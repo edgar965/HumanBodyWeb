@@ -18,17 +18,12 @@ FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
+from ._sicher import Sicher
 
 MODUL = Jsmodul('gemeinsam', 'kombiliste.js')
 
 SKRIPT = """
 const { Kombiliste } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt '
-                        + JSON.stringify(soll));
-    }
-};
 
 // --- 1. Leer darf nicht gebaut werden ------------------------------------
 // Ein einzelnes Stueck baut der gewoehnliche Weg schneller; ein
@@ -179,7 +174,7 @@ class KombilisteTest(SimpleTestCase):
         import re
         from GarmentCode.gemeinsamdienst import Garmentgemeinsam
         quelle = io.open(MODUL.pfad, encoding='utf-8').read()
-        treffer = re.search(r'HOECHSTZAHL\s*=\s*(\d+)', quelle)
-        self.assertIsNotNone(treffer, 'HOECHSTZAHL steht nicht im Modul')
+        treffer = Sicher.wert(re.search(r'HOECHSTZAHL\s*=\s*(\d+)', quelle),
+                              'HOECHSTZAHL steht nicht im Modul')
         self.assertEqual(int(treffer.group(1)),
                          Garmentgemeinsam.HOECHSTZAHL)

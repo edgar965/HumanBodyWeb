@@ -51,6 +51,7 @@ from humanbody_core.quaternion import Quat
 from humanbody_core.skeleton import Skeleton, SkeletonRigify
 from humanbody_core.skeleton.retarget.motor import Retargetlauf
 from core.dienste.skelettgeometrie import Skelettgeometrie
+from ..unit._sicher import Sicher
 
 #: Je Format: (Halsknochen, Rumpf von, Rumpf bis, Hals von, Hals bis).
 EICHKNOCHEN = {
@@ -123,8 +124,7 @@ class HalstreueTest(SimpleTestCase):
             pfad = HalstreueTest._bvh_pfad(name)
             if not pfad:
                 continue
-            reihe = HalstreueTest.eichlauf(pfad)
-            self.assertIsNotNone(reihe, name)
+            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), name)
             for (quelle, _), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(quelle, soll, delta=1.5,
                                        msg='%s: Quelle %.2f statt %.2f'
@@ -145,8 +145,7 @@ class HalstreueTest(SimpleTestCase):
             pfad = HalstreueTest._bvh_pfad(name)
             if not pfad:
                 continue
-            reihe = HalstreueTest.eichlauf(pfad)
-            self.assertIsNotNone(reihe, name)
+            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), name)
             for (_, ziel), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(
                     ziel, soll, delta=self._schwelle(name),
@@ -174,7 +173,7 @@ class HalstreueTest(SimpleTestCase):
         pfad = HalstreueTest._bvh_pfad('OPENPOSE')
         if not pfad:
             self.skipTest('OpenPose-Datei fehlt')
-        reihe = HalstreueTest.eichlauf(pfad)
+        reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), 'OpenPose')
         schlimmster = max(abs(ziel - soll)
                           for (_, ziel), soll in zip(reihe, GRADE))
         self.assertGreater(
@@ -193,7 +192,7 @@ class HalstreueTest(SimpleTestCase):
         if not pfad:
             self.skipTest('CMU-Datei fehlt')
         for rumpf in (-20.0, 20.0, 40.0):
-            reihe = HalstreueTest.eichlauf(pfad, rumpfgrad=rumpf)
+            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad, rumpfgrad=rumpf), 'CMU')
             for (_, ziel), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(
                     ziel, soll, delta=self.SCHWELLE_CMU,
@@ -248,7 +247,7 @@ class HalstreueTest(SimpleTestCase):
         with mock.patch.object(SkeletonOpenPose, 'BONE_MAP_TO_RIGIFY', heil), \
              mock.patch.object(SkeletonOpenPose,
                                'MEHRERE_SCHREIBWEISEN', True):
-            reihe = HalstreueTest.eichlauf(pfad)
+            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), 'OpenPose')
             schlimmster = max(abs(ziel - soll)
                               for (_, ziel), soll in zip(reihe, GRADE))
         self.assertLess(
@@ -319,8 +318,8 @@ class HalstreueTest(SimpleTestCase):
         """
         bvh = SkeletonRigify.parse_bvh(pfad)
         bauart = Skeleton.detect_format(bvh.names)
-        eich = EICHKNOCHEN.get(bauart.FORMAT)
-        if not eich:
+        eich = EICHKNOCHEN.get(bauart.FORMAT) if bauart is not None else None
+        if not eich or bauart is None:
             return None
         hals, q_ra, q_rb, q_ha, q_hb = eich
         if hals not in bvh.names:
@@ -348,8 +347,8 @@ class HalstreueTest(SimpleTestCase):
         spuren = Retargetlauf(
             bvh, skel, mapping=bauart.BONE_MAP_TO_RIGIFY, skip_bones=liste,
             body_height=1.68,
-            use_delta=getattr(bauart, 'USE_DELTA', False),
-            use_delta_dir=getattr(bauart, 'USE_DELTA_DIR', False)).fahren()
+            use_delta=bauart.USE_DELTA,           # Klassenfelder von `Skeleton`
+            use_delta_dir=bauart.USE_DELTA_DIR).fahren()
         quatspuren = spuren.als_dict()['tracks']
 
         def quelle(bild):

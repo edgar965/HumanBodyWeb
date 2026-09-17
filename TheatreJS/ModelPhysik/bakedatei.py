@@ -51,6 +51,24 @@ class Bakedatei:
         u"""Dieselben Punkte in Metern (Faktor = Einheiten je Meter)."""
         return self.daten / faktor
 
+    def auf_dem_boden(self, figurhoehe):
+        u"""Die Bahn in Metern, mittig und auf dem Boden (z = 0 im ersten Bild).
+
+        Der Massstab kommt aus dem ERSTEN Bild, nicht aus einer Konstanten:
+        Die `.skel` traegt den Faktor der Figur, und wer ihn fest hinschreibt,
+        misst nach dem naechsten Konverterlauf etwas anderes (Regel
+        `artefakte-benennen`). `figurhoehe` ist die Hoehe der Figur in Metern.
+        """
+        erstes = self.daten[0]
+        faktor = float(erstes[:, 2].max() - erstes[:, 2].min()) / figurhoehe
+        punkte = self.daten / faktor
+        boden = float(punkte[0][:, 2].min())
+        mitte = punkte[0].reshape(-1, 3).mean(axis=0)
+        punkte[:, :, 0] -= mitte[0]
+        punkte[:, :, 1] -= mitte[1]
+        punkte[:, :, 2] -= boden
+        return punkte
+
     def bewegung(self):
         u"""Weg je Punkt zwischen erstem und letztem Bild (Einheiten)."""
         return np.linalg.norm(self.daten[-1] - self.daten[0], axis=1)

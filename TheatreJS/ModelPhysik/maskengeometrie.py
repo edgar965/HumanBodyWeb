@@ -36,6 +36,8 @@ class Geometrie:
     @staticmethod
     def naht(P):
         u"""Je Punkt die Nummer seiner Gruppe deckungsgleicher Punkte."""
+        # Lehre gilt hier nicht (unique-axis-vermeiden): Gleitkomma-Zeilen lassen
+        # sich nicht zu einem Schluessel falten, und die Rechnung laeuft EINMAL in Ruhelage.
         _einmalig, gruppe = np.unique(np.asarray(P, dtype=np.float64), axis=0,
                                       return_inverse=True)
         return np.asarray(gruppe).reshape(-1)

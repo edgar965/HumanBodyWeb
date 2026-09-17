@@ -18,7 +18,8 @@ export class Mimikeigenschaften {
         const modell = state.project.tracks[track._modellIdx];
         return `<div class="prop-group">
             <div class="prop-row"><label>Typ:</label><span class="marke-akzent">Mimik</span></div>
-            <div class="prop-row"><label>Modell:</label><span class="marke-akzent">${modell?.name || '(keins)'}</span></div>
+            <div class="prop-row"><label>Modell:</label>
+                <span class="marke-akzent">${modell?.name || '(keins)'}</span></div>
             <div class="fussnote">Rechtsklick auf die Spur: Pose setzen, Neutral, Mimik einrechnen.
                 Die letzte Pose bleibt bis zum Ende stehen. Blinzeln und Blick: Script-Spur.</div>
         </div>`;
@@ -35,7 +36,8 @@ export class Mimikeigenschaften {
             ${M.zeile('Bild', M.zahl('prop-mimik-frame', clip.startFrame, 'min="0" step="1"'))}
             <div class="prop-row"><label>Stärke:</label><input type="range" id="prop-mimik-staerke"
                 min="0" max="100" step="5" value="${Math.round((d.staerke ?? 1) * 100)}" class="dehnen">
-                <span id="prop-mimik-staerke-wert" class="reglerwert">${Math.round((d.staerke ?? 1) * 100)}</span> %</div>
+                <span id="prop-mimik-staerke-wert" class="reglerwert">${
+                    Math.round((d.staerke ?? 1) * 100)}</span> %</div>
             <div class="prop-row"><label>Übergang:</label><select id="prop-mimik-uebergang" class="dehnen">
                 <option value="weich" ${d.uebergang !== 'linear' ? 'selected' : ''}>weich</option>
                 <option value="linear" ${d.uebergang === 'linear' ? 'selected' : ''}>linear</option></select></div>

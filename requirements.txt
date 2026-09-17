@@ -67,3 +67,15 @@ djangobase @ git+https://github.com/edgar965/djangoBase.git
 radon>=6
 pyflakes>=3
 pycodestyle>=2.11
+
+# --- Hilfe -> Werkzeug Language Server (basedpyright, python14) ---
+# Typangaben, ohne die der Prüfer rät: `django-types` (12.09.2026, ~150
+# Fehlalarme an Model-Feldern) und `scipy-stubs` (17.09.2026: ohne sie gilt
+# `ndimage.label` als `Literal[0, 1]` — „not iterable" an jedem Entpacken).
+# ACHTUNG: `pip install scipy-stubs` allein zieht `numpy-typing-compat` fuer
+# numpy 2.5 und hebt numpy mit an — dort fehlt `np.cross` in 2-D, und 21
+# Schuh-/Schnitt-Tests wurden rot (17.09.2026). Deshalb die .2.4-Fassung.
+basedpyright>=1.39
+django-types>=0.24
+scipy-stubs>=1.18
+numpy-typing-compat==20260602.2.4

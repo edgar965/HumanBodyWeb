@@ -32,9 +32,19 @@ import { Protokoll } from './protokoll.js';
  * `geometry.userData.indexVoll`; `aufheben` stellt ihn her, wenn die Stücke
  * gehen (Ergebnisseite: Vorgabe gewechselt).
  */
+/**
+ * Was eine Maskierung zurückmeldet — Zahlen fürs Protokoll und die Tests.
+ * @typedef {{verdeckt: number, dreiecke: number, stuecke: number, ms: number,
+ *            band?: number, lagen?: any[]}} Hautstand
+ */
+
 export class Figurhaut {
 
-    /** @param {{mesh: THREE.Mesh, group: THREE.Group, name?: string}} figur */
+    /**
+     * @param {{mesh: THREE.Mesh, group: THREE.Group, name?: string}|any} figur
+     *        (`Hautverdeckung` der Szene nimmt hier ihre `CharacterInstance`)
+     * @returns {Hautstand|null}
+     */
     static anwenden(figur) {
         const koerper = figur?.mesh;
         const geo = koerper?.geometry;
@@ -51,8 +61,9 @@ export class Figurhaut {
         const einzug = Hauteinzug.setzen(koerper, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });
         const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg);
         Figurhaut.indexSetzen(geo, neu.index, neu.gruppen);
+        /** @type {Hautstand} */
         const stand = { verdeckt: Figurhaut._anzahl(maske), band: einzug.band, dreiecke: neu.entfernt,
-                        stuecke: stoffe.length, lagen: [] };
+                        stuecke: stoffe.length, lagen: [], ms: 0 };
         if (stoffe.length > 1) stand.lagen = Figurhaut._lagen(geo, stoffe);
         stand.ms = Math.round(performance.now() - t0);
         Protokoll.debug('Figurhaut', `Hautmaske ${figur.name || ''}: ${stand.verdeckt} Punkte `
@@ -60,7 +71,10 @@ export class Figurhaut {
         return stand;
     }
 
-    /** Den vollen Index wiederherstellen — kein Stück mehr an der Figur. */
+    /**
+     * Den vollen Index wiederherstellen — kein Stück mehr an der Figur.
+     * @returns {Hautstand|null}
+     */
     static aufheben(figur) {
         const koerper = figur?.mesh;
         const geo = koerper?.geometry;
@@ -134,6 +148,11 @@ export class Figurhaut {
         geo.setIndex(new THREE.BufferAttribute(index, 1));
         geo.clearGroups();
         for (const g of gruppen) geo.addGroup(g.start, g.count, g.materialIndex);
+    }
+
+    /** Der volle Index eines Körpers, gekürzt oder nicht. */
+    static vollerIndex(geo) {
+        return geo?.userData?.indexVoll?.index || geo?.index?.array || null;
     }
 
     static _anzahl(maske) {

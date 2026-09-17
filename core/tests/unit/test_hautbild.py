@@ -103,7 +103,7 @@ class HautbildTest(SimpleTestCase):
         self.assertGreater(dunkel, 50, 'Härchen im Fenster')
         self.assertLess(dunkel, innen.shape[0] * innen.shape[1] // 2)
 
-    def test_verdrahtung(self):
+    def test_details_gehen_von_der_szene_bis_zum_render(self):
         szene = (VIEWER / 'scene' / 'figurvideo.js').read_text(encoding='utf-8')
         self.assertIn('details: inst.details || {}', szene)
         dienst = (settings.BASE_DIR / 'core' / 'dienste' / 'figurvideo.py'

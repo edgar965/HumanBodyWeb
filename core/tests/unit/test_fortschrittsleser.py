@@ -15,13 +15,14 @@ Ein Test, der auf `time.time()` wartet, misst die Testmaschine.
 from django.test import SimpleTestCase
 
 from core.pipelines.fortschrittsleser import Fortschrittsleser
+from ._sicher import Sicher
 
 
 class FortschrittsleserTest(SimpleTestCase):
 
     def test_prozent_und_restzeit(self):
         leser = Fortschrittsleser(125, jetzt=1000.0)
-        prozent, text = leser.zeile_lesen('Frame 50/125', jetzt=1010.0)
+        prozent, text = Sicher.wert(leser.zeile_lesen('Frame 50/125', jetzt=1010.0), 'Meldung')
         # 50 % Grundwert + 40 % der zweiten Haelfte
         self.assertEqual(prozent, 50 + int(50 / 125 * 48))
         self.assertIn('50 / 125', text)
@@ -37,7 +38,7 @@ class FortschrittsleserTest(SimpleTestCase):
     def test_vor_dem_abschluss_nie_hundert_prozent(self):
         """Vor dem Abschluss darf nie 100 % gemeldet werden."""
         leser = Fortschrittsleser(100, jetzt=0.0)
-        prozent, _ = leser.zeile_lesen('Frame 100/100', jetzt=10.0)
+        prozent, _ = Sicher.wert(leser.zeile_lesen('Frame 100/100', jetzt=10.0), 'Meldung')
         self.assertLessEqual(prozent, Fortschrittsleser.OBERGRENZE)
 
     def test_zeilen_ohne_fortschritt(self):

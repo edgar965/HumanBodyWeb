@@ -46,7 +46,7 @@ class Tensorattrappe:
 
     #: Mit `__eq__` faellt die Standard-Hashbarkeit weg; gebraucht wird
     #: sie hier nicht.
-    __hash__ = None
+    __hash__ = None  # type: ignore[assignment]
 
     def detach(self):
         return self

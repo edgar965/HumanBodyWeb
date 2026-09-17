@@ -56,37 +56,37 @@ console.log(JSON.stringify({ ok: true }));
 """
 
 
-def _text(*teile):
-    return VIEWER.joinpath(*teile).read_text(encoding='utf-8')
-
-
 class BibliothekskanalTest(SimpleTestCase):
 
     def test_meldung_erreicht_andere_kanaele_nicht_den_sender(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
-    def test_verdrahtung(self):
+    def test_sender_und_hoerer_haengen_am_kanal(self):
         melden = 'Bibliothekskanal.melden('
         sender = (('bvh_studio', 'bibliothekablage.js', melden + 'aktion, daten);'),
                   ('scene', 'animationsmenue.js', melden + 'aktion, daten);'),
                   ('animation', 'baum.js', melden + 'action, data);'),
                   ('scene', 'animation.js', melden + "'save', { category, name });"))
         for ordner, datei, marke in sender:
-            self.assertIn(marke, _text(ordner, datei), datei)
+            self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
         hoeren = 'Bibliothekskanal.hoeren(() => '
         hoerer = (('bvh_studio', 'bibliotheksbaum.js', hoeren + 'this.laden());'),
                   ('scene', 'animation.js', hoeren + 'loadAnimationUI());'),
                   ('animation', 'baum.js', hoeren + 'loadAnimationTree());'))
         for ordner, datei, marke in hoerer:
-            self.assertIn(marke, _text(ordner, datei), datei)
+            self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
         # Sofort aus dem Baum, bevor das Neuladen (unter Last Sekunden) fertig ist.
-        studio = _text('bvh_studio', 'bibliothekmenues.js')
+        studio = BibliothekskanalTest._text('bvh_studio', 'bibliothekmenues.js')
         self.assertLess(
             studio.index('this.baum.eintragEntfernen(ziel.category, ziel.name);'),
             studio.index('this.baum.laden();', studio.index('async loeschen(ziel)')))
-        szene = _text('scene', 'animation.js')
+        szene = BibliothekskanalTest._text('scene', 'animation.js')
         entfernt = szene.index('item.remove();')
         self.assertLess(entfernt,
                         szene.index('return Animationsentfernung.nach(anim, cat, {'))
         self.assertLess(szene.index('const eintraege = Animationsentfernung.'),
                         entfernt, 'Nachfolger wird VOR dem Entfernen bestimmt')
+
+    @staticmethod
+    def _text(*teile):
+        return VIEWER.joinpath(*teile).read_text(encoding='utf-8')

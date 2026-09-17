@@ -37,11 +37,6 @@ MODUL = Jsmodul('gemeinsam', 'kombiliste.js')
 
 SKRIPT = """
 const { Kombiliste } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 let liste = new Kombiliste();
 const bau = { hautabstand_mm: 1, aufloesung: 1, anliegen_mm: 2 };
 liste.hinzufuegen('hose', 'Hose', { 'pants.flare': 0.5 }, bau);

@@ -154,9 +154,8 @@ export class UmapythonModell extends Modell {
      * Skelette ineinander (Befund 07.09.2026).
      */
     _skelettSetzen(daten) {
-        if (!daten?.knochen?.length) return;
-        this.skelett = Knochenbau.abraeumen(this.skelett);
-        this.skelett = Knochenbau.bauen(daten, this.group);
+        if (!daten?.knochen?.length) return;   // ohne Knochen bleibt das alte
+        this.skelettBauen(daten);
     }
 
     dispose() {

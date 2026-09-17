@@ -27,7 +27,8 @@ export class Scripteigenschaften {
         const modell = state.project.tracks[track._modellIdx];
         return `<div class="prop-group">
             <div class="prop-row"><label>Typ:</label><span class="marke-akzent">Script</span></div>
-            <div class="prop-row"><label>Modell:</label><span class="marke-akzent">${modell?.name || '(keins)'}</span></div>
+            <div class="prop-row"><label>Modell:</label>
+                <span class="marke-akzent">${modell?.name || '(keins)'}</span></div>
             <div class="fussnote">Rechtsklick auf die Spur: Script hinzufügen. Ein Script wirkt, solange der
                 Abspielkopf in seinem Clip steht; Klick auf den Clip zeigt seine Einstellungen.</div>
         </div>`;

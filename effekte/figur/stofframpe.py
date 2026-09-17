@@ -59,29 +59,13 @@ class Stofframpe:
     def lage(self, anteil):
         u"""Weltlagen aller Knochen fuer den Anteil `anteil` (0 = Ruhe, 1 = Bild 0)."""
         from anim_umsetzung import Animumsetzung
-        welt = {}
-        ruhe_lokal = {n: Animumsetzung._wxyz(self.knochen[n]['local_quaternion'])
-                      for n in self.namen}
-        ziel_lokal = {n: self._lokal(n, self.ziel) for n in self.namen}
+        from knochenwelt import Knochenwelt
 
-        def loesen(name):
-            if name in welt:
-                return welt[name]
-            knochen = self.knochen[name]
-            lokal = self.slerp(ruhe_lokal[name], ziel_lokal[name], anteil)
-            versatz = np.asarray(knochen['local_position'], dtype=np.float64)
-            elternteil = knochen.get('parent')
-            if not elternteil or elternteil not in self.knochen:
-                welt[name] = (versatz, lokal)
-            else:
-                ep, eq = loesen(elternteil)
-                welt[name] = (ep + Animumsetzung.drehen(eq, versatz),
-                              Animumsetzung.mul(eq, lokal))
-            return welt[name]
+        def lokal(name):
+            ruhe = Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
+            return self.slerp(ruhe, self._lokal(name, self.ziel), anteil)
 
-        for name in self.namen:
-            loesen(name)
-        return welt
+        return Knochenwelt.loesen(self.knochen, self.namen, lokal)
 
     def punkte(self, hautbahnen, schritte):
         u"""Je Zwischenpose die LBS-Punkte jeder Hautbahn: Liste von

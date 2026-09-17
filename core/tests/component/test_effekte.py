@@ -12,19 +12,17 @@ waehrend eines Laufs abgewiesen wird.
 Der Befehl (`Effektbefehl`) wird mit Attrappen-Einstellungen gebaut, damit
 nichts vom installierten Blender abhaengt.
 """
-import json
 import os
-from unittest import mock
 
 from django.conf import settings
-from django.test import Client, TestCase, override_settings
-from django.urls import reverse
+from django.test import override_settings
+from django.urls import resolve, reverse
 
+from core.api.effekte import Effektendpunkte
 from core.effekte.effektbefehl import Effektbefehl
-from core.effekte.effektlauf import Effektlauf
 from core.effekte.effektquellen import Effektquellen
 from core.models import BVHJob, Effektauftrag
-from core.tests.unit._pruefablage import Pruefablage
+from core.tests.component._effektseite import Effektseite
 from effekte.effektparameter import Effektparameter
 
 BVH = ('HIERARCHY\nROOT Pelvis\n{\n\tOFFSET 0 0 0\n'
@@ -33,30 +31,16 @@ BVH = ('HIERARCHY\nROOT Pelvis\n{\n\tOFFSET 0 0 0\n'
        '0 0 0 0 0 0\n0 0 0 0 0 0\n')
 
 
-class EffekteSeite(TestCase):
+class EffekteSeite(Effektseite):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls._ablage = Pruefablage.ordner('effekte_')
-        cls.ordner = cls._ablage.__enter__()
-        cls.bvh = os.path.join(cls.ordner, 'probe.bvh')
-        with open(cls.bvh, 'w', encoding='utf-8') as datei:
-            datei.write(BVH)
-        cls.fremd = os.path.join(cls.ordner, 'fremd.bvh')
-        with open(cls.fremd, 'w', encoding='utf-8') as datei:
-            datei.write(BVH.replace('Pelvis', 'hip'))
-        cls.kleid = os.path.join(cls.ordner, 'kleid.mhclo')
-        with open(cls.kleid, 'w', encoding='utf-8') as datei:
-            datei.write('# Probe\n')
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._ablage.__exit__(None, None, None)
-        super().tearDownClass()
+    def dateien(cls):
+        cls.bvh = cls.schreiben('probe.bvh', BVH)
+        cls.fremd = cls.schreiben('fremd.bvh', BVH.replace('Pelvis', 'hip'))
+        cls.kleid = cls.schreiben('kleid.mhclo', '# Probe\n')
 
     def setUp(self):
-        self.client = Client(HTTP_HOST='127.0.0.1')
+        super().setUp()
         BVHJob.objects.create(name='probe.mp4', pipeline='gem', status='complete',
                               bvh_file=self.bvh, video_file='uploads/probe.mp4')
         BVHJob.objects.create(name='fremd.mp4', pipeline='mediapipe', status='complete',
@@ -68,13 +52,6 @@ class EffekteSeite(TestCase):
                  'parameter': {'bilder': 20, 'wind': 1.5, 'selbstkollision': False}}
         daten.update(extra)
         return daten
-
-    def starten(self, **extra):
-        with mock.patch.object(Effektlauf, 'starten') as start:
-            antwort = self.client.post(reverse('effekte_start'),
-                                       data=json.dumps(self.nutzlast(**extra)),
-                                       content_type='application/json')
-        return antwort, start
 
     # --------------------------------------------------------------- Seite
 
@@ -109,16 +86,11 @@ class EffekteSeite(TestCase):
         self.assertEqual(auftrag.name, 'probe')
 
     def test_start_weist_fremde_gelenke_fehlende_dateien_und_falsche_endung_ab(self):
-        for extra, erwartet in ((dict(bvh=self.fremd), 'unbekannten Gelenken'),
-                                (dict(bvh=self.bvh + '.nein'), 'BVH-Datei fehlt'),
-                                (dict(kleid='x.mhclo'), 'Kleid fehlt'),
-                                (dict(ausgabe='o.avi'), '.mp4'),
-                                (dict(parameter={'quatsch': 1}), 'Parameter')):
-            with self.subTest(**extra):
-                antwort, start = self.starten(**extra)
-                self.assertEqual(antwort.status_code, 400)
-                self.assertIn(erwartet, antwort.json()['error'])
-                start.assert_not_called()
+        self.abgewiesen(((dict(bvh=self.fremd), 'unbekannten Gelenken'),
+                         (dict(bvh=self.bvh + '.nein'), 'BVH-Datei fehlt'),
+                         (dict(kleid='x.mhclo'), 'Kleid fehlt'),
+                         (dict(ausgabe='o.avi'), '.mp4'),
+                         (dict(parameter={'quatsch': 1}), 'Parameter')))
         self.assertEqual(Effektauftrag.objects.count(), 0)
 
     def test_zweiter_start_waehrend_eines_laufs_bekommt_409(self):
@@ -185,3 +157,15 @@ class EffekteSeite(TestCase):
 
     def test_das_blender_skript_liegt_da(self):
         self.assertTrue(os.path.isfile(settings.EFFEKTE_SKRIPT), settings.EFFEKTE_SKRIPT)
+
+    def test_die_sechs_adressen_fuehren_zu_den_effektendpunkten(self):
+        u"""Seite und API haengen an `Effektendpunkte` — wer eine Route umbaut,
+        sieht es hier, nicht erst im Browser."""
+        kennung = '00000000-0000-0000-0000-000000000001'
+        for adresse, ziel in (('/process/effekte/', Effektendpunkte.seite),
+                              ('/api/effekte/quellen/', Effektendpunkte.quellen),
+                              ('/api/effekte/start/', Effektendpunkte.starten),
+                              ('/api/effekte/%s/status/' % kennung, Effektendpunkte.zustand),
+                              ('/api/effekte/%s/stop/' % kennung, Effektendpunkte.anhalten),
+                              ('/api/effekte/%s/video/' % kennung, Effektendpunkte.video)):
+            self.assertIs(resolve(adresse).func, ziel, adresse)

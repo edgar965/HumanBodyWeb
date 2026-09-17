@@ -168,11 +168,21 @@ class Charakterdaten:
         return cc
 
     @classmethod
+    def zustand(cls, koerpertyp='Female_Caucasian'):
+        """Ein frischer `CharacterState` auf den GETEILTEN Morph-Daten und Vorgaben.
+
+        Die beiden WebSocket-Kanäle (`consumers`, `stoffkanal`) luden je
+        Verbindung eigene `MorphData` von der Platte (Befund `doppelcode`,
+        17.09.2026); die Morphs sind nur Lesedaten, der Zustand ist je Rufer.
+        """
+        zustand = CharacterState(cls.morphdaten(), cls.voreinstellungen())
+        zustand.set_body_type(koerpertyp)
+        return zustand
+
+    @classmethod
     def _referenznormalen(cls, cc, geschlecht):
         basistyp = 'Male_Caucasian' if geschlecht == 'male' else 'Female_Caucasian'
-        zustand = CharacterState(cls.morphdaten(), cls.voreinstellungen())
-        zustand.set_body_type(basistyp)
-        verts = zustand.compute()
+        verts = cls.zustand(basistyp).compute()
         if verts is None:
             return
         cc.compute_quad_normals(cc.subdivide(verts))

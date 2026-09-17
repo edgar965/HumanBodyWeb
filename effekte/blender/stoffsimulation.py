@@ -22,7 +22,7 @@ from __future__ import print_function
 import math
 import time
 
-import bpy
+import bpy  # pyright: ignore[reportMissingImports]  (Blender)
 
 __all__ = ['Stoffsimulation']
 

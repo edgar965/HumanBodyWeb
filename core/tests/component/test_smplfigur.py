@@ -38,7 +38,7 @@ class SmplfigurTest(SimpleTestCase):
             self.skipTest('SMPL-X-Modelldateien fehlen unter %s'
                           % settings.SMPLX_MODELS_DIR)
 
-    def test_liste(self):
+    def test_die_liste_nennt_mean_all_und_verschweigt_a40(self):
         antwort = self.client.get('/api/character/smpl-figur/')
         self.assertEqual(antwort.status_code, 200)
         figuren = {f['name']: f for f in json.loads(antwort.content)['figuren']}

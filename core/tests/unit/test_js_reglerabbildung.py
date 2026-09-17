@@ -22,11 +22,6 @@ MODUL = Jsmodul('gemeinsam', 'reglerabbildung.js')
 
 SKRIPT = """
 const { Reglerabbildung } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const bauch = {name: 'bauch', uma: ['belly'], humanbody: ['Stomach_Volume']};
 const lippen = {name: 'lippen', uma: ['lipsSize'],
                 humanbody: ['Mouth_UpperlipVolume', 'Mouth_LowerlipVolume']};

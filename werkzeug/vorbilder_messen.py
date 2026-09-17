@@ -68,12 +68,12 @@ class Vorbilderlauf:
     def _eines(self, eintrag, koerper, masse):
         from core.dienste.stueckueberfuehrung import Stueckueberfuehrung
 
-        kennung = (eintrag.get('id') if isinstance(eintrag, dict)
-                   else getattr(eintrag, 'garment_id', None))
+        # Der Katalog (`GarmentLibrary.catalog`) fuehrt dicts: id, name,
+        # category, has_thumb (`library/bibliothek.py`).
+        kennung = eintrag.get('id')
         if not kennung:
             return
-        titel = (eintrag.get('name') if isinstance(eintrag, dict)
-                 else getattr(eintrag, 'name', '')) or kennung.split('/')[-1]
+        titel = eintrag.get('name') or kennung.split('/')[-1]
         try:
             deutung, grund = Stueckueberfuehrung.deuten(kennung, koerper, masse)
         except Exception as fehler:                             # noqa: BLE001
@@ -95,9 +95,7 @@ class Vorbilderlauf:
             # Ob es ein Vorschaubild gibt - der Reiter zeigt dasselbe wie die
             # Asset-Liste (`/api/character/garment/thumb/<id>/`). Die Angabe
             # steht im Katalog-dict, nicht am Template.
-            'bild': bool(eintrag.get('has_thumb')
-                         if isinstance(eintrag, dict)
-                         else getattr(eintrag, 'has_thumb', False)),
+            'bild': bool(eintrag.get('has_thumb')),
         })
 
     @staticmethod

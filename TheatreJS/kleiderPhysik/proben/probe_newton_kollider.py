@@ -20,8 +20,8 @@ import warp as wp
 wp.config.kernel_cache_dir = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'warp_cache'
 )
-import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen
-from newton._src.solvers import style3d as st3  # noqa: E402 — nach dem Cache
+import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen  # pyright: ignore[reportMissingImports]
+from newton._src.solvers import style3d as st3  # noqa: E402 — nach dem Cache  # pyright: ignore[reportMissingImports]
 
 
 class Kolliderprobe:
@@ -79,7 +79,7 @@ class Kolliderprobe:
         builder.add_ground_plane()
         self._tuch(builder)
         netz = newton.Mesh(self.v0, self.f0.reshape(-1))
-        lage = wp.transform(wp.vec3(*self.KUGELMITTE), wp.quat_identity())
+        lage = wp.transform(wp.vec3(*self.KUGELMITTE), wp.quat_identity())  # pyright: ignore[reportCallIssue]
         if self.starr:
             koerper = builder.add_body(xform=lage, is_kinematic=True)
             shape = builder.add_shape_mesh(koerper, mesh=netz)
@@ -105,7 +105,7 @@ class Kolliderprobe:
         n = self.n
         gemeinsam = dict(
             pos=wp.vec3(-1.0, -1.0, 1.6),
-            rot=wp.quat_identity(),
+            rot=wp.quat_identity(),  # pyright: ignore[reportCallIssue]
             vel=wp.vec3(0.0),
             dim_x=n, dim_y=n,
             cell_x=2.0 / n, cell_y=2.0 / n,

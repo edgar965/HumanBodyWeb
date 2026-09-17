@@ -29,10 +29,6 @@ from core.daten.kennungskonverter import Kennungskonverter
 VORLAGEN = settings.BASE_DIR / 'templates'
 
 
-def _text(pfad):
-    return pfad.read_text(encoding='utf-8')
-
-
 class AuftragskennungTest(SimpleTestCase):
 
     ZEIT = datetime(2026, 9, 16, 20, 0, 12, 345678, tzinfo=utc.utc)
@@ -64,16 +60,16 @@ class AuftragskennungTest(SimpleTestCase):
         self.assertEqual(Kennungskonverter.to_url('2026.09.16.22.00.12'),
                          '2026.09.16.22.00.12')
 
-    def test_verdrahtung(self):
-        urls = _text(settings.BASE_DIR / 'core' / 'urls.py')
+    def test_urls_seiten_und_tabelle_nennen_die_kennung(self):
+        urls = AuftragskennungTest._text(settings.BASE_DIR / 'core' / 'urls.py')
         self.assertIn("register_converter(Kennungskonverter, 'kennung')", urls)
         for pfad in ('', 'start/', 'stop/', 'result/', 'delete/'):
             self.assertIn("path('process/<kennung:kennung>/%s'" % pfad, urls)
         self.assertNotIn("path('process/<uuid:job_id>/', Webseiten", urls)
         self.assertIn("path('process/<uuid:job_id>/<path:rest>', "
                       "Auftragsweiterleitung.alt)", urls)
-        zeile = _text(settings.BASE_DIR / 'static' / 'js' / 'auftraege'
-                      / 'auftragszeile.js')
+        zeile = AuftragskennungTest._text(
+            settings.BASE_DIR / 'static' / 'js' / 'auftraege' / 'auftragszeile.js')
         self.assertIn('return `/process/${daten.kennung}/result/`;', zeile)
         self.assertNotIn('/process/${this.id}/', zeile)
         for vorlage, marken in (
@@ -82,8 +78,12 @@ class AuftragskennungTest(SimpleTestCase):
                 ('job_result.html', ("{% url 'job_status' job.kennung %}",)),
                 ('processed.html', ("{% url 'job_result' job.kennung %}",
                                     "{% url 'delete_job' job.kennung %}"))):
-            text = _text(VORLAGEN / vorlage)
+            text = AuftragskennungTest._text(VORLAGEN / vorlage)
             for marke in marken:
                 self.assertIn(marke, text, vorlage)
             self.assertNotIn("'job_status' job.id", text, vorlage)
             self.assertNotIn("'job_result' job.id", text, vorlage)
+
+    @staticmethod
+    def _text(pfad):
+        return pfad.read_text(encoding='utf-8')

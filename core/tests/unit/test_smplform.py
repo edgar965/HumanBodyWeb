@@ -72,7 +72,9 @@ class SmplformTest(unittest.TestCase):
 
     def test_unsinn_wird_zur_mitte(self):
         u"""Ein leeres Feld darf keinen Koerper verformen."""
-        self.assertEqual(Smplform.betas('male', None, 'abc')[:2], [0.0, 0.0])
+        # absichtlich Unsinn statt Zahlen — das ist der Fall
+        unsinn = Smplform.betas('male', None, 'abc')  # pyright: ignore[reportArgumentType]
+        self.assertEqual(unsinn[:2], [0.0, 0.0])
 
     def test_unbekanntes_geschlecht_bleibt_bedienbar(self):
         b = Smplform.betas('divers', 100, 0)

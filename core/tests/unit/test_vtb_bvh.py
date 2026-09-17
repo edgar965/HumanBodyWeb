@@ -21,7 +21,7 @@ mit der Messung, die die alte Zusicherung hier widerlegt hat.
 BDD - GEGEBEN / DANN
 ====================
     DasSkelett          ... haelt 24 Gelenke in einer Ordnung
-    DieGelenkgrenzen    ... fangen ein ueberstrecktes Knie ein
+    DieGelenkgrenzenImBvh    ... fangen ein ueberstrecktes Knie ein
     DieGlaettung        ... springt nicht am Vorzeichenwechsel
     DieBildpunkte       ... liegen im Bild und folgen der Bewegung
 """
@@ -74,7 +74,7 @@ class DasSkelett(unittest.TestCase):
         self.assertEqual(len(set(Smplskelett.NAMEN)), 24)
 
 
-class DieGelenkgrenzen(unittest.TestCase):
+class DieGelenkgrenzenImBvh(unittest.TestCase):
     u"""Knie und Ellenbogen sind Scharniere."""
 
     def _spur(self, gelenk, winkel_grad, achse=0):

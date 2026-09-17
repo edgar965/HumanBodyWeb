@@ -19,6 +19,7 @@ Humanbodypfad.setzen()
 
 from humanbody_core.quaternion import Quat  # noqa: E402
 from humanbody_core.skeleton.retarget.wurzelspur import Wurzelspur  # noqa: E402
+from ._sicher import Sicher
 
 
 class _Knochen:
@@ -43,7 +44,8 @@ class WurzelspurElternrahmenTest(SimpleTestCase):
 
     @staticmethod
     def _spur(skelett):
-        return Wurzelspur(_Bvh(), skelett, {'Hips': 'Hips'}, 0.01, 2).spur()['values']
+        return Sicher.wert(Wurzelspur(_Bvh(), skelett, {'Hips': 'Hips'}, 0.01, 2).spur(),
+                           'Spur')['values']
 
     def test_ohne_drehung_bleibt_der_weg_wie_er_ist(self):
         self.assertTrue(np.allclose(self._spur(_Skelett(Quat.ID.copy())),

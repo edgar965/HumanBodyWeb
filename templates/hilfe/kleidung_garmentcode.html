@@ -144,24 +144,7 @@ eine leere Tabelle saehe aus wie „alles gut".
     {% endif %}
   </p>
 
-  <table class="doku kleidung-matrix">
-    <thead>
-      <tr>
-        <th>Stück</th>
-        {% for k in matrix_hb.koerper %}<th>{{ k }}</th>{% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for zeile in matrix_hb.zeilen %}
-      <tr>
-        <td>{{ zeile.stueck }}</td>
-        {% for z in zeile.zellen %}
-        <td class="zelle-{{ z.zustand }}" title="{{ z.titel }}">{{ z.text }}</td>
-        {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% include "hilfe/_kleidung_matrix.html" with matrix=matrix_hb %}
   {% else %}
   <p class="kleidung-fehlt">
     Noch keine Messreihe abgelegt. Sie entsteht mit
@@ -190,24 +173,7 @@ eine leere Tabelle saehe aus wie „alles gut".
     {% endif %}
   </p>
 
-  <table class="doku kleidung-matrix">
-    <thead>
-      <tr>
-        <th>Stück</th>
-        {% for k in matrix_smpl.koerper %}<th>{{ k }}</th>{% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for zeile in matrix_smpl.zeilen %}
-      <tr>
-        <td>{{ zeile.stueck }}</td>
-        {% for z in zeile.zellen %}
-        <td class="zelle-{{ z.zustand }}" title="{{ z.titel }}">{{ z.text }}</td>
-        {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% include "hilfe/_kleidung_matrix.html" with matrix=matrix_smpl %}
   {% else %}
   <p class="kleidung-fehlt">
     Noch keine SMPL-Messreihe abgelegt

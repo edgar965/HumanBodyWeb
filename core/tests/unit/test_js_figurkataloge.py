@@ -17,11 +17,6 @@ MODUL = Jsmodul('gemeinsam', 'figurkataloge.js')
 
 SKRIPT = """
 const { Figurkataloge } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 
 // --- Reihenfolge der Reiter nach Ansage (07.09.2026) -----------------------
 pruefe('Reihenfolge', Figurkataloge.REIHENFOLGE,

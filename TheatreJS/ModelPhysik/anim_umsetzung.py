@@ -355,36 +355,23 @@ class Animumsetzung:
 
     def _rig_punkte(self, spuren, nummer):
         u"""Gelenkpunkte, wie unser eigenes Rig sie in dieser Pose haette."""
-        welt = {}
+        from knochenwelt import Knochenwelt
 
-        def loesen(name):
-            if name in welt:
-                return welt[name]
-            knochen = self.knochen[name]
+        def lokal(name):
             spur = spuren.get(name)
             if spur is not None:
-                lokal = self.nach_blender(np.asarray(
+                return self.nach_blender(np.asarray(
                     spur[nummer * 4:nummer * 4 + 4], dtype=np.float64))
-            else:
-                lokal = self._wxyz(knochen['local_quaternion'])
-            versatz = np.asarray(knochen['local_position'], dtype=np.float64)
-            elternteil = knochen.get('parent')
-            if not elternteil or elternteil not in self.knochen:
-                # Die Wurzel sitzt NICHT im Ursprung: `DEF-spine` steht bei
-                # z = 0,81. Mit `zeros` verglich die Gegenprobe zwei Raeume
-                # und meldete 1,79 m Abweichung.
-                welt[name] = (versatz, lokal)
-            else:
-                ep, eq = loesen(elternteil)
-                welt[name] = (ep + self.drehen(eq, versatz), self.mul(eq, lokal))
-            return welt[name]
+            return self._wxyz(self.knochen[name]['local_quaternion'])
 
+        gruende = [n[:-5] if n.endswith('_ende') else n for n in self.namen]
+        welt = Knochenwelt.loesen(
+            self.knochen, [g for g in gruende if g in self.knochen], lokal)
         aus = {}
-        for name in self.namen:
-            grund = name[:-5] if name.endswith('_ende') else name
+        for name, grund in zip(self.namen, gruende):
             if grund not in self.knochen:
                 continue
-            punkt, drehung = loesen(grund)
+            punkt, drehung = welt[grund]
             if name.endswith('_ende'):
                 # Der Endpunkt sitzt am Schwanz — in Knochenrichtung (+Y).
                 laenge = np.linalg.norm(self._schwanzversatz(grund))

@@ -32,11 +32,6 @@ MODUL = Jsmodul('gemeinsam', 'rigauswahl.js')
 
 SKRIPT = """
 const { Rigauswahl: R } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 
 // Figuren, wie die vier Arten sie halten.
 const knochen = (name) => ({ name, isBone: true, parent: null });
@@ -115,6 +110,6 @@ class RigauswahlTest(SimpleTestCase):
 
     databases = set()
 
-    def test_auswahl(self):
+    def test_wurzel_aus_dem_feld_der_art_sonst_aus_dem_szenenbaum(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

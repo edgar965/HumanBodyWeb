@@ -89,29 +89,36 @@ class Modellfigur:
             return tuple(vorgabe)
         try:
             return tuple(int(text[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+        # stumm gewollt: eine unlesbare Farbe faellt auf die Vorgabe zurueck
         except ValueError:
             return tuple(vorgabe)
 
     # -------------------------------------------------------------- Frisur
 
     def frisur(self, ablage):
-        from django.conf import settings
-        from core.api.modelldateien import Modelldateien
         frisur = self.daten.get('hair_style') or {}
-        adresse = frisur.get('url') or ''
-        teile = [t for t in adresse.split('/') if t]
+        teile = [t for t in (frisur.get('url') or '').split('/') if t]
         if not teile:
             return None
-        ordner = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'hairstyles')
-        glb = os.path.join(ordner, '%s.glb' % teile[-1])
-        if not os.path.isfile(glb):
-            raise ValueError(u'Frisur fehlt: %s' % glb)
-        farbe = (Modelldateien.HAARFARBEN.get(frisur.get('color') or '') or {}
-                 ).get('viewport') or self.VORGABE_HAAR
+        glb = self._frisurdatei(teile[-1])
         pfad = os.path.join(ablage, 'frisur_%s.npz' % teile[-1])
         self.frisur_schreiben(glb, pfad)
         return {'name': u'Frisur %s' % (frisur.get('name') or teile[-1]),
-                'pfad': pfad, 'farbe': tuple(farbe)}
+                'pfad': pfad, 'farbe': tuple(self._haarfarbe(frisur.get('color')))}
+
+    @staticmethod
+    def _frisurdatei(name):
+        from django.conf import settings
+        glb = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'hairstyles', '%s.glb' % name)
+        if not os.path.isfile(glb):
+            raise ValueError(u'Frisur fehlt: %s' % glb)
+        return glb
+
+    @classmethod
+    def _haarfarbe(cls, name):
+        from core.api.modelldateien import Modelldateien
+        eintrag = Modelldateien.HAARFARBEN.get(name or '') or {}
+        return eintrag.get('viewport') or cls.VORGABE_HAAR
 
     @classmethod
     def frisur_schreiben(cls, glb, pfad):

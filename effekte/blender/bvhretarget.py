@@ -17,9 +17,9 @@ from __future__ import print_function
 
 import os
 
-import bpy
+import bpy  # pyright: ignore[reportMissingImports]  (Blender)
 
-from bl_ext.user_default.retarget_bvh import utils as mcp_utils
+from bl_ext.user_default.retarget_bvh import utils as mcp_utils  # pyright: ignore[reportMissingImports]
 
 from effekte.bvhnamen import Bvhnamen
 

@@ -99,15 +99,8 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
 
     def _init_state(self):
         try:
-            from django.conf import settings
-            from humanbody_core import (MorphData, CharacterState,
-                                        CharacterDefaults)
-            md = MorphData(data_dir=str(settings.HUMANBODY_DATA_DIR))
-            md.load()
-            cd = CharacterDefaults()
-            cd.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
-            self._char_state = CharacterState(md, cd)
-            self._char_state.set_body_type('Female_Caucasian')
+            from core.dienste.charakterdaten import Charakterdaten
+            self._char_state = Charakterdaten.zustand()
         except Exception as fehler:                       # noqa: BLE001
             logger.error('StoffConsumer: CharacterState nicht aufgebaut: %s',
                          fehler)

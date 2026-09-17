@@ -957,3 +957,12 @@
 .panel-section.hb-ohne-kopf > .panel-body {
     padding-top: 0;
 }
+
+/* Hinweisliste unter den Einstellungskarten (Effekte, Theatre). Stand als
+   <style> in beiden Seiten (Befund `doppelcode`, 17.09.2026); die Namen
+   sagen, was das Element IST — nicht, welche Eigenschaft es setzt. */
+.hinweisliste.hinweisliste.hinweisliste {
+    color:var(--text-muted);
+    font-size:0.85rem;
+    line-height:1.6;
+}

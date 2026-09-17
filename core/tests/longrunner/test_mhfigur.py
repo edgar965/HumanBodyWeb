@@ -69,7 +69,7 @@ class MhfigurTest(SimpleTestCase):
         u"""Positives Volumen = Normalen nach aussen (siehe Mhbasisnetz)."""
         daten = self._netz()
         punkte = MhfigurTest._feld(daten['vertices'], np.float32, 3).astype(np.float64)
-        dreiecke = MhfigurTest._feld(daten['faces'], np.uint32, 3)
+        dreiecke = MhfigurTest._feld(daten['faces'], np.uint32, 3).astype(np.int64)
         v0, v1, v2 = (punkte[dreiecke[:, i]] for i in range(3))
         volumen = float(np.einsum('ij,ij->i', v0, np.cross(v1, v2)).sum() / 6.0)
         self.assertGreater(volumen, 0.03, 'Umlaufsinn gedreht')

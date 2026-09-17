@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Netzentsorgung } from './netzentsorgung.js';
+import { Knochenbau } from './knochenbau.js';
 
 /**
  * Modell — die Figur, wie jede Seite sie kennt: EINE Klasse mit `bauen()`.
@@ -45,6 +46,8 @@ export class Modell {
         this.group = new THREE.Group();
         this.group.userData.characterId = id;
         this.bodyMesh = null;
+        /** Das Skelett der Art — Rigify, `Knochenbau` oder GLB; die Form ist je Art anders.
+         *  @type {any} */
         this.skelett = null;
         /** @type {Object<string, any>} */
         this.clothMeshes = {};
@@ -69,6 +72,21 @@ export class Modell {
      */
     async bauen(optionen = {}) {   // eslint-disable-line no-unused-vars
         throw new Error(`${this.constructor.name}.bauen() ist nicht implementiert`);
+    }
+
+    /**
+     * Das eigene Skelett aus den Serverangaben bauen — das alte ZUERST abräumen.
+     *
+     * `bauen()` läuft bei jedem Reglerzug erneut (MakeHuman: 269 Regler,
+     * SMPL: die Formregler). Ohne das Abräumen hängen nach zehn Zügen zehn
+     * Skelette ineinander, und der `SkeletonHelper` zeigt die alten
+     * Stellungen mit. Ohne `angaben` bleibt die Figur ohne Knochen.
+     * Stand in `MakehumanModell` und `SmplModell` gleich (Befund `doppelcode`).
+     */
+    skelettBauen(angaben) {
+        this.skelett = Knochenbau.abraeumen(this.skelett);
+        if (!angaben) return;
+        this.skelett = Knochenbau.bauen(angaben, this.group);
     }
 
     dispose() {

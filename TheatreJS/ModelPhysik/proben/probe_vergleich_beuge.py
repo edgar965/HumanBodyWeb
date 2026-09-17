@@ -72,8 +72,8 @@ class Beugevergleich:
             u0 = Armmass.umfang(self.v_rest, nummern, self.achse)
             if u0 is None:
                 continue
-            u_ohne = Armmass.umfang(ohne, nummern, self.achse)
-            u_mit = Armmass.umfang(mit, nummern, self.achse)
+            u_ohne = Armmass.umfang(ohne, nummern, self.achse) or 0.0
+            u_mit = Armmass.umfang(mit, nummern, self.achse) or 0.0
             teile.append('%-24s Ruhe %5.2f | LBS %5.2f (%+5.1f %%) | '
                          'mit Korrektur %5.2f (%+5.1f %%)'
                          % (wo, u0, u_ohne, 100 * (u_ohne - u0) / u0,

@@ -38,6 +38,6 @@ class FigurwahlzeileTest(SimpleTestCase):
 
     databases = set()
 
-    def test_markup(self):
+    def test_zeile_maskiert_den_namen_und_zeigt_werkzeuge_nur_mit_unterzeile(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

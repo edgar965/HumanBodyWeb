@@ -17,6 +17,7 @@ FORMAT: je BVH das Format, das der Retarget der Web-App erkennt
 (`Skeleton.detect_format`) — die Figur-Pipeline nimmt alles Erkannte, auch
 MocapNET; die Blender-Pipeline nur SMPL-Namen (`passt`).
 """
+import logging
 import os
 from pathlib import Path
 
@@ -26,6 +27,8 @@ from effekte.bvhnamen import Bvhnamen
 from effekte.figur.modellfigur import Modellfigur
 from ..dienste.modellvorlagen import Modellvorlagen
 from ..models import BVHJob
+
+logger = logging.getLogger('core')
 
 __all__ = ['Effektquellen']
 
@@ -109,6 +112,7 @@ class Effektquellen:
             try:
                 modell = Modellfigur(str(pfad))
             except (OSError, ValueError):
+                logger.warning('Effektquellen: Modell %s nicht lesbar', name, exc_info=True)
                 continue
             beschreibung = modell.beschreibung()
             beschreibung['name'] = name

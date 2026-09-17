@@ -55,7 +55,7 @@ class Schuhbau:
     @classmethod
     def entwurf(cls, art, **regler):
         u"""Ein Entwurf mit Baustein `art` und Reglern `{'shoe.heel': 7}`."""
-        entwurf = copy.deepcopy(cls._entwurf)
+        entwurf = copy.deepcopy(cls._entwurf or {})
         entwurf['meta']['feet']['v'] = art
         for pfad, wert in regler.items():
             gruppe, feld = pfad.split('.')
@@ -70,4 +70,4 @@ class Schuhbau:
 
     @classmethod
     def body(cls):
-        return dict(cls._body)
+        return dict(cls._body or {})

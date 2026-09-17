@@ -28,11 +28,6 @@ MODUL = Jsmodul('gemeinsam', 'greifrechnung.js')
 
 SKRIPT = """
 const { Greifrechnung } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const rund = (x) => Math.round(x * 10000) / 10000;
 const grad = (x) => Math.round(x * 180 / Math.PI * 10) / 10;
 

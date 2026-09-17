@@ -108,7 +108,7 @@ class AuftragsendpunkteTest(TestCase):
 
     # -- Anhalten -------------------------------------------------------------
 
-    def test_anhalten(self):
+    def test_anhalten_nur_per_post_und_ruft_den_arbeiter_genau_einmal(self):
         job = self._auftrag(status='processing')
         weg = reverse('api_stop_processing', args=[job.id])
         self.assertEqual(self.client.get(weg).status_code, 405)

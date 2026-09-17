@@ -10,22 +10,19 @@ nimmt ein Modell und eine Bibliotheksadresse an, der Befehl ruft python14
 mit `figurfilm.py`. Der Film selbst (pyrender, 15 s) laeuft hier nicht —
 `Effektlauf.starten` ist eine Attrappe.
 """
-import json
 import os
 import sys
-from unittest import mock
 
 from django.conf import settings
-from django.test import Client, TestCase, override_settings
+from django.test import override_settings
 from django.urls import reverse
 
 from core.dienste.modellvorlagen import Modellvorlagen
 from core.effekte.effektbefehl import Effektbefehl
-from core.effekte.effektlauf import Effektlauf
 from core.effekte.effektpruefung import Effektpruefung
 from core.effekte.effektquellen import Effektquellen
 from core.models import BVHJob, Effektauftrag
-from core.tests.unit._pruefablage import Pruefablage
+from core.tests.component._effektseite import Effektseite
 from effekte.figurparameter import Figurparameter
 
 #: Drei SMPL-Gelenke reichen, damit `Skeleton.detect_format` AIST erkennt.
@@ -39,40 +36,24 @@ BVH = ('HIERARCHY\nROOT Pelvis\n{\n\tOFFSET 0 0 0\n'
        '0 0 0 0 0 0 0 0 0 0 0 0\n0 0 0 0 0 0 0 0 0 0 0 0\n')
 
 
-class EffekteFigur(TestCase):
+class EffekteFigur(Effektseite):
+
+    PRAEFIX = 'effekte_figur_'
+    MODELLE = {'Probe': {'name': 'Probe', 'body_type': 'Female_Caucasian',
+                         'morphs': {'Waist_Size': -0.2}, 'garmentcode': [],
+                         'hair_style': {'name': 'Ballerina',
+                                        'url': '/api/character/hairstyle/ballerina/'}}}
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls._ablage = Pruefablage.ordner('effekte_figur_')
-        cls.ordner = cls._ablage.__enter__()
-        cls.modelle = os.path.join(cls.ordner, 'models')
-        os.makedirs(cls.modelle)
-        with open(os.path.join(cls.modelle, 'Probe.json'), 'w', encoding='utf-8') as datei:
-            json.dump({'name': 'Probe', 'body_type': 'Female_Caucasian',
-                       'morphs': {'Waist_Size': -0.2}, 'garmentcode': [],
-                       'hair_style': {'name': 'Ballerina',
-                                      'url': '/api/character/hairstyle/ballerina/'}}, datei)
-        with open(os.path.join(cls.modelle, 'Buehne.scene.json'), 'w') as datei:
-            datei.write('{}')
-        cls.bvh = os.path.join(cls.ordner, 'aist.bvh')
-        with open(cls.bvh, 'w', encoding='utf-8') as datei:
-            datei.write(BVH)
-        cls.unbekannt = os.path.join(cls.ordner, 'unbekannt.bvh')
-        with open(cls.unbekannt, 'w', encoding='utf-8') as datei:
-            datei.write(BVH.replace('Pelvis', 'Wurzel').replace('Left_hip', 'Ast')
-                        .replace('Spine1', 'Zweig'))
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._ablage.__exit__(None, None, None)
-        super().tearDownClass()
+    def dateien(cls):
+        cls.schreiben(os.path.join('models', 'Buehne.scene.json'), '{}')
+        cls.bvh = cls.schreiben('aist.bvh', BVH)
+        cls.unbekannt = cls.schreiben(
+            'unbekannt.bvh', BVH.replace('Pelvis', 'Wurzel').replace('Left_hip', 'Ast')
+            .replace('Spine1', 'Zweig'))
 
     def setUp(self):
-        self.client = Client(HTTP_HOST='127.0.0.1')
-        self._modelle = override_settings(HUMANBODY_MODELS_DIR=self.modelle)
-        self._modelle.enable()
-        self.addCleanup(self._modelle.disable)
+        super().setUp()
         BVHJob.objects.create(name='aist.mp4', pipeline='gem', status='complete',
                               bvh_file=self.bvh, video_file='uploads/aist.mp4')
 
@@ -82,13 +63,6 @@ class EffekteFigur(TestCase):
                  'parameter': {'bilder': 20, 'fps': 24, 'physik': 5.0}}
         daten.update(extra)
         return daten
-
-    def starten(self, **extra):
-        with mock.patch.object(Effektlauf, 'starten') as start:
-            antwort = self.client.post(reverse('effekte_start'),
-                                       data=json.dumps(self.nutzlast(**extra)),
-                                       content_type='application/json')
-        return antwort, start
 
     # --------------------------------------------------------------- Seite
 
@@ -143,17 +117,12 @@ class EffekteFigur(TestCase):
             Effektpruefung.bvh_pfad('/api/character/bvh/%s/gibt_es_nicht_xyz/' % kategorie)
 
     def test_start_weist_unbekanntes_format_fehlendes_modell_und_szene_ab(self):
-        for extra, erwartet in ((dict(bvh=self.unbekannt), 'Format nicht erkannt'),
-                                (dict(modell='Nirgends'), 'Modell fehlt'),
-                                (dict(modell='Buehne'), 'Modell fehlt'),
-                                (dict(modell=''), 'Modell fehlt'),
-                                (dict(parameter={'unterteilung': 2}), 'Parameter'),
-                                (dict(pipeline='quatsch'), 'Unbekannte Pipeline')):
-            with self.subTest(**extra):
-                antwort, start = self.starten(**extra)
-                self.assertEqual(antwort.status_code, 400)
-                self.assertIn(erwartet, antwort.json()['error'])
-                start.assert_not_called()
+        self.abgewiesen(((dict(bvh=self.unbekannt), 'Format nicht erkannt'),
+                         (dict(modell='Nirgends'), 'Modell fehlt'),
+                         (dict(modell='Buehne'), 'Modell fehlt'),
+                         (dict(modell=''), 'Modell fehlt'),
+                         (dict(parameter={'unterteilung': 2}), 'Parameter'),
+                         (dict(pipeline='quatsch'), 'Unbekannte Pipeline')))
         self.assertEqual(Effektauftrag.objects.count(), 0)
 
     def test_zustand_nennt_pipeline_und_modell(self):

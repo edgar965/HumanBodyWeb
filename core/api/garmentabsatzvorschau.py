@@ -59,9 +59,9 @@ class Garmentabsatzvorschau:
         anfrage = Garmentcode.aus_anfrage(request)
         try:
             masse, _ = GarmentcodeDienst.masse(
-                anfrage['geschlecht'], morphs=anfrage['morphs'],
-                bauart=anfrage['bauart'], koerper=anfrage['koerper'],
-                meta=anfrage['meta'])
+                anfrage.geschlecht, morphs=anfrage.morphs,
+                bauart=anfrage.bauart, koerper=anfrage.koerper,
+                meta=anfrage.meta)
             return JsonResponse(Garmentabsatzvorschau.rechnen(masse, *werte))
         except Exception as fehler:                              # noqa: BLE001
             logger.exception('Absatzvorschau nicht berechenbar')

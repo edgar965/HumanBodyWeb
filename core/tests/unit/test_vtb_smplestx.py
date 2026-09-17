@@ -46,6 +46,7 @@ from ausdrucksreihe import Ausdrucksreihe                   # noqa: E402
 from bildabtastung import Bildabtastung                     # noqa: E402
 from smplestxbefund import Smplestxbefund                   # noqa: E402
 from smplestxbild import Smplestxbild                       # noqa: E402
+from ._sicher import Sicher
 
 
 class DerBefund(unittest.TestCase):
@@ -124,7 +125,7 @@ class DerBefund(unittest.TestCase):
             [np.zeros((5, 3), dtype=np.float32)])
         with Pruefablage.ordner() as ordner:
             bild = os.path.join(ordner, 'foto.jpg')
-            pfad = Smplestxbefund(ausgabe).netz_speichern(bild)
+            pfad = Sicher.wert(Smplestxbefund(ausgabe).netz_speichern(bild), 'Pfad')
             self.assertEqual(os.path.dirname(pfad), ordner)
             self.assertEqual(np.load(pfad).shape, (5, 3))
 
@@ -183,7 +184,7 @@ class DasBild(unittest.TestCase):
         bild.durchrechnen = lambda eingabe: {
             Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
         befund = bild.auswerten(self._rgb(), vorher=[0.0, 0.0, 12.0, 12.0])
-        self.assertEqual(list(befund.kasten), self.KAESTEN[0])
+        self.assertEqual(list(Sicher.wert(befund.kasten, 'Kasten')), self.KAESTEN[0])
         self.assertAlmostEqual(befund.guete, 0.99, places=5)
 
     def test_die_einstellungen_werden_gelesen(self):
@@ -225,7 +226,7 @@ class DasBild(unittest.TestCase):
         befund = bild.auswerten(self._rgb())
         self.assertTrue(befund.gefunden)
         self.assertAlmostEqual(befund.guete, 0.55, places=5)
-        self.assertEqual(list(befund.kasten), [0.0, 0.0, 100.0, 200.0])
+        self.assertEqual(list(Sicher.wert(befund.kasten, 'Kasten')), [0.0, 0.0, 100.0, 200.0])
 
 
 class DieAbtastung(unittest.TestCase):

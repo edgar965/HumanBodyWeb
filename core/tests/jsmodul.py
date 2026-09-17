@@ -16,6 +16,7 @@ djangoBase nicht VOR dem Projekt, greift `/static/` zuerst und jeder
 djangoBase-Import landet im falschen Ordner — der Lauf bricht dann mit
 „Cannot find module" ab, und man sucht den Fehler im Testfall.
 """
+import re
 import shutil
 from pathlib import Path
 
@@ -41,6 +42,19 @@ class Jsmodul:
         '/static/': WURZEL / 'static',
     }
 
+    #: `pruefe(was, ist, soll)` — der Vergleich, den jedes Prüfskript braucht.
+    #: Stand in 28 Tests wortgleich (Befund `doppelcode`, 17.09.2026); jetzt
+    #: steht er dem Skript voran, sofern es nicht sein eigenes `pruefe` führt
+    #: (`ist !== soll` oder eine Bedingung — dann gilt das eigene).
+    PRUEFE = """const pruefe = (was, ist, soll) => {
+    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
+        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt '
+                        + JSON.stringify(soll));
+    }
+};
+"""
+    EIGENES_PRUEFE = re.compile(r'\bpruefe\s*=|function\s+pruefe\b')
+
     def __init__(self, *teile):
         """@param teile Pfad unter `static/viewer/`, z.B. ('gemeinsam', 'x.js')"""
         self.pfad = self.VIEWER.joinpath(*teile)
@@ -65,4 +79,6 @@ class Jsmodul:
                 'node ist nicht im Pfad. Die JS-Tests führen die Module '
                 'wirklich aus; ohne node gibt es kein Ergebnis — und ein '
                 'übersprungener Test darf nicht grün melden.')
+        if not Jsmodul.EIGENES_PRUEFE.search(skript):
+            skript = Jsmodul.PRUEFE + skript
         return Webmodul(self.pfad, Jsmodul.WURZELN).laufen(skript)

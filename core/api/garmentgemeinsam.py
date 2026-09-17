@@ -42,7 +42,7 @@ class Garmentgemeinsamendpunkte:
         # Stoffkorrektur; der gemeinsame Weg braucht beides. Das zu
         # uebergehen hiesse, auf einem anderen Koerper zu drapieren als
         # angezeigt — der Fehler vom 06.09.2026.
-        if anfrage['koerper']:
+        if anfrage.koerper:
             return JsonResponse(
                 {'fehler': 'Gemeinsam anziehen gilt für die HumanBody-Figur, '
                            'nicht für einen Referenzkörper.'}, status=400)
@@ -52,9 +52,9 @@ class Garmentgemeinsamendpunkte:
                 {'fehler': 'Keine Stücke angegeben'}, status=400)
         try:
             ergebnis = Garmentgemeinsam.lauf(
-                stuecke, geschlecht=anfrage['geschlecht'],
-                morphs=anfrage['morphs'], bauart=anfrage['bauart'],
-                meta=anfrage['meta'])
+                stuecke, geschlecht=anfrage.geschlecht,
+                morphs=anfrage.morphs, bauart=anfrage.bauart,
+                meta=anfrage.meta)
         except (GemeinsamFehler, AblageFehler,
                 DrapierFehler) as fehler:
             logger.warning('Gemeinsamer Lauf gescheitert: %s', fehler)

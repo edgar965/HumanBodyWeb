@@ -31,11 +31,6 @@ MODUL = Jsmodul('..', 'js', 'auftraege', 'zeilenwahl.js')
 
 SKRIPT = """
 const { Zeilenwahl } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const z = ['a', 'b', 'c', 'd', 'e', 'f'];
 // Bereich: beide Richtungen, einschließlich, ein Element, gelöschte Zeile
 pruefe('vorwärts', Zeilenwahl.bereich(z, 'b', 'e'), ['b', 'c', 'd', 'e']);

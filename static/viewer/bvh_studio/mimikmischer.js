@@ -63,10 +63,12 @@ export class Mimikmischer {
                 + [...uebrig].map(e => Mimikmischer._regler(e, gewichte[e] || 0)).join(''));
         }
         return `<div class="prop-row"><label>Name:</label>
-                <input type="text" id="mimik-eigene-name" class="dehnen" value="${name && name !== 'Mischung' ? name : ''}"
+                <input type="text" id="mimik-eigene-name" class="dehnen"
+                    value="${name && name !== 'Mischung' ? name : ''}"
                     placeholder="Name der eigenen Pose"></div>
             <div class="prop-row mimik-mischer-knoepfe">
-                <button data-rolle="speichern" class="knopf-akzent"><i class="fas fa-save"></i> Als Pose speichern</button>
+                <button data-rolle="speichern" class="knopf-akzent">
+                    <i class="fas fa-save"></i> Als Pose speichern</button>
                 <button data-rolle="zuruecksetzen">Alles auf 0</button></div>
             ${zeilen.join('')}`;
     }

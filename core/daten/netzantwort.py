@@ -79,6 +79,24 @@ class Netzantwort:
         return cls.feld(werte, name, cls.TYPEN_SMPLX.get(name, np.float32))
 
     @classmethod
+    def hautgewichte(cls, haut):
+        """`{knochen, index, gewicht}` als `{knochen, skin_indices, skin_weights}`.
+
+        Die Gewichte base64 mit den Breiten aus `TYPEN` — als JSON-Liste wären
+        es beim geglätteten MakeHuman-Netz 53.514 × 8 Zahlen, bei SMPL 190.000.
+        Die Knochen stehen als NAMEN da: Ihre Nummer im `THREE.Skeleton`
+        entscheidet erst der Bauplan. `None` bleibt `None` (Figur ohne Knochen).
+        Stand in `Mhfigur` und `Smplfigur` gleich (Befund `doppelcode`, 17.09.2026).
+        """
+        if not haut:
+            return None
+        return {
+            'knochen': haut['knochen'],
+            'skin_indices': cls.feld(haut['index'], 'skin_indices'),
+            'skin_weights': cls.feld(haut['gewicht'], 'skin_weights'),
+        }
+
+    @classmethod
     def aus(cls, vertices, faces=None, normals=None, uvs=None, **weitere):
         """Die übliche Antwort: Punkte, optional Dreiecke, Normalen, UVs.
 

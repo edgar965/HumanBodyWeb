@@ -1,0 +1,24 @@
+{% comment %}
+Die Stück-mal-Körper-Matrix der Kleidungshilfe (Zustand je Zelle als Klasse,
+Kennzahl als Text, Einzelheiten im Tooltip). Stand zweimal in
+`kleidung_garmentcode.html` — HumanBody und SMPL (Befund `doppelcode`,
+17.09.2026). `matrix` = {koerper: [...], zeilen: [{stueck, zellen: [{zustand, titel, text}]}]}.
+{% endcomment %}
+  <table class="doku kleidung-matrix">
+    <thead>
+      <tr>
+        <th>Stück</th>
+        {% for k in matrix.koerper %}<th>{{ k }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for zeile in matrix.zeilen %}
+      <tr>
+        <td>{{ zeile.stueck }}</td>
+        {% for z in zeile.zellen %}
+        <td class="zelle-{{ z.zustand }}" title="{{ z.titel }}">{{ z.text }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>

@@ -86,15 +86,7 @@
                                          {% if defaults.gvhmr_device == 'cpu' %}selected{% endif %}>CPU</option>
                                 </select>
                             </div>
-                            <div class="setting-item">
-                                <div class="setting-label">Personen <span
-                                     class="setting-hint">Ein BVH je Person, synchron (gleiche Bilder, gleiche
-                                          Kamera): Person 1 wie bisher, dazu <code>_p2</code>, <code>_p3</code> &hellip;
-                                          nach Gr&ouml;&szlig;e der YOLO-Spur. Wer nur durchs Bild l&auml;uft,
-                                          z&auml;hlt nicht &mdash; das Log nennt alle Spuren</span></div>
-                                <input type="number" name="gvhmr_persons" min="1" max="6" step="1"
-                                     value="{{ defaults.gvhmr_persons }}">
-                            </div>
+                            {% include "_pipeline_personen.html" with name="gvhmr_persons" wert=defaults.gvhmr_persons %}
                             <div class="setting-item">
                                 <div class="setting-label">Video-Output Verzeichnis <span
                                      class="setting-hint">Ordner f&uuml;r SMPL-Render-Videos (In-Camera Overlay, Global

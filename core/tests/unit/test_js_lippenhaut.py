@@ -34,11 +34,6 @@ MODUL = Jsmodul('gemeinsam', 'lippenhaut.js')
 SKRIPT = """
 const { Lippenhaut: L } = await import(MODUL);
 const { Shaderpatch } = await import(new URL('./shaderpatch.js', MODUL).href);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 class Farbe {
     constructor(h) { this.h = h; }
     clone() { return new Farbe(this.h); }
@@ -84,7 +79,7 @@ class LippenhautTest(SimpleTestCase):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
 
-class DasDrahtformat(SimpleTestCase):
+class DasLippenDrahtformat(SimpleTestCase):
 
     def quelle(self, *teile):
         return Path(settings.BASE_DIR).joinpath(*teile).read_text(encoding='utf-8')

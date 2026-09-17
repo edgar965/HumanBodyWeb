@@ -88,12 +88,13 @@ class MhkleidHautTest(unittest.TestCase):
         self.assertAlmostEqual(float(gewicht[0].sum()), 1.0, places=5)
 
     def test_stuecke_der_bibliothek_bekommen_alle_gewichte(self):
-        u"""Gemessen 162 von 181; die uebrigen 19 scheitern schon am Netz.
+        u"""Gemessen 162 von 181 (11.09.2026), 147 von 164 (17.09.2026 — die
+        Bibliothek ist kleiner geworden); die uebrigen scheitern schon am Netz.
 
-        Die 19 sind ein aelterer Befund (`punkte[ecken]` laeuft aus dem
-        Feld) und haben mit den Gewichten nichts zu tun — der Test haelt
-        beide Zahlen auseinander, damit niemand das eine fuer das andere
-        haelt.
+        Die kaputten (17, vorher 19) sind ein aelterer Befund (`punkte[ecken]`
+        laeuft aus dem Feld) und haben mit den Gewichten nichts zu tun — der
+        Test haelt beide Zahlen auseinander, damit niemand das eine fuer das
+        andere haelt: JEDES baubare Stueck hat Gewichte.
         """
         from MakeHuman.kleidnetz import Mhkleidnetz
         mit, ohne, kaputt = 0, 0, 0
@@ -109,7 +110,8 @@ class MhkleidHautTest(unittest.TestCase):
             else:
                 ohne += 1
         self.assertEqual(ohne, 0, 'Stuecke ohne Gewichte: %d' % ohne)
-        self.assertGreater(mit, 150)
+        self.assertEqual(mit, len(self.stuecke) - kaputt)
+        self.assertGreater(mit, 100)
         self.assertLess(kaputt, 25)
 
 
@@ -123,9 +125,10 @@ class SmplTraegerTest(unittest.TestCase):
                                            'SMPL_FEMALE.npz')):
             raise unittest.SkipTest('SMPL-Modelle fehlen')
         from GarmentCode.drapierdienst import Garmentdrapierung
-        cls.traeger = Garmentdrapierung._smpl_traeger('mean_all')
-        if cls.traeger is None:
+        traeger = Garmentdrapierung._smpl_traeger('mean_all')
+        if traeger is None:
             raise unittest.SkipTest('GarmentCode-Koerper nicht lesbar')
+        cls.traeger = traeger
 
     def test_der_traeger_liegt_in_projektkoordinaten(self):
         u"""m, Z oben — so liest `Anziehen.netz_lesen` das Stoffnetz.
@@ -150,8 +153,9 @@ class SmplTraegerTest(unittest.TestCase):
 
     def test_die_knochennamen_passen_zum_skelett_der_figur(self):
         u"""Der Browser ordnet ueber Namen zu — sonst bindet nichts."""
-        from SMPL.skelett import Smplskelett
-        self.assertEqual(self.traeger['knochen'], list(Smplskelett.NAMEN))
+        # Seit 15.09.2026 traegt der Traeger das SMPL-X-Skelett (55 Gelenke).
+        from SMPL.xskelett import Smplxskelett
+        self.assertEqual(self.traeger['knochen'], list(Smplxskelett.NAMEN))
 
     def test_ein_stoffnetz_bekommt_stetige_gewichte(self):
         u"""Die Probe auf das Verfahren: Nachbarn duerfen nicht springen.

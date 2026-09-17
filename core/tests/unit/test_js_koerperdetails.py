@@ -28,11 +28,6 @@ MODUL = Jsmodul('gemeinsam', 'koerperdetails.js')
 
 SKRIPT = """
 const { Koerperdetails } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const nah = (was, ist, soll, eps = 1e-5) => {
     if (Math.abs(ist - soll) > eps) throw new Error(was + ': ' + ist + ' statt ' + soll);
 };

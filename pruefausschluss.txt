@@ -29,3 +29,5 @@ TheatreJS/vite.config.js
 test_anim_debug.js
 # Probe für den Bedienelemente-Test: `tun` ist dort ABSICHTLICH unbekannt
 core/tests/unit/beispiele/bedienung/static/probe.js
+# Probeskripte und Zwischendateien der Sitzungen (nicht versioniert, `.gitignore`)
+ProjektTemp

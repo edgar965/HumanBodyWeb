@@ -236,7 +236,7 @@ class DieQuellen(unittest.TestCase):
     def test_lauf_weist_unbekannte_quellen_ab(self):
         for falsch in ({'haende': 'hamer'}, {'gesicht': 'v4'}, {'handgelenk': 'mitte'}):
             with self.assertRaises(ValueError):
-                Smplxlauf('v.mp4', 'z.bvh', **falsch)
+                Smplxlauf('v.mp4', 'z.bvh', **falsch)  # pyright: ignore[reportArgumentType]
 
     def test_reihe_laeuft_nur_wenn_etwas_daran_haengt(self):
         self.assertTrue(Smplxlauf('v.mp4', 'z.bvh').braucht_reihe)

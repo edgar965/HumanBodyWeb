@@ -133,7 +133,8 @@ class ClothBrueckeTest(SimpleTestCase):
         for feld, wert in faelle.items():
             with self.subTest(feld=feld):
                 with self.assertRaises(ValueError) as f:
-                    self.bauen(Probepaket.bauen(**{feld: wert}))
+                    # absichtlich falsche Typen — das ist der Fall
+                    self.bauen(Probepaket.bauen(**{feld: wert}))  # pyright: ignore[reportArgumentType]
                 self.assertIn(feld, str(f.exception))
 
     # ---------------------------------------------------------- weitere Wege

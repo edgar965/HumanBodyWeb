@@ -30,6 +30,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.test import SimpleTestCase
+from ._sicher import Sicher
 
 WURZEL = Path(settings.BASE_DIR)
 
@@ -106,7 +107,7 @@ class ServerneustartTest(SimpleTestCase):
     def _laden():
         u"""`restart_server.py` liegt in der Projektwurzel, nicht im Paket."""
         pfad = WURZEL / 'restart_server.py'
-        spec = importlib.util.spec_from_file_location('restart_server', pfad)
+        spec = Sicher.wert(importlib.util.spec_from_file_location('restart_server', pfad))
         modul = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(modul)
+        Sicher.wert(spec.loader, 'Lader').exec_module(modul)
         return modul.Serverneustart

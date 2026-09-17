@@ -52,6 +52,14 @@ export class Eigenanimation {
         const clip = await Eigenanimation._clip(inst, url, rawBvhText);
         state.currentAnimBvhText = rawBvhText || await Serverabruf.text(
             url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now()).catch(() => '');
+        return Eigenanimation.abspielen(inst, clip);
+    }
+
+    /**
+     * Den fertigen Clip auf der Figurgruppe abspielen — Skelettanzeige, Mischer,
+     * Aktion. Gemeinsam mit `uma/umaanimation.js` (erbt; Befund `doppelcode`).
+     */
+    static abspielen(inst, clip) {
         if (!state.skeletonHelper) {
             state.skeletonHelper = Skelettanzeige.bauen(
                 state.scene, inst.skelett.rootBone, state.rigVisible);
@@ -107,7 +115,12 @@ export class Eigenanimation {
             unten = Math.min(unten, punkt.y);
             oben = Math.max(oben, punkt.y);
         }
-        return oben > unten ? oben - unten : (inst.hoehe || 1.68);
+        return oben > unten ? oben - unten : this.ersatzhoehe(inst);
+    }
+
+    /** Wenn die Gelenke keine Höhe hergeben: die gebaute Höhe, sonst 1,68 m. */
+    static ersatzhoehe(inst) {
+        return inst.hoehe || 1.68;
     }
 
     /** Nach dem Anhalten: zurück in die Ruhelage des eigenen Skeletts. */

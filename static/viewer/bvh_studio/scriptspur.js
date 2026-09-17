@@ -1,10 +1,9 @@
-import { state, TRACK_COLORS } from './state.js';
+import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { Track, Clip } from './models.js';
+import { Clip } from './models.js';
 import { pushUndo } from './undo.js';
-import { Spurauswahl } from './spurauswahl.js';
 import { Lebendigkeit } from './lebendigkeit.js';
-import { Mimikbasis } from './mimikbasis.js';
+import { Modellkindspur } from './modellkindspur.js';
 
 /**
  * Scriptspur — die Script-Spur einer Modellspur: anlegen, Clips setzen.
@@ -23,24 +22,12 @@ export class Scriptspur {
 
     /** Eine Script-Spur zur Modellspur `modellIdx` anlegen (oder die vorhandene liefern). */
     static anlegen(modellIdx, name = null) {
-        const vorhanden = Scriptspur.zuModell(modellIdx);
-        if (vorhanden) return vorhanden;
-        pushUndo('Script-Spur hinzufügen');
-        const modell = state.project.tracks[modellIdx];
-        const spur = new Track(name || `Script ${modell?.name || ''}`.trim());
-        spur.type = 'script';
-        spur.color = TRACK_COLORS.script;
-        spur._modellIdx = modellIdx;
-        state.project.addTrack(spur);
-        Mimikbasis.laden().then(() => fn.applyPlayhead());
-        fn.updateTrackHeaders();
-        fn.renderTimeline();
-        Spurauswahl.waehlen(state.project.tracks.length - 1);
-        return spur;
+        return Scriptspur.zuModell(modellIdx)
+            || Modellkindspur.anlegen(modellIdx, 'script', 'Script', 'Script-Spur hinzufügen', name);
     }
 
     static zuModell(modellIdx) {
-        return state.project.tracks.find(s => s.type === 'script' && s._modellIdx === modellIdx) || null;
+        return Modellkindspur.zuModell(modellIdx, 'script');
     }
 
     /**
@@ -73,6 +60,3 @@ export class Scriptspur {
         return Scriptspur.clipSetzen(spur, bild);
     }
 }
-
-fn.addScriptTrack = (modellIdx) => Scriptspur.anlegen(modellIdx);
-fn.addScriptClip = (modellIdx, bild) => Scriptspur.hinzufuegen(modellIdx, bild);

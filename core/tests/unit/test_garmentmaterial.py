@@ -47,6 +47,7 @@ import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
+from ._sicher import Sicher
 
 WURZEL = settings.BASE_DIR
 
@@ -81,7 +82,7 @@ class MaterialOhneAuswahlTest(SimpleTestCase):
         quelle = _material()
         unterschrift = re.search(r'static anwenden\(([^)]*)\)', quelle)
         self.assertIsNotNone(unterschrift)
-        self.assertEqual(unterschrift.group(1).strip(),
+        self.assertEqual(Sicher.wert(unterschrift, 'Unterschrift').group(1).strip(),
                          'figur, nutzer = false, werte = null')
 
     def test_ein_regler_bringt_nur_seine_eigenschaft_mit(self):

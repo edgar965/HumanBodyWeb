@@ -19,6 +19,7 @@ export class Mimikkurve {
     /** Gewichte (Pose · Stärke) eines Schlüsselbilds. */
     static pose(schluessel) {
         const staerke = schluessel.staerke ?? 1;
+        /** @type {Object<string, number>} */
         const aus = {};
         for (const [einheit, g] of Object.entries(schluessel.gewichte || {})) {
             if (g) aus[einheit] = g * staerke;
@@ -34,6 +35,7 @@ export class Mimikkurve {
 
     /** Zwei Gewichtssätze mischen: (1 − a) · A + a · B über alle Einheiten. */
     static mischen(a, b, anteil) {
+        /** @type {Object<string, number>} */
         const aus = {};
         for (const einheit of new Set([...Object.keys(a), ...Object.keys(b)])) {
             const wert = (a[einheit] || 0) * (1 - anteil) + (b[einheit] || 0) * anteil;

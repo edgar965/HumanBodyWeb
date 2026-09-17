@@ -26,7 +26,7 @@ export class Modellhinzufuegen {
 
     /**
      * Beide Untermenüs füllen.
-     * @param ids  {modell, bvh} — die Kennungen der zwei Untermenü-Felder
+     * @param {{modell: string, bvh: string}} ids  die Kennungen der zwei Untermenü-Felder
      */
     static fuellen(spur, spurNr, menue, klickbild, ids) {
         _populateTrackAddSubmenu(spur, spurNr, menue, klickbild, ids.modell);

@@ -20,6 +20,7 @@ from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from core.dienste.absatzpose import Absatzpose
+from ._sicher import Sicher
 
 
 class AbsatzposeTest(SimpleTestCase):
@@ -82,7 +83,7 @@ class AbsatzposeTest(SimpleTestCase):
         self.assertIsNone(Absatzpose.aus_anfrage({'winkel_grad': 'x'}))
         pose = Absatzpose.aus_anfrage({'winkel_grad': '7', 'hebung_cm': '4.9',
                                        'plateau_cm': '1'})
-        self.assertAlmostEqual(pose.hebung_m, 0.059)
+        self.assertAlmostEqual(Sicher.wert(pose, 'Pose').hebung_m, 0.059)
         self.assertEqual(Absatzpose.to_threejs({'a': [1, 2, 3, 4]}), {'a': [2, 4, -3, 1]})
 
     def test_der_endpunkt_liefert_die_ruhelage_mit_und_ohne_absatz(self):

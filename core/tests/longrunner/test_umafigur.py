@@ -37,6 +37,7 @@ from UMA_Python.haut import Haut                               # noqa: E402
 from UMA_Python.skelett import Skelett  # noqa: E402
 from UMA_Python.verschmelzen import Verschmelzen                         # noqa: E402
 from UMA_Python.unity import Assetdatei, Serialisiert          # noqa: E402
+from core.tests.unit._sicher import Sicher                     # noqa: E402
 
 #: Der UMA-Klon. Ohne ihn ist hier nichts zu prüfen.
 PROJEKT = Path(str(settings.TOOLS_ROOT)) / 'UMA' / 'UMAProject'
@@ -74,7 +75,7 @@ class UnityFormat(unittest.TestCase):
                          u'Der Slot sollte binär sein')
         datei = Serialisiert(pfad)
         self.assertTrue(datei.unity_fassung.startswith('6000.'))
-        felder = datei.erstes().lesen()
+        felder = Sicher.wert(datei.erstes(), 'erstes Objekt').lesen()
         netz = felder['meshData']
         self.assertEqual(netz['vertexCount'], 3183)
         self.assertEqual(len(netz['vertices']), 3183)
@@ -103,7 +104,7 @@ class UnityFormat(unittest.TestCase):
         if not dna.is_file():
             self.skipTest(u'%s fehlt' % dna)
         self.assertTrue(Assetdatei.ist_text(dna))
-        felder = Assetdatei.oeffnen(dna).erstes().lesen()
+        felder = Sicher.wert(Assetdatei.oeffnen(dna).erstes(), 'erstes Objekt').lesen()
         self.assertEqual(felder.get('m_Name'), 'FemaleBody')
         self.assertTrue(felder.get('dnaList'))
 
@@ -123,12 +124,16 @@ class Figurbau(unittest.TestCase):
         # vierzigmal zu zerlegen.
         cls.gebaut = Figur(PROJEKT).bauen(RASSE)
 
+    def bau(self):
+        u"""Die in `setUpClass` gebaute Figur — `setUp` hat sie schon geprüft."""
+        return Sicher.wert(self.gebaut, 'gebaute Figur')
+
     def setUp(self):
         if self.gebaut is None:
             self.skipTest(u'UMA-Klon nicht vorhanden (%s)' % PROJEKT)
 
     def test_die_figur_ist_vollstaendig(self):
-        bilanz = self.gebaut.bilanz()
+        bilanz = self.bau().bilanz()
         self.assertEqual(bilanz['fehlend'], [],
                          u'Slots, die das Rezept nennt und die fehlen')
         self.assertEqual(bilanz['punkte'], 16277)
@@ -144,14 +149,14 @@ class Figurbau(unittest.TestCase):
     def test_die_gewichte_summieren_sich_auf_eins(self):
         u"""Eine Zeile, die sich nicht auf 1 summiert, schrumpft oder
         bläht ihren Punkt — sichtbar erst beim Bewegen."""
-        summe = self.gebaut.netz.gewichte.sum(axis=1)
+        summe = self.bau().netz.gewichte.sum(axis=1)
         np.testing.assert_allclose(summe, 1.0, atol=1e-5)
 
     def test_ruhe_ist_das_eingangsnetz(self):
         u"""DIE SCHARFE PROBE. Ohne DNA muss das Häuten den Eingang
         zurückgeben — jeder Bindepose-, Reihenfolge- oder
         Zuordnungsfehler fällt hier (siehe Kopf: dreimal geschehen)."""
-        netz = self.gebaut.netz
+        netz = self.bau().netz
         skelett = Skelett(netz.knochen)
         matrizen = Haut.matrizen(skelett.weltmatrizen(), netz.bindeposen)
         ruhe = Haut.verformen(netz.punkte, netz.gewichte,
@@ -168,7 +173,7 @@ class Figurbau(unittest.TestCase):
         Matrizen zufällig die Einheit, käme der Eingang ebenfalls
         unverändert zurück (MEMORY.md, „SkinnedMesh Debug Pattern").
         """
-        netz = self.gebaut.netz
+        netz = self.bau().netz
         skelett = Skelett(netz.knochen)
         welt = skelett.weltmatrizen()
         welt[10] = welt[10] @ Skelett.matrix([0.3, 0.0, 0.0],
@@ -181,7 +186,7 @@ class Figurbau(unittest.TestCase):
 
     def test_die_hoehe_stimmt(self):
         u"""1,99 m — und der Regler `height` verändert sie wirklich."""
-        netz = self.gebaut.netz
+        netz = self.bau().netz
         hoehe = float(netz.punkte[:, 2].max() - netz.punkte[:, 2].min())
         self.assertAlmostEqual(hoehe, 1.99, delta=0.05)
 
@@ -194,7 +199,7 @@ class Figurbau(unittest.TestCase):
         Abbildung nicht auffällt.
         """
         def hoehe(wert):
-            punkte = self.gebaut.punkte({'height': wert})
+            punkte = self.bau().punkte({'height': wert})
             return float(punkte[:, 2].max() - punkte[:, 2].min())
 
         klein, mitte, gross = hoehe(0.0), hoehe(0.5), hoehe(1.0)
@@ -209,8 +214,8 @@ class Figurbau(unittest.TestCase):
         setzt, bekäme die doppelte Verformung — und der erste Aufruf sah
         richtig aus.
         """
-        erst = self.gebaut.punkte({'height': 0.8})
-        zweit = self.gebaut.punkte({'height': 0.8})
+        erst = self.bau().punkte({'height': 0.8})
+        zweit = self.bau().punkte({'height': 0.8})
         np.testing.assert_allclose(erst, zweit, atol=1e-9)
 
     def test_die_ruhelage_kommt_aus_den_bindeposen(self):
@@ -226,7 +231,7 @@ class Figurbau(unittest.TestCase):
         sie in den Ursprung, was im Bild ein Fächer aus bis zu 1,59 m
         langen Knochenlinien war (`Verschmelzen.hat_bindepose`).
         """
-        netz = self.gebaut.netz
+        netz = self.bau().netz
         eigene = Verschmelzen.hat_bindepose(netz)
         self.assertGreater(int((~eigene).sum()), 0,
                            u'ohne solche Knochen prüft der Test nichts')
@@ -244,7 +249,7 @@ class Figurbau(unittest.TestCase):
         1,59 m aus Gesicht, Fingern und Zehen zum Boden — während alle
         229 echten Knochen auf 0,01 mm richtig saßen.
         """
-        netz = self.gebaut.netz
+        netz = self.bau().netz
         eigene = Verschmelzen.hat_bindepose(netz)
         welt = Skelett(netz.knochen).weltmatrizen()[:, :3, 3]
         ohne = welt[~eigene]

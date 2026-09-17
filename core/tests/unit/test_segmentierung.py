@@ -30,6 +30,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from GarmentCode.segmentierung import Segmentierung
+from ._sicher import Sicher
 
 
 KNOCHEN = ['DEF-spine', 'DEF-thigh.L', 'DEF-upper_arm.R',
@@ -211,7 +212,7 @@ class GrundnetzTest(SimpleTestCase):
             erwartet = len(morphdaten.l1[bauart])
             netz = GarmentcodeDienst._grundnetz(
                 Charakterdaten.geschlecht_zu(bauart), bauart)
-            self.assertIsNotNone(netz, bauart)
+            netz = Sicher.wert(netz, bauart)
             self.assertEqual(len(netz), erwartet, bauart)
 
     def test_maennlich_und_weiblich_sind_verschieden_lang(self):

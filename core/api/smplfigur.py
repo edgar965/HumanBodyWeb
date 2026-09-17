@@ -58,22 +58,5 @@ class Smplfigur:
             'skelett': Smplfiguren.skelett(name, punkte),
             # Ohne Hautgewichte bleibt die Figur beim Abspielen starr —
             # das Skelett bewegt sich, das Netz nicht.
-            'hautgewichte': Smplfigur._hautgewichte(name, punkte),
+            'hautgewichte': Netzantwort.hautgewichte(Smplfiguren.haut(name, punkte)),
         })
-
-    @staticmethod
-    def _hautgewichte(name, punkte):
-        u"""Die Hautgewichte, base64 wie ueberall sonst im Projekt.
-
-        Als JSON-Liste waeren es bei 23.752 Punkten 190.000 Zahlen; die
-        Gegenseite liest `Float32Array`, deshalb genau die Typen aus
-        `Netzantwort.TYPEN`.
-        """
-        haut = Smplfiguren.haut(name, punkte)
-        if not haut:
-            return None
-        return {
-            'knochen': haut['knochen'],
-            'skin_indices': Netzantwort.feld(haut['index'], 'skin_indices'),
-            'skin_weights': Netzantwort.feld(haut['gewicht'], 'skin_weights'),
-        }

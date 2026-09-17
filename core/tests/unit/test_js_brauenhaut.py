@@ -80,30 +80,26 @@ console.log(JSON.stringify({ ok: true }));
 """
 
 
-def _text(*teile):
-    return VIEWER.joinpath(*teile).read_text(encoding='utf-8')
-
-
 class BrauenhautTest(SimpleTestCase):
 
     def test_abfrage_und_shader(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
-    def test_vorlagen(self):
+    def test_vorlage_setzt_ihre_felder_und_wird_erkannt(self):
         self.assertTrue(VORLAGEN.laufen(VORLAGEN_SKRIPT).get('ok'))
 
-    def test_verdrahtung(self):
-        modell = _text('gemeinsam', 'humanbodymodell.js')
+    def test_modell_regler_und_albedo_sind_verdrahtet(self):
+        modell = BrauenhautTest._text('gemeinsam', 'humanbodymodell.js')
         self.assertIn('Brauenhaut.anwenden(this.bodyMesh, this.details, this.bodyType)',
                       modell)
         for datei in ('gemeinsam/humanbodymodell.js', 'scene/detailbedienung.js',
                       'scene/charakter_koerper.js'):
-            self.assertNotIn('Augenbrauenbau.', _text(*datei.split('/')), datei)
+            self.assertNotIn('Augenbrauenbau.', BrauenhautTest._text(*datei.split('/')), datei)
         self.assertIn("(farbig ? '?brauen=ohne' : '')",
-                      _text('gemeinsam', 'hauttextur.js'))
-        vorgabe = _text('gemeinsam', 'koerperdetails.js')
+                      BrauenhautTest._text('gemeinsam', 'hauttextur.js'))
+        vorgabe = BrauenhautTest._text('gemeinsam', 'koerperdetails.js')
         felder = sorted(set(re.findall(r'(brauen_[a-z_]+):', vorgabe)))
-        bereiche = _text('scene', 'detailbereiche.js')
+        bereiche = BrauenhautTest._text('scene', 'detailbereiche.js')
         vorlage = (settings.BASE_DIR / 'templates' / '_szene_details.html'
                    ).read_text(encoding='utf-8')
         for feld in felder:
@@ -113,7 +109,11 @@ class BrauenhautTest(SimpleTestCase):
         self.assertEqual(len(felder), 9, felder)
         self.assertIn('id="prop-detail-brauen-vorlage"', vorlage)
         self.assertIn("Brauenvorlagen.anwenden(inst.details, wahl.value, "
-                      "Koerperdetails.VORGABE)", _text('scene', 'detailbedienung.js'))
+                      "Koerperdetails.VORGABE)", BrauenhautTest._text('scene', 'detailbedienung.js'))
         hauttexturen = (settings.BASE_DIR / 'core' / 'api' / 'hauttexturen.py'
                         ).read_text(encoding='utf-8')
         self.assertIn("request.GET.get('brauen') == 'ohne'", hauttexturen)
+
+    @staticmethod
+    def _text(*teile):
+        return VIEWER.joinpath(*teile).read_text(encoding='utf-8')

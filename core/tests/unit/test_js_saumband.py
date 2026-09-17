@@ -39,11 +39,6 @@ MODUL = Jsmodul('gemeinsam', 'saumband.js')
 
 SKRIPT = """
 const { Saumband: S } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const nah = (was, a, b) => {
     if (Math.abs(a - b) > 1e-7) throw new Error(was + ': ' + a + ' statt ' + b);
 };
@@ -90,7 +85,7 @@ console.log(JSON.stringify({ ok: true }));
 """
 
 
-class SaumbandTest(SimpleTestCase):
+class SaumbandJsTest(SimpleTestCase):
 
     def test_band_neben_der_gezeichneten_haut(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

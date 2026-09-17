@@ -33,10 +33,10 @@ export class Materialziel {
     /**
      * Die Netze, die den Stand bekommen.
      *
-     * @param {Object} wahl
-     * @param {Object|null} wahl.gewaehlt  das angeklickte GarmentCode-Stück
-     * @param {Object} wahl.stuecke        `inst.clothMeshes` der Figur
-     * @param {boolean} wahl.nutzer        hat der Nutzer das Feld bedient?
+     * @param {Object} [wahl]
+     * @param {Object|null} [wahl.gewaehlt]  das angeklickte GarmentCode-Stück
+     * @param {Object|null} [wahl.stuecke]  `inst.clothMeshes` der Figur
+     * @param {boolean} [wahl.nutzer]  hat der Nutzer das Feld bedient?
      * @returns {Array<Object>} gewählt → nur dieses; sonst bei einer
      *          Nutzeraktion alle `gc_*`-Stücke der Figur; sonst keines
      */

@@ -25,6 +25,7 @@ export class Brauenhaut {
     /** Materialgruppen der Haut (mit Censor) — wie `Hauttextur.HAUT`. */
     static HAUT = [0, 1];
     /** Detailfelder → Abfrageparameter; mm-Felder stehen in Metern in `details`. */
+    /** @type {Object<string, [string, number]>} */
     static FELDER = {
         brauen: ['farbe', 1], brauen_staerke: ['haar_laenge', 1], brauen_dicke: ['dicke', 1],
         brauen_dichte: ['dichte', 1], brauen_bogen_laenge: ['laenge', 1],

@@ -34,11 +34,13 @@ in Ruhelage entschieden — hebt der Wind den Rock, laege darunter ein Loch
 (dieselbe Falle wie MPFBs Delete-Maske in der Blender-Pipeline).
 """
 import json
+import logging
 import os
 import subprocess
-import sys
 
 import numpy as np
+
+logger = logging.getLogger('core')
 
 __all__ = ['Stoffauftrag']
 
@@ -63,6 +65,7 @@ class Stoffauftrag:
 
     def rechnen(self, python, skript, cache):
         if not self.teile:
+            logger.info('Stoff: kein GarmentCode-Stueck am Modell')
             print(u'Stoff: kein GarmentCode-Stueck am Modell — nichts zu rechnen',
                   flush=True)
             return None
@@ -79,6 +82,7 @@ class Stoffauftrag:
         # Ohne Hautmaske — der Stoff bewegt sich jetzt vom Koerper weg.
         self.film.teile[0].pop('maske', None)
         self.film.teile[0].pop('dreiecke_sichtbar', None)
+        # Dictionary gewollt: geht als `stoff` in die Bilanzdatei (JSON).
         return {'stuecke': [t['name'] for t in self.teile],
                 'punkte': int(folge.shape[1]),
                 'ms_je_bild_median': round(float(np.median(ms)), 1) if len(ms) else None,
@@ -156,15 +160,19 @@ class Stoffauftrag:
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             cwd=os.path.dirname(skript))
         letzte = []
-        for roh in prozess.stdout:
+        for roh in prozess.stdout or []:
             zeile = roh.decode('utf-8', errors='replace').rstrip()
             letzte = (letzte + [zeile])[-30:]
+            # Die Newton-Ausgabe geht Zeile fuer Zeile in die lauf.log des Auftrags
+            # (stdout) — und bei DEBUG auch ins Serverlog.
+            logger.debug('Newton: %s', zeile)
             if zeile.startswith('Effekte: '):
                 # Bruchform durchreichen: Stoff liegt zwischen 30 % und 45 %.
                 teil = zeile[len('Effekte: '):]
                 try:
                     n, m = [int(x) for x in teil.rsplit(u'—', 1)[1].split('/')]
                     self.melder(teil.rsplit(u'—', 1)[0].strip(), 0.3 + 0.15 * n / max(m, 1))
+                # stumm gewollt: keine Bruchzahl in der Zeile — dann ist sie Protokoll, kein Stand
                 except (ValueError, IndexError):
                     print(zeile, flush=True)
             else:

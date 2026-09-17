@@ -28,15 +28,11 @@ from django.test import SimpleTestCase
 STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
 
 
-def _text(name):
-    return (STUDIO / name).read_text(encoding='utf-8')
-
-
 class BodendurchsichtTest(SimpleTestCase):
     databases = set()
 
     def test_felder_gehen_durch_alle_schichten(self):
-        boden = _text('spur_boden.js')
+        boden = BodendurchsichtTest._text('spur_boden.js')
         anlegen = boden[boden.index('export function createFloorTrack'):
                         boden.index('export function applyFloorOverride')]
         laden = boden[boden.index('export function applyFloorOverride'):
@@ -44,10 +40,10 @@ class BodendurchsichtTest(SimpleTestCase):
         for rumpf in (anlegen, laden):
             self.assertIn('track.floorTransparenz = override', rumpf)
             self.assertIn('track.floorTiefe = override', rumpf)
-        speichern = _text('projekt_daten.js')
+        speichern = BodendurchsichtTest._text('projekt_daten.js')
         self.assertIn('transparenz: t.floorTransparenz', speichern)
         self.assertIn('tiefe: t.floorTiefe', speichern)
-        maske = _text('eigenschaften/boden.js')
+        maske = BodendurchsichtTest._text('eigenschaften/boden.js')
         regler = re.findall(r"_regler\('(prop-floor-[a-z]+)'", maske)
         self.assertEqual(regler, ['prop-floor-transparenz', 'prop-floor-tiefe'])
         self.assertIn("['prop-floor-transparenz', 'floorTransparenz']", maske)
@@ -55,7 +51,7 @@ class BodendurchsichtTest(SimpleTestCase):
         self.assertIn('type="range"', maske)
 
     def test_material_und_groesse_ziehen_die_platte_nach(self):
-        boden = _text('spur_boden.js')
+        boden = BodendurchsichtTest._text('spur_boden.js')
         material = boden[boden.index('export function updateFloorMaterial'):
                          boden.index('export async function applyFloorTexture')]
         groesse = boden[boden.index('export function setFloorGeometry'):
@@ -64,8 +60,12 @@ class BodendurchsichtTest(SimpleTestCase):
         self.assertIn('Bodenuntergrund.nachziehen(track)', groesse)
 
     def test_platte_ist_kind_des_bodens_ohne_isfloor(self):
-        platte = _text('bodenuntergrund.js')
+        platte = BodendurchsichtTest._text('bodenuntergrund.js')
         self.assertIn('track.mesh.add(platte)', platte)
         self.assertIn('platte.geometry = boden.geometry', platte)
         self.assertIn('m.opacity = 1 - durch', platte)
         self.assertNotIn('isFloor = true', platte)
+
+    @staticmethod
+    def _text(name):
+        return (STUDIO / name).read_text(encoding='utf-8')

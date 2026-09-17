@@ -89,6 +89,7 @@ export class Mimikanwendung {
     static gewichteModell(modellIdx, t) {
         const fps = state.project.fps;
         const mimik = Mimikanwendung.spurZu(modellIdx, 'mimik');
+        /** @type {Object<string, number>} */
         const gewichte = mimik ? Mimikanwendung.posen(mimik, t) : {};
         const script = Mimikanwendung.spurZu(modellIdx, 'script');
         const dazu = script ? Scriptzuschlag.gewichte(script.clips, Math.round(t * fps), fps, gewichte)

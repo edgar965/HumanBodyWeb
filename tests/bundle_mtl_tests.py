@@ -67,6 +67,7 @@ class BundleMtlTests(TestCategory):
                                                 textur='swan_tex.png')
         if fehler:
             return False, fehler
+        mtl_daten = mtl_daten or {}
         rohangabe, wortteile = Mtlbezug.aus_adresse(mtl_daten['url'])
         name = Mtlbezug.dateiname(rohangabe, wortteile)
         if name != 'swan_tex.png':
@@ -132,6 +133,7 @@ class BundleMtlTests(TestCategory):
         if fehler:
             return False, fehler
         # Simuliere Parser: probiere "textures/swan.png" (fehlt), dann "swan.png" (OK)
+        mtl_data = mtl_data or {}
         raw_ref, tokens = Mtlbezug.aus_adresse(mtl_data['url'])
         candidate = ((tokens[-1] if tokens else raw_ref)
                      .replace('\\', '/').lstrip('./'))
@@ -160,6 +162,7 @@ class BundleMtlTests(TestCategory):
         fehler, mtl_data = cls._mtl_und_textur(bundle, 'bs.mtl', mtl_bs)
         if fehler:
             return False, fehler
+        mtl_data = mtl_data or {}
         raw_ref, tokens = Mtlbezug.aus_adresse(mtl_data['url'])
         ref_name = Mtlbezug.dateiname(raw_ref, tokens)
         if ref_name != 'swan.png':

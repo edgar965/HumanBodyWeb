@@ -46,7 +46,7 @@ class Keypointsquellen:
             gewichte = output_dir / stamm / 'hmr4d_results.pt'
             if not gewichte.exists():
                 return None
-            import torch
+            import torch  # pyright: ignore[reportMissingImports]  (python10)
             geschaetzt = torch.load(str(gewichte), map_location='cpu',
                                     weights_only=False)
             if ('smpl_params_incam' not in geschaetzt

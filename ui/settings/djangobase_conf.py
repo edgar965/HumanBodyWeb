@@ -142,11 +142,23 @@ DJANGOBASE = {
     # Skriptordner, die ihre Nachbarn flach importieren (`from hbfilm import …`):
     # Python legt das Skriptverzeichnis in sys.path, der Language Server nicht
     # (12.09.2026: 143 „Import, den es nicht gibt", keiner ein Fehler).
+    # Dazu (17.09.2026): `VelocitySkinning_Python` (`kalibrierung`, `skinning`),
+    # `GarmentCode` selbst (`drapierlauf`), die Proben neben `ModelPhysik`,
+    # `MocapNET_v4` (`mediapipe_compat`), `smpl2bvh` (`bvh`, `quat`) und
+    # MakeHumans `lib` (`targets`) — 20 weitere Importe, keiner ein Fehler.
+    # `wrappers` VOR `GarmentCode`: beide fuehren ein `koerpermasse.py`, und die
+    # Tests der Wrapper meinen ihres (15 Meldungen bei falscher Reihenfolge).
     'ls_extra_pfade': [HUMANBODY_ROOT, TOOLS_ROOT, ASSETS_ROOT,
                        ASSETS_ROOT / 'assetCreator',
-                       ASSETS_ROOT / 'GarmentCode' / 'upstream',
                        VIDEOTOBVH_ROOT / 'wrappers',
+                       VIDEOTOBVH_ROOT / 'wrappers' / 'smpl2bvh',
+                       ASSETS_ROOT / 'GarmentCode',
+                       ASSETS_ROOT / 'GarmentCode' / 'upstream',
+                       VIDEOTOBVH_ROOT / 'MocapNET_v4',
+                       TOOLS_ROOT / 'VelocitySkinning_Python',
+                       TOOLS_ROOT / 'MakeHuman' / 'makehuman' / 'lib',
                        BASE_DIR / 'TheatreJS' / 'ModelPhysik',
+                       BASE_DIR / 'TheatreJS' / 'ModelPhysik' / 'proben',
                        BASE_DIR / 'TheatreJS' / 'kleiderPhysik'],
     'farben': {
         'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)

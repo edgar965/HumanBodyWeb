@@ -34,6 +34,7 @@ class ClothBackeTests(TestCategory):
         daten, ordner, grund = Bakeablage.laden(np)
         if grund:
             return True, grund
+        daten = daten or {}
         if int(daten['n_seg'][0]) == 0:
             return True, 'Skip: keine Cloth-Segmente'
         pruefung = Rockradien().bake_pruefen(daten)
@@ -51,6 +52,7 @@ class ClothBackeTests(TestCategory):
         d, _ordner, grund = Bakeablage.laden(np)
         if grund:
             return True, grund
+        d = d or {}
         rigid_pos = d['rigid_positions']   # (N, NV_body, 3)
         n_seg = int(d['n_seg'][0])
         if n_seg == 0:

@@ -24,12 +24,6 @@ MODUL = Jsmodul('gemeinsam', 'lippengruppe.js')
 
 SKRIPT = """
 const { Lippengruppe: L } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt '
-                        + JSON.stringify(soll));
-    }
-};
 // Haut: (0,1,2) (3,4,5) (6,7,8) (2,3,9); Sklera: (10,11,12). Lippen: 3,4,5,6,7,8,9
 const index = Uint32Array.from([0,1,2, 3,4,5, 6,7,8, 2,3,9, 10,11,12]);
 const gruppen = [{ start: 0, count: 12, materialIndex: 0 },
@@ -60,5 +54,5 @@ console.log(JSON.stringify({ ok: true }));
 
 class LippengruppeTest(SimpleTestCase):
 
-    def test_abspalten(self):
+    def test_lippendreiecke_werden_abgespalten(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

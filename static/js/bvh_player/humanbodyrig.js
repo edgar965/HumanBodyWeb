@@ -40,7 +40,8 @@ const NOTHOEHE_M = 1.68;
  * ORG-teeth). `buildRigifySkeleton` ersetzt nur Punkte durch Unterstriche,
  * der Bindestrich nach DEF bleibt.
  */
-const FEINTEILE = /^(DEF-(f_|thumb|palm|toe|foot|brow|cheek|chin|ear|forehead|jaw|lid|lip|nose|temple|tongue)|MCH-|ORG-)/;
+const FEINTEILE = new RegExp('^(DEF-(f_|thumb|palm|toe|foot|brow|cheek|chin|ear|forehead'
+                             + '|jaw|lid|lip|nose|temple|tongue)|MCH-|ORG-)');
 
 /** DEF-Knochen (Kopf des Knochens = Gelenk) → Namen des 2D-Gelenks je Wortschatz. */
 export const GELENKPAARE = [

@@ -70,4 +70,4 @@ class Bakeablage:
         if grund:
             return None, None, grund
         return (np.load(pfad, allow_pickle=True),
-                os.path.basename(os.path.dirname(pfad)), None)
+                os.path.basename(os.path.dirname(pfad or '')), None)

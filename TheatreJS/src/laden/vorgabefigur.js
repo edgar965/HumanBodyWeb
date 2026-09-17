@@ -2,6 +2,7 @@ import { HumanbodyModell }
     from '../../../static/viewer/gemeinsam/humanbodymodell.js';
 import { Koerperfrage } from '../../../static/viewer/gemeinsam/koerperfrage.js';
 import { Figurlage } from './figurlage.js';
+import { Buehnenschatten } from './buehnenschatten.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
@@ -47,12 +48,7 @@ export class Vorgabefigur {
         const modell = new HumanbodyModell(name, vorgabe);
         await modell.bauen({ zubehoer: true });
         const gruppe = modell.group;
-        gruppe.traverse(teil => {
-            if (teil.isMesh) {
-                teil.castShadow = true;
-                teil.receiveShadow = true;
-            }
-        });
+        Buehnenschatten.an(gruppe);
         scene.add(gruppe);
         this._kennzeichnen(gruppe, modell, vorgabe, name);
         // Lage VOR der Anmeldung: Theatre.js nimmt die Position als Startwert.

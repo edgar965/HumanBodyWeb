@@ -4,6 +4,7 @@ import { Figurwahldialog }
 import { Katalogpflege } from '../../../static/viewer/scene/katalogpflege.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { Figurlage } from '../laden/figurlage.js';
+import { Buehnenschatten } from '../laden/buehnenschatten.js';
 import { Theatreanmeldung } from '../laden/theatreanmeldung.js';
 
 /**
@@ -78,12 +79,7 @@ export class Figurwahl {
     async uma(name, lage) {
         const modell = await new UmaModell(`uma_${Date.now()}`, { datei: name }).bauen();
         const gruppe = modell.group;
-        gruppe.traverse(teil => {
-            if (teil.isMesh) {
-                teil.castShadow = true;
-                teil.receiveShadow = true;
-            }
-        });
+        Buehnenschatten.an(gruppe);
         const anzeige = String(name).replace(/\.glb$/i, '');
         Object.assign(gruppe.userData, {
             isCharacter: true, presetName: modell.presetName, bodyType: modell.bodyType, modell,

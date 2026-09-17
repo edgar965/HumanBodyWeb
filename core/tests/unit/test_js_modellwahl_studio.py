@@ -39,11 +39,6 @@ PLATZ = Jsmodul('bvh_studio', 'modellplatz.js')
 GRUPPEN = Jsmodul('bvh_studio', 'modellgruppen.js')
 
 PRUEFE = """
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const bvh = (x, extra = {}) => ({ type: 'bvh', clips: [], position: [x, 0, 0], ...extra });
 const modell = (ziel) => ({ type: 'model', clips: [], _linkedAnimIdx: ziel });
 """

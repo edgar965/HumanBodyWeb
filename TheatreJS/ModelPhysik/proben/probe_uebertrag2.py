@@ -158,7 +158,7 @@ class Uebertragprobe:
         print('Armumfang 3 cm ueber dem Ellbogen, %d Punkte' % len(messpunkte))
         print('%-10s %9s %24s %26s'
               % ('Beugung', 'Ruhe', 'nur LBS (heute)', 'LBS + SMPL-Korrektur'))
-        u0 = Armmass.umfang(self.punkte, messpunkte, achse_ober)
+        u0 = Armmass.umfang(self.punkte, messpunkte, achse_ober) or 1e-9
         for grad in (30, 60, 90, 120):
             wk = np.radians(grad)
             drehung = Armmass.achsdrehung([1, 0, 0], wk)
@@ -167,8 +167,8 @@ class Uebertragprobe:
             mit = Armmass.haeuten(self.punkte + self._korrektur(wk), self.gewichte,
                                   self.ruhe, pose)
             pose_achse = pose[i_ober][:3, 1]
-            u_lbs = Armmass.umfang(lbs, messpunkte, pose_achse)
-            u_mit = Armmass.umfang(mit, messpunkte, pose_achse)
+            u_lbs = Armmass.umfang(lbs, messpunkte, pose_achse) or 0.0
+            u_mit = Armmass.umfang(mit, messpunkte, pose_achse) or 0.0
             print('%-10s %6.2f cm   %7.2f cm (%+6.1f %%)   %8.2f cm (%+6.1f %%)'
                   % ('%d Grad' % grad, u0, u_lbs, 100 * (u_lbs - u0) / u0,
                      u_mit, 100 * (u_mit - u0) / u0))

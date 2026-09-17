@@ -67,6 +67,7 @@ class EffekteEinstellungenSeite(View):
         u"""Zahl im Rahmen des Registers; Unlesbares laesst den Wert stehen."""
         try:
             wert = typ(float(roh))
+        # stumm gewollt: Unlesbares laesst den bisherigen Wert stehen — sagt der Docstring
         except (TypeError, ValueError):
             return bisher
         feld = Einstellungsfelder.feld(name)

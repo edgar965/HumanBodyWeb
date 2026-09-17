@@ -19,6 +19,9 @@ import numpy as np
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 GC = os.path.join('A:', os.sep, '3DTools', 'Assets', 'GarmentCode')
+# Der Videoschreiber liegt bei der Koerperphysik — EINE Stelle fuer MP4.
+sys.path.insert(0, os.path.join(os.path.dirname(ORDNER), 'ModelPhysik'))
+from videoschreiber import Videoschreiber  # noqa: E402
 
 
 class Stoffvideo:
@@ -97,27 +100,14 @@ class Stoffvideo:
                                                      material=stoff))
                 szene.add(kamera, pose=lage)
                 szene.add(licht, pose=lichtlage)
-                farbe, _t = werk.render(szene)
-                yield np.asarray(farbe[:, :, :3], dtype=np.uint8)
+                yield Videoschreiber.rendern(werk, szene)
         finally:
             werk.delete()
 
     def schreiben(self, ziel, fps=25, halten=25):
         u"""`halten` haengt das Endbild an — sonst ist es kaum zu sehen."""
-        import cv2
-        os.makedirs(os.path.dirname(ziel) or '.', exist_ok=True)
-        gesammelt = list(self.bilder())
-        h, b = gesammelt[0].shape[:2]
-        schreiber = cv2.VideoWriter(ziel, cv2.VideoWriter_fourcc(*'mp4v'),
-                                    float(fps), (b, h))
-        if not schreiber.isOpened():
-            raise SystemExit(u'VideoWriter liess sich nicht oeffnen.')
-        try:
-            for bild in gesammelt + [gesammelt[-1]] * int(halten):
-                schreiber.write(cv2.cvtColor(bild, cv2.COLOR_RGB2BGR))
-        finally:
-            schreiber.release()
-        return ziel, len(gesammelt) + int(halten)
+        return Videoschreiber.schreiben(self.bilder(), ziel, fps, schleifen=1,
+                                        halten=halten)
 
 
 def main():

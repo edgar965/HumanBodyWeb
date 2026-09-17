@@ -85,22 +85,31 @@ class Mimikspuren:
         if bilder.size == 0:
             return Bewegungsspuren.leer()
         anzahl = bilder.shape[0]
-        knochen = sorted({k for e in einheiten if e in basis
-                          for r in basis[e].values() for k in r})
+        knochen = Mimikspuren._knochen(einheiten, basis)
         drehung = {k: np.zeros((anzahl, 3)) for k in knochen}
         for j, einheit in enumerate(einheiten):
-            eintrag = basis.get(einheit)
-            if eintrag is None:
-                continue
-            g = bilder[:, j]
-            plus, minus = np.clip(g, 0, None), np.clip(-g, 0, None)
-            for richtung, betrag in ((eintrag['plus'], plus), (eintrag['minus'], minus)):
-                if not betrag.any():
-                    continue
-                for k, werte in richtung.items():
-                    drehung[k] += betrag[:, None] * np.asarray(werte[:3], dtype=float)
+            Mimikspuren._einheit(drehung, basis.get(einheit), bilder[:, j])
         tracks = {k: Rotation.from_rotvec(v).as_quat().reshape(-1).tolist()
                   for k, v in drehung.items()}
         return Bewegungsspuren(
             duration=anzahl / fps, times=[i / fps for i in range(anzahl)],
             tracks=tracks, frame_count=anzahl, mapped_bones=knochen)
+
+    @staticmethod
+    def _knochen(einheiten, basis):
+        u"""Alle Knochen, die eine der Einheiten bewegt — sortiert."""
+        return sorted({k for e in einheiten if e in basis
+                       for r in basis[e].values() for k in r})
+
+    @staticmethod
+    def _einheit(drehung, eintrag, g):
+        u"""Die Drehvektoren EINER Einheit (Gewichte `g` je Bild, positiv →
+        `plus`, negativ → `minus`) auf die Knochen addieren."""
+        if eintrag is None:
+            return
+        for richtung, betrag in ((eintrag['plus'], np.clip(g, 0, None)),
+                                 (eintrag['minus'], np.clip(-g, 0, None))):
+            if not betrag.any():
+                continue
+            for k, werte in richtung.items():
+                drehung[k] += betrag[:, None] * np.asarray(werte[:3], dtype=float)

@@ -31,6 +31,7 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
 
     def setUp(self):
         self.modul = HautverdeckungVerdrahtungTest._lies('scene', 'hautverdeckung.js')
+        self.figurhaut = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'figurhaut.js')
 
     def test_wird_geladen_und_hoert_auf_das_stueckereignis(self):
         self.assertIn("import './hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js'))
@@ -43,8 +44,11 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertIn("Stueckereignis.melden(inst, target.key.slice(3), false);", quelle)
 
     def test_der_volle_index_bleibt_und_die_stoffgrenze_nimmt_ihn(self):
-        self.assertIn('geo.userData.indexVoll = {', self.modul)
-        self.assertIn('index: geo.index.array.slice()', self.modul)
+        # `merken`/`indexSetzen`/`vollerIndex` kommen seit 17.09.2026 aus `Figurhaut`.
+        self.assertIn('export class Hautverdeckung extends Figurhaut {', self.modul)
+        self.assertNotIn('static merken(', self.modul)
+        self.assertIn('geo.userData.indexVoll = {', self.figurhaut)
+        self.assertIn('index: geo.index.array.slice()', self.figurhaut)
         # Jede Maske rechnet vom vollen Index, nie vom gekuerzten.
         self.assertIn('Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe)', self.modul)
         # Seit dem 13.09.2026 mit `weg` aus dem Einzug: hinter der Maskengrenze
@@ -80,8 +84,8 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
     def test_die_gruppen_werden_neu_gesetzt(self):
         u"""`addGroup` zaehlt Indexeintraege; ohne `clearGroups` laegen alte
         und neue Gruppen uebereinander."""
-        self.assertIn('geo.clearGroups();', self.modul)
-        self.assertIn('geo.addGroup(g.start, g.count, g.materialIndex)', self.modul)
+        self.assertIn('geo.clearGroups();', self.figurhaut)
+        self.assertIn('geo.addGroup(g.start, g.count, g.materialIndex)', self.figurhaut)
 
     @staticmethod
     def _lies(*teile):

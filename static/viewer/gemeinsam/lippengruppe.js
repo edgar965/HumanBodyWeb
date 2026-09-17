@@ -24,7 +24,7 @@ export class Lippengruppe {
 
     /**
      * Den Hautbereich umsortieren: Lippendreiecke nach hinten, eigene Gruppe.
-     * @param {ArrayLike<number>} index  voller Dreiecksindex
+     * @param {Uint32Array} index  voller Dreiecksindex
      * @param {Array<{start,count,materialIndex}>} gruppen
      * @param {ArrayLike<number>} lippen  Punktindizes der Lippen
      * @returns {{index: Uint32Array, gruppen: object[], dreiecke: number}}
@@ -32,7 +32,7 @@ export class Lippengruppe {
      */
     static abspalten(index, gruppen, lippen) {
         const haut = (gruppen || []).find(g => g.materialIndex === Lippengruppe.HAUT);
-        const menge = new Set(lippen || []);
+        const menge = new Set(Array.from(lippen || []));
         if (!haut || !menge.size || (gruppen || []).some(g => g.materialIndex === Lippengruppe.LIPPEN)) {
             return { index, gruppen, dreiecke: 0 };
         }

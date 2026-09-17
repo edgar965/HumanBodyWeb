@@ -8,41 +8,19 @@ liest sie — Pipeline, Modell, Animation, Windrichtung als
 `data-vorgabe-*` am Formular, Bildrate/Breite/Höhe/Wind als Startwert
 der Regler. Ein Modell, das es nicht gibt, darf NICHT vorgewählt werden.
 """
-import json
-import os
-
-from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from core.effekte.effektvorgaben import Effektvorgaben
 from core.models import AppSettings
-from core.tests.unit._pruefablage import Pruefablage
+from core.tests.component._effektseite import Effektseite
 from effekte.figurparameter import Figurparameter
 
 
-class EinstellungenEffekte(TestCase):
+class EinstellungenEffekte(Effektseite):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls._ablage = Pruefablage.ordner('einst_effekte_')
-        cls.ordner = cls._ablage.__enter__()
-        cls.modelle = os.path.join(cls.ordner, 'models')
-        os.makedirs(cls.modelle)
-        with open(os.path.join(cls.modelle, 'Female2.json'), 'w', encoding='utf-8') as datei:
-            json.dump({'name': 'Female2', 'body_type': 'Female_Caucasian',
-                       'morphs': {}, 'garmentcode': [], 'hair_style': {}}, datei)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._ablage.__exit__(None, None, None)
-        super().tearDownClass()
-
-    def setUp(self):
-        self.client = Client(HTTP_HOST='127.0.0.1')
-        self._modelle = override_settings(HUMANBODY_MODELS_DIR=self.modelle)
-        self._modelle.enable()
-        self.addCleanup(self._modelle.disable)
+    PRAEFIX = 'einst_effekte_'
+    MODELLE = {'Female2': {'name': 'Female2', 'body_type': 'Female_Caucasian',
+                           'morphs': {}, 'garmentcode': [], 'hair_style': {}}}
 
     def test_vorgaben_des_modells(self):
         s = AppSettings.load()

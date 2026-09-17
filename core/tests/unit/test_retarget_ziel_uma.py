@@ -32,6 +32,7 @@ from humanbody_core.skeleton import (  # noqa: E402
     Skeleton, SkeletonGeometry, Umazuordnung, parse_bvh)
 from humanbody_core.skeleton.retarget.bvhauswertung import (  # noqa: E402
     Bvhauswertung)
+from ._sicher import Sicher
 
 #: (BVH-Knochen, sein Kind fuer die Richtung, DEF-Name, UMA-Name)
 PROBEN = [
@@ -88,7 +89,7 @@ class RetargetZielUmaTest(SimpleTestCase):
         pfad.write_text(Umaattrappe.bvh_text([{}, {}, {'LeftArm': (-45, 0, 0)}]),
                         encoding='utf-8')
         cls.bvh = parse_bvh(str(pfad))
-        cls.format = Skeleton.detect_format(cls.bvh.names)
+        cls.format = Sicher.wert(Skeleton.detect_format(cls.bvh.names), 'Format')
         cls.probe = Zielprobe(cls.bvh)
         cls.uma = SkeletonGeometry.from_three(Umaattrappe.gedreht(), (0, 1, 0))
         cls.uma_ergebnis = cls.format.retarget_to_rigify(

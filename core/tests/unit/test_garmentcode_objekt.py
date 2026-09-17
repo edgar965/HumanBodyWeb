@@ -25,6 +25,7 @@ import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
+from ._sicher import Sicher
 
 
 class GarmentcodeObjektTest(SimpleTestCase):
@@ -63,7 +64,7 @@ class GarmentcodeObjektTest(SimpleTestCase):
         rumpf = self._rumpf('schluessel')
         treffer = re.search(r'return `([a-z_]+)\$\{rein\}`', rumpf)
         self.assertIsNotNone(treffer, 'Kein Praefix im Schluessel')
-        praefix = treffer.group(1)
+        praefix = Sicher.wert(treffer, 'Treffer').group(1)
         for fremd in ('gar_', 'bld_', 'prim_', 'tpl_'):
             self.assertNotEqual(praefix, fremd)
             self.assertFalse(praefix.startswith(fremd),

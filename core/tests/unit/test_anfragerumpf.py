@@ -21,6 +21,7 @@ import json
 from django.test import SimpleTestCase
 
 from core.daten.anfragerumpf import Anfragerumpf
+from ._sicher import Sicher
 
 
 class _Anfrage:
@@ -45,12 +46,12 @@ class LesenTest(SimpleTestCase):
     def test_leerer_rumpf_gibt_400_statt_500(self):
         rumpf, fehler = Anfragerumpf.lesen(_Anfrage(b''))
         self.assertIsNone(rumpf)
-        self.assertEqual(fehler.status_code, 400)
+        self.assertEqual(Sicher.wert(fehler, 'Fehler').status_code, 400)
         self.assertEqual(_Anfrage.roh(fehler), {'error': 'Invalid JSON'})
 
     def test_kaputter_rumpf_gibt_400(self):
         _, fehler = Anfragerumpf.lesen(_Anfrage(b'{nicht json'))
-        self.assertEqual(fehler.status_code, 400)
+        self.assertEqual(Sicher.wert(fehler, 'Fehler').status_code, 400)
 
     def test_eigene_meldung_bleibt_erhalten(self):
         u"""Vier Endpunkte antworten „Invalid JSON body\" — das ist ihr
@@ -76,7 +77,7 @@ class FeldTest(SimpleTestCase):
         deshalb stand in `auftraege.py` ein anderes `except` als sonst."""
         wert, fehler = Anfragerumpf.feld(_Anfrage(b'[1, 2]'), 'ids', [])
         self.assertIsNone(wert)
-        self.assertEqual(fehler.status_code, 400)
+        self.assertEqual(Sicher.wert(fehler, 'Fehler').status_code, 400)
 
 
 class NameUndDatenTest(SimpleTestCase):
@@ -91,7 +92,7 @@ class NameUndDatenTest(SimpleTestCase):
     def test_name_nur_aus_leerzeichen_zaehlt_nicht(self):
         _, _, fehler = Anfragerumpf.name_und_daten(
             _Anfrage(b'{"name": "   ", "data": {"x": 1}}'))
-        self.assertEqual(fehler.status_code, 400)
+        self.assertEqual(Sicher.wert(fehler, 'Fehler').status_code, 400)
         self.assertEqual(_Anfrage.roh(fehler), {'error': 'name and data required'})
 
     def test_name_null_wirft_nicht(self):
@@ -99,11 +100,11 @@ class NameUndDatenTest(SimpleTestCase):
         und `None.strip()` ist ein 500. Deshalb `or ''`."""
         _, _, fehler = Anfragerumpf.name_und_daten(
             _Anfrage(b'{"name": null, "data": {"x": 1}}'))
-        self.assertEqual(fehler.status_code, 400)
+        self.assertEqual(Sicher.wert(fehler, 'Fehler').status_code, 400)
 
     def test_fehlende_daten_werden_gemeldet(self):
         _, _, fehler = Anfragerumpf.name_und_daten(_Anfrage(b'{"name": "a"}'))
-        self.assertEqual(fehler.status_code, 400)
+        self.assertEqual(Sicher.wert(fehler, 'Fehler').status_code, 400)
 
     def test_kaputter_rumpf_meldet_json_nicht_pflichtfelder(self):
         _, _, fehler = Anfragerumpf.name_und_daten(_Anfrage(b'kaputt'))

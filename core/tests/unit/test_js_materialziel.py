@@ -26,11 +26,6 @@ MODUL = Jsmodul('scene', 'materialziel.js')
 
 SKRIPT = """
 const { Materialziel: M } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const shirt = { n: 'shirt' }, hose = { n: 'hose' }, schuhe = { n: 'schuhe' };
 const stuecke = { 'gc_t-shirt': shirt, gc_hose: hose, 'gar_shoes/x': schuhe, gc_leer: null };
 

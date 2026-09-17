@@ -14,6 +14,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
+from ._sicher import Sicher
 
 MODUL = Jsmodul('scene', 'figurvideo_anzeige.js')
 
@@ -34,8 +35,7 @@ class FigurvideoAnzeigeTest(SimpleTestCase):
     def test_jeder_weg_hat_einen_hinweis(self):
         vorlage = (settings.BASE_DIR / 'templates' / '_figurvideo.html')
         text = vorlage.read_text(encoding='utf-8')
-        auswahl = re.search(r'<select id="figurvideo-weg".*?</select>', text, re.S)
-        self.assertIsNotNone(auswahl)
+        auswahl = Sicher.wert(re.search(r'<select id="figurvideo-weg".*?</select>', text, re.S), 'Auswahl')
         werte = sorted(re.findall(r'<option value="([^"]+)"', auswahl.group(0)))
         self.assertGreaterEqual(len(werte), 2)
         ausgabe = MODUL.laufen(SKRIPT)

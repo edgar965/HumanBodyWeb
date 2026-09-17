@@ -34,6 +34,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from ._kunstkoerper import Kunstkoerper
+from ._sicher import Sicher
 
 
 class NachfuehrungsnetzTest(SimpleTestCase):
@@ -73,7 +74,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         u"""Liegen beide da, gilt die korrigierte."""
         self._obj([[0, 0, 0]])
         self._rig([[0, 0, 0]])
-        pfad = NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel)
+        pfad = Sicher.wert(NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel), 'Pfad')
         self.assertTrue(pfad.endswith('_sim_rig.json'), pfad)
 
     def test_ohne_rigdatei_bleibt_die_obj(self):
@@ -84,7 +85,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         sich nicht bewegt.
         """
         self._obj([[0, 0, 0]])
-        pfad = NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel)
+        pfad = Sicher.wert(NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel), 'Pfad')
         self.assertTrue(pfad.endswith('_sim.obj'), pfad)
 
     def test_ordner_ausserhalb_des_ausgabebaums_wird_verworfen(self):
@@ -104,14 +105,14 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
             self._rig([[0.1, 1.2, -0.3]]))
         self.assertTrue(korrigiert)
-        self.assertAlmostEqual(float(punkte[0][1]), 1.2, places=6)
+        self.assertAlmostEqual(float(Sicher.wert(punkte, 'Punkte')[0][1]), 1.2, places=6)
 
     def test_objpunkte_gelten_als_unkorrigiert(self):
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
             self._obj([[10.0, 120.0, -30.0]]))
         self.assertFalse(korrigiert)
         # Roh gelesen, in Zentimetern — umgerechnet wird erst im Konstruktor.
-        self.assertAlmostEqual(float(punkte[0][1]), 120.0, places=6)
+        self.assertAlmostEqual(float(Sicher.wert(punkte, 'Punkte')[0][1]), 120.0, places=6)
 
     def test_unlesbare_rigdatei_faellt_auf_die_obj_zurueck(self):
         u"""Und sie meldet es — ein stiller Rueckfall waere schlechter.
@@ -125,7 +126,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
             datei.write(u'{kein json')
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(kaputt)
         self.assertFalse(korrigiert)
-        self.assertEqual(len(punkte), 1)
+        self.assertEqual(len(Sicher.wert(punkte, 'Punkte')), 1)
 
     def test_fehlende_datei_gibt_none(self):
         u"""Und der Testordner ist wirklich der Testordner.

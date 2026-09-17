@@ -156,36 +156,17 @@ class Codyfigur:
         Beschleunigung, und genau die treibt das Nachschwingen.
         """
         from anim_umsetzung import Animumsetzung
-        welt = {}
+        from knochenwelt import Knochenwelt
 
-        def loesen(name):
-            if name in welt:
-                return welt[name]
-            knochen = self.knochen[name]
+        def lokal(name):
             spur = (spuren or {}).get(name)
             if spur is not None:
-                lokal = self.nach_blender(
+                return self.nach_blender(
                     np.asarray(spur[nummer * 4:nummer * 4 + 4],
                                dtype=np.float64))
-            else:
-                lokal = Animumsetzung._wxyz(knochen['local_quaternion'])
-            versatz = np.asarray(knochen['local_position'], dtype=np.float64)
-            elternteil = knochen.get('parent')
-            if not elternteil or elternteil not in self.knochen:
-                # Die Wurzel sitzt NICHT im Ursprung: `DEF-spine` steht bei
-                # z = 0,81 (Befund vom 10.09.2026).
-                if ort is not None:
-                    versatz = versatz + np.asarray(ort, dtype=np.float64)
-                welt[name] = (versatz, lokal)
-            else:
-                ep, eq = loesen(elternteil)
-                welt[name] = (ep + Animumsetzung.drehen(eq, versatz),
-                              Animumsetzung.mul(eq, lokal))
-            return welt[name]
+            return Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
 
-        for name in self.namen:
-            loesen(name)
-        return welt
+        return Knochenwelt.loesen(self.knochen, self.namen, lokal, ort)
 
     @staticmethod
     def nach_blender(q):

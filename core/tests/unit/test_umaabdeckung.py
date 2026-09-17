@@ -35,6 +35,7 @@ unbekannter Name gemeldet würde.
 import unittest
 
 from ._umaabdeckung import Abdeckung, Umaquelle
+from ._sicher import Sicher
 
 
 class Vollstaendig(unittest.TestCase):
@@ -77,7 +78,7 @@ class Vollstaendig(unittest.TestCase):
     def _quelltext(self):
         aus = []
         for datei in Abdeckung.DATEIEN:
-            pfad = self.ordner / datei
+            pfad = Sicher.wert(self.ordner, 'Quellordner') / datei
             self.assertTrue(pfad.is_file(), u'%s fehlt' % pfad)
             aus.append(pfad.read_text(encoding='utf-8', errors='replace'))
         return aus

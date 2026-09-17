@@ -18,6 +18,7 @@ import { HumanbodyModell }
     from '../../static/viewer/gemeinsam/humanbodymodell.js';
 import { Bvhszene } from './laden/bvhszene.js';
 import { Theatreanmeldung } from './laden/theatreanmeldung.js';
+import { Buehnenschatten } from './laden/buehnenschatten.js';
 
 const gltfLoader = new GLTFLoader();
 
@@ -31,13 +32,7 @@ export async function loadGLBAsset(url, scene) {
     const gltf = await gltfLoader.loadAsync(url);
     const gruppe = gltf.scene;
     scene.add(gruppe);
-    // Schatten an allen Netzen — GLB-Dateien bringen die Einstellung nicht mit.
-    gruppe.traverse(teil => {
-        if (teil.isMesh) {
-            teil.castShadow = true;
-            teil.receiveShadow = true;
-        }
-    });
+    Buehnenschatten.an(gruppe);
     Theatreanmeldung.anmelden(gruppe, null, 'Asset');
     return gruppe;
 }

@@ -51,7 +51,7 @@ class DerGelenkrahmen(unittest.TestCase):
         for name in ('left_index1', 'left_pinky1', 'right_index1', 'right_pinky1', 'right_ring2'):
             with self.subTest(gelenk=name):
                 B = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index(name), np)
-                n, t, f = B.T
+                _n, t, f = B.T
                 self.assertAlmostEqual(np.linalg.det(B), 1.0, places=9)
                 gedreht = Rotation.from_rotvec(np.radians(60) * f).apply(t)
                 self.assertLess(gedreht[1], -0.8)
@@ -71,7 +71,7 @@ class DieFingergrenzen(unittest.TestCase):
     def test_grundgelenk_120_grad_wird_90_und_spreizt_gebeugt_nicht(self):
         gelenk = Smplxfinger.NAMEN.index('left_pinky1')
         B = Fingergrenzen.rahmen(gelenk, np)
-        n, t, f = B.T
+        n, _t, f = B.T
         feld = self._feld()
         feld[0, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(120) * f)
                                 * Rotation.from_rotvec(np.radians(20) * n))
@@ -87,7 +87,7 @@ class DieFingergrenzen(unittest.TestCase):
     def test_mittelgelenk_ist_ein_scharnier(self):
         gelenk = Smplxfinger.NAMEN.index('right_middle2')
         B = Fingergrenzen.rahmen(gelenk, np)
-        n, t, f = B.T
+        n, _t, f = B.T
         feld = self._feld()
         feld[0, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(25) * n))     # seitlich
         feld[1, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(60) * f))     # gebeugt: erlaubt

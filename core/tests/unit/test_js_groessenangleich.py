@@ -28,11 +28,6 @@ MODUL = Jsmodul('gemeinsam', 'groessenangleich.js')
 
 SKRIPT = """
 const { Groessenangleich } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const rund = (x) => Math.round(x * 10000) / 10000;
 
 // --- 1. Der Fall, um den es geht: 2,05 m neben 1,75 m ----------------------

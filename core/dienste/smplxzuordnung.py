@@ -24,22 +24,18 @@ from humanbody_core.skeleton.formats.smplx import SkeletonSMPLX
 __all__ = ['DEF_ZU_SMPLX', 'Smplxzuordnung']
 
 
-def _finger_umgekehrt():
-    u"""``{def_name: smplx_fingername}`` aus der Tabelle des SMPL-X-Formats."""
-    return {defname: bvh
-            for bvh, defname in SkeletonSMPLX.BONE_MAP_TO_RIGIFY.items()
-            if bvh in SkeletonSMPLX.FINGER and defname}
-
-
-#: Rigify/DEF -> SMPL-X: 22 Koerper + 30 Finger + Kiefer.
-DEF_ZU_SMPLX = {**DEF_ZU_SMPL, **_finger_umgekehrt(), 'DEF-jaw': 'Jaw'}
-
-
 class Smplxzuordnung:
     u"""BVH-Format -> SMPL-X-Namen, in der Reihenfolge des Formats."""
 
     LINKS = 'Left_hip'
     RECHTS = 'Right_hip'
+
+    @staticmethod
+    def finger_umgekehrt():
+        u"""``{def_name: smplx_fingername}`` aus der Tabelle des SMPL-X-Formats."""
+        return {defname: bvh
+                for bvh, defname in SkeletonSMPLX.BONE_MAP_TO_RIGIFY.items()
+                if bvh in SkeletonSMPLX.FINGER and defname}
 
     @staticmethod
     def fuer(format_klasse):
@@ -49,3 +45,7 @@ class Smplxzuordnung:
     @staticmethod
     def ausnahmen(format_klasse):
         return []
+
+
+#: Rigify/DEF -> SMPL-X: 22 Koerper + 30 Finger + Kiefer.
+DEF_ZU_SMPLX = {**DEF_ZU_SMPL, **Smplxzuordnung.finger_umgekehrt(), 'DEF-jaw': 'Jaw'}

@@ -21,19 +21,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from ._kunstkoerper import Kunstkoerper
-
-
-def _pfad(name):
-    return settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik' / name
-
-
-def _modul(name):
-    import importlib
-    import sys
-    ordner = str(settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik')
-    if ordner not in sys.path:
-        sys.path.insert(0, ordner)
-    return importlib.import_module(name)
+from ._modelphysik import Modelphysik
 
 
 class _Haut:
@@ -54,8 +42,8 @@ class FilmmaskenTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.fm = _modul('filmmasken')
-        self.fk = _modul('feinkoerper')
+        self.fm = FilmmaskenTest._modul('filmmasken')
+        self.fk = FilmmaskenTest._modul('feinkoerper')
         kp, kt = Kunstkoerper.zylinder(0.10, 0.0, 1.0, 51, 36)
         sp, st = Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36)
         self.koerper = {'name': u'Koerper', 'haut': _Haut(kp), 'dreiecke': kt}
@@ -102,16 +90,24 @@ class FilmmaskenTest(SimpleTestCase):
         self.assertTrue(np.allclose(F.bild(teil, 1)[:, 2], teil['haut'].folge[1][:, 2]))
 
     def test_verdrahtung_im_film(self):
-        lauf = _pfad('filmlauf.py').read_text(encoding='utf-8')
+        lauf = FilmmaskenTest._pfad('filmlauf.py').read_text(encoding='utf-8')
         self.assertIn('figurfein=fein', lauf)
         self.assertIn('Charakterdaten.unterteiler(geschlecht)', lauf)
-        render = _pfad('filmrender.py').read_text(encoding='utf-8')
+        render = FilmmaskenTest._pfad('filmrender.py').read_text(encoding='utf-8')
         self.assertIn('Filmmasken.gerendert(teil, nummer)', render)
         self.assertNotIn('import trimesh', render)
-        physik = _pfad('filmphysik.py').read_text(encoding='utf-8')
+        physik = FilmmaskenTest._pfad('filmphysik.py').read_text(encoding='utf-8')
         self.assertIn('Stoffgrenze(Feinkoerper.bild(koerper, nummer)', physik)
-        film = _pfad('hbfilm.py').read_text(encoding='utf-8')
+        film = FilmmaskenTest._pfad('hbfilm.py').read_text(encoding='utf-8')
         self.assertIn('Filmmasken.anwenden(self.teile, self.melder)', film)
-        grenze = _pfad('stoffgrenze.py').read_text(encoding='utf-8')
+        grenze = FilmmaskenTest._pfad('stoffgrenze.py').read_text(encoding='utf-8')
         # Wicklung ueber das Volumen, nicht die Mehrheit (kippte in Posen).
         self.assertIn("np.einsum('ij,ij->i', a, np.cross(b, c)).sum()", grenze)
+
+    @staticmethod
+    def _pfad(name):
+        return settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik' / name
+
+    @staticmethod
+    def _modul(name):
+        return Modelphysik.modul(name)

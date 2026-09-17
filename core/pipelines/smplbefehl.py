@@ -109,6 +109,7 @@ class Smplbefehl:
         von bisher."""
         try:
             personen = int(self.params.get('persons', 1) or 1)
+        # stumm gewollt: ein unlesbarer Wert heisst eine Person, wie ohne Angabe
         except (TypeError, ValueError):
             personen = 1
         return ['--persons', str(personen)] if personen > 1 else []
@@ -125,7 +126,7 @@ class Smplbefehl:
         werte = ['--hand_sigma', str(p.get('hand_sigma', self.SMPLX_HAND_SIGMA)),
                  '--face_sigma', str(p.get('face_sigma', self.SMPLX_FACE_SIGMA))]
         for name, vorgabe in self.SMPLX_QUELLEN.items():
-            werte += ['--' + name, str(p.get(name, vorgabe))]
+            werte.extend(['--' + name, str(p.get(name, vorgabe))])
         for name, schalter in self.SMPLX_ZUGABEN.items():
             if not p.get(name, True):
                 werte.append(schalter)
@@ -157,7 +158,7 @@ class Smplbefehl:
         `test_smplbefehl` vorher findet. GEM-X hat keine Gelenkgrenzen.
         """
         s, p = self.einstellungen, self.params
-        name = self.einstellungsname(self.job.pipeline)
+        name = str(self.einstellungsname(self.job.pipeline or ''))
         sigma = p.get('smooth_sigma', getattr(s, name + '_smooth_sigma'))
         werte = ['--smooth_sigma', str(sigma)]
         grenzen = getattr(s, name + '_joint_limits', True)

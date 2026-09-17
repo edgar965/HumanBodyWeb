@@ -12,6 +12,8 @@ from pathlib import Path
 
 from django.conf import settings
 
+from core.tests.unit._sicher import Sicher
+
 sys.path.insert(0, str(Path(settings.ASSETS_ROOT)))
 
 PROJEKT = Path(settings.UMA_PROJEKT)
@@ -32,19 +34,25 @@ class Texturen(unittest.TestCase):
         cls.figur = Figur(str(PROJEKT))
         cls.gebaut = cls.figur.bauen(RASSE)
 
+    def bau(self):
+        return Sicher.wert(self.gebaut, 'gebaute Figur')
+
+    def projektfigur(self):
+        return Sicher.wert(self.figur, 'Figur')
+
     def setUp(self):
         if self.gebaut is None:
             self.skipTest(u'UMA-Klon nicht vorhanden (%s)' % PROJEKT)
 
     def _bilder(self):
         from UMA_Python.texturen import Umatexturen
-        return Umatexturen(self.figur.katalog,
-                           self.figur.verweise).fuer_gebaut(self.gebaut)
+        return Umatexturen(self.projektfigur().katalog,
+                           self.projektfigur().verweise).fuer_gebaut(self.bau())
 
     def test_jeder_slot_hat_eine_albedo(self):
         u"""Alle acht — Körper, Wimpern, Augen, Innenmund."""
         bilder = self._bilder()
-        namen = [n for n, *_ in self.gebaut.netz.bereiche]
+        namen = [n for n, *_ in self.bau().netz.bereiche]
         self.assertEqual(len(namen), 8)
         for name in namen:
             self.assertIn('albedo', bilder.get(name, {}), name)
@@ -73,7 +81,7 @@ class Texturen(unittest.TestCase):
         normiert (gemessen: u 0,001..0,996, v 0,014..0,987). Wer die
         Kachelnummer abzöge, schöbe die Textur um eine ganze Breite.
         """
-        for slot in self.gebaut.slots:
+        for slot in self.bau().slots:
             if not len(slot.uv):
                 continue
             self.assertGreaterEqual(float(slot.uv.min()), -0.001, slot.slotname)

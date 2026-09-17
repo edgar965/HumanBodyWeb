@@ -34,11 +34,6 @@ MODUL = Jsmodul('gemeinsam', 'laufwache.js')
 
 SKRIPT = """
 const { Laufwache: W } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const T0 = 1000000;
 const S = (n) => n * 1000;
 
@@ -94,6 +89,6 @@ class LaufwacheTest(SimpleTestCase):
 
     databases = set()
 
-    def test_laufwache(self):
+    def test_freier_reiter_laesst_durch_laufender_bau_wird_gemeldet(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

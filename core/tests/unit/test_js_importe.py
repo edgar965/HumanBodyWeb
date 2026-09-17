@@ -23,7 +23,7 @@ import re
 from django.conf import settings
 from django.test import SimpleTestCase
 
-BEKANNT = set('''THREE JSON Math Object Number Array Promise Date String Boolean
+BEKANNT: set = set('''THREE JSON Math Object Number Array Promise Date String Boolean
 Symbol Map Set WeakMap WeakSet Float32Array Float64Array Uint8Array Uint16Array
 Uint32Array Int32Array Int16Array Int8Array ArrayBuffer DataView Event
 CustomEvent KeyboardEvent MouseEvent PointerEvent FormData URL URLSearchParams

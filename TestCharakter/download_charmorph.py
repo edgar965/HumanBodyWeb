@@ -110,9 +110,11 @@ def extract_character(name):
                     dest_path.mkdir(parents=True, exist_ok=True)
                 else:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
-                    with tar.extractfile(member) as src:
-                        with open(dest_path, 'wb') as dst:
-                            dst.write(src.read())
+                    src = tar.extractfile(member)
+                    if src is None:
+                        continue
+                    with src, open(dest_path, 'wb') as dst:
+                        dst.write(src.read())
                     print(f'  {name}/{rel}')
 
     finally:

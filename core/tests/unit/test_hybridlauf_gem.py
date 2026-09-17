@@ -102,7 +102,7 @@ class HybridFingerTest(HybridGemBasis):
         self.assertIn('partial', auftrag.progress_detail)
 
     def test_fortschritt_nennt_alle_drei_teile(self):
-        auftrag, _ = self.fahren('hybrid_gem', dict(self.PARAMS))
+        _auftrag, _ = self.fahren('hybrid_gem', dict(self.PARAMS))
         # Die letzte Zwischenmeldung vor „Done" hat alle drei Teile genannt —
         # nachlesbar in der Attrappe nicht, deshalb über die Klasse selbst:
         self.assertEqual(Hybridhaende.ORDNER, 'hands')

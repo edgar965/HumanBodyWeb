@@ -17,10 +17,12 @@ Kleid.
 """
 from __future__ import print_function
 
-import bpy
+from typing import Any
 
-from bl_ext.blender_org.mpfb.services.humanservice import HumanService
-from bl_ext.blender_org.mpfb.services.targetservice import TargetService
+import bpy  # pyright: ignore[reportMissingImports]  (Blender)
+
+from bl_ext.blender_org.mpfb.services.humanservice import HumanService  # pyright: ignore[reportMissingImports]
+from bl_ext.blender_org.mpfb.services.targetservice import TargetService  # pyright: ignore[reportMissingImports]
 
 __all__ = ['Effektfigur']
 
@@ -33,9 +35,10 @@ class Effektfigur:
 
     def __init__(self, geschlechtswert=0.0):
         self.geschlechtswert = geschlechtswert
-        self.basemesh = None
-        self.rig = None
-        self.kleid = None
+        # Blender-Objekte, ohne Stubs — `Any` sagt das dem Language Server.
+        self.basemesh: Any = None
+        self.rig: Any = None
+        self.kleid: Any = None
 
     def bauen(self, kleid_mhclo):
         self.szene_leeren()

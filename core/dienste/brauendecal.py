@@ -73,7 +73,8 @@ class Brauendecal:
                 try:
                     aus[name] = min(oben, max(unten, float(roh[name])))
                 except (TypeError, ValueError):
-                    pass
+                    logger.warning('Brauenregler %s unlesbar: %r', name, roh[name])
+
         farbe = str(roh.get('farbe', aus['farbe'])).lower()
         if len(farbe) == 7 and farbe[0] == '#' and all(c in '0123456789abcdef'
                                                        for c in farbe[1:]):

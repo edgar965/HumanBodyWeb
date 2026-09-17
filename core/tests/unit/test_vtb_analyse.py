@@ -35,13 +35,14 @@ from backendpruefung import Backendpruefung                 # noqa: E402
 from koerpermasse import Koerpermasse                       # noqa: E402
 from photo_analyzer import Fotobackends                     # noqa: E402
 from unterlauf import Unterlauf                             # noqa: E402
+from ._sicher import Sicher
 
 
 class DieBackendpruefung(unittest.TestCase):
     u"""Eine Liste, zwei Antworten — sie koennen nicht auseinanderlaufen."""
 
     def _pruefung(self, ordner, dateien=()):
-        bedingungen = [Backendpruefung.ordner(ordner, 'Ordner fehlt')]
+        bedingungen: list = [Backendpruefung.ordner(ordner, 'Ordner fehlt')]
         for pfad, text in dateien:
             bedingungen.append(Backendpruefung.datei(pfad, text))
         return Backendpruefung('Probe', bedingungen, 'alles da')
@@ -97,8 +98,7 @@ class DieBackendpruefung(unittest.TestCase):
         u"""Auch wenn nichts installiert ist: die zwei Antworten passen."""
         for name in ('smplest_x', 'pymafx', 'hmr2'):
             with self.subTest(backend=name):
-                modul = Fotobackends.laden(name)
-                self.assertIsNotNone(modul)
+                modul = Sicher.wert(Fotobackends.laden(name), name)
                 stand = modul.get_status()
                 self.assertEqual(modul.is_available(), stand['available'])
                 self.assertTrue(stand['info'])
@@ -120,7 +120,7 @@ class DerUnterlauf(unittest.TestCase):
         u"""ML-Bibliotheken schreiben ungefragt auf stdout."""
         text = ('Lade Modell...\n{"betas": [1]}\nWarnung: irgendwas\n'
                 '{"betas": [2], "gender": "female"}\nfertig')
-        daten = self._lauf()._auswerten(self.Lauf(text))
+        daten = Sicher.wert(self._lauf()._auswerten(self.Lauf(text)), 'Daten')
         self.assertEqual(daten['betas'], [2])
 
     def test_keine_ausgabe_ist_ein_fehler(self):

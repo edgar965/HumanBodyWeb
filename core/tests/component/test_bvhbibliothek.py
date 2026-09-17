@@ -68,7 +68,8 @@ class BvhbibliothekTest(TestCase):
 
     def test_unsinnige_seitenzahl_liefert_erste_seite(self):
         """get_page() faengt ab — sonst waere jeder falsche Link ein Fehler 500."""
-        self.assertEqual(Bvhbibliothek(seite='abc').seiteninhalt().number, 1)
+        unsinn = Bvhbibliothek(seite='abc')      # pyright: ignore[reportArgumentType]
+        self.assertEqual(unsinn.seiteninhalt().number, 1)
         self.assertEqual(Bvhbibliothek(seite=9999).seiteninhalt().number, 2)
 
     def test_reihenfolge_ist_stabil(self):

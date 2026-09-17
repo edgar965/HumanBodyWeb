@@ -104,6 +104,11 @@ class Figurnetze:
                     unbekannt.add(name)
                     continue
                 aus[zeile, ziel] += float(wert)
+        return self._normiert(punkte, dreiecke, aus, unbekannt)
+
+    @staticmethod
+    def _normiert(punkte, dreiecke, aus, unbekannt):
+        u"""Gewichte je Zeile auf 1 — ein fremder Knochen ist ein Fehler, kein Rest."""
         if unbekannt:
             raise ValueError(u'%d Knochen des Stuecks fehlen im Skelett: %s'
                              % (len(unbekannt),
@@ -134,12 +139,7 @@ class Figurnetze:
             flach = np.nonzero(treffer)[0] * aus.shape[1] + ziel[treffer]
             aus += Streusumme.zeilen(flach, gewichte[treffer, spalte],
                                      aus.size).reshape(aus.shape)
-        if unbekannt:
-            raise ValueError(u'%d Knochen des Stuecks fehlen im Skelett: %s'
-                             % (len(unbekannt),
-                                u', '.join(sorted(unbekannt)[:4])))
-        summe = aus.sum(axis=1, keepdims=True)
-        return punkte, dreiecke, aus / np.maximum(summe, 1e-9)
+        return self._normiert(punkte, dreiecke, aus, unbekannt)
 
     @staticmethod
     def sitzprobe(stoff, koerper):

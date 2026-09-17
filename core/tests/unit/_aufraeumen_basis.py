@@ -63,7 +63,8 @@ class AufraeumenBasis(TestCase):
             self._ziel, self._args = target, args
 
         def start(self):
-            self._ziel(*self._args)
+            if self._ziel is not None:
+                self._ziel(*self._args)
 
     def _zurueck(self, pruefung, wiederaufnahme):
         pruefung.lebt, wiederaufnahme.fahren = (staticmethod(self._alt[0]),

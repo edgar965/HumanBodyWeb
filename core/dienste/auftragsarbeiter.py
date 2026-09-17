@@ -81,21 +81,25 @@ class Auftragsarbeiter:
     def _popen(cls, befehl, protokoll):
         u"""`CREATE_BREAKAWAY_FROM_JOB` scheitert, wenn das Job-Objekt des
         Servers es verbietet — dann ohne."""
-        gemeinsam = dict(cwd=str(settings.BASE_DIR), stdin=subprocess.DEVNULL,
-                         stdout=protokoll, stderr=subprocess.STDOUT, close_fds=True)
+        def starten(**weitere):
+            return subprocess.Popen(
+                befehl, cwd=str(settings.BASE_DIR), stdin=subprocess.DEVNULL,
+                stdout=protokoll, stderr=subprocess.STDOUT, close_fds=True, **weitere)
         if os.name != 'nt':
-            return subprocess.Popen(befehl, start_new_session=True, **gemeinsam)
+            return starten(start_new_session=True)
         try:
-            return subprocess.Popen(befehl, creationflags=cls.flags(), **gemeinsam)
+            return starten(creationflags=cls.flags())
+        # stumm gewollt: das Job-Objekt des Servers verbietet den Breakaway — dann ohne
         except OSError:
             flags = cls.flags() & ~getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
-            return subprocess.Popen(befehl, creationflags=flags, **gemeinsam)
+            return starten(creationflags=flags)
 
     @classmethod
     def pid(cls, job_id):
         u"""Die eingetragene PID oder None."""
         try:
             return int(cls.pid_datei(job_id).read_text().strip())
+        # stumm gewollt: keine PID-Datei heisst kein laufender Arbeiter
         except (FileNotFoundError, OSError, ValueError):
             return None
 

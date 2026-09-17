@@ -12,7 +12,6 @@ die Felder gelten fuer alle SMPL-X-Koerper des Studios).
 import json
 
 import numpy as np
-from django.conf import settings
 
 __all__ = ['Mimiksmplx']
 

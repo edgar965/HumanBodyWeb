@@ -26,6 +26,7 @@ import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
+from ._sicher import Sicher
 
 
 class ThemeCssTest(SimpleTestCase):
@@ -95,9 +96,8 @@ class ThemeCssTest(SimpleTestCase):
         Das Modul aus djangoBase baut daraus `rgba(var(--fg-rgb),.07)`. Fehlt die
         Variable, ist die Deklaration ungueltig: keine Fuellung, kein Rahmen."""
         for thema in self.THEMES:
-            block = self._block(thema)
-            self.assertIsNotNone(block,
-                                 "Theme-Block fuer %r fehlt in theme.css" % thema)
+            block = Sicher.wert(self._block(thema),
+                                "Theme-Block fuer %r in theme.css" % thema)
             self.assertRegex(
                 block, r"--fg-rgb:\s*\d+\s*,\s*\d+\s*,\s*\d+",
                 "Theme %r definiert --fg-rgb nicht als KOMMA-getrenntes Tripel. "
@@ -164,8 +164,8 @@ class ThemeCssTest(SimpleTestCase):
         immer. Wer nur style.css aendert, sieht im Dark-Theme NICHTS passieren
         und sucht den Fehler woanders. Dieser Test nennt die Abweichung."""
         dark = self._vars(self._block("dark"))
-        root_block = re.search(r":root\s*\{(.*?)\}", self.style, re.S)
-        self.assertIsNotNone(root_block, ":root-Block in style.css nicht gefunden.")
+        root_block = Sicher.wert(re.search(r":root\s*\{(.*?)\}", self.style, re.S),
+                                 ":root-Block in style.css")
         root = self._vars(root_block.group(1))
 
         abweichungen = ["%s: style.css %r vs. theme.css %r" % (name, root[name], wert)

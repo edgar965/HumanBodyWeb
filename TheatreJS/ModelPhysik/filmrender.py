@@ -152,10 +152,9 @@ class Filmrender:
                 lichtlage[:3, 3] = lage[:3, 3] + np.array(
                     [0.0, 1.4 * figurhoehe, 0.0])
                 szene.add(licht, pose=self._blicken(lichtlage, blick))
-                farbe, _t = werk.render(szene)
-                yield np.asarray(farbe[:, :, :3], dtype=np.uint8)
+                yield Videoschreiber.rendern(werk, szene)
         finally:
             werk.delete()
 
-    def schreiben(self, ziel, fps=24, schleifen=2):
+    def schreiben(self, ziel, fps=24.0, schleifen=2):
         return Videoschreiber.schreiben(self.bilder_rendern(), ziel, fps, schleifen)

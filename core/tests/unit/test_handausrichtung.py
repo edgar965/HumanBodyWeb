@@ -39,6 +39,7 @@ from humanbody_core.skeleton.retarget.bvhdaten import BVHData  # noqa: E402
 from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG  # noqa: E402
 from humanbody_core.skeleton.retarget.handausrichtung import Handausrichtung  # noqa: E402
 from humanbody_core.skeleton.retarget.motor import Retargetlauf  # noqa: E402
+from ._sicher import Sicher
 
 #: BVH-Gelenk -> (Eltern, Versatz in cm, DEF-Knochen)
 GELENKE = [
@@ -59,34 +60,6 @@ GELENKE = [
 KRUEMMUNG = math.radians(60.0)
 
 
-def um_achse(achse, winkel):
-    a = np.asarray(achse, float) / np.linalg.norm(achse)
-    return np.array([*(a * math.sin(winkel / 2)), math.cos(winkel / 2)])
-
-
-def bvh(mit_fingern=True, bilder=2):
-    u"""Der Eichfall — Bild 0 Ruhe, Bild 1 Zeigefinger um 60° gekrümmt."""
-    gelenke = [g for g in GELENKE if mit_fingern or not g[0].startswith('right_')]
-    names = [g[0] for g in gelenke]
-    idx = {n: i for i, n in enumerate(names)}
-    parents = np.array([idx[g[1]] if g[1] else -1 for g in gelenke])
-    offsets = np.array([g[2] for g in gelenke], dtype=float)
-    quats = np.tile(Quat.ID, (bilder, len(names), 1))
-    if mit_fingern and bilder > 1:
-        quats[1, idx['right_index1']] = um_achse([0, 0, 1], KRUEMMUNG)
-    positions = np.zeros((bilder, len(names), 3))
-    children = {}
-    for i, p in enumerate(parents):
-        if p >= 0:
-            children.setdefault(int(p), []).append(i)
-    return BVHData(names, parents, offsets, quats, positions, 1 / 30.0,
-                   bilder, children), {g[0]: g[3] for g in gelenke}
-
-
-def einheit(v):
-    return np.asarray(v, float) / np.linalg.norm(v)
-
-
 class DerEichfall(SimpleTestCase):
 
     databases = set()
@@ -96,7 +69,7 @@ class DerEichfall(SimpleTestCase):
         super().setUpClass()
         cls.skel = Skelettgeometrie.holen()
         cls.welt = cls.skel.compute_world_transforms()
-        daten, zuordnung = bvh()
+        daten, zuordnung = DerEichfall.bvh()
         cls.lauf = Retargetlauf(daten, cls.skel, mapping=zuordnung, body_height=1.68)
         cls.spuren = cls.lauf.fahren()
 
@@ -126,7 +99,7 @@ class DerEichfall(SimpleTestCase):
         jetzt = Quat.rotate(self.weltdrehung('DEF-hand.R', bild),
                             Quat.rotate(Quat.inv(ruhe), quer))
         richtung = self.richtung('DEF-hand.R', bild)
-        return einheit(jetzt - np.dot(jetzt, richtung) * richtung)
+        return DerEichfall.einheit(jetzt - np.dot(jetzt, richtung) * richtung)
 
     def test_die_hand_zeigt_zum_mittelfinger_nicht_zum_daumen(self):
         hand = self.richtung('DEF-hand.R', 0)
@@ -143,8 +116,8 @@ class DerEichfall(SimpleTestCase):
         # zeigen entlang ihres eigenen Versatzes.
         for knochen, soll in (('DEF-f_index.01.R', [-1, 0, 0]),
                               ('DEF-f_middle.01.R', [-1, 0, 0]),
-                              ('DEF-f_pinky.01.R', einheit([-8, 0, -4])),
-                              ('DEF-thumb.01.R', einheit([-4, -2, 3]))):
+                              ('DEF-f_pinky.01.R', DerEichfall.einheit([-8, 0, -4])),
+                              ('DEF-thumb.01.R', DerEichfall.einheit([-4, -2, 3]))):
             with self.subTest(knochen=knochen):
                 self.assertGreater(np.dot(self.richtung(knochen, 0), soll),
                                    math.cos(math.radians(1.0)))
@@ -173,7 +146,41 @@ class DerEichfall(SimpleTestCase):
         self.assertTrue(Handausrichtung.ist_finger('DEF-thumb.01.L'))
         self.assertFalse(Handausrichtung.ist_finger('DEF-hand.R'))
         self.assertFalse(Handausrichtung.ist_finger('DEF-palm.01.R'))
-        np.testing.assert_allclose(hand.richtung('DEF-hand.R'), [-1, 0, 0], atol=1e-9)
+        np.testing.assert_allclose(Sicher.wert(hand.richtung('DEF-hand.R'), 'Richtung'), [-1, 0, 0], atol=1e-9)
+
+    @staticmethod
+    def um_achse(achse, winkel):
+        a = np.asarray(achse, float) / np.linalg.norm(achse)
+        return np.array([*(a * math.sin(winkel / 2)), math.cos(winkel / 2)])
+
+    @staticmethod
+    def einheit(v):
+        return np.asarray(v, float) / np.linalg.norm(v)
+
+    @staticmethod
+    def _hierarchie(gelenke):
+        u"""`(names, parents, children)` der Gelenkliste."""
+        names = [g[0] for g in gelenke]
+        idx = {n: i for i, n in enumerate(names)}
+        parents = np.array([idx[g[1]] if g[1] else -1 for g in gelenke])
+        children = {}
+        for i, p in enumerate(parents):
+            if p >= 0:
+                children.setdefault(int(p), []).append(i)
+        return names, parents, children
+
+    @staticmethod
+    def bvh(mit_fingern=True, bilder=2):
+        u"""Der Eichfall — Bild 0 Ruhe, Bild 1 Zeigefinger um 60° gekrümmt."""
+        gelenke = [g for g in GELENKE if mit_fingern or not g[0].startswith('right_')]
+        names, parents, children = DerEichfall._hierarchie(gelenke)
+        offsets = np.array([g[2] for g in gelenke], dtype=float)
+        quats = np.tile(Quat.ID, (bilder, len(names), 1))
+        if mit_fingern and bilder > 1:
+            quats[1, names.index('right_index1')] = DerEichfall.um_achse([0, 0, 1], KRUEMMUNG)
+        positions = np.zeros((bilder, len(names), 3))
+        return BVHData(names, parents, offsets, quats, positions, 1 / 30.0,
+                       bilder, children), {g[0]: g[3] for g in gelenke}
 
 
 class OhneFinger(SimpleTestCase):
@@ -183,12 +190,15 @@ class OhneFinger(SimpleTestCase):
 
     def test_koerper_wie_ohne_handausrichtung(self):
         skel = Skelettgeometrie.holen()
-        daten, zuordnung = bvh(mit_fingern=False)
+        daten, zuordnung = DerEichfall.bvh(mit_fingern=False)
         spuren = Retargetlauf(daten, skel, mapping=zuordnung, body_height=1.68).fahren()
         # Hand ohne Fingerkinder: Richtung aus dem eigenen Versatz (-X), wie bisher
         lauf = Retargetlauf(daten, skel, mapping=zuordnung, body_height=1.68)
-        lauf._bvh_hierarchie(); lauf._zuordnung_bauen(); lauf._hoehenfaktor()
-        lauf._ruhelagen_welt(); lauf._richtungskorrektur()
+        lauf._bvh_hierarchie()
+        lauf._zuordnung_bauen()
+        lauf._hoehenfaktor()
+        lauf._ruhelagen_welt()
+        lauf._richtungskorrektur()
         ruhe = Quat.rotate(skel.bones['DEF-hand.R'].world_rest_quat, np.array([0, 0, -1.0]))
         gezeigt = Quat.rotate(lauf.dir_corr_map['DEF-hand.R'], ruhe)
         np.testing.assert_allclose(gezeigt, [-1, 0, 0], atol=1e-6)

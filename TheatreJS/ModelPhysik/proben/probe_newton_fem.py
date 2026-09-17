@@ -29,7 +29,7 @@ HIER = os.path.dirname(os.path.abspath(__file__))
 wp.config.kernel_cache_dir = os.path.join(HIER, '..', 'warp_cache')
 wp.init()
 
-import newton                                                # noqa: E402
+import newton  # noqa: E402  # pyright: ignore[reportMissingImports]  (nicht installiert)
 
 
 class Fleischprobe:
@@ -51,7 +51,7 @@ class Fleischprobe:
         builder = newton.ModelBuilder()
         builder.add_ground_plane()
         builder.add_soft_grid(
-            pos=wp.vec3(0.0, 1.0, 0.0), rot=wp.quat_identity(dtype=wp.float32),
+            pos=wp.vec3(0.0, 1.0, 0.0), rot=wp.quat_identity(dtype=wp.float32),  # pyright: ignore[reportArgumentType]
             vel=wp.vec3(0.0, 0.0, 0.0),
             dim_x=dim[0], dim_y=dim[1], dim_z=dim[2],
             cell_x=zelle, cell_y=zelle, cell_z=zelle,

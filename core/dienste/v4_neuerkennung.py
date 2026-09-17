@@ -95,12 +95,12 @@ class V4Neuerkennung:
         MediaPipe.
         """
         try:
-            from mediapipe_compat import PoseCompat
+            from mediapipe_compat import PoseCompat  # pyright: ignore[reportMissingImports]
             return PoseCompat()
         except ImportError:
             logger.debug('mediapipe_compat fehlt — mediapipe direkt',
                          exc_info=True)
-            import mediapipe as mp
+            import mediapipe as mp  # pyright: ignore[reportMissingImports]
             return mp.solutions.pose.Pose(static_image_mode=False,
                                           model_complexity=1,
                                           min_detection_confidence=0.5)

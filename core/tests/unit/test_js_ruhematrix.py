@@ -92,6 +92,6 @@ class RuhematrixTest(SimpleTestCase):
 
     databases = set()
 
-    def test_ruhelage(self):
+    def test_ruhematrix_kette_spaltenfolge_und_einheit_ohne_drehung(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

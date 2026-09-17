@@ -33,7 +33,9 @@
  * seit 12.09.2026 in `detailfarben.js`; hier bleiben Vorgabe, Prüfung, Längen.
  */
 import { Detailfarben } from './detailfarben.js';
+import { Detailplan } from './detailplan.js';
 import { Hauttextur } from './hauttextur.js';
+import { Protokoll } from './protokoll.js';
 
 export class Koerperdetails {
 
@@ -48,7 +50,8 @@ export class Koerperdetails {
     static VORGABE = Object.freeze({
         ...Detailfarben.VORGABE, wimpern_laenge: 1.0, naegel_fuss_laenge: 1.0, haut_textur: '',
         brauen_staerke: 1.0, brauen_dicke: 1.0, brauen_dichte: 1.0, brauen_bogen_laenge: 1.0,
-        brauen_deckkraft: 1.0, brauen_lage: 0.0, brauen_hoehe_innen: 0.0, brauen_hoehe_aussen: 0.0, brauen_woelbung: 0.0,
+        brauen_deckkraft: 1.0, brauen_lage: 0.0, brauen_hoehe_innen: 0.0,
+        brauen_hoehe_aussen: 0.0, brauen_woelbung: 0.0,
     });
 
     /** Grenzen der Faktoren (`_laenge`, `_staerke`, `_dicke`, `_dichte`) und der Lage (m); Glanz 0..1. */
@@ -58,6 +61,7 @@ export class Koerperdetails {
     /** Die Details aus Modelldaten — unbekannte Schlüssel fallen weg, Lücken füllt die Vorgabe. */
     static aus(daten) {
         const roh = (daten && daten[Koerperdetails.FELD]) || {};
+        /** @type {Object<string, string|number>} */
         const aus = { ...Koerperdetails.VORGABE };
         for (const [name, wert] of Object.entries(roh)) {
             if (!(name in aus)) continue;
@@ -67,7 +71,9 @@ export class Koerperdetails {
                     aus[name] = Math.min(Koerperdetails.LAENGE.max, Math.max(Koerperdetails.LAENGE.min, zahl));
                 }
             } else if (/_(lage|hoehe_innen|hoehe_aussen|woelbung)$/.test(name)) {
-                if (Number.isFinite(zahl)) aus[name] = Math.min(Koerperdetails.LAGE, Math.max(-Koerperdetails.LAGE, zahl));
+                if (Number.isFinite(zahl)) {
+                    aus[name] = Math.min(Koerperdetails.LAGE, Math.max(-Koerperdetails.LAGE, zahl));
+                }
             } else if (/_(glanz|deckkraft)$/.test(name)) {
                 if (Number.isFinite(zahl)) aus[name] = Math.min(1, Math.max(0, zahl));
             } else if (name.endsWith('_textur')) {
@@ -80,6 +86,11 @@ export class Koerperdetails {
     }
 
     /** True, wenn nichts von der Vorgabe abweicht — dann muss nichts gerechnet werden. */
+    /** Der Plan einer Geometrie (siehe `detailplan.js`). */
+    static plan(index, gruppen, punkte) {
+        return Detailplan.plan(index, gruppen, punkte);
+    }
+
     static istVorgabe(details) {
         return Object.entries(Koerperdetails.VORGABE).every(([k, v]) => details[k] === v);
     }
@@ -89,68 +100,6 @@ export class Koerperdetails {
     /** Die Gruppenfarben und den Glanz setzen — siehe `Detailfarben`. */
     static faerben(materialien, details) {
         return Detailfarben.faerben(materialien, details);
-    }
-
-    // -------------------------------------------------------------- Plan
-
-    /**
-     * Der Plan einer Geometrie: je Wimpernstreifen und je Fußnagel die
-     * beteiligten Ecken. Einmal je Topologie (Index + Gruppen), gemerkt unter
-     * `geometrie.userData.detailplan`.
-     */
-    static plan(index, gruppen, punkte) {
-        const ecken = (nummer) => {
-            const menge = new Set();
-            for (const g of gruppen) {
-                if (g.materialIndex !== nummer) continue;
-                for (let k = g.start; k < g.start + g.count; k++) menge.add(index[k]);
-            }
-            return menge;
-        };
-        const haut = ecken(Koerperdetails.GRUPPE.haut);
-        const sklera = Koerperdetails._schwerpunkteJeSeite([...ecken(Koerperdetails.GRUPPE.sklera)], punkte);
-        return {
-            wimpern: Koerperdetails._teile(index, gruppen, Koerperdetails.GRUPPE.wimpern)
-                .map(teil => ({ ecken: teil, sklera })),
-            naegelFuss: Koerperdetails._teile(index, gruppen, Koerperdetails.GRUPPE.naegelFuss)
-                .map(teil => ({ wurzel: teil.filter(e => haut.has(e)), frei: teil.filter(e => !haut.has(e)) })),
-        };
-    }
-
-    /** Zusammenhängende Teile einer Gruppe (Ecken, die über Dreiecke verbunden sind). */
-    static _teile(index, gruppen, nummer) {
-        const eltern = new Map();
-        const finden = (a) => {
-            while (eltern.get(a) !== a) { eltern.set(a, eltern.get(eltern.get(a))); a = eltern.get(a); }
-            return a;
-        };
-        const vereinen = (a, b) => { eltern.set(finden(a), finden(b)); };
-        for (const g of gruppen) {
-            if (g.materialIndex !== nummer) continue;
-            for (let k = g.start; k + 2 < g.start + g.count; k += 3) {
-                for (const e of [index[k], index[k + 1], index[k + 2]]) if (!eltern.has(e)) eltern.set(e, e);
-                vereinen(index[k], index[k + 1]);
-                vereinen(index[k], index[k + 2]);
-            }
-        }
-        const teile = new Map();
-        for (const e of eltern.keys()) {
-            const w = finden(e);
-            if (!teile.has(w)) teile.set(w, []);
-            teile.get(w).push(e);
-        }
-        return [...teile.values()];
-    }
-
-    /** Schwerpunkt der Ecken links (x < 0) und rechts (x ≥ 0). */
-    static _schwerpunkteJeSeite(ecken, p) {
-        const summe = { links: [0, 0, 0, 0], rechts: [0, 0, 0, 0] };
-        for (const e of ecken) {
-            const s = p[3 * e] < 0 ? summe.links : summe.rechts;
-            s[0] += p[3 * e]; s[1] += p[3 * e + 1]; s[2] += p[3 * e + 2]; s[3] += 1;
-        }
-        const mittel = (s) => (s[3] ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : null);
-        return { links: mittel(summe.links), rechts: mittel(summe.rechts) };
     }
 
     // ------------------------------------------------------------ Strecken
@@ -236,7 +185,8 @@ export class Koerperdetails {
     }
 
     static _abstand2(p, i, j) {
-        return Koerperdetails._abstand2Punkte([p[3 * i], p[3 * i + 1], p[3 * i + 2]], [p[3 * j], p[3 * j + 1], p[3 * j + 2]]);
+        return Koerperdetails._abstand2Punkte([p[3 * i], p[3 * i + 1], p[3 * i + 2]],
+                                              [p[3 * j], p[3 * j + 1], p[3 * j + 2]]);
     }
 
     static _abstand2Punkte(a, b) {
@@ -279,14 +229,15 @@ export class Koerperdetails {
     static anwenden(netz, details, punkte = null) {
         if (!netz?.geometry || !details) return { farben: 0, bewegt: 0 };
         const farben = Koerperdetails.faerben(netz.material, details);
-        Hauttextur.anwenden(netz, details).catch(f => console.warn('Hauttextur:', f));
+        Hauttextur.anwenden(netz, details)
+            .catch(f => Protokoll.warnung('Koerperdetails', 'Hauttextur:', f));
         const geo = netz.geometry;
         const index = geo.userData?.indexVoll?.index || geo.index?.array;
         const gruppen = geo.userData?.indexVoll?.gruppen || geo.groups;
         if (!index || !gruppen?.length) return { farben, bewegt: 0 };
         const ziel = punkte || geo.attributes.position.array;
         if (!geo.userData.detailplan) {
-            geo.userData.detailplan = Koerperdetails.plan(index, gruppen, ziel);
+            geo.userData.detailplan = Detailplan.plan(index, gruppen, ziel);
             geo.userData.detailecken = Koerperdetails._betroffene(geo.userData.detailplan);
         }
         if (punkte || !geo.userData.detailbasis) {

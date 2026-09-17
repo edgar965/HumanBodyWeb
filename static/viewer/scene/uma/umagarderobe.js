@@ -72,15 +72,23 @@ export class Umagarderobe {
         return null;
     }
 
+    /**
+     * Den Zettel der Figur lesen, während `element` den Spinner zeigt —
+     * ein unlesbarer Zettel ist eine Warnung (`wer` nennt den Rufer) und null.
+     */
+    static async lesenFuer(element, figur, wer) {
+        element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        try {
+            return await Umagarderobe.lesen(figur.datei);
+        } catch (fehler) {
+            Protokoll.warnung(wer, 'Zettel nicht lesbar:', fehler);
+            return null;
+        }
+    }
+
     /** Den Platzhalter eines Reiters mit der Garderobe der Figur füllen. */
     static async fuellen(element, figur) {
-        element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        let garderobe = null;
-        try {
-            garderobe = await Umagarderobe.lesen(figur.datei);
-        } catch (fehler) {
-            Protokoll.warnung('Umagarderobe', 'Zettel nicht lesbar:', fehler);
-        }
+        const garderobe = await Umagarderobe.lesenFuer(element, figur, 'Umagarderobe');
         element.innerHTML = Umagarderobe.html(figur, garderobe);
     }
 

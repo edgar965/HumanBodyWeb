@@ -15,7 +15,8 @@ class ProgressConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for real-time job progress updates."""
 
     async def connect(self):
-        self.job_id = self.scope['url_route']['kwargs']['job_id']
+        weg = self.scope.get('url_route') or {}
+        self.job_id = weg['kwargs']['job_id']
         self.group_name = f'job_{self.job_id}'
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
@@ -52,19 +53,9 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
     def _init_state(self):
         """Initialize CharacterState and CC subdivider lazily."""
         try:
-            from humanbody_core import MorphData, CharacterState, CharacterDefaults
-            from django.conf import settings
-
-            md = MorphData(data_dir=str(settings.HUMANBODY_DATA_DIR))
-            md.load()
-            cd = CharacterDefaults()
-            cd.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
-
-            self._char_state = CharacterState(md, cd)
-            self._char_state.set_body_type('Female_Caucasian')
-
-            # Preload female CC subdivider
             from core.dienste.charakterdaten import Charakterdaten
+            self._char_state = Charakterdaten.zustand()
+            # Preload female CC subdivider
             self._cc_subs['female'] = Charakterdaten.unterteiler('female')
         except Exception as e:
             logger.error("Failed to init CharacterState: %s", e)

@@ -48,6 +48,7 @@ class Effektpruefung:
             return 'Unbekannte Pipeline'
         try:
             self.bvh = self.bvh_pfad(self.daten.get('bvh'))
+        # stumm gewollt: die Meldung IST die Rueckgabe — sie geht an die Seite
         except ValueError as e:
             return str(e)
         ausgabe = self.daten.get('ausgabe') or ''
@@ -83,6 +84,7 @@ class Effektpruefung:
     def _parameter(self, klasse, **pflicht):
         try:
             klasse(**pflicht, **(self.daten.get('parameter') or {}))
+        # stumm gewollt: die Meldung IST die Rueckgabe — sie geht an die Seite
         except (ValueError, TypeError) as e:
             return 'Parameter: %s' % e
         return ''

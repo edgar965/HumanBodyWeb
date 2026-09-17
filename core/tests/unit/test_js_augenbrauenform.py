@@ -28,11 +28,6 @@ MODUL = Jsmodul('gemeinsam', 'augenbrauenform.js')
 SKRIPT = """
 const { Augenbrauenform: F } = await import(MODUL);
 const { Augenbrauen: A } = await import(new URL('./augenbrauen.js', MODUL).href);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const nahe = (was, ist, soll, eps) => { if (Math.abs(ist - soll) > eps) throw new Error(was + ': ' + ist + ' statt ' + soll); };
 // Haut: Raster x −0,06..0,06, y 1,54..1,62 (1 mm), z = 0,10; Index mit einem Dreieck je drei Punkte
 const punkte = []; const idx = [];

@@ -18,6 +18,7 @@ if str(settings.ASSETS_ROOT) not in sys.path:      # pragma: no cover
     sys.path.insert(0, str(settings.ASSETS_ROOT))
 
 from GarmentCode.saumgrenze import Saumgrenze                  # noqa: E402
+from ._sicher import Sicher
 
 #: Die Figur aus dem Befund.
 FIGUR = {'bust': 88.66, 'hips': 97.88}
@@ -45,8 +46,8 @@ class SaumgrenzeTest(SimpleTestCase):
         `Saumweite = flare * width * bust` — bei width 1,05 reicht ein
         kleinerer flare fuer denselben Umfang.
         """
-        eng = Saumgrenze.untergrenze({'shirt.width': 1.0}, FIGUR)
-        weit = Saumgrenze.untergrenze({'shirt.width': 1.05}, FIGUR)
+        eng = Sicher.wert(Saumgrenze.untergrenze({'shirt.width': 1.0}, FIGUR))
+        weit = Sicher.wert(Saumgrenze.untergrenze({'shirt.width': 1.05}, FIGUR))
         self.assertLess(weit, eng)
 
     def test_ohne_masse_wird_nicht_geraten(self):
@@ -77,7 +78,7 @@ class SaumgrenzeTest(SimpleTestCase):
         Die Probe zeigt, dass der Test oben wirklich die Grenze prueft und
         nicht eine Eigenschaft, die ohnehin gilt.
         """
-        grenze = Saumgrenze.untergrenze({'shirt.width': 1.0}, FIGUR)
+        grenze = Sicher.wert(Saumgrenze.untergrenze({'shirt.width': 1.0}, FIGUR))
         self.assertGreater(grenze, 0.7,
                            'sonst prueft test_zu_enger_saum_wird_gehoben nichts')
 
@@ -101,18 +102,18 @@ class DerSaumZaehltDortWoErSitzt(SimpleTestCase):
     """
 
     def test_ein_shirt_bis_zur_taille_misst_an_der_taille(self):
-        umfang = Saumgrenze.saumumfang(
-            {'shirt.length': 1.0}, FIGUR_VOLL)
+        umfang = Sicher.wert(Saumgrenze.saumumfang(
+            {'shirt.length': 1.0}, FIGUR_VOLL))
         self.assertAlmostEqual(umfang, FIGUR_VOLL['waist'], places=1)
 
     def test_ein_sehr_langes_shirt_misst_weiter_an_der_huefte(self):
         u"""Der alte Fall bleibt richtig — dort war die Grenze nie falsch."""
-        umfang = Saumgrenze.saumumfang({'shirt.length': 2.0}, FIGUR_VOLL)
+        umfang = Sicher.wert(Saumgrenze.saumumfang({'shirt.length': 2.0}, FIGUR_VOLL))
         self.assertAlmostEqual(umfang, FIGUR_VOLL['hips'], places=1)
 
     def test_die_saumhoehe_folgt_der_formel_aus_tee_py(self):
         u"""`length = design['length'] * body['waist_line']`, ab Schulter."""
-        hoehe = Saumgrenze.saumhoehe({'shirt.length': 1.0}, FIGUR_VOLL)
+        hoehe = Sicher.wert(Saumgrenze.saumhoehe({'shirt.length': 1.0}, FIGUR_VOLL))
         erwartet = (FIGUR_VOLL['height'] - FIGUR_VOLL['head_l']
                     - FIGUR_VOLL['waist_line'])
         self.assertAlmostEqual(hoehe, erwartet, places=3)
@@ -136,20 +137,20 @@ class DerSaumZaehltDortWoErSitzt(SimpleTestCase):
     def test_ein_croptop_misst_am_brustkorb(self):
         u"""Ueber der Taille ist der Koerper wieder weiter — dort darf der
         Saum nicht enger werden als der Brustkorb."""
-        umfang = Saumgrenze.saumumfang({'shirt.length': 0.6}, FIGUR_VOLL)
+        umfang = Sicher.wert(Saumgrenze.saumumfang({'shirt.length': 0.6}, FIGUR_VOLL))
         self.assertGreater(umfang, FIGUR_VOLL['waist'])
         self.assertLess(umfang, FIGUR_VOLL['bust'])
 
     def test_ohne_laengenregler_gilt_die_vorgabe_eins(self):
         u"""Kein Sonderfall: `default.yaml` sagt 1,0, und das heisst Taille."""
         self.assertAlmostEqual(
-            Saumgrenze.saumumfang({}, FIGUR_VOLL),
-            Saumgrenze.saumumfang({'shirt.length': 1.0}, FIGUR_VOLL),
+            Sicher.wert(Saumgrenze.saumumfang({}, FIGUR_VOLL)),
+            Sicher.wert(Saumgrenze.saumumfang({'shirt.length': 1.0}, FIGUR_VOLL)),
             places=3)
 
     def test_ohne_laengenmasse_bleibt_es_bei_der_huefte(self):
         u"""Rueckwaertskompatibel: Die alten Aufrufer geben nur bust/hips."""
-        self.assertAlmostEqual(Saumgrenze.saumumfang({}, FIGUR),
+        self.assertAlmostEqual(Sicher.wert(Saumgrenze.saumumfang({}, FIGUR)),
                                FIGUR['hips'], places=3)
 
     def test_der_hinweis_nennt_die_saumhoehe(self):
@@ -165,8 +166,8 @@ class DerSaumZaehltDortWoErSitzt(SimpleTestCase):
         das belegt, dass der Test oben die Aenderung prueft."""
         alt = FIGUR_VOLL['hips'] / (FIGUR_VOLL['bust'] * 1.05)
         self.assertGreater(alt, 0.7)
-        neu = Saumgrenze.untergrenze(
-            {'shirt.width': 1.05, 'shirt.length': 1.0}, FIGUR_VOLL)
+        neu = Sicher.wert(Saumgrenze.untergrenze(
+            {'shirt.width': 1.05, 'shirt.length': 1.0}, FIGUR_VOLL))
         self.assertLess(neu, 0.7)
 
 

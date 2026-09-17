@@ -33,6 +33,7 @@ Humanbodypfad.setzen()
 
 
 from humanbody_core.cloth.musterlauf import Musterlauf  # noqa: E402
+from ._sicher import Sicher
 
 
 class Musterbau:
@@ -81,7 +82,9 @@ class KantenkarteTest(SimpleTestCase):
 
     def setUp(self):
         self.lauf = Musterlauf(Musterbau.muster(), Musterbau.punktwolke())
-        self.vertices, self.dreiecke = self.lauf.bauen()
+        vertices, dreiecke = self.lauf.bauen()
+        self.vertices = Sicher.wert(vertices, 'Punkte')
+        self.dreiecke = Sicher.wert(dreiecke, 'Dreiecke')
 
     def test_kein_schwerpunkt_in_einer_kantenliste(self):
         u"""DER FALL VON FRÜHER: Kante 0 enthielt den Schwerpunkt.
@@ -130,7 +133,7 @@ class NahtTest(SimpleTestCase):
 
     def test_die_vernaehten_punkte_fallen_zusammen(self):
         lauf = Musterlauf(Musterbau.muster(), Musterbau.punktwolke())
-        vertices, _ = lauf.bauen()
+        vertices = Sicher.wert(lauf.bauen()[0], 'Punkte')
         a = lauf.kantenpunkte[('vorne', 0)]
         b = lauf.kantenpunkte[('hinten', 2)]
         for ia, ib in zip(a, b):
@@ -144,6 +147,7 @@ class NahtTest(SimpleTestCase):
         muster['stitches'].append({'panelA': 'gibtsnicht', 'edgeA': 0,
                                    'panelB': 'hinten', 'edgeB': 0})
         vertices, dreiecke = Musterlauf(muster, Musterbau.punktwolke()).bauen()
+        vertices, dreiecke = Sicher.wert(vertices, 'Punkte'), Sicher.wert(dreiecke, 'Dreiecke')
         self.assertEqual(len(vertices), 20)
         self.assertEqual(len(dreiecke), 18)
 

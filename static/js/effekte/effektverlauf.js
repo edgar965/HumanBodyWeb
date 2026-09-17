@@ -111,6 +111,7 @@ export class Effektverlauf {
         const video = this.el('effektVideo');
         video.src = daten.video_url + '?t=' + Date.now();
         video.hidden = false;
+        // stumm gewollt: ohne Klick verweigert der Browser das Abspielen — das Video steht dann mit Bedienleiste da
         video.play().catch(() => {});
         this.bericht(daten);
     }
@@ -153,7 +154,8 @@ export class Effektverlauf {
         ];
         if (b.stoffpunkte) {
             zeilen.push(['Bilder', `${b.bilder} bei ${b.bildrate} fps, Stoff ${b.stoffpunkte} Punkte`]);
-            zeilen.push(['Dauer', s.gesamt ? `${s.gesamt} s (Simulation ${s.simulation} s, Rendern ${s.rendern} s)` : '']);
+            zeilen.push(['Dauer', s.gesamt
+                ? `${s.gesamt} s (Simulation ${s.simulation} s, Rendern ${s.rendern} s)` : '']);
         } else {
             zeilen.push(['Bilder', b.bilder ? `${b.bilder} bei ${b.bildrate} fps`
                 + (b.bildrate_bvh ? ` (BVH ${Math.round(b.bildrate_bvh)} fps, Schritt ${b.schritt})` : '') : '']);

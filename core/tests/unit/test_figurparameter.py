@@ -35,7 +35,7 @@ class FigurparameterTest(SimpleTestCase):
                            bilder=99999, physik=-5, fps='24')
         self.assertEqual((p.bilder, p.physik, p.fps), (2000, 0.0, 24))
         with self.assertRaises(TypeError):
-            Figurparameter(bvh='a.bvh', ausgabe='o.mp4')
+            Figurparameter(bvh='a.bvh', ausgabe='o.mp4')  # pyright: ignore[reportCallIssue]
         with self.assertRaises(ValueError):
             Figurparameter(modell='m', bvh='a', ausgabe='o', unterteilung=3)
 

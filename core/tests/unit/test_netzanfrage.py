@@ -23,6 +23,7 @@ from django.test import SimpleTestCase, RequestFactory, override_settings
 
 from core.api import netzanfrage as modul
 from core.api.netzanfrage import Netzanfrage
+from ._sicher import Sicher
 
 
 class NetzAttrappe:
@@ -180,13 +181,13 @@ class ReglerTest(NetzanfrageBasis):
 
     def test_morph_und_meta_werden_gesetzt(self):
         self.anfrage('?morph_Abdomen_Mass=0.5&meta_age=30').punkte()
-        self.assertEqual(ZustandAttrappe.letzter.morphs, {'Abdomen_Mass': 0.5})
-        self.assertEqual(ZustandAttrappe.letzter.metas, {'age': 30.0})
+        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, 'Zustand').morphs, {'Abdomen_Mass': 0.5})
+        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, 'Zustand').metas, {'age': 30.0})
 
     def test_unlesbarer_wert_kostet_nicht_die_figur(self):
         anfrage = self.anfrage('?morph_Abdomen_Mass=viel&morph_Nose=0.2')
         self.assertIsNotNone(anfrage.punkte())
-        self.assertEqual(ZustandAttrappe.letzter.morphs, {'Nose': 0.2})
+        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, 'Zustand').morphs, {'Nose': 0.2})
 
     def test_ohne_punkte_kommt_none_zurueck(self):
         # `del` statt Zurücksetzen hat beim ersten Wurf die ECHTE Methode der
@@ -218,7 +219,7 @@ class PoseTest(NetzanfrageBasis):
         ordner = self.ablegen(np.array([[9.0, 9.0, 9.0], [8.0, 8.0, 8.0]],
                                        dtype=np.float32))
         with override_settings(HUMANBODY_DATA_DIR=str(ordner)):
-            punkte = self.anfrage('?pose=t_pose').punkte()
+            punkte = Sicher.wert(self.anfrage('?pose=t_pose').punkte(), 'Punkte')
         self.assertEqual(punkte[0][0], 9.0)
 
     def test_falsche_punktzahl_bleibt_bei_der_a_pose(self):
@@ -226,7 +227,7 @@ class PoseTest(NetzanfrageBasis):
         ordner = self.ablegen(np.zeros((5, 3), dtype=np.float32))
         with override_settings(HUMANBODY_DATA_DIR=str(ordner)):
             with self.assertLogs('core.api.netzanfrage', level='WARNING') as protokoll:
-                punkte = self.anfrage('?pose=t_pose').punkte()
+                punkte = Sicher.wert(self.anfrage('?pose=t_pose').punkte(), 'Punkte')
         self.assertEqual(punkte[0][0], 0.0)
         self.assertEqual(len(punkte), 2, 'die berechneten Punkte bleiben')
         self.assertIn('passt nicht', protokoll.output[0])

@@ -64,8 +64,8 @@ class Vorbildbild:
         stoffwerk = pyrender.MetallicRoughnessMaterial(
             baseColorFactor=list(farbe) + [1.0], metallicFactor=0.0,
             roughnessFactor=0.7, doubleSided=True)
-        koerpernetz = trimesh.Trimesh(self.koerper @ d.T, np.asarray(self.flaechen),
-                                      process=False)
+        koerpernetz = trimesh.Trimesh(np.asarray(self.koerper) @ d.T,
+                                      np.asarray(self.flaechen), process=False)
         szene.add(pyrender.Mesh.from_trimesh(koerpernetz, smooth=True, material=haut))
         # Koerpernormalen der Rig-Datei (Leggings, 11.09.2026) — wie der Browser.
         stoffnetz = trimesh.Trimesh(stoff @ d.T, dreiecke, process=False)
@@ -93,10 +93,12 @@ class Vorbildbild:
                   pose=licht)
         werk = pyrender.OffscreenRenderer(groesse, groesse)
         try:
-            bild, _ = werk.render(szene, flags=pyrender.RenderFlags.RGBA)
+            gerendert = werk.render(szene, flags=pyrender.RenderFlags.RGBA)
         finally:
             werk.delete()
-        Image.fromarray(np.asarray(bild, dtype=np.uint8), 'RGBA').save(ziel)
+        if gerendert is None:
+            raise RuntimeError('pyrender lieferte kein Bild')
+        Image.fromarray(np.asarray(gerendert[0], dtype=np.uint8), 'RGBA').save(ziel)
         return ziel
 
     @staticmethod

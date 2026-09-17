@@ -1,0 +1,17 @@
+{% comment %}
+Untermenü „Animation hinzufügen" im BVH Studio: Animation (BVH-Bibliothek
+der verknüpften Spur), Mimik, Script — Edgar (15.09.2026): „Hinzufügen soll
+zweigeteilt sein, einmal Modell hinzufügen, dann Animation."
+
+BEFUND `doppelcode` (17.09.2026): stand ZWEIMAL in `bvh_studio.html`, im
+Modellmenü der Fläche und im Spurkopfmenü. `kennung` = model | track
+(Präfix von `<kennung>-ctx-bvh` und `<kennung>-ctx-bvh-submenu`, die
+`zeitleiste_modellhinzufuegen.js` füllt).
+{% endcomment %}
+            <div class="ctx-item has-submenu" id="{{ kennung }}-ctx-bvh">
+                <i class="fas fa-running hb-symbolspalte"></i> Animation
+                <i class="fas fa-caret-right hb-kuerzel"></i>
+                <div id="{{ kennung }}-ctx-bvh-submenu" class="ctx-submenu"></div>
+            </div>
+            <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimik</div>
+            <div class="ctx-item" data-action="ctx-script-track"><i class="fas fa-scroll hb-symbolspalte"></i> Script</div>

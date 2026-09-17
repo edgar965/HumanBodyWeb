@@ -6,7 +6,7 @@ import warp as wp
 wp.config.kernel_cache_dir = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'warp_cache'
 )
-import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen
+import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen  # pyright: ignore[reportMissingImports]
 
 wp.init()
 v = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
@@ -14,7 +14,7 @@ f = np.array([0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3], dtype=np.int32)
 b = newton.ModelBuilder()
 b.add_cloth_grid(
     pos=wp.vec3(0, 0, 2),
-    rot=wp.quat_identity(),
+    rot=wp.quat_identity(),  # pyright: ignore[reportCallIssue]
     vel=wp.vec3(0),
     dim_x=4,
     dim_y=4,

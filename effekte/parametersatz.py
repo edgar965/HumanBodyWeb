@@ -22,7 +22,8 @@ __all__ = ['Parametersatz']
 
 class Parametersatz:
 
-    FELDER = ()
+    #: (name, typ, vorgabe, kleinst, groesst, beschriftung, hinweis) je Feld — die Kinder fuellen sie.
+    FELDER: tuple = ()
     PFLICHT = ()
     WAHLEN = {}
     PROG = 'pipeline'
@@ -104,10 +105,10 @@ class Parametersatz:
         u"""`--name wert` fuer Pflicht, Wahlen und Felder — in dieser Reihenfolge."""
         arg = []
         for name in list(self.PFLICHT) + list(self.WAHLEN):
-            arg += ['--' + name, str(getattr(self, name))]
+            arg.extend(['--' + name, str(getattr(self, name))])
         for name in self.namen():
             wert = getattr(self, name)
-            arg += ['--' + name, str(int(wert)) if isinstance(wert, bool) else str(wert)]
+            arg.extend(['--' + name, str(int(wert)) if isinstance(wert, bool) else str(wert)])
         return arg
 
     @classmethod

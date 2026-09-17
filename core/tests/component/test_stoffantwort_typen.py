@@ -29,6 +29,7 @@ import numpy as np
 from django.test import TestCase
 
 from core.daten.stoffantwort import Stoffantwort
+from ..unit._sicher import Sicher
 
 
 class StoffantwortTypenTest(TestCase):
@@ -94,7 +95,7 @@ class AnpassungsantwortTypenTest(TestCase):
         return anpassung.als_antwort('tops/probe', ReglerAttrappe())
 
     def test_dreiecke_kommen_als_uint32(self):
-        roh = base64.b64decode(self.antwort()['faces'])
+        roh = base64.b64decode(Sicher.wert(self.antwort(), 'Antwort')['faces'])
         self.assertEqual(len(roh), 3 * 4)
         self.assertEqual(list(np.frombuffer(roh, dtype=np.uint32)), [0, 1, 2])
 

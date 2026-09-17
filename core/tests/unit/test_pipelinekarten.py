@@ -52,7 +52,7 @@ class DieKarten(SimpleTestCase):
     def test_jede_karte_hat_eine_vorlage(self):
         for vorlage in Pipelinekarten.vorlagen():
             with self.subTest(vorlage=vorlage):
-                get_template(vorlage)
+                self.assertIsNotNone(get_template(vorlage))
 
     def test_eintraege_tragen_karte_vorlage_und_rang_in_kartenfolge(self):
         eintraege = Pipelinekarten.eintraege()

@@ -50,14 +50,23 @@ class Filmmasken:
         kp, kd = Feinkoerper.ruhe(koerper), Feinkoerper.dreiecke(koerper)
         maske = Hautmaske.verdeckt(kp, kd, [(p, d) for _n, p, d in stoffe])
         bericht = [cls._eintragen(koerper, maske, [n for n, _p, _d in stoffe], teile[1:])]
-        lagen = Lagenmaske.verdeckt(kp, kd, stoffe) if len(stoffe) > 1 else {}
-        for teil in teile[1:]:
-            maske, ueber = lagen.get(teil['name'], (None, []))
-            if ueber:
-                darueber = [t for t in teile[1:] if t['name'] in ueber]
-                bericht.append(cls._eintragen(teil, maske, ueber, darueber))
+        bericht.extend(cls._lagen(teile[1:], kp, kd, stoffe))
         cls._melden(bericht)
         return bericht
+
+    @classmethod
+    def _lagen(cls, stuecke, kp, kd, stoffe):
+        u"""Stoff unter Stoff — je Stueck, das ein anderes ueberdeckt, eine Zeile."""
+        if len(stoffe) < 2:
+            return []
+        lagen = Lagenmaske.verdeckt(kp, kd, stoffe)
+        aus = []
+        for teil in stuecke:
+            maske, ueber = lagen.get(teil['name'], (None, []))
+            if ueber:
+                darueber = [t for t in stuecke if t['name'] in ueber]
+                aus.append(cls._eintragen(teil, maske, ueber, darueber))
+        return aus
 
     @staticmethod
     def _melden(bericht):

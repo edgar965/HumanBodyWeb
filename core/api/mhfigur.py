@@ -112,25 +112,9 @@ class Mhfigur:
             'skelett': Mhfigur._skelett(formung),
             # Ohne Hautgewichte bleibt die Figur beim Abspielen starr:
             # Das Skelett bewegt sich, das Netz nicht (07.09.2026).
-            'hautgewichte': Mhfigur._hautgewichte(netz.get('haut')),
+            'hautgewichte': Netzantwort.hautgewichte(netz.get('haut')),
         })
         return JsonResponse(antwort)
-
-    @staticmethod
-    def _hautgewichte(haut):
-        u"""Die Gewichte base64, mit den Breiten aus `Netzantwort.TYPEN`.
-
-        Als JSON-Liste waeren es beim geglaetteten Netz 53.514 x 8 Zahlen.
-        Die Knochen stehen als NAMEN da: Ihre Nummer im `THREE.Skeleton`
-        entscheidet erst der Bauplan.
-        """
-        if not haut:
-            return None
-        return {
-            'knochen': haut['knochen'],
-            'skin_indices': Netzantwort.feld(haut['index'], 'skin_indices'),
-            'skin_weights': Netzantwort.feld(haut['gewicht'], 'skin_weights'),
-        }
 
     @staticmethod
     def _skelett(formung):
@@ -250,7 +234,7 @@ class Mhfigur:
                                   normals=daten.pop('normalen'),
                                   uvs=daten.pop('uvs'))
         antwort.update(daten)
-        antwort['hautgewichte'] = Mhfigur._hautgewichte(haut)
+        antwort['hautgewichte'] = Netzantwort.hautgewichte(haut)
         return JsonResponse(antwort)
 
     @staticmethod

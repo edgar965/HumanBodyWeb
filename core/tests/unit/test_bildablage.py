@@ -34,6 +34,7 @@ from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from core.dienste.bildablage import Bildablage
+from ._sicher import Sicher
 
 #: Ein winziges gültiges JPEG-Fragment — der Inhalt ist gleichgültig, nur
 #: dass es dieselben Bytes zurückgibt.
@@ -94,7 +95,7 @@ class SichernAusDataurlTest(SimpleTestCase):
             pfad, fehler = self._ablage().sichern_aus_dataurl('abc', DATAURL)
         self.assertIsNone(fehler)
         self.assertEqual('media/photo_analysis/pruefung/abc.jpg', pfad)
-        voll = os.path.join(self.ordner, *pfad.split('/'))
+        voll = os.path.join(self.ordner, *Sicher.wert(pfad, 'Pfad').split('/'))
         self.assertTrue(os.path.isfile(voll), 'Datei nicht geschrieben')
         with open(voll, 'rb') as datei:
             self.assertEqual(ROH, datei.read())

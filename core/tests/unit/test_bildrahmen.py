@@ -16,17 +16,18 @@ import numpy as np
 from django.test import SimpleTestCase
 
 from core.daten.bildrahmen import Bildrahmen
+from ._sicher import Sicher
 
 
 class BildrahmenTest(SimpleTestCase):
 
     def test_schluessel_sind_x_y_w_h(self):
         """Das Drahtformat für den Browser — `w`/`h`, nicht `width`/`height`."""
-        rahmen = Bildrahmen.um([[0.0, 0.0], [4.0, 8.0]])
+        rahmen = Sicher.wert(Bildrahmen.um([[0.0, 0.0], [4.0, 8.0]]), 'Rahmen')
         self.assertEqual(sorted(rahmen.als_dict()), ['h', 'w', 'x', 'y'])
 
     def test_rechnet_die_ausdehnung(self):
-        rahmen = Bildrahmen.um([[10.0, 20.0], [30.0, 50.0]])
+        rahmen = Sicher.wert(Bildrahmen.um([[10.0, 20.0], [30.0, 50.0]]), 'Rahmen')
         self.assertEqual(rahmen.als_dict(),
                          {'x': 10.0, 'y': 20.0, 'w': 20.0, 'h': 30.0})
         self.assertEqual(rahmen.mitte(), (20.0, 35.0))
@@ -36,7 +37,7 @@ class BildrahmenTest(SimpleTestCase):
         `NaN`. Ein einfaches `min()` machte daraus einen Rahmen aus `NaN` —
         genau davor schützt `Bildrahmen`."""
         punkte = np.array([[10.0, 20.0], [np.nan, 5.0], [30.0, 50.0]])
-        self.assertEqual(Bildrahmen.um(punkte).als_dict(),
+        self.assertEqual(Sicher.wert(Bildrahmen.um(punkte), 'Rahmen').als_dict(),
                          {'x': 10.0, 'y': 20.0, 'w': 20.0, 'h': 30.0})
 
     def test_ohne_brauchbaren_punkt_kein_rahmen(self):
@@ -51,12 +52,13 @@ class BildrahmenTest(SimpleTestCase):
 
     def test_liste_von_paaren_geht_auch(self):
         """`Gesichtskontur` baut die Landmarken als Liste, nicht als Array."""
-        rahmen = Bildrahmen.um([[1, 2], [4, 6]])
+        rahmen = Sicher.wert(Bildrahmen.um([[1, 2], [4, 6]]), 'Rahmen')
         self.assertEqual(rahmen.als_dict(), {'x': 1.0, 'y': 2.0,
                                              'w': 3.0, 'h': 4.0})
 
     def test_werte_sind_immer_float(self):
         """JSON mag `numpy.float32` nicht — `float()` steht im Konstruktor."""
-        rahmen = Bildrahmen.um(np.array([[1, 2], [4, 6]], dtype=np.float32))
+        punkte = np.array([[1, 2], [4, 6]], dtype=np.float32)
+        rahmen = Sicher.wert(Bildrahmen.um(punkte), 'Rahmen')
         for wert in rahmen.als_dict().values():
             self.assertIsInstance(wert, float)

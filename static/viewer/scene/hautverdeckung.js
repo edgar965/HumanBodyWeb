@@ -25,15 +25,20 @@
  * neues Netz mit geklonter Geometrie, `userData` teilt es sich mit dem
  * alten, der volle Index ist also da). Alle Stücke der Figur zählen, nicht
  * nur das gemeldete: Die Maske ist die Vereinigung.
+ *
+ * Die Three.js-Handgriffe (`merken`, `indexSetzen`, `vollerIndex`) erbt sie
+ * von `gemeinsam/figurhaut.js` — sie standen hier ein zweites Mal (Befund
+ * `doppelcode`, 17.09.2026). Eigen bleibt, WO Körper und Stücke liegen
+ * (`inst.bodyMesh`, `inst.clothMeshes`) und das Ereignis, das sie anstößt.
  */
-import { THREE } from './state.js';
 import { Hautmaske } from '../gemeinsam/hautmaske.js';
+import { Figurhaut } from '../gemeinsam/figurhaut.js';
 import { Stueckereignis } from './garmentcode_stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
 
-export class Hautverdeckung {
+export class Hautverdeckung extends Figurhaut {
 
     /** Den Körper der Figur gegen alle ihre Stücke maskieren. */
     static anwenden(inst) {
@@ -73,22 +78,6 @@ export class Hautverdeckung {
         return { verdeckt: 0, dreiecke: 0, stuecke: 0, ms: 0 };
     }
 
-    /** Der volle Index — einmal gemerkt, bevor je gekürzt wurde. */
-    static merken(geo) {
-        if (geo.userData.indexVoll) return geo.userData.indexVoll;
-        geo.userData.indexVoll = {
-            index: geo.index.array.slice(),
-            gruppen: geo.groups.map((g) => ({ start: g.start, count: g.count,
-                                              materialIndex: g.materialIndex })),
-        };
-        return geo.userData.indexVoll;
-    }
-
-    /** Der volle Index eines Körpers, gekürzt oder nicht. */
-    static vollerIndex(geo) {
-        return geo?.userData?.indexVoll?.index || geo?.index?.array || null;
-    }
-
     /** Die Stücke der Figur, jedes in der Lage des Körpers (Ruhelage). */
     static stoffe(inst) {
         const aus = [];
@@ -99,12 +88,6 @@ export class Hautverdeckung {
                        dreiecke: Hautverdeckung.vollerIndex(g) });
         }
         return aus;
-    }
-
-    static indexSetzen(geo, index, gruppen) {
-        geo.setIndex(new THREE.BufferAttribute(index, 1));
-        geo.clearGroups();
-        for (const g of gruppen) geo.addGroup(g.start, g.count, g.materialIndex);
     }
 
     /** Figuren, deren Maske aussteht — ein Lauf je Umlauf, nicht je Ereignis. */

@@ -26,6 +26,7 @@ from GarmentCode.gemeinsamablage import Gemeinsamablage
 from GarmentCode.hautmitstoff import Hautmitstoff
 from GarmentCode.stoffnacharbeit import Stoffnacharbeit
 from GarmentCode.baufeineinstellung import Baufeineinstellung
+from ._sicher import Sicher
 
 
 def _kasten():
@@ -170,7 +171,7 @@ class NacharbeitTest(SimpleTestCase):
             self.assertEqual(anlage['ueber_getragene'], ['shirt_rig.json'])
             self.assertAlmostEqual(float(np.median(neu[(stoff[:, 0] > 0.1) & (stoff[:, 0] < 0.3), 1])),
                                    0.122, places=3)
-            self.assertEqual(len(arbeit.normalen), len(stoff))
+            self.assertEqual(len(Sicher.wert(arbeit.normalen, 'Normalen')), len(stoff))
             # ohne getragene Stuecke: der bisherige Weg, Haut allein
             ohne = Stoffnacharbeit(koerper, flaechen, dreiecke)
             self.assertIsNone(ohne.haut)
@@ -202,7 +203,7 @@ class GemeinsamTest(SimpleTestCase):
         self.assertEqual(anlage['ueber_getragene'], ['shirt'])
         self.assertAlmostEqual(float(np.median(neu[(stoff[:, 0] > 0.1) & (stoff[:, 0] < 0.3), 1])),
                                0.122, places=3)
-        self.assertEqual(len(normalen), len(stoff))
+        self.assertEqual(len(Sicher.wert(normalen, 'Normalen')), len(stoff))
         # `_andere` liefert die korrigierten Punkte aller ANDEREN Teile
         korrigiert = np.arange(30, dtype=float).reshape(10, 3)
         teile = {'hose': {'indizes': [0, 1]}, 'shirt': {'indizes': [2, 3, 4]},

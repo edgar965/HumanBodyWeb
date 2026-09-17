@@ -37,6 +37,7 @@ export class Animationsbrowser {
         this.bibliothek = null;
         this.element = null;
         this.gewaehlt = null;
+        /** @type {(eintrag: Object) => (string|false)} */
         this.gesperrt = () => false;
     }
 

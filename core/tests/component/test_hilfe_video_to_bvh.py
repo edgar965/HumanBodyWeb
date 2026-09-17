@@ -30,7 +30,7 @@ class DieSeite(SimpleTestCase):
         self.assertEqual(antwort.status_code, 200)
         return antwort.content.decode('utf-8')
 
-    def test_antwortet(self):
+    def test_die_seite_antwortet_mit_200(self):
         self._text()
 
     def test_djangobase_seiten_bleiben_erreichbar(self):

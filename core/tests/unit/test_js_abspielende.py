@@ -36,11 +36,6 @@ MODUL = Jsmodul('bvh_studio', 'abspielende.js')
 
 SKRIPT = """
 const { Abspielende } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const spur = (type, ...enden) => ({ type, clips: enden.map(e => ({ endFrame: e })) });
 // 1. Ende = letzte Animation, nicht der längste Clip
 const spuren = [spur('bvh', 300, 1004), spur('audio', 5520), spur('model', 4530), spur('light', 200)];

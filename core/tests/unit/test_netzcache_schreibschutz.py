@@ -26,6 +26,7 @@ import numpy as np
 from django.test import TestCase
 
 from core.dienste.charakterdaten import Charakterdaten
+from ._sicher import Sicher
 
 
 class NetzcacheSchreibschutzTest(TestCase):
@@ -47,7 +48,7 @@ class NetzcacheSchreibschutzTest(TestCase):
         """DER KERN: Aus stillem Schaden wird eine Ausnahme."""
         netz = Charakterdaten.netzdaten('female')
         with self.assertRaises(ValueError):
-            netz.faces[0, 0] = 999
+            Sicher.wert(netz.faces, 'faces')[0, 0] = 999
 
     def test_der_zweite_abruf_ist_dasselbe_objekt(self):
         """Ohne das wäre der Schutz sinnlos — dann gäbe es ja Kopien.
@@ -63,7 +64,7 @@ class NetzcacheSchreibschutzTest(TestCase):
 
         Alle acht lesen über Indizierung — genau das muss weiter gehen.
         """
-        netz = Charakterdaten.netzdaten('female')
-        self.assertEqual(netz.faces.shape[1], 4, 'Vierecke erwartet')
-        self.assertGreater(int(netz.faces[0].max()), -1)
-        self.assertIsInstance(netz.faces[:5].tolist(), list)
+        flaechen = Sicher.wert(Charakterdaten.netzdaten('female').faces, 'faces')
+        self.assertEqual(flaechen.shape[1], 4, 'Vierecke erwartet')
+        self.assertGreater(int(flaechen[0].max()), -1)
+        self.assertIsInstance(flaechen[:5].tolist(), list)

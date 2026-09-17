@@ -187,8 +187,9 @@ def extract_old(commit_hash: str):
                             os.makedirs(dest_path, exist_ok=True)
                         else:
                             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-                            with tar.extractfile(member) as src:
-                                with open(dest_path, 'wb') as dst:
+                            src = tar.extractfile(member)
+                            if src is not None:
+                                with src, open(dest_path, 'wb') as dst:
                                     dst.write(src.read())
                         break
     finally:

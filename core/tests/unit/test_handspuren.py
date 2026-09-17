@@ -11,13 +11,6 @@ from django.test import SimpleTestCase
 from core.dienste.handspuren import Handspuren
 
 
-def spuren(tracks, bilder=2):
-    from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
-    return Bewegungsspuren(duration=1.0, times=[0.0, 0.5], tracks=tracks,
-                           frame_count=bilder, mapped_bones=sorted(tracks),
-                           position_track=[0.0] * 6)
-
-
 class DieKnochenmenge(SimpleTestCase):
 
     databases = set()
@@ -31,18 +24,26 @@ class DieKnochenmenge(SimpleTestCase):
         for hand in ('DEF-f_index_01_L', 'DEF-thumb_03_R', 'DEF-palm_02_L'):
             self.assertIn(hand, knochen)
 
+    @staticmethod
+    def spuren(tracks, bilder=2):
+        from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
+        return Bewegungsspuren(duration=1.0, times=[0.0, 0.5], tracks=tracks,
+                               frame_count=bilder, mapped_bones=sorted(tracks),
+                               position_track=[0.0] * 6)
 
-class DasMischen(SimpleTestCase):
+
+class DasMischenDerHandspuren(SimpleTestCase):
 
     databases = set()
 
     def setUp(self):
-        q = lambda w: [w, 0.0, 0.0, 1.0] * 2          # zwei Bilder je Spur
-        self.gemischt = spuren({
+        def q(w):
+            return [w, 0.0, 0.0, 1.0] * 2          # zwei Bilder je Spur
+        self.gemischt = DieKnochenmenge.spuren({
             'DEF-spine.001': q(0.1), 'DEF-jaw': q(0.2),
             'DEF-f_index.01.L': q(0.3), 'DEF-palm.01.L': q(0.4),
         })
-        self.haende = spuren({
+        self.haende = DieKnochenmenge.spuren({
             'DEF-spine.001': q(0.9), 'DEF-jaw': q(0.8),
             'DEF-f_index.01.L': q(0.7), 'DEF-thumb.01.R': q(0.6),
         })

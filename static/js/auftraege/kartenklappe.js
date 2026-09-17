@@ -10,6 +10,8 @@
  * sein. Der Knopf steht NEBEN dem <label> der Wahl, nicht darin — sonst
  * waehlte jeder Klick auf den Pfeil auch die Pipeline.
  */
+import { Protokoll } from '/static/djangobase/js/protokoll.js';
+
 export class Kartenklappe {
 
     static KNOPF = '.pipeline-card-klappe';
@@ -43,7 +45,7 @@ export class Kartenklappe {
     setzen(knopf, offen) {
         const block = this.block(knopf);
         if (!block) {
-            console.warn('Kartenklappe: kein Block', knopf.getAttribute('aria-controls'));
+            Protokoll.warnung('Kartenklappe', 'kein Block', knopf.getAttribute('aria-controls'));
             return;
         }
         block.classList.toggle(Kartenklappe.OFFEN, offen);

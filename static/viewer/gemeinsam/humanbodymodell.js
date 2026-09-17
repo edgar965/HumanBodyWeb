@@ -72,13 +72,13 @@ export class HumanbodyModell extends Modell {
     }
 
     /**
-     * @param {Object} o
-     * @param o.skelettdaten  Rigify-Skelett (JSON) — mit `gewichte` wird gehäutet
-     * @param o.gewichte      Hautgewichte (JSON) der Körperart
-     * @param o.hautfarben    {ethnie: [r,g,b]} — Hautfarbe der Körperart; null = Vorgabe
-     * @param o.haarfarben    {name: [r,g,b]} für die Frisur
-     * @param o.zubehoer      Haare, Kleidung, GarmentCode, Hautmaske mitbauen
-     * @param o.beiKoerper    (modell) => void, sobald der Körper in der Gruppe hängt
+     * @param {Object} [o]
+     * @param {Object|null} [o.skelettdaten]  Rigify-Skelett (JSON) — mit `gewichte` wird gehäutet
+     * @param {Object|null} [o.gewichte]      Hautgewichte (JSON) der Körperart
+     * @param {Object<string, number[]>|null} [o.hautfarben]  Ethnie → [r,g,b]; null = Vorgabe
+     * @param {Object<string, number[]>|null} [o.haarfarben]  Name → [r,g,b] für die Frisur
+     * @param {boolean} [o.zubehoer]  Haare, Kleidung, GarmentCode, Hautmaske mitbauen
+     * @param {Function|null} [o.beiKoerper]  (modell) => void, sobald der Körper in der Gruppe hängt
      */
     async bauen({ skelettdaten = null, gewichte = null, hautfarben = null, haarfarben = null,
                   zubehoer = true, beiKoerper = null } = {}) {
@@ -201,7 +201,7 @@ export class HumanbodyModell extends Modell {
         if (!this.details.haut && this.hautfarben) this.hautfarbe(this.hautfarben);
         Koerperdetails.anwenden(this.bodyMesh, this.details, neue);
         Brauenhaut.anwenden(this.bodyMesh, this.details, this.bodyType)
-            .catch(f => console.warn('Brauenhaut:', f));
+            .catch(f => Protokoll.warnung('HumanbodyModell', 'Brauenhaut:', f));
         return true;
     }
 

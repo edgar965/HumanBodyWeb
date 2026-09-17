@@ -27,6 +27,7 @@ from django.test import SimpleTestCase
 from django.urls import reverse
 
 from GarmentCode.gemeinsamdienst import Garmentgemeinsam, GemeinsamFehler
+from ._sicher import Sicher
 
 WURZEL = settings.BASE_DIR
 
@@ -191,4 +192,4 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         self.assertNotIn('Serverabruf.formular(', gemeinsam)
         frist = re.search(r'FRIST_S\s*=\s*(\d+)', gemeinsam)
         self.assertIsNotNone(frist)
-        self.assertGreaterEqual(int(frist.group(1)), 300)
+        self.assertGreaterEqual(int(Sicher.wert(frist, 'Frist').group(1)), 300)

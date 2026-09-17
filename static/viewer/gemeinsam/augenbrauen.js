@@ -121,7 +121,9 @@ export class Augenbrauen {
         const sklera = Augenbrauen.ecken(index, gruppen, Augenbrauen.GRUPPE.sklera);
         const auge = Augenbrauen.augen(punkte, sklera);
         const aus = [];
-        for (const [seite, mitte] of [[-1, auge.links], [1, auge.rechts]]) {
+        /** @type {Array<[number, number[]]>} */
+        const seiten = [[-1, auge.links], [1, auge.rechts]];
+        for (const [seite, mitte] of seiten) {
             for (const b of Augenbrauen.bogen(punkte, haut, mitte, seite)) {
                 aus.push({ seite, wurzel: b.wurzel, t: b.t,
                            dx: b.p[0] - punkte[3 * b.wurzel], dy: b.p[1] - punkte[3 * b.wurzel + 1] });

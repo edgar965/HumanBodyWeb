@@ -105,5 +105,4 @@ export class GarmentcodeStuecke {
 }
 
 // Für `mesh_loading.js`, das wegen des Importkreises über `fn` ruft.
-fn.loadGarmentcode = (eintraege) => GarmentcodeStuecke.laden(eintraege);
 fn.removeAllGarmentcode = () => GarmentcodeStuecke.entfernen();

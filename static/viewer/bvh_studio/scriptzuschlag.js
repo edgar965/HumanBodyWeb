@@ -34,6 +34,7 @@ export class Scriptzuschlag {
      * @returns {{aktiv: boolean, zuschlag: Object}}
      */
     static gewichte(clips, bild, fps, pose = {}) {
+        /** @type {Object<string, number>} */
         const zuschlag = {};
         const aktive = Scriptzuschlag.aktive(clips, bild);
         for (const clip of aktive) {

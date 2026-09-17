@@ -1,0 +1,26 @@
+{% comment %}
+Untermenü „Länge" eines Zeitleisten-Kontextmenüs im BVH Studio.
+
+BEFUND `doppelcode` (17.09.2026): Dieser Block stand DREIMAL in
+`bvh_studio.html` — im Clip-, Modell- und Script-Menü, nur die Kennung der
+IDs und die Beschriftung von 100 % waren anders.
+
+`kennung` = clip | model | script (Präfix von `<kennung>-ctx-laenge` und
+`<kennung>-ctx-laenge-submenu`, die das JS anspricht), `ganz` = was 100 %
+bedeutet („ganz" beim Clip, „Projektende" bei Modell und Script).
+{% endcomment %}
+    <div class="ctx-item has-submenu" id="{{ kennung }}-ctx-laenge" data-action="ctx-laenge">
+        <i class="fas fa-ruler-horizontal hb-symbolspalte"></i> Länge
+        <i class="fas fa-caret-right hb-kuerzel"></i>
+        <div id="{{ kennung }}-ctx-laenge-submenu" class="ctx-submenu">
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="25">25 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="50">50 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="75">75 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="100">100 % ({{ ganz }})</div>
+            <div class="hb-trennlinie"></div>
+            <div class="ctx-item" data-action="ctx-laenge-sekunden"><i
+                 class="fas fa-clock hb-symbolspalte"></i> Sekunden eingeben…</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent"><i
+                 class="fas fa-percent hb-symbolspalte"></i> Prozent eingeben…</div>
+        </div>
+    </div>

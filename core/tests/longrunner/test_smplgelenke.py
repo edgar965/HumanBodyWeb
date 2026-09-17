@@ -172,7 +172,7 @@ class SmplgelenkeTest(unittest.TestCase):
         if stoerung:
             v[:, 1] += stoerung
 
-        welt = [None] * len(j_rest)
+        welt = [np.eye(4) for _ in j_rest]
         for i in range(len(j_rest)):
             eltern = int(modell.parents[i])
             lokal = np.eye(4)

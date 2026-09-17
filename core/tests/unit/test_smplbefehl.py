@@ -19,9 +19,10 @@ from django.test import SimpleTestCase, override_settings
 
 from core.pipelines.smplbefehl import Smplbefehl
 from core.tests.attrappen import AuftragsAttrappe
+from ._sicher import Sicher
 
 
-class EinstellungenAttrappe:
+class Smplbefehlseinstellungen:
     smpl_device = 'cuda'
     gvhmr_static_cam = True
     gvhmr_focal_length_mm = 35.0
@@ -51,7 +52,7 @@ class SmplbefehlTest(SimpleTestCase):
     def befehl(self, pipeline, **params):
         auftrag = AuftragsAttrappe(pipeline, params)
         with override_settings(PIPELINE_PYTHON='py.exe'):
-            return Smplbefehl(auftrag, EinstellungenAttrappe()).bauen(
+            return Smplbefehl(auftrag, Smplbefehlseinstellungen()).bauen(
                 'lift_3d.py', 'tanz.mp4', 'out.bvh')
 
     # ------------------------------------------------------------- Grundgerüst
@@ -179,12 +180,12 @@ class SmplbefehlTest(SimpleTestCase):
             for _schluessel, feld, _argument in schalter:
                 if feld:
                     self.assertIn(feld, felder, '%s: %s' % (pipeline, feld))
-                    self.assertTrue(hasattr(EinstellungenAttrappe, feld),
+                    self.assertTrue(hasattr(Smplbefehlseinstellungen, feld),
                                     'Attrappe ohne %s' % feld)
         for pipeline in Smplbefehl.MIT_GLAETTUNG:
-            name = Smplbefehl.einstellungsname(pipeline)
+            name = Sicher.wert(Smplbefehl.einstellungsname(pipeline), pipeline)
             self.assertIn(name + '_smooth_sigma', felder, name)
-            self.assertTrue(hasattr(EinstellungenAttrappe, name + '_smooth_sigma'),
+            self.assertTrue(hasattr(Smplbefehlseinstellungen, name + '_smooth_sigma'),
                             'Attrappe ohne %s_smooth_sigma' % name)
 
     def test_smplx_faehrt_gems_koerpereinstellungen_und_eigene_glaettungen(self):

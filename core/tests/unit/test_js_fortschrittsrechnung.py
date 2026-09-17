@@ -27,11 +27,6 @@ MODUL = Jsmodul('gemeinsam', 'fortschrittsrechnung.js')
 
 SKRIPT = """
 const { Fortschrittsrechnung: F } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const proz = (x) => Math.round(x * 100);
 
 // --- 1. Ein laufender Schritt wird nie voll --------------------------------
@@ -92,6 +87,6 @@ class FortschrittsrechnungTest(SimpleTestCase):
 
     databases = set()
 
-    def test_fortschrittsrechnung(self):
+    def test_laufender_schritt_nie_voll_gescheitert_springt_nicht_zurueck(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

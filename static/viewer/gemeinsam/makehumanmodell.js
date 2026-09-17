@@ -4,7 +4,6 @@ import { Netzgeometrie } from './netzgeometrie.js';
 import { Netzentsorgung } from './netzentsorgung.js';
 import { Protokoll } from './protokoll.js';
 import { Mhkleidstueck } from './mhkleidstueck.js';
-import { Knochenbau } from './knochenbau.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Modell } from './modell.js';
 
@@ -110,7 +109,7 @@ export class MakehumanModell extends Modell {
         this.bodyMesh.name = `makehuman_${this.modell}`;
         // ERST das Skelett, DANN das Netz einhängen: Die Bindung braucht die
         // Knochen in ihrer Ruhelage (`Eigenhaut.einhaengen`).
-        this._skelettBauen(daten.skelett);
+        this.skelettBauen(daten.skelett);
         this._hautBinden(daten.hautgewichte);
         this.hoehe = daten.hoehe || 0;
         this.punktzahl = daten.vertex_count || 0;
@@ -119,20 +118,6 @@ export class MakehumanModell extends Modell {
             `${this.teile.join('+')}${this.glatt ? ' glatt' : ''}: `
             + `${this.punktzahl} Punkte, ${(this.hoehe * 100).toFixed(1)} cm`);
         return this;
-    }
-
-    /**
-     * `default.mhskel` aus der Antwort bauen — MakeHumans eigenes Rig.
-     *
-     * Zuerst abraeumen: `bauen()` laeuft bei JEDEM Reglerzug erneut (269
-     * Modellierregler, dazu Teileauswahl und Glättung). Ohne das hängen nach
-     * zehn Zügen zehn Skelette ineinander, und der `SkeletonHelper` zeigt
-     * die alten Stellungen mit.
-     */
-    _skelettBauen(angaben) {
-        this.skelett = Knochenbau.abraeumen(this.skelett);
-        if (!angaben) return;
-        this.skelett = Knochenbau.bauen(angaben, this.group);
     }
 
     /**
@@ -166,7 +151,7 @@ export class MakehumanModell extends Modell {
      * schickte die Gewichte mit (163 Knochennamen, keiner davon fehlte im
      * Skelett).
      *
-     * Der zweite Grund ist `_skelettBauen`: Es räumt bei JEDEM Aufruf ab
+     * Der zweite Grund ist `skelettBauen`: Es räumt bei JEDEM Aufruf ab
      * und baut neu. Eine Bindung von vorher zeigte danach auf Knochen, die
      * nicht mehr in der Szene hängen — deshalb wird hier IMMER neu
      * gebunden, aus den Rohgewichten am Netz, nicht aus den Attributen der

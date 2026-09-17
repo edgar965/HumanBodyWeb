@@ -53,7 +53,7 @@ class MhloeschmaskeTest(unittest.TestCase):
     def test_muell_wird_uebergangen(self):
         self.assertEqual(Mhloeschmaske.nummern(['5', 'quatsch', '8']), {5, 8})
 
-    def test_leer(self):
+    def test_ohne_eintraege_keine_nummern(self):
         self.assertEqual(Mhloeschmaske.nummern([]), set())
 
 

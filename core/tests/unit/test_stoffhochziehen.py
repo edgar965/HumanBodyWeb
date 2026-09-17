@@ -10,12 +10,13 @@ z = 0,05 (dort endet der Fuss).
 Sabotage-Gegenprobe: `HOSE_AB_M = 10.0` (keine Hose erkannt) macht
 `test_hose_wird_hochgezogen` rot; `KNOECHEL_ANTEIL = (0.2, 0.3)` macht
 `test_saum_kommt_auf_den_knoechel` rot; `koerperseiten` ohne z-Bedingung
-macht `test_koerperseiten` rot.
+macht `test_koerperseiten_unten_nach_vorzeichen_von_x_oben_null` rot.
 """
 import numpy as np
 from django.test import SimpleTestCase
 
 from GarmentCode.stoffhochziehen import Stoffhochziehen
+from ._sicher import Sicher
 
 
 def _zylinder(x0, radius, z_von, z_bis, n=36, reihen=None):
@@ -53,16 +54,17 @@ class StoffhochziehenTest(SimpleTestCase):
         self.hoch = Stoffhochziehen(_koerper())
 
     def test_koerperschritt_und_knoechel(self):
-        self.assertIsNotNone(self.hoch.schritt)
-        self.assertAlmostEqual(self.hoch.schritt[1], 0.80, delta=0.005)
-        self.assertAlmostEqual(self.hoch.schritt[0], 0.0, delta=0.005)
-        self.assertIsNotNone(self.hoch.knoechel)
-        self.assertGreaterEqual(self.hoch.knoechel, 0.05)
-        self.assertLess(self.hoch.knoechel, 0.09)
+        schritt = Sicher.wert(self.hoch.schritt, 'Schritt')
+        self.assertAlmostEqual(schritt[1], 0.80, delta=0.005)
+        self.assertAlmostEqual(schritt[0], 0.0, delta=0.005)
+        knoechel = Sicher.wert(self.hoch.knoechel, 'Knöchel')
+        self.assertGreaterEqual(knoechel, 0.05)
+        self.assertLess(knoechel, 0.09)
 
     def test_hose_wird_hochgezogen(self):
         hose = _hose()
-        self.assertAlmostEqual(self.hoch.hosenschritt(hose), 0.65, delta=1e-9)
+        self.assertAlmostEqual(Sicher.wert(self.hoch.hosenschritt(hose), 'Hosenschritt'),
+                               0.65, delta=1e-9)
         neu, bilanz = self.hoch.anwenden(hose)
         schritt = neu[-1]
         self.assertAlmostEqual(schritt[2], 0.80, delta=0.005, msg=schritt)
@@ -130,7 +132,7 @@ class StoffhochziehenTest(SimpleTestCase):
         np.testing.assert_allclose(neu, rock)
         self.assertEqual(bilanz['hochgezogen_mm'], 0.0)
 
-    def test_koerperseiten(self):
+    def test_koerperseiten_unten_nach_vorzeichen_von_x_oben_null(self):
         seiten = self.hoch.koerperseiten()
         k = self.hoch.koerper
         unten = k[:, 2] < 0.80

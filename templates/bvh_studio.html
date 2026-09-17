@@ -948,21 +948,7 @@
          class="fas fa-step-backward hb-symbolspalte"></i> Ende trimmen (+10f)</div>
     <div class="ctx-item" data-action="ctx-trim-reset"><i
          class="fas fa-undo hb-symbolspalte"></i> Trim zurücksetzen</div>
-    <div class="ctx-item has-submenu" id="clip-ctx-laenge" data-action="ctx-laenge">
-        <i class="fas fa-ruler-horizontal hb-symbolspalte"></i> Länge
-        <i class="fas fa-caret-right hb-kuerzel"></i>
-        <div id="clip-ctx-laenge-submenu" class="ctx-submenu">
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="25">25 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="50">50 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="75">75 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="100">100 % (ganz)</div>
-            <div class="hb-trennlinie"></div>
-            <div class="ctx-item" data-action="ctx-laenge-sekunden"><i
-                 class="fas fa-clock hb-symbolspalte"></i> Sekunden eingeben…</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent"><i
-                 class="fas fa-percent hb-symbolspalte"></i> Prozent eingeben…</div>
-        </div>
-    </div>
+    {% include "_studio_laenge_untermenue.html" with kennung="clip" ganz="ganz" %}
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-save-bvh"><i
          class="fas fa-file-export hb-symbolspalte"></i> BVH speichern unter...</div>
@@ -983,13 +969,7 @@
         <i class="fas fa-plus hb-symbolspalte"></i> Animation hinzufügen
         <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="model-ctx-anim-submenu" class="ctx-submenu">
-            <div class="ctx-item has-submenu" id="model-ctx-bvh">
-                <i class="fas fa-running hb-symbolspalte"></i> Animation
-                <i class="fas fa-caret-right hb-kuerzel"></i>
-                <div id="model-ctx-bvh-submenu" class="ctx-submenu"></div>
-            </div>
-            <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimik</div>
-            <div class="ctx-item" data-action="ctx-script-track"><i class="fas fa-scroll hb-symbolspalte"></i> Script</div>
+            {% include "_studio_animation_untermenue.html" with kennung="model" %}
         </div>
     </div>
     <div class="hb-trennlinie"></div>
@@ -1002,21 +982,7 @@
     </div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead</div>
-    <div class="ctx-item has-submenu" id="model-ctx-laenge" data-action="ctx-laenge">
-        <i class="fas fa-ruler-horizontal hb-symbolspalte"></i> Länge
-        <i class="fas fa-caret-right hb-kuerzel"></i>
-        <div id="model-ctx-laenge-submenu" class="ctx-submenu">
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="25">25 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="50">50 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="75">75 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="100">100 % (Projektende)</div>
-            <div class="hb-trennlinie"></div>
-            <div class="ctx-item" data-action="ctx-laenge-sekunden"><i
-                 class="fas fa-clock hb-symbolspalte"></i> Sekunden eingeben…</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent"><i
-                 class="fas fa-percent hb-symbolspalte"></i> Prozent eingeben…</div>
-        </div>
-    </div>
+    {% include "_studio_laenge_untermenue.html" with kennung="model" ganz="Projektende" %}
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
 </div>
 
@@ -1027,21 +993,7 @@
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead</div>
-    <div class="ctx-item has-submenu" id="script-ctx-laenge" data-action="ctx-laenge">
-        <i class="fas fa-ruler-horizontal hb-symbolspalte"></i> Länge
-        <i class="fas fa-caret-right hb-kuerzel"></i>
-        <div id="script-ctx-laenge-submenu" class="ctx-submenu">
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="25">25 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="50">50 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="75">75 %</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="100">100 % (Projektende)</div>
-            <div class="hb-trennlinie"></div>
-            <div class="ctx-item" data-action="ctx-laenge-sekunden"><i
-                 class="fas fa-clock hb-symbolspalte"></i> Sekunden eingeben…</div>
-            <div class="ctx-item" data-action="ctx-laenge-prozent"><i
-                 class="fas fa-percent hb-symbolspalte"></i> Prozent eingeben…</div>
-        </div>
-    </div>
+    {% include "_studio_laenge_untermenue.html" with kennung="script" ganz="Projektende" %}
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-mimik-einrechnen"><i class="fas fa-file-export hb-symbolspalte"></i> Mimik einrechnen (zur BVH)</div>
@@ -1078,13 +1030,7 @@
         <i class="fas fa-plus hb-symbolspalte"></i> Animation hinzufügen
         <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="track-ctx-anim-submenu" class="ctx-submenu">
-            <div class="ctx-item has-submenu" id="track-ctx-bvh">
-                <i class="fas fa-running hb-symbolspalte"></i> Animation
-                <i class="fas fa-caret-right hb-kuerzel"></i>
-                <div id="track-ctx-bvh-submenu" class="ctx-submenu"></div>
-            </div>
-            <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimik</div>
-            <div class="ctx-item" data-action="ctx-script-track"><i class="fas fa-scroll hb-symbolspalte"></i> Script</div>
+            {% include "_studio_animation_untermenue.html" with kennung="track" %}
         </div>
     </div>
     <div class="hb-trennlinie"></div>

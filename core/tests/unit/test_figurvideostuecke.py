@@ -16,8 +16,9 @@ Der Weg hat drei stille Fallen, und jede hat hier einen Fall:
   Ein Byte zu wenig oder ein Dreieck ausserhalb der Punkte muss abbrechen,
   nicht stumm Unsinn lesen.
 
-Sabotage-Gegenprobe gemacht: Drehung entfernt -> `test_achsen` rot;
-Umsetzung ueber die Nummer statt den Namen -> `test_gewichte` rot.
+Sabotage-Gegenprobe gemacht: Drehung entfernt ->
+`test_ablage_dreht_die_achsen_und_nennt_die_knochen` rot; Umsetzung ueber die
+Nummer statt den Namen -> `test_gewichte_werden_ueber_den_knochennamen_umgesetzt` rot.
 """
 import os
 import sys
@@ -68,7 +69,7 @@ class FigurvideostueckeTest(SimpleTestCase):
         dateien = {'stueck_0': SimpleUploadedFile('stueck_0.bin', roh)}
         return Figurvideostuecke.ablegen(dateien, [eintrag], knochen, ordner)
 
-    def test_achsen(self):
+    def test_ablage_dreht_die_achsen_und_nennt_die_knochen(self):
         with Pruefablage.ordner('figurvideo_') as ordner:
             aus = self._ablegen(ordner)
             self.assertEqual(aus[0]['name'], 'Hose')
@@ -80,7 +81,7 @@ class FigurvideostueckeTest(SimpleTestCase):
                 np.testing.assert_array_equal(daten['dreiecke'], DREIECKE)
                 self.assertEqual(list(daten['knochen']), PAKET_KNOCHEN)
 
-    def test_gewichte(self):
+    def test_gewichte_werden_ueber_den_knochennamen_umgesetzt(self):
         u"""Ueber den NAMEN umgesetzt, nicht ueber die Nummer."""
         if MODELPHYSIK not in sys.path:
             sys.path.insert(0, MODELPHYSIK)
@@ -142,7 +143,7 @@ class FigurvideostueckeTest(SimpleTestCase):
     def test_ohne_stuecke_nichts(self):
         self.assertEqual(Figurvideostuecke.ablegen({}, [], [], 'nirgends'), [])
 
-    def test_farbe(self):
+    def test_farbe_aus_hex_sonst_die_vorgabe(self):
         self.assertEqual(Figurvideostuecke.farbe(None), Figurvideostuecke.FARBE)
         self.assertEqual(Figurvideostuecke.farbe('#000000'), [0.0, 0.0, 0.0])
         self.assertEqual(Figurvideostuecke.farbe('xyz'), Figurvideostuecke.FARBE)

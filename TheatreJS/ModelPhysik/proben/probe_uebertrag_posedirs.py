@@ -111,9 +111,9 @@ class Posedirsuebertrag:
         mit = Armmass.haeuten(self.punkte + self.korrektur(w), self.gewichte,
                               self.ruhe, pose)
         pose_achse = pose[self.i_ober][:3, 1]
-        u0 = Armmass.umfang(self.punkte, self.messpunkte, self.achse_ober)
-        u_lbs = Armmass.umfang(lbs, self.messpunkte, pose_achse)
-        u_mit = Armmass.umfang(mit, self.messpunkte, pose_achse)
+        u0 = Armmass.umfang(self.punkte, self.messpunkte, self.achse_ober) or 1e-9
+        u_lbs = Armmass.umfang(lbs, self.messpunkte, pose_achse) or 0.0
+        u_mit = Armmass.umfang(mit, self.messpunkte, pose_achse) or 0.0
         return ('%-12s %8.2f cm   %8.2f cm (%+6.1f %%)   %8.2f cm (%+6.1f %%)'
                 % ('%d Grad' % grad, u0,
                    u_lbs, 100 * (u_lbs - u0) / u0,

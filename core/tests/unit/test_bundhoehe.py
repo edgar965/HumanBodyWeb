@@ -20,11 +20,13 @@ from ._pruefablage import Pruefablage
 from GarmentCode.bundhoehe import Bundhoehe
 from GarmentCode.bundmaske import Bundmaske
 from GarmentCode.schnittvorschau import Schnittvorschau
+from ._sicher import Sicher
 
 HIPS_LINE = 25.0
 
 
-def _entwurf(upper=None, wb='StraightWB', bottom='Pants', breite=0.232):
+def _entwurf(upper=None, wb: 'str | None' = 'StraightWB', bottom: 'str | None' = 'Pants',
+             breite=0.232):
     return {'meta': {'upper': {'v': upper}, 'wb': {'v': wb}, 'bottom': {'v': bottom}},
             'waistband': {'width': {'v': breite}}}
 
@@ -170,7 +172,7 @@ class BundmaskeTest(SimpleTestCase):
             datei.write('\n'.join(['pant_f_r', 'wb_front', 'stitch_3',
                                    'hose__wb_back,stitch_1', 'shirt__ftorso', '']))
 
-    def test_marken(self):
+    def test_bundmarken_werden_am_praefix_wb_erkannt(self):
         self.assertTrue(Bundmaske.ist_bund('wb_front'))
         self.assertTrue(Bundmaske.ist_bund('hose__wb_back'))
         self.assertFalse(Bundmaske.ist_bund('pant_f_r'))
@@ -179,7 +181,7 @@ class BundmaskeTest(SimpleTestCase):
 
     def test_die_maske_liegt_neben_dem_netz(self):
         maske = Bundmaske.neben_netz(self.netz, 5)
-        self.assertEqual(maske.tolist(), [False, True, False, True, False])
+        self.assertEqual(Sicher.wert(maske, 'Maske').tolist(), [False, True, False, True, False])
         # fehlende Datei oder falsche Punktzahl: keine Maske, kein Absturz
         self.assertIsNone(Bundmaske.neben_netz(self.netz, 4))
         self.assertIsNone(Bundmaske.neben_netz(os.path.join(self.ordner, 'x_sim.obj')))

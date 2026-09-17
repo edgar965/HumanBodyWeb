@@ -21,6 +21,7 @@ import re
 from django.test import Client, TestCase
 
 from core.models import BVHJob
+from ..unit._sicher import Sicher
 
 
 class DieAuftragstabelle(TestCase):
@@ -92,14 +93,15 @@ class DieAuftragstabelle(TestCase):
         aus = [k for k in koepfe if 'data-sort-aus="1"' in k]
         self.assertEqual(len(aus), 3)
         self.assertIn('data-key="wahl"', aus[0])
-        kopf = re.search(r'<th[^>]*data-key="wahl"[^>]*>(.*?)</th>', tabelle, re.S)
+        kopf = Sicher.wert(
+            re.search(r'<th[^>]*data-key="wahl"[^>]*>(.*?)</th>', tabelle, re.S), 'Kopf')
         self.assertIn('<input type="checkbox" id="select-all"', kopf.group(1))
         self.assertIn('data-key="groesse"', ''.join(koepfe))
 
     def test_der_loeschknopf_beginnt_gesperrt_mit_null(self):
         text = self.seite(self.DREID)
-        knopf = re.search(r'<button[^>]*id="bulk-delete-btn"[^>]*>(.*?)</button>',
-                          text, re.S)
+        knopf = Sicher.wert(re.search(
+            r'<button[^>]*id="bulk-delete-btn"[^>]*>(.*?)</button>', text, re.S), 'Knopf')
         self.assertIn('disabled', knopf.group(0))
         self.assertIn('Auswahl löschen (<span id="bulk-count">0</span>)',
                       knopf.group(1))

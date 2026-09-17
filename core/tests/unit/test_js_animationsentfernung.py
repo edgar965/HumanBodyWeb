@@ -25,11 +25,6 @@ MODUL = Jsmodul('scene', 'animationsentfernung.js')
 
 SKRIPT = """
 const { Animationsentfernung: A } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const e = (name, category) => ({ name, url: '/bvh/' + category + '/' + name + '/', category });
 const baum = [e('a1', 'A'), e('a2', 'A'), e('a3', 'A'), e('b1', 'B'), e('c1', 'C')];
 

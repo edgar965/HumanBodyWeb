@@ -113,6 +113,7 @@ export class Lippenhaut {
 
     /** Trägt die Haut dieses Netzes den Eingriff? */
     static aktiv(netz) {
-        return Lippenhaut.HAUT.some(g => netz?.material?.[g] && Shaderpatch.hat(netz.material[g], Lippenhaut.SCHLUESSEL));
+        return Lippenhaut.HAUT.some(g => netz?.material?.[g]
+            && Shaderpatch.hat(netz.material[g], Lippenhaut.SCHLUESSEL));
     }
 }

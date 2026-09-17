@@ -1,6 +1,5 @@
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { escapeHtml } from '../utils.js';
-import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Umagarderobe } from './umagarderobe.js';
 import { Umatyp } from './umatyp.js';
 import { Umabauerstand } from './umabauerstand.js';
@@ -20,13 +19,7 @@ export class Umakleider {
     static ADRESSE = '/api/character/uma-garderobe/';
 
     static async fuellen(element, figur) {
-        element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        let garderobe = null;
-        try {
-            garderobe = await Umagarderobe.lesen(figur.datei);
-        } catch (fehler) {
-            Protokoll.warnung('Umakleider', 'Zettel nicht lesbar:', fehler);
-        }
+        const garderobe = await Umagarderobe.lesenFuer(element, figur, 'Umakleider');
         const rasse = garderobe?.rasse;
         if (!rasse) {
             element.innerHTML = Umagarderobe.html(figur, garderobe)

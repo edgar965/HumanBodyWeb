@@ -31,12 +31,13 @@ from gemlauf import Gemlauf                                 # noqa: E402
 from gvhmrlauf import Gvhmrlauf                             # noqa: E402
 from kameraverfolgung import Kameraverfolgung               # noqa: E402
 from vorstufe import Vorstufe                               # noqa: E402
+from ._sicher import Sicher
 
 GVHMR = TOOLS / 'VideoToBVH' / 'GVHMR'
 GEM = TOOLS / 'VideoToBVH' / 'GEM'
 
 
-class DieKommandozeile(unittest.TestCase):
+class DieKommandozeileDerVorstufe(unittest.TestCase):
 
     def test_vorstufe_mit_format_und_kameraverfolgung(self):
         befehl = Vorstufe.befehl('tanz.mp4', 'aus', 'gem', True, 24.0)
@@ -131,6 +132,6 @@ class DieStuetzstellen(unittest.TestCase):
             self.skipTest('GVHMR nicht eingelagert')
         treffer = re.search(r'SimpleVO\(cfg\.video_path, scale=([\d.]+), '
                             r'step=(\d+)', demo.read_text(encoding='utf-8'))
-        self.assertIsNotNone(treffer)
+        treffer = Sicher.wert(treffer, 'SimpleVO-Aufruf')
         self.assertEqual(float(treffer.group(1)), Vorstufe.MASSSTAB)
         self.assertEqual(int(treffer.group(2)), Kameraverfolgung.SCHRITT)

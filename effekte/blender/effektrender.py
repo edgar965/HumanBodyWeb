@@ -15,8 +15,8 @@ from __future__ import print_function
 import os
 import time
 
-import bpy
-from mathutils import Vector
+import bpy  # pyright: ignore[reportMissingImports]  (Blender)
+from mathutils import Vector  # pyright: ignore[reportMissingImports]
 
 __all__ = ['Effektrender']
 

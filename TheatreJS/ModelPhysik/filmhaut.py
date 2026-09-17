@@ -139,29 +139,41 @@ class Filmhaut:
             return 1.0 - min(1.0, max(0.0, float(glanz)))
         return vorgabe
 
+    def _farbe(self, feld, vorgabe):
+        u"""Die Detailfarbe des Felds (`#rrggbb`), sonst die Vorgabe."""
+        farbe = self.details.get(feld) if feld else None
+        if isinstance(farbe, str) and len(farbe) == 7 and farbe.startswith('#'):
+            return farbe
+        return vorgabe
+
+    def _textur(self):
+        import pyrender
+        if self.bild is None:
+            return None
+        return pyrender.Texture(source=np.ascontiguousarray(self.bild),
+                                source_channels='RGB')
+
+    def _werkstoff(self, nummer, textur):
+        u"""Das Material EINER Gruppe: Haut mit der Textur (Faktor weiss),
+        alles andere mit seiner Farbe; Deckkraft < 1 heisst durchsichtig."""
+        import pyrender
+        feld, vorgabe, rauheit, alpha = self.GRUPPEN[nummer]
+        mit_textur = textur is not None and nummer in self.HAUT
+        farbe = ([1.0, 1.0, 1.0] if mit_textur
+                 else self.linear(self._farbe(feld, vorgabe)))
+        return pyrender.MetallicRoughnessMaterial(
+            baseColorFactor=farbe + [alpha],
+            baseColorTexture=textur if mit_textur else None,
+            metallicFactor=0.0, roughnessFactor=self._rauheit(nummer, rauheit),
+            doubleSided=True, alphaMode='BLEND' if alpha < 1.0 else 'OPAQUE')
+
     def werkstoffe(self):
         u"""Ein pyrender-Material je Gruppe, einmal je Film."""
-        import pyrender
-        if self._werkstoffe is not None:
-            return self._werkstoffe
-        textur = None
-        if self.bild is not None:
-            textur = pyrender.Texture(source=np.ascontiguousarray(self.bild),
-                                      source_channels='RGB')
-        aus = []
-        for nummer, (feld, vorgabe, rauheit, alpha) in enumerate(self.GRUPPEN):
-            farbe = self.details.get(feld) if feld else None
-            hex_farbe = farbe if isinstance(farbe, str) and len(farbe) == 7 \
-                and farbe.startswith('#') else vorgabe
-            mit_textur = textur is not None and nummer in self.HAUT
-            aus.append(pyrender.MetallicRoughnessMaterial(
-                baseColorFactor=([1.0, 1.0, 1.0] if mit_textur
-                                 else self.linear(hex_farbe)) + [alpha],
-                baseColorTexture=textur if mit_textur else None,
-                metallicFactor=0.0, roughnessFactor=self._rauheit(nummer, rauheit),
-                doubleSided=True, alphaMode='BLEND' if alpha < 1.0 else 'OPAQUE'))
-        self._werkstoffe = aus
-        return aus
+        if self._werkstoffe is None:
+            textur = self._textur()
+            self._werkstoffe = [self._werkstoff(nummer, textur)
+                                for nummer in range(len(self.GRUPPEN))]
+        return self._werkstoffe
 
     # ----------------------------------------------------------------- Netze
 

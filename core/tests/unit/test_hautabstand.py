@@ -132,7 +132,7 @@ class DerGemeinsameKernNimmtBeideEingaben(SimpleTestCase):
     def test_ein_leeres_array(self):
         self.assertEqual(Hautabstand.aus_laengen(np.array([])).punkte, 0)
 
-    def test_none(self):
+    def test_ohne_laengen_null_punkte(self):
         self.assertEqual(Hautabstand.aus_laengen(None).punkte, 0)
 
     def test_vorschau_und_bau_rechnen_gleich(self):

@@ -1,0 +1,14 @@
+{% comment %}
+Das Feld „Personen" einer Pipelinekarte (GEM, GVHMR): ein BVH je Person.
+Stand zweimal wortgleich (Befund `doppelcode`, 17.09.2026).
+`name` = Feldname (`gem_persons`), `wert` = die Vorgabe aus `defaults`.
+{% endcomment %}
+                            <div class="setting-item">
+                                <div class="setting-label">Personen <span
+                                     class="setting-hint">Ein BVH je Person, synchron (gleiche Bilder, gleiche
+                                          Kamera): Person 1 wie bisher, dazu <code>_p2</code>, <code>_p3</code> &hellip;
+                                          nach Gr&ouml;&szlig;e der YOLO-Spur. Wer nur durchs Bild l&auml;uft,
+                                          z&auml;hlt nicht &mdash; das Log nennt alle Spuren</span></div>
+                                <input type="number" name="{{ name }}" min="1" max="6" step="1"
+                                     value="{{ wert }}">
+                            </div>

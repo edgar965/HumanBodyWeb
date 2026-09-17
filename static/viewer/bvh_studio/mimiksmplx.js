@@ -1,3 +1,4 @@
+import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Mimikfelder } from './mimikfelder.js';
@@ -36,7 +37,7 @@ export class Mimiksmplx {
                     return basis;
                 })
                 .catch(fehler => {
-                    console.warn('[BVH Studio] SMPL-X-Mimik nicht ladbar:', fehler);
+                    Protokoll.warnung('BVH Studio', 'SMPL-X-Mimik nicht ladbar:', fehler);
                     return null;
                 });
         }

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
-import { Knochenbau } from './knochenbau.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Modell } from './modell.js';
 
@@ -78,7 +77,7 @@ export class SmplModell extends Modell {
         this.bodyMesh.name = `garmentcode_koerper_${this.koerper}`;
         // ERST das Skelett, DANN das Netz einhängen: Die Bindung braucht
         // die Knochen in ihrer Ruhelage (`Eigenhaut.einhaengen`).
-        this._skelettBauen(daten.skelett);
+        this.skelettBauen(daten.skelett);
         this._hautBinden(daten.hautgewichte);
         this.geschlecht = daten.geschlecht || this.geschlecht;
         this.masse = daten.masse || {};
@@ -87,23 +86,6 @@ export class SmplModell extends Modell {
         Protokoll.debug('SmplModell',
             `${this.koerper}: ${punkte.length} Punkte, ${dreiecke.length} Dreiecke, ${this.hoehe.toFixed(2)} m`);
         return this;
-    }
-
-    /**
-     * Das SMPL-X-Skelett aus der Antwort bauen.
-     *
-     * `null` ist eine gueltige Antwort und keine Panne: Ohne Modelldateien
-     * gibt es keines. Die Figur bekommt dann keine Knochen — der
-     * Rig-Schalter laesst sie schlicht aus.
-     *
-     * Das alte Skelett wird ZUERST abgeraeumt: Die Formregler holen das Netz
-     * bei jedem Zug neu, und ohne das haengen nach zehn Zuegen zehn Skelette
-     * ineinander.
-     */
-    _skelettBauen(angaben) {
-        this.skelett = Knochenbau.abraeumen(this.skelett);
-        if (!angaben) return;
-        this.skelett = Knochenbau.bauen(angaben, this.group);
     }
 
     /**

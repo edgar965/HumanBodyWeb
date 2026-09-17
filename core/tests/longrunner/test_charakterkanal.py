@@ -30,9 +30,10 @@ from channels.testing import WebsocketCommunicator
 from django.test import SimpleTestCase
 
 from core.consumers import CharacterConsumer
+from ..unit._sicher import Sicher
 
 #: Punkte des unterteilten Netzes (Catmull-Clark über 18.210 Grundpunkte).
-PUNKTE = 70851
+PUNKTE = 74128  # 70.851 + 3.277 Nahtkopien (15.09.2026)
 
 
 class Morphkanal:
@@ -114,7 +115,7 @@ class DerMorphKanal(SimpleTestCase):
             folge = await kanal.alles(
                 {'type': 'morph', 'key': 'Body_Size', 'value': 1.0})
             self.assertEqual([a for a, _ in folge], ['punkte', 'skelett'])
-            self.assertGreater(len(kanal.knochen(folge)), 170)
+            self.assertGreater(len(Sicher.wert(kanal.knochen(folge), 'Knochen')), 170)
         finally:
             await kommunikator.disconnect()
 

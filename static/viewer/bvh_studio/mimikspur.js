@@ -1,10 +1,10 @@
-import { state, TRACK_COLORS } from './state.js';
+import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { Track, Clip } from './models.js';
+import { Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { Spurauswahl } from './spurauswahl.js';
-import { Mimikbasis } from './mimikbasis.js';
 import { Scriptspur } from './scriptspur.js';
+import { Modellkindspur } from './modellkindspur.js';
 
 /**
  * Mimikspur — die Gesichtsspur einer Modellspur: anlegen, Schlüsselbilder setzen.
@@ -28,17 +28,7 @@ export class Mimikspur {
     static anlegen(modellIdx, name = null) {
         const vorhanden = Mimikspur.zuModell(modellIdx);
         if (vorhanden) return vorhanden;
-        pushUndo('Mimikspur hinzufügen');
-        const modell = state.project.tracks[modellIdx];
-        const spur = new Track(name || `Mimik ${modell?.name || ''}`.trim());
-        spur.type = 'mimik';
-        spur.color = TRACK_COLORS.mimik;
-        spur._modellIdx = modellIdx;
-        state.project.addTrack(spur);
-        Mimikbasis.laden().then(() => fn.applyPlayhead());
-        fn.updateTrackHeaders();
-        fn.renderTimeline();
-        Spurauswahl.waehlen(state.project.tracks.length - 1);
+        const spur = Modellkindspur.anlegen(modellIdx, 'mimik', 'Mimik', 'Mimikspur hinzufügen', name);
         // Lebendigkeit an bei neuer Spur: ein Script von 0 bis zum Projektende.
         if (!Scriptspur.zuModell(modellIdx)) {
             Scriptspur.clipSetzen(Scriptspur.anlegen(modellIdx), 0);
@@ -48,7 +38,7 @@ export class Mimikspur {
     }
 
     static zuModell(modellIdx) {
-        return state.project.tracks.find(s => s.type === 'mimik' && s._modellIdx === modellIdx) || null;
+        return Modellkindspur.zuModell(modellIdx, 'mimik');
     }
 
     /** Das Schlüsselbild genau an diesem Bild — oder null. */
@@ -103,5 +93,3 @@ export class Mimikspur {
         fn.updateProperties();
     }
 }
-
-fn.addMimikTrack = (modellIdx) => Mimikspur.anlegen(modellIdx);

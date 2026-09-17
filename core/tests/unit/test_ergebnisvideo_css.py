@@ -21,17 +21,12 @@ CSS = BASIS / 'static' / 'css' / 'ergebnisvideo.css'
 SEITEN = ('job_result.html', 'standalone_result.html')
 
 
-def regel(css, selektor):
-    treffer = re.search(r'^' + re.escape(selektor) + r'\s*\{([^}]*)\}', css, re.M)
-    return treffer.group(1) if treffer else ''
-
-
 class DasErgebnisvideo(SimpleTestCase):
 
     def test_der_wrapper_darf_unter_den_inhalt_schrumpfen(self):
         css = CSS.read_text(encoding='utf-8')
-        self.assertIn('min-height: 0', regel(css, '.video-overlay-wrapper'))
-        self.assertIn('object-fit: contain', regel(css, '.video-overlay-wrapper video'))
+        self.assertIn('min-height: 0', DasErgebnisvideo.regel(css, '.video-overlay-wrapper'))
+        self.assertIn('object-fit: contain', DasErgebnisvideo.regel(css, '.video-overlay-wrapper video'))
 
     def test_beide_ergebnisseiten_binden_die_datei_ein(self):
         for name in SEITEN:
@@ -42,5 +37,10 @@ class DasErgebnisvideo(SimpleTestCase):
 
     def test_style_css_fuehrt_den_block_nicht_mehr(self):
         css = (BASIS / 'static' / 'css' / 'style.css').read_text(encoding='utf-8')
-        self.assertEqual(regel(css, '.video-overlay-wrapper'), '')
-        self.assertEqual(regel(css, '.skeleton-overlay'), '')
+        self.assertEqual(DasErgebnisvideo.regel(css, '.video-overlay-wrapper'), '')
+        self.assertEqual(DasErgebnisvideo.regel(css, '.skeleton-overlay'), '')
+
+    @staticmethod
+    def regel(css, selektor):
+        treffer = re.search(r'^' + re.escape(selektor) + r'\s*\{([^}]*)\}', css, re.M)
+        return treffer.group(1) if treffer else ''

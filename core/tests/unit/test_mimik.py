@@ -34,13 +34,10 @@ from django.test import SimpleTestCase
 from humanbody_core.mimik.knochendeltas import Knochendeltas
 from humanbody_core.mimik.mblab_ausdruecke import MblabAusdruecke
 from ._pruefablage import Pruefablage
+from ._studiovorlage import Studiovorlage
 
 STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
 MIMIK = settings.BASE_DIR / 'static' / 'mimik'
-
-
-def _text(pfad):
-    return pfad.read_text(encoding='utf-8')
 
 
 class KunstSkelett:
@@ -116,8 +113,8 @@ class MimikTest(SimpleTestCase):
             self.assertLess(max(abs(w) for w in kinn[3:]), 5e-4)
 
     def test_gebaute_bibliothek(self):
-        posen = json.loads(_text(MIMIK / 'posen.json'))
-        basis = json.loads(_text(MIMIK / 'basis.json'))
+        posen = json.loads(MimikTest._text(MIMIK / 'posen.json'))
+        basis = json.loads(MimikTest._text(MIMIK / 'basis.json'))
         self.assertEqual(len(posen['posen']), 76)   # 78 minus Ein-/Ausatmen (Rumpf)
         self.assertEqual([g['id'] for g in posen['gruppen']][-1], 'eigene')
         gefuellt = {p['gruppe'] for p in posen['posen']}
@@ -152,27 +149,31 @@ class MimikTest(SimpleTestCase):
             self.assertFalse(os.path.isfile(neben))
 
     def test_verdrahtung_im_studio(self):
-        playback = _text(STUDIO / 'playback.js')
+        playback = MimikTest._text(STUDIO / 'playback.js')
         rumpf = playback[playback.index('export function applyPlayhead'):
                          playback.index('export function updatePlaybackUI')]
         schleife_ende = rumpf.rindex("applySceneObjectTrack(track, t);\n    }")
         self.assertGreater(rumpf.index('Mimikanwendung.alle(t);'), schleife_ende)
-        speichern = _text(STUDIO / 'projekt_daten.js')
+        speichern = MimikTest._text(STUDIO / 'projekt_daten.js')
         self.assertIn("td._modellIdx = Projektdaten._stelle(t._modellIdx)", speichern)
         # dieselbe Rechnung für Modell → Animation (15.09.2026)
         self.assertIn("td._linkedAnimIdx = Projektdaten._stelle(t._linkedAnimIdx)", speichern)
         self.assertIn("t.type === 'mimik' || t.type === 'script'", speichern)
         self.assertNotIn('td.lebendigkeit', speichern)   # seit 15.09.2026 am Script-Clip
-        laden = _text(STUDIO / 'projekt_wiederherstellung.js')
+        laden = MimikTest._text(STUDIO / 'projekt_wiederherstellung.js')
         self.assertIn('_zuordnen(eingang, angelegt)', laden)
-        self.assertIn("AM_MODELL = ['mimik', 'script']", _text(STUDIO / 'modellgruppen.js'))
-        retarget = _text(settings.BASE_DIR / 'core' / 'dienste' / 'retargetdaten.py')
+        self.assertIn("AM_MODELL = ['mimik', 'script']", MimikTest._text(STUDIO / 'modellgruppen.js'))
+        retarget = MimikTest._text(settings.BASE_DIR / 'core' / 'dienste' / 'retargetdaten.py')
         self.assertIn('self._mimik_dazu(self._gesicht_dazu(', retarget)
-        vorlage = _text(settings.BASE_DIR / 'templates' / 'bvh_studio.html')
+        vorlage = Studiovorlage.text()
         for aktion in ('ctx-mimik-pose', 'ctx-mimik-neutral', 'ctx-mimik-loeschen',
                        'ctx-mimik-einrechnen', 'ctx-mimik-track',
                        'ctx-script-track', 'ctx-script-clip'):
             self.assertIn('data-action="%s"' % aktion, vorlage)
-        menue = _text(STUDIO / 'zeitleiste_menue.js')
+        menue = MimikTest._text(STUDIO / 'zeitleiste_menue.js')
         self.assertLess(menue.index("spur.type === 'mimik'"),
                         menue.index('_leereSpur(e, spur'))
+
+    @staticmethod
+    def _text(pfad):
+        return pfad.read_text(encoding='utf-8')

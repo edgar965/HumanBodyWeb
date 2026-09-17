@@ -11,11 +11,14 @@ wer dieses Modul laedt, muss `TheatreJS/ModelPhysik` vorher in `sys.path`
 haben — `figurfilm.py` tut das im Modulkopf.
 """
 import json
+import logging
 import os
 import shutil
 import time
 
 from filmlauf import Filmlauf
+
+logger = logging.getLogger('core')
 
 __all__ = ['Effektfilmlauf']
 
@@ -31,6 +34,9 @@ class Effektfilmlauf(Filmlauf):
         super()._melden(phase, anteil, fehler=fehler, fertig=fertig)
         self.film.melden(phase, anteil)
         if fehler:
+            # Ins Protokoll des Auftrags (stdout, liest der Effektbeobachter) UND
+            # in die error.log des Servers — der Lauf ist ein Unterprozess mit Django.
+            logger.error('Effektfilm abgebrochen: %s', fehler)
             print(fehler, flush=True)
 
     def stand(self):

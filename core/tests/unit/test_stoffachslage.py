@@ -31,6 +31,7 @@ import numpy as np
 from django.test import SimpleTestCase
 
 from ._kunstkoerper import Kunstkoerper
+from ._sicher import Sicher
 
 
 class StoffvorschauLiefertSzenenlage(SimpleTestCase):
@@ -91,7 +92,7 @@ class StoffvorschauLiefertSzenenlage(SimpleTestCase):
         „Finalize drücken" gesagt hätte, obwohl nichts passiert war."""
         fuehrung, koerper_zoben, _ = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
         punkte = fuehrung.punkte(koerper_zoben)['probe']
-        self.assertLess(fuehrung.abstand_mm('probe', punkte), 1.0)
+        self.assertLess(Sicher.wert(fuehrung.abstand_mm('probe', punkte), 'Abstand'), 1.0)
 
     @staticmethod
     def _gebundene_nachfuehrung(tmpdatei):

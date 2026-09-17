@@ -133,7 +133,7 @@ class EchteGlbTest(SimpleTestCase):
         hand = self._ort('LeftHand')
         abstand = {n: np.linalg.norm(self._ort('LeftHandFinger0%s_01' % n) - hand)
                    for n in '12345'}
-        self.assertEqual(min(abstand, key=abstand.get), '5', abstand)
+        self.assertEqual(min(abstand, key=lambda n: abstand[n]), '5', abstand)
 
     def test_finger01_ist_der_kleine_finger(self):
         u"""Der kleine Finger: kuerzeste Kette der vier Langfinger und am
@@ -145,4 +145,4 @@ class EchteGlbTest(SimpleTestCase):
         daumen = self._ort('LeftHandFinger05_01')
         abstand = {n: np.linalg.norm(self._ort('LeftHandFinger0%s_01' % n) - daumen)
                    for n in '1234'}
-        self.assertEqual(max(abstand, key=abstand.get), '1', abstand)
+        self.assertEqual(max(abstand, key=lambda n: abstand[n]), '1', abstand)

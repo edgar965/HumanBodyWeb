@@ -73,7 +73,7 @@ class FilmhautTest(SimpleTestCase):
         self.assertIs(haut.gruppe(gekuerzt), gruppe, 'einmal je Index gemerkt')
         self.assertEqual(list(haut.gruppe(dreiecke)), [11, 0, 6, 5])
 
-    def test_netze(self):
+    def test_netze_je_gruppe_haut_mit_textur_hornhaut_durchsichtig(self):
         uvs, dreiecke, material = self.kunstnetz()
         bild = np.zeros((4, 4, 3), dtype=np.uint8)
         haut = self.Filmhaut(uvs, dreiecke, material,

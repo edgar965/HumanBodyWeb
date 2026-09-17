@@ -36,10 +36,6 @@ from ...dienste.smplxzuordnung import DEF_ZU_SMPLX, Smplxzuordnung
 STATIK = settings.BASE_DIR / 'static' / 'viewer'
 
 
-def _text(pfad):
-    return pfad.read_text(encoding='utf-8')
-
-
 class SmplxskelettTest(SimpleTestCase):
 
     def test_55_namen_aus_den_vorhandenen_listen(self):
@@ -99,14 +95,18 @@ class SmplxskelettTest(SimpleTestCase):
 
     # ----------------------------------------------------------- Quelltext
 
-    def test_verdrahtung(self):
-        retarget = _text(settings.BASE_DIR / 'core' / 'dienste' / 'retargetdaten.py')
+    def test_retarget_und_browser_kennen_die_zuordnung(self):
+        retarget = SmplxskelettTest._text(settings.BASE_DIR / 'core' / 'dienste' / 'retargetdaten.py')
         self.assertIn('from .smplxzuordnung import Smplxzuordnung', retarget)
         self.assertIn("kette.geometrie(), Smplxzuordnung)", retarget)
-        kataloge = _text(STATIK / 'gemeinsam' / 'figurkataloge.js')
+        kataloge = SmplxskelettTest._text(STATIK / 'gemeinsam' / 'figurkataloge.js')
         self.assertIn("smpl: { titel: 'SMPL-X'", kataloge)
-        dialog = _text(settings.BASE_DIR / 'templates' / '_charakter_dialog.html')
+        dialog = SmplxskelettTest._text(settings.BASE_DIR / 'templates' / '_charakter_dialog.html')
         self.assertIn('data-quelle="smpl">SMPL-X</button>', dialog)
-        figur = _text(settings.BASE_DIR / 'core' / 'dienste' / 'smplfigur.py')
+        figur = SmplxskelettTest._text(settings.BASE_DIR / 'core' / 'dienste' / 'smplfigur.py')
         self.assertIn("'smplx_female'", figur)
         self.assertIn("'f_smpl_average_A40'", figur)       # bleibt ladbar
+
+    @staticmethod
+    def _text(pfad):
+        return pfad.read_text(encoding='utf-8')

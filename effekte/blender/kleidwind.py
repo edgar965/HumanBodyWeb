@@ -27,7 +27,7 @@ WURZEL = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 if WURZEL not in sys.path:
     sys.path.insert(0, WURZEL)
 
-import bpy  # noqa: E402
+import bpy  # noqa: E402  # pyright: ignore[reportMissingImports]  (Blender)
 
 from effekte.effektparameter import Effektparameter  # noqa: E402
 from effekte.blender.effektfigur import Effektfigur  # noqa: E402

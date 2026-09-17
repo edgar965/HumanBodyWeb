@@ -19,6 +19,7 @@ from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from core.dienste.umabauer import Umabauer, UmabauerFehlt
+from ..unit._sicher import Sicher
 
 ATTRAPPE = u'''# -*- coding: utf-8 -*-
 import json, os, sys, time
@@ -96,13 +97,17 @@ class UmabauerTest(SimpleTestCase):
         self.umschaltung.disable()
         shutil.rmtree(self.wurzel, ignore_errors=True)
 
+    @staticmethod
+    def stand(name):
+        return Sicher.wert(Umabauer.stand(name), name)
+
     def _abwarten(self, name=None):
         u"""Bis kein Lauf mehr läuft; liefert den letzten Stand des genannten Laufs."""
         stand = None
         for _ in range(self.WARTE_S * 10):
             laeuft = False
             for lauf in list(Umabauer._laeufe):
-                s = Umabauer.stand(lauf)
+                s = Sicher.wert(Umabauer.stand(lauf), lauf)
                 if s['laeuft']:
                     laeuft = True
                 if lauf == name:
@@ -115,27 +120,27 @@ class UmabauerTest(SimpleTestCase):
     # ---------------------------------------------------------------- Dienst
 
     def test_bauen_legt_die_datei_in_den_katalog(self):
-        start = Umabauer.bauen('Human Female 3.0')
+        start = Sicher.wert(Umabauer.bauen('Human Female 3.0'), 'Start')
         self.assertEqual(start['name'], 'Uma_HumanFemale30')
         self.assertTrue(start['laeuft'])
         self.assertTrue(start['wartet'])
-        ende = self._abwarten('Uma_HumanFemale30')
+        ende = Sicher.wert(self._abwarten('Uma_HumanFemale30'), 'Ende')
         self.assertEqual(ende['exit'], 0)
         self.assertEqual(ende['datei'], 'Uma_HumanFemale30.glb')
         self.assertEqual(ende['meldung'], 'bau 1.00 s')
         self.assertTrue((self.katalog / 'uma' / 'Uma_HumanFemale30.glb').is_file())
         # Ein neuer Serverprozess kennt den Lauf nur aus der Ablage neben dem Log.
         Umabauer._laeufe.clear()
-        self.assertEqual(Umabauer.stand('Uma_HumanFemale30')['datei'], 'Uma_HumanFemale30.glb')
+        self.assertEqual(self.stand('Uma_HumanFemale30')['datei'], 'Uma_HumanFemale30.glb')
 
     def test_zwei_auftraege_kommen_nacheinander_dran_ohne_zweiten_start(self):
-        erster = Umabauer.bauen('Human Female 3.0')
-        zweiter = Umabauer.bauen('Human Male 3.0')
+        erster = Sicher.wert(Umabauer.bauen('Human Female 3.0'), 'erster')
+        zweiter = Sicher.wert(Umabauer.bauen('Human Male 3.0'), 'zweiter')
         self.assertTrue(erster['laeuft'] and zweiter['laeuft'])
         self.assertEqual(len(list((self.wurzel / 'logs' / 'bauer').glob('*.auftrag.json'))), 2)
         self._abwarten()
-        self.assertEqual(Umabauer.stand('Uma_HumanFemale30')['datei'], 'Uma_HumanFemale30.glb')
-        self.assertEqual(Umabauer.stand('Uma_HumanMale30')['datei'], 'Uma_HumanMale30.glb')
+        self.assertEqual(self.stand('Uma_HumanFemale30')['datei'], 'Uma_HumanFemale30.glb')
+        self.assertEqual(self.stand('Uma_HumanMale30')['datei'], 'Uma_HumanMale30.glb')
 
     def test_ohne_unity_kommt_fehlt(self):
         with override_settings(UNITY_EXE=self.wurzel / 'gibtsnicht.exe'):
@@ -154,17 +159,18 @@ class UmabauerTest(SimpleTestCase):
         Umabauer.rassen_ermitteln()
         self._abwarten(Umabauer.RASSENLAUF)
         self.assertEqual(Umabauer.rassen(), ['ElfFemale30', 'Human Female 3.0', 'HumanMale'])
-        self.assertEqual(Umabauer.rassen_details()['ElfFemale30'], ['Human Female 3.0'])
-        self.assertEqual(Umabauer.rassen_details()['HumanMale'], [])
+        details = Sicher.wert(Umabauer.rassen_details(), 'Rassen')
+        self.assertEqual(details['ElfFemale30'], ['Human Female 3.0'])
+        self.assertEqual(details['HumanMale'], [])
 
     def test_bauer_bleibt_fuer_den_naechsten_auftrag_offen(self):
         Umabauer.bauen('Human Female 3.0')
         self._abwarten()
         self.assertTrue(Umabauer.bauer_lebt())
-        pid = Umabauer.bauer()['pid']
+        pid = Sicher.wert(Umabauer.bauer(), 'Bauer')['pid']
         Umabauer.bauen('Human Male 3.0')
         self._abwarten()
-        self.assertEqual(Umabauer.bauer()['pid'], pid)
+        self.assertEqual(Sicher.wert(Umabauer.bauer(), 'Bauer')['pid'], pid)
 
     def test_vorwaermen_startet_den_bauer_und_baut_ins_leere(self):
         u"""06.09.2026: Der erste Bau nach einem Start kostet 90 s, jeder weitere

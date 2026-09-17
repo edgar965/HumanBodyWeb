@@ -63,31 +63,31 @@ console.log(JSON.stringify({ ok: true }));
 """
 
 
-def _text(pfad):
-    return pfad.read_text(encoding='utf-8')
-
-
 class MimikfelderTest(SimpleTestCase):
 
     def test_summe_anwenden_kennung(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_verdrahtung_im_studio(self):
-        anwendung = _text(STUDIO / 'mimikanwendung.js')
+        anwendung = MimikfelderTest._text(STUDIO / 'mimikanwendung.js')
         self.assertIn('static anwenden(modellIdx, gewichte, ganz = true)', anwendung)
         self.assertIn('if (Mimiksmplx.passt(figur)) '
                       '{ Mimiksmplx.setzen(figur.mesh, gewichte); return; }', anwendung)
         self.assertIn('Mimikanwendung.anwenden(i, stand.gewichte, stand.mimik);',
                       anwendung)
         self.assertIn('Mimikanwendung.anwenden(spur._modellIdx, spur._vorschau || {});',
-                      _text(STUDIO / 'mimikdialog.js'))
-        smplx = _text(STUDIO / 'mimiksmplx.js')
+                      MimikfelderTest._text(STUDIO / 'mimikdialog.js'))
+        smplx = MimikfelderTest._text(STUDIO / 'mimiksmplx.js')
         self.assertIn("figur?.quelle === 'smpl'", smplx)
         self.assertIn('Mimiksmplx._normalen(netz.geometry, stand);', smplx)
-        self.assertIn('SMPL-X', _text(STUDIO / 'hilfetexte_spuren.js'))
-        befehl = _text(settings.BASE_DIR / 'core' / 'management' / 'commands'
-                       / 'mimik_vorbereiten.py')
+        self.assertIn('SMPL-X', MimikfelderTest._text(STUDIO / 'hilfetexte_spuren.js'))
+        befehl = MimikfelderTest._text(
+            settings.BASE_DIR / 'core' / 'management' / 'commands' / 'mimik_vorbereiten.py')
         self.assertIn('Mimiksmplx.schreiben(ausdruecke.einheiten(), daten, ziel)',
                       befehl)
         datei = settings.BASE_DIR / 'static' / 'mimik' / 'smplx_basis.json'
         self.assertTrue(datei.is_file())
+
+    @staticmethod
+    def _text(pfad):
+        return pfad.read_text(encoding='utf-8')

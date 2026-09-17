@@ -19,7 +19,8 @@ auf eine Meldung je Sekunde.
 class AuftragsAttrappe:
     """Ein `BVHJob`-Doppel: nur die Felder, die die Pipelines anfassen."""
 
-    def __init__(self, pipeline='v4', params=None, kennung=7, name='tanz.mp4'):
+    def __init__(self, pipeline='v4', params=None, kennung: 'int | str' = 7,
+                 name='tanz.mp4'):
         self.id = kennung
         self.name = name
         self.pipeline = pipeline

@@ -43,7 +43,7 @@ class RetargetendpunkteTest(TestCase):
 
     # -- Zuordnungstabellen ----------------------------------------------------
 
-    def test_zuordnungstabellen(self):
+    def test_zuordnungstabellen_nennen_je_format_die_richtungskorrektur(self):
         antwort = self.client.get(reverse('retarget_config'))
         self.assertEqual(antwort.status_code, 200)
         daten = antwort.json()

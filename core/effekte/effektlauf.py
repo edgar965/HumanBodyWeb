@@ -11,7 +11,6 @@ Kernen; zwei Laeufe waeren beide doppelt so langsam (12.09.2026).
 """
 import json
 import logging
-import os
 import subprocess
 import threading
 from pathlib import Path
@@ -190,6 +189,7 @@ class Effektlauf:
         try:
             zeilen = self.logdatei.read_text(encoding='utf-8',
                                              errors='replace').splitlines()
+        # stumm gewollt: ohne Logdatei gibt es keinen Auszug, der Fehler selbst steht daneben
         except OSError:
             return ''
         wichtig = [z for z in zeilen if not z.startswith('[MB-Lab')

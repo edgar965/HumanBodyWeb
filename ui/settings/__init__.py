@@ -147,7 +147,7 @@ from .djangobase_conf import DJANGOBASE                       # noqa: E402,F401
 
 # Örtliche Abweichungen (nicht im Repo — jeder Rechner hat seine eigene).
 try:
-    from ..local_settings import *                            # noqa: F401,F403
+    from ..local_settings import *  # noqa: F401,F403  # pyright: ignore[reportMissingImports]
 # stumm gewollt: Die Datei ist absichtlich nicht im Repo — jeder Rechner hat
 # seine eigene, und die meisten haben gar keine. Ein Log hier stünde bei jedem
 # Start da und würde nichts bedeuten.

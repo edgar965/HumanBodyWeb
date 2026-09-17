@@ -46,6 +46,7 @@ class Pipelineparameter:
         """Die Personenzahl eines Laufs: ganze Zahl ab 1, sonst 1."""
         try:
             return max(1, int(post.get(feld, 1) or 1))
+        # stumm gewollt: ein unlesbares Feld heisst eine Person, wie ohne Angabe
         except (TypeError, ValueError):
             return 1
 
@@ -172,10 +173,16 @@ class Pipelineparameter:
             p['v4_' + teil] = an
         return p
 
+    @classmethod
+    def vorgaben(cls, s):
+        """Vorbelegung der Formularfelder aus den Anwendungseinstellungen —
+        je Pipelinefamilie ein Woerterbuch, zusammen eines."""
+        return {**cls._v4_vorgaben(s), **cls._smpl_vorgaben(s),
+                **cls._smplx_vorgaben(s), **cls._hybrid_vorgaben(s)}
+
     @staticmethod
-    def vorgaben(s):
-        """Vorbelegung der Formularfelder aus den Anwendungseinstellungen."""
-        from ..pipelines.smplbefehl import Smplbefehl
+    def _v4_vorgaben(s):
+        u"""MocapNET v4."""
         return {
             'v4_hcd_iterations': s.v4_hcd_iterations,
             'v4_hcd_epochs': s.v4_hcd_epochs,
@@ -189,6 +196,14 @@ class Pipelineparameter:
             'v4_hands': s.v4_enable_hands,
             'v4_mouth': s.v4_enable_mouth,
             'v4_eyes': s.v4_enable_eyes,
+        }
+
+    @staticmethod
+    def _smpl_vorgaben(s):
+        u"""GVHMR, WHAM, PromptHMR, GEM-SMPL, DuoMo, GEM-X — die SMPL-Lifter.
+        GEM, DuoMo, GEM-X: Vorgaben aus `LifterEinstellungen` (12.09.2026),
+        Karte und Einstellungsseite sagen dasselbe."""
+        return {
             'gvhmr_static_cam': s.gvhmr_static_cam,
             'gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
             'gvhmr_smooth_sigma': s.gvhmr_smooth_sigma,
@@ -204,8 +219,6 @@ class Pipelineparameter:
             'wham_device': s.smpl_device,
             'prompthmr_static_cam': s.prompthmr_static_camera,
             'prompthmr_device': s.smpl_device,
-            # GEM-SMPL, DuoMo, GEM-X: Vorgaben aus `LifterEinstellungen`
-            # (12.09.2026) — Karte und Einstellungsseite sagen dasselbe.
             'gem_static_cam': s.gem_static_cam,
             'gem_smooth_sigma': s.gem_smooth_sigma,
             'gem_joint_limits': s.gem_joint_limits,
@@ -219,8 +232,14 @@ class Pipelineparameter:
             'gemx_static_cam': s.gemx_static_cam,
             'gemx_smooth_sigma': s.gemx_smooth_sigma,
             'gemx_device': s.smpl_device,
-            # SMPL-X (12.09.2026): der Koerper ist GEM, also GEMs Vorgaben;
-            # Finger und Gesicht mit der Vorgabe aus `Smplbefehl`.
+        }
+
+    @staticmethod
+    def _smplx_vorgaben(s):
+        u"""SMPL-X (12.09.2026): der Koerper ist GEM, also GEMs Vorgaben;
+        Finger und Gesicht mit der Vorgabe aus `Smplbefehl`."""
+        from ..pipelines.smplbefehl import Smplbefehl
+        return {
             'smplx_static_cam': s.gem_static_cam,
             'smplx_smooth_sigma': s.gem_smooth_sigma,
             'smplx_joint_limits': s.gem_joint_limits,
@@ -233,7 +252,12 @@ class Pipelineparameter:
             'smplx_ground': True,
             'smplx_video': True,
             'smplx_device': s.smpl_device,
-            # Hybrid greift auf dieselben Einstellungen zurueck
+        }
+
+    @staticmethod
+    def _hybrid_vorgaben(s):
+        u"""Hybrid greift auf dieselben Einstellungen zurueck."""
+        return {
             'hybrid_body_device': s.smpl_device,
             'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,
             'hybrid_gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,

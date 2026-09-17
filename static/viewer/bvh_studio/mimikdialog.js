@@ -98,7 +98,7 @@ export class Mimikdialog {
     static _werte(daten) {
         const staerke = Math.round((daten?.staerke ?? 1) * 100);
         document.getElementById('mimik-staerke').value = staerke;
-        document.getElementById('mimik-staerke-wert').textContent = staerke;
+        document.getElementById('mimik-staerke-wert').textContent = String(staerke);
         document.getElementById('mimik-uebergang').value = daten?.uebergang || 'weich';
         document.getElementById('mimik-halten').value = daten?.halten ?? 0;
     }
@@ -165,6 +165,7 @@ export class Mimikdialog {
     }
 
     static _skaliert(gewichte, staerke) {
+        /** @type {Object<string, number>} */
         const aus = {};
         for (const [e, g] of Object.entries(gewichte || {})) aus[e] = g * staerke;
         return aus;

@@ -31,11 +31,6 @@ MODUL = Jsmodul('gemeinsam', 'hauttextur.js')
 
 SKRIPT = """
 const { Hauttextur: H } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 pruefe('karten frau', H.karten('hum_f_cauc'), { map: 'hum_f_cauc_albedo.png', bumpMap: 'human_female_bump.png', roughnessMap: 'human_female_roughness.png' });
 pruefe('karten mann', H.karten('hum_m_afro').bumpMap, 'human_male_bump.png');
 pruefe('leer', H.karten(''), null); pruefe('unbekannt', H.karten('../x'), null);

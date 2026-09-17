@@ -15,7 +15,7 @@ from django.urls import reverse
 from core.dienste.pipelinevergleich import Pipelinevergleich
 
 
-class DerVergleich(TestCase):
+class DerVergleichAufDerUploadseite(TestCase):
 
     ADRESSE = '/process/VideoToBVH/'
 

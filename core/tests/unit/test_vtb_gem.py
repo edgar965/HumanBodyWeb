@@ -74,7 +74,7 @@ class DieErgebnisumformung(unittest.TestCase):
             Gemlauf.vorhersage_laden('x.pt', laden=lambda _pfad: {'body_params_global': {}})
 
 
-class DieVerteilerPassenZusammen(unittest.TestCase):
+class DieGemVerteilerPassenZusammen(unittest.TestCase):
 
     def test_lifterwahl_kennt_gem_mit_den_schaltern_von_smplbefehl(self):
         from core.pipelines.smplbefehl import Smplbefehl

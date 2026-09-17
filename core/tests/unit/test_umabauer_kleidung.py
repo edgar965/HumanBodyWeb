@@ -16,6 +16,7 @@ import unittest
 from unittest import mock
 
 from core.dienste.umabauer import Umabauer
+from ._sicher import Sicher
 
 
 class Kleidungsauftrag(unittest.TestCase):
@@ -25,8 +26,8 @@ class Kleidungsauftrag(unittest.TestCase):
     def _auftrag(self, kleidung):
         with mock.patch.object(Umabauer, '_auftrag',
                                side_effect=lambda name, auftrag, **k: auftrag):
-            return Umabauer.bauen('Human Male 3.0', name='Probe',
-                                  kleidung=kleidung)
+            return Sicher.wert(Umabauer.bauen('Human Male 3.0', name='Probe',
+                                              kleidung=kleidung), 'Auftrag')
 
     def test_nicht_angegeben_laesst_uma_entscheiden(self):
         self.assertNotIn('kleidung', self._auftrag(None))

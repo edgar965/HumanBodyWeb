@@ -24,6 +24,7 @@ import sys
 import numpy as np
 
 from bakedatei import Bakedatei
+from videoschreiber import Videoschreiber
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 ZIEL_VORGABE = r'A:\3DTools\Docu\Ergebnisse'
@@ -65,24 +66,12 @@ class Bakevideo:
         return np.array([[int(x) for x in zeilen[2 + n + i].split()[1:4]]
                          for i in range(m)], dtype=np.int64)
 
-    def _in_metern(self):
-        u"""Auf Meter und auf den Boden.
+    #: die Figur ist 1,68 m hoch
+    FIGURHOEHE = 1.68
 
-        Der Massstab wird aus dem ERSTEN Bild gerechnet, nicht aus einer
-        Konstanten: Die `.skel` traegt den Faktor der Figur, und wer ihn hier
-        fest hinschreibt, misst nach dem naechsten Konverterlauf etwas
-        anderes (Regel `artefakte-benennen`).
-        """
-        erstes = self.bake.daten[0]
-        hoehe_einheiten = float(erstes[:, 2].max() - erstes[:, 2].min())
-        faktor = hoehe_einheiten / 1.68        # die Figur ist 1,68 m hoch
-        punkte = self.bake.daten / faktor
-        boden = float(punkte[0][:, 2].min())
-        mitte = punkte[0].reshape(-1, 3).mean(axis=0)
-        punkte[:, :, 0] -= mitte[0]
-        punkte[:, :, 1] -= mitte[1]
-        punkte[:, :, 2] -= boden
-        return punkte
+    def _in_metern(self):
+        u"""Auf Meter und auf den Boden (`Bakedatei.auf_dem_boden`)."""
+        return self.bake.auf_dem_boden(self.FIGURHOEHE)
 
     # ------------------------------------------------------------ Rendern
 
@@ -131,8 +120,7 @@ class Bakevideo:
                                                      material=material))
                 szene.add(kamera, pose=lage)
                 szene.add(licht, pose=lichtlage)
-                farbe, _tiefe = renderer.render(szene)
-                yield np.asarray(farbe[:, :, :3], dtype=np.uint8)
+                yield Videoschreiber.rendern(renderer, szene)
         finally:
             renderer.delete()
 
@@ -140,23 +128,7 @@ class Bakevideo:
 
     def schreiben(self, ziel, fps=20, schleifen=1):
         u"""MP4 schreiben. Gibt (Pfad, Bilderzahl) zurueck."""
-        import cv2
-        os.makedirs(os.path.dirname(ziel) or '.', exist_ok=True)
-        gesammelt = list(self.bilder())
-        if not gesammelt:
-            raise SystemExit(u'Keine Bilder gerendert.')
-        h, b = gesammelt[0].shape[:2]
-        schreiber = cv2.VideoWriter(ziel, cv2.VideoWriter_fourcc(*'mp4v'),
-                                    float(fps), (b, h))
-        if not schreiber.isOpened():
-            raise SystemExit(u'VideoWriter liess sich nicht oeffnen: %s' % ziel)
-        try:
-            for _ in range(max(1, int(schleifen))):
-                for bild in gesammelt:
-                    schreiber.write(cv2.cvtColor(bild, cv2.COLOR_RGB2BGR))
-        finally:
-            schreiber.release()
-        return ziel, len(gesammelt) * max(1, int(schleifen))
+        return Videoschreiber.schreiben(self.bilder(), ziel, fps, schleifen)
 
 
 def main():

@@ -24,7 +24,7 @@ PIPELINES = [('v4', 'MocapNET v4'), ('gem', 'GEM-SMPL')]
 JS = Path(settings.BASE_DIR) / 'static' / 'js' / 'auftraege' / 'auftragszeile.js'
 
 
-class Auftragsattrappe:
+class Tabellenauftrag:
     u"""Was `Auftragstabelle` von einem BVHJob liest."""
 
     def __init__(self, name='Tanz.mp4', status='complete', pipeline='gem',
@@ -77,7 +77,7 @@ class DieSpalten(SimpleTestCase):
 class DieZeile(SimpleTestCase):
 
     def zeile(self, **wie):
-        job = Auftragsattrappe(**wie)
+        job = Tabellenauftrag(**wie)
         return job, Auftragstabelle([job], 'k', PIPELINES).zeile(job)
 
     def test_kennung_und_drahtformat(self):
@@ -94,7 +94,7 @@ class DieZeile(SimpleTestCase):
         self.assertEqual(html.count('<td'), 8, 'acht Zellen wie der Kopf')
 
     def test_rohwerte_zum_sortieren(self):
-        job, zeile = self.zeile()
+        _job, zeile = self.zeile()
         html = zeile['html']
         self.assertIn('<td class="num" data-sort="4990294">4.8 MB</td>', html)
         self.assertIn('<td data-sort="2026-09-12 17:26:46">12.09.2026 17:26</td>',

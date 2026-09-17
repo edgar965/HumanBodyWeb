@@ -36,6 +36,7 @@ Humanbodypfad.assets()
 
 from GarmentCode.ohrschnitt import Ohrschnitt              # noqa: E402
 from GarmentCode.schnittvorschau import Schnittvorschau     # noqa: E402
+from ._sicher import Sicher
 
 
 class OhrschnittTest(SimpleTestCase):
@@ -66,8 +67,8 @@ class OhrschnittTest(SimpleTestCase):
         dreiecke = Ohrschnitt(form).dreiecke()
         self.assertEqual(len(dreiecke), 4)
         p = np.asarray(form, float)
-        summe = sum(abs(np.cross(p[b] - p[a], p[c] - p[a])) / 2
-                    for a, b, c in dreiecke)
+        summe = float(sum(abs(np.cross(p[b] - p[a], p[c] - p[a])) / 2
+                          for a, b, c in dreiecke))
         self.assertAlmostEqual(summe, 300.0, places=6)
 
     def test_zu_wenig_punkte_gibt_nichts(self):
@@ -97,9 +98,8 @@ class SchnittvorschauTest(SimpleTestCase):
     def test_die_lage_stimmt_mit_dem_upstream_ueberein(self):
         u"""Gegen das Boxmesh DESSELBEN Laufs — die eigentliche Probe."""
         vorschau = Schnittvorschau(self.spez)
-        abweichung = vorschau.abweichung(
-            os.path.join(self.ordner, 't-shirt_mean_all_boxmesh.obj'))
-        self.assertIsNotNone(abweichung, 'kein Boxmesh zum Vergleichen')
+        abweichung = Sicher.wert(vorschau.abweichung(
+            os.path.join(self.ordner, 't-shirt_mean_all_boxmesh.obj')), 'Boxmesh zum Vergleichen')
         for achse in range(3):
             self.assertLess(abweichung['min_cm'][achse], 0.6,
                             'Untergrenze Achse %d: %s' % (achse, abweichung))

@@ -117,12 +117,28 @@ export function _peAutoFit() {
         Musterzustand.pePan.y = H / 2 + cy * Musterzustand.peZoom;
 }
 
+/**
+ * Den Mustereditor an sein Markup binden — Zeichenfläche, Panel-Knöpfe,
+ * Regionsregler, Materialregler, Erzeugen/Löschen/Speichern. Die Teile
+ * stehen je in einer Funktion (Befund `jsfunktionen`: 91 Zeilen, 17.09.2026).
+ */
 export function initPatternEditor() {
     const canvas = document.getElementById('pe-canvas'); if (!canvas) return;
     Musterzeichenflaeche.binden(canvas);
     document.querySelectorAll('#pe-mode-btns .btn-toggle').forEach(btn => { btn.addEventListener('click',
         () => { Musterzustand.peMode = btn.dataset.mode; Musterzustand.peStitchFirst = null; _peSetModeButtons(); });
             });
+    _panelKnoepfeBinden();
+    _regionReglerBinden();
+    _materialReglerBinden();
+    _bauKnoepfeBinden();
+    initVertexEditorBindings();
+    peRender();
+    Protokoll.debug('Viewer', 'Pattern Editor initialized');
+}
+
+/** Panel anlegen, löschen, Platzierung, Umwickeln. */
+function _panelKnoepfeBinden() {
     document.getElementById('pe-add-panel')?.addEventListener('click', () => {
         const names = Object.keys(Musterzustand.pePattern.panels); const defaultName = `Panel${names.length + 1}`;
         const name = prompt('Panel name:', defaultName); if (!name || !name.trim()) return; const trimmed = name.trim();
@@ -159,6 +175,10 @@ export function initPatternEditor() {
             } });
     bindSlider('pe-wrap-offset', 'pe-wrap-offset-val', v => v); bindSlider('pe-wrap-stiffness', 'pe-wrap-stiffness-val',
         v => (v / 100).toFixed(2));
+}
+
+/** Die Regler der Körperregion — Vorgaben je Kategorie, Neuerzeugen bei Änderung. */
+function _regionReglerBinden() {
     bindSlider('pe-region-zmin', 'pe-region-zmin-val', v => (v / 100).toFixed(2)); bindSlider('pe-region-zmax',
         'pe-region-zmax-val', v => (v / 100).toFixed(2));
     bindSlider('pe-region-grow', 'pe-region-grow-val', v => v); bindSlider('pe-region-looseness',
@@ -179,6 +199,10 @@ export function initPatternEditor() {
             () => { if (Musterzustand.peMode === 'region') peRegionGenerate(); }); });
     document.getElementById('pe-region-arms')?.addEventListener('change', () => { if (Musterzustand.peMode
         === 'region') peRegionGenerate(); });
+}
+
+/** Farbe, Rauheit, Metall — wirken sofort auf das gewählte oder das Vorschaunetz. */
+function _materialReglerBinden() {
     bindSlider('pe-roughness', 'pe-roughness-val', v => (v / 100).toFixed(2)); bindSlider('pe-metalness',
         'pe-metalness-val', v => (v / 100).toFixed(2));
     ['pe-color', 'pe-roughness', 'pe-metalness'].forEach(id => {
@@ -197,16 +221,16 @@ export function initPatternEditor() {
                     === 'pe-metalness') mesh.material.metalness = parseInt(el.value) / 100;
         });
     });
+}
+
+/** Erzeugen, Löschen, in die Bibliothek speichern, Muster eines Stücks laden. */
+function _bauKnoepfeBinden() {
     document.getElementById('pe-generate')?.addEventListener('click', () => { if (Musterzustand.peMode
         === 'region') peRegionGenerate(); else peGenerate3D(); });
     document.getElementById('pe-delete')?.addEventListener('click', () => removeClothRegion(pePreviewKey));
     document.getElementById('pe-save')?.addEventListener('click', () => peSaveToLibrary());
     document.getElementById('garment-edit-pattern')?.addEventListener('click',
         () => { if (state.selectedGarmentId) peLoadFromGarment(state.selectedGarmentId); });
-
-    initVertexEditorBindings();
-    peRender();
-    Protokoll.debug('Viewer', 'Pattern Editor initialized');
 }
 
 // Register

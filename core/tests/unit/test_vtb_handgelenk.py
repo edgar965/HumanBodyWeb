@@ -13,7 +13,7 @@ Verdrehung.
 
 BDD - GEGEBEN / DANN
 ====================
-    DieMischung     ... uebernimmt ein moegliches Handgelenk (30 Grad) aus der Handquelle
+    DieHandgelenkmischung     ... uebernimmt ein moegliches Handgelenk (30 Grad) aus der Handquelle
                     ... verwirft ein unmoegliches (150 Grad) und behaelt GEMs eigenes
                     ... zaehlt die verworfenen Bilder in der Bilanz
     DieGelenkgrenzen ... kappen ein Handgelenk ueber 80 Grad Schwenk
@@ -60,7 +60,7 @@ def _winkel(bahn, gelenk):
     return np.degrees(np.linalg.norm(bahn.body_pose[:, gelenk - 1], axis=1))
 
 
-class DieMischung(unittest.TestCase):
+class DieHandgelenkmischung(unittest.TestCase):
 
     N = 12
 

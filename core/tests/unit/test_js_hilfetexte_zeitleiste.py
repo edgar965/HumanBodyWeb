@@ -13,6 +13,7 @@ FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
+from ._studiovorlage import Studiovorlage
 
 STUDIO = Jsmodul.VIEWER / 'bvh_studio'
 MODUL = Jsmodul('bvh_studio', 'hilfetexte_zeitleiste.js')
@@ -50,7 +51,7 @@ BELEGE = {
     'clip_camera_kf': [('„Aktuelle Ansicht übernehmen"', 'eigenschaften/klip_schluesselbilder.js',
                         'Aktuelle Ansicht übernehmen')],
     'mimik': [('„Pose setzen…“', '../../../templates/bvh_studio.html', 'Pose setzen…'),
-              ('Script-Spur', 'scriptspur.js', "spur.type = 'script'"),
+              ('Script-Spur', 'scriptspur.js', "Modellkindspur.anlegen(modellIdx, 'script'"),
               ('„Mimik einrechnen“', '../../../templates/bvh_studio.html',
                'Mimik einrechnen (zur BVH)'),
               ('zehn Gruppen', 'mimikdialog.js', 'mimik-gruppe')],
@@ -92,7 +93,8 @@ class HilfetexteZeitleisteTest(SimpleTestCase):
             for wort, datei, suchtext in belege:
                 if wort not in text:
                     fehlend.append('%s: Text nennt „%s" nicht' % (schluessel, wort))
-                inhalt = (STUDIO / datei).read_text(encoding='utf-8')
+                inhalt = (Studiovorlage.text() if datei.endswith('bvh_studio.html')
+                          else (STUDIO / datei).read_text(encoding='utf-8'))
                 if suchtext not in inhalt:
                     fehlend.append('%s: „%s" nicht in %s' % (schluessel, suchtext, datei))
         self.assertEqual(fehlend, [], '\n'.join(fehlend))

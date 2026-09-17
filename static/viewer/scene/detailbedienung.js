@@ -63,6 +63,7 @@ export class Detailbedienung {
 
     static _reglerSetzen(kennung, wert, einheit) {
         const regler = document.getElementById(kennung);
+        // stumm gewollt: nicht jedes Detailfeld hat einen Regler auf der Seite
         if (!regler) return;
         regler.value = wert;
         const anzeige = document.getElementById(kennung + '-val');

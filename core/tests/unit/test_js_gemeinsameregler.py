@@ -89,11 +89,6 @@ const TABELLE = {min: -100, max: 100, gruppen: [
 SKRIPT = DOM + TABELLE + """
 const { Gemeinsameregler } = await import(MODUL);
 Gemeinsameregler._tabelle = TABELLE;
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const liste = knoten['prop-gemeinsam-liste'];
 const schieber = (nr) => liste.kinder[0].kinder[nr + 1].suchen('input')[0];
 

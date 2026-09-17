@@ -43,6 +43,7 @@ from ganzkoerperpunkte import Ganzkoerperpunkte             # noqa: E402
 from hmr2start import Hmr2start                             # noqa: E402
 from pymafxausgabe import Pymafxausgabe                     # noqa: E402
 from pymafxlauf import Pymafxlauf                           # noqa: E402
+from ._sicher import Sicher
 
 
 class DerHmr2Start(unittest.TestCase):
@@ -118,6 +119,7 @@ class DerHmr2Start(unittest.TestCase):
     def test_die_zuversichtlichste_person_gewinnt(self):
         u"""Anders als bei SMPLest-X: HMR 2.0 bekommt EINEN Kasten."""
         kasten, guete = Hmr2start.beste_person(self._detektor(), None)
+        kasten = Sicher.wert(kasten, 'Kasten')
         self.assertEqual(kasten.shape, (1, 4))
         self.assertEqual(list(kasten[0]), [10.0, 20.0, 110.0, 220.0])
         self.assertAlmostEqual(guete, 0.72, places=5)
@@ -125,6 +127,7 @@ class DerHmr2Start(unittest.TestCase):
     def test_ein_hund_zaehlt_nicht_als_person(self):
         u"""Der Hund ist der sicherste Treffer — und der falsche."""
         kasten, _guete = Hmr2start.beste_person(self._detektor(), None)
+        kasten = Sicher.wert(kasten, 'Kasten')
         self.assertNotEqual(list(kasten[0]), [0.0, 0.0, 50.0, 50.0])
 
     def test_unter_der_schwelle_zaehlt_niemand(self):
@@ -187,7 +190,7 @@ class DiePymafxAusgabe(unittest.TestCase):
     def test_kasten_und_massstab_kommen_aus_dem_datensatz(self):
         ausgabe = self._ausgabe()
         self.assertEqual(ausgabe.kasten(), [50.0, 60.0, 100.0, 200.0])
-        self.assertAlmostEqual(ausgabe.massstab(), 1.25, places=5)
+        self.assertAlmostEqual(Sicher.wert(ausgabe.massstab(), 'Maßstab'), 1.25, places=5)
 
     def test_ohne_datensatz_kein_kasten(self):
         u"""`Inference` kann leer ausgehen — das darf nicht abstuerzen."""
@@ -207,7 +210,7 @@ class DiePymafxAusgabe(unittest.TestCase):
             Pymafxausgabe.NETZ: Tensorattrappe(
                 [np.zeros((7, 3), dtype=np.float32)])})
         with Pruefablage.ordner() as ordner:
-            pfad = ausgabe.netz_speichern(os.path.join(ordner, 'foto.jpg'))
+            pfad = Sicher.wert(ausgabe.netz_speichern(os.path.join(ordner, 'foto.jpg')), 'Pfad')
             self.assertEqual(os.path.basename(pfad),
                              Pymafxausgabe.VERTEXDATEI)
             self.assertEqual(np.load(pfad).shape, (7, 3))
@@ -261,7 +264,7 @@ class DerPymafxLauf(unittest.TestCase):
         """
         vorhersage = Vorhersageattrappe([Personenattrappe(0.8)])
         Pymafxlauf.personen(vorhersage, 'foto.jpg', np)
-        self.assertTrue(os.path.isabs(vorhersage.dateien[0]))
+        self.assertTrue(os.path.isabs(Sicher.wert(vorhersage.dateien, 'Dateien')[0]))
 
     def test_die_indexgrenzen_teilen_alle_133_punkte_auf(self):
         u"""Koerper, Fuesse, Gesicht, zwei Haende — nichts faellt weg."""

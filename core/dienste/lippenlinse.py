@@ -41,10 +41,16 @@ durch die Dreiecke — vorher stand er als Zickzack auf den Kanten.
 Alles in Blender-Koordinaten des Netzes (x rechts, y nach hinten, z hoch).
 """
 import logging
+from collections import namedtuple
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+#: Die Mundlinse: Mitte x0, halbe Breite xc, Mundlinie ym, Höhe der
+#: Mundwinkel yecke, Dicke der Ober- (u0) und Unterlippe (d0) — Meter.
+Linse = namedtuple('Linse', 'x0 xc ym yecke u0 d0')
 
 
 class Lippenlinse:
@@ -106,7 +112,7 @@ class Lippenlinse:
         aus[hinten] = np.where(hoehle, cls.INNEN, cls.AUSSEN)
         aus[front] = cls.rand(x[front], hoch[front], linse)
         logger.info('Lippenlinse: Mundwinkel ±%.1f mm, Mundlinie %.4f m, Lippen %d Punkte vorn (Maske %d)',
-                    1000 * linse['xc'], linse['ym'], int((aus[front] > 0).sum()), int(kand.sum()))
+                    1000 * linse.xc, linse.ym, int((aus[front] > 0).sum()), int(kand.sum()))
         return aus
 
     @classmethod
@@ -156,8 +162,7 @@ class Lippenlinse:
         if xc < 0.005:
             return None
         ecken = band & ((x < links + cls.BAND) | (x > rechts - cls.BAND))
-        return {'x0': x0, 'xc': xc, 'ym': ym, 'yecke': float(hoch[ecken].mean()),
-                'u0': oben - ym, 'd0': ym - unten}
+        return Linse(x0, xc, ym, float(hoch[ecken].mean()), oben - ym, ym - unten)
 
     @classmethod
     def drin(cls, x, hoch, linse):
@@ -172,12 +177,12 @@ class Lippenlinse:
         (an den steilen Enden etwas zu groß, für den 1-mm-Saum egal), jenseits
         der Mundwinkel der waagerechte zum Winkel — nach außen begrenzt auf AUSSEN.
         """
-        t = (x - linse['x0']) / linse['xc']
-        ym = linse['ym'] + (linse['yecke'] - linse['ym']) * t * t
+        t = (x - linse.x0) / linse.xc
+        ym = linse.ym + (linse.yecke - linse.ym) * t * t
         faktor = np.clip(1 - t * t, 0, 1) ** cls.POTENZ
-        oben = ym + linse['u0'] * faktor - hoch
-        unten = hoch - (ym - linse['d0'] * faktor)
+        oben = ym + linse.u0 * faktor - hoch
+        unten = hoch - (ym - linse.d0 * faktor)
         senkrecht = np.minimum(oben, unten)
-        seitlich = -(np.abs(t) - 1) * linse['xc']
+        seitlich = -(np.abs(t) - 1) * linse.xc
         abstand = 1000 * np.where(np.abs(t) <= 1, senkrecht, np.minimum(senkrecht, seitlich))
         return np.clip(abstand, cls.AUSSEN, cls.INNEN)

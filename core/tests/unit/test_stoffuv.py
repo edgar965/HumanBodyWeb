@@ -28,6 +28,7 @@ from django.test import SimpleTestCase
 
 from GarmentCode.stoffuv import Stoffuv
 from ._pruefablage import Pruefablage
+from ._sicher import Sicher
 
 
 def _schreiben(inhalt, ordner):
@@ -79,7 +80,7 @@ class DieUvKommtJePunktTest(SimpleTestCase):
 
     def test_ein_paar_je_punkt(self):
         with Pruefablage.ordner() as ordner:
-            uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
         self.assertEqual(len(uv), 4)
         self.assertEqual(uv.als_liste()[1], [1.0, 0.0])
         self.assertEqual(uv.mehrfach, 0)
@@ -87,7 +88,7 @@ class DieUvKommtJePunktTest(SimpleTestCase):
     def test_an_einer_naht_gewinnt_die_erste_angabe(self):
         u"""Und die Stelle wird gezählt — sonst bliebe sie unbemerkt."""
         with Pruefablage.ordner() as ordner:
-            uv = Stoffuv.aus_obj(_schreiben(MIT_NAHT, ordner))
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(MIT_NAHT, ordner)), 'UV')
         self.assertEqual(len(uv), 4)
         self.assertEqual(uv.als_liste()[2], [1.0, 1.0])
         self.assertEqual(uv.mehrfach, 1)
@@ -122,15 +123,15 @@ class DerMassstabIstInMeternTest(SimpleTestCase):
         u"""Die Kante ist 10 Einheiten lang, das OBJ steht in Zentimetern —
         also 0,1 m je UV-Einheit. Ohne die Umrechnung stünde dort 10."""
         with Pruefablage.ordner() as ordner:
-            uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
-        self.assertAlmostEqual(uv.meter_je_uv, 0.1, places=6)
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
+        self.assertAlmostEqual(Sicher.wert(uv.meter_je_uv, 'Maßstab'), 0.1, places=6)
 
     def test_ein_groesseres_netz_hat_einen_groesseren_massstab(self):
         gross = QUADRAT.replace('v 10 0 0', 'v 20 0 0') \
                        .replace('v 10 10 0', 'v 20 10 0')
         with Pruefablage.ordner() as ordner:
-            uv = Stoffuv.aus_obj(_schreiben(gross, ordner))
-        self.assertGreater(uv.meter_je_uv, 0.1)
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(gross, ordner)), 'UV')
+        self.assertGreater(Sicher.wert(uv.meter_je_uv, 'Maßstab'), 0.1)
 
 
 class DieTeilungBehaeltDenMassstabTest(SimpleTestCase):
@@ -139,16 +140,16 @@ class DieTeilungBehaeltDenMassstabTest(SimpleTestCase):
 
     databases = set()
 
-    def test_ausschnitt(self):
+    def test_teil_behaelt_reihenfolge_und_massstab(self):
         with Pruefablage.ordner() as ordner:
-            uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
-        teil = uv.teil([2, 0])
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
+        teil = Sicher.wert(uv.teil([2, 0]), 'Teil')
         self.assertEqual(teil.als_liste(), [[1.0, 1.0], [0.0, 0.0]])
         self.assertEqual(teil.meter_je_uv, uv.meter_je_uv)
 
     def test_nummern_ausserhalb_des_netzes_liefern_nichts(self):
         with Pruefablage.ordner() as ordner:
-            uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
         self.assertIsNone(uv.teil([0, 99]))
 
 

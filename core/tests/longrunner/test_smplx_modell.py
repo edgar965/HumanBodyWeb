@@ -36,30 +36,6 @@ from SMPL.xsegmentierung import Smplxsegmentierung
 from SMPL.xskelett import Smplxskelett
 
 
-def _obj_punkte(pfad):
-    punkte = []
-    with open(pfad, 'r', encoding='utf-8') as quelle:
-        for zeile in quelle:
-            if zeile.startswith('v '):
-                t = zeile.split()
-                punkte.append([float(t[1]), float(t[2]), float(t[3])])
-    return np.asarray(punkte, dtype=np.float64)
-
-
-def _zentriert(v):
-    aus = np.asarray(v, dtype=np.float64).copy()
-    aus[:, 1] -= aus[:, 1].min()
-    aus[:, 0] -= (aus[:, 0].min() + aus[:, 0].max()) / 2.0
-    aus[:, 2] -= (aus[:, 2].min() + aus[:, 2].max()) / 2.0
-    return aus
-
-
-def _naechste_mm(a, b):
-    from scipy.spatial import cKDTree
-    abstand, _ = cKDTree(_zentriert(b)).query(_zentriert(a), k=1)
-    return abstand * 1000.0
-
-
 class SmplxModellTest(unittest.TestCase):
 
     databases = set()
@@ -99,14 +75,14 @@ class SmplxModellTest(unittest.TestCase):
             self.skipTest('GarmentCode-Klon ohne %s' % datei)
         modell = self.modell(geschlecht)
         eigen = modell.a40(None)
-        fremd = _obj_punkte(pfad)
+        fremd = SmplxModellTest._obj_punkte(pfad)
         gelenke = modell.J_regressor @ eigen
         for seite in ('l', 'r'):
             schulter, hand = gelenke[list(modell.ARM[seite])]
             d = hand - schulter
             winkel = np.degrees(np.arctan2(-d[1], abs(d[0])))
             self.assertAlmostEqual(winkel, 40.0, delta=1.0, msg='Armwinkel %s' % seite)
-        abstand = _naechste_mm(eigen, fremd)
+        abstand = SmplxModellTest._naechste_mm(eigen, fremd)
         self.assertLess(float(np.median(abstand)), 8.0)
         self.assertLess(float(np.percentile(abstand, 90)), 20.0)
         # Gegenprobe: 40 Grad OHNE die Ruhewinkel-Differenz (so rechnet SMPL)
@@ -114,7 +90,7 @@ class SmplxModellTest(unittest.TestCase):
         rad = np.radians(40)
         falsch = modell.posieren(v_rest, {16: [0, 0, -rad], 17: [0, 0, rad]})
         falsch[:, 1] -= falsch[:, 1].min()
-        self.assertGreater(float(np.percentile(_naechste_mm(falsch, fremd), 90)), 30.0,
+        self.assertGreater(float(np.percentile(SmplxModellTest._naechste_mm(falsch, fremd), 90)), 30.0,
                            'die Gegenprobe muesste danebenliegen')
 
     def test_weiblicher_a40_trifft_garmentcode(self):
@@ -203,3 +179,27 @@ class SmplxModellTest(unittest.TestCase):
             punkte = np.nonzero(gewichte.argmax(axis=1) == nummer)[0]
             im_kopf = sum(1 for p in punkte if int(p) in kopf)
             self.assertGreater(im_kopf, 0.95 * len(punkte), gelenk)
+
+    @staticmethod
+    def _obj_punkte(pfad):
+        punkte = []
+        with open(pfad, 'r', encoding='utf-8') as quelle:
+            for zeile in quelle:
+                if zeile.startswith('v '):
+                    t = zeile.split()
+                    punkte.append([float(t[1]), float(t[2]), float(t[3])])
+        return np.asarray(punkte, dtype=np.float64)
+
+    @staticmethod
+    def _zentriert(v):
+        aus = np.asarray(v, dtype=np.float64).copy()
+        aus[:, 1] -= aus[:, 1].min()
+        aus[:, 0] -= (aus[:, 0].min() + aus[:, 0].max()) / 2.0
+        aus[:, 2] -= (aus[:, 2].min() + aus[:, 2].max()) / 2.0
+        return aus
+
+    @staticmethod
+    def _naechste_mm(a, b):
+        from scipy.spatial import cKDTree
+        abstand, _ = cKDTree(SmplxModellTest._zentriert(b)).query(SmplxModellTest._zentriert(a), k=1, workers=-1)
+        return abstand * 1000.0

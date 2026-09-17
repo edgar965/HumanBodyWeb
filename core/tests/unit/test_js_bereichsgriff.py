@@ -23,11 +23,6 @@ MODUL = Jsmodul('gemeinsam', 'bereichsgriff.js')
 
 SKRIPT = """
 const { Bereichsgriff } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const B = Bereichsgriff.naechsteBreite;
 
 // 1. Feld links (Richtung +1): 120 px nach rechts gezogen

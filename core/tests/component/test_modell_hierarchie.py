@@ -65,27 +65,23 @@ ALTE_BAUER = ('bvh_studio/spurzubehoer.js', 'bvh_studio/spurhaut.js',
               'bvh_studio/spurdetails.js', 'scene/figurbasis.js')
 
 
-def _text(pfad):
-    return pfad.read_text(encoding='utf-8')
-
-
 class ModellHierarchie(unittest.TestCase):
     databases = set()
 
     def test_modell_und_die_fuenf_arten(self):
-        basis = _text(GEMEINSAM / 'modell.js')
+        basis = ModellHierarchie._text(GEMEINSAM / 'modell.js')
         self.assertIn('export class Modell {', basis)
         self.assertIn('async bauen(optionen = {}) {', basis)
         self.assertIn('ist nicht implementiert', basis)
         for datei, klasse in ARTEN.items():
-            text = _text(GEMEINSAM / datei)
+            text = ModellHierarchie._text(GEMEINSAM / datei)
             self.assertIn('export class %s extends Modell {' % klasse, text)
             self.assertRegex(text, r'\n    async bauen\(', datei)
             self.assertNotIn('state.js', text, datei)
             self.assertNotIn("from '../scene/", text, datei)
 
     def test_humanbody_koerper_in_der_richtigen_reihenfolge(self):
-        text = _text(GEMEINSAM / 'humanbodymodell.js')
+        text = ModellHierarchie._text(GEMEINSAM / 'humanbodymodell.js')
         rumpf = text[text.index('async koerper('):text.index('async _erzeugt(')]
         lippen = rumpf.index('Lippenbau.abspalten(netz, daten.lippen);')
         haut = rumpf.index('this._gehaeutet(netz, skelettdaten, gewichte)')
@@ -99,11 +95,11 @@ class ModellHierarchie(unittest.TestCase):
 
     def test_die_seiten_bauen_nicht_selbst(self):
         for name, (pfad, aufruf) in SEITEN.items():
-            text = _text(pfad)
+            text = ModellHierarchie._text(pfad)
             self.assertIn(aufruf, text, name)
             self.assertNotIn('Koerpernetz.netz(', text, name)
         for datei, kopf in SZENE.items():
-            self.assertIn(kopf, _text(VIEWER / 'scene' / datei), datei)
+            self.assertIn(kopf, ModellHierarchie._text(VIEWER / 'scene' / datei), datei)
         for alt in ALTE_BAUER:
             self.assertFalse((VIEWER / alt).exists(), alt)
         self.assertFalse((THEATRE / 'laden' / 'figurnetz.js').exists())
@@ -111,6 +107,10 @@ class ModellHierarchie(unittest.TestCase):
             r'Spurzubehoer|Spurhaut\b|Spurdetails|Figurnetz\.|Kleidungsnetz')
         kommentar = ('*', '//', '/*')
         for pfad in list(VIEWER.rglob('*.js')) + list(THEATRE.rglob('*.js')):
-            treffer = [z for z in _text(pfad).splitlines()
+            treffer = [z for z in ModellHierarchie._text(pfad).splitlines()
                        if alte.search(z) and not z.lstrip().startswith(kommentar)]
             self.assertEqual(treffer, [], str(pfad))
+
+    @staticmethod
+    def _text(pfad):
+        return pfad.read_text(encoding='utf-8')

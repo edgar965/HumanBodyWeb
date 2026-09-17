@@ -36,7 +36,7 @@ export class Spurerzeugung {
             name || `Animation ${nummer}`,
             state.project.defaultModel || Spurerzeugung.ERSATZMODELL,
             state.project.defaultBodyType || Spurerzeugung.ERSATZKOERPER);
-        return Spurerzeugung._einhaengen(spur, true);
+        return Spurerzeugung.einhaengen(spur, true);
     }
 
     /** Eine Modellspur — sie stellt die Figur einer Animationsspur. */
@@ -49,7 +49,7 @@ export class Spurerzeugung {
         spur.muted = false;
         spur._currentPreset = null;
         spur._linkedAnimIdx = -1;
-        return Spurerzeugung._einhaengen(spur, false);
+        return Spurerzeugung.einhaengen(spur, false);
     }
 
     /** Kamera, Licht, Ton oder Szenenobjekt. */
@@ -114,7 +114,8 @@ export class Spurerzeugung {
         },
     };
 
-    static _einhaengen(spur, inSzene) {
+    /** Die Spur ins Projekt (und in die Szene), Köpfe und Leiste neu, Spur wählen. */
+    static einhaengen(spur, inSzene = false) {
         state.project.addTrack(spur);
         if (inSzene) state.scene.add(spur.group);
         fn.updateTrackHeaders();

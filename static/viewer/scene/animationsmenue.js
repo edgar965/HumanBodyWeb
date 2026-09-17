@@ -1,5 +1,6 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
+import { Kontextmenue } from '../gemeinsam/kontextmenue.js';
 
 /**
  * Kontextmenü auf den Animationen im Szene-Reiter — umbenennen und löschen.
@@ -22,7 +23,6 @@ import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 export class Animationsmenue {
 
     static ENDPUNKT = '/api/character/bvh-manage/';
-    static KENNUNG = 'anim-ctx';
 
     /**
      * Das Menü an eine Baumzeile hängen. `danach(aktion)` läuft nach
@@ -40,33 +40,16 @@ export class Animationsmenue {
         });
     }
 
+    /** Kasten, Lage im Fenster und Schließen: `gemeinsam/kontextmenue.js`. */
     static zeigen(x, y, kategorie, name, danach) {
-        const menue = Animationsmenue._menue();
-        menue.innerHTML = '';
-        menue.appendChild(Animationsmenue._eintrag(
-            'fa-pen', 'Umbenennen',
-            () => Animationsmenue.umbenennen(kategorie, name, danach)));
-        menue.appendChild(Animationsmenue._eintrag(
-            'fa-arrows-alt', 'Verschieben nach …',
-            () => Animationsmenue.verschieben(kategorie, name, danach)));
-        menue.appendChild(Animationsmenue._eintrag(
-            'fa-trash', 'Löschen',
-            () => Animationsmenue.loeschen(kategorie, name, danach)));
-        // Erst messen, dann setzen: Am rechten Rand liefe das Menü sonst aus
-        // dem Fenster und die Einträge wären nicht erreichbar.
-        menue.style.left = '0px';
-        menue.style.top = '0px';
-        menue.style.display = 'block';
-        const breite = menue.offsetWidth;
-        const hoehe = menue.offsetHeight;
-        menue.style.left = `${Math.min(x, window.innerWidth - breite - 4)}px`;
-        menue.style.top = `${Math.min(y, window.innerHeight - hoehe - 4)}px`;
-        Animationsmenue._schliessenBeiKlick();
-    }
-
-    static verbergen() {
-        const menue = document.getElementById(Animationsmenue.KENNUNG);
-        if (menue) menue.style.display = 'none';
+        Kontextmenue.zeigen(x, y, [
+            { symbol: 'fa-pen', text: 'Umbenennen',
+              tun: () => Animationsmenue.umbenennen(kategorie, name, danach) },
+            { symbol: 'fa-arrows-alt', text: 'Verschieben nach …',
+              tun: () => Animationsmenue.verschieben(kategorie, name, danach) },
+            { symbol: 'fa-trash', text: 'Löschen',
+              tun: () => Animationsmenue.loeschen(kategorie, name, danach) },
+        ]);
     }
 
     static async umbenennen(kategorie, name, danach) {
@@ -212,40 +195,4 @@ export class Animationsmenue {
         });
     }
 
-    // -- Bausteine ------------------------------------------------------------
-
-    /** Der eine Menükasten dieser Seite — angelegt, wenn es ihn nicht gibt. */
-    static _menue() {
-        let menue = document.getElementById(Animationsmenue.KENNUNG);
-        if (menue) return menue;
-        menue = document.createElement('div');
-        menue.id = Animationsmenue.KENNUNG;
-        menue.className = 'hb-kontextmenue';
-        menue.style.display = 'none';
-        document.body.appendChild(menue);
-        return menue;
-    }
-
-    static _eintrag(symbol, text, tun) {
-        const zeile = document.createElement('div');
-        zeile.className = 'hb-menueeintrag';
-        zeile.innerHTML = `<i class="fas ${symbol} hb-symbolspalte"></i> `;
-        zeile.appendChild(document.createTextNode(text));
-        zeile.addEventListener('click', tun);
-        return zeile;
-    }
-
-    /**
-     * Ein Klick daneben schliesst das Menü.
-     *
-     * `{ once: true }` und ein Aufschub um einen Zyklus: Ohne ihn fängt
-     * derselbe Klick, der das Menü öffnet, den Schliesser gleich mit ab —
-     * das Menü blitzt auf und ist weg.
-     */
-    static _schliessenBeiKlick() {
-        setTimeout(() => {
-            document.addEventListener('click', () => Animationsmenue.verbergen(),
-                                      { once: true });
-        }, 0);
-    }
 }

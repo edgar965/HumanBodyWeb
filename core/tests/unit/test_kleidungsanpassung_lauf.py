@@ -34,6 +34,7 @@ Humanbodypfad.setzen()
 
 from GarmentFitter.fitter import (Anpassungslauf, Armmaske,  # noqa: E402
                                   Koerperpolster, Schrittboden)
+from ._sicher import Sicher
 
 
 class Koerperbau:
@@ -192,7 +193,7 @@ class SchrittbodenTest(SimpleTestCase):
         boden = Schrittboden.bestimmen(self.body, self.body,
                                        self.body[:, 0].mean(), 6.0)
         self.assertTrue(boden.vorhanden)
-        self.assertAlmostEqual(boden.hoehe - boden.damm_z, 0.006, places=9)
+        self.assertAlmostEqual(Sicher.wert(boden.hoehe, 'Höhe') - Sicher.wert(boden.damm_z, 'Damm'), 0.006, places=9)
 
     def test_anheben_zieht_haengende_vertices_nach_oben(self):
         boden = Schrittboden(hoehe=0.5, koerpermitte_x=0.0, damm_z=0.494)

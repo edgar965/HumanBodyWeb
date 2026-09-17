@@ -37,6 +37,7 @@ from fotoergebnis import Fotoergebnis                       # noqa: E402
 from ganzkoerperpunkte import Ganzkoerperpunkte             # noqa: E402
 from runnerrahmen import Runnerrahmen                       # noqa: E402
 from smplestxkonfiguration import Smplestxkonfiguration     # noqa: E402
+from ._sicher import Sicher
 
 
 class DerRunnerrahmen(unittest.TestCase):
@@ -243,7 +244,7 @@ class DieSmplestxKonfiguration(unittest.TestCase):
             open(os.path.join(erste, 'config_base.py'), 'w').close()
             open(os.path.join(zweite, 'config_smplest_x_h.py'), 'w').close()
             self.assertIn('pretrained_models',
-                          Smplestxkonfiguration(wurzel).pfad())
+                          Sicher.wert(Smplestxkonfiguration(wurzel).pfad(), 'Pfad'))
 
     def test_die_laufnamen_bleiben_wie_bisher(self):
         u"""Der Ordner in `outputs/` soll erkennbar bleiben."""

@@ -28,11 +28,6 @@ MODUL = Jsmodul('gemeinsam', 'saumschnitt.js')
 SKRIPT = """
 const { Saumschnitt: S } = await import(MODUL);
 const { Hautmaskegeometrie: G } = await import(MODUL.replace('saumschnitt.js', 'hautmaskegeometrie.js'));
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const nah = (was, a, b) => {
     if (Math.abs(a - b) > 1e-6) throw new Error(was + ': ' + a + ' statt ' + b);
 };

@@ -3,6 +3,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Kleiderwerkstoff } from '../gemeinsam/kleiderwerkstoff.js';
 
 /**
  * GarmentcodePanels — das Schnittmuster als flache Flächen am Körper.
@@ -101,19 +102,13 @@ export class GarmentcodePanels {
         return figur?.group || figur?.inst?.group || null;
     }
 
+    /** Rosa, durchscheinend — der Kleiderwerkstoff bringt den Versatz gegen die Haut mit. */
     static werkstoff() {
-        return new THREE.MeshStandardMaterial({
-            color: 0xd8a0b4,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.72,
-            roughness: 0.85,
-            metalness: 0.0,
-            // Ohne das flimmert die Fläche gegen den Körper, wo sie ihn
-            // streift — zwei Flächen im selben Tiefenwert.
-            polygonOffset: true,
-            polygonOffsetFactor: -1,
-            polygonOffsetUnits: -1,
-        });
+        const werkstoff = Kleiderwerkstoff.bauen(THREE, null, 0.85, 0.0);
+        // `setHex` liest sRGB (wie `new Color(0xd8a0b4)`); `bauen` nimmt lineare Anteile.
+        werkstoff.color.setHex(0xd8a0b4);
+        werkstoff.transparent = true;
+        werkstoff.opacity = 0.72;
+        return werkstoff;
     }
 }

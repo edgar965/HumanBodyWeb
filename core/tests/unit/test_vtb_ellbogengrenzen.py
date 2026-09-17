@@ -34,37 +34,41 @@ from smplskelett import Smplskelett                         # noqa: E402
 LINKS, RECHTS = 18, 19
 
 
-def _armachse(gelenk):
-    kind = 20 if gelenk == LINKS else 21
-    achse = np.asarray(Smplskelett.OFFSETS[kind], dtype=float)
-    return achse / np.linalg.norm(achse)
+class Arm:
+    u"""Der Kunstarm im SMPL-Skelett: Achsen und Winkel je Ellbogen (18/19)."""
+
+    @staticmethod
+    def achse(gelenk):
+        kind = 20 if gelenk == LINKS else 21
+        achse = np.asarray(Smplskelett.OFFSETS[kind], dtype=float)
+        return achse / np.linalg.norm(achse)
+
+    @staticmethod
+    def beugeachse(gelenk):
+        u"""Beugung nach vorn: um y (links -y, rechts +y), senkrecht zur Armachse
+        gestellt — der Ruheversatz zum Handgelenk liegt nicht exakt auf x."""
+        y = np.array([0.0, -1.0 if gelenk == LINKS else 1.0, 0.0])
+        achse = Arm.achse(gelenk)
+        y = y - np.dot(y, achse) * achse
+        return y / np.linalg.norm(y)
+
+    @staticmethod
+    def feld(gelenk, rot):
+        feld = np.tile(np.array([[1.0, 0.0, 0.0, 0.0]]), (2, len(Smplskelett.NAMEN), 1))
+        x, y, z, w = rot.as_quat()
+        feld[0, gelenk] = [w, x, y, z]
+        return feld
+
+    @staticmethod
+    def beugung(feld, gelenk):
+        u"""Winkel zwischen Oberarm- und Unterarmrichtung nach der Drehung des Gelenks."""
+        w, x, y, z = feld[0, gelenk]
+        achse = Arm.achse(gelenk)
+        gedreht = Rotation.from_quat([x, y, z, w]).apply(achse)
+        return np.degrees(np.arccos(np.clip(np.dot(gedreht, achse), -1.0, 1.0)))
 
 
-def _beugeachse(gelenk):
-    u"""Beugung nach vorn: um y (links -y, rechts +y), senkrecht zur Armachse
-    gestellt — der Ruheversatz zum Handgelenk liegt nicht exakt auf x."""
-    y = np.array([0.0, -1.0 if gelenk == LINKS else 1.0, 0.0])
-    achse = _armachse(gelenk)
-    y = y - np.dot(y, achse) * achse
-    return y / np.linalg.norm(y)
-
-
-BEUGEACHSE = {LINKS: _beugeachse(LINKS), RECHTS: _beugeachse(RECHTS)}
-
-
-def _feld(gelenk, rot):
-    feld = np.tile(np.array([[1.0, 0.0, 0.0, 0.0]]), (2, len(Smplskelett.NAMEN), 1))
-    x, y, z, w = rot.as_quat()
-    feld[0, gelenk] = [w, x, y, z]
-    return feld
-
-
-def _beugung(feld, gelenk):
-    u"""Winkel zwischen Oberarm- und Unterarmrichtung nach der Drehung des Gelenks."""
-    w, x, y, z = feld[0, gelenk]
-    achse = _armachse(gelenk)
-    gedreht = Rotation.from_quat([x, y, z, w]).apply(achse)
-    return np.degrees(np.arccos(np.clip(np.dot(gedreht, achse), -1.0, 1.0)))
+BEUGEACHSE = {LINKS: Arm.beugeachse(LINKS), RECHTS: Arm.beugeachse(RECHTS)}
 
 
 class DerEllbogen(unittest.TestCase):
@@ -78,21 +82,21 @@ class DerEllbogen(unittest.TestCase):
     def test_beugt_sich_bis_140_grad_ungehindert(self):
         for gelenk in (LINKS, RECHTS):
             with self.subTest(gelenk=Smplskelett.NAMEN[gelenk]):
-                feld = _feld(gelenk, Rotation.from_rotvec(np.radians(140) * BEUGEACHSE[gelenk]))
+                feld = Arm.feld(gelenk, Rotation.from_rotvec(np.radians(140) * BEUGEACHSE[gelenk]))
                 vorher = feld.copy()
                 self.assertEqual(Gelenkgrenzen.anwenden(feld, np), 0)
                 np.testing.assert_allclose(feld, vorher)
-                self.assertAlmostEqual(_beugung(feld, gelenk), 140.0, places=3)
+                self.assertAlmostEqual(Arm.beugung(feld, gelenk), 140.0, places=3)
 
     def test_schwenkung_ueber_150_grad_wird_gekappt(self):
-        feld = _feld(LINKS, Rotation.from_rotvec(np.radians(170) * BEUGEACHSE[LINKS]))
+        feld = Arm.feld(LINKS, Rotation.from_rotvec(np.radians(170) * BEUGEACHSE[LINKS]))
         self.assertEqual(Gelenkgrenzen.anwenden(feld, np), 1)
-        self.assertAlmostEqual(_beugung(feld, LINKS), 150.0, places=3)
+        self.assertAlmostEqual(Arm.beugung(feld, LINKS), 150.0, places=3)
 
     def test_verdrehung_um_die_armachse_wird_auf_90_gekappt(self):
-        achse = _armachse(LINKS)
+        achse = Arm.achse(LINKS)
         beugung = Rotation.from_rotvec(np.radians(60) * BEUGEACHSE[LINKS])
-        feld = _feld(LINKS, beugung * Rotation.from_rotvec(np.radians(130) * achse))
+        feld = Arm.feld(LINKS, beugung * Rotation.from_rotvec(np.radians(130) * achse))
         self.assertEqual(Gelenkgrenzen.anwenden(feld, np), 1)
         w, x, y, z = feld[0, LINKS]
         neu = Rotation.from_quat([x, y, z, w])
@@ -102,4 +106,4 @@ class DerEllbogen(unittest.TestCase):
         dreh = np.array([*(anteil * achse), q[3]])
         dreh /= np.linalg.norm(dreh)
         self.assertAlmostEqual(np.degrees(2 * np.arctan2(np.dot(dreh[:3], achse), dreh[3])), 90.0, places=3)
-        self.assertAlmostEqual(_beugung(feld, LINKS), 60.0, places=3)
+        self.assertAlmostEqual(Arm.beugung(feld, LINKS), 60.0, places=3)

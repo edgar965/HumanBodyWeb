@@ -29,11 +29,6 @@ MODUL = Jsmodul('gemeinsam', 'knochenkette.js')
 
 SKRIPT = """
 const { Knochenkette: K } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const nach = (plan, name) => plan.find(k => k.name === name);
 // Punkte werden gerechnet (kopf - elternKopf), nicht kopiert: 1.2 - 1.0
 // ergibt 0.19999999999999996. Ein exakter Vergleich waere hier nur eine
@@ -141,6 +136,6 @@ class KnochenketteTest(SimpleTestCase):
 
     databases = set()
 
-    def test_bauplan(self):
+    def test_bauplan_relativ_zum_elternteil_eltern_zuerst_endknochen_am_blatt(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

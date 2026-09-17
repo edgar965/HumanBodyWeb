@@ -41,27 +41,31 @@ KLEIDUNG = ['male_hoodie_blue_Recipe', 'male_shorts_black_cotton_Recipe',
             'M_ChallengerBoots_Recipe']
 
 
-def _katalog():
-    return Path(settings.FIGUREN_KATALOG) / 'uma'
+class Unityreferenz:
+    u"""Die Unity-GLB der Gegenprobe und die in Python gebaute Figur."""
 
+    @staticmethod
+    def katalog():
+        return Path(settings.FIGUREN_KATALOG) / 'uma'
 
-def _referenz(name, kleidung=None):
-    u"""Die Unity-GLB — oder eine Anleitung, wie sie entsteht."""
-    datei = _katalog() / ('%s.glb' % name)
-    if datei.is_file():
-        return datei
-    stuecke = '","'.join(kleidung) if kleidung else '-'
-    raise unittest.SkipTest(
-        'Referenz %s fehlt. Erzeugen mit:\n'
-        '  curl -X POST http://127.0.0.1:8081/api/character/uma-figur/bauen/ '
-        '-H "Content-Type: application/json" -d \'{"rasse":"%s",'
-        '"name":"%s","zeiger":0,"kleidung":["%s"]}\''
-        % (datei, RASSE, name, stuecke))
+    @staticmethod
+    def referenz(name, kleidung=None):
+        u"""Die Unity-GLB — oder eine Anleitung, wie sie entsteht."""
+        datei = Unityreferenz.katalog() / ('%s.glb' % name)
+        if datei.is_file():
+            return datei
+        stuecke = '","'.join(kleidung) if kleidung else '-'
+        raise unittest.SkipTest(
+            'Referenz %s fehlt. Erzeugen mit:\n'
+            '  curl -X POST http://127.0.0.1:8081/api/character/uma-figur/bauen/ '
+            '-H "Content-Type: application/json" -d \'{"rasse":"%s",'
+            '"name":"%s","zeiger":0,"kleidung":["%s"]}\''
+            % (datei, RASSE, name, stuecke))
 
-
-def _bauen(kleidung=None):
-    from UMA_Python.figur import Figur
-    return Figur(str(settings.UMA_PROJEKT)).bauen(RASSE, kleidung=kleidung)
+    @staticmethod
+    def bauen(kleidung=None):
+        from UMA_Python.figur import Figur
+        return Figur(str(settings.UMA_PROJEKT)).bauen(RASSE, kleidung=kleidung)
 
 
 class NetzGegenUnity(unittest.TestCase):
@@ -72,8 +76,8 @@ class NetzGegenUnity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from UMA_Python.gegenprobe import Unityglb
-        cls.unity = Unityglb(_referenz('Gegenprobe_nackt'))
-        cls.gebaut = _bauen()
+        cls.unity = Unityglb(Unityreferenz.referenz('Gegenprobe_nackt'))
+        cls.gebaut = Unityreferenz.bauen()
 
     def test_punktzahl_ist_dieselbe(self):
         self.assertEqual(len(self.gebaut.netz.punkte),
@@ -124,8 +128,8 @@ class SkelettGegenUnity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from UMA_Python.gegenprobe import Unityglb
-        cls.unity = Unityglb(_referenz('Gegenprobe_nackt'))
-        cls.gebaut = _bauen()
+        cls.unity = Unityglb(Unityreferenz.referenz('Gegenprobe_nackt'))
+        cls.gebaut = Unityreferenz.bauen()
         cls.fremd = cls.unity.bindeposen()
 
     def test_jeder_knochen_heisst_gleich(self):

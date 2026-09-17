@@ -89,7 +89,11 @@ class Saumschnitt:
             return np.zeros((0, 2), dtype=np.int64)
         k = np.vstack([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]])
         k.sort(axis=1)
-        _, index, zaehler = np.unique(k, axis=0, return_index=True, return_counts=True)
+        # Paare zu EINEM Schluessel gefaltet — `np.unique(axis=0)` sortiert
+        # zeilenweise und ist um ein Vielfaches langsamer (Lehre).
+        n = int(T.max()) + 1
+        _, index, zaehler = np.unique(k[:, 0] * n + k[:, 1],
+                                      return_index=True, return_counts=True)
         return k[index[zaehler == 1]]
 
     @staticmethod

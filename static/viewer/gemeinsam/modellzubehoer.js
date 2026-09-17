@@ -46,8 +46,8 @@ export class Modellzubehoer {
     static _haarfarben = null;
 
     /**
-     * @param modell      das `HumanbodyModell` (group, bodyMesh, skelett, …)
-     * @param haarfarben  {name: [r,g,b]} aus `/api/character/hairstyles/`, oder null
+     * @param {Object} modell  das `HumanbodyModell` (group, bodyMesh, skelett, …)
+     * @param {Object<string, number[]>|null} [haarfarben]  Name → [r,g,b] aus `/api/character/hairstyles/`
      */
     constructor(modell, haarfarben = null) {
         this.modell = modell;

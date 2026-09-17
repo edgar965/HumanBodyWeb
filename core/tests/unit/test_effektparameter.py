@@ -27,7 +27,7 @@ BVH = (
 
 class BvhnamenTest(SimpleTestCase):
 
-    def test_kopfdaten(self):
+    def test_kopfdaten_gelenke_bilder_und_bildrate_aus_der_bvh(self):
         n = Bvhnamen(BVH)
         self.assertEqual(n.gelenke(), ['Pelvis', 'Left_hip', 'Spine1'])
         self.assertEqual(n.bilder(), 3)
@@ -85,8 +85,8 @@ class EffektparameterTest(SimpleTestCase):
                            geschlecht='maennlich', renderer='eevee')
         argv = ['blender', '-b', '--python', 'x.py', '--'] + p.argumente()
         q = Effektparameter.aus_argv(argv)
-        for name in Effektparameter.namen() + ['bvh', 'kleid', 'ausgabe',
-                                              'geschlecht', 'renderer']:
+        felder = Effektparameter.namen() + ['bvh', 'kleid', 'ausgabe', 'geschlecht', 'renderer']
+        for name in felder:
             self.assertEqual(getattr(q, name), getattr(p, name), name)
         for name in Effektparameter.namen():
             self.assertIn('--' + name, argv, name)

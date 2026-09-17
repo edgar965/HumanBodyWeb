@@ -34,11 +34,6 @@ MODUL = Jsmodul('gemeinsam', 'klipquelle.js')
 
 SKRIPT = """
 const { Klipquelle } = await import(MODUL);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const eins = { name: 'eins' }, zwei = { name: 'zwei' };
 
 // holen VOR melden wartet — und bekommt genau den gemeldeten Clip

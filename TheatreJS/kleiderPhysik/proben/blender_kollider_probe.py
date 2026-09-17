@@ -1,6 +1,6 @@
 # Probe: kollidiert Blenders Stoff mit einem Kollider, der sich BEWEGT und
 # VERFORMT? Kugel mit animiertem Ort und animiertem Shape-Key, Tuch darueber.
-import bpy
+import bpy  # pyright: ignore[reportMissingImports]  (Blender)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene

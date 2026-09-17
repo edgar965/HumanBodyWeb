@@ -21,10 +21,10 @@ Projekte mit `lebendigkeit` an der Mimikspur werden zum Script-Clip.
 Sabotage-Gegenprobe: in `aktive` `bild < c.startFrame + …` → `true` →
 Fall 1 rot.
 """
-from django.conf import settings
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
+from ._studiovorlage import Studiovorlage
 
 MODUL = Jsmodul('bvh_studio', 'scriptzuschlag.js')
 STUDIO = Jsmodul.VIEWER / 'bvh_studio'
@@ -64,17 +64,13 @@ console.log(JSON.stringify({ ok: true, bild }));
 """
 
 
-def _text(pfad):
-    return pfad.read_text(encoding='utf-8')
-
-
 class ScriptzuschlagTest(SimpleTestCase):
 
     def test_aktive_clips_zeit_ab_clipanfang_split_und_summe(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_modellmenue_zweigeteilt_und_scriptspur_verdrahtet(self):
-        vorlage = _text(settings.BASE_DIR / 'templates' / 'bvh_studio.html')
+        vorlage = Studiovorlage.text()
         modell = vorlage[vorlage.index('id="model-context-menu"'):
                          vorlage.index('id="script-context-menu"')]
         self.assertIn('Modell hinzufügen', modell)
@@ -87,42 +83,46 @@ class ScriptzuschlagTest(SimpleTestCase):
         for aktion in ('ctx-script-clip', 'ctx-script-einstellungen',
                        'ctx-laenge-sekunden', 'ctx-delete', 'ctx-mimik-einrechnen'):
             self.assertIn('data-action="%s"' % aktion, script)
-        menue = _text(STUDIO / 'zeitleiste_menue.js')
+        menue = ScriptzuschlagTest._text(STUDIO / 'zeitleiste_menue.js')
         self.assertLess(menue.index("spur.type === 'script'"),
                         menue.index('_leereSpur(e, spur'))
         # Fläche und Spurkopf teilen sich die Befehle (`Modellhinzufuegen`).
-        gemeinsam = _text(STUDIO / 'zeitleiste_modellhinzufuegen.js')
+        gemeinsam = ScriptzuschlagTest._text(STUDIO / 'zeitleiste_modellhinzufuegen.js')
         self.assertIn("Mimikdialog.oeffnen(mimik, klickbild, null)", gemeinsam)
         self.assertIn("Scriptspur.hinzufuegen(spurNr, klickbild)", gemeinsam)
-        modellmenue = _text(STUDIO / 'zeitleiste_modellmenue.js')
+        modellmenue = ScriptzuschlagTest._text(STUDIO / 'zeitleiste_modellmenue.js')
         self.assertIn("Modellhinzufuegen.binden(menue, state.selectedTrackIdx, "
                       "Modellmenue.klickbild)", modellmenue)
         self.assertIn("bvh: 'model-ctx-bvh-submenu'", modellmenue)
 
     def test_anwendung_je_modell_und_nur_beteiligte_knochen_ohne_mimikspur(self):
-        anwendung = _text(STUDIO / 'mimikanwendung.js')
+        anwendung = ScriptzuschlagTest._text(STUDIO / 'mimikanwendung.js')
         self.assertIn('static gewichteModell(modellIdx, t)', anwendung)
         self.assertIn('if (!stand.mimik && !stand.script) return;', anwendung)
         self.assertIn('if (!ganz && !b) continue;', anwendung)
         self.assertIn("Mimikanwendung.gewichteModell(spur._modellIdx, t)",
-                      _text(STUDIO / 'mimikeinrechnen.js'))
+                      ScriptzuschlagTest._text(STUDIO / 'mimikeinrechnen.js'))
         # Eine neue Mimikspur bringt ihr Script mit (Lebendigkeit an, 13.09.2026).
         self.assertIn('Scriptspur.clipSetzen(Scriptspur.anlegen(modellIdx), 0)',
-                      _text(STUDIO / 'mimikspur.js'))
+                      ScriptzuschlagTest._text(STUDIO / 'mimikspur.js'))
 
     def test_loeschen_zieht_modellverweis_nach_und_nimmt_kindspuren_mit(self):
-        modelle = _text(STUDIO / 'models.js')
+        modelle = ScriptzuschlagTest._text(STUDIO / 'models.js')
         self.assertIn("(t.type === 'mimik' || t.type === 'script') "
                       "&& t._modellIdx >= 0", modelle)
-        abbau = _text(STUDIO / 'spurabbau.js')
+        abbau = ScriptzuschlagTest._text(STUDIO / 'spurabbau.js')
         self.assertIn('_kindspuren(spur, index)', abbau)
         self.assertLess(abbau.index('const kinder = Spurabbau._kindspuren'),
                         abbau.index('Spurabbau._nachziehen(index);'))
 
     def test_alte_lebendigkeit_wird_script_clip(self):
-        laden = _text(STUDIO / 'projekt_wiederherstellung.js')
+        laden = ScriptzuschlagTest._text(STUDIO / 'projekt_wiederherstellung.js')
         self.assertIn('_alteLebendigkeit(eingang, angelegt)', laden)
         self.assertIn('Scriptspur.clipSetzen(Scriptspur.anlegen(modellIdx), 0, '
                       'td.lebendigkeit)', laden)
         self.assertIn("td.type !== 'mimik' && td.type !== 'script'", laden)
-        self.assertIn("|| c.type === 'script'", _text(STUDIO / 'projekt_daten.js'))
+        self.assertIn("|| c.type === 'script'", ScriptzuschlagTest._text(STUDIO / 'projekt_daten.js'))
+
+    @staticmethod
+    def _text(pfad):
+        return pfad.read_text(encoding='utf-8')

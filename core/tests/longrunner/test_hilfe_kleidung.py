@@ -31,6 +31,7 @@ from GarmentCode.messreihen import Garmentcodemessung
 from kleidung.verfahren import Kleidungsverfahren
 from kleidung.tempo import Kleidungstempo
 from ..unit._pruefablage import Pruefablage
+from ..unit._sicher import Sicher
 
 
 class SeitenTest(SimpleTestCase):
@@ -129,8 +130,7 @@ class MessungTest(SimpleTestCase):
     def test_matrix_wenn_vorhanden(self):
         if not os.path.isfile(Garmentcodemessung.pfad('humanbody')):
             self.skipTest('noch keine Messreihe abgelegt')
-        matrix = Garmentcodemessung.matrix('humanbody')
-        self.assertIsNotNone(matrix)
+        matrix = Sicher.wert(Garmentcodemessung.matrix('humanbody'), 'Matrix')
         self.assertTrue(matrix['koerper'], 'keine Körper in der Matrix')
         self.assertTrue(matrix['zeilen'], 'keine Stücke in der Matrix')
         self.assertEqual(

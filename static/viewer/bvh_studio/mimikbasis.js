@@ -64,6 +64,7 @@ export class Mimikbasis {
      * Positive Gewichte nehmen `plus`, negative `minus` (MB-Labs _max/_min).
      */
     static bewegungen(gewichte) {
+        /** @type {Object<string, number[]>} */
         const summe = {};
         for (const [einheit, g] of Object.entries(gewichte || {})) {
             const eintrag = Mimikbasis.basis?.[einheit];
@@ -75,6 +76,7 @@ export class Mimikbasis {
                 for (let i = 0; i < 6; i++) s[i] += w[i] * betrag;
             }
         }
+        /** @type {Object<string, {rot: THREE.Quaternion, pos: THREE.Vector3}>} */
         const aus = {};
         for (const [knochen, s] of Object.entries(summe)) {
             const achse = new THREE.Vector3(s[0], s[1], s[2]);
@@ -94,7 +96,9 @@ export class Mimikbasis {
         try {
             const eigene = JSON.parse(localStorage.getItem(Mimikbasis.EIGENE) || '[]');
             Mimikbasis.posen = Mimikbasis.posen.filter(p => p.gruppe !== 'eigene').concat(eigene);
-        } catch (_fehler) { /* stillgelegt gewollt: kein Speicher, keine eigenen Posen */ }
+        } catch (_fehler) {
+            // stumm gewollt: kein Browserspeicher heißt keine eigenen Posen
+        }
     }
 
     /** Eine eigene Pose (Gruppe „Eigene") merken — ersetzt eine gleichnamige. */
@@ -103,7 +107,11 @@ export class Mimikbasis {
         const pose = { id, name, gruppe: 'eigene', gewichte };
         const eigene = Mimikbasis.posen.filter(p => p.gruppe === 'eigene' && p.id !== id);
         eigene.push(pose);
-        try { localStorage.setItem(Mimikbasis.EIGENE, JSON.stringify(eigene)); } catch (_fehler) { /* stillgelegt gewollt */ }
+        try {
+            localStorage.setItem(Mimikbasis.EIGENE, JSON.stringify(eigene));
+        } catch (_fehler) {
+            // stumm gewollt: ohne Browserspeicher bleibt die Pose nur in dieser Sitzung
+        }
         Mimikbasis.posen = Mimikbasis.posen.filter(p => p.gruppe !== 'eigene').concat(eigene);
         return pose;
     }

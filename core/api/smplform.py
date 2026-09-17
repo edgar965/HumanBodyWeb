@@ -40,7 +40,7 @@ class Smplformung:
         from GarmentCode.smplform import Smplform
         from ..dienste.smplfigur import Smplfiguren
         from ..dienste.smplvarianten import Smplvarianten
-        from .smplfigur import Smplfigur
+        from ..daten.netzantwort import Netzantwort
 
         try:
             anfrage = json.loads(request.body.decode('utf-8') or '{}')
@@ -76,5 +76,6 @@ class Smplformung:
             # Auch die Variante bekommt Hautgewichte — sonst waere
             # ausgerechnet die geformte Figur die einzige, die beim
             # Abspielen starr bleibt.
-            'hautgewichte': Smplfigur._hautgewichte(daten['name'], punkte),
+            'hautgewichte': Netzantwort.hautgewichte(
+                Smplfiguren.haut(daten['name'], punkte)),
         })

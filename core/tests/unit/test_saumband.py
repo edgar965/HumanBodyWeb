@@ -18,19 +18,10 @@ Punkt bekommt 400 mm statt `inf`, `weg` leer → rot; `_naehte_vereinen`
 nicht aufrufen → Nahttest rot.
 """
 import numpy as np
-from django.conf import settings
 from django.test import SimpleTestCase
 
 from ._kunstkoerper import Kunstkoerper
-
-
-def _modul(name):
-    import importlib
-    import sys
-    ordner = str(settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik')
-    if ordner not in sys.path:
-        sys.path.insert(0, ordner)
-    return importlib.import_module(name)
+from ._modelphysik import Modelphysik
 
 
 class _Haut:
@@ -44,7 +35,7 @@ class SaumbandTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.S = _modul('saumband').Saumband
+        self.S = SaumbandTest._modul('saumband').Saumband
 
     def test_weg_tiefe_und_index(self):
         u"""Derselbe Streifen wie in `test_js_saumband`: Wege 2/5/9/15 mm,
@@ -72,7 +63,7 @@ class SaumbandTest(SimpleTestCase):
         self.assertTrue(np.all(np.isinf(self.S.abstaende(P, np.ones(16, bool), T))))
 
     def test_film_behaelt_das_band_hinter_der_rohrkante(self):
-        fm = _modul('filmmasken')
+        fm = SaumbandTest._modul('filmmasken')
         kp, kt = Kunstkoerper.zylinder(0.10, 0.0, 1.0, 51, 36)
         sp, st = Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36)
         koerper = {'name': u'Koerper', 'haut': _Haut(kp), 'dreiecke': kt}
@@ -99,7 +90,7 @@ class SaumbandTest(SimpleTestCase):
         self.assertTrue(np.allclose(r[innen], 0.10 - 0.010, atol=1e-6))
 
     def test_naht_teilt_sich_eine_normale(self):
-        G = _modul('maskengeometrie').Geometrie
+        G = SaumbandTest._modul('maskengeometrie').Geometrie
         naht = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 0.5], [0, 1, 0]], float)
         N = G.normalen(naht, [[0, 1, 2], [3, 4, 5]])
         self.assertTrue(np.allclose(N[1], N[3]) and np.allclose(N[2], N[5]), N)
@@ -109,3 +100,7 @@ class SaumbandTest(SimpleTestCase):
         gruppe = G.naht(naht)
         self.assertTrue(gruppe[1] == gruppe[3] and gruppe[2] == gruppe[5], gruppe)
         self.assertEqual(len(set(gruppe.tolist())), 4)
+
+    @staticmethod
+    def _modul(name):
+        return Modelphysik.modul(name)

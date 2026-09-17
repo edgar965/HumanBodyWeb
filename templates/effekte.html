@@ -170,7 +170,7 @@ die Bibliothek holt der Browser von /api/character/animations/.
                 <td>{% if a.modell %}{{ a.modell }}{% else %}MPFB{% endif %}</td>
                 <td><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
                 <td class="num">{% if a.bericht.bilder %}{{ a.bericht.bilder }}{% elif a.parameter.bilder %}{{ a.parameter.bilder }}{% endif %}</td>
-                <td class="num" data-sort="{{ a.bericht.sekunden.gesamt|default:0 }}">{% if a.bericht.sekunden.gesamt %}{{ a.bericht.sekunden.gesamt }} s{% endif %}</td>
+                <td class="num" data-sort="{% widthratio a.bericht.sekunden.gesamt|default:0 1 1000 %}">{% if a.bericht.sekunden.gesamt %}{{ a.bericht.sekunden.gesamt }} s{% endif %}</td>
                 <td data-sort="{{ a.created_at|date:'U' }}">{{ a.created_at|date:"d.m.Y H:i" }}</td>
                 <td>{% if a.fertig %}<button type="button" class="btn btn-sm" data-zeigen="{{ a.id }}" data-name="{{ a.name }}">Zeigen</button>{% endif %}</td>
             </tr>

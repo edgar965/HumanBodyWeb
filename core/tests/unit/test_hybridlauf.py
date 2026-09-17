@@ -31,6 +31,7 @@ from core.pipelines import hybridlauf
 from core.pipelines.hybridlauf import Hybridlauf
 from core.pipelines.teilauftrag import Teilauftrag
 from core.tests.attrappen import AuftragsAttrappe
+from ._sicher import Sicher
 
 
 class HybridBasis(TestCase):
@@ -163,8 +164,8 @@ class HybridAusdrueckeTest(HybridBasis):
 
     def test_ausdruecke_werden_gezogen(self):
         self.fahren()
-        self.assertIsNotNone(self.aufrufe['ausdruck'])
-        self.assertTrue(self.aufrufe['ausdruck'][-1].endswith(
+        ausdruck = Sicher.wert(self.aufrufe['ausdruck'], 'Ausdruck')
+        self.assertTrue(ausdruck[-1].endswith(
             'face_blendshapes.json'))
 
     def test_andere_quelle_zieht_keine_ausdruecke(self):
@@ -192,6 +193,6 @@ class HybridAusdrueckeTest(HybridBasis):
         grund = '{"error": "SMPL-X-Modell fehlt unter human_model_files/smplx"}'
         hybridlauf.subprocess.run = lambda befehl, **kw: Runnerergebnis(1, stdout=grund)
         with self.assertLogs('core.pipeline', level='WARNING') as protokoll:
-            auftrag, ergebnis = self.fahren()
+            _auftrag, ergebnis = self.fahren()
         self.assertEqual(ergebnis, ('body.bvh', 'face.bvh'))
         self.assertIn('SMPL-X-Modell fehlt', ' '.join(protokoll.output))

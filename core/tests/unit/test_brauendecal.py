@@ -32,16 +32,6 @@ from core.dienste.brauenretusche import Brauenretusche
 from core.tests.unit._pruefablage import Pruefablage
 
 
-def kunstbogen():
-    t = np.linspace(0, 1, 30)
-    links = [[0.48 - 0.06 * x, 0.20 + 0.02 * np.sin(np.pi * x)] for x in t]
-    rechts = [[0.52 + 0.06 * x, 0.20 + 0.02 * np.sin(np.pi * x)] for x in t]
-    return {'fassung': Brauenbogen.FASSUNG, 'fenster': [0.38, 0.14, 0.62, 0.28],
-            'mm_je_uv': 800.0, 'form': [2048, 2048],
-            'links': [[float(u), float(v)] for u, v in links],
-            'rechts': [[float(u), float(v)] for u, v in rechts]}
-
-
 class BrauenretuscheTest(SimpleTestCase):
 
     def test_maske_findet_den_bogen_am_kern_nicht_den_fleck_daneben(self):
@@ -77,7 +67,7 @@ class BrauendecalTest(SimpleTestCase):
         ablage = Pruefablage.ordner('brauen_')
         self.ordner = ablage.__enter__()
         self.addCleanup(ablage.__exit__, None, None, None)
-        self.laden = mock.patch.object(Brauenbogen, 'laden', return_value=kunstbogen())
+        self.laden = mock.patch.object(Brauenbogen, 'laden', return_value=BrauendecalTest.kunstbogen())
         self.laden.start()
         self.addCleanup(self.laden.stop)
         self.ordnerpatch = mock.patch.object(Brauendecal, 'ORDNER',
@@ -124,7 +114,7 @@ class BrauendecalTest(SimpleTestCase):
         wieder, _ = self._alpha()
         self.assertTrue(np.array_equal(alpha, wieder), 'deterministisch')
 
-    def test_endpunkte(self):
+    def test_endpunkte_liefern_fenster_und_png_mit_cacheheader(self):
         client = Client(HTTP_HOST='127.0.0.1')
         fenster = client.get('/api/character/brauen/fenster/?geschlecht=female').json()
         self.assertEqual(fenster['fenster'], [0.38, 0.14, 0.62, 0.28])
@@ -136,3 +126,13 @@ class BrauendecalTest(SimpleTestCase):
         self.assertIn('max-age', antwort['Cache-Control'])
         bild = Image.open(io.BytesIO(b''.join(antwort.streaming_content)))
         self.assertEqual(bild.mode, 'RGBA')
+
+    @staticmethod
+    def kunstbogen():
+        t = np.linspace(0, 1, 30)
+        links = [[0.48 - 0.06 * x, 0.20 + 0.02 * np.sin(np.pi * x)] for x in t]
+        rechts = [[0.52 + 0.06 * x, 0.20 + 0.02 * np.sin(np.pi * x)] for x in t]
+        return {'fassung': Brauenbogen.FASSUNG, 'fenster': [0.38, 0.14, 0.62, 0.28],
+                'mm_je_uv': 800.0, 'form': [2048, 2048],
+                'links': [[float(u), float(v)] for u, v in links],
+                'rechts': [[float(u), float(v)] for u, v in rechts]}

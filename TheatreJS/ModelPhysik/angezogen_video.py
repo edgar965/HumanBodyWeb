@@ -63,20 +63,8 @@ class Angezogen:
         self._skinning(bvh_pfad)
 
     def _in_metern(self):
-        u"""Die Bake-Bahn auf Meter und auf den Boden.
-
-        Der Massstab kommt aus dem ERSTEN Bild, nicht aus einer Konstanten
-        — die `.skel` traegt den Faktor der Figur (Regel `artefakte-benennen`).
-        """
-        erstes = self.bake.daten[0]
-        faktor = float(erstes[:, 2].max() - erstes[:, 2].min()) / FIGURHOEHE
-        punkte = self.bake.daten / faktor
-        boden = float(punkte[0][:, 2].min())
-        mitte = punkte[0].reshape(-1, 3).mean(axis=0)
-        punkte[:, :, 0] -= mitte[0]
-        punkte[:, :, 1] -= mitte[1]
-        punkte[:, :, 2] -= boden
-        return punkte
+        u"""Die Bake-Bahn auf Meter und auf den Boden (`Bakedatei.auf_dem_boden`)."""
+        return self.bake.auf_dem_boden(FIGURHOEHE)
 
     def _skinning(self, bvh_pfad):
         u"""Stoffbahn: dieselben Knochen wie der Koerper, per LBS."""
@@ -193,8 +181,7 @@ class Angezogen:
                                                      material=tuch))
                 szene.add(kamera, pose=lage)
                 szene.add(licht, pose=lichtlage)
-                farbe, _t = werk.render(szene)
-                yield np.asarray(farbe[:, :, :3], dtype=np.uint8)
+                yield Videoschreiber.rendern(werk, szene)
         finally:
             werk.delete()
 
@@ -215,7 +202,7 @@ def main():
 
     video = Angezogen(werte.bake, werte.stoff, werte.bvh, werte.bilder)
     print(u'Koerper   %d Bilder, %d Punkte, %d Dreiecke (FPS-Simulation)'
-          % (video.bilder, video.bake.punkte, len(video.bake.dreiecke)))
+          % (video.bilder, video.bake.punkte, len(video.bake.dreiecke or [])))
     print(u'Stoff     %d Punkte, %d Dreiecke'
           % (len(video.s_punkte), len(video.s_dreiecke)))
     print(u'RUHEPROBE %.6f m (Skinning in Ruhe darf den Stoff nicht bewegen)'

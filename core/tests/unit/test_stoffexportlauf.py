@@ -19,6 +19,7 @@ from django.test import SimpleTestCase, TestCase
 
 from core.api.bereichsstoff import Bereichsstoff
 from core.dienste.stoffexportlauf import Stoffexportlauf
+from ._sicher import Sicher
 
 
 class MotorwahlTest(SimpleTestCase):
@@ -31,8 +32,7 @@ class MotorwahlTest(SimpleTestCase):
                 self.assertIsNone(lauf.motorfehler())
 
     def test_unbekannter_motor_gibt_400_mit_namen(self):
-        antwort = Stoffexportlauf({'engine': 'raytracer9000'}).motorfehler()
-        self.assertIsNotNone(antwort)
+        antwort = Sicher.wert(Stoffexportlauf({'engine': 'raytracer9000'}).motorfehler(), 'Antwort')
         self.assertEqual(antwort.status_code, 400)
         self.assertIn('raytracer9000', antwort.content.decode())
 
@@ -84,11 +84,12 @@ class StoffexportZielpfadTest(TestCase):
                                 'scene_name': 'x'})
         pfad, antwort = lauf.zielpfad()
         self.assertIsNone(pfad)
-        self.assertEqual(antwort.status_code, 403)
+        self.assertEqual(Sicher.wert(antwort, 'Antwort').status_code, 403)
 
     def test_gueltiger_lauf_liefert_einen_pfad(self):
-        pfad, antwort = Stoffexportlauf({'scene_name': 'Ballett Probe'}).zielpfad()
+        roh, antwort = Stoffexportlauf({'scene_name': 'Ballett Probe'}).zielpfad()
         self.assertIsNone(antwort, getattr(antwort, 'content', None))
+        pfad = Sicher.wert(roh, 'Pfad')
         self.assertIn('Ballett_Probe', pfad)
         self.assertTrue(pfad.endswith('.mp4'), pfad)
 

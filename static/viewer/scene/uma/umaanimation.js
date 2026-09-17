@@ -1,7 +1,7 @@
-import { THREE, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from '../state.js';
+import { fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from '../state.js';
 import { state } from '../state.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { Skelettanzeige } from '../../gemeinsam/skelettanzeige.js';
+import { Eigenanimation } from '../eigenanimation.js';
 
 /**
  * Umaanimation — eine BVH auf der UMA-Figur abspielen.
@@ -14,8 +14,11 @@ import { Skelettanzeige } from '../../gemeinsam/skelettanzeige.js';
  * KEIN `skeleton.pose()`: Das setzt auf die Bindpose der GLB zurück — eine
  * A-Pose, die entlang −Z liegt. Die Ruhelage der Figur ist die Knotenpose
  * mit den Reglern; die stellt `UmaFigur.ruhelageHerstellen` wieder her.
+ *
+ * Abspielen und Höhe über die Gelenke kommen aus `Eigenanimation` (erbt seit
+ * 17.09.2026, Befund `doppelcode`); eigen ist nur, wie der Clip entsteht.
  */
-export class Umaanimation {
+export class Umaanimation extends Eigenanimation {
 
     static async starten(inst, url, rawBvhText) {
         state._animatedCharId = inst.id;
@@ -36,29 +39,12 @@ export class Umaanimation {
             state.currentAnimBvhText = await Serverabruf.text(
                 url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now()).catch(() => '');
         }
-        if (!state.skeletonHelper) {
-            state.skeletonHelper = Skelettanzeige.bauen(state.scene, inst.skelett.rootBone, state.rigVisible);
-        }
-        state.mixer = new THREE.AnimationMixer(inst.group);
-        state.currentAction = state.mixer.clipAction(clip);
-        state.currentAction.play();
-        state.playing = true;
-        return clip;
+        return Umaanimation.abspielen(inst, clip);
     }
 
-    /**
-     * Höhe über die Gelenke — nicht über `Box3.setFromObject`: Das nähme die
-     * Geometrie in der Bindpose der GLB (liegt entlang −Z) und meldete 2,1 m.
-     */
-    static hoehe(inst) {
-        const punkt = new THREE.Vector3();
-        let unten = Infinity, oben = -Infinity;
-        for (const bone of inst.skelett.bones) {
-            bone.getWorldPosition(punkt);
-            unten = Math.min(unten, punkt.y);
-            oben = Math.max(oben, punkt.y);
-        }
-        return oben > unten ? oben - unten : 1.68;
+    /** `inst.hoehe` ist bei UMA die ROHE Höhe der GLB (2,0 m) — nicht die Figur. */
+    static ersatzhoehe() {
+        return 1.68;
     }
 
     /** Nach dem Anhalten: Ruhelage samt Reglern zurück. */

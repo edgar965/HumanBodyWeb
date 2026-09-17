@@ -110,7 +110,7 @@ class Brauenbogen:
                              / 'vertices_tpose.npy')).astype(np.float64)
         idx = Brauenretusche.brauenpunkte(einheiten)
         uv, p = uvs[idx], punkte[idx]
-        abstand_uv, nachbar = cKDTree(uv).query(uv, k=2)
+        abstand_uv, nachbar = cKDTree(uv).query(uv, k=2, workers=-1)
         d_uv = abstand_uv[:, 1]
         d_mm = np.linalg.norm(p - p[nachbar[:, 1]], axis=1) * 1000
         gueltig = d_uv > 1e-6

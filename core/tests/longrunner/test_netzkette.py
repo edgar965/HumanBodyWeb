@@ -29,6 +29,7 @@ import time
 from django.test import SimpleTestCase
 
 from core.dienste.charakterdaten import Charakterdaten
+from ..unit._sicher import Sicher
 
 
 class NetzketteTest(SimpleTestCase):
@@ -39,9 +40,11 @@ class NetzketteTest(SimpleTestCase):
     #: Annahme dieses Tests und sie war falsch (gemessen am 17.08.2026, weiblich
     #: 17.288 Vierecke, männlich 17.074). Wer hier eine Zahl für beide einträgt,
     #: baut sich einen Test, der bei einem echten Datenschaden grün bleibt.
+    #: Seit 15.09.2026 (UVs je Flächenecke) zählt das unterteilte Netz die
+    #: Textur-Kopien an den Nähten mit: 70.851 + 3.277 (female), 69.995 + 3.305.
     NETZE = {
-        'female': (17288, 18210, 70851, 138304),
-        'male': (17074, 17996, 69995, 136592),
+        'female': (17288, 18210, 74128, 138304),
+        'male': (17074, 17996, 73300, 136592),
     }
     #: Obergrenze für den ganzen Durchlauf. Großzügig — es ist ein Longrunner;
     #: die Grenze fängt nur ein Verhalten ab, das aus dem Ruder läuft.
@@ -57,13 +60,13 @@ class NetzketteTest(SimpleTestCase):
     def _eines(self, geschlecht):
         vierecke, basis, unter, dreiecke = self.NETZE[geschlecht]
         netz = Charakterdaten.netzdaten(geschlecht)
-        self.assertIsNotNone(netz.faces, 'faces fehlen — Daten unvollständig')
-        self.assertEqual(netz.faces.shape, (vierecke, 4),
+        flaechen = Sicher.wert(netz.faces, 'faces — Daten unvollständig')
+        self.assertEqual(flaechen.shape, (vierecke, 4),
                          'Der Unterteiler braucht Vierecke, keine Dreiecke')
-        self.assertEqual(int(netz.faces.max()) + 1, basis)
+        self.assertEqual(int(flaechen.max()) + 1, basis)
 
-        cc = Charakterdaten.unterteiler(geschlecht)
-        self.assertIsNotNone(cc, 'kein Unterteiler — faces passen nicht')
+        cc = Sicher.wert(Charakterdaten.unterteiler(geschlecht),
+                         'Unterteiler — faces passen nicht')
         self.assertEqual(cc.sub_vertex_count, unter)
         self.assertEqual(len(cc.triangles), dreiecke)
 
@@ -78,7 +81,7 @@ class NetzketteTest(SimpleTestCase):
         from core.dienste.skingewichte import Skingewichte
         for geschlecht, (_v, basis, unter, _d) in self.NETZE.items():
             with self.subTest(geschlecht=geschlecht):
-                indices, werte = Skingewichte.arrays(geschlecht)
+                indices, werte = Sicher.wert(Skingewichte.arrays(geschlecht), 'Gewichte')
                 self.assertEqual(indices.shape, (basis, Skingewichte.EINFLUESSE))
                 self.assertEqual(werte.shape, indices.shape)
                 # Normiert: Ein Vertex ohne Gewichte hat Summe 0, sonst 1.
@@ -89,8 +92,7 @@ class NetzketteTest(SimpleTestCase):
 
                 text = Skingewichte.propagiert_json(
                     geschlecht, Charakterdaten.unterteiler(geschlecht))
-                self.assertIsNotNone(text, 'keine propagierten Gewichte')
-                daten = json.loads(text)
+                daten = json.loads(Sicher.wert(text, 'propagierte Gewichte'))
                 self.assertEqual(len(daten['weights']), unter,
                                  'die Zahl der Gewichte passt nicht zum '
                                  'unterteilten Netz — genau die Verschiebung, '

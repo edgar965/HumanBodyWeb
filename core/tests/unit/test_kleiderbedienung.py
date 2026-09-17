@@ -30,6 +30,7 @@ import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
+from ._sicher import Sicher
 
 
 def _lesen(*teile):
@@ -49,9 +50,8 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
 
     def test_hautbinden_ruft_kleiderbinden(self):
         u"""Der Aufruf steht IM Rumpf von `_hautBinden`, nicht irgendwo."""
-        rumpf = re.search(r'_hautBinden\(hautgewichte\)\s*\{(.*?)\n    \}',
-                          self.quelle, re.S)
-        self.assertIsNotNone(rumpf, '_hautBinden nicht gefunden')
+        rumpf = Sicher.wert(re.search(r'_hautBinden\(hautgewichte\)\s*\{(.*?)\n    \}',
+                                      self.quelle, re.S), '_hautBinden')
         self.assertIn('this._kleiderBinden()', rumpf.group(1),
                       'Ohne diesen Aufruf bleibt Kleidung, die vor dem '
                       'Skelett angelegt wurde, ein starres Mesh')
@@ -59,12 +59,11 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
     def test_kleiderbinden_nimmt_die_rohgewichte(self):
         u"""Aus `userData`, nicht aus den Attributen der Geometrie.
 
-        Deren Knochennummern gehoeren zum ALTEN Skelett — `_skelettBauen`
+        Deren Knochennummern gehoeren zum ALTEN Skelett — `Modell.skelettBauen`
         raeumt bei jedem Reglerzug ab und baut neu.
         """
-        rumpf = re.search(r'_kleiderBinden\(\)\s*\{(.*?)\n    \}',
-                          self.quelle, re.S)
-        self.assertIsNotNone(rumpf, '_kleiderBinden fehlt')
+        rumpf = Sicher.wert(re.search(r'_kleiderBinden\(\)\s*\{(.*?)\n    \}',
+                                      self.quelle, re.S), '_kleiderBinden')
         self.assertIn('userData?.hautgewichte', rumpf.group(1))
         self.assertIn('Eigenhaut.binden', rumpf.group(1))
 
@@ -73,8 +72,8 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
 
         Beide werden im naechsten Atemzug wiederverwendet.
         """
-        rumpf = re.search(r'_kleiderBinden\(\)\s*\{(.*?)\n    \}',
-                          self.quelle, re.S).group(1)
+        rumpf = Sicher.wert(re.search(r'_kleiderBinden\(\)\s*\{(.*?)\n    \}',
+                                      self.quelle, re.S), '_kleiderBinden').group(1)
         # Ohne die Kommentarzeilen: Der Name steht dort in der BEGRUENDUNG,
         # warum gerade NICHT entsorgt wird — ein Treffer darin waere ein
         # Fehlalarm (`~/.claude/rules/analysewerkzeuge.md`).

@@ -20,6 +20,7 @@ from humanbody_core.regler import Reglertabelle
 from UMA_Python.formregler import Formregler
 
 from core.dienste.charakterdaten import Charakterdaten
+from ._sicher import Sicher
 
 
 class TabelleTest(SimpleTestCase):
@@ -87,8 +88,8 @@ class UmrechnungTest(SimpleTestCase):
                                  'Mouth_LowerlipVolume': -0.3})
 
     def test_rueckweg_aus_uma(self):
-        self.assertAlmostEqual(Reglertabelle.aus_uma('bauch', {'belly': 0.75}), 50.0)
-        self.assertAlmostEqual(Reglertabelle.aus_uma('bauch', {'belly': 0.5}), 0.0)
+        self.assertAlmostEqual(Sicher.wert(Reglertabelle.aus_uma('bauch', {'belly': 0.75})), 50.0)
+        self.assertAlmostEqual(Sicher.wert(Reglertabelle.aus_uma('bauch', {'belly': 0.5})), 0.0)
 
     def test_rueckweg_aus_uma_ist_none_wenn_die_rasse_den_regler_nicht_kennt(self):
         u"""Nicht jede UMA-Rasse fuehrt jeden DNA-Namen — dann keine Zeile."""
@@ -97,7 +98,7 @@ class UmrechnungTest(SimpleTestCase):
     def test_rueckweg_aus_humanbody_zaehlt_ungesetzte_morphs_als_null(self):
         u"""Drei Ziele, eines gestellt: der Regler steht bei einem Drittel."""
         wert = Reglertabelle.aus_humanbody('ohren_groesse', {'Ears_SizeX': 0.6})
-        self.assertAlmostEqual(wert, 20.0)
+        self.assertAlmostEqual(Sicher.wert(wert), 20.0)
 
     def test_die_groesse_traegt_eine_einheit_und_wird_nicht_hier_gerechnet(self):
         u"""cm haengt an der Figur (gemessene Hoehe) — lieber Fehler als Unsinn."""

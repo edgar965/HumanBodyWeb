@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(settings.TOOLS_ROOT)))
 
 from UMA_Python import (Bindung, Einstellungen,               # noqa: E402
                         Kleidungskonformer)
+from ._sicher import Sicher
 
 
 def zylinder(radius, hoehe=1.0, ringe=24, stufen=16):
@@ -225,9 +226,11 @@ class KollisionUndNaehte(unittest.TestCase):
         koerper, k_tri = zylinder(0.20)
         stoff, s_tri = zylinder(0.21, ringe=18, stufen=12)
         stoff = np.vstack([stoff, stoff[0:1] + 1e-6])
-        b = Kleidungskonformer(koerper, k_tri).binden('huelle', stoff, s_tri)
-        self.assertEqual(b.nahtgruppen[0], b.nahtgruppen[-1])
-        self.assertGreaterEqual(b.nahtgruppen[0], 0)
+        gruppen = Sicher.wert(
+            Kleidungskonformer(koerper, k_tri).binden('huelle', stoff, s_tri).nahtgruppen,
+            'Nahtgruppen')
+        self.assertEqual(gruppen[0], gruppen[-1])
+        self.assertGreaterEqual(gruppen[0], 0)
 
         self.assertLess(self._nahtfall(naehte_halten=True), 1e-5)
 

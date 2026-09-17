@@ -27,32 +27,13 @@ import numpy as np
 from django.test import SimpleTestCase
 
 from core.dienste.lippenlinse import Lippenlinse
-
-
-def kunstgesicht():
-    """Punkte (Blender: x, y=−vorn, z=hoch) und Maske eines Mundes."""
-    xs = np.arange(-0.040, 0.0401, 0.001)
-    zs = np.arange(1.480, 1.5201, 0.001)
-    X, Z = np.meshgrid(xs, zs)
-    x, hoch = X.ravel(), Z.ravel()
-    vorn = np.full(x.shape, 0.14)
-    mund = (np.abs(hoch - 1.500) < 0.0006) & (np.abs(x) <= 0.020)
-    vorn[mund] = 0.1385                                  # die Rinne der Mundlinie (1,5 mm)
-    # Mundhöhle: dieselben Lagen 2 cm dahinter, nur um den Mund herum
-    hinten = (np.abs(x) < 0.030) & (np.abs(hoch - 1.500) < 0.012)
-    px = np.concatenate([x, x[hinten], x[hinten]])
-    ph = np.concatenate([hoch, hoch[hinten], hoch[hinten]])
-    pv = np.concatenate([vorn, np.full(hinten.sum(), 0.12), np.full(hinten.sum(), 0.04)])
-    punkte = np.column_stack([px, -pv, ph])
-    maske = (np.abs(px) <= 0.032) & (ph >= 1.490) & (ph <= 1.510)
-    maske &= ~((np.abs(ph - 1.500) < 0.0025) & (np.abs(px) > 0.020))   # an der Linie nur bis zum Winkel
-    return punkte, maske
+from ._sicher import Sicher
 
 
 class LippenlinseTest(SimpleTestCase):
 
     def setUp(self):
-        self.punkte, self.maske = kunstgesicht()
+        self.punkte, self.maske = LippenlinseTest.kunstgesicht()
         self.abstand = Lippenlinse.abstand(self.maske, self.punkte)
 
     def wo(self, x, hoch, vorn=0.14):
@@ -63,10 +44,10 @@ class LippenlinseTest(SimpleTestCase):
         x, hoch, vorn = self.punkte[:, 0], self.punkte[:, 2], -self.punkte[:, 1]
         front = Lippenlinse.vorderseite(x, hoch, vorn)
         kand = self.maske & front
-        linse = Lippenlinse.linse(x[kand], hoch[kand], vorn[kand])
-        self.assertAlmostEqual(linse['xc'], 0.020, delta=0.001)
-        self.assertAlmostEqual(linse['ym'], 1.500, places=3)
-        self.assertAlmostEqual(linse['x0'], 0.0, places=3)
+        linse = Sicher.wert(Lippenlinse.linse(x[kand], hoch[kand], vorn[kand]), 'Linse')
+        self.assertAlmostEqual(linse.xc, 0.020, delta=0.001)
+        self.assertAlmostEqual(linse.ym, 1.500, places=3)
+        self.assertAlmostEqual(linse.x0, 0.0, places=3)
 
     def test_die_keile_an_den_winkeln_fallen_weg(self):
         self.assertTrue(self.maske[self.wo(0.027, 1.506)])
@@ -97,3 +78,23 @@ class LippenlinseTest(SimpleTestCase):
         wenig = np.zeros(len(self.punkte), dtype=bool)
         wenig[:10] = True
         self.assertEqual(Lippenlinse.beschneiden(wenig, self.punkte).tolist(), wenig.tolist())
+
+    @staticmethod
+    def kunstgesicht():
+        """Punkte (Blender: x, y=−vorn, z=hoch) und Maske eines Mundes."""
+        xs = np.arange(-0.040, 0.0401, 0.001)
+        zs = np.arange(1.480, 1.5201, 0.001)
+        X, Z = np.meshgrid(xs, zs)
+        x, hoch = X.ravel(), Z.ravel()
+        vorn = np.full(x.shape, 0.14)
+        mund = (np.abs(hoch - 1.500) < 0.0006) & (np.abs(x) <= 0.020)
+        vorn[mund] = 0.1385                                  # die Rinne der Mundlinie (1,5 mm)
+        # Mundhöhle: dieselben Lagen 2 cm dahinter, nur um den Mund herum
+        hinten = (np.abs(x) < 0.030) & (np.abs(hoch - 1.500) < 0.012)
+        px = np.concatenate([x, x[hinten], x[hinten]])
+        ph = np.concatenate([hoch, hoch[hinten], hoch[hinten]])
+        pv = np.concatenate([vorn, np.full(hinten.sum(), 0.12), np.full(hinten.sum(), 0.04)])
+        punkte = np.column_stack([px, -pv, ph])
+        maske = (np.abs(px) <= 0.032) & (ph >= 1.490) & (ph <= 1.510)
+        maske &= ~((np.abs(ph - 1.500) < 0.0025) & (np.abs(px) > 0.020))   # an der Linie nur bis zum Winkel
+        return punkte, maske

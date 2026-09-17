@@ -113,8 +113,10 @@ class TheatreTests(TestCategory):
         if code != 200:
             return False, f'Liste HTTP {code}'
         fehler = []
-        for eintrag in presets.get('presets', []):
-            fehler += cls._preset_pruefen(eintrag['name'])
+        eintraege = presets.get('presets', []) if isinstance(presets, dict) else []
+        for eintrag in eintraege:
+            name = eintrag.get('name') if isinstance(eintrag, dict) else None
+            fehler += cls._preset_pruefen(name or '')
         if fehler:
             mehr = f' (+{len(fehler) - 3})' if len(fehler) > 3 else ''
             return False, '; '.join(fehler[:3]) + mehr

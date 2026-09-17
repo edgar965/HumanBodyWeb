@@ -106,9 +106,11 @@ class Gesichtskontur:
 
     def _landmarken(self, foto, cv2):
         try:
-            import mediapipe as mp
-            from mediapipe.tasks import python as mp_python
-            from mediapipe.tasks.python import vision as mp_vision
+            # MediaPipe steht in `requirements.txt`, liegt aber nicht in
+            # python14 — der Weg meldet sich unten ab.
+            import mediapipe as mp  # pyright: ignore[reportMissingImports]
+            from mediapipe.tasks import python as mp_python  # pyright: ignore[reportMissingImports]
+            from mediapipe.tasks.python import vision as mp_vision  # pyright: ignore[reportMissingImports]
         except ImportError as e:
             logger.debug('MediaPipe nicht verfuegbar: %s', e)
             return None

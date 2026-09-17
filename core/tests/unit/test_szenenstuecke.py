@@ -19,6 +19,7 @@ from django.test import SimpleTestCase
 
 from GarmentCode.entwurf import Entwurf
 from GarmentCode.szenenstuecke import Szenenstuecke
+from ._sicher import Sicher
 
 
 class AblageAufProbe(SimpleTestCase):
@@ -47,7 +48,7 @@ class AblageAufProbe(SimpleTestCase):
 
     def gelesen(self, rig_url):
         u"""Was unter dieser Adresse wirklich liegt."""
-        pfad = Szenenstuecke._quellpfad(rig_url)
+        pfad = Sicher.wert(Szenenstuecke._quellpfad(rig_url), 'Quellpfad')
         with open(pfad, encoding='utf-8') as datei:
             return json.load(datei)
 
@@ -152,8 +153,8 @@ class NiemandKommtAusDerWurzelHeraus(AblageAufProbe):
             '/api/garmentcode/datei/nurordner/'))
 
     def test_eine_gueltige_adresse_loest_auf(self):
-        pfad = Szenenstuecke._quellpfad(
-            '/api/garmentcode/datei/t-shirt_female/x_rig.json/')
+        pfad = Sicher.wert(Szenenstuecke._quellpfad(
+            '/api/garmentcode/datei/t-shirt_female/x_rig.json/'), 'Quellpfad')
         self.assertTrue(Path(pfad).resolve().is_relative_to(Path(self.wurzel).resolve()), pfad)
 
 

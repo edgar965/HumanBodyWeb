@@ -29,6 +29,7 @@ from smplxbvh import Smplxbvh                                # noqa: E402
 from smplxmischung import Smplxmischung                      # noqa: E402
 from smplxreihe import Smplxreihe                            # noqa: E402
 from SMPL.finger import Smplxfinger                          # noqa: E402
+from ._sicher import Sicher
 
 
 class DasKanonischeFormat(unittest.TestCase):
@@ -68,7 +69,7 @@ class DieMischung(unittest.TestCase):
 
     N = 20
 
-    def _reihe(self, luecke=range(5, 9), mittel=0.1):
+    def _reihe(self, luecke: 'range | tuple' = range(5, 9), mittel=0.1):
         reihe = Smplxreihe(30.0, np)
         reihe.handmittel(np.full(45, mittel), np.full(45, -mittel))
         for i in range(self.N):
@@ -142,7 +143,7 @@ class DasSkelettDesBvh(unittest.TestCase):
 
     def test_finger_haengen_am_handgelenk(self):
         eltern = Smplxbvh.eltern(np)
-        namen = Smplxbvh.namen()
+        namen = [str(n) for n in Smplxbvh.namen()]
         links, rechts = namen.index('Left_wrist'), namen.index('Right_wrist')
         for finger in ('index', 'middle', 'pinky', 'ring', 'thumb'):
             self.assertEqual(eltern[namen.index('left_%s1' % finger)], links)
@@ -167,8 +168,8 @@ class DasRetargetFormat(unittest.TestCase):
 
     def test_bvh_mit_fingern_ist_smplx_nicht_aist(self):
         from humanbody_core.skeleton import Skeleton
-        mit = Skeleton.detect_format(Smplxbvh.namen())
-        ohne = Skeleton.detect_format(Smplxbvh.namen()[:24])
+        mit = Sicher.wert(Skeleton.detect_format(Smplxbvh.namen()), 'mit Fingern')
+        ohne = Sicher.wert(Skeleton.detect_format(Smplxbvh.namen()[:24]), 'ohne Finger')
         self.assertEqual(mit.FORMAT, 'SMPLX')
         self.assertEqual(ohne.FORMAT, 'AIST')
 

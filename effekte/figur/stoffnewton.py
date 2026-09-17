@@ -31,7 +31,6 @@ Selbstkollision abschaltet, schaltet den Koerper mit ab (gemessen: der Rock
 blieb bei einer Verschiebung des Koerpers um 30 cm stehen).
 """
 import json
-import os
 import sys
 import time
 
@@ -88,14 +87,15 @@ class Stoffnewton:
     # --------------------------------------------------------------- Aufbau
 
     def aufbauen(self):
-        import newton
-        from newton._src.solvers import style3d as st3
+        import newton  # pyright: ignore[reportMissingImports]  (Newton-Umgebung)
+        from newton._src.solvers import style3d as st3  # pyright: ignore[reportMissingImports]
         builder = newton.ModelBuilder()
         newton.solvers.SolverStyle3D.register_custom_attributes(builder)
         s, b = float(self.p['steifigkeit']), float(self.p['biegung'])
         panel, panel_index = self._panels()
         st3.add_cloth_mesh(
-            builder, pos=wp.vec3(0.0), rot=wp.quat_identity(), vel=wp.vec3(0.0),
+            builder, pos=wp.vec3(0.0), rot=wp.quat_identity(),  # pyright: ignore[reportCallIssue]
+            vel=wp.vec3(0.0),
             vertices=[wp.vec3(*q) for q in self.ruhe],
             indices=self.stoff_dreiecke.reshape(-1).tolist(),
             density=float(self.p['dichte']),
@@ -113,7 +113,7 @@ class Stoffnewton:
             builder.particle_mass[i] = self.FESTMASSE
         netz = newton.Mesh(self.koerper_ruhe, self.koerper_dreiecke.reshape(-1))
         shape = builder.add_shape_mesh(-1, mesh=netz,
-                                       xform=wp.transform(wp.vec3(0.0), wp.quat_identity()))
+                                       xform=wp.transform(wp.vec3(0.0), wp.quat_identity()))  # pyright: ignore[reportCallIssue]
         self.model = builder.finalize()
         self.model.soft_contact_ke = self.KONTAKT_KE
         self.model.soft_contact_mu = self.KONTAKT_MU
@@ -154,7 +154,8 @@ class Stoffnewton:
         flaeche = 0.5 * np.linalg.norm(n, axis=1)
         self.flaeche_punkt = np.zeros(self.n)
         for ecke in range(3):
-            np.add.at(self.flaeche_punkt, t[:, ecke], flaeche / 3.0)
+            self.flaeche_punkt += np.bincount(t[:, ecke], weights=flaeche / 3.0,
+                                              minlength=self.n)[:self.n]
 
     # ----------------------------------------------------------------- Wind
 
@@ -174,7 +175,9 @@ class Stoffnewton:
         n = np.cross(q[t[:, 1]] - q[t[:, 0]], q[t[:, 2]] - q[t[:, 0]])
         normalen = np.zeros_like(q)
         for ecke in range(3):
-            np.add.at(normalen, t[:, ecke], n)
+            for s in range(3):
+                normalen[:, s] += np.bincount(t[:, ecke], weights=n[:, s],
+                                              minlength=len(q))[:len(q)]
         normalen /= np.maximum(np.linalg.norm(normalen, axis=1), 1e-12)[:, None]
         u = wind - v
         druck = self.RHO_LUFT * self.flaeche_punkt * np.einsum('ij,ij->i', u, normalen)
@@ -280,7 +283,7 @@ def main(argv):
     for strom in (sys.stdout, sys.stderr):
         if hasattr(strom, 'reconfigure'):
             strom.reconfigure(encoding='utf-8', errors='replace')
-    import newton
+    import newton  # pyright: ignore[reportMissingImports]
     print(u'warp %s newton %s device %s' % (wp.__version__, newton.__version__,
                                            wp.get_device()), flush=True)
     return Stoffnewton(auftrag, ergebnis).laufen()

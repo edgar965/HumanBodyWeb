@@ -123,7 +123,8 @@ export class Lebendigkeit {
     static _blick(saat, bl, t) {
         let beginn = 0, ziel = [0, 0], vorher = [0, 0], seit = t;
         for (let k = 0; k < 10000; k++) {
-            const naechster = beginn + bl.abstand[0] + (bl.abstand[1] - bl.abstand[0]) * Lebendigkeit.zufall(saat, k, 2);
+            const naechster = beginn + bl.abstand[0]
+                + (bl.abstand[1] - bl.abstand[0]) * Lebendigkeit.zufall(saat, k, 2);
             if (naechster > t) { seit = t - beginn; break; }
             beginn = naechster;
             vorher = ziel;

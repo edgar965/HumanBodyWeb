@@ -94,16 +94,17 @@ Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
         <td data-sort="{% if e.haende %}1{% else %}0{% endif %}">{% if e.haende %}ja{% else %}nein{% endif %}</td>
         <td data-sort="{% if e.gesicht %}1{% else %}0{% endif %}">{% if e.gesicht %}ja{% else %}nein{% endif %}</td>
         <td>{{ e.kamera }}</td>
-        <td class="num" data-sort="{{ e.dauer_s|default_if_none:'' }}">
+        {# Sortierschlüssel als ganze Zahl (Tausendstel): die Sortierung liest deutsch, ein Punkt wäre ein Tausenderzeichen #}
+        <td class="num" data-sort="{% if e.dauer_s is not None %}{% widthratio e.dauer_s 1 1000 %}{% endif %}">
           {% if e.dauer_s is not None %}{{ e.dauer_s }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
         </td>
-        <td class="num" data-sort="{{ e.ueberlagerung_px|default_if_none:'' }}">
+        <td class="num" data-sort="{% if e.ueberlagerung_px is not None %}{% widthratio e.ueberlagerung_px 1 1000 %}{% endif %}">
           {% if e.ueberlagerung_px is not None %}{{ e.ueberlagerung_px|floatformat:1 }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
         </td>
-        <td class="num" data-sort="{{ e.ruhe_wurzel|default_if_none:'' }}">
+        <td class="num" data-sort="{% if e.ruhe_wurzel is not None %}{% widthratio e.ruhe_wurzel 1 1000 %}{% endif %}">
           {% if e.ruhe_wurzel is not None %}{{ e.ruhe_wurzel|floatformat:2 }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
         </td>
-        <td class="num" data-sort="{{ e.ruhe_pose|default_if_none:'' }}">
+        <td class="num" data-sort="{% if e.ruhe_pose is not None %}{% widthratio e.ruhe_pose 1 1000 %}{% endif %}">
           {% if e.ruhe_pose is not None %}{{ e.ruhe_pose|floatformat:2 }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
         </td>
         <td class="num" data-sort="{{ e.boden_cm|default_if_none:'' }}">

@@ -9,6 +9,7 @@ Garderobe in `api/kleidung.py`. Warum das der Weg ist, steht in
 import json
 import logging
 import os
+from collections import namedtuple
 
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
@@ -16,6 +17,12 @@ from django.views.decorators.http import require_GET, require_POST
 from GarmentCode.dienst import GarmentcodeDienst
 
 logger = logging.getLogger(__name__)
+
+
+#: Was der Browser für Schnitt, Masse und Drapierung mitschickt — drei Leser,
+#: eine Form (`aus_anfrage`).
+Garmentanfrage = namedtuple(
+    'Garmentanfrage', 'vorlage geschlecht bauart morphs regler meta koerper smpl')
 
 
 class Garmentcode:
@@ -73,10 +80,10 @@ class Garmentcode:
         try:
             anfrage = Garmentcode.aus_anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
-                spez, koerper=anfrage['koerper'],
-                geschlecht=anfrage['geschlecht'], morphs=anfrage['morphs'],
-                bauart=anfrage['bauart'], smpl=anfrage['smpl'],
-                meta=anfrage['meta'], fein=fein, sim=sim, getragen=getragen)
+                spez, koerper=anfrage.koerper,
+                geschlecht=anfrage.geschlecht, morphs=anfrage.morphs,
+                bauart=anfrage.bauart, smpl=anfrage.smpl,
+                meta=anfrage.meta, fein=fein, sim=sim, getragen=getragen)
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -133,15 +140,15 @@ class Garmentcode:
         """Die Masse der gewaehlten Figur — mit ihren Reglerwerten."""
         anfrage = Garmentcode.aus_anfrage(request)
         werte, herkunft = GarmentcodeDienst.masse(
-            anfrage['geschlecht'], morphs=anfrage['morphs'],
-            bauart=anfrage['bauart'], koerper=anfrage['koerper'],
-            meta=anfrage['meta'])
+            anfrage.geschlecht, morphs=anfrage.morphs,
+            bauart=anfrage.bauart, koerper=anfrage.koerper,
+            meta=anfrage.meta)
         return JsonResponse({
             'masse': {name: round(float(wert), 2)
                       for name, wert in sorted(werte.items())
                       if not name.startswith('_')},
             'herkunft': herkunft,
-            'morphs': len(anfrage['morphs'] or {}),
+            'morphs': len(anfrage.morphs or {}),
         })
 
     @staticmethod
@@ -157,19 +164,18 @@ class Garmentcode:
         # muss es nicht mitschicken.
         from ..dienste.smplfigur import Smplfiguren
         koerper = request.POST.get('koerper') or None
-        return {
-            'vorlage': request.POST.get('vorlage', 't-shirt'),
-            'geschlecht': request.POST.get('geschlecht', 'female'),
-            'bauart': request.POST.get('bauart') or None,
-            'morphs': Garmentcode._woerterbuch(
+        return Garmentanfrage(
+            vorlage=request.POST.get('vorlage', 't-shirt'),
+            geschlecht=request.POST.get('geschlecht', 'female'),
+            bauart=request.POST.get('bauart') or None,
+            morphs=Garmentcode._woerterbuch(
                 request.POST, 'morphs', 'Morphs unlesbar, nehme Grundkoerper'),
-            'regler': Garmentcode._woerterbuch(
+            regler=Garmentcode._woerterbuch(
                 request.POST, 'regler', 'Reglerwerte unlesbar, nehme Vorgabe'),
-            'meta': Garmentcode._woerterbuch(
+            meta=Garmentcode._woerterbuch(
                 request.POST, 'meta', 'Metaregler unlesbar, nehme keine'),
-            'koerper': koerper,
-            'smpl': bool(koerper) and Smplfiguren.ist_smpl(koerper),
-        }
+            koerper=koerper,
+            smpl=bool(koerper) and Smplfiguren.ist_smpl(koerper))
 
     @staticmethod
     def _woerterbuch(felder, name, warnung):
@@ -190,10 +196,10 @@ class Garmentcode:
         anfrage = Garmentcode.aus_anfrage(request)
         try:
             ergebnis = GarmentcodeDienst.erzeugen(
-                anfrage['vorlage'], geschlecht=anfrage['geschlecht'],
-                morphs=anfrage['morphs'], bauart=anfrage['bauart'],
-                regler=anfrage['regler'], koerper=anfrage['koerper'],
-                meta=anfrage['meta'])
+                anfrage.vorlage, geschlecht=anfrage.geschlecht,
+                morphs=anfrage.morphs, bauart=anfrage.bauart,
+                regler=anfrage.regler, koerper=anfrage.koerper,
+                meta=anfrage.meta)
         except EntwurfFehler as fehler:
             logger.warning('GarmentCode gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)

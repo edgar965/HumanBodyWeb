@@ -57,11 +57,6 @@ globalThis.sessionStorage = { _w: {}, getItem(k) { return this._w[k] ?? null; },
 SKRIPT = DOM + """
 const { Abspielsteuerung } = await import(MODUL);
 const { Figurmerker } = await import(new URL('./figurmerker.js', MODUL).href);
-const pruefe = (was, ist, soll) => {
-    if (JSON.stringify(ist) !== JSON.stringify(soll)) {
-        throw new Error(was + ': ' + JSON.stringify(ist) + ' statt ' + JSON.stringify(soll));
-    }
-};
 const aktion = () => ({ paused: false, laeuft: true, isRunning() { return this.laeuft; }, play() { this.laeuft = true; } });
 const geladen = [];
 const fn = { loadBVHAnimation: (url, name) => geladen.push(name + '@' + url), stopAnimation: () => {} };

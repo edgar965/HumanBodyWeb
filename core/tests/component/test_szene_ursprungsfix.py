@@ -46,22 +46,6 @@ BILDER = 30
 RADIUS_M = 0.5
 
 
-def bewegung():
-    u"""Die Wurzel wandert in 30 Bildern 300 cm nach +X und 200 cm nach −Z."""
-    zeilen = []
-    for b in range(BILDER):
-        x = 300.0 * b / (BILDER - 1)
-        z = -200.0 * b / (BILDER - 1)
-        zeilen.append('%.4f 90.0000 %.4f 0.0 0.0 %.4f 5.0 0.0 0.0' % (x, z, b * 2.0))
-    return zeilen
-
-
-def bilder(text):
-    zeilen = text.split('\n')
-    start = zeilen.index('Frame Time: 0.033333') + 1
-    return [[float(w) for w in z.split()] for z in zeilen[start:] if z.strip()]
-
-
 class DerUrsprungsfix(TestCase):
 
     URL = '/api/retarget/save-bvh-effects/'
@@ -71,7 +55,7 @@ class DerUrsprungsfix(TestCase):
         self.wurzel = Path(self.ordner) / 'bvh'
         (self.wurzel / 'Test').mkdir(parents=True)
         self.datei = self.wurzel / 'Test' / 'probe.bvh'
-        self.datei.write_text(KOPF % BILDER + '\n'.join(bewegung()) + '\n',
+        self.datei.write_text(KOPF % BILDER + '\n'.join(DerUrsprungsfix.bewegung()) + '\n',
                               encoding='utf-8')
         self.enterContext(override_settings(HUMANBODY_BVH_DIR=str(self.wurzel / 'MocapNET')))
         self.client = Client()
@@ -85,16 +69,16 @@ class DerUrsprungsfix(TestCase):
 
     def abstaende(self):
         u"""Abstand jedes Bildes zu Bild 0 in der Bodenebene (BVH-Zentimeter)."""
-        b = bilder(self.datei.read_text(encoding='utf-8'))
+        b = DerUrsprungsfix.bilder(self.datei.read_text(encoding='utf-8'))
         return [math.hypot(x[0] - b[0][0], x[2] - b[0][2]) for x in b]
 
     def test_die_wurzel_bleibt_im_kreis_um_bild_null(self):
-        vorher = bilder(self.datei.read_text(encoding='utf-8'))
+        vorher = DerUrsprungsfix.bilder(self.datei.read_text(encoding='utf-8'))
         self.assertGreater(math.hypot(vorher[-1][0], vorher[-1][2]), 300.0)
         daten = self.anwenden()
         self.assertTrue(daten['ok'])
         self.assertIn('fixed r=0.50m', daten['applied'])
-        nachher = bilder(self.datei.read_text(encoding='utf-8'))
+        nachher = DerUrsprungsfix.bilder(self.datei.read_text(encoding='utf-8'))
         self.assertEqual(len(nachher), BILDER)
         for bild in nachher:
             self.assertLessEqual(math.hypot(bild[0] - nachher[0][0], bild[2] - nachher[0][2]),
@@ -118,9 +102,9 @@ class DerUrsprungsfix(TestCase):
         self.assertEqual(max(self.abstaende()), 0.0)
 
     def test_hoehe_und_drehungen_bleiben(self):
-        vorher = bilder(self.datei.read_text(encoding='utf-8'))
+        vorher = DerUrsprungsfix.bilder(self.datei.read_text(encoding='utf-8'))
         self.anwenden()
-        nachher = bilder(self.datei.read_text(encoding='utf-8'))
+        nachher = DerUrsprungsfix.bilder(self.datei.read_text(encoding='utf-8'))
         for v, n in zip(vorher, nachher):
             self.assertAlmostEqual(n[1], v[1], places=3)          # Y
             for i in range(3, 9):                                  # Drehungen
@@ -136,8 +120,24 @@ class DerUrsprungsfix(TestCase):
     def tearDown(self):
         shutil.rmtree(self.ordner, ignore_errors=True)
 
+    @staticmethod
+    def bewegung():
+        u"""Die Wurzel wandert in 30 Bildern 300 cm nach +X und 200 cm nach −Z."""
+        zeilen = []
+        for b in range(BILDER):
+            x = 300.0 * b / (BILDER - 1)
+            z = -200.0 * b / (BILDER - 1)
+            zeilen.append('%.4f 90.0000 %.4f 0.0 0.0 %.4f 5.0 0.0 0.0' % (x, z, b * 2.0))
+        return zeilen
 
-class DasDrahtformat(TestCase):
+    @staticmethod
+    def bilder(text):
+        zeilen = text.split('\n')
+        start = zeilen.index('Frame Time: 0.033333') + 1
+        return [[float(w) for w in z.split()] for z in zeilen[start:] if z.strip()]
+
+
+class DasUrsprungsfixDrahtformat(TestCase):
     u"""Menüeintrag, Dispatch und Modul gehören zusammen."""
 
     databases = set()

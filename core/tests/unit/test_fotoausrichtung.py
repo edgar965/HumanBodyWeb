@@ -19,6 +19,7 @@ from django.test import SimpleTestCase
 from core.daten.netzmasse import Netzmasse
 from core.daten.persongrenzen import Persongrenzen
 from core.dienste.fotoausrichtung import Fotoausrichtung
+from ._sicher import Sicher
 
 #: Ein Netz, das sich im Kopf rechnen lässt: 1 breit, 2 hoch, Mitte im Ursprung.
 NETZ = np.array([[-0.5, -1.0, 0.0], [0.5, 1.0, 0.0]], dtype=np.float32)
@@ -89,6 +90,7 @@ class PymafxTest(SimpleTestCase):
     def test_mittige_person_landet_in_der_bildmitte(self):
         masse = Netzmasse.aus(NETZ, BILD)
         aus = Fotoausrichtung._aus_pymafx(self.cam(), masse)
+        aus = Sicher.wert(aus, 'Ausrichtung')
         self.assertEqual(aus['method'], 'pymafx')
         bt = aus['body_transform']
         self.assertAlmostEqual(bt['center_x'], 960.0, places=3)
@@ -114,7 +116,7 @@ class SmplestxTest(SimpleTestCase):
 
     def test_hauptpunkt_wird_auf_das_originalbild_zurueckgerechnet(self):
         masse = Netzmasse.aus(NETZ, BILD)
-        bt = Fotoausrichtung._aus_smplestx(self.cam(), masse)['body_transform']
+        bt = Sicher.wert(Fotoausrichtung._aus_smplestx(self.cam(), masse), 'Ausrichtung')['body_transform']
         # princpt_orig_x = 128/256*256 + 100 = 228, y = 128 + 50 = 178
         self.assertAlmostEqual(bt['center_x'], 228.0, places=3)
         self.assertAlmostEqual(bt['center_y'], 178.0, places=3)

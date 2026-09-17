@@ -30,6 +30,7 @@ from GarmentCode.koerpermasse import Koerpermasse
 from GarmentCode.koerperprofil import Koerperprofil
 from GarmentCode.schulterneigung import Schulterneigung
 from ..unit._pruefablage import Pruefablage
+from ..unit._sicher import Sicher
 
 VORLAGE = {
     'height': 166.0, 'head_l': 25.0, 'bust': 97.0, 'underbust': 80.0,
@@ -93,14 +94,13 @@ class KoerperprofilTest(SimpleTestCase):
         self.profil = Koerperprofil(self.v, self.seg['body'], arme)
 
     def test_messhoehen_treffen(self):
-        h = self.profil.hoehen()
-        self.assertIsNotNone(h)
+        h = Sicher.wert(self.profil.hoehen(), 'Messhöhen')
         self.assertAlmostEqual(h['huefte'], 0.92, delta=0.015)
         self.assertAlmostEqual(h['taille'], 1.08, delta=0.015)
         self.assertAlmostEqual(h['brust'], 1.24, delta=0.015)
 
     def test_umfaenge_sind_kreisumfaenge_ohne_arme(self):
-        h = self.profil.hoehen()
+        h = Sicher.wert(self.profil.hoehen(), 'Messhöhen')
         # Kreisumfang 2*pi*r in cm; die Huelle eines 48-Ecks ist ~0,3 % kleiner.
         self.assertAlmostEqual(h['brust_umfang'], 2 * np.pi * 14, delta=1.0)
         self.assertAlmostEqual(h['huefte_umfang'], 2 * np.pi * 15, delta=1.0)
@@ -111,18 +111,18 @@ class KoerperprofilTest(SimpleTestCase):
         self.assertAlmostEqual(h['taille_umfang'], 2 * np.pi * 10, delta=2.5)
         # Mit Armen in der Scheibe waere die Huelle 60 cm breit — das darf
         # auf Brusthoehe nicht passieren.
-        self.assertLess(self.profil.breite(1.24), 30.0)
+        self.assertLess(Sicher.wert(self.profil.breite(1.24), 'Breite'), 30.0)
 
     def test_ruecken_ist_der_halbe_umfang(self):
         u"""Ein Massband von Seite zu Seite ueber den Ruecken: pi*r."""
-        self.assertAlmostEqual(self.profil.ruecken(1.24), np.pi * 14, delta=1.5)
+        self.assertAlmostEqual(Sicher.wert(self.profil.ruecken(1.24), 'Rücken'),
+                               np.pi * 14, delta=1.5)
 
     def test_duenne_scheibe_bleibt_ganz(self):
         u"""Die alte Lueckenfalle: wenige Punkte je Ring, grosse x-Luecken."""
         v, seg = kunstkoerper(punkte_je_ring=10)
         p = Koerperprofil(v, seg['body'], seg['left_arm'] + seg['right_arm'])
-        u = p.umfang(1.24)
-        self.assertIsNotNone(u)
+        u = Sicher.wert(p.umfang(1.24), 'Umfang')
         # 10-Eck-Huelle eines Kreises r=14: 2*10*14*sin(pi/10) = 86,5 cm
         self.assertGreater(u, 80.0, 'die Scheibe hat Punkte verloren')
 
@@ -217,8 +217,7 @@ class DuenneScheibeTest(SimpleTestCase):
         return Koerperprofil(v, seg['body'], arme)
 
     def test_duenner_ring_wird_nicht_zur_taille(self):
-        hoehen = self._profil(ausgeduennt=True).hoehen()
-        self.assertIsNotNone(hoehen)
+        hoehen = Sicher.wert(self._profil(ausgeduennt=True).hoehen(), 'Messhöhen')
         self.assertAlmostEqual(hoehen['taille'], 1.08, delta=0.02,
                                msg='Taille bei %.3f statt 1,08'
                                    % hoehen['taille'])
@@ -232,18 +231,16 @@ class DuenneScheibeTest(SimpleTestCase):
         Suche ohne Schranke nehmen wuerde.
         """
         profil = self._profil(ausgeduennt=True)
-        duenn = profil.umfang(self.DUENN_Z)
-        taille = profil.umfang(1.08)
-        self.assertIsNotNone(duenn)
+        duenn = Sicher.wert(profil.umfang(self.DUENN_Z), 'Umfang der Scheibe')
+        taille = Sicher.wert(profil.umfang(1.08), 'Umfang der Taille')
         self.assertLess(duenn, taille,
-                        'praeparierte Scheibe %.1f, Taille %.1f'
-                        % (duenn or 0, taille or 0))
+                        'praeparierte Scheibe %.1f, Taille %.1f' % (duenn, taille))
         self.assertLess(len(profil.scheibe(self.DUENN_Z)),
                         len(profil.scheibe(1.08)))
 
     def test_ohne_ausduennung_bleibt_alles_wie_vorher(self):
         u"""Die Schranke darf den gesunden Fall nicht verschieben."""
-        hoehen = self._profil(ausgeduennt=False).hoehen()
+        hoehen = Sicher.wert(self._profil(ausgeduennt=False).hoehen(), 'Messhöhen')
         self.assertAlmostEqual(hoehen['huefte'], 0.92, delta=0.015)
         self.assertAlmostEqual(hoehen['taille'], 1.08, delta=0.015)
         self.assertAlmostEqual(hoehen['brust'], 1.24, delta=0.015)
@@ -360,8 +357,8 @@ class ArmhaltungTest(SimpleTestCase):
         u"""Der Arbeitsbereich: T-Pose (0) bis A-Haltung (45)."""
         for soll in (0.0, 20.0, 32.0, 45.0):
             v, seg = armkoerper(soll)
-            gemessen = Armhaltung(v, seg, oben=2).winkel()
-            self.assertIsNotNone(gemessen, 'Winkel %s nicht messbar' % soll)
+            gemessen = Sicher.wert(Armhaltung(v, seg, oben=2).winkel(),
+                                   'Winkel %s' % soll)
             self.assertAlmostEqual(gemessen, soll, delta=1.5,
                                    msg='Soll %.1f, gemessen %.2f'
                                        % (soll, gemessen))
@@ -377,7 +374,7 @@ class ArmhaltungTest(SimpleTestCase):
         Stehende Figuren liegen zwischen 0 und 45; der Fall ist damit
         festgehalten, nicht behoben. Der Test haelt fest, dass er nicht
         SCHLIMMER wird."""
-        gemessen = Armhaltung(*armkoerper(60.0), oben=2).winkel()
+        gemessen = Sicher.wert(Armhaltung(*armkoerper(60.0), oben=2).winkel(), 'Winkel')
         self.assertAlmostEqual(gemessen, 60.0, delta=5.0)
         self.assertLess(gemessen, 60.0, 'der Fehler zeigt nach unten')
 
@@ -387,8 +384,9 @@ class ArmhaltungTest(SimpleTestCase):
         Bei SMPL trägt die Hand 802 Punkte gegen 284 im Oberarm. Ein
         dichter Klumpen am Armende darf den Winkel nicht verschieben.
         """
-        ohne = Armhaltung(*armkoerper(32.0), oben=2).winkel()
-        mit = Armhaltung(*armkoerper(32.0, hand_punkte=900), oben=2).winkel()
+        ohne = Sicher.wert(Armhaltung(*armkoerper(32.0), oben=2).winkel(), 'ohne Hand')
+        mit = Sicher.wert(Armhaltung(*armkoerper(32.0, hand_punkte=900), oben=2).winkel(),
+                          'mit Hand')
         self.assertAlmostEqual(mit, ohne, delta=0.5,
                                msg='ohne Hand %.2f, mit Hand %.2f' % (ohne, mit))
 
@@ -419,8 +417,8 @@ class ArmhaltungTest(SimpleTestCase):
         u"""Er ist eine Haltung, kein Längenmaß: Ein doppelt so großer
         Körper in derselben Haltung hat denselben Winkel."""
         v, seg = armkoerper(35.0)
-        klein = Armhaltung(v, seg, oben=2).winkel()
-        gross = Armhaltung(v * 2.0, seg, oben=2).winkel()
+        klein = Sicher.wert(Armhaltung(v, seg, oben=2).winkel(), 'klein')
+        gross = Sicher.wert(Armhaltung(v * 2.0, seg, oben=2).winkel(), 'groß')
         self.assertAlmostEqual(klein, gross, delta=0.1)
 
 
@@ -463,8 +461,8 @@ class SchulterneigungTest(SimpleTestCase):
             with Pruefablage.ordner() as ordner:
                 pfad = self.schreiben(ordner, self.skelett(
                     (0.03, 0.0, 1.37), (0.13, 0.0, 1.37 + dz)))
-                self.assertAlmostEqual(Schulterneigung(pfad).grad(), soll,
-                                       delta=0.2, msg='dz=%s' % dz)
+                self.assertAlmostEqual(Sicher.wert(Schulterneigung(pfad).grad(), 'Grad'),
+                                       soll, delta=0.2, msg='dz=%s' % dz)
 
     def test_elternkette_wird_gerechnet(self):
         u"""Der Kopf des Schlüsselbeins hängt an der Wirbelsäule — ohne
@@ -480,7 +478,7 @@ class SchulterneigungTest(SimpleTestCase):
         with Pruefablage.ordner() as ordner:
             pfad = self.schreiben(ordner, daten)
             messer = Schulterneigung(pfad)
-            self.assertAlmostEqual(messer.grad(), 45.0, delta=0.2)
+            self.assertAlmostEqual(Sicher.wert(messer.grad(), 'Grad'), 45.0, delta=0.2)
             lagen = messer.lagen()
             # Die Weltlage muss die Wirbelsäulenhöhe tragen.
             self.assertAlmostEqual(lagen[Schulterneigung.HALS][0][2], 1.37,
@@ -498,8 +496,7 @@ class SchulterneigungTest(SimpleTestCase):
         ordner = str(settings.HUMANBODY_DATA_DIR)
         if not os.path.isfile(os.path.join(ordner, 'def_skeleton.json')):
             self.skipTest('kein Skelett im Datenordner')
-        grad = Schulterneigung.aus_datenordner(ordner)
-        self.assertIsNotNone(grad)
+        grad = Sicher.wert(Schulterneigung.aus_datenordner(ordner), 'Neigung')
         self.assertAlmostEqual(grad, 11.6, delta=1.0)
         self.assertLess(grad, VORLAGE['shoulder_incl'] - 5.0,
                         'der Vorlagenwert war nicht nur leicht daneben')

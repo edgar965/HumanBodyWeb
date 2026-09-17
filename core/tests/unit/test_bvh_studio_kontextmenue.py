@@ -24,6 +24,8 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
+from ._studiovorlage import Studiovorlage
+
 WURZEL = Path(settings.BASE_DIR)
 VORLAGE = WURZEL / 'templates' / 'bvh_studio.html'
 STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
@@ -61,7 +63,7 @@ class ModellLaengeTest(SimpleTestCase):
     databases = set()
 
     def test_laenge_im_modellmenue_wie_im_clipmenue(self):
-        html = VORLAGE.read_text(encoding='utf-8')
+        html = Studiovorlage.text()
         menues = {}
         for kennung in ('clip-context-menu', 'model-context-menu'):
             anfang = html.index('<div id="%s"' % kennung)
