@@ -47,3 +47,23 @@ class PfadwurzelnTest(TestCase):
         from pathlib import Path
         eigene = Path('A:/beispiel/bvh')
         self.assertIn(eigene, Pfadwurzeln.bvh(eigene))
+
+    def test_videos_nehmen_den_videoordner_der_uploadseite_an(self):
+        """15.09.2026, Edgar: „Start fehlgeschlagen: 403 Forbidden bei
+        /api/job/create-from-file/". Die Uploadseite listet `3DObjects/Video`
+        (`Videoauswahl.sammeln`), `videos()` kannte den Ordner nicht — seit
+        dem 24.08. war jedes Video von dort abgelehnt. Was die Oberflaeche
+        anbietet, muss die Pruefung annehmen. Und ganz `3DObjects/` ist frei
+        (Edgar: „diese Ordner sollen nicht gesperrt sein")."""
+        from django.conf import settings
+        from core.safe_paths import SafePath
+        from core.dienste import videoauswahl
+        ordner = Pfadwurzeln.videoordner()
+        self.assertEqual(ordner, settings.TOOLS_ROOT / '3DObjects' / 'Video')
+        self.assertIn(settings.TOOLS_ROOT / '3DObjects', Pfadwurzeln.videos())
+        SafePath.fuer_videos().pruefe(str(Pfadwurzeln.objekte() / 'Recherche' / 'x.mp4'))
+        self.assertIn('Pfadwurzeln.videoordner()',
+                      open(videoauswahl.__file__, encoding='utf-8').read())
+        geprueft = SafePath.fuer_videos().pruefe(str(ordner / '005 DanceLang.mp4'))
+        self.assertEqual(geprueft.name, '005 DanceLang.mp4')
+

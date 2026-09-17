@@ -17,7 +17,9 @@ Geprüft ohne Grafikkarte:
    eine Spur mit 2 Bildern von 125 wäre sonst eine Person aus Interpolation),
    Ablage `.npz` hin und zurück; Bruchstücke einer Spur verkettet (002_Dance:
    zwei Kennungen für eine Tänzerin, die ersten 272 Bilder hatten bisher den
-   Kasten von Bild 273).
+   Kasten von Bild 273); über Szenenwechsel hinweg alle Spuren eine Person,
+   solange sich keine zwei zeitlich überschneiden (005 DanceLang: 2.687 Bilder
+   mit dem Kasten aus der linken oberen Ecke), sonst nichts geraten.
 2. `Personenlauf`: Namen (`_p2`, Ordner `p2/`, Spurablage), ein Lauf je
    Person mit `person`/`spuren`, SimpleVO von Person 1 übernommen, und nach
    Person 1 höchstens so viele Personen, wie die Spurablage hergibt.
@@ -32,13 +34,13 @@ ohne `p<n>` → Fall 2/3 rot; `MIT_PERSONEN` ohne `gem` → Fall 4 rot.
 """
 import os
 import re
-import sys
 import unittest
 
 import numpy as np
 from django.test import SimpleTestCase, override_settings
 
 from ._pruefablage import Pruefablage
+from ._sicher import Sicher
 from ._wrappersuchpfad import TOOLS, Wrappersuchpfad
 from ..attrappen import AuftragsAttrappe
 
@@ -141,6 +143,53 @@ class DieSpurwahl(unittest.TestCase):
             if i >= 5:
                 weit[i].append({'id': 5, 'bbx_xyxy': np.array([300, 300, 380, 500], float)})
         self.assertEqual(Spurwahl(weit, 10, 640, 360).verketten(), 0)
+
+    @staticmethod
+    def _szenen(zweite_person=False):
+        u"""80 Bilder, drei Schnitte: Kennung 1 (0-19, links), 2 (19-44, rechts,
+        Sprung 400 px, Bild 19 doppelt: Kennungswechsel), 3 (52-79, links, 32
+        Bilder Luecke) — eine Taenzerin an drei Orten; dazu
+        Kennung 9 mit zwei Bildern (Fehlerkennung). `zweite_person`: Kennung 7
+        gleichzeitig mit Kennung 1."""
+        bilder = [[] for _ in range(80)]
+        for i in range(80):
+            if i < 20:
+                bilder[i].append({'id': 1, 'bbx_xyxy': np.array([50, 50, 150, 300], float)})
+                if zweite_person:
+                    bilder[i].append({'id': 7, 'bbx_xyxy': np.array([400, 50, 500, 300], float)})
+            if 19 <= i < 45:
+                bilder[i].append({'id': 2, 'bbx_xyxy': np.array([450, 60, 550, 310], float)})
+            elif i >= 52:
+                bilder[i].append({'id': 3, 'bbx_xyxy': np.array([100, 40, 200, 290], float)})
+            if i in (30, 31):
+                bilder[i].append({'id': 9, 'bbx_xyxy': np.array([600, 0, 640, 40], float)})
+        return bilder
+
+    def test_szenenwechsel_eine_person(self):
+        u"""005 DanceLang: keine zwei Spuren zur selben Zeit -> eine Person,
+        alle drei Spuren werden eine (Bilder sortiert, Bild 19 einmal, mit dem
+        Kasten der groesseren Spur 2), Rang 1 deckt 73 von 80; die
+        Zwei-Bilder-Fehlerkennung bleibt draussen."""
+        wahl = Spurwahl(self._szenen(), 80, 640, 360)
+        self.assertEqual(wahl.verketten(), 0)          # Spruenge zu gross
+        self.assertEqual(wahl.szenen_verketten(), 2)
+        self.assertEqual(sorted(wahl.bilder), [1, 9])
+        self.assertEqual(wahl.bilder[1].tolist(),
+                         list(range(45)) + list(range(52, 80)))
+        self.assertEqual(wahl.kaesten[1][18][0], 50.0)    # Bild 18: der linke Kasten
+        self.assertEqual(wahl.kaesten[1][19][0], 450.0)   # Bild 19: der rechte (Spur 2 ist groesser)
+        self.assertEqual(wahl.kaesten[1][45][0], 100.0)   # Bild 52: der linke
+        self.assertEqual(len(wahl.kaesten[1]), 73)
+        self.assertEqual(wahl.anzahl(), 1)
+        self.assertEqual(wahl.szenen_verketten(), 0)
+
+    def test_szenenwechsel_zwei_personen_bleiben_getrennt(self):
+        u"""Ueberschneiden sich zwei Spuren laenger als `MINDESTLAENGE` Bilder
+        (hier 20), sind es zwei Personen: ueber Schnitte hinweg wird dann nichts
+        zusammengehaengt."""
+        wahl = Spurwahl(self._szenen(zweite_person=True), 80, 640, 360)
+        self.assertEqual(wahl.szenen_verketten(), 0)
+        self.assertEqual(sorted(wahl.bilder), [1, 2, 3, 7, 9])
 
     def test_leerer_verlauf(self):
         leer = Spurwahl([[] for _ in range(5)], 5, 640, 360)
@@ -356,8 +405,10 @@ class DieDjangoSeite(SimpleTestCase):
 
     def test_formular_karten_und_adresse(self):
         felder = (WEB / 'static' / 'js' / 'auftraege' / 'pipelinefelder.js').read_text(encoding='utf-8')
-        gvhmr = re.search(r'\n        gvhmr: \[(.*?)\n        \],', felder, re.S).group(1)
-        gem = re.search(r'\n        gem: \[(.*?)\n        \],', felder, re.S).group(1)
+        gvhmr = Sicher.wert(re.search(r'\n        gvhmr: \[(.*?)\n        \],', felder, re.S),
+                            'gvhmr-Felder').group(1)
+        gem = Sicher.wert(re.search(r'\n        gem: \[(.*?)\n        \],', felder, re.S),
+                          'gem-Felder').group(1)
         self.assertIn("['persons', 'int']", gvhmr)
         self.assertIn("['persons', 'int']", gem)
         for karte, name in (('_pipeline_gvhmr.html', 'gvhmr_persons'),

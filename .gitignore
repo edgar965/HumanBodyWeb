@@ -11,6 +11,9 @@ media/output/
 media/effekte/
 # Videos der Figur (11.09.2026): je Lauf ein MP4, Weg 1 und Weg 2.
 media/figurvideos/
+# Videos, die Auftraege einlesen (17.09.2026), und der Texturcache der Brauenretusche.
+media/input/
+media/hauttexturen/
 
 # Node
 node_modules/

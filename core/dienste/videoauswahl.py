@@ -21,6 +21,7 @@ from pathlib import Path
 
 from django.conf import settings
 
+from ..daten.pfadwurzeln import Pfadwurzeln
 from ..models import AppSettings
 
 #: Was als Video gilt.
@@ -76,7 +77,7 @@ class Videoauswahl:
     def sammeln(cls, auftraege):
         """Videoordner, Uploads und die Videos bestehender Auftraege."""
         auswahl = cls()
-        auswahl._ordner(Path(settings.TOOLS_ROOT) / '3DObjects' / 'Video')
+        auswahl._ordner(Pfadwurzeln.videoordner())
         auswahl._ordner(Path(settings.MEDIA_ROOT) / 'uploads')
         for job in auftraege:
             auswahl.aufnehmen(Path(cls.pfad_von(job)))

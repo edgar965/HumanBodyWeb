@@ -50,9 +50,34 @@ class Pfadwurzeln:
     def ausgabe(cls):
         return [cls.medien()] + cls.aus_einstellungen('studio_video_output')
 
+    @staticmethod
+    def objekte():
+        """`3DObjects/` — Edgars Inhalte (Videos, Animationen, Kleider, Fotos).
+
+        NICHT GESPERRT (15.09.2026, Edgar: „diese Ordner sollen nicht gesperrt
+        sein, wer hat dir das gesagt??"): Die Sperre kam aus dem Sparring mit
+        Nemotron (18.08.) und dem Waechter-Umbau (24.08.), nicht von ihm. Der
+        Waechter bleibt fuer `ui/`, `.git/` und die Morphdaten sinnvoll;
+        `3DObjects/` ist der Ordner, den der Benutzer selbst fuellt.
+        """
+        return Path(settings.TOOLS_ROOT) / '3DObjects'
+
+    @classmethod
+    def videoordner(cls):
+        """Der Videoordner der Uploadseite (`Videoauswahl` listet ihn)."""
+        return cls.objekte() / 'Video'
+
     @classmethod
     def videos(cls):
-        return ([cls.medien()]
+        """Videos, aus denen ein Auftrag entstehen darf: Medien und `3DObjects/`.
+
+        Die Uploadseite listet `3DObjects/Video`, die Pruefung kannte den
+        Ordner nicht — jedes Video von dort war abgelehnt, seit die Wurzeln
+        am 24.08. gesetzt wurden (Edgar, 15.09.: „403 Forbidden bei
+        /api/job/create-from-file/"). Was die Oberflaeche anbietet, muss die
+        Pruefung annehmen; `test_pfadwurzeln` haelt beide gegeneinander.
+        """
+        return ([cls.medien(), cls.objekte()]
                 + cls.aus_einstellungen('studio_video_output', 'studio_bvh_input'))
 
     @classmethod
