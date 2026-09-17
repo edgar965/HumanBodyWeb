@@ -21,7 +21,7 @@ export class Umakatalog {
     /**
      * Eine Figur laden, in die Szene stellen und auswählen.
      *
-     * `lage` kommt aus dem Dialog (`Charakterdialog.lage`); ohne sie gelten
+     * `lage` kommt aus dem Dialog (`Figurwahldialog.lage`); ohne sie gelten
      * die Vorgaben: 1,5 m rechts neben der vorhandenen Figur und auf deren
      * Höhe. Skaliert wird NACH `load()` — vorher hat die Figur keine Größe,
      * die man messen könnte.

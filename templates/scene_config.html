@@ -9,6 +9,7 @@
 {% include "_viewerstile.html" %}
 <link rel="stylesheet" href="{% fassungspfad 'css/viewer_seitenleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/menueleiste.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
 <style>
     .viewer-row {
         display: flex;
@@ -221,201 +222,8 @@
     }
     .character-item-actions .btn-delete:hover { color: #ef4444; border-color: #ef4444; }
 
-    /* Modal dialog */
-    .scene-modal-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.6);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-        backdrop-filter: blur(2px);
-    }
-    .scene-modal-overlay.visible { display: flex; }
-    .scene-modal {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        width: 420px;
-        max-height: 70vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    .scene-modal-header {
-        padding: 14px 18px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .scene-modal-header h4 {
-        font-size: 0.9rem;
-        color: var(--text);
-        margin: 0;
-    }
-    .scene-modal-close {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 1.1rem;
-        padding: 2px 6px;
-    }
-    .scene-modal-close:hover { color: var(--text); }
-    .scene-modal-body {
-        padding: 14px 18px;
-        overflow-y: auto;
-        flex: 1;
-    }
-    .scene-modal-footer {
-        padding: 12px 18px;
-        border-top: 1px solid var(--border);
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-    }
-    /* Rahmen, Farbe, Übergang: `stilhelfer.css`. Hier nur die Größe. */
-    .scene-modal-footer button {
-        padding: 7px 16px;
-        font-size: 0.82rem;
-        border-radius: 5px;
-    }
-    .scene-modal-footer button:hover { border-color: var(--accent); }
-    .scene-modal-footer button.primary:hover { opacity: 0.9; }
-    /* Ein gesperrter Knopf muss gesperrt AUSSEHEN (07.09.2026). Ohne diese
-       Regel sah „Hinzufügen" auch ohne gewählten Eintrag voll aktiv aus, tat
-       auf den Klick aber nichts — ohne Meldung und ohne Zeile im Log. Genau
-       so ist das Hinzufügen einer MakeHuman-Figur „nicht gegangen": Der
-       Reiter hat EINEN Eintrag, und dass man den erst anklicken muss, sah
-       man dem Dialog nicht an. */
-    .scene-modal-footer button:disabled,
-    .scene-modal-footer button.primary:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .scene-modal-footer button:disabled:hover { border-color: var(--border); }
-    .scene-modal-footer .dialoghinweis {
-        margin-right: auto;
-        align-self: center;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    /* Preset / Scene list inside modal */
-    .preset-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    .preset-list li {
-        padding: 8px 12px;
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        margin-bottom: 4px;
-        cursor: pointer;
-        font-size: 0.84rem;
-        color: var(--text);
-        transition: all 0.12s;
-    }
-    .preset-list li:hover { border-color: var(--accent); background: rgba(99,102,241,0.06); }
-    .preset-list li.selected { border-color: var(--accent); background: rgba(99,102,241,0.12); }
-    .preset-list li .preset-sub {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-    }
-
-    /* Charakter-Dialog: zwei Reiter, Werkzeuge je Zeile, Lage der neuen Figur
-       (Edgar, 06.09.2026). */
-    .dialogreiter {
-        display: flex;
-        gap: 4px;
-        margin-bottom: 10px;
-        border-bottom: 1px solid var(--border);
-    }
-    .dialogreiter-knopf {
-        background: none;
-        border: none;
-        border-bottom: 2px solid transparent;
-        color: var(--text-muted);
-        padding: 6px 12px;
-        font-size: 0.82rem;
-        cursor: pointer;
-    }
-    .dialogreiter-knopf:hover { color: var(--text); }
-    .dialogreiter-knopf.active {
-        color: var(--accent);
-        border-bottom-color: var(--accent);
-    }
-    .preset-list li {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-    }
-    .preset-list li .eintragsname { display: flex; flex-direction: column; min-width: 0; }
-    /* SICHTBAR, NICHT NUR VORHANDEN (Edgar, 08.09.2026: „mach
-       funktionalität zum Umbenennen, löschen der Modelle") — es gab sie
-       längst. Gemessen: 30 px breite Knöpfe mit opacity 0,5, Textfarbe
-       #888 und Rahmen #2a2a4a auf dunklem Grund; auf 21 Zeilen
-       untereinander sieht man sie erst, wenn man weiß, dass sie da sind. */
-    .preset-list li .eintragswerkzeuge {
-        display: flex;
-        gap: 4px;
-        flex-shrink: 0;
-        opacity: 0.85;
-        transition: opacity 0.12s;
-    }
-    .preset-list li:hover .eintragswerkzeuge,
-    .preset-list li.selected .eintragswerkzeuge { opacity: 1; }
-    .preset-list li .eintragswerkzeuge button {
-        background: var(--bg-elevated, rgba(255, 255, 255, 0.05));
-        border: 1px solid var(--border-strong, #3d3d63);
-        border-radius: 4px;
-        color: var(--text, #ddd);
-        padding: 3px 7px;
-        cursor: pointer;
-    }
-    .preset-list li .eintragswerkzeuge button:hover {
-        color: var(--text);
-        border-color: var(--accent);
-    }
-    /* Die Liste scrollt fuer sich, damit Position und Groesse darunter immer
-       sichtbar bleiben — bei 55 Figuren im Katalog lagen sie sonst ausserhalb
-       des Bildes (06.09.2026 im Browser gesehen). */
-    #add-char-dialog .preset-list {
-        max-height: 46vh;
-        overflow-y: auto;
-    }
-    .dialogfelder {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
-        padding-top: 10px;
-        border-top: 1px solid var(--border);
-        font-size: 0.82rem;
-        color: var(--text);
-    }
-    .dialogfelder input[type="number"] {
-        width: 84px;
-        padding: 5px 8px;
-        background: var(--bg-card);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-    }
-    .dialogfelder .einheit { color: var(--text-muted); }
-    .dialogfelder .ankreuz {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-left: auto;
-        cursor: pointer;
-    }
-
+    /* Modaldialoge, Reiter, Listen, Lage der neuen Figur: `css/figurwahldialog.css`
+       (17.09.2026 — hier stand seit dem 06.09. dieselbe Kopie, 34 Regeln). */
     /* Scene name input in save dialog */
     .scene-name-input {
         width: 100%;
@@ -1921,7 +1729,6 @@
 </div>
 
 <!-- Add Character Dialog -->
-{% include "_charakter_dialog.html" %}
 {% include "_ursprungsfix_dialog.html" %}
 
 <!-- Save Scene Dialog -->

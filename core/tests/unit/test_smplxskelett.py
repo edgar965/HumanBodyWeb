@@ -101,8 +101,10 @@ class SmplxskelettTest(SimpleTestCase):
         self.assertIn("kette.geometrie(), Smplxzuordnung)", retarget)
         kataloge = SmplxskelettTest._text(STATIK / 'gemeinsam' / 'figurkataloge.js')
         self.assertIn("smpl: { titel: 'SMPL-X'", kataloge)
-        dialog = SmplxskelettTest._text(settings.BASE_DIR / 'templates' / '_charakter_dialog.html')
-        self.assertIn('data-quelle="smpl">SMPL-X</button>', dialog)
+        # Der Reiter der Szene heißt, wie `Figurkataloge` ihn nennt: Die Szene
+        # baut den Dialog seit dem 17.09.2026 über den gemeinsamen `Figurwahldialog`.
+        dialog = SmplxskelettTest._text(STATIK / 'scene' / 'charakterdialog.js')
+        self.assertIn('new Figurwahldialog(', dialog)
         figur = SmplxskelettTest._text(settings.BASE_DIR / 'core' / 'dienste' / 'smplfigur.py')
         self.assertIn("'smplx_female'", figur)
         self.assertIn("'f_smpl_average_A40'", figur)       # bleibt ladbar

@@ -17,6 +17,8 @@ import { Figurlagefelder } from './figurlagefelder.js';
  * die Registrierung. Dieser hier baut sein HTML selbst, holt die Listen über
  * `Figurkataloge` und kennt die Bühne nicht — wer ihn öffnet, gibt je Reiter
  * einen `lader(name, lage)` mit. Stil: `static/css/figurwahldialog.css`.
+ * Seit dem 17.09.2026 nutzt ihn auch die Szene (`scene/charakterdialog.js`
+ * ist nur noch ihre Konfiguration: Lader, Lage, Pflege).
  *
  * DIE LAGE DER NEUEN FIGUR ist Teil des Dialogs, wie in der Szene: Position X
  * und „Größe der vorhandenen Figur angleichen" (`figurlagefelder.js`). Die

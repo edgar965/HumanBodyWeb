@@ -4,8 +4,8 @@
  * Stil führt (Modaldialog, Reiter, Liste, Lage der neuen Figur), hier als
  * Datei, damit jede Seite den Dialog einbinden kann (11.09.2026, zuerst das
  * Theatre). Die Klassennamen bleiben die der Szene-Seite: `stilhelfer.css`
- * stylt `.scene-modal-footer button.primary` bereits für alle Seiten, und
- * die Szene kann ihre Inline-Kopie später durch diese Datei ersetzen. */
+ * stylt `.scene-modal-footer button.primary` bereits für alle Seiten; die
+ * Szene bindet seit dem 17.09.2026 diese Datei ein statt ihrer Kopie. */
 
 .scene-modal-overlay {
     display: none;
