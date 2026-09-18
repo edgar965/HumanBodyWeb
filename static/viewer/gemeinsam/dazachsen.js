@@ -52,12 +52,7 @@ export class Dazachsen {
     static vorbereiten(skelett, achsen) {
         const aus = {};
         const bones = skelett.skeleton.bones;
-        const ruhe = bones.map((_, i) => {
-            const m = skelett.skeleton.boneInverses[i].clone().invert();
-            const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
-            m.decompose(p, q, s);
-            return { p, q };
-        });
+        const ruhe = Dazachsen.ruheWelt(skelett);
         const nummer = new Map(bones.map((b, i) => [b, i]));
         bones.forEach((bone, i) => {
             const a = achsen[bone.name];
@@ -77,6 +72,41 @@ export class Dazachsen {
             };
         });
         return aus;
+    }
+
+    /** Ruhelage je Knochen im Figurraum `[{p, q}]` — aus `boneInverses`. */
+    static ruheWelt(skelett) {
+        return skelett.skeleton.bones.map((_, i) => {
+            const m = skelett.skeleton.boneInverses[i].clone().invert();
+            const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+            m.decompose(p, q, s);
+            return { p, q };
+        });
+    }
+
+    /**
+     * Ob ein Knochen des Skeletts seine lokale Ruhedrehung um mehr als
+     * `grad` verlassen hat — die billige Frage „bewegt sich die Figur?",
+     * bevor jemand Felder lädt (`Genesis9gelenke`, 18.09.2026 nachts).
+     * Die Ruhedrehungen werden am Skelett gemerkt (`_ruheLokal`).
+     */
+    static bewegt(skelett, grad = 0.5) {
+        const bones = skelett?.skeleton?.bones;
+        if (!bones) return false;
+        if (!skelett._ruheLokal) {
+            const welt = Dazachsen.ruheWelt(skelett);
+            const nummer = new Map(bones.map((b, i) => [b, i]));
+            skelett._ruheLokal = bones.map((bone, i) => {
+                const elternNr = nummer.get(bone.parent);
+                const Qp = elternNr === undefined ? new THREE.Quaternion() : welt[elternNr].q;
+                return Qp.clone().invert().multiply(welt[i].q);
+            });
+        }
+        const schwelle = grad * Math.PI / 180;
+        for (let i = 0; i < bones.length; i++) {
+            if (bones[i].quaternion.angleTo(skelett._ruheLokal[i]) > schwelle) return true;
+        }
+        return false;
     }
 
     /** Daz-Winkel (Grad, [x, y, z]) des Knochens im aktuellen Bild. */

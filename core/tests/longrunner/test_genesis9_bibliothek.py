@@ -225,7 +225,7 @@ class ApiTest(SimpleTestCase):
         self.assertEqual([a['id'] for a in r['augen']][:15],
                          ['%02d' % n for n in range(1, 16)])
         self.assertTrue(r['brauen'])
-        self.assertEqual(len(r['brauenstile']), 21)
+        self.assertEqual(len(r['brauenstile']), 22)     # 21 + Kins eigenes Netz
         antwort = self.c.post('/api/character/genesis9-figur/amala/netz/',
                               data=json.dumps({
                                   'regler': {'Amala_figure_ctrl_Character': 1},

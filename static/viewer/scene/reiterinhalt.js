@@ -68,7 +68,8 @@ export class Reiterinhalt {
     };
 
     /** Was schon gebaut ist. Jeder Reiter wird genau einmal gefüllt. */
-    static _gebaut = new Set();
+    /** Reiter -> Versprechen seines Aufbaus (ein zweiter Aufruf wartet darauf). */
+    static _gebaut = new Map();
 
     /**
      * `?alleReiter=1` baut wieder alles beim Start — der alte Zustand.
@@ -91,11 +92,16 @@ export class Reiterinhalt {
      */
     static bauen(reiter) {
         const namen = Reiterinhalt.AUFBAUTEN[reiter];
-        if (!namen || Reiterinhalt._gebaut.has(reiter)) return Promise.resolve();
+        if (!namen) return Promise.resolve();
+        if (Reiterinhalt._gebaut.has(reiter)) return Reiterinhalt._gebaut.get(reiter);
         // VOR dem Bauen vermerken: Zwei Klicks kurz hintereinander wuerden
         // sonst zwei Laeufe ausloesen, und die haengen ihre Zuhoerer doppelt an.
-        Reiterinhalt._gebaut.add(reiter);
+        // Gemerkt wird das VERSPRECHEN (18.09.2026 nachts): wer nach dem Bau
+        // rollen will (`Reiterstand`), wartet darauf.
         const laeufe = [];
+        let melden;
+        const fertig = new Promise(resolve => { melden = resolve; });
+        Reiterinhalt._gebaut.set(reiter, fertig);
         for (const name of namen) {
             const aufruf = fn[name];
             if (typeof aufruf !== 'function') {
@@ -110,7 +116,9 @@ export class Reiterinhalt {
                 Protokoll.warnung('Reiter', `${name} fehlgeschlagen:`, fehler);
             }
         }
-        return Promise.allSettled(laeufe);
+        const alle = Promise.allSettled(laeufe);
+        alle.then(() => melden());
+        return alle;
     }
 
     /**

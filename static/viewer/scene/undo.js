@@ -10,6 +10,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Reiterstand } from './reiterstand.js';
 
 export const _undoStack = [];
 export const _redoStack = [];
@@ -75,11 +76,16 @@ async function _zurueckspielen(vonStapel, aufStapel, name) {
     if (_lastSnapshot) aufStapel.push(_lastSnapshot);
     const snap = vonStapel.pop();
     _undoSuppressed = true;
+    // Der Reiter faellt beim Leeren der Szene auf „Szene" zurueck
+    // (`Reiterfreigabe.AUSWEICH`) — Edgar, 18.09.2026: „bei Undo ist der
+    // ganze Tab geschlossen". Vorher merken, nach dem Waehlen zurueck.
+    const stand = Reiterstand.merken();
     try {
         await fn.loadSceneFromData(snap.data, snap.data.name || '');
         if (snap.selectedCharacterId && state.characters.has(snap.selectedCharacterId)) {
             fn.selectCharacter(snap.selectedCharacterId);
         }
+        await Reiterstand.herstellen(stand);
     } catch (e) { console.error(`[Scene ${name}] Restore failed:`, e); }
     _undoSuppressed = false;
     _undoInProgress = false;

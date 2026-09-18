@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Netzgeometrie } from './netzgeometrie.js';
 import { Genesis9strang } from './genesis9strang.js';
 import { Genesis9haut } from './genesis9haut.js';
+import { Genesis9texturen } from './genesis9texturen.js';
 import { base64ToFloat32 } from './kodierung.js';
 
 /**
@@ -23,16 +24,23 @@ import { base64ToFloat32 } from './kodierung.js';
  * dieselbe Erfahrung wie bei UMA (`umapythonnetz.js`).
  *
  * Gruppen OHNE Bilder (Augenfeuchte, Träne) werden als Glanzschicht
- * gezeichnet: durchsichtig, glatt. Gruppen mit `alpha` (Wimpern, Haare)
- * bekommen `alphaTest`, damit die Reihenfolge der Dreiecke nicht zählt.
+ * gezeichnet: durchsichtig, glatt. Gruppen mit `alpha` (Haare) bekommen
+ * `alphaTest`, damit die Reihenfolge der Dreiecke nicht zählt; BRAUEN und
+ * WIMPERN (`WEICH`) dagegen eine weiche Deckkraft ohne Tiefenschreiben —
+ * Daz' Cutout-Bild `OpacityCutout01_Thin` hat weiche Härchen, der Schnitt
+ * bei 0,3 ließ nur ihre Kerne stehen (Edgar, 18.09.2026: „ich sehe bei
+ * allen Genesis9 keine Augenbrauen"). Die Braue liegt auf opaker Haut, die
+ * Reihenfolge stimmt von selbst.
  * Stranghaar (`art: strang`, 17.09.2026) baut `Genesis9strang`. Gruppen
  * mit `schminke` (18.09.2026: Farbe, Gewicht, Rauheit vom Server
  * komponiert) bekommen die Mischung im Shader (`Genesis9haut.schminke`);
  * `detailnormalen` (die 8K, nur mit Strg+Alt+H) mischt `Genesis9haut.detail`.
+ * Die Bilder kommen aus einem Vorrat je Datei (`Genesis9texturen`, 18.09.2026
+ * abends): ein Neubau des Netzes lädt nichts zweimal.
  */
 export class Genesis9netz {
 
-    static ADRESSE = '/api/character/genesis9-figur/textur/';
+    static ADRESSE = Genesis9texturen.ADRESSE;
     /** Hautton, bis die Bilder da sind. */
     static HAUT = 0xd9b39c;
     /** Was ohne Bild eine Glanzschicht ist. */
@@ -53,9 +61,11 @@ export class Genesis9netz {
         }
         const material = daten.art === 'kappe'
             ? Genesis9strang.kappe(geo, daten.gruppen || [])
-            : Genesis9netz.materialien(geo, daten.gruppen || []);
+            : Genesis9netz.materialien(geo, daten.gruppen || [], daten.schluessel === 'brauen');
         const netz = new THREE.Mesh(geo, material);
         netz.name = name;
+        // Was Auswahl und Schwebeanzeige zeigen — sonst stünde dort `angie_jeans/0`.
+        if (daten.name) netz.userData.beschriftung = `${daten.name} (Genesis 9)`;
         netz.castShadow = true;
         netz.receiveShadow = true;
         // dForce-Kleidung: Freiheit und Lage des Käfigs für den Stoffschwung (`genesis9stoffschwung.js`).
@@ -66,18 +76,33 @@ export class Genesis9netz {
         return netz;
     }
 
-    /** Je Gruppe ein Material — oder eines für alles, wenn Gruppen fehlen. */
-    static materialien(geo, gruppen) {
+    /**
+     * Je Gruppe ein Material — oder eines für alles, wenn Gruppen fehlen.
+     * `brauen`: Faserbrauen (Gruppen ohne Bilder — Daz' `polygon_mesh`-Streifen,
+     * Ursulas Style 02, Kins Layer) matt und leicht durchscheinend, sonst
+     * stehen sie als glänzende schwarze Klötze im Gesicht (18.09.2026).
+     */
+    static materialien(geo, gruppen, brauen = false) {
         if (!gruppen.length) return Genesis9netz.haut();
         const liste = [];
         for (const gruppe of gruppen) {
             const material = Genesis9netz.material(gruppe);
+            if (brauen && !gruppe.bilder?.alpha) {
+                material.roughness = 0.95;
+                material.transparent = true;
+                material.opacity = 0.85;
+                material.depthWrite = false;
+                material.side = THREE.DoubleSide;
+            }
             geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, liste.length);
             liste.push(material);
             Genesis9netz.texturen(material, gruppe.bilder || {});
         }
         return liste;
     }
+
+    /** Gruppen mit weicher Deckkraft statt Alpha-Schnitt. */
+    static WEICH = ['Eyebrows', 'Eyelashes'];
 
     static material(gruppe) {
         const bilder = gruppe.bilder || {};
@@ -87,17 +112,30 @@ export class Genesis9netz {
                 transparent: true, opacity: 0.12, depthWrite: false,
             });
         }
-        // Klarlack/Metall der Schminke (`Genesis9/glanz.py`) brauchen Threes Physical-Material.
-        const material = Genesis9netz.haut(Boolean(bilder.schminke?.glanz));
+        // Klarlack/Metall der Schminke (`Genesis9/glanz.py`) und ein Glanzgewicht
+        // (Eirgrid Shine, 18.09.2026 abends) brauchen Threes Physical-Material.
+        const material = Genesis9netz.haut(Boolean(bilder.schminke?.glanz) || bilder.glanzgewicht != null);
         if (Genesis9netz.farbe(bilder)) material.color.copy(Genesis9netz.farbe(bilder));
+        // Glanz ohne Bild: Rauheit als Zahl (nur ohne Rauheitskarte), Glanzgewicht als
+        // `specularIntensity`, Metallgewicht als Faktor der Metallkarte.
+        if (Number.isFinite(bilder.rauheitwert) && !bilder.rauheit) material.roughness = bilder.rauheitwert;
+        if (Number.isFinite(bilder.glanzgewicht) && material.isMeshPhysicalMaterial) {
+            material.specularIntensity = bilder.glanzgewicht;
+        }
+        if (bilder.metall) material.metalness = Number.isFinite(bilder.metallgewicht) ? bilder.metallgewicht : 1;
         if (bilder.durchlicht) Genesis9haut.durchlicht(material, bilder.durchlicht);
         if (bilder.schminke) Genesis9haut.schminke(material);
         // 8K-Detailnormalen (nur mit Strg+Alt+H, `Genesis9/browserbilder.py`) über den Grundnormalen.
         if (bilder.detailnormalen && bilder.normalen) Genesis9haut.detail(material, bilder.detailgewicht);
         if (bilder.alpha) {
             material.transparent = true;
-            material.alphaTest = 0.3;
             material.side = THREE.DoubleSide;
+            if (Genesis9netz.WEICH.some(g => gruppe.name.startsWith(g))) {
+                material.alphaTest = 0.02;
+                material.depthWrite = false;
+            } else {
+                material.alphaTest = 0.3;
+            }
         }
         return material;
     }
@@ -120,23 +158,18 @@ export class Genesis9netz {
         return new Art({ color: Genesis9netz.HAUT, roughness: 0.6, metalness: 0 });
     }
 
-    /** Die Bilder einer Gruppe nachladen und einhängen. */
+    /** Die Bilder einer Gruppe aus dem Vorrat einhängen (sofort, wenn schon da). */
     static texturen(material, bilder) {
-        const lader = new THREE.TextureLoader();
-        const laden = (pfad, danach) => lader.load(
-            Genesis9netz.ADRESSE + pfad.split('/').map(encodeURIComponent).join('/'),
-            bild => { danach(bild); material.needsUpdate = true; },
-            undefined, () => {});
+        const laden = (pfad, danach, srgb = false) => Genesis9texturen.holen(pfad, srgb, material, danach);
         if (bilder.albedo) {
             laden(bilder.albedo, bild => {
-                bild.colorSpace = THREE.SRGBColorSpace;
                 material.map = bild;
                 // Daz rechnet Farbe × Bild: die Haut ist weiß, die braunen Brauen
                 // sind ein helles Bild mal Braun. Ohne Angabe wäre der Hautton
                 // ein Ton zu viel — dann weiß.
                 const farbe = Genesis9netz.farbe(bilder);
                 if (farbe) material.color.copy(farbe); else material.color.setHex(0xffffff);
-            });
+            }, true);
         }
         if (bilder.normalen) {
             laden(bilder.normalen, bild => {
@@ -161,9 +194,14 @@ export class Genesis9netz {
                 material.roughness = 1.0;
             });
         }
+        // Metallkarte (Ursula Facial Gloss): Three liest den Blaukanal — Graustufen passen.
+        if (bilder.metall) {
+            laden(bilder.metall, bild => { material.metalnessMap = bild; });
+        }
         for (const art of ['farbe', 'gewicht', 'rauheit', 'glanz', 'normalen']) {
             if (!bilder.schminke?.[art]) continue;
-            laden(bilder.schminke[art], bild => Genesis9haut.schminkeBilder(material, { [art]: bild }));
+            laden(bilder.schminke[art], bild => Genesis9haut.schminkeBilder(material, { [art]: bild }),
+                  art === 'farbe');
         }
         // Zahlen der Schminke: Top Coat Color/Bump, Modus der Glitzer-Normalen.
         if (bilder.schminke?.werte) Genesis9haut.glanzWerte(material, bilder.schminke.werte);

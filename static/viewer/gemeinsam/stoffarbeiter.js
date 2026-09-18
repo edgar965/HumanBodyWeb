@@ -14,15 +14,23 @@
  * Nachrichten:
  *   bauen  {kaefig (n·3), frei (n), kanten (E·2), indptr, indices, data,
  *           zeilen, hautIndex (n·4), hautGewicht (n·4), dreiecke (Browser)}
- *   bild   {M (Knochen·16), W (16), inv (16), kapseln (K·7), dt}
+ *   felder {felder: {kanal: {n, d}}}   die JCMs auf dem Käfig (`Stofffelder`)
+ *   bild   {M (Knochen·16), W (16), inv (16), kapseln (K·7), dt, werte}
  *           → punkte {pos (zeilen·3), nrm (zeilen·3)}   (übertragen, nicht kopiert)
+ *
+ * SEIT 18.09.2026 ABENDS: `werte` sind die Gelenkkorrekturen dieses Bildes
+ * (`Genesis9gelenke.werte`); mit den Käfigfeldern (`felder`) wird der
+ * Käfig VOR der Häutung verformt — das Simulationsnetz folgt Gesäß und
+ * Knie wie die `SkinnedMesh` im Stand.
  */
 import { Stoffpendel } from './stoffpendel.js';
+import { Stofffelder } from './stofffelder.js';
 
 class Stoffarbeiter {
 
     static pendel = null;
     static kaefig = null;
+    static felder = null;
     static ziel = null;
     static hautIndex = null;
     static hautGewicht = null;
@@ -32,6 +40,7 @@ class Stoffarbeiter {
 
     static bauen(d) {
         Stoffarbeiter.kaefig = d.kaefig;
+        Stoffarbeiter.felder = new Stofffelder(d.kaefig, Stoffarbeiter.felder?.felder || {});
         Stoffarbeiter.pendel = Stoffpendel.ausKanten(d.kaefig, d.kanten, d.frei);
         Stoffarbeiter.ziel = new Float32Array(d.kaefig.length);
         // Ganzzahlen als Index — Float32 als Feldindex kostet V8 je Zugriff eine Umwandlung.
@@ -43,9 +52,16 @@ class Stoffarbeiter {
         Stoffarbeiter.erstes = true;
     }
 
-    /** Käfig häuten (wie der Shader) → Welt. */
-    static haeuten(M, W) {
-        const { kaefig: pos, hautIndex: index, hautGewicht: gewicht, ziel } = Stoffarbeiter;
+    /** Die Käfigfelder der JCMs nachreichen (kommen asynchron). */
+    static feldsatz(d) {
+        if (Stoffarbeiter.felder) Stoffarbeiter.felder.setzen(d.felder);
+        else Stoffarbeiter.felder = new Stofffelder(new Float32Array(0), d.felder);
+    }
+
+    /** Käfig (mit den JCMs dieses Bildes) häuten wie der Shader → Welt. */
+    static haeuten(M, W, werte = null) {
+        const { hautIndex: index, hautGewicht: gewicht, ziel } = Stoffarbeiter;
+        const pos = Stoffarbeiter.felder ? Stoffarbeiter.felder.anwenden(werte) : Stoffarbeiter.kaefig;
         const n = pos.length / 3;
         for (let i = 0; i < n; i++) {
             const x = pos[3 * i], y = pos[3 * i + 1], z = pos[3 * i + 2];
@@ -69,7 +85,7 @@ class Stoffarbeiter {
         const { pendel, matrix, zeilen, dreiecke } = Stoffarbeiter;
         if (!pendel) return;
         const zeiten = {}, t0 = performance.now();
-        const ziel = Stoffarbeiter.haeuten(d.M, d.W);
+        const ziel = Stoffarbeiter.haeuten(d.M, d.W, d.werte);
         zeiten.haut = performance.now() - t0;
         if (Stoffarbeiter.erstes) { pendel.setzen(ziel); Stoffarbeiter.erstes = false; }
         const kapseln = [];
@@ -77,11 +93,9 @@ class Stoffarbeiter {
             kapseln.push({ a: [d.kapseln[k], d.kapseln[k + 1], d.kapseln[k + 2]],
                            b: [d.kapseln[k + 3], d.kapseln[k + 4], d.kapseln[k + 5]], r: d.kapseln[k + 6] });
         }
-        // Große Zeitschritte in zwei Teile — der Pendel deckelt bei MAX_DT.
-        const teile = d.dt > Stoffpendel.MAX_DT ? 2 : 1;
-        let x = null;
+        // Sprungschutz und Teilschritte: `Stoffpendel.bild`.
         let t1 = performance.now();
-        for (let t = 0; t < teile; t++) x = pendel.schritt(ziel, d.dt / teile, kapseln);
+        const { x, zurueckgesetzt } = pendel.bild(ziel, d.dt, kapseln);
         zeiten.schritt = performance.now() - t1; t1 = performance.now();
         // Browserpunkte = Matrix · Käfig (Welt), dann in den Raum des Anzeigenetzes.
         const pos = new Float32Array(zeilen * 3);
@@ -101,7 +115,7 @@ class Stoffarbeiter {
         const nrm = Stoffarbeiter.normalen(pos, dreiecke, zeilen);
         zeiten.normalen = performance.now() - t1;
         zeiten.gesamt = performance.now() - t0;
-        self.postMessage({ typ: 'punkte', pos, nrm, auslenkung: pendel.auslenkung(ziel), zeiten },
+        self.postMessage({ typ: 'punkte', pos, nrm, auslenkung: pendel.auslenkung(ziel), zeiten, zurueckgesetzt },
                          [pos.buffer, nrm.buffer]);
     }
 
@@ -128,5 +142,6 @@ class Stoffarbeiter {
 self.onmessage = (ereignis) => {
     const d = ereignis.data;
     if (d.typ === 'bauen') Stoffarbeiter.bauen(d);
+    else if (d.typ === 'felder') Stoffarbeiter.feldsatz(d);
     else if (d.typ === 'bild') Stoffarbeiter.bild(d);
 };

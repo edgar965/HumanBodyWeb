@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { base64ToFloat32 } from './kodierung.js';
+import { base64ToFloat32, base64ToUint16, base64ToBytes } from './kodierung.js';
 import { Protokoll } from './protokoll.js';
 
 /**
@@ -46,14 +46,13 @@ export class Eigenhaut {
         const spalte = Eigenhaut.spaltenNummern(haut.knochen, skelett);
         if (!spalte) return netz;
 
-        const roh = base64ToFloat32(haut.skin_indices);
+        const { index: roh, gewicht } = Eigenhaut.gewichte(haut);
         const index = new Float32Array(roh.length);
         for (let i = 0; i < roh.length; i++) index[i] = spalte[roh[i]] ?? 0;
 
         const geo = netz.geometry;
         geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(index, 4));
-        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(
-            base64ToFloat32(haut.skin_weights), 4));
+        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(gewicht, 4));
 
         const gebunden = new THREE.SkinnedMesh(geo, netz.material);
         gebunden.name = netz.name;
@@ -69,6 +68,27 @@ export class Eigenhaut {
         // nicht mehr moeglich, und das Stueck bleibt still starr.
         gebunden.userData = netz.userData;
         return gebunden;
+    }
+
+    /**
+     * Rohe Spalten und Gewichte einer Hautantwort — float32 (Vorgabe) oder
+     * kompakt `kodierung: 'u16u8'` (Genesis 9 seit 18.09.2026: uint16-Spalten,
+     * uint8-Gewichte × 1/255 — ein Viertel der Bytes auf 410.202 Punkten).
+     * @returns {{index: Float32Array|Uint16Array, gewicht: Float32Array}}
+     */
+    static gewichte(haut) {
+        if (haut?.kodierung === 'u16u8') {
+            const roh = base64ToBytes(haut.skin_weights);
+            const gewicht = new Float32Array(roh.length);
+            // Je Punkt auf Summe 1: Three normiert nicht, und 4 × 1/255 Rundung
+            // hiesse bis zu 0,4 % Skalierung je Punkt — die Haut sah gekräuselt aus.
+            for (let p = 0; p + 3 < roh.length; p += 4) {
+                const summe = (roh[p] + roh[p + 1] + roh[p + 2] + roh[p + 3]) || 255;
+                for (let k = 0; k < 4; k++) gewicht[p + k] = roh[p + k] / summe;
+            }
+            return { index: base64ToUint16(haut.skin_indices), gewicht };
+        }
+        return { index: base64ToFloat32(haut.skin_indices), gewicht: base64ToFloat32(haut.skin_weights) };
     }
 
     /**

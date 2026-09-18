@@ -9,8 +9,11 @@ In Node mit Attrappen für `document`, `window` und `location`:
 3. `istTaste`: Strg+Alt+H ja, ohne Strg / mit Shift / andere Taste nein.
 4. `naechste`: null → 3, 3 → null, 2 → 3.
 5. `einrichten` fängt die Taste in der Fangphase, setzt den Keks, zeigt das
-   Abzeichen mit „lädt neu" und lädt die Seite neu; andere Tasten tun nichts;
+   Abzeichen mit „lädt" und lädt die Seite neu; andere Tasten tun nichts;
    der zweite Druck löscht den Keks; ohne Keks verschwindet das Abzeichen.
+6. `umschalten(umbauen)` (18.09.2026 abends): liefert `umbauen` true, bleibt
+   die Seite stehen (kein `reload`, Abzeichen ohne „lädt"); liefert es false
+   oder wirft es, lädt die Seite neu wie bisher.
 
 Sabotage-Gegenprobe: `ereignis.code === TASTE` weg → Fall 3 rot.
 """
@@ -55,7 +58,7 @@ pruefe('andere taste', N.istTaste(taste({ code: 'KeyG' })), false);
 pruefe('naechste', [N.naechste(null), N.naechste(3), N.naechste(2)], [3, null, 3]);
 pruefe('text', N.text(3),
        'Netz: hohe Auflösung (3 Stufen) · Strg+Alt+H schaltet um');
-pruefe('text laedt', N.text(null, true), 'Netz: Einstellung — Seite lädt neu …');
+pruefe('text laedt', N.text(null, true), 'Netz: Einstellung — lädt …');
 
 const horcher = [];
 const fenster = {
@@ -74,7 +77,7 @@ druck({});
 pruefe('verhindert und gestoppt', [verhindert, gestoppt], [1, 1]);
 pruefe('keks gesetzt', document.cookie.startsWith('netzstufen=3; path=/;'), true);
 pruefe('abzeichen laedt', elemente[0].textContent,
-       'Netz: hohe Auflösung (3 Stufen) — Seite lädt neu …');
+       'Netz: hohe Auflösung (3 Stufen) — lädt …');
 pruefe('neu geladen', neugeladen, 1);
 
 document.cookie = 'netzstufen=3';
@@ -85,6 +88,19 @@ pruefe('zurueck: abzeichen', elemente[0].textContent, N.text(null, true));
 document.cookie = '';
 pruefe('ohne keks weg', N.abzeichen(), null);
 pruefe('entfernt', elemente[0].entfernt, true);
+
+// --- 6. Umbau ohne Neustart ---------------------------------------------
+document.cookie = '';
+let gebaut = [];
+const vorher = neugeladen;
+pruefe('umbau erledigt', await N.umschalten(async (s) => { gebaut.push(s); return true; }), false);
+pruefe('umbau gerufen mit 3', gebaut, [3]);
+pruefe('kein reload', neugeladen, vorher);
+pruefe('abzeichen ohne laedt', N.abzeichen().textContent, N.text(3));
+pruefe('umbau verweigert -> reload', await N.umschalten(async () => false), true);
+pruefe('reload gezaehlt', neugeladen, vorher + 1);
+pruefe('umbau wirft -> reload', await N.umschalten(async () => { throw new Error('x'); }), true);
+pruefe('reload gezaehlt 2', neugeladen, vorher + 2);
 console.log(JSON.stringify({ ok: true }));
 """
 

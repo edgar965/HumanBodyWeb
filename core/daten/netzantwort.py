@@ -79,7 +79,7 @@ class Netzantwort:
         return cls.feld(werte, name, cls.TYPEN_SMPLX.get(name, np.float32))
 
     @classmethod
-    def hautgewichte(cls, haut):
+    def hautgewichte(cls, haut, kompakt=False):
         """`{knochen, index, gewicht}` als `{knochen, skin_indices, skin_weights}`.
 
         Die Gewichte base64 mit den Breiten aus `TYPEN` — als JSON-Liste wären
@@ -87,9 +87,22 @@ class Netzantwort:
         Die Knochen stehen als NAMEN da: Ihre Nummer im `THREE.Skeleton`
         entscheidet erst der Bauplan. `None` bleibt `None` (Figur ohne Knochen).
         Stand in `Mhfigur` und `Smplfigur` gleich (Befund `doppelcode`, 17.09.2026).
+
+        `kompakt` (18.09.2026 nachts, Genesis 9): Indizes als uint16, Gewichte
+        als uint8 (× 255) mit `kodierung: 'u16u8'` — ein Viertel der Bytes.
+        Auf Stufe 2 (410.202 Punkte × 4 Einflüsse) waren es 17 MB base64 je
+        Reglerzug; `Eigenhaut.gewichte` im Browser liest beide Fassungen.
         """
         if not haut:
             return None
+        if kompakt:
+            gewicht = np.clip(np.rint(np.asarray(haut['gewicht'], dtype=np.float64)
+                                      * 255.0), 0, 255)
+            return {
+                'knochen': haut['knochen'], 'kodierung': 'u16u8',
+                'skin_indices': cls.feld(haut['index'], 'skin_indices', np.uint16),
+                'skin_weights': cls.feld(gewicht, 'skin_weights', np.uint8),
+            }
         return {
             'knochen': haut['knochen'],
             'skin_indices': cls.feld(haut['index'], 'skin_indices'),

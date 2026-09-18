@@ -5,6 +5,10 @@ u"""Reglerfelder von Genesis 9 fuer den Browser: Gelenkkorrekturen und Visemes.
         {stufen, graph: {kanaele, morphe, knochen}, achsen, felder}
     GET /api/character/genesis9-figur/felder/visemes/?stufen=1
         {stufen, visemes: [{id, name}], achsen, felder}
+    GET /api/character/genesis9-figur/garderobe/<kennung>/felder/gelenke/?stufen=1
+        {kennung, gruppe, stufen, teile: [{kanal: {n, d}}]}   (`G9stueckfelder`)
+    … ?kaefig=1   dieselben Felder auf Daz' Kaefigpunkten (`stufen: null`) —
+                  fuer den Stoff-Worker (18.09.2026 abends)
 
 `felder` = {koerper: {kanal: {n, d}}, anhaenge: {schluessel: {kanal: {n, d}}},
 knochen: {kanal: {knochen: {'rotation/x': Grad, …}}}} — `n` Punktnummern
@@ -17,6 +21,9 @@ Die Antwort haengt nur an der Stufe, nicht an der Figur oder ihren
 Reglern (die Unterteilung ist linear): der Browser holt sie einmal je
 Stufe fuer alle Genesis-9-Figuren (`gemeinsam/genesis9felder.js`).
 Gemessen (Stufe 1): 117 JCMs rund 7 s beim ersten Mal, danach Ablage.
+Die Stueckfelder (Auto-Follow der JCMs auf die Kleidung, 18.09.2026
+nachts) haengen am Stueck: je Teil ein Woerterbuch in der Reihenfolge
+von `garderobe/<kennung>/netz/` — leer fuer Props und Stranghaar.
 """
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
@@ -28,6 +35,7 @@ from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.reglerfelder import G9reglerfelder
 from Genesis9.skelett import G9skelett
+from Genesis9.stueckfelder import G9stueckfelder
 from Genesis9.visemes import G9visemes
 
 __all__ = ['G9felderapi']
@@ -62,6 +70,35 @@ class G9felderapi:
         })
 
     @staticmethod
+    @require_GET
+    def stueck(request, kennung, gruppe):
+        if not G9pfade.vorhanden():
+            return JsonResponse({'fehler': FEHLT}, status=404)
+        kanaele = G9felderapi.kanaele(gruppe)
+        if kanaele is None:
+            return JsonResponse({'fehler': 'Unbekannte Gruppe %s' % gruppe},
+                                status=404)
+        stufen = None if request.GET.get('kaefig') else G9felderapi.stufen(request)
+        try:
+            felder = G9stueckfelder.holen(gruppe, kanaele, kennung, stufen)
+        except ValueError as fehler:
+            return JsonResponse({'fehler': str(fehler)}, status=404)
+        return JsonResponse({
+            'kennung': kennung, 'gruppe': gruppe, 'stufen': stufen,
+            'teile': [{k: G9felderapi.paar(*v) for k, v in teil.items()}
+                      for teil in felder.teile],
+        })
+
+    @staticmethod
+    def kanaele(gruppe):
+        u"""Die Kanaele einer Gruppe — oder None."""
+        if gruppe == 'gelenke':
+            return G9gelenkkorrekturen.graph()['morphe']
+        if gruppe == 'visemes':
+            return G9visemes.kennungen()
+        return None
+
+    @staticmethod
     def stufen(request):
         try:
             return max(0, min(2, int(request.GET.get('stufen', G9netzstufe.browser()))))
@@ -76,10 +113,13 @@ class G9felderapi:
                 for k in G9skelett.roh()}
 
     @staticmethod
+    def paar(nummern, deltas):
+        return {'n': Netzantwort.feld(nummern, 'n', typ='uint32'),
+                'd': Netzantwort.feld(deltas, 'd'), 'anzahl': int(len(nummern))}
+
+    @staticmethod
     def kodiert(felder):
-        def paar(nummern, deltas):
-            return {'n': Netzantwort.feld(nummern, 'n', typ='uint32'),
-                    'd': Netzantwort.feld(deltas, 'd'), 'anzahl': int(len(nummern))}
+        paar = G9felderapi.paar
         return {
             'koerper': {k: paar(*v) for k, v in felder.koerper.items()},
             'anhaenge': {s: {k: paar(*v) for k, v in kanaele.items()}

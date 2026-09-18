@@ -34,6 +34,14 @@ export class Stoffpendel {
     static DURCHGAENGE = 4;
     static ABSTAND = 0.006;
     static MAX_DT = 1 / 30;
+    /** Ab dieser Bildzeit (Sekunden) gilt das Bild als Sprung: die Figur ist
+     *  weitergesprungen, der Stoff wird auf die gehäutete Lage gesetzt statt
+     *  gezogen — sonst zerreißen die Kanten (Edgar, 18.09.2026: das Kleid
+     *  hing in Fetzen, das Haar schwebte neben der Figur; Ladezeiten von
+     *  Sekunden je Bild bei hoher Auflösung). */
+    static SPRUNG_DT = 0.25;
+    /** Ab dieser Auslenkung (Meter) ist die Simulation entgleist: zurück auf die Lage. */
+    static ENTGLEIST_M = 0.5;
     static G = [0, -1, 0];
 
     /**
@@ -79,9 +87,24 @@ export class Stoffpendel {
         return new Stoffpendel(ruhe, frei, { a, b, l });
     }
 
-    /** Zustand auf die gehäutete Lage setzen (Start, Stopp). */
+    /** Zustand auf die gehäutete Lage setzen (Start, Stopp, Sprung). */
     setzen(ziel) {
         this.x.set(ziel); this.xAlt.set(ziel);
+    }
+
+    /**
+     * Ein Bild — mit Sprungschutz: ein Bild über `SPRUNG_DT` oder eine
+     * Auslenkung über `ENTGLEIST_M` setzt auf die gehäutete Lage; sonst
+     * höchstens zwei Teilschritte (der Schritt selbst deckelt bei `MAX_DT`).
+     * @returns {{x: Float32Array, zurueckgesetzt: boolean}}
+     */
+    bild(ziel, dt, kapseln = [], werte = Stoffpendel) {
+        if (!(dt >= 0) || dt > werte.SPRUNG_DT) { this.setzen(ziel); return { x: this.x, zurueckgesetzt: true }; }
+        const teile = dt > werte.MAX_DT ? 2 : 1;
+        let x = this.x;
+        for (let t = 0; t < teile; t++) x = this.schritt(ziel, dt / teile, kapseln, werte);
+        if (this.auslenkung(ziel) > werte.ENTGLEIST_M) { this.setzen(ziel); return { x: this.x, zurueckgesetzt: true }; }
+        return { x, zurueckgesetzt: false };
     }
 
     /**

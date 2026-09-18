@@ -8,6 +8,7 @@ import { Startmessung } from '../gemeinsam/startmessung.js';
 import { szenenteile } from './szenenteile.js';
 import { Szenenzustand } from './szenenzustand.js';
 import { Figurarten } from './figurarten.js';
+import { Reiterstand } from './reiterstand.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -17,6 +18,12 @@ export function saveSessionState() {
         if (!fn.gatherSceneState) return;
         const sceneData = fn.gatherSceneState();
         sceneData._defaultPresetSnapshot = state.defaultPresetName;
+        // Die gewählte Figur (Edgar, 18.09.2026: „merke dir die letzte Auswahl /
+        // den letzten Tab links, und mach den auf beim nächsten Laden"): ohne
+        // Auswahl bleiben die Figur-Reiter gesperrt, und das Reitergedächtnis
+        // konnte den letzten Reiter nicht öffnen.
+        sceneData._ausgewaehlt = state.selectedCharacterId || null;
+        sceneData._reiterstand = Reiterstand.merken();
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(sceneData));
     } catch (e) {
         Protokoll.warnung('session', 'Failed to save session state:', e);
@@ -82,6 +89,16 @@ export async function restoreSessionState() {
         szenenteile('session').uebernehmen(data);
 
         Szenenzustand.oberflaecheAngleichen();
+        // Die letzte Auswahl wieder setzen — VOR dem Reitergedächtnis
+        // (`Szenenaufbau._reitergedaechtnis`), das den Reiter nur öffnet,
+        // wenn er frei ist.
+        if (data._ausgewaehlt && state.characters.has(data._ausgewaehlt)) {
+            fn.selectCharacter?.(data._ausgewaehlt);
+        }
+        // Reiter und Rollstellung — NACH dem Waehlen (die Figur-Reiter sind
+        // sonst gesperrt); `Szenenaufbau._reitergedaechtnis` nimmt danach nur
+        // noch den letzten Reiter aus dem localStorage, wenn die Sitzung keinen hat.
+        if (data._reiterstand) Reiterstand.herstellen(data._reiterstand);
         return true;
     } catch (e) {
         console.error('Failed to restore session state:', e);

@@ -6,6 +6,7 @@ import { Szenenbuehne } from './szenenbuehne.js';
 import { Szenenschleife } from './szenenschleife.js';
 import { Starteinstellungen } from './starteinstellungen.js';
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
+import { Reiterstand } from './reiterstand.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -125,10 +126,22 @@ export class Szenenaufbau {
         // Hautfarben, fuer `Charakterkoerper.hautfarbe`. Skelett und
         // Gewichte braucht erst das ZUBEHOER; es wartet in
         // `CharacterInstance.load` auf `state.grunddatenBereit`.
-        const grunddaten = M.umAsync('  Haarfarben, Skelett, Gewichte', () =>
-            Promise.all([this._haarfarben(), fn.loadRigifySkeleton(),
-                         fn.loadSkinWeights()]));
-        state.grunddatenBereit = grunddaten;
+        //
+        // ERST BEI BEDARF (18.09.2026 nachts, Edgar: „ein refresh dauert noch
+        // immer mehr als 10 s"): Skelett und Gewichte gehoeren zur HumanBody-
+        // Figur. Eine Szene nur mit Genesis-9-Figuren holte sie trotzdem — mit
+        // Strg+Alt+H (Stufe 3) 1,1 Mio. Punkte, gemessen 14,7 s Serverzeit,
+        // die jede andere Anfrage aufhielt. Das Versprechen entsteht jetzt
+        // beim ersten Lesen von `state.grunddatenBereit` (`CharacterInstance.
+        // bauen`), also erst mit einer HumanBody-Figur.
+        M.umAsync('  Haarfarben', () => this._haarfarben());
+        let grunddaten = null;
+        Object.defineProperty(state, 'grunddatenBereit', {
+            configurable: true, enumerable: true,
+            get: () => grunddaten ??= M.umAsync('  Skelett, Gewichte', () =>
+                Promise.all([fn.loadRigifySkeleton(), fn.loadSkinWeights()])),
+            set: (wert) => { grunddaten = wert; },
+        });
         await M.umAsync('  Hautfarben', () => this._hautfarben());
         const hatSitzung = !!sessionStorage.getItem(SESSION_KEY);
         if (hatSitzung) {
@@ -166,7 +179,11 @@ export class Szenenaufbau {
     _reitergedaechtnis() {
         const gesetzt = Reitergedaechtnis.starten();
         const reiter = Reitergedaechtnis.letzterReiter();
-        if (reiter && Reiterfreigabe.frei(reiter)) fn.switchTab?.(reiter);
+        // Die Sitzung (F5) bringt Reiter UND Rollstellung selbst mit
+        // (`session.js`, `Reiterstand`); dann nicht noch einmal umschalten.
+        if (reiter && Reiterfreigabe.frei(reiter) && !Reiterstand.hergestellt) {
+            fn.switchTab?.(reiter);
+        }
         Protokoll.debug('Reiter', `${gesetzt} Einstellungen wiederhergestellt`,
                         reiter ? `zuletzt offen: ${reiter}` : '');
     }

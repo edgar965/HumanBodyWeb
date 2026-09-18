@@ -13,6 +13,14 @@
  * Hautgewichte und alles, was an Punktnummern hängt — ein Umbau im laufenden
  * Zustand hiesse, jeden dieser Wege einzeln nachzuziehen.
  *
+ * AUSNAHME (18.09.2026 abends, Edgar: „volle Auflösung immer noch mehr als
+ * 5 s"): Eine Seite darf mit `einrichten(fenster, umbauen)` einen Umbau im
+ * laufenden Zustand anbieten. Liefert `umbauen(stufe)` true, bleibt die
+ * Seite stehen — die Szene tut das, wenn NUR Genesis-9-Figuren darin
+ * stehen (`Genesis9aufbau.umschalten`: dieselbe Stellung in der neuen Stufe,
+ * Texturen aus dem Vorrat). Sonst der Neustart wie bisher, denn die
+ * HumanBody-Figur hängt an ihren Punktnummern.
+ *
  * Solange der Keks steht, zeigt ein Abzeichen unten rechts die Stufe, damit
  * niemand „langsam" meldet, ohne zu wissen, warum.
  */
@@ -54,11 +62,17 @@ export class Netzstufe {
         return bisher === Netzstufe.HOCH ? null : Netzstufe.HOCH;
     }
 
-    static umschalten() {
+    static async umschalten(umbauen = null) {
         const neu = Netzstufe.naechste(Netzstufe.gewaehlt());
         Netzstufe.setzen(neu);
         Netzstufe.abzeichen(neu, true);
+        if (umbauen) {
+            let fertig = false;
+            try { fertig = await umbauen(neu); } catch (fehler) { console.warn('[Netzstufe]', fehler); }
+            if (fertig) { Netzstufe.abzeichen(neu); return false; }
+        }
         location.reload();
+        return true;
     }
 
     /**
@@ -86,16 +100,19 @@ export class Netzstufe {
     static text(stufe, laedt = false) {
         const was = stufe === null
             ? 'Netz: Einstellung' : `Netz: hohe Auflösung (${stufe} Stufen)`;
-        return laedt ? `${was} — Seite lädt neu …` : `${was} · Strg+Alt+H schaltet um`;
+        return laedt ? `${was} — lädt …` : `${was} · Strg+Alt+H schaltet um`;
     }
 
-    /** Auf jeder Figurseite einmal rufen: Taste anbinden, Abzeichen zeigen. */
-    static einrichten(fenster = window) {
+    /**
+     * Auf jeder Figurseite einmal rufen: Taste anbinden, Abzeichen zeigen.
+     * `umbauen(stufe)` (optional): Umbau ohne Neustart — true, wenn erledigt.
+     */
+    static einrichten(fenster = window, umbauen = null) {
         fenster.addEventListener('keydown', ereignis => {
             if (!Netzstufe.istTaste(ereignis)) return;
             ereignis.preventDefault();
             ereignis.stopImmediatePropagation();
-            Netzstufe.umschalten();
+            Netzstufe.umschalten(umbauen);
         }, true);
         Netzstufe.abzeichen();
     }

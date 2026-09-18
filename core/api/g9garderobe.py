@@ -28,6 +28,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .g9figur import G9figur, FEHLT
+from ..dienste.g9antworten import G9antworten
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.material import G9material
@@ -48,7 +49,9 @@ class G9garderobeapi:
     def garderobe(request):
         if not G9pfade.vorhanden():
             return JsonResponse({'stuecke': [], 'anzahl': 0, 'fehler': FEHLT})
-        stuecke = G9garderobe.liste()
+        from .g9vorschau import G9vorschau
+        stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s))
+                   for s in G9garderobe.liste()]
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
 
     @staticmethod
@@ -64,8 +67,15 @@ class G9garderobeapi:
         if not G9pfade.vorhanden():
             return JsonResponse({'fehler': FEHLT}, status=404)
         rumpf = G9figur._rumpf(request)
-        formung = G9figur.formung(rumpf, {})
         eintrag = G9garderobe.eintrag(kennung) or {}
+        return G9antworten.liefern(
+            'kleid', kennung, rumpf,
+            lambda: G9garderobeapi._kleid(kennung, eintrag, rumpf), eintrag=eintrag)
+
+    @staticmethod
+    def _kleid(kennung, eintrag, rumpf):
+        u"""Das Antwort-Dict eines Stuecks — oder eine Fehlerantwort."""
+        formung = G9figur.formung(rumpf, {})
         # Ein Genesis-8-Schuh mit Fusspose: der Fuss der Figur stellt sich, der
         # Schuh bleibt in seiner (schon getragenen) Ruhelage (`G9autofit`).
         stueckformung = (G9figur.formung(rumpf, {}, ohne_griff=kennung)
@@ -103,8 +113,8 @@ class G9garderobeapi:
             teil['stufen'] = netz['stufen']
             teil['knochen'] = lage.knochen if lage is not None else None
             antwort_teile.append(teil)
-        return JsonResponse({'kennung': kennung, 'teile': antwort_teile,
-                             'boden': round(hoch[1], 4), 'stufen': stufen})
+        return {'kennung': kennung, 'teile': antwort_teile,
+                'boden': round(hoch[1], 4), 'stufen': stufen}
 
     # -------------------------------------------------------------- Texturen
 
@@ -124,8 +134,11 @@ class G9garderobeapi:
     @staticmethod
     @require_GET
     def posen(request):
-        u"""`{posen: [{gruppe, eintraege}], ausdruecke: [...]}` (`G9posen`)."""
+        u"""`{posen: [{gruppe, eintraege}], ausdruecke: [...], formen: [...]}`
+        (`G9posen`; `formen` = Formpresets mit ihren Reglern, 18.09.2026)."""
         if not G9pfade.vorhanden():
-            return JsonResponse({'posen': [], 'ausdruecke': [], 'fehler': FEHLT})
+            return JsonResponse({'posen': [], 'ausdruecke': [], 'formen': [],
+                                 'fehler': FEHLT})
         return JsonResponse({'posen': G9posen.liste('pose'),
-                             'ausdruecke': G9posen.liste('ausdruck')})
+                             'ausdruecke': G9posen.liste('ausdruck'),
+                             'formen': G9posen.liste('form')})

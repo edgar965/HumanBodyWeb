@@ -85,8 +85,15 @@ export function float32ToBase64(f32) { return pufferZuBase64(f32); }
 /** Uint32Array -> base64 (Dreiecksindizes). */
 export function uint32ToBase64(u32) { return pufferZuBase64(u32); }
 
-/** base64 -> Uint8Array. Die eine Stelle, an der dekodiert wird. */
-function base64ToBytes(b64) {
+/**
+ * base64 -> Uint8Array. Die eine Stelle, an der dekodiert wird (auch fuer uint8-Gewichte).
+ *
+ * `Uint8Array.fromBase64` (Chrome 140+) statt `atob` + Schleife: gemessen an 42 MB
+ * (Ursula Stufe 2) 83 ms gegen 955 ms — die Schleife war der groesste Posten
+ * des Browsers je Netzbau (18.09.2026 nachts). Ohne die Funktion der alte Weg.
+ */
+export function base64ToBytes(b64) {
+    if (typeof Uint8Array.fromBase64 === 'function') return Uint8Array.fromBase64(b64);
     const binaer = atob(b64);
     const bytes = new Uint8Array(binaer.length);
     for (let i = 0; i < binaer.length; i++) bytes[i] = binaer.charCodeAt(i);

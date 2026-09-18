@@ -42,7 +42,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from ..daten.anfragerumpf import Anfragerumpf
-from ..daten.netzantwort import Netzantwort
+from ..dienste.g9antworten import G9antworten
+from .g9netzantwort import G9netzantwort
 from ..dienste.modellkatalog import Modellkatalog
 from Genesis9.brauen import G9brauen
 from Genesis9.charaktere import G9charaktere
@@ -154,6 +155,15 @@ class G9figur:
             return JsonResponse({'fehler': u'Unbekannte Genesis-9-Figur'},
                                 status=404)
         rumpf = G9figur._rumpf(request)
+        # Fertige Antworten je Stellung, Strg+Alt+H-Stufe vorausgerechnet
+        # (`G9antworten`, 18.09.2026 nachts).
+        return G9antworten.liefern(
+            'koerper', name, rumpf, lambda: G9figur._koerper(name, eintrag, rumpf),
+            eintrag=eintrag)
+
+    @staticmethod
+    def _koerper(name, eintrag, rumpf):
+        u"""Das Antwort-Dict des Koerpers — oder eine Fehlerantwort."""
         # Ohne Angabe im Rumpf gelten Haut, Augen und Brauen des Eintrags —
         # bei einem gespeicherten Modell die gespeicherten.
         haut = G9figur._name(rumpf.get('haut')) or G9figur._name(
@@ -184,33 +194,14 @@ class G9figur:
             'browserpunkte': netz['browserpunkte'], 'stufen': netz['stufen'],
             'morphwerte': netz['morphwerte'],
             'hdkanaele': netz.get('hdkanaele') or [],
+            'gelenkregler': netz.get('gelenkregler') or {},
             'anhaenge': [dict(G9figur._netzantwort(a), schluessel=a['schluessel'],
                               name=a['name']) for a in netz['anhaenge']],
         })
-        return JsonResponse(antwort)
-
-    @staticmethod
-    def _netzantwort(netz):
-        u"""Punkte, Dreiecke, Normalen, UV, Gruppen, Haut — base64 mit Breiten."""
-        antwort = Netzantwort.aus(netz['punkte'], faces=netz['dreiecke'],
-                                  normals=netz['normalen'], uvs=netz['uv'])
-        antwort['gruppen'] = netz['gruppen']
-        antwort['hautgewichte'] = Netzantwort.hautgewichte(netz.get('haut'))
-        if netz.get('dicke') is not None:
-            # Duenne 0..1 je Punkt — das Durchlicht der Haut (`G9dicke`).
-            antwort['dicke'] = Netzantwort.feld(netz['dicke'], 'dicke')
-        if netz.get('stoff') is not None:
-            # dForce-Kleidung (`G9stoff`): Freiheit 0..1 und Lage je Kaefigpunkt.
-            antwort['stoff'] = {'frei': Netzantwort.feld(netz['stoff']['frei'], 'frei'),
-                                'kaefig': Netzantwort.feld(netz['stoff']['kaefig'],
-                                                           'kaefig')}
-        if netz.get('art'):
-            # Stranghaar: Linien statt Flaechen, `anteil` 0 (Wurzel) .. 1 (Spitze);
-            # `kappe`: die Haarkappe darunter, unbeleuchtet.
-            antwort['art'] = netz['art']
-            if netz.get('anteil') is not None:
-                antwort['anteil'] = Netzantwort.feld(netz['anteil'], 'anteil')
         return antwort
+
+    #: Netz -> Antwort-Dict (`G9netzantwort`, ausgelagert 18.09.2026 nachts).
+    _netzantwort = staticmethod(G9netzantwort.aus)
 
     @staticmethod
     def formung(rumpf, eintrag, ohne_griff=None):

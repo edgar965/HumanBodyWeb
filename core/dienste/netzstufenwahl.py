@@ -20,6 +20,13 @@ Nachrichten laufen nicht im Kontext dieser Middleware.
 Die Kontextvariable wird im `finally` zurückgesetzt — unter Daphne laufen
 die synchronen Ansichten in EINEM Faden, ein hängen gebliebener Wert gälte
 sonst für die nächste Anfrage eines anderen Browsers.
+
+PROGRESSIVES LADEN (18.09.2026 nachts, Edgar: „erst mit geringer Auflösung,
+dann asynchron mit höherer. ich möchte sofort das modell sehen"): Eine
+Anfrage darf ihre Stufe selbst nennen (`?stufen=0` … `3`) — der Browser holt
+die Genesis-Figur erst als Käfig (Stufe 0) und dann mit der gewählten
+Stufe nach (`gemeinsam/genesis9aufbau.js`). Die Anfrage schlägt den Keks;
+0 heißt Käfig (nur Genesis 9 unterscheidet 0 von 1).
 """
 import contextvars
 
@@ -31,6 +38,7 @@ class Netzstufenwahl:
 
     KEKS = 'netzstufen'
     MINI, MAXI = 1, 3
+    ANFRAGE = 'stufen'
 
     _gewaehlt = contextvars.ContextVar('netzstufen', default=None)
 
@@ -38,7 +46,10 @@ class Netzstufenwahl:
         self.get_response = get_response
 
     def __call__(self, request):
-        marke = self._gewaehlt.set(self.aus_cookies(request.COOKIES))
+        gewaehlt = self.aus_anfrage(request.GET)
+        if gewaehlt is None:
+            gewaehlt = self.aus_cookies(request.COOKIES)
+        marke = self._gewaehlt.set(gewaehlt)
         try:
             return self.get_response(request)
         finally:
@@ -52,6 +63,15 @@ class Netzstufenwahl:
         except (TypeError, ValueError):
             return None
         return wert if cls.MINI <= wert <= cls.MAXI else None
+
+    @classmethod
+    def aus_anfrage(cls, get):
+        u"""0–3 aus `?stufen=`, sonst None."""
+        try:
+            wert = int((get or {}).get(cls.ANFRAGE, ''))
+        except (TypeError, ValueError):
+            return None
+        return wert if 0 <= wert <= cls.MAXI else None
 
     @classmethod
     def gewaehlt(cls):

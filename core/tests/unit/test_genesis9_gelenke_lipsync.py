@@ -253,9 +253,11 @@ class Bewegungen(SimpleTestCase):
         for defname, g9 in DEF_ZU_G9.items():
             self.assertEqual(zu[g9], defname)
         self.assertIsNone(zu['pelvis'])
-        # Auf Genesis 9 selbst: keine Richtungskorrektur, gleiches Skelett.
+        # Auf Genesis 9 selbst: keine Richtungskorrektur, gleiches Skelett —
+        # auch fuer die Zehen (`DIREKT`, 18.09.2026 abends).
         self.assertEqual(sorted(G9zuordnung.ausnahmen(SkeletonGenesis9)),
-                         sorted(v for v in DEF_ZU_G9.values() if v))
+                         sorted([v for v in DEF_ZU_G9.values() if v]
+                                + list(SkeletonGenesis9.DIREKT)))
         self.assertEqual(G9zuordnung.ausnahmen(Skeleton.get_format('CMU')), [])
 
 

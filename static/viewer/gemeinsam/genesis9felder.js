@@ -1,6 +1,7 @@
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
 import { base64ToFloat32, base64ToUint32 } from './kodierung.js';
+import { Genesis9normalen } from './genesis9normalen.js';
 
 /**
  * Genesis9felder — dünne Verschiebungsfelder je Regler auf den Browserpunkten
@@ -18,19 +19,23 @@ import { base64ToFloat32, base64ToUint32 } from './kodierung.js';
  * Geschrieben werden nur die Punkte, die jetzt oder beim letzten Mal bewegt
  * waren (`berührt`, wie `Mimikfelder.anwenden` für SMPL-X). Die Ruhelage ist
  * eine Kopie am Netz (`userData.felder`); die Häutung läuft danach auf der
- * GPU wie immer. Die Normalen bleiben die der Ruhelage — die Deltas liegen
- * im Millimeterbereich (JCM Oberschenkel bis 2 cm), ein voller
- * `computeVertexNormals` kostete auf 104.480 Punkten 40 ms je Bild.
+ * GPU wie immer. Die Normalen der berührten Punkte zieht `Genesis9normalen`
+ * nach (18.09.2026 abends: über die Nahtkopien hinweg, als Differenz zur
+ * Ruhe — ein voller `computeVertexNormals` kostete 40 ms je Bild).
  *
  * Ein Feldsatz gilt für ALLE Genesis-9-Figuren einer Stufe (die Unterteilung
  * ist linear; `Genesis9/reglerfelder.py`), darum je Gruppe und Stufe einmal
- * geladen. Zwei Gruppen dürfen dasselbe Netz beschreiben (JCMs und Visemes):
+ * geladen. Die Kleidung hat je Stück ihre eigenen Felder (`holenStueck`,
+ * `Genesis9/stueckfelder.py` — Daz' Auto-Follow, 18.09.2026 nachts): je Teil
+ * eines Stücks ein Wörterbuch, in der Reihenfolge von `clothMeshes[kennung/n]`.
+ * Zwei Gruppen dürfen dasselbe Netz beschreiben (JCMs und Visemes):
  * jede führt ihre eigene Berührt-Liste, und beide addieren auf die Ruhelage —
  * dafür summiert `anwenden` die Felder ALLER Gruppen, die am Netz gemerkt sind.
  */
 export class Genesis9felder {
 
-    static ADRESSE = '/api/character/genesis9-figur/felder/';
+    static WURZEL = '/api/character/genesis9-figur/';
+    static ADRESSE = `${Genesis9felder.WURZEL}felder/`;
     static _lader = new Map();              // `${gruppe}/${stufen}` -> Promise
 
     /** Die Felder einer Gruppe (`gelenke`, `visemes`) auf einer Stufe — einmal geholt. */
@@ -50,17 +55,48 @@ export class Genesis9felder {
         return lader;
     }
 
+    /**
+     * Die Felder eines Kleidungsstücks: `[{kanal: {n, d}}]` je Teil — einmal
+     * geholt, null bei Fehler. `stufen = 'kaefig'`: auf Daz' Käfigpunkten
+     * (für den Stoff-Worker, 18.09.2026 abends).
+     */
+    static holenStueck(gruppe, kennung, stufen) {
+        const schluessel = `${gruppe}/${stufen}/stueck/${kennung}`;
+        let lader = Genesis9felder._lader.get(schluessel);
+        if (!lader) {
+            const wahl = stufen === 'kaefig' ? 'kaefig=1' : `stufen=${stufen}`;
+            const adresse = `${Genesis9felder.WURZEL}garderobe/${
+                encodeURIComponent(kennung)}/felder/${gruppe}/?${wahl}`;
+            lader = Serverabruf.json(adresse)
+                .then(daten => (!daten || daten.fehler) ? null
+                    : (daten.teile || []).map(teil => Genesis9felder._kanaele(teil)))
+                .catch(fehler => {
+                    Protokoll.warnung('Genesis 9', `Stückfelder ${kennung} nicht ladbar:`, fehler);
+                    Genesis9felder._lader.delete(schluessel);
+                    return null;
+                });
+            Genesis9felder._lader.set(schluessel, lader);
+        }
+        return lader;
+    }
+
+    /** `{kanal: {n, d}}` einer Antwort — base64 zu Typed Arrays. */
+    static _kanaele(kanaele) {
+        const aus = {};
+        for (const [kanal, e] of Object.entries(kanaele || {})) {
+            aus[kanal] = { n: base64ToUint32(e.n), d: base64ToFloat32(e.d) };
+        }
+        return aus;
+    }
+
     /** Das Wörterbuch einer Antwort — base64 zu Typed Arrays. */
     static dekodieren(daten) {
         if (!daten || daten.fehler) return null;
-        const feld = e => ({ n: base64ToUint32(e.n), d: base64ToFloat32(e.d) });
         const felder = daten.felder || {};
-        const koerper = {};
-        for (const [kanal, e] of Object.entries(felder.koerper || {})) koerper[kanal] = feld(e);
+        const koerper = Genesis9felder._kanaele(felder.koerper);
         const anhaenge = {};
         for (const [schluessel, kanaele] of Object.entries(felder.anhaenge || {})) {
-            anhaenge[schluessel] = {};
-            for (const [kanal, e] of Object.entries(kanaele)) anhaenge[schluessel][kanal] = feld(e);
+            anhaenge[schluessel] = Genesis9felder._kanaele(kanaele);
         }
         return {
             stufen: daten.stufen, achsen: daten.achsen || {}, graph: daten.graph || null,
@@ -83,7 +119,7 @@ export class Genesis9felder {
         const alt = stand.gruppen.get(gruppe);
         if (alt && alt.kennung === kennung) return false;
         stand.gruppen.set(gruppe, { felder, gewichte, kennung });
-        Genesis9felder._schreiben(lage, stand);
+        Genesis9felder._schreiben(netz.geometry, stand);
         return true;
     }
 
@@ -92,12 +128,16 @@ export class Genesis9felder {
         const stand = netz?.geometry?.userData?.felder;
         if (!stand || !stand.gruppen.has(gruppe)) return;
         stand.gruppen.delete(gruppe);
-        Genesis9felder._schreiben(netz.geometry.getAttribute('position'), stand);
+        Genesis9felder._schreiben(netz.geometry, stand);
     }
 
-    static _schreiben(lage, stand) {
+    static _schreiben(geo, stand) {
+        const lage = geo.getAttribute('position');
         const a = lage.array, ruhe = stand.ruhe, marke = stand.marke;
-        // Zuerst alle zuletzt berührten Punkte zurück in die Ruhe.
+        // Die zuletzt berührten Punkte merken (ihre Normalen gehen zurück auf die Ruhe) …
+        stand.vorher.set(stand.beruehrt.subarray(0, stand.anzahl));
+        stand.vorherAnzahl = stand.anzahl;
+        // … und zuerst alle zuletzt berührten Punkte zurück in die Ruhe.
         for (let j = 0; j < stand.anzahl; j++) {
             const p = stand.beruehrt[j] * 3;
             a[p] = ruhe[p]; a[p + 1] = ruhe[p + 1]; a[p + 2] = ruhe[p + 2];
@@ -121,6 +161,8 @@ export class Genesis9felder {
             }
         }
         lage.needsUpdate = true;
+        Genesis9normalen.nachziehen(geo, stand.beruehrt, stand.anzahl, stand.vorher,
+                                    stand.vorherAnzahl, ruhe);
     }
 
     /** Ruhelage, Marken und Berührt-Liste am Netz (einmal angelegt). */
@@ -133,6 +175,8 @@ export class Genesis9felder {
                 marke: new Uint8Array(lage.count),
                 beruehrt: new Uint32Array(lage.count),
                 anzahl: 0,
+                vorher: new Uint32Array(lage.count),
+                vorherAnzahl: 0,
                 gruppen: new Map(),
             };
         }

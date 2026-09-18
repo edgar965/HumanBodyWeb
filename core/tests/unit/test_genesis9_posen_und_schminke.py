@@ -266,8 +266,9 @@ class Genesis9BrauenUndHautwahl(SimpleTestCase):
 
     def test_10_brauenstil_kennung(self):
         self.assertEqual(G9brauen.stil('fiber03'), ('fiber', '03'))
-        self.assertEqual(G9brauen.stil('quatsch'), ('card', '01'))
-        self.assertEqual(G9brauen.stil(None), ('card', '01'))
+        # Vorgabe seit 18.09.2026 nachts: Daz' Post-Load laedt Style 06.
+        self.assertEqual(G9brauen.stil('quatsch'), ('card', '06'))
+        self.assertEqual(G9brauen.stil(None), ('card', '06'))
 
     def test_11_hautwahl_klassen(self):
         haut = {g: {'albedo': 'x'} for g in ('Head', 'Body', 'Arms', 'Legs')}

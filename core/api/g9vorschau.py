@@ -2,6 +2,8 @@
 u"""Vorschaubilder der Genesis-9-Garderobe (Daz' `<Name>.png` neben der `.duf`).
 
     GET /api/character/genesis9-figur/garderobe/<kennung>/vorschau/   PNG oder 404
+    …/vorschau/?variante=<id>   das Bild der Farbvariante (18.09.2026 nachts,
+                                Edgar: „in der Combo box die Farben / icons")
 
 Edgar, 18.09.2026: „bei den Assets / Haaren mach auch ein Icon in dem Tab
 (so wie bei den MakeHuman assets)". Die Bilder liegen in der Daz-Bibliothek
@@ -32,7 +34,26 @@ class G9vorschau:
         eintrag = G9garderobe.eintrag(kennung)
         if eintrag is None:
             return HttpResponseNotFound('Unbekanntes Stück')
-        pfad = G9garderobeeintrag.vorschaudatei(G9garderobe.datei(eintrag))
+        datei = G9garderobe.datei(eintrag)
+        variante = request.GET.get('variante') or ''
+        if variante:
+            treffer = [v for v in eintrag.get('varianten') or [] if v['id'] == variante]
+            if not treffer:
+                return HttpResponseNotFound('Unbekannte Variante')
+            datei = datei.parent / treffer[0]['datei']
+        pfad = G9garderobeeintrag.vorschaudatei(datei)
         if pfad is None:
             return HttpResponseNotFound('Keine Vorschau')
         return FileResponse(open(pfad, 'rb'), content_type='image/png')
+
+    @staticmethod
+    def varianten_mit_vorschau(eintrag):
+        u"""Die Varianten eines Eintrags, jede mit `vorschau: True/False` —
+        je Anfrage geprueft (ein `stat` je Variante), damit die Listenablage
+        keine neue Fassung braucht."""
+        datei = G9garderobe.datei(eintrag)
+        aus = []
+        for v in eintrag.get('varianten') or []:
+            pfad = G9garderobeeintrag.vorschaudatei(datei.parent / v['datei'])
+            aus.append(dict(v, vorschau=pfad is not None))
+        return aus

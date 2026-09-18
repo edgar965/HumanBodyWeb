@@ -1,0 +1,20 @@
+{% comment %}
+Lippensynchronisation im Reiter Animation der Szene (18.09.2026 abends):
+Tondatei -> Rhubarb -> Visemes der Genesis-9-Figuren im Takt der Animation
+(`static/viewer/scene/genesis9/genesis9lipsync.js`). Felder heissen wie
+`Genesis9lipsync.FELDER`.
+{% endcomment %}
+<div class="abschnitt-abgesetzt" id="scene-lipsync">
+    <div class="abschnittstitel-fett">Lippensynchronisation (Genesis 9)</div>
+    <div class="hb-display-flex-eng">
+        <label class="viewer-btn hb-font-size-0-75rem-b" for="scene-lipsync-datei"
+               title="Tondatei (MP3, WAV, OGG) — Rhubarb erkennt die Mundformen">
+            <i class="fas fa-file-audio"></i> Tondatei …</label>
+        <input type="file" id="scene-lipsync-datei" accept="audio/*" class="hb-display-none">
+        <label class="hb-font-size-0-8rem"><input type="checkbox" id="scene-lipsync-ton"
+               class="hb-margin-right-4px" checked>Ton</label>
+        <button id="scene-lipsync-weg" class="viewer-btn hb-font-size-0-75rem-b"
+                title="Lippensynchronisation entfernen"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="anim-info" id="scene-lipsync-status">&mdash;</div>
+</div>

@@ -966,3 +966,5 @@
     font-size:0.85rem;
     line-height:1.6;
 }
+/* Sanduhr (`gemeinsam/sanduhr.js`, 18.09.2026): solange eine Änderung rechnet. */
+html.hb-sanduhr, html.hb-sanduhr * { cursor: progress !important; }

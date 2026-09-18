@@ -7,8 +7,10 @@
  * `Szenenschleife`, `Starteinstellungen` und `Szenenaufbau`. Vorher standen
  * hier 169 Zeilen `init()` und 43 Zeilen `animate()`.
  */
-import { buildRigifySkeleton } from './state.js';
+import { buildRigifySkeleton, state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Genesis9aufbau } from '../gemeinsam/genesis9aufbau.js';
+import { Genesis9lipsync } from './genesis9/genesis9lipsync.js';
 
 // Alle Module laden, damit sie sich in der Registrierung anmelden.
 import './undo.js';
@@ -62,8 +64,11 @@ window.addEventListener('keydown', ereignis => {
 
 fn.initDialogCloseHandlers();
 
-// Strg+Alt+H: hohe Auflösung (Filmstufe) für diesen Browser, Seite lädt neu.
-Netzstufe.einrichten();
+// Strg+Alt+H: hohe Auflösung (Filmstufe) für diesen Browser — Genesis-9-Figuren
+// bauen im Stand um, sonst lädt die Seite neu (`gemeinsam/netzstufe.js`).
+Netzstufe.einrichten(window, () => Genesis9aufbau.umschalten(state.characters.values()));
+// Lippensynchronisation im Reiter Animation (Genesis 9, 18.09.2026 abends).
+Genesis9lipsync.einrichten();
 
 export async function init() {
     return new Szenenaufbau().starten();

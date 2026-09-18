@@ -9,7 +9,8 @@ dieselben Werte liefern — das ist die Deckungsprobe der beiden Rechner.
 
 Sabotage-Gegenproben: `clamped` im JS ignorieren -> Fall 1 rot (1,4 statt 1);
 `zahlen[0]` durch `zahlen[zahlen.length - 1]` (die Knotenzahl) ersetzen ->
-Fall 2 rot; Kreis-Schutz (`offen`) weg -> Fall 3 haengt/rot.
+Fall 2 rot; Kreis-Schutz (`offen`) weg -> Fall 3 haengt/rot; `Object.hasOwn`-
+Vorrang in `wert` weg -> Fall 4 rot (1 statt 0,25).
 """
 from django.test import SimpleTestCase
 
@@ -52,9 +53,11 @@ const w2 = G.werte(graph, G.eingaben({ l_thigh: [49, 0, 0] }));
 const w3 = G.werte(graph, G.eingaben({ l_thigh: [-115, 0, 45] }));
 const w4 = G.werte(graph, G.eingaben({ l_thigh: [-110, 0, 0] }));
 const w5 = G.werte(graph, G.eingaben({ l_thigh: [-20, 0, 0] }));
+const w6 = G.werte(graph, { ...G.eingaben({ l_thigh: [35, 0, 0] }), schalter: 0.25 });
 console.log(JSON.stringify({
     halb: w1.cbs_x35p, voll: w2.cbs_x35p, zwei: w3.cbs_zwei, spline: w4.cbs_spline,
     negativ: w5.cbs_x35p ?? 0, kreis: w1.kreis, zweiOhneZ: w2.cbs_zwei ?? 0,
+    geschaltet: w6.cbs_x35p ?? 0,
 }));
 """
 
@@ -74,6 +77,12 @@ class GelenkformelnTest(SimpleTestCase):
         self.assertAlmostEqual(aus['zwei'], 0.5, places=6)
         self.assertEqual(aus['zweiOhneZ'], 0)
         self.assertAlmostEqual(aus['spline'], 35 / 60, places=6)
+
+    def test_4_gestellter_graphkanal(self):
+        u"""Ein Graphkanal in `eingaben` gilt gestellt (`inst.gelenkregler`):
+        der Schalter 0,25 statt seiner Vorgabe 1 -> 0,25 statt 1."""
+        aus = MODUL.laufen(SKRIPT)
+        self.assertAlmostEqual(aus['geschaltet'], 0.25, places=6)
 
     def test_3_kreis_bricht_ab(self):
         u"""Ein Kanal, der sich selbst liest, bekommt beim zweiten Betreten

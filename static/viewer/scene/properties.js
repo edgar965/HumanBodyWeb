@@ -10,6 +10,7 @@ import { Getragenliste } from './getragenliste.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
+import { Sanduhr } from '../gemeinsam/sanduhr.js';
 import { Umaeigenschaften } from './uma/umaeigenschaften.js';
 import { Smpleigenschaften } from './smpl/smpleigenschaften.js';
 import { Umapythoneigenschaften } from './umapython/umapythoneigenschaften.js';
@@ -243,6 +244,7 @@ const NEULADEN_RUHE_MS = 300;
 export async function reloadCharacterMesh(inst) {
     clearTimeout(state.reloadTimer);
     state.reloadTimer = setTimeout(async () => {
+        Sanduhr.an('Figur wird neu gerechnet …');   // Edgar, 18.09.2026
         try {
             await Charakterkoerper.neuLaden(inst);
             fn.updateVertexCount();
@@ -251,6 +253,8 @@ export async function reloadCharacterMesh(inst) {
             markDirty();
         } catch (fehler) {
             Protokoll.fehler('properties', 'Netz nicht neu ladbar', fehler);
+        } finally {
+            Sanduhr.aus();
         }
     }, NEULADEN_RUHE_MS);
 }

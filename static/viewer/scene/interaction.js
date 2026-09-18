@@ -36,7 +36,9 @@ export function bindCanvasClick() {
         const meshes = [];
         state.characters.forEach((inst, id) => {
             inst.group.traverse(child => {
-                if (child.isMesh && !child.userData._boneOverlay) {
+                // Unsichtbares (die ruhende Simulationskopie eines dForce-Stücks)
+                // fängt keinen Klick — der Raycaster fragt `visible` nicht selbst.
+                if (child.isMesh && child.visible && !child.userData._boneOverlay) {
                     child.userData._parentCharId = id;
                     meshes.push(child);
                 }

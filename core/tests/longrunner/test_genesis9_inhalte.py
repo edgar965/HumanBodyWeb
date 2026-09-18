@@ -76,10 +76,19 @@ class KatalogeTest(SimpleTestCase):
         self.assertTrue(any('all_mat' in e['id'] for e in katalog['haut']))
 
     def test_brauenstile_21(self):
+        u"""21 Stile der Essentials plus Kins eigenes Netz (18.09.2026 nachts);
+        Ursulas Vorgabe ist `fiber02` in ihrem Schwarz, Kins sein Netz."""
         stile = [s['id'] for s in G9brauen.stile()]
-        self.assertEqual(len(stile), 21)
+        self.assertEqual(len(stile), 22)
         self.assertIn('card12', stile)
         self.assertIn('fiber09', stile)
+        self.assertIn('charakter:eg_kin_eyebrows', stile)
+        self.assertEqual(G9brauen.fuer_charakter('P3D Ursula'),
+                         ('fiber02', 'charakter:p3d_ursula_fiber_eyebrows_black'))
+        self.assertEqual(G9brauen.fuer_charakter('EG Kin'),
+                         ('charakter:eg_kin_eyebrows', ''))
+        self.assertIsNone(G9brauen.fuer_charakter('Base Feminine'))
+        self.assertEqual(G9brauen.VORGABE, 'card06')
         farben = G9brauen.farben_je_art()
         self.assertGreaterEqual(len(farben['card']), 9)
         self.assertTrue(any(f['id'].startswith('omni:') for f in farben['fiber']))
@@ -114,6 +123,45 @@ class KatalogeTest(SimpleTestCase):
                       for e in g['eintraege']}
         self.assertIn('p3d_ursula_smile_open', ausdruecke)
         self.assertIn('cdi_sve_g9f_scream', ausdruecke)
+
+    def test_offene_inhalte_18_09_nachts(self):
+        u"""Was der Bestandsabgleich (`ProjektTemp/g9_bestand_abgleich.py`)
+        als fehlend zeigte und Edgar mit „mach alles" beauftragte: der
+        Expressions-Ordner, die Toon-Posen, Formpresets, die Essentials-
+        Materialien (Wimpernstile, Mund), Kins Lippenfarben, Ursulas Wet
+        Skin, Toon-Hauttoene, der Toon-Anhangsatz, Pixies OmniHair-Fassungen,
+        Hime Cuts Ponystile, die Anime-Schminke."""
+        ausdruecke = {e['id'] for g in G9posen.liste('ausdruck')
+                      for e in g['eintraege']}
+        self.assertIn('de_expression_09_soft_smile', ausdruecke)
+        posen = {e['id'] for g in G9posen.liste('pose') for e in g['eintraege']}
+        self.assertIn('g9_anime_base_14_superhero', posen)
+        formen = {e['id']: e for g in G9posen.liste('form') for e in g['eintraege']}
+        self.assertEqual(formen['p3d_ursula_body_apply']['regler'],
+                         {'P3DUrsula_body_bs_Body': 1.0})
+        self.assertIn('eg_kin_fullbody_apply', formen)
+        self.assertNotIn('p3d_ursula_body_rem', formen)
+        katalog = G9hautwahl.katalog()
+        namen = {k: {e['name'] for e in v} for k, v in katalog.items()}
+        self.assertIn(u'Genesis 9 · Eyelashes Style Dense 01', namen['wimpern'])
+        self.assertIn(u'Genesis 9 · Mouth MAT 02', namen['mund'])
+        self.assertIn(u'EG Kin · Lip Color Burgundy', namen['kopf'])
+        self.assertNotIn(u'EG Kin · !!! Lip Color Remove', namen['kopf'])
+        self.assertIn(u'Ursula · Wet Skin Apply', namen['hautglanz'])
+        self.assertEqual(len(katalog['hautton']), 7)
+        self.assertEqual([s for s, _ in G9anhang.alle(None, 'toon')],
+                         ['augen', 'wimpern', 'traene', 'brauen', 'mund_toon',
+                          'schatten'])
+        self.assertEqual(G9charaktere.eintrag('base_anime_feminine').get('anhangsatz'),
+                         'toon')
+        eintraege = {e['id']: e for e in G9garderobe.liste()}
+        pixie = eintraege['g9_base_dforce_pixie_hair']['varianten']
+        self.assertEqual(sum('OmniHair' in v['name'] for v in pixie), 11)
+        hime = eintraege['dforce_mk_hime_cut_hair']['stile']
+        self.assertEqual({s['name'] for s in hime},
+                         {'MKHCH Hair Bangs Style C', 'MKHCH Hair Bangs Style D'})
+        rouge = next(b for b in G9schminke.katalog() if b['kategorie'] == 'rouge')
+        self.assertTrue(any(e['name'].startswith('Anime') for e in rouge['eintraege']))
 
 
 @unittest.skipUnless(bibliothek_da(), 'Daz-Bibliothek mit Genesis 9 fehlt')
@@ -187,3 +235,30 @@ class NetzMitInhaltenTest(SimpleTestCase):
         fehlt = self.client.get('/api/character/genesis9-figur/garderobe/'
                                 'quatsch/vorschau/')
         self.assertEqual(fehlt.status_code, 404)
+
+    def test_glanz_ohne_bild_und_ablagen_18_09_abends(self):
+        u"""Offen-Punkte vom Abend: Eirgrids `Shine`-Presets sind Varianten
+        (Glanzwerte ueber den Bildern des Stuecks), Ursulas `Facial Gloss`
+        (Metallkarte) steht unter Hautglanz, und die Morphe eines Stuecks
+        liegen nach dem ersten Lesen in der Ablage."""
+        eintrag = G9garderobe.eintrag('eirgrid_hair_g9')
+        self.assertIsNotNone(eintrag)
+        shine = [v for v in eintrag['varianten'] if 'Shine' in v['name']]
+        self.assertEqual(len(shine), 3, [v['name'] for v in eintrag['varianten']])
+        hoch = next(v for v in shine if '1High' in v['name'])
+        bilder = G9garderobe.bilder('eirgrid_hair_g9', hoch['id'])
+        self.assertTrue(bilder['hair1'].get('albedo'), bilder['hair1'])
+        self.assertEqual(bilder['hair1']['rauheitwert'], 0.42)
+        self.assertEqual(bilder['hair1']['glanzgewicht'], 0.3)
+        tief = next(v for v in shine if '3Low' in v['name'])
+        tiefe = G9garderobe.bilder('eirgrid_hair_g9', tief['id'])
+        self.assertEqual(tiefe['hair1']['rauheitwert'], 0.3)
+        glanz = {e['name']: e for e in G9hautwahl.katalog()['hautglanz']}
+        gloss = next(e for n, e in glanz.items() if 'Facial Gloss' in n)
+        self.assertTrue(gloss['bilder']['Head']['metall']
+                        .endswith('P3DUrsula_Gloss_1001.jpg'))
+        self.assertEqual(gloss['bilder']['Head']['metallgewicht'], 0.8)
+        ablagen = list(G9pfade.ablage().glob('anhangmorphe_*.npz'))
+        self.assertGreater(len(ablagen), 5, 'Anhangmorphe-Ablagen fehlen')
+        self.assertTrue(list(G9pfade.ablage().glob('haut_koerper_s1_*.npz')))
+        self.assertTrue(list(G9pfade.ablage().glob('naht_*.npz')))

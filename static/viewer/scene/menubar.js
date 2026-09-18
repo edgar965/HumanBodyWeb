@@ -190,6 +190,13 @@ export function toggleModelVisibility() {
  * Auf der Seite kann ein Rig auch ohne Figurinstanz stehen.
  */
 export function toggleRigVisibility() {
+    if (!state.characters?.size && !state.rigifySkeletonData && state.grunddatenBereit
+        && !toggleRigVisibility._nachgeholt) {
+        // Skelett und Gewichte kommen erst auf Anforderung — einmal nachholen, dann zeigen.
+        toggleRigVisibility._nachgeholt = true;
+        state.grunddatenBereit.then(() => toggleRigVisibility());
+        return;
+    }
     if (!state.characters?.size && state.rigifySkeletonData && state.skinWeightData
         && !state.rigifySkeleton) {
         state.rigifySkeleton = fn.buildRigifySkeleton(

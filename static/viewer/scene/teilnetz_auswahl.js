@@ -42,8 +42,10 @@ export function getAllSubMeshTargets() {
 }
 
 export function _findSubMeshForObject(obj, targets) {
+    // Das Simulationsnetz des Stoffschwungs steht fuer sein Stueck (`userData.stueckVon`).
+    const ziel = obj?.userData?.stueckVon || obj;
     for (const t of targets) {
-        let cur = obj;
+        let cur = ziel;
         while (cur) {
             if (cur === t.meshObj) return t;
             cur = cur.parent;
@@ -147,8 +149,15 @@ export function _removeSubMesh(target) {
 
     switch (target.type) {
         case 'cloth': {
-            if (Netzentsorgung.ausAblage(inst.group, inst.clothMeshes,
-                                         target.key)) {
+            if (typeof inst.ausziehen === 'function' && inst.kleidung) {
+                // Genesis 9: ein Stueck sind mehrere Teile (`kennung/n`), und die
+                // Figur merkt sich das Getragene in `kleidung` — nur das Netz zu
+                // entfernen brachte das Stueck beim naechsten Neubau zurueck
+                // (Edgar, 18.09.2026: „wenn ich auf Ctrl-Alt-H klicke erscheint
+                // das Modell wieder mit den Kleidern").
+                inst.ausziehen(String(target.key).split('/')[0]);
+            } else if (Netzentsorgung.ausAblage(inst.group, inst.clothMeshes,
+                                                target.key)) {
                 if (target.key.startsWith('gc_')) {
                     // GarmentCode fuehrt seine eigene Ablage; ohne diese
                     // Zeile kaeme ein geloeschtes Stueck beim naechsten

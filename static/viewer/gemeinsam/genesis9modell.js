@@ -4,6 +4,7 @@ import { Netzentsorgung } from './netzentsorgung.js';
 import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Genesis9netz } from './genesis9netz.js';
+import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Modell } from './modell.js';
 
 /**
@@ -23,16 +24,15 @@ import { Modell } from './modell.js';
  * (Kennung → {variante, stil, stile, regler, griff}). Ein Stück mit `griff`
  * ist ein Prop mit Griffpose (Dolch): der Körper bekommt die Kennungen als
  * `griffe`, damit sich die Finger schließen (18.09.2026). Der Server liefert
- * in EINER Antwort Körper,
- * Skelett (gerechnet auf dieser Stellung — die Gelenke wandern mit den
- * Morphs), Haut und die Anhänge (Augen, Mund, Wimpern, Träne, Brauen); alle
- * hängen am selben Skelett über Knochennamen (`Eigenhaut`).
- *
- * ERST DAS SKELETT, DANN DIE NETZE — wie bei MakeHuman und UMA Python:
- * `Eigenhaut.binden` löst die Knochennamen gegen das Skelett auf, das in
- * der Gruppe hängt. Und bei jedem Reglerzug wird alles neu gebaut, auch
- * die Kleidung: Sie sitzt auf projizierten Körperpunkten, und die sind
- * gerade gewandert.
+ * in EINER Antwort Körper, Skelett (gerechnet auf dieser Stellung — die
+ * Gelenke wandern mit den Morphs), Haut und die Anhänge (Augen, Mund,
+ * Wimpern, Träne, Brauen); alle hängen am selben Skelett über Knochennamen
+ * (`Eigenhaut`). ERST DAS SKELETT, DANN DIE NETZE — `Eigenhaut.binden` löst
+ * die Knochennamen gegen das Skelett in der Gruppe auf. Bei jedem Reglerzug
+ * wird alles neu gebaut, auch die Kleidung (sie sitzt auf projizierten
+ * Körperpunkten). Der ERSTE Bau kommt in zwei Zügen — Käfig sofort, volle
+ * Stufe nach (`Genesis9aufbau`, 18.09.2026 nachts); `_lauf` verwirft
+ * Antworten eines überholten Zugs.
  */
 export class Genesis9Modell extends Modell {
 
@@ -65,21 +65,15 @@ export class Genesis9Modell extends Modell {
         this.anhangNetze = {};
         this.hoehe = 0;
         /** Punkte des Daz-Käfigs (25.182); `browserpunkte` und `stufen` sagen, was gezeichnet wird. */
-        this.punktzahl = 0;
-        this.browserpunkte = 0;
-        this.stufen = 0;
-        this.morphwerte = {};
+        this.punktzahl = 0; this.browserpunkte = 0; this.stufen = 0;
+        this.morphwerte = {}; this.gelenkregler = {};
     }
 
     // ------------------------------------------------------------- Bauen
 
     async bauen() {
         if (this.regler === null) await this._vorgabeUebernehmen();
-        await this.koerperAufbauen();
-        for (const kennung of Object.keys({ ...this.kleidung })) {
-            await this.anziehen(kennung, this.kleidung[kennung]);
-        }
-        return this;
+        return Genesis9aufbau.progressiv(this);
     }
 
     /** Die Reglerstellung des Katalogeintrags — vom Server, nicht geraten. */
@@ -112,16 +106,18 @@ export class Genesis9Modell extends Modell {
         if (!Object.keys(this.kleidung).length) this.kleidung = { ...(eintrag.kleidung || {}) };
     }
 
-    /** Körper, Skelett und Anhänge holen und neu einhängen. */
-    async koerperAufbauen() {
-        const daten = await Serverabruf.senden(
-            `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, {
+    /** Körper, Skelett und Anhänge holen und neu einhängen (`stufen`: null = Stufe des Browsers). */
+    async koerperAufbauen(stufen = null) {
+        const lauf = this._lauf = (this._lauf || 0) + 1;
+        const daten = await Serverabruf.senden(Genesis9aufbau.adresse(
+            `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen), {
                 regler: this.regler || {}, haut: this.haut, augen: this.augen,
                 brauen: this.brauen, brauenstil: this.brauenstil, praesets: this.praesets,
                 pose: this.pose, ausdruck: this.ausdruck, griffe: this.griffe(),
                 kleidung: this.kleidungsliste(),
             });
         if (daten.fehler) throw new Error(daten.fehler);
+        if (lauf !== this._lauf) return this;          // überholt: ein neuer Zug läuft
         this._altesWeg();
         // Mit den eigenen Knochen der getragenen Stücke (Eirgrid: 14 Zöpfe an `spine4`);
         // ihre Namen bekommt der Zopfschwung (`scene/genesis9/genesis9zopfschwung.js`).
@@ -140,6 +136,7 @@ export class Genesis9Modell extends Modell {
         this.browserpunkte = daten.browserpunkte || daten.vertex_count || 0;
         this.stufen = daten.stufen || 0;
         this.morphwerte = daten.morphwerte || {};
+        this.gelenkregler = daten.gelenkregler || {};   // JCM-Schalter (`genesis9gelenke.js`)
         /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
         this.hdkanaele = daten.hdkanaele || [];
         this._kleiderBinden();
@@ -187,13 +184,9 @@ export class Genesis9Modell extends Modell {
 
     // ------------------------------------------------------------ Regler
 
-    /** Nach einem Reglerzug: Körper, Anhänge UND Kleidung neu. */
+    /** Nach einem Reglerzug: Körper, Anhänge UND Kleidung neu — gleichzeitig. */
     async neuFormen() {
-        await this.koerperAufbauen();
-        for (const kennung of this.getragen()) {
-            await this.anziehen(kennung, this.kleidung[kennung]);
-        }
-        return this;
+        return Genesis9aufbau.alles(this, null);
     }
 
     async reglerSetzen(name, wert) {
@@ -244,15 +237,17 @@ export class Genesis9Modell extends Modell {
      * `werte`: `{variante, stil, stile: {pose, laenge}, regler, griff}` — die
      * Stile gehen als Liste (`Genesis9garderobe.werte`), je Art eine Wahl.
      */
-    async anziehen(kennung, werte = null) {
+    async anziehen(kennung, werte = null, stufen = null) {
         this.kleidung[kennung] = { ...(werte || {}) };
-        const daten = await Serverabruf.senden(
-            `${Genesis9Modell.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, {
+        const lauf = this._lauf;
+        const daten = await Serverabruf.senden(Genesis9aufbau.adresse(
+            `${Genesis9Modell.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
                 regler: this.regler || {}, variante: werte?.variante || '',
                 stil: Genesis9Modell.stilliste(werte), regler_stueck: werte?.regler || {},
                 pose: this.pose, ausdruck: this.ausdruck, griffe: this.griffe(),
             });
         if (daten.fehler) throw new Error(daten.fehler);
+        if (lauf !== this._lauf || !this.kleidung[kennung]) return 0;   // überholt oder ausgezogen
         this._stueckWeg(kennung);
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);

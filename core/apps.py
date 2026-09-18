@@ -24,3 +24,8 @@ class CoreConfig(AppConfig):
         aufraeumen = Startaufraeumen()
         aufraeumen.zwischendateien()
         aufraeumen.durchgehen()
+        # Genesis-9-Merker im Hintergrund fuellen (18.09.2026 abends): die
+        # erste Figur nach einem Neustart kostete sonst 10–30 s.
+        from core.dienste.g9aufwaermen import G9aufwaermen
+        if G9aufwaermen.angebracht():
+            G9aufwaermen.starten()

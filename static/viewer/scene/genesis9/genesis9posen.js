@@ -13,6 +13,12 @@ import { Genesis9lauf } from './genesis9lauf.js';
  * EIN STANDBILD, KEINE ANIMATION: Der Server backt die Pose in das Netz und
  * stellt das Skelett dazu — wer danach eine BVH-Bewegung abspielt, stellt die
  * Pose auf „—", sonst rechnet der Retarget gegen eine verdrehte Ruhelage.
+ *
+ * FORMPRESETS (18.09.2026 nachts): Daz' `preset_shape` (Ursula Body, Head,
+ * HD Body, Breasts Push Up, Long Lashes, Navel, Oval Nails; Kin Fullbody,
+ * Head, Body) stellen Regler — hier Kästchen: an setzt die Regler des
+ * Presets, aus setzt sie auf 0 (Daz' `REM`-Fassung). Sie landen in
+ * `inst.regler` und werden mit der Figur gespeichert.
  */
 export class Genesis9posen {
 
@@ -38,10 +44,44 @@ export class Genesis9posen {
         }
         behaelter.appendChild(Genesis9posen._wahl(inst, 'Pose', 'pose', daten.posen || []));
         behaelter.appendChild(Genesis9posen._wahl(inst, 'Ausdruck', 'ausdruck', daten.ausdruecke || []));
+        for (const gruppe of daten.formen || []) behaelter.appendChild(Genesis9posen._formen(inst, gruppe));
         const hinweis = document.createElement('div');
         hinweis.className = 'gedaempft hb-font-size-0-72rem';
         hinweis.textContent = 'Standbild: vor einer BVH-Bewegung die Pose auf „—" stellen.';
         behaelter.appendChild(hinweis);
+    }
+
+    /** Ob alle Regler eines Formpresets in der Figur auf ihrem Wert stehen. */
+    static aktiv(inst, regler) {
+        const eintraege = Object.entries(regler || {});
+        return eintraege.length > 0
+            && eintraege.every(([k, w]) => Math.abs((inst.regler?.[k] || 0) - w) < 1e-6);
+    }
+
+    /** Eine Gruppe Formpresets (ein Charakter) als Kästchen. */
+    static _formen(inst, gruppe) {
+        const block = document.createElement('details');
+        block.className = 'hb-formpresets';
+        block.innerHTML = `<summary>Form · ${escapeHtml(gruppe.gruppe)} <span class="gedaempft">(${
+            gruppe.eintraege.length})</span></summary>`;
+        for (const e of gruppe.eintraege) {
+            const zeile = document.createElement('label');
+            zeile.className = 'hb-formpreset';
+            const haken = document.createElement('input');
+            haken.type = 'checkbox';
+            haken.checked = Genesis9posen.aktiv(inst, e.regler);
+            haken.addEventListener('change', () => {
+                inst.regler = inst.regler || {};
+                for (const [k, w] of Object.entries(e.regler || {})) {
+                    if (haken.checked) inst.regler[k] = w; else delete inst.regler[k];
+                }
+                Genesis9lauf.planen(inst, () => inst.neuFormen(), () => {});
+                markDirty();
+            });
+            zeile.append(haken, document.createTextNode(` ${e.name}`));
+            block.appendChild(zeile);
+        }
+        return block;
     }
 
     static _wahl(inst, titel, feld, gruppen) {

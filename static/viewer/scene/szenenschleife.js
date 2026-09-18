@@ -8,6 +8,7 @@ import { Bodenstand } from './bodenstand.js';
 import { Genesis9zopfschwung } from './genesis9/genesis9zopfschwung.js';
 import { Genesis9stoffschwung } from './genesis9/genesis9stoffschwung.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
+import { Genesis9lipsync } from './genesis9/genesis9lipsync.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -95,6 +96,8 @@ export class Szenenschleife extends Zeichenschleife {
         // Gelenkkorrekturen (18.09.2026 abends): Daz' JCMs aus den Knochen-
         // winkeln dieses Bildes — nach dem Mischer, vor dem Weichgewebe.
         Genesis9gelenke.alle(state.characters.values());
+        // Lippensynchronisation (18.09.2026 abends): Visemes an der Zeit der Aktion.
+        Genesis9lipsync.takt();
         this.aufDenBoden();
         // Weichgewebe (11.09.2026): der Zuschlag auf das Skinning — NACH dem
         // Mixer, damit die Knochen dieses Bildes gelesen werden.

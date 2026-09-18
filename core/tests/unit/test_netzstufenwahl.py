@@ -82,4 +82,4 @@ class DasDrahtformat(SimpleTestCase):
     def test_beide_figurseiten_richten_die_taste_ein(self):
         for teile in (('static', 'viewer', 'viewer', 'index.js'),
                       ('static', 'viewer', 'scene', 'boot.js')):
-            self.assertIn('Netzstufe.einrichten()', self._quelle(*teile), teile)
+            self.assertIn('Netzstufe.einrichten(', self._quelle(*teile), teile)

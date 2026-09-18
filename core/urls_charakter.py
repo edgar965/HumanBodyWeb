@@ -161,6 +161,8 @@ CHARAKTER = [
          name='g9_figur_felder_gelenke'),
     path('api/character/genesis9-figur/felder/visemes/', G9felderapi.visemes,
          name='g9_figur_felder_visemes'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/felder/<str:gruppe>/',
+         G9felderapi.stueck, name='g9_felder_stueck'),
     path('api/character/genesis9-figur/<str:name>/netz/', G9figur.netz,
          name='g9_figur_netz'),
     path('api/character/uma-figur/', Umafigur.liste, name='uma_figur_liste'),

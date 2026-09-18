@@ -5,7 +5,10 @@
  * `felder/gelenke/`): `kanaele[schluessel] = {vorgabe, min, max, clamped,
  * formeln: [{stufe: 'sum'|'mult', ops: [{op, kanal?, val?}]}]}`, `morphe`
  * = die Kanäle mit Deltas. Eine Knocheneingabe heißt `l_thigh?rotation/x`
- * (Grad) und kommt aus `eingaben`; alles andere ist ein Kanal des Graphen:
+ * (Grad) und kommt aus `eingaben`; ein Graphkanal, der in `eingaben` steht,
+ * gilt gestellt (`Base Joint Correctives`, `Flexion Automatic Strength` —
+ * `inst.gelenkregler` vom Server, 18.09.2026 nachts); alles andere ist ein
+ * Kanal des Graphen:
  *
  *     wert(k) = clamp((vorgabe + Σ sum-Formeln) × Π mult-Formeln)
  *
@@ -53,7 +56,7 @@ class Gelenkrechner {
 
     wert(kanal) {
         if (this.werte.has(kanal)) return this.werte.get(kanal);
-        if (kanal.includes('?')) return this.eingaben[kanal] || 0;
+        if (kanal.includes('?') || Object.hasOwn(this.eingaben, kanal)) return this.eingaben[kanal] || 0;
         const angaben = this.kanaele[kanal];
         if (!angaben) return 0;
         if (this.offen.has(kanal)) return angaben.vorgabe || 0;

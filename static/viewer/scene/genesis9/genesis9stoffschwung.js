@@ -24,11 +24,19 @@
  *
  * Läuft nach Mixer und Zopfschwung, vor dem Weichgewebe. Gemessen wird mit
  * `await __stoffschwung.probe(n, dt)` im versteckten Tab.
+ *
+ * JCMs (18.09.2026 abends): je Stück holt `_laden` die Käfigfelder der
+ * Gelenkkorrekturen (`Genesis9felder.holenStueck(…, 'kaefig')`) und gibt sie
+ * dem Worker; `_bild` schickt die Werte des Graphen dieses Bildes mit
+ * (`Genesis9gelenke.werte(inst)`), der Worker verformt den Käfig vor der
+ * Häutung (`gemeinsam/stofffelder.js`).
  */
 import { THREE, state } from '../state.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 import { base64ToFloat32, base64ToUint32 } from '../../gemeinsam/kodierung.js';
 import { Stoffkapseln, Stoffhaut } from './stoffkapseln.js';
+import { Genesis9felder } from '../../gemeinsam/genesis9felder.js';
+import { Genesis9gelenke } from '../../gemeinsam/genesis9gelenke.js';
 
 export class Genesis9stoffschwung {
 
@@ -83,11 +91,14 @@ export class Genesis9stoffschwung {
         anzeige.castShadow = netz.castShadow;
         anzeige.receiveShadow = netz.receiveShadow;
         anzeige.userData.stoffanzeige = true;
+        // Ein Klick auf das Simulationsnetz trifft das STÜCK (`teilnetz_auswahl._findSubMeshForObject`) —
+        // vorher wählte er die Figur, und Entf löschte die ganze Person (Edgar, 18.09.2026).
+        anzeige.userData.stueckVon = netz;
         anzeige.visible = false;
         anzeige.position.copy(netz.position); anzeige.quaternion.copy(netz.quaternion); anzeige.scale.copy(netz.scale);
         netz.parent.add(anzeige);
         const e = { netz, anzeige, worker: null, bereit: false, beschaeftigt: false, dtSumme: 0,
-                    bilder: 0, auslenkung: 0, warten: null };
+                    bilder: 0, auslenkung: 0, warten: null, inst, felder: false };
         Genesis9stoffschwung._laden(inst, e).catch(fehler => console.warn('[Stoffschwung]', netz.name, fehler));
         return e;
     }
@@ -102,7 +113,7 @@ export class Genesis9stoffschwung {
         if (!e.anzeige.parent) return;                  // inzwischen ausgezogen
         const spalte = Eigenhaut.spaltenNummern(plan.hautgewichte.knochen, inst.skelett);
         if (!spalte) throw new Error('Käfighaut nennt Knochen, die das Skelett nicht hat');
-        const roh = base64ToFloat32(plan.hautgewichte.skin_indices);
+        const { index: roh, gewicht: hautGewicht } = Eigenhaut.gewichte(plan.hautgewichte);
         const hautIndex = new Float32Array(roh.length);
         for (let i = 0; i < roh.length; i++) hautIndex[i] = spalte[roh[i]] ?? 0;
         const worker = new Worker(Genesis9stoffschwung.arbeiterpfad(), { type: 'module' });
@@ -111,11 +122,21 @@ export class Genesis9stoffschwung {
         worker.postMessage({
             typ: 'bauen', kaefig: stoff.kaefig, frei: stoff.frei, kanten: base64ToUint32(plan.kanten),
             indptr: base64ToUint32(plan.indptr), indices: base64ToUint32(plan.indices), data: base64ToFloat32(plan.data),
-            zeilen: plan.zeilen, hautIndex, hautGewicht: base64ToFloat32(plan.hautgewichte.skin_weights),
+            zeilen: plan.zeilen, hautIndex, hautGewicht,
             dreiecke: Uint32Array.from(e.netz.geometry.index.array),
         });
         e.worker = worker;
         e.bereit = true;
+        Genesis9stoffschwung._felder(e, treffer[1], Number(treffer[2]));
+    }
+
+    /** Die Käfigfelder der JCMs dieses Teils an den Worker geben (asynchron, einmal je Stück). */
+    static async _felder(e, kennung, nummer) {
+        const teile = await Genesis9felder.holenStueck(Genesis9gelenke.GRUPPE, kennung, 'kaefig');
+        const eigene = teile?.[nummer];
+        if (!eigene || !Object.keys(eigene).length || !e.worker || !e.anzeige.parent) return;
+        e.worker.postMessage({ typ: 'felder', felder: eigene });
+        e.felder = true;
     }
 
     /**
@@ -136,7 +157,7 @@ export class Genesis9stoffschwung {
         e.worker.postMessage({
             typ: 'bild', M: Stoffhaut.matrizen(netz), W: Float32Array.from(netz.matrixWorld.elements),
             inv: Float32Array.from(Genesis9stoffschwung._inv.copy(anzeige.matrixWorld).invert().elements),
-            kapseln, dt: e.dtSumme,
+            kapseln, dt: e.dtSumme, werte: e.felder ? (Genesis9gelenke.werte(e.inst) || null) : null,
         });
         e.beschaeftigt = true;
         e.dtSumme = 0;
@@ -204,7 +225,7 @@ export class Genesis9stoffschwung {
             for (const e of figur.stuecke.values()) {
                 aus.stuecke.push({ name: e.netz.name, bereit: e.bereit, bilder: e.bilder,
                                    auslenkung: +e.auslenkung.toFixed(3), kapseln: figur.kapseln?.length,
-                                   zeiten: e.zeiten });
+                                   zeiten: e.zeiten, felder: e.felder });
             }
         }
         return aus;

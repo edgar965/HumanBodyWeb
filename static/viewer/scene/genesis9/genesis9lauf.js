@@ -1,4 +1,5 @@
 import { markDirty } from '../undo.js';
+import { Sanduhr } from '../../gemeinsam/sanduhr.js';
 
 /**
  * Genesis9lauf — entprellter Neubau der Figur nach einer Bedienung.
@@ -47,6 +48,9 @@ export class Genesis9lauf {
             return;
         }
         lauf.laeuft = true;
+        // Sanduhr, solange der Server rechnet (Edgar, 18.09.2026: „damit ich
+        // weiss, wann die Property geändert wird").
+        Sanduhr.an('Figur wird neu gerechnet …');
         try {
             await aktion();
             markDirty();
@@ -55,6 +59,7 @@ export class Genesis9lauf {
             const feld = document.getElementById('prop-genesis9-kopf');
             if (feld) feld.textContent = `Fehler: ${fehler.message}`;
         } finally {
+            Sanduhr.aus();
             lauf.laeuft = false;
             const offen = lauf.nachholen;
             lauf.nachholen = null;

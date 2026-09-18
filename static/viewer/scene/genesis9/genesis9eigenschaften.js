@@ -61,6 +61,45 @@ export class Genesis9eigenschaften {
 
     // ------------------------------------------------------------- Anzeige
 
+    /**
+     * Der Wert, den ein Regler zeigt: was der Nutzer gestellt hat, sonst der
+     * WIRKSAME Wert aus dem Formelgraphen (`inst.morphwerte`, vom Server).
+     *
+     * Edgar (18.09.2026): „bei Ursula9 ist der Ursula Head gerade bei 0 %,
+     * auch andere Ursula-Properties sind bei 0". Das Preset stellt nur den
+     * Steuerregler `P3DUrsula_figure_ctrl_Character` auf 1; Kopf und Körper
+     * (`P3DUrsula_head_bs_Head`, `_body_bs_Body`) bekommen ihre 100 % über
+     * Formeln — im Regler-Wörterbuch stehen sie nicht, der Schieber zeigte 0.
+     * Daz zeigt bei so einem Kanal die Summe. `gesteuert` = nicht selbst
+     * gestellt, aber wirksam.
+     */
+    static wert(inst, regler) {
+        const eigen = inst.regler?.[regler.name];
+        const gestellt = eigen !== undefined && eigen !== null;
+        const wirksam = inst.morphwerte?.[regler.name];
+        // Ein Kanal mit Deltas zeigt seine SUMME (eigener Wert + Formeln, wie
+        // Daz) — auch nach einem eigenen Zug: 50 % eigen + 100 % gesteuert
+        // sind begrenzt 100 %, und das steht dann auch am Schieber.
+        if (wirksam !== undefined && Math.abs(wirksam) > 1e-9) {
+            return { wert: wirksam, gesteuert: !gestellt };
+        }
+        return { wert: gestellt ? eigen : (regler.vorgabe ?? 0), gesteuert: false };
+    }
+
+    /** Nach einem Lauf die gesteuerten Schieber auf den neuen wirksamen Wert. */
+    static nachziehen(inst, plan) {
+        const alle = (plan?.bereiche || []).flatMap(b => b.regler || []);
+        for (const regler of alle) {
+            const schieber = document.getElementById(`g9-${regler.name}`);
+            if (!schieber || schieber === document.activeElement) continue;
+            const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
+            if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;
+            schieber.value = wert;
+            const anzeige = schieber.parentElement?.querySelector('.slider-value');
+            if (anzeige) anzeige.textContent = Genesis9eigenschaften.text(wert, gesteuert);
+        }
+    }
+
     static _kopf(inst) {
         const feld = document.getElementById('prop-genesis9-kopf');
         if (!feld) return;
@@ -178,27 +217,29 @@ export class Genesis9eigenschaften {
     static _zeile(inst, regler) {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
-        const wert = inst.regler?.[regler.name] ?? regler.vorgabe ?? 0;
+        const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
         const kennung = `g9-${regler.name}`;
+        const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : regler.name;
         zeile.innerHTML = `
-            <label for="${kennung}" title="${escapeHtml(regler.name)}">${
+            <label for="${kennung}" title="${escapeHtml(titel)}">${
                 escapeHtml(regler.anzeige)}</label>
             <input type="range" id="${kennung}" min="${regler.min}" max="${regler.max}"
                    step="0.01" value="${wert}" data-regler="${escapeHtml(regler.name)}">
-            <span class="slider-value">${Genesis9eigenschaften.text(wert)}</span>`;
+            <span class="slider-value">${Genesis9eigenschaften.text(wert, gesteuert)}</span>`;
         const schieber = zeile.querySelector('input');
         const anzeige = zeile.querySelector('.slider-value');
         schieber.addEventListener('input', () => {
             const neu = parseFloat(schieber.value);
             anzeige.textContent = Genesis9eigenschaften.text(neu);
             Genesis9lauf.planen(inst, () => inst.reglerSetzen(regler.name, neu),
-                                () => Genesis9eigenschaften._kopf(inst));
+                                () => { Genesis9eigenschaften._kopf(inst);
+                                        Genesis9eigenschaften.nachziehen(inst, Genesis9eigenschaften._plan); });
         });
         return zeile;
     }
 
-    /** Daz zeigt die Kanäle als Prozent — hier auch. */
-    static text(wert) {
-        return `${Math.round(wert * 100)} %`;
+    /** Daz zeigt die Kanäle als Prozent — hier auch; gesteuerte mit Stern. */
+    static text(wert, gesteuert = false) {
+        return `${Math.round(wert * 100)} %${gesteuert ? ' *' : ''}`;
     }
 }

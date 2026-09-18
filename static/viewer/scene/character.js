@@ -61,7 +61,12 @@ export class CharacterInstance extends HumanbodyModell {
      * @param beiKoerper wird gerufen, sobald der Körper in der Gruppe hängt
      */
     async bauen({ beiKoerper = null } = {}) {
+        // Skelett und Gewichte kommen seit dem 18.09.2026 erst auf Anforderung
+        // (`Szenenaufbau.startsequenz`): das erste Lesen stößt sie an, damit sie
+        // neben dem Körper laufen wie vorher.
+        const grunddaten = state.grunddatenBereit ?? Promise.resolve();
         if (this.generatedConfig) {
+            await grunddaten;
             const fertig = await Charakterkoerper.ausKonfiguration(this);
             beiKoerper?.(this);
             return fertig;
@@ -83,8 +88,7 @@ export class CharacterInstance extends HumanbodyModell {
         // Startsequenz legt das Versprechen ab, statt darauf zu warten,
         // bevor die Figur überhaupt beginnt — 2,4 MB Hautgewichte hielten
         // sonst den Körper auf, der sie gar nicht braucht.
-        await Startmessung.umAsync('    auf Skelett und Gewichte warten',
-                                   () => state.grunddatenBereit ?? Promise.resolve());
+        await Startmessung.umAsync('    auf Skelett und Gewichte warten', () => grunddaten);
         await Startmessung.umAsync('    Stoff', () => Charakterzubehoer.stoff(this));
         await Startmessung.umAsync('    Haare', () => Charakterzubehoer.haare(this));
         await Startmessung.umAsync('    Kleidung', () => Charakterzubehoer.kleidung(this));

@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils.js';
 import { Bildnachlader } from '../../gemeinsam/bildnachlader.js';
+import { Bildauswahl } from '../../gemeinsam/bildauswahl.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
@@ -102,8 +103,14 @@ export class Genesis9garderobe {
         }
         const bisher = inst.kleidung?.[stueck.id] || {};
         const werte = () => Genesis9garderobe.werte(stueck, wahl, felder, inst);
+        // Die Farbvarianten mit Daz' Vorschaubild je Eintrag (`Bildauswahl`,
+        // 18.09.2026 nachts: „in der Combo box die Farben / icons").
         const wahl = Genesis9garderobe._auswahl(zeile, stueck, stueck.varianten, 'Standard',
-            bisher.variante || '', haken, () => werte());
+            bisher.variante || '', haken, () => werte(),
+            v => (v.id === '' ? stueck.vorschau : v.vorschau)
+                ? `${Genesis9garderobe.ADRESSE}${encodeURIComponent(stueck.id)}/vorschau/`
+                  + (v.id ? `?variante=${encodeURIComponent(v.id)}` : '')
+                : null);
         const felder = {};
         for (const [art, titel] of Genesis9garderobe.STILARTEN) {
             const eintraege = (stueck.stile || []).filter(s => (s.art || 'stil') === art);
@@ -133,18 +140,28 @@ export class Genesis9garderobe {
         };
     }
 
-    /** Eine Auswahl (Variante oder Stil) in die Zeile — oder null, wenn es nichts zu wählen gibt. */
-    static _auswahl(zeile, stueck, eintraege, leerText, vorgabe, haken, werte) {
+    /**
+     * Eine Auswahl (Variante oder Stil) in die Zeile — oder null, wenn es nichts
+     * zu wählen gibt. Mit `bild` (Adresse je Eintrag) eine `Bildauswahl`, sonst
+     * ein `<select>`; beide antworten auf `.value` und `change`.
+     */
+    static _auswahl(zeile, stueck, eintraege, leerText, vorgabe, haken, werte, bild = null) {
         if (!eintraege?.length) return null;
-        const feld = document.createElement('select');
-        feld.className = 'hb-dehnt';
-        for (const v of [{ id: '', name: leerText }, ...eintraege]) {
-            const option = document.createElement('option');
-            option.value = v.id;
-            option.textContent = v.name;
-            option.selected = v.id === vorgabe;
-            feld.appendChild(option);
+        const alle = [{ id: '', name: leerText }, ...eintraege];
+        let feld;
+        if (bild) {
+            feld = Bildauswahl.bauen(alle, vorgabe, bild);
+        } else {
+            feld = document.createElement('select');
+            for (const v of alle) {
+                const option = document.createElement('option');
+                option.value = v.id;
+                option.textContent = v.name;
+                option.selected = v.id === vorgabe;
+                feld.appendChild(option);
+            }
         }
+        feld.classList.add('hb-dehnt');
         feld.disabled = !stueck.zeigbar;
         feld.addEventListener('change', () => {
             if (haken.checked) Genesis9garderobe._anziehen(zeile.inst, stueck.id, werte());

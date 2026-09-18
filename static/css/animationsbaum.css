@@ -154,3 +154,30 @@
 .garment-name { flex: 1; overflow: hidden; text-overflow: ellipsis;
                 white-space: nowrap; }
 .garment-haken { color: var(--success); margin-left: 4px; }
+
+/* Bildauswahl (`gemeinsam/bildauswahl.js`, 18.09.2026): Farbvarianten der
+   Daz-Garderobe mit Vorschaubild je Eintrag — ein `<select>` zeigt keine
+   Bilder. Die Liste liegt fest am Bildschirm, damit der rollende Baum sie
+   nicht abschneidet. */
+.bildauswahl { position: relative; min-width: 0; }
+.bildauswahl-knopf { display: flex; align-items: center; gap: 6px; width: 100%;
+                     padding: 2px 6px; border: 1px solid var(--border);
+                     border-radius: 4px; background: var(--bg-secondary);
+                     color: var(--text); cursor: pointer; font: inherit;
+                     text-align: left; }
+.bildauswahl-knopf:disabled { cursor: default; opacity: 0.6; }
+.bildauswahl-bild { width: 24px; height: 24px; border-radius: 3px;
+                    object-fit: cover; flex-shrink: 0; }
+.bildauswahl-name { flex: 1; overflow: hidden; text-overflow: ellipsis;
+                    white-space: nowrap; }
+.bildauswahl-pfeil { color: var(--text-muted); }
+.bildauswahl-liste { position: fixed; z-index: 1000; margin: 0; padding: 2px 0;
+                     list-style: none; max-height: 280px; overflow-y: auto;
+                     border: 1px solid var(--border); border-radius: 4px;
+                     background: var(--bg-secondary);
+                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.bildauswahl-liste li { display: flex; align-items: center; gap: 6px;
+                        padding: 3px 6px; cursor: pointer; }
+.bildauswahl-liste li:hover { background: var(--bg-hover); }
+.bildauswahl-liste li.gewaehlt { background: rgba(124, 92, 191, 0.35); }
+.bildauswahl-liste .bildauswahl-bild { width: 32px; height: 32px; }

@@ -11,6 +11,9 @@ Diagonalen), oberste Reihe gebunden (Freiheit 0), der Rest frei:
 3. Springt die gehaeutete Lage seitlich, bleibt der Saum zurueck (Traegheit)
    und kommt danach zurueck (Feder).
 4. Eine Kapsel im Weg drueckt die Punkte auf Radius plus Abstand hinaus.
+5. Sprungschutz (18.09.2026 abends, Edgar: „kleider animieren nicht" — das
+   Kleid hing in Fetzen, weil die Figur bei Sekunden je Bild weitersprang):
+   `bild` setzt bei dt > SPRUNG_DT und bei Entgleisung auf die Lage.
 
 Sabotage-Gegenprobe: die Kantenschleife weglassen -> Fall 2 rot (der Saum
 faellt ungebremst); `(alt - xAlt)` weglassen -> Fall 3 rot (keine Traegheit).
@@ -92,10 +95,22 @@ if (!(naechster >= 0.05 + S.ABSTAND - 1e-6)) {
     throw new Error('in der Kapsel: ' + naechster);
 }
 
+// --- 5. Sprungschutz: ein Bild von 2 s setzt auf die Lage, ein Bild von 1/10 s
+//        laeuft in zwei Teilschritten; eine Entgleisung (Lage 3 m weg) setzt zurueck.
+p = bau();
+for (let i = 0; i < 30; i++) p.schritt(ziel, dt, [], ohne);
+const lag = p.bild(versetzt, 2.0, [], ohne);
+if (!lag.zurueckgesetzt || p.auslenkung(versetzt) > 1e-9) throw new Error('Sprung nicht gesetzt');
+const teil = p.bild(versetzt, 0.1, [], ohne);
+if (teil.zurueckgesetzt) throw new Error('Teilschritt als Sprung');
+const weit = Float32Array.from(ruhe.map((w, k) => k % 3 === 0 ? w + 3 : w));
+const ent = p.bild(weit, dt, [], ohne);
+if (!ent.zurueckgesetzt || p.auslenkung(weit) > 1e-9) throw new Error('Entgleisung nicht gesetzt');
+
 console.log(JSON.stringify({
     ok: true, sack_cm: +(sack * 100).toFixed(1), dehnung: +dehnung.toFixed(3),
     sprung_cm: +(sprung * 100).toFixed(1), danach_cm: +(danach * 100).toFixed(2),
-    kapsel_cm: +(naechster * 100).toFixed(2)}));
+    kapsel_cm: +(naechster * 100).toFixed(2), sprungschutz: true}));
 """
 
 
@@ -109,3 +124,4 @@ class StoffpendelTest(SimpleTestCase):
         self.assertLess(ausgabe['dehnung'], 1.10)
         self.assertGreater(ausgabe['sprung_cm'], 15)
         self.assertLess(ausgabe['danach_cm'], 2)
+        self.assertTrue(ausgabe['sprungschutz'])

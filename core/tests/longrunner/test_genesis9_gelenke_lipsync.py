@@ -12,6 +12,9 @@ u"""Genesis 9 gegen die installierte Daz-Bibliothek (18.09.2026 abends, Edgar:
    Genesis 9 mit 54 Spuren.
 4. Lippensynchronisation: eine Sekunde Rauschen -> Mundformen (nur mit
    Rhubarb).
+5. Kleidung und Schalter (18.09.2026 nachts, „mach beide"): die Stueckfelder
+   der Angie Jeans (sieben Teile, `thigh_x35p_l` auf der Hose), die zwei
+   Schalter im Reglerplan, Fabrice stellt die Beugungen per Formel auf 1.
 
 LongRunner: JCM-Felder 7 s beim ersten Mal, Retarget, Rhubarb. Ohne
 Bibliothek uebersprungen.
@@ -102,26 +105,85 @@ class GelenkeLipsyncTest(SimpleTestCase):
         b = G9bewegungen.lesen(katalog['walking']['datei'])
         self.assertEqual(b['bilder'], 36)
         text = G9bewegungbvh.text(b)
-        self.assertEqual(text.count('JOINT '), 56)
+        # 56 der Zuordnung + Kiefer + zehn Zehen (18.09.2026 abends)
+        self.assertEqual(text.count('JOINT '), 67)
         self.assertIn('JOINT neck2', text)
+        self.assertIn('JOINT lowerjaw', text)
+        self.assertIn('JOINT r_pinkytoe1', text)
         self.assertNotIn('l_eye', text)
         self.assertNotIn('twist', text)
+        self.assertNotIn('bigtoe2', text)
         namen = [z.split()[1] for z in text.split('\n')
                  if z.strip().startswith(('ROOT', 'JOINT'))]
         bauart = Skeleton.detect_format(namen)
         self.assertEqual(bauart.FORMAT, 'GENESIS9')
-        self.assertEqual(len(G9zuordnung.ausnahmen(bauart)), 54)
+        self.assertEqual(len(G9zuordnung.ausnahmen(bauart)), 65)
         with tempfile.TemporaryDirectory(dir=os.getcwd()) as ordner:
             geschrieben = G9bewegungen.bereitstellen(Path(ordner))
             self.assertEqual(len(geschrieben), 7)
             self.assertEqual(G9bewegungen.bereitstellen(Path(ordner)), [])
+            marke = Path(ordner) / 'fassung.txt'
+            self.assertEqual(marke.read_text(encoding='utf-8'),
+                             str(G9bewegungen.BVH_FASSUNG))
+            marke.write_text('1', encoding='utf-8')         # alte Fassung: alles neu
+            self.assertEqual(len(G9bewegungen.bereitstellen(Path(ordner))), 7)
         wurzel = Path(settings.HUMANBODY_BVH_DIR).parent / G9bewegungen.ORDNER
         if (wurzel / 'Walking.bvh').is_file():
             r = self.client.get('/api/retarget/', {
                 'category': 'Daz', 'name': 'Walking', 'target': 'genesis9',
                 'figur': 'basis'})
             self.assertEqual(r.status_code, 200, r.content[:300])
-            self.assertEqual(len(r.json()['tracks']), 54)
+            spuren = r.json()['tracks']
+            self.assertEqual(len(spuren), 65)
+            self.assertIn('lowerjaw', spuren)
+            self.assertIn('l_bigtoe1', spuren)
+
+    # ------------------------------------------------------------ Kleidung
+
+    def test_5_stueckfelder_und_schalter(self):
+        r = self.client.get(
+            '/api/character/genesis9-figur/garderobe/angie_jeans/felder/gelenke/'
+            '?stufen=1')
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        d = r.json()
+        self.assertEqual(len(d['teile']), 7)
+        self.assertGreater(d['teile'][0]['body_cbs_thigh_x35p_l']['anzahl'], 1000)
+        r = self.client.get(
+            '/api/character/genesis9-figur/garderobe/kein_stueck/felder/gelenke/')
+        self.assertEqual(r.status_code, 404)
+        # Kaefigfelder fuer den Stoff-Worker (18.09.2026 abends): Daz-Punkte,
+        # ohne Matrix — jede Nummer unter der Punktzahl des Teils.
+        r = self.client.get(
+            '/api/character/genesis9-figur/garderobe/angie_jeans/felder/gelenke/'
+            '?kaefig=1')
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        k = r.json()
+        self.assertIsNone(k['stufen'])
+        self.assertEqual(len(k['teile']), 7)
+        from Genesis9.garderobe import G9garderobe
+        folger = [f for f, lage in G9garderobe.teile('angie_jeans')]
+        feld = k['teile'][0]['body_cbs_thigh_x35p_l']
+        self.assertGreater(feld['anzahl'], 200)
+        fein = d['teile'][0]['body_cbs_thigh_x35p_l']['anzahl']
+        self.assertLess(feld['anzahl'], fein)
+        import base64
+        import numpy as np
+        nummern = np.frombuffer(base64.b64decode(feld['n']), dtype=np.uint32)
+        self.assertLess(int(nummern.max()), len(folger[0].punkte))
+        r = self.client.get('/api/character/genesis9-figur/regler/')
+        koerper = next(b for b in r.json()['bereiche'] if b['schluessel'] == 'koerper')
+        namen = {x['name']: x for x in koerper['regler']}
+        self.assertEqual(namen['body_ctrl_FlexionAutoStrength']['vorgabe'], 0.0)
+        self.assertEqual(namen['body_basejointcorrectives']['vorgabe'], 1.0)
+        r = self.client.post(
+            '/api/character/genesis9-figur/fabrice/netz/',
+            data=json.dumps({'regler': {'Fabrice_figure_ctrl_Character': 1.0},
+                             'anhaenge': False}),
+            content_type='application/json')
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        self.assertEqual(r.json()['gelenkregler'],
+                         {'body_basejointcorrectives': 1.0,
+                          'body_ctrl_FlexionAutoStrength': 1.0})
 
     # -------------------------------------------------------------- Lipsync
 
