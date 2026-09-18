@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die JavaScript-Stoffgrenze gegen die Python-Fassung — dieselben Zahlen.
+"""Die JavaScript-Stoffgrenze gegen die Python-Fassung — dieselben Zahlen.
 
 `gemeinsam/stoffgrenze.js` haelt im Browser den Weichgewebe-Zuschlag der
 Kleidung aus dem Koerper; `TheatreJS/ModelPhysik/stoffgrenze.py` tut es im
@@ -19,6 +19,7 @@ Ohne den Ringabbruch (`break` entfernt) bleibt der Test gruen — der Ring
 laeuft dann nur weiter; mit einer falschen Schale (`<=` statt `<` im
 Abbruch) wird er rot.
 """
+
 import json
 import os
 import sys
@@ -30,9 +31,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._pruefablage import Pruefablage
 
-MODUL = Jsmodul('gemeinsam', 'stoffgrenze.js')
-GITTER = Jsmodul('gemeinsam', 'punktgitter.js')
-MODELPHYSIK = os.path.join(str(settings.BASE_DIR), 'TheatreJS', 'ModelPhysik')
+MODUL = Jsmodul("gemeinsam", "stoffgrenze.js")
+GITTER = Jsmodul("gemeinsam", "punktgitter.js")
+MODELPHYSIK = os.path.join(str(settings.BASE_DIR), "TheatreJS", "ModelPhysik")
 
 
 SKRIPT = """
@@ -100,13 +101,13 @@ console.log(JSON.stringify({ ok: true, anfragen: m, zelle: gitter.zelle, zellen:
 
 
 class StoffgrenzeJsTest(SimpleTestCase):
-
     databases = set()
 
     def _fixture(self):
         if MODELPHYSIK not in sys.path:
             sys.path.insert(0, MODELPHYSIK)
         from stoffgrenze import Stoffgrenze
+
         zufall = np.random.default_rng(3)
         mitte = (0.0, 1.0, 0.0)
         koerper, dreiecke = StoffgrenzeJsTest._kugelnetz(mitte=mitte)
@@ -117,12 +118,14 @@ class StoffgrenzeJsTest(SimpleTestCase):
         soll = ruhe.sollabstand(stoff)
         faelle = []
         ohne_grenze = None
-        for name, schub in ((u'Ruhe', np.zeros(3)),
-                            (u'verschoben', np.array([0.5, -0.2, 0.3])),
-                            (u'eingedrueckt', np.zeros(3)),
-                            (u'koerper_aussen', np.zeros(3))):
+        for name, schub in (
+            ("Ruhe", np.zeros(3)),
+            ("verschoben", np.array([0.5, -0.2, 0.3])),
+            ("eingedrueckt", np.zeros(3)),
+            ("koerper_aussen", np.zeros(3)),
+        ):
             k, s = koerper + schub, stoff + schub
-            if name == u'koerper_aussen':
+            if name == "koerper_aussen":
                 # Der KOERPER geht 12 mm nach aussen (sein eigener
                 # Weichgewebe-Zuschlag), der Stoff hat keinen Versatz. Die
                 # alte Fassung kuerzte hier nichts (kein einwaerts gerichteter
@@ -130,14 +133,14 @@ class StoffgrenzeJsTest(SimpleTestCase):
                 k = koerper + 0.012 * ruhe.normalen
             grenze = Stoffgrenze(k, dreiecke)
             _abstand, naechster = grenze.baum.query(s)
-            if name == u'eingedrueckt':
+            if name == "eingedrueckt":
                 # Nur MESSEN: alle Punkte 0 bis 20 mm in den Koerper
                 # gedrueckt, nichts gekuerzt — die Durchdringungsprobe muss
                 # sie zaehlen.
                 tiefe = zufall.uniform(0.0, 0.020, size=(len(s), 1))
                 versatz = -grenze.normalen[naechster] * tiefe
                 ergebnis, zahl = np.zeros_like(versatz), 0
-            elif name == u'koerper_aussen':
+            elif name == "koerper_aussen":
                 versatz = np.zeros_like(s)
                 ohne_grenze = grenze.durchdringung(s)[0]
                 ergebnis, zahl = grenze.kuerzen(s, versatz, soll)
@@ -148,80 +151,93 @@ class StoffgrenzeJsTest(SimpleTestCase):
             # JS-Fassung. Pythons `durchdringung()` sucht je Aufruf neu und
             # findet fuer einen seitlich verschobenen Punkt womoeglich einen
             # anderen Nachbarn; das ist die Naeherung, nicht ein Fehler.
-            rest = (s + versatz if name == u'eingedrueckt' else s + ergebnis)
-            aussen = np.sum((rest - k[naechster]) * grenze.normalen[naechster],
-                            axis=1)
+            rest = s + versatz if name == "eingedrueckt" else s + ergebnis
+            aussen = np.sum((rest - k[naechster]) * grenze.normalen[naechster], axis=1)
             drin = aussen < -Stoffgrenze.TOLERANZ
-            faelle.append({
-                'name': name, 'koerper': k.tolist(), 'stoff': s.tolist(),
-                'versatz': versatz.tolist(), 'ergebnis': ergebnis.tolist(),
-                'gekuerzt': zahl, 'nur_messen': name == u'eingedrueckt',
-                'durchdringung': [float(drin.mean()) * 100.0,
-                                  float(-aussen[drin].min()) * 1000.0
-                                  if drin.any() else 0.0],
-                # Pythons eigene Probe auf denselben Punkten: Sie MUSS die
-                # tiefste Stelle nennen, nicht die flachste (Fehler bis
-                # 11.09.2026: `.max()` auf negativen Werten).
-                'tiefe_python_mm': grenze.durchdringung(rest)[1],
-            })
+            faelle.append(
+                {
+                    "name": name,
+                    "koerper": k.tolist(),
+                    "stoff": s.tolist(),
+                    "versatz": versatz.tolist(),
+                    "ergebnis": ergebnis.tolist(),
+                    "gekuerzt": zahl,
+                    "nur_messen": name == "eingedrueckt",
+                    "durchdringung": [
+                        float(drin.mean()) * 100.0,
+                        float(-aussen[drin].min()) * 1000.0 if drin.any() else 0.0,
+                    ],
+                    # Pythons eigene Probe auf denselben Punkten: Sie MUSS die
+                    # tiefste Stelle nennen, nicht die flachste (Fehler bis
+                    # 11.09.2026: `.max()` auf negativen Werten).
+                    "tiefe_python_mm": grenze.durchdringung(rest)[1],
+                }
+            )
         # Dictionary gewollt: geht als JSON an das Node-Skript.
-        return {'koerper': koerper.tolist(), 'dreiecke': dreiecke.tolist(),
-                'stoff': stoff.tolist(), 'soll': soll.tolist(), 'faelle': faelle,
-                'koerper_aussen_ohne_grenze': ohne_grenze}
+        return {
+            "koerper": koerper.tolist(),
+            "dreiecke": dreiecke.tolist(),
+            "stoff": stoff.tolist(),
+            "soll": soll.tolist(),
+            "faelle": faelle,
+            "koerper_aussen_ohne_grenze": ohne_grenze,
+        }
 
     def test_js_kuerzt_wie_python(self):
         fixture = self._fixture()
-        from stoffgrenze import Stoffgrenze      # nach `_fixture`: setzt den Pfad
+        from stoffgrenze import Stoffgrenze  # nach `_fixture`: setzt den Pfad
+
         # Der Fall muss etwas zu kuerzen haben — sonst prueft er nichts.
-        self.assertGreater(fixture['faelle'][0]['gekuerzt'], 20)
-        self.assertLess(fixture['faelle'][0]['gekuerzt'], 300)
+        self.assertGreater(fixture["faelle"][0]["gekuerzt"], 20)
+        self.assertLess(fixture["faelle"][0]["gekuerzt"], 300)
         # Und die Messprobe muss Punkte IM Koerper haben, sonst misst sie nichts.
-        mess = fixture['faelle'][2]
-        self.assertGreater(mess['durchdringung'][0], 20.0)
+        mess = fixture["faelle"][2]
+        self.assertGreater(mess["durchdringung"][0], 20.0)
         # Der tiefste Punkt liegt bei bis zu 20 mm Eindrueckung tief, nicht
         # bei einem Millimeter.
-        self.assertGreater(mess['tiefe_python_mm'], 10.0)
-        self.assertAlmostEqual(mess['tiefe_python_mm'], mess['durchdringung'][1], places=6)
+        self.assertGreater(mess["tiefe_python_mm"], 10.0)
+        self.assertAlmostEqual(mess["tiefe_python_mm"], mess["durchdringung"][1], places=6)
         # Der Koerper von innen: OHNE Stoffversatz muss angehoben werden —
         # jeder Punkt, dessen Ruheabstand unter 12 mm + Soll liegt. Danach
         # steckt nur noch im Koerper, was schon in RUHE darin stand (der
         # Kunstkoerper ist facettiert; ein Punkt ueber der Flaechenmitte
         # misst gegen die Punktnormale bis 1,6 mm „innen"). Mit der alten
         # Fassung war hier `gekuerzt` 0 (Sabotage-Gegenprobe gemacht).
-        aussen = fixture['faelle'][3]
-        soll = np.asarray(fixture['soll'])
-        self.assertGreater(fixture['koerper_aussen_ohne_grenze'], 30.0)
-        self.assertGreater(aussen['gekuerzt'], 100)
+        aussen = fixture["faelle"][3]
+        soll = np.asarray(fixture["soll"])
+        self.assertGreater(fixture["koerper_aussen_ohne_grenze"], 30.0)
+        self.assertGreater(aussen["gekuerzt"], 100)
         in_ruhe_drin = 100.0 * float((soll < -Stoffgrenze.TOLERANZ).mean())
-        self.assertLessEqual(aussen['durchdringung'][0], in_ruhe_drin)
-        self.assertLess(aussen['durchdringung'][0], 2.0)
+        self.assertLessEqual(aussen["durchdringung"][0], in_ruhe_drin)
+        self.assertLess(aussen["durchdringung"][0], 2.0)
         # Eine Leggings auf 2 mm bekommt 2 mm als Soll, nicht 6.
         self.assertLess(soll.min(), 0.0025)
         self.assertAlmostEqual(soll.max(), 0.006, places=9)
-        with Pruefablage.datei(json.dumps(fixture), '.json',
-                               'stoffgrenze_') as pfad:
-            skript = SKRIPT.replace('FIXTURE,', json.dumps(pfad) + ',', 1)
+        with Pruefablage.datei(json.dumps(fixture), ".json", "stoffgrenze_") as pfad:
+            skript = SKRIPT.replace("FIXTURE,", json.dumps(pfad) + ",", 1)
             ausgabe = MODUL.laufen(skript)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['geprueft'], 4 * 300 * 3)
-        self.assertGreater(ausgabe['geaendert'], 0)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertEqual(ausgabe["geprueft"], 4 * 300 * 3)
+        self.assertGreater(ausgabe["geaendert"], 0)
 
     def test_gitter_findet_den_naechsten(self):
         ausgabe = GITTER.laufen(GITTER_SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['anfragen'], 600)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertEqual(ausgabe["anfragen"], 600)
 
     @staticmethod
     def _kugelnetz(ringe=14, segmente=18, radius=0.3, mitte=(0.0, 1.0, 0.0)):
-        u"""Geschlossene Kugel, Dreiecke NACH AUSSEN gewickelt."""
+        """Geschlossene Kugel, Dreiecke NACH AUSSEN gewickelt."""
         punkte = [np.array(mitte) + [0, radius, 0]]
         for r in range(1, ringe):
             phi = np.pi * r / ringe
             for s in range(segmente):
                 theta = 2 * np.pi * s / segmente
-                punkte.append(np.array(mitte) + radius * np.array(
-                    [np.sin(phi) * np.cos(theta), np.cos(phi),
-                     np.sin(phi) * np.sin(theta)]))
+                punkte.append(
+                    np.array(mitte)
+                    + radius
+                    * np.array([np.sin(phi) * np.cos(theta), np.cos(phi), np.sin(phi) * np.sin(theta)])
+                )
         punkte.append(np.array(mitte) - [0, radius, 0])
         unten = len(punkte) - 1
         dreiecke = []

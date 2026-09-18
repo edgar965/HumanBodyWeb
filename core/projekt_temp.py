@@ -26,6 +26,7 @@ Sie ersetzt nicht `AtomarSchreiber`. Der legt seine Nebendatei bewusst NEBEN
 die Zieldatei (damit `os.replace` auf demselben Laufwerk bleibt) — das ist eine
 andere Aufgabe.
 """
+
 import logging
 import shutil
 import tempfile
@@ -35,7 +36,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class ProjektTemp:
@@ -59,25 +60,24 @@ class ProjektTemp:
     @classmethod
     def verzeichnis(cls):
         """Das Basisverzeichnis (wird angelegt, wenn es fehlt)."""
-        p = Path(settings.MEDIA_ROOT) / 'tmp'
+        p = Path(settings.MEDIA_ROOT) / "tmp"
         p.mkdir(parents=True, exist_ok=True)
         return p
 
     # ------------------------------------------------------------------ anlegen
 
     @classmethod
-    def datei(cls, suffix='', prefix='hb_'):
+    def datei(cls, suffix="", prefix="hb_"):
         """Pfad einer neuen, leeren Datei. Der Aufrufer löscht sie — oder der
         Hausmeister tut es später."""
         basis = cls.verzeichnis()
         cls.hausmeister()
-        f = tempfile.NamedTemporaryFile(dir=str(basis), suffix=suffix,
-                                        prefix=prefix, delete=False)
+        f = tempfile.NamedTemporaryFile(dir=str(basis), suffix=suffix, prefix=prefix, delete=False)
         f.close()
         return Path(f.name)
 
     @classmethod
-    def ordner(cls, prefix='hb_'):
+    def ordner(cls, prefix="hb_"):
         """Pfad eines neuen, leeren Verzeichnisses."""
         basis = cls.verzeichnis()
         cls.hausmeister()
@@ -85,7 +85,7 @@ class ProjektTemp:
 
     @classmethod
     @contextmanager
-    def wegwerfordner(cls, prefix='hb_'):
+    def wegwerfordner(cls, prefix="hb_"):
         """`with ProjektTemp.wegwerfordner() as ordner:` — wie
         `tempfile.TemporaryDirectory()`, aber im Projekt.
 
@@ -121,7 +121,7 @@ class ProjektTemp:
                 else:
                     p.unlink(missing_ok=True)
             except OSError as e:
-                logger.warning('ProjektTemp: %s nicht entfernbar: %s', p, e)
+                logger.warning("ProjektTemp: %s nicht entfernbar: %s", p, e)
 
     @classmethod
     def hausmeister(cls, max_alter_h=None, erzwingen=False):
@@ -142,7 +142,7 @@ class ProjektTemp:
         cls._letzter_lauf = jetzt
         grenze = time.time() - (max_alter_h or cls.MAX_ALTER_H) * 3600
         try:
-            eintraege = list(Path(settings.MEDIA_ROOT).joinpath('tmp').iterdir())
+            eintraege = list(Path(settings.MEDIA_ROOT).joinpath("tmp").iterdir())
         # stumm gewollt: Gibt es das Verzeichnis noch nicht, ist nichts
         # aufzuräumen — der Hausmeister läuft beim nächsten Anlegen erneut.
         except OSError:
@@ -160,6 +160,9 @@ class ProjektTemp:
             cls.weg(p)
             entfernt += 1
         if entfernt:
-            logger.info('ProjektTemp: %d alte Reste entfernt (älter als %d h)',
-                        entfernt, max_alter_h or cls.MAX_ALTER_H)
+            logger.info(
+                "ProjektTemp: %d alte Reste entfernt (älter als %d h)",
+                entfernt,
+                max_alter_h or cls.MAX_ALTER_H,
+            )
         return entfernt

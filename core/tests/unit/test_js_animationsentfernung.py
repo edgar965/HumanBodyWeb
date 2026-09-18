@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Animationsentfernung`: was nach dem Löschen einer Animation geschieht.
+"""`Animationsentfernung`: was nach dem Löschen einer Animation geschieht.
 
 WARUM (12.09.2026, Edgar): „nach löschen einer Animation geht der Tab zu, die
 alte Animation bleibt usw. Es soll der Eintrag verschwinden, auf die nächste
@@ -17,11 +17,12 @@ Geprüft ohne DOM und ohne Three.js:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'animationsentfernung.js')
+MODUL = Jsmodul("scene", "animationsentfernung.js")
 
 SKRIPT = """
 const { Animationsentfernung: A } = await import(MODUL);
@@ -103,7 +104,6 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class AnimationsentfernungTest(SimpleTestCase):
-
     def test_stoppt_vergisst_und_waehlt_den_nachfolger(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

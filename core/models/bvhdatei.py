@@ -12,10 +12,10 @@ from django.db import models
 
 class BVHFile(models.Model):
     """Represents a BVH file in the library."""
+
     name = models.CharField(max_length=255)
     path = models.CharField(max_length=512, unique=True)
-    source = models.CharField(max_length=50,
-                              default='mocapnet')  # mocapnet, imported, recorded
+    source = models.CharField(max_length=50, default="mocapnet")  # mocapnet, imported, recorded
     frame_count = models.IntegerField(default=0)
     duration_seconds = models.FloatField(default=0.0)
     # Cache-Invalidierung: wenn mtime_ns sich ändert → Datei wurde geändert →
@@ -26,7 +26,7 @@ class BVHFile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.name

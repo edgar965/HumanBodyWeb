@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die laufende Fassung muss in Hilfe → Versionen auch vorkommen.
+"""Die laufende Fassung muss in Hilfe → Versionen auch vorkommen.
 
 DER BEFUND (Edgar, 08.09.2026: „warum steht in der Hilfe 0.58 als Version, im
 UI aber 0.57? 0.57 fehlt in der Hilfe - Versionen")
@@ -32,6 +32,7 @@ liest; also braucht die laufende Fassung UND jede Fassung ab 0.57, die ein
 Betreff nennt, ein Modul `ui/settings/fassungen/v0NN.py`. Sabotage: `v060`
 aus `fassungen.ALLE` nehmen → beide neuen Fälle rot.
 """
+
 import re
 import subprocess
 import unittest
@@ -40,8 +41,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 #: Dieselbe Erkennung wie in djangoBase — Marke irgendwo im Betreff.
-MARKE = re.compile(r"(?:^|[\s\(\[\+,—\-])(?:v|Version\s+)(\d+\.\d+(?:\.\d+)?)\b",
-                   re.I)
+MARKE = re.compile(r"(?:^|[\s\(\[\+,—\-])(?:v|Version\s+)(\d+\.\d+(?:\.\d+)?)\b", re.I)
 
 #: So viele Betreffs reichen: Ein Bump liegt nie hundert Commits zurück.
 TIEFE = 100
@@ -51,85 +51,96 @@ ERSTE_MIT_EINTRAG = (0, 57)
 
 
 class VersionshistorieTest(SimpleTestCase):
-    u"""Was das UI zeigt, muss die Versionsseite auch kennen."""
+    """Was das UI zeigt, muss die Versionsseite auch kennen."""
 
     def test_laufende_fassung_ist_in_der_historie_vertreten(self):
         laufend = str(settings.VERSION).lstrip("v").strip()
         betreffe = VersionshistorieTest._betreff_fassungen()
         manuell = VersionshistorieTest._manuelle_fassungen()
         self.assertIn(
-            laufend, betreffe | manuell,
-            u"Fassung %s steht im UI, aber Hilfe → Versionen kennt sie nicht: "
-            u"kein Commit-Betreff mit der Marke (gefunden: %s) und kein "
-            u"Eintrag in ui/settings/versionsliste.py (dort: %s). Beim Bump "
-            u"gehört die Nummer in den Commit-Betreff; nachträglich hilft nur "
-            u"die manuelle Liste." % (laufend,
-                                      ", ".join(sorted(betreffe)) or "keine",
-                                      ", ".join(sorted(manuell)) or "keine"))
+            laufend,
+            betreffe | manuell,
+            "Fassung %s steht im UI, aber Hilfe → Versionen kennt sie nicht: "
+            "kein Commit-Betreff mit der Marke (gefunden: %s) und kein "
+            "Eintrag in ui/settings/versionsliste.py (dort: %s). Beim Bump "
+            "gehört die Nummer in den Commit-Betreff; nachträglich hilft nur "
+            "die manuelle Liste."
+            % (laufend, ", ".join(sorted(betreffe)) or "keine", ", ".join(sorted(manuell)) or "keine"),
+        )
 
     def test_die_laufende_fassung_hat_einen_changelog_eintrag(self):
         laufend = str(settings.VERSION).lstrip("v").strip()
         self.assertIn(
-            laufend, VersionshistorieTest._manuelle_fassungen(),
-            u"Fassung %s steht im UI, aber der Changelog-Block auf Hilfe → "
-            u"Versionen kennt sie nicht: ui/settings/fassungen/v%s.py fehlt."
-            % (laufend, laufend.replace(".", "")))
+            laufend,
+            VersionshistorieTest._manuelle_fassungen(),
+            "Fassung %s steht im UI, aber der Changelog-Block auf Hilfe → "
+            "Versionen kennt sie nicht: ui/settings/fassungen/v%s.py fehlt."
+            % (laufend, laufend.replace(".", "")),
+        )
 
     def test_jede_fassung_seit_057_hat_einen_changelog_eintrag(self):
         betreffe = VersionshistorieTest._betreff_fassungen()
         if not betreffe:
-            self.skipTest(u"Kein Git-Repo erreichbar — nur manuelle Liste.")
+            self.skipTest("Kein Git-Repo erreichbar — nur manuelle Liste.")
         manuell = VersionshistorieTest._manuelle_fassungen()
-        fehlend = sorted(f for f in betreffe
-                         if VersionshistorieTest._nummer(f) >= ERSTE_MIT_EINTRAG
-                         and f not in manuell)
+        fehlend = sorted(
+            f for f in betreffe if VersionshistorieTest._nummer(f) >= ERSTE_MIT_EINTRAG and f not in manuell
+        )
         self.assertEqual(
-            fehlend, [],
-            u"Diese Fassungen nennt ein Commit-Betreff, der Changelog-Block "
-            u"kennt sie nicht: %s — je ein Modul ui/settings/fassungen/v0NN.py."
-            % ", ".join(fehlend))
+            fehlend,
+            [],
+            "Diese Fassungen nennt ein Commit-Betreff, der Changelog-Block "
+            "kennt sie nicht: %s — je ein Modul ui/settings/fassungen/v0NN.py." % ", ".join(fehlend),
+        )
 
     @staticmethod
     def _nummer(fassung):
         return tuple(int(t) for t in fassung.split("."))
 
     def test_die_erkennung_findet_wirklich_etwas(self):
-        u"""Gegenprobe: Ein Prüfer, der nie etwas findet, meldet immer Erfolg.
+        """Gegenprobe: Ein Prüfer, der nie etwas findet, meldet immer Erfolg.
 
         Ohne diesen Fall wäre der Test oben auch dann grün, wenn `git` fehlt
         UND jemand die manuelle Liste als Sammelbecken benutzt — die Bedingung
         würde nur noch von der Liste getragen, ohne dass es auffällt.
         """
         if not VersionshistorieTest._betreff_fassungen():
-            self.skipTest(u"Kein Git-Repo erreichbar — nur manuelle Liste.")
-        self.assertTrue(VersionshistorieTest._betreff_fassungen(),
-                        u"Die Betreff-Erkennung findet in 100 Commits keine "
-                        u"einzige Fassung — dann prüft der Test oben nichts.")
+            self.skipTest("Kein Git-Repo erreichbar — nur manuelle Liste.")
+        self.assertTrue(
+            VersionshistorieTest._betreff_fassungen(),
+            "Die Betreff-Erkennung findet in 100 Commits keine "
+            "einzige Fassung — dann prüft der Test oben nichts.",
+        )
 
     def test_die_marke_greift_wie_bei_djangobase(self):
-        u"""Dieselben Formen, die `_fetch_commits` erkennt — und die falschen."""
+        """Dieselben Formen, die `_fetch_commits` erkennt — und die falschen."""
         for zeile, erwartet in (
-                ("Version 0.57", "0.57"),
-                ("v0.57: Umbau", "0.57"),
-                ("MakeHuman zieht aus — Version 0.56", "0.56"),
-                ("UMA Python gegen Unity gemessen: Kopf, Skelett", None),
-                ("LongRunner: elf Module über 5 s heraus", None)):
+            ("Version 0.57", "0.57"),
+            ("v0.57: Umbau", "0.57"),
+            ("MakeHuman zieht aus — Version 0.56", "0.56"),
+            ("UMA Python gegen Unity gemessen: Kopf, Skelett", None),
+            ("LongRunner: elf Module über 5 s heraus", None),
+        ):
             treffer = MARKE.search(zeile)
-            self.assertEqual(treffer.group(1) if treffer else None, erwartet,
-                             u"Betreff %r wurde falsch eingestuft" % zeile)
+            self.assertEqual(
+                treffer.group(1) if treffer else None, erwartet, "Betreff %r wurde falsch eingestuft" % zeile
+            )
 
     @staticmethod
     def _betreff_fassungen():
-        u"""Fassungsnummern aus den letzten Commit-Betreffs dieses Repos."""
+        """Fassungsnummern aus den letzten Commit-Betreffs dieses Repos."""
         try:
             lauf = subprocess.run(
-                ["git", "-C", str(settings.BASE_DIR), "log", "-%d" % TIEFE,
-                 "--pretty=format:%s"],
-                capture_output=True, text=True, timeout=10,
-                encoding="utf-8", errors="replace",
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                ["git", "-C", str(settings.BASE_DIR), "log", "-%d" % TIEFE, "--pretty=format:%s"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                encoding="utf-8",
+                errors="replace",
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
         # stumm gewollt: ohne git gibt es keine Historie — die Pruefung sagt das unten mit skipTest
-        except (OSError, subprocess.TimeoutExpired):
+        except OSError, subprocess.TimeoutExpired:
             return set()
         if lauf.returncode != 0:
             return set()
@@ -142,8 +153,7 @@ class VersionshistorieTest(SimpleTestCase):
 
     @staticmethod
     def _manuelle_fassungen():
-        eintraege = (getattr(settings, "DJANGOBASE", {}) or {}).get(
-            "manual_versions") or []
+        eintraege = (getattr(settings, "DJANGOBASE", {}) or {}).get("manual_versions") or []
         return {str(e.get("version", "")).lstrip("v").strip() for e in eintraege}
 
 

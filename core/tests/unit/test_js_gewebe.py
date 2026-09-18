@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Gewebe`: die Bindung, die einem Kleidungsstück Struktur gibt.
+"""`Gewebe`: die Bindung, die einem Kleidungsstück Struktur gibt.
 
 WARUM (Edgar, 10.09.2026: „Meine Kleider sehen mir noch zu schlecht aus"):
 Ein GarmentCode-Stück war eine einfarbige Fläche. Die Normalkarte, die das
@@ -26,11 +26,12 @@ GEPRÜFT WIRD, WAS FALSCH SEIN KANN, ohne dass es auffällt:
 4. **Die Normalkarte muss geneigt sein.** Ein Feld aus lauter (128,128,255)
    ist eine gültige Normalkarte, die nichts tut — der stille Fehlerfall.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'gewebe.js')
+MODUL = Jsmodul("gemeinsam", "gewebe.js")
 
 SKRIPT = """
 const { Gewebe } = await import(MODUL);
@@ -118,9 +119,8 @@ console.log(JSON.stringify({ok: true, rand: rand, innen: innen, geneigt: geneigt
 
 
 class GewebeTest(SimpleTestCase):
-
     databases = set()
 
     def test_kachel_bindung_und_normalen(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

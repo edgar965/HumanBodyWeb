@@ -60,8 +60,7 @@ class Bundelruf:
         `dateiname=None` -> normales Textfeld, sonst Datei.
         Rueckgabe: `(Status, JSON oder {'_raw': Text})`.
         """
-        return Kanal.aktueller().senden(pfad, method='POST', files=list(felder),
-                                        timeout=cls.FRIST_UPLOAD_S)
+        return Kanal.aktueller().senden(pfad, method="POST", files=list(felder), timeout=cls.FRIST_UPLOAD_S)
 
     @classmethod
     def abrufen(cls, adresse):
@@ -83,31 +82,29 @@ class Mtlbezug:
     """
 
     #: `map_Kd` steht am Zeilenanfang; der Rest der Zeile ist die Angabe.
-    ZEILE = re.compile(r'^\s*map_Kd\s+(.+?)\s*$',
-                       re.IGNORECASE | re.MULTILINE)
+    ZEILE = re.compile(r"^\s*map_Kd\s+(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
 
     @classmethod
     def aus_text(cls, mtl_text):
         """(rohe Angabe, Wortteile ohne Optionen) — oder (`''`, [])."""
         treffer = cls.ZEILE.search(mtl_text)
         if not treffer:
-            return '', []
+            return "", []
         angabe = treffer.group(1).strip()
         # Optionen wie `-s 1 1` oder `-o 0 0 0` stehen VOR dem Dateinamen.
-        return angabe, [w for w in angabe.split()
-                        if w and not w.startswith('-')]
+        return angabe, [w for w in angabe.split() if w and not w.startswith("-")]
 
     @classmethod
     def aus_adresse(cls, adresse):
         """Dieselbe Auswertung, aber die MTL wird erst geladen."""
         _status, roh = Bundelruf.abrufen(adresse)
-        return cls.aus_text(roh.decode('utf-8', errors='ignore'))
+        return cls.aus_text(roh.decode("utf-8", errors="ignore"))
 
     @staticmethod
     def dateiname(rohangabe, wortteile):
         """Der reine Dateiname: Backslashes, `./` und Unterpfade weg."""
         angabe = wortteile[-1] if wortteile else rohangabe
-        return angabe.replace('\\', '/').lstrip('./').split('/')[-1]
+        return angabe.replace("\\", "/").lstrip("./").split("/")[-1]
 
 
 # Synthetische Test-Dateien — minimal, aber syntaktisch gültig. Sie bleiben
@@ -131,14 +128,76 @@ map_Kd bundle_tex.png
 """
 
 # 1x1 PNG (rot) — minimales gültiges PNG
-_PNG_CONTENT = bytes([
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  # PNG signature
-    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,  # IHDR chunk
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,  # 1x1
-    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-    0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-    0x54, 0x08, 0x99, 0x63, 0xF8, 0xCF, 0xC0, 0x00,
-    0x00, 0x00, 0x03, 0x00, 0x01, 0x5B, 0xFC, 0x2A,
-    0x73, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
-    0x44, 0xAE, 0x42, 0x60, 0x82,
-])
+_PNG_CONTENT = bytes(
+    [
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,  # PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x0D,
+        0x49,
+        0x48,
+        0x44,
+        0x52,  # IHDR chunk
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,  # 1x1
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x90,
+        0x77,
+        0x53,
+        0xDE,
+        0x00,
+        0x00,
+        0x00,
+        0x0C,
+        0x49,
+        0x44,
+        0x41,
+        0x54,
+        0x08,
+        0x99,
+        0x63,
+        0xF8,
+        0xCF,
+        0xC0,
+        0x00,
+        0x00,
+        0x00,
+        0x03,
+        0x00,
+        0x01,
+        0x5B,
+        0xFC,
+        0x2A,
+        0x73,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4E,
+        0x44,
+        0xAE,
+        0x42,
+        0x60,
+        0x82,
+    ]
+)

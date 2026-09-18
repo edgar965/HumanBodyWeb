@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Untermenuelage`: ein Untermenü liegt immer ganz im Fenster.
+"""`Untermenuelage`: ein Untermenü liegt immer ganz im Fenster.
 
 Edgar (13.09.2026, BVH Studio): „kann nun das Kontextmenü nicht mehr bedienen -
 beim Hinzufügen einer Animation klappt es zu". Gemessen bei 1548 × 804: Das
@@ -15,11 +15,12 @@ die Animationsliste zu „Dance" von 780 bis 1180 — außerhalb des Fensters.
 Sabotage-Gegenprobe: `fensterHoehe - rand - hoch` → `fensterHoehe - hoch`
 in `rechnen` → Fall 2 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'untermenuelage.js')
+MODUL = Jsmodul("bvh_studio", "untermenuelage.js")
 
 SKRIPT = """
 const { Untermenuelage } = await import(MODUL);
@@ -51,9 +52,8 @@ console.log(JSON.stringify({ ok: fehler.length === 0, fehler }));
 
 
 class UntermenuelageTest(SimpleTestCase):
-
     databases = set()
 
     def test_ein_untermenue_bleibt_im_fenster(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

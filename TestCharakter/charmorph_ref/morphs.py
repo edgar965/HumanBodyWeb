@@ -273,7 +273,9 @@ class MorphStorage:
         if item.get("separator"):
             return Separator
         name = item.get("morph")
-        return MinMaxMorphData(name, self.get_lazy(level, *(names + (name,))), item.get("min", 0), item.get("max", 1))
+        return MinMaxMorphData(
+            name, self.get_lazy(level, *(names + (name,))), item.get("min", 0), item.get("max", 1)
+        )
 
     def _enum_dir(self, path: str, lazy_class, existing_names: set):
         if not os.path.isdir(path):
@@ -329,7 +331,9 @@ class MorphImporter:
 
     def _create_morph_sk(self, prefix, morph):
         if morph is Separator:
-            self.obj.shape_key_add(name=f"---- sep-{self._counter_lev}-{self._counter_cnt} ----", from_mix=False)
+            self.obj.shape_key_add(
+                name=f"---- sep-{self._counter_lev}-{self._counter_cnt} ----", from_mix=False
+            )
             self._counter_cnt += 1
             return None
 
@@ -401,7 +405,8 @@ class MorphImporter:
         lst.extend(
             (morph3, morph1.name)
             for morph1 in self.storage.enum(1)
-            for morph3 in self.storage.enum(3, morph1.name))
+            for morph3 in self.storage.enum(3, morph1.name)
+        )
 
         self._counter_lev = 3
         self._counter_cnt = 1
@@ -507,9 +512,9 @@ def charmorph_to_mblab(data: dict):
         "metaproperties": {
             k: v
             for sublist, v in (
-                ([("character_" + k), ("last_character_" + k)], v)
-                for k, v in data.get("meta", {}).items()
-            ) for k in sublist
+                ([("character_" + k), ("last_character_" + k)], v) for k, v in data.get("meta", {}).items()
+            )
+            for k in sublist
         },
         "materialproperties": data.get("materials"),
         "type": data.get("type", ()),

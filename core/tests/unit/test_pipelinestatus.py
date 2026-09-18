@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`status_3d`: welche 3D-Pipelines auf diesem Rechner bereitstehen.
+"""`status_3d`: welche 3D-Pipelines auf diesem Rechner bereitstehen.
 
 WARUM (31.08.2026)
 ==================
@@ -21,6 +21,7 @@ ES GIBT KEINEN AUGENSCHEIN-BELEG: Auf diesem Rechner sind alle Pipelines
 installiert, jede Karte steht aktiv da. Der Fall „ausgegraut" ist im
 Browser gar nicht herstellbar.
 """
+
 import itertools
 import unittest
 from unittest.mock import patch
@@ -29,19 +30,22 @@ from core.api.auftrag_upload import Uploadseiten
 
 
 class EinRechnerMitPipelines(unittest.TestCase):
-    u"""Gegeben: bestimmte Verzeichnisse liegen da, andere nicht."""
+    """Gegeben: bestimmte Verzeichnisse liegen da, andere nicht."""
 
     databases = set()
 
     #: Reihenfolge, in der `_pipelines_verfuegbar` die Pfade abfragt.
-    EINSTELLUNGEN = ('MOCAPNET_V4_SCRIPT', 'GVHMR_ROOT', 'WHAM_ROOT',
-                     'PROMPTHMR_ROOT', 'GEM_ROOT')
+    EINSTELLUNGEN = ("MOCAPNET_V4_SCRIPT", "GVHMR_ROOT", "WHAM_ROOT", "PROMPTHMR_ROOT", "GEM_ROOT")
 
     def _status(self, v4, gvhmr, wham, prompthmr, gem=False):
-        u"""`status_3d`, als lägen genau diese Verzeichnisse vor."""
-        vorhanden = {'MOCAPNET_V4_SCRIPT': v4, 'GVHMR_ROOT': gvhmr,
-                     'WHAM_ROOT': wham, 'PROMPTHMR_ROOT': prompthmr,
-                     'GEM_ROOT': gem}
+        """`status_3d`, als lägen genau diese Verzeichnisse vor."""
+        vorhanden = {
+            "MOCAPNET_V4_SCRIPT": v4,
+            "GVHMR_ROOT": gvhmr,
+            "WHAM_ROOT": wham,
+            "PROMPTHMR_ROOT": prompthmr,
+            "GEM_ROOT": gem,
+        }
 
         class Pfadattrappe:
             def __init__(self, roh):
@@ -53,68 +57,67 @@ class EinRechnerMitPipelines(unittest.TestCase):
             def is_dir(self):
                 return bool(vorhanden.get(self.roh))
 
-        with patch('core.api.auftrag_upload.Path', Pfadattrappe), \
-                patch('core.api.auftrag_upload.settings') as einst:
+        with (
+            patch("core.api.auftrag_upload.Path", Pfadattrappe),
+            patch("core.api.auftrag_upload.settings") as einst,
+        ):
             for name in self.EINSTELLUNGEN:
                 setattr(einst, name, name)
             return Uploadseiten._pipelines_verfuegbar()
 
     def test_hybrid_deckt_sich_mit_der_alten_bedingung(self):
-        u"""Die Gegenprobe über alle acht Kombinationen."""
-        for v4, gvhmr, prompthmr in itertools.product((True, False),
-                                                      repeat=3):
+        """Die Gegenprobe über alle acht Kombinationen."""
+        for v4, gvhmr, prompthmr in itertools.product((True, False), repeat=3):
             with self.subTest(v4=v4, gvhmr=gvhmr, prompthmr=prompthmr):
                 s = self._status(v4, gvhmr, False, prompthmr)
-                alt = s['hybrid_gvhmr'] or s['hybrid_prompthmr']
-                self.assertEqual(s['hybrid'], alt)
+                alt = s["hybrid_gvhmr"] or s["hybrid_prompthmr"]
+                self.assertEqual(s["hybrid"], alt)
 
     def test_smplx_braucht_gem(self):
-        u"""Die eigene SMPL-X-Pipeline (12.09.2026) faehrt GEMs Koerper — ohne
+        """Die eigene SMPL-X-Pipeline (12.09.2026) faehrt GEMs Koerper — ohne
         GEM keine Karte, gleich ob SMPLest-X daliegt."""
-        self.assertFalse(self._status(True, True, True, True, gem=False)['smplx'])
+        self.assertFalse(self._status(True, True, True, True, gem=False)["smplx"])
 
     def test_ohne_v4_kein_hybrid(self):
-        u"""Beide Hybridwege brauchen MocapNET v4 für Hände und Gesicht."""
+        """Beide Hybridwege brauchen MocapNET v4 für Hände und Gesicht."""
         s = self._status(False, True, True, True)
-        self.assertFalse(s['hybrid'])
+        self.assertFalse(s["hybrid"])
 
     def test_v4_allein_reicht_auch_nicht(self):
-        u"""Ohne einen Körper-Schätzer gibt es nichts zu ergänzen."""
+        """Ohne einen Körper-Schätzer gibt es nichts zu ergänzen."""
         s = self._status(True, False, True, False)
-        self.assertFalse(s['hybrid'])
+        self.assertFalse(s["hybrid"])
 
     def test_v4_mit_gvhmr_genuegt(self):
         s = self._status(True, True, False, False)
-        self.assertTrue(s['hybrid'])
+        self.assertTrue(s["hybrid"])
 
     def test_v4_mit_prompthmr_genuegt(self):
-        u"""PromptHMR allein — der zweite Weg zum selben Ziel."""
+        """PromptHMR allein — der zweite Weg zum selben Ziel."""
         s = self._status(True, False, False, True)
-        self.assertTrue(s['hybrid'])
+        self.assertTrue(s["hybrid"])
 
     def test_v4_mit_gem_genuegt(self):
-        u"""GEM-SMPL — der dritte Weg (12.09.2026)."""
+        """GEM-SMPL — der dritte Weg (12.09.2026)."""
         s = self._status(True, False, False, False, gem=True)
-        self.assertTrue(s['hybrid'])
-        self.assertTrue(s['hybrid_gem'])
-        self.assertFalse(s['hybrid_gvhmr'])
+        self.assertTrue(s["hybrid"])
+        self.assertTrue(s["hybrid_gem"])
+        self.assertFalse(s["hybrid_gvhmr"])
 
     def test_gem_ohne_v4_kein_hybrid_gem(self):
         s = self._status(False, False, False, False, gem=True)
-        self.assertFalse(s['hybrid_gem'])
+        self.assertFalse(s["hybrid_gem"])
 
     def test_die_einzelnen_bleiben_erhalten(self):
-        u"""`hybrid` tritt NEBEN die beiden — das Formular schickt weiter
+        """`hybrid` tritt NEBEN die beiden — das Formular schickt weiter
         `hybrid_gvhmr` oder `hybrid_prompthmr` als Wert."""
         s = self._status(True, True, True, True)
-        for schluessel in ('v4', 'gvhmr', 'wham', 'prompthmr',
-                           'hybrid_gvhmr', 'hybrid_prompthmr'):
+        for schluessel in ("v4", "gvhmr", "wham", "prompthmr", "hybrid_gvhmr", "hybrid_prompthmr"):
             self.assertIn(schluessel, s)
 
     def test_slam_steht_daneben(self):
-        u"""Die Kamerabahn (DPVO/DROID-SLAM) ist keine Pipeline, sondern
+        """Die Kamerabahn (DPVO/DROID-SLAM) ist keine Pipeline, sondern
         eine Zutat — hier ohne Räder falsch, mit `Slamstatus` wahr."""
-        self.assertFalse(self._status(True, True, True, True)['slam'])
-        with patch('core.api.auftrag_upload.Slamstatus.verfuegbar',
-                   return_value=True):
-            self.assertTrue(self._status(True, True, True, True)['slam'])
+        self.assertFalse(self._status(True, True, True, True)["slam"])
+        with patch("core.api.auftrag_upload.Slamstatus.verfuegbar", return_value=True):
+            self.assertTrue(self._status(True, True, True, True)["slam"])

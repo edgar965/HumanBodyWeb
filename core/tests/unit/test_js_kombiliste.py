@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Kombiliste`: welche Stuecke gemeinsam angezogen werden.
+"""`Kombiliste`: welche Stuecke gemeinsam angezogen werden.
 
 WARUM DIE LISTE (Edgar, 09.09.2026: „mach das gleichzeitige Anziehen
 mehrere Stuecke, dann brauche ich aber auch ein UI dafuer")
@@ -15,12 +15,13 @@ ohne dass in der Liste etwas anders aussieht.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 from ._sicher import Sicher
 
-MODUL = Jsmodul('gemeinsam', 'kombiliste.js')
+MODUL = Jsmodul("gemeinsam", "kombiliste.js")
 
 SKRIPT = """
 const { Kombiliste } = await import(MODUL);
@@ -156,15 +157,14 @@ console.log(JSON.stringify({ok: true}));
 
 
 class KombilisteTest(SimpleTestCase):
-
     databases = set()
 
     def test_die_liste_haelt_sich_an_die_regeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
 
     def test_hoechstzahl_stimmt_mit_dem_server_ueberein(self):
-        u"""Zwei Grenzen fuer dieselbe Sache laufen auseinander.
+        """Zwei Grenzen fuer dieselbe Sache laufen auseinander.
 
         Ist die im Browser groesser, laesst er eine Liste bauen, die der
         Server ablehnt — und der Nutzer sieht eine Fehlermeldung, wo die
@@ -173,8 +173,9 @@ class KombilisteTest(SimpleTestCase):
         import io
         import re
         from GarmentCode.gemeinsamdienst import Garmentgemeinsam
-        quelle = io.open(MODUL.pfad, encoding='utf-8').read()
-        treffer = Sicher.wert(re.search(r'HOECHSTZAHL\s*=\s*(\d+)', quelle),
-                              'HOECHSTZAHL steht nicht im Modul')
-        self.assertEqual(int(treffer.group(1)),
-                         Garmentgemeinsam.HOECHSTZAHL)
+
+        quelle = io.open(MODUL.pfad, encoding="utf-8").read()
+        treffer = Sicher.wert(
+            re.search(r"HOECHSTZAHL\s*=\s*(\d+)", quelle), "HOECHSTZAHL steht nicht im Modul"
+        )
+        self.assertEqual(int(treffer.group(1)), Garmentgemeinsam.HOECHSTZAHL)

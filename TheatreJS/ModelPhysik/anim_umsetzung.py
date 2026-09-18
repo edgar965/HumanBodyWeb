@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Rigify-Drehungen -> Gelenkdrehungen, wie FastProjectiveSkinning sie erwartet.
+"""Rigify-Drehungen -> Gelenkdrehungen, wie FastProjectiveSkinning sie erwartet.
 
 DIE BEIDEN RIGS MEINEN VERSCHIEDENES MIT „LOKALER DREHUNG"
 ==========================================================
@@ -34,17 +34,18 @@ KONVENTIONEN, beide am Bestand abgelesen, nicht geraten:
 Ohne Three.js und ohne FPS pruefbar: `gegenprobe()` rechnet die
 Vorwaertskinematik beider Seiten und vergleicht die Gelenkpunkte.
 """
+
 import numpy as np
 
 
 class Animumsetzung:
-    u"""Rechnet Bewegungsspuren in FPS-Gelenkdrehungen um."""
+    """Rechnet Bewegungsspuren in FPS-Gelenkdrehungen um."""
 
     #: Twist auf das Twist-Segment verlagern. Siehe `_twist_verlagern`.
     TWIST_VERLAGERN = True
 
     def __init__(self, knochen, gelenke, laengen=None, punkte=None):
-        u"""`knochen`: {name: {'parent', 'local_position', 'local_quaternion'}}
+        """`knochen`: {name: {'parent', 'local_position', 'local_quaternion'}}
         aus `def_skeleton.json`; `gelenke`: [(name, elternname)] in der
         Reihenfolge der `.skel`-Datei (Eltern vor Kindern); `laengen`:
         {name: Knochenlaenge in Metern} aus `rig_bones.json` (`tail - head`).
@@ -70,7 +71,7 @@ class Animumsetzung:
     # ------------------------------------------------------------- Rechnung
 
     def _ruhelagen(self):
-        u"""Welt-Ruhedrehung je Knochen des GANZEN Rigs (rekursiv)."""
+        """Welt-Ruhedrehung je Knochen des GANZEN Rigs (rekursiv)."""
         aus = {}
 
         def loesen(name):
@@ -79,10 +80,9 @@ class Animumsetzung:
             knochen = self.knochen.get(name)
             if knochen is None:
                 return np.array([0.0, 0.0, 0.0, 1.0])
-            eigen = self._wxyz(knochen['local_quaternion'])
-            elternteil = knochen.get('parent')
-            aus[name] = (eigen if not elternteil
-                         else self.mul(loesen(elternteil), eigen))
+            eigen = self._wxyz(knochen["local_quaternion"])
+            elternteil = knochen.get("parent")
+            aus[name] = eigen if not elternteil else self.mul(loesen(elternteil), eigen)
             return aus[name]
 
         for name in self.knochen:
@@ -90,7 +90,7 @@ class Animumsetzung:
         return aus
 
     def bild(self, spuren, nummer, roh=False):
-        u"""Die FPS-Drehungen eines Bildes: {gelenkname: [x, y, z, w]}.
+        """Die FPS-Drehungen eines Bildes: {gelenkname: [x, y, z, w]}.
 
         Ein Gelenk, dessen Name auf `_ende` endet, ist ein Endpunkt ohne
         eigenen Knochen — es dreht nie.
@@ -103,7 +103,7 @@ class Animumsetzung:
         pose_welt = {}
 
         def welt(name):
-            u"""Welt-Posedrehung eines Knochens, Kette hinauf."""
+            """Welt-Posedrehung eines Knochens, Kette hinauf."""
             if name in pose_welt:
                 return pose_welt[name]
             knochen = self.knochen.get(name)
@@ -111,24 +111,22 @@ class Animumsetzung:
                 return np.array([0.0, 0.0, 0.0, 1.0])
             spur = spuren.get(name)
             if spur is not None:
-                lokal = self.nach_blender(np.asarray(
-                    spur[nummer * 4:nummer * 4 + 4], dtype=np.float64))
+                lokal = self.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
             else:
-                lokal = self._wxyz(knochen['local_quaternion'])
-            elternteil = knochen.get('parent')
-            pose_welt[name] = (lokal if not elternteil
-                               else self.mul(welt(elternteil), lokal))
+                lokal = self._wxyz(knochen["local_quaternion"])
+            elternteil = knochen.get("parent")
+            pose_welt[name] = lokal if not elternteil else self.mul(welt(elternteil), lokal)
             return pose_welt[name]
 
         delta = {}
         for name in self.namen:
-            grund = name[:-5] if name.endswith('_ende') else name
+            grund = name[:-5] if name.endswith("_ende") else name
             if roh:
                 delta[name] = welt(grund)
                 continue
-            delta[name] = self.mul(welt(grund),
-                                   self.konjugiert(self.ruhe_welt.get(
-                                       grund, np.array([0.0, 0.0, 0.0, 1.0]))))
+            delta[name] = self.mul(
+                welt(grund), self.konjugiert(self.ruhe_welt.get(grund, np.array([0.0, 0.0, 0.0, 1.0])))
+            )
 
         aus = {}
         for name in self.namen:
@@ -144,7 +142,7 @@ class Animumsetzung:
     # ------------------------------------------------------------ Twist
 
     def _knochenachse(self, name):
-        u"""Richtung des Knochens: vom Gelenk zu seinem ersten Kind.
+        """Richtung des Knochens: vom Gelenk zu seinem ersten Kind.
 
         `None` fuer ein Blatt — dort gibt es keine Achse, und ein Twist ist
         dann ohnehin bedeutungslos.
@@ -163,7 +161,7 @@ class Animumsetzung:
 
     @staticmethod
     def zerlegen(q, achse):
-        u"""Swing-Twist-Zerlegung: `q = swing * twist`, Twist um `achse`.
+        """Swing-Twist-Zerlegung: `q = swing * twist`, Twist um `achse`.
 
         Der Twist ist die Projektion des Vektorteils auf die Achse. Ist der
         Rest nahe null (Drehung genau um die Achse), bleibt die Einheit
@@ -181,10 +179,10 @@ class Animumsetzung:
 
     #: Rigify teilt Arme und Beine in einen Schwenk- und ein Twist-Segment
     #: (`DEF-upper_arm.L` und `DEF-upper_arm.L.001`).
-    TWISTSEGMENT = '.001'
+    TWISTSEGMENT = ".001"
 
     def _twist_verlagern(self, drehungen, spuren):
-        u"""Den Twist vom Knochen auf SEIN Twist-Segment schieben.
+        """Den Twist vom Knochen auf SEIN Twist-Segment schieben.
 
         WARUM (10.09.2026, gemessen): Der Retarget setzt 21 Spuren; die
         `.001`-Segmente haben keine eigene und stehen in Ruhe. Der ganze
@@ -245,8 +243,7 @@ class Animumsetzung:
             laenge = float(np.linalg.norm(versatz))
             if laenge < 1e-9:
                 continue
-            swing, twist = self.zerlegen(
-                np.asarray(aus[name], dtype=np.float64), versatz / laenge)
+            swing, twist = self.zerlegen(np.asarray(aus[name], dtype=np.float64), versatz / laenge)
             # GLEICHMAESSIG AUF BEIDE SEGMENTE, nicht ganz auf eines. Genau
             # dafuer hat Rigify das Twist-Segment: Im Browser verteilen die
             # Hautgewichte den Twist graduell ueber die Segmentgrenze, und
@@ -263,13 +260,12 @@ class Animumsetzung:
             # bleiben, und sie tut es.
             halb = self.halbe_drehung(twist)
             aus[name] = self.mul(swing, halb)
-            aus[segment] = self.mul(halb, np.asarray(aus[segment],
-                                                     dtype=np.float64))
+            aus[segment] = self.mul(halb, np.asarray(aus[segment], dtype=np.float64))
         return aus
 
     @staticmethod
     def halbe_drehung(q):
-        u"""Die Drehung mit halbem Winkel um dieselbe Achse.
+        """Die Drehung mit halbem Winkel um dieselbe Achse.
 
         `halb * halb == q`. Ueber die Achse-Winkel-Darstellung, nicht ueber
         eine Quaternionen-Wurzel: Bei w nahe -1 (Winkel nahe 360 Grad) ist
@@ -284,11 +280,10 @@ class Animumsetzung:
         # `halb*halb` ergab 56 statt 152 Grad.
         viertel = winkel / 4.0
         sinus = np.sin(viertel)
-        return np.array([achse[0] * sinus, achse[1] * sinus,
-                         achse[2] * sinus, np.cos(viertel)])
+        return np.array([achse[0] * sinus, achse[1] * sinus, achse[2] * sinus, np.cos(viertel)])
 
     def twistbericht(self, spuren, nummern):
-        u"""Twist je Gelenk in Grad — die Probe, fuer die die Positionsprobe
+        """Twist je Gelenk in Grad — die Probe, fuer die die Positionsprobe
         blind ist. {gelenk: [Grad je Bild]}."""
         bericht = {}
         for nummer in nummern:
@@ -297,17 +292,15 @@ class Animumsetzung:
                 achse = self._knochenachse(name)
                 if achse is None:
                     continue
-                _swing, twist = self.zerlegen(
-                    np.asarray(drehungen[name], dtype=np.float64), achse)
+                _swing, twist = self.zerlegen(np.asarray(drehungen[name], dtype=np.float64), achse)
                 grad = np.degrees(2 * np.arccos(min(1.0, abs(float(twist[3])))))
                 bericht.setdefault(name, []).append(float(grad))
         return bericht
 
     # ------------------------------------------------------------ Gegenprobe
 
-    def gegenprobe(self, spuren, nummer, gelenkpunkte, massstab_je_meter=None,
-                   roh=False):
-        u"""Gelenkpunkte nach FPS-Kinematik gegen die unseres Rigs (mm).
+    def gegenprobe(self, spuren, nummer, gelenkpunkte, massstab_je_meter=None, roh=False):
+        """Gelenkpunkte nach FPS-Kinematik gegen die unseres Rigs (mm).
 
         FPS dreht ein Kind um die Position seines Elternteils
         (`Skeleton::transform`: `pretranslate(-pV)`, drehen, zurueck). Genau
@@ -354,25 +347,23 @@ class Animumsetzung:
         return self.mul(self._welt_von(drehungen, elternteil), drehungen[name])
 
     def _rig_punkte(self, spuren, nummer):
-        u"""Gelenkpunkte, wie unser eigenes Rig sie in dieser Pose haette."""
+        """Gelenkpunkte, wie unser eigenes Rig sie in dieser Pose haette."""
         from knochenwelt import Knochenwelt
 
         def lokal(name):
             spur = spuren.get(name)
             if spur is not None:
-                return self.nach_blender(np.asarray(
-                    spur[nummer * 4:nummer * 4 + 4], dtype=np.float64))
-            return self._wxyz(self.knochen[name]['local_quaternion'])
+                return self.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
+            return self._wxyz(self.knochen[name]["local_quaternion"])
 
-        gruende = [n[:-5] if n.endswith('_ende') else n for n in self.namen]
-        welt = Knochenwelt.loesen(
-            self.knochen, [g for g in gruende if g in self.knochen], lokal)
+        gruende = [n[:-5] if n.endswith("_ende") else n for n in self.namen]
+        welt = Knochenwelt.loesen(self.knochen, [g for g in gruende if g in self.knochen], lokal)
         aus = {}
         for name, grund in zip(self.namen, gruende):
             if grund not in self.knochen:
                 continue
             punkt, drehung = welt[grund]
-            if name.endswith('_ende'):
+            if name.endswith("_ende"):
                 # Der Endpunkt sitzt am Schwanz — in Knochenrichtung (+Y).
                 laenge = np.linalg.norm(self._schwanzversatz(grund))
                 punkt = punkt + self.drehen(drehung, np.array([0.0, laenge, 0.0]))
@@ -380,25 +371,25 @@ class Animumsetzung:
         return aus
 
     def _schwanzversatz(self, name):
-        u"""Die Knochenlaenge — aus dem Rig, sonst aus dem ersten Kind."""
+        """Die Knochenlaenge — aus dem Rig, sonst aus dem ersten Kind."""
         if name in self.laengen:
             return np.array([0.0, float(self.laengen[name]), 0.0])
         for knochen in self.knochen.values():
-            if knochen.get('parent') == name:
-                return np.asarray(knochen['local_position'], dtype=np.float64)
+            if knochen.get("parent") == name:
+                return np.asarray(knochen["local_position"], dtype=np.float64)
         return np.array([0.0, 0.05, 0.0])
 
     # ------------------------------------------------- Quaternionen [x,y,z,w]
 
     @staticmethod
     def _wxyz(vier):
-        u"""`def_skeleton.json` fuehrt [w, x, y, z] — hier wird [x, y, z, w]."""
+        """`def_skeleton.json` fuehrt [w, x, y, z] — hier wird [x, y, z, w]."""
         w, x, y, z = vier
         return np.array([x, y, z, w], dtype=np.float64)
 
     @staticmethod
     def nach_blender(q):
-        u"""Retargetdrehung von Three.js-Lage in die Lage des Rigs.
+        """Retargetdrehung von Three.js-Lage in die Lage des Rigs.
 
         DER FEHLER HINTER DEN ERHOBENEN ARMEN (gefunden 10.09.2026). Die
         Retargetspuren kommen in Three.js-Lage (y oben), `def_skeleton.json`
@@ -432,12 +423,14 @@ class Animumsetzung:
     def mul(a, b):
         ax, ay, az, aw = a
         bx, by, bz, bw = b
-        return np.array([
-            aw * bx + ax * bw + ay * bz - az * by,
-            aw * by - ax * bz + ay * bw + az * bx,
-            aw * bz + ax * by - ay * bx + az * bw,
-            aw * bw - ax * bx - ay * by - az * bz,
-        ])
+        return np.array(
+            [
+                aw * bx + ax * bw + ay * bz - az * by,
+                aw * by - ax * bz + ay * bw + az * bx,
+                aw * bz + ax * by - ay * bx + az * bw,
+                aw * bw - ax * bx - ay * by - az * bz,
+            ]
+        )
 
     @staticmethod
     def konjugiert(q):
@@ -447,17 +440,17 @@ class Animumsetzung:
     def drehen(q, v):
         x, y, z, w = q
         u = np.array([x, y, z])
-        return (v + 2.0 * np.cross(u, np.cross(u, v) + w * v))
+        return v + 2.0 * np.cross(u, np.cross(u, v) + w * v)
 
     @staticmethod
     def achse_winkel(q):
-        u"""[x,y,z,w] -> (Achse, Winkel). FPS liest genau dieses Paar."""
+        """[x,y,z,w] -> (Achse, Winkel). FPS liest genau dieses Paar."""
         q = np.asarray(q, dtype=np.float64)
         norm = np.linalg.norm(q)
         if norm < 1e-12:
             return np.array([1.0, 0.0, 0.0]), 0.0
         q = q / norm
-        if q[3] < 0:                      # kuerzerer Weg
+        if q[3] < 0:  # kuerzerer Weg
             q = -q
         winkel = 2.0 * np.arccos(np.clip(q[3], -1.0, 1.0))
         sinus = np.sqrt(max(0.0, 1.0 - q[3] * q[3]))

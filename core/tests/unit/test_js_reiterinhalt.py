@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Reiterinhalt`: Ein Reiter bekommt seinen Inhalt, wenn er aufgeht.
+"""`Reiterinhalt`: Ein Reiter bekommt seinen Inhalt, wenn er aufgeht.
 
 WARUM (10.09.2026, Edgar: „die ladezeit … ist bei mehr als 15 Sekunden,
 alleine mehr als 10 s bis das UI ohne modell aufgebaut wird" und „Die Leiste
@@ -24,11 +24,12 @@ Die Fälle, die hier durchgespielt werden:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'reiterinhalt.js')
+MODUL = Jsmodul("scene", "reiterinhalt.js")
 
 #: Attrappen für alles, was das Modul beim Laden anfasst.
 UMGEBUNG = """
@@ -50,7 +51,9 @@ globalThis.localStorage = {
 const warnungen = [];
 """
 
-SKRIPT = UMGEBUNG + """
+SKRIPT = (
+    UMGEBUNG
+    + """
 const { Reiterinhalt } = await import(MODUL);
 const { fn } = await import(new URL('../gemeinsam/registrierung.js', MODUL).href);
 const { Protokoll } = await import(new URL('../gemeinsam/protokoll.js', MODUL).href);
@@ -116,11 +119,12 @@ pruefe('Messschalter baut alle neun', gerufen.length, 9);
 
 console.log(JSON.stringify({ok: true, gerufen: gerufen.length}));
 """
+)
 
 
 class ReiterinhaltTest(SimpleTestCase):
-    u"""Der Inhalt entsteht beim Öffnen — genau einmal, und Fehler sind laut."""
+    """Der Inhalt entsteht beim Öffnen — genau einmal, und Fehler sind laut."""
 
     def test_reiter_werden_erst_beim_oeffnen_gefuellt(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

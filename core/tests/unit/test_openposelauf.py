@@ -26,7 +26,7 @@ from core.pipelines.openposelauf import Openposelauf
 class ProzessAttrappe:
     """Tut so, als waere OpenPose gelaufen — ohne OpenPose."""
 
-    def __init__(self, rueckgabe=0, fehlertext=''):
+    def __init__(self, rueckgabe=0, fehlertext=""):
         self.proc = self
         self.returncode = rueckgabe
         self._fehlertext = fehlertext
@@ -51,33 +51,31 @@ class LaufendeAttrappe:
 
 
 class OpenposelaufTest(TestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
+        basis = Path(settings.BASE_DIR).parent / "ProjektTemp"
         basis.mkdir(exist_ok=True)
-        cls.ordner = Path(tempfile.mkdtemp(prefix='openpose_', dir=str(basis)))
+        cls.ordner = Path(tempfile.mkdtemp(prefix="openpose_", dir=str(basis)))
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.ordner, ignore_errors=True)
         super().tearDownClass()
 
-    def lauf(self, bildzahl=100, rueckgabe=0, fehlertext='', unterordner='a'):
-        job = BVHJob.objects.create(video_file='x.mp4', pipeline='openpose')
+    def lauf(self, bildzahl=100, rueckgabe=0, fehlertext="", unterordner="a"):
+        job = BVHJob.objects.create(video_file="x.mp4", pipeline="openpose")
         ausgabe = self.ordner / unterordner
         ausgabe.mkdir(exist_ok=True)
-        lauf = Openposelauf(job, 'video.mp4', ausgabe, bildzahl,
-                            None, LaufendeAttrappe())
+        lauf = Openposelauf(job, "video.mp4", ausgabe, bildzahl, None, LaufendeAttrappe())
         lauf._prozessattrappe = ProzessAttrappe(rueckgabe, fehlertext)
         Path(lauf.jsonordner).mkdir(parents=True, exist_ok=True)
         return lauf
 
-    def json_anlegen(self, lauf, anzahl, kennung='clip_'):
+    def json_anlegen(self, lauf, anzahl, kennung="clip_"):
         for i in range(anzahl):
-            name = '%s%012d%s' % (kennung, i, Openposelauf.JSON_ENDUNG)
-            (Path(lauf.jsonordner) / name).write_text('{}', encoding='utf-8')
+            name = "%s%012d%s" % (kennung, i, Openposelauf.JSON_ENDUNG)
+            (Path(lauf.jsonordner) / name).write_text("{}", encoding="utf-8")
 
     # ------------------------------------------------------------- Fortschritt
 
@@ -97,45 +95,43 @@ class OpenposelaufTest(TestCase):
 
     def test_meldung_enthaelt_tempo_und_restzeit(self):
         lauf = self.lauf(bildzahl=200)
-        lauf._bildfortschritt(50, 5.0)     # 10 Bilder je Sekunde
+        lauf._bildfortschritt(50, 5.0)  # 10 Bilder je Sekunde
         text = lauf.job.progress_detail
-        self.assertIn('50 / 200 frames', text)
-        self.assertIn('10.0 fps', text)
-        self.assertIn('left', text)
+        self.assertIn("50 / 200 frames", text)
+        self.assertIn("10.0 fps", text)
+        self.assertIn("left", text)
 
     def test_ohne_bekannte_bildzahl_nur_zaehler(self):
         lauf = self.lauf(bildzahl=0)
         lauf._bildfortschritt(17, 2.0)
-        self.assertEqual(lauf.job.progress_detail, '17 frames processed')
+        self.assertEqual(lauf.job.progress_detail, "17 frames processed")
 
     def test_kein_teilen_durch_null_bei_erstem_bild(self):
         """rechenzeit=0 kommt vor: das erste Bild ist sofort da."""
         lauf = self.lauf(bildzahl=10)
-        lauf._bildfortschritt(1, 0.0)      # darf nicht werfen
-        self.assertIn('1 / 10 frames', lauf.job.progress_detail)
+        lauf._bildfortschritt(1, 0.0)  # darf nicht werfen
+        self.assertIn("1 / 10 frames", lauf.job.progress_detail)
 
     def test_geschriebene_bilder_zaehlen_nur_keypoints(self):
-        lauf = self.lauf(unterordner='zaehlen')
+        lauf = self.lauf(unterordner="zaehlen")
         self.json_anlegen(lauf, 3)
-        (Path(lauf.jsonordner) / 'liesmich.txt').write_text('x', encoding='utf-8')
+        (Path(lauf.jsonordner) / "liesmich.txt").write_text("x", encoding="utf-8")
         self.assertEqual(lauf._geschriebeneBilder(0), 3)
 
     def test_fehlendes_verzeichnis_gibt_den_ersatzwert(self):
-        lauf = self.lauf(unterordner='weg')
+        lauf = self.lauf(unterordner="weg")
         shutil.rmtree(lauf.jsonordner)
         self.assertEqual(lauf._geschriebeneBilder(42), 42)
 
     # ------------------------------------------------------------------ Kennung
 
     def test_kennung_aus_dateiname(self):
-        self.assertEqual(
-            Openposelauf._kennungAusDateiname('clip_000000000000_keypoints.json'),
-            ('clip_', 12))
+        self.assertEqual(Openposelauf._kennungAusDateiname("clip_000000000000_keypoints.json"), ("clip_", 12))
 
     def test_kennung_mit_unterstrichen_im_namen(self):
         self.assertEqual(
-            Openposelauf._kennungAusDateiname('mein_video_2_00000_keypoints.json'),
-            ('mein_video_2_', 5))
+            Openposelauf._kennungAusDateiname("mein_video_2_00000_keypoints.json"), ("mein_video_2_", 5)
+        )
 
     def test_kennung_ohne_nummernteil(self):
         """Fehlt der Nummernteil, bleibt es bei zwoelf Stellen.
@@ -145,45 +141,44 @@ class OpenposelaufTest(TestCase):
         und der Fall kommt in echten OpenPose-Ausgaben nicht vor. Der Test
         haelt das Verhalten fest, statt es stillschweigend zu aendern.
         """
-        self.assertEqual(
-            Openposelauf._kennungAusDateiname('clip_keypoints.json'), ('clip_', 12))
+        self.assertEqual(Openposelauf._kennungAusDateiname("clip_keypoints.json"), ("clip_", 12))
 
     # ------------------------------------------------------------- Fehlerwege
 
     def test_leeres_verzeichnis_meldet_klar(self):
-        lauf = self.lauf(unterordner='leer')
+        lauf = self.lauf(unterordner="leer")
         with self.assertRaises(RuntimeError) as fehler:
             lauf._ergebnisPruefen(ProzessAttrappe(0))
-        self.assertIn('No keypoint JSON files', str(fehler.exception))
+        self.assertIn("No keypoint JSON files", str(fehler.exception))
 
     def test_abbruch_ohne_bilder_wird_als_abbruch_gemeldet(self):
-        lauf = self.lauf(unterordner='abbruch')
-        (lauf.ausgabeordner / 'STOP_FLAG').write_text('', encoding='utf-8')
+        lauf = self.lauf(unterordner="abbruch")
+        (lauf.ausgabeordner / "STOP_FLAG").write_text("", encoding="utf-8")
         with self.assertRaises(RuntimeError) as fehler:
             lauf._ergebnisPruefen(ProzessAttrappe(1))
-        self.assertIn('Stopped early', str(fehler.exception))
+        self.assertIn("Stopped early", str(fehler.exception))
 
     def test_fehlercode_nimmt_den_gesammelten_text_mit(self):
         """Der Text kommt aus dem Lesefaden — `proc.stderr.read()` waere leer."""
-        lauf = self.lauf(unterordner='fehler')
+        lauf = self.lauf(unterordner="fehler")
         self.json_anlegen(lauf, 1)
         with self.assertRaises(RuntimeError) as fehler:
-            lauf._ergebnisPruefen(ProzessAttrappe(3, 'CUDA out of memory'))
+            lauf._ergebnisPruefen(ProzessAttrappe(3, "CUDA out of memory"))
         text = str(fehler.exception)
-        self.assertIn('exit code 3', text)
-        self.assertIn('CUDA out of memory', text)
+        self.assertIn("exit code 3", text)
+        self.assertIn("CUDA out of memory", text)
 
     def test_abbruch_mit_bildern_gilt_als_erfolg(self):
         """Wer waehrend des Laufs abbricht, hat brauchbare Teilbilder."""
-        lauf = self.lauf(unterordner='teilweise')
-        (lauf.ausgabeordner / 'STOP_FLAG').write_text('', encoding='utf-8')
+        lauf = self.lauf(unterordner="teilweise")
+        (lauf.ausgabeordner / "STOP_FLAG").write_text("", encoding="utf-8")
         self.json_anlegen(lauf, 5)
         dateien = lauf._ergebnisPruefen(ProzessAttrappe(1))
         self.assertEqual(len(dateien), 5)
         self.assertEqual(lauf.job.progress, Openposelauf.BIS_PROZENT)
 
     def test_dateien_kommen_sortiert(self):
-        lauf = self.lauf(unterordner='sortiert')
+        lauf = self.lauf(unterordner="sortiert")
         self.json_anlegen(lauf, 12)
         dateien = lauf._ergebnisPruefen(ProzessAttrappe(0))
         self.assertEqual(dateien, sorted(dateien))

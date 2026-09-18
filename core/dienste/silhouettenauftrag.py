@@ -56,26 +56,27 @@ class Silhouettenauftrag:
         try:
             return json.loads(self.job.result_json)
         except (json.JSONDecodeError, TypeError) as fehler:
-            logger.exception('Silhouettenauftrag: result_json unlesbar')
-            raise Fotofehler('Invalid result data', 500) from fehler
+            logger.exception("Silhouettenauftrag: result_json unlesbar")
+            raise Fotofehler("Invalid result data", 500) from fehler
 
     # ------------------------------------------------------------------- Foto
 
     def foto(self, cv2):
         pfad = os.path.join(str(settings.BASE_DIR), self.job.photo_file)
         if not os.path.isfile(pfad):
-            raise Fotofehler('Photo not found', 404)
+            raise Fotofehler("Photo not found", 404)
         bild = cv2.imread(pfad)
         if bild is None:
-            raise Fotofehler('Could not read photo', 500)
+            raise Fotofehler("Could not read photo", 500)
         return bild
 
     def netz(self):
         try:
-            return SmplxNetz.erzeugen(self.daten.get('betas', [0.0] * 10),
-                                      self.daten.get('gender', 'neutral'))
+            return SmplxNetz.erzeugen(
+                self.daten.get("betas", [0.0] * 10), self.daten.get("gender", "neutral")
+            )
         except SmplxNetzFehler as fehler:
-            logger.exception('Silhouettenauftrag: SmplxNetzFehler')
+            logger.exception("Silhouettenauftrag: SmplxNetzFehler")
             raise Fotofehler(str(fehler), 500) from fehler
 
     # ---------------------------------------------------------------- Ergebnis
@@ -94,26 +95,24 @@ class Silhouettenauftrag:
 
     def _silhouette(self, punkte, flaechen, breite, hoehe):
         """Projizieren — mit der gespeicherten Pose, sonst orthographisch."""
-        ausrichtung = self.daten.get('alignment_data') or {}
+        ausrichtung = self.daten.get("alignment_data") or {}
         silhouette = Silhouette(punkte, flaechen, breite, hoehe)
         posiert = self.posierte_punkte(self.job.id, self.daten, breite, hoehe)
         if posiert is not None:
             stellen, anzahl = posiert
             silhouette.anzahl_posiert = anzahl
-            silhouette.posierte_projektion(stellen,
-                                           ausrichtung.get('proj_2d_offset'))
+            silhouette.posierte_projektion(stellen, ausrichtung.get("proj_2d_offset"))
         else:
-            silhouette.orthographische_projektion(
-                ausrichtung.get('body_transform'))
+            silhouette.orthographische_projektion(ausrichtung.get("body_transform"))
         return silhouette
 
     def _umrisse(self, silhouette, cv2, breite, hoehe):
         ergebnis = Silhouettenergebnis(breite, hoehe)
-        ergebnis.ausrichtung = self.daten.get('alignment_data')
+        ergebnis.ausrichtung = self.daten.get("alignment_data")
         ergebnis.posiert = silhouette.posiert
         ergebnis.koerperkontur = silhouette.koerperkontur(cv2)
         ergebnis.netz_rahmen = silhouette.netz_rahmen()
-        ergebnis.yolo_rahmen = self.daten.get('bbox_xyxy')
+        ergebnis.yolo_rahmen = self.daten.get("bbox_xyxy")
         return ergebnis
 
     @staticmethod
@@ -125,8 +124,7 @@ class Silhouettenauftrag:
             gesicht.aus_kopfbereich()
         ergebnis.gesichtskontur = gesicht.kontur
         ergebnis.gesichtsrahmen_netz = gesicht.rahmen_netz
-        ergebnis.gesichtsrahmen_erkannt = (gesicht.rahmen_erkannt
-                                           or gesicht.rahmen_netz)
+        ergebnis.gesichtsrahmen_erkannt = gesicht.rahmen_erkannt or gesicht.rahmen_netz
         ergebnis.aus_smplx = gesicht.aus_smplx
 
     def _vorschau(self, cv2, foto, ergebnis):
@@ -135,11 +133,11 @@ class Silhouettenauftrag:
         Der Pfad steht im `result_json`, damit die Seite das Bild ohne zweiten
         Aufruf zeigen kann.
         """
-        pfad = Silhouettenvorschau.speichern(cv2, foto, ergebnis.koerperkontur,
-                                             ergebnis.gesichtskontur,
-                                             self.job.id)
+        pfad = Silhouettenvorschau.speichern(
+            cv2, foto, ergebnis.koerperkontur, ergebnis.gesichtskontur, self.job.id
+        )
         if not pfad:
             return
-        self.daten['silhouette_path'] = pfad
+        self.daten["silhouette_path"] = pfad
         self.job.result_json = json.dumps(self.daten, default=str)
-        self.job.save(update_fields=['result_json'])
+        self.job.save(update_fields=["result_json"])

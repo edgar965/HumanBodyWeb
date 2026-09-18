@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Eine verschobene BVH-Datei wird NICHT gesucht — sie ist 404, und das Studio
+"""Eine verschobene BVH-Datei wird NICHT gesucht — sie ist 404, und das Studio
 nimmt ihren Clip aus der Zeitleiste.
 
 Edgar (13.09.2026, BVH Studio): „bei jedem Refresh soll der Ordner neu
@@ -15,6 +15,7 @@ Datei selbst und die schreibenden Endpunkte gleichermaßen. Das Aufräumen
 der Zeitleiste prüft `test_js_clipfehlt.py`. Die Bibliothek der Prüfung
 liegt in der Prüfablage, nie unter 3DObjects.
 """
+
 import shutil
 from pathlib import Path
 
@@ -42,50 +43,51 @@ Frame Time: 0.033333
 
 
 class DieVerschobeneDatei(TestCase):
-
     def setUp(self):
-        self.ordner = self.enterContext(Pruefablage.ordner('umzug_'))
-        self.wurzel = Path(self.ordner) / 'bvh'
-        for kategorie in ('A_Results', 'Mixamo'):
+        self.ordner = self.enterContext(Pruefablage.ordner("umzug_"))
+        self.wurzel = Path(self.ordner) / "bvh"
+        for kategorie in ("A_Results", "Mixamo"):
             (self.wurzel / kategorie).mkdir(parents=True)
-        (self.wurzel / 'A_Results' / 'tanz.bvh').write_text(BVH, encoding='utf-8')
-        (self.wurzel / 'Mixamo' / 'gehen.bvh').write_text(BVH, encoding='utf-8')
-        self.enterContext(override_settings(HUMANBODY_BVH_DIR=str(self.wurzel / 'MocapNET')))
+        (self.wurzel / "A_Results" / "tanz.bvh").write_text(BVH, encoding="utf-8")
+        (self.wurzel / "Mixamo" / "gehen.bvh").write_text(BVH, encoding="utf-8")
+        self.enterContext(override_settings(HUMANBODY_BVH_DIR=str(self.wurzel / "MocapNET")))
         self.client = Client()
 
     def tearDown(self):
         shutil.rmtree(self.ordner, ignore_errors=True)
 
     def test_die_datei_an_ihrem_ort_wird_umgesetzt(self):
-        antwort = self.client.get('/api/retarget/?category=A_Results&name=tanz&body_height=1.68')
+        antwort = self.client.get("/api/retarget/?category=A_Results&name=tanz&body_height=1.68")
         self.assertEqual(antwort.status_code, 200, antwort.content[:200])
-        self.assertEqual(antwort.json()['frame_count'], 2)
-        antwort = self.client.get('/api/character/bvh/A_Results/tanz/')
+        self.assertEqual(antwort.json()["frame_count"], 2)
+        antwort = self.client.get("/api/character/bvh/A_Results/tanz/")
         self.assertEqual(antwort.status_code, 200)
-        self.assertIn(b'ROOT Hips', b''.join(antwort.streaming_content))
+        self.assertIn(b"ROOT Hips", b"".join(antwort.streaming_content))
 
     def test_der_alte_ordnername_bleibt_404(self):
-        antwort = self.client.get('/api/retarget/?category=Results&name=tanz&body_height=1.68')
+        antwort = self.client.get("/api/retarget/?category=Results&name=tanz&body_height=1.68")
         self.assertEqual(antwort.status_code, 404)
-        self.assertIn(b'BVH not found: Results/tanz', antwort.content)
-        self.assertEqual(self.client.get('/api/character/bvh/Results/tanz/').status_code, 404)
+        self.assertIn(b"BVH not found: Results/tanz", antwort.content)
+        self.assertEqual(self.client.get("/api/character/bvh/Results/tanz/").status_code, 404)
 
     def test_ein_unterordner_bleibt_404(self):
-        alt = self.wurzel / 'A_Results' / 'alt'
+        alt = self.wurzel / "A_Results" / "alt"
         alt.mkdir()
-        (self.wurzel / 'A_Results' / 'tanz.bvh').rename(alt / 'tanz.bvh')
-        antwort = self.client.get('/api/retarget/?category=A_Results&name=tanz&body_height=1.68')
+        (self.wurzel / "A_Results" / "tanz.bvh").rename(alt / "tanz.bvh")
+        antwort = self.client.get("/api/retarget/?category=A_Results&name=tanz&body_height=1.68")
         self.assertEqual(antwort.status_code, 404)
-        self.assertEqual(self.client.get('/api/character/bvh/A_Results/tanz/').status_code, 404)
+        self.assertEqual(self.client.get("/api/character/bvh/A_Results/tanz/").status_code, 404)
 
     def test_die_pfadpruefung_bleibt(self):
-        self.assertIsNone(Bvhablage.pfad_pruefen(self.wurzel / '..' / 'settings.py'))
-        self.assertEqual(self.client.get('/api/character/bvh/..%2F..%2Fx/tanz/').status_code, 404)
+        self.assertIsNone(Bvhablage.pfad_pruefen(self.wurzel / ".." / "settings.py"))
+        self.assertEqual(self.client.get("/api/character/bvh/..%2F..%2Fx/tanz/").status_code, 404)
 
     def test_schreiben_folgt_keinem_umzug(self):
-        u"""Sonst landete „Boden richten“ in einem Ordner, den niemand genannt hat."""
-        antwort = self.client.post('/api/retarget/save-bvh-effects/',
-                                   data={'category': 'Results', 'name': 'tanz', 'fixed_radius': 0.5},
-                                   content_type='application/json')
+        """Sonst landete „Boden richten“ in einem Ordner, den niemand genannt hat."""
+        antwort = self.client.post(
+            "/api/retarget/save-bvh-effects/",
+            data={"category": "Results", "name": "tanz", "fixed_radius": 0.5},
+            content_type="application/json",
+        )
         self.assertEqual(antwort.status_code, 404)
-        self.assertFalse((self.wurzel / 'Results').exists())
+        self.assertFalse((self.wurzel / "Results").exists())

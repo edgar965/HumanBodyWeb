@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Tensorattrappe — ein Tensor ohne torch, fuer die Pruefungen.
+"""Tensorattrappe — ein Tensor ohne torch, fuer die Pruefungen.
 
 Die Runner laufen in `python10`/`python8ENV` mit CUDA-torch; die
 Testsuite laeuft in `python14`, wo es kein torch gibt. Geprueft werden
@@ -16,13 +16,14 @@ WAS SIE NICHT KANN
 Rechnen. Sie ist eine Huelle um ein numpy-Feld, kein Ersatz fuer torch —
 wer eine Multiplikation prueft, braucht den echten Lauf.
 """
+
 import numpy as np
 
-__all__ = ['Tensorattrappe']
+__all__ = ["Tensorattrappe"]
 
 
 class Tensorattrappe:
-    u"""Verhaelt sich wie ein Tensor, soweit die Ausgabe ihn anfasst."""
+    """Verhaelt sich wie ein Tensor, soweit die Ausgabe ihn anfasst."""
 
     def __init__(self, werte):
         #: Der Datentyp kommt aus den Werten — Klassennummern bleiben

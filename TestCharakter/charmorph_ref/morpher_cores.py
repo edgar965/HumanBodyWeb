@@ -181,9 +181,11 @@ class ShapeKeysMorpher(MorpherCore):
 
         L2_key = self._get_L2_morph_key() or ""
         for sk in self.obj.data.shape_keys.key_blocks:
-            if sk.name.startswith("L2_")\
-                    and not sk.name.startswith("L2__")\
-                    and not sk.name.startswith(f"L2_{L2_key}_"):
+            if (
+                sk.name.startswith("L2_")
+                and not sk.name.startswith("L2__")
+                and not sk.name.startswith(f"L2_{L2_key}_")
+            ):
                 sk.value = 0
 
     # scan object shape keys and convert them to dictionary
@@ -235,7 +237,9 @@ class ShapeKeysMorpher(MorpherCore):
             prefix = f"L2_{key}_"
             for sk in self.obj.data.shape_keys.key_blocks:
                 if sk.name.startswith(prefix):
-                    combiner.add_morph(morphs.MinMaxMorphData(sk.name[len(prefix):], sk, sk.slider_min, sk.slider_max))
+                    combiner.add_morph(
+                        morphs.MinMaxMorphData(sk.name[len(prefix) :], sk, sk.slider_min, sk.slider_max)
+                    )
 
         for k, v in combiner.morphs_combo.items():
             names = list(enum_combo_names(k))
@@ -327,6 +331,7 @@ class ShapeKeysMorpher(MorpherCore):
             return
 
         basis_cache = {}
+
         def get_basis(sk):
             result = basis_cache.get(sk)
             if result is not None:
@@ -348,7 +353,7 @@ class ShapeKeysMorpher(MorpherCore):
                     sk.data.foreach_get("co", arr)
                     arr -= get_basis(sk.relative_key)
 
-                    morph.name = sk.name[len(prefix):]
+                    morph.name = sk.name[len(prefix) :]
                     morph.min = sk.slider_min
                     morph.max = sk.slider_max
 

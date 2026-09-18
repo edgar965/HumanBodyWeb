@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Hilfe -> Kleidung -> Neu: fuenf Welten, eine Figur.
+"""Hilfe -> Kleidung -> Neu: fuenf Welten, eine Figur.
 
 WARUM (Edgar, 08.09.2026): Die Analyse, die am selben Tag als Artefakt
 entstand, gehoert ins Projekt — dort steht sie neben den Seiten, deren
@@ -23,19 +23,19 @@ from kleidung.vergleich import Vergleich
 
 
 class KleidungNeu(Hilfeseite):
-    u"""Analyse der fuenf Systeme und der Stufenplan fuer „Unified"."""
+    """Analyse der fuenf Systeme und der Stufenplan fuer „Unified"."""
 
-    template_name = 'hilfe/kleidung_neu.html'
-    AKTIV = 'hilfe_kleidung_neu'
+    template_name = "hilfe/kleidung_neu.html"
+    AKTIV = "hilfe_kleidung_neu"
 
     def kontext(self):
         return {
-            'welten': Vergleich.welten(),
-            'knochen_morph': Vergleich.knochen_gegen_morph(),
-            'wege': Vergleich.wege(),
-            'schicht': Vergleich.schicht(),
-            'beschreibung': Vergleich.beschreibung(),
-            'stufen': Vergleich.stufen(),
-            'nicht': Vergleich.nicht(),
-            'unsicher': Vergleich.unsicher(),
+            "welten": Vergleich.welten(),
+            "knochen_morph": Vergleich.knochen_gegen_morph(),
+            "wege": Vergleich.wege(),
+            "schicht": Vergleich.schicht(),
+            "beschreibung": Vergleich.beschreibung(),
+            "stufen": Vergleich.stufen(),
+            "nicht": Vergleich.nicht(),
+            "unsicher": Vergleich.unsicher(),
         }

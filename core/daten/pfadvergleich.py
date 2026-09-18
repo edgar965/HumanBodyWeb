@@ -48,7 +48,7 @@ class Pfadvergleich:
         try:
             ziel = Path(pfad).resolve()
             basis = Path(wurzel).resolve()
-        except (OSError, ValueError, TypeError):
+        except OSError, ValueError, TypeError:
             # stumm gewollt: Diese Methode ist ein WAECHTER und wird in
             # Schleifen ueber viele Pfade gerufen. Was hier scheitert, ist
             # kein Pfad — und „False" ist die vollstaendige Antwort darauf.

@@ -19,6 +19,7 @@ sieht, dass sie fehlt.
 
 `TimestampedStream` bleibt hier: Den gibt es in djangoBase nicht.
 """
+
 from __future__ import annotations
 
 import re
@@ -28,8 +29,7 @@ import time
 
 from djangobase.jobctx import JobContextFilter, with_job_id
 
-__all__ = ['Auftragskontext', 'JobContextFilter', 'TimestampedStream',
-           'Zeitstempelausgabe']
+__all__ = ["Auftragskontext", "JobContextFilter", "TimestampedStream", "Zeitstempelausgabe"]
 
 
 class Auftragskontext:
@@ -51,7 +51,7 @@ class Auftragskontext:
         return with_job_id(job_id)
 
 
-_TS_PREFIX_RE = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}')
+_TS_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}")
 
 
 class TimestampedStream:
@@ -74,7 +74,7 @@ class TimestampedStream:
 
     def __init__(self, wrapped):
         self._wrapped = wrapped
-        self._buffer = ''
+        self._buffer = ""
         self._at_line_start = True
         self._lock = threading.Lock()
 
@@ -92,7 +92,7 @@ class TimestampedStream:
         arbeiten: Ohne `\r` waere ein ganzer Lauf EINE Zeile, und der
         Zeitstempel stuende nur ganz am Anfang.
         """
-        stellen = [x for x in (s.find('\n', ab), s.find('\r', ab)) if x != -1]
+        stellen = [x for x in (s.find("\n", ab), s.find("\r", ab)) if x != -1]
         return min(stellen) if stellen else -1
 
     @staticmethod
@@ -107,7 +107,7 @@ class TimestampedStream:
             return stueck
         if _TS_PREFIX_RE.match(stueck):
             return stueck
-        return f'{time.strftime("%Y-%m-%d %H:%M:%S")} {stueck}'
+        return f"{time.strftime('%Y-%m-%d %H:%M:%S')} {stueck}"
 
     def _write_locked(self, s):
         """Fertige Zeilen durchreichen, den Rest bis zum naechsten Mal halten.
@@ -125,25 +125,25 @@ class TimestampedStream:
                 self._buffer = s[i:]
                 self._at_line_start = zeilenanfang
                 break
-            fertig.append(self._mit_stempel(s[i:ende + 1], zeilenanfang))
+            fertig.append(self._mit_stempel(s[i : ende + 1], zeilenanfang))
             zeilenanfang = True
             i = ende + 1
         else:
-            self._buffer = ''
+            self._buffer = ""
             self._at_line_start = zeilenanfang
         if fertig:
-            self._wrapped.write(''.join(fertig))
+            self._wrapped.write("".join(fertig))
         return len(s)
 
     def flush(self):
         with self._lock:
             if self._buffer:
-                ts = time.strftime('%Y-%m-%d %H:%M:%S')
+                ts = time.strftime("%Y-%m-%d %H:%M:%S")
                 if not _TS_PREFIX_RE.match(self._buffer):
-                    self._wrapped.write(f'{ts} {self._buffer}')
+                    self._wrapped.write(f"{ts} {self._buffer}")
                 else:
                     self._wrapped.write(self._buffer)
-                self._buffer = ''
+                self._buffer = ""
             self._wrapped.flush()
 
     def __getattr__(self, name):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Den VideoToBVH-Wrapperbaum in den Suchpfad legen — fuer Pruefungen.
+"""Den VideoToBVH-Wrapperbaum in den Suchpfad legen — fuer Pruefungen.
 
 HIESS BIS ZUM 02.09.2026 `Wrappersuchpfad` — genau wie die Klasse in
 `core/daten/wrapperpfad.py`, die etwas ANDERES tut: Die haengt das
@@ -16,20 +16,21 @@ steht.
 DER EINTRAG WIRD NUR EINMAL GESETZT — ein waschsender `sys.path` macht
 jeden Import langsamer.
 """
+
 import sys
 from pathlib import Path
 
 #: `…/3DTools` — vier Ebenen ueber dieser Datei (core/tests/unit).
 TOOLS = Path(__file__).resolve().parents[4]
-WRAPPERS = TOOLS / 'VideoToBVH' / 'wrappers'
+WRAPPERS = TOOLS / "VideoToBVH" / "wrappers"
 
 
 class Wrappersuchpfad:
-    u"""Der Suchpfad zu `VideoToBVH/wrappers`."""
+    """Der Suchpfad zu `VideoToBVH/wrappers`."""
 
     @staticmethod
     def setzen():
-        u"""Den Wrapperordner voranstellen. Gibt den Pfad zurueck."""
+        """Den Wrapperordner voranstellen. Gibt den Pfad zurueck."""
         pfad = str(WRAPPERS)
         if pfad not in sys.path:
             sys.path.insert(0, pfad)
@@ -37,6 +38,5 @@ class Wrappersuchpfad:
 
     @staticmethod
     def dateien():
-        u"""Alle eigenen Wrapper-Module (ohne `__init__`)."""
-        return sorted(p for p in WRAPPERS.glob('*.py')
-                      if p.name != '__init__.py')
+        """Alle eigenen Wrapper-Module (ohne `__init__`)."""
+        return sorted(p for p in WRAPPERS.glob("*.py") if p.name != "__init__.py")

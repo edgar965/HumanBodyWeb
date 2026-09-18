@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Reiterzuordnung`: welcher Reiter zu einem angeklickten Stueck gehoert.
+"""`Reiterzuordnung`: welcher Reiter zu einem angeklickten Stueck gehoert.
 
 WARUM (Edgar, 09.09.2026: „Klick auf die Hose aendert den Tab zu
 Eigenschaften des Modells. Es soll zu GarmenCode wechseln!")
@@ -13,11 +13,12 @@ Die Zuordnung haengt am PRAEFIX des Schluessels, nicht am `type` — `type`
 ist bei jedem Kleidungsstueck `cloth`, gleich woher es kommt. Genau das
 haelt dieser Test fest.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'reiterzuordnung.js')
+MODUL = Jsmodul("gemeinsam", "reiterzuordnung.js")
 
 SKRIPT = """
 const { Reiterzuordnung } = await import(MODUL);
@@ -62,9 +63,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class Zuordnung(SimpleTestCase):
-
     databases = set()
 
     def test_die_zuordnung_stimmt(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'))
+        self.assertTrue(ausgabe.get("ok"))

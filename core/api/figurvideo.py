@@ -13,6 +13,7 @@ Stueckliste, Knochennamen) und je Stueck eine Binaerdatei
 geht weiter — dann ohne Stuecke. Alles Weitere steht in
 `core/dienste/figurvideo.py`.
 """
+
 import json
 import logging
 
@@ -23,7 +24,7 @@ from ..daten.anfragerumpf import Anfragerumpf
 from ..dienste.figurvideo import Figurvideo
 from ..dienste.figurvideoablage import Figurvideoablage
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Figurvideoendpunkte:
@@ -32,77 +33,77 @@ class Figurvideoendpunkte:
     @staticmethod
     @require_POST
     def starten(request):
-        if (request.content_type or '').startswith('multipart/'):
+        if (request.content_type or "").startswith("multipart/"):
             try:
-                daten = json.loads(request.POST.get('auftrag') or '{}')
+                daten = json.loads(request.POST.get("auftrag") or "{}")
             except ValueError:
-                return JsonResponse({'fehler': 'Auftrag ist kein JSON.'},
-                                    status=400)
+                return JsonResponse({"fehler": "Auftrag ist kein JSON."}, status=400)
         else:
             daten, fehler = Anfragerumpf.lesen(request)
             if fehler:
                 return fehler
-        if not daten.get('bvh_url'):
-            return JsonResponse({'fehler': 'Keine Animation gewählt.'},
-                                status=400)
+        if not daten.get("bvh_url"):
+            return JsonResponse({"fehler": "Keine Animation gewählt."}, status=400)
         try:
             kennung = Figurvideo.starten(daten, request.FILES)
         except ValueError as fehler:
-            return JsonResponse({'fehler': str(fehler)}, status=400)
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('Figurvideo: Start fehlgeschlagen')
-            return JsonResponse(
-                {'fehler': '%s: %s' % (type(fehler).__name__, fehler)},
-                status=500)
-        return JsonResponse({'kennung': kennung})
+            return JsonResponse({"fehler": str(fehler)}, status=400)
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("Figurvideo: Start fehlgeschlagen")
+            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+        return JsonResponse({"kennung": kennung})
 
     @staticmethod
     @require_POST
     def aufnahme(request):
         """Bildfolge aus der Szene (Weg 2) kodieren und ablegen."""
         from ..dienste.videokodierer import VideoFehler
-        bilder = request.FILES.getlist('frames')
+
+        bilder = request.FILES.getlist("frames")
         if not bilder:
-            return JsonResponse({'fehler': 'Keine Bilder empfangen.'}, status=400)
+            return JsonResponse({"fehler": "Keine Bilder empfangen."}, status=400)
         felder = request.POST
         try:
             kennung, url, pfad = Figurvideo.aus_bildfolge(
-                bilder, fps=felder.get('fps') or 24,
-                physik_mm=felder.get('physik_mm') or 0,
-                ablage=Figurvideoendpunkte._ablagewunsch(felder))
+                bilder,
+                fps=felder.get("fps") or 24,
+                physik_mm=felder.get("physik_mm") or 0,
+                ablage=Figurvideoendpunkte._ablagewunsch(felder),
+            )
         except ValueError as fehler:
-            return JsonResponse({'fehler': str(fehler)}, status=400)
+            return JsonResponse({"fehler": str(fehler)}, status=400)
         except VideoFehler as fehler:
-            logger.error('Figurvideo: Bildfolge nicht kodiert: %s', fehler)
-            return JsonResponse({'fehler': str(fehler)}, status=500)
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('Figurvideo: Bildfolge fehlgeschlagen')
-            return JsonResponse(
-                {'fehler': '%s: %s' % (type(fehler).__name__, fehler)},
-                status=500)
-        return JsonResponse({'kennung': kennung, 'video_url': url,
-                             'bilder': len(bilder), 'pfad': pfad})
+            logger.error("Figurvideo: Bildfolge nicht kodiert: %s", fehler)
+            return JsonResponse({"fehler": str(fehler)}, status=500)
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("Figurvideo: Bildfolge fehlgeschlagen")
+            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+        return JsonResponse({"kennung": kennung, "video_url": url, "bilder": len(bilder), "pfad": pfad})
 
     #: Formularfeld -> Schluessel der Ablage (Ordner, Dateiname, Figur, Animation).
-    ABLAGEFELDER = (('ordner', 'ablage'), ('name', 'dateiname'),
-                    ('figur', 'figur'), ('animation', 'animation'))
+    ABLAGEFELDER = (
+        ("ordner", "ablage"),
+        ("name", "dateiname"),
+        ("figur", "figur"),
+        ("animation", "animation"),
+    )
 
     @classmethod
     def _ablagewunsch(cls, felder):
         """Wohin das fertige Video kopiert wird — leer heisst Vorgabe."""
-        return {name: felder.get(feld) or '' for name, feld in cls.ABLAGEFELDER}
+        return {name: felder.get(feld) or "" for name, feld in cls.ABLAGEFELDER}
 
     @staticmethod
     @require_GET
     def ablage(request):
         """Der Ordner, in den Videos ohne eigene Angabe kopiert werden."""
-        return JsonResponse({'ordner': Figurvideoablage.vorgabe_ordner()})
+        return JsonResponse({"ordner": Figurvideoablage.vorgabe_ordner()})
 
     @staticmethod
     @require_GET
     def stand(request, kennung):
         try:
             return JsonResponse(Figurvideo.stand(kennung))
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('Figurvideo: Stand nicht lesbar')
-            return JsonResponse({'fehler': str(fehler)}, status=500)
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("Figurvideo: Stand nicht lesbar")
+            return JsonResponse({"fehler": str(fehler)}, status=500)

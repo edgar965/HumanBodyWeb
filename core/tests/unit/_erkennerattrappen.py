@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Erkennerattrappen — YOLO und detectron2 ohne Modell und ohne Karte.
+"""Erkennerattrappen — YOLO und detectron2 ohne Modell und ohne Karte.
 
 Die beiden Foto-Wege benutzen verschiedene Personendetektoren, und beide
 antworten in ihrer eigenen Form:
@@ -20,14 +20,14 @@ verschiedene Klassen mit demselben Namen sind genau das, was die
 Pruefung `EineQuelle` im Wrapperbaum verbietet — bei einem Fehlschlag
 nennt die Ausgabe nur den Namen, und der stimmt dann fuer beide.
 """
+
 from ._tensorattrappe import Tensorattrappe
 
-__all__ = ['Yolokaesten', 'Yoloattrappe', 'Kastenfeld', 'Erkennungen',
-           'Detectronattrappe']
+__all__ = ["Yolokaesten", "Yoloattrappe", "Kastenfeld", "Erkennungen", "Detectronattrappe"]
 
 
 class Yolokaesten:
-    u"""Was YOLO als `results[0].boxes` zurueckgibt."""
+    """Was YOLO als `results[0].boxes` zurueckgibt."""
 
     def __init__(self, kaesten, guete):
         self.xyxy = Tensorattrappe(kaesten)
@@ -35,7 +35,7 @@ class Yolokaesten:
 
 
 class Yoloattrappe:
-    u"""Ein YOLO-Ersatz mit fester Antwort; merkt sich seine Argumente."""
+    """Ein YOLO-Ersatz mit fester Antwort; merkt sich seine Argumente."""
 
     def __init__(self, kaesten, guete):
         self.boxes = Yolokaesten(kaesten, guete)
@@ -49,14 +49,14 @@ class Yoloattrappe:
 
 
 class Kastenfeld:
-    u"""`instances.pred_boxes` — traegt nur das Feld `tensor`."""
+    """`instances.pred_boxes` — traegt nur das Feld `tensor`."""
 
     def __init__(self, kaesten):
         self.tensor = Tensorattrappe(kaesten)
 
 
 class Erkennungen:
-    u"""Was detectron2 als `det_out['instances']` liefert."""
+    """Was detectron2 als `det_out['instances']` liefert."""
 
     def __init__(self, klassen, guete, kaesten):
         self.pred_classes = Tensorattrappe(klassen)
@@ -65,10 +65,10 @@ class Erkennungen:
 
 
 class Detectronattrappe:
-    u"""Ein detectron2-Ersatz mit fester Antwort."""
+    """Ein detectron2-Ersatz mit fester Antwort."""
 
     def __init__(self, erkennungen):
         self.erkennungen = erkennungen
 
     def __call__(self, bild):
-        return {'instances': self.erkennungen}
+        return {"instances": self.erkennungen}

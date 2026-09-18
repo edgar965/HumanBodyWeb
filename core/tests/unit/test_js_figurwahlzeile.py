@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Figurwahlzeile`: das Markup einer Listenzeile des Figurwahl-Dialogs.
+"""`Figurwahlzeile`: das Markup einer Listenzeile des Figurwahl-Dialogs.
 
 WARUM (11.09.2026): Die Zeile wurde aus `figurwahldialog.js` herausgelöst, als
 der Dialog eine zweite Aufgabe bekam (Modell austauschen, `lage: false`,
@@ -9,11 +9,12 @@ Anzeige und Unterzeile werden maskiert, Pflege-Knöpfe kommen nur mit
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'figurwahlzeile.js')
+MODUL = Jsmodul("gemeinsam", "figurwahlzeile.js")
 
 SKRIPT = """
 const { Figurwahlzeile } = await import(MODUL);
@@ -35,9 +36,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class FigurwahlzeileTest(SimpleTestCase):
-
     databases = set()
 
     def test_zeile_maskiert_den_namen_und_zeigt_werkzeuge_nur_mit_unterzeile(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

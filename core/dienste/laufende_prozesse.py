@@ -11,16 +11,17 @@ gesucht, den es in seiner Kopie nie gab.
 Die Sperre gehoert zum Verzeichnis; deshalb liegen beide hier und werden nur
 ueber diese Klasse angefasst.
 """
+
 import logging
 import threading
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class LaufendeProzesse:
     """Verzeichnis der laufenden Pipeline-Prozesse, nach Auftrags-ID."""
 
-    _prozesse = {}                 # job_id (str) -> subprocess.Popen
+    _prozesse = {}  # job_id (str) -> subprocess.Popen
     _sperre = threading.Lock()
 
     @classmethod
@@ -66,11 +67,10 @@ class LaufendeProzesse:
             # stumm gewollt: Der Ablauf der Wartezeit IST der erwartete Fall — darauf
             # folgt das harte Beenden, und scheitert auch das, steht es im Zweig
             # darunter im Log.
-            except Exception:                                     # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 prozess.kill()
-        except Exception as e:                                    # noqa: BLE001
-            logger.warning('Prozess von Auftrag %s liess sich nicht beenden: %s',
-                           job_id, e)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Prozess von Auftrag %s liess sich nicht beenden: %s", job_id, e)
             return False
-        logger.info('Prozess von Auftrag %s beendet', job_id)
+        logger.info("Prozess von Auftrag %s beendet", job_id)
         return True

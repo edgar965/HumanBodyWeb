@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Jsmodul — ein Viewer-Modul in Node ausführen, ohne die Präambel viermal.
+"""Jsmodul — ein Viewer-Modul in Node ausführen, ohne die Präambel viermal.
 
 BEFUND `doppelcode` (28.08.2026): Diese sieben Zeilen standen in VIER
 JS-Tests wortgleich:
@@ -16,6 +16,7 @@ djangoBase nicht VOR dem Projekt, greift `/static/` zuerst und jeder
 djangoBase-Import landet im falschen Ordner — der Lauf bricht dann mit
 „Cannot find module" ab, und man sucht den Fehler im Testfall.
 """
+
 import re
 import shutil
 from pathlib import Path
@@ -33,13 +34,12 @@ class Jsmodul:
     """Ein Modul unter `static/viewer/` — samt der Wurzeln für seine Importe."""
 
     #: `static/viewer/` — die Tests greifen von hier auf ihre Ordner zu.
-    VIEWER = WURZEL / 'static' / 'viewer'
+    VIEWER = WURZEL / "static" / "viewer"
 
     #: Reihenfolge zählt: die LÄNGERE Vorsilbe muss zuerst passen.
     WURZELN = {
-        '/static/djangobase/': (Path(__import__('djangobase').__file__).parent
-                                / 'static' / 'djangobase'),
-        '/static/': WURZEL / 'static',
+        "/static/djangobase/": (Path(__import__("djangobase").__file__).parent / "static" / "djangobase"),
+        "/static/": WURZEL / "static",
     }
 
     #: `pruefe(was, ist, soll)` — der Vergleich, den jedes Prüfskript braucht.
@@ -53,7 +53,7 @@ class Jsmodul:
     }
 };
 """
-    EIGENES_PRUEFE = re.compile(r'\bpruefe\s*=|function\s+pruefe\b')
+    EIGENES_PRUEFE = re.compile(r"\bpruefe\s*=|function\s+pruefe\b")
 
     def __init__(self, *teile):
         """@param teile Pfad unter `static/viewer/`, z.B. ('gemeinsam', 'x.js')"""
@@ -74,11 +74,12 @@ class Jsmodul:
         laufen damit, TheatreJS wird damit gebaut). Wer es nicht hat, hat den
         Rechner nicht fertig eingerichtet.
         """
-        if not shutil.which('node'):
+        if not shutil.which("node"):
             raise RuntimeError(
-                'node ist nicht im Pfad. Die JS-Tests führen die Module '
-                'wirklich aus; ohne node gibt es kein Ergebnis — und ein '
-                'übersprungener Test darf nicht grün melden.')
+                "node ist nicht im Pfad. Die JS-Tests führen die Module "
+                "wirklich aus; ohne node gibt es kein Ergebnis — und ein "
+                "übersprungener Test darf nicht grün melden."
+            )
         if not Jsmodul.EIGENES_PRUEFE.search(skript):
             skript = Jsmodul.PRUEFE + skript
         return Webmodul(self.pfad, Jsmodul.WURZELN).laufen(skript)

@@ -44,14 +44,25 @@ from ..models import BVHJob
 from ..safe_paths import PfadAbgelehnt, SafePath
 from ..daten.anfragerumpf import Anfragerumpf
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 #: Pipelines der 2D-Uploadseite.
-PIPELINES_2D = ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11')
+PIPELINES_2D = ("mediapipe", "openpose", "rtmpose", "vitpose", "yolo11")
 
 #: Pipelines der 3D-Uploadseite.
-PIPELINES_3D = ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'smplx',
-                'hybrid_gvhmr', 'hybrid_prompthmr', 'hybrid_gem')
+PIPELINES_3D = (
+    "v4",
+    "gvhmr",
+    "wham",
+    "prompthmr",
+    "gem",
+    "duomo",
+    "gemx",
+    "smplx",
+    "hybrid_gvhmr",
+    "hybrid_prompthmr",
+    "hybrid_gem",
+)
 
 #: Zustaende, in denen ein Auftrag die Sperre haelt. EINE Quelle: `Haenger`
 #: braucht dieselbe Liste, um die Sperre wieder freizugeben.
@@ -81,19 +92,19 @@ class Auftragsendpunkte:
         job = cls(job_id).job
         Haenger.erkennen(job)
         daten = {
-            'kennung': job.kennung,
-            'status': job.status,
-            'progress': job.progress,
-            'progress_detail': job.progress_detail,
-            'error': job.error_message,
-            'bvh_file': job.bvh_file,
+            "kennung": job.kennung,
+            "status": job.status,
+            "progress": job.progress,
+            "progress_detail": job.progress_detail,
+            "error": job.error_message,
+            "bvh_file": job.bvh_file,
         }
         if job.bvh_file_face:
-            daten['bvh_file_face'] = job.bvh_file_face
+            daten["bvh_file_face"] = job.bvh_file_face
         if job.bvh_file_hands:
-            daten['bvh_file_hands'] = job.bvh_file_hands
+            daten["bvh_file_hands"] = job.bvh_file_hands
         if job.bvh_file_personen:
-            daten['bvh_file_personen'] = job.bvh_file_personen
+            daten["bvh_file_personen"] = job.bvh_file_personen
         return JsonResponse(daten)
 
     # -------------------------------------------------------------- Starten
@@ -105,65 +116,68 @@ class Auftragsendpunkte:
         Steht im POST eine andere `pipeline` als am Auftrag, entsteht ein NEUER
         Auftrag mit demselben Video — das bisherige Ergebnis bleibt erhalten.
         """
-        if request.method != 'POST':
-            return JsonResponse({'error': 'POST required'}, status=405)
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
         belegt = Auftragsstart.belegt(ausser=job_id)
         if belegt:
             return belegt
         return cls(job_id)._starten(request)
 
     def _starten(self, request):
-        roh = request.POST.get('pipeline_params', '')
+        roh = request.POST.get("pipeline_params", "")
         parameter = json.loads(roh) if roh else {}
-        neue = request.POST.get('pipeline', '').strip()
+        neue = request.POST.get("pipeline", "").strip()
 
         if Auftragsstart.braucht_zwilling(self.job, neue):
             zwilling = Auftragsstart.zwilling(self.job, neue, parameter)
             Auftragssteuerung.starten(zwilling)
-            return JsonResponse({
-                'ok': True, 'status': zwilling.status,
-                'new_job_id': str(zwilling.id), 'new_pipeline': neue,
-                'new_pipeline_display': zwilling.get_pipeline_display(),
-            })
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "status": zwilling.status,
+                    "new_job_id": str(zwilling.id),
+                    "new_pipeline": neue,
+                    "new_pipeline_display": zwilling.get_pipeline_display(),
+                }
+            )
 
-        if self.job.status not in ('pending', 'complete', 'failed'):
-            return JsonResponse({'ok': False, 'error': 'Job not startable'},
-                                status=400)
+        if self.job.status not in ("pending", "complete", "failed"):
+            return JsonResponse({"ok": False, "error": "Job not startable"}, status=400)
         if parameter:
             self.job.pipeline_params = parameter
-            self.job.save(update_fields=['pipeline_params'])
+            self.job.save(update_fields=["pipeline_params"])
         Auftragssteuerung.starten(self.job)
-        return JsonResponse({'ok': True, 'status': self.job.status})
+        return JsonResponse({"ok": True, "status": self.job.status})
 
     # ------------------------------------------------------------- Anhalten
 
     @classmethod
     def anhalten(cls, request, job_id):
         """Laufenden Auftrag per AJAX abbrechen."""
-        if request.method != 'POST':
-            return JsonResponse({'error': 'POST required'}, status=405)
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
         Auftragssteuerung.anhalten(cls(job_id).job)
-        return JsonResponse({'ok': True})
+        return JsonResponse({"ok": True})
 
     # ------------------------------------------------------------- Loeschen
 
     @classmethod
     def loeschen(cls, request, job_id):
         """Auftrag samt Dateien per AJAX loeschen."""
-        if request.method != 'POST':
-            return JsonResponse({'error': 'POST required'}, status=405)
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
         job = cls(job_id).job
         name = job.name
         Auftragssteuerung.dateien_entfernen(job)
         job.delete()
-        return JsonResponse({'ok': True, 'name': name})
+        return JsonResponse({"ok": True, "name": name})
 
     @staticmethod
     def mehrere_loeschen(request):
         """Mehrere Auftraege auf einmal loeschen."""
-        if request.method != 'POST':
-            return JsonResponse({'error': 'POST required'}, status=405)
-        ids, fehler = Anfragerumpf.feld(request, 'ids', [])
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
+        ids, fehler = Anfragerumpf.feld(request, "ids", [])
         if fehler:
             return fehler
         geloescht = []
@@ -174,40 +188,41 @@ class Auftragsendpunkte:
                 job.delete()
                 geloescht.append(str(jid))
             except BVHJob.DoesNotExist:
-                logger.debug('uebergangen', exc_info=True)
-        return JsonResponse({'ok': True, 'deleted': geloescht})
+                logger.debug("uebergangen", exc_info=True)
+        return JsonResponse({"ok": True, "deleted": geloescht})
 
     # ----------------------------------------------------------- Neuanlage
 
     @staticmethod
     def aus_datei(request):
         """Auftrag aus einer vorhandenen Videodatei anlegen und starten."""
-        if request.method != 'POST':
-            return JsonResponse({'error': 'POST required'}, status=405)
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
         try:
             Haenger.freigeben()
             belegt = Auftragsstart.belegt()
             if belegt:
                 return belegt
             daten = json.loads(request.body)
-            pipeline = daten.get('pipeline', 'gvhmr')
+            pipeline = daten.get("pipeline", "gvhmr")
             if pipeline not in PIPELINES_3D:
-                return JsonResponse({'error': 'Invalid pipeline: %s' % pipeline},
-                                    status=400)
-            pfad = Auftragsendpunkte._videopfad(daten.get('video_path', ''))
+                return JsonResponse({"error": "Invalid pipeline: %s" % pipeline}, status=400)
+            pfad = Auftragsendpunkte._videopfad(daten.get("video_path", ""))
             if not isinstance(pfad, Path):
-                return pfad                       # fertige Fehlerantwort
+                return pfad  # fertige Fehlerantwort
             # Auftrag zeigt auf die vorhandene Datei — es wird nichts kopiert.
             job = BVHJob.objects.create(
-                name=pfad.name, video_file=str(pfad),
-                fps=Auftragsanlage.bildrate(pfad), pipeline=pipeline,
-                pipeline_params=daten.get('pipeline_params', {}))
+                name=pfad.name,
+                video_file=str(pfad),
+                fps=Auftragsanlage.bildrate(pfad),
+                pipeline=pipeline,
+                pipeline_params=daten.get("pipeline_params", {}),
+            )
             Auftragssteuerung.starten(job)
-            return JsonResponse({'ok': True, 'job_id': str(job.id),
-                                 'status': job.status})
+            return JsonResponse({"ok": True, "job_id": str(job.id), "status": job.status})
         except Exception as e:
-            logger.exception('create_job_from_file: unerwarteter Fehler')
-            return JsonResponse({'error': str(e)}, status=500)
+            logger.exception("create_job_from_file: unerwarteter Fehler")
+            return JsonResponse({"error": str(e)}, status=500)
 
     @staticmethod
     def _videopfad(angabe):
@@ -224,9 +239,7 @@ class Auftragsendpunkte:
         try:
             pfad = SafePath.fuer_videos().pruefe(str(roh))
         except PfadAbgelehnt as fehler:
-            return JsonResponse({'error': 'Video-Pfad abgelehnt: %s' % fehler},
-                                status=403)
+            return JsonResponse({"error": "Video-Pfad abgelehnt: %s" % fehler}, status=403)
         if not pfad.is_file():
-            return JsonResponse({'error': 'Video file not found: %s' % angabe},
-                                status=404)
+            return JsonResponse({"error": "Video file not found: %s" % angabe}, status=404)
         return pfad

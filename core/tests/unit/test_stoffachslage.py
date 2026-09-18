@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Vorschau liefert Punkte in SZENENLAGE (Y oben) — nicht Z oben.
+"""Die Vorschau liefert Punkte in SZENENLAGE (Y oben) — nicht Z oben.
 
 DER BEFUND, DEN DIESE DATEI FESTHÄLT (08.09.2026)
 =================================================
@@ -27,6 +27,7 @@ Dort wird die Klasse `Stoffvorschau` geprüft, und die war in Ordnung: Ihr
 sie benutzt wird. Diese Datei prüft deshalb `Stoffnachfuehrung` — die
 Grenze zum Browser.
 """
+
 import numpy as np
 from django.test import SimpleTestCase
 
@@ -35,20 +36,21 @@ from ._sicher import Sicher
 
 
 class StoffvorschauLiefertSzenenlage(SimpleTestCase):
-
     databases = set()
 
     def setUp(self):
         import os
         import tempfile
         from pathlib import Path
+
         # Ins Projektverzeichnis, nicht nach C:\Temp (globale Regel).
         from django.conf import settings
-        self.ordner = Path(settings.BASE_DIR) / '_wegwerf' / 'achslage'
+
+        self.ordner = Path(settings.BASE_DIR) / "_wegwerf" / "achslage"
         self.ordner.mkdir(parents=True, exist_ok=True)
         # `mkstemp` gibt einen OFFENEN Deskriptor zurueck; unter Windows
         # laesst sich die Datei sonst im tearDown nicht loeschen.
-        kennung, pfad = tempfile.mkstemp(suffix='.obj', dir=self.ordner)
+        kennung, pfad = tempfile.mkstemp(suffix=".obj", dir=self.ordner)
         os.close(kennung)
         self.datei = Path(pfad)
 
@@ -56,47 +58,47 @@ class StoffvorschauLiefertSzenenlage(SimpleTestCase):
         self.datei.unlink(missing_ok=True)
 
     def test_die_hoehe_steht_auf_y_nicht_auf_z(self):
-        u"""Die scharfe Probe: Der Würfel ist 1 m hoch, der Stoff liegt oben
+        """Die scharfe Probe: Der Würfel ist 1 m hoch, der Stoff liegt oben
         darüber. In Szenenlage muss die y-Ausdehnung gross und die
         z-Ausdehnung klein sein — vertauscht war es genau andersherum."""
         fuehrung, koerper_zoben, bilanz = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
-        self.assertNotIn('fehler', bilanz)
+        self.assertNotIn("fehler", bilanz)
 
-        punkte = fuehrung.punkte(koerper_zoben)['probe']
+        punkte = fuehrung.punkte(koerper_zoben)["probe"]
         # Der Stoff liegt auf der Oberseite: y nahe 1,05, z zwischen -0,5..0,5.
-        self.assertGreater(punkte[:, 1].min(), 0.9,
-                           'Der Stoff muss OBEN liegen (y ~ 1,05)')
-        self.assertLess(abs(punkte[:, 2]).max(), 0.6,
-                        'Die z-Ausdehnung ist die Tiefe, nicht die Höhe')
+        self.assertGreater(punkte[:, 1].min(), 0.9, "Der Stoff muss OBEN liegen (y ~ 1,05)")
+        self.assertLess(abs(punkte[:, 2]).max(), 0.6, "Die z-Ausdehnung ist die Tiefe, nicht die Höhe")
 
     def test_der_stoff_folgt_dem_koerper_in_szenenlage(self):
-        u"""Wird der Körper höher, wandert der Stoff auf der y-Achse mit —
+        """Wird der Körper höher, wandert der Stoff auf der y-Achse mit —
         nicht auf der z-Achse."""
         fuehrung, koerper_zoben, _ = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
-        vorher = fuehrung.punkte(koerper_zoben)['probe'].copy()
+        vorher = fuehrung.punkte(koerper_zoben)["probe"].copy()
 
         # In `CharacterState`-Lage (Z oben) ist die Höhe die z-Achse.
         hoeher = koerper_zoben.copy()
         hoeher[:, 2] *= 1.5
-        nachher = fuehrung.punkte(hoeher)['probe']
+        nachher = fuehrung.punkte(hoeher)["probe"]
 
-        self.assertGreater(nachher[:, 1].max() - vorher[:, 1].max(), 0.1,
-                           'Die Figur wurde höher — der Stoff muss mit')
-        self.assertLess(abs(nachher[:, 2] - vorher[:, 2]).max(), 0.05,
-                        'Die Tiefe darf sich dabei kaum ändern')
+        self.assertGreater(
+            nachher[:, 1].max() - vorher[:, 1].max(), 0.1, "Die Figur wurde höher — der Stoff muss mit"
+        )
+        self.assertLess(
+            abs(nachher[:, 2] - vorher[:, 2]).max(), 0.05, "Die Tiefe darf sich dabei kaum ändern"
+        )
 
     def test_abstand_wird_gegen_dieselbe_lage_gemessen(self):
-        u"""`abstand_mm` bekommt jetzt Y-oben-Punkte. Bei unverändertem
+        """`abstand_mm` bekommt jetzt Y-oben-Punkte. Bei unverändertem
         Körper muss der Abstand ~0 sein; mit der alten Z-oben-Erwartung kam
         dort ein zweistelliger Zentimeterwert heraus — eine Zahl, die
         „Finalize drücken" gesagt hätte, obwohl nichts passiert war."""
         fuehrung, koerper_zoben, _ = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
-        punkte = fuehrung.punkte(koerper_zoben)['probe']
-        self.assertLess(Sicher.wert(fuehrung.abstand_mm('probe', punkte), 'Abstand'), 1.0)
+        punkte = fuehrung.punkte(koerper_zoben)["probe"]
+        self.assertLess(Sicher.wert(fuehrung.abstand_mm("probe", punkte), "Abstand"), 1.0)
 
     @staticmethod
     def _gebundene_nachfuehrung(tmpdatei):
-        u"""Eine Nachführung mit einem Stück, das 5 cm über dem Würfel liegt."""
+        """Eine Nachführung mit einem Stück, das 5 cm über dem Würfel liegt."""
         from GarmentCode.nachfuehrung import Stoffnachfuehrung
         from GarmentCode.stoffvorschau import Stoffvorschau
 
@@ -108,9 +110,8 @@ class StoffvorschauLiefertSzenenlage(SimpleTestCase):
         # GarmentCode `*_sim.obj` ab).
         oben = koerper_yoben[np.isclose(koerper_yoben[:, 1], 1.0)]
         stoff_cm = (oben + np.array([0.0, 0.05, 0.0])) * 100.0
-        tmpdatei.write_text(
-            '\n'.join('v %f %f %f' % tuple(p) for p in stoff_cm), encoding='utf-8')
+        tmpdatei.write_text("\n".join("v %f %f %f" % tuple(p) for p in stoff_cm), encoding="utf-8")
 
         fuehrung = Stoffnachfuehrung()
-        bilanz = fuehrung.binden('probe', str(tmpdatei), koerper_zoben, dreiecke)
+        bilanz = fuehrung.binden("probe", str(tmpdatei), koerper_zoben, dreiecke)
         return fuehrung, koerper_zoben, bilanz

@@ -16,25 +16,25 @@ Django liest die Namen dieses Moduls, egal woher sie kommen. Alle Namen sind
 GROSS geschrieben; ein `_`-Name wäre von `import *` ohnehin ausgeschlossen.
 """
 
-from .wurzeln import *                                        # noqa: F401,F403
-from .pfade import *                                          # noqa: F401,F403
-from .protokoll import *                                      # noqa: F401,F403
-from .wurzeln import BASE_DIR                                 # noqa: F401
+from .wurzeln import *  # noqa: F401,F403
+from .pfade import *  # noqa: F401,F403
+from .protokoll import *  # noqa: F401,F403
+from .wurzeln import BASE_DIR  # noqa: F401
 
-SECRET_KEY = 'django-insecure-mocapnet-dev-key-change-in-production'
+SECRET_KEY = "django-insecure-mocapnet-dev-key-change-in-production"
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
-    'daphne',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'djangobase',
-    'core',
+    "daphne",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "djangobase",
+    "core",
 ]
 
 # `djangobase.cache_middleware.CacheHeaderMiddleware` steht NICHT hier: Sie
@@ -52,81 +52,81 @@ MIDDLEWARE = [
     # GANZ VORNE: Wer ueber `localhost` kommt, wird auf 127.0.0.1 geschickt,
     # bevor irgendetwas gerechnet wird. Der Grund ist gemessen (12,7 s gegen
     # 0,4 s beim ersten Aufruf) und steht in `ui/schnelleadresse.py`.
-    'ui.schnelleadresse.Schnelleadresse',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    "ui.schnelleadresse.Schnelleadresse",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     # Direkt hinter der CSRF-Prüfung: Sie greift bei den 35 `csrf_exempt`-
     # Endpunkten nicht, diese hier schon. Sie fragt nicht nach einem Token,
     # sondern ob die Anfrage von der eigenen Seite kommt (13.08.2026).
-    'ui.same_origin.GleicherUrsprungMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "ui.same_origin.GleicherUrsprungMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Daten nie aus dem Zwischenspeicher des Browsers (09.09.2026). Ohne
     # sie lieferte Chrome das Modell-JSON von VOR dem Speichern, und die
     # Figur kam ohne ihre GarmentCode-Stuecke zurueck — Begruendung und
     # Messung in `ui/datenfrische.py`.
-    'ui.datenfrische.Datenfrische',
+    "ui.datenfrische.Datenfrische",
     # Der Keks `netzstufen` (Strg+Alt+H im Browser) waehlt die Unterteilungs-
     # stufe fuer DIESEN Browser — je Anfrage, vor der Einstellung (17.09.2026).
-    'core.dienste.netzstufenwahl.Netzstufenwahl',
+    "core.dienste.netzstufenwahl.Netzstufenwahl",
 ]
 
-ROOT_URLCONF = 'ui.urls'
+ROOT_URLCONF = "ui.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'ui.context_processors.version',
-                'ui.context_processors.active_theme',
-                'djangobase.context_processors.djangobase',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "ui.context_processors.version",
+                "ui.context_processors.active_theme",
+                "djangobase.context_processors.djangobase",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'ui.wsgi.application'
-ASGI_APPLICATION = 'ui.asgi.application'
+WSGI_APPLICATION = "ui.wsgi.application"
+ASGI_APPLICATION = "ui.asgi.application"
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Europe/Berlin'
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "Europe/Berlin"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 #: Grenzen für den Video-Export: Der Browser schickt Hunderte PNG-Einzelbilder
 #: in EINER Anfrage.
-DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024   # 500 MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024   # 500 MB
-DATA_UPLOAD_MAX_NUMBER_FILES = 10000              # bis zu 10.000 Bilder
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500 MB
+DATA_UPLOAD_MAX_NUMBER_FILES = 10000  # bis zu 10.000 Bilder
 
 #: Kanäle für die WebSocket-Verbindungen (im Speicher, Entwicklungsbetrieb).
 CHANNEL_LAYERS = {
-    'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'},
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
 }
 
 #: Was die djangoBase-Konformitätsprüfungen NICHT ansehen sollen.
@@ -136,7 +136,7 @@ CHANNEL_LAYERS = {
 #: rendert es. `test_keine_seite_mit_eigenem_html` meldete es trotzdem als
 #: „Seiten-Vorlage ohne `{% extends %}`" — richtig gesehen, falsche Sorte
 #: Datei (28.08.2026).
-DJANGOBASE_KONFORM_AUS = ('docs/',)
+DJANGOBASE_KONFORM_AUS = ("docs/",)
 
 #: Dateien, in denen die Tabellen-Konformitaet nicht gilt.
 #:
@@ -144,9 +144,9 @@ DJANGOBASE_KONFORM_AUS = ('docs/',)
 #: Sie enthaelt three.js und Theatre.js mit; die Tabelle darin gehoert einer
 #: Fremdbibliothek. Aendern liesse sie sich nur, indem man den Build anfasst —
 #: und beim naechsten `npm run build` waere es wieder weg (28.08.2026).
-DJANGOBASE_KONFORM_TABELLEN_AUS = ('static/theatre/',)
+DJANGOBASE_KONFORM_TABELLEN_AUS = ("static/theatre/",)
 
-from .djangobase_conf import DJANGOBASE                       # noqa: E402,F401
+from .djangobase_conf import DJANGOBASE  # noqa: E402,F401
 
 # Örtliche Abweichungen (nicht im Repo — jeder Rechner hat seine eigene).
 try:

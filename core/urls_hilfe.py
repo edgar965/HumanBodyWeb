@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Projekteigene Hilfeseiten unter `/hilfe/`.
+"""Projekteigene Hilfeseiten unter `/hilfe/`.
 
 `ui/urls.py` bindet djangoBase unter `hilfe/` ein; dieses Modul haengt
 darunter einen engeren Praefix (`hilfe/kleidung/`).
@@ -25,11 +25,9 @@ from .api.hilfe_kleidung import KleidungAllgemein
 from .api.hilfe_neu import KleidungNeu
 
 urlpatterns = [
-    path('', KleidungAllgemein.ansicht(), name='hilfe_kleidung'),
-    path('garmentcode/', KleidungGarmentcode.ansicht(),
-         name='hilfe_kleidung_garmentcode'),
-    path('neu/', KleidungNeu.ansicht(), name='hilfe_kleidung_neu'),
-    path('physik/', KleidungPhysik.ansicht(), name='hilfe_kleidung_physik'),
-    path('koerperphysik/', KoerperPhysik.ansicht(),
-         name='hilfe_koerper_physik'),
+    path("", KleidungAllgemein.ansicht(), name="hilfe_kleidung"),
+    path("garmentcode/", KleidungGarmentcode.ansicht(), name="hilfe_kleidung_garmentcode"),
+    path("neu/", KleidungNeu.ansicht(), name="hilfe_kleidung_neu"),
+    path("physik/", KleidungPhysik.ansicht(), name="hilfe_kleidung_physik"),
+    path("koerperphysik/", KoerperPhysik.ansicht(), name="hilfe_koerper_physik"),
 ]

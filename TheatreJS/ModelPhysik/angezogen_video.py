@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die HumanBody-Figur in Bewegung, angezogen — ein Video.
+"""Die HumanBody-Figur in Bewegung, angezogen — ein Video.
 
 WARUM (Edgar, 10.09.2026: „ich brauche ein Video das du mit MEINEM
 humanBody modell erzeugt hast mit einer Animation und Kleider Physik"):
@@ -21,6 +21,7 @@ verspricht als sie haelt.
 
 Aufruf:  python angezogen_video.py [--bilder 60]
 """
+
 import argparse
 import json
 import os
@@ -34,16 +35,22 @@ from bakedatei import Bakedatei
 from figur_nach_cody import Codyfigur
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
-STOFF = os.path.join('A:', os.sep, '3DTools', 'Assets', 'GarmentCode',
-                     'ausgabe', 't-shirt_female',
-                     't-shirt_female_sim_rig.json')
-BVH = os.path.join('A:', os.sep, '3DTools', '3DObjects', 'animations', 'bvh',
-                   'Walk', '01_01.bvh')
+STOFF = os.path.join(
+    "A:",
+    os.sep,
+    "3DTools",
+    "Assets",
+    "GarmentCode",
+    "ausgabe",
+    "t-shirt_female",
+    "t-shirt_female_sim_rig.json",
+)
+BVH = os.path.join("A:", os.sep, "3DTools", "3DObjects", "animations", "bvh", "Walk", "01_01.bvh")
 FIGURHOEHE = 1.68
 
 
 class Angezogen:
-    u"""Koerperbahn aus FPS, Stoff per Skinning, beides in Metern."""
+    """Koerperbahn aus FPS, Stoff per Skinning, beides in Metern."""
 
     HINTERGRUND = (0.94, 0.94, 0.96)
     ABSTAND = 2.3
@@ -54,25 +61,25 @@ class Angezogen:
         self.koerper = self._in_metern()
         with open(stoff_pfad) as datei:
             self.stoff = json.load(datei)
-        self.s_punkte = np.asarray(self.stoff['punkte'], dtype=np.float64)
+        self.s_punkte = np.asarray(self.stoff["punkte"], dtype=np.float64)
         if self.s_punkte.ndim == 1:
             self.s_punkte = self.s_punkte.reshape(-1, 3)
-        self.s_dreiecke = np.asarray(self.stoff['dreiecke'],
-                                     dtype=np.int64).reshape(-1, 3)
+        self.s_dreiecke = np.asarray(self.stoff["dreiecke"], dtype=np.int64).reshape(-1, 3)
         self.bilder = min(bilder, self.bake.bilder)
         self._skinning(bvh_pfad)
 
     def _in_metern(self):
-        u"""Die Bake-Bahn auf Meter und auf den Boden (`Bakedatei.auf_dem_boden`)."""
+        """Die Bake-Bahn auf Meter und auf den Boden (`Bakedatei.auf_dem_boden`)."""
         return self.bake.auf_dem_boden(FIGURHOEHE)
 
     def _skinning(self, bvh_pfad):
-        u"""Stoffbahn: dieselben Knochen wie der Koerper, per LBS."""
+        """Stoffbahn: dieselben Knochen wie der Koerper, per LBS."""
         from bvh_nach_anim import Animschreiber
-        figur = Codyfigur('female', mit_fingern=True)
+
+        figur = Codyfigur("female", mit_fingern=True)
         figur.VORLAUF = 0
-        daten = Animschreiber('hb_female').spuren(bvh_pfad)
-        namen = list(self.stoff['knochen'])
+        daten = Animschreiber("hb_female").spuren(bvh_pfad)
+        namen = list(self.stoff["knochen"])
         gewichte = self._gewichtsmatrix(namen)
         ruhe = figur._welt()
         ruhe_um = self._ruhe_um(ruhe, namen)
@@ -87,21 +94,20 @@ class Angezogen:
         # DIE PROBE: Skinning in der RUHELAGE muss den Stoff unveraendert
         # lassen. Faellt sie durch, stimmt eine Konvention nicht — und in
         # Bewegung sieht auch ein falsches Skinning plausibel aus.
-        self.ruheprobe = float(np.abs(self._lbs(namen, gewichte, ruhe_um, ruhe)
-                                      - self.s_punkte).max())
+        self.ruheprobe = float(np.abs(self._lbs(namen, gewichte, ruhe_um, ruhe) - self.s_punkte).max())
 
     def _gewichtsmatrix(self, namen):
-        u"""Die Gewichte liegen DUENNBESETZT je Punkt: [[knochennummer,
+        """Die Gewichte liegen DUENNBESETZT je Punkt: [[knochennummer,
         wert], ...] — bis zu vier Eintraege. Als dichte Matrix ist das
         7290 x 176 und damit klein genug."""
         gewichte = np.zeros((len(self.s_punkte), len(namen)))
-        for zeile, eintraege in enumerate(self.stoff['gewichte']):
+        for zeile, eintraege in enumerate(self.stoff["gewichte"]):
             for nummer, wert in eintraege:
                 gewichte[zeile, int(nummer)] = float(wert)
         return gewichte
 
     def _ruhe_um(self, ruhe, namen):
-        u"""Die Umkehrung der Ruhelage jedes Knochens. Ohne sie waere es
+        """Die Umkehrung der Ruhelage jedes Knochens. Ohne sie waere es
         keine Verformung, sondern ein Versetzen in den Weltursprung."""
         ruhe_um = {}
         for name in namen:
@@ -114,31 +120,32 @@ class Angezogen:
 
     @staticmethod
     def _orte(daten):
-        u"""Die Wurzelorte der BVH (Y-oben -> Z-oben), oder None ohne Spur."""
+        """Die Wurzelorte der BVH (Y-oben -> Z-oben), oder None ohne Spur."""
         from skelettbahn import Skelettbahn
+
         return Skelettbahn.wurzelbahn(daten)
 
     def _lbs(self, namen, gewichte, ruhe_um, welt):
-        u"""Ein Bild: jeder Stoffpunkt gewichtet ueber seine Knochen."""
+        """Ein Bild: jeder Stoffpunkt gewichtet ueber seine Knochen."""
         ziel = np.zeros_like(self.s_punkte)
         summe = np.zeros((len(self.s_punkte), 1))
         for spalte, name in enumerate(namen):
             if name not in ruhe_um or name not in welt:
                 continue
-            w = gewichte[:, spalte:spalte + 1]
+            w = gewichte[:, spalte : spalte + 1]
             if not w.any():
                 continue
             punkt, quat = welt[name]
             dreh = self._dreh(quat)
             rum, tum = ruhe_um[name]
-            ziel += w * ((self.s_punkte @ rum.T + tum) @ dreh.T
-                         + np.asarray(punkt))
+            ziel += w * ((self.s_punkte @ rum.T + tum) @ dreh.T + np.asarray(punkt))
             summe += w
         return ziel / np.maximum(summe, 1e-9)
 
     @staticmethod
     def _dreh(quat):
         from skelettbahn import Skelettbahn
+
         return Skelettbahn.dreh(quat)
 
     # ------------------------------------------------------------- Ausgabe
@@ -146,39 +153,35 @@ class Angezogen:
     def bilder_rendern(self, breite=640, hoehe=860):
         import trimesh
         import pyrender
+
         figurhoehe = float(self.koerper[0][:, 2].max())
-        drehung = np.array([[1.0, 0.0, 0.0],
-                            [0.0, 0.0, 1.0],
-                            [0.0, -1.0, 0.0]])
+        drehung = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
         lage = np.eye(4)
-        lage[:3, 3] = [0.0, self.BLICKHOEHE * figurhoehe,
-                       self.ABSTAND * figurhoehe]
+        lage[:3, 3] = [0.0, self.BLICKHOEHE * figurhoehe, self.ABSTAND * figurhoehe]
         kamera = pyrender.PerspectiveCamera(yfov=np.deg2rad(40.0))
         licht = pyrender.DirectionalLight(color=np.ones(3), intensity=3.4)
         lichtlage = np.eye(4)
-        lichtlage[:3, 3] = [1.2 * figurhoehe, 1.6 * figurhoehe,
-                            1.8 * figurhoehe]
+        lichtlage[:3, 3] = [1.2 * figurhoehe, 1.6 * figurhoehe, 1.8 * figurhoehe]
         haut = pyrender.MetallicRoughnessMaterial(
-            baseColorFactor=[0.86, 0.79, 0.72, 1.0], metallicFactor=0.0,
-            roughnessFactor=0.8)
+            baseColorFactor=[0.86, 0.79, 0.72, 1.0], metallicFactor=0.0, roughnessFactor=0.8
+        )
         tuch = pyrender.MetallicRoughnessMaterial(
-            baseColorFactor=[0.25, 0.45, 0.78, 1.0], metallicFactor=0.0,
-            roughnessFactor=0.55)
+            baseColorFactor=[0.25, 0.45, 0.78, 1.0], metallicFactor=0.0, roughnessFactor=0.55
+        )
         werk = pyrender.OffscreenRenderer(breite, hoehe)
         try:
             for nummer in range(self.bilder):
                 szene = pyrender.Scene(
-                    bg_color=list(self.HINTERGRUND) + [1.0],
-                    ambient_light=[0.38, 0.38, 0.40])
-                k = trimesh.Trimesh(vertices=self.koerper[nummer] @ drehung.T,
-                                    faces=self.bake.dreiecke, process=False)
-                szene.add(pyrender.Mesh.from_trimesh(k, smooth=True,
-                                                     material=haut))
+                    bg_color=list(self.HINTERGRUND) + [1.0], ambient_light=[0.38, 0.38, 0.40]
+                )
+                k = trimesh.Trimesh(
+                    vertices=self.koerper[nummer] @ drehung.T, faces=self.bake.dreiecke, process=False
+                )
+                szene.add(pyrender.Mesh.from_trimesh(k, smooth=True, material=haut))
                 s = trimesh.Trimesh(
-                    vertices=self.stoffbahn[nummer] @ drehung.T,
-                    faces=self.s_dreiecke, process=False)
-                szene.add(pyrender.Mesh.from_trimesh(s, smooth=True,
-                                                     material=tuch))
+                    vertices=self.stoffbahn[nummer] @ drehung.T, faces=self.s_dreiecke, process=False
+                )
+                szene.add(pyrender.Mesh.from_trimesh(s, smooth=True, material=tuch))
                 szene.add(kamera, pose=lage)
                 szene.add(licht, pose=lichtlage)
                 yield Videoschreiber.rendern(werk, szene)
@@ -191,30 +194,31 @@ class Angezogen:
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument('--bake', default=os.path.join(
-        ORDNER, 'figur', 'hb_female_walk.bin'))
-    zerleger.add_argument('--stoff', default=STOFF)
-    zerleger.add_argument('--bvh', default=BVH)
-    zerleger.add_argument('--bilder', type=int, default=60)
-    zerleger.add_argument('--aus', default=os.path.join(
-        r'A:\3DTools\Docu\Ergebnisse', 'hb_angezogen_walk.mp4'))
+    zerleger.add_argument("--bake", default=os.path.join(ORDNER, "figur", "hb_female_walk.bin"))
+    zerleger.add_argument("--stoff", default=STOFF)
+    zerleger.add_argument("--bvh", default=BVH)
+    zerleger.add_argument("--bilder", type=int, default=60)
+    zerleger.add_argument(
+        "--aus", default=os.path.join(r"A:\3DTools\Docu\Ergebnisse", "hb_angezogen_walk.mp4")
+    )
     werte = zerleger.parse_args()
 
     video = Angezogen(werte.bake, werte.stoff, werte.bvh, werte.bilder)
-    print(u'Koerper   %d Bilder, %d Punkte, %d Dreiecke (FPS-Simulation)'
-          % (video.bilder, video.bake.punkte, len(video.bake.dreiecke or [])))
-    print(u'Stoff     %d Punkte, %d Dreiecke'
-          % (len(video.s_punkte), len(video.s_dreiecke)))
-    print(u'RUHEPROBE %.6f m (Skinning in Ruhe darf den Stoff nicht bewegen)'
-          % video.ruheprobe)
+    print(
+        "Koerper   %d Bilder, %d Punkte, %d Dreiecke (FPS-Simulation)"
+        % (video.bilder, video.bake.punkte, len(video.bake.dreiecke or []))
+    )
+    print("Stoff     %d Punkte, %d Dreiecke" % (len(video.s_punkte), len(video.s_dreiecke)))
+    print("RUHEPROBE %.6f m (Skinning in Ruhe darf den Stoff nicht bewegen)" % video.ruheprobe)
     weg = np.linalg.norm(video.stoffbahn[-1] - video.stoffbahn[0], axis=1)
-    print(u'Stoffweg  Median %.0f mm, groesster %.0f mm'
-          % (float(np.median(weg)) * 1000.0, float(weg.max()) * 1000.0))
+    print(
+        "Stoffweg  Median %.0f mm, groesster %.0f mm"
+        % (float(np.median(weg)) * 1000.0, float(weg.max()) * 1000.0)
+    )
     pfad, zahl = video.schreiben(werte.aus)
-    print(u'Video     %s (%d Bilder, %.1f KB)'
-          % (pfad, zahl, os.path.getsize(pfad) / 1024.0))
+    print("Video     %s (%d Bilder, %.1f KB)" % (pfad, zahl, os.path.getsize(pfad) / 1024.0))
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

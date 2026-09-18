@@ -28,14 +28,14 @@ Klasse stand dort als lokale Klasse IN der Funktion und schloss über die Closur
 class Teilauftrag:
     """Auftrags-Doppel für eine Unter-Pipeline: schreibt nichts, merkt sich alles."""
 
-    def __init__(self, pipeline, params, name, kennung, anzeige=''):
+    def __init__(self, pipeline, params, name, kennung, anzeige=""):
         self.pipeline = pipeline
         self.pipeline_params = params
         self.name = name
         self.id = kennung
-        self.status = 'processing'
+        self.status = "processing"
         self.progress = 0
-        self.progress_detail = ''
+        self.progress_detail = ""
         #: Was `get_pipeline_display()` liefert — die Unter-Pipelines zeigen den
         #: Namen im Fortschritt an.
         self.anzeige = anzeige or str(pipeline).upper()

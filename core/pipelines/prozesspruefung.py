@@ -31,7 +31,7 @@ UMA-Bauer; jetzt fragt der hier.
 
 import logging
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Prozesspruefung:
@@ -51,6 +51,7 @@ class Prozesspruefung:
         try:
             import ctypes
             from ctypes import wintypes
+
             kernel32 = ctypes.windll.kernel32
             kernel32.OpenProcess.restype = wintypes.HANDLE
             handle = kernel32.OpenProcess(cls.ABFRAGE, False, int(pid))
@@ -62,8 +63,8 @@ class Prozesspruefung:
                 return code.value == cls.STILL_ACTIVE
             finally:
                 kernel32.CloseHandle(handle)
-        except Exception:                                          # noqa: BLE001
+        except Exception:  # noqa: BLE001
             # Kein Windows, keine ctypes, unbrauchbare PID: „lebt nicht" ist die
             # sichere Antwort — sonst wartet die Beobachtung endlos.
-            logger.debug('PID-Prüfung für %s fehlgeschlagen', pid, exc_info=True)
+            logger.debug("PID-Prüfung für %s fehlgeschlagen", pid, exc_info=True)
             return False

@@ -41,8 +41,7 @@ class Materialgruppen:
     def aus_flaechen(cls, flaechen, materialien=None, namen=None):
         """Aus Vierecken ODER Dreiecken — mit erhaltener Umlaufrichtung."""
         if flaechen.ndim == 2 and flaechen.shape[1] == 4:
-            dreiecke = np.concatenate([flaechen[:, [0, 2, 1]],
-                                       flaechen[:, [0, 3, 2]]], axis=0)
+            dreiecke = np.concatenate([flaechen[:, [0, 2, 1]], flaechen[:, [0, 3, 2]]], axis=0)
             # Jedes Viereck liefert ZWEI Dreiecke — die Materialliste muss
             # mitwachsen, sonst passt sie nicht mehr zu den Dreiecken.
             if materialien is not None:
@@ -59,13 +58,13 @@ class Materialgruppen:
         """Die Dreiecke, nach Material gruppiert (stabil)."""
         if self.materialien is None:
             return self.dreiecke
-        return self.dreiecke[np.argsort(self.materialien, kind='stable')]
+        return self.dreiecke[np.argsort(self.materialien, kind="stable")]
 
     def bereiche(self):
         """`[{materialIndex, start, count}]` — leer ohne Materialangaben."""
         if self.materialien is None or not len(self.materialien):
             return []
-        folge = self.materialien[np.argsort(self.materialien, kind='stable')]
+        folge = self.materialien[np.argsort(self.materialien, kind="stable")]
         bereiche, anfang = [], 0
         for stelle in range(1, len(folge)):
             if folge[stelle] != folge[anfang]:
@@ -76,6 +75,8 @@ class Materialgruppen:
 
     def _bereich(self, material, anfang, ende):
         # Dictionary gewollt: geht unveraendert als JSON an Three.js.
-        return {'materialIndex': int(material),
-                'start': int(anfang * self.JE_DREIECK),
-                'count': int((ende - anfang) * self.JE_DREIECK)}
+        return {
+            "materialIndex": int(material),
+            "start": int(anfang * self.JE_DREIECK),
+            "count": int((ende - anfang) * self.JE_DREIECK),
+        }

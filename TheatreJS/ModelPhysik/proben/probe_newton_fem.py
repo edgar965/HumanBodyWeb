@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Was kostet volumetrisches Weichgewebe (FEM) je Bild?
+"""Was kostet volumetrisches Weichgewebe (FEM) je Bild?
 
 WARUM: Der teuerste der drei moeglichen Wege ist echte Physik — ein
 tetraedrisches Netz aus Fleisch, innen an den Knochen festgehalten, aussen
@@ -20,30 +20,37 @@ Der Kernelcache liegt IM PROJEKT — `wp.config.kernel_cache_dir` muss vor
 `wp.init()` stehen, sonst schreibt Warp nach %LOCALAPPDATA% auf C:
 (derselbe Fehler wie am 09.09.2026 im GarmentCode-Weg).
 """
+
 import os
 import time
 
 import warp as wp
 
 HIER = os.path.dirname(os.path.abspath(__file__))
-wp.config.kernel_cache_dir = os.path.join(HIER, '..', 'warp_cache')
+wp.config.kernel_cache_dir = os.path.join(HIER, "..", "warp_cache")
 wp.init()
 
 import newton  # noqa: E402  # pyright: ignore[reportMissingImports]  (nicht installiert)
 
 
 class Fleischprobe:
-    u"""Ein Quader aus Fleisch, an einer Wand festgehalten: Schrittzeit je Bild."""
+    """Ein Quader aus Fleisch, an einer Wand festgehalten: Schrittzeit je Bild."""
 
     #: (Gitter, Zellkante) — die Kurve ueber die Netzgroesse.
-    GITTER = (((8, 8, 8), 0.05), ((12, 12, 12), 0.04), ((16, 16, 16), 0.03),
-              ((20, 20, 20), 0.03), ((26, 26, 26), 0.02), ((34, 34, 34), 0.015))
+    GITTER = (
+        ((8, 8, 8), 0.05),
+        ((12, 12, 12), 0.04),
+        ((16, 16, 16), 0.03),
+        ((20, 20, 20), 0.03),
+        ((26, 26, 26), 0.02),
+        ((34, 34, 34), 0.015),
+    )
     #: (Teilschritte, Iterationen) — die Kurve ueber die Solver-Durchgaenge.
     DURCHGAENGE = ((10, 10), (10, 5), (5, 10), (5, 5), (2, 5), (1, 5))
 
     @staticmethod
     def bauen(dim, zelle, verankert=True):
-        u"""Ein Quader aus Fleisch; die unterste Schicht ist kinematisch.
+        """Ein Quader aus Fleisch; die unterste Schicht ist kinematisch.
 
         `mass = 0` heisst in Newton `inv_mass = 0` — der Punkt bewegt sich nur,
         wenn ihn jemand setzt. Genau so haengt spaeter das Fleisch am Knochen.
@@ -51,12 +58,19 @@ class Fleischprobe:
         builder = newton.ModelBuilder()
         builder.add_ground_plane()
         builder.add_soft_grid(
-            pos=wp.vec3(0.0, 1.0, 0.0), rot=wp.quat_identity(dtype=wp.float32),  # pyright: ignore[reportArgumentType]
+            pos=wp.vec3(0.0, 1.0, 0.0),
+            rot=wp.quat_identity(dtype=wp.float32),  # pyright: ignore[reportArgumentType]
             vel=wp.vec3(0.0, 0.0, 0.0),
-            dim_x=dim[0], dim_y=dim[1], dim_z=dim[2],
-            cell_x=zelle, cell_y=zelle, cell_z=zelle,
-            density=1000.0,                    # Weichgewebe, rund wie Wasser
-            k_mu=2.0e4, k_lambda=2.0e4, k_damp=1.0e1,
+            dim_x=dim[0],
+            dim_y=dim[1],
+            dim_z=dim[2],
+            cell_x=zelle,
+            cell_y=zelle,
+            cell_z=zelle,
+            density=1000.0,  # Weichgewebe, rund wie Wasser
+            k_mu=2.0e4,
+            k_lambda=2.0e4,
+            k_damp=1.0e1,
         )
         if verankert:
             # Eine Wand aus kinematischen Punkten (der "Knochen").
@@ -77,7 +91,7 @@ class Fleischprobe:
         solver = newton.solvers.SolverVBD(model=model, iterations=iterationen)
         state_0, state_1 = model.state(), model.state()
         control = model.control()
-        pipeline = newton.CollisionPipeline(model, broad_phase='nxn')
+        pipeline = newton.CollisionPipeline(model, broad_phase="nxn")
         contacts = pipeline.contacts()
         dt = 1.0 / 60.0 / teilschritte
 
@@ -102,34 +116,31 @@ class Fleischprobe:
 
     @classmethod
     def laufen(cls):
-        print('Geraet: %s' % wp.get_device())
+        print("Geraet: %s" % wp.get_device())
 
         # Aufwaermen: der erste Lauf zahlt den Kernelbau (gemessen 1.847 ms
         # gegen 250 ms danach — ohne diesen Vorlauf sieht das kleinste Gitter
         # aus wie das teuerste).
         cls.messen((8, 8, 8), 0.05, bilder=2)
 
-        print('')
-        print('--- ueber die Netzgroesse (10 Teilschritte x 10 Iterationen) ---')
-        print('%-12s %8s %10s %11s' % ('Gitter', 'Punkte', 'Tetraeder', 'ms je Bild'))
+        print("")
+        print("--- ueber die Netzgroesse (10 Teilschritte x 10 Iterationen) ---")
+        print("%-12s %8s %10s %11s" % ("Gitter", "Punkte", "Tetraeder", "ms je Bild"))
         for dim, zelle in cls.GITTER:
             punkte, tets, ms = cls.messen(dim, zelle)
-            print('%-12s %8d %10d %11.1f' % ('%dx%dx%d' % dim, punkte, tets, ms))
+            print("%-12s %8d %10d %11.1f" % ("%dx%dx%d" % dim, punkte, tets, ms))
 
-        print('')
-        print('--- ueber die Zahl der Solver-Durchgaenge (Gitter 20x20x20) ---')
-        print('%-24s %11s %14s'
-              % ('Teilschritte x Iter.', 'ms je Bild', 'ms je Durchgang'))
+        print("")
+        print("--- ueber die Zahl der Solver-Durchgaenge (Gitter 20x20x20) ---")
+        print("%-24s %11s %14s" % ("Teilschritte x Iter.", "ms je Bild", "ms je Durchgang"))
         for teil, iters in cls.DURCHGAENGE:
-            _, _, ms = cls.messen((20, 20, 20), 0.03, teilschritte=teil,
-                                  iterationen=iters)
-            print('%-24s %11.1f %14.2f'
-                  % ('%d x %d' % (teil, iters), ms, ms / (teil * iters)))
+            _, _, ms = cls.messen((20, 20, 20), 0.03, teilschritte=teil, iterationen=iters)
+            print("%-24s %11.1f %14.2f" % ("%d x %d" % (teil, iters), ms, ms / (teil * iters)))
 
 
 def main():
     Fleischprobe.laufen()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

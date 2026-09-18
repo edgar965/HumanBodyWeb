@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Fortschrittsbalken und klebendes Lineal der Studio-Zeitleiste.
+"""Fortschrittsbalken und klebendes Lineal der Studio-Zeitleiste.
 
 WARUM (Edgar, 13.09.2026: „die Überschrift mit der Zeit und dem Playhead
 immer sichtbar, auch beim Scrollen. Unten, unterhalb aller Balken mach einen
@@ -20,6 +20,7 @@ Sabotage-Gegenprobe: in `Fortschrittsmass.bild` `Math.round` → `Math.floor`
 → Fall 1 rot (`bild(2, 3, 100)` 66 statt 67); `pointer-events: none` aus der
 Vorlage → Fall 2 rot.
 """
+
 import re
 
 from django.conf import settings
@@ -28,9 +29,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._sicher import Sicher
 
-MODUL = Jsmodul('bvh_studio', 'fortschrittsmass.js')
-STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
-VORLAGE = settings.BASE_DIR / 'templates' / 'bvh_studio.html'
+MODUL = Jsmodul("bvh_studio", "fortschrittsmass.js")
+STUDIO = settings.BASE_DIR / "static" / "viewer" / "bvh_studio"
+VORLAGE = settings.BASE_DIR / "templates" / "bvh_studio.html"
 
 SKRIPT = """
 const { Fortschrittsmass: F } = await import(MODUL);
@@ -52,40 +53,37 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class FortschrittTest(SimpleTestCase):
-
     def test_das_mass_rechnet_geklemmt_und_gerundet(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
 
     def test_lineal_klebt_und_balken_liegt_unter_dem_rahmen(self):
         html = FortschrittTest._text(VORLAGE)
         lineal = html.index('<canvas id="timeline-lineal">')
         spuren = html.index('<canvas id="timeline-canvas">')
-        rahmen_ende = html.index('</div>', spuren)
+        rahmen_ende = html.index("</div>", spuren)
         balken = html.index('<canvas id="timeline-fortschritt">')
         self.assertLess(lineal, spuren)
         self.assertLess(rahmen_ende, balken)
-        stil = Sicher.wert(re.search(r'#timeline-lineal \{([^}]*)\}', html), 'Stil').group(1)
-        self.assertIn('position: sticky', stil)
-        self.assertIn('pointer-events: none', stil)
+        stil = Sicher.wert(re.search(r"#timeline-lineal \{([^}]*)\}", html), "Stil").group(1)
+        self.assertIn("position: sticky", stil)
+        self.assertIn("pointer-events: none", stil)
 
     def test_aufbau_und_zeichnen_sind_verdrahtet(self):
-        aufbau = FortschrittTest._text(STUDIO / 'timeline.js')
+        aufbau = FortschrittTest._text(STUDIO / "timeline.js")
         self.assertIn("Zeitleistenflaeche.setzen(flaeche, lineal)", aufbau)
-        self.assertIn("Fortschrittsbalken.anbinden("
-                      "document.getElementById('timeline-fortschritt'))", aufbau)
+        self.assertIn("Fortschrittsbalken.anbinden(document.getElementById('timeline-fortschritt'))", aufbau)
         self.assertIn("lineal.style.marginBottom = `-${RULER_HEIGHT}px`", aufbau)
-        zeichnen = FortschrittTest._text(STUDIO / 'zeitleiste_zeichnen.js')
-        self.assertIn('Fortschrittsbalken.zeichnen();', zeichnen)
-        self.assertNotIn('Zeitleistenflaeche.oben', zeichnen)
-        lineal = FortschrittTest._text(STUDIO / 'zeitleiste_lineal.js')
-        self.assertIn('Zeitleistenflaeche.linealCtx', lineal)
-        kopf = FortschrittTest._text(STUDIO / 'zeitleiste_abspielkopf.js')
-        self.assertIn('Zeitleistenflaeche.linealCtx', kopf)
-        balken = FortschrittTest._text(STUDIO / 'zeitleiste_fortschritt.js')
-        self.assertIn('Zeitleistenfolge.nachziehen('
-                      'state, Zeitleistenflaeche.breite - HEADER_WIDTH)', balken)
+        zeichnen = FortschrittTest._text(STUDIO / "zeitleiste_zeichnen.js")
+        self.assertIn("Fortschrittsbalken.zeichnen();", zeichnen)
+        self.assertNotIn("Zeitleistenflaeche.oben", zeichnen)
+        lineal = FortschrittTest._text(STUDIO / "zeitleiste_lineal.js")
+        self.assertIn("Zeitleistenflaeche.linealCtx", lineal)
+        kopf = FortschrittTest._text(STUDIO / "zeitleiste_abspielkopf.js")
+        self.assertIn("Zeitleistenflaeche.linealCtx", kopf)
+        balken = FortschrittTest._text(STUDIO / "zeitleiste_fortschritt.js")
+        self.assertIn("Zeitleistenfolge.nachziehen(state, Zeitleistenflaeche.breite - HEADER_WIDTH)", balken)
         self.assertIn("addEventListener('mousedown'", balken)
 
     @staticmethod
     def _text(pfad):
-        return pfad.read_text(encoding='utf-8')
+        return pfad.read_text(encoding="utf-8")

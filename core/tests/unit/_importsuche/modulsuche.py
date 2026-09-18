@@ -11,7 +11,7 @@ import logging
 from .grundwerte import WURZEL
 from .lokalerimport import Lokalerimport
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Modulsuche:
@@ -24,20 +24,18 @@ class Modulsuche:
         self.nicht_lesbar = []
 
     def dateien(self):
-        for pfad in self.ordner.rglob('*.py'):
+        for pfad in self.ordner.rglob("*.py"):
             teile = pfad.parts
-            if '__pycache__' in teile or 'migrations' in teile:
+            if "__pycache__" in teile or "migrations" in teile:
                 continue
             yield pfad
 
     def importe(self):
         for pfad in self.dateien():
             try:
-                baum = ast.parse(pfad.read_text(encoding='utf-8',
-                                                errors='replace'))
+                baum = ast.parse(pfad.read_text(encoding="utf-8", errors="replace"))
             except SyntaxError:
-                logger.warning('%s parst nicht — nicht geprueft', pfad,
-                               exc_info=True)
+                logger.warning("%s parst nicht — nicht geprueft", pfad, exc_info=True)
                 self.nicht_lesbar.append(pfad)
                 continue
             yield from self._aus_baum(pfad, baum)
@@ -61,7 +59,7 @@ class Modulsuche:
     def _name(pfad, knoten):
         """Relative Importe (`from ..x import y`) in einen vollen Namen."""
         if not knoten.level:
-            return knoten.module or ''
+            return knoten.module or ""
         paket = pfad.parent
         for _ in range(knoten.level - 1):
             paket = paket.parent
@@ -70,7 +68,8 @@ class Modulsuche:
         except ValueError:
             # Mehr `..` als Ebenen bis zur Projektwurzel — der Import zeigt
             # aus dem Projekt heraus und ist hier nicht pruefbar.
-            logger.warning('%s:%d — %d Ebenen fuehren aus %s heraus',
-                           pfad, knoten.lineno, knoten.level, WURZEL)
-            return ''
-        return '.'.join(teile + ((knoten.module,) if knoten.module else ()))
+            logger.warning(
+                "%s:%d — %d Ebenen fuehren aus %s heraus", pfad, knoten.lineno, knoten.level, WURZEL
+            )
+            return ""
+        return ".".join(teile + ((knoten.module,) if knoten.module else ()))

@@ -6,6 +6,7 @@ Hier steht der fachliche Ablauf: Datei ablegen, Backend rufen, Betas auf
 Morph-Regler abbilden, Hautfarbe nachtragen. Das Archivieren der Rohdaten macht
 `SmplxArchiv`, das Zusammensetzen der Antwort `Analyseergebnis`.
 """
+
 import logging
 import os
 import time
@@ -17,7 +18,7 @@ from ..daten.analyseergebnis import Analyseergebnis
 from ..daten.wrapperpfad import Wrapperpfad
 from .hautfarbe import Hautfarbe
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class FotoanalyseFehler(RuntimeError):
@@ -31,7 +32,7 @@ class FotoanalyseFehler(RuntimeError):
 class Fotoanalyse:
     """Fuehrt die Analyse aus und legt das Foto ab."""
 
-    VORGABE_BACKEND = 'mediapipe'
+    VORGABE_BACKEND = "mediapipe"
 
     @classmethod
     def _werkzeuge(cls):
@@ -46,24 +47,24 @@ class Fotoanalyse:
                 from photo_analyzer import analyze
                 from smplest_x_wrapper import betas_to_morph_sliders
         except ImportError as e:
-            raise FotoanalyseFehler('Photo analyzer not found: %s' % e) from e
+            raise FotoanalyseFehler("Photo analyzer not found: %s" % e) from e
         return analyze, betas_to_morph_sliders
 
     # ------------------------------------------------------------------ ablegen
 
     @classmethod
     def ablageverzeichnis(cls):
-        pfad = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis')
+        pfad = os.path.join(str(settings.BASE_DIR), "media", "photo_analysis")
         os.makedirs(pfad, exist_ok=True)
         return pfad
 
     @classmethod
     def foto_ablegen(cls, hochgeladen):
         """(Pfad, Dateiname) — Name aus einer UUID, Endung vom Original."""
-        endung = os.path.splitext(hochgeladen.name)[1] or '.jpg'
-        name = '%s%s' % (uuid.uuid4().hex, endung)
+        endung = os.path.splitext(hochgeladen.name)[1] or ".jpg"
+        name = "%s%s" % (uuid.uuid4().hex, endung)
         pfad = os.path.join(cls.ablageverzeichnis(), name)
-        with open(pfad, 'wb') as f:
+        with open(pfad, "wb") as f:
             for stueck in hochgeladen.chunks():
                 f.write(stueck)
         return pfad, name
@@ -80,13 +81,11 @@ class Fotoanalyse:
         beginn = time.monotonic()
         roh = analyse(pfad, backend=backend)
         if roh is None:
-            raise FotoanalyseFehler('Analysis failed (backend: %s)' % backend)
-        zuordnung = betas_zu_reglern(roh['betas'], roh['gender'],
-                                     expression=roh.get('expression'))
+            raise FotoanalyseFehler("Analysis failed (backend: %s)" % backend)
+        zuordnung = betas_zu_reglern(roh["betas"], roh["gender"], expression=roh.get("expression"))
         dauer = time.monotonic() - beginn
 
-        ergebnis = Analyseergebnis(roh, zuordnung, backend,
-                                   '/media/photo_analysis/%s' % name, dauer)
+        ergebnis = Analyseergebnis(roh, zuordnung, backend, "/media/photo_analysis/%s" % name, dauer)
         if not ergebnis.hautfarbe:
             # Nicht jedes Backend liefert eine Hautfarbe — dann aus dem Foto.
             ergebnis.hautfarbe = Hautfarbe.aus_foto(pfad)

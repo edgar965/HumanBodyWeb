@@ -46,20 +46,21 @@ class Stoffexportlauf:
     #: Gelesen wird ERST BEIM PRUEFEN, nicht beim Import: `collision`
     #: zieht numpy und die Szenenklassen nach, und der Django-Start soll
     #: das nicht bezahlen.
-    ERSATZMOTOR = 'blender_eevee'
-    ERSATZGUETE = 'medium'
-    ERSATZORDNER = 'cloth_exports'
+    ERSATZMOTOR = "blender_eevee"
+    ERSATZGUETE = "medium"
+    ERSATZORDNER = "cloth_exports"
 
     @staticmethod
     def motoren():
-        u"""Die gueltigen Motornamen — aus `collision.Motorwahl`."""
+        """Die gueltigen Motornamen — aus `collision.Motorwahl`."""
         from collision import Motorwahl
+
         return Motorwahl.namen()
 
     def __init__(self, rumpf):
         self.rumpf = rumpf
-        self.motor = rumpf.get('engine', Stoffexportlauf.ERSATZMOTOR)
-        self.guete = rumpf.get('quality', Stoffexportlauf.ERSATZGUETE)
+        self.motor = rumpf.get("engine", Stoffexportlauf.ERSATZMOTOR)
+        self.guete = rumpf.get("quality", Stoffexportlauf.ERSATZGUETE)
         self.ziel = Stoffexportziel(rumpf, self.motor)
 
     # ------------------------------------------------------------- Einstellung
@@ -68,20 +69,19 @@ class Stoffexportlauf:
     def einstellungen():
         try:
             from ..models import AppSettings
+
             return AppSettings.load()
         except Exception:
-            logger.warning('AppSettings nicht lesbar — Kleider-Export rechnet '
-                           'mit Vorgaben', exc_info=True)
+            logger.warning("AppSettings nicht lesbar — Kleider-Export rechnet mit Vorgaben", exc_info=True)
             return None
 
     @staticmethod
     def ausgabeordner():
         stand = Stoffexportlauf.einstellungen()
-        gewaehlt = (stand.ui_prefs or {}).get('studio_video_output') if stand else None
+        gewaehlt = (stand.ui_prefs or {}).get("studio_video_output") if stand else None
         if gewaehlt and os.path.isdir(gewaehlt):
             return gewaehlt
-        return os.path.join(str(settings.MEDIA_ROOT),
-                            Stoffexportlauf.ERSATZORDNER)
+        return os.path.join(str(settings.MEDIA_ROOT), Stoffexportlauf.ERSATZORDNER)
 
     # ------------------------------------------------------------------ Pruefen
 
@@ -89,51 +89,54 @@ class Stoffexportlauf:
         """Antwort, wenn der Motor unbekannt ist — sonst `None`."""
         if self.motor in Stoffexportlauf.motoren():
             return None
-        return JsonResponse({'ok': False,
-                             'error': f'unknown engine {self.motor}'}, status=400)
+        return JsonResponse({"ok": False, "error": f"unknown engine {self.motor}"}, status=400)
 
     def szene(self):
         """`(szene, None)` oder `(None, Fehlerantwort)`."""
         try:
             from collision.bridge import payload_to_scene_input
         except Exception as fehler:
-            logger.exception('export_cloth: collision-Paket nicht importierbar')
-            return None, JsonResponse(
-                {'ok': False, 'error': f'import failed: {fehler}'}, status=500)
+            logger.exception("export_cloth: collision-Paket nicht importierbar")
+            return None, JsonResponse({"ok": False, "error": f"import failed: {fehler}"}, status=500)
         try:
             return payload_to_scene_input(self.rumpf), None
         except Exception as fehler:
-            logger.exception('payload_to_scene_input failed')
-            return None, JsonResponse(
-                {'ok': False, 'error': f'payload decode failed: {fehler}'},
-                status=400)
+            logger.exception("payload_to_scene_input failed")
+            return None, JsonResponse({"ok": False, "error": f"payload decode failed: {fehler}"}, status=400)
 
     def zielpfad(self):
         """Vollstaendiger Ausgabepfad — oder eine 403-Antwort mit dem Grund."""
         try:
             ordner = self.ziel.ordner(Stoffexportlauf.ausgabeordner())
         except PfadAbgelehnt as fehler:
-            return None, JsonResponse(
-                {'ok': False, 'error': f'output_dir abgelehnt: {fehler}'},
-                status=403)
+            return None, JsonResponse({"ok": False, "error": f"output_dir abgelehnt: {fehler}"}, status=403)
         try:
             name = self.ziel.dateiname()
         except PfadAbgelehnt as fehler:
-            return None, JsonResponse(
-                {'ok': False, 'error': f'filename abgelehnt: {fehler}'},
-                status=403)
+            return None, JsonResponse({"ok": False, "error": f"filename abgelehnt: {fehler}"}, status=403)
         os.makedirs(ordner, exist_ok=True)
         return os.path.join(ordner, name), None
 
     # ----------------------------------------------------------------- Antwort
 
     def antwort(self, ergebnis, pfad, sekunden):
-        gemeinsam = {'engine': self.motor, 'quality': self.guete,
-                     'elapsed_sec': sekunden}
-        if not ergebnis.get('ok'):
-            return JsonResponse({'ok': False, **gemeinsam,
-                                 'log': ergebnis.get('log', ''),
-                                 'error': 'engine failed — see log'}, status=200)
-        return JsonResponse({'ok': True, **gemeinsam, 'output': pfad,
-                             'url': Stoffexportziel.adresse(pfad),
-                             'duration_sec': ergebnis.get('duration_sec', 0)})
+        gemeinsam = {"engine": self.motor, "quality": self.guete, "elapsed_sec": sekunden}
+        if not ergebnis.get("ok"):
+            return JsonResponse(
+                {
+                    "ok": False,
+                    **gemeinsam,
+                    "log": ergebnis.get("log", ""),
+                    "error": "engine failed — see log",
+                },
+                status=200,
+            )
+        return JsonResponse(
+            {
+                "ok": True,
+                **gemeinsam,
+                "output": pfad,
+                "url": Stoffexportziel.adresse(pfad),
+                "duration_sec": ergebnis.get("duration_sec", 0),
+            }
+        )

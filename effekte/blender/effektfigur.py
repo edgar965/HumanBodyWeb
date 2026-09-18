@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Effektfigur — MPFB-Figur mit Rig und Kleid, bereit fuer Retarget und Stoff.
+"""Effektfigur — MPFB-Figur mit Rig und Kleid, bereit fuer Retarget und Stoff.
 
 WARUM DAS CMU-MB-RIG (12.09.2026)
 =================================
@@ -15,6 +15,7 @@ Das Kleid kommt als `.mhclo` aus der Kleiderbibliothek (MakeHuman-Bestand,
 interpoliert die Hautgewichte vom Koerper — deshalb erst das Rig, dann das
 Kleid.
 """
+
 from __future__ import print_function
 
 from typing import Any
@@ -24,14 +25,14 @@ import bpy  # pyright: ignore[reportMissingImports]  (Blender)
 from bl_ext.blender_org.mpfb.services.humanservice import HumanService  # pyright: ignore[reportMissingImports]
 from bl_ext.blender_org.mpfb.services.targetservice import TargetService  # pyright: ignore[reportMissingImports]
 
-__all__ = ['Effektfigur']
+__all__ = ["Effektfigur"]
 
 
 class Effektfigur:
-    u"""Koerper (`basemesh`), Rig (`rig`) und Kleid (`kleid`)."""
+    """Koerper (`basemesh`), Rig (`rig`) und Kleid (`kleid`)."""
 
-    RIG = 'cmu_mb'
-    HUEFTE = 'Hips'
+    RIG = "cmu_mb"
+    HUEFTE = "Hips"
 
     def __init__(self, geschlechtswert=0.0):
         self.geschlechtswert = geschlechtswert
@@ -43,21 +44,20 @@ class Effektfigur:
     def bauen(self, kleid_mhclo):
         self.szene_leeren()
         makro = TargetService.get_default_macro_info_dict()
-        makro['gender'] = self.geschlechtswert
+        makro["gender"] = self.geschlechtswert
         self.basemesh = HumanService.create_human(macro_detail_dict=makro)
         self.rig = HumanService.add_builtin_rig(self.basemesh, self.RIG)
-        self.kleid = HumanService.add_mhclo_asset(
-            kleid_mhclo, self.basemesh, subdiv_levels=0)
+        self.kleid = HumanService.add_mhclo_asset(kleid_mhclo, self.basemesh, subdiv_levels=0)
         return self
 
     @staticmethod
     def szene_leeren():
-        u"""Wuerfel, Licht und Kamera der Startdatei weg — sie stuenden im Bild."""
+        """Wuerfel, Licht und Kamera der Startdatei weg — sie stuenden im Bild."""
         for objekt in list(bpy.data.objects):
             bpy.data.objects.remove(objekt, do_unlink=True)
 
     def aktivieren(self, objekt):
-        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_all(action="DESELECT")
         objekt.select_set(True)
         bpy.context.view_layer.objects.active = objekt
 
@@ -65,6 +65,9 @@ class Effektfigur:
         return float(self.basemesh.dimensions.z)
 
     def beschreibung(self):
-        return ('Figur %d Punkte, Rig %d Knochen, Kleid %d Punkte / %d Flächen'
-                % (len(self.basemesh.data.vertices), len(self.rig.data.bones),
-                   len(self.kleid.data.vertices), len(self.kleid.data.polygons)))
+        return "Figur %d Punkte, Rig %d Knochen, Kleid %d Punkte / %d Flächen" % (
+            len(self.basemesh.data.vertices),
+            len(self.rig.data.bones),
+            len(self.kleid.data.vertices),
+            len(self.kleid.data.polygons),
+        )

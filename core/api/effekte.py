@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Effektendpunkte — die Seite „Process Videos — Effekte" und ihre API.
+"""Effektendpunkte — die Seite „Process Videos — Effekte" und ihre API.
 
 WARUM (Edgar, 12.09.2026): „mach dafuer eine Seite Process Video - Effekte
 mit einer Pipeline dazu (BVH / Modell laden, Pipeline auswaehlen mit
@@ -13,6 +13,7 @@ Ausgabe screen wo man das ergebnis sieht"
     POST /api/effekte/<id>/stop/           anhalten
     GET  /api/effekte/<id>/video/          das fertige MP4 (mit Range)
 """
+
 import json
 import os
 
@@ -30,11 +31,10 @@ from ..effekte.effektquellen import Effektquellen
 from ..effekte.effektvorgaben import Effektvorgaben
 from ..models import AppSettings, Effektauftrag
 
-__all__ = ['Effektendpunkte']
+__all__ = ["Effektendpunkte"]
 
 
 class Effektendpunkte:
-
     LETZTE = 12
 
     # -------------------------------------------------------------- Seite
@@ -46,37 +46,41 @@ class Effektendpunkte:
         einstellungen = AppSettings.load()
         # Startwahlen und Reglerstellungen aus Einstellungen -> Effekte.
         vorgaben = Effektvorgaben(einstellungen)
-        return render(request, 'effekte.html', {
-            'bvh_dateien': Effektquellen.bvh_dateien(),
-            'kleider': Effektquellen.kleider(),
-            'modelle': Effektquellen.modelle(),
-            'felder': vorgaben.karte(Effektparameter.karte()),
-            'figur_felder': vorgaben.karte(Figurparameter.karte()),
-            **vorgaben.kontext(),
-            'windrichtungen': list(Figurparameter.WAHLEN['windrichtung'][1]),
-            'pipelines': Effektauftrag.PIPELINE_CHOICES,
-            'mit_modell': list(Effektauftrag.MIT_MODELL),
-            'geschlechter': [g for g, _ in Effektparameter.GESCHLECHTER],
-            'renderer': Effektparameter.RENDERER,
-            'auftraege': Effektauftrag.objects.all()[:Effektendpunkte.LETZTE],
-            'ausgabe_basis': str(settings.EFFEKTE_AUSGABE_DIR),
-            # Die Figur-Pipeline legt ins Video-Ausgabeverzeichnis der
-            # Einstellungen ab (Edgar, 12.09.2026: „lege es im output ordner ab").
-            'video_ausgabe': einstellungen.video_output_dir,
-            'laufender': laufender,
-            'zuletzt': (Effektauftrag.objects.filter(status='complete').first()
-                        if laufender is None else None),
-        })
+        return render(
+            request,
+            "effekte.html",
+            {
+                "bvh_dateien": Effektquellen.bvh_dateien(),
+                "kleider": Effektquellen.kleider(),
+                "modelle": Effektquellen.modelle(),
+                "felder": vorgaben.karte(Effektparameter.karte()),
+                "figur_felder": vorgaben.karte(Figurparameter.karte()),
+                **vorgaben.kontext(),
+                "windrichtungen": list(Figurparameter.WAHLEN["windrichtung"][1]),
+                "pipelines": Effektauftrag.PIPELINE_CHOICES,
+                "mit_modell": list(Effektauftrag.MIT_MODELL),
+                "geschlechter": [g for g, _ in Effektparameter.GESCHLECHTER],
+                "renderer": Effektparameter.RENDERER,
+                "auftraege": Effektauftrag.objects.all()[: Effektendpunkte.LETZTE],
+                "ausgabe_basis": str(settings.EFFEKTE_AUSGABE_DIR),
+                # Die Figur-Pipeline legt ins Video-Ausgabeverzeichnis der
+                # Einstellungen ab (Edgar, 12.09.2026: „lege es im output ordner ab").
+                "video_ausgabe": einstellungen.video_output_dir,
+                "laufender": laufender,
+                "zuletzt": (
+                    Effektauftrag.objects.filter(status="complete").first() if laufender is None else None
+                ),
+            },
+        )
 
     # ------------------------------------------------------------ Quellen
 
     @staticmethod
     @require_GET
     def quellen(request):
-        u"""Modelle und Auftrags-BVHs fuer Dialog und Browser — die
+        """Modelle und Auftrags-BVHs fuer Dialog und Browser — die
         Bibliothek kommt von `/api/character/animations/`."""
-        return JsonResponse({'modelle': Effektquellen.modelle(),
-                             'auftraege': Effektquellen.bvh_dateien()})
+        return JsonResponse({"modelle": Effektquellen.modelle(), "auftraege": Effektquellen.bvh_dateien()})
 
     # -------------------------------------------------------------- Start
 
@@ -84,20 +88,19 @@ class Effektendpunkte:
     @require_POST
     def starten(request):
         try:
-            daten = json.loads(request.body.decode('utf-8') or '{}')
+            daten = json.loads(request.body.decode("utf-8") or "{}")
         except ValueError:
-            return JsonResponse({'ok': False, 'error': 'Kein JSON'}, status=400)
+            return JsonResponse({"ok": False, "error": "Kein JSON"}, status=400)
         pruefung = Effektpruefung(daten)
         fehler = pruefung.grund()
         if fehler:
-            return JsonResponse({'ok': False, 'error': fehler}, status=400)
+            return JsonResponse({"ok": False, "error": fehler}, status=400)
         laeuft = Effektlauf.laufender()
         if laeuft is not None:
-            return JsonResponse({'ok': False, 'error': 'Es läuft schon: %s' % laeuft.name},
-                                status=409)
+            return JsonResponse({"ok": False, "error": "Es läuft schon: %s" % laeuft.name}, status=409)
         auftrag = pruefung.anlegen()
         Effektlauf.starten(auftrag)
-        return JsonResponse({'ok': True, 'id': str(auftrag.id)})
+        return JsonResponse({"ok": True, "id": str(auftrag.id)})
 
     # ------------------------------------------------------------ Zustand
 
@@ -106,36 +109,41 @@ class Effektendpunkte:
         try:
             return Effektauftrag.objects.get(id=auftrag_id)
         except Effektauftrag.DoesNotExist:
-            raise Http404('Effektauftrag %s' % auftrag_id)
+            raise Http404("Effektauftrag %s" % auftrag_id)
 
     @staticmethod
     @require_GET
     def zustand(request, auftrag_id):
         auftrag = Effektendpunkte._auftrag(auftrag_id)
-        return JsonResponse({
-            'id': str(auftrag.id), 'name': auftrag.name,
-            'pipeline': auftrag.pipeline, 'modell': auftrag.modell,
-            'status': auftrag.status, 'progress': auftrag.progress,
-            'progress_detail': auftrag.progress_detail,
-            'error': auftrag.error_message,
-            'video_url': ('/api/effekte/%s/video/' % auftrag.id) if auftrag.fertig else '',
-            'ausgabe': auftrag.ausgabe,
-            'bericht': auftrag.bericht,
-        })
+        return JsonResponse(
+            {
+                "id": str(auftrag.id),
+                "name": auftrag.name,
+                "pipeline": auftrag.pipeline,
+                "modell": auftrag.modell,
+                "status": auftrag.status,
+                "progress": auftrag.progress,
+                "progress_detail": auftrag.progress_detail,
+                "error": auftrag.error_message,
+                "video_url": ("/api/effekte/%s/video/" % auftrag.id) if auftrag.fertig else "",
+                "ausgabe": auftrag.ausgabe,
+                "bericht": auftrag.bericht,
+            }
+        )
 
     @staticmethod
     @require_POST
     def anhalten(request, auftrag_id):
         auftrag = Effektendpunkte._auftrag(auftrag_id)
         if not auftrag.laeuft:
-            return JsonResponse({'ok': False, 'error': 'Läuft nicht'}, status=409)
+            return JsonResponse({"ok": False, "error": "Läuft nicht"}, status=409)
         Effektlauf.anhalten(auftrag)
-        return JsonResponse({'ok': True, 'status': auftrag.status})
+        return JsonResponse({"ok": True, "status": auftrag.status})
 
     @staticmethod
     @require_GET
     def video(request, auftrag_id):
         auftrag = Effektendpunkte._auftrag(auftrag_id)
         if not auftrag.fertig or not os.path.isfile(auftrag.ausgabe):
-            return HttpResponseNotFound('Kein Video')
+            return HttpResponseNotFound("Kein Video")
         return Videoauslieferung.mit_bereich(request, auftrag.ausgabe)

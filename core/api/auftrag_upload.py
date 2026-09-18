@@ -36,8 +36,7 @@ class Uploadseiten:
     @staticmethod
     def _auftraege(pipelines):
         """Die Auftraege dieser Pipelines, neueste zuerst, mit Dateigroesse."""
-        auftraege = BVHJob.objects.filter(
-            pipeline__in=list(pipelines)).order_by('-created_at')
+        auftraege = BVHJob.objects.filter(pipeline__in=list(pipelines)).order_by("-created_at")
         Dateigroessen.anhaengen(auftraege)
         return auftraege
 
@@ -53,27 +52,25 @@ class Uploadseiten:
         Pipeline, zwei Namen, auf derselben Seite.
         """
         erlaubt = set(pipelines)
-        return [(wert, text) for wert, text in BVHJob.PIPELINE_CHOICES
-                if wert in erlaubt]
+        return [(wert, text) for wert, text in BVHJob.PIPELINE_CHOICES if wert in erlaubt]
 
     @staticmethod
     def _annehmen(request, pipelines, vorgabe, ziel, parameter=None):
         """Die POST-Haelfte beider Seiten: Datei pruefen, Auftrag anlegen."""
-        video = request.FILES.get('video')
+        video = request.FILES.get("video")
         if not video:
-            messages.error(request, 'No video file selected.')
+            messages.error(request, "No video file selected.")
             return redirect(ziel)
-        pipeline = request.POST.get('pipeline', vorgabe)
+        pipeline = request.POST.get("pipeline", vorgabe)
         if pipeline not in pipelines:
             pipeline = vorgabe
         auftrag = Auftragsanlage.anlegen(
-            video, pipeline,
-            parameter(request.POST, pipeline) if parameter else None)
+            video, pipeline, parameter(request.POST, pipeline) if parameter else None
+        )
         # Das neue Video ist danach das gewaehlte (12.09.2026) — vorher
         # blieb der Haken auf dem Video des letzten Pipelinestarts.
         Videoauswahl.merken(auftrag)
-        messages.success(request, 'Uploaded %s (%.1f fps).'
-                                  % (video.name, auftrag.fps))
+        messages.success(request, "Uploaded %s (%.1f fps)." % (video.name, auftrag.fps))
         return redirect(ziel)
 
     # ---------------------------------------------------------------- 2D
@@ -81,19 +78,22 @@ class Uploadseiten:
     @staticmethod
     def zweid(request):
         """Video fuer die 2D-Verarbeitung hochladen."""
-        if request.method == 'POST':
-            return Uploadseiten._annehmen(request, PIPELINES_2D, 'mediapipe',
-                                          'upload')
+        if request.method == "POST":
+            return Uploadseiten._annehmen(request, PIPELINES_2D, "mediapipe", "upload")
         zustand = Systemzustand.holen()
         zustand.update(Uploadseiten._erkenner_verfuegbar())
         gespeichert = AppSettings.load()
         vorgabe = gespeichert.detector_2d_default
-        return render(request, 'upload.html', {
-            'status': zustand,
-            'v21_jobs': Uploadseiten._auftraege(PIPELINES_2D),
-            'pipelines': Uploadseiten._pipelinewahl(PIPELINES_2D),
-            'default_2d': (vorgabe if vorgabe in PIPELINES_2D else 'mediapipe'),
-        })
+        return render(
+            request,
+            "upload.html",
+            {
+                "status": zustand,
+                "v21_jobs": Uploadseiten._auftraege(PIPELINES_2D),
+                "pipelines": Uploadseiten._pipelinewahl(PIPELINES_2D),
+                "default_2d": (vorgabe if vorgabe in PIPELINES_2D else "mediapipe"),
+            },
+        )
 
     @staticmethod
     def _erkenner_verfuegbar():
@@ -117,42 +117,46 @@ class Uploadseiten:
         laeuft in `python14`, die Erkenner laufen in `python10` — siehe
         `Systemzustand.pipeline_paket`.
         """
-        rtmlib_da = Systemzustand.pipeline_paket('rtmlib')
+        rtmlib_da = Systemzustand.pipeline_paket("rtmlib")
         # ViTPose laeuft ueber rtmlib mit.
-        return {'rtmpose': rtmlib_da,
-                'yolo11': Systemzustand.pipeline_paket('ultralytics'),
-                'vitpose': rtmlib_da}
+        return {
+            "rtmpose": rtmlib_da,
+            "yolo11": Systemzustand.pipeline_paket("ultralytics"),
+            "vitpose": rtmlib_da,
+        }
 
     # ---------------------------------------------------------------- 3D
 
     @staticmethod
     def dreid(request):
         """Video fuer die 3D-Verarbeitung hochladen."""
-        if request.method == 'POST':
-            return Uploadseiten._annehmen(request, PIPELINES_3D, 'v4',
-                                          'upload_v4',
-                                          Pipelineparameter.lesen)
+        if request.method == "POST":
+            return Uploadseiten._annehmen(request, PIPELINES_3D, "v4", "upload_v4", Pipelineparameter.lesen)
         gespeichert = AppSettings.load()
         auftraege = Uploadseiten._auftraege(PIPELINES_3D)
         vorlieben = gespeichert.ui_prefs or {}
-        vorgabe = vorlieben.get('last_pipeline', gespeichert.lifter_3d_default)
+        vorgabe = vorlieben.get("last_pipeline", gespeichert.lifter_3d_default)
         if vorgabe not in PIPELINES_3D:
-            vorgabe = 'v4'
-        return render(request, 'upload_v4.html', {
-            'v4_jobs': auftraege,
-            'pipelines': Uploadseiten._pipelinewahl(PIPELINES_3D),
-            # Kartenfolge und Rang-Abzeichen (Hilfe -> Video to BVH), 12.09.2026.
-            'pipeline_karten': Pipelinekarten.eintraege(),
-            'rang_von': Pipelinekarten.rang_von(),
-            # Der Vergleich unten: dieselbe Messung wie Hilfe -> Video to BVH.
-            'vergleich_3d': Pipelinevergleich.dreid_rangfolge(),
-            'messung': Pipelinevergleich.MESSUNG,
-            'status_3d': Uploadseiten._pipelines_verfuegbar(),
-            'default_3d': vorgabe,
-            'defaults': Pipelineparameter.vorgaben(gespeichert),
-            'upload_files': Videoauswahl.sammeln(auftraege),
-            'selected_video_path': vorlieben.get('selected_video_path', ''),
-        })
+            vorgabe = "v4"
+        return render(
+            request,
+            "upload_v4.html",
+            {
+                "v4_jobs": auftraege,
+                "pipelines": Uploadseiten._pipelinewahl(PIPELINES_3D),
+                # Kartenfolge und Rang-Abzeichen (Hilfe -> Video to BVH), 12.09.2026.
+                "pipeline_karten": Pipelinekarten.eintraege(),
+                "rang_von": Pipelinekarten.rang_von(),
+                # Der Vergleich unten: dieselbe Messung wie Hilfe -> Video to BVH.
+                "vergleich_3d": Pipelinevergleich.dreid_rangfolge(),
+                "messung": Pipelinevergleich.MESSUNG,
+                "status_3d": Uploadseiten._pipelines_verfuegbar(),
+                "default_3d": vorgabe,
+                "defaults": Pipelineparameter.vorgaben(gespeichert),
+                "upload_files": Videoauswahl.sammeln(auftraege),
+                "selected_video_path": vorlieben.get("selected_video_path", ""),
+            },
+        )
 
     @staticmethod
     def _pipelines_verfuegbar():
@@ -162,28 +166,27 @@ class Uploadseiten:
         prompthmr = Path(settings.PROMPTHMR_ROOT).is_dir()
         gem = Path(settings.GEM_ROOT).is_dir()
         return {
-            'v4': v4,
-            'gvhmr': gvhmr,
-            'wham': Path(settings.WHAM_ROOT).is_dir(),
-            'prompthmr': prompthmr,
-            'gem': gem,
-            'duomo': Path(settings.DUOMO_ROOT).is_dir(),
-            'gemx': Path(settings.GEMX_ROOT).is_dir(),
+            "v4": v4,
+            "gvhmr": gvhmr,
+            "wham": Path(settings.WHAM_ROOT).is_dir(),
+            "prompthmr": prompthmr,
+            "gem": gem,
+            "duomo": Path(settings.DUOMO_ROOT).is_dir(),
+            "gemx": Path(settings.GEMX_ROOT).is_dir(),
             # Die eigene SMPL-X-Pipeline (12.09.2026) braucht GEM (Koerper)
             # und SMPLest-X (Haende, Gesicht); der Klon liegt neben den anderen.
-            'smplx': gem and Path(os.path.join(str(settings.VIDEOTOBVH_ROOT),
-                                               'SMPLest-X')).is_dir(),
+            "smplx": gem and Path(os.path.join(str(settings.VIDEOTOBVH_ROOT), "SMPLest-X")).is_dir(),
             # Kamerabahn (DPVO fuer GVHMR/WHAM, DROID-SLAM fuer PromptHMR):
             # die Kaestchen gibt es seit je, die Raeder erst seit 12.09.2026.
-            'slam': Slamstatus.verfuegbar(settings.PIPELINE_PYTHON,
-                                          settings.GVHMR_ROOT,
-                                          settings.PROMPTHMR_ROOT),
-            'hybrid_gvhmr': gvhmr and v4,
-            'hybrid_prompthmr': prompthmr and v4,
-            'hybrid_gem': gem and v4,
+            "slam": Slamstatus.verfuegbar(
+                settings.PIPELINE_PYTHON, settings.GVHMR_ROOT, settings.PROMPTHMR_ROOT
+            ),
+            "hybrid_gvhmr": gvhmr and v4,
+            "hybrid_prompthmr": prompthmr and v4,
+            "hybrid_gem": gem and v4,
             # Die Vorlage fragte zweimal `not hybrid_gvhmr and not
             # hybrid_prompthmr` — eine Bedingung, die in die Vorlage
             # gewandert war und dort in EINER Zeile keinen Platz mehr hatte
             # (ein `{% … %}` laesst sich nicht umbrechen).
-            'hybrid': (gvhmr or prompthmr or gem) and v4,
+            "hybrid": (gvhmr or prompthmr or gem) and v4,
         }

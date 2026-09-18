@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Bvhpfad`: der Ordner aus dem BVH-Pfad — Windows- und POSIX-Trenner.
+"""`Bvhpfad`: der Ordner aus dem BVH-Pfad — Windows- und POSIX-Trenner.
 
 WARUM (Edgar, 13.09.2026: „so dass ich das Verzeichnis kopieren kann"): Der
 Ordner wird im Browser aus `job.bvh_file` geschnitten; ein Pfad ohne
@@ -7,11 +7,12 @@ Trenner bleibt, wie er ist, ein Trenner am Ende kommt nicht mit.
 
 Sabotage-Gegenprobe: `schnitt > 0` → `schnitt >= 0` macht Fall 3 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'bvhpfad.js')
+MODUL = Jsmodul("gemeinsam", "bvhpfad.js")
 
 SKRIPT = """
 const { Bvhpfad: B } = await import(MODUL);
@@ -34,6 +35,5 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class BvhpfadTest(SimpleTestCase):
-
     def test_ordner_aus_pfad(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""LongRunner — Tests ueber 1 Sekunde je Modul.
+"""LongRunner — Tests ueber 1 Sekunde je Modul.
 
 WARUM SIE HIER LIEGEN
 =====================
@@ -62,6 +62,7 @@ DJANGOBASE BLEIBT UNBERUEHRT. Es ist in sechs Projekten als editable
 Install eingebunden; eine Ausnahme fuer dieses Projekt dort einzubauen
 wirkte sofort in allen (`A:/shared/djangoBase/CLAUDE.md`).
 """
+
 import os
 
 from ..nurgemeint import Nurgemeint
@@ -69,14 +70,14 @@ from ..nurgemeint import Nurgemeint
 #: Das Wort, an dem ein ausdruecklicher Aufruf zu erkennen ist. Bleibt als
 #: Modulname stehen: `test_longrunner_auswahl` prueft die Entscheidung
 #: darueber, und `ui/settings/djangobase_tests.py` nennt dasselbe Ziel.
-MARKE = 'longrunner'
+MARKE = "longrunner"
 SCHALTER = Nurgemeint.SCHALTER
 
-WAECHTER = Nurgemeint(MARKE, os.path.dirname(__file__), dauer='250 s')
+WAECHTER = Nurgemeint(MARKE, os.path.dirname(__file__), dauer="250 s")
 
 
 def angefordert(argumente=None, umgebung=None):
-    u"""Sind die LongRunner ausdruecklich gemeint?"""
+    """Sind die LongRunner ausdruecklich gemeint?"""
     return WAECHTER.angefordert(argumente, umgebung)
 
 

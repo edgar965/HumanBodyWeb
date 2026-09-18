@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Clipfehlt`: Ein Clip, dessen BVH es nicht mehr gibt, fliegt aus der Zeitleiste.
+"""`Clipfehlt`: Ein Clip, dessen BVH es nicht mehr gibt, fliegt aus der Zeitleiste.
 
 Edgar (13.09.2026, BVH Studio): „Falls in der Timeline etwas ist was es
 nicht gibt, dann entfernen." Vorher blieb er rot markiert stehen
@@ -17,11 +17,12 @@ nicht gibt, dann entfernen." Vorher blieb er rot markiert stehen
 
 Sabotage-Gegenprobe: `i--` in `_spurRaeumen` zu `i++` → Fall 1 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'clipfehlt.js')
+MODUL = Jsmodul("bvh_studio", "clipfehlt.js")
 
 SKRIPT = """
 const { Clipfehlt } = await import(MODUL);
@@ -78,9 +79,8 @@ console.log(JSON.stringify({ ok: fehler.length === 0, fehler }));
 
 
 class ClipfehltTest(SimpleTestCase):
-
     databases = set()
 
     def test_clips_ohne_datei_verlassen_die_zeitleiste(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

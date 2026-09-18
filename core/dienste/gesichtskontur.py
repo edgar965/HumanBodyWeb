@@ -11,6 +11,7 @@ jetzt an einer Stelle:
        (die Indexliste gilt fuer 10.475 Vertices, nicht fuer ein SMPL-Netz).
     3. Konvexe Huelle des oberen Achtels der Projektion — der Rueckfall.
 """
+
 import logging
 
 from ..daten.bildrahmen import Bildrahmen
@@ -19,7 +20,7 @@ import os
 import numpy as np
 from django.conf import settings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Gesichtskontur:
@@ -27,10 +28,44 @@ class Gesichtskontur:
 
     #: Landmarken des Gesichtsumrisses in MediaPipes 468-Punkte-Netz, in der
     #: Reihenfolge des Umlaufs.
-    OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323,
-            361, 288, 397, 365, 379, 378, 400, 377, 152, 148,
-            176, 149, 150, 136, 172, 58, 132, 93, 234, 127,
-            162, 21, 54, 103, 67, 109]
+    OVAL = [
+        10,
+        338,
+        297,
+        332,
+        284,
+        251,
+        389,
+        356,
+        454,
+        323,
+        361,
+        288,
+        397,
+        365,
+        379,
+        378,
+        400,
+        377,
+        152,
+        148,
+        176,
+        149,
+        150,
+        136,
+        172,
+        58,
+        132,
+        93,
+        234,
+        127,
+        162,
+        21,
+        54,
+        103,
+        67,
+        109,
+    ]
 
     #: Ab so vielen Vertices gilt ein Netz als SMPL-X (10.475) und nicht als
     #: SMPL (6.890) — nur dann passen die Gesichtsindizes.
@@ -54,11 +89,18 @@ class Gesichtskontur:
         """Konvexe Huelle der Gesichtsvertices — nur bei SMPL-X-Topologie."""
         if anzahl_posiert < self.SMPLX_AB:
             return False
-        pfad = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH',
-                            'PyMAF-X', 'data', 'partial_mesh', 'smplx_face_vids.npz')
+        pfad = os.path.join(
+            str(settings.BASE_DIR),
+            "..",
+            "VideoToBVH",
+            "PyMAF-X",
+            "data",
+            "partial_mesh",
+            "smplx_face_vids.npz",
+        )
         if not os.path.isfile(pfad):
             return False
-        indizes = np.load(pfad)['vids']
+        indizes = np.load(pfad)["vids"]
         indizes = indizes[indizes < len(self.projektion)]
         punkte = self.projektion[indizes]
         punkte = punkte[~np.isnan(punkte).any(axis=1)]
@@ -95,11 +137,12 @@ class Gesichtskontur:
         landmarken = self._landmarken(foto, cv2)
         if not landmarken:
             return False
-        self.rahmen_erkannt = Bildrahmen.um(
-            [[m.x * self.breite, m.y * self.hoehe] for m in landmarken])
-        self.kontur = [[float(landmarken[i].x * self.breite),
-                        float(landmarken[i].y * self.hoehe)]
-                       for i in self.OVAL if i < len(landmarken)]
+        self.rahmen_erkannt = Bildrahmen.um([[m.x * self.breite, m.y * self.hoehe] for m in landmarken])
+        self.kontur = [
+            [float(landmarken[i].x * self.breite), float(landmarken[i].y * self.hoehe)]
+            for i in self.OVAL
+            if i < len(landmarken)
+        ]
         if not self.aus_smplx:
             self.rahmen_netz = self.rahmen_erkannt
         return True
@@ -112,24 +155,31 @@ class Gesichtskontur:
             from mediapipe.tasks import python as mp_python  # pyright: ignore[reportMissingImports]
             from mediapipe.tasks.python import vision as mp_vision  # pyright: ignore[reportMissingImports]
         except ImportError as e:
-            logger.debug('MediaPipe nicht verfuegbar: %s', e)
+            logger.debug("MediaPipe nicht verfuegbar: %s", e)
             return None
-        modell = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH',
-                              'MocapNET_v4', 'src', 'python', 'mnet4',
-                              'models', 'face_landmarker.task')
+        modell = os.path.join(
+            str(settings.BASE_DIR),
+            "..",
+            "VideoToBVH",
+            "MocapNET_v4",
+            "src",
+            "python",
+            "mnet4",
+            "models",
+            "face_landmarker.task",
+        )
         if not os.path.isfile(modell):
             return None
         try:
             optionen = mp_vision.FaceLandmarkerOptions(
-                base_options=mp_python.BaseOptions(model_asset_path=modell),
-                num_faces=1)
+                base_options=mp_python.BaseOptions(model_asset_path=modell), num_faces=1
+            )
             with mp_vision.FaceLandmarker.create_from_options(optionen) as erkenner:
-                bild = mp.Image(image_format=mp.ImageFormat.SRGB,
-                                data=cv2.cvtColor(foto, cv2.COLOR_BGR2RGB))
+                bild = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(foto, cv2.COLOR_BGR2RGB))
                 ergebnis = erkenner.detect(bild)
             return ergebnis.face_landmarks[0] if ergebnis.face_landmarks else None
-        except Exception as e:                                    # noqa: BLE001
-            logger.debug('Gesichtserkennung uebersprungen: %s', e)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Gesichtserkennung uebersprungen: %s", e)
             return None
 
     # ------------------------------------------------------------------ Technik
@@ -138,10 +188,11 @@ class Gesichtskontur:
     def _huelle(punkte):
         try:
             from scipy.spatial import ConvexHull
+
             huelle = ConvexHull(punkte)
             return [[float(p[0]), float(p[1])] for p in punkte[huelle.vertices]]
-        except Exception:                                         # noqa: BLE001
-            logger.debug('Konvexe Huelle fehlgeschlagen', exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.debug("Konvexe Huelle fehlgeschlagen", exc_info=True)
             return []
 
     #: `_rahmen` stand hier als eigene Min-Max-Rechnung und lieferte ein

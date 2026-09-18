@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Groessenangleich`: der Faktor, mit dem eine neue Figur auf die Höhe der
+"""`Groessenangleich`: der Faktor, mit dem eine neue Figur auf die Höhe der
 vorhandenen kommt.
 
 WARUM (06.09.2026, Edgar: „beim Laden eines neuen Modells, immer mit der
@@ -20,11 +20,12 @@ UMA-Figur nicht sieht.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'groessenangleich.js')
+MODUL = Jsmodul("gemeinsam", "groessenangleich.js")
 
 SKRIPT = """
 const { Groessenangleich } = await import(MODUL);
@@ -58,9 +59,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class GroessenangleichTest(SimpleTestCase):
-
     databases = set()
 
     def test_der_faktor_gleicht_aus_ohne_zu_zappeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

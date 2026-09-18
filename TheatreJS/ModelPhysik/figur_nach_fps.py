@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""HumanBody-Figur -> Eingabedateien fuer FastProjectiveSkinning.
+"""HumanBody-Figur -> Eingabedateien fuer FastProjectiveSkinning.
 
 WARUM (Edgar, 10.09.2026: „ich nutze das HumanBody Modell, dafuer brauche ich
 das!"): FastProjectiveSkinning (Komaritzan/Botsch, MIG 2019) rechnet aus einem
@@ -33,6 +33,7 @@ DREI DINGE, DIE HIER ENTSCHIEDEN WERDEN
 
 Aufruf:  python figur_nach_fps.py [--geschlecht female|male]
 """
+
 import argparse
 import json
 import os
@@ -40,44 +41,65 @@ import sys
 
 import numpy as np
 
-from hautnetz import Hautnetz    # Aussenhaut, seit 12.09.2026 eigene Datei
+from hautnetz import Hautnetz  # Aussenhaut, seit 12.09.2026 eigene Datei
 
 WURZELN = {
-    'female': r'A:\3DTools\HumanBody\data\humanBody',
-    'male': r'A:\3DTools\HumanBody\data\humanBody_male',
+    "female": r"A:\3DTools\HumanBody\data\humanBody",
+    "male": r"A:\3DTools\HumanBody\data\humanBody_male",
 }
-ZIEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figur')
+ZIEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figur")
 
 
 #: Die Kette, die das Weichgewebe treiben soll. Reihenfolge egal, die
 #: Elternschaft kommt aus `rig_bones.json`.
 KETTE = (
-    'DEF-spine', 'DEF-spine.001', 'DEF-spine.002', 'DEF-spine.003',
-    'DEF-spine.004', 'DEF-spine.005', 'DEF-spine.006',
-    'DEF-shoulder.L', 'DEF-upper_arm.L', 'DEF-upper_arm.L.001',
-    'DEF-forearm.L', 'DEF-forearm.L.001', 'DEF-hand.L',
-    'DEF-shoulder.R', 'DEF-upper_arm.R', 'DEF-upper_arm.R.001',
-    'DEF-forearm.R', 'DEF-forearm.R.001', 'DEF-hand.R',
-    'DEF-thigh.L', 'DEF-thigh.L.001', 'DEF-shin.L', 'DEF-shin.L.001',
-    'DEF-foot.L', 'DEF-toe.L',
-    'DEF-thigh.R', 'DEF-thigh.R.001', 'DEF-shin.R', 'DEF-shin.R.001',
-    'DEF-foot.R', 'DEF-toe.R',
+    "DEF-spine",
+    "DEF-spine.001",
+    "DEF-spine.002",
+    "DEF-spine.003",
+    "DEF-spine.004",
+    "DEF-spine.005",
+    "DEF-spine.006",
+    "DEF-shoulder.L",
+    "DEF-upper_arm.L",
+    "DEF-upper_arm.L.001",
+    "DEF-forearm.L",
+    "DEF-forearm.L.001",
+    "DEF-hand.L",
+    "DEF-shoulder.R",
+    "DEF-upper_arm.R",
+    "DEF-upper_arm.R.001",
+    "DEF-forearm.R",
+    "DEF-forearm.R.001",
+    "DEF-hand.R",
+    "DEF-thigh.L",
+    "DEF-thigh.L.001",
+    "DEF-shin.L",
+    "DEF-shin.L.001",
+    "DEF-foot.L",
+    "DEF-toe.L",
+    "DEF-thigh.R",
+    "DEF-thigh.R.001",
+    "DEF-shin.R",
+    "DEF-shin.R.001",
+    "DEF-foot.R",
+    "DEF-toe.R",
 )
 
 #: Knochen, deren Elternteil ausserhalb der Kette liegt (ORG-*): wohin sie
 #: stattdessen gehaengt werden. Am Rig abgelesen, nicht geraten.
 ERSATZELTERN = {
-    'DEF-spine': None,                      # Wurzel
-    'DEF-thigh.L': 'DEF-spine',
-    'DEF-thigh.R': 'DEF-spine',
-    'DEF-shoulder.L': 'DEF-spine.003',
-    'DEF-shoulder.R': 'DEF-spine.003',
-    'DEF-upper_arm.L': 'DEF-shoulder.L',
-    'DEF-upper_arm.R': 'DEF-shoulder.R',
+    "DEF-spine": None,  # Wurzel
+    "DEF-thigh.L": "DEF-spine",
+    "DEF-thigh.R": "DEF-spine",
+    "DEF-shoulder.L": "DEF-spine.003",
+    "DEF-shoulder.R": "DEF-spine.003",
+    "DEF-upper_arm.L": "DEF-shoulder.L",
+    "DEF-upper_arm.R": "DEF-shoulder.R",
 }
 
 #: Blaetter der Kette: Sie brauchen ein Endgelenk aus ihrem `tail`.
-BLAETTER = ['DEF-spine.006', 'DEF-toe.L', 'DEF-toe.R']
+BLAETTER = ["DEF-spine.006", "DEF-toe.L", "DEF-toe.R"]
 
 #: Finger und ihr Handteller. DIE HAND BRAUCHT IHRE FINGER (10.09.2026,
 #: gemessen): Ohne sie schrumpft FPS die ganze Hand samt Fingern auf EIN
@@ -86,33 +108,36 @@ BLAETTER = ['DEF-spine.006', 'DEF-toe.L', 'DEF-toe.R']
 #: mitgelieferte `male`-Beispiel fuehrt 40 seiner 63 Gelenke allein in den
 #: Fingern; unsere erste Fassung hatte 36 Gelenke fuer den ganzen Koerper.
 FINGER_AN_TELLER = {
-    'f_index': '01', 'f_middle': '02', 'f_ring': '03', 'f_pinky': '04',
+    "f_index": "01",
+    "f_middle": "02",
+    "f_ring": "03",
+    "f_pinky": "04",
 }
 
 
 class Handkette:
-    u"""Handteller, Finger und Daumen beider Haende in die Kette."""
+    """Handteller, Finger und Daumen beider Haende in die Kette."""
 
     @staticmethod
     def ergaenzen():
         kette, eltern = [], {}
-        for seite in ('L', 'R'):
-            hand = 'DEF-hand.%s' % seite
-            for nummer in ('01', '02', '03', '04'):
-                teller = 'DEF-palm.%s.%s' % (nummer, seite)
+        for seite in ("L", "R"):
+            hand = "DEF-hand.%s" % seite
+            for nummer in ("01", "02", "03", "04"):
+                teller = "DEF-palm.%s.%s" % (nummer, seite)
                 kette.append(teller)
                 eltern[teller] = hand
             for finger, nummer in FINGER_AN_TELLER.items():
-                elternteil = 'DEF-palm.%s.%s' % (nummer, seite)
-                for glied in ('01', '02', '03'):
-                    name = 'DEF-%s.%s.%s' % (finger, glied, seite)
+                elternteil = "DEF-palm.%s.%s" % (nummer, seite)
+                for glied in ("01", "02", "03"):
+                    name = "DEF-%s.%s.%s" % (finger, glied, seite)
                     kette.append(name)
                     eltern[name] = elternteil
                     elternteil = name
                 BLAETTER.append(elternteil)
             elternteil = hand
-            for glied in ('01', '02', '03'):
-                name = 'DEF-thumb.%s.%s' % (glied, seite)
+            for glied in ("01", "02", "03"):
+                name = "DEF-thumb.%s.%s" % (glied, seite)
                 kette.append(name)
                 eltern[name] = elternteil
                 elternteil = name
@@ -130,15 +155,15 @@ FPS_BODEN = -0.18
 
 
 class Skelettauszug:
-    u"""Die Hauptkette des DEF-Rigs als Gelenkliste."""
+    """Die Hauptkette des DEF-Rigs als Gelenkliste."""
 
     def __init__(self, wurzel):
-        with open(os.path.join(wurzel, 'rig_bones.json'), encoding='utf-8') as datei:
-            knochen = json.load(datei)['bones']
-        self.knochen = {b['name']: b for b in knochen}
+        with open(os.path.join(wurzel, "rig_bones.json"), encoding="utf-8") as datei:
+            knochen = json.load(datei)["bones"]
+        self.knochen = {b["name"]: b for b in knochen}
 
     def gelenke(self, mit_fingern=True):
-        u"""[(name, punkt, elternname)] — Wurzel zuerst, Eltern vor Kindern.
+        """[(name, punkt, elternname)] — Wurzel zuerst, Eltern vor Kindern.
 
         `mit_fingern=False` laesst Handteller und Fingerglieder weg. DAS IST
         DERZEIT DIE EINZIGE FASSUNG, DIE DURCHLAEUFT (gemessen 10.09.2026):
@@ -159,35 +184,32 @@ class Skelettauszug:
         Fingergelenke ohne Belang — die Hand bleibt dann ein Segment.
         """
         aus, gesetzt = [], set()
-        kette = KETTE if mit_fingern else tuple(
-            n for n in KETTE if n not in _HAND_KETTE)
-        blaetter = BLAETTER if mit_fingern else [
-            n for n in BLAETTER if n not in _HAND_KETTE]
+        kette = KETTE if mit_fingern else tuple(n for n in KETTE if n not in _HAND_KETTE)
+        blaetter = BLAETTER if mit_fingern else [n for n in BLAETTER if n not in _HAND_KETTE]
 
         def eintragen(name):
             if name in gesetzt:
                 return
             knochen = self.knochen.get(name)
             if knochen is None:
-                raise KeyError(u'Knochen fehlt im Rig: %s' % name)
-            elternteil = ERSATZELTERN.get(name, knochen['parent'])
+                raise KeyError("Knochen fehlt im Rig: %s" % name)
+            elternteil = ERSATZELTERN.get(name, knochen["parent"])
             if elternteil is not None and elternteil not in gesetzt:
                 eintragen(elternteil)
             gesetzt.add(name)
-            aus.append((name, np.asarray(knochen['head'], dtype=np.float64),
-                        elternteil))
+            aus.append((name, np.asarray(knochen["head"], dtype=np.float64), elternteil))
 
         for name in kette:
             eintragen(name)
         for name in blaetter:
-            ende = np.asarray(self.knochen[name]['tail'], dtype=np.float64)
-            aus.append((name + '_ende', ende, name))
-            gesetzt.add(name + '_ende')
+            ende = np.asarray(self.knochen[name]["tail"], dtype=np.float64)
+            aus.append((name + "_ende", ende, name))
+            gesetzt.add(name + "_ende")
         return aus
 
 
 class FpsAusgabe:
-    u"""Netz (.off), Skelett (.skel) und .ini fuer FastProjectiveSkinning."""
+    """Netz (.off), Skelett (.skel) und .ini fuer FastProjectiveSkinning."""
 
     @classmethod
     def schreiben(cls, geschlecht, dreiecke_ziel=10000, mit_fingern=True, bauart=None):
@@ -211,91 +233,98 @@ class FpsAusgabe:
         cls._bericht(netz, punkte, dreiecke, punkte_fps, hautflaechen, vorher, faktor)
         # Die Probe, die FPS' README verlangt: „Make sure, that the skeleton is
         # inside of your mesh."
-        aussen = [n for n, p, _ in gelenke
-                  if not cls._im_netz(umrechnen(p), punkte_fps)]
-        print(u'Skelett  %d Gelenke, Wurzel %s' % (len(gelenke), gelenke[0][0]))
-        print(u'         Gelenke ausserhalb der Netzhuelle: %s'
-              % (', '.join(aussen) if aussen else 'keine'))
-        print(u'Dateien  %s' % ', '.join(os.path.basename(p) for p in dateien))
+        aussen = [n for n, p, _ in gelenke if not cls._im_netz(umrechnen(p), punkte_fps)]
+        print("Skelett  %d Gelenke, Wurzel %s" % (len(gelenke), gelenke[0][0]))
+        print("         Gelenke ausserhalb der Netzhuelle: %s" % (", ".join(aussen) if aussen else "keine"))
+        print("Dateien  %s" % ", ".join(os.path.basename(p) for p in dateien))
         return dateien
 
     @staticmethod
     def _dateien(geschlecht, punkte_fps, dreiecke, gelenke, umrechnen):
-        u"""`.off`, `.skel` und `.ini` unter `ZIEL`; gibt die drei Pfade."""
+        """`.off`, `.skel` und `.ini` unter `ZIEL`; gibt die drei Pfade."""
         os.makedirs(ZIEL, exist_ok=True)
-        stamm = 'hb_%s' % geschlecht
-        off = os.path.join(ZIEL, stamm + '.off')
-        with open(off, 'w') as datei:
-            datei.write('OFF\n%d %d 0\n' % (len(punkte_fps), len(dreiecke)))
+        stamm = "hb_%s" % geschlecht
+        off = os.path.join(ZIEL, stamm + ".off")
+        with open(off, "w") as datei:
+            datei.write("OFF\n%d %d 0\n" % (len(punkte_fps), len(dreiecke)))
             for p in punkte_fps:
-                datei.write('%.6f %.6f %.6f\n' % tuple(p))
+                datei.write("%.6f %.6f %.6f\n" % tuple(p))
             for d in dreiecke:
-                datei.write('3 %d %d %d\n' % tuple(d))
-        skel = os.path.join(ZIEL, stamm + '.skel')
-        with open(skel, 'w') as datei:
-            datei.write('%d\n' % len(gelenke))
+                datei.write("3 %d %d %d\n" % tuple(d))
+        skel = os.path.join(ZIEL, stamm + ".skel")
+        with open(skel, "w") as datei:
+            datei.write("%d\n" % len(gelenke))
             for name, punkt, elternteil in gelenke:
                 p = umrechnen(punkt)
-                datei.write('%.6f\t%.6f\t%.6f\t%s\t%s\n'
-                            % (p[0], p[1], p[2], name,
-                               elternteil if elternteil else 'root'))
-        ini = os.path.join(ZIEL, stamm + '.ini')
-        with open(ini, 'w') as datei:
-            datei.write('SIMMESH     %s.off\n' % stamm)
-            datei.write('SKELETON    %s.skel\n' % stamm)
+                datei.write(
+                    "%.6f\t%.6f\t%.6f\t%s\t%s\n"
+                    % (p[0], p[1], p[2], name, elternteil if elternteil else "root")
+                )
+        ini = os.path.join(ZIEL, stamm + ".ini")
+        with open(ini, "w") as datei:
+            datei.write("SIMMESH     %s.off\n" % stamm)
+            datei.write("SKELETON    %s.skel\n" % stamm)
         return off, skel, ini
 
     @staticmethod
     def _bericht(netz, punkte, dreiecke, punkte_fps, hautflaechen, vorher, faktor):
-        u"""Jede Zahl, an der man einen Fehler sehen wuerde."""
+        """Jede Zahl, an der man einen Fehler sehen wuerde."""
         loecher = Hautnetz.randkanten(dreiecke)
         euler = len(punkte) - (len(dreiecke) * 3 // 2) + len(dreiecke)
         unten, oben = punkte[:, 2].min(), punkte[:, 2].max()
-        print(u'Netz     %d Punkte, %d Dreiecke (aus %d Haut-Vierecken von %d)'
-              % (len(punkte_fps), len(dreiecke), hautflaechen, len(netz.vierecke)))
-        print(u'         vor der Reparatur: %d Punkte, %d Dreiecke, %d Randkanten'
-              % vorher)
-        print(u'         Randkanten jetzt: %d   Euler: %d (geschlossen = 2)'
-              % (loecher, euler))
+        print(
+            "Netz     %d Punkte, %d Dreiecke (aus %d Haut-Vierecken von %d)"
+            % (len(punkte_fps), len(dreiecke), hautflaechen, len(netz.vierecke))
+        )
+        print("         vor der Reparatur: %d Punkte, %d Dreiecke, %d Randkanten" % vorher)
+        print("         Randkanten jetzt: %d   Euler: %d (geschlossen = 2)" % (loecher, euler))
         kanten = np.linalg.norm(punkte[dreiecke[:, 0]] - punkte[dreiecke[:, 1]], axis=1)
-        print(u'         kuerzeste Kante: %.2e m' % kanten.min())
-        print(u'         Hoehe %.3f m -> %.2f Einheiten (Faktor %.3f)'
-              % (oben - unten, FPS_HOEHE, faktor))
-        print(u'         Huelle x %.2f..%.2f  y %.2f..%.2f  z %.2f..%.2f'
-              % (punkte_fps[:, 0].min(), punkte_fps[:, 0].max(),
-                 punkte_fps[:, 1].min(), punkte_fps[:, 1].max(),
-                 punkte_fps[:, 2].min(), punkte_fps[:, 2].max()))
+        print("         kuerzeste Kante: %.2e m" % kanten.min())
+        print("         Hoehe %.3f m -> %.2f Einheiten (Faktor %.3f)" % (oben - unten, FPS_HOEHE, faktor))
+        print(
+            "         Huelle x %.2f..%.2f  y %.2f..%.2f  z %.2f..%.2f"
+            % (
+                punkte_fps[:, 0].min(),
+                punkte_fps[:, 0].max(),
+                punkte_fps[:, 1].min(),
+                punkte_fps[:, 1].max(),
+                punkte_fps[:, 2].min(),
+                punkte_fps[:, 2].max(),
+            )
+        )
 
     @staticmethod
     def _im_netz(punkt, punkte):
-        u"""Grobe Probe: liegt das Gelenk innerhalb der Netz-Huelle?
+        """Grobe Probe: liegt das Gelenk innerhalb der Netz-Huelle?
 
         Keine echte Innen-Aussen-Pruefung — die braeuchte einen Strahltest. Sie
         faengt den Fall ab, der wirklich vorkommt: ein Gelenk, das durch einen
         Massstabs- oder Achsenfehler weit neben dem Koerper liegt.
         """
-        return bool(np.all(punkt >= punkte.min(axis=0) - 1e-6)
-                    and np.all(punkt <= punkte.max(axis=0) + 1e-6))
+        return bool(np.all(punkt >= punkte.min(axis=0) - 1e-6) and np.all(punkt <= punkte.max(axis=0) + 1e-6))
 
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument('--geschlecht', default='female',
-                          choices=sorted(WURZELN))
-    zerleger.add_argument('--bauart', default=None,
-                          help=u'L1-Netz, z.B. Female_Asian (Vorgabe: Caucasian)')
-    zerleger.add_argument('--dreiecke', type=int, default=10000,
-                          help=u'Ziel der Dezimierung (die Autoren: 3000-5000 '
-                               u'Punkte, also rund 6000-10000 Dreiecke)')
-    zerleger.add_argument('--ohne-finger', action='store_true',
-                          help=u'Hand als ein Segment. NOETIG, solange die '
-                               u'Fingerknochen nur knapp im Netz liegen — '
-                               u'siehe Skelettauszug.gelenke.')
+    zerleger.add_argument("--geschlecht", default="female", choices=sorted(WURZELN))
+    zerleger.add_argument("--bauart", default=None, help="L1-Netz, z.B. Female_Asian (Vorgabe: Caucasian)")
+    zerleger.add_argument(
+        "--dreiecke",
+        type=int,
+        default=10000,
+        help="Ziel der Dezimierung (die Autoren: 3000-5000 Punkte, also rund 6000-10000 Dreiecke)",
+    )
+    zerleger.add_argument(
+        "--ohne-finger",
+        action="store_true",
+        help="Hand als ein Segment. NOETIG, solange die "
+        "Fingerknochen nur knapp im Netz liegen — "
+        "siehe Skelettauszug.gelenke.",
+    )
     werte = zerleger.parse_args()
-    FpsAusgabe.schreiben(werte.geschlecht, werte.dreiecke,
-                         not werte.ohne_finger, werte.bauart)
+    FpsAusgabe.schreiben(werte.geschlecht, werte.dreiecke, not werte.ohne_finger, werte.bauart)
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

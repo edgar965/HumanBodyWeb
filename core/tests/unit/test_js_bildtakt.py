@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Bildtakt`: das Abspieltempo hängt nicht mehr an der Bildwiederholrate.
+"""`Bildtakt`: das Abspieltempo hängt nicht mehr an der Bildwiederholrate.
 
 WARUM (Edgar, 13.09.2026: „die Play-Geschwindigkeit stimmt nicht, die
 Normalgeschwindigkeit ist viel zu schnell, bei 0,5 ist es viel zu langsam"):
@@ -17,14 +17,14 @@ Bei Tempo 0,5 ergab 0,25 → 0, der Kopf stand.
 Sabotage-Gegenprobe: in `bilder` `Math.floor` → `Math.round` → Fall 1 rot
 (60 statt 30 bei 60 Hz).
 """
+
 from django.conf import settings
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'bildtakt.js')
-SCHLEIFE = (settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
-            / 'studioschleife.js')
+MODUL = Jsmodul("bvh_studio", "bildtakt.js")
+SCHLEIFE = settings.BASE_DIR / "static" / "viewer" / "bvh_studio" / "studioschleife.js"
 
 SKRIPT = """
 const { Bildtakt } = await import(MODUL);
@@ -59,12 +59,10 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class BildtaktTest(SimpleTestCase):
-
     def test_das_tempo_haengt_nicht_am_monitor(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
 
     def test_die_studioschleife_nutzt_den_takt(self):
-        text = SCHLEIFE.read_text(encoding='utf-8')
-        self.assertIn('this.takt.bilder(dt, state.project.fps, state.playbackSpeed)',
-                      text)
-        self.assertNotIn('Math.round(dt', text)
+        text = SCHLEIFE.read_text(encoding="utf-8")
+        self.assertIn("this.takt.bilder(dt, state.project.fps, state.playbackSpeed)", text)
+        self.assertNotIn("Math.round(dt", text)

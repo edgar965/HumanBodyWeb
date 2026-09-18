@@ -45,13 +45,15 @@ class NetzketteTest(SimpleTestCase):
     #: Das sind die Zahlen EINER Stufe; die Stufe ist seit 17.09.2026 eine
     #: Einstellung (MB-Lab: 2 im Browser), deshalb fragt der Test sie ausdrücklich.
     NETZE = {
-        'female': (17288, 18210, 74128, 138304),
-        'male': (17074, 17996, 73300, 136592),
+        "female": (17288, 18210, 74128, 138304),
+        "male": (17074, 17996, 73300, 136592),
     }
     #: Dieselben Netze mit zwei und drei Stufen (gemessen 17.09.2026).
     STUFEN = {
-        ('female', 2): (286376, 553216), ('female', 3): (1125784, 2212864),
-        ('male', 2): (283008, 546368), ('male', 3): (1112200, 2185472),
+        ("female", 2): (286376, 553216),
+        ("female", 3): (1125784, 2212864),
+        ("male", 2): (283008, 546368),
+        ("male", 3): (1112200, 2185472),
     }
     #: Obergrenze für den ganzen Durchlauf. Großzügig — es ist ein Longrunner;
     #: die Grenze fängt nur ein Verhalten ab, das aus dem Ruder läuft.
@@ -67,21 +69,18 @@ class NetzketteTest(SimpleTestCase):
     def _eines(self, geschlecht):
         vierecke, basis, unter, dreiecke = self.NETZE[geschlecht]
         netz = Charakterdaten.netzdaten(geschlecht)
-        flaechen = Sicher.wert(netz.faces, 'faces — Daten unvollständig')
-        self.assertEqual(flaechen.shape, (vierecke, 4),
-                         'Der Unterteiler braucht Vierecke, keine Dreiecke')
+        flaechen = Sicher.wert(netz.faces, "faces — Daten unvollständig")
+        self.assertEqual(flaechen.shape, (vierecke, 4), "Der Unterteiler braucht Vierecke, keine Dreiecke")
         self.assertEqual(int(flaechen.max()) + 1, basis)
 
-        cc = Sicher.wert(Charakterdaten.unterteiler(geschlecht, stufen=1),
-                         'Unterteiler — faces passen nicht')
+        cc = Sicher.wert(Charakterdaten.unterteiler(geschlecht, stufen=1), "Unterteiler — faces passen nicht")
         self.assertEqual(cc.sub_vertex_count, unter)
         self.assertEqual(len(cc.triangles), dreiecke)
         for stufen in (2, 3):
             mehr = Sicher.wert(
-                Charakterdaten.unterteiler(geschlecht, stufen=stufen),
-                'Unterteiler %d Stufen' % stufen)
-            self.assertEqual((mehr.sub_vertex_count, len(mehr.triangles)),
-                             self.STUFEN[(geschlecht, stufen)])
+                Charakterdaten.unterteiler(geschlecht, stufen=stufen), "Unterteiler %d Stufen" % stufen
+            )
+            self.assertEqual((mehr.sub_vertex_count, len(mehr.triangles)), self.STUFEN[(geschlecht, stufen)])
             self.assertEqual(mehr.levels, stufen)
 
     def test_gewichte_kommen_durch_die_unterteilung(self):
@@ -93,25 +92,31 @@ class NetzketteTest(SimpleTestCase):
         Deshalb prüft dieser Test die Struktur und nicht das Bild.
         """
         from core.dienste.skingewichte import Skingewichte
+
         for geschlecht, (_v, basis, unter, _d) in self.NETZE.items():
             with self.subTest(geschlecht=geschlecht):
-                indices, werte = Sicher.wert(Skingewichte.arrays(geschlecht), 'Gewichte')
+                indices, werte = Sicher.wert(Skingewichte.arrays(geschlecht), "Gewichte")
                 self.assertEqual(indices.shape, (basis, Skingewichte.EINFLUESSE))
                 self.assertEqual(werte.shape, indices.shape)
                 # Normiert: Ein Vertex ohne Gewichte hat Summe 0, sonst 1.
                 summen = werte.sum(axis=1)
                 self.assertTrue(
                     all(abs(s) < 1e-4 or abs(s - 1.0) < 1e-4 for s in summen),
-                    'Gewichtssummen sind weder 0 noch 1 — nicht normiert')
+                    "Gewichtssummen sind weder 0 noch 1 — nicht normiert",
+                )
 
                 text = Skingewichte.propagiert_json(
-                    geschlecht, Charakterdaten.unterteiler(geschlecht, stufen=1))
-                daten = json.loads(Sicher.wert(text, 'propagierte Gewichte'))
-                self.assertEqual(len(daten['weights']), unter,
-                                 'die Zahl der Gewichte passt nicht zum '
-                                 'unterteilten Netz — genau die Verschiebung, '
-                                 'die bei Rest-Pose unsichtbar bleibt')
-                self.assertTrue(daten['bone_names'])
+                    geschlecht, Charakterdaten.unterteiler(geschlecht, stufen=1)
+                )
+                daten = json.loads(Sicher.wert(text, "propagierte Gewichte"))
+                self.assertEqual(
+                    len(daten["weights"]),
+                    unter,
+                    "die Zahl der Gewichte passt nicht zum "
+                    "unterteilten Netz — genau die Verschiebung, "
+                    "die bei Rest-Pose unsichtbar bleibt",
+                )
+                self.assertTrue(daten["bone_names"])
 
     def test_der_unterteiler_wird_nur_einmal_gebaut(self):
         """Zweiter Abruf kommt aus dem Klassen-Zwischenspeicher.
@@ -121,11 +126,11 @@ class NetzketteTest(SimpleTestCase):
         nicht das Verhältnis zur ersten: Läuft nebenher etwas, schwanken
         Sekundenwerte um Faktor 1,5 und mehr.
         """
-        Charakterdaten.unterteiler('female')          # aufwärmen
+        Charakterdaten.unterteiler("female")  # aufwärmen
         start = time.time()
-        wieder = Charakterdaten.unterteiler('female')
+        wieder = Charakterdaten.unterteiler("female")
         dauer = time.time() - start
         self.assertIsNotNone(wieder)
-        self.assertLess(dauer, 0.5,
-                        'zweiter Abruf dauerte %.2f s — der Zwischenspeicher '
-                        'greift nicht' % dauer)
+        self.assertLess(
+            dauer, 0.5, "zweiter Abruf dauerte %.2f s — der Zwischenspeicher greift nicht" % dauer
+        )

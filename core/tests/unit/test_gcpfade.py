@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Zwei Quellen für denselben Ort — und sie müssen gleich bleiben.
+"""Zwei Quellen für denselben Ort — und sie müssen gleich bleiben.
 
 WARUM (08.09.2026, Umzug der Kleidungsdienste nach `Assets/`)
 =============================================================
@@ -18,6 +18,7 @@ Und die `.parents`-Kette selbst wird geprüft: Sie ist genau die Falle,
 die beim Verschieben einer Datei um eine Ebene stumm woanders hinzeigt
 (`~/.claude/rules/projektpfade.md`).
 """
+
 from pathlib import Path
 
 from django.conf import settings
@@ -27,7 +28,6 @@ from GarmentCode.pfade import Gcpfade
 
 
 class GcpfadeGegenSettings(SimpleTestCase):
-
     databases = set()
 
     def test_assets_ist_dieselbe_wurzel(self):
@@ -37,31 +37,28 @@ class GcpfadeGegenSettings(SimpleTestCase):
         self.assertEqual(Gcpfade.wurzel(), Path(str(settings.TOOLS_ROOT)))
 
     def test_humanbody_daten_weiblich(self):
-        self.assertEqual(Gcpfade.humanbody_daten('female'),
-                         Path(str(settings.HUMANBODY_DATA_DIR)))
+        self.assertEqual(Gcpfade.humanbody_daten("female"), Path(str(settings.HUMANBODY_DATA_DIR)))
 
     def test_humanbody_daten_maennlich(self):
-        u"""Der männliche Ordner heisst `humanBody_male` — bis zum
+        """Der männliche Ordner heisst `humanBody_male` — bis zum
         07.09.2026 wurde er durch Anhängen von `_male` an die Zeichenkette
         gebildet. Das steht jetzt an einer Stelle statt an dreien."""
-        self.assertEqual(Gcpfade.humanbody_daten('male'),
-                         Path(str(settings.HUMANBODY_DATA_DIR) + '_male'))
+        self.assertEqual(Gcpfade.humanbody_daten("male"), Path(str(settings.HUMANBODY_DATA_DIR) + "_male"))
 
     def test_das_paket_liegt_unter_assets(self):
-        self.assertEqual(Gcpfade.PAKET,
-                         Path(str(settings.ASSETS_ROOT)) / 'GarmentCode')
+        self.assertEqual(Gcpfade.PAKET, Path(str(settings.ASSETS_ROOT)) / "GarmentCode")
 
     def test_messreihen_liegen_neben_dem_paket(self):
-        u"""Die YAML-Reihen der Hilfeseite. Fehlt der Ordner, zeigt die
+        """Die YAML-Reihen der Hilfeseite. Fehlt der Ordner, zeigt die
         Seite eine leere Tabelle — und die liest sich wie „alles gut"."""
-        self.assertTrue(Gcpfade.messreihen().is_dir(),
-                        u'%s fehlt' % Gcpfade.messreihen())
+        self.assertTrue(Gcpfade.messreihen().is_dir(), "%s fehlt" % Gcpfade.messreihen())
 
     def test_die_kette_wuerde_eine_falsche_ebene_melden(self):
-        u"""GEGENPROBE: Zeigt die Wurzel woanders hin, muss `wurzel()`
+        """GEGENPROBE: Zeigt die Wurzel woanders hin, muss `wurzel()`
         werfen statt still ein leeres Verzeichnis zu liefern."""
+
         class Verschoben(Gcpfade):
-            WURZEL = Path(str(settings.ASSETS_ROOT))   # eine Ebene zu tief
+            WURZEL = Path(str(settings.ASSETS_ROOT))  # eine Ebene zu tief
 
         with self.assertRaises(RuntimeError):
             Verschoben.wurzel()

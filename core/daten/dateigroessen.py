@@ -18,19 +18,16 @@ class Dateigroessen:
     """Groessen an eine Auftragsliste haengen."""
 
     #: Schwelle, Teiler, Einheit -- von klein nach gross gelesen.
-    STUFEN = ((1024, 1, 'B'),
-              (1024 ** 2, 1024, 'KB'),
-              (1024 ** 3, 1024 ** 2, 'MB'),
-              (None, 1024 ** 3, 'GB'))
+    STUFEN = ((1024, 1, "B"), (1024**2, 1024, "KB"), (1024**3, 1024**2, "MB"), (None, 1024**3, "GB"))
 
     @staticmethod
     def lesbar(bytes_):
         for grenze, teiler, einheit in Dateigroessen.STUFEN:
             if grenze is None or bytes_ < grenze:
-                if einheit == 'B':
-                    return f'{bytes_} B'
-                return f'{bytes_ / teiler:.1f} {einheit}'
-        return f'{bytes_} B'
+                if einheit == "B":
+                    return f"{bytes_} B"
+                return f"{bytes_ / teiler:.1f} {einheit}"
+        return f"{bytes_} B"
 
     @staticmethod
     def groesse(job):

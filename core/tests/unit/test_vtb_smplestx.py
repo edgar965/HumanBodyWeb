@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Der SMPLest-X-Weg: ein Bild, ein Video, dieselben fuenf Schritte.
+"""Der SMPLest-X-Weg: ein Bild, ein Video, dieselben fuenf Schritte.
 
 DER ANLASS (02.09.2026)
 =======================
@@ -28,6 +28,7 @@ BDD - GEGEBEN / DANN
     DieAbtastung      ... rechnet die Bildnummern zur Ziel-Bildrate
     DieAusdrucksreihe ... haelt je Bild zehn Werte, auch ohne Person
 """
+
 import json
 import os
 import unittest
@@ -40,17 +41,17 @@ from ._wrappersuchpfad import Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
-import numpy as np                                          # noqa: E402
+import numpy as np  # noqa: E402
 
-from ausdrucksreihe import Ausdrucksreihe                   # noqa: E402
-from bildabtastung import Bildabtastung                     # noqa: E402
-from smplestxbefund import Smplestxbefund                   # noqa: E402
-from smplestxbild import Smplestxbild                       # noqa: E402
+from ausdrucksreihe import Ausdrucksreihe  # noqa: E402
+from bildabtastung import Bildabtastung  # noqa: E402
+from smplestxbefund import Smplestxbefund  # noqa: E402
+from smplestxbild import Smplestxbild  # noqa: E402
 from ._sicher import Sicher
 
 
 class DerBefund(unittest.TestCase):
-    u"""Was das Modell sagt, kommt als Python-Werte heraus."""
+    """Was das Modell sagt, kommt als Python-Werte heraus."""
 
     def _ausgabe(self):
         return {
@@ -78,7 +79,7 @@ class DerBefund(unittest.TestCase):
         self.assertEqual(self._befund().kiefer(), [])
 
     def test_die_gesichtsmarken_landen_im_originalbild(self):
-        u"""`smplx_joint_proj` liegt im Heizkartenraster (16 hoch, 12
+        """`smplx_joint_proj` liegt im Heizkartenraster (16 hoch, 12
         breit); der Ausschnitt (links 100, oben 50, 120 breit, 160 hoch)
         bringt es ins Bild. Die ersten 65 Gelenke sind Koerper und
         Haende und fallen weg."""
@@ -86,8 +87,7 @@ class DerBefund(unittest.TestCase):
         punkte = [[0.0, 0.0]] * Smplestxbefund.GESICHT_AB + [[6.0, 8.0], [12.0, 16.0]]
         ausgabe[Smplestxbefund.GELENKBILD] = Tensorattrappe([punkte])
         befund = Smplestxbefund(ausgabe, [100, 50, 120, 160], [100, 50, 120, 160], 0.9)
-        self.assertEqual(befund.gesichtspunkte((16, 16, 12)),
-                         [[160.0, 130.0], [220.0, 210.0]])
+        self.assertEqual(befund.gesichtspunkte((16, 16, 12)), [[160.0, 130.0], [220.0, 210.0]])
 
     def test_ohne_ausschnitt_keine_marken(self):
         ausgabe = self._ausgabe()
@@ -98,7 +98,7 @@ class DerBefund(unittest.TestCase):
         self.assertEqual(self._befund().kameraverschiebung(), [0.0, 0.0, 3.0])
 
     def test_ein_fehlendes_feld_gibt_keine_ausnahme(self):
-        u"""Nicht jedes Modell liefert `cam_trans`."""
+        """Nicht jedes Modell liefert `cam_trans`."""
         befund = Smplestxbefund({Smplestxbefund.FORM: Tensorattrappe([[1.0]])})
         self.assertIsNone(befund.kameraverschiebung())
         self.assertEqual(befund.ausdruck(), [])
@@ -106,69 +106,69 @@ class DerBefund(unittest.TestCase):
     def test_ein_befund_ohne_person_nennt_seinen_grund(self):
         befund = Smplestxbefund.ohne(Smplestxbefund.KEINE_PERSON)
         self.assertFalse(befund.gefunden)
-        self.assertEqual(befund.grund, 'No person detected in image')
+        self.assertEqual(befund.grund, "No person detected in image")
 
     def test_die_meldungstexte_bleiben_wie_bisher(self):
-        u"""Beide standen so in den Runnern — Protokolle bleiben lesbar."""
-        self.assertEqual(Smplestxbefund.KEINE_PERSON,
-                         'No person detected in image')
-        self.assertEqual(Smplestxbefund.KEIN_AUSSCHNITT,
-                         'Bbox processing failed')
+        """Beide standen so in den Runnern — Protokolle bleiben lesbar."""
+        self.assertEqual(Smplestxbefund.KEINE_PERSON, "No person detected in image")
+        self.assertEqual(Smplestxbefund.KEIN_AUSSCHNITT, "Bbox processing failed")
 
     def test_die_zuversicht_ist_immer_eine_zahl(self):
         self.assertIsInstance(self._befund().guete, float)
-        self.assertEqual(Smplestxbefund.ohne('x').guete, 0.0)
+        self.assertEqual(Smplestxbefund.ohne("x").guete, 0.0)
 
     def test_das_netz_landet_neben_dem_bild(self):
         ausgabe = self._ausgabe()
-        ausgabe[Smplestxbefund.NETZ] = Tensorattrappe(
-            [np.zeros((5, 3), dtype=np.float32)])
+        ausgabe[Smplestxbefund.NETZ] = Tensorattrappe([np.zeros((5, 3), dtype=np.float32)])
         with Pruefablage.ordner() as ordner:
-            bild = os.path.join(ordner, 'foto.jpg')
-            pfad = Sicher.wert(Smplestxbefund(ausgabe).netz_speichern(bild), 'Pfad')
+            bild = os.path.join(ordner, "foto.jpg")
+            pfad = Sicher.wert(Smplestxbefund(ausgabe).netz_speichern(bild), "Pfad")
             self.assertEqual(os.path.dirname(pfad), ordner)
             self.assertEqual(np.load(pfad).shape, (5, 3))
 
     def test_ohne_netz_kein_dateiname(self):
-        self.assertIsNone(self._befund().netz_speichern('/egal/foto.jpg'))
+        self.assertIsNone(self._befund().netz_speichern("/egal/foto.jpg"))
 
 
 class DasBild(unittest.TestCase):
-    u"""Ein Weg fuer Foto und Video — und er nimmt den groessten Kasten."""
+    """Ein Weg fuer Foto und Video — und er nimmt den groessten Kasten."""
 
     #: Erster Kasten klein und sehr sicher, zweiter gross und weniger.
-    KAESTEN = [[0.0, 0.0, 10.0, 10.0],
-               [0.0, 0.0, 100.0, 200.0]]
+    KAESTEN = [[0.0, 0.0, 10.0, 10.0], [0.0, 0.0, 100.0, 200.0]]
     GUETE = [0.99, 0.55]
 
     def _bild(self, kaesten=None, guete=None):
         detektor = Yoloattrappe(
-            self.KAESTEN if kaesten is None else kaesten,
-            self.GUETE if guete is None else guete)
-        return Smplestxbild(Smplestxeinstellungen(), detektor, None, 'cuda')
+            self.KAESTEN if kaesten is None else kaesten, self.GUETE if guete is None else guete
+        )
+        return Smplestxbild(Smplestxeinstellungen(), detektor, None, "cuda")
 
     @staticmethod
     def _rgb():
         return np.zeros((480, 640, 3), dtype=np.uint8)
 
     def test_der_groesste_kasten_gewinnt_nicht_der_sicherste(self):
-        u"""Ein sicher erkannter Passant im Hintergrund zaehlt nicht."""
+        """Ein sicher erkannter Passant im Hintergrund zaehlt nicht."""
         self.assertEqual(Smplestxbild.groesste(np.array(self.KAESTEN)), 1)
 
     def test_im_video_gewinnt_der_kasten_neben_dem_vorigen(self):
-        u"""001_ShyrinKurz (12.09.2026): In 25 von 295 Bildern war der
+        """001_ShyrinKurz (12.09.2026): In 25 von 295 Bildern war der
         groesste Kasten eine sitzende Nebentaenzerin. Mit dem Kasten des
         vorigen Bildes bleibt die Wahl bei der Person, die gemeint ist."""
-        kaesten = np.array([[500.0, 100.0, 560.0, 300.0],     # die Haupttaenzerin, klein
-                            [100.0, 300.0, 400.0, 480.0]])    # eine Sitzende, grosser Kasten
+        kaesten = np.array(
+            [
+                [500.0, 100.0, 560.0, 300.0],  # die Haupttaenzerin, klein
+                [100.0, 300.0, 400.0, 480.0],
+            ]
+        )  # eine Sitzende, grosser Kasten
         self.assertEqual(Smplestxbild.wahl(kaesten), 1)
         self.assertEqual(Smplestxbild.wahl(kaesten, vorher=[505.0, 95.0, 565.0, 305.0]), 0)
 
     def test_zu_weit_weg_ist_die_person_verloren(self):
-        u"""Fehlt die Verfolgte im Bild, darf nicht die naechste Fremde
+        """Fehlt die Verfolgte im Bild, darf nicht die naechste Fremde
         gewinnen — sonst klebt die Wahl an ihr (8 Bilder, 12.09.2026)."""
-        kaesten = np.array([[100.0, 300.0, 400.0, 480.0]])   # nur eine Sitzende, 340 px entfernt
-        vorher = [505.0, 95.0, 565.0, 305.0]                  # 210 px hoch → Sprung bis 84 px
+        kaesten = np.array([[100.0, 300.0, 400.0, 480.0]])  # nur eine Sitzende, 340 px entfernt
+        vorher = [505.0, 95.0, 565.0, 305.0]  # 210 px hoch → Sprung bis 84 px
         self.assertIsNone(Smplestxbild.wahl(kaesten, vorher))
         self.assertEqual(Smplestxbild.wahl(kaesten, [110.0, 290.0, 410.0, 470.0]), 0)
 
@@ -180,11 +180,10 @@ class DasBild(unittest.TestCase):
     def test_der_befund_traegt_den_gewaehlten_kasten_fuer_das_naechste_bild(self):
         bild = self._bild()
         bild.ausschnitt = lambda *args: np.array([0.0, 0.0, 10.0, 10.0])
-        bild.netzeingabe = lambda *args: 'eingabe'
-        bild.durchrechnen = lambda eingabe: {
-            Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
+        bild.netzeingabe = lambda *args: "eingabe"
+        bild.durchrechnen = lambda eingabe: {Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
         befund = bild.auswerten(self._rgb(), vorher=[0.0, 0.0, 12.0, 12.0])
-        self.assertEqual(list(Sicher.wert(befund.kasten, 'Kasten')), self.KAESTEN[0])
+        self.assertEqual(list(Sicher.wert(befund.kasten, "Kasten")), self.KAESTEN[0])
         self.assertAlmostEqual(befund.guete, 0.99, places=5)
 
     def test_die_einstellungen_werden_gelesen(self):
@@ -196,11 +195,11 @@ class DasBild(unittest.TestCase):
     def test_der_detektor_bekommt_die_werte_aus_der_konfiguration(self):
         bild = self._bild()
         bild.personen(self._rgb())
-        self.assertEqual(bild.detektor.aufrufe[0]['conf'], 0.42)
-        self.assertEqual(bild.detektor.aufrufe[0]['classes'], 0)
+        self.assertEqual(bild.detektor.aufrufe[0]["conf"], 0.42)
+        self.assertEqual(bild.detektor.aufrufe[0]["classes"], 0)
 
     def test_ein_gespiegelter_kasten_bekommt_positive_masse(self):
-        u"""YOLO liefert gelegentlich rechts vor links."""
+        """YOLO liefert gelegentlich rechts vor links."""
         xywh = Smplestxbild.als_xywh(np.array([100.0, 200.0, 40.0, 150.0]))
         self.assertEqual(list(xywh), [100.0, 200.0, 60.0, 50.0])
 
@@ -211,26 +210,24 @@ class DasBild(unittest.TestCase):
         self.assertEqual(befund.grund, Smplestxbefund.KEINE_PERSON)
 
     def test_ein_gescheiterter_ausschnitt_ist_ein_eigener_grund(self):
-        u"""`process_bbox` gibt `None`, wenn der Kasten unbrauchbar ist."""
+        """`process_bbox` gibt `None`, wenn der Kasten unbrauchbar ist."""
         bild = self._bild()
         bild.ausschnitt = lambda *args: None
-        self.assertEqual(bild.auswerten(self._rgb()).grund,
-                         Smplestxbefund.KEIN_AUSSCHNITT)
+        self.assertEqual(bild.auswerten(self._rgb()).grund, Smplestxbefund.KEIN_AUSSCHNITT)
 
     def test_der_befund_traegt_die_guete_des_groessten_kastens(self):
         bild = self._bild()
         bild.ausschnitt = lambda *args: np.array([0.0, 0.0, 100.0, 200.0])
-        bild.netzeingabe = lambda *args: 'eingabe'
-        bild.durchrechnen = lambda eingabe: {
-            Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
+        bild.netzeingabe = lambda *args: "eingabe"
+        bild.durchrechnen = lambda eingabe: {Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
         befund = bild.auswerten(self._rgb())
         self.assertTrue(befund.gefunden)
         self.assertAlmostEqual(befund.guete, 0.55, places=5)
-        self.assertEqual(list(Sicher.wert(befund.kasten, 'Kasten')), [0.0, 0.0, 100.0, 200.0])
+        self.assertEqual(list(Sicher.wert(befund.kasten, "Kasten")), [0.0, 0.0, 100.0, 200.0])
 
 
 class DieAbtastung(unittest.TestCase):
-    u"""Welche Bildnummern eine Ziel-Bildrate braucht."""
+    """Welche Bildnummern eine Ziel-Bildrate braucht."""
 
     def test_gleiche_rate_liest_jedes_bild(self):
         abtastung = Bildabtastung(300, 30.0, 30.0)
@@ -247,14 +244,14 @@ class DieAbtastung(unittest.TestCase):
         self.assertEqual(nummern[:4], [0, 2, 4, 6])
 
     def test_ntsc_gilt_als_dieselbe_rate(self):
-        u"""29,97 ist nicht 30 — ohne Toleranz nimmt jedes NTSC-Video den
+        """29,97 ist nicht 30 — ohne Toleranz nimmt jedes NTSC-Video den
         Umweg ueber die Zeitachse, obwohl es Bild fuer Bild gemeint ist.
         """
         self.assertTrue(Bildabtastung(100, 29.995, 30.0).unveraendert)
         self.assertFalse(Bildabtastung(100, 29.9, 30.0).unveraendert)
 
     def test_keine_nummer_zeigt_ueber_das_ende(self):
-        u"""Beim Hochrechnen zeigt die Rundung ueber das letzte Bild.
+        """Beim Hochrechnen zeigt die Rundung ueber das letzte Bild.
 
         DIESE PRUEFUNG WAR ZUERST ZAHNLOS (Sabotageprobe 02.09.2026):
         Sie stand auf `(10, 25, 30)` — dort greift die Deckelung gar
@@ -266,11 +263,10 @@ class DieAbtastung(unittest.TestCase):
         for gesamt, quelle, ziel in ((2, 30.0, 60.0), (1, 15.0, 60.0)):
             with self.subTest(gesamt=gesamt, quelle=quelle, ziel=ziel):
                 nummern = Bildabtastung(gesamt, quelle, ziel).nummern()
-                self.assertLessEqual(max(nummern), gesamt - 1,
-                                     'liest ein Bild, das es nicht gibt')
+                self.assertLessEqual(max(nummern), gesamt - 1, "liest ein Bild, das es nicht gibt")
 
     def test_das_hochrechnen_liefert_mehr_bilder_als_die_quelle(self):
-        u"""Sonst waere die Deckelung nur deshalb erfuellt, weil gar
+        """Sonst waere die Deckelung nur deshalb erfuellt, weil gar
         nicht hochgerechnet wird."""
         self.assertEqual(len(Bildabtastung(2, 30.0, 60.0).nummern()), 4)
         self.assertEqual(len(Bildabtastung(10, 25.0, 30.0).nummern()), 12)
@@ -279,7 +275,7 @@ class DieAbtastung(unittest.TestCase):
         self.assertEqual(Bildabtastung(0, 30.0, 30.0).nummern(), [])
 
     def test_ohne_bildrate_wird_mit_dreissig_gerechnet(self):
-        u"""Manche Container nennen keine Bildrate — `cap.get` gibt 0."""
+        """Manche Container nennen keine Bildrate — `cap.get` gibt 0."""
         self.assertEqual(Bildabtastung(60, 0, None).quellrate, 30.0)
 
     def test_mindestens_ein_bild(self):
@@ -287,7 +283,7 @@ class DieAbtastung(unittest.TestCase):
 
 
 class DieAusdrucksreihe(unittest.TestCase):
-    u"""Je Bild zehn Werte — auch dort, wo niemand zu sehen war."""
+    """Je Bild zehn Werte — auch dort, wo niemand zu sehen war."""
 
     def test_ein_bild_ohne_person_bekommt_nullen(self):
         reihe = Ausdrucksreihe(30.0)
@@ -296,14 +292,14 @@ class DieAusdrucksreihe(unittest.TestCase):
         self.assertEqual(reihe.erkannt, 0)
 
     def test_zu_lange_ausdruecke_werden_gekuerzt(self):
-        u"""SMPLest-X liefert 50 Parameter, weiter gehen zehn."""
+        """SMPLest-X liefert 50 Parameter, weiter gehen zehn."""
         reihe = Ausdrucksreihe(30.0)
         reihe.dazu([float(i) for i in range(50)])
         self.assertEqual(len(reihe.bilder[0]), 10)
         self.assertEqual(reihe.erkannt, 1)
 
     def test_alle_zeilen_sind_gleich_lang(self):
-        u"""Sonst brechen die Blendshapes mitten im Video ab."""
+        """Sonst brechen die Blendshapes mitten im Video ab."""
         reihe = Ausdrucksreihe(24.0)
         reihe.dazu(range(50))
         reihe.leer()
@@ -313,15 +309,20 @@ class DieAusdrucksreihe(unittest.TestCase):
     def test_das_woerterbuch_traegt_die_sechs_felder(self):
         reihe = Ausdrucksreihe(24.0)
         reihe.leer()
-        self.assertEqual(reihe.als_dict(),
-                         {'fps': 24.0, 'frame_count': 1,
-                          'expression_frames': [[0.0] * 10],
-                          'jaw_frames': [[0.0] * 3],
-                          'face_points': [[]],
-                          'detected_count': 0})
+        self.assertEqual(
+            reihe.als_dict(),
+            {
+                "fps": 24.0,
+                "frame_count": 1,
+                "expression_frames": [[0.0] * 10],
+                "jaw_frames": [[0.0] * 3],
+                "face_points": [[]],
+                "detected_count": 0,
+            },
+        )
 
     def test_kiefer_und_marken_stehen_je_bild_daneben(self):
-        u"""Ein Bild ohne Person traegt drei Nullen und keine Marken —
+        """Ein Bild ohne Person traegt drei Nullen und keine Marken —
         die Zeilen bleiben zu den Ausdruecken deckungsgleich."""
         reihe = Ausdrucksreihe(24.0)
         reihe.dazu(range(10), [0.3, 0.0, 0.1], [(10.5, 20.0), (11.0, 21.5)])
@@ -339,7 +340,7 @@ class DieAusdrucksreihe(unittest.TestCase):
         reihe = Ausdrucksreihe(30.0)
         reihe.dazu(range(10))
         with Pruefablage.ordner() as ordner:
-            ziel = os.path.join(ordner, 'tief', 'ausdruck.json')
+            ziel = os.path.join(ordner, "tief", "ausdruck.json")
             reihe.schreiben(ziel)
             with open(ziel) as datei:
-                self.assertEqual(json.load(datei)['detected_count'], 1)
+                self.assertEqual(json.load(datei)["detected_count"], 1)

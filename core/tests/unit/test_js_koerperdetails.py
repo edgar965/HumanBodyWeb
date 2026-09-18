@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Körperdetails: Farben und Längen von Iris, Wimpern und Nägeln.
+"""Körperdetails: Farben und Längen von Iris, Wimpern und Nägeln.
 
 WARUM (Edgar, 12.09.2026: „bei klick auf das Model … muss ich doch einen
 Bereich haben wo ich die Farbe der Fingernägel, die Augenwimpern, die Farbe
@@ -20,11 +20,12 @@ Three.js und läuft hier in Node an einem kleinen Netz:
 Sabotage-Gegenprobe gemacht: `_laengs` ohne `(faktor - 1)` → Fälle 3 und 4
 rot; `_basisZurueck` weggelassen → Fall 4 (zweites Anwenden) rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'koerperdetails.js')
+MODUL = Jsmodul("gemeinsam", "koerperdetails.js")
 
 SKRIPT = """
 const { Koerperdetails } = await import(MODUL);
@@ -120,9 +121,8 @@ console.log(JSON.stringify({ ok: true, bewegt: Koerperdetails.strecken(p.slice()
 
 
 class KoerperdetailsTest(SimpleTestCase):
-
     def test_farben_und_laengen(self):
         aus = MODUL.laufen(SKRIPT)
-        self.assertTrue(aus['ok'])
+        self.assertTrue(aus["ok"])
         # Spitze des Streifens (2) + freie Nagelecken (2); Wurzeln bleiben.
-        self.assertEqual(aus['bewegt'], 4)
+        self.assertEqual(aus["bewegt"], 4)

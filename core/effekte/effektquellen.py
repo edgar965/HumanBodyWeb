@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Effektquellen — was die Seite „Effekte" zur Auswahl stellt.
+"""Effektquellen — was die Seite „Effekte" zur Auswahl stellt.
 
 BVH-DATEIEN: die fertigen Auftraege von „Process Videos" — nur die, deren
 Gelenke der Retargeter kennt (SMPL-Namen der 3D-Pipelines). MocapNET-BVHs
@@ -17,6 +17,7 @@ FORMAT: je BVH das Format, das der Retarget der Web-App erkennt
 (`Skeleton.detect_format`) — die Figur-Pipeline nimmt alles Erkannte, auch
 MocapNET; die Blender-Pipeline nur SMPL-Namen (`passt`).
 """
+
 import logging
 import os
 from pathlib import Path
@@ -28,58 +29,66 @@ from effekte.figur.modellfigur import Modellfigur
 from ..dienste.modellvorlagen import Modellvorlagen
 from ..models import BVHJob
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
-__all__ = ['Effektquellen']
+__all__ = ["Effektquellen"]
 
 
 class Effektquellen:
-
-    ENDUNG_KLEID = '.mhclo'
+    ENDUNG_KLEID = ".mhclo"
     HOECHSTENS = 60
 
     # -------------------------------------------------------------- BVH
 
     @classmethod
     def bvh_dateien(cls):
-        u"""Fertige Auftraege mit BVH, neueste zuerst; `passt` sagt, ob der
+        """Fertige Auftraege mit BVH, neueste zuerst; `passt` sagt, ob der
         Retargeter die Gelenke kennt."""
         eintraege = []
-        auftraege = (BVHJob.objects.filter(status='complete')
-                     .exclude(bvh_file='').order_by('-created_at')[:cls.HOECHSTENS])
+        auftraege = (
+            BVHJob.objects.filter(status="complete")
+            .exclude(bvh_file="")
+            .order_by("-created_at")[: cls.HOECHSTENS]
+        )
         for job in auftraege:
             pfad = str(job.bvh_file)
             if not os.path.isfile(pfad):
                 continue
             namen = Bvhnamen.lesen(pfad)
             unbekannt = namen.unbekannte()
-            eintraege.append({
-                'pfad': pfad,
-                'name': os.path.basename(pfad),
-                'auftrag': job.name,
-                'pipeline': job.get_pipeline_display(),
-                'bilder': namen.bilder(),
-                'bildrate': namen.bildrate(),
-                'format': cls.format(namen.gelenke()),
-                'passt': not unbekannt,
-                'grund': ('' if not unbekannt else
-                          '%d unbekannte Gelenke (%s …)' % (len(unbekannt), unbekannt[0])),
-                'vorgewaehlt': False,
-            })
+            eintraege.append(
+                {
+                    "pfad": pfad,
+                    "name": os.path.basename(pfad),
+                    "auftrag": job.name,
+                    "pipeline": job.get_pipeline_display(),
+                    "bilder": namen.bilder(),
+                    "bildrate": namen.bildrate(),
+                    "format": cls.format(namen.gelenke()),
+                    "passt": not unbekannt,
+                    "grund": (
+                        ""
+                        if not unbekannt
+                        else "%d unbekannte Gelenke (%s …)" % (len(unbekannt), unbekannt[0])
+                    ),
+                    "vorgewaehlt": False,
+                }
+            )
         # Der neueste passende ist vorgewaehlt — so steht der Ausgabevorschlag
         # sofort da, statt erst nach einem Klick.
         for eintrag in eintraege:
-            if eintrag['passt']:
-                eintrag['vorgewaehlt'] = True
+            if eintrag["passt"]:
+                eintrag["vorgewaehlt"] = True
                 break
         return eintraege
 
     @staticmethod
     def format(gelenke):
-        u"""Name des erkannten BVH-Formats (CMU, SMPL, MOCAPNET …) oder ''."""
+        """Name des erkannten BVH-Formats (CMU, SMPL, MOCAPNET …) oder ''."""
         from humanbody_core.skeleton import Skeleton
+
         bauart = Skeleton.detect_format(list(gelenke))
-        return getattr(bauart, 'FORMAT', '') or '' if bauart else ''
+        return getattr(bauart, "FORMAT", "") or "" if bauart else ""
 
     # ----------------------------------------------------------- Kleider
 
@@ -90,32 +99,31 @@ class Effektquellen:
             return []
         eintraege = []
         for unter in sorted(p for p in ordner.iterdir() if p.is_dir()):
-            for datei in sorted(unter.glob('*' + cls.ENDUNG_KLEID)):
-                eintraege.append({'pfad': str(datei), 'name': unter.name,
-                                  'titel': cls.titel(unter.name)})
+            for datei in sorted(unter.glob("*" + cls.ENDUNG_KLEID)):
+                eintraege.append({"pfad": str(datei), "name": unter.name, "titel": cls.titel(unter.name)})
                 break
         return eintraege
 
     @staticmethod
     def titel(name):
-        return name.replace('_', ' ')
+        return name.replace("_", " ")
 
     # ----------------------------------------------------------- Modelle
 
     @classmethod
     def modelle(cls):
-        u"""Die gespeicherten Modelle der Szene, mit dem, was der Film daraus
+        """Die gespeicherten Modelle der Szene, mit dem, was der Film daraus
         macht: Koerpertyp, GarmentCode-Stuecke, Frisur."""
         eintraege = []
         for name in Modellvorlagen.namen():
             pfad = Modellvorlagen.pfad(name)
             try:
                 modell = Modellfigur(str(pfad))
-            except (OSError, ValueError):
-                logger.warning('Effektquellen: Modell %s nicht lesbar', name, exc_info=True)
+            except OSError, ValueError:
+                logger.warning("Effektquellen: Modell %s nicht lesbar", name, exc_info=True)
                 continue
             beschreibung = modell.beschreibung()
-            beschreibung['name'] = name
-            beschreibung['stuecke'] = [s for s in beschreibung['stuecke'] if s]
+            beschreibung["name"] = name
+            beschreibung["stuecke"] = [s for s in beschreibung["stuecke"] if s]
             eintraege.append(beschreibung)
         return eintraege

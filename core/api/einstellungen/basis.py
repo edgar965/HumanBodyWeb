@@ -35,22 +35,22 @@ from django.views import View
 
 from ...models import AppSettings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Einstellungsseite(View):
     """GET zeigt das Formular, POST übernimmt die Felder und leitet zurück."""
 
     #: Vorlage der Seite.
-    VORLAGE = ''
+    VORLAGE = ""
     #: Name der URL, auf die nach dem Speichern umgeleitet wird.
-    ROUTE = ''
+    ROUTE = ""
     #: Meldung nach erfolgreichem Speichern.
-    ERFOLG = 'Settings saved.'
+    ERFOLG = "Settings saved."
 
     def get(self, request):
         s = AppSettings.load()
-        return render(request, self.VORLAGE, {'settings': s, **self.kontext(s)})
+        return render(request, self.VORLAGE, {"settings": s, **self.kontext(s)})
 
     def post(self, request):
         s = AppSettings.load()
@@ -58,9 +58,9 @@ class Einstellungsseite(View):
             self.uebernehmen(s, request.POST)
             s.save()
             messages.success(request, self.ERFOLG)
-        except (ValueError, TypeError):
-            logger.debug('%s: unbrauchbarer Wert', self.ROUTE, exc_info=True)
-            messages.error(request, 'Invalid value.')
+        except ValueError, TypeError:
+            logger.debug("%s: unbrauchbarer Wert", self.ROUTE, exc_info=True)
+            messages.error(request, "Invalid value.")
         return redirect(self.ROUTE)
 
     # ------------------------------------------------------ je Seite besetzen

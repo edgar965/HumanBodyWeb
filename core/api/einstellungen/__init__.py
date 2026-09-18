@@ -20,16 +20,24 @@ from .szenenseite import SzeneEinstellungen
 from .zweidseite import ZweiDEinstellungen
 
 __all__ = [
-    'Einstellungsseite', 'ModellEinstellungen', 'ErgebnisEinstellungen',
-    'SzeneEinstellungen', 'ZweiDEinstellungen', 'DreiDEinstellungen',
-    'SmplEinstellungen',
-    'app_settings_model', 'app_settings_result', 'app_settings_scene',
-    'app_settings_videobvh_2d', 'app_settings_videobvh_3d', 'app_settings_smpl',
+    "Einstellungsseite",
+    "ModellEinstellungen",
+    "ErgebnisEinstellungen",
+    "SzeneEinstellungen",
+    "ZweiDEinstellungen",
+    "DreiDEinstellungen",
+    "SmplEinstellungen",
+    "app_settings_model",
+    "app_settings_result",
+    "app_settings_scene",
+    "app_settings_videobvh_2d",
+    "app_settings_videobvh_3d",
+    "app_settings_smpl",
 ]
 
-app_settings_model = ModellEinstellungen.ansicht('app_settings_model')
-app_settings_result = ErgebnisEinstellungen.ansicht('app_settings_result')
-app_settings_scene = SzeneEinstellungen.ansicht('app_settings_scene')
-app_settings_videobvh_2d = ZweiDEinstellungen.ansicht('app_settings_videobvh_2d')
-app_settings_videobvh_3d = DreiDEinstellungen.ansicht('app_settings_videobvh_3d')
-app_settings_smpl = SmplEinstellungen.ansicht('app_settings_smpl')
+app_settings_model = ModellEinstellungen.ansicht("app_settings_model")
+app_settings_result = ErgebnisEinstellungen.ansicht("app_settings_result")
+app_settings_scene = SzeneEinstellungen.ansicht("app_settings_scene")
+app_settings_videobvh_2d = ZweiDEinstellungen.ansicht("app_settings_videobvh_2d")
+app_settings_videobvh_3d = DreiDEinstellungen.ansicht("app_settings_videobvh_3d")
+app_settings_smpl = SmplEinstellungen.ansicht("app_settings_smpl")

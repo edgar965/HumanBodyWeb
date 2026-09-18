@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Der Unterprozess hinter „Video erzeugen" im Animations-Reiter.
+"""Der Unterprozess hinter „Video erzeugen" im Animations-Reiter.
 
 Bekommt einen Auftrag als JSON, baut die Figur MIT ihren Morphs und ihren
 Kleidern, rechnet die Bewegung (mit Weichgewebe, wenn gewuenscht) und
@@ -22,6 +22,7 @@ Auftrag (JSON):
 
 Aufruf:  python filmlauf.py <auftrag.json>
 """
+
 import json
 import os
 import sys
@@ -34,96 +35,104 @@ sys.path.insert(0, ORDNER)
 
 
 class Filmlauf:
-    u"""Ein Auftrag, ein Video."""
+    """Ein Auftrag, ein Video."""
 
     def __init__(self, auftrag_pfad):
-        with open(auftrag_pfad, encoding='utf-8') as datei:
+        with open(auftrag_pfad, encoding="utf-8") as datei:
             self.auftrag = json.load(datei)
-        self.fortschritt = self.auftrag['fortschritt']
+        self.fortschritt = self.auftrag["fortschritt"]
         self.begonnen = time.time()
-        self._melden(u'Start', 0.0)
+        self._melden("Start", 0.0)
 
     def _melden(self, phase, anteil, fehler=None, fertig=False):
-        u"""Schreibt den Stand — ATOMAR, ueber eine Zwischendatei.
+        """Schreibt den Stand — ATOMAR, ueber eine Zwischendatei.
 
         Der Server liest die Datei jederzeit; eine halb geschriebene JSON
         waere fuer ihn ein Fehler, obwohl nichts kaputt ist.
         """
         stand = {
-            'phase': phase, 'anteil': round(float(anteil), 3),
-            'sekunden': round(time.time() - self.begonnen, 1),
-            'fertig': fertig, 'fehler': fehler,
+            "phase": phase,
+            "anteil": round(float(anteil), 3),
+            "sekunden": round(time.time() - self.begonnen, 1),
+            "fertig": fertig,
+            "fehler": fehler,
         }
-        vorlaeufig = self.fortschritt + '.neu'
-        with open(vorlaeufig, 'w', encoding='utf-8') as datei:
+        vorlaeufig = self.fortschritt + ".neu"
+        with open(vorlaeufig, "w", encoding="utf-8") as datei:
             json.dump(stand, datei)
         os.replace(vorlaeufig, self.fortschritt)
 
     def _figurpunkte(self):
-        u"""Alle Basispunkte der Figur, mit ihren Morphs — ueber Django.
+        """Alle Basispunkte der Figur, mit ihren Morphs — ueber Django.
 
         Derselbe Weg wie die Szene (`Charakterdaten.koerper_aus`): Eine
         zweite Morph-Rechnung hier liefe irgendwann auseinander.
         """
         from bvh_nach_anim import Animschreiber
+
         Animschreiber._django()
         from core.dienste.charakterdaten import Charakterdaten
-        parameter = {'body_type': self.auftrag.get('body_type')
-                     or 'Female_Caucasian'}
-        for name, wert in (self.auftrag.get('morphs') or {}).items():
-            parameter['morph_%s' % name] = wert
+
+        parameter = {"body_type": self.auftrag.get("body_type") or "Female_Caucasian"}
+        for name, wert in (self.auftrag.get("morphs") or {}).items():
+            parameter["morph_%s" % name] = wert
         # Alter/Masse/Tonus (17.09.2026): formen den Koerper UND die
         # Hautverschiebung — wie in MB-Lab.
-        for name, wert in (self.auftrag.get('meta') or {}).items():
-            parameter['meta_%s' % name] = wert
+        for name, wert in (self.auftrag.get("meta") or {}).items():
+            parameter["meta_%s" % name] = wert
         koerper = Charakterdaten.koerper_aus(parameter)
         if koerper.vertices is None:
-            raise ValueError(u'Die Figur liefert kein Netz (Morphdaten?).')
+            raise ValueError("Die Figur liefert kein Netz (Morphdaten?).")
         # KOPIE, nicht der Puffer: `CharacterState.compute()` gibt dasselbe
         # Feld zurueck, das der naechste Reglerzug ueberschreibt (CLAUDE.md,
         # 08.09.2026, „Zwei Stufen statt einer").
         punkte = np.array(koerper.vertices, dtype=np.float64)
-        return punkte, koerper.geschlecht, self._feines_netz(punkte,
-                                                             koerper.geschlecht)
+        return punkte, koerper.geschlecht, self._feines_netz(punkte, koerper.geschlecht)
 
     def _feines_netz(self, punkte, geschlecht):
-        u"""Die `Koerperfeinheit` fuer das SICHTBARE Netz: Unterteiler mit der
+        """Die `Koerperfeinheit` fuer das SICHTBARE Netz: Unterteiler mit der
         Film-Stufe (Einstellung, MB-Lab 3), Korrekturglaettung und — wenn
         eingeschaltet — die Hautverschiebung aus Alter/Tonus/Masse. None,
         wenn es keinen Unterteiler gibt (dann bleibt die 18K-Aussenhaut)."""
         from core.dienste.charakterdaten import Charakterdaten
         from core.dienste.netzqualitaet import Netzqualitaet
         from koerperfeinheit import Koerperfeinheit
-        unterteiler = Charakterdaten.unterteiler(
-            geschlecht, stufen=Netzqualitaet.stufen_film())
+
+        unterteiler = Charakterdaten.unterteiler(geschlecht, stufen=Netzqualitaet.stufen_film())
         netz = Charakterdaten.netzdaten(geschlecht)
-        if unterteiler is None or getattr(netz, 'faces', None) is None:
+        if unterteiler is None or getattr(netz, "faces", None) is None:
             return None
         textur = None
         if Netzqualitaet.verschiebung():
             from core.dienste.verschiebungstextur import Verschiebungstextur
-            meta = self.auftrag.get('meta') or {}
+
+            meta = self.auftrag.get("meta") or {}
             textur = Verschiebungstextur.feld(
-                geschlecht, meta.get('age', 0.0), meta.get('tone', 0.0),
-                meta.get('mass', 0.0))
+                geschlecht, meta.get("age", 0.0), meta.get("tone", 0.0), meta.get("mass", 0.0)
+            )
         return Koerperfeinheit(unterteiler, np.asarray(netz.faces), textur)
 
     def laufen(self):
         from hbfilm import Hbfilm
+
         try:
             punkte, geschlecht, fein = self._figurpunkte()
-            fps = float(self.auftrag.get('fps') or 24.0)
-            bilder = int(round(float(self.auftrag.get('sekunden') or 5.0)
-                               * fps))
+            fps = float(self.auftrag.get("fps") or 24.0)
+            bilder = int(round(float(self.auftrag.get("sekunden") or 5.0) * fps))
             film = Hbfilm(
-                self.auftrag['bvh'], bilder, fps,
-                ab_sekunden=float(self.auftrag.get('ab_sekunden') or 0.0),
-                stuecke=self.auftrag.get('stuecke') or [],
-                physik=float(self.auftrag.get('physik_mm') or 0.0),
-                geschlecht=geschlecht, figurpunkte=punkte, figurfein=fein,
-                details=self.auftrag.get('details') or {},
-                body_type=self.auftrag.get('body_type') or 'Female_Caucasian',
-                melder=self._melden)
+                self.auftrag["bvh"],
+                bilder,
+                fps,
+                ab_sekunden=float(self.auftrag.get("ab_sekunden") or 0.0),
+                stuecke=self.auftrag.get("stuecke") or [],
+                physik=float(self.auftrag.get("physik_mm") or 0.0),
+                geschlecht=geschlecht,
+                figurpunkte=punkte,
+                figurfein=fein,
+                details=self.auftrag.get("details") or {},
+                body_type=self.auftrag.get("body_type") or "Female_Caucasian",
+                melder=self._melden,
+            )
             proben = film.proben()
             film.rechnen()
             _pfad, zahl = self._video(film, fps)
@@ -131,47 +140,50 @@ class Filmlauf:
             # Stand `video.mp4.json` — kam „Fertig" 70 ms davor (gemessen
             # 11.09.2026), stand das Ergebnis ohne Messwerte da.
             self._bilanz(film, proben, zahl)
-            self._melden(u'Fertig', 1.0, fertig=True)
+            self._melden("Fertig", 1.0, fertig=True)
             return 0
         # stumm gewollt: der Traceback geht in die Standdatei (`_melden`), die der
         # Server liest und anzeigt
-        except Exception as fehler:                              # noqa: BLE001
+        except Exception as fehler:  # noqa: BLE001
             import traceback
-            self._melden(u'Abgebrochen', 0.0,
-                         fehler=u'%s\n%s' % (fehler, traceback.format_exc()))
+
+            self._melden("Abgebrochen", 0.0, fehler="%s\n%s" % (fehler, traceback.format_exc()))
             return 1
 
     def _video(self, film, fps):
-        u"""Das MP4 schreiben. Die Effekte-Pipeline (`effekte/figur/figurfilm.py`)
+        """Das MP4 schreiben. Die Effekte-Pipeline (`effekte/figur/figurfilm.py`)
         ueberschreibt das: eigene Bildgroesse, H.264 statt mp4v."""
-        return film.schreiben(self.auftrag['ziel'], fps=fps, schleifen=1)
+        return film.schreiben(self.auftrag["ziel"], fps=fps, schleifen=1)
 
     def _bilanz(self, film, proben, bilder):
-        u"""Die Messwerte neben das Video — sie sind der Beleg."""
+        """Die Messwerte neben das Video — sie sind der Beleg."""
         bilanz = {
-            'bilder': bilder, 'wurzelweg_m': film.bahn.wurzelweg(),
-            'quell_fps': film.bahn.quell_fps, 'schritt': film.bahn.schritt,
-            'teile': [],
+            "bilder": bilder,
+            "wurzelweg_m": film.bahn.wurzelweg(),
+            "quell_fps": film.bahn.quell_fps,
+            "schritt": film.bahn.schritt,
+            "teile": [],
         }
         for (name, punkte, ruhe, sitz, _leer), teil in zip(proben, film.teile):
-            eintrag = {'name': name, 'punkte': punkte,
-                       'ruheprobe_mm': round(ruhe, 6),
-                       'sitz_mm': round(sitz, 1) if sitz is not None else None}
-            physik = teil.get('physik')
+            eintrag = {
+                "name": name,
+                "punkte": punkte,
+                "ruheprobe_mm": round(ruhe, 6),
+                "sitz_mm": round(sitz, 1) if sitz is not None else None,
+            }
+            physik = teil.get("physik")
             if physik:
-                eintrag['zuschlag_mm'] = round(physik['groesster_mm'], 1)
-                if 'durchstich' in physik:
-                    eintrag['stoff_im_koerper_prozent'] = round(
-                        physik['durchstich'], 2)
-            bilanz['teile'].append(eintrag)
+                eintrag["zuschlag_mm"] = round(physik["groesster_mm"], 1)
+                if "durchstich" in physik:
+                    eintrag["stoff_im_koerper_prozent"] = round(physik["durchstich"], 2)
+            bilanz["teile"].append(eintrag)
         for name, werte in film.gleichlauf():
-            for eintrag in bilanz['teile']:
-                if eintrag['name'] == name:
-                    eintrag['gleichlauf_mm'] = [round(w, 1) for w in werte]
-        with open(self.auftrag['ziel'] + '.json', 'w',
-                  encoding='utf-8') as datei:
+            for eintrag in bilanz["teile"]:
+                if eintrag["name"] == name:
+                    eintrag["gleichlauf_mm"] = [round(w, 1) for w in werte]
+        with open(self.auftrag["ziel"] + ".json", "w", encoding="utf-8") as datei:
             json.dump(bilanz, datei, indent=1, ensure_ascii=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(Filmlauf(sys.argv[1]).laufen())

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Figurkataloge`: aus einer Serverantwort die Zeilen des Figurwahl-Dialogs.
+"""`Figurkataloge`: aus einer Serverantwort die Zeilen des Figurwahl-Dialogs.
 
 WARUM (11.09.2026): Der Dialog „Charakter hinzufügen" der Szene-Seite las
 seine Listen über Klassen, die an `scene/state.js` hängen; für das
@@ -9,11 +9,12 @@ die der Szene-Seite, und wer sie ändert, ändert beide Dialoge.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'figurkataloge.js')
+MODUL = Jsmodul("gemeinsam", "figurkataloge.js")
 
 SKRIPT = """
 const { Figurkataloge } = await import(MODUL);
@@ -84,9 +85,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class FigurkatalogeTest(SimpleTestCase):
-
     databases = set()
 
     def test_zeilen_je_quelle(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

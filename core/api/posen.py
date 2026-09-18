@@ -29,33 +29,32 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from ..daten.anfragerumpf import Anfragerumpf
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Posen:
     """Die Posendateien unter `poseData/<kategorie>/<name>.json`."""
 
     #: Die A-Pose ohne Datei — nur mit Absatz traegt sie Knochen.
-    RUHELAGE = 'ruhelage'
+    RUHELAGE = "ruhelage"
     #: Wie `Skelettdaten.VORGABE_KOERPERTYP`.
-    VORGABE_KOERPERTYP = 'Female_Caucasian'
+    VORGABE_KOERPERTYP = "Female_Caucasian"
 
     @staticmethod
     def wurzel():
-        return Path(str(settings.HUMANBODY_DATA_DIR)).parent / 'poseData'
+        return Path(str(settings.HUMANBODY_DATA_DIR)).parent / "poseData"
 
     @classmethod
     def _geprueft(cls, kategorie, name):
         """Der aufgeloeste Pfad — oder None, wenn er die Wurzel verlaesst."""
         wurzel = cls.wurzel().resolve()
         try:
-            ziel = (cls.wurzel() / kategorie / ('%s.json' % name)).resolve()
-        except (OSError, ValueError):
+            ziel = (cls.wurzel() / kategorie / ("%s.json" % name)).resolve()
+        except OSError, ValueError:
             # Kategorie oder Name kommen aus dem Anfragerumpf; ein Pfad, den
             # das Betriebssystem nicht aufloesen kann, ist eine ABGELEHNTE
             # Eingabe — und die will man sehen, wenn jemand sie probiert.
-            logger.warning('[pose-manage] Pfad nicht aufloesbar: %s/%s',
-                           kategorie, name, exc_info=True)
+            logger.warning("[pose-manage] Pfad nicht aufloesbar: %s/%s", kategorie, name, exc_info=True)
             return None
         return ziel if ziel.is_relative_to(wurzel) else None
 
@@ -66,10 +65,16 @@ class Posen:
     def liste(request):
         """Die Posen von CharMorph/MB-Lab, nach Kategorie."""
         from humanbody_core.pose import list_poses
+
         # Ohne die Dateipfade — die gehen den Browser nichts an.
-        return JsonResponse({'categories': {
-            kategorie: [{'id': p['id'], 'name': p['name']} for p in posen]
-            for kategorie, posen in list_poses().items()}})
+        return JsonResponse(
+            {
+                "categories": {
+                    kategorie: [{"id": p["id"], "name": p["name"]} for p in posen]
+                    for kategorie, posen in list_poses().items()
+                }
+            }
+        )
 
     @staticmethod
     @require_GET
@@ -94,30 +99,30 @@ class Posen:
         from humanbody_core.pose import load_pose
         from ..dienste.absatzpose import Absatzpose
         from ..dienste.charakterdaten import Charakterdaten
+
         if pose_id == Posen.RUHELAGE:
             knochen = {}
         else:
             try:
                 knochen = load_pose(pose_id).def_bones
             except FileNotFoundError:
-                return JsonResponse({'error': 'Pose not found: %s' % pose_id},
-                                    status=404)
-        geschlecht = Charakterdaten.geschlecht_zu(
-            request.GET.get('body_type', Posen.VORGABE_KOERPERTYP))
+                return JsonResponse({"error": "Pose not found: %s" % pose_id}, status=404)
+        geschlecht = Charakterdaten.geschlecht_zu(request.GET.get("body_type", Posen.VORGABE_KOERPERTYP))
         absatz = Absatzpose.aus_anfrage(request.GET, geschlecht)
         if absatz is not None:
             knochen = absatz.einrechnen(knochen)
-        return JsonResponse({
-            'pose_id': pose_id,
-            'bones': knochen,                             # {DEF-Name: [w,x,y,z]}
-            'threejs': Absatzpose.to_threejs(knochen),    # {DEF-Name: [x,y,z,w]}
-            'absatz': absatz.beschreibung() if absatz else None,
-            'hebung_m': absatz.hebung_m if absatz else 0.0,
-            # Die reinen Fussdeltas, damit der Betrachter sie bei einer
-            # laufenden Animation je Bild nachmischt (`posenabsatz.js`).
-            'absatz_deltas': (Absatzpose.to_threejs(absatz.deltas())
-                              if absatz else {}),
-        })
+        return JsonResponse(
+            {
+                "pose_id": pose_id,
+                "bones": knochen,  # {DEF-Name: [w,x,y,z]}
+                "threejs": Absatzpose.to_threejs(knochen),  # {DEF-Name: [x,y,z,w]}
+                "absatz": absatz.beschreibung() if absatz else None,
+                "hebung_m": absatz.hebung_m if absatz else 0.0,
+                # Die reinen Fussdeltas, damit der Betrachter sie bei einer
+                # laufenden Animation je Bild nachmischt (`posenabsatz.js`).
+                "absatz_deltas": (Absatzpose.to_threejs(absatz.deltas()) if absatz else {}),
+            }
+        )
 
     # ----------------------------------------------------------- Verwalten
 
@@ -133,45 +138,39 @@ class Posen:
         daten, fehler = Anfragerumpf.lesen(request)
         if fehler:
             return fehler
-        aktion = daten.get('action', '')
-        kategorie = daten.get('category', '')
-        name = daten.get('name', '')
-        logger.info('[pose-manage] action=%s, category=%s, name=%s',
-                    aktion, kategorie, name)
-        if aktion == 'delete':
+        aktion = daten.get("action", "")
+        kategorie = daten.get("category", "")
+        name = daten.get("name", "")
+        logger.info("[pose-manage] action=%s, category=%s, name=%s", aktion, kategorie, name)
+        if aktion == "delete":
             return Posen._loeschen(kategorie, name)
-        if aktion == 'rename':
-            return Posen._umbenennen(kategorie, name,
-                                     daten.get('new_name', '').strip())
-        return JsonResponse({'error': 'Unknown action: %s' % aktion},
-                            status=400)
+        if aktion == "rename":
+            return Posen._umbenennen(kategorie, name, daten.get("new_name", "").strip())
+        return JsonResponse({"error": "Unknown action: %s" % aktion}, status=400)
 
     @staticmethod
     def _loeschen(kategorie, name):
         if not kategorie or not name:
-            return JsonResponse({'error': 'category + name required'},
-                                status=400)
+            return JsonResponse({"error": "category + name required"}, status=400)
         pfad = Posen._geprueft(kategorie, name)
         if not pfad or not pfad.is_file():
-            return JsonResponse({'error': 'Pose not found'}, status=404)
+            return JsonResponse({"error": "Pose not found"}, status=404)
         pfad.unlink()
-        logger.info('[pose-manage] Deleted: %s', pfad)
-        return JsonResponse({'ok': True})
+        logger.info("[pose-manage] Deleted: %s", pfad)
+        return JsonResponse({"ok": True})
 
     @staticmethod
     def _umbenennen(kategorie, name, neuer_name):
         if not kategorie or not name or not neuer_name:
-            return JsonResponse(
-                {'error': 'category, name, new_name required'}, status=400)
+            return JsonResponse({"error": "category, name, new_name required"}, status=400)
         alt = Posen._geprueft(kategorie, name)
         neu = Posen._geprueft(kategorie, neuer_name)
         if not alt or not alt.is_file():
-            return JsonResponse({'error': 'Pose not found'}, status=404)
+            return JsonResponse({"error": "Pose not found"}, status=404)
         if not neu:
-            return JsonResponse({'error': 'Invalid new path'}, status=400)
+            return JsonResponse({"error": "Invalid new path"}, status=400)
         if neu.exists():
-            return JsonResponse({'error': '%s.json exists already'
-                                          % neuer_name}, status=409)
+            return JsonResponse({"error": "%s.json exists already" % neuer_name}, status=409)
         alt.rename(neu)
-        logger.info('[pose-manage] Renamed: %s -> %s', alt, neu)
-        return JsonResponse({'ok': True, 'new_name': neuer_name})
+        logger.info("[pose-manage] Renamed: %s -> %s", alt, neu)
+        return JsonResponse({"ok": True, "new_name": neuer_name})

@@ -11,13 +11,13 @@ import logging
 from .grundwerte import AUSSEN, EIGENE, WURZEL
 from .modulnamen import Modulnamen
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Lokalerimport:
     """Ein Import, der unterhalb einer Funktion steht."""
 
-    def __init__(self, datei, knoten, modulname, name=''):
+    def __init__(self, datei, knoten, modulname, name=""):
         self.datei = datei
         self.zeile = knoten.lineno
         self.modul = modulname
@@ -26,23 +26,22 @@ class Lokalerimport:
 
     def __str__(self):
         kurz = self.datei.relative_to(WURZEL).as_posix()
-        ziel = '%s.%s' % (self.modul, self.name) if self.name else self.modul
-        return f'{kurz}:{self.zeile} -> {ziel}'
+        ziel = "%s.%s" % (self.modul, self.name) if self.name else self.modul
+        return f"{kurz}:{self.zeile} -> {ziel}"
 
     @property
     def pruefbar(self):
-        kopf = self.modul.split('.')[0]
+        kopf = self.modul.split(".")[0]
         return kopf in EIGENE and kopf not in AUSSEN
 
     @property
     def loesbar(self):
         try:
             return importlib.util.find_spec(self.modul) is not None
-        except (ImportError, ValueError, AttributeError):
+        except ImportError, ValueError, AttributeError:
             # Nicht dasselbe wie „gibt es nicht": Hier scheitert schon das
             # Paket DARUEBER. Ohne diese Zeile sehen beide Faelle gleich aus.
-            logger.warning('%s: %s nicht aufloesbar', self, self.modul,
-                           exc_info=True)
+            logger.warning("%s: %s nicht aufloesbar", self, self.modul, exc_info=True)
             return False
 
     @property
@@ -64,10 +63,9 @@ class Lokalerimport:
         # `find_spec` wirft, wenn das Elternteil kein Paket ist — dann ist der
         # Name schlicht nicht da.
         try:
-            return importlib.util.find_spec('%s.%s'
-                                            % (self.modul, self.name)) is not None
+            return importlib.util.find_spec("%s.%s" % (self.modul, self.name)) is not None
         # stumm gewollt: `find_spec` auf `<modul>.<name>` wirft, wenn das
         # Elternteil kein Paket ist — dann ist der Name schlicht nicht da,
         # und genau das ist die Antwort.
-        except (ImportError, ValueError, AttributeError, ModuleNotFoundError):
+        except ImportError, ValueError, AttributeError, ModuleNotFoundError:
             return False

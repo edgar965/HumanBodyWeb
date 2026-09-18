@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Materialziel`: welche GarmentCode-Stücke bekommen den Reglerstand?
+"""`Materialziel`: welche GarmentCode-Stücke bekommen den Reglerstand?
 
 WARUM (12.09.2026, Edgar: „bei GarmentCode - bereich Farbe/Material -
 ändere ich das Gewebe, oder andere Einstellungen, tut sich nichts"): Seit
@@ -18,11 +18,12 @@ dieser Figur". Die Grenze liegt jetzt beim Urheber des Ereignisses:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'materialziel.js')
+MODUL = Jsmodul("scene", "materialziel.js")
 
 SKRIPT = """
 const { Materialziel: M } = await import(MODUL);
@@ -46,7 +47,6 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class MaterialzielTest(SimpleTestCase):
-
     def test_nutzer_wirkt_breit_code_nur_auf_die_auswahl(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

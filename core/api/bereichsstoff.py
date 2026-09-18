@@ -34,12 +34,12 @@ class Bereichsstoff:
     WEITENANTEIL = 0.010
 
     def __init__(self, parameter):
-        self.von = float(parameter.get('z_min', 0.0))
-        self.bis = float(parameter.get('z_max', 1.0))
-        self.mit_armen = parameter.get('include_arms', '0') == '1'
-        self.wachsen = int(parameter.get('grow', 2))
-        self.weite = float(parameter.get('looseness', 0.3))
-        self.kategorie = parameter.get('category', None)
+        self.von = float(parameter.get("z_min", 0.0))
+        self.bis = float(parameter.get("z_max", 1.0))
+        self.mit_armen = parameter.get("include_arms", "0") == "1"
+        self.wachsen = int(parameter.get("grow", 2))
+        self.weite = float(parameter.get("looseness", 0.3))
+        self.kategorie = parameter.get("category", None)
 
     # ------------------------------------------------------------------ Bauen
 
@@ -48,16 +48,21 @@ class Bereichsstoff:
         punkte = np.asarray(koerper.vertices, dtype=np.float64)
         flaechen = self._flaechen(koerper)
         if flaechen is None:
-            return None, 'No face topology available'
-        grundlage, grundflaechen = self._grundlage(koerper.geschlecht, punkte,
-                                                   flaechen)
+            return None, "No face topology available"
+        grundlage, grundflaechen = self._grundlage(koerper.geschlecht, punkte, flaechen)
         ergebnis = generate_builder_custom(
-            grundlage, grundflaechen, self.von, self.bis,
-            include_arms=self.mit_armen, looseness=self.weite,
-            grow=self.wachsen, category=self.kategorie)
+            grundlage,
+            grundflaechen,
+            self.von,
+            self.bis,
+            include_arms=self.mit_armen,
+            looseness=self.weite,
+            grow=self.wachsen,
+            category=self.kategorie,
+        )
         if ergebnis is None:
-            return None, 'No body faces in region'
-        ergebnis['vertices'] = self._herausschieben(ergebnis, grundlage)
+            return None, "No body faces in region"
+        ergebnis["vertices"] = self._herausschieben(ergebnis, grundlage)
         return ergebnis, None
 
     @staticmethod
@@ -76,13 +81,12 @@ class Bereichsstoff:
         unterteiler = Charakterdaten.unterteiler(geschlecht)
         if unterteiler is None:
             return punkte, flaechen
-        return (unterteiler.subdivide(punkte).astype(np.float64),
-                unterteiler._sub_quads)
+        return (unterteiler.subdivide(punkte).astype(np.float64), unterteiler._sub_quads)
 
     def _herausschieben(self, ergebnis, grundlage):
         """Zweiter Schub gegen die konvexen Stellen (siehe Modul-Docstring)."""
         abstand = self.GRUNDABSTAND + self.weite * self.WEITENANTEIL
         geschoben = Koerperabstand.radial(
-            ergebnis['vertices'].astype(np.float64), grundlage,
-            mindestabstand=abstand)
+            ergebnis["vertices"].astype(np.float64), grundlage, mindestabstand=abstand
+        )
         return geschoben.astype(np.float32)

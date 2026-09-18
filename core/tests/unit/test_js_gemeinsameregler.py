@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Gemeinsameregler`: derselbe Block für UMA (Knochen) und HumanBody (Punkte).
+"""`Gemeinsameregler`: derselbe Block für UMA (Knochen) und HumanBody (Punkte).
 
 WARUM (06.09.2026, Edgar: „ein Name, zwei Übersetzungen"): Ein fachlicher
 Regler steht für beide Figurarten an derselben Stelle und stellt darunter,
@@ -20,11 +20,12 @@ was die jeweilige Welt kennt. Geprüft wird genau der Unterschied:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'gemeinsameregler.js')
+MODUL = Jsmodul("scene", "gemeinsameregler.js")
 
 #: DOM-Attrappe: nur was die Klasse anfasst — Bereich, Kopfzeile, Liste.
 DOM = """
@@ -86,7 +87,10 @@ const TABELLE = {min: -100, max: 100, gruppen: [
 ]};
 """
 
-SKRIPT = DOM + TABELLE + """
+SKRIPT = (
+    DOM
+    + TABELLE
+    + """
 const { Gemeinsameregler } = await import(MODUL);
 Gemeinsameregler._tabelle = TABELLE;
 const liste = knoten['prop-gemeinsam-liste'];
@@ -157,12 +161,12 @@ pruefe('HB: unvollstaendiger Regler faellt weg', liste.kinder[0].kinder.length -
 
 console.log(JSON.stringify({ok: true}));
 """
+)
 
 
 class GemeinsamereglerTest(SimpleTestCase):
-
     databases = set()
 
     def test_derselbe_regler_stellt_knochen_oder_punkte(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

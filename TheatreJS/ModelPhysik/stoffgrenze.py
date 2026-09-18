@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Haelt den Physik-Zuschlag aus dem Koerper heraus.
+"""Haelt den Physik-Zuschlag aus dem Koerper heraus.
 
 DER BEFUND, DER DAZU GEFUEHRT HAT (11.09.2026): Velocity Skinning ist fuer
 KOERPER entworfen — dort ist jeder Punkt an Knochen gebunden, und ein
@@ -29,13 +29,14 @@ Ruheabstand, hoechstens `MINDESTABSTAND` — und wer darunter liegt, wird
 auf ihn gehoben, gleich ob der Stoff nach innen oder der Koerper nach
 aussen gegangen ist.
 """
+
 import numpy as np
 
 from streusumme import Streusumme
 
 
 class Stoffgrenze:
-    u"""Kuerzt Verschiebungen, die in den Koerper hineinzeigen."""
+    """Kuerzt Verschiebungen, die in den Koerper hineinzeigen."""
 
     #: So nah darf der Stoff der Haut kommen. Der Kollisionsabstand der
     #: Drapierung liegt bei 6 mm (CLAUDE.md, 08.09.2026, nach dem Befund
@@ -45,13 +46,14 @@ class Stoffgrenze:
 
     def __init__(self, koerperpunkte, koerperdreiecke):
         from scipy.spatial import cKDTree
+
         self.punkte = np.asarray(koerperpunkte, dtype=np.float64)
         self.dreiecke = np.asarray(koerperdreiecke, dtype=np.int64)
         self.baum = cKDTree(self.punkte)
         self.normalen = self._normalen()
 
     def _normalen(self):
-        u"""Punktnormalen des Koerpers, aus den Flaechennormalen gemittelt.
+        """Punktnormalen des Koerpers, aus den Flaechennormalen gemittelt.
 
         DIE RICHTUNG MUSS AUS DEM KOERPER KOMMEN, nie aus dem Stoff. Die
         Flaechennormale eines Schnittteils haengt an seiner Wickelrichtung
@@ -70,7 +72,7 @@ class Stoffgrenze:
         return aus * self._aussen(aus)
 
     def _aussen(self, normalen):
-        u"""+1 oder -1 — zeigen die Normalen nach aussen?
+        """+1 oder -1 — zeigen die Normalen nach aussen?
 
         Ueber das SIGNIERTE VOLUMEN, nicht die Mehrheit gegen den
         Schwerpunkt: Die Grenze wird je Bild aus dem POSIERTEN Koerper
@@ -83,17 +85,17 @@ class Stoffgrenze:
         a = self.punkte[self.dreiecke[:, 0]]
         b = self.punkte[self.dreiecke[:, 1]]
         c = self.punkte[self.dreiecke[:, 2]]
-        vol = float(np.einsum('ij,ij->i', a, np.cross(b, c)).sum())
+        vol = float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum())
         return 1.0 if vol >= 0 else -1.0
 
     def abstand(self, stoffpunkte):
-        u"""Der vorzeichenbehaftete Abstand je Stoffpunkt (positiv = aussen)."""
+        """Der vorzeichenbehaftete Abstand je Stoffpunkt (positiv = aussen)."""
         _abstand, naechster = self.baum.query(stoffpunkte, workers=-1)
         rest = stoffpunkte - self.punkte[naechster]
         return np.sum(rest * self.normalen[naechster], axis=1)
 
     def sollabstand(self, stoffruhe):
-        u"""Je Stoffpunkt: sein Ruheabstand, hoechstens `MINDESTABSTAND`.
+        """Je Stoffpunkt: sein Ruheabstand, hoechstens `MINDESTABSTAND`.
 
         Auf dieser Grenze (aus der RUHELAGE gerechnet) haelt `kuerzen`
         jeden Punkt — eine Leggings auf 2 mm bleibt auf 2 mm, ein T-Shirt
@@ -102,7 +104,7 @@ class Stoffgrenze:
         return np.minimum(self.abstand(stoffruhe), self.MINDESTABSTAND)
 
     def kuerzen(self, stoffpunkte, versatz, soll=None):
-        u"""Der erlaubte Teil des Zuschlags, je Punkt.
+        """Der erlaubte Teil des Zuschlags, je Punkt.
 
         `soll` ist der Sollabstand je Punkt (`sollabstand`); ohne ihn gilt
         `MINDESTABSTAND` fuer alle. Rueckgabe ist der gekuerzte Versatz und
@@ -135,7 +137,7 @@ class Stoffgrenze:
     TOLERANZ = 0.001
 
     def durchdringung(self, stoffpunkte):
-        u"""Anteil der Stoffpunkte IM Koerper, und die groesste Tiefe.
+        """Anteil der Stoffpunkte IM Koerper, und die groesste Tiefe.
 
         Die Probe, die zaehlt. Sie fragt je STOFFpunkt, ob er im Koerper
         steckt — nicht je Koerperpunkt, ob Stoff dahinter liegt: Der
@@ -152,5 +154,4 @@ class Stoffgrenze:
         # als „groesste Tiefe" in jeder Bilanz. Gefunden hat es die
         # JavaScript-Gegenprobe (`test_js_stoffgrenze.py`): 19,0 mm gegen
         # 1,0 mm bei denselben Punkten.
-        return (float(drin.mean()) * 100.0,
-                float(-aussen[drin].min()) * 1000.0 if drin.any() else 0.0)
+        return (float(drin.mean()) * 100.0, float(-aussen[drin].min()) * 1000.0 if drin.any() else 0.0)

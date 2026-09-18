@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Alle acht BVH-Formate müssen in der Registry stehen.
+"""Alle acht BVH-Formate müssen in der Registry stehen.
 
 WARUM DIESER TEST EXISTIERT (31.08.2026)
 ----------------------------------------
@@ -43,6 +43,7 @@ Format eine EIGENE Zuordnungstabelle trägt statt einer geerbten leeren.
 
 Aufruf:  python manage.py test core.tests.unit.test_skelettformate
 """
+
 from django.test import SimpleTestCase
 
 from ._humanbodypfad import Humanbodypfad
@@ -54,30 +55,33 @@ from humanbody_core.skeleton.skeleton import Skeleton  # noqa: E402
 
 
 class RegistryTest(SimpleTestCase):
-    u"""Was `Skeleton.detect()` kennen muss."""
+    """Was `Skeleton.detect()` kennen muss."""
 
     #: Die Formate aus dem Paket `formats/` — Kennung: Klassenname.
     AUS_DEM_PAKET = {
-        'CMU': 'SkeletonCMU',
-        'MIXAMO': 'SkeletonMixamo',
-        'GENESIS9': 'SkeletonGenesis9',
-        'MOCAPNET': 'SkeletonMocapNet',
-        'AIST': 'SkeletonAIST_SMPL',
-        'SMPLX': 'SkeletonSMPLX',
-        'OPENPOSE': 'SkeletonOpenPose',
-        'BANDAI': 'SkeletonBandai',
-        'SMPL': 'SkeletonSMPL',
-        'MEDIAPIPE': 'SkeletonMediaPipe',
+        "CMU": "SkeletonCMU",
+        "MIXAMO": "SkeletonMixamo",
+        "GENESIS9": "SkeletonGenesis9",
+        "MOCAPNET": "SkeletonMocapNet",
+        "AIST": "SkeletonAIST_SMPL",
+        "SMPLX": "SkeletonSMPLX",
+        "OPENPOSE": "SkeletonOpenPose",
+        "BANDAI": "SkeletonBandai",
+        "SMPL": "SkeletonSMPL",
+        "MEDIAPIPE": "SkeletonMediaPipe",
     }
 
     #: Die zwei, die in `skeleton.py` selbst stehen und nicht im Paket.
-    AUS_SKELETON_PY = ('RIGIFY', 'META')
+    AUS_SKELETON_PY = ("RIGIFY", "META")
 
     def test_jedes_format_ist_registriert(self):
         fehlen = [k for k in self.AUS_DEM_PAKET if k not in Skeleton._registry]
-        self.assertEqual(fehlen, [],
-                         'Fehlende Formate — vermutlich wurde eine Importzeile '
-                         'in formats/__init__.py als "unbenutzt" entfernt')
+        self.assertEqual(
+            fehlen,
+            [],
+            "Fehlende Formate — vermutlich wurde eine Importzeile "
+            'in formats/__init__.py als "unbenutzt" entfernt',
+        )
 
     def test_jede_kennung_zeigt_auf_die_richtige_klasse(self):
         for kennung, klassenname in self.AUS_DEM_PAKET.items():
@@ -88,27 +92,28 @@ class RegistryTest(SimpleTestCase):
             self.assertIn(kennung, Skeleton._registry)
 
     def test_jede_klasse_liegt_in_einer_eigenen_datei(self):
-        u"""Das war der Zweck der Aufteilung — sonst wächst es zurück."""
+        """Das war der Zweck der Aufteilung — sonst wächst es zurück."""
         module = {}
         for klassenname in self.AUS_DEM_PAKET.values():
             klasse = getattr(formats, klassenname)
             module.setdefault(klasse.__module__, []).append(klassenname)
         doppelt = {m: n for m, n in module.items() if len(n) > 1}
-        self.assertEqual(doppelt, {},
-                         'Mehrere Formate in einer Datei: %s' % doppelt)
+        self.assertEqual(doppelt, {}, "Mehrere Formate in einer Datei: %s" % doppelt)
 
     def test_das_paket_reicht_alle_namen_durch(self):
-        u"""`from .formats import SkeletonCMU` muss weiter tragen."""
+        """`from .formats import SkeletonCMU` muss weiter tragen."""
         for klassenname in self.AUS_DEM_PAKET.values():
-            self.assertTrue(hasattr(formats, klassenname),
-                            '%s ist über das Paket nicht erreichbar'
-                            % klassenname)
-        self.assertEqual(sorted(formats.__all__),
-                         sorted(self.AUS_DEM_PAKET.values()),
-                         '__all__ und die Registry sind auseinandergelaufen')
+            self.assertTrue(
+                hasattr(formats, klassenname), "%s ist über das Paket nicht erreichbar" % klassenname
+            )
+        self.assertEqual(
+            sorted(formats.__all__),
+            sorted(self.AUS_DEM_PAKET.values()),
+            "__all__ und die Registry sind auseinandergelaufen",
+        )
 
     def test_jede_klasse_traegt_ihre_eigene_zuordnung(self):
-        u"""Eine geerbte leere Tabelle wäre eine stille Fehlerquelle.
+        """Eine geerbte leere Tabelle wäre eine stille Fehlerquelle.
 
         `BONE_MAP_TO_RIGIFY` muss in der Klasse SELBST stehen, nicht von
         `Skeleton` geerbt sein — sonst ordnet das Format nichts zu und
@@ -117,7 +122,6 @@ class RegistryTest(SimpleTestCase):
         ohne = []
         for klassenname in self.AUS_DEM_PAKET.values():
             klasse = getattr(formats, klassenname)
-            if 'BONE_MAP_TO_RIGIFY' not in vars(klasse):
+            if "BONE_MAP_TO_RIGIFY" not in vars(klasse):
                 ohne.append(klassenname)
-        self.assertEqual(ohne, [],
-                         'Diese Formate haben keine eigene Zuordnungstabelle')
+        self.assertEqual(ohne, [], "Diese Formate haben keine eigene Zuordnungstabelle")

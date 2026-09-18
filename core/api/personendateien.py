@@ -5,6 +5,7 @@
 Text — Person 1 ist `serve_bvh`. Eigenes Modul, weil `api/dateien.py`
 (`Auftragsdateien`) mit 265 Zeilen voll ist (14.09.2026).
 """
+
 from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404
 
@@ -21,5 +22,5 @@ class Personendateien:
         weitere = job.bvh_file_personen or []
         stelle = int(person) - 2
         if stelle < 0 or stelle >= len(weitere):
-            return HttpResponseNotFound('Kein BVH für Person %s' % person)
+            return HttpResponseNotFound("Kein BVH für Person %s" % person)
         return Auftragsdateien.textantwort(weitere[stelle])

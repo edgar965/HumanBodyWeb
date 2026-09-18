@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`{% zahl %}` und `{% kaestchen %}` — eine Einstellungszeile aus dem Register.
+"""`{% zahl %}` und `{% kaestchen %}` — eine Einstellungszeile aus dem Register.
 
 WARUM (30.08.2026, Befund `jsbefunde`/lange Zeilen)
 ===================================================
@@ -27,6 +27,7 @@ DER ERSTE PARAMETER HEISST `context`, englisch: Django prüft den NAMEN und
 lehnt die Marke sonst ab („is decorated with takes_context=True so it must
 have a first argument of 'context'"). Das ist keine Stilentscheidung.
 """
+
 from django import template
 
 from ..daten.einstellungsfelder import Einstellungsfelder
@@ -35,29 +36,28 @@ register = template.Library()
 
 
 class Einstellungszeile:
-    u"""Was beide Marken gemeinsam haben: Register nachschlagen, Wert holen."""
+    """Was beide Marken gemeinsam haben: Register nachschlagen, Wert holen."""
 
     @staticmethod
     def kontext(context, kennung):
-        u"""Der Vorlagen-Kontext einer Zeile: Register plus aktueller Wert.
+        """Der Vorlagen-Kontext einer Zeile: Register plus aktueller Wert.
 
         FEHLT `settings` IM KONTEXT, IST DAS EIN FEHLER — eine Zeile ohne
         Wert zeigt den Anfangswert des Feldes und sieht dabei aus wie eine
         gespeicherte Einstellung. Wer sie speichert, überschreibt still den
         echten Wert.
         """
-        einstellungen = context.get('settings')
+        einstellungen = context.get("settings")
         if einstellungen is None:
             raise KeyError(
-                u'`settings` fehlt im Kontext — `{%% zahl "%s" %%}` kann '
-                u'seinen Wert nicht lesen' % kennung)
-        return Einstellungsfelder.feld(kennung).als_kontext(
-            kennung, getattr(einstellungen, kennung))
+                '`settings` fehlt im Kontext — `{%% zahl "%s" %%}` kann seinen Wert nicht lesen' % kennung
+            )
+        return Einstellungsfelder.feld(kennung).als_kontext(kennung, getattr(einstellungen, kennung))
 
 
-@register.inclusion_tag('_einstellungen_zahl.html', takes_context=True)
+@register.inclusion_tag("_einstellungen_zahl.html", takes_context=True)
 def zahl(context, kennung):
-    u"""Eine Einstellungszeile mit Zahlenfeld.
+    """Eine Einstellungszeile mit Zahlenfeld.
 
     @param kennung Feldname in `AppSettings`; Titel, Text und Grenzen
                    kommen aus `Einstellungsfelder`
@@ -66,8 +66,8 @@ def zahl(context, kennung):
     return Einstellungszeile.kontext(context, kennung)
 
 
-@register.inclusion_tag('_einstellungen_animation.html', takes_context=True)
-def animation(context, kennung, auswahl, wertformat=''):
+@register.inclusion_tag("_einstellungen_animation.html", takes_context=True)
+def animation(context, kennung, auswahl, wertformat=""):
     """Eine Einstellungszeile mit Animations-Auswahlfeld.
 
     @param kennung   Feldname in `AppSettings`
@@ -81,22 +81,22 @@ def animation(context, kennung, auswahl, wertformat=''):
     # kommt der Baustein ohne `{% include … with … %}` aus — und genau das
     # Tag war es, das sich NICHT umbrechen laesst (Djangos Lexer kennt kein
     # DOTALL; ein Tag ueber zwei Zeilen wird still zu Text).
-    daten['field_name'] = kennung
-    daten['current_value'] = daten['wert']
-    daten['selector_id'] = auswahl
-    daten['wertformat'] = wertformat
+    daten["field_name"] = kennung
+    daten["current_value"] = daten["wert"]
+    daten["selector_id"] = auswahl
+    daten["wertformat"] = wertformat
     # WAS DIE SEITE MITBRINGT, muss ausdruecklich durchgereicht werden: Ein
     # `{% include %}` erbt den Seitenkontext, ein `inclusion_tag` NICHT.
     # Ohne `anim_kategorien` zeigt das Auswahlfeld keine einzige Animation
     # mehr — und die Seite kommt trotzdem mit 200.
-    for name in ('anim_kategorien', 'anim_fehlt'):
+    for name in ("anim_kategorien", "anim_fehlt"):
         daten[name] = context.get(name)
     return daten
 
 
-@register.inclusion_tag('_einstellungen_kaestchen.html', takes_context=True)
+@register.inclusion_tag("_einstellungen_kaestchen.html", takes_context=True)
 def kaestchen(context, kennung):
-    u"""Eine Einstellungszeile mit Ankreuzfeld.
+    """Eine Einstellungszeile mit Ankreuzfeld.
 
     @param kennung Feldname in `AppSettings`; Titel, Text und die Aufschrift
                    neben dem Kästchen kommen aus `Einstellungsfelder`

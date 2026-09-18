@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Figurexport — die fertige Figur als GLB für Roomguest und jeden anderen Abnehmer.
+"""Figurexport — die fertige Figur als GLB für Roomguest und jeden anderen Abnehmer.
 
 WARUM (05.09.2026)
 ==================
@@ -33,19 +33,19 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.modellpfad import Modellpfad
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Figurexport:
     """GLB-Dateien im Figurenordner: ablegen, auflisten, ausliefern."""
 
-    ENDUNG = '.glb'
-    FELD = 'glb'
+    ENDUNG = ".glb"
+    FELD = "glb"
     #: Die ersten vier Bytes jeder GLB-Datei (Magic).
-    MAGIE = b'glTF'
+    MAGIE = b"glTF"
     MAX_BYTES = 256 * 1024 * 1024
-    TYP = 'model/gltf-binary'
-    ZEITFORMAT = '%Y-%m-%d %H:%M:%S'
+    TYP = "model/gltf-binary"
+    ZEITFORMAT = "%Y-%m-%d %H:%M:%S"
 
     @staticmethod
     def _ordner():
@@ -56,7 +56,7 @@ class Figurexport:
         """Der geprüfte Dateipfad zum Namen — oder None."""
         # Nur Buchstaben, Ziffern, Leerzeichen, Binde- und Unterstriche (wie
         # `Modelldateien.modell_sichern`).
-        sauber = re.sub(r'[^\w\s\-]', '', name or '').strip()
+        sauber = re.sub(r"[^\w\s\-]", "", name or "").strip()
         if not sauber:
             return None
         return Modellpfad.geprueft(Figurexport._ordner(), sauber, Figurexport.ENDUNG)
@@ -68,27 +68,29 @@ class Figurexport:
         """Eine GLB unter dem Namen schreiben (überschreibt)."""
         pfad = Figurexport._pfad(name)
         if pfad is None:
-            return JsonResponse({'error': 'Invalid name'}, status=400)
+            return JsonResponse({"error": "Invalid name"}, status=400)
         datei = request.FILES.get(Figurexport.FELD)
         if datei is None:
-            return JsonResponse({'error': 'Feld "%s" fehlt' % Figurexport.FELD},
-                                status=400)
+            return JsonResponse({"error": 'Feld "%s" fehlt' % Figurexport.FELD}, status=400)
         if datei.size > Figurexport.MAX_BYTES:
-            return JsonResponse({'error': 'Zu groß: %d Bytes, erlaubt sind %d'
-                                 % (datei.size, Figurexport.MAX_BYTES)}, status=400)
+            return JsonResponse(
+                {"error": "Zu groß: %d Bytes, erlaubt sind %d" % (datei.size, Figurexport.MAX_BYTES)},
+                status=400,
+            )
         inhalt = datei.read()
         if not inhalt.startswith(Figurexport.MAGIE):
-            return JsonResponse({'error': 'Keine GLB-Datei (Kopf ist nicht "glTF")'},
-                                status=400)
+            return JsonResponse({"error": 'Keine GLB-Datei (Kopf ist nicht "glTF")'}, status=400)
         os.makedirs(Figurexport._ordner(), exist_ok=True)
-        with open(pfad, 'wb') as ziel:
+        with open(pfad, "wb") as ziel:
             ziel.write(inhalt)
-        logger.info('Figurexport: %s abgelegt (%d Bytes)', pfad, len(inhalt))
-        return JsonResponse({
-            'name': os.path.splitext(os.path.basename(pfad))[0],
-            'bytes': len(inhalt),
-            'pfad': pfad,
-        })
+        logger.info("Figurexport: %s abgelegt (%d Bytes)", pfad, len(inhalt))
+        return JsonResponse(
+            {
+                "name": os.path.splitext(os.path.basename(pfad))[0],
+                "bytes": len(inhalt),
+                "pfad": pfad,
+            }
+        )
 
     @staticmethod
     @require_GET
@@ -101,13 +103,14 @@ class Figurexport:
                 if not dateiname.endswith(Figurexport.ENDUNG):
                     continue
                 stand = os.stat(os.path.join(ordner, dateiname))
-                figuren.append({
-                    'name': dateiname[:-len(Figurexport.ENDUNG)],
-                    'bytes': stand.st_size,
-                    'geaendert': time.strftime(Figurexport.ZEITFORMAT,
-                                               time.localtime(stand.st_mtime)),
-                })
-        return JsonResponse({'figuren': figuren, 'ordner': ordner})
+                figuren.append(
+                    {
+                        "name": dateiname[: -len(Figurexport.ENDUNG)],
+                        "bytes": stand.st_size,
+                        "geaendert": time.strftime(Figurexport.ZEITFORMAT, time.localtime(stand.st_mtime)),
+                    }
+                )
+        return JsonResponse({"figuren": figuren, "ordner": ordner})
 
     @staticmethod
     @require_GET
@@ -115,8 +118,7 @@ class Figurexport:
         """Die GLB einer Figur."""
         pfad = Figurexport._pfad(name)
         if pfad is None:
-            return JsonResponse({'error': 'Invalid name'}, status=400)
+            return JsonResponse({"error": "Invalid name"}, status=400)
         if not os.path.isfile(pfad):
-            return JsonResponse({'error': 'Keine Figur "%s"' % name}, status=404)
-        return FileResponse(open(pfad, 'rb'), content_type=Figurexport.TYP,
-                            filename=os.path.basename(pfad))
+            return JsonResponse({"error": 'Keine Figur "%s"' % name}, status=404)
+        return FileResponse(open(pfad, "rb"), content_type=Figurexport.TYP, filename=os.path.basename(pfad))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`ModelPhysik/hautmaske.py` — die Server-Fassung der Hautmaske am
+"""`ModelPhysik/hautmaske.py` — die Server-Fassung der Hautmaske am
 Kunstkörper: anliegende Kante bis zum Rand, lockere mit zwei Ringen frei,
 Inselschließung, Index und Einzug.
 
@@ -9,6 +9,7 @@ seiner Dauer in `core/tests/longrunner/test_hautmaske_gegen_browser.py`.
 Sabotage-Gegenprobe: `groesse_frei < groesste` entfernt (`maskeninseln`)
 macht die Insel rot; `t >= -tiefe` → `t >= 0` macht den Browser-Vergleich rot.
 """
+
 import numpy as np
 from django.test import SimpleTestCase
 from ._modelphysik import Modelphysik
@@ -17,7 +18,6 @@ from ._kunstkoerper import Kunstkoerper
 
 
 class HautmaskePythonTest(SimpleTestCase):
-
     databases = set()
 
     def setUp(self):
@@ -62,4 +62,4 @@ class HautmaskePythonTest(SimpleTestCase):
 
     @staticmethod
     def _hautmaske_modul():
-        return Modelphysik.modul('hautmaske')
+        return Modelphysik.modul("hautmaske")

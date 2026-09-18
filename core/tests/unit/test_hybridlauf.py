@@ -38,9 +38,9 @@ class HybridBasis(TestCase):
     """Gemeinsame Umleitung: keine echte Pipeline, kein Unterprozess."""
 
     def setUp(self):
-        self.aufrufe = {'koerper': None, 'gesicht': None, 'ausdruck': None}
-        self.koerper = lambda auftrag, video, ordner: 'body.bvh'
-        self.gesicht = lambda auftrag, video, ordner: 'face.bvh'
+        self.aufrufe = {"koerper": None, "gesicht": None, "ausdruck": None}
+        self.koerper = lambda auftrag, video, ordner: "body.bvh"
+        self.gesicht = lambda auftrag, video, ordner: "face.bvh"
         pruefung = self
 
         class Laufattrappe:
@@ -51,7 +51,7 @@ class HybridBasis(TestCase):
             eine Klasse sein (vorher waren es zwei freie Funktionen).
             """
 
-            welcher = ''
+            welcher = ""
 
             def __init__(self, auftrag, video, ordner):
                 self.auftrag, self.video, self.ordner = auftrag, video, ordner
@@ -62,17 +62,16 @@ class HybridBasis(TestCase):
                 return macher(self.auftrag, self.video, self.ordner)
 
         class Koerperattrappe(Laufattrappe):
-            welcher = 'koerper'
+            welcher = "koerper"
 
         class Gesichtsattrappe(Laufattrappe):
-            welcher = 'gesicht'
+            welcher = "gesicht"
 
         def lauf(befehl, **kw):
-            self.aufrufe['ausdruck'] = befehl
+            self.aufrufe["ausdruck"] = befehl
             return Runnerergebnis(0)
 
-        self._alt = (hybridlauf.Smpllauf, hybridlauf.V4Lauf,
-                     hybridlauf.subprocess.run, Hybridlauf.TAKT)
+        self._alt = (hybridlauf.Smpllauf, hybridlauf.V4Lauf, hybridlauf.subprocess.run, Hybridlauf.TAKT)
         hybridlauf.Smpllauf = Koerperattrappe
         hybridlauf.V4Lauf = Gesichtsattrappe
         hybridlauf.subprocess.run = lauf
@@ -80,36 +79,35 @@ class HybridBasis(TestCase):
         Hybridlauf.TAKT = 0.01
 
     def tearDown(self):
-        (hybridlauf.Smpllauf, hybridlauf.V4Lauf,
-         hybridlauf.subprocess.run, Hybridlauf.TAKT) = self._alt
+        (hybridlauf.Smpllauf, hybridlauf.V4Lauf, hybridlauf.subprocess.run, Hybridlauf.TAKT) = self._alt
 
-    def fahren(self, pipeline='hybrid_gvhmr', params=None):
+    def fahren(self, pipeline="hybrid_gvhmr", params=None):
         from django.conf import settings
         from pathlib import Path
-        ordner = Path(settings.BASE_DIR) / 'media' / 'tmp' / 'hybridtest'
+
+        ordner = Path(settings.BASE_DIR) / "media" / "tmp" / "hybridtest"
         auftrag = AuftragsAttrappe(pipeline, params, kennung=42)
-        ergebnis = Hybridlauf(auftrag, 'tanz.mp4', ordner).fahren()
+        ergebnis = Hybridlauf(auftrag, "tanz.mp4", ordner).fahren()
         return auftrag, ergebnis
 
 
 class HybridErfolgTest(HybridBasis):
-
     def test_beide_dateien_landen_im_auftrag(self):
         auftrag, ergebnis = self.fahren()
-        self.assertEqual(ergebnis, ('body.bvh', 'face.bvh'))
-        self.assertEqual(auftrag.bvh_file, 'body.bvh')
-        self.assertEqual(auftrag.bvh_file_face, 'face.bvh')
-        self.assertEqual(auftrag.progress_detail, 'Done')
+        self.assertEqual(ergebnis, ("body.bvh", "face.bvh"))
+        self.assertEqual(auftrag.bvh_file, "body.bvh")
+        self.assertEqual(auftrag.bvh_file_face, "face.bvh")
+        self.assertEqual(auftrag.progress_detail, "Done")
 
     def test_eigene_kennung_je_unterauftrag(self):
         """Gleiche Kennung hieße: „Abbrechen" beim Gesicht trifft den Körper."""
         self.fahren()
-        self.assertEqual(self.aufrufe['koerper'].id, '42_body')
-        self.assertEqual(self.aufrufe['gesicht'].id, '42_face')
+        self.assertEqual(self.aufrufe["koerper"].id, "42_body")
+        self.assertEqual(self.aufrufe["gesicht"].id, "42_face")
 
     def test_unterauftrag_schreibt_nicht_in_die_datenbank(self):
         self.fahren()
-        for welcher in ('koerper', 'gesicht'):
+        for welcher in ("koerper", "gesicht"):
             self.assertIsInstance(self.aufrufe[welcher], Teilauftrag)
             # `save()` darf nichts tun — sonst überschreiben sich die beiden
             # Fortschritte im echten Auftrag.
@@ -118,81 +116,82 @@ class HybridErfolgTest(HybridBasis):
     def test_v4_ohne_ik_feinarbeit(self):
         """`hcd_iterations` > 0 lässt BVHConverter.dll abstürzen."""
         self.fahren()
-        self.assertEqual(self.aufrufe['gesicht'].pipeline_params['hcd_iterations'], 0)
-        self.assertTrue(self.aufrufe['gesicht'].pipeline_params['body'])
+        self.assertEqual(self.aufrufe["gesicht"].pipeline_params["hcd_iterations"], 0)
+        self.assertTrue(self.aufrufe["gesicht"].pipeline_params["body"])
 
     def test_rueckgrat_haengt_am_pipelinenamen(self):
-        self.fahren('hybrid_gvhmr')
-        self.assertEqual(self.aufrufe['koerper'].pipeline, 'gvhmr')
-        self.fahren('hybrid_prompthmr')
-        self.assertEqual(self.aufrufe['koerper'].pipeline, 'prompthmr')
+        self.fahren("hybrid_gvhmr")
+        self.assertEqual(self.aufrufe["koerper"].pipeline, "gvhmr")
+        self.fahren("hybrid_prompthmr")
+        self.assertEqual(self.aufrufe["koerper"].pipeline, "prompthmr")
 
 
 class HybridTeilergebnisTest(HybridBasis):
-
     def test_koerper_scheitert_gesicht_bleibt(self):
         def platzt(auftrag, video, ordner):
-            raise RuntimeError('kein CUDA')
+            raise RuntimeError("kein CUDA")
+
         self.koerper = platzt
         auftrag, ergebnis = self.fahren()
-        self.assertEqual(ergebnis, (None, 'face.bvh'))
-        self.assertFalse(auftrag.bvh_file, 'nichts eingetragen')
-        self.assertEqual(auftrag.bvh_file_face, 'face.bvh')
-        self.assertIn('kein CUDA', auftrag.progress_detail)
-        self.assertIn('partial', auftrag.progress_detail)
+        self.assertEqual(ergebnis, (None, "face.bvh"))
+        self.assertFalse(auftrag.bvh_file, "nichts eingetragen")
+        self.assertEqual(auftrag.bvh_file_face, "face.bvh")
+        self.assertIn("kein CUDA", auftrag.progress_detail)
+        self.assertIn("partial", auftrag.progress_detail)
 
     def test_beide_scheitern_ist_ein_fehler(self):
         def platzt(auftrag, video, ordner):
-            raise RuntimeError('nichts geht')
+            raise RuntimeError("nichts geht")
+
         self.koerper = platzt
         self.gesicht = platzt
         with self.assertRaises(RuntimeError) as gefangen:
             self.fahren()
-        self.assertIn('Hybrid pipeline failed', str(gefangen.exception))
+        self.assertIn("Hybrid pipeline failed", str(gefangen.exception))
 
 
 class Runnerergebnis:
-    u"""Was `subprocess.run` mit `capture_output` zurückgibt — verkürzt."""
+    """Was `subprocess.run` mit `capture_output` zurückgibt — verkürzt."""
 
-    def __init__(self, returncode, stdout='', stderr=''):
+    def __init__(self, returncode, stdout="", stderr=""):
         self.returncode = returncode
         self.stdout = stdout
         self.stderr = stderr
 
 
 class HybridAusdrueckeTest(HybridBasis):
-
     def test_ausdruecke_werden_gezogen(self):
         self.fahren()
-        ausdruck = Sicher.wert(self.aufrufe['ausdruck'], 'Ausdruck')
-        self.assertTrue(ausdruck[-1].endswith(
-            'face_blendshapes.json'))
+        ausdruck = Sicher.wert(self.aufrufe["ausdruck"], "Ausdruck")
+        self.assertTrue(ausdruck[-1].endswith("face_blendshapes.json"))
 
     def test_andere_quelle_zieht_keine_ausdruecke(self):
-        self.fahren(params={'face_source': 'v4'})
-        self.assertIsNone(self.aufrufe['ausdruck'])
+        self.fahren(params={"face_source": "v4"})
+        self.assertIsNone(self.aufrufe["ausdruck"])
 
     def test_ohne_gesichts_bvh_keine_ausdruecke(self):
         self.gesicht = lambda auftrag, video, ordner: None
         self.fahren()
-        self.assertIsNone(self.aufrufe['ausdruck'])
+        self.assertIsNone(self.aufrufe["ausdruck"])
 
     def test_fehlschlag_beendet_den_lauf_nicht(self):
         """Ohne Ausdrücke ist der Lauf unvollständig, aber nicht kaputt."""
+
         def platzt(befehl, **kw):
-            raise OSError('SMPLest-X fehlt')
+            raise OSError("SMPLest-X fehlt")
+
         hybridlauf.subprocess.run = platzt
         auftrag, ergebnis = self.fahren()
-        self.assertEqual(ergebnis, ('body.bvh', 'face.bvh'))
-        self.assertEqual(auftrag.progress_detail, 'Done')
+        self.assertEqual(ergebnis, ("body.bvh", "face.bvh"))
+        self.assertEqual(auftrag.progress_detail, "Done")
 
     def test_der_grund_des_runners_steht_im_log(self):
-        u"""Der Runner meldet seinen Grund als JSON auf stdout. Vom 08.05. bis
+        """Der Runner meldet seinen Grund als JSON auf stdout. Vom 08.05. bis
         zum 12.09.2026 stand im Log nur „exit status 1", während die
         SMPL-X-Modelle fehlten — vier Monate ohne Gesicht, unbemerkt."""
         grund = '{"error": "SMPL-X-Modell fehlt unter human_model_files/smplx"}'
         hybridlauf.subprocess.run = lambda befehl, **kw: Runnerergebnis(1, stdout=grund)
-        with self.assertLogs('core.pipeline', level='WARNING') as protokoll:
+        with self.assertLogs("core.pipeline", level="WARNING") as protokoll:
             _auftrag, ergebnis = self.fahren()
-        self.assertEqual(ergebnis, ('body.bvh', 'face.bvh'))
-        self.assertIn('SMPL-X-Modell fehlt', ' '.join(protokoll.output))
+        self.assertEqual(ergebnis, ("body.bvh", "face.bvh"))
+        self.assertIn("SMPL-X-Modell fehlt", " ".join(protokoll.output))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Hautmaske`: welche Körperpunkte unter dem Stoff liegen — geprüft am
+"""`Hautmaske`: welche Körperpunkte unter dem Stoff liegen — geprüft am
 Kunstkörper, in Node, mit dem echten Modul.
 
 WARUM (Edgar, 11.09.2026, mit Bild: „natürlich ist es die Haut die durch die
@@ -39,11 +39,12 @@ macht Fall 6 rot; `kueste.has(r)` weggelassen macht Fall 7 rot.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'hautmaske.js')
+MODUL = Jsmodul("gemeinsam", "hautmaske.js")
 
 SKRIPT = """
 const { Hautmaske } = await import(MODUL);
@@ -204,10 +205,9 @@ console.log(JSON.stringify({ ok: true, unter, frei, entfernt: neu.entfernt }));
 
 
 class HautmaskeTest(SimpleTestCase):
-
     databases = set()
 
     def test_rohr_abstand_tiefe_wicklung_und_index(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertGreater(ausgabe['entfernt'], 0)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertGreater(ausgabe["entfernt"], 0)

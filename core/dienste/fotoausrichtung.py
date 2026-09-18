@@ -16,7 +16,7 @@ from ..daten.persongrenzen import Persongrenzen
 from ..daten.wrapperpfad import Wrapperpfad
 
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Fotoausrichtung:
@@ -45,14 +45,14 @@ class Fotoausrichtung:
         netz = Fotoausrichtung._netz(betas, gender)
         if netz is None:
             return None
-        masse = Netzmasse.aus(netz['vertices'].reshape(netz['n_verts'], 3),
-                              cam_data)
-        vorschlag = (Fotoausrichtung._aus_pymafx(cam_data, masse)
-                     or Fotoausrichtung._aus_smplestx(cam_data, masse))
+        masse = Netzmasse.aus(netz["vertices"].reshape(netz["n_verts"], 3), cam_data)
+        vorschlag = Fotoausrichtung._aus_pymafx(cam_data, masse) or Fotoausrichtung._aus_smplestx(
+            cam_data, masse
+        )
         if vorschlag is None:
             return None
         grenzen = Persongrenzen.aus_foto(photo_path, masse.img_w, masse.img_h)
-        if Fotoausrichtung._passt(vorschlag['body_transform'], masse, grenzen):
+        if Fotoausrichtung._passt(vorschlag["body_transform"], masse, grenzen):
             return vorschlag
         return Fotoausrichtung._einpassen(vorschlag, masse, grenzen)
 
@@ -69,10 +69,12 @@ class Fotoausrichtung:
         try:
             with Wrapperpfad():
                 from smplest_x_wrapper import generate_mesh
+
                 return generate_mesh(betas, gender)
         except ImportError:
-            logger.warning('smplest_x_wrapper nicht importierbar — keine '
-                           'automatische Ausrichtung', exc_info=True)
+            logger.warning(
+                "smplest_x_wrapper nicht importierbar — keine automatische Ausrichtung", exc_info=True
+            )
             return None
 
     # --------------------------------------------------------- die zwei Formate
@@ -80,9 +82,9 @@ class Fotoausrichtung:
     @staticmethod
     def _aus_pymafx(cam_data, masse):
         """PyMAF-X: `pred_cam` [s, tx, ty] im Ausschnittsraum."""
-        pred_cam = cam_data.get('pred_cam')
-        bbox_cxcywh = cam_data.get('bbox_cxcywh')
-        if not (pred_cam and bbox_cxcywh and cam_data.get('bbox_scale')):
+        pred_cam = cam_data.get("pred_cam")
+        bbox_cxcywh = cam_data.get("bbox_cxcywh")
+        if not (pred_cam and bbox_cxcywh and cam_data.get("bbox_scale")):
             return None
         s_crop, tx_crop, ty_crop = pred_cam
         bbox_cx, bbox_cy, bbox_w_px, bbox_h_px = bbox_cxcywh
@@ -93,18 +95,19 @@ class Fotoausrichtung:
         return Fotoausrichtung._vorschlag(
             orig_tx * (masse.img_w / 2.0) + masse.img_w / 2.0,
             orig_ty * (masse.img_h / 2.0) + masse.img_h / 2.0,
-            s_pixels / masse.base_scale, 'pymafx')
+            s_pixels / masse.base_scale,
+            "pymafx",
+        )
 
     @staticmethod
     def _aus_smplestx(cam_data, masse):
         """SMPLest-X: `cam_trans` [tx,ty,tz] mit Brennweite und Hauptpunkt."""
-        cam_trans = cam_data.get('cam_trans')
-        processed_bbox = cam_data.get('processed_bbox')
-        focal_arr = cam_data.get('cam_focal')
-        princpt = cam_data.get('cam_princpt')
-        input_body_shape = cam_data.get('input_body_shape')
-        if not (cam_trans and processed_bbox and focal_arr and princpt
-                and input_body_shape):
+        cam_trans = cam_data.get("cam_trans")
+        processed_bbox = cam_data.get("processed_bbox")
+        focal_arr = cam_data.get("cam_focal")
+        princpt = cam_data.get("cam_princpt")
+        input_body_shape = cam_data.get("input_body_shape")
+        if not (cam_trans and processed_bbox and focal_arr and princpt and input_body_shape):
             return None
         tx, ty, tz = cam_trans
         if abs(tz) <= 1e-6:
@@ -120,19 +123,21 @@ class Fotoausrichtung:
         return Fotoausrichtung._vorschlag(
             wp_scale * (masse.cx + tx) + princpt_orig_x,
             princpt_orig_y - wp_scale * (ty + masse.cy),
-            wp_scale / masse.base_scale, 'smplest_x')
+            wp_scale / masse.base_scale,
+            "smplest_x",
+        )
 
     @staticmethod
     def _vorschlag(mitte_x, mitte_y, skalierung, verfahren):
         # Dictionary gewollt: geht als JSON an den Browser und in die Ablage.
         return {
-            'body_transform': {
-                'center_x': float(mitte_x),
-                'center_y': float(mitte_y),
-                'scale': float(skalierung),
+            "body_transform": {
+                "center_x": float(mitte_x),
+                "center_y": float(mitte_y),
+                "scale": float(skalierung),
             },
-            'auto': True,
-            'method': verfahren,
+            "auto": True,
+            "method": verfahren,
         }
 
     # ------------------------------------------------------------------ Prüfung
@@ -155,8 +160,11 @@ class Fotoausrichtung:
             kopf_ab = abs(kopf_y - grenzen.oben) / hoehe
             fuesse_ab = abs(fuesse_y - grenzen.unten) / hoehe
             if max(kopf_ab, fuesse_ab) > Fotoausrichtung.ABWEICHUNG:
-                logger.info('Ausrichtung der Pipeline daneben: Kopf %.1f %%, '
-                            'Fuesse %.1f %%', kopf_ab * 100, fuesse_ab * 100)
+                logger.info(
+                    "Ausrichtung der Pipeline daneben: Kopf %.1f %%, Fuesse %.1f %%",
+                    kopf_ab * 100,
+                    fuesse_ab * 100,
+                )
                 return False
             return True
         # Ohne Personenerkennung nur der grobe Maßstab.
@@ -165,8 +173,7 @@ class Fotoausrichtung:
         netz_hoehe = fuesse_y - kopf_y
         im_bild = max(0, min(fuesse_y, masse.img_h) - max(kopf_y, 0))
         anteil = im_bild / max(netz_hoehe, 1) if netz_hoehe > 0 else 0
-        return bool(kopf_ok and fuesse_ok
-                    and anteil > Fotoausrichtung.MIND_UEBERDECKUNG)
+        return bool(kopf_ok and fuesse_ok and anteil > Fotoausrichtung.MIND_UEBERDECKUNG)
 
     #: Das Netz füllt 95 % der erkannten Personenhöhe.
     EINPASSUNG = 0.95
@@ -174,13 +181,14 @@ class Fotoausrichtung:
     @staticmethod
     def _einpassen(vorschlag, masse, grenzen):
         """Rückfall: Netz in die erkannte Personenhöhe einpassen."""
-        logger.info('Ausrichtung der Pipeline verworfen — Netz wird in die '
-                    'Personenhoehe eingepasst (%s)', vorschlag['method'])
-        fit_scale = (grenzen.hoehe * Fotoausrichtung.EINPASSUNG
-                     / max(masse.mesh_h, 1e-6))
+        logger.info(
+            "Ausrichtung der Pipeline verworfen — Netz wird in die Personenhoehe eingepasst (%s)",
+            vorschlag["method"],
+        )
+        fit_scale = grenzen.hoehe * Fotoausrichtung.EINPASSUNG / max(masse.mesh_h, 1e-6)
         return Fotoausrichtung._vorschlag(
-            grenzen.mitte_x, grenzen.mitte_y, fit_scale / masse.base_scale,
-            vorschlag['method'] + '_fallback')
+            grenzen.mitte_x, grenzen.mitte_y, fit_scale / masse.base_scale, vorschlag["method"] + "_fallback"
+        )
 
     @staticmethod
     def koerper_verschiebung(vertices, posed_proj, w_img, h_img, margin=0.05):
@@ -213,9 +221,9 @@ class Fotoausrichtung:
         scale = posed_h / (mesh_h * base_scale) if mesh_h * base_scale > 1 else 1.0
 
         return {
-            'center_x': float(posed_cx),
-            'center_y': float(posed_cy),
-            'scale': float(scale),
+            "center_x": float(posed_cx),
+            "center_y": float(posed_cy),
+            "scale": float(scale),
         }
 
     @staticmethod
@@ -228,12 +236,12 @@ class Fotoausrichtung:
         n = len(posed_verts)
         proj = np.zeros((n, 2), dtype=np.float32)
 
-        if cam_data.get('cam_trans'):
+        if cam_data.get("cam_trans"):
             # SMPLest-X: perspective projection in camera space
-            focal_cfg = cam_data['cam_focal']           # [fx, fy] in crop space
-            princpt_cfg = cam_data['cam_princpt']       # [cx, cy] in crop space
-            bbox = cam_data['processed_bbox']           # [x, y, w, h]
-            input_shape = cam_data['input_body_shape']  # [H, W]
+            focal_cfg = cam_data["cam_focal"]  # [fx, fy] in crop space
+            princpt_cfg = cam_data["cam_princpt"]  # [cx, cy] in crop space
+            bbox = cam_data["processed_bbox"]  # [x, y, w, h]
+            input_shape = cam_data["input_body_shape"]  # [H, W]
 
             fx = focal_cfg[0] / input_shape[1] * bbox[2]
             fy = focal_cfg[1] / input_shape[0] * bbox[3]
@@ -245,10 +253,10 @@ class Fotoausrichtung:
             proj[:, 0] = fx * posed_verts[:, 0] / z + cx
             proj[:, 1] = fy * posed_verts[:, 1] / z + cy
 
-        elif cam_data.get('pred_cam'):
+        elif cam_data.get("pred_cam"):
             # PyMAF-X: weak-perspective in crop → original image
-            s, tx, ty = cam_data['pred_cam']
-            bbox_cx, bbox_cy, bbox_w, bbox_h = cam_data['bbox_cxcywh']
+            s, tx, ty = cam_data["pred_cam"]
+            bbox_cx, bbox_cy, bbox_w, bbox_h = cam_data["bbox_cxcywh"]
             crop_size = max(bbox_w, bbox_h)
 
             proj[:, 0] = s * posed_verts[:, 0] + tx

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Testläufe schreiben nicht in die Produktivlogs.
+"""Testläufe schreiben nicht in die Produktivlogs.
 
 DER BEFUND (10.09.2026, gemessen an `logs/error.log`)
 =====================================================
@@ -31,24 +31,25 @@ Genau so lange läuft ein Test.
 WAS NICHT GEFILTERT WIRD: die Konsole. Wer einen Testlauf ansieht, soll seine
 Meldungen sehen; nur die fünf Dateien bleiben sauber.
 """
+
 import logging
 
-__all__ = ['Testlauf']
+__all__ = ["Testlauf"]
 
 
 class Testlauf(logging.Filter):
-    u"""Lässt Datensätze durch, solange KEIN Testlauf läuft."""
+    """Lässt Datensätze durch, solange KEIN Testlauf läuft."""
 
     @staticmethod
     def laeuft():
-        u"""Ist Djangos Testumgebung gerade aufgebaut?"""
+        """Ist Djangos Testumgebung gerade aufgebaut?"""
         try:
             from django.core import mail
         # stumm gewollt: ohne Django-Mail gibt es keine Testumgebung — dann filtert
         # der Filter nicht
-        except Exception:                      # pragma: no cover
+        except Exception:  # pragma: no cover
             return False
-        return hasattr(mail, 'outbox')
+        return hasattr(mail, "outbox")
 
     def filter(self, datensatz):
         return not Testlauf.laeuft()

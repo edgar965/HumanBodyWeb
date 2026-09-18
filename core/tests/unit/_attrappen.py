@@ -31,4 +31,4 @@ class Sammelstrom:
 
     @property
     def text(self):
-        return ''.join(self.stuecke)
+        return "".join(self.stuecke)

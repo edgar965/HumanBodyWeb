@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Humanbodybaum — die Dateien von `humanbody_core` und `GarmentFitter`.
+"""Humanbodybaum — die Dateien von `humanbody_core` und `GarmentFitter`.
 
 Zwei Befunde in einem (02.09.2026):
 
@@ -25,15 +25,16 @@ Skript deshalb AM CODE — wer auf Modulebene etwas *tut*, wird
 ausgefuehrt statt importiert. Eine Ordnerliste raet und liegt beim
 naechsten Verzeichnis daneben.
 """
+
 import ast
 
 from django.conf import settings
 
-__all__ = ['Humanbodybaum']
+__all__ = ["Humanbodybaum"]
 
 
 class Humanbodybaum:
-    u"""Findet die Dateien und sagt, welche davon Skripte sind."""
+    """Findet die Dateien und sagt, welche davon Skripte sind."""
 
     #: Je Baum die Wurzel, unter der er liegt — und die ist zugleich der
     #: Bezug fuer den Importnamen (`module()`). Seit dem 07.09.2026 sind
@@ -41,11 +42,13 @@ class Humanbodybaum:
     #: „verschiebe auch die alle nach A:\3DTools\Assets"),
     #: `humanbody_core` blieb in `HumanBody/`. Beide Wurzeln stehen im
     #: `sys.path` (`ui/settings/wurzeln.py`), sonst laedt kein Modul.
-    BAEUME = (('HUMANBODY_ROOT', 'humanbody_core'),
-              ('ASSETS_ROOT', 'assetCreator/GarmentFitter'),
-              ('TOOLS_ROOT', 'MakeHuman'),
-              ('TOOLS_ROOT', 'UMA_Python'),
-              ('ASSETS_ROOT', 'kleidung'))
+    BAEUME = (
+        ("HUMANBODY_ROOT", "humanbody_core"),
+        ("ASSETS_ROOT", "assetCreator/GarmentFitter"),
+        ("TOOLS_ROOT", "MakeHuman"),
+        ("TOOLS_ROOT", "UMA_Python"),
+        ("ASSETS_ROOT", "kleidung"),
+    )
 
     #: Was innerhalb eines Baums NICHT geprueft wird. `makehuman` und
     #: `buildscripts` sind der MakeHuman-Upstream (147 MB, AGPL) — sie
@@ -57,52 +60,51 @@ class Humanbodybaum:
     #: Ladetest dort meldete nur, dass das Paket fehlt — nichts ueber die
     #: Importwege. Gegen stilles Verschwinden schuetzt dort
     #: `Projektquellen` (Syntax, Namen, Escape-Sequenzen).
-    AUS = ('__pycache__', 'makehuman', 'buildscripts')
+    AUS = ("__pycache__", "makehuman", "buildscripts")
 
     @classmethod
-    def wurzel(cls, einstellung='HUMANBODY_ROOT'):
-        u"""Die Wurzel aus den Einstellungen — nie ein fester Pfad."""
+    def wurzel(cls, einstellung="HUMANBODY_ROOT"):
+        """Die Wurzel aus den Einstellungen — nie ein fester Pfad."""
         from pathlib import Path
+
         return Path(str(getattr(settings, einstellung)))
 
     @classmethod
     def paare(cls):
-        u"""(Wurzel, Pfad) je Datei — die Wurzel traegt den Importnamen."""
+        """(Wurzel, Pfad) je Datei — die Wurzel traegt den Importnamen."""
         verboten = set(cls.AUS)
         for einstellung, baum in cls.BAEUME:
             wurzel = cls.wurzel(einstellung)
-            for pfad in sorted((wurzel / baum).rglob('*.py')):
+            for pfad in sorted((wurzel / baum).rglob("*.py")):
                 if not set(pfad.parts) & verboten:
                     yield wurzel, pfad
 
     @classmethod
     def dateien(cls):
-        u"""Jede `.py`-Datei der geprueften Baeume, sortiert."""
+        """Jede `.py`-Datei der geprueften Baeume, sortiert."""
         for _, pfad in cls.paare():
             yield pfad
 
     @classmethod
     def fehlende(cls):
-        u"""Baeume, die es unter ihrer Wurzel gar nicht gibt.
+        """Baeume, die es unter ihrer Wurzel gar nicht gibt.
 
         `rglob` auf einen Ordner, den es nicht mehr gibt, wirft NICHT —
         es kommt nur nichts zurueck. Ein verschobener Baum faellt damit
         still aus jeder Pruefung hier (`~/.claude/rules/projektpfade.md`).
         """
-        return ['%s/%s' % (e, b) for e, b in cls.BAEUME
-                if not (cls.wurzel(e) / b).is_dir()]
+        return ["%s/%s" % (e, b) for e, b in cls.BAEUME if not (cls.wurzel(e) / b).is_dir()]
 
     @staticmethod
     def ist_skript(baum):
-        u"""Tut die Datei auf Modulebene etwas, statt nur zu definieren?
+        """Tut die Datei auf Modulebene etwas, statt nur zu definieren?
 
         Ein Aufruf als eigene Anweisung (`print(...)`, `main()`,
         `logging.basicConfig(...)`) oder eine Schleife auf Modulebene
         heisst: Diese Datei wird ausgefuehrt, nicht importiert.
         """
         for knoten in baum.body:
-            if isinstance(knoten, ast.Expr) and isinstance(knoten.value,
-                                                           ast.Call):
+            if isinstance(knoten, ast.Expr) and isinstance(knoten.value, ast.Call):
                 return True
             if isinstance(knoten, (ast.For, ast.While, ast.AsyncFor)):
                 return True
@@ -110,9 +112,9 @@ class Humanbodybaum:
 
     @classmethod
     def _baum(cls, pfad):
-        u"""Der Syntaxbaum einer Datei, oder `None` wenn sie kaputt ist."""
+        """Der Syntaxbaum einer Datei, oder `None` wenn sie kaputt ist."""
         try:
-            return ast.parse(pfad.read_text(encoding='utf-8'))
+            return ast.parse(pfad.read_text(encoding="utf-8"))
         # stumm gewollt: Der Aufrufer entscheidet, was `None` heisst —
         # `module()` uebergeht die Datei, `unlesbare()` meldet sie.
         except SyntaxError:
@@ -120,7 +122,7 @@ class Humanbodybaum:
 
     @classmethod
     def module(cls, nur_importierbare=False):
-        u"""(Importname, Pfad) je Datei.
+        """(Importname, Pfad) je Datei.
 
         Mit `nur_importierbare` fallen Skripte und unlesbare Dateien
         weg — Letztere meldet `unlesbare()`, nicht diese Suche.
@@ -130,14 +132,14 @@ class Humanbodybaum:
                 baum = cls._baum(pfad)
                 if baum is None or cls.ist_skript(baum):
                     continue
-            teile = list(pfad.relative_to(wurzel).with_suffix('').parts)
-            if teile[-1] == '__init__':
+            teile = list(pfad.relative_to(wurzel).with_suffix("").parts)
+            if teile[-1] == "__init__":
                 teile.pop()
-            yield '.'.join(teile), pfad
+            yield ".".join(teile), pfad
 
     @classmethod
     def unlesbare(cls):
-        u"""Dateien, die sich nicht einmal zerlegen lassen.
+        """Dateien, die sich nicht einmal zerlegen lassen.
 
         Frueher wurden sie beim Suchen stillschweigend uebersprungen —
         der Fehler verschwand, und die Pruefung meldete gruen.
@@ -145,7 +147,7 @@ class Humanbodybaum:
         kaputt = []
         for pfad in cls.dateien():
             try:
-                ast.parse(pfad.read_text(encoding='utf-8'))
+                ast.parse(pfad.read_text(encoding="utf-8"))
             except SyntaxError as fehler:
-                kaputt.append('%s: %s' % (pfad.name, fehler))
+                kaputt.append("%s: %s" % (pfad.name, fehler))
         return kaputt

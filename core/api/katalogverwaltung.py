@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Modelle und UMA-Figuren aus dem Dialog heraus umbenennen und löschen.
+"""Modelle und UMA-Figuren aus dem Dialog heraus umbenennen und löschen.
 
     POST /api/character/katalog/uma/umbenennen/     {alt, neu}
     POST /api/character/katalog/uma/loeschen/       {name}
@@ -14,6 +14,7 @@ mit einer Rückfrage davor im Browser. Die eigentliche Arbeit machen
 Edgar, 06.09.2026: „Mach auch Möglichkeiten zum Umbenennen und Löschen der
 Modelle aus dem Dialog."
 """
+
 import json
 import logging
 
@@ -26,11 +27,10 @@ from ..dienste.umaablage import Ablagefehler, Umaablage
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Katalogverwaltung']
+__all__ = ["Katalogverwaltung"]
 
 
 class Katalogverwaltung:
-
     #: Ein Name aus dem Browser darf nicht leer und nicht endlos sein.
     HOECHSTENS = 120
 
@@ -69,44 +69,44 @@ class Katalogverwaltung:
         daten, fehler = cls._daten(request)
         if fehler:
             return fehler
-        alt, neu = cls._text(daten, 'alt'), cls._text(daten, 'neu')
+        alt, neu = cls._text(daten, "alt"), cls._text(daten, "neu")
         if not alt or not neu:
-            return JsonResponse({'error': 'alt und neu angeben'}, status=400)
+            return JsonResponse({"error": "alt und neu angeben"}, status=400)
         if alt == neu:
-            return JsonResponse({'name': neu, 'unveraendert': True})
+            return JsonResponse({"name": neu, "unveraendert": True})
         try:
-            return JsonResponse({'name': ablage.umbenennen(alt, neu)})
+            return JsonResponse({"name": ablage.umbenennen(alt, neu)})
         except Ablagefehler as fehler:
-            return JsonResponse({'error': str(fehler)}, status=400)
+            return JsonResponse({"error": str(fehler)}, status=400)
         except OSError as fehler:
-            logger.exception('Umbenennen fehlgeschlagen: %s -> %s', alt, neu)
-            return JsonResponse({'error': str(fehler)}, status=500)
+            logger.exception("Umbenennen fehlgeschlagen: %s -> %s", alt, neu)
+            return JsonResponse({"error": str(fehler)}, status=500)
 
     @classmethod
     def _loeschen(cls, request, ablage):
         daten, fehler = cls._daten(request)
         if fehler:
             return fehler
-        name = cls._text(daten, 'name')
+        name = cls._text(daten, "name")
         if not name:
-            return JsonResponse({'error': 'name angeben'}, status=400)
+            return JsonResponse({"error": "name angeben"}, status=400)
         try:
             ablage.loeschen(name)
-            return JsonResponse({'geloescht': name})
+            return JsonResponse({"geloescht": name})
         except Ablagefehler as fehler:
-            return JsonResponse({'error': str(fehler)}, status=400)
+            return JsonResponse({"error": str(fehler)}, status=400)
         except OSError as fehler:
-            logger.exception('Löschen fehlgeschlagen: %s', name)
-            return JsonResponse({'error': str(fehler)}, status=500)
+            logger.exception("Löschen fehlgeschlagen: %s", name)
+            return JsonResponse({"error": str(fehler)}, status=500)
 
     @staticmethod
     def _daten(request):
         try:
-            return json.loads(request.body or b'{}'), None
+            return json.loads(request.body or b"{}"), None
         except ValueError:
-            return None, JsonResponse({'error': 'Kein gültiges JSON'}, status=400)
+            return None, JsonResponse({"error": "Kein gültiges JSON"}, status=400)
 
     @classmethod
     def _text(cls, daten, feld):
-        wert = (daten.get(feld) or '').strip()
-        return wert[:cls.HOECHSTENS]
+        wert = (daten.get(feld) or "").strip()
+        return wert[: cls.HOECHSTENS]

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Smplvarianten — SMPL-X-Koerper in Form und A-Haltung, so abgelegt, wie
+"""Smplvarianten — SMPL-X-Koerper in Form und A-Haltung, so abgelegt, wie
 GarmentCode sie zum Drapieren braucht.
 
 WARUM (Edgar, 06.09.2026: „5 Testfälle für das Fitting mit unterschiedlichen
@@ -30,24 +30,24 @@ import os
 import numpy as np
 from django.conf import settings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Smplvarianten:
-    u"""Erzeugt, benennt und legt SMPL-X-Varianten ab."""
+    """Erzeugt, benennt und legt SMPL-X-Varianten ab."""
 
     #: Woher das SMPL-X-Modell und die Transferdaten kommen.
     MODELLE = str(settings.SMPLX_MODELS_DIR)
 
-    PRAEFIX = 'smplx_'
-    PRAEFIX_ALT = 'smpl_'
+    PRAEFIX = "smplx_"
+    PRAEFIX_ALT = "smpl_"
 
     #: Der Durchschnittskoerper (Betas 0) je Geschlecht — fester Name.
-    DURCHSCHNITT = {'female': 'smplx_female', 'male': 'smplx_male'}
+    DURCHSCHNITT = {"female": "smplx_female", "male": "smplx_male"}
 
     #: Der SMPL-Durchschnitt des Tools je Geschlecht — er traegt die YAML,
     #: die Massvorlage aller Varianten.
-    VORLAGE = {'female': 'f_smpl_average_A40', 'male': 'm_smpl_average_A40'}
+    VORLAGE = {"female": "f_smpl_average_A40", "male": "m_smpl_average_A40"}
 
     _erzeugt = {}
     _segmentierung = None
@@ -55,12 +55,14 @@ class Smplvarianten:
     @staticmethod
     def ordner():
         from GarmentCode.koerperablage import Koerperablage
-        return os.path.join(Koerperablage.ORDNER, 'smplx')
+
+        return os.path.join(Koerperablage.ORDNER, "smplx")
 
     @staticmethod
     def ordner_alt():
         from GarmentCode.koerperablage import Koerperablage
-        return os.path.join(Koerperablage.ORDNER, 'smpl')
+
+        return os.path.join(Koerperablage.ORDNER, "smpl")
 
     # ---------------------------------------------------------------- Namen
 
@@ -68,12 +70,12 @@ class Smplvarianten:
     def name(cls, geschlecht, betas):
         b = np.zeros(10)
         betas = np.asarray(betas or [], dtype=np.float64)
-        b[:min(10, len(betas))] = betas[:10]
+        b[: min(10, len(betas))] = betas[:10]
         if not np.any(np.abs(b) >= 0.0005):
             return cls.DURCHSCHNITT[geschlecht]
         rohbytes = np.round(b, 3).astype(np.float32).tobytes()
         kennung = hashlib.sha1(rohbytes).hexdigest()[:12]
-        return '%s%s_%s' % (cls.PRAEFIX, geschlecht[0], kennung)
+        return "%s%s_%s" % (cls.PRAEFIX, geschlecht[0], kennung)
 
     @classmethod
     def ist_variante(cls, name):
@@ -82,16 +84,16 @@ class Smplvarianten:
 
     @classmethod
     def ist_alt(cls, name):
-        u"""Eine SMPL-Variante von vor dem 15.09.2026 (6.890 Punkte)?"""
+        """Eine SMPL-Variante von vor dem 15.09.2026 (6.890 Punkte)?"""
         name = str(name)
         return name.startswith(cls.PRAEFIX_ALT) and not name.startswith(cls.PRAEFIX)
 
     @classmethod
     def geschlecht(cls, name):
-        u"""Das Geschlecht steckt im Namen (`smplx_female`, `smplx_f_…`, `smpl_m_…`)."""
-        teile = str(name).split('_')
-        kurz = teile[1] if len(teile) > 1 else ''
-        return 'male' if kurz in ('m', 'male') else 'female'
+        """Das Geschlecht steckt im Namen (`smplx_female`, `smplx_f_…`, `smpl_m_…`)."""
+        teile = str(name).split("_")
+        kurz = teile[1] if len(teile) > 1 else ""
+        return "male" if kurz in ("m", "male") else "female"
 
     @classmethod
     def _ordner_von(cls, name):
@@ -102,13 +104,13 @@ class Smplvarianten:
         if not cls.ist_variante(name):
             return False
         if name in cls.DURCHSCHNITT.values():
-            return True                     # wird beim ersten Zugriff gebaut
-        return os.path.isfile(os.path.join(cls._ordner_von(name), name + '.obj'))
+            return True  # wird beim ersten Zugriff gebaut
+        return os.path.isfile(os.path.join(cls._ordner_von(name), name + ".obj"))
 
     @classmethod
     def groesse(cls, name):
-        u"""Bytes der abgelegten OBJ — 0, solange sie noch nicht gebaut ist."""
-        pfad = os.path.join(cls._ordner_von(name), name + '.obj')
+        """Bytes der abgelegten OBJ — 0, solange sie noch nicht gebaut ist."""
+        pfad = os.path.join(cls._ordner_von(name), name + ".obj")
         return os.path.getsize(pfad) if os.path.isfile(pfad) else 0
 
     # ------------------------------------------------------------- erzeugen
@@ -116,13 +118,15 @@ class Smplvarianten:
     @classmethod
     def modell(cls, geschlecht):
         from .smplxrig import Smplxrig
+
         return Smplxrig.koerper(geschlecht)
 
     @classmethod
     def segmentierung(cls):
-        u"""Die SMPL-X-Segmentierung — einmal gebaut, dann von der Platte."""
+        """Die SMPL-X-Segmentierung — einmal gebaut, dann von der Platte."""
         from SMPL.xsegmentierung import Smplxsegmentierung
         from .smplfigur import Smplfiguren
+
         if cls._segmentierung is None:
             quelle = os.path.join(Smplfiguren.ordner(), Smplxsegmentierung.DATEINAME)
             Smplxsegmentierung.bereitstellen(quelle, cls.MODELLE, cls.ordner())
@@ -131,7 +135,7 @@ class Smplvarianten:
 
     @classmethod
     def erzeugen(cls, geschlecht, betas):
-        u"""Koerper, Masse und Ablage einer Variante.
+        """Koerper, Masse und Ablage einer Variante.
 
         Rueckgabe: {name, ordner, geschlecht, betas, punkte (Meter, Y oben),
         dreiecke, hoehe, masse, herkunft}.
@@ -151,61 +155,71 @@ class Smplvarianten:
         # Die Armlaenge kommt aus den Gelenken, nicht aus der YAML: dort
         # stehen 80 cm bei 165 cm Koerpergroesse (siehe Smplkoerper.armlaenge).
         masse, herkunft = Smplmasse(cls.segmentierung()).relativ(
-            v, v_avg, yaml_avg, zusatz={'arm_length': modell.armlaenge(betas)})
+            v, v_avg, yaml_avg, zusatz={"arm_length": modell.armlaenge(betas)}
+        )
 
         ordner = cls.ordner()
-        if not os.path.isfile(os.path.join(ordner, name + '.obj')):
+        if not os.path.isfile(os.path.join(ordner, name + ".obj")):
             # Koerperablage rechnet Projekt -> GarmentCode; die Punkte hier
             # SIND schon GarmentCode-Lage, also erst hin, damit sie zurueck
             # genau so landen.
-            Koerperablage(name, Smplmasse.projekt(v), modell.faces,
-                          ordner=ordner).ablegen(masse)
+            Koerperablage(name, Smplmasse.projekt(v), modell.faces, ordner=ordner).ablegen(masse)
         daten = {
-            'name': name, 'ordner': ordner, 'geschlecht': geschlecht,
-            'betas': [float(x) for x in (betas or [])],
-            'punkte': v, 'dreiecke': modell.faces,
-            'hoehe': float(v[:, 1].max() - v[:, 1].min()),
-            'masse': masse, 'herkunft': herkunft,
+            "name": name,
+            "ordner": ordner,
+            "geschlecht": geschlecht,
+            "betas": [float(x) for x in (betas or [])],
+            "punkte": v,
+            "dreiecke": modell.faces,
+            "hoehe": float(v[:, 1].max() - v[:, 1].min()),
+            "masse": masse,
+            "herkunft": herkunft,
         }
         cls._erzeugt[name] = daten
-        logger.info('SMPL-X-Variante %s: %s, Betas %s, %.1f cm, Taille %.0f cm',
-                    name, geschlecht, daten['betas'], daten['hoehe'] * 100,
-                    masse.get('waist', 0))
+        logger.info(
+            "SMPL-X-Variante %s: %s, Betas %s, %.1f cm, Taille %.0f cm",
+            name,
+            geschlecht,
+            daten["betas"],
+            daten["hoehe"] * 100,
+            masse.get("waist", 0),
+        )
         return daten
 
     @classmethod
     def aus_reglern(cls, geschlecht, groesse=0.0, fuelle=0.0):
-        u"""Der Weg, den das Bedienfeld geht: zwei Regler statt zehn Betas.
+        """Der Weg, den das Bedienfeld geht: zwei Regler statt zehn Betas.
 
         Die Umrechnung samt der je Geschlecht verschiedenen Vorzeichen steht
         in `SMPL/form.py` — dort auch, warum sie gemessen und nicht geraten ist.
         """
         from SMPL.form import Smplform
+
         return cls.erzeugen(geschlecht, Smplform.betas(geschlecht, groesse, fuelle))
 
     @classmethod
     def sicherstellen(cls, name):
-        u"""Einen Durchschnittskoerper bauen, falls seine Dateien fehlen."""
+        """Einen Durchschnittskoerper bauen, falls seine Dateien fehlen."""
         for geschlecht, durchschnitt in cls.DURCHSCHNITT.items():
-            if name == durchschnitt and not os.path.isfile(
-                    os.path.join(cls.ordner(), name + '.obj')):
+            if name == durchschnitt and not os.path.isfile(os.path.join(cls.ordner(), name + ".obj")):
                 cls.erzeugen(geschlecht, None)
 
     # ----------------------------------------------------------------- lesen
 
     @classmethod
     def masse(cls, name):
-        u"""Die abgelegten Masse einer Variante (aus ihrer YAML)."""
+        """Die abgelegten Masse einer Variante (aus ihrer YAML)."""
         import yaml
+
         cls.sicherstellen(name)
-        pfad = os.path.join(cls._ordner_von(name), name + '.yaml')
-        with open(pfad, 'r', encoding='utf-8') as quelle:
-            return yaml.safe_load(quelle)['body']
+        pfad = os.path.join(cls._ordner_von(name), name + ".yaml")
+        with open(pfad, "r", encoding="utf-8") as quelle:
+            return yaml.safe_load(quelle)["body"]
 
     @classmethod
     def netz(cls, name):
-        u"""Punkte (Meter, Y oben) und Dreiecke einer abgelegten Variante."""
+        """Punkte (Meter, Y oben) und Dreiecke einer abgelegten Variante."""
         from GarmentCode.anziehen import Anziehen
+
         cls.sicherstellen(name)
-        return Anziehen.netz_lesen(os.path.join(cls._ordner_von(name), name + '.obj'),
-                                   aus_garmentcode=False)
+        return Anziehen.netz_lesen(os.path.join(cls._ordner_von(name), name + ".obj"), aus_garmentcode=False)

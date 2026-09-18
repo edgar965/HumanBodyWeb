@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Vorgabe-Form eines Stücks bekommt ihr Häkchen — auch mit Reglern.
+"""Die Vorgabe-Form eines Stücks bekommt ihr Häkchen — auch mit Reglern.
 
 WARUM (11.09.2026): Rock- und Schuhformen setzten nur Bausteinfelder
 (`meta.*`); die Vorgabe (Bleistiftrock) wurde gehakt, weil alle ihre Pfade
@@ -12,11 +12,12 @@ Treffer nur für die Vorgabe (`gehakt`).
 Läuft in Node gegen das echte Modul; `document` ist eine Attrappe, die
 die Kästchen zählt.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'garmentcode_passform.js')
+MODUL = Jsmodul("scene", "garmentcode_passform.js")
 
 SKRIPT = """
 const gehakt = [];
@@ -51,12 +52,12 @@ console.log(JSON.stringify({ ok: true, erg, gehakt }));
 
 
 class FormhakenTest(SimpleTestCase):
-
     databases = set()
 
     def test_die_vorgabe_bekommt_ihr_haekchen_und_sonst_nur_die_passende_form(self):
         daten = MODUL.laufen(SKRIPT)
-        self.assertTrue(daten.get('ok'), daten)
-        self.assertEqual(daten['erg'], ['form_kleid', None, 'form_sommerkleid', None])
-        self.assertEqual(daten['gehakt'], ['input[data-preset="form_kleid"]',
-                                           'input[data-preset="form_sommerkleid"]'])
+        self.assertTrue(daten.get("ok"), daten)
+        self.assertEqual(daten["erg"], ["form_kleid", None, "form_sommerkleid", None])
+        self.assertEqual(
+            daten["gehakt"], ['input[data-preset="form_kleid"]', 'input[data-preset="form_sommerkleid"]']
+        )

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Fehlerkurzfassung — aus einem Traceback die eine Zeile, die etwas sagt.
+"""Fehlerkurzfassung — aus einem Traceback die eine Zeile, die etwas sagt.
 
 WARUM EIGENE KLASSE (29.08.2026, Befund `code-qualitaet`): `error_summary`
 auf `BVHJob` hatte Rang C — acht Verzweigungen in einer Eigenschaft, die eine
@@ -27,23 +27,22 @@ class Fehlerkurzfassung:
     """Eine Zeile aus einer Fehlermeldung, die ein Traceback enthalten kann."""
 
     #: Steht das im Text, ist es ein Traceback.
-    MARKE = 'Traceback'
+    MARKE = "Traceback"
 
     #: Wenn sich nichts Besseres finden lässt.
-    ERSATZ = 'Processing failed (traceback truncated)'
+    ERSATZ = "Processing failed (traceback truncated)"
 
     @staticmethod
     def aus(meldung):
         """Die Kurzfassung — leer, wenn es keine Meldung gibt."""
         if not meldung:
-            return ''
+            return ""
         if Fehlerkurzfassung.MARKE not in meldung:
-            return meldung.split('\n')[0].strip()
-        vorspann = (meldung.split(Fehlerkurzfassung.MARKE)[0]
-                    .strip().rstrip(':').strip())
+            return meldung.split("\n")[0].strip()
+        vorspann = meldung.split(Fehlerkurzfassung.MARKE)[0].strip().rstrip(":").strip()
         fehlerzeile = Fehlerkurzfassung._fehlerzeile(meldung)
         if vorspann and fehlerzeile:
-            return '%s: %s' % (vorspann, fehlerzeile)
+            return "%s: %s" % (vorspann, fehlerzeile)
         return vorspann or fehlerzeile or Fehlerkurzfassung.ERSATZ
 
     @staticmethod
@@ -57,8 +56,8 @@ class Fehlerkurzfassung:
         """
         for zeile in reversed(meldung.strip().splitlines()):
             gestrafft = zeile.strip()
-            if not gestrafft or gestrafft.startswith('File '):
+            if not gestrafft or gestrafft.startswith("File "):
                 continue
-            if 'Error' in gestrafft and ':' in gestrafft:
+            if "Error" in gestrafft and ":" in gestrafft:
                 return gestrafft
-        return ''
+        return ""

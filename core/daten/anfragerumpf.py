@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Anfragerumpf — den JSON-Rumpf EINMAL lesen, nicht neunzehnmal.
+"""Anfragerumpf — den JSON-Rumpf EINMAL lesen, nicht neunzehnmal.
 
 BEFUND `doppelcode` (28.08.2026)
 ===============================
@@ -41,12 +41,11 @@ class Anfragerumpf:
     """Der JSON-Rumpf einer Anfrage — oder die fertige 400-Antwort."""
 
     #: Die Meldung, die fuenfzehn der neunzehn Stellen benutzten.
-    MELDUNG = 'Invalid JSON'
+    MELDUNG = "Invalid JSON"
 
     @staticmethod
     def _fehler(meldung):
-        return JsonResponse({'error': meldung or Anfragerumpf.MELDUNG},
-                            status=400)
+        return JsonResponse({"error": meldung or Anfragerumpf.MELDUNG}, status=400)
 
     @staticmethod
     def lesen(request, meldung=None) -> tuple[Any, JsonResponse | None]:
@@ -62,12 +61,11 @@ class Anfragerumpf:
         """
         try:
             return json.loads(request.body), None
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             return None, Anfragerumpf._fehler(meldung)
 
     @staticmethod
-    def feld(request, name, vorgabe=None,
-             meldung=None) -> tuple[Any, JsonResponse | None]:
+    def feld(request, name, vorgabe=None, meldung=None) -> tuple[Any, JsonResponse | None]:
         """EIN Feld aus dem Rumpf — auch wenn der gar kein Objekt ist.
 
         ``json.loads('[1,2]').get('ids')`` wirft ``AttributeError``; genau
@@ -83,8 +81,7 @@ class Anfragerumpf:
         return rumpf.get(name, vorgabe), None
 
     @staticmethod
-    def name_und_daten(request,
-                       meldung=None) -> tuple[str, Any, JsonResponse | None]:
+    def name_und_daten(request, meldung=None) -> tuple[str, Any, JsonResponse | None]:
         """Die Paarung ``name`` + ``data``, wie sie drei Endpunkte speichern.
 
         ``kleidungsvorlagen``, ``modelldateien`` und ``studio_projekt``
@@ -95,12 +92,11 @@ class Anfragerumpf:
         """
         rumpf, antwort = Anfragerumpf.lesen(request, meldung)
         if antwort is not None:
-            return '', None, antwort
+            return "", None, antwort
         if not isinstance(rumpf, dict):
-            return '', None, Anfragerumpf._fehler(meldung)
-        name = (rumpf.get('name') or '').strip()
-        daten = rumpf.get('data')
+            return "", None, Anfragerumpf._fehler(meldung)
+        name = (rumpf.get("name") or "").strip()
+        daten = rumpf.get("data")
         if not name or not daten:
-            return '', None, JsonResponse(
-                {'error': 'name and data required'}, status=400)
+            return "", None, JsonResponse({"error": "name and data required"}, status=400)
         return name, daten, None

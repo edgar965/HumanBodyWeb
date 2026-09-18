@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Weichgewebekoerper`: die ausgeschriebene Bildschleife gegen die Formeln.
+"""`Weichgewebekoerper`: die ausgeschriebene Bildschleife gegen die Formeln.
 
 `takt()` rechnet die vier Verformungen INLINE — ohne die Aufrufe von
 `velocityskinning.js`, weil die je Punkt-Knochen-Paar kleine Felder
@@ -16,11 +16,12 @@ Dazu die zwei Proben, die ohne Formelkenntnis gelten:
   Oberarms spueren (Zeile 1259–1294, „rig extended to ancestor"). Ohne
   die Ausdehnung waere sein Zuschlag bei einer Oberarmdrehung null.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'weichgewebekoerper.js')
+MODUL = Jsmodul("gemeinsam", "weichgewebekoerper.js")
 
 SKRIPT = """
 const { Weichgewebekoerper: K } = await import(MODUL);
@@ -101,11 +102,10 @@ console.log(JSON.stringify({ ok: true, hand_mm: hand * 1000, abweichung: groesst
 
 
 class WeichgewebekoerperJsTest(SimpleTestCase):
-
     databases = set()
 
     def test_inline_rechnet_wie_die_formeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertLess(ausgabe['abweichung'], 1e-6)
-        self.assertGreater(ausgabe['hand_mm'], 0.0)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertLess(ausgabe["abweichung"], 1e-6)
+        self.assertGreater(ausgabe["hand_mm"], 0.0)

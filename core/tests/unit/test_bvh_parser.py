@@ -45,17 +45,16 @@ Frame Time: 0.040000
 """
 
 #: Ein Bild: 6 Kanaele Hips + 3 Kanaele Spine.
-BILD = '0.0 1.0 0.0 0.0 0.0 0.0 5.0 0.0 0.0'
+BILD = "0.0 1.0 0.0 0.0 0.0 0.0 5.0 0.0 0.0"
 
 
 class BvhParserTest(TestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
+        basis = Path(settings.BASE_DIR).parent / "ProjektTemp"
         basis.mkdir(exist_ok=True)
-        cls.ordner = tempfile.mkdtemp(prefix='bvhparser_', dir=str(basis))
+        cls.ordner = tempfile.mkdtemp(prefix="bvhparser_", dir=str(basis))
 
     @classmethod
     def tearDownClass(cls):
@@ -64,42 +63,38 @@ class BvhParserTest(TestCase):
 
     def datei(self, name, inhalt):
         pfad = Path(self.ordner) / name
-        pfad.write_text(inhalt, encoding='utf-8')
+        pfad.write_text(inhalt, encoding="utf-8")
         return str(pfad)
 
     def test_saubere_datei(self):
-        pfad = self.datei('sauber.bvh', KOPF % 3 + '\n'.join([BILD] * 3) + '\n')
+        pfad = self.datei("sauber.bvh", KOPF % 3 + "\n".join([BILD] * 3) + "\n")
         daten = SkeletonRigify.parse_bvh(pfad)
         self.assertEqual(daten.quats.shape[0], 3)
-        self.assertEqual(list(daten.names), ['Hips', 'Spine'])
+        self.assertEqual(list(daten.names), ["Hips", "Spine"])
 
     def test_leerzeile_vor_den_daten(self):
         """Der eigentliche Befund: eine Leerzeile nach 'Frame Time:'."""
-        pfad = self.datei('leerzeile.bvh',
-                          KOPF % 3 + '\n' + '\n'.join([BILD] * 3) + '\n')
+        pfad = self.datei("leerzeile.bvh", KOPF % 3 + "\n" + "\n".join([BILD] * 3) + "\n")
         daten = SkeletonRigify.parse_bvh(pfad)
         self.assertEqual(daten.quats.shape[0], 3)
 
     def test_leerzeilen_zwischen_den_bildern(self):
-        pfad = self.datei('dazwischen.bvh',
-                          KOPF % 3 + BILD + '\n\n' + BILD + '\n\n\n' + BILD + '\n')
+        pfad = self.datei("dazwischen.bvh", KOPF % 3 + BILD + "\n\n" + BILD + "\n\n\n" + BILD + "\n")
         self.assertEqual(SkeletonRigify.parse_bvh(pfad).quats.shape[0], 3)
 
     def test_leerzeilen_am_ende(self):
-        pfad = self.datei('ende.bvh',
-                          KOPF % 2 + '\n'.join([BILD] * 2) + '\n\n\n')
+        pfad = self.datei("ende.bvh", KOPF % 2 + "\n".join([BILD] * 2) + "\n\n\n")
         self.assertEqual(SkeletonRigify.parse_bvh(pfad).quats.shape[0], 2)
 
     def test_abgeschnittenes_bild_bricht_nicht_ab(self):
         """Halbe letzte Zeile: die Datei bleibt lesbar, der Rest wird verworfen."""
-        pfad = self.datei('kurz.bvh',
-                          KOPF % 3 + BILD + '\n' + BILD + '\n' + '0.0 1.0\n')
+        pfad = self.datei("kurz.bvh", KOPF % 3 + BILD + "\n" + BILD + "\n" + "0.0 1.0\n")
         daten = SkeletonRigify.parse_bvh(pfad)
         # Feldgroesse bleibt die angekuendigte, die dritte Drehung bleibt neutral.
         self.assertEqual(daten.quats.shape[0], 3)
 
     def test_weniger_zeilen_als_angekuendigt(self):
-        pfad = self.datei('zuwenig.bvh', KOPF % 10 + '\n'.join([BILD] * 2) + '\n')
+        pfad = self.datei("zuwenig.bvh", KOPF % 10 + "\n".join([BILD] * 2) + "\n")
         self.assertEqual(SkeletonRigify.parse_bvh(pfad).quats.shape[0], 10)
 
     def test_grosse_datei_mit_leerzeile(self):
@@ -115,7 +110,5 @@ class BvhParserTest(TestCase):
         mehr und laeuft auf jedem Rechner.
         """
         bilder = 3669
-        pfad = self.datei('gross.bvh',
-                          KOPF % bilder + '\n' + '\n'.join([BILD] * bilder)
-                          + '\n')
+        pfad = self.datei("gross.bvh", KOPF % bilder + "\n" + "\n".join([BILD] * bilder) + "\n")
         self.assertEqual(SkeletonRigify.parse_bvh(pfad).quats.shape[0], bilder)

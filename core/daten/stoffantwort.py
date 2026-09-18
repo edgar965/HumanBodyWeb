@@ -40,17 +40,15 @@ class Stoffantwort:
         """
         # Dictionary gewollt: geht unveraendert als JSON an den Browser.
         antwort = {
-            'vertex_count': int(ergebnis['vertices'].shape[0]),
-            'vertices': Netzantwort.feld(ergebnis['vertices'], 'vertices'),
-            'face_count': int(ergebnis['faces'].shape[0]),
-            'faces': Netzantwort.feld(ergebnis['faces'], 'faces'),
-            'normals': Netzantwort.feld(ergebnis['normals'], 'normals'),
-            'color': list(farbe if farbe is not None
-                          else ergebnis.get('color') or ()),
+            "vertex_count": int(ergebnis["vertices"].shape[0]),
+            "vertices": Netzantwort.feld(ergebnis["vertices"], "vertices"),
+            "face_count": int(ergebnis["faces"].shape[0]),
+            "faces": Netzantwort.feld(ergebnis["faces"], "faces"),
+            "normals": Netzantwort.feld(ergebnis["normals"], "normals"),
+            "color": list(farbe if farbe is not None else ergebnis.get("color") or ()),
         }
         antwort.update(weitere)
-        antwort.update(cls.gewichte(ergebnis['vertices'], koerperpunkte,
-                                    geschlecht))
+        antwort.update(cls.gewichte(ergebnis["vertices"], koerperpunkte, geschlecht))
         return antwort
 
     @classmethod
@@ -63,13 +61,15 @@ class Stoffantwort:
         Ursprung).
         """
         from ..dienste.skingewichte import Skingewichte
+
         arrays = Skingewichte.arrays(geschlecht)
         if arrays is None or koerperpunkte is None:
             return {}
         from humanbody_core.nachbarsuche import Nachbarsuche
+
         indexe, gewichte = arrays
         _, naechste = Nachbarsuche(koerperpunkte).naechster(stoffpunkte)
         return {
-            'skin_indices': Netzantwort.feld(indexe[naechste], 'skin_indices'),
-            'skin_weights': Netzantwort.feld(gewichte[naechste], 'skin_weights'),
+            "skin_indices": Netzantwort.feld(indexe[naechste], "skin_indices"),
+            "skin_weights": Netzantwort.feld(gewichte[naechste], "skin_weights"),
         }

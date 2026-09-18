@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Retargetvorrat — der Retarget eines Auftrags, gerechnet bevor er „fertig" ist.
+"""Retargetvorrat — der Retarget eines Auftrags, gerechnet bevor er „fertig" ist.
 
 Edgar, 16.09.2026: „keine Animation zu sehen … erst jetzt, nach ca. 1 Minute"
 → „Mach retarget neben BVH". Der erste Abruf eines Ergebnisses im Studio
@@ -17,46 +17,50 @@ Der Auftrag meldet solange „Bewegung wird umgesetzt …" und steht erst danach
 auf „Complete". Scheitert die Rechnung, bleibt der Auftrag trotzdem fertig —
 dann rechnet wie früher der erste Abruf.
 """
+
 import logging
 import os
 import shutil
 from pathlib import Path
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Retargetvorrat:
-
     @staticmethod
     def hoehe():
         from ..api.retarget import Retargetendpunkte
+
         return Retargetendpunkte.VORGABE_GROESSE
 
     @classmethod
     def dateien(cls, job):
-        u"""`[(bvh_pfad, kennung_der_kopie)]` — Körper, Gesicht, Hände, Personen."""
+        """`[(bvh_pfad, kennung_der_kopie)]` — Körper, Gesicht, Hände, Personen."""
         from ..pipelines.personenergebnisse import Personenergebnisse
-        paare = [(job.bvh_file, job.pipeline),
-                 (job.bvh_file_face, job.pipeline + '_face'),
-                 (job.bvh_file_hands, job.pipeline + '_hands')]
+
+        paare = [
+            (job.bvh_file, job.pipeline),
+            (job.bvh_file_face, job.pipeline + "_face"),
+            (job.bvh_file_hands, job.pipeline + "_hands"),
+        ]
         for pfad in job.bvh_file_personen or []:
-            paare.append((pfad, '%s_p%d' % (job.pipeline,
-                                            Personenergebnisse.nummer(pfad))))
+            paare.append((pfad, "%s_p%d" % (job.pipeline, Personenergebnisse.nummer(pfad))))
         return [(pfad, kopie) for pfad, kopie in paare if pfad and os.path.isfile(pfad)]
 
     @classmethod
     def anlegen(cls, job, melden=None):
-        u"""Den Retarget je BVH rechnen und ablegen; Rückgabe: die Ablagen.
+        """Den Retarget je BVH rechnen und ablegen; Rückgabe: die Ablagen.
 
         `melden(text)` zeigt den Zwischenstand (Auftrag: `progress_detail`).
         """
         from .ergebnisablage import Ergebnisablage
         from .retargetdaten import Retargetdaten
+
         hoehe = cls.hoehe()
         abgelegt = []
         for pfad, kennung in cls.dateien(job):
             if melden:
-                melden('Bewegung wird umgesetzt (%s) …' % os.path.basename(pfad))
+                melden("Bewegung wird umgesetzt (%s) …" % os.path.basename(pfad))
             try:
                 daten = Retargetdaten(pfad, hoehe)
                 ergebnis = daten.holen()
@@ -67,10 +71,18 @@ class Retargetvorrat:
                     if not os.path.isfile(ziel):
                         shutil.copy2(daten.ablage, ziel)
                     abgelegt.append(ziel)
-                logger.info('Retargetvorrat %s: %s (%s Bilder) -> %d Ablage(n)',
-                            job.kennung, os.path.basename(pfad),
-                            ergebnis.get('frame_count', '?'), len(abgelegt))
-            except Exception:                                     # noqa: BLE001
-                logger.warning('Retargetvorrat %s: %s nicht gerechnet — der erste '
-                               'Abruf rechnet', job.kennung, pfad, exc_info=True)
+                logger.info(
+                    "Retargetvorrat %s: %s (%s Bilder) -> %d Ablage(n)",
+                    job.kennung,
+                    os.path.basename(pfad),
+                    ergebnis.get("frame_count", "?"),
+                    len(abgelegt),
+                )
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "Retargetvorrat %s: %s nicht gerechnet — der erste Abruf rechnet",
+                    job.kennung,
+                    pfad,
+                    exc_info=True,
+                )
         return [Path(p) for p in abgelegt]

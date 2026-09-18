@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-u"""Fassung 0.60 (13.09.2026) — eine Figur, eine Klasse; SMPL-X-Pipeline; Aufträge."""
+"""Fassung 0.60 (13.09.2026) — eine Figur, eine Klasse; SMPL-X-Pipeline; Aufträge."""
 
 FASSUNG = {
-    'version': '0.60',
-    'date': '2026-09-13',
-    'title': 'Eine Figur, eine Klasse — Modell.bauen() für alle Seiten; '
-             'SMPL-X-Pipeline; Aufträge als eigener Prozess',
-    'author': 'edgar965',
-    'body_md': (
+    "version": "0.60",
+    "date": "2026-09-13",
+    "title": "Eine Figur, eine Klasse — Modell.bauen() für alle Seiten; "
+    "SMPL-X-Pipeline; Aufträge als eigener Prozess",
+    "author": "edgar965",
+    "body_md": (
         "HumanBodyWeb ab `9717489`, Wurzel ab `c861910`, VideoToBVH ab "
         "`84b4053`, jeweils bis zum Commit „Version 0.60“.\n"
         "\n"

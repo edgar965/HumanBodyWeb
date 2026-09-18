@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Gesichtsspuren — die SMPLest-X-Ausdrücke eines Hybrid-Auftrags aufs Rig.
+"""Gesichtsspuren — die SMPLest-X-Ausdrücke eines Hybrid-Auftrags aufs Rig.
 
 DER HYBRID HATTE SEIT DEM 05.04.2026 KEIN GESICHT (Befund 12.09.2026, Edgar:
 „ich sehe aber keine gesichter?"). `Hybridlauf._gesichtsausdruecke` schreibt
@@ -27,6 +27,7 @@ Ruhelage 175°, Spur 1° — jeder Gesichtsknochen sprang auf die Einheitslage.
 Deshalb legt `auf_ruhelage` vor dem Mischen die Ruhelage des DEF-Skeletts
 unter jede Spur: `q = ruhe · delta`, dieselbe Reihenfolge wie im JS.
 """
+
 import json
 import os
 
@@ -34,34 +35,35 @@ import numpy as np
 
 
 class Gesichtsspuren:
-
     #: So heißt die Datei neben der Gesichts-BVH (`Hybridlauf`).
-    ENDUNG = '_blendshapes.json'
+    ENDUNG = "_blendshapes.json"
 
     @classmethod
     def datei(cls, gesicht_bvh):
-        return gesicht_bvh.rsplit('.', 1)[0] + cls.ENDUNG
+        return gesicht_bvh.rsplit(".", 1)[0] + cls.ENDUNG
 
     @classmethod
     def laden(cls, gesicht_bvh):
-        u"""`Bewegungsspuren` der Ausdrücke oder `None`, wenn keine Datei da ist."""
+        """`Bewegungsspuren` der Ausdrücke oder `None`, wenn keine Datei da ist."""
         pfad = cls.datei(gesicht_bvh)
         if not os.path.isfile(pfad):
             return None
         from humanbody_core.skeleton.face_blendshapes import Gesichtsformen
-        with open(pfad, encoding='utf-8') as datei:
+
+        with open(pfad, encoding="utf-8") as datei:
             daten = json.load(datei)
         return Gesichtsformen.blendshapes_to_bone_tracks(daten)
 
     @staticmethod
     def auf_ruhelage(spuren, geometrie):
-        u"""Aus Deltas absolute Lagen: je Knochen und Bild `ruhe · delta`.
+        """Aus Deltas absolute Lagen: je Knochen und Bild `ruhe · delta`.
 
         `geometrie` ist das Zielskelett (`SkeletonGeometry`); ein Knochen,
         den es dort nicht gibt, bleibt, wie er ist — der Mischer lässt ihn
         ohnehin fallen. Ändert `spuren` an Ort und Stelle und gibt sie zurück.
         """
         from humanbody_core.quaternion import Quat
+
         for name, werte in spuren.tracks.items():
             knochen = geometrie.bones.get(name)
             if knochen is None:
@@ -73,17 +75,18 @@ class Gesichtsspuren:
 
     @classmethod
     def mischen(cls, gemischt, ausdruecke, geometrie=None):
-        u"""`gemischt` (Körper + v4 [+ Finger]) mit den Gesichtsknochen aus
+        """`gemischt` (Körper + v4 [+ Finger]) mit den Gesichtsknochen aus
         `ausdruecke` — beides `Bewegungsspuren`. Die Ausdrücke sind Deltas
         und werden hier auf die Ruhelage des DEF-Skeletts gelegt (`geometrie`,
         sonst `Skelettgeometrie.holen()`)."""
         if ausdruecke is None or ausdruecke.frame_count == 0:
             return gemischt
         from humanbody_core.skeleton.retarget.zusammenfuegen import merge_retargeted
+
         if geometrie is None:
             from .skelettgeometrie import Skelettgeometrie
+
             geometrie = Skelettgeometrie.holen()
         lagen = cls.auf_ruhelage(ausdruecke, geometrie)
-        knochen = {name.replace('.', '_') for name in lagen.tracks}
-        return merge_retargeted(gemischt, lagen, face_hand_bones=knochen,
-                                filter_noisy_face=False)
+        knochen = {name.replace(".", "_") for name in lagen.tracks}
+        return merge_retargeted(gemischt, lagen, face_hand_bones=knochen, filter_noisy_face=False)

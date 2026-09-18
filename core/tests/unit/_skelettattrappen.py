@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""JS-Attrappen für die Skelett-Prüfungen — Knochen ohne Three.js.
+"""JS-Attrappen für die Skelett-Prüfungen — Knochen ohne Three.js.
 
 Führender Unterstrich mit Absicht: `testaufbau` erkennt daran, dass hier
 keine Testdatei liegt (wie in `_attrappen.py`).

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Konformeranpassung — ein fertiges Kleidungsnetz mit UMAs Konformer anlegen.
+"""Konformeranpassung — ein fertiges Kleidungsnetz mit UMAs Konformer anlegen.
 
 WARUM (09.09.2026, Edgar: „im Tab Assets - Garment Fit viele Assets, die nicht
 auf das Modell fitten … Überlege, ob du die Logik von «Garment Code» anwenden
@@ -31,19 +31,20 @@ Kleidungsstück: Seine Wölbung ist gewollt, sein Abstand zur Haut ist echte
 Stoffdicke. Hier gelten deshalb UMAs Vorgaben (`glaetten=True`,
 `tangential_halten=True`), und der Abstand bleibt, wie er gebunden wurde.
 """
+
 import logging
 
 import numpy as np
 
 from .koerperhuelle import Koerperhuelle
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
-__all__ = ['Konformeranpassung']
+__all__ = ["Konformeranpassung"]
 
 
 class Konformeranpassung:
-    u"""Ein Kleidungsnetz über UMAs Konformer an einen Körper legen."""
+    """Ein Kleidungsnetz über UMAs Konformer an einen Körper legen."""
 
     #: Ein Bibliotheksstück kann weiter von der Haut weg liegen als ein
     #: Schnittteil (Mantel, weiter Rock) - der Suchradius muss das hergeben.
@@ -51,9 +52,8 @@ class Konformeranpassung:
     HOECHSTABSTAND_M = 1.0
 
     @classmethod
-    def legen(cls, stoff_punkte, stoff_dreiecke, koerper_punkte,
-              koerper_dreiecke, zusatzabstand_m=0.0):
-        u"""Das Stück an den Körper legen.
+    def legen(cls, stoff_punkte, stoff_dreiecke, koerper_punkte, koerper_dreiecke, zusatzabstand_m=0.0):
+        """Das Stück an den Körper legen.
 
         @param stoff_punkte    (N, 3) des Kleidungsnetzes
         @param stoff_dreiecke  (T, 3)
@@ -62,8 +62,7 @@ class Konformeranpassung:
         @param zusatzabstand_m zusätzlicher Abstand zur Haut
         @returns (dict, None) oder (None, Grund) - nie eine stille Nulländerung
         """
-        from UMA_Python import (Einstellungen, Kleidungskonformer,
-                                Netzgeometrie)
+        from UMA_Python import Einstellungen, Kleidungskonformer, Netzgeometrie
 
         stoff = np.asarray(stoff_punkte, dtype=np.float64).reshape(-1, 3)
         koerper = np.asarray(koerper_punkte, dtype=np.float64).reshape(-1, 3)
@@ -71,38 +70,40 @@ class Konformeranpassung:
         # `mesh.faces.shape[1] == 4`). Ein `reshape(-1, 3)` darauf haette
         # stillschweigend Unsinn ergeben - dieselbe Zahl Werte, voellig andere
         # Flaechen. `Koerperhuelle.dreiecke` teilt sie richtig auf.
-        flaechen = np.asarray(Koerperhuelle.dreiecke(koerper_dreiecke),
-                              dtype=np.int64).reshape(-1, 3)
-        stoff_flaechen = np.asarray(Koerperhuelle.dreiecke(stoff_dreiecke),
-                                    dtype=np.int64).reshape(-1, 3)
+        flaechen = np.asarray(Koerperhuelle.dreiecke(koerper_dreiecke), dtype=np.int64).reshape(-1, 3)
+        stoff_flaechen = np.asarray(Koerperhuelle.dreiecke(stoff_dreiecke), dtype=np.int64).reshape(-1, 3)
         dreiecke = stoff_flaechen
         if not len(stoff) or not len(dreiecke):
-            return None, u'Das Stück hat keine Flächen'
+            return None, "Das Stück hat keine Flächen"
         if not len(koerper) or not len(flaechen):
-            return None, u'Der Körper hat keine Flächen'
+            return None, "Der Körper hat keine Flächen"
 
         konformer = Kleidungskonformer(
-            koerper, flaechen,
-            Einstellungen(zusatzabstand_m=float(zusatzabstand_m),
-                          suchradius_m=cls.SUCHRADIUS_M,
-                          hoechstabstand_m=cls.HOECHSTABSTAND_M))
-        bindung = konformer.binden('garment_fit', stoff, dreiecke)
+            koerper,
+            flaechen,
+            Einstellungen(
+                zusatzabstand_m=float(zusatzabstand_m),
+                suchradius_m=cls.SUCHRADIUS_M,
+                hoechstabstand_m=cls.HOECHSTABSTAND_M,
+            ),
+        )
+        bindung = konformer.binden("garment_fit", stoff, dreiecke)
         taugt, grund = bindung.taugt()
         if taugt:
             cls._abstand_kappen(bindung, zusatzabstand_m)
         if not taugt:
-            logger.warning('Konformer: Bindung untauglich - %s', grund)
+            logger.warning("Konformer: Bindung untauglich - %s", grund)
             return None, grund
 
         gelegt = konformer.anwenden(bindung)
         bilanz = bindung.bilanz()
         return {
-            'vertices': gelegt,
-            'faces': dreiecke,
-            'normals': Netzgeometrie.punktnormalen(gelegt, dreiecke),
-            'gebunden': bilanz.get('gebunden'),
-            'ungebunden': bilanz.get('ungebunden'),
-            'hautabstand_mm': cls._hautabstand_mm(koerper, gelegt),
+            "vertices": gelegt,
+            "faces": dreiecke,
+            "normals": Netzgeometrie.punktnormalen(gelegt, dreiecke),
+            "gebunden": bilanz.get("gebunden"),
+            "ungebunden": bilanz.get("ungebunden"),
+            "hautabstand_mm": cls._hautabstand_mm(koerper, gelegt),
         }, None
 
     #: Weiter als das darf ein Stück nach dem Anlegen nicht von der Haut
@@ -115,7 +116,7 @@ class Konformeranpassung:
 
     @classmethod
     def _abstand_kappen(cls, bindung, zusatzabstand_m):
-        u"""Zu weite Bindungsabstände auf `KAPPE_M` ziehen, Vorzeichen behalten.
+        """Zu weite Bindungsabstände auf `KAPPE_M` ziehen, Vorzeichen behalten.
 
         Das VORZEICHEN bleibt (wie in `GarmentCode/vorschau3d.py`): Wer es
         mitkappt, klappt das Stück auf die Innenseite des Körpers.
@@ -127,7 +128,7 @@ class Konformeranpassung:
 
     @staticmethod
     def _hautabstand_mm(koerper, gelegt):
-        u"""Median-Abstand zum nächsten Körperpunkt, in Millimetern.
+        """Median-Abstand zum nächsten Körperpunkt, in Millimetern.
 
         Die Zahl macht den Vergleich der Verfahren überhaupt erst möglich -
         ohne sie bliebe „sitzt besser" eine Behauptung. Sie misst gegen die
@@ -136,8 +137,8 @@ class Konformeranpassung:
         """
         try:
             from scipy.spatial import cKDTree
-        except ImportError:                                    # noqa: BLE001
-            logger.info('Konformer: ohne scipy kein Hautabstand')
+        except ImportError:  # noqa: BLE001
+            logger.info("Konformer: ohne scipy kein Hautabstand")
             return None
         abstand, _ = cKDTree(koerper).query(gelegt, workers=-1)
         return round(float(np.median(abstand)) * 1000.0, 1)

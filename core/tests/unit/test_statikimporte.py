@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Kein relativer Import verlässt den Statikstamm.
+"""Kein relativer Import verlässt den Statikstamm.
 
 DER BEFUND (Edgar, 11.09.2026: „GVHMR pipeline starten funktioniert nicht")
 =========================================================================
@@ -22,23 +22,25 @@ unter `static/` liegt. `js/auftraege/x.js` liegt zwei Ordner tief: `../..`
 ist der Statikstamm, `../../..` liegt darüber — und darüber gibt es in der
 Fassungsadresse nichts, was der Platte entspricht.
 """
+
 import re
 from pathlib import Path
 
 from django.conf import settings
 from django.test import SimpleTestCase
 
-STATIK = Path(settings.BASE_DIR) / 'static'
-AUSGENOMMEN = ('node_modules', 'theatre')   # gebaute Bündel, keine Quellen
-IMPORT = re.compile(r"""(?:^|\n)\s*(?:import|export)\b[^'"\n]*?\bfrom\s*['"]([^'"]+)['"]"""
-                    r"""|import\(\s*['"]([^'"]+)['"]""")
+STATIK = Path(settings.BASE_DIR) / "static"
+AUSGENOMMEN = ("node_modules", "theatre")  # gebaute Bündel, keine Quellen
+IMPORT = re.compile(
+    r"""(?:^|\n)\s*(?:import|export)\b[^'"\n]*?\bfrom\s*['"]([^'"]+)['"]"""
+    r"""|import\(\s*['"]([^'"]+)['"]"""
+)
 
 
 class Statikimporte:
-
     @staticmethod
     def dateien():
-        for pfad in STATIK.rglob('*.js'):
+        for pfad in STATIK.rglob("*.js"):
             if any(teil in AUSGENOMMEN for teil in pfad.relative_to(STATIK).parts):
                 continue
             yield pfad
@@ -50,15 +52,15 @@ class Statikimporte:
 
     @staticmethod
     def zu_hoch(pfad, ziel):
-        u"""True, wenn `ziel` (relativ zu `pfad`) über `static/` hinausführt."""
-        if not ziel.startswith(('./', '../')):
+        """True, wenn `ziel` (relativ zu `pfad`) über `static/` hinausführt."""
+        if not ziel.startswith(("./", "../")):
             return False
         tiefe = len(pfad.relative_to(STATIK).parts) - 1
         hoch = 0
-        for teil in ziel.split('/'):
-            if teil == '..':
+        for teil in ziel.split("/"):
+            if teil == "..":
                 hoch += 1
-            elif teil not in ('.', ''):
+            elif teil not in (".", ""):
                 break
         return hoch > tiefe
 
@@ -66,34 +68,36 @@ class Statikimporte:
     def befunde(cls):
         aus = []
         for pfad in cls.dateien():
-            for ziel in cls.ziele(pfad.read_text(encoding='utf-8', errors='replace')):
+            for ziel in cls.ziele(pfad.read_text(encoding="utf-8", errors="replace")):
                 if cls.zu_hoch(pfad, ziel):
                     aus.append((str(pfad.relative_to(STATIK)), ziel))
         return aus
 
 
 class KeinImportVerlaesstDenStatikstamm(SimpleTestCase):
-
     databases = set()
 
     def test_alle_relativen_importe_bleiben_unter_static(self):
         befunde = Statikimporte.befunde()
-        self.assertEqual(befunde, [], 'Importe über den Statikstamm hinaus '
-                         '(im Browser /statik/v-…/ — dort gibt es darüber nichts):\n'
-                         + '\n'.join('  %s  ->  %s' % b for b in befunde))
+        self.assertEqual(
+            befunde,
+            [],
+            "Importe über den Statikstamm hinaus "
+            "(im Browser /statik/v-…/ — dort gibt es darüber nichts):\n"
+            + "\n".join("  %s  ->  %s" % b for b in befunde),
+        )
 
     def test_es_werden_ueberhaupt_dateien_geprueft(self):
         self.assertGreater(len(list(Statikimporte.dateien())), 200)
 
     def test_der_fall_von_damals_wird_gemeldet(self):
-        pfad = STATIK / 'js' / 'auftraege' / 'pipelinevorgaben.js'
-        self.assertTrue(Statikimporte.zu_hoch(
-            pfad, '../../../static/viewer/gemeinsam/protokoll.js'))
-        self.assertFalse(Statikimporte.zu_hoch(pfad, '../../viewer/gemeinsam/protokoll.js'))
-        self.assertFalse(Statikimporte.zu_hoch(pfad, './pipelinefelder.js'))
-        self.assertFalse(Statikimporte.zu_hoch(pfad, '/static/djangobase/js/htmltext.js'))
+        pfad = STATIK / "js" / "auftraege" / "pipelinevorgaben.js"
+        self.assertTrue(Statikimporte.zu_hoch(pfad, "../../../static/viewer/gemeinsam/protokoll.js"))
+        self.assertFalse(Statikimporte.zu_hoch(pfad, "../../viewer/gemeinsam/protokoll.js"))
+        self.assertFalse(Statikimporte.zu_hoch(pfad, "./pipelinefelder.js"))
+        self.assertFalse(Statikimporte.zu_hoch(pfad, "/static/djangobase/js/htmltext.js"))
 
     def test_der_import_ist_auch_wirklich_umgestellt(self):
-        text = (STATIK / 'js' / 'auftraege' / 'pipelinevorgaben.js').read_text(encoding='utf-8')
+        text = (STATIK / "js" / "auftraege" / "pipelinevorgaben.js").read_text(encoding="utf-8")
         self.assertIn("from '../../viewer/gemeinsam/protokoll.js'", text)
         self.assertNotIn("../../../static/", text)

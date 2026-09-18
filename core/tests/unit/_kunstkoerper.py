@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Kunstkörper für Masken-, Vorschau- und Nachführungstests.
+"""Kunstkörper für Masken-, Vorschau- und Nachführungstests.
 
 `zylinder`: ein Zylinder um die y-Achse mit `ringe` Reihen zu `n` Punkten,
 nach außen gewickelt — dieselbe Bauvorschrift wie `zylinder()` in
@@ -12,11 +12,12 @@ aus dem Feld (IndexError). Körpernetze haben 17.288 Dreiecke; ein zu grobes
 Testnetz prüft also einen Fall, den es nicht gibt. Stand bis zum 12.09.2026
 in `test_stoffvorschau` und wurde von zwei anderen Tests importiert.
 """
+
 import numpy as np
 
 
 class Kunstkoerper:
-    u"""Geschlossene Netze mit bekannter Form — `(punkte, dreiecke)`."""
+    """Geschlossene Netze mit bekannter Form — `(punkte, dreiecke)`."""
 
     @staticmethod
     def zylinder(radius, y0, y1, ringe, n):
@@ -38,7 +39,7 @@ class Kunstkoerper:
     def wuerfel(n=6):
         punkte, dreiecke = [], []
         # Sechs Seiten, jede als Gitter. `achse` ist die feste Richtung.
-        seiten = [(0, -.5), (0, .5), (1, 0.), (1, 1.), (2, -.5), (2, .5)]
+        seiten = [(0, -0.5), (0, 0.5), (1, 0.0), (1, 1.0), (2, -0.5), (2, 0.5)]
         for achse, wert in seiten:
             ab = len(punkte)
             frei = [i for i in range(3) if i != achse]
@@ -46,8 +47,8 @@ class Kunstkoerper:
                 for b in range(n + 1):
                     p = [0.0, 0.0, 0.0]
                     p[achse] = wert
-                    p[frei[0]] = -.5 + a / n if frei[0] != 1 else a / n
-                    p[frei[1]] = -.5 + b / n if frei[1] != 1 else b / n
+                    p[frei[0]] = -0.5 + a / n if frei[0] != 1 else a / n
+                    p[frei[1]] = -0.5 + b / n if frei[1] != 1 else b / n
                     punkte.append(p)
             for a in range(n):
                 for b in range(n):

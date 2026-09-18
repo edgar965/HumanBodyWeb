@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Das HumanBody-Paket in den Suchpfad legen — fuer Tests, die es brauchen.
+"""Das HumanBody-Paket in den Suchpfad legen — fuer Tests, die es brauchen.
 
 BEFUND `doppelcode` (30.08.2026): Dieselben fuenf Zeilen standen in
 ``test_cloth_bruecke.py`` und ``test_kollision_ton_pfade.py``. Beide Tests
@@ -14,28 +14,29 @@ DER EINTRAG WIRD NUR EINMAL GESETZT. Ein zweiter Eintrag desselben Pfades
 schadet nicht, aber bei jedem Testlauf waechst ``sys.path`` sonst weiter — und
 lange Suchpfade machen JEDEN Import langsamer.
 """
+
 import sys
 
 from django.conf import settings
 
 
 class Humanbodypfad:
-    u"""Der Suchpfad zum HumanBody-Paket."""
+    """Der Suchpfad zum HumanBody-Paket."""
 
     @staticmethod
     def setzen():
-        u"""Die HumanBody-Wurzel voranstellen. Gibt den Pfad zurueck (oder '')."""
-        return Humanbodypfad._voranstellen('HUMANBODY_ROOT')
+        """Die HumanBody-Wurzel voranstellen. Gibt den Pfad zurueck (oder '')."""
+        return Humanbodypfad._voranstellen("HUMANBODY_ROOT")
 
     @staticmethod
     def assets():
-        u"""Dasselbe fuer `Assets/` — dort liegen `assetCreator` und
+        """Dasselbe fuer `Assets/` — dort liegen `assetCreator` und
         `GarmentCode` seit dem 07.09.2026."""
-        return Humanbodypfad._voranstellen('ASSETS_ROOT')
+        return Humanbodypfad._voranstellen("ASSETS_ROOT")
 
     @staticmethod
     def _voranstellen(einstellung):
-        wurzel = str(getattr(settings, einstellung, ''))
+        wurzel = str(getattr(settings, einstellung, ""))
         if wurzel and wurzel not in sys.path:
             sys.path.insert(0, wurzel)
         return wurzel

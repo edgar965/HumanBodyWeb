@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Bodenstand`: der Bodenfix gilt der ANIMIERTEN Figur, nicht der gewählten.
+"""`Bodenstand`: der Bodenfix gilt der ANIMIERTEN Figur, nicht der gewählten.
 
 WARUM (Edgar, 13.09.2026: „Animation immer auf Bodenniveau funktioniert
 nicht"): `Szenenschleife.aufDenBoden` nahm `fn._selectedInst()`. Wer
@@ -16,11 +16,12 @@ Knochen, siehe `test_js_koerpertiefe`):
 Sabotage-Gegenprobe: in `figur()` `zustand.selectedCharacterId` zuerst →
 Fall 1 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'bodenstand.js')
+MODUL = Jsmodul("scene", "bodenstand.js")
 
 SKRIPT = """
 const { Bodenstand: B } = await import(MODUL);
@@ -62,6 +63,5 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class BodenstandTest(SimpleTestCase):
-
     def test_die_animierte_figur_kommt_auf_den_boden(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

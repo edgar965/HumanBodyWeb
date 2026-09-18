@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Projektquellen — die eigenen Python-Dateien der vier Repos.
+"""Projektquellen — die eigenen Python-Dateien der vier Repos.
 
 Vier Pruefungen suchten dieselben Dateien und schrieben dafuer je einen
 eigenen Block: `TOOLS = Path(__file__).resolve().parents[4]`, eine
@@ -24,20 +24,21 @@ WARUM DIE AUSSCHLUSSLISTEN VERSCHIEDEN BLEIBEN
 Addon-Pruefungen sehen dorthin nicht. Zusammengelegt wird deshalb das
 SUCHEN, nicht der Suchbereich — `dateien()` nimmt beides entgegen.
 """
+
 import ast
 from pathlib import Path
 
-__all__ = ['Projektquellen']
+__all__ = ["Projektquellen"]
 
 
 class Projektquellen:
-    u"""Findet die eigenen Quelltexte unter der Werkzeugwurzel."""
+    """Findet die eigenen Quelltexte unter der Werkzeugwurzel."""
 
     #: `…/3DTools` — die Wurzel, unter der die vier Repos liegen.
     TOOLS = Path(__file__).resolve().parents[4]
 
     #: Das Blender-Addon.
-    ADDON = TOOLS / 'HumanBodyBlender'
+    ADDON = TOOLS / "HumanBodyBlender"
 
     #: Die Baeume mit eigenem Code (Addon-Sicht). `assetCreator` und
     #: `PhotoToTexture` liegen seit dem 07.09.2026 unter `Assets/`
@@ -48,10 +49,17 @@ class Projektquellen:
     #: stand aber in KEINER dieser Listen — die sechs Dienste, die an
     #: diesem Tag dorthin zogen, waeren damit still aus jeder Pruefung
     #: gefallen.
-    BAEUME = ('HumanBodyBlender',
-              'HumanBody/humanbody_core', 'HumanBody/collision',
-              'Assets/assetCreator', 'Assets/PhotoToTexture', 'MakeHuman',
-              'Assets/GarmentCode', 'UMA_Python', 'Assets/kleidung')
+    BAEUME = (
+        "HumanBodyBlender",
+        "HumanBody/humanbody_core",
+        "HumanBody/collision",
+        "Assets/assetCreator",
+        "Assets/PhotoToTexture",
+        "MakeHuman",
+        "Assets/GarmentCode",
+        "UMA_Python",
+        "Assets/kleidung",
+    )
 
     #: Fremde Addons und eingelagerte Fremdprojekte. `convert/retarget_bvh`
     #: und `kbs_retarget` stammen von anderen Urhebern; `data` und `cache`
@@ -63,26 +71,40 @@ class Projektquellen:
     #: `upstream` (62 Dateien) und `warp_fork` (391) sind der
     #: GarmentCode-Upstream und Nvidias Warp-Fork — fremder Code unter
     #: `Assets/GarmentCode/`, gezaehlt am 08.09.2026.
-    AUS = ('__pycache__', 'retarget_bvh', 'kbs_retarget', 'data', 'cache',
-           'idol', 'sith', 'texformer', 'textured_smplx', 'TestCharakter',
-           'alt', 'makehuman', 'buildscripts', 'upstream', 'warp_fork')
+    AUS = (
+        "__pycache__",
+        "retarget_bvh",
+        "kbs_retarget",
+        "data",
+        "cache",
+        "idol",
+        "sith",
+        "texformer",
+        "textured_smplx",
+        "TestCharakter",
+        "alt",
+        "makehuman",
+        "buildscripts",
+        "upstream",
+        "warp_fork",
+    )
 
     @classmethod
     def dateien(cls, baeume=None, aus=None):
-        u"""Alle eigenen Python-Dateien der angegebenen Baeume, sortiert."""
+        """Alle eigenen Python-Dateien der angegebenen Baeume, sortiert."""
         baeume = cls.BAEUME if baeume is None else baeume
         verboten = set(cls.AUS if aus is None else aus)
         for baum in baeume:
             wurzel = cls.TOOLS / baum
             if not wurzel.is_dir():
                 continue
-            for pfad in sorted(wurzel.rglob('*.py')):
+            for pfad in sorted(wurzel.rglob("*.py")):
                 if not set(pfad.parts) & verboten:
                     yield pfad
 
     @classmethod
     def fehlende(cls, baeume=None):
-        u"""Baeume aus der Liste, die es gar nicht gibt.
+        """Baeume aus der Liste, die es gar nicht gibt.
 
         DAS `continue` OBEN IST STILL, und das ist die eigentliche Falle:
         Ein verschobener Ordner faellt einfach aus der Suche, die Pruefung
@@ -91,12 +113,13 @@ class Projektquellen:
         waeren so 49 Dateien lautlos aus der Pruefung gefallen —
         `~/.claude/rules/projektpfade.md`.
         """
-        return [baum for baum in (cls.BAEUME if baeume is None else baeume)
-                if not (cls.TOOLS / baum).is_dir()]
+        return [
+            baum for baum in (cls.BAEUME if baeume is None else baeume) if not (cls.TOOLS / baum).is_dir()
+        ]
 
     @classmethod
     def baeume(cls, baeume=None, aus=None):
-        u"""(Pfad, Syntaxbaum) je lesbarer Datei.
+        """(Pfad, Syntaxbaum) je lesbarer Datei.
 
         Eine Datei, die sich nicht zerlegen laesst, faellt weg — das
         meldet `test_escape_sequenzen`, nicht diese Suche.
@@ -105,7 +128,7 @@ class Projektquellen:
 
     @staticmethod
     def als_baeume(pfade):
-        u"""(Pfad, Syntaxbaum) je lesbarer Datei aus `pfade`.
+        """(Pfad, Syntaxbaum) je lesbarer Datei aus `pfade`.
 
         Steht hier und nicht auch in `Addonimporte`: Dort stand
         dieselbe Schleife ein zweites Mal (`doppelcode`, 8 Zeilen).
@@ -113,8 +136,7 @@ class Projektquellen:
         """
         for pfad in pfade:
             try:
-                yield pfad, ast.parse(
-                    pfad.read_text(encoding='utf-8', errors='replace'))
+                yield pfad, ast.parse(pfad.read_text(encoding="utf-8", errors="replace"))
             # stumm gewollt: Eine Datei, die sich nicht zerlegen laesst,
             # meldet `test_escape_sequenzen` — hier waere es dieselbe
             # Meldung ein zweites Mal.
@@ -123,7 +145,7 @@ class Projektquellen:
 
     @classmethod
     def addondateien(cls):
-        u"""Nur die Dateien des Blender-Addons."""
-        for pfad in sorted(cls.ADDON.rglob('*.py')):
+        """Nur die Dateien des Blender-Addons."""
+        for pfad in sorted(cls.ADDON.rglob("*.py")):
             if not set(pfad.parts) & set(cls.AUS):
                 yield pfad

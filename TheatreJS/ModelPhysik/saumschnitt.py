@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Saumschnitt — verdeckte Randecken enden an der Stoffkante, nicht ein Zahn
+"""Saumschnitt — verdeckte Randecken enden an der Stoffkante, nicht ein Zahn
 darunter. Dieselbe Regel wie `static/viewer/gemeinsam/saumschnitt.js`.
 
 BEFUND (Edgar, 13.09.2026, Bild vom Bund der Hose von oben: „der Innensaum
@@ -19,11 +19,12 @@ wird EINMAL in Ruhelage bestimmt (dort ist die Maske gerechnet) und je Bild
 auf den GESTELLTEN Kanten ausgewertet — die Ecke folgt ihrer Kante, wie im
 Browser der Einzug vor dem Skinning mitdreht.
 """
+
 import numpy as np
 
 
 class Saumschnitt:
-    u"""Zuordnung der verdeckten Randecken zu Stoffkanten und ihr Einzug."""
+    """Zuordnung der verdeckten Randecken zu Stoffkanten und ihr Einzug."""
 
     #: Naeher als das an einer Stoffkante: an die Kante statt nach innen.
     SCHNAPP_M = 0.015
@@ -44,7 +45,7 @@ class Saumschnitt:
 
     @classmethod
     def binden(cls, punkte, dreiecke, maske, stoffe):
-        u"""Ruhelage: je verdeckter Randecke die naechste Kantenstrecke.
+        """Ruhelage: je verdeckter Randecke die naechste Kantenstrecke.
 
         `stoffe`: Liste (punkte, dreiecke) der Stuecke DARUEBER, in derselben
         Lage. Ecken ohne Kante binnen `SCHNAPP_M` fehlen im Ergebnis.
@@ -53,7 +54,7 @@ class Saumschnitt:
         if not len(ecken):
             return cls([], [], [], [], [])
         P = np.asarray(punkte, dtype=np.float64)[ecken]
-        best = np.full(len(ecken), cls.SCHNAPP_M ** 2)
+        best = np.full(len(ecken), cls.SCHNAPP_M**2)
         stueck = np.full(len(ecken), -1)
         A = np.zeros(len(ecken), dtype=np.int64)
         B = np.zeros(len(ecken), dtype=np.int64)
@@ -74,7 +75,7 @@ class Saumschnitt:
 
     @staticmethod
     def randecken(maske, dreiecke):
-        u"""Verdeckte Ecken, die an einem gezeichneten Dreieck haengen."""
+        """Verdeckte Ecken, die an einem gezeichneten Dreieck haengen."""
         T = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
         m = np.asarray(maske, dtype=bool)[T]
         gemischt = m.any(axis=1) & ~m.all(axis=1)
@@ -83,7 +84,7 @@ class Saumschnitt:
 
     @staticmethod
     def kanten(dreiecke):
-        u"""Offene Kanten (in genau einem Dreieck) als (k, 2) Punktpaare."""
+        """Offene Kanten (in genau einem Dreieck) als (k, 2) Punktpaare."""
         T = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
         if not len(T):
             return np.zeros((0, 2), dtype=np.int64)
@@ -92,23 +93,22 @@ class Saumschnitt:
         # Paare zu EINEM Schluessel gefaltet — `np.unique(axis=0)` sortiert
         # zeilenweise und ist um ein Vielfaches langsamer (Lehre).
         n = int(T.max()) + 1
-        _, index, zaehler = np.unique(k[:, 0] * n + k[:, 1],
-                                      return_index=True, return_counts=True)
+        _, index, zaehler = np.unique(k[:, 0] * n + k[:, 1], return_index=True, return_counts=True)
         return k[index[zaehler == 1]]
 
     @staticmethod
     def _naechste_strecke(P, S, kanten):
-        u"""Je Punkt in P: Quadratabstand zur naechsten Strecke und
+        """Je Punkt in P: Quadratabstand zur naechsten Strecke und
         (t, Streckenindex). Dicht genug fuer Hunderte Ecken gegen
         Hunderte Kanten — alles auf einmal."""
         A = S[kanten[:, 0]]
         E = S[kanten[:, 1]] - A
-        e2 = np.einsum('ij,ij->i', E, E)
+        e2 = np.einsum("ij,ij->i", E, E)
         e2[e2 == 0] = 1.0
-        rel = P[:, None, :] - A[None, :, :]                  # (n, k, 3)
-        t = np.clip(np.einsum('nkj,kj->nk', rel, E) / e2[None, :], 0.0, 1.0)
+        rel = P[:, None, :] - A[None, :, :]  # (n, k, 3)
+        t = np.clip(np.einsum("nkj,kj->nk", rel, E) / e2[None, :], 0.0, 1.0)
         Q = A[None, :, :] + t[:, :, None] * E[None, :, :]
-        d2 = np.einsum('nkj,nkj->nk', Q - P[:, None, :], Q - P[:, None, :])
+        d2 = np.einsum("nkj,nkj->nk", Q - P[:, None, :], Q - P[:, None, :])
         wahl = np.argmin(d2, axis=1)
         zeilen = np.arange(len(P))
         return d2[zeilen, wahl], (t[zeilen, wahl], wahl)
@@ -116,7 +116,7 @@ class Saumschnitt:
     # ------------------------------------------------------------- anwenden
 
     def anwenden(self, punkte, normalen, stoffpunkte):
-        u"""Die gebundenen Ecken (an Ort und Stelle in `punkte`) unter ihre
+        """Die gebundenen Ecken (an Ort und Stelle in `punkte`) unter ihre
         Kante legen — `stoffpunkte[s]` sind die Punkte des Stuecks s in
         DIESEM Bild. Gibt die Zahl der gelegten Ecken zurueck."""
         if not len(self):
@@ -129,6 +129,6 @@ class Saumschnitt:
         p = punkte[self.ecken]
         n = normalen[self.ecken]
         d = Q - p
-        d -= np.einsum('ij,ij->i', d, n)[:, None] * n
+        d -= np.einsum("ij,ij->i", d, n)[:, None] * n
         punkte[self.ecken] = p + d - self.UNTERKANTE_M * n
         return len(self)

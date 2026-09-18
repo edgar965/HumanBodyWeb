@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-u"""Fassung 0.58 (09.09.2026) — Retarget nachgemessen, 3DObjects, GarmentCode-Regler."""
+"""Fassung 0.58 (09.09.2026) — Retarget nachgemessen, 3DObjects, GarmentCode-Regler."""
 
 FASSUNG = {
-    'version': '0.58',
-    'date': '2026-09-09',
-    'title': 'Retarget nachgemessen, die 3D-Inhalte unter 3DObjects, '
-             'GarmentCode mit Hilfe und Voreinstellungen',
-    'author': 'edgar965',
-    'body_md': (
+    "version": "0.58",
+    "date": "2026-09-09",
+    "title": "Retarget nachgemessen, die 3D-Inhalte unter 3DObjects, "
+    "GarmentCode mit Hilfe und Voreinstellungen",
+    "author": "edgar965",
+    "body_md": (
         "HumanBodyWeb `342f24c` bis `337cb5e`, Wurzel `c88e6de` bis `6ea8747`, "
         "HumanBodyBlender `0afe26b`, `75b67c6`.\n"
         "\n"

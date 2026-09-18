@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Morphgruppen`: die Morph-Kategorien in Gesicht, Körper und Fantasie.
+"""`Morphgruppen`: die Morph-Kategorien in Gesicht, Körper und Fantasie.
 
 WARUM (Edgar, 12.09.2026: „Die Morphs mach auch auf- zuklappbar, auch
 Gesicht, Körper"): Die Zuordnung ist eine Tabelle; geprüft wird, dass sie
@@ -9,18 +9,47 @@ dass leere Bereiche wegfallen.
 
 Sabotage-Gegenprobe: `'Neck'` aus der Körper-Liste → Fall 1 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'morphgruppen.js')
+MODUL = Jsmodul("gemeinsam", "morphgruppen.js")
 
-KATEGORIEN = ['Abdomen', 'Armpit', 'Arms', 'Body', 'Cheeks', 'Chest', 'Chin', 'Ears',
-              'Elbows', 'Eyebrows', 'Eyelids', 'Eyes', 'Face', 'Fantasy', 'Feet',
-              'Forehead', 'Hands', 'Head', 'Jaw', 'Legs', 'Mouth', 'Neck', 'Nose',
-              'Pelvis', 'Shoulders', 'Stomach', 'Torso', 'Waist', 'Wrists']
+KATEGORIEN = [
+    "Abdomen",
+    "Armpit",
+    "Arms",
+    "Body",
+    "Cheeks",
+    "Chest",
+    "Chin",
+    "Ears",
+    "Elbows",
+    "Eyebrows",
+    "Eyelids",
+    "Eyes",
+    "Face",
+    "Fantasy",
+    "Feet",
+    "Forehead",
+    "Hands",
+    "Head",
+    "Jaw",
+    "Legs",
+    "Mouth",
+    "Neck",
+    "Nose",
+    "Pelvis",
+    "Shoulders",
+    "Stomach",
+    "Torso",
+    "Waist",
+    "Wrists",
+]
 
-SKRIPT = """
+SKRIPT = (
+    """
 const { Morphgruppen: M } = await import(MODUL);
 const alle = %s;
 const aus = M.aufteilen(alle);
@@ -39,13 +68,14 @@ if (JSON.stringify(fremd) !== JSON.stringify(soll)) {
 }
 console.log(JSON.stringify({ ok: true, bereiche: namen,
                              groessen: aus.map(([, k]) => k.length) }));
-""" % KATEGORIEN
+"""
+    % KATEGORIEN
+)
 
 
 class MorphgruppenTest(SimpleTestCase):
-
     def test_alle_kategorien_verteilt(self):
         aus = MODUL.laufen(SKRIPT)
-        self.assertTrue(aus.get('ok'), aus)
-        self.assertEqual(aus['bereiche'], ['Gesicht', 'Körper', 'Fantasie'])
-        self.assertEqual(aus['groessen'], [12, 16, 1])
+        self.assertTrue(aus.get("ok"), aus)
+        self.assertEqual(aus["bereiche"], ["Gesicht", "Körper", "Fantasie"])
+        self.assertEqual(aus["groessen"], [12, 16, 1])

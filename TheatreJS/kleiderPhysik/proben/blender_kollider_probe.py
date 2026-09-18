@@ -7,30 +7,28 @@ sc = bpy.context.scene
 sc.frame_start, sc.frame_end = 1, 30
 bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 0.5))
 kugel = bpy.context.object
-kugel.modifiers.new('koll', 'COLLISION')
+kugel.modifiers.new("koll", "COLLISION")
 kugel.collision.thickness_outer = 0.01
 # Bewegung: die Kugel faehrt nach +x
 kugel.location = (0, 0, 0.5)
-kugel.keyframe_insert('location', frame=1)
+kugel.keyframe_insert("location", frame=1)
 kugel.location = (0.6, 0, 0.5)
-kugel.keyframe_insert('location', frame=40)
+kugel.keyframe_insert("location", frame=40)
 # Verformung: Shape-Key streckt die Kugel in z
-kugel.shape_key_add(name='Basis')
-sk = kugel.shape_key_add(name='hoch')
+kugel.shape_key_add(name="Basis")
+sk = kugel.shape_key_add(name="hoch")
 for v in sk.data:
     v.co.z = v.co.z * 1.8
 sk.value = 0.0
-sk.keyframe_insert('value', frame=1)
+sk.keyframe_insert("value", frame=1)
 sk.value = 1.0
-sk.keyframe_insert('value', frame=40)
-bpy.ops.mesh.primitive_grid_add(
-    x_subdivisions=40, y_subdivisions=40, size=2.4, location=(0, 0, 1.3)
-)
+sk.keyframe_insert("value", frame=40)
+bpy.ops.mesh.primitive_grid_add(x_subdivisions=40, y_subdivisions=40, size=2.4, location=(0, 0, 1.3))
 tuch = bpy.context.object
-tuch.modifiers.new('stoff', 'CLOTH')
-cs = tuch.modifiers['stoff'].settings
+tuch.modifiers.new("stoff", "CLOTH")
+cs = tuch.modifiers["stoff"].settings
 cs.quality = 5
-cc = tuch.modifiers['stoff'].collision_settings
+cc = tuch.modifiers["stoff"].collision_settings
 cc.use_self_collision = True
 cc.distance_min = 0.005
 dg = bpy.context.evaluated_depsgraph_get()
@@ -66,8 +64,8 @@ for q in p:
     if (lokal.x / 0.5) ** 2 + (lokal.y / 0.5) ** 2 + (lokal.z / (0.5 * sz)) ** 2 < 1.0:
         innen += 1
 print(
-    'PROBE kugel_mitte_x=%.2f kugel_oben=%.3f tuch_ueber_kugel_min=%.3f (n=%d) '
-    'tuch_am_rand_min=%.3f (n=%d) im_kollider=%d von %d'
+    "PROBE kugel_mitte_x=%.2f kugel_oben=%.3f tuch_ueber_kugel_min=%.3f (n=%d) "
+    "tuch_am_rand_min=%.3f (n=%d) im_kollider=%d von %d"
     % (
         kx,
         kz,

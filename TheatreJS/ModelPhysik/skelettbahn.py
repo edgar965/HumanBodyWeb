@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Weltlage JEDES Knochens, Bild fuer Bild — eine einzige Quelle.
+"""Die Weltlage JEDES Knochens, Bild fuer Bild — eine einzige Quelle.
 
 WARUM DIESE DATEI (Edgar, 10.09.2026: „ich will funktionierende Animation
 von mir, die auch die Kleider animieren, keine Zombie Videos wo die Kleider
@@ -23,11 +23,12 @@ ZWEI GEMESSENE FEHLER STECKEN IN DIESER KLASSE, beide vom 10.09.2026:
    SECHSFACHE ZEITLUPE — gemessen legt der Fuss in 120 Bildern dann 24 mm
    zurueck statt 2.251 mm, und die Figur sieht aus, als stuende sie still.
 """
+
 import numpy as np
 
 
 class Skelettbahn:
-    u"""Weltmatrizen aller Knochen je Bild, aus einer Retargetspur."""
+    """Weltmatrizen aller Knochen je Bild, aus einer Retargetspur."""
 
     #: Bild 0 des Retargets ist ein Startzustand, kein Bewegungsbild.
     ERSTES_BILD = 1
@@ -42,16 +43,14 @@ class Skelettbahn:
         # zeigt das eine in Zeitlupe (gemessen: Fuss 24 mm statt 2.251 mm
         # Spanne) und das andere im Zeitraffer.
         self.schritt = max(1, int(round(self.quell_fps / ziel_fps)))
-        self.folge = [max(ab, self.ERSTES_BILD) + i * self.schritt
-                      for i in range(bilder)]
+        self.folge = [max(ab, self.ERSTES_BILD) + i * self.schritt for i in range(bilder)]
         letztes = daten.frame_count - 1
         if self.folge[-1] > letztes:
             # Abgeschnitten wird am ANFANG, nicht am Ende: Sonst
             # wiederholt sich das letzte Bild, und die Figur bleibt in
             # den letzten Sekunden stehen.
             self.folge = [n - (self.folge[-1] - letztes) for n in self.folge]
-        self.folge = [max(self.ERSTES_BILD, min(n, letztes))
-                      for n in self.folge]
+        self.folge = [max(self.ERSTES_BILD, min(n, letztes)) for n in self.folge]
         self.orte = self.wurzelbahn(daten)
         self.ruhe = self._welt(None, 0, None)
         self.ruhe_um = self._umkehrungen(self.ruhe)
@@ -61,19 +60,19 @@ class Skelettbahn:
 
     @staticmethod
     def _bildrate(daten):
-        u"""Bilder je Sekunde der Quelle, aus Bildzahl und Dauer.
+        """Bilder je Sekunde der Quelle, aus Bildzahl und Dauer.
 
         Die Retargetdaten fuehren keine `frame_time`, aber `duration` —
         gemessen an `136_28.bvh`: 1.115 Bilder in 9,29 s = 120,0 fps.
         """
-        dauer = float(getattr(daten, 'duration', 0.0) or 0.0)
+        dauer = float(getattr(daten, "duration", 0.0) or 0.0)
         if dauer <= 0.0:
             return 30.0
         return float(daten.frame_count) / dauer
 
     @staticmethod
     def wurzelbahn(daten):
-        u"""Die Ortsbewegung der Wurzel, in der Lage des Rigs — `None` ohne Spur.
+        """Die Ortsbewegung der Wurzel, in der Lage des Rigs — `None` ohne Spur.
 
         Die Spur kommt in Three.js-Lage (y oben), das Rig steht in
         Blender-Lage (z oben): (x, y, z) -> (x, -z, y). Ohne diese Zeile
@@ -81,8 +80,7 @@ class Skelettbahn:
         """
         if not daten.position_track:
             return None
-        roh = np.asarray(daten.position_track['values'],
-                         dtype=np.float64).reshape(-1, 3)
+        roh = np.asarray(daten.position_track["values"], dtype=np.float64).reshape(-1, 3)
         return np.column_stack([roh[:, 0], -roh[:, 2], roh[:, 1]])
 
     def _bild(self, nummer):
@@ -94,7 +92,7 @@ class Skelettbahn:
     # -------------------------------------------------------------- Skelett
 
     def _welt(self, spuren, nummer, ort):
-        u"""(position, weltdrehung) je Knochen — Ruhe oder eine Pose."""
+        """(position, weltdrehung) je Knochen — Ruhe oder eine Pose."""
         from anim_umsetzung import Animumsetzung
         from figur_nach_cody import Codyfigur
         from knochenwelt import Knochenwelt
@@ -102,22 +100,20 @@ class Skelettbahn:
         def lokal(name):
             spur = (spuren or {}).get(name)
             if spur is not None and nummer * 4 + 4 <= len(spur):
-                return Codyfigur.nach_blender(
-                    np.asarray(spur[nummer * 4:nummer * 4 + 4],
-                               dtype=np.float64))
-            return Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
+                return Codyfigur.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
+            return Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
 
         return Knochenwelt.loesen(self.knochen, self.namen, lokal, ort)
 
     @staticmethod
     def dreh(quat):
-        u"""3 x 3 aus einer Drehung."""
+        """3 x 3 aus einer Drehung."""
         from anim_umsetzung import Animumsetzung
-        return np.column_stack([Animumsetzung.drehen(quat, e)
-                                for e in np.eye(3)])
+
+        return np.column_stack([Animumsetzung.drehen(quat, e) for e in np.eye(3)])
 
     def _umkehrungen(self, ruhe):
-        u"""Die Umkehrung der Ruhelage je Knochen.
+        """Die Umkehrung der Ruhelage je Knochen.
 
         Ohne sie waere LBS kein Verformen, sondern ein Versetzen in den
         Weltursprung: Jeder Punkt bekaeme die Weltlage seines Knochens
@@ -132,14 +128,13 @@ class Skelettbahn:
     # ---------------------------------------------------------------- Masse
 
     def wurzelweg(self):
-        u"""Wie weit die Figur ueber die Bildfolge laeuft, in Metern."""
+        """Wie weit die Figur ueber die Bildfolge laeuft, in Metern."""
         if self.orte is None:
             return 0.0
-        return float(np.linalg.norm(self.orte[self.folge[-1]]
-                                    - self.orte[self.folge[0]]))
+        return float(np.linalg.norm(self.orte[self.folge[-1]] - self.orte[self.folge[0]]))
 
     def knochenspanne(self, name):
-        u"""Groesste Ausdehnung der Bahn eines Knochens, in Metern."""
+        """Groesste Ausdehnung der Bahn eines Knochens, in Metern."""
         if name not in self.ruhe:
             return None
         p = np.array([lage[name][0] for lage in self.lagen])

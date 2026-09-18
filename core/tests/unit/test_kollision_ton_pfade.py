@@ -27,6 +27,7 @@ Drei Befunde, alle am Code nachgelesen und nachgestellt:
    Am 12.08.2026 wurden `output_dir` und `filename` auf SafePath umgestellt; der
    Zweig OHNE `filename` blieb übrig.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -41,31 +42,38 @@ from ._humanbodypfad import Humanbodypfad
 class NamensstammTest(SimpleTestCase):
     """Der Ausgabename darf den Ausgabeordner nicht verlassen."""
 
-    AUSGABE = r'A:\3DTools\HumanBodyWeb\media\cloth_exports'
+    AUSGABE = r"A:\3DTools\HumanBodyWeb\media\cloth_exports"
 
     def _ziel(self, scene_name):
-        name = '%s_blender_eevee_1_abc.mp4' % Stoffexport.namensstamm(scene_name)
+        name = "%s_blender_eevee_1_abc.mp4" % Stoffexport.namensstamm(scene_name)
         return os.path.normpath(os.path.join(self.AUSGABE, name))
 
     def test_fiese_namen_bleiben_im_ordner(self):
-        for sn in ('..\\..\\..\\evil', '../../evil', 'C:\\evil', 'C:/Windows/Temp/evil',
-                   'x\\..\\..\\y', '\\\\server\\freigabe\\evil', 'lpt1', 'con'):
+        for sn in (
+            "..\\..\\..\\evil",
+            "../../evil",
+            "C:\\evil",
+            "C:/Windows/Temp/evil",
+            "x\\..\\..\\y",
+            "\\\\server\\freigabe\\evil",
+            "lpt1",
+            "con",
+        ):
             with self.subTest(scene_name=sn):
                 ziel = self._ziel(sn)
-                self.assertTrue(ziel.lower().startswith(self.AUSGABE.lower()),
-                                '%r landet in %s' % (sn, ziel))
+                self.assertTrue(ziel.lower().startswith(self.AUSGABE.lower()), "%r landet in %s" % (sn, ziel))
 
     def test_normale_namen_bleiben_lesbar(self):
-        self.assertEqual(Stoffexport.namensstamm('Ballett Probe 2'), 'Ballett_Probe_2')
-        self.assertEqual(Stoffexport.namensstamm('kleid-v2_final'), 'kleid-v2_final')
+        self.assertEqual(Stoffexport.namensstamm("Ballett Probe 2"), "Ballett_Probe_2")
+        self.assertEqual(Stoffexport.namensstamm("kleid-v2_final"), "kleid-v2_final")
 
     def test_leerer_name_wird_scene(self):
-        for leer in ('', None, '   ', '///', '...'):
+        for leer in ("", None, "   ", "///", "..."):
             with self.subTest(wert=leer):
-                self.assertEqual(Stoffexport.namensstamm(leer), 'scene')
+                self.assertEqual(Stoffexport.namensstamm(leer), "scene")
 
     def test_name_bleibt_kurz(self):
-        self.assertLessEqual(len(Stoffexport.namensstamm('x' * 500)), 60)
+        self.assertLessEqual(len(Stoffexport.namensstamm("x" * 500)), 60)
 
 
 class TonquellenTest(SimpleTestCase):
@@ -76,17 +84,17 @@ class TonquellenTest(SimpleTestCase):
         super().setUpClass()
         Humanbodypfad.setzen()
         from collision import audio_mux
+
         cls.am = audio_mux
 
     def test_wurzeln_zeigen_auf_dieses_projekt(self):
         for w in self.am.WURZELN:
-            self.assertNotIn('HumanBodyTest', w,
-                             'Suchwurzel zeigt noch auf das alte Projekt: %s' % w)
-        self.assertTrue(any(w.endswith('HumanBodyWeb') for w in self.am.WURZELN))
+            self.assertNotIn("HumanBodyTest", w, "Suchwurzel zeigt noch auf das alte Projekt: %s" % w)
+        self.assertTrue(any(w.endswith("HumanBodyWeb") for w in self.am.WURZELN))
 
     def test_basis_url_trifft_den_laufenden_server(self):
         """4040 war der Port, auf dem nichts hört."""
-        self.assertNotIn('4040', self.am.BASIS_URL)
+        self.assertNotIn("4040", self.am.BASIS_URL)
 
     def test_datei_im_projekt_wird_genommen(self):
         """`manage.py` statt eines glob-Treffers unter MEDIA_ROOT.
@@ -95,7 +103,7 @@ class TonquellenTest(SimpleTestCase):
         übersprang sich, wenn MEDIA_ROOT leer war — also genau auf einem
         frisch ausgecheckten Rechner. Eine Prüfung, die sich selbst
         wegdrückt, meldet grün, ohne etwas geprüft zu haben."""
-        eigen = str(Path(settings.BASE_DIR) / 'manage.py')
+        eigen = str(Path(settings.BASE_DIR) / "manage.py")
         self.assertTrue(os.path.isfile(eigen), eigen)
         self.assertEqual(self.am._resolve_url(eigen), eigen)
 
@@ -108,28 +116,29 @@ class TonquellenTest(SimpleTestCase):
         fremd = sys.executable
         self.assertTrue(os.path.isfile(fremd))
         for wurzel in self.am.WURZELN:
-            self.assertFalse(fremd.lower().startswith(wurzel.lower()),
-                             'Interpreter liegt IM Projekt: %s' % fremd)
+            self.assertFalse(
+                fremd.lower().startswith(wurzel.lower()), "Interpreter liegt IM Projekt: %s" % fremd
+            )
         self.assertIsNone(self.am._resolve_url(fremd))
 
     def test_fremder_host_wird_abgelehnt(self):
-        for u in ('http://169.254.169.254/latest/meta-data',
-                  'http://boese.example/x.wav',
-                  'https://example.org/ton.mp3',
-                  'file:///C:/Windows/win.ini'):
+        for u in (
+            "http://169.254.169.254/latest/meta-data",
+            "http://boese.example/x.wav",
+            "https://example.org/ton.mp3",
+            "file:///C:/Windows/win.ini",
+        ):
             with self.subTest(url=u):
                 self.assertIsNone(self.am._resolve_url(u))
 
     def test_eigener_host_ist_erlaubt(self):
         """Gegenprobe: Die Prüfung darf den eigenen Server nicht aussperren."""
-        for u in ('http://127.0.0.1:8081/media/x.wav',
-                  'http://localhost:8081/media/x.wav'):
+        for u in ("http://127.0.0.1:8081/media/x.wav", "http://localhost:8081/media/x.wav"):
             with self.subTest(url=u):
                 self.assertTrue(self.am._erlaubter_host(u))
 
     def test_download_landet_im_projekt_nicht_in_system_temp(self):
-        ziel = str(self.am._download_ziel('/media/x/lied.mp3?v=2'))
-        self.assertIn('media', ziel)
-        self.assertFalse(ziel.upper().startswith('C:'),
-                         'Zwischendatei liegt auf C: — im Projekt verboten')
-        self.assertTrue(ziel.endswith('.mp3'))
+        ziel = str(self.am._download_ziel("/media/x/lied.mp3?v=2"))
+        self.assertIn("media", ziel)
+        self.assertFalse(ziel.upper().startswith("C:"), "Zwischendatei liegt auf C: — im Projekt verboten")
+        self.assertTrue(ziel.endswith(".mp3"))

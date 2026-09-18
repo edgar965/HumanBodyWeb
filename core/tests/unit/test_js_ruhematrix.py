@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Ruhematrix`: die Ruhelage des Skeletts, unabhaengig von der Figurlage.
+"""`Ruhematrix`: die Ruhelage des Skeletts, unabhaengig von der Figurlage.
 
 WARUM (Edgar, 07.09.2026: „bei SMPL verschwinden die Kleider beim Abspielen
 einer Animation")
@@ -26,11 +26,12 @@ ZWEI FEHLER, DIE STILL BLEIBEN, und gegen die dieser Test steht:
    Kette ohne Drehungen faellt es nicht auf — genau deshalb steht hier eine
    MIT Drehungen.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'ruhematrix.js')
+MODUL = Jsmodul("gemeinsam", "ruhematrix.js")
 
 SKRIPT = """
 const { Ruhematrix: R } = await import(MODUL);
@@ -89,9 +90,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class RuhematrixTest(SimpleTestCase):
-
     databases = set()
 
     def test_ruhematrix_kette_spaltenfolge_und_einheit_ohne_drehung(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

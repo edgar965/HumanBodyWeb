@@ -25,16 +25,18 @@ class Bvhbibliothek:
     #: Karten je Seite. 60 statt 7.110 druecken das HTML von 10,5 MB auf ~90 KB.
     JE_SEITE = 60
 
-    def __init__(self, suche='', quelle='', seite=1):
-        self.suche = (suche or '').strip()
-        self.quelle = (quelle or '').strip()
+    def __init__(self, suche="", quelle="", seite=1):
+        self.suche = (suche or "").strip()
+        self.quelle = (quelle or "").strip()
         self.seite = seite
 
     @classmethod
     def aus_anfrage(cls, request):
-        return cls(suche=request.GET.get('q', ''),
-                   quelle=request.GET.get('source', ''),
-                   seite=request.GET.get('page', 1))
+        return cls(
+            suche=request.GET.get("q", ""),
+            quelle=request.GET.get("source", ""),
+            seite=request.GET.get("page", 1),
+        )
 
     def _menge(self):
         menge = BVHFile.objects.all()
@@ -44,7 +46,7 @@ class Bvhbibliothek:
             menge = menge.filter(source=self.quelle)
         # Feste Reihenfolge: ohne order_by warnt der Paginator, und die
         # Seitengrenzen waeren zwischen zwei Aufrufen nicht stabil.
-        return menge.order_by('name', 'pk')
+        return menge.order_by("name", "pk")
 
     def quellen(self):
         """Vorhandene Quellwerte fuer das Auswahlfeld.
@@ -55,8 +57,9 @@ class Bvhbibliothek:
         (source, name, …) statt auf source allein. Beim ersten Bauen lieferte
         das Feld 7.110 Einträge, einen je Datei, alle mit demselben Wert.
         """
-        return sorted(BVHFile.objects.exclude(source='').order_by()
-                      .values_list('source', flat=True).distinct())
+        return sorted(
+            BVHFile.objects.exclude(source="").order_by().values_list("source", flat=True).distinct()
+        )
 
     def seiteninhalt(self):
         aufteiler = Paginator(self._menge(), self.JE_SEITE)
@@ -66,19 +69,19 @@ class Bvhbibliothek:
         """Query-Anteil fuer die Seitenlinks, damit Filter erhalten bleiben."""
         teile = []
         if self.suche:
-            teile.append('q=%s' % self.suche)
+            teile.append("q=%s" % self.suche)
         if self.quelle:
-            teile.append('source=%s' % self.quelle)
-        return ('&' + '&'.join(teile)) if teile else ''
+            teile.append("source=%s" % self.quelle)
+        return ("&" + "&".join(teile)) if teile else ""
 
     def zusammenhang(self):
         inhalt = self.seiteninhalt()
         return {
-            'files': inhalt,
-            'seite': inhalt,
-            'suche': self.suche,
-            'quelle': self.quelle,
-            'quellen': self.quellen(),
-            'zusatzfrage': self.zusatzfrage(),
-            'gesamt': inhalt.paginator.count,
+            "files": inhalt,
+            "seite": inhalt,
+            "suche": self.suche,
+            "quelle": self.quelle,
+            "quellen": self.quellen(),
+            "zusatzfrage": self.zusatzfrage(),
+            "gesamt": inhalt.paginator.count,
         }

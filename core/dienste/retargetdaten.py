@@ -29,7 +29,7 @@ from .skelettgeometrie import Skelettgeometrie
 from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
 from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Retargetdaten:
@@ -37,16 +37,24 @@ class Retargetdaten:
 
     ERSATZHOEHE = 1.68
     #: Zielskelette — siehe `Retargetwahl.ZIELE`.
-    ZIEL_DEF = 'def'
-    ZIEL_UMA = 'uma'
-    ZIEL_SMPL = 'smpl'
-    ZIEL_MH = 'makehuman'
-    ZIEL_UMAPY = 'umapython'
-    ZIEL_G9 = 'genesis9'
+    ZIEL_DEF = "def"
+    ZIEL_UMA = "uma"
+    ZIEL_SMPL = "smpl"
+    ZIEL_MH = "makehuman"
+    ZIEL_UMAPY = "umapython"
+    ZIEL_G9 = "genesis9"
 
-    def __init__(self, bvh_pfad, body_height=ERSATZHOEHE, fmt=None,
-                 foot_correction=False, delta_norm=None, ziel=ZIEL_DEF,
-                 figur=None, formung=None):
+    def __init__(
+        self,
+        bvh_pfad,
+        body_height=ERSATZHOEHE,
+        fmt=None,
+        foot_correction=False,
+        delta_norm=None,
+        ziel=ZIEL_DEF,
+        figur=None,
+        formung=None,
+    ):
         self.bvh_pfad = bvh_pfad
         self.hoehe = body_height
         self.format = fmt
@@ -69,26 +77,26 @@ class Retargetdaten:
         # sie liefern vorhandene Ablagen nach einer Regelaenderung
         # weiter das alte Ergebnis — still, und die Aenderung kommt
         # nirgends an. Begruendung in `retarget/fassung.py`.
-        merkmal = (f'v{REGELFASSUNG}_{self.hoehe:.4f}_{self.format}'
-                   f'_{self.fusskorrektur}_{self.delta_norm}')
+        merkmal = f"v{REGELFASSUNG}_{self.hoehe:.4f}_{self.format}_{self.fusskorrektur}_{self.delta_norm}"
         if self.ziel != self.ZIEL_DEF:
-            merkmal += f'_{self.ziel}'
+            merkmal += f"_{self.ziel}"
         if self.figur:
             # je Figur ein eigenes Skelett, eine eigene Ablage
-            merkmal += f'_{self.figur}'
+            merkmal += f"_{self.figur}"
         if self.ziel == self.ZIEL_SMPL:
             # Das Skelett der SMPL-Figur hat eine eigene Fassung (seit dem
             # 15.09.2026 SMPL-X mit 55 Gelenken) — sonst liefern Ablagen
             # mit 24 Gelenken weiter das alte Ergebnis (`Smplfiguren`).
             from .smplfigur import Smplfiguren
-            merkmal += f'_sx{Smplfiguren.SKELETTFASSUNG}'
+
+            merkmal += f"_sx{Smplfiguren.SKELETTFASSUNG}"
         if self.formung is not None:
             # Je Reglerstellung ein eigenes Skelett: Ohne diesen Teil im
             # Namen laege die Bewegung der schlanken Figur in derselben
             # Datei wie die der kraeftigen.
-            merkmal += '_' + self._formmerkmal()
+            merkmal += "_" + self._formmerkmal()
         kuerzel = hashlib.md5(merkmal.encode()).hexdigest()[:8]
-        return self.bvh_pfad.rsplit('.', 1)[0] + f'_retarget_{kuerzel}.json'
+        return self.bvh_pfad.rsplit(".", 1)[0] + f"_retarget_{kuerzel}.json"
 
     def gemerkt(self):
         """Das gespeicherte Ergebnis — oder `None`."""
@@ -96,21 +104,20 @@ class Retargetdaten:
         if not os.path.isfile(pfad):
             return None
         if os.path.getmtime(pfad) <= os.path.getmtime(self.bvh_pfad):
-            return None      # die BVH-Datei ist neuer
+            return None  # die BVH-Datei ist neuer
         try:
-            with open(pfad, 'r') as datei:
+            with open(pfad, "r") as datei:
                 return Bewegungsspuren.aus_dict(json.load(datei))
-        except (OSError, ValueError):
-            logger.warning('[retarget] Zwischenspeicher %s unlesbar, wird neu '
-                           'gerechnet', pfad, exc_info=True)
+        except OSError, ValueError:
+            logger.warning("[retarget] Zwischenspeicher %s unlesbar, wird neu gerechnet", pfad, exc_info=True)
             return None
 
     def merken(self, ergebnis):
         try:
-            with open(self.ablage, 'w') as datei:
+            with open(self.ablage, "w") as datei:
                 json.dump(ergebnis.als_dict(), datei)
         except Exception:
-            logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
+            logger.debug("optionaler Schritt fehlgeschlagen", exc_info=True)
 
     # ---------------------------------------------------------------- Rechnen
 
@@ -129,10 +136,11 @@ class Retargetdaten:
         if self.ziel != self.ZIEL_DEF:
             return ergebnis
         from .mimikspuren import Mimikspuren
+
         return Mimikspuren.mischen(ergebnis, self.bvh_pfad)
 
     #: Die Marke der eigenen SMPL-X-Pipeline neben ihrem BVH (12.09.2026).
-    SMPLX_MARKE = '_smplx.npz'
+    SMPLX_MARKE = "_smplx.npz"
 
     def _gesicht_dazu(self, ergebnis):
         """Das Gesicht der SMPL-X-Pipeline auf das DEF-Ergebnis legen.
@@ -144,17 +152,18 @@ class Retargetdaten:
         Hybrids (v4) hat dieselbe Nachbardatei und wird in `retarget_job_merge`
         gemischt, nicht hier.
         """
-        stamm = self.bvh_pfad.rsplit('.', 1)[0]
+        stamm = self.bvh_pfad.rsplit(".", 1)[0]
         if self.ziel != self.ZIEL_DEF or not os.path.isfile(stamm + self.SMPLX_MARKE):
             return ergebnis
         from .gesichtsspuren import Gesichtsspuren
+
         return Gesichtsspuren.mischen(ergebnis, Gesichtsspuren.laden(self.bvh_pfad))
 
     def _rechnen(self):
         from humanbody_core.skeleton import Skeleton, SkeletonRigify
+
         bvh = SkeletonRigify.parse_bvh(self.bvh_pfad)
-        bauart = (Skeleton.get_format(self.format) if self.format
-                  else Skeleton.detect_format(bvh.names))
+        bauart = Skeleton.get_format(self.format) if self.format else Skeleton.detect_format(bvh.names)
         if self.ziel == self.ZIEL_UMA:
             return self._auf_uma(bvh, bauart)
         if self.ziel == self.ZIEL_SMPL:
@@ -168,11 +177,15 @@ class Retargetdaten:
         geometrie = Skelettgeometrie.holen()
         if bauart and bauart.BONE_MAP_TO_RIGIFY:
             return bauart.retarget_to_rigify(
-                bvh, geometrie, body_height=self.hoehe,
-                foot_correction=self.fusskorrektur, delta_norm=self.delta_norm)
+                bvh,
+                geometrie,
+                body_height=self.hoehe,
+                foot_correction=self.fusskorrektur,
+                delta_norm=self.delta_norm,
+            )
         return SkeletonRigify.retarget_bvh(
-            bvh, geometrie, fmt=self.format, body_height=self.hoehe,
-            foot_correction=self.fusskorrektur)
+            bvh, geometrie, fmt=self.format, body_height=self.hoehe, foot_correction=self.fusskorrektur
+        )
 
     def _auf_uma(self, bvh, bauart):
         """Dasselbe Verfahren mit Ziel UMA (05.09.2026).
@@ -185,18 +198,23 @@ class Retargetdaten:
         from humanbody_core.skeleton.formats import SkeletonMocapNet
         from humanbody_core.skeleton.formats.uma_knochen import Umazuordnung
         from .umaskelett import Umaskelett
+
         if bauart is None or not bauart.BONE_MAP_TO_RIGIFY:
             bauart = SkeletonMocapNet
         return bauart.retarget_to_rigify(
-            bvh, Umaskelett.geometrie(self.figur), body_height=self.hoehe,
-            foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
+            bvh,
+            Umaskelett.geometrie(self.figur),
+            body_height=self.hoehe,
+            foot_correction=self.fusskorrektur,
+            delta_norm=self.delta_norm,
             mapping=Umazuordnung.fuer(bauart),
-            skip_bones=Umazuordnung.ausnahmen(bauart))
+            skip_bones=Umazuordnung.ausnahmen(bauart),
+        )
 
     # ------------------------------------------------- SMPL und MakeHuman
 
     def _auf_smpl(self, bvh, bauart):
-        u"""Ziel ist das SMPL-X-Skelett der Figur in der Szene (07.09.2026,
+        """Ziel ist das SMPL-X-Skelett der Figur in der Szene (07.09.2026,
         seit dem 15.09.2026 SMPL-X mit Fingern, Kiefer und Augen).
 
         Es braucht keine neue Zuordnungstabelle: Die 22 Koerpergelenke
@@ -209,23 +227,23 @@ class Retargetdaten:
         """
         from .smplfigur import Smplfiguren
         from .smplxzuordnung import Smplxzuordnung
+
         kette = Smplfiguren.kette(self.figur)
         if kette is None:
-            raise ValueError('Kein SMPL-X-Skelett fuer %r' % (self.figur,))
+            raise ValueError("Kein SMPL-X-Skelett fuer %r" % (self.figur,))
         return self._auf_kette(bvh, bauart, kette.geometrie(), Smplxzuordnung)
 
     def _auf_makehuman(self, bvh, bauart):
-        u"""Ziel ist das MakeHuman-Rig (`default.mhskel`) DIESER Reglerstellung."""
+        """Ziel ist das MakeHuman-Rig (`default.mhskel`) DIESER Reglerstellung."""
         from humanbody_core.skeleton.formats.mh_zuordnung import Mhzuordnung
         from MakeHuman.skelett import Mhskelett
+
         if not Mhskelett.vorhanden():
-            raise ValueError('MakeHuman-Upstream fehlt — siehe MakeHuman/HERKUNFT.md')
-        return self._auf_kette(bvh, bauart,
-                               Mhskelett(self.formung).kette().geometrie(),
-                               Mhzuordnung)
+            raise ValueError("MakeHuman-Upstream fehlt — siehe MakeHuman/HERKUNFT.md")
+        return self._auf_kette(bvh, bauart, Mhskelett(self.formung).kette().geometrie(), Mhzuordnung)
 
     def _auf_umapython(self, bvh, bauart):
-        u"""Ziel ist die in Python gebaute UMA-Figur (08.09.2026).
+        """Ziel ist die in Python gebaute UMA-Figur (08.09.2026).
 
         Es braucht keine neue Zuordnungstabelle: Die Knochen heissen
         genau wie in der GLB aus Unity — beide Wege bauen dasselbe
@@ -242,41 +260,49 @@ class Retargetdaten:
         from humanbody_core.skeleton.formats.uma_knochen import Umazuordnung
         from UMA_Python.gelenke import Umagelenke
         from .umapythonfiguren import Umapythonfiguren
+
         if not self.figur:
-            raise ValueError('Kein Rassenname fuer das UMA-Python-Ziel')
+            raise ValueError("Kein Rassenname fuer das UMA-Python-Ziel")
         gebaut = Umapythonfiguren.bauen(self.figur)
         gelenke = Umagelenke(gebaut, self.formung)
         return self._auf_kette(bvh, bauart, gelenke.geometrie(), Umazuordnung)
 
     def _auf_genesis9(self, bvh, bauart):
-        u"""Ziel ist das Daz-Rig von Genesis 9 DIESER Reglerstellung (17.09.2026).
+        """Ziel ist das Daz-Rig von Genesis 9 DIESER Reglerstellung (17.09.2026).
 
         Woher das Skelett kommt, steht in `G9retargetziel` — dieselbe Kette
         wie im Browser. `self.formung` ist die `G9formung` oder None.
         """
         from .g9retargetziel import G9retargetziel
-        return self._auf_kette(bvh, bauart, G9retargetziel.geometrie(self.formung),
-                               G9retargetziel.zuordnung())
+
+        return self._auf_kette(
+            bvh, bauart, G9retargetziel.geometrie(self.formung), G9retargetziel.zuordnung()
+        )
 
     def _auf_kette(self, bvh, bauart, geometrie, zuordnung):
-        u"""Dasselbe Verfahren, anderes Zielskelett — wie `_auf_uma`.
+        """Dasselbe Verfahren, anderes Zielskelett — wie `_auf_uma`.
 
         Ohne erkanntes Format derselbe Rueckfall wie
         `SkeletonRigify.retarget_bvh`: MocapNET.
         """
         from humanbody_core.skeleton.formats import SkeletonMocapNet
+
         if bauart is None or not bauart.BONE_MAP_TO_RIGIFY:
             bauart = SkeletonMocapNet
-        defnamen = getattr(zuordnung, 'defnamen', None)
+        defnamen = getattr(zuordnung, "defnamen", None)
         return bauart.retarget_to_rigify(
-            bvh, geometrie, body_height=self.hoehe,
-            foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
+            bvh,
+            geometrie,
+            body_height=self.hoehe,
+            foot_correction=self.fusskorrektur,
+            delta_norm=self.delta_norm,
             mapping=zuordnung.fuer(bauart),
             skip_bones=zuordnung.ausnahmen(bauart),
-            def_namen=defnamen() if callable(defnamen) else None)
+            def_namen=defnamen() if callable(defnamen) else None,
+        )
 
     def _formmerkmal(self):
-        u"""Ein kurzes Kennzeichen der Reglerstellung fuer den Ablagenamen.
+        """Ein kurzes Kennzeichen der Reglerstellung fuer den Ablagenamen.
 
         Ein Woerterbuch wird SORTIERT verschriftet (UMA Python schickt
         seine DNA so). `repr` eines dict folgt der Einfuegereihenfolge —
@@ -285,10 +311,8 @@ class Retargetdaten:
         Tippreihenfolge abhaengt, ist keiner.
         """
         if isinstance(self.formung, dict):
-            roh = repr(sorted((str(k), round(float(v), 6))
-                              for k, v in self.formung.items()))
+            roh = repr(sorted((str(k), round(float(v), 6)) for k, v in self.formung.items()))
         else:
-            fingerabdruck = getattr(self.formung, 'fingerabdruck', None)
-            roh = (fingerabdruck() if callable(fingerabdruck)
-                   else repr(self.formung))
-        return hashlib.md5(roh.encode('utf-8')).hexdigest()[:8]
+            fingerabdruck = getattr(self.formung, "fingerabdruck", None)
+            roh = fingerabdruck() if callable(fingerabdruck) else repr(self.formung)
+        return hashlib.md5(roh.encode("utf-8")).hexdigest()[:8]

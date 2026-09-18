@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Daten kommen nie aus dem Zwischenspeicher des Browsers.
+"""Daten kommen nie aus dem Zwischenspeicher des Browsers.
 
 DER BEFUND (Edgar, 09.09.2026: „FemaleGarmentCode gerade gespeichert, nach
 dem Speichern keine GarmentCode Dinger! Das habe ich schon zum 4. Mal
@@ -52,15 +52,15 @@ aber erst nach Ruecksprache, nicht als Nebenwirkung einer Fehlerbehebung.
 
 
 class Datenfrische:
-    u"""`Cache-Control: no-store` fuer alles unter `/api/`."""
+    """`Cache-Control: no-store` fuer alles unter `/api/`."""
 
     #: Was als Datenweg gilt. Bewusst der Pfad und nicht der Inhaltstyp:
     #: Die Seiten liefern ihre Vorlagen als `text/html`, und `djangobase`
     #: setzt dort schon `no-store`; eine zweite Zustaendigkeit fuer
     #: dieselbe Antwort waere eine Quelle fuer Widersprueche.
-    PRAEFIXE = ('/api/',)
+    PRAEFIXE = ("/api/",)
 
-    WERT = 'no-store, no-cache, must-revalidate'
+    WERT = "no-store, no-cache, must-revalidate"
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -73,9 +73,9 @@ class Datenfrische:
         # gibt Antworten, die absichtlich lange gelten (ausgelieferte
         # Netze mit Fingerabdruck im Pfad). Ueberschreiben hiesse, deren
         # Entscheidung stillschweigend zu kassieren.
-        if antwort.has_header('Cache-Control'):
+        if antwort.has_header("Cache-Control"):
             return antwort
-        antwort['Cache-Control'] = Datenfrische.WERT
-        antwort['Pragma'] = 'no-cache'
-        antwort['Expires'] = '0'
+        antwort["Cache-Control"] = Datenfrische.WERT
+        antwort["Pragma"] = "no-cache"
+        antwort["Expires"] = "0"
         return antwort

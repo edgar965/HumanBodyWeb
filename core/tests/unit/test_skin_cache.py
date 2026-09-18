@@ -17,6 +17,7 @@ nichts und macht aus dem stillen Schaden einen sofortigen Fehler.
 Der Test prüft ZUSÄTZLICH, dass das Lesen weiter funktioniert: Ein Schreibschutz,
 der die Auslieferung kaputt macht, wäre schlimmer als das Problem.
 """
+
 import numpy as np
 from django.test import TestCase
 
@@ -30,10 +31,10 @@ class SkinArrayCacheTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.gelesen = Skingewichte.arrays('female')
+        cls.gelesen = Skingewichte.arrays("female")
 
     def arrays(self):
-        return Sicher.wert(self.gelesen, 'Gewichte')
+        return Sicher.wert(self.gelesen, "Gewichte")
 
     def setUp(self):
         # KEIN skipTest: `skin_weights_base.json` liegt fuer beide
@@ -43,20 +44,21 @@ class SkinArrayCacheTest(TestCase):
         # bestandener (27.08.2026).
         self.assertIsNotNone(
             self.gelesen,
-            'skin_weights_base.json fehlt — die Produktivdaten sind '
-            'versioniert, ihr Fehlen ist eine Regression')
+            "skin_weights_base.json fehlt — die Produktivdaten sind "
+            "versioniert, ihr Fehlen ist eine Regression",
+        )
 
     def test_zwischengespeicherte_arrays_sind_schreibgeschuetzt(self):
         indices, weights = self.arrays()
-        self.assertFalse(indices.flags.writeable, 'indices ist beschreibbar')
-        self.assertFalse(weights.flags.writeable, 'weights ist beschreibbar')
+        self.assertFalse(indices.flags.writeable, "indices ist beschreibbar")
+        self.assertFalse(weights.flags.writeable, "weights ist beschreibbar")
         with self.assertRaises(ValueError):
             indices[0, 0] = 99
 
     def test_zweiter_aufruf_liefert_dasselbe_objekt(self):
         """Der Zwischenspeicher soll greifen — sonst wird bei jeder Anfrage neu
         über alle 18.000 Vertices gerechnet."""
-        nochmal = Sicher.wert(Skingewichte.arrays('female'), 'Gewichte')
+        nochmal = Sicher.wert(Skingewichte.arrays("female"), "Gewichte")
         self.assertIs(nochmal[0], self.arrays()[0])
 
     def test_lesen_geht_weiter_wie_die_aufrufstellen_es_tun(self):
@@ -65,9 +67,8 @@ class SkinArrayCacheTest(TestCase):
         indices, weights = self.arrays()
         auswahl = np.array([0, 1, 2])
         kopie = indices[auswahl]
-        self.assertTrue(kopie.flags.writeable,
-                        'die Kopie muss beschreibbar sein, sonst brechen die Aufrufer')
-        kopie[0, 0] = 7                       # darf NICHT werfen
+        self.assertTrue(kopie.flags.writeable, "die Kopie muss beschreibbar sein, sonst brechen die Aufrufer")
+        kopie[0, 0] = 7  # darf NICHT werfen
         self.assertEqual(indices.shape[1], 4)
         self.assertEqual(weights.shape[1], 4)
 
@@ -77,5 +78,7 @@ class SkinArrayCacheTest(TestCase):
         _, weights = self.arrays()
         summen = weights.sum(axis=1)
         belegt = summen > 0
-        self.assertTrue(np.allclose(summen[belegt], 1.0, atol=1e-4),
-                        'Gewichtssummen weichen von 1 ab: %s' % summen[belegt][:5])
+        self.assertTrue(
+            np.allclose(summen[belegt], 1.0, atol=1e-4),
+            "Gewichtssummen weichen von 1 ab: %s" % summen[belegt][:5],
+        )

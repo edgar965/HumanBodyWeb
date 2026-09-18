@@ -32,9 +32,9 @@ class Animationsauswahl:
     """Sicht auf `3DObjects/animations/bvh/` — Kategorien und Eintraege."""
 
     #: Wertformat fuer die Viewer-Seiten (Model, Result, Szene).
-    ALS_URL = 'url'
+    ALS_URL = "url"
     #: Wertformat fuer die Theatre-Seite.
-    ALS_PFAD = 'pfad'
+    ALS_PFAD = "pfad"
 
     def __init__(self, wertformat=ALS_URL, verzeichnis=None):
         self.wertformat = wertformat if wertformat == self.ALS_PFAD else self.ALS_URL
@@ -42,7 +42,7 @@ class Animationsauswahl:
 
     @classmethod
     def aus_anfrage(cls, request):
-        return cls(wertformat=request.GET.get('wertformat', cls.ALS_URL))
+        return cls(wertformat=request.GET.get("wertformat", cls.ALS_URL))
 
     def kategorien(self):
         """Nur die Koepfe: Name und Anzahl. Leere Ordner fallen raus."""
@@ -50,7 +50,7 @@ class Animationsauswahl:
         for name in self.verzeichnis.kategorienamen():
             anzahl = self.verzeichnis.anzahl(name)
             if anzahl:
-                gefunden.append({'name': name, 'anzahl': anzahl})
+                gefunden.append({"name": name, "anzahl": anzahl})
         return gefunden
 
     def eintraege(self, kategorie):
@@ -62,13 +62,15 @@ class Animationsauswahl:
         """
         if kategorie not in self.verzeichnis.kategorienamen():
             return []
-        return [{'value': self._wert(kategorie, datei.name), 'label': datei.name}
-                for datei in self.verzeichnis.dateien(kategorie)]
+        return [
+            {"value": self._wert(kategorie, datei.name), "label": datei.name}
+            for datei in self.verzeichnis.dateien(kategorie)
+        ]
 
     def _wert(self, kategorie, stamm):
         if self.wertformat == self.ALS_PFAD:
-            return '%s/%s' % (kategorie, stamm)
-        return '/api/character/bvh/%s/%s/' % (kategorie, stamm)
+            return "%s/%s" % (kategorie, stamm)
+        return "/api/character/bvh/%s/%s/" % (kategorie, stamm)
 
     def fehlt(self, wert):
         """True, wenn ein Wert gespeichert ist, die Datei aber nicht existiert.
@@ -99,24 +101,22 @@ class Animationsauswahl:
                 continue
             kategorie, name = zerlegt
             if kategorie not in bekannt:
-                bekannt[kategorie] = {d.name
-                                      for d in self.verzeichnis.dateien(kategorie)}
+                bekannt[kategorie] = {d.name for d in self.verzeichnis.dateien(kategorie)}
             if name not in bekannt[kategorie]:
                 fehlend.add(wert)
         return fehlend
 
     def seitenteil(self, werte=()):
         """Der Zusammenhang, den `_anim_selector.html` braucht."""
-        return {'anim_kategorien': self.kategorien(),
-                'anim_fehlt': self.fehlende(werte)}
+        return {"anim_kategorien": self.kategorien(), "anim_fehlt": self.fehlende(werte)}
 
     @staticmethod
     def zerlegen(wert):
         """(Kategorie, Name) aus beiden Wertformaten, sonst None."""
         if not wert:
             return None
-        teile = wert.strip('/').split('/')
-        if wert.startswith('/api/character/bvh/'):
+        teile = wert.strip("/").split("/")
+        if wert.startswith("/api/character/bvh/"):
             teile = teile[3:]
         if len(teile) != 2 or not all(teile):
             return None

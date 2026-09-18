@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Figurvideostuecke`: das Binaerpaket eines Szenennetzes, Byte fuer Byte.
+"""`Figurvideostuecke`: das Binaerpaket eines Szenennetzes, Byte fuer Byte.
 
 Das Paket hat keinen Kopf — der Server liest es allein nach den Zahlen im
 Auftrag (`figurvideostuecke.py`). Stimmt die Reihenfolge der vier Bloecke
@@ -15,11 +15,12 @@ Geometrie und Material, in Node:
   werden aber GENANNT.
 * `formular` nennt je Stueck die Datei und legt die Knochenliste bei.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'figurvideo_stuecke.js')
+MODUL = Jsmodul("scene", "figurvideo_stuecke.js")
 
 SKRIPT = """
 const { Figurvideostuecke: F } = await import(MODUL);
@@ -72,10 +73,9 @@ console.log(JSON.stringify({ ok: true, bytes: roh.length }));
 
 
 class FigurvideoStueckeJsTest(SimpleTestCase):
-
     databases = set()
 
     def test_paket_byte_fuer_byte(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['bytes'], 120)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertEqual(ausgabe["bytes"], 120)

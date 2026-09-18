@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Laufwache`: wer den GarmentCode-Reiter besetzt, und wann er ihn freigibt.
+"""`Laufwache`: wer den GarmentCode-Reiter besetzt, und wann er ihn freigibt.
 
 WARUM (08.09.2026, Edgar: „Kleid erzeugen funktioniert gerade nicht (nach
 T-Shirt Erzeugung)"): Die Wache war eine einzige stumme Zeile —
@@ -26,11 +26,12 @@ Geprueft wird:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'laufwache.js')
+MODUL = Jsmodul("gemeinsam", "laufwache.js")
 
 SKRIPT = """
 const { Laufwache: W } = await import(MODUL);
@@ -85,10 +86,10 @@ console.log(JSON.stringify({ok: true}));
 
 
 class LaufwacheTest(SimpleTestCase):
-    u"""Ein besetzter Reiter sagt es — und gibt sich irgendwann selbst frei."""
+    """Ein besetzter Reiter sagt es — und gibt sich irgendwann selbst frei."""
 
     databases = set()
 
     def test_freier_reiter_laesst_durch_laufender_bau_wird_gemeldet(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

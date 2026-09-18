@@ -38,53 +38,50 @@ class Bvhauslieferung:
         Dateien, nur geschrieben, wenn sie fehlen oder die Szene juenger ist.
         """
         from ..dienste.animationsliste import Animationsliste
+
         Bvhauslieferung.dazbewegungen()
-        return JsonResponse({'categories': Animationsliste().nach_kategorie()})
+        return JsonResponse({"categories": Animationsliste().nach_kategorie()})
 
     @staticmethod
     def dazbewegungen():
         """Daz' Bewegungen als BVH bereitstellen — ohne Bibliothek nichts."""
         import logging
         from pathlib import Path
+
         try:
             from Genesis9.bewegung import G9bewegungen
-            neu = G9bewegungen.bereitstellen(
-                Path(Bvhauslieferung.wurzel()) / G9bewegungen.ORDNER)
-        except Exception as fehler:      # noqa: BLE001 — die Liste kommt trotzdem
-            logging.getLogger('core').warning('Daz-Bewegungen nicht bereitgestellt: %s',
-                                              fehler)
+
+            neu = G9bewegungen.bereitstellen(Path(Bvhauslieferung.wurzel()) / G9bewegungen.ORDNER)
+        except Exception as fehler:  # noqa: BLE001 — die Liste kommt trotzdem
+            logging.getLogger("core").warning("Daz-Bewegungen nicht bereitgestellt: %s", fehler)
             return []
         if neu:
-            logging.getLogger('core').info('Daz-Bewegungen als BVH: %s',
-                                           ', '.join(p.name for p in neu))
+            logging.getLogger("core").info("Daz-Bewegungen als BVH: %s", ", ".join(p.name for p in neu))
         return neu
 
     @staticmethod
     def _ausliefern(pfad, name):
-        return FileResponse(open(pfad, 'rb'), content_type='text/plain',
-                            filename='%s.bvh' % name)
+        return FileResponse(open(pfad, "rb"), content_type="text/plain", filename="%s.bvh" % name)
 
     @staticmethod
     def datei(request, name):
         """Aeltere Adresse: eine Datei direkt aus dem MocapNET-Ordner."""
-        pfad = os.path.join(str(settings.HUMANBODY_BVH_DIR), '%s.bvh' % name)
+        pfad = os.path.join(str(settings.HUMANBODY_BVH_DIR), "%s.bvh" % name)
         if not os.path.isfile(pfad):
-            return HttpResponseNotFound('BVH not found: %s' % name)
+            return HttpResponseNotFound("BVH not found: %s" % name)
         return Bvhauslieferung._ausliefern(pfad, name)
 
     @staticmethod
     def datei_der_kategorie(request, category, name):
         """Eine Datei aus einem Kategorieordner."""
         wurzel = Bvhauslieferung.wurzel()
-        pfad = os.path.normpath(os.path.join(wurzel, category,
-                                             '%s.bvh' % name))
+        pfad = os.path.normpath(os.path.join(wurzel, category, "%s.bvh" % name))
         if not Pfadvergleich.liegt_unter(pfad, wurzel):
-            return HttpResponseNotFound('Invalid path')
+            return HttpResponseNotFound("Invalid path")
         # Genau dieser Pfad — keine Suche in anderen Ordnern (Edgar,
         # 13.09.2026: was es nicht gibt, fliegt aus der Zeitleiste).
         if not os.path.isfile(pfad):
-            return HttpResponseNotFound('BVH not found: %s/%s'
-                                        % (category, name))
+            return HttpResponseNotFound("BVH not found: %s/%s" % (category, name))
         return Bvhauslieferung._ausliefern(pfad, name)
 
     @staticmethod
@@ -95,26 +92,22 @@ class Bvhauslieferung:
         rumpf, fehler = Anfragerumpf.lesen(request)
         if fehler:
             return fehler
-        kategorie = rumpf.get('category', '').strip()
-        name = rumpf.get('name', '').strip()
-        inhalt = rumpf.get('bvh_content', '')
+        kategorie = rumpf.get("category", "").strip()
+        name = rumpf.get("name", "").strip()
+        inhalt = rumpf.get("bvh_content", "")
         if not kategorie or not name or not inhalt:
-            return JsonResponse(
-                {'error': 'category, name, and bvh_content required'},
-                status=400)
+            return JsonResponse({"error": "category, name, and bvh_content required"}, status=400)
         # Wortzeichen, Leerzeichen, Bindestriche und Punkte bleiben stehen.
-        name = re.sub(r'[^\w\s\-.]', '', name).strip()
-        kategorie = re.sub(r'[^\w\s\-.]', '', kategorie).strip()
+        name = re.sub(r"[^\w\s\-.]", "", name).strip()
+        kategorie = re.sub(r"[^\w\s\-.]", "", kategorie).strip()
         if not name or not kategorie:
-            return JsonResponse({'error': 'Invalid name or category'},
-                                status=400)
+            return JsonResponse({"error": "Invalid name or category"}, status=400)
         wurzel = Bvhauslieferung.wurzel()
         ordner = os.path.normpath(os.path.join(wurzel, kategorie))
-        ziel = os.path.normpath(os.path.join(ordner, '%s.bvh' % name))
+        ziel = os.path.normpath(os.path.join(ordner, "%s.bvh" % name))
         if not Pfadvergleich.liegt_unter(ziel, wurzel):
-            return JsonResponse({'error': 'Invalid path'}, status=400)
+            return JsonResponse({"error": "Invalid path"}, status=400)
         os.makedirs(ordner, exist_ok=True)
-        with open(ziel, 'w', encoding='utf-8') as datei:
+        with open(ziel, "w", encoding="utf-8") as datei:
             datei.write(inhalt)
-        return JsonResponse({'ok': True,
-                             'path': '%s/%s.bvh' % (kategorie, name)})
+        return JsonResponse({"ok": True, "path": "%s/%s.bvh" % (kategorie, name)})

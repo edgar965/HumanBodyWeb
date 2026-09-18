@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Reglerabbildung`: ein gemeinsamer Reglerwert, übersetzt in beide Welten.
+"""`Reglerabbildung`: ein gemeinsamer Reglerwert, übersetzt in beide Welten.
 
 Die Umrechnung steht zweimal — in Python (`humanbody_core.regler`, weil
 HumanBody auf dem Server rechnet) und in JS (weil UMA im Browser rechnet).
@@ -14,11 +14,12 @@ Prüfung stünde dort ein Regler, der sich ziehen lässt und nichts tut.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'reglerabbildung.js')
+MODUL = Jsmodul("gemeinsam", "reglerabbildung.js")
 
 SKRIPT = """
 const { Reglerabbildung } = await import(MODUL);
@@ -81,9 +82,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class ReglerabbildungTest(SimpleTestCase):
-
     databases = set()
 
     def test_umrechnung_und_filter(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

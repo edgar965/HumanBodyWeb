@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Kamera und Bilder eines Films — aus `hbfilm.py` abgeteilt (11.09.2026).
+"""Kamera und Bilder eines Films — aus `hbfilm.py` abgeteilt (11.09.2026).
 
 Die Kamera laeuft mit und schaut der Figur ins Gesicht. Beides ist
 gemessen, nicht angenommen: Ein fester Versatz stand bei `136_12` hinter
@@ -15,7 +15,7 @@ from filmmasken import Filmmasken
 
 
 class Filmrender:
-    u"""Rendert die Teile eines `Hbfilm` Bild fuer Bild."""
+    """Rendert die Teile eines `Hbfilm` Bild fuer Bild."""
 
     HINTERGRUND = (0.93, 0.94, 0.96)
     ABSTAND = 2.2
@@ -25,9 +25,7 @@ class Filmrender:
     #: Blender-Koordinaten rechnet und in Renderkoordinaten einsetzt,
     #: verwechselt Tiefe mit Hoehe — die Figur laeuft dann nach 36
     #: Bildern aus dem Bild, obwohl die Kamera „mitlaeuft".
-    DREHUNG = np.array([[1.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0],
-                        [0.0, -1.0, 0.0]])
+    DREHUNG = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
 
     def __init__(self, teile, bahn, melder=None):
         self.teile = teile
@@ -35,7 +33,7 @@ class Filmrender:
         self.melder = melder or (lambda phase, anteil: None)
 
     def _kamera(self, nummer):
-        u"""Die Kamera laeuft mit — IN RENDERKOORDINATEN.
+        """Die Kamera laeuft mit — IN RENDERKOORDINATEN.
 
         Ohne das Mitlaufen verlaesst die Figur nach 2,8 m das Bild, und ein
         Video, auf dem am Ende nur Hintergrund steht, ist kein Beleg. Die
@@ -43,9 +41,9 @@ class Filmrender:
         in Blender-Koordinaten laesst, setzt die Tiefe als Hoehe ein und
         die Kamera laeuft in die falsche Richtung davon.
         """
-        koerper = self.teile[0]['haut'].folge[nummer]
+        koerper = self.teile[0]["haut"].folge[nummer]
         mitte = self.DREHUNG @ koerper.mean(axis=0)
-        hoehe = float(self.teile[0]['haut'].folge[0][:, 2].max())
+        hoehe = float(self.teile[0]["haut"].folge[0][:, 2].max())
         blick = np.array([mitte[0], 0.52 * hoehe, mitte[2]])
         lage = np.eye(4)
         # SCHRAEG VON VORN, an der LAUFRICHTUNG ausgerichtet. Ein fester
@@ -54,12 +52,11 @@ class Filmrender:
         # Ruecken statt die Vorderseite.
         vorn, seite = self._richtung(), np.array([0.0, 1.0, 0.0])
         quer = np.cross(seite, vorn)
-        lage[:3, 3] = blick + self.ABSTAND * hoehe * (
-            0.82 * vorn + 0.52 * quer + 0.18 * seite)
+        lage[:3, 3] = blick + self.ABSTAND * hoehe * (0.82 * vorn + 0.52 * quer + 0.18 * seite)
         return lage, hoehe, blick
 
     def _richtung(self):
-        u"""BLICKRICHTUNG der Figur in Renderkoordinaten, waagrecht.
+        """BLICKRICHTUNG der Figur in Renderkoordinaten, waagrecht.
 
         NICHT die Laufrichtung. Gemessen in der BVH-Quelle stehen bei
         `136_12` die Zehen 170 Grad gegen die Bewegung — die Person geht
@@ -68,16 +65,16 @@ class Filmrender:
         (`DEF-toe.L` gegen `DEF-foot.L`), das in Ruhe unstrittig frontal
         steht, und wird ueber die Beckendrehung je Bild mitgefuehrt.
         """
-        if getattr(self, '_blick', None) is not None:
+        if getattr(self, "_blick", None) is not None:
             return self._blick
         ruhe = self.bahn.ruhe
-        if 'DEF-toe.L' in ruhe and 'DEF-foot.L' in ruhe:
-            vor = self._waagrecht(np.asarray(ruhe['DEF-toe.L'][0])
-                                  - np.asarray(ruhe['DEF-foot.L'][0]))
-            lokal = self.bahn.dreh(ruhe['DEF-spine'][1]).T @ vor
-            mittel = np.mean([self._waagrecht(
-                self.bahn.dreh(lage['DEF-spine'][1]) @ lokal)
-                for lage in self.bahn.lagen], axis=0)
+        if "DEF-toe.L" in ruhe and "DEF-foot.L" in ruhe:
+            vor = self._waagrecht(np.asarray(ruhe["DEF-toe.L"][0]) - np.asarray(ruhe["DEF-foot.L"][0]))
+            lokal = self.bahn.dreh(ruhe["DEF-spine"][1]).T @ vor
+            mittel = np.mean(
+                [self._waagrecht(self.bahn.dreh(lage["DEF-spine"][1]) @ lokal) for lage in self.bahn.lagen],
+                axis=0,
+            )
             self._blick = self.DREHUNG @ self._waagrecht(mittel)
         else:
             self._blick = np.array([0.0, 0.0, 1.0])
@@ -87,14 +84,14 @@ class Filmrender:
 
     @staticmethod
     def _waagrecht(v):
-        u"""Auf die Bodenebene des RIGS (z oben) projiziert und normiert."""
+        """Auf die Bodenebene des RIGS (z oben) projiziert und normiert."""
         v = np.array(v, dtype=np.float64)
         v[2] = 0.0
         return v / max(np.linalg.norm(v), 1e-9)
 
     @staticmethod
     def _blicken(lage, ziel):
-        u"""Kameramatrix, die von `lage` auf `ziel` schaut (Y oben)."""
+        """Kameramatrix, die von `lage` auf `ziel` schaut (Y oben)."""
         auge = lage[:3, 3]
         vor = auge - ziel
         vor /= max(np.linalg.norm(vor), 1e-9)
@@ -108,6 +105,7 @@ class Filmrender:
 
     def bilder_rendern(self, breite=720, hoehe=900):
         import pyrender
+
         drehung = self.DREHUNG
         kamera = pyrender.PerspectiveCamera(yfov=np.deg2rad(36.0))
         licht = pyrender.DirectionalLight(color=np.ones(3), intensity=3.6)
@@ -116,41 +114,53 @@ class Filmrender:
         # Vorlagen-Hose ist zu 76 % nach INNEN gewickelt (gemessen
         # 11.09.2026); einseitig gerendert blieben von ihr nur Fetzen an
         # den Beinen, die von innen zu sehen sind.
-        stoffe = [pyrender.MetallicRoughnessMaterial(
-            baseColorFactor=list(t['farbe']) + [1.0], metallicFactor=0.0,
-            roughnessFactor=0.62, doubleSided=True) for t in self.teile]
+        stoffe = [
+            pyrender.MetallicRoughnessMaterial(
+                baseColorFactor=list(t["farbe"]) + [1.0],
+                metallicFactor=0.0,
+                roughnessFactor=0.62,
+                doubleSided=True,
+            )
+            for t in self.teile
+        ]
         try:
-            zahl = len(self.teile[0]['haut'].folge)
+            zahl = len(self.teile[0]["haut"].folge)
             for nummer in range(zahl):
-                self.melder(u'Bild %d von %d' % (nummer + 1, zahl),
-                            0.45 + 0.55 * nummer / max(zahl, 1))
+                self.melder("Bild %d von %d" % (nummer + 1, zahl), 0.45 + 0.55 * nummer / max(zahl, 1))
                 lage, figurhoehe, blick = self._kamera(nummer)
                 szene = pyrender.Scene(
-                    bg_color=list(self.HINTERGRUND) + [1.0],
-                    ambient_light=[0.40, 0.40, 0.42])
+                    bg_color=list(self.HINTERGRUND) + [1.0], ambient_light=[0.40, 0.40, 0.42]
+                )
                 for teil, werkstoff in zip(self.teile, stoffe):
                     # Ohne die Dreiecke unter Stoff, Randecken eingezogen;
                     # Normalen fertig mitgeliefert (kein trimesh je Bild —
                     # das kostete 2,8 s je Bild beim 70K-Netz).
                     punkte, dreiecke, normalen = Filmmasken.gerendert(teil, nummer)
                     ecken = np.ascontiguousarray(punkte @ drehung.T, dtype=np.float32)
-                    senkrechten = np.ascontiguousarray(normalen @ drehung.T,
-                                                       dtype=np.float32)
-                    haut = teil.get('filmhaut')
+                    senkrechten = np.ascontiguousarray(normalen @ drehung.T, dtype=np.float32)
+                    haut = teil.get("filmhaut")
                     if haut is not None:
                         # Haut mit Textur und Braue, Augen, Wimpern, Lippen —
                         # je Gruppe ihr Material (`filmhaut.py`, 17.09.2026).
                         for netz in haut.netze(ecken, senkrechten, dreiecke):
                             szene.add(netz)
                         continue
-                    szene.add(pyrender.Mesh(primitives=[pyrender.Primitive(
-                        positions=ecken, normals=senkrechten,
-                        indices=np.ascontiguousarray(dreiecke, dtype=np.uint32),
-                        material=werkstoff, mode=4)]))
+                    szene.add(
+                        pyrender.Mesh(
+                            primitives=[
+                                pyrender.Primitive(
+                                    positions=ecken,
+                                    normals=senkrechten,
+                                    indices=np.ascontiguousarray(dreiecke, dtype=np.uint32),
+                                    material=werkstoff,
+                                    mode=4,
+                                )
+                            ]
+                        )
+                    )
                 szene.add(kamera, pose=self._blicken(lage, blick))
                 lichtlage = np.array(lage)
-                lichtlage[:3, 3] = lage[:3, 3] + np.array(
-                    [0.0, 1.4 * figurhoehe, 0.0])
+                lichtlage[:3, 3] = lage[:3, 3] + np.array([0.0, 1.4 * figurhoehe, 0.0])
                 szene.add(licht, pose=self._blicken(lichtlage, blick))
                 yield Videoschreiber.rendern(werk, szene)
         finally:

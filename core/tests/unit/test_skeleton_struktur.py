@@ -18,6 +18,7 @@ sobald wieder eine Funktion ohne Einrückung in den Klassenkörper gerät.
 
 Aufruf:  python manage.py test core
 """
+
 from django.test import SimpleTestCase
 
 from humanbody_core.skeleton.skeleton import Skeleton
@@ -29,15 +30,24 @@ class SkeletonStrukturTest(SimpleTestCase):
     """Die Methoden der Klasse müssen Methoden der Klasse sein."""
 
     #: Was durch den Einrückungsfehler verschluckt worden war.
-    ERWARTET = ('conversion_map', 'bone_names', 'deformation_bone_map',
-                'left_arm_ik', 'right_arm_ik', 'left_leg_ik', 'right_leg_ik')
+    ERWARTET = (
+        "conversion_map",
+        "bone_names",
+        "deformation_bone_map",
+        "left_arm_ik",
+        "right_arm_ik",
+        "left_leg_ik",
+        "right_leg_ik",
+    )
 
     def test_alle_methoden_sind_erreichbar(self):
         fehlend = [n for n in self.ERWARTET if not hasattr(Skeleton, n)]
         self.assertEqual(
-            fehlend, [],
-            'Unerreichbar: %s — steht wieder eine Funktion ohne Einrueckung im '
-            'Klassenkoerper? Siehe Docu/befund_skeleton_einrueckung.md' % fehlend)
+            fehlend,
+            [],
+            "Unerreichbar: %s — steht wieder eine Funktion ohne Einrueckung im "
+            "Klassenkoerper? Siehe Docu/befund_skeleton_einrueckung.md" % fehlend,
+        )
 
     def test_klasse_hat_eigenen_konstruktor(self):
         """`Skeleton.__init__` war der von `object` — der eigene lief nie."""
@@ -63,11 +73,13 @@ class SkeletonStrukturTest(SimpleTestCase):
         from humanbody_core.skeleton.bvh_normalisierung import BvhNormalisierung
 
         self.assertTrue(callable(BvhNormalisierung.delta))
-        self.assertFalse(hasattr(modul, '_delta_normalize_bvh'),
-                         'Die alte Modulfunktion ist zurück in skeleton.py')
-        self.assertFalse(hasattr(Skeleton, '_delta_normalize_bvh'),
-                         '_delta_normalize_bvh haengt an der Klasse — steht sie '
-                         'wieder im Klassenkoerper?')
+        self.assertFalse(
+            hasattr(modul, "_delta_normalize_bvh"), "Die alte Modulfunktion ist zurück in skeleton.py"
+        )
+        self.assertFalse(
+            hasattr(Skeleton, "_delta_normalize_bvh"),
+            "_delta_normalize_bvh haengt an der Klasse — steht sie wieder im Klassenkoerper?",
+        )
 
     def test_unterklassen_bleiben_baubar(self):
         """Der wieder aktive `__init__` darf die Unterklassen nicht stören.
@@ -82,13 +94,12 @@ class SkeletonStrukturTest(SimpleTestCase):
         """Die acht Quellformate haben keinen eigenen Konstruktor — sie laufen
         jetzt durch `Skeleton.__init__(preset=None)`."""
         from humanbody_core.skeleton import formats
+
         gebaut = 0
         for name in dir(formats):
             kls = getattr(formats, name)
-            if isinstance(kls, type) and issubclass(kls,
-                                                    Skeleton) and kls is not Skeleton:
+            if isinstance(kls, type) and issubclass(kls, Skeleton) and kls is not Skeleton:
                 with self.subTest(klasse=name):
                     self.assertIsNotNone(kls())
                     gebaut += 1
-        self.assertGreaterEqual(gebaut, 8,
-                                'weniger Formatklassen gefunden als erwartet')
+        self.assertGreaterEqual(gebaut, 8, "weniger Formatklassen gefunden als erwartet")

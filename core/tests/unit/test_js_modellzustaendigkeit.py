@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Modellzustaendigkeit`: je Animationsspur setzt genau EINE Modellspur die Figur.
+"""`Modellzustaendigkeit`: je Animationsspur setzt genau EINE Modellspur die Figur.
 
 WARUM (11.09.2026, Edgar: „bei Klick auf Play im BVH Studio verschwindet das
 Modell"): Zwei Modellspuren an derselben Animation — eine mit Clips, eine
@@ -9,11 +9,12 @@ Fall hier ist das Projekt TechnoDance nachgestellt.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'modellzustaendigkeit.js')
+MODUL = Jsmodul("bvh_studio", "modellzustaendigkeit.js")
 
 SKRIPT = """
 const { Modellzustaendigkeit } = await import(MODUL);
@@ -52,9 +53,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class ModellzustaendigkeitTest(SimpleTestCase):
-
     databases = set()
 
     def test_eine_spur_je_animation(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

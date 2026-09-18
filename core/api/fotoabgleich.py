@@ -45,23 +45,23 @@ class Fotoabgleich:
         job, rumpf, fehler = Fotoauftragszugriff.mit_rumpf(request, job_id)
         if fehler:
             return fehler
-        relativ, fehlertext = Bildablage('silhouettes').sichern_aus_dataurl(
-            job_id, rumpf.get('image', ''))
+        relativ, fehlertext = Bildablage("silhouettes").sichern_aus_dataurl(job_id, rumpf.get("image", ""))
         if fehlertext:
-            return JsonResponse({'ok': False, 'error': fehlertext}, status=400)
+            return JsonResponse({"ok": False, "error": fehlertext}, status=400)
         Fotoabgleich._pfad_vermerken(job, relativ)
-        return JsonResponse({'ok': True, 'path': '/%s' % relativ})
+        return JsonResponse({"ok": True, "path": "/%s" % relativ})
 
     @staticmethod
     def _pfad_vermerken(job, relativ):
         try:
             daten = json.loads(job.result_json)
-            daten['silhouette_path'] = relativ
+            daten["silhouette_path"] = relativ
             job.result_json = json.dumps(daten, default=str)
-            job.save(update_fields=['result_json'])
-        except Exception:                                        # noqa: BLE001
-            logger.warning('Job-Ergebnis konnte nicht gespeichert werden — '
-                           'result_json fehlt jetzt', exc_info=True)
+            job.save(update_fields=["result_json"])
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Job-Ergebnis konnte nicht gespeichert werden — result_json fehlt jetzt", exc_info=True
+            )
 
     # ------------------------------------------------------------ Silhouette
 
@@ -76,8 +76,8 @@ class Fotoabgleich:
         Endpunkt tut: Auftrag holen, rufen, Statuscode setzen.
         """
         import cv2
-        from ..dienste.silhouettenauftrag import (Fotofehler,
-                                                  Silhouettenauftrag)
+        from ..dienste.silhouettenauftrag import Fotofehler, Silhouettenauftrag
+
         job = Fotoauftragszugriff.holen(job_id)
         if job is None:
             return Fotoauftragszugriff.nicht_gefunden()
@@ -85,8 +85,7 @@ class Fotoabgleich:
             auftrag = Silhouettenauftrag(job, Fotoabgleich._posierte_punkte)
             return JsonResponse(auftrag.ergebnis(cv2))
         except Fotofehler as fehler:
-            return JsonResponse({'ok': False, 'error': str(fehler)},
-                                status=fehler.code)
+            return JsonResponse({"ok": False, "error": str(fehler)}, status=fehler.code)
 
     @staticmethod
     def _posierte_punkte(job_id, daten, breite, hoehe):
@@ -97,21 +96,19 @@ class Fotoabgleich:
         SMPL-X) wird mit NaN aufgefuellt, damit die Indizes der Dreiecke weiter
         passen.
         """
-        kamera = daten.get('cam_data')
+        kamera = daten.get("cam_data")
         pfad = Smplxablage.datei(job_id)
         if not (kamera and os.path.isfile(pfad)):
             return None
         try:
             npz = np.load(pfad)
-            if 'posed_vertices' not in npz:
+            if "posed_vertices" not in npz:
                 return None
-            posiert = npz['posed_vertices']
-            punkte = Fotoausrichtung.vertices_projizieren(posiert, kamera,
-                                                          breite, hoehe)
+            posiert = npz["posed_vertices"]
+            punkte = Fotoausrichtung.vertices_projizieren(posiert, kamera, breite, hoehe)
             return punkte, len(posiert)
-        except Exception:                                        # noqa: BLE001
-            logger.error('Posierte Vertices fuer %s nicht ladbar', job_id,
-                         exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.error("Posierte Vertices fuer %s nicht ladbar", job_id, exc_info=True)
             return None
 
     # ----------------------------------------------------------- Ausrichtung
@@ -124,26 +121,24 @@ class Fotoabgleich:
         job, rumpf, fehler = Fotoauftragszugriff.mit_rumpf(request, job_id)
         if fehler:
             return fehler
-        koerper = rumpf.get('body_transform')
-        versatz = rumpf.get('proj_2d_offset')
+        koerper = rumpf.get("body_transform")
+        versatz = rumpf.get("proj_2d_offset")
         if not koerper and not versatz:
             return JsonResponse(
-                {'ok': False,
-                 'error': 'body_transform or proj_2d_offset required'},
-                status=400)
+                {"ok": False, "error": "body_transform or proj_2d_offset required"}, status=400
+            )
         try:
             daten = json.loads(job.result_json)
-        except (json.JSONDecodeError, TypeError):
-            logger.exception('photo_save_alignment: JSONDecodeError/TypeError')
-            return JsonResponse({'ok': False, 'error': 'Invalid result data'},
-                                status=500)
-        daten['alignment_data'] = {
-            'body_transform': koerper,
-            'face_transform': rumpf.get('face_transform'),
-            'proj_2d_offset': versatz,
-            'body_contour_edited': rumpf.get('body_contour_edited'),
-            'face_contour_edited': rumpf.get('face_contour_edited'),
+        except json.JSONDecodeError, TypeError:
+            logger.exception("photo_save_alignment: JSONDecodeError/TypeError")
+            return JsonResponse({"ok": False, "error": "Invalid result data"}, status=500)
+        daten["alignment_data"] = {
+            "body_transform": koerper,
+            "face_transform": rumpf.get("face_transform"),
+            "proj_2d_offset": versatz,
+            "body_contour_edited": rumpf.get("body_contour_edited"),
+            "face_contour_edited": rumpf.get("face_contour_edited"),
         }
         job.result_json = json.dumps(daten, default=str)
-        job.save(update_fields=['result_json'])
-        return JsonResponse({'ok': True})
+        job.save(update_fields=["result_json"])
+        return JsonResponse({"ok": True})

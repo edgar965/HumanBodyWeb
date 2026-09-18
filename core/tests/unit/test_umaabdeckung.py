@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die ganze Funktionalität von UMAs Konformer — Stück für Stück belegt.
+"""Die ganze Funktionalität von UMAs Konformer — Stück für Stück belegt.
 
 WARUM (08.09.2026, Edgar: „Für UMA und UMA Python mach testcases die ganze
 Funktionalität von UMA abbilden, die sollen dann mit UMA Python auch
@@ -32,6 +32,7 @@ mitglieder` und `test_ein_erfundenes_mitglied_wuerde_auffallen` stellen
 sicher, dass das Lesen der .cs-Dateien wirklich etwas liefert und dass ein
 unbekannter Name gemeldet würde.
 """
+
 import unittest
 
 from ._umaabdeckung import Abdeckung, Umaquelle
@@ -39,7 +40,7 @@ from ._sicher import Sicher
 
 
 class Vollstaendig(unittest.TestCase):
-    u"""Die Tabelle gegen den echten C#-Quelltext."""
+    """Die Tabelle gegen den echten C#-Quelltext."""
 
     databases = set()
 
@@ -47,51 +48,95 @@ class Vollstaendig(unittest.TestCase):
     #: `Instance`/`get_`-Formen und Unity-Ereignisse; die Klassen- und
     #: Feldnamen der internen `struct`s sind Datenhalter ohne Verhalten.
     NICHT_SCHNITTSTELLE = {
-        'UMAClothingConformer', 'ClothingConformerMeshUtility',
-        'ClothingBindData', 'ClothingConformerSettings', 'BindVertexData',
-        'umaAvatar', 'umaData', 'selectedSlotNames', 'baseSlotNames',
-        'settings', 'bindData', 'bindDataAssets', 'preview',
-        'LastStatus', 'UnboundVertexPositions', 'HasConformedResults',
-        'BoundVertexCount', 'HasNearestVertexFallback',
-        'sourceSlotName', 'sourceSlotAsset', 'clothingMeshOriginal',
-        'sourceMaterial', 'originalUv', 'vertexCount', 'vertices',
-        'triangles', 'weldedVertexGroups', 'weldedSeamTolerance',
-        'baseSlotNames', 'baseTopologyHash', 'clothingTopologyHash',
-        'sourceBounds', 'umaVersion', 'isComplete',
-        'slotAsset', 'hadOverride', 'normals', 'slotNames', 'topologyHash',
-        'renderer', 'sourceMesh', 'rootVertices', 'blendedVertexDeltas',
-        'submeshTriangles', 'slot', 'rendererSnapshot', 'startVertex',
-        'tangents', 'rootNormals', 'rootTangents', 'baseVertices',
-        'localNormals', 'localTangents', 'IsValidVertexIndex',
+        "UMAClothingConformer",
+        "ClothingConformerMeshUtility",
+        "ClothingBindData",
+        "ClothingConformerSettings",
+        "BindVertexData",
+        "umaAvatar",
+        "umaData",
+        "selectedSlotNames",
+        "baseSlotNames",
+        "settings",
+        "bindData",
+        "bindDataAssets",
+        "preview",
+        "LastStatus",
+        "UnboundVertexPositions",
+        "HasConformedResults",
+        "BoundVertexCount",
+        "HasNearestVertexFallback",
+        "sourceSlotName",
+        "sourceSlotAsset",
+        "clothingMeshOriginal",
+        "sourceMaterial",
+        "originalUv",
+        "vertexCount",
+        "vertices",
+        "triangles",
+        "weldedVertexGroups",
+        "weldedSeamTolerance",
+        "baseSlotNames",
+        "baseTopologyHash",
+        "clothingTopologyHash",
+        "sourceBounds",
+        "umaVersion",
+        "isComplete",
+        "slotAsset",
+        "hadOverride",
+        "normals",
+        "slotNames",
+        "topologyHash",
+        "renderer",
+        "sourceMesh",
+        "rootVertices",
+        "blendedVertexDeltas",
+        "submeshTriangles",
+        "slot",
+        "rendererSnapshot",
+        "startVertex",
+        "tangents",
+        "rootNormals",
+        "rootTangents",
+        "baseVertices",
+        "localNormals",
+        "localTangents",
+        "IsValidVertexIndex",
         # Felder der internen `struct`s (ConformedSlotResult,
         # SurfaceSnapshot, SlotSnapshot) — Datenhalter ohne Verhalten.
-        'count', 'mesh', 'originalMesh', 'previewMesh', 'rendererIndex',
-        'shapeName', 'total', 'weight', 'boneIndex',
+        "count",
+        "mesh",
+        "originalMesh",
+        "previewMesh",
+        "rendererIndex",
+        "shapeName",
+        "total",
+        "weight",
+        "boneIndex",
     }
 
     def setUp(self):
         self.ordner = Umaquelle.quellordner()
         if self.ordner is None:
-            self.skipTest(u'UMA-Klon nicht vorhanden (%s)'
-                          % '/'.join(Abdeckung.QUELLORDNER))
+            self.skipTest("UMA-Klon nicht vorhanden (%s)" % "/".join(Abdeckung.QUELLORDNER))
 
     def _quelltext(self):
         aus = []
         for datei in Abdeckung.DATEIEN:
-            pfad = Sicher.wert(self.ordner, 'Quellordner') / datei
-            self.assertTrue(pfad.is_file(), u'%s fehlt' % pfad)
-            aus.append(pfad.read_text(encoding='utf-8', errors='replace'))
+            pfad = Sicher.wert(self.ordner, "Quellordner") / datei
+            self.assertTrue(pfad.is_file(), "%s fehlt" % pfad)
+            aus.append(pfad.read_text(encoding="utf-8", errors="replace"))
         return aus
 
     def _gefunden(self):
-        u"""Die OEFFENTLICHE Schnittstelle — sie muss abgedeckt sein."""
+        """Die OEFFENTLICHE Schnittstelle — sie muss abgedeckt sein."""
         namen = set()
         for text in self._quelltext():
             namen |= Umaquelle.mitglieder(text)
         return namen - self.NICHT_SCHNITTSTELLE
 
     def _alle_namen(self):
-        u"""Auch die privaten — dafür, dass die Tabelle nichts erfindet.
+        """Auch die privaten — dafür, dass die Tabelle nichts erfindet.
 
         Die Tabelle FÜHRT vier private Methoden (`ApplyWeldedSeam-
         Displacements`, `InterpolateNormal`, `GetWeightedSurfacePoint`,
@@ -105,38 +150,39 @@ class Vollstaendig(unittest.TestCase):
         return namen
 
     def test_der_leser_findet_ueberhaupt_mitglieder(self):
-        u"""GEGENPROBE: Ein Leser, der nichts findet, meldet grün — genau
+        """GEGENPROBE: Ein Leser, der nichts findet, meldet grün — genau
         die Falle aus `~/.claude/rules/analysewerkzeuge.md`."""
         gefunden = self._gefunden()
-        self.assertGreater(len(gefunden), 40,
-                           u'Nur %d Mitglieder gelesen — der reguläre '
-                           u'Ausdruck passt nicht mehr zur Quelle'
-                           % len(gefunden))
+        self.assertGreater(
+            len(gefunden),
+            40,
+            "Nur %d Mitglieder gelesen — der reguläre Ausdruck passt nicht mehr zur Quelle" % len(gefunden),
+        )
 
     def test_jedes_mitglied_steht_in_der_tabelle(self):
-        u"""Der eigentliche Test: nichts fällt unter den Tisch."""
+        """Der eigentliche Test: nichts fällt unter den Tisch."""
         fehlt = sorted(self._gefunden() - Abdeckung.namen())
         self.assertEqual(
-            fehlt, [],
-            u'Diese Mitglieder des C#-Originals haben keinen Eintrag in '
-            u'UMA_Python/abdeckung.py: %s' % ', '.join(fehlt))
+            fehlt,
+            [],
+            "Diese Mitglieder des C#-Originals haben keinen Eintrag in "
+            "UMA_Python/abdeckung.py: %s" % ", ".join(fehlt),
+        )
 
     def test_die_tabelle_erfindet_nichts(self):
-        u"""Die andere Richtung: kein Eintrag ohne Vorbild im Original.
+        """Die andere Richtung: kein Eintrag ohne Vorbild im Original.
 
         Sonst wächst die Tabelle mit Namen, die es nicht mehr gibt, und
         die Abdeckung sieht besser aus, als sie ist."""
         gefunden = self._alle_namen() | self.NICHT_SCHNITTSTELLE
         erfunden = sorted(Abdeckung.namen() - gefunden)
-        self.assertEqual(erfunden, [],
-                         u'Eintraege ohne Vorbild im Original: %s'
-                         % ', '.join(erfunden))
+        self.assertEqual(erfunden, [], "Eintraege ohne Vorbild im Original: %s" % ", ".join(erfunden))
 
     def test_ein_erfundenes_mitglied_wuerde_auffallen(self):
-        u"""GEGENPROBE zum Abgleich selbst."""
+        """GEGENPROBE zum Abgleich selbst."""
         gefunden = self._gefunden()
-        self.assertNotIn('DasGibtEsNicht', gefunden)
+        self.assertNotIn("DasGibtEsNicht", gefunden)
         self.assertTrue(
-            {'ClosestPointOnTriangle', 'Smooth', 'maxSearchRadius'}
-            <= gefunden,
-            u'Der Leser findet die bekannten Mitglieder nicht mehr')
+            {"ClosestPointOnTriangle", "Smooth", "maxSearchRadius"} <= gefunden,
+            "Der Leser findet die bekannten Mitglieder nicht mehr",
+        )

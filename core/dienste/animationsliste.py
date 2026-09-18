@@ -23,7 +23,7 @@ from ..models import BVHFile
 from .bvhablage import Bvhablage
 from .bvhverzeichnis import Bvhverzeichnis
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Animationsliste:
@@ -42,8 +42,10 @@ class Animationsliste:
         anzulegen, zu_aendern = [], []
         kategorien = {}
         for kategorie in self.verzeichnis.kategorienamen():
-            eintraege = [self._eintrag(datei, bekannt, anzulegen, zu_aendern)
-                         for datei in self.verzeichnis.dateien(kategorie)]
+            eintraege = [
+                self._eintrag(datei, bekannt, anzulegen, zu_aendern)
+                for datei in self.verzeichnis.dateien(kategorie)
+            ]
             if eintraege:
                 kategorien[kategorie] = eintraege
         self._sichern(anzulegen, zu_aendern)
@@ -51,10 +53,12 @@ class Animationsliste:
 
     def _zwischenspeicher(self):
         """{Pfad: (id, Bildzahl, Zeitstempel)} — ohne Modellobjekte."""
-        return {pfad: (kennung, bilder, stempel)
-                for kennung, pfad, bilder, stempel
-                in BVHFile.objects.values_list('id', 'path', 'frame_count',
-                                               'mtime_ns').iterator()}
+        return {
+            pfad: (kennung, bilder, stempel)
+            for kennung, pfad, bilder, stempel in BVHFile.objects.values_list(
+                "id", "path", "frame_count", "mtime_ns"
+            ).iterator()
+        }
 
     def _eintrag(self, datei, bekannt, anzulegen, zu_aendern):
         stand = bekannt.get(datei.pfad)
@@ -64,28 +68,35 @@ class Animationsliste:
             bilder = Bvhablage.frames_lesen(datei.pfad)
             self.gelesen += 1
             if stand is not None:
-                zu_aendern.append(BVHFile(pk=stand[0], frame_count=bilder,
-                                          mtime_ns=datei.mtime_ns))
+                zu_aendern.append(BVHFile(pk=stand[0], frame_count=bilder, mtime_ns=datei.mtime_ns))
             else:
-                anzulegen.append(BVHFile(
-                    name=datei.name, path=datei.pfad, source='library',
-                    frame_count=bilder, mtime_ns=datei.mtime_ns))
+                anzulegen.append(
+                    BVHFile(
+                        name=datei.name,
+                        path=datei.pfad,
+                        source="library",
+                        frame_count=bilder,
+                        mtime_ns=datei.mtime_ns,
+                    )
+                )
         return {
-            'name': datei.name,
-            'category': datei.kategorie,
-            'url': '/api/character/bvh/%s/%s/' % (datei.kategorie, datei.name),
-            'frames': bilder,
+            "name": datei.name,
+            "category": datei.kategorie,
+            "url": "/api/character/bvh/%s/%s/" % (datei.kategorie, datei.name),
+            "frames": bilder,
         }
 
     def _sichern(self, anzulegen, zu_aendern):
         if anzulegen:
-            BVHFile.objects.bulk_create(anzulegen, ignore_conflicts=True,
-                                        batch_size=self.STAPEL)
+            BVHFile.objects.bulk_create(anzulegen, ignore_conflicts=True, batch_size=self.STAPEL)
         if zu_aendern:
-            BVHFile.objects.bulk_update(zu_aendern,
-                                        fields=['frame_count', 'mtime_ns'],
-                                        batch_size=self.STAPEL)
+            BVHFile.objects.bulk_update(
+                zu_aendern, fields=["frame_count", "mtime_ns"], batch_size=self.STAPEL
+            )
         if self.gelesen:
-            logger.info('Animationsliste: %d BVH-Koepfe neu gelesen '
-                        '(%d angelegt, %d geaendert)',
-                        self.gelesen, len(anzulegen), len(zu_aendern))
+            logger.info(
+                "Animationsliste: %d BVH-Koepfe neu gelesen (%d angelegt, %d geaendert)",
+                self.gelesen,
+                len(anzulegen),
+                len(zu_aendern),
+            )

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Streusumme` rechnet dasselbe wie `np.add.at` — nur in einem Zug.
+"""`Streusumme` rechnet dasselbe wie `np.add.at` — nur in einem Zug.
 
 Befund `lehren-treue` (12.09.2026): fünf `np.add.at`-Stellen in
 `TheatreJS/ModelPhysik` (Hautbahn je Videobild, Normalen der Masken
@@ -8,6 +8,7 @@ den Helfer gegen das Original auf Zufallsdaten, eindimensional, mit Spalten
 und mit dem flachen Zweifach-Index aus `figurnetze.py`; dazu die
 Verdrahtung: in den vier Modulen steht kein `np.add.at` mehr.
 """
+
 # Lehre gilt hier nicht ("bincount-statt-add-at"): `np.add.at` ist hier das
 # ORIGINAL, gegen das der Helfer geprueft wird — die Gegenprobe braucht es.
 import numpy as np
@@ -19,7 +20,6 @@ ORDNER = Modelphysik.ORDNER
 
 
 class StreusummeTest(SimpleTestCase):
-
     databases = set()
 
     def setUp(self):
@@ -50,13 +50,13 @@ class StreusummeTest(SimpleTestCase):
         np.testing.assert_allclose(ziel[1], [1, 1, 1])
 
     def test_leere_zeilen_am_ende_bleiben_null(self):
-        u"""`minlength` — ein Index, der die letzten Zeilen nie trifft."""
+        """`minlength` — ein Index, der die letzten Zeilen nie trifft."""
         aus = self.S.zeilen(np.array([0, 1]), np.array([2.0, 3.0]), 6)
         self.assertEqual(aus.shape, (6,))
         self.assertEqual(aus[5], 0.0)
 
     def test_flacher_zweifachindex_wie_in_figurnetze(self):
-        u"""(Zeile, Spalte) als `zeile * breite + spalte` — die Form aus figurnetze.py."""
+        """(Zeile, Spalte) als `zeile * breite + spalte` — die Form aus figurnetze.py."""
         aus = np.zeros((6, 4))
         zeilen = self.zufall.integers(0, 6, size=50)
         spalten = self.zufall.integers(0, 4, size=50)
@@ -68,11 +68,11 @@ class StreusummeTest(SimpleTestCase):
 
     def test_die_module_benutzen_den_helfer(self):
         # `hautmaske` -> `maskengeometrie` (12.09.2026, je Klasse eine Datei).
-        for name in ('hautbahn', 'maskengeometrie', 'stoffgrenze', 'figurnetze'):
-            text = (ORDNER / (name + '.py')).read_text(encoding='utf-8')
-            self.assertNotIn('np.add.at', text, name)
-            self.assertIn('Streusumme', text, name)
+        for name in ("hautbahn", "maskengeometrie", "stoffgrenze", "figurnetze"):
+            text = (ORDNER / (name + ".py")).read_text(encoding="utf-8")
+            self.assertNotIn("np.add.at", text, name)
+            self.assertIn("Streusumme", text, name)
 
     @staticmethod
     def _modul():
-        return Modelphysik.modul('streusumme').Streusumme
+        return Modelphysik.modul("streusumme").Streusumme

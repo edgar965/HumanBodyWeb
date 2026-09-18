@@ -47,21 +47,22 @@ Bildaufruf und jede Verknüpfung geprüft. Ansichten, die per GET etwas ändern,
 sind dadurch NICHT geschützt — die brauchen `@require_POST`; deshalb wurde
 `photo_analysis_delete` am selben Tag umgestellt.
 """
+
 import logging
 from urllib.parse import urlsplit
 
 from django.http import HttpResponseForbidden, JsonResponse
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class GleicherUrsprungMiddleware:
     """Weist schreibende Anfragen ab, die nicht von der eigenen Seite kommen."""
 
-    SCHREIBEND = frozenset({'POST', 'PUT', 'PATCH', 'DELETE'})
+    SCHREIBEND = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
     #: Werte von `Sec-Fetch-Site`, die einen fremden Auslöser bedeuten.
-    FREMD = frozenset({'cross-site', 'same-site'})
+    FREMD = frozenset({"cross-site", "same-site"})
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -69,12 +70,10 @@ class GleicherUrsprungMiddleware:
     def __call__(self, request):
         grund = self._fremd(request)
         if grund:
-            logger.warning('Fremder Ursprung abgewiesen: %s %s (%s)',
-                           request.method, request.path, grund)
-            if request.path.startswith('/api/'):
-                return JsonResponse(
-                    {'error': 'Anfrage von fremdem Ursprung abgelehnt'}, status=403)
-            return HttpResponseForbidden('Anfrage von fremdem Ursprung abgelehnt')
+            logger.warning("Fremder Ursprung abgewiesen: %s %s (%s)", request.method, request.path, grund)
+            if request.path.startswith("/api/"):
+                return JsonResponse({"error": "Anfrage von fremdem Ursprung abgelehnt"}, status=403)
+            return HttpResponseForbidden("Anfrage von fremdem Ursprung abgelehnt")
         return self.get_response(request)
 
     def _fremd(self, request):
@@ -82,14 +81,14 @@ class GleicherUrsprungMiddleware:
         if request.method not in self.SCHREIBEND:
             return None
 
-        seite = (request.headers.get('Sec-Fetch-Site') or '').lower()
+        seite = (request.headers.get("Sec-Fetch-Site") or "").lower()
         if seite in self.FREMD:
-            return 'Sec-Fetch-Site: %s' % seite
+            return "Sec-Fetch-Site: %s" % seite
 
-        ursprung = request.headers.get('Origin')
+        ursprung = request.headers.get("Origin")
         if ursprung:
             # Vergleich über Host UND Port: `127.0.0.1:8081` und
             # `127.0.0.1:9000` sind verschiedene Ursprünge.
             if urlsplit(ursprung).netloc.lower() != request.get_host().lower():
-                return 'Origin: %s' % ursprung
+                return "Origin: %s" % ursprung
         return None

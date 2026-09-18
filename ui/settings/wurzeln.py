@@ -20,22 +20,23 @@ ersten Datenzugriff.
 import sys
 from pathlib import Path
 
-VERSION = '0.60'
+VERSION = "0.60"
 
 #: Projektwurzel (`HumanBodyWeb/`) — drei Ebenen über dieser Datei.
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-if not (BASE_DIR / 'manage.py').is_file():          # pragma: no cover
+if not (BASE_DIR / "manage.py").is_file():  # pragma: no cover
     raise RuntimeError(
-        'BASE_DIR zeigt auf %s — dort liegt keine manage.py. Die '
-        '.parents-Kette in ui/settings/wurzeln.py passt nicht mehr zur '
-        'Verzeichnistiefe.' % BASE_DIR)
+        "BASE_DIR zeigt auf %s — dort liegt keine manage.py. Die "
+        ".parents-Kette in ui/settings/wurzeln.py passt nicht mehr zur "
+        "Verzeichnistiefe." % BASE_DIR
+    )
 
 #: Arbeitsverzeichnis mit allen vier Repos (`A:\\3DTools`).
 TOOLS_ROOT = BASE_DIR.parent
-VIDEOTOBVH_ROOT = TOOLS_ROOT / 'VideoToBVH'
-MOCAPNET_ROOT = VIDEOTOBVH_ROOT / 'MocapNET'
-HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
+VIDEOTOBVH_ROOT = TOOLS_ROOT / "VideoToBVH"
+MOCAPNET_ROOT = VIDEOTOBVH_ROOT / "MocapNET"
+HUMANBODY_ROOT = TOOLS_ROOT / "HumanBody"
 
 #: Die 3D-Inhalte liegen seit dem 08.09.2026 NICHT mehr unter `HumanBody/data`
 #: (Edgar: „verschiebe den kompletten Ordner … der nicht direkt zu HumanBody
@@ -53,7 +54,7 @@ HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
 #: `3DObjects/` steht in der `.gitignore` der Wurzel und ist damit bewusst
 #: NICHT versioniert (Edgars Entscheidung) — 9.253 der Dateien lagen vorher
 #: im HumanBody-Repo.
-OBJECTS_ROOT = TOOLS_ROOT / '3DObjects'
+OBJECTS_ROOT = TOOLS_ROOT / "3DObjects"
 
 #: `humanbody_core` liegt in `HumanBody/` und wird von hier aus importiert.
 if str(HUMANBODY_ROOT) not in sys.path:
@@ -75,7 +76,7 @@ if str(TOOLS_ROOT) not in sys.path:
 #: Edgar: „alles was mit Garments zu tun hat soll direkt A:\3DTools\Assets
 #: hier kommen … nur die Websteuerung kann im A:\3DTools\HumanBodyWeb
 #: bleiben". Alle drei Pakete werden ueber DIESEN Eintrag gefunden.
-ASSETS_ROOT = TOOLS_ROOT / 'Assets'
+ASSETS_ROOT = TOOLS_ROOT / "Assets"
 if str(ASSETS_ROOT) not in sys.path:
     sys.path.insert(0, str(ASSETS_ROOT))
 
@@ -85,6 +86,6 @@ if str(ASSETS_ROOT) not in sys.path:
 #: Importe `from GarmentFitter import ...` lauten — `assetCreator` ist nur
 #: die Klammer darum (und ueber ASSETS_ROOT als Namensraumpaket erreichbar,
 #: `from assetCreator.GarmentFitter... import` im Test).
-_ASSET_CREATOR = str(ASSETS_ROOT / 'assetCreator')
+_ASSET_CREATOR = str(ASSETS_ROOT / "assetCreator")
 if _ASSET_CREATOR not in sys.path:
     sys.path.insert(0, _ASSET_CREATOR)

@@ -25,7 +25,7 @@ class Modellvorlagen:
     """Namen der Modelldateien — ohne Szenen."""
 
     #: Diese Endung kennzeichnet eine SZENE, nicht ein Modell.
-    SZENE = '.scene.json'
+    SZENE = ".scene.json"
 
     @classmethod
     def ordner(cls):
@@ -37,8 +37,7 @@ class Modellvorlagen:
         ordner = cls.ordner()
         if not ordner.is_dir():
             return []
-        return [f.stem for f in sorted(ordner.glob('*.json'))
-                if not f.name.endswith(cls.SZENE)]
+        return [f.stem for f in sorted(ordner.glob("*.json")) if not f.name.endswith(cls.SZENE)]
 
     @classmethod
     def pfad(cls, name):
@@ -50,4 +49,4 @@ class Modellvorlagen:
         """
         if name not in cls.namen():
             return None
-        return cls.ordner() / ('%s.json' % name)
+        return cls.ordner() / ("%s.json" % name)

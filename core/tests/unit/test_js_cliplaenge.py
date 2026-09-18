@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Cliplaenge`: die Länge eines Clips in Sekunden oder Prozent setzen.
+"""`Cliplaenge`: die Länge eines Clips in Sekunden oder Prozent setzen.
 
 Edgar (13.09.2026, BVH Studio): „keine Längenvorgaben! mach kontextmenüs wo
 man die Länge der Clips setzen kann (in s oder in %)". Und am selben Tag:
@@ -18,11 +18,12 @@ als vorher), Prozent beziehen sich auf die Projektdauer (`bezug`).
 
 Sabotage-Gegenprobe: `hoechstens - gesetzt` → `gesetzt` in `bilder` → Fall 1 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'cliplaenge.js')
+MODUL = Jsmodul("bvh_studio", "cliplaenge.js")
 
 SKRIPT = """
 const { Cliplaenge } = await import(MODUL);
@@ -101,9 +102,8 @@ console.log(JSON.stringify({ ok: fehler.length === 0, fehler }));
 
 
 class CliplaengeTest(SimpleTestCase):
-
     databases = set()
 
     def test_laenge_in_sekunden_und_prozent(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

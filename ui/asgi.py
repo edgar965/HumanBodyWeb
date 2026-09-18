@@ -5,11 +5,11 @@ from django.core.asgi import get_asgi_application
 from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
 from djangobase.statik_kopfzeilen import StatikKopfzeilen
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ui.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ui.settings")
 
 django_asgi_app = get_asgi_application()
 
-from core import routing                    # noqa: E402
+from core import routing  # noqa: E402
 from core.logging_utils import Zeitstempelausgabe  # noqa: E402
 
 # Pipeline-Subprocesses (MocapNET/ffmpeg/tqdm) printen ohne eigenen Timestamp;
@@ -22,9 +22,15 @@ Zeitstempelausgabe.einhaengen()
 # selbst (10 % des Dateialters) und liefert Module tagelang ungefragt aus.
 # Am 05.09.2026 stand deshalb eine frische Einstiegsdatei neben einem alten
 # Geschwistermodul; die Seite kam mit 200 und zeigte nichts.
-application = StatikKopfzeilen(ASGIStaticFilesHandler(ProtocolTypeRouter({
-    "http": django_asgi_app,
-    # `CookieMiddleware`: der Kanal liest den Keks `netzstufen` (Strg+Alt+H,
-    # `core/dienste/netzstufenwahl.py`) aus `scope['cookies']`.
-    "websocket": CookieMiddleware(URLRouter(routing.websocket_urlpatterns)),
-})))
+application = StatikKopfzeilen(
+    ASGIStaticFilesHandler(
+        ProtocolTypeRouter(
+            {
+                "http": django_asgi_app,
+                # `CookieMiddleware`: der Kanal liest den Keks `netzstufen` (Strg+Alt+H,
+                # `core/dienste/netzstufenwahl.py`) aus `scope['cookies']`.
+                "websocket": CookieMiddleware(URLRouter(routing.websocket_urlpatterns)),
+            }
+        )
+    )
+)

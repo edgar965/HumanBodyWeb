@@ -35,8 +35,8 @@ class Netzmasse:
         self.img_w = img_w
         self.img_h = img_h
         x_min, x_max = punkte[:, 0].min(), punkte[:, 0].max()
-        self.y_min = punkte[:, 1].min()          # Füße
-        self.y_max = punkte[:, 1].max()          # Kopf
+        self.y_min = punkte[:, 1].min()  # Füße
+        self.y_max = punkte[:, 1].max()  # Kopf
         #: Mitte des Netzes — Bezugspunkt der Projektion.
         self.cx = (x_min + x_max) / 2
         self.cy = (self.y_min + self.y_max) / 2
@@ -44,7 +44,8 @@ class Netzmasse:
         self.mesh_h = self.y_max - self.y_min
         self.base_scale = min(
             img_w * (1 - 2 * self.RAND) / max(self.mesh_w, 1e-6),
-            img_h * (1 - 2 * self.RAND) / max(self.mesh_h, 1e-6))
+            img_h * (1 - 2 * self.RAND) / max(self.mesh_h, 1e-6),
+        )
 
     @classmethod
     def aus(cls, vertices, cam_data):
@@ -57,11 +58,13 @@ class Netzmasse:
         `img_w * (1 - 2*margin)` mit None: TypeError. Bei 0 wird `base_scale` zu 0
         und `s_pixels / base_scale` zu einer Division durch Null. Beides gemessen.
         """
-        return cls(vertices,
-                   cam_data.get('image_width') or cls.VORGABE_BREITE,
-                   cam_data.get('image_height') or cls.VORGABE_HOEHE)
+        return cls(
+            vertices,
+            cam_data.get("image_width") or cls.VORGABE_BREITE,
+            cam_data.get("image_height") or cls.VORGABE_HOEHE,
+        )
 
     def bildhoehe_von(self, y_netz, verschiebung):
         """Wohin ein Netz-Y bei diesem `body_transform` im Bild fällt."""
-        s = self.base_scale * verschiebung['scale']
-        return (self.cy - y_netz) * s + verschiebung['center_y']
+        s = self.base_scale * verschiebung["scale"]
+        return (self.cy - y_netz) * s + verschiebung["center_y"]

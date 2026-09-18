@@ -21,56 +21,75 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
     GEM-X) stehen in `LifterEinstellungen`, die der Effekte-Seite in
     `EffektEinstellungen` — abstrakte Basen, dieselbe Tabelle (12.09.2026).
     """
+
     progress_update_interval = models.IntegerField(
         default=10,
-        help_text=Einstellungsfelder.hilfetext('progress_update_interval'),
+        help_text=Einstellungsfelder.hilfetext("progress_update_interval"),
     )
     default_model_config = models.CharField(
-        max_length=200, default='femaleWithClothes', blank=True,
+        max_length=200,
+        default="femaleWithClothes",
+        blank=True,
         help_text="Default model preset for Konfiguration page",
     )
     default_model_scene = models.CharField(
-        max_length=200, default='femaleWithClothes', blank=True,
+        max_length=200,
+        default="femaleWithClothes",
+        blank=True,
         help_text="Default model preset for Szene page",
     )
     default_model_animations = models.CharField(
-        max_length=200, default='femaleWithClothes', blank=True,
+        max_length=200,
+        default="femaleWithClothes",
+        blank=True,
         help_text="Default model preset for Animationen page",
     )
     default_model_result = models.CharField(
-        max_length=200, default='femaleWithClothes', blank=True,
+        max_length=200,
+        default="femaleWithClothes",
+        blank=True,
         help_text="Default model preset for Process result page",
     )
     show_rig_config = models.BooleanField(
         default=False,
-        help_text=Einstellungsfelder.hilfetext('show_rig_config'),
+        help_text=Einstellungsfelder.hilfetext("show_rig_config"),
     )
     show_rig_scene = models.BooleanField(
         default=False,
-        help_text=Einstellungsfelder.hilfetext('show_rig_scene'),
+        help_text=Einstellungsfelder.hilfetext("show_rig_scene"),
     )
     show_rig_animations = models.BooleanField(
         default=False,
-        help_text=Einstellungsfelder.hilfetext('show_rig_animations'),
+        help_text=Einstellungsfelder.hilfetext("show_rig_animations"),
     )
     default_anim_config = models.CharField(
-        max_length=300, default='', blank=True,
-        help_text=Einstellungsfelder.hilfetext('default_anim_config'),
+        max_length=300,
+        default="",
+        blank=True,
+        help_text=Einstellungsfelder.hilfetext("default_anim_config"),
     )
     default_anim_scene = models.CharField(
-        max_length=300, default='', blank=True,
-        help_text=Einstellungsfelder.hilfetext('default_anim_scene'),
+        max_length=300,
+        default="",
+        blank=True,
+        help_text=Einstellungsfelder.hilfetext("default_anim_scene"),
     )
     default_anim_animations = models.CharField(
-        max_length=300, default='', blank=True,
-        help_text=Einstellungsfelder.hilfetext('default_anim_animations'),
+        max_length=300,
+        default="",
+        blank=True,
+        help_text=Einstellungsfelder.hilfetext("default_anim_animations"),
     )
     default_anim_result = models.CharField(
-        max_length=300, default='', blank=True,
-        help_text=Einstellungsfelder.hilfetext('default_anim_result'),
+        max_length=300,
+        default="",
+        blank=True,
+        help_text=Einstellungsfelder.hilfetext("default_anim_result"),
     )
     expanded_panels_config = models.CharField(
-        max_length=500, default='["body_type","morphs","cloth_template"]', blank=True,
+        max_length=500,
+        default='["body_type","morphs","cloth_template"]',
+        blank=True,
         help_text="JSON list of expanded panel keys for Konfiguration page",
     )
     expanded_panels_scene = models.CharField(
@@ -84,38 +103,44 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
         help_text="Selection highlight opacity (0.0–1.0)",
     )
     ui_prefs = models.JSONField(
-        default=dict, blank=True,
+        default=dict,
+        blank=True,
         help_text="User UI preferences (panel sizes, layout ratios, etc.)",
     )
 
     # --- Video to BVH: MediaPipe settings ---
     mp_min_detection_confidence = models.FloatField(
         default=0.5,
-        help_text=Einstellungsfelder.hilfetext('mp_min_detection_confidence'),
+        help_text=Einstellungsfelder.hilfetext("mp_min_detection_confidence"),
     )
     mp_min_tracking_confidence = models.FloatField(
         default=0.2,
-        help_text=Einstellungsfelder.hilfetext('mp_min_tracking_confidence'),
+        help_text=Einstellungsfelder.hilfetext("mp_min_tracking_confidence"),
     )
     mp_model_complexity = models.IntegerField(
-        default=1, help_text="0=Lite (fast), 1=Full (accurate)",
+        default=1,
+        help_text="0=Lite (fast), 1=Full (accurate)",
     )
 
     # --- Video to BVH: 2D Detector defaults ---
     detector_2d_default = models.CharField(
-        max_length=20, default='mediapipe',
+        max_length=20,
+        default="mediapipe",
         help_text="Default 2D detector (mediapipe/openpose/rtmpose/vitpose/yolo11)",
     )
     rtmpose_model_size = models.CharField(
-        max_length=5, default='l',
+        max_length=5,
+        default="l",
         help_text="RTMPose model size: m, l, x",
     )
     vitpose_model_size = models.CharField(
-        max_length=5, default='h',
+        max_length=5,
+        default="h",
         help_text="ViTPose model size: b, l, h",
     )
     yolo_model_size = models.CharField(
-        max_length=5, default='l',
+        max_length=5,
+        default="l",
         help_text="YOLO11-Pose model size: n, s, m, l, x",
     )
 
@@ -125,7 +150,8 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
     # um, dass das Beste herauskommt"). Migration 0041 zieht gespeicherte
     # Altvorgaben (v4, hybrid_gvhmr) nach.
     lifter_3d_default = models.CharField(
-        max_length=20, default='hybrid_gem',
+        max_length=20,
+        default="hybrid_gem",
         help_text="Default 3D pipeline "
         "(v4/gvhmr/wham/prompthmr/gem/gemx/duomo/hybrid_gvhmr/"
         "hybrid_prompthmr/hybrid_gem)",
@@ -134,87 +160,103 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
     # --- Video to BVH: MocapNET v4 settings ---
     v4_hcd_iterations = models.IntegerField(
         default=10,
-        help_text=Einstellungsfelder.hilfetext('v4_hcd_iterations'),
+        help_text=Einstellungsfelder.hilfetext("v4_hcd_iterations"),
     )
     v4_hcd_epochs = models.IntegerField(
         default=30,
-        help_text=Einstellungsfelder.hilfetext('v4_hcd_epochs'),
+        help_text=Einstellungsfelder.hilfetext("v4_hcd_epochs"),
     )
     v4_hcd_learning_rate = models.FloatField(
         default=0.001,
-        help_text=Einstellungsfelder.hilfetext('v4_hcd_learning_rate'),
+        help_text=Einstellungsfelder.hilfetext("v4_hcd_learning_rate"),
     )
     v4_smoothing_cutoff = models.FloatField(
         default=5.0,
-        help_text=Einstellungsfelder.hilfetext('v4_smoothing_cutoff'),
+        help_text=Einstellungsfelder.hilfetext("v4_smoothing_cutoff"),
     )
     v4_smoothing_sampling = models.FloatField(
         default=30.0,
-        help_text=Einstellungsfelder.hilfetext('v4_smoothing_sampling'),
+        help_text=Einstellungsfelder.hilfetext("v4_smoothing_sampling"),
     )
 
     # --- Video to BVH: MocapNET v4 component flags ---
     v4_enable_body = models.BooleanField(default=True, help_text="Enable body tracking")
     v4_enable_face = models.BooleanField(default=True, help_text="Enable face tracking")
-    v4_enable_hands = models.BooleanField(default=True,
-                                          help_text="Enable hand tracking")
-    v4_enable_mouth = models.BooleanField(default=True,
-                                          help_text="Enable mouth tracking")
+    v4_enable_hands = models.BooleanField(default=True, help_text="Enable hand tracking")
+    v4_enable_mouth = models.BooleanField(default=True, help_text="Enable mouth tracking")
     v4_enable_eyes = models.BooleanField(default=False, help_text="Enable eye tracking")
 
     # --- SMPL Body defaults (test-smpl page) ---
     smpl_default_gender = models.CharField(
-        max_length=10, default='female',
+        max_length=10,
+        default="female",
         help_text="Default SMPL gender (female/male/neutral)",
     )
     smpl_default_betas = models.CharField(
-        max_length=200, default='0,0,0,0,0,0,0,0,0,0', blank=True,
+        max_length=200,
+        default="0,0,0,0,0,0,0,0,0,0",
+        blank=True,
         help_text="Default shape betas as comma-separated floats",
     )
     smpl_default_opacity = models.FloatField(
-        default=1.0, help_text="Default SMPL body opacity (0.0-1.0)",
+        default=1.0,
+        help_text="Default SMPL body opacity (0.0-1.0)",
     )
     smpl_default_color = models.CharField(
-        max_length=10, default='#88aaff', blank=True,
+        max_length=10,
+        default="#88aaff",
+        blank=True,
         help_text="Default SMPL body color (hex)",
     )
     smpl_default_wireframe = models.BooleanField(
         default=False,
-        help_text=Einstellungsfelder.hilfetext('smpl_default_wireframe'),
+        help_text=Einstellungsfelder.hilfetext("smpl_default_wireframe"),
     )
     smpl_default_xoffset = models.FloatField(
-        default=1.0, help_text="Default SMPL body X offset in meters",
+        default=1.0,
+        help_text="Default SMPL body X offset in meters",
     )
     smpl_default_scene = models.TextField(
-        default='', blank=True,
+        default="",
+        blank=True,
         help_text="Default SMPL scene settings JSON (lighting, renderer, camera)",
     )
     smpl_default_humanbody_preset = models.CharField(
-        max_length=100, default='FemaleNew', blank=True,
+        max_length=100,
+        default="FemaleNew",
+        blank=True,
         help_text="Default HumanBody model preset for SMPL test page",
     )
 
     # --- Theatre.js defaults ---
     theatre_default_model = models.CharField(
-        max_length=200, default='FemaleWithHair', blank=True,
+        max_length=200,
+        default="FemaleWithHair",
+        blank=True,
         help_text="Default model preset for Theatre page",
     )
     theatre_default_animation = models.CharField(
-        max_length=300, default='', blank=True,
-        help_text=Einstellungsfelder.hilfetext('theatre_default_animation'),
+        max_length=300,
+        default="",
+        blank=True,
+        help_text=Einstellungsfelder.hilfetext("theatre_default_animation"),
     )
     theatre_default_preset = models.CharField(
-        max_length=50, default='ballet_stage', blank=True,
+        max_length=50,
+        default="ballet_stage",
+        blank=True,
         help_text="Default lighting/camera preset for Theatre page",
     )
 
     # --- Theatre Video Export ---
     theatre_video_format = models.CharField(
-        max_length=10, default='mp4',
+        max_length=10,
+        default="mp4",
         help_text="Video export format: mp4 or webm",
     )
     theatre_video_resolution = models.CharField(
-        max_length=10, default='1080p',
+        max_length=10,
+        default="1080p",
         help_text="Video export resolution: 720p, 1080p, 1440p, 4k",
     )
     theatre_video_fps = models.IntegerField(
@@ -222,13 +264,16 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
         help_text="Video export frames per second: 24, 30, 60",
     )
     theatre_video_quality = models.CharField(
-        max_length=10, default='high',
+        max_length=10,
+        default="high",
         help_text="Video export quality: low, medium, high, ultra",
     )
 
     # --- 3D Video Output ---
     video_output_dir = models.CharField(
-        max_length=500, default=r'A:\3DTools\HumanBodyWeb\media\output', blank=True,
+        max_length=500,
+        default=r"A:\3DTools\HumanBodyWeb\media\output",
+        blank=True,
         help_text="Directory for saving 3D video exports from the Process result page",
     )
 

@@ -28,23 +28,21 @@ class MotorwahlTest(SimpleTestCase):
     def test_bekannter_motor_gibt_keine_fehlerantwort(self):
         for motor in Stoffexportlauf.motoren():
             with self.subTest(motor=motor):
-                lauf = Stoffexportlauf({'engine': motor})
+                lauf = Stoffexportlauf({"engine": motor})
                 self.assertIsNone(lauf.motorfehler())
 
     def test_unbekannter_motor_gibt_400_mit_namen(self):
-        antwort = Sicher.wert(Stoffexportlauf({'engine': 'raytracer9000'}).motorfehler(), 'Antwort')
+        antwort = Sicher.wert(Stoffexportlauf({"engine": "raytracer9000"}).motorfehler(), "Antwort")
         self.assertEqual(antwort.status_code, 400)
-        self.assertIn('raytracer9000', antwort.content.decode())
+        self.assertIn("raytracer9000", antwort.content.decode())
 
     def test_ohne_angabe_gilt_der_ersatzmotor(self):
         lauf = Stoffexportlauf({})
         self.assertEqual(lauf.motor, Stoffexportlauf.ERSATZMOTOR)
-        self.assertIsNone(lauf.motorfehler(),
-                          'der Ersatzmotor muss selbst zulaessig sein')
+        self.assertIsNone(lauf.motorfehler(), "der Ersatzmotor muss selbst zulaessig sein")
 
     def test_ohne_angabe_gilt_die_ersatzguete(self):
-        self.assertEqual(Stoffexportlauf({}).guete,
-                         Stoffexportlauf.ERSATZGUETE)
+        self.assertEqual(Stoffexportlauf({}).guete, Stoffexportlauf.ERSATZGUETE)
 
 
 class AusgabeordnerTest(TestCase):
@@ -53,24 +51,23 @@ class AusgabeordnerTest(TestCase):
     def test_ohne_einstellung_der_ersatzordner(self):
         from django.conf import settings
         from core.daten.pfadvergleich import Pfadvergleich
+
         ordner = Stoffexportlauf.ausgabeordner()
         # `Pfadvergleich` statt `startswith`: Der Zeichenvergleich ist genau
         # der Fehler, den das Werkzeug `pfadpraefix` sucht — er hat auch in
         # einer Zusicherung nichts zu suchen.
-        self.assertTrue(Pfadvergleich.liegt_unter(ordner, settings.MEDIA_ROOT),
-                        ordner)
+        self.assertTrue(Pfadvergleich.liegt_unter(ordner, settings.MEDIA_ROOT), ordner)
         self.assertTrue(ordner.endswith(Stoffexportlauf.ERSATZORDNER), ordner)
 
     def test_eingestellter_ordner_der_nicht_existiert_wird_uebergangen(self):
         """Sonst schriebe der Export ins Leere und meldete trotzdem Erfolg."""
         from core.models import AppSettings
+
         stand = AppSettings.load()
-        stand.ui_prefs = {'studio_video_output': 'A:/gibtesnicht/xyz'}
+        stand.ui_prefs = {"studio_video_output": "A:/gibtesnicht/xyz"}
         stand.save()
         try:
-            self.assertTrue(
-                Stoffexportlauf.ausgabeordner().endswith(
-                    Stoffexportlauf.ERSATZORDNER))
+            self.assertTrue(Stoffexportlauf.ausgabeordner().endswith(Stoffexportlauf.ERSATZORDNER))
         finally:
             stand.ui_prefs = {}
             stand.save()
@@ -80,33 +77,39 @@ class StoffexportZielpfadTest(TestCase):
     """Pfad und Dateiname kommen aus dem Anfragerumpf — beide werden geprüft."""
 
     def test_ausgabepfad_ausserhalb_wird_abgelehnt(self):
-        lauf = Stoffexportlauf({'output_dir': 'C:/Windows/Temp',
-                                'scene_name': 'x'})
+        lauf = Stoffexportlauf({"output_dir": "C:/Windows/Temp", "scene_name": "x"})
         pfad, antwort = lauf.zielpfad()
         self.assertIsNone(pfad)
-        self.assertEqual(Sicher.wert(antwort, 'Antwort').status_code, 403)
+        self.assertEqual(Sicher.wert(antwort, "Antwort").status_code, 403)
 
     def test_gueltiger_lauf_liefert_einen_pfad(self):
-        roh, antwort = Stoffexportlauf({'scene_name': 'Ballett Probe'}).zielpfad()
-        self.assertIsNone(antwort, getattr(antwort, 'content', None))
-        pfad = Sicher.wert(roh, 'Pfad')
-        self.assertIn('Ballett_Probe', pfad)
-        self.assertTrue(pfad.endswith('.mp4'), pfad)
+        roh, antwort = Stoffexportlauf({"scene_name": "Ballett Probe"}).zielpfad()
+        self.assertIsNone(antwort, getattr(antwort, "content", None))
+        pfad = Sicher.wert(roh, "Pfad")
+        self.assertIn("Ballett_Probe", pfad)
+        self.assertTrue(pfad.endswith(".mp4"), pfad)
 
 
 class BereichsstoffReglerTest(SimpleTestCase):
     """Was der Nutzer am Regler einstellt — und was ohne Angabe gilt."""
 
     def test_werte_aus_der_anfrage(self):
-        stoff = Bereichsstoff({'z_min': '0.6', 'z_max': '1.2',
-                               'include_arms': '1', 'grow': '4',
-                               'looseness': '0.8', 'category': 'Tops'})
+        stoff = Bereichsstoff(
+            {
+                "z_min": "0.6",
+                "z_max": "1.2",
+                "include_arms": "1",
+                "grow": "4",
+                "looseness": "0.8",
+                "category": "Tops",
+            }
+        )
         self.assertAlmostEqual(stoff.von, 0.6)
         self.assertAlmostEqual(stoff.bis, 1.2)
         self.assertTrue(stoff.mit_armen)
         self.assertEqual(stoff.wachsen, 4)
         self.assertAlmostEqual(stoff.weite, 0.8)
-        self.assertEqual(stoff.kategorie, 'Tops')
+        self.assertEqual(stoff.kategorie, "Tops")
 
     def test_vorgaben_ohne_angabe(self):
         stoff = Bereichsstoff({})
@@ -118,11 +121,9 @@ class BereichsstoffReglerTest(SimpleTestCase):
 
     def test_arme_nur_bei_genau_eins(self):
         """`include_arms` kommt als Zeichenkette — `'true'` ist NICHT `'1'`."""
-        for wert, erwartet in (('1', True), ('0', False), ('true', False),
-                               ('', False)):
+        for wert, erwartet in (("1", True), ("0", False), ("true", False), ("", False)):
             with self.subTest(wert=wert):
-                self.assertIs(
-                    Bereichsstoff({'include_arms': wert}).mit_armen, erwartet)
+                self.assertIs(Bereichsstoff({"include_arms": wert}).mit_armen, erwartet)
 
     def test_zweiter_abstand_waechst_mit_der_weite(self):
         """Der zweite Schub faengt die Laplace-Glaettung ein (Modul-Docstring).
@@ -131,8 +132,8 @@ class BereichsstoffReglerTest(SimpleTestCase):
         geglaettet und zieht sich an Brust, Knie und Schulter weiter nach
         innen.
         """
-        eng = Bereichsstoff({'looseness': '0.0'})
-        weit = Bereichsstoff({'looseness': '1.0'})
-        abstand = (lambda s: s.GRUNDABSTAND + s.weite * s.WEITENANTEIL)
+        eng = Bereichsstoff({"looseness": "0.0"})
+        weit = Bereichsstoff({"looseness": "1.0"})
+        abstand = lambda s: s.GRUNDABSTAND + s.weite * s.WEITENANTEIL
         self.assertAlmostEqual(abstand(eng), Bereichsstoff.GRUNDABSTAND)
         self.assertGreater(abstand(weit), abstand(eng))

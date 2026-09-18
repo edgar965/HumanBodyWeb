@@ -17,9 +17,7 @@ import numpy as np
 import warp as wp
 
 # Kernelcache im Projekt, nicht unter %LOCALAPPDATA% (Regel: keine Ablage auf C:)
-wp.config.kernel_cache_dir = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'warp_cache'
-)
+wp.config.kernel_cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "warp_cache")
 import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen  # pyright: ignore[reportMissingImports]
 from newton._src.solvers import style3d as st3  # noqa: E402 — nach dem Cache  # pyright: ignore[reportMissingImports]
 
@@ -46,8 +44,13 @@ class Kolliderprobe:
         self.pipeline = newton.CollisionPipeline(self.model)
         self.contacts = self.pipeline.contacts()
         self.wpmesh = self.model.shape_source[self.shape].mesh
-        print('wp.Mesh am Shape:', self.wpmesh is not None,
-              '| refit:', hasattr(self.wpmesh, 'refit'), flush=True)
+        print(
+            "wp.Mesh am Shape:",
+            self.wpmesh is not None,
+            "| refit:",
+            hasattr(self.wpmesh, "refit"),
+            flush=True,
+        )
 
     @staticmethod
     def kugel(r, n_lat=32, n_lon=64):
@@ -56,9 +59,7 @@ class Kolliderprobe:
             th = np.pi * i / n_lat
             for j in range(n_lon):
                 ph = 2 * np.pi * j / n_lon
-                v.append([r * np.sin(th) * np.cos(ph),
-                          r * np.sin(th) * np.sin(ph),
-                          r * np.cos(th)])
+                v.append([r * np.sin(th) * np.cos(ph), r * np.sin(th) * np.sin(ph), r * np.cos(th)])
         f = []
         for i in range(n_lat):
             for j in range(n_lon):
@@ -92,13 +93,21 @@ class Kolliderprobe:
         model.soft_contact_ke = 1.0e3
         model.soft_contact_kd = 1.0e-1
         model.soft_contact_mu = 0.5
-        print('masse je partikel', self.masse,
-              'STYLE3D' if self.style3d else 'VBD',
-              'STARR' if self.starr else 'VERFORMT',
-              'partikel', model.particle_count,
-              'dreiecke stoff', model.tri_count,
-              'kollider-dreiecke', len(self.f0),
-              'selbstkontakt', self.selbst, flush=True)
+        print(
+            "masse je partikel",
+            self.masse,
+            "STYLE3D" if self.style3d else "VBD",
+            "STARR" if self.starr else "VERFORMT",
+            "partikel",
+            model.particle_count,
+            "dreiecke stoff",
+            model.tri_count,
+            "kollider-dreiecke",
+            len(self.f0),
+            "selbstkontakt",
+            self.selbst,
+            flush=True,
+        )
         return koerper, shape, model
 
     def _tuch(self, builder):
@@ -107,23 +116,29 @@ class Kolliderprobe:
             pos=wp.vec3(-1.0, -1.0, 1.6),
             rot=wp.quat_identity(),  # pyright: ignore[reportCallIssue]
             vel=wp.vec3(0.0),
-            dim_x=n, dim_y=n,
-            cell_x=2.0 / n, cell_y=2.0 / n,
+            dim_x=n,
+            dim_y=n,
+            cell_x=2.0 / n,
+            cell_y=2.0 / n,
             mass=self.masse,
             fix_left=False,
             particle_radius=0.004,
         )
         if self.style3d:
             st3.add_cloth_grid(
-                builder, **gemeinsam,
+                builder,
+                **gemeinsam,
                 tri_aniso_ke=wp.vec3(1.0e4, 1.0e4, 1.0e3),
                 edge_aniso_ke=wp.vec3(2.0e-6, 1.0e-6, 5.0e-6),
             )
         else:
             builder.add_cloth_grid(
                 **gemeinsam,
-                tri_ke=1.0e3, tri_ka=1.0e3, tri_kd=1.0e2,
-                edge_ke=1.0e-1, edge_kd=0.0,
+                tri_ke=1.0e3,
+                tri_ka=1.0e3,
+                tri_kd=1.0e2,
+                edge_ke=1.0e-1,
+                edge_kd=0.0,
             )
 
     def _loeser(self):
@@ -134,7 +149,8 @@ class Kolliderprobe:
             solver.collision.radius = 3.5e-3
             return solver
         return newton.solvers.SolverVBD(
-            self.model, iterations=10,
+            self.model,
+            iterations=10,
             particle_enable_self_contact=self.selbst,
             particle_self_contact_radius=0.004,
             particle_self_contact_margin=0.008,
@@ -176,48 +192,65 @@ class Kolliderprobe:
 
     def _melden(self, bild, dx, sz):
         q = self.s0.particle_q.numpy()
-        rad = np.sqrt(((q[:, 0] - dx) / self.R) ** 2 + (q[:, 1] / self.R) ** 2
-                      + ((q[:, 2] - 0.9) / (self.R * sz)) ** 2)
+        rad = np.sqrt(
+            ((q[:, 0] - dx) / self.R) ** 2 + (q[:, 1] / self.R) ** 2 + ((q[:, 2] - 0.9) / (self.R * sz)) ** 2
+        )
         innen = rad < 1.0
         tief = float((1.0 - rad.min()) * self.R * 1000) if innen.any() else 0.0
         tief5 = int((rad < 1.0 - 0.005 / self.R).sum())
-        print(f'bild {bild:3d}  {self.zeiten[-1]:7.1f} ms  kollider dx={dx:.2f} '
-              f'sz={sz:.2f}  stoff min z={q[:, 2].min():.3f}  '
-              f'im kollider: {int(innen.sum())} punkte, '
-              f'tiefster {tief:.1f} mm, tiefer als 5 mm: {tief5}', flush=True)
+        print(
+            f"bild {bild:3d}  {self.zeiten[-1]:7.1f} ms  kollider dx={dx:.2f} "
+            f"sz={sz:.2f}  stoff min z={q[:, 2].min():.3f}  "
+            f"im kollider: {int(innen.sum())} punkte, "
+            f"tiefster {tief:.1f} mm, tiefer als 5 mm: {tief5}",
+            flush=True,
+        )
 
     def laufen(self):
         v_alt = self.v0
         for bild in range(self.BILDER):
             s = bild / self.BILDER
-            v = (self.v0 * np.array([1.0, 1.0, 1.0 + 0.3 * s], dtype=np.float32)
-                 + np.array([0.6 * s, 0.0, 0.0], dtype=np.float32))
+            v = self.v0 * np.array([1.0, 1.0, 1.0 + 0.3 * s], dtype=np.float32) + np.array(
+                [0.6 * s, 0.0, 0.0], dtype=np.float32
+            )
             dx, sz = self._kollider_stellen(bild, v, v_alt)
             v_alt = v
             self._schritt()
             if bild % 15 == 0 or bild == self.BILDER - 1:
                 self._melden(bild, dx, sz)
         warm = np.array(self.zeiten[5:])
-        print(f'ZEIT je 60-Hz-Bild ({self.SUB} Teilschritte, '
-              f'{self.model.particle_count} Partikel, '
-              f'Selbstkontakt {"an" if self.selbst else "AUS"}): '
-              f'median {np.median(warm):.1f} ms, '
-              f'p90 {np.percentile(warm, 90):.1f} ms, '
-              f'erstes Bild {self.zeiten[0]:.0f} ms', flush=True)
+        print(
+            f"ZEIT je 60-Hz-Bild ({self.SUB} Teilschritte, "
+            f"{self.model.particle_count} Partikel, "
+            f"Selbstkontakt {'an' if self.selbst else 'AUS'}): "
+            f"median {np.median(warm):.1f} ms, "
+            f"p90 {np.percentile(warm, 90):.1f} ms, "
+            f"erstes Bild {self.zeiten[0]:.0f} ms",
+            flush=True,
+        )
 
 
 def main(argv):
     wp.init()
-    print('warp', wp.__version__, 'newton', newton.__version__,
-          'device', wp.get_device(), 'cache', wp.config.kernel_cache_dir, flush=True)
+    print(
+        "warp",
+        wp.__version__,
+        "newton",
+        newton.__version__,
+        "device",
+        wp.get_device(),
+        "cache",
+        wp.config.kernel_cache_dir,
+        flush=True,
+    )
     Kolliderprobe(
         n=int(argv[1]) if len(argv) > 1 else 100,
-        selbst=(argv[2] != 'ohne') if len(argv) > 2 else True,
-        starr=len(argv) > 3 and argv[3] == 'starr',
-        style3d=len(argv) > 4 and argv[4] == 'style3d',
+        selbst=(argv[2] != "ohne") if len(argv) > 2 else True,
+        starr=len(argv) > 3 and argv[3] == "starr",
+        style3d=len(argv) > 4 and argv[4] == "style3d",
         masse=float(argv[5]) if len(argv) > 5 else 0.05,
     ).laufen()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)

@@ -3,9 +3,7 @@ import os
 import numpy as np
 import warp as wp
 
-wp.config.kernel_cache_dir = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'warp_cache'
-)
+wp.config.kernel_cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "warp_cache")
 import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen  # pyright: ignore[reportMissingImports]
 
 wp.init()
@@ -34,18 +32,14 @@ s = b.add_shape_mesh(-1, mesh=m)
 b.color()
 model = b.finalize()
 src = model.shape_source[s]
-print('Mesh.mesh.id            ', src.mesh.id)
-print(
-    'finalized keys/ids      ', [(k, mm.id) for k, mm in src._finalized_meshes.items()]
-)
-for name in ('shape_geo', 'shape_geo_src', 'shape_source_ptr', 'shape_mesh_id'):
+print("Mesh.mesh.id            ", src.mesh.id)
+print("finalized keys/ids      ", [(k, mm.id) for k, mm in src._finalized_meshes.items()])
+for name in ("shape_geo", "shape_geo_src", "shape_source_ptr", "shape_mesh_id"):
     if hasattr(model, name):
         obj = getattr(model, name)
-        val = getattr(obj, 'source', obj)
+        val = getattr(obj, "source", obj)
         try:
-            print(
-                name, '->', np.asarray(val.numpy() if hasattr(val, 'numpy') else val)[s]
-            )
+            print(name, "->", np.asarray(val.numpy() if hasattr(val, "numpy") else val)[s])
         # stumm gewollt: Probe-Skript, die Meldung steht auf der Konsole
         except Exception as e:
-            print(name, 'nicht lesbar:', e)
+            print(name, "nicht lesbar:", e)

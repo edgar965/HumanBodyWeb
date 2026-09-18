@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-u"""Fassung 0.59 (11.09.2026) — Haut unter dem Stoff, Schuhe, Katalog, Figurvideo."""
+"""Fassung 0.59 (11.09.2026) — Haut unter dem Stoff, Schuhe, Katalog, Figurvideo."""
 
 FASSUNG = {
-    'version': '0.59',
-    'date': '2026-09-11',
-    'title': 'Haut unter dem Stoff, Server-Video mit feinem Netz, '
-             'Schuhe mit Absatz, Theatre und BVH Studio',
-    'author': 'edgar965',
-    'body_md': (
+    "version": "0.59",
+    "date": "2026-09-11",
+    "title": "Haut unter dem Stoff, Server-Video mit feinem Netz, Schuhe mit Absatz, Theatre und BVH Studio",
+    "author": "edgar965",
+    "body_md": (
         "HumanBodyWeb `a5ea8fb` bis `d7c5e62`, Wurzel `bb48e6b` bis `7a9c29e`, "
         "HumanBodyBlender `e5f3053`.\n"
         "\n"

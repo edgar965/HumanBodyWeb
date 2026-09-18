@@ -22,4 +22,4 @@ Eine eigene Kopie dieser Prüfungen wäre die falsche Antwort: Sie gehören zu
 djangoBase, damit ein Fund in einem Projekt allen zugutekommt.
 """
 
-from djangobase.grundtests import *      # noqa: F401,F403
+from djangobase.grundtests import *  # noqa: F401,F403

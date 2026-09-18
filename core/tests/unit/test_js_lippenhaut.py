@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Lippenhaut`: die Lippenfarbe läuft im Hautshader glatt aus.
+"""`Lippenhaut`: die Lippenfarbe läuft im Hautshader glatt aus.
 
 WARUM (Edgar, 13.09.2026, Bild aus der Szene: „die Lippen sind fehlerhaft"):
 Je Dreieck gefärbt war der Lippenrand ein Zickzack. Jetzt trägt jeder
@@ -22,6 +22,7 @@ Dazu das Drahtformat: `Lippenbau` spaltet mit Saum NICHT mehr ab und ruft
 
 Sabotage-Gegenprobe: `werte[i] = Lippenhaut.INNEN` weg → Fall 1 rot.
 """
+
 from pathlib import Path
 
 from django.conf import settings
@@ -29,7 +30,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'lippenhaut.js')
+MODUL = Jsmodul("gemeinsam", "lippenhaut.js")
 
 SKRIPT = """
 const { Lippenhaut: L } = await import(MODUL);
@@ -74,30 +75,28 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class LippenhautTest(SimpleTestCase):
-
     def test_attribut_eingriff_und_nachziehen(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
 
 
 class DasLippenDrahtformat(SimpleTestCase):
-
     def quelle(self, *teile):
-        return Path(settings.BASE_DIR).joinpath(*teile).read_text(encoding='utf-8')
+        return Path(settings.BASE_DIR).joinpath(*teile).read_text(encoding="utf-8")
 
     def test_lippenbau_ruft_die_lippenhaut_statt_abzuspalten(self):
-        text = self.quelle('static', 'viewer', 'gemeinsam', 'lippenbau.js')
+        text = self.quelle("static", "viewer", "gemeinsam", "lippenbau.js")
         self.assertIn("import { Lippenhaut } from './lippenhaut.js';", text)
-        anlegen = text.index('geo.userData.lippensaum = Lippenhaut.anlegen(netz, lippen);')
-        abspalten = text.index('Lippengruppe.abspalten(geo.index.array, geo.groups, punkte)')
+        anlegen = text.index("geo.userData.lippensaum = Lippenhaut.anlegen(netz, lippen);")
+        abspalten = text.index("Lippengruppe.abspalten(geo.index.array, geo.groups, punkte)")
         self.assertLess(anlegen, abspalten)
-        self.assertIn('if (geo.userData.lippensaum) { geo.userData.lippen = 0; return 0; }', text)
+        self.assertIn("if (geo.userData.lippensaum) { geo.userData.lippen = 0; return 0; }", text)
 
     def test_detailfarben_zieht_die_uniforms_nach(self):
-        text = self.quelle('static', 'viewer', 'gemeinsam', 'detailfarben.js')
+        text = self.quelle("static", "viewer", "gemeinsam", "detailfarben.js")
         self.assertIn("import { Lippenhaut } from './lippenhaut.js';", text)
-        self.assertIn('Lippenhaut.nachziehen(materialien);', text)
+        self.assertIn("Lippenhaut.nachziehen(materialien);", text)
 
     def test_der_server_liefert_punkte_und_saum(self):
-        text = self.quelle('core', 'api', 'netzanfrage.py')
-        self.assertEqual(text.count('Lippenmaske.lippen(self.geschlecht'), 2)
-        self.assertNotIn('Lippenmaske.indizes(', text)
+        text = self.quelle("core", "api", "netzanfrage.py")
+        self.assertEqual(text.count("Lippenmaske.lippen(self.geschlecht"), 2)
+        self.assertNotIn("Lippenmaske.indizes(", text)

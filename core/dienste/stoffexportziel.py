@@ -32,15 +32,15 @@ from ..daten.pfadvergleich import Pfadvergleich
 from ..safe_paths import SafePath
 
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Stoffexportziel:
     """Ordner und Dateiname für ein Export-Video."""
 
     HOECHSTLAENGE = 60
-    ERSATZNAME = 'scene'
-    ENDUNG = '.mp4'
+    ERSATZNAME = "scene"
+    ENDUNG = ".mp4"
     #: Zufälliger Anhang, damit zwei Exporte derselben Szene sich nicht
     #: überschreiben (Zeitstempel allein reicht bei Sekundengenauigkeit nicht).
     ZUFALLSLAENGE = 6
@@ -54,7 +54,7 @@ class Stoffexportziel:
 
     def ordner(self, vorgabe):
         """Der geprüfte Zielordner. Wirft `PfadAbgelehnt`, wenn er ausbricht."""
-        gewuenscht = (self.rumpf.get('output_dir') or '').strip()
+        gewuenscht = (self.rumpf.get("output_dir") or "").strip()
         if not gewuenscht:
             return vorgabe
         return str(SafePath.fuer_ausgabe().pruefe(gewuenscht))
@@ -63,21 +63,24 @@ class Stoffexportziel:
 
     def dateiname(self):
         """Der geprüfte Dateiname — mit Motornamen darin."""
-        gewuenscht = (self.rumpf.get('filename') or '').strip()
+        gewuenscht = (self.rumpf.get("filename") or "").strip()
         if gewuenscht:
             geprueft = SafePath.dateiname(gewuenscht, self.ENDUNG)
             stamm, endung = os.path.splitext(geprueft)
-            return '%s_%s%s' % (stamm, self.motor, endung)
-        return '%s_%s_%d_%s%s' % (self.namensstamm(), self.motor,
-                                  int(self.jetzt or time.time()),
-                                  uuid.uuid4().hex[:self.ZUFALLSLAENGE],
-                                  self.ENDUNG)
+            return "%s_%s%s" % (stamm, self.motor, endung)
+        return "%s_%s_%d_%s%s" % (
+            self.namensstamm(),
+            self.motor,
+            int(self.jetzt or time.time()),
+            uuid.uuid4().hex[: self.ZUFALLSLAENGE],
+            self.ENDUNG,
+        )
 
     def namensstamm(self):
         """Szenenname -> unbedenklicher Namensstamm (siehe Modul-Docstring)."""
-        text = str(self.rumpf.get('scene_name') or '').strip()
-        stamm = ''.join(z if (z.isalnum() or z in '-_') else '_' for z in text)
-        return stamm.strip('_')[:self.HOECHSTLAENGE] or self.ERSATZNAME
+        text = str(self.rumpf.get("scene_name") or "").strip()
+        stamm = "".join(z if (z.isalnum() or z in "-_") else "_" for z in text)
+        return stamm.strip("_")[: self.HOECHSTLAENGE] or self.ERSATZNAME
 
     # -------------------------------------------------------------------- URL
 
@@ -92,21 +95,24 @@ class Stoffexportziel:
         wurzel = str(settings.MEDIA_ROOT)
         if not Pfadvergleich.liegt_unter(pfad, wurzel):
             return None
-        rest = pfad[len(wurzel):].replace('\\', '/').lstrip('/')
-        return settings.MEDIA_URL.rstrip('/') + '/' + rest
+        rest = pfad[len(wurzel) :].replace("\\", "/").lstrip("/")
+        return settings.MEDIA_URL.rstrip("/") + "/" + rest
 
     # ------------------------------------------------------------- Auflösung
 
     def aufloesung(self, vorgabe=(1920, 1080), mindestens=64):
         """Breite und Höhe aus dem Rumpf — nie kleiner als `mindestens`."""
         try:
-            breite = int(self.rumpf.get('width') or vorgabe[0])
-            hoehe = int(self.rumpf.get('height') or vorgabe[1])
-        except (TypeError, ValueError):
+            breite = int(self.rumpf.get("width") or vorgabe[0])
+            hoehe = int(self.rumpf.get("height") or vorgabe[1])
+        except TypeError, ValueError:
             # Nicht stumm: Der Nutzer bekommt sonst still 1920x1080, obwohl er
             # etwas anderes eingestellt hat — und sucht den Fehler im Renderer.
-            logger.warning('Auflösung der Anfrage unbrauchbar (%r x %r) — es '
-                           'gilt %dx%d', self.rumpf.get('width'),
-                           self.rumpf.get('height'), *vorgabe)
+            logger.warning(
+                "Auflösung der Anfrage unbrauchbar (%r x %r) — es gilt %dx%d",
+                self.rumpf.get("width"),
+                self.rumpf.get("height"),
+                *vorgabe,
+            )
             return vorgabe
         return max(mindestens, breite), max(mindestens, hoehe)

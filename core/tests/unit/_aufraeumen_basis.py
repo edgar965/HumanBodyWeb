@@ -27,10 +27,10 @@ from core.models import BVHJob
 
 
 class AufraeumenBasis(TestCase):
-
     def setUp(self):
         from django.conf import settings
-        self.wurzel = Path(settings.BASE_DIR) / 'media' / 'tmp' / 'starttest'
+
+        self.wurzel = Path(settings.BASE_DIR) / "media" / "tmp" / "starttest"
         umgebung = override_settings(MEDIA_ROOT=str(self.wurzel))
         umgebung.enable()
         self.addCleanup(umgebung.disable)
@@ -49,6 +49,7 @@ class AufraeumenBasis(TestCase):
         # holen sich die Klassen direkt.
         from core.pipelines.prozesspruefung import Prozesspruefung
         from core.pipelines.wiederaufnahme import Wiederaufnahme
+
         self._alt = (Prozesspruefung.lebt, Wiederaufnahme.fahren)
         Prozesspruefung.lebt = staticmethod(lebt_pid)
         Wiederaufnahme.fahren = staticmethod(beobachten)
@@ -67,28 +68,26 @@ class AufraeumenBasis(TestCase):
                 self._ziel(*self._args)
 
     def _zurueck(self, pruefung, wiederaufnahme):
-        pruefung.lebt, wiederaufnahme.fahren = (staticmethod(self._alt[0]),
-                                                staticmethod(self._alt[1]))
+        pruefung.lebt, wiederaufnahme.fahren = (staticmethod(self._alt[0]), staticmethod(self._alt[1]))
 
     def _faden_zurueck(self):
         modul.threading.Thread = self._alt_thread
 
-    def auftrag(self, status='processing'):
-        job = BVHJob.objects.create(name='tanz.mp4', pipeline='gvhmr',
-                                    status=status)
+    def auftrag(self, status="processing"):
+        job = BVHJob.objects.create(name="tanz.mp4", pipeline="gvhmr", status=status)
         (self.ordner(job)).mkdir(parents=True, exist_ok=True)
         return job
 
     def ordner(self, job):
-        return self.wurzel / 'output' / str(job.id)
+        return self.wurzel / "output" / str(job.id)
 
-    def bvh(self, job, bytes_=200, name='gvhmr_tanz.bvh'):
+    def bvh(self, job, bytes_=200, name="gvhmr_tanz.bvh"):
         pfad = self.ordner(job) / name
-        pfad.write_text('x' * bytes_, encoding='utf-8')
+        pfad.write_text("x" * bytes_, encoding="utf-8")
         return pfad
 
     def pid(self, job, nummer=4711, lebt=True):
-        (self.ordner(job) / 'pipeline.pid').write_text(str(nummer))
+        (self.ordner(job) / "pipeline.pid").write_text(str(nummer))
         if lebt:
             self.lebt.add(nummer)
         return nummer

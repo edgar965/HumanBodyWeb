@@ -18,6 +18,7 @@ Der Fall, den kein `finally` abdeckt: Der Browser bricht das Hochladen ab, die
 Antwort wird nie fertig, und der an sie gehängte Löschaufruf läuft deshalb nie.
 Dafür gibt es den Hausmeister — und dafür gibt es diesen Test.
 """
+
 import os
 import time
 from pathlib import Path
@@ -29,7 +30,6 @@ from core.projekt_temp import ProjektTemp
 
 
 class ProjektTempTest(TestCase):
-
     def setUp(self):
         self.basis = ProjektTemp.verzeichnis()
         self.eigene = []
@@ -38,24 +38,25 @@ class ProjektTempTest(TestCase):
     def test_liegt_im_projekt_und_nicht_in_system_temp(self):
         """Der Kern der Regel: nichts auf C:\\…\\Temp."""
         import tempfile as _t
-        f = ProjektTemp.datei(suffix='.mp4')
+
+        f = ProjektTemp.datei(suffix=".mp4")
         self.eigene.append(f)
-        self.assertTrue(f.is_relative_to(Path(settings.MEDIA_ROOT)),
-                        '%s liegt nicht unter MEDIA_ROOT' % f)
+        self.assertTrue(f.is_relative_to(Path(settings.MEDIA_ROOT)), "%s liegt nicht unter MEDIA_ROOT" % f)
         # `gettempdir()` steht hier in einer ZUSICHERUNG, es wird nichts
         # dorthin geschrieben — Lehre gilt hier nicht
         # („keine-temp-dateien-im-system"). Der Wächter meldete sonst
         # genau die Prüfung, die seine eigene Lehre durchsetzt.
         system = Path(_t.gettempdir()).resolve()
-        self.assertFalse(str(f.resolve()).lower().startswith(str(system).lower()),
-                         'Datei liegt in System-Temp: %s' % f)
+        self.assertFalse(
+            str(f.resolve()).lower().startswith(str(system).lower()), "Datei liegt in System-Temp: %s" % f
+        )
 
     def test_ordner_wird_angelegt_und_wieder_entfernt(self):
-        d = ProjektTemp.ordner(prefix='test_')
-        (d / 'inhalt.txt').write_text('x', encoding='utf-8')
+        d = ProjektTemp.ordner(prefix="test_")
+        (d / "inhalt.txt").write_text("x", encoding="utf-8")
         self.assertTrue(d.is_dir())
         ProjektTemp.weg(d)
-        self.assertFalse(d.exists(), 'Verzeichnis mit Inhalt blieb liegen')
+        self.assertFalse(d.exists(), "Verzeichnis mit Inhalt blieb liegen")
 
     def test_weg_raeumt_vorhandenes_und_uebergeht_fehlendes(self):
         """Für den `finally`-Zweig: Was schon weg ist, ist in Ordnung.
@@ -63,11 +64,11 @@ class ProjektTempTest(TestCase):
         Der Rumpf behauptete bis zum 27.08.2026 NICHTS — er verliess sich
         darauf, dass keine Ausnahme fliegt. Eine solche Prüfung meldet auch
         dann grün, wenn `weg` gar nichts mehr tut."""
-        da = ProjektTemp.datei(suffix='.tmp')
-        fehlt = self.basis / 'gibtesnicht.tmp'
+        da = ProjektTemp.datei(suffix=".tmp")
+        fehlt = self.basis / "gibtesnicht.tmp"
         self.assertTrue(da.exists())
         ProjektTemp.weg(da, fehlt, None)
-        self.assertFalse(da.exists(), 'vorhandene Datei blieb liegen')
+        self.assertFalse(da.exists(), "vorhandene Datei blieb liegen")
         self.assertFalse(fehlt.exists())
 
     def test_hausmeister_entfernt_nur_altes(self):
@@ -75,9 +76,9 @@ class ProjektTempTest(TestCase):
 
         Alt wird hier über die Änderungszeit nachgestellt, statt einen Tag zu
         warten."""
-        alt_datei = ProjektTemp.datei(suffix='.png', prefix='alt_')
-        alt_ordner = ProjektTemp.ordner(prefix='alt_')
-        neu = ProjektTemp.datei(suffix='.png', prefix='neu_')
+        alt_datei = ProjektTemp.datei(suffix=".png", prefix="alt_")
+        alt_ordner = ProjektTemp.ordner(prefix="alt_")
+        neu = ProjektTemp.datei(suffix=".png", prefix="neu_")
         self.eigene += [neu]
         vorgestern = time.time() - 48 * 3600
         for p in (alt_datei, alt_ordner):
@@ -88,21 +89,20 @@ class ProjektTempTest(TestCase):
         entfernt = ProjektTemp.hausmeister(erzwingen=True)
 
         self.assertGreaterEqual(entfernt, 2)
-        self.assertFalse(alt_datei.exists(), 'alte Datei blieb liegen')
-        self.assertFalse(alt_ordner.exists(), 'alter Ordner blieb liegen')
-        self.assertTrue(neu.exists(), 'der Hausmeister hat Frisches mitgenommen')
+        self.assertFalse(alt_datei.exists(), "alte Datei blieb liegen")
+        self.assertFalse(alt_ordner.exists(), "alter Ordner blieb liegen")
+        self.assertTrue(neu.exists(), "der Hausmeister hat Frisches mitgenommen")
 
     def test_anlegen_ruft_den_hausmeister(self):
         """Er soll nebenbei laufen, damit niemand ihn planen muss."""
-        ProjektTemp._letzter_lauf = 0.0        # Drosselung zurücksetzen
-        alt = ProjektTemp.datei(suffix='.tmp', prefix='alt2_')
+        ProjektTemp._letzter_lauf = 0.0  # Drosselung zurücksetzen
+        alt = ProjektTemp.datei(suffix=".tmp", prefix="alt2_")
         vorgestern = time.time() - 48 * 3600
         os.utime(alt, (vorgestern, vorgestern))
-        ProjektTemp._letzter_lauf = 0.0        # das Anlegen oben hat ihn verbraucht
-        neu = ProjektTemp.datei(suffix='.tmp', prefix='neu2_')
+        ProjektTemp._letzter_lauf = 0.0  # das Anlegen oben hat ihn verbraucht
+        neu = ProjektTemp.datei(suffix=".tmp", prefix="neu2_")
         self.eigene.append(neu)
-        self.assertFalse(alt.exists(),
-                         'Anlegen einer neuen Datei hat nicht aufgeräumt')
+        self.assertFalse(alt.exists(), "Anlegen einer neuen Datei hat nicht aufgeräumt")
 
     def test_hausmeister_ist_gedrosselt(self):
         """NEU 15.08.2026, mit Messung begründet.
@@ -114,16 +114,15 @@ class ProjektTempTest(TestCase):
         ProjektTemp._letzter_lauf = 0.0
         self.assertGreaterEqual(ProjektTemp.MIN_ABSTAND_S, 60)
 
-        alt = ProjektTemp.datei(suffix='.tmp', prefix='alt3_')
+        alt = ProjektTemp.datei(suffix=".tmp", prefix="alt3_")
         vorgestern = time.time() - 48 * 3600
         os.utime(alt, (vorgestern, vorgestern))
 
         # Erster Lauf räumt, der zweite unmittelbar danach nicht mehr.
         ProjektTemp.hausmeister(erzwingen=True)
-        zweiter = ProjektTemp.datei(suffix='.tmp', prefix='alt4_')
+        zweiter = ProjektTemp.datei(suffix=".tmp", prefix="alt4_")
         os.utime(zweiter, (vorgestern, vorgestern))
-        self.assertEqual(ProjektTemp.hausmeister(), 0,
-                         'der Hausmeister lief trotz Drosselung erneut')
+        self.assertEqual(ProjektTemp.hausmeister(), 0, "der Hausmeister lief trotz Drosselung erneut")
         self.assertTrue(zweiter.exists())
 
         # ... und `erzwingen=True` kommt trotzdem durch.

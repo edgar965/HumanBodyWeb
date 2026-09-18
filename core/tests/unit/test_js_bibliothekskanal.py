@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Bibliothekskanal: ein Tab löscht, die anderen holen ihren Baum neu.
+"""Bibliothekskanal: ein Tab löscht, die anderen holen ihren Baum neu.
 
 WARUM (Edgar, 16.09.2026: „nach löschen einer Animation z.B. bei
 /humanbody/scene/ oder BVH-Studio (kontext menü) ist die Animation immer noch
@@ -18,11 +18,12 @@ Neuladen dauerte (unter Last 9 s, gemessen im Log).
 Sabotage-Gegenprobe: in `Bibliothekskanal.melden` das `postMessage` entfernen
 → Fall 1 rot (keine Meldung beim Empfänger).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'bibliothekskanal.js')
+MODUL = Jsmodul("gemeinsam", "bibliothekskanal.js")
 VIEWER = Jsmodul.VIEWER
 
 SKRIPT = """
@@ -57,36 +58,42 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class BibliothekskanalTest(SimpleTestCase):
-
     def test_meldung_erreicht_andere_kanaele_nicht_den_sender(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
 
     def test_sender_und_hoerer_haengen_am_kanal(self):
-        melden = 'Bibliothekskanal.melden('
-        sender = (('bvh_studio', 'bibliothekablage.js', melden + 'aktion, daten);'),
-                  ('scene', 'animationsmenue.js', melden + 'aktion, daten);'),
-                  ('animation', 'baum.js', melden + 'action, data);'),
-                  ('scene', 'animation.js', melden + "'save', { category, name });"))
+        melden = "Bibliothekskanal.melden("
+        sender = (
+            ("bvh_studio", "bibliothekablage.js", melden + "aktion, daten);"),
+            ("scene", "animationsmenue.js", melden + "aktion, daten);"),
+            ("animation", "baum.js", melden + "action, data);"),
+            ("scene", "animation.js", melden + "'save', { category, name });"),
+        )
         for ordner, datei, marke in sender:
             self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
-        hoeren = 'Bibliothekskanal.hoeren(() => '
-        hoerer = (('bvh_studio', 'bibliotheksbaum.js', hoeren + 'this.laden());'),
-                  ('scene', 'animation.js', hoeren + 'loadAnimationUI());'),
-                  ('animation', 'baum.js', hoeren + 'loadAnimationTree());'))
+        hoeren = "Bibliothekskanal.hoeren(() => "
+        hoerer = (
+            ("bvh_studio", "bibliotheksbaum.js", hoeren + "this.laden());"),
+            ("scene", "animation.js", hoeren + "loadAnimationUI());"),
+            ("animation", "baum.js", hoeren + "loadAnimationTree());"),
+        )
         for ordner, datei, marke in hoerer:
             self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
         # Sofort aus dem Baum, bevor das Neuladen (unter Last Sekunden) fertig ist.
-        studio = BibliothekskanalTest._text('bvh_studio', 'bibliothekmenues.js')
+        studio = BibliothekskanalTest._text("bvh_studio", "bibliothekmenues.js")
         self.assertLess(
-            studio.index('this.baum.eintragEntfernen(ziel.category, ziel.name);'),
-            studio.index('this.baum.laden();', studio.index('async loeschen(ziel)')))
-        szene = BibliothekskanalTest._text('scene', 'animation.js')
-        entfernt = szene.index('item.remove();')
-        self.assertLess(entfernt,
-                        szene.index('return Animationsentfernung.nach(anim, cat, {'))
-        self.assertLess(szene.index('const eintraege = Animationsentfernung.'),
-                        entfernt, 'Nachfolger wird VOR dem Entfernen bestimmt')
+            studio.index("this.baum.eintragEntfernen(ziel.category, ziel.name);"),
+            studio.index("this.baum.laden();", studio.index("async loeschen(ziel)")),
+        )
+        szene = BibliothekskanalTest._text("scene", "animation.js")
+        entfernt = szene.index("item.remove();")
+        self.assertLess(entfernt, szene.index("return Animationsentfernung.nach(anim, cat, {"))
+        self.assertLess(
+            szene.index("const eintraege = Animationsentfernung."),
+            entfernt,
+            "Nachfolger wird VOR dem Entfernen bestimmt",
+        )
 
     @staticmethod
     def _text(*teile):
-        return VIEWER.joinpath(*teile).read_text(encoding='utf-8')
+        return VIEWER.joinpath(*teile).read_text(encoding="utf-8")

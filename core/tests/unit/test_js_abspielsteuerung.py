@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Abspielsteuerung`: Play meint die ausgewählte Figur.
+"""`Abspielsteuerung`: Play meint die ausgewählte Figur.
 
 WARUM (06.09.2026, Edgar: „Animationen funktionieren nicht auf die ausgewählte
 Person"): Beide Play-Knöpfe der Szene-Seite schalteten nur `state.currentAction`
@@ -21,11 +21,12 @@ Dazu: `verdrahten` hängt beim zweiten Aufruf KEINE zweiten Zuhörer an.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'abspielsteuerung.js')
+MODUL = Jsmodul("scene", "abspielsteuerung.js")
 
 #: DOM-Attrappe: die Knöpfe, die Meldungszeile, der Bibliotheksbaum.
 DOM = """
@@ -54,7 +55,9 @@ globalThis.document = {
 globalThis.sessionStorage = { _w: {}, getItem(k) { return this._w[k] ?? null; }, setItem(k, v) { this._w[k] = v; } };
 """
 
-SKRIPT = DOM + """
+SKRIPT = (
+    DOM
+    + """
 const { Abspielsteuerung } = await import(MODUL);
 const { Figurmerker } = await import(new URL('./figurmerker.js', MODUL).href);
 const aktion = () => ({ paused: false, laeuft: true, isRunning() { return this.laeuft; }, play() { this.laeuft = true; } });
@@ -121,10 +124,10 @@ pruefe('Klick pausiert genau einmal', state.playing, false);
 
 console.log(JSON.stringify({ok: true}));
 """
+)
 
 
 class AbspielsteuerungTest(SimpleTestCase):
-
     def test_play_meint_die_ausgewaehlte_figur(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

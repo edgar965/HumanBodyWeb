@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Niemand greift auf ein Attribut einer Methode zu.
+"""Niemand greift auf ein Attribut einer Methode zu.
 
 DER ANLASS (01.09.2026)
 =======================
@@ -37,6 +37,7 @@ BDD - GEGEBEN / DANN
     KeinZugriffAufEineMethode ... kein `Klasse.methode.attribut`
     EineSabotageAmZugriff              ... der erfundene Zugriff wird erkannt
 """
+
 import ast
 import unittest
 
@@ -51,7 +52,7 @@ TOOLS = Projektquellen.TOOLS
 
 
 class KeinZugriffAufEineMethode(unittest.TestCase):
-    u"""Kein Modul liest ein Attribut, das eine Funktion nicht hat."""
+    """Kein Modul liest ein Attribut, das eine Funktion nicht hat."""
 
     databases = set()
 
@@ -61,43 +62,37 @@ class KeinZugriffAufEineMethode(unittest.TestCase):
         schlecht = []
         for pfad, baum in gelesen:
             for zeile, ausdruck in Methodenzugriffe.auf_methoden(baum, methoden):
-                schlecht.append('%s:%d %s'
-                                % (pfad.relative_to(TOOLS).as_posix(),
-                                   zeile, ausdruck))
-        self.assertEqual(schlecht, [],
-                         'Zugriff auf ein Methodenattribut: %s' % schlecht)
+                schlecht.append("%s:%d %s" % (pfad.relative_to(TOOLS).as_posix(), zeile, ausdruck))
+        self.assertEqual(schlecht, [], "Zugriff auf ein Methodenattribut: %s" % schlecht)
 
     def test_es_werden_ueberhaupt_klassen_gefunden(self):
-        u"""Sabotageschutz: Eine leere Menge bestuende jeden Test."""
-        namen = Methodenzugriffe.methodennamen(
-            list(Projektquellen.baeume()))
+        """Sabotageschutz: Eine leere Menge bestuende jeden Test."""
+        namen = Methodenzugriffe.methodennamen(list(Projektquellen.baeume()))
         self.assertGreater(len(namen), 150)
 
 
 class EineSabotageAmZugriff(unittest.TestCase):
-    u"""Die Gegenprobe: Der Test muss rot werden koennen."""
+    """Die Gegenprobe: Der Test muss rot werden koennen."""
 
     databases = set()
 
     def test_der_echte_fall_wird_erkannt(self):
-        u"""Genau die Zeile aus `convertDazPoseBvhToBlender.py`."""
-        baum = ast.parse('Dazretarget.retarget_bvh.register()')
+        """Genau die Zeile aus `convertDazPoseBvhToBlender.py`."""
+        baum = ast.parse("Dazretarget.retarget_bvh.register()")
         self.assertEqual(
-            Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}),
-            [(1, 'Dazretarget.retarget_bvh.register')])
+            Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}),
+            [(1, "Dazretarget.retarget_bvh.register")],
+        )
 
     def test_ein_gewoehnlicher_aufruf_wird_nicht_gemeldet(self):
-        baum = ast.parse('Dazretarget.retarget_bvh(a, b, c)')
-        self.assertEqual(
-            Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}), [])
+        baum = ast.parse("Dazretarget.retarget_bvh(a, b, c)")
+        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}), [])
 
     def test_ein_echtes_funktionsattribut_ist_erlaubt(self):
-        baum = ast.parse('print(Dazretarget.retarget_bvh.__name__)')
-        self.assertEqual(
-            Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}), [])
+        baum = ast.parse("print(Dazretarget.retarget_bvh.__name__)")
+        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}), [])
 
     def test_ein_modul_gleichen_namens_wird_nicht_verwechselt(self):
-        u"""`retarget_bvh.register()` ohne Klasse davor ist in Ordnung."""
-        baum = ast.parse('retarget_bvh.register()')
-        self.assertEqual(
-            Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}), [])
+        """`retarget_bvh.register()` ohne Klasse davor ist in Ordnung."""
+        baum = ast.parse("retarget_bvh.register()")
+        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}), [])

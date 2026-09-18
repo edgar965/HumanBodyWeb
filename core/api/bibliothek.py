@@ -30,13 +30,15 @@ class Bibliotheksendpunkte:
     """Die drei Aktionen der BVH-Bibliothek — alle drei NUR per POST."""
 
     #: Name des Hilfsskripts, das Blender die Datei laden laesst.
-    BLENDER_SKRIPT = 'mocapnet_load_bvh.py'
+    BLENDER_SKRIPT = "mocapnet_load_bvh.py"
 
     @staticmethod
     def _suchorte():
-        return [settings.MOCAPNET_ROOT / 'output',
-                settings.BLENDER_BVH_DIR,
-                Path(settings.MEDIA_ROOT) / 'output']
+        return [
+            settings.MOCAPNET_ROOT / "output",
+            settings.BLENDER_BVH_DIR,
+            Path(settings.MEDIA_ROOT) / "output",
+        ]
 
     @staticmethod
     @require_POST
@@ -59,18 +61,18 @@ class Bibliotheksendpunkte:
         for ordner in Bibliotheksendpunkte._suchorte():
             if not ordner.exists():
                 continue
-            for pfad in ordner.rglob('*.bvh'):
+            for pfad in ordner.rglob("*.bvh"):
                 _, angelegt = BVHFile.objects.get_or_create(
                     path=str(pfad),
                     defaults={
-                        'name': pfad.name,
-                        'source': ('mocapnet' if 'MocapNET' in str(pfad)
-                                   else 'imported'),
-                    })
+                        "name": pfad.name,
+                        "source": ("mocapnet" if "MocapNET" in str(pfad) else "imported"),
+                    },
+                )
                 if angelegt:
                     neu += 1
-        messages.success(request, '%d new BVH files found.' % neu)
-        return redirect('library')
+        messages.success(request, "%d new BVH files found." % neu)
+        return redirect("library")
 
     @staticmethod
     @require_POST
@@ -86,8 +88,8 @@ class Bibliotheksendpunkte:
         """
         eintrag = get_object_or_404(BVHFile, pk=pk)
         eintrag.delete()
-        messages.success(request, 'Removed %s from library.' % eintrag.name)
-        return redirect('library')
+        messages.success(request, "Removed %s from library." % eintrag.name)
+        return redirect("library")
 
     @staticmethod
     @require_POST
@@ -101,9 +103,9 @@ class Bibliotheksendpunkte:
         """
         eintrag = get_object_or_404(BVHFile, pk=pk)
         skript = Bibliotheksendpunkte._skript_schreiben(eintrag)
-        subprocess.Popen([str(settings.BLENDER_EXE), '--python', skript])
-        messages.success(request, 'Opening %s in Blender...' % eintrag.name)
-        return redirect('library')
+        subprocess.Popen([str(settings.BLENDER_EXE), "--python", skript])
+        messages.success(request, "Opening %s in Blender..." % eintrag.name)
+        return redirect("library")
 
     @staticmethod
     def _skript_schreiben(eintrag):
@@ -113,13 +115,13 @@ class Bibliotheksendpunkte:
         Vorgeschichte: rund 100 GB Datenmuell dort). Der Name ist bewusst
         fest — das Skript wird bei jedem Aufruf ueberschrieben.
         """
-        inhalt = ('\nimport bpy\n\n'
-                  '# Import BVH\n'
-                  'bpy.ops.import_anim.bvh(filepath=%s)\n'
-                  'print("BVH loaded:", %s)\n'
-                  % (repr(str(eintrag.path)), repr(str(eintrag.name))))
-        pfad = str(ProjektTemp.verzeichnis()
-                   / Bibliotheksendpunkte.BLENDER_SKRIPT)
-        with open(pfad, 'w') as datei:
+        inhalt = (
+            "\nimport bpy\n\n"
+            "# Import BVH\n"
+            "bpy.ops.import_anim.bvh(filepath=%s)\n"
+            'print("BVH loaded:", %s)\n' % (repr(str(eintrag.path)), repr(str(eintrag.name)))
+        )
+        pfad = str(ProjektTemp.verzeichnis() / Bibliotheksendpunkte.BLENDER_SKRIPT)
+        with open(pfad, "w") as datei:
             datei.write(inhalt)
         return pfad

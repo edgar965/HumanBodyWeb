@@ -37,13 +37,11 @@ from core.dienste.koerperhuelle import Koerperhuelle
 
 
 class Netz:
-    PUNKTE = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
-                       [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
+    PUNKTE = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
     VIERECK = np.array([[0, 1, 2, 3]])
 
 
 class HuelleDreieckeTest(SimpleTestCase):
-
     def test_viereck_wird_zu_zwei_dreiecken(self):
         dreiecke = Koerperhuelle.dreiecke(Netz.VIERECK)
         self.assertEqual(dreiecke.shape, (2, 3))
@@ -56,7 +54,6 @@ class HuelleDreieckeTest(SimpleTestCase):
 
 
 class NachbarschaftTest(SimpleTestCase):
-
     def matrix(self):
         return Koerperhuelle._nachbarschaft(Netz.VIERECK, 4).toarray()
 
@@ -84,7 +81,6 @@ class NachbarschaftTest(SimpleTestCase):
 
 
 class NormalenTest(SimpleTestCase):
-
     def test_flaechennormalen_zeigen_nach_z(self):
         normalen = Koerperhuelle._flaechennormalen(Netz.PUNKTE, Netz.VIERECK)
         for normale in normalen:
@@ -98,10 +94,8 @@ class NormalenTest(SimpleTestCase):
 
 
 class GlattTest(SimpleTestCase):
-
     def test_aufblaehen_hebt_um_die_angegebenen_millimeter(self):
-        huelle = Koerperhuelle.glatt(Netz.PUNKTE, Netz.VIERECK,
-                                     inflate_mm=15, smooth_iterations=0)
+        huelle = Koerperhuelle.glatt(Netz.PUNKTE, Netz.VIERECK, inflate_mm=15, smooth_iterations=0)
         for punkt in huelle:
             self.assertAlmostEqual(punkt[2], 0.015, places=6)
 
@@ -109,8 +103,7 @@ class GlattTest(SimpleTestCase):
         """Ein herausstehender Punkt wandert zu seinen Nachbarn."""
         punkte = Netz.PUNKTE.copy()
         punkte[0] = [0.0, 0.0, 1.0]
-        huelle = Koerperhuelle.glatt(punkte, Netz.VIERECK, inflate_mm=0,
-                                     smooth_iterations=5)
+        huelle = Koerperhuelle.glatt(punkte, Netz.VIERECK, inflate_mm=0, smooth_iterations=5)
         self.assertLess(huelle[0][2], 1.0)
 
     def test_ohne_flaechen_wird_nur_aufgeblaeht(self):
@@ -127,7 +120,6 @@ class GlattTest(SimpleTestCase):
 
 
 class HuelleEinpassenTest(SimpleTestCase):
-
     def test_umgebungsquader_wird_je_achse_angeglichen(self):
         """Ein Würfel von 1 wird auf einen Kasten 2×4×6 gestreckt."""
         quelle = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]])
@@ -142,5 +134,4 @@ class HuelleEinpassenTest(SimpleTestCase):
         ziel = np.array([[0.0, 0.0, 0.0], [2.0, 2.0, 5.0]])
         eingepasst = Koerperhuelle._einpassen(quelle, ziel)
         self.assertTrue(np.all(np.isfinite(eingepasst)))
-        self.assertAlmostEqual(eingepasst[0][2], 2.5, places=6,
-                               msg='nur verschoben, nicht gestreckt')
+        self.assertAlmostEqual(eingepasst[0][2], 2.5, places=6, msg="nur verschoben, nicht gestreckt")

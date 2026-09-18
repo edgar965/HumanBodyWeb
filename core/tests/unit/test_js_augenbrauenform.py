@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Augenbrauenform`: Dichte, Dicke, Länge und Lage der Brauenhärchen.
+"""`Augenbrauenform`: Dichte, Dicke, Länge und Lage der Brauenhärchen.
 
 WARUM (Edgar, 13.09.2026: „augenbrauen regler auch sehr schlecht, die Höhe
 sollte weiter nach unten verstellbar sein, es fehlen Regler für dicke,
@@ -19,11 +19,12 @@ mit 5 Stützen je Seite:
 
 Sabotage-Gegenprobe: `+ form.lage` weg in `stellen` → Fall 2 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'augenbrauenform.js')
+MODUL = Jsmodul("gemeinsam", "augenbrauenform.js")
 
 SKRIPT = """
 const { Augenbrauenform: F } = await import(MODUL);
@@ -75,6 +76,5 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class AugenbrauenformTest(SimpleTestCase):
-
     def test_dichte_lage_dicke_und_zittern(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

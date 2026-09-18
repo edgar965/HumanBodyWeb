@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Das sichtbare Koerpernetz des Films — je Bild aus der Basis unterteilt.
+"""Das sichtbare Koerpernetz des Films — je Bild aus der Basis unterteilt.
 
 Die Szene zeigt das Catmull-Clark-unterteilte Netz (70.851 Punkte); der
 Film rechnete bis zum 11.09.2026 mit der 18K-Aussenhaut und zeigte deshalb
@@ -17,48 +17,49 @@ sichtbare Netz (Stoff, oder eine Figur ohne Unterteiler).
 Der Bildspeicher haelt nur die letzten `SPEICHER` Bilder: Bei drei Stufen
 wiegt ein Bild 1,1 Mio. Punkte = 27 MB, ein ganzer Film 3 GB.
 """
+
 import numpy as np
 
 
 class Feinkoerper:
-    u"""Feine Punkte eines Teils in Ruhe und je Bild, mit Zwischenspeicher."""
+    """Feine Punkte eines Teils in Ruhe und je Bild, mit Zwischenspeicher."""
 
     SPEICHER = 3
 
     @staticmethod
     def hat(teil):
-        return teil.get('unterteiler') is not None
+        return teil.get("unterteiler") is not None
 
     @classmethod
     def _rechnen(cls, teil, basis):
-        feinheit = teil.get('feinheit')
+        feinheit = teil.get("feinheit")
         if feinheit is not None:
-            return feinheit.punkte(basis, teil['dreiecke'])
-        return np.asarray(teil['unterteiler'].subdivide(basis), dtype=np.float64)
+            return feinheit.punkte(basis, teil["dreiecke"])
+        return np.asarray(teil["unterteiler"].subdivide(basis), dtype=np.float64)
 
     @classmethod
     def ruhe(cls, teil):
-        u"""Die sichtbaren Punkte in Ruhelage."""
+        """Die sichtbaren Punkte in Ruhelage."""
         if not cls.hat(teil):
-            return teil['haut'].punkte
-        if 'fein_ruhe' not in teil:
-            teil['fein_ruhe'] = cls._rechnen(teil, teil['haut'].punkte)
-        return teil['fein_ruhe']
+            return teil["haut"].punkte
+        if "fein_ruhe" not in teil:
+            teil["fein_ruhe"] = cls._rechnen(teil, teil["haut"].punkte)
+        return teil["fein_ruhe"]
 
     @classmethod
     def dreiecke(cls, teil):
-        return teil['fein_dreiecke'] if cls.hat(teil) else teil['dreiecke']
+        return teil["fein_dreiecke"] if cls.hat(teil) else teil["dreiecke"]
 
     @classmethod
     def bild(cls, teil, nummer):
-        u"""Die sichtbaren Punkte fuer Bild `nummer` — nach Physik, weil die
+        """Die sichtbaren Punkte fuer Bild `nummer` — nach Physik, weil die
         Bahn (`haut.folge`) dann schon den Zuschlag traegt. Der Speicher
         haengt an der Bahn-Kennung: Wird die Bahn ersetzt (Physik), gilt
         der alte Eintrag nicht mehr."""
-        folge = teil['haut'].folge
+        folge = teil["haut"].folge
         if not cls.hat(teil):
             return folge[nummer]
-        merker = teil.setdefault('fein_folge', {})
+        merker = teil.setdefault("fein_folge", {})
         schluessel = (id(folge), nummer)
         if schluessel not in merker:
             if any(k[0] != id(folge) for k in merker) or len(merker) >= cls.SPEICHER:

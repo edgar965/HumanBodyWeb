@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Wrapperquellen — die Quelltexte des Wrapperbaums, als Syntaxbaum gelesen.
+"""Wrapperquellen — die Quelltexte des Wrapperbaums, als Syntaxbaum gelesen.
 
 Drei Pruefungen im Baum stellen dieselben Fragen an den Quelltext:
 Welche Zeichenketten stehen im CODE (nicht in der Doku)? Wo steht ein
@@ -17,41 +17,40 @@ eine Zeile tiefer stand. Ein Werkzeug, das die Beschreibung eines
 behobenen Fehlers fuer den Fehler haelt, macht die Doku zur
 Fehlerquelle (`~/.claude/rules/analysewerkzeuge.md`).
 """
+
 import ast
 
 from ._wrappersuchpfad import Wrappersuchpfad
 
-__all__ = ['Wrapperquellen']
+__all__ = ["Wrapperquellen"]
 
 
 class Wrapperquellen:
-    u"""Liest den Wrapperbaum und beantwortet Fragen an den Syntaxbaum."""
+    """Liest den Wrapperbaum und beantwortet Fragen an den Syntaxbaum."""
 
     #: Diese Knoten duerfen einen Docstring tragen.
-    MIT_DOKU = (ast.Module, ast.ClassDef, ast.FunctionDef,
-                ast.AsyncFunctionDef)
+    MIT_DOKU = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
     #: Parameternamen, die nie im Rumpf stehen muessen.
-    FREI = ('self', 'cls')
+    FREI = ("self", "cls")
 
     # -------------------------------------------------------------- Einlesen
 
     @staticmethod
     def texte():
-        u"""(Pfad, Text) je eigenem Wrapper-Modul."""
-        return [(p, p.read_text(encoding='utf-8'))
-                for p in Wrappersuchpfad.dateien()]
+        """(Pfad, Text) je eigenem Wrapper-Modul."""
+        return [(p, p.read_text(encoding="utf-8")) for p in Wrappersuchpfad.dateien()]
 
     @classmethod
     def baeume(cls):
-        u"""(Pfad, Syntaxbaum) je Modul — einmal geparst, nicht dreimal."""
+        """(Pfad, Syntaxbaum) je Modul — einmal geparst, nicht dreimal."""
         return [(pfad, ast.parse(text)) for pfad, text in cls.texte()]
 
     # ---------------------------------------------------------- Zeichenketten
 
     @classmethod
     def dokuknoten(cls, baum):
-        u"""Die Zeichenketten-Knoten, die Docstrings sind (als `id`)."""
+        """Die Zeichenketten-Knoten, die Docstrings sind (als `id`)."""
         gefunden = set()
         for knoten in ast.walk(baum):
             if not isinstance(knoten, cls.MIT_DOKU):
@@ -63,30 +62,30 @@ class Wrapperquellen:
 
     @staticmethod
     def _ist_text(knoten):
-        return (isinstance(knoten, ast.Constant)
-                and isinstance(knoten.value, str))
+        return isinstance(knoten, ast.Constant) and isinstance(knoten.value, str)
 
     @classmethod
     def zeichenketten(cls, baum):
-        u"""Alle Zeichenketten im CODE — Docstrings ausgenommen."""
+        """Alle Zeichenketten im CODE — Docstrings ausgenommen."""
         doku = cls.dokuknoten(baum)
-        return [k for k in ast.walk(baum)
-                if cls._ist_text(k) and id(k) not in doku]
+        return [k for k in ast.walk(baum) if cls._ist_text(k) and id(k) not in doku]
 
     # ------------------------------------------------------------- Aufrufe
 
     @staticmethod
     def druckaufrufe(baum):
-        u"""Jeder `print(...)` als (Knoten, erstes Argument als Text)."""
-        return [(k, ast.dump(k.args[0])) for k in ast.walk(baum)
-                if isinstance(k, ast.Call) and isinstance(k.func, ast.Name)
-                and k.func.id == 'print' and k.args]
+        """Jeder `print(...)` als (Knoten, erstes Argument als Text)."""
+        return [
+            (k, ast.dump(k.args[0]))
+            for k in ast.walk(baum)
+            if isinstance(k, ast.Call) and isinstance(k.func, ast.Name) and k.func.id == "print" and k.args
+        ]
 
     # ------------------------------------------------------------ Parameter
 
     @staticmethod
     def gelesene_namen(knoten):
-        u"""Jeder Name, der im Rumpf vorkommt — auch als Schluesselwort.
+        """Jeder Name, der im Rumpf vorkommt — auch als Schluesselwort.
 
         Ein weitergereichter Wert (`fahren(video, device=device)`) zaehlt
         als gelesen; ohne die Schluesselwoerter waere jeder solche
@@ -104,17 +103,18 @@ class Wrapperquellen:
 
     @classmethod
     def _tote_parameter(cls, knoten):
-        u"""Die Parameter EINER Funktion, die nie gelesen werden."""
+        """Die Parameter EINER Funktion, die nie gelesen werden."""
         gelesen = cls.gelesene_namen(knoten)
         argumente = list(knoten.args.args) + list(knoten.args.kwonlyargs)
-        return [arg.arg for arg in argumente
-                if arg.arg not in cls.FREI
-                and not arg.arg.startswith('_')
-                and arg.arg not in gelesen]
+        return [
+            arg.arg
+            for arg in argumente
+            if arg.arg not in cls.FREI and not arg.arg.startswith("_") and arg.arg not in gelesen
+        ]
 
     @classmethod
     def unbenutzte_parameter(cls, baum):
-        u"""(Funktionsname, Parameter, Zeile) fuer den ganzen Baum."""
+        """(Funktionsname, Parameter, Zeile) fuer den ganzen Baum."""
         aus = []
         for knoten in ast.walk(baum):
             if not isinstance(knoten, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -127,7 +127,7 @@ class Wrapperquellen:
 
     @classmethod
     def modulebene(cls):
-        u"""{Name: [Dateien]} fuer Klassen und Funktionen auf Modulebene."""
+        """{Name: [Dateien]} fuer Klassen und Funktionen auf Modulebene."""
         gefunden = {}
         for pfad, baum in cls.baeume():
             for knoten in baum.body:

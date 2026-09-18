@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Auftragskennung — Datum und Uhrzeit als Adresse eines Auftrags.
+"""Auftragskennung — Datum und Uhrzeit als Adresse eines Auftrags.
 
 Edgar, 16.09.2026: „änder die Verzeichnisnamen der Process Seiten …
 Das Directory soll das Datum und Uhrzeit enthalten, in der Form
@@ -16,6 +16,7 @@ vergleich tut das, Tests auch), bekommt der zweite die NÄCHSTE FREIE Sekunde:
 Die Form bleibt, die Reihenfolge stimmt, und die Abweichung ist so groß wie
 die Zahl der Aufträge in dieser Sekunde.
 """
+
 import re
 from datetime import timedelta
 
@@ -23,22 +24,21 @@ from django.utils import timezone
 
 
 class Auftragskennung:
-
-    FORMAT = '%Y.%m.%d.%H.%M.%S'
+    FORMAT = "%Y.%m.%d.%H.%M.%S"
     #: Für den URL-Konverter und die Prüfung einer Zeichenkette.
-    MUSTER = r'[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}'
+    MUSTER = r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}"
     LAENGE = 19
 
     @classmethod
     def aus(cls, zeit):
-        u"""Die Kennung zu einem Zeitpunkt (bewusste Zeit → Ortszeit)."""
+        """Die Kennung zu einem Zeitpunkt (bewusste Zeit → Ortszeit)."""
         if timezone.is_aware(zeit):
             zeit = timezone.localtime(zeit)
         return zeit.strftime(cls.FORMAT)
 
     @classmethod
     def frei(cls, zeit, belegt):
-        u"""Die erste freie Kennung ab `zeit`; `belegt(kennung)` sagt, ob es
+        """Die erste freie Kennung ab `zeit`; `belegt(kennung)` sagt, ob es
         sie schon gibt. Sekundenbruchteile spielen keine Rolle."""
         zeit = zeit.replace(microsecond=0)
         while belegt(cls.aus(zeit)):
@@ -51,7 +51,7 @@ class Auftragskennung:
 
     @classmethod
     def fuer(cls, auftrag):
-        u"""Die Kennung für einen Auftrag, der noch keine hat — aus seiner
+        """Die Kennung für einen Auftrag, der noch keine hat — aus seiner
         Anlagezeit, sonst aus jetzt; frei gegenüber allen anderen Aufträgen."""
         zeit = auftrag.created_at or timezone.now()
         andere = type(auftrag).objects.exclude(pk=auftrag.pk)

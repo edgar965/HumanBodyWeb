@@ -7,13 +7,14 @@ vorderseitige Dreiecke rastern, Umriss abnehmen. Zwei Wege gibt es nur bei der
 Projektion — mit gespeicherter Pose (dann liegen 2D-Punkte schon vor) oder
 orthographisch aus den Vertices.
 """
+
 import logging
 
 import numpy as np
 
 from ..daten.bildrahmen import Bildrahmen
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Silhouette:
@@ -47,9 +48,9 @@ class Silhouette:
             gueltig = ~np.isnan(proj).any(axis=1)
             mx = proj[gueltig, 0].mean()
             my = proj[gueltig, 1].mean()
-            s = versatz.get('scale', 1)
-            proj[gueltig, 0] = (proj[gueltig, 0] - mx) * s + mx + versatz.get('dx', 0)
-            proj[gueltig, 1] = (proj[gueltig, 1] - my) * s + my + versatz.get('dy', 0)
+            s = versatz.get("scale", 1)
+            proj[gueltig, 0] = (proj[gueltig, 0] - mx) * s + mx + versatz.get("dx", 0)
+            proj[gueltig, 1] = (proj[gueltig, 1] - my) * s + my + versatz.get("dy", 0)
         self.projektion = proj
         self.posiert = True
         self.vorderseiten = self._vorderseiten_im_bild(proj)
@@ -73,9 +74,9 @@ class Silhouette:
         proj = np.zeros((len(v), 2), dtype=np.float32)
         if koerpertransformation:
             bt = koerpertransformation
-            s = grund * bt['scale']
-            proj[:, 0] = (v[:, 0] - cx) * s + bt['center_x']
-            proj[:, 1] = (cy - v[:, 1]) * s + bt['center_y']
+            s = grund * bt["scale"]
+            proj[:, 0] = (v[:, 0] - cx) * s + bt["center_x"]
+            proj[:, 1] = (cy - v[:, 1]) * s + bt["center_y"]
         else:
             proj[:, 0] = (v[:, 0] - cx) * s_y + self.breite / 2
             proj[:, 1] = (cy - v[:, 1]) * s_y + self.hoehe / 2
@@ -96,10 +97,8 @@ class Silhouette:
     def _vorderseiten_im_bild(self, proj):
         """Dasselbe in Bildkoordinaten: Y zeigt nach unten, also ist im
         Uhrzeigersinn vorne (kreuz_z < 0)."""
-        p0, p1, p2 = proj[self.faces[:, 0]], proj[self.faces[:, 1]], proj[self.faces[:,
-                                                                                     2]]
-        hat_nan = (np.isnan(p0).any(axis=1) | np.isnan(p1).any(axis=1)
-                   | np.isnan(p2).any(axis=1))
+        p0, p1, p2 = proj[self.faces[:, 0]], proj[self.faces[:, 1]], proj[self.faces[:, 2]]
+        hat_nan = np.isnan(p0).any(axis=1) | np.isnan(p1).any(axis=1) | np.isnan(p2).any(axis=1)
         e1, e2 = p1 - p0, p2 - p0
         kreuz_z = e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]
         return np.where((kreuz_z < 0) & ~hat_nan)[0]
@@ -109,7 +108,7 @@ class Silhouette:
     def maske(self, cv2):
         """Binaere Maske der Vorderseite, `MASKE` x `MASKE` Bildpunkte."""
         if self.projektion is None or self.vorderseiten is None:
-            raise RuntimeError('Silhouette: erst projizieren, dann rastern')
+            raise RuntimeError("Silhouette: erst projizieren, dann rastern")
         sx, sy = self.MASKE / self.breite, self.MASKE / self.hoehe
         maske = np.zeros((self.MASKE, self.MASKE), dtype=np.uint8)
         if self.posiert and self.anzahl_posiert < len(self.vertices):
@@ -124,7 +123,7 @@ class Silhouette:
         Die Topologien passen nicht zueinander (6.890 gegen 10.475 Vertices);
         gerasterte Dreiecke ergaeben ein Flickenmuster. Deshalb werden die
         Punkte gesetzt und morphologisch geschlossen."""
-        gueltig = self._projektion()[:self.anzahl_posiert]
+        gueltig = self._projektion()[: self.anzahl_posiert]
         gueltig = gueltig[~np.isnan(gueltig).any(axis=1)]
         px = (gueltig[:, 0] * sx).astype(np.int32)
         py = (gueltig[:, 1] * sy).astype(np.int32)
@@ -139,18 +138,21 @@ class Silhouette:
     def _projektion(self):
         """Die Projektion — gesetzt von `projizieren`; vorher ist Rastern ein Fehler."""
         if self.projektion is None:
-            raise RuntimeError('Silhouette: erst projizieren, dann rastern')
+            raise RuntimeError("Silhouette: erst projizieren, dann rastern")
         return self.projektion
 
     def _dreiecke_fuellen(self, cv2, maske, sx, sy):
         proj = self._projektion()
-        for fi in (self.vorderseiten if self.vorderseiten is not None else ()):
+        for fi in self.vorderseiten if self.vorderseiten is not None else ():
             i0, i1, i2 = self.faces[fi]
-            punkte = np.array([
-                [proj[i0, 0] * sx, proj[i0, 1] * sy],
-                [proj[i1, 0] * sx, proj[i1, 1] * sy],
-                [proj[i2, 0] * sx, proj[i2, 1] * sy],
-            ], dtype=np.int32).reshape((-1, 1, 2))
+            punkte = np.array(
+                [
+                    [proj[i0, 0] * sx, proj[i0, 1] * sy],
+                    [proj[i1, 0] * sx, proj[i1, 1] * sy],
+                    [proj[i2, 0] * sx, proj[i2, 1] * sy],
+                ],
+                dtype=np.int32,
+            ).reshape((-1, 1, 2))
             cv2.fillConvexPoly(maske, punkte, 255)
 
     # ------------------------------------------------------------------ Umriss
@@ -158,8 +160,7 @@ class Silhouette:
     def koerperkontur(self, cv2):
         """Groesster Umriss der Maske, vereinfacht, in Bildkoordinaten."""
         maske, sx, sy = self.maske(cv2)
-        konturen, _ = cv2.findContours(maske, cv2.RETR_EXTERNAL,
-                                       cv2.CHAIN_APPROX_SIMPLE)
+        konturen, _ = cv2.findContours(maske, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if not konturen:
             return []
         groesste = max(konturen, key=cv2.contourArea)

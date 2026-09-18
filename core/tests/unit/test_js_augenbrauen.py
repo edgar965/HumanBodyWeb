@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Augenbrauen`: Härchen aus dem Netz — Bogen vom Auge aus, auf der Haut.
+"""`Augenbrauen`: Härchen aus dem Netz — Bogen vom Auge aus, auf der Haut.
 
 WARUM (Edgar, 12.09.2026: „bei Augen - Wimpern - Nägel fehlen die
 Augenbrauen"): Das HumanBody-Netz hat keine Brauen (keine Gruppe, keine
@@ -25,11 +25,12 @@ Ebene z = 0,1 mit leichter Wölbung, zwei Augen (Gruppe 4) als Punktwolken:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'augenbrauen.js')
+MODUL = Jsmodul("gemeinsam", "augenbrauen.js")
 
 SKRIPT = """
 const { Augenbrauen: A } = await import(MODUL);
@@ -138,8 +139,7 @@ console.log(JSON.stringify({ ok: true, haare: g1.haare,
 
 
 class AugenbrauenTest(SimpleTestCase):
-
     def test_bogen_auf_der_haut_und_streifen(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['haare'], 60)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertEqual(ausgabe["haare"], 60)

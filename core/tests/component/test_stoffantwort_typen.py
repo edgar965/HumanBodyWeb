@@ -33,38 +33,35 @@ from ..unit._sicher import Sicher
 
 
 class StoffantwortTypenTest(TestCase):
-
     def antwort(self):
         ergebnis = {
-            'vertices': np.array([[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]],
-                                 dtype=np.float32),
-            'faces': np.array([[0, 1, 2]], dtype=np.uint32),
-            'normals': np.zeros((3, 3), dtype=np.float32),
-            'color': [0.3, 0.4, 0.5],
+            "vertices": np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float32),
+            "faces": np.array([[0, 1, 2]], dtype=np.uint32),
+            "normals": np.zeros((3, 3), dtype=np.float32),
+            "color": [0.3, 0.4, 0.5],
         }
-        return Stoffantwort.aus(ergebnis, None, 'female')
+        return Stoffantwort.aus(ergebnis, None, "female")
 
     def test_dreiecke_kommen_als_uint32(self):
-        roh = base64.b64decode(self.antwort()['faces'])
-        self.assertEqual(len(roh), 3 * 4, '4 Byte je Index')
+        roh = base64.b64decode(self.antwort()["faces"])
+        self.assertEqual(len(roh), 3 * 4, "4 Byte je Index")
         self.assertEqual(list(np.frombuffer(roh, dtype=np.uint32)), [0, 1, 2])
 
     def test_punkte_und_normalen_kommen_als_float32(self):
         antwort = self.antwort()
-        for feld, zahl in (('vertices', 9), ('normals', 9)):
-            werte = np.frombuffer(base64.b64decode(antwort[feld]),
-                                  dtype=np.float32)
+        for feld, zahl in (("vertices", 9), ("normals", 9)):
+            werte = np.frombuffer(base64.b64decode(antwort[feld]), dtype=np.float32)
             self.assertEqual(len(werte), zahl, feld)
 
     def test_zaehler_kommen_aus_den_feldern(self):
         antwort = self.antwort()
-        self.assertEqual(antwort['vertex_count'], 3)
-        self.assertEqual(antwort['face_count'], 1)
+        self.assertEqual(antwort["vertex_count"], 3)
+        self.assertEqual(antwort["face_count"], 1)
 
     def test_ohne_koerperpunkte_keine_gewichte(self):
         """Kein stilles Nullgewicht: Ohne Körper gibt es keine Zuordnung."""
         antwort = self.antwort()
-        self.assertNotIn('skin_indices', antwort)
+        self.assertNotIn("skin_indices", antwort)
 
 
 class AnpassungsantwortTypenTest(TestCase):
@@ -76,8 +73,8 @@ class AnpassungsantwortTypenTest(TestCase):
         from core.dienste.kleidungsanpassung import Kleidungsanpassung
 
         class VorlageAttrappe:
-            name = 'Probe'
-            source = ''
+            name = "Probe"
+            source = ""
             vertices = None
             faces = None
 
@@ -85,17 +82,19 @@ class AnpassungsantwortTypenTest(TestCase):
             farbe = (0.3, 0.4, 0.5)
 
         anpassung = Kleidungsanpassung(
-            VorlageAttrappe(),
-            Koerperzustand(None, 'female', None, None, 'Female_Caucasian'))
-        anpassung.ergebnis = Anpassungsergebnis.aus_dict({
-            'vertices': np.zeros((3, 3), dtype=np.float32),
-            'faces': np.array([[0, 1, 2]], dtype=np.uint32),
-            'normals': np.zeros((3, 3), dtype=np.float32),
-        })
-        return anpassung.als_antwort('tops/probe', ReglerAttrappe())
+            VorlageAttrappe(), Koerperzustand(None, "female", None, None, "Female_Caucasian")
+        )
+        anpassung.ergebnis = Anpassungsergebnis.aus_dict(
+            {
+                "vertices": np.zeros((3, 3), dtype=np.float32),
+                "faces": np.array([[0, 1, 2]], dtype=np.uint32),
+                "normals": np.zeros((3, 3), dtype=np.float32),
+            }
+        )
+        return anpassung.als_antwort("tops/probe", ReglerAttrappe())
 
     def test_dreiecke_kommen_als_uint32(self):
-        roh = base64.b64decode(Sicher.wert(self.antwort(), 'Antwort')['faces'])
+        roh = base64.b64decode(Sicher.wert(self.antwort(), "Antwort")["faces"])
         self.assertEqual(len(roh), 3 * 4)
         self.assertEqual(list(np.frombuffer(roh, dtype=np.uint32)), [0, 1, 2])
 
@@ -107,8 +106,13 @@ class AnpassungsantwortTypenTest(TestCase):
         """
         gross = np.array([[16777217, 16777219, 16777221]], dtype=np.uint32)
         kodiert = Stoffantwort.aus(
-            {'vertices': np.zeros((3, 3), dtype=np.float32), 'faces': gross,
-             'normals': np.zeros((3, 3), dtype=np.float32)},
-            None, 'female')['faces']
+            {
+                "vertices": np.zeros((3, 3), dtype=np.float32),
+                "faces": gross,
+                "normals": np.zeros((3, 3), dtype=np.float32),
+            },
+            None,
+            "female",
+        )["faces"]
         gelesen = np.frombuffer(base64.b64decode(kodiert), dtype=np.uint32)
         self.assertEqual(list(gelesen), [16777217, 16777219, 16777221])

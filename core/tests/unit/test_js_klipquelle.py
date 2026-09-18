@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Klipquelle: ein Clip für alle Ansichten der Ergebnisseite.
+"""Klipquelle: ein Clip für alle Ansichten der Ergebnisseite.
 
 Edgar (12.09.2026): „schon wieder unterschiedliche Rigs oben und unten" und
 „nach dem Play startet das Video oben mit einem anderen Rig, erst nach
@@ -21,6 +21,7 @@ lässt niemand ewig warten. Die Spielerseite (`rigstart.js`, `bvh_player.js`,
 Sabotage-Gegenprobe: `melden` ohne das Leeren der Warter lässt „nur einmal"
 rot werden.
 """
+
 from pathlib import Path
 
 from django.conf import settings
@@ -28,9 +29,9 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-STATIK = Path(settings.BASE_DIR) / 'static'
+STATIK = Path(settings.BASE_DIR) / "static"
 
-MODUL = Jsmodul('gemeinsam', 'klipquelle.js')
+MODUL = Jsmodul("gemeinsam", "klipquelle.js")
 
 SKRIPT = """
 const { Klipquelle } = await import(MODUL);
@@ -73,27 +74,26 @@ console.log(JSON.stringify({ok: true}));
 
 
 class KlipquelleTest(SimpleTestCase):
-
     databases = set()
 
     def test_ein_clip_fuer_alle_wartenden(self):
-        self.assertEqual(MODUL.laufen(SKRIPT), {'ok': True})
+        self.assertEqual(MODUL.laufen(SKRIPT), {"ok": True})
 
 
 class DasDrahtformat(SimpleTestCase):
-    u"""Wer meldet, wer holt, wer nimmt das Versprechen an."""
+    """Wer meldet, wer holt, wer nimmt das Versprechen an."""
 
     databases = set()
 
     def quelle(self, *teile):
-        return STATIK.joinpath(*teile).read_text(encoding='utf-8')
+        return STATIK.joinpath(*teile).read_text(encoding="utf-8")
 
     def test_die_figur_meldet_ihren_clip_und_ihr_scheitern(self):
-        text = self.quelle('viewer', 'result_character', 'bvh_animation.js')
-        self.assertIn('Klipquelle.melden(clip)', text)
-        self.assertIn('Klipquelle.scheitern(err)', text)
+        text = self.quelle("viewer", "result_character", "bvh_animation.js")
+        self.assertIn("Klipquelle.melden(clip)", text)
+        self.assertIn("Klipquelle.scheitern(err)", text)
 
     def test_der_einstieg_laesst_niemanden_ewig_warten(self):
-        text = self.quelle('viewer', 'result_character', 'index.js')
-        self.assertIn('if (!Klipquelle.gemeldet)', text)
-        self.assertIn('Klipquelle.scheitern(', text)
+        text = self.quelle("viewer", "result_character", "index.js")
+        self.assertIn("if (!Klipquelle.gemeldet)", text)
+        self.assertIn("Klipquelle.scheitern(", text)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Was das Addon nach dem Laden TUT: Zustand, Pfade, Panels.
+"""Was das Addon nach dem Laden TUT: Zustand, Pfade, Panels.
 
 Drei Fehlerklassen, die ein Import-Test NICHT findet — er laedt das
 Modul ja erfolgreich:
@@ -25,6 +25,7 @@ BDD - GEGEBEN / DANN
     DieProjektpfade    ... jede Wurzel zeigt auf ein echtes Verzeichnis
     DieErzeugtenPanels ... 36 Panels, verschachtelt, jedes zeichnet
 """
+
 import ast
 import importlib
 from pathlib import Path
@@ -34,7 +35,7 @@ from .blenderattrappe import Blenderattrappe
 
 
 class DerGeteilteZustand(Addonbasis):
-    u"""Der Anzeigezustand ist EINER — ueber alle Bauteile hinweg.
+    """Der Anzeigezustand ist EINER — ueber alle Bauteile hinweg.
 
     Beim Aufteilen von `ui.py` (2.194 Zeilen) wanderten dreizehn
     Modulvariablen in `ui_teile/zustand.py`. Sie wurden vorher mit
@@ -48,30 +49,26 @@ class DerGeteilteZustand(Addonbasis):
     #: Module, die den Anzeigezustand halten. `zeichnen_koerper` stand
     #: hier bis zum 01.09.2026; seither zeichnet `wahlknopf` den
     #: Umschalter fuer BEIDE Panels, und nur der liest den Zustand.
-    HALTER = ("HumanBodyBlender.ui_teile.teilewahl",
-              "HumanBodyBlender.ui_teile.wahlknopf")
+    HALTER = ("HumanBodyBlender.ui_teile.teilewahl", "HumanBodyBlender.ui_teile.wahlknopf")
 
     def test_was_ein_bauteil_setzt_sieht_das_andere(self):
         with Blenderattrappe():
-            zustand = importlib.import_module(
-                "HumanBodyBlender.ui_teile.zustand").Anzeigezustand
-            halter = [importlib.import_module(n)
-                      for n in DerGeteilteZustand.HALTER]
+            zustand = importlib.import_module("HumanBodyBlender.ui_teile.zustand").Anzeigezustand
+            halter = [importlib.import_module(n) for n in DerGeteilteZustand.HALTER]
             self.assertTrue(halter, "kein Modul haelt den Zustand mehr")
             vorher = zustand.wahl_laeuft
             try:
                 zustand.wahl_laeuft = True
                 for modul in halter:
-                    self.assertIs(modul.Anzeigezustand, zustand,
-                                  "%s hat eine EIGENE Kopie" % modul.__name__)
-                    self.assertTrue(modul.Anzeigezustand.wahl_laeuft,
-                                    "%s sieht die Aenderung nicht"
-                                    % modul.__name__)
+                    self.assertIs(modul.Anzeigezustand, zustand, "%s hat eine EIGENE Kopie" % modul.__name__)
+                    self.assertTrue(
+                        modul.Anzeigezustand.wahl_laeuft, "%s sieht die Aenderung nicht" % modul.__name__
+                    )
             finally:
                 zustand.wahl_laeuft = vorher
 
     def test_kein_global_mehr_auf_den_umgezogenen_namen(self):
-        u"""Sabotageschutz: Ein zurueckgekehrtes `global` faellt auf.
+        """Sabotageschutz: Ein zurueckgekehrtes `global` faellt auf.
 
         UEBER DEN SYNTAXBAUM, NICHT UEBER ZEILEN: Der erste Wurf las
         Text und schlug in `zustand.py` an — dort stehen die alten
@@ -79,21 +76,25 @@ class DerGeteilteZustand(Addonbasis):
         mehr gibt. Ein `ast.Global`-Knoten ist Code; eine Zeile, die so
         aussieht, muss keiner sein.
         """
-        alt = {"_pick_mode_active", "_hovered_category", "_zone_tris",
-               "_expanded_categories", "_draw_handler", "_updating"}
+        alt = {
+            "_pick_mode_active",
+            "_hovered_category",
+            "_zone_tris",
+            "_expanded_categories",
+            "_draw_handler",
+            "_updating",
+        }
         gefunden = []
         for pfad in sorted((ADDON / "ui_teile").glob("*.py")):
             baum = ast.parse(pfad.read_text(encoding="utf-8"))
             for knoten in ast.walk(baum):
                 if isinstance(knoten, ast.Global) and alt & set(knoten.names):
-                    gefunden.append("%s:%d %s"
-                                    % (pfad.name, knoten.lineno,
-                                       ", ".join(knoten.names)))
+                    gefunden.append("%s:%d %s" % (pfad.name, knoten.lineno, ", ".join(knoten.names)))
         self.assertEqual(gefunden, [])
 
 
 class DieProjektpfade(Addonbasis):
-    u"""Die Datenwurzeln zeigen auf echte Verzeichnisse.
+    """Die Datenwurzeln zeigen auf echte Verzeichnisse.
 
     DIESER TEST HAT EINEN GRUND (01.09.2026): Sechs Dateien im Addon
     berechneten ihre Wurzel selbst, als
@@ -109,25 +110,24 @@ class DieProjektpfade(Addonbasis):
 
     def test_jede_wurzel_gibt_es(self):
         with Blenderattrappe():
-            pfade = importlib.import_module(
-                "HumanBodyBlender.pfade").Projektpfade
-            fehlt = [name for name in ("tools", "humanbody", "daten",
-                                       "bvh", "assets", "webapp")
-                     if not Path(getattr(pfade, name)()).is_dir()]
+            pfade = importlib.import_module("HumanBodyBlender.pfade").Projektpfade
+            fehlt = [
+                name
+                for name in ("tools", "humanbody", "daten", "bvh", "assets", "webapp")
+                if not Path(getattr(pfade, name)()).is_dir()
+            ]
         self.assertEqual(fehlt, [], "Wurzeln zeigen ins Leere: %s" % fehlt)
 
     def test_der_bvh_katalog_findet_dateien(self):
-        u"""Die Probe aufs Exempel: Im BVH-Verzeichnis liegen Dateien."""
+        """Die Probe aufs Exempel: Im BVH-Verzeichnis liegen Dateien."""
         with Blenderattrappe():
-            katalog = importlib.import_module(
-                "HumanBodyBlender.anim.katalog")
+            katalog = importlib.import_module("HumanBodyBlender.anim.katalog")
             ordner = Path(katalog._BVH_DIR)
             self.assertTrue(ordner.is_dir(), katalog._BVH_DIR)
-            self.assertTrue(any(ordner.rglob("*.bvh")),
-                            "keine BVH-Datei unter %s" % ordner)
+            self.assertTrue(any(ordner.rglob("*.bvh")), "keine BVH-Datei unter %s" % ordner)
 
     def test_niemand_rechnet_die_wurzel_selbst_aus(self):
-        u"""Sabotageschutz: eine neue `dirname`-Kette faellt auf."""
+        """Sabotageschutz: eine neue `dirname`-Kette faellt auf."""
         kette = "dirname(os.path.dirname("
         gefunden = []
         for name in self.eigene_module():
@@ -138,17 +138,14 @@ class DieProjektpfade(Addonbasis):
                 pfad = ADDON.joinpath(*teile) / "__init__.py"
             if not pfad.is_file() or pfad.name == "pfade.py":
                 continue
-            for nummer, zeile in enumerate(
-                    pfad.read_text(encoding="utf-8").splitlines(), 1):
+            for nummer, zeile in enumerate(pfad.read_text(encoding="utf-8").splitlines(), 1):
                 if kette in zeile and not zeile.strip().startswith("#"):
                     gefunden.append("%s:%d" % (pfad.name, nummer))
-        self.assertEqual(gefunden, [],
-                         "Wurzel selbst gerechnet statt `pfade.py`: %s"
-                         % gefunden)
+        self.assertEqual(gefunden, [], "Wurzel selbst gerechnet statt `pfade.py`: %s" % gefunden)
 
 
 class DieErzeugtenPanels(Addonbasis):
-    u"""36 Panel-Klassen aus 18 Bereichen — vollstaendig und verschachtelt.
+    """36 Panel-Klassen aus 18 Bereichen — vollstaendig und verschachtelt.
 
     `ui.py` schrieb sie einzeln aus: 540 Zeilen, in denen 54 Werte
     steckten, und zwei Saetze desselben (N-Leiste und
@@ -174,42 +171,37 @@ class DieErzeugtenPanels(Addonbasis):
 
     def test_jedes_kind_findet_sein_elternpanel(self):
         panels = self.panels()
-        verwaist = [n for n, k in panels.items()
-                    if getattr(k, "bl_parent_id", None)
-                    and k.bl_parent_id not in panels]
+        verwaist = [
+            n for n, k in panels.items() if getattr(k, "bl_parent_id", None) and k.bl_parent_id not in panels
+        ]
         self.assertEqual(verwaist, [])
 
     def test_genau_zwei_wurzeln(self):
-        u"""Eine je Ort — alles andere haengt darunter."""
-        wurzeln = sorted(n for n, k in self.panels().items()
-                         if not getattr(k, "bl_parent_id", None))
-        self.assertEqual(wurzeln, ["HUMANBODY_PT_main",
-                                   "HUMANBODY_PT_props_main"])
+        """Eine je Ort — alles andere haengt darunter."""
+        wurzeln = sorted(n for n, k in self.panels().items() if not getattr(k, "bl_parent_id", None))
+        self.assertEqual(wurzeln, ["HUMANBODY_PT_main", "HUMANBODY_PT_props_main"])
 
     def test_die_verschachtelung_ist_nicht_flach(self):
-        u"""Fuenf Panels haengen unter `wardrobe`, nicht unter `main`."""
+        """Fuenf Panels haengen unter `wardrobe`, nicht unter `main`."""
         panels = self.panels()
-        unter_garderobe = [n for n, k in panels.items()
-                           if getattr(k, "bl_parent_id", "").endswith(
-                               "_wardrobe")]
+        unter_garderobe = [
+            n for n, k in panels.items() if getattr(k, "bl_parent_id", "").endswith("_wardrobe")
+        ]
         self.assertEqual(len(unter_garderobe), 10, unter_garderobe)
 
     def test_beide_saetze_fuehren_dieselben_bereiche(self):
         panels = self.panels()
-        leiste = {n[len("HUMANBODY_PT_"):] for n in panels
-                  if not n.startswith("HUMANBODY_PT_props_")}
-        eigen = {n[len("HUMANBODY_PT_props_"):] for n in panels
-                 if n.startswith("HUMANBODY_PT_props_")}
+        leiste = {n[len("HUMANBODY_PT_") :] for n in panels if not n.startswith("HUMANBODY_PT_props_")}
+        eigen = {n[len("HUMANBODY_PT_props_") :] for n in panels if n.startswith("HUMANBODY_PT_props_")}
         self.assertEqual(leiste, eigen)
 
     def test_jedes_panel_zeichnet_etwas(self):
-        u"""Ein Panel ohne `draw` waere leer — und faellt sonst nicht auf.
+        """Ein Panel ohne `draw` waere leer — und faellt sonst nicht auf.
 
         Gefragt wird `vars(k)`, nicht `getattr(k, 'draw', None)`: Der
         Erzeuger MUSS jedem Panel ein eigenes `draw` mitgeben. Ein von
         `bpy.types.Panel` geerbtes wuerde die schwaechere Frage bestehen
         und zeichnete doch nichts.
         """
-        ohne = [n for n, k in self.panels().items()
-                if not callable(vars(k).get('draw'))]
+        ohne = [n for n, k in self.panels().items() if not callable(vars(k).get("draw"))]
         self.assertEqual(ohne, [])

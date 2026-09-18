@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Effekte — Sekundaerbewegung auf einer BVH-Bewegung (Kleid, Wind, Figur).
+"""Effekte — Sekundaerbewegung auf einer BVH-Bewegung (Kleid, Wind, Figur).
 
 Drei Teile: `effekte/` ist reines Python (Parameter, BVH-Namen) und wird
 von Django wie von den Unterprozessen importiert; `effekte/blender/` braucht

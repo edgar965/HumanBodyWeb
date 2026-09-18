@@ -24,6 +24,7 @@ lippenrand"). Das Feld entsteht am Basisnetz und geht durch den Unterteiler.
 Nur lesen: Weder `HumanBody/data` noch die MB-Lab-Texturen werden
 geschrieben.
 """
+
 import logging
 from pathlib import Path
 
@@ -39,8 +40,7 @@ class Lippenmaske:
     """Lippenpunkte eines Netzes aus der MB-Lab-Maske an seinen UVs."""
 
     #: Maske je Geschlecht, relativ zu `ordner()`.
-    DATEI = {'female': 'human_female_lipmap.png',
-             'male': 'human_male_lipmap.png'}
+    DATEI = {"female": "human_female_lipmap.png", "male": "human_male_lipmap.png"}
     #: Ab diesem Maskenwert (0..255) gilt ein Punkt als Lippe.
     SCHWELLE = 128
 
@@ -53,7 +53,7 @@ class Lippenmaske:
     @classmethod
     def ordner(cls):
         """Die MB-Lab-Texturen liegen im Werkzeugordner, nicht in HumanBody/data."""
-        return Path(settings.TOOLS_ROOT) / 'tools' / 'MB-Lab' / 'data' / 'textures'
+        return Path(settings.TOOLS_ROOT) / "tools" / "MB-Lab" / "data" / "textures"
 
     @classmethod
     def indizes(cls, geschlecht, uvs, unterteiler=None):
@@ -73,15 +73,15 @@ class Lippenmaske:
             return cls._gemerkt[schluessel]
         aus = []
         cls._saum[schluessel] = None
-        datei = cls.ordner() / cls.DATEI.get(geschlecht, '')
+        datei = cls.ordner() / cls.DATEI.get(geschlecht, "")
         if uvs is not None and datei.is_file():
             roh = cls.aus_uvs(np.asarray(uvs), cls.maske(datei))
             aus = cls.beschnitten(roh, len(uvs), geschlecht, unterteiler)
-            logger.info('Lippenmaske (%s): %d Punkte aus %s (roh %d)', geschlecht,
-                        len(aus), datei.name, len(roh))
+            logger.info(
+                "Lippenmaske (%s): %d Punkte aus %s (roh %d)", geschlecht, len(aus), datei.name, len(roh)
+            )
         else:
-            logger.warning('Lippenmaske (%s): keine Maske unter %s oder '
-                           'keine UVs', geschlecht, datei)
+            logger.warning("Lippenmaske (%s): keine Maske unter %s oder keine UVs", geschlecht, datei)
         cls._gemerkt[schluessel] = aus
         return aus
 
@@ -94,8 +94,9 @@ class Lippenmaske:
     def maske(datei):
         """Das Maskenbild als Graustufen-Feld (H, W), 0..255."""
         from PIL import Image
+
         with Image.open(datei) as bild:
-            return np.asarray(bild.convert('L'))
+            return np.asarray(bild.convert("L"))
 
     @classmethod
     def aus_uvs(cls, uvs, maske):
@@ -118,10 +119,10 @@ class Lippenmaske:
         vorher je Dreieck.
         """
         punkte = cls.indizes(geschlecht, uvs, unterteiler)
-        aus = {'punkte': punkte}
+        aus = {"punkte": punkte}
         saum = cls._saum.get(cls.schluessel(geschlecht, uvs))
         if saum:
-            aus['saum'] = saum
+            aus["saum"] = saum
         return aus
 
     @classmethod
@@ -135,14 +136,18 @@ class Lippenmaske:
         """
         abstand = Lippenrand.abstand(geschlecht, unterteiler)
         if abstand is None or len(abstand) != anzahl:
-            logger.warning('Lippenmaske (%s): kein Lippenrand (%s zu %d UVs), '
-                           'Maske bleibt roh', geschlecht,
-                           None if abstand is None else len(abstand), anzahl)
+            logger.warning(
+                "Lippenmaske (%s): kein Lippenrand (%s zu %d UVs), Maske bleibt roh",
+                geschlecht,
+                None if abstand is None else len(abstand),
+                anzahl,
+            )
             return roh.tolist()
         saum = np.flatnonzero(np.abs(abstand) < cls.SAUM_MM)
         cls._saum[(geschlecht, anzahl)] = {
-            'punkte': saum.tolist(),
-            'abstand': np.round(abstand[saum], 2).tolist()}
+            "punkte": saum.tolist(),
+            "abstand": np.round(abstand[saum], 2).tolist(),
+        }
         return np.flatnonzero(abstand > 0).tolist()
 
     @classmethod
@@ -150,9 +155,9 @@ class Lippenmaske:
         """Die Punkte des Basiskörpers dieses Geschlechts — unterteilt, wenn ein Unterteiler mitkommt."""
         from humanbody_core import CharacterState
         from .charakterdaten import Charakterdaten
-        zustand = CharacterState(Charakterdaten.morphdaten(),
-                                 Charakterdaten.voreinstellungen())
-        zustand.set_body_type('Male_Caucasian' if geschlecht == 'male' else 'Female_Caucasian')
+
+        zustand = CharacterState(Charakterdaten.morphdaten(), Charakterdaten.voreinstellungen())
+        zustand.set_body_type("Male_Caucasian" if geschlecht == "male" else "Female_Caucasian")
         punkte = zustand.compute()
         if punkte is None or unterteiler is None:
             return punkte

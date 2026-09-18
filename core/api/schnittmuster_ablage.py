@@ -41,24 +41,22 @@ class Schnittmusterablage:
         Der Ablauf steht in `api/musterablage.Musterablage`; hier bleiben die
         Statuscodes, weil nur die Ansicht antwortet.
         """
-        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
+        rumpf, fehler = Anfragerumpf.lesen(request, "Invalid JSON body")
         if fehler:
             return fehler
         ablage = Musterablage(rumpf)
         einwand = ablage.fehler()
         if einwand:
-            return JsonResponse({'error': einwand}, status=400)
+            return JsonResponse({"error": einwand}, status=400)
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({'error': 'Failed to compute mesh'},
-                                status=500)
-        ergebnis = ablage.netz(np.asarray(koerper.vertices, dtype=np.float64),
-                               koerper.faces, koerper.geschlecht)
+            return JsonResponse({"error": "Failed to compute mesh"}, status=500)
+        ergebnis = ablage.netz(
+            np.asarray(koerper.vertices, dtype=np.float64), koerper.faces, koerper.geschlecht
+        )
         if ergebnis is None:
-            return JsonResponse(
-                {'error': 'Could not generate mesh from pattern'}, status=400)
-        return JsonResponse({'ok': True,
-                             'garment_id': ablage.ablegen(ergebnis)})
+            return JsonResponse({"error": "Could not generate mesh from pattern"}, status=400)
+        return JsonResponse({"ok": True, "garment_id": ablage.ablegen(ergebnis)})
 
     @staticmethod
     @require_GET
@@ -67,20 +65,20 @@ class Schnittmusterablage:
 
         Abfrageparameter: garment_id (z. B. 'custom/my_pattern')
         """
-        kennung = request.GET.get('garment_id', '')
+        kennung = request.GET.get("garment_id", "")
         if not kennung:
-            return JsonResponse({'error': 'garment_id required'}, status=400)
+            return JsonResponse({"error": "garment_id required"}, status=400)
         pfad = Schnittmusterablage._beschreibungspfad(kennung)
         if pfad is None:
-            return JsonResponse({'error': 'Invalid garment_id'}, status=400)
+            return JsonResponse({"error": "Invalid garment_id"}, status=400)
         if not os.path.isfile(pfad):
-            return JsonResponse({'error': 'No specification found'}, status=404)
+            return JsonResponse({"error": "No specification found"}, status=404)
         try:
-            with open(pfad, 'r', encoding='utf-8') as datei:
-                return JsonResponse({'ok': True, 'pattern': json.load(datei)})
+            with open(pfad, "r", encoding="utf-8") as datei:
+                return JsonResponse({"ok": True, "pattern": json.load(datei)})
         except (json.JSONDecodeError, IOError) as fehler:
-            logger.exception('pattern_specification: JSONDecodeError/IOError')
-            return JsonResponse({'error': str(fehler)}, status=500)
+            logger.exception("pattern_specification: JSONDecodeError/IOError")
+            return JsonResponse({"error": str(fehler)}, status=500)
 
     @staticmethod
     def _beschreibungspfad(kennung):
@@ -97,17 +95,15 @@ class Schnittmusterablage:
         Schaden ist also klein — aber die Pruefung soll halten, was sie
         verspricht. Deshalb dieselbe Enthaltenspruefung wie in SafePath.
         """
-        if '..' in kennung:
+        if ".." in kennung:
             return None
         wurzel = Path(str(settings.HUMANBODY_GARMENT_LIBRARY_DIR)).resolve()
         try:
-            ziel = (wurzel / kennung / 'specification.json').resolve()
-        except (OSError, ValueError):
-            logger.warning('pattern_specification: Kennung nicht aufloesbar: '
-                           '%s', kennung, exc_info=True)
+            ziel = (wurzel / kennung / "specification.json").resolve()
+        except OSError, ValueError:
+            logger.warning("pattern_specification: Kennung nicht aufloesbar: %s", kennung, exc_info=True)
             return None
         if not (ziel == wurzel or ziel.is_relative_to(wurzel)):
-            logger.warning('pattern_specification: Pfad ausserhalb der '
-                           'Bibliothek: %s', ziel)
+            logger.warning("pattern_specification: Pfad ausserhalb der Bibliothek: %s", ziel)
             return None
         return str(ziel)

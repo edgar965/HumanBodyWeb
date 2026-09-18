@@ -19,7 +19,7 @@ import numpy as np
 class Anpassungsergebnis:
     """Vertices, Dreiecke, Normalen und Farbe eines angepassten Kleidungsstuecks."""
 
-    __slots__ = ('vertices', 'faces', 'normals', 'color', 'weiteres')
+    __slots__ = ("vertices", "faces", "normals", "color", "weiteres")
 
     def __init__(self, vertices, faces, normals, color, weiteres=None):
         self.vertices = vertices
@@ -36,9 +36,10 @@ class Anpassungsergebnis:
             return None
         if isinstance(daten, cls):
             return daten
-        bekannt = ('vertices', 'faces', 'normals', 'color')
-        return cls(*(daten.get(k) for k in bekannt),
-                   weiteres={k: v for k, v in daten.items() if k not in bekannt})
+        bekannt = ("vertices", "faces", "normals", "color")
+        return cls(
+            *(daten.get(k) for k in bekannt), weiteres={k: v for k, v in daten.items() if k not in bekannt}
+        )
 
     @property
     def vertexzahl(self):

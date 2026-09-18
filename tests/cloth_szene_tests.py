@@ -8,13 +8,14 @@ Zeilen und
 eine Klasse mit ueber 300 — Befund `dateigroesse`. Gemeinsame Importe und
 Fixtures stehen in `_cloth_basis.py`.
 """
+
 from .base import TestCategory
 from ._cloth_basis import Clothbasis
 
 
 class ClothSzeneTests(TestCategory):
-    name = 'Cloth Export: Szene und Aufteilung'
-    description = 'SceneInput als .npz und das Aufteilen in Rigid- und Stoffteile'
+    name = "Cloth Export: Szene und Aufteilung"
+    description = "SceneInput als .npz und das Aufteilen in Rigid- und Stoffteile"
 
     @staticmethod
     def test_scene_input_save_npz_creates_file_on_disk():
@@ -22,7 +23,7 @@ class ClothSzeneTests(TestCategory):
         r = Clothbasis.npz_rundlauf()
         if r.fehler:
             return False, r.fehler
-        return bool(r.exists), 'Datei vorhanden'
+        return bool(r.exists), "Datei vorhanden"
 
     @staticmethod
     def test_scene_npz_roundtrip_preserves_rigid_vertex_count():
@@ -54,7 +55,7 @@ class ClothSzeneTests(TestCategory):
         r = Clothbasis.npz_rundlauf()
         if r.fehler:
             return False, r.fehler
-        return r.scene_name == 'unit_test_scene', r.scene_name
+        return r.scene_name == "unit_test_scene", r.scene_name
 
     @staticmethod
     def test_scene_npz_roundtrip_preserves_cloth_segment_bone_name():
@@ -62,7 +63,7 @@ class ClothSzeneTests(TestCategory):
         r = Clothbasis.npz_rundlauf()
         if r.fehler:
             return False, r.fehler
-        return r.seg_bone == 'DEF-spine', r.seg_bone
+        return r.seg_bone == "DEF-spine", r.seg_bone
 
     @staticmethod
     def test_mesh_splitter_keeps_only_spine_vertices_in_rigid_body():
@@ -88,7 +89,7 @@ class ClothSzeneTests(TestCategory):
         r = Clothbasis.aufteilung()
         if r.fehler:
             return False, r.fehler
-        return r.cloth0_bone == 'DEF-skirt', r.cloth0_bone
+        return r.cloth0_bone == "DEF-skirt", r.cloth0_bone
 
     @staticmethod
     def test_mesh_splitter_extracts_all_three_skirt_vertices():

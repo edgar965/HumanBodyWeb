@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Das Video der Ergebnisseite passt ganz ins Feld — auch im Hochformat.
+"""Das Video der Ergebnisseite passt ganz ins Feld — auch im Hochformat.
 
 WARUM (12.09.2026, Edgar: „ich möchte das ganze Video links oben sehen, es
 wird abgeschnitten unten"): `.video-overlay-wrapper` ist ein Flex-Kind der
@@ -10,6 +10,7 @@ einer 1080×1920-Leinwand an Stelle des Videos: 503 px abgeschnitten, mit
 `min-height: 0` keiner. Der Block liegt seither in `ergebnisvideo.css`
 (style.css war 1447 Zeilen).
 """
+
 import re
 from pathlib import Path
 
@@ -17,30 +18,29 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 BASIS = Path(settings.BASE_DIR)
-CSS = BASIS / 'static' / 'css' / 'ergebnisvideo.css'
-SEITEN = ('job_result.html', 'standalone_result.html')
+CSS = BASIS / "static" / "css" / "ergebnisvideo.css"
+SEITEN = ("job_result.html", "standalone_result.html")
 
 
 class DasErgebnisvideo(SimpleTestCase):
-
     def test_der_wrapper_darf_unter_den_inhalt_schrumpfen(self):
-        css = CSS.read_text(encoding='utf-8')
-        self.assertIn('min-height: 0', DasErgebnisvideo.regel(css, '.video-overlay-wrapper'))
-        self.assertIn('object-fit: contain', DasErgebnisvideo.regel(css, '.video-overlay-wrapper video'))
+        css = CSS.read_text(encoding="utf-8")
+        self.assertIn("min-height: 0", DasErgebnisvideo.regel(css, ".video-overlay-wrapper"))
+        self.assertIn("object-fit: contain", DasErgebnisvideo.regel(css, ".video-overlay-wrapper video"))
 
     def test_beide_ergebnisseiten_binden_die_datei_ein(self):
         for name in SEITEN:
             with self.subTest(seite=name):
-                html = (BASIS / 'templates' / name).read_text(encoding='utf-8')
+                html = (BASIS / "templates" / name).read_text(encoding="utf-8")
                 self.assertIn("{% fassungspfad 'css/ergebnisvideo.css' %}", html)
-                self.assertIn('{% load fassung %}', html)
+                self.assertIn("{% load fassung %}", html)
 
     def test_style_css_fuehrt_den_block_nicht_mehr(self):
-        css = (BASIS / 'static' / 'css' / 'style.css').read_text(encoding='utf-8')
-        self.assertEqual(DasErgebnisvideo.regel(css, '.video-overlay-wrapper'), '')
-        self.assertEqual(DasErgebnisvideo.regel(css, '.skeleton-overlay'), '')
+        css = (BASIS / "static" / "css" / "style.css").read_text(encoding="utf-8")
+        self.assertEqual(DasErgebnisvideo.regel(css, ".video-overlay-wrapper"), "")
+        self.assertEqual(DasErgebnisvideo.regel(css, ".skeleton-overlay"), "")
 
     @staticmethod
     def regel(css, selektor):
-        treffer = re.search(r'^' + re.escape(selektor) + r'\s*\{([^}]*)\}', css, re.M)
-        return treffer.group(1) if treffer else ''
+        treffer = re.search(r"^" + re.escape(selektor) + r"\s*\{([^}]*)\}", css, re.M)
+        return treffer.group(1) if treffer else ""

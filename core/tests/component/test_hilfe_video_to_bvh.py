@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Hilfe -> Video to BVH: die Seite antwortet, traegt alle Pipelines und ist
+"""Hilfe -> Video to BVH: die Seite antwortet, traegt alle Pipelines und ist
 eine djangoBase-Tabelle.
 
 Wie bei Hilfe -> Kleidung gilt beides: Die eigene Seite unter `/hilfe/`
@@ -11,6 +11,7 @@ nur dann bindet `tabellen_auto.js` Sortierung und Spaltenbreiten. Und wo
 ein Wert fehlt, steht „nicht gemessen", keine leere Zelle: Eine leere
 Zelle saehe aus wie „alles gut".
 """
+
 from django.test import Client, SimpleTestCase
 
 from core.dienste.pipelinevergleich import Pipelinevergleich
@@ -18,9 +19,8 @@ from core.models import BVHJob
 
 
 class DieSeite(SimpleTestCase):
-
     databases = set()
-    ADRESSE = '/hilfe/video-to-bvh/'
+    ADRESSE = "/hilfe/video-to-bvh/"
 
     def setUp(self):
         self.client = Client()
@@ -28,20 +28,20 @@ class DieSeite(SimpleTestCase):
     def _text(self):
         antwort = self.client.get(self.ADRESSE)
         self.assertEqual(antwort.status_code, 200)
-        return antwort.content.decode('utf-8')
+        return antwort.content.decode("utf-8")
 
     def test_die_seite_antwortet_mit_200(self):
         self._text()
 
     def test_djangobase_seiten_bleiben_erreichbar(self):
-        self.assertEqual(self.client.get('/hilfe/versionen/').status_code, 200)
+        self.assertEqual(self.client.get("/hilfe/versionen/").status_code, 200)
 
     def test_nennt_jede_pipeline_mit_dem_namen_aus_dem_modell(self):
         text = self._text()
         for schluessel, name in BVHJob.PIPELINE_CHOICES:
             with self.subTest(pipeline=schluessel):
                 self.assertIn(name, text)
-                self.assertIn('>%s<' % schluessel, text)
+                self.assertIn(">%s<" % schluessel, text)
 
     def test_die_tabelle_ist_eine_djangobase_tabelle(self):
         text = self._text()
@@ -53,24 +53,27 @@ class DieSeite(SimpleTestCase):
 
     def test_fehlende_werte_stehen_ausgeschrieben_da(self):
         text = self._text()
-        fehlt = any(e[f] is None for e in Pipelinevergleich.alle()
-                    for f in ('dauer_s', 'ueberlagerung_px', 'ruhe_wurzel'))
-        self.assertEqual('nicht gemessen' in text, fehlt)
+        fehlt = any(
+            e[f] is None
+            for e in Pipelinevergleich.alle()
+            for f in ("dauer_s", "ueberlagerung_px", "ruhe_wurzel")
+        )
+        self.assertEqual("nicht gemessen" in text, fehlt)
 
     def test_jeder_rang_steht_in_der_tabelle_und_ohne_rang_heisst_so(self):
         text = self._text()
         for e in Pipelinevergleich.mit_rang():
-            self.assertIn('data-sort="%d"' % e['rang'], text)
+            self.assertIn('data-sort="%d"' % e["rang"], text)
         ohne = len(Pipelinevergleich.alle()) - len(Pipelinevergleich.mit_rang())
-        self.assertIn('Rang 1 bis %d' % len(Pipelinevergleich.mit_rang()), text)
-        self.assertEqual(text.count('>ohne Rang<'), ohne)
+        self.assertIn("Rang 1 bis %d" % len(Pipelinevergleich.mit_rang()), text)
+        self.assertEqual(text.count(">ohne Rang<"), ohne)
 
     def test_jeder_rang_nennt_sein_video_und_das_gesicht_ist_erklaert(self):
         text = self._text()
         for e in Pipelinevergleich.mit_rang():
-            self.assertIn('<code>%s</code>' % e['video'], text)
-        self.assertIn('72', text)
-        self.assertIn('SMPLest-X', text)
+            self.assertIn("<code>%s</code>" % e["video"], text)
+        self.assertIn("72", text)
+        self.assertIn("SMPLest-X", text)
 
     def test_der_menuepunkt_zeigt_auf_die_seite(self):
         self.assertIn('href="/hilfe/video-to-bvh/"', self._text())

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Umapythonfiguren — gebaute UMA-Figuren im Prozess halten.
+"""Umapythonfiguren — gebaute UMA-Figuren im Prozess halten.
 
 WARUM (Edgar, 08.09.2026: „Beim Modell UMA Python habe ich immer noch keine
 Portierung. Ich moechte doch ein Male, Female, Elf usw. auswaehlen, genau so
@@ -20,18 +20,19 @@ zweimal, und der langsamere ueberschreibt den anderen. Dieselbe Regel wie
 bei `Kleiderbibliothek` (18.08.2026) und `Charakterdaten` (16.08.2026):
 erst bauen, dann sichtbar machen, alles unter einem Schloss.
 """
+
 import logging
 import threading
 
 from django.conf import settings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
-__all__ = ['Umapythonfiguren']
+__all__ = ["Umapythonfiguren"]
 
 
 class Umapythonfiguren:
-    u"""Zugriff auf `UMA_Python.Figur`, je Rasse einmal gebaut."""
+    """Zugriff auf `UMA_Python.Figur`, je Rasse einmal gebaut."""
 
     #: Wieviele Rassen gleichzeitig gehalten werden. Eine Figur belegt
     #: gemessen rund 16.000 Punkte mit fuenf Gewichten — ein paar Megabyte.
@@ -39,7 +40,7 @@ class Umapythonfiguren:
     PLAETZE = 3
 
     _schloss = threading.RLock()
-    _gebaut = {}          # rasse -> Gebaut
+    _gebaut = {}  # rasse -> Gebaut
     _reihenfolge = []
     _figur = None
 
@@ -47,29 +48,30 @@ class Umapythonfiguren:
 
     @classmethod
     def figur(cls):
-        u"""Der Zugang zum UMA-Projekt (Katalog und GUID-Index)."""
+        """Der Zugang zum UMA-Projekt (Katalog und GUID-Index)."""
         if cls._figur is None:
             with cls._schloss:
                 if cls._figur is None:
                     from UMA_Python import Figur
+
                     cls._figur = Figur(cls.projekt())
         return cls._figur
 
     @staticmethod
     def projekt():
-        u"""Das Unity-Projekt. Aus den Settings, nie eingetippt."""
+        """Das Unity-Projekt. Aus den Settings, nie eingetippt."""
         return settings.UMA_PROJEKT
 
     @classmethod
     def rassen(cls):
-        u"""Die Rassennamen, wie der Katalog sie fuehrt."""
+        """Die Rassennamen, wie der Katalog sie fuehrt."""
         return cls.figur().rassen()
 
     # -------------------------------------------------------------- Bauen
 
     @classmethod
     def bauen(cls, rasse, kleidung=None):
-        u"""Die gebaute Figur einer Rasse — beim ersten Mal gerechnet."""
+        """Die gebaute Figur einer Rasse — beim ersten Mal gerechnet."""
         with cls._schloss:
             vorhanden = cls._gebaut.get(rasse)
             if vorhanden is not None:
@@ -80,8 +82,12 @@ class Umapythonfiguren:
             cls._gebaut[rasse] = gebaut
             cls._vormerken(rasse)
             cls._aufraeumen()
-        logger.info('UMA Python: %s gebaut (%d Punkte, %d Knochen)',
-                    rasse, len(gebaut.netz.punkte), len(gebaut.netz.knochen))
+        logger.info(
+            "UMA Python: %s gebaut (%d Punkte, %d Knochen)",
+            rasse,
+            len(gebaut.netz.punkte),
+            len(gebaut.netz.knochen),
+        )
         return gebaut
 
     @classmethod
@@ -98,7 +104,7 @@ class Umapythonfiguren:
 
     @classmethod
     def vergessen(cls):
-        u"""Alles verwerfen — fuer Tests und nach einem Asset-Import."""
+        """Alles verwerfen — fuer Tests und nach einem Asset-Import."""
         with cls._schloss:
             cls._gebaut.clear()
             cls._reihenfolge.clear()

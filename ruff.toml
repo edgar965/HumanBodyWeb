@@ -1,0 +1,4 @@
+# ruff: die gemeinsame Vorgabe aus djangoBase (18.09.2026). Abweichungen hier eintragen —
+# Ausnahmen über [lint.extend-per-file-ignores], sonst ersetzen sie die der Vorgabe.
+extend = "A:/shared/djangoBase/djangobase/ruff_vorgabe.toml"
+target-version = "py314"  # der Interpreter des Projekts

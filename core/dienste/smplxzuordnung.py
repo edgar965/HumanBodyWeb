@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Smplxzuordnung — die Zuordnung eines BVH-Formats auf das SMPL-X-Skelett.
+"""Smplxzuordnung — die Zuordnung eines BVH-Formats auf das SMPL-X-Skelett.
 
 Wie `Smplzuordnung` (`humanbody_core/skeleton/formats/smpl_knochen.py`):
 keine neue Tabelle, sondern die Umkehrung der vorhandenen. Die 22
@@ -21,26 +21,30 @@ Grad, mit 82,7). Quelle und Ziel sind bei AIST/SMPL-X dasselbe Skelett.
 from humanbody_core.skeleton.formats.smpl_knochen import DEF_ZU_SMPL
 from humanbody_core.skeleton.formats.smplx import SkeletonSMPLX
 
-__all__ = ['DEF_ZU_SMPLX', 'Smplxzuordnung']
+__all__ = ["DEF_ZU_SMPLX", "Smplxzuordnung"]
 
 
 class Smplxzuordnung:
-    u"""BVH-Format -> SMPL-X-Namen, in der Reihenfolge des Formats."""
+    """BVH-Format -> SMPL-X-Namen, in der Reihenfolge des Formats."""
 
-    LINKS = 'Left_hip'
-    RECHTS = 'Right_hip'
+    LINKS = "Left_hip"
+    RECHTS = "Right_hip"
 
     @staticmethod
     def finger_umgekehrt():
-        u"""``{def_name: smplx_fingername}`` aus der Tabelle des SMPL-X-Formats."""
-        return {defname: bvh
-                for bvh, defname in SkeletonSMPLX.BONE_MAP_TO_RIGIFY.items()
-                if bvh in SkeletonSMPLX.FINGER and defname}
+        """``{def_name: smplx_fingername}`` aus der Tabelle des SMPL-X-Formats."""
+        return {
+            defname: bvh
+            for bvh, defname in SkeletonSMPLX.BONE_MAP_TO_RIGIFY.items()
+            if bvh in SkeletonSMPLX.FINGER and defname
+        }
 
     @staticmethod
     def fuer(format_klasse):
-        return {bvh: (DEF_ZU_SMPLX.get(defname) if defname else None)
-                for bvh, defname in format_klasse.BONE_MAP_TO_RIGIFY.items()}
+        return {
+            bvh: (DEF_ZU_SMPLX.get(defname) if defname else None)
+            for bvh, defname in format_klasse.BONE_MAP_TO_RIGIFY.items()
+        }
 
     @staticmethod
     def ausnahmen(format_klasse):
@@ -48,4 +52,4 @@ class Smplxzuordnung:
 
 
 #: Rigify/DEF -> SMPL-X: 22 Koerper + 30 Finger + Kiefer.
-DEF_ZU_SMPLX = {**DEF_ZU_SMPL, **Smplxzuordnung.finger_umgekehrt(), 'DEF-jaw': 'Jaw'}
+DEF_ZU_SMPLX = {**DEF_ZU_SMPL, **Smplxzuordnung.finger_umgekehrt(), "DEF-jaw": "Jaw"}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Figurmerker`: je Figur den Reiter, die Animation und das Kleidungsstück merken.
+"""`Figurmerker`: je Figur den Reiter, die Animation und das Kleidungsstück merken.
 
 WARUM (06.09.2026, Edgar): „Merke dir den letzten Tab und die Auswahl, die ich
 beim letzten Mal hatte, als ich auf einem Modell geklickt habe, und öffne diese
@@ -14,11 +14,12 @@ zurückkommt — sonst wäre er nach einem Reload weg, obwohl die Szene
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'figurmerker.js')
+MODUL = Jsmodul("scene", "figurmerker.js")
 
 #: sessionStorage, so viel davon, wie die Klasse anfasst — mit Mitschrift,
 #: damit der Test sieht, WANN geschrieben wird.
@@ -31,7 +32,9 @@ globalThis.sessionStorage = {
 };
 """
 
-SKRIPT = ABLAGE + """
+SKRIPT = (
+    ABLAGE
+    + """
 const { Figurmerker } = await import(MODUL);
 
 // --- leer: nichts gemerkt, nichts geschrieben -------------------------------
@@ -99,11 +102,11 @@ pruefe('kaputt = leer', Figurmerker.tab('b'), null);
 
 console.log(JSON.stringify({ok: true, schreibungen: geschrieben.length}));
 """
+)
 
 
 class FigurmerkerTest(SimpleTestCase):
-
     def test_merkt_je_figur_und_ueberlebt_den_reload(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertGreater(ausgabe.get('schreibungen', 0), 0)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertGreater(ausgabe.get("schreibungen", 0), 0)

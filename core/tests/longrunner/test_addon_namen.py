@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Kein Name im eigenen Code, den es beim Ausfuehren nicht gibt.
+"""Kein Name im eigenen Code, den es beim Ausfuehren nicht gibt.
 
 DER ANLASS (01.09.2026)
 =======================
@@ -47,6 +47,7 @@ BDD - GEGEBEN / DANN
     JederGeleseneName ... ist an seiner Stelle gebunden
     EineSabotageAmNamen      ... ein erfundener Name wird erkannt
 """
+
 import unittest
 
 from ..unit._namensbindung import Namensbindung
@@ -60,14 +61,14 @@ TOOLS = Projektquellen.TOOLS
 
 
 class JederGeleseneName(unittest.TestCase):
-    u"""Kein Modul liest einen Namen, den es nicht gibt."""
+    """Kein Modul liest einen Namen, den es nicht gibt."""
 
     databases = set()
 
     def test_keiner_ist_unbekannt(self):
         schlecht = []
         for pfad in Projektquellen.dateien():
-            quelle = pfad.read_text(encoding='utf-8', errors='replace')
+            quelle = pfad.read_text(encoding="utf-8", errors="replace")
             try:
                 treffer = Namensbindung.unbekannte(quelle, str(pfad))
             # stumm gewollt: Eine Datei, die sich nicht zerlegen laesst,
@@ -76,17 +77,15 @@ class JederGeleseneName(unittest.TestCase):
             except SyntaxError:
                 continue
             for zeile, name in treffer:
-                schlecht.append('%s:%d %s'
-                                % (pfad.relative_to(TOOLS).as_posix(),
-                                   zeile, name))
-        self.assertEqual(schlecht, [], 'Unbekannte Namen: %s' % schlecht)
+                schlecht.append("%s:%d %s" % (pfad.relative_to(TOOLS).as_posix(), zeile, name))
+        self.assertEqual(schlecht, [], "Unbekannte Namen: %s" % schlecht)
 
     def test_es_werden_ueberhaupt_dateien_geprueft(self):
-        u"""Sabotageschutz: Eine leere Menge bestuende jeden Test."""
+        """Sabotageschutz: Eine leere Menge bestuende jeden Test."""
         self.assertGreater(len(list(Projektquellen.dateien())), 180)
 
     def test_jeder_baum_liegt_da_wo_er_steht(self):
-        u"""Die Zahl oben faellt bei einem verschobenen Ordner nicht auf.
+        """Die Zahl oben faellt bei einem verschobenen Ordner nicht auf.
 
         Sie prueft eine Untergrenze; wer 49 Dateien verliert, bleibt
         darueber. `fehlende()` nennt den Ordner beim Namen.
@@ -95,29 +94,28 @@ class JederGeleseneName(unittest.TestCase):
 
 
 class EineSabotageAmNamen(unittest.TestCase):
-    u"""Die Gegenprobe: Der Test muss rot werden koennen."""
+    """Die Gegenprobe: Der Test muss rot werden koennen."""
 
     databases = set()
 
     def test_ein_erfundener_name_wird_erkannt(self):
-        quelle = 'def f():\n    return _gibtesnicht\n'
-        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'),
-                         [(2, '_gibtesnicht')])
+        quelle = "def f():\n    return _gibtesnicht\n"
+        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [(2, "_gibtesnicht")])
 
     def test_ein_gebundener_name_wird_nicht_gemeldet(self):
-        quelle = '_da = 1\n\n\ndef f():\n    return _da\n'
-        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'), [])
+        quelle = "_da = 1\n\n\ndef f():\n    return _da\n"
+        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [])
 
     def test_eine_blender_beschriftung_ist_kein_name(self):
-        u"""Ohne diese Ausnahme meldete die Pruefung 110 Fehlalarme."""
-        quelle = ('from bpy.props import EnumProperty\n\n\n'
-                  'class P:\n'
-                  '    region: EnumProperty(items=[("HEAD", "Head", "")])\n')
-        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'), [])
+        """Ohne diese Ausnahme meldete die Pruefung 110 Fehlalarme."""
+        quelle = (
+            "from bpy.props import EnumProperty\n\n\n"
+            "class P:\n"
+            '    region: EnumProperty(items=[("HEAD", "Head", "")])\n'
+        )
+        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [])
 
     def test_der_aufruf_in_der_annotation_wird_sehr_wohl_geprueft(self):
-        u"""Ausgenommen sind die BESCHRIFTUNGEN, nicht die ganze Zeile."""
-        quelle = ('class P:\n'
-                  '    region: EnumProperty(items=[("HEAD", "Head", "")])\n')
-        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'),
-                         [(2, 'EnumProperty')])
+        """Ausgenommen sind die BESCHRIFTUNGEN, nicht die ganze Zeile."""
+        quelle = 'class P:\n    region: EnumProperty(items=[("HEAD", "Head", "")])\n'
+        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [(2, "EnumProperty")])

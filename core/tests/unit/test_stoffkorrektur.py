@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Stoffkorrektur`: eingesunkene Stoffpunkte aus dem Koerper holen.
+"""`Stoffkorrektur`: eingesunkene Stoffpunkte aus dem Koerper holen.
 
 WARUM (06.09.2026, Edgar: „das T-Shirt geht IN den Koerper hinein"):
 Die Simulation haelt 2,5 mm Abstand (`body_collision_thickness`), und alles,
@@ -25,20 +25,20 @@ unabhaengig von Morphdaten und Netzdateien.
        naechsten Stoff und ihn hinter ihrer Normale; vorher hob das den Ring
        bis 5,9 mm. Sabotage: `fehlt[seitlich > …] = 0` weg -> rot.
 """
+
 import sys
 
 import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
 
-sys.path.insert(0, str(settings.HUMANBODY_ROOT)) if hasattr(
-    settings, 'HUMANBODY_ROOT') else None
+sys.path.insert(0, str(settings.HUMANBODY_ROOT)) if hasattr(settings, "HUMANBODY_ROOT") else None
 
-from GarmentCode.stoffkorrektur import Stoffkorrektur      # noqa: E402
+from GarmentCode.stoffkorrektur import Stoffkorrektur  # noqa: E402
 
 
 class StoffkorrekturTest(SimpleTestCase):
-    u"""Die Korrektur an einem Fall, dessen Antwort ausrechenbar ist."""
+    """Die Korrektur an einem Fall, dessen Antwort ausrechenbar ist."""
 
     databases = set()
     RADIUS = 0.5
@@ -50,30 +50,33 @@ class StoffkorrekturTest(SimpleTestCase):
         return Stoffkorrektur.aus_netz(self.koerper, self.flaechen, dreiecke)
 
     def _drei_punkte(self, tiefe):
-        u"""Einer `tiefe` Meter im Koerper, zwei sauber aussen."""
-        return (np.array([[0.0, 0.0, self.RADIUS - tiefe],
-                          [0.06, 0.0, self.RADIUS + 0.01],
-                          [-0.06, 0.0, self.RADIUS + 0.01]]),
-                np.array([[0, 1, 2]]))
+        """Einer `tiefe` Meter im Koerper, zwei sauber aussen."""
+        return (
+            np.array(
+                [
+                    [0.0, 0.0, self.RADIUS - tiefe],
+                    [0.06, 0.0, self.RADIUS + 0.01],
+                    [-0.06, 0.0, self.RADIUS + 0.01],
+                ]
+            ),
+            np.array([[0, 1, 2]]),
+        )
 
     def test_eingesunkener_punkt_kommt_heraus(self):
-        u"""Ein normal tief eingesunkener Punkt landet VOR der Oberflaeche.
+        """Ein normal tief eingesunkener Punkt landet VOR der Oberflaeche.
 
         8 mm ist der realistische Fall: Am echten Koerper lag der mittlere
         Durchstich bei 2,7 mm, der tiefste bei 22 mm.
         """
         punkte, dreiecke = self._drei_punkte(0.008)
-        neu, bilanz = self._korrektur(punkte, dreiecke).anwenden(
-            StoffkorrekturTest.neu_punkte(punkte))
+        neu, bilanz = self._korrektur(punkte, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(punkte))
 
-        self.assertGreaterEqual(bilanz['eingesunken'], 1,
-                                'der eingesunkene Punkt wurde nicht erkannt')
+        self.assertGreaterEqual(bilanz["eingesunken"], 1, "der eingesunkene Punkt wurde nicht erkannt")
         abstand = np.linalg.norm(neu[0]) - self.RADIUS
-        self.assertGreater(abstand, 0,
-                           'der Punkt steckt nach der Korrektur immer noch drin')
+        self.assertGreater(abstand, 0, "der Punkt steckt nach der Korrektur immer noch drin")
 
     def test_sehr_tiefer_punkt_kommt_wenigstens_naeher(self):
-        u"""Bei 20 mm greift der Deckel — dann zaehlt die Richtung.
+        """Bei 20 mm greift der Deckel — dann zaehlt die Richtung.
 
         Vollstaendig herauszuholen waeren 23 mm noetig, erlaubt sind
         `HUB_MAX_MM`. Der Punkt muss dann wenigstens deutlich naeher an die
@@ -85,13 +88,11 @@ class StoffkorrekturTest(SimpleTestCase):
         neu, _ = self._korrektur(punkte, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(punkte))
         vorher = self.RADIUS - float(np.linalg.norm(punkte[0]))
         nachher = self.RADIUS - float(np.linalg.norm(neu[0]))
-        self.assertLess(nachher, vorher,
-                        'der Punkt ist nicht naeher an die Oberflaeche gekommen')
-        self.assertLess(nachher, 0.006,
-                        'der Deckel haette mehr als 14 mm hergeben muessen')
+        self.assertLess(nachher, vorher, "der Punkt ist nicht naeher an die Oberflaeche gekommen")
+        self.assertLess(nachher, 0.006, "der Deckel haette mehr als 14 mm hergeben muessen")
 
     def test_falsch_gewickeltes_netz_wird_erkannt(self):
-        u"""Auch ein nach INNEN gewickelter Koerper wird richtig behandelt.
+        """Auch ein nach INNEN gewickelter Koerper wird richtig behandelt.
 
         Die Wickelrichtung sieht man einem Netz nicht an, und `vertex_normals`
         folgt ihr blind. Zeigen die Normalen nach innen, schiebt die Korrektur
@@ -106,48 +107,53 @@ class StoffkorrekturTest(SimpleTestCase):
         korrektur = Stoffkorrektur.aus_netz(punkte_k, verdreht, dreiecke)
         neu, _ = korrektur.anwenden(StoffkorrekturTest.neu_punkte(punkte))
         abstand = np.linalg.norm(neu[0]) - self.RADIUS
-        self.assertGreater(abstand, 0,
-                           'bei umgekehrter Wickelrichtung schiebt die '
-                           'Korrektur den Stoff in den Koerper')
+        self.assertGreater(
+            abstand, 0, "bei umgekehrter Wickelrichtung schiebt die Korrektur den Stoff in den Koerper"
+        )
 
     def test_freier_punkt_bleibt_liegen(self):
-        u"""Was weit weg haengt, wird nicht angefasst — sonst Falten weg."""
+        """Was weit weg haengt, wird nicht angefasst — sonst Falten weg."""
         frei = np.array([[0.0, 0.0, self.RADIUS + 0.30]])
         dreiecke = np.zeros((0, 3), dtype=int)
         neu, _ = self._korrektur(frei, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(frei))
         self.assertLess(float(np.linalg.norm(neu[0] - frei[0])), 1e-9)
 
     def test_niemand_wandert_weiter_als_der_deckel(self):
-        u"""Auch ein Punkt tief im Inneren bleibt am Deckel."""
-        tief = np.array([[0.0, 0.0, 0.0],                 # Mittelpunkt
-                         [0.0, 0.0, self.RADIUS + 0.01]])
+        """Auch ein Punkt tief im Inneren bleibt am Deckel."""
+        tief = np.array(
+            [
+                [0.0, 0.0, 0.0],  # Mittelpunkt
+                [0.0, 0.0, self.RADIUS + 0.01],
+            ]
+        )
         dreiecke = np.zeros((0, 3), dtype=int)
         neu, bilanz = self._korrektur(tief, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(tief))
         weg = np.linalg.norm(neu - tief, axis=1) * 1000
-        self.assertLessEqual(float(weg.max()),
-                             Stoffkorrektur.HUB_MAX_MM + 1e-6)
-        self.assertLessEqual(bilanz['groesster_weg_mm'],
-                             Stoffkorrektur.HUB_MAX_MM + 0.01)
+        self.assertLessEqual(float(weg.max()), Stoffkorrektur.HUB_MAX_MM + 1e-6)
+        self.assertLessEqual(bilanz["groesster_weg_mm"], Stoffkorrektur.HUB_MAX_MM + 0.01)
 
     def test_netz_reisst_nicht_auf(self):
-        u"""Nachbarn bleiben Nachbarn — die Verschiebung wird verteilt."""
+        """Nachbarn bleiben Nachbarn — die Verschiebung wird verteilt."""
         # Eine Reihe von Punkten dicht ueber der Kugel; einer steckt drin.
         winkel = np.linspace(-0.3, 0.3, 9)
-        punkte = np.stack([np.sin(winkel) * (self.RADIUS + 0.005),
-                           np.zeros_like(winkel),
-                           np.cos(winkel) * (self.RADIUS + 0.005)], axis=-1)
+        punkte = np.stack(
+            [
+                np.sin(winkel) * (self.RADIUS + 0.005),
+                np.zeros_like(winkel),
+                np.cos(winkel) * (self.RADIUS + 0.005),
+            ],
+            axis=-1,
+        )
         punkte[4] *= (self.RADIUS - 0.015) / (self.RADIUS + 0.005)
-        dreiecke = np.array([[i, i + 1, (i + 2) % len(punkte)]
-                             for i in range(len(punkte) - 2)])
+        dreiecke = np.array([[i, i + 1, (i + 2) % len(punkte)] for i in range(len(punkte) - 2)])
         vorher = np.linalg.norm(np.diff(punkte, axis=0), axis=1)
         neu, _ = self._korrektur(punkte, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(punkte))
         nachher = np.linalg.norm(np.diff(neu, axis=0), axis=1)
         # Keine Kante darf sich mehr als verdoppeln.
-        self.assertLess(float((nachher / vorher).max()), 2.0,
-                        'die Korrektur reisst das Netz auseinander')
+        self.assertLess(float((nachher / vorher).max()), 2.0, "die Korrektur reisst das Netz auseinander")
 
     def test_nackte_haut_neben_der_kante_hebt_sie_nicht(self):
-        u"""Ein Ring 3,5 mm um einen Hals von 5 cm Radius bleibt liegen.
+        """Ein Ring 3,5 mm um einen Hals von 5 cm Radius bleibt liegen.
 
         Die Halspunkte 60–70 Grad ueber dem Ring liegen 21–26 mm seitlich
         von ihrem naechsten Ringpunkt — mehr als eine Stoffkante (17 mm).
@@ -161,22 +167,25 @@ class StoffkorrekturTest(SimpleTestCase):
         aussen = np.stack([np.cos(winkel), np.sin(winkel), np.zeros_like(winkel)], -1) * (radius + 0.02)
         punkte = np.vstack([innen, aussen])
         n = len(winkel)
-        dreiecke = np.array([[i, (i + 1) % n, n + i] for i in range(n)]
-                            + [[(i + 1) % n, n + (i + 1) % n, n + i] for i in range(n)])
+        dreiecke = np.array(
+            [[i, (i + 1) % n, n + i] for i in range(n)]
+            + [[(i + 1) % n, n + (i + 1) % n, n + i] for i in range(n)]
+        )
         korrektur = Stoffkorrektur.aus_netz(koerper, flaechen, dreiecke)
         neu, bilanz = korrektur.anwenden(StoffkorrekturTest.neu_punkte(punkte))
-        self.assertLess(bilanz['groesster_weg_mm'], 0.5,
-                        'nackte Haut neben dem Ring hebt ihn: %s' % bilanz)
+        self.assertLess(bilanz["groesster_weg_mm"], 0.5, "nackte Haut neben dem Ring hebt ihn: %s" % bilanz)
         np.testing.assert_allclose(neu, punkte, atol=5e-4)
 
     @staticmethod
     def kugel(radius=0.5, feinheit=16):
-        u"""Eine Kugel als Koerper: Punkte, Vierecke, Normalen nach aussen."""
+        """Eine Kugel als Koerper: Punkte, Vierecke, Normalen nach aussen."""
         theta = np.linspace(0.001, np.pi - 0.001, feinheit)
         phi = np.linspace(0, 2 * np.pi, feinheit, endpoint=False)
-        t, p = np.meshgrid(theta, phi, indexing='ij')
-        punkte = np.stack([np.sin(t) * np.cos(p), np.sin(t) * np.sin(p),
-                           np.cos(t)], axis=-1).reshape(-1, 3) * radius
+        t, p = np.meshgrid(theta, phi, indexing="ij")
+        punkte = (
+            np.stack([np.sin(t) * np.cos(p), np.sin(t) * np.sin(p), np.cos(t)], axis=-1).reshape(-1, 3)
+            * radius
+        )
         flaechen = []
         for i in range(feinheit - 1):
             for j in range(feinheit):
@@ -190,5 +199,5 @@ class StoffkorrekturTest(SimpleTestCase):
 
     @staticmethod
     def neu_punkte(a):
-        u"""Kopie, damit ein Test die Vorlage des naechsten nicht veraendert."""
+        """Kopie, damit ein Test die Vorlage des naechsten nicht veraendert."""
         return np.asarray(a, dtype=np.float64).copy()

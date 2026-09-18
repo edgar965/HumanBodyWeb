@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Greifrechnung`: was eine Mausbewegung beim Greifen (G/R/S) bedeutet.
+"""`Greifrechnung`: was eine Mausbewegung beim Greifen (G/R/S) bedeutet.
 
 WARUM (06.09.2026, Edgar: „ich verstehe nicht G zum Translate, bei Klick auf G
 und dann Maus tut sich nichts"): G schaltete nur den Modus des Gizmos um. Jetzt
@@ -20,11 +20,12 @@ Three.js-Geometrie:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'greifrechnung.js')
+MODUL = Jsmodul("gemeinsam", "greifrechnung.js")
 
 SKRIPT = """
 const { Greifrechnung } = await import(MODUL);
@@ -86,9 +87,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class GreifrechnungTest(SimpleTestCase):
-
     databases = set()
 
     def test_achse_winkel_und_faktor(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

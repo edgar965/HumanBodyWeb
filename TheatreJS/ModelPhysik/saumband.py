@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Saumband — verdeckte Haut neben der gezeichneten bleibt gezeichnet,
+"""Saumband — verdeckte Haut neben der gezeichneten bleibt gezeichnet,
 versenkt. Dieselbe Regel wie `static/viewer/gemeinsam/saumband.js`.
 
 BEFUND (Edgar, 13.09.2026, Bild vom Aermel des anliegenden T-Shirts in
@@ -17,6 +17,7 @@ gerendert, versenkt um `UNTERKANTE_M + STEIGUNG · Weg`, hoechstens
 Ruhelage gerechnet, die Versenkung laeuft je Bild entlang der gestellten
 Normale.
 """
+
 import numpy as np
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
@@ -26,7 +27,7 @@ from saumschnitt import Saumschnitt
 
 
 class Saumband:
-    u"""Weg zur gezeichneten Haut, Versenkung und Index-Maske."""
+    """Weg zur gezeichneten Haut, Versenkung und Index-Maske."""
 
     #: So weit (auf der Haut) neben der gezeichneten Haut bleibt verdeckte
     #: Haut gerendert. 15 cm: Der Aermelsaum liegt 12 cm von der Achsel.
@@ -38,7 +39,7 @@ class Saumband:
 
     @classmethod
     def abstaende(cls, punkte, maske, dreiecke):
-        u"""Je Punkt der Weg auf der Haut zum naechsten gezeichneten Punkt:
+        """Je Punkt der Weg auf der Haut zum naechsten gezeichneten Punkt:
         0 fuer gezeichnete, `inf` jenseits von `BAND_M`."""
         P = np.asarray(punkte, dtype=np.float64)
         m = np.asarray(maske, dtype=bool)
@@ -50,15 +51,14 @@ class Saumband:
             return aus
         graph = cls._kanten(P, dreiecke)
         quellen = np.flatnonzero(~m)
-        weg = dijkstra(graph, directed=False, indices=quellen, min_only=True,
-                       limit=cls.BAND_M)
+        weg = dijkstra(graph, directed=False, indices=quellen, min_only=True, limit=cls.BAND_M)
         aus[:] = np.where(weg <= cls.BAND_M, weg, np.inf)
         aus[~m] = 0.0
         return aus
 
     @staticmethod
     def _kanten(P, dreiecke):
-        u"""Das Netz als Kantengraph (Laenge als Gewicht); deckungsgleiche
+        """Das Netz als Kantengraph (Laenge als Gewicht); deckungsgleiche
         Punkte (Naht) haengen mit einer Kante der Laenge 0 zusammen — als
         `eps`, weil scipy 0 als „keine Kante" liest."""
         T = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
@@ -80,13 +80,12 @@ class Saumband:
 
     @classmethod
     def weg(cls, maske, abstaende):
-        u"""Je Punkt True, wenn verdeckt UND jenseits des Bands — nur
+        """Je Punkt True, wenn verdeckt UND jenseits des Bands — nur
         Dreiecke mit drei solchen Ecken fallen aus dem Index."""
         m = np.asarray(maske, dtype=bool)
         return m & ~(np.asarray(abstaende) <= cls.BAND_M)
 
     @classmethod
     def tiefe(cls, abstaende):
-        u"""Die Versenkung (Meter) je Punkt aus dem Weg."""
-        return np.minimum(cls.TIEFE_M,
-                          Saumschnitt.UNTERKANTE_M + cls.STEIGUNG * np.asarray(abstaende))
+        """Die Versenkung (Meter) je Punkt aus dem Weg."""
+        return np.minimum(cls.TIEFE_M, Saumschnitt.UNTERKANTE_M + cls.STEIGUNG * np.asarray(abstaende))

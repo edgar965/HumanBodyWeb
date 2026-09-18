@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Bereichsgriff`: die Breite, die aus einem Mausweg wird.
+"""`Bereichsgriff`: die Breite, die aus einem Mausweg wird.
 
 WARUM (11.09.2026, Edgar: „möchte den rechten Bereich verschieben können,
 die Griffe fehlen"): Der Griff der Szene-Seite kannte nur ein Feld LINKS im
@@ -15,11 +15,12 @@ wird genau diese Entscheidung, ohne DOM:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'bereichsgriff.js')
+MODUL = Jsmodul("gemeinsam", "bereichsgriff.js")
 
 SKRIPT = """
 const { Bereichsgriff } = await import(MODUL);
@@ -45,9 +46,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class BereichsgriffTest(SimpleTestCase):
-
     databases = set()
 
     def test_breite_aus_mausweg(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

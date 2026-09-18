@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""BVH Studio: „Modell hinzufügen" über den Figurwahl-Dialog, und die
+"""BVH Studio: „Modell hinzufügen" über den Figurwahl-Dialog, und die
 verknüpfte Animation unter ihrer Modellspur.
 
 WARUM (Edgar, 11.09.2026): „beim Hinzufügen eines Modells bitte den gleichen
@@ -24,6 +24,7 @@ Vorlage lädt sein CSS, der Dialog kann ohne „Größe angleichen", und
 Sabotage-Gegenprobe gemacht: `traeger` immer -1 → Fälle 2 rot;
 `vorgabeX` ohne Abstand → Fälle 1 rot.
 """
+
 from pathlib import Path
 
 from django.conf import settings
@@ -32,18 +33,20 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 
 WURZEL = Path(settings.BASE_DIR)
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
-GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
+STUDIO = Jsmodul.VIEWER / "bvh_studio"
+GEMEINSAM = Jsmodul.VIEWER / "gemeinsam"
 
-PLATZ = Jsmodul('bvh_studio', 'modellplatz.js')
-GRUPPEN = Jsmodul('bvh_studio', 'modellgruppen.js')
+PLATZ = Jsmodul("bvh_studio", "modellplatz.js")
+GRUPPEN = Jsmodul("bvh_studio", "modellgruppen.js")
 
 PRUEFE = """
 const bvh = (x, extra = {}) => ({ type: 'bvh', clips: [], position: [x, 0, 0], ...extra });
 const modell = (ziel) => ({ type: 'model', clips: [], _linkedAnimIdx: ziel });
 """
 
-PLATZ_SKRIPT = PRUEFE + """
+PLATZ_SKRIPT = (
+    PRUEFE
+    + """
 const { Modellplatz } = await import(MODUL);
 // Leere Zeitleiste: Ursprung, keine Trägerspur.
 pruefe('leer x', Modellplatz.vorgabeX([]), 0);
@@ -72,8 +75,11 @@ pruefe('ABSTAND_M', Modellplatz.ABSTAND_M, 1.5);
 pruefe('Abstand', Modellplatz.vorgabeX([a], 0.5), 0.9);
 console.log(JSON.stringify({ok: true}));
 """
+)
 
-GRUPPEN_SKRIPT = PRUEFE + """
+GRUPPEN_SKRIPT = (
+    PRUEFE
+    + """
 const { Modellgruppen } = await import(MODUL);
 const R = (spuren) => Modellgruppen.reihen(spuren).map(r =>
     [r.trackIdx, r.indent ? 'ein' : '', r.unterreihe ?? '', r.collapsed ?? '']);
@@ -100,35 +106,33 @@ pruefe('traeger', Modellgruppen.traeger([bvh(0), modell(0)], 0), 1);
 pruefe('traeger ohne', Modellgruppen.traeger([bvh(0)], 0), -1);
 console.log(JSON.stringify({ok: true}));
 """
+)
 
 
 class ModellplatzTest(SimpleTestCase):
-
     databases = set()
 
     def test_lage_und_traegerspur(self):
         ausgabe = PLATZ.laufen(PLATZ_SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
 
 
 class ModellgruppenTest(SimpleTestCase):
-
     databases = set()
 
     def test_animation_unter_ihrer_modellspur(self):
         ausgabe = GRUPPEN.laufen(GRUPPEN_SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
 
 
 class ModellwahlVerdrahtungTest(SimpleTestCase):
-
     databases = set()
 
     def test_der_menuepunkt_oeffnet_den_dialog(self):
-        leiste = (STUDIO / 'werkzeugleiste.js').read_text(encoding='utf-8')
+        leiste = (STUDIO / "werkzeugleiste.js").read_text(encoding="utf-8")
         self.assertIn("['dd-add-model', () => Modellwahl.oeffnen()]", leiste)
         self.assertNotIn("['dd-add-model', () => fn.addModelTrack()]", leiste)
-        wahl = (STUDIO / 'modellwahl.js').read_text(encoding='utf-8')
+        wahl = (STUDIO / "modellwahl.js").read_text(encoding="utf-8")
         self.assertIn("angleichen: false", wahl)
         self.assertIn("Modellplatz.vorgabeX(state.project.tracks", wahl)
         # Die drei Bausteine merken je einen Undo-Schritt — hier ist es EINER.
@@ -136,22 +140,22 @@ class ModellwahlVerdrahtungTest(SimpleTestCase):
         self.assertIn("pushUndo('Modell hinzufügen')", wahl)
 
     def test_die_vorlage_laedt_das_dialog_css(self):
-        html = (WURZEL / 'templates' / 'bvh_studio.html').read_text(encoding='utf-8')
+        html = (WURZEL / "templates" / "bvh_studio.html").read_text(encoding="utf-8")
         self.assertIn("{% fassungspfad 'css/figurwahldialog.css' %}", html)
 
     def test_der_dialog_kann_ohne_groessenangleich(self):
-        felder = (GEMEINSAM / 'figurlagefelder.js').read_text(encoding='utf-8')
-        self.assertIn('{ angleichen = true } = {}', felder)
-        self.assertIn('this.mitAngleichen ?', felder)
-        dialog = (GEMEINSAM / 'figurwahldialog.js').read_text(encoding='utf-8')
-        self.assertIn('new Figurlagefelder(kennung, this.vorgaben, { angleichen })', dialog)
+        felder = (GEMEINSAM / "figurlagefelder.js").read_text(encoding="utf-8")
+        self.assertIn("{ angleichen = true } = {}", felder)
+        self.assertIn("this.mitAngleichen ?", felder)
+        dialog = (GEMEINSAM / "figurwahldialog.js").read_text(encoding="utf-8")
+        self.assertIn("new Figurlagefelder(kennung, this.vorgaben, { angleichen })", dialog)
 
     def test_zugeklappt_ueberlebt_speichern_und_laden(self):
-        daten = (STUDIO / 'projekt_daten.js').read_text(encoding='utf-8')
-        self.assertIn('td.zugeklappt = Boolean(t.zugeklappt)', daten)
-        laden = (STUDIO / 'projekt_wiederherstellung.js').read_text(encoding='utf-8')
-        self.assertIn('track.zugeklappt = Boolean(td.zugeklappt)', laden)
-        reihen = (STUDIO / 'zeitleiste_reihen.js').read_text(encoding='utf-8')
-        self.assertIn('Modellgruppen.reihen(spuren)', reihen)
-        kopf = (STUDIO / 'zeitleiste_spurkopf.js').read_text(encoding='utf-8')
-        self.assertIn('spur.zugeklappt = !spur.zugeklappt', kopf)
+        daten = (STUDIO / "projekt_daten.js").read_text(encoding="utf-8")
+        self.assertIn("td.zugeklappt = Boolean(t.zugeklappt)", daten)
+        laden = (STUDIO / "projekt_wiederherstellung.js").read_text(encoding="utf-8")
+        self.assertIn("track.zugeklappt = Boolean(td.zugeklappt)", laden)
+        reihen = (STUDIO / "zeitleiste_reihen.js").read_text(encoding="utf-8")
+        self.assertIn("Modellgruppen.reihen(spuren)", reihen)
+        kopf = (STUDIO / "zeitleiste_spurkopf.js").read_text(encoding="utf-8")
+        self.assertIn("spur.zugeklappt = !spur.zugeklappt", kopf)

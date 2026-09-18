@@ -37,6 +37,7 @@ Das Feld entsteht am Basisnetz (18.210 Punkte) und geht durch dieselbe
 Catmull-Clark-Matrix wie die Geometrie (`unterteiler.subdivide`): Der
 Nullpunkt liegt dann auf jeder Stufe dort, wo die Schleife liegt.
 """
+
 import logging
 from collections import deque
 
@@ -44,7 +45,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Lippenrand']
+__all__ = ["Lippenrand"]
 
 
 class Lippenrand:
@@ -64,7 +65,7 @@ class Lippenrand:
     AUSSEN = -10.0
     INNEN = 10.0
 
-    _basis = {}   # geschlecht -> Feld am Basisnetz (mm)
+    _basis = {}  # geschlecht -> Feld am Basisnetz (mm)
 
     # ---------------------------------------------------------------- Zugang
 
@@ -93,19 +94,24 @@ class Lippenrand:
     def _rechnen(cls, geschlecht):
         from .charakterdaten import Charakterdaten
         from .lippenmaske import Lippenmaske
+
         netz = Charakterdaten.netzdaten(geschlecht)
         punkte = Lippenmaske.basispunkte(geschlecht, None)
-        datei = Lippenmaske.ordner() / Lippenmaske.DATEI.get(geschlecht, '')
+        datei = Lippenmaske.ordner() / Lippenmaske.DATEI.get(geschlecht, "")
         fehlt = punkte is None or netz.faces is None or netz.uvs is None
         if fehlt or not datei.is_file():
-            logger.warning('Lippenrand (%s): Netz, UVs oder Lipmap fehlen', geschlecht)
+            logger.warning("Lippenrand (%s): Netz, UVs oder Lipmap fehlen", geschlecht)
             return None
         haut = np.asarray(netz.faces)[np.asarray(netz.face_materials) == 0]
         maske = cls.maskenwerte(np.asarray(netz.uvs), Lippenmaske.maske(datei))
         feld = cls.feld(punkte, haut, maske)
         if feld is not None:
-            logger.info('Lippenrand (%s): %d Punkte innen, %d im Saum', geschlecht,
-                        int((feld > 0).sum()), int((np.abs(feld) < 6).sum()))
+            logger.info(
+                "Lippenrand (%s): %d Punkte innen, %d im Saum",
+                geschlecht,
+                int((feld > 0).sum()),
+                int((np.abs(feld) < 6).sum()),
+            )
         return feld
 
     @staticmethod
@@ -133,17 +139,22 @@ class Lippenrand:
         umriss = maske >= cls.UMRISS
         mund = cls.mundoeffnung(nachbarn, vorn, umriss)
         if len(mund) < 10:
-            logger.warning('Lippenrand: keine Mundöffnung (%d Punkte)', len(mund))
+            logger.warning("Lippenrand: keine Mundöffnung (%d Punkte)", len(mund))
             return None
         zm = float(np.median(p[sorted(mund), 2]))
         stufe = cls.ringe(nachbarn, mund, vorn)
         schleifen = cls.schleifen(kanten, stufe)
         rand = cls.randschleifen(schleifen, p, knick, maske, zm)
         if rand is None:
-            logger.warning('Lippenrand: keine Randschleife gefunden')
+            logger.warning("Lippenrand: keine Randschleife gefunden")
             return None
-        logger.info('Lippenrand: Mundöffnung %d Punkte auf %.4f m, Randschleife oben %d, '
-                    'unten %d', len(mund), zm, rand[0], rand[1])
+        logger.info(
+            "Lippenrand: Mundöffnung %d Punkte auf %.4f m, Randschleife oben %d, unten %d",
+            len(mund),
+            zm,
+            rand[0],
+            rand[1],
+        )
         haut = np.zeros(len(p), dtype=bool)
         haut[q.ravel()] = True
         return cls.abstaende(p, schleifen, stufe, rand, zm, vorn, haut & umriss, mund)
@@ -194,8 +205,7 @@ class Lippenrand:
     def mundoeffnung(nachbarn, vorn, umriss):
         """Der Saum der Mundöffnung: vordere Punkte im Umriss der Maske mit
         einem verborgenen Nachbarn (Innenseite der Lippe)."""
-        return set(int(i) for i in np.flatnonzero(vorn & umriss)
-                   if any(not vorn[j] for j in nachbarn[i]))
+        return set(int(i) for i in np.flatnonzero(vorn & umriss) if any(not vorn[j] for j in nachbarn[i]))
 
     @classmethod
     def ringe(cls, nachbarn, mund, vorn):
@@ -231,12 +241,12 @@ class Lippenrand:
         ihrer Punkte; ohne Kanten auf der Seite (0, 0)."""
         aus = []
         for kanten in schleifen:
-            seitlich = [(a, b) for a, b in kanten
-                        if ((p[a, 2] + p[b, 2]) / 2 > zm) == oben]
+            seitlich = [(a, b) for a, b in kanten if ((p[a, 2] + p[b, 2]) / 2 > zm) == oben]
             winkel = [knick[k] for k in seitlich if k in knick]
             punkte = sorted(set(i for kante in seitlich for i in kante))
-            aus.append((float(np.mean(winkel)) if winkel else 0.0,
-                        float(np.mean(maske[punkte])) if punkte else 0.0))
+            aus.append(
+                (float(np.mean(winkel)) if winkel else 0.0, float(np.mean(maske[punkte])) if punkte else 0.0)
+            )
         return aus
 
     @classmethod
@@ -267,8 +277,12 @@ class Lippenrand:
         `haut` sind die Hautpunkte im Umriss der Lipmap (nur die kommen als
         Mundhöhle in Frage; Wangenhaut mit seitlicher Normale nicht)."""
         oben = p[:, 2] > zm
-        segmente = [(a, b) for seite, k in enumerate(rand) for a, b in schleifen[k]
-                    if ((p[a, 2] + p[b, 2]) / 2 > zm) == (seite == 0)]
+        segmente = [
+            (a, b)
+            for seite, k in enumerate(rand)
+            for a, b in schleifen[k]
+            if ((p[a, 2] + p[b, 2]) / 2 > zm) == (seite == 0)
+        ]
         A = p[[s[0] for s in segmente]]
         AB = p[[s[1] for s in segmente]] - A
         L2 = np.maximum((AB * AB).sum(axis=1), 1e-12)

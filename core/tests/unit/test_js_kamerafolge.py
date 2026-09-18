@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Kamerafolge`: die Kamera faehrt der Figur in der Bodenebene nach.
+"""`Kamerafolge`: die Kamera faehrt der Figur in der Bodenebene nach.
 
 Drei Dinge, die stimmen muessen — mit Attrappen fuer Kamera, Steuerung und
 Knochen, ohne Three.js:
@@ -13,11 +13,12 @@ Sabotage-Gegenprobe: `versatz` mit `jetzt[1] - start[1]` in der Mitte
 macht den zweiten Block rot; ein vergessenes `ziel` im dritten Block den
 letzten.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'kamerafolge.js')
+MODUL = Jsmodul("scene", "kamerafolge.js")
 
 SKRIPT = """
 const { Kamerafolge } = await import(MODUL);
@@ -61,9 +62,8 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class KamerafolgeJsTest(SimpleTestCase):
-
     databases = set()
 
     def test_kamera_faehrt_in_der_bodenebene_mit(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

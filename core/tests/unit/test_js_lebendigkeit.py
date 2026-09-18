@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Lebendigkeit`: Blinzeln, Blick, Atmen, Variation, Zucken, Schlucken — wiederholbar.
+"""`Lebendigkeit`: Blinzeln, Blick, Atmen, Variation, Zucken, Schlucken — wiederholbar.
 
 WARUM (Edgar, 13.09.2026: „Lebendigkeit, Blinzeln, Mimikveränderungen um die
 aktuelle Mimik … an bei neuer Spur, aber konfigurierbar"):
@@ -15,11 +15,12 @@ aktuelle Mimik … an bei neuer Spur, aber konfigurierbar"):
 Sabotage-Gegenprobe: in `ereignis` `if (beginn > t) return null;` entfernen
 → Fall 2 rot (Ereignisse vor ihrem Beginn).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'lebendigkeit.js')
+MODUL = Jsmodul("bvh_studio", "lebendigkeit.js")
 
 SKRIPT = """
 const { Lebendigkeit: L } = await import(MODUL);
@@ -74,6 +75,5 @@ console.log(JSON.stringify({ ok: true, blinzeln: a.length }));
 
 
 class LebendigkeitTest(SimpleTestCase):
-
     def test_bausteine_sind_wiederholbar_und_begrenzt(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

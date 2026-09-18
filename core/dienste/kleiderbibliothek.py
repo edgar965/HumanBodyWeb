@@ -54,10 +54,10 @@ class Kleiderbibliothek:
     @classmethod
     def _einlesen(cls):
         from GarmentFitter import GarmentLibrary
+
         katalog = GarmentLibrary(str(settings.HUMANBODY_GARMENT_LIBRARY_DIR))
         katalog.scan()
-        logger.info('Kleiderbibliothek eingelesen: %d Stuecke',
-                    len(getattr(katalog, 'catalog', []) or []))
+        logger.info("Kleiderbibliothek eingelesen: %d Stuecke", len(getattr(katalog, "catalog", []) or []))
         return katalog
 
     @classmethod

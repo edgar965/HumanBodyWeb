@@ -26,25 +26,26 @@ class Skelettzeichner:
     GELENKRADIUS = 3
 
     def __init__(self, verbindungen=None, farbe=(0, 255, 0), dicke=2):
-        self.verbindungen = (verbindungen if verbindungen is not None
-                             else Gelenknamen.alle_verbindungen())
+        self.verbindungen = verbindungen if verbindungen is not None else Gelenknamen.alle_verbindungen()
         self.farbe = farbe
         self.dicke = dicke
 
     def zeichnen(self, bild, punkte):
         import cv2
+
         hoehe, breite = bild.shape[:2]
         for name_a, name_b in self.verbindungen:
             a, b = punkte.get(name_a), punkte.get(name_b)
-            if not self._sichtbar(a, breite, hoehe) or \
-                    not self._sichtbar(b, breite, hoehe):
+            if not self._sichtbar(a, breite, hoehe) or not self._sichtbar(b, breite, hoehe):
                 continue
-            cv2.line(bild, (int(a[0]), int(a[1])), (int(b[0]), int(b[1])),
-                     self.farbe, self.dicke, cv2.LINE_AA)
+            cv2.line(
+                bild, (int(a[0]), int(a[1])), (int(b[0]), int(b[1])), self.farbe, self.dicke, cv2.LINE_AA
+            )
         for punkt in punkte.values():
             if self._sichtbar(punkt, breite, hoehe):
-                cv2.circle(bild, (int(punkt[0]), int(punkt[1])),
-                           self.GELENKRADIUS, self.GELENKFARBE, -1, cv2.LINE_AA)
+                cv2.circle(
+                    bild, (int(punkt[0]), int(punkt[1])), self.GELENKRADIUS, self.GELENKFARBE, -1, cv2.LINE_AA
+                )
         return bild
 
     def _sichtbar(self, punkt, breite, hoehe):

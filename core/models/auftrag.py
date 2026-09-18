@@ -19,52 +19,51 @@ class BVHJob(models.Model):
     """Represents a video-to-BVH processing job."""
 
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('detecting_2d', '2D Detection'),
-        ('openpose', 'Running OpenPose'),
-        ('openpose_csv', 'Converting OpenPose JSON'),
-        ('mediapipe', 'Running MediaPipe'),
-        ('lifting_3d', '3D Lifting'),
-        ('mocapnet', 'Running MocapNET'),
-        ('v4_processing', 'Running MocapNET v4'),
-        ('processing', 'Processing'),
-        ('complete', 'Complete'),
-        ('failed', 'Failed'),
+        ("pending", "Pending"),
+        ("detecting_2d", "2D Detection"),
+        ("openpose", "Running OpenPose"),
+        ("openpose_csv", "Converting OpenPose JSON"),
+        ("mediapipe", "Running MediaPipe"),
+        ("lifting_3d", "3D Lifting"),
+        ("mocapnet", "Running MocapNET"),
+        ("v4_processing", "Running MocapNET v4"),
+        ("processing", "Processing"),
+        ("complete", "Complete"),
+        ("failed", "Failed"),
     ]
 
     PIPELINE_CHOICES = [
         # 2D Pipelines (2D Detector + MocapNET v2.1 Lifter)
-        ('mediapipe', 'MediaPipe'),
-        ('openpose', 'OpenPose'),
-        ('rtmpose', 'RTMPose'),
-        ('vitpose', 'ViTPose'),
-        ('yolo11', 'YOLO11-Pose'),
+        ("mediapipe", "MediaPipe"),
+        ("openpose", "OpenPose"),
+        ("rtmpose", "RTMPose"),
+        ("vitpose", "ViTPose"),
+        ("yolo11", "YOLO11-Pose"),
         # 3D Pipelines (complete Video → BVH)
-        ('v4', 'MocapNET v4'),
-        ('gvhmr', 'GVHMR'),
-        ('wham', 'WHAM'),
-        ('prompthmr', 'PromptHMR'),
-        ('gem', 'GEM-SMPL'),
-        ('duomo', 'DuoMo'),
-        ('gemx', 'GEM-X (mit Händen)'),
+        ("v4", "MocapNET v4"),
+        ("gvhmr", "GVHMR"),
+        ("wham", "WHAM"),
+        ("prompthmr", "PromptHMR"),
+        ("gem", "GEM-SMPL"),
+        ("duomo", "DuoMo"),
+        ("gemx", "GEM-X (mit Händen)"),
         # 12.09.2026, die eigene Pipeline: SMPL-X als Rückgrat — Körper aus
         # GEM-SMPL, Hände und Gesicht aus SMPLest-X, EIN BVH mit Fingern.
-        ('smplx', 'SMPL-X (eigen: Körper, Hände, Gesicht)'),
+        ("smplx", "SMPL-X (eigen: Körper, Hände, Gesicht)"),
         # Hybrid Pipelines (SMPL Body + MocapNET v4 Face+Hands)
-        ('hybrid_gvhmr', 'Hybrid (GVHMR + MocapNET v4)'),
-        ('hybrid_prompthmr', 'Hybrid (PromptHMR + MocapNET v4)'),
+        ("hybrid_gvhmr", "Hybrid (GVHMR + MocapNET v4)"),
+        ("hybrid_prompthmr", "Hybrid (PromptHMR + MocapNET v4)"),
         # 12.09.2026 (Edgar: „können die NACH der GEM_SMPL pipeline aufsetzen"):
         # der beste Körper des Vergleichs als drittes Rückgrat.
-        ('hybrid_gem', 'Hybrid (GEM-SMPL + MocapNET v4)'),
+        ("hybrid_gem", "Hybrid (GEM-SMPL + MocapNET v4)"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     #: Datum und Uhrzeit der Anlage, `2026.09.16.22.00.12` — die Adresse der
     #: Auftragsseiten (Edgar, 16.09.2026); siehe `Auftragskennung`.
-    kennung = models.CharField(max_length=Auftragskennung.LAENGE, unique=True,
-                               editable=False)
+    kennung = models.CharField(max_length=Auftragskennung.LAENGE, unique=True, editable=False)
     name = models.CharField(max_length=255)
-    video_file = models.FileField(upload_to='uploads/')
+    video_file = models.FileField(upload_to="uploads/")
     csv_file = models.CharField(max_length=512, blank=True)
     bvh_file = models.CharField(max_length=512, blank=True)
     bvh_file_face = models.CharField(max_length=512, blank=True)
@@ -76,15 +75,14 @@ class BVHJob(models.Model):
     #: Personen brauche ich mehrere BVHs, die aber synchron sein sollen"):
     #: Pfade in Reihenfolge der Personen 2, 3, …; `bvh_file` bleibt Person 1.
     bvh_file_personen = models.JSONField(default=list, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES,
-                                default='hybrid_gvhmr')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES, default="hybrid_gvhmr")
     progress = models.IntegerField(default=0)  # 0-100
-    progress_detail = models.CharField(max_length=100,
-                                       blank=True)  # e.g. "150 / 20000 frames"
+    progress_detail = models.CharField(max_length=100, blank=True)  # e.g. "150 / 20000 frames"
     error_message = models.TextField(blank=True)
     pipeline_params = models.JSONField(
-        default=dict, blank=True,
+        default=dict,
+        blank=True,
         help_text="Per-job pipeline parameters (override AppSettings defaults)",
     )
     fps = models.FloatField(default=30.0)
@@ -92,10 +90,10 @@ class BVHJob(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['status']),
-            models.Index(fields=['pipeline', '-created_at']),
+            models.Index(fields=["status"]),
+            models.Index(fields=["pipeline", "-created_at"]),
         ]
 
     def __str__(self):
@@ -120,8 +118,8 @@ class BVHJob(models.Model):
     @property
     def error_traceback(self):
         """Full traceback text."""
-        if not self.error_message or 'Traceback' not in self.error_message:
-            return ''
+        if not self.error_message or "Traceback" not in self.error_message:
+            return ""
         # Everything from "Traceback" onwards
-        idx = self.error_message.find('Traceback')
+        idx = self.error_message.find("Traceback")
         return self.error_message[idx:].strip()

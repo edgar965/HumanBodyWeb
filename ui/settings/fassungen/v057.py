@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-u"""Fassung 0.57 (08.09.2026) — nachgetragen, der Bump-Commit trug keine Marke."""
+"""Fassung 0.57 (08.09.2026) — nachgetragen, der Bump-Commit trug keine Marke."""
 
 FASSUNG = {
-    'version': '0.57',
-    'date': '2026-09-08',
-    'title': 'UMA Python gegen Unity gemessen — und die Ärmelfrage beantwortet',
-    'author': 'edgar965',
-    'body_md': (
+    "version": "0.57",
+    "date": "2026-09-08",
+    "title": "UMA Python gegen Unity gemessen — und die Ärmelfrage beantwortet",
+    "author": "edgar965",
+    "body_md": (
         "Nachgetragen, weil der Bump-Commit `93b8fa1` die Marke nicht im "
         "Betreff trug. Enthalten sind `a65d0cf` bis `fabfd8b`.\n"
         "\n"

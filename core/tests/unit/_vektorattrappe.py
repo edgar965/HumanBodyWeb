@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Vektorattrappe — so viel `mathutils.Vector`, wie ein Import braucht.
+"""Vektorattrappe — so viel `mathutils.Vector`, wie ein Import braucht.
 
 Herausgeloest am 02.09.2026 aus `blenderattrappe.py` (Befund
 `klassen-je-datei`: zwei eigenstaendige Klassen in einer Datei). `Vektor`
@@ -14,13 +14,14 @@ ein `tuple` und damit unveraenderlich — Blenders `Vector` ist das nicht.
 Code, der `v.x = 3` schreibt, faellt hier auf; das ist erwuenscht, denn
 solcher Code stuende auf Modulebene und liefe beim Import.
 """
+
 import math
 
-__all__ = ['Vektor']
+__all__ = ["Vektor"]
 
 
 class Vektor(tuple):
-    u"""So viel Vektor, wie Code auf Modulebene braucht."""
+    """So viel Vektor, wie Code auf Modulebene braucht."""
 
     def __new__(cls, werte=(0.0, 0.0, 0.0)):
         return super().__new__(cls, tuple(float(w) for w in werte))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Der Schieberegler als Vorlagen-Marke statt als `{% include %}`.
+"""Der Schieberegler als Vorlagen-Marke statt als `{% include %}`.
 
 WARUM (30.08.2026, Befund `jsbefunde`/lange Zeilen)
 ===================================================
@@ -22,14 +22,14 @@ achtzig Zeichen::
 Gerendert wird weiterhin `_schieberegler.html` — die Vorlage bleibt die eine
 Stelle, an der die Zeile aussieht, wie sie aussieht.
 """
+
 from django import template
 
 register = template.Library()
 
 
-@register.inclusion_tag('_schieberegler.html')
-def regler(kennung, beschriftung, min=0, max=100, wert=0, schritt=1,
-           anzeige='', zeilenkennung=''):
+@register.inclusion_tag("_schieberegler.html")
+def regler(kennung, beschriftung, min=0, max=100, wert=0, schritt=1, anzeige="", zeilenkennung=""):
     """Eine Reglerzeile.
 
     @param kennung `id` des Reglers; die Anzeige heisst `<kennung>-val`
@@ -42,7 +42,13 @@ def regler(kennung, beschriftung, min=0, max=100, wert=0, schritt=1,
     @param zeilenkennung `id` der Zeile selbst, wo das JS sie aus- und einblendet
     """
     # Dictionary gewollt: Es IST der Kontext der eingebundenen Vorlage.
-    return {'kennung': kennung, 'beschriftung': beschriftung,
-            'min': min, 'max': max, 'wert': wert, 'schritt': schritt,
-            'anzeige': anzeige if anzeige != '' else wert,
-            'zeilenkennung': zeilenkennung}
+    return {
+        "kennung": kennung,
+        "beschriftung": beschriftung,
+        "min": min,
+        "max": max,
+        "wert": wert,
+        "schritt": schritt,
+        "anzeige": anzeige if anzeige != "" else wert,
+        "zeilenkennung": zeilenkennung,
+    }

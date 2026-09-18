@@ -42,7 +42,7 @@ class Videoablage:
         Arbeitsspeicher.
         """
         ziel = Videoablage.ordner() / dateiname
-        with open(ziel, 'wb') as datei:
+        with open(ziel, "wb") as datei:
             for happen in hochgeladen.chunks():
                 datei.write(happen)
         return ziel

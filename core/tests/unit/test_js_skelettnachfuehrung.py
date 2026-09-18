@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Skelettnachfuehrung` — die drei Dinge, die still schiefgehen können.
+"""`Skelettnachfuehrung` — die drei Dinge, die still schiefgehen können.
 
 WARUM (05.09.2026)
 ==================
@@ -20,11 +20,12 @@ setzt sie. Zwischen beiden liegen drei Fallen, und keine davon wirft:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'skelettnachfuehrung.js')
+MODUL = Jsmodul("gemeinsam", "skelettnachfuehrung.js")
 
 SKRIPT = """
 const { Skelettnachfuehrung } = await import(MODUL);
@@ -141,28 +142,27 @@ console.log(JSON.stringify(ergebnis));
 
 
 class SkelettnachfuehrungTest(SimpleTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.e = MODUL.laufen(SKRIPT)
 
     def test_der_genannte_knochen_wird_gesetzt(self):
-        self.assertIs(self.e['einer']['ok'], True)
-        self.assertEqual(self.e['einer']['bewegt'], [0, 2, 0])
+        self.assertIs(self.e["einer"]["ok"], True)
+        self.assertEqual(self.e["einer"]["bewegt"], [0, 2, 0])
 
     def test_der_ungenannte_bekommt_seine_ruhelage(self):
-        u"""Falle 3: Er stand vorher auf (0,0,0), weil ein frischer Knochen
+        """Falle 3: Er stand vorher auf (0,0,0), weil ein frischer Knochen
         das tut. Ohne diese Zeile bliebe er dort und die Kette risse."""
-        self.assertEqual(self.e['einer']['ungenannt'], [0, 0.5, 0])
+        self.assertEqual(self.e["einer"]["ungenannt"], [0, 0.5, 0])
 
     def test_es_wird_neu_gebunden(self):
-        u"""Falle 1. Ohne `calculateInverses()` verschiebt der Knochen das
+        """Falle 1. Ohne `calculateInverses()` verschiebt der Knochen das
         Netz statt sich selbst — der Körper zerreißt, lautlos."""
-        self.assertEqual(self.e['einer']['gebunden'], 1)
+        self.assertEqual(self.e["einer"]["gebunden"], 1)
 
     def test_und_zwar_erst_nach_dem_auffrischen_der_weltmatrizen(self):
-        u"""Die Reihenfolge ist der Punkt, nicht die Anzahl: Die Knochen
+        """Die Reihenfolge ist der Punkt, nicht die Anzahl: Die Knochen
         hängen unter dem SkinnedMesh, dessen eigene Weltmatrix in die
         Umkehrmatrizen eingeht. Wer zuerst bindet, bindet an die Lagen von
         vorher — und sieht davon nichts.
@@ -170,33 +170,32 @@ class SkelettnachfuehrungTest(SimpleTestCase):
         Das dritte Auffrischen gehört zum Zurückschreiben der Pose: Danach
         stimmen die Weltmatrizen wieder zu dem, was wirklich gesetzt ist.
         """
-        self.assertEqual(self.e['einer']['folge'], ['welt', 'binden', 'welt'])
+        self.assertEqual(self.e["einer"]["folge"], ["welt", "binden", "welt"])
 
     def test_eine_leere_nachricht_holt_alles_zurueck(self):
-        u"""Der Rückweg: Regler auf 0, `reset`, Körperart zurück. Ohne das
+        """Der Rückweg: Regler auf 0, `reset`, Körperart zurück. Ohne das
         bliebe das Skelett in der zuletzt gemeldeten Größe stehen."""
-        self.assertEqual(self.e['zurueck']['wurzel'], [0, 1, 0])
-        self.assertEqual(self.e['zurueck']['kind'], [0, 0.5, 0])
+        self.assertEqual(self.e["zurueck"]["wurzel"], [0, 1, 0])
+        self.assertEqual(self.e["zurueck"]["kind"], [0, 0.5, 0])
 
     def test_beim_binden_stehen_die_ruhedrehungen(self):
-        u"""Falle 2: Wäre hier die laufende Pose zu sehen, würde sie als
+        """Falle 2: Wäre hier die laufende Pose zu sehen, würde sie als
         Ruhelage einbrennen und die Figur bliebe verdreht."""
-        self.assertEqual(self.e['pose']['beimBinden'], [[0, 0, 0, 1], [0, 0, 0, 1]])
+        self.assertEqual(self.e["pose"]["beimBinden"], [[0, 0, 0, 1], [0, 0, 0, 1]])
 
     def test_die_pose_laeuft_danach_weiter(self):
-        u"""Nachbinden darf die Animation nicht anhalten."""
-        self.assertEqual(self.e['pose']['danach'],
-                         [[0.5, 0.5, 0.5, 0.5], [0, 0.7071, 0, 0.7071]])
+        """Nachbinden darf die Animation nicht anhalten."""
+        self.assertEqual(self.e["pose"]["danach"], [[0.5, 0.5, 0.5, 0.5], [0, 0.7071, 0, 0.7071]])
 
     def test_ohne_netz_skelett_oder_daten_passiert_nichts(self):
-        u"""Die Nachricht kann vor dem Skinning eintreffen — dann ist
+        """Die Nachricht kann vor dem Skinning eintreffen — dann ist
         „nichts tun" richtig, nicht „werfen"."""
-        self.assertIs(self.e['leerlauf']['ohneNetz'], False)
-        self.assertIs(self.e['leerlauf']['ohneSkelett'], False)
-        self.assertIs(self.e['leerlauf']['ohneDaten'], False)
-        self.assertIs(self.e['leerlauf']['brauchbar'], True)
+        self.assertIs(self.e["leerlauf"]["ohneNetz"], False)
+        self.assertIs(self.e["leerlauf"]["ohneSkelett"], False)
+        self.assertIs(self.e["leerlauf"]["ohneDaten"], False)
+        self.assertIs(self.e["leerlauf"]["brauchbar"], True)
 
     def test_die_achsen_werden_gedreht(self):
-        u"""Blender (x,y,z) -> Three.js (x,z,-y) — dieselbe Wandlung wie im
+        """Blender (x,y,z) -> Three.js (x,z,-y) — dieselbe Wandlung wie im
         Skelettbauer. Wer sie hier vergisst, legt die Figur hin."""
-        self.assertEqual(self.e['achsen'], [1, 3, -2])
+        self.assertEqual(self.e["achsen"], [1, 3, -2])

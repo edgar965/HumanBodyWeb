@@ -30,7 +30,7 @@ class Bvhbaum:
     #: Endpunkte („End Site") tragen keinen Namen und keine Kanäle; auf dem
     #: Stapel brauchen sie trotzdem einen Platzhalter, sonst rutscht die
     #: Elternbeziehung beim schließenden `}` um eine Ebene.
-    ENDPUNKT = '__endsite__'
+    ENDPUNKT = "__endsite__"
 
     def __init__(self, pfad):
         self.gelenke = []
@@ -54,8 +54,7 @@ class Bvhbaum:
         Das ist genau `kanaele` flach gelegt: Ein Gelenk hat GENAU EINE
         `CHANNELS`-Zeile, und die Woerterbuch-Reihenfolge ist die der Datei.
         """
-        return [(gelenk, kanal)
-                for gelenk, liste in self.kanaele.items() for kanal in liste]
+        return [(gelenk, kanal) for gelenk, liste in self.kanaele.items() for kanal in liste]
 
     def verbindungen(self):
         """(Eltern, Kind) für jede Kante der Hierarchie."""
@@ -75,12 +74,11 @@ class Bvhbaum:
         i = 0
         while i < len(zeilen):
             zeile = zeilen[i].strip()
-            if zeile == 'MOTION':
+            if zeile == "MOTION":
                 return i + 1
             wortliste = zeile.split()
             if wortliste:
-                aktuell, endpunkt = self._wort(wortliste, stapel, aktuell,
-                                               endpunkt)
+                aktuell, endpunkt = self._wort(wortliste, stapel, aktuell, endpunkt)
             i += 1
         return i
 
@@ -94,15 +92,15 @@ class Bvhbaum:
         unangenehmste Sorte Funktion, weil jede Änderung alle drei betrifft.
         """
         kopf = wortliste[0]
-        if kopf in ('ROOT', 'JOINT'):
+        if kopf in ("ROOT", "JOINT"):
             return self._gelenk_beginnt(wortliste[1], stapel), False
         # „End Site" — ein Endpunkt ohne Namen und ohne Kanäle. Er zählt nicht
         # als Gelenk, braucht auf dem Stapel aber einen Platz (siehe ENDPUNKT).
-        if kopf == 'End' and len(wortliste) > 1 and wortliste[1] == 'Site':
+        if kopf == "End" and len(wortliste) > 1 and wortliste[1] == "Site":
             return None, True
-        if kopf == '{':
+        if kopf == "{":
             return self._klammer_auf(stapel, aktuell, endpunkt), endpunkt
-        if kopf == '}':
+        if kopf == "}":
             if stapel:
                 stapel.pop()
             return aktuell, False
@@ -136,15 +134,15 @@ class Bvhbaum:
     def _eigenschaft(self, kopf, wortliste):
         """`OFFSET` und `CHANNELS` des zuletzt begonnenen Gelenks."""
         gelenk = self.gelenke[-1]
-        if kopf == 'OFFSET':
+        if kopf == "OFFSET":
             self.verschiebung[gelenk] = np.array(
-                [float(wortliste[1]), float(wortliste[2]),
-                 float(wortliste[3])])
-        elif kopf == 'CHANNELS':
+                [float(wortliste[1]), float(wortliste[2]), float(wortliste[3])]
+            )
+        elif kopf == "CHANNELS":
             # Die ANZAHL steht in der Zeile; mehr Namen dahinter wären ein
             # Fehler der Datei und werden abgeschnitten, nicht gelesen.
             anzahl = int(wortliste[1])
-            self.kanaele[gelenk] = wortliste[2:2 + anzahl]
+            self.kanaele[gelenk] = wortliste[2 : 2 + anzahl]
 
     def _bewegung(self, zeilen, stelle):
         """Bewegungswerte je Bild — Leerzeilen übersprungen.
@@ -153,10 +151,9 @@ class Bvhbaum:
         Ende; sie haben in einem anderen Leser dieses Projekts einmal jeden
         Aufruf der Theatre-Seite mit einem Fehler 500 beendet (16.08.2026).
         """
-        while stelle < len(zeilen) and not zeilen[stelle].strip().startswith(
-                'Frames:'):
+        while stelle < len(zeilen) and not zeilen[stelle].strip().startswith("Frames:"):
             stelle += 1
-        stelle += 2                      # „Frames: N" und „Frame Time: …"
+        stelle += 2  # „Frames: N" und „Frame Time: …"
         for zeile in zeilen[stelle:]:
             werte = zeile.strip()
             if werte:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Korrekturglaettung: glaettet die Verformung, nicht die Form.
+"""Korrekturglaettung: glaettet die Verformung, nicht die Form.
 
 Blenders Corrective Smooth (MB-Lab: alles ausser Kopf, Faktor 0,5, fuenf
 Durchgaenge). Drei Eigenschaften, an denen man erkennt, ob es der richtige
@@ -11,6 +11,7 @@ Algorithmus ist — und nicht bloss eine Laplace-Glaettung:
 3. Eine Zacke, die das Skinning erzeugt, wird flacher; ein Punkt mit
    Gewicht 0 bleibt, wo er ist.
 """
+
 from unittest import TestCase
 
 import numpy as np
@@ -19,10 +20,9 @@ from humanbody_core.korrekturglaettung import Korrekturglaettung
 
 
 def _gitter(nx=8, ny=8, welle=0.0):
-    u"""Ebenes Vierecknetz mit einer sanften Welle (Ruhelage-Detail)."""
-    xs, ys = np.meshgrid(np.arange(nx), np.arange(ny), indexing='ij')
-    punkte = np.stack([xs.ravel() * 0.1, ys.ravel() * 0.1,
-                       welle * np.sin(xs.ravel() * 0.9)], axis=1)
+    """Ebenes Vierecknetz mit einer sanften Welle (Ruhelage-Detail)."""
+    xs, ys = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    punkte = np.stack([xs.ravel() * 0.1, ys.ravel() * 0.1, welle * np.sin(xs.ravel() * 0.9)], axis=1)
     quads = []
     for i in range(nx - 1):
         for j in range(ny - 1):
@@ -33,12 +33,10 @@ def _gitter(nx=8, ny=8, welle=0.0):
 
 def _drehung(grad):
     w = np.radians(grad)
-    return np.array([[np.cos(w), -np.sin(w), 0], [np.sin(w), np.cos(w), 0],
-                     [0, 0, 1.0]])
+    return np.array([[np.cos(w), -np.sin(w), 0], [np.sin(w), np.cos(w), 0], [0, 0, 1.0]])
 
 
 class Eigenschaften(TestCase):
-
     def test_ruhelage_bleibt_ruhelage(self):
         punkte, quads = _gitter(welle=0.03)
         k = Korrekturglaettung(quads).ruhelage(punkte)
@@ -51,7 +49,7 @@ class Eigenschaften(TestCase):
         np.testing.assert_allclose(k.anwenden(gedreht), gedreht, atol=1e-9)
 
     def test_blosse_glaettung_wuerde_die_welle_verlieren(self):
-        u"""Gegenprobe: ohne Deltas verschwindet das Ruhelage-Detail."""
+        """Gegenprobe: ohne Deltas verschwindet das Ruhelage-Detail."""
         punkte, quads = _gitter(welle=0.03)
         k = Korrekturglaettung(quads)
         flach = k.glaetten(punkte)
@@ -65,8 +63,8 @@ class Eigenschaften(TestCase):
         k = Korrekturglaettung(quads, gewichte).ruhelage(punkte)
         verformt = punkte.copy()
         mitte = (4 * 8) + 4
-        verformt[mitte, 2] += 0.2          # Skinning-Zacke
-        verformt[0, 2] += 0.2              # Punkt mit Gewicht 0
+        verformt[mitte, 2] += 0.2  # Skinning-Zacke
+        verformt[0, 2] += 0.2  # Punkt mit Gewicht 0
         aus = k.anwenden(verformt)
         self.assertLess(aus[mitte, 2], 0.2 * 0.6)
         self.assertGreater(aus[mitte, 2], 0.0)
@@ -75,6 +73,5 @@ class Eigenschaften(TestCase):
     def test_tangentenrahmen_sind_orthonormal(self):
         punkte, quads = _gitter(welle=0.03)
         rahmen = Korrekturglaettung(quads).tangentenrahmen(punkte)
-        innen = np.einsum('vij,vkj->vik', rahmen, rahmen)
-        np.testing.assert_allclose(innen, np.broadcast_to(np.eye(3), innen.shape),
-                                   atol=0.05)
+        innen = np.einsum("vij,vkj->vik", rahmen, rahmen)
+        np.testing.assert_allclose(innen, np.broadcast_to(np.eye(3), innen.shape), atol=0.05)

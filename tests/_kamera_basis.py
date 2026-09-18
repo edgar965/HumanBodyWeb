@@ -71,34 +71,55 @@ class Kamerabasis:
         # Dictionary gewollt: geht unveraendert als JSON an
         # /api/studio/project-save/.
         return {
-            'name': 'T', 'fps': 30,
-            'tracks': [{
-                'name': 'Kamera', 'type': 'camera', 'color': '#4caf50',
-                'muted': False, 'position': [0, 0, 0], 'cameraActive': True,
-                'clips': [
-                    cls.keyframe(1, {'x': 2.0, 'y': 1.5, 'z': 3.0},
-                                 {'x': -0.12, 'y': 0.55, 'z': 0.06},
-                                 {'x': 0.103, 'y': 0.275, 'z': -0.031,
-                                  'w': 0.956}, 'KF1'),
-                    cls.keyframe(200, {'x': 2.05, 'y': 1.51, 'z': 3.02},
-                                 {'x': -0.12, 'y': 0.56, 'z': 0.06},
-                                 {'x': -0.104, 'y': -0.280, 'z': 0.031,
-                                  'w': -0.955}, 'KF2'),
-                ],
-            }],
+            "name": "T",
+            "fps": 30,
+            "tracks": [
+                {
+                    "name": "Kamera",
+                    "type": "camera",
+                    "color": "#4caf50",
+                    "muted": False,
+                    "position": [0, 0, 0],
+                    "cameraActive": True,
+                    "clips": [
+                        cls.keyframe(
+                            1,
+                            {"x": 2.0, "y": 1.5, "z": 3.0},
+                            {"x": -0.12, "y": 0.55, "z": 0.06},
+                            {"x": 0.103, "y": 0.275, "z": -0.031, "w": 0.956},
+                            "KF1",
+                        ),
+                        cls.keyframe(
+                            200,
+                            {"x": 2.05, "y": 1.51, "z": 3.02},
+                            {"x": -0.12, "y": 0.56, "z": 0.06},
+                            {"x": -0.104, "y": -0.280, "z": 0.031, "w": -0.955},
+                            "KF2",
+                        ),
+                    ],
+                }
+            ],
         }
 
     @staticmethod
     def keyframe(bild, position, drehung, quaternion, name):
         """Ein Kamera-Keyframe-Clip in der Form, die das Studio speichert."""
         return {
-            'type': 'camera_kf', 'name': name, 'startFrame': bild,
-            'fps': 30, 'totalFrames': 0, 'trimIn': 0, 'trimOut': 0,
-            'speed': 1.0,
-            'data': {
-                'position': position, 'rotation': drehung,
-                'quaternion': quaternion, 'fov': 45,
-                'interpolation': 'smooth', 'fade': True,
+            "type": "camera_kf",
+            "name": name,
+            "startFrame": bild,
+            "fps": 30,
+            "totalFrames": 0,
+            "trimIn": 0,
+            "trimOut": 0,
+            "speed": 1.0,
+            "data": {
+                "position": position,
+                "rotation": drehung,
+                "quaternion": quaternion,
+                "fov": 45,
+                "interpolation": "smooth",
+                "fade": True,
             },
         }
 

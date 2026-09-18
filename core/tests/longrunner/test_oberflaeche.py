@@ -61,10 +61,9 @@ from tests.kanal import Kanal
 #: entstanden. `ProjektTemp` geht hier nicht: Es legt unter
 #: `MEDIA_ROOT/tmp` ab, und MEDIA_ROOT ist genau das, was hier erst
 #: erzeugt wird.
-_TEMPBASIS = Path(settings.BASE_DIR).parent / 'ProjektTemp'
+_TEMPBASIS = Path(settings.BASE_DIR).parent / "ProjektTemp"
 _TEMPBASIS.mkdir(exist_ok=True)
-_MEDIEN = tempfile.TemporaryDirectory(prefix='hb-ui-medien-',
-                                      dir=str(_TEMPBASIS))
+_MEDIEN = tempfile.TemporaryDirectory(prefix="hb-ui-medien-", dir=str(_TEMPBASIS))
 
 
 @override_settings(MEDIA_ROOT=Path(_MEDIEN.name))
@@ -82,10 +81,9 @@ class Oberflaechenfall(TestCase):
     def pruefen(self, fall):
         """Einen Fall fahren und sein Ergebnis als Zusicherung auswerten."""
         ergebnis = fall.run()
-        if ergebnis['error']:
-            self.fail('%s: %s' % (fall.name, ergebnis['error']))
-        self.assertTrue(ergebnis['ok'],
-                        '%s: %s' % (fall.name, ergebnis['detail']))
+        if ergebnis["error"]:
+            self.fail("%s: %s" % (fall.name, ergebnis["error"]))
+        self.assertTrue(ergebnis["ok"], "%s: %s" % (fall.name, ergebnis["detail"]))
 
 
 class Fallbau:
@@ -96,17 +94,18 @@ class Fallbau:
     @staticmethod
     def methode(fall):
         """Eine Testmethode, die genau diesen Fall fährt."""
+
         def pruefung(self):
             self.pruefen(fall)
-        pruefung.__name__ = 'test_%s' % fall.fn.__name__.replace('test_', '')
+
+        pruefung.__name__ = "test_%s" % fall.fn.__name__.replace("test_", "")
         pruefung.__doc__ = fall.description or fall.name
         return pruefung
 
     @classmethod
     def klasse(cls, kategorie):
         """Aus einer `TestCategory` eine `TestCase`-Klasse bauen."""
-        inhalt = {'KATEGORIE': kategorie,
-                  '__doc__': '%s — %s' % (kategorie.name, kategorie.description)}
+        inhalt = {"KATEGORIE": kategorie, "__doc__": "%s — %s" % (kategorie.name, kategorie.description)}
         for fall in kategorie.cases():
             methode = cls.methode(fall)
             inhalt[methode.__name__] = methode
@@ -116,8 +115,7 @@ class Fallbau:
 #: Je Kategorie eine Klasse im Modul-Namensraum — Djangos Discovery findet sie
 #: darüber. `globals()` ist hier der Punkt: Eine Klasse, die nur in einer Liste
 #: steht, wird nicht gefunden.
-globals().update({_kategorie.__name__: Fallbau.klasse(_kategorie)
-                  for _kategorie in ALL_CATEGORIES})
+globals().update({_kategorie.__name__: Fallbau.klasse(_kategorie) for _kategorie in ALL_CATEGORIES})
 
 
 class AdapterTest(unittest.TestCase):
@@ -125,21 +123,19 @@ class AdapterTest(unittest.TestCase):
 
     def test_jede_kategorie_hat_eine_klasse(self):
         for kategorie in ALL_CATEGORIES:
-            self.assertIn(kategorie.__name__, globals(),
-                          'Kategorie %s fehlt' % kategorie.__name__)
+            self.assertIn(kategorie.__name__, globals(), "Kategorie %s fehlt" % kategorie.__name__)
 
     def test_jeder_fall_hat_eine_methode(self):
         fehlend = []
         for kategorie in ALL_CATEGORIES:
             klasse = globals()[kategorie.__name__]
             for fall in kategorie.cases():
-                name = 'test_%s' % fall.fn.__name__.replace('test_', '')
+                name = "test_%s" % fall.fn.__name__.replace("test_", "")
                 if not hasattr(klasse, name):
-                    fehlend.append('%s.%s' % (kategorie.__name__, name))
-        self.assertEqual(fehlend, [], 'Verlorene Fälle: %s' % fehlend)
+                    fehlend.append("%s.%s" % (kategorie.__name__, name))
+        self.assertEqual(fehlend, [], "Verlorene Fälle: %s" % fehlend)
 
     def test_die_zahl_der_faelle_bleibt_sichtbar(self):
         """Die Gesamtzahl steht im Bericht — sinkt sie, ist etwas verschwunden."""
         anzahl = sum(len(k.cases()) for k in ALL_CATEGORIES)
-        self.assertGreaterEqual(anzahl, 120,
-                                'Nur %d Fälle gefunden' % anzahl)
+        self.assertGreaterEqual(anzahl, 120, "Nur %d Fälle gefunden" % anzahl)

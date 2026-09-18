@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Vorgabewerte der SMPL-Seite — welche es gibt und was gilt.
+"""Die Vorgabewerte der SMPL-Seite — welche es gibt und was gilt.
 
 WARUM EIGENE KLASSE (30.08.2026, Befund `code-qualitaet`):
 ``Smplendpunkte.einstellungen_sichern`` hatte dreizehn Verzweigungen, und jede
@@ -22,14 +22,15 @@ ZWEI ARTEN VON FELDERN, und der Unterschied ist gewollt:
                                 Ein Rückfall würde hier einen Wert löschen, den
                                 eine ältere Fassung der Seite gar nicht kennt.
 """
+
 import json
 
 
 class Smplvorgaben:
-    u"""Was die SMPL-Seite speichern darf — als Tabelle statt als if-Kette."""
+    """Was die SMPL-Seite speichern darf — als Tabelle statt als if-Kette."""
 
     #: Zulaessige Geschlechter des SMPL-Modells.
-    GESCHLECHTER = ('female', 'male', 'neutral')
+    GESCHLECHTER = ("female", "male", "neutral")
     #: So viele Formparameter fuehrt SMPL.
     BETAS = 10
 
@@ -38,39 +39,39 @@ class Smplvorgaben:
 
     @staticmethod
     def _geschlecht(wert):
-        return wert if wert in Smplvorgaben.GESCHLECHTER else 'female'
+        return wert if wert in Smplvorgaben.GESCHLECHTER else "female"
 
     @staticmethod
     def _betas(wert):
-        u"""Genau zehn Zahlen, sonst gar nichts.
+        """Genau zehn Zahlen, sonst gar nichts.
 
         Eine kürzere Liste würde beim Lesen mit Nullen aufgefüllt — die
         fehlenden Formparameter wären still auf Standard zurückgesetzt.
         """
         if not isinstance(wert, list) or len(wert) != Smplvorgaben.BETAS:
             return None
-        return ','.join('%.2f' % b for b in wert)
+        return ",".join("%.2f" % b for b in wert)
 
     @staticmethod
     def _anteil(wert):
-        u"""0…1 — die Deckkraft."""
+        """0…1 — die Deckkraft."""
         return None if wert is None else max(0.0, min(1.0, float(wert)))
 
     @staticmethod
     def _versatz(wert):
-        u"""±2 Meter. Weiter draußen ist der Körper aus dem Bild."""
+        """±2 Meter. Weiter draußen ist der Körper aus dem Bild."""
         return None if wert is None else max(-2.0, min(2.0, float(wert)))
 
     @staticmethod
     def _farbe(wert):
-        u"""Nur Hexfarben. Ein Farbname käme im CSS an und im Renderer nicht."""
-        if not (wert and isinstance(wert, str) and wert.startswith('#')):
+        """Nur Hexfarben. Ein Farbname käme im CSS an und im Renderer nicht."""
+        if not (wert and isinstance(wert, str) and wert.startswith("#")):
             return None
         return wert
 
     @staticmethod
     def _szene(wert):
-        u"""Das Szenen-Wörterbuch als JSON-Text im Modellfeld."""
+        """Das Szenen-Wörterbuch als JSON-Text im Modellfeld."""
         return json.dumps(wert) if isinstance(wert, dict) and wert else None
 
     @staticmethod
@@ -79,7 +80,7 @@ class Smplvorgaben:
 
     @classmethod
     def uebernehmen(cls, daten, einstellungen):
-        u"""Die gemeldeten Werte ins Modell schreiben. Speichert NICHT.
+        """Die gemeldeten Werte ins Modell schreiben. Speichert NICHT.
 
         @param daten Wörterbuch aus der Anfrage
         @param einstellungen ``AppSettings``-Objekt
@@ -108,11 +109,11 @@ class Smplvorgaben:
 #: nichts meldet). ``FEHLT`` heisst „dann nichts anfassen"; gibt die Pruefung
 #: ``None`` zurueck, bleibt das Feld ebenfalls unveraendert.
 Smplvorgaben.FELDER = (
-    ('gender', 'smpl_default_gender', Smplvorgaben._geschlecht, 'female'),
-    ('betas', 'smpl_default_betas', Smplvorgaben._betas, Smplvorgaben.FEHLT),
-    ('opacity', 'smpl_default_opacity', Smplvorgaben._anteil, Smplvorgaben.FEHLT),
-    ('color', 'smpl_default_color', Smplvorgaben._farbe, Smplvorgaben.FEHLT),
-    ('wireframe', 'smpl_default_wireframe', Smplvorgaben._schalter, False),
-    ('xoffset', 'smpl_default_xoffset', Smplvorgaben._versatz, Smplvorgaben.FEHLT),
-    ('scene', 'smpl_default_scene', Smplvorgaben._szene, Smplvorgaben.FEHLT),
+    ("gender", "smpl_default_gender", Smplvorgaben._geschlecht, "female"),
+    ("betas", "smpl_default_betas", Smplvorgaben._betas, Smplvorgaben.FEHLT),
+    ("opacity", "smpl_default_opacity", Smplvorgaben._anteil, Smplvorgaben.FEHLT),
+    ("color", "smpl_default_color", Smplvorgaben._farbe, Smplvorgaben.FEHLT),
+    ("wireframe", "smpl_default_wireframe", Smplvorgaben._schalter, False),
+    ("xoffset", "smpl_default_xoffset", Smplvorgaben._versatz, Smplvorgaben.FEHLT),
+    ("scene", "smpl_default_scene", Smplvorgaben._szene, Smplvorgaben.FEHLT),
 )

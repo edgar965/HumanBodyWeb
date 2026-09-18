@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Jeder relative Import im Addon zeigt auf eine Datei, die es gibt.
+"""Jeder relative Import im Addon zeigt auf eine Datei, die es gibt.
 
 DER ANLASS (01.09.2026)
 =======================
@@ -52,6 +52,7 @@ BDD - GEGEBEN / DANN
     JederNameAusEinemPaket ... ist dort auch zu finden
     EineSabotageAmImport        ... ein erfundener Pfad wird erkannt
 """
+
 import ast
 import unittest
 
@@ -61,64 +62,61 @@ ADDON = Addonimporte.WURZEL
 
 
 class JederRelativeImport(unittest.TestCase):
-    u"""Kein Import zeigt auf ein Modul, das es nicht gibt."""
+    """Kein Import zeigt auf ein Modul, das es nicht gibt."""
 
     databases = set()
 
     def test_keiner_zeigt_ins_leere(self):
         schlecht = Addonimporte.ins_leere()
-        self.assertEqual(schlecht, [], 'Importe ins Leere: %s' % schlecht)
+        self.assertEqual(schlecht, [], "Importe ins Leere: %s" % schlecht)
 
     def test_es_werden_ueberhaupt_importe_geprueft(self):
-        u"""Sabotageschutz: Eine leere Menge bestuende jeden Test."""
+        """Sabotageschutz: Eine leere Menge bestuende jeden Test."""
         self.assertGreater(Addonimporte.anzahl(), 150)
 
 
 class EineSabotageAmImport(unittest.TestCase):
-    u"""Die Gegenprobe: Der Test muss rot werden koennen."""
+    """Die Gegenprobe: Der Test muss rot werden koennen."""
 
     databases = set()
 
     @staticmethod
     def _zeigt_auf_etwas(datei, knoten):
-        u"""Findet `from …` aus dieser Datei heraus ein Ziel?"""
-        pfad = ADDON.joinpath(*datei.split('/'))
+        """Findet `from …` aus dieser Datei heraus ein Ziel?"""
+        pfad = ADDON.joinpath(*datei.split("/"))
         return Addonimporte.gibt_es(Addonimporte.ziel(pfad, knoten))
 
     @staticmethod
     def _fehlend(datei, knoten):
-        pfad = ADDON.joinpath(*datei.split('/'))
+        pfad = ADDON.joinpath(*datei.split("/"))
         return Addonimporte.fehlende_namen(pfad, knoten)
 
     def test_ein_erfundener_pfad_wird_erkannt(self):
-        knoten = ast.parse('from .gibtesnicht import x').body[0]
-        self.assertFalse(self._zeigt_auf_etwas('ui.py', knoten))
+        knoten = ast.parse("from .gibtesnicht import x").body[0]
+        self.assertFalse(self._zeigt_auf_etwas("ui.py", knoten))
 
     def test_ein_richtiger_pfad_wird_nicht_gemeldet(self):
-        knoten = ast.parse('from .ui_teile.zonen import Zonen').body[0]
-        self.assertTrue(self._zeigt_auf_etwas('ui.py', knoten))
+        knoten = ast.parse("from .ui_teile.zonen import Zonen").body[0]
+        self.assertTrue(self._zeigt_auf_etwas("ui.py", knoten))
 
     def test_eine_ebene_zu_wenig_faellt_auf(self):
-        u"""Genau der Fall von `anim/zwischenspeicher.py`."""
-        knoten = ast.parse('from .convert.x import y').body[0]
-        katalog = 'anim/katalog.py'
+        """Genau der Fall von `anim/zwischenspeicher.py`."""
+        knoten = ast.parse("from .convert.x import y").body[0]
+        katalog = "anim/katalog.py"
         self.assertFalse(self._zeigt_auf_etwas(katalog, knoten))
-        zwei = ast.parse('from ..convert.retarget_bvh import y').body[0]
+        zwei = ast.parse("from ..convert.retarget_bvh import y").body[0]
         self.assertTrue(self._zeigt_auf_etwas(katalog, zwei))
 
     def test_ein_name_der_im_paket_fehlt_wird_erkannt(self):
-        u"""Genau der Fall von `ui_teile/zeichnen_garderobe.py`."""
-        knoten = ast.parse('from . import assetCreator').body[0]
-        self.assertEqual(self._fehlend('ui_teile/ui.py', knoten),
-                         ['assetCreator'])
+        """Genau der Fall von `ui_teile/zeichnen_garderobe.py`."""
+        knoten = ast.parse("from . import assetCreator").body[0]
+        self.assertEqual(self._fehlend("ui_teile/ui.py", knoten), ["assetCreator"])
 
     def test_ein_untermodul_wird_nicht_gemeldet(self):
-        knoten = ast.parse('from . import zonen').body[0]
-        self.assertEqual(self._fehlend('ui_teile/ui.py', knoten),
-                         [])
+        knoten = ast.parse("from . import zonen").body[0]
+        self.assertEqual(self._fehlend("ui_teile/ui.py", knoten), [])
 
     def test_namen_aus_einem_modul_werden_hier_nicht_geprueft(self):
-        u"""`from .zonen import Zonen` zeigt auf eine Datei, kein Paket."""
-        knoten = ast.parse('from .zonen import Zonen, Egal').body[0]
-        self.assertEqual(self._fehlend('ui_teile/ui.py', knoten),
-                         [])
+        """`from .zonen import Zonen` zeigt auf eine Datei, kein Paket."""
+        knoten = ast.parse("from .zonen import Zonen, Egal").body[0]
+        self.assertEqual(self._fehlend("ui_teile/ui.py", knoten), [])

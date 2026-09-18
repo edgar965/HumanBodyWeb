@@ -27,33 +27,33 @@ class Systemendpunkte:
     """Vorgaben der Oberflaeche lesen und schreiben, Browsermeldungen loggen."""
 
     #: Stufen, die eine Browsermeldung tragen darf.
-    STUFEN = ('error', 'warning', 'info')
+    STUFEN = ("error", "warning", "info")
 
     @staticmethod
     @require_GET
     def vorgaben(request):
         """Alle Vorgaben des HumanBody-Teils in einer Antwort."""
         gespeichert = AppSettings.load()
-        return JsonResponse({
-            'models_dir': str(settings.HUMANBODY_MODELS_DIR),
-            'config': gespeichert.default_model_config,
-            'scene': gespeichert.default_model_scene,
-            'animations': gespeichert.default_model_animations,
-            'show_rig_config': gespeichert.show_rig_config,
-            'show_rig_scene': gespeichert.show_rig_scene,
-            'show_rig_animations': gespeichert.show_rig_animations,
-            'default_anim_config': gespeichert.default_anim_config,
-            'default_anim_scene': gespeichert.default_anim_scene,
-            'default_anim_animations': gespeichert.default_anim_animations,
-            'expanded_panels_config': json.loads(
-                gespeichert.expanded_panels_config or '[]'),
-            'expanded_panels_scene': json.loads(
-                gespeichert.expanded_panels_scene or '[]'),
-            'selection_opacity': gespeichert.selection_opacity,
-            'result': gespeichert.default_model_result,
-            'default_anim_result': gespeichert.default_anim_result,
-            'ui_prefs': gespeichert.ui_prefs or {},
-        })
+        return JsonResponse(
+            {
+                "models_dir": str(settings.HUMANBODY_MODELS_DIR),
+                "config": gespeichert.default_model_config,
+                "scene": gespeichert.default_model_scene,
+                "animations": gespeichert.default_model_animations,
+                "show_rig_config": gespeichert.show_rig_config,
+                "show_rig_scene": gespeichert.show_rig_scene,
+                "show_rig_animations": gespeichert.show_rig_animations,
+                "default_anim_config": gespeichert.default_anim_config,
+                "default_anim_scene": gespeichert.default_anim_scene,
+                "default_anim_animations": gespeichert.default_anim_animations,
+                "expanded_panels_config": json.loads(gespeichert.expanded_panels_config or "[]"),
+                "expanded_panels_scene": json.loads(gespeichert.expanded_panels_scene or "[]"),
+                "selection_opacity": gespeichert.selection_opacity,
+                "result": gespeichert.default_model_result,
+                "default_anim_result": gespeichert.default_anim_result,
+                "ui_prefs": gespeichert.ui_prefs or {},
+            }
+        )
 
     @staticmethod
     @csrf_exempt
@@ -62,18 +62,18 @@ class Systemendpunkte:
         """EINEN Schluessel in `AppSettings.ui_prefs` schreiben."""
         try:
             daten = json.loads(request.body)
-            schluessel = daten.get('key')
+            schluessel = daten.get("key")
             if not schluessel:
-                return JsonResponse({'error': 'key required'}, status=400)
+                return JsonResponse({"error": "key required"}, status=400)
             gespeichert = AppSettings.load()
             vorgaben = gespeichert.ui_prefs or {}
-            vorgaben[schluessel] = daten.get('value')
+            vorgaben[schluessel] = daten.get("value")
             gespeichert.ui_prefs = vorgaben
             gespeichert.save()
-            return JsonResponse({'ok': True})
+            return JsonResponse({"ok": True})
         except Exception as fehler:
-            logger.exception('ui_pref_save: unerwarteter Fehler')
-            return JsonResponse({'error': str(fehler)}, status=500)
+            logger.exception("ui_pref_save: unerwarteter Fehler")
+            return JsonResponse({"error": str(fehler)}, status=500)
 
     @staticmethod
     @csrf_exempt
@@ -86,19 +86,19 @@ class Systemendpunkte:
                 detail: "sigma=2.0", level: "info" }
         """
         # Routet auf den Logger `core.client` -> client.log
-        protokoll = logging.getLogger('core.client')
+        protokoll = logging.getLogger("core.client")
         daten, fehler = Anfragerumpf.lesen(request)
         if fehler:
             return fehler
-        text = '[%s] %s' % (daten.get('page', '?'), daten.get('action', '?'))
-        einzelheit = daten.get('detail', '')
+        text = "[%s] %s" % (daten.get("page", "?"), daten.get("action", "?"))
+        einzelheit = daten.get("detail", "")
         if einzelheit:
-            text += ' - %s' % einzelheit
-        stufe = daten.get('level', 'info').lower()
-        if stufe == 'error':
+            text += " - %s" % einzelheit
+        stufe = daten.get("level", "info").lower()
+        if stufe == "error":
             protokoll.error(text)
-        elif stufe == 'warning':
+        elif stufe == "warning":
             protokoll.warning(text)
         else:
             protokoll.info(text)
-        return JsonResponse({'ok': True})
+        return JsonResponse({"ok": True})

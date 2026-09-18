@@ -8,14 +8,14 @@ rechnen darauf — sie brauchen also einen Lauf, der schon stattgefunden
 hat, und sie dauern. Die uebrigen pruefen nur Merkmale im Quelltext
 der drei Engines.
 """
+
 from .base import TestCategory
 import numpy as np
 
 
 class ClothBackeTests(TestCategory):
-    name = 'Cloth Export: Backe-Ergebnis'
-    description = (
-        'Auswertung des juengsten bake.npz: Rockradien und Durchdringung')
+    name = "Cloth Export: Backe-Ergebnis"
+    description = "Auswertung des juengsten bake.npz: Rockradien und Durchdringung"
 
     @staticmethod
     def test_recent_bake_no_thigh_through_skirt_radial():
@@ -35,12 +35,11 @@ class ClothBackeTests(TestCategory):
         if grund:
             return True, grund
         daten = daten or {}
-        if int(daten['n_seg'][0]) == 0:
-            return True, 'Skip: keine Cloth-Segmente'
+        if int(daten["n_seg"][0]) == 0:
+            return True, "Skip: keine Cloth-Segmente"
         pruefung = Rockradien().bake_pruefen(daten)
         if pruefung.geprueft == 0:
-            return True, ('Skip: keine vergleichbaren Slices (cloth zu klein?) '
-                          '— latest=%s' % ordner)
+            return True, ("Skip: keine vergleichbaren Slices (cloth zu klein?) — latest=%s" % ordner)
         return bool(pruefung.bestanden), pruefung.bericht()
 
     @staticmethod
@@ -49,14 +48,15 @@ class ClothBackeTests(TestCategory):
         Cloth-Vertex-Penetrationen (Cloth-Vert innerhalb Body-Mesh). Läuft nicht
         wenn kein bake.npz existiert (= keine Regression-Daten)."""
         from ._bakeablage import Bakeablage
+
         d, _ordner, grund = Bakeablage.laden(np)
         if grund:
             return True, grund
         d = d or {}
-        rigid_pos = d['rigid_positions']   # (N, NV_body, 3)
-        n_seg = int(d['n_seg'][0])
+        rigid_pos = d["rigid_positions"]  # (N, NV_body, 3)
+        n_seg = int(d["n_seg"][0])
         if n_seg == 0:
-            return True, 'Skip: keine Cloth-Segmente im bake'
+            return True, "Skip: keine Cloth-Segmente im bake"
         # Für jeden sample-Frame (0, N/2, N-1) prüfe Penetrationen
         N = rigid_pos.shape[0]
         sample_frames = [0, N // 2, N - 1] if N >= 3 else list(range(N))
@@ -68,24 +68,21 @@ class ClothBackeTests(TestCategory):
             # in body's bounding box AND inside its convex-ish region (use distance to
             # nearest body vert < 5cm as penetration proxy).
             for i in range(n_seg):
-                cloth = d[f'seg{i}_positions'][fr]
+                cloth = d[f"seg{i}_positions"][fr]
                 # Count cloth verts whose nearest body vert is very close (< 1 cm) and
                 # the cloth vert is BELOW the nearest body surface (proxy for "inside").
                 # For a lightweight test we use: cloth vert is within 1 cm of body.
                 n_near = 0
                 # Brute force (slow but OK for sample frame); use chunks for memory
                 for start in range(0, cloth.shape[0], 256):
-                    chunk = cloth[start:start + 256]
+                    chunk = cloth[start : start + 256]
                     # (chunk, body) → squared distances
                     d2 = ((chunk[:, None, :] - body[None, :, :]) ** 2).sum(axis=2)
-                    near = (d2.min(axis=1) < 0.0001)  # <1 cm
+                    near = d2.min(axis=1) < 0.0001  # <1 cm
                     n_near += int(near.sum())
                 rate = n_near / max(1, cloth.shape[0])
-                details.append(f'f={fr} seg{i} '
-                               f'penetr={n_near}/{cloth.shape[0]} '
-                               f'({rate*100:.1f}%)')
+                details.append(f"f={fr} seg{i} penetr={n_near}/{cloth.shape[0]} ({rate * 100:.1f}%)")
                 max_penetration_rate = max(max_penetration_rate, rate)
         # Akzeptabel: <5% Cloth-Verts sehr nah an Body. Mehr = Verdacht auf Penetration.
         ok = max_penetration_rate < 0.05
-        return (
-            ok, f'max_rate={max_penetration_rate*100:.1f}% | {" | ".join(details[:3])}')
+        return (ok, f"max_rate={max_penetration_rate * 100:.1f}% | {' | '.join(details[:3])}")

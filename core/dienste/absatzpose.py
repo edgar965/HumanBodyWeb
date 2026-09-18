@@ -25,27 +25,29 @@ Alles in Blenders Achsen ([w, x, y, z], Z oben); die Querachse x ist in
 beiden Welten dieselbe, und `to_threejs` benennt am Ende um wie bei jeder
 Pose ([x, z, -y, w]).
 """
+
 import json
 import math
 import os
 
 from django.conf import settings
 
-__all__ = ['Absatzpose']
+__all__ = ["Absatzpose"]
 
 
 class Absatzpose:
     """Fuss- und Zehendeltas für einen Absatz, zum Einrechnen in eine Pose."""
 
-    FUSS = ('DEF-foot.L', 'DEF-foot.R')
-    ZEHEN = ('DEF-toe.L', 'DEF-toe.R')
+    FUSS = ("DEF-foot.L", "DEF-foot.R")
+    ZEHEN = ("DEF-toe.L", "DEF-toe.R")
     #: Was der Betrachter mitschickt (Grad, cm) — `Fussbeugung.beschreibung`.
-    FELDER = ('winkel_grad', 'sprengung_grad', 'hebung_cm', 'plateau_cm')
+    FELDER = ("winkel_grad", "sprengung_grad", "hebung_cm", "plateau_cm")
 
     _skelette = {}
 
-    def __init__(self, winkel_grad=0.0, sprengung_grad=0.0, hebung_cm=0.0,
-                 plateau_cm=0.0, geschlecht='female'):
+    def __init__(
+        self, winkel_grad=0.0, sprengung_grad=0.0, hebung_cm=0.0, plateau_cm=0.0, geschlecht="female"
+    ):
         self.winkel_grad = float(winkel_grad or 0.0)
         self.sprengung_grad = float(sprengung_grad or 0.0)
         self.hebung_cm = float(hebung_cm or 0.0)
@@ -53,14 +55,16 @@ class Absatzpose:
         self.geschlecht = geschlecht
 
     @classmethod
-    def aus_anfrage(cls, werte, geschlecht='female'):
+    def aus_anfrage(cls, werte, geschlecht="female"):
         """Aus den Abfrageparametern einer Anfrage — None ohne Absatz."""
+
         def zahl(name):
             try:
                 return float(werte.get(name) or 0.0)
             # stumm gewollt: ein unlesbarer Abfrageparameter heisst 'kein Absatz'
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return 0.0
+
         pose = cls(*[zahl(name) for name in cls.FELDER], geschlecht=geschlecht)
         return pose if pose.aktiv else None
 
@@ -73,34 +77,37 @@ class Absatzpose:
         return (self.hebung_cm + self.plateau_cm) / 100.0
 
     def beschreibung(self):
-        return {'winkel_grad': self.winkel_grad, 'sprengung_grad': self.sprengung_grad,
-                'hebung_cm': self.hebung_cm, 'plateau_cm': self.plateau_cm}
+        return {
+            "winkel_grad": self.winkel_grad,
+            "sprengung_grad": self.sprengung_grad,
+            "hebung_cm": self.hebung_cm,
+            "plateau_cm": self.plateau_cm,
+        }
 
     # ------------------------------------------------------------- Skelett
 
     @classmethod
     def skelettdatei(cls, geschlecht):
         ordner = str(settings.HUMANBODY_DATA_DIR)
-        if geschlecht == 'male':
-            ordner += '_male'
-        return os.path.join(ordner, 'def_skeleton.json')
+        if geschlecht == "male":
+            ordner += "_male"
+        return os.path.join(ordner, "def_skeleton.json")
 
     @classmethod
     def ruhelagen(cls, geschlecht):
         """{Knochen: Weltquaternion [w,x,y,z] in der Ruhelage} — einmal gelesen."""
         if geschlecht not in cls._skelette:
-            with open(cls.skelettdatei(geschlecht), 'r', encoding='utf-8') as datei:
-                knochen = {b['name']: b for b in json.load(datei)['bones']}
+            with open(cls.skelettdatei(geschlecht), "r", encoding="utf-8") as datei:
+                knochen = {b["name"]: b for b in json.load(datei)["bones"]}
             welt = {}
 
             def weltlage(name):
                 if name in welt:
                     return welt[name]
                 eintrag = knochen[name]
-                lokal = eintrag.get('local_quaternion') or [1.0, 0.0, 0.0, 0.0]
-                eltern = eintrag.get('parent')
-                welt[name] = (cls.mal(weltlage(eltern), lokal)
-                              if eltern in knochen else list(lokal))
+                lokal = eintrag.get("local_quaternion") or [1.0, 0.0, 0.0, 0.0]
+                eltern = eintrag.get("parent")
+                welt[name] = cls.mal(weltlage(eltern), lokal) if eltern in knochen else list(lokal)
                 return welt[name]
 
             for name in cls.FUSS + cls.ZEHEN:
@@ -116,10 +123,12 @@ class Absatzpose:
         """Hamilton-Produkt zweier [w, x, y, z]."""
         w1, x1, y1, z1 = a
         w2, x2, y2, z2 = b
-        return [w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-                w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-                w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-                w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2]
+        return [
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+        ]
 
     @staticmethod
     def invers(q):
@@ -135,8 +144,10 @@ class Absatzpose:
         """{Knochen: Delta [w,x,y,z] im Knochenraum} — Fuss und Zehen."""
         welt = self.ruhelagen(self.geschlecht)
         aus = {}
-        for namen, grad in ((self.FUSS, self.winkel_grad),
-                            (self.ZEHEN, -(self.winkel_grad + self.sprengung_grad))):
+        for namen, grad in (
+            (self.FUSS, self.winkel_grad),
+            (self.ZEHEN, -(self.winkel_grad + self.sprengung_grad)),
+        ):
             for name in namen:
                 if name not in welt:
                     continue

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Jedes Modul in `humanbody_core` und `GarmentFitter` lädt — auch tief drin.
+"""Jedes Modul in `humanbody_core` und `GarmentFitter` lädt — auch tief drin.
 
 WARUM DIESER TEST EXISTIERT (31.08.2026)
 ----------------------------------------
@@ -51,6 +51,7 @@ Ordnerliste rät und liegt beim nächsten Verzeichnis daneben.
 
 Aufruf:  python manage.py test core.tests.unit.test_humanbody_importwege
 """
+
 import ast
 import importlib
 
@@ -64,31 +65,39 @@ Humanbodypfad.setzen()
 #: Die Bäume, die hier geprüft werden.
 #: Module, die eine andere Umgebung brauchen (python10: Warp, Torch) oder
 #: Blender voraussetzen. Ihr Fehlen ist kein Befund dieses Tests.
-FREMD = ('warp', 'torch', 'bpy', 'cv2', 'smplx', 'mediapipe', 'trimesh',
-         'pyrender', 'onnxruntime', 'yaml', 'playwright')
+FREMD = (
+    "warp",
+    "torch",
+    "bpy",
+    "cv2",
+    "smplx",
+    "mediapipe",
+    "trimesh",
+    "pyrender",
+    "onnxruntime",
+    "yaml",
+    "playwright",
+)
 
 
 class JedesModulLaedtTest(SimpleTestCase):
-    u"""Die Modulebene jeder Datei trägt."""
+    """Die Modulebene jeder Datei trägt."""
 
     def test_skripte_werden_erkannt(self):
-        u"""`download_all.py` MUSS als Skript gelten — sonst lädt es los."""
-        pfad = (Humanbodybaum.wurzel('ASSETS_ROOT') / 'assetCreator'
-                / 'GarmentFitter' / 'download_all.py')
+        """`download_all.py` MUSS als Skript gelten — sonst lädt es los."""
+        pfad = Humanbodybaum.wurzel("ASSETS_ROOT") / "assetCreator" / "GarmentFitter" / "download_all.py"
         wurzel = Humanbodybaum.wurzel()
         self.assertTrue(pfad.exists(), pfad)
         self.assertTrue(
             self._ist_skript(pfad),
-            'download_all.py wird beim Import ausgeführt und lädt '
-            '20 Asset-Pakete in data/garment_library/')
+            "download_all.py wird beim Import ausgeführt und lädt 20 Asset-Pakete in data/garment_library/",
+        )
         # Gegenprobe: ein gewöhnliches Modul ist KEIN Skript.
-        self.assertFalse(
-            self._ist_skript(wurzel / 'humanbody_core' / 'quaternion.py'))
+        self.assertFalse(self._ist_skript(wurzel / "humanbody_core" / "quaternion.py"))
 
     @staticmethod
     def _ist_skript(pfad):
-        return Humanbodybaum.ist_skript(
-            ast.parse(pfad.read_text(encoding='utf-8')))
+        return Humanbodybaum.ist_skript(ast.parse(pfad.read_text(encoding="utf-8")))
 
     def test_jedes_modul_laedt(self):
         kaputt = []
@@ -97,17 +106,15 @@ class JedesModulLaedtTest(SimpleTestCase):
                 importlib.import_module(name)
             except ImportError as fehler:
                 if any(f in str(fehler) for f in FREMD):
-                    continue        # andere Umgebung, nicht unser Befund
-                kaputt.append('%s: %s' % (name, fehler))
-            except Exception as fehler:              # noqa: BLE001
-                kaputt.append('%s: %s: %s'
-                              % (name, type(fehler).__name__, fehler))
-        self.assertEqual(kaputt, [], 'Diese Module laden nicht: %s'
-                         % '; '.join(kaputt))
+                    continue  # andere Umgebung, nicht unser Befund
+                kaputt.append("%s: %s" % (name, fehler))
+            except Exception as fehler:  # noqa: BLE001
+                kaputt.append("%s: %s: %s" % (name, type(fehler).__name__, fehler))
+        self.assertEqual(kaputt, [], "Diese Module laden nicht: %s" % "; ".join(kaputt))
 
 
 class HumanbodyLokaleImporteTest(SimpleTestCase):
-    u"""Relative Importe INNERHALB von Funktionen finden ihr Ziel.
+    """Relative Importe INNERHALB von Funktionen finden ihr Ziel.
 
     HIESS BIS ZUM 01.09.2026 `LokaleImporteTest` — genau wie die Klasse
     in `test_lokale_importe.py`, die dasselbe fuer HumanBodyWeb prueft.
@@ -120,51 +127,48 @@ class HumanbodyLokaleImporteTest(SimpleTestCase):
     def _ins_leere(self, dateien):
         kaputt = []
         for pfad in dateien:
-            baum = ast.parse(pfad.read_text(encoding='utf-8'))
+            baum = ast.parse(pfad.read_text(encoding="utf-8"))
             for knoten in ast.walk(baum):
-                if not isinstance(knoten, (ast.FunctionDef,
-                                           ast.AsyncFunctionDef)):
+                if not isinstance(knoten, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
                 for innen in ast.walk(knoten):
                     if not isinstance(innen, ast.ImportFrom) or not innen.level:
                         continue
                     if not self._loesbar(pfad, innen):
-                        kaputt.append('%s:%d  from %s%s'
-                                      % (pfad.name, innen.lineno,
-                                         '.' * innen.level,
-                                         innen.module or ''))
+                        kaputt.append(
+                            "%s:%d  from %s%s"
+                            % (pfad.name, innen.lineno, "." * innen.level, innen.module or "")
+                        )
         return kaputt
 
     @staticmethod
     def _loesbar(pfad, knoten):
-        u"""Zeigt die Ebene auf ein Modul oder Paket, das es gibt?"""
+        """Zeigt die Ebene auf ein Modul oder Paket, das es gibt?"""
         ziel = pfad.parent
         for _ in range(knoten.level - 1):
             ziel = ziel.parent
-        kopf = (knoten.module or '').split('.')[0]
+        kopf = (knoten.module or "").split(".")[0]
         if not kopf:
-            return True                  # `from . import x` — Paket selbst
-        return (ziel / (kopf + '.py')).exists() or (ziel / kopf).is_dir()
+            return True  # `from . import x` — Paket selbst
+        return (ziel / (kopf + ".py")).exists() or (ziel / kopf).is_dir()
 
     def test_kein_lokaler_import_zeigt_ins_leere(self):
         kaputt = self._ins_leere(p for _, p in Humanbodybaum.module())
-        self.assertEqual(kaputt, [],
-                         'Import in einer Funktion zeigt ins Leere: %s'
-                         % '; '.join(kaputt))
+        self.assertEqual(kaputt, [], "Import in einer Funktion zeigt ins Leere: %s" % "; ".join(kaputt))
 
     def test_die_pruefung_erkennt_eine_falsche_ebene(self):
-        u"""Gegenprobe: Genau der Fall vom 31.08.2026 MUSS auffallen."""
-        knoten = ast.parse('from .nachbarsuche import Nachbarsuche').body[0]
-        falsch = Humanbodybaum.wurzel() / 'humanbody_core' / 'cloth' / 'netzpflege.py'
-        richtig = Humanbodybaum.wurzel() / 'humanbody_core' / 'koerperabstand.py'
-        self.assertFalse(self._loesbar(falsch, knoten),
-                         'cloth/nachbarsuche.py gibt es nicht — muss auffallen')
-        self.assertTrue(self._loesbar(richtig, knoten),
-                        'humanbody_core/nachbarsuche.py gibt es sehr wohl')
+        """Gegenprobe: Genau der Fall vom 31.08.2026 MUSS auffallen."""
+        knoten = ast.parse("from .nachbarsuche import Nachbarsuche").body[0]
+        falsch = Humanbodybaum.wurzel() / "humanbody_core" / "cloth" / "netzpflege.py"
+        richtig = Humanbodybaum.wurzel() / "humanbody_core" / "koerperabstand.py"
+        self.assertFalse(
+            self._loesbar(falsch, knoten), "cloth/nachbarsuche.py gibt es nicht — muss auffallen"
+        )
+        self.assertTrue(self._loesbar(richtig, knoten), "humanbody_core/nachbarsuche.py gibt es sehr wohl")
 
 
 class DateienLesbarTest(SimpleTestCase):
-    u"""Jede gefundene Datei laesst sich zerlegen.
+    """Jede gefundene Datei laesst sich zerlegen.
 
     STAND BIS ZUM 02.09.2026 AUF DEM KOPF: Der Fall prueft frueher eine
     Liste auf Modulebene, die eine ANDERE Pruefung nebenbei gefuellt
@@ -177,16 +181,14 @@ class DateienLesbarTest(SimpleTestCase):
 
     def test_alle_dateien_lesbar(self):
         kaputt = Humanbodybaum.unlesbare()
-        self.assertEqual(kaputt, [],
-                         'Diese Dateien liessen sich nicht zerlegen: %s'
-                         % '; '.join(kaputt))
+        self.assertEqual(kaputt, [], "Diese Dateien liessen sich nicht zerlegen: %s" % "; ".join(kaputt))
 
     def test_die_pruefung_findet_ueberhaupt_dateien(self):
-        u"""Ein leerer Baum wuerde sonst als „alles lesbar" durchgehen."""
+        """Ein leerer Baum wuerde sonst als „alles lesbar" durchgehen."""
         self.assertGreater(len(list(Humanbodybaum.dateien())), 50)
 
     def test_jeder_baum_liegt_unter_seiner_wurzel(self):
-        u"""Ein verschobener Baum faellt still aus jeder Pruefung.
+        """Ein verschobener Baum faellt still aus jeder Pruefung.
 
         Die Zahl oben faengt das nicht: `humanbody_core` allein bringt
         weit mehr als 50 Dateien mit. Beim Umzug von `assetCreator` nach

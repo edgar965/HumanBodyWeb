@@ -9,13 +9,14 @@ Pruefung beisammen.
 Geprueft werden genau dieselben Dinge wie vorher — die Antwort dieser Klasse
 geht unveraendert an die Startseite und an die Testseite.
 """
+
 import logging
 import time
 from pathlib import Path
 
 from django.conf import settings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Systemzustand:
@@ -44,15 +45,15 @@ class Systemzustand:
     @classmethod
     def _ermitteln(cls):
         zustand = {
-            'mocapnet_exe': Path(settings.MOCAPNET_EXE).exists(),
-            'mediapipe_script': Path(settings.MEDIAPIPE_SCRIPT).exists(),
-            'openpose_exe': Path(settings.OPENPOSE_EXE).exists(),
-            'openpose_json2csv': Path(settings.OPENPOSE_JSON2CSV_EXE).exists(),
+            "mocapnet_exe": Path(settings.MOCAPNET_EXE).exists(),
+            "mediapipe_script": Path(settings.MEDIAPIPE_SCRIPT).exists(),
+            "openpose_exe": Path(settings.OPENPOSE_EXE).exists(),
+            "openpose_json2csv": Path(settings.OPENPOSE_JSON2CSV_EXE).exists(),
         }
-        zustand.update(cls._modul('mediapipe'))
-        zustand.update(cls._modul('opencv', 'cv2'))
-        zustand['models'] = cls._mocapnet_modelle()
-        zustand['openpose_models'] = cls._openpose_modelle()
+        zustand.update(cls._modul("mediapipe"))
+        zustand.update(cls._modul("opencv", "cv2"))
+        zustand["models"] = cls._mocapnet_modelle()
+        zustand["openpose_models"] = cls._openpose_modelle()
         return zustand
 
     @staticmethod
@@ -64,9 +65,8 @@ class Systemzustand:
         # es steht auf der Startseite. Ein Log daneben schriebe je Seitenaufruf
         # eine Zeile für jedes nicht installierte Werkzeug.
         except ImportError:
-            return {name: False, '%s_version' % name: None}
-        return {name: True,
-                '%s_version' % name: getattr(modul, '__version__', None)}
+            return {name: False, "%s_version" % name: None}
+        return {name: True, "%s_version" % name: getattr(modul, "__version__", None)}
 
     @classmethod
     def pipeline_paket(cls, name):
@@ -82,17 +82,15 @@ class Systemzustand:
         venv. Das ist ein `is_dir()` und kostet nichts; ein Unterprozess je
         Seitenaufruf wäre die Alternative gewesen.
         """
-        pakete = Path(settings.PIPELINE_PYTHON).parent.parent / 'Lib' / 'site-packages'
+        pakete = Path(settings.PIPELINE_PYTHON).parent.parent / "Lib" / "site-packages"
         return (pakete / name).is_dir()
 
     @staticmethod
     def _mocapnet_modelle():
-        ordner = (settings.MOCAPNET_ROOT / 'dataset' / 'combinedModel'
-                  / 'mocapnet2' / 'mode5' / '1.0')
-        return (ordner / 'upperbody_front.pb').exists()
+        ordner = settings.MOCAPNET_ROOT / "dataset" / "combinedModel" / "mocapnet2" / "mode5" / "1.0"
+        return (ordner / "upperbody_front.pb").exists()
 
     @staticmethod
     def _openpose_modelle():
-        modell = (settings.OPENPOSE_MODEL_DIR / 'pose' / 'body_25'
-                  / 'pose_iter_584000.caffemodel')
+        modell = settings.OPENPOSE_MODEL_DIR / "pose" / "body_25" / "pose_iter_584000.caffemodel"
         return modell.exists()

@@ -13,6 +13,7 @@ Die NACHBEREITUNG war fuenfmal fast gleich: Auftrag auf „fertig" setzen, BVH i
 die Ergebnisablage kopieren, Eintrag in der Bibliothek anlegen. Genau daran
 zeigt sich der Wert der Klasse — `_fertigmelden` steht einmal da.
 """
+
 import glob
 import logging
 import os
@@ -28,14 +29,14 @@ from ..pipeline_process import PipelineProzess
 from .fortschrittsleser import Fortschrittsleser
 from .laufbasis import Pipelinelauf
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Auftragslauf:
     """Fuehrt einen BVH-Auftrag aus und haelt seinen Zustand nach."""
 
-    SMPL_PIPELINES = ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'smplx')
-    NEUE_2D_ERKENNER = ('rtmpose', 'vitpose', 'yolo11')
+    SMPL_PIPELINES = ("gvhmr", "wham", "prompthmr", "gem", "duomo", "gemx", "smplx")
+    NEUE_2D_ERKENNER = ("rtmpose", "vitpose", "yolo11")
     #: MocapNET laedt beim Start seine TensorFlow-Modelle und meldet danach jede
     #: Frame. Es holt nichts aus dem Netz — deshalb kuerzer als bei den
     #: Python-Pipelines.
@@ -46,11 +47,11 @@ class Auftragslauf:
 
     def __init__(self, job_id):
         self.job_id = str(job_id)
-        self.BVHJob = apps.get_model('core', 'BVHJob')
-        self.BVHFile = apps.get_model('core', 'BVHFile')
+        self.BVHJob = apps.get_model("core", "BVHJob")
+        self.BVHFile = apps.get_model("core", "BVHFile")
         self.job = self.BVHJob.objects.get(id=job_id)
         self.videopfad = Path(settings.MEDIA_ROOT) / str(self.job.video_file)
-        self.ausgabeordner = Path(settings.MEDIA_ROOT) / 'output' / str(self.job.id)
+        self.ausgabeordner = Path(settings.MEDIA_ROOT) / "output" / str(self.job.id)
         self.ausgabeordner.mkdir(parents=True, exist_ok=True)
         self.teilweise = False
 
@@ -58,16 +59,16 @@ class Auftragslauf:
 
     def ausfuehren(self):
         try:
-            if self.job.pipeline.startswith('hybrid_'):
+            if self.job.pipeline.startswith("hybrid_"):
                 self._route_hybrid()
             elif self.job.pipeline in self.SMPL_PIPELINES:
                 self._route_smpl()
-            elif self.job.pipeline == 'v4':
+            elif self.job.pipeline == "v4":
                 self._route_v4()
             else:
                 self._route_zweidimensional()
-        except Exception as fehler:                               # noqa: BLE001
-            logger.exception('Auftrag %s: Lauf abgebrochen', self.job_id)
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("Auftrag %s: Lauf abgebrochen", self.job_id)
             self._teilergebnis_oder_fehler(fehler)
         finally:
             LaufendeProzesse.entfernen(self.job_id)
@@ -79,59 +80,52 @@ class Auftragslauf:
         from .gvhmr_ausgabe import GvhmrAusgabe
         from ..dienste.ergebnisablage import Ergebnisablage
 
-        koerper_bvh, gesicht_bvh = Hybridlauf(
-            self.job, self.videopfad, self.ausgabeordner).fahren()
+        koerper_bvh, gesicht_bvh = Hybridlauf(self.job, self.videopfad, self.ausgabeordner).fahren()
         if koerper_bvh:
             Ergebnisablage.kopieren(koerper_bvh, self.job.name, self.job.pipeline)
         if gesicht_bvh:
-            Ergebnisablage.kopieren(gesicht_bvh, self.job.name,
-                                    self.job.pipeline + '_face')
+            Ergebnisablage.kopieren(gesicht_bvh, self.job.name, self.job.pipeline + "_face")
         if self.job.bvh_file_hands:
-            Ergebnisablage.kopieren(self.job.bvh_file_hands, self.job.name,
-                                    self.job.pipeline + '_hands')
-        if self.job.pipeline == 'hybrid_gvhmr' and koerper_bvh:
-            GvhmrAusgabe(self.job, self.ausgabeordner / 'body').kopieren()
+            Ergebnisablage.kopieren(self.job.bvh_file_hands, self.job.name, self.job.pipeline + "_hands")
+        if self.job.pipeline == "hybrid_gvhmr" and koerper_bvh:
+            GvhmrAusgabe(self.job, self.ausgabeordner / "body").kopieren()
         self._abschliessen()
         if koerper_bvh:
-            self._bibliothekseintrag(koerper_bvh, self.job.pipeline,
-                                     namenszusatz='_body')
+            self._bibliothekseintrag(koerper_bvh, self.job.pipeline, namenszusatz="_body")
 
     def _route_smpl(self):
         from .smpllauf import Smpllauf
         from .gvhmr_ausgabe import GvhmrAusgabe
         from .personenergebnisse import Personenergebnisse
 
-        bvh = Smpllauf(self.job, self.videopfad,
-                       self.ausgabeordner).fahren()
-        if self.job.pipeline == 'gvhmr':
+        bvh = Smpllauf(self.job, self.videopfad, self.ausgabeordner).fahren()
+        if self.job.pipeline == "gvhmr":
             GvhmrAusgabe(self.job, self.ausgabeordner).kopieren()
         # Weitere Personen (`--persons n`, 14.09.2026): `<stamm>_p2.bvh` …
         # neben dem ersten — am Auftrag, in der Ablage, in der Bibliothek.
-        Personenergebnisse.eintragen(self.job, bvh, self.job.pipeline,
-                                     self._bibliothekseintrag)
+        Personenergebnisse.eintragen(self.job, bvh, self.job.pipeline, self._bibliothekseintrag)
         self._fertigmelden(bvh, self.job.pipeline)
 
     def _route_v4(self):
         from .mocapnet4 import V4Lauf
 
-        bvh = V4Lauf(self.job, self.videopfad,
-                     self.ausgabeordner).fahren()
+        bvh = V4Lauf(self.job, self.videopfad, self.ausgabeordner).fahren()
         self.teilweise = self._ist_teilergebnis(bvh)
-        self._fertigmelden(bvh, 'v4', quelle_bibliothek='mocapnet_v4')
+        self._fertigmelden(bvh, "v4", quelle_bibliothek="mocapnet_v4")
 
     def _route_zweidimensional(self):
-        stoppmarke = self.ausgabeordner / 'STOP_FLAG'
+        stoppmarke = self.ausgabeordner / "STOP_FLAG"
         csv_datei = self._csv_erzeugen(stoppmarke)
         if stoppmarke.exists():
             self.teilweise = True
 
         self.job.csv_file = csv_datei
         self.job.progress = 50
-        self.job.progress_detail = ('Partial CSV ready, starting MocapNET...'
-                                    if self.teilweise
-                                    else 'CSV ready, starting MocapNET...')
-        self.job.status = 'mocapnet'
-        self.job.progress_detail = 'Loading neural network...'
+        self.job.progress_detail = (
+            "Partial CSV ready, starting MocapNET..." if self.teilweise else "CSV ready, starting MocapNET..."
+        )
+        self.job.status = "mocapnet"
+        self.job.progress_detail = "Loading neural network..."
         self.job.save()
 
         # Stoppmarke vor dem MocapNET-Schritt entfernen, damit sie ihn nicht
@@ -140,10 +134,10 @@ class Auftragslauf:
             try:
                 stoppmarke.unlink()
             except OSError:
-                logger.debug('Stoppmarke nicht entfernbar', exc_info=True)
+                logger.debug("Stoppmarke nicht entfernbar", exc_info=True)
 
         bvh = self._mocapnet(csv_datei)
-        quelle = 'openpose' if self.job.pipeline == 'openpose' else 'mocapnet'
+        quelle = "openpose" if self.job.pipeline == "openpose" else "mocapnet"
         self._fertigmelden(bvh, self.job.pipeline, quelle_bibliothek=quelle)
 
     # ------------------------------------------------------- 2D und MocapNET
@@ -151,9 +145,10 @@ class Auftragslauf:
     def _csv_erzeugen(self, stoppmarke):
         """2D-Erkennung starten; bei Abbruch ein angefangenes CSV weiterbenutzen."""
         from .erkennung2d import Erkennung2d
+
         lauf = Erkennung2d(self.job, self.videopfad, self.ausgabeordner)
         try:
-            if self.job.pipeline == 'openpose':
+            if self.job.pipeline == "openpose":
                 return lauf.openpose()
             if self.job.pipeline in self.NEUE_2D_ERKENNER:
                 return lauf.neuer_erkenner()
@@ -170,9 +165,9 @@ class Auftragslauf:
     def _angefangenes_csv(self):
         """Der Nutzer hat abgebrochen — liegt ein brauchbares CSV vor?"""
         kandidaten = [
-            self.ausgabeordner / 'frames-mpdata' / '2dJoints_mediapipe.csv',
-            self.ausgabeordner / 'openpose_2d.csv',
-            self.ausgabeordner / ('%s_2d.csv' % self.job.pipeline),
+            self.ausgabeordner / "frames-mpdata" / "2dJoints_mediapipe.csv",
+            self.ausgabeordner / "openpose_2d.csv",
+            self.ausgabeordner / ("%s_2d.csv" % self.job.pipeline),
         ]
         for pfad in kandidaten:
             if pfad.exists():
@@ -183,17 +178,14 @@ class Auftragslauf:
         """MocapNET (C++) starten, Fortschritt melden, Ausgabedatei bestimmen."""
         from .videolaenge import Videolaenge
 
-        stamm = str(self.ausgabeordner
-                    / ('%s_%s' % (self.job.pipeline,
-                                  self.job.name.rsplit('.', 1)[0])))
+        stamm = str(self.ausgabeordner / ("%s_%s" % (self.job.pipeline, self.job.name.rsplit(".", 1)[0])))
         lauf = PipelineProzess.starten(
-            [str(settings.MOCAPNET_EXE), '--from', csv_datei, '-o', stamm,
-             '--hands', '--show', '0'],
-            cwd=settings.MOCAPNET_ROOT)
+            [str(settings.MOCAPNET_EXE), "--from", csv_datei, "-o", stamm, "--hands", "--show", "0"],
+            cwd=settings.MOCAPNET_ROOT,
+        )
         LaufendeProzesse.eintragen(self.job.id, lauf.proc)
 
-        leser = Fortschrittsleser(Videolaenge.bilder(self.videopfad),
-                                  time.time())
+        leser = Fortschrittsleser(Videolaenge.bilder(self.videopfad), time.time())
         for zeile in lauf.stdout_zeilen(stille_timeout=self.STILLE_TIMEOUT_S):
             meldung = leser.zeile_lesen(zeile)
             if meldung:
@@ -206,17 +198,15 @@ class Auftragslauf:
             if os.path.exists(bvh) and os.path.getsize(bvh) > 100:
                 self.teilweise = True
             else:
-                fehlertext = Pipelinelauf.fehlerausschnitt(
-                    ''.join(lauf.stderr_zeilen))
-                raise RuntimeError('MocapNET failed (exit code %s):\n%s'
-                                   % (lauf.proc.returncode, fehlertext))
+                fehlertext = Pipelinelauf.fehlerausschnitt("".join(lauf.stderr_zeilen))
+                raise RuntimeError("MocapNET failed (exit code %s):\n%s" % (lauf.proc.returncode, fehlertext))
         return self._auf_bvh_endung(bvh, stamm)
 
     @staticmethod
     def _ausgabedatei(stamm):
         """MocapNET schreibt manchmal BEIDES: ohne Endung (vollstaendig) und
         `.bvh` (Teilergebnis). Die groessere Datei ist die richtige."""
-        ohne, mit = stamm, stamm + '.bvh'
+        ohne, mit = stamm, stamm + ".bvh"
         if os.path.exists(ohne) and os.path.exists(mit):
             return ohne if os.path.getsize(ohne) >= os.path.getsize(mit) else mit
         if os.path.exists(ohne):
@@ -226,7 +216,7 @@ class Auftragslauf:
     @staticmethod
     def _auf_bvh_endung(bvh, stamm):
         """Auf `.bvh` vereinheitlichen (`os.replace` ueberschreibt unter Windows)."""
-        ziel = stamm + '.bvh'
+        ziel = stamm + ".bvh"
         if bvh != ziel and os.path.exists(bvh):
             os.replace(bvh, ziel)
         return ziel
@@ -234,17 +224,18 @@ class Auftragslauf:
     def _ist_teilergebnis(self, bvh):
         """Hat die Datei deutlich weniger Bilder als das Video?"""
         from .videolaenge import Videolaenge
+
         gesamt = Videolaenge.bilder(self.videopfad)
         if not gesamt or not os.path.exists(bvh):
             return False
         try:
-            with open(bvh, encoding='utf-8', errors='replace') as f:
+            with open(bvh, encoding="utf-8", errors="replace") as f:
                 for zeile in f:
-                    if zeile.strip().startswith('Frames:'):
-                        vorhanden = int(zeile.split(':')[1])
+                    if zeile.strip().startswith("Frames:"):
+                        vorhanden = int(zeile.split(":")[1])
                         return vorhanden < gesamt * self.VOLLSTAENDIG_AB
-        except (OSError, ValueError):
-            logger.debug('Bildzahl im BVH nicht lesbar', exc_info=True)
+        except OSError, ValueError:
+            logger.debug("Bildzahl im BVH nicht lesbar", exc_info=True)
         return False
 
     # ------------------------------------------------------------ Nachbereitung
@@ -252,49 +243,49 @@ class Auftragslauf:
     def _fertigmelden(self, bvh, quelle, quelle_bibliothek=None):
         """Der Teil, der vorher fuenfmal fast gleich im Code stand."""
         from ..dienste.ergebnisablage import Ergebnisablage
+
         ergebnispfad = Ergebnisablage.kopieren(bvh, self.job.name, quelle)
         self.job.bvh_file = bvh
-        self._abschliessen('Done (partial — stopped early)' if self.teilweise
-                           else 'Done')
+        self._abschliessen("Done (partial — stopped early)" if self.teilweise else "Done")
         self._bibliothekseintrag(ergebnispfad, quelle_bibliothek or quelle)
         return ergebnispfad
 
     def _abschliessen(self, meldung=None):
         """Retarget neben jedes BVH, dann „complete" (`Auftragsabschluss`)."""
         from ..dienste.auftragsabschluss import Auftragsabschluss
+
         Auftragsabschluss.fertig_mit_vorrat(self.job, meldung)
 
-    def _bibliothekseintrag(self, pfad, quelle, namenszusatz=''):
+    def _bibliothekseintrag(self, pfad, quelle, namenszusatz=""):
         self.BVHFile.objects.get_or_create(
             path=pfad,
-            defaults={'name': '%s%s.bvh' % (self.job.name.rsplit('.', 1)[0],
-                                            namenszusatz),
-                      'source': quelle})
+            defaults={"name": "%s%s.bvh" % (self.job.name.rsplit(".", 1)[0], namenszusatz), "source": quelle},
+        )
 
     def _teilergebnis_oder_fehler(self, fehler):
         """Ein abgebrochener Lauf hat oft ein brauchbares BVH hinterlassen."""
         angefangen = self._angefangenes_bvh()
         if not angefangen:
-            self.job.status = 'failed'
-            self.job.error_message = ('%s\n\n--- Original error ---\n%s'
-                                      % (traceback.format_exc(), fehler))[:4000]
+            self.job.status = "failed"
+            self.job.error_message = ("%s\n\n--- Original error ---\n%s" % (traceback.format_exc(), fehler))[
+                :4000
+            ]
             self.job.save()
             return
         self.teilweise = True
         try:
             from ..dienste.ergebnisablage import Ergebnisablage
-            ergebnispfad = Ergebnisablage.kopieren(angefangen, self.job.name,
-                                                   self.job.pipeline)
-        except Exception:                                         # noqa: BLE001
-            logger.warning('Teilergebnis nicht in die Ablage kopierbar',
-                           exc_info=True)
+
+            ergebnispfad = Ergebnisablage.kopieren(angefangen, self.job.name, self.job.pipeline)
+        except Exception:  # noqa: BLE001
+            logger.warning("Teilergebnis nicht in die Ablage kopierbar", exc_info=True)
             ergebnispfad = angefangen
         self.job.bvh_file = angefangen
-        self._abschliessen('Done (partial — stopped early)')
+        self._abschliessen("Done (partial — stopped early)")
         self._bibliothekseintrag(ergebnispfad, self.job.pipeline)
 
     def _angefangenes_bvh(self):
-        for pfad in glob.glob(str(self.ausgabeordner / '*.bvh')):
+        for pfad in glob.glob(str(self.ausgabeordner / "*.bvh")):
             if os.path.getsize(pfad) > 100:
                 return pfad
         return None

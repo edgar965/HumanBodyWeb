@@ -33,71 +33,81 @@ from pathlib import Path
 from django.conf import settings
 from .videobildrate import Videobildrate
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Startaufraeumen:
     """Verwaiste Aufträge nach einem Serverstart einordnen."""
 
     #: Zustände, die „läuft gerade" bedeuten.
-    LAUFEND = ('detecting_2d', 'openpose', 'openpose_csv', 'mediapipe',
-               'lifting_3d', 'mocapnet', 'v4_processing', 'processing')
+    LAUFEND = (
+        "detecting_2d",
+        "openpose",
+        "openpose_csv",
+        "mediapipe",
+        "lifting_3d",
+        "mocapnet",
+        "v4_processing",
+        "processing",
+    )
     #: Kleiner heisst: die BVH ist ein Rumpf ohne Bewegung.
     MINDESTGROESSE = 100
-    NEUSTART_HINWEIS = ('Server was restarted while job was running. '
-                        'Click "Neu starten" to retry.')
+    NEUSTART_HINWEIS = 'Server was restarted while job was running. Click "Neu starten" to retry.'
 
     def durchgehen(self):
         """Alle verwaisten Aufträge einordnen; liefert die Zahl je Fall."""
         from core.models import BVHJob
-        zaehler = {'fertig': 0, 'weiter': 0, 'gescheitert': 0}
+
+        zaehler = {"fertig": 0, "weiter": 0, "gescheitert": 0}
         for auftrag in BVHJob.objects.filter(status__in=self.LAUFEND):
             zaehler[self._einordnen(auftrag)] += 1
         return zaehler
 
     def _einordnen(self, auftrag):
         from .auftragsarbeiter import Auftragsarbeiter
+
         if Auftragsarbeiter.lebt(auftrag.id):
-            logger.info('Job %s: Arbeitsprozess %s laeuft weiter',
-                        auftrag.id, Auftragsarbeiter.pid(auftrag.id))
-            return 'weiter'
-        ordner = Path(settings.MEDIA_ROOT) / 'output' / str(auftrag.id)
+            logger.info(
+                "Job %s: Arbeitsprozess %s laeuft weiter", auftrag.id, Auftragsarbeiter.pid(auftrag.id)
+            )
+            return "weiter"
+        ordner = Path(settings.MEDIA_ROOT) / "output" / str(auftrag.id)
         fertige = self._bvh(ordner)
         if fertige:
-            self._als_fertig(auftrag, fertige, ordner / 'pipeline.pid')
-            return 'fertig'
-        if self._weiter_beobachten(auftrag, ordner / 'pipeline.pid'):
-            return 'weiter'
+            self._als_fertig(auftrag, fertige, ordner / "pipeline.pid")
+            return "fertig"
+        if self._weiter_beobachten(auftrag, ordner / "pipeline.pid"):
+            return "weiter"
         self._als_gescheitert(auftrag)
-        return 'gescheitert'
+        return "gescheitert"
 
     # ------------------------------------------------------------------ Fall 1
 
     def _bvh(self, ordner):
         """Die erste BVH im Ordner, die mehr als einen Rumpf enthält."""
-        for datei in glob.glob(str(ordner / '*.bvh')):
+        for datei in glob.glob(str(ordner / "*.bvh")):
             if os.path.getsize(datei) > self.MINDESTGROESSE:
                 return datei
         return None
 
     def _als_fertig(self, auftrag, bvh, pid_datei):
         auftrag.bvh_file = bvh
-        auftrag.status = 'complete'
+        auftrag.status = "complete"
         auftrag.progress = 100
-        auftrag.progress_detail = 'Complete (recovered after restart)'
-        auftrag.error_message = ''
+        auftrag.progress_detail = "Complete (recovered after restart)"
+        auftrag.error_message = ""
         auftrag.fps = Videobildrate.zu(auftrag)
         auftrag.save()
         self._pid_weg(pid_datei)
-        logger.info('Job %s: BVH gefunden, als fertig vermerkt', auftrag.id)
+        logger.info("Job %s: BVH gefunden, als fertig vermerkt", auftrag.id)
 
     @staticmethod
     def _pid_weg(pid_datei):
         try:
             pid_datei.unlink()
-        except (FileNotFoundError, OSError):
+        except FileNotFoundError, OSError:
             # stumm gewollt: Die Datei ist eine Notiz, kein Ergebnis.
-            logger.debug('uebergangen', exc_info=True)
+            logger.debug("uebergangen", exc_info=True)
 
     # ------------------------------------------------------------------ Fall 2
 
@@ -107,27 +117,25 @@ class Startaufraeumen:
             return False
         from core.pipelines.prozesspruefung import Prozesspruefung
         from core.pipelines.wiederaufnahme import Wiederaufnahme
+
         try:
             pid = int(pid_datei.read_text().strip())
-        except (ValueError, FileNotFoundError, OSError):
-            logger.debug('PID-Datei %s unlesbar', pid_datei, exc_info=True)
+        except ValueError, FileNotFoundError, OSError:
+            logger.debug("PID-Datei %s unlesbar", pid_datei, exc_info=True)
             return False
         if not Prozesspruefung.lebt(pid):
             return False
-        threading.Thread(target=Wiederaufnahme.fahren,
-                         args=(str(auftrag.id), pid), daemon=True).start()
-        logger.info('Job %s: PID %s laeuft noch, wird weiter beobachtet',
-                    auftrag.id, pid)
+        threading.Thread(target=Wiederaufnahme.fahren, args=(str(auftrag.id), pid), daemon=True).start()
+        logger.info("Job %s: PID %s laeuft noch, wird weiter beobachtet", auftrag.id, pid)
         return True
 
     # ------------------------------------------------------------------ Fall 3
 
     def _als_gescheitert(self, auftrag):
-        auftrag.status = 'failed'
+        auftrag.status = "failed"
         auftrag.error_message = self.NEUSTART_HINWEIS
         auftrag.save()
-        logger.warning('Job %s: als fehlgeschlagen vermerkt (Serverneustart)',
-                       auftrag.id)
+        logger.warning("Job %s: als fehlgeschlagen vermerkt (Serverneustart)", auftrag.id)
 
     # --------------------------------------------------------- Zwischendateien
 
@@ -141,12 +149,12 @@ class Startaufraeumen:
         """
         try:
             from core.projekt_temp import ProjektTemp
+
             entfernt = ProjektTemp.hausmeister(erzwingen=True)
             if entfernt:
-                logger.info('Start: %d alte Zwischendateien entfernt', entfernt)
+                logger.info("Start: %d alte Zwischendateien entfernt", entfernt)
             return entfernt
-        except Exception:                                          # noqa: BLE001
+        except Exception:  # noqa: BLE001
             # Kein Abbruch: Das Aufräumen darf den Serverstart nicht kosten.
-            logger.warning('Aufräumen der Zwischendateien beim Start '
-                           'fehlgeschlagen', exc_info=True)
+            logger.warning("Aufräumen der Zwischendateien beim Start fehlgeschlagen", exc_info=True)
             return 0

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Auswahlfeld`: Optionen an ein `<select>` hängen.
+"""`Auswahlfeld`: Optionen an ein `<select>` hängen.
 
 WARUM (30.08.2026, Befund `doppelcode` + „lange Zeile")
 =========================================================================
@@ -22,11 +22,12 @@ Liste. Alle drei müssen 0 ergeben und dürfen NICHT werfen.
 FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
 kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'auswahlfeld.js')
+MODUL = Jsmodul("gemeinsam", "auswahlfeld.js")
 
 #: Ein `<select>`, so viel davon, wie die Klasse anfasst. Node hat kein DOM;
 #: eine echte Attrappe ist ehrlicher als ein Test, der nur den Rückgabewert
@@ -47,7 +48,9 @@ globalThis.document = {
 const feld = () => ({ kinder: [], appendChild(k) { this.kinder.push(k); } });
 """
 
-SKRIPT = DOM + """
+SKRIPT = (
+    DOM
+    + """
 const { Auswahlfeld } = await import(MODUL);
 const pruefe = (was, ist, soll) => {
     if (JSON.stringify(ist) !== JSON.stringify(soll)) {
@@ -95,10 +98,11 @@ pruefe('kein Feld, keine Liste', Auswahlfeld.ausNamen(null, null), 0);
 
 console.log(JSON.stringify({fertig: true}));
 """
+)
 
 
 class AuswahlfeldTest(SimpleTestCase):
-    u"""Der gemeinsame Optionen-Füller, in Node ausgeführt."""
+    """Der gemeinsame Optionen-Füller, in Node ausgeführt."""
 
     def test_fuellt_und_haelt_die_raender_aus(self):
-        self.assertEqual(MODUL.laufen(SKRIPT), {'fertig': True})
+        self.assertEqual(MODUL.laufen(SKRIPT), {"fertig": True})

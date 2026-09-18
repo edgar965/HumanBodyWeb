@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Der Ellbogen ist kein Knie: seine Grenze klemmt Verdrehung und Schwenkung.
+"""Der Ellbogen ist kein Knie: seine Grenze klemmt Verdrehung und Schwenkung.
 
 DER ANLASS (12.09.2026, Edgar an `0001_Dance`: „die Ellbogen sind auch
 seltsam verdreht"): Seit dem 31.03.2026 trugen die Ellbogen die Grenzen des
@@ -19,23 +19,24 @@ BDD - GEGEBEN / DANN
 Sabotage-Gegenprobe (12.09.2026): die alte Zeile `18: (-5, 150, -15, 15,
 -15, 15)` wieder in GRENZEN -> „beugt sich ungehindert" rot.
 """
+
 import unittest
 
 from ._wrappersuchpfad import Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
-import numpy as np                                          # noqa: E402
-from scipy.spatial.transform import Rotation                # noqa: E402
+import numpy as np  # noqa: E402
+from scipy.spatial.transform import Rotation  # noqa: E402
 
-from gelenkgrenzen import Gelenkgrenzen                     # noqa: E402
-from smplskelett import Smplskelett                         # noqa: E402
+from gelenkgrenzen import Gelenkgrenzen  # noqa: E402
+from smplskelett import Smplskelett  # noqa: E402
 
 LINKS, RECHTS = 18, 19
 
 
 class Arm:
-    u"""Der Kunstarm im SMPL-Skelett: Achsen und Winkel je Ellbogen (18/19)."""
+    """Der Kunstarm im SMPL-Skelett: Achsen und Winkel je Ellbogen (18/19)."""
 
     @staticmethod
     def achse(gelenk):
@@ -45,7 +46,7 @@ class Arm:
 
     @staticmethod
     def beugeachse(gelenk):
-        u"""Beugung nach vorn: um y (links -y, rechts +y), senkrecht zur Armachse
+        """Beugung nach vorn: um y (links -y, rechts +y), senkrecht zur Armachse
         gestellt — der Ruheversatz zum Handgelenk liegt nicht exakt auf x."""
         y = np.array([0.0, -1.0 if gelenk == LINKS else 1.0, 0.0])
         achse = Arm.achse(gelenk)
@@ -61,7 +62,7 @@ class Arm:
 
     @staticmethod
     def beugung(feld, gelenk):
-        u"""Winkel zwischen Oberarm- und Unterarmrichtung nach der Drehung des Gelenks."""
+        """Winkel zwischen Oberarm- und Unterarmrichtung nach der Drehung des Gelenks."""
         w, x, y, z = feld[0, gelenk]
         achse = Arm.achse(gelenk)
         gedreht = Rotation.from_quat([x, y, z, w]).apply(achse)
@@ -72,7 +73,6 @@ BEUGEACHSE = {LINKS: Arm.beugeachse(LINKS), RECHTS: Arm.beugeachse(RECHTS)}
 
 
 class DerEllbogen(unittest.TestCase):
-
     def test_steht_nicht_mehr_in_den_eulergrenzen(self):
         self.assertNotIn(LINKS, Gelenkgrenzen.GRENZEN)
         self.assertNotIn(RECHTS, Gelenkgrenzen.GRENZEN)

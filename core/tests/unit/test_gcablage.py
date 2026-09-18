@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Jede Figurart speichert ihre GarmentCode-Stuecke — und laedt sie wieder.
+"""Jede Figurart speichert ihre GarmentCode-Stuecke — und laedt sie wieder.
 
 BEFUND (Edgar, 08.09.2026): „habe gerade das Modell mit GarmentCode
 gespeichert, beim neu laden sind die Garment Code items weg." GarmentCode
@@ -31,6 +31,7 @@ an der Datei, die den Weg TRAEGT: die Art selbst, oder `Figurablage`, wenn
 die Art `Figurablage.grunddaten(this)` schreibt. Eine Art, die die Ablage
 verlaesst, faellt damit wieder auf die eigene Datei zurueck.
 """
+
 import io
 import re
 
@@ -40,34 +41,36 @@ from django.test import SimpleTestCase
 #: Die Figurarten und ihre Datei. Die Liste steht ABSICHTLICH hier und nicht
 #: als Glob: Kommt eine siebte Art dazu, soll dieser Test sie verlangen.
 ARTEN = {
-    'HumanBody': 'scene/character.js',
-    'SMPL': 'scene/smpl/smplfigur.js',
-    'MakeHuman': 'scene/makehuman/mhfigur.js',
-    'UMA': 'scene/uma/umafigur.js',
-    'UMA Python': 'scene/umapython/umapythonfigur.js',
-    'Genesis 9': 'scene/genesis9/genesis9figur.js',
+    "HumanBody": "scene/character.js",
+    "SMPL": "scene/smpl/smplfigur.js",
+    "MakeHuman": "scene/makehuman/mhfigur.js",
+    "UMA": "scene/uma/umafigur.js",
+    "UMA Python": "scene/umapython/umapythonfigur.js",
+    "Genesis 9": "scene/genesis9/genesis9figur.js",
 }
 
 
-BASIS = 'scene/figurablage.js'
+BASIS = "scene/figurablage.js"
 #: Womit eine Szene-Art den gemeinsamen Weg ruft.
-ABLAGE_SCHREIBT = '...Figurablage.grunddaten(this),'
-ABLAGE_LIEST = 'return Figurablage.ausJSON('
+ABLAGE_SCHREIBT = "...Figurablage.grunddaten(this),"
+ABLAGE_LIEST = "return Figurablage.ausJSON("
 
 
 class GcAblageTest(SimpleTestCase):
-
     databases = set()
 
     def test_jede_figurart_schreibt_die_liste(self):
-        u"""Ohne den Eintrag in `toJSON` ist das Stueck nach dem Laden weg."""
+        """Ohne den Eintrag in `toJSON` ist das Stueck nach dem Laden weg."""
         for name, pfad in ARTEN.items():
             quelle = GcAblageTest._traeger(pfad)
-            self.assertIn('[GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(',
-                          quelle, '%s speichert keine GarmentCode-Stuecke' % name)
+            self.assertIn(
+                "[GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(",
+                quelle,
+                "%s speichert keine GarmentCode-Stuecke" % name,
+            )
 
     def test_beide_zweige_der_humanbody_figur_schreiben_die_liste(self):
-        u"""`CharacterInstance.toJSON` hat ZWEI Rueckgaben.
+        """`CharacterInstance.toJSON` hat ZWEI Rueckgaben.
 
         Eine erzeugte Figur (`generatedConfig`) kehrt frueher zurueck. Der
         Zweig fuehrte das Feld bis zum 09.09.2026 nicht — wer eine
@@ -76,31 +79,33 @@ class GcAblageTest(SimpleTestCase):
         `test_jede_figurart_schreibt_die_liste` oben genuegt sich mit EINEM
         Vorkommen je Datei, und das zweite stand ja da.
         """
-        quelle = GcAblageTest._dateitext('scene/character.js')
-        rumpf = quelle.split('    toJSON() {')[1]
-        rumpf = rumpf.split('    static ')[0]
-        self.assertEqual(rumpf.count('[GarmentcodeAblage.FELD]'), 2,
-                         u'Ein Rueckgabezweig von toJSON fuehrt die Liste '
-                         u'nicht.')
+        quelle = GcAblageTest._dateitext("scene/character.js")
+        rumpf = quelle.split("    toJSON() {")[1]
+        rumpf = rumpf.split("    static ")[0]
+        self.assertEqual(
+            rumpf.count("[GarmentcodeAblage.FELD]"),
+            2,
+            "Ein Rueckgabezweig von toJSON fuehrt die Liste nicht.",
+        )
 
     def test_jede_figurart_laedt_die_liste(self):
-        u"""Speichern ohne Laden ist der haeufigere halbe Umbau."""
+        """Speichern ohne Laden ist der haeufigere halbe Umbau."""
         for name, pfad in ARTEN.items():
             quelle = GcAblageTest._traeger(pfad)
-            self.assertIn('GarmentcodeAblage.laden(', quelle,
-                          '%s stellt die Stuecke nicht wieder her' % name)
+            self.assertIn("GarmentcodeAblage.laden(", quelle, "%s stellt die Stuecke nicht wieder her" % name)
 
     def test_jede_figurart_importiert_die_ablage(self):
-        u"""Ein fehlender Import ist ein Laufzeitfehler beim Speichern."""
+        """Ein fehlender Import ist ein Laufzeitfehler beim Speichern."""
         for name, pfad in ARTEN.items():
             quelle = GcAblageTest._traeger(pfad)
             self.assertRegex(
                 quelle,
                 r"import \{ GarmentcodeAblage \} from '\.{1,2}/garmentcode_ablage\.js';",
-                '%s importiert die Ablage nicht' % name)
+                "%s importiert die Ablage nicht" % name,
+            )
 
     def test_geladen_wird_nach_dem_aufbau(self):
-        u"""Die Reihenfolge zaehlt: erst `bauen()` (frueher `load()`), dann anziehen.
+        """Die Reihenfolge zaehlt: erst `bauen()` (frueher `load()`), dann anziehen.
 
         `GarmentcodeAnziehen` sucht das Skelett der Figur und bindet in der
         Lage der Figurgruppe. Ein Stueck, das VOR `load()` kommt, findet
@@ -109,21 +114,19 @@ class GcAblageTest(SimpleTestCase):
         """
         for name, pfad in ARTEN.items():
             quelle = GcAblageTest._traeger(pfad)
-            laden = quelle.index('GarmentcodeAblage.laden(')
+            laden = quelle.index("GarmentcodeAblage.laden(")
             # `\.load\(` statt `\.load\(\)`: Seit dem 10.09.2026 nimmt
             # `load` einen Rueckruf entgegen, mit dem die Figur auf die
             # Buehne kommt, sobald ihr KOERPER steht — Haare und Kleidung
             # laden danach weiter (`character.js`). Die Aussage dieses
             # Tests aendert sich dadurch nicht: Angezogen wird immer noch
             # erst, wenn `load` durch ist.
-            aufbau = max((m.end() for m in re.finditer(r'\.(load|bauen)\(', quelle)),
-                         default=-1)
-            self.assertGreater(aufbau, 0, '%s ruft kein bauen()' % name)
-            self.assertGreater(laden, aufbau,
-                               '%s zieht an, bevor die Figur steht' % name)
+            aufbau = max((m.end() for m in re.finditer(r"\.(load|bauen)\(", quelle)), default=-1)
+            self.assertGreater(aufbau, 0, "%s ruft kein bauen()" % name)
+            self.assertGreater(laden, aufbau, "%s zieht an, bevor die Figur steht" % name)
 
     def test_jeder_ladeweg_geht_ueber_die_gemeinsame_kette(self):
-        u"""Drei Wege bauen eine Figur aus Modelldaten — einer zog an.
+        """Drei Wege bauen eine Figur aus Modelldaten — einer zog an.
 
         BEFUND (Edgar, 09.09.2026): „Ueber Datei - Modell Importieren
         funktioniert das Modell ‘Female GarmentCode’ nicht, keine Kleider.
@@ -136,78 +139,77 @@ class GcAblageTest(SimpleTestCase):
         Abstand von 0,8 m, den `Figurplatzierung` am 06.09.2026 ersetzt
         hat. Seither gibt es `charakterAusModelldaten` als einzigen Weg.
         """
-        dialoge = GcAblageTest._dateitext('scene/szene_dialoge.js')
-        self.assertEqual(dialoge.count('charakterAusModelldaten'), 2,
-                         u'Beide Dateiwege muessen die gemeinsame Kette '
-                         u'rufen.')
+        dialoge = GcAblageTest._dateitext("scene/szene_dialoge.js")
+        self.assertEqual(
+            dialoge.count("charakterAusModelldaten"), 2, "Beide Dateiwege muessen die gemeinsame Kette rufen."
+        )
         # Und keiner darf sich seine Figur weiter selbst zusammenbauen.
-        self.assertNotIn('new fn.CharacterInstance(', dialoge,
-                         u'Ein eigener Aufbau umgeht die Kette — genau so '
-                         u'sind die Kleider verloren gegangen.')
+        self.assertNotIn(
+            "new fn.CharacterInstance(",
+            dialoge,
+            "Ein eigener Aufbau umgeht die Kette — genau so sind die Kleider verloren gegangen.",
+        )
 
     def test_die_gemeinsame_kette_zieht_die_stuecke_an(self):
-        quelle = GcAblageTest._dateitext('scene/charakterliste.js')
-        rumpf = quelle.split('export async function charakterAusModelldaten')[1]
-        rumpf = rumpf.split('export async function')[0]
-        for erwartet in ('await inst.load(', 'Figurplatzierung.anwenden(',
-                         'GarmentcodeAblage.laden('):
+        quelle = GcAblageTest._dateitext("scene/charakterliste.js")
+        rumpf = quelle.split("export async function charakterAusModelldaten")[1]
+        rumpf = rumpf.split("export async function")[0]
+        for erwartet in ("await inst.load(", "Figurplatzierung.anwenden(", "GarmentcodeAblage.laden("):
             self.assertIn(erwartet, rumpf, erwartet)
         # Die Reihenfolge ist der Grund, warum es eine Kette ist.
-        self.assertLess(rumpf.index('await inst.load('),
-                        rumpf.index('GarmentcodeAblage.laden('))
+        self.assertLess(rumpf.index("await inst.load("), rumpf.index("GarmentcodeAblage.laden("))
 
     def test_geloeschtes_stueck_kommt_nicht_zurueck(self):
-        u"""Der Loeschzweig muss die Ablage mitnehmen.
+        """Der Loeschzweig muss die Ablage mitnehmen.
 
         Ohne ihn steht ein geloeschtes Stueck weiter in `gcStuecke` und
         haengt beim naechsten Laden der Szene wieder an der Figur — ein
         Loeschen, das nur bis zum Speichern haelt.
         """
-        quelle = GcAblageTest._dateitext('scene/teilnetz_auswahl.js')
+        quelle = GcAblageTest._dateitext("scene/teilnetz_auswahl.js")
         self.assertIn("target.key.startsWith('gc_')", quelle)
-        self.assertIn('GarmentcodeAblage.vergessen(', quelle)
+        self.assertIn("GarmentcodeAblage.vergessen(", quelle)
 
     def test_gebaute_stuecke_landen_in_der_ablage(self):
-        u"""Gemerkt wird beim Anziehen — sonst ist die Liste immer leer."""
-        quelle = GcAblageTest._dateitext('scene/garmentcode_drapieren.js')
-        self.assertIn('GarmentcodeAblage.merken(', quelle)
+        """Gemerkt wird beim Anziehen — sonst ist die Liste immer leer."""
+        quelle = GcAblageTest._dateitext("scene/garmentcode_drapieren.js")
+        self.assertIn("GarmentcodeAblage.merken(", quelle)
 
     def test_gegenprobe_der_suchbegriff_trifft_wirklich(self):
-        u"""Sabotage: ein Begriff, der nirgends steht, MUSS fehlschlagen.
+        """Sabotage: ein Begriff, der nirgends steht, MUSS fehlschlagen.
 
         Ohne diesen Fall koennte ein Tippfehler im Suchtext alle Pruefungen
         oben gruen halten (`~/.claude/rules/analysewerkzeuge.md`).
         """
         for pfad in ARTEN.values():
-            self.assertNotIn('GarmentcodeAblage.gibtsNicht(', GcAblageTest._traeger(pfad))
+            self.assertNotIn("GarmentcodeAblage.gibtsNicht(", GcAblageTest._traeger(pfad))
         # Und der echte Begriff steht in ALLEN, nicht nur in einer:
-        treffer = sum('GarmentcodeAblage.laden(' in GcAblageTest._traeger(p)
-                      for p in ARTEN.values())
+        treffer = sum("GarmentcodeAblage.laden(" in GcAblageTest._traeger(p) for p in ARTEN.values())
         self.assertEqual(treffer, len(ARTEN), treffer)
 
     def test_die_vier_arten_nutzen_wirklich_die_ablage(self):
-        u"""`GcAblageTest._traeger` darf nicht ins Leere greifen: Wer die
+        """`GcAblageTest._traeger` darf nicht ins Leere greifen: Wer die
         Ablage schreibt, laedt auch ueber sie und erbt von einem `Modell`
         aus `gemeinsam/` — sonst haette die Art ein eigenes `toJSON` ohne
         die Liste, und die Ablage wuerde fuer sie buergen."""
         for name, pfad in ARTEN.items():
             quelle = GcAblageTest._dateitext(pfad)
             if ABLAGE_SCHREIBT not in quelle:
-                self.assertEqual(name, 'HumanBody')
+                self.assertEqual(name, "HumanBody")
                 continue
             self.assertIn(ABLAGE_LIEST, quelle, name)
-            self.assertRegex(quelle, r'extends \w+Modell \{', name)
+            self.assertRegex(quelle, r"extends \w+Modell \{", name)
             self.assertIn("from '../figurablage.js'", quelle, name)
-            self.assertNotIn('transform:', quelle, name)
+            self.assertNotIn("transform:", quelle, name)
 
     @staticmethod
     def _dateitext(pfad):
-        voll = settings.BASE_DIR / 'static' / 'viewer' / pfad
-        return io.open(voll, encoding='utf-8').read()
+        voll = settings.BASE_DIR / "static" / "viewer" / pfad
+        return io.open(voll, encoding="utf-8").read()
 
     @staticmethod
     def _traeger(pfad):
-        u"""Die Quelle, die Speichern und Laden fuer diese Art fuehrt."""
+        """Die Quelle, die Speichern und Laden fuer diese Art fuehrt."""
         quelle = GcAblageTest._dateitext(pfad)
         if ABLAGE_SCHREIBT in quelle:
             return GcAblageTest._dateitext(BASIS)

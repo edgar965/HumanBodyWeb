@@ -12,11 +12,12 @@ geschlossen werden musste.
 Die Glaettung laeuft jetzt ueber die ganze Achse statt in verschachtelten
 Schleifen — dazu steht die Messung bei `glaetten`.
 """
+
 import logging
 
 import numpy as np
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class BvhDatei:
@@ -28,6 +29,7 @@ class BvhDatei:
     def __init__(self, pfad):
         self.pfad = pfad
         from humanbody_core.skeleton.retarget import parse_bvh
+
         self.bvh = parse_bvh(str(pfad))
         self.angewandt = []
 
@@ -52,6 +54,7 @@ class BvhDatei:
         verschachtelten Schleifen — je Gelenk und je Komponente, bei 176 Gelenken
         also 704 Aufrufe je Datei. `axis=0` macht dasselbe in einem Aufruf."""
         from scipy.ndimage import gaussian_filter1d
+
         sigma = float(sigma)
         if sigma <= 0:
             return self
@@ -69,8 +72,9 @@ class BvhDatei:
             for c, hat_werte in enumerate(gelenk):
                 if hat_werte:
                     self.bvh.positions[:, ji, c] = gaussian_filter1d(
-                        self.bvh.positions[:, ji, c], sigma=sigma)
-        self.angewandt.append('smooth sigma=%s' % sigma)
+                        self.bvh.positions[:, ji, c], sigma=sigma
+                    )
+        self.angewandt.append("smooth sigma=%s" % sigma)
         return self
 
     #: Ab diesem Anteil der Bildzahl frisst die Glaettung die Bewegung.
@@ -97,9 +101,12 @@ class BvhDatei:
         """
         if self.frames and sigma > self.frames / BvhDatei.SIGMA_WARNGRENZE:
             logger.warning(
-                'Glaettung mit sigma=%.1f auf nur %d Bildern — die Bewegung '
-                'wird dabei deutlich flacher (gemessen: bei sigma = Bildzahl/6 '
-                'bleiben rund drei Viertel des Drehwinkels)', sigma, self.frames)
+                "Glaettung mit sigma=%.1f auf nur %d Bildern — die Bewegung "
+                "wird dabei deutlich flacher (gemessen: bei sigma = Bildzahl/6 "
+                "bleiben rund drei Viertel des Drehwinkels)",
+                sigma,
+                self.frames,
+            )
 
     def _vorzeichen_angleichen(self):
         """Aufeinanderfolgende Quaternionen auf dieselbe Halbkugel bringen.
@@ -108,7 +115,7 @@ class BvhDatei:
         zwei Frames waere fuer den Filter ein Sprung ueber die halbe Kugel."""
         q = self.bvh.quats
         for f in range(1, len(q)):
-            falsch = np.einsum('ij,ij->i', q[f], q[f - 1]) < 0
+            falsch = np.einsum("ij,ij->i", q[f], q[f - 1]) < 0
             q[f][falsch] = -q[f][falsch]
 
     # ------------------------------------------------------- Wurzel festhalten
@@ -133,30 +140,31 @@ class BvhDatei:
             faktor = radius / abstand[zu_weit]
             p[zu_weit, 0, 0] = anker_x + dx[zu_weit] * faktor
             p[zu_weit, 0, 2] = anker_z + dz[zu_weit] * faktor
-        self.angewandt.append('fixed r=%.2fm' % float(radius_m))
+        self.angewandt.append("fixed r=%.2fm" % float(radius_m))
         return self
 
     # --------------------------------------------------------------- speichern
 
     #: BVH-Kanalnamen auf Achsen. Grossbuchstaben, weil `parse_bvh` die
     #: Reihenfolge als intrinsische Drehfolge liest.
-    ACHSEN = {'xrotation': 'X', 'yrotation': 'Y', 'zrotation': 'Z'}
-    VORGABE_ORDNUNG = 'ZYX'
+    ACHSEN = {"xrotation": "X", "yrotation": "Y", "zrotation": "Z"}
+    VORGABE_ORDNUNG = "ZYX"
 
     def speichern(self):
         """Bewegungsdaten in die Datei zurueckschreiben (Euler, wie im Kopf)."""
         from scipy.spatial.transform import Rotation
-        zeilen = self.pfad.read_text(encoding='utf-8').split('\n')
+
+        zeilen = self.pfad.read_text(encoding="utf-8").split("\n")
         ordnungen = self._kanalordnungen(zeilen)
         frame_zeilen = self._frame_zeilen(zeilen)
 
         for fi in range(min(self.frames, len(frame_zeilen))):
             werte = zeilen[frame_zeilen[fi]].strip().split()
             self._frame_schreiben(Rotation, werte, fi, ordnungen)
-            zeilen[frame_zeilen[fi]] = ' '.join(werte)
+            zeilen[frame_zeilen[fi]] = " ".join(werte)
 
-        with open(str(self.pfad), 'w', encoding='utf-8', newline='\n') as f:
-            f.write('\n'.join(zeilen))
+        with open(str(self.pfad), "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(zeilen))
         self.zwischenspeicher_leeren()
         return self.frames
 
@@ -181,14 +189,13 @@ class BvhDatei:
             kanaele, ordnung = ordnungen[ji]
             if kanaele >= 6:
                 for k in range(3):
-                    werte[stelle + k] = '%.6f' % self.bvh.positions[fi, ji, k]
+                    werte[stelle + k] = "%.6f" % self.bvh.positions[fi, ji, k]
                 stelle_rot = stelle + 3
             else:
                 stelle_rot = stelle
-            euler = Rotation.from_quat(self.bvh.quats[fi, ji]).as_euler(
-                ordnung, degrees=True)
+            euler = Rotation.from_quat(self.bvh.quats[fi, ji]).as_euler(ordnung, degrees=True)
             for k in range(3):
-                werte[stelle_rot + k] = '%.6f' % euler[k]
+                werte[stelle_rot + k] = "%.6f" % euler[k]
             stelle += kanaele
 
     @classmethod
@@ -197,11 +204,10 @@ class BvhDatei:
         raus = []
         for zeile in zeilen:
             s = zeile.strip()
-            if not s.startswith('CHANNELS'):
+            if not s.startswith("CHANNELS"):
                 continue
             teile = s.split()
-            folge = ''.join(cls.ACHSEN[p.lower()] for p in teile[2:]
-                            if p.lower() in cls.ACHSEN)
+            folge = "".join(cls.ACHSEN[p.lower()] for p in teile[2:] if p.lower() in cls.ACHSEN)
             raus.append((int(teile[1]), folge or cls.VORGABE_ORDNUNG))
         return raus
 
@@ -209,19 +215,19 @@ class BvhDatei:
     def _frame_zeilen(zeilen):
         """Zeilennummern der Bewegungsdaten (alles nach MOTION, was mit einer
         Zahl beginnt)."""
-        beginn = next(i for i, z in enumerate(zeilen) if z.strip() == 'MOTION')
+        beginn = next(i for i, z in enumerate(zeilen) if z.strip() == "MOTION")
         raus = []
         for i in range(beginn + 1, len(zeilen)):
             s = zeilen[i].strip()
-            if s and (s[0].isdigit() or s[0] == '-'):
+            if s and (s[0].isdigit() or s[0] == "-"):
                 raus.append(i)
         return raus
 
     def zwischenspeicher_leeren(self):
         """Retarget-Ergebnisse zu dieser Datei verwerfen — sie sind veraltet."""
         stamm = self.pfad.stem
-        for datei in self.pfad.parent.glob('%s_retarget_*.json' % stamm):
+        for datei in self.pfad.parent.glob("%s_retarget_*.json" % stamm):
             try:
                 datei.unlink()
             except OSError as e:
-                logger.debug('Zwischenspeicher %s bleibt liegen: %s', datei, e)
+                logger.debug("Zwischenspeicher %s bleibt liegen: %s", datei, e)

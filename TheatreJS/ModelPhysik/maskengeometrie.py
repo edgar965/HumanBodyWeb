@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
-u"""Normalen und Strahltests der Masken — reine Rechnung.
+"""Normalen und Strahltests der Masken — reine Rechnung.
 
 Herausgeloest aus `hautmaske.py` (12.09.2026, vier Klassen in einer Datei).
 Die Normalen kommen von der HAUT (Vorzeichen ueber das signierte Volumen —
 die Mehrheit gegen den Schwerpunkt kippte in manchen Posen), der Strahl
 ist Moeller-Trumbore, beidseitig.
 """
+
 import numpy as np
 
 from streusumme import Streusumme
 
 
 class Geometrie:
-    u"""Normalen und Strahltests — reine Rechnung."""
+    """Normalen und Strahltests — reine Rechnung."""
 
     @staticmethod
     def normalen(P, T, naht=None):
-        u"""Punktnormalen nach aussen (Vorzeichen ueber das signierte Volumen).
+        """Punktnormalen nach aussen (Vorzeichen ueber das signierte Volumen).
         `naht`: die Gruppen deckungsgleicher Punkte aus `Geometrie.naht`,
         einmal in Ruhelage gerechnet — je Bild kostete `np.unique` sonst
         82 ms bei 74.128 Punkten."""
@@ -24,7 +25,7 @@ class Geometrie:
         T = np.asarray(T, dtype=np.int64).reshape(-1, 3)
         a, b, c = P[T[:, 0]], P[T[:, 1]], P[T[:, 2]]
         fn = np.cross(b - a, c - a)
-        vol = float(np.einsum('ij,ij->i', a, np.cross(b, c)).sum())
+        vol = float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum())
         N = np.zeros_like(P)
         for k in range(3):
             Streusumme.dazu(N, T[:, k], fn)
@@ -35,16 +36,15 @@ class Geometrie:
 
     @staticmethod
     def naht(P):
-        u"""Je Punkt die Nummer seiner Gruppe deckungsgleicher Punkte."""
+        """Je Punkt die Nummer seiner Gruppe deckungsgleicher Punkte."""
         # Lehre gilt hier nicht (unique-axis-vermeiden): Gleitkomma-Zeilen lassen
         # sich nicht zu einem Schluessel falten, und die Rechnung laeuft EINMAL in Ruhelage.
-        _einmalig, gruppe = np.unique(np.asarray(P, dtype=np.float64), axis=0,
-                                      return_inverse=True)
+        _einmalig, gruppe = np.unique(np.asarray(P, dtype=np.float64), axis=0, return_inverse=True)
         return np.asarray(gruppe).reshape(-1)
 
     @staticmethod
     def _naehte_vereinen(N, gruppe):
-        u"""Deckungsgleiche Punkte teilen sich eine Normale (13.09.2026, wie
+        """Deckungsgleiche Punkte teilen sich eine Normale (13.09.2026, wie
         `hautmaskegeometrie.js`): An der Naht der Rueckenmitte sieht jeder
         Zwilling nur seinen halben Faecher, die Normalen kippen auseinander,
         und der Einzug zog die Zwillinge auseinander — ein Spalt ueber dem
@@ -55,7 +55,7 @@ class Geometrie:
 
     @staticmethod
     def strahl_dreiecke(P, T, kandidaten, p, r):
-        u"""Moeller-Trumbore fuer (M, K) Kandidaten je Strahl — t oder NaN.
+        """Moeller-Trumbore fuer (M, K) Kandidaten je Strahl — t oder NaN.
 
         `kandidaten` traegt -1 als Fuellwert. Beidseitig, `r` normiert."""
         gueltig = kandidaten >= 0
@@ -65,13 +65,13 @@ class Geometrie:
         e2 = P[T[kk, 2]] - a
         rr = r[:, None, :]
         h = np.cross(rr, e2)
-        det = np.einsum('mkj,mkj->mk', e1, h)
+        det = np.einsum("mkj,mkj->mk", e1, h)
         gut = gueltig & (np.abs(det) > 1e-12)
         f = 1.0 / np.where(gut, det, 1.0)
         s = p[:, None, :] - a
-        u = f * np.einsum('mkj,mkj->mk', s, h)
+        u = f * np.einsum("mkj,mkj->mk", s, h)
         q = np.cross(s, e1)
-        v = f * np.einsum('mkj,mkj->mk', rr, q)
-        t = f * np.einsum('mkj,mkj->mk', e2, q)
+        v = f * np.einsum("mkj,mkj->mk", rr, q)
+        t = f * np.einsum("mkj,mkj->mk", e2, q)
         innen = gut & (u >= 0) & (u <= 1) & (v >= 0) & (u + v <= 1)
         return np.where(innen, t, np.nan)

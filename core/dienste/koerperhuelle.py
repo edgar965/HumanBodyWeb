@@ -38,9 +38,15 @@ class Koerperhuelle:
     # ---------------------------------------------------- Anpassen an ein Netz
 
     @staticmethod
-    def allgemein_anpassen(garment_verts, garment_faces, target_verts,
-                           offset=0.006, stiffness=0.5, color=(0.3, 0.35, 0.5),
-                           coordinate_system='auto'):
+    def allgemein_anpassen(
+        garment_verts,
+        garment_faces,
+        target_verts,
+        offset=0.006,
+        stiffness=0.5,
+        color=(0.3, 0.35, 0.5),
+        coordinate_system="auto",
+    ):
         """Generic garment fit: wrap garment around ANY target mesh.
 
         No arm-retarget, no crotch handling, no body-specific logic.
@@ -49,34 +55,31 @@ class Koerperhuelle:
         """
         from GarmentFitter.fitter import _compute_vertex_normals
 
-        punkte, dreiecke = Koerperhuelle._vorbereiten(
-            garment_verts, garment_faces, coordinate_system)
+        punkte, dreiecke = Koerperhuelle._vorbereiten(garment_verts, garment_faces, coordinate_system)
         punkte = Koerperhuelle._einpassen(punkte, target_verts)
         normalen = Koerperhuelle._radialnormalen(target_verts)
         # Ziel leicht aufblasen: So bleibt nach dem Schrumpfen der Abstand
         # uebrig, den der Stoff braucht.
         gedehnt = target_verts + normalen * (offset * 0.5)
-        punkte = Koerperhuelle._schrumpfen(punkte, gedehnt, normalen, dreiecke,
-                                           offset)
-        punkte = Koerperhuelle._verfeinern(punkte, gedehnt, dreiecke, offset,
-                                           stiffness)
+        punkte = Koerperhuelle._schrumpfen(punkte, gedehnt, normalen, dreiecke, offset)
+        punkte = Koerperhuelle._verfeinern(punkte, gedehnt, dreiecke, offset, stiffness)
         # Dictionary gewollt: dasselbe Format wie `fit_garment` liefert.
         return {
-            'vertices': punkte.astype(np.float32),
-            'faces': dreiecke,
-            'normals': _compute_vertex_normals(punkte, dreiecke).astype(np.float32),
-            'color': color,
+            "vertices": punkte.astype(np.float32),
+            "faces": dreiecke,
+            "normals": _compute_vertex_normals(punkte, dreiecke).astype(np.float32),
+            "color": color,
         }
 
     @staticmethod
     def _vorbereiten(punkte, flaechen, koordinatensystem):
         """Koordinatensystem klären und in Dreiecke zerlegen."""
-        from GarmentFitter.fitter import (mh_to_blender, _triangulate,
-                                          _detect_coordinate_system)
+        from GarmentFitter.fitter import mh_to_blender, _triangulate, _detect_coordinate_system
+
         werte = punkte.copy().astype(np.float64)
-        if koordinatensystem == 'auto':
+        if koordinatensystem == "auto":
             koordinatensystem = _detect_coordinate_system(werte)
-        if koordinatensystem == 'makehuman':
+        if koordinatensystem == "makehuman":
             werte = mh_to_blender(werte)
         return werte, _triangulate(flaechen.copy())
 
@@ -113,28 +116,31 @@ class Koerperhuelle:
         käme er in einem Durchgang nicht weit genug.
         """
         from GarmentFitter.fitter import _laplacian_smooth, _shrinkwrap
+
         for durchgang in range(cls.SCHRUMPFEN):
             punkte = _shrinkwrap(
-                punkte, ziel, normalen, offset=offset, soft=True,
-                char_length=cls.KANTENLAENGE / (1 + durchgang * 0.3))
-            punkte = _laplacian_smooth(punkte, dreiecke, iterations=2,
-                                       factor=0.15)
-            punkte = Koerperabstand.gerichtet(punkte, ziel,
-                                              mindestabstand=offset * 0.8)
+                punkte,
+                ziel,
+                normalen,
+                offset=offset,
+                soft=True,
+                char_length=cls.KANTENLAENGE / (1 + durchgang * 0.3),
+            )
+            punkte = _laplacian_smooth(punkte, dreiecke, iterations=2, factor=0.15)
+            punkte = Koerperabstand.gerichtet(punkte, ziel, mindestabstand=offset * 0.8)
         return punkte
 
     @staticmethod
     def _verfeinern(punkte, ziel, dreiecke, offset, stiffness):
         """Steifigkeit: weicher Stoff wird stärker geglättet, aber seltener."""
         from GarmentFitter.fitter import _laplacian_smooth
+
         steife = max(0.0, min(1.0, stiffness))
         staerke = 0.5 - steife * 0.4
         durchgaenge = max(2, round(5 - steife * 3))
         for _ in range(durchgaenge):
-            punkte = _laplacian_smooth(punkte, dreiecke, iterations=3,
-                                       factor=staerke)
-            punkte = Koerperabstand.gerichtet(punkte, ziel,
-                                              mindestabstand=offset * 0.8)
+            punkte = _laplacian_smooth(punkte, dreiecke, iterations=3, factor=staerke)
+            punkte = Koerperabstand.gerichtet(punkte, ziel, mindestabstand=offset * 0.8)
         return punkte
 
     # ------------------------------------------------------- Geglättete Hülle
@@ -165,8 +171,7 @@ class Koerperhuelle:
         """
         felder = np.asarray(flaechen)
         if felder.ndim == 2 and felder.shape[1] == 4:
-            return np.concatenate([felder[:, [0, 1, 2]], felder[:, [0, 2, 3]]],
-                                  axis=0).astype(np.int32)
+            return np.concatenate([felder[:, [0, 1, 2]], felder[:, [0, 2, 3]]], axis=0).astype(np.int32)
         return felder[:, :3].astype(np.int32)
 
     @classmethod
@@ -195,6 +200,7 @@ class Koerperhuelle:
     def _glaetten(cls, punkte, flaechen, durchgaenge, staerke=0.5):
         """Laplace-Glättung über die Nachbarschaftsmatrix der Flächen."""
         from scipy.sparse import diags
+
         nachbarn = cls._nachbarschaft(flaechen, len(punkte))
         grade = np.asarray(nachbarn.sum(axis=1)).flatten()
         grade[grade == 0] = 1
@@ -213,6 +219,7 @@ class Koerperhuelle:
         die Kanten in einem Zug erzeugt und die Matrix in einem Aufruf gebaut.
         """
         from scipy.sparse import coo_matrix
+
         felder = np.asarray(flaechen)
         ecken = felder.shape[1]
         paare = [(i, j) for i in range(ecken) for j in range(i + 1, ecken)]
@@ -222,8 +229,7 @@ class Koerperhuelle:
         zeilen = np.concatenate([von, nach])
         spalten = np.concatenate([nach, von])
         werte = np.ones(len(zeilen), dtype=np.float64)
-        matrix = coo_matrix((werte, (zeilen, spalten)),
-                            shape=(anzahl, anzahl)).tocsr()
+        matrix = coo_matrix((werte, (zeilen, spalten)), shape=(anzahl, anzahl)).tocsr()
         # Doppelte Kanten (geteilt zwischen zwei Flächen) auf 1 setzen — die
         # `lil`-Fassung hat zugewiesen, nicht addiert.
         matrix.data[:] = 1.0

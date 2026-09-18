@@ -22,8 +22,7 @@ class Testendpunkte:
 
     #: Die vier Regler, die nicht aus den Morphdaten kommen, sondern aus den
     #: Vorgaben — mit ihrer Beschriftung.
-    METAREGLER = (('age', 'Age'), ('mass', 'Mass (kg)'),
-                  ('tone', 'Tone'), ('height', 'Height (cm)'))
+    METAREGLER = (("age", "Age"), ("mass", "Mass (kg)"), ("tone", "Tone"), ("height", "Height (cm)"))
 
     @staticmethod
     @require_GET
@@ -31,8 +30,7 @@ class Testendpunkte:
         """Netzdaten der Testfassung."""
         antwort = Testnetz(request).antwort()
         if antwort is None:
-            return JsonResponse({'error': 'Failed to compute mesh'},
-                                status=500)
+            return JsonResponse({"error": "Failed to compute mesh"}, status=500)
         return JsonResponse(antwort)
 
     @staticmethod
@@ -40,13 +38,15 @@ class Testendpunkte:
     def regler(request):
         """Reglerliste der Testfassung — Kategorien, Koerpertypen, Metaregler."""
         morphs = Testkern.zustand().get_morph_list()
-        return JsonResponse({
-            'body_types': sorted(Testkern.morphdaten().l1.keys()),
-            'morphs': morphs,
-            'categories': sorted({m['category'] for m in morphs}),
-            'skin_colors': Testkern.modul().MorphData.SKIN_COLORS,
-            'meta_sliders': Testendpunkte._metaregler(),
-        })
+        return JsonResponse(
+            {
+                "body_types": sorted(Testkern.morphdaten().l1.keys()),
+                "morphs": morphs,
+                "categories": sorted({m["category"] for m in morphs}),
+                "skin_colors": Testkern.modul().MorphData.SKIN_COLORS,
+                "meta_sliders": Testendpunkte._metaregler(),
+            }
+        )
 
     @classmethod
     def _metaregler(cls):
@@ -55,9 +55,12 @@ class Testendpunkte:
         for name, beschriftung in cls.METAREGLER:
             regler = getattr(vorgaben, name, None)
             if regler:
-                werte[name] = {'min': regler.min, 'max': regler.max,
-                               'default': regler.default,
-                               'label': beschriftung}
+                werte[name] = {
+                    "min": regler.min,
+                    "max": regler.max,
+                    "default": regler.default,
+                    "label": beschriftung,
+                }
         return werte
 
     @staticmethod
@@ -67,20 +70,18 @@ class Testendpunkte:
         gewichte = Testkern.gewichte()
         if gewichte is not None:
             return JsonResponse(gewichte)
-        return Testendpunkte._json_datei(Testkern.datei('skin_weights.json'),
-                                         'Skin weights not found')
+        return Testendpunkte._json_datei(Testkern.datei("skin_weights.json"), "Skin weights not found")
 
     @staticmethod
     @require_GET
     def def_skelett(request):
         """DEF-Skelett der Testfassung."""
-        return Testendpunkte._json_datei(Testkern.datei('def_skeleton.json'),
-                                         'DEF skeleton not exported yet')
+        return Testendpunkte._json_datei(Testkern.datei("def_skeleton.json"), "DEF skeleton not exported yet")
 
     @staticmethod
     def _json_datei(pfad, fehlt):
         """Eine JSON-Datei unveraendert ausliefern — oder 404 mit Grund."""
         if not os.path.isfile(pfad):
-            return JsonResponse({'error': fehlt}, status=404)
-        with open(pfad, 'r', encoding='utf-8') as datei:
+            return JsonResponse({"error": fehlt}, status=404)
+        with open(pfad, "r", encoding="utf-8") as datei:
             return JsonResponse(json.load(datei))

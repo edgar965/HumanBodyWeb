@@ -266,9 +266,10 @@ class Asset(DataDir):
         return AssetFold(
             morphs.np_ro64(z["verts"]),
             z["faces"].tolist(),
-            z["pos"], z["idx"],
+            z["pos"],
+            z["idx"],
             morphs.np_ro64(z["weights"]),
-            wmorph
+            wmorph,
         )
 
     @utils.lazyproperty
@@ -356,9 +357,13 @@ def _lazy_yaml_props(*prop_lst):
 
         cls.__init__ = new_init
         for prop in prop_lst:
-            setattr(cls, prop, utils.named_lazyprop(
-                prop, lambda self, name=prop:
-                    self.parent.get_yaml(getattr(self, "_lazy_yaml_" + name))))
+            setattr(
+                cls,
+                prop,
+                utils.named_lazyprop(
+                    prop, lambda self, name=prop: self.parent.get_yaml(getattr(self, "_lazy_yaml_" + name))
+                ),
+            )
         return cls
 
     return modify_class

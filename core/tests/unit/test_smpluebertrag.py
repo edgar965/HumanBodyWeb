@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Netzuebertrag — SMPL-Gelenke auf einem Netz fremder Topologie.
+"""Netzuebertrag — SMPL-Gelenke auf einem Netz fremder Topologie.
 
 WARUM (Edgar, 07.09.2026: „SMPL modell zeigt immer noch kein Skeleton"):
 Der Dialog bietet unter „SMPL" fuenf Koerper an, aber nur zwei sind
@@ -23,6 +23,7 @@ entfernen und alle anderen Tests blieben gruen.
 
 Ohne die Modelldateien (`VideoToBVH/models/smpl`) wird uebersprungen.
 """
+
 import os
 import unittest
 
@@ -35,21 +36,20 @@ from SMPL.uebertrag import Netzuebertrag
 
 
 class NetzuebertragTest(unittest.TestCase):
-
     databases = set()
 
     @classmethod
     def setUpClass(cls):
         cls.ordner = str(settings.SMPL_MODELS_DIR)
-        if not os.path.isfile(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
-            raise unittest.SkipTest('SMPL-Modelle fehlen')
-        cls.gelenke = Smplgelenke.aus_modell('female', cls.ordner)
-        cls.modell = Smplkoerper.laden('female', cls.ordner)
+        if not os.path.isfile(os.path.join(cls.ordner, "SMPL_FEMALE.npz")):
+            raise unittest.SkipTest("SMPL-Modelle fehlen")
+        cls.gelenke = Smplgelenke.aus_modell("female", cls.ordner)
+        cls.modell = Smplkoerper.laden("female", cls.ordner)
         cls.punkte = cls.modell.a40(None)
         cls.wahr = cls.gelenke.gelenke(cls.punkte)
 
     def _abweichung(self, netz, referenz=None):
-        u"""mm je Gelenk gegenueber der Wahrheit."""
+        """mm je Gelenk gegenueber der Wahrheit."""
         referenz = self.punkte if referenz is None else referenz
         uebertrag = self.gelenke.uebertragen(netz, referenz)
         ist = self.gelenke.gelenke(uebertrag.punkte(netz))
@@ -58,12 +58,12 @@ class NetzuebertragTest(unittest.TestCase):
     # ------------------------------------------------------- die Messlatte
 
     def test_identitaet_ist_exakt(self):
-        u"""Dasselbe Netz auf sich selbst — kein Millimeter Abweichung."""
+        """Dasselbe Netz auf sich selbst — kein Millimeter Abweichung."""
         abw = self._abweichung(self.punkte)
         self.assertLess(abw.max(), 1e-6)
 
     def test_gemischte_reihenfolge_aendert_nichts(self):
-        u"""Die Zuordnung geht ueber die LAGE, nicht ueber den Index."""
+        """Die Zuordnung geht ueber die LAGE, nicht ueber den Index."""
         misch = np.random.default_rng(7).permutation(len(self.punkte))
         abw = self._abweichung(self.punkte[misch])
         self.assertLess(abw.max(), 1e-6)
@@ -71,7 +71,7 @@ class NetzuebertragTest(unittest.TestCase):
     # ------------------------------------------------- fremde Topologien
 
     def test_groberes_netz_bleibt_nah(self):
-        u"""Jeder dritte Punkt — gemessen 6,05 mm Median, max 14,9 mm."""
+        """Jeder dritte Punkt — gemessen 6,05 mm Median, max 14,9 mm."""
         abw = self._abweichung(self.punkte[::3])
         self.assertLess(np.median(abw), 12.0)
         self.assertLess(abw.max(), 30.0)
@@ -85,7 +85,7 @@ class NetzuebertragTest(unittest.TestCase):
     # ---------------------------------------------------- die Gegenprobe
 
     def test_falsche_haltung_verzieht_die_arme(self):
-        u"""Ohne Haltungsangleichung wandert die Hand um Zentimeter.
+        """Ohne Haltungsangleichung wandert die Hand um Zentimeter.
 
         Der Median bleibt dabei bei null — der Rumpf sieht richtig aus. Wer
         nur den Median prueft, uebersieht genau diesen Fehler.
@@ -93,23 +93,23 @@ class NetzuebertragTest(unittest.TestCase):
         tpose = self.modell.a40(None, grad=0.0)
         abw = self._abweichung(self.punkte, referenz=tpose)
         self.assertGreater(abw.max(), 100.0)
-        hand = list(Smplgelenke.NAMEN).index('Right_palm')
+        hand = list(Smplgelenke.NAMEN).index("Right_palm")
         self.assertGreater(abw[hand], 100.0)
 
     # -------------------------------------------------------- Guetemass
 
     def test_guete_meldet_die_zuordnungsabstaende(self):
-        u"""Der Wert ist die Warnlampe fuer eine schiefe Zuordnung."""
+        """Der Wert ist die Warnlampe fuer eine schiefe Zuordnung."""
         gleich = Netzuebertrag.bauen(self.punkte, self.punkte)
-        self.assertLess(gleich.guete['median'], 1e-9)
-        self.assertLess(gleich.guete['max'], 1e-9)
+        self.assertLess(gleich.guete["median"], 1e-9)
+        self.assertLess(gleich.guete["max"], 1e-9)
 
         tpose = self.modell.a40(None, grad=0.0)
         schief = Netzuebertrag.bauen(tpose, self.punkte)
-        self.assertGreater(schief.guete['max'], gleich.guete['max'])
+        self.assertGreater(schief.guete["max"], gleich.guete["max"])
 
     def test_normierung_gleicht_groesse_und_lage_an(self):
-        u"""Ein doppelt so grosses, verschobenes Netz ordnet gleich zu.
+        """Ein doppelt so grosses, verschobenes Netz ordnet gleich zu.
 
         Ohne die Angleichung faende der Kopf des einen die Schulter des
         anderen — der Fehler waere ueber die ganze Figur verteilt und
@@ -127,11 +127,9 @@ class NetzuebertragTest(unittest.TestCase):
     # -------------------------------------------------- Blockweg == KDTree
 
     def test_rueckfall_ohne_scipy_rechnet_dasselbe(self):
-        u"""Der Blockweg ist der Ersatz, wenn scipy fehlt — er muss stimmen."""
+        """Der Blockweg ist der Ersatz, wenn scipy fehlt — er muss stimmen."""
         a = self.punkte[:400]
         b = self.punkte[::7]
-        mit = Netzuebertrag._naechste(Netzuebertrag._normiert(a),
-                                      Netzuebertrag._normiert(b))
-        ohne = Netzuebertrag._naechste_blockweise(Netzuebertrag._normiert(a),
-                                                  Netzuebertrag._normiert(b))
+        mit = Netzuebertrag._naechste(Netzuebertrag._normiert(a), Netzuebertrag._normiert(b))
+        ohne = Netzuebertrag._naechste_blockweise(Netzuebertrag._normiert(a), Netzuebertrag._normiert(b))
         self.assertTrue(np.array_equal(np.asarray(mit[0]), np.asarray(ohne[0])))

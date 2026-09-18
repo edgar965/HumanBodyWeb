@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Knochenkette`: aus einer Serverliste eine Three.js-Hierarchie.
+"""`Knochenkette`: aus einer Serverliste eine Three.js-Hierarchie.
 
 WARUM (Edgar, 07.09.2026: „jedes Hinzufuegen eines Modells soll auch das
 Skeleton dazu erzeugen"): SMPL und MakeHuman bekommen ihre Knochen vom
@@ -21,11 +21,12 @@ und Kopf blieben unsichtbar. Deshalb der Endknochen am `schwanz`.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'knochenkette.js')
+MODUL = Jsmodul("gemeinsam", "knochenkette.js")
 
 SKRIPT = """
 const { Knochenkette: K } = await import(MODUL);
@@ -133,9 +134,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class KnochenketteTest(SimpleTestCase):
-
     databases = set()
 
     def test_bauplan_relativ_zum_elternteil_eltern_zuerst_endknochen_am_blatt(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

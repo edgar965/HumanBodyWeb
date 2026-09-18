@@ -37,7 +37,7 @@ from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..pipeline_process import PipelineProzess
 from .laufbasis import Pipelinelauf
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Smpllauf(Pipelinelauf):
@@ -54,20 +54,20 @@ class Smpllauf(Pipelinelauf):
         # GVHMR/WHAM nutzen PyAV — das kann kein WebM.
         self.video = Videovorbereitung.als_mp4(video_path, output_dir)
         self.bilder = Videolaenge.bilder(self.video)
-        self.bvh = str(output_dir / ('%s_%s.bvh' % (job.pipeline, self.stamm)))
-        self.logdatei = output_dir / 'pipeline.log'
-        self.pid_datei = output_dir / 'pipeline.pid'
+        self.bvh = str(output_dir / ("%s_%s.bvh" % (job.pipeline, self.stamm)))
+        self.logdatei = output_dir / "pipeline.log"
+        self.pid_datei = output_dir / "pipeline.pid"
 
     # ------------------------------------------------------------------ Ablauf
 
     def fahren(self):
         self._anfangsmeldung()
         befehl = Smplbefehl(self.job, self.einstellungen).bauen(
-            settings.WRAPPERS_DIR / 'lift_3d.py', self.video, self.bvh)
+            settings.WRAPPERS_DIR / "lift_3d.py", self.video, self.bvh
+        )
         prozess, protokoll = self._starten(befehl)
         try:
-            Logbeobachter(self.job, self.logdatei, self.bilder,
-                          proc=prozess).verfolgen()
+            Logbeobachter(self.job, self.logdatei, self.bilder, proc=prozess).verfolgen()
         finally:
             protokoll.close()
         prozess.wait(timeout=self.ENDE_S)
@@ -75,11 +75,13 @@ class Smpllauf(Pipelinelauf):
         return self._ergebnis(prozess.returncode)
 
     def _anfangsmeldung(self):
-        self.job.status = 'processing'
+        self.job.status = "processing"
         self.job.progress = 0
         self.job.progress_detail = (
-            '%d / %d frames' % (0, self.bilder) if self.bilder
-            else 'Starting %s...' % self.job.get_pipeline_display())
+            "%d / %d frames" % (0, self.bilder)
+            if self.bilder
+            else "Starting %s..." % self.job.get_pipeline_display()
+        )
         self.job.save()
 
     def _starten(self, befehl):
@@ -91,12 +93,15 @@ class Smpllauf(Pipelinelauf):
         Deskriptor offen, und zwar einer je Fehlversuch. Genau dann passiert
         es auch: Ein Lauf, der sofort scheitert, wird wiederholt.
         """
-        protokoll = open(self.logdatei, 'w', encoding='utf-8')
+        protokoll = open(self.logdatei, "w", encoding="utf-8")
         try:
             prozess = subprocess.Popen(
-                befehl, stdout=protokoll, stderr=subprocess.STDOUT,
+                befehl,
+                stdout=protokoll,
+                stderr=subprocess.STDOUT,
                 cwd=str(settings.WRAPPERS_DIR.parent),
-                env=PipelineProzess.umgebung())
+                env=PipelineProzess.umgebung(),
+            )
         except Exception:
             protokoll.close()
             raise
@@ -107,9 +112,9 @@ class Smpllauf(Pipelinelauf):
     def _pid_weg(self):
         try:
             self.pid_datei.unlink()
-        except (FileNotFoundError, OSError):
+        except FileNotFoundError, OSError:
             # stumm gewollt: Die Datei ist eine Notiz, kein Ergebnis.
-            logger.debug('uebergangen', exc_info=True)
+            logger.debug("uebergangen", exc_info=True)
 
     # ----------------------------------------------------------- Das Ergebnis
 
@@ -120,8 +125,9 @@ class Smpllauf(Pipelinelauf):
         if teilergebnis:
             # Abgebrochen oder abgeschossen — was schon geschrieben ist, zaehlt.
             return teilergebnis
-        raise RuntimeError("3D pipeline '%s' failed (exit code %s):\n%s"
-                           % (self.job.pipeline, code, self._logauszug()))
+        raise RuntimeError(
+            "3D pipeline '%s' failed (exit code %s):\n%s" % (self.job.pipeline, code, self._logauszug())
+        )
 
     def _teilergebnis(self):
         """Die erwartete BVH — oder irgendeine im Ordner.
@@ -130,17 +136,14 @@ class Smpllauf(Pipelinelauf):
         statt `gvhmr_<stamm>.bvh`). Ein Lauf, der Bewegung erzeugt hat, soll
         nicht daran scheitern.
         """
-        if (os.path.exists(self.bvh)
-                and os.path.getsize(self.bvh) > self.MINDESTGROESSE):
+        if os.path.exists(self.bvh) and os.path.getsize(self.bvh) > self.MINDESTGROESSE:
             return self.bvh
-        gefunden = glob.glob(str(self.output_dir / '*.bvh'))
+        gefunden = glob.glob(str(self.output_dir / "*.bvh"))
         return gefunden[0] if gefunden else None
 
     def _logauszug(self):
         try:
-            return self.fehlerausschnitt(self.logdatei.read_text(
-                encoding='utf-8', errors='replace'))
+            return self.fehlerausschnitt(self.logdatei.read_text(encoding="utf-8", errors="replace"))
         except OSError:
-            logger.debug('Pipeline-Log %s nicht lesbar', self.logdatei,
-                         exc_info=True)
-            return ''
+            logger.debug("Pipeline-Log %s nicht lesbar", self.logdatei, exc_info=True)
+            return ""

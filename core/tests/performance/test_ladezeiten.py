@@ -18,4 +18,4 @@ egal was die Uhr sagt.
 Eingestellt über `DJANGOBASE["leistung"]` in `ui/settings.py`.
 """
 
-from djangobase.leistungstests import *      # noqa: F401,F403
+from djangobase.leistungstests import *  # noqa: F401,F403

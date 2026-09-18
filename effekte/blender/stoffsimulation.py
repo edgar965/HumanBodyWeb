@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Stoffsimulation — das Kleid als Stoff, der Koerper als Kollider, Wind dazu.
+"""Stoffsimulation — das Kleid als Stoff, der Koerper als Kollider, Wind dazu.
 
 DER ANKER (12.09.2026)
 ======================
@@ -17,6 +17,7 @@ Gewichte der Anker-Gruppe interpolieren mit.
 Gerechnet wird durch Setzen der Bilder (`frame_set`), nicht mit
 `ptcache.bake_all`: So kann jedes Bild als Fortschritt gemeldet werden.
 """
+
 from __future__ import print_function
 
 import math
@@ -24,16 +25,21 @@ import time
 
 import bpy  # pyright: ignore[reportMissingImports]  (Blender)
 
-__all__ = ['Stoffsimulation']
+__all__ = ["Stoffsimulation"]
 
 
 class Stoffsimulation:
-
-    ANKER = 'Stoffanker'
+    ANKER = "Stoffanker"
     #: Stoffwerte nach Blenders Baumwoll-Vorgabe.
-    STOFF = {'mass': 0.3, 'tension_stiffness': 15.0, 'compression_stiffness': 15.0,
-             'shear_stiffness': 5.0, 'bending_stiffness': 0.5,
-             'tension_damping': 5.0, 'air_damping': 1.0}
+    STOFF = {
+        "mass": 0.3,
+        "tension_stiffness": 15.0,
+        "compression_stiffness": 15.0,
+        "shear_stiffness": 5.0,
+        "bending_stiffness": 0.5,
+        "tension_damping": 5.0,
+        "air_damping": 1.0,
+    }
     ABSTAND_M = 0.015
     #: Selbstkollisionsabstand fuer das UNunterteilte Netz; je Unterteilungs-
     #: stufe halbiert. Gemessen (still stehende Figur, 30 Bilder, 12.09.2026):
@@ -52,29 +58,29 @@ class Stoffsimulation:
     # ------------------------------------------------------------- Aufbau
 
     def anker_setzen(self):
-        u"""Gewicht 1 oberhalb der Taille, 0 unterhalb der Huefte, dazwischen linear."""
+        """Gewicht 1 oberhalb der Taille, 0 unterhalb der Huefte, dazwischen linear."""
         rig = self.figur.rig
         huefte = rig.data.bones[self.figur.HUEFTE].head_local.z
-        taille = rig.data.bones['Spine'].head_local.z + 0.05
+        taille = rig.data.bones["Spine"].head_local.z + 0.05
         kleid = self.figur.kleid
         gruppe = kleid.vertex_groups.new(name=self.ANKER)
         voll = teil = 0
         for v in kleid.data.vertices:
             z = v.co.z
             if z >= taille:
-                gruppe.add([v.index], 1.0, 'REPLACE')
+                gruppe.add([v.index], 1.0, "REPLACE")
                 voll += 1
             elif z > huefte:
-                gruppe.add([v.index], (z - huefte) / (taille - huefte), 'REPLACE')
+                gruppe.add([v.index], (z - huefte) / (taille - huefte), "REPLACE")
                 teil += 1
         return voll, teil
 
     def kleid_vorbereiten(self):
         kleid = self.figur.kleid
         if self.p.unterteilung > 0:
-            unter = kleid.modifiers.new('Unterteilung', 'SUBSURF')
+            unter = kleid.modifiers.new("Unterteilung", "SUBSURF")
             unter.levels = unter.render_levels = self.p.unterteilung
-        stoff = kleid.modifiers.new('Stoff', 'CLOTH')
+        stoff = kleid.modifiers.new("Stoff", "CLOTH")
         s = stoff.settings
         for name, wert in self.STOFF.items():
             setattr(s, name, wert)
@@ -94,10 +100,10 @@ class Stoffsimulation:
         return stoff
 
     def selbstabstand(self):
-        return max(0.001, self.SELBSTABSTAND_M / (2 ** self.p.unterteilung))
+        return max(0.001, self.SELBSTABSTAND_M / (2**self.p.unterteilung))
 
     def koerper_als_kollider(self):
-        u"""Der ganze Koerper stoesst — auch die Haut unter dem Kleid.
+        """Der ganze Koerper stoesst — auch die Haut unter dem Kleid.
 
         MPFB versteckt beim Anziehen die Koerperteile unter dem Kleid
         (MASK `Delete.<kleid>`, damit keine Haut durchsticht). Fuer eine
@@ -108,19 +114,18 @@ class Stoffsimulation:
         """
         basemesh = self.figur.basemesh
         for modifier in list(basemesh.modifiers):
-            if modifier.type == 'MASK' and modifier.name.startswith('Delete.'):
+            if modifier.type == "MASK" and modifier.name.startswith("Delete."):
                 basemesh.modifiers.remove(modifier)
-        basemesh.modifiers.new('Kollision', 'COLLISION')
+        basemesh.modifiers.new("Kollision", "COLLISION")
         basemesh.collision.thickness_outer = self.KOERPERDICKE_M
 
     def wind_setzen(self):
-        u"""Ein Windfeld links der Figur, das nach +X blaest."""
+        """Ein Windfeld links der Figur, das nach +X blaest."""
         if self.p.wind <= 0:
             return None
-        bpy.ops.object.effector_add(type='WIND', location=(-3.0, 0.0, 1.0),
-                                    rotation=(0.0, math.pi / 2, 0.0))
+        bpy.ops.object.effector_add(type="WIND", location=(-3.0, 0.0, 1.0), rotation=(0.0, math.pi / 2, 0.0))
         wind = bpy.context.object
-        wind.name = 'Wind'
+        wind.name = "Wind"
         wind.field.strength = self.p.wind
         wind.field.noise = self.p.turbulenz
         wind.field.flow = 0.2
@@ -136,7 +141,7 @@ class Stoffsimulation:
     # ------------------------------------------------------------ Rechnen
 
     def rechnen(self, gesamt_schritte, versatz=0):
-        u"""Bild fuer Bild setzen; meldet `n / gesamt` fuer den Logbeobachter."""
+        """Bild fuer Bild setzen; meldet `n / gesamt` fuer den Logbeobachter."""
         szene = bpy.context.scene
         start, ende = szene.frame_start, szene.frame_end
         naechste = 0.0
@@ -144,7 +149,9 @@ class Stoffsimulation:
         for bild in range(start, ende + 1):
             szene.frame_set(bild)
             if time.perf_counter() >= naechste or bild == ende:
-                self.melden('Effekte: Simulation Bild %d von %d — %d / %d'
-                            % (bild, ende, versatz + bild, gesamt_schritte))
+                self.melden(
+                    "Effekte: Simulation Bild %d von %d — %d / %d"
+                    % (bild, ende, versatz + bild, gesamt_schritte)
+                )
                 naechste = time.perf_counter() + self.TAKT_S
         return time.perf_counter() - t0

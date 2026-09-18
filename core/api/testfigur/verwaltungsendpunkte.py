@@ -24,8 +24,7 @@ class Testverwaltung:
         """Welche Fassung liegt gerade unter `TestCharakter/`?"""
         daten = Quellenschau.fassung()
         if daten is None:
-            return JsonResponse({'error': 'No test version downloaded'},
-                                status=404)
+            return JsonResponse({"error": "No test version downloaded"}, status=404)
         return JsonResponse(daten)
 
     @staticmethod
@@ -34,8 +33,7 @@ class Testverwaltung:
         """Quelltext und Datenbestand der Testfassung (siehe `Quellenschau`)."""
         schau = Quellenschau()
         if not schau.vorhanden:
-            return JsonResponse({'error': 'No test version downloaded'},
-                                status=404)
+            return JsonResponse({"error": "No test version downloaded"}, status=404)
         return JsonResponse(schau.bericht())
 
     @staticmethod
@@ -43,8 +41,7 @@ class Testverwaltung:
     def neu_laden(request):
         """Zwischenstaende fallen lassen — Fassungswechsel ohne Neustart."""
         Testkern.vergessen()
-        return JsonResponse({'ok': True,
-                             'message': 'Test singletons reloaded'})
+        return JsonResponse({"ok": True, "message": "Test singletons reloaded"})
 
     @staticmethod
     @csrf_exempt
@@ -65,11 +62,13 @@ class Testverwaltung:
         Der Name kommt weiter aus der Abfragezeichenkette, damit die zwei
         Aufrufstellen in `test_character.html` sich nur in der Methode aendern.
         """
-        wechsel = Figurenwechsel(request.GET.get('name', ''))
+        wechsel = Figurenwechsel(request.GET.get("name", ""))
         if not wechsel.vorhanden:
             return JsonResponse(
-                {'error': 'Character "%s" not found' % wechsel.name,
-                 'available': wechsel.auswahl()}, status=400)
+                {"error": 'Character "%s" not found' % wechsel.name, "available": wechsel.auswahl()},
+                status=400,
+            )
         wechsel.umschalten()
-        return JsonResponse({'ok': True, 'character': wechsel.name,
-                             'message': 'Switched to %s' % wechsel.name})
+        return JsonResponse(
+            {"ok": True, "character": wechsel.name, "message": "Switched to %s" % wechsel.name}
+        )

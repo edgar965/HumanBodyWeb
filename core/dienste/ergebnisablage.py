@@ -35,8 +35,8 @@ class Ergebnisablage:
     @staticmethod
     def pfad(videoname, pipeline):
         """Der Zielpfad einer Kopie — ohne den Ordner anzulegen."""
-        stamm = videoname.rsplit('.', 1)[0]
-        return Path(settings.BVH_RESULTS_DIR) / ('%s_%s.bvh' % (stamm, pipeline))
+        stamm = videoname.rsplit(".", 1)[0]
+        return Path(settings.BVH_RESULTS_DIR) / ("%s_%s.bvh" % (stamm, pipeline))
 
     @classmethod
     def kopieren(cls, bvh_pfad, videoname, pipeline):
@@ -49,7 +49,7 @@ class Ergebnisablage:
     @classmethod
     def kopie_von(cls, auftrag):
         """Die Ablagekopie eines Auftrags, wenn sie liegt — sonst ''."""
-        if not auftrag or not getattr(auftrag, 'bvh_file', ''):
-            return ''
+        if not auftrag or not getattr(auftrag, "bvh_file", ""):
+            return ""
         ziel = cls.pfad(auftrag.name, auftrag.pipeline)
-        return str(ziel) if ziel.is_file() else ''
+        return str(ziel) if ziel.is_file() else ""

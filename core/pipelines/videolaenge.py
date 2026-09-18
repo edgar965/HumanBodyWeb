@@ -18,7 +18,7 @@ Fortschritt zeigt dann Text statt Anteil.
 
 import logging
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Videolaenge:
@@ -29,11 +29,11 @@ class Videolaenge:
         """Anzahl der Bilder — `0`, wenn sie nicht zu ermitteln ist."""
         try:
             import cv2
+
             film = cv2.VideoCapture(str(pfad))
             anzahl = int(film.get(cv2.CAP_PROP_FRAME_COUNT))
             film.release()
             return anzahl if anzahl > 0 else 0
-        except Exception:                                          # noqa: BLE001
-            logger.debug('Bildanzahl von %s nicht ermittelbar', pfad,
-                         exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.debug("Bildanzahl von %s nicht ermittelbar", pfad, exc_info=True)
             return 0

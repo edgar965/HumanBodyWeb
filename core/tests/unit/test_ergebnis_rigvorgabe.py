@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Ergebnisseite zeigt das HumanBody-Rig auf allen Ansichten — als VORGABE.
+"""Die Ergebnisseite zeigt das HumanBody-Rig auf allen Ansichten — als VORGABE.
 
 WARUM (12.09.2026, Edgar zum dritten Mal: „oben ist ein anderes Rig zu sehen
 als unten. Das Rig in den oberen Bereichen ist wahrscheinlich CMU oder SMPL,
@@ -13,47 +13,47 @@ der Spieler schaltet das Rig nach dem Laden selbst ein, der Knopf zeigt
 den Stand, die Figur startet mit sichtbarem Rig und baut den Helfer, sobald
 ihr Skelett da ist — nicht erst beim Kippen.
 """
+
 from pathlib import Path
 
 from django.conf import settings
 from django.test import SimpleTestCase
 
-STATIK = Path(settings.BASE_DIR) / 'static'
-SPIELER = STATIK / 'js' / 'bvh_player.js'
-BEDIENUNG = STATIK / 'js' / 'bvh_player' / 'bedienung.js'
-FIGUR = STATIK / 'viewer' / 'result_character'
+STATIK = Path(settings.BASE_DIR) / "static"
+SPIELER = STATIK / "js" / "bvh_player.js"
+BEDIENUNG = STATIK / "js" / "bvh_player" / "bedienung.js"
+FIGUR = STATIK / "viewer" / "result_character"
 
 
 class DieRigvorgabe(SimpleTestCase):
-
     def test_der_spieler_schaltet_das_rig_nach_dem_laden_selbst_ein(self):
         js = DieRigvorgabe.lesen(SPIELER)
-        self.assertIn('async rigVorgeben()', js)
-        start = js.index('async starten(')
-        self.assertIn('await this.rigVorgeben();', js[start:])
+        self.assertIn("async rigVorgeben()", js)
+        start = js.index("async starten(")
+        self.assertIn("await this.rigVorgeben();", js[start:])
         # nach dem Skelett, nicht davor: ohne Wurzel gibt es keinen Anker
-        self.assertLess(js.index('await this.skelett.laden(bvhUrl)', start),
-                        js.index('await this.rigVorgeben();', start))
-        self.assertIn('this.bedienung.rigStandZeigen(this.rigGewuenscht)', js)
+        self.assertLess(
+            js.index("await this.skelett.laden(bvhUrl)", start), js.index("await this.rigVorgeben();", start)
+        )
+        self.assertIn("this.bedienung.rigStandZeigen(this.rigGewuenscht)", js)
 
     def test_der_knopf_zeigt_den_stand(self):
         self.assertIn("classList.toggle('active', !!an)", DieRigvorgabe.lesen(BEDIENUNG))
 
     def test_die_figur_startet_mit_sichtbarem_rig(self):
-        self.assertIn('rigVisible: true', DieRigvorgabe.lesen(FIGUR / 'state.js'))
-        leiste = DieRigvorgabe.lesen(FIGUR / 'knopfleiste.js')
+        self.assertIn("rigVisible: true", DieRigvorgabe.lesen(FIGUR / "state.js"))
+        leiste = DieRigvorgabe.lesen(FIGUR / "knopfleiste.js")
         rig = leiste.index("text: 'Rig'")
-        self.assertIn('an: true', leiste[rig:leiste.index('kippen', rig)])
+        self.assertIn("an: true", leiste[rig : leiste.index("kippen", rig)])
 
     def test_der_helfer_entsteht_mit_dem_skelett(self):
-        js = DieRigvorgabe.lesen(FIGUR / 'mesh_loading.js')
+        js = DieRigvorgabe.lesen(FIGUR / "mesh_loading.js")
         # Seit 13.09.2026 haeutet `HumanbodyModell` (`haeuten`), das Skelett
         # kommt aus dem Modell.
-        skelett = js.index('state.rigifySkeleton = state.modell.skelett;')
-        self.assertIn('if (state.rigVisible && !state.skeletonHelper)',
-                      js[skelett:skelett + 600])
+        skelett = js.index("state.rigifySkeleton = state.modell.skelett;")
+        self.assertIn("if (state.rigVisible && !state.skeletonHelper)", js[skelett : skelett + 600])
         self.assertIn("import { Skelettanzeige }", js)
 
     @staticmethod
     def lesen(pfad):
-        return pfad.read_text(encoding='utf-8')
+        return pfad.read_text(encoding="utf-8")

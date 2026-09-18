@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Saumschnitt`: verdeckte Randecken der Haut wandern unter die Stoffkante.
+"""`Saumschnitt`: verdeckte Randecken der Haut wandern unter die Stoffkante.
 
 WARUM (Edgar, 13.09.2026, Bild vom Bund der Hose von oben: „der Innensaum
 der Kleider ist eckig, der soll so sein wie die Außenhaut"): Der `Hauteinzug`
@@ -19,11 +19,12 @@ Attrappen:
 Sabotage-Gegenprobe: in `verschiebung` die Projektion in die Tangentialebene
 weglassen → z wird +1 statt −1 mm → Fall 3 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'saumschnitt.js')
+MODUL = Jsmodul("gemeinsam", "saumschnitt.js")
 
 SKRIPT = """
 const { Saumschnitt: S } = await import(MODUL);
@@ -55,6 +56,5 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class SaumschnittTest(SimpleTestCase):
-
     def test_randecken_wandern_unter_die_kante(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

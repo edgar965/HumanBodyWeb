@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Ablage des Bake-Laufs lesen (`FPSBAKE2`, `FPSBAKE1`).
+"""Die Ablage des Bake-Laufs lesen (`FPSBAKE2`, `FPSBAKE1`).
 
 Geschrieben von `skinning_bake.exe` (Ergaenzung am fremden Code, siehe
 `src/bake_main.cpp`). Aufbau:
@@ -12,22 +12,23 @@ Geschrieben von `skinning_bake.exe` (Ergaenzung am fremden Code, siehe
 Die Punkte stehen in FPS-EINHEITEN (rund 12,3 je Meter, siehe
 `figur_nach_fps.py`) — `in_metern()` rechnet zurueck.
 """
+
 import numpy as np
 
 
 class Bakedatei:
-    u"""Punkte je Bild aus einem FPS-Bake."""
+    """Punkte je Bild aus einem FPS-Bake."""
 
-    KENNUNG = b'FPSBAKE2'
-    KENNUNG_ALT = b'FPSBAKE1'
+    KENNUNG = b"FPSBAKE2"
+    KENNUNG_ALT = b"FPSBAKE1"
 
     def __init__(self, pfad):
-        with open(pfad, 'rb') as datei:
+        with open(pfad, "rb") as datei:
             kennung = datei.read(8)
             if kennung not in (self.KENNUNG, self.KENNUNG_ALT):
-                raise ValueError(u'Keine FPSBAKE-Datei: %r' % kennung)
-            self.bilder = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
-            self.punkte = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
+                raise ValueError("Keine FPSBAKE-Datei: %r" % kennung)
+            self.bilder = int(np.frombuffer(datei.read(4), dtype="<u4")[0])
+            self.punkte = int(np.frombuffer(datei.read(4), dtype="<u4")[0])
             # FPSBAKE2 fuehrt die Dreiecke MIT. Sie werden gebraucht, weil
             # FPS die Punkte umsortiert: Nach dem Einlesen lag kein einziger
             # der 5.807 Punkte an der Stelle, an der er in der `.off` stand.
@@ -36,23 +37,22 @@ class Bakedatei:
             # es ein Knaeuel.
             self.dreiecke = None
             if kennung == self.KENNUNG:
-                zahl = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
-                self.dreiecke = np.frombuffer(
-                    datei.read(zahl * 12), dtype='<u4'
-                ).reshape(zahl, 3).astype(np.int64)
-            roh = np.frombuffer(datei.read(), dtype='<f4')
+                zahl = int(np.frombuffer(datei.read(4), dtype="<u4")[0])
+                self.dreiecke = (
+                    np.frombuffer(datei.read(zahl * 12), dtype="<u4").reshape(zahl, 3).astype(np.int64)
+                )
+            roh = np.frombuffer(datei.read(), dtype="<f4")
         erwartet = self.bilder * self.punkte * 3
         if roh.size != erwartet:
-            raise ValueError(u'Datei unvollstaendig: %d statt %d Werte'
-                             % (roh.size, erwartet))
+            raise ValueError("Datei unvollstaendig: %d statt %d Werte" % (roh.size, erwartet))
         self.daten = roh.reshape(self.bilder, self.punkte, 3).astype(np.float64)
 
     def in_metern(self, faktor):
-        u"""Dieselben Punkte in Metern (Faktor = Einheiten je Meter)."""
+        """Dieselben Punkte in Metern (Faktor = Einheiten je Meter)."""
         return self.daten / faktor
 
     def auf_dem_boden(self, figurhoehe):
-        u"""Die Bahn in Metern, mittig und auf dem Boden (z = 0 im ersten Bild).
+        """Die Bahn in Metern, mittig und auf dem Boden (z = 0 im ersten Bild).
 
         Der Massstab kommt aus dem ERSTEN Bild, nicht aus einer Konstanten:
         Die `.skel` traegt den Faktor der Figur, und wer ihn fest hinschreibt,
@@ -70,11 +70,11 @@ class Bakedatei:
         return punkte
 
     def bewegung(self):
-        u"""Weg je Punkt zwischen erstem und letztem Bild (Einheiten)."""
+        """Weg je Punkt zwischen erstem und letztem Bild (Einheiten)."""
         return np.linalg.norm(self.daten[-1] - self.daten[0], axis=1)
 
     def bewegung_je_bild(self):
-        u"""Groesster Weg eines Punktes von Bild zu Bild — die Probe auf
+        """Groesster Weg eines Punktes von Bild zu Bild — die Probe auf
         Ruecken: Ein Sprung von mehreren Zentimetern je Bild ist keine
         Simulation, sondern ein Fehler in der Zeitsteuerung."""
         schritte = np.linalg.norm(np.diff(self.daten, axis=0), axis=2)

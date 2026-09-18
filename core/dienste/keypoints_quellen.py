@@ -28,7 +28,7 @@ from django.conf import settings
 
 from ..daten.wrapperpfad import Wrapperpfad
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Keypointsquellen:
@@ -43,26 +43,24 @@ class Keypointsquellen:
         """
         try:
             stamm = Path(job.video_file.name).stem
-            gewichte = output_dir / stamm / 'hmr4d_results.pt'
+            gewichte = output_dir / stamm / "hmr4d_results.pt"
             if not gewichte.exists():
                 return None
             import torch  # pyright: ignore[reportMissingImports]  (python10)
-            geschaetzt = torch.load(str(gewichte), map_location='cpu',
-                                    weights_only=False)
-            if ('smpl_params_incam' not in geschaetzt
-                    or 'K_fullimg' not in geschaetzt):
+
+            geschaetzt = torch.load(str(gewichte), map_location="cpu", weights_only=False)
+            if "smpl_params_incam" not in geschaetzt or "K_fullimg" not in geschaetzt:
                 return None
             video = str(Path(settings.MEDIA_ROOT) / str(job.video_file))
-            ziel = str(output_dir / ('%s_keypoints2d.json'
-                                     % Path(job.bvh_file).stem))
+            ziel = str(output_dir / ("%s_keypoints2d.json" % Path(job.bvh_file).stem))
             with Wrapperpfad():
                 from gvhmr_lift import _save_2d_keypoints
+
                 _save_2d_keypoints(geschaetzt, ziel, video)
             with open(ziel) as datei:
                 return json.load(datei)
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('[serve_keypoints_2d] Retroactive SMPL 2D '
-                             'keypoints failed: %s', fehler)
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("[serve_keypoints_2d] Retroactive SMPL 2D keypoints failed: %s", fehler)
             return None
 
     @staticmethod
@@ -76,9 +74,10 @@ class Keypointsquellen:
         0..1 normiert und werden mit den Videomaßen hochgerechnet.
         """
         from .gelenkquelle import Gelenkquelle
+
         quelle = Gelenkquelle(job)
         masse = quelle.bildmasse()
-        if job.pipeline == 'openpose':
+        if job.pipeline == "openpose":
             # `alle=True`: Fürs Video werden auch Augen, Ohren und Füße
             # gezeichnet.
             return quelle.aus_openpose(tupel=True, alle=True), masse

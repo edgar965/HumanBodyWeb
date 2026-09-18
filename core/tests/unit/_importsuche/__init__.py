@@ -21,5 +21,4 @@ from .lokalerimport import Lokalerimport
 from .modulnamen import Modulnamen
 from .modulsuche import Modulsuche
 
-__all__ = ['AUSSEN', 'EIGENE', 'WURZEL', 'Lokalerimport', 'Modulnamen',
-           'Modulsuche']
+__all__ = ["AUSSEN", "EIGENE", "WURZEL", "Lokalerimport", "Modulnamen", "Modulsuche"]

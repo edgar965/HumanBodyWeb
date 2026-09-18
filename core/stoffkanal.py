@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Stoffkanal — die WebSocket-Seite der Stoffvorschau.
+"""Stoffkanal — die WebSocket-Seite der Stoffvorschau.
 
 WARUM EIGENE DATEI: `core/consumers.py` stand bei 259 Zeilen; mit dem
 Stoffteil waere sie auf 312 gewachsen. Die Regel ist, dass eine Datei beim
@@ -10,22 +10,23 @@ Hier steht ausschliesslich das Drahtformat. Was gerechnet wird, steht in
 `core/dienste/stoffnachfuehrung.py`, und wie gerechnet wird in
 `GarmentCode/stoffvorschau.py`.
 """
+
 import json
 import logging
 
 import numpy as np
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
-__all__ = ['Stoffkanal', 'StoffConsumer']
+__all__ = ["Stoffkanal", "StoffConsumer"]
 
 
 class Stoffkanal:
-    u"""Mischklasse fuer `CharacterConsumer`: Stoff senden und binden."""
+    """Mischklasse fuer `CharacterConsumer`: Stoff senden und binden."""
 
     async def _send_stoff(self, grundnetz):
-        u"""Drapierte Kleidung, die dem Koerper folgt.
+        """Drapierte Kleidung, die dem Koerper folgt.
 
         An EINER Stelle gerufen (`_send_vertices`), aus demselben Grund wie
         beim Skelett: Es gibt fuenf Stellen, die Punkte schicken. Eine davon
@@ -40,40 +41,47 @@ class Stoffkanal:
         if self._stoff.leer:
             return
         for stueck, punkte in self._stoff.punkte(grundnetz).items():
-            await self.send(text_data=json.dumps({
-                'type': 'stoff', 'stueck': stueck,
-                'punkte': int(len(punkte)),
-                # Wie weit die Vorschau von der simulierten Form weg ist —
-                # die Zahl, die „Finalize" begruendet.
-                'abstand_mm': self._stoff.abstand_mm(stueck, punkte)}))
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "type": "stoff",
+                        "stueck": stueck,
+                        "punkte": int(len(punkte)),
+                        # Wie weit die Vorschau von der simulierten Form weg ist —
+                        # die Zahl, die „Finalize" begruendet.
+                        "abstand_mm": self._stoff.abstand_mm(stueck, punkte),
+                    }
+                )
+            )
             await self.send(bytes_data=punkte.astype(np.float32).tobytes())
 
     async def _handle_stoff_binden(self, msg):
-        u"""Ein drapiertes Stueck an den aktuellen Koerper binden.
+        """Ein drapiertes Stueck an den aktuellen Koerper binden.
 
         Der Ordner kommt aus der Antwort der Drapierung und damit aus dem
         Browser — `Stoffnachfuehrung.netzpfad` prueft ihn gegen den
         Ausgabeordner, bevor irgendetwas gelesen wird.
         """
         from .dienste.charakterdaten import Charakterdaten
-        pfad = self._stoff.netzpfad(msg.get('ordner'))
+
+        pfad = self._stoff.netzpfad(msg.get("ordner"))
         if not pfad:
-            await self.send(text_data=json.dumps({
-                'type': 'stoff_bindung',
-                'fehler': 'Kein Ergebnisnetz in diesem Ordner'}))
+            await self.send(
+                text_data=json.dumps(
+                    {"type": "stoff_bindung", "fehler": "Kein Ergebnisnetz in diesem Ordner"}
+                )
+            )
             return
         grundnetz = self._char_state.compute()
         netz = Charakterdaten.netzdaten(self._current_gender)
-        bilanz = self._stoff.binden(
-            msg.get('stueck') or 'kleidung', pfad, grundnetz, netz.faces)
-        await self.send(text_data=json.dumps(
-            {'type': 'stoff_bindung', **bilanz}))
-        if 'fehler' not in bilanz:
+        bilanz = self._stoff.binden(msg.get("stueck") or "kleidung", pfad, grundnetz, netz.faces)
+        await self.send(text_data=json.dumps({"type": "stoff_bindung", **bilanz}))
+        if "fehler" not in bilanz:
             await self._send_stoff(grundnetz)
 
 
 class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
-    u"""Der Kanal der SZENE-Seite: nur Stoff, kein Koerpernetz.
+    """Der Kanal der SZENE-Seite: nur Stoff, kein Koerpernetz.
 
     WARUM EIN EIGENER KANAL (08.09.2026, Edgar: „du kannst vorschau auch per
     websocket ueber den Server laufen lassen!"): Die Szene holt ihr
@@ -92,25 +100,26 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         from GarmentCode.nachfuehrung import Stoffnachfuehrung
+
         self._stoff = Stoffnachfuehrung()
         self._char_state = None
-        self._current_gender = 'female'
+        self._current_gender = "female"
         self._init_state()
 
     def _init_state(self):
         try:
             from core.dienste.charakterdaten import Charakterdaten
+
             self._char_state = Charakterdaten.zustand()
-        except Exception as fehler:                       # noqa: BLE001
-            logger.error('StoffConsumer: CharacterState nicht aufgebaut: %s',
-                         fehler)
+        except Exception as fehler:  # noqa: BLE001
+            logger.error("StoffConsumer: CharacterState nicht aufgebaut: %s", fehler)
 
     async def disconnect(self, close_code):
         self._stoff.loesen()
         self._char_state = None
 
     async def receive(self, text_data=None, bytes_data=None):
-        u"""Morphs rein, Stoffpunkte raus.
+        """Morphs rein, Stoffpunkte raus.
 
         Kaputtes JSON bleibt stumm: Der Rumpf kommt aus dem Browser, ein Log
         daraus liesse sich von aussen beliebig oft ausloesen (dieselbe
@@ -124,21 +133,21 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # kein Serverfehler (wie CharacterConsumer)
         except json.JSONDecodeError:
             return
-        art = msg.get('type')
+        art = msg.get("type")
 
-        if art == 'stoff_binden':
+        if art == "stoff_binden":
             self._stellen(msg)
             await self._handle_stoff_binden(msg)
-        elif art == 'stoff_loesen':
-            self._stoff.loesen(msg.get('stueck'))
-        elif art == 'stellung':
+        elif art == "stoff_loesen":
+            self._stoff.loesen(msg.get("stueck"))
+        elif art == "stellung":
             if self._stoff.leer:
                 return
             self._stellen(msg)
             await self._send_stoff(self._char_state.compute())
 
     def _stellen(self, msg):
-        u"""Bauart, Morphs und Metaregler uebernehmen.
+        """Bauart, Morphs und Metaregler uebernehmen.
 
         VOLLSTAENDIG, nicht einzeln: Der Browser schickt seinen ganzen
         Stand. Wer nur die geaenderten Werte schickt, muss den Rest
@@ -146,27 +155,26 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         ohne dass es auffaellt.
         """
         zustand = self._char_state
-        if zustand is None:          # `receive` prueft das schon; hier fuer sich
+        if zustand is None:  # `receive` prueft das schon; hier fuer sich
             return
-        bauart = msg.get('bauart') or 'Female_Caucasian'
-        self._current_gender = ('male' if str(bauart).lower().startswith('m')
-                                else 'female')
+        bauart = msg.get("bauart") or "Female_Caucasian"
+        self._current_gender = "male" if str(bauart).lower().startswith("m") else "female"
         # ERST leeren, DANN die Bauart setzen — dieselbe Reihenfolge wie in
         # `CharacterConsumer.receive` bei `reset`: `compute()` schreibt die
         # Regler aus `_user_morphs` zurueck, ein spaeteres Leeren traefe sie
         # nicht.
         zustand.zuruecksetzen()
         zustand.set_body_type(bauart)
-        for name, wert in (msg.get('morphs') or {}).items():
+        for name, wert in (msg.get("morphs") or {}).items():
             try:
                 zustand.set_morph(name, float(wert))
             # stumm gewollt: ein unbrauchbarer Reglerwert aus dem Browser wird
             # uebergangen
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 continue
-        for name, wert in (msg.get('meta') or {}).items():
+        for name, wert in (msg.get("meta") or {}).items():
             try:
                 zustand.set_meta(name, float(wert))
             # stumm gewollt: ein unbrauchbarer Metawert aus dem Browser wird uebergangen
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 continue

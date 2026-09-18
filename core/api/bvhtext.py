@@ -48,27 +48,31 @@ class Bvhtext:
         JSON: { bvh_text: "HIERARCHY\\nROOT ...", body_height: 1.68,
                 foot_correction: false, format: null }
         """
-        daten, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
+        daten, fehler = Anfragerumpf.lesen(request, "Invalid JSON body")
         if fehler:
             return fehler
-        text = daten.get('bvh_text', '')
+        text = daten.get("bvh_text", "")
         if not text:
-            return JsonResponse({'error': 'bvh_text is required'}, status=400)
+            return JsonResponse({"error": "bvh_text is required"}, status=400)
         # `parse_bvh` will einen Pfad. Die Datei geht INS PROJEKT statt nach
         # System-Temp (Projektregel, siehe ProjektTemp).
         with tempfile.NamedTemporaryFile(
-                mode='w', suffix='.bvh', delete=False,
-                dir=str(ProjektTemp.verzeichnis()), encoding='utf-8') as ablage:
+            mode="w", suffix=".bvh", delete=False, dir=str(ProjektTemp.verzeichnis()), encoding="utf-8"
+        ) as ablage:
             ablage.write(text)
             pfad = ablage.name
         try:
-            return JsonResponse(Retargetdaten(
-                pfad,
-                float(daten.get('body_height', Bvhtext.VORGABE_GROESSE)),
-                daten.get('format', None),
-                bool(daten.get('foot_correction', False)),
-                ziel=daten.get('target') or Retargetdaten.ZIEL_DEF,
-            ).holen().als_dict())
+            return JsonResponse(
+                Retargetdaten(
+                    pfad,
+                    float(daten.get("body_height", Bvhtext.VORGABE_GROESSE)),
+                    daten.get("format", None),
+                    bool(daten.get("foot_correction", False)),
+                    ziel=daten.get("target") or Retargetdaten.ZIEL_DEF,
+                )
+                .holen()
+                .als_dict()
+            )
         finally:
             os.unlink(pfad)
 
@@ -85,13 +89,12 @@ class Bvhtext:
         daten, fehler = Anfragerumpf.lesen(request)
         if fehler:
             return fehler
-        text = daten.get('bvh_text', '')
+        text = daten.get("bvh_text", "")
         if not text:
-            return JsonResponse({'error': 'bvh_text required'}, status=400)
+            return JsonResponse({"error": "bvh_text required"}, status=400)
         ziel = Bvhtext._zielpfad(daten)
         if not ziel:
-            return JsonResponse({'error': 'path or category+name required'},
-                                status=400)
+            return JsonResponse({"error": "path or category+name required"}, status=400)
         # Pfadpruefung ueber SafePath. Vorher stand hier ein
         # String-Praefix-Vergleich (`str(sp).startswith(str(media))`) — den
         # besteht auch `<media>_evil\x.bvh`, weil "media_evil" mit "media"
@@ -100,30 +103,30 @@ class Bvhtext:
         try:
             geprueft = SafePath.fuer_bvh().pruefe(ziel)
         except PfadAbgelehnt as fehler:
-            return JsonResponse({'error': str(fehler)}, status=403)
+            return JsonResponse({"error": str(fehler)}, status=403)
         try:
             # Zeilenenden auf \n normalisieren (BVH-Dateien duerfen kein \r\n
             # haben); AtomarSchreiber ersetzt die Datei erst, wenn sie
             # vollstaendig auf der Platte liegt.
-            sauber = text.replace('\r\n', '\n').replace('\r', '\n')
-            AtomarSchreiber.text_schreiben(geprueft, sauber, zeilenende='\n')
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('save_bvh_text fehlgeschlagen: %s', geprueft)
-            return JsonResponse({'error': str(fehler)}, status=500)
-        return JsonResponse({'ok': True, 'path': str(geprueft)})
+            sauber = text.replace("\r\n", "\n").replace("\r", "\n")
+            AtomarSchreiber.text_schreiben(geprueft, sauber, zeilenende="\n")
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("save_bvh_text fehlgeschlagen: %s", geprueft)
+            return JsonResponse({"error": str(fehler)}, status=500)
+        return JsonResponse({"ok": True, "path": str(geprueft)})
 
     @staticmethod
     def _zielpfad(daten):
         """Der angegebene Pfad — oder einer aus Kategorie und Name."""
-        pfad = daten.get('path', '')
+        pfad = daten.get("path", "")
         if pfad:
             return pfad
-        kategorie = daten.get('category', '')
-        name = daten.get('name', '')
+        kategorie = daten.get("category", "")
+        name = daten.get("name", "")
         if not (kategorie and name):
-            return ''
+            return ""
         wurzel = Path(str(settings.HUMANBODY_BVH_DIR)).parent
-        return str(wurzel / kategorie / ('%s.bvh' % name))
+        return str(wurzel / kategorie / ("%s.bvh" % name))
 
     # ---------------------------------------------------------------- Effekte
 
@@ -159,46 +162,43 @@ class Bvhtext:
         daten, fehler = Anfragerumpf.lesen(request)
         if fehler:
             return fehler
-        kategorie = daten.get('category', '')
-        name = daten.get('name', '')
+        kategorie = daten.get("category", "")
+        name = daten.get("name", "")
         if not kategorie or not name:
-            return JsonResponse({'error': 'category + name required'},
-                                status=400)
+            return JsonResponse({"error": "category + name required"}, status=400)
         # Die Pfadpruefung ist der Grund, warum diese beiden Endpunkte am
         # 13.08.2026 auffielen: `category='../../..'` landete in den
         # Produktivdaten, und am Ende wird die Datei UEBERSCHRIEBEN.
-        pfad = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / kategorie
-                                      / ('%s.bvh' % name))
+        pfad = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / kategorie / ("%s.bvh" % name))
         if pfad is None:
-            return JsonResponse(
-                {'error': 'Pfad liegt ausserhalb der BVH-Bibliothek'},
-                status=403)
+            return JsonResponse({"error": "Pfad liegt ausserhalb der BVH-Bibliothek"}, status=403)
         if not pfad.is_file():
             # Kein voller Pfad in der Antwort — das waere eine Auskunft ueber
             # das Dateisystem. Er steht im Protokoll.
-            logger.info('BVH nicht gefunden: %s', pfad)
-            return JsonResponse({'error': 'BVH not found'}, status=404)
+            logger.info("BVH nicht gefunden: %s", pfad)
+            return JsonResponse({"error": "BVH not found"}, status=404)
         return Bvhtext._anwenden(pfad, daten, nur_glaetten, kategorie, name)
 
     @staticmethod
     def _mimik(pfad, mimik, kategorie, name):
-        u"""Die Mimik des Studios (14.09.2026) ist ein Effekt NEBEN der BVH:
+        """Die Mimik des Studios (14.09.2026) ist ein Effekt NEBEN der BVH:
         `<stamm>_mimik.json`, gelesen beim Retarget (`Mimikspuren`). Die BVH
         selbst bleibt unangetastet — eine Quell-BVH hat kein Gesicht."""
         from core.dienste.mimikspuren import Mimikspuren
+
         nebendatei = Mimikspuren.schreiben(pfad, mimik)
-        bilder = len((mimik or {}).get('bilder') or [])
-        logger.info('Mimik zur BVH %s/%s: %d Bilder', kategorie, name, bilder)
-        return JsonResponse({'ok': True, 'frames': bilder, 'applied': ['mimik'],
-                             'datei': os.path.basename(nebendatei)})
+        bilder = len((mimik or {}).get("bilder") or [])
+        logger.info("Mimik zur BVH %s/%s: %d Bilder", kategorie, name, bilder)
+        return JsonResponse(
+            {"ok": True, "frames": bilder, "applied": ["mimik"], "datei": os.path.basename(nebendatei)}
+        )
 
     @staticmethod
     def _anwenden(pfad, daten, nur_glaetten, kategorie, name):
-        sigma = (daten.get('sigma', Bvhtext.VORGABE_SIGMA) if nur_glaetten
-                 else daten.get('sigma'))
-        radius = None if nur_glaetten else daten.get('fixed_radius')
-        if not nur_glaetten and 'mimik' in daten:
-            return Bvhtext._mimik(pfad, daten['mimik'], kategorie, name)
+        sigma = daten.get("sigma", Bvhtext.VORGABE_SIGMA) if nur_glaetten else daten.get("sigma")
+        radius = None if nur_glaetten else daten.get("fixed_radius")
+        if not nur_glaetten and "mimik" in daten:
+            return Bvhtext._mimik(pfad, daten["mimik"], kategorie, name)
         try:
             bvh = BvhDatei(pfad)
             if sigma:
@@ -206,16 +206,15 @@ class Bvhtext:
             if radius is not None:
                 bvh.wurzel_festhalten(radius)
             if not bvh.angewandt:
-                return JsonResponse({'error': 'No effects to apply'},
-                                    status=400)
+                return JsonResponse({"error": "No effects to apply"}, status=400)
             bilder = bvh.speichern()
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('BVH-Bearbeitung fehlgeschlagen: %s/%s',
-                             kategorie, name)
-            return JsonResponse({'error': str(fehler)}, status=500)
-        logger.info('BVH bearbeitet: %s/%s — %s, %d Frames', kategorie, name,
-                    ', '.join(bvh.angewandt), bilder)
-        antwort = {'ok': True, 'frames': bilder}
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("BVH-Bearbeitung fehlgeschlagen: %s/%s", kategorie, name)
+            return JsonResponse({"error": str(fehler)}, status=500)
+        logger.info(
+            "BVH bearbeitet: %s/%s — %s, %d Frames", kategorie, name, ", ".join(bvh.angewandt), bilder
+        )
+        antwort = {"ok": True, "frames": bilder}
         if not nur_glaetten:
-            antwort['applied'] = bvh.angewandt
+            antwort["applied"] = bvh.angewandt
         return JsonResponse(antwort)

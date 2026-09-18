@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Knochenwelt — Vorwaertskinematik ueber die Elternkette des Rigs.
+"""Knochenwelt — Vorwaertskinematik ueber die Elternkette des Rigs.
 
 Viermal stand dieselbe Rekursion im Projekt (`Animumsetzung._rig_punkte`,
 `Codyfigur._welt`, `Skelettbahn._welt`, `Stofframpe.lage`, Befund `doppelcode`
@@ -13,16 +13,16 @@ vom 10.09.2026). Mit `zeros` verglich die Gegenprobe zwei Raeume und meldete
 sie gibt es keine Physik: Eine Figur, die auf der Stelle tritt, erfaehrt
 keine Beschleunigung, und genau die treibt das Nachschwingen.
 """
+
 import numpy as np
 
-__all__ = ['Knochenwelt']
+__all__ = ["Knochenwelt"]
 
 
 class Knochenwelt:
-
     @staticmethod
     def loesen(knochen, namen, lokal, ort=None):
-        u"""{name: (position, weltdrehung)} fuer `namen` — Eltern werden mitgeloest.
+        """{name: (position, weltdrehung)} fuer `namen` — Eltern werden mitgeloest.
 
         `knochen`: {name: {'local_position', 'parent', ...}} des Rigs;
         `lokal(name)`: die lokale Drehung [x, y, z, w]; `ort`: Versatz der
@@ -30,6 +30,7 @@ class Knochenwelt:
         kennt, gilt als Wurzel.
         """
         from anim_umsetzung import Animumsetzung
+
         welt = {}
 
         def eins(name):
@@ -37,16 +38,15 @@ class Knochenwelt:
                 return welt[name]
             eintrag = knochen[name]
             drehung = lokal(name)
-            versatz = np.asarray(eintrag['local_position'], dtype=np.float64)
-            elternteil = eintrag.get('parent')
+            versatz = np.asarray(eintrag["local_position"], dtype=np.float64)
+            elternteil = eintrag.get("parent")
             if not elternteil or elternteil not in knochen:
                 if ort is not None:
                     versatz = versatz + np.asarray(ort, dtype=np.float64)
                 welt[name] = (versatz, drehung)
             else:
                 ep, eq = eins(elternteil)
-                welt[name] = (ep + Animumsetzung.drehen(eq, versatz),
-                              Animumsetzung.mul(eq, drehung))
+                welt[name] = (ep + Animumsetzung.drehen(eq, versatz), Animumsetzung.mul(eq, drehung))
             return welt[name]
 
         for name in namen:

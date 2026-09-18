@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Stromleser — die beiden Faeden, die stdout und stderr leerlesen.
+"""Stromleser — die beiden Faeden, die stdout und stderr leerlesen.
 
 Aus `pipeline_process.py` herausgeloest (30.08.2026, Befund `dateigroesse`).
 Die Datei trug zwei Dinge: das Starten eines Subprozesses und das Leerlesen
@@ -10,10 +10,11 @@ WARUM UEBERHAUPT FAEDEN: Laeuft der Pipe-Puffer (etwa 64 KB) voll, blockiert
 der Kindprozess beim Schreiben, waehrend Django auf die naechste stdout-Zeile
 wartet. Beide warten dann aufeinander, und der Auftrag haengt.
 """
-import logging
-import queue                                                       # noqa: F401
 
-logger = logging.getLogger('core')
+import logging
+import queue  # noqa: F401
+
+logger = logging.getLogger("core")
 
 
 class Stromleser:
@@ -41,10 +42,10 @@ class Stromleser:
             for zeile in strom:
                 ziel.append(zeile)
                 if len(ziel) > Stromleser.STDERR_ZEILEN:
-                    del ziel[:-Stromleser.STDERR_ZEILEN]
+                    del ziel[: -Stromleser.STDERR_ZEILEN]
         # stumm gewollt: Der Strom wurde geschlossen — der Prozess ist fertig.
         # Das ist das normale Ende dieses Fadens, kein Fehler.
-        except (ValueError, OSError):
+        except ValueError, OSError:
             pass
 
     @classmethod
@@ -55,10 +56,10 @@ class Stromleser:
                 ziel_q.put(zeile)
         # stumm gewollt: Strom geschlossen — normales Ende. Das `finally`
         # darunter setzt die Endmarke, sonst wartet der Abholer ewig.
-        except (ValueError, OSError):
+        except ValueError, OSError:
             pass
         finally:
-            ziel_q.put(cls.ENDE)    # auch im Fehlerfall: sonst wartet der Abholer ewig
+            ziel_q.put(cls.ENDE)  # auch im Fehlerfall: sonst wartet der Abholer ewig
 
 
-__all__ = ['Stromleser']
+__all__ = ["Stromleser"]

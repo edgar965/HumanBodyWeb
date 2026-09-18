@@ -24,11 +24,12 @@ Dazu die Gewichtung: `smooth` ist `3t²−2t³` (bei 0,5 genau 0,5, bei 0,25 abe
 Ohne `node` im Pfad bricht der Lauf mit einer Meldung ab (seit dem
 30.08.2026) — vorher meldete er grün, ohne gelaufen zu sein.
 """
+
 import unittest
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'schluesselpaar.js')
+MODUL = Jsmodul("bvh_studio", "schluesselpaar.js")
 
 SKRIPT = """
 const { Schluesselpaar } = await import(MODUL);
@@ -98,41 +99,36 @@ console.log(JSON.stringify(ergebnis));
 
 
 class SchluesselpaarTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.ergebnis = MODUL.laufen(SKRIPT)
 
     def test_paare_wie_die_alte_schleife(self):
         """Für jedes geprüfte Bild dasselbe Paar wie vorher."""
-        for vorher, nachher in self.ergebnis['paare']:
-            self.assertTrue(vorher, 'vorheriger Keyframe weicht ab')
-            self.assertTrue(nachher, 'nächster Keyframe weicht ab')
+        for vorher, nachher in self.ergebnis["paare"]:
+            self.assertTrue(vorher, "vorheriger Keyframe weicht ab")
+            self.assertTrue(nachher, "nächster Keyframe weicht ab")
 
     def test_anteile_nachgerechnet(self):
         """Bilder -10, 0, 25, 50, 100, 200 bei Keyframes 0 und 100."""
-        self.assertEqual(self.ergebnis['anteile'],
-                         [0.0, 0.0, 0.25, 0.5, 0.0, 0.0])
+        self.assertEqual(self.ergebnis["anteile"], [0.0, 0.0, 0.25, 0.5, 0.0, 0.0])
 
     def test_glatte_gewichtung(self):
         """`smooth` = 3t²−2t³: bei 0,25 -> 0,1563, bei 0,5 -> 0,5."""
-        self.assertEqual(self.ergebnis['glatt'], [0.1563, 0.5, 0.8438])
+        self.assertEqual(self.ergebnis["glatt"], [0.1563, 0.5, 0.8438])
 
     def test_stufe_bleibt_auf_null(self):
-        self.assertEqual(self.ergebnis['stufe'], [0.0, 0.0, 0.0])
+        self.assertEqual(self.ergebnis["stufe"], [0.0, 0.0, 0.0])
 
     def test_ohne_paar_kein_uebergang_sonst_harter_sprung(self):
-        sonder = self.ergebnis['sonderfaelle']
-        self.assertIsNone(sonder['ohneClips'], 'ohne Keyframes kein Paar')
-        self.assertTrue(sonder['einer'], 'ein Keyframe = Sprung')
-        self.assertTrue(sonder['gleichesBild'],
-                        'zwei Keyframes am gleichen Bild = Sprung')
-        self.assertEqual(sonder['anteilGleichesBild'], 0,
-                         'kein Teilen durch 0')
-        self.assertTrue(sonder['fadeAus'], 'fade=false = harter Wechsel')
+        sonder = self.ergebnis["sonderfaelle"]
+        self.assertIsNone(sonder["ohneClips"], "ohne Keyframes kein Paar")
+        self.assertTrue(sonder["einer"], "ein Keyframe = Sprung")
+        self.assertTrue(sonder["gleichesBild"], "zwei Keyframes am gleichen Bild = Sprung")
+        self.assertEqual(sonder["anteilGleichesBild"], 0, "kein Teilen durch 0")
+        self.assertTrue(sonder["fadeAus"], "fade=false = harter Wechsel")
 
     def test_mischen_trifft_die_mitte_und_uebergeht_fehlende_felder(self):
-        sonder = self.ergebnis['sonderfaelle']
-        self.assertEqual(sonder['mischen'], 5, '0 und 10 in der Mitte')
-        self.assertIsNone(sonder['mischenFehlend'],
-                          'ein Feld, das es nicht gibt, ergibt nichts')
+        sonder = self.ergebnis["sonderfaelle"]
+        self.assertEqual(sonder["mischen"], 5, "0 und 10 in der Mitte")
+        self.assertIsNone(sonder["mischenFehlend"], "ein Feld, das es nicht gibt, ergibt nichts")

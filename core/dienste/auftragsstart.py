@@ -44,11 +44,13 @@ class Auftragsstart:
         laeuft = Auftragsstart.laufender(ausser)
         if not laeuft:
             return None
-        return JsonResponse({
-            'ok': False,
-            'error': f'Job "{laeuft.name}" läuft bereits ({laeuft.status}). '
-                     'Bitte warten oder abbrechen.',
-        }, status=409)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": f'Job "{laeuft.name}" läuft bereits ({laeuft.status}). Bitte warten oder abbrechen.',
+            },
+            status=409,
+        )
 
     @staticmethod
     def pipelines():
@@ -57,14 +59,12 @@ class Auftragsstart:
 
     @staticmethod
     def braucht_zwilling(job, gewuenscht):
-        return bool(gewuenscht) and gewuenscht in Auftragsstart.pipelines() \
-            and gewuenscht != job.pipeline
+        return bool(gewuenscht) and gewuenscht in Auftragsstart.pipelines() and gewuenscht != job.pipeline
 
     @staticmethod
     def zwilling(job, pipeline, parameter):
         """Neuer Auftrag mit demselben Video und einer anderen Pipeline."""
-        neuer = BVHJob(name=job.name, fps=job.fps, pipeline=pipeline,
-                       pipeline_params=parameter)
-        neuer.video_file.name = job.video_file.name   # dieselbe Datei
+        neuer = BVHJob(name=job.name, fps=job.fps, pipeline=pipeline, pipeline_params=parameter)
+        neuer.video_file.name = job.video_file.name  # dieselbe Datei
         neuer.save()
         return neuer

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Fortschrittsrechnung`: was der Balken beim Kleidungsbau anzeigt.
+"""`Fortschrittsrechnung`: was der Balken beim Kleidungsbau anzeigt.
 
 WARUM (06.09.2026, Edgar: „mach einen Fortschrittsbalken"): Echten Fortschritt
 meldet der Server nicht — die Simulation läuft in einem eigenen Prozess und
@@ -19,11 +19,12 @@ nachprüft, ist eine Behauptung. Geprüft wird:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'fortschrittsrechnung.js')
+MODUL = Jsmodul("gemeinsam", "fortschrittsrechnung.js")
 
 SKRIPT = """
 const { Fortschrittsrechnung: F } = await import(MODUL);
@@ -83,10 +84,10 @@ console.log(JSON.stringify({ok: true}));
 
 
 class FortschrittsrechnungTest(SimpleTestCase):
-    u"""Der Balken schätzt — hier steht, was die Schätzung zusagt."""
+    """Der Balken schätzt — hier steht, was die Schätzung zusagt."""
 
     databases = set()
 
     def test_laufender_schritt_nie_voll_gescheitert_springt_nicht_zurueck(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

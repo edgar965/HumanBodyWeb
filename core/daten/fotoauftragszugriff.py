@@ -28,6 +28,7 @@ class Fotoauftragszugriff:
     def holen(job_id):
         """Der Auftrag — oder None, wenn es ihn nicht (mehr) gibt."""
         from ..models import PhotoAnalysisJob
+
         try:
             return PhotoAnalysisJob.objects.get(id=job_id)
         # stumm gewollt: „Auftrag geloescht" ist der Normalfall, sobald
@@ -38,7 +39,7 @@ class Fotoauftragszugriff:
 
     @staticmethod
     def nicht_gefunden():
-        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+        return JsonResponse({"ok": False, "error": "Job not found"}, status=404)
 
     @staticmethod
     def mit_rumpf(request, job_id) -> tuple[Any, Any, JsonResponse | None]:
@@ -69,9 +70,8 @@ class Fotoauftragszugriff:
             return None, None, Fotoauftragszugriff.nicht_gefunden()
         try:
             rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return None, None, JsonResponse(
-                {'ok': False, 'error': 'Invalid JSON'}, status=400)
+        except json.JSONDecodeError, ValueError:
+            return None, None, JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
         return job, rumpf, None
 
 

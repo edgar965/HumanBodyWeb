@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Ladezeiten — laufen nur, wenn sie ausdruecklich gemeint sind.
+"""Ladezeiten — laufen nur, wenn sie ausdruecklich gemeint sind.
 
 GEMESSEN (09.09.2026): 26,5 s in ZWEI Faellen —
 `test_ladezeiten_messen_und_protokollieren` 16,1 s und
@@ -12,11 +12,12 @@ Begruendung und Waechter: `core/tests/nurgemeint.py` (Edgar, 09.09.2026:
 
     manage.py test core.tests.performance      oder  LONGRUNNER=1
 """
+
 import os
 
 from ..nurgemeint import Nurgemeint
 
-WAECHTER = Nurgemeint('performance', os.path.dirname(__file__), dauer='27 s')
+WAECHTER = Nurgemeint("performance", os.path.dirname(__file__), dauer="27 s")
 
 
 def load_tests(loader, standard_tests, pattern):

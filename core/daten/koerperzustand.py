@@ -18,14 +18,14 @@ Indizes stillschweigend.
 class Koerperzustand:
     """Der gerechnete Koerper einer Anfrage: Zustand, Geschlecht, Geometrie."""
 
-    __slots__ = ('zustand', 'geschlecht', 'vertices', 'faces', 'koerpertyp')
+    __slots__ = ("zustand", "geschlecht", "vertices", "faces", "koerpertyp")
 
-    def __init__(self, zustand, geschlecht, vertices, faces, koerpertyp=''):
-        self.zustand = zustand          # humanbody_core.CharacterState
-        self.geschlecht = geschlecht    # 'female' | 'male'
-        self.vertices = vertices        # (V, 3) float32 oder None
-        self.faces = faces              # (F, 4) oder None
-        self.koerpertyp = koerpertyp    # 'Female_Caucasian' ...
+    def __init__(self, zustand, geschlecht, vertices, faces, koerpertyp=""):
+        self.zustand = zustand  # humanbody_core.CharacterState
+        self.geschlecht = geschlecht  # 'female' | 'male'
+        self.vertices = vertices  # (V, 3) float32 oder None
+        self.faces = faces  # (F, 4) oder None
+        self.koerpertyp = koerpertyp  # 'Female_Caucasian' ...
 
     # ------------------------------------------------------------------ lesen
 
@@ -46,6 +46,8 @@ class Koerperzustand:
         return iter((self.zustand, self.geschlecht, self.vertices, self.faces))
 
     def __repr__(self):
-        return ('<Koerperzustand %s %s, %d Vertices>'
-                % (self.koerpertyp or '?', self.geschlecht,
-                   self.vertex_anzahl))
+        return "<Koerperzustand %s %s, %d Vertices>" % (
+            self.koerpertyp or "?",
+            self.geschlecht,
+            self.vertex_anzahl,
+        )

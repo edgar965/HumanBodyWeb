@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Lippengruppe`: Lippendreiecke aus der Haut in eine eigene Materialgruppe.
+"""`Lippengruppe`: Lippendreiecke aus der Haut in eine eigene Materialgruppe.
 
 WARUM (Edgar, 12.09.2026: „es fehlen noch die Lippen (farbe usw.)"): Das
 Netz hat keine Lippengruppe; der Server nennt die Lippenpunkte, der
@@ -16,11 +16,12 @@ teilweise), dahinter eine Sklera-Gruppe:
 
 Sabotage-Gegenprobe: `&& menge.has(index[k + 2])` weg → Fall 2 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'lippengruppe.js')
+MODUL = Jsmodul("gemeinsam", "lippengruppe.js")
 
 SKRIPT = """
 const { Lippengruppe: L } = await import(MODUL);
@@ -53,6 +54,5 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class LippengruppeTest(SimpleTestCase):
-
     def test_lippendreiecke_werden_abgespalten(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

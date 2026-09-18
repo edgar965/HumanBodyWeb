@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Grundabsicherung — laeuft nur, wenn sie ausdruecklich gemeint ist.
+"""Grundabsicherung — laeuft nur, wenn sie ausdruecklich gemeint ist.
 
 GEMESSEN (09.09.2026): 31,8 s in SECHS Faellen, der laengste Posten des
 ganzen Sammellaufs. `test_keine_seite_wirft_5xx` allein braucht 29,9 s —
@@ -16,11 +16,12 @@ Gefahren wird es weiter uber seinen eigenen Eintrag:
 
     manage.py test core.tests.automated        oder  LONGRUNNER=1
 """
+
 import os
 
 from ..nurgemeint import Nurgemeint
 
-WAECHTER = Nurgemeint('automated', os.path.dirname(__file__), dauer='32 s')
+WAECHTER = Nurgemeint("automated", os.path.dirname(__file__), dauer="32 s")
 
 
 def load_tests(loader, standard_tests, pattern):

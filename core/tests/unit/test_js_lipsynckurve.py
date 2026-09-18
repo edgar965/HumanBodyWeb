@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Lipsynckurve` und `Lipsyncformen` (`gemeinsam/`): Rhubarbs Mundformen
+"""`Lipsynckurve` und `Lipsyncformen` (`gemeinsam/`): Rhubarbs Mundformen
 mit Zeiten -> Reglerstellung je Bild (18.09.2026, Edgar: „mach Lipsync").
 
 Drei Cues (X 0–0,2 · D 0,2–0,5 · A 0,5–0,8): davor und danach Ruhe; mitten
@@ -10,11 +10,12 @@ beidem (Uebergang 60 ms); MB-Lab-Tabelle liefert Mundeinheiten statt Visemes;
 Sabotage-Gegenproben: `u` fest auf 1 (kein Uebergang) -> Fall 2 rot (AA 0
 statt 0,5); `stelle` mit `t <= c.end` -> Fall 1 rot (0,8 faellt in A statt X).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'lipsynckurve.js')
+MODUL = Jsmodul("gemeinsam", "lipsynckurve.js")
 
 SKRIPT = """
 const { Lipsynckurve: K, Lipsyncformen: F } = await import(MODUL);
@@ -38,24 +39,23 @@ console.log(JSON.stringify({
 
 
 class LipsynckurveTest(SimpleTestCase):
-
     databases = set()
 
     def test_1_form_an_der_zeit(self):
         aus = MODUL.laufen(SKRIPT)
         self.assertEqual(
-            [aus['vorher'], aus['ruhe'], aus['d'], aus['a'], aus['danach']],
-            ['X', 'X', 'D', 'A', 'X'])
-        self.assertEqual(aus['ausserhalb'], 0)
-        self.assertEqual(aus['formen'], 'ABCDEFGHX')
+            [aus["vorher"], aus["ruhe"], aus["d"], aus["a"], aus["danach"]], ["X", "X", "D", "A", "X"]
+        )
+        self.assertEqual(aus["ausserhalb"], 0)
+        self.assertEqual(aus["formen"], "ABCDEFGHX")
 
     def test_2_uebergang_und_tabellen(self):
         aus = MODUL.laufen(SKRIPT)
-        self.assertAlmostEqual(aus['mitteAA'], 1.0, places=6)
-        self.assertEqual(aus['mitteAnzahl'], 1)
-        self.assertAlmostEqual(aus['wechselAA'], 0.5, places=6)
-        self.assertAlmostEqual(aus['wechselM'], 0.5, places=6)
-        self.assertIn('mouthOpen', aus['mblab'])
-        self.assertNotIn('facs_ctrl_vAA', aus['mblab'])
-        self.assertAlmostEqual(aus['summe']['facs_ctrl_vAA'], 1.0, places=6)
-        self.assertAlmostEqual(aus['summe']['facs_ctrl_vM'], 0.2, places=6)
+        self.assertAlmostEqual(aus["mitteAA"], 1.0, places=6)
+        self.assertEqual(aus["mitteAnzahl"], 1)
+        self.assertAlmostEqual(aus["wechselAA"], 0.5, places=6)
+        self.assertAlmostEqual(aus["wechselM"], 0.5, places=6)
+        self.assertIn("mouthOpen", aus["mblab"])
+        self.assertNotIn("facs_ctrl_vAA", aus["mblab"])
+        self.assertAlmostEqual(aus["summe"]["facs_ctrl_vAA"], 1.0, places=6)
+        self.assertAlmostEqual(aus["summe"]["facs_ctrl_vM"], 0.2, places=6)

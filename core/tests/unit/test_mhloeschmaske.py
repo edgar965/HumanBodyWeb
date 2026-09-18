@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Mhloeschmaske — die `delete_verts`-Liste einer `.mhclo` richtig lesen.
+"""Mhloeschmaske — die `delete_verts`-Liste einer `.mhclo` richtig lesen.
 
 WORUM ES GEHT (06.09.2026): MakeHuman blendet die Haut unter einem
 Kleidungsstueck aus. Ohne diese Liste steht sie durch den Stoff — gemessen
@@ -23,39 +23,36 @@ from MakeHuman.loeschmaske import Mhloeschmaske
 
 
 class MhloeschmaskeTest(unittest.TestCase):
-
     databases = set()
 
     def test_einzelne_zahlen(self):
-        self.assertEqual(Mhloeschmaske.nummern(['3', '7', '9']), {3, 7, 9})
+        self.assertEqual(Mhloeschmaske.nummern(["3", "7", "9"]), {3, 7, 9})
 
     def test_bereich_ist_einschliesslich(self):
-        self.assertEqual(Mhloeschmaske.nummern(['3', '-', '6']), {3, 4, 5, 6})
+        self.assertEqual(Mhloeschmaske.nummern(["3", "-", "6"]), {3, 4, 5, 6})
 
     def test_bereiche_und_einzelne_gemischt(self):
-        woerter = '1355 - 1358 1420 1430 - 1432'.split()
-        self.assertEqual(Mhloeschmaske.nummern(woerter),
-                         {1355, 1356, 1357, 1358, 1420, 1430, 1431, 1432})
+        woerter = "1355 - 1358 1420 1430 - 1432".split()
+        self.assertEqual(Mhloeschmaske.nummern(woerter), {1355, 1356, 1357, 1358, 1420, 1430, 1431, 1432})
 
     def test_bindestrich_wird_nicht_zum_vorzeichen(self):
-        u"""Kein negativer Wert — sonst trifft die Maske nichts."""
-        nummern = Mhloeschmaske.nummern('10 - 12 40'.split())
+        """Kein negativer Wert — sonst trifft die Maske nichts."""
+        nummern = Mhloeschmaske.nummern("10 - 12 40".split())
         self.assertFalse([n for n in nummern if n < 0])
         self.assertEqual(nummern, {10, 11, 12, 40})
 
     def test_zeilenumbruch_zerreisst_keinen_bereich(self):
-        u"""In der Datei stehen Bereiche ueber Zeilengrenzen hinweg."""
-        erste = '1663 -'.split()
-        zweite = '1686 1689'.split()
-        self.assertEqual(Mhloeschmaske.nummern(erste + zweite),
-                         set(range(1663, 1687)) | {1689})
+        """In der Datei stehen Bereiche ueber Zeilengrenzen hinweg."""
+        erste = "1663 -".split()
+        zweite = "1686 1689".split()
+        self.assertEqual(Mhloeschmaske.nummern(erste + zweite), set(range(1663, 1687)) | {1689})
 
     def test_muell_wird_uebergangen(self):
-        self.assertEqual(Mhloeschmaske.nummern(['5', 'quatsch', '8']), {5, 8})
+        self.assertEqual(Mhloeschmaske.nummern(["5", "quatsch", "8"]), {5, 8})
 
     def test_ohne_eintraege_keine_nummern(self):
         self.assertEqual(Mhloeschmaske.nummern([]), set())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

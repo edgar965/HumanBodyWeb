@@ -13,6 +13,7 @@ SMPL-Koerper mit 6.890 Vertices, waehrend SMPL-X 10.475 hat. Von rund 13.000
 Dreiecken sind nur 268 gemeinsam — mit SMPL-Vertices auf SMPL-X-Dreiecken wird
 die Textur zu Konfetti.
 """
+
 import logging
 import os
 from typing import Any
@@ -23,15 +24,15 @@ from ..daten.smplxablage import Smplxablage
 
 from .fotoausrichtung import Fotoausrichtung
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Texturbacken:
     """Backt eine Textur und legt sie ab."""
 
     GROESSE = 1024
-    VORGABE_HINTERGRUND = (136, 170, 204)      # BGR
-    REGIONEN = ('all', 'body', 'face')
+    VORGABE_HINTERGRUND = (136, 170, 204)  # BGR
+    REGIONEN = ("all", "body", "face")
 
     def __init__(self, job_id, daten, foto):
         self.job_id = job_id
@@ -51,7 +52,7 @@ class Texturbacken:
             return (b, g, r)
         # stumm gewollt: Ein Farbwert, der nicht wie „#ccaa88“ aussieht, ist keine
         # Störung — die Vorgabefarbe ist die Antwort darauf.
-        except (ValueError, IndexError, TypeError):
+        except ValueError, IndexError, TypeError:
             return cls.VORGABE_HINTERGRUND
 
     # ------------------------------------------------------------- Projektion
@@ -61,25 +62,26 @@ class Texturbacken:
 
         Passt die Vertexzahl, wird direkt projiziert. Passt sie nicht, taugt die
         Projektion immer noch, um die orthographische Lage zu bestimmen."""
-        kamera = self.daten.get('cam_data')
+        kamera = self.daten.get("cam_data")
         pfad = Smplxablage.datei(self.job_id)
         if not (kamera and os.path.isfile(pfad)):
             return None, None
         try:
             npz = np.load(pfad)
-            if 'posed_vertices' not in npz:
+            if "posed_vertices" not in npz:
                 return None, None
-            posiert = npz['posed_vertices']
-            projektion = Fotoausrichtung.vertices_projizieren(
-                posiert, kamera, self.breite, self.hoehe)
-        except Exception:                                         # noqa: BLE001
-            logger.error('Posierte Vertices fuer %s nicht ladbar', self.job_id,
-                         exc_info=True)
+            posiert = npz["posed_vertices"]
+            projektion = Fotoausrichtung.vertices_projizieren(posiert, kamera, self.breite, self.hoehe)
+        except Exception:  # noqa: BLE001
+            logger.error("Posierte Vertices fuer %s nicht ladbar", self.job_id, exc_info=True)
             return None, None
         if len(posiert) >= anzahl_vertices:
             return projektion, None
-        logger.info('Nur SMPL-Koerper (%d < %d) — orthographisch backen, '
-                    'Lage aus der Pose', len(posiert), anzahl_vertices)
+        logger.info(
+            "Nur SMPL-Koerper (%d < %d) — orthographisch backen, Lage aus der Pose",
+            len(posiert),
+            anzahl_vertices,
+        )
         return None, projektion
 
     @staticmethod
@@ -90,28 +92,27 @@ class Texturbacken:
         gueltig = ~np.isnan(projektion).any(axis=1)
         mx = projektion[gueltig, 0].mean()
         my = projektion[gueltig, 1].mean()
-        s = versatz.get('scale', 1.0)
-        projektion[gueltig, 0] = ((projektion[gueltig, 0] - mx) * s + mx
-                                  + versatz.get('dx', 0))
-        projektion[gueltig, 1] = ((projektion[gueltig, 1] - my) * s + my
-                                  + versatz.get('dy', 0))
+        s = versatz.get("scale", 1.0)
+        projektion[gueltig, 0] = (projektion[gueltig, 0] - mx) * s + mx + versatz.get("dx", 0)
+        projektion[gueltig, 1] = (projektion[gueltig, 1] - my) * s + my + versatz.get("dy", 0)
         return projektion
 
     def lage_bestimmen(self, vertices, projektion_aus_pose):
         """Koerperlage fuer den orthographischen Weg."""
-        ausrichtung = self.daten.get('alignment_data') or {}
-        lage = ausrichtung.get('body_transform')
+        ausrichtung = self.daten.get("alignment_data") or {}
+        lage = ausrichtung.get("body_transform")
         if lage:
             return lage
         if projektion_aus_pose is None:
             return None
         lage = Fotoausrichtung.koerper_verschiebung(
-            vertices, projektion_aus_pose, self.breite, self.hoehe, margin=0.05)
-        versatz = ausrichtung.get('proj_2d_offset')
+            vertices, projektion_aus_pose, self.breite, self.hoehe, margin=0.05
+        )
+        versatz = ausrichtung.get("proj_2d_offset")
         if lage and versatz:
-            lage['center_x'] += versatz.get('dx', 0)
-            lage['center_y'] += versatz.get('dy', 0)
-            lage['scale'] *= versatz.get('scale', 1.0)
+            lage["center_x"] += versatz.get("dx", 0)
+            lage["center_y"] += versatz.get("dy", 0)
+            lage["scale"] *= versatz.get("scale", 1.0)
         return lage
 
     # ------------------------------------------------------------------ backen
@@ -119,19 +120,18 @@ class Texturbacken:
     def backen(self, backend, vertices, faces, region, hintergrund):
         """Textur erzeugen — wirft die Ausnahme des Backends weiter."""
         projektion, aus_pose = self.posierte_projektion(len(vertices))
-        ausrichtung = self.daten.get('alignment_data') or {}
+        ausrichtung = self.daten.get("alignment_data") or {}
         argumente: dict[str, Any] = dict(
-            job_data=self.daten, texture_size=self.GROESSE,
-            bg_color=hintergrund, region=region)
+            job_data=self.daten, texture_size=self.GROESSE, bg_color=hintergrund, region=region
+        )
         if projektion is not None:
-            argumente['proj_2d'] = self.versatz_anwenden(
-                projektion, ausrichtung.get('proj_2d_offset'))
+            argumente["proj_2d"] = self.versatz_anwenden(projektion, ausrichtung.get("proj_2d_offset"))
         else:
             lage = self.lage_bestimmen(vertices, aus_pose)
             if lage:
-                argumente['body_transform'] = lage
-            if ausrichtung.get('face_transform'):
-                argumente['face_transform'] = ausrichtung['face_transform']
+                argumente["body_transform"] = lage
+            if ausrichtung.get("face_transform"):
+                argumente["face_transform"] = ausrichtung["face_transform"]
 
         # ALS PAKET, nicht als Datei. `bake_texture` holt seine Hilfsklasse
         # relativ (`from .uvkarte import Uvkarte`); mit dem Ordner im
@@ -140,27 +140,25 @@ class Texturbacken:
         # zwar erst beim ersten echten Texturlauf, nicht beim Start.
         # `ASSETS_ROOT` steht ohnehin im Pfad (`ui/settings/wurzeln.py`).
         from PhotoToTexture.bake_texture import bake_with_backend
-        return bake_with_backend(backend, vertices, faces, self.foto,
-                                 **argumente)
+
+        return bake_with_backend(backend, vertices, faces, self.foto, **argumente)
 
     # ----------------------------------------------------------------- ablegen
 
     @staticmethod
     def verzeichnis():
-        pfad = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis',
-                            'textures')
+        pfad = os.path.join(str(settings.BASE_DIR), "media", "photo_analysis", "textures")
         os.makedirs(pfad, exist_ok=True)
         return pfad
 
     def zusammensetzen(self, cv2, textur, region, hintergrund):
         """Koerper- und Gesichtstextur uebereinanderlegen, wenn beide da sind."""
-        if region not in ('body', 'face'):
+        if region not in ("body", "face"):
             return textur
         ordner = self.verzeichnis()
-        cv2.imwrite(os.path.join(ordner, '%s_%s.png' % (self.job_id, region)),
-                    textur)
-        koerper = os.path.join(ordner, '%s_body.png' % self.job_id)
-        gesicht = os.path.join(ordner, '%s_face.png' % self.job_id)
+        cv2.imwrite(os.path.join(ordner, "%s_%s.png" % (self.job_id, region)), textur)
+        koerper = os.path.join(ordner, "%s_body.png" % self.job_id)
+        gesicht = os.path.join(ordner, "%s_face.png" % self.job_id)
         if not (os.path.isfile(koerper) and os.path.isfile(gesicht)):
             return textur
         unten = cv2.imread(koerper, cv2.IMREAD_UNCHANGED)
@@ -175,6 +173,6 @@ class Texturbacken:
 
     def speichern(self, cv2, textur):
         """Fertige Textur ablegen und den Pfad relativ zum Projekt liefern."""
-        name = '%s.png' % self.job_id
+        name = "%s.png" % self.job_id
         cv2.imwrite(os.path.join(self.verzeichnis(), name), textur)
-        return 'media/photo_analysis/textures/%s' % name
+        return "media/photo_analysis/textures/%s" % name

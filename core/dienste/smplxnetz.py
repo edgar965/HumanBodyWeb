@@ -9,11 +9,12 @@ eine eigene Fehlerbehandlung. Einmal reicht.
 Der Pfadumweg ist noetig, weil die Wrapper nicht als Paket installiert sind; er
 gehoert deshalb an EINE Stelle und nicht in jeden Endpunkt.
 """
+
 import logging
 
 from ..daten.wrapperpfad import Wrapperpfad
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class SmplxNetzFehler(RuntimeError):
@@ -30,19 +31,21 @@ class SmplxNetz:
     SMPL_VERTICES = 6890
 
     @classmethod
-    def erzeugen(cls, betas, geschlecht='neutral'):
+    def erzeugen(cls, betas, geschlecht="neutral"):
         """(vertices, faces, netz) — wirft `SmplxNetzFehler`, wenn es nicht geht."""
         try:
             with Wrapperpfad():
                 from smplest_x_wrapper import generate_mesh
+
                 netz = generate_mesh(betas, geschlecht)
         except ImportError as e:
-            raise SmplxNetzFehler('SMPL-X-Wrapper nicht gefunden: %s' % e) from e
+            raise SmplxNetzFehler("SMPL-X-Wrapper nicht gefunden: %s" % e) from e
         if netz is None:
-            raise SmplxNetzFehler('SMPL-X-Modell nicht verfuegbar')
+            raise SmplxNetzFehler("SMPL-X-Modell nicht verfuegbar")
         import numpy as np
-        vertices = np.asarray(netz['vertices']).reshape(netz['n_verts'], 3)
-        faces = np.asarray(netz['faces']).reshape(netz['n_faces'], 3)
+
+        vertices = np.asarray(netz["vertices"]).reshape(netz["n_verts"], 3)
+        faces = np.asarray(netz["faces"]).reshape(netz["n_faces"], 3)
         return vertices, faces, netz
 
     @classmethod

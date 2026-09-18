@@ -16,14 +16,15 @@ WARUM EINE EIGENE DATEI: `api/garmentcode.py` gehört gerade einer zweiten
 Sitzung. Ein eigener Endpunkt kostet nichts und hält beide Arbeiten
 auseinander — derselbe Grund wie bei `garmentvorbilder.py`.
 """
+
 import logging
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
-__all__ = ['Garmentsimulation']
+__all__ = ["Garmentsimulation"]
 
 
 class Garmentsimulation:
@@ -36,10 +37,8 @@ class Garmentsimulation:
 
         try:
             gruppen = Simulationsfelder.nach_gruppen()
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('Simulationsregler nicht lesbar')
-            return JsonResponse(
-                {'fehler': '%s: %s' % (type(fehler).__name__, fehler)},
-                status=500)
-        anzahl = sum(len(g['felder']) for g in gruppen)
-        return JsonResponse({'gruppen': gruppen, 'anzahl': anzahl})
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("Simulationsregler nicht lesbar")
+            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+        anzahl = sum(len(g["felder"]) for g in gruppen)
+        return JsonResponse({"gruppen": gruppen, "anzahl": anzahl})

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Lichtfelder`: Winkel, Penumbra und Reichweite eines Spotlichts.
+"""`Lichtfelder`: Winkel, Penumbra und Reichweite eines Spotlichts.
 
 WARUM (31.08.2026, Befund `doppelcode`)
 =======================================
@@ -20,11 +20,12 @@ Grenze wäre sonst unsichtbar.
 FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
 kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'eigenschaften', 'lichtfelder.js')
+MODUL = Jsmodul("bvh_studio", "eigenschaften", "lichtfelder.js")
 
 SKRIPT = """
 const { Lichtfelder } = await import(MODUL);
@@ -81,7 +82,7 @@ console.log(JSON.stringify({fertig: true}));
 
 
 class LichtfelderTest(SimpleTestCase):
-    u"""Die gemeinsamen Lichtfelder, in Node ausgeführt."""
+    """Die gemeinsamen Lichtfelder, in Node ausgeführt."""
 
     def test_masken_und_grenzen_bleiben(self):
-        self.assertEqual(MODUL.laufen(SKRIPT), {'fertig': True})
+        self.assertEqual(MODUL.laufen(SKRIPT), {"fertig": True})

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Der handgepflegte Changelog: ein Eintrag je Fassung, aus `fassungen/`.
+"""Der handgepflegte Changelog: ein Eintrag je Fassung, aus `fassungen/`.
 
 WARUM ES DIESE DATEI GIBT (Edgar, 08.09.2026: „warum steht in der Hilfe 0.58
 als Version, im UI aber 0.57? 0.57 fehlt in der Hilfe - Versionen")

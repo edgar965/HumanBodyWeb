@@ -49,10 +49,8 @@ class Ueberlagerungskamera:
 
     def punkt(self, position):
         """(x, y) in Pixeln; Y gespiegelt."""
-        x = ((position[0] - self.mitte_x + self.halb_x)
-             / (2 * self.halb_x) * self.video_w)
-        y = ((self.mitte_y + self.halb_y - position[1])
-             / (2 * self.halb_y) * self.video_h)
+        x = (position[0] - self.mitte_x + self.halb_x) / (2 * self.halb_x) * self.video_w
+        y = (self.mitte_y + self.halb_y - position[1]) / (2 * self.halb_y) * self.video_h
         return x, y
 
     def bilder(self, positionen):

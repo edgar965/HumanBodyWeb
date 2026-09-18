@@ -12,7 +12,7 @@ import logging
 from ..safe_paths import SafePath, PfadAbgelehnt
 
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Bvhablage:
@@ -22,12 +22,12 @@ class Bvhablage:
     def frames_lesen(bvh_path):
         """Liest den Frames-Zähler aus dem BVH-Header. 0 bei Fehler."""
         try:
-            with open(bvh_path, 'r') as f:
+            with open(bvh_path, "r") as f:
                 for line in f:
-                    if line.strip().startswith('Frames:'):
-                        return int(line.strip().split(':')[1])
-        except (IOError, ValueError):
-            logger.debug('uebergangen', exc_info=True)
+                    if line.strip().startswith("Frames:"):
+                        return int(line.strip().split(":")[1])
+        except IOError, ValueError:
+            logger.debug("uebergangen", exc_info=True)
         return 0
 
     @staticmethod
@@ -53,5 +53,5 @@ class Bvhablage:
         try:
             return SafePath([SafePath.bvh_wurzel()]).pruefe(p)
         except PfadAbgelehnt as e:
-            logger.warning('BVH-Pfad abgelehnt: %s', e)
+            logger.warning("BVH-Pfad abgelehnt: %s", e)
             return None

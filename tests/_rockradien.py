@@ -49,20 +49,21 @@ class Rockradien:
     def __init__(self):
         self.geprueft = 0
         self.verletzt = 0
-        self.schlimmste = ('', 0.0, 0.0)
+        self.schlimmste = ("", 0.0, 0.0)
 
     # ------------------------------------------------------------------ Prüfen
 
     def bake_pruefen(self, daten, bilder=None):
         """Alle Segmente über die Beispielbilder prüfen."""
-        koerperbilder = daten['rigid_positions']
-        anzahl_segmente = int(daten['n_seg'][0])
-        for bild in (bilder if bilder is not None
-                     else self.beispielbilder(koerperbilder.shape[0])):
+        koerperbilder = daten["rigid_positions"]
+        anzahl_segmente = int(daten["n_seg"][0])
+        for bild in bilder if bilder is not None else self.beispielbilder(koerperbilder.shape[0]):
             for segment in range(anzahl_segmente):
-                self.segment_pruefen(koerperbilder[bild],
-                                     daten['seg%d_positions' % segment][bild],
-                                     '%s seg%d' % (bild, segment))
+                self.segment_pruefen(
+                    koerperbilder[bild],
+                    daten["seg%d_positions" % segment][bild],
+                    "%s seg%d" % (bild, segment),
+                )
         return self
 
     @staticmethod
@@ -81,8 +82,7 @@ class Rockradien:
             return
         rand = self.RAND * (oben - unten)
         for hoehe in np.linspace(unten + rand, oben - rand, self.HOEHEN):
-            self._hoehe_pruefen(koerper, stoff, mitte, hoehe,
-                                '%s y=%.2f' % (marke, hoehe))
+            self._hoehe_pruefen(koerper, stoff, mitte, hoehe, "%s y=%.2f" % (marke, hoehe))
 
     def _hoehe_pruefen(self, koerper, stoff, mitte, hoehe, marke):
         koerper_radius = self._aussen(koerper, mitte, hoehe)
@@ -105,8 +105,7 @@ class Rockradien:
         return gewaehlt if gewaehlt.shape[0] >= self.MINDESTPUNKTE else None
 
     def _radien(self, punkte, mitte):
-        return np.sqrt((punkte[:, 0] - mitte[0]) ** 2
-                       + (punkte[:, 2] - mitte[1]) ** 2)
+        return np.sqrt((punkte[:, 0] - mitte[0]) ** 2 + (punkte[:, 2] - mitte[1]) ** 2)
 
     def _aussen(self, punkte, mitte, hoehe):
         """Der äußerste Körperpunkt dieser Höhe."""
@@ -129,6 +128,11 @@ class Rockradien:
         return self.anteil < self.GRENZE
 
     def bericht(self):
-        return ('violations=%d/%d (%.0f%%) worst=%s body_r=%.2f cloth_r=%.2f'
-                % (self.verletzt, self.geprueft, self.anteil * 100,
-                   self.schlimmste[0], self.schlimmste[1], self.schlimmste[2]))
+        return "violations=%d/%d (%.0f%%) worst=%s body_r=%.2f cloth_r=%.2f" % (
+            self.verletzt,
+            self.geprueft,
+            self.anteil * 100,
+            self.schlimmste[0],
+            self.schlimmste[1],
+            self.schlimmste[2],
+        )

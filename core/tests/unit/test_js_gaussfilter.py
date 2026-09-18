@@ -26,11 +26,12 @@ DIE FÄLLE, DIE WEHTUN
 Ohne `node` im Pfad bricht der Lauf mit einer Meldung ab (seit dem
 30.08.2026) — vorher meldete er grün, ohne gelaufen zu sein.
 """
+
 import unittest
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'gaussfilter.js')
+MODUL = Jsmodul("bvh_studio", "gaussfilter.js")
 
 SKRIPT = """
 const { Gaussfilter } = await import(MODUL);
@@ -134,36 +135,35 @@ console.log(JSON.stringify(ergebnis));
 
 
 class GaussfilterTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.ergebnis = MODUL.laufen(SKRIPT)
 
     def test_gleiche_werte_wie_die_alte_fassung(self):
         """Bei drei Sigmas: kein Wert weicht messbar ab."""
-        for abweichung in self.ergebnis['gleich']:
-            self.assertLess(abweichung, 1e-6, 'Filter rechnet anders als vorher')
+        for abweichung in self.ergebnis["gleich"]:
+            self.assertLess(abweichung, 1e-6, "Filter rechnet anders als vorher")
 
     def test_kern_ist_normiert_und_symmetrisch(self):
-        kern = self.ergebnis['kern']
-        self.assertEqual(kern['laenge'], 13, '2·6 + 1')
-        self.assertEqual(kern['summe'], 1.0)
-        self.assertTrue(kern['symmetrisch'])
-        self.assertTrue(kern['mitteAmGroessten'])
+        kern = self.ergebnis["kern"]
+        self.assertEqual(kern["laenge"], 13, "2·6 + 1")
+        self.assertEqual(kern["summe"], 1.0)
+        self.assertTrue(kern["symmetrisch"])
+        self.assertTrue(kern["mitteAmGroessten"])
 
     def test_quaternionen_haben_laenge_eins(self):
         """Ohne Normierung skaliert ein Quaternion das Skelett."""
-        for laenge in self.ergebnis['laengen']:
+        for laenge in self.ergebnis["laengen"]:
             self.assertEqual(laenge, 1.0)
 
     def test_raender_werden_gehalten(self):
         """Eine konstante Reihe bleibt konstant — kein Abfall an den Enden."""
-        self.assertEqual(self.ergebnis['raender']['erster'], 5.0)
-        self.assertEqual(self.ergebnis['raender']['letzter'], 5.0)
+        self.assertEqual(self.ergebnis["raender"]["erster"], 5.0)
+        self.assertEqual(self.ergebnis["raender"]["letzter"], 5.0)
 
     def test_positionen_werden_nicht_normiert(self):
         """(3, 4, 0) hat Länge 5 und muss sie behalten."""
-        self.assertEqual(self.ergebnis['positionslaenge'], 5.0)
+        self.assertEqual(self.ergebnis["positionslaenge"], 5.0)
 
     def test_entartetes_quaternion_bleibt(self):
-        self.assertEqual(self.ergebnis['entartet'], [0, 0, 0, 0])
+        self.assertEqual(self.ergebnis["entartet"], [0, 0, 0, 0])

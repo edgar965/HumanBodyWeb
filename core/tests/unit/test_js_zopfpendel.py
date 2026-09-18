@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Zopfpendel` (`gemeinsam/zopfpendel.js`): die Rechnung des Zopfschwungs
+"""`Zopfpendel` (`gemeinsam/zopfpendel.js`): die Rechnung des Zopfschwungs
 der Daz-Haare ohne Three.js (18.09.2026, Edgar: „Rigging der Haare?").
 
 Drei Eigenschaften, die ein Verlet-Pendel nach VRMs SpringBone haben muss:
@@ -15,11 +15,12 @@ Drei Eigenschaften, die ein Verlet-Pendel nach VRMs SpringBone haben muss:
 Sabotage-Gegenprobe: `(g.tail[i] - g.prev[i]) * tr` weglassen -> Fall 4
 rot (keine Traegheit); `ruhe[i] * s` weglassen -> Fall 3 rot.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'zopfpendel.js')
+MODUL = Jsmodul("gemeinsam", "zopfpendel.js")
 
 SKRIPT = """
 const { Zopfpendel: Z } = await import(MODUL);
@@ -73,11 +74,10 @@ console.log(JSON.stringify({ok: true, sprung_cm: +(aus * 100).toFixed(1),
 
 
 class ZopfpendelTest(SimpleTestCase):
-
     databases = set()
 
     def test_ruhe_traegheit_und_rueckkehr(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertGreater(ausgabe['sprung_cm'], 10)
-        self.assertLess(ausgabe['nach2s_cm'], 1)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertGreater(ausgabe["sprung_cm"], 10)
+        self.assertLess(ausgabe["nach2s_cm"], 1)

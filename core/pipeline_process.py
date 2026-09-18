@@ -61,6 +61,7 @@ Die bestehende Prüfung der Aufrufer bleibt gültig und wird bewusst nicht
 ersetzt: Rückgabewert prüfen, Ausgabedatei prüfen, STOP_FLAG beachten, teilweise
 erzeugte BVH-Dateien retten. Das war schon vorher sauber gebaut.
 """
+
 import logging
 import os
 import queue
@@ -69,7 +70,7 @@ import threading
 
 from .prozessleser import Stromleser
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class PipelineStille(TimeoutError):
@@ -83,13 +84,13 @@ class PipelineStille(TimeoutError):
 class PipelineProzess:
     """Startet einen Subprozess mit einheitlichem Zeichensatz und abgeräumten Strömen.
 
-        p = PipelineProzess.starten(cmd, cwd=..., env_extra={'CUDA_VISIBLE_DEVICES':
-        '0'})
-        for zeile in p.stdout_zeilen(stille_timeout=300):
-            ...
-        p.warten(timeout=1800)
-        if p.proc.returncode != 0:
-            raise RuntimeError(p.fehlertext())
+    p = PipelineProzess.starten(cmd, cwd=..., env_extra={'CUDA_VISIBLE_DEVICES':
+    '0'})
+    for zeile in p.stdout_zeilen(stille_timeout=300):
+        ...
+    p.warten(timeout=1800)
+    if p.proc.returncode != 0:
+        raise RuntimeError(p.fehlertext())
     """
 
     def __init__(self, proc, stderr_zeilen, faeden, stdout_q):
@@ -101,8 +102,7 @@ class PipelineProzess:
     # ------------------------------------------------------------------- Starten
 
     @classmethod
-    def starten(cls, cmd, cwd=None, env_extra=None, stderr_sammeln=True,
-                stdout_lesen=True):
+    def starten(cls, cmd, cwd=None, env_extra=None, stderr_sammeln=True, stdout_lesen=True):
         """Subprozess starten. Beide Ströme sind UTF-8-dekodiert.
 
         `stderr_sammeln=True` liest stderr in einem eigenen Faden mit (gegen den
@@ -122,21 +122,23 @@ class PipelineProzess:
             text=True,
             bufsize=1,
             # zeilenweise, sonst kommt Fortschritt in Schüben
-            encoding='utf-8',
-            errors='replace',
+            encoding="utf-8",
+            errors="replace",
             # ein Ersatzzeichen ist besser als ein Absturz
             cwd=str(cwd) if cwd else None,
             env=env,
         )
         zeilen, stderr_faden, stdout_faden, stdout_q = [], None, None, None
         if stderr_sammeln:
-            stderr_faden = threading.Thread(target=Stromleser.stderr_lesen,
-                                            args=(proc.stderr, zeilen), daemon=True)
+            stderr_faden = threading.Thread(
+                target=Stromleser.stderr_lesen, args=(proc.stderr, zeilen), daemon=True
+            )
             stderr_faden.start()
         if stdout_lesen:
             stdout_q = queue.Queue()
-            stdout_faden = threading.Thread(target=Stromleser.stdout_lesen,
-                                            args=(proc.stdout, stdout_q), daemon=True)
+            stdout_faden = threading.Thread(
+                target=Stromleser.stdout_lesen, args=(proc.stdout, stdout_q), daemon=True
+            )
             stdout_faden.start()
         return cls(proc, zeilen, [stderr_faden, stdout_faden], stdout_q)
 
@@ -157,10 +159,10 @@ class PipelineProzess:
         Pipelines in 3.10 — ein geerbter Suchpfad zieht Pakete der falschen
         Version herein."""
         env = os.environ.copy()
-        env['PYTHONIOENCODING'] = 'utf-8'
-        env['PYTHONUTF8'] = '1'
-        env['PYTHONUNBUFFERED'] = '1'
-        for schluessel in ('PYTHONPATH', 'PYTHONHOME'):
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
+        env["PYTHONUNBUFFERED"] = "1"
+        for schluessel in ("PYTHONPATH", "PYTHONHOME"):
             env.pop(schluessel, None)
         if env_extra:
             env.update({k: str(v) for k, v in env_extra.items()})
@@ -190,18 +192,20 @@ class PipelineProzess:
         Krankheit. Und ein Prozess, den wir gerade für hängend erklärt haben,
         darf die Grafikkarte nicht weiter belegen."""
         if self._stdout_q is None:
-            raise RuntimeError('Mit stdout_lesen=False gestartet — es gibt keine '
-                               'Zeilen')
+            raise RuntimeError("Mit stdout_lesen=False gestartet — es gibt keine Zeilen")
         while True:
             try:
                 zeile = self._stdout_q.get(timeout=stille_timeout)
             except queue.Empty:
-                logger.error('PipelineProzess: keine Ausgabe seit %s s — Prozess %s '
-                             'wird beendet', stille_timeout, self.proc.pid)
+                logger.error(
+                    "PipelineProzess: keine Ausgabe seit %s s — Prozess %s wird beendet",
+                    stille_timeout,
+                    self.proc.pid,
+                )
                 self.beenden()
                 raise PipelineStille(
-                    'Pipeline hat seit %s Sekunden nichts geschrieben und wurde '
-                    'beendet' % stille_timeout)
+                    "Pipeline hat seit %s Sekunden nichts geschrieben und wurde beendet" % stille_timeout
+                )
             if zeile is Stromleser.ENDE:
                 return
             yield zeile
@@ -219,7 +223,7 @@ class PipelineProzess:
 
     def fehlertext(self, max_zeichen=4000):
         """Die letzten stderr-Zeilen, gekürzt — für Fehlermeldungen."""
-        return ''.join(self._stderr_zeilen)[-max_zeichen:].strip()
+        return "".join(self._stderr_zeilen)[-max_zeichen:].strip()
 
     def beenden(self, warten_s=10):
         """Prozessbaum beenden UND auf sein Ende warten.
@@ -236,13 +240,14 @@ class PipelineProzess:
         if self.proc.poll() is not None:
             return
         angestossen = False
-        if os.name == 'nt':
+        if os.name == "nt":
             try:
-                subprocess.run(['taskkill', '/PID', str(self.proc.pid), '/T', '/F'],
-                               capture_output=True, timeout=15)
+                subprocess.run(
+                    ["taskkill", "/PID", str(self.proc.pid), "/T", "/F"], capture_output=True, timeout=15
+                )
                 angestossen = True
-            except (OSError, subprocess.SubprocessError):
-                logger.warning('PipelineProzess: taskkill fehlgeschlagen, nutze kill()')
+            except OSError, subprocess.SubprocessError:
+                logger.warning("PipelineProzess: taskkill fehlgeschlagen, nutze kill()")
         if not angestossen:
             # Auch der Weg für Nicht-Windows: ohne ihn würde unten auf einen
             # Prozess gewartet, den niemand beendet hat.
@@ -255,10 +260,11 @@ class PipelineProzess:
         try:
             self.proc.wait(timeout=warten_s)
         except subprocess.TimeoutExpired:
-            logger.warning('PipelineProzess: Prozess %s lebt nach %s s noch — kill()',
-                           self.proc.pid, warten_s)
+            logger.warning(
+                "PipelineProzess: Prozess %s lebt nach %s s noch — kill()", self.proc.pid, warten_s
+            )
             try:
                 self.proc.kill()
                 self.proc.wait(timeout=5)
-            except (OSError, subprocess.SubprocessError):
-                logger.exception('PipelineProzess: kill() fehlgeschlagen')
+            except OSError, subprocess.SubprocessError:
+                logger.exception("PipelineProzess: kill() fehlgeschlagen")

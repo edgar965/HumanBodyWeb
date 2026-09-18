@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Hautbindung` gegen die drei alten Fassungen — Schritt für Schritt.
+"""`Hautbindung` gegen die drei alten Fassungen — Schritt für Schritt.
 
 WARUM (28.08.2026, Befund `doppelcode`)
 =======================================
@@ -23,11 +23,12 @@ umsprang. Der Test nagelt das neue, vollständige Verhalten fest.
 FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
 kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'hautbindung.js')
+MODUL = Jsmodul("gemeinsam", "hautbindung.js")
 
 SKRIPT = """
 const { Hautbindung } = await import(MODUL);
@@ -81,39 +82,38 @@ console.log(JSON.stringify({
 
 
 class HautbindungTest(SimpleTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.e = MODUL.laufen(SKRIPT)
 
     def test_es_entsteht_ein_skinnedmesh(self):
-        self.assertTrue(self.e['istSkinned'])
-        self.assertEqual(self.e['geometrie'], 'mit skinIndex')
+        self.assertTrue(self.e["istSkinned"])
+        self.assertEqual(self.e["geometrie"], "mit skinIndex")
 
     def test_material_wird_uebernommen(self):
-        u"""Sonst steht die Figur in Three.js-Grau da."""
-        self.assertEqual(self.e['material'], 'haut')
+        """Sonst steht die Figur in Three.js-Grau da."""
+        self.assertEqual(self.e["material"], "haut")
 
     def test_ort_wird_uebernommen(self):
-        u"""Ohne das steht die Figur im Ursprung statt an ihrem Platz."""
-        self.assertEqual(self.e['ort'], [1.5, -2, 0.25])
+        """Ohne das steht die Figur im Ursprung statt an ihrem Platz."""
+        self.assertEqual(self.e["ort"], [1.5, -2, 0.25])
 
     def test_sichtbarkeit_wird_uebernommen(self):
-        u"""DIE Stelle, die vorher auseinanderlief: `mesh_loading.js` hat sie
+        """DIE Stelle, die vorher auseinanderlief: `mesh_loading.js` hat sie
         als einzige nicht mitgenommen — ein ausgeblendeter Körper kam beim
         Zuschalten des Skeletts zurück, ohne dass der Schalter umsprang."""
-        self.assertIs(self.e['sichtbar'], False)
+        self.assertIs(self.e["sichtbar"], False)
 
     def test_wurzelknochen_haengt_am_netz(self):
-        u"""Ohne ihn bleiben die Knochenmatrizen auf Identität — die Figur
+        """Ohne ihn bleiben die Knochenmatrizen auf Identität — die Figur
         steht still, und nichts wirft."""
-        self.assertEqual(self.e['kinder'], ['wurzelknochen'])
+        self.assertEqual(self.e["kinder"], ["wurzelknochen"])
 
     def test_es_wird_gebunden(self):
-        u"""Ohne `bind()` rendert das Netz ewig in der Ruhelage."""
-        self.assertEqual(self.e['gebundenAn'], 'skelett')
+        """Ohne `bind()` rendert das Netz ewig in der Ruhelage."""
+        self.assertEqual(self.e["gebundenAn"], "skelett")
 
     def test_das_alte_netz_ist_aus_der_szene_raus(self):
-        u"""Sonst stehen zwei Körper übereinander — einer davon unbewegt."""
-        self.assertEqual(self.e['inSzene'], ['skinned'])
+        """Sonst stehen zwei Körper übereinander — einer davon unbewegt."""
+        self.assertEqual(self.e["inSzene"], ["skinned"])

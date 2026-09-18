@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Einstellungsfeld — was eine Einstellungszeile über ihr Feld weiß.
+"""Einstellungsfeld — was eine Einstellungszeile über ihr Feld weiß.
 
 WARUM (30.08.2026, Befund `jsbefunde`/lange Zeilen)
 ====================================================================
@@ -33,18 +33,17 @@ auf der anderen bis 200 geht — genau das war der Zustand.
 
 
 class Einstellungsfeld:
-    u"""Titel, Erklärung und Grenzen EINER Einstellung.
+    """Titel, Erklärung und Grenzen EINER Einstellung.
 
     Mehr als drei Felder — deshalb eine Klasse und kein Wörterbuch
     (Projektregel). Die Werte sind unveränderlich: Das Register wird beim
     Laden des Moduls gebaut und danach nur gelesen.
     """
 
-    __slots__ = ('titel', 'text', 'min', 'max', 'schritt', 'zusatz')
+    __slots__ = ("titel", "text", "min", "max", "schritt", "zusatz")
 
-    def __init__(self, titel, text, min=None, max=None, schritt=None,
-                 zusatz=None):
-        u"""
+    def __init__(self, titel, text, min=None, max=None, schritt=None, zusatz=None):
+        """
         @param titel    fette Überschrift links; leer = keine
         @param text     erklärender Satz darunter, deutsch
         @param min      untere Grenze (Zahlenfeld)
@@ -61,7 +60,7 @@ class Einstellungsfeld:
 
     @property
     def hilfetext(self):
-        u"""Was als `help_text` ans Model-Feld geht — Text plus Grenzen.
+        """Was als `help_text` ans Model-Feld geht — Text plus Grenzen.
 
         So steht die Erklärung EINMAL da und erscheint im Admin genauso wie
         auf der Einstellungsseite. Die Grenzen kommen aus `min`/`max`, statt
@@ -69,20 +68,22 @@ class Einstellungsfeld:
         """
         if self.min is None and self.max is None:
             return self.text
-        return u'%s (%s–%s)' % (self.text,
-                                u'…' if self.min is None else self.min,
-                                u'…' if self.max is None else self.max)
+        return "%s (%s–%s)" % (
+            self.text,
+            "…" if self.min is None else self.min,
+            "…" if self.max is None else self.max,
+        )
 
     def als_kontext(self, kennung, wert):
-        u"""Was die Vorlage braucht — für `{% zahl %}` und `{% kaestchen %}`."""
+        """Was die Vorlage braucht — für `{% zahl %}` und `{% kaestchen %}`."""
         return {
-            'feld': kennung,
-            'titel': self.titel,
-            'beschriftung': self.text,
-            'wert': wert,
-            'an': wert,
-            'min': self.min,
-            'max': self.max,
-            'schritt': self.schritt or 1,
-            'text': self.zusatz or u'Aktiviert',
+            "feld": kennung,
+            "titel": self.titel,
+            "beschriftung": self.text,
+            "wert": wert,
+            "an": wert,
+            "min": self.min,
+            "max": self.max,
+            "schritt": self.schritt or 1,
+            "text": self.zusatz or "Aktiviert",
         }

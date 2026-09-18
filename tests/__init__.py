@@ -40,4 +40,4 @@ ALL_CATEGORIES = [
     ClientLogTests,
 ]
 
-__all__ = ['TestCase', 'TestCategory', 'ALL_CATEGORIES']
+__all__ = ["TestCase", "TestCategory", "ALL_CATEGORIES"]

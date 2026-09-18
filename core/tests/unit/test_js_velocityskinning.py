@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die JavaScript-Fassung von Velocity Skinning gegen die Python-Fassung.
+"""Die JavaScript-Fassung von Velocity Skinning gegen die Python-Fassung.
 
 ZWEI FASSUNGEN DERSELBEN RECHNUNG laufen irgendwann auseinander — die eine
 wird korrigiert, die andere nicht, und im Browser sieht die Figur anders
@@ -15,6 +15,7 @@ sonst prueft der Test nur die einfache Haelfte der Formel.
 Fehlt die Fixture, wird sie NICHT still uebersprungen: Der Test sagt, wie
 sie entsteht. Ein gruener Test ohne Fixture waere ein Test ohne Inhalt.
 """
+
 import json
 import os
 
@@ -23,9 +24,8 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'velocityskinning.js')
-FIXTURE = os.path.join(str(settings.TOOLS_ROOT), 'VelocitySkinning_Python',
-                       'fixture.json')
+MODUL = Jsmodul("gemeinsam", "velocityskinning.js")
+FIXTURE = os.path.join(str(settings.TOOLS_ROOT), "VelocitySkinning_Python", "fixture.json")
 
 SKRIPT = """
 const { Velocityskinning: V } = await import(MODUL);
@@ -84,21 +84,20 @@ console.log(JSON.stringify({ ok: true, geprueft, deckel }));
 
 
 class VelocityskinningJsTest(SimpleTestCase):
-
     databases = set()
 
     def test_fixture_liegt_vor(self):
         self.assertTrue(
             os.path.isfile(FIXTURE),
-            u'Fixture fehlt: %s — erzeugen mit '
-            u'`python14 VelocitySkinning_Python/fixture.py`' % FIXTURE)
+            "Fixture fehlt: %s — erzeugen mit `python14 VelocitySkinning_Python/fixture.py`" % FIXTURE,
+        )
 
     def test_js_rechnet_wie_python(self):
-        with open(FIXTURE, encoding='utf-8') as datei:
+        with open(FIXTURE, encoding="utf-8") as datei:
             fixture = json.load(datei)
-        skript = SKRIPT.replace('FIXTURE;', json.dumps(fixture) + ';', 1)
+        skript = SKRIPT.replace("FIXTURE;", json.dumps(fixture) + ";", 1)
         ausgabe = MODUL.laufen(skript)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
         # Mindestens die Zufallsfaelle: 6 je Formel mit 2 bis 5 Punkten.
-        self.assertGreater(ausgabe['geprueft'], 200, ausgabe)
-        self.assertGreater(ausgabe['deckel'], 0, ausgabe)
+        self.assertGreater(ausgabe["geprueft"], 200, ausgabe)
+        self.assertGreater(ausgabe["deckel"], 0, ausgabe)

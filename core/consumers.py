@@ -15,9 +15,9 @@ class ProgressConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for real-time job progress updates."""
 
     async def connect(self):
-        weg = self.scope.get('url_route') or {}
-        self.job_id = weg['kwargs']['job_id']
-        self.group_name = f'job_{self.job_id}'
+        weg = self.scope.get("url_route") or {}
+        self.job_id = weg["kwargs"]["job_id"]
+        self.group_name = f"job_{self.job_id}"
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
@@ -27,12 +27,16 @@ class ProgressConsumer(AsyncWebsocketConsumer):
 
     async def job_progress(self, event):
         """Send progress update to WebSocket."""
-        await self.send(text_data=json.dumps({
-            'status': event['status'],
-            'progress': event['progress'],
-            'error': event.get('error', ''),
-            'bvh_file': event.get('bvh_file', ''),
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "status": event["status"],
+                    "progress": event["progress"],
+                    "error": event.get("error", ""),
+                    "bvh_file": event.get("bvh_file", ""),
+                }
+            )
+        )
 
 
 class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
@@ -42,33 +46,36 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         await self.accept()
         self._char_state = None
         self._cc_subs = {}  # {'female': CC, 'male': CC}
-        self._current_gender = 'female'
+        self._current_gender = "female"
         #: Ob zuletzt bewegte Knochen unterwegs waren — siehe `_send_skelett`.
         self._skelett_bewegt = False
         #: Drapierte Kleidung, die den Reglern folgt (`_send_stoff`).
         from GarmentCode.nachfuehrung import Stoffnachfuehrung
+
         self._stoff = Stoffnachfuehrung()
         # Die Netzqualitaet (Unterteilungsstufe) steht in der Datenbank; aus
         # dem Ereigniskreis darf sie nur ueber einen Faden gelesen werden.
         from channels.db import database_sync_to_async
         from .dienste.netzqualitaet import Netzqualitaet
+
         await database_sync_to_async(Netzqualitaet.merken)()
         # Was DIESER Browser mit Strg+Alt+H gewaehlt hat (Keks `netzstufen`,
         # `CookieMiddleware` in `ui/asgi.py`) — None heisst: die Einstellung.
         # Ausdruecklich mitgegeben, denn die Middleware der HTTP-Anfragen
         # (`Netzstufenwahl`) sieht diesen Kanal nicht.
         from .dienste.netzstufenwahl import Netzstufenwahl
-        self._stufen = Netzstufenwahl.aus_cookies(self.scope.get('cookies'))
+
+        self._stufen = Netzstufenwahl.aus_cookies(self.scope.get("cookies"))
         self._init_state()
 
     def _init_state(self):
         """Initialize CharacterState and CC subdivider lazily."""
         try:
             from core.dienste.charakterdaten import Charakterdaten
+
             self._char_state = Charakterdaten.zustand()
             # Preload female CC subdivider
-            self._cc_subs['female'] = Charakterdaten.unterteiler(
-                'female', stufen=self._stufen)
+            self._cc_subs["female"] = Charakterdaten.unterteiler("female", stufen=self._stufen)
         except Exception as e:
             logger.error("Failed to init CharacterState: %s", e)
 
@@ -76,8 +83,10 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         """Get CC subdivider for current gender, lazy-loading if needed."""
         if self._current_gender not in self._cc_subs:
             from core.dienste.charakterdaten import Charakterdaten
+
             self._cc_subs[self._current_gender] = Charakterdaten.unterteiler(
-                self._current_gender, stufen=self._stufen)
+                self._current_gender, stufen=self._stufen
+            )
         return self._cc_subs.get(self._current_gender)
 
     async def disconnect(self, close_code):
@@ -124,10 +133,14 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         if not bewegte and not self._skelett_bewegt:
             return
         self._skelett_bewegt = bool(bewegte)
-        await self.send(text_data=json.dumps({
-            'type': 'skelett',
-            'bones': bewegte,
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "skelett",
+                    "bones": bewegte,
+                }
+            )
+        )
 
     async def _handle_body_type(self, body_type):
         """Koerperart wechseln und dabei einen Geschlechtswechsel erkennen.
@@ -148,7 +161,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         bisher gemerkten Wert — genau dafuer gibt es `self._current_gender`.
         """
         zustand = self._char_state
-        if zustand is None:          # `receive` prueft das schon; hier fuer sich
+        if zustand is None:  # `receive` prueft das schon; hier fuer sich
             return
         zustand.set_body_type(body_type)
         new_gender = Charakterdaten.geschlecht_zu(body_type)
@@ -157,11 +170,15 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
 
         if gender_changed:
             # Gender changed — client needs to reload mesh (different topology)
-            await self.send(text_data=json.dumps({
-                'type': 'reload_mesh',
-                'body_type': body_type,
-                'gender': new_gender,
-            }))
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "type": "reload_mesh",
+                        "body_type": body_type,
+                        "gender": new_gender,
+                    }
+                )
+            )
             return
 
         # Same gender — just send updated vertices
@@ -181,13 +198,12 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
             return
 
         if self._char_state is None:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'CharacterState not initialized'
-            }))
+            await self.send(
+                text_data=json.dumps({"type": "error", "message": "CharacterState not initialized"})
+            )
             return
 
-        handler = self.NACHRICHTEN.get(msg.get('type'))
+        handler = self.NACHRICHTEN.get(msg.get("type"))
         if handler is not None:
             await handler(self, msg)
 
@@ -195,7 +211,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
     def zustand(self):
         """Der Figurzustand — `receive` weist Nachrichten ohne ihn ab."""
         if self._char_state is None:
-            raise RuntimeError('CharacterState not initialized')
+            raise RuntimeError("CharacterState not initialized")
         return self._char_state
 
     # Die Handler je Nachrichtentyp — `NACHRICHTEN` unten ordnet sie zu.
@@ -204,24 +220,24 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         await self._send_vertices(self.zustand.compute())
 
     async def _bei_body_type(self, msg):
-        await self._handle_body_type(msg['value'])
+        await self._handle_body_type(msg["value"])
 
     async def _bei_morph(self, msg):
-        self.zustand.set_morph(msg['key'], float(msg['value']))
+        self.zustand.set_morph(msg["key"], float(msg["value"]))
         await self._neu_senden()
 
     async def _bei_morph_batch(self, msg):
         # Apply multiple morphs at once
-        for key, val in msg.get('morphs', {}).items():
+        for key, val in msg.get("morphs", {}).items():
             self.zustand.set_morph(key, float(val))
         await self._neu_senden()
 
     async def _bei_meta(self, msg):
-        self.zustand.set_meta(msg['name'], float(msg['value']))
+        self.zustand.set_meta(msg["name"], float(msg["value"]))
         await self._neu_senden()
 
     async def _bei_stoff_loesen(self, msg):
-        self._stoff.loesen(msg.get('stueck'))
+        self._stoff.loesen(msg.get("stueck"))
 
     async def _bei_reset(self, msg):
         # ERST leeren, DANN die Koerperart setzen (05.09.2026).
@@ -239,17 +255,16 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # Skelett-Nachfuehrung sichtbar als kurzes Aufblitzen des
         # grossen Rigs. Jetzt geht eine Nachricht raus, die richtige.
         self.zustand.zuruecksetzen()
-        await self._handle_body_type(msg.get('body_type',
-                                             'Female_Caucasian'))
+        await self._handle_body_type(msg.get("body_type", "Female_Caucasian"))
 
     NACHRICHTEN = {
-        'body_type': _bei_body_type,
-        'morph': _bei_morph,
-        'morph_batch': _bei_morph_batch,
-        'meta': _bei_meta,
-        'stoff_binden': Stoffkanal._handle_stoff_binden,
-        'stoff_loesen': _bei_stoff_loesen,
-        'reset': _bei_reset,
+        "body_type": _bei_body_type,
+        "morph": _bei_morph,
+        "morph_batch": _bei_morph_batch,
+        "meta": _bei_meta,
+        "stoff_binden": Stoffkanal._handle_stoff_binden,
+        "stoff_loesen": _bei_stoff_loesen,
+        "reset": _bei_reset,
     }
 
 
@@ -263,10 +278,11 @@ class TestCharacterConsumer(CharacterConsumer):
             # Funktionen von `test_character_api` — Modulinneres, das mit dem
             # Aufteilen der Datei verschwunden wäre.
             from core.api.testfigur import Testkern
+
             self._char_state = Testkern.zustand()
-            self._cc_subs = {'test': Testkern.unterteiler()}
+            self._cc_subs = {"test": Testkern.unterteiler()}
         except Exception as e:
-            logger.exception('Test-CharacterState nicht aufbaubar: %s', e)
+            logger.exception("Test-CharacterState nicht aufbaubar: %s", e)
 
     async def _send_skelett(self, grundnetz):
         """Der Testcharakter bekommt keine Nachfuehrung.
@@ -292,4 +308,4 @@ class TestCharacterConsumer(CharacterConsumer):
 
         und die Verbindung riss ab. Ein Buchstabe Unterschied im Feldnamen.
         """
-        return self._cc_subs.get('test')
+        return self._cc_subs.get("test")

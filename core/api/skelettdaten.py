@@ -26,7 +26,7 @@ class Skelettdaten:
     """Was der Browser zum Skinning braucht: Knochen, Skelett, Gewichte."""
 
     #: Koerpertyp, wenn keiner mitkommt.
-    VORGABE_KOERPERTYP = 'Female_Caucasian'
+    VORGABE_KOERPERTYP = "Female_Caucasian"
 
     @staticmethod
     @require_GET
@@ -36,11 +36,12 @@ class Skelettdaten:
         if netz.rig_bones:
             return JsonResponse(netz.rig_bones)
         # Noch keine Rigdaten exportiert.
-        return JsonResponse({
-            'bones': [],
-            'warning': ('Rig data not exported yet. Run export_mesh_data.py '
-                        'in Blender.'),
-        })
+        return JsonResponse(
+            {
+                "bones": [],
+                "warning": ("Rig data not exported yet. Run export_mesh_data.py in Blender."),
+            }
+        )
 
     @staticmethod
     @require_GET
@@ -51,15 +52,15 @@ class Skelettdaten:
         ueber `applyPoseFromServer`.
         """
         geschlecht = Charakterdaten.geschlecht_zu(
-            request.GET.get('body_type', Skelettdaten.VORGABE_KOERPERTYP))
+            request.GET.get("body_type", Skelettdaten.VORGABE_KOERPERTYP)
+        )
         ordner = str(settings.HUMANBODY_DATA_DIR)
-        if geschlecht == 'male':
-            ordner += '_male'
-        pfad = os.path.join(ordner, 'def_skeleton.json')
+        if geschlecht == "male":
+            ordner += "_male"
+        pfad = os.path.join(ordner, "def_skeleton.json")
         if not os.path.isfile(pfad):
-            return JsonResponse({'error': 'DEF skeleton not exported yet'},
-                                status=404)
-        with open(pfad, 'r', encoding='utf-8') as datei:
+            return JsonResponse({"error": "DEF skeleton not exported yet"}, status=404)
+        with open(pfad, "r", encoding="utf-8") as datei:
             return JsonResponse(json.load(datei))
 
     @staticmethod
@@ -74,14 +75,14 @@ class Skelettdaten:
         bleibt die Frage nach dem Geschlecht und das Ausliefern.
         """
         geschlecht = Charakterdaten.geschlecht_zu(
-            request.GET.get('body_type', Skelettdaten.VORGABE_KOERPERTYP))
-        inhalt = Skingewichte.propagiert_json(
-            geschlecht, Charakterdaten.unterteiler(geschlecht))
+            request.GET.get("body_type", Skelettdaten.VORGABE_KOERPERTYP)
+        )
+        inhalt = Skingewichte.propagiert_json(geschlecht, Charakterdaten.unterteiler(geschlecht))
         if inhalt is None:
-            return JsonResponse({'error': 'Skin weights not found'}, status=404)
+            return JsonResponse({"error": "Skin weights not found"}, status=404)
         # Fertige Zeichenkette, deshalb HttpResponse statt JsonResponse: die
         # wuerde das Ergebnis ein zweites Mal kodieren.
-        return HttpResponse(inhalt, content_type='application/json')
+        return HttpResponse(inhalt, content_type="application/json")
 
     @staticmethod
     @require_GET
@@ -94,12 +95,10 @@ class Skelettdaten:
         Klartext — die Vergleichsseite zeigt ihn an der Spalte.
         """
         try:
-            return JsonResponse({'bones': Umaskelett.knochen(),
-                                 **Umaskelett.beschreibung()})
+            return JsonResponse({"bones": Umaskelett.knochen(), **Umaskelett.beschreibung()})
         except UmaskelettFehlt as fehler:
-            return JsonResponse({'error': str(fehler)}, status=404)
+            return JsonResponse({"error": str(fehler)}, status=404)
         except ValueError as fehler:
             # Eine GLB, die kein Skelett hergibt — Klartext statt Stack.
-            logger.warning('UMA-Skelett unlesbar: %s', fehler)
-            return JsonResponse({'error': 'UMA-GLB unlesbar: %s' % fehler},
-                                status=500)
+            logger.warning("UMA-Skelett unlesbar: %s", fehler)
+            return JsonResponse({"error": "UMA-GLB unlesbar: %s" % fehler}, status=500)

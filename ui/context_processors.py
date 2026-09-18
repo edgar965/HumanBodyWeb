@@ -20,7 +20,7 @@ import logging
 
 from django.conf import settings
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 def version(request):
@@ -32,8 +32,8 @@ def version(request):
     auch das djangoBase-seitige CSS frisch zieht.
     """
     return {
-        'APP_VERSION': settings.VERSION,
-        'JS_VERSION': settings.VERSION,
+        "APP_VERSION": settings.VERSION,
+        "JS_VERSION": settings.VERSION,
     }
 
 
@@ -51,10 +51,11 @@ def active_theme(request):
     """
     try:
         from djangobase.conf import conf
+
         c = conf()
-        if (c.get('base_template') or '').endswith('base_cleanorga.html'):
-            return {'aktives_theme': 'light'}
-        return {'aktives_theme': c.get('theme_default') or 'dark'}
+        if (c.get("base_template") or "").endswith("base_cleanorga.html"):
+            return {"aktives_theme": "light"}
+        return {"aktives_theme": c.get("theme_default") or "dark"}
     except Exception:
-        logger.warning('Theme nicht aus djangoBase lesbar — dunkel', exc_info=True)
-        return {'aktives_theme': 'dark'}
+        logger.warning("Theme nicht aus djangoBase lesbar — dunkel", exc_info=True)
+        return {"aktives_theme": "dark"}

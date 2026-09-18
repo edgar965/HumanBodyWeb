@@ -38,46 +38,40 @@ from ..unit._importsuche import WURZEL, Lokalerimport, Modulsuche
 
 
 class LokaleImporteTest(SimpleTestCase):
-
     def test_jeder_import_in_einer_funktion_findet_sein_modul(self):
-        suche = Modulsuche(WURZEL / 'core')
+        suche = Modulsuche(WURZEL / "core")
         tot = []
         for eintrag in suche.importe():
             if eintrag.pruefbar and not eintrag.loesbar:
                 tot.append(str(eintrag))
-        self.assertEqual(tot, [], 'Import in einer Funktion zeigt ins Leere: '
-                         + ', '.join(tot))
-        self.assertEqual(suche.nicht_lesbar, [],
-                         'Diese Dateien parsen nicht und wurden deshalb NICHT '
-                         'geprueft: %s' % suche.nicht_lesbar)
+        self.assertEqual(tot, [], "Import in einer Funktion zeigt ins Leere: " + ", ".join(tot))
+        self.assertEqual(
+            suche.nicht_lesbar,
+            [],
+            "Diese Dateien parsen nicht und wurden deshalb NICHT geprueft: %s" % suche.nicht_lesbar,
+        )
 
     def test_jeder_geholte_name_steht_auch_im_zielmodul(self):
         """Modul da, Name weg — der Fall vom 27.08.2026."""
         fehlend = []
-        for eintrag in Modulsuche(WURZEL / 'core').importe():
-            if eintrag.pruefbar and eintrag.loesbar \
-                    and not eintrag.name_vorhanden:
+        for eintrag in Modulsuche(WURZEL / "core").importe():
+            if eintrag.pruefbar and eintrag.loesbar and not eintrag.name_vorhanden:
                 fehlend.append(str(eintrag))
-        self.assertEqual(fehlend, [],
-                         'Der Name steht nicht (mehr) im Zielmodul: '
-                         + ', '.join(fehlend))
+        self.assertEqual(fehlend, [], "Der Name steht nicht (mehr) im Zielmodul: " + ", ".join(fehlend))
 
     def test_der_test_findet_einen_kaputten_import(self):
         """Gegenprobe: Ein erfundener Modulname MUSS auffallen."""
-        knoten = ast.parse('from ..gibtesnicht import x').body[0]
-        eintrag = Lokalerimport(WURZEL / 'core' / 'api' / 'x.py', knoten,
-                                'core.gibtesnicht')
+        knoten = ast.parse("from ..gibtesnicht import x").body[0]
+        eintrag = Lokalerimport(WURZEL / "core" / "api" / "x.py", knoten, "core.gibtesnicht")
         self.assertTrue(eintrag.pruefbar)
         self.assertFalse(eintrag.loesbar)
 
     def test_der_test_findet_einen_fehlenden_namen(self):
         """Gegenprobe zum zweiten Fall: Modul da, Name erfunden."""
-        knoten = ast.parse('from ..models import GibtEsNicht').body[0]
-        eintrag = Lokalerimport(WURZEL / 'core' / 'api' / 'x.py', knoten,
-                                'core.models', 'GibtEsNicht')
-        self.assertTrue(eintrag.loesbar, 'core.models muss auffindbar sein')
+        knoten = ast.parse("from ..models import GibtEsNicht").body[0]
+        eintrag = Lokalerimport(WURZEL / "core" / "api" / "x.py", knoten, "core.models", "GibtEsNicht")
+        self.assertTrue(eintrag.loesbar, "core.models muss auffindbar sein")
         self.assertFalse(eintrag.name_vorhanden)
         # Und die Gegenrichtung: ein Name, den es wirklich gibt.
-        echt = Lokalerimport(WURZEL / 'core' / 'api' / 'x.py', knoten,
-                             'core.models', 'BVHJob')
+        echt = Lokalerimport(WURZEL / "core" / "api" / "x.py", knoten, "core.models", "BVHJob")
         self.assertTrue(echt.name_vorhanden)

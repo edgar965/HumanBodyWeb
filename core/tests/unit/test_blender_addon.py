@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Das Blender-Addon laedt — und meldet an, was es anmelden soll.
+"""Das Blender-Addon laedt — und meldet an, was es anmelden soll.
 
 DER ANLASS (01.09.2026)
 =======================
@@ -31,6 +31,7 @@ BDD - GEGEBEN / DANN
     DieAnmeldung     ... meldet 93 Klassen an und wieder ab
     DieAttrappe      ... faellt auf, wenn ein Name fehlt
 """
+
 import importlib
 import sys
 from ._addonbasis import Addonbasis
@@ -38,7 +39,7 @@ from .blenderattrappe import Blenderattrappe
 
 
 class JedesEigeneModul(Addonbasis):
-    u"""Jede Datei des Addons laesst sich laden."""
+    """Jede Datei des Addons laesst sich laden."""
 
     def test_alle_module_laden(self):
         with Blenderattrappe():
@@ -46,22 +47,21 @@ class JedesEigeneModul(Addonbasis):
             for name in self.eigene_module():
                 try:
                     importlib.import_module(name)
-                except Exception as fehler:      # noqa: BLE001
-                    schlecht.append('%s — %s: %s'
-                                    % (name, type(fehler).__name__, fehler))
-        self.assertEqual(schlecht, [], 'Module laden nicht: %s' % schlecht)
+                except Exception as fehler:  # noqa: BLE001
+                    schlecht.append("%s — %s: %s" % (name, type(fehler).__name__, fehler))
+        self.assertEqual(schlecht, [], "Module laden nicht: %s" % schlecht)
 
     def test_es_sind_ueberhaupt_welche_da(self):
-        u"""Sabotageschutz: Eine leere Liste bestuende jeden Test."""
+        """Sabotageschutz: Eine leere Liste bestuende jeden Test."""
         self.assertGreaterEqual(len(self.eigene_module()), 15)
 
 
 class DieAnmeldung(Addonbasis):
-    u"""``register()`` meldet jede Klasse an, ``unregister()`` alle ab."""
+    """``register()`` meldet jede Klasse an, ``unregister()`` alle ab."""
 
     def anmelden(self):
         with Blenderattrappe() as attrappe:
-            addon = importlib.import_module('HumanBodyBlender')
+            addon = importlib.import_module("HumanBodyBlender")
             addon.register()
             angemeldet = list(attrappe.angemeldet)
             addon.unregister()
@@ -76,7 +76,7 @@ class DieAnmeldung(Addonbasis):
         self.assertEqual(uebrig, [])
 
     def test_keine_klasse_doppelt(self):
-        u"""Ein Name in zwei ``classes``-Tupeln ist ein Fehler.
+        """Ein Name in zwei ``classes``-Tupeln ist ein Fehler.
 
         Blender wirft beim zweiten ``register_class`` desselben Namens;
         beim Aufteilen einer Datei passiert das schnell.
@@ -87,18 +87,17 @@ class DieAnmeldung(Addonbasis):
 
 
 class DieAttrappe(Addonbasis):
-    u"""Die Gegenprobe: Der Test muss rot werden koennen."""
+    """Die Gegenprobe: Der Test muss rot werden koennen."""
 
     def test_ein_fehlender_name_faellt_auf(self):
-        u"""Sabotage — ein Modul, das einen Namen einfuehrt, den es nicht gibt."""
+        """Sabotage — ein Modul, das einen Namen einfuehrt, den es nicht gibt."""
         with Blenderattrappe():
             with self.assertRaises(ImportError):
-                exec('from HumanBodyBlender.morphing import GibtEsNicht',
-                     {})
+                exec("from HumanBodyBlender.morphing import GibtEsNicht", {})
 
     def test_sie_raeumt_sys_modules_wieder_auf(self):
-        u"""Sonst sieht der naechste Test im Lauf ein halbes Blender."""
-        vorher = 'bpy' in sys.modules
+        """Sonst sieht der naechste Test im Lauf ein halbes Blender."""
+        vorher = "bpy" in sys.modules
         with Blenderattrappe():
-            self.assertIn('bpy', sys.modules)
-        self.assertEqual('bpy' in sys.modules, vorher)
+            self.assertIn("bpy", sys.modules)
+        self.assertEqual("bpy" in sys.modules, vorher)

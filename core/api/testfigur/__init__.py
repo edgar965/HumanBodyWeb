@@ -22,5 +22,4 @@ from .testkern import Testkern
 from .verwaltung import Figurenwechsel
 from .verwaltungsendpunkte import Testverwaltung
 
-__all__ = ['Testkern', 'Testnetz', 'Testendpunkte', 'Quellenschau',
-           'Figurenwechsel', 'Testverwaltung']
+__all__ = ["Testkern", "Testnetz", "Testendpunkte", "Quellenschau", "Figurenwechsel", "Testverwaltung"]

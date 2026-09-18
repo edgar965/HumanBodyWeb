@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Shaderpatch`: zwei Eingriffe in denselben Shader, ohne dass der zweite
+"""`Shaderpatch`: zwei Eingriffe in denselben Shader, ohne dass der zweite
 den ersten löscht — geprüft in Node, mit dem echten Modul.
 
 WARUM (11.09.2026): Weichgewebe (`zuschlag`) und Hautverdeckung (`einzug`)
@@ -14,11 +14,12 @@ Fall 2 rot; Programmschlüssel fest `'x'` macht Fall 3 rot.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'shaderpatch.js')
+MODUL = Jsmodul("gemeinsam", "shaderpatch.js")
 
 SKRIPT = """
 const { Shaderpatch } = await import(MODUL);
@@ -63,10 +64,9 @@ console.log(JSON.stringify({ ok: true, schluessel: Shaderpatch.schluessel(k) }))
 
 
 class ShaderpatchTest(SimpleTestCase):
-
     databases = set()
 
     def test_zwei_eingriffe_klonen_und_schluessel(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['schluessel'], ['dritter', 'hauteinzug', 'weichgewebe'])
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertEqual(ausgabe["schluessel"], ["dritter", "hauteinzug", "weichgewebe"])

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Rigauswahl`: welche Figur bekommt Knochenlinien?
+"""`Rigauswahl`: welche Figur bekommt Knochenlinien?
 
 WARUM (07.09.2026, Edgar: „es gibt einen Button zum Rig ein und ausblenden.
 das blendet das aber nur für HumanBody ein/aus. das soll für alle Modelle
@@ -24,11 +24,12 @@ einem Modul ohne Three.js und ohne DOM:
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'rigauswahl.js')
+MODUL = Jsmodul("gemeinsam", "rigauswahl.js")
 
 SKRIPT = """
 const { Rigauswahl: R } = await import(MODUL);
@@ -107,9 +108,8 @@ console.log(JSON.stringify({ok: true}));
 
 
 class RigauswahlTest(SimpleTestCase):
-
     databases = set()
 
     def test_wurzel_aus_dem_feld_der_art_sonst_aus_dem_szenenbaum(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

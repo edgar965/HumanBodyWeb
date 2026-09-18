@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Lagenmaske`: welche Punkte eines Stücks unter einem anderen liegen —
+"""`Lagenmaske`: welche Punkte eines Stücks unter einem anderen liegen —
 geprüft am Kunstkörper, in Node, mit dem echten Modul.
 
 WARUM (11.09.2026, Dance1): Der Bund der Leggings drückte in Bewegung durch
@@ -21,11 +21,12 @@ Sabotage-Gegenprobe: `bUeberA >= aUeberB ? 1 : -1` → `-1` macht Fall 1 rot;
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'lagenmaske.js')
+MODUL = Jsmodul("gemeinsam", "lagenmaske.js")
 
 SKRIPT = """
 const { Lagenmaske } = await import(MODUL);
@@ -94,9 +95,8 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class LagenmaskeTest(SimpleTestCase):
-
     databases = set()
 
     def test_lage_ueberlappung_und_kanten(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertTrue(ausgabe.get("ok"), ausgabe)

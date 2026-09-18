@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Laedt Koerper und Kleidungsstuecke in EINE gemeinsame Form.
+"""Laedt Koerper und Kleidungsstuecke in EINE gemeinsame Form.
 
 Beide werden am Ende gleich behandelt: Punkte, Dreiecke, eine
 Gewichtsmatrix und die Namen ihrer Spalten. Was danach kommt, sieht keinen
@@ -11,6 +11,7 @@ eine Auswahl. Das Stoff-Rig verweist auf alle 176; wer auf 31 oder 69
 umleitet, verliert bei der Haelfte der Stoffpunkte einen Teil des Gewichts
 (gemessen: 3.670 von 7.290), und LBS verteilt den Rest stumm um.
 """
+
 import json
 import os
 
@@ -20,7 +21,7 @@ from streusumme import Streusumme
 
 
 class Figurnetze:
-    u"""Haut und Kleidung derselben Figur, mit denselben Knochenspalten."""
+    """Haut und Kleidung derselben Figur, mit denselben Knochenspalten."""
 
     def __init__(self, figur):
         self.figur = figur
@@ -30,10 +31,9 @@ class Figurnetze:
     # -------------------------------------------------------------- Koerper
 
     def koerper(self):
-        u"""Aussenhaut der Figur mit Gewichten auf alle Knochen."""
-        tabelle = json.load(
-            open(os.path.join(self.figur.wurzel, 'skin_weights_base.json')))
-        knochennamen, roh = tabelle['bone_names'], tabelle['weights']
+        """Aussenhaut der Figur mit Gewichten auf alle Knochen."""
+        tabelle = json.load(open(os.path.join(self.figur.wurzel, "skin_weights_base.json")))
+        knochennamen, roh = tabelle["bone_names"], tabelle["weights"]
         aus = np.zeros((len(self.figur.punkte), len(self.namen)))
         for zeile, alt in enumerate(self.figur.gewaehlt):
             for name, wert in self.figur._paare(roh[int(alt)], knochennamen):
@@ -41,12 +41,14 @@ class Figurnetze:
                 if ziel is not None:
                     aus[zeile, ziel] += float(wert)
         summe = aus.sum(axis=1, keepdims=True)
-        return (np.asarray(self.figur.punkte, dtype=np.float64),
-                np.asarray(self.figur.dreiecke, dtype=np.int64),
-                aus / np.maximum(summe, 1e-9))
+        return (
+            np.asarray(self.figur.punkte, dtype=np.float64),
+            np.asarray(self.figur.dreiecke, dtype=np.int64),
+            aus / np.maximum(summe, 1e-9),
+        )
 
     def koerper_basis(self, punkte, vierecke):
-        u"""ALLE Basispunkte der Figur (18.210) mit ihren Gewichten — das
+        """ALLE Basispunkte der Figur (18.210) mit ihren Gewichten — das
         Steuernetz, aus dem `Feinkoerper` je Bild das sichtbare Netz
         unterteilt.
 
@@ -58,9 +60,8 @@ class Figurnetze:
         und das feine Netz folgt als `W @ basis` in Millisekunden.
         `vierecke` sind die Basisflaechen (17.288 x 4).
         """
-        tabelle = json.load(
-            open(os.path.join(self.figur.wurzel, 'skin_weights_base.json')))
-        knochennamen, roh = tabelle['bone_names'], tabelle['weights']
+        tabelle = json.load(open(os.path.join(self.figur.wurzel, "skin_weights_base.json")))
+        knochennamen, roh = tabelle["bone_names"], tabelle["weights"]
         aus = np.zeros((len(punkte), len(self.namen)))
         for zeile in range(min(len(punkte), len(roh))):
             for name, wert in self.figur._paare(roh[zeile], knochennamen):
@@ -70,13 +71,12 @@ class Figurnetze:
         summe = aus.sum(axis=1, keepdims=True)
         q = np.asarray(vierecke, dtype=np.int64)
         dreiecke = np.vstack([q[:, [0, 1, 2]], q[:, [0, 2, 3]]])
-        return (np.asarray(punkte, dtype=np.float64), dreiecke,
-                aus / np.maximum(summe, 1e-9))
+        return (np.asarray(punkte, dtype=np.float64), dreiecke, aus / np.maximum(summe, 1e-9))
 
     # ------------------------------------------------------------ Kleidung
 
     def stueck(self, pfad):
-        u"""Ein Stueck aus seiner `*_sim_rig.json` — oder `.npz` aus der Szene.
+        """Ein Stueck aus seiner `*_sim_rig.json` — oder `.npz` aus der Szene.
 
         Die Gewichte liegen in der Rig-Datei DUENNBESETZT je Punkt als
         [[knochennummer, wert], ...]; die Nummer zeigt in die Liste
@@ -86,17 +86,16 @@ class Figurnetze:
         Server aus einem Szenennetz schreibt (`figurvideostuecke.py`):
         dort stehen `skin_index`/`skin_weight` als n x 4 plus `knochen`.
         """
-        if pfad.endswith('.npz'):
+        if pfad.endswith(".npz"):
             return self._szenenstueck(pfad)
         with open(pfad) as datei:
             daten = json.load(datei)
-        punkte = np.asarray(daten['punkte'], dtype=np.float64).reshape(-1, 3)
-        dreiecke = np.asarray(daten['dreiecke'],
-                              dtype=np.int64).reshape(-1, 3)
-        eigene = list(daten['knochen'])
+        punkte = np.asarray(daten["punkte"], dtype=np.float64).reshape(-1, 3)
+        dreiecke = np.asarray(daten["dreiecke"], dtype=np.int64).reshape(-1, 3)
+        eigene = list(daten["knochen"])
         aus = np.zeros((len(punkte), len(self.namen)))
         unbekannt = set()
-        for zeile, eintraege in enumerate(daten['gewichte']):
+        for zeile, eintraege in enumerate(daten["gewichte"]):
             for nummer, wert in eintraege:
                 name = eigene[int(nummer)]
                 ziel = self.spalte.get(name)
@@ -108,11 +107,12 @@ class Figurnetze:
 
     @staticmethod
     def _normiert(punkte, dreiecke, aus, unbekannt):
-        u"""Gewichte je Zeile auf 1 — ein fremder Knochen ist ein Fehler, kein Rest."""
+        """Gewichte je Zeile auf 1 — ein fremder Knochen ist ein Fehler, kein Rest."""
         if unbekannt:
-            raise ValueError(u'%d Knochen des Stuecks fehlen im Skelett: %s'
-                             % (len(unbekannt),
-                                u', '.join(sorted(unbekannt)[:4])))
+            raise ValueError(
+                "%d Knochen des Stuecks fehlen im Skelett: %s"
+                % (len(unbekannt), ", ".join(sorted(unbekannt)[:4]))
+            )
         summe = aus.sum(axis=1, keepdims=True)
         return punkte, dreiecke, aus / np.maximum(summe, 1e-9)
 
@@ -121,10 +121,10 @@ class Figurnetze:
         # Aufraeumen des Objekts offen — unter Windows liess das jeden
         # Pruefordner mit dem Stueck darin stehen (60 Ordner, 12.09.2026).
         with np.load(pfad) as daten:
-            punkte = np.asarray(daten['punkte'], dtype=np.float64)
-            dreiecke = np.asarray(daten['dreiecke'], dtype=np.int64)
-            namen = [str(n) for n in daten['knochen']]
-            nummern, gewichte = daten['skin_index'], daten['skin_weight']
+            punkte = np.asarray(daten["punkte"], dtype=np.float64)
+            dreiecke = np.asarray(daten["dreiecke"], dtype=np.int64)
+            namen = [str(n) for n in daten["knochen"]]
+            nummern, gewichte = daten["skin_index"], daten["skin_weight"]
         umsetzung = np.array([self.spalte.get(n, -1) for n in namen])
         aus = np.zeros((len(punkte), len(self.namen)))
         unbekannt = set()
@@ -137,13 +137,12 @@ class Figurnetze:
             treffer = gilt & (ziel >= 0)
             # Zweidimensionaler Index als flacher: Zeile * Breite + Spalte.
             flach = np.nonzero(treffer)[0] * aus.shape[1] + ziel[treffer]
-            aus += Streusumme.zeilen(flach, gewichte[treffer, spalte],
-                                     aus.size).reshape(aus.shape)
+            aus += Streusumme.zeilen(flach, gewichte[treffer, spalte], aus.size).reshape(aus.shape)
         return self._normiert(punkte, dreiecke, aus, unbekannt)
 
     @staticmethod
     def sitzprobe(stoff, koerper):
-        u"""Abstand des Stoffs zur Haut, in Millimetern.
+        """Abstand des Stoffs zur Haut, in Millimetern.
 
         Die Probe darauf, dass Stueck und Koerper ueberhaupt zusammen-
         gehoeren. Ein Stueck, das auf einem ANDEREN Koerper drapiert wurde,
@@ -151,6 +150,7 @@ class Figurnetze:
         Ueber 40 mm heisst „sitzt nicht" (CLAUDE.md, 06.09.2026).
         """
         from scipy.spatial import cKDTree
+
         baum = cKDTree(koerper)
         abstand, _ = baum.query(stoff, workers=-1)
         return float(np.median(abstand)) * 1000.0

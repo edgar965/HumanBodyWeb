@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Simulationsskripte müssen auf BEIDEN Wegen laden.
+"""Die Simulationsskripte müssen auf BEIDEN Wegen laden.
 
 WARUM DIESER TEST EXISTIERT (31.08.2026)
 ----------------------------------------
@@ -30,6 +30,7 @@ Datei getragen.
 
 Aufruf:  python manage.py test core.tests.unit.test_kollision_importwege
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -40,49 +41,44 @@ from ..unit._humanbodypfad import Humanbodypfad
 
 
 class ImportwegeTest(SimpleTestCase):
-    u"""Beide Ladewege, für beide Skripte."""
+    """Beide Ladewege, für beide Skripte."""
 
     #: Die Dateien mit dem zweizweigigen Vorspann.
-    SKRIPTE = ('warp_sim', 'skinning_only')
+    SKRIPTE = ("warp_sim", "skinning_only")
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.wurzel = Path(Humanbodypfad.setzen() or '.') / 'collision'
+        cls.wurzel = Path(Humanbodypfad.setzen() or ".") / "collision"
 
     def test_paketweg_laedt_beide(self):
-        u"""`from collision import …` — der Weg der Prüfungen."""
+        """`from collision import …` — der Weg der Prüfungen."""
         import importlib
 
         for name in self.SKRIPTE:
-            modul = importlib.import_module('collision.%s' % name)
-            self.assertTrue(hasattr(modul, 'main'),
-                            '%s hat kein main()' % name)
+            modul = importlib.import_module("collision.%s" % name)
+            self.assertTrue(hasattr(modul, "main"), "%s hat kein main()" % name)
 
     def test_skriptweg_laedt_beide(self):
-        u"""Direkt gestartet — der Weg des Teilprozesses.
+        """Direkt gestartet — der Weg des Teilprozesses.
 
         Läuft mit DIESEM Python, nicht mit `python10`: geprüft wird der
         Importweg, nicht die Simulationsumgebung. Warp fehlt hier, und
         genau das darf beim Laden nicht stören — `HAS_WARP` fängt es ab.
         """
         for name in self.SKRIPTE:
-            pfad = self.wurzel / ('%s.py' % name)
-            self.assertTrue(pfad.exists(), '%s fehlt' % pfad)
-            lauf = subprocess.run([sys.executable, str(pfad), '--help'],
-                                  capture_output=True, text=True, timeout=120)
-            self.assertEqual(lauf.returncode, 0,
-                             '%s bricht als Skript ab:\n%s'
-                             % (name, lauf.stderr[-1500:]))
-            self.assertIn('--input', lauf.stdout)
+            pfad = self.wurzel / ("%s.py" % name)
+            self.assertTrue(pfad.exists(), "%s fehlt" % pfad)
+            lauf = subprocess.run(
+                [sys.executable, str(pfad), "--help"], capture_output=True, text=True, timeout=120
+            )
+            self.assertEqual(lauf.returncode, 0, "%s bricht als Skript ab:\n%s" % (name, lauf.stderr[-1500:]))
+            self.assertIn("--input", lauf.stdout)
 
     def test_beide_zweige_stehen_im_vorspann(self):
-        u"""Ohne den `else`-Zweig hätte der Teilprozess keinen Importweg."""
+        """Ohne den `else`-Zweig hätte der Teilprozess keinen Importweg."""
         for name in self.SKRIPTE:
-            text = (self.wurzel / ('%s.py' % name)).read_text(encoding='utf-8')
-            self.assertIn('if __package__:', text,
-                          '%s: der Paketweg fehlt' % name)
-            self.assertIn('from bakedatei import Bakedatei', text,
-                          '%s: der Skriptweg fehlt' % name)
-            self.assertIn('from .bakedatei import Bakedatei', text,
-                          '%s: der Paketweg fehlt' % name)
+            text = (self.wurzel / ("%s.py" % name)).read_text(encoding="utf-8")
+            self.assertIn("if __package__:", text, "%s: der Paketweg fehlt" % name)
+            self.assertIn("from bakedatei import Bakedatei", text, "%s: der Skriptweg fehlt" % name)
+            self.assertIn("from .bakedatei import Bakedatei", text, "%s: der Paketweg fehlt" % name)

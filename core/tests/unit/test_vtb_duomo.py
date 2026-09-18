@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""DuoMo im VideoToBVH-Baum — der Teil ohne Grafikkarte (12.09.2026).
+"""DuoMo im VideoToBVH-Baum — der Teil ohne Grafikkarte (12.09.2026).
 
 Der Lauf selbst braucht 2,6 GB Checkpoints, die PromptHMR-Bildmerkmale
 und CUDA; was sich hier pruefen laesst, ist alles davor und danach:
@@ -16,6 +16,7 @@ und CUDA; was sich hier pruefen laesst, ist alles davor und danach:
 * **Die Verteiler stimmen ueberein**: Was `Lifterwahl` fuer `duomo`
   annimmt, muss `Smplbefehl` senden koennen — und `lift_3d.py` parsen.
 """
+
 import os
 import re
 import unittest
@@ -25,88 +26,91 @@ from ._wrappersuchpfad import Wrappersuchpfad, WRAPPERS
 
 Wrappersuchpfad.setzen()
 
-from duomolauf import Duomolauf                             # noqa: E402
-from lifterwahl import Lifterwahl                           # noqa: E402
+from duomolauf import Duomolauf  # noqa: E402
+from lifterwahl import Lifterwahl  # noqa: E402
 
 
 class DerDuomoBefehl(unittest.TestCase):
-
     def _lauf(self, **zusatz):
-        return Duomolauf('tanz.mp4', os.path.join('aus', 'tanz.bvh'), **zusatz)
+        return Duomolauf("tanz.mp4", os.path.join("aus", "tanz.bvh"), **zusatz)
 
     def test_eigener_interpreter_und_relatives_skript(self):
         befehl = self._lauf().befehl()
-        self.assertTrue(befehl[0].lower().endswith(
-            os.path.join('python10duomo', 'scripts', 'python.exe')))
+        self.assertTrue(befehl[0].lower().endswith(os.path.join("python10duomo", "scripts", "python.exe")))
         # Der Starter vertritt DuoMos Skript: gleiche Argumente, aber ohne
         # xformers' Hopper-Kern (Blackwell) und ohne EGL-Rendern.
         self.assertEqual(befehl[1], Duomolauf.STARTER)
-        self.assertEqual(befehl[2:4], ['--video_path', 'tanz.mp4'])
-        self.assertNotIn('--camera_param', befehl)
+        self.assertEqual(befehl[2:4], ["--video_path", "tanz.mp4"])
+        self.assertNotIn("--camera_param", befehl)
 
     def test_starter_liegt_neben_dem_lauf_und_rendert_nicht(self):
         self.assertTrue(os.path.isfile(Duomolauf.STARTER))
-        self.assertEqual(os.path.basename(Duomolauf.STARTER), 'duomo_start.py')
+        self.assertEqual(os.path.basename(Duomolauf.STARTER), "duomo_start.py")
         import duomo_start
+
         self.assertTrue(callable(duomo_start.flash3_abschalten))
         self.assertTrue(callable(duomo_start.vorhersagen))
-        quelle = open(Duomolauf.STARTER, encoding='utf-8').read()
-        self.assertIn('flash3.FwOp.is_available', quelle)
-        self.assertIn('render_output=False', quelle)
+        quelle = open(Duomolauf.STARTER, encoding="utf-8").read()
+        self.assertIn("flash3.FwOp.is_available", quelle)
+        self.assertIn("render_output=False", quelle)
         # Dieselben Argumente wie DuoMos `scripts/inference.py`.
-        for argument in ('--video_path', '--camera_param', '--boxes'):
+        for argument in ("--video_path", "--camera_param", "--boxes"):
             self.assertIn("'%s'" % argument, quelle)
 
     def test_kamerabahn_nur_bei_bewegter_kamera(self):
-        mit = self._lauf(static_cam=False, kamera_pt='kamera.pt').befehl()
-        self.assertEqual(mit[-2:], ['--camera_param', 'kamera.pt'])
+        mit = self._lauf(static_cam=False, kamera_pt="kamera.pt").befehl()
+        self.assertEqual(mit[-2:], ["--camera_param", "kamera.pt"])
         # Feste Kamera angekreuzt: die Bahn bleibt liegen.
-        fest = self._lauf(static_cam=True, kamera_pt='kamera.pt').befehl()
-        self.assertNotIn('--camera_param', fest)
+        fest = self._lauf(static_cam=True, kamera_pt="kamera.pt").befehl()
+        self.assertNotIn("--camera_param", fest)
 
     def test_ergebnis_liegt_unter_duomos_wurzel(self):
         ergebnis = self._lauf().ergebnisdatei()
-        self.assertEqual(os.path.normcase(ergebnis), os.path.normcase(
-            os.path.join(Duomolauf.WURZEL, 'results', 'tanz', 'motion.pt')))
-        parameter = self._lauf().parameterdatei('aus')
-        self.assertEqual(parameter, os.path.join('aus', 'tanz', 'smplx_params.pt'))
+        self.assertEqual(
+            os.path.normcase(ergebnis),
+            os.path.normcase(os.path.join(Duomolauf.WURZEL, "results", "tanz", "motion.pt")),
+        )
+        parameter = self._lauf().parameterdatei("aus")
+        self.assertEqual(parameter, os.path.join("aus", "tanz", "smplx_params.pt"))
 
     def test_fehlende_gewichte_werden_genannt(self):
         lauf = self._lauf()
-        with patch.object(Duomolauf, 'WURZEL', os.path.join('aus', 'nirgends')):
+        with patch.object(Duomolauf, "WURZEL", os.path.join("aus", "nirgends")):
             fehlt = lauf.fehlende_gewichte()
         self.assertEqual(len(fehlt), len(Duomolauf.GEWICHTE))
-        self.assertTrue(any('phmr' in p for p in fehlt))
-        with patch.object(Duomolauf, 'WURZEL', os.path.join('aus', 'nirgends')):
+        self.assertTrue(any("phmr" in p for p in fehlt))
+        with patch.object(Duomolauf, "WURZEL", os.path.join("aus", "nirgends")):
             with self.assertRaises(SystemExit):
                 lauf.gewichte_pruefen()
 
     def test_lifterwahl_kennt_duomo_mit_den_schaltern_von_smplbefehl(self):
         from core.pipelines.smplbefehl import Smplbefehl
-        modul, erlaubt = Lifterwahl.LIFTER['duomo']
-        self.assertEqual(modul, 'duomo_lift')
-        for schluessel, _feld, _argument in Smplbefehl.SCHALTER['duomo']:
+
+        modul, erlaubt = Lifterwahl.LIFTER["duomo"]
+        self.assertEqual(modul, "duomo_lift")
+        for schluessel, _feld, _argument in Smplbefehl.SCHALTER["duomo"]:
             self.assertIn(schluessel, erlaubt)
-        for name in ('smooth_sigma', 'joint_limits'):
-            self.assertIn(name, erlaubt, '%s kommt ueber _glaettung mit' % name)
-        self.assertIn('duomo', Smplbefehl.MIT_GLAETTUNG)
+        for name in ("smooth_sigma", "joint_limits"):
+            self.assertIn(name, erlaubt, "%s kommt ueber _glaettung mit" % name)
+        self.assertIn("duomo", Smplbefehl.MIT_GLAETTUNG)
 
     def test_lift_3d_parst_jeden_gesendeten_schalter(self):
         from core.pipelines.smplbefehl import Smplbefehl
-        quelle = (WRAPPERS / 'lift_3d.py').read_text(encoding='utf-8')
+
+        quelle = (WRAPPERS / "lift_3d.py").read_text(encoding="utf-8")
         argumente = set(re.findall(r"add_argument\('(--[a-z_]+)'", quelle))
         argumente |= set(re.findall(r"'(--no_[a-z_]+)'", quelle))
-        for _schluessel, _feld, argument in Smplbefehl.SCHALTER['duomo']:
+        for _schluessel, _feld, argument in Smplbefehl.SCHALTER["duomo"]:
             self.assertIn(argument, argumente)
 
     def test_umgebung_laesst_xformers_nicht_nach_triton_suchen(self):
         # Ohne den Schalter stand xformers' Triton-Traceback als
         # Fortschrittstext im Formular (Auftrag f33496c4, 12.09.2026).
-        umgebung = self._lauf(geraet='cuda').umgebung()
-        self.assertEqual(umgebung['XFORMERS_FORCE_DISABLE_TRITON'], '1')
-        self.assertIn('CUDA_VISIBLE_DEVICES', umgebung)
-        self.assertIn('PATH', umgebung, 'die Prozessumgebung bleibt erhalten')
+        umgebung = self._lauf(geraet="cuda").umgebung()
+        self.assertEqual(umgebung["XFORMERS_FORCE_DISABLE_TRITON"], "1")
+        self.assertIn("CUDA_VISIBLE_DEVICES", umgebung)
+        self.assertIn("PATH", umgebung, "die Prozessumgebung bleibt erhalten")
 
     def test_umrechner_liegt_neben_dem_lauf(self):
         self.assertTrue(os.path.isfile(Duomolauf.UMRECHNER))
-        self.assertEqual(os.path.basename(Duomolauf.UMRECHNER), 'duomo_smplx.py')
+        self.assertEqual(os.path.basename(Duomolauf.UMRECHNER), "duomo_smplx.py")

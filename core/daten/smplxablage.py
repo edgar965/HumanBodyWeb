@@ -25,11 +25,11 @@ class Smplxablage:
     """Der Ordner mit den SMPL-X-Ergebnissen und die Dateien darin."""
 
     #: Verzeichnisname auf der Platte. Gemischte Schreibweise — siehe oben.
-    ORDNER = 'photoTo3D'
+    ORDNER = "photoTo3D"
     #: Unterordner der SMPL-X-Ausgabe.
-    UNTERORDNER = 'SMPLX'
+    UNTERORDNER = "SMPLX"
     #: Dateiendungen, die je Auftrag entstehen.
-    ENDUNGEN = ('.json', '.npz')
+    ENDUNGEN = (".json", ".npz")
 
     @classmethod
     def verzeichnis(cls):
@@ -37,12 +37,11 @@ class Smplxablage:
         # `HumanBody/data` (Edgar). Ueber `OBJECTS_ROOT`, nicht ueber eine
         # `..`-Kette ab BASE_DIR — die zeigt beim naechsten Umzug wieder
         # woanders hin (`~/.claude/rules/projektpfade.md`).
-        return os.path.join(str(settings.OBJECTS_ROOT),
-                            cls.ORDNER, cls.UNTERORDNER)
+        return os.path.join(str(settings.OBJECTS_ROOT), cls.ORDNER, cls.UNTERORDNER)
 
     @classmethod
-    def datei(cls, job_id, endung='.npz'):
-        return os.path.join(cls.verzeichnis(), '%s%s' % (job_id, endung))
+    def datei(cls, job_id, endung=".npz"):
+        return os.path.join(cls.verzeichnis(), "%s%s" % (job_id, endung))
 
     @classmethod
     def dateien(cls, job_id):

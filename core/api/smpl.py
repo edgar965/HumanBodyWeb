@@ -47,19 +47,19 @@ class Smplendpunkte:
         """Die gespeicherten Vorgaben des SMPL-Koerpers."""
         gespeichert = AppSettings.load()
         antwort = {
-            'gender': gespeichert.smpl_default_gender,
-            'betas': Smplendpunkte._betas(gespeichert.smpl_default_betas),
-            'opacity': gespeichert.smpl_default_opacity,
-            'color': gespeichert.smpl_default_color,
-            'wireframe': gespeichert.smpl_default_wireframe,
-            'xoffset': gespeichert.smpl_default_xoffset,
-            'humanbody_preset': gespeichert.smpl_default_humanbody_preset,
+            "gender": gespeichert.smpl_default_gender,
+            "betas": Smplendpunkte._betas(gespeichert.smpl_default_betas),
+            "opacity": gespeichert.smpl_default_opacity,
+            "color": gespeichert.smpl_default_color,
+            "wireframe": gespeichert.smpl_default_wireframe,
+            "xoffset": gespeichert.smpl_default_xoffset,
+            "humanbody_preset": gespeichert.smpl_default_humanbody_preset,
         }
         if gespeichert.smpl_default_scene:
             try:
-                antwort['scene'] = json.loads(gespeichert.smpl_default_scene)
-            except (json.JSONDecodeError, TypeError):
-                logger.debug('uebergangen', exc_info=True)
+                antwort["scene"] = json.loads(gespeichert.smpl_default_scene)
+            except json.JSONDecodeError, TypeError:
+                logger.debug("uebergangen", exc_info=True)
         return JsonResponse(antwort)
 
     @staticmethod
@@ -67,10 +67,10 @@ class Smplendpunkte:
         """Zehn Formparameter aus einer Komma-Zeichenkette."""
         werte = [0.0] * Smplendpunkte.BETAS
         try:
-            for platz, roh in enumerate(text.split(',')[:Smplendpunkte.BETAS]):
+            for platz, roh in enumerate(text.split(",")[: Smplendpunkte.BETAS]):
                 werte[platz] = float(roh.strip())
-        except (ValueError, IndexError):
-            logger.debug('uebergangen', exc_info=True)
+        except ValueError, IndexError:
+            logger.debug("uebergangen", exc_info=True)
         return werte
 
     @staticmethod
@@ -80,16 +80,15 @@ class Smplendpunkte:
         """Koerper- und Szenenvorgaben der SMPL-Seite speichern."""
         try:
             daten = json.loads(request.body)
-        except (json.JSONDecodeError, TypeError):
-            return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
-                                status=400)
+        except json.JSONDecodeError, TypeError:
+            return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
         gespeichert = AppSettings.load()
         # Welche Felder es gibt und was fuer sie gilt, steht in
         # `Smplvorgaben` — hier standen bis zum 30.08.2026 sieben `if`-Bloecke
         # mit ihren Grenzen mitten im Rumpf.
         Smplvorgaben.uebernehmen(daten, gespeichert)
         gespeichert.save()
-        return JsonResponse({'ok': True})
+        return JsonResponse({"ok": True})
 
     # ------------------------------------------------------------ Koerpernetz
 
@@ -97,9 +96,9 @@ class Smplendpunkte:
     def _netzantwort(netz, **zusatz):
         """Vertices, Faces und Normalen als base64-Bloecke."""
         antwort = {
-            'vertices': Netzantwort.feld(netz['vertices'], 'vertices'),
-            'faces': Netzantwort.feld(netz['faces'], 'faces'),
-            'normals': Netzantwort.feld(netz['normals'], 'normals'),
+            "vertices": Netzantwort.feld(netz["vertices"], "vertices"),
+            "faces": Netzantwort.feld(netz["faces"], "faces"),
+            "normals": Netzantwort.feld(netz["normals"], "normals"),
         }
         antwort.update(zusatz)
         return antwort
@@ -112,25 +111,26 @@ class Smplendpunkte:
         `gender`: female/male/neutral (Vorgabe female)
         `betas`: Kommaliste, z. B. "1.5,-0.3,0,0,0,0,0,0,0,0"
         """
-        geschlecht = request.GET.get('gender', 'female')
-        roh = request.GET.get('betas', '')
+        geschlecht = request.GET.get("gender", "female")
+        roh = request.GET.get("betas", "")
         betas = None
         if roh:
             try:
-                betas = [float(x) for x in roh.split(',')]
+                betas = [float(x) for x in roh.split(",")]
             except ValueError:
-                return JsonResponse({'error': 'Invalid betas format'},
-                                    status=400)
+                return JsonResponse({"error": "Invalid betas format"}, status=400)
         try:
             erzeuger = Charakterdaten.smpl_koerpergenerator()
             netz = erzeuger.generate(gender=geschlecht, betas=betas)
         except FileNotFoundError as fehler:
-            return JsonResponse({'error': str(fehler)}, status=404)
+            return JsonResponse({"error": str(fehler)}, status=404)
         except ValueError as fehler:
-            return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse(Smplendpunkte._netzantwort(
-            netz, vertex_count=netz['vertex_count'],
-            face_count=netz['face_count'], gender=geschlecht))
+            return JsonResponse({"error": str(fehler)}, status=400)
+        return JsonResponse(
+            Smplendpunkte._netzantwort(
+                netz, vertex_count=netz["vertex_count"], face_count=netz["face_count"], gender=geschlecht
+            )
+        )
 
     # --------------------------------------------------------- Kleiderbestand
 
@@ -144,18 +144,22 @@ class Smplendpunkte:
     @require_GET
     def kleidernetz(request):
         """Das Netz EINES SMPL-Kleides als base64-JSON."""
-        kennung = request.GET.get('garment_id', '')
+        kennung = request.GET.get("garment_id", "")
         if not kennung:
-            return JsonResponse({'error': 'garment_id required'}, status=400)
+            return JsonResponse({"error": "garment_id required"}, status=400)
         try:
             netz = Charakterdaten.smpl_bibliothek().get_garment_mesh(kennung)
         except Exception as fehler:
-            logger.error('Error loading SMPL garment %s: %s', kennung, fehler)
-            return JsonResponse({'error': str(fehler)}, status=500)
-        return JsonResponse(Smplendpunkte._netzantwort(
-            netz, garment_id=kennung,
-            vertex_count=len(netz['vertices']) // 3,
-            face_count=len(netz['faces']) // 3))
+            logger.error("Error loading SMPL garment %s: %s", kennung, fehler)
+            return JsonResponse({"error": str(fehler)}, status=500)
+        return JsonResponse(
+            Smplendpunkte._netzantwort(
+                netz,
+                garment_id=kennung,
+                vertex_count=len(netz["vertices"]) // 3,
+                face_count=len(netz["faces"]) // 3,
+            )
+        )
 
     @staticmethod
     @require_GET
@@ -168,53 +172,57 @@ class Smplendpunkte:
         `stiffness`  — Steifigkeit 0…1
         `color_r/g/b`, `morph_*`, `meta_*`
         """
-        kennung = request.GET.get('garment_id', '')
+        kennung = request.GET.get("garment_id", "")
         if not kennung:
-            return JsonResponse({'error': 'garment_id required'}, status=400)
+            return JsonResponse({"error": "garment_id required"}, status=400)
         try:
             roh = Charakterdaten.smpl_bibliothek().get_garment_mesh_raw(kennung)
         except Exception as fehler:
-            logger.error('Error loading SMPL garment raw %s: %s',
-                         kennung, fehler)
-            return JsonResponse({'error': str(fehler)}, status=500)
+            logger.error("Error loading SMPL garment raw %s: %s", kennung, fehler)
+            return JsonResponse({"error": str(fehler)}, status=500)
         # Koerper aus der Anfrage — derselbe Weg wie ueberall
         # (`Charakterdaten.koerper_aus`); der Reglerblock stand hier ein
         # viertes Mal.
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({'error': 'Failed to compute body mesh'},
-                                status=500)
+            return JsonResponse({"error": "Failed to compute body mesh"}, status=500)
         farbe = Smplendpunkte._farbe(request.GET)
         from GarmentFitter import fit_garment
+
         ergebnis = fit_garment(
-            roh['vertices'], roh['faces'], koerper.vertices,
+            roh["vertices"],
+            roh["faces"],
+            koerper.vertices,
             body_faces=Charakterdaten.netzdaten(koerper.geschlecht).faces,
-            offset=float(request.GET.get('offset',
-                                         Smplendpunkte.VORGABE_ABSTAND)),
-            stiffness=float(request.GET.get('stiffness',
-                                            Smplendpunkte.VORGABE_STEIFE)),
-            color=farbe, coordinate_system='smpl')
+            offset=float(request.GET.get("offset", Smplendpunkte.VORGABE_ABSTAND)),
+            stiffness=float(request.GET.get("stiffness", Smplendpunkte.VORGABE_STEIFE)),
+            color=farbe,
+            coordinate_system="smpl",
+        )
         if ergebnis is None:
-            return JsonResponse({'error': 'Fitting failed'}, status=500)
-        return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices,
-                                             koerper.geschlecht, farbe=farbe,
-                                             garment_id=kennung))
+            return JsonResponse({"error": "Fitting failed"}, status=500)
+        return JsonResponse(
+            Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht, farbe=farbe, garment_id=kennung)
+        )
 
     @classmethod
     def _farbe(cls, werte):
         r, g, b = cls.VORGABE_FARBE
-        return (float(werte.get('color_r', r)), float(werte.get('color_g', g)),
-                float(werte.get('color_b', b)))
+        return (
+            float(werte.get("color_r", r)),
+            float(werte.get("color_g", g)),
+            float(werte.get("color_b", b)),
+        )
 
     @staticmethod
     @require_GET
     def vorschaubild(request, garment_path):
         """Das Vorschaubild eines SMPL-Kleides."""
-        kennung = garment_path.rstrip('/')
+        kennung = garment_path.rstrip("/")
         try:
             bild = Charakterdaten.smpl_bibliothek().get_thumbnail(kennung)
         except Exception as fehler:
-            return HttpResponseNotFound('Garment not found: %s' % fehler)
+            return HttpResponseNotFound("Garment not found: %s" % fehler)
         if bild is None:
-            return HttpResponseNotFound('No thumbnail')
-        return HttpResponse(bild, content_type='image/png')
+            return HttpResponseNotFound("No thumbnail")
+        return HttpResponse(bild, content_type="image/png")

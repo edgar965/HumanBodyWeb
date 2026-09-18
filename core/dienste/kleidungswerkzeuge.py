@@ -14,7 +14,7 @@ import os
 from django.conf import settings
 
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
 
 class Kleidungswerkzeuge:
@@ -25,7 +25,7 @@ class Kleidungswerkzeuge:
     NACHBARN = 8
 
     @classmethod
-    def tpose_zu_apose(cls, garment_verts, body_verts, gender='female'):
+    def tpose_zu_apose(cls, garment_verts, body_verts, gender="female"):
         """Kleidung von der T-Pose in die A-Pose bringen — ueber den Index.
 
         `base_vertices.npy` (MakeHuman in T-Pose) und `mh_base_apose.npy`
@@ -53,18 +53,19 @@ class Kleidungswerkzeuge:
         mit Z nach oben. Danach werden die Fuesse auf die Hoehe des
         Koerpers gelegt, sonst schwebt die ganze Verschiebung.
         """
-        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT),
-                            'base_vertices.npy')
+        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT), "base_vertices.npy")
         if not os.path.isfile(pfad):
-            logger.error('[T→A] No MH base_vertices.npy')
+            logger.error("[T→A] No MH base_vertices.npy")
             return None
         roh = np.load(pfad)
         anzahl = min(roh.shape[0], body_verts.shape[0])
-        tpose = np.column_stack([
-            roh[:anzahl, 0] * 0.1,
-            -roh[:anzahl, 2] * 0.1,
-            roh[:anzahl, 1] * 0.1,
-        ])
+        tpose = np.column_stack(
+            [
+                roh[:anzahl, 0] * 0.1,
+                -roh[:anzahl, 2] * 0.1,
+                roh[:anzahl, 1] * 0.1,
+            ]
+        )
         tpose[:, 2] -= tpose[:, 2].min()
         tpose[:, 2] += body_verts[:, 2].min()
         return tpose
@@ -76,15 +77,13 @@ class Kleidungswerkzeuge:
         Beide Netze haben dieselbe Topologie; eine Nachbarsuche hier
         wuerde nur Artefakte einbauen.
         """
-        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT),
-                            'mh_base_apose.npy')
+        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT), "mh_base_apose.npy")
         if not os.path.isfile(pfad):
-            logger.error('[T→A] No mh_base_apose.npy — skipping displacement')
+            logger.error("[T→A] No mh_base_apose.npy — skipping displacement")
             return None
         apose = np.load(pfad)
         if apose.shape != mh_tpose.shape:
-            logger.error('[T→A] Shape mismatch: tpose=%s apose=%s',
-                         mh_tpose.shape, apose.shape)
+            logger.error("[T→A] Shape mismatch: tpose=%s apose=%s", mh_tpose.shape, apose.shape)
             return None
         return apose - mh_tpose
 
@@ -97,22 +96,22 @@ class Kleidungswerkzeuge:
         """
         from humanbody_core.nachbarsuche import Nachbarsuche
 
-        abstaende, kennungen = Nachbarsuche(mh_tpose).naechste(
-            garment_verts, k=cls.NACHBARN)
+        abstaende, kennungen = Nachbarsuche(mh_tpose).naechste(garment_verts, k=cls.NACHBARN)
         ergebnis = garment_verts.copy().astype(np.float64)
         for punkt in range(len(garment_verts)):
             gewicht = 1.0 / (abstaende[punkt] + 1e-6)
             gewicht /= gewicht.sum()
-            ergebnis[punkt] += (gewicht[:, None]
-                                * verschiebung[kennungen[punkt]]).sum(axis=0)
-        logger.info('[T→A] Displaced %d garment verts (MH T-pose → Rigify '
-                    'A-pose, K=%d)', len(ergebnis), cls.NACHBARN)
+            ergebnis[punkt] += (gewicht[:, None] * verschiebung[kennungen[punkt]]).sum(axis=0)
+        logger.info(
+            "[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose, K=%d)", len(ergebnis), cls.NACHBARN
+        )
         return ergebnis.astype(np.float32)
 
     @staticmethod
     def glaetten(verts, faces, iterations=3, factor=0.5):
         """Laplacian smooth on garment mesh. Preserves boundary vertices."""
         from collections import defaultdict
+
         n = len(verts)
         # Build adjacency
         adj = defaultdict(set)
@@ -135,7 +134,7 @@ class Kleidungswerkzeuge:
 
     @staticmethod
     def _zuordnung(garment_verts, body_verts, ref_body=None):
-        u"""Zu jedem Kleidungspunkt der naechste Koerperpunkt — als Indexfeld.
+        """Zu jedem Kleidungspunkt der naechste Koerperpunkt — als Indexfeld.
 
         BEFUND `doppelcode` (30.08.2026): Diese vierzehn Zeilen standen zweimal,
         in ``knochenindizes`` und ``knochengewichte``. Die beiden Methoden
@@ -153,6 +152,7 @@ class Kleidungswerkzeuge:
         Aermel an den Rumpf binden.
         """
         from humanbody_core.nachbarsuche import Nachbarsuche
+
         if ref_body is not None and len(ref_body) != len(body_verts):
             _, nearest_ref = Nachbarsuche(ref_body).naechster(garment_verts)
             _, ref_to_body = Nachbarsuche(body_verts).naechster(ref_body)
@@ -161,14 +161,14 @@ class Kleidungswerkzeuge:
         return nearest
 
     @staticmethod
-    def knochenindizes(garment_verts, body_verts, gender='female', ref_body=None):
+    def knochenindizes(garment_verts, body_verts, gender="female", ref_body=None):
         """Compute skin indices for garment by nearest-body-vertex transfer."""
         si, _sw = Kleidungswerkzeuge._gewichtsfelder(gender)
         nearest = Kleidungswerkzeuge._zuordnung(garment_verts, body_verts, ref_body)
         return si[nearest].astype(np.float32).tobytes()
 
     @staticmethod
-    def knochengewichte(garment_verts, body_verts, gender='female', ref_body=None):
+    def knochengewichte(garment_verts, body_verts, gender="female", ref_body=None):
         """Compute skin weights for garment by nearest-body-vertex transfer."""
         _si, sw = Kleidungswerkzeuge._gewichtsfelder(gender)
         nearest = Kleidungswerkzeuge._zuordnung(garment_verts, body_verts, ref_body)
@@ -180,5 +180,5 @@ class Kleidungswerkzeuge:
         non-iterable NoneType" tief im Aufrufer (LS-Befund 12.09.2026)."""
         felder = Skingewichte.arrays(gender)
         if felder is None:
-            raise LookupError('Keine Hautgewichte fuer %s' % gender)
+            raise LookupError("Keine Hautgewichte fuer %s" % gender)
         return felder

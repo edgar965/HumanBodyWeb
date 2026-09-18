@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Die Gewebe-Auswahl unter „Farbe / Material" (11.09.2026).
+"""Die Gewebe-Auswahl unter „Farbe / Material" (11.09.2026).
 
 Edgar: „du hast ja jetzt auch die Textur eingebaut, kannst du
 auswahlmoeglichkeiten fuer Textur bei dem Bereich Farbe/Material
@@ -27,6 +27,7 @@ Sabotage-Gegenprobe: `faedenJeKachel: 7` beim Koeper macht Probe 1 rot;
 eine Option `<option value="leder">` in der Vorlage macht
 `test_vorlage_und_modul_fuehren_dieselben_arten` rot.
 """
+
 import io
 import re
 
@@ -35,7 +36,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'gewebearten.js')
+MODUL = Jsmodul("gemeinsam", "gewebearten.js")
 
 SKRIPT = """
 const { GEWEBEARTEN, gewebeart, GEWEBE_VORGABE } = await import(MODUL);
@@ -98,22 +99,20 @@ console.log(JSON.stringify({ok: true, arten: Object.keys(GEWEBEARTEN)}));
 
 
 class GewebeartenTest(SimpleTestCase):
-
     databases = set()
 
     def test_kacheln_und_muster(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['arten'],
-                         ['leinwand', 'koeper', 'jersey', 'satin', 'glatt'])
+        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertEqual(ausgabe["arten"], ["leinwand", "koeper", "jersey", "satin", "glatt"])
 
     def test_vorlage_und_modul_fuehren_dieselben_arten(self):
-        vorlage = GewebeartenTest._lies('templates', '_garmentcode_material.html')
+        vorlage = GewebeartenTest._lies("templates", "_garmentcode_material.html")
         stelle = vorlage.index('id="gc-gewebe"')
-        block = vorlage[stelle:vorlage.index('</select>', stelle)]
+        block = vorlage[stelle : vorlage.index("</select>", stelle)]
         optionen = re.findall(r'<option value="([a-z]+)"', block)
-        modul = GewebeartenTest._lies('static', 'viewer', 'gemeinsam', 'gewebearten.js')
-        arten = re.findall(r'^    ([a-z]+): \{$', modul, re.M)
+        modul = GewebeartenTest._lies("static", "viewer", "gemeinsam", "gewebearten.js")
+        arten = re.findall(r"^    ([a-z]+): \{$", modul, re.M)
         self.assertEqual(optionen, arten)
         self.assertIn('{% regler "gc-faeden"', vorlage)
         self.assertIn('{% regler "gc-struktur"', vorlage)
@@ -123,23 +122,23 @@ class GewebeartenTest(SimpleTestCase):
         self.assertLess(stelle, vorlage.index('"gc-faeden"'))
 
     def test_das_material_haengt_die_auswahl_ein(self):
-        material = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_material.js')
-        self.assertIn('GarmentcodeGewebe.einhaengen(GarmentcodeMaterial)', material)
-        self.assertIn('gewebe: { ...Garmentstoff.GEWEBE }', material)
-        auswahl = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_gewebe.js')
+        material = GewebeartenTest._lies("static", "viewer", "scene", "garmentcode_material.js")
+        self.assertIn("GarmentcodeGewebe.einhaengen(GarmentcodeMaterial)", material)
+        self.assertIn("gewebe: { ...Garmentstoff.GEWEBE }", material)
+        auswahl = GewebeartenTest._lies("static", "viewer", "scene", "garmentcode_gewebe.js")
         # Beim Seitenstart (synthetisches `change`) keine Vorgaben setzen.
-        self.assertIn('if (ereignis.isTrusted)', auswahl)
+        self.assertIn("if (ereignis.isTrusted)", auswahl)
 
     def test_das_gewebe_geht_in_die_szenendatei_und_zurueck(self):
-        stoff = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_stoff.js')
+        stoff = GewebeartenTest._lies("static", "viewer", "scene", "garmentcode_stoff.js")
         self.assertIn("gewebe: m.userData?.gewebe ? { ...m.userData.gewebe } : null", stoff)
         self.assertIn("if (werte.gewebe && typeof werte.gewebe === 'object')", stoff)
         # Ein Stueck ohne UV bekommt keine Karte, behaelt aber seine Angabe.
-        self.assertIn('material.userData.gewebe = wahl', stoff)
+        self.assertIn("material.userData.gewebe = wahl", stoff)
         # Die Ablage schreibt `werte()` unveraendert — das Gewebe kommt mit.
-        ablage = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_ablage.js')
-        self.assertIn('...werte,', ablage)
+        ablage = GewebeartenTest._lies("static", "viewer", "scene", "garmentcode_ablage.js")
+        self.assertIn("...werte,", ablage)
 
     @staticmethod
     def _lies(*teile):
-        return io.open(settings.BASE_DIR.joinpath(*teile), encoding='utf-8').read()
+        return io.open(settings.BASE_DIR.joinpath(*teile), encoding="utf-8").read()

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Koerpertiefe`: der Bodenfix misst den tiefsten Punkt des ganzen Netzes.
+"""`Koerpertiefe`: der Bodenfix misst den tiefsten Punkt des ganzen Netzes.
 
 WARUM (Edgar, 13.09.2026: „die Fußspitzen gehen noch in den Boden hinein …
 nimm den tiefsten Punkt des Körpers bei jedem Animationsframe"): Vorher
@@ -16,11 +16,12 @@ Geprüft mit Attrappen (eine kleine spaltenweise 4×4-Matrix wie `Matrix4`):
 Sabotage-Gegenprobe: in `yZeilen` das `.premultiply(vorn)` weglassen →
 Fall 1 rot (−0,3 statt −0,2, die Weltverschiebung fehlt).
 """
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'koerpertiefe.js')
+MODUL = Jsmodul("scene", "koerpertiefe.js")
 
 SKRIPT = """
 const { Koerpertiefe: K } = await import(MODUL);
@@ -73,6 +74,5 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class KoerpertiefeTest(SimpleTestCase):
-
     def test_tiefster_punkt_des_ganzen_netzes(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))

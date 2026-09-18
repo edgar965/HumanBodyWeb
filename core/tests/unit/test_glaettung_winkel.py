@@ -65,7 +65,6 @@ class Glaettung:
 
 
 class GlaettungWinkelTest(SimpleTestCase):
-
     BILDER = 30
     WINKEL = 90.0
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Was jeder Pipeline-Lauf mitbringt: Auftrag, Video, Ausgabeordner.
+"""Was jeder Pipeline-Lauf mitbringt: Auftrag, Video, Ausgabeordner.
 
 BEFUND `doppelcode` (30.08.2026)
 ===============================
@@ -20,11 +20,12 @@ Datenbank; im Konstruktor hätte das jeden Lauf eine Abfrage gekostet, auch die,
 die nie danach fragen (`Erkennung2d`). Als Eigenschaft wird sie einmal geholt
 und danach gehalten.
 """
+
 from ..models import AppSettings
 
 
 class Pipelinelauf:
-    u"""Gemeinsame Grundlage der Video-zu-BVH-Läufe."""
+    """Gemeinsame Grundlage der Video-zu-BVH-Läufe."""
 
     #: So viele Zeichen der Fehlerausgabe landen in der Meldung. Mehr sprengt
     #: die Anzeige, weniger schneidet die eigentliche Ursache ab — sie steht
@@ -40,17 +41,17 @@ class Pipelinelauf:
 
     @property
     def einstellungen(self):
-        u"""Die Anwendungseinstellungen — einmal geholt, dann gehalten."""
+        """Die Anwendungseinstellungen — einmal geholt, dann gehalten."""
         if self._einstellungen is None:
             self._einstellungen = AppSettings.load()
         return self._einstellungen
 
     @property
     def stamm(self):
-        u"""Dateiname des Auftrags ohne Endung — Grundlage der Ausgabenamen."""
-        return self.job.name.rsplit('.', 1)[0]
+        """Dateiname des Auftrags ohne Endung — Grundlage der Ausgabenamen."""
+        return self.job.name.rsplit(".", 1)[0]
 
     @classmethod
     def fehlerausschnitt(cls, text):
-        u"""Das Ende der Fehlerausgabe, auf `MAX_FEHLERZEICHEN` gekürzt."""
-        return (text or '')[-cls.MAX_FEHLERZEICHEN:]
+        """Das Ende der Fehlerausgabe, auf `MAX_FEHLERZEICHEN` gekürzt."""
+        return (text or "")[-cls.MAX_FEHLERZEICHEN :]

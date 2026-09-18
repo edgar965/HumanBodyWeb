@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Anpassungslauf` — und der Körper, den er nicht anfassen darf.
+"""`Anpassungslauf` — und der Körper, den er nicht anfassen darf.
 
 WARUM DIESER TEST EXISTIERT (31.08.2026)
 ----------------------------------------
@@ -25,6 +25,7 @@ gerade nicht da ist.
 
 Aufruf:  python manage.py test core.tests.unit.test_kleidungsanpassung_lauf
 """
+
 import numpy as np
 from django.test import SimpleTestCase
 
@@ -32,13 +33,17 @@ from ._humanbodypfad import Humanbodypfad
 
 Humanbodypfad.setzen()
 
-from GarmentFitter.fitter import (Anpassungslauf, Armmaske,  # noqa: E402
-                                  Koerperpolster, Schrittboden)
+from GarmentFitter.fitter import (
+    Anpassungslauf,
+    Armmaske,  # noqa: E402
+    Koerperpolster,
+    Schrittboden,
+)
 from ._sicher import Sicher
 
 
 class Koerperbau:
-    u"""Baut Koerper- und Kleidernetze fuer diese Faelle.
+    """Baut Koerper- und Kleidernetze fuer diese Faelle.
 
     Stand bis zum 02.09.2026 als freie Funktionen auf
     Modulebene (Befund `freie-funktionen`).
@@ -46,7 +51,7 @@ class Koerperbau:
 
     @staticmethod
     def koerper(hoehe=1.7, ringe=24, ecken=16):
-        u"""Eine stehende Röhre als Ersatzkörper: Vertices und Vierecke."""
+        """Eine stehende Röhre als Ersatzkörper: Vertices und Vierecke."""
         winkel = np.linspace(0, 2 * np.pi, ecken, endpoint=False)
         punkte, flaechen = [], []
         for i in range(ringe):
@@ -64,33 +69,36 @@ class Koerperbau:
 
     @staticmethod
     def kleid(koerper):
-        u"""Ein grobes Netz um die untere Körperhälfte."""
+        """Ein grobes Netz um die untere Körperhälfte."""
         punkte = koerper[koerper[:, 2] < 0.9].copy()
         punkte *= np.array([1.25, 1.25, 1.0])
         n = len(punkte)
-        flaechen = np.array([[i, (i + 1) % n, (i + 2) % n, (i + 3) % n]
-                             for i in range(0, n - 4, 2)])
+        flaechen = np.array([[i, (i + 1) % n, (i + 2) % n, (i + 3) % n] for i in range(0, n - 4, 2)])
         return punkte, flaechen
 
 
 class KoerperBleibtUnberuehrtTest(SimpleTestCase):
-    u"""Der Aufrufer bekommt sein Körperarray unverändert zurück."""
+    """Der Aufrufer bekommt sein Körperarray unverändert zurück."""
 
     def _lauf(self, min_dist_mm, crotch_depth_mm):
         body, body_faces = Koerperbau.koerper()
         vorher = body.copy()
         verts, faces = Koerperbau.kleid(body)
-        Anpassungslauf(verts, faces, body, body_faces=body_faces,
-                       coordinate_system='blender',
-                       min_dist_mm=min_dist_mm,
-                       crotch_depth_mm=crotch_depth_mm).fahren()
+        Anpassungslauf(
+            verts,
+            faces,
+            body,
+            body_faces=body_faces,
+            coordinate_system="blender",
+            min_dist_mm=min_dist_mm,
+            crotch_depth_mm=crotch_depth_mm,
+        ).fahren()
         return np.abs(body - vorher)
 
     def test_ohne_polster_mit_schritttiefe(self):
-        u"""DER FALL, DER FRÜHER SCHIEFGING: kein Polster, aber Schritttiefe."""
+        """DER FALL, DER FRÜHER SCHIEFGING: kein Polster, aber Schritttiefe."""
         abweichung = self._lauf(min_dist_mm=0.0, crotch_depth_mm=4.0)
-        self.assertEqual(abweichung.max(), 0.0,
-                         'fit_garment hat den Körper des Aufrufers verändert')
+        self.assertEqual(abweichung.max(), 0.0, "fit_garment hat den Körper des Aufrufers verändert")
 
     def test_mit_polster(self):
         self.assertEqual(self._lauf(2.0, 4.0).max(), 0.0)
@@ -100,20 +108,18 @@ class KoerperBleibtUnberuehrtTest(SimpleTestCase):
 
 
 class KoerperpolsterTest(SimpleTestCase):
-    u"""Das Polster ist immer ein eigenes Array — auch bei Dicke 0."""
+    """Das Polster ist immer ein eigenes Array — auch bei Dicke 0."""
 
     def setUp(self):
         self.body, self.faces = Koerperbau.koerper()
 
     def test_eigenes_array_ohne_dicke(self):
-        polster = Koerperpolster(self.body, self.faces,
-                                 self.body[:, 0].mean(), min_dist_mm=0.0)
+        polster = Koerperpolster(self.body, self.faces, self.body[:, 0].mean(), min_dist_mm=0.0)
         self.assertIsNot(polster.netz, self.body)
 
     def test_dicke_wirkt_nach_aussen(self):
-        u"""3 mm Polster heben jeden Punkt um genau 3 mm an."""
-        polster = Koerperpolster(self.body, self.faces,
-                                 self.body[:, 0].mean(), min_dist_mm=3.0)
+        """3 mm Polster heben jeden Punkt um genau 3 mm an."""
+        polster = Koerperpolster(self.body, self.faces, self.body[:, 0].mean(), min_dist_mm=3.0)
         weg = np.linalg.norm(polster.netz - self.body, axis=1)
         self.assertAlmostEqual(float(weg.max()), 0.003, places=9)
         self.assertAlmostEqual(float(weg.min()), 0.003, places=9)
@@ -125,7 +131,7 @@ class KoerperpolsterTest(SimpleTestCase):
 
 
 class ArmmaskeTest(SimpleTestCase):
-    u"""Die beiden Mischrichtungen sind wirklich gegenläufig."""
+    """Die beiden Mischrichtungen sind wirklich gegenläufig."""
 
     def setUp(self):
         self.body, _ = Koerperbau.koerper()
@@ -139,13 +145,12 @@ class ArmmaskeTest(SimpleTestCase):
         self.assertIsNone(maske.sichern(verts))
 
     def test_roehre_hat_keine_arme(self):
-        u"""Ein Körper ohne abstehende Arme darf keine Armmaske ergeben."""
+        """Ein Körper ohne abstehende Arme darf keine Armmaske ergeben."""
         verts = self.body.copy()
-        self.assertFalse(Armmaske(verts, self.body,
-                                  self.body[:, 0].mean()).betroffen)
+        self.assertFalse(Armmaske(verts, self.body, self.body[:, 0].mean()).betroffen)
 
     def test_schuetzen_und_uebernehmen_sind_gegenlaeufig(self):
-        u"""Dieselben Eingaben, entgegengesetztes Ergebnis.
+        """Dieselben Eingaben, entgegengesetztes Ergebnis.
 
         Genau diese Verwechslung sollte der Umbau ausschließen: In der
         alten Funktion standen beide Formeln sechsmal im Fließtext, mit
@@ -170,17 +175,16 @@ class ArmmaskeTest(SimpleTestCase):
 
 
 class SchrittbodenTest(SimpleTestCase):
-    u"""Boden bestimmen, anheben, halten."""
+    """Boden bestimmen, anheben, halten."""
 
     def setUp(self):
         self.body, _ = Koerperbau.koerper()
 
     def test_kein_boden_ausserhalb_der_hoehenspanne(self):
-        u"""Ein Stück weit über dem Körper bekommt keinen Schrittboden."""
+        """Ein Stück weit über dem Körper bekommt keinen Schrittboden."""
         weit_oben = self.body.copy()
         weit_oben[:, 2] += 5.0
-        boden = Schrittboden.bestimmen(weit_oben, self.body,
-                                       self.body[:, 0].mean(), 6.0)
+        boden = Schrittboden.bestimmen(weit_oben, self.body, self.body[:, 0].mean(), 6.0)
         self.assertFalse(boden.vorhanden)
 
     def test_leerer_boden_laesst_die_vertices_liegen(self):
@@ -190,15 +194,20 @@ class SchrittbodenTest(SimpleTestCase):
         self.assertIs(boden.halten(verts), verts)
 
     def test_hoehe_liegt_ueber_dem_damm(self):
-        boden = Schrittboden.bestimmen(self.body, self.body,
-                                       self.body[:, 0].mean(), 6.0)
+        boden = Schrittboden.bestimmen(self.body, self.body, self.body[:, 0].mean(), 6.0)
         self.assertTrue(boden.vorhanden)
-        self.assertAlmostEqual(Sicher.wert(boden.hoehe, 'Höhe') - Sicher.wert(boden.damm_z, 'Damm'), 0.006, places=9)
+        self.assertAlmostEqual(
+            Sicher.wert(boden.hoehe, "Höhe") - Sicher.wert(boden.damm_z, "Damm"), 0.006, places=9
+        )
 
     def test_anheben_zieht_haengende_vertices_nach_oben(self):
         boden = Schrittboden(hoehe=0.5, koerpermitte_x=0.0, damm_z=0.494)
-        verts = np.array([[0.0, 0.0, 0.30],     # mittig, tief → wird gehoben
-                          [0.30, 0.0, 0.30]])   # weit außen  → bleibt liegen
+        verts = np.array(
+            [
+                [0.0, 0.0, 0.30],  # mittig, tief → wird gehoben
+                [0.30, 0.0, 0.30],
+            ]
+        )  # weit außen  → bleibt liegen
         gehoben = boden.anheben(verts.copy(), 0.006)
         self.assertGreater(gehoben[0, 2], verts[0, 2])
         self.assertAlmostEqual(float(gehoben[1, 2]), 0.30)

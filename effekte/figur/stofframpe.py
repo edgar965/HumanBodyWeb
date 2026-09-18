@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Stofframpe — die Zwischenposen von der A-Haltung zur ersten Pose, im Gelenkraum.
+"""Stofframpe — die Zwischenposen von der A-Haltung zur ersten Pose, im Gelenkraum.
 
 WARUM (gemessen 12.09.2026): Der Stoff startet in seiner Drapierung auf der
 A-Haltung; die erste Pose des Tanzes liegt weit davon (Koerperpunkte im
@@ -15,13 +15,13 @@ Koerper- und Bundpunkte per LBS (`Hautbahn._lbs`). Der Koerper
 artikuliert dann wie ein Koerper — Beine schwenken, statt zu springen —
 und der Stoff wird von innen geschoben, nicht tangential geschleift.
 """
+
 import numpy as np
 
-__all__ = ['Stofframpe']
+__all__ = ["Stofframpe"]
 
 
 class Stofframpe:
-
     def __init__(self, bahn):
         self.bahn = bahn
         self.knochen = bahn.knochen
@@ -31,14 +31,14 @@ class Stofframpe:
     # ------------------------------------------------------------ Lokal
 
     def _lokal(self, name, nummer):
-        u"""Lokale Drehung [x, y, z, w] eines Knochens in Bild `nummer`."""
+        """Lokale Drehung [x, y, z, w] eines Knochens in Bild `nummer`."""
         from anim_umsetzung import Animumsetzung
         from figur_nach_cody import Codyfigur
+
         spur = (self.bahn.spuren or {}).get(name)
         if spur is not None and nummer * 4 + 4 <= len(spur):
-            return Codyfigur.nach_blender(
-                np.asarray(spur[nummer * 4:nummer * 4 + 4], dtype=np.float64))
-        return Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
+            return Codyfigur.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
+        return Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
 
     @staticmethod
     def slerp(a, b, t):
@@ -51,27 +51,25 @@ class Stofframpe:
             q = a + t * (b - a)
             return q / np.linalg.norm(q)
         winkel = np.arccos(cos)
-        return ((np.sin((1.0 - t) * winkel) * a + np.sin(t * winkel) * b)
-                / np.sin(winkel))
+        return (np.sin((1.0 - t) * winkel) * a + np.sin(t * winkel) * b) / np.sin(winkel)
 
     # ------------------------------------------------------------- Welt
 
     def lage(self, anteil):
-        u"""Weltlagen aller Knochen fuer den Anteil `anteil` (0 = Ruhe, 1 = Bild 0)."""
+        """Weltlagen aller Knochen fuer den Anteil `anteil` (0 = Ruhe, 1 = Bild 0)."""
         from anim_umsetzung import Animumsetzung
         from knochenwelt import Knochenwelt
 
         def lokal(name):
-            ruhe = Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
+            ruhe = Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
             return self.slerp(ruhe, self._lokal(name, self.ziel), anteil)
 
         return Knochenwelt.loesen(self.knochen, self.namen, lokal)
 
     def punkte(self, hautbahnen, schritte):
-        u"""Je Zwischenpose die LBS-Punkte jeder Hautbahn: Liste von
+        """Je Zwischenpose die LBS-Punkte jeder Hautbahn: Liste von
         (schritte, n, 3)-Feldern, `anteil` von 1/schritte bis 1."""
-        aus = [np.zeros((schritte, len(h.punkte), 3), dtype=np.float32)
-               for h in hautbahnen]
+        aus = [np.zeros((schritte, len(h.punkte), 3), dtype=np.float32) for h in hautbahnen]
         # Die Lagen bleiben referenziert: `Hautbahn._matrizen` merkt sich
         # Matrizen unter `id(lage)` — ein freigegebenes und neu vergebenes
         # `id` traefe sonst den falschen Eintrag.

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`Zeitleistenfolge`: die Zeitleiste blättert beim Abspielen mit dem Kopf.
+"""`Zeitleistenfolge`: die Zeitleiste blättert beim Abspielen mit dem Kopf.
 
 WARUM (Edgar, 13.09.2026: „bei Play soll die Zeitleiste die Timeline
 mitziehen, im Moment ist der Playhead außerhalb des sichtbaren Bereichs"):
@@ -21,14 +21,14 @@ Sabotage-Gegenprobe: in `verschiebung` `x < sichtbar` → `x <= sichtbar`
 → Fall 1 rot; Aufruf in `studioschleife.js` hinter `renderTimeline()` →
 Fall 4 rot.
 """
+
 from django.conf import settings
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'zeitleiste_folgen.js')
-SCHLEIFE = (settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
-            / 'studioschleife.js')
+MODUL = Jsmodul("bvh_studio", "zeitleiste_folgen.js")
+SCHLEIFE = settings.BASE_DIR / "static" / "viewer" / "bvh_studio" / "studioschleife.js"
 
 SKRIPT = """
 const { Zeitleistenfolge: Z } = await import(MODUL);
@@ -61,13 +61,11 @@ console.log(JSON.stringify({ ok: true }));
 
 
 class ZeitleistenfolgeTest(SimpleTestCase):
-
     def test_die_leiste_blaettert_mit_dem_kopf(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
+        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
 
     def test_die_studioschleife_zieht_vor_dem_zeichnen_nach(self):
-        text = SCHLEIFE.read_text(encoding='utf-8')
-        rumpf = text[text.index('abspielen(dt) {'):text.index('kameraspurAktiv() {')]
-        aufruf = rumpf.index('Zeitleistenfolge.nachziehen(state, '
-                             'Zeitleistenflaeche.breite - HEADER_WIDTH);')
-        self.assertLess(aufruf, rumpf.index('renderTimeline();'))
+        text = SCHLEIFE.read_text(encoding="utf-8")
+        rumpf = text[text.index("abspielen(dt) {") : text.index("kameraspurAktiv() {")]
+        aufruf = rumpf.index("Zeitleistenfolge.nachziehen(state, Zeitleistenflaeche.breite - HEADER_WIDTH);")
+        self.assertLess(aufruf, rumpf.index("renderTimeline();"))

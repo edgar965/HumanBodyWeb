@@ -32,18 +32,18 @@ class Messwerte:
 
     def __getattr__(self, name):
         # Nur gerufen, wenn das Attribut nicht regulaer existiert.
-        werte = self.__dict__.get('_werte') or {}
+        werte = self.__dict__.get("_werte") or {}
         if name in werte:
             return werte[name]
         raise AttributeError(
-            '%s hat keinen Wert `%s` — vorhanden: %s'
-            % (type(self).__name__, name, ', '.join(sorted(werte)) or '(keine)'))
+            "%s hat keinen Wert `%s` — vorhanden: %s"
+            % (type(self).__name__, name, ", ".join(sorted(werte)) or "(keine)")
+        )
 
     def __contains__(self, name):
         return name in self._werte
 
     def __repr__(self):
         if self.fehler:
-            return '<Messwerte gescheitert: %s>' % self.fehler
-        return '<Messwerte %s>' % ', '.join(
-            '%s=%r' % paar for paar in sorted(self._werte.items()))
+            return "<Messwerte gescheitert: %s>" % self.fehler
+        return "<Messwerte %s>" % ", ".join("%s=%r" % paar for paar in sorted(self._werte.items()))

@@ -17,14 +17,15 @@ die `werkzeug/vorbilder_messen.py` schreibt (181 Stücke in 10 s, davon 121
 gedeutet). Fehlt die Datei, kommt eine leere Liste und `gesamt: 0` — die
 Oberfläche sagt das dann, statt einen leeren Kasten zu zeigen.
 """
+
 import logging
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
 
-__all__ = ['Garmentvorbilder']
+__all__ = ["Garmentvorbilder"]
 
 
 class Garmentvorbilder:
@@ -35,20 +36,16 @@ class Garmentvorbilder:
     def vorbilder(request):
         from GarmentCode.vorbildpresets import Vorbildpresets
 
-        vorlage = (request.GET.get('vorlage') or '').strip()
+        vorlage = (request.GET.get("vorlage") or "").strip()
         if not vorlage:
-            return JsonResponse({'fehler': 'Kein Kleidungsstück angegeben'},
-                                status=400)
+            return JsonResponse({"fehler": "Kein Kleidungsstück angegeben"}, status=400)
         try:
             liste = Vorbildpresets.fuer(vorlage)
             gesamt = Vorbildpresets.anzahl()
-        except Exception as fehler:                              # noqa: BLE001
-            logger.exception('Vorbilder für %s nicht lesbar', vorlage)
-            return JsonResponse(
-                {'fehler': '%s: %s' % (type(fehler).__name__, fehler)},
-                status=500)
-        return JsonResponse({'vorlage': vorlage, 'vorbilder': liste,
-                             'gesamt': gesamt})
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception("Vorbilder für %s nicht lesbar", vorlage)
+            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+        return JsonResponse({"vorlage": vorlage, "vorbilder": liste, "gesamt": gesamt})
 
     @staticmethod
     @require_GET
@@ -61,7 +58,8 @@ class Garmentvorbilder:
         """
         from django.http import FileResponse, HttpResponseNotFound
         from GarmentCode.vorbildpresets import Vorbildpresets
+
         pfad = Vorbildpresets.bildpfad(name)
         if not pfad:
-            return HttpResponseNotFound('Kein Bild')
-        return FileResponse(open(pfad, 'rb'), content_type='image/png')
+            return HttpResponseNotFound("Kein Bild")
+        return FileResponse(open(pfad, "rb"), content_type="image/png")
