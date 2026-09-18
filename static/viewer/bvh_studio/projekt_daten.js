@@ -146,7 +146,7 @@ export class Projektdaten {
             blendIn: c.blendIn, blendOut: c.blendOut,
         };
         if (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf'
-            || c.type === 'script') {
+            || c.type === 'script' || c.type === 'lipsync') {
             cd.data = c.data;
         } else if (c.type === 'model') {
             cd.data = { preset: c.data.preset, bodyType: c.data.bodyType,

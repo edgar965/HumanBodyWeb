@@ -43,6 +43,7 @@ class UnterteilerAttrappe:
         self.triangles = np.array([[0, 1, 2], [1, 2, 3], [0, 2, 3]])
         self.uvs = np.zeros((4, 2), dtype=np.float32)
         self.groups = [{'materialIndex': 0, 'start': 0, 'count': 9}]
+        self.levels = 2   # die Antwort nennt die Stufe (`netzqualitaet`, 17.09.2026)
 
     def subdivide(self, punkte):
         return np.repeat(punkte, 2, axis=0)
@@ -167,6 +168,9 @@ class MitUnterteilerTest(NetzanfrageBasis):
         self.assertIn('normals', antwort)
         self.assertEqual(antwort['face_count'], 3, 'aus cc.triangles')
         self.assertEqual(antwort['groups'], self.unterteiler.groups)
+        # Stufe und Hautverschiebung fuer den Browser (`Hauttextur.verschieben`).
+        self.assertEqual(antwort['netzqualitaet']['stufen'], 2)
+        self.assertIn(antwort['netzqualitaet']['verschiebung'], (True, False))
 
     def test_nur_punkte_spart_dreiecke_und_uvs(self):
         anfrage = self.anfrage('?nur_punkte=1')

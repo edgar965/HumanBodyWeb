@@ -10,6 +10,7 @@ import { Maskenbausteine as M } from './bausteine.js';
 import { Schluesselbildeigenschaften } from './klip_schluesselbilder.js';
 import { Mimikeigenschaften } from './mimik.js';
 import { Scripteigenschaften } from './script.js';
+import { Lipsynceigenschaften } from './lipsync.js';
 
 /** Vorgabelaenge, wenn ein Dauerfeld leer gelassen wird. */
 const VORGABE_BILDER = 300;
@@ -21,6 +22,7 @@ export class Klipeigenschaften {
         }
         if (clip.type === 'mimik_kf') return Mimikeigenschaften.schluesselMaske(clip);
         if (clip.type === 'script') return Scripteigenschaften.clipMaske(clip);
+        if (clip.type === 'lipsync') return Lipsynceigenschaften.maske(clip);
         if (clip.type === 'audio') return Klipeigenschaften._ton(clip);
         if (clip.type === 'object_clip') return Klipeigenschaften._objekt(clip);
         if (clip.type === 'model') return Klipeigenschaften._modell(clip);
@@ -35,6 +37,8 @@ export class Klipeigenschaften {
             Mimikeigenschaften.schluesselBinden(track, clip);
         } else if (art === 'script') {
             Scripteigenschaften.clipBinden(track, clip);
+        } else if (art === 'lipsync') {
+            Lipsynceigenschaften.binden(track, clip);
         } else if (art === 'audio') {
             Klipeigenschaften._tonBinden(clip);
         } else if (art === 'object_clip') {

@@ -1,0 +1,69 @@
+{% comment %}
+Teilvorlage von `andere_modelle.html`: die Rangliste als djangoBase-Tabelle —
+einmal für die Ganzkörper, einmal für „nur Kopf" (Edgar, 17.09.2026: „ich
+brauche ganze Körper, mach getrennte Liste für nur Kopf").
+
+  eintraege   die Zeilen (mit `bilder`), aus `Figurquellen`/`Figurkoepfe`
+  kennung     `koerper` oder `kopf` — Tabellen-ID, Sortierschlüssel, Sprungziele
+
+Punkte, Vierecke und Dreiecke des Basisnetzes stehen in getrennten Spalten
+(„mach getrennte Spalten für die Punkte, Vierecke"); die Vergleichsgröße ist
+die Dreieckszahl der höchsten Stufe (`Netzmasse`), ein „≈" heißt abgeleitet.
+Sie steht direkt neben den Basis-Dreiecken („die Spalte mit Dreiecke höchste
+Stufe gleich neben der anderen Dreieck-Spalte"), die Unterteilungen dahinter.
+Zahlenzellen tragen `data-sort` mit dem Rohwert; die Bildspalte ist mit
+`data-sort-aus` ausgenommen. Eigene Figurarten (`eigen`) sind rot.
+{% endcomment %}
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable am-tabelle" id="andereModelle-{{ kennung }}"
+       data-sort-key="hilfe-andere-modelle-{{ kennung }}">
+  <thead>
+    <tr>
+      <th class="num">Rang</th>
+      <th>Quelle</th>
+      <th class="num">Punkte (Basis)</th>
+      <th class="num">Vierecke (Basis)</th>
+      <th class="num">Dreiecke (Basis)</th>
+      <th class="num">Dreiecke (höchste Stufe)</th>
+      <th>Unterteilungen</th>
+      <th>Texturen</th>
+      <th>Frau/Mann</th>
+      <th>Rig/Morphs</th>
+      <th>Preis (privat)</th>
+      <th>Lizenz</th>
+      <th data-sort-aus="1">Webseite</th>
+      <th data-sort-aus="1">Bild</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in eintraege %}
+    <tr{% if e.klasse %} class="{{ e.klasse }}"{% endif %}>
+      <td class="num" data-sort="{{ e.rang|default_if_none:'' }}">
+        {% if e.rang is not None %}<span class="am-rang">{{ e.rang }}</span>{% else %}<span class="am-fehlt">ohne Rang</span>{% endif %}
+      </td>
+      <td data-sort="{{ e.name }}">
+        <a class="am-name" href="#{{ kennung }}-{{ e.ordner }}">{{ e.name }}</a>
+        {% if e.zusatz %}<br><span class="am-zusatz">{{ e.zusatz }}</span>{% endif %}
+      </td>
+      <td class="num" data-sort="{{ e.punkte|default_if_none:'' }}">{{ e.basis_punkte_text }}</td>
+      <td class="num" data-sort="{{ e.vierecke|default_if_none:'' }}">{{ e.basis_vierecke_text }}</td>
+      <td class="num" data-sort="{{ e.basis_dreiecke|default_if_none:'' }}">{{ e.basis_dreiecke_text }}</td>
+      <td class="num am-vergleich" data-sort="{{ e.hoechst_dreiecke|default_if_none:'' }}">{{ e.hoechst_text }}</td>
+      <td data-sort="{{ e.stufen }}">{{ e.stufen_text }}</td>
+      <td>{{ e.texturen }}</td>
+      <td>{{ e.geschlecht }}</td>
+      <td>{{ e.rig }}</td>
+      <td>{{ e.preis }}</td>
+      <td>{{ e.lizenz }}</td>
+      <td class="am-webseite">
+        {% for text, adresse in e.links %}<a href="{{ adresse }}" target="_blank" rel="noopener" title="{{ adresse }}">{{ text }}</a>{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      </td>
+      <td class="am-mini">
+        {% if e.bilder %}<a href="#{{ kennung }}-{{ e.ordner }}"><img loading="lazy" alt="{{ e.name }}"
+          src="{% url 'hilfe_andere_modelle_vorschau' e.ordner e.bilder.0 %}"></a>{% else %}<span class="am-fehlt">–</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

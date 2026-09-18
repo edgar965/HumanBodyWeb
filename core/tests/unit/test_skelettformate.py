@@ -60,6 +60,7 @@ class RegistryTest(SimpleTestCase):
     AUS_DEM_PAKET = {
         'CMU': 'SkeletonCMU',
         'MIXAMO': 'SkeletonMixamo',
+        'GENESIS9': 'SkeletonGenesis9',
         'MOCAPNET': 'SkeletonMocapNet',
         'AIST': 'SkeletonAIST_SMPL',
         'SMPLX': 'SkeletonSMPLX',

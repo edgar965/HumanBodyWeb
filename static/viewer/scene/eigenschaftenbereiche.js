@@ -15,6 +15,7 @@ import { Reiterfreigabe } from './reiterfreigabe.js';
 export class Eigenschaftenbereiche {
 
     static PAARE = [['prop-empty', 'prop-content'], ['assets-empty', 'assets-content']];
+    static GENESIS9 = 'assets-genesis9-section';
     static HUMANBODY = ['prop-equipped-section', 'prop-bodytype-section',
                         'prop-details-section', 'prop-morphs-section'];
 
@@ -54,5 +55,32 @@ export class Eigenschaftenbereiche {
         leer.style.display = '';
         inhalt.classList.add('hb-versteckt');
         Umagarderobe.fuellen(leer, figur);
+    }
+
+    /**
+     * Der Assets-Reiter für eine Genesis-9-Figur (17.09.2026, Edgar: „machst
+     * Du einen extra Reiter dafür bei Assets?"): der Bereich „Genesis 9 –
+     * Daz-Garderobe" (`_genesis9_garderobe.html`) statt der HumanBody-
+     * Werkzeuge. Verborgen wird nur, was HIER verborgen wurde
+     * (`data-g9Verborgen`) — ein Bereich, den ein anderer Weg versteckt
+     * hält, kommt beim Zurückschalten nicht ungefragt wieder. `null` =
+     * keine Genesis-9-Figur.
+     */
+    static genesis9Garderobe(figur) {
+        const inhalt = document.getElementById('assets-content');
+        const eigener = document.getElementById(Eigenschaftenbereiche.GENESIS9);
+        if (!inhalt || !eigener) return;
+        eigener.classList.toggle('hb-versteckt', !figur);
+        for (const bereich of inhalt.querySelectorAll(':scope > .panel-section')) {
+            if (bereich === eigener) continue;
+            if (figur) {
+                if (bereich.classList.contains('hb-versteckt')) continue;
+                bereich.classList.add('hb-versteckt');
+                bereich.dataset.g9Verborgen = '1';
+            } else if (bereich.dataset.g9Verborgen) {
+                bereich.classList.remove('hb-versteckt');
+                delete bereich.dataset.g9Verborgen;
+            }
+        }
     }
 }

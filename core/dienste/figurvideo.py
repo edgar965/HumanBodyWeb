@@ -106,6 +106,8 @@ class Figurvideo:
         return {
             'body_type': daten.get('body_type') or 'Female_Caucasian',
             'morphs': dict(daten.get('morphs') or {}),
+            # Alter/Masse/Tonus: Koerperform und Hautverschiebung (17.09.2026).
+            'meta': dict(daten.get('meta') or {}),
             'details': dict(daten.get('details') or {}),
             'bvh': cls._bvh_pfad(daten.get('bvh_url') or ''),
             'ab_sekunden': max(float(daten.get('ab_sekunden') or 0.0), 0.0),

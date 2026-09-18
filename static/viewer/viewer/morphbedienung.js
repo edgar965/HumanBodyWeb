@@ -47,8 +47,10 @@ export class Morphbedienung {
 
     bauen() {
         this.koerperart();
-        Metaregler.verdrahten(this.daten.meta_sliders,
-                              (name, wert) => wsSend({ type: 'meta', name, value: wert }));
+        Metaregler.verdrahten(this.daten.meta_sliders, (name, wert) => {
+            wsSend({ type: 'meta', name, value: wert });
+            state.modell?.metaSetzen?.(name, wert);   // Hautverschiebung folgt
+        });
         Hautbedienung.verdrahten();
         this.morphliste();
         this.zuruecksetzenKnopf();

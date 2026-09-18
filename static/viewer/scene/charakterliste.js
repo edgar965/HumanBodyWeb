@@ -44,6 +44,17 @@ import { Speichernmenue } from './speichernmenue.js';
  * @param wahl   `{lage, name}` — Lage wie im Dialog, Name für den Katalog
  */
 export async function charakterAusModelldaten(daten, wahl = {}) {
+    // Eine Datei vom Vormittag des 17.09.2026: Genesis 9 als HumanBody-Datei
+    // (`body_type: "Genesis 9"`, ohne `quelle`) — die Grundfigur.
+    if (daten && !daten.quelle && daten.body_type === 'Genesis 9') {
+        daten = { ...daten, quelle: 'genesis9', figur: { figur: 'basis' } };
+    }
+    // Eine gespeicherte Figur mit eigener Quelle (17.09.2026): ihre Klasse
+    // baut sie aus `figur` (`Figurarten.KLASSEN[quelle].fromJSON`), die Lage
+    // kommt aus dem Dialog, nicht aus der Datei.
+    if (daten?.quelle && daten.quelle !== 'modell' && Figurarten.KLASSEN[daten.quelle]) {
+        return figurAusModelldaten(daten, wahl);
+    }
     const id = generateCharacterId();
     const inst = new CharacterInstance(id, daten);
     if (wahl.name) {
@@ -84,6 +95,28 @@ export async function charakterAusModelldaten(daten, wahl = {}) {
     fn.selectCharacter(id);
     markDirty();
 
+    return inst;
+}
+
+async function figurAusModelldaten(daten, wahl) {
+    const Klasse = Figurarten.KLASSEN[daten.quelle];
+    const name = wahl.name || daten.name || null;
+    const inst = await Klasse.fromJSON({
+        ...(daten.figur || {}), id: generateCharacterId(),
+        presetName: name || daten.figur?.presetName, transform: null,
+    });
+    if (name) {
+        inst.presetKey = name;
+        inst.presetName = name;
+    }
+    Figurplatzierung.anwenden(inst, wahl.lage || null);
+    state.characters.set(inst.id, inst);
+    state.scene.add(inst.group);
+    Startmessung.eintragen('FIGUR SICHTBAR', performance.now());
+    fn.updateCharacterListUI();
+    fn.updateVertexCount();
+    fn.selectCharacter(inst.id);
+    markDirty();
     return inst;
 }
 

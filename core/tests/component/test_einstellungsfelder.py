@@ -30,7 +30,8 @@ from core.daten.einstellungsfelder import Einstellungsfelder
 #: `mp_min_*` steht auf der 2D- und der 3D-Seite und ist DIESELBE Spalte.
 SEITEN = {
     '/settings/model/': ('progress_update_interval', 'show_rig_config',
-                         'show_rig_animations'),
+                         'show_rig_animations', 'unterteilung_browser',
+                         'unterteilung_film', 'haut_verschiebung'),
     '/settings/scene/': ('show_rig_scene',),
     '/settings/smpl/': ('smpl_default_wireframe',),
     '/settings/video-to-bvh-2d/': ('mp_min_detection_confidence',

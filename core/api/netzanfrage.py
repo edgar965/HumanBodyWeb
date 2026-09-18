@@ -31,6 +31,7 @@ from ..daten.materialgruppen import Materialgruppen
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.lippenmaske import Lippenmaske
+from ..dienste.netzqualitaet import Netzqualitaet
 from ..models import AppSettings
 
 logger = logging.getLogger(__name__)
@@ -127,6 +128,11 @@ class Netzanfrage:
             # Browsers — das Netz selbst hat keine — und seit 13.09.2026 der
             # Saum mit Abständen zum Rand, damit die Farbe glatt ausläuft.
             weitere['lippen'] = Lippenmaske.lippen(self.geschlecht, cc.uvs, cc)
+            # Was der Browser ueber das Netz wissen muss (17.09.2026): die
+            # Stufe und ob er die Hautverschiebung (`displacementMap`) setzt.
+            weitere['netzqualitaet'] = {
+                'stufen': cc.levels,
+                'verschiebung': Netzqualitaet.verschiebung()}
         antwort = Netzantwort.aus(
             feine, normals=cc.compute_quad_normals(feine),
             faces=None if self.nur_punkte else cc.triangles, **weitere)

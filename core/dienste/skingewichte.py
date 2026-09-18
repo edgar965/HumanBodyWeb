@@ -26,7 +26,7 @@ class Skingewichte:
 
     _basis = {}            # {'female': {...}, 'male': {...}}
     _arrays = {}           # {'female': (indices, weights)}
-    _propagiert_json = {}  # {'female': '…'} — fertig kodiert, siehe propagiert_json
+    _propagiert_json = {}  # {('female', 74128): '…'} — fertig kodiert
 
     #: So viele Knochen wirken hoechstens auf einen Vertex (Three.js-Grenze).
     EINFLUESSE = 4
@@ -162,13 +162,16 @@ class Skingewichte:
         Leerzeichen, was bei dieser Menge an Zahlen mehrere hundert Kilobyte
         reines Fuellzeichen sind.
         """
-        if geschlecht in cls._propagiert_json:
-            return cls._propagiert_json[geschlecht]
+        # Je Unterteilungsstufe ein Eintrag (17.09.2026): Die Stufe ist eine
+        # Einstellung, und Gewichte fuer 74.128 Punkte passen nicht zu 286.376.
+        schluessel = (geschlecht, unterteiler.sub_vertex_count if unterteiler else 0)
+        if schluessel in cls._propagiert_json:
+            return cls._propagiert_json[schluessel]
         daten = cls._propagieren(geschlecht, unterteiler)
         if daten is None:
             return None
-        cls._propagiert_json[geschlecht] = json.dumps(daten, separators=(',', ':'))
-        return cls._propagiert_json[geschlecht]
+        cls._propagiert_json[schluessel] = json.dumps(daten, separators=(',', ':'))
+        return cls._propagiert_json[schluessel]
 
     @classmethod
     def _propagieren(cls, geschlecht, unterteiler):

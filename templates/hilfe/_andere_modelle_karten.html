@@ -1,0 +1,45 @@
+{% comment %}
+Teilvorlage von `andere_modelle.html`: eine Karte je Quelle — Rang, Name,
+Urteil, Adressen und die Vorschaubilder aus `3DObjects/humanModels/<ordner>/`.
+Wird zweimal eingebunden (Ganzkörper, nur Kopf):
+
+  karten    die Zeilen mit `links` und `bilder`
+  kennung   `koerper` oder `kopf` — Teil des Sprungziels, auf das die
+            Tabelle verweist (ein Ordner kann in beiden Listen vorkommen)
+{% endcomment %}
+<ol class="am-karten">
+  {% for e in karten %}
+  <li class="am-karte{% if e.klasse %} {{ e.klasse }}{% endif %}" id="{{ kennung }}-{{ e.ordner }}">
+    <h3>
+      {% if e.rang is not None %}<span class="am-rang">{{ e.rang }}</span>{% else %}<span class="am-fehlt">ohne Rang</span>{% endif %}
+      {{ e.name }}{% if e.zusatz %} <span class="am-zusatz">— {{ e.zusatz }}</span>{% endif %}
+    </h3>
+    <p class="am-urteil">{{ e.urteil }}</p>
+    <dl class="am-daten">
+      <dt>Basisnetz</dt><dd>{{ e.basis_punkte_text }} Punkte · {{ e.basis_vierecke_text }} Vierecke · {{ e.basis_dreiecke_text }} Dreiecke</dd>
+      <dt>Höchste Stufe</dt><dd>{{ e.stufen_text }} → <strong>{{ e.hoechst_text }} Dreiecke</strong></dd>
+      <dt>Texturen</dt><dd>{{ e.texturen }}</dd>
+      <dt>Preis / Lizenz</dt><dd>{{ e.preis }} · {{ e.lizenz }}</dd>
+    </dl>
+    {% if e.links %}
+    <ul class="am-links">
+      {% for text, adresse in e.links %}
+      <li><a href="{{ adresse }}" target="_blank" rel="noopener">{{ text }}</a>
+        <span class="am-adresse">{{ adresse }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if e.bilder %}
+    <div class="am-galerie">
+      {% for datei in e.bilder %}
+      <a href="{% url 'hilfe_andere_modelle_bild' e.ordner datei %}" target="_blank" rel="noopener" title="{{ datei }}">
+        <img loading="lazy" alt="{{ e.name }} — {{ datei }}"
+             src="{% url 'hilfe_andere_modelle_vorschau' e.ordner datei %}"></a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="am-fehlt">Keine Vorschaubilder abgelegt — die Adressen oben öffnen.</p>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>

@@ -10,12 +10,13 @@ import { Shaderpatch } from './shaderpatch.js';
  * die Zacken mitten auf der Wange.
  *
  * Der Server schickt seit heute zu den Lippenpunkten einen SAUM: je Punkt
- * nahe am Rand den Vorzeichenabstand in Millimetern (innen positiv,
- * `core/dienste/lippenlinse.py`). Der steht hier als Attribut `lippe` am
- * Netz; der Shader der HAUT mischt daraus je Bildpunkt die Lippenfarbe ein
- * (`smoothstep` über ±SAUM_MM um den Nullpunkt). Weil der Abstand über ein
- * Dreieck linear läuft, liegt der Nullpunkt als gerade Strecke QUER durch
- * das Dreieck — der Rand folgt der Linse, nicht den Kanten.
+ * nahe am Rand den Vorzeichenabstand in Millimetern (innen positiv; seit
+ * 17.09.2026 zur Kantenschleife des Lippenrands, `core/dienste/lippenrand.py`).
+ * Der steht hier als Attribut `lippe` am Netz; der Shader der HAUT mischt
+ * daraus je Bildpunkt die Lippenfarbe ein (`smoothstep` über ±SAUM_MM um den
+ * Nullpunkt). Weil der Abstand über ein Dreieck linear läuft, liegt der
+ * Nullpunkt als gerade Strecke QUER durch das Dreieck — der Rand folgt dem
+ * Feld, nicht den Kanten.
  *
  * Mit Saum wird die Lippengruppe NICHT mehr abgespalten (`Lippenbau`): Ein
  * Dreieck mit drei knapp positiven Ecken stünde sonst als roter Zacken über

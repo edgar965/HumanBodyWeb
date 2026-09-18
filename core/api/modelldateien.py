@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.modellpfad import Modellpfad
 from ..daten.anfragerumpf import Anfragerumpf
+from ..dienste.modellkatalog import Modellkatalog
 
 logger = logging.getLogger('core')
 
@@ -100,24 +101,11 @@ class Modelldateien:
     @staticmethod
     @require_GET
     def modellliste(request):
-        """Nur die Modellvorgaben, ohne Szenen."""
-        ordner = Modelldateien._modellordner()
-        vorgaben = []
-        if os.path.isdir(ordner):
-            for dateiname in sorted(os.listdir(ordner)):
-                if (not dateiname.endswith('.json')
-                        or dateiname.endswith(Modelldateien.SZENE)):
-                    continue
-                name = dateiname[:-5]
-                try:
-                    with open(os.path.join(ordner, dateiname), 'r',
-                              encoding='utf-8') as datei:
-                        json.load(datei)      # nur die Lesbarkeit pruefen
-                except (json.JSONDecodeError, IOError):
-                    logger.warning('%s nicht lesbar — Dateiname als '
-                                   'Bezeichnung', dateiname, exc_info=True)
-                vorgaben.append({'name': name, 'label': name})
-        return JsonResponse({'presets': vorgaben})
+        """Nur die Modellvorgaben, ohne Szenen — je Vorgabe ihre `quelle`
+        (HumanBody `modell`, sonst die Figurart), dazu die Koerpertypen als
+        Standardfiguren (`Modellkatalog`, 17.09.2026)."""
+        return JsonResponse({'presets': Modellkatalog.gespeicherte(),
+                             'koerpertypen': Modellkatalog.koerpertypen()})
 
     # ---------------------------------------------------------- Eine Datei
 
@@ -130,6 +118,11 @@ class Modelldateien:
         if pfad is None:
             return JsonResponse({'error': 'Invalid name'}, status=400)
         if not os.path.isfile(pfad):
+            # Ein Koerpertyp (Female_Caucasian …) ist keine Datei, aber eine
+            # Standardfigur des Dialogs (17.09.2026).
+            vorgabe = Modellkatalog.koerpertyp(name)
+            if vorgabe is not None:
+                return JsonResponse(vorgabe)
             return HttpResponseNotFound('Preset not found: %s' % name)
         with open(pfad, 'r', encoding='utf-8') as datei:
             return JsonResponse(json.load(datei))

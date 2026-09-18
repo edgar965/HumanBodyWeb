@@ -1,0 +1,204 @@
+/* Hilfe -> Architektur -> Andere Modelle: Rangliste und Karten der Figurquellen.
+ *
+ * Eigene Datei statt Inline-Stilen, wie `hilfe_video_to_bvh.css`. Die Tabelle
+ * ist eine djangoBase-Tabelle (`db-tabelle sortable`, Stile aus
+ * djangobase/css/tabellen.css); hier stehen nur die Zugaben dieser Seite.
+ */
+
+/* Volle Breite: zehn Spalten passen nicht in 960 px. */
+.doku-seite.am-breit {
+    max-width: none;
+}
+
+.am-tabelle td {
+    vertical-align: top;
+    font-size: 0.9em;
+}
+
+.am-name {
+    font-weight: 600;
+}
+
+.am-zusatz {
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.am-rang {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 0.3em;
+    border-radius: 4px;
+    background: #7c5cbf;
+    color: #fff;
+    text-align: center;
+    font-weight: 600;
+}
+
+.am-fehlt {
+    opacity: 0.55;
+    font-style: italic;
+}
+
+/* Die Vergleichsspalte: Dreiecke der höchsten Stufe, nach der der Rang geht. */
+.am-tabelle .am-vergleich {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Eigene Figurarten (HumanBody, MakeHuman, UMA, SMPL, SMPL-X) rot —
+ * Edgar, 17.09.2026: „mach die alle rot". Die dreifache Klasse schlägt die
+ * Zeilenfarben aus `tabellen.css` und `dokuseite.css`. */
+.doku-seite tr.am-eigen.am-eigen.am-eigen td,
+.doku-seite tr.am-eigen.am-eigen.am-eigen td a {
+    color: #ff6b6b;
+}
+.doku-seite tr.am-eigen.am-eigen.am-eigen td {
+    background: rgba(255, 107, 107, 0.08);
+}
+.doku-seite .am-karte.am-eigen.am-eigen {
+    border-left-color: #ff6b6b;
+}
+.doku-seite .am-karte.am-eigen.am-eigen h3 {
+    color: #ff6b6b;
+}
+.doku-seite .am-eigen-wort {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+/* Das MB-Lab-Original (Ursprung des HumanBody-Netzes) orange, damit die
+ * Vergleichszeile neben der roten HumanBody-Zeile ins Auge fällt
+ * (Edgar, 17.09.2026: „eine Zeile MB-Lab, damit wir vergleichen können"). */
+.doku-seite tr.am-ursprung.am-ursprung.am-ursprung td,
+.doku-seite tr.am-ursprung.am-ursprung.am-ursprung td a {
+    color: #ff9940;
+}
+.doku-seite tr.am-ursprung.am-ursprung.am-ursprung td {
+    background: rgba(255, 153, 64, 0.08);
+}
+.doku-seite .am-karte.am-ursprung.am-ursprung {
+    border-left-color: #ff9940;
+}
+.doku-seite .am-karte.am-ursprung.am-ursprung h3 {
+    color: #ff9940;
+}
+
+.am-lesehilfe ul {
+    margin: 8px 0 0;
+    padding-left: 1.2em;
+}
+.am-lesehilfe li {
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.am-webseite {
+    font-size: 0.85em;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.am-mini img {
+    height: 56px;
+    width: auto;
+    border-radius: 3px;
+    border: 1px solid #333;
+    display: block;
+}
+
+.am-hinweis {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+/* --- Karten je Quelle ---------------------------------------------- */
+
+.am-karten {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 16px;
+}
+
+.am-karte {
+    background: #1e1e2e;
+    border-radius: 8px;
+    padding: 16px 20px;
+    border-left: 4px solid #7c5cbf;
+}
+
+.am-karte h3 {
+    margin: 0 0 8px;
+    font-size: 1.1em;
+}
+
+.am-urteil {
+    margin: 0 0 8px;
+}
+
+.am-daten {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 14px;
+    margin: 0 0 8px;
+    font-size: 0.9em;
+}
+
+.am-daten dt {
+    opacity: 0.7;
+}
+
+.am-daten dd {
+    margin: 0;
+}
+
+.am-links {
+    margin: 0 0 10px;
+    padding-left: 1.1em;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.am-adresse {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.8em;
+    opacity: 0.6;
+    margin-left: 0.5em;
+    word-break: break-all;
+}
+
+/* --- Bildraster ---------------------------------------------------- */
+
+.am-galerie {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 6px 0 0;
+}
+
+.am-galerie img {
+    height: 140px;
+    width: auto;
+    border-radius: 4px;
+    border: 1px solid #333;
+    display: block;
+    background: #0d1117;
+}
+
+.am-galerie a:hover img {
+    border-color: #7c5cbf;
+}
+
+.am-galerie figure {
+    margin: 0;
+    max-width: 240px;
+}
+
+.am-galerie figcaption {
+    font-size: 0.8em;
+    opacity: 0.75;
+    line-height: 1.4;
+    margin-top: 4px;
+}

@@ -45,6 +45,9 @@ export class Koerpernetz {
     static bauen(daten, THREE) {
         const geometrie = Koerpernetz.geometrie(daten, THREE);
         Koerpernetz.gruppen(geometrie, daten);
+        // Stufe und Hautverschiebung, wie der Server sie entschieden hat
+        // (`netzanfrage.py`, 17.09.2026) — `Hauttextur` liest es an der Geometrie.
+        if (daten.netzqualitaet) geometrie.userData.netzqualitaet = daten.netzqualitaet;
         return { geometrie, materialien: Koerpernetz.materialien(THREE) };
     }
 

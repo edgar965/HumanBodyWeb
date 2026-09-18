@@ -31,9 +31,33 @@ class Bvhauslieferung:
     @staticmethod
     @require_GET
     def animationen(request):
-        """Alle BVH-Animationen nach Kategorie — siehe Animationsliste."""
+        """Alle BVH-Animationen nach Kategorie — siehe Animationsliste.
+
+        Vorher legt `Bvhauslieferung.dazbewegungen` Daz' Bewegungsszenen als
+        BVH in den Ordner `Daz` (18.09.2026, `Genesis9/bewegung.py`): sieben
+        Dateien, nur geschrieben, wenn sie fehlen oder die Szene juenger ist.
+        """
         from ..dienste.animationsliste import Animationsliste
+        Bvhauslieferung.dazbewegungen()
         return JsonResponse({'categories': Animationsliste().nach_kategorie()})
+
+    @staticmethod
+    def dazbewegungen():
+        """Daz' Bewegungen als BVH bereitstellen — ohne Bibliothek nichts."""
+        import logging
+        from pathlib import Path
+        try:
+            from Genesis9.bewegung import G9bewegungen
+            neu = G9bewegungen.bereitstellen(
+                Path(Bvhauslieferung.wurzel()) / G9bewegungen.ORDNER)
+        except Exception as fehler:      # noqa: BLE001 — die Liste kommt trotzdem
+            logging.getLogger('core').warning('Daz-Bewegungen nicht bereitgestellt: %s',
+                                              fehler)
+            return []
+        if neu:
+            logging.getLogger('core').info('Daz-Bewegungen als BVH: %s',
+                                           ', '.join(p.name for p in neu))
+        return neu
 
     @staticmethod
     def _ausliefern(pfad, name):

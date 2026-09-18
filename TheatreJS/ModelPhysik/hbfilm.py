@@ -29,6 +29,7 @@ import sys
 import numpy as np
 
 from feinkoerper import Feinkoerper
+from koerperfeinheit import Koerperfeinheit
 from figurnetze import Figurnetze
 from filmhaut import Filmhaut
 from filmmasken import Filmmasken
@@ -67,10 +68,12 @@ class Hbfilm:
                  figurpunkte=None, melder=None, ab_sekunden=None,
                  figurfein=None, details=None, body_type=None):
         u"""`figurpunkte` sind ALLE Basispunkte der Figur (mit Morphs);
-        ohne sie kommt die unverformte Grundfigur. `figurfein` =
-        (Unterteiler, Basisflaechen): Dann laufen LBS und Physik auf ALLEN
-        Basispunkten und der Film rendert das unterteilte Netz der Szene
-        (`Feinkoerper`); ohne bleibt es bei der 18K-Aussenhaut. `melder(phase,
+        ohne sie kommt die unverformte Grundfigur. `figurfein` = eine
+        `Koerperfeinheit` (Unterteiler, Basisflaechen, Korrekturglaettung,
+        Hautverschiebung — seit 17.09.2026) oder das Paar (Unterteiler,
+        Basisflaechen): Dann laufen LBS und Physik auf ALLEN Basispunkten und
+        der Film rendert das unterteilte Netz (`Feinkoerper`); ohne bleibt es
+        bei der 18K-Aussenhaut. `melder(phase,
         anteil)` bekommt den Fortschritt — der Videoweg im UI zeigt ihn an.
         `details` (Farben, Textur, Braue der Szene) und `body_type` geben dem
         unterteilten Koerper seine Materialgruppen (`Filmhaut`); None = die
@@ -120,10 +123,17 @@ class Hbfilm:
     def _koerper(self, fein=None, alle=None):
         teil = {'name': u'Koerper', 'farbe': self.HAUT}
         if fein is not None:
-            unterteiler, vierecke = fein
-            punkte, dreiecke, gewichte = self.netze.koerper_basis(alle, vierecke)
-            teil['unterteiler'] = unterteiler
-            teil['fein_dreiecke'] = np.asarray(unterteiler.triangles, dtype=np.int64)
+            # `fein` ist eine `Koerperfeinheit` — oder, wie bis zum 17.09.2026,
+            # das Paar (Unterteiler, Basisflaechen) ohne Glaettung/Verschiebung.
+            feinheit = (fein if isinstance(fein, Koerperfeinheit)
+                        else Koerperfeinheit(fein[0], fein[1], korrektur=False))
+            punkte, dreiecke, gewichte = self.netze.koerper_basis(
+                alle, feinheit.vierecke)
+            feinheit.anlegen(punkte, gewichte, self.netze.namen)
+            teil['feinheit'] = feinheit
+            teil['unterteiler'] = feinheit.unterteiler
+            teil['fein_dreiecke'] = feinheit.dreiecke
+            self.melder(u'Netz: ' + feinheit.beschreibung(), 0.055)
         else:
             punkte, dreiecke, gewichte = self.netze.koerper()
         teil['haut'] = Hautbahn(punkte, gewichte, self.netze.namen, self.bahn)

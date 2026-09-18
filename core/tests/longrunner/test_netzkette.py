@@ -42,9 +42,16 @@ class NetzketteTest(SimpleTestCase):
     #: baut sich einen Test, der bei einem echten Datenschaden grün bleibt.
     #: Seit 15.09.2026 (UVs je Flächenecke) zählt das unterteilte Netz die
     #: Textur-Kopien an den Nähten mit: 70.851 + 3.277 (female), 69.995 + 3.305.
+    #: Das sind die Zahlen EINER Stufe; die Stufe ist seit 17.09.2026 eine
+    #: Einstellung (MB-Lab: 2 im Browser), deshalb fragt der Test sie ausdrücklich.
     NETZE = {
         'female': (17288, 18210, 74128, 138304),
         'male': (17074, 17996, 73300, 136592),
+    }
+    #: Dieselben Netze mit zwei und drei Stufen (gemessen 17.09.2026).
+    STUFEN = {
+        ('female', 2): (286376, 553216), ('female', 3): (1125784, 2212864),
+        ('male', 2): (283008, 546368), ('male', 3): (1112200, 2185472),
     }
     #: Obergrenze für den ganzen Durchlauf. Großzügig — es ist ein Longrunner;
     #: die Grenze fängt nur ein Verhalten ab, das aus dem Ruder läuft.
@@ -65,10 +72,17 @@ class NetzketteTest(SimpleTestCase):
                          'Der Unterteiler braucht Vierecke, keine Dreiecke')
         self.assertEqual(int(flaechen.max()) + 1, basis)
 
-        cc = Sicher.wert(Charakterdaten.unterteiler(geschlecht),
+        cc = Sicher.wert(Charakterdaten.unterteiler(geschlecht, stufen=1),
                          'Unterteiler — faces passen nicht')
         self.assertEqual(cc.sub_vertex_count, unter)
         self.assertEqual(len(cc.triangles), dreiecke)
+        for stufen in (2, 3):
+            mehr = Sicher.wert(
+                Charakterdaten.unterteiler(geschlecht, stufen=stufen),
+                'Unterteiler %d Stufen' % stufen)
+            self.assertEqual((mehr.sub_vertex_count, len(mehr.triangles)),
+                             self.STUFEN[(geschlecht, stufen)])
+            self.assertEqual(mehr.levels, stufen)
 
     def test_gewichte_kommen_durch_die_unterteilung(self):
         """Vier Einflüsse je Vertex, Summe 1, und am Ende so viele Einträge wie
@@ -91,7 +105,7 @@ class NetzketteTest(SimpleTestCase):
                     'Gewichtssummen sind weder 0 noch 1 — nicht normiert')
 
                 text = Skingewichte.propagiert_json(
-                    geschlecht, Charakterdaten.unterteiler(geschlecht))
+                    geschlecht, Charakterdaten.unterteiler(geschlecht, stufen=1))
                 daten = json.loads(Sicher.wert(text, 'propagierte Gewichte'))
                 self.assertEqual(len(daten['weights']), unter,
                                  'die Zahl der Gewichte passt nicht zum '

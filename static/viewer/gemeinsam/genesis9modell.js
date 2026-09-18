@@ -1,0 +1,332 @@
+import * as THREE from 'three';
+import { Serverabruf } from './serverabruf.js';
+import { Netzentsorgung } from './netzentsorgung.js';
+import { Protokoll } from './protokoll.js';
+import { Eigenhaut } from './eigenhaut.js';
+import { Genesis9netz } from './genesis9netz.js';
+import { Modell } from './modell.js';
+
+/**
+ * Genesis9Modell — die Daz-Figur Genesis 9 als `Modell` für jede Seite.
+ *
+ * WARUM (Edgar, 17.09.2026: „baue das Genesis9 Modell als zusätzliches neues
+ * Modell ein, mit allem drum und dran"): Genesis 9 ist das dichteste
+ * Figurnetz im Haus (25.182 Punkte, 4K-Haut je Kachel, 138 Knochen, 1.486
+ * Morphkanäle) und liegt installiert auf diesem Rechner. Der Server liest
+ * die Daz-Dateien direkt (`Genesis9/`, ohne Daz Studio); nichts davon geht
+ * ins Repo (EULA — `Genesis9/HERKUNFT.md`).
+ *
+ * WAS EINE FIGUR HIER IST: ein Katalogeintrag (`figur`: basis, feminine,
+ * masculine, amala, …) — das ist eine REGLERSTELLUNG plus Haut, kein
+ * eigenes Netz — dazu `regler` (Daz' Morphkanäle, 0..1 oder −2..2), `haut`
+ * (Preset, leer = das des Eintrags), `augen` (Bild 01–15) und `kleidung`
+ * (Kennung → {variante, stil, stile, regler, griff}). Ein Stück mit `griff`
+ * ist ein Prop mit Griffpose (Dolch): der Körper bekommt die Kennungen als
+ * `griffe`, damit sich die Finger schließen (18.09.2026). Der Server liefert
+ * in EINER Antwort Körper,
+ * Skelett (gerechnet auf dieser Stellung — die Gelenke wandern mit den
+ * Morphs), Haut und die Anhänge (Augen, Mund, Wimpern, Träne, Brauen); alle
+ * hängen am selben Skelett über Knochennamen (`Eigenhaut`).
+ *
+ * ERST DAS SKELETT, DANN DIE NETZE — wie bei MakeHuman und UMA Python:
+ * `Eigenhaut.binden` löst die Knochennamen gegen das Skelett auf, das in
+ * der Gruppe hängt. Und bei jedem Reglerzug wird alles neu gebaut, auch
+ * die Kleidung: Sie sitzt auf projizierten Körperpunkten, und die sind
+ * gerade gewandert.
+ */
+export class Genesis9Modell extends Modell {
+
+    static QUELLE = 'genesis9';
+    static ADRESSE = '/api/character/genesis9-figur/';
+
+    constructor(id, daten = {}) {
+        super(id, Genesis9Modell.QUELLE);
+        this.figur = daten.figur || 'basis';
+        this.presetName = daten.presetName || `Genesis 9 · ${this.figur}`;
+        this.bodyType = 'Genesis 9';
+        /** Daz-Morphkanäle: `{Amala_figure_ctrl_Character: 1}`; null = Vorgabe des Eintrags. */
+        this.regler = daten.regler ? { ...daten.regler } : null;
+        /** Hautpreset (`G9 Feminine Skin 02 MAT`); leer = das des Eintrags. */
+        this.haut = daten.haut || '';
+        /** Augenbild 01–15. */
+        this.augen = daten.augen || '01';
+        /** Farbe der Brauen (`Brown`, `omni:Ruby`, `charakter:…`); leer = Vorgabe des Servers. */
+        this.brauen = daten.brauen || '';
+        /** Brauenstil `card01`..`card12`, `fiber01`..`fiber09`; leer = Karte 01. */
+        this.brauenstil = daten.brauenstil || '';
+        /** Wimpern, Nagellack, Rouge, Lidschatten, Eyeliner, Lippen, Bemalung: Kategorie → Preset-Id. */
+        this.praesets = { ...(daten.praesets || {}) };
+        /** Daz-Posenpreset (Standbild: Netz UND Skelett stehen in der Pose) und Ausdruck (FACS). */
+        this.pose = daten.pose || '';
+        this.ausdruck = daten.ausdruck || '';
+        /** Getragene Stücke: Kennung → `{variante}`. Die Netze hängen in `clothMeshes`. */
+        this.kleidung = { ...(daten.kleidung || {}) };
+        /** Die Anhänge: Schlüssel → Netz. */
+        this.anhangNetze = {};
+        this.hoehe = 0;
+        /** Punkte des Daz-Käfigs (25.182); `browserpunkte` und `stufen` sagen, was gezeichnet wird. */
+        this.punktzahl = 0;
+        this.browserpunkte = 0;
+        this.stufen = 0;
+        this.morphwerte = {};
+    }
+
+    // ------------------------------------------------------------- Bauen
+
+    async bauen() {
+        if (this.regler === null) await this._vorgabeUebernehmen();
+        await this.koerperAufbauen();
+        for (const kennung of Object.keys({ ...this.kleidung })) {
+            await this.anziehen(kennung, this.kleidung[kennung]);
+        }
+        return this;
+    }
+
+    /** Die Reglerstellung des Katalogeintrags — vom Server, nicht geraten. */
+    static async vorgabe(figur) {
+        return { ...((await Genesis9Modell.eintrag(figur))?.regler || {}) };
+    }
+
+    /** Der Katalogeintrag (Bibliothek oder gespeichertes Modell) — oder null. */
+    static async eintrag(figur) {
+        const daten = await Serverabruf.json(Genesis9Modell.ADRESSE);
+        return (daten.figuren || []).find(f => f.name === figur) || null;
+    }
+
+    /**
+     * Regler des Eintrags übernehmen — und bei einem GESPEICHERTEN Modell
+     * (Studio, Theatre: dort ist nur der Name bekannt, 17.09.2026) auch Haut,
+     * Augen, Brauen und Kleidung, soweit hier nichts gesetzt ist.
+     */
+    async _vorgabeUebernehmen() {
+        const eintrag = await Genesis9Modell.eintrag(this.figur);
+        this.regler = { ...(eintrag?.regler || {}) };
+        if (!eintrag?.gespeichert) return;
+        if (!this.haut) this.haut = eintrag.haut || '';
+        if (this.augen === '01' && eintrag.augen) this.augen = eintrag.augen;
+        if (!this.brauen) this.brauen = eintrag.brauen || '';
+        if (!this.brauenstil) this.brauenstil = eintrag.brauenstil || '';
+        if (!Object.keys(this.praesets).length) this.praesets = { ...(eintrag.praesets || {}) };
+        if (!this.pose) this.pose = eintrag.pose || '';
+        if (!this.ausdruck) this.ausdruck = eintrag.ausdruck || '';
+        if (!Object.keys(this.kleidung).length) this.kleidung = { ...(eintrag.kleidung || {}) };
+    }
+
+    /** Körper, Skelett und Anhänge holen und neu einhängen. */
+    async koerperAufbauen() {
+        const daten = await Serverabruf.senden(
+            `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, {
+                regler: this.regler || {}, haut: this.haut, augen: this.augen,
+                brauen: this.brauen, brauenstil: this.brauenstil, praesets: this.praesets,
+                pose: this.pose, ausdruck: this.ausdruck, griffe: this.griffe(),
+                kleidung: this.kleidungsliste(),
+            });
+        if (daten.fehler) throw new Error(daten.fehler);
+        this._altesWeg();
+        // Mit den eigenen Knochen der getragenen Stücke (Eirgrid: 14 Zöpfe an `spine4`);
+        // ihre Namen bekommt der Zopfschwung (`scene/genesis9/genesis9zopfschwung.js`).
+        this.skelettBauen(daten.skelett);
+        this.eigeneKnochen = daten.skelett?.eigene || [];
+        this.bodyMesh = this._einhaengen(
+            Genesis9netz.bauen(daten, `genesis9_koerper_${this.id}`), daten.hautgewichte);
+        this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
+        for (const anhang of daten.anhaenge || []) {
+            this.anhangNetze[anhang.schluessel] = this._einhaengen(
+                Genesis9netz.bauen(anhang, `genesis9_${anhang.schluessel}_${this.id}`),
+                anhang.hautgewichte);
+        }
+        this.hoehe = daten.hoehe || 0;
+        this.punktzahl = daten.punktzahl || 0;
+        this.browserpunkte = daten.browserpunkte || daten.vertex_count || 0;
+        this.stufen = daten.stufen || 0;
+        this.morphwerte = daten.morphwerte || {};
+        /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
+        this.hdkanaele = daten.hdkanaele || [];
+        this._kleiderBinden();
+        Protokoll.debug('Genesis9Modell',
+            `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} `
+            + `(${this.browserpunkte}), ${(this.hoehe * 100).toFixed(1)} cm, `
+            + `${Object.keys(this.morphwerte).length} Morphs wirksam`);
+        return this;
+    }
+
+    /** Ein Netz binden (wenn Gewichte da sind) und in die Gruppe hängen. */
+    _einhaengen(netz, haut) {
+        const gebunden = (this.skelett && haut) ? Eigenhaut.binden(netz, this.skelett, haut) : netz;
+        gebunden.userData.hautgewichte = haut || null;
+        Eigenhaut.einhaengen(this.group, gebunden, this.skelett);
+        return gebunden;
+    }
+
+    _altesWeg() {
+        if (this.bodyMesh) Netzentsorgung.entfernen(this.group, this.bodyMesh);
+        this.bodyMesh = null;
+        for (const netz of Object.values(this.anhangNetze)) {
+            Netzentsorgung.entfernen(this.group, netz);
+        }
+        this.anhangNetze = {};
+    }
+
+    /**
+     * Die getragenen Stücke an das FRISCHE Skelett binden — `skelettBauen`
+     * räumt bei jedem Aufruf ab, eine Bindung von vorher zeigte auf Knochen,
+     * die nicht mehr in der Szene hängen (Befund MakeHuman, 07.09.2026).
+     */
+    _kleiderBinden() {
+        if (!this.skelett) return;
+        for (const [schluessel, altes] of Object.entries(this.clothMeshes)) {
+            const haut = altes?.userData?.hautgewichte;
+            if (!haut) continue;
+            this.group.remove(altes);
+            const roh = new THREE.Mesh(altes.geometry, altes.material);
+            roh.name = altes.name;
+            roh.userData = altes.userData;
+            this.clothMeshes[schluessel] = this._einhaengen(roh, haut);
+        }
+    }
+
+    // ------------------------------------------------------------ Regler
+
+    /** Nach einem Reglerzug: Körper, Anhänge UND Kleidung neu. */
+    async neuFormen() {
+        await this.koerperAufbauen();
+        for (const kennung of this.getragen()) {
+            await this.anziehen(kennung, this.kleidung[kennung]);
+        }
+        return this;
+    }
+
+    async reglerSetzen(name, wert) {
+        this.regler = this.regler || {};
+        if (Math.abs(wert) < 1e-6) delete this.regler[name];
+        else this.regler[name] = wert;
+        return this.neuFormen();
+    }
+
+    async hautSetzen(preset) {
+        this.haut = preset || '';
+        return this.koerperAufbauen();
+    }
+
+    async augenSetzen(nummer) {
+        this.augen = nummer || '01';
+        return this.koerperAufbauen();
+    }
+
+    async brauenSetzen(farbe) {
+        this.brauen = farbe || '';
+        return this.koerperAufbauen();
+    }
+
+    async brauenstilSetzen(stil, farbe = undefined) {
+        this.brauenstil = stil || '';
+        if (farbe !== undefined) this.brauen = farbe || '';
+        return this.koerperAufbauen();
+    }
+
+    /** Ein Preset einer Kategorie wählen (leer = keins). */
+    async praesetSetzen(kategorie, kennung) {
+        if (kennung) this.praesets[kategorie] = kennung;
+        else delete this.praesets[kategorie];
+        return this.koerperAufbauen();
+    }
+
+    /** Pose oder Ausdruck (leer = Ruhelage) — die Kleidung sitzt auf der Pose, also alles neu. */
+    async poseSetzen(feld, kennung) {
+        this[feld === 'ausdruck' ? 'ausdruck' : 'pose'] = kennung || '';
+        return this.neuFormen();
+    }
+
+    // ---------------------------------------------------------- Kleidung
+
+    /**
+     * Ein Stück der Daz-Garderobe anziehen — alle seine Teile.
+     * `werte`: `{variante, stil, stile: {pose, laenge}, regler, griff}` — die
+     * Stile gehen als Liste (`Genesis9garderobe.werte`), je Art eine Wahl.
+     */
+    async anziehen(kennung, werte = null) {
+        this.kleidung[kennung] = { ...(werte || {}) };
+        const daten = await Serverabruf.senden(
+            `${Genesis9Modell.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, {
+                regler: this.regler || {}, variante: werte?.variante || '',
+                stil: Genesis9Modell.stilliste(werte), regler_stueck: werte?.regler || {},
+                pose: this.pose, ausdruck: this.ausdruck, griffe: this.griffe(),
+            });
+        if (daten.fehler) throw new Error(daten.fehler);
+        this._stueckWeg(kennung);
+        (daten.teile || []).forEach((teil, nummer) => {
+            const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
+            this.clothMeshes[`${kennung}/${nummer}`] = this._einhaengen(netz, teil.hautgewichte);
+        });
+        return daten.teile?.length || 0;
+    }
+
+    /** `[stil, pose, laenge]` eines Stücks ohne Leere. */
+    static stilliste(werte) {
+        return [werte?.stil || '', ...Object.values(werte?.stile || {})].filter(Boolean);
+    }
+
+    /**
+     * Anziehen — und die Figur neu, wenn das Stück das Skelett ändert: ein
+     * Prop mit Griffpose (Finger), ein Haar mit eigenen Knochen (Zöpfe — sie
+     * hängen im Browser-Skelett, ihre Pose steckt in dessen Stellung).
+     */
+    async anziehenMitGriff(kennung, werte = null) {
+        if (!werte?.griff && !werte?.knochen) return this.anziehen(kennung, werte);
+        this.kleidung[kennung] = { ...werte };
+        return this.neuFormen();
+    }
+
+    /** Ausziehen — Griffpose öffnet die Finger, eigene Knochen verlassen das Skelett (Figur neu). */
+    async ausziehen(kennung) {
+        const neu = Boolean(this.kleidung[kennung]?.griff || this.kleidung[kennung]?.knochen);
+        this._stueckWeg(kennung);
+        delete this.kleidung[kennung];
+        if (neu) await this.neuFormen();
+    }
+
+    /** Kennungen der getragenen Props mit Griffpose. */
+    griffe() {
+        return Object.keys(this.kleidung).filter(k => this.kleidung[k]?.griff);
+    }
+
+    /** `[{kennung, stil}]` aller getragenen Stücke — der Server hängt deren eigene Knochen ins Skelett. */
+    kleidungsliste() {
+        return Object.entries(this.kleidung).map(([kennung, werte]) => ({
+            kennung, stil: Genesis9Modell.stilliste(werte),
+        }));
+    }
+
+    _stueckWeg(kennung) {
+        for (const schluessel of Object.keys(this.clothMeshes)) {
+            if (schluessel.split('/')[0] === kennung) {
+                Netzentsorgung.ausAblage(this.group, this.clothMeshes, schluessel);
+            }
+        }
+    }
+
+    getragen() {
+        return Object.keys(this.kleidung);
+    }
+
+    // ------------------------------------------------------------- Größe
+
+    sichtbareHoehe() {
+        return this.hoehe * (this.group.scale.y || 1);
+    }
+
+    aufHoehe(meter) {
+        if (!(meter > 0) || !(this.hoehe > 0)) return;
+        this.group.scale.setScalar(meter / this.hoehe);
+        this.group.updateMatrixWorld(true);
+    }
+
+    dispose() {
+        // Erst das Skelett abhängen (`Knochenbau.abraeumen`), dann Netze und Gruppe.
+        this.skelettBauen(null);
+        super.dispose();
+        this.bodyMesh = null;
+        this.anhangNetze = {};
+        this.clothMeshes = {};
+    }
+}

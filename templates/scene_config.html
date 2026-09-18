@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="{% fassungspfad 'css/viewer_seitenleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/menueleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
+{# Der Stoffschwung-Worker (dForce-Kleidung) liegt außerhalb des Bündels: Pfad mit Fassung. #}
+<meta name="stoffarbeiter" content="{% fassungspfad 'viewer/gemeinsam/stoffarbeiter.js' %}">
 <style>
     .viewer-row {
         display: flex;
@@ -709,6 +711,7 @@
                     {% include "_uma_eigenschaften.html" %}
                     {% include "_smpl_eigenschaften.html" %}
                     {% include "_umapython_eigenschaften.html" %}
+                    {% include "_genesis9_eigenschaften.html" %}
                     {% include "_makehuman_eigenschaften.html" %}
                     <!-- Equipped Items (body context) -->
                     {% comment %}Alle Bereiche dieses Reiters klappen wie „Augen · Wimpern"
@@ -886,6 +889,7 @@
                     Charakter auswählen
                 </div>
                 <div id="assets-content" class="hb-versteckt">
+                {% include "_genesis9_garderobe.html" %}
                 <!-- MakeHuman Proxy Fit -->
                 <div class="panel-section" data-panel-key="mh_proxy_fit">
                     <h3>MakeHuman <span class="chevron">&#9660;</span></h3>

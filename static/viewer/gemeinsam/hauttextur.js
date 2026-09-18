@@ -19,6 +19,17 @@
  * herein (`import('three')`), damit das Modul — wie `Koerperdetails` — in
  * Node prüfbar bleibt (`test_js_hauttextur.py`). Geladene Texturen werden
  * je Adresse gemerkt; eine zweite Figur derselben Ethnie lädt nichts neu.
+ *
+ * HAUTVERSCHIEBUNG (17.09.2026, „implementiere alles, was fehlt"): MB-Lab
+ * gibt der Figur einen Displace-Modifier (Stärke 0,01, Textur aus Alter,
+ * Tonus und Masse). Hier ist das die `displacementMap` der Hautmaterialien —
+ * Three.js verschiebt im Vertex-Shader entlang der Normale um
+ * `texel · scale + bias`; `bias = −scale/2` ist Blenders `mid_level` 0,5. Die
+ * Textur kommt von `/api/character/textur/verschiebung/<geschlecht>/?age=…`
+ * (`core/dienste/verschiebungstextur.py`); Geschlecht und Meta-Regler stehen
+ * an der Geometrie (`userData.figur`, gesetzt von `HumanbodyModell`), ob die
+ * Verschiebung an ist, sagt der Server mit dem Netz (`userData.netzqualitaet`).
+ * Sie läuft unabhängig von der Albedo — wie in MB-Lab.
  */
 export class Hauttextur {
 
@@ -36,6 +47,9 @@ export class Hauttextur {
     ];
     /** Stärke der Bump-Karte (Three.js `bumpScale`, in Netzeinheiten ≈ m). */
     static BUMP = 0.0015;
+    /** Stärke der Hautverschiebung (MB-Lab `strength` 0,01 m = ±5 mm). */
+    static VERSCHIEBUNG = 0.01;
+    static VERSCHIEBUNG_ADRESSE = '/api/character/textur/verschiebung/';
 
     static _geladen = new Map();
     static _lader = null;
@@ -56,6 +70,7 @@ export class Hauttextur {
         const materialien = Array.isArray(netz?.material) ? netz.material : null;
         if (!materialien) return false;
         const karten = Hauttextur.karten(details?.[Hauttextur.FELD]);
+        await Hauttextur.verschieben(netz, materialien);
         if (!karten) { Hauttextur.entfernen(materialien); return false; }
         const geladen = {};
         for (const [rolle, datei] of Object.entries(karten)) {
@@ -70,6 +85,36 @@ export class Hauttextur {
             m.needsUpdate = true;
         }
         return true;
+    }
+
+    /** Adresse der Displacement-Textur zu Geschlecht und Meta-Reglern (−1..1). */
+    static verschiebungsadresse(figur) {
+        const meta = figur?.meta || {};
+        const wert = (name) => (Number(meta[name]) || 0).toFixed(2);
+        return `${Hauttextur.VERSCHIEBUNG_ADRESSE}${figur?.geschlecht || 'female'}/`
+            + `?age=${wert('age')}&tone=${wert('tone')}&mass=${wert('mass')}`;
+    }
+
+    /**
+     * Die Hautverschiebung setzen oder entfernen — nach Server-Entscheidung
+     * (`geometry.userData.netzqualitaet.verschiebung`) und Figur (`userData.figur`).
+     * @returns Promise<boolean> — true, wenn sie gesetzt ist
+     */
+    static async verschieben(netz, materialien) {
+        const geo = netz?.geometry;
+        const figur = geo?.userData?.figur;
+        const aktiv = !!(geo?.userData?.netzqualitaet?.verschiebung && figur);
+        const karte = aktiv ? await Hauttextur.laden(Hauttextur.verschiebungsadresse(figur), false)
+                            : null;
+        for (const g of Hauttextur.HAUT) {
+            const m = materialien[g];
+            if (!m || (!karte && !m.displacementMap)) continue;
+            m.displacementMap = karte;
+            m.displacementScale = karte ? Hauttextur.VERSCHIEBUNG : 1;
+            m.displacementBias = karte ? -Hauttextur.VERSCHIEBUNG / 2 : 0;
+            m.needsUpdate = true;
+        }
+        return aktiv;
     }
 
     /** Karten wieder weg — die Farbe setzt danach `Hautfarbe`/`Detailfarben`. */
@@ -88,8 +133,10 @@ export class Hauttextur {
     /** Eine Textur laden — einmal je Datei; Albedo in sRGB, Karten linear. */
     static async laden(datei, farbig) {
         // Albedos ohne die gemalten Brauen — die Figur zeichnet ihre eigenen
-        // (`Brauenhaut`, 16.09.2026); die Abfrage ist Teil der Adresse.
-        const adresse = Hauttextur.ADRESSE + datei + '/' + (farbig ? '?brauen=ohne' : '');
+        // (`Brauenhaut`, 16.09.2026); die Abfrage ist Teil der Adresse. Eine
+        // fertige Adresse (Verschiebung, mit `/`) geht unverändert durch.
+        const adresse = datei.startsWith('/')
+            ? datei : Hauttextur.ADRESSE + datei + '/' + (farbig ? '?brauen=ohne' : '');
         if (Hauttextur._geladen.has(adresse)) return Hauttextur._geladen.get(adresse);
         const THREE = await import('three');
         Hauttextur._lader ??= new THREE.TextureLoader();

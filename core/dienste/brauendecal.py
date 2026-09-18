@@ -38,7 +38,7 @@ logger = logging.getLogger('core')
 
 class Brauendecal:
 
-    FASSUNG = 1
+    FASSUNG = 2
     BREITE = 2048
     S = 3
     ORDNER = Brauenbogen.ORDNER / 'brauen'
@@ -61,6 +61,11 @@ class Brauendecal:
     SEGMENTE = 8
     #: Alpha je Segment von der Wurzel zur Spitze (Anteil).
     AUSBLENDEN = (1, 1, 1, 1, 1, 0.75, 0.5, 0.25)
+    #: Die Enden laufen aus: über diesen Anteil des Bogens (je Ende) wachsen
+    #: Haarlänge und Dichte von ENDE_LAENGE bzw. ENDE_DICHTE auf 1.
+    ENDE_ANTEIL = 0.18
+    ENDE_LAENGE = 0.45
+    ENDE_DICHTE = 0.35
 
     # --------------------------------------------------------------- Regler
 
@@ -178,6 +183,13 @@ class Brauendecal:
         for k in range(anzahl):
             s = (k + rng.uniform(0.15, 0.85)) / anzahl * regler['laenge']
             s_form = min(1.0, s / max(regler['laenge'], 1e-6))
+            # Die Enden laufen aus (Edgar, 17.09.2026: „am Rand noch etwas
+            # krank"): innen standen lange, steile Haare einzeln wie ein
+            # Besen, außen hingen die letzten als dünne Fransen. Im ENDE_ANTEIL
+            # an beiden Enden werden die Haare kürzer und dünner gesät.
+            ende = min(1.0, min(s_form, 1.0 - s_form) / cls.ENDE_ANTEIL)
+            if rng.uniform() > cls.ENDE_DICHTE + (1 - cls.ENDE_DICHTE) * ende:
+                continue
             versatz = (regler['lage'] + regler['hoehe_innen'] * (1 - s_form)
                        + regler['hoehe_aussen'] * s_form
                        + regler['woelbung'] * math.sin(math.pi * s_form))
@@ -188,7 +200,8 @@ class Brauendecal:
             winkel = np.interp(s_form, [0, 0.45, 1], cls.WINKEL) + rng.normal(0, 7)
             richtung = cls._drehen(tangente(s), n, winkel)
             laenge = (np.interp(s_form, [0, 1], cls.HAAR_MM) * regler['haar_laenge']
-                      * (1 + rng.normal(0, 0.18))) * px_je_mm
+                      * (1 + rng.normal(0, 0.18))
+                      * (cls.ENDE_LAENGE + (1 - cls.ENDE_LAENGE) * ende)) * px_je_mm
             spitze = cls._drehen(richtung, n, -25.0)
             steuer = wurzel + richtung * laenge * 0.55
             ende = wurzel + spitze * laenge

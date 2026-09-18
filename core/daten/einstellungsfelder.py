@@ -87,6 +87,24 @@ class Einstellungsfelder:
             u'Wind (m/s)', u'Windstärke der Stoffdynamik (HumanBody-Figur); '
             u'0 = kein Wind', min=0, max=30, schritt=0.1),
 
+        # ------------------------------------------ Netzqualitaet (17.09.2026)
+        'unterteilung_browser': F(
+            u'Unterteilung im Browser',
+            u'Catmull-Clark-Stufen der HumanBody-Figur auf Szene, Modell- und '
+            u'Ergebnisseite (je Stufe viermal so viele Flächen). MB-Lab zeigt '
+            u'2; 1 ist schneller, 3 sehr schwer',
+            min=1, max=3, schritt=1),
+        'unterteilung_film': F(
+            u'Unterteilung im Film',
+            u'Catmull-Clark-Stufen beim Rendern des Figurvideos (pyrender). '
+            u'MB-Lab rendert 3',
+            min=1, max=3, schritt=1),
+        'haut_verschiebung': F(
+            u'', u'Hautverschiebung wie MB-Labs Displace-Modifier: Poren, '
+            u'Falten (Alter), Muskeln (Tonus), Fett (Masse) aus der '
+            u'Displacement-Textur, ±5 mm entlang der Normale',
+            zusatz=u'Hautverschiebung (Displacement) anwenden'),
+
         # --------------------------------------------- MediaPipe (2D UND 3D)
         'mp_min_detection_confidence': F(
             u'MediaPipe Detection Confidence',

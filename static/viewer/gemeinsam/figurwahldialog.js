@@ -1,5 +1,6 @@
 import { Htmltext } from '/static/djangobase/js/htmltext.js';
 import { Figurkataloge } from './figurkataloge.js';
+import { Figurwahlbereiche } from './figurwahlbereiche.js';
 import { Figurwahlzeile } from './figurwahlzeile.js';
 import { Figurlagefelder } from './figurlagefelder.js';
 
@@ -42,7 +43,9 @@ export class Figurwahldialog {
 
     /**
      * @param {Object} einstellungen
-     *   lader     {quelle: async (name, lage) => …}  — Pflicht je Reiter
+     *   lader     {quelle: async (name, lage, eintrag) => …}  — Pflicht je Reiter;
+ *             `eintrag` ist die Zeile aus `Figurkataloge` (`bereich`,
+ *             `gespeichert`), Lader ohne den dritten Parameter ignorieren ihn
      *   quellen   Reiter in dieser Reihenfolge; Vorgabe: alle mit Lader
      *   vorgaben  () => ({x, angleichen, vorbildHoehe}); Vorgabe siehe oben
      *   pflege    {umbenennen(quelle, name), loeschen(quelle, name)} oder null
@@ -117,9 +120,10 @@ export class Figurwahldialog {
         const reiter = this.quellen.map((q, i) =>
             `<button class="dialogreiter-knopf${i === 0 ? ' active' : ''}" `
             + `data-quelle="${q}">${Htmltext.t(Figurkataloge.QUELLEN[q].titel)}</button>`).join('');
+        // Je Reiter zwei zugeklappte Bereiche (Edgar, 17.09.2026): Standard-
+        // Modelle und gespeicherte Modelle — `Figurwahlbereiche`.
         const listen = this.quellen.map((q, i) =>
-            `<ul class="preset-list${i === 0 ? '' : ' hb-versteckt'}" `
-            + `id="${this.kennung}-liste-${q}" data-quelle="${q}"></ul>`).join('');
+            Figurwahlbereiche.html(this.kennung, q, i !== 0)).join('');
         const k = this.kennung;
         return `
     <div class="scene-modal">
@@ -151,6 +155,10 @@ export class Figurwahldialog {
         });
         for (const knopf of this._reiterknoepfe()) {
             knopf.addEventListener('click', () => this._umschalten(knopf.dataset.quelle));
+        }
+        for (const bereich of dialog.querySelectorAll('details.dialogbereich')) {
+            bereich.addEventListener('toggle',
+                                     () => Figurwahlbereiche.merken(this.kennung, bereich));
         }
         this._feld('bestaetigen')?.addEventListener('click', async () => {
             if (!this.gewaehlt) return;
@@ -195,7 +203,10 @@ export class Figurwahldialog {
     _einzelnenVorwaehlen(quelle) {
         const zeilen = this._liste(quelle)?.querySelectorAll('li[data-name]') || [];
         if (zeilen.length !== 1) return;
-        this._waehlen({ quelle, name: zeilen[0].dataset.name });
+        const liste = zeilen[0].closest('ul[data-bereich]');
+        this._waehlen({ quelle, name: zeilen[0].dataset.name,
+                        eintrag: { name: zeilen[0].dataset.name,
+                                   bereich: liste?.dataset.bereich || 'standard' } });
     }
 
     _waehlen(eintrag) {
@@ -215,35 +226,35 @@ export class Figurwahldialog {
     // -- Listen ---------------------------------------------------------------
 
     async _fuellen(quelle) {
-        const liste = this._liste(quelle);
-        if (!liste) return;
-        liste.innerHTML = '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade …</li>';
+        const behaelter = this._liste(quelle);
+        if (!behaelter) return;
+        Figurwahlbereiche.meldung(behaelter,
+            '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade …</li>');
         let eintraege;
         try {
             eintraege = await Figurkataloge.liste(quelle);
         } catch (fehler) {
-            liste.innerHTML = `<li class="fehlertext">Fehler: ${Htmltext.t(fehler.message)}</li>`;
+            Figurwahlbereiche.meldung(behaelter,
+                `<li class="fehlertext">Fehler: ${Htmltext.t(fehler.message)}</li>`);
             return;
         }
-        liste.innerHTML = '';
-        if (!eintraege.length) {
-            liste.innerHTML = `<li class="gedaempft">${Htmltext.t(Figurkataloge.QUELLEN[quelle].leer)}</li>`;
-            return;
-        }
-        for (const eintrag of eintraege) {
-            liste.appendChild(this._zeile(eintrag, quelle));
-        }
+        Figurwahlbereiche.verteilen(behaelter, eintraege,
+                                    eintrag => this._zeile(eintrag, quelle),
+                                    Figurkataloge.QUELLEN[quelle].leer);
         // Die Listen kommen nebenläufig; vorwählen nur im offenen Reiter.
         if (quelle === this.quelle && !this.gewaehlt) this._einzelnenVorwaehlen(quelle);
     }
 
     _zeile(eintrag, quelle) {
-        const pflege = Boolean(this.pflege) && Figurkataloge.QUELLEN[quelle].pflege;
+        // Umbenennen und Löschen gibt es nur für Gespeichertes — ein
+        // Körpertyp oder ein Daz-Katalogeintrag ist keine Datei.
+        const pflege = Boolean(this.pflege) && Figurkataloge.QUELLEN[quelle].pflege
+            && (eintrag.bereich || 'standard') === 'gespeichert';
         return Figurwahlzeile.bauen(eintrag, {
-            waehlen: () => this._waehlen({ quelle, name: eintrag.name }),
+            waehlen: () => this._waehlen({ quelle, name: eintrag.name, eintrag }),
             laden: async () => {
                 this.schliessen();
-                await this._laden({ quelle, name: eintrag.name });
+                await this._laden({ quelle, name: eintrag.name, eintrag });
             },
             pflegen: pflege ? (was) => this._pflegen(quelle, eintrag.name, was) : null,
         });
@@ -262,10 +273,12 @@ export class Figurwahldialog {
         }
     }
 
-    async _laden({ quelle, name }) {
+    async _laden({ quelle, name, eintrag = null }) {
         const lage = this.lage();
         try {
-            return await this.lader[quelle](name, lage);
+            // Der Eintrag geht mit (17.09.2026): ein Lader unterscheidet daran
+            // Standard und gespeichert (`Genesis9katalog.hinzufuegen`).
+            return await this.lader[quelle](name, lage, eintrag);
         } catch (fehler) {
             window.alert(`Fehler: ${fehler.message}`);
             return null;

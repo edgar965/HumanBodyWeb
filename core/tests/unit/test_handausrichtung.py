@@ -142,11 +142,28 @@ class DerEichfall(SimpleTestCase):
                                self.lauf.bvh_idx)
         self.assertTrue(hand.ist_hand('DEF-hand.R'))
         self.assertFalse(hand.ist_hand('DEF-forearm.R'))
-        self.assertTrue(Handausrichtung.ist_finger('DEF-f_index.02.R'))
-        self.assertTrue(Handausrichtung.ist_finger('DEF-thumb.01.L'))
-        self.assertFalse(Handausrichtung.ist_finger('DEF-hand.R'))
-        self.assertFalse(Handausrichtung.ist_finger('DEF-palm.01.R'))
+        self.assertTrue(hand.ist_finger('DEF-f_index.02.R'))
+        self.assertTrue(hand.ist_finger('DEF-thumb.01.L'))
+        self.assertFalse(hand.ist_finger('DEF-hand.R'))
+        self.assertFalse(hand.ist_finger('DEF-palm.01.R'))
         np.testing.assert_allclose(Sicher.wert(hand.richtung('DEF-hand.R'), 'Richtung'), [-1, 0, 0], atol=1e-9)
+
+    def test_fremdes_ziel_wird_ueber_def_namen_erkannt(self):
+        u"""Genesis 9 (17.09.2026, „verdrehte Katzenkrallen"): die Zielknochen
+        heissen `r_mid1`, erkannt wird am DEF-Namen aus `def_namen`. Ohne die
+        Tabelle ist die Hand keine Hand — die Sabotage-Gegenprobe."""
+        umbenannt = {'DEF-hand.R': 'r_hand', 'DEF-f_index.01.R': 'r_index1',
+                     'DEF-f_middle.01.R': 'r_mid1', 'DEF-thumb.01.R': 'r_thumb1',
+                     'DEF-f_pinky.01.R': 'r_pinky1', 'DEF-f_index.02.R': 'r_index2'}
+        rig_to_bvh = {umbenannt.get(r, r): b for r, b in self.lauf.rig_to_bvh.items()}
+        mit = Handausrichtung(self.skel, self.lauf.bvh, rig_to_bvh, self.lauf.bvh_idx,
+                              def_namen={z: d for d, z in umbenannt.items()})
+        self.assertTrue(mit.ist_hand('r_hand'))
+        self.assertTrue(mit.ist_finger('r_index2'))
+        self.assertFalse(mit.ist_finger('r_hand'))
+        np.testing.assert_allclose(Sicher.wert(mit.richtung('r_hand'), 'Richtung'), [-1, 0, 0], atol=1e-9)
+        ohne = Handausrichtung(self.skel, self.lauf.bvh, rig_to_bvh, self.lauf.bvh_idx)
+        self.assertFalse(ohne.ist_hand('r_hand'))
 
     @staticmethod
     def um_achse(achse, winkel):

@@ -38,13 +38,14 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 #: Die Figurarten und ihre Datei. Die Liste steht ABSICHTLICH hier und nicht
-#: als Glob: Kommt eine sechste Art dazu, soll dieser Test sie verlangen.
+#: als Glob: Kommt eine siebte Art dazu, soll dieser Test sie verlangen.
 ARTEN = {
     'HumanBody': 'scene/character.js',
     'SMPL': 'scene/smpl/smplfigur.js',
     'MakeHuman': 'scene/makehuman/mhfigur.js',
     'UMA': 'scene/uma/umafigur.js',
     'UMA Python': 'scene/umapython/umapythonfigur.js',
+    'Genesis 9': 'scene/genesis9/genesis9figur.js',
 }
 
 

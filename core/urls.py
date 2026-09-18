@@ -34,6 +34,7 @@ from .api.garmentvorschau import Garmentvorschauendpunkte
 from .api.ui_vorgaben import Uivorgaben
 from .api.auftrag_upload import Uploadseiten
 from .api.studio_video import Theatrevideo
+from .api.studio_lipsync import Studiolipsync
 from .api.figurvideo import Figurvideoendpunkte
 from .api.effekte import Effektendpunkte
 from .urls_charakter import CHARAKTER
@@ -161,6 +162,8 @@ urlpatterns = [
     path('api/cloth/export/', Stoffexport.ausfuehren, name='cloth_export'),
     path('api/studio/audio-upload/', Studioendpunkte.ton_hochladen,
          name='studio_audio_upload'),
+    # Lippensynchronisation (18.09.2026, core/api/studio_lipsync.py).
+    path('api/studio/lipsync/', Studiolipsync.cues, name='studio_lipsync'),
     path('api/studio/project-save/', Studioprojekte.projekt_sichern,
          name='studio_project_save'),
     path('api/studio/project-load/', Studioprojekte.projekt_laden,

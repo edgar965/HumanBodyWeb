@@ -42,6 +42,7 @@ class Retargetdaten:
     ZIEL_SMPL = 'smpl'
     ZIEL_MH = 'makehuman'
     ZIEL_UMAPY = 'umapython'
+    ZIEL_G9 = 'genesis9'
 
     def __init__(self, bvh_pfad, body_height=ERSATZHOEHE, fmt=None,
                  foot_correction=False, delta_norm=None, ziel=ZIEL_DEF,
@@ -162,6 +163,8 @@ class Retargetdaten:
             return self._auf_makehuman(bvh, bauart)
         if self.ziel == self.ZIEL_UMAPY:
             return self._auf_umapython(bvh, bauart)
+        if self.ziel == self.ZIEL_G9:
+            return self._auf_genesis9(bvh, bauart)
         geometrie = Skelettgeometrie.holen()
         if bauart and bauart.BONE_MAP_TO_RIGIFY:
             return bauart.retarget_to_rigify(
@@ -245,6 +248,16 @@ class Retargetdaten:
         gelenke = Umagelenke(gebaut, self.formung)
         return self._auf_kette(bvh, bauart, gelenke.geometrie(), Umazuordnung)
 
+    def _auf_genesis9(self, bvh, bauart):
+        u"""Ziel ist das Daz-Rig von Genesis 9 DIESER Reglerstellung (17.09.2026).
+
+        Woher das Skelett kommt, steht in `G9retargetziel` — dieselbe Kette
+        wie im Browser. `self.formung` ist die `G9formung` oder None.
+        """
+        from .g9retargetziel import G9retargetziel
+        return self._auf_kette(bvh, bauart, G9retargetziel.geometrie(self.formung),
+                               G9retargetziel.zuordnung())
+
     def _auf_kette(self, bvh, bauart, geometrie, zuordnung):
         u"""Dasselbe Verfahren, anderes Zielskelett — wie `_auf_uma`.
 
@@ -254,11 +267,13 @@ class Retargetdaten:
         from humanbody_core.skeleton.formats import SkeletonMocapNet
         if bauart is None or not bauart.BONE_MAP_TO_RIGIFY:
             bauart = SkeletonMocapNet
+        defnamen = getattr(zuordnung, 'defnamen', None)
         return bauart.retarget_to_rigify(
             bvh, geometrie, body_height=self.hoehe,
             foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
             mapping=zuordnung.fuer(bauart),
-            skip_bones=zuordnung.ausnahmen(bauart))
+            skip_bones=zuordnung.ausnahmen(bauart),
+            def_namen=defnamen() if callable(defnamen) else None)
 
     def _formmerkmal(self):
         u"""Ein kurzes Kennzeichen der Reglerstellung fuer den Ablagenamen.

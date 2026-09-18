@@ -1,5 +1,6 @@
 import os
 from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.sessions import CookieMiddleware
 from django.core.asgi import get_asgi_application
 from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
 from djangobase.statik_kopfzeilen import StatikKopfzeilen
@@ -23,5 +24,7 @@ Zeitstempelausgabe.einhaengen()
 # Geschwistermodul; die Seite kam mit 200 und zeigte nichts.
 application = StatikKopfzeilen(ASGIStaticFilesHandler(ProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": URLRouter(routing.websocket_urlpatterns),
+    # `CookieMiddleware`: der Kanal liest den Keks `netzstufen` (Strg+Alt+H,
+    # `core/dienste/netzstufenwahl.py`) aus `scope['cookies']`.
+    "websocket": CookieMiddleware(URLRouter(routing.websocket_urlpatterns)),
 })))

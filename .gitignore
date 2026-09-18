@@ -14,6 +14,10 @@ media/figurvideos/
 # Videos, die Auftraege einlesen (17.09.2026), und der Texturcache der Brauenretusche.
 media/input/
 media/hauttexturen/
+# Verkleinerte Vorschaubilder der Figurquellen (Hilfe -> Architektur -> Andere Modelle).
+media/vorschau/
+# Fertige Unterteiler-Teile je Stufe (17.09.2026): drei Stufen bauen 66 s, laden < 1 s.
+media/unterteilung/
 
 # Node
 node_modules/

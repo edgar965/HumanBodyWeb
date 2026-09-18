@@ -72,6 +72,10 @@ class Filmlauf:
                      or 'Female_Caucasian'}
         for name, wert in (self.auftrag.get('morphs') or {}).items():
             parameter['morph_%s' % name] = wert
+        # Alter/Masse/Tonus (17.09.2026): formen den Koerper UND die
+        # Hautverschiebung — wie in MB-Lab.
+        for name, wert in (self.auftrag.get('meta') or {}).items():
+            parameter['meta_%s' % name] = wert
         koerper = Charakterdaten.koerper_aus(parameter)
         if koerper.vertices is None:
             raise ValueError(u'Die Figur liefert kein Netz (Morphdaten?).')
@@ -82,17 +86,27 @@ class Filmlauf:
         return punkte, koerper.geschlecht, self._feines_netz(punkte,
                                                              koerper.geschlecht)
 
-    @staticmethod
-    def _feines_netz(punkte, geschlecht):
-        u"""Unterteiler und Basisflaechen fuer das SICHTBARE Netz der Szene
-        (`Feinkoerper`) — oder None, wenn es keinen Unterteiler gibt (dann
-        bleibt die 18K-Aussenhaut)."""
+    def _feines_netz(self, punkte, geschlecht):
+        u"""Die `Koerperfeinheit` fuer das SICHTBARE Netz: Unterteiler mit der
+        Film-Stufe (Einstellung, MB-Lab 3), Korrekturglaettung und — wenn
+        eingeschaltet — die Hautverschiebung aus Alter/Tonus/Masse. None,
+        wenn es keinen Unterteiler gibt (dann bleibt die 18K-Aussenhaut)."""
         from core.dienste.charakterdaten import Charakterdaten
-        unterteiler = Charakterdaten.unterteiler(geschlecht)
+        from core.dienste.netzqualitaet import Netzqualitaet
+        from koerperfeinheit import Koerperfeinheit
+        unterteiler = Charakterdaten.unterteiler(
+            geschlecht, stufen=Netzqualitaet.stufen_film())
         netz = Charakterdaten.netzdaten(geschlecht)
         if unterteiler is None or getattr(netz, 'faces', None) is None:
             return None
-        return unterteiler, np.asarray(netz.faces)
+        textur = None
+        if Netzqualitaet.verschiebung():
+            from core.dienste.verschiebungstextur import Verschiebungstextur
+            meta = self.auftrag.get('meta') or {}
+            textur = Verschiebungstextur.feld(
+                geschlecht, meta.get('age', 0.0), meta.get('tone', 0.0),
+                meta.get('mass', 0.0))
+        return Koerperfeinheit(unterteiler, np.asarray(netz.faces), textur)
 
     def laufen(self):
         from hbfilm import Hbfilm

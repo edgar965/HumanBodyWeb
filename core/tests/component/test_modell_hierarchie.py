@@ -41,6 +41,7 @@ ARTEN = {
     'makehumanmodell.js': 'MakehumanModell',
     'smplmodell.js': 'SmplModell',
     'umapythonmodell.js': 'UmapythonModell',
+    'genesis9modell.js': 'Genesis9Modell',
 }
 #: Seite → (Datei, was sie vom Modell ruft)
 SEITEN = {
@@ -60,6 +61,7 @@ SZENE = {
     'makehuman/mhfigur.js': 'class MhFigur extends MakehumanModell {',
     'smpl/smplfigur.js': 'class SmplFigur extends SmplModell {',
     'umapython/umapythonfigur.js': 'class UmapythonFigur extends UmapythonModell {',
+    'genesis9/genesis9figur.js': 'class Genesis9Figur extends Genesis9Modell {',
 }
 ALTE_BAUER = ('bvh_studio/spurzubehoer.js', 'bvh_studio/spurhaut.js',
               'bvh_studio/spurdetails.js', 'scene/figurbasis.js')
@@ -68,7 +70,7 @@ ALTE_BAUER = ('bvh_studio/spurzubehoer.js', 'bvh_studio/spurhaut.js',
 class ModellHierarchie(unittest.TestCase):
     databases = set()
 
-    def test_modell_und_die_fuenf_arten(self):
+    def test_modell_und_die_sechs_arten(self):
         basis = ModellHierarchie._text(GEMEINSAM / 'modell.js')
         self.assertIn('export class Modell {', basis)
         self.assertIn('async bauen(optionen = {}) {', basis)

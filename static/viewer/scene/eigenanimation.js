@@ -40,7 +40,7 @@ export class Eigenanimation {
      * nicht aus einer Datei — und es hängt an den DNA-Reglern.
      */
     static ZIELE = { smpl: 'smpl', makehuman: 'makehuman',
-                     umapython: 'umapython' };
+                     umapython: 'umapython', genesis9: 'genesis9' };
 
     /** Trifft diese Figur zu — hat sie ein eigenes Skelett zum Bespielen? */
     static passt(inst) {
@@ -86,6 +86,9 @@ export class Eigenanimation {
         // Stellung ist das Ziel, nicht das der Vorgabefigur. Dieselbe
         // Überlegung wie bei MakeHuman.
         if (inst.quelle === 'umapython') wahl.regler = inst.dna || {};
+        // Genesis 9: die Morphregler stellen die Gelenke über Daz' Formeln —
+        // das Skelett DIESER Stellung ist das Ziel (17.09.2026).
+        if (inst.quelle === 'genesis9') wahl.regler = inst.regler || {};
         // Bearbeiteter BVH-Text (Boden richten, Effekte) geht denselben Weg
         // wie beim DEF-Ziel: über den Text-Endpunkt. Der kennt nur DEF —
         // deshalb bleibt es hier bei der Datei, und der Rohtext dient nur
@@ -97,6 +100,7 @@ export class Eigenanimation {
     static figurname(inst) {
         if (inst.quelle === 'smpl') return inst.koerper;
         if (inst.quelle === 'umapython') return inst.rasse;
+        if (inst.quelle === 'genesis9') return inst.figur || 'basis';
         return inst.modell || 'basis';
     }
 

@@ -41,6 +41,13 @@
     border-radius: 4px;
     margin-bottom: 8px;
 }
+/* Ohne die 300-px-Grenze: die Liste läuft bis unten, der Reiter scrollt
+ * (Edgar, 17.09.2026, Daz-Garderobe: „mach diesen Tab bis nach unten, so
+ * dass man mehr sehen kann"). */
+.anim-tree.anim-tree-offen {
+    max-height: none;
+    overflow-y: visible;
+}
 
 .anim-category:last-child { border-bottom: none; }
 
@@ -140,3 +147,9 @@
 .reglerzeile-eng.reglerzeile-eng.reglerzeile-eng {
     gap:4px;
 }
+
+/* Anpassungsregler eines Daz-Kleidungsstücks unter seiner Zeile
+   (scene/genesis9/genesis9stueckregler.js, 18.09.2026): eingerückt, damit
+   sie als Teil der Zeile darüber lesbar sind, nicht als eigenes Stück. */
+.genesis9-stueckregler.genesis9-stueckregler { margin: 0 0 6px 28px; }
+.genesis9-stueckregler > summary { text-transform: none; letter-spacing: 0; }

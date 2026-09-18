@@ -95,7 +95,8 @@ export const HILFE_ZEITLEISTE = {
         text: 'Gesichtsposen für die Figur der Modellspur. <b>Rechtsklick</b> → „Pose setzen…“: '
             + 'der Dialog mit zehn Gruppen (Freude, Trauer, Ärger, … Phoneme, Eigene); zwischen zwei '
             + 'Posen wird weich überblendet, die letzte bleibt. Blinzeln und Blick kommen aus der '
-            + 'Script-Spur. „Mimik einrechnen“ legt alles zur BVH, dann hat jede Seite es.',
+            + 'Script-Spur. „Mimik einrechnen“ legt alles zur BVH, dann hat jede Seite es. '
+            + '„Lippensynchronisation aus Tonspur“ setzt die Mundformen zum Ton.',
     },
     script: {
         titel: 'Script',
@@ -113,6 +114,13 @@ export const HILFE_ZEITLEISTE = {
         titel: 'Mimik-Schlüsselbild',
         text: 'Klick wählt es: rechts Pose, Bild, Stärke, Übergang und Haltezeit. Ziehen '
             + 'verschiebt, <b>Rechtsklick</b> → Pose ändern oder löschen.',
+    },
+    clip_lipsync: {
+        titel: 'Lippensynchronisation',
+        text: 'Mundformen aus der Tonspur (Rhubarb Lip Sync), Bild für Bild auf die Figur: '
+            + 'Genesis 9 mit Daz’ Visemes, die anderen mit den MB-Lab-Mundeinheiten. Entsteht über '
+            + '<b>Rechtsklick</b> → „Lippensynchronisation aus Tonspur“; Klick zeigt rechts die '
+            + 'Mundform am Abspielkopf, Ziehen verschiebt den Start.',
     },
     clip_light_kf: {
         titel: 'Licht-Keyframe',

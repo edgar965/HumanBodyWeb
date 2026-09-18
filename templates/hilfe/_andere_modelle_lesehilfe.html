@@ -1,0 +1,43 @@
+{% comment %}
+Teilvorlage von `andere_modelle.html`: die Lesehilfe zu Punkten, Vierecken,
+Dreiecken und Unterteilung (Edgar, 17.09.2026: „in der Tabelle verstehe ich
+nicht die Dreiecke, Vierecke und Punkte, wie hängen die zusammen? Warum hat
+HumanBody weniger Dreiecke als Genesis 9?" — „mach das als Lesehilfe").
+
+  hb   die HumanBody-Zeile, g9 die Genesis-9-Zeile (aus `Figurquellen`,
+       mit den Texten aus `Netzmasse`) — die Beispielzahlen kommen von dort.
+{% endcomment %}
+<div class="info-box info-box-blue am-lesehilfe">
+  <strong>Lesehilfe: Punkte, Vierecke, Dreiecke — und warum der Rang nach der
+  Spalte „Dreiecke (höchste Stufe)" geht.</strong>
+  <ul>
+    <li><strong>Punkte</strong> (Vertices) sind die Ecken des Netzes. Sie werden
+      zu <strong>Flächen</strong> verbunden: ein <strong>Viereck</strong> hat vier
+      Ecken, ein <strong>Dreieck</strong> drei. Modelliert wird in Vierecken (die
+      lassen sich glatt unterteilen); die Grafikkarte zeichnet immer Dreiecke —
+      <strong>ein Viereck = zwei Dreiecke</strong>.</li>
+    <li>In einem geschlossenen Vierecknetz teilen sich je vier Vierecke einen
+      Punkt, und jedes Viereck hat vier Ecken: <strong>Vierecke ≈ Punkte</strong>,
+      also Dreiecke ≈ 2 × Punkte. Beispiel {{ hb.name }}:
+      {{ hb.basis_punkte_text }} Punkte, {{ hb.basis_vierecke_text }} Vierecke, {{ hb.basis_dreiecke_text }} Dreiecke.</li>
+    <li>Die Hersteller nennen, was ihnen passt — Punkte, Vierecke, Dreiecke
+      oder „Polygone". Die drei Basis-Spalten zeigen es so, wie es angegeben
+      ist; was fehlt, ist nach diesen Regeln abgeleitet und trägt ein
+      <strong>„≈"</strong>.</li>
+    <li><strong>Unterteilung</strong> (Catmull-Clark, SubD, Multires) teilt jedes
+      Viereck in vier — <strong>×4 je Stufe</strong>. Sie glättet nur; Detail
+      (Poren, Falten, Adern) entsteht erst, wenn jemand auf der hohen Stufe
+      skulptiert oder scannt. Die Spalte <strong>„Dreiecke (höchste Stufe)"</strong>
+      zählt deshalb, was der Hersteller <em>mit Detail</em> liefert — und nur
+      nach ihr geht der Rang.</li>
+    <li><strong>Warum {{ hb.name }} unter {{ g9.name }} liegt:</strong> Die Basis
+      von {{ g9.name }} ist schon dichter ({{ g9.basis_vierecke_text }} gegen
+      {{ hb.basis_vierecke_text }} Vierecke), und Daz sculptet Detail auf den
+      hohen Stufen: {{ g9.stufen_text }} → {{ g9.hoechst_text }} Dreiecke.
+      HumanBody rechnet seit dem 17.09.2026 wie das MB-Lab-Original (orange):
+      {{ hb.stufen_text }} → {{ hb.hoechst_text }} Dreiecke. Noch mehr Stufen
+      brächten nur Glätte, keine Information — das Detail muss von einem Scan
+      oder einer Skulptur kommen (oder, wie bei MB-Lab, aus der
+      Displacement-Textur).</li>
+  </ul>
+</div>

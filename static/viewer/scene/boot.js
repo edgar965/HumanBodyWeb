@@ -45,6 +45,7 @@ import './cloth_export.js';
 import './greifen.js';
 import { Szenenaufbau } from './szenenaufbau.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzstufe } from '../gemeinsam/netzstufe.js';
 
 // Die Menüleiste schaltet das Rig darüber ein und aus.
 fn.buildRigifySkeleton = buildRigifySkeleton;
@@ -60,6 +61,9 @@ window.addEventListener('keydown', ereignis => {
 }, true);
 
 fn.initDialogCloseHandlers();
+
+// Strg+Alt+H: hohe Auflösung (Filmstufe) für diesen Browser, Seite lädt neu.
+Netzstufe.einrichten();
 
 export async function init() {
     return new Szenenaufbau().starten();

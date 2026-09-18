@@ -10,6 +10,7 @@ import { applyBvhTrack, applyCameraTrack, applyLightTrack, applyModelTrack,
     applySceneObjectTrack } from './spur_anwenden.js';
 import { Abspielende } from './abspielende.js';
 import { Mimikanwendung } from './mimikanwendung.js';
+import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
 import { Endlosschalter } from './endlosschalter.js';
 
 export function setupPlayback() {
@@ -225,6 +226,9 @@ export function applyPlayhead() {
         else if (track.type === 'audio') applyAudioTrack(track, t);
         else if (track.type === 'scene_object') applySceneObjectTrack(track, t);
     }
+    // Gelenkkorrekturen (18.09.2026 abends): Daz' JCMs der Genesis-9-Figuren
+    // aus den Knochenwinkeln dieses Bildes — nach den Bewegungsspuren.
+    Genesis9gelenke.alle(state.project.tracks.map(s => s.modell).filter(Boolean));
     // Die Mimik NACH allen Bewegungsspuren: sie überschreibt die Gesichtsknochen,
     // die der Mischer der Körperanimation gerade gesetzt hat (14.09.2026).
     Mimikanwendung.alle(t);

@@ -81,6 +81,13 @@ HILFE_EXTRA = [
     # alles hinein in Hilfe - Animationseffekte").
     {'label': 'Animationseffekte', 'icon': 'bi-stars',
      'url': '/hilfe/animationseffekte/', 'aktiv': 'hilfe_animationseffekte'},
+    # Hochaufloesende Figuren im Vergleich (Edgar, 17.09.2026: „mach diese
+    # Liste als HTML-Datei: Hilfe - Architektur - Andere Modelle").
+    {'label': 'Architektur', 'icon': 'bi-bricks', 'untermenu': [
+        {'label': 'Andere Modelle', 'icon': 'bi-people',
+         'url': '/hilfe/architektur/andere-modelle/',
+         'aktiv': 'hilfe_andere_modelle'},
+    ]},
     {'label': 'Kleidung', 'icon': 'bi-bag', 'untermenu': [
         {'label': 'Allgemein', 'icon': 'bi-list-columns',
          'url': '/hilfe/kleidung/', 'aktiv': 'hilfe_kleidung'},

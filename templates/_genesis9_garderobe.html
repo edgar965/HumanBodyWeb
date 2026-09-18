@@ -1,0 +1,24 @@
+{% comment %}Die Daz-Garderobe einer Genesis-9-Figur im Assets-Reiter —
+`scene/genesis9/genesis9garderobe.js`.
+
+Edgar, 17.09.2026: „Kleider für Genesis - machst Du einen extra Reiter dafür
+bei Assets?" — bis dahin hing die Garderobe als Klappbereich unter den
+Reglern im Modell-Reiter. Hier steht sie wie die MakeHuman-Bibliothek: ein
+eigener Bereich, der nur bei einer Genesis-9-Figur sichtbar ist
+(`Eigenschaftenbereiche.genesis9Garderobe`); die HumanBody-Werkzeuge
+darunter (Garment Fit, Cloth, Haare) gelten dem HumanBody-Körper und
+werden solange verborgen.{% endcomment %}
+<div class="panel-section hb-versteckt" data-panel-key="genesis9_garderobe"
+     id="assets-genesis9-section">
+    <h3>Genesis 9 &ndash; Daz-Garderobe <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div class="hb-font-size-0-72rem">
+            Jedes <code>wearable</code> unter <code>People/Genesis 9/Clothing</code>
+            und <code>&hellip;/Hair</code> der Daz-Bibliothek mit Daz' Vorschaubild;
+            daneben Farbvariante und Stil des Produkts, darunter (aufklappbar)
+            seine Anpassungsregler. Die St&uuml;cke folgen der Reglerstellung
+            und h&auml;ngen am Skelett der Figur.
+        </div>
+        <div id="assets-genesis9-garderobe" class="anim-tree anim-tree-offen"></div>
+    </div>
+</div>

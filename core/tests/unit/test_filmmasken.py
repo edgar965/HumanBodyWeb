@@ -92,7 +92,9 @@ class FilmmaskenTest(SimpleTestCase):
     def test_verdrahtung_im_film(self):
         lauf = FilmmaskenTest._pfad('filmlauf.py').read_text(encoding='utf-8')
         self.assertIn('figurfein=fein', lauf)
-        self.assertIn('Charakterdaten.unterteiler(geschlecht)', lauf)
+        # Seit dem 17.09.2026 mit der Film-Stufe aus der Einstellung.
+        self.assertIn('Charakterdaten.unterteiler(', lauf)
+        self.assertIn('stufen=Netzqualitaet.stufen_film()', lauf)
         render = FilmmaskenTest._pfad('filmrender.py').read_text(encoding='utf-8')
         self.assertIn('Filmmasken.gerendert(teil, nummer)', render)
         self.assertNotIn('import trimesh', render)

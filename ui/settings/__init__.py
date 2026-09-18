@@ -69,6 +69,9 @@ MIDDLEWARE = [
     # Figur kam ohne ihre GarmentCode-Stuecke zurueck — Begruendung und
     # Messung in `ui/datenfrische.py`.
     'ui.datenfrische.Datenfrische',
+    # Der Keks `netzstufen` (Strg+Alt+H im Browser) waehlt die Unterteilungs-
+    # stufe fuer DIESEN Browser — je Anfrage, vor der Einstellung (17.09.2026).
+    'core.dienste.netzstufenwahl.Netzstufenwahl',
 ]
 
 ROOT_URLCONF = 'ui.urls'

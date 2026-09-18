@@ -12,13 +12,15 @@
  * `scene/uma/umaanimation.js`): HumanBody → DEF (ohne Angabe), UMA → `uma`
  * mit der GLB-Datei, SMPL → `smpl` mit dem Körper, MakeHuman → `makehuman`
  * mit Makros und Reglern (POST — 269 Regler passen in keine Adresse), UMA
- * Python → `umapython` mit der Rasse und den DNA-Reglern.
+ * Python → `umapython` mit der Rasse und den DNA-Reglern, Genesis 9 →
+ * `genesis9` mit dem Katalognamen und den Daz-Reglern (17.09.2026).
  *
  * Ohne Importe — `test_js_retargetziel` rechnet in Node.
  */
 export class Retargetziel {
 
-    static ZIELE = { uma: 'uma', smpl: 'smpl', makehuman: 'makehuman', umapython: 'umapython' };
+    static ZIELE = { uma: 'uma', smpl: 'smpl', makehuman: 'makehuman', umapython: 'umapython',
+                     genesis9: 'genesis9' };
 
     /**
      * Die Wahl für den Retarget aus den Feldern der Figur.
@@ -36,6 +38,7 @@ export class Retargetziel {
         let rumpf = null;
         if (quelle === 'makehuman') rumpf = { makro: modell.makro || null, regler: modell.regler || null };
         if (quelle === 'umapython') rumpf = { makro: null, regler: modell.dna || {} };
+        if (quelle === 'genesis9') rumpf = { makro: null, regler: modell.regler || {} };
         const h = Number(hoehe) > 0 ? Number(hoehe) : 0;
         return { target, figur, rumpf, hoehe: h,
                  schluessel: `${target}:${figur}:${h ? h.toFixed(3) : ''}` };
@@ -46,6 +49,7 @@ export class Retargetziel {
         if (quelle === 'uma') return modell.datei || '';
         if (quelle === 'smpl') return modell.koerper || 'mean_all';
         if (quelle === 'umapython') return modell.rasse || '';
+        if (quelle === 'genesis9') return modell.figur || 'basis';
         return modell.modell || 'basis';
     }
 

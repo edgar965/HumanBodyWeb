@@ -110,7 +110,7 @@ export class Track {
         this.name = name;
         this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model' | 'mimik' | 'script'
         this.preset = preset;
-        this.quelle = 'modell';   // Figurart: modell (HumanBody) | uma | makehuman | smpl | umapython
+        this.quelle = 'modell';   // Figurart: modell (HumanBody) | uma | makehuman | smpl | umapython | genesis9
         this.bodyType = bodyType;
         this.clips = [];
         this.muted = false;
@@ -142,7 +142,7 @@ export class Track {
 // =========================================================================
 export class Clip {
     constructor(category, name, totalFrames, fps) {
-        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf' | 'script'
+        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf' | 'script' | 'lipsync'
         this.category = category;
         this.name = name;
         this.totalFrames = totalFrames;

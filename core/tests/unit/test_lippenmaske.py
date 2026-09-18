@@ -40,6 +40,6 @@ class LippenmaskeTest(SimpleTestCase):
         Lippenmaske.vergessen()
         try:
             self.assertEqual(Lippenmaske.indizes('unbekannt', np.zeros((3, 2))), [])
-            self.assertIn('unbekannt', Lippenmaske._gemerkt)
+            self.assertIn(('unbekannt', 3), Lippenmaske._gemerkt)
         finally:
             Lippenmaske.vergessen()

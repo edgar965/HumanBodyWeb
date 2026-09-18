@@ -6,6 +6,7 @@ import json
 from django.conf import settings
 
 from ...dienste.animationsauswahl import Animationsauswahl
+from ...dienste.netzqualitaet import Netzqualitaet
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
 
@@ -33,6 +34,7 @@ class ModellEinstellungen(Einstellungsseite):
         for name in self.SCHALTER:
             setattr(s, name, F.schalter(post, name))
         s.expanded_panels_config = json.dumps(F.aufgeklappt(post, 'panel_config_'))
+        Netzqualitaet.uebernehmen(s, post)
 
     def kontext(self, s):
         return {

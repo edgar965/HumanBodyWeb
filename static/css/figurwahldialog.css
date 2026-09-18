@@ -22,7 +22,11 @@
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 10px;
-    width: 420px;
+    /* 560 statt 420 (17.09.2026): Mit dem sechsten Reiter „Genesis 9" war die
+     * Leiste 461 px breit bei 366 px Platz — der Knopf stand rechts außerhalb
+     * des Dialogs, gemessen im DOM (Edgar: „bei Character Hinzufügen gibt es
+     * noch kein Genesis9"). Dazu umbrechen die Reiter, falls es mehr werden. */
+    width: min(560px, 96vw);
     max-height: 70vh;
     display: flex;
     flex-direction: column;
@@ -85,6 +89,7 @@
 /* Reiter je Figurart */
 .dialogreiter {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     margin-bottom: 10px;
     border-bottom: 1px solid var(--border);
@@ -96,6 +101,7 @@
     color: var(--text-muted);
     padding: 6px 12px;
     font-size: 0.82rem;
+    white-space: nowrap;
     cursor: pointer;
 }
 .dialogreiter-knopf:hover { color: var(--text); }
@@ -103,6 +109,31 @@
     color: var(--accent);
     border-bottom-color: var(--accent);
 }
+
+/* Die zwei Bereiche je Reiter (17.09.2026): Standard und gespeichert,
+ * zugeklappt, bis man sie aufklappt. */
+.dialogbereich {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    padding: 0 8px 4px;
+}
+.dialogbereich summary {
+    cursor: pointer;
+    padding: 6px 2px;
+    font-size: 0.82rem;
+    color: var(--text);
+    list-style: none;
+}
+.dialogbereich summary::before {
+    content: '\25B8';
+    display: inline-block;
+    width: 1em;
+    color: var(--text-muted);
+}
+.dialogbereich[open] summary::before { content: '\25BE'; }
+.dialogbereich summary .gedaempft { color: var(--text-muted); font-size: 0.75rem; }
+.dialogbereich .preset-list { max-height: 34vh; overflow-y: auto; }
 
 /* Die Liste */
 .preset-list {

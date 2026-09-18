@@ -70,11 +70,14 @@ class MimikfelderTest(SimpleTestCase):
 
     def test_verdrahtung_im_studio(self):
         anwendung = MimikfelderTest._text(STUDIO / 'mimikanwendung.js')
-        self.assertIn('static anwenden(modellIdx, gewichte, ganz = true)', anwendung)
+        self.assertIn(
+            'static anwenden(modellIdx, gewichte, ganz = true, visemes = null)',
+            anwendung)
         self.assertIn('if (Mimiksmplx.passt(figur)) '
                       '{ Mimiksmplx.setzen(figur.mesh, gewichte); return; }', anwendung)
-        self.assertIn('Mimikanwendung.anwenden(i, stand.gewichte, stand.mimik);',
-                      anwendung)
+        self.assertIn(
+            'Mimikanwendung.anwenden(i, stand.gewichte, stand.mimik, stand.visemes);',
+            anwendung)
         self.assertIn('Mimikanwendung.anwenden(spur._modellIdx, spur._vorschau || {});',
                       MimikfelderTest._text(STUDIO / 'mimikdialog.js'))
         smplx = MimikfelderTest._text(STUDIO / 'mimiksmplx.js')

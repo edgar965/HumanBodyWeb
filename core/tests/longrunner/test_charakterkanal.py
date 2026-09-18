@@ -30,10 +30,14 @@ from channels.testing import WebsocketCommunicator
 from django.test import SimpleTestCase
 
 from core.consumers import CharacterConsumer
+from core.dienste.netzqualitaet import Netzqualitaet
 from ..unit._sicher import Sicher
 
-#: Punkte des unterteilten Netzes (Catmull-Clark über 18.210 Grundpunkte).
-PUNKTE = 74128  # 70.851 + 3.277 Nahtkopien (15.09.2026)
+#: Punkte des unterteilten Netzes (Catmull-Clark über 18.210 Grundpunkte), je
+#: Stufe — der Kanal nimmt die Browser-Stufe aus der Einstellung (17.09.2026).
+PUNKTE_JE_STUFE = {1: 74128,      # 70.851 + 3.277 Nahtkopien (15.09.2026)
+                   2: 286376, 3: 1125784}
+PUNKTE = PUNKTE_JE_STUFE[Netzqualitaet.stufen_browser()]
 
 
 class Morphkanal:

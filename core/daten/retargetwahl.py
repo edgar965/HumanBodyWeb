@@ -41,7 +41,10 @@ class Retargetwahl:
     #: dieselben Knochennamen wie `uma`, aber das Skelett kommt aus dem
     #: Bau, nicht aus einer GLB. Deshalb ein eigenes Ziel und KEIN
     #: Dateiname: `figur` traegt hier den Rassennamen.
-    ZIELE = ('def', 'uma', 'smpl', 'makehuman', 'umapython')
+    #: `genesis9` (17.09.2026): das Daz-Rig aus `Genesis9.dsf`, gerechnet auf
+    #: der Reglerstellung (`regler` im Rumpf) — die Gelenke wandern mit den
+    #: Morphs. `figur` traegt den Katalognamen (basis, feminine, amala …).
+    ZIELE = ('def', 'uma', 'smpl', 'makehuman', 'umapython', 'genesis9')
     #: Ziele, deren `figur` ein GLB-Dateiname sein muss.
     GLB_ZIELE = ('uma',)
 

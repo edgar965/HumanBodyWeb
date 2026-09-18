@@ -85,6 +85,7 @@ class Figurfilm:
         return {
             'body_type': modell.koerpertyp(),
             'morphs': modell.morphs(),
+            'meta': modell.meta(),
             'stuecke': self.stuecke,
             'bvh': os.path.abspath(self.p.bvh),
             'ab_sekunden': float(self.p.ab),

@@ -11,9 +11,10 @@ from django.db import models
 from ..daten.einstellungsfelder import Einstellungsfelder
 from .effekt_einstellungen import EffektEinstellungen
 from .lifter_einstellungen import LifterEinstellungen
+from .netz_einstellungen import NetzEinstellungen
 
 
-class AppSettings(LifterEinstellungen, EffektEinstellungen):
+class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
     """Singleton settings for the application.
 
     Die Felder der SMPL-Pipelines (GVHMR, WHAM, PromptHMR, GEM-SMPL, DuoMo,

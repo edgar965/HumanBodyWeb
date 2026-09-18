@@ -47,7 +47,7 @@ class Skriptbaum:
     #: der Umgebung (torch, bpy) und sind kein Befund dieses Projekts.
     EIGEN = ('humanbody_core', 'collision', 'assetCreator', 'core', 'ui',
              'djangobase', 'GarmentFitter', 'PhotoToTexture', 'MakeHuman',
-             'SMPL', 'UMA', 'GarmentCode')
+             'SMPL', 'UMA', 'GarmentCode', 'Genesis9')
 
     @classmethod
     def dateien(cls):

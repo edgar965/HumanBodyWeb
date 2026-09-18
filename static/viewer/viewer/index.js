@@ -54,8 +54,12 @@ import { Werkzeugknoepfe } from './werkzeugknoepfe.js';
 import { Seitenbefehle } from './seitenbefehle.js';
 import { Bildschleife } from './bildschleife.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzstufe } from '../gemeinsam/netzstufe.js';
 
 Protokoll.debug('Viewer', 'v2.1 geladen (ES-Module, Klassen)');
+
+// Strg+Alt+H: hohe Auflösung (Filmstufe) für diesen Browser, Seite lädt neu.
+Netzstufe.einrichten();
 
 /** Alle Panel-Bereiche auf- und zuklappbar machen. */
 function bereicheKlappbar() {

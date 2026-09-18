@@ -49,6 +49,10 @@ class Modellfigur:
     def morphs(self):
         return {str(k): float(v) for k, v in (self.daten.get('morphs') or {}).items()}
 
+    def meta(self):
+        u"""Alter/Masse/Tonus/Groesse (−1..1) — formen Koerper und Haut (17.09.2026)."""
+        return {str(k): float(v) for k, v in (self.daten.get('meta') or {}).items()}
+
     def geschlecht(self):
         return 'female' if self.koerpertyp().lower().startswith('female') else 'male'
 

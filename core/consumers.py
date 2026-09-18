@@ -48,6 +48,17 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         #: Drapierte Kleidung, die den Reglern folgt (`_send_stoff`).
         from GarmentCode.nachfuehrung import Stoffnachfuehrung
         self._stoff = Stoffnachfuehrung()
+        # Die Netzqualitaet (Unterteilungsstufe) steht in der Datenbank; aus
+        # dem Ereigniskreis darf sie nur ueber einen Faden gelesen werden.
+        from channels.db import database_sync_to_async
+        from .dienste.netzqualitaet import Netzqualitaet
+        await database_sync_to_async(Netzqualitaet.merken)()
+        # Was DIESER Browser mit Strg+Alt+H gewaehlt hat (Keks `netzstufen`,
+        # `CookieMiddleware` in `ui/asgi.py`) — None heisst: die Einstellung.
+        # Ausdruecklich mitgegeben, denn die Middleware der HTTP-Anfragen
+        # (`Netzstufenwahl`) sieht diesen Kanal nicht.
+        from .dienste.netzstufenwahl import Netzstufenwahl
+        self._stufen = Netzstufenwahl.aus_cookies(self.scope.get('cookies'))
         self._init_state()
 
     def _init_state(self):
@@ -56,7 +67,8 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
             from core.dienste.charakterdaten import Charakterdaten
             self._char_state = Charakterdaten.zustand()
             # Preload female CC subdivider
-            self._cc_subs['female'] = Charakterdaten.unterteiler('female')
+            self._cc_subs['female'] = Charakterdaten.unterteiler(
+                'female', stufen=self._stufen)
         except Exception as e:
             logger.error("Failed to init CharacterState: %s", e)
 
@@ -64,8 +76,8 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         """Get CC subdivider for current gender, lazy-loading if needed."""
         if self._current_gender not in self._cc_subs:
             from core.dienste.charakterdaten import Charakterdaten
-            self._cc_subs[self._current_gender] = (
-                Charakterdaten.unterteiler(self._current_gender))
+            self._cc_subs[self._current_gender] = Charakterdaten.unterteiler(
+                self._current_gender, stufen=self._stufen)
         return self._cc_subs.get(self._current_gender)
 
     async def disconnect(self, close_code):

@@ -8,9 +8,14 @@ Unterteilung ist LINEAR (`unterteiler.subdivide` = `W @ basis`): LBS und
 Weichgewebe laufen weiter auf den Basispunkten (1,7 s je Bild waeren es auf
 70.851), und das feine Netz folgt je Bild in Millisekunden.
 
-Ein Teil traegt `unterteiler` und `fein_dreiecke`, wenn es so gerechnet
-wird; ohne die beiden ist `haut.folge` selbst das sichtbare Netz (Stoff,
-oder eine Figur ohne Unterteiler).
+Seit dem 17.09.2026 rechnet `Koerperfeinheit` dazu MB-Labs Corrective
+Smooth vor und die Hautverschiebung nach der Unterteilung; ein Teil traegt
+sie als `feinheit` (dazu `unterteiler` und `fein_dreiecke` fuer die Stellen,
+die nur die Topologie brauchen). Ohne die drei ist `haut.folge` selbst das
+sichtbare Netz (Stoff, oder eine Figur ohne Unterteiler).
+
+Der Bildspeicher haelt nur die letzten `SPEICHER` Bilder: Bei drei Stufen
+wiegt ein Bild 1,1 Mio. Punkte = 27 MB, ein ganzer Film 3 GB.
 """
 import numpy as np
 
@@ -18,9 +23,18 @@ import numpy as np
 class Feinkoerper:
     u"""Feine Punkte eines Teils in Ruhe und je Bild, mit Zwischenspeicher."""
 
+    SPEICHER = 3
+
     @staticmethod
     def hat(teil):
         return teil.get('unterteiler') is not None
+
+    @classmethod
+    def _rechnen(cls, teil, basis):
+        feinheit = teil.get('feinheit')
+        if feinheit is not None:
+            return feinheit.punkte(basis, teil['dreiecke'])
+        return np.asarray(teil['unterteiler'].subdivide(basis), dtype=np.float64)
 
     @classmethod
     def ruhe(cls, teil):
@@ -28,8 +42,7 @@ class Feinkoerper:
         if not cls.hat(teil):
             return teil['haut'].punkte
         if 'fein_ruhe' not in teil:
-            teil['fein_ruhe'] = np.asarray(
-                teil['unterteiler'].subdivide(teil['haut'].punkte), dtype=np.float64)
+            teil['fein_ruhe'] = cls._rechnen(teil, teil['haut'].punkte)
         return teil['fein_ruhe']
 
     @classmethod
@@ -48,7 +61,7 @@ class Feinkoerper:
         merker = teil.setdefault('fein_folge', {})
         schluessel = (id(folge), nummer)
         if schluessel not in merker:
-            merker.clear() if any(k[0] != id(folge) for k in merker) else None
-            merker[schluessel] = np.asarray(
-                teil['unterteiler'].subdivide(folge[nummer]), dtype=np.float64)
+            if any(k[0] != id(folge) for k in merker) or len(merker) >= cls.SPEICHER:
+                merker.clear()
+            merker[schluessel] = cls._rechnen(teil, folge[nummer])
         return merker[schluessel]

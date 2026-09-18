@@ -61,7 +61,8 @@ if str(HUMANBODY_ROOT) not in sys.path:
 
 #: Das Paket `SMPL` liegt seit dem 07.09.2026 direkt unter A:\\3DTools
 #: (Edgar: „packe den ganzen SMPL code hierhin"). TOOLS_ROOT muss deshalb
-#: im Pfad stehen — `from SMPL.koerper import Smplkoerper`.
+#: im Pfad stehen — `from SMPL.koerper import Smplkoerper`. Seit dem
+#: 17.09.2026 ebenso `Genesis9` (Daz-Leser, `Genesis9/HERKUNFT.md`).
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 

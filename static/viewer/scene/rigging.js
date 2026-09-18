@@ -32,7 +32,14 @@ export function initRiggingTab(toggleRigVisibility) {
         const inst = state.selectedCharacterId ? state.characters.get(state.selectedCharacterId) : null;
         if (inst) { if (!inst._rigParams) inst._rigParams = { ..._defaultRigParams }; inst._rigParams[key] = val;
             markDirty('Rigging'); }
-        if (key === 'rigVisible') { state.rigVisible = val; if (toggleRigVisibility) toggleRigVisibility(); }
+        if (key === 'rigVisible' && toggleRigVisibility && state.rigVisible !== val) {
+            // `toggleRigVisibility` KIPPT den Schalter (`Rigsichtbarkeit.umschalten`);
+            // der Haken nennt den Zielzustand. Bis zum 17.09.2026 wurde erst
+            // `state.rigVisible = val` gesetzt und dann gekippt — Haken an hieß
+            // Rig weg, gemessen an der Genesis-9-Figur (Helfer stand, `visible`
+            // false). Gekippt wird nur, wenn der Stand vom Haken abweicht.
+            toggleRigVisibility();
+        }
     }
     for (const [id, cfg] of Object.entries(ids)) {
         const el = document.getElementById(id); if (!el) continue;

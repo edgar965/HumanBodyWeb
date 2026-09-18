@@ -133,6 +133,7 @@ export class Figurvideo {
             ...this.ablage(),
             body_type: inst.bodyType,
             morphs: inst.morphs || {},
+            meta: inst.meta || {},
             // Farben, Hauttextur und Braue der Figur — der Film baut daraus
             // Haut, Augen, Wimpern und Lippen (`ModelPhysik/filmhaut.py`).
             details: inst.details || {},

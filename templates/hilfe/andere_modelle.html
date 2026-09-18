@@ -1,0 +1,93 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Architektur -> Andere Modelle: hochauflösende Figuren im Vergleich.
+
+Edgar, 17.09.2026: „Mach eine Tabelle absteigend nach Qualität (Punkte,
+Dreiecke)" — „mach diese Liste als HTML-Datei: Hilfe - Architektur - Andere
+Modelle" — „ich brauche ganze Körper, mach getrennte Liste für nur Kopf".
+Zwei Ranglisten (Ganzkörper, nur Kopf), je eine djangoBase-Tabelle
+(`_andere_modelle_tabelle.html`) und Karten mit Bildern und Adressen
+(`_andere_modelle_karten.html`).
+
+Alle Texte, Zahlen und Adressen kommen aus `core/dienste/figurquellen.py`,
+`figurkoepfe.py` und `figurquellenlinks.py`, die Bilder aus
+`3DObjects/humanModels/` über `core/dienste/figurbilder.py` — eine Zahl im
+HTML wäre eine Behauptung, die niemand mehr nachprüft.
+{% endcomment %}
+
+{% block title %}Andere Modelle{% endblock %}
+{% block topbar_title %}Architektur — Andere Modelle: hochauflösende Figuren{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+{% comment %}Zellgitter der djangoBase-Tabellen aus `tabellen.css` — die
+Doku-Seiten laden es nicht selbst (siehe `video_to_bvh.html`).{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_andere_modelle.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite am-breit">
+
+  <h1>Andere Modelle: {{ karten|length }} Ganzkörper-Quellen und {{ koepfe|length }} nur Kopf</h1>
+
+  <p>
+    Ziel ist, das HumanBody-Netz mit fotorealistischer Qualität zu erweitern.
+    Stand heute: MB-Lab-Netz mit <strong>{{ stand.punkte }} Punkten /
+    {{ stand.vierecke }} Vierecken</strong>, Haut {{ stand.haut }}. Jede Spalte
+    ist sortierbar — Klick auf den Kopf. Die Vorschaubilder kommen von den
+    Herstellerseiten und liegen unter <code>{{ bilderordner }}</code>;
+    ein Klick öffnet das Original. Die eigenen Figurarten (HumanBody,
+    MakeHuman, UMA, SMPL, SMPL-X) stehen <span class="am-eigen-wort">rot</span>
+    in derselben Liste.
+  </p>
+
+  {% include "hilfe/_andere_modelle_lesehilfe.html" with hb=lesehilfe.hb g9=lesehilfe.g9 %}
+
+  <div class="info-box info-box-purple">
+    <strong>Befund:</strong> {{ befund }}
+  </div>
+
+  <h2 id="koerper">Ganzkörper</h2>
+  {% include "hilfe/_andere_modelle_tabelle.html" with eintraege=karten kennung="koerper" %}
+
+  <p class="am-hinweis">
+    Rang 1 bis {{ rang_von }} nach Netzdichte; „ohne Rang" steht, was keine
+    Auflösung bringt oder nur der Forschung offensteht. Ausgeschieden:
+    {% for name, adresse, grund in ausgeschieden %}<a href="{{ adresse }}" target="_blank" rel="noopener">{{ name }}</a> ({{ grund }}){% if not forloop.last %}, {% endif %}{% endfor %}.
+  </p>
+
+  <h2 id="kopf">Nur Kopf</h2>
+  <p>
+    Kopfmodelle ohne Körper — als Ergänzung zu einem Körper aus der Liste
+    oben, nicht als Basis für die Figur.
+  </p>
+  {% include "hilfe/_andere_modelle_tabelle.html" with eintraege=koepfe kennung="kopf" %}
+
+  <h2>Die Ganzkörper-Quellen im Einzelnen</h2>
+  {% include "hilfe/_andere_modelle_karten.html" with karten=karten kennung="koerper" %}
+
+  <h2>Die Kopf-Quellen im Einzelnen</h2>
+  {% include "hilfe/_andere_modelle_karten.html" with karten=koepfe kennung="kopf" %}
+
+  <h2 id="00_eigene_Renderings">Eigene Renderings (Workbench)</h2>
+  <p>
+    MB-Lab mit zwei Stufen Catmull-Clark gegen Genesis 9 mit zwei Stufen
+    Unterteilung gegen das Blender-Basisnetz mit Multires 3: Die Geometrie
+    ist bei rund 70.000 Punkten glatt; was fehlt, ist bei allen dreien
+    gleich — Poren, Unterhautstreuung, Augen, Haar, Licht. Ein dichteres
+    Netz allein bringt keine Fotoqualität; Texturen und Shader bringen sie.
+  </p>
+  <div class="am-galerie">
+    {% for datei, text in renderings %}
+    <figure>
+      <a href="{% url 'hilfe_andere_modelle_bild' '00_eigene_Renderings' datei %}" target="_blank" rel="noopener">
+        <img loading="lazy" alt="{{ text }}"
+             src="{% url 'hilfe_andere_modelle_vorschau' '00_eigene_Renderings' datei %}"></a>
+      <figcaption>{{ text }}</figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

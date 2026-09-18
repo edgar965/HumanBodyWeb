@@ -16,6 +16,11 @@
 .zeile-abgesetzt.zeile-abgesetzt.zeile-abgesetzt {
     margin-top:1rem;
 }
+.karten-hinweis.karten-hinweis.karten-hinweis {
+    margin:.6rem 0 0;
+    color:var(--text-muted,#999);
+    font-size:.85rem;
+}
 </style>
 {% endblock %}
 
@@ -79,6 +84,20 @@
         </div>
         {% kaestchen "show_rig_animations" %}
         {% animation "default_anim_animations" "anim-sel-anims" %}
+    </div>
+
+    {% comment %}Netzqualität (17.09.2026): was MB-Lab der Figur beim Anlegen
+    mitgibt — SubSurf 2 (Viewport) / 3 (Render) und der Displace-Modifier.
+    Spalten in `NetzEinstellungen`; gelesen über `core/dienste/netzqualitaet.py`.{% endcomment %}
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-vector-square"></i> Netzqualität (wie MB-Lab)</h2>
+        {% zahl "unterteilung_browser" %}
+        {% zahl "unterteilung_film" %}
+        {% kaestchen "haut_verschiebung" %}
+        <p class="karten-hinweis"><i class="fas fa-keyboard"></i>
+            <kbd>Strg</kbd>+<kbd>Alt</kbd>+<kbd>H</kbd> auf der Modell- oder Szenenseite
+            zeigt die hohe Auflösung (3 Stufen) nur in diesem Browser — die Einstellung
+            hier bleibt; dieselbe Taste schaltet zurück.</p>
     </div>
 {% endblock %}
 

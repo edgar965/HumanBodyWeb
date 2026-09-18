@@ -8,7 +8,7 @@ import { Figurkataloge } from '../gemeinsam/figurkataloge.js';
  *
  * Herausgelöst aus `zeitleiste_spurmenue.js` (372 Zeilen). Seit 15.09.2026
  * (Edgar: „bei Modell hinzufügen, mach das unterteilt, in HumanBody, UMA,
- * MakeHuman usw") ein Ordner je Figurart — dieselben fünf wie im Dialog
+ * MakeHuman usw") ein Ordner je Figurart — dieselben sechs wie im Dialog
  * „Charakter hinzufügen" der Szene (`Figurkataloge.REIHENFOLGE`) — und darin
  * der Katalog der Art. Ein Klick legt einen Modellclip mit `quelle`; die
  * Figur baut `Spurfigurarten` nach dieser Quelle.
@@ -26,7 +26,8 @@ export class Menuemodelle {
 
     static ERSATZKOERPER = 'Female_Caucasian';
     static SYMBOLE = { modell: 'fa-user', smpl: 'fa-child', makehuman: 'fa-user-alt',
-                       uma: 'fa-user-astronaut', umapython: 'fa-user-cog' };
+                       uma: 'fa-user-astronaut', umapython: 'fa-user-cog',
+                       genesis9: 'fa-user-tie' };
 
     constructor(menue) {
         this.menue = menue;

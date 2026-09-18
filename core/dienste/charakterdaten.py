@@ -29,10 +29,11 @@ import numpy as np
 from django.conf import settings
 
 from humanbody_core import CharacterDefaults, CharacterState, MeshData, MorphData
-from humanbody_core.catmull_clark import CatmullClarkSubdivider
 
 from ..daten.koerperzustand import Koerperzustand
 from ..daten.ladeschloss import Ladeschloss
+from .netzqualitaet import Netzqualitaet
+from .unterteilungsablage import Unterteilungsablage
 
 logger = logging.getLogger('core')
 
@@ -43,7 +44,7 @@ class Charakterdaten:
     _morph_data = None
     _char_defaults = None
     _mesh_data = {}          # {'female': MeshData, 'male': MeshData}
-    _cc_subdivider = {}      # {'female': CatmullClarkSubdivider, ...}
+    _cc_subdivider = {}      # {('female', 2): CatmullClarkSubdivider, ...}
     _smpl_library = None
     _smpl_body_gen = None
 
@@ -131,40 +132,44 @@ class Charakterdaten:
     # ---------------------------------------------------------- Unterteilung
 
     @classmethod
-    def unterteiler(cls, geschlecht='female'):
+    def unterteiler(cls, geschlecht='female', stufen=None):
         """Catmull-Clark-Unterteiler mit vorbereiteten Referenznormalen.
+
+        `stufen` None = die Einstellung fuer den Browser (`Netzqualitaet`,
+        MB-Lab: 2); der Film fragt seine eigene Stufe (3). Je (Geschlecht,
+        Stufen) ein Unterteiler — Teile aus der Ablage, sonst gebaut.
 
         Die Normalen werden EINMAL aus dem Basiskoerper gerechnet: Andere
         Koerpertypen haben zusammenfallende Vertices, aus denen sich keine
         brauchbare Richtung ergibt — ohne diese Referenz zeigen dort Flaechen
         nach innen."""
+        if stufen is None:
+            stufen = Netzqualitaet.stufen_browser()
+        schluessel = (geschlecht, int(stufen))
         return cls._schloesser.einmal(
-            'unterteiler:' + geschlecht,
-            lambda: cls._cc_subdivider.get(geschlecht),
-            lambda: cls._unterteiler_bauen(geschlecht))
+            'unterteiler:%s:%d' % schluessel,
+            lambda: cls._cc_subdivider.get(schluessel),
+            lambda: cls._unterteiler_bauen(geschlecht, int(stufen)))
 
     @classmethod
-    def _unterteiler_bauen(cls, geschlecht):
+    def _unterteiler_bauen(cls, geschlecht, stufen):
         """Der teure Teil — laeuft unter dem Schloss NUR dieses Namens.
 
-        Gemessen 1,21 s beim ersten Aufruf. Vorher blockierte er ueber das
-        gemeinsame Schloss auch Anfragen, die nur Morph- oder Netzdaten
-        brauchten (Befund aus dem Sparring, 18.08.2026).
+        Gemessen 1,21 s beim ersten Aufruf (eine Stufe, gebaut). Vorher
+        blockierte er ueber das gemeinsame Schloss auch Anfragen, die nur
+        Morph- oder Netzdaten brauchten (Befund aus dem Sparring, 18.08.2026).
         """
         mesh = cls.netzdaten(geschlecht)
         if mesh.faces is None or mesh.faces.ndim != 2 or mesh.faces.shape[1] != 4:
             return None
-        cc = CatmullClarkSubdivider(mesh.faces,
-                                    face_materials=mesh.face_materials,
-                                    uvs=mesh.uvs, levels=1,
-                                    uv_loops=getattr(mesh, 'uv_loops', None))
-        logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices '
+        cc = Unterteilungsablage.unterteiler(geschlecht, mesh, stufen)
+        logger.info('CC-Unterteiler (%s, %d Stufen): %d Basis- -> %d Untervertices '
                     '(davon %d Textur-Kopien an Naehten), %d Dreiecke',
-                    geschlecht, mesh.faces.max() + 1, cc.sub_vertex_count,
+                    geschlecht, stufen, mesh.faces.max() + 1, cc.sub_vertex_count,
                     cc.naht_kopien, len(cc.triangles))
         cls._referenznormalen(cc, geschlecht)
         # Erst mit fertigen Referenznormalen sichtbar machen.
-        cls._cc_subdivider[geschlecht] = cc
+        cls._cc_subdivider[(geschlecht, stufen)] = cc
         return cc
 
     @classmethod

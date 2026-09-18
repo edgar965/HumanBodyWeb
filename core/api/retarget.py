@@ -98,7 +98,7 @@ class Retargetendpunkte:
 
         Dazu: `body_height`, `format`, `foot_correction`, `delta_norm`,
         `target` (`def` = Rigify-Skelett, `uma` = UMA-Figur aus dem
-        Figurkatalog, `smpl`, `makehuman`) und `figur`.
+        Figurkatalog, `smpl`, `makehuman`, `umapython`, `genesis9`) und `figur`.
 
         WARUM ES POST GIBT (07.09.2026): Das MakeHuman-Rig haengt an 269
         Reglern — seine Gelenke sind Mittelwerte von Punkten DIESER
@@ -166,6 +166,11 @@ class Retargetendpunkte:
         """
         if wahl.ziel == Retargetdaten.ZIEL_UMAPY:
             return wahl.regler if isinstance(wahl.regler, dict) else None
+        if wahl.ziel == Retargetdaten.ZIEL_G9:
+            # Genesis 9: die Morphregler stellen die Gelenke ueber Daz'
+            # Formeln (17.09.2026) — `G9formung` traegt den Fingerabdruck.
+            from Genesis9.formung import G9formung
+            return G9formung.aus_abfrage(wahl.regler)
         if wahl.ziel != Retargetdaten.ZIEL_MH:
             return None
         from MakeHuman.formung import Mhformung

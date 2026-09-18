@@ -54,6 +54,15 @@ export class Szenenausgabe {
      * anderes als wer in den Katalog speichert — und niemand sieht, welche.
      */
     static modelldaten(figur) {
+        // Eine Figur mit eigener Quelle (Genesis 9, UMA, MakeHuman, SMPL-X,
+        // UMA Python; 17.09.2026, Edgar: „die Genesis9 die ich gespeichert
+        // habe") wird mit IHREM `toJSON` gespeichert — vorher kam eine
+        // HumanBody-Datei mit leeren Morphs heraus, die beim Laden scheiterte.
+        // Lage und Kennung bleiben draußen: die vergibt der Dialog beim Laden.
+        if (figur.quelle && figur.quelle !== 'modell' && typeof figur.toJSON === 'function') {
+            const { id, transform, ...rest } = figur.toJSON();
+            return { name: figur.presetName, quelle: figur.quelle, figur: rest };
+        }
         const daten = figur.generatedConfig
             ? Szenenausgabe._erzeugt(figur)
             : Szenenausgabe._zusammengestellt(figur);

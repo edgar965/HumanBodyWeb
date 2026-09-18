@@ -14,6 +14,7 @@ import { Umaeigenschaften } from './uma/umaeigenschaften.js';
 import { Smpleigenschaften } from './smpl/smpleigenschaften.js';
 import { Umapythoneigenschaften } from './umapython/umapythoneigenschaften.js';
 import { Mheigenschaften } from './makehuman/mheigenschaften.js';
+import { Genesis9eigenschaften } from './genesis9/genesis9eigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
@@ -85,8 +86,11 @@ export async function populateProperties(charId) {
     const smpl = inst.quelle === 'smpl';
     const makehuman = inst.quelle === 'makehuman';
     const umapython = inst.quelle === 'umapython';
-    Eigenschaftenbereiche.humanbodyTeile(!uma && !smpl && !makehuman && !umapython);
+    const genesis9 = inst.quelle === 'genesis9';
+    Eigenschaftenbereiche.humanbodyTeile(!uma && !smpl && !makehuman && !umapython
+                                         && !genesis9);
     Eigenschaftenbereiche.umaGarderobe(uma ? inst : null);
+    Eigenschaftenbereiche.genesis9Garderobe(genesis9 ? inst : null);
     // Eine MakeHuman-Figur (06.09.2026) bringt ihre eigene Garderobe mit —
     // die 181 .mhclo-Stücke sitzen auf ihr ohne Fit-Regler. Body Type,
     // Morphs und Ausstattung des HumanBody-Körpers hat sie nicht.
@@ -94,12 +98,26 @@ export async function populateProperties(charId) {
         Umaeigenschaften.leeren();
         Smpleigenschaften.leeren();
         Formbedienung.leeren();
+        Genesis9eigenschaften.leeren();
         await Mheigenschaften.fuellen(inst);
         _updatePropContext();
         _gemerktesHerstellen(charId);
         return;
     }
     Mheigenschaften.leeren();
+    // Eine Genesis-9-Figur (17.09.2026): Daz' Formregler, Haut, Augen und
+    // die Daz-Garderobe — nichts vom HumanBody-Koerper.
+    if (genesis9) {
+        Umaeigenschaften.leeren();
+        Smpleigenschaften.leeren();
+        Umapythoneigenschaften.leeren();
+        Formbedienung.leeren();
+        await Genesis9eigenschaften.fuellen(inst);
+        _updatePropContext();
+        _gemerktesHerstellen(charId);
+        return;
+    }
+    Genesis9eigenschaften.leeren();
     // Eine UMA-Python-Figur (08.09.2026) ist Koerper plus angepasstes
     // Kleidungsstueck; geformt wird ueber zwei geometrische Regler, den
     // Stoff zieht der portierte Konformer nach.
@@ -172,6 +190,7 @@ export function clearProperties() {
     Mheigenschaften.leeren();
     Formbedienung.leeren();
     Eigenschaftenbereiche.umaGarderobe(null);
+    Eigenschaftenbereiche.genesis9Garderobe(null);
 }
 
 function populateTransform(inst) {

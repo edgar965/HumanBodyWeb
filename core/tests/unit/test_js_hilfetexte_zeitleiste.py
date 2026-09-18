@@ -26,7 +26,7 @@ console.log(JSON.stringify(HILFE_ZEITLEISTE));
 SPURARTEN = ('bvh', 'model', 'camera', 'light', 'audio', 'scene_object', 'floor',
              'mimik', 'script')
 CLIPARTEN = ('bvh', 'model', 'camera_kf', 'light_kf', 'audio', 'object_clip',
-             'mimik_kf', 'script')
+             'mimik_kf', 'script', 'lipsync')
 
 #: Was ein Text nennt → wo es im Studio steht: (Wort im Text, Datei, Suchtext).
 BELEGE = {
@@ -60,6 +60,10 @@ BELEGE = {
                ('Saat', 'scriptzuschlag.js', 'Lebendigkeit.zuschlag(clip.data, t, pose)')],
     'clip_script': [('Länge', '../../../templates/bvh_studio.html', 'script-ctx-laenge'),
                     ('Blinzelfolge', 'scriptzuschlag.js', 'clip.trimIn')],
+    'clip_lipsync': [('„Lippensynchronisation aus Tonspur“', '../../../templates/bvh_studio.html',
+                      'ctx-mimik-lipsync'),
+                     ('Rhubarb', 'lipsyncspur.js', "'/api/studio/lipsync/'"),
+                     ('Visemes', 'mimikgenesis9.js', 'Genesis9felder.anwenden')],
     'clip_model': [('„Modell hinzufügen“', '../../../templates/bvh_studio.html', 'Modell hinzufügen'),
                    ('„Animation hinzufügen“', '../../../templates/bvh_studio.html',
                     'Animation hinzufügen'),

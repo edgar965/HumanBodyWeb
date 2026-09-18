@@ -24,6 +24,9 @@ export function detectBVHFormat(bones) {
         // Mixamo has Spine2, CMU does not (CMU uses LowerBack instead)
         return names.has('Spine2') ? 'MIXAMO' : 'CMU';
     }
+    // Daz Genesis 9 (18.09.2026, `Genesis9/bewegung.py`): hip + l_upperarm —
+    // VOR MocapNET, dessen Probe schon bei `hip` allein zuschlaegt.
+    if (names.has('hip') && names.has('l_upperarm')) return 'GENESIS9';
     // OpenPose: hip + rShldr (capitalized, distinct from MocapNET's rshoulder)
     if (names.has('hip') && names.has('rShldr')) return 'OPENPOSE';
     if (names.has('hip') || names.has('rshoulder')) return 'MOCAPNET';

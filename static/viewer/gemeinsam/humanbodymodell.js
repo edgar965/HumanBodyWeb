@@ -7,6 +7,7 @@ import { Hautfarbe } from './hautfarbe.js';
 import { Hautgewichte } from './hautgewichte.js';
 import { Koerperdetails } from './koerperdetails.js';
 import { Brauenhaut } from './brauenhaut.js';
+import { Hauttextur } from './hauttextur.js';
 import { Koerperfrage } from './koerperfrage.js';
 import { Modellzubehoer } from './modellzubehoer.js';
 import { Erzeugtesmodell } from './erzeugtesmodell.js';
@@ -93,6 +94,11 @@ export class HumanbodyModell extends Modell {
         return this;
     }
 
+    /** `female`/`male` aus der Körperart (`Male_Caucasian` → male). */
+    geschlecht() {
+        return /^male/i.test(this.bodyType || '') ? 'male' : 'female';
+    }
+
     /** Die Frage an `/api/character/mesh/` und `/garment/fit/`: Körperart, Morphs, Meta. */
     frage() {
         return new Koerperfrage({ bodyType: this.bodyType, morphs: this.morphs, meta: this.meta })
@@ -106,6 +112,9 @@ export class HumanbodyModell extends Modell {
         const daten = await Serverabruf.json(`${HumanbodyModell.ADRESSE}?${this.frage()}`);
         if (daten.error) throw new Error(daten.error);
         const netz = Koerpernetz.netz(daten, THREE);
+        // Geschlecht und Meta-Regler an der GEOMETRIE (die Häutung baut ein
+        // neues Netzobjekt): `Hauttextur` holt daraus die Displacement-Textur.
+        netz.geometry.userData.figur = { geschlecht: this.geschlecht(), meta: this.meta };
         Lippenbau.abspalten(netz, daten.lippen);
         this.hautfarbe(hautfarben, HumanbodyModell.materialien(netz));
         this.bodyMesh = (skelettdaten && gewichte)
@@ -199,10 +208,24 @@ export class HumanbodyModell extends Modell {
     detailsAnwenden(neue = null) {
         if (!this.bodyMesh || !this.details) return false;
         if (!this.details.haut && this.hautfarben) this.hautfarbe(this.hautfarben);
+        const figur = this.bodyMesh.geometry?.userData?.figur;
+        if (figur) figur.meta = this.meta;
         Koerperdetails.anwenden(this.bodyMesh, this.details, neue);
         Brauenhaut.anwenden(this.bodyMesh, this.details, this.bodyType)
             .catch(f => Protokoll.warnung('HumanbodyModell', 'Brauenhaut:', f));
         return true;
+    }
+
+    /**
+     * Ein Meta-Regler (age/mass/tone/height, −1..1) — und die Hautverschiebung
+     * folgt ihm, weil ihre Textur aus Alter, Tonus und Masse gerechnet wird.
+     * Die Modellseite ruft das neben dem WebSocket-Senden (17.09.2026).
+     */
+    metaSetzen(name, wert) {
+        this.meta[name] = wert;
+        if (!this.bodyMesh) return;
+        Hauttextur.verschieben(this.bodyMesh, HumanbodyModell.materialien(this.bodyMesh))
+            .catch(f => Protokoll.warnung('HumanbodyModell', 'Hautverschiebung:', f));
     }
 
     static materialien(netz) {

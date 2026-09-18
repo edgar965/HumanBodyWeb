@@ -38,7 +38,7 @@ const def = R.wahl(null);
 gleich('def target', def.target, null); gleich('def schluessel', def.schluessel, 'def');
 gleich('def abfrage', R.abfrage(def), '');
 gleich('modell-quelle', R.wahl({ quelle: 'modell' }).schluessel, 'def');
-// 2. die vier eigenen Ziele
+// 2. die fünf eigenen Ziele
 const uma = R.wahl({ quelle: 'uma', datei: 'Female Elf.glb' }, 1.7);
 gleich('uma target', uma.target, 'uma'); gleich('uma figur', uma.figur, 'Female Elf.glb');
 gleich('uma abfrage', R.abfrage(uma), '&target=uma&figur=Female%20Elf.glb&body_height=1.7000');
@@ -51,6 +51,10 @@ gleich('mh rumpf', JSON.stringify(mh.rumpf), '{"makro":{"a":1},"regler":{"b":2}}
 const up = R.wahl({ quelle: 'umapython', rasse: 'Human Female 3.0', dna: { height: 0.6 } });
 gleich('up figur', up.figur, 'Human Female 3.0');
 gleich('up rumpf', JSON.stringify(up.rumpf), '{"makro":null,"regler":{"height":0.6}}');
+const g9 = R.wahl({ quelle: 'genesis9', figur: 'amala', regler: { Amala_figure_ctrl_Character: 1 } }, 1.7);
+gleich('g9 target', g9.target, 'genesis9'); gleich('g9 figur', g9.figur, 'amala');
+gleich('g9 rumpf', JSON.stringify(g9.rumpf), '{"makro":null,"regler":{"Amala_figure_ctrl_Character":1}}');
+gleich('g9 ohne figur', R.wahl({ quelle: 'genesis9' }).figur, 'basis');
 // 3. Schlüssel trennt Ziel, Figur, Höhe
 const a = R.wahl({ quelle: 'uma', datei: 'a.glb' }, 1.7).schluessel;
 const b = R.wahl({ quelle: 'uma', datei: 'b.glb' }, 1.7).schluessel;
@@ -99,10 +103,10 @@ class RetargetzielTest(SimpleTestCase):
         self.assertIn('for (const quelle of Figurkataloge.REIHENFOLGE)', modelle)
         self.assertIn('clip.data = { preset: zeile.name, quelle,', modelle)
 
-    def test_studio_baut_und_bespielt_alle_fuenf_figurarten(self):
+    def test_studio_baut_und_bespielt_alle_sechs_figurarten(self):
         arten = RetargetzielTest._text(STUDIO / 'spurfigurarten.js')
         for bauer in ('async modell(', 'async uma(', 'async makehuman(', 'async smpl(',
-                      'async umapython('):
+                      'async umapython(', 'async genesis9('):
             self.assertIn(bauer, arten)
         self.assertIn("spur.modell?.ruhelageHerstellen", arten)
         clip = RetargetzielTest._text(STUDIO / 'clipanimation.js')

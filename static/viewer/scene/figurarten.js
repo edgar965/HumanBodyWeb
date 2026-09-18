@@ -3,6 +3,7 @@ import { UmaFigur } from './uma/umafigur.js';
 import { SmplFigur } from './smpl/smplfigur.js';
 import { MhFigur } from './makehuman/mhfigur.js';
 import { UmapythonFigur } from './umapython/umapythonfigur.js';
+import { Genesis9Figur } from './genesis9/genesis9figur.js';
 
 /**
  * Figurarten — welche Klasse zu einer gespeicherten Figur gehört.
@@ -33,6 +34,7 @@ export class Figurarten {
         [SmplFigur.QUELLE]: SmplFigur,
         [MhFigur.QUELLE]: MhFigur,
         [UmapythonFigur.QUELLE]: UmapythonFigur,
+        [Genesis9Figur.QUELLE]: Genesis9Figur,
     };
 
     /**
@@ -66,5 +68,7 @@ export class Figurarten {
         // Seit dem 08.09.2026 baut der Reiter eine echte UMA-Figur,
         // kein Kleidungspaar mehr — deshalb kein Hemd.
         [UmapythonFigur.QUELLE]: 'fa-dna',
+        // Daz Genesis 9 (17.09.2026): das dichteste Netz im Haus.
+        [Genesis9Figur.QUELLE]: 'fa-user-tie',
     };
 }

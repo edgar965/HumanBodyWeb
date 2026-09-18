@@ -33,6 +33,11 @@ PYTHON14 = str(TOOLS_ROOT / 'python14' / 'Scripts' / 'python.exe')
 FFMPEG_EXE = os.environ.get('FFMPEG_EXE') or r'A:\archiv2\_AI\tools\ffmpeg.exe'
 BLENDER_EXE = (os.environ.get('BLENDER_EXE')
                or r'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe')
+#: Rhubarb Lip Sync (18.09.2026, `core/dienste/lippensync.py`): Tondatei ->
+#: Mundformen mit Zeiten. Liegt als Fremdprogramm unter `tools/rhubarb/`
+#: (nicht im Git, `tools/**/*.exe`); Herkunft in `Genesis9/HERKUNFT.md`.
+RHUBARB_EXE = os.environ.get('RHUBARB_EXE') or str(
+    TOOLS_ROOT / 'tools' / 'rhubarb' / 'rhubarb.exe')
 
 # ------------------------------------------------------------------- MocapNET
 MOCAPNET_EXE = MOCAPNET_ROOT / 'MocapNET2CSV.exe'

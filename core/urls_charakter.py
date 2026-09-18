@@ -25,6 +25,11 @@ from .api.bvhdateien import Bvhauslieferung
 from .api.fotoabgleich import Fotoabgleich
 from .api.hauttexturen import Hauttexturen
 from .api.brauen import Brauenendpunkte
+from .api.g9figur import G9figur
+from .api.g9garderobe import G9garderobeapi
+from .api.g9vorschau import G9vorschau
+from .api.g9stoff import G9stoffapi
+from .api.g9felder import G9felderapi
 from .api.mhfigur import Mhfigur
 from .api.mhproxy import Mhproxy
 from .api.netzbearbeitung import Netzbearbeitung
@@ -81,6 +86,9 @@ CHARAKTER = [
     path('api/character/mesh/', Netzendpunkte.netz, name='character_mesh'),
     # MB-Lab-Hauttexturen fuer die Figur, nur lesend (13.09.2026).
     path('api/character/textur/<str:name>/', Hauttexturen.datei, name='character_textur'),
+    # Displacement-Textur aus Alter/Tonus/Masse (MB-Lab Displace, 17.09.2026).
+    path('api/character/textur/verschiebung/<str:geschlecht>/',
+         Hauttexturen.verschiebung, name='character_textur_verschiebung'),
     # Die gezeichnete Augenbraue (`Brauendecal`, 16.09.2026).
     path('api/character/brauen/fenster/', Brauenendpunkte.fenster,
          name='brauen_fenster'),
@@ -131,6 +139,30 @@ CHARAKTER = [
          'textur/<str:datei>/', Mhfigur.textur, name='mh_figur_textur'),
     path('api/character/mh-figur/<str:name>/netz/', Mhfigur.netz,
          name='mh_figur_netz'),
+    # Genesis 9 (Daz, 17.09.2026, core/api/g9figur.py) — dieselbe Ordnung:
+    # Regler, Garderobe und Texturen VOR `<str:name>/netz/`.
+    path('api/character/genesis9-figur/', G9figur.liste, name='g9_figur_liste'),
+    path('api/character/genesis9-figur/regler/', G9figur.regler,
+         name='g9_figur_regler'),
+    path('api/character/genesis9-figur/posen/', G9garderobeapi.posen,
+         name='g9_figur_posen'),
+    path('api/character/genesis9-figur/garderobe/', G9garderobeapi.garderobe,
+         name='g9_figur_garderobe'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/netz/',
+         G9garderobeapi.kleidnetz, name='g9_figur_kleidnetz'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/vorschau/',
+         G9vorschau.stueck, name='g9_figur_vorschau'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/stoff/<int:nummer>/',
+         G9stoffapi.bauplan, name='g9_figur_stoffbauplan'),
+    path('api/character/genesis9-figur/textur/<path:pfad>', G9garderobeapi.textur,
+         name='g9_figur_textur'),
+    # Reglerfelder je Stufe (18.09.2026, core/api/g9felder.py): JCMs, Visemes.
+    path('api/character/genesis9-figur/felder/gelenke/', G9felderapi.gelenke,
+         name='g9_figur_felder_gelenke'),
+    path('api/character/genesis9-figur/felder/visemes/', G9felderapi.visemes,
+         name='g9_figur_felder_visemes'),
+    path('api/character/genesis9-figur/<str:name>/netz/', G9figur.netz,
+         name='g9_figur_netz'),
     path('api/character/uma-figur/', Umafigur.liste, name='uma_figur_liste'),
     path('api/character/uma-figur/<str:name>/', Umafigur.datei, name='uma_figur'),
     path('api/character/uma-figur/<str:name>/zettel/', Umafigur.zettel,

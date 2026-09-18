@@ -4,7 +4,11 @@ import { sharedState } from '../character_core.js';
 import { Mimikbasis } from './mimikbasis.js';
 import { Mimikkurve } from './mimikkurve.js';
 import { Mimiksmplx } from './mimiksmplx.js';
+import { Mimikgenesis9 } from './mimikgenesis9.js';
 import { Scriptzuschlag } from './scriptzuschlag.js';
+import { Lipsyncspur } from './lipsyncspur.js';
+import { Lipsynckurve } from '../gemeinsam/lipsynckurve.js';
+import { Lipsyncformen } from '../gemeinsam/lipsyncformen.js';
 
 /**
  * Mimikanwendung — je Bild die Gesichtsknochen der Figur aus der Mimikspur setzen.
@@ -23,6 +27,10 @@ import { Scriptzuschlag } from './scriptzuschlag.js';
  * Blender-Achsen [w,x,y,z] → Three.js (x,z,−y,w), wie der Skelettbauer).
  * Eine SMPL-X-Figur hat keine Gesichtsknochen — dieselben Gewichte gehen
  * dort als Netzverschiebung (`Mimiksmplx`, 16.09.2026); `anwenden` wählt.
+ * Die Lippensynchronisation (18.09.2026, `lipsync`-Clips der Mimikspur)
+ * liefert je Bild Mundformen: als MB-Lab-Einheiten zu den Gewichten dazu
+ * (DEF, SMPL-X) und als Daz-Visemes für Genesis 9 (`Mimikgenesis9` —
+ * Felder im Netz plus Kieferknochen; Genesis 9 kennt die MB-Lab-Posen nicht).
  */
 export class Mimikanwendung {
 
@@ -52,7 +60,8 @@ export class Mimikanwendung {
         const animation = state.project.getLinkedAnimation(modell);
         if (!animation) return null;
         return { skelett: animation.skeleton || animation.mesh?.skeleton || null,
-                 mesh: animation.mesh || null, quelle: animation.quelle || 'modell' };
+                 mesh: animation.mesh || null, quelle: animation.quelle || 'modell',
+                 modell: animation.modell || null };
     }
 
     /** Das Skelett zur Modellspur (DEF-Weg) — oder null. */
@@ -60,10 +69,14 @@ export class Mimikanwendung {
         return Mimikanwendung.figur(modellIdx)?.skelett || null;
     }
 
-    /** Gewichte auf die Figur der Modellspur legen — Knochen (DEF) oder Netz (SMPL-X). */
-    static anwenden(modellIdx, gewichte, ganz = true) {
+    /**
+     * Gewichte auf die Figur der Modellspur legen — Knochen (DEF), Netz (SMPL-X)
+     * oder Daz-Visemes (`visemes`, Genesis 9).
+     */
+    static anwenden(modellIdx, gewichte, ganz = true, visemes = null) {
         const figur = Mimikanwendung.figur(modellIdx);
         if (!figur) return;
+        if (Mimikgenesis9.passt(figur)) { Mimikgenesis9.setzen(figur.modell, visemes || {}); return; }
         if (Mimiksmplx.passt(figur)) { Mimiksmplx.setzen(figur.mesh, gewichte); return; }
         if (figur.skelett && Mimikbasis.bereit) Mimikanwendung.setzen(figur.skelett, gewichte, ganz);
     }
@@ -82,22 +95,45 @@ export class Mimikanwendung {
     }
 
     /**
+     * Mundformen der `lipsync`-Clips einer Mimikspur an der Zeit `t`, in der
+     * Tabelle `tabelle` (`Lipsyncformen`) — leer, wenn kein Clip die Zeit deckt.
+     */
+    static lipsync(spur, t, tabelle) {
+        const fps = state.project.fps, frame = Math.round(t * fps);
+        /** @type {Object<string, number>} */
+        let aus = {};
+        for (const clip of spur.clips) {
+            if (clip.type !== 'lipsync' || !clip.data?.cues) continue;
+            const tonzeit = Lipsyncspur.tonzeit(clip, frame, fps);
+            if (tonzeit === null) continue;
+            aus = Lipsynckurve.addieren(aus, Lipsynckurve.gewichte(clip.data.cues, tonzeit, tabelle));
+        }
+        return aus;
+    }
+
+    /**
      * Gewichte des Modells an der Zeit `t`: Posen der Mimikspur plus die
-     * Scripts der Script-Spur. `{gewichte, mimik, script}` — die beiden
-     * Marken sagen, ob eine Mimikspur da ist und ob ein Script gerade wirkt.
+     * Scripts der Script-Spur plus die Lippensynchronisation.
+     * `{gewichte, visemes, mimik, script}` — `visemes` sind die Daz-Regler für
+     * Genesis 9; die Marken sagen, ob eine Mimikspur da ist und ob ein Script wirkt.
      */
     static gewichteModell(modellIdx, t) {
         const fps = state.project.fps;
         const mimik = Mimikanwendung.spurZu(modellIdx, 'mimik');
         /** @type {Object<string, number>} */
-        const gewichte = mimik ? Mimikanwendung.posen(mimik, t) : {};
+        let gewichte = mimik ? Mimikanwendung.posen(mimik, t) : {};
         const script = Mimikanwendung.spurZu(modellIdx, 'script');
         const dazu = script ? Scriptzuschlag.gewichte(script.clips, Math.round(t * fps), fps, gewichte)
                             : { aktiv: false, zuschlag: {} };
         for (const [einheit, g] of Object.entries(dazu.zuschlag)) {
             gewichte[einheit] = Math.max(-1, Math.min(1, (gewichte[einheit] || 0) + g));
         }
-        return { gewichte, mimik: Boolean(mimik), script: dazu.aktiv };
+        let visemes = {};
+        if (mimik) {
+            gewichte = Lipsynckurve.addieren(gewichte, Mimikanwendung.lipsync(mimik, t, Lipsyncformen.MBLAB));
+            visemes = Mimikanwendung.lipsync(mimik, t, Lipsyncformen.GENESIS9);
+        }
+        return { gewichte, visemes, mimik: Boolean(mimik), script: dazu.aktiv };
     }
 
     /** Alle Modelle an der Zeit `t`: Mimik- und Script-Spuren anwenden. */
@@ -108,7 +144,7 @@ export class Mimikanwendung {
             if (vorschau) { Mimikanwendung.anwenden(i, vorschau); return; }
             const stand = Mimikanwendung.gewichteModell(i, t);
             if (!stand.mimik && !stand.script) return;
-            Mimikanwendung.anwenden(i, stand.gewichte, stand.mimik);
+            Mimikanwendung.anwenden(i, stand.gewichte, stand.mimik, stand.visemes);
         });
     }
 

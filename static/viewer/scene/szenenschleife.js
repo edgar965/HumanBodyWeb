@@ -5,6 +5,9 @@ import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Weichgewebe } from './weichgewebe.js';
 import { Posenabsatz } from './posenabsatz.js';
 import { Bodenstand } from './bodenstand.js';
+import { Genesis9zopfschwung } from './genesis9/genesis9zopfschwung.js';
+import { Genesis9stoffschwung } from './genesis9/genesis9stoffschwung.js';
+import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -85,6 +88,13 @@ export class Szenenschleife extends Zeichenschleife {
             Posenabsatz.takt();
             this.zeitanzeige();
         }
+        // Zopfschwung (18.09.2026): die eigenen Knochen der Daz-Haare — NACH
+        // dem Mixer, VOR dem Weichgewebe, das ihr Tempo liest.
+        Genesis9zopfschwung.takt(dt);
+        Genesis9stoffschwung.takt(dt);
+        // Gelenkkorrekturen (18.09.2026 abends): Daz' JCMs aus den Knochen-
+        // winkeln dieses Bildes — nach dem Mischer, vor dem Weichgewebe.
+        Genesis9gelenke.alle(state.characters.values());
         this.aufDenBoden();
         // Weichgewebe (11.09.2026): der Zuschlag auf das Skinning — NACH dem
         // Mixer, damit die Knochen dieses Bildes gelesen werden.
