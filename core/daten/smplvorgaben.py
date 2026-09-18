@@ -30,7 +30,7 @@ class Smplvorgaben:
     """Was die SMPL-Seite speichern darf — als Tabelle statt als if-Kette."""
 
     #: Zulaessige Geschlechter des SMPL-Modells.
-    GESCHLECHTER = ("female", "male", "neutral")
+    GESCHLECHTER = ('female', 'male', 'neutral')
     #: So viele Formparameter fuehrt SMPL.
     BETAS = 10
 
@@ -39,7 +39,7 @@ class Smplvorgaben:
 
     @staticmethod
     def _geschlecht(wert):
-        return wert if wert in Smplvorgaben.GESCHLECHTER else "female"
+        return wert if wert in Smplvorgaben.GESCHLECHTER else 'female'
 
     @staticmethod
     def _betas(wert):
@@ -50,7 +50,7 @@ class Smplvorgaben:
         """
         if not isinstance(wert, list) or len(wert) != Smplvorgaben.BETAS:
             return None
-        return ",".join("%.2f" % b for b in wert)
+        return ','.join('%.2f' % b for b in wert)
 
     @staticmethod
     def _anteil(wert):
@@ -65,7 +65,7 @@ class Smplvorgaben:
     @staticmethod
     def _farbe(wert):
         """Nur Hexfarben. Ein Farbname käme im CSS an und im Renderer nicht."""
-        if not (wert and isinstance(wert, str) and wert.startswith("#")):
+        if not (wert and isinstance(wert, str) and wert.startswith('#')):
             return None
         return wert
 
@@ -109,11 +109,11 @@ class Smplvorgaben:
 #: nichts meldet). ``FEHLT`` heisst „dann nichts anfassen"; gibt die Pruefung
 #: ``None`` zurueck, bleibt das Feld ebenfalls unveraendert.
 Smplvorgaben.FELDER = (
-    ("gender", "smpl_default_gender", Smplvorgaben._geschlecht, "female"),
-    ("betas", "smpl_default_betas", Smplvorgaben._betas, Smplvorgaben.FEHLT),
-    ("opacity", "smpl_default_opacity", Smplvorgaben._anteil, Smplvorgaben.FEHLT),
-    ("color", "smpl_default_color", Smplvorgaben._farbe, Smplvorgaben.FEHLT),
-    ("wireframe", "smpl_default_wireframe", Smplvorgaben._schalter, False),
-    ("xoffset", "smpl_default_xoffset", Smplvorgaben._versatz, Smplvorgaben.FEHLT),
-    ("scene", "smpl_default_scene", Smplvorgaben._szene, Smplvorgaben.FEHLT),
+    ('gender', 'smpl_default_gender', Smplvorgaben._geschlecht, 'female'),
+    ('betas', 'smpl_default_betas', Smplvorgaben._betas, Smplvorgaben.FEHLT),
+    ('opacity', 'smpl_default_opacity', Smplvorgaben._anteil, Smplvorgaben.FEHLT),
+    ('color', 'smpl_default_color', Smplvorgaben._farbe, Smplvorgaben.FEHLT),
+    ('wireframe', 'smpl_default_wireframe', Smplvorgaben._schalter, False),
+    ('xoffset', 'smpl_default_xoffset', Smplvorgaben._versatz, Smplvorgaben.FEHLT),
+    ('scene', 'smpl_default_scene', Smplvorgaben._szene, Smplvorgaben.FEHLT),
 )

@@ -34,6 +34,7 @@ Humanbodypfad.setzen()
 
 
 from humanbody_core.cloth.musterlauf import Musterlauf  # noqa: E402
+
 from ._sicher import Sicher
 
 
@@ -61,16 +62,16 @@ class Musterbau:
     @staticmethod
     def rechteck(x0, y0, breite, hoehe):
         ecken = [[x0, y0], [x0 + breite, y0], [x0 + breite, y0 + hoehe], [x0, y0 + hoehe]]
-        return {"vertices": ecken, "edges": [{"endpoints": [i, (i + 1) % 4]} for i in range(4)]}
+        return {'vertices': ecken, 'edges': [{'endpoints': [i, (i + 1) % 4]} for i in range(4)]}
 
     @staticmethod
     def muster():
         return {
-            "panels": {
-                "vorne": dict(Musterbau.rechteck(-18, 90, 36, 45), placement="front"),
-                "hinten": dict(Musterbau.rechteck(-18, 90, 36, 45), placement="back"),
+            'panels': {
+                'vorne': dict(Musterbau.rechteck(-18, 90, 36, 45), placement='front'),
+                'hinten': dict(Musterbau.rechteck(-18, 90, 36, 45), placement='back'),
             },
-            "stitches": [{"panelA": "vorne", "edgeA": 0, "panelB": "hinten", "edgeB": 2}],
+            'stitches': [{'panelA': 'vorne', 'edgeA': 0, 'panelB': 'hinten', 'edgeB': 2}],
         }
 
 
@@ -80,8 +81,8 @@ class KantenkarteTest(SimpleTestCase):
     def setUp(self):
         self.lauf = Musterlauf(Musterbau.muster(), Musterbau.punktwolke())
         vertices, dreiecke = self.lauf.bauen()
-        self.vertices = Sicher.wert(vertices, "Punkte")
-        self.dreiecke = Sicher.wert(dreiecke, "Dreiecke")
+        self.vertices = Sicher.wert(vertices, 'Punkte')
+        self.dreiecke = Sicher.wert(dreiecke, 'Dreiecke')
 
     def test_kein_schwerpunkt_in_einer_kantenliste(self):
         """DER FALL VON FRÜHER: Kante 0 enthielt den Schwerpunkt.
@@ -93,7 +94,7 @@ class KantenkarteTest(SimpleTestCase):
         schwerpunkte = {int(d[0]) for d in self.dreiecke}
         for schluessel, nummern in self.lauf.kantenpunkte.items():
             getroffen = schwerpunkte & set(nummern)
-            self.assertEqual(getroffen, set(), "Kante %s nennt den Schwerpunkt %s" % (schluessel, getroffen))
+            self.assertEqual(getroffen, set(), 'Kante %s nennt den Schwerpunkt %s' % (schluessel, getroffen))
 
     def test_die_kanten_decken_genau_den_rand(self):
         """Zusammen nennen die Kanten eines Panels jeden Randpunkt genau einmal.
@@ -104,14 +105,14 @@ class KantenkarteTest(SimpleTestCase):
         gehört zu genau einer Kante — auch der letzte, der beim
         Off-by-one durchs Raster fiel.
         """
-        for panel in ("vorne", "hinten"):
+        for panel in ('vorne', 'hinten'):
             nummern = [n for (p, _), liste in self.lauf.kantenpunkte.items() if p == panel for n in liste]
-            self.assertEqual(len(nummern), len(set(nummern)), "ein Randpunkt steht in zwei Kanten")
+            self.assertEqual(len(nummern), len(set(nummern)), 'ein Randpunkt steht in zwei Kanten')
             schwerpunkt = min(nummern) - 1
             self.assertEqual(
                 sorted(nummern),
                 list(range(schwerpunkt + 1, schwerpunkt + 1 + len(nummern))),
-                "die Kanten lassen eine Lücke im Rand von %s" % panel,
+                'die Kanten lassen eine Lücke im Rand von %s' % panel,
             )
 
     def test_jede_nummer_liegt_im_netz(self):
@@ -125,21 +126,21 @@ class NahtTest(SimpleTestCase):
 
     def test_die_vernaehten_punkte_fallen_zusammen(self):
         lauf = Musterlauf(Musterbau.muster(), Musterbau.punktwolke())
-        vertices = Sicher.wert(lauf.bauen()[0], "Punkte")
-        a = lauf.kantenpunkte[("vorne", 0)]
-        b = lauf.kantenpunkte[("hinten", 2)]
+        vertices = Sicher.wert(lauf.bauen()[0], 'Punkte')
+        a = lauf.kantenpunkte[('vorne', 0)]
+        b = lauf.kantenpunkte[('hinten', 2)]
         for ia, ib in zip(a, b):
             self.assertTrue(
                 np.allclose(vertices[ia], vertices[ib]),
-                "Naht %d/%d liegt auseinander: %s vs %s" % (ia, ib, vertices[ia], vertices[ib]),
+                'Naht %d/%d liegt auseinander: %s vs %s' % (ia, ib, vertices[ia], vertices[ib]),
             )
 
     def test_eine_naht_ins_leere_stoert_nicht(self):
         """Ein Stich auf ein Panel, das es nicht gibt, wird übergangen."""
         muster = Musterbau.muster()
-        muster["stitches"].append({"panelA": "gibtsnicht", "edgeA": 0, "panelB": "hinten", "edgeB": 0})
+        muster['stitches'].append({'panelA': 'gibtsnicht', 'edgeA': 0, 'panelB': 'hinten', 'edgeB': 0})
         vertices, dreiecke = Musterlauf(muster, Musterbau.punktwolke()).bauen()
-        vertices, dreiecke = Sicher.wert(vertices, "Punkte"), Sicher.wert(dreiecke, "Dreiecke")
+        vertices, dreiecke = Sicher.wert(vertices, 'Punkte'), Sicher.wert(dreiecke, 'Dreiecke')
         self.assertEqual(len(vertices), 20)
         self.assertEqual(len(dreiecke), 18)
 
@@ -152,8 +153,8 @@ class LeeresMusterTest(SimpleTestCase):
 
     def test_panel_mit_zwei_ecken(self):
         muster = {
-            "panels": {"strich": {"vertices": [[0, 0], [1, 0]], "edges": [{"endpoints": [0, 1]}]}},
-            "stitches": [],
+            'panels': {'strich': {'vertices': [[0, 0], [1, 0]], 'edges': [{'endpoints': [0, 1]}]}},
+            'stitches': [],
         }
         lauf = Musterlauf(muster, Musterbau.punktwolke())
         self.assertEqual(lauf.bauen(), (None, None))

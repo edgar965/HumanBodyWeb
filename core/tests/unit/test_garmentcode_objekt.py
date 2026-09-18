@@ -26,6 +26,7 @@ import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
+
 from ._sicher import Sicher
 
 
@@ -34,50 +35,50 @@ class GarmentcodeObjektTest(SimpleTestCase):
 
     def setUp(self):
         self.quelle = settings.BASE_DIR.joinpath(
-            "static", "viewer", "scene", "garmentcode_anziehen.js"
-        ).read_text(encoding="utf-8")
+            'static', 'viewer', 'scene', 'garmentcode_anziehen.js'
+        ).read_text(encoding='utf-8')
 
     def _rumpf(self, name):
-        treffer = re.search(r"static %s\([^)]*\)\s*\{(.*?)\n    \}" % name, self.quelle, re.S)
-        self.assertIsNotNone(treffer, "%s nicht gefunden" % name)
+        treffer = re.search(r'static %s\([^)]*\)\s*\{(.*?)\n    \}' % name, self.quelle, re.S)
+        self.assertIsNotNone(treffer, '%s nicht gefunden' % name)
         return treffer.group(1)
 
     def test_einhaengen_traegt_in_clothmeshes_ein(self):
         """Ohne diese Zeile ist das Stueck kein waehlbares Teilnetz."""
-        rumpf = self._rumpf("einhaengen")
+        rumpf = self._rumpf('einhaengen')
         self.assertIn(
-            "clothMeshes[GarmentcodeAnziehen.schluessel(stueck)]",
+            'clothMeshes[GarmentcodeAnziehen.schluessel(stueck)]',
             rumpf,
-            "Ohne den Eintrag waehlt ein Klick auf das Stueck die ganze Figur — und Entf loescht sie",
+            'Ohne den Eintrag waehlt ein Klick auf das Stueck die ganze Figur — und Entf loescht sie',
         )
 
     def test_entfernen_raeumt_den_eintrag_mit_weg(self):
         """Sonst zeigt die Auswahl ein Stueck, das es nicht mehr gibt."""
-        rumpf = self._rumpf("entfernen")
+        rumpf = self._rumpf('entfernen')
         self.assertIn(
-            "delete figur.clothMeshes[schluessel]",
+            'delete figur.clothMeshes[schluessel]',
             rumpf,
-            "Ein verwaister Eintrag laesst `dispose()` spaeter ueber ein freigegebenes Netz laufen",
+            'Ein verwaister Eintrag laesst `dispose()` spaeter ueber ein freigegebenes Netz laufen',
         )
 
     def test_schluessel_kollidiert_mit_keinem_aufraeumzweig(self):
         """`gar_`, `bld_`, `prim_`, `tpl_` haben in `_removeSubMesh` je
         eigene Zweige, die Listen fuehren, die es hier nicht gibt."""
-        rumpf = self._rumpf("schluessel")
-        treffer = re.search(r"return `([a-z_]+)\$\{rein\}`", rumpf)
-        self.assertIsNotNone(treffer, "Kein Praefix im Schluessel")
-        praefix = Sicher.wert(treffer, "Treffer").group(1)
-        for fremd in ("gar_", "bld_", "prim_", "tpl_"):
+        rumpf = self._rumpf('schluessel')
+        treffer = re.search(r'return `([a-z_]+)\$\{rein\}`', rumpf)
+        self.assertIsNotNone(treffer, 'Kein Praefix im Schluessel')
+        praefix = Sicher.wert(treffer, 'Treffer').group(1)
+        for fremd in ('gar_', 'bld_', 'prim_', 'tpl_'):
             self.assertNotEqual(praefix, fremd)
             self.assertFalse(
                 praefix.startswith(fremd),
-                "Praefix %r geraet in den %r-Zweig von _removeSubMesh" % (praefix, fremd),
+                'Praefix %r geraet in den %r-Zweig von _removeSubMesh' % (praefix, fremd),
             )
 
     def test_beschriftung_schlaegt_den_schluessel(self):
         """Im Auswahlmenue soll „kleid (GarmentCode)" stehen, nicht `gc_kleid`."""
-        auswahl = settings.BASE_DIR.joinpath("static", "viewer", "scene", "teilnetz_auswahl.js").read_text(
-            encoding="utf-8"
+        auswahl = settings.BASE_DIR.joinpath('static', 'viewer', 'scene', 'teilnetz_auswahl.js').read_text(
+            encoding='utf-8'
         )
-        self.assertIn("mesh.userData?.beschriftung || key", auswahl)
-        self.assertIn("userData.beschriftung", self._rumpf("einhaengen"))
+        self.assertIn('mesh.userData?.beschriftung || key', auswahl)
+        self.assertIn('userData.beschriftung', self._rumpf('einhaengen'))

@@ -20,6 +20,7 @@ from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from core.dienste.umabauer import Umabauer, UmabauerFehlt
+
 from ..unit._sicher import Sicher
 
 ATTRAPPE = """# -*- coding: utf-8 -*-
@@ -74,24 +75,24 @@ class UmabauerTest(SimpleTestCase):
     WARTE_S = 20
 
     def setUp(self):
-        basis = Path(settings.BASE_DIR).parent / "ProjektTemp"
+        basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
         basis.mkdir(exist_ok=True)
-        self.wurzel = Path(tempfile.mkdtemp(prefix="umabauer_", dir=str(basis)))
-        self.katalog = self.wurzel / "Figuren"
-        (self.katalog / "uma").mkdir(parents=True)
-        self.projekt = self.wurzel / "UMAProject"
+        self.wurzel = Path(tempfile.mkdtemp(prefix='umabauer_', dir=str(basis)))
+        self.katalog = self.wurzel / 'Figuren'
+        (self.katalog / 'uma').mkdir(parents=True)
+        self.projekt = self.wurzel / 'UMAProject'
         self.projekt.mkdir()
-        skript = self.wurzel / "attrappe.py"
-        skript.write_text(ATTRAPPE % {"katalog": str(self.katalog / "uma")}, encoding="utf-8")
-        self.unity = self.wurzel / "unity.cmd"
-        self.unity.write_text('@"%s" "%s" %%*\n' % (sys.executable, skript), encoding="utf-8")
+        skript = self.wurzel / 'attrappe.py'
+        skript.write_text(ATTRAPPE % {'katalog': str(self.katalog / 'uma')}, encoding='utf-8')
+        self.unity = self.wurzel / 'unity.cmd'
+        self.unity.write_text('@"%s" "%s" %%*\n' % (sys.executable, skript), encoding='utf-8')
         Umabauer._laeufe.clear()
         Umabauer._prozess = None
         self.umschaltung = override_settings(
             UNITY_EXE=self.unity,
             UMA_PROJEKT=self.projekt,
             FIGUREN_KATALOG=self.katalog,
-            UMA_BAU_LOGS=self.wurzel / "logs",
+            UMA_BAU_LOGS=self.wurzel / 'logs',
         )
         self.umschaltung.enable()
 
@@ -113,69 +114,69 @@ class UmabauerTest(SimpleTestCase):
             laeuft = False
             for lauf in list(Umabauer._laeufe):
                 s = Sicher.wert(Umabauer.stand(lauf), lauf)
-                if s["laeuft"]:
+                if s['laeuft']:
                     laeuft = True
                 if lauf == name:
                     stand = s
             if not laeuft:
                 return stand
             time.sleep(0.1)
-        self.fail("Attrappe läuft nach %d s noch" % self.WARTE_S)
+        self.fail('Attrappe läuft nach %d s noch' % self.WARTE_S)
 
     # ---------------------------------------------------------------- Dienst
 
     def test_bauen_legt_die_datei_in_den_katalog(self):
-        start = Sicher.wert(Umabauer.bauen("Human Female 3.0"), "Start")
-        self.assertEqual(start["name"], "Uma_HumanFemale30")
-        self.assertTrue(start["laeuft"])
-        self.assertTrue(start["wartet"])
-        ende = Sicher.wert(self._abwarten("Uma_HumanFemale30"), "Ende")
-        self.assertEqual(ende["exit"], 0)
-        self.assertEqual(ende["datei"], "Uma_HumanFemale30.glb")
-        self.assertEqual(ende["meldung"], "bau 1.00 s")
-        self.assertTrue((self.katalog / "uma" / "Uma_HumanFemale30.glb").is_file())
+        start = Sicher.wert(Umabauer.bauen('Human Female 3.0'), 'Start')
+        self.assertEqual(start['name'], 'Uma_HumanFemale30')
+        self.assertTrue(start['laeuft'])
+        self.assertTrue(start['wartet'])
+        ende = Sicher.wert(self._abwarten('Uma_HumanFemale30'), 'Ende')
+        self.assertEqual(ende['exit'], 0)
+        self.assertEqual(ende['datei'], 'Uma_HumanFemale30.glb')
+        self.assertEqual(ende['meldung'], 'bau 1.00 s')
+        self.assertTrue((self.katalog / 'uma' / 'Uma_HumanFemale30.glb').is_file())
         # Ein neuer Serverprozess kennt den Lauf nur aus der Ablage neben dem Log.
         Umabauer._laeufe.clear()
-        self.assertEqual(self.stand("Uma_HumanFemale30")["datei"], "Uma_HumanFemale30.glb")
+        self.assertEqual(self.stand('Uma_HumanFemale30')['datei'], 'Uma_HumanFemale30.glb')
 
     def test_zwei_auftraege_kommen_nacheinander_dran_ohne_zweiten_start(self):
-        erster = Sicher.wert(Umabauer.bauen("Human Female 3.0"), "erster")
-        zweiter = Sicher.wert(Umabauer.bauen("Human Male 3.0"), "zweiter")
-        self.assertTrue(erster["laeuft"] and zweiter["laeuft"])
-        self.assertEqual(len(list((self.wurzel / "logs" / "bauer").glob("*.auftrag.json"))), 2)
+        erster = Sicher.wert(Umabauer.bauen('Human Female 3.0'), 'erster')
+        zweiter = Sicher.wert(Umabauer.bauen('Human Male 3.0'), 'zweiter')
+        self.assertTrue(erster['laeuft'] and zweiter['laeuft'])
+        self.assertEqual(len(list((self.wurzel / 'logs' / 'bauer').glob('*.auftrag.json'))), 2)
         self._abwarten()
-        self.assertEqual(self.stand("Uma_HumanFemale30")["datei"], "Uma_HumanFemale30.glb")
-        self.assertEqual(self.stand("Uma_HumanMale30")["datei"], "Uma_HumanMale30.glb")
+        self.assertEqual(self.stand('Uma_HumanFemale30')['datei'], 'Uma_HumanFemale30.glb')
+        self.assertEqual(self.stand('Uma_HumanMale30')['datei'], 'Uma_HumanMale30.glb')
 
     def test_ohne_unity_kommt_fehlt(self):
-        with override_settings(UNITY_EXE=self.wurzel / "gibtsnicht.exe"):
+        with override_settings(UNITY_EXE=self.wurzel / 'gibtsnicht.exe'):
             with self.assertRaises(UmabauerFehlt):
-                Umabauer.bauen("Human Female 3.0")
+                Umabauer.bauen('Human Female 3.0')
 
     def test_name_aus_der_rasse_und_ungueltige_namen(self):
-        self.assertEqual(Umabauer.name_fuer("Anime Elf Female 3.0"), "Uma_AnimeElfFemale30")
+        self.assertEqual(Umabauer.name_fuer('Anime Elf Female 3.0'), 'Uma_AnimeElfFemale30')
         with self.assertRaises(ValueError):
-            Umabauer.bauen("Human Male 3.0", name="../raus")
+            Umabauer.bauen('Human Male 3.0', name='../raus')
         with self.assertRaises(ValueError):
-            Umabauer.bauen("")
+            Umabauer.bauen('')
 
     def test_rassenliste_kommt_aus_unity(self):
         self.assertIsNone(Umabauer.rassen())
         Umabauer.rassen_ermitteln()
         self._abwarten(Umabauer.RASSENLAUF)
-        self.assertEqual(Umabauer.rassen(), ["ElfFemale30", "Human Female 3.0", "HumanMale"])
-        details = Sicher.wert(Umabauer.rassen_details(), "Rassen")
-        self.assertEqual(details["ElfFemale30"], ["Human Female 3.0"])
-        self.assertEqual(details["HumanMale"], [])
+        self.assertEqual(Umabauer.rassen(), ['ElfFemale30', 'Human Female 3.0', 'HumanMale'])
+        details = Sicher.wert(Umabauer.rassen_details(), 'Rassen')
+        self.assertEqual(details['ElfFemale30'], ['Human Female 3.0'])
+        self.assertEqual(details['HumanMale'], [])
 
     def test_bauer_bleibt_fuer_den_naechsten_auftrag_offen(self):
-        Umabauer.bauen("Human Female 3.0")
+        Umabauer.bauen('Human Female 3.0')
         self._abwarten()
         self.assertTrue(Umabauer.bauer_lebt())
-        pid = Sicher.wert(Umabauer.bauer(), "Bauer")["pid"]
-        Umabauer.bauen("Human Male 3.0")
+        pid = Sicher.wert(Umabauer.bauer(), 'Bauer')['pid']
+        Umabauer.bauen('Human Male 3.0')
         self._abwarten()
-        self.assertEqual(Sicher.wert(Umabauer.bauer(), "Bauer")["pid"], pid)
+        self.assertEqual(Sicher.wert(Umabauer.bauer(), 'Bauer')['pid'], pid)
 
     def test_vorwaermen_startet_den_bauer_und_baut_ins_leere(self):
         """06.09.2026: Der erste Bau nach einem Start kostet 90 s, jeder weitere
@@ -184,65 +185,65 @@ class UmabauerTest(SimpleTestCase):
         `-leerlauf 0`: Er bleibt offen."""
         self.assertEqual(
             Umabauer.bauer_stand(),
-            {"lebt": False, "stand": "aus", "startet": False, "seit_s": None, "pid": None},
+            {'lebt': False, 'stand': 'aus', 'startet': False, 'seit_s': None, 'pid': None},
         )
-        self.assertTrue(Umabauer.vorwaermen()["gestartet"])
-        self.assertTrue(Umabauer.bauer_stand()["startet"] or Umabauer.bauer_stand()["lebt"])
+        self.assertTrue(Umabauer.vorwaermen()['gestartet'])
+        self.assertTrue(Umabauer.bauer_stand()['startet'] or Umabauer.bauer_stand()['lebt'])
         self._abwarten(Umabauer.WARMNAME)
         ordner = Path(Umabauer.auftragsordner())
         self.assertTrue((ordner / Umabauer.WARMDATEI).is_file())
-        self.assertFalse(list((self.katalog / "uma").glob("_warm*")))
+        self.assertFalse(list((self.katalog / 'uma').glob('_warm*')))
         stand = Umabauer.bauer_stand()
-        self.assertTrue(stand["lebt"])
+        self.assertTrue(stand['lebt'])
         # Das Lebenszeichen hinkt dem Ergebnis um einen Takt nach: „baut" ist hier noch erlaubt.
-        self.assertIn(stand["stand"], ("bereit", "baut"))
-        self.assertFalse(Umabauer.vorwaermen()["gestartet"])  # lebt schon: nichts zu tun
-        argv = json.loads((ordner / "argv.json").read_text(encoding="utf-8"))
-        self.assertEqual(argv[argv.index("-leerlauf") + 1], "0")
+        self.assertIn(stand['stand'], ('bereit', 'baut'))
+        self.assertFalse(Umabauer.vorwaermen()['gestartet'])  # lebt schon: nichts zu tun
+        argv = json.loads((ordner / 'argv.json').read_text(encoding='utf-8'))
+        self.assertEqual(argv[argv.index('-leerlauf') + 1], '0')
 
     def test_farben_landen_im_auftrag_wie_der_exporter_sie_liest(self):
-        Umabauer.bauen("Human Female 3.0", name="Uma_Farbe", farben={"haut": "#E0B090", "haar": "#302010"})
-        self._abwarten("Uma_Farbe")
+        Umabauer.bauen('Human Female 3.0', name='Uma_Farbe', farben={'haut': '#E0B090', 'haar': '#302010'})
+        self._abwarten('Uma_Farbe')
         ergebnis = json.loads(
-            (Path(Umabauer.auftragsordner()) / "Uma_Farbe.ergebnis.json").read_text(encoding="utf-8")
+            (Path(Umabauer.auftragsordner()) / 'Uma_Farbe.ergebnis.json').read_text(encoding='utf-8')
         )
-        self.assertEqual(ergebnis["auftrag"]["farben"], "Skin=#e0b090,Hair=#302010")
-        for schlecht in ({"haut": "rot"}, {"augen": "#000000"}, "Skin=#000000"):
+        self.assertEqual(ergebnis['auftrag']['farben'], 'Skin=#e0b090,Hair=#302010')
+        for schlecht in ({'haut': 'rot'}, {'augen': '#000000'}, 'Skin=#000000'):
             with self.assertRaises(ValueError, msg=repr(schlecht)):
-                Umabauer.bauen("Human Female 3.0", name="Uma_Schlecht", farben=schlecht)
-        self.assertFalse((Path(Umabauer.auftragsordner()) / "Uma_Schlecht.auftrag.json").exists())
+                Umabauer.bauen('Human Female 3.0', name='Uma_Schlecht', farben=schlecht)
+        self.assertFalse((Path(Umabauer.auftragsordner()) / 'Uma_Schlecht.auftrag.json').exists())
 
     # ------------------------------------------------------------- Endpunkte
 
     def test_endpunkte_bauen_stand_und_rassen(self):
-        antwort = self.client.get("/api/character/uma-rassen/")
+        antwort = self.client.get('/api/character/uma-rassen/')
         self.assertEqual(antwort.status_code, 200)
-        self.assertEqual(antwort.json(), {"rassen": [], "ermittelt": False, "figuren": []})
+        self.assertEqual(antwort.json(), {'rassen': [], 'ermittelt': False, 'figuren': []})
 
-        antwort = self._bauen("Human Male 3.0")
+        antwort = self._bauen('Human Male 3.0')
         self.assertEqual(antwort.status_code, 202, antwort.content)
-        name = antwort.json()["name"]
-        self.assertEqual(name, "Uma_HumanMale30")
-        self.assertEqual(self._bauen("Human Female 3.0").status_code, 202)  # stellt sich an
+        name = antwort.json()['name']
+        self.assertEqual(name, 'Uma_HumanMale30')
+        self.assertEqual(self._bauen('Human Female 3.0').status_code, 202)  # stellt sich an
 
         self._abwarten(name)
-        stand = self.client.get("/api/character/uma-figur/bauen/%s/stand/" % name).json()
-        self.assertFalse(stand["laeuft"])
-        self.assertEqual(stand["datei"], "Uma_HumanMale30.glb")
-        self.assertEqual(self.client.get("/api/character/uma-figur/bauen/nix/stand/").status_code, 404)
+        stand = self.client.get('/api/character/uma-figur/bauen/%s/stand/' % name).json()
+        self.assertFalse(stand['laeuft'])
+        self.assertEqual(stand['datei'], 'Uma_HumanMale30.glb')
+        self.assertEqual(self.client.get('/api/character/uma-figur/bauen/nix/stand/').status_code, 404)
 
         self._abwarten()
-        figuren = self.client.get("/api/character/uma-rassen/").json()["figuren"]
-        self.assertEqual(sorted(f["name"] for f in figuren), ["Uma_HumanFemale30.glb", "Uma_HumanMale30.glb"])
+        figuren = self.client.get('/api/character/uma-rassen/').json()['figuren']
+        self.assertEqual(sorted(f['name'] for f in figuren), ['Uma_HumanFemale30.glb', 'Uma_HumanMale30.glb'])
 
     def test_endpunkt_ohne_rasse_und_ohne_unity(self):
-        antwort = self.client.post("/api/character/uma-figur/bauen/", "{}", content_type="application/json")
+        antwort = self.client.post('/api/character/uma-figur/bauen/', '{}', content_type='application/json')
         self.assertEqual(antwort.status_code, 400)
-        with override_settings(UNITY_EXE=self.wurzel / "gibtsnicht.exe"):
-            antwort = self._bauen("Human Male 3.0")
+        with override_settings(UNITY_EXE=self.wurzel / 'gibtsnicht.exe'):
+            antwort = self._bauen('Human Male 3.0')
         self.assertEqual(antwort.status_code, 503)
 
     def _bauen(self, rasse):
         return self.client.post(
-            "/api/character/uma-figur/bauen/", json.dumps({"rasse": rasse}), content_type="application/json"
+            '/api/character/uma-figur/bauen/', json.dumps({'rasse': rasse}), content_type='application/json'
         )

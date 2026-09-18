@@ -23,12 +23,11 @@ import os
 import sys
 
 import numpy as np
-
 from bakedatei import Bakedatei
 from videoschreiber import Videoschreiber
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
-ZIEL_VORGABE = r"A:\3DTools\Docu\Ergebnisse"
+ZIEL_VORGABE = r'A:\3DTools\Docu\Ergebnisse'
 
 
 class Bakevideo:
@@ -52,8 +51,8 @@ class Bakevideo:
             self.dreiecke = self.bake.dreiecke
         else:
             print(
-                "ACHTUNG: alte FPSBAKE1-Ablage ohne Dreiecke — die "
-                ".off-Flaechen passen NICHT zu diesen Punkten."
+                'ACHTUNG: alte FPSBAKE1-Ablage ohne Dreiecke — die '
+                '.off-Flaechen passen NICHT zu diesen Punkten.'
             )
             self.dreiecke = self._off_flaechen(off_pfad)
         self.breite, self.hoehe = int(breite), int(hoehe)
@@ -64,7 +63,7 @@ class Bakevideo:
     @staticmethod
     def _off_flaechen(pfad):
         """Die Dreiecke der `.off` — die Punkte kommen aus dem Bake."""
-        zeilen = open(pfad).read().split("\n")
+        zeilen = open(pfad).read().split('\n')
         n, m, _ = [int(x) for x in zeilen[1].split()]
         return np.array([[int(x) for x in zeilen[2 + n + i].split()[1:4]] for i in range(m)], dtype=np.int64)
 
@@ -91,8 +90,8 @@ class Bakevideo:
 
     def bilder(self):
         """Ein RGB-Feld je Bild (H x B x 3, uint8)."""
-        import trimesh
         import pyrender
+        import trimesh
 
         figurhoehe = float(self.punkte_m[0][:, 2].max())
         lage, _ = self._kamera(figurhoehe)
@@ -134,27 +133,27 @@ class Bakevideo:
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument("--bake", default=os.path.join(ORDNER, "figur", "hb_female_walk.bin"))
-    zerleger.add_argument("--off", default=os.path.join(ORDNER, "figur", "hb_female.off"))
-    zerleger.add_argument("--aus", default=None)
-    zerleger.add_argument("--fps", type=int, default=20)
-    zerleger.add_argument("--breite", type=int, default=720)
-    zerleger.add_argument("--hoehe", type=int, default=960)
-    zerleger.add_argument("--schleifen", type=int, default=3)
+    zerleger.add_argument('--bake', default=os.path.join(ORDNER, 'figur', 'hb_female_walk.bin'))
+    zerleger.add_argument('--off', default=os.path.join(ORDNER, 'figur', 'hb_female.off'))
+    zerleger.add_argument('--aus', default=None)
+    zerleger.add_argument('--fps', type=int, default=20)
+    zerleger.add_argument('--breite', type=int, default=720)
+    zerleger.add_argument('--hoehe', type=int, default=960)
+    zerleger.add_argument('--schleifen', type=int, default=3)
     werte = zerleger.parse_args()
 
-    ziel = werte.aus or os.path.join(ZIEL_VORGABE, os.path.splitext(os.path.basename(werte.bake))[0] + ".mp4")
+    ziel = werte.aus or os.path.join(ZIEL_VORGABE, os.path.splitext(os.path.basename(werte.bake))[0] + '.mp4')
 
     video = Bakevideo(werte.bake, werte.off, werte.breite, werte.hoehe)
     print(
-        "Bake     %d Bilder, %d Punkte, %d Dreiecke"
+        'Bake     %d Bilder, %d Punkte, %d Dreiecke'
         % (video.bake.bilder, video.bake.punkte, len(video.dreiecke))
     )
     pfad, zahl = video.schreiben(ziel, werte.fps, werte.schleifen)
-    print("Video    %s (%d Bilder bei %d fps = %.1f s)" % (pfad, zahl, werte.fps, zahl / float(werte.fps)))
-    print("         %.1f KB" % (os.path.getsize(pfad) / 1024.0))
+    print('Video    %s (%d Bilder bei %d fps = %.1f s)' % (pfad, zahl, werte.fps, zahl / float(werte.fps)))
+    print('         %.1f KB' % (os.path.getsize(pfad) / 1024.0))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

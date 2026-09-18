@@ -18,7 +18,7 @@ das eingeschränkt, was die dritte Spur wirklich mitbringt (gemessen 12.09.2026:
 
 class Handspuren:
     #: Anfänge der Knochennamen (Three.js-Schreibweise), die eine Hand ausmachen.
-    ANFAENGE = ("DEF-f_", "DEF-thumb", "DEF-palm")
+    ANFAENGE = ('DEF-f_', 'DEF-thumb', 'DEF-palm')
 
     @classmethod
     def knochen(cls):
@@ -32,7 +32,7 @@ class Handspuren:
         `Bewegungsspuren` aus dem Retarget."""
         from humanbody_core.skeleton.retarget.zusammenfuegen import merge_retargeted
 
-        vorhanden = {name.replace(".", "_") for name in haende.tracks}
+        vorhanden = {name.replace('.', '_') for name in haende.tracks}
         return merge_retargeted(
             gemischt, haende, face_hand_bones=cls.knochen() & vorhanden, filter_noisy_face=False
         )

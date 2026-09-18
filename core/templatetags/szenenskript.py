@@ -19,10 +19,10 @@ from ..dienste.modulbuendel import Modulbuendel
 
 register = template.Library()
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 #: Der Weg ohne Bündel: der Einstiegspunkt der Einzelmodule.
-EINZELN = "viewer/scene/main.js"
+EINZELN = 'viewer/scene/main.js'
 
 
 @register.simple_tag
@@ -40,7 +40,7 @@ def szenenskript():
         except Exception:
             # Ein Fehler beim Bündeln darf die Seite nicht kosten: Sie lädt
             # dann die Einzelmodule — langsamer, aber vollständig.
-            logger.exception("Szenenskript: Bündel nicht verfügbar")
+            logger.exception('Szenenskript: Bündel nicht verfügbar')
     return Fassungsstatik.pfad(EINZELN)
 
 
@@ -55,7 +55,7 @@ def _gewuenscht():
         from ..models import AppSettings
 
         prefs = AppSettings.load().ui_prefs or {}
-        return str(prefs.get("module_buendeln", "1")) != "0"
+        return str(prefs.get('module_buendeln', '1')) != '0'
     except Exception:
-        logger.exception("Szenenskript: Einstellung nicht lesbar")
+        logger.exception('Szenenskript: Einstellung nicht lesbar')
         return False

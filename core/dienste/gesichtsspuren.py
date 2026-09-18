@@ -36,11 +36,11 @@ import numpy as np
 
 class Gesichtsspuren:
     #: So heißt die Datei neben der Gesichts-BVH (`Hybridlauf`).
-    ENDUNG = "_blendshapes.json"
+    ENDUNG = '_blendshapes.json'
 
     @classmethod
     def datei(cls, gesicht_bvh):
-        return gesicht_bvh.rsplit(".", 1)[0] + cls.ENDUNG
+        return gesicht_bvh.rsplit('.', 1)[0] + cls.ENDUNG
 
     @classmethod
     def laden(cls, gesicht_bvh):
@@ -50,7 +50,7 @@ class Gesichtsspuren:
             return None
         from humanbody_core.skeleton.face_blendshapes import Gesichtsformen
 
-        with open(pfad, encoding="utf-8") as datei:
+        with open(pfad, encoding='utf-8') as datei:
             daten = json.load(datei)
         return Gesichtsformen.blendshapes_to_bone_tracks(daten)
 
@@ -88,5 +88,5 @@ class Gesichtsspuren:
 
             geometrie = Skelettgeometrie.holen()
         lagen = cls.auf_ruhelage(ausdruecke, geometrie)
-        knochen = {name.replace(".", "_") for name in lagen.tracks}
+        knochen = {name.replace('.', '_') for name in lagen.tracks}
         return merge_retargeted(gemischt, lagen, face_hand_bones=knochen, filter_noisy_face=False)

@@ -40,7 +40,7 @@ import tempfile
 import time
 from pathlib import Path
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class AtomarSchreiber:
@@ -70,12 +70,12 @@ class AtomarSchreiber:
             # delete=False, weil die Datei nach dem Schließen noch gebraucht wird;
             # dir=ziel.parent, damit os.replace auf demselben Laufwerk bleibt.
             with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
+                mode='w',
+                encoding='utf-8',
                 newline=zeilenende,
                 dir=str(ziel.parent),
-                prefix="." + ziel.name + ".",
-                suffix=".tmp",
+                prefix='.' + ziel.name + '.',
+                suffix='.tmp',
                 delete=False,
             ) as f:
                 tmp_name = f.name
@@ -90,7 +90,7 @@ class AtomarSchreiber:
                 try:
                     os.unlink(tmp_name)
                 except OSError:
-                    logger.warning("AtomarSchreiber: Nebendatei blieb liegen: %s", tmp_name)
+                    logger.warning('AtomarSchreiber: Nebendatei blieb liegen: %s', tmp_name)
 
     @classmethod
     def _ersetzen(cls, quelle, ziel):
@@ -105,5 +105,5 @@ class AtomarSchreiber:
                 # Typisch Windows: Datei ist kurz von einem anderen Programm offen.
                 letzter = e
                 time.sleep(cls.PAUSE_S * (versuch + 1))
-        logger.error("AtomarSchreiber: %s liess sich nicht ersetzen: %s", ziel, letzter)
+        logger.error('AtomarSchreiber: %s liess sich nicht ersetzen: %s', ziel, letzter)
         raise letzter if letzter is not None else PermissionError(str(ziel))

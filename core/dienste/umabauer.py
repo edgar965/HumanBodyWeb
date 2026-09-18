@@ -32,9 +32,9 @@ from django.conf import settings
 from ..pipelines.prozesspruefung import Prozesspruefung
 from .umalaufstand import Umalaufstand
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Umabauer", "UmabauerFehlt"]
+__all__ = ['Umabauer', 'UmabauerFehlt']
 
 
 class UmabauerFehlt(Exception):
@@ -44,23 +44,23 @@ class UmabauerFehlt(Exception):
 class Umabauer:
     """Aufträge an den Unity-Bauer geben und ihren Stand melden."""
 
-    METHODE = "Roomguest3d.UmaFigurExport.Exportieren"
-    NAME = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_\-]*$")
-    RASSENDATEI = "rassen.json"
-    RASSENLAUF = "rassenliste"
-    BAUERLOG = "unity_bauer.log"
+    METHODE = 'Roomguest3d.UmaFigurExport.Exportieren'
+    NAME = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_\-]*$')
+    RASSENDATEI = 'rassen.json'
+    RASSENLAUF = 'rassenliste'
+    BAUERLOG = 'unity_bauer.log'
     #: So alt darf das Lebenszeichen sein; der Bauer schreibt alle 2 s.
     FRISCH_S = 15
     #: Vorwärmen (06.09.2026): Der erste Bau nach einem Start kostet rund 90 s
     #: (Editor, Skripte, Rezept-Index, erster Export), jeder weitere 4–6 s.
     #: Deshalb startet der Bauer, sobald die Szene eine UMA-Figur zeigt, und
     #: baut einmal ins Leere — nach `logs/bauer/`, nie in den Katalog.
-    WARMNAME = "_warm"
-    WARMRASSE = "Human Female 3.0"
-    WARMDATEI = "warm.glb"
+    WARMNAME = '_warm'
+    WARMRASSE = 'Human Female 3.0'
+    WARMDATEI = 'warm.glb'
     #: Geteilte Farben der Rasse, wie UMA sie nennt — Browser-Schlüssel → UMA-Name.
-    FARBEN = {"haut": "Skin", "haar": "Hair"}
-    FARBWERT = re.compile(r"^#[0-9A-Fa-f]{6}$")
+    FARBEN = {'haut': 'Skin', 'haar': 'Hair'}
+    FARBWERT = re.compile(r'^#[0-9A-Fa-f]{6}$')
 
     _laeufe = {}
     _prozess = None
@@ -77,18 +77,18 @@ class Umabauer:
 
     @staticmethod
     def katalog():
-        return os.path.join(str(settings.FIGUREN_KATALOG), "uma")
+        return os.path.join(str(settings.FIGUREN_KATALOG), 'uma')
 
     @staticmethod
     def logordner():
         """`settings.UMA_BAU_LOGS`, sonst `logs/` des Projekts — Tests legen ihn um."""
-        ordner = str(getattr(settings, "UMA_BAU_LOGS", "") or os.path.join(str(settings.BASE_DIR), "logs"))
+        ordner = str(getattr(settings, 'UMA_BAU_LOGS', '') or os.path.join(str(settings.BASE_DIR), 'logs'))
         os.makedirs(ordner, exist_ok=True)
         return ordner
 
     @classmethod
     def auftragsordner(cls):
-        ordner = os.path.join(cls.logordner(), "bauer")
+        ordner = os.path.join(cls.logordner(), 'bauer')
         os.makedirs(ordner, exist_ok=True)
         return ordner
 
@@ -99,21 +99,21 @@ class Umabauer:
     @classmethod
     def pruefen(cls):
         if not os.path.isfile(cls.unity()):
-            raise UmabauerFehlt("Unity fehlt: %s" % cls.unity())
+            raise UmabauerFehlt('Unity fehlt: %s' % cls.unity())
         if not os.path.isdir(cls.projekt()):
-            raise UmabauerFehlt("UMA-Projekt fehlt: %s" % cls.projekt())
+            raise UmabauerFehlt('UMA-Projekt fehlt: %s' % cls.projekt())
 
     @staticmethod
     def name_fuer(rasse):
         """Dateiname aus der Rasse: „Human Female 3.0" → `Uma_HumanFemale30`."""
-        return "Uma_" + re.sub(r"[^A-Za-z0-9]+", "", rasse or "")
+        return 'Uma_' + re.sub(r'[^A-Za-z0-9]+', '', rasse or '')
 
     # ------------------------------------------------------------ Aufträge
 
     #: Roomguests Zeichen fuer „an diesem Platz nichts". Als ganze
     #: `-kleidung` heisst es: nackt bleiben. Derselbe Wert wie
     #: `UmaFigurExport.OhneKleidung` drueben.
-    OHNE_KLEIDUNG = "-"
+    OHNE_KLEIDUNG = '-'
 
     @classmethod
     def bauen(cls, rasse, name=None, zeiger=False, kleidung=None, farben=None):
@@ -137,44 +137,44 @@ class Umabauer:
         Rasse).
         """
         if not rasse or not rasse.strip():
-            raise ValueError("Keine Rasse angegeben")
+            raise ValueError('Keine Rasse angegeben')
         name = name or cls.name_fuer(rasse)
         if not cls.NAME.match(name):
-            raise ValueError("Ungültiger Name: %r" % (name,))
-        auftrag = {"rasse": rasse, "name": name, "zeiger": 1 if zeiger else 0}
+            raise ValueError('Ungültiger Name: %r' % (name,))
+        auftrag = {'rasse': rasse, 'name': name, 'zeiger': 1 if zeiger else 0}
         if kleidung is not None:
-            auftrag["kleidung"] = cls._kleidungstext(kleidung)
+            auftrag['kleidung'] = cls._kleidungstext(kleidung)
         farbtext = cls._farbtext(farben)
         if farbtext:
-            auftrag["farben"] = farbtext
+            auftrag['farben'] = farbtext
         return cls._auftrag(name, auftrag, rasse=rasse)
 
     @classmethod
     def _kleidungstext(cls, kleidung):
         """Rezeptnamen mit Komma getrennt, wie der Exporter sie liest; leer → `-`."""
-        if any("," in r for r in kleidung):
-            raise ValueError("Rezeptnamen dürfen kein Komma enthalten")
+        if any(',' in r for r in kleidung):
+            raise ValueError('Rezeptnamen dürfen kein Komma enthalten')
         gewaehlt = [r.strip() for r in kleidung if r.strip()]
-        return ",".join(gewaehlt) if gewaehlt else cls.OHNE_KLEIDUNG
+        return ','.join(gewaehlt) if gewaehlt else cls.OHNE_KLEIDUNG
 
     @classmethod
     def _farbtext(cls, farben):
         """`{'haut': '#e0b090'}` → `Skin=#e0b090`, wie der Exporter es liest;
         leer → ''."""
         if not farben:
-            return ""
+            return ''
         if not isinstance(farben, dict):
-            raise ValueError("farben muss ein Wörterbuch haut/haar → #rrggbb sein")
+            raise ValueError('farben muss ein Wörterbuch haut/haar → #rrggbb sein')
         teile = []
         for schluessel, wert in farben.items():
             if schluessel not in cls.FARBEN:
-                raise ValueError("Unbekannte Farbe %r — erlaubt: %s" % (schluessel, ", ".join(cls.FARBEN)))
+                raise ValueError('Unbekannte Farbe %r — erlaubt: %s' % (schluessel, ', '.join(cls.FARBEN)))
             if not wert:
                 continue
             if not cls.FARBWERT.match(str(wert)):
-                raise ValueError("Farbwert %r ist kein #rrggbb" % (wert,))
-            teile.append("%s=%s" % (cls.FARBEN[schluessel], str(wert).lower()))
-        return ",".join(teile)
+                raise ValueError('Farbwert %r ist kein #rrggbb' % (wert,))
+            teile.append('%s=%s' % (cls.FARBEN[schluessel], str(wert).lower()))
+        return ','.join(teile)
 
     @classmethod
     def vorwaermen(cls):
@@ -186,18 +186,18 @@ class Umabauer:
         """
         cls.pruefen()
         if cls.bauer_lebt() or cls.startet():
-            return {"gestartet": False, "bauer": cls.bauer_stand()}
+            return {'gestartet': False, 'bauer': cls.bauer_stand()}
         cls._auftrag(
             cls.WARMNAME,
             {
-                "rasse": cls.WARMRASSE,
-                "name": cls.WARMNAME,
-                "zeiger": 0,
-                "ziel": os.path.join(cls.auftragsordner(), cls.WARMDATEI),
+                'rasse': cls.WARMRASSE,
+                'name': cls.WARMNAME,
+                'zeiger': 0,
+                'ziel': os.path.join(cls.auftragsordner(), cls.WARMDATEI),
             },
             rasse=cls.WARMRASSE,
         )
-        return {"gestartet": True, "bauer": cls.bauer_stand()}
+        return {'gestartet': True, 'bauer': cls.bauer_stand()}
 
     @classmethod
     def bauer_stand(cls):
@@ -208,18 +208,18 @@ class Umabauer:
         startet = not lebt and cls.startet()
         # Dictionary gewollt: geht unveraendert als JSON an die Seite.
         return {
-            "lebt": lebt,
-            "stand": ((zeichen.get("stand") or "aus") if lebt else ("startet" if startet else "aus")),
-            "startet": startet,
-            "seit_s": (int(time.time() - float(zeichen.get("zeit") or time.time())) if lebt else None),
-            "pid": zeichen.get("pid") if lebt else None,
+            'lebt': lebt,
+            'stand': ((zeichen.get('stand') or 'aus') if lebt else ('startet' if startet else 'aus')),
+            'startet': startet,
+            'seit_s': (int(time.time() - float(zeichen.get('zeit') or time.time())) if lebt else None),
+            'pid': zeichen.get('pid') if lebt else None,
         }
 
     @classmethod
     def rassen_ermitteln(cls):
         """Unity schreibt die Rassen (Name + verträgliche Rassen) nach
         `rassen.json`."""
-        return cls._auftrag(cls.RASSENLAUF, {"name": cls.RASSENLAUF, "rassenliste": cls.rassenpfad()})
+        return cls._auftrag(cls.RASSENLAUF, {'name': cls.RASSENLAUF, 'rassenliste': cls.rassenpfad()})
 
     @classmethod
     def rassen(cls):
@@ -235,12 +235,12 @@ class Umabauer:
         pfad = cls.rassenpfad()
         if not os.path.isfile(pfad):
             return None
-        with open(pfad, encoding="utf-8") as datei:
+        with open(pfad, encoding='utf-8') as datei:
             eintraege = json.load(datei)
         details = {}
         for eintrag in eintraege:
             if isinstance(eintrag, dict):
-                details[eintrag["name"]] = [str(r) for r in eintrag.get("kompatibel") or []]
+                details[eintrag['name']] = [str(r) for r in eintrag.get('kompatibel') or []]
             else:
                 details[str(eintrag)] = []
         return details
@@ -251,24 +251,24 @@ class Umabauer:
         cls.pruefen()
         ordner = cls.auftragsordner()
         os.makedirs(cls.katalog(), exist_ok=True)
-        ergebnis = os.path.join(ordner, name + ".ergebnis.json")
+        ergebnis = os.path.join(ordner, name + '.ergebnis.json')
         if os.path.isfile(ergebnis):
             os.remove(ergebnis)  # ein alter Erfolg zählt nicht für diesen Lauf
-        auftragspfad = os.path.join(ordner, name + ".auftrag.json")
-        with open(auftragspfad, "w", encoding="utf-8") as datei:
+        auftragspfad = os.path.join(ordner, name + '.auftrag.json')
+        with open(auftragspfad, 'w', encoding='utf-8') as datei:
             json.dump(auftrag, datei, ensure_ascii=False)
         gestartet = cls._bauer_sicherstellen()
         lauf = {
-            "name": name,
-            "rasse": rasse,
-            "start": time.time(),
-            "log": os.path.join(cls.logordner(), cls.BAUERLOG),
-            "gestartet": gestartet,
+            'name': name,
+            'rasse': rasse,
+            'start': time.time(),
+            'log': os.path.join(cls.logordner(), cls.BAUERLOG),
+            'gestartet': gestartet,
         }
         cls._laeufe[name] = lauf
         Umalaufstand.merken(cls, lauf)
         logger.info(
-            "Umabauer: Auftrag %s abgelegt (%s)", name, "Bauer neu gestartet" if gestartet else "Bauer lebt"
+            'Umabauer: Auftrag %s abgelegt (%s)', name, 'Bauer neu gestartet' if gestartet else 'Bauer lebt'
         )
         return cls.stand(name)
 
@@ -284,23 +284,23 @@ class Umabauer:
         # `-leerlauf 0`: Der Editor bleibt offen (Edgar, 06.09.2026: „du kannst
         # den UnityEditor offen lassen") — sonst zahlt jede Pause den Neustart.
         # `UMA_BAUER_LEERLAUF_S` in den Einstellungen setzt eine Frist.
-        leerlauf = int(getattr(settings, "UMA_BAUER_LEERLAUF_S", 0) or 0)
+        leerlauf = int(getattr(settings, 'UMA_BAUER_LEERLAUF_S', 0) or 0)
         befehl = [
             cls.unity(),
-            "-batchmode",
-            "-projectPath",
+            '-batchmode',
+            '-projectPath',
             cls.projekt(),
-            "-executeMethod",
+            '-executeMethod',
             cls.METHODE,
-            "-logFile",
+            '-logFile',
             log,
-            "-auftraege",
+            '-auftraege',
             cls.auftragsordner(),
-            "-leerlauf",
+            '-leerlauf',
             str(leerlauf),
         ]
         cls._prozess = subprocess.Popen(befehl)
-        logger.info("Umabauer: Unity-Bauer gestartet (pid %s): %s", cls._prozess.pid, " ".join(befehl))
+        logger.info('Umabauer: Unity-Bauer gestartet (pid %s): %s', cls._prozess.pid, ' '.join(befehl))
         return True
 
     # ------------------------------------------------------------ Bauer
@@ -308,9 +308,9 @@ class Umabauer:
     @classmethod
     def bauer(cls):
         """Das Lebenszeichen `bauer.json` — `None`, wenn keines da ist."""
-        pfad = os.path.join(cls.auftragsordner(), "bauer.json")
+        pfad = os.path.join(cls.auftragsordner(), 'bauer.json')
         try:
-            with open(pfad, encoding="utf-8") as datei:
+            with open(pfad, encoding='utf-8') as datei:
                 return json.load(datei)
         # stumm gewollt: kein Lebenszeichen heisst kein Bauer laeuft, der Normalfall
         except OSError, ValueError:
@@ -324,13 +324,13 @@ class Umabauer:
     @classmethod
     def bauer_lebt(cls):
         zeichen = cls.bauer()
-        if not zeichen or zeichen.get("stand") == "beendet":
+        if not zeichen or zeichen.get('stand') == 'beendet':
             return False
-        if time.time() - float(zeichen.get("zeit") or 0) > cls.FRISCH_S:
+        if time.time() - float(zeichen.get('zeit') or 0) > cls.FRISCH_S:
             return False
         # `Prozesspruefung` fragt auch den Exitcode: `OpenProcess` gelingt fuer
         # einen beendeten Prozess, solange `cls._prozess` sein Handle haelt.
-        return Prozesspruefung.lebt(zeichen.get("pid"))
+        return Prozesspruefung.lebt(zeichen.get('pid'))
 
     # ------------------------------------------------------------ Stand
 

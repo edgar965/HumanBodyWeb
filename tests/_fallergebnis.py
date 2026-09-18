@@ -33,9 +33,9 @@ import traceback
 class Fallergebnis:
     """Das Ergebnis eines Testfalls — mit `als_dict()` in der Browser-Form."""
 
-    __slots__ = ("ok", "name", "description", "detail", "error")
+    __slots__ = ('ok', 'name', 'description', 'detail', 'error')
 
-    def __init__(self, ok, name, description="", detail="", error=None):
+    def __init__(self, ok, name, description='', detail='', error=None):
         self.ok = bool(ok)
         self.name = name
         self.description = description
@@ -45,7 +45,7 @@ class Fallergebnis:
     # ------------------------------------------------------------- Erzeugen
 
     @classmethod
-    def aus_rueckgabe(cls, wert, name, description=""):
+    def aus_rueckgabe(cls, wert, name, description=''):
         """`True`, `(True, 'Text')` oder `(False, 'Grund')` -> Ergebnis.
 
         Ein Fall darf beides liefern: nur einen Wahrheitswert oder ein Paar mit
@@ -53,13 +53,13 @@ class Fallergebnis:
         """
         if isinstance(wert, tuple):
             ok = wert[0]
-            detail = wert[1] if len(wert) > 1 else ""
+            detail = wert[1] if len(wert) > 1 else ''
         else:
-            ok, detail = wert, ""
+            ok, detail = wert, ''
         return cls(ok, name, description, detail)
 
     @classmethod
-    def aus_ausnahme(cls, fehler, name, description=""):
+    def aus_ausnahme(cls, fehler, name, description=''):
         """Gescheitert — mit Typ, Text und Rückverfolgung.
 
         Die Rückverfolgung gehört dazu: Ohne sie steht in der Tabelle
@@ -70,8 +70,8 @@ class Fallergebnis:
             False,
             name,
             description,
-            "",
-            "%s: %s\n%s" % (type(fehler).__name__, fehler, traceback.format_exc()),
+            '',
+            '%s: %s\n%s' % (type(fehler).__name__, fehler, traceback.format_exc()),
         )
 
     # ------------------------------------------------------------- Ausgeben
@@ -79,9 +79,9 @@ class Fallergebnis:
     def als_dict(self):
         # Dictionary gewollt: geht als JSON an die Testseite.
         return {
-            "ok": self.ok,
-            "name": self.name,
-            "description": self.description,
-            "detail": self.detail,
-            "error": self.error,
+            'ok': self.ok,
+            'name': self.name,
+            'description': self.description,
+            'detail': self.detail,
+            'error': self.error,
         }

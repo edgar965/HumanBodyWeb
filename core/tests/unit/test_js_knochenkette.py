@@ -26,7 +26,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "knochenkette.js")
+MODUL = Jsmodul('gemeinsam', 'knochenkette.js')
 
 SKRIPT = """
 const { Knochenkette: K } = await import(MODUL);
@@ -138,4 +138,4 @@ class KnochenketteTest(SimpleTestCase):
 
     def test_bauplan_relativ_zum_elternteil_eltern_zuerst_endknochen_am_blatt(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

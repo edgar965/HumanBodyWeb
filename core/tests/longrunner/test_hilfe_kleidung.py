@@ -26,10 +26,10 @@ from pathlib import Path
 from unittest import mock
 
 from django.test import Client, SimpleTestCase
-
 from GarmentCode.messreihen import Garmentcodemessung
-from kleidung.verfahren import Kleidungsverfahren
 from kleidung.tempo import Kleidungstempo
+from kleidung.verfahren import Kleidungsverfahren
+
 from ..unit._pruefablage import Pruefablage
 from ..unit._sicher import Sicher
 
@@ -43,30 +43,30 @@ class SeitenTest(SimpleTestCase):
         self.client = Client()
 
     def test_uebersicht_antwortet(self):
-        antwort = self.client.get("/hilfe/kleidung/")
+        antwort = self.client.get('/hilfe/kleidung/')
         self.assertEqual(antwort.status_code, 200)
 
     def test_garmentcode_antwortet(self):
-        antwort = self.client.get("/hilfe/kleidung/garmentcode/")
+        antwort = self.client.get('/hilfe/kleidung/garmentcode/')
         self.assertEqual(antwort.status_code, 200)
 
     def test_uebersicht_nennt_alle_verfahren(self):
         """Alle sechs Verfahren stehen auf der Seite — nicht nur die,
         an die man beim Schreiben gerade gedacht hat."""
-        text = self.client.get("/hilfe/kleidung/").content.decode("utf-8")
+        text = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
         for verfahren in Kleidungsverfahren.alle():
-            self.assertIn(verfahren["name"], text, verfahren["schluessel"])
+            self.assertIn(verfahren['name'], text, verfahren['schluessel'])
 
     def test_ungemessenes_steht_ausgeschrieben_da(self):
         """Wo keine Messreihe vorliegt, darf die Zelle nicht leer sein."""
-        text = self.client.get("/hilfe/kleidung/").content.decode("utf-8")
-        self.assertIn("nicht gemessen", text)
+        text = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
+        self.assertIn('nicht gemessen', text)
 
     def test_beide_seiten_verweisen_aufeinander(self):
-        uebersicht = self.client.get("/hilfe/kleidung/").content.decode("utf-8")
-        einzeln = self.client.get("/hilfe/kleidung/garmentcode/").content.decode("utf-8")
-        self.assertIn("/hilfe/kleidung/garmentcode/", uebersicht)
-        self.assertIn("/hilfe/kleidung/", einzeln)
+        uebersicht = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
+        einzeln = self.client.get('/hilfe/kleidung/garmentcode/').content.decode('utf-8')
+        self.assertIn('/hilfe/kleidung/garmentcode/', uebersicht)
+        self.assertIn('/hilfe/kleidung/', einzeln)
 
 
 class MenueTest(SimpleTestCase):
@@ -77,17 +77,17 @@ class MenueTest(SimpleTestCase):
     def test_hilfe_extra_ist_gesetzt(self):
         from django.conf import settings
 
-        eintraege = settings.DJANGOBASE.get("hilfe_extra") or []
-        self.assertTrue(eintraege, "hilfe_extra fehlt")
-        adressen = [unterpunkt["url"] for eintrag in eintraege for unterpunkt in eintrag.get("untermenu", [])]
-        self.assertIn("/hilfe/kleidung/", adressen)
-        self.assertIn("/hilfe/kleidung/garmentcode/", adressen)
+        eintraege = settings.DJANGOBASE.get('hilfe_extra') or []
+        self.assertTrue(eintraege, 'hilfe_extra fehlt')
+        adressen = [unterpunkt['url'] for eintrag in eintraege for unterpunkt in eintrag.get('untermenu', [])]
+        self.assertIn('/hilfe/kleidung/', adressen)
+        self.assertIn('/hilfe/kleidung/garmentcode/', adressen)
 
     def test_djangobase_hilfe_bleibt_erhalten(self):
         """Die mitgelieferten Hilfeseiten duerfen durch die eigenen nicht
         verdeckt werden — waere der eigene Praefix zu weit gefasst
         (`hilfe/` statt `hilfe/kleidung/`), schluckte er sie."""
-        for pfad in ("/hilfe/versionen/", "/hilfe/logs/", "/hilfe/tests/"):
+        for pfad in ('/hilfe/versionen/', '/hilfe/logs/', '/hilfe/tests/'):
             antwort = Client().get(pfad)
             self.assertEqual(antwort.status_code, 200, pfad)
 
@@ -118,39 +118,39 @@ class MessungTest(SimpleTestCase):
         from GarmentCode.pfade import Gcpfade
 
         with Pruefablage.ordner() as ordner:
-            with mock.patch.object(Gcpfade, "PAKET", Path(ordner)):
+            with mock.patch.object(Gcpfade, 'PAKET', Path(ordner)):
                 # Gegenprobe zuerst — sonst schlägt die Behauptung an, und
                 # niemand sieht, dass gar nicht umgeleitet wurde.
-                self.assertTrue(Garmentcodemessung.wurzel().startswith(ordner), "Umleitung greift ins Leere")
-                self.assertIsNone(Garmentcodemessung.matrix("humanbody"))
+                self.assertTrue(Garmentcodemessung.wurzel().startswith(ordner), 'Umleitung greift ins Leere')
+                self.assertIsNone(Garmentcodemessung.matrix('humanbody'))
                 self.assertEqual(Garmentcodemessung.koerper(), [])
 
     def test_matrix_wenn_vorhanden(self):
-        if not os.path.isfile(Garmentcodemessung.pfad("humanbody")):
-            self.skipTest("noch keine Messreihe abgelegt")
-        matrix = Sicher.wert(Garmentcodemessung.matrix("humanbody"), "Matrix")
-        self.assertTrue(matrix["koerper"], "keine Körper in der Matrix")
-        self.assertTrue(matrix["zeilen"], "keine Stücke in der Matrix")
-        self.assertEqual(matrix["anzahl"], matrix["gelungen"] + matrix["fehlgeschlagen"])
+        if not os.path.isfile(Garmentcodemessung.pfad('humanbody')):
+            self.skipTest('noch keine Messreihe abgelegt')
+        matrix = Sicher.wert(Garmentcodemessung.matrix('humanbody'), 'Matrix')
+        self.assertTrue(matrix['koerper'], 'keine Körper in der Matrix')
+        self.assertTrue(matrix['zeilen'], 'keine Stücke in der Matrix')
+        self.assertEqual(matrix['anzahl'], matrix['gelungen'] + matrix['fehlgeschlagen'])
         # Jede Zeile hat so viele Zellen wie es Körper gibt — sonst
         # verrutscht die Tabelle, ohne dass es auffällt.
-        for zeile in matrix["zeilen"]:
-            self.assertEqual(len(zeile["zellen"]), len(matrix["koerper"]), zeile["stueck"])
+        for zeile in matrix['zeilen']:
+            self.assertEqual(len(zeile['zellen']), len(matrix['koerper']), zeile['stueck'])
 
     def test_zellenzustand_folgt_dem_wert(self):
         """Die Farbe der Zelle muss am Wert hängen, nicht am Zufall."""
-        gut = Garmentcodemessung._zelle({"durchstich_prozent": 0.05})
-        warnung = Garmentcodemessung._zelle({"durchstich_prozent": 1.2})
-        schlecht = Garmentcodemessung._zelle({"durchstich_prozent": 4.0})
-        fehler = Garmentcodemessung._zelle({"fehler": "StitchingError"})
-        self.assertEqual(gut["zustand"], "gut")
-        self.assertEqual(warnung["zustand"], "warnung")
-        self.assertEqual(schlecht["zustand"], "fehler")
-        self.assertEqual(fehler["zustand"], "fehler")
-        self.assertIn("StitchingError", fehler["titel"])
+        gut = Garmentcodemessung._zelle({'durchstich_prozent': 0.05})
+        warnung = Garmentcodemessung._zelle({'durchstich_prozent': 1.2})
+        schlecht = Garmentcodemessung._zelle({'durchstich_prozent': 4.0})
+        fehler = Garmentcodemessung._zelle({'fehler': 'StitchingError'})
+        self.assertEqual(gut['zustand'], 'gut')
+        self.assertEqual(warnung['zustand'], 'warnung')
+        self.assertEqual(schlecht['zustand'], 'fehler')
+        self.assertEqual(fehler['zustand'], 'fehler')
+        self.assertIn('StitchingError', fehler['titel'])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
 
 
@@ -167,22 +167,22 @@ class KleidungTempoTest(SimpleTestCase):
     databases = set()
 
     def test_seite_zeigt_den_vergleich(self):
-        antwort = self.client.get("/hilfe/kleidung/")
+        antwort = self.client.get('/hilfe/kleidung/')
         self.assertEqual(antwort.status_code, 200)
-        text = antwort.content.decode("utf-8")
+        text = antwort.content.decode('utf-8')
         for frage, _, _ in Kleidungstempo.vergleich():
             self.assertIn(frage, text)
 
     def test_seite_zeigt_die_gemessenen_phasen(self):
         """Jede Phase MIT ihrer Dauer — eine Tabelle ohne Zahlen erklaert nichts."""
-        text = self.client.get("/hilfe/kleidung/").content.decode("utf-8")
+        text = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
         for name, dauer, _, _ in Kleidungstempo.phasen():
             self.assertIn(name, text)
             self.assertIn(str(dauer), text)
 
     def test_seite_nennt_was_verworfen_wurde(self):
         """Der teuerste Teil des Wissens: was NICHT hilft."""
-        text = self.client.get("/hilfe/kleidung/").content.decode("utf-8")
+        text = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
         for idee, _ in Kleidungstempo.verworfen():
             self.assertIn(idee, text)
 
@@ -201,5 +201,5 @@ class KleidungTempoTest(SimpleTestCase):
         tut.
         """
         groesster = max(Kleidungstempo.PHASEN, key=lambda z: z[1])
-        self.assertIn("run_sim", groesster[0])
+        self.assertIn('run_sim', groesster[0])
         self.assertGreater(groesster[2], 50)

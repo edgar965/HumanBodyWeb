@@ -22,7 +22,7 @@ from pathlib import Path
 
 #: `…/3DTools` — vier Ebenen ueber dieser Datei (core/tests/unit).
 TOOLS = Path(__file__).resolve().parents[4]
-WRAPPERS = TOOLS / "VideoToBVH" / "wrappers"
+WRAPPERS = TOOLS / 'VideoToBVH' / 'wrappers'
 
 
 class Wrappersuchpfad:
@@ -39,4 +39,4 @@ class Wrappersuchpfad:
     @staticmethod
     def dateien():
         """Alle eigenen Wrapper-Module (ohne `__init__`)."""
-        return sorted(p for p in WRAPPERS.glob("*.py") if p.name != "__init__.py")
+        return sorted(p for p in WRAPPERS.glob('*.py') if p.name != '__init__.py')

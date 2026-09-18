@@ -16,7 +16,6 @@ Sabotage-Gegenprobe: `set_morph` -> `set_morph_value` macht den Fall rot.
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from GarmentCode.dienst import GarmentcodeDienst
 
 
@@ -24,8 +23,8 @@ class FigurnetzMorphsTest(SimpleTestCase):
     databases = set()
 
     def test_morph_veraendert_das_netz(self):
-        grund = np.asarray(GarmentcodeDienst.figurnetz("female", {}, None))
-        duenn = np.asarray(GarmentcodeDienst.figurnetz("female", {"Legs_UpperlegsMass": -1.0}, None))
+        grund = np.asarray(GarmentcodeDienst.figurnetz('female', {}, None))
+        duenn = np.asarray(GarmentcodeDienst.figurnetz('female', {'Legs_UpperlegsMass': -1.0}, None))
         self.assertEqual(grund.shape, duenn.shape)
         abweichung = float(np.abs(grund - duenn).max())
-        self.assertGreater(abweichung, 0.005, "Morph wirkt nicht: %.4f m" % abweichung)
+        self.assertGreater(abweichung, 0.005, 'Morph wirkt nicht: %.4f m' % abweichung)

@@ -10,7 +10,7 @@ import importlib.util
 import logging
 from pathlib import Path
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Modulnamen:
@@ -66,9 +66,9 @@ class Modulnamen:
     def _baum(pfad):
         """Die Datei als Syntaxbaum — oder `None`, mit Eintrag im Protokoll."""
         try:
-            return ast.parse(pfad.read_text(encoding="utf-8", errors="replace"))
+            return ast.parse(pfad.read_text(encoding='utf-8', errors='replace'))
         except OSError, SyntaxError:
-            logger.warning("%s nicht lesbar — Namen ungeprueft", pfad, exc_info=True)
+            logger.warning('%s nicht lesbar — Namen ungeprueft', pfad, exc_info=True)
             return None
 
     @classmethod
@@ -97,9 +97,9 @@ class Modulnamen:
         """`import x`, `from y import z` — oder `None` bei `import *`."""
         namen = set()
         for teil in knoten.names:
-            if teil.name == "*":
+            if teil.name == '*':
                 return None
-            namen.add(teil.asname or teil.name.split(".")[0])
+            namen.add(teil.asname or teil.name.split('.')[0])
         return namen
 
     @staticmethod

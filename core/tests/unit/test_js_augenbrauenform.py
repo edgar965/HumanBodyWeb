@@ -24,7 +24,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "augenbrauenform.js")
+MODUL = Jsmodul('gemeinsam', 'augenbrauenform.js')
 
 SKRIPT = """
 const { Augenbrauenform: F } = await import(MODUL);
@@ -77,4 +77,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class AugenbrauenformTest(SimpleTestCase):
     def test_dichte_lage_dicke_und_zittern(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

@@ -16,20 +16,20 @@ from django.conf import settings
 class Smplmodelle:
     """Mixin für `unittest.TestCase`: `modelle`, `vorhanden`, `modell()`."""
 
-    GESCHLECHTER = ("female", "male")
+    GESCHLECHTER = ('female', 'male')
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.modelle = str(settings.SMPL_MODELS_DIR)
         cls.vorhanden = all(
-            os.path.isfile(os.path.join(cls.modelle, "SMPL_%s.npz" % g.upper())) for g in cls.GESCHLECHTER
+            os.path.isfile(os.path.join(cls.modelle, 'SMPL_%s.npz' % g.upper())) for g in cls.GESCHLECHTER
         )
 
     def modell(self, geschlecht):
         """Das geladene `Smplkoerper`-Modell — oder `skipTest`."""
         if not self.vorhanden:
-            self.skipTest("SMPL-Modelldateien nicht vorhanden")
+            self.skipTest('SMPL-Modelldateien nicht vorhanden')
         from GarmentCode.smplkoerper import Smplkoerper
 
         return Smplkoerper.laden(geschlecht, self.modelle)

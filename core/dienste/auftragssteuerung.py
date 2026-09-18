@@ -22,15 +22,14 @@ from pathlib import Path
 
 from django.conf import settings
 
-from ..dienste.haenger import Haenger
 from ..daten.pfadvergleich import Pfadvergleich
-
+from ..dienste.haenger import Haenger
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..pipelines.prozesspruefung import Prozesspruefung
 from ..pipelines.videolaenge import Videolaenge
 
-logger = logging.getLogger("core")
-pipeline_logger = logging.getLogger("core.pipeline")
+logger = logging.getLogger('core')
+pipeline_logger = logging.getLogger('core.pipeline')
 
 #: Sekunden, die v4 zum geordneten Beenden bekommt. Das Skript prueft die
 #: Stoppmarke je Bild und schreibt danach ein Teilergebnis.
@@ -45,12 +44,12 @@ class Auftragssteuerung:
 
     @staticmethod
     def _ausgabeordner(job):
-        return Path(settings.MEDIA_ROOT) / "output" / str(job.id)
+        return Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
 
     # ------------------------------------------------------------------ Start
 
     #: Zustaende, aus denen ein Auftrag gestartet werden darf.
-    STARTBAR = ("pending", "complete", "failed")
+    STARTBAR = ('pending', 'complete', 'failed')
 
     @staticmethod
     def _beanspruchen(job, zustand):
@@ -68,7 +67,7 @@ class Auftragssteuerung:
         )
         if not geaendert:
             pipeline_logger.info(
-                "start_processing: Auftrag %s laeuft bereits — zweiter Start uebergangen", job.id
+                'start_processing: Auftrag %s laeuft bereits — zweiter Start uebergangen', job.id
             )
         return bool(geaendert)
 
@@ -83,27 +82,27 @@ class Auftragssteuerung:
             return False
         job.status = zustand
         job.progress = 0
-        job.error_message = ""
-        job.bvh_file = ""
-        job.bvh_file_face = ""
-        job.bvh_file_hands = ""
+        job.error_message = ''
+        job.bvh_file = ''
+        job.bvh_file_face = ''
+        job.bvh_file_hands = ''
         job.bvh_file_personen = []
         bilder = Videolaenge.bilder(Path(settings.MEDIA_ROOT) / str(job.video_file))
-        job.progress_detail = f"0 / {bilder} frames" if bilder else "Starting..."
+        job.progress_detail = f'0 / {bilder} frames' if bilder else 'Starting...'
         job.save()
         Auftragssteuerung._faden_starten(str(job.id))
         return True
 
     @staticmethod
     def _anfangszustand(pipeline):
-        if pipeline == "v4":
-            return "v4_processing"
-        if pipeline in ("gvhmr", "wham", "prompthmr", "gem", "duomo", "gemx", "smplx") or pipeline.startswith(
-            "hybrid_"
+        if pipeline == 'v4':
+            return 'v4_processing'
+        if pipeline in ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'smplx') or pipeline.startswith(
+            'hybrid_'
         ):
-            return "processing"
-        if pipeline in ("rtmpose", "vitpose", "yolo11"):
-            return "detecting_2d"
+            return 'processing'
+        if pipeline in ('rtmpose', 'vitpose', 'yolo11'):
+            return 'detecting_2d'
         return pipeline
 
     @staticmethod
@@ -112,7 +111,7 @@ class Auftragssteuerung:
         Neustart des Servers nicht mitreisst (12.09.2026: vier Auftraege an
         einem Tag „Server was restarted while job was running"). Mit
         `AUFTRAG_IM_SERVER = True` in den Einstellungen wie frueher als Faden."""
-        if not getattr(settings, "AUFTRAG_IM_SERVER", False):
+        if not getattr(settings, 'AUFTRAG_IM_SERVER', False):
             from ..dienste.auftragsarbeiter import Auftragsarbeiter
 
             Auftragsarbeiter.starten(job_id)
@@ -123,7 +122,7 @@ class Auftragssteuerung:
             try:
                 Auftragslauf(jid).ausfuehren()
             except Exception:
-                logger.exception("Auftrag %s: Hintergrundfaden abgestürzt", jid)
+                logger.exception('Auftrag %s: Hintergrundfaden abgestürzt', jid)
                 Auftragssteuerung._absturz_vermerken(jid)
 
         threading.Thread(target=_sicher, args=(job_id,), daemon=True).start()
@@ -133,23 +132,24 @@ class Auftragssteuerung:
         """Unerwarteten Fehler am Auftrag festhalten, statt den Server zu reissen."""
         try:
             import traceback
+
             from django.apps import apps
 
-            job = apps.get_model("core", "BVHJob").objects.get(id=jid)
-            if job.status != "failed":
-                job.status = "failed"
-                job.error_message = ("Unexpected crash:\n" + traceback.format_exc())[:4000]
+            job = apps.get_model('core', 'BVHJob').objects.get(id=jid)
+            if job.status != 'failed':
+                job.status = 'failed'
+                job.error_message = ('Unexpected crash:\n' + traceback.format_exc())[:4000]
                 job.save()
         except Exception:
             logger.warning(
-                "Fehlermeldung des Jobs konnte nicht gespeichert werden — Ursache nur im Protokoll",
+                'Fehlermeldung des Jobs konnte nicht gespeichert werden — Ursache nur im Protokoll',
                 exc_info=True,
             )
 
     # ----------------------------------------------------------------- Abbruch
 
     @staticmethod
-    def anhalten(job, herkunft="api"):
+    def anhalten(job, herkunft='api'):
         """Laufenden Auftrag abbrechen.
 
         Fuer ALLE Pipelines wird eine Stoppmarke geschrieben. v4 prueft sie je
@@ -158,12 +158,12 @@ class Auftragssteuerung:
         Marke und rechnet mit den Teildaten weiter.
         """
         jid = str(job.id)
-        pipeline_logger.info("stop_processing (%s) job=%s pipeline=%s", herkunft, jid, job.pipeline)
+        pipeline_logger.info('stop_processing (%s) job=%s pipeline=%s', herkunft, jid, job.pipeline)
         ordner = Auftragssteuerung._ausgabeordner(job)
         Auftragssteuerung._stoppmarken_schreiben(job, ordner)
 
         prozess = LaufendeProzesse.holen(jid)
-        if job.pipeline.startswith("hybrid_"):
+        if job.pipeline.startswith('hybrid_'):
             Auftragssteuerung._teilprozesse_beenden(jid, ordner)
             return  # Endzustand setzt der Hintergrundfaden
         if prozess and prozess.poll() is None:
@@ -192,17 +192,17 @@ class Auftragssteuerung:
             pipeline_logger.info(
                 'stop_processing: Auftrag %s steht auf "%s" — nicht mehr laufend, Zustand bleibt',
                 job.id,
-                frisch.status if frisch else "geloescht",
+                frisch.status if frisch else 'geloescht',
             )
             return
-        frisch.status = "failed"
-        frisch.error_message = "Cancelled by user"
-        frisch.save(update_fields=["status", "error_message"])
+        frisch.status = 'failed'
+        frisch.error_message = 'Cancelled by user'
+        frisch.save(update_fields=['status', 'error_message'])
         job.status, job.error_message = frisch.status, frisch.error_message
 
     @staticmethod
     def _prozess_beenden(prozess, pipeline):
-        if pipeline == "v4":
+        if pipeline == 'v4':
             try:
                 prozess.wait(timeout=V4_GEDULD)
                 return
@@ -217,34 +217,34 @@ class Auftragssteuerung:
     def _teilprozesse_beenden(jid, ordner):
         """Hybridlaeufe haben je einen Prozess fuer Koerper und Gesicht —
         und seit dem 12.09.2026 einen dritten fuer die Finger (GEM-X)."""
-        for teil in ("body", "face", "hands"):
-            prozess = LaufendeProzesse.entfernen(f"{jid}_{teil}")
+        for teil in ('body', 'face', 'hands'):
+            prozess = LaufendeProzesse.entfernen(f'{jid}_{teil}')
             if prozess and prozess.poll() is None:
                 prozess.kill()
                 try:
                     prozess.wait(timeout=KILL_GEDULD)
                 except subprocess.TimeoutExpired:
-                    logger.debug("uebergangen", exc_info=True)
+                    logger.debug('uebergangen', exc_info=True)
             else:
                 Auftragssteuerung._per_pid_beenden(ordner / teil)
 
     @staticmethod
     def _stoppmarken_schreiben(job, ordner):
         ziele = [ordner]
-        if job.pipeline.startswith("hybrid_"):
-            ziele += [ordner / "body", ordner / "face", ordner / "hands"]
+        if job.pipeline.startswith('hybrid_'):
+            ziele += [ordner / 'body', ordner / 'face', ordner / 'hands']
         for ziel in ziele:
-            marke = ziel / "STOP_FLAG"
+            marke = ziel / 'STOP_FLAG'
             try:
                 marke.parent.mkdir(parents=True, exist_ok=True)
-                marke.write_text("stop")
+                marke.write_text('stop')
             except OSError:
-                logger.debug("uebergangen", exc_info=True)
+                logger.debug('uebergangen', exc_info=True)
 
     @staticmethod
     def _per_pid_beenden(ordner):
         """Verwaisten Prozess ueber seine PID-Datei beenden."""
-        pid_datei = ordner / "pipeline.pid"
+        pid_datei = ordner / 'pipeline.pid'
         if not pid_datei.exists():
             return False
         try:
@@ -253,12 +253,12 @@ class Auftragssteuerung:
                 os.kill(pid, 9)
                 return True
         except ValueError, OSError, ProcessLookupError:
-            logger.debug("uebergangen", exc_info=True)
+            logger.debug('uebergangen', exc_info=True)
         finally:
             try:
                 pid_datei.unlink()
             except FileNotFoundError, OSError:
-                logger.debug("uebergangen", exc_info=True)
+                logger.debug('uebergangen', exc_info=True)
         return False
 
     # ----------------------------------------------------------------- Loeschen

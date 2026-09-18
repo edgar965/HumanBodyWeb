@@ -23,7 +23,7 @@ import unittest
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "hautgewichte.js")
+MODUL = Jsmodul('gemeinsam', 'hautgewichte.js')
 
 #: Die Fälle, auf die es ankommt — je Punkt eine Liste [Knochen, Gewicht].
 SKRIPT = """
@@ -84,36 +84,36 @@ class HautgewichteTest(unittest.TestCase):
         cls.e = MODUL.laufen(SKRIPT)
 
     def test_gleiche_indices_wie_die_alte_schleife(self):
-        self.assertEqual(self.e["neuIndices"], self.e["altIndices"])
+        self.assertEqual(self.e['neuIndices'], self.e['altIndices'])
 
     def test_gleiche_gewichte_wie_die_alte_schleife(self):
-        for i, (alt, neu) in enumerate(zip(self.e["altGewichte"], self.e["neuGewichte"])):
-            self.assertAlmostEqual(alt, neu, places=6, msg="Stelle %d" % i)
+        for i, (alt, neu) in enumerate(zip(self.e['altGewichte'], self.e['neuGewichte'])):
+            self.assertAlmostEqual(alt, neu, places=6, msg='Stelle %d' % i)
 
     def test_die_vier_staerksten_in_der_richtigen_reihenfolge(self):
         """Punkt 0 hat fünf Einflüsse — 7 (0,6) muss vorn stehen, 4 wegfallen."""
-        self.assertEqual(self.e["neuIndices"][:4], [7.0, 1.0, 3.0, 9.0])
+        self.assertEqual(self.e['neuIndices'][:4], [7.0, 1.0, 3.0, 9.0])
 
     def test_normiert_auf_summe_eins(self):
         """Punkt 2 hat Gewicht 3,0 — nach dem Normieren genau 1,0."""
-        self.assertAlmostEqual(self.e["neuGewichte"][8], 1.0, places=6)
+        self.assertAlmostEqual(self.e['neuGewichte'][8], 1.0, places=6)
 
     def test_punkt_ohne_einfluss_bleibt_null_statt_nan(self):
         """Summe 0 würde durch Null teilen; erwartet sind vier Nullen."""
         for stelle in range(12, 16):  # Punkt 3
-            self.assertEqual(self.e["neuGewichte"][stelle], 0.0)
+            self.assertEqual(self.e['neuGewichte'][stelle], 0.0)
         for stelle in range(16, 20):  # Punkt 4, Summe 0
-            self.assertEqual(self.e["neuGewichte"][stelle], 0.0)
+            self.assertEqual(self.e['neuGewichte'][stelle], 0.0)
 
     def test_fehlender_eintrag_wirft_nicht(self):
         """`weights[5]` ist `undefined` — das darf keine Ausnahme sein."""
-        self.assertEqual(self.e["neuIndices"][20:24], [0.0, 0.0, 0.0, 0.0])
+        self.assertEqual(self.e['neuIndices'][20:24], [0.0, 0.0, 0.0, 0.0])
 
     def test_ein_knochen_bekommt_gewicht_eins(self):
-        self.assertEqual(self.e["kopfIndices"], [42, 0, 0, 0] * 3)
-        self.assertEqual(self.e["kopfGewichte"], [1.0, 0, 0, 0] * 3)
-        self.assertEqual(self.e["breite"], 4)
+        self.assertEqual(self.e['kopfIndices'], [42, 0, 0, 0] * 3)
+        self.assertEqual(self.e['kopfGewichte'], [1.0, 0, 0, 0] * 3)
+        self.assertEqual(self.e['breite'], 4)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

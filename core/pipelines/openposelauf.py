@@ -19,7 +19,7 @@ import time
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Openposelauf:
@@ -32,7 +32,7 @@ class Openposelauf:
     FEHLER_ZEICHEN = 4000
     #: Wartezeit zwischen zwei Blicken ins Ausgabeverzeichnis.
     TAKT_S = 1
-    JSON_ENDUNG = "_keypoints.json"
+    JSON_ENDUNG = '_keypoints.json'
 
     def __init__(self, job, videopfad, ausgabeordner, bildzahl, prozessklasse, laufende):
         self.job = job
@@ -41,7 +41,7 @@ class Openposelauf:
         self.bildzahl = bildzahl
         self.Prozess = prozessklasse  # PipelineProzess
         self.laufende = laufende  # LaufendeProzesse
-        self.jsonordner = str(ausgabeordner / "openpose_json")
+        self.jsonordner = str(ausgabeordner / 'openpose_json')
 
     # ------------------------------------------------------------------ Ablauf
 
@@ -57,24 +57,24 @@ class Openposelauf:
     # -------------------------------------------------------------- Einzelteile
 
     def _vorbereiten(self):
-        self._melden("openpose", self.VON_PROZENT - 1, "Initializing GPU...")
+        self._melden('openpose', self.VON_PROZENT - 1, 'Initializing GPU...')
         os.makedirs(self.jsonordner, exist_ok=True)
 
     def _starten(self):
         befehl = [
             str(settings.OPENPOSE_EXE),
-            "--video",
+            '--video',
             str(self.videopfad),
-            "--write_json",
+            '--write_json',
             self.jsonordner,
-            "--display",
-            "0",
-            "--render_pose",
-            "0",
-            "--model_folder",
+            '--display',
+            '0',
+            '--render_pose',
+            '0',
+            '--model_folder',
             str(settings.OPENPOSE_MODEL_DIR) + os.sep,
-            "--number_people_max",
-            "1",
+            '--number_people_max',
+            '1',
         ]
         # stdout NICHT lesen: Diese Stelle verfolgt den Fortschritt an den
         # geschriebenen Dateien. Stuende stdout auf PIPE, ohne dass jemand
@@ -95,7 +95,7 @@ class Openposelauf:
             jetzt = self._geschriebeneBilder(zuletzt)
             vergangen = time.time() - beginn
             if jetzt == 0:
-                self._melden("openpose", self.VON_PROZENT - 1, "Initializing GPU... (%ds)" % int(vergangen))
+                self._melden('openpose', self.VON_PROZENT - 1, 'Initializing GPU... (%ds)' % int(vergangen))
             elif jetzt != zuletzt:
                 if erstes_bild is None:
                     erstes_bild = time.time()
@@ -114,7 +114,7 @@ class Openposelauf:
     def _bildfortschritt(self, jetzt, rechenzeit):
         """Anteil und Restzeit — die Init-Zeit zaehlt bewusst nicht mit."""
         if self.bildzahl <= 0:
-            self.job.progress_detail = "%d frames processed" % jetzt
+            self.job.progress_detail = '%d frames processed' % jetzt
             self.job.save()
             return
         spanne = self.BIS_PROZENT - self.VON_PROZENT
@@ -122,7 +122,7 @@ class Openposelauf:
         tempo = jetzt / max(rechenzeit, 0.1)
         rest = int((self.bildzahl - jetzt) / max(tempo, 0.01))
         self.job.progress = min(anteil, self.BIS_PROZENT)
-        self.job.progress_detail = "%d / %d frames (%.1f fps, ~%ds left)" % (
+        self.job.progress_detail = '%d / %d frames (%.1f fps, ~%ds left)' % (
             jetzt,
             self.bildzahl,
             tempo,
@@ -135,21 +135,21 @@ class Openposelauf:
         # Prozess ist also fertig. `warten` sammelt nur den stderr-Faden ein,
         # damit die Fehlermeldung darunter vollstaendig ist.
         lauf.warten(timeout=30)
-        abgebrochen = (self.ausgabeordner / "STOP_FLAG").exists()
+        abgebrochen = (self.ausgabeordner / 'STOP_FLAG').exists()
         if lauf.proc.returncode != 0 and not abgebrochen:
             # `proc.stderr.read()` liefert hier nichts: Der Lesefaden hat den
             # Strom längst geleert. Deshalb den gesammelten Text nehmen.
             text = lauf.fehlertext()
             raise RuntimeError(
-                "OpenPose failed (exit code %s):\n%s" % (lauf.proc.returncode, text[-self.FEHLER_ZEICHEN :])
+                'OpenPose failed (exit code %s):\n%s' % (lauf.proc.returncode, text[-self.FEHLER_ZEICHEN :])
             )
 
         dateien = sorted(d for d in os.listdir(self.jsonordner) if d.endswith(self.JSON_ENDUNG))
         if not dateien:
             if abgebrochen:
-                raise RuntimeError("Stopped early — no OpenPose frames were written yet")
-            raise RuntimeError("No keypoint JSON files found in %s" % self.jsonordner)
-        self._melden("openpose", self.BIS_PROZENT, "%d / %d frames" % (len(dateien), len(dateien)))
+                raise RuntimeError('Stopped early — no OpenPose frames were written yet')
+            raise RuntimeError('No keypoint JSON files found in %s' % self.jsonordner)
+        self._melden('openpose', self.BIS_PROZENT, '%d / %d frames' % (len(dateien), len(dateien)))
         return dateien
 
     @classmethod
@@ -160,26 +160,26 @@ class Openposelauf:
         die Dateinamen selbst wieder zusammensetzt.
         """
         stamm = erste[: -len(cls.JSON_ENDUNG)]
-        teile = stamm.rsplit("_", 1)
+        teile = stamm.rsplit('_', 1)
         stellen = len(teile[1]) if len(teile) > 1 else 12
-        return teile[0] + "_", stellen
+        return teile[0] + '_', stellen
 
     def _nachCsv(self, kennung, stellen):
-        self._melden("openpose_csv", 40, "Converting JSON to CSV...")
-        ziel = str(self.ausgabeordner / "openpose_2d.csv")
+        self._melden('openpose_csv', 40, 'Converting JSON to CSV...')
+        ziel = str(self.ausgabeordner / 'openpose_2d.csv')
         ergebnis = subprocess.run(
             [
                 str(settings.OPENPOSE_JSON2CSV_EXE),
-                "--from",
+                '--from',
                 self.jsonordner,
-                "--label",
+                '--label',
                 kennung,
-                "--seriallength",
+                '--seriallength',
                 str(stellen),
-                "--size",
-                "1920",
-                "1080",
-                "-o",
+                '--size',
+                '1920',
+                '1080',
+                '-o',
                 ziel,
             ],
             capture_output=True,
@@ -189,11 +189,11 @@ class Openposelauf:
         )
         if ergebnis.returncode != 0:
             raise RuntimeError(
-                "JSON to CSV conversion failed (exit code %s):\n%s"
+                'JSON to CSV conversion failed (exit code %s):\n%s'
                 % (ergebnis.returncode, ergebnis.stderr[-self.FEHLER_ZEICHEN :])
             )
         if not os.path.exists(ziel):
-            raise RuntimeError("CSV file not created at %s" % ziel)
+            raise RuntimeError('CSV file not created at %s' % ziel)
         return ziel
 
     def _melden(self, status, anteil, text):

@@ -14,30 +14,30 @@ class Pipelineparameter:
     @staticmethod
     def lesen(post, pipeline):
         """Einstellungen der gewaehlten Pipeline aus dem Formular holen."""
-        if pipeline == "v4":
+        if pipeline == 'v4':
             return Pipelineparameter._v4(post)
-        if pipeline == "gvhmr":
+        if pipeline == 'gvhmr':
             return Pipelineparameter._gvhmr(post)
-        if pipeline == "wham":
+        if pipeline == 'wham':
             return {
-                "local_only": post.get("wham_local_only") == "on",
-                "smplify": post.get("wham_smplify") == "on",
-                "device": post.get("wham_device", "cuda"),
+                'local_only': post.get('wham_local_only') == 'on',
+                'smplify': post.get('wham_smplify') == 'on',
+                'device': post.get('wham_device', 'cuda'),
             }
-        if pipeline == "prompthmr":
+        if pipeline == 'prompthmr':
             return {
-                "static_cam": post.get("prompthmr_static_cam") == "on",
-                "device": post.get("prompthmr_device", "cuda"),
+                'static_cam': post.get('prompthmr_static_cam') == 'on',
+                'device': post.get('prompthmr_device', 'cuda'),
             }
-        if pipeline == "gem":
+        if pipeline == 'gem':
             return Pipelineparameter._gem(post)
-        if pipeline == "duomo":
+        if pipeline == 'duomo':
             return Pipelineparameter._duomo(post)
-        if pipeline == "gemx":
+        if pipeline == 'gemx':
             return Pipelineparameter._gemx(post)
-        if pipeline == "smplx":
+        if pipeline == 'smplx':
             return Pipelineparameter._smplx(post)
-        if pipeline.startswith("hybrid_"):
+        if pipeline.startswith('hybrid_'):
             return Pipelineparameter._hybrid(post)
         return {}
 
@@ -59,59 +59,59 @@ class Pipelineparameter:
     @staticmethod
     def _v4(post):
         p = {
-            "hcd_iterations": int(post.get("v4_hcd_iterations", 10)),
-            "hcd_epochs": int(post.get("v4_hcd_epochs", 30)),
-            "hcd_learning_rate": float(post.get("v4_hcd_learning_rate", 0.001)),
-            "smoothing_cutoff": float(post.get("v4_smoothing_cutoff", 5.0)),
-            "smoothing_sampling": float(post.get("v4_smoothing_sampling", 30.0)),
-            "mp_detection": float(post.get("v4_mp_detection", 0.5)),
-            "mp_tracking": float(post.get("v4_mp_tracking", 0.2)),
+            'hcd_iterations': int(post.get('v4_hcd_iterations', 10)),
+            'hcd_epochs': int(post.get('v4_hcd_epochs', 30)),
+            'hcd_learning_rate': float(post.get('v4_hcd_learning_rate', 0.001)),
+            'smoothing_cutoff': float(post.get('v4_smoothing_cutoff', 5.0)),
+            'smoothing_sampling': float(post.get('v4_smoothing_sampling', 30.0)),
+            'mp_detection': float(post.get('v4_mp_detection', 0.5)),
+            'mp_tracking': float(post.get('v4_mp_tracking', 0.2)),
         }
-        p.update(Pipelineparameter._teile(post, "v4_parts", ("body", "face", "hands", "mouth", "eyes")))
+        p.update(Pipelineparameter._teile(post, 'v4_parts', ('body', 'face', 'hands', 'mouth', 'eyes')))
         return p
 
     @staticmethod
     def _gvhmr(post):
         p = {
-            "static_cam": post.get("gvhmr_static_cam") == "on",
-            "focal_length_mm": float(post.get("gvhmr_focal_length_mm", 0)),
-            "device": post.get("gvhmr_device", "cuda"),
+            'static_cam': post.get('gvhmr_static_cam') == 'on',
+            'focal_length_mm': float(post.get('gvhmr_focal_length_mm', 0)),
+            'device': post.get('gvhmr_device', 'cuda'),
             # Die vier standen seit dem Formularbau im HTML, kamen aber nie
             # im Auftrag an (12.09.2026) — `Smplbefehl` kannte sie schon.
-            "use_dpvo": post.get("gvhmr_use_dpvo") == "on",
-            "verbose": post.get("gvhmr_verbose") == "on",
-            "smooth_sigma": float(post.get("gvhmr_smooth_sigma", 2.0)),
-            "joint_limits": post.get("gvhmr_joint_limits") == "on",
+            'use_dpvo': post.get('gvhmr_use_dpvo') == 'on',
+            'verbose': post.get('gvhmr_verbose') == 'on',
+            'smooth_sigma': float(post.get('gvhmr_smooth_sigma', 2.0)),
+            'joint_limits': post.get('gvhmr_joint_limits') == 'on',
             # Die drei Demo-Videos: Vorgabe an, wie das Demo (12.09.2026).
-            "render": post.get("gvhmr_render") == "on",
+            'render': post.get('gvhmr_render') == 'on',
             # Ein BVH je Person (14.09.2026), Vorgabe eine.
-            "persons": Pipelineparameter._personen(post, "gvhmr_persons"),
+            'persons': Pipelineparameter._personen(post, 'gvhmr_persons'),
         }
-        ordner = post.get("gvhmr_video_output_dir", "").strip()
+        ordner = post.get('gvhmr_video_output_dir', '').strip()
         if ordner:
-            p["video_output_dir"] = ordner
+            p['video_output_dir'] = ordner
         return p
 
     @staticmethod
     def _gem(post):
         """GEM-SMPL (11.09.2026): feste Kamera, Glaettung, Gelenkgrenzen, Geraet."""
         return {
-            "static_cam": post.get("gem_static_cam") == "on",
-            "smooth_sigma": float(post.get("gem_smooth_sigma", 2.0)),
-            "joint_limits": post.get("gem_joint_limits") == "on",
-            "render": post.get("gem_render") == "on",
-            "device": post.get("gem_device", "cuda"),
-            "persons": Pipelineparameter._personen(post, "gem_persons"),
+            'static_cam': post.get('gem_static_cam') == 'on',
+            'smooth_sigma': float(post.get('gem_smooth_sigma', 2.0)),
+            'joint_limits': post.get('gem_joint_limits') == 'on',
+            'render': post.get('gem_render') == 'on',
+            'device': post.get('gem_device', 'cuda'),
+            'persons': Pipelineparameter._personen(post, 'gem_persons'),
         }
 
     @staticmethod
     def _duomo(post):
         """DuoMo (12.09.2026): feste Kamera, Glaettung, Gelenkgrenzen, Geraet."""
         return {
-            "static_cam": post.get("duomo_static_cam") == "on",
-            "smooth_sigma": float(post.get("duomo_smooth_sigma", 2.0)),
-            "joint_limits": post.get("duomo_joint_limits") == "on",
-            "device": post.get("duomo_device", "cuda"),
+            'static_cam': post.get('duomo_static_cam') == 'on',
+            'smooth_sigma': float(post.get('duomo_smooth_sigma', 2.0)),
+            'joint_limits': post.get('duomo_joint_limits') == 'on',
+            'device': post.get('duomo_device', 'cuda'),
         }
 
     @staticmethod
@@ -119,9 +119,9 @@ class Pipelineparameter:
         """GEM-X (12.09.2026): feste Kamera, Glaettung, Geraet — keine
         Gelenkgrenzen (SOMA hat 77 Gelenke, die Grenzen sind SMPL-Indizes)."""
         return {
-            "static_cam": post.get("gemx_static_cam") == "on",
-            "smooth_sigma": float(post.get("gemx_smooth_sigma", 4.0)),
-            "device": post.get("gemx_device", "cuda"),
+            'static_cam': post.get('gemx_static_cam') == 'on',
+            'smooth_sigma': float(post.get('gemx_smooth_sigma', 4.0)),
+            'device': post.get('gemx_device', 'cuda'),
         }
 
     @staticmethod
@@ -131,47 +131,47 @@ class Pipelineparameter:
         from ..pipelines.smplbefehl import Smplbefehl
 
         p = {
-            "static_cam": post.get("smplx_static_cam") == "on",
-            "smooth_sigma": float(post.get("smplx_smooth_sigma", 2.0)),
-            "joint_limits": post.get("smplx_joint_limits") == "on",
-            "hand_sigma": float(post.get("smplx_hand_sigma", 2.0)),
-            "face_sigma": float(post.get("smplx_face_sigma", 2.0)),
-            "ground": post.get("smplx_ground") == "on",
-            "video": post.get("smplx_video") == "on",
-            "device": post.get("smplx_device", "cuda"),
+            'static_cam': post.get('smplx_static_cam') == 'on',
+            'smooth_sigma': float(post.get('smplx_smooth_sigma', 2.0)),
+            'joint_limits': post.get('smplx_joint_limits') == 'on',
+            'hand_sigma': float(post.get('smplx_hand_sigma', 2.0)),
+            'face_sigma': float(post.get('smplx_face_sigma', 2.0)),
+            'ground': post.get('smplx_ground') == 'on',
+            'video': post.get('smplx_video') == 'on',
+            'device': post.get('smplx_device', 'cuda'),
         }
         for name, vorgabe in Smplbefehl.SMPLX_QUELLEN.items():
-            p[name] = post.get("smplx_" + name, vorgabe)
+            p[name] = post.get('smplx_' + name, vorgabe)
         return p
 
     @staticmethod
     def _hybrid(post):
-        koerper = post.get("hybrid_body_backend", "gvhmr")
+        koerper = post.get('hybrid_body_backend', 'gvhmr')
         p = {
-            "body_backend": koerper,
-            "body_device": post.get("hybrid_body_device", "cuda"),
-            "hands_source": post.get("hybrid_hands_source", "v4"),
-            "face_source": post.get("hybrid_face_source", "smplest_x"),
-            "v4_hcd_iterations": int(post.get("hybrid_v4_hcd_iterations", 10)),
-            "v4_hcd_epochs": int(post.get("hybrid_v4_hcd_epochs", 30)),
-            "v4_mp_detection": float(post.get("hybrid_v4_mp_detection", 0.5)),
-            "v4_mp_tracking": float(post.get("hybrid_v4_mp_tracking", 0.2)),
+            'body_backend': koerper,
+            'body_device': post.get('hybrid_body_device', 'cuda'),
+            'hands_source': post.get('hybrid_hands_source', 'v4'),
+            'face_source': post.get('hybrid_face_source', 'smplest_x'),
+            'v4_hcd_iterations': int(post.get('hybrid_v4_hcd_iterations', 10)),
+            'v4_hcd_epochs': int(post.get('hybrid_v4_hcd_epochs', 30)),
+            'v4_mp_detection': float(post.get('hybrid_v4_mp_detection', 0.5)),
+            'v4_mp_tracking': float(post.get('hybrid_v4_mp_tracking', 0.2)),
         }
-        if koerper == "gvhmr":
-            p["static_cam"] = post.get("hybrid_gvhmr_static_cam") == "on"
-            p["focal_length_mm"] = float(post.get("hybrid_gvhmr_focal_length_mm", 0))
-        elif koerper == "gem":
+        if koerper == 'gvhmr':
+            p['static_cam'] = post.get('hybrid_gvhmr_static_cam') == 'on'
+            p['focal_length_mm'] = float(post.get('hybrid_gvhmr_focal_length_mm', 0))
+        elif koerper == 'gem':
             # GEM-SMPL als Rueckgrat (12.09.2026): dieselben drei Regler wie
             # seine eigene Karte, ohne Rendern.
-            p["static_cam"] = post.get("hybrid_gem_static_cam") == "on"
-            p["smooth_sigma"] = float(post.get("hybrid_gem_smooth_sigma", 2.0))
-            p["joint_limits"] = post.get("hybrid_gem_joint_limits") == "on"
+            p['static_cam'] = post.get('hybrid_gem_static_cam') == 'on'
+            p['smooth_sigma'] = float(post.get('hybrid_gem_smooth_sigma', 2.0))
+            p['joint_limits'] = post.get('hybrid_gem_joint_limits') == 'on'
         else:
-            p["static_cam"] = post.get("hybrid_prompthmr_static_cam") == "on"
+            p['static_cam'] = post.get('hybrid_prompthmr_static_cam') == 'on'
         for teil, an in Pipelineparameter._teile(
-            post, "hybrid_v4_parts", ("face", "hands", "mouth", "eyes")
+            post, 'hybrid_v4_parts', ('face', 'hands', 'mouth', 'eyes')
         ).items():
-            p["v4_" + teil] = an
+            p['v4_' + teil] = an
         return p
 
     @classmethod
@@ -189,18 +189,18 @@ class Pipelineparameter:
     def _v4_vorgaben(s):
         """MocapNET v4."""
         return {
-            "v4_hcd_iterations": s.v4_hcd_iterations,
-            "v4_hcd_epochs": s.v4_hcd_epochs,
-            "v4_hcd_learning_rate": s.v4_hcd_learning_rate,
-            "v4_smoothing_cutoff": s.v4_smoothing_cutoff,
-            "v4_smoothing_sampling": s.v4_smoothing_sampling,
-            "v4_mp_detection": s.mp_min_detection_confidence,
-            "v4_mp_tracking": s.mp_min_tracking_confidence,
-            "v4_body": s.v4_enable_body,
-            "v4_face": s.v4_enable_face,
-            "v4_hands": s.v4_enable_hands,
-            "v4_mouth": s.v4_enable_mouth,
-            "v4_eyes": s.v4_enable_eyes,
+            'v4_hcd_iterations': s.v4_hcd_iterations,
+            'v4_hcd_epochs': s.v4_hcd_epochs,
+            'v4_hcd_learning_rate': s.v4_hcd_learning_rate,
+            'v4_smoothing_cutoff': s.v4_smoothing_cutoff,
+            'v4_smoothing_sampling': s.v4_smoothing_sampling,
+            'v4_mp_detection': s.mp_min_detection_confidence,
+            'v4_mp_tracking': s.mp_min_tracking_confidence,
+            'v4_body': s.v4_enable_body,
+            'v4_face': s.v4_enable_face,
+            'v4_hands': s.v4_enable_hands,
+            'v4_mouth': s.v4_enable_mouth,
+            'v4_eyes': s.v4_enable_eyes,
         }
 
     @staticmethod
@@ -209,34 +209,34 @@ class Pipelineparameter:
         GEM, DuoMo, GEM-X: Vorgaben aus `LifterEinstellungen` (12.09.2026),
         Karte und Einstellungsseite sagen dasselbe."""
         return {
-            "gvhmr_static_cam": s.gvhmr_static_cam,
-            "gvhmr_focal_length_mm": s.gvhmr_focal_length_mm,
-            "gvhmr_smooth_sigma": s.gvhmr_smooth_sigma,
-            "gvhmr_joint_limits": s.gvhmr_joint_limits,
-            "gvhmr_use_dpvo": s.gvhmr_use_dpvo,
-            "gvhmr_verbose": s.gvhmr_verbose,
-            "gvhmr_render": s.gvhmr_render,
-            "gvhmr_device": s.smpl_device,
-            "gvhmr_video_output_dir": s.video_output_dir,
-            "gvhmr_persons": 1,
-            "wham_local_only": s.wham_estimate_local_only,
-            "wham_smplify": s.wham_run_smplify,
-            "wham_device": s.smpl_device,
-            "prompthmr_static_cam": s.prompthmr_static_camera,
-            "prompthmr_device": s.smpl_device,
-            "gem_static_cam": s.gem_static_cam,
-            "gem_smooth_sigma": s.gem_smooth_sigma,
-            "gem_joint_limits": s.gem_joint_limits,
-            "gem_render": s.gem_render,
-            "gem_device": s.smpl_device,
-            "gem_persons": 1,
-            "duomo_static_cam": s.duomo_static_cam,
-            "duomo_smooth_sigma": s.duomo_smooth_sigma,
-            "duomo_joint_limits": s.duomo_joint_limits,
-            "duomo_device": s.smpl_device,
-            "gemx_static_cam": s.gemx_static_cam,
-            "gemx_smooth_sigma": s.gemx_smooth_sigma,
-            "gemx_device": s.smpl_device,
+            'gvhmr_static_cam': s.gvhmr_static_cam,
+            'gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
+            'gvhmr_smooth_sigma': s.gvhmr_smooth_sigma,
+            'gvhmr_joint_limits': s.gvhmr_joint_limits,
+            'gvhmr_use_dpvo': s.gvhmr_use_dpvo,
+            'gvhmr_verbose': s.gvhmr_verbose,
+            'gvhmr_render': s.gvhmr_render,
+            'gvhmr_device': s.smpl_device,
+            'gvhmr_video_output_dir': s.video_output_dir,
+            'gvhmr_persons': 1,
+            'wham_local_only': s.wham_estimate_local_only,
+            'wham_smplify': s.wham_run_smplify,
+            'wham_device': s.smpl_device,
+            'prompthmr_static_cam': s.prompthmr_static_camera,
+            'prompthmr_device': s.smpl_device,
+            'gem_static_cam': s.gem_static_cam,
+            'gem_smooth_sigma': s.gem_smooth_sigma,
+            'gem_joint_limits': s.gem_joint_limits,
+            'gem_render': s.gem_render,
+            'gem_device': s.smpl_device,
+            'gem_persons': 1,
+            'duomo_static_cam': s.duomo_static_cam,
+            'duomo_smooth_sigma': s.duomo_smooth_sigma,
+            'duomo_joint_limits': s.duomo_joint_limits,
+            'duomo_device': s.smpl_device,
+            'gemx_static_cam': s.gemx_static_cam,
+            'gemx_smooth_sigma': s.gemx_smooth_sigma,
+            'gemx_device': s.smpl_device,
         }
 
     @staticmethod
@@ -246,37 +246,37 @@ class Pipelineparameter:
         from ..pipelines.smplbefehl import Smplbefehl
 
         return {
-            "smplx_static_cam": s.gem_static_cam,
-            "smplx_smooth_sigma": s.gem_smooth_sigma,
-            "smplx_joint_limits": s.gem_joint_limits,
-            "smplx_hand_sigma": Smplbefehl.SMPLX_HAND_SIGMA,
-            "smplx_face_sigma": Smplbefehl.SMPLX_FACE_SIGMA,
-            "smplx_body_source": Smplbefehl.SMPLX_QUELLEN["body_source"],
-            "smplx_hands_source": Smplbefehl.SMPLX_QUELLEN["hands_source"],
-            "smplx_face_source": Smplbefehl.SMPLX_QUELLEN["face_source"],
-            "smplx_wrist_source": Smplbefehl.SMPLX_QUELLEN["wrist_source"],
-            "smplx_ground": True,
-            "smplx_video": True,
-            "smplx_device": s.smpl_device,
+            'smplx_static_cam': s.gem_static_cam,
+            'smplx_smooth_sigma': s.gem_smooth_sigma,
+            'smplx_joint_limits': s.gem_joint_limits,
+            'smplx_hand_sigma': Smplbefehl.SMPLX_HAND_SIGMA,
+            'smplx_face_sigma': Smplbefehl.SMPLX_FACE_SIGMA,
+            'smplx_body_source': Smplbefehl.SMPLX_QUELLEN['body_source'],
+            'smplx_hands_source': Smplbefehl.SMPLX_QUELLEN['hands_source'],
+            'smplx_face_source': Smplbefehl.SMPLX_QUELLEN['face_source'],
+            'smplx_wrist_source': Smplbefehl.SMPLX_QUELLEN['wrist_source'],
+            'smplx_ground': True,
+            'smplx_video': True,
+            'smplx_device': s.smpl_device,
         }
 
     @staticmethod
     def _hybrid_vorgaben(s):
         """Hybrid greift auf dieselben Einstellungen zurueck."""
         return {
-            "hybrid_body_device": s.smpl_device,
-            "hybrid_gvhmr_static_cam": s.gvhmr_static_cam,
-            "hybrid_gvhmr_focal_length_mm": s.gvhmr_focal_length_mm,
-            "hybrid_prompthmr_static_cam": s.prompthmr_static_camera,
-            "hybrid_gem_static_cam": s.gem_static_cam,
-            "hybrid_gem_smooth_sigma": s.gem_smooth_sigma,
-            "hybrid_gem_joint_limits": s.gem_joint_limits,
-            "hybrid_v4_face": s.v4_enable_face,
-            "hybrid_v4_hands": s.v4_enable_hands,
-            "hybrid_v4_mouth": s.v4_enable_mouth,
-            "hybrid_v4_eyes": s.v4_enable_eyes,
-            "hybrid_v4_hcd_iterations": s.v4_hcd_iterations,
-            "hybrid_v4_hcd_epochs": s.v4_hcd_epochs,
-            "hybrid_v4_mp_detection": s.mp_min_detection_confidence,
-            "hybrid_v4_mp_tracking": s.mp_min_tracking_confidence,
+            'hybrid_body_device': s.smpl_device,
+            'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,
+            'hybrid_gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
+            'hybrid_prompthmr_static_cam': s.prompthmr_static_camera,
+            'hybrid_gem_static_cam': s.gem_static_cam,
+            'hybrid_gem_smooth_sigma': s.gem_smooth_sigma,
+            'hybrid_gem_joint_limits': s.gem_joint_limits,
+            'hybrid_v4_face': s.v4_enable_face,
+            'hybrid_v4_hands': s.v4_enable_hands,
+            'hybrid_v4_mouth': s.v4_enable_mouth,
+            'hybrid_v4_eyes': s.v4_enable_eyes,
+            'hybrid_v4_hcd_iterations': s.v4_hcd_iterations,
+            'hybrid_v4_hcd_epochs': s.v4_hcd_epochs,
+            'hybrid_v4_mp_detection': s.mp_min_detection_confidence,
+            'hybrid_v4_mp_tracking': s.mp_min_tracking_confidence,
         }

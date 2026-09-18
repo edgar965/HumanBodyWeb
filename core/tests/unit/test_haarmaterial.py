@@ -28,22 +28,22 @@ class DasHaarmaterialIstDielektrischTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.quelle = Jsmodul("character_core.js").pfad.read_text(encoding="utf-8")
+        self.quelle = Jsmodul('character_core.js').pfad.read_text(encoding='utf-8')
 
     def test_die_metallstaerke_wird_gesetzt(self):
-        self.assertIn("m.metalness = HAAR_METALL", self.quelle)
-        self.assertIn("const HAAR_METALL = 0.0", self.quelle)
+        self.assertIn('m.metalness = HAAR_METALL', self.quelle)
+        self.assertIn('const HAAR_METALL = 0.0', self.quelle)
 
     def test_auch_ohne_bekannte_farbe(self):
         """Der frühere `if (!rgb) return;` ließ genau den Fall metallisch,
         in dem eine Frisur ohne Farbeintrag geladen wird."""
-        stelle = self.quelle.index("export function applyHairColor")
+        stelle = self.quelle.index('export function applyHairColor')
         rumpf = self.quelle[stelle : stelle + 900]
-        self.assertNotIn("if (!rgb) return;", rumpf)
+        self.assertNotIn('if (!rgb) return;', rumpf)
         self.assertLess(
-            rumpf.index("m.metalness"),
-            rumpf.index("if (color)"),
-            "Die Metallstärke muss vor der Farbe kommen — sie gilt auch ohne sie",
+            rumpf.index('m.metalness'),
+            rumpf.index('if (color)'),
+            'Die Metallstärke muss vor der Farbe kommen — sie gilt auch ohne sie',
         )
 
 
@@ -53,13 +53,13 @@ class DieFrisurdateienFuehrenKeinMaterialTest(SimpleTestCase):
     databases = set()
 
     def test_jede_frisur_ueberlaesst_das_material_der_spezifikation(self):
-        ordner = settings.HUMANBODY_ROOT / "data" / "humanBody" / "hairstyles"
-        dateien = sorted(ordner.glob("*.glb"))
-        self.assertTrue(dateien, "Keine Frisur gefunden: %s" % ordner)
+        ordner = settings.HUMANBODY_ROOT / 'data' / 'humanBody' / 'hairstyles'
+        dateien = sorted(ordner.glob('*.glb'))
+        self.assertTrue(dateien, 'Keine Frisur gefunden: %s' % ordner)
         for pfad in dateien:
             # in der Schleife gewollt: je Durchlauf eine andere GLB, ihr Kopf
-            with open(pfad, "rb") as datei:
+            with open(pfad, 'rb') as datei:
                 datei.read(12)
-                laenge, _art = struct.unpack("<II", datei.read(8))
-                kopf = json.loads(datei.read(laenge).decode("utf-8"))
-            self.assertIsNone(kopf.get("materials"), pfad.name)
+                laenge, _art = struct.unpack('<II', datei.read(8))
+                kopf = json.loads(datei.read(laenge).decode('utf-8'))
+            self.assertIsNone(kopf.get('materials'), pfad.name)

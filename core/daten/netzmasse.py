@@ -60,11 +60,11 @@ class Netzmasse:
         """
         return cls(
             vertices,
-            cam_data.get("image_width") or cls.VORGABE_BREITE,
-            cam_data.get("image_height") or cls.VORGABE_HOEHE,
+            cam_data.get('image_width') or cls.VORGABE_BREITE,
+            cam_data.get('image_height') or cls.VORGABE_HOEHE,
         )
 
     def bildhoehe_von(self, y_netz, verschiebung):
         """Wohin ein Netz-Y bei diesem `body_transform` im Bild fällt."""
-        s = self.base_scale * verschiebung["scale"]
-        return (self.cy - y_netz) * s + verschiebung["center_y"]
+        s = self.base_scale * verschiebung['scale']
+        return (self.cy - y_netz) * s + verschiebung['center_y']

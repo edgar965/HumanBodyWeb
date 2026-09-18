@@ -15,84 +15,84 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._studiovorlage import Studiovorlage
 
-STUDIO = Jsmodul.VIEWER / "bvh_studio"
-MODUL = Jsmodul("bvh_studio", "hilfetexte_zeitleiste.js")
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+MODUL = Jsmodul('bvh_studio', 'hilfetexte_zeitleiste.js')
 
 SKRIPT = """
 const { HILFE_ZEITLEISTE } = await import(MODUL);
 console.log(JSON.stringify(HILFE_ZEITLEISTE));
 """
 
-SPURARTEN = ("bvh", "model", "camera", "light", "audio", "scene_object", "floor", "mimik", "script")
-CLIPARTEN = ("bvh", "model", "camera_kf", "light_kf", "audio", "object_clip", "mimik_kf", "script", "lipsync")
+SPURARTEN = ('bvh', 'model', 'camera', 'light', 'audio', 'scene_object', 'floor', 'mimik', 'script')
+CLIPARTEN = ('bvh', 'model', 'camera_kf', 'light_kf', 'audio', 'object_clip', 'mimik_kf', 'script', 'lipsync')
 
 #: Was ein Text nennt → wo es im Studio steht: (Wort im Text, Datei, Suchtext).
 BELEGE = {
-    "camera": [
-        ("Kameraposition", "zeitleiste_spurmenue.js", "'Kameraposition'"),
-        ("<b>K</b>", "playback.js", "e.code === 'KeyK'"),
-        ('„Aktiv"', "properties.js", "Aktiv:"),
+    'camera': [
+        ('Kameraposition', 'zeitleiste_spurmenue.js', "'Kameraposition'"),
+        ('<b>K</b>', 'playback.js', "e.code === 'KeyK'"),
+        ('„Aktiv"', 'properties.js', 'Aktiv:'),
     ],
-    "light": [
-        ("Lichteigenschaft", "menue_licht.js", "'Lichteigenschaft (einzel)'"),
-        ("<b>Alt+Klick</b>", "lichtsetzen.js", "e.altKey"),
-        ("<b>K</b>", "playback.js", "fn.addLightKeyframe(state.selectedTrackIdx)"),
+    'light': [
+        ('Lichteigenschaft', 'menue_licht.js', "'Lichteigenschaft (einzel)'"),
+        ('<b>Alt+Klick</b>', 'lichtsetzen.js', 'e.altKey'),
+        ('<b>K</b>', 'playback.js', 'fn.addLightKeyframe(state.selectedTrackIdx)'),
     ],
-    "audio": [("Audio-Datei wählen", "zeitleiste_spurmenue.js", "'Audio-Datei wählen...'")],
-    "scene_object": [
-        ("3D-Datei wählen", "zeitleiste_spurmenue.js", "'3D-Datei wählen...'"),
-        ("<b>Alt+Klick</b>", "lichtsetzen.js", "spur.type === 'scene_object'"),
+    'audio': [('Audio-Datei wählen', 'zeitleiste_spurmenue.js', "'Audio-Datei wählen...'")],
+    'scene_object': [
+        ('3D-Datei wählen', 'zeitleiste_spurmenue.js', "'3D-Datei wählen...'"),
+        ('<b>Alt+Klick</b>', 'lichtsetzen.js', "spur.type === 'scene_object'"),
     ],
-    "model": [
-        ('„Modell wählen"', "../../../templates/bvh_studio.html", "Modell w&auml;hlen:"),
-        ("verknüpft", "zeitleiste_kontextmenue.js", "_verknuepfungszeile"),
+    'model': [
+        ('„Modell wählen"', '../../../templates/bvh_studio.html', 'Modell w&auml;hlen:'),
+        ('verknüpft', 'zeitleiste_kontextmenue.js', '_verknuepfungszeile'),
     ],
-    "bvh": [
-        ("<b>Doppelklick</b>", "bibliotheksbaum.js", "'dblclick'"),
-        ("<b>Ziehen</b>", "zeitleiste_spurkopf.js", "'drop'"),
+    'bvh': [
+        ('<b>Doppelklick</b>', 'bibliotheksbaum.js', "'dblclick'"),
+        ('<b>Ziehen</b>', 'zeitleiste_spurkopf.js', "'drop'"),
     ],
-    "clip_bvh": [
-        ("<b>S</b>", "../../../templates/bvh_studio.html", "Split an Playhead (S)"),
-        ("Duplizieren", "../../../templates/bvh_studio.html", "Duplizieren"),
-        ("Smooth", "../../../templates/bvh_studio.html", "Smooth"),
-        ("Bodenniveau", "../../../templates/bvh_studio.html", "Bodenniveau"),
-        ("Trim", "zeitleiste_ziehen.js", "'trim-left'"),
+    'clip_bvh': [
+        ('<b>S</b>', '../../../templates/bvh_studio.html', 'Split an Playhead (S)'),
+        ('Duplizieren', '../../../templates/bvh_studio.html', 'Duplizieren'),
+        ('Smooth', '../../../templates/bvh_studio.html', 'Smooth'),
+        ('Bodenniveau', '../../../templates/bvh_studio.html', 'Bodenniveau'),
+        ('Trim', 'zeitleiste_ziehen.js', "'trim-left'"),
     ],
-    "clip_camera_kf": [
+    'clip_camera_kf': [
         (
             '„Aktuelle Ansicht übernehmen"',
-            "eigenschaften/klip_schluesselbilder.js",
-            "Aktuelle Ansicht übernehmen",
+            'eigenschaften/klip_schluesselbilder.js',
+            'Aktuelle Ansicht übernehmen',
         )
     ],
-    "mimik": [
-        ("„Pose setzen…“", "../../../templates/bvh_studio.html", "Pose setzen…"),
-        ("Script-Spur", "scriptspur.js", "Modellkindspur.anlegen(modellIdx, 'script'"),
-        ("„Mimik einrechnen“", "../../../templates/bvh_studio.html", "Mimik einrechnen (zur BVH)"),
-        ("zehn Gruppen", "mimikdialog.js", "mimik-gruppe"),
+    'mimik': [
+        ('„Pose setzen…“', '../../../templates/bvh_studio.html', 'Pose setzen…'),
+        ('Script-Spur', 'scriptspur.js', "Modellkindspur.anlegen(modellIdx, 'script'"),
+        ('„Mimik einrechnen“', '../../../templates/bvh_studio.html', 'Mimik einrechnen (zur BVH)'),
+        ('zehn Gruppen', 'mimikdialog.js', 'mimik-gruppe'),
     ],
-    "script": [
-        ("„Script hinzufügen“", "../../../templates/bvh_studio.html", "Script hinzufügen"),
-        ("Blinzeln", "eigenschaften/script.js", "'Blinzeln'"),
-        ("Saat", "scriptzuschlag.js", "Lebendigkeit.zuschlag(clip.data, t, pose)"),
+    'script': [
+        ('„Script hinzufügen“', '../../../templates/bvh_studio.html', 'Script hinzufügen'),
+        ('Blinzeln', 'eigenschaften/script.js', "'Blinzeln'"),
+        ('Saat', 'scriptzuschlag.js', 'Lebendigkeit.zuschlag(clip.data, t, pose)'),
     ],
-    "clip_script": [
-        ("Länge", "../../../templates/bvh_studio.html", "script-ctx-laenge"),
-        ("Blinzelfolge", "scriptzuschlag.js", "clip.trimIn"),
+    'clip_script': [
+        ('Länge', '../../../templates/bvh_studio.html', 'script-ctx-laenge'),
+        ('Blinzelfolge', 'scriptzuschlag.js', 'clip.trimIn'),
     ],
-    "clip_lipsync": [
-        ("„Lippensynchronisation aus Tonspur“", "../../../templates/bvh_studio.html", "ctx-mimik-lipsync"),
-        ("Rhubarb", "lipsyncspur.js", "'/api/studio/lipsync/'"),
-        ("Visemes", "mimikgenesis9.js", "Genesis9felder.anwenden"),
+    'clip_lipsync': [
+        ('„Lippensynchronisation aus Tonspur“', '../../../templates/bvh_studio.html', 'ctx-mimik-lipsync'),
+        ('Rhubarb', 'lipsyncspur.js', "'/api/studio/lipsync/'"),
+        ('Visemes', 'mimikgenesis9.js', 'Genesis9felder.anwenden'),
     ],
-    "clip_model": [
-        ("„Modell hinzufügen“", "../../../templates/bvh_studio.html", "Modell hinzufügen"),
-        ("„Animation hinzufügen“", "../../../templates/bvh_studio.html", "Animation hinzufügen"),
-        ("Script", "../../../templates/bvh_studio.html", "ctx-script-track"),
+    'clip_model': [
+        ('„Modell hinzufügen“', '../../../templates/bvh_studio.html', 'Modell hinzufügen'),
+        ('„Animation hinzufügen“', '../../../templates/bvh_studio.html', 'Animation hinzufügen'),
+        ('Script', '../../../templates/bvh_studio.html', 'ctx-script-track'),
     ],
-    "lineal": [
-        ("<b>Leertaste</b>", "playback.js", "e.code === 'Space'"),
-        ("<b>Alt+Ziehen</b>", "zeitleiste_ziehen.js", "e.button === 0 && e.altKey"),
+    'lineal': [
+        ('<b>Leertaste</b>', 'playback.js', "e.code === 'Space'"),
+        ('<b>Alt+Ziehen</b>', 'zeitleiste_ziehen.js', 'e.button === 0 && e.altKey'),
     ],
 }
 
@@ -107,30 +107,30 @@ class HilfetexteZeitleisteTest(SimpleTestCase):
 
     def test_jede_spur_und_clipart_hat_einen_text(self):
         fehlend = [a for a in SPURARTEN if a not in self.texte]
-        fehlend += ["clip_" + a for a in CLIPARTEN if "clip_" + a not in self.texte]
+        fehlend += ['clip_' + a for a in CLIPARTEN if 'clip_' + a not in self.texte]
         self.assertEqual(fehlend, [])
         for schluessel, eintrag in self.texte.items():
-            self.assertTrue(eintrag.get("titel") and eintrag.get("text"), schluessel)
+            self.assertTrue(eintrag.get('titel') and eintrag.get('text'), schluessel)
 
     def test_genannte_dinge_gibt_es(self):
         fehlend = []
         for schluessel, belege in BELEGE.items():
             self.assertIn(schluessel, self.texte)
-            text = self.texte[schluessel]["text"]
+            text = self.texte[schluessel]['text']
             for wort, datei, suchtext in belege:
                 if wort not in text:
                     fehlend.append('%s: Text nennt „%s" nicht' % (schluessel, wort))
                 inhalt = (
                     Studiovorlage.text()
-                    if datei.endswith("bvh_studio.html")
-                    else (STUDIO / datei).read_text(encoding="utf-8")
+                    if datei.endswith('bvh_studio.html')
+                    else (STUDIO / datei).read_text(encoding='utf-8')
                 )
                 if suchtext not in inhalt:
                     fehlend.append('%s: „%s" nicht in %s' % (schluessel, suchtext, datei))
-        self.assertEqual(fehlend, [], "\n".join(fehlend))
+        self.assertEqual(fehlend, [], '\n'.join(fehlend))
 
     def test_keine_ae_oe_ue_schreibweise(self):
         """User-sichtbare Texte tragen echte Umlaute."""
         for schluessel, eintrag in self.texte.items():
-            for wort in ("waehlen", "loescht", "fuer", "ueber", "Staerke", "Laenge"):
-                self.assertNotIn(wort, eintrag["text"], schluessel)
+            for wort in ('waehlen', 'loescht', 'fuer', 'ueber', 'Staerke', 'Laenge'):
+                self.assertNotIn(wort, eintrag['text'], schluessel)

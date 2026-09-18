@@ -17,7 +17,6 @@ Namensraeume. Lokale Grossbuchstaben-Namen (Parameter, Destrukturierung)
 gelten als bekannt, ebenso die Browser- und Sprach-Globalen.
 """
 
-import io
 import os
 import re
 
@@ -44,11 +43,11 @@ PerformanceObserver Screen""".split()
 
 NUTZUNG = re.compile(r'(?<![\w.$\'"`])([A-Z][A-Za-z0-9_]+)\s*\.(?!\.)')
 DEFINITION = re.compile(
-    r"(?:^|\n)\s*(?:export\s+)?(?:class|const|let|var|function|async function)"
-    r"\s+([A-Z][A-Za-z0-9_]+)"
+    r'(?:^|\n)\s*(?:export\s+)?(?:class|const|let|var|function|async function)'
+    r'\s+([A-Z][A-Za-z0-9_]+)'
 )
-IMPORT = re.compile(r"import\s*\{([^}]*)\}\s*from|import\s+\*\s+as\s+(\w+)\s+from|import\s+(\w+)\s+from")
-LOKAL = re.compile(r"(?:[(,{]\s*|=\s*\{[^}]*?)([A-Z][A-Za-z0-9_]+)\s*[,)=}]")
+IMPORT = re.compile(r'import\s*\{([^}]*)\}\s*from|import\s+\*\s+as\s+(\w+)\s+from|import\s+(\w+)\s+from')
+LOKAL = re.compile(r'(?:[(,{]\s*|=\s*\{[^}]*?)([A-Z][A-Za-z0-9_]+)\s*[,)=}]')
 
 
 class Jsimporte:
@@ -56,9 +55,9 @@ class Jsimporte:
 
     @staticmethod
     def ohne_kommentare_und_texte(quelle):
-        quelle = re.sub(r"/\*.*?\*/", "", quelle, flags=re.S)
-        quelle = re.sub(r"//[^\n]*", "", quelle)
-        quelle = re.sub(r"`(?:\\.|[^`\\])*`", "``", quelle, flags=re.S)
+        quelle = re.sub(r'/\*.*?\*/', '', quelle, flags=re.S)
+        quelle = re.sub(r'//[^\n]*', '', quelle)
+        quelle = re.sub(r'`(?:\\.|[^`\\])*`', '``', quelle, flags=re.S)
         quelle = re.sub(r"'(?:\\.|[^'\\\n])*'", "''", quelle)
         quelle = re.sub(r'"(?:\\.|[^"\\\n])*"', '""', quelle)
         return quelle
@@ -69,10 +68,10 @@ class Jsimporte:
         bekannt = set(BEKANNT)
         for m in IMPORT.finditer(quelle):
             if m.group(1):
-                for teil in m.group(1).split(","):
+                for teil in m.group(1).split(','):
                     teil = teil.strip()
                     if teil:
-                        bekannt.add(teil.split(" as ")[-1].strip())
+                        bekannt.add(teil.split(' as ')[-1].strip())
             else:
                 bekannt.add(m.group(2) or m.group(3))
         bekannt.update(m.group(1) for m in DEFINITION.finditer(quelle))
@@ -83,40 +82,40 @@ class Jsimporte:
 class JsimporteTest(SimpleTestCase):
     databases = set()
 
-    WURZEL = settings.BASE_DIR / "static" / "viewer"
+    WURZEL = settings.BASE_DIR / 'static' / 'viewer'
 
     def test_kein_modul_nutzt_einen_namen_ohne_import(self):
         befunde = {}
         gezaehlt = 0
         for ordner, _, dateien in os.walk(self.WURZEL):
             for name in dateien:
-                if not name.endswith(".js"):
+                if not name.endswith('.js'):
                     continue
                 pfad = os.path.join(ordner, name)
                 gezaehlt += 1
-                fehlend = Jsimporte.fehlende(io.open(pfad, encoding="utf-8").read())
+                fehlend = Jsimporte.fehlende(open(pfad, encoding='utf-8').read())
                 if fehlend:
                     befunde[os.path.relpath(pfad, self.WURZEL)] = fehlend
-        self.assertGreater(gezaehlt, 200, "der Statik-Baum ist nicht da, wo erwartet")
-        self.assertEqual(befunde, {}, "Namen ohne Import: %r" % befunde)
+        self.assertGreater(gezaehlt, 200, 'der Statik-Baum ist nicht da, wo erwartet')
+        self.assertEqual(befunde, {}, 'Namen ohne Import: %r' % befunde)
 
     def test_die_gegenprobe_findet_den_anlass(self):
         """Genau der Fall vom 11.09.2026 — ohne diese Probe koennte der
         Pruefer still nichts finden (`analysewerkzeuge.md`)."""
         quelle = (
             "import { A } from './a.js';\n"
-            "export class B {\n"
-            "    static x(figur, stueck) {\n"
-            "        const bisher = GarmentcodeMaterial.getragen(figur, stueck);\n"
-            "        return A.y(bisher) + Math.max(1, 2);\n"
-            "    }\n"
-            "}\n"
+            'export class B {\n'
+            '    static x(figur, stueck) {\n'
+            '        const bisher = GarmentcodeMaterial.getragen(figur, stueck);\n'
+            '        return A.y(bisher) + Math.max(1, 2);\n'
+            '    }\n'
+            '}\n'
         )
-        self.assertEqual(Jsimporte.fehlende(quelle), ["GarmentcodeMaterial"])
+        self.assertEqual(Jsimporte.fehlende(quelle), ['GarmentcodeMaterial'])
         # Texte und Kommentare zaehlen nicht, lokale Namen auch nicht.
         harmlos = (
-            "// Koerpernetz.materialsatz steht woanders\n"
+            '// Koerpernetz.materialsatz steht woanders\n'
             "const t = `${Foo.bar}`; const s = 'Baz.qux';\n"
-            "function f(Vorlage, { Regler }) { return Vorlage.a + Regler.b; }\n"
+            'function f(Vorlage, { Regler }) { return Vorlage.a + Regler.b; }\n'
         )
         self.assertEqual(Jsimporte.fehlende(harmlos), [])

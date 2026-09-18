@@ -78,7 +78,7 @@ class QuatGegenScipyTest(SimpleTestCase):
         a = Drehungsbau.zufallsdrehungen(1, 31)[0]
         reihe = Drehungsbau.zufallsdrehungen(9, 37)
         zusammen = Quat.mul_reihe(a, reihe)
-        self.assertEqual(zusammen.shape, reihe.shape, "Die Form muss (N, 4) bleiben, nicht (4, N)")
+        self.assertEqual(zusammen.shape, reihe.shape, 'Die Form muss (N, 4) bleiben, nicht (4, N)')
         for i, b in enumerate(reihe):
             np.testing.assert_allclose(zusammen[i], Quat.mul(a, b), atol=1e-12)
 
@@ -180,7 +180,7 @@ class QuatEinzigeFassungTest(SimpleTestCase):
     """
 
     #: Genau die Namen, die am 31.08.2026 aus zwei Dateien hierher zogen.
-    GEZOGEN = ("_qmul", "_qinv", "_qnorm", "_qrotate", "_qslerp", "_qfrom_unit_vectors", "_IDQ")
+    GEZOGEN = ('_qmul', '_qinv', '_qnorm', '_qrotate', '_qslerp', '_qfrom_unit_vectors', '_IDQ')
 
     def test_keine_zweite_fassung_im_paket(self):
         from pathlib import Path
@@ -189,11 +189,11 @@ class QuatEinzigeFassungTest(SimpleTestCase):
 
         wurzel = Path(humanbody_core.__file__).parent
         treffer = []
-        for pfad in wurzel.rglob("*.py"):
-            if pfad.name == "quaternion.py" or "__pycache__" in pfad.parts:
+        for pfad in wurzel.rglob('*.py'):
+            if pfad.name == 'quaternion.py' or '__pycache__' in pfad.parts:
                 continue
-            for zeile in pfad.read_text(encoding="utf-8").splitlines():
+            for zeile in pfad.read_text(encoding='utf-8').splitlines():
                 for name in self.GEZOGEN:
-                    if zeile.startswith("def %s(" % name) or zeile.startswith("%s =" % name):
-                        treffer.append("%s: %s" % (pfad.name, zeile.strip()))
-        self.assertEqual(treffer, [], "Quaternion-Mathematik steht wieder doppelt im Paket")
+                    if zeile.startswith('def %s(' % name) or zeile.startswith('%s =' % name):
+                        treffer.append('%s: %s' % (pfad.name, zeile.strip()))
+        self.assertEqual(treffer, [], 'Quaternion-Mathematik steht wieder doppelt im Paket')

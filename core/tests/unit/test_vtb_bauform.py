@@ -27,8 +27,8 @@ import ast
 import re
 import unittest
 
-from ._wrappersuchpfad import Wrappersuchpfad, WRAPPERS
 from ._wrapperquellen import Wrapperquellen
+from ._wrappersuchpfad import WRAPPERS, Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
@@ -40,22 +40,22 @@ class EineQuelle(unittest.TestCase):
     #: `Smplskelett` steht seit dem 07.09.2026 NICHT mehr hier — siehe
     #: `test_smplskelett_kommt_aus_dem_paket`.
     EINMALIG = (
-        "Smplxmodell",
-        "Koerpermasse",
-        "Baum",
-        "Videolauf",
-        "Csvschreiber",
-        "Koerperpunkte",
-        "Unterlauf",
-        "Backendpruefung",
-        "Fremdlauf",
+        'Smplxmodell',
+        'Koerpermasse',
+        'Baum',
+        'Videolauf',
+        'Csvschreiber',
+        'Koerperpunkte',
+        'Unterlauf',
+        'Backendpruefung',
+        'Fremdlauf',
     )
 
     def test_jede_klasse_gibt_es_nur_einmal(self):
         namen = Wrapperquellen.modulebene()
         for name in self.EINMALIG:
             with self.subTest(name=name):
-                self.assertEqual(len(namen.get(name, [])), 1, "%s steht in %s" % (name, namen.get(name)))
+                self.assertEqual(len(namen.get(name, [])), 1, '%s steht in %s' % (name, namen.get(name)))
 
     def test_smplskelett_kommt_aus_dem_paket(self):
         """Die Skelettdefinition liegt in `A:\\3DTools\\SMPL`, nicht hier.
@@ -70,32 +70,32 @@ class EineQuelle(unittest.TestCase):
         statt sie zu importieren, baut die Dopplung neu auf.
         """
         namen = Wrapperquellen.modulebene()
-        self.assertEqual(namen.get("Smplskelett", []), [], "Smplskelett wieder im Wrapperbaum definiert")
-        weiter = [t for p, t in Wrapperquellen.texte() if p.name == "smplskelett.py"]
-        self.assertEqual(len(weiter), 1, "Weiterleitung fehlt")
-        self.assertIn("from SMPL.skelett import Smplskelett", weiter[0])
+        self.assertEqual(namen.get('Smplskelett', []), [], 'Smplskelett wieder im Wrapperbaum definiert')
+        weiter = [t for p, t in Wrapperquellen.texte() if p.name == 'smplskelett.py']
+        self.assertEqual(len(weiter), 1, 'Weiterleitung fehlt')
+        self.assertIn('from SMPL.skelett import Smplskelett', weiter[0])
 
     def test_die_masse_werden_an_einer_stelle_gerechnet(self):
         """Der Befund: zwei `_body_measurements` mit anderem Ergebnis."""
         treffer = [
             p.name
             for p, t in Wrapperquellen.texte()
-            if "def _masse_aus" in t or "def _body_measurements" in t
+            if 'def _masse_aus' in t or 'def _body_measurements' in t
         ]
-        self.assertEqual(treffer, ["smplxmodell.py"])
+        self.assertEqual(treffer, ['smplxmodell.py'])
 
     def test_das_modell_wird_an_einer_stelle_geladen(self):
         treffer = [
-            p.name for p, t in Wrapperquellen.texte() if re.search(r"np\.load\([^)]*SMPLX|def _load_model", t)
+            p.name for p, t in Wrapperquellen.texte() if re.search(r'np\.load\([^)]*SMPLX|def _load_model', t)
         ]
         self.assertEqual(treffer, [])
 
     def test_die_gelenkindizes_stehen_einmal(self):
         """`_J` lag als Kopie in zwei Dateien."""
         treffer = [
-            p.name for p, t in Wrapperquellen.texte() if re.search(r"^\s*(GELENK|_J)\s*=\s*dict\(", t, re.M)
+            p.name for p, t in Wrapperquellen.texte() if re.search(r'^\s*(GELENK|_J)\s*=\s*dict\(', t, re.M)
         ]
-        self.assertEqual(treffer, ["smplxmodell.py"])
+        self.assertEqual(treffer, ['smplxmodell.py'])
 
     def test_die_hoehe_kommt_aus_dem_netz(self):
         """Der Fix vom 15.08.2026 — er hatte nur eine der zwei Kopien.
@@ -112,10 +112,10 @@ class EineQuelle(unittest.TestCase):
         from baum import Baum
         from smplxmodell import Smplxmodell
 
-        modell = Smplxmodell.laden("neutral")
-        datei = Baum.smplx_datei("neutral")
+        modell = Smplxmodell.laden('neutral')
+        datei = Baum.smplx_datei('neutral')
         self.assertEqual(
-            modell is None, not os.path.isfile(datei), "Modell nicht ladbar, obwohl %s da ist" % datei
+            modell is None, not os.path.isfile(datei), 'Modell nicht ladbar, obwohl %s da ist' % datei
         )
         if modell is None:
             return
@@ -130,18 +130,18 @@ class DasFortschrittsprotokoll(unittest.TestCase):
     """`TOTAL:`/`PROGRESS:`/`STATUS:` liest Django zeilenweise."""
 
     #: Die Vorsaetze, die `Erkennungsfortschritt` auswertet.
-    VORSAETZE = ("TOTAL:", "PROGRESS:", "STATUS:")
+    VORSAETZE = ('TOTAL:', 'PROGRESS:', 'STATUS:')
 
     def test_die_vorsaetze_stimmen_mit_django_ueberein(self):
         from core.pipelines.erkennungsfortschritt import Erkennungsfortschritt
 
-        quelle = __import__("inspect").getsource(Erkennungsfortschritt.zeile_lesen)
+        quelle = __import__('inspect').getsource(Erkennungsfortschritt.zeile_lesen)
         for vorsatz in self.VORSAETZE:
             with self.subTest(vorsatz=vorsatz):
                 self.assertIn("'%s'" % vorsatz, quelle)
 
     def test_der_videolauf_meldet_beide(self):
-        text = (WRAPPERS / "videolauf.py").read_text(encoding="utf-8")
+        text = (WRAPPERS / 'videolauf.py').read_text(encoding='utf-8')
         self.assertIn("'TOTAL:%d'", text)
         self.assertIn("'PROGRESS:%d/%d'", text)
 
@@ -157,15 +157,15 @@ class DasFortschrittsprotokoll(unittest.TestCase):
             for knoten, argument in Wrapperquellen.druckaufrufe(ast.parse(text)):
                 if not any(v in argument for v in self.VORSAETZE):
                     continue
-                geleert = any(w.arg == "flush" for w in knoten.keywords)
+                geleert = any(w.arg == 'flush' for w in knoten.keywords)
                 with self.subTest(datei=pfad.name, zeile=knoten.lineno):
-                    self.assertTrue(geleert, "%s:%d meldet ohne `flush`" % (pfad.name, knoten.lineno))
+                    self.assertTrue(geleert, '%s:%d meldet ohne `flush`' % (pfad.name, knoten.lineno))
 
     def test_die_pruefung_merkt_ein_fehlendes_flush(self):
         """Gegenprobe zur vorigen Zusicherung."""
         baum = ast.parse("print('PROGRESS:%d/%d' % (1, 2))\nprint('TOTAL:%d' % 3, flush=True)\n")
         ohne = [
-            k for k, _a in Wrapperquellen.druckaufrufe(baum) if not any(w.arg == "flush" for w in k.keywords)
+            k for k, _a in Wrapperquellen.druckaufrufe(baum) if not any(w.arg == 'flush' for w in k.keywords)
         ]
         self.assertEqual(len(ohne), 1)
         self.assertEqual(ohne[0].lineno, 1)
@@ -187,16 +187,16 @@ class DieDateigroesse(unittest.TestCase):
     def test_keine_datei_ueber_300_zeilen(self):
         zu_gross = []
         for pfad, text in Wrapperquellen.texte():
-            zeilen = len(text.split("\n"))
+            zeilen = len(text.split('\n'))
             if zeilen > self.GRENZE:
-                zu_gross.append("%s (%d)" % (pfad.name, zeilen))
+                zu_gross.append('%s (%d)' % (pfad.name, zeilen))
         self.assertEqual(zu_gross, [])
 
     def test_jedes_modul_nennt_seinen_zweck(self):
         for pfad, text in Wrapperquellen.texte():
             with self.subTest(datei=pfad.name):
                 self.assertIsNotNone(
-                    ast.get_docstring(ast.parse(text)), "%s hat keinen Docstring" % pfad.name
+                    ast.get_docstring(ast.parse(text)), '%s hat keinen Docstring' % pfad.name
                 )
 
     def test_jede_klasse_nennt_ihren_zweck(self):
@@ -209,18 +209,18 @@ class DieDateigroesse(unittest.TestCase):
     def test_keine_stumme_ausnahme_ohne_vermerk(self):
         """Ein `except: pass` ohne Begruendung verschluckt Befunde."""
         for pfad, text in Wrapperquellen.texte():
-            zeilen = text.split("\n")
+            zeilen = text.split('\n')
             for knoten in ast.walk(ast.parse(text)):
                 if not isinstance(knoten, ast.ExceptHandler):
                     continue
                 nur_pass = len(knoten.body) == 1 and isinstance(knoten.body[0], ast.Pass)
                 if not nur_pass:
                     continue
-                umfeld = "\n".join(zeilen[max(0, knoten.lineno - 3) : knoten.lineno + 2])
+                umfeld = '\n'.join(zeilen[max(0, knoten.lineno - 3) : knoten.lineno + 2])
                 with self.subTest(datei=pfad.name, zeile=knoten.lineno):
                     self.assertTrue(
-                        "stumm gewollt" in umfeld or "Absichtlich" in umfeld,
-                        "%s:%d verschluckt eine Ausnahme ohne Vermerk" % (pfad.name, knoten.lineno),
+                        'stumm gewollt' in umfeld or 'Absichtlich' in umfeld,
+                        '%s:%d verschluckt eine Ausnahme ohne Vermerk' % (pfad.name, knoten.lineno),
                     )
 
 
@@ -242,19 +242,19 @@ class JederRunnerLiefertSeineFelder(unittest.TestCase):
     #: Zwei Felder stehen nicht in `KAMERAFELDER`, weil sie woanders
     #: gelesen werden: der YOLO-Rahmen in `silhouettenauftrag`, der
     #: Vertexpfad in `smplx_archiv`.
-    AUSSERHALB = ("bbox_xyxy", "posed_vertices_path")
+    AUSSERHALB = ('bbox_xyxy', 'posed_vertices_path')
 
     #: Die Runner mit Zusatzfeldern. `_run_hmr2` hat keine — HMR 2.0
     #: liefert nur die Form, keine Kameradaten.
-    RUNNER = ("_run_pymafx.py", "_run_smplest_x.py")
+    RUNNER = ('_run_pymafx.py', '_run_smplest_x.py')
 
     @staticmethod
     def _zusatzfelder(name):
         """Die Schluesselwoerter aus `ergebnis.dazu(...)` einer Datei."""
-        text = (WRAPPERS / name).read_text(encoding="utf-8")
+        text = (WRAPPERS / name).read_text(encoding='utf-8')
         felder = set()
         for knoten in ast.walk(ast.parse(text)):
-            if isinstance(knoten, ast.Call) and getattr(knoten.func, "attr", None) == "dazu":
+            if isinstance(knoten, ast.Call) and getattr(knoten.func, 'attr', None) == 'dazu':
                 felder |= {w.arg for w in knoten.keywords}
         return felder
 
@@ -269,7 +269,7 @@ class JederRunnerLiefertSeineFelder(unittest.TestCase):
         from core.daten.analyseergebnis import Analyseergebnis
 
         fehlend = set(Analyseergebnis.KAMERAFELDER) - self._alle()
-        self.assertEqual(fehlend, set(), "Django liest Felder, die kein Runner schickt: %s" % sorted(fehlend))
+        self.assertEqual(fehlend, set(), 'Django liest Felder, die kein Runner schickt: %s' % sorted(fehlend))
 
     def test_jedes_gesendete_feld_wird_auch_gelesen(self):
         """Und andersherum: nichts wird umsonst berechnet."""
@@ -277,28 +277,28 @@ class JederRunnerLiefertSeineFelder(unittest.TestCase):
 
         gelesen = set(Analyseergebnis.KAMERAFELDER) | set(self.AUSSERHALB)
         ueberfluessig = self._alle() - gelesen
-        self.assertEqual(ueberfluessig, set(), "Diese Felder liest niemand: %s" % sorted(ueberfluessig))
+        self.assertEqual(ueberfluessig, set(), 'Diese Felder liest niemand: %s' % sorted(ueberfluessig))
 
     def test_die_backendnamen_stehen_fest(self):
         """`photo_analyzer` waehlt den Runner ueber diesen Namen."""
         erwartet = {
-            "_run_hmr2.py": "'hmr2'",
-            "_run_pymafx.py": "'pymafx'",
-            "_run_smplest_x.py": "'smplest_x'",
+            '_run_hmr2.py': "'hmr2'",
+            '_run_pymafx.py': "'pymafx'",
+            '_run_smplest_x.py': "'smplest_x'",
         }
         for name, backend in erwartet.items():
             with self.subTest(runner=name):
-                text = (WRAPPERS / name).read_text(encoding="utf-8")
-                self.assertIn("Fotoergebnis(%s" % backend, text)
+                text = (WRAPPERS / name).read_text(encoding='utf-8')
+                self.assertIn('Fotoergebnis(%s' % backend, text)
 
     def test_die_modellart_bleibt_je_runner_dieselbe(self):
         """SMPL und SMPL-X haben unvereinbare Netztopologien (6.890 gegen
         10.475 Vertices); wer sie verwechselt, bekommt Netzsalat."""
         for name, art in (
-            ("_run_hmr2.py", "'smpl'"),
-            ("_run_pymafx.py", "'smplx'"),
-            ("_run_smplest_x.py", "'smplx'"),
+            ('_run_hmr2.py', "'smpl'"),
+            ('_run_pymafx.py', "'smplx'"),
+            ('_run_smplest_x.py', "'smplx'"),
         ):
             with self.subTest(runner=name):
-                text = (WRAPPERS / name).read_text(encoding="utf-8")
-                self.assertIn(", %s," % art, text)
+                text = (WRAPPERS / name).read_text(encoding='utf-8')
+                self.assertIn(', %s,' % art, text)

@@ -13,14 +13,14 @@ jetzt an einer Stelle:
 """
 
 import logging
-
-from ..daten.bildrahmen import Bildrahmen
 import os
 
 import numpy as np
 from django.conf import settings
 
-logger = logging.getLogger("core")
+from ..daten.bildrahmen import Bildrahmen
+
+logger = logging.getLogger('core')
 
 
 class Gesichtskontur:
@@ -91,16 +91,16 @@ class Gesichtskontur:
             return False
         pfad = os.path.join(
             str(settings.BASE_DIR),
-            "..",
-            "VideoToBVH",
-            "PyMAF-X",
-            "data",
-            "partial_mesh",
-            "smplx_face_vids.npz",
+            '..',
+            'VideoToBVH',
+            'PyMAF-X',
+            'data',
+            'partial_mesh',
+            'smplx_face_vids.npz',
         )
         if not os.path.isfile(pfad):
             return False
-        indizes = np.load(pfad)["vids"]
+        indizes = np.load(pfad)['vids']
         indizes = indizes[indizes < len(self.projektion)]
         punkte = self.projektion[indizes]
         punkte = punkte[~np.isnan(punkte).any(axis=1)]
@@ -155,18 +155,18 @@ class Gesichtskontur:
             from mediapipe.tasks import python as mp_python  # pyright: ignore[reportMissingImports]
             from mediapipe.tasks.python import vision as mp_vision  # pyright: ignore[reportMissingImports]
         except ImportError as e:
-            logger.debug("MediaPipe nicht verfuegbar: %s", e)
+            logger.debug('MediaPipe nicht verfuegbar: %s', e)
             return None
         modell = os.path.join(
             str(settings.BASE_DIR),
-            "..",
-            "VideoToBVH",
-            "MocapNET_v4",
-            "src",
-            "python",
-            "mnet4",
-            "models",
-            "face_landmarker.task",
+            '..',
+            'VideoToBVH',
+            'MocapNET_v4',
+            'src',
+            'python',
+            'mnet4',
+            'models',
+            'face_landmarker.task',
         )
         if not os.path.isfile(modell):
             return None
@@ -179,7 +179,7 @@ class Gesichtskontur:
                 ergebnis = erkenner.detect(bild)
             return ergebnis.face_landmarks[0] if ergebnis.face_landmarks else None
         except Exception as e:  # noqa: BLE001
-            logger.debug("Gesichtserkennung uebersprungen: %s", e)
+            logger.debug('Gesichtserkennung uebersprungen: %s', e)
             return None
 
     # ------------------------------------------------------------------ Technik
@@ -192,7 +192,7 @@ class Gesichtskontur:
             huelle = ConvexHull(punkte)
             return [[float(p[0]), float(p[1])] for p in punkte[huelle.vertices]]
         except Exception:  # noqa: BLE001
-            logger.debug("Konvexe Huelle fehlgeschlagen", exc_info=True)
+            logger.debug('Konvexe Huelle fehlgeschlagen', exc_info=True)
             return []
 
     #: `_rahmen` stand hier als eigene Min-Max-Rechnung und lieferte ein

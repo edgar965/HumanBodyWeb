@@ -43,12 +43,12 @@ class Schuhbau:
             Kurvenzerlegung.einhaengen(edge_modul)
             from GarmentCode.schuh.schuhentwurf import Schuhentwurf
 
-            pfad = os.path.join(cls.UPSTREAM, "assets", "design_params", "default.yaml")
-            with open(pfad, "r", encoding="utf-8") as datei:
-                entwurf = yaml.safe_load(datei)["design"]
+            pfad = os.path.join(cls.UPSTREAM, 'assets', 'design_params', 'default.yaml')
+            with open(pfad, encoding='utf-8') as datei:
+                entwurf = yaml.safe_load(datei)['design']
             Schuhentwurf.mischen(entwurf)
-            with open(os.path.join(cls.UPSTREAM, "assets", "bodies", "mean_female.yaml"), "r") as datei:
-                body = yaml.safe_load(datei)["body"]
+            with open(os.path.join(cls.UPSTREAM, 'assets', 'bodies', 'mean_female.yaml')) as datei:
+                body = yaml.safe_load(datei)['body']
             body.update(fuss)
             cls._entwurf, cls._body = entwurf, body
         finally:
@@ -58,10 +58,10 @@ class Schuhbau:
     def entwurf(cls, art, **regler):
         """Ein Entwurf mit Baustein `art` und Reglern `{'shoe.heel': 7}`."""
         entwurf = copy.deepcopy(cls._entwurf or {})
-        entwurf["meta"]["feet"]["v"] = art
+        entwurf['meta']['feet']['v'] = art
         for pfad, wert in regler.items():
-            gruppe, feld = pfad.split(".")
-            entwurf[gruppe][feld]["v"] = wert
+            gruppe, feld = pfad.split('.')
+            entwurf[gruppe][feld]['v'] = wert
         return entwurf
 
     @classmethod
@@ -69,7 +69,7 @@ class Schuhbau:
         """Das Paar (`Schuhgarment`) für Baustein und Regler."""
         from GarmentCode.schuh.schuhgarment import Schuhgarment
 
-        return Schuhgarment("probe", cls._body, cls.entwurf(art, **regler))
+        return Schuhgarment('probe', cls._body, cls.entwurf(art, **regler))
 
     @classmethod
     def body(cls):

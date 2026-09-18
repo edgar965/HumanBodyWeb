@@ -28,7 +28,6 @@ import logging
 
 import numpy as np
 from django.conf import settings
-
 from humanbody_core import CharacterDefaults, CharacterState, MeshData, MorphData
 
 from ..daten.koerperzustand import Koerperzustand
@@ -36,7 +35,7 @@ from ..daten.ladeschloss import Ladeschloss
 from .netzqualitaet import Netzqualitaet
 from .unterteilungsablage import Unterteilungsablage
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Charakterdaten:
@@ -56,14 +55,14 @@ class Charakterdaten:
     #: wiedereintretend: siehe `daten/ladeschloss.py`.
     _schloesser = Ladeschloss()
 
-    VORGABE_KOERPERTYP = "Female_Caucasian"
+    VORGABE_KOERPERTYP = 'Female_Caucasian'
 
     # ------------------------------------------------------------ Grunddaten
 
     @staticmethod
     def geschlecht_zu(koerpertyp):
         """'Male_Caucasian' -> 'male'. Alles andere gilt als weiblich."""
-        return "male" if str(koerpertyp).startswith("Male_") else "female"
+        return 'male' if str(koerpertyp).startswith('Male_') else 'female'
 
     @classmethod
     def morphdaten(cls):
@@ -75,36 +74,36 @@ class Charakterdaten:
             cls._morph_data = daten
             return daten
 
-        return cls._schloesser.einmal("morph", lambda: cls._morph_data, bauen)
+        return cls._schloesser.einmal('morph', lambda: cls._morph_data, bauen)
 
     @classmethod
     def voreinstellungen(cls):
         def bauen():
             werte = CharacterDefaults()
-            werte.load(str(settings.HUMANBODY_ROOT / "settings.yaml"))
+            werte.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
             cls._char_defaults = werte
             return werte
 
-        return cls._schloesser.einmal("vorgaben", lambda: cls._char_defaults, bauen)
+        return cls._schloesser.einmal('vorgaben', lambda: cls._char_defaults, bauen)
 
     #: Felder von `MeshData`, die als NumPy-Feld im Zwischenspeicher liegen.
-    NETZFELDER = ("faces", "face_materials", "normals", "uvs")
+    NETZFELDER = ('faces', 'face_materials', 'normals', 'uvs')
 
     @classmethod
-    def netzdaten(cls, geschlecht="female"):
+    def netzdaten(cls, geschlecht='female'):
         """MeshData je Geschlecht — die maennlichen Daten liegen in `_male`."""
 
         def bauen():
             verzeichnis = str(settings.HUMANBODY_DATA_DIR)
-            if geschlecht == "male":
-                verzeichnis += "_male"
+            if geschlecht == 'male':
+                verzeichnis += '_male'
             netz = MeshData(data_dir=verzeichnis)
             netz.load()
             cls._schreibschutz(netz)
             cls._mesh_data[geschlecht] = netz
             return netz
 
-        return cls._schloesser.einmal("netz:" + geschlecht, lambda: cls._mesh_data.get(geschlecht), bauen)
+        return cls._schloesser.einmal('netz:' + geschlecht, lambda: cls._mesh_data.get(geschlecht), bauen)
 
     @classmethod
     def _schreibschutz(cls, netz):
@@ -134,7 +133,7 @@ class Charakterdaten:
     # ---------------------------------------------------------- Unterteilung
 
     @classmethod
-    def unterteiler(cls, geschlecht="female", stufen=None):
+    def unterteiler(cls, geschlecht='female', stufen=None):
         """Catmull-Clark-Unterteiler mit vorbereiteten Referenznormalen.
 
         `stufen` None = die Einstellung fuer den Browser (`Netzqualitaet`,
@@ -149,7 +148,7 @@ class Charakterdaten:
             stufen = Netzqualitaet.stufen_browser()
         schluessel = (geschlecht, int(stufen))
         return cls._schloesser.einmal(
-            "unterteiler:%s:%d" % schluessel,
+            'unterteiler:%s:%d' % schluessel,
             lambda: cls._cc_subdivider.get(schluessel),
             lambda: cls._unterteiler_bauen(geschlecht, int(stufen)),
         )
@@ -167,8 +166,8 @@ class Charakterdaten:
             return None
         cc = Unterteilungsablage.unterteiler(geschlecht, mesh, stufen)
         logger.info(
-            "CC-Unterteiler (%s, %d Stufen): %d Basis- -> %d Untervertices "
-            "(davon %d Textur-Kopien an Naehten), %d Dreiecke",
+            'CC-Unterteiler (%s, %d Stufen): %d Basis- -> %d Untervertices '
+            '(davon %d Textur-Kopien an Naehten), %d Dreiecke',
             geschlecht,
             stufen,
             mesh.faces.max() + 1,
@@ -182,7 +181,7 @@ class Charakterdaten:
         return cc
 
     @classmethod
-    def zustand(cls, koerpertyp="Female_Caucasian"):
+    def zustand(cls, koerpertyp='Female_Caucasian'):
         """Ein frischer `CharacterState` auf den GETEILTEN Morph-Daten und Vorgaben.
 
         Die beiden WebSocket-Kanäle (`consumers`, `stoffkanal`) luden je
@@ -195,12 +194,12 @@ class Charakterdaten:
 
     @classmethod
     def _referenznormalen(cls, cc, geschlecht):
-        basistyp = "Male_Caucasian" if geschlecht == "male" else "Female_Caucasian"
+        basistyp = 'Male_Caucasian' if geschlecht == 'male' else 'Female_Caucasian'
         verts = cls.zustand(basistyp).compute()
         if verts is None:
             return
         cc.compute_quad_normals(cc.subdivide(verts))
-        logger.info("CC-Unterteiler (%s): Referenznormalen aus %s", geschlecht, basistyp)
+        logger.info('CC-Unterteiler (%s): Referenznormalen aus %s', geschlecht, basistyp)
 
     # ------------------------------------------------------------ SMPL-Teile
 
@@ -216,7 +215,7 @@ class Charakterdaten:
             cls._smpl_library = bibliothek
             return bibliothek
 
-        return cls._schloesser.einmal("smpl_bibliothek", lambda: cls._smpl_library, bauen)
+        return cls._schloesser.einmal('smpl_bibliothek', lambda: cls._smpl_library, bauen)
 
     @classmethod
     def smpl_koerpergenerator(cls):
@@ -226,7 +225,7 @@ class Charakterdaten:
             cls._smpl_body_gen = SmplBodyGenerator(str(settings.SMPL_MODELS_DIR))
             return cls._smpl_body_gen
 
-        return cls._schloesser.einmal("smpl_generator", lambda: cls._smpl_body_gen, bauen)
+        return cls._schloesser.einmal('smpl_generator', lambda: cls._smpl_body_gen, bauen)
 
     # ------------------------------------------------------------- Koerper bauen
 
@@ -238,7 +237,7 @@ class Charakterdaten:
         und `meta_<name>`. Ein unbrauchbarer Wert wird uebergangen und
         protokolliert — eine halb gesetzte Figur ist besser als eine Fehlerseite
         wegen eines Reglers."""
-        koerpertyp = parameter.get("body_type") or cls.VORGABE_KOERPERTYP
+        koerpertyp = parameter.get('body_type') or cls.VORGABE_KOERPERTYP
         geschlecht = cls.geschlecht_zu(koerpertyp)
 
         zustand = CharacterState(cls.morphdaten(), cls.voreinstellungen())
@@ -252,13 +251,13 @@ class Charakterdaten:
 
     @staticmethod
     def _regler_setzen(zustand, schluessel, wert):
-        if schluessel.startswith("morph_"):
+        if schluessel.startswith('morph_'):
             try:
-                zustand.set_morph(schluessel[len("morph_") :], float(wert))
+                zustand.set_morph(schluessel[len('morph_') :], float(wert))
             except TypeError, ValueError:
-                logger.debug("Morphwert %r=%r uebergangen", schluessel, wert)
-        elif schluessel.startswith("meta_"):
+                logger.debug('Morphwert %r=%r uebergangen', schluessel, wert)
+        elif schluessel.startswith('meta_'):
             try:
-                zustand.set_meta(schluessel[len("meta_") :], float(wert))
+                zustand.set_meta(schluessel[len('meta_') :], float(wert))
             except TypeError, ValueError, AttributeError:
-                logger.debug("Metawert %r=%r uebergangen", schluessel, wert)
+                logger.debug('Metawert %r=%r uebergangen', schluessel, wert)

@@ -11,5 +11,5 @@ from django.urls import path
 from .api.hilfe_video_to_bvh import VideoToBvhVergleich
 
 urlpatterns = [
-    path("", VideoToBvhVergleich.ansicht(), name="hilfe_video_to_bvh"),
+    path('', VideoToBvhVergleich.ansicht(), name='hilfe_video_to_bvh'),
 ]

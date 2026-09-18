@@ -34,29 +34,31 @@ from ._humanbodypfad import Humanbodypfad
 
 Humanbodypfad.setzen()
 
-from core.dienste.skelettgeometrie import Skelettgeometrie  # noqa: E402
 from humanbody_core.quaternion import Quat  # noqa: E402
 from humanbody_core.skeleton.retarget.bvhdaten import BVHData  # noqa: E402
 from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG  # noqa: E402
 from humanbody_core.skeleton.retarget.handausrichtung import Handausrichtung  # noqa: E402
 from humanbody_core.skeleton.retarget.motor import Retargetlauf  # noqa: E402
+
+from core.dienste.skelettgeometrie import Skelettgeometrie  # noqa: E402
+
 from ._sicher import Sicher
 
 #: BVH-Gelenk -> (Eltern, Versatz in cm, DEF-Knochen)
 GELENKE = [
-    ("Pelvis", None, [0, 95, 0], "DEF-spine"),
-    ("Spine", "Pelvis", [0, 30, 0], "DEF-spine.003"),
-    ("Right_shoulder", "Spine", [-18, 10, 0], "DEF-upper_arm.R"),
-    ("Right_elbow", "Right_shoulder", [-28, 0, 0], "DEF-forearm.R"),
-    ("Right_wrist", "Right_elbow", [-25, 0, 0], "DEF-hand.R"),
-    ("right_index1", "Right_wrist", [-10, 0, 2], "DEF-f_index.01.R"),
-    ("right_index2", "right_index1", [-3.5, 0, 0], "DEF-f_index.02.R"),
-    ("right_middle1", "Right_wrist", [-10.5, 0, 0], "DEF-f_middle.01.R"),
-    ("right_pinky1", "Right_wrist", [-8, 0, -4], "DEF-f_pinky.01.R"),
-    ("right_thumb1", "Right_wrist", [-4, -2, 3], "DEF-thumb.01.R"),
-    ("Left_hip", "Pelvis", [9, 0, 0], "DEF-thigh.L"),
-    ("Left_knee", "Left_hip", [0, -45, 0], "DEF-shin.L"),
-    ("Left_ankle", "Left_knee", [0, -45, 0], "DEF-foot.L"),
+    ('Pelvis', None, [0, 95, 0], 'DEF-spine'),
+    ('Spine', 'Pelvis', [0, 30, 0], 'DEF-spine.003'),
+    ('Right_shoulder', 'Spine', [-18, 10, 0], 'DEF-upper_arm.R'),
+    ('Right_elbow', 'Right_shoulder', [-28, 0, 0], 'DEF-forearm.R'),
+    ('Right_wrist', 'Right_elbow', [-25, 0, 0], 'DEF-hand.R'),
+    ('right_index1', 'Right_wrist', [-10, 0, 2], 'DEF-f_index.01.R'),
+    ('right_index2', 'right_index1', [-3.5, 0, 0], 'DEF-f_index.02.R'),
+    ('right_middle1', 'Right_wrist', [-10.5, 0, 0], 'DEF-f_middle.01.R'),
+    ('right_pinky1', 'Right_wrist', [-8, 0, -4], 'DEF-f_pinky.01.R'),
+    ('right_thumb1', 'Right_wrist', [-4, -2, 3], 'DEF-thumb.01.R'),
+    ('Left_hip', 'Pelvis', [9, 0, 0], 'DEF-thigh.L'),
+    ('Left_knee', 'Left_hip', [0, -45, 0], 'DEF-shin.L'),
+    ('Left_ankle', 'Left_knee', [0, -45, 0], 'DEF-foot.L'),
 ]
 KRUEMMUNG = math.radians(60.0)
 
@@ -92,18 +94,18 @@ class DerEichfall(SimpleTestCase):
 
     def querachse_def(self, bild):
         """Zeige- minus Mittelfinger der DEF-Hand, mitgedreht in das Bild."""
-        ruhe = self.welt["DEF-hand.R"]["world_quat"]
-        quer = self.welt["DEF-f_index.01.R"]["world_pos"] - self.welt["DEF-f_middle.01.R"]["world_pos"]
-        jetzt = Quat.rotate(self.weltdrehung("DEF-hand.R", bild), Quat.rotate(Quat.inv(ruhe), quer))
-        richtung = self.richtung("DEF-hand.R", bild)
+        ruhe = self.welt['DEF-hand.R']['world_quat']
+        quer = self.welt['DEF-f_index.01.R']['world_pos'] - self.welt['DEF-f_middle.01.R']['world_pos']
+        jetzt = Quat.rotate(self.weltdrehung('DEF-hand.R', bild), Quat.rotate(Quat.inv(ruhe), quer))
+        richtung = self.richtung('DEF-hand.R', bild)
         return DerEichfall.einheit(jetzt - np.dot(jetzt, richtung) * richtung)
 
     def test_die_hand_zeigt_zum_mittelfinger_nicht_zum_daumen(self):
-        hand = self.richtung("DEF-hand.R", 0)
+        hand = self.richtung('DEF-hand.R', 0)
         self.assertGreater(
             np.dot(hand, [-1, 0, 0]),
             math.cos(math.radians(1.0)),
-            "Handrichtung %s statt -X (Daumen wäre [-0.74 -0.37 0.56])" % np.round(hand, 2),
+            'Handrichtung %s statt -X (Daumen wäre [-0.74 -0.37 0.56])' % np.round(hand, 2),
         )
 
     def test_die_querachse_der_hand_liegt_auf_der_des_bvh(self):
@@ -111,17 +113,17 @@ class DerEichfall(SimpleTestCase):
         self.assertGreater(
             np.dot(quer, [0, 0, 1]),
             math.cos(math.radians(1.0)),
-            "Querachse %s statt +Z (Zeigefinger vorn)" % np.round(quer, 2),
+            'Querachse %s statt +Z (Zeigefinger vorn)' % np.round(quer, 2),
         )
 
     def test_die_finger_liegen_in_ruhe_wie_im_bvh(self):
         # Zeigefinger: Richtung zum Kind (index2, -X); die anderen ohne Kind
         # zeigen entlang ihres eigenen Versatzes.
         for knochen, soll in (
-            ("DEF-f_index.01.R", [-1, 0, 0]),
-            ("DEF-f_middle.01.R", [-1, 0, 0]),
-            ("DEF-f_pinky.01.R", DerEichfall.einheit([-8, 0, -4])),
-            ("DEF-thumb.01.R", DerEichfall.einheit([-4, -2, 3])),
+            ('DEF-f_index.01.R', [-1, 0, 0]),
+            ('DEF-f_middle.01.R', [-1, 0, 0]),
+            ('DEF-f_pinky.01.R', DerEichfall.einheit([-8, 0, -4])),
+            ('DEF-thumb.01.R', DerEichfall.einheit([-4, -2, 3])),
         ):
             with self.subTest(knochen=knochen):
                 self.assertGreater(np.dot(self.richtung(knochen, 0), soll), math.cos(math.radians(1.0)))
@@ -129,34 +131,34 @@ class DerEichfall(SimpleTestCase):
     def test_der_zeigefinger_kruemmt_sich_zur_handflaeche_nicht_seitlich(self):
         """Bild 1: 60° um die Querachse. Relativ zur Hand darf der Finger
         nur in der Ebene Handrichtung/Handflächen-Normale wandern."""
-        hand = self.richtung("DEF-hand.R", 1)
+        hand = self.richtung('DEF-hand.R', 1)
         quer = self.querachse_def(1)
         normale = np.cross(hand, quer)
-        finger = self.richtung("DEF-f_index.01.R", 1)
-        ruhe = self.richtung("DEF-f_index.01.R", 0)
+        finger = self.richtung('DEF-f_index.01.R', 1)
+        ruhe = self.richtung('DEF-f_index.01.R', 0)
         winkel = math.degrees(math.acos(np.clip(np.dot(finger, ruhe), -1, 1)))
         self.assertAlmostEqual(winkel, 60.0, delta=1.0)
         self.assertLess(
             abs(np.dot(finger, quer)) - abs(np.dot(ruhe, quer)),
             0.02,
-            "seitlicher Anteil hat zugenommen — der Finger bricht zur Seite",
+            'seitlicher Anteil hat zugenommen — der Finger bricht zur Seite',
         )
         self.assertGreater(
             abs(np.dot(finger, normale)),
             math.sin(math.radians(55.0)),
-            "der Finger wandert nicht zur Handfläche",
+            'der Finger wandert nicht zur Handfläche',
         )
 
     def test_die_hand_wird_erkannt_und_finger_erben(self):
         hand = Handausrichtung(self.skel, self.lauf.bvh, self.lauf.rig_to_bvh, self.lauf.bvh_idx)
-        self.assertTrue(hand.ist_hand("DEF-hand.R"))
-        self.assertFalse(hand.ist_hand("DEF-forearm.R"))
-        self.assertTrue(hand.ist_finger("DEF-f_index.02.R"))
-        self.assertTrue(hand.ist_finger("DEF-thumb.01.L"))
-        self.assertFalse(hand.ist_finger("DEF-hand.R"))
-        self.assertFalse(hand.ist_finger("DEF-palm.01.R"))
+        self.assertTrue(hand.ist_hand('DEF-hand.R'))
+        self.assertFalse(hand.ist_hand('DEF-forearm.R'))
+        self.assertTrue(hand.ist_finger('DEF-f_index.02.R'))
+        self.assertTrue(hand.ist_finger('DEF-thumb.01.L'))
+        self.assertFalse(hand.ist_finger('DEF-hand.R'))
+        self.assertFalse(hand.ist_finger('DEF-palm.01.R'))
         np.testing.assert_allclose(
-            Sicher.wert(hand.richtung("DEF-hand.R"), "Richtung"), [-1, 0, 0], atol=1e-9
+            Sicher.wert(hand.richtung('DEF-hand.R'), 'Richtung'), [-1, 0, 0], atol=1e-9
         )
 
     def test_fremdes_ziel_wird_ueber_def_namen_erkannt(self):
@@ -164,12 +166,12 @@ class DerEichfall(SimpleTestCase):
         heissen `r_mid1`, erkannt wird am DEF-Namen aus `def_namen`. Ohne die
         Tabelle ist die Hand keine Hand — die Sabotage-Gegenprobe."""
         umbenannt = {
-            "DEF-hand.R": "r_hand",
-            "DEF-f_index.01.R": "r_index1",
-            "DEF-f_middle.01.R": "r_mid1",
-            "DEF-thumb.01.R": "r_thumb1",
-            "DEF-f_pinky.01.R": "r_pinky1",
-            "DEF-f_index.02.R": "r_index2",
+            'DEF-hand.R': 'r_hand',
+            'DEF-f_index.01.R': 'r_index1',
+            'DEF-f_middle.01.R': 'r_mid1',
+            'DEF-thumb.01.R': 'r_thumb1',
+            'DEF-f_pinky.01.R': 'r_pinky1',
+            'DEF-f_index.02.R': 'r_index2',
         }
         rig_to_bvh = {umbenannt.get(r, r): b for r, b in self.lauf.rig_to_bvh.items()}
         mit = Handausrichtung(
@@ -179,12 +181,12 @@ class DerEichfall(SimpleTestCase):
             self.lauf.bvh_idx,
             def_namen={z: d for d, z in umbenannt.items()},
         )
-        self.assertTrue(mit.ist_hand("r_hand"))
-        self.assertTrue(mit.ist_finger("r_index2"))
-        self.assertFalse(mit.ist_finger("r_hand"))
-        np.testing.assert_allclose(Sicher.wert(mit.richtung("r_hand"), "Richtung"), [-1, 0, 0], atol=1e-9)
+        self.assertTrue(mit.ist_hand('r_hand'))
+        self.assertTrue(mit.ist_finger('r_index2'))
+        self.assertFalse(mit.ist_finger('r_hand'))
+        np.testing.assert_allclose(Sicher.wert(mit.richtung('r_hand'), 'Richtung'), [-1, 0, 0], atol=1e-9)
         ohne = Handausrichtung(self.skel, self.lauf.bvh, rig_to_bvh, self.lauf.bvh_idx)
-        self.assertFalse(ohne.ist_hand("r_hand"))
+        self.assertFalse(ohne.ist_hand('r_hand'))
 
     @staticmethod
     def um_achse(achse, winkel):
@@ -210,12 +212,12 @@ class DerEichfall(SimpleTestCase):
     @staticmethod
     def bvh(mit_fingern=True, bilder=2):
         """Der Eichfall — Bild 0 Ruhe, Bild 1 Zeigefinger um 60° gekrümmt."""
-        gelenke = [g for g in GELENKE if mit_fingern or not g[0].startswith("right_")]
+        gelenke = [g for g in GELENKE if mit_fingern or not g[0].startswith('right_')]
         names, parents, children = DerEichfall._hierarchie(gelenke)
         offsets = np.array([g[2] for g in gelenke], dtype=float)
         quats = np.tile(Quat.ID, (bilder, len(names), 1))
         if mit_fingern and bilder > 1:
-            quats[1, names.index("right_index1")] = DerEichfall.um_achse([0, 0, 1], KRUEMMUNG)
+            quats[1, names.index('right_index1')] = DerEichfall.um_achse([0, 0, 1], KRUEMMUNG)
         positions = np.zeros((bilder, len(names), 3))
         return BVHData(names, parents, offsets, quats, positions, 1 / 30.0, bilder, children), {
             g[0]: g[3] for g in gelenke
@@ -238,10 +240,10 @@ class OhneFinger(SimpleTestCase):
         lauf._hoehenfaktor()
         lauf._ruhelagen_welt()
         lauf._richtungskorrektur()
-        ruhe = Quat.rotate(skel.bones["DEF-hand.R"].world_rest_quat, np.array([0, 0, -1.0]))
-        gezeigt = Quat.rotate(lauf.dir_corr_map["DEF-hand.R"], ruhe)
+        ruhe = Quat.rotate(skel.bones['DEF-hand.R'].world_rest_quat, np.array([0, 0, -1.0]))
+        gezeigt = Quat.rotate(lauf.dir_corr_map['DEF-hand.R'], ruhe)
         np.testing.assert_allclose(gezeigt, [-1, 0, 0], atol=1e-6)
-        self.assertNotIn("DEF-f_index.01.R", spuren.tracks)
+        self.assertNotIn('DEF-f_index.01.R', spuren.tracks)
 
     def test_die_regelfassung_ist_erhoeht(self):
         """Sonst lieferten alle Ablagen weiter die alten Hände."""

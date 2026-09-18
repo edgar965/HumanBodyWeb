@@ -21,7 +21,7 @@ class LadeschlossTest(SimpleTestCase):
 
     def test_gleicher_name_gleiches_schloss(self):
         schloss = Ladeschloss()
-        self.assertIs(schloss.fuer("netz"), schloss.fuer("netz"))
+        self.assertIs(schloss.fuer('netz'), schloss.fuer('netz'))
 
     def test_verschiedene_namen_verschiedene_schloesser(self):
         """DER GRUND, WARUM ES DIESE KLASSE GIBT.
@@ -30,14 +30,14 @@ class LadeschlossTest(SimpleTestCase):
         Catmull-Clark-Unterteilung — auch die, die nur Morphdaten wollte.
         """
         schloss = Ladeschloss()
-        self.assertIsNot(schloss.fuer("netz"), schloss.fuer("unterteiler"))
+        self.assertIsNot(schloss.fuer('netz'), schloss.fuer('unterteiler'))
 
     def test_derselbe_faden_darf_zweimal_hinein(self):
         """`unterteiler()` braucht beim Füllen `netzdaten()` — RLock, nicht Lock."""
-        schloss = Ladeschloss().fuer("netz")
+        schloss = Ladeschloss().fuer('netz')
         with schloss:
             self.assertTrue(
-                schloss.acquire(blocking=False), "ein einfacher Lock würde sich hier selbst sperren"
+                schloss.acquire(blocking=False), 'ein einfacher Lock würde sich hier selbst sperren'
             )
             schloss.release()
 
@@ -55,12 +55,12 @@ class LadeschlossTest(SimpleTestCase):
         def bauen():
             gebaut.append(1)
             time.sleep(0.05)  # der zweite Faden laeuft hier auf
-            wert["x"] = "fertig"
-            return wert["x"]
+            wert['x'] = 'fertig'
+            return wert['x']
 
         def holen():
             losgehts.wait()
-            schloss.einmal("x", lambda: wert.get("x"), bauen)
+            schloss.einmal('x', lambda: wert.get('x'), bauen)
 
         faeden = [threading.Thread(target=holen) for _ in range(4)]
         for faden in faeden:
@@ -68,11 +68,11 @@ class LadeschlossTest(SimpleTestCase):
         losgehts.set()
         for faden in faeden:
             faden.join()
-        self.assertEqual(len(gebaut), 1, "gebaut wurde %dx statt einmal" % len(gebaut))
+        self.assertEqual(len(gebaut), 1, 'gebaut wurde %dx statt einmal' % len(gebaut))
 
     def test_vorhandenes_wird_nicht_neu_gebaut(self):
         schloss = Ladeschloss()
         gebaut = []
-        ergebnis = schloss.einmal("x", lambda: "schon da", lambda: gebaut.append(1))
-        self.assertEqual(ergebnis, "schon da")
+        ergebnis = schloss.einmal('x', lambda: 'schon da', lambda: gebaut.append(1))
+        self.assertEqual(ergebnis, 'schon da')
         self.assertEqual(gebaut, [])

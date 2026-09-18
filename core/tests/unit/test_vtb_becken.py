@@ -34,7 +34,6 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-
 from bildpunkte import Bildpunkte  # noqa: E402
 from smplskelett import Smplskelett  # noqa: E402
 
@@ -56,12 +55,12 @@ class DasBecken(unittest.TestCase):
         gespiegelt[:, 2] *= -1
         positionen[:, 0] += gespiegelt * Smplskelett.CM_JE_M
         return {
-            "names": list(Smplskelett.NAMEN),
-            "parents": list(Smplskelett.ELTERN),
-            "offsets": offsets,
-            "order": "zyx",
-            "rotations": np.zeros((anzahl, 24, 3)),
-            "positions": positionen,
+            'names': list(Smplskelett.NAMEN),
+            'parents': list(Smplskelett.ELTERN),
+            'offsets': offsets,
+            'order': 'zyx',
+            'rotations': np.zeros((anzahl, 24, 3)),
+            'positions': positionen,
         }
 
     @staticmethod
@@ -71,8 +70,8 @@ class DasBecken(unittest.TestCase):
     def _welt(self, bvh, bild):
         from scipy.spatial.transform import Rotation
 
-        eltern = [int(p) for p in bvh["parents"]]
-        offsets = np.asarray(bvh["offsets"], dtype=np.float64)
+        eltern = [int(p) for p in bvh['parents']]
+        offsets = np.asarray(bvh['offsets'], dtype=np.float64)
         return Bildpunkte._vorwaerts(bvh, bild, eltern, offsets, Rotation, np)
 
     def _kameraraum(self, bvh, bild):
@@ -81,7 +80,7 @@ class DasBecken(unittest.TestCase):
 
     def _beckenlage(self, bvh):
         """Der zurueckgedrehte Wurzeloffset in Metern: (0, -0,35, 0,03)."""
-        return self._rueck() @ np.asarray(bvh["offsets"][0]) / Smplskelett.CM_JE_M
+        return self._rueck() @ np.asarray(bvh['offsets'][0]) / Smplskelett.CM_JE_M
 
     def test_die_wurzel_sitzt_ueber_der_verschiebung(self):
         verschiebung = np.array([[0.0, 0.0, 3.0], [0.5, -0.2, 2.5], [-0.3, 0.1, 4.0]])
@@ -90,7 +89,7 @@ class DasBecken(unittest.TestCase):
             with self.subTest(bild=bild):
                 becken = self._kameraraum(bvh, bild)[0]
                 soll = verschiebung[bild] + self._beckenlage(bvh)
-                self.assertTrue(np.allclose(becken, soll, atol=1e-6), "%s != %s" % (becken, soll))
+                self.assertTrue(np.allclose(becken, soll, atol=1e-6), '%s != %s' % (becken, soll))
 
     def test_der_wurzeloffset_zeigt_im_kameraraum_nach_oben(self):
         """Y zeigt im Kameraraum nach unten: -0,35 m heisst 35 cm ueber
@@ -104,7 +103,7 @@ class DasBecken(unittest.TestCase):
         statt 23 px, siehe Modulkopf)."""
         verschiebung = np.array([[0.0, 0.0, 3.0]])
         bvh = self._bvh(verschiebung)
-        offsets = np.asarray(bvh["offsets"], dtype=np.float64)
+        offsets = np.asarray(bvh['offsets'], dtype=np.float64)
         mit_abzug = self._rueck() @ (self._welt(bvh, 0)[0] - offsets[0]) / Smplskelett.CM_JE_M
         self.assertTrue(np.allclose(mit_abzug, verschiebung[0], atol=1e-6))
         abstand = float(np.linalg.norm(self._kameraraum(bvh, 0)[0] - mit_abzug))

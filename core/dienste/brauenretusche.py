@@ -25,12 +25,12 @@ from pathlib import Path
 import numpy as np
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Brauenretusche:
     FASSUNG = 1
-    EINHEITEN = ("browOutVertL", "browOutVertR", "browsMidVert")
+    EINHEITEN = ('browOutVertL', 'browOutVertR', 'browsMidVert')
     #: m — was eine Einheit stärker bewegt, ist Brauenhaut.
     MINDEST = 0.002
     #: Pixel (bei 2048²) um die Brauenpunkte, in denen nach Dunklem gesucht wird.
@@ -43,7 +43,7 @@ class Brauenretusche:
     RAND_DUNKEL = 0.93
     AUSDEHNUNG_PX = 2
     GLAETTUNG = 6
-    ORDNER = Path(settings.MEDIA_ROOT) / "hauttexturen"
+    ORDNER = Path(settings.MEDIA_ROOT) / 'hauttexturen'
 
     # --------------------------------------------------------------- Zutaten
 
@@ -52,7 +52,7 @@ class Brauenretusche:
         """Indizes der Hautpunkte, die eine der Brauen-Einheiten bewegt."""
         punkte = set()
         for name in cls.EINHEITEN:
-            for richtung in ("plus", "minus"):
+            for richtung in ('plus', 'minus'):
                 deltas = np.array(einheiten.get(name, {}).get(richtung, []), dtype=np.float64)
                 if not len(deltas):
                     continue
@@ -114,10 +114,10 @@ class Brauenretusche:
         while offen.any():
             bekannt = ~offen
             summe = np.stack(
-                [ndimage.convolve(aus[..., k] * bekannt, kern, mode="nearest") for k in range(aus.shape[-1])],
+                [ndimage.convolve(aus[..., k] * bekannt, kern, mode='nearest') for k in range(aus.shape[-1])],
                 axis=-1,
             )
-            anzahl = ndimage.convolve(bekannt.astype(np.float64), kern, mode="nearest")
+            anzahl = ndimage.convolve(bekannt.astype(np.float64), kern, mode='nearest')
             rand = offen & (anzahl > 0)
             if not rand.any():
                 break
@@ -137,15 +137,15 @@ class Brauenretusche:
     def zutaten(cls):
         """`(einheiten, uvs)` — MB-Lab-Einheiten und die UVs des Basisnetzes,
         einmal je Prozess."""
-        if "einheiten" not in cls._zutaten:
+        if 'einheiten' not in cls._zutaten:
             from humanbody_core.mimik.mblab_ausdruecke import MblabAusdruecke
 
-            mblab = Path(settings.TOOLS_ROOT) / "tools" / "MB-Lab" / "data"
-            cls._zutaten["einheiten"] = MblabAusdruecke(str(mblab)).einheiten()
-            cls._zutaten["uvs"] = np.load(
-                str(Path(settings.HUMANBODY_ROOT) / "data" / "humanBody" / "uvs.npy")
+            mblab = Path(settings.TOOLS_ROOT) / 'tools' / 'MB-Lab' / 'data'
+            cls._zutaten['einheiten'] = MblabAusdruecke(str(mblab)).einheiten()
+            cls._zutaten['uvs'] = np.load(
+                str(Path(settings.HUMANBODY_ROOT) / 'data' / 'humanBody' / 'uvs.npy')
             )
-        return cls._zutaten["einheiten"], cls._zutaten["uvs"]
+        return cls._zutaten['einheiten'], cls._zutaten['uvs']
 
     @classmethod
     def fuer(cls, quelle):
@@ -160,7 +160,7 @@ class Brauenretusche:
 
         einheiten, uvs = cls.zutaten()
         with Image.open(quelle) as bild:
-            roh = np.asarray(bild.convert("RGB"))
+            roh = np.asarray(bild.convert('RGB'))
         brauen = uvs[cls.brauenpunkte(einheiten)]
         zone = cls.zone(brauen, roh.shape[:2])
         return cls.maske(roh, zone, cls.kern(brauen, roh.shape[:2], cls.KERN_PX)), zone
@@ -169,7 +169,7 @@ class Brauenretusche:
 
     @classmethod
     def ziel(cls, quelle):
-        return cls.ORDNER / ("%s_ohne_brauen.png" % Path(quelle).stem)
+        return cls.ORDNER / ('%s_ohne_brauen.png' % Path(quelle).stem)
 
     @classmethod
     def ohne_brauen(cls, quelle, einheiten, uvs):
@@ -185,7 +185,7 @@ class Brauenretusche:
         ):
             return ziel
         with Image.open(quelle) as bild:
-            roh = np.asarray(bild.convert("RGB"))
+            roh = np.asarray(bild.convert('RGB'))
         brauen = uvs[cls.brauenpunkte(einheiten)]
         zone = cls.zone(brauen, roh.shape[:2])
         maske = cls.maske(roh, zone, cls.kern(brauen, roh.shape[:2], cls.KERN_PX))
@@ -193,7 +193,7 @@ class Brauenretusche:
         cls.ORDNER.mkdir(parents=True, exist_ok=True)
         Image.fromarray(fertig).save(ziel, pnginfo=cls._info())
         logger.info(
-            "Brauenretusche: %s -> %s (%d Brauenpixel in Zone %d)",
+            'Brauenretusche: %s -> %s (%d Brauenpixel in Zone %d)',
             quelle.name,
             ziel.name,
             int(maske.sum()),
@@ -206,7 +206,7 @@ class Brauenretusche:
         from PIL.PngImagePlugin import PngInfo
 
         info = PngInfo()
-        info.add_text("brauenretusche", str(cls.FASSUNG))
+        info.add_text('brauenretusche', str(cls.FASSUNG))
         return info
 
     @staticmethod
@@ -214,4 +214,4 @@ class Brauenretusche:
         from PIL import Image
 
         with Image.open(pfad) as bild:
-            return int(bild.info.get("brauenretusche", 0))
+            return int(bild.info.get('brauenretusche', 0))

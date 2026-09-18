@@ -71,13 +71,13 @@ class KurvenzerlegungTest(SimpleTestCase):
         punkte = [s**3 for s in stellen]
         abstaende = [b - a for a, b in zip([0.0] + punkte, punkte + [1.0])]
         self.assertAlmostEqual(
-            max(abstaende), min(abstaende), places=3, msg="Abstaende sind nicht gleichmaessig: %s" % abstaende
+            max(abstaende), min(abstaende), places=3, msg='Abstaende sind nicht gleichmaessig: %s' % abstaende
         )
         # Und die Gegenprobe: in t waeren sie es NICHT.
         gleich_t = [0.1 * i for i in range(1, 10)]
         roh = [s**3 for s in gleich_t]
         roh_abst = [b - a for a, b in zip([0.0] + roh, roh + [1.0])]
-        self.assertGreater(max(roh_abst) - min(roh_abst), 0.1, "Die Kurve ist zu brav fuer diesen Test")
+        self.assertGreater(max(roh_abst) - min(roh_abst), 0.1, 'Die Kurve ist zu brav fuer diesen Test')
 
     def test_viertelkreis_gegen_die_analytische_loesung(self):
         """Auf dem Kreis ist die Bogenlaenge bekannt: s(t) = r * Winkel."""

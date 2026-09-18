@@ -27,7 +27,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "auswahlfeld.js")
+MODUL = Jsmodul('gemeinsam', 'auswahlfeld.js')
 
 #: Ein `<select>`, so viel davon, wie die Klasse anfasst. Node hat kein DOM;
 #: eine echte Attrappe ist ehrlicher als ein Test, der nur den Rückgabewert
@@ -105,4 +105,4 @@ class AuswahlfeldTest(SimpleTestCase):
     """Der gemeinsame Optionen-Füller, in Node ausgeführt."""
 
     def test_fuellt_und_haelt_die_raender_aus(self):
-        self.assertEqual(MODUL.laufen(SKRIPT), {"fertig": True})
+        self.assertEqual(MODUL.laufen(SKRIPT), {'fertig': True})

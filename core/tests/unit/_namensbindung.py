@@ -21,14 +21,14 @@ import ast
 
 from djangobase.umbau.codequalitaet import _annotationsketten
 
-__all__ = ["Namensbindung"]
+__all__ = ['Namensbindung']
 
 
 class Namensbindung:
     """Liest den Quelltext und nennt die ungebundenen Namen."""
 
     #: Die pyflakes-Meldung, auf die es ankommt.
-    MELDUNG = "UndefinedName"
+    MELDUNG = 'UndefinedName'
 
     @classmethod
     def unbekannte(cls, quelle, name):
@@ -44,5 +44,5 @@ class Namensbindung:
             args = meldung.message_args
             if args and (meldung.lineno, args[0]) in beschriftung:
                 continue  # eine Beschriftung, kein Name
-            gefunden.append((meldung.lineno, args[0] if args else "?"))
+            gefunden.append((meldung.lineno, args[0] if args else '?'))
         return gefunden

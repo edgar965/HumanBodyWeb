@@ -27,23 +27,23 @@ class GemeinsameModuleTest(SimpleTestCase):
     #: Namen, die am 31.08.2026 aus `warp_sim` und `skinning_only`
     #: nach `bakedatei`/`netzmathematik` zogen.
     GEZOGEN = (
-        "_skin_rigid_frame",
-        "_compute_vertex_normals",
-        "_push_outside_body",
-        "_naechste_nachbarn",
-        "load_scene_npz",
-        "save_bake",
+        '_skin_rigid_frame',
+        '_compute_vertex_normals',
+        '_push_outside_body',
+        '_naechste_nachbarn',
+        'load_scene_npz',
+        'save_bake',
     )
 
     def test_keine_eigene_fassung_mehr(self):
-        wurzel = Path(Humanbodypfad.setzen() or ".") / "collision"
+        wurzel = Path(Humanbodypfad.setzen() or '.') / 'collision'
         treffer = []
-        for name in ("warp_sim", "skinning_only"):
-            for zeile in (wurzel / ("%s.py" % name)).read_text(encoding="utf-8").splitlines():
+        for name in ('warp_sim', 'skinning_only'):
+            for zeile in (wurzel / ('%s.py' % name)).read_text(encoding='utf-8').splitlines():
                 for gezogen in self.GEZOGEN:
-                    if zeile.startswith("def %s(" % gezogen):
-                        treffer.append("%s: %s" % (name, zeile.strip()))
-        self.assertEqual(treffer, [], "Die Rechnung steht wieder doppelt in collision/")
+                    if zeile.startswith('def %s(' % gezogen):
+                        treffer.append('%s: %s' % (name, zeile.strip()))
+        self.assertEqual(treffer, [], 'Die Rechnung steht wieder doppelt in collision/')
 
     def test_haeuten_liest_die_spaltenzahl_aus_den_daten(self):
         """Die alte Fassung in `skinning_only` lief über feste `range(4)`.

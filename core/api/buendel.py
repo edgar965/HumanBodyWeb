@@ -19,7 +19,7 @@ from django.http import FileResponse, Http404
 
 from ..dienste.modulbuendel import Modulbuendel
 
-__all__ = ["buendel_datei"]
+__all__ = ['buendel_datei']
 
 
 def buendel_datei(request, fassung):
@@ -27,14 +27,14 @@ def buendel_datei(request, fassung):
     # Nur Ziffern: Die Fassung kommt aus dem Pfad, und `os.path.join` mit
     # „..“ darin läge sonst außerhalb der Ablage.
     if not fassung.isdigit():
-        raise Http404("unbekannte Fassung")
+        raise Http404('unbekannte Fassung')
     pfad = Modulbuendel.pfad(fassung)
     if not os.path.isfile(pfad):
         # Nicht heimlich neu bauen: Wer hier landet, hat eine Adresse aus
         # einer alten Seite. Ein 404 lässt ihn neu laden und die aktuelle
         # Adresse holen; ein Neubau lieferte ihm dagegen Code, der nicht zu
         # seiner Seite gehört.
-        raise Http404("Bündel nicht vorhanden")
-    antwort = FileResponse(open(pfad, "rb"), content_type="application/javascript")
-    antwort["Cache-Control"] = "public, max-age=31536000, immutable"
+        raise Http404('Bündel nicht vorhanden')
+    antwort = FileResponse(open(pfad, 'rb'), content_type='application/javascript')
+    antwort['Cache-Control'] = 'public, max-age=31536000, immutable'
     return antwort

@@ -14,7 +14,7 @@ Herausgeloest am 02.09.2026 aus `test_escape_sequenzen.py`.
 
 import warnings
 
-__all__ = ["Syntaxwarnungen"]
+__all__ = ['Syntaxwarnungen']
 
 
 class Syntaxwarnungen:
@@ -24,6 +24,6 @@ class Syntaxwarnungen:
     def beim_uebersetzen(quelle, name):
         """[(Zeile, Meldung)] — die SyntaxWarnings beim Uebersetzen."""
         with warnings.catch_warnings(record=True) as gefangen:
-            warnings.simplefilter("always")
-            compile(quelle, name, "exec")
+            warnings.simplefilter('always')
+            compile(quelle, name, 'exec')
             return [(w.lineno, str(w.message)) for w in gefangen if issubclass(w.category, SyntaxWarning)]

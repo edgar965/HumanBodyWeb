@@ -28,16 +28,16 @@ import logging
 import re
 import time
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Logbeobachter:
     """Liest die Logdatei eines laufenden Prozesses und meldet den Fortschritt."""
 
     #: tqdm-Balken: ` 42%|…`
-    PROZENT = re.compile(r"(\d+)%\|")
+    PROZENT = re.compile(r'(\d+)%\|')
     #: Bruchform: `42 / 100`
-    BRUCH = re.compile(r"(\d+)\s*/\s*(\d+)")
+    BRUCH = re.compile(r'(\d+)\s*/\s*(\d+)')
     #: Höchster Wert, den die Beobachtung meldet (siehe Modul-Docstring).
     DECKEL = 95
     #: Wie oft in die Datei gesehen wird.
@@ -84,7 +84,7 @@ class Logbeobachter:
     def nachschub(self):
         """Was seit dem letzten Blick dazugekommen ist — oder `''`."""
         try:
-            with open(self.logdatei, "r", encoding="utf-8", errors="replace") as datei:
+            with open(self.logdatei, encoding='utf-8', errors='replace') as datei:
                 datei.seek(self.stelle)
                 neu = datei.read()
                 self.stelle = datei.tell()
@@ -93,7 +93,7 @@ class Logbeobachter:
             # stumm gewollt: Beim ersten Durchgang gibt es die Logdatei oft noch
             # nicht; der Prozess schreibt sie erst. Eine Meldung je Sekunde je
             # Auftrag waere das Log voll und wuerde nichts sagen.
-            return ""
+            return ''
 
     # ---------------------------------------------------------------- Auswerten
 
@@ -116,7 +116,7 @@ class Logbeobachter:
         if anteil is not None:
             self.job.progress = anteil
         self.job.progress_detail = self.meldung(zeile)
-        self.job.save(update_fields=["progress", "progress_detail", "updated_at"])
+        self.job.save(update_fields=['progress', 'progress_detail', 'updated_at'])
         return True
 
     @classmethod
@@ -135,5 +135,5 @@ class Logbeobachter:
     def meldung(self, zeile):
         text = zeile[: self.LAENGE_ZEILE]
         if self.bilder:
-            text = "%s — %d frames" % (text, self.bilder)
+            text = '%s — %d frames' % (text, self.bilder)
         return text[: self.LAENGE_MELDUNG]

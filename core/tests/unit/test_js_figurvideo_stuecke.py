@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "figurvideo_stuecke.js")
+MODUL = Jsmodul('scene', 'figurvideo_stuecke.js')
 
 SKRIPT = """
 const { Figurvideostuecke: F } = await import(MODUL);
@@ -77,5 +77,5 @@ class FigurvideoStueckeJsTest(SimpleTestCase):
 
     def test_paket_byte_fuer_byte(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertEqual(ausgabe["bytes"], 120)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertEqual(ausgabe['bytes'], 120)

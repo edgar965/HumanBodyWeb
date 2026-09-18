@@ -30,7 +30,7 @@ import ast
 
 from django.conf import settings
 
-__all__ = ["Humanbodybaum"]
+__all__ = ['Humanbodybaum']
 
 
 class Humanbodybaum:
@@ -43,11 +43,11 @@ class Humanbodybaum:
     #: `humanbody_core` blieb in `HumanBody/`. Beide Wurzeln stehen im
     #: `sys.path` (`ui/settings/wurzeln.py`), sonst laedt kein Modul.
     BAEUME = (
-        ("HUMANBODY_ROOT", "humanbody_core"),
-        ("ASSETS_ROOT", "assetCreator/GarmentFitter"),
-        ("TOOLS_ROOT", "MakeHuman"),
-        ("TOOLS_ROOT", "UMA_Python"),
-        ("ASSETS_ROOT", "kleidung"),
+        ('HUMANBODY_ROOT', 'humanbody_core'),
+        ('ASSETS_ROOT', 'assetCreator/GarmentFitter'),
+        ('TOOLS_ROOT', 'MakeHuman'),
+        ('TOOLS_ROOT', 'UMA_Python'),
+        ('ASSETS_ROOT', 'kleidung'),
     )
 
     #: Was innerhalb eines Baums NICHT geprueft wird. `makehuman` und
@@ -60,10 +60,10 @@ class Humanbodybaum:
     #: Ladetest dort meldete nur, dass das Paket fehlt — nichts ueber die
     #: Importwege. Gegen stilles Verschwinden schuetzt dort
     #: `Projektquellen` (Syntax, Namen, Escape-Sequenzen).
-    AUS = ("__pycache__", "makehuman", "buildscripts")
+    AUS = ('__pycache__', 'makehuman', 'buildscripts')
 
     @classmethod
-    def wurzel(cls, einstellung="HUMANBODY_ROOT"):
+    def wurzel(cls, einstellung='HUMANBODY_ROOT'):
         """Die Wurzel aus den Einstellungen — nie ein fester Pfad."""
         from pathlib import Path
 
@@ -75,7 +75,7 @@ class Humanbodybaum:
         verboten = set(cls.AUS)
         for einstellung, baum in cls.BAEUME:
             wurzel = cls.wurzel(einstellung)
-            for pfad in sorted((wurzel / baum).rglob("*.py")):
+            for pfad in sorted((wurzel / baum).rglob('*.py')):
                 if not set(pfad.parts) & verboten:
                     yield wurzel, pfad
 
@@ -93,7 +93,7 @@ class Humanbodybaum:
         es kommt nur nichts zurueck. Ein verschobener Baum faellt damit
         still aus jeder Pruefung hier (`~/.claude/rules/projektpfade.md`).
         """
-        return ["%s/%s" % (e, b) for e, b in cls.BAEUME if not (cls.wurzel(e) / b).is_dir()]
+        return ['%s/%s' % (e, b) for e, b in cls.BAEUME if not (cls.wurzel(e) / b).is_dir()]
 
     @staticmethod
     def ist_skript(baum):
@@ -114,7 +114,7 @@ class Humanbodybaum:
     def _baum(cls, pfad):
         """Der Syntaxbaum einer Datei, oder `None` wenn sie kaputt ist."""
         try:
-            return ast.parse(pfad.read_text(encoding="utf-8"))
+            return ast.parse(pfad.read_text(encoding='utf-8'))
         # stumm gewollt: Der Aufrufer entscheidet, was `None` heisst —
         # `module()` uebergeht die Datei, `unlesbare()` meldet sie.
         except SyntaxError:
@@ -132,10 +132,10 @@ class Humanbodybaum:
                 baum = cls._baum(pfad)
                 if baum is None or cls.ist_skript(baum):
                     continue
-            teile = list(pfad.relative_to(wurzel).with_suffix("").parts)
-            if teile[-1] == "__init__":
+            teile = list(pfad.relative_to(wurzel).with_suffix('').parts)
+            if teile[-1] == '__init__':
                 teile.pop()
-            yield ".".join(teile), pfad
+            yield '.'.join(teile), pfad
 
     @classmethod
     def unlesbare(cls):
@@ -147,7 +147,7 @@ class Humanbodybaum:
         kaputt = []
         for pfad in cls.dateien():
             try:
-                ast.parse(pfad.read_text(encoding="utf-8"))
+                ast.parse(pfad.read_text(encoding='utf-8'))
             except SyntaxError as fehler:
-                kaputt.append("%s: %s" % (pfad.name, fehler))
+                kaputt.append('%s: %s' % (pfad.name, fehler))
         return kaputt

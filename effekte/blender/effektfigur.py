@@ -16,23 +16,24 @@ interpoliert die Hautgewichte vom Koerper — deshalb erst das Rig, dann das
 Kleid.
 """
 
-from __future__ import print_function
-
 from typing import Any
 
 import bpy  # pyright: ignore[reportMissingImports]  (Blender)
+from bl_ext.blender_org.mpfb.services.humanservice import (
+    HumanService,  # pyright: ignore[reportMissingImports]
+)
+from bl_ext.blender_org.mpfb.services.targetservice import (
+    TargetService,  # pyright: ignore[reportMissingImports]
+)
 
-from bl_ext.blender_org.mpfb.services.humanservice import HumanService  # pyright: ignore[reportMissingImports]
-from bl_ext.blender_org.mpfb.services.targetservice import TargetService  # pyright: ignore[reportMissingImports]
-
-__all__ = ["Effektfigur"]
+__all__ = ['Effektfigur']
 
 
 class Effektfigur:
     """Koerper (`basemesh`), Rig (`rig`) und Kleid (`kleid`)."""
 
-    RIG = "cmu_mb"
-    HUEFTE = "Hips"
+    RIG = 'cmu_mb'
+    HUEFTE = 'Hips'
 
     def __init__(self, geschlechtswert=0.0):
         self.geschlechtswert = geschlechtswert
@@ -44,7 +45,7 @@ class Effektfigur:
     def bauen(self, kleid_mhclo):
         self.szene_leeren()
         makro = TargetService.get_default_macro_info_dict()
-        makro["gender"] = self.geschlechtswert
+        makro['gender'] = self.geschlechtswert
         self.basemesh = HumanService.create_human(macro_detail_dict=makro)
         self.rig = HumanService.add_builtin_rig(self.basemesh, self.RIG)
         self.kleid = HumanService.add_mhclo_asset(kleid_mhclo, self.basemesh, subdiv_levels=0)
@@ -57,7 +58,7 @@ class Effektfigur:
             bpy.data.objects.remove(objekt, do_unlink=True)
 
     def aktivieren(self, objekt):
-        bpy.ops.object.select_all(action="DESELECT")
+        bpy.ops.object.select_all(action='DESELECT')
         objekt.select_set(True)
         bpy.context.view_layer.objects.active = objekt
 
@@ -65,7 +66,7 @@ class Effektfigur:
         return float(self.basemesh.dimensions.z)
 
     def beschreibung(self):
-        return "Figur %d Punkte, Rig %d Knochen, Kleid %d Punkte / %d Flächen" % (
+        return 'Figur %d Punkte, Rig %d Knochen, Kleid %d Punkte / %d Flächen' % (
             len(self.basemesh.data.vertices),
             len(self.rig.data.bones),
             len(self.kleid.data.vertices),

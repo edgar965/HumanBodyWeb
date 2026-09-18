@@ -44,7 +44,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "hautmaske.js")
+MODUL = Jsmodul('gemeinsam', 'hautmaske.js')
 
 SKRIPT = """
 const { Hautmaske } = await import(MODUL);
@@ -209,5 +209,5 @@ class HautmaskeTest(SimpleTestCase):
 
     def test_rohr_abstand_tiefe_wicklung_und_index(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertGreater(ausgabe["entfernt"], 0)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertGreater(ausgabe['entfernt'], 0)

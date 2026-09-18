@@ -47,33 +47,33 @@ class ReihenfolgeTest(SimpleTestCase):
     def test_kein_set_im_quelltext(self):
         quelle = inspect.getsource(Retargetlauf._zuordnung_bauen)
         self.assertNotIn(
-            "set(self.rig_to_bvh)",
+            'set(self.rig_to_bvh)',
             quelle,
-            "mapped_rig_names darf kein `set` sein — die Reihenfolge wäre je Prozess zufällig",
+            'mapped_rig_names darf kein `set` sein — die Reihenfolge wäre je Prozess zufällig',
         )
-        self.assertIn("dict.fromkeys(self.rig_to_bvh)", quelle)
+        self.assertIn('dict.fromkeys(self.rig_to_bvh)', quelle)
 
     def test_die_zuordnung_bleibt_in_ihrer_reihenfolge(self):
         """Was zuerst zugeordnet wird, steht zuerst in den Spuren."""
         lauf = Retargetlauf.__new__(Retargetlauf)
         lauf.rig_to_bvh = {}
         lauf.mapping = {}
-        lauf.skel = _Skelett(["A", "B", "C", "D"])
-        lauf.mapping = {"bA": "A", "bB": "B", "bC": "C", "bD": "D"}
-        lauf.bvh_idx = {"bA": 0, "bB": 1, "bC": 2, "bD": 3}
+        lauf.skel = _Skelett(['A', 'B', 'C', 'D'])
+        lauf.mapping = {'bA': 'A', 'bB': 'B', 'bC': 'C', 'bD': 'D'}
+        lauf.bvh_idx = {'bA': 0, 'bB': 1, 'bC': 2, 'bD': 3}
         lauf._zuordnung_bauen()
-        self.assertEqual(list(lauf.mapped_rig_names), ["A", "B", "C", "D"])
+        self.assertEqual(list(lauf.mapped_rig_names), ['A', 'B', 'C', 'D'])
 
     def test_enthaeltpruefung_geht_weiter(self):
         """`in` muss auf der neuen Struktur genauso funktionieren."""
         lauf = Retargetlauf.__new__(Retargetlauf)
         lauf.rig_to_bvh = {}
-        lauf.skel = _Skelett(["A", "B"])
-        lauf.mapping = {"bA": "A", "bB": "B"}
-        lauf.bvh_idx = {"bA": 0, "bB": 1}
+        lauf.skel = _Skelett(['A', 'B'])
+        lauf.mapping = {'bA': 'A', 'bB': 'B'}
+        lauf.bvh_idx = {'bA': 0, 'bB': 1}
         lauf._zuordnung_bauen()
-        self.assertIn("A", lauf.mapped_rig_names)
-        self.assertNotIn("Z", lauf.mapped_rig_names)
+        self.assertIn('A', lauf.mapped_rig_names)
+        self.assertNotIn('Z', lauf.mapped_rig_names)
 
 
 class _Skelett:

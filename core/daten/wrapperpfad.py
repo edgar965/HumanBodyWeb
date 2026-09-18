@@ -33,7 +33,7 @@ class Wrapperpfad:
     @staticmethod
     def pfad():
         """`…/VideoToBVH/wrappers` neben dem Django-Teil."""
-        return os.path.join(str(settings.BASE_DIR), "..", "VideoToBVH", "wrappers")
+        return os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
 
     def __enter__(self):
         if self.verzeichnis not in sys.path:

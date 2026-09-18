@@ -37,53 +37,53 @@ class SeiteKoerperphysik(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.antwort = Client().get(reverse("hilfe_koerper_physik"))
-        self.inhalt = self.antwort.content.decode("utf-8")
+        self.antwort = Client().get(reverse('hilfe_koerper_physik'))
+        self.inhalt = self.antwort.content.decode('utf-8')
 
     def test_die_seite_antwortet(self):
         self.assertEqual(self.antwort.status_code, 200)
 
     def test_die_adresse_ist_die_erwartete(self):
-        self.assertEqual(reverse("hilfe_koerper_physik"), "/hilfe/kleidung/koerperphysik/")
+        self.assertEqual(reverse('hilfe_koerper_physik'), '/hilfe/kleidung/koerperphysik/')
 
     def test_die_kernaussagen_stehen_darin(self):
         """Die Namen und Zahlen, um die es geht — nicht der Fließtext."""
         for probe in (
-            "FastProjectiveSkinning",
-            "Spring Decomposed Skinning",
-            "vertices_tpose.npy",
-            "--vorlauf",
+            'FastProjectiveSkinning',
+            'Spring Decomposed Skinning',
+            'vertices_tpose.npy',
+            '--vorlauf',
             str(Fpskette.PUNKTE),
             str(Fpskette.GELENKE),
             str(Fpskette.SEKUNDEN_60_BILDER),
             # Ohne Vorzeichen: Django lokalisiert und schreibt
             # ein typografisches Minus (U+2212), nicht den
             # ASCII-Bindestrich der Konstanten.
-            str(abs(Koerperphysik.LBS_ARMVERLUST_PROZENT)).replace(".", ","),
+            str(abs(Koerperphysik.LBS_ARMVERLUST_PROZENT)).replace('.', ','),
         ):
             self.assertIn(probe, self.inhalt, probe)
 
     def test_jeder_kandidat_und_jede_falle_steht_auf_der_seite(self):
         # `escape`, weil die Vorlage Anführungszeichen als `&quot;` schreibt.
         for kandidat in Koerperphysik.kandidaten():
-            self.assertIn(escape(kandidat["urteil"]), self.inhalt, kandidat["name"])
+            self.assertIn(escape(kandidat['urteil']), self.inhalt, kandidat['name'])
         for falle in Fpskette.fallen():
-            self.assertIn(escape(falle["titel"]), self.inhalt, falle["titel"])
+            self.assertIn(escape(falle['titel']), self.inhalt, falle['titel'])
 
     def test_das_menue_fuehrt_den_punkt(self):
-        gruppen = settings.DJANGOBASE.get("hilfe_extra") or []
-        adressen = [e["url"] for gruppe in gruppen for e in gruppe.get("untermenu", [])]
-        self.assertIn("/hilfe/kleidung/koerperphysik/", adressen)
+        gruppen = settings.DJANGOBASE.get('hilfe_extra') or []
+        adressen = [e['url'] for gruppe in gruppen for e in gruppe.get('untermenu', [])]
+        self.assertIn('/hilfe/kleidung/koerperphysik/', adressen)
 
     def test_die_nachbarseiten_bleiben_erreichbar(self):
         for pfad in (
-            "/hilfe/versionen/",
-            "/hilfe/logs/",
-            "/hilfe/tests/",
-            "/hilfe/kleidung/",
-            "/hilfe/kleidung/garmentcode/",
-            "/hilfe/kleidung/neu/",
-            "/hilfe/kleidung/physik/",
+            '/hilfe/versionen/',
+            '/hilfe/logs/',
+            '/hilfe/tests/',
+            '/hilfe/kleidung/',
+            '/hilfe/kleidung/garmentcode/',
+            '/hilfe/kleidung/neu/',
+            '/hilfe/kleidung/physik/',
         ):
             self.assertEqual(Client().get(pfad).status_code, 200, pfad)
 
@@ -97,21 +97,21 @@ class KoerperphysikDatenStehenInPython(unittest.TestCase):
         baustellen = Koerperphysik.baustellen()
         self.assertEqual(len(baustellen), 3)
         for b in baustellen:
-            for feld in ("name", "was", "ist", "loeser"):
-                self.assertTrue(b.get(feld), "%s: %s" % (b["name"], feld))
+            for feld in ('name', 'was', 'ist', 'loeser'):
+                self.assertTrue(b.get(feld), '%s: %s' % (b['name'], feld))
 
     def test_jeder_kandidat_ist_vollstaendig(self):
-        felder = ("name", "lizenz", "laeuft", "braucht", "kann", "urteil")
+        felder = ('name', 'lizenz', 'laeuft', 'braucht', 'kann', 'urteil')
         kandidaten = Koerperphysik.kandidaten()
         self.assertGreaterEqual(len(kandidaten), 5)
         for kandidat in kandidaten:
             for feld in felder:
-                self.assertTrue(kandidat.get(feld), "%s: %s" % (kandidat, feld))
+                self.assertTrue(kandidat.get(feld), '%s: %s' % (kandidat, feld))
 
     def test_genau_ein_kandidat_ist_gewaehlt(self):
-        gewaehlt = [k for k in Koerperphysik.kandidaten() if k["urteil"] == "gewaehlt"]
+        gewaehlt = [k for k in Koerperphysik.kandidaten() if k['urteil'] == 'gewaehlt']
         self.assertEqual(len(gewaehlt), 1)
-        self.assertTrue(gewaehlt[0]["name"].startswith("FastProjectiveSkinning"))
+        self.assertTrue(gewaehlt[0]['name'].startswith('FastProjectiveSkinning'))
 
     def test_der_stand_bleibt_ehrlich(self):
         """DIE SCHARFE PRÜFUNG. Eine Bestandsseite, auf der alles läuft,
@@ -120,9 +120,9 @@ class KoerperphysikDatenStehenInPython(unittest.TestCase):
         angefasst, nicht der Test."""
         stand = Fpskette.stand()
         wie = [w for _teil, w, _beleg in stand]
-        self.assertIn("FEHLER", wie, "kein einziger Fehler — wirklich?")
-        self.assertIn("offen", wie)
-        self.assertIn("laeuft", wie)
+        self.assertIn('FEHLER', wie, 'kein einziger Fehler — wirklich?')
+        self.assertIn('offen', wie)
+        self.assertIn('laeuft', wie)
         for teil, _w, beleg in stand:
             self.assertTrue(beleg, teil)
 
@@ -133,8 +133,8 @@ class KoerperphysikDatenStehenInPython(unittest.TestCase):
         pruefungen = Fpskette.pruefen()
         self.assertGreaterEqual(len(pruefungen), 4)
         for p in pruefungen:
-            for feld in ("was", "wie", "soll", "ist", "gegenprobe"):
-                self.assertTrue(p.get(feld), "%s: %s" % (p["was"], feld))
+            for feld in ('was', 'wie', 'soll', 'ist', 'gegenprobe'):
+                self.assertTrue(p.get(feld), '%s: %s' % (p['was'], feld))
 
     def test_jede_falle_nennt_zahl_und_lehre(self):
         """Eine Falle ohne Messung ist eine Behauptung, eine ohne Lehre
@@ -142,30 +142,30 @@ class KoerperphysikDatenStehenInPython(unittest.TestCase):
         fallen = Fpskette.fallen()
         self.assertGreaterEqual(len(fallen), 9)
         for f in fallen:
-            for feld in ("titel", "was", "zahl", "warum_still", "lehre"):
-                self.assertTrue(f.get(feld), "%s: %s" % (f["titel"], feld))
+            for feld in ('titel', 'was', 'zahl', 'warum_still', 'lehre'):
+                self.assertTrue(f.get(feld), '%s: %s' % (f['titel'], feld))
 
     def test_die_vier_schritte_sind_bedienbar_beschrieben(self):
         schritte = Fpskette.schritte()
         self.assertEqual(len(schritte), 5)
-        self.assertEqual(sorted(s["nr"] for s in schritte), [1, 2, 3, 4, 5])
+        self.assertEqual(sorted(s['nr'] for s in schritte), [1, 2, 3, 4, 5])
         for s in schritte:
-            for feld in ("titel", "befehl", "macht", "ergibt", "dauer"):
-                self.assertTrue(s.get(feld), "%s: %s" % (s["titel"], feld))
+            for feld in ('titel', 'befehl', 'macht', 'ergibt', 'dauer'):
+                self.assertTrue(s.get(feld), '%s: %s' % (s['titel'], feld))
 
     def test_die_aenderungen_am_fremden_code_sind_benannt(self):
         """GPL-Code: Was geändert wurde, muss nachlesbar sein."""
         aenderungen = Fpskette.aenderungen()
         self.assertGreaterEqual(len(aenderungen), 3)
         for a in aenderungen:
-            for feld in ("wo", "was", "warum"):
-                self.assertTrue(a.get(feld), "%s: %s" % (a["wo"], feld))
+            for feld in ('wo', 'was', 'warum'):
+                self.assertTrue(a.get(feld), '%s: %s' % (a['wo'], feld))
 
     def test_abgrenzung_offenes_und_quellen_sind_benannt(self):
         self.assertGreaterEqual(len(Koerperphysik.nicht()), 3)
         self.assertGreaterEqual(len(Fpskette.offen()), 3)
         for name, adresse in Koerperphysik.quellen():
-            self.assertTrue(name and adresse.startswith("http"), name)
+            self.assertTrue(name and adresse.startswith('http'), name)
 
     def test_die_zehn_sekunden_rechnung_folgt_den_konstanten(self):
         erwartet = 10 * 60 * (Fpskette.SEKUNDEN_60_BILDER / 60.0) / 60.0

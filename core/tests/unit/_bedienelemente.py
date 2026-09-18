@@ -26,18 +26,17 @@ Ohne diese drei Filter meldete der erste Lauf 59 Fälle, von denen vier echt
 waren.
 """
 
-import io
 import re
 from pathlib import Path
 
 # Anzeigefelder neben einem Regler: `_bindSlider(id, id + '-val', …)` bedient
 # sie, sie tragen nie einen eigenen Hörer.
-ANZEIGE = re.compile(r"-val$")
+ANZEIGE = re.compile(r'-val$')
 
 # Fremdcode: `vendor` ist three.js & Co.
-FREMD = ("vendor",)
+FREMD = ('vendor',)
 
-PLATZHALTER = r"\$\{[^}]+\}"
+PLATZHALTER = r'\$\{[^}]+\}'
 
 ELEMENT = re.compile(r'<(input|select|button|textarea)\b([^>]*)\bid="([^"]+)"([^>]*)>', re.I)
 
@@ -46,8 +45,8 @@ class Bedienelemente:
     """Die Bedienelemente einer Seite und ihre Hörer."""
 
     def __init__(self, wurzel):
-        self.vorlagen = Path(wurzel) / "templates"
-        self.statik = Path(wurzel) / "static"
+        self.vorlagen = Path(wurzel) / 'templates'
+        self.statik = Path(wurzel) / 'static'
         self._code = None
 
     # ------------------------------------------------------------- Sammeln
@@ -55,8 +54,8 @@ class Bedienelemente:
     def seiten(self):
         """Vorlagen, die selbst eine Seite sind — am Modul-Einstieg erkannt."""
         namen = []
-        for pfad in sorted(self.vorlagen.glob("*.html")):
-            if 'type="module"' in io.open(pfad, encoding="utf-8").read():
+        for pfad in sorted(self.vorlagen.glob('*.html')):
+            if 'type="module"' in open(pfad, encoding='utf-8').read():
                 namen.append(pfad.name)
         return namen
 
@@ -70,7 +69,7 @@ class Bedienelemente:
                 continue
             gesehen.append(name)
             # in der Schleife gewollt: je Durchlauf eine andere Vorlage
-            text = io.open(pfad, encoding="utf-8").read()
+            text = open(pfad, encoding='utf-8').read()
             offen.extend(re.findall(r'{%\s*include\s+"([^"]+)"', text))
         return gesehen
 
@@ -78,34 +77,34 @@ class Bedienelemente:
         """Kennung → (Art, Vorlage, Marken, hat `name`)."""
         gefunden = {}
         for name in namen:
-            text = io.open(self.vorlagen / name, encoding="utf-8").read()
+            text = open(self.vorlagen / name, encoding='utf-8').read()
             for art, vorn, kennung, hinten in ELEMENT.findall(text):
                 # `{{ kennung }}` ist eine Vorlagenvariable, keine Kennung.
-                if ANZEIGE.search(kennung) or "{" in kennung:
+                if ANZEIGE.search(kennung) or '{' in kennung:
                     continue
                 merkmale = vorn + hinten
                 marken = []
                 for klassen in re.findall(r'class="([^"]*)"', merkmale):
                     marken.extend(klassen.split())
-                marken.extend("data-" + n for n in re.findall(r"\bdata-([\w-]+)=", merkmale))
+                marken.extend('data-' + n for n in re.findall(r'\bdata-([\w-]+)=', merkmale))
                 hatname = bool(re.search(r'\bname="[^"]+"', merkmale))
                 gefunden.setdefault(kennung, (art.lower(), name, marken, hatname))
         return gefunden
 
     def code(self, namen=()):
         if self._code is None:
-            self._code = "\n".join(
-                io.open(pfad, encoding="utf-8", errors="replace").read()
-                for pfad in self.statik.rglob("*.js")
+            self._code = '\n'.join(
+                open(pfad, encoding='utf-8', errors='replace').read()
+                for pfad in self.statik.rglob('*.js')
                 if not any(teil in pfad.parts for teil in FREMD)
             )
         # Inline-Skripte der Seite gehören dazu: Ein dort verdrahteter Knopf
         # wäre sonst ein Fehlalarm.
         teile = [self._code]
         for name in namen:
-            text = io.open(self.vorlagen / name, encoding="utf-8").read()
-            teile.extend(re.findall(r"<script[^>]*>(.*?)</script>", text, re.S))
-        return "\n".join(teile)
+            text = open(self.vorlagen / name, encoding='utf-8').read()
+            teile.extend(re.findall(r'<script[^>]*>(.*?)</script>', text, re.S))
+        return '\n'.join(teile)
 
     # ------------------------------------------------------------- Urteil
 
@@ -123,19 +122,19 @@ class Bedienelemente:
         praefixe = set()
         for text in re.findall(r"'([^'\n]{2,80})'|\"([^\"\n]{2,80})\"|`([^`\n]{2,80})`", code):
             wert = text[0] or text[1] or text[2]
-            if "${" in wert:
+            if '${' in wert:
                 # `${vorsilbe}-roughness` -> Suffix; `prop-region-${rid}` ->
                 # Präfix. Beides zugleich ist möglich.
-                kopf = wert.partition("${")[0]
+                kopf = wert.partition('${')[0]
                 if kopf:
-                    praefixe.add(kopf.rstrip("-"))
-                hinten = wert.rsplit("}", 1)[-1]
+                    praefixe.add(kopf.rstrip('-'))
+                hinten = wert.rsplit('}', 1)[-1]
                 if hinten:
-                    suffixe.add(hinten.lstrip("-"))
+                    suffixe.add(hinten.lstrip('-'))
                 continue
             literale.add(wert)
-            if wert.endswith("-"):
-                praefixe.add(wert.rstrip("-"))
+            if wert.endswith('-'):
+                praefixe.add(wert.rstrip('-'))
         return literale, suffixe, praefixe
 
     @staticmethod
@@ -143,16 +142,16 @@ class Bedienelemente:
         """Wie die Kennung im Code vorkommt — oder `None`."""
         literale, suffixe, praefixe = verzeichnis
         if kennung in literale:
-            return "woertlich"
-        teile = kennung.split("-")
+            return 'woertlich'
+        teile = kennung.split('-')
         for ab in range(1, len(teile)):
-            if "-".join(teile[ab:]) in suffixe:
-                return "zusammengesetzt"
+            if '-'.join(teile[ab:]) in suffixe:
+                return 'zusammengesetzt'
         for bis in range(len(teile) - 1, 0, -1):
-            if "-".join(teile[:bis]) in praefixe:
-                return "angehaengt"
+            if '-'.join(teile[:bis]) in praefixe:
+                return 'angehaengt'
         if kennung in code:
-            return "im Text"
+            return 'im Text'
         return None
 
     @staticmethod
@@ -163,7 +162,7 @@ class Bedienelemente:
         nichts über Bedienung sagen.
         """
         for marke in marken:
-            if marke and not marke.startswith("hb-") and marke in waehler:
+            if marke and not marke.startswith('hb-') and marke in waehler:
                 return True
         return False
 
@@ -171,7 +170,7 @@ class Bedienelemente:
     def waehler(code):
         """Klassen und data-Namen, über die Skripte Elemente greifen."""
         gefunden = set()
-        for treffer in re.findall(r"[.\[]([A-Za-z][\w-]{2,60})", code):
+        for treffer in re.findall(r'[.\[]([A-Za-z][\w-]{2,60})', code):
             gefunden.add(treffer)
         return gefunden
 
@@ -182,7 +181,7 @@ class Bedienelemente:
         erneut: 3,3 s für zwanzig Seiten statt 0,4 s. Die Inline-Skripte der
         einzelnen Seite kommen danach dazu, die sind klein.
         """
-        if getattr(self, "_index", None) is None:
+        if getattr(self, '_index', None) is None:
             code = self.code()
             self._index = (Bedienelemente.verzeichnis(code), Bedienelemente.waehler(code))
         return self._index
@@ -192,10 +191,10 @@ class Bedienelemente:
         namen = self.kette(seite)
         code = self.code(namen)
         (literale, suffixe, praefixe), waehler = self._grundindex()
-        inline = "\n".join(
+        inline = '\n'.join(
             re.findall(
-                r"<script[^>]*>(.*?)</script>",
-                "\n".join(io.open(self.vorlagen / n, encoding="utf-8").read() for n in namen),
+                r'<script[^>]*>(.*?)</script>',
+                '\n'.join(open(self.vorlagen / n, encoding='utf-8').read() for n in namen),
                 re.S,
             )
         )
@@ -210,6 +209,6 @@ class Bedienelemente:
         for kennung, (art, vorlage, marken, hatname) in sorted(self.elemente(namen).items()):
             if hatname or Bedienelemente.ueber_marke(marken, waehler):
                 continue
-            if Bedienelemente.erwaehnt(kennung, verzeichnis, code) in (None, "im Text"):
+            if Bedienelemente.erwaehnt(kennung, verzeichnis, code) in (None, 'im Text'):
                 stumm.append((kennung, art, vorlage))
         return stumm

@@ -24,13 +24,12 @@ import logging
 import os
 
 from django.conf import settings
-
 from humanbody_core import CharacterState, Gelenkanpassung
 
 from ..daten.ladeschloss import Ladeschloss
 from .charakterdaten import Charakterdaten
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Skelettnachfuehrung:
@@ -42,10 +41,10 @@ class Skelettnachfuehrung:
     #: Die Koerperart, in der das DEF-Skelett exportiert wurde. Sie ist die
     #: Ruhelage, nicht bloss eine Vorgabe: Wer hier etwas anderes einsetzt,
     #: verschiebt das Skelett schon vor dem ersten Regler.
-    RUHEART = {"female": "Female_Caucasian", "male": "Male_Caucasian"}
+    RUHEART = {'female': 'Female_Caucasian', 'male': 'Male_Caucasian'}
 
     @classmethod
-    def fuer(cls, geschlecht="female"):
+    def fuer(cls, geschlecht='female'):
         """Die Anpassung fuer dieses Geschlecht, oder ``None``.
 
         ``None`` heisst: Es gibt kein exportiertes Skelett (dann laeuft die
@@ -63,7 +62,7 @@ class Skelettnachfuehrung:
             return gebaut
 
         return (
-            cls._schloesser.einmal("skelett_%s" % geschlecht, lambda: cls._anpassung.get(geschlecht), bauen)
+            cls._schloesser.einmal('skelett_%s' % geschlecht, lambda: cls._anpassung.get(geschlecht), bauen)
             or None
         )
 
@@ -73,10 +72,10 @@ class Skelettnachfuehrung:
         if not knochen:
             return None
         zustand = CharacterState(Charakterdaten.morphdaten(), Charakterdaten.voreinstellungen())
-        zustand.set_body_type(cls.RUHEART.get(geschlecht, "Female_Caucasian"))
+        zustand.set_body_type(cls.RUHEART.get(geschlecht, 'Female_Caucasian'))
         anpassung = Gelenkanpassung(knochen, zustand.compute())
         logger.info(
-            "Gelenkanpassung %s bereit: %d Knochen, %d Netzpunkte",
+            'Gelenkanpassung %s bereit: %d Knochen, %d Netzpunkte',
             geschlecht,
             len(anpassung.namen),
             anpassung.punktzahl,
@@ -87,14 +86,14 @@ class Skelettnachfuehrung:
     def _skelettdatei(geschlecht):
         """Die ``bones``-Liste aus ``def_skeleton.json``, oder ``None``."""
         ordner = str(settings.HUMANBODY_DATA_DIR)
-        if geschlecht == "male":
-            ordner += "_male"
-        pfad = os.path.join(ordner, "def_skeleton.json")
+        if geschlecht == 'male':
+            ordner += '_male'
+        pfad = os.path.join(ordner, 'def_skeleton.json')
         if not os.path.isfile(pfad):
-            logger.warning("Kein DEF-Skelett unter %s — keine Nachfuehrung", pfad)
+            logger.warning('Kein DEF-Skelett unter %s — keine Nachfuehrung', pfad)
             return None
-        with open(pfad, "r", encoding="utf-8") as datei:
-            return json.load(datei).get("bones") or None
+        with open(pfad, encoding='utf-8') as datei:
+            return json.load(datei).get('bones') or None
 
     @classmethod
     def bewegte(cls, geschlecht, netz):

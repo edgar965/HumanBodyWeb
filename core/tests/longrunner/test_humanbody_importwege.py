@@ -66,17 +66,17 @@ Humanbodypfad.setzen()
 #: Module, die eine andere Umgebung brauchen (python10: Warp, Torch) oder
 #: Blender voraussetzen. Ihr Fehlen ist kein Befund dieses Tests.
 FREMD = (
-    "warp",
-    "torch",
-    "bpy",
-    "cv2",
-    "smplx",
-    "mediapipe",
-    "trimesh",
-    "pyrender",
-    "onnxruntime",
-    "yaml",
-    "playwright",
+    'warp',
+    'torch',
+    'bpy',
+    'cv2',
+    'smplx',
+    'mediapipe',
+    'trimesh',
+    'pyrender',
+    'onnxruntime',
+    'yaml',
+    'playwright',
 )
 
 
@@ -85,19 +85,19 @@ class JedesModulLaedtTest(SimpleTestCase):
 
     def test_skripte_werden_erkannt(self):
         """`download_all.py` MUSS als Skript gelten — sonst lädt es los."""
-        pfad = Humanbodybaum.wurzel("ASSETS_ROOT") / "assetCreator" / "GarmentFitter" / "download_all.py"
+        pfad = Humanbodybaum.wurzel('ASSETS_ROOT') / 'assetCreator' / 'GarmentFitter' / 'download_all.py'
         wurzel = Humanbodybaum.wurzel()
         self.assertTrue(pfad.exists(), pfad)
         self.assertTrue(
             self._ist_skript(pfad),
-            "download_all.py wird beim Import ausgeführt und lädt 20 Asset-Pakete in data/garment_library/",
+            'download_all.py wird beim Import ausgeführt und lädt 20 Asset-Pakete in data/garment_library/',
         )
         # Gegenprobe: ein gewöhnliches Modul ist KEIN Skript.
-        self.assertFalse(self._ist_skript(wurzel / "humanbody_core" / "quaternion.py"))
+        self.assertFalse(self._ist_skript(wurzel / 'humanbody_core' / 'quaternion.py'))
 
     @staticmethod
     def _ist_skript(pfad):
-        return Humanbodybaum.ist_skript(ast.parse(pfad.read_text(encoding="utf-8")))
+        return Humanbodybaum.ist_skript(ast.parse(pfad.read_text(encoding='utf-8')))
 
     def test_jedes_modul_laedt(self):
         kaputt = []
@@ -107,10 +107,10 @@ class JedesModulLaedtTest(SimpleTestCase):
             except ImportError as fehler:
                 if any(f in str(fehler) for f in FREMD):
                     continue  # andere Umgebung, nicht unser Befund
-                kaputt.append("%s: %s" % (name, fehler))
+                kaputt.append('%s: %s' % (name, fehler))
             except Exception as fehler:  # noqa: BLE001
-                kaputt.append("%s: %s: %s" % (name, type(fehler).__name__, fehler))
-        self.assertEqual(kaputt, [], "Diese Module laden nicht: %s" % "; ".join(kaputt))
+                kaputt.append('%s: %s: %s' % (name, type(fehler).__name__, fehler))
+        self.assertEqual(kaputt, [], 'Diese Module laden nicht: %s' % '; '.join(kaputt))
 
 
 class HumanbodyLokaleImporteTest(SimpleTestCase):
@@ -127,7 +127,7 @@ class HumanbodyLokaleImporteTest(SimpleTestCase):
     def _ins_leere(self, dateien):
         kaputt = []
         for pfad in dateien:
-            baum = ast.parse(pfad.read_text(encoding="utf-8"))
+            baum = ast.parse(pfad.read_text(encoding='utf-8'))
             for knoten in ast.walk(baum):
                 if not isinstance(knoten, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
@@ -136,8 +136,8 @@ class HumanbodyLokaleImporteTest(SimpleTestCase):
                         continue
                     if not self._loesbar(pfad, innen):
                         kaputt.append(
-                            "%s:%d  from %s%s"
-                            % (pfad.name, innen.lineno, "." * innen.level, innen.module or "")
+                            '%s:%d  from %s%s'
+                            % (pfad.name, innen.lineno, '.' * innen.level, innen.module or '')
                         )
         return kaputt
 
@@ -147,24 +147,24 @@ class HumanbodyLokaleImporteTest(SimpleTestCase):
         ziel = pfad.parent
         for _ in range(knoten.level - 1):
             ziel = ziel.parent
-        kopf = (knoten.module or "").split(".")[0]
+        kopf = (knoten.module or '').split('.')[0]
         if not kopf:
             return True  # `from . import x` — Paket selbst
-        return (ziel / (kopf + ".py")).exists() or (ziel / kopf).is_dir()
+        return (ziel / (kopf + '.py')).exists() or (ziel / kopf).is_dir()
 
     def test_kein_lokaler_import_zeigt_ins_leere(self):
         kaputt = self._ins_leere(p for _, p in Humanbodybaum.module())
-        self.assertEqual(kaputt, [], "Import in einer Funktion zeigt ins Leere: %s" % "; ".join(kaputt))
+        self.assertEqual(kaputt, [], 'Import in einer Funktion zeigt ins Leere: %s' % '; '.join(kaputt))
 
     def test_die_pruefung_erkennt_eine_falsche_ebene(self):
         """Gegenprobe: Genau der Fall vom 31.08.2026 MUSS auffallen."""
-        knoten = ast.parse("from .nachbarsuche import Nachbarsuche").body[0]
-        falsch = Humanbodybaum.wurzel() / "humanbody_core" / "cloth" / "netzpflege.py"
-        richtig = Humanbodybaum.wurzel() / "humanbody_core" / "koerperabstand.py"
+        knoten = ast.parse('from .nachbarsuche import Nachbarsuche').body[0]
+        falsch = Humanbodybaum.wurzel() / 'humanbody_core' / 'cloth' / 'netzpflege.py'
+        richtig = Humanbodybaum.wurzel() / 'humanbody_core' / 'koerperabstand.py'
         self.assertFalse(
-            self._loesbar(falsch, knoten), "cloth/nachbarsuche.py gibt es nicht — muss auffallen"
+            self._loesbar(falsch, knoten), 'cloth/nachbarsuche.py gibt es nicht — muss auffallen'
         )
-        self.assertTrue(self._loesbar(richtig, knoten), "humanbody_core/nachbarsuche.py gibt es sehr wohl")
+        self.assertTrue(self._loesbar(richtig, knoten), 'humanbody_core/nachbarsuche.py gibt es sehr wohl')
 
 
 class DateienLesbarTest(SimpleTestCase):
@@ -181,7 +181,7 @@ class DateienLesbarTest(SimpleTestCase):
 
     def test_alle_dateien_lesbar(self):
         kaputt = Humanbodybaum.unlesbare()
-        self.assertEqual(kaputt, [], "Diese Dateien liessen sich nicht zerlegen: %s" % "; ".join(kaputt))
+        self.assertEqual(kaputt, [], 'Diese Dateien liessen sich nicht zerlegen: %s' % '; '.join(kaputt))
 
     def test_die_pruefung_findet_ueberhaupt_dateien(self):
         """Ein leerer Baum wuerde sonst als „alles lesbar" durchgehen."""

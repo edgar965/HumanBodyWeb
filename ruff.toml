@@ -2,3 +2,8 @@
 # Ausnahmen über [lint.extend-per-file-ignores], sonst ersetzen sie die der Vorgabe.
 extend = "A:/shared/djangoBase/djangobase/ruff_vorgabe.toml"
 target-version = "py314"  # der Interpreter des Projekts
+
+[format]
+# Das Projekt schreibt einfache Anführungszeichen; mehrere Tests lesen den Quelltext
+# und suchen darin nach '…'-Ausdrücken (18.09.2026). Die Vorgabe (doppelt) brach 13 davon.
+quote-style = "single"

@@ -34,10 +34,10 @@ class Fortschrittsleser:
         gelegentlich `Frames:` — und manchmal ohne Gesamtzahl."""
         teile = zeile.split()
         for i, teil in enumerate(teile):
-            if not teil.lower().startswith("frame") or i + 1 >= len(teile):
+            if not teil.lower().startswith('frame') or i + 1 >= len(teile):
                 continue
             try:
-                zahlen = teile[i + 1].replace(":", "").split("/")
+                zahlen = teile[i + 1].replace(':', '').split('/')
                 aktuell = int(zahlen[0])
                 gesamt = int(zahlen[1]) if len(zahlen) > 1 else 0
                 return aktuell, gesamt
@@ -52,7 +52,7 @@ class Fortschrittsleser:
 
         Gedrosselt: Bei 30 Bildern je Sekunde waeren es sonst 30 Datenbank-
         schreibvorgaenge je Sekunde."""
-        if "rame" not in zeile:
+        if 'rame' not in zeile:
             return None
         jetzt = jetzt or time.time()
         if jetzt - self.letzte_meldung < self.MINDESTABSTAND_S:
@@ -70,5 +70,5 @@ class Fortschrittsleser:
         vergangen = max(jetzt - self.beginn, 0.1)
         rate = aktuell / vergangen
         rest = int((gesamt - aktuell) / max(rate, 0.01))
-        text = "3D estimation: %d / %d frames — %.1f fps, ~%ds left" % (aktuell, gesamt, rate, rest)
+        text = '3D estimation: %d / %d frames — %.1f fps, ~%ds left' % (aktuell, gesamt, rate, rest)
         return min(prozent, self.OBERGRENZE), text

@@ -20,7 +20,7 @@ class Quelltext:
         from django.conf import settings
 
         stamm = os.path.dirname(os.path.abspath(str(settings.BASE_DIR)))
-        with open(os.path.join(stamm, *teile), "r", encoding="utf-8") as datei:
+        with open(os.path.join(stamm, *teile), encoding='utf-8') as datei:
             return datei.read()
 
     @staticmethod
@@ -29,9 +29,9 @@ class Quelltext:
 
         Sonst findet ein Test seine eigenen Begriffe in der Begruendung, die
         erklaert, warum sie NICHT benutzt werden (Regel `analysewerkzeuge`)."""
-        ohne = re.sub(r'"""..*?"""', "", quelle, flags=re.S)
-        ohne = re.sub(r"'''..*?'''", "", ohne, flags=re.S)
-        return re.sub(r"#.*", "", ohne)
+        ohne = re.sub(r'"""..*?"""', '', quelle, flags=re.S)
+        ohne = re.sub(r"'''..*?'''", '', ohne, flags=re.S)
+        return re.sub(r'#.*', '', ohne)
 
     @classmethod
     def bereinigt(cls, *teile):

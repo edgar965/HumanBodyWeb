@@ -28,7 +28,7 @@ class DerVideoschreiber(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Videoschreiber = Modelphysik.modul("videoschreiber").Videoschreiber
+        cls.Videoschreiber = Modelphysik.modul('videoschreiber').Videoschreiber
 
     def test_rendern_gibt_rgb_ohne_alpha_als_uint8(self):
         farbe = np.zeros((4, 6, 4), dtype=np.float32)
@@ -46,20 +46,20 @@ class DerVideoschreiber(SimpleTestCase):
     def test_die_skripte_rendern_und_schreiben_nur_ueber_den_videoschreiber(self):
         wurzel = Path(Modelphysik.ORDNER).parent
         for datei in (
-            "ModelPhysik/angezogen_video.py",
-            "ModelPhysik/bake_nach_video.py",
-            "ModelPhysik/filmrender.py",
-            "kleiderPhysik/stofffilm_video.py",
+            'ModelPhysik/angezogen_video.py',
+            'ModelPhysik/bake_nach_video.py',
+            'ModelPhysik/filmrender.py',
+            'kleiderPhysik/stofffilm_video.py',
         ):
-            text = (wurzel / datei).read_text(encoding="utf-8")
-            self.assertIn("Videoschreiber.rendern(", text, datei)
-            self.assertNotIn("cv2.VideoWriter", text, datei)
-            self.assertNotIn("pyrender lieferte kein Bild", text, datei)
+            text = (wurzel / datei).read_text(encoding='utf-8')
+            self.assertIn('Videoschreiber.rendern(', text, datei)
+            self.assertNotIn('cv2.VideoWriter', text, datei)
+            self.assertNotIn('pyrender lieferte kein Bild', text, datei)
 
 
 class DasBakeAufDemBoden(SimpleTestCase):
     def test_massstab_aus_dem_ersten_bild_mitte_und_boden_bei_null(self):
-        Bakedatei = Modelphysik.modul("bakedatei").Bakedatei
+        Bakedatei = Modelphysik.modul('bakedatei').Bakedatei
         bake = Bakedatei.__new__(Bakedatei)
         # Zwei Bilder, drei Punkte: Hoehe 20 Einheiten, im zweiten Bild 5 nach +x.
         bake.daten = np.array(

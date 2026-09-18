@@ -68,11 +68,11 @@ class StreusummeTest(SimpleTestCase):
 
     def test_die_module_benutzen_den_helfer(self):
         # `hautmaske` -> `maskengeometrie` (12.09.2026, je Klasse eine Datei).
-        for name in ("hautbahn", "maskengeometrie", "stoffgrenze", "figurnetze"):
-            text = (ORDNER / (name + ".py")).read_text(encoding="utf-8")
-            self.assertNotIn("np.add.at", text, name)
-            self.assertIn("Streusumme", text, name)
+        for name in ('hautbahn', 'maskengeometrie', 'stoffgrenze', 'figurnetze'):
+            text = (ORDNER / (name + '.py')).read_text(encoding='utf-8')
+            self.assertNotIn('np.add.at', text, name)
+            self.assertIn('Streusumme', text, name)
 
     @staticmethod
     def _modul():
-        return Modelphysik.modul("streusumme").Streusumme
+        return Modelphysik.modul('streusumme').Streusumme

@@ -16,7 +16,7 @@ from django.conf import settings
 class Modelphysik:
     """`Modelphysik.modul('hautmaske')` — das Modul, importierbar."""
 
-    ORDNER = settings.BASE_DIR / "TheatreJS" / "ModelPhysik"
+    ORDNER = settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik'
 
     @classmethod
     def modul(cls, name):

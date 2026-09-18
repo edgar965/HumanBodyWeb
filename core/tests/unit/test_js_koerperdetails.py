@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "koerperdetails.js")
+MODUL = Jsmodul('gemeinsam', 'koerperdetails.js')
 
 SKRIPT = """
 const { Koerperdetails } = await import(MODUL);
@@ -123,6 +123,6 @@ console.log(JSON.stringify({ ok: true, bewegt: Koerperdetails.strecken(p.slice()
 class KoerperdetailsTest(SimpleTestCase):
     def test_farben_und_laengen(self):
         aus = MODUL.laufen(SKRIPT)
-        self.assertTrue(aus["ok"])
+        self.assertTrue(aus['ok'])
         # Spitze des Streifens (2) + freie Nagelecken (2); Wurzeln bleiben.
-        self.assertEqual(aus["bewegt"], 4)
+        self.assertEqual(aus['bewegt'], 4)

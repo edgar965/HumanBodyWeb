@@ -42,7 +42,7 @@ class StoffvorschauTest(SimpleTestCase):
         breiter = punkte.copy()
         breiter[:, 0] *= 2.0  # Wuerfel doppelt so breit
         neu = v.punkte(breiter)
-        self.assertGreater(float(np.abs(neu - stoff).max()), 0.4, "Der Stoff ist dem Koerper nicht gefolgt")
+        self.assertGreater(float(np.abs(neu - stoff).max()), 0.4, 'Der Stoff ist dem Koerper nicht gefolgt')
         # Und er bleibt AUSSEN: x muss mitgewachsen sein, nicht schrumpfen.
         self.assertGreater(float(neu[:, 0].min()), 0.9)
 
@@ -68,10 +68,10 @@ class StoffvorschauTest(SimpleTestCase):
         v = S(punkte, dreiecke, stoff)
         punkte[:, 0] *= 5.0  # der Aufrufer schreibt weiter
         self.assertLess(
-            float(np.abs(v.grundkoerper[:, 0]).max()), 0.51, "Die Bindung haengt am Puffer des Aufrufers"
+            float(np.abs(v.grundkoerper[:, 0]).max()), 0.51, 'Die Bindung haengt am Puffer des Aufrufers'
         )
         stoff[0, 0] = 99.0
-        self.assertLess(float(v.stoff.max()), 1.0, "Das Stoffnetz haengt am Puffer des Aufrufers")
+        self.assertLess(float(v.stoff.max()), 1.0, 'Das Stoffnetz haengt am Puffer des Aufrufers')
 
     def test_achsen_hin_und_zurueck(self):
         """Falle 2: Z oben <-> Y oben, und die Umkehrung muss treffen."""
@@ -103,13 +103,13 @@ class StoffvorschauTest(SimpleTestCase):
         S = StoffvorschauTest._vorschau()
         punkte, dreiecke = Kunstkoerper.wuerfel()
         nah = S(punkte, dreiecke, np.array([[0.52, 0.3, 0.0], [0.52, 0.6, 0.2]]))
-        self.assertTrue(nah.sitzt()["sitzt"])
-        self.assertLess(nah.sitzt()["median_mm"], 50.0)
+        self.assertTrue(nah.sitzt()['sitzt'])
+        self.assertLess(nah.sitzt()['median_mm'], 50.0)
 
         # Derselbe Stoff, aber in Zentimetern gelesen: 100x zu gross.
         falsch = S(punkte, dreiecke, np.array([[52.0, 30.0, 0.0], [52.0, 60.0, 20.0]]))
-        self.assertFalse(falsch.sitzt()["sitzt"])
-        self.assertGreater(falsch.sitzt()["median_mm"], 1000.0)
+        self.assertFalse(falsch.sitzt()['sitzt'])
+        self.assertGreater(falsch.sitzt()['median_mm'], 1000.0)
 
     def test_falsche_punktzahl_wird_gemeldet(self):
         """Ein Koerper anderer Bauart passt nicht — und das muss knallen."""

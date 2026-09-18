@@ -28,11 +28,9 @@ durchläuft.
 """
 
 from django.test import SimpleTestCase
-
 from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
 from humanbody_core.skeleton.face_blendshapes import Gesichtsformen
 from humanbody_core.skeleton.retarget.zusammenfuegen import merge_retargeted
-
 
 #: Zehn SMPL-X-Ausdruckswerte je Bild — die Form, die SMPLest-X liefert.
 EIN_BILD = [0.0] * 10
@@ -56,14 +54,14 @@ class JederWegLiefertDenDatensatz(SimpleTestCase):
         self.assertEqual(raus.frame_count, 4)
 
     def test_das_altformat_gibt_bewegungsspuren(self):
-        raus = Gesichtsformen.blendshapes_to_bone_tracks({"blendshape_names": ["jawOpen"], "frames": []})
+        raus = Gesichtsformen.blendshapes_to_bone_tracks({'blendshape_names': ['jawOpen'], 'frames': []})
         self.assertIsInstance(raus, Bewegungsspuren)
 
     def test_jeder_weg_traegt_alle_sechs_felder(self):
         for reihe in ([], [EIN_BILD] * 2):
             raus = Gesichtsformen.expression_to_bone_tracks(reihe, fps=30.0)
             self.assertEqual(
-                sorted(raus.als_dict()), sorted(Bewegungsspuren.FELDER), "Reihe mit %d Bildern" % len(reihe)
+                sorted(raus.als_dict()), sorted(Bewegungsspuren.FELDER), 'Reihe mit %d Bildern' % len(reihe)
             )
 
 
@@ -80,9 +78,9 @@ class EinLeeresGesichtBrichtDasMischenNicht(SimpleTestCase):
         return Bewegungsspuren(
             duration=bilder / 30.0,
             times=[i / 30.0 for i in range(bilder)],
-            tracks={"DEF-spine": [0.0, 0.0, 0.0, 1.0] * bilder},
+            tracks={'DEF-spine': [0.0, 0.0, 0.0, 1.0] * bilder},
             frame_count=bilder,
-            mapped_bones=["DEF-spine"],
+            mapped_bones=['DEF-spine'],
         )
 
     def test_ein_leeres_gesicht_laesst_sich_mischen(self):
@@ -94,7 +92,7 @@ class EinLeeresGesichtBrichtDasMischenNicht(SimpleTestCase):
             self.koerper(bilder=5), Gesichtsformen.expression_to_bone_tracks([], fps=30.0)
         )
         self.assertEqual(gemischt.frame_count, 5)
-        self.assertIn("DEF-spine", gemischt.tracks)
+        self.assertIn('DEF-spine', gemischt.tracks)
 
     def test_ein_woerterbuch_wuerde_hier_werfen(self):
         """Die Gegenprobe: Mit dem alten Rückgabewert bricht es.
@@ -103,6 +101,6 @@ class EinLeeresGesichtBrichtDasMischenNicht(SimpleTestCase):
         Wörterbücher irgendwann doch verträgt — dann prüft sie nichts
         mehr.
         """
-        altes_ergebnis = {"duration": 0, "times": [], "tracks": {}, "frame_count": 0, "mapped_bones": []}
+        altes_ergebnis = {'duration': 0, 'times': [], 'tracks': {}, 'frame_count': 0, 'mapped_bones': []}
         with self.assertRaises(AttributeError):
             merge_retargeted(self.koerper(), altes_ergebnis)

@@ -38,12 +38,12 @@ class Auswahl(unittest.TestCase):
     databases = set()
 
     def test_ausdruecklich_genannt_laeuft(self):
-        self.assertTrue(angefordert(["manage.py", "test", "core.tests.longrunner"], {}))
+        self.assertTrue(angefordert(['manage.py', 'test', 'core.tests.longrunner'], {}))
 
     def test_teilweise_genannt_laeuft_auch(self):
         """Ein einzelnes Modul daraus ist auch eine Anforderung."""
         self.assertTrue(
-            angefordert(["manage.py", "test", "core.tests.longrunner.test_umafigur.Figurbau"], {})
+            angefordert(['manage.py', 'test', 'core.tests.longrunner.test_umafigur.Figurbau'], {})
         )
 
     def test_sammellauf_ohne_ziel_laeuft_nicht(self):
@@ -52,18 +52,18 @@ class Auswahl(unittest.TestCase):
         Genau so ruft djangoBases Reiter „Alles" — mit LEERER Zielliste
         (`testkategorien.sammel(python, 'alles', …, [])`).
         """
-        self.assertFalse(angefordert(["manage.py", "test"], {}))
+        self.assertFalse(angefordert(['manage.py', 'test'], {}))
 
     def test_andere_ziele_laufen_nicht_mit(self):
-        self.assertFalse(angefordert(["manage.py", "test", "core.tests.unit", "core.tests.component"], {}))
+        self.assertFalse(angefordert(['manage.py', 'test', 'core.tests.unit', 'core.tests.component'], {}))
 
     def test_der_schalter_zieht(self):
-        for wert in ("1", "true", "ja"):
-            self.assertTrue(angefordert(["manage.py", "test"], {SCHALTER: wert}), wert)
+        for wert in ('1', 'true', 'ja'):
+            self.assertTrue(angefordert(['manage.py', 'test'], {SCHALTER: wert}), wert)
 
     def test_ein_leerer_schalter_zieht_nicht(self):
-        for wert in ("", "0", "nein"):
-            self.assertFalse(angefordert(["manage.py", "test"], {SCHALTER: wert}), repr(wert))
+        for wert in ('', '0', 'nein'):
+            self.assertFalse(angefordert(['manage.py', 'test'], {SCHALTER: wert}), repr(wert))
 
     def test_das_eigene_programm_zaehlt_nicht(self):
         """`argv[0]` ist der Programmpfad.
@@ -72,10 +72,10 @@ class Auswahl(unittest.TestCase):
         sonst jeder Lauf ein ausdrücklicher — die Umstellung hätte nichts
         gebracht, und die Ursache wäre nirgends zu sehen.
         """
-        self.assertFalse(angefordert(["/pfad/mit/longrunner/manage.py", "test"], {}))
+        self.assertFalse(angefordert(['/pfad/mit/longrunner/manage.py', 'test'], {}))
 
     def test_die_marke_ist_der_paketname(self):
-        self.assertIn(MARKE, "core.tests.longrunner")
+        self.assertIn(MARKE, 'core.tests.longrunner')
 
 
 class WeitereWaechter(unittest.TestCase):
@@ -85,7 +85,7 @@ class WeitereWaechter(unittest.TestCase):
 
     #: Paket -> Marke. Absichtlich hier ausgeschrieben: Nimmt ein Paket die
     #: falsche Marke, laeuft es nie und alles bleibt grün.
-    PAKETE = {"automated": "core/tests/automated", "performance": "core/tests/performance"}
+    PAKETE = {'automated': 'core/tests/automated', 'performance': 'core/tests/performance'}
 
     def _waechter(self, marke):
         ordner = os.path.join(os.path.dirname(os.path.dirname(__file__)), marke)
@@ -94,11 +94,11 @@ class WeitereWaechter(unittest.TestCase):
     def test_jedes_paket_laeuft_bei_seinem_eigenen_ziel(self):
         for marke, ziel in self.PAKETE.items():
             waechter = self._waechter(marke)
-            self.assertTrue(waechter.angefordert(["manage.py", "test", ziel.replace("/", ".")], {}), marke)
+            self.assertTrue(waechter.angefordert(['manage.py', 'test', ziel.replace('/', '.')], {}), marke)
 
     def test_keines_laeuft_beim_sammellauf(self):
         for marke in self.PAKETE:
-            self.assertFalse(self._waechter(marke).angefordert(["manage.py", "test"], {}), marke)
+            self.assertFalse(self._waechter(marke).angefordert(['manage.py', 'test'], {}), marke)
 
     def test_keines_haengt_an_der_marke_des_anderen(self):
         """`longrunner` im Aufruf darf `automated` NICHT mitziehen.
@@ -108,22 +108,22 @@ class WeitereWaechter(unittest.TestCase):
         """
         for marke in self.PAKETE:
             self.assertFalse(
-                self._waechter(marke).angefordert(["manage.py", "test", "core.tests.longrunner"], {}), marke
+                self._waechter(marke).angefordert(['manage.py', 'test', 'core.tests.longrunner'], {}), marke
             )
 
     def test_der_gemeinsame_schalter_zieht_alle(self):
         """Ein naechtlicher Lauf soll wirklich alles fahren."""
         for marke in self.PAKETE:
             self.assertTrue(
-                self._waechter(marke).angefordert(["manage.py", "test"], {Nurgemeint.SCHALTER: "1"}), marke
+                self._waechter(marke).angefordert(['manage.py', 'test'], {Nurgemeint.SCHALTER: '1'}), marke
             )
 
     def test_die_pakete_fuehren_ihren_waechter_wirklich(self):
         """Der Test prueft sonst nur seine eigene Kopie der Entscheidung."""
         from core.tests import automated, performance
 
-        for paket, marke in ((automated, "automated"), (performance, "performance")):
-            self.assertTrue(hasattr(paket, "load_tests"), marke)
+        for paket, marke in ((automated, 'automated'), (performance, 'performance')):
+            self.assertTrue(hasattr(paket, 'load_tests'), marke)
             self.assertEqual(paket.WAECHTER.marke, marke)
 
     def test_jedes_paket_findet_seine_module(self):
@@ -156,17 +156,17 @@ class DiscoveryMitPaketnamen(unittest.TestCase):
         from core.tests.longrunner import WAECHTER
 
         lader = unittest.TestLoader()
-        with mock.patch.dict(os.environ, {Nurgemeint.SCHALTER: "1"}):
+        with mock.patch.dict(os.environ, {Nurgemeint.SCHALTER: '1'}):
             suite = WAECHTER.sammeln(lader, muster)
         return lader, list(suite)
 
     def test_ein_modul_mit_import_ueber_die_paketgrenze_laedt(self):
-        lader, gefunden = self._laden("test_mhpfade.py")
-        self.assertEqual(lader.errors, [], "Der Loader konnte das Modul nicht importieren.")
+        lader, gefunden = self._laden('test_mhpfade.py')
+        self.assertEqual(lader.errors, [], 'Der Loader konnte das Modul nicht importieren.')
         namen = str(gefunden)
-        self.assertNotIn("_FailedTest", namen)
+        self.assertNotIn('_FailedTest', namen)
         self.assertIn(
-            "test_mhpfade", namen, "Das Muster hat gar nichts getroffen — dann prueft dieser Fall nichts."
+            'test_mhpfade', namen, 'Das Muster hat gar nichts getroffen — dann prueft dieser Fall nichts.'
         )
 
     def test_ohne_anforderung_kommt_nichts(self):
@@ -174,8 +174,8 @@ class DiscoveryMitPaketnamen(unittest.TestCase):
         from core.tests.longrunner import WAECHTER
 
         with (
-            mock.patch.dict(os.environ, {Nurgemeint.SCHALTER: ""}),
-            mock.patch("sys.argv", ["manage.py", "test"]),
+            mock.patch.dict(os.environ, {Nurgemeint.SCHALTER: ''}),
+            mock.patch('sys.argv', ['manage.py', 'test']),
         ):
-            suite = WAECHTER.sammeln(unittest.TestLoader(), "test_mhpfade.py")
+            suite = WAECHTER.sammeln(unittest.TestLoader(), 'test_mhpfade.py')
         self.assertEqual(list(suite), [])

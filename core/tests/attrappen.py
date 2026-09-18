@@ -19,18 +19,18 @@ auf eine Meldung je Sekunde.
 class AuftragsAttrappe:
     """Ein `BVHJob`-Doppel: nur die Felder, die die Pipelines anfassen."""
 
-    def __init__(self, pipeline="v4", params=None, kennung: "int | str" = 7, name="tanz.mp4"):
+    def __init__(self, pipeline='v4', params=None, kennung: int | str = 7, name='tanz.mp4'):
         self.id = kennung
         self.name = name
         self.pipeline = pipeline
         self.pipeline_params = params or {}
-        self.video_file = "video.mp4"
-        self.status = ""
+        self.video_file = 'video.mp4'
+        self.status = ''
         self.progress = 0
-        self.progress_detail = ""
-        self.bvh_file = ""
-        self.bvh_file_face = ""
-        self.bvh_file_hands = ""
+        self.progress_detail = ''
+        self.bvh_file = ''
+        self.bvh_file_face = ''
+        self.bvh_file_hands = ''
         self.bvh_file_personen = []
         #: Wie oft `save()` gerufen wurde. Mehrere Prüfungen hängen daran.
         self.speicherungen = 0

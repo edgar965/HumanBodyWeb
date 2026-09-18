@@ -25,7 +25,7 @@ class LangsamLadendeDaten:
     def load(self):
         # Lang genug, dass ein zweiter Thread sicher dazwischenkommt.
         threading.Event().wait(0.05)
-        self.packs = ["pack"]
+        self.packs = ['pack']
         self.geladen = True
 
 
@@ -45,7 +45,7 @@ class CharakterdatenNebenlaeufigTest(unittest.TestCase):
             daten = Charakterdaten.morphdaten()
             gesehen.append((daten.geladen, list(daten.packs)))
 
-        with mock.patch("core.dienste.charakterdaten.MorphData", LangsamLadendeDaten):
+        with mock.patch('core.dienste.charakterdaten.MorphData', LangsamLadendeDaten):
             threads = [threading.Thread(target=holen) for _ in range(8)]
             for t in threads:
                 t.start()
@@ -54,8 +54,8 @@ class CharakterdatenNebenlaeufigTest(unittest.TestCase):
 
         self.assertEqual(len(gesehen), 8)
         for geladen, packs in gesehen:
-            self.assertTrue(geladen, "ungeladene Daten waren sichtbar")
-            self.assertEqual(packs, ["pack"])
+            self.assertTrue(geladen, 'ungeladene Daten waren sichtbar')
+            self.assertEqual(packs, ['pack'])
 
     def test_nur_einmal_geladen(self):
         """Acht gleichzeitige Aufrufe duerfen die Daten nicht achtmal laden."""
@@ -66,7 +66,7 @@ class CharakterdatenNebenlaeufigTest(unittest.TestCase):
                 anzahl.append(1)
                 super().load()
 
-        with mock.patch("core.dienste.charakterdaten.MorphData", Zaehlend):
+        with mock.patch('core.dienste.charakterdaten.MorphData', Zaehlend):
             threads = [threading.Thread(target=Charakterdaten.morphdaten) for _ in range(8)]
             for t in threads:
                 t.start()
@@ -76,11 +76,11 @@ class CharakterdatenNebenlaeufigTest(unittest.TestCase):
         self.assertEqual(sum(anzahl), 1)
 
     def test_zweiter_aufruf_liefert_dasselbe_objekt(self):
-        with mock.patch("core.dienste.charakterdaten.MorphData", LangsamLadendeDaten):
+        with mock.patch('core.dienste.charakterdaten.MorphData', LangsamLadendeDaten):
             erst = Charakterdaten.morphdaten()
             zweit = Charakterdaten.morphdaten()
         self.assertIs(erst, zweit)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

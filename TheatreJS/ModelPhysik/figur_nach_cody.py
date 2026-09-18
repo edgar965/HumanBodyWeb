@@ -31,37 +31,36 @@ import sys
 from collections import namedtuple
 
 import numpy as np
-
-from figur_nach_fps import KETTE, ERSATZELTERN, _HAND_KETTE
+from figur_nach_fps import _HAND_KETTE, ERSATZELTERN, KETTE
 from hautnetz import HAUT, Hautnetz
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 WURZEL = {
-    "female": r"A:\3DTools\HumanBody\data\humanBody",
-    "male": r"A:\3DTools\HumanBody\data\humanBody_male",
+    'female': r'A:\3DTools\HumanBody\data\humanBody',
+    'male': r'A:\3DTools\HumanBody\data\humanBody_male',
 }
-ZIEL = os.path.join(ORDNER, "cody")
+ZIEL = os.path.join(ORDNER, 'cody')
 
 
 #: Was `Codyfigur.schreiben` ablegt: die zwei Dateipfade (`anim` ist
 #: `None` ohne Bewegung), die Gewichtsmatrix und die Punkte ohne Gewicht.
-Codyausgabe = namedtuple("Codyausgabe", "rig anim gewichte leer")
+Codyausgabe = namedtuple('Codyausgabe', 'rig anim gewichte leer')
 
 
 class Codyfigur:
     """Netz, Gewichte, Skelett und Bewegung in der Form von `fast-cody`."""
 
-    def __init__(self, geschlecht="female", bauart=None, mit_fingern=False):
+    def __init__(self, geschlecht='female', bauart=None, mit_fingern=False):
         self.wurzel = WURZEL[geschlecht]
         self.geschlecht = geschlecht
         netz = Hautnetz(self.wurzel, bauart=bauart, geschlecht=geschlecht)
         self.punkte, self.dreiecke, _ = netz.aussenhaut()
         self.gewaehlt = self._hautindizes(netz)
-        rohbau = json.load(open(os.path.join(self.wurzel, "def_skeleton.json")))
-        if isinstance(rohbau, dict) and "bones" in rohbau:
-            rohbau = rohbau["bones"]
+        rohbau = json.load(open(os.path.join(self.wurzel, 'def_skeleton.json')))
+        if isinstance(rohbau, dict) and 'bones' in rohbau:
+            rohbau = rohbau['bones']
         if isinstance(rohbau, list):
-            rohbau = {b["name"]: b for b in rohbau}
+            rohbau = {b['name']: b for b in rohbau}
         self.knochen = rohbau
         self.namen = self._auswahl(mit_fingern)
 
@@ -89,7 +88,7 @@ class Codyfigur:
         def eintragen(name):
             if name in gesetzt or name not in self.knochen:
                 return
-            elternteil = ERSATZELTERN.get(name, self.knochen[name].get("parent"))
+            elternteil = ERSATZELTERN.get(name, self.knochen[name].get('parent'))
             if elternteil in kette:
                 eintragen(elternteil)
             if name in gesetzt:
@@ -110,8 +109,8 @@ class Codyfigur:
         an den naechsten Vorfahren AB, statt es zu verlieren: Sonst haette
         eine Hand Zeilensumme 0,3 und fiele beim Skinning zusammen.
         """
-        tabelle = json.load(open(os.path.join(self.wurzel, "skin_weights_base.json")))
-        namen, roh = tabelle["bone_names"], tabelle["weights"]
+        tabelle = json.load(open(os.path.join(self.wurzel, 'skin_weights_base.json')))
+        namen, roh = tabelle['bone_names'], tabelle['weights']
         spalte = {name: i for i, name in enumerate(self.namen)}
         umleitung = {}
         for name in namen:
@@ -120,7 +119,7 @@ class Codyfigur:
                 if lauf in spalte:
                     ziel = spalte[lauf]
                     break
-                lauf = (self.knochen.get(lauf) or {}).get("parent")
+                lauf = (self.knochen.get(lauf) or {}).get('parent')
             umleitung[name] = ziel
 
         aus = np.zeros((len(self.punkte), len(self.namen)))
@@ -137,8 +136,8 @@ class Codyfigur:
     def _paare(eintrag, namen):
         """(Knochenname, Gewicht) — die Tabelle kennt drei Schreibweisen."""
         if isinstance(eintrag, dict):
-            if "bones" in eintrag:
-                return list(zip(eintrag["bones"], eintrag["weights"]))
+            if 'bones' in eintrag:
+                return list(zip(eintrag['bones'], eintrag['weights']))
             return list(eintrag.items())
         if eintrag and isinstance(eintrag[0], (list, tuple)):
             return [(namen[int(i)], w) for i, w in eintrag]
@@ -160,7 +159,7 @@ class Codyfigur:
             spur = (spuren or {}).get(name)
             if spur is not None:
                 return self.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
-            return Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
+            return Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
 
         return Knochenwelt.loesen(self.knochen, self.namen, lokal, ort)
 
@@ -208,9 +207,9 @@ class Codyfigur:
         nummer = {n: i for i, n in enumerate(self.namen)}
         aus = []
         for name in self.namen:
-            lauf = ERSATZELTERN.get(name, self.knochen[name].get("parent"))
+            lauf = ERSATZELTERN.get(name, self.knochen[name].get('parent'))
             while lauf and lauf not in nummer:
-                lauf = (self.knochen.get(lauf) or {}).get("parent")
+                lauf = (self.knochen.get(lauf) or {}).get('parent')
             aus.append(nummer.get(lauf, -1) if lauf else -1)
         return np.array(aus, dtype=np.int64)
 
@@ -252,45 +251,45 @@ class Codyfigur:
         os.makedirs(ordner, exist_ok=True)
         gewichte, leer = self.gewichte()
         p0 = self.ruhelagen()
-        rig = os.path.join(ordner, "hb_%s_rig.json" % self.geschlecht)
-        with open(rig, "w") as datei:
+        rig = os.path.join(ordner, 'hb_%s_rig.json' % self.geschlecht)
+        with open(rig, 'w') as datei:
             json.dump(
                 {
-                    "V": self.punkte.tolist(),
-                    "F": self.dreiecke.tolist(),
-                    "W": gewichte.tolist(),
-                    "p0": p0.tolist(),
-                    "lengths": [0.0] * len(self.namen),
-                    "pI": self.eltern().tolist(),
-                    "namen": self.namen,
+                    'V': self.punkte.tolist(),
+                    'F': self.dreiecke.tolist(),
+                    'W': gewichte.tolist(),
+                    'p0': p0.tolist(),
+                    'lengths': [0.0] * len(self.namen),
+                    'pI': self.eltern().tolist(),
+                    'namen': self.namen,
                 },
                 datei,
             )
         anim = None
         if spuren and bilder:
-            anim = os.path.join(ordner, "hb_%s_anim.json" % self.geschlecht)
-            with open(anim, "w") as datei:
-                json.dump({"P": self.bahn(spuren, bilder, orte).tolist()}, datei)
+            anim = os.path.join(ordner, 'hb_%s_anim.json' % self.geschlecht)
+            with open(anim, 'w') as datei:
+                json.dump({'P': self.bahn(spuren, bilder, orte).tolist()}, datei)
         return Codyausgabe(rig, anim, gewichte, leer)
 
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument("--geschlecht", default="female")
-    zerleger.add_argument("--bauart", default=None)
-    zerleger.add_argument("--bilder", type=int, default=240)
-    zerleger.add_argument("--bvh", default=None)
+    zerleger.add_argument('--geschlecht', default='female')
+    zerleger.add_argument('--bauart', default=None)
+    zerleger.add_argument('--bilder', type=int, default=240)
+    zerleger.add_argument('--bvh', default=None)
     werte = zerleger.parse_args()
 
     figur = Codyfigur(werte.geschlecht, werte.bauart)
-    print("Haut      %d Punkte, %d Dreiecke" % (len(figur.punkte), len(figur.dreiecke)))
-    print("Skelett   %d Knochen (ohne Finger)" % len(figur.namen))
+    print('Haut      %d Punkte, %d Dreiecke' % (len(figur.punkte), len(figur.dreiecke)))
+    print('Skelett   %d Knochen (ohne Finger)' % len(figur.namen))
 
     spuren, bilder, orte = None, 0, None
     if werte.bvh:
         from bvh_nach_anim import Animschreiber
 
-        daten = Animschreiber("hb_%s" % werte.geschlecht).spuren(werte.bvh)
+        daten = Animschreiber('hb_%s' % werte.geschlecht).spuren(werte.bvh)
         spuren = daten.tracks
         bilder = min(werte.bilder, daten.frame_count - Codyfigur.ERSTES_BILD)
         if daten.position_track:
@@ -300,22 +299,22 @@ def main():
             # `DEF-spine.local_position` (0, -0,0189, 0,8102) — also
             # (x, y, z) -> (x, -z, y). Ohne diesen Schritt laeuft die Figur
             # seitwaerts in den Boden, ohne dass ein Fehler entsteht.
-            bahn = np.asarray(daten.position_track["values"], dtype=np.float64).reshape(-1, 3)
+            bahn = np.asarray(daten.position_track['values'], dtype=np.float64).reshape(-1, 3)
             orte = np.column_stack([bahn[:, 0], -bahn[:, 2], bahn[:, 1]])
         print(
-            "Bewegung  %d Spuren, %d von %d Bildern, Wurzelbahn %s"
-            % (len(spuren), bilder, daten.frame_count, "ja" if orte is not None else "nein")
+            'Bewegung  %d Spuren, %d von %d Bildern, Wurzelbahn %s'
+            % (len(spuren), bilder, daten.frame_count, 'ja' if orte is not None else 'nein')
         )
 
     rig, anim, gewichte, leer = figur.schreiben(ZIEL, spuren, bilder, orte)
     print(
-        "Gewichte  Zeilensumme min %.4f, Punkte ohne Gewicht %d" % (float(gewichte.sum(axis=1).min()), leer)
+        'Gewichte  Zeilensumme min %.4f, Punkte ohne Gewicht %d' % (float(gewichte.sum(axis=1).min()), leer)
     )
-    print("Rig       %s (%.1f MB)" % (rig, os.path.getsize(rig) / 1048576.0))
+    print('Rig       %s (%.1f MB)' % (rig, os.path.getsize(rig) / 1048576.0))
     if anim:
-        print("Anim      %s (%.1f MB)" % (anim, os.path.getsize(anim) / 1048576.0))
+        print('Anim      %s (%.1f MB)' % (anim, os.path.getsize(anim) / 1048576.0))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

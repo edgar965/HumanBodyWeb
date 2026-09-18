@@ -38,9 +38,9 @@ import numpy as np
 
 from .koerperhuelle import Koerperhuelle
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Konformeranpassung"]
+__all__ = ['Konformeranpassung']
 
 
 class Konformeranpassung:
@@ -74,9 +74,9 @@ class Konformeranpassung:
         stoff_flaechen = np.asarray(Koerperhuelle.dreiecke(stoff_dreiecke), dtype=np.int64).reshape(-1, 3)
         dreiecke = stoff_flaechen
         if not len(stoff) or not len(dreiecke):
-            return None, "Das Stück hat keine Flächen"
+            return None, 'Das Stück hat keine Flächen'
         if not len(koerper) or not len(flaechen):
-            return None, "Der Körper hat keine Flächen"
+            return None, 'Der Körper hat keine Flächen'
 
         konformer = Kleidungskonformer(
             koerper,
@@ -87,23 +87,23 @@ class Konformeranpassung:
                 hoechstabstand_m=cls.HOECHSTABSTAND_M,
             ),
         )
-        bindung = konformer.binden("garment_fit", stoff, dreiecke)
+        bindung = konformer.binden('garment_fit', stoff, dreiecke)
         taugt, grund = bindung.taugt()
         if taugt:
             cls._abstand_kappen(bindung, zusatzabstand_m)
         if not taugt:
-            logger.warning("Konformer: Bindung untauglich - %s", grund)
+            logger.warning('Konformer: Bindung untauglich - %s', grund)
             return None, grund
 
         gelegt = konformer.anwenden(bindung)
         bilanz = bindung.bilanz()
         return {
-            "vertices": gelegt,
-            "faces": dreiecke,
-            "normals": Netzgeometrie.punktnormalen(gelegt, dreiecke),
-            "gebunden": bilanz.get("gebunden"),
-            "ungebunden": bilanz.get("ungebunden"),
-            "hautabstand_mm": cls._hautabstand_mm(koerper, gelegt),
+            'vertices': gelegt,
+            'faces': dreiecke,
+            'normals': Netzgeometrie.punktnormalen(gelegt, dreiecke),
+            'gebunden': bilanz.get('gebunden'),
+            'ungebunden': bilanz.get('ungebunden'),
+            'hautabstand_mm': cls._hautabstand_mm(koerper, gelegt),
         }, None
 
     #: Weiter als das darf ein Stück nach dem Anlegen nicht von der Haut
@@ -138,7 +138,7 @@ class Konformeranpassung:
         try:
             from scipy.spatial import cKDTree
         except ImportError:  # noqa: BLE001
-            logger.info("Konformer: ohne scipy kein Hautabstand")
+            logger.info('Konformer: ohne scipy kein Hautabstand')
             return None
         abstand, _ = cKDTree(koerper).query(gelegt, workers=-1)
         return round(float(np.median(abstand)) * 1000.0, 1)

@@ -32,9 +32,9 @@ class Speicherprobe:
     """Speichert ein Projekt, liest es zurück und hält beide Ergebnisse."""
 
     #: Endpunkte des Studios.
-    SPEICHERN = "/api/studio/project-save/"
-    LADEN = "/api/studio/project-load/"
-    DATEINAME = "test_project.studio.json"
+    SPEICHERN = '/api/studio/project-save/'
+    LADEN = '/api/studio/project-load/'
+    DATEINAME = 'test_project.studio.json'
 
     def __init__(self):
         self.speichercode = 0
@@ -59,18 +59,18 @@ class Speicherprobe:
 
     def _speichern(self, pfad, projektdaten):
         self.speichercode, antwort = Netzruf.senden(
-            self.SPEICHERN, method="POST", data={"path": str(pfad), "project": projektdaten}
+            self.SPEICHERN, method='POST', data={'path': str(pfad), 'project': projektdaten}
         )
-        self.gespeichert = self.speichercode == 200 and bool(antwort.get("ok"))
+        self.gespeichert = self.speichercode == 200 and bool(antwort.get('ok'))
         if self.gespeichert:
             self.datei_da = pfad.is_file()
         return self.gespeichert
 
     def _laden(self, pfad):
-        self.ladecode, antwort = Netzruf.senden("%s?path=%s" % (self.LADEN, urllib.parse.quote(str(pfad))))
-        self.geladen = self.ladecode == 200 and bool(antwort.get("ok"))
+        self.ladecode, antwort = Netzruf.senden('%s?path=%s' % (self.LADEN, urllib.parse.quote(str(pfad))))
+        self.geladen = self.ladecode == 200 and bool(antwort.get('ok'))
         if self.geladen:
-            self.projekt = antwort.get("project", {})
+            self.projekt = antwort.get('project', {})
 
     # ------------------------------------------------------------- Altes Format
 
@@ -81,10 +81,10 @@ class Speicherprobe:
         # Testfaellen, nicht im Frontend — deshalb findet `anzeigeformat` sie
         # dort nicht wieder. Eine Klasse waere hier der Umbau der Aufrufer.
         return {
-            "_save_code": self.speichercode,
-            "_save_ok": self.gespeichert,
-            "_file_exists": self.datei_da,
-            "_load_code": self.ladecode,
-            "_load_ok": self.geladen,
-            "project": self.projekt,
+            '_save_code': self.speichercode,
+            '_save_ok': self.gespeichert,
+            '_file_exists': self.datei_da,
+            '_load_code': self.ladecode,
+            '_load_ok': self.geladen,
+            'project': self.projekt,
         }

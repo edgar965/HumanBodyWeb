@@ -38,15 +38,15 @@ class MhkleidHautTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        from MakeHuman.basisnetz import Mhbasisnetz
         from MakeHuman.garderobe import Mhgarderobe
         from MakeHuman.haut import Mhhaut
-        from MakeHuman.basisnetz import Mhbasisnetz
 
         if not (Mhhaut.vorhanden() and Mhbasisnetz.vorhanden()):
-            raise unittest.SkipTest("MakeHuman-Upstream fehlt")
-        cls.stuecke = [s["id"] for s in Mhgarderobe.liste()]
+            raise unittest.SkipTest('MakeHuman-Upstream fehlt')
+        cls.stuecke = [s['id'] for s in Mhgarderobe.liste()]
         if not cls.stuecke:
-            raise unittest.SkipTest("keine MakeHuman-Garderobe")
+            raise unittest.SkipTest('keine MakeHuman-Garderobe')
 
     def _netz(self, kennung):
         from MakeHuman.kleidnetz import Mhkleidnetz
@@ -56,13 +56,13 @@ class MhkleidHautTest(unittest.TestCase):
     def test_je_stoffpunkt_ein_gewicht(self):
         """So viele Gewichte wie Punkte — die `ecken` muessen mitgehen."""
         netz = self._netz(self.stuecke[0])
-        self.assertIsNotNone(netz["haut"])
-        self.assertEqual(len(netz["haut"]["index"]), len(netz["punkte"]))
-        self.assertEqual(len(netz["haut"]["gewicht"]), len(netz["punkte"]))
+        self.assertIsNotNone(netz['haut'])
+        self.assertEqual(len(netz['haut']['index']), len(netz['punkte']))
+        self.assertEqual(len(netz['haut']['gewicht']), len(netz['punkte']))
 
     def test_die_gewichte_summieren_sich_auf_eins(self):
         netz = self._netz(self.stuecke[0])
-        summe = netz["haut"]["gewicht"].sum(axis=1)
+        summe = netz['haut']['gewicht'].sum(axis=1)
         self.assertTrue(np.allclose(summe, 1.0, atol=1e-5))
 
     def test_die_knochen_sind_die_des_rigs(self):
@@ -70,7 +70,7 @@ class MhkleidHautTest(unittest.TestCase):
         from MakeHuman.skelett import Mhskelett
 
         netz = self._netz(self.stuecke[0])
-        self.assertEqual(set(netz["haut"]["knochen"]), set(Mhskelett.rig()["bones"]))
+        self.assertEqual(set(netz['haut']['knochen']), set(Mhskelett.rig()['bones']))
 
     def test_die_mischung_ist_die_der_mhclo(self):
         """Kein zweites Verfahren: dieselben drei Punkte, dieselben Anteile.
@@ -109,11 +109,11 @@ class MhkleidHautTest(unittest.TestCase):
             except Exception:
                 kaputt += 1
                 continue
-            if netz.get("haut"):
+            if netz.get('haut'):
                 mit += 1
             else:
                 ohne += 1
-        self.assertEqual(ohne, 0, "Stuecke ohne Gewichte: %d" % ohne)
+        self.assertEqual(ohne, 0, 'Stuecke ohne Gewichte: %d' % ohne)
         self.assertEqual(mit, len(self.stuecke) - kaputt)
         self.assertGreater(mit, 100)
         self.assertLess(kaputt, 25)
@@ -124,13 +124,13 @@ class SmplTraegerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if not os.path.isfile(os.path.join(str(settings.SMPL_MODELS_DIR), "SMPL_FEMALE.npz")):
-            raise unittest.SkipTest("SMPL-Modelle fehlen")
+        if not os.path.isfile(os.path.join(str(settings.SMPL_MODELS_DIR), 'SMPL_FEMALE.npz')):
+            raise unittest.SkipTest('SMPL-Modelle fehlen')
         from GarmentCode.drapierdienst import Garmentdrapierung
 
-        traeger = Garmentdrapierung._smpl_traeger("mean_all")
+        traeger = Garmentdrapierung._smpl_traeger('mean_all')
         if traeger is None:
-            raise unittest.SkipTest("GarmentCode-Koerper nicht lesbar")
+            raise unittest.SkipTest('GarmentCode-Koerper nicht lesbar')
         cls.traeger = traeger
 
     def test_der_traeger_liegt_in_projektkoordinaten(self):
@@ -141,16 +141,16 @@ class SmplTraegerTest(unittest.TestCase):
         Ausdehnung: Ein Mensch ist in der HOEHENachse am groessten, und
         das ist hier Z.
         """
-        punkte = self.traeger["punkte"]
+        punkte = self.traeger['punkte']
         spanne = punkte.max(axis=0) - punkte.min(axis=0)
-        self.assertEqual(int(np.argmax(spanne)), 2, "Hoehe nicht in Z")
+        self.assertEqual(int(np.argmax(spanne)), 2, 'Hoehe nicht in Z')
         self.assertGreater(spanne[2], 1.4)
         self.assertLess(spanne[2], 2.1)
 
     def test_je_koerperpunkt_eine_gewichtsliste(self):
-        self.assertEqual(len(self.traeger["gewichte"]), len(self.traeger["punkte"]))
-        for zeile in self.traeger["gewichte"][:200]:
-            self.assertTrue(zeile, "Punkt ohne jedes Gewicht")
+        self.assertEqual(len(self.traeger['gewichte']), len(self.traeger['punkte']))
+        for zeile in self.traeger['gewichte'][:200]:
+            self.assertTrue(zeile, 'Punkt ohne jedes Gewicht')
             self.assertAlmostEqual(sum(w for _, w in zeile), 1.0, places=4)
 
     def test_die_knochennamen_passen_zum_skelett_der_figur(self):
@@ -158,7 +158,7 @@ class SmplTraegerTest(unittest.TestCase):
         # Seit 15.09.2026 traegt der Traeger das SMPL-X-Skelett (55 Gelenke).
         from SMPL.xskelett import Smplxskelett
 
-        self.assertEqual(self.traeger["knochen"], list(Smplxskelett.NAMEN))
+        self.assertEqual(self.traeger['knochen'], list(Smplxskelett.NAMEN))
 
     def test_ein_stoffnetz_bekommt_stetige_gewichte(self):
         """Die Probe auf das Verfahren: Nachbarn duerfen nicht springen.
@@ -169,15 +169,15 @@ class SmplTraegerTest(unittest.TestCase):
         """
         from GarmentCode.anziehen import Anziehen
 
-        koerper = self.traeger["punkte"]
+        koerper = self.traeger['punkte']
         # Ein kleines Stueck „Stoff": Koerperpunkte, 1 cm nach aussen
         # versetzt, damit sie sicher ueber der Haut liegen.
         auswahl = np.arange(0, len(koerper), 97)[:300]
         stoff = koerper[auswahl] * 1.01
         anzieher = Anziehen(
-            koerper, self.traeger["dreiecke"], self.traeger["gewichte"], self.traeger["knochen"]
+            koerper, self.traeger['dreiecke'], self.traeger['gewichte'], self.traeger['knochen']
         )
         rig = anzieher.anziehen(stoff)
-        self.assertEqual(rig["punkte"], len(stoff))
-        self.assertEqual(rig["ohne_gewicht"], 0)
-        self.assertLess(rig["gewichtsabweichung"], 1e-3)
+        self.assertEqual(rig['punkte'], len(stoff))
+        self.assertEqual(rig['ohne_gewicht'], 0)
+        self.assertLess(rig['gewichtsabweichung'], 1e-3)

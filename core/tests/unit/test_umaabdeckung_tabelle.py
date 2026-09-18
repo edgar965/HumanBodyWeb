@@ -34,18 +34,18 @@ class TabelleIstBelegt(unittest.TestCase):
         # stumm gewollt: ohne Quelltext (eingebaute Klasse) gibt es kein Feld zu finden
         except OSError, TypeError:
             return False
-        return ("self.%s =" % name) in quelle or ("self.%s:" % name) in quelle
+        return ('self.%s =' % name) in quelle or ('self.%s:' % name) in quelle
 
     def test_jedes_gegenstueck_existiert(self):
         fehlt = []
         for eintrag in Abdeckung.eintraege():
             if not eintrag.gegenstueck:
                 continue
-            klasse, _, name = eintrag.gegenstueck.partition(".")
+            klasse, _, name = eintrag.gegenstueck.partition('.')
             ziel = Umaquelle.KLASSEN.get(klasse)
             if ziel is None or not self._hat(ziel, name):
-                fehlt.append("%s -> %s" % (eintrag.uma, eintrag.gegenstueck))
-        self.assertEqual(fehlt, [], "Gegenstücke, die es nicht gibt: %s" % ", ".join(fehlt))
+                fehlt.append('%s -> %s' % (eintrag.uma, eintrag.gegenstueck))
+        self.assertEqual(fehlt, [], 'Gegenstücke, die es nicht gibt: %s' % ', '.join(fehlt))
 
     def test_jede_probe_ist_eine_echte_testmethode(self):
         """Eine Probe, die es nicht gibt, ist eine Behauptung.
@@ -61,17 +61,17 @@ class TabelleIstBelegt(unittest.TestCase):
         for eintrag in Abdeckung.eintraege():
             if not eintrag.probe:
                 continue
-            modul, klasse, methode = eintrag.probe.split(".")
+            modul, klasse, methode = eintrag.probe.split('.')
             try:
-                geladen = importlib.import_module("core.tests.unit.%s" % modul)
+                geladen = importlib.import_module('core.tests.unit.%s' % modul)
             # stumm gewollt: ein fehlendes Modul wird in `fehlt` gesammelt und unten zugesichert
             except ImportError:
-                fehlt.append("%s (Modul %s)" % (eintrag.probe, modul))
+                fehlt.append('%s (Modul %s)' % (eintrag.probe, modul))
                 continue
             ziel = getattr(geladen, klasse, None)
             if ziel is None or not hasattr(ziel, methode):
                 fehlt.append(eintrag.probe)
-        self.assertEqual(fehlt, [], "Proben, die es nicht gibt: %s" % ", ".join(fehlt))
+        self.assertEqual(fehlt, [], 'Proben, die es nicht gibt: %s' % ', '.join(fehlt))
 
     def test_nichts_ist_unbegruendet_weggelassen(self):
         """`unity` und `intern` brauchen einen Grund — die Klasse erzwingt
@@ -79,18 +79,18 @@ class TabelleIstBelegt(unittest.TestCase):
         from UMA_Python.abdeckung import Eintrag
 
         with self.assertRaises(ValueError):
-            Eintrag("Irgendwas", "unity")
+            Eintrag('Irgendwas', 'unity')
         with self.assertRaises(ValueError):
-            Eintrag("Irgendwas", "portiert", "Netzgeometrie.seite")
+            Eintrag('Irgendwas', 'portiert', 'Netzgeometrie.seite')
         with self.assertRaises(ValueError):
-            Eintrag("Irgendwas", "zauberei")
+            Eintrag('Irgendwas', 'zauberei')
 
     def test_die_anteile_stimmen(self):
         """Eine Zahl, die man in den Bericht schreiben kann — und die rot
         wird, wenn jemand einen Eintrag stumm auf `unity` setzt."""
-        gerechnet = len(Abdeckung.nach_art("portiert")) + len(Abdeckung.nach_art("anders"))
+        gerechnet = len(Abdeckung.nach_art('portiert')) + len(Abdeckung.nach_art('anders'))
         self.assertGreaterEqual(gerechnet, 45)
-        self.assertLessEqual(len(Abdeckung.nach_art("intern")), 5)
+        self.assertLessEqual(len(Abdeckung.nach_art('intern')), 5)
 
 
 # ===================================================================== Proben

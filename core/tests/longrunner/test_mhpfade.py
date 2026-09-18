@@ -35,12 +35,12 @@ class MhpfadeTest(SimpleTestCase):
 
     #: (Methode von `Mhpfade`, Name der Einstellung)
     PAARE = (
-        ("wurzel", "MAKEHUMAN_ROOT"),
-        ("daten", "MAKEHUMAN_DATA_DIR"),
-        ("ziele", "MAKEHUMAN_ZIELE_DIR"),
-        ("modifikatoren", "MAKEHUMAN_MODIFIER_DIR"),
-        ("zielablage", "MAKEHUMAN_ZIELABLAGE"),
-        ("kleiderbibliothek", "HUMANBODY_GARMENT_LIBRARY_DIR"),
+        ('wurzel', 'MAKEHUMAN_ROOT'),
+        ('daten', 'MAKEHUMAN_DATA_DIR'),
+        ('ziele', 'MAKEHUMAN_ZIELE_DIR'),
+        ('modifikatoren', 'MAKEHUMAN_MODIFIER_DIR'),
+        ('zielablage', 'MAKEHUMAN_ZIELABLAGE'),
+        ('kleiderbibliothek', 'HUMANBODY_GARMENT_LIBRARY_DIR'),
     )
 
     def test_paket_und_einstellungen_meinen_denselben_ort(self):
@@ -49,8 +49,8 @@ class MhpfadeTest(SimpleTestCase):
             paket = str(getattr(Mhpfade, methode)())
             gesetzt = str(getattr(settings, einstellung))
             if paket != gesetzt:
-                abweichend.append("%s: %s != settings.%s (%s)" % (methode, paket, einstellung, gesetzt))
-        self.assertEqual(abweichend, [], "; ".join(abweichend))
+                abweichend.append('%s: %s != settings.%s (%s)' % (methode, paket, einstellung, gesetzt))
+        self.assertEqual(abweichend, [], '; '.join(abweichend))
 
     def test_der_bestand_liegt_da(self):
         """`base.obj` ist die Probe: Ohne sie gelten die Vertexnummern
@@ -67,11 +67,11 @@ class MhpfadeTest(SimpleTestCase):
         (`~/.claude/rules/test-isolation.md`).
         """
         self.addCleanup(Mhpfade.zuruecksetzen)
-        Mhpfade.setzen(r"X:\gibtsnicht")
-        Mhpfade.kleider_setzen(r"X:\auchnicht")
-        self.assertEqual(str(Mhpfade.wurzel()), r"X:\gibtsnicht")
-        self.assertEqual(str(Mhpfade.daten()), r"X:\gibtsnicht\makehuman\data")
-        self.assertEqual(str(Mhpfade.kleiderbibliothek()), r"X:\auchnicht")
+        Mhpfade.setzen(r'X:\gibtsnicht')
+        Mhpfade.kleider_setzen(r'X:\auchnicht')
+        self.assertEqual(str(Mhpfade.wurzel()), r'X:\gibtsnicht')
+        self.assertEqual(str(Mhpfade.daten()), r'X:\gibtsnicht\makehuman\data')
+        self.assertEqual(str(Mhpfade.kleiderbibliothek()), r'X:\auchnicht')
         self.assertFalse(Mhpfade.vorhanden())
         Mhpfade.zuruecksetzen()
         self.assertEqual(str(Mhpfade.wurzel()), str(settings.MAKEHUMAN_ROOT))
@@ -89,14 +89,14 @@ class MhpfadeTest(SimpleTestCase):
 
         wurzel = Path(str(settings.MAKEHUMAN_ROOT))
         treffer = []
-        for pfad in sorted(wurzel.glob("*.py")):
-            baum = ast.parse(pfad.read_text(encoding="utf-8"))
+        for pfad in sorted(wurzel.glob('*.py')):
+            baum = ast.parse(pfad.read_text(encoding='utf-8'))
             for knoten in ast.walk(baum):
                 namen = []
                 if isinstance(knoten, ast.Import):
                     namen = [t.name for t in knoten.names]
                 elif isinstance(knoten, ast.ImportFrom):
-                    namen = [knoten.module or ""]
-                if any(n.split(".")[0] == "django" for n in namen):
-                    treffer.append("%s:%d" % (pfad.name, knoten.lineno))
-        self.assertEqual(treffer, [], "Django im Paket: %s" % treffer)
+                    namen = [knoten.module or '']
+                if any(n.split('.')[0] == 'django' for n in namen):
+                    treffer.append('%s:%d' % (pfad.name, knoten.lineno))
+        self.assertEqual(treffer, [], 'Django im Paket: %s' % treffer)

@@ -37,6 +37,7 @@ Humanbodypfad.assets()
 
 from GarmentCode.ohrschnitt import Ohrschnitt  # noqa: E402
 from GarmentCode.schnittvorschau import Schnittvorschau  # noqa: E402
+
 from ._sicher import Sicher
 
 
@@ -80,29 +81,29 @@ class SchnittvorschauTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.ordner = os.path.join(str(settings.ASSETS_ROOT), "GarmentCode", "ausgabe", "t-shirt_mean_all")
-        cls.spez = os.path.join(cls.ordner, "t-shirt_mean_all_specification.json")
+        cls.ordner = os.path.join(str(settings.ASSETS_ROOT), 'GarmentCode', 'ausgabe', 't-shirt_mean_all')
+        cls.spez = os.path.join(cls.ordner, 't-shirt_mean_all_specification.json')
         if not os.path.isfile(cls.spez):
-            raise unittest.SkipTest("kein Beispiellauf t-shirt_mean_all")
+            raise unittest.SkipTest('kein Beispiellauf t-shirt_mean_all')
 
     def test_das_netz_traegt_alle_panels(self):
         netz = Schnittvorschau(self.spez).netz()
-        self.assertEqual(len(netz["panels"]), 8, "T-Shirt hat 8 Panels")
-        self.assertGreater(len(netz["punkte"]), 100)
-        self.assertGreater(len(netz["dreiecke"]), 100)
+        self.assertEqual(len(netz['panels']), 8, 'T-Shirt hat 8 Panels')
+        self.assertGreater(len(netz['punkte']), 100)
+        self.assertGreater(len(netz['dreiecke']), 100)
 
     def test_die_lage_stimmt_mit_dem_upstream_ueberein(self):
         """Gegen das Boxmesh DESSELBEN Laufs — die eigentliche Probe."""
         vorschau = Schnittvorschau(self.spez)
         abweichung = Sicher.wert(
-            vorschau.abweichung(os.path.join(self.ordner, "t-shirt_mean_all_boxmesh.obj")),
-            "Boxmesh zum Vergleichen",
+            vorschau.abweichung(os.path.join(self.ordner, 't-shirt_mean_all_boxmesh.obj')),
+            'Boxmesh zum Vergleichen',
         )
         for achse in range(3):
             self.assertLess(
-                abweichung["min_cm"][achse], 0.6, "Untergrenze Achse %d: %s" % (achse, abweichung)
+                abweichung['min_cm'][achse], 0.6, 'Untergrenze Achse %d: %s' % (achse, abweichung)
             )
-            self.assertLess(abweichung["max_cm"][achse], 0.6, "Obergrenze Achse %d: %s" % (achse, abweichung))
+            self.assertLess(abweichung['max_cm'][achse], 0.6, 'Obergrenze Achse %d: %s' % (achse, abweichung))
 
     def test_eine_falsche_eulerreihenfolge_faellt_auf(self):
         """Gegenprobe: Der Test muss rot werden koennen.
@@ -117,7 +118,7 @@ class SchnittvorschauTest(SimpleTestCase):
         verdreht = dy @ dz
         self.assertFalse(
             np.allclose(soll, verdreht),
-            "Die Reihenfolge macht keinen Unterschied — dann prueft der Vergleich oben nichts",
+            'Die Reihenfolge macht keinen Unterschied — dann prueft der Vergleich oben nichts',
         )
 
     def test_kurvenpunkte_liegen_in_kantenkoordinaten(self):
@@ -134,13 +135,13 @@ class SchnittvorschauTest(SimpleTestCase):
         self.assertAlmostEqual(punkt[1], 5.0)
 
     def test_eine_gerade_kante_bekommt_keine_zwischenpunkte(self):
-        vorschau = Schnittvorschau({"pattern": {"panels": {}}})
+        vorschau = Schnittvorschau({'pattern': {'panels': {}}})
         self.assertEqual(vorschau._kurvenpunkte([0, 0], [1, 0], None), [])
 
     def test_die_kontur_loest_kurven_auf(self):
         """Mehr Punkte als Ecken — sonst sind die Rundungen Kanten."""
         vorschau = Schnittvorschau(self.spez)
-        panels = vorschau.daten["pattern"]["panels"]
-        name = next(n for n, p in panels.items() if any(k.get("curvature") for k in p["edges"]))
+        panels = vorschau.daten['pattern']['panels']
+        name = next(n for n, p in panels.items() if any(k.get('curvature') for k in p['edges']))
         kontur = vorschau.kontur(panels[name])
-        self.assertGreater(len(kontur), len(panels[name]["vertices"]))
+        self.assertGreater(len(kontur), len(panels[name]['vertices']))

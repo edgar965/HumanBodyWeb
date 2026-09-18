@@ -22,28 +22,28 @@ import unittest
 
 from ..jsmodul import Jsmodul
 
-BVHTEXT = Jsmodul("bvh_studio", "bvhtext.js")
+BVHTEXT = Jsmodul('bvh_studio', 'bvhtext.js')
 
 #: Kleine, aber vollständige BVH: Wurzel mit 6 Kanälen, ein Gelenk mit 3.
-BVH = "\n".join(
+BVH = '\n'.join(
     [
-        "HIERARCHY",
-        "ROOT Hips",
-        "{",
-        "  OFFSET 0 0 0",
-        "  CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation",
-        "  JOINT Spine",
-        "  {",
-        "    CHANNELS 3 Zrotation Xrotation Yrotation",
-        "  }",
-        "}",
-        "MOTION",
-        "Frames: 3",
-        "Frame Time: 0.033333",
-        "0.0 10.0 0.0 0 0 0 0 0 0",
-        "0.0 11.0 0.0 0 0 0 0 0 0",
-        "0.0 12.0 0.0 0 0 0 0 0 0",
-        "",
+        'HIERARCHY',
+        'ROOT Hips',
+        '{',
+        '  OFFSET 0 0 0',
+        '  CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation',
+        '  JOINT Spine',
+        '  {',
+        '    CHANNELS 3 Zrotation Xrotation Yrotation',
+        '  }',
+        '}',
+        'MOTION',
+        'Frames: 3',
+        'Frame Time: 0.033333',
+        '0.0 10.0 0.0 0 0 0 0 0 0',
+        '0.0 11.0 0.0 0 0 0 0 0 0',
+        '0.0 12.0 0.0 0 0 0 0 0 0',
+        '',
     ]
 )
 
@@ -72,23 +72,23 @@ class BvhtextTest(unittest.TestCase):
         cls.ergebnis = BVHTEXT.laufen(skript)
 
     def test_yposition_ist_der_zweite_kanal(self):
-        self.assertEqual(self.ergebnis["kanal"], 1)
+        self.assertEqual(self.ergebnis['kanal'], 1)
 
     def test_bewegungszeilen_beginnen_nach_frame_time(self):
         # Zeilen 13, 14, 15 (0-basiert) sind die drei Datenzeilen.
-        self.assertEqual(self.ergebnis["bewegungszeilen"], [13, 14, 15])
+        self.assertEqual(self.ergebnis['bewegungszeilen'], [13, 14, 15])
 
     def test_werte_werden_ersetzt(self):
-        self.assertEqual(self.ergebnis["geaendert"], 3)
-        self.assertEqual(self.ergebnis["werte"], ["1.500000", "2.500000", "3.500000"])
+        self.assertEqual(self.ergebnis['geaendert'], 3)
+        self.assertEqual(self.ergebnis['werte'], ['1.500000', '2.500000', '3.500000'])
 
     def test_unbekannter_kanal_meldet_minus_eins(self):
         """Sonst würde `kanalSetzen` in die falsche Spalte schreiben."""
-        self.assertEqual(self.ergebnis["unbekannt"], -1)
+        self.assertEqual(self.ergebnis['unbekannt'], -1)
 
     def test_datei_ohne_motion_hat_keine_bewegungszeilen(self):
-        self.assertEqual(self.ergebnis["ohneMotion"], 0)
+        self.assertEqual(self.ergebnis['ohneMotion'], 0)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

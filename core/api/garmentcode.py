@@ -13,7 +13,6 @@ from collections import namedtuple
 
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-
 from GarmentCode.dienst import GarmentcodeDienst
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 #: Was der Browser für Schnitt, Masse und Drapierung mitschickt — drei Leser,
 #: eine Form (`aus_anfrage`).
-Garmentanfrage = namedtuple("Garmentanfrage", "vorlage geschlecht bauart morphs regler meta koerper smpl")
+Garmentanfrage = namedtuple('Garmentanfrage', 'vorlage geschlecht bauart morphs regler meta koerper smpl')
 
 
 class Garmentcode:
@@ -38,7 +37,7 @@ class Garmentcode:
     #: Nur diese Dateien darf die Vorschau ausliefern — der Ordnername kommt
     #: aus dem Browser, also wird der Pfad nie aus der Anfrage zusammengebaut,
     #: sondern gegen den Ausgabeordner geprueft.
-    ERLAUBTE_ENDUNGEN = (".png", ".svg", ".pdf", ".json", ".yaml")
+    ERLAUBTE_ENDUNGEN = ('.png', '.svg', '.pdf', '.json', '.yaml')
 
     @staticmethod
     @require_GET
@@ -49,10 +48,10 @@ class Garmentcode:
         # selbst gebauten Warp — sie kann fehlen, waehrend Schnittmuster
         # laengst gehen. Die Seite soll das unterscheiden koennen.
         try:
-            zustand["drapierbereit"] = GarmentcodeDienst.drapierbereit()
+            zustand['drapierbereit'] = GarmentcodeDienst.drapierbereit()
         except Exception:
-            logger.exception("GarmentCode: Drapier-Pruefung gescheitert")
-            zustand["drapierbereit"] = False
+            logger.exception('GarmentCode: Drapier-Pruefung gescheitert')
+            zustand['drapierbereit'] = False
         return JsonResponse(zustand)
 
     @staticmethod
@@ -62,9 +61,9 @@ class Garmentcode:
         from GarmentCode.baufeineinstellung import Baufeineinstellung
         from GarmentCode.drapierung import DrapierFehler
 
-        spez = request.POST.get("spezifikation") or ""
+        spez = request.POST.get('spezifikation') or ''
         if not spez:
-            return JsonResponse({"fehler": "Kein Schnittmuster angegeben"}, status=400)
+            return JsonResponse({'fehler': 'Kein Schnittmuster angegeben'}, status=400)
         # Die beiden Regler unter „Bauen" (Edgar, 09.09.2026). Sie gehoeren
         # nur hierher, nicht in `aus_anfrage` — das Erzeugen eines Schnitts
         # kennt weder Haut noch Simulation.
@@ -76,7 +75,7 @@ class Garmentcode:
         sim = Simulationsregler.aus_anfrage(request.POST)
         # Die Stuecke, die die Figur schon traegt (11.09.2026): Der Koerper
         # wird um sie erweitert, das neue Stueck legt sich darueber.
-        getragen = Garmentcode.getragene(request.POST.get("getragen"))
+        getragen = Garmentcode.getragene(request.POST.get('getragen'))
         try:
             anfrage = Garmentcode.aus_anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
@@ -92,27 +91,27 @@ class Garmentcode:
                 getragen=getragen,
             )
         except DrapierFehler as fehler:
-            logger.warning("Drapierung gescheitert: %s", fehler)
-            return JsonResponse({"fehler": str(fehler)}, status=400)
+            logger.warning('Drapierung gescheitert: %s', fehler)
+            return JsonResponse({'fehler': str(fehler)}, status=400)
         except Exception as fehler:
-            logger.exception("Drapierung: unerwarteter Fehler")
-            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+            logger.exception('Drapierung: unerwarteter Fehler')
+            return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
         # Die Adresse, unter der der Browser die Rig-Datei holen kann. Ohne
         # sie bleibt das drapierte Netz auf der Platte liegen (Edgar,
         # 06.09.2026: „nach dem Bauen sollte die Kleidung am ausgewaehlten
         # HumanBody liegen").
         # Die Korrektur-Bilanz ist ein dict und gehoert nicht als Ganzes in
         # die Antwort — die eine Zahl, die zaehlt, schon.
-        korrektur = ergebnis.pop("korrektur", None) or {}
-        ergebnis["aus_der_haut"] = korrektur.get("eingesunken", 0)
+        korrektur = ergebnis.pop('korrektur', None) or {}
+        ergebnis['aus_der_haut'] = korrektur.get('eingesunken', 0)
         # Womit gebaut wurde, gehoert in die Antwort: Sonst laesst sich ein
         # Ergebnis spaeter nicht mehr einer Reglerstellung zuordnen.
-        ergebnis["feineinstellung"] = fein.als_dict()
-        ergebnis["simulationswerte"] = sim.als_dict()
-        ordner = os.path.basename(ergebnis.get("ordner") or "")
-        datei = ergebnis.get("rig_datei")
+        ergebnis['feineinstellung'] = fein.als_dict()
+        ergebnis['simulationswerte'] = sim.als_dict()
+        ordner = os.path.basename(ergebnis.get('ordner') or '')
+        datei = ergebnis.get('rig_datei')
         if ordner and datei:
-            ergebnis["rig_url"] = "/api/garmentcode/datei/%s/%s/" % (ordner, datei)
+            ergebnis['rig_url'] = '/api/garmentcode/datei/%s/%s/' % (ordner, datei)
         return JsonResponse(ergebnis)
 
     @staticmethod
@@ -123,22 +122,22 @@ class Garmentcode:
         Welche Regler gelten, haengt am Stueck: eine Hose hat keinen Kragen.
         Deshalb GET mit `vorlage`, nicht eine feste Liste.
         """
-        vorlage = request.GET.get("vorlage", "")
+        vorlage = request.GET.get('vorlage', '')
         return JsonResponse(
             {
-                "vorlage": vorlage,
-                "gruppen": GarmentcodeDienst.regler(vorlage),
+                'vorlage': vorlage,
+                'gruppen': GarmentcodeDienst.regler(vorlage),
                 # Fertige Kombinationen zum Anhaken (08.09.2026). Sie kommen
                 # MIT den Gruppen, nicht ueber einen zweiten Aufruf: Ein Preset
                 # gehoert zu genau diesen Reglern, und ein getrennter Abruf
                 # koennte auf ein anderes Stueck treffen.
-                "presets": GarmentcodeDienst.presets(vorlage),
+                'presets': GarmentcodeDienst.presets(vorlage),
                 # Und die Voreinstellungen fuer das ganze Stueck, die oben im
                 # Reiter stehen (Edgar, 08.09.2026: „oben im Tab, nach dem
                 # Farben bereich"). Sie haengen zusaetzlich an den
                 # meta-Feldern, weil die Rumpfweite nur beim ungefitteten
                 # `Shirt` existiert.
-                "passform": GarmentcodeDienst.passform(vorlage),
+                'passform': GarmentcodeDienst.passform(vorlage),
             }
         )
 
@@ -156,13 +155,13 @@ class Garmentcode:
         )
         return JsonResponse(
             {
-                "masse": {
+                'masse': {
                     name: round(float(wert), 2)
                     for name, wert in sorted(werte.items())
-                    if not name.startswith("_")
+                    if not name.startswith('_')
                 },
-                "herkunft": herkunft,
-                "morphs": len(anfrage.morphs or {}),
+                'herkunft': herkunft,
+                'morphs': len(anfrage.morphs or {}),
             }
         )
 
@@ -179,14 +178,14 @@ class Garmentcode:
         # muss es nicht mitschicken.
         from ..dienste.smplfigur import Smplfiguren
 
-        koerper = request.POST.get("koerper") or None
+        koerper = request.POST.get('koerper') or None
         return Garmentanfrage(
-            vorlage=request.POST.get("vorlage", "t-shirt"),
-            geschlecht=request.POST.get("geschlecht", "female"),
-            bauart=request.POST.get("bauart") or None,
-            morphs=Garmentcode._woerterbuch(request.POST, "morphs", "Morphs unlesbar, nehme Grundkoerper"),
-            regler=Garmentcode._woerterbuch(request.POST, "regler", "Reglerwerte unlesbar, nehme Vorgabe"),
-            meta=Garmentcode._woerterbuch(request.POST, "meta", "Metaregler unlesbar, nehme keine"),
+            vorlage=request.POST.get('vorlage', 't-shirt'),
+            geschlecht=request.POST.get('geschlecht', 'female'),
+            bauart=request.POST.get('bauart') or None,
+            morphs=Garmentcode._woerterbuch(request.POST, 'morphs', 'Morphs unlesbar, nehme Grundkoerper'),
+            regler=Garmentcode._woerterbuch(request.POST, 'regler', 'Reglerwerte unlesbar, nehme Vorgabe'),
+            meta=Garmentcode._woerterbuch(request.POST, 'meta', 'Metaregler unlesbar, nehme keine'),
             koerper=koerper,
             smpl=bool(koerper) and Smplfiguren.ist_smpl(koerper),
         )
@@ -196,9 +195,9 @@ class Garmentcode:
         """Ein JSON-Feld des Formulars als dict; unlesbar oder keins -> leer,
         mit Warnung."""
         try:
-            wert = json.loads(felder.get(name) or "{}")
+            wert = json.loads(felder.get(name) or '{}')
         except ValueError:
-            logger.warning("GarmentCode: %s", warnung)
+            logger.warning('GarmentCode: %s', warnung)
             return {}
         return wert if isinstance(wert, dict) else {}
 
@@ -220,17 +219,17 @@ class Garmentcode:
                 meta=anfrage.meta,
             )
         except EntwurfFehler as fehler:
-            logger.warning("GarmentCode gescheitert: %s", fehler)
-            return JsonResponse({"fehler": str(fehler)}, status=400)
+            logger.warning('GarmentCode gescheitert: %s', fehler)
+            return JsonResponse({'fehler': str(fehler)}, status=400)
         except Exception as fehler:
-            logger.exception("GarmentCode: unerwarteter Fehler")
-            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+            logger.exception('GarmentCode: unerwarteter Fehler')
+            return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
 
-        ordner = ergebnis.get("ordner", "")
+        ordner = ergebnis.get('ordner', '')
         bild = GarmentcodeDienst.vorschaubild(ordner)
-        ergebnis["spezifikation"] = GarmentcodeDienst.spezifikation(ergebnis) or ""
-        ergebnis["vorschau"] = (
-            "/api/garmentcode/datei/%s/%s/" % (os.path.basename(ordner), bild) if bild else ""
+        ergebnis['spezifikation'] = GarmentcodeDienst.spezifikation(ergebnis) or ''
+        ergebnis['vorschau'] = (
+            '/api/garmentcode/datei/%s/%s/' % (os.path.basename(ordner), bild) if bild else ''
         )
         return JsonResponse(ergebnis)
 
@@ -246,7 +245,7 @@ class Garmentcode:
         from GarmentCode.entwurf import Entwurf
 
         try:
-            liste = json.loads(roh or "[]")
+            liste = json.loads(roh or '[]')
         # stumm gewollt: kaputtes JSON aus dem Browser heisst 'keine getragenen Stuecke'
         except ValueError:
             return []
@@ -261,9 +260,9 @@ class Garmentcode:
         nicht die Form hat, aus der Wurzel fuehrt oder nicht existiert."""
         if not isinstance(eintrag, dict):
             return None
-        ordner = os.path.basename(str(eintrag.get("ordner") or ""))
-        name = str(eintrag.get("rig_datei") or "")
-        if not ordner or not name.endswith("_rig.json"):
+        ordner = os.path.basename(str(eintrag.get('ordner') or ''))
+        name = str(eintrag.get('rig_datei') or '')
+        if not ordner or not name.endswith('_rig.json'):
             return None
         pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
         if pfad.startswith(wurzel + os.sep) and os.path.isfile(pfad):
@@ -277,10 +276,10 @@ class Garmentcode:
         from GarmentCode.entwurf import Entwurf
 
         if not name.lower().endswith(Garmentcode.ERLAUBTE_ENDUNGEN):
-            return JsonResponse({"fehler": "Dateityp nicht erlaubt"}, status=400)
+            return JsonResponse({'fehler': 'Dateityp nicht erlaubt'}, status=400)
         wurzel = os.path.abspath(Entwurf.AUSGABE)
         pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
         # Der Ordnername kommt aus dem Browser: nur unterhalb der Wurzel.
         if not pfad.startswith(wurzel + os.sep) or not os.path.isfile(pfad):
-            return JsonResponse({"fehler": "Nicht gefunden"}, status=404)
-        return FileResponse(open(pfad, "rb"))
+            return JsonResponse({'fehler': 'Nicht gefunden'}, status=404)
+        return FileResponse(open(pfad, 'rb'))

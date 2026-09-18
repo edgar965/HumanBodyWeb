@@ -20,10 +20,10 @@ Dienst liest Dateien, keine Tabellen.
 
 import numpy as np
 from django.test import SimpleTestCase
+from humanbody_core import CharacterState
 
 from core.dienste.charakterdaten import Charakterdaten
 from core.dienste.skelettnachfuehrung import Skelettnachfuehrung
-from humanbody_core import CharacterState
 
 
 class Bezug:
@@ -44,8 +44,8 @@ class Bezug:
         einer fehlenden Datei. Der Language Server meldet dieselbe Stelle
         als `reportOptionalSubscript`.
         """
-        anpassung = Skelettnachfuehrung.fuer("female")
-        assert anpassung is not None, "kein exportiertes DEF-Skelett gefunden"
+        anpassung = Skelettnachfuehrung.fuer('female')
+        assert anpassung is not None, 'kein exportiertes DEF-Skelett gefunden'
         return anpassung
 
     @staticmethod
@@ -58,17 +58,17 @@ class Bezug:
         wie ein Rechenfehler statt wie eine fehlende Datei.
         """
         zustand = CharacterState(Charakterdaten.morphdaten(), Charakterdaten.voreinstellungen())
-        zustand.set_body_type("Female_Caucasian")
+        zustand.set_body_type('Female_Caucasian')
         for schluessel, wert in morphs.items():
             zustand.set_morph(schluessel, wert)
         netz = zustand.compute()
-        assert netz is not None, "Morphdaten nicht geladen"
+        assert netz is not None, 'Morphdaten nicht geladen'
         return netz
 
 
 class DerDienstFindetDasSkelett(SimpleTestCase):
     def test_es_gibt_eine_anpassung_fuer_weiblich(self):
-        self.assertIsNotNone(Skelettnachfuehrung.fuer("female"))
+        self.assertIsNotNone(Skelettnachfuehrung.fuer('female'))
 
     def test_sie_kennt_alle_176_knochen(self):
         """Weniger hieße, dass ein Teil des Rigs stehen bleibt — sichtbar
@@ -81,14 +81,14 @@ class DerDienstFindetDasSkelett(SimpleTestCase):
     def test_zweimal_fragen_gibt_dasselbe_objekt(self):
         """Der Aufbau kostet 27 ms und einen KD-Baum. Je Regleranschlag
         wäre das die teuerste Zeile im ganzen Ablauf."""
-        self.assertIs(Skelettnachfuehrung.fuer("female"), Skelettnachfuehrung.fuer("female"))
+        self.assertIs(Skelettnachfuehrung.fuer('female'), Skelettnachfuehrung.fuer('female'))
 
 
 class DieRuhelageBewegtNichts(SimpleTestCase):
     """Der wichtigste Fall: Ohne Regler darf sich NICHTS ändern."""
 
     def test_kein_einziger_knochen_meldet_sich(self):
-        self.assertEqual(Skelettnachfuehrung.bewegte("female", Bezug.netz()), {})
+        self.assertEqual(Skelettnachfuehrung.bewegte('female', Bezug.netz()), {})
 
     def test_und_die_lagen_sind_die_der_datei(self):
         """Zahl für Zahl — nicht „ungefähr". Jede Abweichung hier wäre ein
@@ -96,7 +96,7 @@ class DieRuhelageBewegtNichts(SimpleTestCase):
         anpassung = Bezug.anpassung()
         lagen = anpassung.lokale_positionen(Bezug.netz())
         for knochen in anpassung.knochen:
-            self.assertEqual(lagen[knochen["name"]], knochen["local_position"], knochen["name"])
+            self.assertEqual(lagen[knochen['name']], knochen['local_position'], knochen['name'])
 
 
 class DerGroessenreglerBewegtDasSkelett(SimpleTestCase):
@@ -110,7 +110,7 @@ class DerGroessenreglerBewegtDasSkelett(SimpleTestCase):
         cls.gross = Bezug.netz(Body_Size=1.0)
 
     def test_fast_alle_knochen_wandern(self):
-        bewegte = Skelettnachfuehrung.bewegte("female", self.gross)
+        bewegte = Skelettnachfuehrung.bewegte('female', self.gross)
         self.assertGreater(len(bewegte), 170)
 
     def test_das_skelett_waechst_wie_der_koerper(self):
@@ -124,8 +124,8 @@ class DerGroessenreglerBewegtDasSkelett(SimpleTestCase):
 
         def kopf_zu_fuss(netz):
             koepfe = anpassung.weltkoepfe(netz)
-            oben = koepfe[anpassung.namen.index("DEF-spine.006")][2]
-            unten = koepfe[anpassung.namen.index("DEF-foot.L")][2]
+            oben = koepfe[anpassung.namen.index('DEF-spine.006')][2]
+            unten = koepfe[anpassung.namen.index('DEF-foot.L')][2]
             return oben - unten
 
         netzwuchs = float(np.ptp(self.gross[:, 2]) / np.ptp(self.ruhe[:, 2]))
@@ -139,7 +139,7 @@ class DerGroessenreglerBewegtDasSkelett(SimpleTestCase):
         anpassung = Bezug.anpassung()
         koepfe_ruhe = anpassung.weltkoepfe(self.ruhe)
         koepfe_gross = anpassung.weltkoepfe(self.gross)
-        kopf = anpassung.namen.index("DEF-spine.006")
+        kopf = anpassung.namen.index('DEF-spine.006')
         self.assertGreater(koepfe_gross[kopf][2], koepfe_ruhe[kopf][2])
 
 
@@ -147,7 +147,7 @@ class EinFremdesNetzBekommtNichts(SimpleTestCase):
     """Der Testcharakter hat 17.996 Punkte statt 18.210."""
 
     def test_die_punktzahl_entscheidet(self):
-        self.assertEqual(Skelettnachfuehrung.bewegte("female", np.zeros((17996, 3))), {})
+        self.assertEqual(Skelettnachfuehrung.bewegte('female', np.zeros((17996, 3))), {})
 
     def test_und_gar_kein_netz_ebenso(self):
-        self.assertEqual(Skelettnachfuehrung.bewegte("female", None), {})
+        self.assertEqual(Skelettnachfuehrung.bewegte('female', None), {})

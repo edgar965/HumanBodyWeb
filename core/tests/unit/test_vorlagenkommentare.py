@@ -25,8 +25,6 @@ sie waere eine Pruefung, die nichts findet, nicht von einer kaputten zu
 unterscheiden (`~/.claude/rules/analysewerkzeuge.md`).
 """
 
-import io
-
 from django.conf import settings
 from django.test import SimpleTestCase
 
@@ -37,13 +35,13 @@ class VorlagenkommentareTest(SimpleTestCase):
     def test_keine_vorlage_hat_einen_mehrzeiligen_kurzkommentar(self):
         befunde = []
         for pfad in VorlagenkommentareTest._vorlagen():
-            text = io.open(pfad, encoding="utf-8").read()
+            text = open(pfad, encoding='utf-8').read()
             for nummer in VorlagenkommentareTest._offene_kurzkommentare(text):
-                befunde.append("%s:%d" % (pfad.name, nummer))
+                befunde.append('%s:%d' % (pfad.name, nummer))
         self.assertEqual(
             befunde,
             [],
-            "Mehrzeilig geht nur ein comment-Block; die Kurzform steht sonst sichtbar auf der Seite.",
+            'Mehrzeilig geht nur ein comment-Block; die Kurzform steht sonst sichtbar auf der Seite.',
         )
 
     def test_es_gibt_ueberhaupt_vorlagen_zu_pruefen(self):
@@ -53,26 +51,26 @@ class VorlagenkommentareTest(SimpleTestCase):
     def test_die_pruefung_findet_den_fall(self):
         """Gegenprobe mit genau der Schreibweise, die im Menue stand."""
         kaputt = (
-            "<div>a</div>\n"
-            "{# Speichern hiess immer die SZENE. Modell\n"
-            "   und Szene sind zwei Dinge. #}\n"
-            "<div>b</div>\n"
+            '<div>a</div>\n'
+            '{# Speichern hiess immer die SZENE. Modell\n'
+            '   und Szene sind zwei Dinge. #}\n'
+            '<div>b</div>\n'
         )
         self.assertEqual(VorlagenkommentareTest._offene_kurzkommentare(kaputt), [2])
 
     def test_einzeilige_kommentare_sind_in_ordnung(self):
-        self.assertEqual(VorlagenkommentareTest._offene_kurzkommentare("{# alles gut #}\n{# auch #}"), [])
+        self.assertEqual(VorlagenkommentareTest._offene_kurzkommentare('{# alles gut #}\n{# auch #}'), [])
 
     @staticmethod
     def _offene_kurzkommentare(text):
         """Zeilennummern, in denen `{#` steht, ohne dass `#}` folgt."""
         offen = []
         for nummer, zeile in enumerate(text.splitlines(), start=1):
-            stelle = zeile.find("{#")
-            if stelle >= 0 and "#}" not in zeile[stelle:]:
+            stelle = zeile.find('{#')
+            if stelle >= 0 and '#}' not in zeile[stelle:]:
                 offen.append(nummer)
         return offen
 
     @staticmethod
     def _vorlagen():
-        return sorted((settings.BASE_DIR / "templates").rglob("*.html"))
+        return sorted((settings.BASE_DIR / 'templates').rglob('*.html'))

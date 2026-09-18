@@ -26,29 +26,29 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, r"A:\3DTools\HumanBody")
+sys.path.insert(0, r'A:\3DTools\HumanBody')
 
 from anim_umsetzung import Animumsetzung  # noqa: E402
 
-DATEN = r"A:\3DTools\HumanBody\data\humanBody"
-BVH_ORDNER = r"A:\3DTools\3DObjects\animations\bvh"
-ZIEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figur")
+DATEN = r'A:\3DTools\HumanBody\data\humanBody'
+BVH_ORDNER = r'A:\3DTools\3DObjects\animations\bvh'
+ZIEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figur')
 
 
 class Animschreiber:
     """Schreibt eine Bewegung als `.anim` und prueft sie nach."""
 
-    def __init__(self, stamm="hb_female"):
+    def __init__(self, stamm='hb_female'):
         self.stamm = stamm
-        with open(os.path.join(DATEN, "def_skeleton.json")) as datei:
-            self.knochen = {b["name"]: b for b in json.load(datei)["bones"]}
+        with open(os.path.join(DATEN, 'def_skeleton.json')) as datei:
+            self.knochen = {b['name']: b for b in json.load(datei)['bones']}
         self.gelenke, self.punkte = self._skel_lesen()
         self.umsetzung = Animumsetzung(self.knochen, self.gelenke, self._knochenlaengen(), punkte=self.punkte)
 
     def _knochenlaengen(self):
         """`tail - head` je Knochen, in Metern — fuer die Endgelenke."""
-        rig = json.load(open(os.path.join(DATEN, "rig_bones.json")))["bones"]
-        return {b["name"]: float(np.linalg.norm(np.asarray(b["tail"]) - np.asarray(b["head"]))) for b in rig}
+        rig = json.load(open(os.path.join(DATEN, 'rig_bones.json')))['bones']
+        return {b['name']: float(np.linalg.norm(np.asarray(b['tail']) - np.asarray(b['head']))) for b in rig}
 
     def _skel_lesen(self):
         """Die `.skel`, die `figur_nach_fps.py` geschrieben hat.
@@ -56,15 +56,15 @@ class Animschreiber:
         Sie ist die Wahrheit ueber Reihenfolge und Elternschaft — eine
         zweite Liste im Code liefe irgendwann auseinander.
         """
-        pfad = os.path.join(ZIEL, self.stamm + ".skel")
+        pfad = os.path.join(ZIEL, self.stamm + '.skel')
         if not os.path.exists(pfad):
-            raise SystemExit("Erst `figur_nach_fps.py` laufen lassen: %s fehlt" % pfad)
+            raise SystemExit('Erst `figur_nach_fps.py` laufen lassen: %s fehlt' % pfad)
         zeilen = open(pfad).read().strip().splitlines()
         gelenke, punkte = [], {}
         for zeile in zeilen[1:]:
             teile = zeile.split()
             name, elternteil = teile[3], teile[4]
-            gelenke.append((name, None if elternteil == "root" else elternteil))
+            gelenke.append((name, None if elternteil == 'root' else elternteil))
             punkte[name] = np.array([float(x) for x in teile[:3]])
         return gelenke, punkte
 
@@ -112,7 +112,7 @@ class Animschreiber:
         web = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         if web not in sys.path:
             sys.path.insert(0, web)
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ui.settings")
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ui.settings')
         django.setup()
 
     #: Bild 0 der Retarget-Ausgabe ist ein STARTZUSTAND, keine Pose der
@@ -132,18 +132,18 @@ class Animschreiber:
         ab = self.ERSTES_BILD
         gesamt = bewegung.frame_count - ab
         bilder = gesamt if not hoechstzahl else min(gesamt, hoechstzahl)
-        pfad = os.path.join(ZIEL, "%s%s.anim" % (self.stamm, name))
-        with open(pfad, "w") as datei:
-            datei.write("%d %d\n" % (bilder, len(self.umsetzung.namen)))
+        pfad = os.path.join(ZIEL, '%s%s.anim' % (self.stamm, name))
+        with open(pfad, 'w') as datei:
+            datei.write('%d %d\n' % (bilder, len(self.umsetzung.namen)))
             for f in range(ab, ab + bilder):
                 drehungen = self.umsetzung.bild(spuren, f)
-                datei.write("%.6f\n" % (bewegung.times[f] - bewegung.times[ab]))
+                datei.write('%.6f\n' % (bewegung.times[f] - bewegung.times[ab]))
                 winkel = []
                 for gelenk in self.umsetzung.namen:
                     achse, wert = Animumsetzung.achse_winkel(drehungen[gelenk])
-                    datei.write("%.6f %.6f %.6f\n" % tuple(achse))
+                    datei.write('%.6f %.6f %.6f\n' % tuple(achse))
                     winkel.append(wert)
-                datei.write("\n".join("%.6f" % w for w in winkel) + "\n")
+                datei.write('\n'.join('%.6f' % w for w in winkel) + '\n')
         return pfad, bilder
 
     def pruefen(self, bewegung, bilder, roh=False):
@@ -154,7 +154,7 @@ class Animschreiber:
         Metern), deshalb wird durch ihn geteilt, um mm zu bekommen.
         """
         massstab = self._massstab()
-        schlimmster, wo, erstes = 0.0, "", None
+        schlimmster, wo, erstes = 0.0, '', None
         ab = self.ERSTES_BILD
         for f in (ab, ab + bilder // 2, ab + bilder - 1):
             abweichung = self.umsetzung.gegenprobe(bewegung.tracks, f, self.punkte, massstab, roh)
@@ -162,81 +162,81 @@ class Animschreiber:
                 erstes = max(abweichung.values())
             for gelenk, wert in abweichung.items():
                 if wert > schlimmster:
-                    schlimmster, wo = wert, "%s (Bild %d)" % (gelenk, f)
+                    schlimmster, wo = wert, '%s (Bild %d)' % (gelenk, f)
         return schlimmster, wo, erstes
 
     def _massstab(self):
         """Einheiten je Meter, aus zwei Gelenken mit bekanntem Abstand."""
-        a, b = "DEF-spine", "DEF-spine.001"
+        a, b = 'DEF-spine', 'DEF-spine.001'
         in_fps = np.linalg.norm(self.punkte[b] - self.punkte[a])
-        kopf_a = np.asarray(self.knochen[a]["head"] if "head" in self.knochen[a] else [0, 0, 0])
+        kopf_a = np.asarray(self.knochen[a]['head'] if 'head' in self.knochen[a] else [0, 0, 0])
         del kopf_a
         # Der Abstand in Metern steht als `local_position` des Kindes.
-        in_meter = np.linalg.norm(self.knochen[b]["local_position"])
+        in_meter = np.linalg.norm(self.knochen[b]['local_position'])
         return in_fps / in_meter
 
     @staticmethod
     def erste_bvh():
         """Die erste BVH unter `Walk` — der Vorgabelauf ohne `--bvh`."""
-        for wurzel, _ordner, dateien in os.walk(os.path.join(BVH_ORDNER, "Walk")):
+        for wurzel, _ordner, dateien in os.walk(os.path.join(BVH_ORDNER, 'Walk')):
             for datei in sorted(dateien):
-                if datei.lower().endswith(".bvh"):
+                if datei.lower().endswith('.bvh'):
                     return os.path.join(wurzel, datei)
         return None
 
     def probe(self, bewegung, bilder):
         """Die Gelenkprobe — und ihre Sabotage-Gegenprobe."""
         schlimmster, wo, erstes = self.pruefen(bewegung, bilder)
-        print("Probe    groesste Abweichung der Gelenke: %.2f mm bei %s" % (schlimmster, wo))
-        print("         (Bild 0: %.2f mm)" % erstes)
+        print('Probe    groesste Abweichung der Gelenke: %.2f mm bei %s' % (schlimmster, wo))
+        print('         (Bild 0: %.2f mm)' % erstes)
         # Sabotage-Gegenprobe: ohne das Delta gegen die Ruhelage MUSS die Probe
         # ausschlagen. Eine Probe, die immer 0,00 meldet, ist keine.
         kaputt, _wo, _erst = self.pruefen(bewegung, bilder, roh=True)
         print(
-            "         Sabotage (Rigify-Drehung roh): %.1f mm — %s"
-            % (kaputt, "Probe greift" if kaputt > 10.0 else "PROBE IST BLIND")
+            '         Sabotage (Rigify-Drehung roh): %.1f mm — %s'
+            % (kaputt, 'Probe greift' if kaputt > 10.0 else 'PROBE IST BLIND')
         )
 
     def ini_ergaenzen(self, name):
         """Die ANIMATION-Zeile der `.ini` auf diese Datei setzen."""
-        ini = os.path.join(ZIEL, self.stamm + ".ini")
-        with open(ini, encoding="utf-8") as datei:
-            zeilen = [z for z in datei.read().splitlines() if not z.startswith("ANIMATION")]
-        zeilen.append("ANIMATION   %s%s.anim %s" % (self.stamm, name, self.stamm))
-        with open(ini, "w", encoding="utf-8") as datei:
-            datei.write("\n".join(zeilen) + "\n")
+        ini = os.path.join(ZIEL, self.stamm + '.ini')
+        with open(ini, encoding='utf-8') as datei:
+            zeilen = [z for z in datei.read().splitlines() if not z.startswith('ANIMATION')]
+        zeilen.append('ANIMATION   %s%s.anim %s' % (self.stamm, name, self.stamm))
+        with open(ini, 'w', encoding='utf-8') as datei:
+            datei.write('\n'.join(zeilen) + '\n')
         return ini
 
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument("--bvh", default=None)
-    zerleger.add_argument("--name", default="0")
-    zerleger.add_argument("--bilder", type=int, default=120)
-    zerleger.add_argument("--stamm", default="hb_female")
+    zerleger.add_argument('--bvh', default=None)
+    zerleger.add_argument('--name', default='0')
+    zerleger.add_argument('--bilder', type=int, default=120)
+    zerleger.add_argument('--stamm', default='hb_female')
     werte = zerleger.parse_args()
 
     bvh = werte.bvh or Animschreiber.erste_bvh()
     if not bvh or not os.path.exists(bvh):
-        raise SystemExit("Keine BVH gefunden — bitte --bvh angeben")
-    print("BVH      %s" % bvh)
+        raise SystemExit('Keine BVH gefunden — bitte --bvh angeben')
+    print('BVH      %s' % bvh)
 
     schreiber = Animschreiber(werte.stamm)
     bewegung = schreiber.spuren(bvh)
     print(
-        "Retarget %d Bilder, %d Spuren, %.2f s"
+        'Retarget %d Bilder, %d Spuren, %.2f s'
         % (bewegung.frame_count, len(bewegung.tracks), bewegung.duration)
     )
-    fehlend = [n for n, _ in schreiber.gelenke if not n.endswith("_ende") and n not in bewegung.tracks]
-    print("         ohne eigene Spur: %s" % (", ".join(fehlend) if fehlend else "keines"))
+    fehlend = [n for n, _ in schreiber.gelenke if not n.endswith('_ende') and n not in bewegung.tracks]
+    print('         ohne eigene Spur: %s' % (', '.join(fehlend) if fehlend else 'keines'))
 
     pfad, bilder = schreiber.schreiben(bewegung, werte.name, werte.bilder)
-    print("Datei    %s (%d Bilder)" % (os.path.basename(pfad), bilder))
+    print('Datei    %s (%d Bilder)' % (os.path.basename(pfad), bilder))
     schreiber.probe(bewegung, bilder)
     ini = schreiber.ini_ergaenzen(werte.name)
-    print("         %s ergaenzt" % os.path.basename(ini))
+    print('         %s ergaenzt' % os.path.basename(ini))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

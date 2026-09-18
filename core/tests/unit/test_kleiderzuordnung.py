@@ -91,7 +91,7 @@ class KleiderzuordnungTest(unittest.TestCase):
         from core.dienste import kleidungswerkzeuge as modul
 
         echt = modul.Skingewichte.arrays
-        modul.Skingewichte.arrays = staticmethod(lambda geschlecht="female": (si, sw))
+        modul.Skingewichte.arrays = staticmethod(lambda geschlecht='female': (si, sw))
         try:
             i_roh = Kleidungswerkzeuge.knochenindizes(kleid, koerper)
             w_roh = Kleidungswerkzeuge.knochengewichte(kleid, koerper)
@@ -117,7 +117,7 @@ class KleiderzuordnungTest(unittest.TestCase):
         from core.dienste import kleidungswerkzeuge as modul
 
         echt = modul.Skingewichte.arrays
-        modul.Skingewichte.arrays = staticmethod(lambda geschlecht="female": (si, sw))
+        modul.Skingewichte.arrays = staticmethod(lambda geschlecht='female': (si, sw))
         try:
             roh = Kleidungswerkzeuge.knochenindizes(kleid, koerper)
         finally:

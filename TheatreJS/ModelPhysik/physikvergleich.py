@@ -19,8 +19,7 @@ import os
 import sys
 
 import numpy as np
-
-from hbfilm import Hbfilm, BVH, AB_BILD
+from hbfilm import AB_BILD, BVH, Hbfilm
 
 
 class Physikvergleich:
@@ -36,8 +35,8 @@ class Physikvergleich:
         """Je Teil: Verschiebung durch die Physik, in Millimetern."""
         aus = []
         for a, b in zip(self.ohne.teile, self.mit.teile):
-            weg = np.linalg.norm(b["haut"].folge[nummer] - a["haut"].folge[nummer], axis=1)
-            aus.append((a["name"], weg * 1000.0))
+            weg = np.linalg.norm(b['haut'].folge[nummer] - a['haut'].folge[nummer], axis=1)
+            aus.append((a['name'], weg * 1000.0))
         return aus
 
     def _einfaerben(self, film, nummer, werte, hoechst):
@@ -49,7 +48,7 @@ class Physikvergleich:
         """
         for teil, (_name, weg) in zip(film.teile, werte):
             anteil = float(weg.max()) / max(hoechst, 1e-9)
-            teil["farbe"] = (0.25 + 0.7 * anteil, 0.45 - 0.3 * anteil, 0.75 - 0.6 * anteil)
+            teil['farbe'] = (0.25 + 0.7 * anteil, 0.45 - 0.3 * anteil, 0.75 - 0.6 * anteil)
 
     def bild(self, nummer, ziel):
         """Ein PNG: links ohne, rechts mit, dazwischen die Zahlen."""
@@ -60,12 +59,12 @@ class Physikvergleich:
         werte = self.unterschied(nummer)
         tafel = np.full((links.shape[0], 300, 3), 245, np.uint8)
         y = 40
-        cv2.putText(tafel, "Zuschlag je Teil", (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (30, 30, 30), 1)
+        cv2.putText(tafel, 'Zuschlag je Teil', (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (30, 30, 30), 1)
         for name, weg in werte:
             y += 34
             cv2.putText(
                 tafel,
-                "%-9s %5.1f mm" % (name, float(weg.max())),
+                '%-9s %5.1f mm' % (name, float(weg.max())),
                 (16, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.52,
@@ -75,7 +74,7 @@ class Physikvergleich:
             y += 22
             cv2.putText(
                 tafel,
-                "  Median %5.2f mm" % float(np.median(weg)),
+                '  Median %5.2f mm' % float(np.median(weg)),
                 (16, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.45,
@@ -83,8 +82,8 @@ class Physikvergleich:
                 1,
             )
         y += 44
-        cv2.putText(tafel, "links  ohne Physik", (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 60, 60), 1)
-        cv2.putText(tafel, "rechts mit Physik", (16, y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 60, 60), 1)
+        cv2.putText(tafel, 'links  ohne Physik', (16, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 60, 60), 1)
+        cv2.putText(tafel, 'rechts mit Physik', (16, y + 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 60, 60), 1)
         zusammen = np.hstack([links, tafel, rechts])
         self._speichern(ziel, cv2.cvtColor(zusammen, cv2.COLOR_RGB2BGR))
         return ziel, werte
@@ -103,20 +102,20 @@ class Physikvergleich:
         """
         import cv2
 
-        gut, puffer = cv2.imencode(".png", bild)
+        gut, puffer = cv2.imencode('.png', bild)
         if not gut:
-            raise SystemExit("Bild liess sich nicht kodieren.")
-        with open(ziel, "wb") as datei:
+            raise SystemExit('Bild liess sich nicht kodieren.')
+        with open(ziel, 'wb') as datei:
             datei.write(puffer.tobytes())
 
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument("--bild", type=int, default=60)
-    zerleger.add_argument("--bilder", type=int, default=120)
-    zerleger.add_argument("--physik", type=float, default=25.0)
+    zerleger.add_argument('--bild', type=int, default=60)
+    zerleger.add_argument('--bilder', type=int, default=120)
+    zerleger.add_argument('--physik', type=float, default=25.0)
     zerleger.add_argument(
-        "--aus", default=os.path.join(r"A:\3DTools\Docu\KörperPhysik", "physik_vergleich.png")
+        '--aus', default=os.path.join(r'A:\3DTools\Docu\KörperPhysik', 'physik_vergleich.png')
     )
     werte = zerleger.parse_args()
 
@@ -125,12 +124,12 @@ def main():
     for name, weg in zahlen:
         über = int((weg > 5.0).sum())
         print(
-            "%-9s groesster %.1f mm, Median %.2f mm, %d Punkte ueber 5 mm"
+            '%-9s groesster %.1f mm, Median %.2f mm, %d Punkte ueber 5 mm'
             % (name, float(weg.max()), float(np.median(weg)), über)
         )
-    print("Bild      %s" % pfad)
+    print('Bild      %s' % pfad)
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

@@ -15,13 +15,13 @@ import numpy as np
 
 from core.projekt_temp import ProjektTemp
 
-from .base import TestCategory, Netzruf
 from ._kamera_basis import Kamerabasis
+from .base import Netzruf, TestCategory
 
 
 class KameraSlerpTests(TestCategory):
-    name = "Kamera: Kurzbogen und LookAt"
-    description = "Quaternion-Slerp über den kurzen Bogen und die LookAt-Interpolation gegen wirre Kamerawege"
+    name = 'Kamera: Kurzbogen und LookAt'
+    description = 'Quaternion-Slerp über den kurzen Bogen und die LookAt-Interpolation gegen wirre Kamerawege'
 
     # --- Playback: applyCameraTrack Short-Arc Quaternion-Slerp ---
     # Der "Kamera bewegt sich wild durch die Szene"-Bug: wenn zwei Keyframes
@@ -34,7 +34,7 @@ class KameraSlerpTests(TestCategory):
         q = np.array([0.1, 0.27, -0.03, 0.96])
         q = q / np.linalg.norm(q)
         r = Kamerabasis.slerp_kurzbogen(q, q, 0.5)
-        return float(abs(r @ q)) > 0.999, f"dot={r @ q:.6f}"
+        return float(abs(r @ q)) > 0.999, f'dot={r @ q:.6f}'
 
     @staticmethod
     def test_camera_slerp_hemisphere_flip_stays_near_original_pose():
@@ -45,7 +45,7 @@ class KameraSlerpTests(TestCategory):
         q = q / np.linalg.norm(q)
         q_flipped = -q
         r_mid = Kamerabasis.slerp_kurzbogen(q, q_flipped, 0.5)
-        return float(abs(r_mid @ q)) > 0.999, f"dot={abs(r_mid @ q):.6f}"
+        return float(abs(r_mid @ q)) > 0.999, f'dot={abs(r_mid @ q):.6f}'
 
     @staticmethod
     def test_camera_slerp_hemisphere_flip_w_never_crosses_zero():
@@ -59,7 +59,7 @@ class KameraSlerpTests(TestCategory):
             r = Kamerabasis.slerp_kurzbogen(q, q_flipped, float(t))
             ws.append(float(r[3]))
         w_min, w_max = min(ws), max(ws)
-        return (w_min > 0.9 or w_max < -0.9), f"w_range=[{w_min:.3f}, {w_max:.3f}]"
+        return (w_min > 0.9 or w_max < -0.9), f'w_range=[{w_min:.3f}, {w_max:.3f}]'
 
     @staticmethod
     def test_camera_slerp_two_near_identical_keyframes_minimal_motion():
@@ -70,7 +70,7 @@ class KameraSlerpTests(TestCategory):
         q1 = np.array([0.104, 0.278, -0.031, 0.955])
         q1 /= np.linalg.norm(q1)
         r = Kamerabasis.slerp_kurzbogen(q0, q1, 0.5)
-        return float(abs(r @ q0)) > 0.9999, f"dot={abs(r @ q0):.6f}"
+        return float(abs(r @ q0)) > 0.9999, f'dot={abs(r @ q0):.6f}'
 
     # --- LookAt-Interpolation (echter Fix für "wirre Kamera durch die Szene") ---
     # Reproduziert das Symptom aus dem TechnoTriadisch-Standardprojekt:
@@ -102,7 +102,7 @@ class KameraSlerpTests(TestCategory):
             if off > max_off:
                 max_off = off
         # Bei konstantem Target MUSS der Hit exakt auf dem Target landen
-        return max_off < 0.05, f"max off-body = {max_off:.4f}m"
+        return max_off < 0.05, f'max off-body = {max_off:.4f}m'
 
     @staticmethod
     def test_camera_quaternion_slerp_technotriadisch_misses_body_midflight():
@@ -159,37 +159,37 @@ class KameraSlerpTests(TestCategory):
                 max_off = off
         # Muss > 1 m sein, sonst ist der "alte Fix" bereits gut und LookAt wäre
         # überflüssig.
-        return (max_off > 1.0, f"max off-body (Quat-only-Slerp) = {max_off:.3f}m — bestätigt den Bug")
+        return (max_off > 1.0, f'max off-body (Quat-only-Slerp) = {max_off:.3f}m — bestätigt den Bug')
 
     #: Ein Projekt mit genau EINEM Kamera-Keyframe, der ein `lookAt` traegt.
     #: Als Klassenfeld, weil es Daten sind und der Testrumpf sonst zur
     #: Haelfte aus Wortliste besteht.
     LOOKAT_PROJEKT = {
-        "name": "T",
-        "fps": 30,
-        "tracks": [
+        'name': 'T',
+        'fps': 30,
+        'tracks': [
             {
-                "name": "Kamera",
-                "type": "camera",
-                "cameraActive": True,
-                "muted": False,
-                "clips": [
+                'name': 'Kamera',
+                'type': 'camera',
+                'cameraActive': True,
+                'muted': False,
+                'clips': [
                     {
-                        "type": "camera_kf",
-                        "name": "KF",
-                        "startFrame": 1,
-                        "fps": 30,
-                        "totalFrames": 0,
-                        "trimIn": 0,
-                        "trimOut": 0,
-                        "speed": 1.0,
-                        "data": {
-                            "position": {"x": 0, "y": 1.03, "z": 4.41},
-                            "rotation": {"x": -0.03, "y": 0, "z": 0},
-                            "lookAt": {"x": 0, "y": 0.9, "z": 0},
-                            "fov": 35,
-                            "interpolation": "smooth",
-                            "fade": True,
+                        'type': 'camera_kf',
+                        'name': 'KF',
+                        'startFrame': 1,
+                        'fps': 30,
+                        'totalFrames': 0,
+                        'trimIn': 0,
+                        'trimOut': 0,
+                        'speed': 1.0,
+                        'data': {
+                            'position': {'x': 0, 'y': 1.03, 'z': 4.41},
+                            'rotation': {'x': -0.03, 'y': 0, 'z': 0},
+                            'lookAt': {'x': 0, 'y': 0.9, 'z': 0},
+                            'fov': 35,
+                            'interpolation': 'smooth',
+                            'fade': True,
                         },
                     }
                 ],
@@ -200,9 +200,9 @@ class KameraSlerpTests(TestCategory):
     @staticmethod
     def _erster_kamera_kf(projekt):
         """Die `data` des ersten Kamera-Keyframes — oder `{}`."""
-        spuren = [s for s in projekt.get("tracks", []) if s.get("type") == "camera"]
-        clips = spuren[0].get("clips", []) if spuren else []
-        return clips[0].get("data", {}) if clips else {}
+        spuren = [s for s in projekt.get('tracks', []) if s.get('type') == 'camera']
+        clips = spuren[0].get('clips', []) if spuren else []
+        return clips[0].get('data', {}) if clips else {}
 
     @classmethod
     def _speichern_und_laden(cls, projekt):
@@ -212,18 +212,18 @@ class KameraSlerpTests(TestCategory):
         (System-Temp gab 403 — 48 Tests rot seit 12.08.2026).
         """
         with ProjektTemp.wegwerfordner() as ordner:
-            pfad = Path(ordner) / "lookat.json"
+            pfad = Path(ordner) / 'lookat.json'
             code, antwort = Netzruf.senden(
-                "/api/studio/project-save/", method="POST", data={"path": str(pfad), "project": projekt}
+                '/api/studio/project-save/', method='POST', data={'path': str(pfad), 'project': projekt}
             )
-            if code != 200 or not antwort.get("ok"):
-                return f"save failed ({code})", {}
+            if code != 200 or not antwort.get('ok'):
+                return f'save failed ({code})', {}
             code, antwort = Netzruf.senden(
-                "/api/studio/project-load/?path=%s" % urllib.parse.quote(str(pfad))
+                '/api/studio/project-load/?path=%s' % urllib.parse.quote(str(pfad))
             )
-        if code != 200 or not antwort.get("ok"):
-            return f"load failed ({code})", {}
-        return "", antwort.get("project", {})
+        if code != 200 or not antwort.get('ok'):
+            return f'load failed ({code})', {}
+        return '', antwort.get('project', {})
 
     @classmethod
     def test_camera_lookat_kf_survives_project_save_load_roundtrip(cls):
@@ -233,8 +233,8 @@ class KameraSlerpTests(TestCategory):
         if fehler:
             return False, fehler
         daten = cls._erster_kamera_kf(geladen)
-        ziel = daten.get("lookAt")
+        ziel = daten.get('lookAt')
         if not ziel:
-            return False, f"lookAt fehlt nach Load: {daten}"
-        erwartet = cls.LOOKAT_PROJEKT["tracks"][0]["clips"][0]["data"]["lookAt"]
-        return ziel == erwartet, f"lookAt={ziel}"
+            return False, f'lookAt fehlt nach Load: {daten}'
+        erwartet = cls.LOOKAT_PROJEKT['tracks'][0]['clips'][0]['data']['lookAt']
+        return ziel == erwartet, f'lookAt={ziel}'

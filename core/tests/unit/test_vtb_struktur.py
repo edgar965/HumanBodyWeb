@@ -33,8 +33,8 @@ import ast
 import re
 import unittest
 
-from ._wrappersuchpfad import Wrappersuchpfad, WRAPPERS
 from ._wrapperquellen import Wrapperquellen
+from ._wrappersuchpfad import WRAPPERS, Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
@@ -43,7 +43,7 @@ class KeineFestenPfade(unittest.TestCase):
     """Pfade kommen aus `Baum`, nicht aus dem Quelltext."""
 
     #: `A:/…` oder `A:\…` — ein Laufwerksbuchstabe mit Doppelpunkt.
-    LAUFWERK = re.compile(r"^[A-Za-z]:[/\\]")
+    LAUFWERK = re.compile(r'^[A-Za-z]:[/\\]')
 
     def test_kein_laufwerksbuchstabe_in_einer_zeichenkette(self):
         for pfad, text in Wrapperquellen.texte():
@@ -51,14 +51,14 @@ class KeineFestenPfade(unittest.TestCase):
                 with self.subTest(datei=pfad.name, zeile=knoten.lineno):
                     self.assertIsNone(
                         self.LAUFWERK.match(knoten.value),
-                        "%s:%d verdrahtet ein Laufwerk: %r" % (pfad.name, knoten.lineno, knoten.value),
+                        '%s:%d verdrahtet ein Laufwerk: %r' % (pfad.name, knoten.lineno, knoten.value),
                     )
 
     def test_die_pruefung_faellt_auf_einen_festen_pfad_herein(self):
         """Gegenprobe: erkennt sie einen, der wirklich im Code steht?"""
         baum = ast.parse("SMPLX = 'A:/3DTools/3DObjects'\nu'''Docstring mit A:/3DTools darin'''\n")
         werte = [k.value for k in Wrapperquellen.zeichenketten(baum)]
-        self.assertIn("A:/3DTools/3DObjects", werte)
+        self.assertIn('A:/3DTools/3DObjects', werte)
         self.assertTrue(any(self.LAUFWERK.match(w) for w in werte))
 
     def test_die_pruefung_uebergeht_doku(self):
@@ -70,22 +70,22 @@ class KeineFestenPfade(unittest.TestCase):
         from baum import Baum
 
         for name in (
-            "GVHMR",
-            "WHAM",
-            "PromptHMR",
-            "SMPLest-X",
-            "PyMAF-X",
-            "4D-Humans",
-            "MocapNET",
-            "OpenPose",
+            'GVHMR',
+            'WHAM',
+            'PromptHMR',
+            'SMPLest-X',
+            'PyMAF-X',
+            '4D-Humans',
+            'MocapNET',
+            'OpenPose',
         ):
             with self.subTest(projekt=name):
                 self.assertTrue(Baum.im_baum(name).endswith(name))
 
     def test_umgebungsvariablen_haben_vorrang(self):
         """Ein anderer Rechner darf ohne Quelltextaenderung auskommen."""
-        text = (WRAPPERS / "baum.py").read_text(encoding="utf-8")
-        for name in ("VTB_ROOT", "OBJEKTE_DIR", "SMPLX_DIR"):
+        text = (WRAPPERS / 'baum.py').read_text(encoding='utf-8')
+        for name in ('VTB_ROOT', 'OBJEKTE_DIR', 'SMPLX_DIR'):
             with self.subTest(variable=name):
                 self.assertIn("os.environ.get('%s')" % name, text)
 
@@ -94,7 +94,7 @@ class KeineSystemablage(unittest.TestCase):
     """Zwischendateien gehoeren ins Projekt, nicht nach C:."""
 
     #: Alles, was ohne `dir=` in `%TEMP%` landet.
-    ABLAGEN = ("mkdtemp", "mkstemp", "NamedTemporaryFile", "TemporaryDirectory", "TemporaryFile")
+    ABLAGEN = ('mkdtemp', 'mkstemp', 'NamedTemporaryFile', 'TemporaryDirectory', 'TemporaryFile')
 
     def _ablageaufrufe(self, baum):
         """Die Aufrufe im CODE — der Docstring daneben zaehlt nicht.
@@ -108,7 +108,7 @@ class KeineSystemablage(unittest.TestCase):
         for knoten in ast.walk(baum):
             if not isinstance(knoten, ast.Call):
                 continue
-            name = getattr(knoten.func, "attr", None) or getattr(knoten.func, "id", None)
+            name = getattr(knoten.func, 'attr', None) or getattr(knoten.func, 'id', None)
             if name in self.ABLAGEN:
                 aus.append((name, knoten.lineno, {w.arg for w in knoten.keywords}))
         return aus
@@ -128,21 +128,21 @@ class KeineSystemablage(unittest.TestCase):
                 gefunden += 1
                 with self.subTest(datei=pfad.name, zeile=zeile):
                     self.assertIn(
-                        "dir",
+                        'dir',
                         benannt,
-                        "%s:%d — %s() ohne `dir=` legt in %%TEMP%% an" % (pfad.name, zeile, name),
+                        '%s:%d — %s() ohne `dir=` legt in %%TEMP%% an' % (pfad.name, zeile, name),
                     )
-        self.assertGreater(gefunden, 0, "Die Pruefung findet gar nichts mehr")
+        self.assertGreater(gefunden, 0, 'Die Pruefung findet gar nichts mehr')
 
     def test_die_pruefung_merkt_ein_fehlendes_dir(self):
         """Gegenprobe — und der Docstring daneben bleibt unbeachtet."""
         baum = ast.parse(
             "u'''Hier stand mkdtemp(prefix=\"x_\")'''\n"
-            "import tempfile\n"
+            'import tempfile\n'
             "a = tempfile.mkdtemp(prefix='x_')\n"
             "b = tempfile.mkdtemp(prefix='x_', dir='/projekt')\n"
         )
-        ohne = [z for _n, z, benannt in self._ablageaufrufe(baum) if "dir" not in benannt]
+        ohne = [z for _n, z, benannt in self._ablageaufrufe(baum) if 'dir' not in benannt]
         self.assertEqual(ohne, [3])
 
     def test_die_arbeitsablage_liegt_im_projekt(self):
@@ -160,7 +160,7 @@ class KeineSystemablage(unittest.TestCase):
 
         self.assertTrue(
             Path(Arbeitsablage.WURZEL).is_relative_to(Path(Baum.WURZEL)),
-            "Zwischendateien liegen ausserhalb des Baums: %s" % Arbeitsablage.WURZEL,
+            'Zwischendateien liegen ausserhalb des Baums: %s' % Arbeitsablage.WURZEL,
         )
 
 
@@ -184,7 +184,7 @@ class JederParameterWirkt(unittest.TestCase):
         tot = Wrapperquellen.unbenutzte_parameter
         for pfad, text in Wrapperquellen.texte():
             for name, arg, zeile in tot(ast.parse(text)):
-                self.fail("%s:%d — %s() nimmt `%s` entgegen und liest es nie" % (pfad.name, zeile, name, arg))
+                self.fail('%s:%d — %s() nimmt `%s` entgegen und liest es nie' % (pfad.name, zeile, name, arg))
 
     def test_die_pruefung_faellt_auf_einen_toten_parameter_herein(self):
         """Gegenprobe: erkennt sie den Fall, den es gab?"""
@@ -192,10 +192,10 @@ class JederParameterWirkt(unittest.TestCase):
             'def detect(video, ausgabe, model_size="h"):\n    return bauen("balanced", video, ausgabe)\n'
         )
         tot = Wrapperquellen.unbenutzte_parameter(baum)
-        self.assertEqual([(n, a) for n, a, _z in tot], [("detect", "model_size")])
+        self.assertEqual([(n, a) for n, a, _z in tot], [('detect', 'model_size')])
 
     def test_ein_unterstrich_nimmt_aus(self):
-        baum = ast.parse("def zeichnen(self, _kontext):\n    return 1\n")
+        baum = ast.parse('def zeichnen(self, _kontext):\n    return 1\n')
         self.assertEqual(Wrapperquellen.unbenutzte_parameter(baum), [])
 
     def test_weitergereichte_werte_zaehlen_als_gelesen(self):

@@ -16,7 +16,6 @@ die alte Formel 1/16 je Ecke am Kantenpunkt).
 from unittest import TestCase
 
 import numpy as np
-
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
 from humanbody_core.nahtteilung import Nahtteilung
 from humanbody_core.unterteilungsstufe import Unterteilungsstufe
@@ -81,7 +80,7 @@ class DreieckeInDerStufe(TestCase):
         fein = cc.subdivide(punkte)
         self.assertEqual(len(cc.triangles), 2 * (4 + 12))
         # Material 0 = das Viereck (4 Vierecke = 8 Dreiecke), Material 1 = 12 Vierecke.
-        self.assertEqual([g["count"] // 3 for g in cc.groups], [8, 24])
+        self.assertEqual([g['count'] // 3 for g in cc.groups], [8, 24])
         self.assertTrue(np.isfinite(fein).all())
         self.assertEqual(len(cc.uvs), cc.sub_vertex_count)
         normalen = cc.compute_quad_normals(fein)

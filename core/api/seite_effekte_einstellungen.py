@@ -15,6 +15,7 @@ from django.shortcuts import redirect, render
 from django.views import View
 
 from effekte.figurparameter import Figurparameter
+
 from ..daten.einstellungsfelder import Einstellungsfelder
 from ..dienste.animationsauswahl import Animationsauswahl
 from ..dienste.modellvorlagen import Modellvorlagen
@@ -24,21 +25,21 @@ from ..models import AppSettings, Effektauftrag
 class EffekteEinstellungenSeite(View):
     """GET zeigt das Formular, POST speichert und leitet zurueck."""
 
-    VORLAGE = "settings_effekte.html"
+    VORLAGE = 'settings_effekte.html'
 
     #: Textfelder: Name im Modell -> Vorgabe, wenn das Formular nichts schickt.
     FELDER = (
-        ("effekte_default_pipeline", "figur_def"),
-        ("effekte_default_model", "Female2"),
-        ("effekte_default_animation", ""),
-        ("effekte_windrichtung", "seite"),
+        ('effekte_default_pipeline', 'figur_def'),
+        ('effekte_default_model', 'Female2'),
+        ('effekte_default_animation', ''),
+        ('effekte_windrichtung', 'seite'),
     )
     #: Zahlenfelder: Name -> Typ; Grenzen kommen aus dem Register.
     ZAHLEN = (
-        ("effekte_video_fps", int),
-        ("effekte_video_width", int),
-        ("effekte_video_height", int),
-        ("effekte_wind", float),
+        ('effekte_video_fps', int),
+        ('effekte_video_width', int),
+        ('effekte_video_height', int),
+        ('effekte_wind', float),
     )
 
     def get(self, request):
@@ -48,10 +49,10 @@ class EffekteEinstellungenSeite(View):
             request,
             self.VORLAGE,
             {
-                "settings": s,
-                "available_models": Modellvorlagen.namen(),
-                "pipelines": Effektauftrag.PIPELINE_CHOICES,
-                "windrichtungen": list(Figurparameter.WAHLEN["windrichtung"][1]),
+                'settings': s,
+                'available_models': Modellvorlagen.namen(),
+                'pipelines': Effektauftrag.PIPELINE_CHOICES,
+                'windrichtungen': list(Figurparameter.WAHLEN['windrichtung'][1]),
                 **anim_teil,
             },
         )
@@ -63,8 +64,8 @@ class EffekteEinstellungenSeite(View):
         for name, typ in self.ZAHLEN:
             setattr(s, name, self._zahl(request.POST.get(name), typ, name, getattr(s, name)))
         s.save()
-        messages.success(request, "Effekte-Einstellungen gespeichert.")
-        return redirect("settings_effekte")
+        messages.success(request, 'Effekte-Einstellungen gespeichert.')
+        return redirect('settings_effekte')
 
     @staticmethod
     def _zahl(roh, typ, name, bisher):
@@ -84,4 +85,4 @@ class EffekteEinstellungenSeite(View):
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heisst sonst ``view``.
 effekte_settings_page = EffekteEinstellungenSeite.as_view()
-effekte_settings_page.__name__ = "effekte_settings_page"
+effekte_settings_page.__name__ = 'effekte_settings_page'

@@ -9,13 +9,13 @@ es eine zweite Rechnung, rechnete der Motor gegen eine Ruhelage, die die
 Figur nicht hat (Befund SMPL, 07.09.2026).
 """
 
-__all__ = ["G9retargetziel"]
+__all__ = ['G9retargetziel']
 
 
 class G9retargetziel:
     """Geometrie und Zuordnung fuer `Retargetdaten._auf_kette`."""
 
-    FEHLT = "Daz-Bibliothek mit Genesis 9 fehlt — siehe Genesis9/HERKUNFT.md"
+    FEHLT = 'Daz-Bibliothek mit Genesis 9 fehlt — siehe Genesis9/HERKUNFT.md'
 
     @classmethod
     def geometrie(cls, formung):

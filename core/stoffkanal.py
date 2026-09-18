@@ -17,9 +17,9 @@ import logging
 import numpy as np
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Stoffkanal", "StoffConsumer"]
+__all__ = ['Stoffkanal', 'StoffConsumer']
 
 
 class Stoffkanal:
@@ -44,12 +44,12 @@ class Stoffkanal:
             await self.send(
                 text_data=json.dumps(
                     {
-                        "type": "stoff",
-                        "stueck": stueck,
-                        "punkte": int(len(punkte)),
+                        'type': 'stoff',
+                        'stueck': stueck,
+                        'punkte': int(len(punkte)),
                         # Wie weit die Vorschau von der simulierten Form weg ist —
                         # die Zahl, die „Finalize" begruendet.
-                        "abstand_mm": self._stoff.abstand_mm(stueck, punkte),
+                        'abstand_mm': self._stoff.abstand_mm(stueck, punkte),
                     }
                 )
             )
@@ -64,19 +64,19 @@ class Stoffkanal:
         """
         from .dienste.charakterdaten import Charakterdaten
 
-        pfad = self._stoff.netzpfad(msg.get("ordner"))
+        pfad = self._stoff.netzpfad(msg.get('ordner'))
         if not pfad:
             await self.send(
                 text_data=json.dumps(
-                    {"type": "stoff_bindung", "fehler": "Kein Ergebnisnetz in diesem Ordner"}
+                    {'type': 'stoff_bindung', 'fehler': 'Kein Ergebnisnetz in diesem Ordner'}
                 )
             )
             return
         grundnetz = self._char_state.compute()
         netz = Charakterdaten.netzdaten(self._current_gender)
-        bilanz = self._stoff.binden(msg.get("stueck") or "kleidung", pfad, grundnetz, netz.faces)
-        await self.send(text_data=json.dumps({"type": "stoff_bindung", **bilanz}))
-        if "fehler" not in bilanz:
+        bilanz = self._stoff.binden(msg.get('stueck') or 'kleidung', pfad, grundnetz, netz.faces)
+        await self.send(text_data=json.dumps({'type': 'stoff_bindung', **bilanz}))
+        if 'fehler' not in bilanz:
             await self._send_stoff(grundnetz)
 
 
@@ -103,7 +103,7 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
 
         self._stoff = Stoffnachfuehrung()
         self._char_state = None
-        self._current_gender = "female"
+        self._current_gender = 'female'
         self._init_state()
 
     def _init_state(self):
@@ -112,7 +112,7 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
 
             self._char_state = Charakterdaten.zustand()
         except Exception as fehler:  # noqa: BLE001
-            logger.error("StoffConsumer: CharacterState nicht aufgebaut: %s", fehler)
+            logger.error('StoffConsumer: CharacterState nicht aufgebaut: %s', fehler)
 
     async def disconnect(self, close_code):
         self._stoff.loesen()
@@ -133,14 +133,14 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # kein Serverfehler (wie CharacterConsumer)
         except json.JSONDecodeError:
             return
-        art = msg.get("type")
+        art = msg.get('type')
 
-        if art == "stoff_binden":
+        if art == 'stoff_binden':
             self._stellen(msg)
             await self._handle_stoff_binden(msg)
-        elif art == "stoff_loesen":
-            self._stoff.loesen(msg.get("stueck"))
-        elif art == "stellung":
+        elif art == 'stoff_loesen':
+            self._stoff.loesen(msg.get('stueck'))
+        elif art == 'stellung':
             if self._stoff.leer:
                 return
             self._stellen(msg)
@@ -157,22 +157,22 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         zustand = self._char_state
         if zustand is None:  # `receive` prueft das schon; hier fuer sich
             return
-        bauart = msg.get("bauart") or "Female_Caucasian"
-        self._current_gender = "male" if str(bauart).lower().startswith("m") else "female"
+        bauart = msg.get('bauart') or 'Female_Caucasian'
+        self._current_gender = 'male' if str(bauart).lower().startswith('m') else 'female'
         # ERST leeren, DANN die Bauart setzen — dieselbe Reihenfolge wie in
         # `CharacterConsumer.receive` bei `reset`: `compute()` schreibt die
         # Regler aus `_user_morphs` zurueck, ein spaeteres Leeren traefe sie
         # nicht.
         zustand.zuruecksetzen()
         zustand.set_body_type(bauart)
-        for name, wert in (msg.get("morphs") or {}).items():
+        for name, wert in (msg.get('morphs') or {}).items():
             try:
                 zustand.set_morph(name, float(wert))
             # stumm gewollt: ein unbrauchbarer Reglerwert aus dem Browser wird
             # uebergangen
             except TypeError, ValueError:
                 continue
-        for name, wert in (msg.get("meta") or {}).items():
+        for name, wert in (msg.get('meta') or {}).items():
             try:
                 zustand.set_meta(name, float(wert))
             # stumm gewollt: ein unbrauchbarer Metawert aus dem Browser wird uebergangen

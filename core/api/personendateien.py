@@ -22,5 +22,5 @@ class Personendateien:
         weitere = job.bvh_file_personen or []
         stelle = int(person) - 2
         if stelle < 0 or stelle >= len(weitere):
-            return HttpResponseNotFound("Kein BVH für Person %s" % person)
+            return HttpResponseNotFound('Kein BVH für Person %s' % person)
         return Auftragsdateien.textantwort(weitere[stelle])

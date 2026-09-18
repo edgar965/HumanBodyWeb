@@ -19,8 +19,8 @@ class Skelettgeometrie:
         if cls._gemerkt is None:
             from humanbody_core.skeleton import SkeletonGeometry
 
-            skelett = str(settings.HUMANBODY_DATA_DIR / "def_skeleton.json")
-            gewichte = str(settings.HUMANBODY_DATA_DIR / "skin_weights_base.json")
+            skelett = str(settings.HUMANBODY_DATA_DIR / 'def_skeleton.json')
+            gewichte = str(settings.HUMANBODY_DATA_DIR / 'skin_weights_base.json')
             cls._gemerkt = SkeletonGeometry.from_json(skelett, gewichte)
         return cls._gemerkt
 

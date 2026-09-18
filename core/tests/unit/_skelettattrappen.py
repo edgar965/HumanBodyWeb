@@ -35,7 +35,7 @@ const pruefe = (was, ist, soll) => {
 #: Die Abschlusszeile, die `Webmodul.laufen` als Ergebnis liest. Fehlt sie,
 #: meldet der Helfer „node hat nichts ausgegeben" — was aussieht, als fehle
 #: node, und keiner der Vergleiche darüber wäre geprüft worden.
-FERTIG = "\nconsole.log(JSON.stringify({fertig: true}));\n"
+FERTIG = '\nconsole.log(JSON.stringify({fertig: true}));\n'
 
 #: Wurzel, Hüften und ihre Ortsspuren — der Aufbau des Bandai-Falls.
 BANDAI_AUFBAU = """

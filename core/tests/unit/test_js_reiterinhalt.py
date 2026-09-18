@@ -29,7 +29,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "reiterinhalt.js")
+MODUL = Jsmodul('scene', 'reiterinhalt.js')
 
 #: Attrappen für alles, was das Modul beim Laden anfasst.
 UMGEBUNG = """
@@ -127,4 +127,4 @@ class ReiterinhaltTest(SimpleTestCase):
 
     def test_reiter_werden_erst_beim_oeffnen_gefuellt(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

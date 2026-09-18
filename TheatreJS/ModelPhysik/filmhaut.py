@@ -22,7 +22,6 @@ die Dreiecke keine Materialnummer.
 import logging
 
 import numpy as np
-
 from feinkoerper import Feinkoerper
 
 logger = logging.getLogger(__name__)
@@ -36,23 +35,23 @@ class Filmhaut:
     #: Je Zeile: Detailfeld der Farbe (None = fest), Vorgabefarbe (sRGB),
     #: Rauheit, Deckkraft. `test_filmhaut` vergleicht mit der JS-Quelle.
     GRUPPEN = [
-        ("haut", "#d4a574", 0.55, 1.0),  # 0 Haut
-        ("haut", "#d4a574", 0.55, 1.0),  # 1 Censor (dieselbe Haut)
-        ("wimpern", "#111111", 0.8, 1.0),  # 2 Wimpern
-        (None, "#0a0a0a", 0.1, 1.0),  # 3 Pupille
-        ("sklera", "#f4f0e8", 0.2, 1.0),  # 4 Sklera
-        (None, "#f4f0e8", 0.05, 0.3),  # 5 Hornhaut (durchsichtig)
-        ("iris", "#4a7a9b", 0.15, 1.0),  # 6 Iris
-        ("zunge", "#b55a6a", 0.7, 1.0),  # 7 Zunge
-        ("zaehne", "#f0ece0", 0.3, 1.0),  # 8 Zaehne
-        ("naegel_hand", "#e0a88a", 0.4, 1.0),  # 9 Naegel Hand
-        ("naegel_fuss", "#e0a88a", 0.4, 1.0),  # 10 Naegel Fuss
-        ("lippen", "#b5707a", 0.4, 1.0),  # 11 Lippen (`lippengruppe.js`)
+        ('haut', '#d4a574', 0.55, 1.0),  # 0 Haut
+        ('haut', '#d4a574', 0.55, 1.0),  # 1 Censor (dieselbe Haut)
+        ('wimpern', '#111111', 0.8, 1.0),  # 2 Wimpern
+        (None, '#0a0a0a', 0.1, 1.0),  # 3 Pupille
+        ('sklera', '#f4f0e8', 0.2, 1.0),  # 4 Sklera
+        (None, '#f4f0e8', 0.05, 0.3),  # 5 Hornhaut (durchsichtig)
+        ('iris', '#4a7a9b', 0.15, 1.0),  # 6 Iris
+        ('zunge', '#b55a6a', 0.7, 1.0),  # 7 Zunge
+        ('zaehne', '#f0ece0', 0.3, 1.0),  # 8 Zaehne
+        ('naegel_hand', '#e0a88a', 0.4, 1.0),  # 9 Naegel Hand
+        ('naegel_fuss', '#e0a88a', 0.4, 1.0),  # 10 Naegel Fuss
+        ('lippen', '#b5707a', 0.4, 1.0),  # 11 Lippen (`lippengruppe.js`)
     ]
     HAUT = (0, 1)
     LIPPEN = 11
     #: Glanzfeld je Gruppe: Rauheit = 1 − Glanz (`Detailfarben.GLANZ`).
-    GLANZ = {0: "haut_glanz", 1: "haut_glanz", 11: "lippen_glanz"}
+    GLANZ = {0: 'haut_glanz', 1: 'haut_glanz', 11: 'lippen_glanz'}
 
     def __init__(self, uvs, dreiecke, material, details=None, bild=None):
         self.uvs = np.ascontiguousarray(uvs, dtype=np.float32)
@@ -69,7 +68,7 @@ class Filmhaut:
     def anlegen(cls, teil, details, geschlecht, body_type):
         """`teil['filmhaut']` fuer einen Koerper mit Unterteiler — oder None,
         dann rendert `Filmrender` die Flaeche wie bisher."""
-        unterteiler = teil.get("unterteiler")
+        unterteiler = teil.get('unterteiler')
         if unterteiler is None or unterteiler.uvs is None or unterteiler.triangle_materials is None:
             return None
         try:
@@ -83,9 +82,9 @@ class Filmhaut:
             haut.lippen(cls._lippenpunkte(geschlecht, unterteiler))
         # stumm gewollt: ohne Texturen oder Maske wird der Film trotzdem fertig
         except Exception:  # noqa: BLE001
-            logger.warning("Filmhaut: Flaeche statt Textur", exc_info=True)
+            logger.warning('Filmhaut: Flaeche statt Textur', exc_info=True)
             return None
-        teil["filmhaut"] = haut
+        teil['filmhaut'] = haut
         return haut
 
     @staticmethod
@@ -147,7 +146,7 @@ class Filmhaut:
     def _farbe(self, feld, vorgabe):
         """Die Detailfarbe des Felds (`#rrggbb`), sonst die Vorgabe."""
         farbe = self.details.get(feld) if feld else None
-        if isinstance(farbe, str) and len(farbe) == 7 and farbe.startswith("#"):
+        if isinstance(farbe, str) and len(farbe) == 7 and farbe.startswith('#'):
             return farbe
         return vorgabe
 
@@ -156,7 +155,7 @@ class Filmhaut:
 
         if self.bild is None:
             return None
-        return pyrender.Texture(source=np.ascontiguousarray(self.bild), source_channels="RGB")
+        return pyrender.Texture(source=np.ascontiguousarray(self.bild), source_channels='RGB')
 
     def _werkstoff(self, nummer, textur):
         """Das Material EINER Gruppe: Haut mit der Textur (Faktor weiss),
@@ -172,7 +171,7 @@ class Filmhaut:
             metallicFactor=0.0,
             roughnessFactor=self._rauheit(nummer, rauheit),
             doubleSided=True,
-            alphaMode="BLEND" if alpha < 1.0 else "OPAQUE",
+            alphaMode='BLEND' if alpha < 1.0 else 'OPAQUE',
         )
 
     def werkstoffe(self):
@@ -206,7 +205,7 @@ class Filmhaut:
                 material=werkstoff,
                 mode=4,
             )
-            (durchsichtig if werkstoff.alphaMode == "BLEND" else deckend).append(teil)
+            (durchsichtig if werkstoff.alphaMode == 'BLEND' else deckend).append(teil)
         aus = [pyrender.Mesh(primitives=deckend)] if deckend else []
         aus.extend(pyrender.Mesh(primitives=[t]) for t in durchsichtig)
         return aus

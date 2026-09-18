@@ -31,17 +31,17 @@ from django.conf import settings
 class Figurvideoablage:
     """Ordner pruefen, Namen bilden, Kopie anlegen."""
 
-    ENDUNG = ".mp4"
+    ENDUNG = '.mp4'
     #: Was im Dateinamen bleiben darf: Buchstaben (auch Umlaute), Ziffern,
     #: Punkt, Bindestrich, Unterstrich, Leerzeichen. Alles andere wird `_`.
-    _UNERLAUBT = re.compile(r"[^\w.\- ]", re.UNICODE)
+    _UNERLAUBT = re.compile(r'[^\w.\- ]', re.UNICODE)
     #: Marke im Auftragsordner: das Video ist schon abgelegt (Server-Weg,
     #: `stand()` wird alle zwei Sekunden gefragt — kopiert wird einmal).
-    MARKE = "ablage.json"
+    MARKE = 'ablage.json'
 
     @classmethod
     def vorgabe_ordner(cls):
-        return os.path.join(str(settings.MEDIA_ROOT), "figurvideos")
+        return os.path.join(str(settings.MEDIA_ROOT), 'figurvideos')
 
     # --------------------------------------------------------------- Ordner
 
@@ -52,43 +52,43 @@ class Figurvideoablage:
         Leer heisst Vorgabe. Geprueft wird beim START, nicht erst nach zwei
         Minuten Rechnen: Ein Tippfehler im Laufwerk soll sofort auffallen.
         """
-        ordner = (ordner or "").strip().strip('"')
+        ordner = (ordner or '').strip().strip('"')
         if not ordner:
             return cls.vorgabe_ordner()
         if not os.path.isabs(ordner):
             raise ValueError(
-                "Die Ablage muss ein vollständiger Pfad sein (z. B. A:\\Videos), nicht: %s" % ordner
+                'Die Ablage muss ein vollständiger Pfad sein (z. B. A:\\Videos), nicht: %s' % ordner
             )
         try:
             os.makedirs(ordner, exist_ok=True)
         except OSError as fehler:
-            raise ValueError("Ablage nicht anlegbar: %s (%s)" % (ordner, fehler.strerror or fehler))
+            raise ValueError('Ablage nicht anlegbar: %s (%s)' % (ordner, fehler.strerror or fehler))
         if not os.path.isdir(ordner):
-            raise ValueError("Ablage ist kein Ordner: %s" % ordner)
+            raise ValueError('Ablage ist kein Ordner: %s' % ordner)
         return ordner
 
     # ----------------------------------------------------------------- Name
 
     @classmethod
-    def dateiname(cls, name="", figur="", animation="", zeit=None):
+    def dateiname(cls, name='', figur='', animation='', zeit=None):
         """Der Wunschname, bereinigt — oder Figur_Animation_Zeit."""
         stamm = cls._sauber(name)
         if stamm.lower().endswith(cls.ENDUNG):
-            stamm = stamm[: -len(cls.ENDUNG)].rstrip(" ._")
+            stamm = stamm[: -len(cls.ENDUNG)].rstrip(' ._')
         if not stamm:
             zeit = zeit or datetime.now()
-            stamm = "_".join(
+            stamm = '_'.join(
                 [
-                    cls._sauber(figur) or "figur",
-                    cls._sauber(animation) or "animation",
-                    zeit.strftime("%Y%m%d-%H%M"),
+                    cls._sauber(figur) or 'figur',
+                    cls._sauber(animation) or 'animation',
+                    zeit.strftime('%Y%m%d-%H%M'),
                 ]
             )
         return stamm + cls.ENDUNG
 
     @classmethod
     def _sauber(cls, text):
-        text = cls._UNERLAUBT.sub("_", str(text or "")).strip(" ._")
+        text = cls._UNERLAUBT.sub('_', str(text or '')).strip(' ._')
         return text[:80]
 
     # ---------------------------------------------------------------- Kopie
@@ -107,9 +107,9 @@ class Figurvideoablage:
             return pfad
         stamm, endung = os.path.splitext(pfad)
         n = 2
-        while os.path.exists("%s-%d%s" % (stamm, n, endung)):
+        while os.path.exists('%s-%d%s' % (stamm, n, endung)):
             n += 1
-        return "%s-%d%s" % (stamm, n, endung)
+        return '%s-%d%s' % (stamm, n, endung)
 
     @classmethod
     def fuer_auftrag(cls, auftragsordner):
@@ -120,13 +120,13 @@ class Figurvideoablage:
         """
         marke = os.path.join(auftragsordner, cls.MARKE)
         if os.path.isfile(marke):
-            with open(marke, encoding="utf-8") as datei:
-                return json.load(datei).get("pfad")
-        with open(os.path.join(auftragsordner, "auftrag.json"), encoding="utf-8") as datei:
-            ablage = json.load(datei).get("ablage") or {}
-        if not ablage.get("name"):
+            with open(marke, encoding='utf-8') as datei:
+                return json.load(datei).get('pfad')
+        with open(os.path.join(auftragsordner, 'auftrag.json'), encoding='utf-8') as datei:
+            ablage = json.load(datei).get('ablage') or {}
+        if not ablage.get('name'):
             return None
-        pfad = cls.ablegen(os.path.join(auftragsordner, "video.mp4"), ablage.get("ordner"), ablage["name"])
-        with open(marke, "w", encoding="utf-8") as datei:
-            json.dump({"pfad": pfad}, datei)
+        pfad = cls.ablegen(os.path.join(auftragsordner, 'video.mp4'), ablage.get('ordner'), ablage['name'])
+        with open(marke, 'w', encoding='utf-8') as datei:
+            json.dump({'pfad': pfad}, datei)
         return pfad

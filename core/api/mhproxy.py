@@ -20,14 +20,14 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
+from humanbody_core.koerperabstand import Koerperabstand
+from MakeHuman.material import MhMaterial
+from MakeHuman.proxy_anpassung import MhProxyAnpassung, MhProxyFehler
 
 from ..daten.anpassungsregler import Anpassungsregler
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.kleidungswerkzeuge import Kleidungswerkzeuge
-from MakeHuman.material import MhMaterial
-from MakeHuman.proxy_anpassung import MhProxyAnpassung, MhProxyFehler
-from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger(__name__)
 
@@ -50,18 +50,18 @@ class Mhproxy:
         MhProxyAnpassung, die Regler in Anpassungsregler, die Materialangaben
         in MhMaterial.
         """
-        kennung = request.GET.get("garment_id", "")
+        kennung = request.GET.get('garment_id', '')
         if not kennung:
-            return JsonResponse({"error": "garment_id required"}, status=400)
+            return JsonResponse({'error': 'garment_id required'}, status=400)
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({"error": "Failed to compute body mesh"}, status=500)
+            return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
         regler = Anpassungsregler.aus_parametern(request.GET)
         try:
             anpassung = MhProxyAnpassung(kennung, koerper.geschlecht)
             punkte = anpassung.anpassen(koerper.vertices, regler)
         except MhProxyFehler as fehler:
-            return JsonResponse({"error": str(fehler)}, status=fehler.status)
+            return JsonResponse({'error': str(fehler)}, status=fehler.status)
         return JsonResponse(
             MhMaterial(anpassung.verzeichnis).in_antwort(Mhproxy._netzantwort(anpassung, punkte, koerper))
         )
@@ -72,14 +72,14 @@ class Mhproxy:
         dreiecke = anpassung.dreiecke()
         flaechen = dreiecke.astype(np.uint32) if len(dreiecke) else np.zeros((0, 3), dtype=np.uint32)
         return {
-            "vertex_count": int(len(f32)),
-            "vertices": Netzantwort.feld(f32, "vertices"),
-            "normals": Netzantwort.feld(anpassung.normalen(punkte), "normals"),
-            "faces": Netzantwort.feld(flaechen, "faces"),
-            "skin_indices": base64.b64encode(
+            'vertex_count': int(len(f32)),
+            'vertices': Netzantwort.feld(f32, 'vertices'),
+            'normals': Netzantwort.feld(anpassung.normalen(punkte), 'normals'),
+            'faces': Netzantwort.feld(flaechen, 'faces'),
+            'skin_indices': base64.b64encode(
                 Kleidungswerkzeuge.knochenindizes(f32, koerper.vertices, koerper.geschlecht)
             ).decode(),
-            "skin_weights": base64.b64encode(
+            'skin_weights': base64.b64encode(
                 Kleidungswerkzeuge.knochengewichte(f32, koerper.vertices, koerper.geschlecht)
             ).decode(),
         }
@@ -88,12 +88,12 @@ class Mhproxy:
     @require_GET
     def tpose_punkte(request):
         """Die vorberechneten T-Pose-Punkte des Koerpers als base64."""
-        pfad = os.path.join(str(settings.HUMANBODY_DATA_DIR), "vertices_tpose.npy")
+        pfad = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'vertices_tpose.npy')
         if not os.path.isfile(pfad):
-            return JsonResponse({"error": "T-pose vertices not found"}, status=404)
+            return JsonResponse({'error': 'T-pose vertices not found'}, status=404)
         punkte = np.load(pfad).astype(np.float32)
         return JsonResponse(
-            {"vertices": Netzantwort.feld(punkte, "vertices"), "vertex_count": int(len(punkte))}
+            {'vertices': Netzantwort.feld(punkte, 'vertices'), 'vertex_count': int(len(punkte))}
         )
 
     @staticmethod
@@ -111,13 +111,13 @@ class Mhproxy:
 
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({"error": "Body compute failed"}, status=500)
+            return JsonResponse({'error': 'Body compute failed'}, status=500)
         try:
             punkte = Mhproxy._punkte_aus_rumpf(request.body)
         except (ValueError, KeyError, TypeError) as fehler:
-            return JsonResponse({"error": "Parse failed: %s" % fehler}, status=400)
+            return JsonResponse({'error': 'Parse failed: %s' % fehler}, status=400)
         schiebekoerper = MhKoerper.schiebekoerper(
-            koerper.vertices, request.GET.get("use_mh_body", "1") == "1"
+            koerper.vertices, request.GET.get('use_mh_body', '1') == '1'
         )
         from GarmentFitter.fitter import _compute_vertex_normals
 
@@ -130,15 +130,15 @@ class Mhproxy:
             if netz.faces is not None and len(schiebekoerper) == len(koerper.vertices)
             else None
         )
-        weg_mm = float(request.GET.get("push_dist", Mhproxy.VORGABE_SCHIEBEWEG_MM))
+        weg_mm = float(request.GET.get('push_dist', Mhproxy.VORGABE_SCHIEBEWEG_MM))
         ergebnis = Koerperabstand.gerichtet(
             punkte, schiebekoerper, mindestabstand=weg_mm / 1000.0, normalen=normalen
         )
-        return JsonResponse({"vertices": Netzantwort.feld(ergebnis, "vertices")})
+        return JsonResponse({'vertices': Netzantwort.feld(ergebnis, 'vertices')})
 
     @staticmethod
     def _punkte_aus_rumpf(rumpf):
         """base64-Float32 aus dem POST-Rumpf als (N, 3)-Feld in float64."""
         daten = json.loads(rumpf)
-        roh = base64.b64decode(daten["vertices"])
+        roh = base64.b64decode(daten['vertices'])
         return np.frombuffer(roh, dtype=np.float32).reshape(-1, 3).astype(np.float64)

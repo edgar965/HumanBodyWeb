@@ -19,12 +19,11 @@ import json
 import logging
 from pathlib import Path
 
-
 from ..daten.gelenknamen import Gelenknamen
 from .gelenkquelle import Gelenkquelle
 from .keypoints_quellen import Keypointsquellen
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Ueberlagerungspunkte:
@@ -36,7 +35,7 @@ class Ueberlagerungspunkte:
 
     def daten(self):
         """`{joints, connections, frames}` — `frames` notfalls leer."""
-        if self.job.pipeline == "openpose":
+        if self.job.pipeline == 'openpose':
             masse = self.quelle.bildmasse()
             return self._antwort(self.quelle.aus_openpose(*masse))
         pfad = self.quelle.csv_pfad()
@@ -51,9 +50,9 @@ class Ueberlagerungspunkte:
     def _antwort(self, bilder):
         # Dictionary gewollt: geht unveraendert als JSON an `playback.js`.
         return {
-            "joints": list(Gelenknamen.GELENKE),
-            "connections": Gelenknamen.verbindungsliste(),
-            "frames": bilder,
+            'joints': list(Gelenknamen.GELENKE),
+            'connections': Gelenknamen.verbindungsliste(),
+            'frames': bilder,
         }
 
     def _smpl_projektion(self):
@@ -67,8 +66,8 @@ class Ueberlagerungspunkte:
             return None
         bvh = Path(self.job.bvh_file)
         for kandidat in (
-            bvh.parent / ("%s_keypoints2d.json" % bvh.stem),
-            self.quelle.ordner / ("%s_keypoints2d.json" % bvh.stem),
+            bvh.parent / ('%s_keypoints2d.json' % bvh.stem),
+            self.quelle.ordner / ('%s_keypoints2d.json' % bvh.stem),
         ):
             if kandidat.exists():
                 with open(kandidat) as datei:

@@ -1,11 +1,12 @@
 import os
+
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.sessions import CookieMiddleware
-from django.core.asgi import get_asgi_application
 from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+from django.core.asgi import get_asgi_application
 from djangobase.statik_kopfzeilen import StatikKopfzeilen
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ui.settings")
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ui.settings')
 
 django_asgi_app = get_asgi_application()
 
@@ -26,10 +27,10 @@ application = StatikKopfzeilen(
     ASGIStaticFilesHandler(
         ProtocolTypeRouter(
             {
-                "http": django_asgi_app,
+                'http': django_asgi_app,
                 # `CookieMiddleware`: der Kanal liest den Keks `netzstufen` (Strg+Alt+H,
                 # `core/dienste/netzstufenwahl.py`) aus `scope['cookies']`.
-                "websocket": CookieMiddleware(URLRouter(routing.websocket_urlpatterns)),
+                'websocket': CookieMiddleware(URLRouter(routing.websocket_urlpatterns)),
             }
         )
     )

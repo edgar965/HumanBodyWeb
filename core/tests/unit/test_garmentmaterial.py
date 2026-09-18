@@ -43,26 +43,26 @@ geprüft (`test_js_materialziel`); hier steht, dass die Handler den
 Urheber durchreichen.
 """
 
-import io
 import re
 
 from django.conf import settings
 from django.test import SimpleTestCase
+
 from ._sicher import Sicher
 
 WURZEL = settings.BASE_DIR
 
 
 def _modultext(*teile):
-    return io.open(WURZEL.joinpath(*teile), encoding="utf-8").read()
+    return open(WURZEL.joinpath(*teile), encoding='utf-8').read()
 
 
 def _material():
-    return _modultext("static", "viewer", "scene", "garmentcode_material.js")
+    return _modultext('static', 'viewer', 'scene', 'garmentcode_material.js')
 
 
 def _drapieren():
-    return _modultext("static", "viewer", "scene", "garmentcode_drapieren.js")
+    return _modultext('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
 
 
 class MaterialOhneAuswahlTest(SimpleTestCase):
@@ -73,17 +73,17 @@ class MaterialOhneAuswahlTest(SimpleTestCase):
         geprüfte Klasse — nicht eine Schleife im Modul."""
         quelle = _material()
         self.assertIn("import { Materialziel } from './materialziel.js';", quelle)
-        self.assertIn("Materialziel.netze({", quelle)
-        self.assertIn("gewaehlt: GarmentcodeMaterial.gewaehltesStueck(inst)", quelle)
+        self.assertIn('Materialziel.netze({', quelle)
+        self.assertIn('gewaehlt: GarmentcodeMaterial.gewaehltesStueck(inst)', quelle)
         self.assertNotIn(".filter((k) => k.startsWith('gc_'))", quelle)
 
     def test_anwenden_kennt_den_urheber(self):
         """`anwenden(figur, nutzer)`: breit nur, wenn der Nutzer es war."""
         quelle = _material()
-        unterschrift = re.search(r"static anwenden\(([^)]*)\)", quelle)
+        unterschrift = re.search(r'static anwenden\(([^)]*)\)', quelle)
         self.assertIsNotNone(unterschrift)
         self.assertEqual(
-            Sicher.wert(unterschrift, "Unterschrift").group(1).strip(), "figur, nutzer = false, werte = null"
+            Sicher.wert(unterschrift, 'Unterschrift').group(1).strip(), 'figur, nutzer = false, werte = null'
         )
 
     def test_ein_regler_bringt_nur_seine_eigenschaft_mit(self):
@@ -91,28 +91,28 @@ class MaterialOhneAuswahlTest(SimpleTestCase):
         der Figur auf das Farbfeld um. Jeder Handler liefert deshalb nur
         die Eigenschaft, die er bewegt hat."""
         quelle = _material()
-        self.assertIn("return { farbe: wert };", quelle)
-        self.assertIn("return { rauheit: wert / 100 };", quelle)
-        self.assertIn("return { metall: wert / 100 };", quelle)
-        self.assertEqual(quelle.count("ereignis.isTrusted, werte);"), 2)
-        gewebe = _modultext("static", "viewer", "scene", "garmentcode_gewebe.js")
-        self.assertEqual(gewebe.count("return { gewebe: material.stand.gewebe };"), 2)
-        self.assertIn("{ gewebe: material.stand.gewebe });", gewebe)
+        self.assertIn('return { farbe: wert };', quelle)
+        self.assertIn('return { rauheit: wert / 100 };', quelle)
+        self.assertIn('return { metall: wert / 100 };', quelle)
+        self.assertEqual(quelle.count('ereignis.isTrusted, werte);'), 2)
+        gewebe = _modultext('static', 'viewer', 'scene', 'garmentcode_gewebe.js')
+        self.assertEqual(gewebe.count('return { gewebe: material.stand.gewebe };'), 2)
+        self.assertIn('{ gewebe: material.stand.gewebe });', gewebe)
 
     def test_die_handler_reichen_istrusted_durch(self):
         """Reitergedächtnis und Vorbild schreiben per `dispatchEvent` —
         das darf nie breit wirken. Der Nutzer am Feld schon."""
         quelle = _material()
-        self.assertEqual(quelle.count("ereignis.isTrusted, werte);"), 2, "_feld und _schieber")
-        gewebe = _modultext("static", "viewer", "scene", "garmentcode_gewebe.js")
-        self.assertIn("material.anwenden(material.figur(), ereignis.isTrusted,", gewebe)
-        self.assertNotIn("material.anwenden(material.figur());", gewebe)
+        self.assertEqual(quelle.count('ereignis.isTrusted, werte);'), 2, '_feld und _schieber')
+        gewebe = _modultext('static', 'viewer', 'scene', 'garmentcode_gewebe.js')
+        self.assertIn('material.anwenden(material.figur(), ereignis.isTrusted,', gewebe)
+        self.assertNotIn('material.anwenden(material.figur());', gewebe)
 
     def test_der_befund_steht_im_modulkopf(self):
         """Die gemessenen Werte, damit die nächste Fassung sie kennt."""
         quelle = _material()
-        self.assertIn("#dcd8d0", quelle)
-        self.assertIn("reitergedaechtnis", quelle)
+        self.assertIn('#dcd8d0', quelle)
+        self.assertIn('reitergedaechtnis', quelle)
 
 
 class MaterialBeimBauenTest(SimpleTestCase):
@@ -121,15 +121,15 @@ class MaterialBeimBauenTest(SimpleTestCase):
     def test_der_bau_faerbt_genau_sein_stueck(self):
         """Sonst zieht das zweite Stück die Farbe des ersten mit."""
         quelle = _drapieren()
-        self.assertIn("GarmentcodeMaterial.aufStueck(figur, stueck)", quelle)
-        self.assertNotIn("GarmentcodeMaterial.anwenden(figur, false)", quelle)
+        self.assertIn('GarmentcodeMaterial.aufStueck(figur, stueck)', quelle)
+        self.assertNotIn('GarmentcodeMaterial.anwenden(figur, false)', quelle)
 
     def test_auf_stueck_greift_ueber_den_schluessel(self):
         """Über `clothMeshes` und den `gc_`-Schlüssel — nicht über den Namen
         im Szenengraphen, wo auch Körper und Haare hängen."""
         quelle = _material()
-        self.assertIn("static aufStueck(figur, stueck, werte = null)", quelle)
-        self.assertIn("GarmentcodeAnziehen.schluessel(stueck)", quelle)
+        self.assertIn('static aufStueck(figur, stueck, werte = null)', quelle)
+        self.assertIn('GarmentcodeAnziehen.schluessel(stueck)', quelle)
 
 
 class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
@@ -149,34 +149,34 @@ class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
     databases = set()
 
     def _anziehen(self):
-        return _modultext("static", "viewer", "scene", "garmentcode_anziehen.js")
+        return _modultext('static', 'viewer', 'scene', 'garmentcode_anziehen.js')
 
     def test_das_bisherige_material_wird_vor_dem_entfernen_gelesen(self):
         """`entfernen` gibt das Material frei — danach ist nichts zu holen."""
         quelle = self._anziehen()
-        stelle_lesen = quelle.index("Garmentstoff.werte(")
-        stelle_entfernen = quelle.index("GarmentcodeAnziehen.entfernen(figur,")
+        stelle_lesen = quelle.index('Garmentstoff.werte(')
+        stelle_entfernen = quelle.index('GarmentcodeAnziehen.entfernen(figur,')
         self.assertLess(stelle_lesen, stelle_entfernen)
 
     def test_das_neue_material_erbt_die_bisherigen_werte(self):
         quelle = self._anziehen()
         # Seit dem 10.09.2026 kommen die Stoffangaben als zweites Argument
         # dazu (UV und Massstab fuer das Gewebe) — geerbt wird weiter.
-        self.assertIn("Garmentstoff.neu(bisher, stoff)", quelle)
-        self.assertNotIn("GarmentcodeAnziehen._stoff()", quelle)
+        self.assertIn('Garmentstoff.neu(bisher, stoff)', quelle)
+        self.assertNotIn('GarmentcodeAnziehen._stoff()', quelle)
 
     def test_der_stoff_hat_eine_eigene_quelle(self):
         """Farbe, Rauheit und Metallanteil entstehen an EINER Stelle.
 
         Vorher an dreien — und zwei davon sind auseinandergelaufen.
         """
-        stoff = _modultext("static", "viewer", "scene", "garmentcode_stoff.js")
-        self.assertIn("static FARBE = 0xdcd8d0;", stoff)
-        self.assertIn("static neu(bisher = null, angaben = null)", stoff)
-        self.assertIn("static werte(netz)", stoff)
-        for datei in ("garmentcode_anziehen.js", "garmentcode_ablage.js", "garmentcode_material.js"):
+        stoff = _modultext('static', 'viewer', 'scene', 'garmentcode_stoff.js')
+        self.assertIn('static FARBE = 0xdcd8d0;', stoff)
+        self.assertIn('static neu(bisher = null, angaben = null)', stoff)
+        self.assertIn('static werte(netz)', stoff)
+        for datei in ('garmentcode_anziehen.js', 'garmentcode_ablage.js', 'garmentcode_material.js'):
             self.assertIn(
-                "from './garmentcode_stoff.js'", _modultext("static", "viewer", "scene", datei), datei
+                "from './garmentcode_stoff.js'", _modultext('static', 'viewer', 'scene', datei), datei
             )
 
 
@@ -188,10 +188,10 @@ class EinhaengenNimmtBeideFormenTest(SimpleTestCase):
     databases = set()
 
     def test_kein_direkter_zugriff_auf_figur_inst_mehr(self):
-        quelle = _modultext("static", "viewer", "scene", "garmentcode_drapieren.js")
-        self.assertIn("const inst = figur?.inst || figur;", quelle)
-        self.assertIn("GarmentcodeAnziehen.anziehen(\n                inst,", quelle)
-        self.assertNotIn("anziehen(\n                figur.inst,", quelle)
+        quelle = _modultext('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
+        self.assertIn('const inst = figur?.inst || figur;', quelle)
+        self.assertIn('GarmentcodeAnziehen.anziehen(\n                inst,', quelle)
+        self.assertNotIn('anziehen(\n                figur.inst,', quelle)
 
 
 class MaterialAusDerSzeneTest(SimpleTestCase):
@@ -201,11 +201,11 @@ class MaterialAusDerSzeneTest(SimpleTestCase):
         """Die andere Hälfte des Befundes: Beim Laden muss das Material aus
         der Szenendatei ankommen. Es kam an — und wurde danach überschrieben.
         """
-        ablage = _modultext("static", "viewer", "scene", "garmentcode_ablage.js")
-        self.assertIn("GarmentcodeAblage._materialSetzen(", ablage)
-        self.assertIn("eintrag.material", ablage)
+        ablage = _modultext('static', 'viewer', 'scene', 'garmentcode_ablage.js')
+        self.assertIn('GarmentcodeAblage._materialSetzen(', ablage)
+        self.assertIn('eintrag.material', ablage)
 
     def test_die_ablage_liest_das_material_am_netz(self):
         """Gespeichert wird, was am Netz steht — nicht der Reglerstand."""
-        ablage = _modultext("static", "viewer", "scene", "garmentcode_ablage.js")
-        self.assertIn("material: GarmentcodeAblage._material(netz)", ablage)
+        ablage = _modultext('static', 'viewer', 'scene', 'garmentcode_ablage.js')
+        self.assertIn('material: GarmentcodeAblage._material(netz)', ablage)

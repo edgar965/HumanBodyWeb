@@ -46,8 +46,8 @@ class Auftragsstart:
             return None
         return JsonResponse(
             {
-                "ok": False,
-                "error": f'Job "{laeuft.name}" läuft bereits ({laeuft.status}). Bitte warten oder abbrechen.',
+                'ok': False,
+                'error': f'Job "{laeuft.name}" läuft bereits ({laeuft.status}). Bitte warten oder abbrechen.',
             },
             status=409,
         )

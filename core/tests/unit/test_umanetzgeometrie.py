@@ -17,14 +17,13 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-
 from django.conf import settings
 
 sys.path.insert(0, str(Path(settings.TOOLS_ROOT)))
 
-from UMA_Python.netzgeometrie import Netzgeometrie  # noqa: E402
-from UMA_Python.nahtgruppen import Nahtgruppen  # noqa: E402
 from UMA_Python.glaettung import Glaettung  # noqa: E402
+from UMA_Python.nahtgruppen import Nahtgruppen  # noqa: E402
+from UMA_Python.netzgeometrie import Netzgeometrie  # noqa: E402
 
 
 class UmaOriginalfaelle(unittest.TestCase):
@@ -98,7 +97,7 @@ class ZweiteFassungDesselbenAlgorithmus(unittest.TestCase):
 
         abweichung = np.linalg.norm(meins - seins, axis=1)
         self.assertLess(
-            abweichung.max(), 1e-9, "Die beiden Ericson-Fassungen weichen ab: max %.3e" % abweichung.max()
+            abweichung.max(), 1e-9, 'Die beiden Ericson-Fassungen weichen ab: max %.3e' % abweichung.max()
         )
 
 
@@ -135,7 +134,7 @@ class RelativeEntartungsschwelle(unittest.TestCase):
         for kante in (0.01, 1.0, 100.0):
             ecken = self._feines_dreieck(kante)
             bary = Netzgeometrie.baryzentrisch(ecken[0].mean(axis=0)[None], ecken)[0]
-            self.assertAlmostEqual(bary[0], 1.0 / 3.0, places=6, msg="Kantenlänge %g" % kante)
+            self.assertAlmostEqual(bary[0], 1.0 / 3.0, places=6, msg='Kantenlänge %g' % kante)
 
 
 class GlaettungHaeltDieGroesse(unittest.TestCase):
@@ -162,11 +161,11 @@ class GlaettungHaeltDieGroesse(unittest.TestCase):
         nachbarn = Netzgeometrie.nachbarschaft(len(punkte), dreiecke)
         vorher = self._radius(punkte)
 
-        laplace = Glaettung.glaetten(punkte, nachbarn, "laplace", durchgaenge=20, staerke=0.5)
-        hc = Glaettung.glaetten(punkte, nachbarn, "hc", durchgaenge=20, staerke=0.5)
+        laplace = Glaettung.glaetten(punkte, nachbarn, 'laplace', durchgaenge=20, staerke=0.5)
+        hc = Glaettung.glaetten(punkte, nachbarn, 'hc', durchgaenge=20, staerke=0.5)
 
-        self.assertLess(self._radius(laplace), vorher * 0.97, "Laplace müsste sichtbar schrumpfen")
-        self.assertGreater(self._radius(hc), self._radius(laplace), "HC muss weniger schrumpfen als Laplace")
+        self.assertLess(self._radius(laplace), vorher * 0.97, 'Laplace müsste sichtbar schrumpfen')
+        self.assertGreater(self._radius(hc), self._radius(laplace), 'HC muss weniger schrumpfen als Laplace')
 
     def test_gesperrte_punkte_bleiben_liegen(self):
         punkte, dreiecke = self._kugel()
@@ -174,7 +173,7 @@ class GlaettungHaeltDieGroesse(unittest.TestCase):
         darf = np.zeros(len(punkte), dtype=bool)
         darf[:50] = True
 
-        raus = Glaettung.glaetten(punkte, nachbarn, "hc", durchgaenge=5, betroffen=darf)
+        raus = Glaettung.glaetten(punkte, nachbarn, 'hc', durchgaenge=5, betroffen=darf)
         np.testing.assert_allclose(raus[50:], punkte[50:], atol=1e-12)
         self.assertGreater(np.abs(raus[:50] - punkte[:50]).max(), 0.0)
 
@@ -182,4 +181,4 @@ class GlaettungHaeltDieGroesse(unittest.TestCase):
         punkte, dreiecke = self._kugel()
         nachbarn = Netzgeometrie.nachbarschaft(len(punkte), dreiecke)
         with self.assertRaises(ValueError):
-            Glaettung.glaetten(punkte, nachbarn, "kaputt")
+            Glaettung.glaetten(punkte, nachbarn, 'kaputt')

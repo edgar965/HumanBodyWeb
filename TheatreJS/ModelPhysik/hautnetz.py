@@ -12,7 +12,7 @@ import os
 import numpy as np
 
 #: Materialien, die zur AUSSENhaut gehoeren. Alles andere steckt im Kopf.
-HAUT = ("HB_Skin", "HB_Censor", "HB_Nails_Hand", "HB_Nails_Feet")
+HAUT = ('HB_Skin', 'HB_Censor', 'HB_Nails_Hand', 'HB_Nails_Feet')
 
 
 class Hautnetz:
@@ -42,14 +42,14 @@ class Hautnetz:
     #: `--bauart` waehlen. DIE TOPOLOGIEN SIND VERSCHIEDEN: weiblich 18.210
     #: Punkte, maennlich 17.996 — deshalb nie das eine Netz mit den Flaechen
     #: des anderen mischen (Befund vom 07.09.2026).
-    BAUART = {"female": "Female_Caucasian", "male": "Male_Caucasian"}
+    BAUART = {'female': 'Female_Caucasian', 'male': 'Male_Caucasian'}
 
-    def __init__(self, wurzel, bauart=None, geschlecht="female"):
+    def __init__(self, wurzel, bauart=None, geschlecht='female'):
         self.bauart = bauart or self.BAUART[geschlecht]
         self.punkte = self._basis(wurzel).astype(np.float64)
-        self.vierecke = np.load(os.path.join(wurzel, "faces.npy"))
-        pfad = os.path.join(wurzel, "materials.json")
-        mpfad = os.path.join(wurzel, "face_materials.npy")
+        self.vierecke = np.load(os.path.join(wurzel, 'faces.npy'))
+        pfad = os.path.join(wurzel, 'materials.json')
+        mpfad = os.path.join(wurzel, 'face_materials.npy')
         self.materialien = json.load(open(pfad)) if os.path.exists(pfad) else None
         self.flaechenmaterial = np.load(mpfad) if os.path.exists(mpfad) else None
 
@@ -60,9 +60,9 @@ class Hautnetz:
         T-Pose-Datei zurueckgefallen: Die liefert ein Netz, das fuer sich
         plausibel aussieht und zum Skelett nicht passt.
         """
-        pfad = os.path.join(wurzel, "morphs", "L1", self.bauart + ".npy")
+        pfad = os.path.join(wurzel, 'morphs', 'L1', self.bauart + '.npy')
         if not os.path.exists(pfad):
-            raise SystemExit("Basisnetz fehlt: %s" % pfad)
+            raise SystemExit('Basisnetz fehlt: %s' % pfad)
         return np.load(pfad)
 
     def aussenhaut(self):
@@ -137,7 +137,7 @@ class Hautnetz:
 
         netz = pymeshlab.Mesh(vertex_matrix=punkte, face_matrix=dreiecke)
         satz = pymeshlab.MeshSet()
-        satz.add_mesh(netz, "haut")
+        satz.add_mesh(netz, 'haut')
         satz.meshing_remove_duplicate_vertices()
         satz.meshing_remove_duplicate_faces()
         satz.meshing_remove_null_faces()

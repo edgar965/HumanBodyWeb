@@ -27,7 +27,7 @@ Skelett und Haut: `core/dienste/smplxrig.py`.
 import logging
 import os
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Smplfiguren:
@@ -39,18 +39,18 @@ class Smplfiguren:
     #: `ggg_body_segmentation.json` (GarmentCodes eigenes Koerpermodell,
     #: 23.752 Punkte).
     KOERPER = {
-        "mean_all": {"geschlecht": "female", "smpl": False, "anzeige": "mean_all — Körper des Online-Tools"},
-        "mean_female": {"geschlecht": "female", "smpl": False, "anzeige": "mean_female (GarmentCode)"},
-        "mean_male": {"geschlecht": "male", "smpl": False, "anzeige": "mean_male (GarmentCode)"},
-        "smplx_female": {
-            "geschlecht": "female",
-            "smpl": True,
-            "anzeige": "SMPL-X weiblich (Durchschnitt, A-Pose 40°)",
+        'mean_all': {'geschlecht': 'female', 'smpl': False, 'anzeige': 'mean_all — Körper des Online-Tools'},
+        'mean_female': {'geschlecht': 'female', 'smpl': False, 'anzeige': 'mean_female (GarmentCode)'},
+        'mean_male': {'geschlecht': 'male', 'smpl': False, 'anzeige': 'mean_male (GarmentCode)'},
+        'smplx_female': {
+            'geschlecht': 'female',
+            'smpl': True,
+            'anzeige': 'SMPL-X weiblich (Durchschnitt, A-Pose 40°)',
         },
-        "smplx_male": {
-            "geschlecht": "male",
-            "smpl": True,
-            "anzeige": "SMPL-X männlich (Durchschnitt, A-Pose 40°)",
+        'smplx_male': {
+            'geschlecht': 'male',
+            'smpl': True,
+            'anzeige': 'SMPL-X männlich (Durchschnitt, A-Pose 40°)',
         },
     }
 
@@ -63,15 +63,15 @@ class Smplfiguren:
     #: Die SMPL-Durchschnitte des Tools: nicht mehr im Dialog, aber ladbar —
     #: und ihre YAML ist die Massvorlage der SMPL-X-Koerper.
     VERSTECKT = {
-        "f_smpl_average_A40": {"geschlecht": "female", "smpl": True},
-        "m_smpl_average_A40": {"geschlecht": "male", "smpl": True},
+        'f_smpl_average_A40': {'geschlecht': 'female', 'smpl': True},
+        'm_smpl_average_A40': {'geschlecht': 'male', 'smpl': True},
     }
 
     @staticmethod
     def ordner():
         from GarmentCode.entwurf import Entwurf
 
-        return os.path.join(Entwurf.REPO, "assets", "bodies")
+        return os.path.join(Entwurf.REPO, 'assets', 'bodies')
 
     @classmethod
     def kennt(cls, name):
@@ -87,7 +87,7 @@ class Smplfiguren:
         if Smplvarianten.ist_variante(name):
             return True  # Varianten sind SMPL-X-Netze, immer.
         angaben = cls.KOERPER.get(name) or cls.VERSTECKT.get(name, {})
-        return bool(angaben.get("smpl"))
+        return bool(angaben.get('smpl'))
 
     @classmethod
     def geschlecht(cls, name):
@@ -96,7 +96,7 @@ class Smplfiguren:
         if Smplvarianten.ist_variante(name):
             return Smplvarianten.geschlecht(name)
         angaben = cls.KOERPER.get(name) or cls.VERSTECKT.get(name, {})
-        return angaben.get("geschlecht", "female")
+        return angaben.get('geschlecht', 'female')
 
     @classmethod
     def liste(cls):
@@ -106,25 +106,25 @@ class Smplfiguren:
 
         aus = []
         for name, angaben in cls.KOERPER.items():
-            if angaben["smpl"]:
-                if not Smplxrig.vorhanden(angaben["geschlecht"]):
+            if angaben['smpl']:
+                if not Smplxrig.vorhanden(angaben['geschlecht']):
                     continue
                 groesse = Smplvarianten.groesse(name)
             else:
-                obj = os.path.join(cls.ordner(), name + ".obj")
+                obj = os.path.join(cls.ordner(), name + '.obj')
                 if not os.path.isfile(obj):
                     continue
                 groesse = os.path.getsize(obj)
             aus.append(
                 {
-                    "name": name,
-                    "anzeige": angaben["anzeige"],
-                    "geschlecht": angaben["geschlecht"],
-                    "smpl": angaben["smpl"],
-                    "bytes": groesse,
-                    "masse_vorhanden": True
-                    if angaben["smpl"]
-                    else os.path.isfile(os.path.join(cls.ordner(), name + ".yaml")),
+                    'name': name,
+                    'anzeige': angaben['anzeige'],
+                    'geschlecht': angaben['geschlecht'],
+                    'smpl': angaben['smpl'],
+                    'bytes': groesse,
+                    'masse_vorhanden': True
+                    if angaben['smpl']
+                    else os.path.isfile(os.path.join(cls.ordner(), name + '.yaml')),
                 }
             )
         return aus
@@ -133,26 +133,28 @@ class Smplfiguren:
     def masse(cls, name):
         """Die vorgegebenen Masse des Koerpers (dict, Zentimeter)."""
         import yaml
+
         from .smplvarianten import Smplvarianten
 
         cls._pruefen(name)
         if Smplvarianten.ist_variante(name):
             return Smplvarianten.masse(name)
-        with open(os.path.join(cls.ordner(), name + ".yaml"), "r", encoding="utf-8") as quelle:
-            return yaml.safe_load(quelle)["body"]
+        with open(os.path.join(cls.ordner(), name + '.yaml'), encoding='utf-8') as quelle:
+            return yaml.safe_load(quelle)['body']
 
     @classmethod
     def netz(cls, name):
         """Punkte (Meter, Y oben — so wie GarmentCode und Three.js rechnen)
         und Dreiecke. Vierecke werden geteilt."""
         from GarmentCode.anziehen import Anziehen
+
         from .smplvarianten import Smplvarianten
 
         cls._pruefen(name)
         if Smplvarianten.ist_variante(name):
             return Smplvarianten.netz(name)
         punkte, dreiecke = Anziehen.netz_lesen(
-            os.path.join(cls.ordner(), name + ".obj"), aus_garmentcode=False
+            os.path.join(cls.ordner(), name + '.obj'), aus_garmentcode=False
         )
         return punkte, dreiecke
 
@@ -189,7 +191,7 @@ class Smplfiguren:
         from .smplxrig import Smplxrig
 
         if not name:
-            raise ValueError("Ohne Koerpernamen kein SMPL-X-Skelett")
+            raise ValueError('Ohne Koerpernamen kein SMPL-X-Skelett')
         if name in cls._ketten:
             return cls._ketten[name]
         cls._pruefen(name)
@@ -222,7 +224,7 @@ class Smplfiguren:
         """`arm_pose_angle` des Koerpers in Grad — die Haltung, in der ein
         Uebertrag auf fremde Topologie gerechnet wird."""
         try:
-            wert = cls.masse(name).get("arm_pose_angle")
+            wert = cls.masse(name).get('arm_pose_angle')
             return float(wert) if wert is not None else cls.ARMWINKEL_VORGABE
         # stumm gewollt: ohne lesbare YAML gilt der Winkel der Vorgabe — die Figur
         # laedt trotzdem
@@ -232,4 +234,4 @@ class Smplfiguren:
     @classmethod
     def _pruefen(cls, name):
         if not cls.kennt(name):
-            raise ValueError("Unbekannter Referenzkoerper: %r" % (name,))
+            raise ValueError('Unbekannter Referenzkoerper: %r' % (name,))

@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "greifrechnung.js")
+MODUL = Jsmodul('gemeinsam', 'greifrechnung.js')
 
 SKRIPT = """
 const { Greifrechnung } = await import(MODUL);
@@ -91,4 +91,4 @@ class GreifrechnungTest(SimpleTestCase):
 
     def test_achse_winkel_und_faktor(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

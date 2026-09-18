@@ -26,15 +26,15 @@ Die drei Stellen, an denen es still schiefgehen kann:
 import os
 
 from django.test import SimpleTestCase
-
 from GarmentCode.stoffuv import Stoffuv
+
 from ._pruefablage import Pruefablage
 from ._sicher import Sicher
 
 
 def _schreiben(inhalt, ordner):
-    pfad = os.path.join(ordner, "probe_sim.obj")
-    with open(pfad, "w", encoding="utf-8") as datei:
+    pfad = os.path.join(ordner, 'probe_sim.obj')
+    with open(pfad, 'w', encoding='utf-8') as datei:
         datei.write(inhalt)
     return pfad
 
@@ -80,7 +80,7 @@ class DieUvKommtJePunktTest(SimpleTestCase):
 
     def test_ein_paar_je_punkt(self):
         with Pruefablage.ordner() as ordner:
-            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), "UV")
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
         self.assertEqual(len(uv), 4)
         self.assertEqual(uv.als_liste()[1], [1.0, 0.0])
         self.assertEqual(uv.mehrfach, 0)
@@ -88,7 +88,7 @@ class DieUvKommtJePunktTest(SimpleTestCase):
     def test_an_einer_naht_gewinnt_die_erste_angabe(self):
         """Und die Stelle wird gezählt — sonst bliebe sie unbemerkt."""
         with Pruefablage.ordner() as ordner:
-            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(MIT_NAHT, ordner)), "UV")
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(MIT_NAHT, ordner)), 'UV')
         self.assertEqual(len(uv), 4)
         self.assertEqual(uv.als_liste()[2], [1.0, 1.0])
         self.assertEqual(uv.mehrfach, 1)
@@ -98,8 +98,8 @@ class DieUvKommtJePunktTest(SimpleTestCase):
             self.assertIsNone(Stoffuv.aus_obj(_schreiben(OHNE_UV, ordner)))
 
     def test_eine_fehlende_datei_wirft_nicht(self):
-        self.assertIsNone(Stoffuv.aus_obj(r"A:\gibtesnicht\probe_sim.obj"))
-        self.assertIsNone(Stoffuv.aus_obj(""))
+        self.assertIsNone(Stoffuv.aus_obj(r'A:\gibtesnicht\probe_sim.obj'))
+        self.assertIsNone(Stoffuv.aus_obj(''))
 
 
 class DieListeMussZumNetzPassenTest(SimpleTestCase):
@@ -122,14 +122,14 @@ class DerMassstabIstInMeternTest(SimpleTestCase):
         """Die Kante ist 10 Einheiten lang, das OBJ steht in Zentimetern —
         also 0,1 m je UV-Einheit. Ohne die Umrechnung stünde dort 10."""
         with Pruefablage.ordner() as ordner:
-            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), "UV")
-        self.assertAlmostEqual(Sicher.wert(uv.meter_je_uv, "Maßstab"), 0.1, places=6)
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
+        self.assertAlmostEqual(Sicher.wert(uv.meter_je_uv, 'Maßstab'), 0.1, places=6)
 
     def test_ein_groesseres_netz_hat_einen_groesseren_massstab(self):
-        gross = QUADRAT.replace("v 10 0 0", "v 20 0 0").replace("v 10 10 0", "v 20 10 0")
+        gross = QUADRAT.replace('v 10 0 0', 'v 20 0 0').replace('v 10 10 0', 'v 20 10 0')
         with Pruefablage.ordner() as ordner:
-            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(gross, ordner)), "UV")
-        self.assertGreater(Sicher.wert(uv.meter_je_uv, "Maßstab"), 0.1)
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(gross, ordner)), 'UV')
+        self.assertGreater(Sicher.wert(uv.meter_je_uv, 'Maßstab'), 0.1)
 
 
 class DieTeilungBehaeltDenMassstabTest(SimpleTestCase):
@@ -140,14 +140,14 @@ class DieTeilungBehaeltDenMassstabTest(SimpleTestCase):
 
     def test_teil_behaelt_reihenfolge_und_massstab(self):
         with Pruefablage.ordner() as ordner:
-            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), "UV")
-        teil = Sicher.wert(uv.teil([2, 0]), "Teil")
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
+        teil = Sicher.wert(uv.teil([2, 0]), 'Teil')
         self.assertEqual(teil.als_liste(), [[1.0, 1.0], [0.0, 0.0]])
         self.assertEqual(teil.meter_je_uv, uv.meter_je_uv)
 
     def test_nummern_ausserhalb_des_netzes_liefern_nichts(self):
         with Pruefablage.ordner() as ordner:
-            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), "UV")
+            uv = Sicher.wert(Stoffuv.aus_obj(_schreiben(QUADRAT, ordner)), 'UV')
         self.assertIsNone(uv.teil([0, 99]))
 
 
@@ -158,27 +158,29 @@ class DieRigDateiFuehrtDieUvTest(SimpleTestCase):
 
     def test_uv_und_massstab_stehen_in_der_datei(self):
         import json
+
         from GarmentCode.anziehen import Anziehen
 
         with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
-            ziel = os.path.join(ordner, "probe_sim_rig.json")
+            ziel = os.path.join(ordner, 'probe_sim_rig.json')
             Anziehen.ablegen(ziel, [[0, 0, 0]] * 4, [[0, 1, 2]], None, [], uv=uv)
-            with open(ziel, encoding="utf-8") as datei:
+            with open(ziel, encoding='utf-8') as datei:
                 daten = json.load(datei)
-        self.assertEqual(len(daten["uv"]), 4)
-        self.assertAlmostEqual(daten["uv_meter"], 0.1, places=6)
+        self.assertEqual(len(daten['uv']), 4)
+        self.assertAlmostEqual(daten['uv_meter'], 0.1, places=6)
 
     def test_ohne_uv_bleiben_die_felder_weg(self):
         """Ein älterer Ergebnisordner hat keine — dann darf auch kein
         leeres Feld dastehen, an dem der Browser eine Karte aufhängt."""
         import json
+
         from GarmentCode.anziehen import Anziehen
 
         with Pruefablage.ordner() as ordner:
-            ziel = os.path.join(ordner, "probe_sim_rig.json")
+            ziel = os.path.join(ordner, 'probe_sim_rig.json')
             Anziehen.ablegen(ziel, [[0, 0, 0]] * 3, [[0, 1, 2]], None, [])
-            with open(ziel, encoding="utf-8") as datei:
+            with open(ziel, encoding='utf-8') as datei:
                 daten = json.load(datei)
-        self.assertNotIn("uv", daten)
-        self.assertNotIn("uv_meter", daten)
+        self.assertNotIn('uv', daten)
+        self.assertNotIn('uv_meter', daten)

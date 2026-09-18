@@ -39,11 +39,11 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-
 from ganzkoerperpunkte import Ganzkoerperpunkte  # noqa: E402
 from hmr2start import Hmr2start  # noqa: E402
 from pymafxausgabe import Pymafxausgabe  # noqa: E402
 from pymafxlauf import Pymafxlauf  # noqa: E402
+
 from ._sicher import Sicher
 
 
@@ -74,30 +74,30 @@ class DerHmr2Start(unittest.TestCase):
         braechte weiter ab.
         """
         gesehen = []
-        attrappe = types.ModuleType("torch")
+        attrappe = types.ModuleType('torch')
         attrappe.load = lambda pfad, **benannt: gesehen.append(benannt)
-        self.addCleanup(sys.modules.pop, "torch", None)
-        sys.modules["torch"] = attrappe
+        self.addCleanup(sys.modules.pop, 'torch', None)
+        sys.modules['torch'] = attrappe
 
         vorher = Hmr2start.torch_ohne_pruefung()
-        attrappe.load("gewichte.pt", weights_only=True)
-        self.assertEqual(gesehen, [{"weights_only": False}])
+        attrappe.load('gewichte.pt', weights_only=True)
+        self.assertEqual(gesehen, [{'weights_only': False}])
         self.assertIsNot(attrappe.load, vorher)
 
     # -------------------------------------------------------- pyrender
 
     def test_pyrender_wird_durch_leere_klassen_ersetzt(self):
         """`renderer.py` nennt sie auf Modulebene; OpenGL gibt es nicht."""
-        vorher = sys.modules.get("pyrender")
+        vorher = sys.modules.get('pyrender')
         self.addCleanup(
             lambda: (
-                sys.modules.__setitem__("pyrender", vorher)
+                sys.modules.__setitem__('pyrender', vorher)
                 if vorher is not None
-                else sys.modules.pop("pyrender", None)
+                else sys.modules.pop('pyrender', None)
             )
         )
         attrappe = Hmr2start.ohne_pyrender()
-        self.assertIs(sys.modules["pyrender"], attrappe)
+        self.assertIs(sys.modules['pyrender'], attrappe)
         for name in Hmr2start.PYRENDER_NAMEN:
             with self.subTest(name=name):
                 klasse = getattr(attrappe, name)
@@ -105,7 +105,7 @@ class DerHmr2Start(unittest.TestCase):
 
     def test_die_namensliste_deckt_den_renderer(self):
         """Fehlt einer, scheitert erst der Import — nicht der Aufbau."""
-        for name in ("Node", "Mesh", "Scene", "OffscreenRenderer", "IntrinsicsCamera", "Viewer"):
+        for name in ('Node', 'Mesh', 'Scene', 'OffscreenRenderer', 'IntrinsicsCamera', 'Viewer'):
             self.assertIn(name, Hmr2start.PYRENDER_NAMEN)
 
     # ------------------------------------------------------- Protokoll
@@ -123,7 +123,7 @@ class DerHmr2Start(unittest.TestCase):
     def test_die_zuversichtlichste_person_gewinnt(self):
         """Anders als bei SMPLest-X: HMR 2.0 bekommt EINEN Kasten."""
         kasten, guete = Hmr2start.beste_person(self._detektor(), None)
-        kasten = Sicher.wert(kasten, "Kasten")
+        kasten = Sicher.wert(kasten, 'Kasten')
         self.assertEqual(kasten.shape, (1, 4))
         self.assertEqual(list(kasten[0]), [10.0, 20.0, 110.0, 220.0])
         self.assertAlmostEqual(guete, 0.72, places=5)
@@ -131,7 +131,7 @@ class DerHmr2Start(unittest.TestCase):
     def test_ein_hund_zaehlt_nicht_als_person(self):
         """Der Hund ist der sicherste Treffer — und der falsche."""
         kasten, _guete = Hmr2start.beste_person(self._detektor(), None)
-        kasten = Sicher.wert(kasten, "Kasten")
+        kasten = Sicher.wert(kasten, 'Kasten')
         self.assertNotEqual(list(kasten[0]), [0.0, 0.0, 50.0, 50.0])
 
     def test_unter_der_schwelle_zaehlt_niemand(self):
@@ -193,7 +193,7 @@ class DiePymafxAusgabe(unittest.TestCase):
     def test_kasten_und_massstab_kommen_aus_dem_datensatz(self):
         ausgabe = self._ausgabe()
         self.assertEqual(ausgabe.kasten(), [50.0, 60.0, 100.0, 200.0])
-        self.assertAlmostEqual(Sicher.wert(ausgabe.massstab(), "Maßstab"), 1.25, places=5)
+        self.assertAlmostEqual(Sicher.wert(ausgabe.massstab(), 'Maßstab'), 1.25, places=5)
 
     def test_ohne_datensatz_kein_kasten(self):
         """`Inference` kann leer ausgehen — das darf nicht abstuerzen."""
@@ -206,12 +206,12 @@ class DiePymafxAusgabe(unittest.TestCase):
         self.assertEqual(leer.betas(), self.THETA)
         self.assertEqual(leer.ausdruck(), [])
         self.assertIsNone(leer.kameradaten())
-        self.assertIsNone(leer.netz_speichern("/egal/foto.jpg"))
+        self.assertIsNone(leer.netz_speichern('/egal/foto.jpg'))
 
     def test_das_netz_landet_neben_dem_bild(self):
         ausgabe = self._ausgabe(**{Pymafxausgabe.NETZ: Tensorattrappe([np.zeros((7, 3), dtype=np.float32)])})
         with Pruefablage.ordner() as ordner:
-            pfad = Sicher.wert(ausgabe.netz_speichern(os.path.join(ordner, "foto.jpg")), "Pfad")
+            pfad = Sicher.wert(ausgabe.netz_speichern(os.path.join(ordner, 'foto.jpg')), 'Pfad')
             self.assertEqual(os.path.basename(pfad), Pymafxausgabe.VERTEXDATEI)
             self.assertEqual(np.load(pfad).shape, (7, 3))
 
@@ -233,7 +233,7 @@ class Vorhersageattrappe:
 
     def images(self, dateien):
         self.dateien = dateien
-        yield self.personen, None, {"dataset_index": 7}
+        yield self.personen, None, {'dataset_index': 7}
 
 
 class DerPymafxLauf(unittest.TestCase):
@@ -241,37 +241,37 @@ class DerPymafxLauf(unittest.TestCase):
 
     def test_die_erkannte_person_wird_uebernommen(self):
         vorhersage = Vorhersageattrappe([Personenattrappe(0.8, 1.0)])
-        gefunden = Pymafxlauf.personen(vorhersage, "foto.jpg", np)
-        self.assertEqual(list(gefunden), ["person_0"])
-        self.assertAlmostEqual(gefunden["person_0"]["score"], 0.8, places=5)
-        self.assertEqual(gefunden["person_0"]["frames"], [7])
+        gefunden = Pymafxlauf.personen(vorhersage, 'foto.jpg', np)
+        self.assertEqual(list(gefunden), ['person_0'])
+        self.assertAlmostEqual(gefunden['person_0']['score'], 0.8, places=5)
+        self.assertEqual(gefunden['person_0']['frames'], [7])
 
     def test_unter_der_guetegrenze_kommt_nichts(self):
         schwach = Ganzkoerperpunkte.SCHWELLE - 0.01
         vorhersage = Vorhersageattrappe([Personenattrappe(schwach)])
-        self.assertEqual(Pymafxlauf.personen(vorhersage, "foto.jpg", np), {})
+        self.assertEqual(Pymafxlauf.personen(vorhersage, 'foto.jpg', np), {})
 
     def test_nur_die_erste_person_zaehlt(self):
         """Die Fotoanalyse gilt einem Menschen; wer sonst waere gemeint?"""
         vorhersage = Vorhersageattrappe([Personenattrappe(0.8), Personenattrappe(0.9)])
-        self.assertEqual(len(Pymafxlauf.personen(vorhersage, "f.jpg", np)), 1)
+        self.assertEqual(len(Pymafxlauf.personen(vorhersage, 'f.jpg', np)), 1)
 
     def test_der_predictor_bekommt_einen_absoluten_pfad(self):
         """`Inference` liest den Ordner selbst — ein relativer Pfad
         haengt am Arbeitsverzeichnis, das der Runner vorher wechselt.
         """
         vorhersage = Vorhersageattrappe([Personenattrappe(0.8)])
-        Pymafxlauf.personen(vorhersage, "foto.jpg", np)
-        self.assertTrue(os.path.isabs(Sicher.wert(vorhersage.dateien, "Dateien")[0]))
+        Pymafxlauf.personen(vorhersage, 'foto.jpg', np)
+        self.assertTrue(os.path.isabs(Sicher.wert(vorhersage.dateien, 'Dateien')[0]))
 
     def test_die_indexgrenzen_teilen_alle_133_punkte_auf(self):
         """Koerper, Fuesse, Gesicht, zwei Haende — nichts faellt weg."""
         vorhersage = Vorhersageattrappe([Personenattrappe(0.8)])
-        eintrag = Pymafxlauf.personen(vorhersage, "f.jpg", np)["person_0"]
-        self.assertEqual(len(eintrag["joints2d"][0]), 17)
-        self.assertEqual(len(eintrag["joints2d_face"][0]), 68)
-        self.assertEqual(len(eintrag["joints2d_lhand"][0]), 21)
-        self.assertEqual(len(eintrag["joints2d_rhand"][0]), 21)
+        eintrag = Pymafxlauf.personen(vorhersage, 'f.jpg', np)['person_0']
+        self.assertEqual(len(eintrag['joints2d'][0]), 17)
+        self.assertEqual(len(eintrag['joints2d_face'][0]), 68)
+        self.assertEqual(len(eintrag['joints2d_lhand'][0]), 21)
+        self.assertEqual(len(eintrag['joints2d_rhand'][0]), 21)
 
     def test_theta_traegt_kamera_und_form(self):
         """`theta[3:13]` sind die zehn Formparameter der SMPL-Konvention."""

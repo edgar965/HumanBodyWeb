@@ -14,11 +14,9 @@ Eine Unterklasse nennt:
     PROG     Name fuers Hilfe-Banner
 """
 
-from __future__ import print_function
-
 import argparse
 
-__all__ = ["Parametersatz"]
+__all__ = ['Parametersatz']
 
 
 class Parametersatz:
@@ -26,17 +24,17 @@ class Parametersatz:
     FELDER: tuple = ()
     PFLICHT = ()
     WAHLEN = {}
-    PROG = "pipeline"
+    PROG = 'pipeline'
 
     def __init__(self, **werte):
         for name in self.PFLICHT:
             if name not in werte:
-                raise TypeError("%s fehlt" % name)
+                raise TypeError('%s fehlt' % name)
             setattr(self, name, werte.pop(name))
         for name, (vorgabe, zulaessig) in self.WAHLEN.items():
             wert = werte.pop(name, vorgabe)
             if wert not in zulaessig:
-                raise ValueError("%s: %r" % (name, wert))
+                raise ValueError('%s: %r' % (name, wert))
             setattr(self, name, wert)
         for name, typ, vorgabe, kleinst, groesst, _b, _h in self.FELDER:
             wert = werte.pop(name, vorgabe)
@@ -47,13 +45,13 @@ class Parametersatz:
             else:
                 setattr(self, name, min(max(typ(wert), kleinst), groesst))
         if werte:
-            raise ValueError("Unbekannte Parameter: %s" % sorted(werte))
+            raise ValueError('Unbekannte Parameter: %s' % sorted(werte))
 
     @staticmethod
     def wahr(wert):
         """Schalter aus JSON (`true`), Formular (`on`) oder Argument (`1`)."""
         if isinstance(wert, str):
-            return wert.strip().lower() in ("1", "true", "on", "ja", "yes")
+            return wert.strip().lower() in ('1', 'true', 'on', 'ja', 'yes')
         return bool(wert)
 
     @classmethod
@@ -69,14 +67,14 @@ class Parametersatz:
         """Die Felder fuer das Formular — je Feld ein Woerterbuch."""
         return [
             {
-                "name": name,
-                "typ": typ.__name__,
-                "vorgabe": vorgabe,
-                "min": kleinst,
-                "max": groesst,
-                "schritt": cls.schritt(typ, vorgabe, kleinst, groesst),
-                "beschriftung": beschriftung,
-                "hinweis": hinweis,
+                'name': name,
+                'typ': typ.__name__,
+                'vorgabe': vorgabe,
+                'min': kleinst,
+                'max': groesst,
+                'schritt': cls.schritt(typ, vorgabe, kleinst, groesst),
+                'beschriftung': beschriftung,
+                'hinweis': hinweis,
             }
             for name, typ, vorgabe, kleinst, groesst, beschriftung, hinweis in cls.FELDER
         ]
@@ -95,15 +93,15 @@ class Parametersatz:
         die mindestens ~200 Rasten ergibt UND Vorgabe wie Minimum trifft.
         """
         if typ is not float:
-            return "1"
+            return '1'
         spanne = float(groesst) - float(kleinst)
         for stufe in cls.SCHRITTE:
             if spanne / stufe < 200:
                 continue
             passt = all(abs(w / stufe - round(w / stufe)) < 1e-6 for w in (float(vorgabe), float(kleinst)))
             if passt:
-                return "%g" % stufe
-        return "0.001"
+                return '%g' % stufe
+        return '0.001'
 
     # ---------------------------------------------------------- Kommandozeile
 
@@ -111,26 +109,26 @@ class Parametersatz:
         """`--name wert` fuer Pflicht, Wahlen und Felder — in dieser Reihenfolge."""
         arg = []
         for name in list(self.PFLICHT) + list(self.WAHLEN):
-            arg.extend(["--" + name, str(getattr(self, name))])
+            arg.extend(['--' + name, str(getattr(self, name))])
         for name in self.namen():
             wert = getattr(self, name)
-            arg.extend(["--" + name, str(int(wert)) if isinstance(wert, bool) else str(wert)])
+            arg.extend(['--' + name, str(int(wert)) if isinstance(wert, bool) else str(wert)])
         return arg
 
     @classmethod
     def parser(cls):
         p = argparse.ArgumentParser(prog=cls.PROG)
         for name in cls.PFLICHT:
-            p.add_argument("--" + name, required=True)
+            p.add_argument('--' + name, required=True)
         for name, (vorgabe, zulaessig) in cls.WAHLEN.items():
-            p.add_argument("--" + name, default=vorgabe, choices=list(zulaessig))
+            p.add_argument('--' + name, default=vorgabe, choices=list(zulaessig))
         for name, typ, vorgabe, _k, _g, _b, hinweis in cls.FELDER:
-            p.add_argument("--" + name, type=cls.wahr if typ is bool else typ, default=vorgabe, help=hinweis)
+            p.add_argument('--' + name, type=cls.wahr if typ is bool else typ, default=vorgabe, help=hinweis)
         return p
 
     @classmethod
     def aus_argv(cls, argv):
         """Die Argumente hinter `--` (Blender behaelt alles davor)."""
-        rest = argv[argv.index("--") + 1 :] if "--" in argv else argv
+        rest = argv[argv.index('--') + 1 :] if '--' in argv else argv
         ns = cls.parser().parse_args(rest)
         return cls(**vars(ns))

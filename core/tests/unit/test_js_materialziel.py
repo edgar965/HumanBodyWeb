@@ -23,7 +23,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "materialziel.js")
+MODUL = Jsmodul('scene', 'materialziel.js')
 
 SKRIPT = """
 const { Materialziel: M } = await import(MODUL);
@@ -49,4 +49,4 @@ console.log(JSON.stringify({ ok: true }));
 class MaterialzielTest(SimpleTestCase):
     def test_nutzer_wirkt_breit_code_nur_auf_die_auswahl(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

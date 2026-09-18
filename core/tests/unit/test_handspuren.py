@@ -19,9 +19,9 @@ class DieKnochenmenge(SimpleTestCase):
         knochen = Handspuren.knochen()
         self.assertEqual(len(knochen), 38)
         self.assertTrue(all(k.startswith(Handspuren.ANFAENGE) for k in knochen))
-        for gesicht in ("DEF-jaw", "DEF-lip_T_L", "DEF-tongue", "MCH-eye_L"):
+        for gesicht in ('DEF-jaw', 'DEF-lip_T_L', 'DEF-tongue', 'MCH-eye_L'):
             self.assertNotIn(gesicht, knochen)
-        for hand in ("DEF-f_index_01_L", "DEF-thumb_03_R", "DEF-palm_02_L"):
+        for hand in ('DEF-f_index_01_L', 'DEF-thumb_03_R', 'DEF-palm_02_L'):
             self.assertIn(hand, knochen)
 
     @staticmethod
@@ -47,32 +47,32 @@ class DasMischenDerHandspuren(SimpleTestCase):
 
         self.gemischt = DieKnochenmenge.spuren(
             {
-                "DEF-spine.001": q(0.1),
-                "DEF-jaw": q(0.2),
-                "DEF-f_index.01.L": q(0.3),
-                "DEF-palm.01.L": q(0.4),
+                'DEF-spine.001': q(0.1),
+                'DEF-jaw': q(0.2),
+                'DEF-f_index.01.L': q(0.3),
+                'DEF-palm.01.L': q(0.4),
             }
         )
         self.haende = DieKnochenmenge.spuren(
             {
-                "DEF-spine.001": q(0.9),
-                "DEF-jaw": q(0.8),
-                "DEF-f_index.01.L": q(0.7),
-                "DEF-thumb.01.R": q(0.6),
+                'DEF-spine.001': q(0.9),
+                'DEF-jaw': q(0.8),
+                'DEF-f_index.01.L': q(0.7),
+                'DEF-thumb.01.R': q(0.6),
             }
         )
         self.ergebnis = Handspuren.mischen(self.gemischt, self.haende)
 
     def test_finger_kommen_aus_der_dritten_spur(self):
-        self.assertEqual(self.ergebnis.tracks["DEF-f_index.01.L"][0], 0.7)
-        self.assertEqual(self.ergebnis.tracks["DEF-thumb.01.R"][0], 0.6)
+        self.assertEqual(self.ergebnis.tracks['DEF-f_index.01.L'][0], 0.7)
+        self.assertEqual(self.ergebnis.tracks['DEF-thumb.01.R'][0], 0.6)
 
     def test_koerper_und_gesicht_bleiben_wie_sie_waren(self):
-        self.assertEqual(self.ergebnis.tracks["DEF-spine.001"][0], 0.1)
-        self.assertEqual(self.ergebnis.tracks["DEF-jaw"][0], 0.2)
+        self.assertEqual(self.ergebnis.tracks['DEF-spine.001'][0], 0.1)
+        self.assertEqual(self.ergebnis.tracks['DEF-jaw'][0], 0.2)
 
     def test_was_die_dritte_spur_nicht_hat_bleibt_stehen(self):
-        self.assertEqual(self.ergebnis.tracks["DEF-palm.01.L"][0], 0.4)
+        self.assertEqual(self.ergebnis.tracks['DEF-palm.01.L'][0], 0.4)
 
     def test_bildzahl_und_wurzel_kommen_vom_gemisch(self):
         self.assertEqual(self.ergebnis.frame_count, 2)

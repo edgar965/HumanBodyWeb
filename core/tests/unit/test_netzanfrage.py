@@ -19,10 +19,11 @@ würde ins Leere greifen (Projektregel „Test-Umleitungen, die ins Leere greife
 """
 
 import numpy as np
-from django.test import SimpleTestCase, RequestFactory, override_settings
+from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from core.api import netzanfrage as modul
 from core.api.netzanfrage import Netzanfrage
+
 from ._sicher import Sicher
 
 
@@ -32,7 +33,7 @@ class NetzAttrappe:
     def __init__(self, mit_material=True):
         self.faces = np.array([[0, 1, 2, 3], [4, 5, 6, 7]])
         self.face_materials = np.array([1, 0]) if mit_material else None
-        self.material_names = ["haut", "auge"]
+        self.material_names = ['haut', 'auge']
         self.uvs = np.zeros((8, 2), dtype=np.float32)
 
 
@@ -42,7 +43,7 @@ class UnterteilerAttrappe:
     def __init__(self):
         self.triangles = np.array([[0, 1, 2], [1, 2, 3], [0, 2, 3]])
         self.uvs = np.zeros((4, 2), dtype=np.float32)
-        self.groups = [{"materialIndex": 0, "start": 0, "count": 9}]
+        self.groups = [{'materialIndex': 0, 'start': 0, 'count': 9}]
         self.levels = 2  # die Antwort nennt die Stufe (`netzqualitaet`, 17.09.2026)
 
     def subdivide(self, punkte):
@@ -58,7 +59,7 @@ class ZustandAttrappe:
     letzter = None
 
     def __init__(self, *args):
-        self.bauart = ""
+        self.bauart = ''
         self.morphs = {}
         self.metas = {}
         ZustandAttrappe.letzter = self
@@ -85,7 +86,7 @@ class NetzanfrageBasis(SimpleTestCase):
         class DatenAttrappe:
             @staticmethod
             def geschlecht_zu(bauart):
-                return "female"
+                return 'female'
 
             @staticmethod
             def morphdaten():
@@ -96,15 +97,15 @@ class NetzanfrageBasis(SimpleTestCase):
                 return None
 
             @staticmethod
-            def netzdaten(geschlecht="female"):
+            def netzdaten(geschlecht='female'):
                 return pruefung.netz
 
             @staticmethod
-            def unterteiler(geschlecht="female"):
+            def unterteiler(geschlecht='female'):
                 return pruefung.unterteiler
 
         class EinstellungenAttrappe:
-            ui_prefs = {"default_pose": "a_pose"}
+            ui_prefs = {'default_pose': 'a_pose'}
 
             @classmethod
             def load(cls):
@@ -118,8 +119,8 @@ class NetzanfrageBasis(SimpleTestCase):
     def tearDown(self):
         (modul.Charakterdaten, modul.CharacterState, modul.AppSettings) = self._alt
 
-    def anfrage(self, abfrage=""):
-        bitte = RequestFactory().get("/api/character/mesh/" + abfrage)
+    def anfrage(self, abfrage=''):
+        bitte = RequestFactory().get('/api/character/mesh/' + abfrage)
         return Netzanfrage(bitte)
 
 
@@ -129,31 +130,31 @@ class OhneUnterteilerTest(NetzanfrageBasis):
     def test_vierecke_werden_dreiecke_mit_gruppen(self):
         anfrage = self.anfrage()
         antwort = anfrage.antwort(anfrage.punkte())
-        self.assertEqual(antwort["face_count"], 4, "zwei Vierecke = vier Dreiecke")
+        self.assertEqual(antwort['face_count'], 4, 'zwei Vierecke = vier Dreiecke')
         self.assertEqual(
-            antwort["groups"],
+            antwort['groups'],
             [
-                {"materialIndex": 0, "start": 0, "count": 6},
-                {"materialIndex": 1, "start": 6, "count": 6},
+                {'materialIndex': 0, 'start': 0, 'count': 6},
+                {'materialIndex': 1, 'start': 6, 'count': 6},
             ],
         )
-        self.assertEqual(antwort["material_names"], ["haut", "auge"])
-        self.assertIn("faces", antwort)
-        self.assertIn("uvs", antwort)
+        self.assertEqual(antwort['material_names'], ['haut', 'auge'])
+        self.assertIn('faces', antwort)
+        self.assertIn('uvs', antwort)
 
     def test_nur_punkte_laesst_alles_weg(self):
-        anfrage = self.anfrage("?nur_punkte=1")
+        anfrage = self.anfrage('?nur_punkte=1')
         antwort = anfrage.antwort(anfrage.punkte())
-        for weg in ("faces", "uvs", "groups", "material_names"):
+        for weg in ('faces', 'uvs', 'groups', 'material_names'):
             self.assertNotIn(weg, antwort)
-        self.assertIn("vertices", antwort)
+        self.assertIn('vertices', antwort)
 
     def test_ohne_materialien_keine_gruppen(self):
         self.netz = NetzAttrappe(mit_material=False)
         anfrage = self.anfrage()
         antwort = anfrage.antwort(anfrage.punkte())
-        self.assertNotIn("groups", antwort)
-        self.assertEqual(antwort["face_count"], 4)
+        self.assertNotIn('groups', antwort)
+        self.assertEqual(antwort['face_count'], 4)
 
 
 class MitUnterteilerTest(NetzanfrageBasis):
@@ -164,32 +165,32 @@ class MitUnterteilerTest(NetzanfrageBasis):
     def test_punkte_kommen_unterteilt_und_mit_normalen(self):
         anfrage = self.anfrage()
         antwort = anfrage.antwort(anfrage.punkte())
-        self.assertEqual(antwort["vertex_count"], 4, "2 Punkte, verdoppelt")
-        self.assertIn("normals", antwort)
-        self.assertEqual(antwort["face_count"], 3, "aus cc.triangles")
-        self.assertEqual(antwort["groups"], self.unterteiler.groups)
+        self.assertEqual(antwort['vertex_count'], 4, '2 Punkte, verdoppelt')
+        self.assertIn('normals', antwort)
+        self.assertEqual(antwort['face_count'], 3, 'aus cc.triangles')
+        self.assertEqual(antwort['groups'], self.unterteiler.groups)
         # Stufe und Hautverschiebung fuer den Browser (`Hauttextur.verschieben`).
-        self.assertEqual(antwort["netzqualitaet"]["stufen"], 2)
-        self.assertIn(antwort["netzqualitaet"]["verschiebung"], (True, False))
+        self.assertEqual(antwort['netzqualitaet']['stufen'], 2)
+        self.assertIn(antwort['netzqualitaet']['verschiebung'], (True, False))
 
     def test_nur_punkte_spart_dreiecke_und_uvs(self):
-        anfrage = self.anfrage("?nur_punkte=1")
+        anfrage = self.anfrage('?nur_punkte=1')
         antwort = anfrage.antwort(anfrage.punkte())
-        self.assertNotIn("faces", antwort)
-        self.assertNotIn("uvs", antwort)
-        self.assertEqual(antwort["face_count"], 3, "die Zahl bleibt — die Oberfläche zeigt sie an")
+        self.assertNotIn('faces', antwort)
+        self.assertNotIn('uvs', antwort)
+        self.assertEqual(antwort['face_count'], 3, 'die Zahl bleibt — die Oberfläche zeigt sie an')
 
 
 class ReglerTest(NetzanfrageBasis):
     def test_morph_und_meta_werden_gesetzt(self):
-        self.anfrage("?morph_Abdomen_Mass=0.5&meta_age=30").punkte()
-        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, "Zustand").morphs, {"Abdomen_Mass": 0.5})
-        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, "Zustand").metas, {"age": 30.0})
+        self.anfrage('?morph_Abdomen_Mass=0.5&meta_age=30').punkte()
+        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, 'Zustand').morphs, {'Abdomen_Mass': 0.5})
+        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, 'Zustand').metas, {'age': 30.0})
 
     def test_unlesbarer_wert_kostet_nicht_die_figur(self):
-        anfrage = self.anfrage("?morph_Abdomen_Mass=viel&morph_Nose=0.2")
+        anfrage = self.anfrage('?morph_Abdomen_Mass=viel&morph_Nose=0.2')
         self.assertIsNotNone(anfrage.punkte())
-        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, "Zustand").morphs, {"Nose": 0.2})
+        self.assertEqual(Sicher.wert(ZustandAttrappe.letzter, 'Zustand').morphs, {'Nose': 0.2})
 
     def test_ohne_punkte_kommt_none_zurueck(self):
         # `del` statt Zurücksetzen hat beim ersten Wurf die ECHTE Methode der
@@ -206,10 +207,11 @@ class PoseTest(NetzanfrageBasis):
     """Die T-Pose kommt aus einer .npy-Datei — Formfehler dürfen nicht durch."""
 
     def temp(self):
-        from django.conf import settings
         from pathlib import Path
 
-        ordner = Path(settings.BASE_DIR) / "media" / "tmp" / "posetest"
+        from django.conf import settings
+
+        ordner = Path(settings.BASE_DIR) / 'media' / 'tmp' / 'posetest'
         ordner.mkdir(parents=True, exist_ok=True)
         return ordner
 
@@ -221,19 +223,19 @@ class PoseTest(NetzanfrageBasis):
     def test_passende_datei_wird_eingesetzt(self):
         ordner = self.ablegen(np.array([[9.0, 9.0, 9.0], [8.0, 8.0, 8.0]], dtype=np.float32))
         with override_settings(HUMANBODY_DATA_DIR=str(ordner)):
-            punkte = Sicher.wert(self.anfrage("?pose=t_pose").punkte(), "Punkte")
+            punkte = Sicher.wert(self.anfrage('?pose=t_pose').punkte(), 'Punkte')
         self.assertEqual(punkte[0][0], 9.0)
 
     def test_falsche_punktzahl_bleibt_bei_der_a_pose(self):
         """Andere Punktzahl heißt andere Figur — einsetzen zerstört das Modell."""
         ordner = self.ablegen(np.zeros((5, 3), dtype=np.float32))
         with override_settings(HUMANBODY_DATA_DIR=str(ordner)):
-            with self.assertLogs("core.api.netzanfrage", level="WARNING") as protokoll:
-                punkte = Sicher.wert(self.anfrage("?pose=t_pose").punkte(), "Punkte")
+            with self.assertLogs('core.api.netzanfrage', level='WARNING') as protokoll:
+                punkte = Sicher.wert(self.anfrage('?pose=t_pose').punkte(), 'Punkte')
         self.assertEqual(punkte[0][0], 0.0)
-        self.assertEqual(len(punkte), 2, "die berechneten Punkte bleiben")
-        self.assertIn("passt nicht", protokoll.output[0])
+        self.assertEqual(len(punkte), 2, 'die berechneten Punkte bleiben')
+        self.assertIn('passt nicht', protokoll.output[0])
 
     def test_a_pose_liest_die_datei_nicht(self):
-        with override_settings(HUMANBODY_DATA_DIR="/gibtsnicht"):
+        with override_settings(HUMANBODY_DATA_DIR='/gibtsnicht'):
             self.assertIsNotNone(self.anfrage().punkte())

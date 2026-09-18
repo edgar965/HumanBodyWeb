@@ -34,7 +34,7 @@ Meldungen sehen; nur die fünf Dateien bleiben sauber.
 
 import logging
 
-__all__ = ["Testlauf"]
+__all__ = ['Testlauf']
 
 
 class Testlauf(logging.Filter):
@@ -49,7 +49,7 @@ class Testlauf(logging.Filter):
         # der Filter nicht
         except Exception:  # pragma: no cover
             return False
-        return hasattr(mail, "outbox")
+        return hasattr(mail, 'outbox')
 
     def filter(self, datensatz):
         return not Testlauf.laeuft()

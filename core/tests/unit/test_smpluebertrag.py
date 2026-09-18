@@ -29,7 +29,6 @@ import unittest
 
 import numpy as np
 from django.conf import settings
-
 from SMPL.gelenke import Smplgelenke
 from SMPL.koerper import Smplkoerper
 from SMPL.uebertrag import Netzuebertrag
@@ -41,10 +40,10 @@ class NetzuebertragTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ordner = str(settings.SMPL_MODELS_DIR)
-        if not os.path.isfile(os.path.join(cls.ordner, "SMPL_FEMALE.npz")):
-            raise unittest.SkipTest("SMPL-Modelle fehlen")
-        cls.gelenke = Smplgelenke.aus_modell("female", cls.ordner)
-        cls.modell = Smplkoerper.laden("female", cls.ordner)
+        if not os.path.isfile(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
+            raise unittest.SkipTest('SMPL-Modelle fehlen')
+        cls.gelenke = Smplgelenke.aus_modell('female', cls.ordner)
+        cls.modell = Smplkoerper.laden('female', cls.ordner)
         cls.punkte = cls.modell.a40(None)
         cls.wahr = cls.gelenke.gelenke(cls.punkte)
 
@@ -93,7 +92,7 @@ class NetzuebertragTest(unittest.TestCase):
         tpose = self.modell.a40(None, grad=0.0)
         abw = self._abweichung(self.punkte, referenz=tpose)
         self.assertGreater(abw.max(), 100.0)
-        hand = list(Smplgelenke.NAMEN).index("Right_palm")
+        hand = list(Smplgelenke.NAMEN).index('Right_palm')
         self.assertGreater(abw[hand], 100.0)
 
     # -------------------------------------------------------- Guetemass
@@ -101,12 +100,12 @@ class NetzuebertragTest(unittest.TestCase):
     def test_guete_meldet_die_zuordnungsabstaende(self):
         """Der Wert ist die Warnlampe fuer eine schiefe Zuordnung."""
         gleich = Netzuebertrag.bauen(self.punkte, self.punkte)
-        self.assertLess(gleich.guete["median"], 1e-9)
-        self.assertLess(gleich.guete["max"], 1e-9)
+        self.assertLess(gleich.guete['median'], 1e-9)
+        self.assertLess(gleich.guete['max'], 1e-9)
 
         tpose = self.modell.a40(None, grad=0.0)
         schief = Netzuebertrag.bauen(tpose, self.punkte)
-        self.assertGreater(schief.guete["max"], gleich.guete["max"])
+        self.assertGreater(schief.guete['max'], gleich.guete['max'])
 
     def test_normierung_gleicht_groesse_und_lage_an(self):
         """Ein doppelt so grosses, verschobenes Netz ordnet gleich zu.

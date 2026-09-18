@@ -60,7 +60,7 @@ class Bundelruf:
         `dateiname=None` -> normales Textfeld, sonst Datei.
         Rueckgabe: `(Status, JSON oder {'_raw': Text})`.
         """
-        return Kanal.aktueller().senden(pfad, method="POST", files=list(felder), timeout=cls.FRIST_UPLOAD_S)
+        return Kanal.aktueller().senden(pfad, method='POST', files=list(felder), timeout=cls.FRIST_UPLOAD_S)
 
     @classmethod
     def abrufen(cls, adresse):
@@ -82,29 +82,29 @@ class Mtlbezug:
     """
 
     #: `map_Kd` steht am Zeilenanfang; der Rest der Zeile ist die Angabe.
-    ZEILE = re.compile(r"^\s*map_Kd\s+(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
+    ZEILE = re.compile(r'^\s*map_Kd\s+(.+?)\s*$', re.IGNORECASE | re.MULTILINE)
 
     @classmethod
     def aus_text(cls, mtl_text):
         """(rohe Angabe, Wortteile ohne Optionen) — oder (`''`, [])."""
         treffer = cls.ZEILE.search(mtl_text)
         if not treffer:
-            return "", []
+            return '', []
         angabe = treffer.group(1).strip()
         # Optionen wie `-s 1 1` oder `-o 0 0 0` stehen VOR dem Dateinamen.
-        return angabe, [w for w in angabe.split() if w and not w.startswith("-")]
+        return angabe, [w for w in angabe.split() if w and not w.startswith('-')]
 
     @classmethod
     def aus_adresse(cls, adresse):
         """Dieselbe Auswertung, aber die MTL wird erst geladen."""
         _status, roh = Bundelruf.abrufen(adresse)
-        return cls.aus_text(roh.decode("utf-8", errors="ignore"))
+        return cls.aus_text(roh.decode('utf-8', errors='ignore'))
 
     @staticmethod
     def dateiname(rohangabe, wortteile):
         """Der reine Dateiname: Backslashes, `./` und Unterpfade weg."""
         angabe = wortteile[-1] if wortteile else rohangabe
-        return angabe.replace("\\", "/").lstrip("./").split("/")[-1]
+        return angabe.replace('\\', '/').lstrip('./').split('/')[-1]
 
 
 # Synthetische Test-Dateien — minimal, aber syntaktisch gültig. Sie bleiben

@@ -23,9 +23,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._skelettattrappen import BANDAI_AUFBAU, FERTIG, SKELETT
 
-MODUL = Jsmodul("anfangshaltung.js")
+MODUL = Jsmodul('anfangshaltung.js')
 
-GESCHAFFT = {"fertig": True}
+GESCHAFFT = {'fertig': True}
 
 
 class DerBandaiSonderfall(SimpleTestCase):

@@ -26,9 +26,9 @@ class BibliotheksAktionenTest(TestCase):
     #: Adressänderung gültig, und der Name steht im Text — das Werkzeug
     #: `testdeckung` erkennt eine Route an ihrem Namen.
     NUR_POST = (
-        ("scan_bvh", (), "liest 7.067 Dateien und schreibt die Bibliothek"),
-        ("delete_bvh", (1,), "löscht einen Eintrag"),
-        ("open_in_blender", (1,), "startet Blender"),
+        ('scan_bvh', (), 'liest 7.067 Dateien und schreibt die Bibliothek'),
+        ('delete_bvh', (1,), 'löscht einen Eintrag'),
+        ('open_in_blender', (1,), 'startet Blender'),
     )
 
     def test_get_wird_abgewiesen(self):
@@ -40,6 +40,6 @@ class BibliotheksAktionenTest(TestCase):
     def test_scan_kommt_ohne_eintraege_nicht_ins_stolpern(self):
         """POST ist erlaubt und leitet auf die Liste zurück. Der Scan läuft
         gegen die echten Verzeichnisse, schreibt aber in die Test-Datenbank."""
-        antwort = self.client.post(reverse("scan_bvh"))
+        antwort = self.client.post(reverse('scan_bvh'))
         self.assertEqual(antwort.status_code, 302)
-        self.assertEqual(antwort["Location"], "/library/")
+        self.assertEqual(antwort['Location'], '/library/')

@@ -63,10 +63,10 @@ class Nachbarsuche(unittest.TestCase):
         s_tri = np.zeros((0, 3), dtype=np.int64)
         e = Einstellungen(hoechstabstand_m=0.1, suchradius_m=0.5)
         konformer = Kleidungskonformer(koerper, k_tri, e)
-        b = konformer.binden("saum", stoff, s_tri)
-        self.assertTrue((b.dreieck < 0).all(), "Kein Dreieck darf hier treffen")
+        b = konformer.binden('saum', stoff, s_tri)
+        self.assertTrue((b.dreieck < 0).all(), 'Kein Dreieck darf hier treffen')
         mit_rueckfall = b.nahe_punkte[:, 0] >= 0
-        self.assertTrue(mit_rueckfall.all(), "Kein einziger Punkt über den Rückfall gebunden")
+        self.assertTrue(mit_rueckfall.all(), 'Kein einziger Punkt über den Rückfall gebunden')
         # Die Gewichte einer Rückfallzeile summieren sich auf 1.
         zeilen = b.nahe_gewichte[mit_rueckfall]
         np.testing.assert_allclose(zeilen.sum(axis=1), 1.0, atol=1e-9)
@@ -80,9 +80,9 @@ class Nachbarsuche(unittest.TestCase):
         s_tri = np.zeros((0, 3), dtype=np.int64)
         e = Einstellungen(hoechstabstand_m=0.1, suchradius_m=5.0)
         konformer = Kleidungskonformer(koerper, k_tri, e)
-        b = konformer.binden("einer", stoff, s_tri)
+        b = konformer.binden('einer', stoff, s_tri)
         gueltig = b.nahe_punkte[0] >= 0
-        self.assertTrue(gueltig.any(), "Der Rückfall hat nicht gegriffen")
+        self.assertTrue(gueltig.any(), 'Der Rückfall hat nicht gegriffen')
         abstaende = np.linalg.norm(koerper[b.nahe_punkte[0][gueltig]] - stoff[0], axis=1)
         gewichte = b.nahe_gewichte[0][gueltig]
         # Reihenfolge: kleinster Abstand -> grösstes Gewicht

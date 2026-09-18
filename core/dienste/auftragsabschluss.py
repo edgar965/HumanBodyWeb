@@ -30,9 +30,10 @@ import os
 from pathlib import Path
 
 from django.conf import settings
+
 from .videobildrate import Videobildrate
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Auftragsabschluss:
@@ -47,12 +48,12 @@ class Auftragsabschluss:
 
     @classmethod
     def ordner(cls, job_id):
-        return Path(settings.MEDIA_ROOT) / "output" / str(job_id)
+        return Path(settings.MEDIA_ROOT) / 'output' / str(job_id)
 
     @classmethod
     def bvh(cls, ordner):
         """Die erste BVH im Ordner, die mehr als einen Rumpf enthält."""
-        for datei in glob.glob(str(Path(ordner) / "*.bvh")):
+        for datei in glob.glob(str(Path(ordner) / '*.bvh')):
             if os.path.getsize(datei) > cls.MINDESTGROESSE:
                 return datei
         return None
@@ -60,15 +61,15 @@ class Auftragsabschluss:
     @classmethod
     def als_fertig(cls, auftrag, bvh, pid_datei=None, meldung=None):
         auftrag.bvh_file = bvh
-        auftrag.status = "complete"
+        auftrag.status = 'complete'
         auftrag.progress = 100
-        auftrag.progress_detail = meldung or "Complete (recovered after restart)"
-        auftrag.error_message = ""
+        auftrag.progress_detail = meldung or 'Complete (recovered after restart)'
+        auftrag.error_message = ''
         auftrag.fps = cls.bildrate(auftrag)
         auftrag.save()
         if pid_datei is not None:
             cls.pid_weg(pid_datei)
-        logger.info("Job %s: BVH gefunden, als fertig vermerkt", auftrag.id)
+        logger.info('Job %s: BVH gefunden, als fertig vermerkt', auftrag.id)
 
     @classmethod
     def fertig_mit_vorrat(cls, auftrag, meldung=None):
@@ -80,10 +81,10 @@ class Auftragsabschluss:
 
         def melden(text):
             auftrag.progress_detail = text
-            auftrag.save(update_fields=["progress_detail", "updated_at"])
+            auftrag.save(update_fields=['progress_detail', 'updated_at'])
 
         Retargetvorrat.anlegen(auftrag, melden)
-        auftrag.status = "complete"
+        auftrag.status = 'complete'
         auftrag.progress = 100
         if meldung:
             auftrag.progress_detail = meldung
@@ -91,10 +92,10 @@ class Auftragsabschluss:
 
     @classmethod
     def als_gescheitert(cls, auftrag, grund=None):
-        auftrag.status = "failed"
+        auftrag.status = 'failed'
         auftrag.error_message = grund or cls.NEUSTART_HINWEIS
         auftrag.save()
-        logger.warning("Job %s: als fehlgeschlagen vermerkt", auftrag.id)
+        logger.warning('Job %s: als fehlgeschlagen vermerkt', auftrag.id)
 
     @classmethod
     def bildrate(cls, auftrag):
@@ -111,14 +112,14 @@ class Auftragsabschluss:
             Path(pid_datei).unlink()
         except FileNotFoundError, OSError:
             # stumm gewollt: Die Datei ist eine Notiz, kein Ergebnis.
-            logger.debug("uebergangen", exc_info=True)
+            logger.debug('uebergangen', exc_info=True)
 
     @staticmethod
     def logauszug(logdatei, zeichen=500):
         """Das Ende der Logdatei als Fehlergrund — der Nutzer soll ihn sehen."""
         try:
-            text = Path(logdatei).read_text(encoding="utf-8", errors="replace")
+            text = Path(logdatei).read_text(encoding='utf-8', errors='replace')
         except OSError:
-            logger.debug("Pipeline-Log %s nicht lesbar", logdatei, exc_info=True)
-            return "Pipeline finished but no BVH output was found."
-        return "Pipeline finished but no BVH output found.\n%s" % text[-zeichen:]
+            logger.debug('Pipeline-Log %s nicht lesbar', logdatei, exc_info=True)
+            return 'Pipeline finished but no BVH output was found.'
+        return 'Pipeline finished but no BVH output found.\n%s' % text[-zeichen:]

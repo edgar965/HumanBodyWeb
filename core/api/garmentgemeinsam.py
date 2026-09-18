@@ -32,9 +32,10 @@ class Garmentgemeinsamendpunkte:
     @require_POST
     def gemeinsam(request):
         """Mehrere Stuecke bauen, zusammen drapieren, je Stueck anziehen."""
-        from GarmentCode.gemeinsamdienst import Garmentgemeinsam, GemeinsamFehler
-        from GarmentCode.gemeinsamablage import AblageFehler
         from GarmentCode.drapierung import DrapierFehler
+        from GarmentCode.gemeinsamablage import AblageFehler
+        from GarmentCode.gemeinsamdienst import Garmentgemeinsam, GemeinsamFehler
+
         from .garmentcode import Garmentcode
 
         anfrage = Garmentcode.aus_anfrage(request)
@@ -45,14 +46,14 @@ class Garmentgemeinsamendpunkte:
         if anfrage.koerper:
             return JsonResponse(
                 {
-                    "fehler": "Gemeinsam anziehen gilt für die HumanBody-Figur, "
-                    "nicht für einen Referenzkörper."
+                    'fehler': 'Gemeinsam anziehen gilt für die HumanBody-Figur, '
+                    'nicht für einen Referenzkörper.'
                 },
                 status=400,
             )
         stuecke = Garmentgemeinsamendpunkte._stuecke(request)
         if not stuecke:
-            return JsonResponse({"fehler": "Keine Stücke angegeben"}, status=400)
+            return JsonResponse({'fehler': 'Keine Stücke angegeben'}, status=400)
         try:
             ergebnis = Garmentgemeinsam.lauf(
                 stuecke,
@@ -62,16 +63,16 @@ class Garmentgemeinsamendpunkte:
                 meta=anfrage.meta,
             )
         except (GemeinsamFehler, AblageFehler, DrapierFehler) as fehler:
-            logger.warning("Gemeinsamer Lauf gescheitert: %s", fehler)
-            return JsonResponse({"fehler": str(fehler)}, status=400)
+            logger.warning('Gemeinsamer Lauf gescheitert: %s', fehler)
+            return JsonResponse({'fehler': str(fehler)}, status=400)
         except Exception as fehler:  # noqa: BLE001
-            logger.exception("Gemeinsamer Lauf: unerwarteter Fehler")
-            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+            logger.exception('Gemeinsamer Lauf: unerwarteter Fehler')
+            return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
         return JsonResponse(Garmentgemeinsamendpunkte._antwort(ergebnis))
 
     #: Was ein Stueck an Bauwerten mitbringen darf — dieselben Felder wie
     #: beim Einzelbau (`Baufeineinstellung.aus_anfrage`), hier je Stueck.
-    BAUFELDER = ("hautabstand_mm", "aufloesung", "anliegen_mm")
+    BAUFELDER = ('hautabstand_mm', 'aufloesung', 'anliegen_mm')
 
     @staticmethod
     def _stuecke(request):
@@ -84,27 +85,27 @@ class Garmentgemeinsamendpunkte:
         from GarmentCode.baufeineinstellung import Baufeineinstellung
 
         try:
-            roh = json.loads(request.POST.get("stuecke") or "[]")
+            roh = json.loads(request.POST.get('stuecke') or '[]')
         except ValueError:
-            logger.warning("Gemeinsam: Stueckliste unlesbar")
+            logger.warning('Gemeinsam: Stueckliste unlesbar')
             return []
         if not isinstance(roh, list):
             return []
         gewaehlt = []
         for nummer, eintrag in enumerate(roh):
-            if not isinstance(eintrag, dict) or not eintrag.get("vorlage"):
+            if not isinstance(eintrag, dict) or not eintrag.get('vorlage'):
                 continue
-            regler = eintrag.get("regler")
-            bau = eintrag.get("bau")
+            regler = eintrag.get('regler')
+            bau = eintrag.get('bau')
             bau = bau if isinstance(bau, dict) else {}
             # `nummer` = Stelle in der Wunschliste des Browsers: Dort steht
             # das Material, das nach dem Einhaengen auf das Stueck kommt.
             gewaehlt.append(
                 {
-                    "vorlage": eintrag["vorlage"],
-                    "nummer": nummer,
-                    "regler": regler if isinstance(regler, dict) else {},
-                    "fein": Baufeineinstellung(
+                    'vorlage': eintrag['vorlage'],
+                    'nummer': nummer,
+                    'regler': regler if isinstance(regler, dict) else {},
+                    'fein': Baufeineinstellung(
                         **{f: bau.get(f) for f in Garmentgemeinsamendpunkte.BAUFELDER}
                     ),
                 }
@@ -122,29 +123,29 @@ class Garmentgemeinsamendpunkte:
         der Szene von einem einzeln gebauten nicht zu unterscheiden.
         """
         stuecke = []
-        for eintrag in ergebnis.get("stuecke") or []:
+        for eintrag in ergebnis.get('stuecke') or []:
             kopie = dict(eintrag)
-            ordner = os.path.basename(kopie.get("ordner") or "")
-            datei = kopie.get("rig_datei")
+            ordner = os.path.basename(kopie.get('ordner') or '')
+            datei = kopie.get('rig_datei')
             if ordner and datei:
-                kopie["rig_url"] = "/api/garmentcode/datei/%s/%s/" % (ordner, datei)
+                kopie['rig_url'] = '/api/garmentcode/datei/%s/%s/' % (ordner, datei)
             # `ordner` bleibt der VOLLE Pfad — genau wie beim Einzelbau.
             # Die Ablage merkt ihn, und `Stoffnachfuehrung.netzpfad`
             # bekommt ihn zurueck und prueft ihn gegen den Ausgabeordner.
             # Die beiden Dateipfade daneben braucht der Browser nicht.
-            kopie["ordner"] = kopie.get("ordner") or ""
-            kopie.pop("netz", None)
-            kopie.pop("rig", None)
+            kopie['ordner'] = kopie.get('ordner') or ''
+            kopie.pop('netz', None)
+            kopie.pop('rig', None)
             stuecke.append(kopie)
         return {
-            "stuecke": stuecke,
-            "punkte": ergebnis.get("punkte"),
-            "dreiecke": ergebnis.get("dreiecke"),
-            "dauer_s": ergebnis.get("dauer_s"),
-            "dauer_gesamt_s": ergebnis.get("dauer_gesamt_s"),
-            "geraet": ergebnis.get("geraet"),
-            "aus_der_haut": ergebnis.get("aus_der_haut", 0),
-            "auf_figur": ergebnis.get("auf_figur"),
-            "drapierkoerper": ergebnis.get("drapierkoerper"),
-            "gemeinsam": os.path.basename(ergebnis.get("ordner") or ""),
+            'stuecke': stuecke,
+            'punkte': ergebnis.get('punkte'),
+            'dreiecke': ergebnis.get('dreiecke'),
+            'dauer_s': ergebnis.get('dauer_s'),
+            'dauer_gesamt_s': ergebnis.get('dauer_gesamt_s'),
+            'geraet': ergebnis.get('geraet'),
+            'aus_der_haut': ergebnis.get('aus_der_haut', 0),
+            'auf_figur': ergebnis.get('auf_figur'),
+            'drapierkoerper': ergebnis.get('drapierkoerper'),
+            'gemeinsam': os.path.basename(ergebnis.get('ordner') or ''),
         }

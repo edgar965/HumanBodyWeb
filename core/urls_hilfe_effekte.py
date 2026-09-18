@@ -11,5 +11,5 @@ from django.urls import path
 from .api.hilfe_animationseffekte import HilfeAnimationseffekte
 
 urlpatterns = [
-    path("", HilfeAnimationseffekte.ansicht(), name="hilfe_animationseffekte"),
+    path('', HilfeAnimationseffekte.ansicht(), name='hilfe_animationseffekte'),
 ]

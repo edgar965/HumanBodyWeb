@@ -17,9 +17,9 @@ from django.views.generic import TemplateView
 
 class Hilfeseite(TemplateView):
     #: Der Menuepunkt, den die Seite in der Hilfe-Gruppe hervorhebt.
-    AKTIV = ""
+    AKTIV = ''
     #: Name der Ansichtsfunktion; leer heisst wie `AKTIV`.
-    NAME = ""
+    NAME = ''
 
     def kontext(self):
         """Die Daten der Seite — die Unterklasse liefert sie."""
@@ -27,7 +27,7 @@ class Hilfeseite(TemplateView):
 
     def get_context_data(self, **kwargs):
         kontext = super().get_context_data(**kwargs)
-        kontext["aktiv"] = self.AKTIV
+        kontext['aktiv'] = self.AKTIV
         kontext.update(self.kontext())
         return kontext
 

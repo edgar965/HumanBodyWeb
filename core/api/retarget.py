@@ -14,20 +14,20 @@ dann 404 mit passendem Text") steht einmal in `_bibliothekspfad`.
 import logging
 import os
 
-from django.http import JsonResponse, HttpResponseNotFound
+from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from ..daten.anfragerumpf import Anfragerumpf
 from ..daten.retargetwahl import Retargetwahl
 from ..dienste.bvhablage import Bvhablage
-from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
+from ..dienste.bvhverwaltung import BvhFehler, Bvhverwaltung
 from ..dienste.gesichtsspuren import Gesichtsspuren
 from ..dienste.handspuren import Handspuren
 from ..dienste.retargetdaten import Retargetdaten
 from ..dienste.umaskelett import UmaskelettFehlt
 from ..models import BVHJob
-from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class Retargetendpunkte:
     @require_GET
     def zuordnungstabellen(request):
         """Die Tabellen BVH→Rigify, die Ausnahmen und die Gesichtsknochen."""
-        from humanbody_core.skeleton import Skeleton, FACE_HAND_BONES
+        from humanbody_core.skeleton import FACE_HAND_BONES, Skeleton
 
         zuordnungen = {}
         ohne_richtungskorrektur = {}
@@ -54,9 +54,9 @@ class Retargetendpunkte:
                 ohne_richtungskorrektur[art] = klasse.SKIP_DIR_CORRECTION
         return JsonResponse(
             {
-                "mappings": zuordnungen,
-                "skip_dir_correction": ohne_richtungskorrektur,
-                "face_hand_bones": FACE_HAND_BONES,
+                'mappings': zuordnungen,
+                'skip_dir_correction': ohne_richtungskorrektur,
+                'face_hand_bones': FACE_HAND_BONES,
             }
         )
 
@@ -71,13 +71,13 @@ class Retargetendpunkte:
         Namensanfang. Am 16.08.2026 nachgezogen — an den uebrigen Stellen war
         das schon am 12.08. umgestellt worden, diese hier war uebersehen.
         """
-        geprueft = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / ("%s.bvh" % schluessel))
+        geprueft = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / ('%s.bvh' % schluessel))
         if not geprueft:
-            return HttpResponseNotFound("Invalid path: %s" % schluessel)
+            return HttpResponseNotFound('Invalid path: %s' % schluessel)
         # Genau dieser Pfad — keine Suche in anderen Ordnern (Edgar,
         # 13.09.2026: was es nicht gibt, fliegt aus der Zeitleiste).
         if not geprueft.is_file():
-            return HttpResponseNotFound("BVH not found: %s" % schluessel)
+            return HttpResponseNotFound('BVH not found: %s' % schluessel)
         return str(geprueft)
 
     @staticmethod
@@ -85,7 +85,7 @@ class Retargetendpunkte:
         """Die BVH eines Auftrags — oder eine 404-Antwort."""
         job = get_object_or_404(BVHJob, id=job_id)
         if not job.bvh_file or not os.path.isfile(job.bvh_file):
-            return HttpResponseNotFound("Job has no BVH file")
+            return HttpResponseNotFound('Job has no BVH file')
         return job.bvh_file
 
     # -------------------------------------------------------------- Umsetzen
@@ -112,16 +112,16 @@ class Retargetendpunkte:
         try:
             wahl = Retargetwahl(werte, cls.VORGABE_GROESSE)
         except ValueError as fehler:
-            return JsonResponse({"error": str(fehler)}, status=400)
-        auftrag = werte.get("job")
-        kategorie = werte.get("category")
-        name = werte.get("name")
+            return JsonResponse({'error': str(fehler)}, status=400)
+        auftrag = werte.get('job')
+        kategorie = werte.get('category')
+        name = werte.get('name')
         if auftrag:
             pfad = cls._auftragspfad(auftrag)
         elif kategorie and name:
-            pfad = cls._bibliothekspfad("%s/%s" % (kategorie, name))
+            pfad = cls._bibliothekspfad('%s/%s' % (kategorie, name))
         else:
-            return JsonResponse({"error": "Provide ?job=<uuid> or ?category=<cat>&name=<name>"}, status=400)
+            return JsonResponse({'error': 'Provide ?job=<uuid> or ?category=<cat>&name=<name>'}, status=400)
         if not isinstance(pfad, str):
             return pfad  # fertige Fehlerantwort
         try:
@@ -140,12 +140,12 @@ class Retargetendpunkte:
                 .als_dict()
             )
         except UmaskelettFehlt as fehler:
-            return JsonResponse({"error": str(fehler)}, status=404)
+            return JsonResponse({'error': str(fehler)}, status=404)
         except ValueError as fehler:
             # Ein unbekannter Koerper oder ein fehlender Upstream ist eine
             # Frage des Aufrufers, kein Serverfehler — und die Meldung
             # gehoert in die Zeile unter der Leiste, nicht ins Nichts.
-            return JsonResponse({"error": str(fehler)}, status=400)
+            return JsonResponse({'error': str(fehler)}, status=400)
 
     @staticmethod
     def _werte(request):
@@ -156,7 +156,7 @@ class Retargetendpunkte:
         Sie kann vollstaendig sein, und ein POST mit leerem Rumpf ist der
         Normalfall bei einem Ziel ohne Regler.
         """
-        if request.method != "POST":
+        if request.method != 'POST':
             return request.GET
         rumpf, fehler = Anfragerumpf.lesen(request)
         if fehler is not None or not isinstance(rumpf, dict):
@@ -193,8 +193,8 @@ class Retargetendpunkte:
     def bibliotheks_bvh(request, category, name):
         """Aeltere Adresse — leitet auf `umsetzen` weiter."""
         request.GET = request.GET.copy()
-        request.GET["category"] = category
-        request.GET["name"] = name
+        request.GET['category'] = category
+        request.GET['name'] = name
         return Retargetendpunkte.umsetzen(request)
 
     @staticmethod
@@ -204,7 +204,7 @@ class Retargetendpunkte:
         from .dateien import Auftragsdateien
 
         request.GET = request.GET.copy()
-        request.GET["mode"] = "retarget"
+        request.GET['mode'] = 'retarget'
         return Auftragsdateien.bvh(request, job_id)
 
     # --------------------------------------------------- Koerper und Gesicht
@@ -221,15 +221,15 @@ class Retargetendpunkte:
         """
         from humanbody_core.skeleton import SkeletonRigify
 
-        daten, fehler = Anfragerumpf.lesen(request, "Invalid JSON body")
+        daten, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
         if fehler:
             return fehler
-        koerper = daten.get("body_bvh", "")
-        gesicht = daten.get("face_bvh", "")
+        koerper = daten.get('body_bvh', '')
+        gesicht = daten.get('face_bvh', '')
         if not koerper or not gesicht:
-            return JsonResponse({"error": "body_bvh and face_bvh are required"}, status=400)
-        groesse = float(daten.get("body_height", Retargetendpunkte.VORGABE_GROESSE))
-        fusskorrektur = bool(daten.get("foot_correction", False))
+            return JsonResponse({'error': 'body_bvh and face_bvh are required'}, status=400)
+        groesse = float(daten.get('body_height', Retargetendpunkte.VORGABE_GROESSE))
+        fusskorrektur = bool(daten.get('foot_correction', False))
         koerperpfad = Retargetendpunkte._bibliothekspfad(koerper)
         if not isinstance(koerperpfad, str):
             return koerperpfad
@@ -255,19 +255,19 @@ class Retargetendpunkte:
 
         job = get_object_or_404(BVHJob, id=job_id)
         if not job.bvh_file:
-            return HttpResponseNotFound("Job has no body BVH file")
+            return HttpResponseNotFound('Job has no body BVH file')
         if not job.bvh_file_face:
-            return HttpResponseNotFound("Job has no face BVH file")
+            return HttpResponseNotFound('Job has no face BVH file')
         for pfad in (job.bvh_file, job.bvh_file_face, job.bvh_file_hands):
             if pfad and not os.path.isfile(pfad):
-                return HttpResponseNotFound("BVH file not found: %s" % pfad)
-        groesse = float(request.GET.get("body_height", Retargetendpunkte.VORGABE_GROESSE))
-        fusskorrektur = request.GET.get("foot_correction", "").lower() in ("1", "true")
+                return HttpResponseNotFound('BVH file not found: %s' % pfad)
+        groesse = float(request.GET.get('body_height', Retargetendpunkte.VORGABE_GROESSE))
+        fusskorrektur = request.GET.get('foot_correction', '').lower() in ('1', 'true')
         # Die v4-BVH wird IMMER umgesetzt (sie fuehrt die Handknochen); beim
         # Mischen fallen die unruhigen v4-Gesichtsknochen heraus — ausser der
         # Auftrag hat sie als Gesicht-Quelle bestellt (`face_source: v4`; bis
         # zum 12.09.2026 war die Wahl wirkungslos gleich „Keine").
-        gesicht_v4 = (job.pipeline_params or {}).get("face_source") == "v4"
+        gesicht_v4 = (job.pipeline_params or {}).get('face_source') == 'v4'
         gemischt = SkeletonRigify.merge_retargeted_clips(
             Retargetdaten(job.bvh_file, groesse, foot_correction=fusskorrektur).holen(),
             Retargetdaten(job.bvh_file_face, groesse).holen(),
@@ -301,4 +301,4 @@ class Retargetendpunkte:
         try:
             return JsonResponse(Bvhverwaltung.ausfuehren(daten))
         except BvhFehler as fehler:
-            return JsonResponse({"error": fehler.text}, status=fehler.kennzahl)
+            return JsonResponse({'error': fehler.text}, status=fehler.kennzahl)

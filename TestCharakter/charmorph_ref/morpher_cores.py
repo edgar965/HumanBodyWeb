@@ -43,7 +43,7 @@ class MorpherCore(utils.ObjTracker):
         pass
 
     def get_L1(self) -> tuple[str, dict]:
-        return "", {}
+        return '', {}
 
     def get_morphs_L2(self):
         return []
@@ -84,7 +84,7 @@ class MorpherCore(utils.ObjTracker):
     def _get_L2_morph_key(self):
         if not self.L1:
             return None
-        name = self.char.types.get(self.L1, {}).get("L2")
+        name = self.char.types.get(self.L1, {}).get('L2')
         return name if name else self.L1
 
     def set_L1(self, value):
@@ -109,20 +109,20 @@ class MorpherCore(utils.ObjTracker):
 
     def _del_asset_morphs(self):
         try:
-            del self.obj.data["charmorph_asset_morphs"]
+            del self.obj.data['charmorph_asset_morphs']
         except KeyError:
             pass
 
     def add_asset_morph(self, name: str, _: morphs.Morph):
-        lst = self.obj.data.get("charmorph_asset_morphs")
+        lst = self.obj.data.get('charmorph_asset_morphs')
         if not isinstance(lst, list):
             lst = []
         if name not in lst:
             lst.append(name)
-        self.obj.data["charmorph_asset_morphs"] = lst
+        self.obj.data['charmorph_asset_morphs'] = lst
 
     def remove_asset_morph(self, name: str):
-        lst = self.obj.data.get("charmorph_asset_morphs")
+        lst = self.obj.data.get('charmorph_asset_morphs')
         if not isinstance(lst, list):
             lst = []
         else:
@@ -131,7 +131,7 @@ class MorpherCore(utils.ObjTracker):
             except ValueError:
                 return
         if lst:
-            self.obj.data["charmorph_asset_morphs"] = lst
+            self.obj.data['charmorph_asset_morphs'] = lst
         else:
             self._del_asset_morphs()
 
@@ -141,8 +141,8 @@ def get_combo_item_value(arr_idx, values):
 
 
 def enum_combo_names(name):
-    nameParts = name.split("_")
-    return (f"{nameParts[0]}_{name}" for name in nameParts[1].split("-"))
+    nameParts = name.split('_')
+    return (f'{nameParts[0]}_{name}' for name in nameParts[1].split('-'))
 
 
 class ShapeKeysComboMorpher:
@@ -179,24 +179,24 @@ class ShapeKeysMorpher(MorpherCore):
         if not self.obj.data.shape_keys:
             return
 
-        L2_key = self._get_L2_morph_key() or ""
+        L2_key = self._get_L2_morph_key() or ''
         for sk in self.obj.data.shape_keys.key_blocks:
             if (
-                sk.name.startswith("L2_")
-                and not sk.name.startswith("L2__")
-                and not sk.name.startswith(f"L2_{L2_key}_")
+                sk.name.startswith('L2_')
+                and not sk.name.startswith('L2__')
+                and not sk.name.startswith(f'L2_{L2_key}_')
             ):
                 sk.value = 0
 
     # scan object shape keys and convert them to dictionary
     def get_L1(self):
         if not self.obj.data.shape_keys:
-            return "", {}
+            return '', {}
         morphs_l1 = {}
-        maxkey = ""
+        maxkey = ''
         maxval = 0
         for sk in self.obj.data.shape_keys.key_blocks:
-            if not sk.name.startswith("L1_"):
+            if not sk.name.startswith('L1_'):
                 continue
             name = sk.name[3:]
             if sk.value > maxval:
@@ -217,12 +217,12 @@ class ShapeKeysMorpher(MorpherCore):
         if not self.obj.data.shape_keys or not self.obj.data.shape_keys.key_blocks:
             return False
         for sk in self.obj.data.shape_keys.key_blocks:
-            if sk.name.startswith("L2_"):
+            if sk.name.startswith('L2_'):
                 return True
         return False
 
     def _get_L2_morph_keys(self):
-        yield ""
+        yield ''
         k = self._get_L2_morph_key()
         if k:
             yield k
@@ -234,7 +234,7 @@ class ShapeKeysMorpher(MorpherCore):
         combiner = morphs.MorphCombiner()
 
         for key in self._get_L2_morph_keys():
-            prefix = f"L2_{key}_"
+            prefix = f'L2_{key}_'
             for sk in self.obj.data.shape_keys.key_blocks:
                 if sk.name.startswith(prefix):
                     combiner.add_morph(
@@ -299,27 +299,27 @@ class ShapeKeysMorpher(MorpherCore):
 
     def _ensure_basis(self):
         if not self.obj.data.shape_keys or not self.obj.data.shape_keys.key_blocks:
-            self.obj.shape_key_add(name="Basis", from_mix=False)
+            self.obj.shape_key_add(name='Basis', from_mix=False)
 
     def add_asset_morph(self, name: str, morph: morphs.Morph):
         if self.error:
             return
         self._ensure_basis()
-        sk_name = "charmorph_asset_" + name
+        sk_name = 'charmorph_asset_' + name
         sk = self.obj.data.shape_keys.key_blocks.get(sk_name)
         if not sk:
             sk = self.obj.shape_key_add(name=sk_name, from_mix=False)
         sk.value = 1
         data = utils.get_basis_numpy(self.obj)
         morph.apply(data)
-        sk.data.foreach_set("co", data.reshape(-1))
+        sk.data.foreach_set('co', data.reshape(-1))
         super().add_asset_morph(name, morph)
 
     def remove_asset_morph(self, name: str):
         if self.error:
             return
         if self.obj.data.shape_keys and self.obj.data.shape_keys.key_blocks:
-            sk_name = "charmorph_asset_" + name
+            sk_name = 'charmorph_asset_' + name
             sk = self.obj.data.shape_keys.key_blocks.get(sk_name)
             if sk:
                 self.obj.shape_key_remove(sk)
@@ -345,12 +345,12 @@ class ShapeKeysMorpher(MorpherCore):
             return result
 
         arr = numpy.empty(len(self.obj.data.vertices) * 3)
-        morph = morphs.MinMaxMorphData("", arr.reshape(-1, 3))
+        morph = morphs.MinMaxMorphData('', arr.reshape(-1, 3))
         for L2_key in self._get_L2_morph_keys():
-            prefix = f"L3_{L2_key}_"
+            prefix = f'L3_{L2_key}_'
             for sk in k.key_blocks:
                 if sk.name.startswith(prefix):
-                    sk.data.foreach_get("co", arr)
+                    sk.data.foreach_get('co', arr)
                     arr -= get_basis(sk.relative_key)
 
                     morph.name = sk.name[len(prefix) :]
@@ -371,7 +371,7 @@ class NumpyMorpher(MorpherCore):
         super().__init__(obj)
         self.asset_morphs = self._get_asset_morphs()
         if len(self.get_basis_alt_topo()) != len(obj.data.vertices):
-            self.error = f"Vertex count mismatch {len(self.get_basis_alt_topo())} != {len(obj.data.vertices)}"
+            self.error = f'Vertex count mismatch {len(self.get_basis_alt_topo())} != {len(obj.data.vertices)}'
             if not self.alt_topo and self.char.faces is not None:
                 self.alt_topo_buildable = True
 
@@ -384,11 +384,11 @@ class NumpyMorpher(MorpherCore):
 
     def has_morphs(self):
         # HACK: used just to prevent morphing when morphing data was removed
-        return self.obj.data.get("cm_morpher") == "ext"
+        return self.obj.data.get('cm_morpher') == 'ext'
 
     def _update_L1(self):
         if self.L1:
-            self.obj.data["cmorph_L1"] = self.L1
+            self.obj.data['cmorph_L1'] = self.L1
             self.basis = self.morphs_l1.get(self.L1)
             if isinstance(self.basis, morphs.LazyMorph):
                 self.basis = self.basis.resolve()
@@ -405,9 +405,9 @@ class NumpyMorpher(MorpherCore):
 
     def get_L1(self):
         morphs_l1 = {morph.name: morph.data for morph in self.storage.enum(1)}
-        L1 = self.obj.data.get("cmorph_L1", "")
+        L1 = self.obj.data.get('cmorph_L1', '')
         if L1 not in morphs_l1:
-            L1 = ""
+            L1 = ''
         return L1, morphs_l1
 
     def enum_morphs(self, level):
@@ -449,11 +449,11 @@ class NumpyMorpher(MorpherCore):
         self._do_all_morphs()
 
         if not self.alt_topo:
-            utils.get_target(self.obj).foreach_set("co", self.morphed.reshape(-1))
+            utils.get_target(self.obj).foreach_set('co', self.morphed.reshape(-1))
             self.obj.data.update()
 
     def prop_get(self, name):
-        return self.obj.data.get("cmorph_L2_" + name, 0.0)
+        return self.obj.data.get('cmorph_L2_' + name, 0.0)
 
     # Clamp to -1..1 only for combo props
     def prop_get_clamped(self, name):
@@ -465,7 +465,7 @@ class NumpyMorpher(MorpherCore):
         return val
 
     def prop_set(self, name, value):
-        self.obj.data["cmorph_L2_" + name] = value
+        self.obj.data['cmorph_L2_' + name] = value
 
     def ensure(self):
         if self.morphed is None:
@@ -479,19 +479,19 @@ class NumpyMorpher(MorpherCore):
         return self.get_final()
 
     def cleanup_asset_morphs(self):
-        lst = self.obj.data.get("charmorph_asset_morphs")
+        lst = self.obj.data.get('charmorph_asset_morphs')
         if not isinstance(lst, list):
             self._del_asset_morphs()
             return
         assets = self.char.assets
         lst = [item for item in lst if assets.get(item, charlib.Asset).morph]
         if lst:
-            self.obj.data.get["charmorph_asset_morphs"] = lst
+            self.obj.data.get['charmorph_asset_morphs'] = lst
         else:
             self._del_asset_morphs()
 
     def _get_asset_morphs(self) -> dict[str, morphs.Morph]:
-        lst = self.obj.data.get("charmorph_asset_morphs")
+        lst = self.obj.data.get('charmorph_asset_morphs')
         if not isinstance(lst, list):
             return {}
         assets = self.char.assets
@@ -518,10 +518,10 @@ class NumpyMorpher(MorpherCore):
         self.basis = None
 
     def enum_expressions(self):
-        morph2 = morphs.MinMaxMorphData("", numpy.empty(self.full_basis.shape))
+        morph2 = morphs.MinMaxMorphData('', numpy.empty(self.full_basis.shape))
         for morph in self.enum_morphs(3):
             for k in morph2.__slots__:
-                if k != "data":
+                if k != 'data':
                     setattr(morph2, k, getattr(morph, k))
             morph2.data[:] = 0
             morph.data.resolve().apply(morph2.data)
@@ -541,8 +541,8 @@ class AltTopoMorpher(NumpyMorpher):
 
 
 def get(obj, storage=None):
-    if obj.data.get("cm_alt_topo"):
+    if obj.data.get('cm_alt_topo'):
         return AltTopoMorpher(obj, storage)
-    if obj.data.get("cm_morpher") == "ext":
+    if obj.data.get('cm_morpher') == 'ext':
         return NumpyMorpher(obj, storage)
     return ShapeKeysMorpher(obj)

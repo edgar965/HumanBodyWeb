@@ -27,19 +27,19 @@ from django.conf import settings
 
 from ..pipelines.prozesspruefung import Prozesspruefung
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Auftragsarbeiter:
     """Der abgelöste Prozess, der einen Auftrag rechnet."""
 
-    PID_DATEI = "auftrag.pid"
-    LOG_DATEI = "auftrag.log"
-    BEFEHL = "auftrag_fahren"
+    PID_DATEI = 'auftrag.pid'
+    LOG_DATEI = 'auftrag.log'
+    BEFEHL = 'auftrag_fahren'
 
     @staticmethod
     def ordner(job_id):
-        return Path(settings.MEDIA_ROOT) / "output" / str(job_id)
+        return Path(settings.MEDIA_ROOT) / 'output' / str(job_id)
 
     @classmethod
     def pid_datei(cls, job_id):
@@ -59,9 +59,9 @@ class Auftragsarbeiter:
         Konsole, die Interpreter, Wrapper und GEM erben (gemessen:
         `ProjektTemp/fensterprobe.py`)."""
         return (
-            getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-            | getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+            getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+            | getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
+            | getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
         )
 
     @classmethod
@@ -69,14 +69,14 @@ class Auftragsarbeiter:
         """Den Arbeitsprozess anwerfen; liefert seine PID."""
         ordner = cls.ordner(job_id)
         ordner.mkdir(parents=True, exist_ok=True)
-        befehl = [sys.executable, str(Path(settings.BASE_DIR) / "manage.py"), cls.BEFEHL, str(job_id)]
-        protokoll = open(ordner / cls.LOG_DATEI, "ab")
+        befehl = [sys.executable, str(Path(settings.BASE_DIR) / 'manage.py'), cls.BEFEHL, str(job_id)]
+        protokoll = open(ordner / cls.LOG_DATEI, 'ab')
         try:
             prozess = cls._popen(befehl, protokoll)
         finally:
             protokoll.close()
         cls.pid_datei(job_id).write_text(str(prozess.pid))
-        logger.info("Auftrag %s: Arbeitsprozess %s gestartet", job_id, prozess.pid)
+        logger.info('Auftrag %s: Arbeitsprozess %s gestartet', job_id, prozess.pid)
         return prozess.pid
 
     @classmethod
@@ -95,13 +95,13 @@ class Auftragsarbeiter:
                 **weitere,
             )
 
-        if os.name != "nt":
+        if os.name != 'nt':
             return starten(start_new_session=True)
         try:
             return starten(creationflags=cls.flags())
         # stumm gewollt: das Job-Objekt des Servers verbietet den Breakaway — dann ohne
         except OSError:
-            flags = cls.flags() & ~getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+            flags = cls.flags() & ~getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
             return starten(creationflags=flags)
 
     @classmethod
@@ -131,4 +131,4 @@ class Auftragsarbeiter:
         try:
             cls.pid_datei(job_id).unlink()
         except FileNotFoundError, OSError:
-            logger.debug("PID-Datei von %s schon weg", job_id, exc_info=True)
+            logger.debug('PID-Datei von %s schon weg', job_id, exc_info=True)

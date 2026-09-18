@@ -16,7 +16,7 @@ aeusseren NICHT (`class Vorlauf: detection = Erkennung()` scheitert mit
 prompt gelaufen ist.
 """
 
-__all__ = ["Erkennungsteil", "Vorlaufteil", "Datenteil", "Modellteil", "Smplestxeinstellungen"]
+__all__ = ['Erkennungsteil', 'Vorlaufteil', 'Datenteil', 'Modellteil', 'Smplestxeinstellungen']
 
 
 class Erkennungsteil:

@@ -29,15 +29,15 @@ import subprocess
 
 from django.conf import settings
 
-from .smplbefehl import Smplbefehl
-from .logbeobachter import Logbeobachter
-from .videolaenge import Videolaenge
-from .videovorbereitung import Videovorbereitung
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..pipeline_process import PipelineProzess
 from .laufbasis import Pipelinelauf
+from .logbeobachter import Logbeobachter
+from .smplbefehl import Smplbefehl
+from .videolaenge import Videolaenge
+from .videovorbereitung import Videovorbereitung
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Smpllauf(Pipelinelauf):
@@ -54,16 +54,16 @@ class Smpllauf(Pipelinelauf):
         # GVHMR/WHAM nutzen PyAV — das kann kein WebM.
         self.video = Videovorbereitung.als_mp4(video_path, output_dir)
         self.bilder = Videolaenge.bilder(self.video)
-        self.bvh = str(output_dir / ("%s_%s.bvh" % (job.pipeline, self.stamm)))
-        self.logdatei = output_dir / "pipeline.log"
-        self.pid_datei = output_dir / "pipeline.pid"
+        self.bvh = str(output_dir / ('%s_%s.bvh' % (job.pipeline, self.stamm)))
+        self.logdatei = output_dir / 'pipeline.log'
+        self.pid_datei = output_dir / 'pipeline.pid'
 
     # ------------------------------------------------------------------ Ablauf
 
     def fahren(self):
         self._anfangsmeldung()
         befehl = Smplbefehl(self.job, self.einstellungen).bauen(
-            settings.WRAPPERS_DIR / "lift_3d.py", self.video, self.bvh
+            settings.WRAPPERS_DIR / 'lift_3d.py', self.video, self.bvh
         )
         prozess, protokoll = self._starten(befehl)
         try:
@@ -75,12 +75,12 @@ class Smpllauf(Pipelinelauf):
         return self._ergebnis(prozess.returncode)
 
     def _anfangsmeldung(self):
-        self.job.status = "processing"
+        self.job.status = 'processing'
         self.job.progress = 0
         self.job.progress_detail = (
-            "%d / %d frames" % (0, self.bilder)
+            '%d / %d frames' % (0, self.bilder)
             if self.bilder
-            else "Starting %s..." % self.job.get_pipeline_display()
+            else 'Starting %s...' % self.job.get_pipeline_display()
         )
         self.job.save()
 
@@ -93,7 +93,7 @@ class Smpllauf(Pipelinelauf):
         Deskriptor offen, und zwar einer je Fehlversuch. Genau dann passiert
         es auch: Ein Lauf, der sofort scheitert, wird wiederholt.
         """
-        protokoll = open(self.logdatei, "w", encoding="utf-8")
+        protokoll = open(self.logdatei, 'w', encoding='utf-8')
         try:
             prozess = subprocess.Popen(
                 befehl,
@@ -114,7 +114,7 @@ class Smpllauf(Pipelinelauf):
             self.pid_datei.unlink()
         except FileNotFoundError, OSError:
             # stumm gewollt: Die Datei ist eine Notiz, kein Ergebnis.
-            logger.debug("uebergangen", exc_info=True)
+            logger.debug('uebergangen', exc_info=True)
 
     # ----------------------------------------------------------- Das Ergebnis
 
@@ -138,12 +138,12 @@ class Smpllauf(Pipelinelauf):
         """
         if os.path.exists(self.bvh) and os.path.getsize(self.bvh) > self.MINDESTGROESSE:
             return self.bvh
-        gefunden = glob.glob(str(self.output_dir / "*.bvh"))
+        gefunden = glob.glob(str(self.output_dir / '*.bvh'))
         return gefunden[0] if gefunden else None
 
     def _logauszug(self):
         try:
-            return self.fehlerausschnitt(self.logdatei.read_text(encoding="utf-8", errors="replace"))
+            return self.fehlerausschnitt(self.logdatei.read_text(encoding='utf-8', errors='replace'))
         except OSError:
-            logger.debug("Pipeline-Log %s nicht lesbar", self.logdatei, exc_info=True)
-            return ""
+            logger.debug('Pipeline-Log %s nicht lesbar', self.logdatei, exc_info=True)
+            return ''

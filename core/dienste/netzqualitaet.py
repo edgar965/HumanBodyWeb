@@ -13,17 +13,17 @@ Speicher nach dem Speichern (`uebernehmen` → `vergessen`).
 import logging
 from types import SimpleNamespace
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Netzqualitaet"]
+__all__ = ['Netzqualitaet']
 
 
 class Netzqualitaet:
     #: (Feld, Vorgabe, Minimum, Maximum) — Vorgaben wie MB-Lab.
-    STUFEN_BROWSER = ("unterteilung_browser", 2, 1, 3)
-    STUFEN_FILM = ("unterteilung_film", 3, 1, 3)
-    VERSCHIEBUNG = "haut_verschiebung"
-    FELDER = ("unterteilung_browser", "unterteilung_film", "haut_verschiebung")
+    STUFEN_BROWSER = ('unterteilung_browser', 2, 1, 3)
+    STUFEN_FILM = ('unterteilung_film', 3, 1, 3)
+    VERSCHIEBUNG = 'haut_verschiebung'
+    FELDER = ('unterteilung_browser', 'unterteilung_film', 'haut_verschiebung')
 
     _werte = None
 
@@ -59,7 +59,7 @@ class Netzqualitaet:
         except Exception as fehler:  # noqa: BLE001
             # stumm gewollt: gemeldet wird es, nur nicht als Fehlerseite —
             # eine Figur mit MB-Lab-Vorgaben ist besser als keine.
-            logger.warning("Netzqualitaet nicht lesbar (%s) — Vorgaben von MB-Lab", fehler)
+            logger.warning('Netzqualitaet nicht lesbar (%s) — Vorgaben von MB-Lab', fehler)
             return None
 
     @classmethod

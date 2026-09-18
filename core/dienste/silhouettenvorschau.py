@@ -11,7 +11,7 @@ import os
 import numpy as np
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Silhouettenvorschau:
@@ -25,7 +25,7 @@ class Silhouettenvorschau:
 
     @classmethod
     def verzeichnis(cls):
-        pfad = os.path.join(str(settings.BASE_DIR), "media", "photo_analysis", "silhouettes")
+        pfad = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis', 'silhouettes')
         os.makedirs(pfad, exist_ok=True)
         return pfad
 
@@ -41,13 +41,13 @@ class Silhouettenvorschau:
             klein = cv2.resize(foto, (int(breite * faktor), cls.HOEHE))
             cls._koerper_zeichnen(cv2, klein, koerperkontur, faktor)
             cls._gesicht_zeichnen(cv2, klein, gesichtskontur, faktor)
-            name = "%s.jpg" % job_id
+            name = '%s.jpg' % job_id
             cv2.imwrite(
                 os.path.join(cls.verzeichnis(), name), klein, [cv2.IMWRITE_JPEG_QUALITY, cls.QUALITAET]
             )
-            return "media/photo_analysis/silhouettes/%s" % name
+            return 'media/photo_analysis/silhouettes/%s' % name
         except Exception:  # noqa: BLE001
-            logger.error("Silhouetten-Vorschau fuer %s nicht speicherbar", job_id, exc_info=True)
+            logger.error('Silhouetten-Vorschau fuer %s nicht speicherbar', job_id, exc_info=True)
             return None
 
     @classmethod

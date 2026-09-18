@@ -26,9 +26,9 @@ import threading
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Umapythonfiguren"]
+__all__ = ['Umapythonfiguren']
 
 
 class Umapythonfiguren:
@@ -83,7 +83,7 @@ class Umapythonfiguren:
             cls._vormerken(rasse)
             cls._aufraeumen()
         logger.info(
-            "UMA Python: %s gebaut (%d Punkte, %d Knochen)",
+            'UMA Python: %s gebaut (%d Punkte, %d Knochen)',
             rasse,
             len(gebaut.netz.punkte),
             len(gebaut.netz.knochen),

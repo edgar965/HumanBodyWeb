@@ -22,7 +22,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "clipfehlt.js")
+MODUL = Jsmodul('bvh_studio', 'clipfehlt.js')
 
 SKRIPT = """
 const { Clipfehlt } = await import(MODUL);
@@ -83,4 +83,4 @@ class ClipfehltTest(SimpleTestCase):
 
     def test_clips_ohne_datei_verlassen_die_zeitleiste(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

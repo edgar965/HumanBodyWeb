@@ -42,23 +42,23 @@ class FilmmaskenTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.fm = FilmmaskenTest._modul("filmmasken")
-        self.fk = FilmmaskenTest._modul("feinkoerper")
+        self.fm = FilmmaskenTest._modul('filmmasken')
+        self.fk = FilmmaskenTest._modul('feinkoerper')
         kp, kt = Kunstkoerper.zylinder(0.10, 0.0, 1.0, 51, 36)
         sp, st = Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36)
-        self.koerper = {"name": "Koerper", "haut": _Haut(kp), "dreiecke": kt}
-        self.rohr = {"name": "rohr", "haut": _Haut(sp), "dreiecke": st}
+        self.koerper = {'name': 'Koerper', 'haut': _Haut(kp), 'dreiecke': kt}
+        self.rohr = {'name': 'rohr', 'haut': _Haut(sp), 'dreiecke': st}
 
     def test_koerper_bekommt_maske_und_gekuerzten_index(self):
         bericht = self.fm.Filmmasken.anwenden([self.koerper, self.rohr])
-        self.assertEqual([b[0] for b in bericht], ["Koerper"])
-        self.assertGreater(int(self.koerper["maske"].sum()), 500)
-        self.assertLess(len(self.koerper["dreiecke_sichtbar"]), len(self.koerper["dreiecke"]))
-        self.assertNotIn("maske", self.rohr)
+        self.assertEqual([b[0] for b in bericht], ['Koerper'])
+        self.assertGreater(int(self.koerper['maske'].sum()), 500)
+        self.assertLess(len(self.koerper['dreiecke_sichtbar']), len(self.koerper['dreiecke']))
+        self.assertNotIn('maske', self.rohr)
         punkte, dreiecke, normalen = self.fm.Filmmasken.gerendert(self.koerper, 1)
-        self.assertEqual(len(dreiecke), len(self.koerper["dreiecke_sichtbar"]))
-        maske = self.koerper["maske"].copy()
-        saum = self.koerper["saum"]
+        self.assertEqual(len(dreiecke), len(self.koerper['dreiecke_sichtbar']))
+        maske = self.koerper['maske'].copy()
+        saum = self.koerper['saum']
         self.assertGreater(len(saum), 0)
         r = np.linalg.norm(punkte[:, [0, 2]], axis=1)
         # Die Randecken: an der Rohrkante (Bild 1 ist um 1 mm gehoben),
@@ -68,47 +68,48 @@ class FilmmaskenTest(SimpleTestCase):
         self.assertTrue(np.allclose(r[saum.ecken], 0.10 - 0.001, atol=3e-4))
         maske[saum.ecken] = False
         self.assertTrue(np.allclose(r[maske], 0.10 - 0.010, atol=1e-6))
-        self.assertTrue(np.allclose(r[~self.koerper["maske"]], 0.10, atol=1e-6))
+        self.assertTrue(np.allclose(r[~self.koerper['maske']], 0.10, atol=1e-6))
         self.assertEqual(normalen.shape, punkte.shape)
 
     def test_feinkoerper_ohne_unterteiler_ist_die_bahn(self):
         F = self.fk.Feinkoerper
         self.assertFalse(F.hat(self.koerper))
-        self.assertIs(F.ruhe(self.koerper), self.koerper["haut"].punkte)
-        self.assertIs(F.dreiecke(self.koerper), self.koerper["dreiecke"])
-        self.assertTrue(np.array_equal(F.bild(self.koerper, 1), self.koerper["haut"].folge[1]))
+        self.assertIs(F.ruhe(self.koerper), self.koerper['haut'].punkte)
+        self.assertIs(F.dreiecke(self.koerper), self.koerper['dreiecke'])
+        self.assertTrue(np.array_equal(F.bild(self.koerper, 1), self.koerper['haut'].folge[1]))
 
     def test_feinkoerper_mit_unterteiler_folgt_der_bahn(self):
         F = self.fk.Feinkoerper
-        teil = dict(self.koerper, unterteiler=_Unterteiler(), fein_dreiecke=self.koerper["dreiecke"])
+        teil = dict(self.koerper, unterteiler=_Unterteiler(), fein_dreiecke=self.koerper['dreiecke'])
         ruhe = F.ruhe(teil)
-        self.assertTrue(np.allclose(ruhe[:, 0], teil["haut"].punkte[:, 0] + 0.001))
+        self.assertTrue(np.allclose(ruhe[:, 0], teil['haut'].punkte[:, 0] + 0.001))
         bild = F.bild(teil, 1)
-        self.assertTrue(np.allclose(bild[:, 1], teil["haut"].folge[1][:, 1]))
+        self.assertTrue(np.allclose(bild[:, 1], teil['haut'].folge[1][:, 1]))
         # Bahn ersetzt (wie nach der Physik): der alte Eintrag gilt nicht mehr.
-        teil["haut"].folge = teil["haut"].folge + np.array([0.0, 0.0, 0.5])
-        self.assertTrue(np.allclose(F.bild(teil, 1)[:, 2], teil["haut"].folge[1][:, 2]))
+        teil['haut'].folge = teil['haut'].folge + np.array([0.0, 0.0, 0.5])
+        self.assertTrue(np.allclose(F.bild(teil, 1)[:, 2], teil['haut'].folge[1][:, 2]))
 
     def test_verdrahtung_im_film(self):
-        lauf = FilmmaskenTest._pfad("filmlauf.py").read_text(encoding="utf-8")
-        self.assertIn("figurfein=fein", lauf)
+        lauf = FilmmaskenTest._pfad('filmlauf.py').read_text(encoding='utf-8')
+        self.assertIn('figurfein=fein', lauf)
         # Seit dem 17.09.2026 mit der Film-Stufe aus der Einstellung.
-        self.assertIn("Charakterdaten.unterteiler(", lauf)
-        self.assertIn("stufen=Netzqualitaet.stufen_film()", lauf)
-        render = FilmmaskenTest._pfad("filmrender.py").read_text(encoding="utf-8")
-        self.assertIn("Filmmasken.gerendert(teil, nummer)", render)
-        self.assertNotIn("import trimesh", render)
-        physik = FilmmaskenTest._pfad("filmphysik.py").read_text(encoding="utf-8")
-        self.assertIn("Stoffgrenze(Feinkoerper.bild(koerper, nummer)", physik)
-        film = FilmmaskenTest._pfad("hbfilm.py").read_text(encoding="utf-8")
-        self.assertIn("Filmmasken.anwenden(self.teile, self.melder)", film)
-        grenze = FilmmaskenTest._pfad("stoffgrenze.py").read_text(encoding="utf-8")
+        self.assertIn('Charakterdaten.unterteiler(', lauf)
+        self.assertIn('stufen=Netzqualitaet.stufen_film()', lauf)
+        render = FilmmaskenTest._pfad('filmrender.py').read_text(encoding='utf-8')
+        self.assertIn('Filmmasken.gerendert(teil, nummer)', render)
+        self.assertNotIn('import trimesh', render)
+        physik = FilmmaskenTest._pfad('filmphysik.py').read_text(encoding='utf-8')
+        # ruff format bricht den Aufruf um — Leerraum nach der Klammer ist egal.
+        self.assertRegex(physik, r'Stoffgrenze\(\s*Feinkoerper\.bild\(koerper, nummer\)')
+        film = FilmmaskenTest._pfad('hbfilm.py').read_text(encoding='utf-8')
+        self.assertIn('Filmmasken.anwenden(self.teile, self.melder)', film)
+        grenze = FilmmaskenTest._pfad('stoffgrenze.py').read_text(encoding='utf-8')
         # Wicklung ueber das Volumen, nicht die Mehrheit (kippte in Posen).
         self.assertIn("np.einsum('ij,ij->i', a, np.cross(b, c)).sum()", grenze)
 
     @staticmethod
     def _pfad(name):
-        return settings.BASE_DIR / "TheatreJS" / "ModelPhysik" / name
+        return settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik' / name
 
     @staticmethod
     def _modul(name):

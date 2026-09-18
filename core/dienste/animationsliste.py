@@ -23,7 +23,7 @@ from ..models import BVHFile
 from .bvhablage import Bvhablage
 from .bvhverzeichnis import Bvhverzeichnis
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Animationsliste:
@@ -56,7 +56,7 @@ class Animationsliste:
         return {
             pfad: (kennung, bilder, stempel)
             for kennung, pfad, bilder, stempel in BVHFile.objects.values_list(
-                "id", "path", "frame_count", "mtime_ns"
+                'id', 'path', 'frame_count', 'mtime_ns'
             ).iterator()
         }
 
@@ -74,16 +74,16 @@ class Animationsliste:
                     BVHFile(
                         name=datei.name,
                         path=datei.pfad,
-                        source="library",
+                        source='library',
                         frame_count=bilder,
                         mtime_ns=datei.mtime_ns,
                     )
                 )
         return {
-            "name": datei.name,
-            "category": datei.kategorie,
-            "url": "/api/character/bvh/%s/%s/" % (datei.kategorie, datei.name),
-            "frames": bilder,
+            'name': datei.name,
+            'category': datei.kategorie,
+            'url': '/api/character/bvh/%s/%s/' % (datei.kategorie, datei.name),
+            'frames': bilder,
         }
 
     def _sichern(self, anzulegen, zu_aendern):
@@ -91,11 +91,11 @@ class Animationsliste:
             BVHFile.objects.bulk_create(anzulegen, ignore_conflicts=True, batch_size=self.STAPEL)
         if zu_aendern:
             BVHFile.objects.bulk_update(
-                zu_aendern, fields=["frame_count", "mtime_ns"], batch_size=self.STAPEL
+                zu_aendern, fields=['frame_count', 'mtime_ns'], batch_size=self.STAPEL
             )
         if self.gelesen:
             logger.info(
-                "Animationsliste: %d BVH-Koepfe neu gelesen (%d angelegt, %d geaendert)",
+                'Animationsliste: %d BVH-Koepfe neu gelesen (%d angelegt, %d geaendert)',
                 self.gelesen,
                 len(anzulegen),
                 len(zu_aendern),

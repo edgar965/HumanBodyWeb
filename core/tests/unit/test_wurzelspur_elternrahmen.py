@@ -20,6 +20,7 @@ Humanbodypfad.setzen()
 
 from humanbody_core.quaternion import Quat  # noqa: E402
 from humanbody_core.skeleton.retarget.wurzelspur import Wurzelspur  # noqa: E402
+
 from ._sicher import Sicher
 
 
@@ -31,11 +32,11 @@ class _Knochen:
 
 class _Skelett:
     def __init__(self, eltern_rot):
-        self.bones = {"Hips": _Knochen((0, 1, 0), eltern_rot)}
+        self.bones = {'Hips': _Knochen((0, 1, 0), eltern_rot)}
 
 
 class _Bvh:
-    names = ["Hips"]
+    names = ['Hips']
     children = {}
     #: Zwei Bilder: die Wurzel wandert um 10 Einheiten nach +Z.
     positions = np.array([[[0.0, 0.0, 0.0]], [[0.0, 0.0, 10.0]]])
@@ -44,7 +45,7 @@ class _Bvh:
 class WurzelspurElternrahmenTest(SimpleTestCase):
     @staticmethod
     def _spur(skelett):
-        return Sicher.wert(Wurzelspur(_Bvh(), skelett, {"Hips": "Hips"}, 0.01, 2).spur(), "Spur")["values"]
+        return Sicher.wert(Wurzelspur(_Bvh(), skelett, {'Hips': 'Hips'}, 0.01, 2).spur(), 'Spur')['values']
 
     def test_ohne_drehung_bleibt_der_weg_wie_er_ist(self):
         self.assertTrue(np.allclose(self._spur(_Skelett(Quat.ID.copy())), [0, 1, 0, 0, 1, 0.1]))
@@ -58,5 +59,5 @@ class WurzelspurElternrahmenTest(SimpleTestCase):
     def test_ohne_elternangabe_wie_frueher(self):
         """Attrappen ohne das Feld (aeltere Tests) laufen weiter."""
         skelett = _Skelett(None)
-        del skelett.bones["Hips"].parent_world_rest_quat
+        del skelett.bones['Hips'].parent_world_rest_quat
         self.assertTrue(np.allclose(self._spur(skelett), [0, 1, 0, 0, 1, 0.1]))

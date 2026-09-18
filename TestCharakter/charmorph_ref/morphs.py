@@ -18,7 +18,12 @@
 #
 # Copyright (C) 2022 Michael Vigovsky
 
-import os, abc, json, logging, numpy
+import abc
+import json
+import logging
+import os
+
+import numpy
 
 from . import utils
 
@@ -33,7 +38,7 @@ class Morph:
 
 
 class FullMorph(Morph):
-    __slots__ = ("delta",)
+    __slots__ = ('delta',)
 
     def __init__(self, delta):
         self.delta = delta
@@ -47,7 +52,7 @@ class FullMorph(Morph):
 
 
 class PartialMorph(FullMorph):
-    __slots__ = ("idx",)
+    __slots__ = ('idx',)
 
     def __init__(self, idx, delta):
         super().__init__(delta)
@@ -61,7 +66,7 @@ class PartialMorph(FullMorph):
 def np_ro64(a: numpy.ndarray):
     if a is None:
         return None
-    a = a.astype(numpy.float64, casting="same_kind")
+    a = a.astype(numpy.float64, casting='same_kind')
     a.flags.writeable = False
     return a
 
@@ -72,11 +77,11 @@ def load(file):
     data = numpy.load(file)
     if isinstance(data, numpy.ndarray):
         return FullMorph(np_ro64(data))
-    return PartialMorph(data["idx"], np_ro64(data["delta"]))
+    return PartialMorph(data['idx'], np_ro64(data['delta']))
 
 
 def detect_npy_npz(base):
-    for ext in (".npy", ".npz"):
+    for ext in ('.npy', '.npz'):
         path = base + ext
         if os.path.isfile(path):
             return path
@@ -97,7 +102,7 @@ class LazyMorph(metaclass=abc.ABCMeta):
 
 
 class MinMaxMorphData:
-    __slots__ = "name", "data", "min", "max"
+    __slots__ = 'name', 'data', 'min', 'max'
 
     def __init__(self, name, data, minval=0, maxval=1):
         self.name = name
@@ -132,7 +137,7 @@ class MinMaxMorph(MinMaxMorphData):
 
 class Separator(Morph):
     __slots__ = ()
-    name = ""
+    name = ''
 
 
 class MorphPack:
@@ -145,19 +150,19 @@ class MorphPack:
             self._load()
 
     def _load(self):
-        logger.debug("loading pack: %s", self.file)
+        logger.debug('loading pack: %s', self.file)
         z = numpy.load(self.file)
         names = utils.np_names(z)
         self.data = []
-        idx = z["idx"]
-        delta = z["delta"]
-        full = z.get("full")
+        idx = z['idx']
+        delta = z['delta']
+        full = z.get('full')
         if self.namedict is None:
             self.namedict = {}
 
         full_pos = 0
         part_pos = 0
-        for name, i in zip(names, z["cnt"]):
+        for name, i in zip(names, z['cnt']):
             if i >= 0:
                 pos2 = part_pos + int(i)
                 item = (idx[part_pos:pos2], delta[part_pos:pos2])
@@ -188,11 +193,11 @@ class LazyVertsFile(LazyMorph, str):
     __slots__ = ()
 
     def resolve(self):
-        return numpy.load(self).astype(numpy.float64, casting="same_kind")
+        return numpy.load(self).astype(numpy.float64, casting='same_kind')
 
 
 class LazyMorphFile(LazyMorph):
-    __slots__ = ("file",)
+    __slots__ = ('file',)
 
     def __init__(self, file):
         self.file = file
@@ -202,7 +207,7 @@ class LazyMorphFile(LazyMorph):
 
 
 class LazyPackedMorph(LazyMorph):
-    __slots__ = "pack", "idx"
+    __slots__ = 'pack', 'idx'
     pack: MorphPack
     idx: int
 
@@ -217,21 +222,21 @@ class LazyPackedMorph(LazyMorph):
 class MorphStorage:
     def __init__(self, char):
         self.char = char
-        self.path = char.path("morphs")
+        self.path = char.path('morphs')
         self.packs = {}
 
     def get_path(self, level, *names):
-        return os.path.join(self.path, f"L{level}", *names)
+        return os.path.join(self.path, f'L{level}', *names)
 
     def get_pack_path(self, level, *names):
         if not names:
-            for file in (f"L{level}", os.path.join(f"L{level}_packed", "__main__")):
-                file = os.path.join(self.path, file) + ".npz"
+            for file in (f'L{level}', os.path.join(f'L{level}_packed', '__main__')):
+                file = os.path.join(self.path, file) + '.npz'
                 if os.path.isfile(file):
                     return file
             return None
 
-        file = os.path.join(self.path, f"L{level}_packed", *names) + ".npz"
+        file = os.path.join(self.path, f'L{level}_packed', *names) + '.npz'
         return file if os.path.isfile(file) else None
 
     def _get_pack(self, level, *names):
@@ -270,11 +275,11 @@ class MorphStorage:
         return l.resolve() if l else None
 
     def _json_to_morph(self, item, level, *names):
-        if item.get("separator"):
+        if item.get('separator'):
             return Separator
-        name = item.get("morph")
+        name = item.get('morph')
         return MinMaxMorphData(
-            name, self.get_lazy(level, *(names + (name,))), item.get("min", 0), item.get("max", 1)
+            name, self.get_lazy(level, *(names + (name,))), item.get('min', 0), item.get('max', 1)
         )
 
     def _enum_dir(self, path: str, lazy_class, existing_names: set):
@@ -282,7 +287,7 @@ class MorphStorage:
             return
         for name in sorted(os.listdir(path)):
             pathname = os.path.join(path, name)
-            if (name.endswith(".npz") or name.endswith(".npy")) and os.path.isfile(pathname):
+            if (name.endswith('.npz') or name.endswith('.npy')) and os.path.isfile(pathname):
                 existing_names.add(name)
                 yield MinMaxMorphData(name[:-4], lazy_class(pathname))
 
@@ -301,7 +306,7 @@ class MorphStorage:
         if level == 1:
             return self._enum_dir(path, LazyVertsFile, set())
 
-        jslist = utils.parse_file(os.path.join(path, "morphs.json"), json.load, None)
+        jslist = utils.parse_file(os.path.join(path, 'morphs.json'), json.load, None)
         if jslist is not None:
             return (self._json_to_morph(item, level, *names) for item in jslist)
 
@@ -321,9 +326,9 @@ class MorphImporter:
     def _ensure_basis(self):
         basis = self.storage.char.np_basis
         if not self.obj.data.shape_keys or not self.obj.data.shape_keys.key_blocks:
-            sk = self.obj.shape_key_add(name="Basis", from_mix=False)
+            sk = self.obj.shape_key_add(name='Basis', from_mix=False)
             if basis is not None:
-                sk.data.foreach_set("co", basis.reshape(-1))
+                sk.data.foreach_set('co', basis.reshape(-1))
 
         if basis is None:
             basis = utils.get_basis_numpy(self.obj)
@@ -332,7 +337,7 @@ class MorphImporter:
     def _create_morph_sk(self, prefix, morph):
         if morph is Separator:
             self.obj.shape_key_add(
-                name=f"---- sep-{self._counter_lev}-{self._counter_cnt} ----", from_mix=False
+                name=f'---- sep-{self._counter_lev}-{self._counter_cnt} ----', from_mix=False
             )
             self._counter_cnt += 1
             return None
@@ -343,7 +348,7 @@ class MorphImporter:
         return sk
 
     def _import_to_sk(self, morph: MinMaxMorphData, level, *names):
-        sk = self._create_morph_sk("_".join((f"L{level}",) + names) + "_", morph)
+        sk = self._create_morph_sk('_'.join((f'L{level}',) + names) + '_', morph)
         if not sk:
             return Separator, None
 
@@ -354,7 +359,7 @@ class MorphImporter:
                 sk.relative_key = data[0]
                 basis = data[1]
             else:
-                sk_rel = self.obj.data.shape_keys.key_blocks.get("L1_" + names[0])
+                sk_rel = self.obj.data.shape_keys.key_blocks.get('L1_' + names[0])
                 if sk_rel:
                     sk.relative_key = sk_rel
                     basis = utils.verts_to_numpy(sk_rel.data)
@@ -364,14 +369,14 @@ class MorphImporter:
         if isinstance(data, Morph):
             data = data.apply(basis.copy())
 
-        sk.data.foreach_set("co", data.reshape(-1))
+        sk.data.foreach_set('co', data.reshape(-1))
         return sk, data
 
     def import_morphs(self, progress):
         self._ensure_basis()
 
         L1 = []
-        L2 = [(morph, "") for morph in self.storage.enum(2)]
+        L2 = [(morph, '') for morph in self.storage.enum(2)]
         for morph in list(self.storage.enum(1)):
             L1.append(morph)
             L2.extend((morph2, morph.name) for morph2 in self.storage.enum(2, morph.name))
@@ -379,7 +384,7 @@ class MorphImporter:
         self._counter_lev = 2
         self._counter_cnt = 1
 
-        progress.enter_substeps(len(L1) + len(L2), "Importing morphs")
+        progress.enter_substeps(len(L1) + len(L2), 'Importing morphs')
 
         self._L1_data.clear()
         for morph in L1:
@@ -397,11 +402,11 @@ class MorphImporter:
             except OSError:
                 pass
 
-        progress.leave_substeps("Morphs done")
+        progress.leave_substeps('Morphs done')
 
     def import_expressions(self, progress):
         self._ensure_basis()
-        lst = [(morph, "") for morph in self.storage.enum(3)]
+        lst = [(morph, '') for morph in self.storage.enum(3)]
         lst.extend(
             (morph3, morph1.name)
             for morph1 in self.storage.enum(1)
@@ -410,19 +415,19 @@ class MorphImporter:
 
         self._counter_lev = 3
         self._counter_cnt = 1
-        progress.enter_substeps(len(lst), "Importing expressions")
+        progress.enter_substeps(len(lst), 'Importing expressions')
         for morph, L1_name in lst:
             data = self._import_to_sk(morph, 3, L1_name)
             try:
                 progress.step(data[0].name)
             except OSError:
                 pass
-        progress.leave_substeps("Expressions done")
+        progress.leave_substeps('Expressions done')
 
 
 def convertSigns(signs):
     try:
-        return sum({"min": 0, "max": 1}[sign] << i for i, sign in enumerate(signs))
+        return sum({'min': 0, 'max': 1}[sign] << i for i, sign in enumerate(signs))
     except KeyError:
         return -1
 
@@ -438,11 +443,11 @@ class MorphCombiner:
             self.morphs_list.append(Separator)
             return
 
-        nameParts = morph.name.split("_")
+        nameParts = morph.name.split('_')
 
         signIdx = -1
         if len(nameParts) == 3:
-            signArr = nameParts[2].split("-")
+            signArr = nameParts[2].split('-')
             signIdx = convertSigns(signArr)
 
         if signIdx < 0:
@@ -451,13 +456,13 @@ class MorphCombiner:
             self.morphs_list.append(result)
             return
 
-        names = nameParts[1].split("-")
+        names = nameParts[1].split('-')
 
         if len(names) == 0 or len(names) != len(signArr):
-            logger.error("Invalid L2 morph name: %s, skipping", morph.name)
+            logger.error('Invalid L2 morph name: %s, skipping', morph.name)
             return
 
-        morph_name = "_".join(nameParts[:2])
+        morph_name = '_'.join(nameParts[:2])
         cnt = 2 ** len(names)
 
         if len(names) == 1:
@@ -468,7 +473,7 @@ class MorphCombiner:
         if morph_name in target:
             target_morph = target[morph_name]
             if len(target_morph.data) != cnt:
-                logger.error("L2 combo morph conflict: different dimension count on %s, skipping", morph.name)
+                logger.error('L2 combo morph conflict: different dimension count on %s, skipping', morph.name)
                 return
         else:
             target_morph = MinMaxMorph(morph_name, [None] * cnt, 0, 0)
@@ -477,7 +482,7 @@ class MorphCombiner:
                 self.morphs_list.append(target_morph)
             else:
                 for name in names:
-                    full_name = "_".join((nameParts[0], name))
+                    full_name = '_'.join((nameParts[0], name))
                     if full_name in self.morphs_dict:
                         continue
                     new_morph = MinMaxMorph(full_name, None, -1, 1)
@@ -485,9 +490,9 @@ class MorphCombiner:
                     self.morphs_list.append(new_morph)
 
         for sign in signArr:
-            if sign == "min":
+            if sign == 'min':
                 target_morph.min = min(target_morph.min, -morph.max)
-            elif sign == "max":
+            elif sign == 'max':
                 target_morph.max = max(target_morph.max, morph.max)
 
         target_morph.data[signIdx] = morph.data
@@ -495,36 +500,36 @@ class MorphCombiner:
 
 def mblab_to_charmorph(data):
     return {
-        "morphs": {k: v * 2 - 1 for k, v in data.get("structural", {}).items()},
-        "materials": data.get("materialproperties", {}),
-        "meta": {
-            (k[10:] if k.startswith("character_") else k): v
-            for k, v in data.get("metaproperties", {}).items()
-            if not k.startswith("last_character_")
+        'morphs': {k: v * 2 - 1 for k, v in data.get('structural', {}).items()},
+        'materials': data.get('materialproperties', {}),
+        'meta': {
+            (k[10:] if k.startswith('character_') else k): v
+            for k, v in data.get('metaproperties', {}).items()
+            if not k.startswith('last_character_')
         },
-        "type": data.get("type", ()),
+        'type': data.get('type', ()),
     }
 
 
 def charmorph_to_mblab(data: dict):
     return {
-        "structural": {k: (v + 1) / 2 for k, v in data.get("morphs", {}).items()},
-        "metaproperties": {
+        'structural': {k: (v + 1) / 2 for k, v in data.get('morphs', {}).items()},
+        'metaproperties': {
             k: v
             for sublist, v in (
-                ([("character_" + k), ("last_character_" + k)], v) for k, v in data.get("meta", {}).items()
+                ([('character_' + k), ('last_character_' + k)], v) for k, v in data.get('meta', {}).items()
             )
             for k in sublist
         },
-        "materialproperties": data.get("materials"),
-        "type": data.get("type", ()),
+        'materialproperties': data.get('materials'),
+        'type': data.get('type', ()),
     }
 
 
 def load_morph_data(fn: str):
-    with open(fn, "r", encoding="utf-8") as f:
-        if fn[-5:] == ".yaml":
+    with open(fn, encoding='utf-8') as f:
+        if fn[-5:] == '.yaml':
             return utils.load_yaml(f)
-        if fn[-5:] == ".json":
+        if fn[-5:] == '.json':
             return mblab_to_charmorph(json.load(f))
     return None

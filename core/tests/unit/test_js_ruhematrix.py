@@ -31,7 +31,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "ruhematrix.js")
+MODUL = Jsmodul('gemeinsam', 'ruhematrix.js')
 
 SKRIPT = """
 const { Ruhematrix: R } = await import(MODUL);
@@ -94,4 +94,4 @@ class RuhematrixTest(SimpleTestCase):
 
     def test_ruhematrix_kette_spaltenfolge_und_einheit_ohne_drehung(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

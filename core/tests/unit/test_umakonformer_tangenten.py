@@ -76,7 +76,7 @@ class Tangenten(unittest.TestCase):
         uv = np.column_stack([(winkel + np.pi) / (2 * np.pi), stoff[:, 1]])
 
         k = Kleidungskonformer(koerper, k_tri)
-        b = k.binden("huelle", stoff, s_tri)
+        b = k.binden('huelle', stoff, s_tri)
         vorher = Netzgeometrie.tangenten(stoff, None, uv, s_tri)
 
         # Zylinder oben aufweiten -> die Fläche kippt, die Tangente auch.
@@ -92,12 +92,12 @@ class Tangenten(unittest.TestCase):
         self.assertGreater(
             float(wanderung.max()),
             0.01,
-            "Die Tangenten haben sich nicht bewegt — dann beschreiben sie die alte Oberfläche",
+            'Die Tangenten haben sich nicht bewegt — dann beschreiben sie die alte Oberfläche',
         )
         # GEGENPROBE: Ohne Verformung dürfen sie sich NICHT bewegen.
         # Dazu muss die Glättung aus sein — sie ist in `Einstellungen`
         # VORGABE und verändert das Netz auch bei unverändertem Körper.
         still = Kleidungskonformer(koerper, k_tri, Einstellungen(glaetten=False, tangential_halten=True))
-        b2 = still.binden("huelle", stoff, s_tri)
+        b2 = still.binden('huelle', stoff, s_tri)
         ruhe = Netzgeometrie.tangenten(still.anwenden(b2), None, uv, s_tri)
         self.assertLess(float(np.linalg.norm(ruhe[:, :3] - vorher[:, :3], axis=1).max()), 1e-6)

@@ -9,7 +9,6 @@ Saum mitzaehlen.
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from GarmentCode.hautabstand import Hautabstand
 
 
@@ -17,7 +16,7 @@ def rig_mit(abstaende_mm):
     """Ein Rig-dict, dessen Ankerversatz genau diese Laengen hat."""
     versatz = [[0.0, 0.0, mm / 1000.0] for mm in abstaende_mm]
     # Dictionary gewollt: so liegt die Rig-Datei auf der Platte.
-    return {"anker": {"versatz": versatz}}
+    return {'anker': {'versatz': versatz}}
 
 
 class ZweiZahlenStattEiner(SimpleTestCase):
@@ -58,7 +57,7 @@ class OhneAnkerGibtEsNichtsZuMessen(SimpleTestCase):
         self.assertEqual(sitz.punkte, 0)
 
     def test_rig_ohne_ankerschluessel(self):
-        sitz = Hautabstand.aus_rig({"punkte": 12})
+        sitz = Hautabstand.aus_rig({'punkte': 12})
         self.assertEqual(sitz.punkte, 0)
 
 
@@ -97,13 +96,13 @@ class WasAnDenBrowserGeht(SimpleTestCase):
         # liegt, entscheidet die Float-Darstellung, wohin `round` geht —
         # der Test pruefte dann nicht die Klasse, sondern Python.
         werte = Hautabstand(2.44, 4.57).als_dict()
-        self.assertEqual(werte, {"hautabstand_mm": 4.6, "hautabstand_eng_mm": 2.4, "hautabstand_sitzt": True})
+        self.assertEqual(werte, {'hautabstand_mm': 4.6, 'hautabstand_eng_mm': 2.4, 'hautabstand_sitzt': True})
 
     def test_hautabstand_mm_bleibt_der_median(self):
         """Damit frueher gemessene Werte vergleichbar bleiben — die Zahl
         steht in Dutzenden Notizen und Docstrings."""
         werte = Hautabstand(2.0, 9.4).als_dict()
-        self.assertEqual(werte["hautabstand_mm"], 9.4)
+        self.assertEqual(werte['hautabstand_mm'], 9.4)
 
 
 class DerGemeinsameKernNimmtBeideEingaben(SimpleTestCase):

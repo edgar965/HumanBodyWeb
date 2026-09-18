@@ -28,13 +28,13 @@ from .test_uma_gegenprobe import (
 #: Eine BVH aus dem Bestand — Arme seitlich, also viel Bewegung in den
 #: Gliedmaßen und wenig im Rumpf. Fehlt sie, wird übersprungen statt
 #: eine andere geraten.
-BVH = "Aist/01001_ArmeSeitlich.bvh"
+BVH = 'Aist/01001_ArmeSeitlich.bvh'
 
 
 def _bvh():
-    pfad = Path(settings.OBJECTS_ROOT) / "animations" / "bvh" / BVH
+    pfad = Path(settings.OBJECTS_ROOT) / 'animations' / 'bvh' / BVH
     if not pfad.is_file():
-        raise unittest.SkipTest("BVH fehlt: %s" % pfad)
+        raise unittest.SkipTest('BVH fehlt: %s' % pfad)
     return pfad
 
 
@@ -61,7 +61,7 @@ class AnimationAufBeiden(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        _referenz("Gegenprobe_nackt")  # überspringt, wenn sie fehlt
+        _referenz('Gegenprobe_nackt')  # überspringt, wenn sie fehlt
         cls.pfad = str(_bvh())
 
     def _lauf(self, ziel, figur):
@@ -70,12 +70,12 @@ class AnimationAufBeiden(unittest.TestCase):
         return Retargetdaten(self.pfad, body_height=1.99, ziel=ziel, figur=figur).holen()
 
     def test_beide_ziele_rechnen_und_treffen_dieselben_knochen(self):
-        glb = self._lauf("uma", "Gegenprobe_nackt.glb")
-        py = self._lauf("umapython", RASSE)
-        namen_glb = set(glb.als_dict()["mapped_bones"])
-        namen_py = set(py.als_dict()["mapped_bones"])
-        self.assertTrue(namen_glb, "GLB-Ziel hat keinen Knochen zugeordnet")
-        self.assertEqual(namen_glb, namen_py, "Beide Wege nutzen dieselbe Zuordnungstabelle")
+        glb = self._lauf('uma', 'Gegenprobe_nackt.glb')
+        py = self._lauf('umapython', RASSE)
+        namen_glb = set(glb.als_dict()['mapped_bones'])
+        namen_py = set(py.als_dict()['mapped_bones'])
+        self.assertTrue(namen_glb, 'GLB-Ziel hat keinen Knochen zugeordnet')
+        self.assertEqual(namen_glb, namen_py, 'Beide Wege nutzen dieselbe Zuordnungstabelle')
 
     def test_die_bewegung_kommt_an(self):
         """Eine Spur, die sich nicht ändert, ist keine Animation.
@@ -84,18 +84,18 @@ class AnimationAufBeiden(unittest.TestCase):
         entstand, hatte Spuren — und bewegte nichts, weil die Spuren
         Knochen nannten, die die Figur nicht hat.
         """
-        py = self._lauf("umapython", RASSE).als_dict()
-        self.assertGreater(py["frame_count"], 10)
+        py = self._lauf('umapython', RASSE).als_dict()
+        self.assertGreater(py['frame_count'], 10)
         bewegt = 0
-        for spur in py["tracks"].values():
+        for spur in py['tracks'].values():
             werte = np.asarray(spur, dtype=np.float64).reshape(-1, 4)
             if len(werte) > 1 and np.abs(werte - werte[0]).max() > 0.01:
                 bewegt += 1
-        self.assertGreater(bewegt, 10, "zu wenige Knochen bewegen sich: %d" % bewegt)
+        self.assertGreater(bewegt, 10, 'zu wenige Knochen bewegen sich: %d' % bewegt)
 
     def test_die_wurzel_ist_dabei(self):
-        py = self._lauf("umapython", RASSE).als_dict()
-        self.assertIn("Hips", py["tracks"])
+        py = self._lauf('umapython', RASSE).als_dict()
+        self.assertIn('Hips', py['tracks'])
 
 
 class KleidungAufBeiden(unittest.TestCase):
@@ -113,7 +113,7 @@ class KleidungAufBeiden(unittest.TestCase):
     def setUpClass(cls):
         from UMA_Python.gegenprobe import Unityglb
 
-        cls.unity = Unityglb(_referenz("Gegenprobe_kleidung", KLEIDUNG))
+        cls.unity = Unityglb(_referenz('Gegenprobe_kleidung', KLEIDUNG))
         cls.gebaut = _bauen(KLEIDUNG)
 
     def test_punkt_und_dreieckszahl_stimmen(self):
@@ -125,8 +125,8 @@ class KleidungAufBeiden(unittest.TestCase):
         namen = [name for name, *_ in self.gebaut.netz.bereiche]
         self.assertEqual(len(namen), 11)
         for rezept in KLEIDUNG:
-            kurz = rezept.replace("_Recipe", "").lower()
-            self.assertTrue(any(kurz in n.lower() for n in namen), "%s fehlt in %s" % (rezept, namen))
+            kurz = rezept.replace('_Recipe', '').lower()
+            self.assertTrue(any(kurz in n.lower() for n in namen), '%s fehlt in %s' % (rezept, namen))
 
     def test_der_koerper_bleibt_exakt(self):
         """Kleidung ändert am Körper nichts — und das ist zu prüfen.
@@ -137,7 +137,7 @@ class KleidungAufBeiden(unittest.TestCase):
         from UMA_Python.gegenprobe import Unityglb
 
         punkte = self.gebaut.punkte()
-        koerper = [(n, a, z) for n, a, z, _, _ in self.gebaut.netz.bereiche if n.startswith("UMA30_Body")]
+        koerper = [(n, a, z) for n, a, z, _, _ in self.gebaut.netz.bereiche if n.startswith('UMA30_Body')]
         self.assertEqual(len(koerper), 5)
         eigen = np.concatenate([punkte[a : a + z] for _, a, z in koerper])
         abstand = Unityglb.abstaende(eigen, self.unity.punkte)
@@ -173,11 +173,11 @@ class KleidungAufBeiden(unittest.TestCase):
 
         punkte = self.gebaut.punkte()
         stellen = {n: (a, a + z) for n, a, z, _, _ in self.gebaut.netz.bereiche}
-        stoff = [n for n in stellen if "hoodie" in n or "shorts" in n]
+        stoff = [n for n in stellen if 'hoodie' in n or 'shorts' in n]
         self.assertEqual(len(stoff), 2)
         eigen = np.concatenate([punkte[stellen[n][0] : stellen[n][1]] for n in stoff])
         abstand = Unityglb.abstaende(eigen, self.unity.punkte)
-        self.assertLess(float(np.median(abstand)), 12.0, "die Kleidung ist weiter abgewandert als gemessen")
+        self.assertLess(float(np.median(abstand)), 12.0, 'die Kleidung ist weiter abgewandert als gemessen')
 
     def test_die_kleidung_haengt_am_selben_skelett(self):
         """Der Grund, warum UMA-Kleidung sitzt — und die Probe darauf.

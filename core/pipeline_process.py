@@ -70,7 +70,7 @@ import threading
 
 from .prozessleser import Stromleser
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class PipelineStille(TimeoutError):
@@ -122,8 +122,8 @@ class PipelineProzess:
             text=True,
             bufsize=1,
             # zeilenweise, sonst kommt Fortschritt in Schüben
-            encoding="utf-8",
-            errors="replace",
+            encoding='utf-8',
+            errors='replace',
             # ein Ersatzzeichen ist besser als ein Absturz
             cwd=str(cwd) if cwd else None,
             env=env,
@@ -159,10 +159,10 @@ class PipelineProzess:
         Pipelines in 3.10 — ein geerbter Suchpfad zieht Pakete der falschen
         Version herein."""
         env = os.environ.copy()
-        env["PYTHONIOENCODING"] = "utf-8"
-        env["PYTHONUTF8"] = "1"
-        env["PYTHONUNBUFFERED"] = "1"
-        for schluessel in ("PYTHONPATH", "PYTHONHOME"):
+        env['PYTHONIOENCODING'] = 'utf-8'
+        env['PYTHONUTF8'] = '1'
+        env['PYTHONUNBUFFERED'] = '1'
+        for schluessel in ('PYTHONPATH', 'PYTHONHOME'):
             env.pop(schluessel, None)
         if env_extra:
             env.update({k: str(v) for k, v in env_extra.items()})
@@ -192,19 +192,19 @@ class PipelineProzess:
         Krankheit. Und ein Prozess, den wir gerade für hängend erklärt haben,
         darf die Grafikkarte nicht weiter belegen."""
         if self._stdout_q is None:
-            raise RuntimeError("Mit stdout_lesen=False gestartet — es gibt keine Zeilen")
+            raise RuntimeError('Mit stdout_lesen=False gestartet — es gibt keine Zeilen')
         while True:
             try:
                 zeile = self._stdout_q.get(timeout=stille_timeout)
             except queue.Empty:
                 logger.error(
-                    "PipelineProzess: keine Ausgabe seit %s s — Prozess %s wird beendet",
+                    'PipelineProzess: keine Ausgabe seit %s s — Prozess %s wird beendet',
                     stille_timeout,
                     self.proc.pid,
                 )
                 self.beenden()
                 raise PipelineStille(
-                    "Pipeline hat seit %s Sekunden nichts geschrieben und wurde beendet" % stille_timeout
+                    'Pipeline hat seit %s Sekunden nichts geschrieben und wurde beendet' % stille_timeout
                 )
             if zeile is Stromleser.ENDE:
                 return
@@ -223,7 +223,7 @@ class PipelineProzess:
 
     def fehlertext(self, max_zeichen=4000):
         """Die letzten stderr-Zeilen, gekürzt — für Fehlermeldungen."""
-        return "".join(self._stderr_zeilen)[-max_zeichen:].strip()
+        return ''.join(self._stderr_zeilen)[-max_zeichen:].strip()
 
     def beenden(self, warten_s=10):
         """Prozessbaum beenden UND auf sein Ende warten.
@@ -240,14 +240,14 @@ class PipelineProzess:
         if self.proc.poll() is not None:
             return
         angestossen = False
-        if os.name == "nt":
+        if os.name == 'nt':
             try:
                 subprocess.run(
-                    ["taskkill", "/PID", str(self.proc.pid), "/T", "/F"], capture_output=True, timeout=15
+                    ['taskkill', '/PID', str(self.proc.pid), '/T', '/F'], capture_output=True, timeout=15
                 )
                 angestossen = True
             except OSError, subprocess.SubprocessError:
-                logger.warning("PipelineProzess: taskkill fehlgeschlagen, nutze kill()")
+                logger.warning('PipelineProzess: taskkill fehlgeschlagen, nutze kill()')
         if not angestossen:
             # Auch der Weg für Nicht-Windows: ohne ihn würde unten auf einen
             # Prozess gewartet, den niemand beendet hat.
@@ -261,10 +261,10 @@ class PipelineProzess:
             self.proc.wait(timeout=warten_s)
         except subprocess.TimeoutExpired:
             logger.warning(
-                "PipelineProzess: Prozess %s lebt nach %s s noch — kill()", self.proc.pid, warten_s
+                'PipelineProzess: Prozess %s lebt nach %s s noch — kill()', self.proc.pid, warten_s
             )
             try:
                 self.proc.kill()
                 self.proc.wait(timeout=5)
             except OSError, subprocess.SubprocessError:
-                logger.exception("PipelineProzess: kill() fehlgeschlagen")
+                logger.exception('PipelineProzess: kill() fehlgeschlagen')

@@ -32,15 +32,14 @@ import os
 import re
 
 from django.conf import settings
-from django.http import JsonResponse, FileResponse, HttpResponseNotFound
+from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from ..dienste.kleiderbibliothek import Kleiderbibliothek
-from ..daten.pfadvergleich import Pfadvergleich
-
-from ..dienste.kleiderverwaltung import Kleiderverwaltung, KleiderFehler
 from ..daten.anfragerumpf import Anfragerumpf
+from ..daten.pfadvergleich import Pfadvergleich
+from ..dienste.kleiderbibliothek import Kleiderbibliothek
+from ..dienste.kleiderverwaltung import KleiderFehler, Kleiderverwaltung
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ class Kleiderendpunkte:
     """Die HTTP-Schale um `Kleiderbibliothek` und `Kleiderverwaltung`."""
 
     #: Endungen einer Vorschau, in dieser Reihenfolge gesucht.
-    VORSCHAU_ENDUNGEN = (".thumb", "_diffuse.png")
+    VORSCHAU_ENDUNGEN = ('.thumb', '_diffuse.png')
 
     # ------------------------------------------------------------- Bestand
 
@@ -58,17 +57,17 @@ class Kleiderendpunkte:
     def bestand(request):
         """Alle Kleidungsstuecke, nach Kategorie gruppiert."""
         katalog = Kleiderbibliothek.holen().catalog
-        kategorie = request.GET.get("category", "")
+        kategorie = request.GET.get('category', '')
         if kategorie:
-            katalog = [g for g in katalog if g["category"] == kategorie]
+            katalog = [g for g in katalog if g['category'] == kategorie]
         nach_kategorie = {}
         for stueck in katalog:
-            nach_kategorie.setdefault(stueck["category"], []).append(stueck)
+            nach_kategorie.setdefault(stueck['category'], []).append(stueck)
         return JsonResponse(
             {
-                "categories": sorted(nach_kategorie.keys()),
-                "garments": nach_kategorie,
-                "total": len(katalog),
+                'categories': sorted(nach_kategorie.keys()),
+                'garments': nach_kategorie,
+                'total': len(katalog),
             }
         )
 
@@ -77,7 +76,7 @@ class Kleiderendpunkte:
     def neu_einlesen(request):
         """Das Kleiderverzeichnis erneut durchsuchen."""
         katalog = Kleiderbibliothek.neu_einlesen()
-        return JsonResponse({"ok": True, "count": len(katalog.catalog)})
+        return JsonResponse({'ok': True, 'count': len(katalog.catalog)})
 
     @staticmethod
     @csrf_exempt
@@ -104,7 +103,7 @@ class Kleiderendpunkte:
         try:
             antwort = Kleiderverwaltung.ausfuehren(daten)
         except KleiderFehler as fehler:
-            return JsonResponse({"error": fehler.text}, status=fehler.kennzahl)
+            return JsonResponse({'error': fehler.text}, status=fehler.kennzahl)
         Kleiderbibliothek.neu_einlesen()
         return JsonResponse(antwort)
 
@@ -126,8 +125,8 @@ class Kleiderendpunkte:
         try:
             mitgeliefert = lader.list_builtin_assets()
         except Exception:
-            logger.debug("optionaler Schritt fehlgeschlagen", exc_info=True)
-        return JsonResponse({"packs": pakete, "builtin_assets": mitgeliefert})
+            logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
+        return JsonResponse({'packs': pakete, 'builtin_assets': mitgeliefert})
 
     @staticmethod
     @csrf_exempt
@@ -142,17 +141,17 @@ class Kleiderendpunkte:
         if fehler:
             return fehler
         lader = Kleiderendpunkte._herunterlader()
-        paket = rumpf.get("pack_name", "")
-        stueck = rumpf.get("asset_name", "")
+        paket = rumpf.get('pack_name', '')
+        stueck = rumpf.get('asset_name', '')
         if paket:
             eingerichtet = lader.download_pack(paket)
             Kleiderbibliothek.neu_einlesen()
-            return JsonResponse({"ok": True, "installed": eingerichtet, "count": len(eingerichtet)})
+            return JsonResponse({'ok': True, 'installed': eingerichtet, 'count': len(eingerichtet)})
         if stueck:
             kennung = lader.download_builtin_asset(stueck)
             Kleiderbibliothek.neu_einlesen()
-            return JsonResponse({"ok": kennung is not None, "garment_id": kennung})
-        return JsonResponse({"error": "pack_name or asset_name required"}, status=400)
+            return JsonResponse({'ok': kennung is not None, 'garment_id': kennung})
+        return JsonResponse({'error': 'pack_name or asset_name required'}, status=400)
 
     # -------------------------------------------------------------- Ausgabe
 
@@ -164,23 +163,23 @@ class Kleiderendpunkte:
         rumpf, fehler = Anfragerumpf.lesen(request)
         if fehler:
             return fehler
-        kennung = rumpf.get("garment_id", "")
-        name = rumpf.get("name", "garment").strip()
+        kennung = rumpf.get('garment_id', '')
+        name = rumpf.get('name', 'garment').strip()
         if not kennung or not name:
-            return JsonResponse({"error": "garment_id and name required"}, status=400)
-        sauber = re.sub(r"[^\w\s\-]", "", name).strip()
+            return JsonResponse({'error': 'garment_id and name required'}, status=400)
+        sauber = re.sub(r'[^\w\s\-]', '', name).strip()
         if not sauber:
-            return JsonResponse({"error": "Invalid name"}, status=400)
+            return JsonResponse({'error': 'Invalid name'}, status=400)
         wurzel = str(settings.HUMANBODY_GARMENT_EXPORT_DIR)
         os.makedirs(wurzel, exist_ok=True)
         ziel = os.path.normpath(os.path.join(wurzel, sauber))
         if not Pfadvergleich.liegt_unter(ziel, wurzel):
-            return JsonResponse({"error": "Invalid path"}, status=400)
+            return JsonResponse({'error': 'Invalid path'}, status=400)
         return JsonResponse(
             {
-                "ok": True,
-                "export_dir": ziel,
-                "message": "Export directory prepared: %s" % sauber,
+                'ok': True,
+                'export_dir': ziel,
+                'message': 'Export directory prepared: %s' % sauber,
             }
         )
 
@@ -191,32 +190,32 @@ class Kleiderendpunkte:
     def vorschaubild(request, garment_path):
         """Das Vorschaubild eines Kleides (`.thumb` oder `_diffuse.png`)."""
         wurzel = str(settings.HUMANBODY_GARMENT_LIBRARY_DIR)
-        sauber = os.path.normpath(garment_path).replace("\\", "/")
-        if ".." in sauber:
-            return HttpResponseNotFound("Invalid path")
+        sauber = os.path.normpath(garment_path).replace('\\', '/')
+        if '..' in sauber:
+            return HttpResponseNotFound('Invalid path')
         ordner = os.path.join(wurzel, sauber)
         if not Pfadvergleich.liegt_unter(ordner, wurzel):
-            return HttpResponseNotFound("Invalid path")
+            return HttpResponseNotFound('Invalid path')
         if not os.path.isdir(ordner):
-            return HttpResponseNotFound("Garment not found")
+            return HttpResponseNotFound('Garment not found')
         # `.thumb` hat Vorrang; erst wenn es keines gibt, die Diffuse-Textur.
         for endung in Kleiderendpunkte.VORSCHAU_ENDUNGEN:
             for name in sorted(os.listdir(ordner)):
                 if name.endswith(endung):
-                    return FileResponse(open(os.path.join(ordner, name), "rb"), content_type="image/png")
-        return HttpResponseNotFound("No thumbnail")
+                    return FileResponse(open(os.path.join(ordner, name), 'rb'), content_type='image/png')
+        return HttpResponseNotFound('No thumbnail')
 
     @staticmethod
     @require_GET
     def textur(request, garment_id, filename):
         """Eine Texturdatei aus dem Zwischenspeicher der Kleiderbibliothek."""
-        speicher = os.path.join(str(settings.HUMANBODY_DATA_DIR), "..", "garment_library", ".cache")
-        kleid = garment_id.split("/")[-1] if "/" in garment_id else garment_id
+        speicher = os.path.join(str(settings.HUMANBODY_DATA_DIR), '..', 'garment_library', '.cache')
+        kleid = garment_id.split('/')[-1] if '/' in garment_id else garment_id
         name = os.path.basename(filename)
-        if ".." in name or ".." in kleid:
-            return HttpResponseNotFound("Invalid path")
+        if '..' in name or '..' in kleid:
+            return HttpResponseNotFound('Invalid path')
         pfad = os.path.join(speicher, kleid, name)
         if not os.path.isfile(pfad):
-            return HttpResponseNotFound("Texture not found")
-        art = "image/png" if name.endswith(".png") else "image/jpeg"
-        return FileResponse(open(pfad, "rb"), content_type=art)
+            return HttpResponseNotFound('Texture not found')
+        art = 'image/png' if name.endswith('.png') else 'image/jpeg'
+        return FileResponse(open(pfad, 'rb'), content_type=art)

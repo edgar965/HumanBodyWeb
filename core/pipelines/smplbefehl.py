@@ -24,40 +24,40 @@ class Smplbefehl:
     #: Reine Ja/Nein-Schalter: (Auftragsschlüssel, Einstellungsfeld, Argument).
     #: `None` als Feld heißt: nur der Auftrag entscheidet, Vorgabe aus.
     SCHALTER = {
-        "gvhmr": (
-            ("static_cam", "gvhmr_static_cam", "--static_cam"),
-            ("use_dpvo", "gvhmr_use_dpvo", "--use_dpvo"),
-            ("verbose", "gvhmr_verbose", "--verbose"),
+        'gvhmr': (
+            ('static_cam', 'gvhmr_static_cam', '--static_cam'),
+            ('use_dpvo', 'gvhmr_use_dpvo', '--use_dpvo'),
+            ('verbose', 'gvhmr_verbose', '--verbose'),
         ),
-        "wham": (
-            ("local_only", "wham_estimate_local_only", "--estimate_local_only"),
-            ("smplify", "wham_run_smplify", "--run_smplify"),
+        'wham': (
+            ('local_only', 'wham_estimate_local_only', '--estimate_local_only'),
+            ('smplify', 'wham_run_smplify', '--run_smplify'),
         ),
-        "prompthmr": (("static_cam", "prompthmr_static_camera", "--static_camera"),),
+        'prompthmr': (('static_cam', 'prompthmr_static_camera', '--static_camera'),),
         # GEM-SMPL (11.09.2026): feste Kamera wie GVHMR, dazu die Demo-Videos.
-        "gem": (("static_cam", "gem_static_cam", "--static_cam"), ("render", "gem_render", "--render")),
+        'gem': (('static_cam', 'gem_static_cam', '--static_cam'), ('render', 'gem_render', '--render')),
         # DuoMo (12.09.2026): ohne Kamerabahn ohnehin fest; die Einstellung
         # ist die Vorgabe der Karte.
-        "duomo": (("static_cam", "duomo_static_cam", "--static_cam"),),
+        'duomo': (('static_cam', 'duomo_static_cam', '--static_cam'),),
         # GEM-X (12.09.2026): wie GEM-SMPL ohne Rendern; Glaettung ueber
         # `_glaettung`, die Gelenkgrenzen nimmt der Wrapper an und ignoriert sie.
-        "gemx": (("static_cam", "gemx_static_cam", "--static_cam"),),
+        'gemx': (('static_cam', 'gemx_static_cam', '--static_cam'),),
         # SMPL-X, die eigene Pipeline (12.09.2026): der Koerper ist GEM-SMPL,
         # also gelten GEMs Einstellungen (`EINSTELLUNGSNAME`); Finger und
         # Gesicht bekommen eigene Glaettungen ueber `_smplx_werte`.
-        "smplx": (("static_cam", "gem_static_cam", "--static_cam"),),
+        'smplx': (('static_cam', 'gem_static_cam', '--static_cam'),),
     }
 
     #: Pipelines, die Glaettung und Gelenkgrenzen von `Bvhbau` kennen.
-    MIT_GLAETTUNG = ("gvhmr", "gem", "duomo", "gemx", "smplx")
+    MIT_GLAETTUNG = ('gvhmr', 'gem', 'duomo', 'gemx', 'smplx')
     #: Pipelines mit einem BVH je Person (14.09.2026): `--persons n` ab 2 —
     #: nur der Auftrag entscheidet, die Vorgabe ist eine Person wie bisher.
-    MIT_PERSONEN = ("gvhmr", "gem")
+    MIT_PERSONEN = ('gvhmr', 'gem')
 
     #: Pipeline -> Name, unter dem ihre Einstellungen im Modell stehen, wo er
     #: vom Pipelinenamen abweicht. SMPL-X faehrt GEMs Koerper und nimmt dessen
     #: Felder — ein eigener Feldsatz waere eine Migration fuer dieselben Werte.
-    EINSTELLUNGSNAME = {"smplx": "gem"}
+    EINSTELLUNGSNAME = {'smplx': 'gem'}
 
     #: Glaettung der je Bild geschaetzten Teile (Finger, Kiefer, Ausdruck) in
     #: Bildern — dieselbe Vorgabe wie die Koerperglaettung von `Bvhbau`.
@@ -71,13 +71,13 @@ class Smplbefehl:
     #: und zittert weniger (0,007 gegen 0,009 cm/Bild^2 im Handgelenkrahmen).
     #: Die Karte faellt auf SMPLest-X zurueck, wo GEM-X nicht installiert ist.
     SMPLX_QUELLEN = {
-        "body_source": "gem",
-        "hands_source": "gemx",
-        "face_source": "smplestx",
-        "wrist_source": "hand",
+        'body_source': 'gem',
+        'hands_source': 'gemx',
+        'face_source': 'smplestx',
+        'wrist_source': 'hand',
     }
     #: Die beiden Zugaben: Bodenkontakt der Wurzel, Netz-Video ueber dem Original.
-    SMPLX_ZUGABEN = {"ground": "--no_ground", "video": "--no_video"}
+    SMPLX_ZUGABEN = {'ground': '--no_ground', 'video': '--no_video'}
 
     def __init__(self, job, einstellungen):
         self.job = job
@@ -90,28 +90,28 @@ class Smplbefehl:
         befehl = [
             settings.PIPELINE_PYTHON,
             str(wrapper),
-            "--pipeline",
+            '--pipeline',
             self.job.pipeline,
-            "--video",
+            '--video',
             str(video),
-            "--output",
+            '--output',
             str(ziel),
-            "--device",
+            '--device',
             self.geraet(),
         ]
         return befehl + self.zusatz()
 
     def geraet(self):
-        return self.params.get("device", self.einstellungen.smpl_device)
+        return self.params.get('device', self.einstellungen.smpl_device)
 
     def zusatz(self):
         """Die pipeline-eigenen Argumente."""
         teile = list(self._schalter())
-        if self.job.pipeline == "gvhmr":
+        if self.job.pipeline == 'gvhmr':
             teile += self._gvhmr_werte()
         if self.job.pipeline in self.MIT_GLAETTUNG:
             teile += self._glaettung()
-        if self.job.pipeline == "smplx":
+        if self.job.pipeline == 'smplx':
             teile += self._smplx_werte()
         if self.job.pipeline in self.MIT_PERSONEN:
             teile += self._personen()
@@ -121,11 +121,11 @@ class Smplbefehl:
         """`--persons n` nur ab zwei — mit einer Person bleibt der Befehl der
         von bisher."""
         try:
-            personen = int(self.params.get("persons", 1) or 1)
+            personen = int(self.params.get('persons', 1) or 1)
         # stumm gewollt: ein unlesbarer Wert heisst eine Person, wie ohne Angabe
         except TypeError, ValueError:
             personen = 1
-        return ["--persons", str(personen)] if personen > 1 else []
+        return ['--persons', str(personen)] if personen > 1 else []
 
     @classmethod
     def einstellungsname(cls, pipeline):
@@ -137,13 +137,13 @@ class Smplbefehl:
         Zugaben — nur der Auftrag, sonst die Vorgabe."""
         p = self.params
         werte = [
-            "--hand_sigma",
-            str(p.get("hand_sigma", self.SMPLX_HAND_SIGMA)),
-            "--face_sigma",
-            str(p.get("face_sigma", self.SMPLX_FACE_SIGMA)),
+            '--hand_sigma',
+            str(p.get('hand_sigma', self.SMPLX_HAND_SIGMA)),
+            '--face_sigma',
+            str(p.get('face_sigma', self.SMPLX_FACE_SIGMA)),
         ]
         for name, vorgabe in self.SMPLX_QUELLEN.items():
-            werte.extend(["--" + name, str(p.get(name, vorgabe))])
+            werte.extend(['--' + name, str(p.get(name, vorgabe))])
         for name, schalter in self.SMPLX_ZUGABEN.items():
             if not p.get(name, True):
                 werte.append(schalter)
@@ -160,9 +160,9 @@ class Smplbefehl:
         umgekehrte Render-Schalter: Das Demo rendert von sich aus, `--no_render`
         laesst die drei Videos weg (12.09.2026)."""
         s, p = self.einstellungen, self.params
-        werte = ["--focal_length_mm", str(p.get("focal_length_mm", s.gvhmr_focal_length_mm))]
-        if not p.get("render", s.gvhmr_render):
-            werte.append("--no_render")
+        werte = ['--focal_length_mm', str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))]
+        if not p.get('render', s.gvhmr_render):
+            werte.append('--no_render')
         return werte
 
     def _glaettung(self):
@@ -174,10 +174,10 @@ class Smplbefehl:
         `test_smplbefehl` vorher findet. GEM-X hat keine Gelenkgrenzen.
         """
         s, p = self.einstellungen, self.params
-        name = str(self.einstellungsname(self.job.pipeline or ""))
-        sigma = p.get("smooth_sigma", getattr(s, name + "_smooth_sigma"))
-        werte = ["--smooth_sigma", str(sigma)]
-        grenzen = getattr(s, name + "_joint_limits", True)
-        if not p.get("joint_limits", grenzen):
-            werte.append("--no_joint_limits")
+        name = str(self.einstellungsname(self.job.pipeline or ''))
+        sigma = p.get('smooth_sigma', getattr(s, name + '_smooth_sigma'))
+        werte = ['--smooth_sigma', str(sigma)]
+        grenzen = getattr(s, name + '_joint_limits', True)
+        if not p.get('joint_limits', grenzen):
+            werte.append('--no_joint_limits')
         return werte

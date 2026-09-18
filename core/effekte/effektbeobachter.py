@@ -11,11 +11,11 @@ Praefix selbst faellt in der Anzeige weg.
 
 from ..pipelines.logbeobachter import Logbeobachter
 
-__all__ = ["Effektbeobachter"]
+__all__ = ['Effektbeobachter']
 
 
 class Effektbeobachter(Logbeobachter):
-    PRAEFIX = "Effekte: "
+    PRAEFIX = 'Effekte: '
 
     def auswerten(self, text, jetzt=None):
         zeilen = [
@@ -23,4 +23,4 @@ class Effektbeobachter(Logbeobachter):
         ]
         if not zeilen:
             return False
-        return super().auswerten("\n".join(zeilen), jetzt)
+        return super().auswerten('\n'.join(zeilen), jetzt)

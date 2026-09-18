@@ -30,7 +30,7 @@ class Modellpfad:
     """`<wurzel>/<name><endung>` — oder nichts."""
 
     #: Zeichen, die in einem Namen aus der Adresse nichts zu suchen haben.
-    VERBOTEN = ("/", "\\", "..")
+    VERBOTEN = ('/', '\\', '..')
 
     @classmethod
     def geprueft(cls, wurzel, name, endung):
@@ -44,7 +44,7 @@ class Modellpfad:
         """
         if not name or any(z in name for z in cls.VERBOTEN):
             return None
-        pfad = os.path.normpath(os.path.join(str(wurzel), "%s%s" % (name, endung)))
+        pfad = os.path.normpath(os.path.join(str(wurzel), '%s%s' % (name, endung)))
         if not Pfadvergleich.liegt_unter(pfad, wurzel):
             return None
         return pfad

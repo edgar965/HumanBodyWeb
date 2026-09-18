@@ -19,7 +19,7 @@ class Videoschreiber:
         """Ein Bild der Szene als (h, b, 3) uint8 — RGB, ohne Alpha."""
         bild = werk.render(szene)
         if bild is None:
-            raise RuntimeError("pyrender lieferte kein Bild")
+            raise RuntimeError('pyrender lieferte kein Bild')
         return np.asarray(bild[0][:, :, :3], dtype=np.uint8)
 
     @staticmethod
@@ -30,15 +30,15 @@ class Videoschreiber:
         """
         import cv2
 
-        os.makedirs(os.path.dirname(ziel) or ".", exist_ok=True)
+        os.makedirs(os.path.dirname(ziel) or '.', exist_ok=True)
         gesammelt = list(bilder)
         if not gesammelt:
-            raise ValueError("Keine Bilder zum Schreiben.")
+            raise ValueError('Keine Bilder zum Schreiben.')
         gesammelt += [gesammelt[-1]] * max(0, int(halten))
         h, b = gesammelt[0].shape[:2]
-        schreiber = cv2.VideoWriter(ziel, cv2.VideoWriter_fourcc(*"mp4v"), float(fps), (b, h))
+        schreiber = cv2.VideoWriter(ziel, cv2.VideoWriter_fourcc(*'mp4v'), float(fps), (b, h))
         if not schreiber.isOpened():
-            raise SystemExit("VideoWriter liess sich nicht oeffnen: %s" % ziel)
+            raise SystemExit('VideoWriter liess sich nicht oeffnen: %s' % ziel)
         try:
             for _ in range(max(1, int(schleifen))):
                 for bild in gesammelt:

@@ -18,7 +18,7 @@ from core.tests.unit._sicher import Sicher
 sys.path.insert(0, str(Path(settings.ASSETS_ROOT)))
 
 PROJEKT = Path(settings.UMA_PROJEKT)
-RASSE = "Human Male 3.0"
+RASSE = 'Human Male 3.0'
 
 
 class Texturen(unittest.TestCase):
@@ -36,14 +36,14 @@ class Texturen(unittest.TestCase):
         cls.gebaut = cls.figur.bauen(RASSE)
 
     def bau(self):
-        return Sicher.wert(self.gebaut, "gebaute Figur")
+        return Sicher.wert(self.gebaut, 'gebaute Figur')
 
     def projektfigur(self):
-        return Sicher.wert(self.figur, "Figur")
+        return Sicher.wert(self.figur, 'Figur')
 
     def setUp(self):
         if self.gebaut is None:
-            self.skipTest("UMA-Klon nicht vorhanden (%s)" % PROJEKT)
+            self.skipTest('UMA-Klon nicht vorhanden (%s)' % PROJEKT)
 
     def _bilder(self):
         from UMA_Python.texturen import Umatexturen
@@ -56,12 +56,12 @@ class Texturen(unittest.TestCase):
         namen = [n for n, *_ in self.bau().netz.bereiche]
         self.assertEqual(len(namen), 8)
         for name in namen:
-            self.assertIn("albedo", bilder.get(name, {}), name)
+            self.assertIn('albedo', bilder.get(name, {}), name)
 
     def test_die_dateien_liegen_wirklich_da(self):
         for name, arten in self._bilder().items():
             for art, pfad in arten.items():
-                self.assertTrue(pfad.is_file(), "%s/%s: %s" % (name, art, pfad))
+                self.assertTrue(pfad.is_file(), '%s/%s: %s' % (name, art, pfad))
 
     def test_nur_bildformate_werden_gemeldet(self):
         """Die dritte Textur jedes Körper-Overlays ist eine .tga.
@@ -94,9 +94,9 @@ class Texturen(unittest.TestCase):
         from UMA_Python.szene import Szenenfigur
 
         netz = Szenenfigur.netz(self.gebaut)
-        self.assertEqual(len(netz["uv"]), netz["punktzahl"] * 2)
-        for gruppe in netz["gruppen"]:
-            self.assertIsInstance(gruppe["texturen"], list)
-            for art in gruppe["texturen"]:
-                self.assertIn(art, ("albedo", "normalen"))
-            self.assertNotIn("pfad", gruppe)
+        self.assertEqual(len(netz['uv']), netz['punktzahl'] * 2)
+        for gruppe in netz['gruppen']:
+            self.assertIsInstance(gruppe['texturen'], list)
+            for art in gruppe['texturen']:
+                self.assertIn(art, ('albedo', 'normalen'))
+            self.assertNotIn('pfad', gruppe)

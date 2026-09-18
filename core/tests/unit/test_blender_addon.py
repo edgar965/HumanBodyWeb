@@ -34,6 +34,7 @@ BDD - GEGEBEN / DANN
 
 import importlib
 import sys
+
 from ._addonbasis import Addonbasis
 from .blenderattrappe import Blenderattrappe
 
@@ -48,8 +49,8 @@ class JedesEigeneModul(Addonbasis):
                 try:
                     importlib.import_module(name)
                 except Exception as fehler:  # noqa: BLE001
-                    schlecht.append("%s — %s: %s" % (name, type(fehler).__name__, fehler))
-        self.assertEqual(schlecht, [], "Module laden nicht: %s" % schlecht)
+                    schlecht.append('%s — %s: %s' % (name, type(fehler).__name__, fehler))
+        self.assertEqual(schlecht, [], 'Module laden nicht: %s' % schlecht)
 
     def test_es_sind_ueberhaupt_welche_da(self):
         """Sabotageschutz: Eine leere Liste bestuende jeden Test."""
@@ -61,7 +62,7 @@ class DieAnmeldung(Addonbasis):
 
     def anmelden(self):
         with Blenderattrappe() as attrappe:
-            addon = importlib.import_module("HumanBodyBlender")
+            addon = importlib.import_module('HumanBodyBlender')
             addon.register()
             angemeldet = list(attrappe.angemeldet)
             addon.unregister()
@@ -93,11 +94,11 @@ class DieAttrappe(Addonbasis):
         """Sabotage — ein Modul, das einen Namen einfuehrt, den es nicht gibt."""
         with Blenderattrappe():
             with self.assertRaises(ImportError):
-                exec("from HumanBodyBlender.morphing import GibtEsNicht", {})
+                exec('from HumanBodyBlender.morphing import GibtEsNicht', {})
 
     def test_sie_raeumt_sys_modules_wieder_auf(self):
         """Sonst sieht der naechste Test im Lauf ein halbes Blender."""
-        vorher = "bpy" in sys.modules
+        vorher = 'bpy' in sys.modules
         with Blenderattrappe():
-            self.assertIn("bpy", sys.modules)
-        self.assertEqual("bpy" in sys.modules, vorher)
+            self.assertIn('bpy', sys.modules)
+        self.assertEqual('bpy' in sys.modules, vorher)

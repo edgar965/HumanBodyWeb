@@ -15,8 +15,8 @@ macht `test_koerperseiten_unten_nach_vorzeichen_von_x_oben_null` rot.
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from GarmentCode.stoffhochziehen import Stoffhochziehen
+
 from ._sicher import Sicher
 
 
@@ -56,20 +56,20 @@ class StoffhochziehenTest(SimpleTestCase):
         self.hoch = Stoffhochziehen(_koerper())
 
     def test_koerperschritt_und_knoechel(self):
-        schritt = Sicher.wert(self.hoch.schritt, "Schritt")
+        schritt = Sicher.wert(self.hoch.schritt, 'Schritt')
         self.assertAlmostEqual(schritt[1], 0.80, delta=0.005)
         self.assertAlmostEqual(schritt[0], 0.0, delta=0.005)
-        knoechel = Sicher.wert(self.hoch.knoechel, "Knöchel")
+        knoechel = Sicher.wert(self.hoch.knoechel, 'Knöchel')
         self.assertGreaterEqual(knoechel, 0.05)
         self.assertLess(knoechel, 0.09)
 
     def test_hose_wird_hochgezogen(self):
         hose = _hose()
-        self.assertAlmostEqual(Sicher.wert(self.hoch.hosenschritt(hose), "Hosenschritt"), 0.65, delta=1e-9)
+        self.assertAlmostEqual(Sicher.wert(self.hoch.hosenschritt(hose), 'Hosenschritt'), 0.65, delta=1e-9)
         neu, bilanz = self.hoch.anwenden(hose)
         schritt = neu[-1]
         self.assertAlmostEqual(schritt[2], 0.80, delta=0.005, msg=schritt)
-        self.assertAlmostEqual(bilanz["hochgezogen_mm"], 150.0, delta=5)
+        self.assertAlmostEqual(bilanz['hochgezogen_mm'], 150.0, delta=5)
         # Die Oberkante bleibt, wo die Simulation sie liess.
         self.assertAlmostEqual(neu[:, 2].max(), 1.10, delta=1e-6)
         # Die Hoehe bleibt monoton: kein Punkt ueberholt einen anderen.
@@ -92,7 +92,7 @@ class StoffhochziehenTest(SimpleTestCase):
         fest = np.zeros(len(hose), dtype=bool)
         fest[len(hose) - len(bund) - 1 : len(hose) - 1] = True
         neu, bilanz = self.hoch.anwenden(hose, fest)
-        self.assertEqual(bilanz["bund_fest"], len(bund))
+        self.assertEqual(bilanz['bund_fest'], len(bund))
         np.testing.assert_allclose(neu[fest], hose[fest])  # Bund unveraendert
         self.assertAlmostEqual(neu[-1, 2], 0.80, delta=0.005)  # Schritt am Schritt
         # knapp unter dem Bund: fast kein Versatz mehr; in der Mitte etwa die Haelfte
@@ -115,7 +115,7 @@ class StoffhochziehenTest(SimpleTestCase):
     def test_saum_kommt_auf_den_knoechel(self):
         neu, bilanz = self.hoch.anwenden(_hose())
         self.assertAlmostEqual(neu[:, 2].min(), self.hoch.knoechel, delta=1e-6)
-        self.assertGreater(bilanz["saum_gehoben_mm"], 80)
+        self.assertGreater(bilanz['saum_gehoben_mm'], 80)
 
     def test_saum_ueber_dem_knoechel_bleibt(self):
         """Eine Dreiviertelhose endet, wo sie endet."""
@@ -123,7 +123,7 @@ class StoffhochziehenTest(SimpleTestCase):
         hose = hose[hose[:, 2] > 0.30]
         neu, bilanz = self.hoch.anwenden(hose)
         self.assertAlmostEqual(neu[:, 2].min(), hose[:, 2].min(), delta=1e-6)
-        self.assertEqual(bilanz["saum_gehoben_mm"], 0.0)
+        self.assertEqual(bilanz['saum_gehoben_mm'], 0.0)
 
     def test_rock_bleibt_unangetastet(self):
         """Ohne Schritt keine Hose: tiefster Mittelpunkt IST der Saum."""
@@ -132,7 +132,7 @@ class StoffhochziehenTest(SimpleTestCase):
         self.assertIsNone(self.hoch.hosenschritt(rock))
         neu, bilanz = self.hoch.anwenden(rock)
         np.testing.assert_allclose(neu, rock)
-        self.assertEqual(bilanz["hochgezogen_mm"], 0.0)
+        self.assertEqual(bilanz['hochgezogen_mm'], 0.0)
 
     def test_koerperseiten_unten_nach_vorzeichen_von_x_oben_null(self):
         seiten = self.hoch.koerperseiten()

@@ -35,8 +35,8 @@ unbekannter Name gemeldet würde.
 
 import unittest
 
-from ._umaabdeckung import Abdeckung, Umaquelle
 from ._sicher import Sicher
+from ._umaabdeckung import Abdeckung, Umaquelle
 
 
 class Vollstaendig(unittest.TestCase):
@@ -48,84 +48,83 @@ class Vollstaendig(unittest.TestCase):
     #: `Instance`/`get_`-Formen und Unity-Ereignisse; die Klassen- und
     #: Feldnamen der internen `struct`s sind Datenhalter ohne Verhalten.
     NICHT_SCHNITTSTELLE = {
-        "UMAClothingConformer",
-        "ClothingConformerMeshUtility",
-        "ClothingBindData",
-        "ClothingConformerSettings",
-        "BindVertexData",
-        "umaAvatar",
-        "umaData",
-        "selectedSlotNames",
-        "baseSlotNames",
-        "settings",
-        "bindData",
-        "bindDataAssets",
-        "preview",
-        "LastStatus",
-        "UnboundVertexPositions",
-        "HasConformedResults",
-        "BoundVertexCount",
-        "HasNearestVertexFallback",
-        "sourceSlotName",
-        "sourceSlotAsset",
-        "clothingMeshOriginal",
-        "sourceMaterial",
-        "originalUv",
-        "vertexCount",
-        "vertices",
-        "triangles",
-        "weldedVertexGroups",
-        "weldedSeamTolerance",
-        "baseSlotNames",
-        "baseTopologyHash",
-        "clothingTopologyHash",
-        "sourceBounds",
-        "umaVersion",
-        "isComplete",
-        "slotAsset",
-        "hadOverride",
-        "normals",
-        "slotNames",
-        "topologyHash",
-        "renderer",
-        "sourceMesh",
-        "rootVertices",
-        "blendedVertexDeltas",
-        "submeshTriangles",
-        "slot",
-        "rendererSnapshot",
-        "startVertex",
-        "tangents",
-        "rootNormals",
-        "rootTangents",
-        "baseVertices",
-        "localNormals",
-        "localTangents",
-        "IsValidVertexIndex",
+        'UMAClothingConformer',
+        'ClothingConformerMeshUtility',
+        'ClothingBindData',
+        'ClothingConformerSettings',
+        'BindVertexData',
+        'umaAvatar',
+        'umaData',
+        'selectedSlotNames',
+        'baseSlotNames',
+        'settings',
+        'bindData',
+        'bindDataAssets',
+        'preview',
+        'LastStatus',
+        'UnboundVertexPositions',
+        'HasConformedResults',
+        'BoundVertexCount',
+        'HasNearestVertexFallback',
+        'sourceSlotName',
+        'sourceSlotAsset',
+        'clothingMeshOriginal',
+        'sourceMaterial',
+        'originalUv',
+        'vertexCount',
+        'vertices',
+        'triangles',
+        'weldedVertexGroups',
+        'weldedSeamTolerance',
+        'baseTopologyHash',
+        'clothingTopologyHash',
+        'sourceBounds',
+        'umaVersion',
+        'isComplete',
+        'slotAsset',
+        'hadOverride',
+        'normals',
+        'slotNames',
+        'topologyHash',
+        'renderer',
+        'sourceMesh',
+        'rootVertices',
+        'blendedVertexDeltas',
+        'submeshTriangles',
+        'slot',
+        'rendererSnapshot',
+        'startVertex',
+        'tangents',
+        'rootNormals',
+        'rootTangents',
+        'baseVertices',
+        'localNormals',
+        'localTangents',
+        'IsValidVertexIndex',
         # Felder der internen `struct`s (ConformedSlotResult,
         # SurfaceSnapshot, SlotSnapshot) — Datenhalter ohne Verhalten.
-        "count",
-        "mesh",
-        "originalMesh",
-        "previewMesh",
-        "rendererIndex",
-        "shapeName",
-        "total",
-        "weight",
-        "boneIndex",
+        'count',
+        'mesh',
+        'originalMesh',
+        'previewMesh',
+        'rendererIndex',
+        'shapeName',
+        'total',
+        'weight',
+        'boneIndex',
     }
 
     def setUp(self):
         self.ordner = Umaquelle.quellordner()
         if self.ordner is None:
-            self.skipTest("UMA-Klon nicht vorhanden (%s)" % "/".join(Abdeckung.QUELLORDNER))
+            self.skipTest('UMA-Klon nicht vorhanden (%s)' % '/'.join(Abdeckung.QUELLORDNER))
 
     def _quelltext(self):
         aus = []
         for datei in Abdeckung.DATEIEN:
-            pfad = Sicher.wert(self.ordner, "Quellordner") / datei
-            self.assertTrue(pfad.is_file(), "%s fehlt" % pfad)
-            aus.append(pfad.read_text(encoding="utf-8", errors="replace"))
+            pfad = Sicher.wert(self.ordner, 'Quellordner') / datei
+            self.assertTrue(pfad.is_file(), '%s fehlt' % pfad)
+            aus.append(pfad.read_text(encoding='utf-8', errors='replace'))
         return aus
 
     def _gefunden(self):
@@ -156,7 +155,7 @@ class Vollstaendig(unittest.TestCase):
         self.assertGreater(
             len(gefunden),
             40,
-            "Nur %d Mitglieder gelesen — der reguläre Ausdruck passt nicht mehr zur Quelle" % len(gefunden),
+            'Nur %d Mitglieder gelesen — der reguläre Ausdruck passt nicht mehr zur Quelle' % len(gefunden),
         )
 
     def test_jedes_mitglied_steht_in_der_tabelle(self):
@@ -165,8 +164,8 @@ class Vollstaendig(unittest.TestCase):
         self.assertEqual(
             fehlt,
             [],
-            "Diese Mitglieder des C#-Originals haben keinen Eintrag in "
-            "UMA_Python/abdeckung.py: %s" % ", ".join(fehlt),
+            'Diese Mitglieder des C#-Originals haben keinen Eintrag in '
+            'UMA_Python/abdeckung.py: %s' % ', '.join(fehlt),
         )
 
     def test_die_tabelle_erfindet_nichts(self):
@@ -176,13 +175,13 @@ class Vollstaendig(unittest.TestCase):
         die Abdeckung sieht besser aus, als sie ist."""
         gefunden = self._alle_namen() | self.NICHT_SCHNITTSTELLE
         erfunden = sorted(Abdeckung.namen() - gefunden)
-        self.assertEqual(erfunden, [], "Eintraege ohne Vorbild im Original: %s" % ", ".join(erfunden))
+        self.assertEqual(erfunden, [], 'Eintraege ohne Vorbild im Original: %s' % ', '.join(erfunden))
 
     def test_ein_erfundenes_mitglied_wuerde_auffallen(self):
         """GEGENPROBE zum Abgleich selbst."""
         gefunden = self._gefunden()
-        self.assertNotIn("DasGibtEsNicht", gefunden)
+        self.assertNotIn('DasGibtEsNicht', gefunden)
         self.assertTrue(
-            {"ClosestPointOnTriangle", "Smooth", "maxSearchRadius"} <= gefunden,
-            "Der Leser findet die bekannten Mitglieder nicht mehr",
+            {'ClosestPointOnTriangle', 'Smooth', 'maxSearchRadius'} <= gefunden,
+            'Der Leser findet die bekannten Mitglieder nicht mehr',
         )

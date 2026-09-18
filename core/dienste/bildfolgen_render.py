@@ -18,7 +18,7 @@ import subprocess
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 #: Das Aufnahmeskript. Es liest seine Werte von stdin — siehe Modulkopf.
 SKRIPT = r"""
@@ -77,52 +77,52 @@ class BildfolgenRender:
     def python_mit_playwright():
         from pathlib import Path
 
-        return str(Path(settings.TOOLS_ROOT) / "python10" / "Scripts" / "python.exe")
+        return str(Path(settings.TOOLS_ROOT) / 'python10' / 'Scripts' / 'python.exe')
 
     @staticmethod
     def vollstaendige_url(url, port):
         """Relative Szenen-URL absolut machen und den Aufnahmemodus anhaengen."""
-        if url.startswith("/"):
-            url = "http://127.0.0.1:%s%s" % (port, url)
-        trenner = "&" if "?" in url else "?"
-        return "%s%srenderMode=server&autoplay=1" % (url, trenner)
+        if url.startswith('/'):
+            url = 'http://127.0.0.1:%s%s' % (port, url)
+        trenner = '&' if '?' in url else '?'
+        return '%s%srenderMode=server&autoplay=1' % (url, trenner)
 
     def aufnehmen(self, url, start=0.0, ende=0.0, ausschnitt=None):
         """Bilder in den Ordner schreiben; gibt die Zahl der Bilder zurueck."""
         dauer = (ende - start) if ende > start else self.VORGABE_DAUER
         frames = max(1, int(dauer * self.fps))
         einstellungen = {
-            "url": url,
-            "breite": self.breite,
-            "hoehe": self.hoehe,
-            "fps": self.fps,
-            "start": start,
-            "frames": frames,
-            "ordner": self.ordner,
-            "ausschnitt": ausschnitt,
+            'url': url,
+            'breite': self.breite,
+            'hoehe': self.hoehe,
+            'fps': self.fps,
+            'start': start,
+            'frames': frames,
+            'ordner': self.ordner,
+            'ausschnitt': ausschnitt,
         }
         try:
             ergebnis = subprocess.run(
-                [self.python_mit_playwright(), "-c", SKRIPT],
+                [self.python_mit_playwright(), '-c', SKRIPT],
                 input=json.dumps(einstellungen),
                 capture_output=True,
                 text=True,
                 timeout=self.ZEITGRENZE,
             )
         except subprocess.TimeoutExpired as e:
-            raise RenderFehler("Aufnahme hat die Zeitgrenze ueberschritten") from e
+            raise RenderFehler('Aufnahme hat die Zeitgrenze ueberschritten') from e
         except FileNotFoundError as e:
             raise RenderFehler(
-                "Python mit Playwright nicht gefunden: %s" % self.python_mit_playwright()
+                'Python mit Playwright nicht gefunden: %s' % self.python_mit_playwright()
             ) from e
         if ergebnis.returncode != 0:
-            raise RenderFehler("Playwright: %s" % (ergebnis.stderr or "")[-500:])
-        logger.info("Bildfolge aufgenommen: %d Bilder nach %s", frames, self.ordner)
+            raise RenderFehler('Playwright: %s' % (ergebnis.stderr or '')[-500:])
+        logger.info('Bildfolge aufgenommen: %d Bilder nach %s', frames, self.ordner)
         return frames
 
     @staticmethod
     def ausschnitt(x, y, breite, hoehe):
         """Zuschnitt fuer die Aufnahme — None, wenn keiner gewuenscht ist."""
         if breite > 0 and hoehe > 0:
-            return {"x": x, "y": y, "width": breite, "height": hoehe}
+            return {'x': x, 'y': y, 'width': breite, 'height': hoehe}
         return None

@@ -70,10 +70,10 @@ from ..nurgemeint import Nurgemeint
 #: Das Wort, an dem ein ausdruecklicher Aufruf zu erkennen ist. Bleibt als
 #: Modulname stehen: `test_longrunner_auswahl` prueft die Entscheidung
 #: darueber, und `ui/settings/djangobase_tests.py` nennt dasselbe Ziel.
-MARKE = "longrunner"
+MARKE = 'longrunner'
 SCHALTER = Nurgemeint.SCHALTER
 
-WAECHTER = Nurgemeint(MARKE, os.path.dirname(__file__), dauer="250 s")
+WAECHTER = Nurgemeint(MARKE, os.path.dirname(__file__), dauer='250 s')
 
 
 def angefordert(argumente=None, umgebung=None):

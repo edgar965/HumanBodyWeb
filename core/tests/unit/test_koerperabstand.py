@@ -46,7 +46,7 @@ class EntarteteRichtungTest(SimpleTestCase):
         stoff = self.KOERPER.copy()
         raus = Koerperabstand.radial(stoff, self.KOERPER, mindestabstand=0.01)
         self.assertGreater(
-            float(np.linalg.norm(raus - stoff)), 0.0, "radial hat den eingeklemmten Punkt nicht bewegt"
+            float(np.linalg.norm(raus - stoff)), 0.0, 'radial hat den eingeklemmten Punkt nicht bewegt'
         )
 
     def test_gerichtet_laesst_ihn_praktisch_liegen(self):
@@ -135,19 +135,19 @@ class EinzigeFassungTest(SimpleTestCase):
         from django.conf import settings
 
         ordner = [
-            Path(str(settings.HUMANBODY_ROOT)) / "humanbody_core",
-            Path(str(settings.ASSETS_ROOT)) / "assetCreator",
+            Path(str(settings.HUMANBODY_ROOT)) / 'humanbody_core',
+            Path(str(settings.ASSETS_ROOT)) / 'assetCreator',
         ]
         for ordner_pfad in ordner:
             self.assertTrue(ordner_pfad.is_dir(), ordner_pfad)
         treffer = []
         for ordner_pfad in ordner:
-            for pfad in ordner_pfad.rglob("*.py"):
-                if "__pycache__" in pfad.parts:
+            for pfad in ordner_pfad.rglob('*.py'):
+                if '__pycache__' in pfad.parts:
                     continue
                 for nummer, zeile in enumerate(
-                    pfad.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+                    pfad.read_text(encoding='utf-8', errors='replace').splitlines(), 1
                 ):
-                    if zeile.startswith("def _push_outside_body("):
-                        treffer.append("%s:%d" % (pfad.name, nummer))
-        self.assertEqual(treffer, [], "`_push_outside_body` steht wieder in den Bibliotheken")
+                    if zeile.startswith('def _push_outside_body('):
+                        treffer.append('%s:%d' % (pfad.name, nummer))
+        self.assertEqual(treffer, [], '`_push_outside_body` steht wieder in den Bibliotheken')

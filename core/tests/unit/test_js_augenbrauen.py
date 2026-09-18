@@ -30,7 +30,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "augenbrauen.js")
+MODUL = Jsmodul('gemeinsam', 'augenbrauen.js')
 
 SKRIPT = """
 const { Augenbrauen: A } = await import(MODUL);
@@ -141,5 +141,5 @@ console.log(JSON.stringify({ ok: true, haare: g1.haare,
 class AugenbrauenTest(SimpleTestCase):
     def test_bogen_auf_der_haut_und_streifen(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertEqual(ausgabe["haare"], 60)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertEqual(ausgabe['haare'], 60)

@@ -23,7 +23,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "cliplaenge.js")
+MODUL = Jsmodul('bvh_studio', 'cliplaenge.js')
 
 SKRIPT = """
 const { Cliplaenge } = await import(MODUL);
@@ -106,4 +106,4 @@ class CliplaengeTest(SimpleTestCase):
 
     def test_laenge_in_sekunden_und_prozent(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

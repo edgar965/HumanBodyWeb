@@ -44,12 +44,12 @@ class Probeform:
 class RockradienTest(SimpleTestCase):
     def pruefen(self, bein, rock):
         pruefung = Rockradien()
-        pruefung.segment_pruefen(bein, rock, "probe")
+        pruefung.segment_pruefen(bein, rock, 'probe')
         return pruefung
 
     def test_weiter_rock_ist_in_ordnung(self):
         pruefung = self.pruefen(Probeform.zylinder(0.10), Probeform.zylinder(0.15))
-        self.assertGreater(pruefung.geprueft, 0, "es muss geprüft worden sein")
+        self.assertGreater(pruefung.geprueft, 0, 'es muss geprüft worden sein')
         self.assertEqual(pruefung.verletzt, 0)
         self.assertTrue(pruefung.bestanden)
 
@@ -57,7 +57,7 @@ class RockradienTest(SimpleTestCase):
         pruefung = self.pruefen(Probeform.zylinder(0.10), Probeform.zylinder(0.05))
         self.assertEqual(pruefung.verletzt, pruefung.geprueft)
         self.assertFalse(pruefung.bestanden)
-        self.assertIn("worst=", pruefung.bericht())
+        self.assertIn('worst=', pruefung.bericht())
 
     def test_toleranz_von_fuenf_millimetern(self):
         """Radius 0,102 gegen Bein 0,10: 2 mm Abstand — noch in Ordnung."""

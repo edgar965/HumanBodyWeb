@@ -41,7 +41,7 @@ import unittest
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Nurgemeint:
@@ -49,10 +49,10 @@ class Nurgemeint:
 
     #: Damit laesst sich JEDES dieser Pakete einschalten — etwa in einem
     #: naechtlichen Lauf, der wirklich alles fahren soll.
-    SCHALTER = "LONGRUNNER"
+    SCHALTER = 'LONGRUNNER'
 
     #: Was als „gesetzt" gilt. `'0'` und `'nein'` bewusst nicht.
-    WAHR = ("1", "true", "ja")
+    WAHR = ('1', 'true', 'ja')
 
     def __init__(self, marke, ordner, dauer=None):
         #: Das Wort, an dem ein ausdruecklicher Aufruf zu erkennen ist —
@@ -75,27 +75,27 @@ class Nurgemeint:
         """
         argumente = sys.argv if argumente is None else argumente
         umgebung = os.environ if umgebung is None else umgebung
-        if str(umgebung.get(self.SCHALTER, "")).strip() in self.WAHR:
+        if str(umgebung.get(self.SCHALTER, '')).strip() in self.WAHR:
             return True
         return any(self.marke in str(a) for a in argumente[1:])
 
     def module(self):
-        return [n for n in sorted(os.listdir(self.ordner)) if n.startswith("test_") and n.endswith(".py")]
+        return [n for n in sorted(os.listdir(self.ordner)) if n.startswith('test_') and n.endswith('.py')]
 
     def sammeln(self, loader, pattern):
         """Das `load_tests`-Protokoll: Wir sammeln selbst — oder eben nicht."""
         if not self.angefordert():
             logger.info(
-                "%s uebersprungen (%d Module%s). Zum Fahren: manage.py test core.tests.%s  oder  %s=1",
+                '%s uebersprungen (%d Module%s). Zum Fahren: manage.py test core.tests.%s  oder  %s=1',
                 self.marke,
                 len(self.module()),
-                ", rund %s" % self.dauer if self.dauer else "",
+                ', rund %s' % self.dauer if self.dauer else '',
                 self.marke,
                 self.SCHALTER,
             )
             return unittest.TestSuite()
         return loader.discover(
-            self.ordner, pattern=pattern or "test*.py", top_level_dir=str(settings.BASE_DIR)
+            self.ordner, pattern=pattern or 'test*.py', top_level_dir=str(settings.BASE_DIR)
         )
 
     # `top_level_dir` IST DER UNTERSCHIED ZWISCHEN LAUFEN UND SCHEITERN

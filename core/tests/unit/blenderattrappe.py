@@ -62,52 +62,52 @@ class Blenderattrappe:
     #: Basisklassen, von denen Addon-Klassen erben. Blender gibt ihnen
     #: zur Laufzeit viel mit; zum Erben genuegt der nackte Typ.
     TYPEN = (
-        "Operator",
-        "Panel",
-        "PropertyGroup",
-        "AddonPreferences",
-        "UIList",
-        "Menu",
-        "Header",
-        "Object",
-        "Mesh",
-        "Armature",
-        "Scene",
-        "Bone",
-        "PoseBone",
-        "EditBone",
-        "Material",
-        "Image",
-        "Action",
-        "NodeTree",
-        "ShaderNodeTree",
-        "Node",
-        "Context",
-        "Event",
-        "Modifier",
-        "Collection",
-        "ID",
-        "bpy_struct",
-        "WindowManager",
-        "SpaceView3D",
-        "Object_OT_dummy",
+        'Operator',
+        'Panel',
+        'PropertyGroup',
+        'AddonPreferences',
+        'UIList',
+        'Menu',
+        'Header',
+        'Object',
+        'Mesh',
+        'Armature',
+        'Scene',
+        'Bone',
+        'PoseBone',
+        'EditBone',
+        'Material',
+        'Image',
+        'Action',
+        'NodeTree',
+        'ShaderNodeTree',
+        'Node',
+        'Context',
+        'Event',
+        'Modifier',
+        'Collection',
+        'ID',
+        'bpy_struct',
+        'WindowManager',
+        'SpaceView3D',
+        'Object_OT_dummy',
     )
 
     #: Die Fabriken aus ``bpy.props``. Im Addon stehen sie als Annotation
     #: (``x: IntProperty(...)``) — beim Import wird die Fabrik also
     #: WIRKLICH aufgerufen und muss etwas zurueckgeben.
     EIGENSCHAFTEN = (
-        "BoolProperty",
-        "BoolVectorProperty",
-        "IntProperty",
-        "IntVectorProperty",
-        "FloatProperty",
-        "FloatVectorProperty",
-        "StringProperty",
-        "EnumProperty",
-        "PointerProperty",
-        "CollectionProperty",
-        "RemoveProperty",
+        'BoolProperty',
+        'BoolVectorProperty',
+        'IntProperty',
+        'IntVectorProperty',
+        'FloatProperty',
+        'FloatVectorProperty',
+        'StringProperty',
+        'EnumProperty',
+        'PointerProperty',
+        'CollectionProperty',
+        'RemoveProperty',
     )
 
     #: Die Fassung, gegen die dieses Addon gebaut ist. Mancher Code
@@ -153,15 +153,15 @@ class Blenderattrappe:
         laufen laesst, und rot in der Suite — oder umgekehrt. Deshalb
         beginnt jeder Kontext mit einem frisch geladenen Addon.
         """
-        for name in [n for n in sys.modules if n == "HumanBodyBlender" or n.startswith("HumanBodyBlender.")]:
+        for name in [n for n in sys.modules if n == 'HumanBodyBlender' or n.startswith('HumanBodyBlender.')]:
             del sys.modules[name]
 
     def _anmelden(self, klasse):
         """Was ``bpy.utils.register_class`` bekommt, kommt hierher."""
-        self.angemeldet.append(getattr(klasse, "__name__", repr(klasse)))
+        self.angemeldet.append(getattr(klasse, '__name__', repr(klasse)))
 
     def _abmelden(self, klasse):
-        name = getattr(klasse, "__name__", repr(klasse))
+        name = getattr(klasse, '__name__', repr(klasse))
         if name in self.angemeldet:
             self.angemeldet.remove(name)
 
@@ -172,47 +172,47 @@ class Blenderattrappe:
         extras, batch = self.gpu_extras()
         # Dictionary gewollt: geht so in `sys.modules` — Modulname zu Modul.
         return {
-            "bpy": bpy,
-            "bpy.types": bpy.types,
-            "bpy.props": bpy.props,
-            "bpy.utils": bpy.utils,
-            "bpy.app": bpy.app,
-            "mathutils": mathutils,
-            "mathutils.kdtree": mathutils.kdtree,
-            "mathutils.bvhtree": mathutils.bvhtree,
-            "mathutils.geometry": mathutils.geometry,
-            "bmesh": self.bmesh(),
-            "gpu": self.gpu(),
-            "gpu_extras": extras,
-            "gpu_extras.batch": batch,
+            'bpy': bpy,
+            'bpy.types': bpy.types,
+            'bpy.props': bpy.props,
+            'bpy.utils': bpy.utils,
+            'bpy.app': bpy.app,
+            'mathutils': mathutils,
+            'mathutils.kdtree': mathutils.kdtree,
+            'mathutils.bvhtree': mathutils.bvhtree,
+            'mathutils.geometry': mathutils.geometry,
+            'bmesh': self.bmesh(),
+            'gpu': self.gpu(),
+            'gpu_extras': extras,
+            'gpu_extras.batch': batch,
         }
 
     def bpy(self):
-        bpy = types.ModuleType("bpy")
+        bpy = types.ModuleType('bpy')
 
-        typen = types.ModuleType("bpy.types")
+        typen = types.ModuleType('bpy.types')
         for name in self.TYPEN:
             setattr(typen, name, type(name, (), {}))
         bpy.types = typen
 
-        props = types.ModuleType("bpy.props")
+        props = types.ModuleType('bpy.props')
         for name in self.EIGENSCHAFTEN:
             # Die Vorgabe zurueckgeben, wo es eine gibt: Mancher Code
             # liest sie auf Modulebene wieder aus.
             setattr(props, name, lambda *a, default=None, **k: default)
         bpy.props = props
 
-        utils = types.ModuleType("bpy.utils")
+        utils = types.ModuleType('bpy.utils')
         utils.register_class = self._anmelden
         utils.unregister_class = self._abmelden
         utils.previews = Platzhalter()
-        utils.resource_path = lambda *a, **k: ""
-        utils.user_resource = lambda *a, **k: ""
+        utils.resource_path = lambda *a, **k: ''
+        utils.user_resource = lambda *a, **k: ''
         bpy.utils = utils
 
-        app = types.ModuleType("bpy.app")
+        app = types.ModuleType('bpy.app')
         app.version = self.FASSUNG
-        app.version_string = ".".join(str(t) for t in self.FASSUNG)
+        app.version_string = '.'.join(str(t) for t in self.FASSUNG)
         app.handlers = Platzhalter()
         app.timers = Platzhalter()
         app.background = True
@@ -225,29 +225,29 @@ class Blenderattrappe:
         return bpy
 
     def mathutils(self):
-        m = types.ModuleType("mathutils")
+        m = types.ModuleType('mathutils')
         m.Vector = Vektor
         m.Matrix = type(
-            "Matrix",
+            'Matrix',
             (),
             {
-                "Identity": staticmethod(lambda n=4: Platzhalter()),
-                "Rotation": staticmethod(lambda *a, **k: Platzhalter()),
-                "Translation": staticmethod(lambda *a, **k: Platzhalter()),
+                'Identity': staticmethod(lambda n=4: Platzhalter()),
+                'Rotation': staticmethod(lambda *a, **k: Platzhalter()),
+                'Translation': staticmethod(lambda *a, **k: Platzhalter()),
             },
         )
-        m.Quaternion = type("Quaternion", (), {})
-        m.Euler = type("Euler", (), {})
-        m.Color = type("Color", (), {})
+        m.Quaternion = type('Quaternion', (), {})
+        m.Euler = type('Euler', (), {})
+        m.Color = type('Color', (), {})
 
-        for name in ("kdtree", "bvhtree", "geometry", "noise", "interpolate"):
-            setattr(m, name, types.ModuleType("mathutils." + name))
-        m.kdtree.KDTree = type("KDTree", (), {})
-        m.bvhtree.BVHTree = type("BVHTree", (), {})
+        for name in ('kdtree', 'bvhtree', 'geometry', 'noise', 'interpolate'):
+            setattr(m, name, types.ModuleType('mathutils.' + name))
+        m.kdtree.KDTree = type('KDTree', (), {})
+        m.bvhtree.BVHTree = type('BVHTree', (), {})
         return m
 
     def bmesh(self):
-        m = types.ModuleType("bmesh")
+        m = types.ModuleType('bmesh')
         m.new = lambda *a, **k: Platzhalter()
         m.from_edit_mesh = lambda *a, **k: Platzhalter()
         m.update_edit_mesh = lambda *a, **k: None
@@ -256,7 +256,7 @@ class Blenderattrappe:
         return m
 
     def gpu(self):
-        m = types.ModuleType("gpu")
+        m = types.ModuleType('gpu')
         m.state = Platzhalter()
         m.matrix = Platzhalter()
         m.shader = Platzhalter()
@@ -264,8 +264,8 @@ class Blenderattrappe:
         return m
 
     def gpu_extras(self):
-        extras = types.ModuleType("gpu_extras")
-        batch = types.ModuleType("gpu_extras.batch")
+        extras = types.ModuleType('gpu_extras')
+        batch = types.ModuleType('gpu_extras.batch')
         batch.batch_for_shader = lambda *a, **k: Platzhalter()
         extras.batch = batch
         return extras, batch

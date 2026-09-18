@@ -17,25 +17,25 @@ in drei Endpunkten je einmal von Hand da (character_cloth, garment_fit,
 mh_proxy_fit).
 """
 
-from ..daten.netzantwort import Netzantwort
-from ..daten.stoffantwort import Stoffantwort
 import base64
 import logging
 
 import numpy as np
 
 from ..daten.anpassungsergebnis import Anpassungsergebnis
+from ..daten.netzantwort import Netzantwort
+from ..daten.stoffantwort import Stoffantwort
 from .koerperhuelle import Koerperhuelle
 from .konformeranpassung import Konformeranpassung
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Kleidungsanpassung:
     """Passt eine Kleidungsvorlage an einen Koerper an und kodiert das Ergebnis."""
 
     #: MakeHuman-Vorlagen liegen in einem anderen Koordinatensystem.
-    MAKEHUMAN_QUELLE = "makehuman-assets"
+    MAKEHUMAN_QUELLE = 'makehuman-assets'
 
     def __init__(self, vorlage, koerper):
         self.vorlage = vorlage
@@ -44,7 +44,7 @@ class Kleidungsanpassung:
 
     @property
     def koordinatensystem(self):
-        return "makehuman" if self.vorlage.source == self.MAKEHUMAN_QUELLE else "auto"
+        return 'makehuman' if self.vorlage.source == self.MAKEHUMAN_QUELLE else 'auto'
 
     # ---------------------------------------------------------------- anpassen
 
@@ -65,9 +65,9 @@ class Kleidungsanpassung:
                 zusatzabstand_m=regler.abstand,
             )
             if gelegt is None:
-                logger.warning("Konformer-Anpassung gescheitert: %s", grund)
+                logger.warning('Konformer-Anpassung gescheitert: %s', grund)
                 return None
-            gelegt["color"] = regler.farbe
+            gelegt['color'] = regler.farbe
             self.ergebnis = Anpassungsergebnis.aus_dict(gelegt)
             return self.ergebnis
         if regler.um_huelle:
@@ -115,9 +115,9 @@ class Kleidungsanpassung:
 
         punkte = np.asarray(self.vorlage.vertices, dtype=np.float64)
         system = self.koordinatensystem
-        if system == "auto":
+        if system == 'auto':
             system = Quellsystem.erkennen(punkte)
-        if system == "blender":
+        if system == 'blender':
             return punkte
         return Quellsystem.nach_blender(punkte, system)
 
@@ -129,14 +129,14 @@ class Kleidungsanpassung:
             return None
         vertices = self.ergebnis.vertices
         antwort = {
-            "vertex_count": self.ergebnis.vertexzahl,
-            "vertices": Netzantwort.feld(vertices, "vertices"),
-            "face_count": self.ergebnis.flaechenzahl,
-            "faces": Netzantwort.feld(self.ergebnis.flaechen_flach(), "faces"),
-            "normals": Netzantwort.feld(self.ergebnis.normals, "normals"),
-            "color": list(regler.farbe),
-            "garment_id": garment_id,
-            "garment_name": self.vorlage.name,
+            'vertex_count': self.ergebnis.vertexzahl,
+            'vertices': Netzantwort.feld(vertices, 'vertices'),
+            'face_count': self.ergebnis.flaechenzahl,
+            'faces': Netzantwort.feld(self.ergebnis.flaechen_flach(), 'faces'),
+            'normals': Netzantwort.feld(self.ergebnis.normals, 'normals'),
+            'color': list(regler.farbe),
+            'garment_id': garment_id,
+            'garment_name': self.vorlage.name,
         }
         antwort.update(self.knochengewichte(vertices))
         return antwort
@@ -160,16 +160,16 @@ class Kleidungsanpassung:
 
         Der Browser schickt sie als base64-Float32 — sie kommen aus der ersten
         Stufe (grobes Anlegen) und ersparen das Neuberechnen."""
-        if request.method != "POST":
+        if request.method != 'POST':
             return None
         import json
 
         try:
-            daten = json.loads(request.body or b"{}")
-            roh = daten.get("hull_vertices")
+            daten = json.loads(request.body or b'{}')
+            roh = daten.get('hull_vertices')
             if not roh:
                 return None
             return np.frombuffer(base64.b64decode(roh), dtype=np.float32).reshape(-1, 3).astype(np.float64)
         except Exception as e:  # noqa: BLE001
-            logger.error("Huellvertices nicht lesbar: %s", e)
+            logger.error('Huellvertices nicht lesbar: %s', e)
             return None

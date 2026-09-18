@@ -29,14 +29,14 @@ class JobMethodenTest(TestCase):
     def setUp(self):
         # Eine Kennung, die es nicht gibt (die Seiten heißen seit dem
         # 16.09.2026 nach Datum und Uhrzeit, nicht nach der UUID).
-        self.job_id = "2001.01.01.00.00.00"
+        self.job_id = '2001.01.01.00.00.00'
 
     def test_start_per_get_ist_nicht_moeglich(self):
-        a = self.client.get(reverse("start_processing", args=[self.job_id]))
-        self.assertEqual(a.status_code, 405, "GET startet eine GPU-Pipeline — das darf nicht gehen")
+        a = self.client.get(reverse('start_processing', args=[self.job_id]))
+        self.assertEqual(a.status_code, 405, 'GET startet eine GPU-Pipeline — das darf nicht gehen')
 
     def test_stop_per_get_ist_nicht_moeglich(self):
-        a = self.client.get(reverse("stop_processing", args=[self.job_id]))
+        a = self.client.get(reverse('stop_processing', args=[self.job_id]))
         self.assertEqual(a.status_code, 405)
 
     def test_post_kommt_bis_zur_ansicht(self):
@@ -44,24 +44,24 @@ class JobMethodenTest(TestCase):
 
         404 heisst hier „Ansicht lief, Auftrag gibt es nicht" — genau richtig,
         denn die Kennung ist frei erfunden."""
-        for name in ("start_processing", "stop_processing"):
+        for name in ('start_processing', 'stop_processing'):
             with self.subTest(name=name):
                 a = self.client.post(reverse(name, args=[self.job_id]))
                 self.assertEqual(a.status_code, 404)
 
     def test_api_stopp_prueft_die_methode_selbst(self):
         """Die AJAX-Fassung hat ihre eigene Prüfung (405) — die bleibt gültig."""
-        a = self.client.get(reverse("api_stop_processing", args=[uuid.uuid4()]))
+        a = self.client.get(reverse('api_stop_processing', args=[uuid.uuid4()]))
         self.assertEqual(a.status_code, 405)
 
     def test_delete_job_ist_nur_per_post_erreichbar(self):
         """Löschen ist die teuerste der Aktionen: Der Auftrag geht mitsamt
         seinen Dateien. Ein Vorschau-Abruf des Browsers darf das nicht tun."""
-        a = self.client.get(reverse("delete_job", args=[self.job_id]))
+        a = self.client.get(reverse('delete_job', args=[self.job_id]))
         self.assertEqual(a.status_code, 405)
 
     def test_job_result_ohne_auftrag_ist_404(self):
         """`job_result` rendert die Ergebnisseite. Ohne Auftrag muss ein klares
         404 kommen — nicht ein 500 aus einem `DoesNotExist`."""
-        a = self.client.get(reverse("job_result", args=[self.job_id]))
+        a = self.client.get(reverse('job_result', args=[self.job_id]))
         self.assertEqual(a.status_code, 404)

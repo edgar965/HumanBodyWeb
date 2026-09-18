@@ -58,7 +58,7 @@ class Vorwaertskinematik:
     def _versatz(self, gelenk, kanaele, kanalwerte):
         """Verschiebung: die feste des Gelenks, beim Wurzelgelenk aus Kanälen."""
         versatz = list(self.baum.verschiebung.get(gelenk, np.zeros(3)))
-        for achse, kanal in enumerate(("Xposition", "Yposition", "Zposition")):
+        for achse, kanal in enumerate(('Xposition', 'Yposition', 'Zposition')):
             if kanal in kanaele:
                 versatz[achse] = kanalwerte.get((gelenk, kanal), 0)
         return versatz
@@ -66,7 +66,7 @@ class Vorwaertskinematik:
     def _drehung(self, gelenk, kanaele, kanalwerte):
         matrix = np.eye(3)
         for kanal in kanaele:
-            if kanal.endswith("rotation"):
+            if kanal.endswith('rotation'):
                 matrix = matrix @ self.achsendrehung(kanal[0], kanalwerte.get((gelenk, kanal), 0))
         return matrix
 
@@ -75,8 +75,8 @@ class Vorwaertskinematik:
         """Drehmatrix um X, Y oder Z (Rechtshandsystem, Grad)."""
         bogen = np.radians(grad)
         cos, sin = np.cos(bogen), np.sin(bogen)
-        if achse == "X":
+        if achse == 'X':
             return np.array([[1, 0, 0], [0, cos, -sin], [0, sin, cos]])
-        if achse == "Y":
+        if achse == 'Y':
             return np.array([[cos, 0, sin], [0, 1, 0], [-sin, 0, cos]])
         return np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])

@@ -13,105 +13,103 @@ hier stehen nur die Felder dieser Pipeline. Geschlecht: MakeHuman zaehlt
 0 = weiblich, 1 = maennlich.
 """
 
-from __future__ import print_function
-
 from .parametersatz import Parametersatz
 
-__all__ = ["Effektparameter"]
+__all__ = ['Effektparameter']
 
 
 class Effektparameter(Parametersatz):
     """Namen, Typen, Vorgaben und Grenzen — plus Lesen aus `sys.argv`."""
 
-    PROG = "kleidwind"
-    PFLICHT = ("bvh", "kleid", "ausgabe")
+    PROG = 'kleidwind'
+    PFLICHT = ('bvh', 'kleid', 'ausgabe')
     #: (name, typ, vorgabe, minimum, maximum, beschriftung, hinweis)
     FELDER = (
         (
-            "bilder",
+            'bilder',
             int,
             300,
             10,
             6000,
-            "Bilder",
-            "Zahl der simulierten und gerenderten Bilder; die BVH begrenzt sie",
+            'Bilder',
+            'Zahl der simulierten und gerenderten Bilder; die BVH begrenzt sie',
         ),
-        ("breite", int, 1280, 320, 3840, "Breite (px)", "Videobreite"),
-        ("hoehe", int, 720, 240, 2160, "Höhe (px)", "Videohöhe"),
+        ('breite', int, 1280, 320, 3840, 'Breite (px)', 'Videobreite'),
+        ('hoehe', int, 720, 240, 2160, 'Höhe (px)', 'Videohöhe'),
         (
-            "unterteilung",
+            'unterteilung',
             int,
             1,
             0,
             3,
-            "Stoffunterteilung",
-            "Unterteilungsstufen des Kleids vor der Simulation: 0 = wie geliefert, "
-            "je Stufe viermal so viele Flächen (feinere Falten, längere Rechnung)",
+            'Stoffunterteilung',
+            'Unterteilungsstufen des Kleids vor der Simulation: 0 = wie geliefert, '
+            'je Stufe viermal so viele Flächen (feinere Falten, längere Rechnung)',
         ),
         (
-            "qualitaet",
+            'qualitaet',
             int,
             5,
             1,
             20,
-            "Simulationsschritte",
+            'Simulationsschritte',
             'Teilschritte je Bild (Blender „Quality"); mehr = stabiler, langsamer',
         ),
         (
-            "wind",
+            'wind',
             float,
             2.0,
             0.0,
             50.0,
-            "Windstärke",
-            "Kraft des Windfelds (Blender-Einheit); 0 = kein Wind. Bei 6 wickelte "
-            "sich der Rock um die Hüfte (002_Dance, 12.09.2026)",
+            'Windstärke',
+            'Kraft des Windfelds (Blender-Einheit); 0 = kein Wind. Bei 6 wickelte '
+            'sich der Rock um die Hüfte (002_Dance, 12.09.2026)',
         ),
         (
-            "turbulenz",
+            'turbulenz',
             float,
             2.0,
             0.0,
             20.0,
-            "Turbulenz",
-            "Rauschen auf der Windstärke — Böen statt gleichmäßigem Zug",
+            'Turbulenz',
+            'Rauschen auf der Windstärke — Böen statt gleichmäßigem Zug',
         ),
         (
-            "steifigkeit",
+            'steifigkeit',
             float,
             1.0,
             0.05,
             20.0,
-            "Biegesteifigkeit",
+            'Biegesteifigkeit',
             'Blender „Bending"; 0,5 = Baumwolle, 10 = Jeans',
         ),
         (
-            "reibung",
+            'reibung',
             float,
             1.0,
             0.0,
             80.0,
-            "Reibung am Körper",
+            'Reibung am Körper',
             'Blender „Friction" der Kollision (Vorgabe dort 5). Gemessen bei '
-            "Bild 120 von 002_Dance: mit 5 hing der Saum 1,6 cm unter der Hüfte, "
-            "mit 1 waren es 7,8 cm — der Rock rutscht wieder herunter",
+            'Bild 120 von 002_Dance: mit 5 hing der Saum 1,6 cm unter der Hüfte, '
+            'mit 1 waren es 7,8 cm — der Rock rutscht wieder herunter',
         ),
         (
-            "selbstkollision",
+            'selbstkollision',
             bool,
             True,
             0,
             1,
-            "Selbstkollision",
-            "Stoff stößt an sich selbst — ohne das faltet sich der Rock durch "
-            "sich hindurch und zerknüllt; kostet Rechenzeit",
+            'Selbstkollision',
+            'Stoff stößt an sich selbst — ohne das faltet sich der Rock durch '
+            'sich hindurch und zerknüllt; kostet Rechenzeit',
         ),
     )
-    GESCHLECHTER = (("weiblich", 0.0), ("maennlich", 1.0))
-    RENDERER = ("workbench", "eevee")
-    WAHLEN = {"geschlecht": ("weiblich", ("weiblich", "maennlich")), "renderer": ("workbench", RENDERER)}
+    GESCHLECHTER = (('weiblich', 0.0), ('maennlich', 1.0))
+    RENDERER = ('workbench', 'eevee')
+    WAHLEN = {'geschlecht': ('weiblich', ('weiblich', 'maennlich')), 'renderer': ('workbench', RENDERER)}
 
-    def __init__(self, bvh, kleid, ausgabe, geschlecht="weiblich", renderer="workbench", **werte):
+    def __init__(self, bvh, kleid, ausgabe, geschlecht='weiblich', renderer='workbench', **werte):
         super().__init__(
             bvh=bvh, kleid=kleid, ausgabe=ausgabe, geschlecht=geschlecht, renderer=renderer, **werte
         )

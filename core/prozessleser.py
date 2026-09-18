@@ -14,7 +14,7 @@ wartet. Beide warten dann aufeinander, und der Auftrag haengt.
 import logging
 import queue  # noqa: F401
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Stromleser:
@@ -62,4 +62,4 @@ class Stromleser:
             ziel_q.put(cls.ENDE)  # auch im Fehlerfall: sonst wartet der Abholer ewig
 
 
-__all__ = ["Stromleser"]
+__all__ = ['Stromleser']

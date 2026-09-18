@@ -16,7 +16,6 @@ import json
 import os
 
 import numpy as np
-
 from streusumme import Streusumme
 
 
@@ -32,8 +31,8 @@ class Figurnetze:
 
     def koerper(self):
         """Aussenhaut der Figur mit Gewichten auf alle Knochen."""
-        tabelle = json.load(open(os.path.join(self.figur.wurzel, "skin_weights_base.json")))
-        knochennamen, roh = tabelle["bone_names"], tabelle["weights"]
+        tabelle = json.load(open(os.path.join(self.figur.wurzel, 'skin_weights_base.json')))
+        knochennamen, roh = tabelle['bone_names'], tabelle['weights']
         aus = np.zeros((len(self.figur.punkte), len(self.namen)))
         for zeile, alt in enumerate(self.figur.gewaehlt):
             for name, wert in self.figur._paare(roh[int(alt)], knochennamen):
@@ -60,8 +59,8 @@ class Figurnetze:
         und das feine Netz folgt als `W @ basis` in Millisekunden.
         `vierecke` sind die Basisflaechen (17.288 x 4).
         """
-        tabelle = json.load(open(os.path.join(self.figur.wurzel, "skin_weights_base.json")))
-        knochennamen, roh = tabelle["bone_names"], tabelle["weights"]
+        tabelle = json.load(open(os.path.join(self.figur.wurzel, 'skin_weights_base.json')))
+        knochennamen, roh = tabelle['bone_names'], tabelle['weights']
         aus = np.zeros((len(punkte), len(self.namen)))
         for zeile in range(min(len(punkte), len(roh))):
             for name, wert in self.figur._paare(roh[zeile], knochennamen):
@@ -86,16 +85,16 @@ class Figurnetze:
         Server aus einem Szenennetz schreibt (`figurvideostuecke.py`):
         dort stehen `skin_index`/`skin_weight` als n x 4 plus `knochen`.
         """
-        if pfad.endswith(".npz"):
+        if pfad.endswith('.npz'):
             return self._szenenstueck(pfad)
         with open(pfad) as datei:
             daten = json.load(datei)
-        punkte = np.asarray(daten["punkte"], dtype=np.float64).reshape(-1, 3)
-        dreiecke = np.asarray(daten["dreiecke"], dtype=np.int64).reshape(-1, 3)
-        eigene = list(daten["knochen"])
+        punkte = np.asarray(daten['punkte'], dtype=np.float64).reshape(-1, 3)
+        dreiecke = np.asarray(daten['dreiecke'], dtype=np.int64).reshape(-1, 3)
+        eigene = list(daten['knochen'])
         aus = np.zeros((len(punkte), len(self.namen)))
         unbekannt = set()
-        for zeile, eintraege in enumerate(daten["gewichte"]):
+        for zeile, eintraege in enumerate(daten['gewichte']):
             for nummer, wert in eintraege:
                 name = eigene[int(nummer)]
                 ziel = self.spalte.get(name)
@@ -110,8 +109,8 @@ class Figurnetze:
         """Gewichte je Zeile auf 1 — ein fremder Knochen ist ein Fehler, kein Rest."""
         if unbekannt:
             raise ValueError(
-                "%d Knochen des Stuecks fehlen im Skelett: %s"
-                % (len(unbekannt), ", ".join(sorted(unbekannt)[:4]))
+                '%d Knochen des Stuecks fehlen im Skelett: %s'
+                % (len(unbekannt), ', '.join(sorted(unbekannt)[:4]))
             )
         summe = aus.sum(axis=1, keepdims=True)
         return punkte, dreiecke, aus / np.maximum(summe, 1e-9)
@@ -121,10 +120,10 @@ class Figurnetze:
         # Aufraeumen des Objekts offen — unter Windows liess das jeden
         # Pruefordner mit dem Stueck darin stehen (60 Ordner, 12.09.2026).
         with np.load(pfad) as daten:
-            punkte = np.asarray(daten["punkte"], dtype=np.float64)
-            dreiecke = np.asarray(daten["dreiecke"], dtype=np.int64)
-            namen = [str(n) for n in daten["knochen"]]
-            nummern, gewichte = daten["skin_index"], daten["skin_weight"]
+            punkte = np.asarray(daten['punkte'], dtype=np.float64)
+            dreiecke = np.asarray(daten['dreiecke'], dtype=np.int64)
+            namen = [str(n) for n in daten['knochen']]
+            nummern, gewichte = daten['skin_index'], daten['skin_weight']
         umsetzung = np.array([self.spalte.get(n, -1) for n in namen])
         aus = np.zeros((len(punkte), len(self.namen)))
         unbekannt = set()

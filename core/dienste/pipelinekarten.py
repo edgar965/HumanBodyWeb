@@ -24,9 +24,9 @@ class Pipelinekarten:
     """Kartennamen und Vorlagen der 3D-Seite, nach Rang."""
 
     #: Pipeline -> Karte, wo es nicht dieselbe ist.
-    KARTE = {"hybrid_gvhmr": "hybrid", "hybrid_prompthmr": "hybrid", "hybrid_gem": "hybrid"}
+    KARTE = {'hybrid_gvhmr': 'hybrid', 'hybrid_prompthmr': 'hybrid', 'hybrid_gem': 'hybrid'}
 
-    VORLAGE = "_pipeline_%s.html"
+    VORLAGE = '_pipeline_%s.html'
 
     @classmethod
     def karte(cls, pipeline):
@@ -36,7 +36,7 @@ class Pipelinekarten:
     def dreid(cls):
         """Die Pipelines der 3D-Seite — die Eintraege des 3D-Vergleichs,
         jede einmal (Varianten nicht doppelt)."""
-        return list(dict.fromkeys(e["schluessel"] for e in Pipelines3d.EINTRAEGE))
+        return list(dict.fromkeys(e['schluessel'] for e in Pipelines3d.EINTRAEGE))
 
     @classmethod
     def reihenfolge(cls):
@@ -44,15 +44,15 @@ class Pipelinekarten:
         dreid = set(cls.dreid())
         karten = []
         for eintrag in Pipelinevergleich.rangfolge():
-            karte = cls.karte(eintrag["schluessel"])
-            if eintrag["schluessel"] in dreid and karte not in karten:
+            karte = cls.karte(eintrag['schluessel'])
+            if eintrag['schluessel'] in dreid and karte not in karten:
                 karten.append(karte)
         return karten
 
     @classmethod
     def rang(cls, karte):
         """Der beste Rang der Pipelines auf dieser Karte; None ohne Rang."""
-        raenge = [e["rang"] for e in Pipelinevergleich.mit_rang() if cls.karte(e["schluessel"]) == karte]
+        raenge = [e['rang'] for e in Pipelinevergleich.mit_rang() if cls.karte(e['schluessel']) == karte]
         return min(raenge) if raenge else None
 
     @classmethod
@@ -73,6 +73,6 @@ class Pipelinekarten:
         (Edgar, 12.09.2026: „mach das Rang abzeichen")."""
         # Dictionary gewollt: geht so in die Vorlage.
         return [
-            {"karte": karte, "vorlage": cls.VORLAGE % karte, "rang": cls.rang(karte)}
+            {'karte': karte, 'vorlage': cls.VORLAGE % karte, 'rang': cls.rang(karte)}
             for karte in cls.reihenfolge()
         ]

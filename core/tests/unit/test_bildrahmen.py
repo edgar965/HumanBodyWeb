@@ -12,22 +12,22 @@ Deshalb prüft dieser Test nicht nur die Zahlen, sondern die SCHLÜSSEL.
 """
 
 import numpy as np
-
 from django.test import SimpleTestCase
 
 from core.daten.bildrahmen import Bildrahmen
+
 from ._sicher import Sicher
 
 
 class BildrahmenTest(SimpleTestCase):
     def test_schluessel_sind_x_y_w_h(self):
         """Das Drahtformat für den Browser — `w`/`h`, nicht `width`/`height`."""
-        rahmen = Sicher.wert(Bildrahmen.um([[0.0, 0.0], [4.0, 8.0]]), "Rahmen")
-        self.assertEqual(sorted(rahmen.als_dict()), ["h", "w", "x", "y"])
+        rahmen = Sicher.wert(Bildrahmen.um([[0.0, 0.0], [4.0, 8.0]]), 'Rahmen')
+        self.assertEqual(sorted(rahmen.als_dict()), ['h', 'w', 'x', 'y'])
 
     def test_rechnet_die_ausdehnung(self):
-        rahmen = Sicher.wert(Bildrahmen.um([[10.0, 20.0], [30.0, 50.0]]), "Rahmen")
-        self.assertEqual(rahmen.als_dict(), {"x": 10.0, "y": 20.0, "w": 20.0, "h": 30.0})
+        rahmen = Sicher.wert(Bildrahmen.um([[10.0, 20.0], [30.0, 50.0]]), 'Rahmen')
+        self.assertEqual(rahmen.als_dict(), {'x': 10.0, 'y': 20.0, 'w': 20.0, 'h': 30.0})
         self.assertEqual(rahmen.mitte(), (20.0, 35.0))
 
     def test_nan_punkte_zaehlen_nicht(self):
@@ -36,25 +36,25 @@ class BildrahmenTest(SimpleTestCase):
         genau davor schützt `Bildrahmen`."""
         punkte = np.array([[10.0, 20.0], [np.nan, 5.0], [30.0, 50.0]])
         self.assertEqual(
-            Sicher.wert(Bildrahmen.um(punkte), "Rahmen").als_dict(),
-            {"x": 10.0, "y": 20.0, "w": 20.0, "h": 30.0},
+            Sicher.wert(Bildrahmen.um(punkte), 'Rahmen').als_dict(),
+            {'x': 10.0, 'y': 20.0, 'w': 20.0, 'h': 30.0},
         )
 
     def test_ohne_brauchbaren_punkt_kein_rahmen(self):
         """`None` statt eines Rahmens aus `NaN`: Der Browser zeichnet dann
         nichts, statt ein Rechteck ohne Ausdehnung an Position `NaN`."""
         for punkte in (np.zeros((0, 2)), np.full((3, 2), np.nan), np.zeros((3, 1)), np.zeros(3)):
-            with self.subTest(form=getattr(punkte, "shape", None)):
+            with self.subTest(form=getattr(punkte, 'shape', None)):
                 self.assertIsNone(Bildrahmen.um(punkte))
 
     def test_liste_von_paaren_geht_auch(self):
         """`Gesichtskontur` baut die Landmarken als Liste, nicht als Array."""
-        rahmen = Sicher.wert(Bildrahmen.um([[1, 2], [4, 6]]), "Rahmen")
-        self.assertEqual(rahmen.als_dict(), {"x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0})
+        rahmen = Sicher.wert(Bildrahmen.um([[1, 2], [4, 6]]), 'Rahmen')
+        self.assertEqual(rahmen.als_dict(), {'x': 1.0, 'y': 2.0, 'w': 3.0, 'h': 4.0})
 
     def test_werte_sind_immer_float(self):
         """JSON mag `numpy.float32` nicht — `float()` steht im Konstruktor."""
         punkte = np.array([[1, 2], [4, 6]], dtype=np.float32)
-        rahmen = Sicher.wert(Bildrahmen.um(punkte), "Rahmen")
+        rahmen = Sicher.wert(Bildrahmen.um(punkte), 'Rahmen')
         for wert in rahmen.als_dict().values():
             self.assertIsInstance(wert, float)

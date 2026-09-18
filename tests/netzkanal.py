@@ -20,15 +20,15 @@ from .kanal import BASE_URL, Kanal
 class NetzKanal(Kanal):
     """Über das Netz an den laufenden Server."""
 
-    def senden(self, pfad, method="GET", data=None, files=None, timeout=15):
+    def senden(self, pfad, method='GET', data=None, files=None, timeout=15):
         adresse = BASE_URL + pfad
         if files:
             rumpf, typ = self._mehrteilig(files)
             anfrage = urllib.request.Request(adresse, data=rumpf, method=method)
-            anfrage.add_header("Content-Type", typ)
+            anfrage.add_header('Content-Type', typ)
         elif data is not None:
             anfrage = urllib.request.Request(adresse, data=json.dumps(data).encode(), method=method)
-            anfrage.add_header("Content-Type", "application/json")
+            anfrage.add_header('Content-Type', 'application/json')
         else:
             anfrage = urllib.request.Request(adresse, method=method)
         try:
@@ -40,19 +40,19 @@ class NetzKanal(Kanal):
             except Exception as roh:  # noqa: BLE001
                 # Beide Gruende in den Bericht: der Statuscode UND warum sein
                 # Rumpf nicht lesbar war.
-                return fehler.code, {"error": "%s (Fehlerrumpf unlesbar: %s)" % (fehler, roh)}
+                return fehler.code, {'error': '%s (Fehlerrumpf unlesbar: %s)' % (fehler, roh)}
         except Exception as fehler:  # noqa: BLE001
-            return 0, {"error": str(fehler)}
+            return 0, {'error': str(fehler)}
 
     def rohabruf(self, pfad, timeout=10):
-        adresse = pfad if pfad.startswith("http") else BASE_URL + pfad
+        adresse = pfad if pfad.startswith('http') else BASE_URL + pfad
         try:
             with urllib.request.urlopen(adresse, timeout=timeout) as antwort:
                 return antwort.status, antwort.read()
         except urllib.error.HTTPError as fehler:
-            return fehler.code, b""
+            return fehler.code, b''
         except Exception as fehler:  # noqa: BLE001
             # Der Grund gehoert in den Bericht: Ein Aufrufer sieht sonst nur
             # „HTTP 0" und weiss nicht, ob der Server aus war, der Name nicht
             # aufloeste oder die Zeit ablief.
-            return 0, str(fehler).encode("utf-8", "replace")
+            return 0, str(fehler).encode('utf-8', 'replace')

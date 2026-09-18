@@ -14,7 +14,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "modellzustaendigkeit.js")
+MODUL = Jsmodul('bvh_studio', 'modellzustaendigkeit.js')
 
 SKRIPT = """
 const { Modellzustaendigkeit } = await import(MODUL);
@@ -57,4 +57,4 @@ class ModellzustaendigkeitTest(SimpleTestCase):
 
     def test_eine_spur_je_animation(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

@@ -26,16 +26,17 @@ from django.conf import settings
 
 from effekte.bvhnamen import Bvhnamen
 from effekte.figur.modellfigur import Modellfigur
+
 from ..dienste.modellvorlagen import Modellvorlagen
 from ..models import BVHJob
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Effektquellen"]
+__all__ = ['Effektquellen']
 
 
 class Effektquellen:
-    ENDUNG_KLEID = ".mhclo"
+    ENDUNG_KLEID = '.mhclo'
     HOECHSTENS = 60
 
     # -------------------------------------------------------------- BVH
@@ -46,9 +47,9 @@ class Effektquellen:
         Retargeter die Gelenke kennt."""
         eintraege = []
         auftraege = (
-            BVHJob.objects.filter(status="complete")
-            .exclude(bvh_file="")
-            .order_by("-created_at")[: cls.HOECHSTENS]
+            BVHJob.objects.filter(status='complete')
+            .exclude(bvh_file='')
+            .order_by('-created_at')[: cls.HOECHSTENS]
         )
         for job in auftraege:
             pfad = str(job.bvh_file)
@@ -58,27 +59,27 @@ class Effektquellen:
             unbekannt = namen.unbekannte()
             eintraege.append(
                 {
-                    "pfad": pfad,
-                    "name": os.path.basename(pfad),
-                    "auftrag": job.name,
-                    "pipeline": job.get_pipeline_display(),
-                    "bilder": namen.bilder(),
-                    "bildrate": namen.bildrate(),
-                    "format": cls.format(namen.gelenke()),
-                    "passt": not unbekannt,
-                    "grund": (
-                        ""
+                    'pfad': pfad,
+                    'name': os.path.basename(pfad),
+                    'auftrag': job.name,
+                    'pipeline': job.get_pipeline_display(),
+                    'bilder': namen.bilder(),
+                    'bildrate': namen.bildrate(),
+                    'format': cls.format(namen.gelenke()),
+                    'passt': not unbekannt,
+                    'grund': (
+                        ''
                         if not unbekannt
-                        else "%d unbekannte Gelenke (%s …)" % (len(unbekannt), unbekannt[0])
+                        else '%d unbekannte Gelenke (%s …)' % (len(unbekannt), unbekannt[0])
                     ),
-                    "vorgewaehlt": False,
+                    'vorgewaehlt': False,
                 }
             )
         # Der neueste passende ist vorgewaehlt — so steht der Ausgabevorschlag
         # sofort da, statt erst nach einem Klick.
         for eintrag in eintraege:
-            if eintrag["passt"]:
-                eintrag["vorgewaehlt"] = True
+            if eintrag['passt']:
+                eintrag['vorgewaehlt'] = True
                 break
         return eintraege
 
@@ -88,7 +89,7 @@ class Effektquellen:
         from humanbody_core.skeleton import Skeleton
 
         bauart = Skeleton.detect_format(list(gelenke))
-        return getattr(bauart, "FORMAT", "") or "" if bauart else ""
+        return getattr(bauart, 'FORMAT', '') or '' if bauart else ''
 
     # ----------------------------------------------------------- Kleider
 
@@ -99,14 +100,14 @@ class Effektquellen:
             return []
         eintraege = []
         for unter in sorted(p for p in ordner.iterdir() if p.is_dir()):
-            for datei in sorted(unter.glob("*" + cls.ENDUNG_KLEID)):
-                eintraege.append({"pfad": str(datei), "name": unter.name, "titel": cls.titel(unter.name)})
+            for datei in sorted(unter.glob('*' + cls.ENDUNG_KLEID)):
+                eintraege.append({'pfad': str(datei), 'name': unter.name, 'titel': cls.titel(unter.name)})
                 break
         return eintraege
 
     @staticmethod
     def titel(name):
-        return name.replace("_", " ")
+        return name.replace('_', ' ')
 
     # ----------------------------------------------------------- Modelle
 
@@ -120,10 +121,10 @@ class Effektquellen:
             try:
                 modell = Modellfigur(str(pfad))
             except OSError, ValueError:
-                logger.warning("Effektquellen: Modell %s nicht lesbar", name, exc_info=True)
+                logger.warning('Effektquellen: Modell %s nicht lesbar', name, exc_info=True)
                 continue
             beschreibung = modell.beschreibung()
-            beschreibung["name"] = name
-            beschreibung["stuecke"] = [s for s in beschreibung["stuecke"] if s]
+            beschreibung['name'] = name
+            beschreibung['stuecke'] = [s for s in beschreibung['stuecke'] if s]
             eintraege.append(beschreibung)
         return eintraege

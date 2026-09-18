@@ -34,13 +34,13 @@ den Aufrufer und stehen so in ``test_safe_paths``.
 #: Endung (``COM1.txt``) und in jeder Schreibweise — deshalb wird vor dem
 #: Vergleich auf Großbuchstaben gehoben und ab dem ersten Punkt abgeschnitten.
 GERAETE = {
-    "CON",
-    "PRN",
-    "AUX",
-    "NUL",
-    "CLOCK$",
-    *("COM%d" % i for i in range(1, 10)),
-    *("LPT%d" % i for i in range(1, 10)),
+    'CON',
+    'PRN',
+    'AUX',
+    'NUL',
+    'CLOCK$',
+    *('COM%d' % i for i in range(1, 10)),
+    *('LPT%d' % i for i in range(1, 10)),
 }
 
 #: Zeichen, die in einem Namensbestandteil nicht vorkommen dürfen (13.08.2026).
@@ -53,27 +53,27 @@ class Namensregeln:
     """Die Einzelprüfungen. Jede gibt einen Ablehnungsgrund oder ``None``."""
 
     @staticmethod
-    def geraet(teil, was="Pfadteil"):
-        if teil.split(".")[0].upper() in GERAETE:
-            return "Gerätename ist kein gültiger %s: %s" % (was.lower(), teil)
+    def geraet(teil, was='Pfadteil'):
+        if teil.split('.')[0].upper() in GERAETE:
+            return 'Gerätename ist kein gültiger %s: %s' % (was.lower(), teil)
         return None
 
     @staticmethod
-    def zeichen(teil, was="Pfad"):
+    def zeichen(teil, was='Pfad'):
         if VERBOTEN & set(teil):
-            return "Unzulässiges Zeichen im %s" % was
+            return 'Unzulässiges Zeichen im %s' % was
         return None
 
     @staticmethod
-    def endet_sauber(teil, was="Pfadteil"):
-        if teil != teil.rstrip(" ."):
-            return "%s darf nicht auf Punkt oder Leerzeichen enden" % was
+    def endet_sauber(teil, was='Pfadteil'):
+        if teil != teil.rstrip(' .'):
+            return '%s darf nicht auf Punkt oder Leerzeichen enden' % was
         return None
 
     @classmethod
     def teil(cls, teil):
         """Erster Ablehnungsgrund für einen PFADbestandteil — oder ``None``."""
-        return cls.zeichen(teil, "Pfad") or cls.geraet(teil, "Pfadteil") or cls.endet_sauber(teil, "Pfadteil")
+        return cls.zeichen(teil, 'Pfad') or cls.geraet(teil, 'Pfadteil') or cls.endet_sauber(teil, 'Pfadteil')
 
     @classmethod
     def datei(cls, name):
@@ -86,12 +86,12 @@ class Namensregeln:
         (Einwand aus dem Sparring, 12.08.2026).
         """
         grund = (
-            cls.zeichen(name, "Dateinamen")
-            or cls.geraet(name, "Dateiname")
-            or cls.endet_sauber(name, "Dateiname")
+            cls.zeichen(name, 'Dateinamen')
+            or cls.geraet(name, 'Dateiname')
+            or cls.endet_sauber(name, 'Dateiname')
         )
         if grund:
             return grund
-        if name.startswith("-"):
-            return "Dateiname darf nicht mit einem Bindestrich beginnen"
+        if name.startswith('-'):
+            return 'Dateiname darf nicht mit einem Bindestrich beginnen'
         return None

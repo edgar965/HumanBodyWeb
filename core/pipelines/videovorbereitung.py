@@ -18,7 +18,7 @@ import logging
 import subprocess
 from pathlib import Path
 
-pipeline_logger = logging.getLogger("core.pipeline")
+pipeline_logger = logging.getLogger('core.pipeline')
 
 
 class Videovorbereitung:
@@ -26,38 +26,38 @@ class Videovorbereitung:
 
     #: ffmpeg bekommt zehn Minuten; danach stimmt etwas anderes nicht.
     GEDULD_S = 600
-    GUETE = "18"
-    VORLAUF = "fast"
+    GUETE = '18'
+    VORLAUF = 'fast'
 
     @staticmethod
     def als_mp4(videopfad, ausgabeordner):
         """Pfad zu einer MP4 — der urspruengliche, wenn es schon eine ist."""
         quelle = Path(videopfad)
-        if quelle.suffix.lower() == ".mp4":
+        if quelle.suffix.lower() == '.mp4':
             return videopfad
-        ziel = Path(ausgabeordner) / (quelle.stem + ".mp4")
+        ziel = Path(ausgabeordner) / (quelle.stem + '.mp4')
         if ziel.exists():
             return str(ziel)  # schon einmal umgewandelt
-        pipeline_logger.info("[SMPL] Converting %s -> MP4 for SMPL pipeline...", quelle.name)
+        pipeline_logger.info('[SMPL] Converting %s -> MP4 for SMPL pipeline...', quelle.name)
         Videovorbereitung._ffmpeg(videopfad, ziel)
-        pipeline_logger.info("[SMPL] Converted to %s", ziel)
+        pipeline_logger.info('[SMPL] Converted to %s', ziel)
         return str(ziel)
 
     @staticmethod
     def _ffmpeg(quelle, ziel):
         lauf = subprocess.run(
             [
-                "ffmpeg",
-                "-y",
-                "-i",
+                'ffmpeg',
+                '-y',
+                '-i',
                 str(quelle),
-                "-c:v",
-                "libx264",
-                "-preset",
+                '-c:v',
+                'libx264',
+                '-preset',
                 Videovorbereitung.VORLAUF,
-                "-crf",
+                '-crf',
                 Videovorbereitung.GUETE,
-                "-an",
+                '-an',
                 str(ziel),
             ],
             capture_output=True,
@@ -67,4 +67,4 @@ class Videovorbereitung:
         if lauf.returncode != 0 or not ziel.exists():
             # Die letzten 500 Zeichen: ffmpeg schreibt seinen Grund ans ENDE,
             # davor stehen Bildschirmzeilen ohne Aussage.
-            raise RuntimeError("ffmpeg conversion failed: %s" % lauf.stderr[-500:])
+            raise RuntimeError('ffmpeg conversion failed: %s' % lauf.stderr[-500:])

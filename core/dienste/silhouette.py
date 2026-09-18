@@ -14,7 +14,7 @@ import numpy as np
 
 from ..daten.bildrahmen import Bildrahmen
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Silhouette:
@@ -48,9 +48,9 @@ class Silhouette:
             gueltig = ~np.isnan(proj).any(axis=1)
             mx = proj[gueltig, 0].mean()
             my = proj[gueltig, 1].mean()
-            s = versatz.get("scale", 1)
-            proj[gueltig, 0] = (proj[gueltig, 0] - mx) * s + mx + versatz.get("dx", 0)
-            proj[gueltig, 1] = (proj[gueltig, 1] - my) * s + my + versatz.get("dy", 0)
+            s = versatz.get('scale', 1)
+            proj[gueltig, 0] = (proj[gueltig, 0] - mx) * s + mx + versatz.get('dx', 0)
+            proj[gueltig, 1] = (proj[gueltig, 1] - my) * s + my + versatz.get('dy', 0)
         self.projektion = proj
         self.posiert = True
         self.vorderseiten = self._vorderseiten_im_bild(proj)
@@ -74,9 +74,9 @@ class Silhouette:
         proj = np.zeros((len(v), 2), dtype=np.float32)
         if koerpertransformation:
             bt = koerpertransformation
-            s = grund * bt["scale"]
-            proj[:, 0] = (v[:, 0] - cx) * s + bt["center_x"]
-            proj[:, 1] = (cy - v[:, 1]) * s + bt["center_y"]
+            s = grund * bt['scale']
+            proj[:, 0] = (v[:, 0] - cx) * s + bt['center_x']
+            proj[:, 1] = (cy - v[:, 1]) * s + bt['center_y']
         else:
             proj[:, 0] = (v[:, 0] - cx) * s_y + self.breite / 2
             proj[:, 1] = (cy - v[:, 1]) * s_y + self.hoehe / 2
@@ -108,7 +108,7 @@ class Silhouette:
     def maske(self, cv2):
         """Binaere Maske der Vorderseite, `MASKE` x `MASKE` Bildpunkte."""
         if self.projektion is None or self.vorderseiten is None:
-            raise RuntimeError("Silhouette: erst projizieren, dann rastern")
+            raise RuntimeError('Silhouette: erst projizieren, dann rastern')
         sx, sy = self.MASKE / self.breite, self.MASKE / self.hoehe
         maske = np.zeros((self.MASKE, self.MASKE), dtype=np.uint8)
         if self.posiert and self.anzahl_posiert < len(self.vertices):
@@ -138,7 +138,7 @@ class Silhouette:
     def _projektion(self):
         """Die Projektion — gesetzt von `projizieren`; vorher ist Rastern ein Fehler."""
         if self.projektion is None:
-            raise RuntimeError("Silhouette: erst projizieren, dann rastern")
+            raise RuntimeError('Silhouette: erst projizieren, dann rastern')
         return self.projektion
 
     def _dreiecke_fuellen(self, cv2, maske, sx, sy):

@@ -21,14 +21,14 @@ Grad, mit 82,7). Quelle und Ziel sind bei AIST/SMPL-X dasselbe Skelett.
 from humanbody_core.skeleton.formats.smpl_knochen import DEF_ZU_SMPL
 from humanbody_core.skeleton.formats.smplx import SkeletonSMPLX
 
-__all__ = ["DEF_ZU_SMPLX", "Smplxzuordnung"]
+__all__ = ['DEF_ZU_SMPLX', 'Smplxzuordnung']
 
 
 class Smplxzuordnung:
     """BVH-Format -> SMPL-X-Namen, in der Reihenfolge des Formats."""
 
-    LINKS = "Left_hip"
-    RECHTS = "Right_hip"
+    LINKS = 'Left_hip'
+    RECHTS = 'Right_hip'
 
     @staticmethod
     def finger_umgekehrt():
@@ -52,4 +52,4 @@ class Smplxzuordnung:
 
 
 #: Rigify/DEF -> SMPL-X: 22 Koerper + 30 Finger + Kiefer.
-DEF_ZU_SMPLX = {**DEF_ZU_SMPL, **Smplxzuordnung.finger_umgekehrt(), "DEF-jaw": "Jaw"}
+DEF_ZU_SMPLX = {**DEF_ZU_SMPL, **Smplxzuordnung.finger_umgekehrt(), 'DEF-jaw': 'Jaw'}

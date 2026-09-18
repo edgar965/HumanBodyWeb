@@ -31,9 +31,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 
 WURZEL = Path(settings.BASE_DIR)
-STUDIO = Jsmodul.VIEWER / "bvh_studio"
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
 
-MODUL = Jsmodul("bvh_studio", "abspielende.js")
+MODUL = Jsmodul('bvh_studio', 'abspielende.js')
 
 SKRIPT = """
 const { Abspielende } = await import(MODUL);
@@ -63,28 +63,28 @@ class AbspielendeTest(SimpleTestCase):
 
     def test_ende_und_endlos(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
 
 
 class AbspielendeVerdrahtungTest(SimpleTestCase):
     databases = set()
 
     def test_die_leiste_steht_in_der_seitenleiste(self):
-        html = (WURZEL / "templates" / "bvh_studio.html").read_text(encoding="utf-8")
-        seitenleiste = html[html.index('id="studio-sidebar"') : html.index("<!-- Library context menus -->")]
+        html = (WURZEL / 'templates' / 'bvh_studio.html').read_text(encoding='utf-8')
+        seitenleiste = html[html.index('id="studio-sidebar"') : html.index('<!-- Library context menus -->')]
         self.assertIn('id="studio-playback"', seitenleiste)
         self.assertIn('id="pb-loop"', seitenleiste)
         self.assertIn('id="pb-speed"', seitenleiste)
-        self.assertEqual(html.count('class="studio-playback"'), 1, "die Leiste darf nur einmal stehen")
+        self.assertEqual(html.count('class="studio-playback"'), 1, 'die Leiste darf nur einmal stehen')
 
     def test_die_schleife_fragt_abspielende(self):
-        schleife = (STUDIO / "studioschleife.js").read_text(encoding="utf-8")
-        self.assertIn("Abspielende.naechstes(state.playheadFrame, abspielende(), state.endlos)", schleife)
-        self.assertIn("if (naechstes.anhalten) pausePlayback()", schleife)
-        self.assertNotIn("state.playheadFrame = 0;   // von vorn", schleife)
-        abspiel = (STUDIO / "playback.js").read_text(encoding="utf-8")
-        self.assertIn("Endlosschalter.binden()", abspiel)
-        self.assertIn("Abspielende.startbild(state.playheadFrame, abspielende())", abspiel)
-        schalter = (STUDIO / "endlosschalter.js").read_text(encoding="utf-8")
+        schleife = (STUDIO / 'studioschleife.js').read_text(encoding='utf-8')
+        self.assertIn('Abspielende.naechstes(state.playheadFrame, abspielende(), state.endlos)', schleife)
+        self.assertIn('if (naechstes.anhalten) pausePlayback()', schleife)
+        self.assertNotIn('state.playheadFrame = 0;   // von vorn', schleife)
+        abspiel = (STUDIO / 'playback.js').read_text(encoding='utf-8')
+        self.assertIn('Endlosschalter.binden()', abspiel)
+        self.assertIn('Abspielende.startbild(state.playheadFrame, abspielende())', abspiel)
+        schalter = (STUDIO / 'endlosschalter.js').read_text(encoding='utf-8')
         self.assertIn("getElementById('pb-loop')", schalter)
-        self.assertIn("state.endlos = !state.endlos", schalter)
+        self.assertIn('state.endlos = !state.endlos', schalter)

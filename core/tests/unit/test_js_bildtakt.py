@@ -23,8 +23,8 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "bildtakt.js")
-SCHLEIFE = settings.BASE_DIR / "static" / "viewer" / "bvh_studio" / "studioschleife.js"
+MODUL = Jsmodul('bvh_studio', 'bildtakt.js')
+SCHLEIFE = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio' / 'studioschleife.js'
 
 SKRIPT = """
 const { Bildtakt } = await import(MODUL);
@@ -60,9 +60,9 @@ console.log(JSON.stringify({ ok: true }));
 
 class BildtaktTest(SimpleTestCase):
     def test_das_tempo_haengt_nicht_am_monitor(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_die_studioschleife_nutzt_den_takt(self):
-        text = SCHLEIFE.read_text(encoding="utf-8")
-        self.assertIn("this.takt.bilder(dt, state.project.fps, state.playbackSpeed)", text)
-        self.assertNotIn("Math.round(dt", text)
+        text = SCHLEIFE.read_text(encoding='utf-8')
+        self.assertIn('this.takt.bilder(dt, state.project.fps, state.playbackSpeed)', text)
+        self.assertNotIn('Math.round(dt', text)

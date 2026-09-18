@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "lebendigkeit.js")
+MODUL = Jsmodul('bvh_studio', 'lebendigkeit.js')
 
 SKRIPT = """
 const { Lebendigkeit: L } = await import(MODUL);
@@ -76,4 +76,4 @@ console.log(JSON.stringify({ ok: true, blinzeln: a.length }));
 
 class LebendigkeitTest(SimpleTestCase):
     def test_bausteine_sind_wiederholbar_und_begrenzt(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

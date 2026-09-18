@@ -8,10 +8,9 @@ kann zum Koerper zeigen. Browser-Fassung: `gemeinsam/lagenmaske.js`.
 """
 
 import numpy as np
-from scipy.spatial import cKDTree
-
 from hautmaske import Hautmaske
 from maskengeometrie import Geometrie
+from scipy.spatial import cKDTree
 
 
 class Lagenmaske:
@@ -50,7 +49,7 @@ class Lagenmaske:
             tiefe=-cls.MINDEST_M,
             randringe=0,
             inseln=0,
-            suchweite=optionen.get("abstand", Hautmaske.ABSTAND_M),
+            suchweite=optionen.get('abstand', Hautmaske.ABSTAND_M),
         )
         b_ueber_a = int(Hautmaske.verdeckt(A[1], None, [(B[1], B[2])], normalen=nA, **o).sum())
         a_ueber_b = int(Hautmaske.verdeckt(B[1], None, [(A[1], A[2])], normalen=nB, **o).sum())

@@ -24,7 +24,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Videobildrate:
@@ -50,5 +50,5 @@ class Videobildrate:
             film.release()
             return rate
         except Exception:  # noqa: BLE001
-            logger.debug("Video-FPS nicht lesbar — Vorgabe %s wird benutzt", cls.VORGABE, exc_info=True)
+            logger.debug('Video-FPS nicht lesbar — Vorgabe %s wird benutzt', cls.VORGABE, exc_info=True)
             return cls.VORGABE

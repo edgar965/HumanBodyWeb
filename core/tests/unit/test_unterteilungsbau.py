@@ -11,10 +11,10 @@ from pathlib import Path
 from unittest import TestCase
 
 import numpy as np
-
-from core.tests.unit._pruefablage import Pruefablage
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
 from humanbody_core.unterteilungsbau import Unterteilungsbau
+
+from core.tests.unit._pruefablage import Pruefablage
 
 
 def _wuerfel():
@@ -31,8 +31,8 @@ class BauUndAblage(TestCase):
     def test_geladen_rechnet_wie_gebaut(self):
         punkte, quads, uv_loops, mat = _wuerfel()
         gebaut = CatmullClarkSubdivider(quads, face_materials=mat, levels=2, uv_loops=uv_loops)
-        with Pruefablage.ordner("unterteilung_") as ordner:
-            pfad = Path(ordner) / "wuerfel.npz"
+        with Pruefablage.ordner('unterteilung_') as ordner:
+            pfad = Path(ordner) / 'wuerfel.npz'
             Unterteilungsbau.speichern(pfad, gebaut.teile)
             teile = Unterteilungsbau.laden(pfad)
         geladen = CatmullClarkSubdivider(quads, teile=teile)

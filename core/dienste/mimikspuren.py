@@ -23,31 +23,31 @@ import os
 import numpy as np
 from django.conf import settings
 
-ENDUNG = "_mimik.json"
+ENDUNG = '_mimik.json'
 
 
 class Mimikspuren:
     @staticmethod
     def pfad(bvh_pfad):
-        return str(bvh_pfad).rsplit(".", 1)[0] + ENDUNG
+        return str(bvh_pfad).rsplit('.', 1)[0] + ENDUNG
 
     @classmethod
     def schreiben(cls, bvh_pfad, mimik):
         """Nachbardatei schreiben; leere Mimik löscht sie."""
         pfad = cls.pfad(bvh_pfad)
-        if not mimik or not mimik.get("bilder"):
+        if not mimik or not mimik.get('bilder'):
             if os.path.isfile(pfad):
                 os.remove(pfad)
             return pfad
-        with open(pfad, "w", encoding="utf-8") as datei:
+        with open(pfad, 'w', encoding='utf-8') as datei:
             json.dump(
                 {
-                    "fps": float(mimik.get("fps") or 30.0),
-                    "einheiten": list(mimik.get("einheiten") or []),
-                    "bilder": mimik["bilder"],
+                    'fps': float(mimik.get('fps') or 30.0),
+                    'einheiten': list(mimik.get('einheiten') or []),
+                    'bilder': mimik['bilder'],
                 },
                 datei,
-                separators=(",", ":"),
+                separators=(',', ':'),
             )
         return pfad
 
@@ -57,7 +57,7 @@ class Mimikspuren:
         pfad = cls.pfad(bvh_pfad)
         if not os.path.isfile(pfad):
             return None
-        with open(pfad, encoding="utf-8") as datei:
+        with open(pfad, encoding='utf-8') as datei:
             daten = json.load(datei)
         return cls.spuren(daten, cls.basis())
 
@@ -76,20 +76,20 @@ class Mimikspuren:
     @classmethod
     def basis(cls):
         if cls._basis is None:
-            pfad = settings.BASE_DIR / "static" / "mimik" / "basis.json"
-            with open(pfad, encoding="utf-8") as datei:
+            pfad = settings.BASE_DIR / 'static' / 'mimik' / 'basis.json'
+            with open(pfad, encoding='utf-8') as datei:
                 cls._basis = json.load(datei)
         return cls._basis
 
     @staticmethod
     def spuren(daten, basis):
         """Gewichte je Bild → Delta-Quaternionen je Knochen (Three.js [x,y,z,w])."""
-        from scipy.spatial.transform import Rotation
         from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
+        from scipy.spatial.transform import Rotation
 
-        fps = float(daten.get("fps") or 30.0)
-        einheiten = daten.get("einheiten") or []
-        bilder = np.asarray(daten.get("bilder") or [], dtype=float)
+        fps = float(daten.get('fps') or 30.0)
+        einheiten = daten.get('einheiten') or []
+        bilder = np.asarray(daten.get('bilder') or [], dtype=float)
         if bilder.size == 0:
             return Bewegungsspuren.leer()
         anzahl = bilder.shape[0]
@@ -118,8 +118,8 @@ class Mimikspuren:
         if eintrag is None:
             return
         for richtung, betrag in (
-            (eintrag["plus"], np.clip(g, 0, None)),
-            (eintrag["minus"], np.clip(-g, 0, None)),
+            (eintrag['plus'], np.clip(g, 0, None)),
+            (eintrag['minus'], np.clip(-g, 0, None)),
         ):
             if not betrag.any():
                 continue

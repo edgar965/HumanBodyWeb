@@ -29,7 +29,7 @@ import ast
 
 from ._projektquellen import Projektquellen
 
-__all__ = ["Addonimporte"]
+__all__ = ['Addonimporte']
 
 
 class Addonimporte:
@@ -41,7 +41,7 @@ class Addonimporte:
     #: Fremde Addons und Nicht-Quelltext. `convert/retarget_bvh` und
     #: `kbs_retarget` stammen von anderen Urhebern; `data` und `cache`
     #: tragen keinen Quelltext.
-    AUS = ("__pycache__", "retarget_bvh", "kbs_retarget", "data", "cache")
+    AUS = ('__pycache__', 'retarget_bvh', 'kbs_retarget', 'data', 'cache')
 
     # --------------------------------------------------------------- Lesen
 
@@ -50,7 +50,7 @@ class Addonimporte:
         """Jede eigene `.py`-Datei unterhalb der Wurzel."""
         wurzel = cls.WURZEL if wurzel is None else wurzel
         verboten = set(cls.AUS)
-        for pfad in sorted(wurzel.rglob("*.py")):
+        for pfad in sorted(wurzel.rglob('*.py')):
             if not set(pfad.parts) & verboten:
                 yield pfad
 
@@ -76,20 +76,20 @@ class Addonimporte:
         ordner = pfad.parent
         for _ in range(knoten.level - 1):
             ordner = ordner.parent
-        teile = (knoten.module or "").split(".") if knoten.module else []
+        teile = (knoten.module or '').split('.') if knoten.module else []
         return ordner.joinpath(*teile) if teile else ordner
 
     @staticmethod
     def gibt_es(pfad):
         """Modul, Paket oder Verzeichnis — eins davon muss es sein."""
-        return pfad.with_suffix(".py").is_file() or (pfad / "__init__.py").is_file() or pfad.is_dir()
+        return pfad.with_suffix('.py').is_file() or (pfad / '__init__.py').is_file() or pfad.is_dir()
 
     # ------------------------------------------------------------- Paketnamen
 
     @staticmethod
     def _aus_dem_ordner(ordner):
         """Was allein am Dateibaum schon ein gueltiger Name ist."""
-        namen = {p.stem for p in ordner.glob("*.py")}
+        namen = {p.stem for p in ordner.glob('*.py')}
         namen |= {p.name for p in ordner.iterdir() if p.is_dir()}
         return namen
 
@@ -104,10 +104,10 @@ class Addonimporte:
                 namen.add(knoten.id)
             elif isinstance(knoten, (ast.Import, ast.ImportFrom)):
                 for teil in knoten.names:
-                    if teil.name == "*":
+                    if teil.name == '*':
                         stern = True
                     else:
-                        namen.add(teil.asname or teil.name.split(".")[0])
+                        namen.add(teil.asname or teil.name.split('.')[0])
         return namen, stern
 
     @classmethod
@@ -119,11 +119,11 @@ class Addonimporte:
         nicht geprueft.
         """
         namen = cls._aus_dem_ordner(ordner)
-        init = ordner / "__init__.py"
+        init = ordner / '__init__.py'
         if not init.is_file():
             return namen, False
         try:
-            baum = ast.parse(init.read_text(encoding="utf-8", errors="replace"))
+            baum = ast.parse(init.read_text(encoding='utf-8', errors='replace'))
         # stumm gewollt: Ein unlesbares `__init__.py` heisst hier
         # „Namensmenge unvollstaendig" — das sagt `stern=True` aus,
         # und der Aufrufer prueft dann gar nicht erst.
@@ -136,22 +136,22 @@ class Addonimporte:
     def fehlende_namen(cls, pfad, knoten):
         """Die importierten Namen, die es im Zielpaket nicht gibt."""
         ziel = cls.ziel(pfad, knoten)
-        if ziel.with_suffix(".py").is_file() or not ziel.is_dir():
+        if ziel.with_suffix('.py').is_file() or not ziel.is_dir():
             return []  # ein Modul, kein Paket
         namen, stern = cls.paketnamen(ziel)
         if stern:
             return []
-        return [t.name for t in knoten.names if t.name != "*" and t.name not in namen]
+        return [t.name for t in knoten.names if t.name != '*' and t.name not in namen]
 
     # ----------------------------------------------------------- Durchlaufen
 
     @classmethod
-    def _meldung(cls, pfad, wurzel, knoten, zusatz=""):
-        return "%s:%d from %s%s%s" % (
+    def _meldung(cls, pfad, wurzel, knoten, zusatz=''):
+        return '%s:%d from %s%s%s' % (
             pfad.relative_to(wurzel).as_posix(),
             knoten.lineno,
-            "." * knoten.level,
-            knoten.module or "",
+            '.' * knoten.level,
+            knoten.module or '',
             zusatz,
         )
 
@@ -166,7 +166,7 @@ class Addonimporte:
                     schlecht.append(cls._meldung(pfad, wurzel, knoten))
                     continue
                 for name in cls.fehlende_namen(pfad, knoten):
-                    schlecht.append(cls._meldung(pfad, wurzel, knoten, " import %s (nicht im Paket)" % name))
+                    schlecht.append(cls._meldung(pfad, wurzel, knoten, ' import %s (nicht im Paket)' % name))
         return schlecht
 
     @classmethod

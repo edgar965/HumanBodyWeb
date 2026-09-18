@@ -30,7 +30,7 @@ import numpy as np
 # `humanbody_core` liegt neben HumanBodyWeb — wie in `bvh_nach_anim.py`, aber
 # ohne festen Laufwerksbuchstaben (Regel `projektpfade`).
 _HUMANBODY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "HumanBody"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'HumanBody'
 )
 if _HUMANBODY not in sys.path:
     sys.path.insert(0, _HUMANBODY)
@@ -45,8 +45,8 @@ class Koerperfeinheit:
 
     #: Knochen, die zum Kopf gehoeren (Corrective Smooth laesst ihn aus).
     KOPF = re.compile(
-        r"^(DEF|MCH|ORG)-(brow|cheek|chin|ear|forehead|jaw|lid|lip|"
-        r"nose|temple|tongue|eye|teeth|spine\.006)(\.|$)"
+        r'^(DEF|MCH|ORG)-(brow|cheek|chin|ear|forehead|jaw|lid|lip|'
+        r'nose|temple|tongue|eye|teeth|spine\.006)(\.|$)'
     )
 
     def __init__(self, unterteiler, vierecke, verschiebung=None, korrektur=True):
@@ -113,8 +113,8 @@ class Koerperfeinheit:
         return np.asarray(self.unterteiler.triangles, dtype=np.int64)
 
     def beschreibung(self):
-        return "%d Stufe(n), Korrekturglaettung %s, Hautverschiebung %s" % (
+        return '%d Stufe(n), Korrekturglaettung %s, Hautverschiebung %s' % (
             self.unterteiler.levels,
-            "an" if self.korrektur is not None else "aus",
-            "an" if self.textur is not None else "aus",
+            'an' if self.korrektur is not None else 'aus',
+            'an' if self.textur is not None else 'aus',
         )

@@ -17,7 +17,7 @@ solcher Code stuende auf Modulebene und liefe beim Import.
 
 import math
 
-__all__ = ["Vektor"]
+__all__ = ['Vektor']
 
 
 class Vektor(tuple):

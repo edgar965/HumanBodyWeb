@@ -15,9 +15,9 @@ class ProgressConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for real-time job progress updates."""
 
     async def connect(self):
-        weg = self.scope.get("url_route") or {}
-        self.job_id = weg["kwargs"]["job_id"]
-        self.group_name = f"job_{self.job_id}"
+        weg = self.scope.get('url_route') or {}
+        self.job_id = weg['kwargs']['job_id']
+        self.group_name = f'job_{self.job_id}'
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
@@ -30,10 +30,10 @@ class ProgressConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps(
                 {
-                    "status": event["status"],
-                    "progress": event["progress"],
-                    "error": event.get("error", ""),
-                    "bvh_file": event.get("bvh_file", ""),
+                    'status': event['status'],
+                    'progress': event['progress'],
+                    'error': event.get('error', ''),
+                    'bvh_file': event.get('bvh_file', ''),
                 }
             )
         )
@@ -46,7 +46,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         await self.accept()
         self._char_state = None
         self._cc_subs = {}  # {'female': CC, 'male': CC}
-        self._current_gender = "female"
+        self._current_gender = 'female'
         #: Ob zuletzt bewegte Knochen unterwegs waren — siehe `_send_skelett`.
         self._skelett_bewegt = False
         #: Drapierte Kleidung, die den Reglern folgt (`_send_stoff`).
@@ -56,6 +56,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # Die Netzqualitaet (Unterteilungsstufe) steht in der Datenbank; aus
         # dem Ereigniskreis darf sie nur ueber einen Faden gelesen werden.
         from channels.db import database_sync_to_async
+
         from .dienste.netzqualitaet import Netzqualitaet
 
         await database_sync_to_async(Netzqualitaet.merken)()
@@ -65,7 +66,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # (`Netzstufenwahl`) sieht diesen Kanal nicht.
         from .dienste.netzstufenwahl import Netzstufenwahl
 
-        self._stufen = Netzstufenwahl.aus_cookies(self.scope.get("cookies"))
+        self._stufen = Netzstufenwahl.aus_cookies(self.scope.get('cookies'))
         self._init_state()
 
     def _init_state(self):
@@ -75,9 +76,9 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
 
             self._char_state = Charakterdaten.zustand()
             # Preload female CC subdivider
-            self._cc_subs["female"] = Charakterdaten.unterteiler("female", stufen=self._stufen)
+            self._cc_subs['female'] = Charakterdaten.unterteiler('female', stufen=self._stufen)
         except Exception as e:
-            logger.error("Failed to init CharacterState: %s", e)
+            logger.error('Failed to init CharacterState: %s', e)
 
     def _get_cc(self):
         """Get CC subdivider for current gender, lazy-loading if needed."""
@@ -136,8 +137,8 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps(
                 {
-                    "type": "skelett",
-                    "bones": bewegte,
+                    'type': 'skelett',
+                    'bones': bewegte,
                 }
             )
         )
@@ -173,9 +174,9 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
             await self.send(
                 text_data=json.dumps(
                     {
-                        "type": "reload_mesh",
-                        "body_type": body_type,
-                        "gender": new_gender,
+                        'type': 'reload_mesh',
+                        'body_type': body_type,
+                        'gender': new_gender,
                     }
                 )
             )
@@ -199,11 +200,11 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
 
         if self._char_state is None:
             await self.send(
-                text_data=json.dumps({"type": "error", "message": "CharacterState not initialized"})
+                text_data=json.dumps({'type': 'error', 'message': 'CharacterState not initialized'})
             )
             return
 
-        handler = self.NACHRICHTEN.get(msg.get("type"))
+        handler = self.NACHRICHTEN.get(msg.get('type'))
         if handler is not None:
             await handler(self, msg)
 
@@ -211,7 +212,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
     def zustand(self):
         """Der Figurzustand — `receive` weist Nachrichten ohne ihn ab."""
         if self._char_state is None:
-            raise RuntimeError("CharacterState not initialized")
+            raise RuntimeError('CharacterState not initialized')
         return self._char_state
 
     # Die Handler je Nachrichtentyp — `NACHRICHTEN` unten ordnet sie zu.
@@ -220,24 +221,24 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         await self._send_vertices(self.zustand.compute())
 
     async def _bei_body_type(self, msg):
-        await self._handle_body_type(msg["value"])
+        await self._handle_body_type(msg['value'])
 
     async def _bei_morph(self, msg):
-        self.zustand.set_morph(msg["key"], float(msg["value"]))
+        self.zustand.set_morph(msg['key'], float(msg['value']))
         await self._neu_senden()
 
     async def _bei_morph_batch(self, msg):
         # Apply multiple morphs at once
-        for key, val in msg.get("morphs", {}).items():
+        for key, val in msg.get('morphs', {}).items():
             self.zustand.set_morph(key, float(val))
         await self._neu_senden()
 
     async def _bei_meta(self, msg):
-        self.zustand.set_meta(msg["name"], float(msg["value"]))
+        self.zustand.set_meta(msg['name'], float(msg['value']))
         await self._neu_senden()
 
     async def _bei_stoff_loesen(self, msg):
-        self._stoff.loesen(msg.get("stueck"))
+        self._stoff.loesen(msg.get('stueck'))
 
     async def _bei_reset(self, msg):
         # ERST leeren, DANN die Koerperart setzen (05.09.2026).
@@ -255,16 +256,16 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # Skelett-Nachfuehrung sichtbar als kurzes Aufblitzen des
         # grossen Rigs. Jetzt geht eine Nachricht raus, die richtige.
         self.zustand.zuruecksetzen()
-        await self._handle_body_type(msg.get("body_type", "Female_Caucasian"))
+        await self._handle_body_type(msg.get('body_type', 'Female_Caucasian'))
 
     NACHRICHTEN = {
-        "body_type": _bei_body_type,
-        "morph": _bei_morph,
-        "morph_batch": _bei_morph_batch,
-        "meta": _bei_meta,
-        "stoff_binden": Stoffkanal._handle_stoff_binden,
-        "stoff_loesen": _bei_stoff_loesen,
-        "reset": _bei_reset,
+        'body_type': _bei_body_type,
+        'morph': _bei_morph,
+        'morph_batch': _bei_morph_batch,
+        'meta': _bei_meta,
+        'stoff_binden': Stoffkanal._handle_stoff_binden,
+        'stoff_loesen': _bei_stoff_loesen,
+        'reset': _bei_reset,
     }
 
 
@@ -280,9 +281,9 @@ class TestCharacterConsumer(CharacterConsumer):
             from core.api.testfigur import Testkern
 
             self._char_state = Testkern.zustand()
-            self._cc_subs = {"test": Testkern.unterteiler()}
+            self._cc_subs = {'test': Testkern.unterteiler()}
         except Exception as e:
-            logger.exception("Test-CharacterState nicht aufbaubar: %s", e)
+            logger.exception('Test-CharacterState nicht aufbaubar: %s', e)
 
     async def _send_skelett(self, grundnetz):
         """Der Testcharakter bekommt keine Nachfuehrung.
@@ -308,4 +309,4 @@ class TestCharacterConsumer(CharacterConsumer):
 
         und die Verbindung riss ab. Ein Buchstabe Unterschied im Feldnamen.
         """
-        return self._cc_subs.get("test")
+        return self._cc_subs.get('test')

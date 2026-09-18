@@ -15,13 +15,12 @@ Algorithmus ist — und nicht bloss eine Laplace-Glaettung:
 from unittest import TestCase
 
 import numpy as np
-
 from humanbody_core.korrekturglaettung import Korrekturglaettung
 
 
 def _gitter(nx=8, ny=8, welle=0.0):
     """Ebenes Vierecknetz mit einer sanften Welle (Ruhelage-Detail)."""
-    xs, ys = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    xs, ys = np.meshgrid(np.arange(nx), np.arange(ny), indexing='ij')
     punkte = np.stack([xs.ravel() * 0.1, ys.ravel() * 0.1, welle * np.sin(xs.ravel() * 0.9)], axis=1)
     quads = []
     for i in range(nx - 1):
@@ -73,5 +72,5 @@ class Eigenschaften(TestCase):
     def test_tangentenrahmen_sind_orthonormal(self):
         punkte, quads = _gitter(welle=0.03)
         rahmen = Korrekturglaettung(quads).tangentenrahmen(punkte)
-        innen = np.einsum("vij,vkj->vik", rahmen, rahmen)
+        innen = np.einsum('vij,vkj->vik', rahmen, rahmen)
         np.testing.assert_allclose(innen, np.broadcast_to(np.eye(3), innen.shape), atol=0.05)

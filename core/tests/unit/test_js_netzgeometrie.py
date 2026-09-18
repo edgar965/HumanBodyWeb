@@ -30,7 +30,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "netzgeometrie.js")
+MODUL = Jsmodul('gemeinsam', 'netzgeometrie.js')
 
 SKRIPT = """
 const { Netzgeometrie } = await import(MODUL);
@@ -145,62 +145,62 @@ class NetzgeometrieTest(SimpleTestCase):
         cls.e = MODUL.laufen(SKRIPT)
 
     def test_punkte_wie_die_alte_fassung(self):
-        self.assertEqual(self.e["neuPosition"], self.e["altPosition"])
+        self.assertEqual(self.e['neuPosition'], self.e['altPosition'])
 
     def test_normalen_wie_die_alte_fassung(self):
         """Die Drehung der Normalen ist die Zeile, die man in einer Kopie
         vergisst — dann leuchtet das Kleidungsstück auf einer Seite anders."""
-        self.assertEqual(self.e["neuNormal"], self.e["altNormal"])
+        self.assertEqual(self.e['neuNormal'], self.e['altNormal'])
 
     def test_normalen_sind_wirklich_gedreht(self):
         """Gegenprobe zur Gleichheit: Wären BEIDE Fassungen falsch, wäre der
         Test oben trotzdem grün. Blender (x, y, z) → Three (x, z, −y)."""
-        self.assertEqual(self.e["neuNormal"][:6], [0, 1, -0, 0, 0, -1])
+        self.assertEqual(self.e['neuNormal'][:6], [0, 1, -0, 0, 0, -1])
 
     def test_index_wie_die_alte_fassung(self):
-        self.assertEqual(self.e["neuIndex"], self.e["altIndex"])
+        self.assertEqual(self.e['neuIndex'], self.e['altIndex'])
 
     def test_ohne_server_normalen_wird_gerechnet(self):
-        self.assertTrue(self.e["altGerechnet"])
-        self.assertTrue(self.e["neuGerechnet"])
-        self.assertIsNone(self.e["neuNormal2"])
-        self.assertIsNone(self.e["altNormal2"])
+        self.assertTrue(self.e['altGerechnet'])
+        self.assertTrue(self.e['neuGerechnet'])
+        self.assertIsNone(self.e['neuNormal2'])
+        self.assertIsNone(self.e['altNormal2'])
 
     def test_uvs_kommen_mit_wenn_sie_da_sind(self):
-        self.assertEqual(self.e["neuUv"], [0, 0, 1, 0, 1, 1, 0, 1])
+        self.assertEqual(self.e['neuUv'], [0, 0, 1, 0, 1, 1, 0, 1])
 
     def test_ohne_uvs_und_ohne_flaechen_passiert_nichts(self):
         """Ein Kleidungsstück bringt keine `uvs` mit — das darf kein leeres
         Attribut und keinen leeren Index erzeugen."""
-        self.assertIsNone(self.e["ohneUv"])
-        self.assertIsNone(self.e["ohneIndex"])
+        self.assertIsNone(self.e['ohneUv'])
+        self.assertIsNone(self.e['ohneIndex'])
 
     def test_ohne_drehung_wie_die_alte_smpl_fassung(self):
         """SMPL liefert bereits Three-Achsen. Wer sie ein zweites Mal dreht,
         legt das Netz um 90 Grad gekippt daneben — deshalb waren die drei
         SMPL-Stellen bis zum 28.08.2026 handgebaut."""
-        self.assertEqual(self.e["neuUngedreht"], self.e["altUngedreht"])
-        self.assertEqual(self.e["neuUngedrehtN"], self.e["altUngedrehtN"])
+        self.assertEqual(self.e['neuUngedreht'], self.e['altUngedreht'])
+        self.assertEqual(self.e['neuUngedrehtN'], self.e['altUngedrehtN'])
 
     def test_ohne_drehung_ist_wirklich_ungedreht(self):
         """Gegenprobe: Der Schalter muss auch etwas BEWIRKEN — sonst wäre der
         Vergleich oben grün, weil beide Fassungen drehen."""
-        self.assertNotEqual(self.e["neuUngedreht"], self.e["neuPosition"])
-        self.assertEqual(self.e["neuUngedreht"][:3], [0, 1, 2])
+        self.assertNotEqual(self.e['neuUngedreht'], self.e['neuPosition'])
+        self.assertEqual(self.e['neuUngedreht'][:3], [0, 1, 2])
 
     def test_aus_fertigen_puffern(self):
         """`smpl_koerper` holt Punkte und Normalen an anderer Stelle und
         frischt sie später im selben Puffer auf."""
-        self.assertEqual(self.e["puffPosition"], [9, 8, 7, 6, 5, 4])
-        self.assertEqual(self.e["puffNormal"], [1, 0, 0, 0, 1, 0])
-        self.assertEqual(self.e["puffIndex"], self.e["altIndex"])
+        self.assertEqual(self.e['puffPosition'], [9, 8, 7, 6, 5, 4])
+        self.assertEqual(self.e['puffNormal'], [1, 0, 0, 0, 1, 0])
+        self.assertEqual(self.e['puffIndex'], self.e['altIndex'])
 
     def test_aus_puffern_ohne_normalen_und_ohne_flaechen(self):
-        self.assertIsNone(self.e["puffOhneIndex"])
-        self.assertTrue(self.e["puffGerechnet"])
+        self.assertIsNone(self.e['puffOhneIndex'])
+        self.assertTrue(self.e['puffGerechnet'])
 
     def test_haken_bekommt_den_gedrehten_puffer(self):
         """`mhproxynetz` merkt sich den Puffer für die Anpassung an die
         Figur. Er muss DERSELBE sein, den die Geometrie bekommt — sonst rechnet
         die Anpassung auf ungedrehten Punkten."""
-        self.assertEqual(self.e["gemerkt"], self.e["neu3Position"])
+        self.assertEqual(self.e['gemerkt'], self.e['neu3Position'])

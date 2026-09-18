@@ -53,7 +53,7 @@ from pathlib import Path
 
 import psutil
 
-__all__ = ["Serverneustart"]
+__all__ = ['Serverneustart']
 
 
 class Serverneustart:
@@ -79,7 +79,7 @@ class Serverneustart:
         """Die PIDs, die auf unserem Port lauschen."""
         pids = set()
         try:
-            for verbindung in psutil.net_connections(kind="inet"):
+            for verbindung in psutil.net_connections(kind='inet'):
                 if (
                     verbindung.status == psutil.CONN_LISTEN
                     and verbindung.laddr
@@ -89,7 +89,7 @@ class Serverneustart:
                     pids.add(verbindung.pid)
         # stumm gewollt: Skript ohne Logger — die Meldung geht auf die Konsole, der zweite Weg folgt
         except psutil.AccessDenied, PermissionError, OSError:
-            print("  (Verbindungen nicht lesbar — nehme den zweiten Weg)")
+            print('  (Verbindungen nicht lesbar — nehme den zweiten Weg)')
         return pids
 
     @classmethod
@@ -101,13 +101,13 @@ class Serverneustart:
         Fassung gescheitert.
         """
         pids = set()
-        for prozess in psutil.process_iter(["pid", "cmdline"]):
+        for prozess in psutil.process_iter(['pid', 'cmdline']):
             try:
-                if not cls._ist_runserver(prozess.info["cmdline"] or []):
+                if not cls._ist_runserver(prozess.info['cmdline'] or []):
                     continue
                 if not cls._hier(prozess):
                     continue
-                pids.add(prozess.info["pid"])
+                pids.add(prozess.info['pid'])
             except psutil.NoSuchProcess, psutil.AccessDenied:
                 # stumm gewollt: Ein Prozess, den wir nicht lesen dürfen,
                 # ist keiner, den wir beenden dürfen.
@@ -124,8 +124,8 @@ class Serverneustart:
         Kommandozeile — und würde sich beenden. Deshalb müssen es eigene
         Argumente sein.
         """
-        manage = any(t.lower().endswith("manage.py") for t in teile)
-        server = any(t.lower().startswith("runserver") for t in teile)
+        manage = any(t.lower().endswith('manage.py') for t in teile)
+        server = any(t.lower().startswith('runserver') for t in teile)
         return manage and server
 
     @classmethod
@@ -173,21 +173,21 @@ class Serverneustart:
         pids = cls.am_port() | cls.im_projekt()
         pids = cls._mit_eltern(pids)
         if not pids:
-            print("Kein laufender Server auf Port %d gefunden." % cls.PORT)
+            print('Kein laufender Server auf Port %d gefunden.' % cls.PORT)
             return 0
         for pid in sorted(pids):
             try:
                 prozess = psutil.Process(pid)
-                print("  beende %d: %s" % (pid, " ".join(prozess.cmdline())))
+                print('  beende %d: %s' % (pid, ' '.join(prozess.cmdline())))
                 prozess.terminate()
             # stumm gewollt: Skript ohne Logger — die Meldung steht auf der Konsole
             except (psutil.NoSuchProcess, psutil.AccessDenied) as fehler:
-                print("  %d nicht beendbar: %s" % (pid, fehler))
+                print('  %d nicht beendbar: %s' % (pid, fehler))
         lebende = [psutil.Process(p) for p in pids if psutil.pid_exists(p)]
         _, uebrig = psutil.wait_procs(lebende, timeout=cls.ENDE_FRIST_S)
         for prozess in uebrig:
             try:
-                print("  %d reagiert nicht — harter Abbruch" % prozess.pid)
+                print('  %d reagiert nicht — harter Abbruch' % prozess.pid)
                 prozess.kill()
             # stumm gewollt: wer beim harten Abbruch schon weg ist, ist erledigt
             except psutil.NoSuchProcess, psutil.AccessDenied:
@@ -209,9 +209,9 @@ class Serverneustart:
 
     @classmethod
     def starten(cls):
-        kennzeichen = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        kennzeichen = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
         return subprocess.Popen(
-            [cls.python(), str(cls.WURZEL / "manage.py"), "runserver", str(cls.PORT)],
+            [cls.python(), str(cls.WURZEL / 'manage.py'), 'runserver', str(cls.PORT)],
             cwd=str(cls.WURZEL),
             creationflags=kennzeichen,
         )
@@ -224,7 +224,7 @@ class Serverneustart:
         kostet unter Windows Sekunden und täuscht eine Grundlast vor.)
         """
         try:
-            with socket.create_connection(("127.0.0.1", cls.PORT), frist_s):
+            with socket.create_connection(('127.0.0.1', cls.PORT), frist_s):
                 return True
         # stumm gewollt: keine Verbindung heisst der Server ist (noch) nicht da — genau die Frage
         except OSError:
@@ -244,22 +244,22 @@ class Serverneustart:
 
     @classmethod
     def lauf(cls):
-        print("Server neu starten — %s, Port %d" % (cls.WURZEL, cls.PORT))
+        print('Server neu starten — %s, Port %d' % (cls.WURZEL, cls.PORT))
         cls.beenden()
-        print("Starte mit %s …" % cls.python())
+        print('Starte mit %s …' % cls.python())
         prozess = cls.starten()
         if cls.warten():
-            print("Server läuft (PID %d), Port %d antwortet." % (prozess.pid, cls.PORT))
+            print('Server läuft (PID %d), Port %d antwortet.' % (prozess.pid, cls.PORT))
             return 0
         # KEINE ERFOLGSMELDUNG OHNE PRUEFUNG — genau daran ist die alte
         # Fassung gescheitert.
-        print("FEHLGESCHLAGEN: Port %d antwortet nach %d s nicht." % (cls.PORT, cls.START_FRIST_S))
+        print('FEHLGESCHLAGEN: Port %d antwortet nach %d s nicht.' % (cls.PORT, cls.START_FRIST_S))
         if prozess.poll() is not None:
-            print("Der Prozess ist bereits beendet (Rückgabewert %s)." % prozess.returncode)
-        print("Zum Nachsehen ohne Fenster:\n  %s manage.py runserver %d" % (cls.python(), cls.PORT))
+            print('Der Prozess ist bereits beendet (Rückgabewert %s).' % prozess.returncode)
+        print('Zum Nachsehen ohne Fenster:\n  %s manage.py runserver %d' % (cls.python(), cls.PORT))
         return 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     os.chdir(str(Serverneustart.WURZEL))
     raise SystemExit(Serverneustart.lauf())

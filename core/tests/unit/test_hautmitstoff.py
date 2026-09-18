@@ -14,7 +14,6 @@ T-Shirt). Ohne das T-Shirt in der Haut (die Sabotage) landet er rechts
 auf 0,102 — genau Edgars Bild.
 """
 
-import io
 import json
 import os
 import tempfile
@@ -22,11 +21,11 @@ import tempfile
 import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
-
+from GarmentCode.baufeineinstellung import Baufeineinstellung
 from GarmentCode.gemeinsamablage import Gemeinsamablage
 from GarmentCode.hautmitstoff import Hautmitstoff
 from GarmentCode.stoffnacharbeit import Stoffnacharbeit
-from GarmentCode.baufeineinstellung import Baufeineinstellung
+
 from ._sicher import Sicher
 
 
@@ -66,25 +65,25 @@ class HautmitstoffTest(SimpleTestCase):
     def test_stoffpunkte_haengen_hinter_der_haut_mit_deren_normale(self):
         haut = Hautmitstoff(self.koerper, self.flaechen)
         self.assertTrue(haut.leer)
-        self.assertTrue(haut.aufnehmen(self.shirt, "shirt"))
+        self.assertTrue(haut.aufnehmen(self.shirt, 'shirt'))
         punkte, normalen = haut.haut()
         self.assertEqual(len(punkte), len(self.koerper) + len(self.shirt))
         # Die Normale eines Shirt-Punkts ist die der Haut darunter: +y.
         oben = normalen[len(self.koerper) :]
         self.assertGreater(float(oben[:, 1].min()), 0.99)
-        self.assertEqual(haut.stuecke, ["shirt"])
-        self.assertFalse(haut.aufnehmen([[0, 0, 0]], "zu wenig"))
+        self.assertEqual(haut.stuecke, ['shirt'])
+        self.assertFalse(haut.aufnehmen([[0, 0, 0]], 'zu wenig'))
 
     def test_angelegt_wird_ueber_dem_getragenen_stueck(self):
         stoff, dreiecke = _gitter(0.115)
         haut = Hautmitstoff(self.koerper, self.flaechen)
-        haut.aufnehmen(self.shirt, "shirt")
+        haut.aufnehmen(self.shirt, 'shirt')
         neu, bilanz = haut.anleger(dreiecke).anlegen(stoff, 2.0)
         links = neu[stoff[:, 0] < -0.1, 1]
         rechts = neu[(stoff[:, 0] > 0.1) & (stoff[:, 0] < 0.3), 1]
         self.assertAlmostEqual(float(np.median(links)), 0.102, places=3)
         self.assertAlmostEqual(float(np.median(rechts)), 0.122, places=3)
-        self.assertGreater(bilanz["angelegt"], len(stoff) * 0.9)
+        self.assertGreater(bilanz['angelegt'], len(stoff) * 0.9)
 
     def test_ohne_das_stueck_landet_der_stoff_auf_der_haut(self):
         """Die Sabotage-Gegenprobe: genau Edgars Bild."""
@@ -128,25 +127,25 @@ class HautmitstoffTest(SimpleTestCase):
     def test_die_korrektur_holt_den_stoff_ueber_das_stueck(self):
         stoff, dreiecke = _gitter(0.115)
         haut = Hautmitstoff(self.koerper, self.flaechen)
-        haut.aufnehmen(self.shirt, "shirt")
+        haut.aufnehmen(self.shirt, 'shirt')
         neu, _ = haut.korrektur(dreiecke).anwenden(stoff, abstand_mm=1.0)
         rechts = neu[(stoff[:, 0] > 0.1) & (stoff[:, 0] < 0.3), 1]
         self.assertGreater(float(np.median(rechts)), 0.1205)
 
     def test_aus_rig_liest_die_punkte_und_uebergeht_muell(self):
-        ordner = tempfile.mkdtemp(dir=str(settings.BASE_DIR / "logs"))
-        gut = os.path.join(ordner, "a_rig.json")
-        kaputt = os.path.join(ordner, "b_rig.json")
+        ordner = tempfile.mkdtemp(dir=str(settings.BASE_DIR / 'logs'))
+        gut = os.path.join(ordner, 'a_rig.json')
+        kaputt = os.path.join(ordner, 'b_rig.json')
         try:
-            with open(gut, "w", encoding="utf-8") as datei:
-                json.dump({"punkte": self.shirt.tolist()}, datei)
-            with open(kaputt, "w", encoding="utf-8") as datei:
-                datei.write("kein json")
+            with open(gut, 'w', encoding='utf-8') as datei:
+                json.dump({'punkte': self.shirt.tolist()}, datei)
+            with open(kaputt, 'w', encoding='utf-8') as datei:
+                datei.write('kein json')
             haut = Hautmitstoff(self.koerper, self.flaechen)
             self.assertTrue(haut.aus_rig(gut))
             self.assertFalse(haut.aus_rig(kaputt))
-            self.assertFalse(haut.aus_rig(os.path.join(ordner, "fehlt_rig.json")))
-            self.assertEqual(haut.stuecke, ["a_rig.json"])
+            self.assertFalse(haut.aus_rig(os.path.join(ordner, 'fehlt_rig.json')))
+            self.assertEqual(haut.stuecke, ['a_rig.json'])
         finally:
             for pfad in (gut, kaputt):
                 if os.path.exists(pfad):
@@ -161,34 +160,34 @@ class NacharbeitTest(SimpleTestCase):
         koerper, flaechen = _kasten()
         shirt, _ = _gitter(0.12, x0=0.0, x1=0.35)
         stoff, dreiecke = _gitter(0.115)
-        ordner = tempfile.mkdtemp(dir=str(settings.BASE_DIR / "logs"))
-        pfad = os.path.join(ordner, "shirt_rig.json")
+        ordner = tempfile.mkdtemp(dir=str(settings.BASE_DIR / 'logs'))
+        pfad = os.path.join(ordner, 'shirt_rig.json')
         try:
-            with open(pfad, "w", encoding="utf-8") as datei:
-                json.dump({"punkte": shirt.tolist()}, datei)
+            with open(pfad, 'w', encoding='utf-8') as datei:
+                json.dump({'punkte': shirt.tolist()}, datei)
             arbeit = Stoffnacharbeit(koerper, flaechen, dreiecke, getragen=[pfad])
             self.assertIsNotNone(arbeit.haut)
             neu, _, anlage = arbeit.anwenden(stoff, anliegen_mm=2.0)
-            self.assertEqual(anlage["ueber_getragene"], ["shirt_rig.json"])
+            self.assertEqual(anlage['ueber_getragene'], ['shirt_rig.json'])
             self.assertAlmostEqual(
                 float(np.median(neu[(stoff[:, 0] > 0.1) & (stoff[:, 0] < 0.3), 1])), 0.122, places=3
             )
-            self.assertEqual(len(Sicher.wert(arbeit.normalen, "Normalen")), len(stoff))
+            self.assertEqual(len(Sicher.wert(arbeit.normalen, 'Normalen')), len(stoff))
             # ohne getragene Stuecke: der bisherige Weg, Haut allein
             ohne = Stoffnacharbeit(koerper, flaechen, dreiecke)
             self.assertIsNone(ohne.haut)
             self.assertIsNone(
-                Stoffnacharbeit(koerper, flaechen, dreiecke, getragen=["/gibt/es/nicht_rig.json"]).haut
+                Stoffnacharbeit(koerper, flaechen, dreiecke, getragen=['/gibt/es/nicht_rig.json']).haut
             )
         finally:
             os.remove(pfad)
             os.rmdir(ordner)
 
     def test_der_einzelbau_reicht_getragen_bis_zur_nacharbeit(self):
-        quelle = io.open(settings.ASSETS_ROOT / "GarmentCode" / "drapierdienst.py", encoding="utf-8").read()
-        self.assertIn("Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)", quelle)
-        lauf = quelle.index("def lauf(")
-        self.assertIn("getragen=getragen", quelle[lauf : quelle.index("def _variantenordner", lauf)])
+        quelle = open(settings.ASSETS_ROOT / 'GarmentCode' / 'drapierdienst.py', encoding='utf-8').read()
+        self.assertIn('Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', quelle)
+        lauf = quelle.index('def lauf(')
+        self.assertIn('getragen=getragen', quelle[lauf : quelle.index('def _variantenordner', lauf)])
 
 
 class GemeinsamTest(SimpleTestCase):
@@ -198,20 +197,20 @@ class GemeinsamTest(SimpleTestCase):
         koerper, flaechen = _kasten()
         shirt, _ = _gitter(0.12, x0=0.0, x1=0.35)
         stoff, dreiecke = _gitter(0.115)
-        schnitt = {"vorlage": "hose", "fein": Baufeineinstellung(anliegen_mm=2.0)}
+        schnitt = {'vorlage': 'hose', 'fein': Baufeineinstellung(anliegen_mm=2.0)}
         neu, anlage, normalen = Gemeinsamablage._anlegen(
-            schnitt, stoff, dreiecke, (koerper, flaechen), {"shirt": shirt}
+            schnitt, stoff, dreiecke, (koerper, flaechen), {'shirt': shirt}
         )
-        self.assertEqual(anlage["ueber_getragene"], ["shirt"])
+        self.assertEqual(anlage['ueber_getragene'], ['shirt'])
         self.assertAlmostEqual(
             float(np.median(neu[(stoff[:, 0] > 0.1) & (stoff[:, 0] < 0.3), 1])), 0.122, places=3
         )
-        self.assertEqual(len(Sicher.wert(normalen, "Normalen")), len(stoff))
+        self.assertEqual(len(Sicher.wert(normalen, 'Normalen')), len(stoff))
         # `_andere` liefert die korrigierten Punkte aller ANDEREN Teile
         korrigiert = np.arange(30, dtype=float).reshape(10, 3)
-        teile = {"hose": {"indizes": [0, 1]}, "shirt": {"indizes": [2, 3, 4]}, "leer": {"indizes": []}}
-        andere = Gemeinsamablage._andere(teile, korrigiert, "hose")
-        self.assertEqual(sorted(andere), ["shirt"])
-        self.assertEqual(andere["shirt"].tolist(), korrigiert[2:5].tolist())
-        quelle = io.open(settings.ASSETS_ROOT / "GarmentCode" / "gemeinsamablage.py", encoding="utf-8").read()
+        teile = {'hose': {'indizes': [0, 1]}, 'shirt': {'indizes': [2, 3, 4]}, 'leer': {'indizes': []}}
+        andere = Gemeinsamablage._andere(teile, korrigiert, 'hose')
+        self.assertEqual(sorted(andere), ['shirt'])
+        self.assertEqual(andere['shirt'].tolist(), korrigiert[2:5].tolist())
+        quelle = open(settings.ASSETS_ROOT / 'GarmentCode' / 'gemeinsamablage.py', encoding='utf-8').read()
         self.assertIn("cls._andere(teile, korrigiert, schnitt.get('teil'))", quelle)

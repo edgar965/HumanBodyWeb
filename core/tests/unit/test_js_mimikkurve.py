@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "mimikkurve.js")
+MODUL = Jsmodul('bvh_studio', 'mimikkurve.js')
 
 SKRIPT = """
 const { Mimikkurve: K } = await import(MODUL);
@@ -55,4 +55,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class MimikkurveTest(SimpleTestCase):
     def test_interpolation_und_die_letzte_bleibt(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

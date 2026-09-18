@@ -14,12 +14,12 @@ Gesichtsspuren die Antwort trägt.
 import json
 import os
 
-from django.test import TestCase, Client
+from django.test import Client, TestCase
+from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
 
 from core.api import retarget
 from core.models import BVHJob
 from core.tests.unit._pruefablage import Pruefablage
-from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
 
 Q = [0.0, 0.0, 0.0, 1.0]
 V4 = [0.2, 0.0, 0.0, 0.98]  # eine deutlich gedrehte v4-Gesichtsspur
@@ -32,10 +32,10 @@ class Retargetattrappe:
         self.pfad = pfad
 
     def holen(self):
-        if "face" in os.path.basename(self.pfad):
-            tracks = {"DEF-jaw": V4 * 2, "DEF-lip.T.L": V4 * 2, "DEF-f_index.01.L": Q * 2}
+        if 'face' in os.path.basename(self.pfad):
+            tracks = {'DEF-jaw': V4 * 2, 'DEF-lip.T.L': V4 * 2, 'DEF-f_index.01.L': Q * 2}
         else:
-            tracks = {"DEF-spine": Q * 2, "DEF-jaw": Q * 2}
+            tracks = {'DEF-spine': Q * 2, 'DEF-jaw': Q * 2}
         return Bewegungsspuren(
             duration=1 / 15.0,
             times=[0.0, 1 / 30.0],
@@ -46,7 +46,7 @@ class Retargetattrappe:
 
 
 class DieGesichtsquelle(TestCase):
-    ADRESSE = "/api/character/retarget-job-merge/%s/"
+    ADRESSE = '/api/character/retarget-job-merge/%s/'
 
     def setUp(self):
         self._alt = retarget.Retargetdaten
@@ -57,63 +57,65 @@ class DieGesichtsquelle(TestCase):
         retarget.Retargetdaten = self._alt
 
     def _antwort(self, ordner, face_source, mit_ausdruecken=False):
-        koerper = os.path.join(ordner, "body.bvh")
-        gesicht = os.path.join(ordner, "v4_face.bvh")
+        koerper = os.path.join(ordner, 'body.bvh')
+        gesicht = os.path.join(ordner, 'v4_face.bvh')
         for pfad in (koerper, gesicht):
-            open(pfad, "w").close()
+            open(pfad, 'w').close()
         if mit_ausdruecken:
-            with open(os.path.join(ordner, "v4_face_blendshapes.json"), "w") as f:
+            with open(os.path.join(ordner, 'v4_face_blendshapes.json'), 'w') as f:
                 json.dump(
                     {
-                        "fps": 30.0,
-                        "frame_count": 2,
-                        "expression_frames": [[0.0] * 10] * 2,
-                        "jaw_frames": [[0.4, 0.0, 0.0]] * 2,
+                        'fps': 30.0,
+                        'frame_count': 2,
+                        'expression_frames': [[0.0] * 10] * 2,
+                        'jaw_frames': [[0.4, 0.0, 0.0]] * 2,
                     },
                     f,
                 )
         job = BVHJob.objects.create(
-            name="probe.mp4",
-            pipeline="hybrid_gem",
-            status="complete",
+            name='probe.mp4',
+            pipeline='hybrid_gem',
+            status='complete',
             bvh_file=koerper,
             bvh_file_face=gesicht,
-            pipeline_params={"face_source": face_source},
+            pipeline_params={'face_source': face_source},
         )
         antwort = self.client.get(self.ADRESSE % job.id)
         self.assertEqual(antwort.status_code, 200)
-        return json.loads(antwort.content)["tracks"]
+        return json.loads(antwort.content)['tracks']
 
     def test_v4_laesst_die_rohen_gesichtsknochen_stehen(self):
         with Pruefablage.ordner() as ordner:
-            tracks = self._antwort(ordner, "v4")
-        self.assertEqual(tracks["DEF-jaw"], V4 * 2)
-        self.assertEqual(tracks["DEF-lip.T.L"], V4 * 2)
+            tracks = self._antwort(ordner, 'v4')
+        self.assertEqual(tracks['DEF-jaw'], V4 * 2)
+        self.assertEqual(tracks['DEF-lip.T.L'], V4 * 2)
 
     def test_keine_quelle_heisst_neutrales_gesicht(self):
         with Pruefablage.ordner() as ordner:
-            tracks = self._antwort(ordner, "none")
-        self.assertNotIn("DEF-jaw", tracks)
-        self.assertNotIn("DEF-lip.T.L", tracks)
-        self.assertIn("DEF-f_index.01.L", tracks, "die v4-Hände bleiben")
+            tracks = self._antwort(ordner, 'none')
+        self.assertNotIn('DEF-jaw', tracks)
+        self.assertNotIn('DEF-lip.T.L', tracks)
+        self.assertIn('DEF-f_index.01.L', tracks, 'die v4-Hände bleiben')
 
     def test_smplest_x_ersetzt_die_v4_knochen_durch_die_ausdruecke(self):
         with Pruefablage.ordner() as ordner:
-            tracks = self._antwort(ordner, "smplest_x", mit_ausdruecken=True)
-        self.assertNotEqual(tracks["DEF-jaw"], V4 * 2)
+            tracks = self._antwort(ordner, 'smplest_x', mit_ausdruecken=True)
+        self.assertNotEqual(tracks['DEF-jaw'], V4 * 2)
         # Seit dem Abend des 12.09.2026 liegt die Spur auf der Ruhelage des
         # DEF-Kiefers (89°); der Ausdruck ist das Delta dazu: 0,4 rad um X.
         import math
+
         import numpy as np
-        from core.dienste.skelettgeometrie import Skelettgeometrie
         from humanbody_core.quaternion import Quat
 
-        ruhe = Skelettgeometrie.holen().bones["DEF-jaw"].rest_local_quat
-        delta = Quat.mul(Quat.inv(ruhe), np.asarray(tracks["DEF-jaw"][:4]))
+        from core.dienste.skelettgeometrie import Skelettgeometrie
+
+        ruhe = Skelettgeometrie.holen().bones['DEF-jaw'].rest_local_quat
+        delta = Quat.mul(Quat.inv(ruhe), np.asarray(tracks['DEF-jaw'][:4]))
         self.assertAlmostEqual(2.0 * math.asin(delta[0]), 0.4, places=3)
-        self.assertIn("DEF-brow.T.L", tracks)
+        self.assertIn('DEF-brow.T.L', tracks)
 
     def test_smplest_x_ohne_datei_bleibt_neutral(self):
         with Pruefablage.ordner() as ordner:
-            tracks = self._antwort(ordner, "smplest_x")
-        self.assertNotIn("DEF-jaw", tracks)
+            tracks = self._antwort(ordner, 'smplest_x')
+        self.assertNotIn('DEF-jaw', tracks)

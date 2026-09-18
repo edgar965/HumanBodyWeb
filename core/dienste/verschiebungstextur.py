@@ -15,18 +15,17 @@ from pathlib import Path
 
 import numpy as np
 from django.conf import settings
-
 from humanbody_core.hautverschiebung import Hautverschiebung
 
 from .lippenmaske import Lippenmaske
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Verschiebungstextur"]
+__all__ = ['Verschiebungstextur']
 
 
 class Verschiebungstextur:
-    ORDNER = Path(settings.MEDIA_ROOT) / "hauttexturen"
+    ORDNER = Path(settings.MEDIA_ROOT) / 'hauttexturen'
     #: Rundung der Reglerwerte (−1..1) für Dateiname und Speicher.
     RASTER = 0.05
     STAERKE = Hautverschiebung.STAERKE
@@ -38,7 +37,7 @@ class Verschiebungstextur:
 
     @staticmethod
     def geschlecht(wert):
-        return "male" if str(wert).lower().startswith("m") else "female"
+        return 'male' if str(wert).lower().startswith('m') else 'female'
 
     @classmethod
     def runden(cls, wert):
@@ -56,11 +55,11 @@ class Verschiebungstextur:
         if geschlecht not in cls._datenbilder:
             from PIL import Image
 
-            pfad = Lippenmaske.ordner() / ("human_%s_displacement.png" % geschlecht)
+            pfad = Lippenmaske.ordner() / ('human_%s_displacement.png' % geschlecht)
             if not pfad.is_file():
                 raise FileNotFoundError(str(pfad))
             with Image.open(pfad) as bild:
-                roh = np.asarray(bild.convert("RGBA"), dtype=np.float32) / 255.0
+                roh = np.asarray(bild.convert('RGBA'), dtype=np.float32) / 255.0
             cls._datenbilder[geschlecht] = roh
         return cls._datenbilder[geschlecht]
 
@@ -78,7 +77,7 @@ class Verschiebungstextur:
 
     @classmethod
     def dateiname(cls, geschlecht, alter, tonus, masse):
-        return "verschiebung_%s_a%+.2f_t%+.2f_m%+.2f.png" % (
+        return 'verschiebung_%s_a%+.2f_t%+.2f_m%+.2f.png' % (
             cls.geschlecht(geschlecht),
             cls.runden(alter),
             cls.runden(tonus),
@@ -95,8 +94,8 @@ class Verschiebungstextur:
 
         werte = cls.feld(geschlecht, alter, tonus, masse)
         cls.ORDNER.mkdir(parents=True, exist_ok=True)
-        vorlaeufig = pfad.with_suffix(".neu.png")
-        Image.fromarray(np.clip(werte * 255.0 + 0.5, 0, 255).astype(np.uint8), "L").save(vorlaeufig, "PNG")
+        vorlaeufig = pfad.with_suffix('.neu.png')
+        Image.fromarray(np.clip(werte * 255.0 + 0.5, 0, 255).astype(np.uint8), 'L').save(vorlaeufig, 'PNG')
         vorlaeufig.replace(pfad)
-        logger.info("Verschiebungstextur geschrieben: %s", pfad.name)
+        logger.info('Verschiebungstextur geschrieben: %s', pfad.name)
         return pfad

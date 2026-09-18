@@ -18,7 +18,7 @@ Fortschritt zeigt dann Text statt Anteil.
 
 import logging
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Videolaenge:
@@ -35,5 +35,5 @@ class Videolaenge:
             film.release()
             return anzahl if anzahl > 0 else 0
         except Exception:  # noqa: BLE001
-            logger.debug("Bildanzahl von %s nicht ermittelbar", pfad, exc_info=True)
+            logger.debug('Bildanzahl von %s nicht ermittelbar', pfad, exc_info=True)
             return 0

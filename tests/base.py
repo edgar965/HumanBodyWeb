@@ -32,7 +32,7 @@ class Netzruf:
     FRIST_S = 15
 
     @classmethod
-    def senden(cls, pfad, method="GET", data=None, files=None, timeout=None):
+    def senden(cls, pfad, method='GET', data=None, files=None, timeout=None):
         """Anfrage ueber den gerade gueltigen Kanal -> `(Status, Woerterbuch)`."""
         return Kanal.aktueller().senden(
             pfad, method=method, data=data, files=files, timeout=cls.FRIST_S if timeout is None else timeout
@@ -42,7 +42,7 @@ class Netzruf:
 class TestCase:
     """Ein einzelner Fall. Jedes fn liefert einen Bool oder (bool, detail)."""
 
-    def __init__(self, name, fn, description=""):
+    def __init__(self, name, fn, description=''):
         self.name = name
         self.fn = fn
         self.description = description
@@ -62,24 +62,24 @@ class TestCase:
 class TestCategory:
     """Basis-Klasse für Kategorien. Unterklassen definieren test_*-Methoden."""
 
-    name = "Unbenannte Kategorie"
-    description = ""
+    name = 'Unbenannte Kategorie'
+    description = ''
 
     @classmethod
     def cases(cls):
         """Sammelt alle test_*-Methoden als `TestCase`-Objekte."""
         faelle = []
         for name in dir(cls):
-            if not name.startswith("test_"):
+            if not name.startswith('test_'):
                 continue
             fn = getattr(cls, name)
             if not callable(fn):
                 continue
             faelle.append(
                 TestCase(
-                    name=name.replace("test_", "").replace("_", " ").title(),
+                    name=name.replace('test_', '').replace('_', ' ').title(),
                     fn=fn,
-                    description=fn.__doc__.strip() if fn.__doc__ else "",
+                    description=fn.__doc__.strip() if fn.__doc__ else '',
                 )
             )
         return faelle

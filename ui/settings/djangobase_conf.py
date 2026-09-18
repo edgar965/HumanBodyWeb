@@ -10,11 +10,11 @@ Die Kommentare im Wörterbuch bleiben, wo sie sind: Jede der Listen hat einen
 Grund, und der steht neben dem Eintrag, nicht in einer Datei daneben.
 """
 
-from .protokoll import LOG_DIR
+from ..review import REVIEW_BEREICHE
 from .djangobase_menue import EINSTELLUNGEN_EXTRA, HILFE_EXTRA, MENUE
 from .djangobase_tests import TEST_BEFEHLE, TEST_BEREICHE
+from .protokoll import LOG_DIR
 from .versionsliste import MANUELLE_FASSUNGEN
-from ..review import REVIEW_BEREICHE
 from .wurzeln import ASSETS_ROOT, BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VERSION, VIDEOTOBVH_ROOT
 
 # djangoBase — wiederverwendbare Infra (Sidebar-Layout, Hilfe: Logs/Versionen/
@@ -22,22 +22,22 @@ from .wurzeln import ASSETS_ROOT, BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VERSION,
 # Repos mit absolutem Pfad + leerem Slug ("") -> djangoBase leitet den GitHub-
 # Slug aus dem lokalen origin-Remote ab (keine Slugs hardcodiert).
 DJANGOBASE = {
-    "titel": "HumanBody",
+    'titel': 'HumanBody',
     # Die aktuelle Version steht immer im UI (Projektkonvention) — djangoBase
     # zeigt sie unten in der Seitenleiste. Sie kam bis zum 28.08.2026 nicht
     # hier an: `wurzeln.VERSION` war gesetzt, die Sidebar zeigte trotzdem
     # nichts (Konformitätsprüfung `test_version_ist_gesetzt`).
-    "version": VERSION,
+    'version': VERSION,
     # Hilfe -> Versionen liest die HISTORIE aus den Commit-Betreffs, nicht aus
     # `VERSION`. Was dort ohne Marke steht, gilt als ungebumpt und bekommt das
     # Etikett der vermuteten naechsten Fassung (`v0.58-dev` bei laufender
     # 0.57). Diese Liste traegt nach, was ein Betreff versaeumt hat — Warum und
     # Messwerte in `versionsliste.py`.
-    "manual_versions": MANUELLE_FASSUNGEN,
+    'manual_versions': MANUELLE_FASSUNGEN,
     # Ziehgriff an der Seitenleiste. djangoBase bringt ihn fertig mit; ohne
     # den Schalter ließ sich die Leiste nicht in der Breite ziehen.
-    "resizable_sidebar": True,
-    "logo_icon": "bi-person-walking",
+    'resizable_sidebar': True,
+    'logo_icon': 'bi-person-walking',
     # Das Tab-/Lesezeichen-Symbol. `logo_icon` ist NUR das Sidebar-Zeichen
     # (Bootstrap-Icon-Schrift) — der Browser braucht eine echte Bilddatei, sonst
     # zeigt er sein graues Ersatzblatt. djangoBase haengt daraus in _shell.html
@@ -45,7 +45,7 @@ DJANGOBASE = {
     # `?v=`-Anhaengung: `{% static %}` kodiert das Fragezeichen zu %3F. Chrome
     # merkt sich Symbole je Seiten-URL sehr lange — auch das FEHLENDE; nur eine
     # neue Adresse holt es sicher neu. Bei Aenderungen am Bild hochzaehlen.
-    "favicon": "img/favicon-v1.svg",
+    'favicon': 'img/favicon-v1.svg',
     # Hilfe -> Skills: Ordner, die die Analysewerkzeuge auslassen. Ohne diese
     # Liste kommen die meisten Befunde aus fremdem Referenzcode (CharMorph,
     # MB-Lab) und aus alten Staenden — die eigenen gehen darin unter.
@@ -82,22 +82,22 @@ DJANGOBASE = {
     # einem anderen Fremdformat zu; sie sehen sich deshalb notwendig aehnlich.
     # `doppelcode` meldete daraus 20 von 68 Befunden — an Dateien, die unter
     # `data/` liegen und laut CLAUDE.md ohnehin nicht angefasst werden duerfen.
-    "skills_ignorieren": [
-        "TestCharakter",
-        "alt",
-        "_merge_tmp2",
-        "Backup",
-        "ProjektTemp",
-        "debug",
-        "tools",
-        "vendor",
-        "theatre",
-        "theatre-studio",
-        "skeleton_presets",
-        "idol",
-        "sith",
-        "texformer",
-        "textured_smplx",
+    'skills_ignorieren': [
+        'TestCharakter',
+        'alt',
+        '_merge_tmp2',
+        'Backup',
+        'ProjektTemp',
+        'debug',
+        'tools',
+        'vendor',
+        'theatre',
+        'theatre-studio',
+        'skeleton_presets',
+        'idol',
+        'sith',
+        'texformer',
+        'textured_smplx',
     ],
     # WELCHE MODULFUNKTIONEN EIN FREMDER RAHMEN BEIM NAMEN RUFT
     # ========================================================
@@ -112,7 +112,7 @@ DJANGOBASE = {
     # Dieselbe Fehlerklasse wie „`Command` 23x vergeben" — ein Befund, der
     # zum Kaputtmachen auffordert. Django-Einstellungen koennen von Blender
     # nichts wissen; deshalb steht die Angabe hier.
-    "rahmenfunktionen": ["register", "unregister"],
+    'rahmenfunktionen': ['register', 'unregister'],
     # WELCHE VERZEICHNISSE NUR GELESEN WERDEN DUERFEN (Werkzeug `nur-lesen`)
     # ======================================================================
     # Aus CLAUDE.md: „NEVER write to `HumanBody/data/` or
@@ -131,26 +131,26 @@ DJANGOBASE = {
     # Ordner ist gerade KEIN Nur-Lesen-Bereich. Die Namen bleiben trotzdem
     # in `ausser` stehen: `HumanBodyBlender/data` fuehrt eigene Ordner
     # gleichen Namens.
-    "daten_nur_lesen": {
-        "wurzeln": ["HumanBody/data", "HumanBodyBlender/data"],
-        "ausser": [
-            "models",
-            "animations",
-            "studio_projects",
-            "assetsInstance",
-            "photoTo3D",
-            "poseData",
-            "garment_library",
-            "theatre_presets",
-            "hairstyles",
-            "output",
-            "tmp",
-            "TestCharakter",
-            "charmorph_data",
-            "music",
-            "test",
+    'daten_nur_lesen': {
+        'wurzeln': ['HumanBody/data', 'HumanBodyBlender/data'],
+        'ausser': [
+            'models',
+            'animations',
+            'studio_projects',
+            'assetsInstance',
+            'photoTo3D',
+            'poseData',
+            'garment_library',
+            'theatre_presets',
+            'hairstyles',
+            'output',
+            'tmp',
+            'TestCharakter',
+            'charmorph_data',
+            'music',
+            'test',
         ],
-        "einstellungen": ["HUMANBODY_DATA_DIR", "HUMANBODY_BVH_DIR", "BLENDER_BVH_DIR"],
+        'einstellungen': ['HUMANBODY_DATA_DIR', 'HUMANBODY_BVH_DIR', 'BLENDER_BVH_DIR'],
     },
     # Hilfe -> Language Server: `humanbody_core` liegt NICHT im Projekt,
     # sondern nebenan in HumanBody, und kommt ueber `sys.path.insert` in
@@ -172,49 +172,49 @@ DJANGOBASE = {
     # MakeHumans `lib` (`targets`) — 20 weitere Importe, keiner ein Fehler.
     # `wrappers` VOR `GarmentCode`: beide fuehren ein `koerpermasse.py`, und die
     # Tests der Wrapper meinen ihres (15 Meldungen bei falscher Reihenfolge).
-    "ls_extra_pfade": [
+    'ls_extra_pfade': [
         HUMANBODY_ROOT,
         TOOLS_ROOT,
         ASSETS_ROOT,
-        ASSETS_ROOT / "assetCreator",
-        VIDEOTOBVH_ROOT / "wrappers",
-        VIDEOTOBVH_ROOT / "wrappers" / "smpl2bvh",
-        ASSETS_ROOT / "GarmentCode",
-        ASSETS_ROOT / "GarmentCode" / "upstream",
-        VIDEOTOBVH_ROOT / "MocapNET_v4",
-        TOOLS_ROOT / "VelocitySkinning_Python",
-        TOOLS_ROOT / "MakeHuman" / "makehuman" / "lib",
-        BASE_DIR / "TheatreJS" / "ModelPhysik",
-        BASE_DIR / "TheatreJS" / "ModelPhysik" / "proben",
-        BASE_DIR / "TheatreJS" / "kleiderPhysik",
+        ASSETS_ROOT / 'assetCreator',
+        VIDEOTOBVH_ROOT / 'wrappers',
+        VIDEOTOBVH_ROOT / 'wrappers' / 'smpl2bvh',
+        ASSETS_ROOT / 'GarmentCode',
+        ASSETS_ROOT / 'GarmentCode' / 'upstream',
+        VIDEOTOBVH_ROOT / 'MocapNET_v4',
+        TOOLS_ROOT / 'VelocitySkinning_Python',
+        TOOLS_ROOT / 'MakeHuman' / 'makehuman' / 'lib',
+        BASE_DIR / 'TheatreJS' / 'ModelPhysik',
+        BASE_DIR / 'TheatreJS' / 'ModelPhysik' / 'proben',
+        BASE_DIR / 'TheatreJS' / 'kleiderPhysik',
     ],
-    "farben": {
-        "sidebar_bg": "#1a1a2e",  # = --bg-secondary (style.css)
-        "sidebar_light": "#16213e",  # = --bg-card  (Hover/Active-Fill)
-        "sidebar_dark": "#0f0f1a",  # = --bg-primary (Topbar)
+    'farben': {
+        'sidebar_bg': '#1a1a2e',  # = --bg-secondary (style.css)
+        'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)
+        'sidebar_dark': '#0f0f1a',  # = --bg-primary (Topbar)
     },
     # 5-Modi-Theme-Palette (slug, label, Akzent-Punkt im Dropdown). Aktiviert
     # den Theme-Switcher im Topbar (base_app.html). Die Farben pro Modus liegen
     # in static/css/theme.css (body[data-theme="X"]) — sie überschreiben die
     # gleichnamigen Variablen aus style.css:root, sodass ALLE Seiten umfärben.
-    "theme_modes": [
-        ("dark", "Dark", "#e94560"),  # HumanBody-Akzent
-        ("light", "Light", "#1976d2"),
-        ("cyber", "Cyber", "#00f0ff"),
-        ("forest", "Forest", "#4caf50"),
-        ("sunset", "Sunset", "#ff7a45"),
+    'theme_modes': [
+        ('dark', 'Dark', '#e94560'),  # HumanBody-Akzent
+        ('light', 'Light', '#1976d2'),
+        ('cyber', 'Cyber', '#00f0ff'),
+        ('forest', 'Forest', '#4caf50'),
+        ('sunset', 'Sunset', '#ff7a45'),
     ],
-    "theme_default": "dark",
+    'theme_default': 'dark',
     # theme.css auch auf die djangoBase-eigenen Seiten (Hilfe/Einstellungen)
     # laden, damit der Theme-Switch dort genauso wirkt (?v={{ JS_VERSION }}).
-    "extra_css": ["css/theme.css"],
-    "log_verzeichnis": LOG_DIR,
-    "log_sources": [
-        ("all", "Alle Quellen — chronologisch", None, None),
-        ("django", "Django-Server", "django.log", None),
-        ("core", "Character / API", "core.log", None),
-        ("pipeline", "Video-to-BVH", "pipeline.log", None),
-        ("client", "Client (JS)", "client.log", None),
+    'extra_css': ['css/theme.css'],
+    'log_verzeichnis': LOG_DIR,
+    'log_sources': [
+        ('all', 'Alle Quellen — chronologisch', None, None),
+        ('django', 'Django-Server', 'django.log', None),
+        ('core', 'Character / API', 'core.log', None),
+        ('pipeline', 'Video-to-BVH', 'pipeline.log', None),
+        ('client', 'Client (JS)', 'client.log', None),
         # 'error.log', NICHT 'errors.log' (Befund 30.08.2026). Seit der
         # Umstellung auf dblog.config am 28.08.2026 schreibt der Handler
         # 'error_file' nach error.log; hier stand weiter der alte Name.
@@ -223,66 +223,66 @@ DJANGOBASE = {
         # 317 Eintraege des laufenden Tages in KEINER Quelle standen.
         # Eine Fehlerseite, die alte Fehler zeigt, ist schlimmer als eine
         # leere - sie sieht gefuellt aus.
-        ("errors", "Fehler (aggregiert)", "error.log", None),
+        ('errors', 'Fehler (aggregiert)', 'error.log', None),
     ],
-    "version_pakete": ["django", "channels", "daphne", "numpy", "scipy", "trimesh"],
-    "repos": [
-        ("HumanBodyWeb", "", str(BASE_DIR)),
-        ("HumanBody", "", str(HUMANBODY_ROOT)),
-        ("HumanBodyBlender", "", str(TOOLS_ROOT / "HumanBodyBlender")),
-        ("VideoToBVH", "", str(VIDEOTOBVH_ROOT)),
+    'version_pakete': ['django', 'channels', 'daphne', 'numpy', 'scipy', 'trimesh'],
+    'repos': [
+        ('HumanBodyWeb', '', str(BASE_DIR)),
+        ('HumanBody', '', str(HUMANBODY_ROOT)),
+        ('HumanBodyBlender', '', str(TOOLS_ROOT / 'HumanBodyBlender')),
+        ('VideoToBVH', '', str(VIDEOTOBVH_ROOT)),
     ],
-    "test_befehle": TEST_BEFEHLE,
-    "tests_djangobase_sichtbar": True,
-    "test_bereiche": TEST_BEREICHE,
+    'test_befehle': TEST_BEFEHLE,
+    'tests_djangobase_sichtbar': True,
+    'test_bereiche': TEST_BEREICHE,
     # `TestCategory` (tests/base.py) erbt von nichts — `test_pruefcode` hielt
     # die 16 Kategorien deshalb für verwaist („unittest führt sie NIE aus").
     # Tatsächlich macht `core/tests/ui/test_oberflaeche.py` aus jeder eine
     # `django.test.TestCase`-Klasse; die 127 Fälle laufen über die Art `ui`
     # mit (Befund 27.08.2026).
-    "test_basen": ["TestCategory"],
+    'test_basen': ['TestCategory'],
     # ----- Hilfe -> Werkzeuge: wo die Proben liegen ------------------------
     # Die Gegenproben (Seitenaufrufe, Cache-Header, LOGGING-Gleichheit,
     # Szenenwerte im Browser) liegen unter `A:/3DTools/Docu/umbau` — eine
     # Ebene ÜBER dem Repo `HumanBodyWeb`, weil sich vier Repos diesen
     # Arbeitsplatz teilen und die Proben über mehrere davon laufen.
-    "proben_ordner": [str(TOOLS_ROOT / "Docu" / "umbau")],
+    'proben_ordner': [str(TOOLS_ROOT / 'Docu' / 'umbau')],
     # ----- Hilfe -> Review: Code-Review im Gespräch mit einem zweiten Modell --
     # Nemotron ist der starke, kostenpflichtige Partner (~0,6 $/Mio. Token, ein
     # Code-Paket kostet unter einem Cent); Gemma läuft lokal und schickt nichts
     # aus dem Haus, findet dafür deutlich weniger.
-    "review_partner": [
+    'review_partner': [
         {
-            "slug": "nemotron",
-            "name": "Nemotron 550B",
-            "ziel": "online",
-            "modell": "nvidia/nemotron-3-ultra-550b-a55b",
+            'slug': 'nemotron',
+            'name': 'Nemotron 550B',
+            'ziel': 'online',
+            'modell': 'nvidia/nemotron-3-ultra-550b-a55b',
         },
         {
-            "slug": "gemma",
-            "name": "Gemma 4 26B (lokal)",
-            "ziel": "lokal",
-            "modell": "gemma4:26b-a4b-it-qat",
-            "num_ctx": 32768,
+            'slug': 'gemma',
+            'name': 'Gemma 4 26B (lokal)',
+            'ziel': 'lokal',
+            'modell': 'gemma4:26b-a4b-it-qat',
+            'num_ctx': 32768,
         },
         {
-            "slug": "qwen",
-            "name": "Qwen 3.6 27B (lokal)",
-            "ziel": "lokal",
-            "modell": "qwen3.6:27b",
-            "num_ctx": 32768,
+            'slug': 'qwen',
+            'name': 'Qwen 3.6 27B (lokal)',
+            'ziel': 'lokal',
+            'modell': 'qwen3.6:27b',
+            'num_ctx': 32768,
         },
     ],
     # Die Dateien liegen teils im Django-Teil, teils in der Kern-Bibliothek
     # daneben — deshalb ist die Wurzel das gemeinsame Arbeitsverzeichnis.
-    "review_wurzel": str(TOOLS_ROOT),
-    "review_bereiche": REVIEW_BEREICHE,
-    "menu": MENUE,
-    "einstellungen_menu": True,
-    "hilfe_menu": True,
-    "benutzer_verwaltung": False,
-    "einstellungen_extra": EINSTELLUNGEN_EXTRA,
+    'review_wurzel': str(TOOLS_ROOT),
+    'review_bereiche': REVIEW_BEREICHE,
+    'menu': MENUE,
+    'einstellungen_menu': True,
+    'hilfe_menu': True,
+    'benutzer_verwaltung': False,
+    'einstellungen_extra': EINSTELLUNGEN_EXTRA,
     # Hilfe -> Kleidung (Allgemein + GarmentCode). Siehe djangobase_menue.py.
-    "hilfe_extra": HILFE_EXTRA,
-    "zugriff": "none",  # HumanBodyWeb hat (noch) keine Auth -> Hilfe offen
+    'hilfe_extra': HILFE_EXTRA,
+    'zugriff': 'none',  # HumanBodyWeb hat (noch) keine Auth -> Hilfe offen
 }

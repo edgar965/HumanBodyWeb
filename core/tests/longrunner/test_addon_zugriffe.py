@@ -62,8 +62,8 @@ class KeinZugriffAufEineMethode(unittest.TestCase):
         schlecht = []
         for pfad, baum in gelesen:
             for zeile, ausdruck in Methodenzugriffe.auf_methoden(baum, methoden):
-                schlecht.append("%s:%d %s" % (pfad.relative_to(TOOLS).as_posix(), zeile, ausdruck))
-        self.assertEqual(schlecht, [], "Zugriff auf ein Methodenattribut: %s" % schlecht)
+                schlecht.append('%s:%d %s' % (pfad.relative_to(TOOLS).as_posix(), zeile, ausdruck))
+        self.assertEqual(schlecht, [], 'Zugriff auf ein Methodenattribut: %s' % schlecht)
 
     def test_es_werden_ueberhaupt_klassen_gefunden(self):
         """Sabotageschutz: Eine leere Menge bestuende jeden Test."""
@@ -78,21 +78,21 @@ class EineSabotageAmZugriff(unittest.TestCase):
 
     def test_der_echte_fall_wird_erkannt(self):
         """Genau die Zeile aus `convertDazPoseBvhToBlender.py`."""
-        baum = ast.parse("Dazretarget.retarget_bvh.register()")
+        baum = ast.parse('Dazretarget.retarget_bvh.register()')
         self.assertEqual(
-            Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}),
-            [(1, "Dazretarget.retarget_bvh.register")],
+            Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}),
+            [(1, 'Dazretarget.retarget_bvh.register')],
         )
 
     def test_ein_gewoehnlicher_aufruf_wird_nicht_gemeldet(self):
-        baum = ast.parse("Dazretarget.retarget_bvh(a, b, c)")
-        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}), [])
+        baum = ast.parse('Dazretarget.retarget_bvh(a, b, c)')
+        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}), [])
 
     def test_ein_echtes_funktionsattribut_ist_erlaubt(self):
-        baum = ast.parse("print(Dazretarget.retarget_bvh.__name__)")
-        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}), [])
+        baum = ast.parse('print(Dazretarget.retarget_bvh.__name__)')
+        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}), [])
 
     def test_ein_modul_gleichen_namens_wird_nicht_verwechselt(self):
         """`retarget_bvh.register()` ohne Klasse davor ist in Ordnung."""
-        baum = ast.parse("retarget_bvh.register()")
-        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {"Dazretarget": {"retarget_bvh"}}), [])
+        baum = ast.parse('retarget_bvh.register()')
+        self.assertEqual(Methodenzugriffe.auf_methoden(baum, {'Dazretarget': {'retarget_bvh'}}), [])

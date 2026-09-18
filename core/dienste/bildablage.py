@@ -22,14 +22,14 @@ import os
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Bildablage:
     """Ein Unterordner unter `media/photo_analysis/`."""
 
     #: Wo die Bilder liegen, relativ zu `BASE_DIR`.
-    BASIS = ("media", "photo_analysis")
+    BASIS = ('media', 'photo_analysis')
 
     def __init__(self, unterordner):
         self.unterordner = unterordner
@@ -38,13 +38,13 @@ class Bildablage:
     def bytes_aus_dataurl(angabe):
         """Bytes aus einer Data-URL — `b''` wenn leer, `None` wenn kaputt."""
         if not angabe:
-            return b""
-        if "," in angabe:
-            angabe = angabe.split(",", 1)[1]
+            return b''
+        if ',' in angabe:
+            angabe = angabe.split(',', 1)[1]
         try:
             return base64.b64decode(angabe)
         except Exception:  # noqa: BLE001
-            logger.warning("Bilddaten nicht dekodierbar", exc_info=True)
+            logger.warning('Bilddaten nicht dekodierbar', exc_info=True)
             return None
 
     def ordner(self):
@@ -67,14 +67,14 @@ class Bildablage:
         """
         roh = self.bytes_aus_dataurl(angabe)
         if roh is None:
-            return None, "Invalid base64"
+            return None, 'Invalid base64'
         if not roh:
-            return None, "No image data"
+            return None, 'No image data'
         return self.sichern(name, roh), None
 
     def sichern(self, name, roh):
         """Schreibt `<name>.jpg` und gibt den Pfad RELATIV zu `BASE_DIR`."""
-        dateiname = "%s.jpg" % name
-        with open(os.path.join(self.ordner(), dateiname), "wb") as datei:
+        dateiname = '%s.jpg' % name
+        with open(os.path.join(self.ordner(), dateiname), 'wb') as datei:
             datei.write(roh)
-        return "/".join(self.BASIS + (self.unterordner, dateiname))
+        return '/'.join(self.BASIS + (self.unterordner, dateiname))

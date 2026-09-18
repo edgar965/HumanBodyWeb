@@ -28,24 +28,22 @@ import os
 import sys
 
 import numpy as np
-
-from videoschreiber import Videoschreiber
-
 from bakedatei import Bakedatei
 from figur_nach_cody import Codyfigur
+from videoschreiber import Videoschreiber
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 STOFF = os.path.join(
-    "A:",
+    'A:',
     os.sep,
-    "3DTools",
-    "Assets",
-    "GarmentCode",
-    "ausgabe",
-    "t-shirt_female",
-    "t-shirt_female_sim_rig.json",
+    '3DTools',
+    'Assets',
+    'GarmentCode',
+    'ausgabe',
+    't-shirt_female',
+    't-shirt_female_sim_rig.json',
 )
-BVH = os.path.join("A:", os.sep, "3DTools", "3DObjects", "animations", "bvh", "Walk", "01_01.bvh")
+BVH = os.path.join('A:', os.sep, '3DTools', '3DObjects', 'animations', 'bvh', 'Walk', '01_01.bvh')
 FIGURHOEHE = 1.68
 
 
@@ -61,10 +59,10 @@ class Angezogen:
         self.koerper = self._in_metern()
         with open(stoff_pfad) as datei:
             self.stoff = json.load(datei)
-        self.s_punkte = np.asarray(self.stoff["punkte"], dtype=np.float64)
+        self.s_punkte = np.asarray(self.stoff['punkte'], dtype=np.float64)
         if self.s_punkte.ndim == 1:
             self.s_punkte = self.s_punkte.reshape(-1, 3)
-        self.s_dreiecke = np.asarray(self.stoff["dreiecke"], dtype=np.int64).reshape(-1, 3)
+        self.s_dreiecke = np.asarray(self.stoff['dreiecke'], dtype=np.int64).reshape(-1, 3)
         self.bilder = min(bilder, self.bake.bilder)
         self._skinning(bvh_pfad)
 
@@ -76,10 +74,10 @@ class Angezogen:
         """Stoffbahn: dieselben Knochen wie der Koerper, per LBS."""
         from bvh_nach_anim import Animschreiber
 
-        figur = Codyfigur("female", mit_fingern=True)
+        figur = Codyfigur('female', mit_fingern=True)
         figur.VORLAUF = 0
-        daten = Animschreiber("hb_female").spuren(bvh_pfad)
-        namen = list(self.stoff["knochen"])
+        daten = Animschreiber('hb_female').spuren(bvh_pfad)
+        namen = list(self.stoff['knochen'])
         gewichte = self._gewichtsmatrix(namen)
         ruhe = figur._welt()
         ruhe_um = self._ruhe_um(ruhe, namen)
@@ -101,7 +99,7 @@ class Angezogen:
         wert], ...] — bis zu vier Eintraege. Als dichte Matrix ist das
         7290 x 176 und damit klein genug."""
         gewichte = np.zeros((len(self.s_punkte), len(namen)))
-        for zeile, eintraege in enumerate(self.stoff["gewichte"]):
+        for zeile, eintraege in enumerate(self.stoff['gewichte']):
             for nummer, wert in eintraege:
                 gewichte[zeile, int(nummer)] = float(wert)
         return gewichte
@@ -151,8 +149,8 @@ class Angezogen:
     # ------------------------------------------------------------- Ausgabe
 
     def bilder_rendern(self, breite=640, hoehe=860):
-        import trimesh
         import pyrender
+        import trimesh
 
         figurhoehe = float(self.koerper[0][:, 2].max())
         drehung = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
@@ -194,31 +192,31 @@ class Angezogen:
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument("--bake", default=os.path.join(ORDNER, "figur", "hb_female_walk.bin"))
-    zerleger.add_argument("--stoff", default=STOFF)
-    zerleger.add_argument("--bvh", default=BVH)
-    zerleger.add_argument("--bilder", type=int, default=60)
+    zerleger.add_argument('--bake', default=os.path.join(ORDNER, 'figur', 'hb_female_walk.bin'))
+    zerleger.add_argument('--stoff', default=STOFF)
+    zerleger.add_argument('--bvh', default=BVH)
+    zerleger.add_argument('--bilder', type=int, default=60)
     zerleger.add_argument(
-        "--aus", default=os.path.join(r"A:\3DTools\Docu\Ergebnisse", "hb_angezogen_walk.mp4")
+        '--aus', default=os.path.join(r'A:\3DTools\Docu\Ergebnisse', 'hb_angezogen_walk.mp4')
     )
     werte = zerleger.parse_args()
 
     video = Angezogen(werte.bake, werte.stoff, werte.bvh, werte.bilder)
     print(
-        "Koerper   %d Bilder, %d Punkte, %d Dreiecke (FPS-Simulation)"
+        'Koerper   %d Bilder, %d Punkte, %d Dreiecke (FPS-Simulation)'
         % (video.bilder, video.bake.punkte, len(video.bake.dreiecke or []))
     )
-    print("Stoff     %d Punkte, %d Dreiecke" % (len(video.s_punkte), len(video.s_dreiecke)))
-    print("RUHEPROBE %.6f m (Skinning in Ruhe darf den Stoff nicht bewegen)" % video.ruheprobe)
+    print('Stoff     %d Punkte, %d Dreiecke' % (len(video.s_punkte), len(video.s_dreiecke)))
+    print('RUHEPROBE %.6f m (Skinning in Ruhe darf den Stoff nicht bewegen)' % video.ruheprobe)
     weg = np.linalg.norm(video.stoffbahn[-1] - video.stoffbahn[0], axis=1)
     print(
-        "Stoffweg  Median %.0f mm, groesster %.0f mm"
+        'Stoffweg  Median %.0f mm, groesster %.0f mm'
         % (float(np.median(weg)) * 1000.0, float(weg.max()) * 1000.0)
     )
     pfad, zahl = video.schreiben(werte.aus)
-    print("Video     %s (%d Bilder, %.1f KB)" % (pfad, zahl, os.path.getsize(pfad) / 1024.0))
+    print('Video     %s (%d Bilder, %.1f KB)' % (pfad, zahl, os.path.getsize(pfad) / 1024.0))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

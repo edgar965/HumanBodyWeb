@@ -14,13 +14,13 @@ from django.urls import path
 from .api.hilfe_andere_modelle import AndereModelle, Figurbild
 
 urlpatterns = [
-    path("andere-modelle/", AndereModelle.ansicht(), name="hilfe_andere_modelle"),
+    path('andere-modelle/', AndereModelle.ansicht(), name='hilfe_andere_modelle'),
     path(
-        "andere-modelle/vorschau/<str:ordner>/<str:datei>",
+        'andere-modelle/vorschau/<str:ordner>/<str:datei>',
         Figurbild.vorschau,
-        name="hilfe_andere_modelle_vorschau",
+        name='hilfe_andere_modelle_vorschau',
     ),
     path(
-        "andere-modelle/bild/<str:ordner>/<str:datei>", Figurbild.original, name="hilfe_andere_modelle_bild"
+        'andere-modelle/bild/<str:ordner>/<str:datei>', Figurbild.original, name='hilfe_andere_modelle_bild'
     ),
 ]

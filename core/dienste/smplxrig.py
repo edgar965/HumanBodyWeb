@@ -27,9 +27,9 @@ import logging
 
 from django.conf import settings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Smplxrig"]
+__all__ = ['Smplxrig']
 
 
 class Smplxrig:
@@ -44,7 +44,7 @@ class Smplxrig:
         return str(settings.SMPLX_MODELS_DIR)
 
     @classmethod
-    def vorhanden(cls, geschlecht="female"):
+    def vorhanden(cls, geschlecht='female'):
         from SMPL.xkoerper import Smplxkoerper
 
         return Smplxkoerper.vorhanden(geschlecht, cls.ordner())
@@ -93,10 +93,10 @@ class Smplxrig:
                 return gelenke.kette(punkte)
             referenz = cls.referenz(geschlecht, armwinkel)
             uebertrag = gelenke.uebertragen(punkte, referenz)
-            cls._melden("Skelett", name, punkte, armwinkel, uebertrag)
+            cls._melden('Skelett', name, punkte, armwinkel, uebertrag)
             return gelenke.kette_uebertragen(punkte, uebertrag)
         except (OSError, KeyError, ValueError) as fehler:
-            logger.warning("SMPL-X-Skelett fuer %s nicht baubar: %s", name, fehler)
+            logger.warning('SMPL-X-Skelett fuer %s nicht baubar: %s', name, fehler)
             return None
 
     @classmethod
@@ -109,8 +109,8 @@ class Smplxrig:
             return None
         bezeichnung = Smplxgelenke.BEZEICHNUNG
         if not cls.gelenke(geschlecht).passt(punkte):
-            bezeichnung += ", uebertragen"
-        return {"name": bezeichnung, "knochen": kette.bauplan()}
+            bezeichnung += ', uebertragen'
+        return {'name': bezeichnung, 'knochen': kette.bauplan()}
 
     # ------------------------------------------------------------------- Haut
 
@@ -125,13 +125,13 @@ class Smplxrig:
             if not cls.gelenke(geschlecht).passt(punkte):
                 referenz = cls.referenz(geschlecht, armwinkel)
                 uebertrag = Netzuebertrag.bauen(punkte, referenz)
-                cls._melden("Hautgewichte", name, punkte, armwinkel, uebertrag)
+                cls._melden('Hautgewichte', name, punkte, armwinkel, uebertrag)
                 zuordnung = uebertrag.zuordnung
             index, anteil = haut.fuer_punkte(len(punkte), zuordnung)
         except (OSError, KeyError, ValueError) as fehler:
-            logger.warning("SMPL-X-Hautgewichte fuer %s nicht baubar: %s", name, fehler)
+            logger.warning('SMPL-X-Hautgewichte fuer %s nicht baubar: %s', name, fehler)
             return None
-        return {"knochen": haut.knochennamen(), "index": index, "gewicht": anteil}
+        return {'knochen': haut.knochennamen(), 'index': index, 'gewicht': anteil}
 
     # ---------------------------------------------------------------- Helfer
 
@@ -144,12 +144,12 @@ class Smplxrig:
     def _melden(was, name, punkte, armwinkel, uebertrag):
         guete = uebertrag.guete
         logger.info(
-            "SMPL-X-%s uebertragen auf %s (%d Punkte, %.1f Grad): "
-            "Zuordnung Median %.4f, p90 %.4f der Koerperhoehe",
+            'SMPL-X-%s uebertragen auf %s (%d Punkte, %.1f Grad): '
+            'Zuordnung Median %.4f, p90 %.4f der Koerperhoehe',
             was,
             name,
             len(punkte),
             armwinkel,
-            guete["median"],
-            guete["p90"],
+            guete['median'],
+            guete['p90'],
         )

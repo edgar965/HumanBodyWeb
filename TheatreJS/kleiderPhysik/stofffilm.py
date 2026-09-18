@@ -26,7 +26,7 @@ import sys
 import numpy as np
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
-GC = os.path.join("A:", os.sep, "3DTools", "Assets", "GarmentCode")
+GC = os.path.join('A:', os.sep, '3DTools', 'Assets', 'GarmentCode')
 
 
 class Stofffilm:
@@ -57,7 +57,7 @@ class Stofffilm:
             # Das letzte Bild gehoert dazu, auch wenn es nicht auf das
             # Raster faellt: Es ist das Ergebnis, das die Figur anzieht.
             film.bilder.append(np.array(garment.current_verts, dtype=np.float32))
-            film.dreiecke = garment.f_cloth_sim if hasattr(garment, "f_cloth_sim") else None
+            film.dreiecke = garment.f_cloth_sim if hasattr(garment, 'f_cloth_sim') else None
             film.garment = garment
 
         return sequenz
@@ -67,48 +67,48 @@ class Stofffilm:
         import drapierlauf
 
         drapierlauf._cache_umlenken()
-        repo = os.path.join(GC, "upstream")
+        repo = os.path.join(GC, 'upstream')
         os.chdir(repo)
         sys.path.insert(0, repo)
 
         import pygarment.data_config as data_config
+        from pygarment.meshgen import simulation
         from pygarment.meshgen.boxmeshgen import BoxMesh
         from pygarment.meshgen.sim_config import PathCofig
-        from pygarment.meshgen import simulation
 
         simulation.sim_frame_sequence = self._mitschnitt(simulation.sim_frame_sequence)
         from pygarment.meshgen.simulation import run_sim
 
-        name = os.path.basename(self.spez)[: -len("_specification.json")]
+        name = os.path.basename(self.spez)[: -len('_specification.json')]
         # Die Systemdatei sagt `PathCofig`, WO der Koerper liegt — sie wird
         # von der Platte gelesen, nicht aus dem Speicher. Dieselbe Funktion
         # wie im Produktivweg, damit kein zweiter Pfadbau entsteht.
         drapierlauf._systemdatei_schreiben(
-            repo, self.koerpername, os.path.join(ORDNER, "film"), self.koerperordner
+            repo, self.koerpername, os.path.join(ORDNER, 'film'), self.koerperordner
         )
         eigenschaften = data_config.Properties(
-            os.path.join(repo, "assets", "Sim_props", "gui_sim_props.yaml")
+            os.path.join(repo, 'assets', 'Sim_props', 'gui_sim_props.yaml')
         )
         # DICTS, nicht Listen — `run_sim` schreibt `stats[...][name]`.
         # Mit Listen bricht es NACH der Simulation ab, und der ganze
         # Mitschnitt waere weg gewesen.
         eigenschaften.set_section_stats(
-            "sim", fails={}, sim_time={}, spf={}, fin_frame={}, body_collisions={}, self_collisions={}
+            'sim', fails={}, sim_time={}, spf={}, fin_frame={}, body_collisions={}, self_collisions={}
         )
-        eigenschaften.set_section_stats("render", render_time={})
+        eigenschaften.set_section_stats('render', render_time={})
 
-        system = data_config.Properties(os.path.join(repo, "system.json"))
+        system = data_config.Properties(os.path.join(repo, 'system.json'))
         wege = PathCofig(
             in_element_path=os.path.dirname(self.spez),
-            out_path=system["output"],
+            out_path=system['output'],
             in_name=name,
             body_name=self.koerpername,
             smpl_body=False,
             add_timestamp=False,
         )
-        netz = BoxMesh(wege.in_g_spec, eigenschaften["sim"]["config"]["resolution_scale"])
+        netz = BoxMesh(wege.in_g_spec, eigenschaften['sim']['config']['resolution_scale'])
         netz.load()
-        netz.serialize(wege, store_panels=False, uv_config=eigenschaften["render"]["config"]["uv_texture"])
+        netz.serialize(wege, store_panels=False, uv_config=eigenschaften['render']['config']['uv_texture'])
         run_sim(
             netz.name,
             eigenschaften,
@@ -124,36 +124,36 @@ class Stofffilm:
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
     zerleger.add_argument(
-        "--spez", default=os.path.join(GC, "ausgabe", "t-shirt_female", "t-shirt_female_specification.json")
+        '--spez', default=os.path.join(GC, 'ausgabe', 't-shirt_female', 't-shirt_female_specification.json')
     )
-    zerleger.add_argument("--koerper", default=os.path.join(GC, "koerper", "female"))
-    zerleger.add_argument("--koerpername", default=None)
-    zerleger.add_argument("--jedes", type=int, default=3)
-    zerleger.add_argument("--aus", default=os.path.join(ORDNER, "stofffilm.npz"))
+    zerleger.add_argument('--koerper', default=os.path.join(GC, 'koerper', 'female'))
+    zerleger.add_argument('--koerpername', default=None)
+    zerleger.add_argument('--jedes', type=int, default=3)
+    zerleger.add_argument('--aus', default=os.path.join(ORDNER, 'stofffilm.npz'))
     werte = zerleger.parse_args()
 
     name = werte.koerpername
     if not name:
-        obj = sorted(f for f in os.listdir(werte.koerper) if f.endswith(".obj"))
+        obj = sorted(f for f in os.listdir(werte.koerper) if f.endswith('.obj'))
         if not obj:
-            raise SystemExit("Kein Koerpernetz in %s" % werte.koerper)
+            raise SystemExit('Kein Koerpernetz in %s' % werte.koerper)
         name = obj[0][:-4]
-    print("Koerper    %s aus %s" % (name, werte.koerper))
+    print('Koerper    %s aus %s' % (name, werte.koerper))
     film = Stofffilm(werte.spez, werte.koerper, name, werte.jedes)
     bilder = film.laufen()
     if not bilder:
-        raise SystemExit("Kein einziges Bild mitgeschnitten.")
+        raise SystemExit('Kein einziges Bild mitgeschnitten.')
     feld = np.array(bilder)
-    print("Mitschnitt %d Bilder, %d Stoffpunkte" % (len(feld), feld.shape[1]))
+    print('Mitschnitt %d Bilder, %d Stoffpunkte' % (len(feld), feld.shape[1]))
     weg = np.linalg.norm(feld[-1] - feld[0], axis=1)
     print(
-        "Fallweg    Median %.1f mm, groesster %.1f mm"
+        'Fallweg    Median %.1f mm, groesster %.1f mm'
         % (float(np.median(weg)) * 10.0, float(weg.max()) * 10.0)
     )
     np.savez_compressed(werte.aus, punkte=feld)
-    print("Ablage     %s (%.1f MB)" % (werte.aus, os.path.getsize(werte.aus) / 1048576.0))
+    print('Ablage     %s (%.1f MB)' % (werte.aus, os.path.getsize(werte.aus) / 1048576.0))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

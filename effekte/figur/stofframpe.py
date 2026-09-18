@@ -18,7 +18,7 @@ und der Stoff wird von innen geschoben, nicht tangential geschleift.
 
 import numpy as np
 
-__all__ = ["Stofframpe"]
+__all__ = ['Stofframpe']
 
 
 class Stofframpe:
@@ -38,7 +38,7 @@ class Stofframpe:
         spur = (self.bahn.spuren or {}).get(name)
         if spur is not None and nummer * 4 + 4 <= len(spur):
             return Codyfigur.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
-        return Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
+        return Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
 
     @staticmethod
     def slerp(a, b, t):
@@ -61,7 +61,7 @@ class Stofframpe:
         from knochenwelt import Knochenwelt
 
         def lokal(name):
-            ruhe = Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
+            ruhe = Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
             return self.slerp(ruhe, self._lokal(name, self.ziel), anteil)
 
         return Knochenwelt.loesen(self.knochen, self.namen, lokal)

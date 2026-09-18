@@ -25,10 +25,10 @@ import os
 
 from django.conf import settings
 
+from ..daten.silhouettenergebnis import Silhouettenergebnis
 from .gesichtskontur import Gesichtskontur
 from .silhouette import Silhouette
 from .silhouettenvorschau import Silhouettenvorschau
-from ..daten.silhouettenergebnis import Silhouettenergebnis
 from .smplxnetz import SmplxNetz, SmplxNetzFehler
 
 logger = logging.getLogger(__name__)
@@ -56,27 +56,27 @@ class Silhouettenauftrag:
         try:
             return json.loads(self.job.result_json)
         except (json.JSONDecodeError, TypeError) as fehler:
-            logger.exception("Silhouettenauftrag: result_json unlesbar")
-            raise Fotofehler("Invalid result data", 500) from fehler
+            logger.exception('Silhouettenauftrag: result_json unlesbar')
+            raise Fotofehler('Invalid result data', 500) from fehler
 
     # ------------------------------------------------------------------- Foto
 
     def foto(self, cv2):
         pfad = os.path.join(str(settings.BASE_DIR), self.job.photo_file)
         if not os.path.isfile(pfad):
-            raise Fotofehler("Photo not found", 404)
+            raise Fotofehler('Photo not found', 404)
         bild = cv2.imread(pfad)
         if bild is None:
-            raise Fotofehler("Could not read photo", 500)
+            raise Fotofehler('Could not read photo', 500)
         return bild
 
     def netz(self):
         try:
             return SmplxNetz.erzeugen(
-                self.daten.get("betas", [0.0] * 10), self.daten.get("gender", "neutral")
+                self.daten.get('betas', [0.0] * 10), self.daten.get('gender', 'neutral')
             )
         except SmplxNetzFehler as fehler:
-            logger.exception("Silhouettenauftrag: SmplxNetzFehler")
+            logger.exception('Silhouettenauftrag: SmplxNetzFehler')
             raise Fotofehler(str(fehler), 500) from fehler
 
     # ---------------------------------------------------------------- Ergebnis
@@ -95,24 +95,24 @@ class Silhouettenauftrag:
 
     def _silhouette(self, punkte, flaechen, breite, hoehe):
         """Projizieren — mit der gespeicherten Pose, sonst orthographisch."""
-        ausrichtung = self.daten.get("alignment_data") or {}
+        ausrichtung = self.daten.get('alignment_data') or {}
         silhouette = Silhouette(punkte, flaechen, breite, hoehe)
         posiert = self.posierte_punkte(self.job.id, self.daten, breite, hoehe)
         if posiert is not None:
             stellen, anzahl = posiert
             silhouette.anzahl_posiert = anzahl
-            silhouette.posierte_projektion(stellen, ausrichtung.get("proj_2d_offset"))
+            silhouette.posierte_projektion(stellen, ausrichtung.get('proj_2d_offset'))
         else:
-            silhouette.orthographische_projektion(ausrichtung.get("body_transform"))
+            silhouette.orthographische_projektion(ausrichtung.get('body_transform'))
         return silhouette
 
     def _umrisse(self, silhouette, cv2, breite, hoehe):
         ergebnis = Silhouettenergebnis(breite, hoehe)
-        ergebnis.ausrichtung = self.daten.get("alignment_data")
+        ergebnis.ausrichtung = self.daten.get('alignment_data')
         ergebnis.posiert = silhouette.posiert
         ergebnis.koerperkontur = silhouette.koerperkontur(cv2)
         ergebnis.netz_rahmen = silhouette.netz_rahmen()
-        ergebnis.yolo_rahmen = self.daten.get("bbox_xyxy")
+        ergebnis.yolo_rahmen = self.daten.get('bbox_xyxy')
         return ergebnis
 
     @staticmethod
@@ -138,6 +138,6 @@ class Silhouettenauftrag:
         )
         if not pfad:
             return
-        self.daten["silhouette_path"] = pfad
+        self.daten['silhouette_path'] = pfad
         self.job.result_json = json.dumps(self.daten, default=str)
-        self.job.save(update_fields=["result_json"])
+        self.job.save(update_fields=['result_json'])

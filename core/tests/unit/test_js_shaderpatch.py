@@ -19,7 +19,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "shaderpatch.js")
+MODUL = Jsmodul('gemeinsam', 'shaderpatch.js')
 
 SKRIPT = """
 const { Shaderpatch } = await import(MODUL);
@@ -68,5 +68,5 @@ class ShaderpatchTest(SimpleTestCase):
 
     def test_zwei_eingriffe_klonen_und_schluessel(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertEqual(ausgabe["schluessel"], ["dritter", "hauteinzug", "weichgewebe"])
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertEqual(ausgabe['schluessel'], ['dritter', 'hauteinzug', 'weichgewebe'])

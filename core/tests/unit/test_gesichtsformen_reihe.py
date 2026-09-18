@@ -14,10 +14,9 @@ spuren und für die Kieferspuren, die denselben Weg nehmen.
 
 import numpy as np
 from django.test import SimpleTestCase
-from scipy.spatial.transform import Rotation
-
 from humanbody_core.skeleton.face_blendshapes import Gesichtsformen
 from humanbody_core.skeleton.kieferspuren import Kieferspuren
+from scipy.spatial.transform import Rotation
 
 ZUFALL = np.random.default_rng(12)
 
@@ -70,4 +69,4 @@ class DieReihe(SimpleTestCase):
     @staticmethod
     def einzeln(rx, ry, rz):
         """Die Formel vor dem Umbau: Euler(rx, rz, -ry, 'XYZ') → [x, y, z, w]."""
-        return Rotation.from_euler("XYZ", [rx, rz, -ry]).as_quat()
+        return Rotation.from_euler('XYZ', [rx, rz, -ry]).as_quat()

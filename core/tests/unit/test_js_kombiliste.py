@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._sicher import Sicher
 
-MODUL = Jsmodul("gemeinsam", "kombiliste.js")
+MODUL = Jsmodul('gemeinsam', 'kombiliste.js')
 
 SKRIPT = """
 const { Kombiliste } = await import(MODUL);
@@ -161,7 +161,7 @@ class KombilisteTest(SimpleTestCase):
 
     def test_die_liste_haelt_sich_an_die_regeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
 
     def test_hoechstzahl_stimmt_mit_dem_server_ueberein(self):
         """Zwei Grenzen fuer dieselbe Sache laufen auseinander.
@@ -170,12 +170,12 @@ class KombilisteTest(SimpleTestCase):
         Server ablehnt — und der Nutzer sieht eine Fehlermeldung, wo die
         Oberflaeche haette bremsen muessen.
         """
-        import io
         import re
+
         from GarmentCode.gemeinsamdienst import Garmentgemeinsam
 
-        quelle = io.open(MODUL.pfad, encoding="utf-8").read()
+        quelle = open(MODUL.pfad, encoding='utf-8').read()
         treffer = Sicher.wert(
-            re.search(r"HOECHSTZAHL\s*=\s*(\d+)", quelle), "HOECHSTZAHL steht nicht im Modul"
+            re.search(r'HOECHSTZAHL\s*=\s*(\d+)', quelle), 'HOECHSTZAHL steht nicht im Modul'
         )
         self.assertEqual(int(treffer.group(1)), Garmentgemeinsam.HOECHSTZAHL)

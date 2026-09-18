@@ -30,11 +30,10 @@ Strahl), `maskeninseln.py`, `lagenmaske.py`.
 """
 
 import numpy as np
-from scipy.sparse import coo_matrix, csr_matrix, identity
-from scipy.spatial import cKDTree
-
 from maskengeometrie import Geometrie
 from maskeninseln import Maskeninseln
+from scipy.sparse import coo_matrix, csr_matrix, identity
+from scipy.spatial import cKDTree
 
 
 class Hautmaske:
@@ -81,14 +80,14 @@ class Hautmaske:
                 maske,
                 np.asarray(punkte, dtype=np.float64),
                 np.asarray(tris, dtype=np.int64).reshape(-1, 3),
-                w["abstand"],
-                w["tiefe"],
-                w["randringe"],
-                w["eng"],
-                w["suchweite"],
+                w['abstand'],
+                w['tiefe'],
+                w['randringe'],
+                w['eng'],
+                w['suchweite'],
             )
-        if w["inseln"] > 0 and dreiecke is not None:
-            Maskeninseln.schliessen(maske, dreiecke, w["inseln"])
+        if w['inseln'] > 0 and dreiecke is not None:
+            Maskeninseln.schliessen(maske, dreiecke, w['inseln'])
         return maske
 
     @classmethod
@@ -96,15 +95,15 @@ class Hautmaske:
         """Die Masse der Maske: `None` heisst Klassenkonstante; die Suchweite
         folgt ohne Angabe dem groesseren von Abstand und Tiefe."""
         vorgaben = {
-            "abstand": cls.ABSTAND_M,
-            "tiefe": cls.TIEFE_M,
-            "randringe": cls.RANDRINGE,
-            "eng": cls.ENG_M,
-            "inseln": cls.INSEL_MAX,
+            'abstand': cls.ABSTAND_M,
+            'tiefe': cls.TIEFE_M,
+            'randringe': cls.RANDRINGE,
+            'eng': cls.ENG_M,
+            'inseln': cls.INSEL_MAX,
         }
         w = {name: (vorgabe if wahl.get(name) is None else wahl[name]) for name, vorgabe in vorgaben.items()}
-        suchweite = wahl.get("suchweite")
-        w["suchweite"] = max(w["abstand"], w["tiefe"]) if suchweite is None else suchweite
+        suchweite = wahl.get('suchweite')
+        w['suchweite'] = max(w['abstand'], w['tiefe']) if suchweite is None else suchweite
         return w
 
     @staticmethod
@@ -124,7 +123,7 @@ class Hautmaske:
         if not len(kand):
             return
         t = Geometrie.strahl_dreiecke(P, T, umkreis[j[kand]], koerper[kand], normalen[kand])
-        with np.errstate(invalid="ignore"):
+        with np.errstate(invalid='ignore'):
             treffer = np.any((t >= -tiefe) & (t <= abstand), axis=1)
         maske[kand[treffer]] = True
 
@@ -160,7 +159,7 @@ class Hautmaske:
         d, i = baum.query(P[wo], distance_upper_bound=0.09, workers=-1)
         weit = ~np.isfinite(d)
         i = np.where(weit, 0, i)
-        tief = np.einsum("ij,ij->i", P[wo] - koerper[i], normalen[i])
+        tief = np.einsum('ij,ij->i', P[wo] - koerper[i], normalen[i])
         locker[wo] = weit | (np.abs(tief) > eng)
         return locker
 
@@ -182,7 +181,7 @@ class Hautmaske:
         zeilen = np.concatenate([T[okT, 0], T[okT, 1], T[okT, 2]])
         spalten = np.concatenate([okT, okT, okT])
         B = csr_matrix((np.ones(len(zeilen), dtype=np.int8), (zeilen, spalten)), shape=(n, nT))
-        R = identity(n, dtype="int8", format="csr") + nachbarn
+        R = identity(n, dtype='int8', format='csr') + nachbarn
         R = R + R @ nachbarn
         C = (R @ B).tocsr()
         C.sum_duplicates()

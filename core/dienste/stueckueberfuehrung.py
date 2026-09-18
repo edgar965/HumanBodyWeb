@@ -41,9 +41,9 @@ import logging
 
 import numpy as np
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Stueckueberfuehrung"]
+__all__ = ['Stueckueberfuehrung']
 
 
 class Stueckueberfuehrung:
@@ -64,17 +64,17 @@ class Stueckueberfuehrung:
         if punkte is None:
             return None, fehler
         gemessen = Stueckmasse(punkte, koerper.vertices)
-        werte = gemessen.als_dict(masse["shoulder_w"], cls._achsel_cm(masse), cls._huefte_cm(masse))
+        werte = gemessen.als_dict(masse['shoulder_w'], cls._achsel_cm(masse), cls._huefte_cm(masse))
         try:
             if cls._ist_schuh(gemessen, masse, kategorie):
                 stueck, regler, bericht = cls._schuh(punkte, masse)
             else:
                 stueck, regler, bericht = Schnittdeutung(werte, masse, kategorie).deuten()
         except (Unuebersetzbar, ValueError) as grund:
-            logger.info("Deutung %s abgelehnt: %s", garment_id, grund)
+            logger.info('Deutung %s abgelehnt: %s', garment_id, grund)
             return None, str(grund)
-        logger.info("Deutung %s -> %s (%d Regler)", garment_id, stueck, len(regler))
-        return {"garment_id": garment_id, "vorlage": stueck, "regler": regler, "bericht": bericht}, None
+        logger.info('Deutung %s -> %s (%d Regler)', garment_id, stueck, len(regler))
+        return {'garment_id': garment_id, 'vorlage': stueck, 'regler': regler, 'bericht': bericht}, None
 
     #: Wann ein Stück den Schuhweg nimmt (11.09.2026) — die Kategorie führt,
     #: die Geometrie springt ein, wie bei Hose/Rock in `Schnittdeutung`:
@@ -91,9 +91,9 @@ class Stueckueberfuehrung:
     SCHUH_FREMD_BIS = 0.40
 
     @classmethod
-    def _ist_schuh(cls, gemessen, masse, kategorie=""):
-        grenze = cls.SCHUH_BIS_ANTEIL if (kategorie or "").lower() == "shoes" else cls.SCHUH_FREMD_BIS
-        return gemessen.oben_cm < grenze * float(masse["height"])
+    def _ist_schuh(cls, gemessen, masse, kategorie=''):
+        grenze = cls.SCHUH_BIS_ANTEIL if (kategorie or '').lower() == 'shoes' else cls.SCHUH_FREMD_BIS
+        return gemessen.oben_cm < grenze * float(masse['height'])
 
     @classmethod
     def _schuh(cls, punkte, masse):
@@ -112,14 +112,14 @@ class Stueckueberfuehrung:
         stueck, regler, bericht = deutung.deuten()
         # Dieselben Schlüssel wie bei `Schnittdeutung`, damit der Messlauf
         # (`werkzeug/vorbilder_messen.py`) beide gleich behandelt.
-        bericht["stueck"].setdefault("unten_cm", 0.0)
-        bericht["stueck"].setdefault("oben_cm", bericht["stueck"]["schaft_cm"])
+        bericht['stueck'].setdefault('unten_cm', 0.0)
+        bericht['stueck'].setdefault('oben_cm', bericht['stueck']['schaft_cm'])
         return stueck, regler, bericht
 
     @staticmethod
     def _achsel_cm(masse):
         """Höhe der Achsel über dem Boden — die Grenze zwischen Rumpf und Arm."""
-        return masse["height"] - masse["head_l"] - masse["armscye_depth"]
+        return masse['height'] - masse['head_l'] - masse['armscye_depth']
 
     @staticmethod
     def _huefte_cm(masse):
@@ -128,7 +128,7 @@ class Stueckueberfuehrung:
         Unterhalb davon zählt kein Stoff als „am Arm": In der A-Pose stehen
         die Beine breiter als die Schultern.
         """
-        return masse["height"] - masse["head_l"] - masse["waist_line"] - masse["hips_line"]
+        return masse['height'] - masse['head_l'] - masse['waist_line'] - masse['hips_line']
 
     @staticmethod
     def _vorlagenpunkte(garment_id):
@@ -138,15 +138,16 @@ class Stueckueberfuehrung:
         Y oben. `Stueckmasse` erwartet die Blender-Lage; die Verschiebung auf
         den Boden macht sie selbst.
         """
-        from core.dienste.kleiderbibliothek import Kleiderbibliothek
         from GarmentFitter.fitter.koordinaten import Quellsystem
+
+        from core.dienste.kleiderbibliothek import Kleiderbibliothek
 
         vorlage = Kleiderbibliothek.holen().get_template(garment_id)
         if vorlage is None or vorlage.vertices is None:
-            return None, "", "Kleidungsstück %s hat kein Netz" % garment_id
-        kategorie = getattr(vorlage, "category", "") or ""
+            return None, '', 'Kleidungsstück %s hat kein Netz' % garment_id
+        kategorie = getattr(vorlage, 'category', '') or ''
         punkte = np.asarray(vorlage.vertices, dtype=np.float64)
-        system = "makehuman" if vorlage.source == "makehuman-assets" else Quellsystem.erkennen(punkte)
-        if system != "blender":
+        system = 'makehuman' if vorlage.source == 'makehuman-assets' else Quellsystem.erkennen(punkte)
+        if system != 'blender':
             punkte = Quellsystem.nach_blender(punkte, system)
         return punkte, kategorie, None

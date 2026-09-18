@@ -12,7 +12,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "bvhpfad.js")
+MODUL = Jsmodul('gemeinsam', 'bvhpfad.js')
 
 SKRIPT = """
 const { Bvhpfad: B } = await import(MODUL);
@@ -36,4 +36,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class BvhpfadTest(SimpleTestCase):
     def test_ordner_aus_pfad(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

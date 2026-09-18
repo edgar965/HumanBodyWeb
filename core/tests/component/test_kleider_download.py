@@ -23,7 +23,7 @@ Nulloperation wäre genau der Fehler, den Test-Umleitungen sonst machen.
 
 from django.test import Client, SimpleTestCase, override_settings
 
-ADRESSE = "/api/character/garment/download/available/"
+ADRESSE = '/api/character/garment/download/available/'
 
 
 class Downloaderattrappe:
@@ -36,15 +36,15 @@ class Downloaderattrappe:
         pass
 
     def list_available_packs(self):
-        return [{"name": "shirts01", "files": 3}]
+        return [{'name': 'shirts01', 'files': 3}]
 
     def list_builtin_assets(self):
         if Downloaderattrappe.bricht_ein:
-            raise OSError("GitHub nicht erreichbar")
-        return [{"name": "jeans01"}]
+            raise OSError('GitHub nicht erreichbar')
+        return [{'name': 'jeans01'}]
 
 
-@override_settings(ALLOWED_HOSTS=["*"])
+@override_settings(ALLOWED_HOSTS=['*'])
 class KleiderDownloadTest(SimpleTestCase):
     def setUp(self):
         import GarmentFitter
@@ -52,7 +52,7 @@ class KleiderDownloadTest(SimpleTestCase):
         self._echt = GarmentFitter.MakeHumanDownloader
         GarmentFitter.MakeHumanDownloader = Downloaderattrappe
         Downloaderattrappe.bricht_ein = False
-        self.addCleanup(setattr, GarmentFitter, "MakeHumanDownloader", self._echt)
+        self.addCleanup(setattr, GarmentFitter, 'MakeHumanDownloader', self._echt)
 
     def test_die_umlenkung_greift_wirklich(self):
         """Null Treffer wäre ein Fehler, kein stilles Weiter."""
@@ -64,13 +64,13 @@ class KleiderDownloadTest(SimpleTestCase):
         antwort = Client().get(ADRESSE)
         self.assertEqual(antwort.status_code, 200)
         daten = antwort.json()
-        self.assertEqual([p["name"] for p in daten["packs"]], ["shirts01"])
-        self.assertEqual([a["name"] for a in daten["builtin_assets"]], ["jeans01"])
+        self.assertEqual([p['name'] for p in daten['packs']], ['shirts01'])
+        self.assertEqual([a['name'] for a in daten['builtin_assets']], ['jeans01'])
 
     def test_ausfall_der_eingebauten_laesst_die_antwort_stehen(self):
         """Sonst wäre die Kleider-Seite bei jeder GitHub-Störung leer."""
         Downloaderattrappe.bricht_ein = True
         antwort = Client().get(ADRESSE)
         self.assertEqual(antwort.status_code, 200)
-        self.assertEqual(antwort.json()["builtin_assets"], [])
-        self.assertTrue(antwort.json()["packs"])
+        self.assertEqual(antwort.json()['builtin_assets'], [])
+        self.assertTrue(antwort.json()['packs'])

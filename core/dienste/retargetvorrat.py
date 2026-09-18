@@ -23,7 +23,7 @@ import os
 import shutil
 from pathlib import Path
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Retargetvorrat:
@@ -40,11 +40,11 @@ class Retargetvorrat:
 
         paare = [
             (job.bvh_file, job.pipeline),
-            (job.bvh_file_face, job.pipeline + "_face"),
-            (job.bvh_file_hands, job.pipeline + "_hands"),
+            (job.bvh_file_face, job.pipeline + '_face'),
+            (job.bvh_file_hands, job.pipeline + '_hands'),
         ]
         for pfad in job.bvh_file_personen or []:
-            paare.append((pfad, "%s_p%d" % (job.pipeline, Personenergebnisse.nummer(pfad))))
+            paare.append((pfad, '%s_p%d' % (job.pipeline, Personenergebnisse.nummer(pfad))))
         return [(pfad, kopie) for pfad, kopie in paare if pfad and os.path.isfile(pfad)]
 
     @classmethod
@@ -60,7 +60,7 @@ class Retargetvorrat:
         abgelegt = []
         for pfad, kennung in cls.dateien(job):
             if melden:
-                melden("Bewegung wird umgesetzt (%s) …" % os.path.basename(pfad))
+                melden('Bewegung wird umgesetzt (%s) …' % os.path.basename(pfad))
             try:
                 daten = Retargetdaten(pfad, hoehe)
                 ergebnis = daten.holen()
@@ -72,15 +72,15 @@ class Retargetvorrat:
                         shutil.copy2(daten.ablage, ziel)
                     abgelegt.append(ziel)
                 logger.info(
-                    "Retargetvorrat %s: %s (%s Bilder) -> %d Ablage(n)",
+                    'Retargetvorrat %s: %s (%s Bilder) -> %d Ablage(n)',
                     job.kennung,
                     os.path.basename(pfad),
-                    ergebnis.get("frame_count", "?"),
+                    ergebnis.get('frame_count', '?'),
                     len(abgelegt),
                 )
             except Exception:  # noqa: BLE001
                 logger.warning(
-                    "Retargetvorrat %s: %s nicht gerechnet — der erste Abruf rechnet",
+                    'Retargetvorrat %s: %s nicht gerechnet — der erste Abruf rechnet',
                     job.kennung,
                     pfad,
                     exc_info=True,

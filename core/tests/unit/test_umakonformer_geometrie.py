@@ -83,10 +83,10 @@ class Geometriebausteine(unittest.TestCase):
         paare = set()
         for i in range(len(punkte)):
             for j in nachbarn[starts[i] : starts[i + 1]]:
-                self.assertNotEqual(i, int(j), "Punkt %d ist sein eigener Nachbar" % i)
+                self.assertNotEqual(i, int(j), 'Punkt %d ist sein eigener Nachbar' % i)
                 paare.add((i, int(j)))
         fehlend = [(a, b) for a, b in paare if (b, a) not in paare]
-        self.assertEqual(fehlend, [], "Nachbarschaft nicht symmetrisch")
+        self.assertEqual(fehlend, [], 'Nachbarschaft nicht symmetrisch')
 
     def test_interpolierte_normale_liegt_zwischen_den_ecken(self):
         """`InterpolateNormal`: In der Mitte eines Dreiecks das Mittel der

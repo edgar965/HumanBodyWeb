@@ -50,7 +50,7 @@ class Clothbasis:
     # dieser Test das `collision`-Paket VON DORT importiert und fremden Code
     # geprueft, ohne dass es jemandem auffaellt. Denselben Rueckfall hat
     # cloth_export_api.py am 12.08.2026 verloren; hier blieb er stehen.
-    HB_WURZEL = str(Path(__file__).resolve().parents[2] / "HumanBody")
+    HB_WURZEL = str(Path(__file__).resolve().parents[2] / 'HumanBody')
     HB_ELTERN = str(Path(__file__).resolve().parents[2])
 
     #: {Name: Ergebnis} — je Vorlage einmal gerechnet.
@@ -92,7 +92,7 @@ class Clothbasis:
 
         matrizen = np.tile(np.eye(4, dtype=np.float32), (bilder, knochen, 1, 1))
         return AnimationTrack(
-            bone_names=["B%d" % i for i in range(knochen)], fps=30.0, frame_count=bilder, matrices=matrizen
+            bone_names=['B%d' % i for i in range(knochen)], fps=30.0, frame_count=bilder, matrices=matrizen
         )
 
     # -------------------------------------------------------- .npz-Rundlauf
@@ -100,22 +100,22 @@ class Clothbasis:
     @classmethod
     def npz_rundlauf(cls):
         """Eine Szene schreiben, zurueckladen und die Felder nachzaehlen."""
-        if "npz" in cls._vorlagen:
-            return cls._vorlagen["npz"]
+        if 'npz' in cls._vorlagen:
+            return cls._vorlagen['npz']
         cls.pfad_sichern()
         try:
-            from collision.scene_input import SceneInput, ClothSegment
+            from collision.scene_input import ClothSegment, SceneInput
         except Exception as fehler:  # noqa: BLE001
-            cls._vorlagen["npz"] = Messwerte.gescheitert("import failed: %s" % fehler)
-            return cls._vorlagen["npz"]
+            cls._vorlagen['npz'] = Messwerte.gescheitert('import failed: %s' % fehler)
+            return cls._vorlagen['npz']
         szene = cls._kunstszene(SceneInput, ClothSegment)
-        cls._vorlagen["npz"] = cls._schreiben_und_lesen(szene)
-        return cls._vorlagen["npz"]
+        cls._vorlagen['npz'] = cls._schreiben_und_lesen(szene)
+        return cls._vorlagen['npz']
 
     @classmethod
     def _kunstszene(cls, SceneInput, ClothSegment):
         segment = ClothSegment(
-            bone_name="DEF-spine",
+            bone_name='DEF-spine',
             vertices=np.array([[0, 0, 1], [0.1, 0, 0.9], [-0.1, 0, 0.9]], dtype=np.float32),
             faces=np.array([[0, 1, 2]], dtype=np.uint32),
             pin_indices=np.array([0], dtype=np.uint32),
@@ -129,7 +129,7 @@ class Clothbasis:
             bone_rest_inverse=np.tile(np.eye(4, dtype=np.float32), (1, 1, 1)),
             animation=cls.kunstanimation(1, 2),
             cloth_segments=[segment],
-            scene_name="unit_test_scene",
+            scene_name='unit_test_scene',
         )
 
     @staticmethod
@@ -137,20 +137,20 @@ class Clothbasis:
         # ProjektTemp, nicht System-Temp: `tempfile.mkdtemp` ohne `dir=`
         # schreibt auf C:, und das ist in diesem Projekt verboten
         # (Vorgeschichte: ~100 GB Datenmuell).
-        ordner = ProjektTemp.ordner(prefix="cloth_npz_")
+        ordner = ProjektTemp.ordner(prefix='cloth_npz_')
         try:
-            pfad = os.path.join(ordner, "s.npz")
+            pfad = os.path.join(ordner, 's.npz')
             szene.save_npz(pfad)
             da = os.path.isfile(pfad)
             with np.load(pfad, allow_pickle=True) as daten:
                 return Messwerte(
                     exists=bool(da),
-                    rigid_V=int(daten["rigid_vertices"].shape[0]),
-                    num_segs=int(daten["num_cloth_segments"][0]),
-                    anim_fps=float(daten["anim_fps"][0]),
-                    scene_name=str(daten["scene_name"][0]),
-                    seg_bone=str(daten["seg0_bone_name"][0]),
-                    seg_V=int(daten["seg0_vertices"].shape[0]),
+                    rigid_V=int(daten['rigid_vertices'].shape[0]),
+                    num_segs=int(daten['num_cloth_segments'][0]),
+                    anim_fps=float(daten['anim_fps'][0]),
+                    scene_name=str(daten['scene_name'][0]),
+                    seg_bone=str(daten['seg0_bone_name'][0]),
+                    seg_V=int(daten['seg0_vertices'].shape[0]),
                 )
         finally:
             shutil.rmtree(ordner, ignore_errors=True)
@@ -160,24 +160,24 @@ class Clothbasis:
     @classmethod
     def aufteilung(cls):
         """Eine Szene aus Rigid- und Stoffknochen durch `split_scene`."""
-        if "split" in cls._vorlagen:
-            return cls._vorlagen["split"]
+        if 'split' in cls._vorlagen:
+            return cls._vorlagen['split']
         cls.pfad_sichern()
         try:
             from collision.splitter import split_scene
         except Exception as fehler:  # noqa: BLE001
-            cls._vorlagen["split"] = Messwerte.gescheitert("import failed: %s" % fehler)
-            return cls._vorlagen["split"]
+            cls._vorlagen['split'] = Messwerte.gescheitert('import failed: %s' % fehler)
+            return cls._vorlagen['split']
         szene = cls._aufgeteilte_szene(split_scene)
         stoff = szene.cloth_segments
-        cls._vorlagen["split"] = Messwerte(
+        cls._vorlagen['split'] = Messwerte(
             rigid_V=int(szene.rigid_vertices.shape[0]),
             cloth_count=len(stoff),
-            cloth0_bone=stoff[0].bone_name if stoff else "",
+            cloth0_bone=stoff[0].bone_name if stoff else '',
             cloth0_V=int(stoff[0].vertices.shape[0]) if stoff else 0,
             cloth0_pins=int(stoff[0].pin_indices.shape[0]) if stoff else 0,
         )
-        return cls._vorlagen["split"]
+        return cls._vorlagen['split']
 
     @classmethod
     def _aufgeteilte_szene(cls, split_scene):
@@ -209,16 +209,16 @@ class Clothbasis:
             faces=np.array([[0, 1, 2], [3, 4, 5]], dtype=np.uint32),
             skin_indices=gewichtsindizes,
             skin_weights=np.tile(np.array([1, 0, 0, 0], dtype=np.float32), (6, 1)),
-            bone_vertex_ranges={"DEF-spine": (0, 3), "DEF-skirt": (3, 3)},
+            bone_vertex_ranges={'DEF-spine': (0, 3), 'DEF-skirt': (3, 3)},
             bone_parts={
-                "DEF-spine": {"shape": "cylinder"},
+                'DEF-spine': {'shape': 'cylinder'},
                 # `skirt` -> is_garment=true als Vorgabe
-                "DEF-skirt": {"shape": "skirt"},
+                'DEF-skirt': {'shape': 'skirt'},
             },
-            bone_heads_world={"DEF-spine": np.zeros(3), "DEF-skirt": np.array([0, 0.8, 0])},
-            bone_tails_world={"DEF-spine": np.array([0, 0.5, 0]), "DEF-skirt": np.array([0, 0.0, 0])},
-            bone_names_ordered=["DEF-spine", "DEF-skirt"],
+            bone_heads_world={'DEF-spine': np.zeros(3), 'DEF-skirt': np.array([0, 0.8, 0])},
+            bone_tails_world={'DEF-spine': np.array([0, 0.5, 0]), 'DEF-skirt': np.array([0, 0.0, 0])},
+            bone_names_ordered=['DEF-spine', 'DEF-skirt'],
             bone_rest_inverse=np.tile(np.eye(4, dtype=np.float32), (2, 1, 1)),
             animation=cls.kunstanimation(2, 2),
-            scene_name="split_fx",
+            scene_name='split_fx',
         )

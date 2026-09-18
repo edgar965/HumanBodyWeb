@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "koerpertiefe.js")
+MODUL = Jsmodul('scene', 'koerpertiefe.js')
 
 SKRIPT = """
 const { Koerpertiefe: K } = await import(MODUL);
@@ -75,4 +75,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class KoerpertiefeTest(SimpleTestCase):
     def test_tiefster_punkt_des_ganzen_netzes(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

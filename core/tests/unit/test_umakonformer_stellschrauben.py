@@ -27,7 +27,7 @@ class Stellschrauben(unittest.TestCase):
     def _binden(self, **abweichungen):
         e = Einstellungen(**abweichungen)
         k = Kleidungskonformer(self.koerper, self.k_tri, e)
-        return k, k.binden("huelle", self.stoff, self.s_tri)
+        return k, k.binden('huelle', self.stoff, self.s_tri)
 
     def test_suchradius_begrenzt_die_bindung(self):
         """`maxSearchRadius`. Mit 1 mm findet kein Punkt mehr eine Fläche
@@ -44,9 +44,9 @@ class Stellschrauben(unittest.TestCase):
         k, b = self._binden(abstandsschwelle_m=0.001)
         eng = k.anwenden(b)
         k2 = Kleidungskonformer(self.koerper, self.k_tri, Einstellungen(abstandsschwelle_m=0.05))
-        b2 = k2.binden("huelle", self.stoff, self.s_tri)
+        b2 = k2.binden('huelle', self.stoff, self.s_tri)
         weit = k2.anwenden(b2)
-        self.assertGreater(float(np.abs(eng - weit).max()), 1e-6, "Die Schwelle wirkt gar nicht")
+        self.assertGreater(float(np.abs(eng - weit).max()), 1e-6, 'Die Schwelle wirkt gar nicht')
 
     def _mit_glaettung(self, beheben, deckel=0.05):
         """Ein gezackter Stoff, stark geglättet — der Fall, in dem die
@@ -67,7 +67,7 @@ class Stellschrauben(unittest.TestCase):
         e = Einstellungen(
             kollision_beheben=beheben,
             glaetten=True,
-            glaettungsverfahren="laplace",
+            glaettungsverfahren='laplace',
             glaettungsdurchgaenge=20,
             glaettungsstaerke=1.0,
             schub_deckel_m=deckel,
@@ -75,7 +75,7 @@ class Stellschrauben(unittest.TestCase):
             tangential_halten=False,
         )
         k = Kleidungskonformer(self.koerper, self.k_tri, e)
-        ergebnis = k.anwenden(k.binden("huelle", rau, self.s_tri))
+        ergebnis = k.anwenden(k.binden('huelle', rau, self.s_tri))
         return float(np.hypot(ergebnis[:, 0], ergebnis[:, 2]).min())
 
     def test_ohne_kollisionsbehebung_bleibt_der_punkt_drin(self):
@@ -85,7 +85,7 @@ class Stellschrauben(unittest.TestCase):
         self.assertGreater(
             self._mit_glaettung(True),
             self._mit_glaettung(False) + 0.01,
-            "Mit Behebung muss der Stoff deutlich weiter draussen liegen",
+            'Mit Behebung muss der Stoff deutlich weiter draussen liegen',
         )
 
     def test_der_schub_ist_gedeckelt(self):
@@ -99,8 +99,8 @@ class Stellschrauben(unittest.TestCase):
         eng = self._mit_glaettung(True, deckel=0.002)
         weit = self._mit_glaettung(True, deckel=0.05)
         ohne = self._mit_glaettung(False)
-        self.assertGreater(weit, eng, "Ein grösserer Deckel muss mehr herausholen")
-        self.assertGreater(eng, ohne, "Auch ein kleiner Deckel muss etwas tun")
+        self.assertGreater(weit, eng, 'Ein grösserer Deckel muss mehr herausholen')
+        self.assertGreater(eng, ohne, 'Auch ein kleiner Deckel muss etwas tun')
 
     def test_glaettung_laesst_sich_abschalten(self):
         """`enableSmoothing`."""
@@ -110,7 +110,7 @@ class Stellschrauben(unittest.TestCase):
         for an in (True, False):
             e = Einstellungen(glaetten=an, naehte_halten=False)
             k = Kleidungskonformer(self.koerper, self.k_tri, e)
-            ergebnisse[an] = k.anwenden(k.binden("h", rau, self.s_tri))
+            ergebnisse[an] = k.anwenden(k.binden('h', rau, self.s_tri))
         self.assertGreater(float(np.abs(ergebnisse[True] - ergebnisse[False]).max()), 1e-6)
 
     def test_mehr_durchgaenge_glaetten_staerker(self):
@@ -136,7 +136,7 @@ class Stellschrauben(unittest.TestCase):
 
         werte = []
         for durchgaenge in (1, 4, 16):
-            g = Glaettung.glaetten(rau, (starts, nachbarn), "laplace", durchgaenge=durchgaenge, staerke=0.5)
+            g = Glaettung.glaetten(rau, (starts, nachbarn), 'laplace', durchgaenge=durchgaenge, staerke=0.5)
             werte.append(rauheit(g))
         self.assertLess(werte[1], werte[0])
         self.assertLess(werte[2], werte[1])
@@ -149,7 +149,7 @@ class Stellschrauben(unittest.TestCase):
         rau = punkte.copy()
         rau[::2] *= 1.02
         starts, nachbarn = Netzgeometrie.nachbarschaft(len(punkte), dreiecke)
-        g = Glaettung.glaetten(rau, (starts, nachbarn), "laplace", durchgaenge=8, staerke=0.0)
+        g = Glaettung.glaetten(rau, (starts, nachbarn), 'laplace', durchgaenge=8, staerke=0.0)
         np.testing.assert_allclose(g, rau, atol=1e-12)
 
     def test_hc_alpha_zieht_zur_ausgangslage(self):
@@ -163,10 +163,10 @@ class Stellschrauben(unittest.TestCase):
         weg = {}
         for alpha in (0.0, 1.0):
             g = Glaettung.glaetten(
-                rau, (starts, nachbarn), "hc", durchgaenge=8, staerke=0.5, alpha=alpha, beta=0.5
+                rau, (starts, nachbarn), 'hc', durchgaenge=8, staerke=0.5, alpha=alpha, beta=0.5
             )
             weg[alpha] = float(np.abs(np.linalg.norm(g, axis=1) - np.linalg.norm(rau, axis=1)).mean())
-        self.assertLess(weg[1.0], weg[0.0], "alpha=1 muss näher an der Ausgangslage bleiben")
+        self.assertLess(weg[1.0], weg[0.0], 'alpha=1 muss näher an der Ausgangslage bleiben')
 
     def test_hc_beta_zieht_zu_den_nachbarn(self):
         """`hcBeta`: der Gegenspieler von alpha. Zwei verschiedene Werte
@@ -175,8 +175,8 @@ class Stellschrauben(unittest.TestCase):
         rau = punkte.copy()
         rau[::2] *= 1.03
         starts, nachbarn = Netzgeometrie.nachbarschaft(len(punkte), dreiecke)
-        a = Glaettung.glaetten(rau, (starts, nachbarn), "hc", 8, 0.5, alpha=0.5, beta=0.0)
-        b = Glaettung.glaetten(rau, (starts, nachbarn), "hc", 8, 0.5, alpha=0.5, beta=1.0)
+        a = Glaettung.glaetten(rau, (starts, nachbarn), 'hc', 8, 0.5, alpha=0.5, beta=0.0)
+        b = Glaettung.glaetten(rau, (starts, nachbarn), 'hc', 8, 0.5, alpha=0.5, beta=1.0)
         self.assertGreater(float(np.abs(a - b).max()), 1e-6)
 
     def test_nahttoleranz_entscheidet_ueber_die_gruppe(self):
@@ -190,7 +190,7 @@ class Stellschrauben(unittest.TestCase):
         # −1 tragen, sind NICHT zusammengefasst. Wer hier schlicht auf
         # Ungleichheit prüft, vergleicht −1 mit −1 und hält die
         # Toleranz für wirkungslos.
-        self.assertEqual(int(eng[0]), -1, "1e-7 darf die beiden nicht zusammenfassen")
+        self.assertEqual(int(eng[0]), -1, '1e-7 darf die beiden nicht zusammenfassen')
         self.assertEqual(int(eng[1]), -1)
-        self.assertGreaterEqual(int(weit[0]), 0, "1e-4 muss sie zusammenfassen")
+        self.assertGreaterEqual(int(weit[0]), 0, '1e-4 muss sie zusammenfassen')
         self.assertEqual(int(weit[0]), int(weit[1]))

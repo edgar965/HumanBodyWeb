@@ -16,7 +16,6 @@ geglaettet (`innen` weg) macht `test_offener_rand_wandert_nicht` rot;
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from GarmentCode.stoffanlegen import Stoffanlegen
 
 
@@ -32,8 +31,8 @@ class StoffanlegenTest(SimpleTestCase):
         neu, bilanz = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 3.0)
         abstand = self._abstand(neu) * 1000
         self.assertLess(np.abs(abstand - 3.0).max(), 0.6, abstand)
-        self.assertEqual(bilanz["angelegt"], len(stoff))
-        self.assertGreater(bilanz["median_weg_mm"], 40)
+        self.assertEqual(bilanz['angelegt'], len(stoff))
+        self.assertGreater(bilanz['median_weg_mm'], 40)
 
     def test_eingesunkener_stoff_kommt_heraus(self):
         kv, kf = StoffanlegenTest._kugel()
@@ -48,7 +47,7 @@ class StoffanlegenTest(SimpleTestCase):
         stoff, dreiecke = StoffanlegenTest._streifen([(0.40, -0.02), (0.40, 0.0), (0.40, 0.02)])
         neu, bilanz = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 2.0)
         np.testing.assert_allclose(neu, stoff)
-        self.assertEqual(bilanz["angelegt"], 0)
+        self.assertEqual(bilanz['angelegt'], 0)
 
     def test_offener_rand_wandert_nicht(self):
         """Der Saum liegt an, bleibt aber auf seiner Hoehe."""
@@ -98,20 +97,21 @@ class StoffanlegenTest(SimpleTestCase):
         )
         dreiecke = np.array([[0, 1, 3], [0, 3, 2], [0, 2, 4], [0, 4, 1]])
         anleger = Stoffanlegen.aus_netz(kv, kf, dreiecke)
-        self.assertIsNotNone(anleger, "Kunstkoerper ohne Schritt")
+        self.assertIsNotNone(anleger, 'Kunstkoerper ohne Schritt')
         neu, _ = anleger.anlegen(stoff, 2.0)
         self.assertGreater(neu[0, 0], 0.04, neu[0])
         self.assertAlmostEqual(neu[0, 0], 0.058, delta=0.004)
         # Gegenprobe: ohne Seiten liegt der naechste Punkt am linken Bein.
         _, index = anleger.baum.query(stoff[0])
-        self.assertLess(kv[index][0], 0.0, "die Gegenprobe traegt nicht: naechster Punkt rechts")
+        self.assertLess(kv[index][0], 0.0, 'die Gegenprobe traegt nicht: naechster Punkt rechts')
 
     def test_hose_wird_hochgezogen_und_saum_kommt_auf_den_knoechel(self):
         """Am Kunstkoerper aus `test_stoffhochziehen`: Der Hosenschritt
         landet am Koerperschritt, der Saum nicht unter der Ferse."""
-        from .test_stoffhochziehen import _koerper, _hose
-        from GarmentCode.stoffhochziehen import Stoffhochziehen
         import trimesh
+        from GarmentCode.stoffhochziehen import Stoffhochziehen
+
+        from .test_stoffhochziehen import _hose, _koerper
 
         kv = _koerper()
         # Ein Netz aus der Punktwolke: konvexe Huelle je Teil reicht fuer
@@ -126,16 +126,16 @@ class StoffanlegenTest(SimpleTestCase):
         hoch = Stoffhochziehen(np.asarray(netz.vertices))
         self.assertIsNotNone(hoch.schritt)
         neu, bilanz = hoch.anwenden(hose)
-        self.assertGreater(bilanz["hochgezogen_mm"], 100)
-        self.assertGreater(bilanz["saum_gehoben_mm"], 50)
+        self.assertGreater(bilanz['hochgezogen_mm'], 100)
+        self.assertGreater(bilanz['saum_gehoben_mm'], 50)
         self.assertGreater(neu[:, 2].min(), 0.03)
 
     def test_bilanz_nennt_den_hautabstand(self):
         kv, kf = StoffanlegenTest._kugel()
         stoff, dreiecke = StoffanlegenTest._streifen([(0.13, -0.01), (0.13, 0.01)])
         _, bilanz = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 2.5)
-        self.assertAlmostEqual(bilanz["haut_median_mm"], 2.5, delta=0.3)
-        self.assertEqual(bilanz["abstand_mm"], 2.5)
+        self.assertAlmostEqual(bilanz['haut_median_mm'], 2.5, delta=0.3)
+        self.assertEqual(bilanz['abstand_mm'], 2.5)
 
     @staticmethod
     def _kugel(radius=0.10):

@@ -32,12 +32,12 @@ class Umaquelle:
 
     #: Die Klassen, in denen ein Gegenstueck stehen kann.
     KLASSEN = {
-        "Netzgeometrie": Netzgeometrie,
-        "Glaettung": Glaettung,
-        "Nahtgruppen": Nahtgruppen,
-        "Bindung": Bindung,
-        "Einstellungen": Einstellungen,
-        "Kleidungskonformer": Kleidungskonformer,
+        'Netzgeometrie': Netzgeometrie,
+        'Glaettung': Glaettung,
+        'Nahtgruppen': Nahtgruppen,
+        'Bindung': Bindung,
+        'Einstellungen': Einstellungen,
+        'Kleidungskonformer': Kleidungskonformer,
     }
 
     #: Nur `public`. Das ist die SCHNITTSTELLE — und nur die muss der Port
@@ -47,12 +47,12 @@ class Umaquelle:
     #: seine eigene Union-Find-Struktur im Rumpf. Sie einzeln zu fordern
     #: hiesse, die INNERE Bauart nachzubauen statt das Verhalten.
     MUSTER = (
-        re.compile(r"\bpublic\s+static\s+[\w\[\]<>,\.]+\s+(\w+)\s*\("),
+        re.compile(r'\bpublic\s+static\s+[\w\[\]<>,\.]+\s+(\w+)\s*\('),
         re.compile(
-            r"\bpublic\s+(?!class|enum|struct|static)"
-            r"[\w\[\]<>,\.]+\s+(\w+)\s*\("
+            r'\bpublic\s+(?!class|enum|struct|static)'
+            r'[\w\[\]<>,\.]+\s+(\w+)\s*\('
         ),
-        re.compile(r"\bpublic\s+[\w\[\]<>,\.]+\s+(\w+)\s*[=;]"),
+        re.compile(r'\bpublic\s+[\w\[\]<>,\.]+\s+(\w+)\s*[=;]'),
     )
 
     #: Zusaetzlich, wenn auch die privaten Schritte und die Klassennamen
@@ -61,8 +61,8 @@ class Umaquelle:
     #: kein eigener Baustein, sondern in `cKDTree` aufgegangen — ein
     #: Eintrag ohne Methodennamen, aber mit Vorbild.
     PRIVAT = (
-        re.compile(r"\bprivate\s+static\s+[\w\[\]<>,\.]+\s+(\w+)\s*\("),
-        re.compile(r"\bclass\s+(\w+)"),
+        re.compile(r'\bprivate\s+static\s+[\w\[\]<>,\.]+\s+(\w+)\s*\('),
+        re.compile(r'\bclass\s+(\w+)'),
     )
 
     @staticmethod
@@ -80,14 +80,14 @@ class Umaquelle:
         fuer C# waere ein zweites Fremdprojekt in dieser Pruefung.
         """
         if klasse:
-            teile = text.split("class %s" % klasse)
+            teile = text.split('class %s' % klasse)
             if len(teile) < 2:
                 return set()
             text = teile[1]
             # bis zur naechsten Klasse auf derselben Ebene
             naechste = re.search(
-                r"\n    (?:public |internal )?(?:sealed |static )?"
-                r"class \w",
+                r'\n    (?:public |internal )?(?:sealed |static )?'
+                r'class \w',
                 text,
             )
             if naechste:

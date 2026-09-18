@@ -17,27 +17,27 @@ import re
 from django.conf import settings
 from django.test import Client, TestCase
 
-JS = settings.BASE_DIR / "static" / "viewer" / "scene" / "detailbereiche.js"
-BEREICHE = ("haut", "augen", "brauen", "mund", "naegel")
+JS = settings.BASE_DIR / 'static' / 'viewer' / 'scene' / 'detailbereiche.js'
+BEREICHE = ('haut', 'augen', 'brauen', 'mund', 'naegel')
 KLAPPBAR = (
-    "prop-transform-section",
-    "prop-equipped-section",
-    "prop-bodytype-section",
-    "prop-gemeinsam-section",
-    "prop-morphs-section",
+    'prop-transform-section',
+    'prop-equipped-section',
+    'prop-bodytype-section',
+    'prop-gemeinsam-section',
+    'prop-morphs-section',
 )
 
 
 class SzeneDetails(TestCase):
     def setUp(self):
-        antwort = Client().get("/humanbody/scene/")
+        antwort = Client().get('/humanbody/scene/')
         self.assertEqual(antwort.status_code, 200)
-        self.text = antwort.content.decode("utf-8")
-        self.tabelle = JS.read_text(encoding="utf-8")
+        self.text = antwort.content.decode('utf-8')
+        self.tabelle = JS.read_text(encoding='utf-8')
 
     def _kennungen(self, sorte):
         """Alle `['prop-detail-…', 'feld']`-Kennungen einer Sorte aus der JS-Tabelle."""
-        if sorte == "felder":
+        if sorte == 'felder':
             return re.findall(r"\['(prop-detail-[\w-]+)', '\w+'\]", self.tabelle)
         return re.findall(r"'((?:Eyelids|Eyebrows|Hands)_\w+)'", self.tabelle)
 
@@ -55,12 +55,12 @@ class SzeneDetails(TestCase):
             )
 
     def test_jede_kennung_der_tabelle_steht_auf_der_seite(self):
-        felder = self._kennungen("felder")
+        felder = self._kennungen('felder')
         self.assertGreaterEqual(len(felder), 15)
         for kennung in felder:
             muster = r'<(input type="(color|range)"|select) id="%s"' % kennung
             self.assertRegex(self.text, muster, kennung)
-        morphe = self._kennungen("morphe")
+        morphe = self._kennungen('morphe')
         self.assertGreaterEqual(len(morphe), 9)
         for name in morphe:
             muster = (

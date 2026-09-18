@@ -58,7 +58,7 @@ class StetigkeitTest(SimpleTestCase):
         a = Quaternionenbau.mit_schleife(quats.copy())
         b = quats.copy()
         Bvhleser._stetig_machen(b)
-        self.assertTrue(np.array_equal(a, b), "geschlossene Rechnung weicht ab:\n%s\n%s" % (a, b))
+        self.assertTrue(np.array_equal(a, b), 'geschlossene Rechnung weicht ab:\n%s\n%s' % (a, b))
         return b
 
     def test_zufaellige_reihen(self):
@@ -75,7 +75,7 @@ class StetigkeitTest(SimpleTestCase):
         quats[1::2] *= -1
         ergebnis = self._vergleiche(quats)
         # Danach zeigen alle in dieselbe Richtung.
-        skalar = np.einsum("fjk,fjk->fj", ergebnis[1:], ergebnis[:-1])
+        skalar = np.einsum('fjk,fjk->fj', ergebnis[1:], ergebnis[:-1])
         self.assertTrue((skalar >= 0).all())
 
     def test_skalarprodukt_genau_null(self):
@@ -91,7 +91,7 @@ class StetigkeitTest(SimpleTestCase):
         quats[2, 0] = [0.0, 1.0, 0.0, 0.0]
         ergebnis = self._vergleiche(quats)
         self.assertTrue(np.allclose(ergebnis[1, 0], [0.0, 1.0, 0.0, 0.0]))
-        self.assertTrue(np.abs(ergebnis).sum() > 0, "Reihe auf null gefallen")
+        self.assertTrue(np.abs(ergebnis).sum() > 0, 'Reihe auf null gefallen')
 
     def test_ein_einziges_bild(self):
         quats = np.array([[[0.0, 0.0, 0.0, 1.0]]])
@@ -120,7 +120,7 @@ class SpitzenTest(SimpleTestCase):
         quats[:, 0, 3] = np.cos(winkel / 2)
         vorher = quats.copy()
         self._leser()._spitzen_glaetten(quats)
-        self.assertTrue(np.array_equal(quats, vorher), "eine gleichmäßige Drehung wurde angetastet")
+        self.assertTrue(np.array_equal(quats, vorher), 'eine gleichmäßige Drehung wurde angetastet')
 
     def test_zu_kurze_reihe(self):
         quats = np.zeros((2, 1, 4))

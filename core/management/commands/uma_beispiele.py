@@ -34,41 +34,41 @@ from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
-    help = "Baut Beispiel-UMA-Figuren in Python und legt sie ab."
+    help = 'Baut Beispiel-UMA-Figuren in Python und legt sie ab.'
 
     #: Die drei, die Edgar nennt — Male, Female, Elf.
-    VORGABE = ("Human Male 3.0", "Human Female 3.0", "Elf Male")
+    VORGABE = ('Human Male 3.0', 'Human Female 3.0', 'Elf Male')
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--rasse",
-            action="append",
-            dest="rassen",
-            help="Rassenname aus dem Katalog; mehrfach angebbar. Ohne Angabe: %s" % ", ".join(self.VORGABE),
+            '--rasse',
+            action='append',
+            dest='rassen',
+            help='Rassenname aus dem Katalog; mehrfach angebbar. Ohne Angabe: %s' % ', '.join(self.VORGABE),
         )
-        parser.add_argument("--ordner", default=None, help="Zielordner (Vorgabe: Figuren/uma_python)")
+        parser.add_argument('--ordner', default=None, help='Zielordner (Vorgabe: Figuren/uma_python)')
 
     def handle(self, *args, **optionen):
         from UMA_Python import Figur
         from UMA_Python.szene import Szenenfigur
 
-        ziel = self._ordner(optionen.get("ordner"))
-        rassen = optionen.get("rassen") or list(self.VORGABE)
+        ziel = self._ordner(optionen.get('ordner'))
+        rassen = optionen.get('rassen') or list(self.VORGABE)
         figur = Figur(settings.UMA_PROJEKT)
         bekannt = set(figur.rassen())
 
         for rasse in rassen:
             if rasse not in bekannt:
-                self.stderr.write("Unbekannte Rasse: %s" % rasse)
+                self.stderr.write('Unbekannte Rasse: %s' % rasse)
                 continue
             beginn = time.time()
             gebaut = figur.bauen(rasse)
             dauer = time.time() - beginn
             zettel = self._ablegen(ziel, gebaut, Szenenfigur, dauer)
             self.stdout.write(
-                "%-20s %6d Punkte  %3d Knochen  %.2f m  %.1f s  "
-                "Ruhe %.4f mm"
-                % (rasse, zettel["punkte"], zettel["knochen"], zettel["hoehe_m"], dauer, zettel["ruhe_mm"])
+                '%-20s %6d Punkte  %3d Knochen  %.2f m  %.1f s  '
+                'Ruhe %.4f mm'
+                % (rasse, zettel['punkte'], zettel['knochen'], zettel['hoehe_m'], dauer, zettel['ruhe_mm'])
             )
 
     # ------------------------------------------------------------------ Ort
@@ -80,7 +80,7 @@ class Command(BaseCommand):
         if angabe:
             ziel = Path(angabe)
         else:
-            ziel = Path(str(settings.TOOLS_ROOT)) / "Figuren" / "uma_python"
+            ziel = Path(str(settings.TOOLS_ROOT)) / 'Figuren' / 'uma_python'
         ziel.mkdir(parents=True, exist_ok=True)
         return ziel
 
@@ -92,8 +92,8 @@ class Command(BaseCommand):
         und Leerzeichen, und eine Verbotsliste hat in diesem Projekt schon
         zweimal einen Fall uebersehen (`Stoffexportziel`, 01.09.2026).
         """
-        erlaubt = [z if (z.isalnum() or z in "-_") else "_" for z in rasse]
-        return "".join(erlaubt).strip("_")
+        erlaubt = [z if (z.isalnum() or z in '-_') else '_' for z in rasse]
+        return ''.join(erlaubt).strip('_')
 
     # ---------------------------------------------------------------- Ablage
 
@@ -102,25 +102,25 @@ class Command(BaseCommand):
         name = cls._dateiname(gebaut.rasse)
         punkte = Szenenfigur.nach_yoben(gebaut.punkte())
         dreiecke = gebaut.netz.dreiecke
-        cls._obj(ziel / ("%s.obj" % name), punkte, dreiecke, gebaut.rasse)
+        cls._obj(ziel / ('%s.obj' % name), punkte, dreiecke, gebaut.rasse)
 
         zettel = {
-            "rasse": gebaut.rasse,
-            "quelle": "UMA_Python",
-            "punkte": int(len(punkte)),
-            "dreiecke": int(len(dreiecke)),
-            "knochen": len(gebaut.netz.knochen),
-            "slots": len(gebaut.netz.bereiche),
-            "hoehe_m": round(float(punkte[:, 1].max() - punkte[:, 1].min()), 4),
-            "lage": "Meter, Y oben (Szenenlage)",
-            "bauzeit_s": round(dauer, 2),
-            "ruhe_mm": cls._ruhe_mm(gebaut),
-            "dna": {n: float(w) for n, w in gebaut.dna.items()},
-            "regler": len(gebaut.regler),
-            "fehlende_slots": gebaut.fehlend,
+            'rasse': gebaut.rasse,
+            'quelle': 'UMA_Python',
+            'punkte': int(len(punkte)),
+            'dreiecke': int(len(dreiecke)),
+            'knochen': len(gebaut.netz.knochen),
+            'slots': len(gebaut.netz.bereiche),
+            'hoehe_m': round(float(punkte[:, 1].max() - punkte[:, 1].min()), 4),
+            'lage': 'Meter, Y oben (Szenenlage)',
+            'bauzeit_s': round(dauer, 2),
+            'ruhe_mm': cls._ruhe_mm(gebaut),
+            'dna': {n: float(w) for n, w in gebaut.dna.items()},
+            'regler': len(gebaut.regler),
+            'fehlende_slots': gebaut.fehlend,
         }
-        (ziel / ("%s.json" % name)).write_text(
-            json.dumps(zettel, indent=2, ensure_ascii=False), encoding="utf-8"
+        (ziel / ('%s.json' % name)).write_text(
+            json.dumps(zettel, indent=2, ensure_ascii=False), encoding='utf-8'
         )
         return zettel
 
@@ -145,7 +145,7 @@ class Command(BaseCommand):
     def _obj(pfad, punkte, dreiecke, rasse):
         """Netz als OBJ. Nur Punkte und Flaechen — Texturen rechnet der
         Port nicht mit, und ein leeres `vt` waere eine Behauptung."""
-        zeilen = ["# %s — UMA_Python, Meter, Y oben" % rasse]
-        zeilen += ["v %.6f %.6f %.6f" % tuple(p) for p in punkte]
-        zeilen += ["f %d %d %d" % (a + 1, b + 1, c + 1) for a, b, c in dreiecke]
-        pfad.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
+        zeilen = ['# %s — UMA_Python, Meter, Y oben' % rasse]
+        zeilen += ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
+        zeilen += ['f %d %d %d' % (a + 1, b + 1, c + 1) for a, b, c in dreiecke]
+        pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')

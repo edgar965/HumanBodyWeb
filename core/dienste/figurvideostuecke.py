@@ -43,25 +43,25 @@ class Figurvideostuecke:
         if not liste:
             return []
         if not knochen:
-            raise ValueError("Stuecke ohne Knochenliste.")
-        ziel = os.path.join(ordner, "stuecke")
+            raise ValueError('Stuecke ohne Knochenliste.')
+        ziel = os.path.join(ordner, 'stuecke')
         os.makedirs(ziel, exist_ok=True)
         aus = []
         for nummer, meta in enumerate(liste):
-            name = str(meta.get("name") or "Stueck %d" % (nummer + 1))
-            datei = dateien.get(str(meta.get("datei") or ""))
+            name = str(meta.get('name') or 'Stueck %d' % (nummer + 1))
+            datei = dateien.get(str(meta.get('datei') or ''))
             if datei is None:
                 raise ValueError('Stueck „%s" ohne Daten.' % name)
-            pfad = os.path.join(ziel, "%02d.npz" % nummer)
+            pfad = os.path.join(ziel, '%02d.npz' % nummer)
             cls._schreiben(
                 pfad,
                 datei.read(),
-                int(meta.get("punkte") or 0),
-                int(meta.get("dreiecke") or 0),
+                int(meta.get('punkte') or 0),
+                int(meta.get('dreiecke') or 0),
                 knochen,
                 name,
             )
-            aus.append({"name": name, "pfad": pfad, "farbe": cls.farbe(meta.get("farbe"))})
+            aus.append({'name': name, 'pfad': pfad, 'farbe': cls.farbe(meta.get('farbe'))})
         return aus
 
     @classmethod
@@ -70,7 +70,7 @@ class Figurvideostuecke:
         if n <= 0 or m <= 0 or len(roh) != erwartet:
             raise ValueError(
                 'Stueck „%s": %d Bytes, erwartet %d '
-                "(%d Punkte, %d Dreiecke)." % (name, len(roh), erwartet, n, m)
+                '(%d Punkte, %d Dreiecke).' % (name, len(roh), erwartet, n, m)
             )
         punkte = np.frombuffer(roh, dtype=np.float32, count=n * 3).reshape(n, 3)
         versatz = n * 12
@@ -103,7 +103,7 @@ class Figurvideostuecke:
     def farbe(cls, wert):
         """`#rrggbb` -> [r, g, b] in 0..1; sonst die Standardfarbe."""
         try:
-            farbe = str(wert or "").lstrip("#")
+            farbe = str(wert or '').lstrip('#')
             if len(farbe) == 6:
                 return [int(farbe[i : i + 2], 16) / 255.0 for i in (0, 2, 4)]
         # stumm gewollt: ein unlesbarer Farbwert aus dem Browser faellt auf die

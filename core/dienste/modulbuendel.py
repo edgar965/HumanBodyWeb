@@ -58,16 +58,16 @@ import threading
 
 from django.conf import settings
 
-__all__ = ["Modulbuendel"]
+__all__ = ['Modulbuendel']
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Modulbuendel:
     """Baut und findet das gebündelte Skript der Szene-Seite."""
 
     #: Einstiegspunkt, relativ zum Statik-Ordner.
-    EINSTIEG = "viewer/scene/main.js"
+    EINSTIEG = 'viewer/scene/main.js'
 
     #: Wohin die fertigen Bündel kommen.
     #:
@@ -78,12 +78,12 @@ class Modulbuendel:
     #: `scene_1789043552.js` und `scene_1789043571.js` aus, also zwei Bauten
     #: für eine Änderung. Ausgeliefert wird über eine eigene Route
     #: (`core/api/buendel.py`), die die Fassung genauso im Pfad trägt.
-    ORDNER = "_buendel"
+    ORDNER = '_buendel'
 
     #: Was NICHT mit hineingebündelt wird. `three` kommt aus dem CDN und
     #: steht in der Import-Map der Seite; die djangoBase-Module liegen
     #: außerhalb dieses Projekts und haben ihre eigene Fassung.
-    EXTERN = ("three", "three/addons/*", "three-subdivide", "/static/djangobase/*")
+    EXTERN = ('three', 'three/addons/*', 'three-subdivide', '/static/djangobase/*')
 
     #: Länger darf ein Bündel nicht brauchen. Schlägt es fehl, liefert die
     #: Seite die Einzelmodule — langsamer, aber immer richtig.
@@ -96,7 +96,7 @@ class Modulbuendel:
     @classmethod
     def wurzel(cls):
         """Der Statik-Ordner dieses Projekts — die Quelle der Module."""
-        return os.path.join(settings.BASE_DIR, "static")
+        return os.path.join(settings.BASE_DIR, 'static')
 
     @classmethod
     def ablage(cls):
@@ -105,12 +105,12 @@ class Modulbuendel:
 
     @classmethod
     def dateiname(cls, fassung):
-        return "scene_%s.js" % fassung
+        return 'scene_%s.js' % fassung
 
     @classmethod
     def adresse(cls, fassung):
         """Die Adresse, unter der die Seite das Bündel lädt."""
-        return "/buendel/%s/scene.js" % fassung
+        return '/buendel/%s/scene.js' % fassung
 
     @classmethod
     def pfad(cls, fassung):
@@ -123,11 +123,11 @@ class Modulbuendel:
         Ohne es gibt es kein Bündel — und das ist kein Fehler, sondern der
         Normalfall auf einem Rechner ohne `npm install`.
         """
-        for name in ("esbuild.cmd", "esbuild.exe", "esbuild"):
-            kandidat = os.path.join(settings.BASE_DIR, "node_modules", ".bin", name)
+        for name in ('esbuild.cmd', 'esbuild.exe', 'esbuild'):
+            kandidat = os.path.join(settings.BASE_DIR, 'node_modules', '.bin', name)
             if os.path.isfile(kandidat):
                 return kandidat
-        return shutil.which("esbuild")
+        return shutil.which('esbuild')
 
     @classmethod
     def bereit(cls, fassung):
@@ -151,32 +151,32 @@ class Modulbuendel:
         werkzeug = cls.esbuild()
         if not werkzeug:
             logger.info(
-                "Modulbuendel: esbuild fehlt — die Szene-Seite laedt "
-                "die Einzelmodule (langsamer, aber richtig)"
+                'Modulbuendel: esbuild fehlt — die Szene-Seite laedt '
+                'die Einzelmodule (langsamer, aber richtig)'
             )
             return False
         os.makedirs(os.path.dirname(ziel), exist_ok=True)
         befehl = [
             werkzeug,
-            os.path.join(cls.wurzel(), *cls.EINSTIEG.split("/")),
-            "--bundle",
-            "--format=esm",
-            "--outfile=%s" % ziel,
-            "--log-level=warning",
+            os.path.join(cls.wurzel(), *cls.EINSTIEG.split('/')),
+            '--bundle',
+            '--format=esm',
+            '--outfile=%s' % ziel,
+            '--log-level=warning',
         ]
-        befehl += ["--external:%s" % e for e in cls.EXTERN]
+        befehl += ['--external:%s' % e for e in cls.EXTERN]
         try:
             lauf = subprocess.run(
                 befehl, capture_output=True, text=True, timeout=cls.ZEITGRENZE_S, cwd=settings.BASE_DIR
             )
         except OSError, subprocess.SubprocessError:
-            logger.exception("Modulbuendel: Lauf fehlgeschlagen")
+            logger.exception('Modulbuendel: Lauf fehlgeschlagen')
             return False
         if lauf.returncode != 0 or not os.path.isfile(ziel):
-            logger.error("Modulbuendel: esbuild meldet %s — %s", lauf.returncode, (lauf.stderr or "")[:500])
+            logger.error('Modulbuendel: esbuild meldet %s — %s', lauf.returncode, (lauf.stderr or '')[:500])
             return False
         cls._aufraeumen(os.path.dirname(ziel), os.path.basename(ziel))
-        logger.info("Modulbuendel: %s gebaut (%d KB)", os.path.basename(ziel), os.path.getsize(ziel) // 1024)
+        logger.info('Modulbuendel: %s gebaut (%d KB)', os.path.basename(ziel), os.path.getsize(ziel) // 1024)
         return True
 
     @classmethod
@@ -188,7 +188,7 @@ class Modulbuendel:
         zuordnen kann.
         """
         for name in os.listdir(ordner):
-            if name == behalten or not name.endswith(".js"):
+            if name == behalten or not name.endswith('.js'):
                 continue
             try:
                 os.remove(os.path.join(ordner, name))

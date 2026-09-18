@@ -20,10 +20,9 @@ Aufruf:  python manage.py test core
 """
 
 from django.test import SimpleTestCase
-
-from humanbody_core.skeleton.skeleton import Skeleton
-from humanbody_core.skeleton.rigify import SkeletonRigify
 from humanbody_core.skeleton.meta import SkeletonMeta
+from humanbody_core.skeleton.rigify import SkeletonRigify
+from humanbody_core.skeleton.skeleton import Skeleton
 
 
 class SkeletonStrukturTest(SimpleTestCase):
@@ -31,13 +30,13 @@ class SkeletonStrukturTest(SimpleTestCase):
 
     #: Was durch den Einrückungsfehler verschluckt worden war.
     ERWARTET = (
-        "conversion_map",
-        "bone_names",
-        "deformation_bone_map",
-        "left_arm_ik",
-        "right_arm_ik",
-        "left_leg_ik",
-        "right_leg_ik",
+        'conversion_map',
+        'bone_names',
+        'deformation_bone_map',
+        'left_arm_ik',
+        'right_arm_ik',
+        'left_leg_ik',
+        'right_leg_ik',
     )
 
     def test_alle_methoden_sind_erreichbar(self):
@@ -45,8 +44,8 @@ class SkeletonStrukturTest(SimpleTestCase):
         self.assertEqual(
             fehlend,
             [],
-            "Unerreichbar: %s — steht wieder eine Funktion ohne Einrueckung im "
-            "Klassenkoerper? Siehe Docu/befund_skeleton_einrueckung.md" % fehlend,
+            'Unerreichbar: %s — steht wieder eine Funktion ohne Einrueckung im '
+            'Klassenkoerper? Siehe Docu/befund_skeleton_einrueckung.md' % fehlend,
         )
 
     def test_klasse_hat_eigenen_konstruktor(self):
@@ -74,11 +73,11 @@ class SkeletonStrukturTest(SimpleTestCase):
 
         self.assertTrue(callable(BvhNormalisierung.delta))
         self.assertFalse(
-            hasattr(modul, "_delta_normalize_bvh"), "Die alte Modulfunktion ist zurück in skeleton.py"
+            hasattr(modul, '_delta_normalize_bvh'), 'Die alte Modulfunktion ist zurück in skeleton.py'
         )
         self.assertFalse(
-            hasattr(Skeleton, "_delta_normalize_bvh"),
-            "_delta_normalize_bvh haengt an der Klasse — steht sie wieder im Klassenkoerper?",
+            hasattr(Skeleton, '_delta_normalize_bvh'),
+            '_delta_normalize_bvh haengt an der Klasse — steht sie wieder im Klassenkoerper?',
         )
 
     def test_unterklassen_bleiben_baubar(self):
@@ -102,4 +101,4 @@ class SkeletonStrukturTest(SimpleTestCase):
                 with self.subTest(klasse=name):
                     self.assertIsNotNone(kls())
                     gebaut += 1
-        self.assertGreaterEqual(gebaut, 8, "weniger Formatklassen gefunden als erwartet")
+        self.assertGreaterEqual(gebaut, 8, 'weniger Formatklassen gefunden als erwartet')

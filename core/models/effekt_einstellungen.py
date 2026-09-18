@@ -28,41 +28,41 @@ class EffektEinstellungen(models.Model):
 
     effekte_default_pipeline = models.CharField(
         max_length=20,
-        default="figur_def",
+        default='figur_def',
         blank=True,
-        help_text="Vorgewählte Pipeline der Effekte-Seite (kleid_wind, figur_def)",
+        help_text='Vorgewählte Pipeline der Effekte-Seite (kleid_wind, figur_def)',
     )
     effekte_default_model = models.CharField(
         max_length=200,
-        default="Female2",
+        default='Female2',
         blank=True,
-        help_text="Vorgewähltes HumanBody-Modell der Effekte-Seite",
+        help_text='Vorgewähltes HumanBody-Modell der Effekte-Seite',
     )
     effekte_default_animation = models.CharField(
         max_length=300,
-        default="",
+        default='',
         blank=True,
-        help_text=Einstellungsfelder.hilfetext("effekte_default_animation"),
+        help_text=Einstellungsfelder.hilfetext('effekte_default_animation'),
     )
     effekte_windrichtung = models.CharField(
         max_length=10,
-        default="seite",
+        default='seite',
         blank=True,
-        help_text="Windrichtung relativ zur Figur (seite, vorn, hinten)",
+        help_text='Windrichtung relativ zur Figur (seite, vorn, hinten)',
     )
     effekte_video_fps = models.IntegerField(
         default=30,
-        help_text=Einstellungsfelder.hilfetext("effekte_video_fps"),
+        help_text=Einstellungsfelder.hilfetext('effekte_video_fps'),
     )
     effekte_video_width = models.IntegerField(
         default=720,
-        help_text=Einstellungsfelder.hilfetext("effekte_video_width"),
+        help_text=Einstellungsfelder.hilfetext('effekte_video_width'),
     )
     effekte_video_height = models.IntegerField(
         default=900,
-        help_text=Einstellungsfelder.hilfetext("effekte_video_height"),
+        help_text=Einstellungsfelder.hilfetext('effekte_video_height'),
     )
     effekte_wind = models.FloatField(
         default=4.0,
-        help_text=Einstellungsfelder.hilfetext("effekte_wind"),
+        help_text=Einstellungsfelder.hilfetext('effekte_wind'),
     )

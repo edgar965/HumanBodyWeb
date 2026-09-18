@@ -27,7 +27,6 @@ auf die sich der Modulkopf von `gelenkanpassung.py` beruft.
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from humanbody_core import Gelenkanpassung
 
 
@@ -45,7 +44,7 @@ class Wuerfelnetz:
     @staticmethod
     def bauen(kante=1.0, punkte=6):
         achse = np.linspace(0.0, kante, punkte)
-        gitter = np.stack(np.meshgrid(achse, achse, achse, indexing="ij"), axis=-1)
+        gitter = np.stack(np.meshgrid(achse, achse, achse, indexing='ij'), axis=-1)
         return gitter.reshape(-1, 3).astype(np.float64)
 
 
@@ -53,22 +52,22 @@ class Wuerfelnetz:
 #: lokale Lage eines Knochens genau sein Abstand zum Elternknochen.
 KETTE = [
     {
-        "name": "wurzel",
-        "parent": None,
-        "local_position": [0.5, 0.5, 0.0],
-        "local_quaternion": [1.0, 0.0, 0.0, 0.0],
+        'name': 'wurzel',
+        'parent': None,
+        'local_position': [0.5, 0.5, 0.0],
+        'local_quaternion': [1.0, 0.0, 0.0, 0.0],
     },
     {
-        "name": "mitte",
-        "parent": "wurzel",
-        "local_position": [0.0, 0.0, 0.5],
-        "local_quaternion": [1.0, 0.0, 0.0, 0.0],
+        'name': 'mitte',
+        'parent': 'wurzel',
+        'local_position': [0.0, 0.0, 0.5],
+        'local_quaternion': [1.0, 0.0, 0.0, 0.0],
     },
     {
-        "name": "spitze",
-        "parent": "mitte",
-        "local_position": [0.0, 0.0, 0.5],
-        "local_quaternion": [1.0, 0.0, 0.0, 0.0],
+        'name': 'spitze',
+        'parent': 'mitte',
+        'local_position': [0.0, 0.0, 0.5],
+        'local_quaternion': [1.0, 0.0, 0.0, 0.0],
     },
 ]
 
@@ -91,7 +90,7 @@ class DieRuhelageBleibtDieRuhelage(SimpleTestCase):
         """
         lagen = self.anpassung.lokale_positionen(self.netz)
         for knochen in KETTE:
-            self.assertEqual(lagen[knochen["name"]], knochen["local_position"])
+            self.assertEqual(lagen[knochen['name']], knochen['local_position'])
 
     def test_kein_knochen_gilt_als_bewegt(self):
         """Das ist der Schalter, an dem die leere Nachricht hängt: Solange
@@ -124,7 +123,7 @@ class EineVerschiebungWandertMit(SimpleTestCase):
 
     def test_nur_die_wurzel_meldet_eine_neue_lage(self):
         """Kinder messen relativ zum Elternknochen — der ist mitgewandert."""
-        self.assertEqual(list(self.anpassung.bewegte(self.versetzt)), ["wurzel"])
+        self.assertEqual(list(self.anpassung.bewegte(self.versetzt)), ['wurzel'])
 
 
 class EinGroesseresNetzErgibtEinGroesseresSkelett(SimpleTestCase):
@@ -147,13 +146,13 @@ class EinGroesseresNetzErgibtEinGroesseresSkelett(SimpleTestCase):
         self.assertAlmostEqual(float(nachher / vorher), 2.0, places=6)
 
     def test_alle_drei_knochen_melden_sich(self):
-        self.assertEqual(sorted(self.anpassung.bewegte(self.doppelt)), ["mitte", "spitze", "wurzel"])
+        self.assertEqual(sorted(self.anpassung.bewegte(self.doppelt)), ['mitte', 'spitze', 'wurzel'])
 
     def test_die_lokale_lage_eines_kindes_verdoppelt_sich(self):
         """0,5 zwischen Wurzel und Mitte werden 1,0 — genau das ist die
         Länge, die dem Netz vorher gefehlt hat."""
         lagen = self.anpassung.lokale_positionen(self.doppelt)
-        np.testing.assert_allclose(lagen["mitte"], [0.0, 0.0, 1.0], atol=1e-5)
+        np.testing.assert_allclose(lagen['mitte'], [0.0, 0.0, 1.0], atol=1e-5)
 
 
 class EineDrehungIstKeineVerzerrung(SimpleTestCase):
@@ -207,9 +206,9 @@ class DieKnochenlisteBehaeltIhreForm(SimpleTestCase):
         netz = Wuerfelnetz.bauen()
         anpassung = Gelenkanpassung(KETTE, netz, nachbarn=20)
         liste = anpassung.knochenliste(netz * 1.5)
-        self.assertEqual([k["name"] for k in liste], [k["name"] for k in KETTE])
-        self.assertEqual([k["parent"] for k in liste], [k["parent"] for k in KETTE])
-        self.assertEqual([k["local_quaternion"] for k in liste], [k["local_quaternion"] for k in KETTE])
+        self.assertEqual([k['name'] for k in liste], [k['name'] for k in KETTE])
+        self.assertEqual([k['parent'] for k in liste], [k['parent'] for k in KETTE])
+        self.assertEqual([k['local_quaternion'] for k in liste], [k['local_quaternion'] for k in KETTE])
 
     def test_die_vorlage_bleibt_unberuehrt(self):
         """`dict(eintrag, ...)` kopiert — sonst wäre die Ruhelage nach dem
@@ -217,7 +216,7 @@ class DieKnochenlisteBehaeltIhreForm(SimpleTestCase):
         netz = Wuerfelnetz.bauen()
         anpassung = Gelenkanpassung(KETTE, netz, nachbarn=20)
         anpassung.knochenliste(netz * 1.5)
-        self.assertEqual(KETTE[1]["local_position"], [0.0, 0.0, 0.5])
+        self.assertEqual(KETTE[1]['local_position'], [0.0, 0.0, 0.5])
 
 
 class EinZyklusInDerElternkette(SimpleTestCase):
@@ -227,16 +226,16 @@ class EinZyklusInDerElternkette(SimpleTestCase):
     def test_er_wird_gemeldet_statt_zu_haengen(self):
         ring = [
             {
-                "name": "a",
-                "parent": "b",
-                "local_position": [0.0, 0.0, 0.1],
-                "local_quaternion": [1.0, 0.0, 0.0, 0.0],
+                'name': 'a',
+                'parent': 'b',
+                'local_position': [0.0, 0.0, 0.1],
+                'local_quaternion': [1.0, 0.0, 0.0, 0.0],
             },
             {
-                "name": "b",
-                "parent": "a",
-                "local_position": [0.0, 0.0, 0.1],
-                "local_quaternion": [1.0, 0.0, 0.0, 0.0],
+                'name': 'b',
+                'parent': 'a',
+                'local_position': [0.0, 0.0, 0.1],
+                'local_quaternion': [1.0, 0.0, 0.0, 0.0],
             },
         ]
         with self.assertRaises(ValueError):

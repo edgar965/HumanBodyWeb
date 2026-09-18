@@ -15,18 +15,18 @@ Systemaufruf. Im Profil von `/api/character/animations/` war `nt.stat` mit
 7.067 Aufrufen und 110 ms der groesste Einzelposten.
 """
 
+import logging
 import os
 
 from django.conf import settings
-import logging
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Bvhdatei:
     """Eine BVH-Datei im Bestand. `__slots__`, weil es 7.067 davon gibt."""
 
-    __slots__ = ("name", "pfad", "kategorie", "mtime_ns")
+    __slots__ = ('name', 'pfad', 'kategorie', 'mtime_ns')
 
     def __init__(self, name, pfad, kategorie, mtime_ns):
         self.name = name
@@ -35,13 +35,13 @@ class Bvhdatei:
         self.mtime_ns = mtime_ns
 
     def __repr__(self):
-        return "<Bvhdatei %s/%s>" % (self.kategorie, self.name)
+        return '<Bvhdatei %s/%s>' % (self.kategorie, self.name)
 
 
 class Bvhverzeichnis:
     """Kategorien und Dateien des BVH-Bestands."""
 
-    ENDUNG = ".bvh"
+    ENDUNG = '.bvh'
 
     def __init__(self, wurzel=None):
         self._wurzel = wurzel
@@ -52,7 +52,7 @@ class Bvhverzeichnis:
         # Seit 08.09.2026 unter `A:/3DTools/3DObjects` statt
         # `HumanBody/data` (Edgar: „verschiebe den kompletten Ordner …
         # der nicht direkt zu HumanBody gehoert").
-        return os.path.join(str(settings.OBJECTS_ROOT), "animations", "bvh")
+        return os.path.join(str(settings.OBJECTS_ROOT), 'animations', 'bvh')
 
     def kategorienamen(self):
         """Namen der Unterordner, alphabetisch. Leere Liste, wenn es sie nicht gibt."""
@@ -73,7 +73,7 @@ class Bvhverzeichnis:
                     except OSError:
                         continue
         except OSError:
-            logger.warning("BVH-Wurzel %s nicht lesbar", self.wurzel(), exc_info=True)
+            logger.warning('BVH-Wurzel %s nicht lesbar', self.wurzel(), exc_info=True)
             return []
         return sorted(namen)
 
@@ -101,7 +101,7 @@ class Bvhverzeichnis:
                         )
                     )
         except OSError:
-            logger.warning("BVH-Ordner %s nicht lesbar", ordner, exc_info=True)
+            logger.warning('BVH-Ordner %s nicht lesbar', ordner, exc_info=True)
             return []
         # Sortiert wird nach dem PFAD, was innerhalb eines Ordners dasselbe ist
         # wie nach dem Dateinamen MIT Endung — und darauf kommt es an: die
@@ -123,5 +123,5 @@ class Bvhverzeichnis:
             with os.scandir(ordner) as eintraege:
                 return sum(1 for e in eintraege if e.name.lower().endswith(self.ENDUNG))
         except OSError:
-            logger.warning("BVH-Ordner %s nicht lesbar", ordner, exc_info=True)
+            logger.warning('BVH-Ordner %s nicht lesbar', ordner, exc_info=True)
             return 0

@@ -51,7 +51,7 @@ class Bewegungsbau:
         roh = zufall.normal(size=(bilder, gelenke, 4))
         quats = roh / np.linalg.norm(roh, axis=2, keepdims=True)
         return BVHData(
-            names=["gelenk%d" % i for i in range(gelenke)],
+            names=['gelenk%d' % i for i in range(gelenke)],
             parents=[-1] + list(range(gelenke - 1)),
             offsets=np.zeros((gelenke, 3)),
             quats=quats,
@@ -71,7 +71,7 @@ class DeltaTest(SimpleTestCase):
                 raus.quats[0, gelenk],
                 [0.0, 0.0, 0.0, 1.0],
                 atol=1e-12,
-                err_msg="Gelenk %d steht in Bild 0 nicht in Ruhelage" % gelenk,
+                err_msg='Gelenk %d steht in Bild 0 nicht in Ruhelage' % gelenk,
             )
 
     def test_jedes_bild_bleibt_ein_einheitsquaternion(self):

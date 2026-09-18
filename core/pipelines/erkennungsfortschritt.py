@@ -19,7 +19,7 @@ Muster wie in `Fortschrittsleser` für den MocapNET-Lauf.
 
 import logging
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Erkennungsfortschritt:
@@ -31,7 +31,7 @@ class Erkennungsfortschritt:
     #: Höchstens eine Datenbankschreibung je Sekunde.
     SPERRE_S = 1.0
 
-    def __init__(self, job, gesamt, jetzt, name="", anteil=None):
+    def __init__(self, job, gesamt, jetzt, name='', anteil=None):
         self.job = job
         self.gesamt = gesamt or 0
         self.start = jetzt
@@ -47,11 +47,11 @@ class Erkennungsfortschritt:
     def zeile_lesen(self, zeile, jetzt):
         """Eine Ausgabezeile verarbeiten. True, wenn etwas geschrieben wurde."""
         zeile = zeile.strip()
-        if zeile.startswith("STATUS:"):
-            return self._melden("%s%s" % (self._vorsatz(), zeile[7:]))
-        if zeile.startswith("TOTAL:"):
+        if zeile.startswith('STATUS:'):
+            return self._melden('%s%s' % (self._vorsatz(), zeile[7:]))
+        if zeile.startswith('TOTAL:'):
             return self._gesamtzahl(zeile[6:], jetzt)
-        if zeile.startswith("PROGRESS:"):
+        if zeile.startswith('PROGRESS:'):
             return self._fortschritt(zeile[9:], jetzt)
         return False
 
@@ -67,10 +67,10 @@ class Erkennungsfortschritt:
         try:
             self.gesamt = int(text)
         except ValueError:
-            logger.debug("TOTAL unlesbar: %r", text, exc_info=True)
+            logger.debug('TOTAL unlesbar: %r', text, exc_info=True)
             return False
         self.start = jetzt
-        return self._melden("0 / %d frames — starting..." % self.gesamt)
+        return self._melden('0 / %d frames — starting...' % self.gesamt)
 
     def _fortschritt(self, text, jetzt):
         if jetzt - self._letzte < self.SPERRE_S:
@@ -86,22 +86,22 @@ class Erkennungsfortschritt:
         rest = int((gesamt - aktuell) / max(bilder_je_s, 0.01))
         self.job.progress = int((aktuell / gesamt) * self.anteil)
         return self._melden(
-            "%s%d / %d frames — %.1f fps, ~%ds left" % (self._vorsatz(), aktuell, gesamt, bilder_je_s, rest)
+            '%s%d / %d frames — %.1f fps, ~%ds left' % (self._vorsatz(), aktuell, gesamt, bilder_je_s, rest)
         )
 
     def _zahlen(self, text):
         """`50/125` oder `50` — im zweiten Fall gilt die bekannte Gesamtzahl."""
-        teile = text.split("/")
+        teile = text.split('/')
         try:
             aktuell = int(teile[0])
             gesamt = int(teile[1]) if len(teile) > 1 else self.gesamt
         except ValueError, IndexError:
-            logger.debug("PROGRESS unlesbar: %r", text, exc_info=True)
+            logger.debug('PROGRESS unlesbar: %r', text, exc_info=True)
             return None
         return aktuell, gesamt
 
     def _vorsatz(self):
-        return "%s: " % self.name if self.name else ""
+        return '%s: ' % self.name if self.name else ''
 
     def _melden(self, text):
         self.job.progress_detail = text
@@ -110,7 +110,7 @@ class Erkennungsfortschritt:
 
     # ------------------------------------------------------------- Startzustand
 
-    def anfangsmeldung(self, status, wobei=""):
+    def anfangsmeldung(self, status, wobei=''):
         """Auftrag auf 0 % setzen, bevor der Erkenner losläuft.
 
         `wobei` steht nur in der Wartemeldung („Starting MocapNET v4…") und
@@ -119,8 +119,8 @@ class Erkennungsfortschritt:
         self.job.status = status
         self.job.progress = 0
         self.job.progress_detail = (
-            "0 / %d frames" % self.gesamt
+            '0 / %d frames' % self.gesamt
             if self.gesamt
-            else "Starting %s..." % (wobei or self.name or "detection")
+            else 'Starting %s...' % (wobei or self.name or 'detection')
         )
         self.job.save()

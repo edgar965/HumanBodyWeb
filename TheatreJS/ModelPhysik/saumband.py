@@ -19,11 +19,10 @@ Normale.
 """
 
 import numpy as np
-from scipy.sparse import coo_matrix
-from scipy.sparse.csgraph import dijkstra
-
 from maskengeometrie import Geometrie
 from saumschnitt import Saumschnitt
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import dijkstra
 
 
 class Saumband:

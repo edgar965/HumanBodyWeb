@@ -34,7 +34,7 @@ class Bewegungsattrappe:
     """Was `_frame_schreiben` von `parse_bvh` liest."""
 
     def __init__(self, gelenke):
-        self.names = ["G%d" % i for i in range(gelenke)]
+        self.names = ['G%d' % i for i in range(gelenke)]
         self.frame_count = 1
         # Einheitsquaternionen: Die Drehung ist überall 0 Grad, damit man
         # die POSITIONEN im Ergebnis wiedererkennt.
@@ -58,24 +58,24 @@ class Schreibprobe(BvhDatei):
         from scipy.spatial.transform import Rotation
 
         probe = cls(len(ordnungen))
-        werte = ["LEER"] * sum(k for k, _o in ordnungen)
+        werte = ['LEER'] * sum(k for k, _o in ordnungen)
         probe._frame_schreiben(Rotation, werte, 0, ordnungen)
         return werte
 
 
 class KanalversatzTest(SimpleTestCase):
     #: Die übliche Wurzel: drei Positionen, drei Drehungen.
-    WURZEL = (6, "ZXY")
+    WURZEL = (6, 'ZXY')
     #: Ein übliches Gelenk: nur Drehung.
-    GELENK = (3, "ZXY")
+    GELENK = (3, 'ZXY')
 
     def test_der_uebliche_fall_bleibt_wie_er_war(self):
         """6 + 3 + 3 — die Gegenprobe, dass der Fix nichts verschiebt."""
         werte = Schreibprobe.zeile([self.WURZEL, self.GELENK, self.GELENK])
         self.assertEqual(len(werte), 12)
-        self.assertNotIn("LEER", werte, "jede Spalte muss belegt sein")
+        self.assertNotIn('LEER', werte, 'jede Spalte muss belegt sein')
         # Die Wurzelposition steht vorn und ist die des ERSTEN Gelenks.
-        self.assertEqual(werte[:3], ["1.000000", "2.000000", "3.000000"])
+        self.assertEqual(werte[:3], ['1.000000', '2.000000', '3.000000'])
 
     def test_vier_kanaele_verschieben_die_folgenden_gelenke_nicht(self):
         """DER FEHLER, festgenagelt.
@@ -86,21 +86,21 @@ class KanalversatzTest(SimpleTestCase):
         FOLGENDE Gelenk anfaengt — mit `+= 3` waere es Spalte 9 statt 10
         gewesen, und ab da stuende die ganze Zeile verschoben.
         """
-        werte = Schreibprobe.zeile([self.WURZEL, (4, "ZXY"), self.GELENK])
+        werte = Schreibprobe.zeile([self.WURZEL, (4, 'ZXY'), self.GELENK])
         self.assertEqual(len(werte), 13)
         # 6 (Wurzel) + 4 (Gelenk mit vier Kanaelen) = Spalte 10.
-        self.assertEqual(werte[9], "LEER", "die vierte Spalte des Gelenks bleibt unangetastet")
+        self.assertEqual(werte[9], 'LEER', 'die vierte Spalte des Gelenks bleibt unangetastet')
         self.assertTrue(
-            all(w != "LEER" for w in werte[10:13]),
-            "das dritte Gelenk gehoert auf 10..12, steht aber auf: %s" % werte,
+            all(w != 'LEER' for w in werte[10:13]),
+            'das dritte Gelenk gehoert auf 10..12, steht aber auf: %s' % werte,
         )
 
     def test_fuenf_kanaele_ebenso(self):
-        werte = Schreibprobe.zeile([self.WURZEL, (5, "ZXY"), self.GELENK])
+        werte = Schreibprobe.zeile([self.WURZEL, (5, 'ZXY'), self.GELENK])
         self.assertEqual(len(werte), 14)
-        self.assertEqual(werte[9:11], ["LEER", "LEER"])
+        self.assertEqual(werte[9:11], ['LEER', 'LEER'])
         self.assertTrue(
-            all(w != "LEER" for w in werte[11:14]), "das dritte Gelenk gehoert auf 11..13: %s" % werte
+            all(w != 'LEER' for w in werte[11:14]), 'das dritte Gelenk gehoert auf 11..13: %s' % werte
         )
 
     def test_die_alte_formel_haette_verschoben(self):
@@ -108,12 +108,12 @@ class KanalversatzTest(SimpleTestCase):
 
         So stand es bis zum 28.08.2026 — nachgerechnet, nicht behauptet.
         """
-        ordnungen = [self.WURZEL, (4, "ZXY"), self.GELENK]
+        ordnungen = [self.WURZEL, (4, 'ZXY'), self.GELENK]
         stelle, stellen = 0, []
         for kanaele, _ordnung in ordnungen:
             stellen.append(stelle)
             stelle += kanaele if kanaele >= 6 else 3  # die alte Formel
-        self.assertEqual(stellen, [0, 6, 9], "die alte Formel setzt das dritte Gelenk auf 9")
+        self.assertEqual(stellen, [0, 6, 9], 'die alte Formel setzt das dritte Gelenk auf 9')
         stelle, neue = 0, []
         for kanaele, _ordnung in ordnungen:
             neue.append(stelle)
@@ -130,5 +130,5 @@ class KanalversatzTest(SimpleTestCase):
         self.assertEqual(len(werte), 6)
         self.assertTrue(
             all(float(w) == 0.0 for w in werte),
-            "bei 3 Kanaelen stehen dort Drehwinkel, keine Positionen: %s" % werte,
+            'bei 3 Kanaelen stehen dort Drehwinkel, keine Positionen: %s' % werte,
         )

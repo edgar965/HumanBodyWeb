@@ -15,8 +15,8 @@ class FilmlaufReihenfolgeTest(SimpleTestCase):
     databases = set()
 
     def test_bilanz_vor_fertig(self):
-        pfad = settings.BASE_DIR / "TheatreJS" / "ModelPhysik" / "filmlauf.py"
-        quelle = pfad.read_text(encoding="utf-8")
-        bilanz = quelle.index("self._bilanz(film, proben, zahl)")
-        fertig = quelle.index("self._melden(u'Fertig', 1.0, fertig=True)")
+        pfad = settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik' / 'filmlauf.py'
+        quelle = pfad.read_text(encoding='utf-8')
+        bilanz = quelle.index('self._bilanz(film, proben, zahl)')
+        fertig = quelle.index("self._melden('Fertig', 1.0, fertig=True)")
         self.assertLess(bilanz, fertig)

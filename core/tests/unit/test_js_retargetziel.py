@@ -27,9 +27,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._studiovorlage import Studiovorlage
 
-MODUL = Jsmodul("bvh_studio", "retargetziel.js")
-ZUSTAENDIG = Jsmodul("bvh_studio", "modellzustaendigkeit.js")
-STUDIO = Jsmodul.VIEWER / "bvh_studio"
+MODUL = Jsmodul('bvh_studio', 'retargetziel.js')
+ZUSTAENDIG = Jsmodul('bvh_studio', 'modellzustaendigkeit.js')
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
 
 SKRIPT = """
 const { Retargetziel: R } = await import(MODUL);
@@ -84,65 +84,65 @@ console.log(JSON.stringify({ ok: true }));
 
 class RetargetzielTest(SimpleTestCase):
     def test_ziele_abfrage_rumpf_und_schluessel(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_schluessel_der_modellzustaendigkeit(self):
-        self.assertTrue(ZUSTAENDIG.laufen(SKRIPT_ZUSTAENDIG).get("ok"))
+        self.assertTrue(ZUSTAENDIG.laufen(SKRIPT_ZUSTAENDIG).get('ok'))
 
     def test_spurkopfmenue_zweigeteilt_und_modellmenue_je_figurart(self):
         vorlage = Studiovorlage.text()
         kopf = vorlage[vorlage.index('id="track-context-menu"') :]
         for kennung in (
-            "track-ctx-add-label",
-            "track-ctx-anim",
-            "track-ctx-bvh-submenu",
-            "ctx-mimik-track",
-            "ctx-script-track",
+            'track-ctx-add-label',
+            'track-ctx-anim',
+            'track-ctx-bvh-submenu',
+            'ctx-mimik-track',
+            'ctx-script-track',
         ):
             self.assertIn(kennung, kopf)
-        kontext = RetargetzielTest._text(STUDIO / "zeitleiste_kontextmenue.js")
+        kontext = RetargetzielTest._text(STUDIO / 'zeitleiste_kontextmenue.js')
         self.assertIn("modell ? 'Modell hinzufügen' : 'Hinzufügen'", kontext)
-        self.assertIn("Modellhinzufuegen.fuellen(spur, index, menue, bild,", kontext)
-        modelle = RetargetzielTest._text(STUDIO / "menue_modelle.js")
-        self.assertIn("for (const quelle of Figurkataloge.REIHENFOLGE)", modelle)
-        self.assertIn("clip.data = { preset: zeile.name, quelle,", modelle)
+        self.assertIn('Modellhinzufuegen.fuellen(spur, index, menue, bild,', kontext)
+        modelle = RetargetzielTest._text(STUDIO / 'menue_modelle.js')
+        self.assertIn('for (const quelle of Figurkataloge.REIHENFOLGE)', modelle)
+        self.assertIn('clip.data = { preset: zeile.name, quelle,', modelle)
 
     def test_studio_baut_und_bespielt_alle_sechs_figurarten(self):
-        arten = RetargetzielTest._text(STUDIO / "spurfigurarten.js")
+        arten = RetargetzielTest._text(STUDIO / 'spurfigurarten.js')
         for bauer in (
-            "async modell(",
-            "async uma(",
-            "async makehuman(",
-            "async smpl(",
-            "async umapython(",
-            "async genesis9(",
+            'async modell(',
+            'async uma(',
+            'async makehuman(',
+            'async smpl(',
+            'async umapython(',
+            'async genesis9(',
         ):
             self.assertIn(bauer, arten)
-        self.assertIn("spur.modell?.ruhelageHerstellen", arten)
-        clip = RetargetzielTest._text(STUDIO / "clipanimation.js")
-        self.assertIn("Retargetziel.wahl(spur.modell, spur.figurHoehe)", clip)
-        self.assertIn("clip._animZiel = ziel.schluessel;", clip)
-        self.assertIn("ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)", clip)
+        self.assertIn('spur.modell?.ruhelageHerstellen', arten)
+        clip = RetargetzielTest._text(STUDIO / 'clipanimation.js')
+        self.assertIn('Retargetziel.wahl(spur.modell, spur.figurHoehe)', clip)
+        self.assertIn('clip._animZiel = ziel.schluessel;', clip)
+        self.assertIn('ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)', clip)
         # Der erste Abruf rechnet den Retarget (43 s bei 7.538 Bildern, 16.09.2026:
         # „keine Animation zu sehen … erst jetzt, nach ca. 1 Minute") — solange
         # steht es oben rechts, danach Bildzahl und gemessene Dauer.
-        self.assertLess(clip.index("wird umgesetzt${bilder} …`"), clip.index("try {"))
-        self.assertIn("${sekunden.toFixed(1)} s)`, 4000);", clip)
-        bvh = RetargetzielTest._text(STUDIO / "bvhspur.js")
-        self.assertIn("clip._animZiel !== ziel) Bvhspur._neuHolen(spur, clip);", bvh)
-        self.assertIn("Spurfigurarten.ruhelage(spur);", bvh)
+        self.assertLess(clip.index('wird umgesetzt${bilder} …`'), clip.index('try {'))
+        self.assertIn('${sekunden.toFixed(1)} s)`, 4000);', clip)
+        bvh = RetargetzielTest._text(STUDIO / 'bvhspur.js')
+        self.assertIn('clip._animZiel !== ziel) Bvhspur._neuHolen(spur, clip);', bvh)
+        self.assertIn('Spurfigurarten.ruhelage(spur);', bvh)
         self.assertIn(
-            "quelle: c.data.quelle || 'modell'", RetargetzielTest._text(STUDIO / "projekt_daten.js")
+            "quelle: c.data.quelle || 'modell'", RetargetzielTest._text(STUDIO / 'projekt_daten.js')
         )
         self.assertIn(
             "track.quelle = td.quelle || 'modell';",
-            RetargetzielTest._text(STUDIO / "projekt_wiederherstellung.js"),
+            RetargetzielTest._text(STUDIO / 'projekt_wiederherstellung.js'),
         )
         self.assertIn(
-            "for (const quelle of Figurkataloge.REIHENFOLGE)",
-            RetargetzielTest._text(STUDIO / "modellwahl.js"),
+            'for (const quelle of Figurkataloge.REIHENFOLGE)',
+            RetargetzielTest._text(STUDIO / 'modellwahl.js'),
         )
 
     @staticmethod
     def _text(pfad):
-        return pfad.read_text(encoding="utf-8")
+        return pfad.read_text(encoding='utf-8')

@@ -31,8 +31,6 @@ Die Fälle prüfen den Quelltext, nicht das Verhalten im Browser: Das Modul hän
 an `three` und am DOM und ist in node nicht ladbar.
 """
 
-import io
-
 from django.conf import settings
 from django.test import SimpleTestCase
 
@@ -40,15 +38,15 @@ WURZEL = settings.BASE_DIR
 
 
 def _quelle(*teile):
-    return io.open(WURZEL.joinpath(*teile), encoding="utf-8").read()
+    return open(WURZEL.joinpath(*teile), encoding='utf-8').read()
 
 
 def _merker():
-    return _quelle("static", "viewer", "scene", "materialmerker.js")
+    return _quelle('static', 'viewer', 'scene', 'materialmerker.js')
 
 
 def _prop():
-    return _quelle("static", "viewer", "scene", "prop_garments.js")
+    return _quelle('static', 'viewer', 'scene', 'prop_garments.js')
 
 
 def _linear(kanal):
@@ -73,23 +71,23 @@ class DerZustandBekommtDieFarbeTest(SimpleTestCase):
         Solange eine solche Zeile dasteht, ist der Befund wieder möglich.
         """
         quelle = _prop()
-        self.assertNotIn("sel.mesh.material.color.set(colorPicker.value)", quelle)
-        self.assertNotIn("sel.mesh.material.roughness = _sliderVal(", quelle)
-        self.assertNotIn("sel.mesh.material.metalness = _sliderVal(", quelle)
+        self.assertNotIn('sel.mesh.material.color.set(colorPicker.value)', quelle)
+        self.assertNotIn('sel.mesh.material.roughness = _sliderVal(', quelle)
+        self.assertNotIn('sel.mesh.material.metalness = _sliderVal(', quelle)
 
     def test_gemerkt_wird_in_den_zustand_des_stuecks(self):
         quelle = _merker()
-        self.assertIn("auswahl.inst.garmentState[auswahl.key]", quelle)
-        self.assertIn("Object.assign(zustand, werte);", quelle)
+        self.assertIn('auswahl.inst.garmentState[auswahl.key]', quelle)
+        self.assertIn('Object.assign(zustand, werte);', quelle)
 
     def test_die_farbe_geht_als_drei_kanaele_mit(self):
         """`Kleidungszustand` führt sie so — ein Hexwort passte nicht dazu."""
-        self.assertIn("color: [farbe.r, farbe.g, farbe.b]", _merker())
+        self.assertIn('color: [farbe.r, farbe.g, farbe.b]', _merker())
 
     def test_rauheit_und_metallgrad_gehen_denselben_weg(self):
         quelle = _merker()
         self.assertIn("static ANTEILE = [['roughness', 'roughness'], ['metalness', 'metalness']];", quelle)
-        self.assertIn("this.merken({ [feld]: wert / 100 });", quelle)
+        self.assertIn('this.merken({ [feld]: wert / 100 });', quelle)
 
 
 class OhneAuswahlPassiertNichtsTest(SimpleTestCase):
@@ -99,10 +97,10 @@ class OhneAuswahlPassiertNichtsTest(SimpleTestCase):
     databases = set()
 
     def test_ohne_stueck_wird_nichts_geschrieben(self):
-        self.assertIn("if (!zustand) return false;", _merker())
+        self.assertIn('if (!zustand) return false;', _merker())
 
     def test_das_nachziehen_der_anzeige_gilt_nicht_als_eingabe(self):
-        self.assertIn("if (state._syncingSliders) return;", _merker())
+        self.assertIn('if (state._syncingSliders) return;', _merker())
 
 
 class DerBefundIstBelegtTest(SimpleTestCase):
@@ -121,8 +119,8 @@ class DerBefundIstBelegtTest(SimpleTestCase):
 
     def test_der_befund_steht_im_modulkopf(self):
         quelle = _merker()
-        self.assertIn("farbe der Schuhe wird nicht gespeichert", quelle)
-        self.assertIn("0.0742", quelle)
+        self.assertIn('farbe der Schuhe wird nicht gespeichert', quelle)
+        self.assertIn('0.0742', quelle)
 
 
 class DieKetteZumSpeichernTest(SimpleTestCase):
@@ -138,22 +136,22 @@ class DieKetteZumSpeichernTest(SimpleTestCase):
     databases = set()
 
     def test_beide_speicherwege_rechnen_den_zustand_ein(self):
-        charakter = _quelle("static", "viewer", "scene", "character.js")
-        ausgabe = _quelle("static", "viewer", "scene", "szenenausgabe.js")
-        self.assertIn("Garderobenstand.liste(this)", charakter)
-        self.assertIn("garments: Garderobenstand.liste(figur),", ausgabe)
-        self.assertNotIn("garments: figur.garments", ausgabe)
+        charakter = _quelle('static', 'viewer', 'scene', 'character.js')
+        ausgabe = _quelle('static', 'viewer', 'scene', 'szenenausgabe.js')
+        self.assertIn('Garderobenstand.liste(this)', charakter)
+        self.assertIn('garments: Garderobenstand.liste(figur),', ausgabe)
+        self.assertNotIn('garments: figur.garments', ausgabe)
 
     def test_der_garderobenstand_liest_den_zustand(self):
-        stand = _quelle("static", "viewer", "scene", "garderobenstand.js")
-        self.assertIn("zustaende[Garderobenstand.VORSILBE + stueck.id]", stand)
-        self.assertIn("Kleidungszustand.ausJson(zustand).zuJson()", stand)
+        stand = _quelle('static', 'viewer', 'scene', 'garderobenstand.js')
+        self.assertIn('zustaende[Garderobenstand.VORSILBE + stueck.id]', stand)
+        self.assertIn('Kleidungszustand.ausJson(zustand).zuJson()', stand)
 
     def test_ein_stueck_ohne_zustand_bleibt_stehen(self):
         """Sonst überschriebe das Speichern die Werte einer älteren Datei
         mit Vorgaben, nur weil das Stück in dieser Sitzung nie gewählt war."""
         self.assertIn(
-            "if (!zustand) return stueck;", _quelle("static", "viewer", "scene", "garderobenstand.js")
+            'if (!zustand) return stueck;', _quelle('static', 'viewer', 'scene', 'garderobenstand.js')
         )
 
     def test_der_farbwaehler_zeigt_den_zustand_an(self):
@@ -177,15 +175,15 @@ class DieRegionsverschiebungKommtAnTest(SimpleTestCase):
     databases = set()
 
     def _zubehoer(self):
-        return _quelle("static", "viewer", "scene", "charakter_zubehoer.js")
+        return _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')
 
     def test_die_verschiebung_wird_angewandt(self):
-        self.assertIn("_applyGarmentRegionOffsets(inst, key);", self._zubehoer())
+        self.assertIn('_applyGarmentRegionOffsets(inst, key);', self._zubehoer())
 
     def test_der_zustand_steht_vor_der_verschiebung(self):
         quelle = self._zubehoer()
-        zustand = quelle.index("inst.garmentState[key] = Kleidungszustand")
-        anwenden = quelle.index("_applyGarmentRegionOffsets(inst, key);")
+        zustand = quelle.index('inst.garmentState[key] = Kleidungszustand')
+        anwenden = quelle.index('_applyGarmentRegionOffsets(inst, key);')
         self.assertLess(zustand, anwenden)
 
     def test_die_verschiebungen_werden_ueberhaupt_gespeichert(self):
@@ -195,17 +193,17 @@ class DieRegionsverschiebungKommtAnTest(SimpleTestCase):
         Anwendung beim Laden wirkungslos, weil der Wert nie in der Datei
         stünde.
         """
-        zustand = _quelle("static", "viewer", "scene", "kleidungszustand.js")
+        zustand = _quelle('static', 'viewer', 'scene', 'kleidungszustand.js')
         # Die Feldnamen entstehen als `'region' + region` — wörtlich steht
         # `regionTop` nirgends.
         self.assertIn("REGIONEN = ['Top', 'Upper', 'Mid', 'Lower', 'Bottom']", zustand)
         self.assertIn("daten['region' + region] = this['region' + region];", zustand)
         self.assertIn(
-            "Kleidungszustand.ausJson(zustand).zuJson()",
-            _quelle("static", "viewer", "scene", "garderobenstand.js"),
+            'Kleidungszustand.ausJson(zustand).zuJson()',
+            _quelle('static', 'viewer', 'scene', 'garderobenstand.js'),
         )
 
     def test_kein_stiller_fang_mehr_in_dieser_datei(self):
         """`console.error` sieht niemand — genau daran hat der
         ReferenceError der Schuhe zwölf Tage überlebt."""
-        self.assertNotIn("console.error", self._zubehoer())
+        self.assertNotIn('console.error', self._zubehoer())

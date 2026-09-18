@@ -27,9 +27,8 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-from scipy.spatial.transform import Rotation  # noqa: E402
-
 from gelenkgrenzen import Gelenkgrenzen  # noqa: E402
+from scipy.spatial.transform import Rotation  # noqa: E402
 from smplskelett import Smplskelett  # noqa: E402
 
 LINKS, RECHTS = 18, 19

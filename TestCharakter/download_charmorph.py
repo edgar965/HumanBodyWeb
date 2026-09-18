@@ -20,26 +20,26 @@ Characters:
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
-PARENT_REPO = Path(r"A:\3DTools")
+PARENT_REPO = Path(r'A:\3DTools')
 DEST = Path(__file__).resolve().parent
-CHARMORPH_COMMIT = "69e914e"
+CHARMORPH_COMMIT = '69e914e'
 
 # Characters with faces.npy (renderable)
-CHARACTERS = ["mb_male", "mb_female", "antonia"]
-DEFAULT_CHARACTER = "mb_male"
+CHARACTERS = ['mb_male', 'mb_female', 'antonia']
+DEFAULT_CHARACTER = 'mb_male'
 
 # Cache directory for all extracted characters
-CACHE_DIR = DEST / "charmorph_data"
+CACHE_DIR = DEST / 'charmorph_data'
 
 # Active character data directory (read by test_character_api.py)
-ACTIVE_DIR = DEST / "data" / "humanBody"
+ACTIVE_DIR = DEST / 'data' / 'humanBody'
 
 
 def clean_active():
@@ -52,12 +52,12 @@ def clean_active():
 def clean_all():
     """Remove all extracted files, keeping scripts and reference code."""
     keep = {
-        "download_version.py",
-        "download_charmorph.py",
-        "__init__.py",
-        "__pycache__",
-        ".gitignore",
-        "charmorph_ref",
+        'download_version.py',
+        'download_charmorph.py',
+        '__init__.py',
+        '__pycache__',
+        '.gitignore',
+        'charmorph_ref',
     }
     for entry in DEST.iterdir():
         if entry.name in keep:
@@ -70,24 +70,24 @@ def clean_all():
 
 def extract_character(name):
     """Extract one character from git into charmorph_data/{name}/."""
-    char_prefix = f"CharMorphPlugin/data/characters/{name}/"
+    char_prefix = f'CharMorphPlugin/data/characters/{name}/'
     cache_path = CACHE_DIR / name
 
     if cache_path.exists():
         shutil.rmtree(cache_path)
     cache_path.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix='.tar', delete=False) as tmp:
         tmp_path = tmp.name
     try:
         subprocess.run(
             [
-                "git",
-                "-C",
+                'git',
+                '-C',
                 str(PARENT_REPO),
-                "archive",
-                "--format=tar",
-                "-o",
+                'archive',
+                '--format=tar',
+                '-o',
                 tmp_path,
                 CHARMORPH_COMMIT,
                 char_prefix,
@@ -95,7 +95,7 @@ def extract_character(name):
             check=True,
         )
 
-        with tarfile.open(tmp_path, "r") as tar:
+        with tarfile.open(tmp_path, 'r') as tar:
             for member in tar.getmembers():
                 if not member.name.startswith(char_prefix):
                     continue
@@ -105,13 +105,13 @@ def extract_character(name):
 
                 # Only extract data files relevant for humanbody_core
                 should_extract = False
-                if rel.startswith("morphs/"):
+                if rel.startswith('morphs/'):
                     should_extract = True
-                elif rel in ("faces.npy", "config.yaml", "morphs_meta.yaml", "morphs_meta_fantasy.yaml"):
+                elif rel in ('faces.npy', 'config.yaml', 'morphs_meta.yaml', 'morphs_meta_fantasy.yaml'):
                     should_extract = True
-                elif rel.startswith("weights/"):
+                elif rel.startswith('weights/'):
                     should_extract = True
-                elif rel.startswith("joints/"):
+                elif rel.startswith('joints/'):
                     should_extract = True
 
                 if not should_extract:
@@ -125,27 +125,27 @@ def extract_character(name):
                     src = tar.extractfile(member)
                     if src is None:
                         continue
-                    with src, open(dest_path, "wb") as dst:
+                    with src, open(dest_path, 'wb') as dst:
                         dst.write(src.read())
-                    print(f"  {name}/{rel}")
+                    print(f'  {name}/{rel}')
 
     finally:
         os.unlink(tmp_path)
 
     # Verify
-    faces = cache_path / "faces.npy"
-    l1_dir = cache_path / "morphs" / "L1"
+    faces = cache_path / 'faces.npy'
+    l1_dir = cache_path / 'morphs' / 'L1'
     if faces.exists():
         import numpy as np
 
         arr = np.load(str(faces))
-        print(f"  -> faces.npy: {arr.shape[0]} faces, shape={arr.shape}")
+        print(f'  -> faces.npy: {arr.shape[0]} faces, shape={arr.shape}')
     else:
-        print(f"  -> WARNING: no faces.npy!")
+        print('  -> WARNING: no faces.npy!')
 
     if l1_dir.exists():
-        types = [f.stem for f in sorted(l1_dir.glob("*.npy"))]
-        print(f"  -> L1 body types: {types}")
+        types = [f.stem for f in sorted(l1_dir.glob('*.npy'))]
+        print(f'  -> L1 body types: {types}')
 
 
 def activate_character(name):
@@ -153,14 +153,14 @@ def activate_character(name):
     cache_path = CACHE_DIR / name
     if not cache_path.exists():
         print(f'ERROR: Character "{name}" not found in cache.')
-        print(f"Available: {list_cached()}")
+        print(f'Available: {list_cached()}')
         return False
 
-    print(f"Activating character: {name}")
+    print(f'Activating character: {name}')
     clean_active()
 
     # Copy all data files
-    for src_path in cache_path.rglob("*"):
+    for src_path in cache_path.rglob('*'):
         if src_path.is_file():
             rel = src_path.relative_to(cache_path)
             dst_path = ACTIVE_DIR / rel
@@ -168,16 +168,16 @@ def activate_character(name):
             shutil.copy2(src_path, dst_path)
 
     # Update commit_info.json with active character
-    info_path = DEST / "commit_info.json"
+    info_path = DEST / 'commit_info.json'
     if info_path.exists():
-        with open(info_path, "r", encoding="utf-8") as f:
+        with open(info_path, encoding='utf-8') as f:
             info = json.load(f)
-        info["character"] = name
-        info["message"] = f"CharMorphPlugin {name} character"
-        with open(info_path, "w", encoding="utf-8") as f:
+        info['character'] = name
+        info['message'] = f'CharMorphPlugin {name} character'
+        with open(info_path, 'w', encoding='utf-8') as f:
             json.dump(info, f, indent=2, ensure_ascii=False)
 
-    print(f"  -> {name} is now the active character")
+    print(f'  -> {name} is now the active character')
     return True
 
 
@@ -185,7 +185,7 @@ def list_cached():
     """Return list of cached character names."""
     if not CACHE_DIR.exists():
         return []
-    return sorted(d.name for d in CACHE_DIR.iterdir() if d.is_dir() and (d / "faces.npy").exists())
+    return sorted(d.name for d in CACHE_DIR.iterdir() if d.is_dir() and (d / 'faces.npy').exists())
 
 
 def extract_humanbody_core():
@@ -194,60 +194,60 @@ def extract_humanbody_core():
     The CharMorphPlugin commit (69e914e) predates humanbody_core, so we use
     v0.53 (b884619) which has a compatible MorphData that can load CharMorphPlugin data.
     """
-    CORE_COMMIT = "b884619"  # v0.53
-    with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as tmp:
+    CORE_COMMIT = 'b884619'  # v0.53
+    with tempfile.NamedTemporaryFile(suffix='.tar', delete=False) as tmp:
         tmp_path = tmp.name
     try:
         subprocess.run(
             [
-                "git",
-                "-C",
+                'git',
+                '-C',
                 str(PARENT_REPO),
-                "archive",
-                "--format=tar",
-                "-o",
+                'archive',
+                '--format=tar',
+                '-o',
                 tmp_path,
                 CORE_COMMIT,
-                "humanbody_core/",
+                'humanbody_core/',
             ],
             check=True,
         )
-        with tarfile.open(tmp_path, "r") as tar:
+        with tarfile.open(tmp_path, 'r') as tar:
             for member in tar.getmembers():
-                if member.name.startswith("humanbody_core/"):
+                if member.name.startswith('humanbody_core/'):
                     tar.extract(member, path=str(DEST))
                     if not member.isdir():
-                        print(f"  {member.name}")
+                        print(f'  {member.name}')
     finally:
         os.unlink(tmp_path)
 
 
 def create_settings_yaml():
     """Create a minimal settings.yaml."""
-    settings = DEST / "settings.yaml"
+    settings = DEST / 'settings.yaml'
     settings.write_text(
-        "character_defaults:\n"
-        "  gender:\n"
-        "    min: 0\n"
-        "    max: 100\n"
-        "    default: 0\n"
-        "  age:\n"
-        "    min: 18\n"
-        "    max: 100\n"
-        "    default: 59\n"
-        "  mass:\n"
-        "    min: 45\n"
-        "    max: 200\n"
-        "    default: 123\n"
-        "  tone:\n"
-        "    min: 0\n"
-        "    max: 100\n"
-        "    default: 50\n"
-        "  height:\n"
-        "    min: 150\n"
-        "    max: 200\n"
-        "    default: 175\n",
-        encoding="utf-8",
+        'character_defaults:\n'
+        '  gender:\n'
+        '    min: 0\n'
+        '    max: 100\n'
+        '    default: 0\n'
+        '  age:\n'
+        '    min: 18\n'
+        '    max: 100\n'
+        '    default: 59\n'
+        '  mass:\n'
+        '    min: 45\n'
+        '    max: 200\n'
+        '    default: 123\n'
+        '  tone:\n'
+        '    min: 0\n'
+        '    max: 100\n'
+        '    default: 50\n'
+        '  height:\n'
+        '    min: 150\n'
+        '    max: 200\n'
+        '    default: 175\n',
+        encoding='utf-8',
     )
 
 
@@ -255,91 +255,91 @@ def main():
     args = sys.argv[1:]
 
     # --list: show cached characters
-    if "--list" in args:
+    if '--list' in args:
         cached = list_cached()
         if cached:
-            print(f"Cached characters: {cached}")
+            print(f'Cached characters: {cached}')
             # Check which is active
-            info_path = DEST / "commit_info.json"
+            info_path = DEST / 'commit_info.json'
             if info_path.exists():
-                with open(info_path, "r", encoding="utf-8") as f:
+                with open(info_path, encoding='utf-8') as f:
                     info = json.load(f)
-                print(f"Active: {info.get('character', 'unknown')}")
+                print(f'Active: {info.get("character", "unknown")}')
         else:
-            print("No characters cached. Run without arguments to extract all.")
+            print('No characters cached. Run without arguments to extract all.')
         return
 
     # --switch <name>: switch active character from cache
-    if "--switch" in args:
-        idx = args.index("--switch")
+    if '--switch' in args:
+        idx = args.index('--switch')
         if idx + 1 >= len(args):
-            print("Usage: download_charmorph.py --switch <character_name>")
-            print(f"Available: {list_cached()}")
+            print('Usage: download_charmorph.py --switch <character_name>')
+            print(f'Available: {list_cached()}')
             return
         name = args[idx + 1]
         if activate_character(name):
-            print(f"\nDone! Switched to {name}.")
-            print("Call /api/character-test/reload/ to refresh the test page.")
+            print(f'\nDone! Switched to {name}.')
+            print('Call /api/character-test/reload/ to refresh the test page.')
         return
 
     # Default: extract ALL characters + humanbody_core
-    print(f"Extracting CharMorphPlugin characters from commit {CHARMORPH_COMMIT}...")
-    print(f"Characters: {CHARACTERS}")
+    print(f'Extracting CharMorphPlugin characters from commit {CHARMORPH_COMMIT}...')
+    print(f'Characters: {CHARACTERS}')
 
-    print("\nCleaning old TestCharakter files...")
+    print('\nCleaning old TestCharakter files...')
     clean_all()
 
     # Extract each character into cache
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     for name in CHARACTERS:
-        print(f"\nExtracting {name}...")
+        print(f'\nExtracting {name}...')
         extract_character(name)
 
-    print("\nExtracting humanbody_core module (v0.53)...")
+    print('\nExtracting humanbody_core module (v0.53)...')
     extract_humanbody_core()
 
-    print("\nCreating settings.yaml...")
+    print('\nCreating settings.yaml...')
     create_settings_yaml()
 
     # Save commit info
     info = {
-        "full_hash": CHARMORPH_COMMIT,
-        "short_hash": CHARMORPH_COMMIT[:7],
-        "message": f"CharMorphPlugin {DEFAULT_CHARACTER} character",
-        "version": "CharMorphPlugin",
-        "date": "2026-02-26",
-        "downloaded_at": datetime.now().isoformat(),
-        "source": "charmorph",
-        "character": DEFAULT_CHARACTER,
-        "available_characters": CHARACTERS,
+        'full_hash': CHARMORPH_COMMIT,
+        'short_hash': CHARMORPH_COMMIT[:7],
+        'message': f'CharMorphPlugin {DEFAULT_CHARACTER} character',
+        'version': 'CharMorphPlugin',
+        'date': '2026-02-26',
+        'downloaded_at': datetime.now().isoformat(),
+        'source': 'charmorph',
+        'character': DEFAULT_CHARACTER,
+        'available_characters': CHARACTERS,
     }
-    info_path = DEST / "commit_info.json"
-    with open(info_path, "w", encoding="utf-8") as f:
+    info_path = DEST / 'commit_info.json'
+    with open(info_path, 'w', encoding='utf-8') as f:
         json.dump(info, f, indent=2, ensure_ascii=False)
 
     # Activate default character
-    print(f"\nActivating default character: {DEFAULT_CHARACTER}")
+    print(f'\nActivating default character: {DEFAULT_CHARACTER}')
     activate_character(DEFAULT_CHARACTER)
 
     # Summary
-    print("\n" + "=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
+    print('\n' + '=' * 60)
+    print('SUMMARY')
+    print('=' * 60)
     cached = list_cached()
     for name in cached:
         cache_path = CACHE_DIR / name
-        l1_dir = cache_path / "morphs" / "L1"
+        l1_dir = cache_path / 'morphs' / 'L1'
         if l1_dir.exists():
-            types = [f.stem for f in sorted(l1_dir.glob("*.npy"))]
+            types = [f.stem for f in sorted(l1_dir.glob('*.npy'))]
         else:
-            types = ["?"]
-        marker = " <-- ACTIVE" if name == DEFAULT_CHARACTER else ""
-        print(f"  {name}: {len(types)} body type(s) {types}{marker}")
+            types = ['?']
+        marker = ' <-- ACTIVE' if name == DEFAULT_CHARACTER else ''
+        print(f'  {name}: {len(types)} body type(s) {types}{marker}')
 
-    print(f"\nTo switch: python download_charmorph.py --switch <name>")
-    print(f"Then call: /api/character-test/reload/")
-    print(f"\nDone!")
+    print('\nTo switch: python download_charmorph.py --switch <name>')
+    print('Then call: /api/character-test/reload/')
+    print('\nDone!')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

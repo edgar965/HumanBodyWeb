@@ -18,14 +18,14 @@ class Kleidungsregler:
     """Werte, die das Ergebnis einer Vorlagen-Anpassung bestimmen."""
 
     __slots__ = (
-        "abstand",
-        "steifigkeit",
-        "mindestabstand_mm",
-        "schrittboden_mm",
-        "anheben_mm",
-        "schritttiefe_mm",
-        "farbe",
-        "verfahren",
+        'abstand',
+        'steifigkeit',
+        'mindestabstand_mm',
+        'schrittboden_mm',
+        'anheben_mm',
+        'schritttiefe_mm',
+        'farbe',
+        'verfahren',
     )
 
     #: Die Vorgaben, die vorher in den GET-Aufrufen standen.
@@ -35,20 +35,20 @@ class Kleidungsregler:
     SCHRITTTIEFE_MM = 0.0
 
     #: `rig_hull` legt das Stueck um eine Huelle statt um den Koerper.
-    HUELLE = "rig_hull"
+    HUELLE = 'rig_hull'
 
     #: `uma_conformer` legt es mit UMAs Konformer an - derselbe Weg, den der
     #: GarmentCode-Reiter fuer seine Schnittteile nimmt (09.09.2026, Frage
     #: Edgar „ob du die Logik von «Garment Code» anwenden kannst fuer das
     #: Fitten"). Siehe `dienste/konformeranpassung.py`.
-    KONFORMER = "uma_conformer"
+    KONFORMER = 'uma_conformer'
 
     def __init__(
         self,
         abstand,
         steifigkeit,
         farbe,
-        verfahren="",
+        verfahren='',
         mindestabstand_mm=None,
         schrittboden_mm=None,
         anheben_mm=None,
@@ -69,20 +69,20 @@ class Kleidungsregler:
     def aus_parametern(cls, p, vorlage):
         """Werte aus `request.GET`; was fehlt, kommt aus der Vorlage."""
         return cls(
-            abstand=cls._zahl(p, "offset", vorlage.offset),
-            steifigkeit=cls._zahl(p, "stiffness", vorlage.stiffness),
+            abstand=cls._zahl(p, 'offset', vorlage.offset),
+            steifigkeit=cls._zahl(p, 'stiffness', vorlage.stiffness),
             farbe=cls._farbe(p, vorlage.color),
-            verfahren=p.get("fit_mode", "") or "",
-            mindestabstand_mm=cls._zahl(p, "min_dist", cls.MINDESTABSTAND_MM),
-            schrittboden_mm=cls._zahl(p, "crotch_floor", cls.SCHRITTBODEN_MM),
-            anheben_mm=cls._zahl(p, "lift", cls.ANHEBEN_MM),
-            schritttiefe_mm=cls._zahl(p, "crotch_depth", cls.SCHRITTTIEFE_MM),
+            verfahren=p.get('fit_mode', '') or '',
+            mindestabstand_mm=cls._zahl(p, 'min_dist', cls.MINDESTABSTAND_MM),
+            schrittboden_mm=cls._zahl(p, 'crotch_floor', cls.SCHRITTBODEN_MM),
+            anheben_mm=cls._zahl(p, 'lift', cls.ANHEBEN_MM),
+            schritttiefe_mm=cls._zahl(p, 'crotch_depth', cls.SCHRITTTIEFE_MM),
         )
 
     @staticmethod
     def _zahl(p, name, vorgabe):
         wert = p.get(name)
-        if wert in (None, ""):
+        if wert in (None, ''):
             return vorgabe
         try:
             return float(wert)
@@ -93,7 +93,7 @@ class Kleidungsregler:
     @classmethod
     def _farbe(cls, p, vorlagenfarbe):
         return tuple(
-            cls._zahl(p, "color_%s" % kanal, vorlagenfarbe[i]) for i, kanal in enumerate(("r", "g", "b"))
+            cls._zahl(p, 'color_%s' % kanal, vorlagenfarbe[i]) for i, kanal in enumerate(('r', 'g', 'b'))
         )
 
     # ----------------------------------------------------------------- fragen
@@ -120,8 +120,8 @@ class Kleidungsregler:
         )
 
     def __repr__(self):
-        return "<Kleidungsregler abstand=%.4f steif=%.2f verfahren=%r>" % (
+        return '<Kleidungsregler abstand=%.4f steif=%.2f verfahren=%r>' % (
             self.abstand,
             self.steifigkeit,
-            self.verfahren or "vorgabe",
+            self.verfahren or 'vorgabe',
         )

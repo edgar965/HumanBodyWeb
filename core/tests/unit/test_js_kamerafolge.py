@@ -18,7 +18,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "kamerafolge.js")
+MODUL = Jsmodul('scene', 'kamerafolge.js')
 
 SKRIPT = """
 const { Kamerafolge } = await import(MODUL);
@@ -66,4 +66,4 @@ class KamerafolgeJsTest(SimpleTestCase):
 
     def test_kamera_faehrt_in_der_bodenebene_mit(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

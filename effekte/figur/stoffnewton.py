@@ -67,19 +67,19 @@ class Stoffnewton:
     def __init__(self, auftrag, ergebnis):
         self.ergebnis = ergebnis
         with np.load(auftrag) as d:
-            self.p = json.loads(str(d["parameter"]))
-            self.koerper = np.asarray(d["koerper_folge"], dtype=np.float32)
-            self.koerper_dreiecke = np.asarray(d["koerper_dreiecke"], dtype=np.int32)
-            self.koerper_ruhe = np.asarray(d["koerper_ruhe"], dtype=np.float32)
-            self.koerper_rampe = np.asarray(d["koerper_rampe"], dtype=np.float32)
-            self.stoff_rampe = np.asarray(d["stoff_rampe"], dtype=np.float32)
-            self.stoff_folge = np.asarray(d["stoff_folge"], dtype=np.float32)
-            self.stoff_dreiecke = np.asarray(d["stoff_dreiecke"], dtype=np.int32)
-            self.ruhe = np.asarray(d["stoff_ruhe"], dtype=np.float64)
-            self.fest = np.asarray(d["fest"], dtype=bool)
+            self.p = json.loads(str(d['parameter']))
+            self.koerper = np.asarray(d['koerper_folge'], dtype=np.float32)
+            self.koerper_dreiecke = np.asarray(d['koerper_dreiecke'], dtype=np.int32)
+            self.koerper_ruhe = np.asarray(d['koerper_ruhe'], dtype=np.float32)
+            self.koerper_rampe = np.asarray(d['koerper_rampe'], dtype=np.float32)
+            self.stoff_rampe = np.asarray(d['stoff_rampe'], dtype=np.float32)
+            self.stoff_folge = np.asarray(d['stoff_folge'], dtype=np.float32)
+            self.stoff_dreiecke = np.asarray(d['stoff_dreiecke'], dtype=np.int32)
+            self.ruhe = np.asarray(d['stoff_ruhe'], dtype=np.float64)
+            self.fest = np.asarray(d['fest'], dtype=bool)
         self.bilder, self.n = self.stoff_folge.shape[:2]
-        self.fps = float(self.p["fps"])
-        self.sub = int(self.p["teilschritte"])
+        self.fps = float(self.p['fps'])
+        self.sub = int(self.p['teilschritte'])
         self.dt = 1.0 / self.fps / self.sub
         self.zeiten = []
         self._flaechen_vorbereiten()
@@ -92,7 +92,7 @@ class Stoffnewton:
 
         builder = newton.ModelBuilder()
         newton.solvers.SolverStyle3D.register_custom_attributes(builder)
-        s, b = float(self.p["steifigkeit"]), float(self.p["biegung"])
+        s, b = float(self.p['steifigkeit']), float(self.p['biegung'])
         panel, panel_index = self._panels()
         st3.add_cloth_mesh(
             builder,
@@ -101,7 +101,7 @@ class Stoffnewton:
             vel=wp.vec3(0.0),
             vertices=[wp.vec3(*q) for q in self.ruhe],
             indices=self.stoff_dreiecke.reshape(-1).tolist(),
-            density=float(self.p["dichte"]),
+            density=float(self.p['dichte']),
             panel_verts=[wp.vec2(*q) for q in panel],
             panel_indices=panel_index.tolist(),
             tri_aniso_ke=wp.vec3(*(k * s for k in self.DEHNUNG)),
@@ -120,7 +120,7 @@ class Stoffnewton:
         self.model = builder.finalize()
         self.model.soft_contact_ke = self.KONTAKT_KE
         self.model.soft_contact_mu = self.KONTAKT_MU
-        self.solver = newton.solvers.SolverStyle3D(model=self.model, iterations=int(self.p["iterationen"]))
+        self.solver = newton.solvers.SolverStyle3D(model=self.model, iterations=int(self.p['iterationen']))
         self.solver.collision.radius = self.RADIUS
         self.s0, self.s1 = self.model.state(), self.model.state()
         self.control = self.model.control()
@@ -129,7 +129,7 @@ class Stoffnewton:
         self.wpmesh = self.model.shape_source[shape].mesh
         self.masse = self.model.particle_mass.numpy()
         print(
-            "Stoff: %d Punkte, %d Dreiecke, %d fest, Masse %.3f kg; Koerper %d Dreiecke"
+            'Stoff: %d Punkte, %d Dreiecke, %d fest, Masse %.3f kg; Koerper %d Dreiecke'
             % (
                 self.n,
                 len(self.stoff_dreiecke),
@@ -148,7 +148,7 @@ class Stoffnewton:
         a, b, c = self.ruhe[t[:, 0]], self.ruhe[t[:, 1]], self.ruhe[t[:, 2]]
         e1, e2 = b - a, c - a
         l1 = np.maximum(np.linalg.norm(e1, axis=1), 1e-9)
-        x2 = np.einsum("ij,ij->i", e1, e2) / l1
+        x2 = np.einsum('ij,ij->i', e1, e2) / l1
         y2 = np.linalg.norm(np.cross(e1, e2), axis=1) / l1
         panel = np.zeros((len(t) * 3, 2), dtype=np.float32)
         panel[1::3, 0] = l1
@@ -170,12 +170,12 @@ class Stoffnewton:
 
     def _wind(self, q, v, zeit):
         """Kraft je Punkt: Staudruck der Relativgeschwindigkeit auf die Normale."""
-        staerke = float(self.p["wind"])
+        staerke = float(self.p['wind'])
         if staerke <= 0.0:
             return None
-        richtung = np.asarray(self.p["richtung"], dtype=np.float64)
+        richtung = np.asarray(self.p['richtung'], dtype=np.float64)
         richtung /= max(np.linalg.norm(richtung), 1e-9)
-        turb = float(self.p["turbulenz"])
+        turb = float(self.p['turbulenz'])
         laengs = q @ richtung
         boe = 1.0 + turb * (
             0.6 * np.sin(2 * np.pi * 0.7 * zeit + 0.4) + 0.4 * np.sin(2 * np.pi * 2.3 * zeit + 3.0 * laengs)
@@ -189,7 +189,7 @@ class Stoffnewton:
                 normalen[:, s] += np.bincount(t[:, ecke], weights=n[:, s], minlength=len(q))[: len(q)]
         normalen /= np.maximum(np.linalg.norm(normalen, axis=1), 1e-12)[:, None]
         u = wind - v
-        druck = self.RHO_LUFT * self.flaeche_punkt * np.einsum("ij,ij->i", u, normalen)
+        druck = self.RHO_LUFT * self.flaeche_punkt * np.einsum('ij,ij->i', u, normalen)
         kraft = druck[:, None] * normalen
         kraft[self.fest] = 0.0
         return kraft.astype(np.float32)
@@ -260,7 +260,7 @@ class Stoffnewton:
             self._feste_stellen(f1, np.zeros_like(f1))
             self._teilschritt(0.0, mit_wind=False)
         print(
-            "Einlauf: %d Zwischenposen + %d Teilschritte in %.1f s"
+            'Einlauf: %d Zwischenposen + %d Teilschritte in %.1f s'
             % (len(self.koerper_rampe), self.EINLAUF, time.perf_counter() - t0),
             flush=True,
         )
@@ -286,12 +286,12 @@ class Stoffnewton:
             self.zeiten.append((time.perf_counter() - t0) * 1000.0)
             folge[bild + 1] = self.s0.particle_q.numpy()
             print(
-                "Effekte: Stoff Bild %d von %d — %d / %d" % (bild + 2, self.bilder, bild + 2, self.bilder),
+                'Effekte: Stoff Bild %d von %d — %d / %d' % (bild + 2, self.bilder, bild + 2, self.bilder),
                 flush=True,
             )
         np.savez(self.ergebnis, folge=folge.astype(np.float32), ms=np.asarray(self.zeiten, dtype=np.float32))
         print(
-            "Stoff fertig: median %.0f ms je Bild, p90 %.0f ms"
+            'Stoff fertig: median %.0f ms je Bild, p90 %.0f ms'
             % (np.median(self.zeiten), np.percentile(self.zeiten, 90)),
             flush=True,
         )
@@ -304,13 +304,13 @@ def main(argv):
     wp.config.kernel_cache_dir = cache
     wp.init()
     for strom in (sys.stdout, sys.stderr):
-        if hasattr(strom, "reconfigure"):
-            strom.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(strom, 'reconfigure'):
+            strom.reconfigure(encoding='utf-8', errors='replace')
     import newton  # pyright: ignore[reportMissingImports]
 
-    print("warp %s newton %s device %s" % (wp.__version__, newton.__version__, wp.get_device()), flush=True)
+    print('warp %s newton %s device %s' % (wp.__version__, newton.__version__, wp.get_device()), flush=True)
     return Stoffnewton(auftrag, ergebnis).laufen()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main(sys.argv))

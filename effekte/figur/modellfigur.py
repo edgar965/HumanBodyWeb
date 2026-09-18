@@ -24,43 +24,43 @@ import os
 
 import numpy as np
 
-__all__ = ["Modellfigur"]
+__all__ = ['Modellfigur']
 
 
 class Modellfigur:
-    KOPFKNOCHEN = "DEF-spine.006"
-    VORGABE_KOERPER = "Female_Caucasian"
+    KOPFKNOCHEN = 'DEF-spine.006'
+    VORGABE_KOERPER = 'Female_Caucasian'
     VORGABE_STOFF = (0.3, 0.45, 0.7)
     VORGABE_HAAR = (0.02, 0.02, 0.02)
-    ENDUNG_RIG = "_rig.json"
+    ENDUNG_RIG = '_rig.json'
 
     def __init__(self, pfad):
         self.pfad = pfad
-        with open(pfad, encoding="utf-8") as datei:
+        with open(pfad, encoding='utf-8') as datei:
             self.daten = json.load(datei)
-        self.name = self.daten.get("name") or os.path.splitext(os.path.basename(pfad))[0]
+        self.name = self.daten.get('name') or os.path.splitext(os.path.basename(pfad))[0]
 
     # --------------------------------------------------------------- Figur
 
     def koerpertyp(self):
-        return self.daten.get("body_type") or self.VORGABE_KOERPER
+        return self.daten.get('body_type') or self.VORGABE_KOERPER
 
     def morphs(self):
-        return {str(k): float(v) for k, v in (self.daten.get("morphs") or {}).items()}
+        return {str(k): float(v) for k, v in (self.daten.get('morphs') or {}).items()}
 
     def meta(self):
         """Alter/Masse/Tonus/Groesse (−1..1) — formen Koerper und Haut (17.09.2026)."""
-        return {str(k): float(v) for k, v in (self.daten.get("meta") or {}).items()}
+        return {str(k): float(v) for k, v in (self.daten.get('meta') or {}).items()}
 
     def geschlecht(self):
-        return "female" if self.koerpertyp().lower().startswith("female") else "male"
+        return 'female' if self.koerpertyp().lower().startswith('female') else 'male'
 
     # ------------------------------------------------------------- Stuecke
 
     def stuecke(self, ablage):
         """[{name, pfad, farbe}] fuer `Hbfilm(stuecke=…)`; `ablage` ist der
         Ordner, in den die Frisur als `.npz` geschrieben wird."""
-        liste = [self._garmentcode(eintrag) for eintrag in (self.daten.get("garmentcode") or [])]
+        liste = [self._garmentcode(eintrag) for eintrag in (self.daten.get('garmentcode') or [])]
         liste = [s for s in liste if s]
         haar = self.frisur(ablage)
         if haar:
@@ -70,25 +70,25 @@ class Modellfigur:
     def _garmentcode(self, eintrag):
         from GarmentCode.entwurf import Entwurf
 
-        rig = eintrag.get("rig_url") or ""
-        teile = [t for t in rig.split("/") if t]
+        rig = eintrag.get('rig_url') or ''
+        teile = [t for t in rig.split('/') if t]
         if len(teile) < 2 or not teile[-1].endswith(self.ENDUNG_RIG):
             return None
         wurzel = os.path.abspath(Entwurf.AUSGABE)
         pfad = os.path.abspath(os.path.join(wurzel, teile[-2], teile[-1]))
         if not pfad.startswith(wurzel + os.sep) or not os.path.isfile(pfad):
-            raise ValueError("Stueck %s: Rig-Datei fehlt (%s)" % (eintrag.get("stueck"), pfad))
-        material = eintrag.get("material") or {}
+            raise ValueError('Stueck %s: Rig-Datei fehlt (%s)' % (eintrag.get('stueck'), pfad))
+        material = eintrag.get('material') or {}
         return {
-            "name": eintrag.get("stueck") or teile[-1],
-            "pfad": pfad,
-            "farbe": self.farbe(material.get("farbe"), self.VORGABE_STOFF),
+            'name': eintrag.get('stueck') or teile[-1],
+            'pfad': pfad,
+            'farbe': self.farbe(material.get('farbe'), self.VORGABE_STOFF),
         }
 
     @staticmethod
     def farbe(hexwert, vorgabe):
         """`#b42727` -> (0.706, 0.153, 0.153); sonst die Vorgabe."""
-        text = (hexwert or "").strip().lstrip("#")
+        text = (hexwert or '').strip().lstrip('#')
         if len(text) != 6:
             return tuple(vorgabe)
         try:
@@ -100,42 +100,42 @@ class Modellfigur:
     # -------------------------------------------------------------- Frisur
 
     def frisur(self, ablage):
-        frisur = self.daten.get("hair_style") or {}
-        teile = [t for t in (frisur.get("url") or "").split("/") if t]
+        frisur = self.daten.get('hair_style') or {}
+        teile = [t for t in (frisur.get('url') or '').split('/') if t]
         if not teile:
             return None
         glb = self._frisurdatei(teile[-1])
-        pfad = os.path.join(ablage, "frisur_%s.npz" % teile[-1])
+        pfad = os.path.join(ablage, 'frisur_%s.npz' % teile[-1])
         self.frisur_schreiben(glb, pfad)
         return {
-            "name": "Frisur %s" % (frisur.get("name") or teile[-1]),
-            "pfad": pfad,
-            "farbe": tuple(self._haarfarbe(frisur.get("color"))),
+            'name': 'Frisur %s' % (frisur.get('name') or teile[-1]),
+            'pfad': pfad,
+            'farbe': tuple(self._haarfarbe(frisur.get('color'))),
         }
 
     @staticmethod
     def _frisurdatei(name):
         from django.conf import settings
 
-        glb = os.path.join(str(settings.HUMANBODY_DATA_DIR), "hairstyles", "%s.glb" % name)
+        glb = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'hairstyles', '%s.glb' % name)
         if not os.path.isfile(glb):
-            raise ValueError("Frisur fehlt: %s" % glb)
+            raise ValueError('Frisur fehlt: %s' % glb)
         return glb
 
     @classmethod
     def _haarfarbe(cls, name):
         from core.api.modelldateien import Modelldateien
 
-        eintrag = Modelldateien.HAARFARBEN.get(name or "") or {}
-        return eintrag.get("viewport") or cls.VORGABE_HAAR
+        eintrag = Modelldateien.HAARFARBEN.get(name or '') or {}
+        return eintrag.get('viewport') or cls.VORGABE_HAAR
 
     @classmethod
     def frisur_schreiben(cls, glb, pfad):
         """GLB -> Szenenstueck-`.npz`, alle Punkte am Kopfknochen."""
         import trimesh
 
-        szene = trimesh.load(glb, force="scene")
-        netz = szene.to_geometry() if hasattr(szene, "to_geometry") else szene.dump(concatenate=True)
+        szene = trimesh.load(glb, force='scene')
+        netz = szene.to_geometry() if hasattr(szene, 'to_geometry') else szene.dump(concatenate=True)
         punkte = np.asarray(netz.vertices, dtype=np.float64)
         blender = np.column_stack([punkte[:, 0], -punkte[:, 2], punkte[:, 1]])
         n = len(blender)
@@ -155,9 +155,9 @@ class Modellfigur:
 
     def beschreibung(self):
         return {
-            "name": self.name,
-            "koerpertyp": self.koerpertyp(),
-            "morphs": len(self.morphs()),
-            "stuecke": [e.get("stueck") for e in (self.daten.get("garmentcode") or [])],
-            "frisur": (self.daten.get("hair_style") or {}).get("name") or "",
+            'name': self.name,
+            'koerpertyp': self.koerpertyp(),
+            'morphs': len(self.morphs()),
+            'stuecke': [e.get('stueck') for e in (self.daten.get('garmentcode') or [])],
+            'frisur': (self.daten.get('hair_style') or {}).get('name') or '',
         }

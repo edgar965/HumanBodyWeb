@@ -18,13 +18,11 @@ fest, dass die vier gesperrten Reiter gesperrt BLEIBEN.
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
 
-import io
-
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "gedaechtniswahl.js")
+MODUL = Jsmodul('gemeinsam', 'gedaechtniswahl.js')
 
 SKRIPT = """
 const { Gedaechtniswahl } = await import(MODUL);
@@ -110,13 +108,13 @@ class GedaechtniswahlTest(SimpleTestCase):
 
     def test_die_wahl_haelt_sich_an_die_regeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
 
     def test_die_gesperrten_reiter_stehen_im_modul(self):
         """Gegenprobe am Quelltext: Waere `REITER` leer, wuerde oben alles
         `false` liefern und die Faelle 2 bis 5 blieben gruen."""
-        quelle = io.open(MODUL.pfad, encoding="utf-8").read()
-        for reiter in ("garmentcode", "animation", "rigging", "finalize"):
+        quelle = open(MODUL.pfad, encoding='utf-8').read()
+        for reiter in ('garmentcode', 'animation', 'rigging', 'finalize'):
             self.assertIn("'%s'" % reiter, quelle)
-        for gesperrt in ("eigenschaften", "kleider", "assets", "szene", "modell"):
-            self.assertNotIn("'%s'," % gesperrt, quelle.split("static REITER")[1].split("]")[0])
+        for gesperrt in ('eigenschaften', 'kleider', 'assets', 'szene', 'modell'):
+            self.assertNotIn("'%s'," % gesperrt, quelle.split('static REITER')[1].split(']')[0])

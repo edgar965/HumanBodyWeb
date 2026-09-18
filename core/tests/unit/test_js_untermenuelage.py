@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "untermenuelage.js")
+MODUL = Jsmodul('bvh_studio', 'untermenuelage.js')
 
 SKRIPT = """
 const { Untermenuelage } = await import(MODUL);
@@ -56,4 +56,4 @@ class UntermenuelageTest(SimpleTestCase):
 
     def test_ein_untermenue_bleibt_im_fenster(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

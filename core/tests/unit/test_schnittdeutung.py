@@ -47,35 +47,35 @@ class SchnittdeutungTest(unittest.TestCase):
     #: Die Masse der Vorgabefigur, gemessen am 09.09.2026. Aus ihnen folgen
     #: Schulter 142,2 cm, Taille 109,9 cm und Huefte 84,9 cm ueber dem Boden.
     MASSE = {
-        "height": 167.989,
-        "head_l": 25.809,
-        "waist_line": 32.312,
-        "hips_line": 25.0,
-        "shoulder_w": 31.798,
-        "armscye_depth": 10.356,
-        "arm_length": 52.151,
-        "waist": 61.842,
-        "hips": 97.432,
+        'height': 167.989,
+        'head_l': 25.809,
+        'waist_line': 32.312,
+        'hips_line': 25.0,
+        'shoulder_w': 31.798,
+        'armscye_depth': 10.356,
+        'arm_length': 52.151,
+        'waist': 61.842,
+        'hips': 97.432,
     }
 
     def _stueck(self, **abweichung):
         """Ein gemessenes Stueck; die Vorgabe ist ein knielanges Kleid."""
         werte = {
-            "unten_cm": 50.0,
-            "oben_cm": 136.0,
-            "saum_umfang_cm": 106.0,
-            "saum_breite_cm": 40.0,
-            "oben_umfang_cm": 90.0,
-            "oben_breite_cm": 34.0,
-            "armstoff_cm": 0.0,
-            "beine_getrennt": False,
-            "aussen_anteil": 0.05,
-            "punkte": 6892,
+            'unten_cm': 50.0,
+            'oben_cm': 136.0,
+            'saum_umfang_cm': 106.0,
+            'saum_breite_cm': 40.0,
+            'oben_umfang_cm': 90.0,
+            'oben_breite_cm': 34.0,
+            'armstoff_cm': 0.0,
+            'beine_getrennt': False,
+            'aussen_anteil': 0.05,
+            'punkte': 6892,
         }
         werte.update(abweichung)
         return werte
 
-    def _deuten(self, kategorie="dresses", **abweichung):
+    def _deuten(self, kategorie='dresses', **abweichung):
         from GarmentCode.schnittdeutung import Schnittdeutung
 
         return Schnittdeutung(self._stueck(**abweichung), self.MASSE, kategorie).deuten()
@@ -96,24 +96,24 @@ class SchnittdeutungTest(unittest.TestCase):
     def test_rocklaenge_ist_der_anteil_der_beinlaenge(self):
         """Saum bei 50 cm, Huefte bei 84,868 cm -> (84,868-50)/84,868."""
         _, regler, _ = self._deuten()
-        self.assertAlmostEqual(regler["pencil-skirt.length"], 0.411, places=3)
-        self.assertAlmostEqual(regler["flare-skirt.length"], 0.411, places=3)
+        self.assertAlmostEqual(regler['pencil-skirt.length'], 0.411, places=3)
+        self.assertAlmostEqual(regler['flare-skirt.length'], 0.411, places=3)
 
     def test_saum_am_boden_ergibt_volle_beinlaenge(self):
         """Ein bodenlanges Stueck darf `length` nicht ueber 1,0 treiben."""
         _, regler, _ = self._deuten(unten_cm=0.0)
-        self.assertEqual(regler["pencil-skirt.length"], 1.0)
+        self.assertEqual(regler['pencil-skirt.length'], 1.0)
 
     def test_aermellaenge_gegen_arm_ohne_armloch(self):
         """20 cm Stoff am Arm / (52,151 - 10,356) nutzbarer Armlaenge."""
         _, regler, _ = self._deuten(armstoff_cm=20.0)
-        self.assertFalse(regler["sleeve.sleeveless"])
-        self.assertAlmostEqual(regler["sleeve.length"], 0.479, places=3)
+        self.assertFalse(regler['sleeve.sleeveless'])
+        self.assertAlmostEqual(regler['sleeve.length'], 0.479, places=3)
 
     def test_ohne_armstoff_bleibt_das_stueck_aermellos(self):
         _, regler, _ = self._deuten(armstoff_cm=0.0)
-        self.assertTrue(regler["sleeve.sleeveless"])
-        self.assertNotIn("sleeve.length", regler)
+        self.assertTrue(regler['sleeve.sleeveless'])
+        self.assertNotIn('sleeve.length', regler)
 
     # ---------------------------------------------------------------- Weite
 
@@ -124,14 +124,14 @@ class SchnittdeutungTest(unittest.TestCase):
         (176 - 61,842) / (2*pi*51,868) = 0,350.
         """
         _, regler, _ = self._deuten(unten_cm=33.0, saum_umfang_cm=176.0)
-        self.assertAlmostEqual(regler["flare-skirt.suns"], 0.350, places=2)
+        self.assertAlmostEqual(regler['flare-skirt.suns'], 0.350, places=2)
 
     def test_weiter_saum_wird_ein_sommerkleid_enger_ein_kleid(self):
         """Der Unterschied ist der Saum gegen die Huefte (97,4 cm)."""
         weit, _, _ = self._deuten(saum_umfang_cm=176.0)
         eng, _, _ = self._deuten(saum_umfang_cm=106.0)
-        self.assertEqual(weit, "sommerkleid")
-        self.assertEqual(eng, "kleid")
+        self.assertEqual(weit, 'sommerkleid')
+        self.assertEqual(eng, 'kleid')
 
     # ------------------------------------------------------------- Bauarten
 
@@ -143,20 +143,20 @@ class SchnittdeutungTest(unittest.TestCase):
         `frankyaye_mini_skirt_01` (Rock) 19 % der Breite. Dazwischen liegt
         keine Schwelle, die beide richtig trennt.
         """
-        hose, _, _ = self._deuten(kategorie="pants", unten_cm=73.0, oben_cm=95.0, beine_getrennt=False)
-        rock, _, _ = self._deuten(kategorie="skirts", unten_cm=74.0, oben_cm=95.0, beine_getrennt=True)
-        self.assertEqual(hose, "hose")
-        self.assertEqual(rock, "bleistiftrock")
+        hose, _, _ = self._deuten(kategorie='pants', unten_cm=73.0, oben_cm=95.0, beine_getrennt=False)
+        rock, _, _ = self._deuten(kategorie='skirts', unten_cm=74.0, oben_cm=95.0, beine_getrennt=True)
+        self.assertEqual(hose, 'hose')
+        self.assertEqual(rock, 'bleistiftrock')
 
     def test_ein_kurzes_oberteil_bekommt_kein_unterteil(self):
         oben, _, bericht = self._deuten(unten_cm=95.0, oben_cm=137.0)
-        self.assertEqual(oben, "t-shirt")
-        self.assertFalse(bericht["unterteil"])
+        self.assertEqual(oben, 't-shirt')
+        self.assertFalse(bericht['unterteil'])
 
     def test_unter_der_achsel_beginnendes_stueck_ist_traegerlos(self):
         """Achsel bei 142,18 - 10,356 = 131,8 cm ueber dem Boden."""
         _, regler, _ = self._deuten(oben_cm=124.0)
-        self.assertTrue(regler["shirt.strapless"])
+        self.assertTrue(regler['shirt.strapless'])
 
     # ------------------------------------------------- was der Katalog nicht kann
 
@@ -165,14 +165,14 @@ class SchnittdeutungTest(unittest.TestCase):
 
         with self.assertRaises(Unuebersetzbar) as gefangen:
             self._deuten(unten_cm=146.0, oben_cm=176.0)
-        self.assertIn("oberhalb der Achsel", str(gefangen.exception))
+        self.assertIn('oberhalb der Achsel', str(gefangen.exception))
 
     def test_schuh_wird_abgelehnt_statt_geraten(self):
         from GarmentCode.schnittdeutung import Unuebersetzbar
 
         with self.assertRaises(Unuebersetzbar) as gefangen:
             self._deuten(unten_cm=2.0, oben_cm=51.0)
-        self.assertIn("unterhalb der Hüfte", str(gefangen.exception))
+        self.assertIn('unterhalb der Hüfte', str(gefangen.exception))
 
     def test_handschuh_wird_abgelehnt_und_nicht_zum_jumpsuit(self):
         """Der Fehler vom 09.09.2026: `toigo_gloves_long` -> „jumpsuit"."""
@@ -180,12 +180,12 @@ class SchnittdeutungTest(unittest.TestCase):
 
         with self.assertRaises(Unuebersetzbar) as gefangen:
             self._deuten(unten_cm=88.0, oben_cm=126.0, aussen_anteil=1.0, beine_getrennt=True)
-        self.assertIn("an den Armen", str(gefangen.exception))
+        self.assertIn('an den Armen', str(gefangen.exception))
 
     def test_ein_normales_kleid_wird_nicht_abgelehnt(self):
         """Gegenprobe: Die drei Ablehnungen duerfen nicht zu breit greifen."""
         name, regler, _ = self._deuten()
-        self.assertEqual(name, "kleid")
+        self.assertEqual(name, 'kleid')
         self.assertTrue(regler)
 
 
@@ -240,5 +240,5 @@ class StueckmasseTest(unittest.TestCase):
         self.assertEqual(masse.aussen_anteil(31.8, ab_hoehe_cm=0.0), 1.0)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

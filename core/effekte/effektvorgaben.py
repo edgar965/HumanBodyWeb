@@ -15,16 +15,16 @@ zeigt „keins gewählt" statt eines Namens, den der Start dann abweist.
 from ..dienste.modellvorlagen import Modellvorlagen
 from ..models import Effektauftrag
 
-__all__ = ["Effektvorgaben"]
+__all__ = ['Effektvorgaben']
 
 
 class Effektvorgaben:
     #: Einstellungsfeld -> Name des Reglers auf der Seite.
     REGLER = (
-        ("effekte_video_fps", "fps"),
-        ("effekte_video_width", "breite"),
-        ("effekte_video_height", "hoehe"),
-        ("effekte_wind", "wind"),
+        ('effekte_video_fps', 'fps'),
+        ('effekte_video_width', 'breite'),
+        ('effekte_video_height', 'hoehe'),
+        ('effekte_wind', 'wind'),
     )
 
     def __init__(self, einstellungen):
@@ -32,17 +32,17 @@ class Effektvorgaben:
 
     def pipeline(self):
         wert = self.s.effekte_default_pipeline
-        return wert if wert in dict(Effektauftrag.PIPELINE_CHOICES) else "figur_def"
+        return wert if wert in dict(Effektauftrag.PIPELINE_CHOICES) else 'figur_def'
 
     def modell(self):
-        name = self.s.effekte_default_model or ""
-        return name if Modellvorlagen.pfad(name) else ""
+        name = self.s.effekte_default_model or ''
+        return name if Modellvorlagen.pfad(name) else ''
 
     def animation(self):
-        return (self.s.effekte_default_animation or "").strip()
+        return (self.s.effekte_default_animation or '').strip()
 
     def windrichtung(self):
-        return self.s.effekte_windrichtung or "seite"
+        return self.s.effekte_windrichtung or 'seite'
 
     def karte(self, karte):
         """`Parametersatz.karte()` mit den Startwerten aus den Einstellungen —
@@ -51,17 +51,17 @@ class Effektvorgaben:
         aus = []
         for f in karte:
             f = dict(f)
-            if f["name"] in werte and f["typ"] != "bool":
-                wert = min(max(werte[f["name"]], f["min"]), f["max"])
-                f["vorgabe"] = int(wert) if f["typ"] == "int" else wert
+            if f['name'] in werte and f['typ'] != 'bool':
+                wert = min(max(werte[f['name']], f['min']), f['max'])
+                f['vorgabe'] = int(wert) if f['typ'] == 'int' else wert
             aus.append(f)
         return aus
 
     def kontext(self):
         """Die drei Startwahlen fuer `data-vorgabe-*` am Formular."""
         return {
-            "vorgabe_pipeline": self.pipeline(),
-            "vorgabe_modell": self.modell(),
-            "vorgabe_animation": self.animation(),
-            "vorgabe_windrichtung": self.windrichtung(),
+            'vorgabe_pipeline': self.pipeline(),
+            'vorgabe_modell': self.modell(),
+            'vorgabe_animation': self.animation(),
+            'vorgabe_windrichtung': self.windrichtung(),
         }

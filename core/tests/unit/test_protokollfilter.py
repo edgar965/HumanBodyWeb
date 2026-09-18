@@ -24,7 +24,7 @@ from ui.protokollfilter import Testlauf
 
 
 def _satz():
-    return logging.LogRecord("core", logging.ERROR, __file__, 1, "Probe", None, None)
+    return logging.LogRecord('core', logging.ERROR, __file__, 1, 'Probe', None, None)
 
 
 class ImTestlaufStummTest(SimpleTestCase):
@@ -33,7 +33,7 @@ class ImTestlaufStummTest(SimpleTestCase):
     def test_die_testumgebung_wird_erkannt(self):
         """Djangos eigener Schalter: `setup_test_environment` hängt `outbox`
         an `django.core.mail` — und nimmt es danach wieder weg."""
-        self.assertTrue(hasattr(mail, "outbox"))
+        self.assertTrue(hasattr(mail, 'outbox'))
         self.assertTrue(Testlauf.laeuft())
 
     def test_waehrend_eines_testlaufs_geht_nichts_durch(self):
@@ -60,17 +60,17 @@ class DieHandlerFuehrenIhnTest(SimpleTestCase):
     databases = set()
 
     def test_alle_dateihandler_tragen_den_filter(self):
-        for name, handler in settings.LOGGING["handlers"].items():
-            if name == "console":
+        for name, handler in settings.LOGGING['handlers'].items():
+            if name == 'console':
                 continue
-            self.assertIn("nicht_im_testlauf", handler.get("filters", []), name)
+            self.assertIn('nicht_im_testlauf', handler.get('filters', []), name)
 
     def test_die_konsole_bleibt_ungefiltert(self):
         """Wer einen Testlauf ansieht, will seine Meldungen sehen."""
-        konsole = settings.LOGGING["handlers"]["console"]
-        self.assertNotIn("nicht_im_testlauf", konsole.get("filters", []))
+        konsole = settings.LOGGING['handlers']['console']
+        self.assertNotIn('nicht_im_testlauf', konsole.get('filters', []))
 
     def test_der_filter_ist_angemeldet(self):
         self.assertEqual(
-            settings.LOGGING["filters"]["nicht_im_testlauf"]["()"], "ui.protokollfilter.Testlauf"
+            settings.LOGGING['filters']['nicht_im_testlauf']['()'], 'ui.protokollfilter.Testlauf'
         )

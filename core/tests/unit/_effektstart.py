@@ -18,8 +18,8 @@ class Effektstart:
     @staticmethod
     def senden(client, nutzlast):
         """`(antwort, start)` — `start` ist die Attrappe von `Effektlauf.starten`."""
-        with mock.patch.object(Effektlauf, "starten") as start:
+        with mock.patch.object(Effektlauf, 'starten') as start:
             antwort = client.post(
-                reverse("effekte_start"), data=json.dumps(nutzlast), content_type="application/json"
+                reverse('effekte_start'), data=json.dumps(nutzlast), content_type='application/json'
             )
         return antwort, start

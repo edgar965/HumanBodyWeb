@@ -26,11 +26,11 @@ import numpy as np
 from django.test import SimpleTestCase
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
 from humanbody_core.nahtteilung import Nahtteilung
+
 from ._sicher import Sicher
 
-
 #: Das Kunstgitter: Punkte (9, 3), Vierecke (4, 4), UVs je Punkt (9, 2), je Ecke (4, 4, 2).
-Gitter = namedtuple("Gitter", "punkte quads uvs ecken")
+Gitter = namedtuple('Gitter', 'punkte quads uvs ecken')
 
 
 class NahtteilungTest(SimpleTestCase):
@@ -57,15 +57,15 @@ class NahtteilungTest(SimpleTestCase):
         n_ohne, n_mit = self.ohne.compute_quad_normals(fein_ohne), self.mit.compute_quad_normals(fein_mit)
         self.assertEqual(n_ohne.tolist(), n_mit[:g].tolist())
         self.assertEqual(n_mit[g:].tolist(), n_mit[eltern].tolist())
-        gewichte = self.mit.propagate_skin_weights([[[0, 1.0]]] * 9, ["DEF-a"])
-        self.assertEqual(gewichte["vertex_count"], self.mit.sub_vertex_count)
-        self.assertEqual(gewichte["weights"][g], gewichte["weights"][eltern[0]])
+        gewichte = self.mit.propagate_skin_weights([[[0, 1.0]]] * 9, ['DEF-a'])
+        self.assertEqual(gewichte['vertex_count'], self.mit.sub_vertex_count)
+        self.assertEqual(gewichte['weights'][g], gewichte['weights'][eltern[0]])
 
     def test_kein_dreieck_spannt_ueber_die_naht(self):
         # Zwischen den Inseln (0,4 < u < 0,6) liegt keine Ecke — der alte Weg
         # setzt die Nahtpunkte gemittelt auf u = 0,5.
         for cc, dazwischen in ((self.ohne, True), (self.mit, False)):
-            u = Sicher.wert(cc.uvs, "UVs")[cc.triangles][:, :, 0]
+            u = Sicher.wert(cc.uvs, 'UVs')[cc.triangles][:, :, 0]
             self.assertEqual(bool(((u > 0.4) & (u < 0.6)).any()), dazwischen)
         self.assertEqual(len(self.mit.triangles), len(self.ohne.triangles))
         self.assertLess(int(self.mit.triangles.max()), self.mit.sub_vertex_count)
@@ -74,7 +74,7 @@ class NahtteilungTest(SimpleTestCase):
         glatt = CatmullClarkSubdivider(self.quads, uvs=self.uvs, uv_loops=self.uvs[self.quads])
         self.assertEqual(glatt.naht_kopien, 0)
         np.testing.assert_allclose(
-            Sicher.wert(glatt.uvs, "UVs"), Sicher.wert(self.ohne.uvs, "UVs"), atol=1e-6
+            Sicher.wert(glatt.uvs, 'UVs'), Sicher.wert(self.ohne.uvs, 'UVs'), atol=1e-6
         )
         self.assertEqual(glatt.triangles.tolist(), self.ohne.triangles.tolist())
 

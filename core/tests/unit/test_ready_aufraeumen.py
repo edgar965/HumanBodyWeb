@@ -29,10 +29,10 @@ class ReadyTest(TestCase):
 
         class Attrappe:
             def zwischendateien(self):
-                gerufen.append("zwischendateien")
+                gerufen.append('zwischendateien')
 
             def durchgehen(self):
-                gerufen.append("durchgehen")
+                gerufen.append('durchgehen')
                 return {}
 
         echt, altes_argv = modul.Startaufraeumen, sys.argv
@@ -46,10 +46,10 @@ class ReadyTest(TestCase):
         return gerufen
 
     def test_mit_runserver_wird_aufgeraeumt(self):
-        self.assertEqual(self.laufen(["manage.py", "runserver", "8081"]), ["zwischendateien", "durchgehen"])
+        self.assertEqual(self.laufen(['manage.py', 'runserver', '8081']), ['zwischendateien', 'durchgehen'])
 
     def test_bei_migrate_passiert_nichts(self):
-        self.assertEqual(self.laufen(["manage.py", "migrate"]), [])
+        self.assertEqual(self.laufen(['manage.py', 'migrate']), [])
 
     def test_beim_testlauf_passiert_nichts(self):
-        self.assertEqual(self.laufen(["manage.py", "test", "core.tests"]), [])
+        self.assertEqual(self.laufen(['manage.py', 'test', 'core.tests']), [])

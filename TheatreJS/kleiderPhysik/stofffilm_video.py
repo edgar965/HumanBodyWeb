@@ -19,9 +19,9 @@ import sys
 import numpy as np
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
-GC = os.path.join("A:", os.sep, "3DTools", "Assets", "GarmentCode")
+GC = os.path.join('A:', os.sep, '3DTools', 'Assets', 'GarmentCode')
 # Der Videoschreiber liegt bei der Koerperphysik — EINE Stelle fuer MP4.
-sys.path.insert(0, os.path.join(os.path.dirname(ORDNER), "ModelPhysik"))
+sys.path.insert(0, os.path.join(os.path.dirname(ORDNER), 'ModelPhysik'))
 from videoschreiber import Videoschreiber  # noqa: E402
 
 
@@ -38,7 +38,7 @@ class Stoffvideo:
         # 1,68). Ohne Umrechnung liegt der Stoff hundertfach zu gross weit
         # ausserhalb des Bildes — im Video sieht man dann nur den Koerper
         # und haelt das fuer eine fehlgeschlagene Simulation.
-        self.bahn = np.load(npz)["punkte"].astype(np.float64) / 100.0
+        self.bahn = np.load(npz)['punkte'].astype(np.float64) / 100.0
         self.k_punkte, self.k_flaechen = self._obj(obj_koerper)
         _p, self.s_flaechen = self._obj(obj_stoff)
         self.breite, self.hoehe = int(breite), int(hoehe)
@@ -48,10 +48,10 @@ class Stoffvideo:
         """Punkte und Dreiecke einer OBJ. Vierecke werden geteilt."""
         punkte, flaechen = [], []
         for zeile in open(pfad):
-            if zeile.startswith("v "):
+            if zeile.startswith('v '):
                 punkte.append([float(x) for x in zeile.split()[1:4]])
-            elif zeile.startswith("f "):
-                ecken = [int(t.split("/")[0]) - 1 for t in zeile.split()[1:]]
+            elif zeile.startswith('f '):
+                ecken = [int(t.split('/')[0]) - 1 for t in zeile.split()[1:]]
                 for i in range(1, len(ecken) - 1):
                     flaechen.append([ecken[0], ecken[i], ecken[i + 1]])
         return np.array(punkte, dtype=np.float64), np.array(flaechen, dtype=np.int64)
@@ -70,8 +70,8 @@ class Stoffvideo:
         return lage, hoehe
 
     def bilder(self):
-        import trimesh
         import pyrender
+        import trimesh
 
         lage, hoehe = self._kamera()
         kamera = pyrender.PerspectiveCamera(yfov=np.deg2rad(40.0))
@@ -107,37 +107,37 @@ class Stoffvideo:
 
 def main():
     zerleger = argparse.ArgumentParser(description=__doc__)
-    zerleger.add_argument("--npz", default=os.path.join(ORDNER, "stofffilm.npz"))
-    zerleger.add_argument("--koerper", default=None)
+    zerleger.add_argument('--npz', default=os.path.join(ORDNER, 'stofffilm.npz'))
+    zerleger.add_argument('--koerper', default=None)
     zerleger.add_argument(
-        "--stoff", default=os.path.join(GC, "ausgabe", "t-shirt_female", "t-shirt_female_sim.obj")
+        '--stoff', default=os.path.join(GC, 'ausgabe', 't-shirt_female', 't-shirt_female_sim.obj')
     )
     zerleger.add_argument(
-        "--aus", default=os.path.join(r"A:\3DTools\Docu\Ergebnisse", "kleiderphysik_tshirt.mp4")
+        '--aus', default=os.path.join(r'A:\3DTools\Docu\Ergebnisse', 'kleiderphysik_tshirt.mp4')
     )
     werte = zerleger.parse_args()
 
     koerper = werte.koerper
     if not koerper:
-        ordner = os.path.join(GC, "koerper", "female")
-        obj = sorted(f for f in os.listdir(ordner) if f.endswith(".obj"))
+        ordner = os.path.join(GC, 'koerper', 'female')
+        obj = sorted(f for f in os.listdir(ordner) if f.endswith('.obj'))
         koerper = os.path.join(ordner, obj[0])
 
     video = Stoffvideo(werte.npz, koerper, werte.stoff)
     print(
-        "Stoffbahn %d Bilder, %d Punkte, %d Dreiecke"
+        'Stoffbahn %d Bilder, %d Punkte, %d Dreiecke'
         % (len(video.bahn), video.bahn.shape[1], len(video.s_flaechen))
     )
-    print("Koerper   %s, %d Punkte" % (os.path.basename(koerper), len(video.k_punkte)))
+    print('Koerper   %s, %d Punkte' % (os.path.basename(koerper), len(video.k_punkte)))
     if video.bahn.shape[1] != int(video.s_flaechen.max()) + 1:
         print(
-            "ACHTUNG: %d Punkte, aber Dreiecke bis Index %d — die "
-            "Flaechen passen nicht zu dieser Bahn." % (video.bahn.shape[1], int(video.s_flaechen.max()))
+            'ACHTUNG: %d Punkte, aber Dreiecke bis Index %d — die '
+            'Flaechen passen nicht zu dieser Bahn.' % (video.bahn.shape[1], int(video.s_flaechen.max()))
         )
     pfad, zahl = video.schreiben(werte.aus)
-    print("Video     %s (%d Bilder, %.1f KB)" % (pfad, zahl, os.path.getsize(pfad) / 1024.0))
+    print('Video     %s (%d Bilder, %.1f KB)' % (pfad, zahl, os.path.getsize(pfad) / 1024.0))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

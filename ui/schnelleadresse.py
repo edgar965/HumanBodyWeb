@@ -50,13 +50,13 @@ from django.conf import settings
 from django.http import HttpResponseRedirect
 
 
-class Schnelleadresse(object):
+class Schnelleadresse:
     #: Der Name, der ueber IPv6 in die Sackgasse laeuft.
-    LANGSAM = "localhost"
+    LANGSAM = 'localhost'
     #: Wohin stattdessen.
-    SCHNELL = "127.0.0.1"
+    SCHNELL = '127.0.0.1'
     #: Nur diese Methoden — ein POST verliert beim Weiterleiten den Rumpf.
-    METHODEN = ("GET", "HEAD")
+    METHODEN = ('GET', 'HEAD')
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -74,13 +74,13 @@ class Schnelleadresse(object):
         if request.method not in Schnelleadresse.METHODEN:
             return None
         host = request.get_host()
-        name = host.split(":")[0]
+        name = host.split(':')[0]
         if name != Schnelleadresse.LANGSAM:
             return None
         if not self.will_html(request):
             return None
         neuer_host = host.replace(Schnelleadresse.LANGSAM, Schnelleadresse.SCHNELL, 1)
-        return "%s://%s%s" % (request.scheme, neuer_host, request.get_full_path())
+        return '%s://%s%s' % (request.scheme, neuer_host, request.get_full_path())
 
     @staticmethod
     def will_html(request):
@@ -91,4 +91,4 @@ class Schnelleadresse(object):
         ganz (curl), wird nicht weitergeleitet: Wer die Adresse ausdruecklich
         so aufruft, meint sie auch so.
         """
-        return "text/html" in request.META.get("HTTP_ACCEPT", "")
+        return 'text/html' in request.META.get('HTTP_ACCEPT', '')

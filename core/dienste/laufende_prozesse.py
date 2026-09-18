@@ -15,7 +15,7 @@ ueber diese Klasse angefasst.
 import logging
 import threading
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class LaufendeProzesse:
@@ -70,7 +70,7 @@ class LaufendeProzesse:
             except Exception:  # noqa: BLE001
                 prozess.kill()
         except Exception as e:  # noqa: BLE001
-            logger.warning("Prozess von Auftrag %s liess sich nicht beenden: %s", job_id, e)
+            logger.warning('Prozess von Auftrag %s liess sich nicht beenden: %s', job_id, e)
             return False
-        logger.info("Prozess von Auftrag %s beendet", job_id)
+        logger.info('Prozess von Auftrag %s beendet', job_id)
         return True

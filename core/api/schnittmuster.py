@@ -18,12 +18,12 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from humanbody_core.cloth import generate_from_pattern
+from humanbody_core.koerperabstand import Koerperabstand
 
+from ..daten.anfragerumpf import Anfragerumpf
 from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
 from .bereichsstoff import Bereichsstoff
-from ..daten.anfragerumpf import Anfragerumpf
-from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger(__name__)
 
@@ -49,27 +49,27 @@ class Schnittmuster:
         POST (JSON): {pattern: {panels, stitches}}
         Abfrageparameter: body_type, morph_* fuer den Koerper.
         """
-        rumpf, fehler = Anfragerumpf.lesen(request, "Invalid JSON body")
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
         if fehler:
             return fehler
-        schnitt = rumpf.get("pattern")
-        if not schnitt or not schnitt.get("panels"):
-            return JsonResponse({"error": "Pattern with panels is required"}, status=400)
+        schnitt = rumpf.get('pattern')
+        if not schnitt or not schnitt.get('panels'):
+            return JsonResponse({'error': 'Pattern with panels is required'}, status=400)
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({"error": "Failed to compute mesh"}, status=500)
-        abstand = float(rumpf.get("offset", Schnittmuster.VORGABE_ABSTAND))
+            return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
+        abstand = float(rumpf.get('offset', Schnittmuster.VORGABE_ABSTAND))
         punkte = np.asarray(koerper.vertices, dtype=np.float64)
         ergebnis = generate_from_pattern(
             schnitt,
             punkte,
             body_faces=koerper.faces,
-            wrap=rumpf.get("wrap", False),
+            wrap=rumpf.get('wrap', False),
             offset=abstand,
-            stiffness=float(rumpf.get("stiffness", Schnittmuster.VORGABE_STEIFE)),
+            stiffness=float(rumpf.get('stiffness', Schnittmuster.VORGABE_STEIFE)),
         )
         if ergebnis is None:
-            return JsonResponse({"error": "Could not generate mesh from pattern"}, status=400)
+            return JsonResponse({'error': 'Could not generate mesh from pattern'}, status=400)
         Schnittmuster._aus_der_haut(ergebnis, punkte, koerper.geschlecht, abstand)
         return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht))
 
@@ -80,9 +80,9 @@ class Schnittmuster:
         if unterteiler is None:
             return
         geschoben = Koerperabstand.radial(
-            ergebnis["vertices"].astype(np.float64), unterteiler.subdivide(punkte), mindestabstand=abstand
+            ergebnis['vertices'].astype(np.float64), unterteiler.subdivide(punkte), mindestabstand=abstand
         )
-        ergebnis["vertices"] = geschoben.astype(np.float32)
+        ergebnis['vertices'] = geschoben.astype(np.float32)
 
     @staticmethod
     @require_GET
@@ -103,11 +103,11 @@ class Schnittmuster:
         """
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({"error": "Failed to compute mesh"}, status=500)
+            return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
         ergebnis, fehler = Bereichsstoff(request.GET).bauen(koerper)
         if fehler:
             # 400, wenn im Bereich keine Flaeche liegt (Eingabe), 500, wenn die
             # Topologie fehlt (Datenlage).
-            code = 400 if ergebnis is None and "region" in fehler else 500
-            return JsonResponse({"error": fehler}, status=code)
+            code = 400 if ergebnis is None and 'region' in fehler else 500
+            return JsonResponse({'error': fehler}, status=code)
         return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht))

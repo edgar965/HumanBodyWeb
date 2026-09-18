@@ -15,7 +15,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "lipsynckurve.js")
+MODUL = Jsmodul('gemeinsam', 'lipsynckurve.js')
 
 SKRIPT = """
 const { Lipsynckurve: K, Lipsyncformen: F } = await import(MODUL);
@@ -44,18 +44,18 @@ class LipsynckurveTest(SimpleTestCase):
     def test_1_form_an_der_zeit(self):
         aus = MODUL.laufen(SKRIPT)
         self.assertEqual(
-            [aus["vorher"], aus["ruhe"], aus["d"], aus["a"], aus["danach"]], ["X", "X", "D", "A", "X"]
+            [aus['vorher'], aus['ruhe'], aus['d'], aus['a'], aus['danach']], ['X', 'X', 'D', 'A', 'X']
         )
-        self.assertEqual(aus["ausserhalb"], 0)
-        self.assertEqual(aus["formen"], "ABCDEFGHX")
+        self.assertEqual(aus['ausserhalb'], 0)
+        self.assertEqual(aus['formen'], 'ABCDEFGHX')
 
     def test_2_uebergang_und_tabellen(self):
         aus = MODUL.laufen(SKRIPT)
-        self.assertAlmostEqual(aus["mitteAA"], 1.0, places=6)
-        self.assertEqual(aus["mitteAnzahl"], 1)
-        self.assertAlmostEqual(aus["wechselAA"], 0.5, places=6)
-        self.assertAlmostEqual(aus["wechselM"], 0.5, places=6)
-        self.assertIn("mouthOpen", aus["mblab"])
-        self.assertNotIn("facs_ctrl_vAA", aus["mblab"])
-        self.assertAlmostEqual(aus["summe"]["facs_ctrl_vAA"], 1.0, places=6)
-        self.assertAlmostEqual(aus["summe"]["facs_ctrl_vM"], 0.2, places=6)
+        self.assertAlmostEqual(aus['mitteAA'], 1.0, places=6)
+        self.assertEqual(aus['mitteAnzahl'], 1)
+        self.assertAlmostEqual(aus['wechselAA'], 0.5, places=6)
+        self.assertAlmostEqual(aus['wechselM'], 0.5, places=6)
+        self.assertIn('mouthOpen', aus['mblab'])
+        self.assertNotIn('facs_ctrl_vAA', aus['mblab'])
+        self.assertAlmostEqual(aus['summe']['facs_ctrl_vAA'], 1.0, places=6)
+        self.assertAlmostEqual(aus['summe']['facs_ctrl_vM'], 0.2, places=6)

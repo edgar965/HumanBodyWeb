@@ -16,17 +16,17 @@ class Silhouettenergebnis:
     """Konturen, Rahmen und Herkunftsangaben einer Foto-Ausrichtung."""
 
     __slots__ = (
-        "koerperkontur",
-        "gesichtskontur",
-        "netz_rahmen",
-        "gesichtsrahmen_erkannt",
-        "gesichtsrahmen_netz",
-        "yolo_rahmen",
-        "breite",
-        "hoehe",
-        "posiert",
-        "ausrichtung",
-        "aus_smplx",
+        'koerperkontur',
+        'gesichtskontur',
+        'netz_rahmen',
+        'gesichtsrahmen_erkannt',
+        'gesichtsrahmen_netz',
+        'yolo_rahmen',
+        'breite',
+        'hoehe',
+        'posiert',
+        'ausrichtung',
+        'aus_smplx',
     )
 
     def __init__(self, breite, hoehe):
@@ -50,15 +50,15 @@ class Silhouettenergebnis:
         Sie gewinnen gegen alles Gerechnete — der Nutzer hat sie ja gerade
         deshalb korrigiert."""
         a = self.ausrichtung or {}
-        if a.get("body_contour_edited"):
-            self.koerperkontur = a["body_contour_edited"]
-        if a.get("face_contour_edited"):
-            self.gesichtskontur = a["face_contour_edited"]
+        if a.get('body_contour_edited'):
+            self.koerperkontur = a['body_contour_edited']
+        if a.get('face_contour_edited'):
+            self.gesichtskontur = a['face_contour_edited']
 
     @property
     def hat_ausrichtung(self):
         a = self.ausrichtung or {}
-        return bool(a.get("body_transform") or a.get("proj_2d_offset"))
+        return bool(a.get('body_transform') or a.get('proj_2d_offset'))
 
     @staticmethod
     def _rahmen(wert):
@@ -73,17 +73,17 @@ class Silhouettenergebnis:
     def als_dict(self):
         """Die Form, die der Browser erwartet — Feldnamen unveraendert."""
         return {
-            "ok": True,
-            "body_contour": self.koerperkontur,
-            "face_contour": self.gesichtskontur,
-            "mesh_bbox": self._rahmen(self.netz_rahmen),
-            "face_bbox_detected": self._rahmen(self.gesichtsrahmen_erkannt),
-            "face_bbox_mesh": self._rahmen(self.gesichtsrahmen_netz),
-            "yolo_bbox": self.yolo_rahmen,
-            "photo_width": self.breite,
-            "photo_height": self.hoehe,
-            "use_posed": self.posiert,
-            "has_alignment": self.hat_ausrichtung,
-            "alignment_method": (self.ausrichtung or {}).get("method", ""),
-            "saved_alignment": self.ausrichtung or None,
+            'ok': True,
+            'body_contour': self.koerperkontur,
+            'face_contour': self.gesichtskontur,
+            'mesh_bbox': self._rahmen(self.netz_rahmen),
+            'face_bbox_detected': self._rahmen(self.gesichtsrahmen_erkannt),
+            'face_bbox_mesh': self._rahmen(self.gesichtsrahmen_netz),
+            'yolo_bbox': self.yolo_rahmen,
+            'photo_width': self.breite,
+            'photo_height': self.hoehe,
+            'use_posed': self.posiert,
+            'has_alignment': self.hat_ausrichtung,
+            'alignment_method': (self.ausrichtung or {}).get('method', ''),
+            'saved_alignment': self.ausrichtung or None,
         }

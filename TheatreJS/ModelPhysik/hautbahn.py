@@ -13,7 +13,6 @@ plausibel aus.
 """
 
 import numpy as np
-
 from streusumme import Streusumme
 
 
@@ -39,8 +38,8 @@ class Hautbahn:
         self.fehlend = [n for n in self.namen if n not in self.bahn.ruhe]
         if self.fehlend:
             raise ValueError(
-                "%d Knochen des Netzes fehlen im Skelett, darunter %s. "
-                "LBS wuerde ihr Gewicht stumm umverteilen." % (len(self.fehlend), ", ".join(self.fehlend[:4]))
+                '%d Knochen des Netzes fehlen im Skelett, darunter %s. '
+                'LBS wuerde ihr Gewicht stumm umverteilen.' % (len(self.fehlend), ', '.join(self.fehlend[:4]))
             )
         summe = self.gewichte.sum(axis=1)
         self.ohne_gewicht = int((summe <= 1e-9).sum())
@@ -57,12 +56,12 @@ class Hautbahn:
         Erst werden alle Knochenmatrizen gebaut (176 x 3 x 3 und 176 x 3),
         dann jeder Eintrag (Punkt, Knochen, Gewicht) auf einmal.
         """
-        if not hasattr(self, "_nnz"):
+        if not hasattr(self, '_nnz'):
             zeilen, spalten = np.nonzero(self.gewichte > 0)
             self._nnz = (zeilen, spalten, self.gewichte[zeilen, spalten])
         zeilen, spalten, werte = self._nnz
         R, t = self._matrizen(lage)
-        bewegt = np.einsum("kij,kj->ki", R[spalten], self.punkte[zeilen]) + t[spalten]
+        bewegt = np.einsum('kij,kj->ki', R[spalten], self.punkte[zeilen]) + t[spalten]
         anzahl = len(self.punkte)
         ziel = Streusumme.zeilen(zeilen, werte[:, None] * bewegt, anzahl)
         summe = Streusumme.zeilen(zeilen, werte, anzahl)
@@ -73,7 +72,7 @@ class Hautbahn:
         Bild, an der Bahn gemerkt: Koerper und jedes Stueck laufen ueber
         dieselben Lagen, und die 176 Drehungen kosten mehr als das LBS
         eines Stuecks."""
-        merker = self.bahn.__dict__.setdefault("_lbs_matrizen", {})
+        merker = self.bahn.__dict__.setdefault('_lbs_matrizen', {})
         schluessel = (id(lage), tuple(self.namen))
         if schluessel in merker:
             return merker[schluessel]

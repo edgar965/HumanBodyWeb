@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "zopfpendel.js")
+MODUL = Jsmodul('gemeinsam', 'zopfpendel.js')
 
 SKRIPT = """
 const { Zopfpendel: Z } = await import(MODUL);
@@ -78,6 +78,6 @@ class ZopfpendelTest(SimpleTestCase):
 
     def test_ruhe_traegheit_und_rueckkehr(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertGreater(ausgabe["sprung_cm"], 10)
-        self.assertLess(ausgabe["nach2s_cm"], 1)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertGreater(ausgabe['sprung_cm'], 10)
+        self.assertLess(ausgabe['nach2s_cm'], 1)

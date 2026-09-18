@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "bereichsgriff.js")
+MODUL = Jsmodul('gemeinsam', 'bereichsgriff.js')
 
 SKRIPT = """
 const { Bereichsgriff } = await import(MODUL);
@@ -50,4 +50,4 @@ class BereichsgriffTest(SimpleTestCase):
 
     def test_breite_aus_mausweg(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

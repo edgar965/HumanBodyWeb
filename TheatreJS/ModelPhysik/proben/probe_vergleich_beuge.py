@@ -25,14 +25,14 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, r"A:\3DTools")
-sys.path.insert(0, r"A:\3DTools\HumanBodyWeb\TheatreJS\ModelPhysik\proben")
+sys.path.insert(0, r'A:\3DTools')
+sys.path.insert(0, r'A:\3DTools\HumanBodyWeb\TheatreJS\ModelPhysik\proben')
 
-from SMPL.koerper import Smplkoerper  # noqa: E402
 from probe_lbs_ist import Armmass  # noqa: E402
 from probe_smpl_posedirs import Posedirsprobe  # noqa: E402
+from SMPL.koerper import Smplkoerper  # noqa: E402
 
-MODELLE = r"A:\3DTools\VideoToBVH\models\smpl"
+MODELLE = r'A:\3DTools\VideoToBVH\models\smpl'
 ELLBOGEN_L, SCHULTER_L, HANDGELENK_L = 18, 16, 20
 
 
@@ -40,7 +40,7 @@ class Beugevergleich:
     """Oberarmumfang an SMPL: Ruhe, reines LBS, LBS mit Pose-Korrektur."""
 
     GRADE = (30, 60, 90, 120)
-    SCHEIBEN = ((0.85, "kurz ueber dem Ellbogen"), (0.50, "Mitte des Oberarms"))
+    SCHEIBEN = ((0.85, 'kurz ueber dem Ellbogen'), (0.50, 'Mitte des Oberarms'))
 
     def __init__(self, geschlecht):
         self.geschlecht = geschlecht
@@ -76,28 +76,28 @@ class Beugevergleich:
             u_ohne = Armmass.umfang(ohne, nummern, self.achse) or 0.0
             u_mit = Armmass.umfang(mit, nummern, self.achse) or 0.0
             teile.append(
-                "%-24s Ruhe %5.2f | LBS %5.2f (%+5.1f %%) | "
-                "mit Korrektur %5.2f (%+5.1f %%)"
+                '%-24s Ruhe %5.2f | LBS %5.2f (%+5.1f %%) | '
+                'mit Korrektur %5.2f (%+5.1f %%)'
                 % (wo, u0, u_ohne, 100 * (u_ohne - u0) / u0, u_mit, 100 * (u_mit - u0) / u0)
             )
         return teile
 
     def laufen(self):
-        print("")
+        print('')
         print(
-            "=== SMPL %s: Oberarm links, %s ==="
-            % (self.geschlecht, ", ".join("%s %d Punkte" % (w, len(n)) for w, n in self.scheiben.items()))
+            '=== SMPL %s: Oberarm links, %s ==='
+            % (self.geschlecht, ', '.join('%s %d Punkte' % (w, len(n)) for w, n in self.scheiben.items()))
         )
         for grad in self.GRADE:
-            print("  Ellbogen %3d Grad" % grad)
+            print('  Ellbogen %3d Grad' % grad)
             for zeile in self.zeilen(grad):
-                print("      %s" % zeile)
+                print('      %s' % zeile)
 
 
 def main():
-    for geschlecht in ("FEMALE", "MALE"):
+    for geschlecht in ('FEMALE', 'MALE'):
         Beugevergleich(geschlecht).laufen()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

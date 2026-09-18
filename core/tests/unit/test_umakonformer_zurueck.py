@@ -28,7 +28,7 @@ class Zuruecknehmen(unittest.TestCase):
         koerper, k_tri = zylinder(0.20)
         stoff, s_tri = zylinder(0.21, ringe=18, stufen=12)
         k = Kleidungskonformer(koerper, k_tri)
-        b = k.binden("huelle", stoff, s_tri)
+        b = k.binden('huelle', stoff, s_tri)
         ausgang = b.ausgangslage.copy()
 
         for faktor in (1.2, 1.5, 0.9, 1.0):

@@ -16,7 +16,6 @@ from unittest import mock
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from Genesis9.browserbilder import G9browserbilder
 from Genesis9.dson import G9dson
 from Genesis9.eigenknochen import G9eigenknochen
@@ -24,26 +23,26 @@ from Genesis9.garderobeeintrag import G9garderobeeintrag
 from Genesis9.hdmorph import G9hdmorph
 from Genesis9.hdmorphe import G9hdmorphe
 from Genesis9.knochenmatrizen import G9knochenmatrizen
-from Genesis9.skelett import G9skelett
 from Genesis9.requisit import G9requisit
+from Genesis9.skelett import G9skelett
 
 
 def _dhdm(stufen):
     """Eine `.dhdm` aus `{stufe: [(flaeche, idx16, x, y, z)]}` bauen."""
-    roh = struct.pack("<IIII", 0xD0D0D0D0, len(stufen), 0x3F800000, len(stufen))
+    roh = struct.pack('<IIII', 0xD0D0D0D0, len(stufen), 0x3F800000, len(stufen))
     for stufe in sorted(stufen):
-        daten = b""
+        daten = b''
         je_flaeche = {}
         for flaeche, idx, x, y, z in stufen[stufe]:
             je_flaeche.setdefault(flaeche, []).append((idx, x, y, z))
         for flaeche, eintraege in je_flaeche.items():
-            daten += struct.pack("<II", flaeche, len(eintraege))
+            daten += struct.pack('<II', flaeche, len(eintraege))
             for idx, x, y, z in eintraege:
                 if stufe < 4:
-                    daten += struct.pack("<fBBff", x, idx >> 8, (stufe + 1) * 16, y, z)
+                    daten += struct.pack('<fBBff', x, idx >> 8, (stufe + 1) * 16, y, z)
                 else:
-                    daten += struct.pack("<fBBBBff", x, 0, idx & 255, idx >> 8, (stufe + 1) * 16, y, z)
-        roh += struct.pack("<IIII", 4, stufe, len(stufen[stufe]), len(daten)) + daten
+                    daten += struct.pack('<fBBBBff', x, 0, idx & 255, idx >> 8, (stufe + 1) * 16, y, z)
+        roh += struct.pack('<IIII', 4, stufe, len(stufen[stufe]), len(daten)) + daten
     return roh
 
 
@@ -60,16 +59,16 @@ class Genesis9HdMorph(SimpleTestCase):
                 3: [(5, 0, 9.0, 9.0, 9.0)],
             }
         )
-        m = G9hdmorph._zerlegen("x.dhdm", roh, 2)
+        m = G9hdmorph._zerlegen('x.dhdm', roh, 2)
         self.assertEqual(m.anzahl_stufen, 3)
         self.assertEqual(sorted(m.stufen), [1, 2])  # Stufe 3 bleibt liegen
         s1 = m.stufen[1]
-        self.assertEqual((int(s1["flaeche"][0]), int(s1["unterflaeche"][0]), int(s1["ecke"][0])), (5, 2, 3))
-        self.assertTrue(np.allclose(s1["vektor"][0], [1.0, 2.0, 3.0]))
+        self.assertEqual((int(s1['flaeche'][0]), int(s1['unterflaeche'][0]), int(s1['ecke'][0])), (5, 2, 3))
+        self.assertTrue(np.allclose(s1['vektor'][0], [1.0, 2.0, 3.0]))
         s2 = m.stufen[2]
-        self.assertEqual(s2["unterflaeche"].tolist(), [9, 0])
-        self.assertEqual(s2["ecke"].tolist(), [1, 2])
-        self.assertEqual(s2["flaeche"].tolist(), [5, 7])
+        self.assertEqual(s2['unterflaeche'].tolist(), [9, 0])
+        self.assertEqual(s2['ecke'].tolist(), [1, 2])
+        self.assertEqual(s2['flaeche'].tolist(), [5, 7])
 
     def test_2_rahmen_der_flaechenecke(self):
         """Viereck in der xz-Ebene, Umlauf gegen den Uhrzeiger von oben: z-Achse
@@ -96,22 +95,22 @@ class Genesis9Requisit(SimpleTestCase):
     databases = set()
 
     KNOTEN = {
-        "id": "Dolch",
-        "parent": "name://@selection/r_hand:",
-        "translation": [{"id": "x", "current_value": -50.0}, {"id": "y", "current_value": 70.0}],
-        "rotation": [{"id": "z", "current_value": 90.0}],
-        "center_point": [{"id": "y", "current_value": 20.0}],
-        "rotation_order": "YXZ",
+        'id': 'Dolch',
+        'parent': 'name://@selection/r_hand:',
+        'translation': [{'id': 'x', 'current_value': -50.0}, {'id': 'y', 'current_value': 70.0}],
+        'rotation': [{'id': 'z', 'current_value': 90.0}],
+        'center_point': [{'id': 'y', 'current_value': 20.0}],
+        'rotation_order': 'YXZ',
     }
 
     def test_3_knoten_lesen(self):
-        definition = {"rotation_order": "XYZ", "center_point": [{"id": "y", "value": -38.0}]}
+        definition = {'rotation_order': 'XYZ', 'center_point': [{'id': 'y', 'value': -38.0}]}
         lage = G9requisit.aus_knoten(self.KNOTEN, definition)
-        self.assertEqual(lage.knochen, "r_hand")
+        self.assertEqual(lage.knochen, 'r_hand')
         self.assertEqual(lage.translation.tolist(), [-50.0, 70.0, 0.0])
         self.assertEqual(lage.mitte.tolist(), [0.0, 20.0, 0.0])  # Szene vor .dsf
-        self.assertEqual(lage.reihenfolge, "YXZ")
-        self.assertIsNone(G9requisit.aus_knoten({"id": "frei"}))
+        self.assertEqual(lage.reihenfolge, 'YXZ')
+        self.assertIsNone(G9requisit.aus_knoten({'id': 'frei'}))
 
     def test_4_ruhelage_dreht_um_den_drehpunkt_und_verschiebt(self):
         lage = G9requisit.aus_knoten(self.KNOTEN)
@@ -122,23 +121,23 @@ class Genesis9Requisit(SimpleTestCase):
         self.assertTrue(np.allclose(lage.ruhelage(drehpunkt), [[-0.5, 0.9, 0.0]]))
         self.assertTrue(np.allclose(lage.ruhelage(oben), [[-0.6, 0.9, 0.0]]))
         haut = lage.haut(3)
-        self.assertEqual(haut.knochen, ["r_hand"])
+        self.assertEqual(haut.knochen, ['r_hand'])
         self.assertTrue((haut.gewicht[:, 0] == 1).all())
 
     def test_5_griffpose_ohne_skalierung_eins(self):
         doc = G9dson(
-            "x.duf",
+            'x.duf',
             {
-                "scene": {
-                    "animations": [
-                        {"url": "name://@selection/r_thumb1:?rotation/x/value", "keys": [[0, -8.4]]},
-                        {"url": "name://@selection/r_thumb1:?scale/general/value", "keys": [[0, 1]]},
-                        {"url": "name://@selection/r_hand:?scale/x/value", "keys": [[0, 1]]},
+                'scene': {
+                    'animations': [
+                        {'url': 'name://@selection/r_thumb1:?rotation/x/value', 'keys': [[0, -8.4]]},
+                        {'url': 'name://@selection/r_thumb1:?scale/general/value', 'keys': [[0, 1]]},
+                        {'url': 'name://@selection/r_hand:?scale/x/value', 'keys': [[0, 1]]},
                     ]
                 }
             },
         )
-        self.assertEqual(G9requisit.griff(doc), {"r_thumb1": {"rotation/x": -8.4}})
+        self.assertEqual(G9requisit.griff(doc), {'r_thumb1': {'rotation/x': -8.4}})
 
 
 class Genesis9Eigenknochen(SimpleTestCase):
@@ -146,42 +145,42 @@ class Genesis9Eigenknochen(SimpleTestCase):
 
     def _doc(self):
         return G9dson(
-            "haar.dsf",
+            'haar.dsf',
             {
-                "node_library": [
-                    {"id": "Haar", "type": "figure"},
+                'node_library': [
+                    {'id': 'Haar', 'type': 'figure'},
                     {
-                        "id": "spine4",
-                        "type": "bone",
-                        "parent": "#Haar",
-                        "center_point": [{"id": "y", "value": 120}],
-                        "end_point": [{"id": "y", "value": 140}],
+                        'id': 'spine4',
+                        'type': 'bone',
+                        'parent': '#Haar',
+                        'center_point': [{'id': 'y', 'value': 120}],
+                        'end_point': [{'id': 'y', 'value': 140}],
                     },
                     {
-                        "id": "Zopf",
-                        "type": "bone",
-                        "parent": "#spine4",
-                        "center_point": [{"id": "y", "value": 160}],
-                        "end_point": [{"id": "y", "value": 120}],
-                        "rotation_order": "XYZ",
-                        "inherits_scale": True,
+                        'id': 'Zopf',
+                        'type': 'bone',
+                        'parent': '#spine4',
+                        'center_point': [{'id': 'y', 'value': 160}],
+                        'end_point': [{'id': 'y', 'value': 120}],
+                        'rotation_order': 'XYZ',
+                        'inherits_scale': True,
                     },
                 ],
-                "modifier_library": [
+                'modifier_library': [
                     {
-                        "id": "SkinBinding",
-                        "skin": {
-                            "vertex_count": 2,
-                            "joints": [
+                        'id': 'SkinBinding',
+                        'skin': {
+                            'vertex_count': 2,
+                            'joints': [
                                 {
-                                    "id": "spine4",
-                                    "node": "#spine4",
-                                    "node_weights": {"count": 1, "values": [[0, 1.0]]},
+                                    'id': 'spine4',
+                                    'node': '#spine4',
+                                    'node_weights': {'count': 1, 'values': [[0, 1.0]]},
                                 },
                                 {
-                                    "id": "Zopf",
-                                    "node": "#Zopf",
-                                    "node_weights": {"count": 1, "values": [[1, 1.0]]},
+                                    'id': 'Zopf',
+                                    'node': '#Zopf',
+                                    'node_weights': {'count': 1, 'values': [[1, 1.0]]},
                                 },
                             ],
                         },
@@ -191,22 +190,22 @@ class Genesis9Eigenknochen(SimpleTestCase):
         )
 
     def test_6_eigene_knochen_drehen_ihre_punkte(self):
-        eigene = G9eigenknochen.aus_dokument(self._doc(), ["spine4"])
-        self.assertEqual(eigene.namen, ["Zopf"])
-        self.assertEqual(eigene.knochen[0]["eltern"], "spine4")
-        self.assertEqual(eigene.haut.knochen, ["spine4", "Zopf"])
+        eigene = G9eigenknochen.aus_dokument(self._doc(), ['spine4'])
+        self.assertEqual(eigene.namen, ['Zopf'])
+        self.assertEqual(eigene.knochen[0]['eltern'], 'spine4')
+        self.assertEqual(eigene.haut.knochen, ['spine4', 'Zopf'])
         roh = [
             {
-                "name": "spine4",
-                "eltern": None,
-                "kopf": np.array([0.0, 120.0, 0.0]),
-                "schwanz": np.array([0.0, 140.0, 0.0]),
-                "erbt": False,
-                "orientation": np.zeros(3),
-                "reihenfolge": "XYZ",
+                'name': 'spine4',
+                'eltern': None,
+                'kopf': np.array([0.0, 120.0, 0.0]),
+                'schwanz': np.array([0.0, 140.0, 0.0]),
+                'erbt': False,
+                'orientation': np.zeros(3),
+                'reihenfolge': 'XYZ',
             }
         ] + eigene.knochen
-        matrizen = G9knochenmatrizen({}, roh=roh, drehung={"Zopf": {"rotation/z": 90}})
+        matrizen = G9knochenmatrizen({}, roh=roh, drehung={'Zopf': {'rotation/z': 90}})
         punkte = np.array([[0.0, 1.3, 0.0], [0.0, 1.2, 0.0]])  # Meter; Zopfspitze
         aus = matrizen.anwenden(punkte, eigene.haut)
         self.assertTrue(np.allclose(aus[0], punkte[0]))  # spine4 ruht
@@ -227,12 +226,12 @@ class Genesis9Eigenknochen(SimpleTestCase):
                 def knochen():
                     return {}
 
-        with mock.patch.object(G9skelett, "roh", return_value=roh[:1]):
-            gelenke = eigene.gelenke(Formung(), {"Zopf": {"rotation/z": 90}}, boden=0.1)
-        self.assertEqual([g["name"] for g in gelenke], ["Zopf"])
-        self.assertEqual(gelenke[0]["eltern"], "spine4")
-        self.assertTrue(np.allclose(gelenke[0]["kopf"], [0.0, 1.5, 0.0]), gelenke[0])
-        self.assertTrue(np.allclose(gelenke[0]["schwanz"], [0.4, 1.5, 0.0], atol=1e-6), gelenke[0])
+        with mock.patch.object(G9skelett, 'roh', return_value=roh[:1]):
+            gelenke = eigene.gelenke(Formung(), {'Zopf': {'rotation/z': 90}}, boden=0.1)
+        self.assertEqual([g['name'] for g in gelenke], ['Zopf'])
+        self.assertEqual(gelenke[0]['eltern'], 'spine4')
+        self.assertTrue(np.allclose(gelenke[0]['kopf'], [0.0, 1.5, 0.0]), gelenke[0])
+        self.assertTrue(np.allclose(gelenke[0]['schwanz'], [0.4, 1.5, 0.0], atol=1e-6), gelenke[0])
 
 
 class Genesis9Verschiebung(SimpleTestCase):
@@ -243,17 +242,17 @@ class Genesis9Verschiebung(SimpleTestCase):
         die Verschiebung mit (`W = W_eltern · T(t) · …`)."""
         roh = [
             {
-                "name": "hip",
-                "eltern": None,
-                "kopf": np.array([0.0, 100.0, 0.0]),
-                "schwanz": np.array([0.0, 80.0, 0.0]),
-                "erbt": True,
-                "orientation": np.zeros(3),
-                "reihenfolge": "XYZ",
+                'name': 'hip',
+                'eltern': None,
+                'kopf': np.array([0.0, 100.0, 0.0]),
+                'schwanz': np.array([0.0, 80.0, 0.0]),
+                'erbt': True,
+                'orientation': np.zeros(3),
+                'reihenfolge': 'XYZ',
             }
         ]
-        m = G9knochenmatrizen({"Genesis9": {"scale/general": 1.25}, "hip": {"translation/y": 20.0}}, roh=roh)
-        gelenk = (m.matrizen()["hip"] @ np.array([0.0, 100.0, 0.0, 1.0]))[:3]
+        m = G9knochenmatrizen({'Genesis9': {'scale/general': 1.25}, 'hip': {'translation/y': 20.0}}, roh=roh)
+        gelenk = (m.matrizen()['hip'] @ np.array([0.0, 100.0, 0.0, 1.0]))[:3]
         self.assertTrue(np.allclose(gelenk, [0.0, 150.0, 0.0]), gelenk)  # 1,25·(100+20)
 
 
@@ -263,30 +262,30 @@ class Genesis9Stilarten(SimpleTestCase):
     def test_8_stil_pose_laenge(self):
         def doc(zeilen):
             return G9dson(
-                "s.duf", {"scene": {"animations": [{"url": u, "keys": [[0, w]]} for u, w in zeilen]}}
+                's.duf', {'scene': {'animations': [{'url': u, 'keys': [[0, w]]} for u, w in zeilen]}}
             )
 
-        eigene, knochen = {"Frizz"}, {"Zopf"}
+        eigene, knochen = {'Frizz'}, {'Zopf'}
         werte, gedreht, fremd = G9garderobeeintrag._stilwerte(
             doc(
                 [
-                    ("name://@selection/Zopf:?rotation/x/value", 10.7),
-                    ("name://@selection/Zopf:?scale/general/value", 1),
-                    ("name://@selection#Frizz:?value/value", 0.45),
+                    ('name://@selection/Zopf:?rotation/x/value', 10.7),
+                    ('name://@selection/Zopf:?scale/general/value', 1),
+                    ('name://@selection#Frizz:?value/value', 0.45),
                 ]
             ),
             eigene,
             knochen,
         )
-        self.assertEqual((werte, gedreht, fremd), ({"Frizz": 0.45}, {"Zopf": {"rotation/x": 10.7}}, False))
-        self.assertEqual(G9garderobeeintrag._stilart(gedreht), "pose")
+        self.assertEqual((werte, gedreht, fremd), ({'Frizz': 0.45}, {'Zopf': {'rotation/x': 10.7}}, False))
+        self.assertEqual(G9garderobeeintrag._stilart(gedreht), 'pose')
         _w, laenge, _f = G9garderobeeintrag._stilwerte(
-            doc([("name://@selection/Zopf:?scale/y/value", 1.07)]), eigene, knochen
+            doc([('name://@selection/Zopf:?scale/y/value', 1.07)]), eigene, knochen
         )
-        self.assertEqual(G9garderobeeintrag._stilart(laenge), "laenge")
-        self.assertEqual(G9garderobeeintrag._stilart({}), "stil")
+        self.assertEqual(G9garderobeeintrag._stilart(laenge), 'laenge')
+        self.assertEqual(G9garderobeeintrag._stilart({}), 'stil')
         _w, _g, fremd = G9garderobeeintrag._stilwerte(
-            doc([("name://@selection/r_thumb1:?rotation/x/value", -8.4)]), eigene, knochen
+            doc([('name://@selection/r_thumb1:?rotation/x/value', -8.4)]), eigene, knochen
         )
         self.assertTrue(fremd)  # Griffpose: Figur
 
@@ -295,34 +294,34 @@ class Genesis9Browserbilder(SimpleTestCase):
     databases = set()
 
     def test_9_detailnormalen_nur_hoch(self):
-        gross = {"Runtime/Textures/x/8k_NM.jpg"}
+        gross = {'Runtime/Textures/x/8k_NM.jpg'}
 
         def tragbar(relativ, grenze=None):
             grenze = grenze or G9browserbilder.SCHWER_MB * 1024 * 1024
             return not (relativ in gross and grenze <= 20 * 1024 * 1024)
 
         bilder = {
-            "albedo": "Runtime/Textures/x/A_D_1001.jpg",
-            "normalen": "Runtime/Textures/x/N.jpg",
-            "detailnormalen": "Runtime/Textures/x/8k_NM.jpg",
-            "detailgewicht": 1.0,
-            "farbe": [1, 1, 1],
+            'albedo': 'Runtime/Textures/x/A_D_1001.jpg',
+            'normalen': 'Runtime/Textures/x/N.jpg',
+            'detailnormalen': 'Runtime/Textures/x/8k_NM.jpg',
+            'detailgewicht': 1.0,
+            'farbe': [1, 1, 1],
         }
-        with mock.patch.object(G9browserbilder, "tragbar", side_effect=tragbar):
+        with mock.patch.object(G9browserbilder, 'tragbar', side_effect=tragbar):
             tief = G9browserbilder.fuer(bilder, hoch=False)
-            self.assertNotIn("detailnormalen", tief)
-            self.assertNotIn("detailgewicht", tief)
-            self.assertEqual(tief["normalen"], "Runtime/Textures/x/N.jpg")
+            self.assertNotIn('detailnormalen', tief)
+            self.assertNotIn('detailgewicht', tief)
+            self.assertEqual(tief['normalen'], 'Runtime/Textures/x/N.jpg')
             hoch = G9browserbilder.fuer(bilder, hoch=True)
-            self.assertEqual(hoch["detailnormalen"], "Runtime/Textures/x/8k_NM.jpg")
-            self.assertEqual(hoch["detailgewicht"], 1.0)
+            self.assertEqual(hoch['detailnormalen'], 'Runtime/Textures/x/8k_NM.jpg')
+            self.assertEqual(hoch['detailgewicht'], 1.0)
             # Ohne Grundnormalen wird das Detailbild die einzige Normale (Amala);
             # ohne alles der 4K-Nachbar der Albedo.
             ohne = dict(bilder)
-            del ohne["normalen"]
+            del ohne['normalen']
             self.assertEqual(
-                G9browserbilder.fuer(ohne, hoch=True)["normalen"], "Runtime/Textures/x/8k_NM.jpg"
+                G9browserbilder.fuer(ohne, hoch=True)['normalen'], 'Runtime/Textures/x/8k_NM.jpg'
             )
             self.assertEqual(
-                G9browserbilder.fuer(ohne, hoch=False)["normalen"], "Runtime/Textures/x/A_NM_1001.jpg"
+                G9browserbilder.fuer(ohne, hoch=False)['normalen'], 'Runtime/Textures/x/A_NM_1001.jpg'
             )

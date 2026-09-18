@@ -23,36 +23,36 @@ from django.views.decorators.http import require_http_methods
 
 from core.dienste.lippensync import Lippensync, LipsyncFehler
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Studiolipsync"]
+__all__ = ['Studiolipsync']
 
 
 class Studiolipsync:
     @staticmethod
     @csrf_exempt
-    @require_http_methods(["GET", "POST"])
+    @require_http_methods(['GET', 'POST'])
     def cues(request):
-        if request.method == "GET":
+        if request.method == 'GET':
             return JsonResponse(
-                {"verfuegbar": Lippensync.verfuegbar(), "programm": Lippensync.programm() or ""}
+                {'verfuegbar': Lippensync.verfuegbar(), 'programm': Lippensync.programm() or ''}
             )
         try:
-            rumpf = json.loads(request.body or b"{}")
+            rumpf = json.loads(request.body or b'{}')
         except ValueError:
-            return JsonResponse({"ok": False, "fehler": "Kein JSON"}, status=400)
-        pfad = Lippensync.pfad_aus_url(rumpf.get("audioUrl"))
+            return JsonResponse({'ok': False, 'fehler': 'Kein JSON'}, status=400)
+        pfad = Lippensync.pfad_aus_url(rumpf.get('audioUrl'))
         if pfad is None:
-            return JsonResponse({"ok": False, "fehler": "Keine Tondatei des Studios"}, status=400)
+            return JsonResponse({'ok': False, 'fehler': 'Keine Tondatei des Studios'}, status=400)
         try:
-            daten = Lippensync.cues(pfad, neu=bool(rumpf.get("neu")))
+            daten = Lippensync.cues(pfad, neu=bool(rumpf.get('neu')))
         except LipsyncFehler as fehler:
-            logger.warning("[lipsync] %s", fehler)
-            return JsonResponse({"ok": False, "fehler": str(fehler)}, status=422)
+            logger.warning('[lipsync] %s', fehler)
+            return JsonResponse({'ok': False, 'fehler': str(fehler)}, status=422)
         logger.info(
-            "[lipsync] %s: %d Mundformen, %.1f s",
-            pfad.rsplit("\\", 1)[-1],
-            len(daten["cues"]),
-            daten["dauer"],
+            '[lipsync] %s: %d Mundformen, %.1f s',
+            pfad.rsplit('\\', 1)[-1],
+            len(daten['cues']),
+            daten['dauer'],
         )
         return JsonResponse(dict(daten, ok=True))

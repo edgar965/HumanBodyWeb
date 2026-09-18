@@ -32,7 +32,6 @@ import unittest
 
 import numpy as np
 from django.conf import settings
-
 from SMPL.gelenke import Smplgelenke
 from SMPL.koerper import Smplkoerper
 from SMPL.skelett import Smplskelett
@@ -48,8 +47,8 @@ class SmplgelenkeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ordner = str(settings.SMPL_MODELS_DIR)
-        if not os.path.isfile(os.path.join(cls.ordner, "SMPL_FEMALE.npz")):
-            raise unittest.SkipTest("SMPL-Modelle fehlen (%s)" % cls.ordner)
+        if not os.path.isfile(os.path.join(cls.ordner, 'SMPL_FEMALE.npz')):
+            raise unittest.SkipTest('SMPL-Modelle fehlen (%s)' % cls.ordner)
 
     # ------------------------------------------------------- eine Definition
 
@@ -60,13 +59,13 @@ class SmplgelenkeTest(unittest.TestCase):
 
     def test_eltern_des_modells_gleich_der_definition(self):
         """`kintree_table` gegen die ausgeschriebene Elternliste."""
-        for geschlecht in ("female", "male"):
+        for geschlecht in ('female', 'male'):
             with self.subTest(geschlecht=geschlecht):
                 g = Smplgelenke.aus_modell(geschlecht, self.ordner)
                 self.assertEqual(list(g.eltern), list(Smplskelett.ELTERN))
 
     def test_genau_eine_wurzel(self):
-        g = Smplgelenke.aus_modell("female", self.ordner)
+        g = Smplgelenke.aus_modell('female', self.ordner)
         self.assertEqual(list(g.eltern).count(-1), 1)
         self.assertEqual(g.eltern[0], -1)
 
@@ -74,7 +73,7 @@ class SmplgelenkeTest(unittest.TestCase):
 
     def test_fremde_topologie_wird_abgewiesen(self):
         """23.752 Punkte sind GarmentCodes Koerper, nicht SMPL."""
-        g = Smplgelenke.aus_modell("female", self.ordner)
+        g = Smplgelenke.aus_modell('female', self.ordner)
         self.assertFalse(Smplgelenke.passt(np.zeros((23752, 3))))
         self.assertFalse(Smplgelenke.passt(None))
         self.assertTrue(Smplgelenke.passt(np.zeros((6890, 3))))
@@ -84,20 +83,20 @@ class SmplgelenkeTest(unittest.TestCase):
     # ------------------------------------------------------ Knochenliste
 
     def test_knochenliste_hat_form_und_wurzel(self):
-        g = Smplgelenke.aus_modell("female", self.ordner)
-        modell = Smplkoerper.laden("female", self.ordner)
+        g = Smplgelenke.aus_modell('female', self.ordner)
+        modell = Smplkoerper.laden('female', self.ordner)
         knochen = g.knochen(modell.a40(None))
 
         self.assertEqual(len(knochen), 24)
-        self.assertEqual([k for k in knochen if k["eltern"] is None][0]["name"], Smplskelett.NAMEN[0])
-        namen = {k["name"] for k in knochen}
+        self.assertEqual([k for k in knochen if k['eltern'] is None][0]['name'], Smplskelett.NAMEN[0])
+        namen = {k['name'] for k in knochen}
         for k in knochen:
-            self.assertEqual(len(k["kopf"]), 3)
-            self.assertEqual(len(k["schwanz"]), 3)
-            if k["eltern"] is not None:
+            self.assertEqual(len(k['kopf']), 3)
+            self.assertEqual(len(k['schwanz']), 3)
+            if k['eltern'] is not None:
                 # Ein Elternteil, den es nicht gibt, haenge im Browser die
                 # halbe Figur an den Ursprung.
-                self.assertIn(k["eltern"], namen)
+                self.assertIn(k['eltern'], namen)
 
     def test_endgelenke_zeigen_vom_elternteil_weg(self):
         """Ohne Kind zeigt der `schwanz` in die Verlaengerung.
@@ -106,28 +105,28 @@ class SmplgelenkeTest(unittest.TestCase):
         zeichnet eine Linie der Laenge null — Haende, Fuesse und Kopf
         blieben unsichtbar.
         """
-        g = Smplgelenke.aus_modell("female", self.ordner)
-        modell = Smplkoerper.laden("female", self.ordner)
-        knochen = {k["name"]: k for k in g.knochen(modell.a40(None))}
-        for name in ("Left_palm", "Right_palm", "Head", "Left_foot"):
+        g = Smplgelenke.aus_modell('female', self.ordner)
+        modell = Smplkoerper.laden('female', self.ordner)
+        knochen = {k['name']: k for k in g.knochen(modell.a40(None))}
+        for name in ('Left_palm', 'Right_palm', 'Head', 'Left_foot'):
             with self.subTest(gelenk=name):
                 k = knochen[name]
-                weg = np.linalg.norm(np.array(k["schwanz"]) - np.array(k["kopf"]))
-                self.assertGreater(weg, 0.01, "%s: Schwanz auf dem Gelenk" % name)
+                weg = np.linalg.norm(np.array(k['schwanz']) - np.array(k['kopf']))
+                self.assertGreater(weg, 0.01, '%s: Schwanz auf dem Gelenk' % name)
 
     def test_versatz_zieht_auf_den_boden(self):
-        g = Smplgelenke.aus_modell("female", self.ordner)
-        modell = Smplkoerper.laden("female", self.ordner)
+        g = Smplgelenke.aus_modell('female', self.ordner)
+        modell = Smplkoerper.laden('female', self.ordner)
         punkte = modell.a40(None)
-        ohne = g.knochen(punkte)[0]["kopf"][1]
-        mit = g.knochen(punkte, versatz_y=0.25)[0]["kopf"][1]
+        ohne = g.knochen(punkte)[0]['kopf'][1]
+        mit = g.knochen(punkte, versatz_y=0.25)[0]['kopf'][1]
         self.assertAlmostEqual(ohne - mit, 0.25, places=5)
 
     # ----------------------------------------------------- Guete der Zahl
 
     def test_ruhelage_ist_exakt(self):
         """In der Ruhelage IST der Regressor die Definition der Gelenke."""
-        for geschlecht in ("female", "male"):
+        for geschlecht in ('female', 'male'):
             with self.subTest(geschlecht=geschlecht):
                 g = Smplgelenke.aus_modell(geschlecht, self.ordner)
                 modell = Smplkoerper.laden(geschlecht, self.ordner)
@@ -142,7 +141,7 @@ class SmplgelenkeTest(unittest.TestCase):
         Schranken hier sind bewusst weiter — sie sollen eine
         Verschlechterung melden, nicht Rauschen.
         """
-        for geschlecht in ("female", "male"):
+        for geschlecht in ('female', 'male'):
             with self.subTest(geschlecht=geschlecht):
                 g = Smplgelenke.aus_modell(geschlecht, self.ordner)
                 modell = Smplkoerper.laden(geschlecht, self.ordner)
@@ -152,8 +151,8 @@ class SmplgelenkeTest(unittest.TestCase):
 
     def test_gegenprobe_ein_verschobenes_netz_faellt_auf(self):
         """Sabotage: Waeren die Schranken blind, taugte der Test nichts."""
-        g = Smplgelenke.aus_modell("female", self.ordner)
-        modell = Smplkoerper.laden("female", self.ordner)
+        g = Smplgelenke.aus_modell('female', self.ordner)
+        modell = Smplkoerper.laden('female', self.ordner)
         abw = self._abweichung(modell, g, stoerung=0.05)
         self.assertGreater(abw.max(), self.MAX_MM)
 
@@ -163,8 +162,8 @@ class SmplgelenkeTest(unittest.TestCase):
         j_rest = modell.J_regressor @ v_rest
         winkel = np.radians(modell.A40_GRAD)
         drehungen = {
-            modell.GELENKE["shoulder_l"]: np.array([0.0, 0.0, -winkel]),
-            modell.GELENKE["shoulder_r"]: np.array([0.0, 0.0, winkel]),
+            modell.GELENKE['shoulder_l']: np.array([0.0, 0.0, -winkel]),
+            modell.GELENKE['shoulder_r']: np.array([0.0, 0.0, winkel]),
         }
         v = modell.posieren(v_rest, drehungen)
         versatz = v[:, 1].min()

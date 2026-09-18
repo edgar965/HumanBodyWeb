@@ -34,7 +34,7 @@ TOOLS = Path(__file__).resolve().parents[4]
 class Pruefablage:
     """Ordner und Dateien fuer die Dauer einer Pruefung."""
 
-    WURZEL = TOOLS / "ProjektTemp" / "pruefungen"
+    WURZEL = TOOLS / 'ProjektTemp' / 'pruefungen'
 
     @classmethod
     def wurzel(cls):
@@ -44,7 +44,7 @@ class Pruefablage:
 
     @classmethod
     @contextlib.contextmanager
-    def ordner(cls, vorsatz="pruef_"):
+    def ordner(cls, vorsatz='pruef_'):
         """Ein leerer Ordner fuer die Dauer des Blocks."""
         pfad = tempfile.mkdtemp(prefix=vorsatz, dir=cls.wurzel())
         try:
@@ -54,7 +54,7 @@ class Pruefablage:
 
     @classmethod
     @contextlib.contextmanager
-    def datei(cls, inhalt=None, endung="", vorsatz="pruef_"):
+    def datei(cls, inhalt=None, endung='', vorsatz='pruef_'):
         """Eine Datei fuer die Dauer des Blocks; gibt den Pfad zurueck.
 
         `inhalt` als Text wird geschrieben, `None` laesst sie leer.
@@ -65,7 +65,7 @@ class Pruefablage:
         os.close(griff)
         try:
             if inhalt is not None:
-                with open(pfad, "w", encoding="utf-8") as datei:
+                with open(pfad, 'w', encoding='utf-8') as datei:
                     datei.write(inhalt)
             yield pfad
         finally:

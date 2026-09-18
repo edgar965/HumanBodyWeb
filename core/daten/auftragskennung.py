@@ -24,9 +24,9 @@ from django.utils import timezone
 
 
 class Auftragskennung:
-    FORMAT = "%Y.%m.%d.%H.%M.%S"
+    FORMAT = '%Y.%m.%d.%H.%M.%S'
     #: Für den URL-Konverter und die Prüfung einer Zeichenkette.
-    MUSTER = r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}"
+    MUSTER = r'[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}'
     LAENGE = 19
 
     @classmethod

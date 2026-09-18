@@ -26,6 +26,7 @@ import numpy as np
 from django.test import TestCase
 
 from core.dienste.charakterdaten import Charakterdaten
+
 from ._sicher import Sicher
 
 
@@ -33,7 +34,7 @@ class NetzcacheSchreibschutzTest(TestCase):
     """`TestCase` und nicht `SimpleTestCase`: Das Laden liest Einstellungen."""
 
     def test_alle_gemerkten_felder_sind_gesperrt(self):
-        netz = Charakterdaten.netzdaten("female")
+        netz = Charakterdaten.netzdaten('female')
         for name in Charakterdaten.NETZFELDER:
             feld = getattr(netz, name, None)
             if not isinstance(feld, np.ndarray):
@@ -41,15 +42,15 @@ class NetzcacheSchreibschutzTest(TestCase):
             with self.subTest(feld=name):
                 self.assertFalse(
                     feld.flags.writeable,
-                    "%s ist beschreibbar — ein Aufrufer kann damit den "
-                    "Zwischenspeicher des ganzen Prozesses vergiften" % name,
+                    '%s ist beschreibbar — ein Aufrufer kann damit den '
+                    'Zwischenspeicher des ganzen Prozesses vergiften' % name,
                 )
 
     def test_schreiben_wirft_statt_still_zu_wirken(self):
         """DER KERN: Aus stillem Schaden wird eine Ausnahme."""
-        netz = Charakterdaten.netzdaten("female")
+        netz = Charakterdaten.netzdaten('female')
         with self.assertRaises(ValueError):
-            Sicher.wert(netz.faces, "faces")[0, 0] = 999
+            Sicher.wert(netz.faces, 'faces')[0, 0] = 999
 
     def test_der_zweite_abruf_ist_dasselbe_objekt(self):
         """Ohne das wäre der Schutz sinnlos — dann gäbe es ja Kopien.
@@ -57,14 +58,14 @@ class NetzcacheSchreibschutzTest(TestCase):
         Er belegt zugleich, warum es ihn braucht: Alle Aufrufer teilen sich
         EIN Objekt.
         """
-        self.assertIs(Charakterdaten.netzdaten("female"), Charakterdaten.netzdaten("female"))
+        self.assertIs(Charakterdaten.netzdaten('female'), Charakterdaten.netzdaten('female'))
 
     def test_lesen_geht_weiterhin(self):
         """Die Gegenprobe: Der Schutz darf die Aufrufer nicht lahmlegen.
 
         Alle acht lesen über Indizierung — genau das muss weiter gehen.
         """
-        flaechen = Sicher.wert(Charakterdaten.netzdaten("female").faces, "faces")
-        self.assertEqual(flaechen.shape[1], 4, "Vierecke erwartet")
+        flaechen = Sicher.wert(Charakterdaten.netzdaten('female').faces, 'faces')
+        self.assertEqual(flaechen.shape[1], 4, 'Vierecke erwartet')
         self.assertGreater(int(flaechen[0].max()), -1)
         self.assertIsInstance(flaechen[:5].tolist(), list)

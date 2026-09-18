@@ -30,6 +30,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.test import SimpleTestCase
+
 from ._sicher import Sicher
 
 WURZEL = Path(settings.BASE_DIR)
@@ -42,29 +43,29 @@ class ServerneustartTest(SimpleTestCase):
     # --------------------------------------------- Was als Server gilt
 
     def test_ein_echter_runserver_wird_erkannt(self):
-        self.assertTrue(self.neustart._ist_runserver(["python.exe", "manage.py", "runserver", "8081"]))
+        self.assertTrue(self.neustart._ist_runserver(['python.exe', 'manage.py', 'runserver', '8081']))
 
     def test_auch_mit_vollem_pfad_und_eigenem_befehl(self):
         """`runserver_dual` ist shortlongx' Variante — auch ein Server."""
         self.assertTrue(
-            self.neustart._ist_runserver(["python.exe", "A:/x/manage.py", "runserver_dual", "[::]:5020"])
+            self.neustart._ist_runserver(['python.exe', 'A:/x/manage.py', 'runserver_dual', '[::]:5020'])
         )
 
     def test_ein_pruefskript_ist_kein_server(self):
         """Sonst beendet die Reparatur sich selbst."""
         self.assertFalse(
-            self.neustart._ist_runserver(["python.exe", "-c", "import psutil  # manage.py runserver suchen"])
+            self.neustart._ist_runserver(['python.exe', '-c', 'import psutil  # manage.py runserver suchen'])
         )
 
     def test_ein_grep_darueber_ist_kein_server(self):
         self.assertFalse(
-            self.neustart._ist_runserver(["bash.exe", "-c", "grep manage.py runserver logs/django.log"])
+            self.neustart._ist_runserver(['bash.exe', '-c', 'grep manage.py runserver logs/django.log'])
         )
 
     def test_andere_manage_befehle_bleiben_unberuehrt(self):
         """Ein laufender Testlauf oder eine Migration ist kein Server."""
-        for befehl in ("test", "migrate", "shell", "collectstatic"):
-            self.assertFalse(self.neustart._ist_runserver(["python.exe", "manage.py", befehl]), befehl)
+        for befehl in ('test', 'migrate', 'shell', 'collectstatic'):
+            self.assertFalse(self.neustart._ist_runserver(['python.exe', 'manage.py', befehl]), befehl)
 
     # ------------------------------------------ Was als „unseres" gilt
 
@@ -73,7 +74,7 @@ class ServerneustartTest(SimpleTestCase):
         eigen = mock.Mock()
         eigen.cwd.return_value = str(self.neustart.WURZEL)
         fremd = mock.Mock()
-        fremd.cwd.return_value = r"A:\shortlongx\shortlongxWeb"
+        fremd.cwd.return_value = r'A:\shortlongx\shortlongxWeb'
         self.assertTrue(self.neustart._hier(eigen))
         self.assertFalse(self.neustart._hier(fremd))
 
@@ -99,16 +100,16 @@ class ServerneustartTest(SimpleTestCase):
         (`~/.claude/rules/zeit-messen.md` — dort ist derselbe Fehler mit
         2,05 s gegen 0,03 s gemessen.)
         """
-        with mock.patch("socket.create_connection") as verbindung:
+        with mock.patch('socket.create_connection') as verbindung:
             self.neustart.erreichbar()
         adresse, _ = verbindung.call_args[0]
-        self.assertEqual(adresse[0], "127.0.0.1")
+        self.assertEqual(adresse[0], '127.0.0.1')
 
     @staticmethod
     def _laden():
         """`restart_server.py` liegt in der Projektwurzel, nicht im Paket."""
-        pfad = WURZEL / "restart_server.py"
-        spec = Sicher.wert(importlib.util.spec_from_file_location("restart_server", pfad))
+        pfad = WURZEL / 'restart_server.py'
+        spec = Sicher.wert(importlib.util.spec_from_file_location('restart_server', pfad))
         modul = importlib.util.module_from_spec(spec)
-        Sicher.wert(spec.loader, "Lader").exec_module(modul)
+        Sicher.wert(spec.loader, 'Lader').exec_module(modul)
         return modul.Serverneustart

@@ -22,7 +22,7 @@ import ast
 
 from ._wrappersuchpfad import Wrappersuchpfad
 
-__all__ = ["Wrapperquellen"]
+__all__ = ['Wrapperquellen']
 
 
 class Wrapperquellen:
@@ -32,14 +32,14 @@ class Wrapperquellen:
     MIT_DOKU = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
     #: Parameternamen, die nie im Rumpf stehen muessen.
-    FREI = ("self", "cls")
+    FREI = ('self', 'cls')
 
     # -------------------------------------------------------------- Einlesen
 
     @staticmethod
     def texte():
         """(Pfad, Text) je eigenem Wrapper-Modul."""
-        return [(p, p.read_text(encoding="utf-8")) for p in Wrappersuchpfad.dateien()]
+        return [(p, p.read_text(encoding='utf-8')) for p in Wrappersuchpfad.dateien()]
 
     @classmethod
     def baeume(cls):
@@ -78,7 +78,7 @@ class Wrapperquellen:
         return [
             (k, ast.dump(k.args[0]))
             for k in ast.walk(baum)
-            if isinstance(k, ast.Call) and isinstance(k.func, ast.Name) and k.func.id == "print" and k.args
+            if isinstance(k, ast.Call) and isinstance(k.func, ast.Name) and k.func.id == 'print' and k.args
         ]
 
     # ------------------------------------------------------------ Parameter
@@ -109,7 +109,7 @@ class Wrapperquellen:
         return [
             arg.arg
             for arg in argumente
-            if arg.arg not in cls.FREI and not arg.arg.startswith("_") and arg.arg not in gelesen
+            if arg.arg not in cls.FREI and not arg.arg.startswith('_') and arg.arg not in gelesen
         ]
 
     @classmethod

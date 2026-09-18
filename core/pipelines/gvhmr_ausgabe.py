@@ -24,7 +24,7 @@ from pathlib import Path
 
 from ..models import AppSettings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class GvhmrAusgabe:
@@ -36,12 +36,12 @@ class GvhmrAusgabe:
 
     @property
     def videostamm(self):
-        return self.job.name.rsplit(".", 1)[0]
+        return self.job.name.rsplit('.', 1)[0]
 
     def zielordner(self):
         """Auftragseigene Einstellung schlaegt die allgemeine — sonst `None`."""
         parameter = self.job.pipeline_params or {}
-        gewaehlt = parameter.get("video_output_dir", AppSettings.load().video_output_dir)
+        gewaehlt = parameter.get('video_output_dir', AppSettings.load().video_output_dir)
         if not gewaehlt or not str(gewaehlt).strip():
             return None
         ziel = Path(gewaehlt)
@@ -56,16 +56,16 @@ class GvhmrAusgabe:
             return 0
         kopiert = 0
         for datei in quelle.iterdir():
-            if datei.suffix != ".mp4":
+            if datei.suffix != '.mp4':
                 continue
             kopiert += self._kopieren(datei, ziel)
         return kopiert
 
     def _kopieren(self, datei, ziel):
-        name = f"{self.videostamm}_{datei.stem}.mp4"
+        name = f'{self.videostamm}_{datei.stem}.mp4'
         try:
             shutil.copy2(str(datei), str(ziel / name))
             return 1
         except OSError as fehler:
-            logger.warning("GVHMR video copy failed: %s", fehler)
+            logger.warning('GVHMR video copy failed: %s', fehler)
             return 0

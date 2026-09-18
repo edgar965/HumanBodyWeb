@@ -23,7 +23,6 @@ from pathlib import Path
 
 from django.conf import settings
 from django.test import SimpleTestCase
-
 from GarmentCode.pfade import Gcpfade
 
 
@@ -37,21 +36,21 @@ class GcpfadeGegenSettings(SimpleTestCase):
         self.assertEqual(Gcpfade.wurzel(), Path(str(settings.TOOLS_ROOT)))
 
     def test_humanbody_daten_weiblich(self):
-        self.assertEqual(Gcpfade.humanbody_daten("female"), Path(str(settings.HUMANBODY_DATA_DIR)))
+        self.assertEqual(Gcpfade.humanbody_daten('female'), Path(str(settings.HUMANBODY_DATA_DIR)))
 
     def test_humanbody_daten_maennlich(self):
         """Der männliche Ordner heisst `humanBody_male` — bis zum
         07.09.2026 wurde er durch Anhängen von `_male` an die Zeichenkette
         gebildet. Das steht jetzt an einer Stelle statt an dreien."""
-        self.assertEqual(Gcpfade.humanbody_daten("male"), Path(str(settings.HUMANBODY_DATA_DIR) + "_male"))
+        self.assertEqual(Gcpfade.humanbody_daten('male'), Path(str(settings.HUMANBODY_DATA_DIR) + '_male'))
 
     def test_das_paket_liegt_unter_assets(self):
-        self.assertEqual(Gcpfade.PAKET, Path(str(settings.ASSETS_ROOT)) / "GarmentCode")
+        self.assertEqual(Gcpfade.PAKET, Path(str(settings.ASSETS_ROOT)) / 'GarmentCode')
 
     def test_messreihen_liegen_neben_dem_paket(self):
         """Die YAML-Reihen der Hilfeseite. Fehlt der Ordner, zeigt die
         Seite eine leere Tabelle — und die liest sich wie „alles gut"."""
-        self.assertTrue(Gcpfade.messreihen().is_dir(), "%s fehlt" % Gcpfade.messreihen())
+        self.assertTrue(Gcpfade.messreihen().is_dir(), '%s fehlt' % Gcpfade.messreihen())
 
     def test_die_kette_wuerde_eine_falsche_ebene_melden(self):
         """GEGENPROBE: Zeigt die Wurzel woanders hin, muss `wurzel()`

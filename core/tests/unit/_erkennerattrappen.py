@@ -23,7 +23,7 @@ nennt die Ausgabe nur den Namen, und der stimmt dann fuer beide.
 
 from ._tensorattrappe import Tensorattrappe
 
-__all__ = ["Yolokaesten", "Yoloattrappe", "Kastenfeld", "Erkennungen", "Detectronattrappe"]
+__all__ = ['Yolokaesten', 'Yoloattrappe', 'Kastenfeld', 'Erkennungen', 'Detectronattrappe']
 
 
 class Yolokaesten:
@@ -71,4 +71,4 @@ class Detectronattrappe:
         self.erkennungen = erkennungen
 
     def __call__(self, bild):
-        return {"instances": self.erkennungen}
+        return {'instances': self.erkennungen}

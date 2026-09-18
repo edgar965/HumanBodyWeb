@@ -45,7 +45,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Lippenrand"]
+__all__ = ['Lippenrand']
 
 
 class Lippenrand:
@@ -97,17 +97,17 @@ class Lippenrand:
 
         netz = Charakterdaten.netzdaten(geschlecht)
         punkte = Lippenmaske.basispunkte(geschlecht, None)
-        datei = Lippenmaske.ordner() / Lippenmaske.DATEI.get(geschlecht, "")
+        datei = Lippenmaske.ordner() / Lippenmaske.DATEI.get(geschlecht, '')
         fehlt = punkte is None or netz.faces is None or netz.uvs is None
         if fehlt or not datei.is_file():
-            logger.warning("Lippenrand (%s): Netz, UVs oder Lipmap fehlen", geschlecht)
+            logger.warning('Lippenrand (%s): Netz, UVs oder Lipmap fehlen', geschlecht)
             return None
         haut = np.asarray(netz.faces)[np.asarray(netz.face_materials) == 0]
         maske = cls.maskenwerte(np.asarray(netz.uvs), Lippenmaske.maske(datei))
         feld = cls.feld(punkte, haut, maske)
         if feld is not None:
             logger.info(
-                "Lippenrand (%s): %d Punkte innen, %d im Saum",
+                'Lippenrand (%s): %d Punkte innen, %d im Saum',
                 geschlecht,
                 int((feld > 0).sum()),
                 int((np.abs(feld) < 6).sum()),
@@ -139,17 +139,17 @@ class Lippenrand:
         umriss = maske >= cls.UMRISS
         mund = cls.mundoeffnung(nachbarn, vorn, umriss)
         if len(mund) < 10:
-            logger.warning("Lippenrand: keine Mundöffnung (%d Punkte)", len(mund))
+            logger.warning('Lippenrand: keine Mundöffnung (%d Punkte)', len(mund))
             return None
         zm = float(np.median(p[sorted(mund), 2]))
         stufe = cls.ringe(nachbarn, mund, vorn)
         schleifen = cls.schleifen(kanten, stufe)
         rand = cls.randschleifen(schleifen, p, knick, maske, zm)
         if rand is None:
-            logger.warning("Lippenrand: keine Randschleife gefunden")
+            logger.warning('Lippenrand: keine Randschleife gefunden')
             return None
         logger.info(
-            "Lippenrand: Mundöffnung %d Punkte auf %.4f m, Randschleife oben %d, unten %d",
+            'Lippenrand: Mundöffnung %d Punkte auf %.4f m, Randschleife oben %d, unten %d',
             len(mund),
             zm,
             rand[0],

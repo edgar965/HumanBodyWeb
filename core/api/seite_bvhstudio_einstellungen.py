@@ -19,16 +19,16 @@ from django.views.generic import TemplateView
 class BvhStudioEinstellungenSeite(TemplateView):
     """Zeigt die gespeicherten Vorgaben; gespeichert wird ueber die API."""
 
-    template_name = "settings_bvh_studio.html"
+    template_name = 'settings_bvh_studio.html'
 
     #: Feste Vorgaben ohne Pfadbezug.
     VORGABEN = {
-        "studio_default_model": "Rig2",
-        "studio_body_type": "Female_Caucasian",
-        "studio_fps": "30",
-        "studio_zoom": "100",
-        "studio_export_resolution": "1080",
-        "studio_export_crf": "18",
+        'studio_default_model': 'Rig2',
+        'studio_body_type': 'Female_Caucasian',
+        'studio_fps': '30',
+        'studio_zoom': '100',
+        'studio_export_resolution': '1080',
+        'studio_export_crf': '18',
     }
 
     def get_context_data(self, **kwargs):
@@ -44,12 +44,12 @@ class BvhStudioEinstellungenSeite(TemplateView):
     @staticmethod
     def _pfadvorgaben():
         """Vorgabepfade aus den Einstellungen — nicht eingetippt, abgeleitet."""
-        bvh = Path(settings.OBJECTS_ROOT) / "animations" / "bvh"
+        bvh = Path(settings.OBJECTS_ROOT) / 'animations' / 'bvh'
         return {
-            "studio_bvh_input": str(bvh),
-            "studio_bvh_output": str(bvh / "Results"),
-            "studio_video_output": str(Path(settings.MEDIA_ROOT) / "output"),
-            "studio_project_path": str(Path(settings.TOOLS_ROOT) / "HumanBody" / "data" / "studio_projects"),
+            'studio_bvh_input': str(bvh),
+            'studio_bvh_output': str(bvh / 'Results'),
+            'studio_video_output': str(Path(settings.MEDIA_ROOT) / 'output'),
+            'studio_project_path': str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data' / 'studio_projects'),
         }
 
 
@@ -61,4 +61,4 @@ class BvhStudioEinstellungenSeite(TemplateView):
 #: schlicht ``view`` heisst — Stapelspuren und Werkzeuge, die Routen ueber
 #: ``callback.__name__`` unterscheiden, koennten sie sonst nicht benennen.
 bvh_studio_settings_page = BvhStudioEinstellungenSeite.as_view()
-bvh_studio_settings_page.__name__ = "bvh_studio_settings_page"
+bvh_studio_settings_page.__name__ = 'bvh_studio_settings_page'

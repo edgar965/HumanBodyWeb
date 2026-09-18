@@ -21,15 +21,15 @@ gereicht. Die Vorlagen schicken POST-Formulare.
 import logging
 
 from django.contrib import messages
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from ..dienste.auftragssteuerung import Auftragssteuerung
 from ..logging_utils import Auftragskontext
 from ..models import BVHJob
 
-logger = logging.getLogger("core")
-pipeline_logger = logging.getLogger("core.pipeline")
+logger = logging.getLogger('core')
+pipeline_logger = logging.getLogger('core.pipeline')
 
 
 class Auftragsformulare:
@@ -42,21 +42,21 @@ class Auftragsformulare:
     def starten(request, kennung):
         """Auftrag starten oder neu starten."""
         job = Auftragsformulare.auftrag(kennung)
-        if job.status in ("pending", "complete", "failed"):
+        if job.status in ('pending', 'complete', 'failed'):
             with Auftragskontext.mit_auftrag(str(job.id)):
-                pipeline_logger.info("start_processing pipeline=%s name=%s", job.pipeline, job.name)
+                pipeline_logger.info('start_processing pipeline=%s name=%s', job.pipeline, job.name)
                 Auftragssteuerung.starten(job)
-            messages.info(request, "Processing started.")
-        return redirect("job_status", kennung=job.kennung)
+            messages.info(request, 'Processing started.')
+        return redirect('job_status', kennung=job.kennung)
 
     @staticmethod
     @require_POST
     def anhalten(request, kennung):
         """Laufenden Auftrag abbrechen."""
         job = Auftragsformulare.auftrag(kennung)
-        Auftragssteuerung.anhalten(job, herkunft="form")
-        messages.info(request, "Processing stopped.")
-        return redirect("job_status", kennung=job.kennung)
+        Auftragssteuerung.anhalten(job, herkunft='form')
+        messages.info(request, 'Processing stopped.')
+        return redirect('job_status', kennung=job.kennung)
 
     @staticmethod
     @require_POST
@@ -64,8 +64,8 @@ class Auftragsformulare:
         """Auftrag samt Dateien löschen; die Rückfrage hängt am `submit`."""
         job = Auftragsformulare.auftrag(kennung)
         name = job.name
-        logger.info("delete_job id=%s name=%s pipeline=%s", job.id, name, job.pipeline)
+        logger.info('delete_job id=%s name=%s pipeline=%s', job.id, name, job.pipeline)
         Auftragssteuerung.dateien_entfernen(job)
         job.delete()
-        messages.success(request, "Deleted %s." % name)
-        return redirect("processed")
+        messages.success(request, 'Deleted %s.' % name)
+        return redirect('processed')

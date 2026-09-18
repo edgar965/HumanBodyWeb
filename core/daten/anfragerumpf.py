@@ -41,11 +41,11 @@ class Anfragerumpf:
     """Der JSON-Rumpf einer Anfrage — oder die fertige 400-Antwort."""
 
     #: Die Meldung, die fuenfzehn der neunzehn Stellen benutzten.
-    MELDUNG = "Invalid JSON"
+    MELDUNG = 'Invalid JSON'
 
     @staticmethod
     def _fehler(meldung):
-        return JsonResponse({"error": meldung or Anfragerumpf.MELDUNG}, status=400)
+        return JsonResponse({'error': meldung or Anfragerumpf.MELDUNG}, status=400)
 
     @staticmethod
     def lesen(request, meldung=None) -> tuple[Any, JsonResponse | None]:
@@ -92,11 +92,11 @@ class Anfragerumpf:
         """
         rumpf, antwort = Anfragerumpf.lesen(request, meldung)
         if antwort is not None:
-            return "", None, antwort
+            return '', None, antwort
         if not isinstance(rumpf, dict):
-            return "", None, Anfragerumpf._fehler(meldung)
-        name = (rumpf.get("name") or "").strip()
-        daten = rumpf.get("data")
+            return '', None, Anfragerumpf._fehler(meldung)
+        name = (rumpf.get('name') or '').strip()
+        daten = rumpf.get('data')
         if not name or not daten:
-            return "", None, JsonResponse({"error": "name and data required"}, status=400)
+            return '', None, JsonResponse({'error': 'name and data required'}, status=400)
         return name, daten, None

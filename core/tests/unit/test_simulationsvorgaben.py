@@ -8,7 +8,6 @@ auseinander, zeigt der Regler etwas anderes an, als gebaut wird.
 """
 
 from django.test import TestCase
-
 from GarmentCode.drapierung import Drapierung
 from GarmentCode.simulationsfelder import Simulationsfelder
 from GarmentCode.simulationsvorgaben import Simulationsvorgaben
@@ -22,8 +21,8 @@ class DerReglerZeigtWasWirklichGilt(TestCase):
             self.assertEqual(
                 Simulationsfelder.vorgabe(schluessel),
                 wert,
-                "%s: Feldkatalog und Simulationsvorgaben sind ungleich — "
-                "der Regler zeigt dann eine Zahl, die nie gebaut wird" % schluessel,
+                '%s: Feldkatalog und Simulationsvorgaben sind ungleich — '
+                'der Regler zeigt dann eine Zahl, die nie gebaut wird' % schluessel,
             )
 
     def test_der_kollisionsabstand_ist_kleiner_als_bei_garmentcode(self):
@@ -33,7 +32,7 @@ class DerReglerZeigtWasWirklichGilt(TestCase):
         des Hautabstands auf unserem Netz (Brust 4,6 mm gegen 2,8 mm bei
         0,05).
         """
-        self.assertLess(Simulationsvorgaben.OPTIONEN["body_collision_thickness"], 0.25)
+        self.assertLess(Simulationsvorgaben.OPTIONEN['body_collision_thickness'], 0.25)
 
 
 class DerReglerGewinntGegenDieVorgabe(TestCase):
@@ -41,19 +40,19 @@ class DerReglerGewinntGegenDieVorgabe(TestCase):
     Regler, der nicht tut, was er anzeigt."""
 
     def test_eingestellter_wert_schlaegt_die_vorgabe(self):
-        werte = Simulationsvorgaben.optionen_mit({"body_collision_thickness": 0.25})
-        self.assertEqual(werte["body_collision_thickness"], 0.25)
+        werte = Simulationsvorgaben.optionen_mit({'body_collision_thickness': 0.25})
+        self.assertEqual(werte['body_collision_thickness'], 0.25)
 
     def test_ohne_eingabe_gilt_die_vorgabe(self):
         werte = Simulationsvorgaben.optionen_mit(None)
         self.assertEqual(
-            werte["body_collision_thickness"], Simulationsvorgaben.OPTIONEN["body_collision_thickness"]
+            werte['body_collision_thickness'], Simulationsvorgaben.OPTIONEN['body_collision_thickness']
         )
 
     def test_fremde_werte_bleiben_erhalten(self):
-        werte = Simulationsvorgaben.optionen_mit({"body_friction": 0.8})
-        self.assertEqual(werte["body_friction"], 0.8)
-        self.assertIn("body_collision_thickness", werte)
+        werte = Simulationsvorgaben.optionen_mit({'body_friction': 0.8})
+        self.assertEqual(werte['body_friction'], 0.8)
+        self.assertIn('body_collision_thickness', werte)
 
 
 class AufDemReferenzkoerperGiltGarmentCode(TestCase):
@@ -61,20 +60,20 @@ class AufDemReferenzkoerperGiltGarmentCode(TestCase):
     Aufgabe. Eigene Vorgaben machten daraus einen Vergleich zweier
     verschiedener Programme."""
 
-    SPEZ = "egal_specification.json"
+    SPEZ = 'egal_specification.json'
 
     def test_smpl_bekommt_die_eigenen_vorgaben_nicht(self):
-        lauf = Drapierung(self.SPEZ, koerper="mean_all", smpl_body=True)
-        self.assertNotIn("body_collision_thickness", lauf.optionen)
+        lauf = Drapierung(self.SPEZ, koerper='mean_all', smpl_body=True)
+        self.assertNotIn('body_collision_thickness', lauf.optionen)
 
     def test_auf_der_figur_gelten_sie(self):
-        lauf = Drapierung(self.SPEZ, koerper="figur_abc")
+        lauf = Drapierung(self.SPEZ, koerper='figur_abc')
         self.assertEqual(
-            lauf.optionen["body_collision_thickness"],
-            Simulationsvorgaben.OPTIONEN["body_collision_thickness"],
+            lauf.optionen['body_collision_thickness'],
+            Simulationsvorgaben.OPTIONEN['body_collision_thickness'],
         )
 
     def test_smpl_behaelt_trotzdem_was_der_nutzer_stellte(self):
         """Ausgenommen sind die VORGABEN, nicht die Regler."""
-        lauf = Drapierung(self.SPEZ, koerper="mean_all", smpl_body=True, optionen={"body_friction": 0.9})
-        self.assertEqual(lauf.optionen, {"body_friction": 0.9})
+        lauf = Drapierung(self.SPEZ, koerper='mean_all', smpl_body=True, optionen={'body_friction': 0.9})
+        self.assertEqual(lauf.optionen, {'body_friction': 0.9})

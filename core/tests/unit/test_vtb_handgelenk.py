@@ -30,15 +30,14 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-from scipy.spatial.transform import Rotation  # noqa: E402
-
 from gelenkgrenzen import Gelenkgrenzen  # noqa: E402
+from scipy.spatial.transform import Rotation  # noqa: E402
 from smplskelett import Smplskelett  # noqa: E402
 from smplxbahn import Smplxbahn  # noqa: E402
 from smplxmischung import Smplxmischung  # noqa: E402
 from smplxreihe import Smplxreihe  # noqa: E402
 
-LINKS = Smplskelett.NAMEN.index("Left_wrist")  # 20
+LINKS = Smplskelett.NAMEN.index('Left_wrist')  # 20
 #: Beugung des linken Handgelenks nach vorn (Arm entlang +x): um -y.
 BEUGEACHSE = np.array([0.0, -1.0, 0.0])
 
@@ -51,14 +50,14 @@ def _reihe(n, handgelenk_grad):
     for _ in range(n):
         reihe.dazu(
             {
-                "smplx_root_pose": np.zeros(3),
-                "smplx_body_pose": koerper.ravel(),
-                "smplx_lhand_pose": np.zeros(45),
-                "smplx_rhand_pose": np.zeros(45),
-                "smplx_jaw_pose": np.zeros(3),
-                "smplx_expr": np.zeros(10),
-                "smplx_shape": np.zeros(10),
-                "cam_trans": np.zeros(3),
+                'smplx_root_pose': np.zeros(3),
+                'smplx_body_pose': koerper.ravel(),
+                'smplx_lhand_pose': np.zeros(45),
+                'smplx_rhand_pose': np.zeros(45),
+                'smplx_jaw_pose': np.zeros(3),
+                'smplx_expr': np.zeros(10),
+                'smplx_shape': np.zeros(10),
+                'cam_trans': np.zeros(3),
             },
             (1, 2, 3, 4),
             [(1.0, 2.0)] * 72,
@@ -83,14 +82,14 @@ class DieHandgelenkmischung(unittest.TestCase):
         mischung = Smplxmischung(bahn, _reihe(self.N, 30.0), np)
         mischung.handgelenk(0.0)
         np.testing.assert_allclose(_winkel(bahn, LINKS), 30.0, atol=1e-3)
-        self.assertEqual(mischung.bilanz["handgelenk_verworfen"], 0)
+        self.assertEqual(mischung.bilanz['handgelenk_verworfen'], 0)
 
     def test_ein_unmoegliches_handgelenk_bleibt_gems_eigenes(self):
         bahn = self._bahn()
         mischung = Smplxmischung(bahn, _reihe(self.N, 150.0), np)
         mischung.handgelenk(0.0)
         np.testing.assert_allclose(_winkel(bahn, LINKS), 10.0, atol=1e-3)
-        self.assertEqual(mischung.bilanz["handgelenk_verworfen"], self.N)
+        self.assertEqual(mischung.bilanz['handgelenk_verworfen'], self.N)
 
     def test_die_grenze_ist_die_der_gelenkgrenzen(self):
         _, schwenk_max = Gelenkgrenzen.SCHWENKGRENZEN[LINKS][1:]
@@ -104,6 +103,6 @@ class DieGelenkgrenzen(unittest.TestCase):
         feld[0, LINKS] = [w, x, y, z]
         self.assertEqual(Gelenkgrenzen.anwenden(feld, np), 1)
         w, x, y, z = feld[0, LINKS]
-        achse = Gelenkgrenzen.knochenachse(Smplskelett.NAMEN.index("Left_palm"), np)
+        achse = Gelenkgrenzen.knochenachse(Smplskelett.NAMEN.index('Left_palm'), np)
         gedreht = Rotation.from_quat([x, y, z, w]).apply(achse)
         self.assertAlmostEqual(np.degrees(np.arccos(np.clip(np.dot(gedreht, achse), -1, 1))), 80.0, places=1)

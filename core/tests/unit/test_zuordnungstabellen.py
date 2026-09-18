@@ -44,39 +44,39 @@ class ZuordnungstabellenTest(SimpleTestCase):
     def test_skelett_wird_erkannt(self):
         """Die Produktionsdatei liefert Knochen in beiden Schreibweisen."""
         knochen = self.pruefung.knochen
-        self.assertIn("DEF-spine.006", knochen)
-        self.assertIn("DEF-spine_006", knochen)
+        self.assertIn('DEF-spine.006', knochen)
+        self.assertIn('DEF-spine_006', knochen)
 
     def test_alle_formate_dabei(self):
         """Kein Format faellt aus der Pruefung — auch SMPL und MEDIAPIPE."""
         formate = set(self.pruefung.formate)
-        for name in ("CMU", "MIXAMO", "MOCAPNET", "OPENPOSE", "AIST", "BANDAI", "SMPL", "MEDIAPIPE"):
+        for name in ('CMU', 'MIXAMO', 'MOCAPNET', 'OPENPOSE', 'AIST', 'BANDAI', 'SMPL', 'MEDIAPIPE'):
             self.assertIn(name, formate)
 
     def test_keine_beanstandungen(self):
         """Der ganze Bericht muss sauber sein."""
         zeilen, summe = self.pruefung.bericht()
-        self.assertEqual(summe, 0, "\n".join(zeilen))
+        self.assertEqual(summe, 0, '\n'.join(zeilen))
 
     def test_unbekanntes_ziel_faellt_auf(self):
         """Gegenprobe: ein Tippfehler im Ziel muss rot werden."""
 
         class Kaputt(Skeleton):
             FORMAT = None
-            BONE_MAP_TO_RIGIFY = {"Hips": "DEF-spine.OO6"}
+            BONE_MAP_TO_RIGIFY = {'Hips': 'DEF-spine.OO6'}
 
         _, funde = self.pruefung.format_pruefen(Kaputt)
-        self.assertEqual(funde["unbekannt"], [("Hips", "DEF-spine.OO6")])
+        self.assertEqual(funde['unbekannt'], [('Hips', 'DEF-spine.OO6')])
 
     def test_doppeltes_ziel_faellt_auf(self):
         """Gegenprobe: zwei Namen auf denselben Knochen — der erste faellt weg."""
 
         class Doppelt(Skeleton):
             FORMAT = None
-            BONE_MAP_TO_RIGIFY = {"Hips": "DEF-spine", "Root": "DEF-spine"}
+            BONE_MAP_TO_RIGIFY = {'Hips': 'DEF-spine', 'Root': 'DEF-spine'}
 
         _, funde = self.pruefung.format_pruefen(Doppelt)
-        self.assertEqual(funde["doppelt"], [("Hips", "Root", "DEF-spine")])
+        self.assertEqual(funde['doppelt'], [('Hips', 'Root', 'DEF-spine')])
 
     def test_mehrere_schreibweisen_bleiben_still(self):
         """Dasselbe Format mit `MEHRERE_SCHREIBWEISEN` meldet nichts."""
@@ -84,20 +84,20 @@ class ZuordnungstabellenTest(SimpleTestCase):
         class Zweisprachig(Skeleton):
             FORMAT = None
             MEHRERE_SCHREIBWEISEN = True
-            BONE_MAP_TO_RIGIFY = {"lhand": "DEF-hand.L", "lHand": "DEF-hand.L"}
+            BONE_MAP_TO_RIGIFY = {'lhand': 'DEF-hand.L', 'lHand': 'DEF-hand.L'}
 
         _, funde = self.pruefung.format_pruefen(Zweisprachig)
-        self.assertEqual(funde["doppelt"], [])
+        self.assertEqual(funde['doppelt'], [])
 
     def test_vertauschte_seite_faellt_auf(self):
         """Gegenprobe: links auf rechts."""
 
         class Verdreht(Skeleton):
             FORMAT = None
-            BONE_MAP_TO_RIGIFY = {"LeftHand": "DEF-hand.R"}
+            BONE_MAP_TO_RIGIFY = {'LeftHand': 'DEF-hand.R'}
 
         _, funde = self.pruefung.format_pruefen(Verdreht)
-        self.assertEqual(funde["seite"], [("LeftHand", "DEF-hand.R")])
+        self.assertEqual(funde['seite'], [('LeftHand', 'DEF-hand.R')])
 
     def test_face_hand_bones_zeigen_ins_skelett(self):
         """Die abgeleitete Gesichts-/Handliste trifft echte Knochen."""

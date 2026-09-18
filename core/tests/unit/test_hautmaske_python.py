@@ -12,9 +12,9 @@ macht die Insel rot; `t >= -tiefe` → `t >= 0` macht den Browser-Vergleich rot.
 
 import numpy as np
 from django.test import SimpleTestCase
-from ._modelphysik import Modelphysik
 
 from ._kunstkoerper import Kunstkoerper
+from ._modelphysik import Modelphysik
 
 
 class HautmaskePythonTest(SimpleTestCase):
@@ -62,4 +62,4 @@ class HautmaskePythonTest(SimpleTestCase):
 
     @staticmethod
     def _hautmaske_modul():
-        return Modelphysik.modul("hautmaske")
+        return Modelphysik.modul('hautmaske')

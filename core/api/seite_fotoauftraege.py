@@ -16,16 +16,16 @@ import logging
 
 from django.views.generic import TemplateView
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class FotoauftraegeSeite(TemplateView):
     """Alle Auftraege mit ihren Ergebnispfaden."""
 
-    template_name = "photo_analysis_jobs.html"
+    template_name = 'photo_analysis_jobs.html'
 
     #: Schluessel in ``result_json`` -> Feldname fuer die Vorlage.
-    ERGEBNISPFADE = (("texture_path", "texture_path"), ("silhouette_path", "silhouette_path"))
+    ERGEBNISPFADE = (('texture_path', 'texture_path'), ('silhouette_path', 'silhouette_path'))
 
     def get_context_data(self, **kwargs):
         from ..models import PhotoAnalysisJob
@@ -34,7 +34,7 @@ class FotoauftraegeSeite(TemplateView):
         for auftrag in auftraege:
             ergebnis = self._ergebnis(auftrag)
             for schluessel, feld in self.ERGEBNISPFADE:
-                setattr(auftrag, feld, ergebnis.get(schluessel, ""))
+                setattr(auftrag, feld, ergebnis.get(schluessel, ''))
         return dict(super().get_context_data(**kwargs), jobs=auftraege)
 
     @staticmethod
@@ -46,11 +46,11 @@ class FotoauftraegeSeite(TemplateView):
         try:
             daten = json.loads(auftrag.result_json)
         except json.JSONDecodeError, TypeError:
-            logger.warning("[fotoauftraege] result_json unlesbar: Auftrag %s", auftrag.pk)
+            logger.warning('[fotoauftraege] result_json unlesbar: Auftrag %s', auftrag.pk)
             return {}
         return daten if isinstance(daten, dict) else {}
 
 
 #: Name gesetzt, siehe ``core/api/seiten.py``.
 photo_analysis_jobs_page = FotoauftraegeSeite.as_view()
-photo_analysis_jobs_page.__name__ = "photo_analysis_jobs_page"
+photo_analysis_jobs_page.__name__ = 'photo_analysis_jobs_page'

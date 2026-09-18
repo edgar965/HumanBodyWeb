@@ -24,16 +24,16 @@ class Objdatei:
     #: OBJ-Flächen sind 1-basiert, unsere Dreiecksindexe 0-basiert.
     VERSATZ = 1
 
-    def __init__(self, punkte, dreiecke, kopfzeile=""):
+    def __init__(self, punkte, dreiecke, kopfzeile=''):
         self.punkte = punkte
         self.dreiecke = dreiecke
         self.kopfzeile = kopfzeile
 
     def zeilen(self):
         if self.kopfzeile:
-            yield "# %s" % self.kopfzeile
+            yield '# %s' % self.kopfzeile
         for punkt in self.punkte:
-            yield "v %.*f %.*f %.*f" % (
+            yield 'v %.*f %.*f %.*f' % (
                 self.STELLEN,
                 punkt[0],
                 self.STELLEN,
@@ -42,14 +42,14 @@ class Objdatei:
                 punkt[2],
             )
         for dreieck in self.dreiecke:
-            yield "f %d %d %d" % (
+            yield 'f %d %d %d' % (
                 dreieck[0] + self.VERSATZ,
                 dreieck[1] + self.VERSATZ,
                 dreieck[2] + self.VERSATZ,
             )
 
     def schreiben(self, pfad):
-        with open(pfad, "w", encoding="utf-8") as datei:
+        with open(pfad, 'w', encoding='utf-8') as datei:
             for zeile in self.zeilen():
-                datei.write(zeile + "\n")
+                datei.write(zeile + '\n')
         return pfad

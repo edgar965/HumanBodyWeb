@@ -26,9 +26,10 @@ from django.conf import settings
 from django.test import Client, SimpleTestCase
 
 from core.api.hauttexturen import Hauttexturen
+
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "hauttextur.js")
+MODUL = Jsmodul('gemeinsam', 'hauttextur.js')
 
 SKRIPT = """
 const { Hauttextur: H } = await import(MODUL);
@@ -56,17 +57,17 @@ console.log(JSON.stringify({ ok: true }));
 
 class HauttexturTest(SimpleTestCase):
     def test_karten_anwenden_und_entfernen(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_koerperdetails_kennt_das_feld(self):
         text = (
             Path(settings.BASE_DIR)
-            .joinpath("static", "viewer", "gemeinsam", "koerperdetails.js")
-            .read_text(encoding="utf-8")
+            .joinpath('static', 'viewer', 'gemeinsam', 'koerperdetails.js')
+            .read_text(encoding='utf-8')
         )
         self.assertIn("haut_textur: ''", text)
-        self.assertIn("Hauttextur.WAHL.some(([w]) => w === wert)", text)
-        self.assertIn("Hauttextur.anwenden(netz, details)", text)
+        self.assertIn('Hauttextur.WAHL.some(([w]) => w === wert)', text)
+        self.assertIn('Hauttextur.anwenden(netz, details)', text)
 
 
 class DerEndpunkt(SimpleTestCase):
@@ -75,16 +76,16 @@ class DerEndpunkt(SimpleTestCase):
 
     def test_erlaubte_textur_kommt_als_png_mit_cache(self):
         self.assertTrue(
-            (Hauttexturen.ordner() / "human_female_bump.png").is_file(),
-            "MB-Lab-Texturen fehlen unter %s" % Hauttexturen.ordner(),
+            (Hauttexturen.ordner() / 'human_female_bump.png').is_file(),
+            'MB-Lab-Texturen fehlen unter %s' % Hauttexturen.ordner(),
         )
-        antwort = self.client.get("/api/character/textur/human_female_bump.png/")
+        antwort = self.client.get('/api/character/textur/human_female_bump.png/')
         self.assertEqual(antwort.status_code, 200)
-        self.assertEqual(antwort["Content-Type"], "image/png")
-        self.assertEqual(antwort["Cache-Control"], Hauttexturen.CACHE)
+        self.assertEqual(antwort['Content-Type'], 'image/png')
+        self.assertEqual(antwort['Cache-Control'], Hauttexturen.CACHE)
         antwort.close()
 
     def test_unbekannt_und_pfad_bleiben_404(self):
-        self.assertEqual(self.client.get("/api/character/textur/settings.py/").status_code, 404)
-        self.assertEqual(self.client.get("/api/character/textur/..%2Fsettings.py/").status_code, 404)
-        self.assertFalse(Hauttexturen.ERLAUBT.match("human_female_lipmap.png/../x.png"))
+        self.assertEqual(self.client.get('/api/character/textur/settings.py/').status_code, 404)
+        self.assertEqual(self.client.get('/api/character/textur/..%2Fsettings.py/').status_code, 404)
+        self.assertFalse(Hauttexturen.ERLAUBT.match('human_female_lipmap.png/../x.png'))

@@ -14,7 +14,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "figurkataloge.js")
+MODUL = Jsmodul('gemeinsam', 'figurkataloge.js')
 
 SKRIPT = """
 const { Figurkataloge } = await import(MODUL);
@@ -89,4 +89,4 @@ class FigurkatalogeTest(SimpleTestCase):
 
     def test_zeilen_je_quelle(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

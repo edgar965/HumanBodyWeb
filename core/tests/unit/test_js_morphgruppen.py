@@ -14,38 +14,38 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "morphgruppen.js")
+MODUL = Jsmodul('gemeinsam', 'morphgruppen.js')
 
 KATEGORIEN = [
-    "Abdomen",
-    "Armpit",
-    "Arms",
-    "Body",
-    "Cheeks",
-    "Chest",
-    "Chin",
-    "Ears",
-    "Elbows",
-    "Eyebrows",
-    "Eyelids",
-    "Eyes",
-    "Face",
-    "Fantasy",
-    "Feet",
-    "Forehead",
-    "Hands",
-    "Head",
-    "Jaw",
-    "Legs",
-    "Mouth",
-    "Neck",
-    "Nose",
-    "Pelvis",
-    "Shoulders",
-    "Stomach",
-    "Torso",
-    "Waist",
-    "Wrists",
+    'Abdomen',
+    'Armpit',
+    'Arms',
+    'Body',
+    'Cheeks',
+    'Chest',
+    'Chin',
+    'Ears',
+    'Elbows',
+    'Eyebrows',
+    'Eyelids',
+    'Eyes',
+    'Face',
+    'Fantasy',
+    'Feet',
+    'Forehead',
+    'Hands',
+    'Head',
+    'Jaw',
+    'Legs',
+    'Mouth',
+    'Neck',
+    'Nose',
+    'Pelvis',
+    'Shoulders',
+    'Stomach',
+    'Torso',
+    'Waist',
+    'Wrists',
 ]
 
 SKRIPT = (
@@ -76,6 +76,6 @@ console.log(JSON.stringify({ ok: true, bereiche: namen,
 class MorphgruppenTest(SimpleTestCase):
     def test_alle_kategorien_verteilt(self):
         aus = MODUL.laufen(SKRIPT)
-        self.assertTrue(aus.get("ok"), aus)
-        self.assertEqual(aus["bereiche"], ["Gesicht", "Körper", "Fantasie"])
-        self.assertEqual(aus["groessen"], [12, 16, 1])
+        self.assertTrue(aus.get('ok'), aus)
+        self.assertEqual(aus['bereiche'], ['Gesicht', 'Körper', 'Fantasie'])
+        self.assertEqual(aus['groessen'], [12, 16, 1])

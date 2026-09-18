@@ -19,7 +19,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "reglerabbildung.js")
+MODUL = Jsmodul('gemeinsam', 'reglerabbildung.js')
 
 SKRIPT = """
 const { Reglerabbildung } = await import(MODUL);
@@ -86,4 +86,4 @@ class ReglerabbildungTest(SimpleTestCase):
 
     def test_umrechnung_und_filter(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

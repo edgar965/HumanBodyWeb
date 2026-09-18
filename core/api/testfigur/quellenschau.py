@@ -31,7 +31,7 @@ class Quellenschau:
     NAMEN_JE_PAKET = 20
 
     def __init__(self):
-        self.quellordner = os.path.join(Testkern.WURZEL, "humanbody_core")
+        self.quellordner = os.path.join(Testkern.WURZEL, 'humanbody_core')
 
     @property
     def vorhanden(self):
@@ -40,13 +40,13 @@ class Quellenschau:
     def bericht(self):
         # Dictionary gewollt: geht unveraendert als JSON an die Testseite.
         return {
-            "files": self.quelldateien(),
-            "charmorph_files": self.referenzdateien(),
-            "data_diagnostics": {
-                "l1": self.l1_morphs(),
-                "gender_delta": self.geschlechtsdelta(),
-                "l2_packed": self.l2_pakete(),
-                "data_files": self.datendateien(),
+            'files': self.quelldateien(),
+            'charmorph_files': self.referenzdateien(),
+            'data_diagnostics': {
+                'l1': self.l1_morphs(),
+                'gender_delta': self.geschlechtsdelta(),
+                'l2_packed': self.l2_pakete(),
+                'data_files': self.datendateien(),
             },
         }
 
@@ -65,41 +65,41 @@ class Quellenschau:
             return []
         aus = []
         for name in sorted(os.listdir(ordner)):
-            if not name.endswith(".py"):
+            if not name.endswith('.py'):
                 continue
             pfad = os.path.join(ordner, name)
             try:
-                with open(pfad, "r", encoding="utf-8") as f:
-                    aus.append({"name": name, "content": f.read()})
+                with open(pfad, encoding='utf-8') as f:
+                    aus.append({'name': name, 'content': f.read()})
             # stumm gewollt: Der Fehlertext IST das Ergebnis dieser Seite,
             # siehe Modulkopf.
             except OSError as e:
-                aus.append({"name": name, "content": "# Nicht lesbar: %s" % e})
+                aus.append({'name': name, 'content': '# Nicht lesbar: %s' % e})
         return aus
 
     # ---------------------------------------------------------------- Morphdaten
 
     def l1_morphs(self):
         """Je L1-Datei: Größe, Form, Punktzahl, Datentyp."""
-        ordner = Testkern.datei("morphs", "L1")
+        ordner = Testkern.datei('morphs', 'L1')
         if not os.path.isdir(ordner):
             return []
         aus = []
         for name in sorted(os.listdir(ordner)):
-            if not name.endswith(".npy"):
+            if not name.endswith('.npy'):
                 continue
             pfad = os.path.join(ordner, name)
-            eintrag = {"name": name[:-4], "file": name, "size_bytes": os.path.getsize(pfad)}
+            eintrag = {'name': name[:-4], 'file': name, 'size_bytes': os.path.getsize(pfad)}
             eintrag.update(self._feldform(pfad))
             aus.append(eintrag)
         return aus
 
     def geschlechtsdelta(self):
         """Das Delta zwischen den Geschlechtern — eine einzelne Datei."""
-        pfad = Testkern.datei("morphs", "gender_male.npy")
+        pfad = Testkern.datei('morphs', 'gender_male.npy')
         if not os.path.isfile(pfad):
             return None
-        eintrag = {"file": "gender_male.npy", "size_bytes": os.path.getsize(pfad)}
+        eintrag = {'file': 'gender_male.npy', 'size_bytes': os.path.getsize(pfad)}
         eintrag.update(self._feldform(pfad))
         return eintrag
 
@@ -110,31 +110,31 @@ class Quellenschau:
             feld = np.load(pfad)
         # stumm gewollt: Der Fehlertext IST das Ergebnis dieser Seite.
         except (OSError, ValueError) as e:
-            return {"error": str(e)}
-        return {"shape": list(feld.shape), "vertex_count": int(feld.shape[0]), "dtype": str(feld.dtype)}
+            return {'error': str(e)}
+        return {'shape': list(feld.shape), 'vertex_count': int(feld.shape[0]), 'dtype': str(feld.dtype)}
 
     def l2_pakete(self):
         """Je L2-Paket: Anzahl und die ersten Namen."""
-        ordner = Testkern.datei("morphs", "L2_packed")
+        ordner = Testkern.datei('morphs', 'L2_packed')
         if not os.path.isdir(ordner):
             return []
         aus = []
         for name in sorted(os.listdir(ordner)):
-            if name.endswith(".npz"):
+            if name.endswith('.npz'):
                 aus.append(self._paket(os.path.join(ordner, name), name))
         return aus
 
     def _paket(self, pfad, name):
-        eintrag = {"file": name, "size_bytes": os.path.getsize(pfad)}
+        eintrag = {'file': name, 'size_bytes': os.path.getsize(pfad)}
         try:
             with np.load(pfad) as paket:
-                namen = [n.decode("utf-8") for n in bytes(paket["names"]).split(b"\0")]
+                namen = [n.decode('utf-8') for n in bytes(paket['names']).split(b'\0')]
         # stumm gewollt: Der Fehlertext IST das Ergebnis dieser Seite.
         except (OSError, ValueError, KeyError) as e:
-            eintrag["error"] = str(e)
+            eintrag['error'] = str(e)
             return eintrag
-        eintrag["morph_count"] = len(namen)
-        eintrag["morph_names"] = namen[: self.NAMEN_JE_PAKET]
+        eintrag['morph_count'] = len(namen)
+        eintrag['morph_names'] = namen[: self.NAMEN_JE_PAKET]
         return eintrag
 
     @staticmethod
@@ -147,7 +147,7 @@ class Quellenschau:
         for name in sorted(os.listdir(ordner)):
             pfad = os.path.join(ordner, name)
             if os.path.isfile(pfad):
-                aus.append({"name": name, "size_bytes": os.path.getsize(pfad)})
+                aus.append({'name': name, 'size_bytes': os.path.getsize(pfad)})
         return aus
 
     # ------------------------------------------------------------ Fassungsinfo
@@ -155,14 +155,14 @@ class Quellenschau:
     @staticmethod
     def fassung():
         """`commit_info.json` der geladenen Fassung — oder None."""
-        pfad = os.path.join(Testkern.WURZEL, "commit_info.json")
+        pfad = os.path.join(Testkern.WURZEL, 'commit_info.json')
         if not os.path.isfile(pfad):
             return None
-        with open(pfad, "r", encoding="utf-8") as f:
+        with open(pfad, encoding='utf-8') as f:
             return json.load(f)
 
     @staticmethod
     def fassung_schreiben(daten):
-        pfad = os.path.join(Testkern.WURZEL, "commit_info.json")
-        with open(pfad, "w", encoding="utf-8") as f:
+        pfad = os.path.join(Testkern.WURZEL, 'commit_info.json')
+        with open(pfad, 'w', encoding='utf-8') as f:
             json.dump(daten, f, indent=2, ensure_ascii=False)

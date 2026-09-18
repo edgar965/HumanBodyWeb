@@ -21,8 +21,8 @@ class Mimikvorschau:
 
     def __init__(self, ausdruecke, datenordner, zielordner):
         self.ausdruecke = ausdruecke
-        self.netz = np.load(os.path.join(datenordner, "vertices_tpose.npy")).astype(float)
-        self.flaechen = np.load(os.path.join(datenordner, "faces.npy"))
+        self.netz = np.load(os.path.join(datenordner, 'vertices_tpose.npy')).astype(float)
+        self.flaechen = np.load(os.path.join(datenordner, 'faces.npy'))
         self.ziel = str(zielordner)
         self.einheiten = ausdruecke.einheiten()
 
@@ -31,8 +31,8 @@ class Mimikvorschau:
         renderer = self._renderer()
         anzahl = 0
         for pose in posen:
-            bild = self._rendern(renderer, self.verschoben(pose["gewichte"]))
-            self._speichern(bild, os.path.join(self.ziel, pose["id"] + ".png"))
+            bild = self._rendern(renderer, self.verschoben(pose['gewichte']))
+            self._speichern(bild, os.path.join(self.ziel, pose['id'] + '.png'))
             anzahl += 1
         renderer.delete()
         return anzahl
@@ -44,7 +44,7 @@ class Mimikvorschau:
             eintrag = self.einheiten.get(einheit)
             if not eintrag or not g:
                 continue
-            for idx, dx, dy, dz in eintrag["plus"] if g > 0 else eintrag["minus"]:
+            for idx, dx, dy, dz in eintrag['plus'] if g > 0 else eintrag['minus']:
                 punkte[int(idx)] += abs(g) * np.array([dx, dy, dz])
         return punkte
 

@@ -34,7 +34,6 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-
 from bildpunkte import Bildpunkte  # noqa: E402
 from drehungsglaettung import Drehungsglaettung  # noqa: E402
 from gelenkgrenzen import Gelenkgrenzen  # noqa: E402
@@ -62,7 +61,7 @@ class DasSkelett(unittest.TestCase):
     def test_die_sichtbaren_lassen_die_handflaechen_weg(self):
         namen = Smplskelett.sichtbare_namen()
         self.assertEqual(len(namen), 22)
-        self.assertNotIn("Left_palm", namen)
+        self.assertNotIn('Left_palm', namen)
 
     def test_verbindungen_nennen_nur_bekannte_namen(self):
         namen = set(Smplskelett.sichtbare_namen())
@@ -84,7 +83,7 @@ class DieGelenkgrenzenImBvh(unittest.TestCase):
         drehungen = np.tile(np.array([[1.0, 0, 0, 0]]), (3, len(Smplskelett.NAMEN), 1))
         winkel = [0.0, 0.0, 0.0]
         winkel[achse] = winkel_grad
-        xyzw = Rotation.from_euler("XYZ", winkel, degrees=True).as_quat()
+        xyzw = Rotation.from_euler('XYZ', winkel, degrees=True).as_quat()
         drehungen[:, gelenk] = [xyzw[3], xyzw[0], xyzw[1], xyzw[2]]
         return drehungen
 
@@ -163,30 +162,30 @@ class DieBildpunkte(unittest.TestCase):
     def test_ein_mensch_in_drei_metern_fuellt_das_bild(self):
         """1,7 m bei Brennweite 1400 px und 3 m Abstand: rund 793 px."""
         punkte = np.array([[0.0, -0.85, 3.0], [0.0, 0.85, 3.0]])
-        bild = Bildpunkte(["Head", "Left_foot"], self.BREITE, self.HOEHE).bild_anfuegen(
+        bild = Bildpunkte(['Head', 'Left_foot'], self.BREITE, self.HOEHE).bild_anfuegen(
             punkte, self._kamera()
         )
-        hoehe_px = abs(bild["Head"][1] - bild["Left_foot"][1]) * self.HOEHE
+        hoehe_px = abs(bild['Head'][1] - bild['Left_foot'][1]) * self.HOEHE
         self.assertAlmostEqual(hoehe_px, 1.7 * self.BRENNWEITE / 3, delta=1.0)
 
     def test_die_mitte_liegt_in_der_bildmitte(self):
-        bild = Bildpunkte(["Pelvis"], self.BREITE, self.HOEHE).bild_anfuegen(
+        bild = Bildpunkte(['Pelvis'], self.BREITE, self.HOEHE).bild_anfuegen(
             np.array([[0.0, 0.0, 3.0]]), self._kamera()
         )
-        self.assertAlmostEqual(bild["Pelvis"][0], 0.5, places=4)
-        self.assertAlmostEqual(bild["Pelvis"][1], 0.5, places=4)
+        self.assertAlmostEqual(bild['Pelvis'][0], 0.5, places=4)
+        self.assertAlmostEqual(bild['Pelvis'][1], 0.5, places=4)
 
     def test_punkte_hinter_der_kamera_fallen_weg(self):
-        bild = Bildpunkte(["Pelvis"], self.BREITE, self.HOEHE).bild_anfuegen(
+        bild = Bildpunkte(['Pelvis'], self.BREITE, self.HOEHE).bild_anfuegen(
             np.array([[0.0, 0.0, 0.0]]), self._kamera()
         )
         self.assertEqual(bild, {})
 
     def test_die_figur_folgt_der_bewegung(self):
-        leser = Bildpunkte(["Pelvis"], self.BREITE, self.HOEHE)
+        leser = Bildpunkte(['Pelvis'], self.BREITE, self.HOEHE)
         links = leser.bild_anfuegen(np.array([[-0.5, 0, 3.0]]), self._kamera())
         rechts = leser.bild_anfuegen(np.array([[0.5, 0, 3.0]]), self._kamera())
-        self.assertLess(links["Pelvis"][0], rechts["Pelvis"][0])
+        self.assertLess(links['Pelvis'][0], rechts['Pelvis'][0])
         self.assertEqual(len(leser.bilder), 2)
 
     def test_die_datei_traegt_gelenke_und_knochen(self):
@@ -195,10 +194,10 @@ class DieBildpunkte(unittest.TestCase):
         leser = Bildpunkte(Smplskelett.sichtbare_namen(), self.BREITE, self.HOEHE)
         leser.bild_anfuegen(np.zeros((22, 3)) + [0, 0, 3.0], self._kamera())
         with Pruefablage.ordner() as ordner:
-            ziel = "%s/punkte.json" % ordner
+            ziel = '%s/punkte.json' % ordner
             leser.schreiben(ziel)
             with open(ziel) as datei:
                 daten = json.load(datei)
-        self.assertEqual(len(daten["joints"]), 22)
-        self.assertEqual(len(daten["connections"]), 21)
-        self.assertEqual(len(daten["frames"]), 1)
+        self.assertEqual(len(daten['joints']), 22)
+        self.assertEqual(len(daten['connections']), 21)
+        self.assertEqual(len(daten['frames']), 1)

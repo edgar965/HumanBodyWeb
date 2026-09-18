@@ -8,10 +8,8 @@ Person dort rueckwaerts geht (Zehen 170 Grad gegen die Bewegung).
 """
 
 import numpy as np
-
-from videoschreiber import Videoschreiber
-
 from filmmasken import Filmmasken
+from videoschreiber import Videoschreiber
 
 
 class Filmrender:
@@ -41,9 +39,9 @@ class Filmrender:
         in Blender-Koordinaten laesst, setzt die Tiefe als Hoehe ein und
         die Kamera laeuft in die falsche Richtung davon.
         """
-        koerper = self.teile[0]["haut"].folge[nummer]
+        koerper = self.teile[0]['haut'].folge[nummer]
         mitte = self.DREHUNG @ koerper.mean(axis=0)
-        hoehe = float(self.teile[0]["haut"].folge[0][:, 2].max())
+        hoehe = float(self.teile[0]['haut'].folge[0][:, 2].max())
         blick = np.array([mitte[0], 0.52 * hoehe, mitte[2]])
         lage = np.eye(4)
         # SCHRAEG VON VORN, an der LAUFRICHTUNG ausgerichtet. Ein fester
@@ -65,14 +63,14 @@ class Filmrender:
         (`DEF-toe.L` gegen `DEF-foot.L`), das in Ruhe unstrittig frontal
         steht, und wird ueber die Beckendrehung je Bild mitgefuehrt.
         """
-        if getattr(self, "_blick", None) is not None:
+        if getattr(self, '_blick', None) is not None:
             return self._blick
         ruhe = self.bahn.ruhe
-        if "DEF-toe.L" in ruhe and "DEF-foot.L" in ruhe:
-            vor = self._waagrecht(np.asarray(ruhe["DEF-toe.L"][0]) - np.asarray(ruhe["DEF-foot.L"][0]))
-            lokal = self.bahn.dreh(ruhe["DEF-spine"][1]).T @ vor
+        if 'DEF-toe.L' in ruhe and 'DEF-foot.L' in ruhe:
+            vor = self._waagrecht(np.asarray(ruhe['DEF-toe.L'][0]) - np.asarray(ruhe['DEF-foot.L'][0]))
+            lokal = self.bahn.dreh(ruhe['DEF-spine'][1]).T @ vor
             mittel = np.mean(
-                [self._waagrecht(self.bahn.dreh(lage["DEF-spine"][1]) @ lokal) for lage in self.bahn.lagen],
+                [self._waagrecht(self.bahn.dreh(lage['DEF-spine'][1]) @ lokal) for lage in self.bahn.lagen],
                 axis=0,
             )
             self._blick = self.DREHUNG @ self._waagrecht(mittel)
@@ -116,7 +114,7 @@ class Filmrender:
         # den Beinen, die von innen zu sehen sind.
         stoffe = [
             pyrender.MetallicRoughnessMaterial(
-                baseColorFactor=list(t["farbe"]) + [1.0],
+                baseColorFactor=list(t['farbe']) + [1.0],
                 metallicFactor=0.0,
                 roughnessFactor=0.62,
                 doubleSided=True,
@@ -124,9 +122,9 @@ class Filmrender:
             for t in self.teile
         ]
         try:
-            zahl = len(self.teile[0]["haut"].folge)
+            zahl = len(self.teile[0]['haut'].folge)
             for nummer in range(zahl):
-                self.melder("Bild %d von %d" % (nummer + 1, zahl), 0.45 + 0.55 * nummer / max(zahl, 1))
+                self.melder('Bild %d von %d' % (nummer + 1, zahl), 0.45 + 0.55 * nummer / max(zahl, 1))
                 lage, figurhoehe, blick = self._kamera(nummer)
                 szene = pyrender.Scene(
                     bg_color=list(self.HINTERGRUND) + [1.0], ambient_light=[0.40, 0.40, 0.42]
@@ -138,7 +136,7 @@ class Filmrender:
                     punkte, dreiecke, normalen = Filmmasken.gerendert(teil, nummer)
                     ecken = np.ascontiguousarray(punkte @ drehung.T, dtype=np.float32)
                     senkrechten = np.ascontiguousarray(normalen @ drehung.T, dtype=np.float32)
-                    haut = teil.get("filmhaut")
+                    haut = teil.get('filmhaut')
                     if haut is not None:
                         # Haut mit Textur und Braue, Augen, Wimpern, Lippen —
                         # je Gruppe ihr Material (`filmhaut.py`, 17.09.2026).

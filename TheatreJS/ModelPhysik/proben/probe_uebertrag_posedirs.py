@@ -26,13 +26,13 @@ import sys
 import numpy as np
 from scipy.spatial import cKDTree
 
-sys.path.insert(0, r"A:\3DTools")
-sys.path.insert(0, r"A:\3DTools\HumanBodyWeb\TheatreJS\ModelPhysik\proben")
+sys.path.insert(0, r'A:\3DTools')
+sys.path.insert(0, r'A:\3DTools\HumanBodyWeb\TheatreJS\ModelPhysik\proben')
 
+from probe_lbs_ist import ARM_L, WURZEL, Armmass, Skelett  # noqa: E402
 from SMPL.koerper import Smplkoerper  # noqa: E402
-from probe_lbs_ist import Skelett, Armmass, ARM_L, WURZEL  # noqa: E402
 
-MODELLE = r"A:\3DTools\VideoToBVH\models\smpl"
+MODELLE = r'A:\3DTools\VideoToBVH\models\smpl'
 ELLBOGEN_SMPL = 18
 
 
@@ -53,17 +53,17 @@ class Posedirsuebertrag:
 
     def __init__(self):
         # ---------------------------------------------------------- unser Netz
-        self.punkte = np.load(WURZEL + r"\vertices_tpose.npy").astype(np.float64)
-        roh = json.load(open(WURZEL + r"\skin_weights_base.json"))
-        self.skelett = Skelett(WURZEL + r"\def_skeleton.json")
-        umnummerieren = [self.skelett.nummer[n] for n in roh["bone_names"]]
-        self.gewichte = [[(umnummerieren[b], w) for b, w in e] for e in roh["weights"]]
+        self.punkte = np.load(WURZEL + r'\vertices_tpose.npy').astype(np.float64)
+        roh = json.load(open(WURZEL + r'\skin_weights_base.json'))
+        self.skelett = Skelett(WURZEL + r'\def_skeleton.json')
+        umnummerieren = [self.skelett.nummer[n] for n in roh['bone_names']]
+        self.gewichte = [[(umnummerieren[b], w) for b, w in e] for e in roh['weights']]
         # ------------------------------------------------------------ SMPL
-        self.k = Smplkoerper.laden("FEMALE", MODELLE)
+        self.k = Smplkoerper.laden('FEMALE', MODELLE)
         self.smpl_rest = self.k.formen(None)
         self.massstab, self.zuordnung = self.zuordnen()
         self.ruhe = self.skelett.welt()
-        self.i_ober = self.skelett.nummer["DEF-upper_arm.L"]
+        self.i_ober = self.skelett.nummer['DEF-upper_arm.L']
         self.achse_ober = self.ruhe[self.i_ober][:3, 1]
         self.messpunkte = self._messpunkte()
 
@@ -75,17 +75,17 @@ class Posedirsuebertrag:
         smpl_hoehe = self.smpl_rest[:, 1].max() - self.smpl_rest[:, 1].min()
         massstab = smpl_hoehe / unser_hoehe
         unser_gleich = (unser - unser.mean(axis=0)) * massstab + self.smpl_rest.mean(axis=0)
-        print("Unser Netz %.3f m hoch, SMPL %.3f m — Massstab %.4f" % (unser_hoehe, smpl_hoehe, massstab))
+        print('Unser Netz %.3f m hoch, SMPL %.3f m — Massstab %.4f' % (unser_hoehe, smpl_hoehe, massstab))
         abstand, zuordnung = cKDTree(self.smpl_rest).query(unser_gleich, workers=-1)
         print(
-            "Zuordnung: Median %.1f mm, p90 %.1f mm, max %.1f mm"
+            'Zuordnung: Median %.1f mm, p90 %.1f mm, max %.1f mm'
             % (np.median(abstand) * 1000, np.percentile(abstand, 90) * 1000, abstand.max() * 1000)
         )
         return massstab, zuordnung
 
     def _messpunkte(self):
         """Die Scheibe 3 cm ueber dem Ellbogen, nur Armpunkte."""
-        ursprung = self.ruhe[self.skelett.nummer["DEF-forearm.L"]][:3, 3]
+        ursprung = self.ruhe[self.skelett.nummer['DEF-forearm.L']][:3, 3]
         arm = {self.skelett.nummer[n] for n in ARM_L}
         anteil = np.array([sum(w for b, w in e if b in arm) for e in self.gewichte])
         auswahl = np.where(anteil > 0.5)[0]
@@ -104,7 +104,7 @@ class Posedirsuebertrag:
 
     def zeile(self, grad):
         w = np.radians(grad)
-        pose = self.skelett.welt({"DEF-forearm.L": Armmass.achsdrehung([1, 0, 0], w)})
+        pose = self.skelett.welt({'DEF-forearm.L': Armmass.achsdrehung([1, 0, 0], w)})
         lbs = Armmass.haeuten(self.punkte, self.gewichte, self.ruhe, pose)
         # Die Korrektur gilt in der RUHELAGE und wird mitgehaeutet — genau
         # wie bei SMPL, wo sie vor dem Skinning addiert wird.
@@ -113,8 +113,8 @@ class Posedirsuebertrag:
         u0 = Armmass.umfang(self.punkte, self.messpunkte, self.achse_ober) or 1e-9
         u_lbs = Armmass.umfang(lbs, self.messpunkte, pose_achse) or 0.0
         u_mit = Armmass.umfang(mit, self.messpunkte, pose_achse) or 0.0
-        return "%-12s %8.2f cm   %8.2f cm (%+6.1f %%)   %8.2f cm (%+6.1f %%)" % (
-            "%d Grad" % grad,
+        return '%-12s %8.2f cm   %8.2f cm (%+6.1f %%)   %8.2f cm (%+6.1f %%)' % (
+            '%d Grad' % grad,
             u0,
             u_lbs,
             100 * (u_lbs - u0) / u0,
@@ -125,13 +125,13 @@ class Posedirsuebertrag:
     def gegenprobe(self):
         """In der RUHELAGE (keine Beugung) darf die Korrektur nichts tun."""
         null = np.abs(self.korrektur(0.0)).max()
-        print("")
-        print("Gegenprobe ohne Beugung: groesste Korrektur %.6f mm (muss 0 sein)" % (null * 1000))
+        print('')
+        print('Gegenprobe ohne Beugung: groesste Korrektur %.6f mm (muss 0 sein)' % (null * 1000))
 
     def laufen(self):
-        print("")
-        print("Armumfang 3 cm ueber dem Ellbogen, %d Punkte" % len(self.messpunkte))
-        print("%-12s %10s %26s %26s" % ("Beugung", "Ruhe", "nur LBS (heute)", "LBS + SMPL-Korrektur"))
+        print('')
+        print('Armumfang 3 cm ueber dem Ellbogen, %d Punkte' % len(self.messpunkte))
+        print('%-12s %10s %26s %26s' % ('Beugung', 'Ruhe', 'nur LBS (heute)', 'LBS + SMPL-Korrektur'))
         for grad in self.GRADE:
             print(self.zeile(grad))
         self.gegenprobe()
@@ -141,5 +141,5 @@ def main():
     Posedirsuebertrag().laufen()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

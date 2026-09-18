@@ -39,26 +39,26 @@ from ...templatetags import szenenskript
 
 class ModulbuendelTest(SimpleTestCase):
     def test_die_adresse_traegt_die_fassung(self):
-        self.assertEqual(Modulbuendel.adresse("1789043967"), "/buendel/1789043967/scene.js")
+        self.assertEqual(Modulbuendel.adresse('1789043967'), '/buendel/1789043967/scene.js')
 
     def test_zwei_fassungen_sind_zwei_dateien(self):
         """Der Name haengt an der Fassung — sonst gibt es stille Altstaende."""
-        self.assertNotEqual(Modulbuendel.dateiname("111"), Modulbuendel.dateiname("222"))
+        self.assertNotEqual(Modulbuendel.dateiname('111'), Modulbuendel.dateiname('222'))
 
     def test_das_buendel_liegt_nicht_in_der_statik(self):
         """Sonst dreht sein Bau die Fassung weiter und loest den naechsten aus."""
         ablage = os.path.abspath(Modulbuendel.ablage())
         statik = os.path.abspath(Modulbuendel.wurzel())
-        self.assertFalse(ablage.startswith(statik + os.sep), "%s liegt unter %s" % (ablage, statik))
+        self.assertFalse(ablage.startswith(statik + os.sep), '%s liegt unter %s' % (ablage, statik))
 
     def test_ohne_esbuild_bleibt_es_bei_den_einzelmodulen(self):
         with (
-            mock.patch.object(Modulbuendel, "esbuild", return_value=None),
+            mock.patch.object(Modulbuendel, 'esbuild', return_value=None),
             mock.patch.object(
-                Modulbuendel, "pfad", return_value=os.path.join(Modulbuendel.ablage(), "_gibtsnicht.js")
+                Modulbuendel, 'pfad', return_value=os.path.join(Modulbuendel.ablage(), '_gibtsnicht.js')
             ),
         ):
-            self.assertIsNone(Modulbuendel.bereit("999999"))
+            self.assertIsNone(Modulbuendel.bereit('999999'))
 
     def test_ein_gescheiterter_lauf_kostet_die_seite_nicht(self):
         """Die Marke faellt auf den Einstiegspunkt zurueck, statt zu werfen.
@@ -71,8 +71,8 @@ class ModulbuendelTest(SimpleTestCase):
         geprueft, als sein Name sagt.
         """
         with (
-            mock.patch.object(szenenskript, "_gewuenscht", return_value=True),
-            mock.patch.object(Modulbuendel, "bereit", side_effect=RuntimeError("Absicht")),
+            mock.patch.object(szenenskript, '_gewuenscht', return_value=True),
+            mock.patch.object(Modulbuendel, 'bereit', side_effect=RuntimeError('Absicht')),
         ):
             adresse = szenenskript.szenenskript()
         self.assertIn(szenenskript.EINZELN, adresse)
@@ -80,22 +80,23 @@ class ModulbuendelTest(SimpleTestCase):
     def test_ohne_einstellung_ist_es_eingeschaltet(self):
         """Wer nichts einstellt, bekommt die schnelle Seite."""
         with (
-            mock.patch.object(szenenskript, "_gewuenscht", return_value=True),
-            mock.patch.object(Modulbuendel, "bereit", return_value="/buendel/42/scene.js"),
+            mock.patch.object(szenenskript, '_gewuenscht', return_value=True),
+            mock.patch.object(Modulbuendel, 'bereit', return_value='/buendel/42/scene.js'),
         ):
-            self.assertEqual(szenenskript.szenenskript(), "/buendel/42/scene.js")
+            self.assertEqual(szenenskript.szenenskript(), '/buendel/42/scene.js')
 
     def test_ausgeschaltet_kommen_die_einzelmodule(self):
         """Gegenprobe zum Schalter — sonst wuerde er nie geprueft."""
-        with mock.patch.object(szenenskript, "_gewuenscht", return_value=False):
+        with mock.patch.object(szenenskript, '_gewuenscht', return_value=False):
             adresse = szenenskript.szenenskript()
         self.assertIn(szenenskript.EINZELN, adresse)
 
     def test_eine_fassung_mit_pfadanteilen_wird_abgewiesen(self):
         """Die Fassung kommt aus dem Pfad; „..“ darin fuehrte aus der Ablage."""
         from django.http import Http404
+
         from ...api.buendel import buendel_datei
 
-        for boese in ("..", "../..", "a/b", "abc"):
+        for boese in ('..', '../..', 'a/b', 'abc'):
             with self.assertRaises(Http404, msg=boese):
                 buendel_datei(None, boese)

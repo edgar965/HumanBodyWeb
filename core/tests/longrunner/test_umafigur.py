@@ -36,19 +36,20 @@ sys.path.insert(0, str(Path(settings.ASSETS_ROOT)))
 from UMA_Python import Figur  # noqa: E402
 from UMA_Python.haut import Haut  # noqa: E402
 from UMA_Python.skelett import Skelett  # noqa: E402
-from UMA_Python.verschmelzen import Verschmelzen  # noqa: E402
 from UMA_Python.unity import Assetdatei, Serialisiert  # noqa: E402
+from UMA_Python.verschmelzen import Verschmelzen  # noqa: E402
+
 from core.tests.unit._sicher import Sicher  # noqa: E402
 
 #: Der UMA-Klon. Ohne ihn ist hier nichts zu prüfen.
-PROJEKT = Path(str(settings.TOOLS_ROOT)) / "UMA" / "UMAProject"
+PROJEKT = Path(str(settings.TOOLS_ROOT)) / 'UMA' / 'UMAProject'
 
 #: Die Rasse, an der gemessen wurde. Sie ist im Klon vorhanden.
-RASSE = "Human Female 3.0"
+RASSE = 'Human Female 3.0'
 
 
 def _figuren_da():
-    return (PROJEKT / "Assets" / "UMA").is_dir()
+    return (PROJEKT / 'Assets' / 'UMA').is_dir()
 
 
 class UnityFormat(unittest.TestCase):
@@ -58,7 +59,7 @@ class UnityFormat(unittest.TestCase):
 
     def setUp(self):
         if not _figuren_da():
-            self.skipTest("UMA-Klon nicht vorhanden (%s)" % PROJEKT)
+            self.skipTest('UMA-Klon nicht vorhanden (%s)' % PROJEKT)
 
     def test_ein_binaeres_slotasset_liest_sich(self):
         """Der Körper-Slot: 3.183 Punkte, 228 Knochen, 21 Formen.
@@ -70,27 +71,27 @@ class UnityFormat(unittest.TestCase):
         """
         pfad = (
             PROJEKT
-            / "Assets"
-            / "UMA"
-            / "UMA3"
-            / "Races"
-            / "Slots"
-            / "UMA30_Body"
-            / "UMA30_Body_UDIM1001_slot.asset"
+            / 'Assets'
+            / 'UMA'
+            / 'UMA3'
+            / 'Races'
+            / 'Slots'
+            / 'UMA30_Body'
+            / 'UMA30_Body_UDIM1001_slot.asset'
         )
         if not pfad.is_file():
-            self.skipTest("%s fehlt" % pfad)
-        self.assertFalse(Assetdatei.ist_text(pfad), "Der Slot sollte binär sein")
+            self.skipTest('%s fehlt' % pfad)
+        self.assertFalse(Assetdatei.ist_text(pfad), 'Der Slot sollte binär sein')
         datei = Serialisiert(pfad)
-        self.assertTrue(datei.unity_fassung.startswith("6000."))
-        felder = Sicher.wert(datei.erstes(), "erstes Objekt").lesen()
-        netz = felder["meshData"]
-        self.assertEqual(netz["vertexCount"], 3183)
-        self.assertEqual(len(netz["vertices"]), 3183)
-        self.assertEqual(len(netz["umaBones"]), 228)
-        self.assertEqual(len(netz["boneNameHashes"]), 229)
-        self.assertEqual(len(netz["bindPoses"]), 229)
-        self.assertEqual(netz["RootBoneName"], "Global")
+        self.assertTrue(datei.unity_fassung.startswith('6000.'))
+        felder = Sicher.wert(datei.erstes(), 'erstes Objekt').lesen()
+        netz = felder['meshData']
+        self.assertEqual(netz['vertexCount'], 3183)
+        self.assertEqual(len(netz['vertices']), 3183)
+        self.assertEqual(len(netz['umaBones']), 228)
+        self.assertEqual(len(netz['boneNameHashes']), 229)
+        self.assertEqual(len(netz['bindPoses']), 229)
+        self.assertEqual(netz['RootBoneName'], 'Global')
 
     def test_die_guid_wird_mit_vertauschten_halbbytes_geschrieben(self):
         """GEGENPROBE zu einer Falle, die den ganzen Index leer lässt.
@@ -100,21 +101,21 @@ class UnityFormat(unittest.TestCase):
         """
         from UMA_Python.unity.serialisiert import Verweis
 
-        roh = bytes.fromhex("db97bf2f3814204191ce5534e7a40cd1")
-        self.assertEqual(Verweis.als_text(roh), "bd79fbf28341021419ec55437e4ac01d")
+        roh = bytes.fromhex('db97bf2f3814204191ce5534e7a40cd1')
+        self.assertEqual(Verweis.als_text(roh), 'bd79fbf28341021419ec55437e4ac01d')
         self.assertNotEqual(Verweis.als_text(roh), roh.hex())
 
     def test_ein_textasset_wird_als_text_gelesen(self):
         """Beide Formate kommen in EINEM Projekt vor (1.023 Text, 588
         binär). Wer nur eines liest, läuft dem anderen in einen Fehler,
         der nach einer kaputten Datei aussieht."""
-        dna = PROJEKT / "Assets" / "UMA" / "UMA3" / "DNA" / "FemaleBody.asset"
+        dna = PROJEKT / 'Assets' / 'UMA' / 'UMA3' / 'DNA' / 'FemaleBody.asset'
         if not dna.is_file():
-            self.skipTest("%s fehlt" % dna)
+            self.skipTest('%s fehlt' % dna)
         self.assertTrue(Assetdatei.ist_text(dna))
-        felder = Sicher.wert(Assetdatei.oeffnen(dna).erstes(), "erstes Objekt").lesen()
-        self.assertEqual(felder.get("m_Name"), "FemaleBody")
-        self.assertTrue(felder.get("dnaList"))
+        felder = Sicher.wert(Assetdatei.oeffnen(dna).erstes(), 'erstes Objekt').lesen()
+        self.assertEqual(felder.get('m_Name'), 'FemaleBody')
+        self.assertTrue(felder.get('dnaList'))
 
 
 class Figurbau(unittest.TestCase):
@@ -134,24 +135,24 @@ class Figurbau(unittest.TestCase):
 
     def bau(self):
         """Die in `setUpClass` gebaute Figur — `setUp` hat sie schon geprüft."""
-        return Sicher.wert(self.gebaut, "gebaute Figur")
+        return Sicher.wert(self.gebaut, 'gebaute Figur')
 
     def setUp(self):
         if self.gebaut is None:
-            self.skipTest("UMA-Klon nicht vorhanden (%s)" % PROJEKT)
+            self.skipTest('UMA-Klon nicht vorhanden (%s)' % PROJEKT)
 
     def test_die_figur_ist_vollstaendig(self):
         bilanz = self.bau().bilanz()
-        self.assertEqual(bilanz["fehlend"], [], "Slots, die das Rezept nennt und die fehlen")
-        self.assertEqual(bilanz["punkte"], 16277)
+        self.assertEqual(bilanz['fehlend'], [], 'Slots, die das Rezept nennt und die fehlen')
+        self.assertEqual(bilanz['punkte'], 16277)
         # 29.430, NICHT 58.538: Bis zum 08.09.2026 stand hier die Summe
         # ALLER fünf LOD-Stufen, weil `Slot._dreiecke` sie übereinander
         # legte. Die Zahl ist gegen Unitys eigenen Export derselben Rasse
         # belegt (`test_uma_gegenprobe.NetzGegenUnity`), Slot für Slot.
-        self.assertEqual(bilanz["dreiecke"], 29430)
-        self.assertEqual(bilanz["knochen"], 229)
-        self.assertEqual(bilanz["slots"], 8)
-        self.assertGreater(bilanz["regler"], 50)
+        self.assertEqual(bilanz['dreiecke'], 29430)
+        self.assertEqual(bilanz['knochen'], 229)
+        self.assertEqual(bilanz['slots'], 8)
+        self.assertGreater(bilanz['regler'], 50)
 
     def test_die_gewichte_summieren_sich_auf_eins(self):
         """Eine Zeile, die sich nicht auf 1 summiert, schrumpft oder
@@ -168,7 +169,7 @@ class Figurbau(unittest.TestCase):
         matrizen = Haut.matrizen(skelett.weltmatrizen(), netz.bindeposen)
         ruhe = Haut.verformen(netz.punkte, netz.gewichte, netz.knochenindex, matrizen)
         abweichung = float(np.abs(ruhe - netz.punkte).max()) * 1000.0
-        self.assertLess(abweichung, 0.01, "Ruhefehler %.4f mm — das Skinning stimmt nicht" % abweichung)
+        self.assertLess(abweichung, 0.01, 'Ruhefehler %.4f mm — das Skinning stimmt nicht' % abweichung)
 
     def test_die_gegenprobe_zur_ruhe(self):
         """Ein VERDREHTER Knochen muss die Probe fallen lassen.
@@ -184,7 +185,7 @@ class Figurbau(unittest.TestCase):
         matrizen = Haut.matrizen(welt, netz.bindeposen)
         verschoben = Haut.verformen(netz.punkte, netz.gewichte, netz.knochenindex, matrizen)
         self.assertGreater(
-            float(np.abs(verschoben - netz.punkte).max()), 0.01, "Ein verschobener Knochen bewegt nichts"
+            float(np.abs(verschoben - netz.punkte).max()), 0.01, 'Ein verschobener Knochen bewegt nichts'
         )
 
     def test_die_hoehe_stimmt(self):
@@ -203,7 +204,7 @@ class Figurbau(unittest.TestCase):
         """
 
         def hoehe(wert):
-            punkte = self.bau().punkte({"height": wert})
+            punkte = self.bau().punkte({'height': wert})
             return float(punkte[:, 2].max() - punkte[:, 2].min())
 
         klein, mitte, gross = hoehe(0.0), hoehe(0.5), hoehe(1.0)
@@ -218,8 +219,8 @@ class Figurbau(unittest.TestCase):
         setzt, bekäme die doppelte Verformung — und der erste Aufruf sah
         richtig aus.
         """
-        erst = self.bau().punkte({"height": 0.8})
-        zweit = self.bau().punkte({"height": 0.8})
+        erst = self.bau().punkte({'height': 0.8})
+        zweit = self.bau().punkte({'height': 0.8})
         np.testing.assert_allclose(erst, zweit, atol=1e-9)
 
     def test_die_ruhelage_kommt_aus_den_bindeposen(self):
@@ -237,7 +238,7 @@ class Figurbau(unittest.TestCase):
         """
         netz = self.bau().netz
         eigene = Verschmelzen.hat_bindepose(netz)
-        self.assertGreater(int((~eigene).sum()), 0, "ohne solche Knochen prüft der Test nichts")
+        self.assertGreater(int((~eigene).sum()), 0, 'ohne solche Knochen prüft der Test nichts')
         skelett = Skelett(netz.knochen)
         produkt = skelett.weltmatrizen() @ netz.bindeposen
         einheit = np.tile(np.eye(4), (len(produkt), 1, 1))
@@ -257,7 +258,7 @@ class Figurbau(unittest.TestCase):
         ohne = welt[~eigene]
         self.assertGreater(len(ohne), 50)
         self.assertGreater(
-            float(np.linalg.norm(ohne, axis=1).min()), 0.05, "ein Endknochen sitzt im Ursprung"
+            float(np.linalg.norm(ohne, axis=1).min()), 0.05, 'ein Endknochen sitzt im Ursprung'
         )
 
 

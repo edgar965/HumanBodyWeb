@@ -8,7 +8,6 @@ ist Moeller-Trumbore, beidseitig.
 """
 
 import numpy as np
-
 from streusumme import Streusumme
 
 
@@ -25,7 +24,7 @@ class Geometrie:
         T = np.asarray(T, dtype=np.int64).reshape(-1, 3)
         a, b, c = P[T[:, 0]], P[T[:, 1]], P[T[:, 2]]
         fn = np.cross(b - a, c - a)
-        vol = float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum())
+        vol = float(np.einsum('ij,ij->i', a, np.cross(b, c)).sum())
         N = np.zeros_like(P)
         for k in range(3):
             Streusumme.dazu(N, T[:, k], fn)
@@ -65,13 +64,13 @@ class Geometrie:
         e2 = P[T[kk, 2]] - a
         rr = r[:, None, :]
         h = np.cross(rr, e2)
-        det = np.einsum("mkj,mkj->mk", e1, h)
+        det = np.einsum('mkj,mkj->mk', e1, h)
         gut = gueltig & (np.abs(det) > 1e-12)
         f = 1.0 / np.where(gut, det, 1.0)
         s = p[:, None, :] - a
-        u = f * np.einsum("mkj,mkj->mk", s, h)
+        u = f * np.einsum('mkj,mkj->mk', s, h)
         q = np.cross(s, e1)
-        v = f * np.einsum("mkj,mkj->mk", rr, q)
-        t = f * np.einsum("mkj,mkj->mk", e2, q)
+        v = f * np.einsum('mkj,mkj->mk', rr, q)
+        t = f * np.einsum('mkj,mkj->mk', e2, q)
         innen = gut & (u >= 0) & (u <= 1) & (v >= 0) & (u + v <= 1)
         return np.where(innen, t, np.nan)

@@ -65,7 +65,7 @@ from . import namensregeln
 from .daten.pfadwurzeln import Pfadwurzeln
 from .namensregeln import Namensregeln
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 #: Weitergereicht, damit `from .safe_paths import GERAETE` weiter geht — die
 #: Listen und ihre Begruendung stehen seit dem 30.08.2026 in `namensregeln.py`,
@@ -145,17 +145,17 @@ class SafePath:
         # gäbe `.parent` das Elternverzeichnis `data/animations` frei, in dem
         # auch Sicherungen liegen (Einwand aus dem Sparring, 13.08.2026: vorher
         # wurde hier nur gewarnt und die zu weite Wurzel trotzdem geliefert).
-        wurzel = b if b.name.lower() == "bvh" else b.parent
-        if wurzel.name.lower() != "bvh":
+        wurzel = b if b.name.lower() == 'bvh' else b.parent
+        if wurzel.name.lower() != 'bvh':
             # Verschlossen scheitern: Lieber alle BVH-Endpunkte mit einer
             # eindeutigen Meldung ablehnen als stillschweigend ein zu weites
             # Verzeichnis zum Schreiben und Löschen freigeben.
             logger.error(
-                "SafePath: BVH-Wurzel nicht bestimmbar — HUMANBODY_BVH_DIR=%r, "
+                'SafePath: BVH-Wurzel nicht bestimmbar — HUMANBODY_BVH_DIR=%r, '
                 'erwartet wurde ein Ordner "bvh" oder eine Kategorie darunter.',
                 str(b),
             )
-            raise PfadAbgelehnt("BVH-Wurzel nicht bestimmbar (HUMANBODY_BVH_DIR)")
+            raise PfadAbgelehnt('BVH-Wurzel nicht bestimmbar (HUMANBODY_BVH_DIR)')
         return wurzel
 
     @staticmethod
@@ -183,19 +183,19 @@ class SafePath:
         self._namen_pruefen(ziel)
         self._lage_pruefen(ziel)
         if muss_existieren and not ziel.exists():
-            raise PfadAbgelehnt("Datei oder Verzeichnis nicht gefunden")
+            raise PfadAbgelehnt('Datei oder Verzeichnis nicht gefunden')
         return ziel
 
     def _aufloesen(self, roh):
         """Rohangabe -> `Path`, aufgelöst. Prüft noch nichts über die Lage."""
-        text = (str(roh) if roh is not None else "").strip()
+        text = (str(roh) if roh is not None else '').strip()
         if not text:
-            raise PfadAbgelehnt("Kein Pfad angegeben")
+            raise PfadAbgelehnt('Kein Pfad angegeben')
         self._grobpruefung(text)
         try:
             return Path(text).resolve()
         except (OSError, ValueError) as e:
-            raise PfadAbgelehnt("Pfad nicht auflösbar: %s" % e) from e
+            raise PfadAbgelehnt('Pfad nicht auflösbar: %s' % e) from e
 
     @staticmethod
     def _namen_pruefen(ziel):
@@ -207,7 +207,7 @@ class SafePath:
         (`…\COM1\datei.txt`) nicht bemerkt.
         """
         if Namensregeln.geraet(ziel.name):
-            raise PfadAbgelehnt("Gerätename ist kein gültiges Ziel: %s" % ziel.name)
+            raise PfadAbgelehnt('Gerätename ist kein gültiges Ziel: %s' % ziel.name)
         for teil in ziel.parts[1:]:
             grund = Namensregeln.teil(teil)
             if grund:
@@ -223,22 +223,22 @@ class SafePath:
         if any(self._liegt_in(ziel, w) for w in self.wurzeln):
             return
         logger.warning(
-            "SafePath: Pfad abgelehnt: %s (Wurzeln: %s)", ziel, ", ".join(str(w) for w in self.wurzeln)
+            'SafePath: Pfad abgelehnt: %s (Wurzeln: %s)', ziel, ', '.join(str(w) for w in self.wurzeln)
         )
-        raise PfadAbgelehnt("Pfad liegt ausserhalb der erlaubten Verzeichnisse")
+        raise PfadAbgelehnt('Pfad liegt ausserhalb der erlaubten Verzeichnisse')
 
     @staticmethod
     def _grobpruefung(text):
         """UNC und Alternate Data Streams ablehnen, BEVOR das Dateisystem antwortet."""
         # Deckt UNC und die Gerätepfade `\\?\` / `\\.\` in einem ab — die
         # eigene Abfrage dafür stand hinter dieser hier und war unerreichbar.
-        if text.startswith("\\\\") or text.startswith("//"):
-            raise PfadAbgelehnt("Netzwerk- und Gerätepfade sind nicht erlaubt")
+        if text.startswith('\\\\') or text.startswith('//'):
+            raise PfadAbgelehnt('Netzwerk- und Gerätepfade sind nicht erlaubt')
         # NTFS-Datenströme: "datei.json:versteckt" landet nicht als Datei.
         # Der Laufwerksbuchstabe (C:) ist der erlaubte Doppelpunkt.
-        ohne_laufwerk = text[2:] if len(text) > 1 and text[1] == ":" else text
-        if ":" in ohne_laufwerk:
-            raise PfadAbgelehnt("Doppelpunkte im Pfad sind nicht erlaubt")
+        ohne_laufwerk = text[2:] if len(text) > 1 and text[1] == ':' else text
+        if ':' in ohne_laufwerk:
+            raise PfadAbgelehnt('Doppelpunkte im Pfad sind nicht erlaubt')
 
     @staticmethod
     def _liegt_in(ziel, wurzel):
@@ -260,11 +260,11 @@ class SafePath:
         Bewusst KEIN stilles Zurechtschneiden: Wer `..\\..\\x.mp4` schickt, soll
         eine Absage bekommen und nicht eine Datei, die woanders liegt als der
         Name vermuten lässt."""
-        text = (str(roh) if roh is not None else "").strip()
+        text = (str(roh) if roh is not None else '').strip()
         if not text:
-            raise PfadAbgelehnt("Kein Dateiname angegeben")
-        if Path(text).name != text or text in (".", ".."):
-            raise PfadAbgelehnt("Dateiname darf keinen Pfadanteil enthalten")
+            raise PfadAbgelehnt('Kein Dateiname angegeben')
+        if Path(text).name != text or text in ('.', '..'):
+            raise PfadAbgelehnt('Dateiname darf keinen Pfadanteil enthalten')
         # DIESELBEN Regeln wie in `pruefe` (`namensregeln.py`). Sie fehlten
         # hier einmal, und ein Name wie `video:1.mp4` kam durch.
         grund = Namensregeln.datei(text)

@@ -47,35 +47,36 @@ import os
 import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
-
 from humanbody_core.quaternion import Quat
 from humanbody_core.skeleton import Skeleton, SkeletonRigify
 from humanbody_core.skeleton.retarget.motor import Retargetlauf
+
 from core.dienste.skelettgeometrie import Skelettgeometrie
+
 from ..unit._sicher import Sicher
 
 #: Je Format: (Halsknochen, Rumpf von, Rumpf bis, Hals von, Hals bis).
 EICHKNOCHEN = {
-    "CMU": ("Neck", "Spine", "Spine1", "Neck", "Head"),
-    "MIXAMO": ("Neck", "Spine1", "Spine2", "Neck", "Head"),
-    "AIST": ("Neck", "Spine2", "Spine3", "Neck", "Head"),
-    "BANDAI": ("Neck", "Spine", "Chest", "Neck", "Head"),
-    "MOCAPNET": ("neck", "abdomen", "chest", "neck", "head"),
-    "OPENPOSE": ("neck", "abdomen", "chest", "neck", "head"),
+    'CMU': ('Neck', 'Spine', 'Spine1', 'Neck', 'Head'),
+    'MIXAMO': ('Neck', 'Spine1', 'Spine2', 'Neck', 'Head'),
+    'AIST': ('Neck', 'Spine2', 'Spine3', 'Neck', 'Head'),
+    'BANDAI': ('Neck', 'Spine', 'Chest', 'Neck', 'Head'),
+    'MOCAPNET': ('neck', 'abdomen', 'chest', 'neck', 'head'),
+    'OPENPOSE': ('neck', 'abdomen', 'chest', 'neck', 'head'),
 }
-ZIEL = ("DEF-spine.002", "DEF-spine.003", "DEF-spine.004", "DEF-spine.006")
+ZIEL = ('DEF-spine.002', 'DEF-spine.003', 'DEF-spine.004', 'DEF-spine.006')
 VORN = np.array([0.0, 0.0, 1.0])
 GRADE = (-30.0, -20.0, -10.0, 10.0, 20.0, 30.0)
 
 #: Je Format eine Datei, an der geeicht wird. Relativ zu OBJECTS_ROOT.
 DATEIEN = {
-    "CMU": "animations/bvh/A_Pose/13_07.bvh",
-    "MIXAMO": "animations/bvh/Mixamo/2hand_idle.bvh",
+    'CMU': 'animations/bvh/A_Pose/13_07.bvh',
+    'MIXAMO': 'animations/bvh/Mixamo/2hand_idle.bvh',
     # OHNE `neck1` — das ist der Punkt: 19 von 29 OpenPose-Dateien
     # fuehren es nicht, und dort war `DEF-spine.004` bis zum 09.09.2026
     # unzugeordnet. Eine Datei MIT `neck1` wuerde den Fix nicht pruefen.
-    "OPENPOSE": "animations/bvh/Dance/05_02_expressive_arms_pirouette.bvh",
-    "MOCAPNET": "animations/bvh/MocapNET/mocapnet_doubleclap.bvh",
+    'OPENPOSE': 'animations/bvh/Dance/05_02_expressive_arms_pirouette.bvh',
+    'MOCAPNET': 'animations/bvh/MocapNET/mocapnet_doubleclap.bvh',
 }
 
 
@@ -95,18 +96,18 @@ class HalstreueTest(SimpleTestCase):
     SCHWELLE_CMU = 2.5
 
     def _schwelle(self, format_name):
-        return self.SCHWELLE_CMU if format_name == "CMU" else self.SCHWELLE
+        return self.SCHWELLE_CMU if format_name == 'CMU' else self.SCHWELLE
 
     def test_jede_eingetragene_datei_gibt_es(self):
         """Eine HalstreueTest.fehlende Datei faellt auf, statt still zu fehlen."""
         fehlt = HalstreueTest.fehlende()
         if len(fehlt) == len(DATEIEN):
-            self.skipTest("OBJECTS_ROOT fuehrt keine der Dateien (Testbaum) — dann greift keiner der Faelle")
+            self.skipTest('OBJECTS_ROOT fuehrt keine der Dateien (Testbaum) — dann greift keiner der Faelle')
         self.assertEqual(
             fehlt,
             [],
-            "Eingetragen, aber nicht vorhanden: %s. Der Fall "
-            "zu diesem Format prueft dann NICHTS." % ", ".join("%s (%s)" % (n, DATEIEN[n]) for n in fehlt),
+            'Eingetragen, aber nicht vorhanden: %s. Der Fall '
+            'zu diesem Format prueft dann NICHTS.' % ', '.join('%s (%s)' % (n, DATEIEN[n]) for n in fehlt),
         )
 
     def test_die_quelle_folgt_den_vorgaben(self):
@@ -126,14 +127,14 @@ class HalstreueTest(SimpleTestCase):
             reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), name)
             for (quelle, _), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(
-                    quelle, soll, delta=1.5, msg="%s: Quelle %.2f statt %.2f" % (name, quelle, soll)
+                    quelle, soll, delta=1.5, msg='%s: Quelle %.2f statt %.2f' % (name, quelle, soll)
                 )
             geprueft += 1
         if not geprueft:
-            self.skipTest("keine BVH-Datei unter OBJECTS_ROOT")
+            self.skipTest('keine BVH-Datei unter OBJECTS_ROOT')
 
     #: Formate, deren Beugung heute ankommt.
-    TRAGEND = ("CMU", "MIXAMO", "MOCAPNET")
+    TRAGEND = ('CMU', 'MIXAMO', 'MOCAPNET')
 
     def test_die_beugung_kommt_am_ziel_an(self):
         """Vorgabe rein, dieselbe Beugung raus — wo das heute gilt."""
@@ -150,11 +151,11 @@ class HalstreueTest(SimpleTestCase):
                     ziel,
                     soll,
                     delta=self._schwelle(name),
-                    msg="%s: Ziel beugt %.2f statt %.2f Grad" % (name, ziel, soll),
+                    msg='%s: Ziel beugt %.2f statt %.2f Grad' % (name, ziel, soll),
                 )
             geprueft += 1
         if not geprueft:
-            self.skipTest("keine BVH-Datei unter OBJECTS_ROOT")
+            self.skipTest('keine BVH-Datei unter OBJECTS_ROOT')
 
     def test_openpose_bewegt_den_hals_nicht(self):
         """EIN OFFENER PUNKT, hier festgehalten statt verschwiegen.
@@ -171,17 +172,17 @@ class HalstreueTest(SimpleTestCase):
         FAELLT DIESER FALL, ist der Fehler behoben — dann gehoert er
         umgedreht und OpenPose in `TRAGEND`.
         """
-        pfad = HalstreueTest._bvh_pfad("OPENPOSE")
+        pfad = HalstreueTest._bvh_pfad('OPENPOSE')
         if not pfad:
-            self.skipTest("OpenPose-Datei fehlt")
-        reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), "OpenPose")
+            self.skipTest('OpenPose-Datei fehlt')
+        reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), 'OpenPose')
         schlimmster = max(abs(ziel - soll) for (_, ziel), soll in zip(reihe, GRADE))
         self.assertGreater(
             schlimmster,
             10.0,
-            "OpenPose beugt den Hals jetzt (%.2f Grad Abweichung). Wenn "
-            "das gewollt ist: diesen Fall umdrehen und OPENPOSE in "
-            "TRAGEND aufnehmen." % schlimmster,
+            'OpenPose beugt den Hals jetzt (%.2f Grad Abweichung). Wenn '
+            'das gewollt ist: diesen Fall umdrehen und OPENPOSE in '
+            'TRAGEND aufnehmen.' % schlimmster,
         )
 
     def test_auch_bei_gebeugtem_rumpf(self):
@@ -190,17 +191,17 @@ class HalstreueTest(SimpleTestCase):
         Mit einem Rumpf in Ruhelage prueft der Eichfall nur den halben
         Weg — deshalb dieselbe Messung ueber vier Rumpfhaltungen.
         """
-        pfad = HalstreueTest._bvh_pfad("CMU")
+        pfad = HalstreueTest._bvh_pfad('CMU')
         if not pfad:
-            self.skipTest("CMU-Datei fehlt")
+            self.skipTest('CMU-Datei fehlt')
         for rumpf in (-20.0, 20.0, 40.0):
-            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad, rumpfgrad=rumpf), "CMU")
+            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad, rumpfgrad=rumpf), 'CMU')
             for (_, ziel), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(
                     ziel,
                     soll,
                     delta=self.SCHWELLE_CMU,
-                    msg="Rumpf %+.0f: Ziel beugt %.2f statt %.2f" % (rumpf, ziel, soll),
+                    msg='Rumpf %+.0f: Ziel beugt %.2f statt %.2f' % (rumpf, ziel, soll),
                 )
 
     def test_der_hals_ist_in_jedem_format_zugeordnet(self):
@@ -215,10 +216,10 @@ class HalstreueTest(SimpleTestCase):
         Dieser Fall braucht keine BVH-Datei und faellt deshalb auch
         dort, wo `OBJECTS_ROOT` leer ist.
         """
-        from humanbody_core.skeleton.formats.cmu import SkeletonCMU
-        from humanbody_core.skeleton.formats.mixamo import SkeletonMixamo
         from humanbody_core.skeleton.formats.aist_smpl import SkeletonAIST_SMPL
         from humanbody_core.skeleton.formats.bandai import SkeletonBandai
+        from humanbody_core.skeleton.formats.cmu import SkeletonCMU
+        from humanbody_core.skeleton.formats.mixamo import SkeletonMixamo
         from humanbody_core.skeleton.formats.mocapnet import SkeletonMocapNet
         from humanbody_core.skeleton.formats.openpose import SkeletonOpenPose
 
@@ -231,8 +232,8 @@ class HalstreueTest(SimpleTestCase):
             SkeletonOpenPose,
         ):
             ziele = set(klasse.BONE_MAP_TO_RIGIFY.values())
-            for knochen in ("DEF-spine.004", "DEF-spine.006"):
-                self.assertIn(knochen, ziele, "%s ordnet %s niemandem zu" % (klasse.FORMAT, knochen))
+            for knochen in ('DEF-spine.004', 'DEF-spine.006'):
+                self.assertIn(knochen, ziele, '%s ordnet %s niemandem zu' % (klasse.FORMAT, knochen))
 
     def test_gegenprobe_die_reparatur_wuerde_wirken(self):
         """Sabotage in die andere Richtung: `neck` als zweiter Traeger.
@@ -242,25 +243,26 @@ class HalstreueTest(SimpleTestCase):
         die Beugung an, ohne sie nicht.
         """
         from unittest import mock
+
         from humanbody_core.skeleton.formats.openpose import SkeletonOpenPose
 
-        pfad = HalstreueTest._bvh_pfad("OPENPOSE")
+        pfad = HalstreueTest._bvh_pfad('OPENPOSE')
         if not pfad:
-            self.skipTest("OpenPose-Datei fehlt")
+            self.skipTest('OpenPose-Datei fehlt')
         heil = {}
         for bvh_name, ziel in SkeletonOpenPose.BONE_MAP_TO_RIGIFY.items():
-            heil[bvh_name] = "DEF-spine.004" if bvh_name == "neck" else ziel
+            heil[bvh_name] = 'DEF-spine.004' if bvh_name == 'neck' else ziel
         with (
-            mock.patch.object(SkeletonOpenPose, "BONE_MAP_TO_RIGIFY", heil),
-            mock.patch.object(SkeletonOpenPose, "MEHRERE_SCHREIBWEISEN", True),
+            mock.patch.object(SkeletonOpenPose, 'BONE_MAP_TO_RIGIFY', heil),
+            mock.patch.object(SkeletonOpenPose, 'MEHRERE_SCHREIBWEISEN', True),
         ):
-            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), "OpenPose")
+            reihe = Sicher.wert(HalstreueTest.eichlauf(pfad), 'OpenPose')
             schlimmster = max(abs(ziel - soll) for (_, ziel), soll in zip(reihe, GRADE))
         self.assertLess(
             schlimmster,
             self.SCHWELLE,
-            "Auch mit zugeordnetem Hals liegt die Beugung %.2f Grad "
-            "daneben — dann ist die Zuordnung nicht die Ursache." % schlimmster,
+            'Auch mit zugeordnetem Hals liegt die Beugung %.2f Grad '
+            'daneben — dann ist die Zuordnung nicht die Ursache.' % schlimmster,
         )
 
     @staticmethod
@@ -348,7 +350,7 @@ class HalstreueTest(SimpleTestCase):
         bvh.frame_count = anzahl
         # `positions` ist (Bilder, Knochen, 3) — mit (Bilder, 3) bricht
         # `Wurzelspur.spur` mit einem matmul-Fehler ab.
-        if getattr(bvh, "positions", None) is not None:
+        if getattr(bvh, 'positions', None) is not None:
             bvh.positions = np.zeros((anzahl, len(bvh.names), 3))
 
         skel = Skelettgeometrie.holen()
@@ -362,7 +364,7 @@ class HalstreueTest(SimpleTestCase):
             use_delta=bauart.USE_DELTA,  # Klassenfelder von `Skeleton`
             use_delta_dir=bauart.USE_DELTA_DIR,
         ).fahren()
-        quatspuren = spuren.als_dict()["tracks"]
+        quatspuren = spuren.als_dict()['tracks']
 
         def quelle(bild):
             p = HalstreueTest._bvh_lagen(bvh, bild)
@@ -399,7 +401,7 @@ class HalstreueTest(SimpleTestCase):
         rel = DATEIEN.get(format_name)
         if not rel:
             return None
-        voll = os.path.join(str(settings.OBJECTS_ROOT), *rel.split("/"))
+        voll = os.path.join(str(settings.OBJECTS_ROOT), *rel.split('/'))
         return voll if os.path.isfile(voll) else None
 
     @staticmethod

@@ -18,14 +18,14 @@ class Anpassungsregler:
     """Werte aus der Anfrage, die das Ergebnis einer Anpassung bestimmen."""
 
     __slots__ = (
-        "steifigkeit",
-        "abstand",
-        "skalierung",
-        "hoehenversatz",
-        "ausschieben_m",
-        "mh_koerper",
-        "tpose_verschiebung",
-        "farbe",
+        'steifigkeit',
+        'abstand',
+        'skalierung',
+        'hoehenversatz',
+        'ausschieben_m',
+        'mh_koerper',
+        'tpose_verschiebung',
+        'farbe',
     )
 
     #: Vorgaben — dieselben Werte, die vorher in den GET-Aufrufen standen.
@@ -63,13 +63,13 @@ class Anpassungsregler:
     def aus_parametern(cls, p):
         """Aus einem dict-artigen Zugriff (`request.GET`)."""
         return cls(
-            steifigkeit=cls._zahl(p, "stiffness", cls.STEIFIGKEIT),
-            abstand=cls._zahl(p, "offset", cls.ABSTAND),
-            skalierung=cls._zahl(p, "scale", cls.SKALIERUNG),
-            hoehenversatz=cls._zahl(p, "y_offset", cls.HOEHENVERSATZ),
-            ausschieben_mm=cls._zahl(p, "push_dist", cls.AUSSCHIEBEN_MM),
-            mh_koerper=p.get("use_mh_body", "1") == "1",
-            tpose_verschiebung=p.get("tpose_displacement", "1") == "1",
+            steifigkeit=cls._zahl(p, 'stiffness', cls.STEIFIGKEIT),
+            abstand=cls._zahl(p, 'offset', cls.ABSTAND),
+            skalierung=cls._zahl(p, 'scale', cls.SKALIERUNG),
+            hoehenversatz=cls._zahl(p, 'y_offset', cls.HOEHENVERSATZ),
+            ausschieben_mm=cls._zahl(p, 'push_dist', cls.AUSSCHIEBEN_MM),
+            mh_koerper=p.get('use_mh_body', '1') == '1',
+            tpose_verschiebung=p.get('tpose_displacement', '1') == '1',
             farbe=cls._farbe(p),
         )
 
@@ -77,7 +77,7 @@ class Anpassungsregler:
     def _zahl(p, name, vorgabe):
         try:
             wert = p.get(name)
-            return vorgabe if wert in (None, "") else float(wert)
+            return vorgabe if wert in (None, '') else float(wert)
         # stumm gewollt: Vorschrift dieser Klasse ist „unbrauchbar → Vorgabe“.
         # Sie läuft je Regler jeder Anfrage; ein Log wäre eine Zeile pro Slider.
         except TypeError, ValueError:
@@ -86,8 +86,8 @@ class Anpassungsregler:
     @classmethod
     def _farbe(cls, p):
         """Nur wenn ALLE drei Kanaele da sind — sonst gilt die Materialfarbe."""
-        werte = [p.get("color_r"), p.get("color_g"), p.get("color_b")]
-        if any(w in (None, "") for w in werte):
+        werte = [p.get('color_r'), p.get('color_g'), p.get('color_b')]
+        if any(w in (None, '') for w in werte):
             return None
         try:
             return tuple(float(w) for w in werte)
@@ -119,7 +119,7 @@ class Anpassungsregler:
         return self.VORGABE_FARBE
 
     def __repr__(self):
-        return "<Anpassungsregler steif=%.2f abstand=%.3f skal=%.2f ausschieben=%.1fmm>" % (
+        return '<Anpassungsregler steif=%.2f abstand=%.3f skal=%.2f ausschieben=%.1fmm>' % (
             self.steifigkeit,
             self.abstand,
             self.skalierung,

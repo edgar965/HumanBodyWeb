@@ -17,6 +17,7 @@ import unittest
 from unittest import mock
 
 from core.dienste.umabauer import Umabauer
+
 from ._sicher import Sicher
 
 
@@ -24,24 +25,24 @@ class Kleidungsauftrag(unittest.TestCase):
     databases = set()
 
     def _auftrag(self, kleidung):
-        with mock.patch.object(Umabauer, "_auftrag", side_effect=lambda name, auftrag, **k: auftrag):
-            return Sicher.wert(Umabauer.bauen("Human Male 3.0", name="Probe", kleidung=kleidung), "Auftrag")
+        with mock.patch.object(Umabauer, '_auftrag', side_effect=lambda name, auftrag, **k: auftrag):
+            return Sicher.wert(Umabauer.bauen('Human Male 3.0', name='Probe', kleidung=kleidung), 'Auftrag')
 
     def test_nicht_angegeben_laesst_uma_entscheiden(self):
-        self.assertNotIn("kleidung", self._auftrag(None))
+        self.assertNotIn('kleidung', self._auftrag(None))
 
     def test_genannte_rezepte_kommen_durch(self):
-        auftrag = self._auftrag(["A_Recipe", "B_Recipe"])
-        self.assertEqual(auftrag["kleidung"], "A_Recipe,B_Recipe")
+        auftrag = self._auftrag(['A_Recipe', 'B_Recipe'])
+        self.assertEqual(auftrag['kleidung'], 'A_Recipe,B_Recipe')
 
     def test_leere_liste_heisst_nackt(self):
         """Der Fall, um den es geht."""
-        self.assertEqual(self._auftrag([])["kleidung"], Umabauer.OHNE_KLEIDUNG)
+        self.assertEqual(self._auftrag([])['kleidung'], Umabauer.OHNE_KLEIDUNG)
 
     def test_nur_leere_eintraege_heissen_auch_nackt(self):
         """Ein Auswahlfeld auf „—" liefert einen leeren Text, keine
         fehlende Zeile — auch das ist eine Abwahl."""
-        self.assertEqual(self._auftrag(["", "  "])["kleidung"], Umabauer.OHNE_KLEIDUNG)
+        self.assertEqual(self._auftrag(['', '  '])['kleidung'], Umabauer.OHNE_KLEIDUNG)
 
     def test_das_zeichen_ist_dasselbe_wie_drueben(self):
         """`UmaFigurExport.OhneKleidung` — zwei Seiten, ein Wert.
@@ -51,10 +52,11 @@ class Kleidungsauftrag(unittest.TestCase):
         warum.
         """
         from pathlib import Path
+
         from django.conf import settings
 
-        quelle = Path(settings.UMA_PROJEKT) / "Assets" / "Roomguest" / "Editor" / "UmaFigurExport.cs"
+        quelle = Path(settings.UMA_PROJEKT) / 'Assets' / 'Roomguest' / 'Editor' / 'UmaFigurExport.cs'
         if not quelle.is_file():
-            self.skipTest("Exporter nicht vorhanden: %s" % quelle)
-        text = quelle.read_text(encoding="utf-8", errors="replace")
+            self.skipTest('Exporter nicht vorhanden: %s' % quelle)
+        text = quelle.read_text(encoding='utf-8', errors='replace')
         self.assertIn('public const string OhneKleidung = "%s";' % Umabauer.OHNE_KLEIDUNG, text)

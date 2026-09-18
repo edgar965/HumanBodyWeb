@@ -29,9 +29,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Umafigurbau"]
+__all__ = ['Umafigurbau']
 
 
 class Umafigurbau:
@@ -43,11 +43,11 @@ class Umafigurbau:
     #: Die Namen sind die des KATALOGS, nicht der Dateien: `RaceData._Name`
     #: heisst „Human Female 3.0", die Datei `HumanFemale30.asset`. Wer die
     #: Dateinamen nimmt, findet nichts (Befund 08.09.2026).
-    BEISPIELE = ("Human Male 3.0", "Human Female 3.0", "Elf Male")
+    BEISPIELE = ('Human Male 3.0', 'Human Female 3.0', 'Elf Male')
 
     #: Rassen, die keine Figur sind. `SkyCar` ist ein Auto aus UMAs
     #: SRP-Beispielszene — es steht im selben Katalog.
-    AUS = ("SkyCar",)
+    AUS = ('SkyCar',)
 
     @staticmethod
     @require_GET
@@ -57,14 +57,14 @@ class Umafigurbau:
         try:
             alle = [r for r in Umapythonfiguren.rassen() if r not in Umafigurbau.AUS]
         except (OSError, ValueError) as fehler:
-            logger.warning("UMA Python: Katalog nicht lesbar: %s", fehler)
-            return JsonResponse({"rassen": [], "fehler": str(fehler)})
+            logger.warning('UMA Python: Katalog nicht lesbar: %s', fehler)
+            return JsonResponse({'rassen': [], 'fehler': str(fehler)})
         beispiele = [r for r in Umafigurbau.BEISPIELE if r in alle]
         uebrige = sorted(r for r in alle if r not in beispiele)
         return JsonResponse(
             {
-                "rassen": beispiele + uebrige,
-                "beispiele": beispiele,
+                'rassen': beispiele + uebrige,
+                'beispiele': beispiele,
             }
         )
 
@@ -73,29 +73,30 @@ class Umafigurbau:
     @require_POST
     def figur(request):
         """Eine Figur bauen und ihre Regler stellen."""
-        from core.dienste.umapythonfiguren import Umapythonfiguren
         from UMA_Python.szene import Szenenfigur
 
-        try:
-            wunsch = json.loads(request.body or b"{}")
-        except ValueError:
-            return JsonResponse({"fehler": "Anfrage nicht lesbar"}, status=400)
+        from core.dienste.umapythonfiguren import Umapythonfiguren
 
-        rasse = str(wunsch.get("rasse") or "").strip()
+        try:
+            wunsch = json.loads(request.body or b'{}')
+        except ValueError:
+            return JsonResponse({'fehler': 'Anfrage nicht lesbar'}, status=400)
+
+        rasse = str(wunsch.get('rasse') or '').strip()
         if not rasse:
-            return JsonResponse({"fehler": "Keine Rasse angegeben"}, status=400)
-        dna = Umafigurbau._dna(wunsch.get("dna"))
+            return JsonResponse({'fehler': 'Keine Rasse angegeben'}, status=400)
+        dna = Umafigurbau._dna(wunsch.get('dna'))
         try:
             gebaut = Umapythonfiguren.bauen(rasse)
         except (OSError, ValueError) as fehler:
-            logger.warning("UMA Python: %s nicht baubar: %s", rasse, fehler)
-            return JsonResponse({"fehler": str(fehler)}, status=400)
+            logger.warning('UMA Python: %s nicht baubar: %s', rasse, fehler)
+            return JsonResponse({'fehler': str(fehler)}, status=400)
         except Exception as fehler:  # noqa: BLE001
-            logger.exception("UMA Python: unerwarteter Fehler bei %s", rasse)
-            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+            logger.exception('UMA Python: unerwarteter Fehler bei %s', rasse)
+            return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
 
         antwort = Szenenfigur.alles(gebaut, dna)
-        antwort["regler"] = Szenenfigur.regler(gebaut)
+        antwort['regler'] = Szenenfigur.regler(gebaut)
         return JsonResponse(antwort)
 
     @staticmethod

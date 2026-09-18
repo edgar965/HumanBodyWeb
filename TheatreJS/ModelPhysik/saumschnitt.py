@@ -103,12 +103,12 @@ class Saumschnitt:
         Hunderte Kanten — alles auf einmal."""
         A = S[kanten[:, 0]]
         E = S[kanten[:, 1]] - A
-        e2 = np.einsum("ij,ij->i", E, E)
+        e2 = np.einsum('ij,ij->i', E, E)
         e2[e2 == 0] = 1.0
         rel = P[:, None, :] - A[None, :, :]  # (n, k, 3)
-        t = np.clip(np.einsum("nkj,kj->nk", rel, E) / e2[None, :], 0.0, 1.0)
+        t = np.clip(np.einsum('nkj,kj->nk', rel, E) / e2[None, :], 0.0, 1.0)
         Q = A[None, :, :] + t[:, :, None] * E[None, :, :]
-        d2 = np.einsum("nkj,nkj->nk", Q - P[:, None, :], Q - P[:, None, :])
+        d2 = np.einsum('nkj,nkj->nk', Q - P[:, None, :], Q - P[:, None, :])
         wahl = np.argmin(d2, axis=1)
         zeilen = np.arange(len(P))
         return d2[zeilen, wahl], (t[zeilen, wahl], wahl)
@@ -129,6 +129,6 @@ class Saumschnitt:
         p = punkte[self.ecken]
         n = normalen[self.ecken]
         d = Q - p
-        d -= np.einsum("ij,ij->i", d, n)[:, None] * n
+        d -= np.einsum('ij,ij->i', d, n)[:, None] * n
         punkte[self.ecken] = p + d - self.UNTERKANTE_M * n
         return len(self)

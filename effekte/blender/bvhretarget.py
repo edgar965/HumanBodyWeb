@@ -14,17 +14,14 @@ Unterabtastung ist AUS: Die Szene bekommt die Bildrate der BVH, jedes Bild
 der Datei wird eines der Simulation (12.09.2026).
 """
 
-from __future__ import print_function
-
 import os
 
 import bpy  # pyright: ignore[reportMissingImports]  (Blender)
-
 from bl_ext.user_default.retarget_bvh import utils as mcp_utils  # pyright: ignore[reportMissingImports]
 
 from effekte.bvhnamen import Bvhnamen
 
-__all__ = ["Bvhretarget"]
+__all__ = ['Bvhretarget']
 
 
 class Bvhretarget:
@@ -42,8 +39,8 @@ class Bvhretarget:
     def kopie_mit_bekannten_namen(self):
         unbekannt = self.namen.unbekannte()
         if unbekannt:
-            raise ValueError("BVH mit unbekannten Gelenken: %s" % unbekannt)
-        ziel = os.path.join(self.arbeitsordner, "retarget_quelle.bvh")
+            raise ValueError('BVH mit unbekannten Gelenken: %s' % unbekannt)
+        ziel = os.path.join(self.arbeitsordner, 'retarget_quelle.bvh')
         return self.namen.schreiben(ziel)
 
     def fahren(self):
@@ -53,11 +50,11 @@ class Bvhretarget:
         szene.render.fps_base = 1.0
         mcp_utils.setSilentMode(True)
         self.figur.aktivieren(self.figur.rig)
-        wahl = {"useDefaultSS": False, "ssFactor": 1}
+        wahl = {'useDefaultSS': False, 'ssFactor': 1}
         if self.hoechstens and self.hoechstens < self.bilder:
             wahl.update(useAllFrames=False, startFrame=0, endFrame=self.hoechstens)
         bpy.ops.mcp.load_and_retarget(filepath=quelle, **wahl)
         action = self.figur.rig.animation_data.action if self.figur.rig.animation_data else None
         if action is None or action.frame_range[1] < 2:
-            raise RuntimeError("Retarget ohne Ergebnis: %s" % (mcp_utils.theMessage or "keine Meldung"))
+            raise RuntimeError('Retarget ohne Ergebnis: %s' % (mcp_utils.theMessage or 'keine Meldung'))
         return int(action.frame_range[1])

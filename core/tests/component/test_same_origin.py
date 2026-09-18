@@ -29,9 +29,9 @@ from django.urls import reverse
 class GleicherUrsprungTest(TestCase):
     """Django gibt sich im Test als Host `testserver` aus."""
 
-    EIGEN = "http://testserver"
-    FREMD = "https://boese.example"
-    ZIEL = "/api/character/bvh-manage/"
+    EIGEN = 'http://testserver'
+    FREMD = 'https://boese.example'
+    ZIEL = '/api/character/bvh-manage/'
     RUMPF = '{"action":"gibtesnicht","category":"x","name":"y"}'
 
     # ------------------------------------------------------------ Muss abprallen
@@ -39,19 +39,19 @@ class GleicherUrsprungTest(TestCase):
     def test_fremder_origin_wird_abgewiesen(self):
         """DER GEMESSENE ANGRIFF: fremde Seite, einfacher Inhaltstyp."""
         a = self.client.post(
-            self.ZIEL, data=self.RUMPF, content_type="text/plain", headers={"origin": self.FREMD}
+            self.ZIEL, data=self.RUMPF, content_type='text/plain', headers={'origin': self.FREMD}
         )
         self.assertEqual(a.status_code, 403)
         self.assertNotIn(
-            "Unknown action", a.content.decode("utf-8"), "die Ansicht wurde trotzdem ausgefuehrt"
+            'Unknown action', a.content.decode('utf-8'), 'die Ansicht wurde trotzdem ausgefuehrt'
         )
 
     def test_sec_fetch_site_cross_site_wird_abgewiesen(self):
         """Das Feld setzt der Browser selbst; eine Schadseite kann es nicht fälschen."""
-        for wert in ("cross-site", "same-site"):
+        for wert in ('cross-site', 'same-site'):
             with self.subTest(wert=wert):
                 a = self.client.post(
-                    self.ZIEL, data=self.RUMPF, content_type="text/plain", headers={"sec-fetch-site": wert}
+                    self.ZIEL, data=self.RUMPF, content_type='text/plain', headers={'sec-fetch-site': wert}
                 )
                 self.assertEqual(a.status_code, 403)
 
@@ -59,8 +59,8 @@ class GleicherUrsprungTest(TestCase):
         a = self.client.post(
             self.ZIEL,
             data=self.RUMPF,
-            content_type="text/plain",
-            headers={"origin": "http://testserver:9000"},
+            content_type='text/plain',
+            headers={'origin': 'http://testserver:9000'},
         )
         self.assertEqual(a.status_code, 403)
 
@@ -72,8 +72,8 @@ class GleicherUrsprungTest(TestCase):
         a = self.client.post(
             self.ZIEL,
             data=self.RUMPF,
-            content_type="application/json",
-            headers={"origin": self.EIGEN, "sec-fetch-site": "same-origin"},
+            content_type='application/json',
+            headers={'origin': self.EIGEN, 'sec-fetch-site': 'same-origin'},
         )
         self.assertEqual(a.status_code, 400)
 
@@ -82,12 +82,12 @@ class GleicherUrsprungTest(TestCase):
 
         Das ist Absicht — wer ohne Browser anfragt, sitzt schon am Rechner. Der
         Angriff braucht gerade den Browser, und der schickt die Felder immer."""
-        a = self.client.post(self.ZIEL, data=self.RUMPF, content_type="application/json")
+        a = self.client.post(self.ZIEL, data=self.RUMPF, content_type='application/json')
         self.assertEqual(a.status_code, 400)
 
     def test_lesende_anfragen_werden_nicht_geprueft(self):
         """Sonst würde jedes Bild und jede Verknüpfung von aussen geprüft."""
-        a = self.client.get("/api/ui-prefs/", headers={"sec-fetch-site": "cross-site"})
+        a = self.client.get('/api/ui-prefs/', headers={'sec-fetch-site': 'cross-site'})
         self.assertEqual(a.status_code, 200)
 
     # ------------------------------------------------------- Methodenschutz
@@ -97,5 +97,5 @@ class GleicherUrsprungTest(TestCase):
         das Dateien löscht. Ein `<img src>` auf einer fremden Seite hätte
         gereicht; GET wird von der Ursprungsprüfung bewusst nicht erfasst.
         Deshalb `@require_POST` und im Template ein POST."""
-        ziel = reverse("photo_analysis_delete", args=[uuid.uuid4()])
+        ziel = reverse('photo_analysis_delete', args=[uuid.uuid4()])
         self.assertEqual(self.client.get(ziel).status_code, 405)

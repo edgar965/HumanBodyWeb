@@ -17,9 +17,9 @@ import numpy as np
 import warp as wp
 
 # Kernelcache im Projekt, nicht unter %LOCALAPPDATA% (Regel: keine Ablage auf C:)
-wp.config.kernel_cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "warp_cache")
+wp.config.kernel_cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'warp_cache')
 import newton  # noqa: E402 — der Kernelcache muss VOR dem Import stehen  # pyright: ignore[reportMissingImports]
-from newton._src.solvers import style3d as st3  # noqa: E402 — nach dem Cache  # pyright: ignore[reportMissingImports]
+from newton._src.solvers import style3d as st3  # noqa: E402  # pyright: ignore[reportMissingImports]
 
 
 class Kolliderprobe:
@@ -45,10 +45,10 @@ class Kolliderprobe:
         self.contacts = self.pipeline.contacts()
         self.wpmesh = self.model.shape_source[self.shape].mesh
         print(
-            "wp.Mesh am Shape:",
+            'wp.Mesh am Shape:',
             self.wpmesh is not None,
-            "| refit:",
-            hasattr(self.wpmesh, "refit"),
+            '| refit:',
+            hasattr(self.wpmesh, 'refit'),
             flush=True,
         )
 
@@ -94,17 +94,17 @@ class Kolliderprobe:
         model.soft_contact_kd = 1.0e-1
         model.soft_contact_mu = 0.5
         print(
-            "masse je partikel",
+            'masse je partikel',
             self.masse,
-            "STYLE3D" if self.style3d else "VBD",
-            "STARR" if self.starr else "VERFORMT",
-            "partikel",
+            'STYLE3D' if self.style3d else 'VBD',
+            'STARR' if self.starr else 'VERFORMT',
+            'partikel',
             model.particle_count,
-            "dreiecke stoff",
+            'dreiecke stoff',
             model.tri_count,
-            "kollider-dreiecke",
+            'kollider-dreiecke',
             len(self.f0),
-            "selbstkontakt",
+            'selbstkontakt',
             self.selbst,
             flush=True,
         )
@@ -199,10 +199,10 @@ class Kolliderprobe:
         tief = float((1.0 - rad.min()) * self.R * 1000) if innen.any() else 0.0
         tief5 = int((rad < 1.0 - 0.005 / self.R).sum())
         print(
-            f"bild {bild:3d}  {self.zeiten[-1]:7.1f} ms  kollider dx={dx:.2f} "
-            f"sz={sz:.2f}  stoff min z={q[:, 2].min():.3f}  "
-            f"im kollider: {int(innen.sum())} punkte, "
-            f"tiefster {tief:.1f} mm, tiefer als 5 mm: {tief5}",
+            f'bild {bild:3d}  {self.zeiten[-1]:7.1f} ms  kollider dx={dx:.2f} '
+            f'sz={sz:.2f}  stoff min z={q[:, 2].min():.3f}  '
+            f'im kollider: {int(innen.sum())} punkte, '
+            f'tiefster {tief:.1f} mm, tiefer als 5 mm: {tief5}',
             flush=True,
         )
 
@@ -220,12 +220,12 @@ class Kolliderprobe:
                 self._melden(bild, dx, sz)
         warm = np.array(self.zeiten[5:])
         print(
-            f"ZEIT je 60-Hz-Bild ({self.SUB} Teilschritte, "
-            f"{self.model.particle_count} Partikel, "
-            f"Selbstkontakt {'an' if self.selbst else 'AUS'}): "
-            f"median {np.median(warm):.1f} ms, "
-            f"p90 {np.percentile(warm, 90):.1f} ms, "
-            f"erstes Bild {self.zeiten[0]:.0f} ms",
+            f'ZEIT je 60-Hz-Bild ({self.SUB} Teilschritte, '
+            f'{self.model.particle_count} Partikel, '
+            f'Selbstkontakt {"an" if self.selbst else "AUS"}): '
+            f'median {np.median(warm):.1f} ms, '
+            f'p90 {np.percentile(warm, 90):.1f} ms, '
+            f'erstes Bild {self.zeiten[0]:.0f} ms',
             flush=True,
         )
 
@@ -233,24 +233,24 @@ class Kolliderprobe:
 def main(argv):
     wp.init()
     print(
-        "warp",
+        'warp',
         wp.__version__,
-        "newton",
+        'newton',
         newton.__version__,
-        "device",
+        'device',
         wp.get_device(),
-        "cache",
+        'cache',
         wp.config.kernel_cache_dir,
         flush=True,
     )
     Kolliderprobe(
         n=int(argv[1]) if len(argv) > 1 else 100,
-        selbst=(argv[2] != "ohne") if len(argv) > 2 else True,
-        starr=len(argv) > 3 and argv[3] == "starr",
-        style3d=len(argv) > 4 and argv[4] == "style3d",
+        selbst=(argv[2] != 'ohne') if len(argv) > 2 else True,
+        starr=len(argv) > 3 and argv[3] == 'starr',
+        style3d=len(argv) > 4 and argv[4] == 'style3d',
         masse=float(argv[5]) if len(argv) > 5 else 0.05,
     ).laufen()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main(sys.argv)

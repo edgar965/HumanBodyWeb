@@ -38,14 +38,14 @@ class PipelineProzessTest(SimpleTestCase):
         Der Kindprozess schreibt bewusst Umlaute und ein Zeichen ausserhalb von
         cp1252 (ein Fortschrittsblock, wie tqdm ihn benutzt)."""
         p = PipelineProzess.starten(
-            [sys.executable, "-c", 'print("TOTAL:5"); print("Datei: 0030_BallettLänger.mp4 █ 50%")']
+            [sys.executable, '-c', 'print("TOTAL:5"); print("Datei: 0030_BallettLänger.mp4 █ 50%")']
         )
         zeilen = [z.strip() for z in p.stdout_zeilen()]
         p.warten(timeout=30)
-        self.assertIn("TOTAL:5", zeilen)
-        self.assertTrue(any("BallettLänger" in z for z in zeilen), "Umlaut kam nicht durch: %r" % zeilen)
+        self.assertIn('TOTAL:5', zeilen)
+        self.assertTrue(any('BallettLänger' in z for z in zeilen), 'Umlaut kam nicht durch: %r' % zeilen)
         self.assertTrue(
-            any("█" in z for z in zeilen), "Zeichen ausserhalb cp1252 kam nicht durch: %r" % zeilen
+            any('█' in z for z in zeilen), 'Zeichen ausserhalb cp1252 kam nicht durch: %r' % zeilen
         )
         self.assertEqual(p.proc.returncode, 0)
 
@@ -56,14 +56,14 @@ class PipelineProzessTest(SimpleTestCase):
         p = PipelineProzess.starten(
             [
                 sys.executable,
-                "-c",
+                '-c',
                 'import sys; sys.stdout.buffer.write(b"STATUS:\\xff\\xfe kaputt\\n"); '
                 'sys.stdout.buffer.write(b"TOTAL:7\\n")',
             ]
         )
         zeilen = [z.strip() for z in p.stdout_zeilen()]  # darf NICHT werfen
         p.warten(timeout=30)
-        self.assertIn("TOTAL:7", zeilen)
+        self.assertIn('TOTAL:7', zeilen)
 
     def test_viel_stderr_fuehrt_nicht_zum_haenger(self):
         """DER HAENGER-KANDIDAT (OpenPose/Caffe): stderr voll, niemand liest.
@@ -81,50 +81,50 @@ class PipelineProzessTest(SimpleTestCase):
         p = PipelineProzess.starten(
             [
                 sys.executable,
-                "-c",
-                "import sys\n"
+                '-c',
+                'import sys\n'
                 'for i in range(2000): sys.stderr.write("W" * 100 + "\\n")\n'
-                "sys.stderr.flush()\n"
+                'sys.stderr.flush()\n'
                 'print("TOTAL:9")\n',
             ]
         )
         zeilen = [z.strip() for z in p.stdout_zeilen()]
         code = p.warten(timeout=60)
-        self.assertIn("TOTAL:9", zeilen, "stdout kam nicht an — Puffer-Hänger?")
+        self.assertIn('TOTAL:9', zeilen, 'stdout kam nicht an — Puffer-Hänger?')
         self.assertEqual(code, 0)
-        self.assertGreater(len(p.stderr_zeilen), 100, "stderr wurde nicht mitgelesen")
+        self.assertGreater(len(p.stderr_zeilen), 100, 'stderr wurde nicht mitgelesen')
 
     def test_stderr_wird_begrenzt(self):
         """Die Fehlermeldung soll nicht Zehntausende Fortschrittszeilen halten."""
         p = PipelineProzess.starten(
-            [sys.executable, "-c", 'import sys\nfor i in range(3000): sys.stderr.write(f"Zeile {i}\\n")\n']
+            [sys.executable, '-c', 'import sys\nfor i in range(3000): sys.stderr.write(f"Zeile {i}\\n")\n']
         )
         p.warten(timeout=60)
         self.assertLessEqual(len(p.stderr_zeilen), Stromleser.STDERR_ZEILEN + 1)
-        self.assertIn("Zeile 2999", p.fehlertext(), "die LETZTEN Zeilen fehlen")
+        self.assertIn('Zeile 2999', p.fehlertext(), 'die LETZTEN Zeilen fehlen')
 
     def test_rueckgabewert_wird_durchgereicht(self):
-        p = PipelineProzess.starten([sys.executable, "-c", "import sys; sys.exit(3)"])
+        p = PipelineProzess.starten([sys.executable, '-c', 'import sys; sys.exit(3)'])
         self.assertEqual(p.warten(timeout=30), 3)
 
     def test_umgebung_setzt_utf8_und_entfernt_pythonpath(self):
         """PYTHONPATH darf nicht von 3.14 nach 3.10 durchsickern."""
-        env = PipelineProzess.umgebung({"EIGEN": "wert"})
-        self.assertEqual(env["PYTHONIOENCODING"], "utf-8")
-        self.assertEqual(env["PYTHONUTF8"], "1")
-        self.assertEqual(env["PYTHONUNBUFFERED"], "1")
-        self.assertNotIn("PYTHONPATH", env)
-        self.assertNotIn("PYTHONHOME", env)
-        self.assertEqual(env["EIGEN"], "wert")
+        env = PipelineProzess.umgebung({'EIGEN': 'wert'})
+        self.assertEqual(env['PYTHONIOENCODING'], 'utf-8')
+        self.assertEqual(env['PYTHONUTF8'], '1')
+        self.assertEqual(env['PYTHONUNBUFFERED'], '1')
+        self.assertNotIn('PYTHONPATH', env)
+        self.assertNotIn('PYTHONHOME', env)
+        self.assertEqual(env['EIGEN'], 'wert')
 
     def test_beenden_raeumt_den_prozess_ab(self):
-        p = PipelineProzess.starten([sys.executable, "-c", "import time; time.sleep(60)"])
+        p = PipelineProzess.starten([sys.executable, '-c', 'import time; time.sleep(60)'])
         p.beenden()
         # KEIN `wait()` mehr davor: `beenden()` wartet seit 13.08.2026 selbst.
         # `taskkill` kehrt zurück, sobald es die Beendigung angestossen hat —
         # wer danach sofort den nächsten Lauf startet, fand den Grafikspeicher
         # noch belegt.
-        self.assertIsNotNone(p.proc.poll(), "beenden() kam zurueck, bevor der Prozess weg war")
+        self.assertIsNotNone(p.proc.poll(), 'beenden() kam zurueck, bevor der Prozess weg war')
 
     # --------------------------------------------------- Stille = Haenger
 
@@ -140,7 +140,7 @@ class PipelineProzessTest(SimpleTestCase):
 
         Hier: ein Kind, das eine Zeile schreibt und dann schweigt."""
         p = PipelineProzess.starten(
-            [sys.executable, "-c", 'import time, sys\nprint("TOTAL:5", flush=True)\ntime.sleep(120)\n']
+            [sys.executable, '-c', 'import time, sys\nprint("TOTAL:5", flush=True)\ntime.sleep(120)\n']
         )
         gelesen = []
         start = time.time()
@@ -149,10 +149,10 @@ class PipelineProzessTest(SimpleTestCase):
                 gelesen.append(zeile.strip())
         dauer = time.time() - start
 
-        self.assertIn("TOTAL:5", gelesen, "die Zeile vor der Stille fehlt")
-        self.assertLess(dauer, 30, "die Stille wurde erst nach %.0f s bemerkt" % dauer)
+        self.assertIn('TOTAL:5', gelesen, 'die Zeile vor der Stille fehlt')
+        self.assertLess(dauer, 30, 'die Stille wurde erst nach %.0f s bemerkt' % dauer)
         self.assertIsNotNone(
-            p.proc.poll(), "Prozess laeuft nach dem Stille-Abbruch weiter — genau das ist das VRAM-Leck"
+            p.proc.poll(), 'Prozess laeuft nach dem Stille-Abbruch weiter — genau das ist das VRAM-Leck'
         )
 
     def test_stille_unterhalb_der_grenze_ist_kein_abbruch(self):
@@ -164,13 +164,13 @@ class PipelineProzessTest(SimpleTestCase):
         p = PipelineProzess.starten(
             [
                 sys.executable,
-                "-c",
+                '-c',
                 'import time\nprint("START", flush=True)\ntime.sleep(3)\nprint("FERTIG", flush=True)\n',
             ]
         )
         zeilen = [z.strip() for z in p.stdout_zeilen(stille_timeout=30)]
         p.warten(timeout=30)
-        self.assertEqual(zeilen, ["START", "FERTIG"])
+        self.assertEqual(zeilen, ['START', 'FERTIG'])
 
     def test_ohne_stdout_lesen_kein_haenger(self):
         """`stdout_lesen=False` für Aufrufstellen, die stdout nie abholen.
@@ -180,8 +180,8 @@ class PipelineProzessTest(SimpleTestCase):
         derselbe volle Puffer möglich wie bei stderr. Hier schreibt das Kind
         deutlich mehr, als in einen Pipe-Puffer passt (~64 KB)."""
         p = PipelineProzess.starten(
-            [sys.executable, "-c", 'import sys\nfor i in range(5000): print("X" * 100)\n'], stdout_lesen=False
+            [sys.executable, '-c', 'import sys\nfor i in range(5000): print("X" * 100)\n'], stdout_lesen=False
         )
-        self.assertEqual(p.warten(timeout=60), 0, "Kindprozess kam nicht durch")
+        self.assertEqual(p.warten(timeout=60), 0, 'Kindprozess kam nicht durch')
         with self.assertRaises(RuntimeError):
             next(iter(p.stdout_zeilen()))

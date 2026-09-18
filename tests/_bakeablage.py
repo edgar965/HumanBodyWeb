@@ -28,7 +28,7 @@ from pathlib import Path
 class Bakeablage:
     """Findet die jüngste `bake.npz` unter dem Arbeitsordner der Pipelines."""
 
-    DATEI = "bake.npz"
+    DATEI = 'bake.npz'
 
     @staticmethod
     def basis():
@@ -47,20 +47,20 @@ class Bakeablage:
             # Nicht stumm: Wenn `collision` nicht importierbar ist, sucht die
             # Pruefung am fest verdrahteten Ort weiter — und genau dieser Pfad
             # ist schon einmal umgezogen (Befund vom 17.08.2026).
-            logging.getLogger("core").debug(
-                "collision.arbeitsordner nicht importierbar — die Bake-Suche "
-                "nutzt den fest verdrahteten Pfad",
+            logging.getLogger('core').debug(
+                'collision.arbeitsordner nicht importierbar — die Bake-Suche '
+                'nutzt den fest verdrahteten Pfad',
                 exc_info=True,
             )
-            return Path(__file__).resolve().parents[1] / "media" / "tmp" / "pipelines"
+            return Path(__file__).resolve().parents[1] / 'media' / 'tmp' / 'pipelines'
 
     @classmethod
     def juengste(cls):
         """`(pfad, None)` oder `(None, Grund)` — der Grund nennt den Ort."""
         basis = cls.basis()
-        treffer = [p for p in glob.glob(str(Path(basis) / "*" / cls.DATEI)) if os.path.exists(p)]
+        treffer = [p for p in glob.glob(str(Path(basis) / '*' / cls.DATEI)) if os.path.exists(p)]
         if not treffer:
-            return None, ("Skip: kein %s unter %s (Export nicht gelaufen)" % (cls.DATEI, basis))
+            return None, ('Skip: kein %s unter %s (Export nicht gelaufen)' % (cls.DATEI, basis))
         return max(treffer, key=os.path.getmtime), None
 
     @classmethod
@@ -69,4 +69,4 @@ class Bakeablage:
         pfad, grund = cls.juengste()
         if grund:
             return None, None, grund
-        return (np.load(pfad, allow_pickle=True), os.path.basename(os.path.dirname(pfad or "")), None)
+        return (np.load(pfad, allow_pickle=True), os.path.basename(os.path.dirname(pfad or '')), None)

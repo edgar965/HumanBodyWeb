@@ -43,7 +43,7 @@ class JederSkriptimportFindetSeinZiel(SimpleTestCase):
     def test_kein_import_zeigt_ins_leere(self):
         tot = Skriptbaum.unaufloesbar()
         self.assertEqual(
-            tot, [], "tote Importe in Skripten:\n" + "\n".join("  %s  %s  ->  %s" % z for z in tot)
+            tot, [], 'tote Importe in Skripten:\n' + '\n'.join('  %s  %s  ->  %s' % z for z in tot)
         )
 
     def test_es_werden_ueberhaupt_importe_geprueft(self):
@@ -63,15 +63,15 @@ class DiePruefungSiehtIhrenEigenenFall(SimpleTestCase):
     """
 
     def test_ein_erfundener_name_wird_gemeldet(self):
-        self.assertIsNotNone(Skriptbaum._gibt_es("humanbody_core.skeleton", "SkelettDasEsNichtGibt"))
+        self.assertIsNotNone(Skriptbaum._gibt_es('humanbody_core.skeleton', 'SkelettDasEsNichtGibt'))
 
     def test_ein_erfundenes_modul_wird_gemeldet(self):
-        self.assertIsNotNone(Skriptbaum._gibt_es("humanbody_core.skeleton.gibtesnicht", None))
+        self.assertIsNotNone(Skriptbaum._gibt_es('humanbody_core.skeleton.gibtesnicht', None))
 
     def test_der_echte_fall_von_damals(self):
         """`SkeletonRigify` liegt in `rigify`, nicht in `skeleton`."""
-        self.assertIsNotNone(Skriptbaum._gibt_es("humanbody_core.skeleton.skeleton", "SkeletonRigify"))
-        self.assertIsNone(Skriptbaum._gibt_es("humanbody_core.skeleton", "SkeletonRigify"))
+        self.assertIsNotNone(Skriptbaum._gibt_es('humanbody_core.skeleton.skeleton', 'SkeletonRigify'))
+        self.assertIsNone(Skriptbaum._gibt_es('humanbody_core.skeleton', 'SkeletonRigify'))
 
     def test_ein_gueltiger_name_wird_nicht_gemeldet(self):
-        self.assertIsNone(Skriptbaum._gibt_es("humanbody_core.skeleton.bewegungsspuren", "Bewegungsspuren"))
+        self.assertIsNone(Skriptbaum._gibt_es('humanbody_core.skeleton.bewegungsspuren', 'Bewegungsspuren'))

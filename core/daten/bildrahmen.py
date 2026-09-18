@@ -28,7 +28,7 @@ import numpy as np
 class Bildrahmen:
     """Rechteck um eine Punktwolke: linke obere Ecke, Breite, Höhe."""
 
-    __slots__ = ("x", "y", "breite", "hoehe")
+    __slots__ = ('x', 'y', 'breite', 'hoehe')
 
     def __init__(self, x, y, breite, hoehe):
         self.x = float(x)
@@ -56,7 +56,7 @@ class Bildrahmen:
 
     def als_dict(self):
         """Das Drahtformat für den Browser — `w`/`h`, nicht `width`/`height`."""
-        return {"x": self.x, "y": self.y, "w": self.breite, "h": self.hoehe}
+        return {'x': self.x, 'y': self.y, 'w': self.breite, 'h': self.hoehe}
 
     def mitte(self):
         return (self.x + self.breite / 2.0, self.y + self.hoehe / 2.0)

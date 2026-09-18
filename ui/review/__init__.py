@@ -15,14 +15,14 @@ der Schichtung: Kern, Browser, Studio, Blender, ML-Kette,
 Stoffsimulation, Django-Teil, geteilte Bibliothek.
 """
 
-from .kern import BEREICHE as KERN
-from .frontend import BEREICHE as FRONTEND
-from .bvhstudio import BEREICHE as STUDIO
 from .blender import BEREICHE as BLENDER
-from .videotobvh import BEREICHE as VIDEOTOBVH
-from .kollision import BEREICHE as KOLLISION
-from .web_api import BEREICHE as WEB_API
-from .web import BEREICHE as WEB
+from .bvhstudio import BEREICHE as STUDIO
 from .djangobase import BEREICHE as DJANGOBASE
+from .frontend import BEREICHE as FRONTEND
+from .kern import BEREICHE as KERN
+from .kollision import BEREICHE as KOLLISION
+from .videotobvh import BEREICHE as VIDEOTOBVH
+from .web import BEREICHE as WEB
+from .web_api import BEREICHE as WEB_API
 
 REVIEW_BEREICHE = KERN + FRONTEND + STUDIO + BLENDER + VIDEOTOBVH + KOLLISION + WEB_API + WEB + DJANGOBASE

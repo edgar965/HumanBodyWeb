@@ -29,9 +29,9 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-STATIK = Path(settings.BASE_DIR) / "static"
+STATIK = Path(settings.BASE_DIR) / 'static'
 
-MODUL = Jsmodul("gemeinsam", "klipquelle.js")
+MODUL = Jsmodul('gemeinsam', 'klipquelle.js')
 
 SKRIPT = """
 const { Klipquelle } = await import(MODUL);
@@ -77,7 +77,7 @@ class KlipquelleTest(SimpleTestCase):
     databases = set()
 
     def test_ein_clip_fuer_alle_wartenden(self):
-        self.assertEqual(MODUL.laufen(SKRIPT), {"ok": True})
+        self.assertEqual(MODUL.laufen(SKRIPT), {'ok': True})
 
 
 class DasDrahtformat(SimpleTestCase):
@@ -86,14 +86,14 @@ class DasDrahtformat(SimpleTestCase):
     databases = set()
 
     def quelle(self, *teile):
-        return STATIK.joinpath(*teile).read_text(encoding="utf-8")
+        return STATIK.joinpath(*teile).read_text(encoding='utf-8')
 
     def test_die_figur_meldet_ihren_clip_und_ihr_scheitern(self):
-        text = self.quelle("viewer", "result_character", "bvh_animation.js")
-        self.assertIn("Klipquelle.melden(clip)", text)
-        self.assertIn("Klipquelle.scheitern(err)", text)
+        text = self.quelle('viewer', 'result_character', 'bvh_animation.js')
+        self.assertIn('Klipquelle.melden(clip)', text)
+        self.assertIn('Klipquelle.scheitern(err)', text)
 
     def test_der_einstieg_laesst_niemanden_ewig_warten(self):
-        text = self.quelle("viewer", "result_character", "index.js")
-        self.assertIn("if (!Klipquelle.gemeldet)", text)
-        self.assertIn("Klipquelle.scheitern(", text)
+        text = self.quelle('viewer', 'result_character', 'index.js')
+        self.assertIn('if (!Klipquelle.gemeldet)', text)
+        self.assertIn('Klipquelle.scheitern(', text)

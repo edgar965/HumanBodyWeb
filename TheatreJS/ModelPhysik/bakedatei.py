@@ -19,16 +19,16 @@ import numpy as np
 class Bakedatei:
     """Punkte je Bild aus einem FPS-Bake."""
 
-    KENNUNG = b"FPSBAKE2"
-    KENNUNG_ALT = b"FPSBAKE1"
+    KENNUNG = b'FPSBAKE2'
+    KENNUNG_ALT = b'FPSBAKE1'
 
     def __init__(self, pfad):
-        with open(pfad, "rb") as datei:
+        with open(pfad, 'rb') as datei:
             kennung = datei.read(8)
             if kennung not in (self.KENNUNG, self.KENNUNG_ALT):
-                raise ValueError("Keine FPSBAKE-Datei: %r" % kennung)
-            self.bilder = int(np.frombuffer(datei.read(4), dtype="<u4")[0])
-            self.punkte = int(np.frombuffer(datei.read(4), dtype="<u4")[0])
+                raise ValueError('Keine FPSBAKE-Datei: %r' % kennung)
+            self.bilder = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
+            self.punkte = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
             # FPSBAKE2 fuehrt die Dreiecke MIT. Sie werden gebraucht, weil
             # FPS die Punkte umsortiert: Nach dem Einlesen lag kein einziger
             # der 5.807 Punkte an der Stelle, an der er in der `.off` stand.
@@ -37,14 +37,14 @@ class Bakedatei:
             # es ein Knaeuel.
             self.dreiecke = None
             if kennung == self.KENNUNG:
-                zahl = int(np.frombuffer(datei.read(4), dtype="<u4")[0])
+                zahl = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
                 self.dreiecke = (
-                    np.frombuffer(datei.read(zahl * 12), dtype="<u4").reshape(zahl, 3).astype(np.int64)
+                    np.frombuffer(datei.read(zahl * 12), dtype='<u4').reshape(zahl, 3).astype(np.int64)
                 )
-            roh = np.frombuffer(datei.read(), dtype="<f4")
+            roh = np.frombuffer(datei.read(), dtype='<f4')
         erwartet = self.bilder * self.punkte * 3
         if roh.size != erwartet:
-            raise ValueError("Datei unvollstaendig: %d statt %d Werte" % (roh.size, erwartet))
+            raise ValueError('Datei unvollstaendig: %d statt %d Werte' % (roh.size, erwartet))
         self.daten = roh.reshape(self.bilder, self.punkte, 3).astype(np.float64)
 
     def in_metern(self, faktor):

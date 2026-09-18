@@ -17,7 +17,7 @@ import os
 
 from ..nurgemeint import Nurgemeint
 
-WAECHTER = Nurgemeint("performance", os.path.dirname(__file__), dauer="27 s")
+WAECHTER = Nurgemeint('performance', os.path.dirname(__file__), dauer='27 s')
 
 
 def load_tests(loader, standard_tests, pattern):

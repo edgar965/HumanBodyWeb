@@ -25,7 +25,7 @@ from ..daten.pfadwurzeln import Pfadwurzeln
 from ..models import AppSettings
 
 #: Was als Video gilt.
-ENDUNGEN = {".mp4", ".webm", ".avi", ".mkv", ".mov", ".wmv"}
+ENDUNGEN = {'.mp4', '.webm', '.avi', '.mkv', '.mov', '.wmv'}
 
 
 class Videoauswahl:
@@ -33,7 +33,7 @@ class Videoauswahl:
 
     #: Schluessel in `AppSettings.ui_prefs`; die Vorlage `upload_v4.html`
     #: setzt den Haken auf den Eintrag mit diesem Pfad.
-    SCHLUESSEL = "selected_video_path"
+    SCHLUESSEL = 'selected_video_path'
 
     def __init__(self):
         self.dateien = []
@@ -51,11 +51,11 @@ class Videoauswahl:
         geaendert = datetime.fromtimestamp(merkmale.st_mtime)
         self.dateien.append(
             {
-                "path": absolut,
-                "name": pfad.name,
-                "size": "%.1f MB" % (merkmale.st_size / (1024 * 1024)),
-                "date": geaendert.strftime("%d.%m.%Y %H:%M"),
-                "dir": str(pfad.parent),
+                'path': absolut,
+                'name': pfad.name,
+                'size': '%.1f MB' % (merkmale.st_size / (1024 * 1024)),
+                'date': geaendert.strftime('%d.%m.%Y %H:%M'),
+                'dir': str(pfad.parent),
             }
         )
 
@@ -78,7 +78,7 @@ class Videoauswahl:
         """Videoordner, Uploads und die Videos bestehender Auftraege."""
         auswahl = cls()
         auswahl._ordner(Pfadwurzeln.videoordner())
-        auswahl._ordner(Path(settings.MEDIA_ROOT) / "uploads")
+        auswahl._ordner(Path(settings.MEDIA_ROOT) / 'uploads')
         for job in auftraege:
             auswahl.aufnehmen(Path(cls.pfad_von(job)))
         return auswahl.dateien
@@ -91,4 +91,4 @@ class Videoauswahl:
         vorlieben = gespeichert.ui_prefs or {}
         vorlieben[cls.SCHLUESSEL] = cls.pfad_von(job)
         gespeichert.ui_prefs = vorlieben
-        gespeichert.save(update_fields=["ui_prefs"])
+        gespeichert.save(update_fields=['ui_prefs'])

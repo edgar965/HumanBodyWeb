@@ -28,7 +28,7 @@ SUCHEN, nicht der Suchbereich — `dateien()` nimmt beides entgegen.
 import ast
 from pathlib import Path
 
-__all__ = ["Projektquellen"]
+__all__ = ['Projektquellen']
 
 
 class Projektquellen:
@@ -38,7 +38,7 @@ class Projektquellen:
     TOOLS = Path(__file__).resolve().parents[4]
 
     #: Das Blender-Addon.
-    ADDON = TOOLS / "HumanBodyBlender"
+    ADDON = TOOLS / 'HumanBodyBlender'
 
     #: Die Baeume mit eigenem Code (Addon-Sicht). `assetCreator` und
     #: `PhotoToTexture` liegen seit dem 07.09.2026 unter `Assets/`
@@ -50,15 +50,15 @@ class Projektquellen:
     #: diesem Tag dorthin zogen, waeren damit still aus jeder Pruefung
     #: gefallen.
     BAEUME = (
-        "HumanBodyBlender",
-        "HumanBody/humanbody_core",
-        "HumanBody/collision",
-        "Assets/assetCreator",
-        "Assets/PhotoToTexture",
-        "MakeHuman",
-        "Assets/GarmentCode",
-        "UMA_Python",
-        "Assets/kleidung",
+        'HumanBodyBlender',
+        'HumanBody/humanbody_core',
+        'HumanBody/collision',
+        'Assets/assetCreator',
+        'Assets/PhotoToTexture',
+        'MakeHuman',
+        'Assets/GarmentCode',
+        'UMA_Python',
+        'Assets/kleidung',
     )
 
     #: Fremde Addons und eingelagerte Fremdprojekte. `convert/retarget_bvh`
@@ -72,21 +72,21 @@ class Projektquellen:
     #: GarmentCode-Upstream und Nvidias Warp-Fork — fremder Code unter
     #: `Assets/GarmentCode/`, gezaehlt am 08.09.2026.
     AUS = (
-        "__pycache__",
-        "retarget_bvh",
-        "kbs_retarget",
-        "data",
-        "cache",
-        "idol",
-        "sith",
-        "texformer",
-        "textured_smplx",
-        "TestCharakter",
-        "alt",
-        "makehuman",
-        "buildscripts",
-        "upstream",
-        "warp_fork",
+        '__pycache__',
+        'retarget_bvh',
+        'kbs_retarget',
+        'data',
+        'cache',
+        'idol',
+        'sith',
+        'texformer',
+        'textured_smplx',
+        'TestCharakter',
+        'alt',
+        'makehuman',
+        'buildscripts',
+        'upstream',
+        'warp_fork',
     )
 
     @classmethod
@@ -98,7 +98,7 @@ class Projektquellen:
             wurzel = cls.TOOLS / baum
             if not wurzel.is_dir():
                 continue
-            for pfad in sorted(wurzel.rglob("*.py")):
+            for pfad in sorted(wurzel.rglob('*.py')):
                 if not set(pfad.parts) & verboten:
                     yield pfad
 
@@ -136,7 +136,7 @@ class Projektquellen:
         """
         for pfad in pfade:
             try:
-                yield pfad, ast.parse(pfad.read_text(encoding="utf-8", errors="replace"))
+                yield pfad, ast.parse(pfad.read_text(encoding='utf-8', errors='replace'))
             # stumm gewollt: Eine Datei, die sich nicht zerlegen laesst,
             # meldet `test_escape_sequenzen` — hier waere es dieselbe
             # Meldung ein zweites Mal.
@@ -146,6 +146,6 @@ class Projektquellen:
     @classmethod
     def addondateien(cls):
         """Nur die Dateien des Blender-Addons."""
-        for pfad in sorted(cls.ADDON.rglob("*.py")):
+        for pfad in sorted(cls.ADDON.rglob('*.py')):
             if not set(pfad.parts) & set(cls.AUS):
                 yield pfad

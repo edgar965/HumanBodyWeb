@@ -39,6 +39,7 @@ from GarmentFitter.fitter import (
     Koerperpolster,
     Schrittboden,
 )
+
 from ._sicher import Sicher
 
 
@@ -89,7 +90,7 @@ class KoerperBleibtUnberuehrtTest(SimpleTestCase):
             faces,
             body,
             body_faces=body_faces,
-            coordinate_system="blender",
+            coordinate_system='blender',
             min_dist_mm=min_dist_mm,
             crotch_depth_mm=crotch_depth_mm,
         ).fahren()
@@ -98,7 +99,7 @@ class KoerperBleibtUnberuehrtTest(SimpleTestCase):
     def test_ohne_polster_mit_schritttiefe(self):
         """DER FALL, DER FRÜHER SCHIEFGING: kein Polster, aber Schritttiefe."""
         abweichung = self._lauf(min_dist_mm=0.0, crotch_depth_mm=4.0)
-        self.assertEqual(abweichung.max(), 0.0, "fit_garment hat den Körper des Aufrufers verändert")
+        self.assertEqual(abweichung.max(), 0.0, 'fit_garment hat den Körper des Aufrufers verändert')
 
     def test_mit_polster(self):
         self.assertEqual(self._lauf(2.0, 4.0).max(), 0.0)
@@ -197,7 +198,7 @@ class SchrittbodenTest(SimpleTestCase):
         boden = Schrittboden.bestimmen(self.body, self.body, self.body[:, 0].mean(), 6.0)
         self.assertTrue(boden.vorhanden)
         self.assertAlmostEqual(
-            Sicher.wert(boden.hoehe, "Höhe") - Sicher.wert(boden.damm_z, "Damm"), 0.006, places=9
+            Sicher.wert(boden.hoehe, 'Höhe') - Sicher.wert(boden.damm_z, 'Damm'), 0.006, places=9
         )
 
     def test_anheben_zieht_haengende_vertices_nach_oben(self):

@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "garmentcode_passform.js")
+MODUL = Jsmodul('scene', 'garmentcode_passform.js')
 
 SKRIPT = """
 const gehakt = [];
@@ -56,8 +56,8 @@ class FormhakenTest(SimpleTestCase):
 
     def test_die_vorgabe_bekommt_ihr_haekchen_und_sonst_nur_die_passende_form(self):
         daten = MODUL.laufen(SKRIPT)
-        self.assertTrue(daten.get("ok"), daten)
-        self.assertEqual(daten["erg"], ["form_kleid", None, "form_sommerkleid", None])
+        self.assertTrue(daten.get('ok'), daten)
+        self.assertEqual(daten['erg'], ['form_kleid', None, 'form_sommerkleid', None])
         self.assertEqual(
-            daten["gehakt"], ['input[data-preset="form_kleid"]', 'input[data-preset="form_sommerkleid"]']
+            daten['gehakt'], ['input[data-preset="form_kleid"]', 'input[data-preset="form_sommerkleid"]']
         )

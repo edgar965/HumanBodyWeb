@@ -28,14 +28,14 @@ import time
 import django
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ui.settings")
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ui.settings')
 django.setup()
 
 
 class Vorbilderlauf:
     """Alle Bibliotheksstuecke deuten und als Preset-Datei schreiben."""
 
-    def __init__(self, ziel=""):
+    def __init__(self, ziel=''):
         from GarmentCode.vorbildpresets import Vorbildpresets
 
         self.ziel = ziel or Vorbildpresets.DATEI
@@ -43,24 +43,25 @@ class Vorbilderlauf:
         self.abgelehnt = []
 
     def laufen(self):
+        from GarmentCode.dienst import GarmentcodeDienst
+
         from core.dienste.charakterdaten import Charakterdaten
         from core.dienste.kleiderbibliothek import Kleiderbibliothek
-        from GarmentCode.dienst import GarmentcodeDienst
 
         koerper = Charakterdaten.koerper_aus({})
         if koerper.vertices is None:
-            print("Kein Koerpernetz - Abbruch")
+            print('Kein Koerpernetz - Abbruch')
             return 1
-        masse, _ = GarmentcodeDienst.masse("female")
-        bestand = getattr(Kleiderbibliothek.holen(), "catalog", None) or []
-        print("%d Stueck werden vermessen …\n" % len(bestand))
+        masse, _ = GarmentcodeDienst.masse('female')
+        bestand = getattr(Kleiderbibliothek.holen(), 'catalog', None) or []
+        print('%d Stueck werden vermessen …\n' % len(bestand))
 
         begonnen = time.time()
         for eintrag in bestand:
             self._eines(eintrag, koerper, masse)
         self._schreiben()
         print(
-            "\n%d Vorbilder in %d Katalogstuecken, %d abgelehnt, %.0f s"
+            '\n%d Vorbilder in %d Katalogstuecken, %d abgelehnt, %.0f s'
             % (
                 sum(len(v) for v in self.gebuendelt.values()),
                 len(self.gebuendelt),
@@ -69,7 +70,7 @@ class Vorbilderlauf:
             )
         )
         for stueck in sorted(self.gebuendelt):
-            print("  %-18s %3d" % (stueck, len(self.gebuendelt[stueck])))
+            print('  %-18s %3d' % (stueck, len(self.gebuendelt[stueck])))
         return 0
 
     def _eines(self, eintrag, koerper, masse):
@@ -77,10 +78,10 @@ class Vorbilderlauf:
 
         # Der Katalog (`GarmentLibrary.catalog`) fuehrt dicts: id, name,
         # category, has_thumb (`library/bibliothek.py`).
-        kennung = eintrag.get("id")
+        kennung = eintrag.get('id')
         if not kennung:
             return
-        titel = eintrag.get("name") or kennung.split("/")[-1]
+        titel = eintrag.get('name') or kennung.split('/')[-1]
         try:
             deutung, grund = Stueckueberfuehrung.deuten(kennung, koerper, masse)
         except Exception as fehler:  # noqa: BLE001
@@ -89,21 +90,21 @@ class Vorbilderlauf:
         if deutung is None:
             self.abgelehnt.append((kennung, grund))
             return
-        self.gebuendelt.setdefault(deutung["vorlage"], []).append(
+        self.gebuendelt.setdefault(deutung['vorlage'], []).append(
             {
-                "kennung": kennung,
-                "titel": titel,
-                "hinweis": self._hinweis(titel, deutung),
-                "werte": deutung["regler"],
+                'kennung': kennung,
+                'titel': titel,
+                'hinweis': self._hinweis(titel, deutung),
+                'werte': deutung['regler'],
                 # Farbe und Glanz aus der `.mhmat` des Stuecks (Edgar, 09.09.2026:
                 # „soll auch die Farbe, Roughness ... vom Garment Fit
                 # herueberkommen"). Die Farbe in `garment.json` taugt dafuer
                 # nicht - sie steht bei allen 181 Stuecken auf [0.3, 0.35, 0.5].
-                "material": self._material(kennung),
+                'material': self._material(kennung),
                 # Ob es ein Vorschaubild gibt - der Reiter zeigt dasselbe wie die
                 # Asset-Liste (`/api/character/garment/thumb/<id>/`). Die Angabe
                 # steht im Katalog-dict, nicht am Template.
-                "bild": bool(eintrag.get("has_thumb")),
+                'bild': bool(eintrag.get('has_thumb')),
             }
         )
 
@@ -115,11 +116,12 @@ class Vorbilderlauf:
         Pfad (`name`, `id`, `category`, `has_thumb`, ...). Das Template ist
         zu diesem Zeitpunkt ohnehin geladen, die Deutung hat es gebraucht.
         """
-        from core.dienste.kleiderbibliothek import Kleiderbibliothek
         from GarmentCode.vorbildmaterial import Vorbildmaterial
 
+        from core.dienste.kleiderbibliothek import Kleiderbibliothek
+
         vorlage = Kleiderbibliothek.holen().get_template(kennung)
-        return Vorbildmaterial.lesen(getattr(vorlage, "dir", "") or "")
+        return Vorbildmaterial.lesen(getattr(vorlage, 'dir', '') or '')
 
     @staticmethod
     def _hinweis(titel, deutung):
@@ -128,34 +130,34 @@ class Vorbilderlauf:
         Dieselbe Regel wie bei den Passform-Presets: `test_passform.py`
         verlangt in jedem Hinweis eine Zahl.
         """
-        masse = deutung["bericht"]["stueck"]
+        masse = deutung['bericht']['stueck']
         teile = [
             'Nach dem Bibliotheksstück „%s".' % titel,
-            "Gemessen: Netz %.0f–%.0f cm über dem Boden" % (masse["unten_cm"], masse["oben_cm"]),
+            'Gemessen: Netz %.0f–%.0f cm über dem Boden' % (masse['unten_cm'], masse['oben_cm']),
         ]
-        if masse.get("saum_umfang_cm"):
-            teile.append("Saumumfang %.0f cm" % masse["saum_umfang_cm"])
-        if masse.get("armstoff_cm"):
-            teile.append("Ärmelstoff %.0f cm" % masse["armstoff_cm"])
-        teile.append("Übernommen wird die Silhouette, nicht Muster und Rüschen.")
-        return " · ".join(teile[:1] + [", ".join(teile[1:-1])] + teile[-1:])
+        if masse.get('saum_umfang_cm'):
+            teile.append('Saumumfang %.0f cm' % masse['saum_umfang_cm'])
+        if masse.get('armstoff_cm'):
+            teile.append('Ärmelstoff %.0f cm' % masse['armstoff_cm'])
+        teile.append('Übernommen wird die Silhouette, nicht Muster und Rüschen.')
+        return ' · '.join(teile[:1] + [', '.join(teile[1:-1])] + teile[-1:])
 
     def _schreiben(self):
         for liste in self.gebuendelt.values():
-            liste.sort(key=lambda e: e["titel"].lower())
-        with open(self.ziel, "w", encoding="utf-8") as datei:
+            liste.sort(key=lambda e: e['titel'].lower())
+        with open(self.ziel, 'w', encoding='utf-8') as datei:
             json.dump(self.gebuendelt, datei, indent=1, ensure_ascii=False)
-        print("-> %s" % self.ziel)
+        print('-> %s' % self.ziel)
         if not self.abgelehnt:
             return
         gruende = {}
         for _, grund in self.abgelehnt:
-            kurz = (grund or "").split("—")[-1].strip()[:60]
+            kurz = (grund or '').split('—')[-1].strip()[:60]
             gruende[kurz] = gruende.get(kurz, 0) + 1
-        print("\nAbgelehnt (der Schnittkatalog kann sie nicht):")
+        print('\nAbgelehnt (der Schnittkatalog kann sie nicht):')
         for grund, anzahl in sorted(gruende.items(), key=lambda p: -p[1]):
-            print("  %3d x  %s" % (anzahl, grund))
+            print('  %3d x  %s' % (anzahl, grund))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(Vorbilderlauf().laufen())

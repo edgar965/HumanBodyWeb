@@ -52,7 +52,7 @@ class Stoffexport:
         am Ergebnis nicht erkennt. Jetzt bleibt der Pfad leer und der Import
         scheitert sichtbar.
         """
-        wurzel = str(getattr(settings, "HUMANBODY_ROOT", ""))
+        wurzel = str(getattr(settings, 'HUMANBODY_ROOT', ''))
         eltern = os.path.dirname(wurzel)
         for teil in (wurzel, eltern):
             if teil and teil not in sys.path:
@@ -61,7 +61,7 @@ class Stoffexport:
     @staticmethod
     def namensstamm(scene_name):
         """Szenenname -> unbedenklicher Namensstamm (siehe `Stoffexportziel`)."""
-        return Stoffexportziel({"scene_name": scene_name}, "").namensstamm()
+        return Stoffexportziel({'scene_name': scene_name}, '').namensstamm()
 
     @staticmethod
     @csrf_exempt
@@ -71,7 +71,7 @@ class Stoffexport:
         try:
             rumpf = json.loads(request.body)
         except Exception as fehler:
-            return JsonResponse({"ok": False, "error": "bad json: %s" % fehler}, status=400)
+            return JsonResponse({'ok': False, 'error': 'bad json: %s' % fehler}, status=400)
         lauf = Stoffexportlauf(rumpf)
         unbekannt = lauf.motorfehler()
         if unbekannt:
@@ -97,5 +97,5 @@ class Stoffexport:
 
             return export_mp4(szene, lauf.motor, lauf.guete, ziel, resolution=lauf.ziel.aufloesung()), None
         except Exception as fehler:  # noqa: BLE001
-            logger.exception("export_mp4 crashed")
-            return None, JsonResponse({"ok": False, "error": "export crashed: %s" % fehler}, status=500)
+            logger.exception('export_mp4 crashed')
+            return None, JsonResponse({'ok': False, 'error': 'export crashed: %s' % fehler}, status=500)

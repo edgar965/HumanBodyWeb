@@ -17,7 +17,7 @@ Funktionen auf Modulebene standen.
 
 import ast
 
-__all__ = ["Methodenzugriffe"]
+__all__ = ['Methodenzugriffe']
 
 
 class Methodenzugriffe:
@@ -25,18 +25,18 @@ class Methodenzugriffe:
 
     #: Was eine Funktion wirklich traegt.
     ECHT = {
-        "__name__",
-        "__doc__",
-        "__wrapped__",
-        "__func__",
-        "__dict__",
-        "__defaults__",
-        "__module__",
-        "__qualname__",
-        "__self__",
-        "fget",
-        "fset",
-        "fdel",
+        '__name__',
+        '__doc__',
+        '__wrapped__',
+        '__func__',
+        '__dict__',
+        '__defaults__',
+        '__module__',
+        '__qualname__',
+        '__self__',
+        'fget',
+        'fset',
+        'fdel',
     }
 
     @staticmethod
@@ -66,5 +66,5 @@ class Methodenzugriffe:
             klasse = knoten.value.value.id
             methode = knoten.value.attr
             if klasse in methoden and methode in methoden[klasse] and knoten.attr not in cls.ECHT:
-                gefunden.append((knoten.lineno, "%s.%s.%s" % (klasse, methode, knoten.attr)))
+                gefunden.append((knoten.lineno, '%s.%s.%s' % (klasse, methode, knoten.attr)))
         return gefunden

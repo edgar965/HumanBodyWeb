@@ -21,16 +21,16 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
-__all__ = ["Garmentabsatzvorschau"]
+__all__ = ['Garmentabsatzvorschau']
 
 
 class Garmentabsatzvorschau:
     """Der Endpunkt, der die Beugung zu Absatz, Plateau und Sprengung liefert."""
 
     #: Die Regler, die hier zählen, mit ihrer Vorgabe.
-    REGLER = (("heel", 0.0), ("platform", 0.0), ("toe_spring", 0.0))
+    REGLER = (('heel', 0.0), ('platform', 0.0), ('toe_spring', 0.0))
 
     @classmethod
     def rechnen(cls, masse, heel, platform, toe_spring):
@@ -40,7 +40,7 @@ class Garmentabsatzvorschau:
 
         fuss = Fussvorgabe(masse)
         beugung = Fussbeugung.aus_fuss(fuss, heel, platform, toe_spring)
-        return {**beugung.beschreibung(), "hinweise": list(fuss.hinweise)}
+        return {**beugung.beschreibung(), 'hinweise': list(fuss.hinweise)}
 
     @staticmethod
     def _zahl(request, name, vorgabe):
@@ -54,8 +54,9 @@ class Garmentabsatzvorschau:
     @staticmethod
     @require_POST
     def vorschau(request):
-        from .garmentcode import Garmentcode
         from GarmentCode.dienst import GarmentcodeDienst
+
+        from .garmentcode import Garmentcode
 
         werte = [
             Garmentabsatzvorschau._zahl(request, name, vorgabe)
@@ -72,5 +73,5 @@ class Garmentabsatzvorschau:
             )
             return JsonResponse(Garmentabsatzvorschau.rechnen(masse, *werte))
         except Exception as fehler:  # noqa: BLE001
-            logger.exception("Absatzvorschau nicht berechenbar")
-            return JsonResponse({"fehler": "%s: %s" % (type(fehler).__name__, fehler)}, status=500)
+            logger.exception('Absatzvorschau nicht berechenbar')
+            return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)

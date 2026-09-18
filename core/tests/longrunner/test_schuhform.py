@@ -49,12 +49,12 @@ class Schuhmass:
     @staticmethod
     def _obj(pfad):
         v, f = [], []
-        with open(pfad, "r", encoding="utf-8", errors="ignore") as datei:
+        with open(pfad, encoding='utf-8', errors='ignore') as datei:
             for zeile in datei:
-                if zeile.startswith("v "):
+                if zeile.startswith('v '):
                     v.append([float(x) for x in zeile.split()[1:4]])
-                elif zeile.startswith("f "):
-                    f.append([int(x.split("/")[0]) - 1 for x in zeile.split()[1:4]])
+                elif zeile.startswith('f '):
+                    f.append([int(x.split('/')[0]) - 1 for x in zeile.split()[1:4]])
         return np.asarray(v, dtype=np.float64), np.asarray(f, dtype=np.int64)
 
     def ueberstand(self):
@@ -93,7 +93,7 @@ class Schuhmass:
 class SchuhformTest(unittest.TestCase):
     databases = set()
 
-    FORMEN = ("slipper", "ballerina")
+    FORMEN = ('slipper', 'ballerina')
     #: Schuhbreite minus Fussbreite, höchstens (cm) — Schmetterling +6,5.
     UEBERSTAND_CM = 2.5
     #: Einstiegsrand zur Haut, Median und 90 % (mm) — Schmetterling 17,8 / 32,7.
@@ -106,17 +106,17 @@ class SchuhformTest(unittest.TestCase):
         from GarmentCode.dienst import GarmentcodeDienst
 
         if not GarmentcodeDienst.drapierbereit():
-            raise unittest.SkipTest("Simulationsumgebung fehlt")
+            raise unittest.SkipTest('Simulationsumgebung fehlt')
         from GarmentCode.drapierdienst import Garmentdrapierung
 
-        cls.figur = GarmentcodeDienst.figurnetz("female", None, None)
+        cls.figur = GarmentcodeDienst.figurnetz('female', None, None)
         cls.masse = {}
         for form in cls.FORMEN:
-            ergebnis = GarmentcodeDienst.erzeugen(form, "female", name="pruef_" + form)
-            sim = Garmentdrapierung.lauf(GarmentcodeDienst.spezifikation(ergebnis), "female")
-            if sim.get("abgestuerzt") or not os.path.isfile(sim.get("netz") or ""):
-                raise AssertionError("%s: Simulation ohne Netz: %s" % (form, sim))
-            cls.masse[form] = (Schuhmass(sim["netz"], cls.figur), sim)
+            ergebnis = GarmentcodeDienst.erzeugen(form, 'female', name='pruef_' + form)
+            sim = Garmentdrapierung.lauf(GarmentcodeDienst.spezifikation(ergebnis), 'female')
+            if sim.get('abgestuerzt') or not os.path.isfile(sim.get('netz') or ''):
+                raise AssertionError('%s: Simulation ohne Netz: %s' % (form, sim))
+            cls.masse[form] = (Schuhmass(sim['netz'], cls.figur), sim)
 
     def test_der_schuh_ist_nirgends_viel_breiter_als_der_fuss(self):
         """Kein Flügel: in keiner Höhenscheibe über der Sohle steht der
@@ -129,21 +129,21 @@ class SchuhformTest(unittest.TestCase):
             self.assertLessEqual(
                 breitester,
                 self.UEBERSTAND_CM,
-                "%s: %+.1f cm breiter als der Fuss auf %.0f cm Höhe — %s"
-                % (form, breitester, hoehe, " ".join("%.0f:%+.1f" % s for s in scheiben)),
+                '%s: %+.1f cm breiter als der Fuss auf %.0f cm Höhe — %s'
+                % (form, breitester, hoehe, ' '.join('%.0f:%+.1f' % s for s in scheiben)),
             )
 
     def test_der_einstiegsrand_liegt_am_fuss(self):
         for form in self.FORMEN:
             mass, _ = self.masse[form]
             median, neunzig = mass.randabstand_mm()
-            self.assertLessEqual(median, self.RAND_MEDIAN_MM, "%s: Rand median %.1f mm" % (form, median))
-            self.assertLessEqual(neunzig, self.RAND_90_MM, "%s: Rand 90 %% %.1f mm" % (form, neunzig))
+            self.assertLessEqual(median, self.RAND_MEDIAN_MM, '%s: Rand median %.1f mm' % (form, median))
+            self.assertLessEqual(neunzig, self.RAND_90_MM, '%s: Rand 90 %% %.1f mm' % (form, neunzig))
 
     def test_die_simulation_kommt_zur_ruhe(self):
         """Ein Schuh, der am Fuss hält, ist nach wenigen hundert Bildern
         still (gemessen 73 und 114); 2.399 ist die Abbruchgrenze."""
         for form in self.FORMEN:
             _, sim = self.masse[form]
-            self.assertFalse(sim.get("abgestuerzt"), form)
-            self.assertLess(int(sim.get("fin_frame") or 0), 1000, form)
+            self.assertFalse(sim.get('abgestuerzt'), form)
+            self.assertLess(int(sim.get('fin_frame') or 0), 1000, form)

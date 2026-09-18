@@ -16,7 +16,7 @@ keine Beschleunigung, und genau die treibt das Nachschwingen.
 
 import numpy as np
 
-__all__ = ["Knochenwelt"]
+__all__ = ['Knochenwelt']
 
 
 class Knochenwelt:
@@ -38,8 +38,8 @@ class Knochenwelt:
                 return welt[name]
             eintrag = knochen[name]
             drehung = lokal(name)
-            versatz = np.asarray(eintrag["local_position"], dtype=np.float64)
-            elternteil = eintrag.get("parent")
+            versatz = np.asarray(eintrag['local_position'], dtype=np.float64)
+            elternteil = eintrag.get('parent')
             if not elternteil or elternteil not in knochen:
                 if ort is not None:
                     versatz = versatz + np.asarray(ort, dtype=np.float64)

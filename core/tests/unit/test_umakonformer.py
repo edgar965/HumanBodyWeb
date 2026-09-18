@@ -19,7 +19,6 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-
 from django.conf import settings
 
 sys.path.insert(0, str(Path(settings.TOOLS_ROOT)))
@@ -29,6 +28,7 @@ from UMA_Python import (
     Einstellungen,  # noqa: E402
     Kleidungskonformer,
 )
+
 from ._sicher import Sicher
 
 
@@ -59,14 +59,14 @@ class Bindenprobe(unittest.TestCase):
 
     def test_alles_wird_gebunden_und_der_abstand_stimmt(self):
         k = Kleidungskonformer(self.koerper, self.k_tri)
-        b = k.binden("huelle", self.stoff, self.s_tri)
+        b = k.binden('huelle', self.stoff, self.s_tri)
         bilanz = b.bilanz()
 
-        self.assertEqual(bilanz["ungebunden"], 0)
-        self.assertEqual(bilanz["gebunden"], len(self.stoff))
+        self.assertEqual(bilanz['ungebunden'], 0)
+        self.assertEqual(bilanz['gebunden'], len(self.stoff))
         # 10 mm nominal; der Zylinder ist ein Vieleck, deshalb etwas weniger.
-        self.assertGreater(bilanz["abstand_median_mm"], 5.0)
-        self.assertLess(bilanz["abstand_median_mm"], 12.0)
+        self.assertGreater(bilanz['abstand_median_mm'], 5.0)
+        self.assertLess(bilanz['abstand_median_mm'], 12.0)
 
     def test_zu_weit_entferntes_wird_nicht_gebunden(self):
         """UMAs `maxTriangleDistance`: Was weit weg ist, gehört nicht an die
@@ -75,14 +75,14 @@ class Bindenprobe(unittest.TestCase):
         k = Kleidungskonformer(
             self.koerper, self.k_tri, Einstellungen(hoechstabstand_m=0.05, suchradius_m=0.05)
         )
-        b = k.binden("weit", weit, weit_tri)
-        self.assertEqual(b.bilanz()["gebunden"], 0)
+        b = k.binden('weit', weit, weit_tri)
+        self.assertEqual(b.bilanz()['gebunden'], 0)
 
     def test_ruhe_ist_exakt_null_mit_tangentialem_anteil(self):
         k = Kleidungskonformer(
             self.koerper, self.k_tri, Einstellungen(tangential_halten=True, glaetten=False)
         )
-        b = k.binden("huelle", self.stoff, self.s_tri)
+        b = k.binden('huelle', self.stoff, self.s_tri)
         ruhe = k.anwenden(b)
         self.assertLess(np.abs(ruhe - self.stoff).max(), 1e-12)
 
@@ -90,7 +90,7 @@ class Bindenprobe(unittest.TestCase):
         k = Kleidungskonformer(
             self.koerper, self.k_tri, Einstellungen(tangential_halten=True, glaetten=False)
         )
-        b = k.binden("huelle", self.stoff, self.s_tri)
+        b = k.binden('huelle', self.stoff, self.s_tri)
 
         weiter = self.koerper.copy()
         weiter[:, [0, 2]] *= 1.2
@@ -107,7 +107,7 @@ class Bindenprobe(unittest.TestCase):
         """UMAs `additionalNormalOffset` — enger oder weiter ohne neue
         Simulation."""
         k = Kleidungskonformer(self.koerper, self.k_tri, Einstellungen(glaetten=False))
-        b = k.binden("huelle", self.stoff, self.s_tri)
+        b = k.binden('huelle', self.stoff, self.s_tri)
         eng = k.anwenden(b)
 
         k.einstellungen.zusatzabstand_m = 0.02
@@ -132,11 +132,11 @@ class SchutzGegenFalscheBindung(unittest.TestCase):
         Metern, Stoff in Zentimetern. Damals lief die Rechnung durch und
         lieferte Zahlen — die Glättung verformte auch ungebundene Punkte."""
         k = Kleidungskonformer(self.koerper, self.k_tri)
-        b = k.binden("falsch", self.stoff * 100.0, self.s_tri)
+        b = k.binden('falsch', self.stoff * 100.0, self.s_tri)
 
         taugt, grund = b.taugt()
         self.assertFalse(taugt)
-        self.assertIn("Einheit", grund)
+        self.assertIn('Einheit', grund)
         with self.assertRaises(ValueError):
             k.anwenden(b)
 
@@ -144,7 +144,7 @@ class SchutzGegenFalscheBindung(unittest.TestCase):
         """Der Fingerabdruck — UMAs `baseTopologyHash`, und dieselbe Lehre
         wie in `~/.claude/rules/artefakte-benennen.md`."""
         k1 = Kleidungskonformer(self.koerper, self.k_tri)
-        b = k1.binden("huelle", self.stoff, self.s_tri)
+        b = k1.binden('huelle', self.stoff, self.s_tri)
 
         anderer, anderer_tri = zylinder(0.20, ringe=20)
         k2 = Kleidungskonformer(anderer, anderer_tri)
@@ -154,15 +154,15 @@ class SchutzGegenFalscheBindung(unittest.TestCase):
     def test_fingerabdruck_ist_zwischen_laeufen_gleich(self):
         """Pythons `hash()` auf Zeichenketten ist es NICHT (PYTHONHASHSEED);
         eine gespeicherte Bindung muss ihre Prüfung überleben."""
-        einmal = Bindung.fingerabdruck(len(self.stoff), self.s_tri, "huelle")
-        nochmal = Bindung.fingerabdruck(len(self.stoff), self.s_tri, "huelle")
-        anders = Bindung.fingerabdruck(len(self.stoff), self.s_tri, "hose")
+        einmal = Bindung.fingerabdruck(len(self.stoff), self.s_tri, 'huelle')
+        nochmal = Bindung.fingerabdruck(len(self.stoff), self.s_tri, 'huelle')
+        anders = Bindung.fingerabdruck(len(self.stoff), self.s_tri, 'hose')
         self.assertEqual(einmal, nochmal)
         self.assertNotEqual(einmal, anders)
 
     def test_koerper_mit_anderer_punktzahl_wird_abgewiesen(self):
         k = Kleidungskonformer(self.koerper, self.k_tri)
-        b = k.binden("huelle", self.stoff, self.s_tri)
+        b = k.binden('huelle', self.stoff, self.s_tri)
         with self.assertRaises(ValueError):
             k.anwenden(b, self.koerper[:-5])
 
@@ -178,7 +178,7 @@ class KollisionUndNaehte(unittest.TestCase):
         koerper, k_tri = zylinder(0.20)
         stoff, s_tri = zylinder(0.21, ringe=18, stufen=12)
         k = Kleidungskonformer(koerper, k_tri, Einstellungen(glaetten=False, schub_m=0.002))
-        b = k.binden("huelle", stoff, s_tri)
+        b = k.binden('huelle', stoff, s_tri)
 
         # Den Körper so weiten, dass er durch den Stoff tritt.
         dicker = koerper.copy()
@@ -209,7 +209,7 @@ class KollisionUndNaehte(unittest.TestCase):
             k_tri,
             Einstellungen(glaetten=False, tangential_halten=False, naehte_halten=naehte_halten),
         )
-        b = k.binden("huelle", stoff, s_tri)
+        b = k.binden('huelle', stoff, s_tri)
         nachbar_dreieck = int(np.flatnonzero((k_tri == k_tri[b.dreieck[0]][0]).any(axis=1))[-1])
         b.dreieck[-1] = nachbar_dreieck
         b.bary[-1] = [1 / 3, 1 / 3, 1 / 3]
@@ -226,7 +226,7 @@ class KollisionUndNaehte(unittest.TestCase):
         stoff, s_tri = zylinder(0.21, ringe=18, stufen=12)
         stoff = np.vstack([stoff, stoff[0:1] + 1e-6])
         gruppen = Sicher.wert(
-            Kleidungskonformer(koerper, k_tri).binden("huelle", stoff, s_tri).nahtgruppen, "Nahtgruppen"
+            Kleidungskonformer(koerper, k_tri).binden('huelle', stoff, s_tri).nahtgruppen, 'Nahtgruppen'
         )
         self.assertEqual(gruppen[0], gruppen[-1])
         self.assertGreaterEqual(gruppen[0], 0)
@@ -237,4 +237,4 @@ class KollisionUndNaehte(unittest.TestCase):
         """Die Gegenprobe. Ohne sie prüfte der Test darüber nichts: Zwei
         Punkte 1 µm auseinander landen fast immer ohnehin zusammen."""
         offen = self._nahtfall(naehte_halten=False)
-        self.assertGreater(offen, 1e-3, "Die Naht müsste ohne Gruppen sichtbar aufgehen")
+        self.assertGreater(offen, 1e-3, 'Die Naht müsste ohne Gruppen sichtbar aufgehen')

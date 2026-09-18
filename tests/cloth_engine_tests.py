@@ -9,23 +9,23 @@ eine Klasse mit ueber 300 — Befund `dateigroesse`. Gemeinsame Importe und
 Fixtures stehen in `_cloth_basis.py`.
 """
 
-from .base import TestCategory
+import inspect
+
+import numpy as np
 
 # `Clothbasis.pfad_sichern()` haengt `HumanBody/` an `sys.path` — ohne den Aufruf unten
 # ist `collision.*` in den Testmethoden nicht importierbar. Vorher stand hier
 # ein `import *` samt Namensliste, von der drei Namen nirgends vorkamen
 # (17.08.2026, `tote-importe`).
 from ._cloth_basis import Clothbasis
-import inspect
-
-import numpy as np
+from .base import TestCategory
 
 Clothbasis.pfad_sichern()
 
 
 class ClothEngineTests(TestCategory):
-    name = "Cloth Export: Engines und Backe-Ergebnis"
-    description = "Y-up/Z-up-Kamera, Nutzlast durch alle drei Engines, Geometrie der Backe"
+    name = 'Cloth Export: Engines und Backe-Ergebnis'
+    description = 'Y-up/Z-up-Kamera, Nutzlast durch alle drei Engines, Geometrie der Backe'
 
     @staticmethod
     def _kamera_bei_0_1_4():
@@ -53,7 +53,7 @@ class ClothEngineTests(TestCategory):
         R, M = ClothEngineTests._kamera_bei_0_1_4()
         pos = (R @ M)[:3, 3]
         ok = bool(abs(pos[0]) < 1e-5 and abs(pos[1] - (-4.0)) < 1e-5 and abs(pos[2] - 1.0) < 1e-5)
-        return ok, f"pos={tuple(round(float(x), 3) for x in pos)}"
+        return ok, f'pos={tuple(round(float(x), 3) for x in pos)}'
 
     @staticmethod
     def test_blender_export_yup_to_zup_camera_forward_aims_at_body():
@@ -63,7 +63,7 @@ class ClothEngineTests(TestCategory):
         R, M = ClothEngineTests._kamera_bei_0_1_4()
         Mz = R @ M
         fwd = -Mz[:3, 2]
-        return bool(fwd[1] > 0.5), f"fwd={tuple(round(float(x), 3) for x in fwd)}"
+        return bool(fwd[1] > 0.5), f'fwd={tuple(round(float(x), 3) for x in fwd)}'
 
     @staticmethod
     def test_blender_export_setup_cloth_has_armature_modifier():
@@ -74,7 +74,7 @@ class ClothEngineTests(TestCategory):
 
         src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         has_arm_new = "modifiers.new('Armature', 'ARMATURE')" in src
-        return has_arm_new, f"armature modifier {'OK' if has_arm_new else 'FEHLT'}"
+        return has_arm_new, f'armature modifier {"OK" if has_arm_new else "FEHLT"}'
 
     @staticmethod
     def test_blender_export_setup_cloth_armature_before_cloth():
@@ -86,7 +86,7 @@ class ClothEngineTests(TestCategory):
         arm_pos = src.find("'Armature', 'ARMATURE'")
         cloth_pos = src.find("'Cloth', 'CLOTH'")
         ok = arm_pos >= 0 and cloth_pos >= 0 and arm_pos < cloth_pos
-        return ok, f"arm@{arm_pos} cloth@{cloth_pos}"
+        return ok, f'arm@{arm_pos} cloth@{cloth_pos}'
 
     @staticmethod
     def test_blender_export_setup_cloth_bone_vgroup_uses_bone_name():
@@ -98,10 +98,10 @@ class ClothEngineTests(TestCategory):
 
         src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         uses_bone_name = (
-            "obj.vertex_groups.new(name=bone_name)" in src
+            'obj.vertex_groups.new(name=bone_name)' in src
             or "vertex_groups.new(name=str(seg['bone_name']))" in src
         )
-        return (uses_bone_name, "OK" if uses_bone_name else "VG-Name nicht an bone_name gekoppelt")
+        return (uses_bone_name, 'OK' if uses_bone_name else 'VG-Name nicht an bone_name gekoppelt')
 
     @staticmethod
     def test_blender_export_setup_cloth_bone_vg_covers_all_verts():
@@ -113,8 +113,8 @@ class ClothEngineTests(TestCategory):
 
         src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         # Akzeptiere zwei Formen: list(range(n_verts)) oder all_verts Iteration
-        uses_all = "list(range(n_verts))" in src or "range(len(obj.data.vertices))" in src
-        return (uses_all, "OK" if uses_all else "Bone-VG nur auf Pins (Rest-Verts bleiben in T-Pose)")
+        uses_all = 'list(range(n_verts))' in src or 'range(len(obj.data.vertices))' in src
+        return (uses_all, 'OK' if uses_all else 'Bone-VG nur auf Pins (Rest-Verts bleiben in T-Pose)')
 
     @staticmethod
     def test_blender_eevee_uses_payload_camera():
@@ -128,10 +128,10 @@ class ClothEngineTests(TestCategory):
 
         src = inspect.getsource(bs.main) + inspect.getsource(bs.Blenderszene)
         return (
-            "setup_camera_from_payload" in src,
-            "setup_camera_from_payload aufgerufen"
-            if "setup_camera_from_payload" in src
-            else "FEHLT in main()",
+            'setup_camera_from_payload' in src,
+            'setup_camera_from_payload aufgerufen'
+            if 'setup_camera_from_payload' in src
+            else 'FEHLT in main()',
         )
 
     @staticmethod
@@ -145,14 +145,14 @@ class ClothEngineTests(TestCategory):
         # aus den Payload-Matrizen. Auto-Fit setup_camera_light() darf nicht der
         # einzige Kamerapfad sein — entweder ist es durch setup_camera_from_payload()
         # ersetzt oder durch explizite Keyframe-Insertion aus camera_matrices.
-        has_payload_loop = ("for f in range" in src or "for frame in range" in src) and (
-            "camera_matrices" in src and "matrix_world" in src
+        has_payload_loop = ('for f in range' in src or 'for frame in range' in src) and (
+            'camera_matrices' in src and 'matrix_world' in src
         )
-        has_setup_from_payload = "setup_camera_from_payload" in src
+        has_setup_from_payload = 'setup_camera_from_payload' in src
         uses_payload = has_payload_loop or has_setup_from_payload
         return (
             uses_payload,
-            "OK" if uses_payload else "Auto-Fit _fit_camera dominiert, Payload-camera_matrices ungenutzt",
+            'OK' if uses_payload else 'Auto-Fit _fit_camera dominiert, Payload-camera_matrices ungenutzt',
         )
 
     @staticmethod
@@ -161,8 +161,8 @@ class ClothEngineTests(TestCategory):
         import collision.warp_render as wr
 
         src = inspect.getsource(wr)
-        uses_payload = "camera_matrices" in src or "setup_camera_from_payload" in src
+        uses_payload = 'camera_matrices' in src or 'setup_camera_from_payload' in src
         return (
             uses_payload,
-            "OK" if uses_payload else "HARDCODED _fit_camera — Payload-Kamera wird ignoriert",
+            'OK' if uses_payload else 'HARDCODED _fit_camera — Payload-Kamera wird ignoriert',
         )

@@ -27,15 +27,15 @@ class DieKarten(SimpleTestCase):
         self.assertEqual(set(karten), {Pipelinekarten.karte(p) for p in PIPELINES_3D})
 
     def test_rang_eins_steht_vorn(self):
-        erste = next(e for e in Pipelinevergleich.mit_rang() if e["rang"] == 1)
-        self.assertEqual(Pipelinekarten.reihenfolge()[0], Pipelinekarten.karte(erste["schluessel"]))
+        erste = next(e for e in Pipelinevergleich.mit_rang() if e['rang'] == 1)
+        self.assertEqual(Pipelinekarten.reihenfolge()[0], Pipelinekarten.karte(erste['schluessel']))
 
     def test_mit_rang_aufsteigend_und_ohne_rang_am_ende(self):
         raenge = [Pipelinekarten.rang(k) for k in Pipelinekarten.reihenfolge()]
         mit = [r for r in raenge if r is not None]
         self.assertEqual(mit, sorted(mit))
         self.assertEqual(raenge[len(mit) :], [None] * (len(raenge) - len(mit)))
-        self.assertTrue(mit, "keine Karte mit Rang")
+        self.assertTrue(mit, 'keine Karte mit Rang')
 
     def test_die_hybrid_karte_steht_bei_ihrer_besten_pipeline(self):
         """Drei Pipelines auf einer Karte (hybrid_gem, hybrid_gvhmr,
@@ -43,12 +43,12 @@ class DieKarten(SimpleTestCase):
         und steht nicht bei den ranglosen am Ende."""
         folge = Pipelinekarten.reihenfolge()
         raenge = [
-            e["rang"]
+            e['rang']
             for e in Pipelinevergleich.mit_rang()
-            if Pipelinekarten.karte(e["schluessel"]) == "hybrid"
+            if Pipelinekarten.karte(e['schluessel']) == 'hybrid'
         ]
-        self.assertEqual(Pipelinekarten.rang("hybrid"), min(raenge))
-        self.assertLess(folge.index("hybrid"), len(folge) - 1)
+        self.assertEqual(Pipelinekarten.rang('hybrid'), min(raenge))
+        self.assertLess(folge.index('hybrid'), len(folge) - 1)
 
     def test_jede_karte_hat_eine_vorlage(self):
         for vorlage in Pipelinekarten.vorlagen():
@@ -57,13 +57,13 @@ class DieKarten(SimpleTestCase):
 
     def test_eintraege_tragen_karte_vorlage_und_rang_in_kartenfolge(self):
         eintraege = Pipelinekarten.eintraege()
-        self.assertEqual([e["karte"] for e in eintraege], Pipelinekarten.reihenfolge())
+        self.assertEqual([e['karte'] for e in eintraege], Pipelinekarten.reihenfolge())
         for e in eintraege:
-            with self.subTest(karte=e["karte"]):
-                self.assertEqual(e["vorlage"], Pipelinekarten.VORLAGE % e["karte"])
-                self.assertEqual(e["rang"], Pipelinekarten.rang(e["karte"]))
+            with self.subTest(karte=e['karte']):
+                self.assertEqual(e['vorlage'], Pipelinekarten.VORLAGE % e['karte'])
+                self.assertEqual(e['rang'], Pipelinekarten.rang(e['karte']))
 
     def test_rang_von_ist_der_hoechste_rang_des_vergleichs(self):
-        raenge = [e["rang"] for e in Pipelinevergleich.mit_rang()]
+        raenge = [e['rang'] for e in Pipelinevergleich.mit_rang()]
         self.assertEqual(Pipelinekarten.rang_von(), len(raenge))
         self.assertEqual(Pipelinekarten.rang_von(), max(raenge))

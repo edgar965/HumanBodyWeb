@@ -21,28 +21,28 @@ verschwindet.
 from unittest import mock
 
 from django.test import SimpleTestCase
-
-from core.dienste.retargetdaten import Retargetdaten
-from humanbody_core.skeleton.retarget import fassung
 from humanbody_core.skeleton.formats import richtungsausnahmen
+from humanbody_core.skeleton.formats.aist_smpl import SkeletonAIST_SMPL
+from humanbody_core.skeleton.formats.bandai import SkeletonBandai
 from humanbody_core.skeleton.formats.cmu import SkeletonCMU
 from humanbody_core.skeleton.formats.mixamo import SkeletonMixamo
-from humanbody_core.skeleton.formats.bandai import SkeletonBandai
-from humanbody_core.skeleton.formats.aist_smpl import SkeletonAIST_SMPL
+from humanbody_core.skeleton.retarget import fassung
 
-BVH = r"A:/3DTools/3DObjects/animations/bvh/Walk/01_01.bvh"
+from core.dienste.retargetdaten import Retargetdaten
+
+BVH = r'A:/3DTools/3DObjects/animations/bvh/Walk/01_01.bvh'
 
 
 class RetargetfassungTest(SimpleTestCase):
     databases = set()
 
     def _ablage(self, fassungsnummer):
-        with mock.patch.object(fassung, "REGELFASSUNG", fassungsnummer):
+        with mock.patch.object(fassung, 'REGELFASSUNG', fassungsnummer):
             # `ablage` liest die Konstante ueber den Modulnamen im
             # Dienst — deshalb dort ebenfalls setzen.
             import core.dienste.retargetdaten as dienst
 
-            with mock.patch.object(dienst, "REGELFASSUNG", fassungsnummer):
+            with mock.patch.object(dienst, 'REGELFASSUNG', fassungsnummer):
                 return Retargetdaten(BVH).ablage
 
     def test_verschiedene_fassungen_verschiedene_dateien(self):
@@ -55,7 +55,7 @@ class RetargetfassungTest(SimpleTestCase):
 
     def test_die_fassung_steht_im_namen(self):
         """Gegenprobe: verschwindet sie, faellt dieser Fall."""
-        self.assertIn("_retarget_", self._ablage(3))
+        self.assertIn('_retarget_', self._ablage(3))
         # Der Name ist ein Hash — geprueft wird, dass die Fassung
         # eingeht, nicht wie sie geschrieben steht.
         self.assertNotEqual(self._ablage(3), self._ablage(4))
@@ -82,6 +82,6 @@ class RetargetfassungTest(SimpleTestCase):
 
     def test_die_ausnahmeliste_fuehrt_hals_und_kopf(self):
         """Was drinsteht, ist der Grund, warum AIST unauffaellig ist."""
-        for name in ("DEF-spine.004", "DEF-spine.006", "DEF-foot.L", "DEF-foot.R"):
+        for name in ('DEF-spine.004', 'DEF-spine.006', 'DEF-foot.L', 'DEF-foot.R'):
             self.assertIn(name, richtungsausnahmen.FUESSE_UND_KOPF)
         self.assertEqual(len(richtungsausnahmen.FUESSE_UND_KOPF), 6)

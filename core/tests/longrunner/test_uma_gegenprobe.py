@@ -36,9 +36,9 @@ sys.path.insert(0, str(Path(settings.ASSETS_ROOT)))
 
 import numpy as np  # noqa: E402
 
-RASSE = "Human Male 3.0"
+RASSE = 'Human Male 3.0'
 #: Drei Stücke aus drei verschiedenen Plätzen — Oberkörper, Beine, Füße.
-KLEIDUNG = ["male_hoodie_blue_Recipe", "male_shorts_black_cotton_Recipe", "M_ChallengerBoots_Recipe"]
+KLEIDUNG = ['male_hoodie_blue_Recipe', 'male_shorts_black_cotton_Recipe', 'M_ChallengerBoots_Recipe']
 
 
 class Unityreferenz:
@@ -46,18 +46,18 @@ class Unityreferenz:
 
     @staticmethod
     def katalog():
-        return Path(settings.FIGUREN_KATALOG) / "uma"
+        return Path(settings.FIGUREN_KATALOG) / 'uma'
 
     @staticmethod
     def referenz(name, kleidung=None):
         """Die Unity-GLB — oder eine Anleitung, wie sie entsteht."""
-        datei = Unityreferenz.katalog() / ("%s.glb" % name)
+        datei = Unityreferenz.katalog() / ('%s.glb' % name)
         if datei.is_file():
             return datei
-        stuecke = '","'.join(kleidung) if kleidung else "-"
+        stuecke = '","'.join(kleidung) if kleidung else '-'
         raise unittest.SkipTest(
-            "Referenz %s fehlt. Erzeugen mit:\n"
-            "  curl -X POST http://127.0.0.1:8081/api/character/uma-figur/bauen/ "
+            'Referenz %s fehlt. Erzeugen mit:\n'
+            '  curl -X POST http://127.0.0.1:8081/api/character/uma-figur/bauen/ '
             '-H "Content-Type: application/json" -d \'{"rasse":"%s",'
             '"name":"%s","zeiger":0,"kleidung":["%s"]}\'' % (datei, RASSE, name, stuecke)
         )
@@ -78,7 +78,7 @@ class NetzGegenUnity(unittest.TestCase):
     def setUpClass(cls):
         from UMA_Python.gegenprobe import Unityglb
 
-        cls.unity = Unityglb(Unityreferenz.referenz("Gegenprobe_nackt"))
+        cls.unity = Unityglb(Unityreferenz.referenz('Gegenprobe_nackt'))
         cls.gebaut = Unityreferenz.bauen()
 
     def test_punktzahl_ist_dieselbe(self):
@@ -113,7 +113,7 @@ class NetzGegenUnity(unittest.TestCase):
 
         eigen = self.gebaut.punkte()
         fremd = self.unity.punkte
-        for a, b, richtung in ((eigen, fremd, "Python->Unity"), (fremd, eigen, "Unity->Python")):
+        for a, b, richtung in ((eigen, fremd, 'Python->Unity'), (fremd, eigen, 'Unity->Python')):
             abstand = Unityglb.abstaende(a, b)
             self.assertLess(float(np.median(abstand)), 1.0, richtung)
             self.assertLess(float(abstand.max()), 15.0, richtung)
@@ -128,13 +128,13 @@ class SkelettGegenUnity(unittest.TestCase):
     def setUpClass(cls):
         from UMA_Python.gegenprobe import Unityglb
 
-        cls.unity = Unityglb(Unityreferenz.referenz("Gegenprobe_nackt"))
+        cls.unity = Unityglb(Unityreferenz.referenz('Gegenprobe_nackt'))
         cls.gebaut = Unityreferenz.bauen()
         cls.fremd = cls.unity.bindeposen()
 
     def test_jeder_knochen_heisst_gleich(self):
         eigen = {k.name for k in self.gebaut.netz.knochen}
-        self.assertEqual(eigen, set(self.fremd), "Knochennamen müssen deckungsgleich sein")
+        self.assertEqual(eigen, set(self.fremd), 'Knochennamen müssen deckungsgleich sein')
 
     def test_die_knochenlaengen_sind_gleich(self):
         """Die achsenunabhängige Probe — und die scharfe.
@@ -166,14 +166,14 @@ class SkelettGegenUnity(unittest.TestCase):
                     - float(np.linalg.norm(fremd[kind] - fremd[eltern]))
                 )
             )
-        self.assertGreater(len(abweichung), 200, "zu wenige Paare geprüft")
-        self.assertLess(max(abweichung) * 1000, 0.5, "Knochenlängen weichen ab")
+        self.assertGreater(len(abweichung), 200, 'zu wenige Paare geprüft')
+        self.assertLess(max(abweichung) * 1000, 0.5, 'Knochenlängen weichen ab')
 
     def test_die_wurzel_ist_dieselbe(self):
         skelett = self.gebaut.skelett()
         wurzeln = [k.name for i, k in enumerate(skelett.knochen) if int(skelett.eltern[i]) < 0]
-        self.assertEqual(wurzeln, ["Global"])
-        self.assertIn("Global", self.fremd)
+        self.assertEqual(wurzeln, ['Global'])
+        self.assertIn('Global', self.fremd)
 
     def _weltlagen(self):
         posen = self.gebaut.netz.bindeposen

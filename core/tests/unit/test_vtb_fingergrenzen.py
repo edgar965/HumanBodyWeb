@@ -27,9 +27,8 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-from scipy.spatial.transform import Rotation  # noqa: E402
-
 from fingergrenzen import Fingergrenzen  # noqa: E402
+from scipy.spatial.transform import Rotation  # noqa: E402
 from SMPL.finger import Smplxfinger  # noqa: E402
 
 
@@ -41,14 +40,14 @@ def _wxyz(rot):
 def _im_rahmen(wxyz, B):
     """(Beugung, Spreizung, Verdrehung) einer Drehung im Gelenkrahmen."""
     rot = Rotation.from_quat([wxyz[1], wxyz[2], wxyz[3], wxyz[0]])
-    f, t, n = Rotation.from_matrix(B.T @ rot.as_matrix() @ B).as_euler("ZYX", degrees=True)
+    f, t, n = Rotation.from_matrix(B.T @ rot.as_matrix() @ B).as_euler('ZYX', degrees=True)
     return f, n, t
 
 
 class DerGelenkrahmen(unittest.TestCase):
     def test_beugung_fuehrt_zur_handflaeche(self):
         """+60 Grad um f bringt den Knochen nach -y — links, rechts, schraeger Kleinfinger."""
-        for name in ("left_index1", "left_pinky1", "right_index1", "right_pinky1", "right_ring2"):
+        for name in ('left_index1', 'left_pinky1', 'right_index1', 'right_pinky1', 'right_ring2'):
             with self.subTest(gelenk=name):
                 B = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index(name), np)
                 _n, t, f = B.T
@@ -58,8 +57,8 @@ class DerGelenkrahmen(unittest.TestCase):
                 self.assertGreater(np.dot(gedreht, t), 0.45)
 
     def test_endglied_nimmt_die_richtung_des_mittelglieds(self):
-        B2 = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index("left_middle2"), np)
-        B3 = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index("left_middle3"), np)
+        B2 = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index('left_middle2'), np)
+        B3 = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index('left_middle3'), np)
         np.testing.assert_allclose(B2, B3)
 
 
@@ -68,7 +67,7 @@ class DieFingergrenzen(unittest.TestCase):
         return np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (2, len(Smplxfinger.NAMEN), 1))
 
     def test_grundgelenk_120_grad_wird_90_und_spreizt_gebeugt_nicht(self):
-        gelenk = Smplxfinger.NAMEN.index("left_pinky1")
+        gelenk = Smplxfinger.NAMEN.index('left_pinky1')
         B = Fingergrenzen.rahmen(gelenk, np)
         n, _t, f = B.T
         feld = self._feld()
@@ -85,7 +84,7 @@ class DieFingergrenzen(unittest.TestCase):
         self.assertAlmostEqual(spreizung, 20.0, places=3)
 
     def test_mittelgelenk_ist_ein_scharnier(self):
-        gelenk = Smplxfinger.NAMEN.index("right_middle2")
+        gelenk = Smplxfinger.NAMEN.index('right_middle2')
         B = Fingergrenzen.rahmen(gelenk, np)
         n, _t, f = B.T
         feld = self._feld()
@@ -98,7 +97,7 @@ class DieFingergrenzen(unittest.TestCase):
         self.assertAlmostEqual(beugung, 60.0, places=3)
 
     def test_daumen_wird_nur_im_gesamtwinkel_gekappt(self):
-        gelenk = Smplxfinger.NAMEN.index("left_thumb1")
+        gelenk = Smplxfinger.NAMEN.index('left_thumb1')
         achse = np.array([0.3, 0.9, 0.3]) / np.linalg.norm([0.3, 0.9, 0.3])
         feld = self._feld()
         feld[0, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(130) * achse))
@@ -131,25 +130,25 @@ class DasWerkzeug(unittest.TestCase):
         eltern = Smplxbvh.eltern(np)
         anzahl = 3
         rot = np.zeros((anzahl, len(namen), 3))
-        gelenk = namen.index("left_index1")
-        B = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index("left_index1"), np)
+        gelenk = namen.index('left_index1')
+        B = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index('left_index1'), np)
         f = B[:, 2]
         # Bild 1: 120 Grad Beugung als Euler — der Ausreisser. BVH-Kanaele
         # Z Y X wirken nacheinander (R = Rz Ry Rx), bei scipy „ZYX" intrinsisch.
-        rot[1, gelenk] = Rotation.from_rotvec(np.radians(120) * f).as_euler("ZYX", degrees=True)
+        rot[1, gelenk] = Rotation.from_rotvec(np.radians(120) * f).as_euler('ZYX', degrees=True)
         rot[:, 1] = [10.0, 0.0, 0.0]  # Left_hip: Koerper, bleibt
         pos = np.tile(offsets, (anzahl, 1, 1))
         pos[:, 0] = [[5.0, 90.0, -3.0]] * anzahl  # Wurzelbahn, bleibt
         bvh_util.save(
             pfad,
             {
-                "rotations": rot,
-                "positions": pos,
-                "offsets": offsets,
-                "parents": eltern,
-                "names": namen,
-                "order": "zyx",
-                "frametime": 1.0 / 30.0,
+                'rotations': rot,
+                'positions': pos,
+                'offsets': offsets,
+                'parents': eltern,
+                'names': namen,
+                'order': 'zyx',
+                'frametime': 1.0 / 30.0,
             },
         )
         return bvh_util
@@ -159,17 +158,17 @@ class DasWerkzeug(unittest.TestCase):
 
         ordner = tempfile.mkdtemp(dir=os.path.dirname(os.path.abspath(__file__)))
         try:
-            quelle = os.path.join(ordner, "probe.bvh")
+            quelle = os.path.join(ordner, 'probe.bvh')
             bvh_util = self._bvh_schreiben(quelle)
             vorher = bvh_util.load(quelle)
             self.assertEqual(FingergrenzenBvh(quelle).anwenden(), 1)
             nachher = bvh_util.load(quelle)
-            np.testing.assert_allclose(nachher["positions"][:, 0], vorher["positions"][:, 0], atol=1e-5)
-            np.testing.assert_allclose(nachher["rotations"][:, 1], vorher["rotations"][:, 1], atol=1e-5)
-            np.testing.assert_allclose(nachher["offsets"], vorher["offsets"], atol=1e-5)
-            gelenk = vorher["names"].index("left_index1")
-            neu = Rotation.from_euler("ZYX", nachher["rotations"][1, gelenk], degrees=True)
-            B = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index("left_index1"), np)
+            np.testing.assert_allclose(nachher['positions'][:, 0], vorher['positions'][:, 0], atol=1e-5)
+            np.testing.assert_allclose(nachher['rotations'][:, 1], vorher['rotations'][:, 1], atol=1e-5)
+            np.testing.assert_allclose(nachher['offsets'], vorher['offsets'], atol=1e-5)
+            gelenk = vorher['names'].index('left_index1')
+            neu = Rotation.from_euler('ZYX', nachher['rotations'][1, gelenk], degrees=True)
+            B = Fingergrenzen.rahmen(Smplxfinger.NAMEN.index('left_index1'), np)
             beugung, _, _ = _im_rahmen(_wxyz(neu), B)
             self.assertAlmostEqual(beugung, 90.0, places=3)
         finally:

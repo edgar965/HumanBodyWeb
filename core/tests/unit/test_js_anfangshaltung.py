@@ -19,10 +19,10 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._skelettattrappen import FERTIG, SKELETT
 
-MODUL = Jsmodul("anfangshaltung.js")
+MODUL = Jsmodul('anfangshaltung.js')
 
 #: Was ein Skript ausgibt, wenn jeder Vergleich darin gehalten hat.
-GESCHAFFT = {"fertig": True}
+GESCHAFFT = {'fertig': True}
 
 
 class DieHaltungAusBildNull(SimpleTestCase):

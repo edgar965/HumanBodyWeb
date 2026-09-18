@@ -25,8 +25,8 @@ GET/HEAD/OPTIONS. Geprueft, dass keine der dreizehn Vorlagen ein
 """
 
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from django.views.generic import TemplateView
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.generic import TemplateView
 
 
 class Vorlagenseite(TemplateView):
@@ -54,31 +54,31 @@ class Vorlagenseite(TemplateView):
 
 
 # --- Charakter und Szene ----------------------------------------------------
-character_viewer = Vorlagenseite.ansicht("character_viewer.html", "character_viewer")
+character_viewer = Vorlagenseite.ansicht('character_viewer.html', 'character_viewer')
 # Die Szene-Seite setzt das CSRF-Cookie: Ihre Endpunkte (GarmentCode) sind
 # echte POSTs, und `Serverabruf._csrfKopf()` schickt den Kopf nur, wenn ein
 # Token im Cookie steht. Ohne das kam auf `/api/garmentcode/*` ein 403 —
 # gemessen 06.09.2026: die Seite lieferte ueberhaupt kein Cookie aus.
 # Nur diese eine Seite, nicht `Vorlagenseite` insgesamt: die uebrigen zwoelf
 # Seiten arbeiten mit `csrf_exempt`-Endpunkten und brauchen es nicht.
-scene_config = ensure_csrf_cookie(Vorlagenseite.ansicht("scene_config.html", "scene_config"))
-scene_model = Vorlagenseite.ansicht("scene_model.html", "scene_model")
+scene_config = ensure_csrf_cookie(Vorlagenseite.ansicht('scene_config.html', 'scene_config'))
+scene_model = Vorlagenseite.ansicht('scene_model.html', 'scene_model')
 
 # --- Theatre ----------------------------------------------------------------
-theatre_page = Vorlagenseite.ansicht("theatre.html", "theatre_page")
-theatre_studio_page = Vorlagenseite.ansicht("theatre_studio.html", "theatre_studio_page")
-theatre_help_page = Vorlagenseite.ansicht("theatre_help.html", "theatre_help_page")
+theatre_page = Vorlagenseite.ansicht('theatre.html', 'theatre_page')
+theatre_studio_page = Vorlagenseite.ansicht('theatre_studio.html', 'theatre_studio_page')
+theatre_help_page = Vorlagenseite.ansicht('theatre_help.html', 'theatre_help_page')
 
 # --- BVH ---------------------------------------------------------------------
-bvh_studio_page = Vorlagenseite.ansicht("bvh_studio.html", "bvh_studio_page")
-animations_page = Vorlagenseite.ansicht("animations.html", "animations_page")
-test_animation_page = Vorlagenseite.ansicht("skeleton_test.html", "test_animation_page")
+bvh_studio_page = Vorlagenseite.ansicht('bvh_studio.html', 'bvh_studio_page')
+animations_page = Vorlagenseite.ansicht('animations.html', 'animations_page')
+test_animation_page = Vorlagenseite.ansicht('skeleton_test.html', 'test_animation_page')
 
 # --- Hilfe und Tests ---------------------------------------------------------
-rigging_help_page = Vorlagenseite.ansicht("rigging_help.html", "rigging_help_page")
-test_character_page = Vorlagenseite.ansicht("test_character.html", "test_character_page")
-smpl_test_page = Vorlagenseite.ansicht("test_smpl.html", "smpl_test_page")
+rigging_help_page = Vorlagenseite.ansicht('rigging_help.html', 'rigging_help_page')
+test_character_page = Vorlagenseite.ansicht('test_character.html', 'test_character_page')
+smpl_test_page = Vorlagenseite.ansicht('test_smpl.html', 'smpl_test_page')
 
 #: Die Foto-Seite laeuft im iframe der eigenen Seite — der Dekorator gilt fuer
 #: die fertige Ansicht, nicht fuer die Klasse.
-photo_to_3d_page = xframe_options_sameorigin(Vorlagenseite.ansicht("photo_to_3d.html", "photo_to_3d_page"))
+photo_to_3d_page = xframe_options_sameorigin(Vorlagenseite.ansicht('photo_to_3d.html', 'photo_to_3d_page'))

@@ -49,35 +49,35 @@ RuntimeError: zweite
 
 class KurzfassungTest(SimpleTestCase):
     def test_ohne_meldung_kommt_nichts(self):
-        self.assertEqual(Fehlerkurzfassung.aus(""), "")
-        self.assertEqual(Fehlerkurzfassung.aus(None), "")
+        self.assertEqual(Fehlerkurzfassung.aus(''), '')
+        self.assertEqual(Fehlerkurzfassung.aus(None), '')
 
     def test_ohne_traceback_die_erste_zeile(self):
-        self.assertEqual(Fehlerkurzfassung.aus("Datei nicht gefunden\nund noch mehr"), "Datei nicht gefunden")
+        self.assertEqual(Fehlerkurzfassung.aus('Datei nicht gefunden\nund noch mehr'), 'Datei nicht gefunden')
 
     def test_vorspann_und_fehlerzeile_zusammen(self):
-        self.assertEqual(Fehlerkurzfassung.aus(TRACEBACK), "GVHMR-Lauf gescheitert: RuntimeError: kein CUDA")
+        self.assertEqual(Fehlerkurzfassung.aus(TRACEBACK), 'GVHMR-Lauf gescheitert: RuntimeError: kein CUDA')
 
     def test_die_dateizeile_wird_uebergangen(self):
         """`File "...", line 7` steht direkt vor der gesuchten Zeile und
         enthält ebenfalls einen Doppelpunkt."""
-        self.assertNotIn("File ", Fehlerkurzfassung.aus(TRACEBACK))
+        self.assertNotIn('File ', Fehlerkurzfassung.aus(TRACEBACK))
 
     def test_bei_verketteten_ausnahmen_gewinnt_die_letzte(self):
         """Die letzte hat wirklich abgebrochen; die erste wurde überdeckt."""
-        self.assertEqual(Fehlerkurzfassung.aus(VERKETTET), "RuntimeError: zweite")
+        self.assertEqual(Fehlerkurzfassung.aus(VERKETTET), 'RuntimeError: zweite')
 
     def test_ohne_vorspann_nur_die_fehlerzeile(self):
-        self.assertEqual(Fehlerkurzfassung.aus(VERKETTET).count(":"), 1)
+        self.assertEqual(Fehlerkurzfassung.aus(VERKETTET).count(':'), 1)
 
     def test_nur_vorspann_wenn_keine_fehlerzeile_da_ist(self):
         self.assertEqual(
             Fehlerkurzfassung.aus(
-                "Abbruch durch den Benutzer:\n"
-                "Traceback (most recent call last):\n"
+                'Abbruch durch den Benutzer:\n'
+                'Traceback (most recent call last):\n'
                 '  File "a.py", line 1, in <module>\n'
             ),
-            "Abbruch durch den Benutzer",
+            'Abbruch durch den Benutzer',
         )
 
     def test_ersatztext_wenn_gar_nichts_brauchbar_ist(self):
@@ -95,5 +95,5 @@ class AmModellTest(SimpleTestCase):
     def test_error_summary_reicht_durch(self):
         from core.models import BVHJob
 
-        auftrag = BVHJob(name="x", error_message=TRACEBACK)
-        self.assertEqual(auftrag.error_summary, "GVHMR-Lauf gescheitert: RuntimeError: kein CUDA")
+        auftrag = BVHJob(name='x', error_message=TRACEBACK)
+        self.assertEqual(auftrag.error_summary, 'GVHMR-Lauf gescheitert: RuntimeError: kein CUDA')

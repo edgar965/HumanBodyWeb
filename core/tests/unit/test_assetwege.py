@@ -46,9 +46,9 @@ class AssetsLiegenDaTest(SimpleTestCase):
 
     #: Was unter `Assets/` liegen muss, und woran man es erkennt.
     ORDNER = (
-        ("assetCreator", "GarmentFitter/__init__.py"),
-        ("PhotoToTexture", "bake_texture.py"),
-        ("GarmentCode", "anziehen.py"),
+        ('assetCreator', 'GarmentFitter/__init__.py'),
+        ('PhotoToTexture', 'bake_texture.py'),
+        ('GarmentCode', 'anziehen.py'),
     )
 
     def test_jeder_baum_liegt_unter_assets(self):
@@ -56,11 +56,11 @@ class AssetsLiegenDaTest(SimpleTestCase):
 
         wurzel = Path(str(settings.ASSETS_ROOT))
         fehlt = [
-            "%s/%s" % (ordner, probe)
+            '%s/%s' % (ordner, probe)
             for ordner, probe in self.ORDNER
             if not (wurzel / ordner / probe).is_file()
         ]
-        self.assertEqual(fehlt, [], "Nicht unter Assets/: %s" % fehlt)
+        self.assertEqual(fehlt, [], 'Nicht unter Assets/: %s' % fehlt)
 
     def test_der_suchpfad_kennt_beide_ebenen(self):
         """`Assets/` fuer `from GarmentCode…`, `Assets/assetCreator/` fuer
@@ -70,7 +70,7 @@ class AssetsLiegenDaTest(SimpleTestCase):
 
         assets = str(settings.ASSETS_ROOT)
         self.assertIn(assets, sys.path)
-        self.assertIn(str(settings.ASSETS_ROOT / "assetCreator"), sys.path)
+        self.assertIn(str(settings.ASSETS_ROOT / 'assetCreator'), sys.path)
 
 
 class ImportwegeTest(SimpleTestCase):
@@ -85,25 +85,25 @@ class ImportwegeTest(SimpleTestCase):
     #: den gesamten UMA code"). Der Klon selbst bleibt unberührt — dort
     #: steht jetzt nur noch `HERKUNFT.md`.
     WEGE = (
-        ("GarmentFitter", "fit_garment"),
-        ("GarmentFitter.fitter", "_compute_vertex_normals"),
-        ("GarmentFitter.obj_io", "ObjIo"),
-        ("assetCreator.GarmentFitter.smpl_library.objleser", "Objleser"),
-        ("UMA_Python", "Garderobe"),
-        ("UMA_Python", "Formregler"),
-        ("UMA_Python", "Figur"),
-        ("UMA_Python.formregler", "Formregler"),
-        ("UMA_Python.unity", "Serialisiert"),
-        ("UMA_Python.unity.yaml_kopf", "UnityYaml"),
-        ("GarmentCode.dienst", "GarmentcodeDienst"),
-        ("GarmentCode.drapierdienst", "Garmentdrapierung"),
-        ("GarmentCode.koerperdienst", "Garmentkoerper"),
-        ("GarmentCode.vorschau3d", "Garmentvorschau3d"),
-        ("GarmentCode.nachfuehrung", "Stoffnachfuehrung"),
-        ("GarmentCode.messreihen", "Garmentcodemessung"),
-        ("GarmentCode.pfade", "Gcpfade"),
-        ("kleidung.verfahren", "Kleidungsverfahren"),
-        ("kleidung.tempo", "Kleidungstempo"),
+        ('GarmentFitter', 'fit_garment'),
+        ('GarmentFitter.fitter', '_compute_vertex_normals'),
+        ('GarmentFitter.obj_io', 'ObjIo'),
+        ('assetCreator.GarmentFitter.smpl_library.objleser', 'Objleser'),
+        ('UMA_Python', 'Garderobe'),
+        ('UMA_Python', 'Formregler'),
+        ('UMA_Python', 'Figur'),
+        ('UMA_Python.formregler', 'Formregler'),
+        ('UMA_Python.unity', 'Serialisiert'),
+        ('UMA_Python.unity.yaml_kopf', 'UnityYaml'),
+        ('GarmentCode.dienst', 'GarmentcodeDienst'),
+        ('GarmentCode.drapierdienst', 'Garmentdrapierung'),
+        ('GarmentCode.koerperdienst', 'Garmentkoerper'),
+        ('GarmentCode.vorschau3d', 'Garmentvorschau3d'),
+        ('GarmentCode.nachfuehrung', 'Stoffnachfuehrung'),
+        ('GarmentCode.messreihen', 'Garmentcodemessung'),
+        ('GarmentCode.pfade', 'Gcpfade'),
+        ('kleidung.verfahren', 'Kleidungsverfahren'),
+        ('kleidung.tempo', 'Kleidungstempo'),
     )
 
     def test_jeder_weg_traegt(self):
@@ -111,10 +111,10 @@ class ImportwegeTest(SimpleTestCase):
         for modul, name in self.WEGE:
             try:
                 if not hasattr(importlib.import_module(modul), name):
-                    kaputt.append("%s hat kein %s" % (modul, name))
+                    kaputt.append('%s hat kein %s' % (modul, name))
             except Exception as fehler:  # noqa: BLE001
-                kaputt.append("%s: %s: %s" % (modul, type(fehler).__name__, fehler))
-        self.assertEqual(kaputt, [], "; ".join(kaputt))
+                kaputt.append('%s: %s: %s' % (modul, type(fehler).__name__, fehler))
+        self.assertEqual(kaputt, [], '; '.join(kaputt))
 
     def test_der_alte_uma_weg_traegt_nicht_mehr(self):
         """GEGENPROBE zum Umzug: `UMA.Garderobe` DARF nicht mehr gehen.
@@ -125,10 +125,10 @@ class ImportwegeTest(SimpleTestCase):
         wirkungslos bleibt. Dieselbe Gegenprobe wie bei `PhotoToTexture`
         am 07.09.2026.
         """
-        for name in ("UMA", "UMA.formregler", "UMA.garderobe"):
+        for name in ('UMA', 'UMA.formregler', 'UMA.garderobe'):
             sys.modules.pop(name, None)
         with self.assertRaises(ImportError):
-            importlib.import_module("UMA.formregler")
+            importlib.import_module('UMA.formregler')
 
     def test_photototexture_nur_als_paket(self):
         """Der Fall vom 07.09.2026, in beide Richtungen.
@@ -140,20 +140,20 @@ class ImportwegeTest(SimpleTestCase):
         try:
             import cv2  # noqa: F401
         except ImportError:  # pragma: no cover
-            raise unittest.SkipTest("cv2 fehlt in dieser Umgebung")
-        modul = importlib.import_module("PhotoToTexture.bake_texture")
-        self.assertTrue(hasattr(modul, "bake_with_backend"))
+            raise unittest.SkipTest('cv2 fehlt in dieser Umgebung')
+        modul = importlib.import_module('PhotoToTexture.bake_texture')
+        self.assertTrue(hasattr(modul, 'bake_with_backend'))
 
         import sys
 
-        ordner = str(settings.ASSETS_ROOT / "PhotoToTexture")
+        ordner = str(settings.ASSETS_ROOT / 'PhotoToTexture')
         sys.path.insert(0, ordner)
-        for name in ("bake_texture", "PhotoToTexture.bake_texture"):
+        for name in ('bake_texture', 'PhotoToTexture.bake_texture'):
             sys.modules.pop(name, None)
         try:
             with self.assertRaises(ImportError):
-                importlib.import_module("bake_texture")
+                importlib.import_module('bake_texture')
         finally:
             if ordner in sys.path:
                 sys.path.remove(ordner)
-            sys.modules.pop("bake_texture", None)
+            sys.modules.pop('bake_texture', None)

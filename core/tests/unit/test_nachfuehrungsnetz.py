@@ -25,7 +25,6 @@ die sitzt und sich nicht bewegt), und dass der Rueckfall auf die OBJ
 erhalten bleibt: Der SMPL-Referenzkoerper-Weg hat keine Rig-Datei.
 """
 
-import io
 import json
 import os
 import tempfile
@@ -46,7 +45,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         # prueft das gegen den Ausbruch aus dem Ausgabebaum.
         from GarmentCode.entwurf import Entwurf
 
-        self.wurzel = tempfile.mkdtemp(prefix="pruef_", dir=str(Entwurf.AUSGABE))
+        self.wurzel = tempfile.mkdtemp(prefix='pruef_', dir=str(Entwurf.AUSGABE))
         self.addCleanup(self._aufraeumen)
 
     def _aufraeumen(self):
@@ -54,18 +53,18 @@ class NachfuehrungsnetzTest(SimpleTestCase):
             os.remove(os.path.join(self.wurzel, name))
         os.rmdir(self.wurzel)
 
-    def _obj(self, punkte, name="x_sim.obj"):
+    def _obj(self, punkte, name='x_sim.obj'):
         pfad = os.path.join(self.wurzel, name)
-        with io.open(pfad, "w", encoding="utf-8") as datei:
+        with open(pfad, 'w', encoding='utf-8') as datei:
             for p in punkte:
-                datei.write("v %f %f %f\n" % tuple(p))
+                datei.write('v %f %f %f\n' % tuple(p))
         return pfad
 
-    def _rig(self, punkte, name="x_sim_rig.json"):
+    def _rig(self, punkte, name='x_sim_rig.json'):
         pfad = os.path.join(self.wurzel, name)
-        with io.open(pfad, "w", encoding="utf-8") as datei:
+        with open(pfad, 'w', encoding='utf-8') as datei:
             datei.write(
-                json.dumps({"punkte": [list(map(float, p)) for p in punkte], "dreiecke": [[0, 1, 2]]})
+                json.dumps({'punkte': [list(map(float, p)) for p in punkte], 'dreiecke': [[0, 1, 2]]})
             )
         return pfad
 
@@ -75,8 +74,8 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         """Liegen beide da, gilt die korrigierte."""
         self._obj([[0, 0, 0]])
         self._rig([[0, 0, 0]])
-        pfad = Sicher.wert(NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel), "Pfad")
-        self.assertTrue(pfad.endswith("_sim_rig.json"), pfad)
+        pfad = Sicher.wert(NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel), 'Pfad')
+        self.assertTrue(pfad.endswith('_sim_rig.json'), pfad)
 
     def test_ohne_rigdatei_bleibt_die_obj(self):
         """Der Rueckfall MUSS bleiben: Der SMPL-Weg hat kein Rig.
@@ -86,8 +85,8 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         sich nicht bewegt.
         """
         self._obj([[0, 0, 0]])
-        pfad = Sicher.wert(NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel), "Pfad")
-        self.assertTrue(pfad.endswith("_sim.obj"), pfad)
+        pfad = Sicher.wert(NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel), 'Pfad')
+        self.assertTrue(pfad.endswith('_sim.obj'), pfad)
 
     def test_ordner_ausserhalb_des_ausgabebaums_wird_verworfen(self):
         """Der Pfad kommt aus dem Browser — die Pruefung bleibt scharf."""
@@ -105,7 +104,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         """
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(self._rig([[0.1, 1.2, -0.3]]))
         self.assertTrue(korrigiert)
-        self.assertAlmostEqual(float(Sicher.wert(punkte, "Punkte")[0][1]), 1.2, places=6)
+        self.assertAlmostEqual(float(Sicher.wert(punkte, 'Punkte')[0][1]), 1.2, places=6)
 
     def test_objpunkte_gelten_als_unkorrigiert(self):
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
@@ -113,7 +112,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         )
         self.assertFalse(korrigiert)
         # Roh gelesen, in Zentimetern — umgerechnet wird erst im Konstruktor.
-        self.assertAlmostEqual(float(Sicher.wert(punkte, "Punkte")[0][1]), 120.0, places=6)
+        self.assertAlmostEqual(float(Sicher.wert(punkte, 'Punkte')[0][1]), 120.0, places=6)
 
     def test_unlesbare_rigdatei_faellt_auf_die_obj_zurueck(self):
         """Und sie meldet es — ein stiller Rueckfall waere schlechter.
@@ -122,12 +121,12 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         waere von aussen nicht zu sehen, dass die schlechtere Bindung gilt.
         """
         self._obj([[1.0, 2.0, 3.0]])
-        kaputt = os.path.join(self.wurzel, "x_sim_rig.json")
-        with io.open(kaputt, "w", encoding="utf-8") as datei:
-            datei.write("{kein json")
+        kaputt = os.path.join(self.wurzel, 'x_sim_rig.json')
+        with open(kaputt, 'w', encoding='utf-8') as datei:
+            datei.write('{kein json')
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(kaputt)
         self.assertFalse(korrigiert)
-        self.assertEqual(len(Sicher.wert(punkte, "Punkte")), 1)
+        self.assertEqual(len(Sicher.wert(punkte, 'Punkte')), 1)
 
     def test_fehlende_datei_gibt_none(self):
         """Und der Testordner ist wirklich der Testordner.
@@ -136,9 +135,9 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         lasen die Faelle oben die ECHTEN Ergebnisse und blieben gruen
         (`~/.claude/rules/test-isolation.md`).
         """
-        self.assertIn("pruef_", str(self.wurzel))
+        self.assertIn('pruef_', str(self.wurzel))
         punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
-            os.path.join(self.wurzel, "gibtsnicht_sim.obj")
+            os.path.join(self.wurzel, 'gibtsnicht_sim.obj')
         )
         self.assertIsNone(punkte)
         self.assertFalse(korrigiert)
@@ -157,12 +156,12 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         kv = np.column_stack([kv_yoben[:, 0], -kv_yoben[:, 2], kv_yoben[:, 1]])
         stoff = kv[:40] * 1.05  # etwas ausserhalb, in Projektlage
         nach = NachfuehrungsnetzTest._nachfuehrung()()
-        bilanz = nach.binden("probe", self._rig(stoff), kv, kf)
-        self.assertNotIn("fehler", bilanz)
-        self.assertTrue(bilanz["korrigiert"])
-        neu = nach.bindungen["probe"].punkte_zoben(kv)
+        bilanz = nach.binden('probe', self._rig(stoff), kv, kf)
+        self.assertNotIn('fehler', bilanz)
+        self.assertTrue(bilanz['korrigiert'])
+        neu = nach.bindungen['probe'].punkte_zoben(kv)
         weg = np.linalg.norm(neu - stoff, axis=1)
-        self.assertLess(float(weg.max()), 1e-9, "Bindung reproduziert nicht")
+        self.assertLess(float(weg.max()), 1e-9, 'Bindung reproduziert nicht')
 
     def test_gegenprobe_die_obj_wuerde_zentimeter_annehmen(self):
         """Sabotage: dieselben Punkte als OBJ ergeben eine andere Bindung.
@@ -177,12 +176,12 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         kv = np.column_stack([kv_yoben[:, 0], -kv_yoben[:, 2], kv_yoben[:, 1]])
         stoff = kv[:40] * 1.05
         nach = NachfuehrungsnetzTest._nachfuehrung()()
-        bilanz = nach.binden("probe", self._obj(stoff), kv, kf)
-        self.assertFalse(bilanz.get("korrigiert"))
-        if "fehler" not in bilanz:
-            neu = nach.bindungen["probe"].punkte_zoben(kv)
+        bilanz = nach.binden('probe', self._obj(stoff), kv, kf)
+        self.assertFalse(bilanz.get('korrigiert'))
+        if 'fehler' not in bilanz:
+            neu = nach.bindungen['probe'].punkte_zoben(kv)
             weg = np.linalg.norm(neu - stoff, axis=1)
-            self.assertGreater(float(weg.max()), 1e-3, "Die OBJ-Deutung muesste hier abweichen")
+            self.assertGreater(float(weg.max()), 1e-3, 'Die OBJ-Deutung muesste hier abweichen')
 
     @staticmethod
     def _nachfuehrung():

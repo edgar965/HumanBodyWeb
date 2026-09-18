@@ -8,28 +8,26 @@ gleich was `rise` sagt. `bundhoehe.py` senkt den Schnitt UND die
 Anlagehoehe um `(1 - min(rise + bundbreite, 1)) * hips_line`.
 """
 
-import io
 import json
 import os
 
 import yaml
 from django.conf import settings
 from django.test import SimpleTestCase
-
-from ._pruefablage import Pruefablage
-
 from GarmentCode.bundhoehe import Bundhoehe
 from GarmentCode.bundmaske import Bundmaske
 from GarmentCode.schnittvorschau import Schnittvorschau
+
+from ._pruefablage import Pruefablage
 from ._sicher import Sicher
 
 HIPS_LINE = 25.0
 
 
-def _entwurf(upper=None, wb: "str | None" = "StraightWB", bottom: "str | None" = "Pants", breite=0.232):
+def _entwurf(upper=None, wb: str | None = 'StraightWB', bottom: str | None = 'Pants', breite=0.232):
     return {
-        "meta": {"upper": {"v": upper}, "wb": {"v": wb}, "bottom": {"v": bottom}},
-        "waistband": {"width": {"v": breite}},
+        'meta': {'upper': {'v': upper}, 'wb': {'v': wb}, 'bottom': {'v': bottom}},
+        'waistband': {'width': {'v': breite}},
     }
 
 
@@ -48,24 +46,24 @@ class _Stueck:
 
 def _rechteck(tx, ty, tz, breite, hoehe):
     return {
-        "translation": [tx, ty, tz],
-        "rotation": [0, 0, 0],
-        "vertices": [[0, 0], [breite, 0], [breite, hoehe], [0, hoehe]],
-        "edges": [{"endpoints": [0, 1]}, {"endpoints": [1, 2]}, {"endpoints": [2, 3]}, {"endpoints": [3, 0]}],
+        'translation': [tx, ty, tz],
+        'rotation': [0, 0, 0],
+        'vertices': [[0, 0], [breite, 0], [breite, hoehe], [0, hoehe]],
+        'edges': [{'endpoints': [0, 1]}, {'endpoints': [1, 2]}, {'endpoints': [2, 3]}, {'endpoints': [3, 0]}],
     }
 
 
 def _spezifikation():
     """Wie Edgars Hose: Bund 104,9..110,6, Hose bis 99,9 (5 cm Luecke)."""
     muster = {
-        "panels": {
-            "pant_f_r": _rechteck(-20, 11, 25, 20, 88.9),
-            "wb_front": _rechteck(-18, 104.9, 20, 36, 5.8),
+        'panels': {
+            'pant_f_r': _rechteck(-20, 11, 25, 20, 88.9),
+            'wb_front': _rechteck(-18, 104.9, 20, 36, 5.8),
         },
-        "panel_order": ["pant_f_r", "wb_front"],
-        "stitches": [[{"panel": "wb_front", "edge": 0}, {"panel": "pant_f_r", "edge": 2}]],
+        'panel_order': ['pant_f_r', 'wb_front'],
+        'stitches': [[{'panel': 'wb_front', 'edge': 0}, {'panel': 'pant_f_r', 'edge': 2}]],
     }
-    return {"pattern": muster, "parameters": {}, "parameter_order": [], "properties": {}}
+    return {'pattern': muster, 'parameters': {}, 'parameter_order': [], 'properties': {}}
 
 
 class VersatzTest(SimpleTestCase):
@@ -83,7 +81,7 @@ class VersatzTest(SimpleTestCase):
 
     def test_mit_oberteil_bleibt_der_upstream(self):
         """Kleid: der Bund haengt am Oberteil — nicht senken."""
-        self.assertEqual(Bundhoehe.versatz_cm(_entwurf(upper="FittedShirt"), 0.5, HIPS_LINE), 0.0)
+        self.assertEqual(Bundhoehe.versatz_cm(_entwurf(upper='FittedShirt'), 0.5, HIPS_LINE), 0.0)
 
     def test_ohne_unterteil_kein_versatz(self):
         self.assertEqual(Bundhoehe.versatz_cm(_entwurf(), None, HIPS_LINE), 0.0)
@@ -98,36 +96,36 @@ class DateienTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.ordner = self.enterContext(Pruefablage.ordner("bundhoehe_"))
-        self.spez = os.path.join(self.ordner, "probe_specification.json")
-        with io.open(self.spez, "w", encoding="utf-8") as datei:
+        self.ordner = self.enterContext(Pruefablage.ordner('bundhoehe_'))
+        self.spez = os.path.join(self.ordner, 'probe_specification.json')
+        with open(self.spez, 'w', encoding='utf-8') as datei:
             json.dump(_spezifikation(), datei)
-        self.koerper = os.path.join(self.ordner, "figur.yaml")
-        with io.open(self.koerper, "w", encoding="utf-8") as datei:
+        self.koerper = os.path.join(self.ordner, 'figur.yaml')
+        with open(self.koerper, 'w', encoding='utf-8') as datei:
             yaml.safe_dump(
-                {"body": {"height": 168.0, "head_l": 25.8, "waist_line": 32.3, "hips_line": HIPS_LINE}}, datei
+                {'body': {'height': 168.0, 'head_l': 25.8, 'waist_line': 32.3, 'hips_line': HIPS_LINE}}, datei
             )
 
     def test_senken_verschiebt_alle_panels_und_vermerkt(self):
         Bundhoehe.senken(self.spez, 6.7, rise=0.5)
-        spez = json.load(io.open(self.spez, encoding="utf-8"))
-        panels = spez["pattern"]["panels"]
-        self.assertAlmostEqual(panels["wb_front"]["translation"][1], 104.9 - 6.7, places=6)
-        self.assertAlmostEqual(panels["pant_f_r"]["translation"][1], 11 - 6.7, places=6)
-        self.assertEqual(panels["wb_front"]["translation"][0], -18)  # x, z bleiben
-        self.assertEqual(Bundhoehe.vermerk(self.spez), {"versatz_cm": 6.7, "rise": 0.5})
+        spez = json.load(open(self.spez, encoding='utf-8'))
+        panels = spez['pattern']['panels']
+        self.assertAlmostEqual(panels['wb_front']['translation'][1], 104.9 - 6.7, places=6)
+        self.assertAlmostEqual(panels['pant_f_r']['translation'][1], 11 - 6.7, places=6)
+        self.assertEqual(panels['wb_front']['translation'][0], -18)  # x, z bleiben
+        self.assertEqual(Bundhoehe.vermerk(self.spez), {'versatz_cm': 6.7, 'rise': 0.5})
         # und die 2D-Vorschau sieht den gesenkten Bund (plus Bundlage auf die Hose)
         netz = Schnittvorschau(spez).netz(bund_senken=True)
-        bund = netz["punkte"][netz["panels"][1]["ab"] :, 1]
+        bund = netz['punkte'][netz['panels'][1]['ab'] :, 1]
         self.assertAlmostEqual(float(bund.min()), (99.9 - 6.7) / 100, places=4)
 
     def test_anwenden_senkt_die_spezifikation_im_ordner(self):
-        koerper = {"hips_line": HIPS_LINE}
+        koerper = {'hips_line': HIPS_LINE}
         versatz = Bundhoehe.anwenden(self.ordner, _entwurf(), _Stueck(_Unterteil(0.5)), koerper)
         self.assertAlmostEqual(versatz, 6.7, places=6)
-        self.assertAlmostEqual(Bundhoehe.vermerk(self.spez)["versatz_cm"], 6.7, places=3)
+        self.assertAlmostEqual(Bundhoehe.vermerk(self.spez)['versatz_cm'], 6.7, places=3)
         # rise 1: nichts angefasst
-        with io.open(self.spez, "w", encoding="utf-8") as datei:
+        with open(self.spez, 'w', encoding='utf-8') as datei:
             json.dump(_spezifikation(), datei)
         self.assertEqual(Bundhoehe.anwenden(self.ordner, _entwurf(), _Stueck(_Unterteil(1.0)), koerper), 0.0)
         self.assertEqual(Bundhoehe.vermerk(self.spez), {})
@@ -137,22 +135,22 @@ class DateienTest(SimpleTestCase):
         self.assertEqual(Bundhoehe.koerperdatei(self.spez, self.koerper), self.koerper)
         Bundhoehe.senken(self.spez, 6.7, rise=0.5)
         ziel = Bundhoehe.koerperdatei(self.spez, self.koerper)
-        self.assertEqual(os.path.basename(str(ziel)), "probe_koerper_anlage.yaml")
+        self.assertEqual(os.path.basename(str(ziel)), 'probe_koerper_anlage.yaml')
         self.assertEqual(os.path.dirname(str(ziel)), self.ordner)
-        werte = yaml.safe_load(io.open(str(ziel), encoding="utf-8"))["body"]
+        werte = yaml.safe_load(open(str(ziel), encoding='utf-8'))['body']
         # wie garment.py rechnet: height - head_l - waist_line = 109,9
-        self.assertAlmostEqual(werte["_waist_level"], 109.9 - 6.7, places=6)
-        self.assertAlmostEqual(werte["_bund_versatz"], 6.7, places=6)
-        self.assertEqual(werte["hips_line"], HIPS_LINE)
+        self.assertAlmostEqual(werte['_waist_level'], 109.9 - 6.7, places=6)
+        self.assertAlmostEqual(werte['_bund_versatz'], 6.7, places=6)
+        self.assertEqual(werte['hips_line'], HIPS_LINE)
         # die geteilte Koerperdatei bleibt unberuehrt
-        original = yaml.safe_load(io.open(self.koerper, encoding="utf-8"))["body"]
-        self.assertNotIn("_waist_level", original)
+        original = yaml.safe_load(open(self.koerper, encoding='utf-8'))['body']
+        self.assertNotIn('_waist_level', original)
 
     def test_die_vereinigung_nimmt_den_groessten_versatz(self):
         vereint = Bundhoehe.uebernehmen(
-            {}, [{"bundhoehe": {"versatz_cm": 2.0}}, {"bundhoehe": {"versatz_cm": 6.7, "rise": 0.5}}, {}]
+            {}, [{'bundhoehe': {'versatz_cm': 2.0}}, {'bundhoehe': {'versatz_cm': 6.7, 'rise': 0.5}}, {}]
         )
-        self.assertEqual(vereint["bundhoehe"]["versatz_cm"], 6.7)
+        self.assertEqual(vereint['bundhoehe']['versatz_cm'], 6.7)
         self.assertEqual(Bundhoehe.uebernehmen({}, [{}, {}]), {})
 
 
@@ -162,57 +160,57 @@ class BundmaskeTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.ordner = self.enterContext(Pruefablage.ordner("bundhoehe_"))
-        self.netz = os.path.join(self.ordner, "probe_sim.obj")
-        with io.open(os.path.join(self.ordner, "probe_sim_segmentation.txt"), "w", encoding="utf-8") as datei:
+        self.ordner = self.enterContext(Pruefablage.ordner('bundhoehe_'))
+        self.netz = os.path.join(self.ordner, 'probe_sim.obj')
+        with open(os.path.join(self.ordner, 'probe_sim_segmentation.txt'), 'w', encoding='utf-8') as datei:
             datei.write(
-                "\n".join(["pant_f_r", "wb_front", "stitch_3", "hose__wb_back,stitch_1", "shirt__ftorso", ""])
+                '\n'.join(['pant_f_r', 'wb_front', 'stitch_3', 'hose__wb_back,stitch_1', 'shirt__ftorso', ''])
             )
 
     def test_bundmarken_werden_am_praefix_wb_erkannt(self):
-        self.assertTrue(Bundmaske.ist_bund("wb_front"))
-        self.assertTrue(Bundmaske.ist_bund("hose__wb_back"))
-        self.assertFalse(Bundmaske.ist_bund("pant_f_r"))
-        self.assertFalse(Bundmaske.ist_bund("stitch_4"))
-        self.assertFalse(Bundmaske.ist_bund("wbx__pant"))
+        self.assertTrue(Bundmaske.ist_bund('wb_front'))
+        self.assertTrue(Bundmaske.ist_bund('hose__wb_back'))
+        self.assertFalse(Bundmaske.ist_bund('pant_f_r'))
+        self.assertFalse(Bundmaske.ist_bund('stitch_4'))
+        self.assertFalse(Bundmaske.ist_bund('wbx__pant'))
 
     def test_die_maske_liegt_neben_dem_netz(self):
         maske = Bundmaske.neben_netz(self.netz, 5)
-        self.assertEqual(Sicher.wert(maske, "Maske").tolist(), [False, True, False, True, False])
+        self.assertEqual(Sicher.wert(maske, 'Maske').tolist(), [False, True, False, True, False])
         # fehlende Datei oder falsche Punktzahl: keine Maske, kein Absturz
         self.assertIsNone(Bundmaske.neben_netz(self.netz, 4))
-        self.assertIsNone(Bundmaske.neben_netz(os.path.join(self.ordner, "x_sim.obj")))
+        self.assertIsNone(Bundmaske.neben_netz(os.path.join(self.ordner, 'x_sim.obj')))
         self.assertIsNone(Bundmaske.neben_netz(None))
 
     def test_eintragen_je_teilnetz(self):
-        teile = {"hose": {"indizes": [0, 1, 3]}, "shirt": {"indizes": [4]}, "leer": {}}
-        Bundmaske.eintragen(teile, os.path.join(self.ordner, "probe_sim_segmentation.txt"))
-        self.assertEqual(teile["hose"]["bund"].tolist(), [False, True, True])
-        self.assertEqual(teile["shirt"]["bund"].tolist(), [False])
-        self.assertIsNone(teile["leer"]["bund"])
+        teile = {'hose': {'indizes': [0, 1, 3]}, 'shirt': {'indizes': [4]}, 'leer': {}}
+        Bundmaske.eintragen(teile, os.path.join(self.ordner, 'probe_sim_segmentation.txt'))
+        self.assertEqual(teile['hose']['bund'].tolist(), [False, True, True])
+        self.assertEqual(teile['shirt']['bund'].tolist(), [False])
+        self.assertIsNone(teile['leer']['bund'])
 
 
 class VerdrahtungTest(SimpleTestCase):
     databases = set()
 
     def _quelle(self, *teile):
-        return io.open(os.path.join(settings.ASSETS_ROOT, "GarmentCode", *teile), encoding="utf-8").read()
+        return open(os.path.join(settings.ASSETS_ROOT, 'GarmentCode', *teile), encoding='utf-8').read()
 
     def test_schnitt_drapierung_und_vereinigung_rufen_die_bundhoehe(self):
-        self.assertIn("Bundhoehe.anwenden(ordner, entwurf, stueck, koerper)", self._quelle("lauf.py"))
+        self.assertIn('Bundhoehe.anwenden(ordner, entwurf, stueck, koerper)', self._quelle('lauf.py'))
         self.assertIn(
-            "pfade.in_body_mes = Bundhoehe.koerperdatei(spez, pfade.in_body_mes)",
-            self._quelle("drapierlauf.py"),
+            'pfade.in_body_mes = Bundhoehe.koerperdatei(spez, pfade.in_body_mes)',
+            self._quelle('drapierlauf.py'),
         )
-        self.assertIn("Bundhoehe.uebernehmen(vereint,", self._quelle("schnittvereinigung.py"))
-        self.assertIn("Bundhoehe.loggen(", self._quelle("entwurf.py"))
+        self.assertIn('Bundhoehe.uebernehmen(vereint,', self._quelle('schnittvereinigung.py'))
+        self.assertIn('Bundhoehe.loggen(', self._quelle('entwurf.py'))
 
     def test_beide_bauwege_geben_die_bundmaske_ans_anlegen(self):
         self.assertIn(
-            "Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)", self._quelle("drapierdienst.py")
+            'Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', self._quelle('drapierdienst.py')
         )
-        self.assertIn("anleger.anlegen(punkte, anliegen_mm, fest)", self._quelle("stoffnacharbeit.py"))
-        gemeinsam = self._quelle("gemeinsamablage.py")
-        self.assertIn("Bundmaske.eintragen(", gemeinsam)
+        self.assertIn('anleger.anlegen(punkte, anliegen_mm, fest)', self._quelle('stoffnacharbeit.py'))
+        gemeinsam = self._quelle('gemeinsamablage.py')
+        self.assertIn('Bundmaske.eintragen(', gemeinsam)
         self.assertIn("teil.get('bund'))", gemeinsam)
-        self.assertIn("anleger.anlegen(punkte, anliegen_mm, fest)", gemeinsam)
+        self.assertIn('anleger.anlegen(punkte, anliegen_mm, fest)', gemeinsam)

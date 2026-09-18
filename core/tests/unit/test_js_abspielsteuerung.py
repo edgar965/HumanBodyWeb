@@ -26,7 +26,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "abspielsteuerung.js")
+MODUL = Jsmodul('scene', 'abspielsteuerung.js')
 
 #: DOM-Attrappe: die Knöpfe, die Meldungszeile, der Bibliotheksbaum.
 DOM = """
@@ -130,4 +130,4 @@ console.log(JSON.stringify({ok: true}));
 class AbspielsteuerungTest(SimpleTestCase):
     def test_play_meint_die_ausgewaehlte_figur(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

@@ -36,7 +36,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "saumband.js")
+MODUL = Jsmodul('gemeinsam', 'saumband.js')
 
 SKRIPT = """
 const { Saumband: S } = await import(MODUL);
@@ -88,18 +88,18 @@ console.log(JSON.stringify({ ok: true }));
 
 class SaumbandJsTest(SimpleTestCase):
     def test_band_neben_der_gezeichneten_haut(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_einzug_und_index_haengen_am_band(self):
         """Eine Quelle für die Tiefe; die vier Verwender kürzen den Index
         mit `weg` aus `Hauteinzug.setzen`, nicht mehr mit der Maske."""
         viewer = MODUL.VIEWER
-        einzug = (viewer / "gemeinsam" / "hauteinzug.js").read_text(encoding="utf-8")
-        self.assertIn("static EINZUG_M = Saumband.TIEFE_M;", einzug)
-        self.assertIn("stand.weg = Saumband.weg(maske, abstaende);", einzug)
-        for ordner, name in (("scene", "hautverdeckung.js"), ("gemeinsam", "figurhaut.js")):
-            quelle = (viewer / ordner / name).read_text(encoding="utf-8")
-            self.assertIn("Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)", quelle, name)
-            self.assertNotIn("Hautmaske.indexOhne(voll.index, voll.gruppen, maske)", quelle, name)
-        lagen = (viewer / "scene" / "lagenverdeckung.js").read_text(encoding="utf-8")
-        self.assertIn("Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg || maske)", lagen)
+        einzug = (viewer / 'gemeinsam' / 'hauteinzug.js').read_text(encoding='utf-8')
+        self.assertIn('static EINZUG_M = Saumband.TIEFE_M;', einzug)
+        self.assertIn('stand.weg = Saumband.weg(maske, abstaende);', einzug)
+        for ordner, name in (('scene', 'hautverdeckung.js'), ('gemeinsam', 'figurhaut.js')):
+            quelle = (viewer / ordner / name).read_text(encoding='utf-8')
+            self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', quelle, name)
+            self.assertNotIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', quelle, name)
+        lagen = (viewer / 'scene' / 'lagenverdeckung.js').read_text(encoding='utf-8')
+        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg || maske)', lagen)

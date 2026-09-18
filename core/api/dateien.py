@@ -45,7 +45,7 @@ from ..dienste.videoablage import Videoablage
 from ..dienste.videoauslieferung import Videoauslieferung
 from ..models import BVHJob
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Auftragsdateien:
@@ -74,10 +74,10 @@ class Auftragsdateien:
         erkannt), `foot_correction` (Vorgabe aus).
         """
         selbst = cls(request, job_id)
-        art = request.GET.get("mode", "bvh")
-        if art == "keypoints2d":
+        art = request.GET.get('mode', 'bvh')
+        if art == 'keypoints2d':
             return JsonResponse(Ueberlagerungspunkte(selbst.job).daten())
-        if art == "retarget":
+        if art == 'retarget':
             return selbst._retarget()
         return selbst._bewegungsdatei()
 
@@ -92,23 +92,23 @@ class Auftragsdateien:
         ):
             pfad = self.job.bvh_file_face
         if not pfad or not os.path.exists(pfad):
-            return HttpResponseNotFound("BVH file not found")
+            return HttpResponseNotFound('BVH file not found')
         return self.textantwort(pfad)
 
     def _retarget(self):
         """Die BVH des Auftrags auf das Rigify/DEF-Skelett uebertragen."""
         if not self.job.bvh_file:
-            return HttpResponseNotFound("Job has no BVH file")
+            return HttpResponseNotFound('Job has no BVH file')
         if not os.path.isfile(self.job.bvh_file):
-            return HttpResponseNotFound("BVH file not found: %s" % self.job.bvh_file)
+            return HttpResponseNotFound('BVH file not found: %s' % self.job.bvh_file)
         werte = self.request.GET
         return JsonResponse(
             Retargetdaten(
                 self.job.bvh_file,
-                float(werte.get("body_height", 1.68)),
-                werte.get("format", None),
-                werte.get("foot_correction", "").lower() in ("1", "true"),
-                ziel=werte.get("target") or Retargetdaten.ZIEL_DEF,
+                float(werte.get('body_height', 1.68)),
+                werte.get('format', None),
+                werte.get('foot_correction', '').lower() in ('1', 'true'),
+                ziel=werte.get('target') or Retargetdaten.ZIEL_DEF,
             )
             .holen()
             .als_dict()
@@ -120,7 +120,7 @@ class Auftragsdateien:
         selbst = cls(request, job_id)
         gesicht = selbst.job.bvh_file_face
         if not gesicht or not os.path.exists(gesicht):
-            return HttpResponseNotFound("Face BVH file not found")
+            return HttpResponseNotFound('Face BVH file not found')
         return selbst.textantwort(gesicht)
 
     @classmethod
@@ -158,16 +158,16 @@ class Auftragsdateien:
         selbst = cls(request, job_id)
         pfad = Path(settings.MEDIA_ROOT) / str(selbst.job.video_file)
         if not pfad.is_file():
-            logger.warning("Vorschaubild %s: Video liegt nicht (mehr) unter %s", job_id, pfad)
-            return HttpResponseNotFound("Video file missing")
+            logger.warning('Vorschaubild %s: Video liegt nicht (mehr) unter %s', job_id, pfad)
+            return HttpResponseNotFound('Video file missing')
         try:
             return cls._vorschau_aus(pfad)
         except ImportError:
-            logger.warning("Vorschaubild %s: cv2 fehlt in dieser Umgebung", job_id, exc_info=True)
-            return HttpResponseNotFound("Thumbnail generation failed")
+            logger.warning('Vorschaubild %s: cv2 fehlt in dieser Umgebung', job_id, exc_info=True)
+            return HttpResponseNotFound('Thumbnail generation failed')
         except Exception:  # noqa: BLE001
-            logger.warning("Vorschaubild %s aus %s nicht erzeugbar", job_id, pfad, exc_info=True)
-            return HttpResponseNotFound("Thumbnail generation failed")
+            logger.warning('Vorschaubild %s aus %s nicht erzeugbar', job_id, pfad, exc_info=True)
+            return HttpResponseNotFound('Thumbnail generation failed')
 
     @classmethod
     def _vorschau_aus(cls, pfad):
@@ -180,25 +180,25 @@ class Auftragsdateien:
         finally:
             aufnahme.release()
         if not gelesen:
-            logger.warning("Vorschaubild: %s hat kein lesbares erstes Bild", pfad)
-            return HttpResponseNotFound("Could not read video frame")
+            logger.warning('Vorschaubild: %s hat kein lesbares erstes Bild', pfad)
+            return HttpResponseNotFound('Could not read video frame')
         hoehe, breite = bild.shape[:2]
         faktor = min(cls.VORSCHAU_BREITE / breite, cls.VORSCHAU_HOEHE / hoehe)
         bild = cv2.resize(bild, (int(breite * faktor), int(hoehe * faktor)))
-        _, jpeg = cv2.imencode(".jpg", bild, [cv2.IMWRITE_JPEG_QUALITY, cls.VORSCHAU_GUETE])
-        return HttpResponse(jpeg.tobytes(), content_type="image/jpeg")
+        _, jpeg = cv2.imencode('.jpg', bild, [cv2.IMWRITE_JPEG_QUALITY, cls.VORSCHAU_GUETE])
+        return HttpResponse(jpeg.tobytes(), content_type='image/jpeg')
 
     @classmethod
     def erkennungsdaten(cls, request, job_id):
         """Erkennungs-Flags je Bild als JSON fuer den BVH-Spieler."""
         selbst = cls(request, job_id)
-        datei = Path(settings.MEDIA_ROOT) / "output" / str(selbst.job.id) / "detection.json"
+        datei = Path(settings.MEDIA_ROOT) / 'output' / str(selbst.job.id) / 'detection.json'
         if not datei.exists():
             # Alte Auftraege haben keine Erkennungsdaten — leere Liste statt
             # 404, damit der Spieler nicht in den Fehlerzweig laeuft.
             return JsonResponse([], safe=False)
-        antwort = FileResponse(open(datei, "rb"), content_type="application/json")
-        antwort["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        antwort = FileResponse(open(datei, 'rb'), content_type='application/json')
+        antwort['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return antwort
 
     # ------------------------------------------------------- Skelettvideos
@@ -208,11 +208,11 @@ class Auftragsdateien:
         """Nur das Skelett: weiss auf schwarz."""
         selbst = cls(request, job_id)
         return selbst._rendern(
-            False, "%s_%s_rig_only.mp4" % (selbst.job.pipeline, Path(selbst.job.name).stem)
+            False, '%s_%s_rig_only.mp4' % (selbst.job.pipeline, Path(selbst.job.name).stem)
         )
 
     #: Was die SMPL-X-Pipeline neben ihr BVH legt: das Netz ueber dem Video.
-    NETZVIDEO = "_smplx.mp4"
+    NETZVIDEO = '_smplx.mp4'
 
     @classmethod
     def ueberlagerungsvideo(cls, request, job_id):
@@ -223,7 +223,7 @@ class Auftragsdateien:
         netz = selbst._netzvideo()
         if netz:
             return Videoauslieferung.mit_bereich(request, netz)
-        return selbst._rendern(True, "%s_skeleton.mp4" % Path(selbst.job.name).stem)
+        return selbst._rendern(True, '%s_skeleton.mp4' % Path(selbst.job.name).stem)
 
     def _netzvideo(self):
         """`<stamm>_smplx.mp4` neben dem BVH, wenn es da ist — sonst None."""
@@ -236,28 +236,28 @@ class Auftragsdateien:
         """Video rendern, in den Ausgabeordner legen und herunterladen."""
         pfad = Skelettfilm(self.job, ueberlagern=ueberlagern).erzeugen()
         if not pfad or not pfad.exists():
-            art = "overlay" if ueberlagern else "rig"
-            return HttpResponseNotFound("Could not render %s video" % art)
+            art = 'overlay' if ueberlagern else 'rig'
+            return HttpResponseNotFound('Could not render %s video' % art)
         Videoablage.kopieren(pfad, dateiname)
-        return FileResponse(open(pfad, "rb"), content_type="video/mp4", filename=dateiname)
+        return FileResponse(open(pfad, 'rb'), content_type='video/mp4', filename=dateiname)
 
     @classmethod
     def video3d_sichern(cls, request, job_id):
         """Das im Browser aufgezeichnete 3D-Video in den Ausgabeordner."""
-        if request.method != "POST":
-            return JsonResponse({"error": "POST required"}, status=405)
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
         selbst = cls(request, job_id)
-        hochgeladen = request.FILES.get("video")
+        hochgeladen = request.FILES.get('video')
         if not hochgeladen:
-            return JsonResponse({"error": "No video file"}, status=400)
-        ziel = Videoablage.schreiben(hochgeladen, "%s_3d_character.webm" % Path(selbst.job.name).stem)
-        return JsonResponse({"ok": True, "path": str(ziel)})
+            return JsonResponse({'error': 'No video file'}, status=400)
+        ziel = Videoablage.schreiben(hochgeladen, '%s_3d_character.webm' % Path(selbst.job.name).stem)
+        return JsonResponse({'ok': True, 'path': str(ziel)})
 
     # ---------------------------------------------------------------- Hilfe
 
     @staticmethod
     def textantwort(pfad):
         """BVH-Text ohne Zwischenspeicher -- er aendert sich beim Bearbeiten."""
-        antwort = FileResponse(open(pfad, "rb"), content_type="text/plain", filename=os.path.basename(pfad))
-        antwort["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        antwort = FileResponse(open(pfad, 'rb'), content_type='text/plain', filename=os.path.basename(pfad))
+        antwort['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return antwort

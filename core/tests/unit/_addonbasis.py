@@ -24,7 +24,7 @@ import unittest
 
 from ._projektquellen import Projektquellen
 
-__all__ = ["Addonbasis"]
+__all__ = ['Addonbasis']
 
 #: Die Wurzel, unter der die vier Repos liegen, und der Addonordner.
 TOOLS = Projektquellen.TOOLS
@@ -37,10 +37,10 @@ class Addonbasis(unittest.TestCase):
     databases = set()
 
     #: Fremde Addons — Urheber siehe Kopf.
-    FREMD = ("convert", "kbs_retarget")
+    FREMD = ('convert', 'kbs_retarget')
 
     #: Kein Quelltext.
-    KEIN_CODE = ("data", "cache", "__pycache__")
+    KEIN_CODE = ('data', 'cache', '__pycache__')
 
     #: So viele Klassen meldet `register()` an. Die Zahl steht hier,
     #: damit eine verschwundene Klasse auffaellt statt stillschweigend zu
@@ -50,7 +50,7 @@ class Addonbasis(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        for pfad in (TOOLS, TOOLS / "HumanBody"):
+        for pfad in (TOOLS, TOOLS / 'HumanBody'):
             if str(pfad) not in sys.path:
                 sys.path.insert(0, str(pfad))
 
@@ -58,13 +58,13 @@ class Addonbasis(unittest.TestCase):
     def eigene_module(cls):
         """Die Modulnamen des eigenen Addon-Codes, ohne Fremdbestand."""
         namen = []
-        for pfad in sorted(ADDON.rglob("*.py")):
+        for pfad in sorted(ADDON.rglob('*.py')):
             teile = pfad.relative_to(ADDON).parts
             if teile[0] in cls.FREMD or set(teile) & set(cls.KEIN_CODE):
                 continue
-            if pfad.name == "__init__.py":
+            if pfad.name == '__init__.py':
                 teile = teile[:-1]
             else:
                 teile = teile[:-1] + (pfad.stem,)
-            namen.append(".".join(("HumanBodyBlender",) + teile))
+            namen.append('.'.join(('HumanBodyBlender',) + teile))
         return namen

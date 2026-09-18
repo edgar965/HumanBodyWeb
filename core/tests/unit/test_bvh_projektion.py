@@ -36,30 +36,30 @@ from core.dienste.bvhbaum import Bvhbaum
 from core.dienste.vorwaertskinematik import Vorwaertskinematik
 from core.projekt_temp import ProjektTemp
 
-BVH = "\n".join(
+BVH = '\n'.join(
     [
-        "HIERARCHY",
-        "ROOT Hips",
-        "{",
-        "    OFFSET 0.00 0.00 0.00",
-        "    CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation",
-        "    JOINT Spine",
-        "    {",
-        "        OFFSET 0.00 10.00 0.00",
-        "        CHANNELS 3 Zrotation Xrotation Yrotation",
-        "        End Site",
-        "        {",
-        "            OFFSET 0.00 10.00 0.00",
-        "        }",
-        "    }",
-        "}",
-        "MOTION",
-        "Frames: 2",
-        "Frame Time: 0.040000",
-        "",  # Leerzeile: kommt in echten Dateien vor
-        "0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0",
-        "0.0 1.0 0.0 0.0 0.0 0.0 90.0 0.0 0.0",
-        "",
+        'HIERARCHY',
+        'ROOT Hips',
+        '{',
+        '    OFFSET 0.00 0.00 0.00',
+        '    CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation',
+        '    JOINT Spine',
+        '    {',
+        '        OFFSET 0.00 10.00 0.00',
+        '        CHANNELS 3 Zrotation Xrotation Yrotation',
+        '        End Site',
+        '        {',
+        '            OFFSET 0.00 10.00 0.00',
+        '        }',
+        '    }',
+        '}',
+        'MOTION',
+        'Frames: 2',
+        'Frame Time: 0.040000',
+        '',  # Leerzeile: kommt in echten Dateien vor
+        '0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0',
+        '0.0 1.0 0.0 0.0 0.0 0.0 90.0 0.0 0.0',
+        '',
     ]
 )
 
@@ -68,9 +68,9 @@ class BvhProjektionTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.ordner = ProjektTemp.ordner(prefix="bvhproj_")
-        cls.pfad = Path(cls.ordner) / "mini.bvh"
-        cls.pfad.write_text(BVH, encoding="utf-8")
+        cls.ordner = ProjektTemp.ordner(prefix='bvhproj_')
+        cls.pfad = Path(cls.ordner) / 'mini.bvh'
+        cls.pfad.write_text(BVH, encoding='utf-8')
 
     @classmethod
     def tearDownClass(cls):
@@ -81,9 +81,9 @@ class BvhProjektionTest(SimpleTestCase):
 
     def test_hierarchie_gelesen(self):
         baum = Bvhbaum(self.pfad)
-        self.assertEqual(baum.gelenke, ["Hips", "Spine"])
-        self.assertEqual(baum.eltern, {"Hips": None, "Spine": "Hips"})
-        self.assertEqual(baum.verbindungen(), [("Hips", "Spine")])
+        self.assertEqual(baum.gelenke, ['Hips', 'Spine'])
+        self.assertEqual(baum.eltern, {'Hips': None, 'Spine': 'Hips'})
+        self.assertEqual(baum.verbindungen(), [('Hips', 'Spine')])
 
     def test_kanalfolge_in_dateireihenfolge(self):
         """Die Reihenfolge entscheidet über die Drehung — sie darf nicht sortiert
@@ -92,16 +92,16 @@ class BvhProjektionTest(SimpleTestCase):
         self.assertEqual(
             baum.kanalfolge[:6],
             [
-                ("Hips", "Xposition"),
-                ("Hips", "Yposition"),
-                ("Hips", "Zposition"),
-                ("Hips", "Zrotation"),
-                ("Hips", "Xrotation"),
-                ("Hips", "Yrotation"),
+                ('Hips', 'Xposition'),
+                ('Hips', 'Yposition'),
+                ('Hips', 'Zposition'),
+                ('Hips', 'Zrotation'),
+                ('Hips', 'Xrotation'),
+                ('Hips', 'Yrotation'),
             ],
         )
         self.assertEqual(
-            baum.kanalfolge[6:], [("Spine", "Zrotation"), ("Spine", "Xrotation"), ("Spine", "Yrotation")]
+            baum.kanalfolge[6:], [('Spine', 'Zrotation'), ('Spine', 'Xrotation'), ('Spine', 'Yrotation')]
         )
 
     def test_leerzeilen_zaehlen_nicht_als_bild(self):
@@ -116,18 +116,18 @@ class BvhProjektionTest(SimpleTestCase):
 
     def test_weltpositionen_erstes_bild(self):
         stellen = Vorwaertskinematik(Bvhbaum(self.pfad)).positionen()
-        self.assertAlmostEqual(stellen[0]["Hips"][1], 1.0, places=6)
-        self.assertAlmostEqual(stellen[0]["Spine"][1], 11.0, places=6)
+        self.assertAlmostEqual(stellen[0]['Hips'][1], 1.0, places=6)
+        self.assertAlmostEqual(stellen[0]['Spine'][1], 11.0, places=6)
 
     def test_drehung_des_kindes_verschiebt_es_nicht(self):
         """Spine dreht um sich selbst — seine POSITION bleibt (0, 11, 0)."""
         stellen = Vorwaertskinematik(Bvhbaum(self.pfad)).positionen()
-        self.assertAlmostEqual(stellen[1]["Spine"][0], 0.0, places=6)
-        self.assertAlmostEqual(stellen[1]["Spine"][1], 11.0, places=6)
+        self.assertAlmostEqual(stellen[1]['Spine'][0], 0.0, places=6)
+        self.assertAlmostEqual(stellen[1]['Spine'][1], 11.0, places=6)
 
     def test_achsendrehung_um_z(self):
         """90° um Z schickt (1,0,0) nach (0,1,0)."""
-        matrix = Vorwaertskinematik.achsendrehung("Z", 90)
+        matrix = Vorwaertskinematik.achsendrehung('Z', 90)
         gedreht = matrix @ [1.0, 0.0, 0.0]
         self.assertAlmostEqual(gedreht[0], 0.0, places=6)
         self.assertAlmostEqual(gedreht[1], 1.0, places=6)
@@ -137,9 +137,9 @@ class BvhProjektionTest(SimpleTestCase):
     def test_pixel_wie_von_hand_gerechnet(self):
         punkte, verbindungen = Bvhprojektion.punkte(self.pfad, 100, 100)
         self.assertEqual(len(punkte), 2)
-        self.assertEqual(verbindungen, [("Hips", "Spine")])
-        hips = punkte[0]["Hips"]
-        spine = punkte[0]["Spine"]
+        self.assertEqual(verbindungen, [('Hips', 'Spine')])
+        hips = punkte[0]['Hips']
+        spine = punkte[0]['Spine']
         self.assertAlmostEqual(hips[0], 50.0, places=3)
         self.assertAlmostEqual(hips[1], 83.333, places=2)
         self.assertAlmostEqual(spine[0], 50.0, places=3)
@@ -149,20 +149,20 @@ class BvhProjektionTest(SimpleTestCase):
     def test_y_ist_gespiegelt(self):
         """Der höhere Punkt (Spine) muss den KLEINEREN Pixelwert haben."""
         punkte, _ = Bvhprojektion.punkte(self.pfad, 100, 100)
-        self.assertLess(punkte[0]["Spine"][1], punkte[0]["Hips"][1])
+        self.assertLess(punkte[0]['Spine'][1], punkte[0]['Hips'][1])
 
     def test_breites_video_zieht_den_ausschnitt_in_die_breite(self):
         """Bei 200x100 verdoppelt sich halb_x — die Y-Werte bleiben."""
         schmal, _ = Bvhprojektion.punkte(self.pfad, 100, 100)
         breit, _ = Bvhprojektion.punkte(self.pfad, 200, 100)
-        self.assertAlmostEqual(breit[0]["Hips"][1], schmal[0]["Hips"][1], places=3)
-        self.assertAlmostEqual(breit[0]["Hips"][0], 100.0, places=3)
+        self.assertAlmostEqual(breit[0]['Hips'][1], schmal[0]['Hips'][1], places=3)
+        self.assertAlmostEqual(breit[0]['Hips'][0], 100.0, places=3)
 
     def test_bvh_ohne_bewegung_ergibt_leere_listen(self):
-        pfad = Path(self.ordner) / "ohne.bvh"
-        pfad.write_text("HIERARCHY\nROOT Hips\n{\n}\nMOTION\n", encoding="utf-8")
+        pfad = Path(self.ordner) / 'ohne.bvh'
+        pfad.write_text('HIERARCHY\nROOT Hips\n{\n}\nMOTION\n', encoding='utf-8')
         self.assertEqual(Bvhprojektion.punkte(pfad, 100, 100), ([], []))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

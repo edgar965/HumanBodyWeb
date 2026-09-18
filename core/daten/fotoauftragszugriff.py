@@ -39,7 +39,7 @@ class Fotoauftragszugriff:
 
     @staticmethod
     def nicht_gefunden():
-        return JsonResponse({"ok": False, "error": "Job not found"}, status=404)
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
 
     @staticmethod
     def mit_rumpf(request, job_id) -> tuple[Any, Any, JsonResponse | None]:
@@ -71,7 +71,7 @@ class Fotoauftragszugriff:
         try:
             rumpf = json.loads(request.body)
         except json.JSONDecodeError, ValueError:
-            return None, None, JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+            return None, None, JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
         return job, rumpf, None
 
 

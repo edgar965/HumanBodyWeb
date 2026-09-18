@@ -18,9 +18,14 @@
 #
 # Copyright (C) 2020-2022 Michael Vigovsky
 
-import os, json, collections, logging, traceback, numpy
+import collections
+import json
+import logging
+import os
+import traceback
 
 import bpy  # pylint: disable=import-error
+import numpy
 
 from . import morphs, utils
 
@@ -45,7 +50,7 @@ def load_json_dir(path):
     for file in os.listdir(path):
         name, ext = os.path.splitext(file)
         full_path = os.path.join(path, file)
-        if ext == ".json" and os.path.isfile(full_path):
+        if ext == '.json' and os.path.isfile(full_path):
             result[name] = utils.parse_file(full_path, json.load, {})
     return result
 
@@ -54,14 +59,14 @@ _empty_dict = object()
 
 
 class DataDir:
-    dirpath: str = ""
+    dirpath: str = ''
 
     def __init__(self, dirpath: str):
         self.dirpath = dirpath
 
     def path(self, file, *paths):
         if not file or not self.dirpath:
-            return ""
+            return ''
         return os.path.join(self.dirpath, os.path.join(file, *paths))
 
     def get_yaml(self, file, default=_empty_dict):
@@ -82,23 +87,23 @@ class DataDir:
 
 
 class Character(DataDir):
-    description = ""
-    author = ""
-    licence = ""
-    char_file = "char.blend"
-    char_obj = "char"
-    basis = ""
+    description = ''
+    author = ''
+    licence = ''
+    char_file = 'char.blend'
+    char_obj = 'char'
+    basis = ''
     no_morph_categories = False
     custom_morph_order = False
     force_hair_scalp = False
     randomize_incl_regex = None
     randomize_excl_regex = None
-    default_type = ""
-    default_armature = ""
+    default_type = ''
+    default_armature = ''
     default_hair_length = 0.1
-    default_tex_set = ""
+    default_tex_set = ''
     recurse_materials = False
-    armature: dict[str, "Armature"] = {}
+    armature: dict[str, Armature] = {}
     armature_defaults: dict = {}
     bones: dict = {}
     hairstyles = ()
@@ -113,11 +118,11 @@ class Character(DataDir):
     hair_shrinkwrap_offset = 0.0002
 
     def __init__(self, name, lib: DataDir):
-        super().__init__(lib.path("characters", name))
+        super().__init__(lib.path('characters', name))
         self.lib = lib
         self.title = name
         self.name = name
-        self.__dict__.update(self.get_yaml("config.yaml"))
+        self.__dict__.update(self.get_yaml('config.yaml'))
         self.name = name
         self.pack_cache = {}
 
@@ -140,51 +145,51 @@ class Character(DataDir):
 
     @utils.lazyproperty
     def morphs_meta(self):
-        return self.get_yaml("morphs_meta.yaml")
+        return self.get_yaml('morphs_meta.yaml')
 
     @utils.lazyproperty
     def fitting_subset(self):
-        return self.get_np("fitting_subset.npz")
+        return self.get_np('fitting_subset.npz')
 
     @utils.lazyproperty
     def has_faces(self):
-        return os.path.isfile(self.path("faces.npy"))
+        return os.path.isfile(self.path('faces.npy'))
 
     @utils.lazyproperty
     def bbox(self):
-        return self.get_np("morphs/bbox.npz")
+        return self.get_np('morphs/bbox.npz')
 
     @utils.lazyproperty
     def faces(self):
-        npy = self.get_np("faces.npy")
+        npy = self.get_np('faces.npy')
         # Use regular python array instead of numpy for compatibility with BVHTree
         return None if npy is None else npy.tolist()
 
     @utils.lazyproperty
-    def assets(self) -> dict[str, "Asset"]:
-        return load_assets_dir(self.path("assets"))
+    def assets(self) -> dict[str, Asset]:
+        return load_assets_dir(self.path('assets'))
 
     @utils.lazyproperty
     def alt_topos(self):
-        return load_data_dir(self.path("morphs", "alt_topo"), ".npy")
+        return load_data_dir(self.path('morphs', 'alt_topo'), '.npy')
 
     @utils.lazyproperty
     def poses(self):
-        return load_json_dir(self.path("poses"))
+        return load_json_dir(self.path('poses'))
 
     @utils.lazyproperty
     def texture_sets(self):
-        path = self.path("textures")
+        path = self.path('textures')
         if os.path.isdir(path):
             result = [item for item in os.listdir(path) if os.path.isdir(os.path.join(path, item))]
             if result:
                 result.sort()
                 return result
-        return ["/"]
+        return ['/']
 
     @utils.lazyproperty
     def presets(self):
-        return self.load_presets("presets")
+        return self.load_presets('presets')
 
     def load_presets(self, path):
         path = self.path(path)
@@ -204,7 +209,7 @@ class Character(DataDir):
 
     @utils.lazyproperty
     def np_basis(self):
-        return morphs.np_ro64(self.get_np(f"morphs/L1/{self.basis}.npy"))
+        return morphs.np_ro64(self.get_np(f'morphs/L1/{self.basis}.npy'))
 
     def _parse_armature(self, data):
         if isinstance(data, list):
@@ -214,12 +219,12 @@ class Character(DataDir):
     def _parse_armature_list(self, data):
         result = {}
         for i, a in enumerate(data):
-            title = a.get("title")
+            title = a.get('title')
             if title:
-                k = title.lower().replace(" ", "_")
+                k = title.lower().replace(' ', '_')
             else:
                 k = str(i)
-                a["title"] = f"<unnamed {k}>"
+                a['title'] = f'<unnamed {k}>'
             if not self.default_armature:
                 self.default_armature = k
             result[k] = Armature(self, k, a)
@@ -229,8 +234,8 @@ class Character(DataDir):
         return {k: Armature(self, k, v) for k, v in data.items()}
 
 
-AssetFold = collections.namedtuple("AssetFold", ("verts", "faces", "pos", "idx", "weights", "wmorph"))
-AssetJoints = collections.namedtuple("AssetJoints", ("verts", "file"))
+AssetFold = collections.namedtuple('AssetFold', ('verts', 'faces', 'pos', 'idx', 'weights', 'wmorph'))
+AssetJoints = collections.namedtuple('AssetJoints', ('verts', 'file'))
 
 
 class Asset(DataDir):
@@ -241,81 +246,81 @@ class Asset(DataDir):
 
     @utils.lazyproperty
     def config(self):
-        return self.get_yaml("config.yaml")
+        return self.get_yaml('config.yaml')
 
     @utils.lazyproperty
     def author(self):
-        return self.config.get("author", "")
+        return self.config.get('author', '')
 
     @utils.lazyproperty
     def license(self):
-        return self.config.get("license", "")
+        return self.config.get('license', '')
 
     @utils.lazyproperty
     def mask(self):
-        return self.get_np("mask.npy")
+        return self.get_np('mask.npy')
 
     @utils.lazyproperty
     def fold(self):
-        z = self.get_np("fold.npz")
+        z = self.get_np('fold.npz')
         if z is None:
             return None
-        wmorph = z.get("wmorph_idx")
+        wmorph = z.get('wmorph_idx')
         if wmorph is not None:
-            wmorph = morphs.PartialMorph(wmorph, morphs.np_ro64(z["wmorph_delta"]))
+            wmorph = morphs.PartialMorph(wmorph, morphs.np_ro64(z['wmorph_delta']))
         return AssetFold(
-            morphs.np_ro64(z["verts"]),
-            z["faces"].tolist(),
-            z["pos"],
-            z["idx"],
-            morphs.np_ro64(z["weights"]),
+            morphs.np_ro64(z['verts']),
+            z['faces'].tolist(),
+            z['pos'],
+            z['idx'],
+            morphs.np_ro64(z['weights']),
             wmorph,
         )
 
     @utils.lazyproperty
     def armature(self):
-        items = self.config.get("armature", ())
+        items = self.config.get('armature', ())
         if items and not isinstance(items, list):
             items = (items,)
-        return [Armature(self, "", item) for item in items]
+        return [Armature(self, '', item) for item in items]
 
     @utils.lazyproperty
     def rigid(self):
-        return self.config.get("fitting") == "rigid"
+        return self.config.get('fitting') == 'rigid'
 
     @utils.lazyproperty
     def category(self):
-        return self.config.get("category", "Other")
+        return self.config.get('category', 'Other')
 
     @utils.lazyproperty
     def tags(self):
-        return self.config.get("tags", [])
+        return self.config.get('tags', [])
 
     @utils.lazyproperty
     def material_presets(self):
-        return self.config.get("material_presets", {})
+        return self.config.get('material_presets', {})
 
     @utils.lazyproperty
     def parameters(self):
-        return self.config.get("parameters", {})
+        return self.config.get('parameters', {})
 
     @utils.lazyproperty
     def visibility_zones(self):
-        return self.config.get("visibility_zones", {})
+        return self.config.get('visibility_zones', {})
 
     @utils.lazyproperty
     def morph(self):
-        return morphs.load_noext(self.path("morph"))
+        return morphs.load_noext(self.path('morph'))
 
 
 def get_asset(asset_dir: str, name: str):
     path = os.path.join(asset_dir, name)
     if os.path.isdir(path):
-        for fname in (name, "asset"):
-            fname = os.path.join(path, fname + ".blend")
+        for fname in (name, 'asset'):
+            fname = os.path.join(path, fname + '.blend')
             if os.path.isfile(fname):
                 return Asset(name, fname, path)
-    elif name.endswith(".blend"):
+    elif name.endswith('.blend'):
         return Asset(name[:-6], path)
     return None
 
@@ -328,11 +333,11 @@ def load_assets_dir(path: str):
         asset = get_asset(path, item)
         if asset:
             result[asset.name] = asset
-    item = os.path.join(path, "authors.yaml")
+    item = os.path.join(path, 'authors.yaml')
     if os.path.isfile(item):
         for yaml in utils.parse_file(item, utils.load_yaml, ()):
-            assets = yaml.get("items", ())
-            del yaml["items"]
+            assets = yaml.get('items', ())
+            del yaml['items']
             for name in assets:
                 asset = result.get(name)
                 if asset:
@@ -352,7 +357,7 @@ def _lazy_yaml_props(*prop_lst):
             for prop in prop_lst:
                 value = self.__dict__.get(prop)
                 if isinstance(value, str):
-                    setattr(self, "_lazy_yaml_" + prop, value)
+                    setattr(self, '_lazy_yaml_' + prop, value)
                     delattr(self, prop)
 
         cls.__init__ = new_init
@@ -361,7 +366,7 @@ def _lazy_yaml_props(*prop_lst):
                 cls,
                 prop,
                 utils.named_lazyprop(
-                    prop, lambda self, name=prop: self.parent.get_yaml(getattr(self, "_lazy_yaml_" + name))
+                    prop, lambda self, name=prop: self.parent.get_yaml(getattr(self, '_lazy_yaml_' + name))
                 ),
             )
         return cls
@@ -372,22 +377,22 @@ def _lazy_yaml_props(*prop_lst):
 def parse_joints(joints, d: DataDir):
     if isinstance(joints, dict):
         joints = (joints,)
-    return [AssetJoints(item["verts"], d.path(item["file"])) for item in joints]
+    return [AssetJoints(item['verts'], d.path(item['file'])) for item in joints]
 
 
-@_lazy_yaml_props("bones", "mixin_bones")
+@_lazy_yaml_props('bones', 'mixin_bones')
 class Armature:
-    type = "regular"
+    type = 'regular'
     tweaks = None
     ik_limits: dict[str, dict] = {}
     sliding_joints: dict[str, dict] = {}
-    mixin = ""
+    mixin = ''
     match: list[dict[str, str]] = []
     mixin_bones: dict[str, dict]
     arp_reference_layer = 17
     no_legacy = False
     drivers = None
-    description = ""
+    description = ''
 
     asset_joints: list[AssetJoints] = None
 
@@ -396,7 +401,7 @@ class Armature:
         if path:
             return self.parent.path(path)
 
-        return self.parent.path(os.path.join(item, self.name + ".npz"))
+        return self.parent.path(os.path.join(item, self.name + '.npz'))
 
     def __init__(self, parent: DataDir, name: str, conf: dict):
         self.title = name
@@ -410,20 +415,20 @@ class Armature:
 
         self.__dict__.update(conf)
         self.name = name
-        self.weights = self._default_path("weights")
+        self.weights = self._default_path('weights')
 
         if isinstance(parent, Asset):
-            self.asset_joints = parse_joints(self.__dict__.get("joints"), parent)
+            self.asset_joints = parse_joints(self.__dict__.get('joints'), parent)
         else:
-            self.joints_file = self._default_path("joints")
+            self.joints_file = self._default_path('joints')
 
-        if "joints" in self.__dict__:
-            del self.__dict__["joints"]
+        if 'joints' in self.__dict__:
+            del self.__dict__['joints']
 
         if isinstance(self.match, dict):
             self.match = (self.match,)
 
-        if "bones" not in self.__dict__ and isinstance(parent, Character):
+        if 'bones' not in self.__dict__ and isinstance(parent, Character):
             self.bones = parent.bones  # Legacy
 
     @utils.lazyproperty
@@ -435,7 +440,7 @@ class Armature:
         return self.parent.get_np(self.weights)
 
 
-empty_char = Character("", DataDir(""))
+empty_char = Character('', DataDir(''))
 
 
 class Library(DataDir):
@@ -456,27 +461,27 @@ class Library(DataDir):
     def obj_char(self, obj) -> Character:
         if not obj:
             return empty_char
-        return self.char_by_name(obj.data.get("charmorph_template") or obj.get("manuellab_id"))
+        return self.char_by_name(obj.data.get('charmorph_template') or obj.get('manuellab_id'))
 
     def update_additional_assets(self, path):
         self.additional_assets = load_assets_dir(path)
 
     def load(self):
         t = utils.Timer()
-        logger.debug("Loading character library at %s", self.dirpath)
+        logger.debug('Loading character library at %s', self.dirpath)
         if not os.path.isdir(self.dirpath):
-            logger.error("Charmorph data is not found at %s", self.dirpath)
+            logger.error('Charmorph data is not found at %s', self.dirpath)
         self.chars.clear()
-        self.hair_colors = self.get_yaml("hair_colors.yaml")
-        aliases = self.get_yaml("characters/aliases.yaml")
+        self.hair_colors = self.get_yaml('hair_colors.yaml')
+        aliases = self.get_yaml('characters/aliases.yaml')
         self.char_aliases.clear()
         for k, v in aliases.items():
             for k2 in v if isinstance(v, list) else (v,):
                 self.char_aliases[k2] = k
 
-        chardir = self.path("characters")
+        chardir = self.path('characters')
         if not os.path.isdir(chardir):
-            logger.error("Directory %s is not found.", format(chardir))
+            logger.error('Directory %s is not found.', format(chardir))
             return
 
         for char_name in sorted(os.listdir(chardir)):
@@ -485,7 +490,7 @@ class Library(DataDir):
             try:
                 char = Character(char_name, self)
             except Exception as e:
-                logger.error("Error in character %s: %s", char_name, e)
+                logger.error('Error in character %s: %s', char_name, e)
                 logger.error(traceback.format_exc())
                 continue
 
@@ -495,10 +500,10 @@ class Library(DataDir):
 
             self.chars[char_name] = char
 
-        t.time("Library load")
+        t.time('Library load')
 
 
-library = Library(os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "data")))
+library = Library(os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data')))
 
 
 def get_basis(data, mcore=None, use_char=True):
@@ -511,18 +516,18 @@ def get_basis(data, mcore=None, use_char=True):
     if mcore and mcore.obj.data == data:
         return mcore.get_basis_alt_topo()
 
-    alt_topo = data.get("cm_alt_topo")
+    alt_topo = data.get('cm_alt_topo')
     if isinstance(alt_topo, (bpy.types.Object, bpy.types.Mesh)):
         return get_basis(alt_topo, None, False)
 
     char = None
     if use_char:
-        char = library.char_by_name(data.get("charmorph_template"))
+        char = library.char_by_name(data.get('charmorph_template'))
 
     if char:
         if not alt_topo:
             return char.np_basis
         if isinstance(alt_topo, str):
-            return library.char_by_name(data.get("charmorph_template")).get_np("morphs/alt_topo/" + alt_topo)
+            return library.char_by_name(data.get('charmorph_template')).get_np('morphs/alt_topo/' + alt_topo)
 
     return utils.verts_to_numpy(data.vertices)

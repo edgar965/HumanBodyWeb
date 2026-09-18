@@ -25,11 +25,11 @@ class Smplxablage:
     """Der Ordner mit den SMPL-X-Ergebnissen und die Dateien darin."""
 
     #: Verzeichnisname auf der Platte. Gemischte Schreibweise — siehe oben.
-    ORDNER = "photoTo3D"
+    ORDNER = 'photoTo3D'
     #: Unterordner der SMPL-X-Ausgabe.
-    UNTERORDNER = "SMPLX"
+    UNTERORDNER = 'SMPLX'
     #: Dateiendungen, die je Auftrag entstehen.
-    ENDUNGEN = (".json", ".npz")
+    ENDUNGEN = ('.json', '.npz')
 
     @classmethod
     def verzeichnis(cls):
@@ -40,8 +40,8 @@ class Smplxablage:
         return os.path.join(str(settings.OBJECTS_ROOT), cls.ORDNER, cls.UNTERORDNER)
 
     @classmethod
-    def datei(cls, job_id, endung=".npz"):
-        return os.path.join(cls.verzeichnis(), "%s%s" % (job_id, endung))
+    def datei(cls, job_id, endung='.npz'):
+        return os.path.join(cls.verzeichnis(), '%s%s' % (job_id, endung))
 
     @classmethod
     def dateien(cls, job_id):

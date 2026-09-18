@@ -23,7 +23,7 @@ import logging
 
 import numpy as np
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Persongrenzen:
@@ -72,7 +72,7 @@ class Persongrenzen:
             _, maske = cv2.threshold(grau, cls.SCHWELLE, 255, cv2.THRESH_BINARY_INV)
             zeilen, spalten = np.where(maske > 0)
         except Exception:  # noqa: BLE001
-            logger.debug("Personengrenzen nicht bestimmbar: %s", pfad, exc_info=True)
+            logger.debug('Personengrenzen nicht bestimmbar: %s', pfad, exc_info=True)
             return cls.ganzes_bild(img_w, img_h)
         if len(zeilen) <= cls.MIND_PIXEL:
             return cls.ganzes_bild(img_w, img_h)

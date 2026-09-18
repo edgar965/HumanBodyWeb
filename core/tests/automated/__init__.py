@@ -21,7 +21,7 @@ import os
 
 from ..nurgemeint import Nurgemeint
 
-WAECHTER = Nurgemeint("automated", os.path.dirname(__file__), dauer="32 s")
+WAECHTER = Nurgemeint('automated', os.path.dirname(__file__), dauer='32 s')
 
 
 def load_tests(loader, standard_tests, pattern):

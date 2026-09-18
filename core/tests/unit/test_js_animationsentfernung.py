@@ -22,7 +22,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "animationsentfernung.js")
+MODUL = Jsmodul('scene', 'animationsentfernung.js')
 
 SKRIPT = """
 const { Animationsentfernung: A } = await import(MODUL);
@@ -106,4 +106,4 @@ console.log(JSON.stringify({ ok: true }));
 class AnimationsentfernungTest(SimpleTestCase):
     def test_stoppt_vergisst_und_waehlt_den_nachfolger(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

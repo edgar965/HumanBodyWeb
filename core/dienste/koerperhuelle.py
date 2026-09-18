@@ -45,7 +45,7 @@ class Koerperhuelle:
         offset=0.006,
         stiffness=0.5,
         color=(0.3, 0.35, 0.5),
-        coordinate_system="auto",
+        coordinate_system='auto',
     ):
         """Generic garment fit: wrap garment around ANY target mesh.
 
@@ -65,21 +65,21 @@ class Koerperhuelle:
         punkte = Koerperhuelle._verfeinern(punkte, gedehnt, dreiecke, offset, stiffness)
         # Dictionary gewollt: dasselbe Format wie `fit_garment` liefert.
         return {
-            "vertices": punkte.astype(np.float32),
-            "faces": dreiecke,
-            "normals": _compute_vertex_normals(punkte, dreiecke).astype(np.float32),
-            "color": color,
+            'vertices': punkte.astype(np.float32),
+            'faces': dreiecke,
+            'normals': _compute_vertex_normals(punkte, dreiecke).astype(np.float32),
+            'color': color,
         }
 
     @staticmethod
     def _vorbereiten(punkte, flaechen, koordinatensystem):
         """Koordinatensystem klären und in Dreiecke zerlegen."""
-        from GarmentFitter.fitter import mh_to_blender, _triangulate, _detect_coordinate_system
+        from GarmentFitter.fitter import _detect_coordinate_system, _triangulate, mh_to_blender
 
         werte = punkte.copy().astype(np.float64)
-        if koordinatensystem == "auto":
+        if koordinatensystem == 'auto':
             koordinatensystem = _detect_coordinate_system(werte)
-        if koordinatensystem == "makehuman":
+        if koordinatensystem == 'makehuman':
             werte = mh_to_blender(werte)
         return werte, _triangulate(flaechen.copy())
 

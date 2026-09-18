@@ -31,7 +31,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "laufwache.js")
+MODUL = Jsmodul('gemeinsam', 'laufwache.js')
 
 SKRIPT = """
 const { Laufwache: W } = await import(MODUL);
@@ -92,4 +92,4 @@ class LaufwacheTest(SimpleTestCase):
 
     def test_freier_reiter_laesst_durch_laufender_bau_wird_gemeldet(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

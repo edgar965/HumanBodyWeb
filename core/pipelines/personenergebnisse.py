@@ -21,7 +21,7 @@ import re
 class Personenergebnisse:
     """`<stamm>_p<n>.bvh` neben dem BVH der ersten Person."""
 
-    MUSTER = re.compile(r"_p(\d+)\.bvh$", re.IGNORECASE)
+    MUSTER = re.compile(r'_p(\d+)\.bvh$', re.IGNORECASE)
 
     @classmethod
     def finden(cls, bvh):
@@ -30,7 +30,7 @@ class Personenergebnisse:
             return []
         stamm, _endung = os.path.splitext(str(bvh))
         gefunden = []
-        for pfad in glob.glob(glob.escape(stamm) + "_p*.bvh"):
+        for pfad in glob.glob(glob.escape(stamm) + '_p*.bvh'):
             treffer = cls.MUSTER.search(os.path.basename(pfad))
             if treffer and os.path.getsize(pfad) > 0:
                 gefunden.append((int(treffer.group(1)), pfad))
@@ -52,7 +52,7 @@ class Personenergebnisse:
         weitere = cls.finden(bvh)
         job.bvh_file_personen = weitere
         for pfad in weitere:
-            zusatz = "_p%d" % cls.nummer(pfad)
+            zusatz = '_p%d' % cls.nummer(pfad)
             kopie = Ergebnisablage.kopieren(pfad, job.name, quelle + zusatz)
             bibliothek(kopie, quelle, zusatz)
         return weitere

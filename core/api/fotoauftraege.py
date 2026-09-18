@@ -54,45 +54,45 @@ class Fotoauftraege:
         try:
             daten = json.loads(job.result_json)
         except json.JSONDecodeError, TypeError:
-            logger.exception("photo_analysis_job_data: JSONDecodeError/TypeError")
-            return JsonResponse({"ok": False, "error": "Invalid result data"}, status=500)
+            logger.exception('photo_analysis_job_data: JSONDecodeError/TypeError')
+            return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
         Fotoauftraege._morphs_nachrechnen(daten)
         return JsonResponse(Fotoauftraege._mit_adressen(daten, job))
 
     @staticmethod
     def _morphs_nachrechnen(daten):
-        if not daten.get("betas"):
+        if not daten.get('betas'):
             return
         try:
             with Wrapperpfad():
                 from smplest_x_wrapper import betas_to_morph_sliders
 
                 zuordnung = betas_to_morph_sliders(
-                    daten["betas"], daten.get("gender", "female"), expression=daten.get("expression")
+                    daten['betas'], daten.get('gender', 'female'), expression=daten.get('expression')
                 )
-            daten["morphs"] = zuordnung["morphs"]
-            daten["meta_sliders"] = zuordnung["meta_sliders"]
-            daten["body_type"] = zuordnung["body_type"]
+            daten['morphs'] = zuordnung['morphs']
+            daten['meta_sliders'] = zuordnung['meta_sliders']
+            daten['body_type'] = zuordnung['body_type']
         except Exception:
             # Kein `stumm gewollt`: Hier faellt der Aufruf des SMPL-Wrappers
             # aus, und die Seite zeigt danach die ALTEN Morphs — das sieht wie
             # ein Rechenfehler aus, nicht wie ein fehlendes Modul.
             logger.warning(
-                "[foto] Morph-Zuordnung aus Betas fehlgeschlagen, gespeicherte Werte bleiben stehen",
+                '[foto] Morph-Zuordnung aus Betas fehlgeschlagen, gespeicherte Werte bleiben stehen',
                 exc_info=True,
             )
 
     @staticmethod
     def _mit_adressen(daten, job):
         """Die Adressen, die das Frontend zum Anzeigen braucht."""
-        daten["ok"] = True
-        daten["photo_url"] = "/%s" % job.photo_file if job.photo_file else None
-        if daten.get("texture_path"):
-            daten["texture_url"] = "/%s" % daten["texture_path"]
-        if daten.get("silhouette_path"):
-            daten["silhouette_url"] = "/%s" % daten["silhouette_path"]
+        daten['ok'] = True
+        daten['photo_url'] = '/%s' % job.photo_file if job.photo_file else None
+        if daten.get('texture_path'):
+            daten['texture_url'] = '/%s' % daten['texture_path']
+        if daten.get('silhouette_path'):
+            daten['silhouette_url'] = '/%s' % daten['silhouette_path']
         if job.result_image:
-            daten["result_image_url"] = "/%s" % job.result_image
+            daten['result_image_url'] = '/%s' % job.result_image
         return daten
 
     # ------------------------------------------------------------ Bildsichern
@@ -105,12 +105,12 @@ class Fotoauftraege:
         job, rumpf, fehler = Fotoauftragszugriff.mit_rumpf(request, job_id)
         if fehler:
             return fehler
-        relativ, fehlertext = Bildablage("screenshots").sichern_aus_dataurl(job_id, rumpf.get("image", ""))
+        relativ, fehlertext = Bildablage('screenshots').sichern_aus_dataurl(job_id, rumpf.get('image', ''))
         if fehlertext:
-            return JsonResponse({"ok": False, "error": fehlertext}, status=400)
+            return JsonResponse({'ok': False, 'error': fehlertext}, status=400)
         job.result_image = relativ
-        job.save(update_fields=["result_image"])
-        return JsonResponse({"ok": True, "path": "/%s" % relativ})
+        job.save(update_fields=['result_image'])
+        return JsonResponse({'ok': True, 'path': '/%s' % relativ})
 
     # ---------------------------------------------------------------- Loeschen
 
@@ -144,7 +144,7 @@ class Fotoauftraege:
             return Fotoauftragszugriff.nicht_gefunden()
         Fotoauftraege._dateien_entfernen(job)
         job.delete()
-        return redirect("photo_analysis_jobs")
+        return redirect('photo_analysis_jobs')
 
     @staticmethod
     @csrf_exempt
@@ -152,11 +152,11 @@ class Fotoauftraege:
     def mehrere_loeschen(request):
         """Mehrere Fotoanalyse-Auftraege auf einmal loeschen."""
         try:
-            kennungen = json.loads(request.body).get("ids", [])
+            kennungen = json.loads(request.body).get('ids', [])
         except json.JSONDecodeError, TypeError:
-            return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+            return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
         if not kennungen:
-            return JsonResponse({"ok": False, "error": "No job IDs provided"}, status=400)
+            return JsonResponse({'ok': False, 'error': 'No job IDs provided'}, status=400)
         geloescht = 0
         for kennung in kennungen:
             job = Fotoauftragszugriff.holen(kennung)
@@ -168,12 +168,12 @@ class Fotoauftraege:
             Fotoauftraege._dateien_entfernen(job)
             job.delete()
             geloescht += 1
-        return JsonResponse({"ok": True, "deleted": geloescht})
+        return JsonResponse({'ok': True, 'deleted': geloescht})
 
     @staticmethod
     def erneut_analysieren(request, job_id):
         """Zur Foto-zu-3D-Seite mit vorgeladenem Foto des Auftrags."""
-        return redirect("/humanbody/photo-to-3d/?job=%s" % job_id)
+        return redirect('/humanbody/photo-to-3d/?job=%s' % job_id)
 
     # ---------------------------------------------------------------- Analyse
 
@@ -188,13 +188,13 @@ class Fotoauftraege:
         anlegen, Netz und Parameter archivieren, Ausrichtung rechnen. Das liegt
         jetzt in Fotoanalyse, SmplxArchiv und der Datenklasse Analyseergebnis.
         """
-        hochgeladen = request.FILES.get("photo")
+        hochgeladen = request.FILES.get('photo')
         if not hochgeladen:
-            return JsonResponse({"ok": False, "error": "No photo uploaded"}, status=400)
+            return JsonResponse({'ok': False, 'error': 'No photo uploaded'}, status=400)
         try:
-            ergebnis, pfad, _name = Fotoanalyse.ausfuehren(hochgeladen, request.POST.get("backend"))
+            ergebnis, pfad, _name = Fotoanalyse.ausfuehren(hochgeladen, request.POST.get('backend'))
         except FotoanalyseFehler as fehler:
-            return JsonResponse({"ok": False, "error": str(fehler)}, status=fehler.status)
+            return JsonResponse({'ok': False, 'error': str(fehler)}, status=fehler.status)
         job = Fotoauftraege._anlegen(ergebnis, hochgeladen.name)
         if job is not None:
             ergebnis.job_id = job.id
@@ -210,7 +210,7 @@ class Fotoauftraege:
 
             return PhotoAnalysisJob.objects.create(
                 original_filename=dateiname,
-                photo_file=ergebnis.foto_url.lstrip("/"),
+                photo_file=ergebnis.foto_url.lstrip('/'),
                 backend=ergebnis.backend,
                 gender=ergebnis.geschlecht,
                 body_type=ergebnis.koerpertyp,
@@ -218,7 +218,7 @@ class Fotoauftraege:
                 duration_seconds=ergebnis.dauer,
             )
         except Exception:  # noqa: BLE001
-            logger.error("Fotoauftrag nicht speicherbar", exc_info=True)
+            logger.error('Fotoauftrag nicht speicherbar', exc_info=True)
             return None
 
     @staticmethod
@@ -231,19 +231,19 @@ class Fotoauftraege:
                 ergebnis.kameradaten, ergebnis.betas, ergebnis.geschlecht, photo_path=foto_pfad
             )
         except Exception as fehler:  # noqa: BLE001
-            logger.error("Automatische Ausrichtung fehlgeschlagen: %s", fehler)
+            logger.error('Automatische Ausrichtung fehlgeschlagen: %s', fehler)
             return
         if not ausrichtung:
             return
         ergebnis.ausrichtung = ausrichtung
         job.result_json = json.dumps(ergebnis.als_dict(), default=str)
-        job.save(update_fields=["result_json"])
+        job.save(update_fields=['result_json'])
         logger.info(
-            "Ausrichtung fuer %s: Massstab %.3f, Mitte (%.1f, %.1f)",
+            'Ausrichtung fuer %s: Massstab %.3f, Mitte (%.1f, %.1f)',
             job.id,
-            ausrichtung["body_transform"]["scale"],
-            ausrichtung["body_transform"]["center_x"],
-            ausrichtung["body_transform"]["center_y"],
+            ausrichtung['body_transform']['scale'],
+            ausrichtung['body_transform']['center_x'],
+            ausrichtung['body_transform']['center_y'],
         )
 
     @staticmethod
@@ -256,6 +256,6 @@ class Fotoauftraege:
 
                 backends = get_all_status()
         except ImportError:
-            logger.warning("photo_analyzer nicht importierbar — keine Backends", exc_info=True)
+            logger.warning('photo_analyzer nicht importierbar — keine Backends', exc_info=True)
             backends = {}
-        return JsonResponse({"backends": backends})
+        return JsonResponse({'backends': backends})

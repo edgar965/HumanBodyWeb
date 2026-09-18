@@ -26,11 +26,11 @@ class NetzEinstellungen(models.Model):
         abstract = True
 
     unterteilung_browser = models.PositiveSmallIntegerField(
-        default=2, help_text=Einstellungsfelder.hilfetext("unterteilung_browser")
+        default=2, help_text=Einstellungsfelder.hilfetext('unterteilung_browser')
     )
     unterteilung_film = models.PositiveSmallIntegerField(
-        default=3, help_text=Einstellungsfelder.hilfetext("unterteilung_film")
+        default=3, help_text=Einstellungsfelder.hilfetext('unterteilung_film')
     )
     haut_verschiebung = models.BooleanField(
-        default=True, help_text=Einstellungsfelder.hilfetext("haut_verschiebung")
+        default=True, help_text=Einstellungsfelder.hilfetext('haut_verschiebung')
     )

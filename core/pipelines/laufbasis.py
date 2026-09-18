@@ -49,9 +49,9 @@ class Pipelinelauf:
     @property
     def stamm(self):
         """Dateiname des Auftrags ohne Endung — Grundlage der Ausgabenamen."""
-        return self.job.name.rsplit(".", 1)[0]
+        return self.job.name.rsplit('.', 1)[0]
 
     @classmethod
     def fehlerausschnitt(cls, text):
         """Das Ende der Fehlerausgabe, auf `MAX_FEHLERZEICHEN` gekürzt."""
-        return (text or "")[-cls.MAX_FEHLERZEICHEN :]
+        return (text or '')[-cls.MAX_FEHLERZEICHEN :]

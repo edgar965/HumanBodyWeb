@@ -22,9 +22,9 @@ die ein.
 
 import numpy as np
 from humanbody_core.cloth import generate_builder_custom
+from humanbody_core.koerperabstand import Koerperabstand
 
 from ..dienste.charakterdaten import Charakterdaten
-from humanbody_core.koerperabstand import Koerperabstand
 
 
 class Bereichsstoff:
@@ -34,12 +34,12 @@ class Bereichsstoff:
     WEITENANTEIL = 0.010
 
     def __init__(self, parameter):
-        self.von = float(parameter.get("z_min", 0.0))
-        self.bis = float(parameter.get("z_max", 1.0))
-        self.mit_armen = parameter.get("include_arms", "0") == "1"
-        self.wachsen = int(parameter.get("grow", 2))
-        self.weite = float(parameter.get("looseness", 0.3))
-        self.kategorie = parameter.get("category", None)
+        self.von = float(parameter.get('z_min', 0.0))
+        self.bis = float(parameter.get('z_max', 1.0))
+        self.mit_armen = parameter.get('include_arms', '0') == '1'
+        self.wachsen = int(parameter.get('grow', 2))
+        self.weite = float(parameter.get('looseness', 0.3))
+        self.kategorie = parameter.get('category', None)
 
     # ------------------------------------------------------------------ Bauen
 
@@ -48,7 +48,7 @@ class Bereichsstoff:
         punkte = np.asarray(koerper.vertices, dtype=np.float64)
         flaechen = self._flaechen(koerper)
         if flaechen is None:
-            return None, "No face topology available"
+            return None, 'No face topology available'
         grundlage, grundflaechen = self._grundlage(koerper.geschlecht, punkte, flaechen)
         ergebnis = generate_builder_custom(
             grundlage,
@@ -61,8 +61,8 @@ class Bereichsstoff:
             category=self.kategorie,
         )
         if ergebnis is None:
-            return None, "No body faces in region"
-        ergebnis["vertices"] = self._herausschieben(ergebnis, grundlage)
+            return None, 'No body faces in region'
+        ergebnis['vertices'] = self._herausschieben(ergebnis, grundlage)
         return ergebnis, None
 
     @staticmethod
@@ -87,6 +87,6 @@ class Bereichsstoff:
         """Zweiter Schub gegen die konvexen Stellen (siehe Modul-Docstring)."""
         abstand = self.GRUNDABSTAND + self.weite * self.WEITENANTEIL
         geschoben = Koerperabstand.radial(
-            ergebnis["vertices"].astype(np.float64), grundlage, mindestabstand=abstand
+            ergebnis['vertices'].astype(np.float64), grundlage, mindestabstand=abstand
         )
         return geschoben.astype(np.float32)

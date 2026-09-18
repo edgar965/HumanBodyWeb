@@ -32,37 +32,37 @@ class Auftragstabelle:
     #: verspräche eine Ordnung, die es nicht gibt.
     SPALTEN = (
         {
-            "label": '<input type="checkbox" id="select-all" title="alle auswählen / Auswahl aufheben">',
-            "key": "wahl",
-            "sortAus": True,
-            "titel": "Kästchen wählt eine Zeile; Shift-Klick wählt alle Zeilen bis zur zuletzt angeklickten",
+            'label': '<input type="checkbox" id="select-all" title="alle auswählen / Auswahl aufheben">',
+            'key': 'wahl',
+            'sortAus': True,
+            'titel': 'Kästchen wählt eine Zeile; Shift-Klick wählt alle Zeilen bis zur zuletzt angeklickten',
         },
-        {"label": "Name", "key": "name"},
-        {"label": "Pipeline", "key": "pipeline"},
-        {"label": "Status", "key": "status"},
-        {"label": "Größe", "key": "groesse", "num": True},
-        {"label": "Erstellt", "key": "erstellt"},
+        {'label': 'Name', 'key': 'name'},
+        {'label': 'Pipeline', 'key': 'pipeline'},
+        {'label': 'Status', 'key': 'status'},
+        {'label': 'Größe', 'key': 'groesse', 'num': True},
+        {'label': 'Erstellt', 'key': 'erstellt'},
         {
-            "label": "Verarbeiten",
-            "key": "verarbeiten",
-            "sortAus": True,
-            "titel": "Pipeline wählen und starten — eine andere Pipeline legt "
-            "einen neuen Auftrag an, der alte bleibt",
+            'label': 'Verarbeiten',
+            'key': 'verarbeiten',
+            'sortAus': True,
+            'titel': 'Pipeline wählen und starten — eine andere Pipeline legt '
+            'einen neuen Auftrag an, der alte bleibt',
         },
-        {"label": "Aktionen", "key": "aktionen", "sortAus": True},
+        {'label': 'Aktionen', 'key': 'aktionen', 'sortAus': True},
     )
 
     #: Statuszelle je Endzustand: (Klasse, Symbol, Text). Was läuft, bekommt
     #: den Fortschrittsbalken (`_laeuft`).
     ZUSTAENDE = {
-        "complete": ("hb-gut", "fa-check-circle", "Fertig"),
-        "failed": ("hb-schlecht", "fa-times-circle", "Fehlgeschlagen"),
-        "pending": ("hb-laeuft", "fa-clock", "Wartet"),
+        'complete': ('hb-gut', 'fa-check-circle', 'Fertig'),
+        'failed': ('hb-schlecht', 'fa-times-circle', 'Fehlgeschlagen'),
+        'pending': ('hb-laeuft', 'fa-clock', 'Wartet'),
     }
 
     #: Klasse der `<table>` — dort hängt das Eigene (Kästchenspalte, gewählte
     #: Zeile) in `auftragstabelle.css`.
-    KLASSE = "auftragstabelle"
+    KLASSE = 'auftragstabelle'
 
     def __init__(self, auftraege, schluessel, pipelines):
         """@param auftraege BVHJob-Liste mit `video_size`/`video_size_display`
@@ -77,11 +77,11 @@ class Auftragstabelle:
     def tabelle(self):
         # Dictionary gewollt: geht unverändert in `djangobase/_tabelle.html`.
         return {
-            "key": self.schluessel,
-            "spalten": [dict(s) for s in self.SPALTEN],
-            "zeilen": [self.zeile(a) for a in self.auftraege],
-            "leer": "keine Aufträge",
-            "klasse": self.KLASSE,
+            'key': self.schluessel,
+            'spalten': [dict(s) for s in self.SPALTEN],
+            'zeilen': [self.zeile(a) for a in self.auftraege],
+            'leer': 'keine Aufträge',
+            'klasse': self.KLASSE,
         }
 
     # ---------------------------------------------------------------- Zeile
@@ -90,8 +90,8 @@ class Auftragstabelle:
         """Eine Zeile — `id` wird zu `data-id`, `html` ist die Zellenkette."""
         # Dictionary gewollt: Zeilenform von `_tabelle.html`.
         return {
-            "id": str(job.id),
-            "html": "".join(
+            'id': str(job.id),
+            'html': ''.join(
                 (
                     self._kaestchen(job),
                     self._name(job),
@@ -113,7 +113,7 @@ class Auftragstabelle:
 
     @staticmethod
     def _name(job):
-        return format_html("<td>{}</td>", job.name)
+        return format_html('<td>{}</td>', job.name)
 
     @staticmethod
     def _pipeline(job):
@@ -132,7 +132,7 @@ class Auftragstabelle:
         return format_html(
             '<td id="status-{}" data-sort="läuft {}">{}</td>',
             job.id,
-            "%03d" % int(job.progress or 0),
+            '%03d' % int(job.progress or 0),
             self._laeuft(job),
         )
 
@@ -157,31 +157,31 @@ class Auftragstabelle:
     def _groesse(job):
         return format_html(
             '<td class="num" data-sort="{}">{}</td>',
-            getattr(job, "video_size", 0),
-            getattr(job, "video_size_display", ""),
+            getattr(job, 'video_size', 0),
+            getattr(job, 'video_size_display', ''),
         )
 
     @staticmethod
     def _erstellt(job):
         wann = template_localtime(job.created_at)
         return format_html(
-            '<td data-sort="{}">{}</td>', wann.strftime("%Y-%m-%d %H:%M:%S"), wann.strftime("%d.%m.%Y %H:%M")
+            '<td data-sort="{}">{}</td>', wann.strftime('%Y-%m-%d %H:%M:%S'), wann.strftime('%d.%m.%Y %H:%M')
         )
 
     def _verarbeiten(self, job):
-        optionen = "".join(
+        optionen = ''.join(
             format_html(
-                '<option value="{}"{}>{}</option>', wert, " selected" if wert == job.pipeline else "", text
+                '<option value="{}"{}>{}</option>', wert, ' selected' if wert == job.pipeline else '', text
             )
             for wert, text in self.pipelines
         )
         return format_html(
             '<td><div class="hb-zeilenaktionen">'
             '<select class="pipeline-select" id="pl-{id}" data-current="{p}">'
-            "{opt}</select>"
+            '{opt}</select>'
             '<button class="btn btn-sm btn-primary" data-aktion="start" '
             'data-auftrag="{id}" title="starten"><i class="fas fa-play"></i>'
-            "</button></div></td>",
+            '</button></div></td>',
             id=job.id,
             p=job.pipeline,
             opt=mark_safe(optionen),
@@ -190,29 +190,29 @@ class Auftragstabelle:
     @staticmethod
     def _aktionen(job):
         teile = []
-        if job.status == "complete":
+        if job.status == 'complete':
             teile.append(
                 format_html(
                     '<a class="btn btn-sm btn-primary" href="{}" '
                     'target="_blank" rel="noopener">'
                     '<i class="fas fa-eye"></i> Ergebnis</a>',
-                    reverse("job_result", args=[job.kennung]),
+                    reverse('job_result', args=[job.kennung]),
                 )
             )
-        elif job.status != "pending":
+        elif job.status != 'pending':
             teile.append(
                 format_html(
                     '<a class="btn btn-sm btn-secondary" href="{}">'
                     '<i class="fas fa-info-circle"></i> Status</a>',
-                    reverse("job_status", args=[job.kennung]),
+                    reverse('job_status', args=[job.kennung]),
                 )
             )
         teile.append(
             format_html(
                 '<button class="btn btn-sm btn-danger" data-aktion="delete" '
                 'data-auftrag="{}" title="löschen"><i class="fas fa-trash"></i>'
-                "</button>",
+                '</button>',
                 job.id,
             )
         )
-        return mark_safe('<td class="hb-zeilenaktionen">%s</td>' % "".join(teile))
+        return mark_safe('<td class="hb-zeilenaktionen">%s</td>' % ''.join(teile))

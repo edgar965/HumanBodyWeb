@@ -26,11 +26,11 @@ import sys
 
 import numpy as np
 
-WURZEL = r"A:\3DTools\HumanBody\data\humanBody"
+WURZEL = r'A:\3DTools\HumanBody\data\humanBody'
 
 #: Was noch als "Arm" gilt. Ohne die Hand — sie dreht mit und verfaelscht
 #: die Scheiben am Handgelenk.
-ARM_L = ("DEF-upper_arm.L", "DEF-upper_arm.L.001", "DEF-forearm.L", "DEF-forearm.L.001")
+ARM_L = ('DEF-upper_arm.L', 'DEF-upper_arm.L.001', 'DEF-forearm.L', 'DEF-forearm.L.001')
 
 
 class Armmass:
@@ -108,15 +108,15 @@ class Armmass:
 
 class Skelett:
     def __init__(self, pfad):
-        knochen = json.load(open(pfad))["bones"]
-        self.namen = [b["name"] for b in knochen]
+        knochen = json.load(open(pfad))['bones']
+        self.namen = [b['name'] for b in knochen]
         self.nummer = {n: i for i, n in enumerate(self.namen)}
-        self.eltern = [self.nummer.get(b["parent"], -1) for b in knochen]
+        self.eltern = [self.nummer.get(b['parent'], -1) for b in knochen]
         self.lokal = []
         for b in knochen:
             m = np.eye(4)
-            m[:3, :3] = Armmass.quat_matrix(b["local_quaternion"])
-            m[:3, 3] = b["local_position"]
+            m[:3, :3] = Armmass.quat_matrix(b['local_quaternion'])
+            m[:3, 3] = b['local_position']
             self.lokal.append(m)
 
     def welt(self, zusatz=None):
@@ -151,24 +151,24 @@ class LbsProbe:
 
     #: Messscheiben: Abstand vom Ellbogen entlang der Knochenachse (m).
     SCHEIBEN = (
-        (-0.03, "Oberarm  3 cm ueber"),
-        (-0.06, "Oberarm  6 cm ueber"),
-        (0.03, "Unterarm 3 cm unter"),
-        (0.06, "Unterarm 6 cm unter"),
+        (-0.03, 'Oberarm  3 cm ueber'),
+        (-0.06, 'Oberarm  6 cm ueber'),
+        (0.03, 'Unterarm 3 cm unter'),
+        (0.06, 'Unterarm 6 cm unter'),
     )
 
     def __init__(self):
-        self.punkte = np.load(WURZEL + r"\vertices_tpose.npy").astype(np.float64)
-        roh = json.load(open(WURZEL + r"\skin_weights_base.json"))
-        self.skelett = Skelett(WURZEL + r"\def_skeleton.json")
-        umnummerieren = [self.skelett.nummer[n] for n in roh["bone_names"]]
-        self.gewichte = [[(umnummerieren[b], w) for b, w in e] for e in roh["weights"]]
+        self.punkte = np.load(WURZEL + r'\vertices_tpose.npy').astype(np.float64)
+        roh = json.load(open(WURZEL + r'\skin_weights_base.json'))
+        self.skelett = Skelett(WURZEL + r'\def_skeleton.json')
+        umnummerieren = [self.skelett.nummer[n] for n in roh['bone_names']]
+        self.gewichte = [[(umnummerieren[b], w) for b, w in e] for e in roh['weights']]
         arm = {self.skelett.nummer[n] for n in ARM_L}
         anteil = np.array([sum(w for b, w in e if b in arm) for e in self.gewichte])
         self.auswahl = np.where(anteil > 0.5)[0]
         self.ruhe = self.skelett.welt()
-        self.i_ell = self.skelett.nummer["DEF-forearm.L"]
-        self.i_ober = self.skelett.nummer["DEF-upper_arm.L"]
+        self.i_ell = self.skelett.nummer['DEF-forearm.L']
+        self.i_ober = self.skelett.nummer['DEF-upper_arm.L']
         self.ursprung = self.ruhe[self.i_ell][:3, 3]
         self.achse_ober = self.ruhe[self.i_ober][:3, 1]
         self.achse_unter = self.ruhe[self.i_ell][:3, 1]
@@ -180,9 +180,9 @@ class LbsProbe:
 
     def scheiben_bestimmen(self):
         """Die Messscheiben werden EINMAL in der Ruhelage bestimmt."""
-        print("Netz %d Punkte, davon Arm links %d" % (len(self.punkte), len(self.auswahl)))
+        print('Netz %d Punkte, davon Arm links %d' % (len(self.punkte), len(self.auswahl)))
         print(
-            "Ellbogen bei %s, Ruhewinkel Ober-/Unterarm %.1f Grad"
+            'Ellbogen bei %s, Ruhewinkel Ober-/Unterarm %.1f Grad'
             % (np.round(self.ursprung, 3), self.ruhewinkel)
         )
         for hoehe, wo in self.SCHEIBEN:
@@ -190,7 +190,7 @@ class LbsProbe:
             nummern = Armmass.scheibe(self.punkte, self.auswahl, self.ursprung, achse, hoehe)
             self.scheiben[wo] = (nummern, hoehe)
             print(
-                "  Ruhe %-20s dem Ellbogen: %5.2f cm (%d Punkte)"
+                '  Ruhe %-20s dem Ellbogen: %5.2f cm (%d Punkte)'
                 % (wo, Armmass.umfang(self.punkte, nummern, achse), len(nummern))
             )
 
@@ -208,35 +208,35 @@ class LbsProbe:
 
     def _posieren(self, achse, grad):
         drehung = Armmass.achsdrehung(achse, np.radians(grad))
-        pose = self.skelett.welt({"DEF-forearm.L": drehung})
+        pose = self.skelett.welt({'DEF-forearm.L': drehung})
         return pose, Armmass.haeuten(self.punkte, self.gewichte, self.ruhe, pose)
 
     def beugen(self):
-        print("")
-        print("--- Beugen (lokale X-Achse des Unterarms) ---")
+        print('')
+        print('--- Beugen (lokale X-Achse des Unterarms) ---')
         for grad in (30, 60, 90, 120):
             pose, neu = self._posieren([1, 0, 0], grad)
             echt = (
                 Armmass.winkel_zwischen(pose[self.i_ober][:3, 1], pose[self.i_ell][:3, 1]) - self.ruhewinkel
             )
             teile = [
-                "%s %5.2f -> %5.2f (%+6.1f %%)" % (wo.split()[0][:8], u0, u1, d)
+                '%s %5.2f -> %5.2f (%+6.1f %%)' % (wo.split()[0][:8], u0, u1, d)
                 for wo, u0, u1, d in self.bericht(pose, neu)
-                if "3 cm" in wo
+                if '3 cm' in wo
             ]
-            print("  %3d Grad (echt %+5.1f):  %s   %s" % (grad, echt, teile[0], teile[1]))
+            print('  %3d Grad (echt %+5.1f):  %s   %s' % (grad, echt, teile[0], teile[1]))
 
     def verdrehen(self):
-        print("")
-        print("--- Verdrehen um die Laengsachse (Candy-Wrapper) ---")
+        print('')
+        print('--- Verdrehen um die Laengsachse (Candy-Wrapper) ---')
         for grad in (45, 90, 135, 180):
             pose, neu = self._posieren([0, 1, 0], grad)
             teile = [
-                "%s %5.2f -> %5.2f (%+6.1f %%)" % (wo.split()[2] + " cm", u0, u1, d)
+                '%s %5.2f -> %5.2f (%+6.1f %%)' % (wo.split()[2] + ' cm', u0, u1, d)
                 for wo, u0, u1, d in self.bericht(pose, neu)
-                if wo.startswith("Unterarm")
+                if wo.startswith('Unterarm')
             ]
-            print("  %3d Grad:  Unterarm %s   %s" % (grad, teile[0], teile[1]))
+            print('  %3d Grad:  Unterarm %s   %s' % (grad, teile[0], teile[1]))
 
     def laufen(self):
         self.scheiben_bestimmen()
@@ -248,5 +248,5 @@ def main():
     LbsProbe().laufen()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

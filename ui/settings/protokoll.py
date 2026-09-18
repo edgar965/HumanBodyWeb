@@ -38,7 +38,7 @@ import djangobase.logging as dblog
 from .wurzeln import BASE_DIR
 
 #: Hier liegen die Logdateien; djangoBase liest sie für Hilfe → Logs.
-LOG_DIR = BASE_DIR / "logs"
+LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
 #: Größe, ab der eine Logdatei rotiert wird (5 MB), und wie viele alte Stände
@@ -48,13 +48,13 @@ SICHERUNGEN = 3
 
 #: Die drei Dateien, die es nur in diesem Projekt gibt: Name -> Erklärung.
 EIGENE = {
-    "core_file": ("core.log", "Character/HumanBody-API: Netz, Regler, Rig, Garderobe"),
-    "pipeline_file": ("pipeline.log", "Video-to-BVH-Kette: MocapNET, GVHMR, OpenPose"),
-    "client_file": ("client.log", "Meldungen aus dem Browser (über /api/log/)"),
+    'core_file': ('core.log', 'Character/HumanBody-API: Netz, Regler, Rig, Garderobe'),
+    'pipeline_file': ('pipeline.log', 'Video-to-BVH-Kette: MocapNET, GVHMR, OpenPose'),
+    'client_file': ('client.log', 'Meldungen aus dem Browser (über /api/log/)'),
 }
 
 #: Was in `django.log` und `error.log` MIT hineingehört.
-GRUNDZIELE = ["console", "django_file", "error_file"]
+GRUNDZIELE = ['console', 'django_file', 'error_file']
 
 
 #: Die drei eigenen Dateien, fertig gebaut. Der Bausatz kommt aus djangoBase
@@ -65,7 +65,7 @@ EIGENE_HANDLER = {
     name: dblog.datei_handler(
         LOG_DIR,
         datei,
-        level="DEBUG",
+        level='DEBUG',
         max_bytes=GROESSE,
         backup_count=SICHERUNGEN,
         filters=dblog.handler_filters_fuer(True),
@@ -75,7 +75,7 @@ EIGENE_HANDLER = {
 
 LOGGING = dblog.config(
     LOG_DIR,
-    level="INFO",
+    level='INFO',
     # Der `{job_str}`-Platz im Format und `djangobase.jobctx.JobContextFilter`
     # auf jedem Handler. Die Auftragskennung setzt
     # `core.logging_utils.Auftragskontext` — seit dem 28.08.2026 derselbe
@@ -83,19 +83,19 @@ LOGGING = dblog.config(
     job_context=True,
     extra_handlers=EIGENE_HANDLER,
     extra_loggers={
-        "django.channels.server": {"handlers": GRUNDZIELE, "level": "INFO", "propagate": False},
-        "daphne": {"handlers": ["django_file", "error_file"], "level": "WARNING", "propagate": False},
-        "core": {"handlers": ["core_file", "error_file", "console"], "level": "DEBUG", "propagate": False},
-        "core.pipeline": {
-            "handlers": ["pipeline_file", "error_file", "console"],
-            "level": "DEBUG",
-            "propagate": False,
+        'django.channels.server': {'handlers': GRUNDZIELE, 'level': 'INFO', 'propagate': False},
+        'daphne': {'handlers': ['django_file', 'error_file'], 'level': 'WARNING', 'propagate': False},
+        'core': {'handlers': ['core_file', 'error_file', 'console'], 'level': 'DEBUG', 'propagate': False},
+        'core.pipeline': {
+            'handlers': ['pipeline_file', 'error_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
-        "core.client": {"handlers": ["client_file", "error_file"], "level": "DEBUG", "propagate": False},
-        "GarmentFitter": {
-            "handlers": ["core_file", "error_file", "console"],
-            "level": "INFO",
-            "propagate": False,
+        'core.client': {'handlers': ['client_file', 'error_file'], 'level': 'DEBUG', 'propagate': False},
+        'GarmentFitter': {
+            'handlers': ['core_file', 'error_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
     file_max_bytes=GROESSE,
@@ -113,9 +113,9 @@ LOGGING = dblog.config(
 #:
 #: Die Konsole bleibt ungefiltert — wer einen Testlauf ansieht, will seine
 #: Meldungen sehen.
-LOGGING.setdefault("filters", {})["nicht_im_testlauf"] = {
-    "()": "ui.protokollfilter.Testlauf",
+LOGGING.setdefault('filters', {})['nicht_im_testlauf'] = {
+    '()': 'ui.protokollfilter.Testlauf',
 }
-for _name, _handler in LOGGING["handlers"].items():
-    if _name != "console":
-        _handler["filters"] = list(_handler.get("filters", [])) + ["nicht_im_testlauf"]
+for _name, _handler in LOGGING['handlers'].items():
+    if _name != 'console':
+        _handler['filters'] = list(_handler.get('filters', [])) + ['nicht_im_testlauf']

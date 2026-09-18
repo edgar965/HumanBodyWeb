@@ -29,12 +29,11 @@ import os
 import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
-
 from GarmentCode.segmentierung import Segmentierung
+
 from ._sicher import Sicher
 
-
-KNOCHEN = ["DEF-spine", "DEF-thigh.L", "DEF-upper_arm.R", "corrective_smooth_inv"]
+KNOCHEN = ['DEF-spine', 'DEF-thigh.L', 'DEF-upper_arm.R', 'corrective_smooth_inv']
 
 
 def netz(anzahl=4):
@@ -49,7 +48,7 @@ class HilfsknochenTest(SimpleTestCase):
     def _segmente(self, gewichte):
         faces, materialien = netz()
         return Segmentierung(
-            faces, materialien, ["HB_Skin"], {"bone_names": KNOCHEN, "weights": gewichte}, len(gewichte)
+            faces, materialien, ['HB_Skin'], {'bone_names': KNOCHEN, 'weights': gewichte}, len(gewichte)
         ).segmente()
 
     def test_steuerknochen_ueberstimmt_das_bein_nicht(self):
@@ -66,10 +65,10 @@ class HilfsknochenTest(SimpleTestCase):
                 [(1, 1.0)],  # Oberschenkel -> Bein
             ]
         )
-        self.assertIn(0, segmente["left_leg"])
-        self.assertIn(3, segmente["left_leg"])
-        self.assertIn(2, segmente["right_arm"])
-        self.assertIn(1, segmente["body"])
+        self.assertIn(0, segmente['left_leg'])
+        self.assertIn(3, segmente['left_leg'])
+        self.assertIn(2, segmente['right_arm'])
+        self.assertIn(1, segmente['body'])
 
     def test_rumpfvertex_bleibt_im_rumpf(self):
         """Die Gegenprobe: Wer am staerksten an der Wirbelsaeule haengt,
@@ -79,14 +78,14 @@ class HilfsknochenTest(SimpleTestCase):
         einfach jedes 'None' uebersprungen.
         """
         segmente = self._segmente([[(0, 0.9), (2, 0.1)]])
-        self.assertIn(0, segmente["body"])
-        self.assertNotIn(0, segmente["right_arm"])
+        self.assertIn(0, segmente['body'])
+        self.assertNotIn(0, segmente['right_arm'])
 
     def test_ohne_echten_knochen_bleibt_die_wahl_wie_sie_war(self):
         """Haengt ein Vertex NUR an Steuerknochen, wird nichts erfunden:
         er zaehlt zum Rumpf, wie zuvor."""
         segmente = self._segmente([[(3, 1.0)]])
-        self.assertIn(0, segmente["body"])
+        self.assertIn(0, segmente['body'])
 
 
 class MaterialRueckfallTest(SimpleTestCase):
@@ -98,20 +97,20 @@ class MaterialRueckfallTest(SimpleTestCase):
         materialien = np.array([8, 0])
         gewichte = [[(0, 1.0)]] * 8
         return Segmentierung(
-            faces, materialien, material_names, {"bone_names": KNOCHEN, "weights": gewichte}, 8
+            faces, materialien, material_names, {'bone_names': KNOCHEN, 'weights': gewichte}, 8
         ).segmente()
 
     def test_leere_namensliste_nutzt_die_bekannte_reihenfolge(self):
         segmente = self._segmente([])
-        self.assertEqual(sorted(segmente["face_internal"]), [0, 1, 2, 3])
-        self.assertEqual(sorted(segmente["body"]), [4, 5, 6, 7])
+        self.assertEqual(sorted(segmente['face_internal']), [0, 1, 2, 3])
+        self.assertEqual(sorted(segmente['body']), [4, 5, 6, 7])
 
     def test_vorhandene_namen_gewinnen(self):
         """Wo Namen da sind, wird der Rueckfall nicht angefasst — hier
         heisst Material 8 anders, also ist nichts innen."""
-        eigene = ["HB_Skin"] * 8 + ["HB_Irgendwas"]
+        eigene = ['HB_Skin'] * 8 + ['HB_Irgendwas']
         segmente = self._segmente(eigene)
-        self.assertEqual(segmente["face_internal"], [])
+        self.assertEqual(segmente['face_internal'], [])
 
 
 class EchteNetzeTest(SimpleTestCase):
@@ -136,10 +135,10 @@ class EchteNetzeTest(SimpleTestCase):
         angenommen. Laufen die Netze je auseinander, faellt dieser Test
         aus — und nicht erst die Kollision im Drapierlauf.
         """
-        if not os.path.isdir(self.wurzel + "_male"):
-            self.skipTest("keine maennliche Datenlage")
+        if not os.path.isdir(self.wurzel + '_male'):
+            self.skipTest('keine maennliche Datenlage')
         zahlen = {}
-        for geschlecht in ("female", "male"):
+        for geschlecht in ('female', 'male'):
             netzdaten = self._netzdaten(geschlecht)
             fm = np.asarray(netzdaten.face_materials)
             faces = np.asarray(netzdaten.faces)
@@ -148,10 +147,10 @@ class EchteNetzeTest(SimpleTestCase):
             }
         for nr in range(2, 9):
             self.assertEqual(
-                zahlen["female"][nr],
-                zahlen["male"][nr],
-                "Material %d (%s): weiblich %s, maennlich %s"
-                % (nr, Segmentierung.MATERIALIEN_RUECKFALL[nr], zahlen["female"][nr], zahlen["male"][nr]),
+                zahlen['female'][nr],
+                zahlen['male'][nr],
+                'Material %d (%s): weiblich %s, maennlich %s'
+                % (nr, Segmentierung.MATERIALIEN_RUECKFALL[nr], zahlen['female'][nr], zahlen['male'][nr]),
             )
 
     def test_maennlicher_schritt_liegt_wo_ein_schritt_liegt(self):
@@ -164,36 +163,36 @@ class EchteNetzeTest(SimpleTestCase):
         from GarmentCode.dienst import GarmentcodeDienst
         from GarmentCode.koerperdienst import Garmentkoerper
 
-        if not os.path.isdir(self.wurzel + "_male"):
-            self.skipTest("keine maennliche Datenlage")
-        punkte = GarmentcodeDienst.figurnetz("male", None, "Male_Caucasian", None)
+        if not os.path.isdir(self.wurzel + '_male'):
+            self.skipTest('keine maennliche Datenlage')
+        punkte = GarmentcodeDienst.figurnetz('male', None, 'Male_Caucasian', None)
         if punkte is None:
-            self.skipTest("kein maennliches Netz")
+            self.skipTest('kein maennliches Netz')
         punkte = np.asarray(punkte, dtype=np.float64)
-        segmente = Garmentkoerper.segmente("male")
+        segmente = Garmentkoerper.segmente('male')
         if not segmente:
-            self.skipTest("keine Skinning-Gewichte")
-        rumpf = punkte[np.asarray(segmente["body"], dtype=int)]
+            self.skipTest('keine Skinning-Gewichte')
+        rumpf = punkte[np.asarray(segmente['body'], dtype=int)]
         hoehe = float(punkte[:, 2].max() - punkte[:, 2].min())
         anteil = float(rumpf[:, 2].min() - punkte[:, 2].min()) / hoehe
-        self.assertGreater(anteil, 0.40, "Schritt bei %.0f %% der Koerperhoehe" % (anteil * 100))
-        self.assertLess(anteil, 0.60, "Schritt bei %.0f %% der Koerperhoehe" % (anteil * 100))
+        self.assertGreater(anteil, 0.40, 'Schritt bei %.0f %% der Koerperhoehe' % (anteil * 100))
+        self.assertLess(anteil, 0.60, 'Schritt bei %.0f %% der Koerperhoehe' % (anteil * 100))
 
     def test_beide_netze_haben_inneres_gesicht(self):
         """`face_internal` darf in keiner Datenlage leer sein — sonst
         haengt der Stoff an Zaehnen und Zunge."""
         from GarmentCode.koerperdienst import Garmentkoerper
 
-        for geschlecht in ("female", "male"):
-            if geschlecht == "male" and not os.path.isdir(self.wurzel + "_male"):
+        for geschlecht in ('female', 'male'):
+            if geschlecht == 'male' and not os.path.isdir(self.wurzel + '_male'):
                 continue
             segmente = Garmentkoerper.segmente(geschlecht)
             if not segmente:
                 continue
             self.assertGreater(
-                len(segmente["face_internal"]),
+                len(segmente['face_internal']),
                 1000,
-                "%s: nur %d innere Punkte" % (geschlecht, len(segmente["face_internal"])),
+                '%s: nur %d innere Punkte' % (geschlecht, len(segmente['face_internal'])),
             )
 
 
@@ -207,11 +206,12 @@ class GrundnetzTest(SimpleTestCase):
     """
 
     def test_je_bauart_die_eigene_punktzahl(self):
-        from core.dienste.charakterdaten import Charakterdaten
         from GarmentCode.dienst import GarmentcodeDienst
 
+        from core.dienste.charakterdaten import Charakterdaten
+
         morphdaten = Charakterdaten.morphdaten()
-        for bauart in ("Female_Caucasian", "Male_Caucasian"):
+        for bauart in ('Female_Caucasian', 'Male_Caucasian'):
             if bauart not in morphdaten.l1:
                 continue
             erwartet = len(morphdaten.l1[bauart])
@@ -225,6 +225,6 @@ class GrundnetzTest(SimpleTestCase):
         from core.dienste.charakterdaten import Charakterdaten
 
         morphdaten = Charakterdaten.morphdaten()
-        if "Male_Caucasian" not in morphdaten.l1:
-            self.skipTest("keine maennliche Bauart")
-        self.assertNotEqual(len(morphdaten.l1["Female_Caucasian"]), len(morphdaten.l1["Male_Caucasian"]))
+        if 'Male_Caucasian' not in morphdaten.l1:
+            self.skipTest('keine maennliche Bauart')
+        self.assertNotEqual(len(morphdaten.l1['Female_Caucasian']), len(morphdaten.l1['Male_Caucasian']))

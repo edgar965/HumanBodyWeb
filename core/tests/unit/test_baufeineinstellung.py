@@ -8,6 +8,7 @@ deshalb nicht nur der gute Fall, sondern auch Unsinn, Leere und Grenzen.
 from unittest import TestCase
 
 from GarmentCode.baufeineinstellung import Baufeineinstellung
+
 from ._quelltext import Quelltext
 
 
@@ -31,7 +32,7 @@ class VorgabenBleibenDieAltenWerte(TestCase):
         self.assertEqual(Baufeineinstellung.HAUTABSTAND_VORGABE, Stoffkorrektur.ABSTAND_MM)
 
     def test_leeres_formularfeld_gilt_als_keine_angabe(self):
-        fein = Baufeineinstellung(hautabstand_mm="", aufloesung="")
+        fein = Baufeineinstellung(hautabstand_mm='', aufloesung='')
         self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
@@ -45,19 +46,19 @@ class VorgabenBleibenDieAltenWerte(TestCase):
 
 class WerteAusDemNetzWerdenGeprueft(TestCase):
     def test_text_aus_dem_formular_wird_zur_zahl(self):
-        fein = Baufeineinstellung(hautabstand_mm="3.5", aufloesung="1.5")
+        fein = Baufeineinstellung(hautabstand_mm='3.5', aufloesung='1.5')
         self.assertEqual(fein.hautabstand_mm, 3.5)
         self.assertEqual(fein.aufloesung, 1.5)
 
     def test_unlesbarer_wert_faellt_auf_die_vorgabe(self):
-        fein = Baufeineinstellung(hautabstand_mm="viel", aufloesung="fein")
+        fein = Baufeineinstellung(hautabstand_mm='viel', aufloesung='fein')
         self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
     def test_nan_faellt_auf_die_vorgabe(self):
         """`float('nan')` ist lesbar und trotzdem unbrauchbar — es vergleicht
         sich mit nichts, und jede Klemmung liesse es durch."""
-        fein = Baufeineinstellung(hautabstand_mm=float("nan"))
+        fein = Baufeineinstellung(hautabstand_mm=float('nan'))
         self.assertEqual(fein.hautabstand_mm, 1.0)
 
     def test_zu_gross_wird_geklemmt(self):
@@ -80,7 +81,7 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
         self.assertEqual(Baufeineinstellung(hautabstand_mm=0).hautabstand_mm, 0.0)
 
     def test_aus_anfrage_liest_die_formularfelder(self):
-        fein = Baufeineinstellung.aus_anfrage({"hautabstand_mm": "2.5", "aufloesung": "1.8"})
+        fein = Baufeineinstellung.aus_anfrage({'hautabstand_mm': '2.5', 'aufloesung': '1.8'})
         self.assertEqual(fein.hautabstand_mm, 2.5)
         self.assertEqual(fein.aufloesung, 1.8)
 
@@ -91,7 +92,7 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
 
     def test_als_dict_nennt_alle_werte(self):
         werte = Baufeineinstellung(hautabstand_mm=3, aufloesung=2).als_dict()
-        self.assertEqual(werte, {"hautabstand_mm": 3.0, "aufloesung": 2.0, "anliegen_mm": None})
+        self.assertEqual(werte, {'hautabstand_mm': 3.0, 'aufloesung': 2.0, 'anliegen_mm': None})
 
     # --- Anliegen (Leggings, 11.09.2026) --------------------------------
 
@@ -101,14 +102,14 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
         self.assertFalse(Baufeineinstellung().abweichend)
 
     def test_anliegen_null_und_unter_dem_minimum_ist_aus(self):
-        self.assertIsNone(Baufeineinstellung(anliegen_mm="0").anliegen_mm)
+        self.assertIsNone(Baufeineinstellung(anliegen_mm='0').anliegen_mm)
         self.assertIsNone(Baufeineinstellung(anliegen_mm=0.3).anliegen_mm)
 
     def test_anliegen_aus_dem_formular(self):
-        fein = Baufeineinstellung.aus_anfrage({"anliegen_mm": "2"})
+        fein = Baufeineinstellung.aus_anfrage({'anliegen_mm': '2'})
         self.assertEqual(fein.anliegen_mm, 2.0)
         self.assertTrue(fein.abweichend)
-        self.assertEqual(fein.als_dict()["anliegen_mm"], 2.0)
+        self.assertEqual(fein.als_dict()['anliegen_mm'], 2.0)
 
     def test_anliegen_wird_geklemmt(self):
         self.assertEqual(Baufeineinstellung(anliegen_mm=99).anliegen_mm, 15.0)
@@ -126,37 +127,37 @@ class DieKetteReichtDieWerteDurch(TestCase):
     _ohne_kommentare = staticmethod(Quelltext.ohne_kommentare)
 
     def test_die_view_liest_die_feineinstellung(self):
-        quelle = self._ohne_kommentare(self._quelle("HumanBodyWeb", "core", "api", "garmentcode.py"))
-        self.assertIn("Baufeineinstellung.aus_anfrage", quelle)
-        self.assertIn("fein=fein", quelle)
+        quelle = self._ohne_kommentare(self._quelle('HumanBodyWeb', 'core', 'api', 'garmentcode.py'))
+        self.assertIn('Baufeineinstellung.aus_anfrage', quelle)
+        self.assertIn('fein=fein', quelle)
 
     def test_die_view_meldet_zurueck_womit_gebaut_wurde(self):
-        quelle = self._quelle("HumanBodyWeb", "core", "api", "garmentcode.py")
+        quelle = self._quelle('HumanBodyWeb', 'core', 'api', 'garmentcode.py')
         self.assertIn("ergebnis['feineinstellung']", quelle)
 
     def test_der_dienst_reicht_bis_zur_drapierung_durch(self):
-        quelle = self._ohne_kommentare(self._quelle("Assets", "GarmentCode", "drapierdienst.py"))
-        self.assertIn("aufloesung=fein.aufloesung", quelle)
-        self.assertIn("anliegen_mm=fein.anliegen_mm", quelle)
+        quelle = self._ohne_kommentare(self._quelle('Assets', 'GarmentCode', 'drapierdienst.py'))
+        self.assertIn('aufloesung=fein.aufloesung', quelle)
+        self.assertIn('anliegen_mm=fein.anliegen_mm', quelle)
         # Korrektur und Anlegen laufen seit dem 11.09.2026 in
         # `stoffnacharbeit.py` — dort muss der Hautabstand ankommen.
-        nacharbeit = self._ohne_kommentare(self._quelle("Assets", "GarmentCode", "stoffnacharbeit.py"))
-        self.assertIn("abstand_mm=hautabstand_mm", nacharbeit)
-        self.assertIn(".anlegen(punkte, anliegen_mm, fest)", nacharbeit)
+        nacharbeit = self._ohne_kommentare(self._quelle('Assets', 'GarmentCode', 'stoffnacharbeit.py'))
+        self.assertIn('abstand_mm=hautabstand_mm', nacharbeit)
+        self.assertIn('.anlegen(punkte, anliegen_mm, fest)', nacharbeit)
 
     def test_das_js_haengt_beide_werte_an_die_anfrage(self):
-        quelle = self._quelle("HumanBodyWeb", "static", "viewer", "scene", "garmentcode_drapieren.js")
-        self.assertIn("GarmentcodeBauregler.anhaengen(daten)", quelle)
+        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene', 'garmentcode_drapieren.js')
+        self.assertIn('GarmentcodeBauregler.anhaengen(daten)', quelle)
 
     def test_die_vorlage_hat_beide_regler(self):
-        quelle = self._quelle("HumanBodyWeb", "templates", "_garmentcode_panel.html")
-        self.assertIn("gc-hautabstand", quelle)
-        self.assertIn("gc-aufloesung", quelle)
-        self.assertIn("gc-anliegen", quelle)
+        quelle = self._quelle('HumanBodyWeb', 'templates', '_garmentcode_panel.html')
+        self.assertIn('gc-hautabstand', quelle)
+        self.assertIn('gc-aufloesung', quelle)
+        self.assertIn('gc-anliegen', quelle)
 
     def test_js_und_python_kennen_dieselben_vorgaben(self):
         """Zwei Vorgaben, die auseinanderlaufen, zeigen einen Wert an und
         bauen einen anderen."""
-        quelle = self._quelle("HumanBodyWeb", "static", "viewer", "scene", "garmentcode_bauregler.js")
-        self.assertIn("HAUTABSTAND_VORGABE = %.1f" % Baufeineinstellung.HAUTABSTAND_VORGABE, quelle)
-        self.assertIn("AUFLOESUNG_VORGABE = %.1f" % Baufeineinstellung.AUFLOESUNG_VORGABE, quelle)
+        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene', 'garmentcode_bauregler.js')
+        self.assertIn('HAUTABSTAND_VORGABE = %.1f' % Baufeineinstellung.HAUTABSTAND_VORGABE, quelle)
+        self.assertIn('AUFLOESUNG_VORGABE = %.1f' % Baufeineinstellung.AUFLOESUNG_VORGABE, quelle)

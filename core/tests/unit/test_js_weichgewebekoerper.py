@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "weichgewebekoerper.js")
+MODUL = Jsmodul('gemeinsam', 'weichgewebekoerper.js')
 
 SKRIPT = """
 const { Weichgewebekoerper: K } = await import(MODUL);
@@ -106,6 +106,6 @@ class WeichgewebekoerperJsTest(SimpleTestCase):
 
     def test_inline_rechnet_wie_die_formeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertLess(ausgabe["abweichung"], 1e-6)
-        self.assertGreater(ausgabe["hand_mm"], 0.0)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertLess(ausgabe['abweichung'], 1e-6)
+        self.assertGreater(ausgabe['hand_mm'], 0.0)

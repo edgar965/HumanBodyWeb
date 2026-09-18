@@ -33,20 +33,20 @@ class PfadwurzelnTest(TestCase):
         from django.conf import settings
 
         werkzeuge = str(settings.TOOLS_ROOT)
-        for name in ("studio_projekte", "ausgabe", "videos"):
+        for name in ('studio_projekte', 'ausgabe', 'videos'):
             wurzeln = [str(w) for w in getattr(Pfadwurzeln, name)()]
-            self.assertNotIn(werkzeuge, wurzeln, "%s() gibt TOOLS_ROOT frei" % name)
+            self.assertNotIn(werkzeuge, wurzeln, '%s() gibt TOOLS_ROOT frei' % name)
 
     def test_medien_sind_ueberall_dabei(self):
         medien = str(Pfadwurzeln.medien())
-        for name in ("studio_projekte", "ausgabe", "videos"):
+        for name in ('studio_projekte', 'ausgabe', 'videos'):
             wurzeln = [str(w) for w in getattr(Pfadwurzeln, name)()]
-            self.assertIn(medien, wurzeln, "%s() ohne MEDIA_ROOT" % name)
+            self.assertIn(medien, wurzeln, '%s() ohne MEDIA_ROOT' % name)
 
     def test_bvh_nimmt_die_uebergebene_wurzel_mit(self):
         from pathlib import Path
 
-        eigene = Path("A:/beispiel/bvh")
+        eigene = Path('A:/beispiel/bvh')
         self.assertIn(eigene, Pfadwurzeln.bvh(eigene))
 
     def test_videos_nehmen_den_videoordner_der_uploadseite_an(self):
@@ -57,13 +57,14 @@ class PfadwurzelnTest(TestCase):
         anbietet, muss die Pruefung annehmen. Und ganz `3DObjects/` ist frei
         (Edgar: „diese Ordner sollen nicht gesperrt sein")."""
         from django.conf import settings
-        from core.safe_paths import SafePath
+
         from core.dienste import videoauswahl
+        from core.safe_paths import SafePath
 
         ordner = Pfadwurzeln.videoordner()
-        self.assertEqual(ordner, settings.TOOLS_ROOT / "3DObjects" / "Video")
-        self.assertIn(settings.TOOLS_ROOT / "3DObjects", Pfadwurzeln.videos())
-        SafePath.fuer_videos().pruefe(str(Pfadwurzeln.objekte() / "Recherche" / "x.mp4"))
-        self.assertIn("Pfadwurzeln.videoordner()", open(videoauswahl.__file__, encoding="utf-8").read())
-        geprueft = SafePath.fuer_videos().pruefe(str(ordner / "005 DanceLang.mp4"))
-        self.assertEqual(geprueft.name, "005 DanceLang.mp4")
+        self.assertEqual(ordner, settings.TOOLS_ROOT / '3DObjects' / 'Video')
+        self.assertIn(settings.TOOLS_ROOT / '3DObjects', Pfadwurzeln.videos())
+        SafePath.fuer_videos().pruefe(str(Pfadwurzeln.objekte() / 'Recherche' / 'x.mp4'))
+        self.assertIn('Pfadwurzeln.videoordner()', open(videoauswahl.__file__, encoding='utf-8').read())
+        geprueft = SafePath.fuer_videos().pruefe(str(ordner / '005 DanceLang.mp4'))
+        self.assertEqual(geprueft.name, '005 DanceLang.mp4')

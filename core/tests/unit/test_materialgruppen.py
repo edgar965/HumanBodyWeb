@@ -43,7 +43,7 @@ class ViereckeTest(SimpleTestCase):
         self.materialien = np.array([1, 0, 1, 0])
 
     def gruppen(self):
-        return Materialgruppen.aus_flaechen(self.flaechen, self.materialien, ["haut", "auge"])
+        return Materialgruppen.aus_flaechen(self.flaechen, self.materialien, ['haut', 'auge'])
 
     def test_jedes_viereck_wird_zu_zwei_dreiecken(self):
         self.assertEqual(self.gruppen().dreiecke.shape, (8, 3))
@@ -57,8 +57,8 @@ class ViereckeTest(SimpleTestCase):
         self.assertEqual(
             self.gruppen().bereiche(),
             [
-                {"materialIndex": 0, "start": 0, "count": 12},
-                {"materialIndex": 1, "start": 12, "count": 12},
+                {'materialIndex': 0, 'start': 0, 'count': 12},
+                {'materialIndex': 1, 'start': 12, 'count': 12},
             ],
         )
 
@@ -84,13 +84,13 @@ class ViereckeTest(SimpleTestCase):
         for anfang, ende in ((0, anzahl // 2), (anzahl // 2, anzahl)):
             gruppe = erste[anfang:ende]
             self.assertTrue(
-                np.all(np.diff(gruppe) > 0), "innerhalb eines Materials muss die Reihenfolge stehen"
+                np.all(np.diff(gruppe) > 0), 'innerhalb eines Materials muss die Reihenfolge stehen'
             )
 
     def test_bereiche_decken_die_dreiecke_ab(self):
         """Summe der `count` = 8 Dreiecke × 3 Indexwerte. Keine Lücke, kein Rest."""
         gruppen = self.gruppen()
-        summe = sum(b["count"] for b in gruppen.bereiche())
+        summe = sum(b['count'] for b in gruppen.bereiche())
         self.assertEqual(summe, gruppen.dreiecke.shape[0] * 3)
 
 
@@ -109,4 +109,4 @@ class DreieckeTest(SimpleTestCase):
 
     def test_ein_material_ist_ein_bereich(self):
         gruppen = Materialgruppen.aus_flaechen(np.array([[0, 1, 2], [3, 4, 5]]), np.array([2, 2]))
-        self.assertEqual(gruppen.bereiche(), [{"materialIndex": 2, "start": 0, "count": 6}])
+        self.assertEqual(gruppen.bereiche(), [{'materialIndex': 2, 'start': 0, 'count': 6}])

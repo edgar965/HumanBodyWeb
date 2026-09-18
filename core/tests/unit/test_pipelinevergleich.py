@@ -20,22 +20,22 @@ class DerVergleich(unittest.TestCase):
         Zusatzzeilen — der Grundeintrag je Pipeline bleibt genau einer."""
         erwartet = sorted(wahl[0] for wahl in BVHJob.PIPELINE_CHOICES)
         self.assertEqual(sorted(Pipelinevergleich.schluessel()), erwartet)
-        grund = sorted(e["schluessel"] for e in Pipelinevergleich.grundeintraege())
+        grund = sorted(e['schluessel'] for e in Pipelinevergleich.grundeintraege())
         self.assertEqual(grund, erwartet)
 
     def test_eine_variante_traegt_namen_und_kennung_ihrer_bestellung(self):
-        varianten = [e for e in Pipelinevergleich.alle() if e["variante"]]
+        varianten = [e for e in Pipelinevergleich.alle() if e['variante']]
         self.assertTrue(varianten)
         for e in varianten:
-            with self.subTest(pipeline=e["schluessel"]):
-                self.assertIn(" · " + e["variante"], e["name"])
-                self.assertIn(e["variante_kennung"], e["kennung"])
+            with self.subTest(pipeline=e['schluessel']):
+                self.assertIn(' · ' + e['variante'], e['name'])
+                self.assertIn(e['variante_kennung'], e['kennung'])
                 self.assertNotEqual(
-                    e["rang"],
+                    e['rang'],
                     next(
-                        g["rang"]
+                        g['rang']
                         for g in Pipelinevergleich.grundeintraege()
-                        if g["schluessel"] == e["schluessel"]
+                        if g['schluessel'] == e['schluessel']
                     ),
                 )
 
@@ -43,58 +43,58 @@ class DerVergleich(unittest.TestCase):
         """Edgar (12.09.2026): „ist das auch im ranking gekennzeichnet?" —
         das bessere Video `hybrid_gem_gemx_skelett.mp4` gehoert zur
         Variante auf Rang 1, nicht zum Grundeintrag `hybrid_gem`."""
-        videos = {e["name"]: e["video"] for e in Pipelinevergleich.mit_rang()}
+        videos = {e['name']: e['video'] for e in Pipelinevergleich.mit_rang()}
         for name, video in videos.items():
             with self.subTest(lauf=name):
-                self.assertTrue(video.endswith("_skelett.mp4"), video)
-        erster = next(e for e in Pipelinevergleich.mit_rang() if e["rang"] == 1)
-        self.assertEqual(erster["video"], "hybrid_gem_gemx_skelett.mp4")
-        grund = next(e for e in Pipelinevergleich.grundeintraege() if e["schluessel"] == "hybrid_gem")
-        self.assertEqual(grund["video"], "hybrid_gem_skelett.mp4")
-        self.assertEqual(len(set(videos.values())), len(videos), "zwei Laeufe, ein Video")
+                self.assertTrue(video.endswith('_skelett.mp4'), video)
+        erster = next(e for e in Pipelinevergleich.mit_rang() if e['rang'] == 1)
+        self.assertEqual(erster['video'], 'hybrid_gem_gemx_skelett.mp4')
+        grund = next(e for e in Pipelinevergleich.grundeintraege() if e['schluessel'] == 'hybrid_gem')
+        self.assertEqual(grund['video'], 'hybrid_gem_skelett.mp4')
+        self.assertEqual(len(set(videos.values())), len(videos), 'zwei Laeufe, ein Video')
 
     def test_raenge_sind_eins_bis_n_ohne_luecke_nur_fuer_die_mit_ergebnis(self):
         """Rang 1..10 fuer die, die ein BVH liefern; die anderen haben keinen
         (Edgar, 12.09.2026: „das ranking von 1-10")."""
-        raenge = sorted(e["rang"] for e in Pipelinevergleich.mit_rang())
+        raenge = sorted(e['rang'] for e in Pipelinevergleich.mit_rang())
         self.assertEqual(raenge, list(range(1, len(raenge) + 1)))
         for e in Pipelinevergleich.alle():
-            with self.subTest(pipeline=e["schluessel"]):
-                self.assertEqual(e["rang"] is None, e["zustand"] != "laeuft")
+            with self.subTest(pipeline=e['schluessel']):
+                self.assertEqual(e['rang'] is None, e['zustand'] != 'laeuft')
 
     def test_rangfolge_ist_nach_rang_sortiert_und_ohne_rang_am_ende(self):
-        folge = [e["rang"] for e in Pipelinevergleich.rangfolge()]
+        folge = [e['rang'] for e in Pipelinevergleich.rangfolge()]
         mit = [r for r in folge if r is not None]
         self.assertEqual(mit, sorted(mit))
         self.assertEqual(folge[len(mit) :], [None] * (len(folge) - len(mit)))
 
     def test_jeder_eintrag_traegt_alle_felder(self):
         for e in Pipelinevergleich.alle():
-            with self.subTest(pipeline=e["schluessel"]):
+            with self.subTest(pipeline=e['schluessel']):
                 for feld in Pipelinevergleich.FELDER:
                     self.assertIn(feld, e)
-                self.assertIn(e["zustand"], Pipelinevergleich.ZUSTAND)
-                self.assertEqual(e["zustand_text"], Pipelinevergleich.ZUSTAND[e["zustand"]])
-                self.assertTrue(e["vorteile"] and e["nachteile"] and e["begruendung"])
+                self.assertIn(e['zustand'], Pipelinevergleich.ZUSTAND)
+                self.assertEqual(e['zustand_text'], Pipelinevergleich.ZUSTAND[e['zustand']])
+                self.assertTrue(e['vorteile'] and e['nachteile'] and e['begruendung'])
 
     def test_wer_laeuft_hat_messwerte_wer_nicht_hat_einen_grund(self):
         for e in Pipelinevergleich.alle():
-            with self.subTest(pipeline=e["schluessel"]):
-                if e["zustand"] == "laeuft":
-                    self.assertIsNotNone(e["dauer_s"])
-                    self.assertIsNotNone(e["ueberlagerung_px"])
-                    self.assertIsNotNone(e["gelenke"])
+            with self.subTest(pipeline=e['schluessel']):
+                if e['zustand'] == 'laeuft':
+                    self.assertIsNotNone(e['dauer_s'])
+                    self.assertIsNotNone(e['ueberlagerung_px'])
+                    self.assertIsNotNone(e['gelenke'])
                 else:
-                    self.assertTrue(e["zustand_grund"])
+                    self.assertTrue(e['zustand_grund'])
 
     def test_namen_kommen_aus_dem_modell(self):
         """Eine Variante haengt ihren Zusatz an den Modellnamen an."""
         namen = dict(BVHJob.PIPELINE_CHOICES)
         for e in Pipelinevergleich.alle():
-            self.assertTrue(e["name"].startswith(namen[e["schluessel"]]), e["name"])
-            if not e["variante"]:
-                self.assertEqual(e["name"], namen[e["schluessel"]])
+            self.assertTrue(e['name'].startswith(namen[e['schluessel']]), e['name'])
+            if not e['variante']:
+                self.assertEqual(e['name'], namen[e['schluessel']])
 
     def test_nicht_gelaufen_nennt_nur_die_ohne_bvh(self):
         for e in Pipelinevergleich.nicht_gelaufen():
-            self.assertNotEqual(e["zustand"], "laeuft")
+            self.assertNotEqual(e['zustand'], 'laeuft')

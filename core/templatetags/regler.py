@@ -28,8 +28,8 @@ from django import template
 register = template.Library()
 
 
-@register.inclusion_tag("_schieberegler.html")
-def regler(kennung, beschriftung, min=0, max=100, wert=0, schritt=1, anzeige="", zeilenkennung=""):
+@register.inclusion_tag('_schieberegler.html')
+def regler(kennung, beschriftung, min=0, max=100, wert=0, schritt=1, anzeige='', zeilenkennung=''):
     """Eine Reglerzeile.
 
     @param kennung `id` des Reglers; die Anzeige heisst `<kennung>-val`
@@ -43,12 +43,12 @@ def regler(kennung, beschriftung, min=0, max=100, wert=0, schritt=1, anzeige="",
     """
     # Dictionary gewollt: Es IST der Kontext der eingebundenen Vorlage.
     return {
-        "kennung": kennung,
-        "beschriftung": beschriftung,
-        "min": min,
-        "max": max,
-        "wert": wert,
-        "schritt": schritt,
-        "anzeige": anzeige if anzeige != "" else wert,
-        "zeilenkennung": zeilenkennung,
+        'kennung': kennung,
+        'beschriftung': beschriftung,
+        'min': min,
+        'max': max,
+        'wert': wert,
+        'schritt': schritt,
+        'anzeige': anzeige if anzeige != '' else wert,
+        'zeilenkennung': zeilenkennung,
     }

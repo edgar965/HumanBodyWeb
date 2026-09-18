@@ -24,7 +24,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "fortschrittsrechnung.js")
+MODUL = Jsmodul('gemeinsam', 'fortschrittsrechnung.js')
 
 SKRIPT = """
 const { Fortschrittsrechnung: F } = await import(MODUL);
@@ -90,4 +90,4 @@ class FortschrittsrechnungTest(SimpleTestCase):
 
     def test_laufender_schritt_nie_voll_gescheitert_springt_nicht_zurueck(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

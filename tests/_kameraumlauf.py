@@ -35,11 +35,11 @@ class Kameraumlauf:
         return cls(Speicherprobe.fahren(projektdaten))
 
     def _auswerten(self, projekt):
-        spuren = [s for s in projekt.get("tracks", []) if s.get("type") == "camera"]
-        klips = spuren[0].get("clips", []) if spuren else []
+        spuren = [s for s in projekt.get('tracks', []) if s.get('type') == 'camera']
+        klips = spuren[0].get('clips', []) if spuren else []
         self.spuren = len(spuren)
         self.klips = len(klips)
-        self.kamera_aktiv = spuren[0].get("cameraActive") if spuren else None
+        self.kamera_aktiv = spuren[0].get('cameraActive') if spuren else None
         self.kf1 = klips[0] if len(klips) > 0 else {}
         self.kf2 = klips[1] if len(klips) > 1 else {}
 
@@ -66,4 +66,4 @@ class Kameraumlauf:
     @staticmethod
     def feld(keyframe, name, vorgabe=None):
         """Ein Feld aus `keyframe['data']` — ohne zwei `.get()` je Abfrage."""
-        return (keyframe or {}).get("data", {}).get(name, vorgabe)
+        return (keyframe or {}).get('data', {}).get(name, vorgabe)

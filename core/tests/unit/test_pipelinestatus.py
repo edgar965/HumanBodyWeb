@@ -35,16 +35,16 @@ class EinRechnerMitPipelines(unittest.TestCase):
     databases = set()
 
     #: Reihenfolge, in der `_pipelines_verfuegbar` die Pfade abfragt.
-    EINSTELLUNGEN = ("MOCAPNET_V4_SCRIPT", "GVHMR_ROOT", "WHAM_ROOT", "PROMPTHMR_ROOT", "GEM_ROOT")
+    EINSTELLUNGEN = ('MOCAPNET_V4_SCRIPT', 'GVHMR_ROOT', 'WHAM_ROOT', 'PROMPTHMR_ROOT', 'GEM_ROOT')
 
     def _status(self, v4, gvhmr, wham, prompthmr, gem=False):
         """`status_3d`, als lägen genau diese Verzeichnisse vor."""
         vorhanden = {
-            "MOCAPNET_V4_SCRIPT": v4,
-            "GVHMR_ROOT": gvhmr,
-            "WHAM_ROOT": wham,
-            "PROMPTHMR_ROOT": prompthmr,
-            "GEM_ROOT": gem,
+            'MOCAPNET_V4_SCRIPT': v4,
+            'GVHMR_ROOT': gvhmr,
+            'WHAM_ROOT': wham,
+            'PROMPTHMR_ROOT': prompthmr,
+            'GEM_ROOT': gem,
         }
 
         class Pfadattrappe:
@@ -58,8 +58,8 @@ class EinRechnerMitPipelines(unittest.TestCase):
                 return bool(vorhanden.get(self.roh))
 
         with (
-            patch("core.api.auftrag_upload.Path", Pfadattrappe),
-            patch("core.api.auftrag_upload.settings") as einst,
+            patch('core.api.auftrag_upload.Path', Pfadattrappe),
+            patch('core.api.auftrag_upload.settings') as einst,
         ):
             for name in self.EINSTELLUNGEN:
                 setattr(einst, name, name)
@@ -70,54 +70,54 @@ class EinRechnerMitPipelines(unittest.TestCase):
         for v4, gvhmr, prompthmr in itertools.product((True, False), repeat=3):
             with self.subTest(v4=v4, gvhmr=gvhmr, prompthmr=prompthmr):
                 s = self._status(v4, gvhmr, False, prompthmr)
-                alt = s["hybrid_gvhmr"] or s["hybrid_prompthmr"]
-                self.assertEqual(s["hybrid"], alt)
+                alt = s['hybrid_gvhmr'] or s['hybrid_prompthmr']
+                self.assertEqual(s['hybrid'], alt)
 
     def test_smplx_braucht_gem(self):
         """Die eigene SMPL-X-Pipeline (12.09.2026) faehrt GEMs Koerper — ohne
         GEM keine Karte, gleich ob SMPLest-X daliegt."""
-        self.assertFalse(self._status(True, True, True, True, gem=False)["smplx"])
+        self.assertFalse(self._status(True, True, True, True, gem=False)['smplx'])
 
     def test_ohne_v4_kein_hybrid(self):
         """Beide Hybridwege brauchen MocapNET v4 für Hände und Gesicht."""
         s = self._status(False, True, True, True)
-        self.assertFalse(s["hybrid"])
+        self.assertFalse(s['hybrid'])
 
     def test_v4_allein_reicht_auch_nicht(self):
         """Ohne einen Körper-Schätzer gibt es nichts zu ergänzen."""
         s = self._status(True, False, True, False)
-        self.assertFalse(s["hybrid"])
+        self.assertFalse(s['hybrid'])
 
     def test_v4_mit_gvhmr_genuegt(self):
         s = self._status(True, True, False, False)
-        self.assertTrue(s["hybrid"])
+        self.assertTrue(s['hybrid'])
 
     def test_v4_mit_prompthmr_genuegt(self):
         """PromptHMR allein — der zweite Weg zum selben Ziel."""
         s = self._status(True, False, False, True)
-        self.assertTrue(s["hybrid"])
+        self.assertTrue(s['hybrid'])
 
     def test_v4_mit_gem_genuegt(self):
         """GEM-SMPL — der dritte Weg (12.09.2026)."""
         s = self._status(True, False, False, False, gem=True)
-        self.assertTrue(s["hybrid"])
-        self.assertTrue(s["hybrid_gem"])
-        self.assertFalse(s["hybrid_gvhmr"])
+        self.assertTrue(s['hybrid'])
+        self.assertTrue(s['hybrid_gem'])
+        self.assertFalse(s['hybrid_gvhmr'])
 
     def test_gem_ohne_v4_kein_hybrid_gem(self):
         s = self._status(False, False, False, False, gem=True)
-        self.assertFalse(s["hybrid_gem"])
+        self.assertFalse(s['hybrid_gem'])
 
     def test_die_einzelnen_bleiben_erhalten(self):
         """`hybrid` tritt NEBEN die beiden — das Formular schickt weiter
         `hybrid_gvhmr` oder `hybrid_prompthmr` als Wert."""
         s = self._status(True, True, True, True)
-        for schluessel in ("v4", "gvhmr", "wham", "prompthmr", "hybrid_gvhmr", "hybrid_prompthmr"):
+        for schluessel in ('v4', 'gvhmr', 'wham', 'prompthmr', 'hybrid_gvhmr', 'hybrid_prompthmr'):
             self.assertIn(schluessel, s)
 
     def test_slam_steht_daneben(self):
         """Die Kamerabahn (DPVO/DROID-SLAM) ist keine Pipeline, sondern
         eine Zutat — hier ohne Räder falsch, mit `Slamstatus` wahr."""
-        self.assertFalse(self._status(True, True, True, True)["slam"])
-        with patch("core.api.auftrag_upload.Slamstatus.verfuegbar", return_value=True):
-            self.assertTrue(self._status(True, True, True, True)["slam"])
+        self.assertFalse(self._status(True, True, True, True)['slam'])
+        with patch('core.api.auftrag_upload.Slamstatus.verfuegbar', return_value=True):
+            self.assertTrue(self._status(True, True, True, True)['slam'])

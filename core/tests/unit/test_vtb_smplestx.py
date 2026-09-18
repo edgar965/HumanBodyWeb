@@ -42,11 +42,11 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 import numpy as np  # noqa: E402
-
 from ausdrucksreihe import Ausdrucksreihe  # noqa: E402
 from bildabtastung import Bildabtastung  # noqa: E402
 from smplestxbefund import Smplestxbefund  # noqa: E402
 from smplestxbild import Smplestxbild  # noqa: E402
+
 from ._sicher import Sicher
 
 
@@ -106,28 +106,28 @@ class DerBefund(unittest.TestCase):
     def test_ein_befund_ohne_person_nennt_seinen_grund(self):
         befund = Smplestxbefund.ohne(Smplestxbefund.KEINE_PERSON)
         self.assertFalse(befund.gefunden)
-        self.assertEqual(befund.grund, "No person detected in image")
+        self.assertEqual(befund.grund, 'No person detected in image')
 
     def test_die_meldungstexte_bleiben_wie_bisher(self):
         """Beide standen so in den Runnern — Protokolle bleiben lesbar."""
-        self.assertEqual(Smplestxbefund.KEINE_PERSON, "No person detected in image")
-        self.assertEqual(Smplestxbefund.KEIN_AUSSCHNITT, "Bbox processing failed")
+        self.assertEqual(Smplestxbefund.KEINE_PERSON, 'No person detected in image')
+        self.assertEqual(Smplestxbefund.KEIN_AUSSCHNITT, 'Bbox processing failed')
 
     def test_die_zuversicht_ist_immer_eine_zahl(self):
         self.assertIsInstance(self._befund().guete, float)
-        self.assertEqual(Smplestxbefund.ohne("x").guete, 0.0)
+        self.assertEqual(Smplestxbefund.ohne('x').guete, 0.0)
 
     def test_das_netz_landet_neben_dem_bild(self):
         ausgabe = self._ausgabe()
         ausgabe[Smplestxbefund.NETZ] = Tensorattrappe([np.zeros((5, 3), dtype=np.float32)])
         with Pruefablage.ordner() as ordner:
-            bild = os.path.join(ordner, "foto.jpg")
-            pfad = Sicher.wert(Smplestxbefund(ausgabe).netz_speichern(bild), "Pfad")
+            bild = os.path.join(ordner, 'foto.jpg')
+            pfad = Sicher.wert(Smplestxbefund(ausgabe).netz_speichern(bild), 'Pfad')
             self.assertEqual(os.path.dirname(pfad), ordner)
             self.assertEqual(np.load(pfad).shape, (5, 3))
 
     def test_ohne_netz_kein_dateiname(self):
-        self.assertIsNone(self._befund().netz_speichern("/egal/foto.jpg"))
+        self.assertIsNone(self._befund().netz_speichern('/egal/foto.jpg'))
 
 
 class DasBild(unittest.TestCase):
@@ -141,7 +141,7 @@ class DasBild(unittest.TestCase):
         detektor = Yoloattrappe(
             self.KAESTEN if kaesten is None else kaesten, self.GUETE if guete is None else guete
         )
-        return Smplestxbild(Smplestxeinstellungen(), detektor, None, "cuda")
+        return Smplestxbild(Smplestxeinstellungen(), detektor, None, 'cuda')
 
     @staticmethod
     def _rgb():
@@ -180,10 +180,10 @@ class DasBild(unittest.TestCase):
     def test_der_befund_traegt_den_gewaehlten_kasten_fuer_das_naechste_bild(self):
         bild = self._bild()
         bild.ausschnitt = lambda *args: np.array([0.0, 0.0, 10.0, 10.0])
-        bild.netzeingabe = lambda *args: "eingabe"
+        bild.netzeingabe = lambda *args: 'eingabe'
         bild.durchrechnen = lambda eingabe: {Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
         befund = bild.auswerten(self._rgb(), vorher=[0.0, 0.0, 12.0, 12.0])
-        self.assertEqual(list(Sicher.wert(befund.kasten, "Kasten")), self.KAESTEN[0])
+        self.assertEqual(list(Sicher.wert(befund.kasten, 'Kasten')), self.KAESTEN[0])
         self.assertAlmostEqual(befund.guete, 0.99, places=5)
 
     def test_die_einstellungen_werden_gelesen(self):
@@ -195,8 +195,8 @@ class DasBild(unittest.TestCase):
     def test_der_detektor_bekommt_die_werte_aus_der_konfiguration(self):
         bild = self._bild()
         bild.personen(self._rgb())
-        self.assertEqual(bild.detektor.aufrufe[0]["conf"], 0.42)
-        self.assertEqual(bild.detektor.aufrufe[0]["classes"], 0)
+        self.assertEqual(bild.detektor.aufrufe[0]['conf'], 0.42)
+        self.assertEqual(bild.detektor.aufrufe[0]['classes'], 0)
 
     def test_ein_gespiegelter_kasten_bekommt_positive_masse(self):
         """YOLO liefert gelegentlich rechts vor links."""
@@ -218,12 +218,12 @@ class DasBild(unittest.TestCase):
     def test_der_befund_traegt_die_guete_des_groessten_kastens(self):
         bild = self._bild()
         bild.ausschnitt = lambda *args: np.array([0.0, 0.0, 100.0, 200.0])
-        bild.netzeingabe = lambda *args: "eingabe"
+        bild.netzeingabe = lambda *args: 'eingabe'
         bild.durchrechnen = lambda eingabe: {Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
         befund = bild.auswerten(self._rgb())
         self.assertTrue(befund.gefunden)
         self.assertAlmostEqual(befund.guete, 0.55, places=5)
-        self.assertEqual(list(Sicher.wert(befund.kasten, "Kasten")), [0.0, 0.0, 100.0, 200.0])
+        self.assertEqual(list(Sicher.wert(befund.kasten, 'Kasten')), [0.0, 0.0, 100.0, 200.0])
 
 
 class DieAbtastung(unittest.TestCase):
@@ -263,7 +263,7 @@ class DieAbtastung(unittest.TestCase):
         for gesamt, quelle, ziel in ((2, 30.0, 60.0), (1, 15.0, 60.0)):
             with self.subTest(gesamt=gesamt, quelle=quelle, ziel=ziel):
                 nummern = Bildabtastung(gesamt, quelle, ziel).nummern()
-                self.assertLessEqual(max(nummern), gesamt - 1, "liest ein Bild, das es nicht gibt")
+                self.assertLessEqual(max(nummern), gesamt - 1, 'liest ein Bild, das es nicht gibt')
 
     def test_das_hochrechnen_liefert_mehr_bilder_als_die_quelle(self):
         """Sonst waere die Deckelung nur deshalb erfuellt, weil gar
@@ -312,12 +312,12 @@ class DieAusdrucksreihe(unittest.TestCase):
         self.assertEqual(
             reihe.als_dict(),
             {
-                "fps": 24.0,
-                "frame_count": 1,
-                "expression_frames": [[0.0] * 10],
-                "jaw_frames": [[0.0] * 3],
-                "face_points": [[]],
-                "detected_count": 0,
+                'fps': 24.0,
+                'frame_count': 1,
+                'expression_frames': [[0.0] * 10],
+                'jaw_frames': [[0.0] * 3],
+                'face_points': [[]],
+                'detected_count': 0,
             },
         )
 
@@ -340,7 +340,7 @@ class DieAusdrucksreihe(unittest.TestCase):
         reihe = Ausdrucksreihe(30.0)
         reihe.dazu(range(10))
         with Pruefablage.ordner() as ordner:
-            ziel = os.path.join(ordner, "tief", "ausdruck.json")
+            ziel = os.path.join(ordner, 'tief', 'ausdruck.json')
             reihe.schreiben(ziel)
             with open(ziel) as datei:
-                self.assertEqual(json.load(datei)["detected_count"], 1)
+                self.assertEqual(json.load(datei)['detected_count'], 1)

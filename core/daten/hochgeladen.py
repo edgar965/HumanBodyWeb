@@ -20,7 +20,7 @@ class Hochgeladen:
     @staticmethod
     def ablegen(ziel, datei):
         """Schreibt `datei` nach `ziel` und gibt den Zielpfad zurueck."""
-        with open(ziel, "wb") as offen:
+        with open(ziel, 'wb') as offen:
             for stueck in datei.chunks():
                 offen.write(stueck)
         return ziel

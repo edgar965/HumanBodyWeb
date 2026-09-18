@@ -30,71 +30,71 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.modul = HautverdeckungVerdrahtungTest._lies("scene", "hautverdeckung.js")
-        self.figurhaut = HautverdeckungVerdrahtungTest._lies("gemeinsam", "figurhaut.js")
+        self.modul = HautverdeckungVerdrahtungTest._lies('scene', 'hautverdeckung.js')
+        self.figurhaut = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'figurhaut.js')
 
     def test_wird_geladen_und_hoert_auf_das_stueckereignis(self):
         self.assertIn(
-            "import './hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies("scene", "boot.js")
+            "import './hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js')
         )
-        self.assertIn("Stueckereignis.hoeren(", self.modul)
-        self.assertIn("Hautverdeckung.einhaengen();", self.modul)
+        self.assertIn('Stueckereignis.hoeren(', self.modul)
+        self.assertIn('Hautverdeckung.einhaengen();', self.modul)
 
     def test_die_teilnetz_auswahl_meldet_das_entfernen(self):
-        quelle = HautverdeckungVerdrahtungTest._lies("scene", "teilnetz_auswahl.js")
+        quelle = HautverdeckungVerdrahtungTest._lies('scene', 'teilnetz_auswahl.js')
         self.assertIn("import { Stueckereignis } from './garmentcode_stueckereignis.js';", quelle)
-        self.assertIn("Stueckereignis.melden(inst, target.key.slice(3), false);", quelle)
+        self.assertIn('Stueckereignis.melden(inst, target.key.slice(3), false);', quelle)
 
     def test_der_volle_index_bleibt_und_die_stoffgrenze_nimmt_ihn(self):
         # `merken`/`indexSetzen`/`vollerIndex` kommen seit 17.09.2026 aus `Figurhaut`.
-        self.assertIn("export class Hautverdeckung extends Figurhaut {", self.modul)
-        self.assertNotIn("static merken(", self.modul)
-        self.assertIn("geo.userData.indexVoll = {", self.figurhaut)
-        self.assertIn("index: geo.index.array.slice()", self.figurhaut)
+        self.assertIn('export class Hautverdeckung extends Figurhaut {', self.modul)
+        self.assertNotIn('static merken(', self.modul)
+        self.assertIn('geo.userData.indexVoll = {', self.figurhaut)
+        self.assertIn('index: geo.index.array.slice()', self.figurhaut)
         # Jede Maske rechnet vom vollen Index, nie vom gekuerzten.
-        self.assertIn("Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe)", self.modul)
+        self.assertIn('Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe)', self.modul)
         # Seit dem 13.09.2026 mit `weg` aus dem Einzug: hinter der Maskengrenze
         # bleibt ein Band versenkter Haut (`Saumband`).
-        self.assertIn("Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)", self.modul)
-        aufbau = HautverdeckungVerdrahtungTest._lies("scene", "weichgewebeaufbau.js")
-        self.assertIn("geo.userData?.indexVoll?.index ||", aufbau)
+        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', self.modul)
+        aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
+        self.assertIn('geo.userData?.indexVoll?.index ||', aufbau)
 
     def test_ohne_stuecke_kommt_der_volle_index_zurueck(self):
-        self.assertIn("if (!stoffe.length) return Hautverdeckung.aufheben(inst);", self.modul)
-        self.assertIn("Hautverdeckung.indexSetzen(geo, voll.index, voll.gruppen);", self.modul)
+        self.assertIn('if (!stoffe.length) return Hautverdeckung.aufheben(inst);', self.modul)
+        self.assertIn('Hautverdeckung.indexSetzen(geo, voll.index, voll.gruppen);', self.modul)
 
     def test_einzug_und_lagenverdeckung_haengen_daran(self):
         # Seit dem 13.09.2026 mit den Stoffkanten: Randecken wandern unter die
         # Kante statt nach innen (`Saumschnitt`).
         self.assertIn(
-            "Hauteinzug.setzen(inst.bodyMesh, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });",
+            'Hauteinzug.setzen(inst.bodyMesh, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });',
             self.modul,
         )
-        self.assertIn("Hauteinzug.setzen(inst.bodyMesh, null, null);", self.modul)
-        einzug = HautverdeckungVerdrahtungTest._lies("gemeinsam", "hauteinzug.js")
+        self.assertIn('Hauteinzug.setzen(inst.bodyMesh, null, null);', self.modul)
+        einzug = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')
         self.assertIn("Shaderpatch.hinterInclude(shader, 'begin_vertex', 'transformed += einzug;')", einzug)
         self.assertIn(
-            "import './lagenverdeckung.js';", HautverdeckungVerdrahtungTest._lies("scene", "boot.js")
+            "import './lagenverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js')
         )
-        lagen = HautverdeckungVerdrahtungTest._lies("scene", "lagenverdeckung.js")
-        self.assertIn("Stueckereignis.hoeren(", lagen)
-        self.assertIn("Lagenmaske.verdeckt(koerper, stoffe)", lagen)
+        lagen = HautverdeckungVerdrahtungTest._lies('scene', 'lagenverdeckung.js')
+        self.assertIn('Stueckereignis.hoeren(', lagen)
+        self.assertIn('Lagenmaske.verdeckt(koerper, stoffe)', lagen)
 
     def test_weichgewebe_und_einzug_teilen_sich_das_material(self):
-        aufbau = HautverdeckungVerdrahtungTest._lies("scene", "weichgewebeaufbau.js")
-        self.assertIn("Shaderpatch.klonen(alt)", aufbau)
+        aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
+        self.assertIn('Shaderpatch.klonen(alt)', aufbau)
         self.assertIn("Shaderpatch.anhaengen(mat, 'weichgewebe'", aufbau)
-        self.assertNotIn("mat.onBeforeCompile =", aufbau)
+        self.assertNotIn('mat.onBeforeCompile =', aufbau)
         self.assertNotIn(
-            "onBeforeCompile =", HautverdeckungVerdrahtungTest._lies("gemeinsam", "hauteinzug.js")
+            'onBeforeCompile =', HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')
         )
 
     def test_die_gruppen_werden_neu_gesetzt(self):
         """`addGroup` zaehlt Indexeintraege; ohne `clearGroups` laegen alte
         und neue Gruppen uebereinander."""
-        self.assertIn("geo.clearGroups();", self.figurhaut)
-        self.assertIn("geo.addGroup(g.start, g.count, g.materialIndex)", self.figurhaut)
+        self.assertIn('geo.clearGroups();', self.figurhaut)
+        self.assertIn('geo.addGroup(g.start, g.count, g.materialIndex)', self.figurhaut)
 
     @staticmethod
     def _lies(*teile):
-        return Jsmodul(*teile).pfad.read_text(encoding="utf-8")
+        return Jsmodul(*teile).pfad.read_text(encoding='utf-8')

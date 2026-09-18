@@ -22,11 +22,11 @@ from .umaablage import Ablagefehler
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Modellablage"]
+__all__ = ['Modellablage']
 
 
 class Modellablage:
-    ENDUNG = ".json"
+    ENDUNG = '.json'
 
     @classmethod
     def ordner(cls):
@@ -37,25 +37,25 @@ class Modellablage:
         """Der volle Pfad zu `<name>.json`, geprüft gegen Ausbrüche."""
         pfad = Modellpfad.geprueft(cls.ordner(), name, cls.ENDUNG)
         if pfad is None:
-            raise Ablagefehler("Ungültiger Name: %s" % name)
+            raise Ablagefehler('Ungültiger Name: %s' % name)
         return pfad
 
     @classmethod
     def umbenennen(cls, alt, neu):
         alt_pfad, neu_pfad = cls.pfad(alt), cls.pfad(neu)
         if not os.path.isfile(alt_pfad):
-            raise Ablagefehler("Modell nicht gefunden: %s" % alt)
+            raise Ablagefehler('Modell nicht gefunden: %s' % alt)
         if os.path.exists(neu_pfad):
-            raise Ablagefehler("Es gibt schon ein Modell %s" % neu)
+            raise Ablagefehler('Es gibt schon ein Modell %s' % neu)
         os.rename(alt_pfad, neu_pfad)
-        logger.info("Modell umbenannt: %s -> %s", alt, neu)
+        logger.info('Modell umbenannt: %s -> %s', alt, neu)
         return neu
 
     @classmethod
     def loeschen(cls, name):
         pfad = cls.pfad(name)
         if not os.path.isfile(pfad):
-            raise Ablagefehler("Modell nicht gefunden: %s" % name)
+            raise Ablagefehler('Modell nicht gefunden: %s' % name)
         os.remove(pfad)
         # Die drapierten Netze dieser Szene liegen in einem eigenen Ordner
         # (seit 10.09.2026, `GarmentCode/szenenstuecke.py`). Ohne diesen
@@ -68,6 +68,6 @@ class Modellablage:
         except Exception:  # noqa: BLE001
             # Ein Modell gilt als gelöscht, auch wenn die Netze bleiben —
             # die Datei ist weg, und daran hängt die Anzeige.
-            logger.exception("Netze der Szene %s nicht entfernt", name)
-        logger.info("Modell gelöscht: %s", name)
+            logger.exception('Netze der Szene %s nicht entfernt', name)
+        logger.info('Modell gelöscht: %s', name)
         return True

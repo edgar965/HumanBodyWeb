@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "lippengruppe.js")
+MODUL = Jsmodul('gemeinsam', 'lippengruppe.js')
 
 SKRIPT = """
 const { Lippengruppe: L } = await import(MODUL);
@@ -55,4 +55,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class LippengruppeTest(SimpleTestCase):
     def test_lippendreiecke_werden_abgespalten(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

@@ -20,7 +20,6 @@ Oberfläche eine Warnung zu einem Regler, den niemand sieht.
 import unittest
 
 from django.test import SimpleTestCase
-
 from GarmentCode.katalog import Katalog
 from GarmentCode.regler import Regler
 from GarmentCode.reglerhilfe import Reglerhilfe
@@ -54,9 +53,9 @@ def _pfade_der_bloecke(bloecke):
 
     def gehen(bloecke):
         for block in bloecke:
-            for feld in block["felder"]:
-                aus.append(feld["pfad"])
-            gehen(block["untergruppen"])
+            for feld in block['felder']:
+                aus.append(feld['pfad'])
+            gehen(block['untergruppen'])
 
     gehen(bloecke)
     return aus
@@ -69,25 +68,25 @@ class ReglertexteTest(SimpleTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.pfade = _alle_pfade()
-        cls.felder = {p.rsplit(".", 1)[-1] for p in cls.pfade}
+        cls.felder = {p.rsplit('.', 1)[-1] for p in cls.pfade}
 
     def test_die_pfadtexte_treffen_echte_regler(self):
         """Ein Text auf einen Pfad, den es nicht gibt, wirkt nie."""
         fehlend = sorted(p for p in Reglertexte.PFADE if p not in self.pfade)
-        self.assertEqual(fehlend, [], "Erklärung ohne Regler: %s" % fehlend)
+        self.assertEqual(fehlend, [], 'Erklärung ohne Regler: %s' % fehlend)
 
     def test_die_feldtexte_treffen_echte_felder(self):
         fehlend = sorted(f for f in Reglertexte.FELDER if f not in self.felder)
-        self.assertEqual(fehlend, [], "Erklärung ohne Feld: %s" % fehlend)
+        self.assertEqual(fehlend, [], 'Erklärung ohne Feld: %s' % fehlend)
 
     def test_die_aermelgruppe_ist_vollstaendig_erklaert(self):
         """Die Gruppe, an der Edgar hängengeblieben ist, lässt keinen aus."""
-        ohne = [p for p in sorted(self.pfade) if p.startswith("sleeve.") and not Reglertexte.fuer(p)]
-        self.assertEqual(ohne, [], "Ärmelregler ohne Erklärung: %s" % ohne)
+        ohne = [p for p in sorted(self.pfade) if p.startswith('sleeve.') and not Reglertexte.fuer(p)]
+        self.assertEqual(ohne, [], 'Ärmelregler ohne Erklärung: %s' % ohne)
 
     def test_gegenprobe_ein_unbekannter_pfad_gibt_leer(self):
         """Ohne diesen Fall wäre ein Prüfer denkbar, der immer Text findet."""
-        self.assertEqual(Reglertexte.fuer("quatsch.gibtsnicht"), "")
+        self.assertEqual(Reglertexte.fuer('quatsch.gibtsnicht'), '')
 
 
 class ReglerhilfeTest(SimpleTestCase):
@@ -100,7 +99,7 @@ class ReglerhilfeTest(SimpleTestCase):
 
     def test_die_bedingungen_treffen_echte_regler(self):
         fehlend = sorted(p for p in Reglerhilfe.BEDINGUNGEN if p not in self.pfade)
-        self.assertEqual(fehlend, [], "Bedingung ohne Regler: %s" % fehlend)
+        self.assertEqual(fehlend, [], 'Bedingung ohne Regler: %s' % fehlend)
 
     def test_die_beiden_gemeldeten_regler_tragen_ihre_bedingung(self):
         """`armhole_shape` und `sleeve_angle` — die Auslöser der Meldung.
@@ -109,8 +108,8 @@ class ReglerhilfeTest(SimpleTestCase):
         Fällt einer der Texte weg, ist die Oberfläche wieder so stumm wie
         vorher.
         """
-        for pfad in ("sleeve.armhole_shape", "sleeve.sleeve_angle"):
-            self.assertTrue(Reglerhilfe.bedingung(pfad), "%s ohne Bedingungstext" % pfad)
+        for pfad in ('sleeve.armhole_shape', 'sleeve.sleeve_angle'):
+            self.assertTrue(Reglerhilfe.bedingung(pfad), '%s ohne Bedingungstext' % pfad)
 
     def test_jeder_auswahlwert_hat_einen_deutschen_namen(self):
         """Sonst steht wieder `ArmholeCurve` in der Liste."""
@@ -118,33 +117,33 @@ class ReglerhilfeTest(SimpleTestCase):
         for name in Katalog.STUECKE:
             for block in Regler.fuer(Katalog.entwurf(name)):
                 ohne.update(self._ohne_namen(block))
-        self.assertEqual(sorted(ohne), [], "Auswahlwerte ohne deutschen Namen: %s" % sorted(ohne))
+        self.assertEqual(sorted(ohne), [], 'Auswahlwerte ohne deutschen Namen: %s' % sorted(ohne))
 
     def _ohne_namen(self, block):
         aus = set()
-        for feld in block["felder"]:
-            if feld["typ"] not in ("select", "select_null"):
+        for feld in block['felder']:
+            if feld['typ'] not in ('select', 'select_null'):
                 continue
-            for wert in feld["bereich"]:
+            for wert in feld['bereich']:
                 # Zahlen brauchen keinen Namen (`panel_curve`, `num_inserts`).
                 if wert is None or not isinstance(wert, str):
                     continue
                 if Reglerhilfe.wert(wert) == wert:
                     aus.add(wert)
-        for unter in block["untergruppen"]:
+        for unter in block['untergruppen']:
             aus.update(self._ohne_namen(unter))
         return aus
 
     def test_die_linke_seite_erbt_ihre_bedingung(self):
         """Alles unter `left.` gilt nur mit dem Haken — bis auf den Haken."""
-        self.assertTrue(Reglerhilfe.bedingung("left.sleeve.end_width"))
-        self.assertEqual(Reglerhilfe.bedingung("left.enable_asym"), "")
+        self.assertTrue(Reglerhilfe.bedingung('left.sleeve.end_width'))
+        self.assertEqual(Reglerhilfe.bedingung('left.enable_asym'), '')
 
     def test_die_hilfe_kommt_als_dreiteil(self):
-        hilfe = Reglerhilfe.hilfe("sleeve.end_width")
-        self.assertEqual(set(hilfe), {"text", "bedingung", "original"})
-        self.assertEqual(hilfe["original"], "sleeve.end_width")
-        self.assertIn("Ärmelende", hilfe["text"])
+        hilfe = Reglerhilfe.hilfe('sleeve.end_width')
+        self.assertEqual(set(hilfe), {'text', 'bedingung', 'original'})
+        self.assertEqual(hilfe['original'], 'sleeve.end_width')
+        self.assertIn('Ärmelende', hilfe['text'])
 
 
 class ReglerpresetsTest(SimpleTestCase):
@@ -153,9 +152,9 @@ class ReglerpresetsTest(SimpleTestCase):
     def test_jedes_preset_setzt_vorhandene_regler(self):
         pfade = _alle_pfade()
         for preset in Reglerpresets.PRESETS:
-            for pfad in preset["werte"]:
+            for pfad in preset['werte']:
                 self.assertIn(
-                    pfad, pfade, "Preset %s setzt %s — gibt es nicht" % (preset["schluessel"], pfad)
+                    pfad, pfade, 'Preset %s setzt %s — gibt es nicht' % (preset['schluessel'], pfad)
                 )
 
     def test_jeder_wert_liegt_in_seinem_bereich(self):
@@ -165,30 +164,30 @@ class ReglerpresetsTest(SimpleTestCase):
             for block in Regler.fuer(Katalog.entwurf(name)):
                 self._bereiche(block, bereiche)
         for preset in Reglerpresets.PRESETS:
-            for pfad, wert in preset["werte"].items():
+            for pfad, wert in preset['werte'].items():
                 unten, oben = bereiche[pfad]
                 self.assertTrue(
-                    unten <= wert <= oben, "%s = %s liegt nicht in [%s, %s]" % (pfad, wert, unten, oben)
+                    unten <= wert <= oben, '%s = %s liegt nicht in [%s, %s]' % (pfad, wert, unten, oben)
                 )
 
     def _bereiche(self, block, aus):
-        for feld in block["felder"]:
-            if feld["typ"] in ("float", "int") and len(feld["bereich"]) == 2:
-                aus[feld["pfad"]] = (feld["bereich"][0], feld["bereich"][1])
-        for unter in block["untergruppen"]:
+        for feld in block['felder']:
+            if feld['typ'] in ('float', 'int') and len(feld['bereich']) == 2:
+                aus[feld['pfad']] = (feld['bereich'][0], feld['bereich'][1])
+        for unter in block['untergruppen']:
             self._bereiche(unter, aus)
 
     def test_presets_erscheinen_nur_wo_ihre_gruppe_vorkommt(self):
         """Ein Ärmel-Preset an der Hose setzte Werte, die niemand liest."""
-        self.assertTrue(Katalog.presets("t-shirt"))
-        self.assertEqual(Katalog.presets("hose"), [])
-        self.assertEqual(Katalog.presets("bleistiftrock"), [])
+        self.assertTrue(Katalog.presets('t-shirt'))
+        self.assertEqual(Katalog.presets('hose'), [])
+        self.assertEqual(Katalog.presets('bleistiftrock'), [])
 
     def test_die_werte_sind_kopien(self):
         """Wer die Vorlage verändert, verändert sie für alle nächsten Läufe."""
-        erste = Reglerpresets.werte("aermel_eng")
-        erste["sleeve.end_width"] = 99
-        self.assertEqual(Reglerpresets.werte("aermel_eng")["sleeve.end_width"], 0.2)
+        erste = Reglerpresets.werte('aermel_eng')
+        erste['sleeve.end_width'] = 99
+        self.assertEqual(Reglerpresets.werte('aermel_eng')['sleeve.end_width'], 0.2)
 
     def test_das_gemessene_preset_ist_das_aus_dem_bildschirmfoto(self):
         """Vier Werte, gegen die die Messreihe gefahren wurde.
@@ -198,15 +197,15 @@ class ReglerpresetsTest(SimpleTestCase):
         schlimmer als keiner.
         """
         self.assertEqual(
-            Reglerpresets.werte("aermel_eng"),
+            Reglerpresets.werte('aermel_eng'),
             {
-                "sleeve.length": 1.1,
-                "sleeve.connecting_width": 0.0,
-                "sleeve.end_width": 0.2,
-                "sleeve.sleeve_angle": 10,
+                'sleeve.length': 1.1,
+                'sleeve.connecting_width': 0.0,
+                'sleeve.end_width': 0.2,
+                'sleeve.sleeve_angle': 10,
             },
         )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

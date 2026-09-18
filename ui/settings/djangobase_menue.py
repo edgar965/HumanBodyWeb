@@ -7,67 +7,67 @@ Navigationsdaten: Beschriftung, Bootstrap-Icon, Adresse.
 
 MENUE = [
     {
-        "label": "Dashboard",
-        "icon": "bi-speedometer2",
-        "untermenu": [
-            {"label": "BVH Studio", "icon": "bi-scissors", "url": "/humanbody/bvh-studio/"},
-            {"label": "Szene", "icon": "bi-lightbulb", "url": "/humanbody/scene/"},
-            {"label": "Szene - Modell", "icon": "bi-person-gear", "url": "/humanbody/scene-model/"},
-            {"label": "Result", "icon": "bi-play-circle", "url": "/process/result/"},
-            {"label": "Theatre", "icon": "bi-film", "url": "/humanbody/theatre/"},
+        'label': 'Dashboard',
+        'icon': 'bi-speedometer2',
+        'untermenu': [
+            {'label': 'BVH Studio', 'icon': 'bi-scissors', 'url': '/humanbody/bvh-studio/'},
+            {'label': 'Szene', 'icon': 'bi-lightbulb', 'url': '/humanbody/scene/'},
+            {'label': 'Szene - Modell', 'icon': 'bi-person-gear', 'url': '/humanbody/scene-model/'},
+            {'label': 'Result', 'icon': 'bi-play-circle', 'url': '/process/result/'},
+            {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
     {
-        "label": "HumanBody",
-        "icon": "bi-person",
-        "untermenu": [
-            {"label": "Konfiguration", "icon": "bi-sliders", "url": "/humanbody/config/"},
-            {"label": "Foto To 3D", "icon": "bi-camera", "url": "/humanbody/photo-to-3d/"},
-            {"label": "Jobs", "icon": "bi-list-ul", "url": "/humanbody/photo-to-3d/jobs/"},
-            {"label": "Animationen", "icon": "bi-person-walking", "url": "/humanbody/animations/"},
-            {"label": "Pattern Editor", "icon": "bi-compass", "url": "/humanbody/config/#tab-creator"},
+        'label': 'HumanBody',
+        'icon': 'bi-person',
+        'untermenu': [
+            {'label': 'Konfiguration', 'icon': 'bi-sliders', 'url': '/humanbody/config/'},
+            {'label': 'Foto To 3D', 'icon': 'bi-camera', 'url': '/humanbody/photo-to-3d/'},
+            {'label': 'Jobs', 'icon': 'bi-list-ul', 'url': '/humanbody/photo-to-3d/jobs/'},
+            {'label': 'Animationen', 'icon': 'bi-person-walking', 'url': '/humanbody/animations/'},
+            {'label': 'Pattern Editor', 'icon': 'bi-compass', 'url': '/humanbody/config/#tab-creator'},
         ],
     },
     {
-        "label": "Process Videos",
-        "icon": "bi-camera-video",
-        "untermenu": [
-            {"label": "2D", "icon": "bi-upload", "url": "/process/"},
-            {"label": "3D", "icon": "bi-magic", "url": "/process/VideoToBVH/"},
-            {"label": "Verarbeitet", "icon": "bi-list-ul", "url": "/process/list/"},
-            {"label": "Effekte", "icon": "bi-stars", "url": "/process/effekte/"},
+        'label': 'Process Videos',
+        'icon': 'bi-camera-video',
+        'untermenu': [
+            {'label': '2D', 'icon': 'bi-upload', 'url': '/process/'},
+            {'label': '3D', 'icon': 'bi-magic', 'url': '/process/VideoToBVH/'},
+            {'label': 'Verarbeitet', 'icon': 'bi-list-ul', 'url': '/process/list/'},
+            {'label': 'Effekte', 'icon': 'bi-stars', 'url': '/process/effekte/'},
         ],
     },
     {
-        "label": "Test",
-        "icon": "bi-eyedropper",
-        "untermenu": [
-            {"label": "MocapNET", "icon": "bi-gear", "url": "/test/mocapnet/"},
+        'label': 'Test',
+        'icon': 'bi-eyedropper',
+        'untermenu': [
+            {'label': 'MocapNET', 'icon': 'bi-gear', 'url': '/test/mocapnet/'},
             # Zeigte bis zum 17.08.2026 auf die EIGENE Seite `/tests/`. Die
             # Oberflächenfälle sind jetzt reguläre Django-Tests
             # (`core/tests/ui/test_oberflaeche.py`) und stehen damit auf
             # Hilfe → Tests — zusammen mit allen anderen.
-            {"label": "Testcases", "icon": "bi-check2-all", "url": "/hilfe/tests/?tab=Alle&unter=ui"},
-            {"label": "Test Animation", "icon": "bi-collection-play", "url": "/humanbody/test-animation/"},
-            {"label": "Test Charakter", "icon": "bi-person-check", "url": "/humanbody/test-character/"},
-            {"label": "SMPL", "icon": "bi-people", "url": "/humanbody/test-smpl/"},
-            {"label": "BVH Library", "icon": "bi-folder2-open", "url": "/library/"},
-            {"label": "Webcam", "icon": "bi-camera", "url": "/webcam/"},
+            {'label': 'Testcases', 'icon': 'bi-check2-all', 'url': '/hilfe/tests/?tab=Alle&unter=ui'},
+            {'label': 'Test Animation', 'icon': 'bi-collection-play', 'url': '/humanbody/test-animation/'},
+            {'label': 'Test Charakter', 'icon': 'bi-person-check', 'url': '/humanbody/test-character/'},
+            {'label': 'SMPL', 'icon': 'bi-people', 'url': '/humanbody/test-smpl/'},
+            {'label': 'BVH Library', 'icon': 'bi-folder2-open', 'url': '/library/'},
+            {'label': 'Webcam', 'icon': 'bi-camera', 'url': '/webcam/'},
         ],
     },
 ]
 
 
 EINSTELLUNGEN_EXTRA = [
-    {"label": "Modell", "url": "/settings/model/", "icon": "bi-person"},
-    {"label": "Szene", "url": "/settings/scene/", "icon": "bi-lightbulb"},
-    {"label": "Result", "url": "/settings/result/", "icon": "bi-camera-video"},
-    {"label": "Video to BVH: 2D", "url": "/settings/video-to-bvh-2d/", "icon": "bi-film"},
-    {"label": "Video to BVH: 3D", "url": "/settings/video-to-bvh-3d/", "icon": "bi-box"},
-    {"label": "SMPL Body", "url": "/settings/smpl/", "icon": "bi-person-standing"},
-    {"label": "Theatre", "url": "/settings/theatre/", "icon": "bi-mask"},
-    {"label": "BVH Studio", "url": "/settings/bvh-studio/", "icon": "bi-scissors"},
-    {"label": "Effekte", "url": "/settings/effekte/", "icon": "bi-wind"},
+    {'label': 'Modell', 'url': '/settings/model/', 'icon': 'bi-person'},
+    {'label': 'Szene', 'url': '/settings/scene/', 'icon': 'bi-lightbulb'},
+    {'label': 'Result', 'url': '/settings/result/', 'icon': 'bi-camera-video'},
+    {'label': 'Video to BVH: 2D', 'url': '/settings/video-to-bvh-2d/', 'icon': 'bi-film'},
+    {'label': 'Video to BVH: 3D', 'url': '/settings/video-to-bvh-3d/', 'icon': 'bi-box'},
+    {'label': 'SMPL Body', 'url': '/settings/smpl/', 'icon': 'bi-person-standing'},
+    {'label': 'Theatre', 'url': '/settings/theatre/', 'icon': 'bi-mask'},
+    {'label': 'BVH Studio', 'url': '/settings/bvh-studio/', 'icon': 'bi-scissors'},
+    {'label': 'Effekte', 'url': '/settings/effekte/', 'icon': 'bi-wind'},
 ]
 
 
@@ -83,67 +83,67 @@ HILFE_EXTRA = [
     # Vergleich aller Video-nach-BVH-Pipelines (Edgar, 12.09.2026:
     # „auf einer neuen Seite Hilfe - Video to BVH").
     {
-        "label": "Video to BVH",
-        "icon": "bi-camera-video",
-        "url": "/hilfe/video-to-bvh/",
-        "aktiv": "hilfe_video_to_bvh",
+        'label': 'Video to BVH',
+        'icon': 'bi-camera-video',
+        'url': '/hilfe/video-to-bvh/',
+        'aktiv': 'hilfe_video_to_bvh',
     },
     # Mimik, Haare, Kleidung, Wind — wie Studios es machen und welcher
     # offene Code in Frage kommt (Edgar, 12.09.2026: „schreibe schon mal
     # alles hinein in Hilfe - Animationseffekte").
     {
-        "label": "Animationseffekte",
-        "icon": "bi-stars",
-        "url": "/hilfe/animationseffekte/",
-        "aktiv": "hilfe_animationseffekte",
+        'label': 'Animationseffekte',
+        'icon': 'bi-stars',
+        'url': '/hilfe/animationseffekte/',
+        'aktiv': 'hilfe_animationseffekte',
     },
     # Hochaufloesende Figuren im Vergleich (Edgar, 17.09.2026: „mach diese
     # Liste als HTML-Datei: Hilfe - Architektur - Andere Modelle").
     {
-        "label": "Architektur",
-        "icon": "bi-bricks",
-        "untermenu": [
+        'label': 'Architektur',
+        'icon': 'bi-bricks',
+        'untermenu': [
             {
-                "label": "Andere Modelle",
-                "icon": "bi-people",
-                "url": "/hilfe/architektur/andere-modelle/",
-                "aktiv": "hilfe_andere_modelle",
+                'label': 'Andere Modelle',
+                'icon': 'bi-people',
+                'url': '/hilfe/architektur/andere-modelle/',
+                'aktiv': 'hilfe_andere_modelle',
             },
         ],
     },
     {
-        "label": "Kleidung",
-        "icon": "bi-bag",
-        "untermenu": [
+        'label': 'Kleidung',
+        'icon': 'bi-bag',
+        'untermenu': [
             {
-                "label": "Allgemein",
-                "icon": "bi-list-columns",
-                "url": "/hilfe/kleidung/",
-                "aktiv": "hilfe_kleidung",
+                'label': 'Allgemein',
+                'icon': 'bi-list-columns',
+                'url': '/hilfe/kleidung/',
+                'aktiv': 'hilfe_kleidung',
             },
             {
-                "label": "GarmentCode",
-                "icon": "bi-rulers",
-                "url": "/hilfe/kleidung/garmentcode/",
-                "aktiv": "hilfe_kleidung_garmentcode",
+                'label': 'GarmentCode',
+                'icon': 'bi-rulers',
+                'url': '/hilfe/kleidung/garmentcode/',
+                'aktiv': 'hilfe_kleidung_garmentcode',
             },
             {
-                "label": "Neu",
-                "icon": "bi-diagram-3",
-                "url": "/hilfe/kleidung/neu/",
-                "aktiv": "hilfe_kleidung_neu",
+                'label': 'Neu',
+                'icon': 'bi-diagram-3',
+                'url': '/hilfe/kleidung/neu/',
+                'aktiv': 'hilfe_kleidung_neu',
             },
             {
-                "label": "Kleiderphysik",
-                "icon": "bi-wind",
-                "url": "/hilfe/kleidung/physik/",
-                "aktiv": "hilfe_kleidung_physik",
+                'label': 'Kleiderphysik',
+                'icon': 'bi-wind',
+                'url': '/hilfe/kleidung/physik/',
+                'aktiv': 'hilfe_kleidung_physik',
             },
             {
-                "label": "Körperphysik",
-                "icon": "bi-person-arms-up",
-                "url": "/hilfe/kleidung/koerperphysik/",
-                "aktiv": "hilfe_koerper_physik",
+                'label': 'Körperphysik',
+                'icon': 'bi-person-arms-up',
+                'url': '/hilfe/kleidung/koerperphysik/',
+                'aktiv': 'hilfe_koerper_physik',
             },
         ],
     },

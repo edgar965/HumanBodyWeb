@@ -24,7 +24,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "saumschnitt.js")
+MODUL = Jsmodul('gemeinsam', 'saumschnitt.js')
 
 SKRIPT = """
 const { Saumschnitt: S } = await import(MODUL);
@@ -57,4 +57,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class SaumschnittTest(SimpleTestCase):
     def test_randecken_wandern_unter_die_kante(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

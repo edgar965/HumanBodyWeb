@@ -80,8 +80,8 @@ class Animumsetzung:
             knochen = self.knochen.get(name)
             if knochen is None:
                 return np.array([0.0, 0.0, 0.0, 1.0])
-            eigen = self._wxyz(knochen["local_quaternion"])
-            elternteil = knochen.get("parent")
+            eigen = self._wxyz(knochen['local_quaternion'])
+            elternteil = knochen.get('parent')
             aus[name] = eigen if not elternteil else self.mul(loesen(elternteil), eigen)
             return aus[name]
 
@@ -113,14 +113,14 @@ class Animumsetzung:
             if spur is not None:
                 lokal = self.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
             else:
-                lokal = self._wxyz(knochen["local_quaternion"])
-            elternteil = knochen.get("parent")
+                lokal = self._wxyz(knochen['local_quaternion'])
+            elternteil = knochen.get('parent')
             pose_welt[name] = lokal if not elternteil else self.mul(welt(elternteil), lokal)
             return pose_welt[name]
 
         delta = {}
         for name in self.namen:
-            grund = name[:-5] if name.endswith("_ende") else name
+            grund = name[:-5] if name.endswith('_ende') else name
             if roh:
                 delta[name] = welt(grund)
                 continue
@@ -179,7 +179,7 @@ class Animumsetzung:
 
     #: Rigify teilt Arme und Beine in einen Schwenk- und ein Twist-Segment
     #: (`DEF-upper_arm.L` und `DEF-upper_arm.L.001`).
-    TWISTSEGMENT = ".001"
+    TWISTSEGMENT = '.001'
 
     def _twist_verlagern(self, drehungen, spuren):
         """Den Twist vom Knochen auf SEIN Twist-Segment schieben.
@@ -354,16 +354,16 @@ class Animumsetzung:
             spur = spuren.get(name)
             if spur is not None:
                 return self.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
-            return self._wxyz(self.knochen[name]["local_quaternion"])
+            return self._wxyz(self.knochen[name]['local_quaternion'])
 
-        gruende = [n[:-5] if n.endswith("_ende") else n for n in self.namen]
+        gruende = [n[:-5] if n.endswith('_ende') else n for n in self.namen]
         welt = Knochenwelt.loesen(self.knochen, [g for g in gruende if g in self.knochen], lokal)
         aus = {}
         for name, grund in zip(self.namen, gruende):
             if grund not in self.knochen:
                 continue
             punkt, drehung = welt[grund]
-            if name.endswith("_ende"):
+            if name.endswith('_ende'):
                 # Der Endpunkt sitzt am Schwanz — in Knochenrichtung (+Y).
                 laenge = np.linalg.norm(self._schwanzversatz(grund))
                 punkt = punkt + self.drehen(drehung, np.array([0.0, laenge, 0.0]))
@@ -375,8 +375,8 @@ class Animumsetzung:
         if name in self.laengen:
             return np.array([0.0, float(self.laengen[name]), 0.0])
         for knochen in self.knochen.values():
-            if knochen.get("parent") == name:
-                return np.asarray(knochen["local_position"], dtype=np.float64)
+            if knochen.get('parent') == name:
+                return np.asarray(knochen['local_position'], dtype=np.float64)
         return np.array([0.0, 0.05, 0.0])
 
     # ------------------------------------------------- Quaternionen [x,y,z,w]

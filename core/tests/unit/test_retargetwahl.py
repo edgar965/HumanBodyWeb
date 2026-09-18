@@ -15,13 +15,13 @@ class RetargetwahlTest(SimpleTestCase):
     """`delta_norm` ist DREIWERTIG — das ist der ganze Punkt."""
 
     def test_drei_zustaende(self):
-        self.assertIs(Retargetwahl({"delta_norm": "1"}, 1.68).delta_norm, True)
-        self.assertIs(Retargetwahl({"delta_norm": "0"}, 1.68).delta_norm, False)
-        self.assertIsNone(Retargetwahl({}, 1.68).delta_norm, "ohne Angabe entscheidet das Format")
-        self.assertIsNone(Retargetwahl({"delta_norm": "vielleicht"}, 1.68).delta_norm)
+        self.assertIs(Retargetwahl({'delta_norm': '1'}, 1.68).delta_norm, True)
+        self.assertIs(Retargetwahl({'delta_norm': '0'}, 1.68).delta_norm, False)
+        self.assertIsNone(Retargetwahl({}, 1.68).delta_norm, 'ohne Angabe entscheidet das Format')
+        self.assertIsNone(Retargetwahl({'delta_norm': 'vielleicht'}, 1.68).delta_norm)
 
     def test_groesse_und_fusskorrektur(self):
-        wahl = Retargetwahl({"body_height": "1.80", "foot_correction": "TRUE"}, 1.68)
+        wahl = Retargetwahl({'body_height': '1.80', 'foot_correction': 'TRUE'}, 1.68)
         self.assertAlmostEqual(wahl.groesse, 1.80)
         self.assertTrue(wahl.fusskorrektur)
 

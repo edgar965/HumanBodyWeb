@@ -26,57 +26,57 @@ import re
 from django.conf import settings
 from django.test import SimpleTestCase
 
-STUDIO = settings.BASE_DIR / "static" / "viewer" / "bvh_studio"
+STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
 
 
 class BodendurchsichtTest(SimpleTestCase):
     databases = set()
 
     def test_felder_gehen_durch_alle_schichten(self):
-        boden = BodendurchsichtTest._text("spur_boden.js")
+        boden = BodendurchsichtTest._text('spur_boden.js')
         anlegen = boden[
-            boden.index("export function createFloorTrack") : boden.index(
-                "export function applyFloorOverride"
+            boden.index('export function createFloorTrack') : boden.index(
+                'export function applyFloorOverride'
             )
         ]
         laden = boden[
-            boden.index("export function applyFloorOverride") : boden.index(
-                "export function updateFloorMaterial"
+            boden.index('export function applyFloorOverride') : boden.index(
+                'export function updateFloorMaterial'
             )
         ]
         for rumpf in (anlegen, laden):
-            self.assertIn("track.floorTransparenz = override", rumpf)
-            self.assertIn("track.floorTiefe = override", rumpf)
-        speichern = BodendurchsichtTest._text("projekt_daten.js")
-        self.assertIn("transparenz: t.floorTransparenz", speichern)
-        self.assertIn("tiefe: t.floorTiefe", speichern)
-        maske = BodendurchsichtTest._text("eigenschaften/boden.js")
+            self.assertIn('track.floorTransparenz = override', rumpf)
+            self.assertIn('track.floorTiefe = override', rumpf)
+        speichern = BodendurchsichtTest._text('projekt_daten.js')
+        self.assertIn('transparenz: t.floorTransparenz', speichern)
+        self.assertIn('tiefe: t.floorTiefe', speichern)
+        maske = BodendurchsichtTest._text('eigenschaften/boden.js')
         regler = re.findall(r"_regler\('(prop-floor-[a-z]+)'", maske)
-        self.assertEqual(regler, ["prop-floor-transparenz", "prop-floor-tiefe"])
+        self.assertEqual(regler, ['prop-floor-transparenz', 'prop-floor-tiefe'])
         self.assertIn("['prop-floor-transparenz', 'floorTransparenz']", maske)
         self.assertIn("['prop-floor-tiefe', 'floorTiefe']", maske)
         self.assertIn('type="range"', maske)
 
     def test_material_und_groesse_ziehen_die_platte_nach(self):
-        boden = BodendurchsichtTest._text("spur_boden.js")
+        boden = BodendurchsichtTest._text('spur_boden.js')
         material = boden[
-            boden.index("export function updateFloorMaterial") : boden.index(
-                "export async function applyFloorTexture"
+            boden.index('export function updateFloorMaterial') : boden.index(
+                'export async function applyFloorTexture'
             )
         ]
         groesse = boden[
-            boden.index("export function setFloorGeometry") : boden.index("export function setFloorSize")
+            boden.index('export function setFloorGeometry') : boden.index('export function setFloorSize')
         ]
-        self.assertIn("Bodenuntergrund.nachziehen(track)", material)
-        self.assertIn("Bodenuntergrund.nachziehen(track)", groesse)
+        self.assertIn('Bodenuntergrund.nachziehen(track)', material)
+        self.assertIn('Bodenuntergrund.nachziehen(track)', groesse)
 
     def test_platte_ist_kind_des_bodens_ohne_isfloor(self):
-        platte = BodendurchsichtTest._text("bodenuntergrund.js")
-        self.assertIn("track.mesh.add(platte)", platte)
-        self.assertIn("platte.geometry = boden.geometry", platte)
-        self.assertIn("m.opacity = 1 - durch", platte)
-        self.assertNotIn("isFloor = true", platte)
+        platte = BodendurchsichtTest._text('bodenuntergrund.js')
+        self.assertIn('track.mesh.add(platte)', platte)
+        self.assertIn('platte.geometry = boden.geometry', platte)
+        self.assertIn('m.opacity = 1 - durch', platte)
+        self.assertNotIn('isFloor = true', platte)
 
     @staticmethod
     def _text(name):
-        return (STUDIO / name).read_text(encoding="utf-8")
+        return (STUDIO / name).read_text(encoding='utf-8')

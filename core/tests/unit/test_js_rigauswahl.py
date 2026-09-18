@@ -29,7 +29,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "rigauswahl.js")
+MODUL = Jsmodul('gemeinsam', 'rigauswahl.js')
 
 SKRIPT = """
 const { Rigauswahl: R } = await import(MODUL);
@@ -112,4 +112,4 @@ class RigauswahlTest(SimpleTestCase):
 
     def test_wurzel_aus_dem_feld_der_art_sonst_aus_dem_szenenbaum(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

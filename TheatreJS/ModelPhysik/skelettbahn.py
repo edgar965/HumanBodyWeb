@@ -65,7 +65,7 @@ class Skelettbahn:
         Die Retargetdaten fuehren keine `frame_time`, aber `duration` —
         gemessen an `136_28.bvh`: 1.115 Bilder in 9,29 s = 120,0 fps.
         """
-        dauer = float(getattr(daten, "duration", 0.0) or 0.0)
+        dauer = float(getattr(daten, 'duration', 0.0) or 0.0)
         if dauer <= 0.0:
             return 30.0
         return float(daten.frame_count) / dauer
@@ -80,7 +80,7 @@ class Skelettbahn:
         """
         if not daten.position_track:
             return None
-        roh = np.asarray(daten.position_track["values"], dtype=np.float64).reshape(-1, 3)
+        roh = np.asarray(daten.position_track['values'], dtype=np.float64).reshape(-1, 3)
         return np.column_stack([roh[:, 0], -roh[:, 2], roh[:, 1]])
 
     def _bild(self, nummer):
@@ -101,7 +101,7 @@ class Skelettbahn:
             spur = (spuren or {}).get(name)
             if spur is not None and nummer * 4 + 4 <= len(spur):
                 return Codyfigur.nach_blender(np.asarray(spur[nummer * 4 : nummer * 4 + 4], dtype=np.float64))
-            return Animumsetzung._wxyz(self.knochen[name]["local_quaternion"])
+            return Animumsetzung._wxyz(self.knochen[name]['local_quaternion'])
 
         return Knochenwelt.loesen(self.knochen, self.namen, lokal, ort)
 

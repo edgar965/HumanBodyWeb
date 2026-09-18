@@ -23,9 +23,9 @@ from .teilauftrag import Teilauftrag
 class Hybridhaende:
     """Der Finger-Unterauftrag: was GEM-X dafür braucht, und ob er bestellt ist."""
 
-    QUELLE = "gemx"
-    ORDNER = "hands"
-    ANZEIGE = "GEM-X"
+    QUELLE = 'gemx'
+    ORDNER = 'hands'
+    ANZEIGE = 'GEM-X'
 
     def __init__(self, job, params, einstellungen):
         self.job = job
@@ -34,7 +34,7 @@ class Hybridhaende:
 
     @classmethod
     def bestellt(cls, params):
-        return (params or {}).get("hands_source") == cls.QUELLE
+        return (params or {}).get('hands_source') == cls.QUELLE
 
     def auftrag(self):
         """`None`, wenn die Hände nicht von GEM-X kommen sollen.
@@ -46,10 +46,10 @@ class Hybridhaende:
             return None
         s, p = self.einstellungen, self.params
         werte = {
-            "static_cam": p.get("static_cam", s.gemx_static_cam),
-            "smooth_sigma": p.get("hands_smooth_sigma", s.gemx_smooth_sigma),
-            "device": p.get("body_device", s.smpl_device),
+            'static_cam': p.get('static_cam', s.gemx_static_cam),
+            'smooth_sigma': p.get('hands_smooth_sigma', s.gemx_smooth_sigma),
+            'device': p.get('body_device', s.smpl_device),
         }
         return Teilauftrag(
-            self.QUELLE, werte, self.job.name, "%s_%s" % (self.job.id, self.ORDNER), anzeige=self.ANZEIGE
+            self.QUELLE, werte, self.job.name, '%s_%s' % (self.job.id, self.ORDNER), anzeige=self.ANZEIGE
         )

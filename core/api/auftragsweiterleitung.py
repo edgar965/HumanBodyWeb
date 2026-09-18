@@ -16,6 +16,6 @@ from ..models import BVHJob
 
 class Auftragsweiterleitung:
     @staticmethod
-    def alt(request, job_id, rest=""):
+    def alt(request, job_id, rest=''):
         job = get_object_or_404(BVHJob, id=job_id)
-        return HttpResponsePermanentRedirect("/process/%s/%s" % (job.kennung, rest))
+        return HttpResponsePermanentRedirect('/process/%s/%s' % (job.kennung, rest))

@@ -23,12 +23,12 @@ from pathlib import Path
 
 from django.conf import settings
 
+from ..daten.gelenknamen import Gelenknamen
 from .bvh_projektion import Bvhprojektion
 from .keypoints_quellen import Keypointsquellen
 from .skelettzeichner import Skelettzeichner
-from ..daten.gelenknamen import Gelenknamen
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 #: Die Kanten des gezeichneten Skeletts — aus `Gelenknamen`, nicht hier.
 #:
@@ -50,7 +50,7 @@ class Skelettfilm:
     def __init__(self, job, ueberlagern=True):
         self.job = job
         self.ueberlagern = ueberlagern
-        self.ordner = Path(settings.MEDIA_ROOT) / "output" / str(job.id)
+        self.ordner = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
         self.video = Path(settings.MEDIA_ROOT) / str(job.video_file)
 
     # ------------------------------------------------------------------ Ablauf
@@ -68,11 +68,11 @@ class Skelettfilm:
 
     def zielpfad(self):
         """`<pipeline>_<name>_overlay.mp4` bzw. `…_rig_only[_bvh].mp4`."""
-        zusatz = "_overlay" if self.ueberlagern else "_rig_only"
+        zusatz = '_overlay' if self.ueberlagern else '_rig_only'
         if self._aus_bvh():
-            zusatz += "_bvh"
+            zusatz += '_bvh'
         self.ordner.mkdir(parents=True, exist_ok=True)
-        return self.ordner / ("%s_%s%s.mp4" % (self.job.pipeline, Path(self.job.name).stem, zusatz))
+        return self.ordner / ('%s_%s%s.mp4' % (self.job.pipeline, Path(self.job.name).stem, zusatz))
 
     def _aus_bvh(self):
         """Nur für das Rig auf Schwarz und nur bei v4.
@@ -83,7 +83,7 @@ class Skelettfilm:
         """
         return (
             not self.ueberlagern
-            and self.job.pipeline == "v4"
+            and self.job.pipeline == 'v4'
             and self.job.bvh_file
             and os.path.exists(self.job.bvh_file)
         )
@@ -111,7 +111,7 @@ class Skelettfilm:
                 if punkte and kanten:
                     return punkte, kanten, (breite, hoehe)
             except Exception:  # noqa: BLE001
-                logger.warning("BVH-Projektion fehlgeschlagen — kein Rig im Video", exc_info=True)
+                logger.warning('BVH-Projektion fehlgeschlagen — kein Rig im Video', exc_info=True)
         punkte, masse = Keypointsquellen.in_pixeln(self.job)
         return punkte, _BODY_CONNECTIONS, masse
 
@@ -128,7 +128,7 @@ class Skelettfilm:
         zeichner = Skelettzeichner(
             verbindungen, farbe=self.UEBERLAGERUNG if self.ueberlagern else self.NUR_RIG, dicke=self.DICKE
         )
-        schreiber = cv2.VideoWriter(str(ziel), cv2.VideoWriter_fourcc(*"mp4v"), bildrate, (breite, hoehe))
+        schreiber = cv2.VideoWriter(str(ziel), cv2.VideoWriter_fourcc(*'mp4v'), bildrate, (breite, hoehe))
         for nummer in range(anzahl):
             bild = self._bild(film, breite, hoehe, np)
             zeichner.zeichnen(bild, punkte[self.zuordnen(nummer, anzahl, len(punkte))])

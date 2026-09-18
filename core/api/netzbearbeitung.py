@@ -16,11 +16,11 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from humanbody_core.cloth import _laplacian_smooth
+from humanbody_core.koerperabstand import Koerperabstand
 
+from ..daten.anfragerumpf import Anfragerumpf
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
-from ..daten.anfragerumpf import Anfragerumpf
-from humanbody_core.koerperabstand import Koerperabstand
 
 
 class Netzbearbeitung:
@@ -52,7 +52,7 @@ class Netzbearbeitung:
         for platz in set(auswahl):
             if 0 <= platz < len(ergebnis):
                 ergebnis[platz] = nachher[platz]
-        return JsonResponse({"vertices": Netzantwort.feld(ergebnis.astype(np.float32), "vertices")})
+        return JsonResponse({'vertices': Netzantwort.feld(ergebnis.astype(np.float32), 'vertices')})
 
     # ---------------------------------------------------------------- Aktionen
 
@@ -65,22 +65,22 @@ class Netzbearbeitung:
         POST (JSON): {vertices (base64 Float32), faces (base64 Uint32),
                       selected (Liste von int), iterations, factor}
         """
-        rumpf, fehler = Anfragerumpf.lesen(request, "Invalid JSON body")
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
         if fehler:
             return fehler
-        punkte_roh = rumpf.get("vertices")
-        flaechen_roh = rumpf.get("faces")
+        punkte_roh = rumpf.get('vertices')
+        flaechen_roh = rumpf.get('faces')
         if not punkte_roh or not flaechen_roh:
-            return JsonResponse({"error": "vertices and faces are required"}, status=400)
+            return JsonResponse({'error': 'vertices and faces are required'}, status=400)
         punkte = Netzbearbeitung._punkte(punkte_roh)
         flaechen = np.frombuffer(base64.b64decode(flaechen_roh), dtype=np.uint32).reshape(-1, 3)
         geglaettet = _laplacian_smooth(
             punkte,
             flaechen,
-            iterations=int(rumpf.get("iterations", Netzbearbeitung.VORGABE_DURCHGAENGE)),
-            factor=float(rumpf.get("factor", Netzbearbeitung.VORGABE_STAERKE)),
+            iterations=int(rumpf.get('iterations', Netzbearbeitung.VORGABE_DURCHGAENGE)),
+            factor=float(rumpf.get('factor', Netzbearbeitung.VORGABE_STAERKE)),
         )
-        return Netzbearbeitung._nur_ausgewaehlte(punkte, geglaettet, rumpf.get("selected", []))
+        return Netzbearbeitung._nur_ausgewaehlte(punkte, geglaettet, rumpf.get('selected', []))
 
     @staticmethod
     @csrf_exempt
@@ -91,16 +91,16 @@ class Netzbearbeitung:
         POST (JSON): {vertices (base64 Float32), selected, min_dist}
         Abfrageparameter: body_type, morph_* fuer den Koerper.
         """
-        rumpf, fehler = Anfragerumpf.lesen(request, "Invalid JSON body")
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
         if fehler:
             return fehler
-        punkte_roh = rumpf.get("vertices")
+        punkte_roh = rumpf.get('vertices')
         if not punkte_roh:
-            return JsonResponse({"error": "vertices is required"}, status=400)
+            return JsonResponse({'error': 'vertices is required'}, status=400)
         stoff = Netzbearbeitung._punkte(punkte_roh)
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
-            return JsonResponse({"error": "Failed to compute body mesh"}, status=500)
+            return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
         # Der unterteilte Koerper loest feiner auf — die Kollision trifft
         # dadurch auch schmale Stellen.
         punkte = np.asarray(koerper.vertices, dtype=np.float64)
@@ -108,6 +108,6 @@ class Netzbearbeitung:
         if unterteiler is not None:
             punkte = unterteiler.subdivide(punkte)
         geschoben = Koerperabstand.radial(
-            stoff, punkte, mindestabstand=float(rumpf.get("min_dist", Netzbearbeitung.VORGABE_ABSTAND))
+            stoff, punkte, mindestabstand=float(rumpf.get('min_dist', Netzbearbeitung.VORGABE_ABSTAND))
         )
-        return Netzbearbeitung._nur_ausgewaehlte(stoff, geschoben, rumpf.get("selected", []))
+        return Netzbearbeitung._nur_ausgewaehlte(stoff, geschoben, rumpf.get('selected', []))

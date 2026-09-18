@@ -9,15 +9,15 @@ jede Stelle — zu Recht: kommt ``None``, stirbt die Prüfung an einem
 sagt es vorher, und der Typ ist danach verengt.
 """
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
-T = TypeVar("T")
+T = TypeVar('T')
 
 
 class Sicher:
     """``Sicher.wert(x)`` — ``x``, oder ein ``AssertionError`` mit Aussage."""
 
     @staticmethod
-    def wert(wert: Optional[T], was: str = "Wert") -> T:
-        assert wert is not None, "%s fehlt (None)" % was
+    def wert(wert: T | None, was: str = 'Wert') -> T:
+        assert wert is not None, '%s fehlt (None)' % was
         return wert

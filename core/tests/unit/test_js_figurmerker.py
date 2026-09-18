@@ -19,7 +19,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "figurmerker.js")
+MODUL = Jsmodul('scene', 'figurmerker.js')
 
 #: sessionStorage, so viel davon, wie die Klasse anfasst — mit Mitschrift,
 #: damit der Test sieht, WANN geschrieben wird.
@@ -108,5 +108,5 @@ console.log(JSON.stringify({ok: true, schreibungen: geschrieben.length}));
 class FigurmerkerTest(SimpleTestCase):
     def test_merkt_je_figur_und_ueberlebt_den_reload(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
-        self.assertGreater(ausgabe.get("schreibungen", 0), 0)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
+        self.assertGreater(ausgabe.get('schreibungen', 0), 0)

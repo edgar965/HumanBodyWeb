@@ -36,13 +36,13 @@ class ObjleserTest(SimpleTestCase):
     databases = set()
 
     #: Zwei Dreiecke als ein Viereck, ein Punkt bei 100 cm.
-    TEXT = "\n".join(
+    TEXT = '\n'.join(
         [
-            "v 0 0 0",
-            "v 100 0 0",
-            "v 100 100 0",
-            "v 0 100 0",
-            "f 1 2 3 4",
+            'v 0 0 0',
+            'v 100 0 0',
+            'v 100 100 0',
+            'v 0 100 0',
+            'f 1 2 3 4',
         ]
     )
 
@@ -54,40 +54,40 @@ class ObjleserTest(SimpleTestCase):
     def test_roh_bleibt_unveraendert(self):
         """`roh` rechnet NICHT um — Zentimeter bleiben Zentimeter."""
         roh = Objleser(self.TEXT).roh()
-        self.assertEqual(roh["vertices"].dtype, np.float64)
-        self.assertEqual(roh["faces"].dtype, np.uint32)
-        self.assertEqual(roh["faces"].shape, (2, 3))
-        self.assertAlmostEqual(float(roh["vertices"][1][0]), 100.0)
+        self.assertEqual(roh['vertices'].dtype, np.float64)
+        self.assertEqual(roh['faces'].dtype, np.uint32)
+        self.assertEqual(roh['faces'].shape, (2, 3))
+        self.assertAlmostEqual(float(roh['vertices'][1][0]), 100.0)
 
     def test_browser_meter_und_z_gespiegelt(self):
         """Zentimeter → Meter, Z nach hinten."""
-        daten = Objleser("v 100 200 300\nf 1 1 1").fuer_browser()
-        self.assertEqual(daten["vertices"].dtype, np.float32)
-        np.testing.assert_allclose(daten["vertices"][:3], [1.0, 2.0, -3.0])
+        daten = Objleser('v 100 200 300\nf 1 1 1').fuer_browser()
+        self.assertEqual(daten['vertices'].dtype, np.float32)
+        np.testing.assert_allclose(daten['vertices'][:3], [1.0, 2.0, -3.0])
 
     def test_gelesene_normalen_werden_gespiegelt(self):
         """Steht `vn` in der Datei, wird nur die Z-Achse gedreht."""
-        text = "v 0 0 0\nv 1 0 0\nv 0 1 0\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3"
+        text = 'v 0 0 0\nv 1 0 0\nv 0 1 0\nvn 0 0 1\nvn 0 0 1\nvn 0 0 1\nf 1 2 3'
         daten = Objleser(text).fuer_browser()
-        np.testing.assert_allclose(daten["normals"][:3], [0.0, 0.0, -1.0])
+        np.testing.assert_allclose(daten['normals'][:3], [0.0, 0.0, -1.0])
 
     def test_fehlende_normalen_werden_gerechnet(self):
         """Ohne `vn` entstehen sie aus den Flaechen — und sind normiert."""
         daten = Objleser(self.TEXT).fuer_browser()
-        normalen = daten["normals"].reshape(-1, 3)
+        normalen = daten['normals'].reshape(-1, 3)
         self.assertEqual(len(normalen), 4)
         np.testing.assert_allclose(np.linalg.norm(normalen, axis=1), np.ones(4), atol=1e-6)
 
     def test_leerer_text_bricht_nicht(self):
         """Eine leere Datei liefert leere Felder, keinen Fehler."""
-        daten = Objleser("").fuer_browser()
-        self.assertEqual(daten["vertices"].size, 0)
-        self.assertEqual(daten["faces"].size, 0)
-        self.assertEqual(Objleser("").roh()["faces"].shape, (0, 3))
+        daten = Objleser('').fuer_browser()
+        self.assertEqual(daten['vertices'].size, 0)
+        self.assertEqual(daten['faces'].size, 0)
+        self.assertEqual(Objleser('').roh()['faces'].shape, (0, 3))
 
     def test_flaechen_mit_texturindex(self):
         """``f 1/2/3`` — nur der erste Wert ist der Punkt."""
-        leser = Objleser("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1/7/9 2/8/9 3/9/9")
+        leser = Objleser('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1/7/9 2/8/9 3/9/9')
         self.assertEqual(leser.dreiecke, [0, 1, 2])
 
     def test_normalen_summe_ist_die_der_flaechen(self):

@@ -26,7 +26,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "lagenmaske.js")
+MODUL = Jsmodul('gemeinsam', 'lagenmaske.js')
 
 SKRIPT = """
 const { Lagenmaske } = await import(MODUL);
@@ -99,4 +99,4 @@ class LagenmaskeTest(SimpleTestCase):
 
     def test_lage_ueberlappung_und_kanten(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

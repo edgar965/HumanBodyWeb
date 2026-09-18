@@ -26,124 +26,124 @@ from core.models import BVHJob
 
 class AuftragsendpunkteTest(TestCase):
     def setUp(self):
-        self.steuerung = mock.patch("core.api.auftraege.Auftragssteuerung")
+        self.steuerung = mock.patch('core.api.auftraege.Auftragssteuerung')
         self.attrappe = self.steuerung.start()
         self.addCleanup(self.steuerung.stop)
 
-    def _auftrag(self, name="probe", status="pending", pipeline="gvhmr"):
+    def _auftrag(self, name='probe', status='pending', pipeline='gvhmr'):
         job = BVHJob(name=name, fps=30.0, pipeline=pipeline, status=status)
-        job.video_file.name = "uploads/%s.mp4" % name
+        job.video_file.name = 'uploads/%s.mp4' % name
         job.save()
         return job
 
     # -- Zustand --------------------------------------------------------------
 
     def test_zustand_liefert_die_felder_der_oberflaeche(self):
-        job = self._auftrag(status="complete")
+        job = self._auftrag(status='complete')
         job.progress = 100
-        job.progress_detail = "fertig"
-        job.bvh_file = "x.bvh"
+        job.progress_detail = 'fertig'
+        job.bvh_file = 'x.bvh'
         job.save()
-        with mock.patch("core.api.auftraege.Haenger.erkennen") as erkennen:
-            antwort = self.client.get(reverse("job_status_api", args=[job.id]))
+        with mock.patch('core.api.auftraege.Haenger.erkennen') as erkennen:
+            antwort = self.client.get(reverse('job_status_api', args=[job.id]))
         erkennen.assert_called_once()
         self.assertEqual(antwort.status_code, 200)
         daten = antwort.json()
-        self.assertEqual(daten["status"], "complete")
-        self.assertEqual(daten["progress"], 100)
-        self.assertEqual(daten["bvh_file"], "x.bvh")
-        self.assertNotIn("bvh_file_face", daten)  # nur, wenn es eine gibt
+        self.assertEqual(daten['status'], 'complete')
+        self.assertEqual(daten['progress'], 100)
+        self.assertEqual(daten['bvh_file'], 'x.bvh')
+        self.assertNotIn('bvh_file_face', daten)  # nur, wenn es eine gibt
 
     def test_unbekannter_auftrag_gibt_404(self):
         import uuid
 
-        antwort = self.client.get(reverse("job_status_api", args=[uuid.uuid4()]))
+        antwort = self.client.get(reverse('job_status_api', args=[uuid.uuid4()]))
         self.assertEqual(antwort.status_code, 404)
 
     # -- Starten --------------------------------------------------------------
 
     def test_starten_verlangt_post(self):
         job = self._auftrag()
-        antwort = self.client.get(reverse("api_start_processing", args=[job.id]))
+        antwort = self.client.get(reverse('api_start_processing', args=[job.id]))
         self.assertEqual(antwort.status_code, 405)
         self.attrappe.starten.assert_not_called()
 
     def test_starten_bei_belegter_sperre_gibt_409(self):
-        self._auftrag("anderer", status="processing")
+        self._auftrag('anderer', status='processing')
         job = self._auftrag()
-        antwort = self.client.post(reverse("api_start_processing", args=[job.id]))
+        antwort = self.client.post(reverse('api_start_processing', args=[job.id]))
         self.assertEqual(antwort.status_code, 409)
-        self.assertIn("anderer", antwort.json()["error"])
+        self.assertIn('anderer', antwort.json()['error'])
         self.attrappe.starten.assert_not_called()
 
     def test_starten_uebernimmt_parameter_und_startet(self):
         job = self._auftrag()
         antwort = self.client.post(
-            reverse("api_start_processing", args=[job.id]),
+            reverse('api_start_processing', args=[job.id]),
             {
-                "pipeline": "gvhmr",
-                "pipeline_params": json.dumps({"smooth_sigma": 3.0}),
+                'pipeline': 'gvhmr',
+                'pipeline_params': json.dumps({'smooth_sigma': 3.0}),
             },
         )
         self.assertEqual(antwort.status_code, 200)
-        self.assertTrue(antwort.json()["ok"])
+        self.assertTrue(antwort.json()['ok'])
         job.refresh_from_db()
-        self.assertEqual(job.pipeline_params, {"smooth_sigma": 3.0})
+        self.assertEqual(job.pipeline_params, {'smooth_sigma': 3.0})
         self.attrappe.starten.assert_called_once_with(job)
 
     def test_starten_mit_anderer_pipeline_legt_einen_zwilling_an(self):
-        job = self._auftrag(status="complete", pipeline="gvhmr")
-        antwort = self.client.post(reverse("api_start_processing", args=[job.id]), {"pipeline": "gem"})
+        job = self._auftrag(status='complete', pipeline='gvhmr')
+        antwort = self.client.post(reverse('api_start_processing', args=[job.id]), {'pipeline': 'gem'})
         daten = antwort.json()
-        self.assertTrue(daten["ok"])
-        self.assertEqual(daten["new_pipeline"], "gem")
-        self.assertNotEqual(daten["new_job_id"], str(job.id))
+        self.assertTrue(daten['ok'])
+        self.assertEqual(daten['new_pipeline'], 'gem')
+        self.assertNotEqual(daten['new_job_id'], str(job.id))
         self.assertEqual(BVHJob.objects.count(), 2)
         gestartet = self.attrappe.starten.call_args[0][0]
-        self.assertEqual(str(gestartet.id), daten["new_job_id"])
+        self.assertEqual(str(gestartet.id), daten['new_job_id'])
 
     def test_ein_laufender_auftrag_ist_nicht_startbar(self):
-        job = self._auftrag(status="processing")
-        antwort = self.client.post(reverse("api_start_processing", args=[job.id]))
+        job = self._auftrag(status='processing')
+        antwort = self.client.post(reverse('api_start_processing', args=[job.id]))
         # Die Sperre lässt den eigenen Auftrag durch, `_starten` lehnt ab.
         self.assertEqual(antwort.status_code, 400)
-        self.assertIn("not startable", antwort.json()["error"])
+        self.assertIn('not startable', antwort.json()['error'])
 
     # -- Anhalten -------------------------------------------------------------
 
     def test_anhalten_nur_per_post_und_ruft_den_arbeiter_genau_einmal(self):
-        job = self._auftrag(status="processing")
-        weg = reverse("api_stop_processing", args=[job.id])
+        job = self._auftrag(status='processing')
+        weg = reverse('api_stop_processing', args=[job.id])
         self.assertEqual(self.client.get(weg).status_code, 405)
-        antwort = self.client.post(reverse("api_stop_processing", args=[job.id]))
-        self.assertEqual(antwort.json(), {"ok": True})
+        antwort = self.client.post(reverse('api_stop_processing', args=[job.id]))
+        self.assertEqual(antwort.json(), {'ok': True})
         self.attrappe.anhalten.assert_called_once_with(job)
 
     # -- Löschen --------------------------------------------------------------
 
     def test_loeschen_entfernt_den_auftrag(self):
-        job = self._auftrag("weg damit")
-        weg = reverse("delete_job_api", args=[job.id])
+        job = self._auftrag('weg damit')
+        weg = reverse('delete_job_api', args=[job.id])
         self.assertEqual(self.client.get(weg).status_code, 405)
-        antwort = self.client.post(reverse("delete_job_api", args=[job.id]))
-        self.assertEqual(antwort.json(), {"ok": True, "name": "weg damit"})
+        antwort = self.client.post(reverse('delete_job_api', args=[job.id]))
+        self.assertEqual(antwort.json(), {'ok': True, 'name': 'weg damit'})
         self.attrappe.dateien_entfernen.assert_called_once()
         self.assertFalse(BVHJob.objects.filter(id=job.id).exists())
 
     def test_mehrere_loeschen_uebergeht_unbekannte(self):
         import uuid
 
-        a = self._auftrag("a")
-        b = self._auftrag("b")
+        a = self._auftrag('a')
+        b = self._auftrag('b')
         fremd = uuid.uuid4()
         antwort = self.client.post(
-            reverse("bulk_delete_jobs"),
-            json.dumps({"ids": [str(a.id), str(fremd), str(b.id)]}),
-            content_type="application/json",
+            reverse('bulk_delete_jobs'),
+            json.dumps({'ids': [str(a.id), str(fremd), str(b.id)]}),
+            content_type='application/json',
         )
         daten = antwort.json()
-        self.assertTrue(daten["ok"])
-        self.assertEqual(daten["deleted"], [str(a.id), str(b.id)])
+        self.assertTrue(daten['ok'])
+        self.assertEqual(daten['deleted'], [str(a.id), str(b.id)])
         self.assertEqual(BVHJob.objects.count(), 0)
 
     # -- Formularfassungen ----------------------------------------------------
@@ -151,16 +151,16 @@ class AuftragsendpunkteTest(TestCase):
     def test_die_formularfassungen_verlangen_post(self):
         # Vor dem 17.08.2026 löschte `loeschen_formular` auf ein GET hin.
         job = self._auftrag()
-        for name in ("start_processing", "stop_processing", "delete_job"):
+        for name in ('start_processing', 'stop_processing', 'delete_job'):
             antwort = self.client.get(reverse(name, args=[job.kennung]))
             self.assertEqual(antwort.status_code, 405, name)
         self.assertTrue(BVHJob.objects.filter(id=job.id).exists())
 
     def test_loeschen_formular_leitet_auf_die_liste(self):
         job = self._auftrag()
-        antwort = self.client.post(reverse("delete_job", args=[job.kennung]))
+        antwort = self.client.post(reverse('delete_job', args=[job.kennung]))
         self.assertEqual(antwort.status_code, 302)
-        self.assertEqual(antwort["Location"], reverse("processed"))
+        self.assertEqual(antwort['Location'], reverse('processed'))
         self.assertFalse(BVHJob.objects.filter(id=job.id).exists())
 
     def test_die_klasse_holt_ihren_auftrag_oder_404(self):

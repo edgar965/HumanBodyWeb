@@ -16,14 +16,14 @@ import logging
 
 from django.core.management.base import BaseCommand, CommandError
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Command(BaseCommand):
-    help = "Rechnet einen Video-to-BVH-Auftrag in diesem Prozess."
+    help = 'Rechnet einen Video-to-BVH-Auftrag in diesem Prozess.'
 
     def add_arguments(self, parser):
-        parser.add_argument("job_id", help="Die Kennung des BVHJob")
+        parser.add_argument('job_id', help='Die Kennung des BVHJob')
 
     def handle(self, *args, **options):
         from core.dienste.auftragsarbeiter import Auftragsarbeiter
@@ -31,15 +31,15 @@ class Command(BaseCommand):
         from core.models import BVHJob
         from core.pipelines.auftragslauf import Auftragslauf
 
-        jid = options["job_id"]
+        jid = options['job_id']
         if not BVHJob.objects.filter(id=jid).exists():
-            raise CommandError("Kein Auftrag %s" % jid)
+            raise CommandError('Kein Auftrag %s' % jid)
         Auftragsarbeiter.eintragen(jid)
-        logger.info("Auftrag %s: Arbeitsprozess rechnet", jid)
+        logger.info('Auftrag %s: Arbeitsprozess rechnet', jid)
         try:
             Auftragslauf(jid).ausfuehren()
         except Exception:  # noqa: BLE001
-            logger.exception("Auftrag %s: Arbeitsprozess abgestürzt", jid)
+            logger.exception('Auftrag %s: Arbeitsprozess abgestürzt', jid)
             Auftragssteuerung._absturz_vermerken(jid)
         finally:
             Auftragsarbeiter.austragen(jid)

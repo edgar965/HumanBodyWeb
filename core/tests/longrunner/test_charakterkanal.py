@@ -32,6 +32,7 @@ from django.test import SimpleTestCase
 
 from core.consumers import CharacterConsumer
 from core.dienste.netzqualitaet import Netzqualitaet
+
 from ..unit._sicher import Sicher
 
 #: Punkte des unterteilten Netzes (Catmull-Clark über 18.210 Grundpunkte), je
@@ -79,27 +80,27 @@ class Morphkanal:
         while not await self.kommunikator.receive_nothing(self.STILLE_S):
             roh = await self.kommunikator.receive_output(timeout=self.STILLE_S)
             # in der Schleife gewollt: jede Runde bringt eine ANDERE Nachricht
-            if "bytes" in roh:
-                gesammelt.append(("punkte", len(roh["bytes"]) // 12))
+            if 'bytes' in roh:
+                gesammelt.append(('punkte', len(roh['bytes']) // 12))
             else:
-                inhalt = json.loads(roh["text"])
-                gesammelt.append((inhalt.get("type"), inhalt))
+                inhalt = json.loads(roh['text'])
+                gesammelt.append((inhalt.get('type'), inhalt))
         return gesammelt
 
     @staticmethod
     def knochen(folge):
         """Die Knochen der letzten Skelett-Nachricht, oder ``None``."""
-        skelette = [i for a, i in folge if a == "skelett"]
-        return skelette[-1]["bones"] if skelette else None
+        skelette = [i for a, i in folge if a == 'skelett']
+        return skelette[-1]['bones'] if skelette else None
 
 
 class DerMorphKanal(SimpleTestCase):
     async def _offen(self):
-        kommunikator = WebsocketCommunicator(CharacterConsumer.as_asgi(), "/ws/character/")
+        kommunikator = WebsocketCommunicator(CharacterConsumer.as_asgi(), '/ws/character/')
         verbunden, _ = await kommunikator.connect()
         self.assertTrue(verbunden)
         kanal = Morphkanal(kommunikator)
-        await kanal.alles({"type": "body_type", "value": "Female_Caucasian"})
+        await kanal.alles({'type': 'body_type', 'value': 'Female_Caucasian'})
         return kommunikator, kanal
 
     async def test_die_ruhelage_schickt_keine_knochen(self):
@@ -107,8 +108,8 @@ class DerMorphKanal(SimpleTestCase):
         ohne dass sich etwas geändert hat."""
         kommunikator, kanal = await self._offen()
         try:
-            folge = await kanal.alles({"type": "morph", "key": "Body_Size", "value": 0.0})
-            self.assertEqual(folge, [("punkte", PUNKTE)])
+            folge = await kanal.alles({'type': 'morph', 'key': 'Body_Size', 'value': 0.0})
+            self.assertEqual(folge, [('punkte', PUNKTE)])
         finally:
             await kommunikator.disconnect()
 
@@ -117,9 +118,9 @@ class DerMorphKanal(SimpleTestCase):
         das Netz, das dazu gehört. Andersherum bände er ans vorige."""
         kommunikator, kanal = await self._offen()
         try:
-            folge = await kanal.alles({"type": "morph", "key": "Body_Size", "value": 1.0})
-            self.assertEqual([a for a, _ in folge], ["punkte", "skelett"])
-            self.assertGreater(len(Sicher.wert(kanal.knochen(folge), "Knochen")), 170)
+            folge = await kanal.alles({'type': 'morph', 'key': 'Body_Size', 'value': 1.0})
+            self.assertEqual([a for a, _ in folge], ['punkte', 'skelett'])
+            self.assertGreater(len(Sicher.wert(kanal.knochen(folge), 'Knochen')), 170)
         finally:
             await kommunikator.disconnect()
 
@@ -128,8 +129,8 @@ class DerMorphKanal(SimpleTestCase):
         Größe stehen, während der Körper wieder schrumpft."""
         kommunikator, kanal = await self._offen()
         try:
-            await kanal.alles({"type": "morph", "key": "Body_Size", "value": 1.0})
-            folge = await kanal.alles({"type": "morph", "key": "Body_Size", "value": 0.0})
+            await kanal.alles({'type': 'morph', 'key': 'Body_Size', 'value': 1.0})
+            folge = await kanal.alles({'type': 'morph', 'key': 'Body_Size', 'value': 0.0})
             self.assertEqual(kanal.knochen(folge), {})
         finally:
             await kommunikator.disconnect()
@@ -139,7 +140,7 @@ class DerMorphKanal(SimpleTestCase):
         wird beim Nachrüsten vergessen."""
         kommunikator, kanal = await self._offen()
         try:
-            folge = await kanal.alles({"type": "meta", "name": "mass", "value": 1.0})
+            folge = await kanal.alles({'type': 'meta', 'name': 'mass', 'value': 1.0})
             self.assertGreater(len(kanal.knochen(folge) or {}), 0)
         finally:
             await kommunikator.disconnect()
@@ -149,9 +150,9 @@ class DerMorphKanal(SimpleTestCase):
         zweimal, weil `reset` zusätzlich doppelt sendete."""
         kommunikator, kanal = await self._offen()
         try:
-            await kanal.alles({"type": "morph", "key": "Body_Size", "value": 1.0})
-            await kanal.alles({"type": "meta", "name": "mass", "value": 1.0})
-            folge = await kanal.alles({"type": "reset", "body_type": "Female_Caucasian"})
+            await kanal.alles({'type': 'morph', 'key': 'Body_Size', 'value': 1.0})
+            await kanal.alles({'type': 'meta', 'name': 'mass', 'value': 1.0})
+            folge = await kanal.alles({'type': 'reset', 'body_type': 'Female_Caucasian'})
             self.assertEqual(kanal.knochen(folge), {})
         finally:
             await kommunikator.disconnect()
@@ -162,8 +163,8 @@ class DerMorphKanal(SimpleTestCase):
         Aufblitzen des großen Rigs."""
         kommunikator, kanal = await self._offen()
         try:
-            await kanal.alles({"type": "morph", "key": "Body_Size", "value": 1.0})
-            folge = await kanal.alles({"type": "reset", "body_type": "Female_Caucasian"})
-            self.assertEqual([a for a, _ in folge].count("punkte"), 1)
+            await kanal.alles({'type': 'morph', 'key': 'Body_Size', 'value': 1.0})
+            folge = await kanal.alles({'type': 'reset', 'body_type': 'Female_Caucasian'})
+            self.assertEqual([a for a, _ in folge].count('punkte'), 1)
         finally:
             await kommunikator.disconnect()

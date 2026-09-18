@@ -28,7 +28,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "hautbindung.js")
+MODUL = Jsmodul('gemeinsam', 'hautbindung.js')
 
 SKRIPT = """
 const { Hautbindung } = await import(MODUL);
@@ -88,32 +88,32 @@ class HautbindungTest(SimpleTestCase):
         cls.e = MODUL.laufen(SKRIPT)
 
     def test_es_entsteht_ein_skinnedmesh(self):
-        self.assertTrue(self.e["istSkinned"])
-        self.assertEqual(self.e["geometrie"], "mit skinIndex")
+        self.assertTrue(self.e['istSkinned'])
+        self.assertEqual(self.e['geometrie'], 'mit skinIndex')
 
     def test_material_wird_uebernommen(self):
         """Sonst steht die Figur in Three.js-Grau da."""
-        self.assertEqual(self.e["material"], "haut")
+        self.assertEqual(self.e['material'], 'haut')
 
     def test_ort_wird_uebernommen(self):
         """Ohne das steht die Figur im Ursprung statt an ihrem Platz."""
-        self.assertEqual(self.e["ort"], [1.5, -2, 0.25])
+        self.assertEqual(self.e['ort'], [1.5, -2, 0.25])
 
     def test_sichtbarkeit_wird_uebernommen(self):
         """DIE Stelle, die vorher auseinanderlief: `mesh_loading.js` hat sie
         als einzige nicht mitgenommen — ein ausgeblendeter Körper kam beim
         Zuschalten des Skeletts zurück, ohne dass der Schalter umsprang."""
-        self.assertIs(self.e["sichtbar"], False)
+        self.assertIs(self.e['sichtbar'], False)
 
     def test_wurzelknochen_haengt_am_netz(self):
         """Ohne ihn bleiben die Knochenmatrizen auf Identität — die Figur
         steht still, und nichts wirft."""
-        self.assertEqual(self.e["kinder"], ["wurzelknochen"])
+        self.assertEqual(self.e['kinder'], ['wurzelknochen'])
 
     def test_es_wird_gebunden(self):
         """Ohne `bind()` rendert das Netz ewig in der Ruhelage."""
-        self.assertEqual(self.e["gebundenAn"], "skelett")
+        self.assertEqual(self.e['gebundenAn'], 'skelett')
 
     def test_das_alte_netz_ist_aus_der_szene_raus(self):
         """Sonst stehen zwei Körper übereinander — einer davon unbewegt."""
-        self.assertEqual(self.e["inSzene"], ["skinned"])
+        self.assertEqual(self.e['inSzene'], ['skinned'])

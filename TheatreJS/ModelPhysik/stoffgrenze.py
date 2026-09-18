@@ -31,7 +31,6 @@ aussen gegangen ist.
 """
 
 import numpy as np
-
 from streusumme import Streusumme
 
 
@@ -85,7 +84,7 @@ class Stoffgrenze:
         a = self.punkte[self.dreiecke[:, 0]]
         b = self.punkte[self.dreiecke[:, 1]]
         c = self.punkte[self.dreiecke[:, 2]]
-        vol = float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum())
+        vol = float(np.einsum('ij,ij->i', a, np.cross(b, c)).sum())
         return 1.0 if vol >= 0 else -1.0
 
     def abstand(self, stoffpunkte):

@@ -16,10 +16,9 @@ import os
 import sys
 
 import numpy as np
-
 from feinkoerper import Feinkoerper
 
-sys.path.insert(0, os.path.join("A:", os.sep, "3DTools", "VelocitySkinning_Python"))
+sys.path.insert(0, os.path.join('A:', os.sep, '3DTools', 'VelocitySkinning_Python'))
 
 
 class Filmphysik:
@@ -53,32 +52,32 @@ class Filmphysik:
         # Der Koerper zuerst — die Stuecke werden gegen SEINE bereits
         # verformte Lage begrenzt, nicht gegen die rohe LBS-Lage.
         for teil in self.teile:
-            haut = teil["haut"]
+            haut = teil['haut']
             motor = Velocityskinning(
                 haut.punkte,
-                teil["dreiecke"],
+                teil['dreiecke'],
                 haut.gewichte,
                 haut.namen,
                 self.bahn,
                 self.bildzeit,
                 staerke=1.0,
             )
-            ziel = self.physik * teil.get("weichfaktor", 1.0)
+            ziel = self.physik * teil.get('weichfaktor', 1.0)
             motor.staerke, _erreicht = Kalibrierung(motor, haut.folge).fuer(ziel)
             if teil is koerper:
                 haut.folge = motor.bahn_mit_physik(haut.folge)
-                teil["physik"] = motor.bilanz()
+                teil['physik'] = motor.bilanz()
             else:
-                teil["physik"] = self._stoff_mit_grenze(teil, motor, koerper)
-            teil["physik"]["staerke"] = motor.staerke
-            teil["physik"]["ziel_mm"] = ziel
+                teil['physik'] = self._stoff_mit_grenze(teil, motor, koerper)
+            teil['physik']['staerke'] = motor.staerke
+            teil['physik']['ziel_mm'] = ziel
 
     def _grenze(self, koerper, nummer):
         """Die Grenze eines Bildes — EINMAL je Bild fuer alle Stuecke
         (Baum und Normalen ueber 70.851 Punkte kosten je 0,2 s)."""
         from stoffgrenze import Stoffgrenze
 
-        if not hasattr(self, "_grenzen"):
+        if not hasattr(self, '_grenzen'):
             self._grenzen = {}
         if nummer not in self._grenzen:
             # Gegen das SICHTBARE Netz — an das ist der Stoff angelegt.
@@ -97,7 +96,7 @@ class Filmphysik:
         """
         from stoffgrenze import Stoffgrenze
 
-        haut = teil["haut"]
+        haut = teil['haut']
         folge = np.array(haut.folge)
         gekuerzt_gesamt, vorher, nachher = 0, [], []
         motor.zuschlag = np.zeros(len(folge))
@@ -115,7 +114,7 @@ class Filmphysik:
             motor.zuschlag[nummer] = float(np.linalg.norm(versatz, axis=1).max())
         haut.folge = folge
         bilanz = motor.bilanz()
-        bilanz["gekuerzt"] = gekuerzt_gesamt
-        bilanz["durchstich_ohne_grenze"] = float(np.mean(vorher))
-        bilanz["durchstich"] = float(np.mean(nachher))
+        bilanz['gekuerzt'] = gekuerzt_gesamt
+        bilanz['durchstich_ohne_grenze'] = float(np.mean(vorher))
+        bilanz['durchstich'] = float(np.mean(nachher))
         return bilanz

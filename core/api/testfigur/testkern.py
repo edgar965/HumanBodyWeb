@@ -36,18 +36,18 @@ class Testkern:
     #: Wurzel der Testfassung (`HumanBodyWeb/TestCharakter`).
     WURZEL = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
-        "TestCharakter",
+        'TestCharakter',
     )
 
     #: Referenzdateien aus CharMorphPlugin, zum Vergleich daneben.
-    CHARMORPH_REF = os.path.join(WURZEL, "charmorph_ref")
+    CHARMORPH_REF = os.path.join(WURZEL, 'charmorph_ref')
 
     #: Unter diesem Namen liegt die Testfassung in `sys.modules` — nicht unter
     #: `humanbody_core`, sonst überschreibt sie die laufende.
-    MODULNAME = "humanbody_core_test"
+    MODULNAME = 'humanbody_core_test'
 
     #: Körpertypen in der Reihenfolge, in der sie als Vorgabe taugen.
-    BEVORZUGT = ("Caucasian", "Male_Caucasian", "Female_Caucasian")
+    BEVORZUGT = ('Caucasian', 'Male_Caucasian', 'Female_Caucasian')
 
     _modul = None
     _morphdaten = None
@@ -65,12 +65,12 @@ class Testkern:
         """Die Testfassung von `humanbody_core`, einmal geladen."""
         if cls._modul is not None:
             return cls._modul
-        ordner = os.path.join(cls.WURZEL, "humanbody_core")
-        anfang = os.path.join(ordner, "__init__.py")
+        ordner = os.path.join(cls.WURZEL, 'humanbody_core')
+        anfang = os.path.join(ordner, '__init__.py')
         if not os.path.isfile(anfang):
             raise FileNotFoundError(
-                "TestCharakter/humanbody_core fehlt. Anlegen mit: "
-                "python TestCharakter/download_version.py <commit>"
+                'TestCharakter/humanbody_core fehlt. Anlegen mit: '
+                'python TestCharakter/download_version.py <commit>'
             )
         if cls.WURZEL not in sys.path:
             sys.path.insert(0, cls.WURZEL)
@@ -79,7 +79,7 @@ class Testkern:
         sys.modules[cls.MODULNAME] = modul
         cls._laden_mit_ersatznamen(spec, modul)
         cls._modul = modul
-        logger.info("Testfassung von humanbody_core geladen: %s", ordner)
+        logger.info('Testfassung von humanbody_core geladen: %s', ordner)
         return modul
 
     @staticmethod
@@ -90,21 +90,21 @@ class Testkern:
         Deshalb wird der Eintrag für die Dauer des Ladens getauscht — und danach
         zurückgesetzt, sonst rechnet der Betrieb mit der Testfassung weiter.
         """
-        vorher = sys.modules.get("humanbody_core")
-        sys.modules["humanbody_core"] = modul
+        vorher = sys.modules.get('humanbody_core')
+        sys.modules['humanbody_core'] = modul
         try:
             spec.loader.exec_module(modul)
         finally:
             if vorher is not None:
-                sys.modules["humanbody_core"] = vorher
+                sys.modules['humanbody_core'] = vorher
             else:
-                sys.modules.pop("humanbody_core", None)
+                sys.modules.pop('humanbody_core', None)
 
     # -------------------------------------------------------------------- Daten
 
     @classmethod
     def datenordner(cls):
-        return os.path.join(cls.WURZEL, "data", "humanBody")
+        return os.path.join(cls.WURZEL, 'data', 'humanBody')
 
     @classmethod
     def datei(cls, *teile):
@@ -122,7 +122,7 @@ class Testkern:
     def vorgaben(cls):
         if cls._vorgaben is None:
             cls._vorgaben = cls.modul().CharacterDefaults()
-            cls._vorgaben.load(os.path.join(cls.WURZEL, "settings.yaml"))
+            cls._vorgaben.load(os.path.join(cls.WURZEL, 'settings.yaml'))
         return cls._vorgaben
 
     @classmethod
@@ -144,7 +144,7 @@ class Testkern:
         """Der Vorgabe-Körpertyp: der erste bekannte, sonst irgendeiner."""
         morphs = cls.morphdaten()
         if not morphs.l1:
-            return "Caucasian"
+            return 'Caucasian'
         for name in cls.BEVORZUGT:
             if name in morphs.l1:
                 return name
@@ -169,7 +169,7 @@ class Testkern:
             return None
         cls._unterteiler = klasse(netz.faces, face_materials=netz.face_materials, uvs=netz.uvs, levels=1)
         logger.info(
-            "Test-Unterteiler: %d Grund- -> %d Unterpunkte",
+            'Test-Unterteiler: %d Grund- -> %d Unterpunkte',
             netz.faces.max() + 1,
             cls._unterteiler.sub_vertex_count,
         )
@@ -180,20 +180,20 @@ class Testkern:
     def _unterteiler_klasse(cls):
         """`CatmullClarkSubdivider` — am Paket oder aus seiner eigenen Datei."""
         modul = cls.modul()
-        if hasattr(modul, "CatmullClarkSubdivider"):
+        if hasattr(modul, 'CatmullClarkSubdivider'):
             return modul.CatmullClarkSubdivider
-        pfad = os.path.join(cls.WURZEL, "humanbody_core", "catmull_clark.py")
+        pfad = os.path.join(cls.WURZEL, 'humanbody_core', 'catmull_clark.py')
         if not os.path.isfile(pfad):
             if not cls._unterteiler_gemeldet:
                 cls._unterteiler_gemeldet = True
                 logger.warning(
-                    "Testfassung unter %s kennt keine Unterteilung "
-                    "(%s fehlt) — die Antwort bleibt beim Grundnetz",
+                    'Testfassung unter %s kennt keine Unterteilung '
+                    '(%s fehlt) — die Antwort bleibt beim Grundnetz',
                     cls.WURZEL,
                     os.path.basename(pfad),
                 )
             return None
-        spec = cls._spec(cls.MODULNAME + ".catmull_clark", pfad)
+        spec = cls._spec(cls.MODULNAME + '.catmull_clark', pfad)
         modul = importlib.util.module_from_spec(spec)
         cls._ausfuehren(spec, modul)
         return modul.CatmullClarkSubdivider
@@ -207,7 +207,7 @@ class Testkern:
         an einem AttributeError ohne Pfadangabe (LS-Befund 12.09.2026)."""
         spec = importlib.util.spec_from_file_location(name, pfad, **argumente)
         if spec is None or spec.loader is None:
-            raise ImportError("%s: kein Python-Modul unter %s" % (name, pfad))
+            raise ImportError('%s: kein Python-Modul unter %s' % (name, pfad))
         return spec
 
     @staticmethod
@@ -215,7 +215,7 @@ class Testkern:
         """`spec.loader.exec_module` — der Lader ist da (`_spec` prueft es)."""
         lader = spec.loader
         if lader is None:
-            raise ImportError("%s: kein Lader" % spec.name)
+            raise ImportError('%s: kein Lader' % spec.name)
         lader.exec_module(modul)
 
     @classmethod
@@ -229,7 +229,7 @@ class Testkern:
         if punkte is None or unterteiler is None:
             return
         unterteiler.compute_quad_normals(unterteiler.subdivide(punkte))
-        logger.info("Test-Unterteiler: Referenznormalen aus %s", typ)
+        logger.info('Test-Unterteiler: Referenznormalen aus %s', typ)
 
     # ---------------------------------------------------------------- Gewichte
 
@@ -244,18 +244,18 @@ class Testkern:
         """
         if cls._gewichte is not None:
             return cls._gewichte
-        pfad = cls.datei("skin_weights_base.json")
+        pfad = cls.datei('skin_weights_base.json')
         unterteiler = cls.unterteiler()
         if not os.path.isfile(pfad) or unterteiler is None:
             return None
-        with open(pfad, "r", encoding="utf-8") as f:
+        with open(pfad, encoding='utf-8') as f:
             grund = json.load(f)
         logger.info(
-            "Test: Hautgewichte weitergereicht, %d Grund- -> %d Unterpunkte",
-            grund["vertex_count"],
+            'Test: Hautgewichte weitergereicht, %d Grund- -> %d Unterpunkte',
+            grund['vertex_count'],
             unterteiler.sub_vertex_count,
         )
-        cls._gewichte = unterteiler.propagate_skin_weights(grund["weights"], grund["bone_names"])
+        cls._gewichte = unterteiler.propagate_skin_weights(grund['weights'], grund['bone_names'])
         return cls._gewichte
 
     # ---------------------------------------------------------------- vergessen
@@ -278,4 +278,4 @@ class Testkern:
         cls._unterteiler = None
         cls._gewichte = None
         cls._unterteiler_gemeldet = False
-        logger.info("Testfassung vergessen — wird beim nächsten Zugriff neu geladen")
+        logger.info('Testfassung vergessen — wird beim nächsten Zugriff neu geladen')

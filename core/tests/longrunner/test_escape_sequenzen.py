@@ -38,32 +38,32 @@ TOOLS = Projektquellen.TOOLS
 #: aussen vor: Dort liegen eingelagerte Fremdprojekte (MB-Lab, GVHMR,
 #: WHAM, MocapNET) — deren Warnungen gehen dieses Projekt nichts an.
 BAEUME = (
-    "HumanBody/humanbody_core",
-    "Assets/assetCreator",
-    "HumanBody/collision",
-    "Assets/PhotoToTexture",
-    "MakeHuman",
-    "Assets/GarmentCode",
-    "UMA_Python",
-    "Assets/kleidung",
-    "HumanBodyWeb/core",
-    "HumanBodyWeb/ui",
-    "Docu",
+    'HumanBody/humanbody_core',
+    'Assets/assetCreator',
+    'HumanBody/collision',
+    'Assets/PhotoToTexture',
+    'MakeHuman',
+    'Assets/GarmentCode',
+    'UMA_Python',
+    'Assets/kleidung',
+    'HumanBodyWeb/core',
+    'HumanBodyWeb/ui',
+    'Docu',
 )
 
 #: Ordner ohne eigenen Quelltext oder mit fremdem.
 AUS = (
-    "__pycache__",
-    "convert",
-    "kbs_retarget",
-    "node_modules",
-    "TestCharakter",
-    "alt",
-    "migrations",
-    "makehuman",
-    "buildscripts",
-    "upstream",
-    "warp_fork",
+    '__pycache__',
+    'convert',
+    'kbs_retarget',
+    'node_modules',
+    'TestCharakter',
+    'alt',
+    'migrations',
+    'makehuman',
+    'buildscripts',
+    'upstream',
+    'warp_fork',
 )
 
 
@@ -75,10 +75,10 @@ class JedeEigeneDatei(unittest.TestCase):
     def test_kein_syntaxwarning(self):
         schlecht = []
         for pfad in Projektquellen.dateien(BAEUME, AUS):
-            quelle = pfad.read_text(encoding="utf-8", errors="replace")
+            quelle = pfad.read_text(encoding='utf-8', errors='replace')
             for zeile, meldung in Syntaxwarnungen.beim_uebersetzen(quelle, str(pfad)):
-                schlecht.append("%s:%s %s" % (pfad.name, zeile, meldung))
-        self.assertEqual(schlecht, [], "Ungueltige Sequenzen: %s" % schlecht)
+                schlecht.append('%s:%s %s' % (pfad.name, zeile, meldung))
+        self.assertEqual(schlecht, [], 'Ungueltige Sequenzen: %s' % schlecht)
 
     def test_es_werden_ueberhaupt_dateien_geprueft(self):
         """Sabotageschutz: Eine leere Menge bestuende jeden Test."""
@@ -101,11 +101,11 @@ class EineSabotageInDerZeichenkette(unittest.TestCase):
 
     def test_eine_erfundene_sequenz_wird_erkannt(self):
         quelle = 'u"""Pfad: A:%s3DTools%spython14"""%s' % (chr(92), chr(92), chr(10))
-        self.assertTrue(Syntaxwarnungen.beim_uebersetzen(quelle, "probe.py"))
+        self.assertTrue(Syntaxwarnungen.beim_uebersetzen(quelle, 'probe.py'))
 
     def test_ein_rohtext_ist_in_ordnung(self):
         """Ein Rohtext (r-Praefix) ist der andere richtige Weg."""
-        quelle = "r%s%s%sPfad: A:%s3DTools%s%s%s%s" % (
+        quelle = 'r%s%s%sPfad: A:%s3DTools%s%s%s%s' % (
             chr(34),
             chr(34),
             chr(34),
@@ -115,4 +115,4 @@ class EineSabotageInDerZeichenkette(unittest.TestCase):
             chr(34),
             chr(10),
         )
-        self.assertEqual(Syntaxwarnungen.beim_uebersetzen(quelle, "probe.py"), [])
+        self.assertEqual(Syntaxwarnungen.beim_uebersetzen(quelle, 'probe.py'), [])

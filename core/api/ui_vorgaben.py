@@ -20,7 +20,7 @@ from django.views.decorators.csrf import csrf_exempt
 from ..dienste.animationsauswahl import Animationsauswahl
 from ..models import AppSettings
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Uivorgaben:
@@ -36,12 +36,12 @@ class Uivorgaben:
         nicht die Vorlieben der anderen Seiten löschen.
         """
         gespeichert, _ = AppSettings.objects.get_or_create(pk=1)
-        if request.method == "POST":
+        if request.method == 'POST':
             vorlieben = gespeichert.ui_prefs or {}
             vorlieben.update(json.loads(request.body))
             gespeichert.ui_prefs = vorlieben
-            gespeichert.save(update_fields=["ui_prefs"])
-            return JsonResponse({"ok": True})
+            gespeichert.save(update_fields=['ui_prefs'])
+            return JsonResponse({'ok': True})
         return JsonResponse(gespeichert.ui_prefs or {})
 
     @staticmethod
@@ -54,4 +54,4 @@ class Uivorgaben:
         Einstellungsseite.
         """
         auswahl = Animationsauswahl.aus_anfrage(request)
-        return JsonResponse({"animationen": auswahl.eintraege(kategorie)})
+        return JsonResponse({'animationen': auswahl.eintraege(kategorie)})

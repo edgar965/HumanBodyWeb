@@ -19,7 +19,7 @@ wer eine Multiplikation prueft, braucht den echten Lauf.
 
 import numpy as np
 
-__all__ = ["Tensorattrappe"]
+__all__ = ['Tensorattrappe']
 
 
 class Tensorattrappe:

@@ -25,14 +25,14 @@ class Formularwert:
     """Statische Leser für die vier Sorten Formularfeld."""
 
     @staticmethod
-    def text(post, name, vorgabe=""):
+    def text(post, name, vorgabe=''):
         """Getrimmter Text; leer bedeutet Vorgabe (auch die leere Vorgabe)."""
-        return post.get(name, "").strip() or vorgabe
+        return post.get(name, '').strip() or vorgabe
 
     @staticmethod
     def schalter(post, name):
         """Ankreuzfeld: `on` heißt an, alles andere aus."""
-        return post.get(name) == "on"
+        return post.get(name) == 'on'
 
     @staticmethod
     def zahl(post, name, vorgabe, mini=None, maxi=None, ganz=False):
@@ -65,4 +65,4 @@ class Formularwert:
     @staticmethod
     def aufgeklappt(post, vorsilbe):
         """Namen der angekreuzten Klapp-Bereiche (`panel_scene_licht` → `licht`)."""
-        return [k[len(vorsilbe) :] for k in post if k.startswith(vorsilbe) and post[k] == "on"]
+        return [k[len(vorsilbe) :] for k in post if k.startswith(vorsilbe) and post[k] == 'on']

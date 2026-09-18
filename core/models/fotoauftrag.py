@@ -16,16 +16,16 @@ class PhotoAnalysisJob(models.Model):
     """Stores results of a photo-to-3D analysis."""
 
     BACKEND_CHOICES = [
-        ("smplest_x", "SMPLest-X"),
-        ("pymafx", "PyMAF-X"),
-        ("hmr2", "HMR 2.0"),
-        ("mediapipe", "MediaPipe"),
+        ('smplest_x', 'SMPLest-X'),
+        ('pymafx', 'PyMAF-X'),
+        ('hmr2', 'HMR 2.0'),
+        ('mediapipe', 'MediaPipe'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     original_filename = models.CharField(max_length=255)
     photo_file = models.CharField(max_length=500)
-    backend = models.CharField(max_length=30, choices=BACKEND_CHOICES, default="smplest_x")
+    backend = models.CharField(max_length=30, choices=BACKEND_CHOICES, default='smplest_x')
     gender = models.CharField(max_length=20, blank=True)
     body_type = models.CharField(max_length=100, blank=True)
     result_json = models.TextField(blank=True)
@@ -34,10 +34,10 @@ class PhotoAnalysisJob(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=["backend", "-created_at"]),
+            models.Index(fields=['backend', '-created_at']),
         ]
 
     def __str__(self):
-        return f"{self.original_filename} ({self.backend})"
+        return f'{self.original_filename} ({self.backend})'

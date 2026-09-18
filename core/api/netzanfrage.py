@@ -41,14 +41,14 @@ class Netzanfrage:
     """Eine Anfrage an `/api/character/mesh/` — Zustand, Punkte, Antwort."""
 
     #: Vorsätze der Query-Parameter und die Setzer dahinter.
-    REGLER = (("morph_", "set_morph"), ("meta_", "set_meta"))
+    REGLER = (('morph_', 'set_morph'), ('meta_', 'set_meta'))
     #: Die Punktdatei der T-Pose (nur lesen — Produktivdaten).
-    TPOSE = "vertices_tpose.npy"
+    TPOSE = 'vertices_tpose.npy'
 
     def __init__(self, request):
         self.anfrage = request
-        self.nur_punkte = request.GET.get("nur_punkte") == "1"
-        self.bauart = request.GET.get("body_type", "Female_Caucasian")
+        self.nur_punkte = request.GET.get('nur_punkte') == '1'
+        self.bauart = request.GET.get('body_type', 'Female_Caucasian')
         self.geschlecht = Charakterdaten.geschlecht_zu(self.bauart)
         self.netz = Charakterdaten.netzdaten(self.geschlecht)
 
@@ -76,11 +76,11 @@ class Netzanfrage:
                 try:
                     setzen(name[len(vorsatz) :], float(wert))
                 except ValueError, AttributeError:
-                    logger.debug("uebergangen", exc_info=True)
+                    logger.debug('uebergangen', exc_info=True)
 
     def _pose(self, punkte):
         """T-Pose einsetzen, wenn sie gewünscht ist und die Datei passt."""
-        if self._gewuenschte_pose() != "t_pose":
+        if self._gewuenschte_pose() != 't_pose':
             return punkte
         pfad = os.path.join(str(settings.HUMANBODY_DATA_DIR), self.TPOSE)
         if not os.path.isfile(pfad):
@@ -90,17 +90,17 @@ class Netzanfrage:
             # Andere Punktzahl heisst: andere Figur. Stillschweigend einsetzen
             # waere der Fall, der die Maennerfigur einmal zerstoert hat.
             logger.warning(
-                "[Mesh] %s passt nicht (%s statt %s) — A-Pose bleibt", self.TPOSE, tpose.shape, punkte.shape
+                '[Mesh] %s passt nicht (%s statt %s) — A-Pose bleibt', self.TPOSE, tpose.shape, punkte.shape
             )
             return punkte
-        logger.info("[Mesh] Using T-pose vertices")
+        logger.info('[Mesh] Using T-pose vertices')
         return tpose
 
     def _gewuenschte_pose(self):
-        pose = self.anfrage.GET.get("pose", "")
+        pose = self.anfrage.GET.get('pose', '')
         if pose:
             return pose
-        return (AppSettings.load().ui_prefs or {}).get("default_pose", "a_pose")
+        return (AppSettings.load().ui_prefs or {}).get('default_pose', 'a_pose')
 
     # ------------------------------------------------------------- Antworten
 
@@ -120,23 +120,23 @@ class Netzanfrage:
         feine = cc.subdivide(punkte)
         weitere = {}
         if not self.nur_punkte:
-            weitere = {"groups": cc.groups, "material_names": self.netz.material_names or []}
+            weitere = {'groups': cc.groups, 'material_names': self.netz.material_names or []}
             if cc.uvs is not None:
-                weitere["uvs"] = cc.uvs
+                weitere['uvs'] = cc.uvs
             # Die Lippen (12.09.2026): Punkte für die eigene Materialgruppe des
             # Browsers — das Netz selbst hat keine — und seit 13.09.2026 der
             # Saum mit Abständen zum Rand, damit die Farbe glatt ausläuft.
-            weitere["lippen"] = Lippenmaske.lippen(self.geschlecht, cc.uvs, cc)
+            weitere['lippen'] = Lippenmaske.lippen(self.geschlecht, cc.uvs, cc)
             # Was der Browser ueber das Netz wissen muss (17.09.2026): die
             # Stufe und ob er die Hautverschiebung (`displacementMap`) setzt.
-            weitere["netzqualitaet"] = {"stufen": cc.levels, "verschiebung": Netzqualitaet.verschiebung()}
+            weitere['netzqualitaet'] = {'stufen': cc.levels, 'verschiebung': Netzqualitaet.verschiebung()}
         antwort = Netzantwort.aus(
             feine,
             normals=cc.compute_quad_normals(feine),
             faces=None if self.nur_punkte else cc.triangles,
             **weitere,
         )
-        antwort["face_count"] = int(len(cc.triangles))
+        antwort['face_count'] = int(len(cc.triangles))
         return antwort
 
     def _grob(self, punkte):
@@ -149,11 +149,11 @@ class Netzanfrage:
             dreiecke = gruppen.sortiert()
             bereiche = gruppen.bereiche()
             if bereiche:
-                antwort["groups"] = bereiche
-                antwort["material_names"] = gruppen.namen
-            antwort["face_count"] = int(dreiecke.shape[0])
-            antwort["faces"] = Netzantwort.feld(dreiecke, "faces")
+                antwort['groups'] = bereiche
+                antwort['material_names'] = gruppen.namen
+            antwort['face_count'] = int(dreiecke.shape[0])
+            antwort['faces'] = Netzantwort.feld(dreiecke, 'faces')
         if self.netz.uvs is not None and not self.nur_punkte:
-            antwort["uvs"] = Netzantwort.feld(self.netz.uvs, "uvs")
-            antwort["lippen"] = Lippenmaske.lippen(self.geschlecht, self.netz.uvs)
+            antwort['uvs'] = Netzantwort.feld(self.netz.uvs, 'uvs')
+            antwort['lippen'] = Lippenmaske.lippen(self.geschlecht, self.netz.uvs)
         return antwort

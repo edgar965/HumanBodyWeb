@@ -13,18 +13,18 @@ from pathlib import Path
 WURZEL = Path(__file__).resolve().parents[4]
 
 #: Pakete des Projekts, deren Ziele hier ueberhaupt aufloesbar sind.
-EIGENE = ("core", "ui")
+EIGENE = ('core', 'ui')
 
 #: Fremdpakete, die nur in einer anderen Umgebung liegen (python10) oder
 #: absichtlich optional sind — ihr Fehlen ist kein Befund dieses Tests.
 AUSSEN = (
-    "cv2",
-    "torch",
-    "warp",
-    "smplx",
-    "mediapipe",
-    "onnxruntime",
-    "trimesh",
-    "pyrender",
-    "humanbody_core",
+    'cv2',
+    'torch',
+    'warp',
+    'smplx',
+    'mediapipe',
+    'onnxruntime',
+    'trimesh',
+    'pyrender',
+    'humanbody_core',
 )

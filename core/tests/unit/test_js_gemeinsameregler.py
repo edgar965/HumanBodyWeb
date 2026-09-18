@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "gemeinsameregler.js")
+MODUL = Jsmodul('scene', 'gemeinsameregler.js')
 
 #: DOM-Attrappe: nur was die Klasse anfasst — Bereich, Kopfzeile, Liste.
 DOM = """
@@ -169,4 +169,4 @@ class GemeinsamereglerTest(SimpleTestCase):
 
     def test_derselbe_regler_stellt_knochen_oder_punkte(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

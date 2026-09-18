@@ -49,20 +49,20 @@ class Rockradien:
     def __init__(self):
         self.geprueft = 0
         self.verletzt = 0
-        self.schlimmste = ("", 0.0, 0.0)
+        self.schlimmste = ('', 0.0, 0.0)
 
     # ------------------------------------------------------------------ Prüfen
 
     def bake_pruefen(self, daten, bilder=None):
         """Alle Segmente über die Beispielbilder prüfen."""
-        koerperbilder = daten["rigid_positions"]
-        anzahl_segmente = int(daten["n_seg"][0])
+        koerperbilder = daten['rigid_positions']
+        anzahl_segmente = int(daten['n_seg'][0])
         for bild in bilder if bilder is not None else self.beispielbilder(koerperbilder.shape[0]):
             for segment in range(anzahl_segmente):
                 self.segment_pruefen(
                     koerperbilder[bild],
-                    daten["seg%d_positions" % segment][bild],
-                    "%s seg%d" % (bild, segment),
+                    daten['seg%d_positions' % segment][bild],
+                    '%s seg%d' % (bild, segment),
                 )
         return self
 
@@ -82,7 +82,7 @@ class Rockradien:
             return
         rand = self.RAND * (oben - unten)
         for hoehe in np.linspace(unten + rand, oben - rand, self.HOEHEN):
-            self._hoehe_pruefen(koerper, stoff, mitte, hoehe, "%s y=%.2f" % (marke, hoehe))
+            self._hoehe_pruefen(koerper, stoff, mitte, hoehe, '%s y=%.2f' % (marke, hoehe))
 
     def _hoehe_pruefen(self, koerper, stoff, mitte, hoehe, marke):
         koerper_radius = self._aussen(koerper, mitte, hoehe)
@@ -128,7 +128,7 @@ class Rockradien:
         return self.anteil < self.GRENZE
 
     def bericht(self):
-        return "violations=%d/%d (%.0f%%) worst=%s body_r=%.2f cloth_r=%.2f" % (
+        return 'violations=%d/%d (%.0f%%) worst=%s body_r=%.2f cloth_r=%.2f' % (
             self.verletzt,
             self.geprueft,
             self.anteil * 100,

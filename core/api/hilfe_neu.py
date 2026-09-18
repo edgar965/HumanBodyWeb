@@ -17,25 +17,25 @@ weil UMAs Konformer in Python vorliegt.
 Die Daten kommen aus `kleidung.vergleich.Vergleich`, nicht aus der Vorlage.
 """
 
-from .hilfeseite import Hilfeseite
-
 from kleidung.vergleich import Vergleich
+
+from .hilfeseite import Hilfeseite
 
 
 class KleidungNeu(Hilfeseite):
     """Analyse der fuenf Systeme und der Stufenplan fuer „Unified"."""
 
-    template_name = "hilfe/kleidung_neu.html"
-    AKTIV = "hilfe_kleidung_neu"
+    template_name = 'hilfe/kleidung_neu.html'
+    AKTIV = 'hilfe_kleidung_neu'
 
     def kontext(self):
         return {
-            "welten": Vergleich.welten(),
-            "knochen_morph": Vergleich.knochen_gegen_morph(),
-            "wege": Vergleich.wege(),
-            "schicht": Vergleich.schicht(),
-            "beschreibung": Vergleich.beschreibung(),
-            "stufen": Vergleich.stufen(),
-            "nicht": Vergleich.nicht(),
-            "unsicher": Vergleich.unsicher(),
+            'welten': Vergleich.welten(),
+            'knochen_morph': Vergleich.knochen_gegen_morph(),
+            'wege': Vergleich.wege(),
+            'schicht': Vergleich.schicht(),
+            'beschreibung': Vergleich.beschreibung(),
+            'stufen': Vergleich.stufen(),
+            'nicht': Vergleich.nicht(),
+            'unsicher': Vergleich.unsicher(),
         }

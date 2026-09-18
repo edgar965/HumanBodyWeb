@@ -40,7 +40,7 @@ class Einstellungsfeld:
     Laden des Moduls gebaut und danach nur gelesen.
     """
 
-    __slots__ = ("titel", "text", "min", "max", "schritt", "zusatz")
+    __slots__ = ('titel', 'text', 'min', 'max', 'schritt', 'zusatz')
 
     def __init__(self, titel, text, min=None, max=None, schritt=None, zusatz=None):
         """
@@ -68,22 +68,22 @@ class Einstellungsfeld:
         """
         if self.min is None and self.max is None:
             return self.text
-        return "%s (%s–%s)" % (
+        return '%s (%s–%s)' % (
             self.text,
-            "…" if self.min is None else self.min,
-            "…" if self.max is None else self.max,
+            '…' if self.min is None else self.min,
+            '…' if self.max is None else self.max,
         )
 
     def als_kontext(self, kennung, wert):
         """Was die Vorlage braucht — für `{% zahl %}` und `{% kaestchen %}`."""
         return {
-            "feld": kennung,
-            "titel": self.titel,
-            "beschriftung": self.text,
-            "wert": wert,
-            "an": wert,
-            "min": self.min,
-            "max": self.max,
-            "schritt": self.schritt or 1,
-            "text": self.zusatz or "Aktiviert",
+            'feld': kennung,
+            'titel': self.titel,
+            'beschriftung': self.text,
+            'wert': wert,
+            'an': wert,
+            'min': self.min,
+            'max': self.max,
+            'schritt': self.schritt or 1,
+            'text': self.zusatz or 'Aktiviert',
         }

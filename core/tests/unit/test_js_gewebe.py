@@ -31,7 +31,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "gewebe.js")
+MODUL = Jsmodul('gemeinsam', 'gewebe.js')
 
 SKRIPT = """
 const { Gewebe } = await import(MODUL);
@@ -123,4 +123,4 @@ class GewebeTest(SimpleTestCase):
 
     def test_kachel_bindung_und_normalen(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

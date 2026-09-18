@@ -105,7 +105,7 @@ class FussbeugungTest(SimpleTestCase):
             b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, absatz, sprengung_grad=sprengung)
             p = self._huelle()
             rest = np.abs(b.strecken(b.beugen(p)) - p).max() * 10.0
-            self.assertLess(rest, 0.01, "Absatz %.0f cm: Rest %.4f mm" % (absatz, rest))
+            self.assertLess(rest, 0.01, 'Absatz %.0f cm: Rest %.4f mm' % (absatz, rest))
 
     def test_die_abbildung_faltet_sich_nicht(self):
         b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 10.0, sprengung_grad=Fussbeugung.SPRENGUNG_MAX_GRAD)
@@ -122,7 +122,7 @@ class FussbeugungTest(SimpleTestCase):
         self.assertGreater(float(det.min()), 0.0)
 
     def test_der_vermerk_stellt_dieselbe_beugung_wieder_her(self):
-        fuss = Fussvorgabe({"height": 168.0})
+        fuss = Fussvorgabe({'height': 168.0})
         b = Fussbeugung.aus_fuss(fuss, 6.0, 1.0, 8.0)
         wieder = Fussbeugung.aus_vermerk(json.loads(json.dumps(b.beschreibung())))
         self.assertAlmostEqual(wieder.winkel_grad, b.winkel_grad, places=2)
@@ -141,7 +141,7 @@ class AbsatzblockTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.ordner = os.path.join(settings.BASE_DIR, "_wegwerf", "test_absatzblock")
+        self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf', 'test_absatzblock')
         os.makedirs(self.ordner, exist_ok=True)
 
     def tearDown(self):
@@ -155,23 +155,23 @@ class AbsatzblockTest(SimpleTestCase):
 
         def panel(ecken, rotation):
             return {
-                "vertices": ecken,
-                "rotation": rotation,
-                "translation": [21.5, -0.4, 15.4],
-                "edges": [{"endpoints": [i, (i + 1) % len(ecken)]} for i in range(len(ecken))],
+                'vertices': ecken,
+                'rotation': rotation,
+                'translation': [21.5, -0.4, 15.4],
+                'edges': [{'endpoints': [i, (i + 1) % len(ecken)]} for i in range(len(ecken))],
             }
 
         return {
-            "pattern": {
-                "panels": {
-                    "p_l_sohle": panel([[-4, -17], [4, -17], [4, 0], [-4, 0]], [115, 0, 0]),
-                    "p_l_sohle_v": panel([[-4, 0], [4, 0], [4, 8], [-4, 8]], [90, 0, 0]),
+            'pattern': {
+                'panels': {
+                    'p_l_sohle': panel([[-4, -17], [4, -17], [4, 0], [-4, 0]], [115, 0, 0]),
+                    'p_l_sohle_v': panel([[-4, 0], [4, 0], [4, 8], [-4, 8]], [90, 0, 0]),
                 }
             }
         }
 
     def test_klotz_und_platte_stehen_zwischen_sohle_und_boden(self):
-        punkte, dreiecke = Absatzblock(self._spez(), {"absatz_cm": 7.0, "plateau_cm": 4.0}).netz()
+        punkte, dreiecke = Absatzblock(self._spez(), {'absatz_cm': 7.0, 'plateau_cm': 4.0}).netz()
         self.assertGreater(len(punkte), 8)
         self.assertGreater(len(dreiecke), 8)
         # Klotz und Platte reichen bis zum Boden (-Plateau); nichts
@@ -183,8 +183,8 @@ class AbsatzblockTest(SimpleTestCase):
         self.assertTrue((dreiecke[:, 0] != dreiecke[:, 1]).all())
 
     def test_der_stiletto_steht_als_stift_unter_der_fersenmitte(self):
-        block, _ = Absatzblock(self._spez(), {"absatz_cm": 7.0}).netz()
-        stift, dreiecke = Absatzblock(self._spez(), {"absatz_cm": 7.0, "absatzform": "stiletto"}).netz()
+        block, _ = Absatzblock(self._spez(), {'absatz_cm': 7.0}).netz()
+        stift, dreiecke = Absatzblock(self._spez(), {'absatz_cm': 7.0, 'absatzform': 'stiletto'}).netz()
         # Drei Ringe statt zwei, dieselbe Deckfläche.
         self.assertEqual(len(stift), len(block) // 2 * 3)
         n = len(block) // 2
@@ -206,20 +206,20 @@ class AbsatzblockTest(SimpleTestCase):
         self.assertEqual(len(dreiecke), 0)
 
     def test_anhaengen_verlaengert_die_obj(self):
-        pfad = os.path.join(self.ordner, "x_sim.obj")
-        with open(pfad, "w", encoding="utf-8") as datei:
-            datei.write("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1/1 2/2 3/3\n")
+        pfad = os.path.join(self.ordner, 'x_sim.obj')
+        with open(pfad, 'w', encoding='utf-8') as datei:
+            datei.write('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1/1 2/2 3/3\n')
         self.assertFalse(Absatzblock.maske(pfad, 3).any())  # noch kein Block
-        n = Absatzblock.anhaengen(self._spez(), {"absatz_cm": 7.0}, pfad)
+        n = Absatzblock.anhaengen(self._spez(), {'absatz_cm': 7.0}, pfad)
         maske = Absatzblock.maske(pfad, 3 + n)
         self.assertEqual(int(maske.sum()), n)
         self.assertFalse(maske[:3].any())
-        self.assertFalse(Absatzblock.maske(pfad + ".fehlt", 5).any())
-        with open(pfad, encoding="utf-8") as datei:
+        self.assertFalse(Absatzblock.maske(pfad + '.fehlt', 5).any())
+        with open(pfad, encoding='utf-8') as datei:
             zeilen = datei.read().splitlines()
-        self.assertEqual(sum(1 for z in zeilen if z.startswith("v ")), 3 + n)
+        self.assertEqual(sum(1 for z in zeilen if z.startswith('v ')), 3 + n)
         # Die neuen Flächen zeigen hinter die drei alten Punkte.
-        neue = [z for z in zeilen if z.startswith("f ") and "/" not in z]
+        neue = [z for z in zeilen if z.startswith('f ') and '/' not in z]
         self.assertTrue(neue)
         self.assertTrue(all(int(t) > 3 for z in neue for t in z.split()[1:]))
 
@@ -228,7 +228,7 @@ class GarmentabsatzTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.ordner = os.path.join(settings.BASE_DIR, "_wegwerf", "test_garmentabsatz")
+        self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf', 'test_garmentabsatz')
         shutil.rmtree(self.ordner, ignore_errors=True)
         os.makedirs(self.ordner)
         Garmentabsatz.AUSGABE = self.ordner
@@ -240,39 +240,39 @@ class GarmentabsatzTest(SimpleTestCase):
     def _bau(self, name, vermerk):
         os.makedirs(os.path.join(self.ordner, name))
         with open(
-            os.path.join(self.ordner, name, "%s_specification.json" % name), "w", encoding="utf-8"
+            os.path.join(self.ordner, name, '%s_specification.json' % name), 'w', encoding='utf-8'
         ) as datei:
-            json.dump({"pattern": {"panels": {}}, "schuh": vermerk}, datei)
+            json.dump({'pattern': {'panels': {}}, 'schuh': vermerk}, datei)
 
     def test_der_juengste_bau_eines_stuecks_liefert_winkel_und_hebung(self):
         self._bau(
-            "pumps_female",
+            'pumps_female',
             {
-                "material": "leather",
-                "absatz_cm": 7.0,
-                "winkel_grad": 24.9,
-                "hebung_cm": 4.9,
-                "sprengung_grad": 8.0,
+                'material': 'leather',
+                'absatz_cm': 7.0,
+                'winkel_grad': 24.9,
+                'hebung_cm': 4.9,
+                'sprengung_grad': 8.0,
             },
         )
-        antwort = Garmentabsatz.lesen("pumps")
-        self.assertEqual(antwort["name"], "pumps_female")
-        self.assertAlmostEqual(antwort["winkel_grad"], 24.9)
-        self.assertAlmostEqual(antwort["hebung_cm"], 4.9)
-        self.assertAlmostEqual(antwort["sprengung_grad"], 8.0)
-        self.assertEqual(antwort["plateau_cm"], 0.0)
+        antwort = Garmentabsatz.lesen('pumps')
+        self.assertEqual(antwort['name'], 'pumps_female')
+        self.assertAlmostEqual(antwort['winkel_grad'], 24.9)
+        self.assertAlmostEqual(antwort['hebung_cm'], 4.9)
+        self.assertAlmostEqual(antwort['sprengung_grad'], 8.0)
+        self.assertEqual(antwort['plateau_cm'], 0.0)
 
     def test_ein_flacher_schuh_und_ein_unbekanntes_stueck_sind_flach(self):
-        self._bau("ballerina_female", {"material": "cloth"})
-        self.assertEqual(Garmentabsatz.lesen("ballerina")["winkel_grad"], 0.0)
-        self.assertEqual(Garmentabsatz.lesen("gibtsnicht")["name"], "")
+        self._bau('ballerina_female', {'material': 'cloth'})
+        self.assertEqual(Garmentabsatz.lesen('ballerina')['winkel_grad'], 0.0)
+        self.assertEqual(Garmentabsatz.lesen('gibtsnicht')['name'], '')
 
     def test_der_endpunkt_prueft_den_namen(self):
-        antwort = self.client.get("/api/garmentcode/absatz/?stueck=../x")
+        antwort = self.client.get('/api/garmentcode/absatz/?stueck=../x')
         self.assertEqual(antwort.status_code, 400)
-        antwort = self.client.get("/api/garmentcode/absatz/?stueck=pumps")
+        antwort = self.client.get('/api/garmentcode/absatz/?stueck=pumps')
         self.assertEqual(antwort.status_code, 200)
-        self.assertEqual(antwort.json()["stueck"], "pumps")
+        self.assertEqual(antwort.json()['stueck'], 'pumps')
 
 
 class GarmentabsatzvorschauTest(SimpleTestCase):
@@ -282,65 +282,66 @@ class GarmentabsatzvorschauTest(SimpleTestCase):
 
     #: Die Fussmasse der Vorgabefigur (`test_schuhschnitt.FUSS`).
     FUSS = {
-        "foot_length": 24.41,
-        "foot_heel_width": 7.08,
-        "foot_ball_width": 9.14,
-        "toe_height": 2.99,
-        "foot_instep": 21.83,
-        "instep_angle": 19.63,
-        "foot_x": 21.55,
-        "foot_toe_z": 23.19,
-        "foot_heel_z": -1.22,
-        "foot_heel_x": 20.61,
-        "foot_ball_x": 20.69,
-        "foot_toe_x": 18.66,
-        "foot_yaw": 0.04,
-        "ankle_circ": 19.23,
-        "ankle_height": 13.78,
-        "calf_circ": 37.8,
-        "calf_height": 46.64,
-        "knee_circ": 34.73,
-        "knee_height": 53.1,
-        "shin_circ_25": 24.4,
-        "shin_circ_50": 35.45,
-        "shin_circ_75": 36.51,
-        "height": 168.0,
+        'foot_length': 24.41,
+        'foot_heel_width': 7.08,
+        'foot_ball_width': 9.14,
+        'toe_height': 2.99,
+        'foot_instep': 21.83,
+        'instep_angle': 19.63,
+        'foot_x': 21.55,
+        'foot_toe_z': 23.19,
+        'foot_heel_z': -1.22,
+        'foot_heel_x': 20.61,
+        'foot_ball_x': 20.69,
+        'foot_toe_x': 18.66,
+        'foot_yaw': 0.04,
+        'ankle_circ': 19.23,
+        'ankle_height': 13.78,
+        'calf_circ': 37.8,
+        'calf_height': 46.64,
+        'knee_circ': 34.73,
+        'knee_height': 53.1,
+        'shin_circ_25': 24.4,
+        'shin_circ_50': 35.45,
+        'shin_circ_75': 36.51,
+        'height': 168.0,
         # Der Einstieg (`fusseinstieg.py`, 11.09.2026): Risthöhe an der
         # Vamplinie, Weg um die Ferse auf 25/50/75 % der Knöchelhöhe, Bogen
         # über den Rist ab 30/50/70 % der Risthöhe.
-        "vamp_height": 5.81,
-        "heel_girth_25": 32.16,
-        "heel_girth_50": 29.42,
-        "heel_girth_75": 21.88,
-        "instep_arc_30": 12.42,
-        "instep_arc_50": 9.88,
-        "instep_arc_70": 7.36,
+        'vamp_height': 5.81,
+        'heel_girth_25': 32.16,
+        'heel_girth_50': 29.42,
+        'heel_girth_75': 21.88,
+        'instep_arc_30': 12.42,
+        'instep_arc_50': 9.88,
+        'instep_arc_70': 7.36,
     }
 
     def test_rechnen_liefert_die_zahlen_des_baus(self):
         antwort = Garmentabsatzvorschau.rechnen(self.FUSS, 7.0, 0.0, 8.0)
-        self.assertAlmostEqual(antwort["winkel_grad"], 24.943, places=2)
-        self.assertAlmostEqual(antwort["hebung_cm"], 4.884, places=2)
-        self.assertEqual(antwort["sprengung_grad"], 8.0)
-        self.assertEqual(antwort["hinweise"], [])
+        self.assertAlmostEqual(antwort['winkel_grad'], 24.943, places=2)
+        self.assertAlmostEqual(antwort['hebung_cm'], 4.884, places=2)
+        self.assertEqual(antwort['sprengung_grad'], 8.0)
+        self.assertEqual(antwort['hinweise'], [])
         flach = Garmentabsatzvorschau.rechnen(self.FUSS, 0.0, 0.0, 0.0)
-        self.assertEqual(flach["winkel_grad"], 0.0)
+        self.assertEqual(flach['winkel_grad'], 0.0)
 
     def test_der_endpunkt_nimmt_die_regler_als_formular(self):
         from unittest.mock import patch
+
         from GarmentCode.dienst import GarmentcodeDienst
 
-        with patch.object(GarmentcodeDienst, "masse", return_value=(self.FUSS, {})):
+        with patch.object(GarmentcodeDienst, 'masse', return_value=(self.FUSS, {})):
             antwort = self.client.post(
-                "/api/garmentcode/absatz/vorschau/",
-                {"geschlecht": "female", "morphs": "{}", "heel": "9", "platform": "4", "toe_spring": "5"},
+                '/api/garmentcode/absatz/vorschau/',
+                {'geschlecht': 'female', 'morphs': '{}', 'heel': '9', 'platform': '4', 'toe_spring': '5'},
             )
         self.assertEqual(antwort.status_code, 200)
         daten = antwort.json()
-        self.assertAlmostEqual(daten["absatz_cm"], 9.0)
-        self.assertAlmostEqual(daten["plateau_cm"], 4.0)
-        self.assertGreater(daten["winkel_grad"], 10.0)
+        self.assertAlmostEqual(daten['absatz_cm'], 9.0)
+        self.assertAlmostEqual(daten['plateau_cm'], 4.0)
+        self.assertGreater(daten['winkel_grad'], 10.0)
         self.assertLess(
-            daten["winkel_grad"], Garmentabsatzvorschau.rechnen(self.FUSS, 9.0, 0.0, 0.0)["winkel_grad"]
+            daten['winkel_grad'], Garmentabsatzvorschau.rechnen(self.FUSS, 9.0, 0.0, 0.0)['winkel_grad']
         )
-        self.assertEqual(self.client.get("/api/garmentcode/absatz/vorschau/").status_code, 405)
+        self.assertEqual(self.client.get('/api/garmentcode/absatz/vorschau/').status_code, 405)

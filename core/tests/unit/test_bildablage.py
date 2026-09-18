@@ -35,12 +35,13 @@ from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from core.dienste.bildablage import Bildablage
+
 from ._sicher import Sicher
 
 #: Ein winziges gültiges JPEG-Fragment — der Inhalt ist gleichgültig, nur
 #: dass es dieselben Bytes zurückgibt.
-ROH = b"\xff\xd8\xff\xe0 Testbild"
-DATAURL = "data:image/jpeg;base64," + base64.b64encode(ROH).decode()
+ROH = b'\xff\xd8\xff\xe0 Testbild'
+DATAURL = 'data:image/jpeg;base64,' + base64.b64encode(ROH).decode()
 
 
 class BytesAusDataurlTest(SimpleTestCase):
@@ -55,13 +56,13 @@ class BytesAusDataurlTest(SimpleTestCase):
 
     def test_leer_ist_nicht_kaputt(self):
         """`b''` und `None` sind ZWEI Fälle, keiner davon der andere."""
-        self.assertEqual(b"", Bildablage.bytes_aus_dataurl(""))
-        self.assertEqual(b"", Bildablage.bytes_aus_dataurl(None))
+        self.assertEqual(b'', Bildablage.bytes_aus_dataurl(''))
+        self.assertEqual(b'', Bildablage.bytes_aus_dataurl(None))
 
     def test_kaputte_base64_gibt_none(self):
         """`None` gibt es nur bei einer Laengen- oder Fuellzeichen-Panne."""
-        self.assertIsNone(Bildablage.bytes_aus_dataurl("data:,QQ"))
-        self.assertIsNone(Bildablage.bytes_aus_dataurl("data:,AAAAA"))
+        self.assertIsNone(Bildablage.bytes_aus_dataurl('data:,QQ'))
+        self.assertIsNone(Bildablage.bytes_aus_dataurl('data:,AAAAA'))
 
     def test_fremdzeichen_werden_still_verschluckt(self):
         """GEMESSEN, nicht vermutet (29.08.2026): `base64.b64decode` ohne
@@ -74,7 +75,7 @@ class BytesAusDataurlTest(SimpleTestCase):
         nicht als „Invalid base64". Beides ist eine 400 mit einem ehrlichen
         Text — aber wer den Fehlertext liest, um die Ursache zu suchen, wird
         in die falsche Richtung geschickt. Deshalb steht es hier fest."""
-        self.assertEqual(b"", Bildablage.bytes_aus_dataurl("data:,%%%"))
+        self.assertEqual(b'', Bildablage.bytes_aus_dataurl('data:,%%%'))
 
 
 class SichernAusDataurlTest(SimpleTestCase):
@@ -82,56 +83,56 @@ class SichernAusDataurlTest(SimpleTestCase):
 
     def setUp(self):
         # `dir=` ist Pflicht: sonst System-Temp auf C: (Befund `lehren-treue`).
-        basis = Path(settings.BASE_DIR).parent / "ProjektTemp"
+        basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
         basis.mkdir(exist_ok=True)
-        self.ordner = tempfile.mkdtemp(prefix="bildablage_", dir=str(basis))
+        self.ordner = tempfile.mkdtemp(prefix='bildablage_', dir=str(basis))
         self.addCleanup(shutil.rmtree, self.ordner, True)
 
-    def _ablage(self, unterordner="pruefung"):
+    def _ablage(self, unterordner='pruefung'):
         return Bildablage(unterordner)
 
     def test_gueltiges_bild_landet_auf_der_platte(self):
         with override_settings(BASE_DIR=self.ordner):
-            pfad, fehler = self._ablage().sichern_aus_dataurl("abc", DATAURL)
+            pfad, fehler = self._ablage().sichern_aus_dataurl('abc', DATAURL)
         self.assertIsNone(fehler)
-        self.assertEqual("media/photo_analysis/pruefung/abc.jpg", pfad)
-        voll = os.path.join(self.ordner, *Sicher.wert(pfad, "Pfad").split("/"))
-        self.assertTrue(os.path.isfile(voll), "Datei nicht geschrieben")
-        with open(voll, "rb") as datei:
+        self.assertEqual('media/photo_analysis/pruefung/abc.jpg', pfad)
+        voll = os.path.join(self.ordner, *Sicher.wert(pfad, 'Pfad').split('/'))
+        self.assertTrue(os.path.isfile(voll), 'Datei nicht geschrieben')
+        with open(voll, 'rb') as datei:
             self.assertEqual(ROH, datei.read())
 
     def test_kein_bild_meldet_kein_bild(self):
         with override_settings(BASE_DIR=self.ordner):
-            pfad, fehler = self._ablage().sichern_aus_dataurl("abc", "")
+            pfad, fehler = self._ablage().sichern_aus_dataurl('abc', '')
         self.assertIsNone(pfad)
-        self.assertEqual("No image data", fehler)
+        self.assertEqual('No image data', fehler)
 
     def test_kaputtes_bild_meldet_kaputt(self):
         """Der Unterschied, auf den es ankommt: NICHT „No image data"."""
         with override_settings(BASE_DIR=self.ordner):
-            pfad, fehler = self._ablage().sichern_aus_dataurl("abc", "data:,QQ")
+            pfad, fehler = self._ablage().sichern_aus_dataurl('abc', 'data:,QQ')
         self.assertIsNone(pfad)
-        self.assertEqual("Invalid base64", fehler)
+        self.assertEqual('Invalid base64', fehler)
 
     def test_im_fehlerfall_entsteht_keine_datei(self):
         """Eine leere `.jpg` wäre schlimmer als keine: Sie sieht aus wie ein
         Ergebnis und lässt sich später nicht mehr von einem echten Bild
         unterscheiden."""
         with override_settings(BASE_DIR=self.ordner):
-            self._ablage().sichern_aus_dataurl("leer", "")
-            self._ablage().sichern_aus_dataurl("kaputt", "data:,QQ")
-        ordner = os.path.join(self.ordner, "media", "photo_analysis", "pruefung")
+            self._ablage().sichern_aus_dataurl('leer', '')
+            self._ablage().sichern_aus_dataurl('kaputt', 'data:,QQ')
+        ordner = os.path.join(self.ordner, 'media', 'photo_analysis', 'pruefung')
         vorhanden = os.listdir(ordner) if os.path.isdir(ordner) else []
-        self.assertEqual([], vorhanden, "Datei trotz Fehler geschrieben")
+        self.assertEqual([], vorhanden, 'Datei trotz Fehler geschrieben')
 
     def test_der_unterordner_steht_im_pfad(self):
         """Die beiden Endpunkte unterscheiden sich NUR darin."""
         with override_settings(BASE_DIR=self.ordner):
-            a, _ = Bildablage("silhouettes").sichern_aus_dataurl("x", DATAURL)
-            b, _ = Bildablage("screenshots").sichern_aus_dataurl("x", DATAURL)
-        self.assertEqual("media/photo_analysis/silhouettes/x.jpg", a)
-        self.assertEqual("media/photo_analysis/screenshots/x.jpg", b)
+            a, _ = Bildablage('silhouettes').sichern_aus_dataurl('x', DATAURL)
+            b, _ = Bildablage('screenshots').sichern_aus_dataurl('x', DATAURL)
+        self.assertEqual('media/photo_analysis/silhouettes/x.jpg', a)
+        self.assertEqual('media/photo_analysis/screenshots/x.jpg', b)
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == '__main__':  # pragma: no cover
     unittest.main()

@@ -33,32 +33,32 @@ class Hautbild:
     #: damit die Braue (~540 px breit im Fenster) dieselbe Schärfe hat.
     GROESSE = 2048
     #: Die wählbaren Albedos (`Hauttextur.WAHL` ohne die leere Wahl).
-    ALBEDO = re.compile(r"^hum_[fm]_(afro|asian|cauc|latino)$")
+    ALBEDO = re.compile(r'^hum_[fm]_(afro|asian|cauc|latino)$')
     #: Detailfeld → (Regler des Zeichners, Faktor) — Spiegel von
     #: `Brauenhaut.FELDER` in `gemeinsam/brauenhaut.js`.
     BRAUENFELDER = {
-        "brauen": ("farbe", 1),
-        "brauen_staerke": ("haar_laenge", 1),
-        "brauen_dicke": ("dicke", 1),
-        "brauen_dichte": ("dichte", 1),
-        "brauen_bogen_laenge": ("laenge", 1),
-        "brauen_deckkraft": ("deckkraft", 1),
-        "brauen_lage": ("lage", 1000),
-        "brauen_hoehe_innen": ("hoehe_innen", 1000),
-        "brauen_hoehe_aussen": ("hoehe_aussen", 1000),
-        "brauen_woelbung": ("woelbung", 1000),
+        'brauen': ('farbe', 1),
+        'brauen_staerke': ('haar_laenge', 1),
+        'brauen_dicke': ('dicke', 1),
+        'brauen_dichte': ('dichte', 1),
+        'brauen_bogen_laenge': ('laenge', 1),
+        'brauen_deckkraft': ('deckkraft', 1),
+        'brauen_lage': ('lage', 1000),
+        'brauen_hoehe_innen': ('hoehe_innen', 1000),
+        'brauen_hoehe_aussen': ('hoehe_aussen', 1000),
+        'brauen_woelbung': ('woelbung', 1000),
     }
     #: Die Farben der Körperart sind linear (`MorphData.SKIN_COLORS`); der
     #: Browser hebt sie mit 1/2,2 an (`gemeinsam/hautfarbe.js`).
     GAMMA = 1 / 2.2
-    ERSATZ_ETHNIE = "Caucasian"
-    HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+    ERSATZ_ETHNIE = 'Caucasian'
+    HEX = re.compile(r'^#[0-9a-fA-F]{6}$')
 
     # --------------------------------------------------------------- Regler
 
     @classmethod
     def geschlecht(cls, body_type):
-        return "male" if str(body_type or "").lower().startswith("male") else "female"
+        return 'male' if str(body_type or '').lower().startswith('male') else 'female'
 
     @classmethod
     def regler(cls, details):
@@ -66,7 +66,7 @@ class Hautbild:
         roh = {}
         for feld, (name, faktor) in cls.BRAUENFELDER.items():
             wert = (details or {}).get(feld)
-            if wert is None or wert == "":
+            if wert is None or wert == '':
                 continue
             roh[name] = round(float(wert) * faktor, 2) if isinstance(wert, (int, float)) else wert
         return Brauendecal.regler(roh)
@@ -75,13 +75,13 @@ class Hautbild:
 
     @classmethod
     def ethnie(cls, body_type):
-        teile = str(body_type or "").split("_")
-        return "_".join(teile[1:]) if len(teile) > 1 else cls.ERSATZ_ETHNIE
+        teile = str(body_type or '').split('_')
+        return '_'.join(teile[1:]) if len(teile) > 1 else cls.ERSATZ_ETHNIE
 
     @classmethod
     def hautfarbe(cls, details, body_type):
         """(r, g, b) 0..255: die gesetzte Hautfarbe, sonst die der Körperart."""
-        farbe = (details or {}).get("haut")
+        farbe = (details or {}).get('haut')
         if isinstance(farbe, str) and cls.HEX.match(farbe):
             return cls.rgb(farbe)
         from humanbody_core import MorphData
@@ -97,10 +97,10 @@ class Hautbild:
     @classmethod
     def albedo(cls, details):
         """Pfad der MB-Lab-Albedo zum Detail `haut_textur`, oder None."""
-        name = str((details or {}).get("haut_textur") or "")
+        name = str((details or {}).get('haut_textur') or '')
         if not cls.ALBEDO.match(name):
             return None
-        pfad = Lippenmaske.ordner() / ("%s_albedo.png" % name)
+        pfad = Lippenmaske.ordner() / ('%s_albedo.png' % name)
         return pfad if pfad.is_file() else None
 
     @classmethod
@@ -121,8 +121,8 @@ class Hautbild:
         if pfad is None:
             return np.full((cls.GROESSE, cls.GROESSE, 3), farbe, dtype=np.uint8)
         with Image.open(Brauenretusche.fuer(pfad)) as bild:
-            roh = np.asarray(bild.convert("RGB"))
-        if (details or {}).get("haut"):
+            roh = np.asarray(bild.convert('RGB'))
+        if (details or {}).get('haut'):
             return cls.toenen(roh, farbe)
         return roh
 
@@ -135,13 +135,13 @@ class Hautbild:
         gezeichnet (`Brauendecal.zeichnen`: Zeile 0 = v1)."""
         from PIL import Image
 
-        u0, v0, u1, v1 = Brauenbogen.laden(geschlecht)["fenster"]
+        u0, v0, u1, v1 = Brauenbogen.laden(geschlecht)['fenster']
         hoehe, breite = grund.shape[:2]
         x0, x1 = int(round(u0 * breite)), int(round(u1 * breite))
         y0, y1 = int(round((1 - v1) * hoehe)), int(round((1 - v0) * hoehe))
         with Image.open(Brauendecal.bild(geschlecht, regler)) as decal:
             braue = np.asarray(
-                decal.convert("RGBA").resize((x1 - x0, y1 - y0), Image.LANCZOS), dtype=np.float32
+                decal.convert('RGBA').resize((x1 - x0, y1 - y0), Image.LANCZOS), dtype=np.float32
             )
         alpha = braue[..., 3:4] / 255.0
         fenster = grund[y0:y1, x0:x1].astype(np.float32)

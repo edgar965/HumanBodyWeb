@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("scene", "bodenstand.js")
+MODUL = Jsmodul('scene', 'bodenstand.js')
 
 SKRIPT = """
 const { Bodenstand: B } = await import(MODUL);
@@ -64,4 +64,4 @@ console.log(JSON.stringify({ ok: true }));
 
 class BodenstandTest(SimpleTestCase):
     def test_die_animierte_figur_kommt_auf_den_boden(self):
-        self.assertTrue(MODUL.laufen(SKRIPT).get("ok"))
+        self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))

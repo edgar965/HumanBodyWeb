@@ -36,18 +36,18 @@ class BvhAuslieferungTest(TestCase):
     """Ein Auftrag ohne Dateien: Der Endpunkt muss sauber 404 antworten."""
 
     def setUp(self):
-        self.job = BVHJob.objects.create(name="pruefung.mp4", pipeline="mediapipe", status="complete")
+        self.job = BVHJob.objects.create(name='pruefung.mp4', pipeline='mediapipe', status='complete')
 
     def adresse(self, **werte):
-        pfad = reverse("serve_bvh", args=[self.job.id])
+        pfad = reverse('serve_bvh', args=[self.job.id])
         if not werte:
             return pfad
-        return "%s?%s" % (pfad, "&".join("%s=%s" % p for p in werte.items()))
+        return '%s?%s' % (pfad, '&'.join('%s=%s' % p for p in werte.items()))
 
     # ------------------------------------------------------------ Grundfall
 
     def test_unbekannter_auftrag_gibt_404(self):
-        adresse = reverse("serve_bvh", args=[uuid.uuid4()])
+        adresse = reverse('serve_bvh', args=[uuid.uuid4()])
         self.assertEqual(self.client.get(adresse).status_code, 404)
 
     def test_auftrag_ohne_bvh_gibt_404_und_keine_leere_datei(self):
@@ -58,8 +58,8 @@ class BvhAuslieferungTest(TestCase):
 
     def test_bvh_die_es_nicht_mehr_gibt_gibt_404(self):
         """Der Pfad steht in der Datenbank, die Datei ist geloescht."""
-        self.job.bvh_file = "A:/gibtesnicht/weg.bvh"
-        self.job.save(update_fields=["bvh_file"])
+        self.job.bvh_file = 'A:/gibtesnicht/weg.bvh'
+        self.job.save(update_fields=['bvh_file'])
         self.assertEqual(self.client.get(self.adresse()).status_code, 404)
 
     # ------------------------------------------------------------ Rueckfall
@@ -72,51 +72,51 @@ class BvhAuslieferungTest(TestCase):
         """
         from core.projekt_temp import ProjektTemp
 
-        datei = ProjektTemp.datei(suffix=".bvh", prefix="nurgesicht_")
-        datei.write_text("HIERARCHY\n", encoding="utf-8")
+        datei = ProjektTemp.datei(suffix='.bvh', prefix='nurgesicht_')
+        datei.write_text('HIERARCHY\n', encoding='utf-8')
         self.addCleanup(ProjektTemp.weg, datei)
         self.job.bvh_file_face = str(datei)
-        self.job.save(update_fields=["bvh_file_face"])
+        self.job.save(update_fields=['bvh_file_face'])
         antwort = self.client.get(self.adresse())
         self.addCleanup(antwort.close)
         self.assertEqual(antwort.status_code, 200)
-        self.assertIn(b"HIERARCHY", b"".join(antwort.streaming_content))
+        self.assertIn(b'HIERARCHY', b''.join(antwort.streaming_content))
 
     def test_bvh_wird_nicht_zwischengespeichert(self):
         """Der Text aendert sich beim Bearbeiten — der Browser darf ihn nicht
         aus seinem Zwischenspeicher nehmen."""
         from core.projekt_temp import ProjektTemp
 
-        datei = ProjektTemp.datei(suffix=".bvh", prefix="kein_cache_")
-        datei.write_text("HIERARCHY\n", encoding="utf-8")
+        datei = ProjektTemp.datei(suffix='.bvh', prefix='kein_cache_')
+        datei.write_text('HIERARCHY\n', encoding='utf-8')
         self.addCleanup(ProjektTemp.weg, datei)
         self.job.bvh_file = str(datei)
-        self.job.save(update_fields=["bvh_file"])
+        self.job.save(update_fields=['bvh_file'])
         antwort = self.client.get(self.adresse())
         # `close()`, bevor `ProjektTemp.weg` raeumt: `FileResponse` haelt die
         # Datei offen, bis jemand sie liest oder schliesst — unter Windows
         # scheitert das Loeschen sonst mit WinError 32.
         self.addCleanup(antwort.close)
-        self.assertIn("no-store", antwort["Cache-Control"])
+        self.assertIn('no-store', antwort['Cache-Control'])
 
     # --------------------------------------------------------- Betriebsarten
 
     def test_retarget_ohne_bvh_gibt_404(self):
         """DER FALL VOM 18.08.2026: Diese Betriebsart lief in einen
         ModuleNotFoundError statt in eine Antwort."""
-        antwort = self.client.get(self.adresse(mode="retarget"))
+        antwort = self.client.get(self.adresse(mode='retarget'))
         self.assertEqual(antwort.status_code, 404)
-        self.assertNotIn(b"Traceback", antwort.content)
+        self.assertNotIn(b'Traceback', antwort.content)
 
     def test_keypoints2d_antwortet_json(self):
         """Auch ohne Erkennungsdaten: eine JSON-Antwort, keine Ausnahme."""
-        antwort = self.client.get(self.adresse(mode="keypoints2d"))
+        antwort = self.client.get(self.adresse(mode='keypoints2d'))
         self.assertIn(antwort.status_code, (200, 404), antwort.content[:200])
         if antwort.status_code == 200:
-            self.assertEqual(antwort["Content-Type"], "application/json")
+            self.assertEqual(antwort['Content-Type'], 'application/json')
 
     def test_unbekannter_modus_faellt_auf_die_bvh_zurueck(self):
         """`?mode=quatsch` darf keine Fehlerseite geben — der Spieler schickt
         den Wert aus einem Auswahlfeld, und ein neuer Eintrag dort soll die
         alte Serverfassung nicht umbringen."""
-        self.assertEqual(self.client.get(self.adresse(mode="quatsch")).status_code, 404)
+        self.assertEqual(self.client.get(self.adresse(mode='quatsch')).status_code, 404)

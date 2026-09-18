@@ -14,8 +14,8 @@ An einem Wuerfel mit echtem Unterteiler (eine Stufe, mit UV-Naehten):
 
 import numpy as np
 from django.test import SimpleTestCase
-
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
+
 from ._modelphysik import Modelphysik
 
 
@@ -31,21 +31,21 @@ class KoerperfeinheitTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.kf = Modelphysik.modul("koerperfeinheit")
-        cls.fk = Modelphysik.modul("feinkoerper")
+        cls.kf = Modelphysik.modul('koerperfeinheit')
+        cls.fk = Modelphysik.modul('feinkoerper')
         cls.punkte, cls.quads, uv_loops = _wuerfel()
         cls.cc = CatmullClarkSubdivider(cls.quads, levels=1, uv_loops=uv_loops)
         cls.dreiecke = np.vstack([cls.quads[:, [0, 1, 2]], cls.quads[:, [0, 2, 3]]])
 
     def test_kopfmaske_nimmt_kopf_und_gesicht_nicht_den_unterarm(self):
         namen = [
-            "DEF-forearm.L",
-            "DEF-spine.006",
-            "DEF-nose",
-            "MCH-eye.L",
-            "DEF-spine.005",
-            "ORG-teeth.T",
-            "DEF-ear.L.002",
+            'DEF-forearm.L',
+            'DEF-spine.006',
+            'DEF-nose',
+            'MCH-eye.L',
+            'DEF-spine.005',
+            'ORG-teeth.T',
+            'DEF-ear.L.002',
         ]
         gewichte = np.eye(len(namen))
         maske = self.kf.Koerperfeinheit.kopfmaske(gewichte, namen)
@@ -76,7 +76,7 @@ class KoerperfeinheitTest(SimpleTestCase):
         np.testing.assert_allclose(kopien, verschoben[self.cc.kopien_eltern], atol=1e-9)
 
     def test_korrektur_laesst_die_ruhelage_in_ruhe(self):
-        namen = ["DEF-spine", "DEF-spine.006"]
+        namen = ['DEF-spine', 'DEF-spine.006']
         gewichte = np.zeros((8, 2))
         gewichte[:, 0] = 1.0
         f = self.kf.Koerperfeinheit(self.cc, self.quads).anlegen(self.punkte, gewichte, namen)
@@ -84,7 +84,7 @@ class KoerperfeinheitTest(SimpleTestCase):
         np.testing.assert_allclose(
             f.punkte(self.punkte, self.dreiecke), self.cc.subdivide(self.punkte), atol=1e-9
         )
-        self.assertIn("Korrekturglaettung an", f.beschreibung())
+        self.assertIn('Korrekturglaettung an', f.beschreibung())
 
     def test_feinkoerper_rechnet_ueber_die_feinheit_und_haelt_wenige_bilder(self):
         F = self.fk.Feinkoerper
@@ -96,14 +96,14 @@ class KoerperfeinheitTest(SimpleTestCase):
             folge = np.stack([self.punkte + [0, 0.01 * i, 0] for i in range(6)])
 
         teil = {
-            "haut": Haut(),
-            "dreiecke": self.dreiecke,
-            "feinheit": f,
-            "unterteiler": self.cc,
-            "fein_dreiecke": f.dreiecke,
+            'haut': Haut(),
+            'dreiecke': self.dreiecke,
+            'feinheit': f,
+            'unterteiler': self.cc,
+            'fein_dreiecke': f.dreiecke,
         }
         np.testing.assert_allclose(F.ruhe(teil), f.punkte(self.punkte, self.dreiecke))
         for nummer in range(6):
             F.bild(teil, nummer)
-        self.assertLessEqual(len(teil["fein_folge"]), F.SPEICHER)
+        self.assertLessEqual(len(teil['fein_folge']), F.SPEICHER)
         np.testing.assert_allclose(F.bild(teil, 5), f.punkte(Haut.folge[5], self.dreiecke))

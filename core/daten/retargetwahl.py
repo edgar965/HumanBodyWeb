@@ -25,15 +25,15 @@ import re
 class Retargetwahl:
     """Was der Aufrufer am Retarget einstellen darf."""
 
-    __slots__ = ("groesse", "format", "fusskorrektur", "delta_norm", "ziel", "figur", "makro", "regler")
+    __slots__ = ('groesse', 'format', 'fusskorrektur', 'delta_norm', 'ziel', 'figur', 'makro', 'regler')
     #: Ein Name ohne Pfad — bei UMA ein Dateiname im Figurkatalog (wie
     #: `Umafigur.NAME`), bei SMPL der Koerpername aus `Smplfiguren.KOERPER`
     #: bzw. einer Formvariante. Der Endpunkt prueft danach gegen seinen
     #: eigenen Bestand; hier faellt nur weg, was nach Pfad aussieht.
-    FIGUR = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_ .\-]{0,120}$")
+    FIGUR = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_ .\-]{0,120}$')
 
     #: Werte, die in der Abfragezeichenkette „ja" bedeuten.
-    JA = ("1", "true")
+    JA = ('1', 'true')
     #: Zielskelette (`target=`): das DEF-Skelett, die UMA-Figur aus dem
     #: Figurkatalog (05.09.2026), der SMPL-Koerper oder die MakeHuman-Figur
     #: (07.09.2026). Der erste Eintrag ist die Vorgabe.
@@ -44,31 +44,31 @@ class Retargetwahl:
     #: `genesis9` (17.09.2026): das Daz-Rig aus `Genesis9.dsf`, gerechnet auf
     #: der Reglerstellung (`regler` im Rumpf) — die Gelenke wandern mit den
     #: Morphs. `figur` traegt den Katalognamen (basis, feminine, amala …).
-    ZIELE = ("def", "uma", "smpl", "makehuman", "umapython", "genesis9")
+    ZIELE = ('def', 'uma', 'smpl', 'makehuman', 'umapython', 'genesis9')
     #: Ziele, deren `figur` ein GLB-Dateiname sein muss.
-    GLB_ZIELE = ("uma",)
+    GLB_ZIELE = ('uma',)
 
     def __init__(self, werte, vorgabe_groesse):
-        self.groesse = float(werte.get("body_height", vorgabe_groesse))
-        self.format = werte.get("format", None)
-        self.fusskorrektur = str(werte.get("foot_correction", "")).lower() in self.JA
-        self.delta_norm = self._dreiwertig(werte.get("delta_norm", ""))
-        self.ziel = self._ziel(werte.get("target"))
-        self.figur = self._figur(werte.get("figur"), self.ziel)
+        self.groesse = float(werte.get('body_height', vorgabe_groesse))
+        self.format = werte.get('format', None)
+        self.fusskorrektur = str(werte.get('foot_correction', '')).lower() in self.JA
+        self.delta_norm = self._dreiwertig(werte.get('delta_norm', ''))
+        self.ziel = self._ziel(werte.get('target'))
+        self.figur = self._figur(werte.get('figur'), self.ziel)
         # Die Reglerstellung der MakeHuman-Figur (07.09.2026). Ihr Skelett
         # sind Mittelwerte von Punkten DIESER Stellung — ohne sie stuende
         # das Ziel in der Vorgabefigur, und die Bewegung landete auf einem
         # anderen Koerper als dem in der Szene. 269 Regler passen in keine
         # Abfragezeichenkette; sie kommen deshalb aus dem JSON-Rumpf.
         rumpf = werte if isinstance(werte, dict) else {}
-        self.makro = rumpf.get("makro")
-        self.regler = rumpf.get("regler")
+        self.makro = rumpf.get('makro')
+        self.regler = rumpf.get('regler')
 
     @classmethod
     def _ziel(cls, roh):
         ziel = (roh or cls.ZIELE[0]).lower()
         if ziel not in cls.ZIELE:
-            raise ValueError("Unbekanntes Ziel %r — erlaubt: %s" % (ziel, ", ".join(cls.ZIELE)))
+            raise ValueError('Unbekanntes Ziel %r — erlaubt: %s' % (ziel, ', '.join(cls.ZIELE)))
         return ziel
 
     @classmethod
@@ -78,31 +78,31 @@ class Retargetwahl:
         `UmaKleidung_bewegt.glb` traegt einen anders gedrehten Wurzelknoten;
         die Hueftspur landete damit in der falschen Achse (Hoehe in X), und
         jede UMA-Figur der Szene lag bei `0101_Boden` flach am Boden."""
-        figur = (roh or "").strip() or None
+        figur = (roh or '').strip() or None
         if figur is None:
             return None
-        if not cls.FIGUR.match(figur) or ".." in figur:
-            raise ValueError("Ungültiger Figurname %r" % (figur,))
-        if ziel in cls.GLB_ZIELE and not figur.lower().endswith(".glb"):
-            raise ValueError("Ungültiger Figurname %r" % (figur,))
+        if not cls.FIGUR.match(figur) or '..' in figur:
+            raise ValueError('Ungültiger Figurname %r' % (figur,))
+        if ziel in cls.GLB_ZIELE and not figur.lower().endswith('.glb'):
+            raise ValueError('Ungültiger Figurname %r' % (figur,))
         return figur
 
     @staticmethod
     def _dreiwertig(roh):
         """`'1'` -> True, `'0'` -> False, sonst None (Format entscheidet)."""
         text = str(roh).lower()
-        if text == "1":
+        if text == '1':
             return True
-        if text == "0":
+        if text == '0':
             return False
         return None
 
     def __repr__(self):
-        return "<Retargetwahl %.2f m, %s, Fuss=%s, Delta=%s, Ziel=%s%s>" % (
+        return '<Retargetwahl %.2f m, %s, Fuss=%s, Delta=%s, Ziel=%s%s>' % (
             self.groesse,
-            self.format or "erkannt",
+            self.format or 'erkannt',
             self.fusskorrektur,
             self.delta_norm,
             self.ziel,
-            " " + self.figur if self.figur else "",
+            ' ' + self.figur if self.figur else '',
         )

@@ -18,7 +18,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "reiterzuordnung.js")
+MODUL = Jsmodul('gemeinsam', 'reiterzuordnung.js')
 
 SKRIPT = """
 const { Reiterzuordnung } = await import(MODUL);
@@ -67,4 +67,4 @@ class Zuordnung(SimpleTestCase):
 
     def test_die_zuordnung_stimmt(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"))
+        self.assertTrue(ausgabe.get('ok'))

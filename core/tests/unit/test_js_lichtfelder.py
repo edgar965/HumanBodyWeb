@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("bvh_studio", "eigenschaften", "lichtfelder.js")
+MODUL = Jsmodul('bvh_studio', 'eigenschaften', 'lichtfelder.js')
 
 SKRIPT = """
 const { Lichtfelder } = await import(MODUL);
@@ -85,4 +85,4 @@ class LichtfelderTest(SimpleTestCase):
     """Die gemeinsamen Lichtfelder, in Node ausgeführt."""
 
     def test_masken_und_grenzen_bleiben(self):
-        self.assertEqual(MODUL.laufen(SKRIPT), {"fertig": True})
+        self.assertEqual(MODUL.laufen(SKRIPT), {'fertig': True})

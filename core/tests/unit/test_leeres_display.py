@@ -23,12 +23,12 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 WURZEL = Path(settings.BASE_DIR)
-JS_ORDNER = [WURZEL / "static" / "viewer", WURZEL / "static" / "js"]
-HTML = list((WURZEL / "templates").rglob("*.html"))
-CSS = list((WURZEL / "static" / "css").rglob("*.css")) + HTML
+JS_ORDNER = [WURZEL / 'static' / 'viewer', WURZEL / 'static' / 'js']
+HTML = list((WURZEL / 'templates').rglob('*.html'))
+CSS = list((WURZEL / 'static' / 'css').rglob('*.css')) + HTML
 
 LEER = re.compile(r"(\w+)\.style\.display\s*=\s*[^;]*?(?<![\w'\"])(''|\"\")")
-VERSTECKKLASSEN = ("hb-versteckt", "hb-display-none", "hb-display-none-b", "hb-kontextmenue")
+VERSTECKKLASSEN = ('hb-versteckt', 'hb-display-none', 'hb-display-none-b', 'hb-kontextmenue')
 REICHWEITE = 3  # Zeilen davor/danach, in denen eine Klassen-Umschaltung zählt
 
 
@@ -38,14 +38,14 @@ class LeeresDisplayTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.html = {p: p.read_text(encoding="utf-8", errors="replace") for p in HTML}
-        cls.css = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in CSS)
+        cls.html = {p: p.read_text(encoding='utf-8', errors='replace') for p in HTML}
+        cls.css = '\n'.join(p.read_text(encoding='utf-8', errors='replace') for p in CSS)
 
     # -- Hilfen ---------------------------------------------------------------
 
     @staticmethod
     def _element_id(zeilen, var, nr):
-        kopf = "\n".join(zeilen[:nr])
+        kopf = '\n'.join(zeilen[:nr])
         muster = r"%s\s*=\s*[^;\n]*getElementById\(['\"]([^'\"]+)['\"]\)" % re.escape(var)
         treffer = list(re.finditer(muster, kopf))
         if treffer:
@@ -60,17 +60,17 @@ class LeeresDisplayTest(SimpleTestCase):
             for m in re.finditer(r'<[a-z]+[^>]*\bid="%s"[^>]*>' % re.escape(kennung), t):
                 k = re.search(r'class="([^"]*)"', m.group(0))
                 klassen = k.group(1).split() if k else []
-                gruende += ["." + c for c in klassen if c in VERSTECKKLASSEN]
-        if re.search(r"#%s\b[^{]*\{[^}]*display\s*:\s*none" % re.escape(kennung), self.css):
-            gruende.append("#" + kennung)
+                gruende += ['.' + c for c in klassen if c in VERSTECKKLASSEN]
+        if re.search(r'#%s\b[^{]*\{[^}]*display\s*:\s*none' % re.escape(kennung), self.css):
+            gruende.append('#' + kennung)
         return gruende
 
     @staticmethod
     def _klasseUmgeschaltet(zeilen, var, nr):
-        fenster = "\n".join(zeilen[max(0, nr - 1 - REICHWEITE) : nr + REICHWEITE])
+        fenster = '\n'.join(zeilen[max(0, nr - 1 - REICHWEITE) : nr + REICHWEITE])
         return (
             re.search(
-                r"%s\.classList\.(toggle|remove)\(\s*['\"](%s)" % (re.escape(var), "|".join(VERSTECKKLASSEN)),
+                r"%s\.classList\.(toggle|remove)\(\s*['\"](%s)" % (re.escape(var), '|'.join(VERSTECKKLASSEN)),
                 fenster,
             )
             is not None
@@ -81,10 +81,10 @@ class LeeresDisplayTest(SimpleTestCase):
     def test_leeres_display_zeigt_nichts(self):
         befunde = []
         for ordner in JS_ORDNER:
-            for p in ordner.rglob("*.js"):
-                if "vendor" in p.parts:
+            for p in ordner.rglob('*.js'):
+                if 'vendor' in p.parts:
                     continue
-                zeilen = p.read_text(encoding="utf-8", errors="replace").split("\n")
+                zeilen = p.read_text(encoding='utf-8', errors='replace').split('\n')
                 for nr, zeile in enumerate(zeilen, 1):
                     for m in LEER.finditer(zeile):
                         var = m.group(1)
@@ -95,7 +95,7 @@ class LeeresDisplayTest(SimpleTestCase):
                         if not gruende or self._klasseUmgeschaltet(zeilen, var, nr):
                             continue
                         befunde.append(
-                            "%s:%d  #%s versteckt durch %s"
-                            % (p.relative_to(WURZEL), nr, kennung, ", ".join(gruende))
+                            '%s:%d  #%s versteckt durch %s'
+                            % (p.relative_to(WURZEL), nr, kennung, ', '.join(gruende))
                         )
-        self.assertEqual(befunde, [], "\n" + "\n".join(befunde))
+        self.assertEqual(befunde, [], '\n' + '\n'.join(befunde))

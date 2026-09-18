@@ -14,7 +14,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "figurwahlzeile.js")
+MODUL = Jsmodul('gemeinsam', 'figurwahlzeile.js')
 
 SKRIPT = """
 const { Figurwahlzeile } = await import(MODUL);
@@ -40,4 +40,4 @@ class FigurwahlzeileTest(SimpleTestCase):
 
     def test_zeile_maskiert_den_namen_und_zeigt_werkzeuge_nur_mit_unterzeile(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

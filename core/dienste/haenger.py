@@ -28,10 +28,10 @@ from pathlib import Path
 from django.conf import settings
 from django.utils import timezone
 
-from .laufende_prozesse import LaufendeProzesse
 from ..pipelines.prozesspruefung import Prozesspruefung
+from .laufende_prozesse import LaufendeProzesse
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Haenger:
@@ -39,18 +39,18 @@ class Haenger:
 
     #: Zustände, in denen noch gerechnet werden sollte.
     ARBEITET = (
-        "detecting_2d",
-        "openpose",
-        "openpose_csv",
-        "mediapipe",
-        "lifting_3d",
-        "mocapnet",
-        "v4_processing",
-        "processing",
+        'detecting_2d',
+        'openpose',
+        'openpose_csv',
+        'mediapipe',
+        'lifting_3d',
+        'mocapnet',
+        'v4_processing',
+        'processing',
     )
 
     #: Zustände, in denen ein Auftrag die Sperre hält.
-    LAEUFT = ("processing", "v4_processing")
+    LAEUFT = ('processing', 'v4_processing')
 
     #: Minuten ohne Fortschritt, nach denen ein Auftrag als hängend gilt.
     STILL_MINUTEN = 5
@@ -68,10 +68,10 @@ class Haenger:
             return False
         if cls.prozess_lebt(str(job.id)):
             return False
-        job.status = "failed"
-        job.error_message = "Pipeline stalled (no progress for %d min, no running process)" % (alter // 60)
-        job.save(update_fields=["status", "error_message"])
-        logger.warning("Auftrag %s als hängend erkannt (%d min ohne Fortschritt)", job.id, alter // 60)
+        job.status = 'failed'
+        job.error_message = 'Pipeline stalled (no progress for %d min, no running process)' % (alter // 60)
+        job.save(update_fields=['status', 'error_message'])
+        logger.warning('Auftrag %s als hängend erkannt (%d min ohne Fortschritt)', job.id, alter // 60)
         return True
 
     @staticmethod
@@ -84,13 +84,13 @@ class Haenger:
 
         if Auftragsarbeiter.lebt(jid):
             return True
-        pid_datei = Path(settings.MEDIA_ROOT) / "output" / jid / "pipeline.pid"
+        pid_datei = Path(settings.MEDIA_ROOT) / 'output' / jid / 'pipeline.pid'
         if not pid_datei.exists():
             return False
         try:
             return Prozesspruefung.lebt(int(pid_datei.read_text().strip()))
         except ValueError, OSError:
-            logger.debug("PID-Datei %s nicht lesbar", pid_datei, exc_info=True)
+            logger.debug('PID-Datei %s nicht lesbar', pid_datei, exc_info=True)
             return False
 
     @classmethod
@@ -104,5 +104,5 @@ class Haenger:
 
         grenze = timezone.now() - timezone.timedelta(minutes=cls.FREIGABE_MINUTEN)
         return BVHJob.objects.filter(status__in=cls.LAEUFT, updated_at__lt=grenze).update(
-            status="failed", error_message="Auto-cancelled: stuck > %d min" % cls.FREIGABE_MINUTEN
+            status='failed', error_message='Auto-cancelled: stuck > %d min' % cls.FREIGABE_MINUTEN
         )

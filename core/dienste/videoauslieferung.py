@@ -24,7 +24,7 @@ from pathlib import Path
 from django.conf import settings
 from django.http import FileResponse, HttpResponseNotFound, StreamingHttpResponse
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Videoauslieferung:
@@ -32,8 +32,8 @@ class Videoauslieferung:
 
     #: Wie viel je Schritt aus der Datei gelesen wird.
     HAPPEN = 8192
-    ERSATZTYP = "video/mp4"
-    ENDUNGEN = (".mp4", ".webm", ".avi", ".mov")
+    ERSATZTYP = 'video/mp4'
+    ENDUNGEN = ('.mp4', '.webm', '.avi', '.mov')
 
     def __init__(self, job):
         self.job = job
@@ -54,7 +54,7 @@ class Videoauslieferung:
         return pfad if pfad.exists() else None
 
     def _ausgabeordner(self):
-        return Path(settings.MEDIA_ROOT) / "output" / str(self.job.id)
+        return Path(settings.MEDIA_ROOT) / 'output' / str(self.job.id)
 
     def _stamm(self):
         if self.job.video_file:
@@ -67,15 +67,15 @@ class Videoauslieferung:
             return None
         stamm = self._stamm()
         for kandidat in (
-            ordner / stamm / "0_input_video.mp4",
-            ordner / f"{stamm}.mp4",
-            ordner / f"{stamm}.webm",
+            ordner / stamm / '0_input_video.mp4',
+            ordner / f'{stamm}.mp4',
+            ordner / f'{stamm}.webm',
         ):
             if kandidat.exists():
                 return kandidat
         unterordner = ordner / stamm if (ordner / stamm).is_dir() else ordner
         for datei in unterordner.iterdir():
-            if datei.suffix.lower() in Videoauslieferung.ENDUNGEN and datei.name.startswith("0_"):
+            if datei.suffix.lower() in Videoauslieferung.ENDUNGEN and datei.name.startswith('0_'):
                 return datei
         return None
 
@@ -85,7 +85,7 @@ class Videoauslieferung:
         """Antwort mit Bereichsunterstuetzung -- oder 404."""
         datei = self.datei()
         if datei is None:
-            return HttpResponseNotFound("Video file not found")
+            return HttpResponseNotFound('Video file not found')
         return Videoauslieferung.mit_bereich(anfrage, str(datei))
 
     @staticmethod
@@ -93,37 +93,37 @@ class Videoauslieferung:
         """Eine Videodatei ausliefern, `Range` beachtet."""
         typ = mimetypes.guess_type(str(pfad))[0] or Videoauslieferung.ERSATZTYP
         groesse = os.path.getsize(pfad)
-        kopf = anfrage.META.get("HTTP_RANGE", "")
+        kopf = anfrage.META.get('HTTP_RANGE', '')
         if not kopf:
-            antwort = FileResponse(open(pfad, "rb"), content_type=typ)
-            antwort["Accept-Ranges"] = "bytes"
-            antwort["Content-Length"] = groesse
+            antwort = FileResponse(open(pfad, 'rb'), content_type=typ)
+            antwort['Accept-Ranges'] = 'bytes'
+            antwort['Content-Length'] = groesse
             return antwort
         von, bis = Videoauslieferung._bereich(kopf, groesse)
         laenge = bis - von + 1
         antwort = StreamingHttpResponse(
             Videoauslieferung._happen(pfad, von, laenge), status=206, content_type=typ
         )
-        antwort["Content-Length"] = laenge
-        antwort["Content-Range"] = f"bytes {von}-{bis}/{groesse}"
-        antwort["Accept-Ranges"] = "bytes"
+        antwort['Content-Length'] = laenge
+        antwort['Content-Range'] = f'bytes {von}-{bis}/{groesse}'
+        antwort['Accept-Ranges'] = 'bytes'
         return antwort
 
     @staticmethod
     def _bereich(kopf, groesse):
         """`bytes=START-ENDE` deuten; bei Unfug die ganze Datei."""
         try:
-            teile = kopf.replace("bytes=", "").split("-")
+            teile = kopf.replace('bytes=', '').split('-')
             von = int(teile[0]) if teile[0] else 0
             bis = int(teile[1]) if teile[1] else groesse - 1
         except ValueError, IndexError:
-            logger.debug("Range-Kopfzeile unbrauchbar: %r", kopf, exc_info=True)
+            logger.debug('Range-Kopfzeile unbrauchbar: %r', kopf, exc_info=True)
             von, bis = 0, groesse - 1
         return von, min(bis, groesse - 1)
 
     @staticmethod
     def _happen(pfad, von, laenge):
-        with open(pfad, "rb") as datei:
+        with open(pfad, 'rb') as datei:
             datei.seek(von)
             rest = laenge
             while rest > 0:

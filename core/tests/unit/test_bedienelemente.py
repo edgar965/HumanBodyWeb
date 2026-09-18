@@ -24,7 +24,7 @@ from django.test import SimpleTestCase
 from ._bedienelemente import Bedienelemente
 
 WURZEL = settings.BASE_DIR
-BEISPIEL = WURZEL.joinpath("core", "tests", "unit", "beispiele", "bedienung")
+BEISPIEL = WURZEL.joinpath('core', 'tests', 'unit', 'beispiele', 'bedienung')
 
 # Bekannte stumme Bedienelemente: Kennung → warum sie (noch) dastehen.
 #
@@ -32,14 +32,14 @@ BEISPIEL = WURZEL.joinpath("core", "tests", "unit", "beispiele", "bedienung")
 # behebt, nimmt es heraus — `test_die_ausnahmeliste_ist_aktuell` hält beides
 # fest, damit die Liste nicht zum Deckel über neuen Befunden wird.
 AUSNAHMEN = {
-    "smooth-sigma": "Szene, Reiter Animation: Der Glättungsbereich hat nie "
-    "einen Hörer bekommen (gefunden 09.09.2026). Die "
-    "Funktion gibt es im BVH-Studio "
-    "(`bvh_studio/werkzeug_glaettung.js`, dort "
-    "`tool-smooth-*`), in der Szene nicht.",
-    "smooth-apply": 'dasselbe — der Knopf „Smooth" tut nichts.',
-    "smooth-reset": 'dasselbe — der Knopf „Reset" tut nichts.',
-    "tool-ground-method": 'BVH-Studio: Auswahlfeld „Bodenmethode" ohne Leser (gefunden 09.09.2026).',
+    'smooth-sigma': 'Szene, Reiter Animation: Der Glättungsbereich hat nie '
+    'einen Hörer bekommen (gefunden 09.09.2026). Die '
+    'Funktion gibt es im BVH-Studio '
+    '(`bvh_studio/werkzeug_glaettung.js`, dort '
+    '`tool-smooth-*`), in der Szene nicht.',
+    'smooth-apply': 'dasselbe — der Knopf „Smooth" tut nichts.',
+    'smooth-reset': 'dasselbe — der Knopf „Reset" tut nichts.',
+    'tool-ground-method': 'BVH-Studio: Auswahlfeld „Bodenmethode" ohne Leser (gefunden 09.09.2026).',
 }
 
 
@@ -58,25 +58,25 @@ class KunstbeispielTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.stumm = [k for k, _, _ in _pruefer(BEISPIEL).ohne_hoerer("probe.html")]
+        self.stumm = [k for k, _, _ in _pruefer(BEISPIEL).ohne_hoerer('probe.html')]
 
     def test_der_tote_knopf_wird_gefunden(self):
-        self.assertIn("probe-ohne-hoerer", self.stumm)
+        self.assertIn('probe-ohne-hoerer', self.stumm)
 
     def test_ein_woertlicher_hoerer_zaehlt(self):
-        self.assertNotIn("probe-mit-hoerer", self.stumm)
+        self.assertNotIn('probe-mit-hoerer', self.stumm)
 
     def test_ein_delegierter_hoerer_ueber_die_klasse_zaehlt(self):
-        self.assertNotIn("probe-ueber-klasse", self.stumm)
+        self.assertNotIn('probe-ueber-klasse', self.stumm)
 
     def test_eine_zusammengesetzte_kennung_zaehlt(self):
         """`${vorsilbe}-rauheit` — sonst meldete der Prüfer allein auf der
         Szene-Seite über sechzig lebende Regler als tot."""
-        self.assertNotIn("probe-mit-vorsilbe-rauheit", self.stumm)
+        self.assertNotIn('probe-mit-vorsilbe-rauheit', self.stumm)
 
     def test_ein_formularfeld_braucht_kein_skript(self):
         """`name="…"` wird serverseitig im POST gelesen."""
-        self.assertNotIn("probe-pfad", self.stumm)
+        self.assertNotIn('probe-pfad', self.stumm)
 
     def test_genau_ein_befund(self):
         self.assertEqual(len(self.stumm), 1, self.stumm)
@@ -99,8 +99,8 @@ class AlleSeitenTest(SimpleTestCase):
         self.assertEqual(
             neu,
             {},
-            "Bedienelemente ohne jeden Hörer — entweder verdrahten oder mit "
-            "Begründung in AUSNAHMEN eintragen: %s" % sorted(neu),
+            'Bedienelemente ohne jeden Hörer — entweder verdrahten oder mit '
+            'Begründung in AUSNAHMEN eintragen: %s' % sorted(neu),
         )
 
     def test_die_ausnahmeliste_ist_aktuell(self):
@@ -111,7 +111,7 @@ class AlleSeitenTest(SimpleTestCase):
         stehen gelassener Konformitätstest.
         """
         erledigt = [k for k in AUSNAHMEN if k not in self.befunde]
-        self.assertEqual(erledigt, [], "nicht mehr stumm, also aus AUSNAHMEN nehmen: %s" % erledigt)
+        self.assertEqual(erledigt, [], 'nicht mehr stumm, also aus AUSNAHMEN nehmen: %s' % erledigt)
 
     def test_die_szene_seite_wird_wirklich_geprueft(self):
         """Ein Prüfer, der nichts findet, weil er nichts liest, meldet grün.
@@ -120,6 +120,6 @@ class AlleSeitenTest(SimpleTestCase):
         passiert (`Humanbodybaum.fehlende()` gibt es deswegen).
         """
         pruefer = _pruefer()
-        namen = pruefer.kette("scene_config.html")
+        namen = pruefer.kette('scene_config.html')
         self.assertGreater(len(namen), 10, namen)
         self.assertGreater(len(pruefer.elemente(namen)), 150)

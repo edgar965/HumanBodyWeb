@@ -14,10 +14,10 @@ eine gemeinsame Hilfsmethode statt jede fuer sich.
 
 import os
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 
-from ..dienste.systemzustand import Systemzustand
 from ..dienste.ergebnisablage import Ergebnisablage
+from ..dienste.systemzustand import Systemzustand
 from ..models import BVHJob
 
 
@@ -27,7 +27,7 @@ class Webseiten:
     @staticmethod
     def start(request):
         """`/` zeigt die Ergebnisseite."""
-        return redirect("standalone_result")
+        return redirect('standalone_result')
 
     @staticmethod
     def werkzeugstatus(request):
@@ -39,10 +39,10 @@ class Webseiten:
         """
         return render(
             request,
-            "test_mocapnet.html",
+            'test_mocapnet.html',
             {
-                "status": Systemzustand.holen(),
-                "recent_jobs": BVHJob.objects.all()[:10],
+                'status': Systemzustand.holen(),
+                'recent_jobs': BVHJob.objects.all()[:10],
             },
         )
 
@@ -57,7 +57,7 @@ class Webseiten:
     @classmethod
     def auftragsseite(cls, request, kennung):
         """Der Fortschritt eines laufenden Auftrags."""
-        return render(request, "job_status.html", {"job": cls._auftrag(kennung)})
+        return render(request, 'job_status.html', {'job': cls._auftrag(kennung)})
 
     @classmethod
     def ergebnisseite(cls, request, kennung):
@@ -65,8 +65,8 @@ class Webseiten:
         auftrag = cls._auftrag(kennung)
         return render(
             request,
-            "job_result.html",
-            {"job": auftrag, "bibliothekskopie": Ergebnisablage.kopie_von(auftrag)},
+            'job_result.html',
+            {'job': auftrag, 'bibliothekskopie': Ergebnisablage.kopie_von(auftrag)},
         )
 
     # -------------------------------------------------------------- Listen
@@ -74,48 +74,48 @@ class Webseiten:
     @staticmethod
     def ergebnisauswahl(request):
         """Ergebnisseite mit Auswahlliste statt festem Auftrag."""
-        fertige = BVHJob.objects.filter(status="complete").order_by("-created_at")
+        fertige = BVHJob.objects.filter(status='complete').order_by('-created_at')
         auftrag = None
-        gewaehlt = request.GET.get("job")
+        gewaehlt = request.GET.get('job')
         if gewaehlt:
-            auftrag = get_object_or_404(BVHJob, id=gewaehlt, status="complete")
+            auftrag = get_object_or_404(BVHJob, id=gewaehlt, status='complete')
         elif fertige.exists():
             auftrag = fertige.first()
         return render(
             request,
-            "standalone_result.html",
-            {"job": auftrag, "jobs": fertige, "bibliothekskopie": Ergebnisablage.kopie_von(auftrag)},
+            'standalone_result.html',
+            {'job': auftrag, 'jobs': fertige, 'bibliothekskopie': Ergebnisablage.kopie_von(auftrag)},
         )
 
     @staticmethod
     def fertigliste(request):
         """Alle fertigen Auftraege mit Vorschaubild."""
-        auftraege = BVHJob.objects.filter(status="complete")
+        auftraege = BVHJob.objects.filter(status='complete')
         # `bvh_basename` haengt nur fuer die Vorlage am Objekt.
         for auftrag in auftraege:
-            auftrag.bvh_basename = os.path.basename(auftrag.bvh_file) if auftrag.bvh_file else "—"
-        return render(request, "processed.html", {"jobs": auftraege})
+            auftrag.bvh_basename = os.path.basename(auftrag.bvh_file) if auftrag.bvh_file else '—'
+        return render(request, 'processed.html', {'jobs': auftraege})
 
     @staticmethod
     def bvhbibliothek(request):
         """BVH-Dateien durchsuchen — seitenweise, siehe Bvhbibliothek."""
         from ..dienste.bvhbibliothek import Bvhbibliothek
 
-        return render(request, "browser.html", Bvhbibliothek.aus_anfrage(request).zusammenhang())
+        return render(request, 'browser.html', Bvhbibliothek.aus_anfrage(request).zusammenhang())
 
     @staticmethod
     def webcam(request):
         """Aufnahme ueber die angeschlossene Kamera."""
-        return render(request, "webcam.html")
+        return render(request, 'webcam.html')
 
     # ------------------------------------------------------ Weiterleitungen
 
     @staticmethod
     def einstellungen(request):
         """`/settings/` zeigt auf `/settings/model/`."""
-        return redirect("settings_model")
+        return redirect('settings_model')
 
     @staticmethod
     def einstellungen_videobvh(request):
         """Alte Adresse — jetzt die 2D-Einstellungen."""
-        return redirect("settings_videobvh_2d")
+        return redirect('settings_videobvh_2d')

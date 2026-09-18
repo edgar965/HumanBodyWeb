@@ -26,8 +26,6 @@ from pathlib import Path
 import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
-
-from ._umaattrappe import Umaattrappe
 from humanbody_core.quaternion import Quat  # noqa: E402
 from humanbody_core.skeleton import (  # noqa: E402
     Skeleton,
@@ -38,14 +36,16 @@ from humanbody_core.skeleton import (  # noqa: E402
 from humanbody_core.skeleton.retarget.bvhauswertung import (  # noqa: E402
     Bvhauswertung,
 )
+
 from ._sicher import Sicher
+from ._umaattrappe import Umaattrappe
 
 #: (BVH-Knochen, sein Kind fuer die Richtung, DEF-Name, UMA-Name)
 PROBEN = [
-    ("LeftArm", "LeftForeArm", "DEF-upper_arm.L", "LeftArm"),
-    ("LeftForeArm", "LeftHand", "DEF-forearm.L", "LeftForeArm"),
-    ("LeftUpLeg", "LeftLeg", "DEF-thigh.L", "LeftUpLeg"),
-    ("Spine", "Spine1", "DEF-spine.001", "Spine"),
+    ('LeftArm', 'LeftForeArm', 'DEF-upper_arm.L', 'LeftArm'),
+    ('LeftForeArm', 'LeftHand', 'DEF-forearm.L', 'LeftForeArm'),
+    ('LeftUpLeg', 'LeftLeg', 'DEF-thigh.L', 'LeftUpLeg'),
+    ('Spine', 'Spine1', 'DEF-spine.001', 'Spine'),
 ]
 GRAD_TOLERANZ = 1.0
 
@@ -87,13 +87,13 @@ class RetargetZielUmaTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        basis = Path(settings.BASE_DIR).parent / "ProjektTemp"
+        basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
         basis.mkdir(exist_ok=True)
-        cls.ordner = tempfile.mkdtemp(prefix="retarget_uma_", dir=str(basis))
-        pfad = Path(cls.ordner) / "probe.bvh"
-        pfad.write_text(Umaattrappe.bvh_text([{}, {}, {"LeftArm": (-45, 0, 0)}]), encoding="utf-8")
+        cls.ordner = tempfile.mkdtemp(prefix='retarget_uma_', dir=str(basis))
+        pfad = Path(cls.ordner) / 'probe.bvh'
+        pfad.write_text(Umaattrappe.bvh_text([{}, {}, {'LeftArm': (-45, 0, 0)}]), encoding='utf-8')
         cls.bvh = parse_bvh(str(pfad))
-        cls.format = Sicher.wert(Skeleton.detect_format(cls.bvh.names), "Format")
+        cls.format = Sicher.wert(Skeleton.detect_format(cls.bvh.names), 'Format')
         cls.probe = Zielprobe(cls.bvh)
         cls.uma = SkeletonGeometry.from_three(Umaattrappe.gedreht(), (0, 1, 0))
         cls.uma_ergebnis = cls.format.retarget_to_rigify(
@@ -102,7 +102,7 @@ class RetargetZielUmaTest(SimpleTestCase):
             mapping=Umazuordnung.fuer(cls.format),
             skip_bones=Umazuordnung.ausnahmen(cls.format),
         )
-        cls.defskel = SkeletonGeometry.from_json(str(settings.HUMANBODY_DATA_DIR / "def_skeleton.json"))
+        cls.defskel = SkeletonGeometry.from_json(str(settings.HUMANBODY_DATA_DIR / 'def_skeleton.json'))
         cls.def_ergebnis = cls.format.retarget_to_rigify(cls.bvh, cls.defskel)
 
     @classmethod
@@ -117,16 +117,16 @@ class RetargetZielUmaTest(SimpleTestCase):
             self.assertLess(
                 Zielprobe.winkel(ist, soll),
                 GRAD_TOLERANZ,
-                "%s Bild %d: %s statt %s" % (zielname, bild, ist, soll),
+                '%s Bild %d: %s statt %s' % (zielname, bild, ist, soll),
             )
 
     def test_die_attrappe_ist_mixamo(self):
-        self.assertEqual(self.format.FORMAT, "MIXAMO")
+        self.assertEqual(self.format.FORMAT, 'MIXAMO')
 
     def test_die_gegenprobe_bewegt_sich_wirklich(self):
         """Bild 2 senkt den Oberarm um 45 Grad — sonst waere alles unten trivial."""
-        a = self.probe.bvh_richtung("LeftArm", "LeftForeArm", 0)
-        b = self.probe.bvh_richtung("LeftArm", "LeftForeArm", 2)
+        a = self.probe.bvh_richtung('LeftArm', 'LeftForeArm', 0)
+        b = self.probe.bvh_richtung('LeftArm', 'LeftForeArm', 2)
         self.assertAlmostEqual(Zielprobe.winkel(a, b), 45.0, delta=0.01)
 
     def test_uma_knochen_folgen_der_bvh_richtung(self):
@@ -141,12 +141,12 @@ class RetargetZielUmaTest(SimpleTestCase):
 
     def test_die_spuren_tragen_uma_namen(self):
         namen = set(self.uma_ergebnis.tracks)
-        self.assertIn("LeftArm", namen)
-        self.assertIn("Hips", namen)
-        self.assertFalse([n for n in namen if n.startswith("DEF-")])
-        self.assertEqual(self.uma_ergebnis.position_track["bone"], "Hips")
+        self.assertIn('LeftArm', namen)
+        self.assertIn('Hips', namen)
+        self.assertFalse([n for n in namen if n.startswith('DEF-')])
+        self.assertEqual(self.uma_ergebnis.position_track['bone'], 'Hips')
 
     def test_nicht_zugeordnete_behalten_ihre_ruhelage(self):
         """`Global`, `Position`, die `*_end`-Spitzen: keine Spur, keine Drehung."""
-        for name in ("Global", "Position", "HeadAdjust_end"):
+        for name in ('Global', 'Position', 'HeadAdjust_end'):
             self.assertNotIn(name, self.uma_ergebnis.tracks)

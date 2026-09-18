@@ -35,7 +35,7 @@ class SaumbandTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.S = SaumbandTest._modul("saumband").Saumband
+        self.S = SaumbandTest._modul('saumband').Saumband
 
     def test_weg_tiefe_und_index(self):
         """Derselbe Streifen wie in `test_js_saumband`: Wege 2/5/9/15 mm,
@@ -63,38 +63,38 @@ class SaumbandTest(SimpleTestCase):
         self.assertTrue(np.all(np.isinf(self.S.abstaende(P, np.ones(16, bool), T))))
 
     def test_film_behaelt_das_band_hinter_der_rohrkante(self):
-        fm = SaumbandTest._modul("filmmasken")
+        fm = SaumbandTest._modul('filmmasken')
         kp, kt = Kunstkoerper.zylinder(0.10, 0.0, 1.0, 51, 36)
         sp, st = Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36)
-        koerper = {"name": "Koerper", "haut": _Haut(kp), "dreiecke": kt}
-        rohr = {"name": "rohr", "haut": _Haut(sp), "dreiecke": st}
+        koerper = {'name': 'Koerper', 'haut': _Haut(kp), 'dreiecke': kt}
+        rohr = {'name': 'rohr', 'haut': _Haut(sp), 'dreiecke': st}
         fm.Filmmasken.anwenden([koerper, rohr])
-        maske = koerper["maske"]
+        maske = koerper['maske']
         y_ruhe = kp[:, 1]
         # Verdeckt ab der Rohrkante — im Band (bis 15 cm auf der Haut hinter
         # der gezeichneten bei y<0,30 bzw. y>=0,70) liegt alles bis 0,42 und
         # ab 0,56; die Mitte (0,44–0,54) fällt weg.
-        band = maske & (koerper["abstand_haut"] <= self.S.BAND_M)
+        band = maske & (koerper['abstand_haut'] <= self.S.BAND_M)
         yb = y_ruhe[band]
         self.assertTrue(np.all((yb < 0.43) | (yb > 0.55)), sorted(set(np.round(yb, 2))))
         self.assertTrue(np.any(np.isclose(yb, 0.30)) and np.any(np.isclose(yb, 0.42)))
-        T = np.asarray(koerper["dreiecke_sichtbar"])
+        T = np.asarray(koerper['dreiecke_sichtbar'])
         ymax = y_ruhe[T].max(axis=1)
         ymin = y_ruhe[T].min(axis=1)
-        self.assertTrue(np.any(np.isclose(ymin, 0.30) & np.isclose(ymax, 0.32)), "Bandring fehlt")
-        self.assertTrue(np.any(np.isclose(ymin, 0.40) & np.isclose(ymax, 0.42)), "Bandende fehlt")
-        self.assertFalse(np.any((ymin > 0.43) & (ymax < 0.55)), "Dreieck jenseits des Bands")
+        self.assertTrue(np.any(np.isclose(ymin, 0.30) & np.isclose(ymax, 0.32)), 'Bandring fehlt')
+        self.assertTrue(np.any(np.isclose(ymin, 0.40) & np.isclose(ymax, 0.42)), 'Bandende fehlt')
+        self.assertFalse(np.any((ymin > 0.43) & (ymax < 0.55)), 'Dreieck jenseits des Bands')
         punkte, _dreiecke, _normalen = fm.Filmmasken.gerendert(koerper, 0)
         r = np.linalg.norm(punkte[:, [0, 2]], axis=1)
         innen = band & (y_ruhe > 0.33) & (y_ruhe < 0.67)
         self.assertTrue(np.allclose(r[innen], 0.10 - 0.010, atol=1e-6))
 
     def test_naht_teilt_sich_eine_normale(self):
-        G = SaumbandTest._modul("maskengeometrie").Geometrie
+        G = SaumbandTest._modul('maskengeometrie').Geometrie
         naht = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 0.5], [0, 1, 0]], float)
         N = G.normalen(naht, [[0, 1, 2], [3, 4, 5]])
         self.assertTrue(np.allclose(N[1], N[3]) and np.allclose(N[2], N[5]), N)
-        self.assertLess(abs(N[1, 2]), 1 - 1e-6, "Zwilling sieht nur seinen halben Fächer")
+        self.assertLess(abs(N[1, 2]), 1 - 1e-6, 'Zwilling sieht nur seinen halben Fächer')
         # Mit vorgerechneter Naht (der Film je Bild) dasselbe Ergebnis.
         self.assertTrue(np.allclose(G.normalen(naht, [[0, 1, 2], [3, 4, 5]], G.naht(naht)), N))
         gruppe = G.naht(naht)

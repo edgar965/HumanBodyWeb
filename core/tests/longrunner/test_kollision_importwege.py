@@ -44,20 +44,20 @@ class ImportwegeTest(SimpleTestCase):
     """Beide Ladewege, für beide Skripte."""
 
     #: Die Dateien mit dem zweizweigigen Vorspann.
-    SKRIPTE = ("warp_sim", "skinning_only")
+    SKRIPTE = ('warp_sim', 'skinning_only')
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.wurzel = Path(Humanbodypfad.setzen() or ".") / "collision"
+        cls.wurzel = Path(Humanbodypfad.setzen() or '.') / 'collision'
 
     def test_paketweg_laedt_beide(self):
         """`from collision import …` — der Weg der Prüfungen."""
         import importlib
 
         for name in self.SKRIPTE:
-            modul = importlib.import_module("collision.%s" % name)
-            self.assertTrue(hasattr(modul, "main"), "%s hat kein main()" % name)
+            modul = importlib.import_module('collision.%s' % name)
+            self.assertTrue(hasattr(modul, 'main'), '%s hat kein main()' % name)
 
     def test_skriptweg_laedt_beide(self):
         """Direkt gestartet — der Weg des Teilprozesses.
@@ -67,18 +67,18 @@ class ImportwegeTest(SimpleTestCase):
         genau das darf beim Laden nicht stören — `HAS_WARP` fängt es ab.
         """
         for name in self.SKRIPTE:
-            pfad = self.wurzel / ("%s.py" % name)
-            self.assertTrue(pfad.exists(), "%s fehlt" % pfad)
+            pfad = self.wurzel / ('%s.py' % name)
+            self.assertTrue(pfad.exists(), '%s fehlt' % pfad)
             lauf = subprocess.run(
-                [sys.executable, str(pfad), "--help"], capture_output=True, text=True, timeout=120
+                [sys.executable, str(pfad), '--help'], capture_output=True, text=True, timeout=120
             )
-            self.assertEqual(lauf.returncode, 0, "%s bricht als Skript ab:\n%s" % (name, lauf.stderr[-1500:]))
-            self.assertIn("--input", lauf.stdout)
+            self.assertEqual(lauf.returncode, 0, '%s bricht als Skript ab:\n%s' % (name, lauf.stderr[-1500:]))
+            self.assertIn('--input', lauf.stdout)
 
     def test_beide_zweige_stehen_im_vorspann(self):
         """Ohne den `else`-Zweig hätte der Teilprozess keinen Importweg."""
         for name in self.SKRIPTE:
-            text = (self.wurzel / ("%s.py" % name)).read_text(encoding="utf-8")
-            self.assertIn("if __package__:", text, "%s: der Paketweg fehlt" % name)
-            self.assertIn("from bakedatei import Bakedatei", text, "%s: der Skriptweg fehlt" % name)
-            self.assertIn("from .bakedatei import Bakedatei", text, "%s: der Paketweg fehlt" % name)
+            text = (self.wurzel / ('%s.py' % name)).read_text(encoding='utf-8')
+            self.assertIn('if __package__:', text, '%s: der Paketweg fehlt' % name)
+            self.assertIn('from bakedatei import Bakedatei', text, '%s: der Skriptweg fehlt' % name)
+            self.assertIn('from .bakedatei import Bakedatei', text, '%s: der Paketweg fehlt' % name)

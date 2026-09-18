@@ -24,8 +24,8 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "velocityskinning.js")
-FIXTURE = os.path.join(str(settings.TOOLS_ROOT), "VelocitySkinning_Python", "fixture.json")
+MODUL = Jsmodul('gemeinsam', 'velocityskinning.js')
+FIXTURE = os.path.join(str(settings.TOOLS_ROOT), 'VelocitySkinning_Python', 'fixture.json')
 
 SKRIPT = """
 const { Velocityskinning: V } = await import(MODUL);
@@ -89,15 +89,15 @@ class VelocityskinningJsTest(SimpleTestCase):
     def test_fixture_liegt_vor(self):
         self.assertTrue(
             os.path.isfile(FIXTURE),
-            "Fixture fehlt: %s — erzeugen mit `python14 VelocitySkinning_Python/fixture.py`" % FIXTURE,
+            'Fixture fehlt: %s — erzeugen mit `python14 VelocitySkinning_Python/fixture.py`' % FIXTURE,
         )
 
     def test_js_rechnet_wie_python(self):
-        with open(FIXTURE, encoding="utf-8") as datei:
+        with open(FIXTURE, encoding='utf-8') as datei:
             fixture = json.load(datei)
-        skript = SKRIPT.replace("FIXTURE;", json.dumps(fixture) + ";", 1)
+        skript = SKRIPT.replace('FIXTURE;', json.dumps(fixture) + ';', 1)
         ausgabe = MODUL.laufen(skript)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
         # Mindestens die Zufallsfaelle: 6 je Formel mit 2 bis 5 Punkten.
-        self.assertGreater(ausgabe["geprueft"], 200, ausgabe)
-        self.assertGreater(ausgabe["deckel"], 0, ausgabe)
+        self.assertGreater(ausgabe['geprueft'], 200, ausgabe)
+        self.assertGreater(ausgabe['deckel'], 0, ausgabe)

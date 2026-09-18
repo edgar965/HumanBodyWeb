@@ -28,10 +28,10 @@ class FertigTest(AufraeumenBasis):
         pfad = self.bvh(job)
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.status, "complete")
+        self.assertEqual(job.status, 'complete')
         self.assertEqual(job.progress, 100)
         self.assertEqual(job.bvh_file, str(pfad))
-        self.assertIn("recovered", job.progress_detail)
+        self.assertIn('recovered', job.progress_detail)
 
     def test_bvh_schlaegt_lebende_pid(self):
         """Reihenfolge: Das Ergebnis zählt, nicht der Prozess."""
@@ -40,15 +40,15 @@ class FertigTest(AufraeumenBasis):
         self.pid(job)
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.status, "complete")
-        self.assertEqual(self.beobachtet, [], "kein Beobachter mehr nötig")
+        self.assertEqual(job.status, 'complete')
+        self.assertEqual(self.beobachtet, [], 'kein Beobachter mehr nötig')
 
     def test_pid_datei_wird_entfernt(self):
         job = self.auftrag()
         self.bvh(job)
         self.pid(job, lebt=False)
         Startaufraeumen().durchgehen()
-        self.assertFalse((self.ordner(job) / "pipeline.pid").exists())
+        self.assertFalse((self.ordner(job) / 'pipeline.pid').exists())
 
     def test_rumpfdatei_gilt_nicht_als_ergebnis(self):
         """50 Byte BVH = Kopf ohne Bewegung."""
@@ -56,7 +56,7 @@ class FertigTest(AufraeumenBasis):
         self.bvh(job, bytes_=50)
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.status, "failed")
+        self.assertEqual(job.status, 'failed')
 
 
 class WeiterTest(AufraeumenBasis):
@@ -65,7 +65,7 @@ class WeiterTest(AufraeumenBasis):
         nummer = self.pid(job)
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.status, "processing", "bleibt laufend")
+        self.assertEqual(job.status, 'processing', 'bleibt laufend')
         self.assertEqual(self.beobachtet, [(str(job.id), nummer)])
 
     def test_tote_pid_gilt_als_gescheitert(self):
@@ -73,15 +73,15 @@ class WeiterTest(AufraeumenBasis):
         self.pid(job, lebt=False)
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.status, "failed")
+        self.assertEqual(job.status, 'failed')
         self.assertEqual(self.beobachtet, [])
 
     def test_unlesbare_pid_datei_ist_kein_absturz(self):
         job = self.auftrag()
-        (self.ordner(job) / "pipeline.pid").write_text("kaputt")
+        (self.ordner(job) / 'pipeline.pid').write_text('kaputt')
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.status, "failed")
+        self.assertEqual(job.status, 'failed')
 
 
 class GescheitertTest(AufraeumenBasis):
@@ -89,15 +89,15 @@ class GescheitertTest(AufraeumenBasis):
         job = self.auftrag()
         Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertIn("Neu starten", job.error_message)
+        self.assertIn('Neu starten', job.error_message)
 
     def test_fertige_auftraege_werden_nicht_angefasst(self):
-        job = self.auftrag(status="complete")
-        job.progress_detail = "unberührt"
+        job = self.auftrag(status='complete')
+        job.progress_detail = 'unberührt'
         job.save()
         zaehler = Startaufraeumen().durchgehen()
         job.refresh_from_db()
-        self.assertEqual(job.progress_detail, "unberührt")
+        self.assertEqual(job.progress_detail, 'unberührt')
         self.assertEqual(sum(zaehler.values()), 0)
 
     def test_zaehler_nennt_alle_drei_faelle(self):
@@ -106,4 +106,4 @@ class GescheitertTest(AufraeumenBasis):
         laeuft = self.auftrag()
         self.pid(laeuft, nummer=4712)
         self.auftrag()
-        self.assertEqual(Startaufraeumen().durchgehen(), {"fertig": 1, "weiter": 1, "gescheitert": 1})
+        self.assertEqual(Startaufraeumen().durchgehen(), {'fertig': 1, 'weiter': 1, 'gescheitert': 1})

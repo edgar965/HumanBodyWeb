@@ -32,42 +32,42 @@ class DatenfrischeTest(SimpleTestCase):
     databases = set()
 
     def test_api_antwort_wird_nicht_gespeichert(self):
-        antwort = DatenfrischeTest._durch("/api/character/model/Figur/")
-        self.assertEqual(antwort["Cache-Control"], Datenfrische.WERT)
-        self.assertEqual(antwort["Pragma"], "no-cache")
-        self.assertEqual(antwort["Expires"], "0")
+        antwort = DatenfrischeTest._durch('/api/character/model/Figur/')
+        self.assertEqual(antwort['Cache-Control'], Datenfrische.WERT)
+        self.assertEqual(antwort['Pragma'], 'no-cache')
+        self.assertEqual(antwort['Expires'], '0')
 
     def test_andere_wege_bleiben_unberuehrt(self):
         """Statik und Seiten regelt djangoBase — zwei Zustaendigkeiten fuer
         dieselbe Antwort waeren eine Quelle fuer Widersprueche."""
-        for pfad in ("/humanbody/scene/", "/statik/v-1/viewer/scene/state.js", "/hilfe/tests/"):
-            antwort = DatenfrischeTest._durch(pfad, HttpResponse("x"))
-            self.assertFalse(antwort.has_header("Cache-Control"), pfad)
+        for pfad in ('/humanbody/scene/', '/statik/v-1/viewer/scene/state.js', '/hilfe/tests/'):
+            antwort = DatenfrischeTest._durch(pfad, HttpResponse('x'))
+            self.assertFalse(antwort.has_header('Cache-Control'), pfad)
 
     def test_eine_eigene_angabe_bleibt_stehen(self):
         """Ein Endpunkt, der seine Frische selbst regelt, behaelt sie."""
-        eigen = JsonResponse({"a": 1})
-        eigen["Cache-Control"] = "public, max-age=600"
-        antwort = DatenfrischeTest._durch("/api/garmentcode/datei/x/y.json/", eigen)
-        self.assertEqual(antwort["Cache-Control"], "public, max-age=600")
+        eigen = JsonResponse({'a': 1})
+        eigen['Cache-Control'] = 'public, max-age=600'
+        antwort = DatenfrischeTest._durch('/api/garmentcode/datei/x/y.json/', eigen)
+        self.assertEqual(antwort['Cache-Control'], 'public, max-age=600')
 
     def test_die_middleware_haengt_in_der_kette(self):
-        self.assertIn("ui.datenfrische.Datenfrische", settings.MIDDLEWARE)
+        self.assertIn('ui.datenfrische.Datenfrische', settings.MIDDLEWARE)
 
     def test_ein_echter_endpunkt_liefert_den_header(self):
         """Der Fall, der den Befund vom 09.09.2026 abgefangen haette."""
-        antwort = Client().get("/api/character/poses/")
+        antwort = Client().get('/api/character/poses/')
         self.assertEqual(antwort.status_code, 200)
-        self.assertIn("no-store", antwort["Cache-Control"])
+        self.assertIn('no-store', antwort['Cache-Control'])
 
     def test_gegenprobe_die_pruefung_kann_ueberhaupt_fehlschlagen(self):
         """Ohne diesen Fall koennte `PRAEFIXE` leer sein und alles gruen."""
         self.assertTrue(Datenfrische.PRAEFIXE)
-        self.assertIn("/api/", Datenfrische.PRAEFIXE)
+        self.assertIn('/api/', Datenfrische.PRAEFIXE)
 
     @staticmethod
     def _durch(pfad, antwort=None):
         """Die Middleware mit einer Attrappen-Antwort durchlaufen."""
         anfrage = RequestFactory().get(pfad)
-        schicht = Datenfrische(lambda r: antwort or JsonResponse({"a": 1}))
+        schicht = Datenfrische(lambda r: antwort or JsonResponse({'a': 1}))
         return schicht(anfrage)

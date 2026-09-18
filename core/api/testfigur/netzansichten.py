@@ -23,14 +23,14 @@ class Testnetz:
     """Die Netzantwort der Testfassung für eine Anfrage."""
 
     #: Vorsilbe der Regler in der Abfragezeichenkette.
-    REGLER = "morph_"
+    REGLER = 'morph_'
 
     def __init__(self, anfrage):
         self.anfrage = anfrage
 
     def antwort(self):
         """Fertiges Wörterbuch für `JsonResponse` — oder None bei Rechenfehler."""
-        zustand = Testkern.zustand(self.anfrage.GET.get("body_type", Testkern.koerpertyp()))
+        zustand = Testkern.zustand(self.anfrage.GET.get('body_type', Testkern.koerpertyp()))
         self._regler_setzen(zustand)
         punkte = zustand.compute()
         if punkte is None:
@@ -51,7 +51,7 @@ class Testnetz:
                 # Der Regler kommt aus der Abfragezeichenkette. Ein Wert, der
                 # keine Zahl ist, heisst: Das Frontend schickt etwas anderes als
                 # gedacht — der Charakter sieht dann nur „irgendwie falsch" aus.
-                logger.warning("[test-charakter] Morph %r hat den unlesbaren Wert %r", name, wert)
+                logger.warning('[test-charakter] Morph %r hat den unlesbaren Wert %r', name, wert)
 
     def _unterteilt(self, unterteiler, rohpunkte):
         """Die gerechneten Punkte durch die Unterteilung — nicht neu rechnen.
@@ -63,8 +63,8 @@ class Testnetz:
         normalen = unterteiler.compute_quad_normals(punkte)
         netz = Testkern.netzdaten()
         antwort = Netzantwort.aus(punkte, unterteiler.triangles, normalen, unterteiler.uvs)
-        antwort["groups"] = unterteiler.groups
-        antwort["material_names"] = netz.material_names or []
+        antwort['groups'] = unterteiler.groups
+        antwort['material_names'] = netz.material_names or []
         return antwort
 
     def _grundnetz(self, punkte):

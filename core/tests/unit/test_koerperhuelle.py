@@ -134,4 +134,4 @@ class HuelleEinpassenTest(SimpleTestCase):
         ziel = np.array([[0.0, 0.0, 0.0], [2.0, 2.0, 5.0]])
         eingepasst = Koerperhuelle._einpassen(quelle, ziel)
         self.assertTrue(np.all(np.isfinite(eingepasst)))
-        self.assertAlmostEqual(eingepasst[0][2], 2.5, places=6, msg="nur verschoben, nicht gestreckt")
+        self.assertAlmostEqual(eingepasst[0][2], 2.5, places=6, msg='nur verschoben, nicht gestreckt')

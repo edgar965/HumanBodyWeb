@@ -13,32 +13,31 @@ nach einem Wechsel des Upstreams noetig. Er schreibt NICHT nach
 import time
 
 from django.core.management.base import BaseCommand, CommandError
-
 from MakeHuman.zielablage import Mhzielablage
 from MakeHuman.zielbaum import Mhzielbaum
 
 
 class Command(BaseCommand):
-    help = "MakeHuman-Modellierziele in eine npz-Ablage kompilieren"
+    help = 'MakeHuman-Modellierziele in eine npz-Ablage kompilieren'
 
     def add_arguments(self, parser):
-        parser.add_argument("--leise", action="store_true", help="Kein Fortschritt, nur das Ergebnis")
+        parser.add_argument('--leise', action='store_true', help='Kein Fortschritt, nur das Ergebnis')
 
     def handle(self, *args, **optionen):
         if not Mhzielbaum.vorhanden():
             raise CommandError(
-                "Kein Zielordner unter %s — liegt der MakeHuman-Upstream da? "
-                "Siehe MakeHuman/HERKUNFT.md." % Mhzielbaum.wurzel()
+                'Kein Zielordner unter %s — liegt der MakeHuman-Upstream da? '
+                'Siehe MakeHuman/HERKUNFT.md.' % Mhzielbaum.wurzel()
             )
         beginn = time.perf_counter()
-        melden = None if optionen.get("leise") else self._fortschritt
+        melden = None if optionen.get('leise') else self._fortschritt
         anzahl = Mhzielablage.bauen(melden=melden)
         self.stdout.write(
             self.style.SUCCESS(
-                "%d Ziele in %.1f s nach %s geschrieben"
+                '%d Ziele in %.1f s nach %s geschrieben'
                 % (anzahl, time.perf_counter() - beginn, Mhzielablage.pfad())
             )
         )
 
     def _fortschritt(self, nummer, gesamt):
-        self.stdout.write("  %d/%d gelesen" % (nummer, gesamt))
+        self.stdout.write('  %d/%d gelesen' % (nummer, gesamt))

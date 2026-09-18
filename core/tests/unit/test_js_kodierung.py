@@ -36,7 +36,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "kodierung.js")
+MODUL = Jsmodul('gemeinsam', 'kodierung.js')
 
 SKRIPT = """
 const { pufferZuBase64, float32ToBase64, uint32ToBase64, base64ToFloat32 }
@@ -69,13 +69,13 @@ class KodierungTest(SimpleTestCase):
         cls.ergebnis = MODUL.laufen(SKRIPT)
 
     @staticmethod
-    def _erwartet(werte, format_="f"):
-        return base64.b64encode(struct.pack("<%d%s" % (len(werte), format_), *werte)).decode("ascii")
+    def _erwartet(werte, format_='f'):
+        return base64.b64encode(struct.pack('<%d%s' % (len(werte), format_), *werte)).decode('ascii')
 
     def test_langer_puffer_ueber_die_stueckgrenze(self):
         """40.000 Bytes — mehr als ein Stück, und keine runde Zahl davon."""
         werte = [i * 0.25 - 1000 for i in range(10000)]
-        self.assertEqual(self.ergebnis["lang"], self._erwartet(werte))
+        self.assertEqual(self.ergebnis['lang'], self._erwartet(werte))
 
     def test_genau_eine_stueckgrenze(self):
         """32.768 Bytes: Der letzte Durchlauf holt exakt nichts mehr.
@@ -83,20 +83,20 @@ class KodierungTest(SimpleTestCase):
         Das fängt einen falschen SCHRITT ab (`i += stueck - 1`), nicht eine
         andere Stückgröße — die ist folgenlos, siehe Modulkopf."""
         werte = [float(i) for i in range(32768 // 4)]
-        self.assertEqual(self.ergebnis["genau"], self._erwartet(werte))
+        self.assertEqual(self.ergebnis['genau'], self._erwartet(werte))
 
     def test_uint32_wird_genauso_kodiert(self):
         """Der Typ spielt beim Kodieren keine Rolle — gelesen werden Bytes."""
-        self.assertEqual(self.ergebnis["indizes"], self._erwartet([0, 1, 2, 7, 4294967295], "I"))
+        self.assertEqual(self.ergebnis['indizes'], self._erwartet([0, 1, 2, 7, 4294967295], 'I'))
 
     def test_ausschnitt_beachtet_den_versatz(self):
         """`subarray` liefert eine SICHT auf denselben Speicher. Wer
         `byteOffset` vergisst, kodiert den Anfang des Puffers statt des
         Ausschnitts — und niemand sieht es der base64-Zeichenkette an."""
         werte = [i * 0.25 - 1000 for i in range(5, 9)]
-        self.assertEqual(self.ergebnis["ausschnitt"], self._erwartet(werte))
+        self.assertEqual(self.ergebnis['ausschnitt'], self._erwartet(werte))
 
     def test_hin_und_zurueck(self):
         werte = [i * 0.25 - 1000 for i in range(5)]
-        for ist, soll in zip(self.ergebnis["hinundzurueck"], werte):
+        for ist, soll in zip(self.ergebnis['hinundzurueck'], werte):
             self.assertAlmostEqual(ist, soll, places=4)

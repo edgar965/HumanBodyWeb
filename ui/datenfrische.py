@@ -58,9 +58,9 @@ class Datenfrische:
     #: Die Seiten liefern ihre Vorlagen als `text/html`, und `djangobase`
     #: setzt dort schon `no-store`; eine zweite Zustaendigkeit fuer
     #: dieselbe Antwort waere eine Quelle fuer Widersprueche.
-    PRAEFIXE = ("/api/",)
+    PRAEFIXE = ('/api/',)
 
-    WERT = "no-store, no-cache, must-revalidate"
+    WERT = 'no-store, no-cache, must-revalidate'
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -73,9 +73,9 @@ class Datenfrische:
         # gibt Antworten, die absichtlich lange gelten (ausgelieferte
         # Netze mit Fingerabdruck im Pfad). Ueberschreiben hiesse, deren
         # Entscheidung stillschweigend zu kassieren.
-        if antwort.has_header("Cache-Control"):
+        if antwort.has_header('Cache-Control'):
             return antwort
-        antwort["Cache-Control"] = Datenfrische.WERT
-        antwort["Pragma"] = "no-cache"
-        antwort["Expires"] = "0"
+        antwort['Cache-Control'] = Datenfrische.WERT
+        antwort['Pragma'] = 'no-cache'
+        antwort['Expires'] = '0'
         return antwort

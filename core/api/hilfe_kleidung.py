@@ -9,30 +9,30 @@ Die Daten kommen aus `Kleidungsverfahren`, nicht aus der Vorlage. Eine Zahl
 im HTML ist eine Behauptung, die niemand mehr nachrechnet.
 """
 
-from .hilfeseite import Hilfeseite
-
-from kleidung.verfahren import Kleidungsverfahren
 from kleidung.tempo import Kleidungstempo
+from kleidung.verfahren import Kleidungsverfahren
+
+from .hilfeseite import Hilfeseite
 
 
 class KleidungAllgemein(Hilfeseite):
     """Uebersicht und Vergleich aller Kleidungsverfahren."""
 
-    template_name = "hilfe/kleidung_allgemein.html"
-    AKTIV = "hilfe_kleidung"
-    NAME = "hilfe_kleidung_allgemein"
+    template_name = 'hilfe/kleidung_allgemein.html'
+    AKTIV = 'hilfe_kleidung'
+    NAME = 'hilfe_kleidung_allgemein'
 
     def kontext(self):
         return {
-            "verfahren": Kleidungsverfahren.alle(),
-            "unterschied": Kleidungsverfahren.unterschied(),
+            'verfahren': Kleidungsverfahren.alle(),
+            'unterschied': Kleidungsverfahren.unterschied(),
             # Warum MakeHuman in Millisekunden anzieht und GarmentCode in
             # Sekunden (Edgar, 08.09.2026). Die Zahlen stehen in der Klasse,
             # nicht in der Vorlage — sonst rechnet sie niemand mehr nach.
-            "tempo_rechner": Kleidungstempo.RECHNER,
-            "tempo_vergleich": Kleidungstempo.vergleich(),
-            "tempo_phasen": Kleidungstempo.phasen(),
-            "tempo_summe": Kleidungstempo.summe_s(),
-            "tempo_verworfen": Kleidungstempo.verworfen(),
-            "tempo_loesung": Kleidungstempo.loesung(),
+            'tempo_rechner': Kleidungstempo.RECHNER,
+            'tempo_vergleich': Kleidungstempo.vergleich(),
+            'tempo_phasen': Kleidungstempo.phasen(),
+            'tempo_summe': Kleidungstempo.summe_s(),
+            'tempo_verworfen': Kleidungstempo.verworfen(),
+            'tempo_loesung': Kleidungstempo.loesung(),
         }

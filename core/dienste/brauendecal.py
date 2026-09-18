@@ -34,38 +34,38 @@ import numpy as np
 
 from .brauenbogen import Brauenbogen
 
-logger = logging.getLogger("core")
+logger = logging.getLogger('core')
 
 
 class Brauendecal:
     FASSUNG = 2
     BREITE = 2048
     S = 3
-    ORDNER = Brauenbogen.ORDNER / "brauen"
+    ORDNER = Brauenbogen.ORDNER / 'brauen'
 
     #: Regler mit Vorgabe; mm-Werte in Millimetern, Faktoren um 1, Deckkraft 0..1.
     VORGABE = {
-        "farbe": "#3a2a1e",
-        "hoehe_innen": 0.0,
-        "hoehe_aussen": 0.0,
-        "woelbung": 0.0,
-        "lage": 0.0,
-        "laenge": 1.0,
-        "dicke": 1.0,
-        "dichte": 1.0,
-        "haar_laenge": 1.0,
-        "deckkraft": 1.0,
+        'farbe': '#3a2a1e',
+        'hoehe_innen': 0.0,
+        'hoehe_aussen': 0.0,
+        'woelbung': 0.0,
+        'lage': 0.0,
+        'laenge': 1.0,
+        'dicke': 1.0,
+        'dichte': 1.0,
+        'haar_laenge': 1.0,
+        'deckkraft': 1.0,
     }
     GRENZEN = {
-        "hoehe_innen": (-15, 15),
-        "hoehe_aussen": (-15, 15),
-        "woelbung": (-8, 10),
-        "lage": (-20, 20),
-        "laenge": (0.25, 3.0),
-        "dicke": (0.25, 3.0),
-        "dichte": (0.25, 3.0),
-        "haar_laenge": (0.25, 3.0),
-        "deckkraft": (0.0, 1.0),
+        'hoehe_innen': (-15, 15),
+        'hoehe_aussen': (-15, 15),
+        'woelbung': (-8, 10),
+        'lage': (-20, 20),
+        'laenge': (0.25, 3.0),
+        'dicke': (0.25, 3.0),
+        'dichte': (0.25, 3.0),
+        'haar_laenge': (0.25, 3.0),
+        'deckkraft': (0.0, 1.0),
     }
     #: Bogenbreite innen/außen (mm), Härchen je Braue, Haarlänge innen/außen (mm),
     #: Strichbreite Ansatz/Spitze (mm), Winkel zur Tangente innen/Mitte/außen (°).
@@ -94,11 +94,11 @@ class Brauendecal:
                 try:
                     aus[name] = min(oben, max(unten, float(roh[name])))
                 except TypeError, ValueError:
-                    logger.warning("Brauenregler %s unlesbar: %r", name, roh[name])
+                    logger.warning('Brauenregler %s unlesbar: %r', name, roh[name])
 
-        farbe = str(roh.get("farbe", aus["farbe"])).lower()
-        if len(farbe) == 7 and farbe[0] == "#" and all(c in "0123456789abcdef" for c in farbe[1:]):
-            aus["farbe"] = farbe
+        farbe = str(roh.get('farbe', aus['farbe'])).lower()
+        if len(farbe) == 7 and farbe[0] == '#' and all(c in '0123456789abcdef' for c in farbe[1:]):
+            aus['farbe'] = farbe
         return aus
 
     @classmethod
@@ -116,14 +116,14 @@ class Brauendecal:
     @classmethod
     def bild(cls, geschlecht, regler):
         """Pfad der PNG für diesen Reglerstand — aus der Ablage oder frisch."""
-        geschlecht = "male" if geschlecht == "male" else "female"
+        geschlecht = 'male' if geschlecht == 'male' else 'female'
         cls.ORDNER.mkdir(parents=True, exist_ok=True)
-        name = "%s_%s.png" % (geschlecht, cls.kennung(geschlecht, regler))
+        name = '%s_%s.png' % (geschlecht, cls.kennung(geschlecht, regler))
         ziel = cls.ORDNER / name
         if not ziel.is_file():
             bogen = Brauenbogen.laden(geschlecht)
             cls.zeichnen(bogen, regler).save(ziel)
-            logger.info("Brauendecal %s: %s", geschlecht, ziel.name)
+            logger.info('Brauendecal %s: %s', geschlecht, ziel.name)
         return ziel
 
     # ------------------------------------------------------------- Zeichnen
@@ -135,13 +135,13 @@ class Brauendecal:
         kostete 13 s, so sind es 0,2 s."""
         from PIL import Image
 
-        u0, v0, u1, v1 = bogen["fenster"]
+        u0, v0, u1, v1 = bogen['fenster']
         px_je_uv = cls.BREITE / (u1 - u0)
-        px_je_mm = px_je_uv / bogen["mm_je_uv"]
+        px_je_mm = px_je_uv / bogen['mm_je_uv']
         hoehe = int(round((v1 - v0) * px_je_uv))
-        farbe = cls._rgb(regler["farbe"])
-        bild = Image.new("RGBA", (cls.BREITE, hoehe), farbe + (0,))
-        for nummer, seite in enumerate(("links", "rechts")):
+        farbe = cls._rgb(regler['farbe'])
+        bild = Image.new('RGBA', (cls.BREITE, hoehe), farbe + (0,))
+        for nummer, seite in enumerate(('links', 'rechts')):
             if seite not in bogen:
                 continue
             linie = np.array([[(u - u0) * px_je_uv, (v1 - v) * px_je_uv] for u, v in bogen[seite]])
@@ -161,7 +161,7 @@ class Brauendecal:
         x1, y1 = np.ceil(alle.max(axis=0)).astype(int) + rand
         x0, y0 = max(0, x0), max(0, y0)
         breite, hoehe = x1 - x0, y1 - y0
-        gross = Image.new("RGBA", (breite * cls.S, hoehe * cls.S), farbe + (0,))
+        gross = Image.new('RGBA', (breite * cls.S, hoehe * cls.S), farbe + (0,))
         zeichner = ImageDraw.Draw(gross)
         # Spitzen zuerst, Ansätze zuletzt: das dichtere Alpha gewinnt.
         for segment in range(cls.SEGMENTE - 1, -1, -1):
@@ -198,11 +198,11 @@ class Brauendecal:
             n = np.array([-t[1], t[0]])
             return n if n[1] < 0 else -n  # „oben" = kleinere Bildzeile
 
-        anzahl = max(2, int(round(cls.HAARE * regler["dichte"] * regler["laenge"])))
+        anzahl = max(2, int(round(cls.HAARE * regler['dichte'] * regler['laenge'])))
         striche = []
         for k in range(anzahl):
-            s = (k + rng.uniform(0.15, 0.85)) / anzahl * regler["laenge"]
-            s_form = min(1.0, s / max(regler["laenge"], 1e-6))
+            s = (k + rng.uniform(0.15, 0.85)) / anzahl * regler['laenge']
+            s_form = min(1.0, s / max(regler['laenge'], 1e-6))
             # Die Enden laufen aus (Edgar, 17.09.2026: „am Rand noch etwas
             # krank"): innen standen lange, steile Haare einzeln wie ein
             # Besen, außen hingen die letzten als dünne Fransen. Im ENDE_ANTEIL
@@ -211,12 +211,12 @@ class Brauendecal:
             if rng.uniform() > cls.ENDE_DICHTE + (1 - cls.ENDE_DICHTE) * ende:
                 continue
             versatz = (
-                regler["lage"]
-                + regler["hoehe_innen"] * (1 - s_form)
-                + regler["hoehe_aussen"] * s_form
-                + regler["woelbung"] * math.sin(math.pi * s_form)
+                regler['lage']
+                + regler['hoehe_innen'] * (1 - s_form)
+                + regler['hoehe_aussen'] * s_form
+                + regler['woelbung'] * math.sin(math.pi * s_form)
             )
-            breite_mm = regler["dicke"] * np.interp(s_form, [0, 1], cls.BOGEN_MM)
+            breite_mm = regler['dicke'] * np.interp(s_form, [0, 1], cls.BOGEN_MM)
             quer = rng.normal(0, 0.5) * breite_mm / 2
             n = normale(s)
             wurzel = punkt(s) + n * (versatz + quer) * px_je_mm
@@ -224,7 +224,7 @@ class Brauendecal:
             richtung = cls._drehen(tangente(s), n, winkel)
             laenge = (
                 np.interp(s_form, [0, 1], cls.HAAR_MM)
-                * regler["haar_laenge"]
+                * regler['haar_laenge']
                 * (1 + rng.normal(0, 0.18))
                 * (cls.ENDE_LAENGE + (1 - cls.ENDE_LAENGE) * ende)
             ) * px_je_mm
@@ -237,7 +237,7 @@ class Brauendecal:
             hell = 1 + rng.normal(0, 0.10)
             rgb = tuple(int(min(255, max(0, c * hell))) for c in farbe)
             rgba = [
-                rgb + (int(round(255 * regler["deckkraft"] * cls.AUSBLENDEN[i])),)
+                rgb + (int(round(255 * regler['deckkraft'] * cls.AUSBLENDEN[i])),)
                 for i in range(cls.SEGMENTE)
             ]
             striche.append((punkte, breiten, rgba))

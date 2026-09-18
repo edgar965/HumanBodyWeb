@@ -15,13 +15,12 @@ import threading
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-
 from UMA_Python import Garderobe
 
 from ..dienste.umabauer import Umabauer
 from .umafigur import Umafigur
 
-__all__ = ["Umakleidung"]
+__all__ = ['Umakleidung']
 
 
 class Umakleidung:
@@ -46,24 +45,24 @@ class Umakleidung:
     @staticmethod
     @require_GET
     def angebot(request):
-        rasse = request.GET.get("rasse")
-        figur = request.GET.get("figur")
+        rasse = request.GET.get('rasse')
+        figur = request.GET.get('figur')
         if figur and not rasse:
             pfad, antwort = Umafigur._pfad_oder_antwort(figur)
             if antwort:
                 return antwort
             rasse = Umafigur._rasse_der_datei(pfad)
         if not rasse:
-            return JsonResponse({"error": "rasse oder figur angeben"}, status=400)
+            return JsonResponse({'error': 'rasse oder figur angeben'}, status=400)
         # Eine Rasse ohne eigene Rezepte (ElfFemale30) trägt die Kleidung der
         # Rassen, die Unity als verträglich nennt (`rassen.json`, 06.09.2026).
         vertraeglich = (Umabauer.rassen_details() or {}).get(rasse, [])
         plaetze = Umakleidung.garderobe().fuer_rassen([rasse] + vertraeglich)
         return JsonResponse(
             {
-                "rasse": rasse,
-                "vertraeglich": vertraeglich,
-                "plaetze": plaetze,
-                "anzahl": sum(len(p["rezepte"]) for p in plaetze),
+                'rasse': rasse,
+                'vertraeglich': vertraeglich,
+                'plaetze': plaetze,
+                'anzahl': sum(len(p['rezepte']) for p in plaetze),
             }
         )

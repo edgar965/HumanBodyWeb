@@ -9,7 +9,6 @@ Geprueft an einem 2×2-Bild von Hand, dazu Abtastung und Verschiebung.
 from unittest import TestCase
 
 import numpy as np
-
 from humanbody_core.hautverschiebung import Hautverschiebung
 
 

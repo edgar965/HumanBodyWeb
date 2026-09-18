@@ -11,12 +11,13 @@ Kein Schreiben ausserhalb dieses Ordners, keine Produktivdaten angefasst.
 """
 
 import sys
+
 import numpy as np
 
-sys.path.insert(0, r"A:\3DTools")
+sys.path.insert(0, r'A:\3DTools')
 from SMPL.koerper import Smplkoerper  # noqa: E402
 
-MODELLE = r"A:\3DTools\VideoToBVH\models\smpl"
+MODELLE = r'A:\3DTools\VideoToBVH\models\smpl'
 
 # SMPL-Kinematik: 0 Becken, 4/5 Knie, 18/19 Ellbogen, 16/17 Schulter
 ELLBOGEN_L, KNIE_L, SCHULTER_L = 18, 4, 16
@@ -27,9 +28,9 @@ class Posedirsprobe:
 
     #: (Beschriftung, Gelenk, Achse mit Vorzeichen) — was gebeugt wird.
     BEUGUNGEN = (
-        ("Ellbogen", ELLBOGEN_L, (0.0, 0.0, -1.0), (30, 60, 90, 120)),
-        ("Knie", KNIE_L, (-1.0, 0.0, 0.0), (45, 90)),
-        ("Schulter", SCHULTER_L, (0.0, 0.0, -1.0), (45, 90)),
+        ('Ellbogen', ELLBOGEN_L, (0.0, 0.0, -1.0), (30, 60, 90, 120)),
+        ('Knie', KNIE_L, (-1.0, 0.0, 0.0), (45, 90)),
+        ('Schulter', SCHULTER_L, (0.0, 0.0, -1.0), (45, 90)),
     )
 
     @staticmethod
@@ -48,7 +49,7 @@ class Posedirsprobe:
         a = punkte[flaechen[:, 0]]
         b = punkte[flaechen[:, 1]]
         c = punkte[flaechen[:, 2]]
-        return abs(np.einsum("ij,ij->i", a, np.cross(b, c)).sum() / 6.0) * 1000.0
+        return abs(np.einsum('ij,ij->i', a, np.cross(b, c)).sum() / 6.0) * 1000.0
 
     @classmethod
     def messen(cls, name, k, drehungen):
@@ -58,36 +59,36 @@ class Posedirsprobe:
         weg = np.linalg.norm(mit - ohne, axis=1) * 1000.0  # mm
         betroffen = weg > 1.0
         print(
-            "%-22s  Punkte ueber 1 mm: %5d von %d (%.1f %%)"
+            '%-22s  Punkte ueber 1 mm: %5d von %d (%.1f %%)'
             % (name, betroffen.sum(), len(weg), 100.0 * betroffen.mean())
         )
         print(
-            "%-22s  Median %5.2f mm   p99 %6.2f mm   max %6.2f mm"
-            % ("", np.median(weg[betroffen]) if betroffen.any() else 0.0, np.percentile(weg, 99), weg.max())
+            '%-22s  Median %5.2f mm   p99 %6.2f mm   max %6.2f mm'
+            % ('', np.median(weg[betroffen]) if betroffen.any() else 0.0, np.percentile(weg, 99), weg.max())
         )
         print(
-            "%-22s  Volumen mit %7.3f l   ohne %7.3f l   Rest %7.3f l"
-            % ("", cls.volumen(mit, k.faces), cls.volumen(ohne, k.faces), cls.volumen(v_rest, k.faces))
+            '%-22s  Volumen mit %7.3f l   ohne %7.3f l   Rest %7.3f l'
+            % ('', cls.volumen(mit, k.faces), cls.volumen(ohne, k.faces), cls.volumen(v_rest, k.faces))
         )
         return weg
 
     @classmethod
     def laufen(cls):
-        for geschlecht in ("FEMALE", "MALE"):
+        for geschlecht in ('FEMALE', 'MALE'):
             k = Smplkoerper.laden(geschlecht, MODELLE)
             print(
-                "\n=== SMPL %s: %d Punkte, posedirs %s ==="
+                '\n=== SMPL %s: %d Punkte, posedirs %s ==='
                 % (geschlecht, len(k.v_template), k.posedirs.shape)
             )
             for name, gelenk, achse, winkel in cls.BEUGUNGEN:
                 for grad in winkel:
                     drehung = np.radians(grad) * np.array(achse)
-                    cls.messen("%s %d Grad" % (name, grad), k, {gelenk: drehung})
+                    cls.messen('%s %d Grad' % (name, grad), k, {gelenk: drehung})
 
 
 def main():
     Posedirsprobe.laufen()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

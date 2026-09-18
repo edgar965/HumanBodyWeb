@@ -26,9 +26,9 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-AUFTRAEGE = Path(settings.BASE_DIR) / "static" / "js" / "auftraege"
+AUFTRAEGE = Path(settings.BASE_DIR) / 'static' / 'js' / 'auftraege'
 
-MODUL = Jsmodul("..", "js", "auftraege", "zeilenwahl.js")
+MODUL = Jsmodul('..', 'js', 'auftraege', 'zeilenwahl.js')
 
 SKRIPT = """
 const { Zeilenwahl } = await import(MODUL);
@@ -57,7 +57,7 @@ class ZeilenwahlTest(SimpleTestCase):
 
     def test_bereich_und_kopfkaestchen(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)
 
 
 class DrahtformatTest(SimpleTestCase):
@@ -65,24 +65,24 @@ class DrahtformatTest(SimpleTestCase):
 
     databases = set()
 
-    MODULE = ("auftragsliste.js", "auftragslauf.js", "auftragszeile.js", "detailzeilen.js", "zeilenwahl.js")
+    MODULE = ('auftragsliste.js', 'auftragslauf.js', 'auftragszeile.js', 'detailzeilen.js', 'zeilenwahl.js')
 
     def test_kein_modul_sucht_das_alte_markup(self):
         for name in self.MODULE:
             with self.subTest(modul=name):
-                quelle = (AUFTRAEGE / name).read_text(encoding="utf-8")
+                quelle = (AUFTRAEGE / name).read_text(encoding='utf-8')
                 # Kommentare dürfen die Geschichte erzählen; Code nicht.
-                code = "\n".join(
-                    z for z in quelle.splitlines() if not z.strip().startswith(("*", "//", "/*"))
+                code = '\n'.join(
+                    z for z in quelle.splitlines() if not z.strip().startswith(('*', '//', '/*'))
                 )
                 self.assertNotIn("'row-'", code)
                 self.assertNotIn('id^="row-"', code)
-                self.assertNotIn("jobTableBody", code)
+                self.assertNotIn('jobTableBody', code)
                 self.assertNotIn("getElementById('jobTable')", code)
 
     def test_die_zeile_wird_ueber_data_id_gefunden(self):
-        quelle = (AUFTRAEGE / "auftragszeile.js").read_text(encoding="utf-8")
+        quelle = (AUFTRAEGE / 'auftragszeile.js').read_text(encoding='utf-8')
         self.assertIn('tr[data-id="${this.id}"]', quelle)
-        lauf = (AUFTRAEGE / "auftragslauf.js").read_text(encoding="utf-8")
-        self.assertIn("zeile.dataset.id = neueId", lauf)
+        lauf = (AUFTRAEGE / 'auftragslauf.js').read_text(encoding='utf-8')
+        self.assertIn('zeile.dataset.id = neueId', lauf)
         self.assertIn('class="job-check" value="${neueId}"', lauf)

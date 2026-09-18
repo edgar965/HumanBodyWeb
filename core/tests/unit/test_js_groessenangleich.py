@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul("gemeinsam", "groessenangleich.js")
+MODUL = Jsmodul('gemeinsam', 'groessenangleich.js')
 
 SKRIPT = """
 const { Groessenangleich } = await import(MODUL);
@@ -63,4 +63,4 @@ class GroessenangleichTest(SimpleTestCase):
 
     def test_der_faktor_gleicht_aus_ohne_zu_zappeln(self):
         ausgabe = MODUL.laufen(SKRIPT)
-        self.assertTrue(ausgabe.get("ok"), ausgabe)
+        self.assertTrue(ausgabe.get('ok'), ausgabe)

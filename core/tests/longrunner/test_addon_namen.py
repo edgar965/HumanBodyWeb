@@ -53,7 +53,6 @@ import unittest
 from ..unit._namensbindung import Namensbindung
 from ..unit._projektquellen import Projektquellen
 
-
 #: Die Wurzel, unter der die vier Repos liegen.
 #: Wurzel, Baeume und Ausschluesse stehen in `Projektquellen` —
 #: `test_addon_zugriffe` trug dieselbe Liste ein zweites Mal.
@@ -68,7 +67,7 @@ class JederGeleseneName(unittest.TestCase):
     def test_keiner_ist_unbekannt(self):
         schlecht = []
         for pfad in Projektquellen.dateien():
-            quelle = pfad.read_text(encoding="utf-8", errors="replace")
+            quelle = pfad.read_text(encoding='utf-8', errors='replace')
             try:
                 treffer = Namensbindung.unbekannte(quelle, str(pfad))
             # stumm gewollt: Eine Datei, die sich nicht zerlegen laesst,
@@ -77,8 +76,8 @@ class JederGeleseneName(unittest.TestCase):
             except SyntaxError:
                 continue
             for zeile, name in treffer:
-                schlecht.append("%s:%d %s" % (pfad.relative_to(TOOLS).as_posix(), zeile, name))
-        self.assertEqual(schlecht, [], "Unbekannte Namen: %s" % schlecht)
+                schlecht.append('%s:%d %s' % (pfad.relative_to(TOOLS).as_posix(), zeile, name))
+        self.assertEqual(schlecht, [], 'Unbekannte Namen: %s' % schlecht)
 
     def test_es_werden_ueberhaupt_dateien_geprueft(self):
         """Sabotageschutz: Eine leere Menge bestuende jeden Test."""
@@ -99,23 +98,23 @@ class EineSabotageAmNamen(unittest.TestCase):
     databases = set()
 
     def test_ein_erfundener_name_wird_erkannt(self):
-        quelle = "def f():\n    return _gibtesnicht\n"
-        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [(2, "_gibtesnicht")])
+        quelle = 'def f():\n    return _gibtesnicht\n'
+        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'), [(2, '_gibtesnicht')])
 
     def test_ein_gebundener_name_wird_nicht_gemeldet(self):
-        quelle = "_da = 1\n\n\ndef f():\n    return _da\n"
-        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [])
+        quelle = '_da = 1\n\n\ndef f():\n    return _da\n'
+        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'), [])
 
     def test_eine_blender_beschriftung_ist_kein_name(self):
         """Ohne diese Ausnahme meldete die Pruefung 110 Fehlalarme."""
         quelle = (
-            "from bpy.props import EnumProperty\n\n\n"
-            "class P:\n"
+            'from bpy.props import EnumProperty\n\n\n'
+            'class P:\n'
             '    region: EnumProperty(items=[("HEAD", "Head", "")])\n'
         )
-        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [])
+        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'), [])
 
     def test_der_aufruf_in_der_annotation_wird_sehr_wohl_geprueft(self):
         """Ausgenommen sind die BESCHRIFTUNGEN, nicht die ganze Zeile."""
         quelle = 'class P:\n    region: EnumProperty(items=[("HEAD", "Head", "")])\n'
-        self.assertEqual(Namensbindung.unbekannte(quelle, "probe.py"), [(2, "EnumProperty")])
+        self.assertEqual(Namensbindung.unbekannte(quelle, 'probe.py'), [(2, 'EnumProperty')])
