@@ -4,10 +4,11 @@ import { Bildauswahl } from '../../gemeinsam/bildauswahl.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
+import { Dazkleidung } from './dazkleidung.js';
 import { Genesis9stueckregler } from './genesis9stueckregler.js';
 
 /**
- * Genesis9garderobe — die Daz-Kleidung und -Haare einer Genesis-9-Figur.
+ * Genesis9garderobe — Daz-Kleidung und -Haare einer Genesis-9-Figur (`Dazkleidung`: auch HumanBody).
  *
  * Die Liste ist der Ordner `People/Genesis 9/Clothing` und `…/Hair` der
  * Daz-Bibliothek (`Genesis9/garderobe.py`): jedes `wearable` eine Zeile mit
@@ -15,20 +16,17 @@ import { Genesis9stueckregler } from './genesis9stueckregler.js';
  * wie die MakeHuman-Stücke — Edgar 18.09.2026: „mach auch ein Icon in dem Tab"),
  * daneben die Farbvarianten des Produkts als Auswahl. Sie steht im Assets-Reiter
  * als eigener Bereich (Edgar, 17.09.2026: „machst Du einen extra Reiter dafür
- * bei Assets?"), sichtbar nur bei einer Genesis-9-Figur
- * (`Eigenschaftenbereiche.genesis9Garderobe`). Nur ein Stück, das nicht zeigbar
- * ist (dForce-Stranghaar ohne Flächen), steht ausgegraut da, mit Grund; der Name
- * trägt `stueckname` — als `<label>` in `.slider-row` las er sich sonst gesperrt.
+ * bei Assets?", `Eigenschaftenbereiche.genesis9Garderobe`). Nur ein Stück, das nicht
+ * zeigbar ist (dForce-Stranghaar ohne Flächen), steht ausgegraut da, mit Grund; der
+ * Name trägt `stueckname` — als `<label>` in `.slider-row` las er sich sonst gesperrt.
  *
- * Anziehen holt alle Teile des Stücks auf der AKTUELLEN Reglerstellung
- * (projiziert, `G9folger`) und bindet sie an das Skelett der Figur; ein
- * Reglerzug baut sie mit (`Genesis9Modell.neuFormen`). Seit 18.09.2026 hat
- * ein Stück neben der Farbvariante bis zu drei Presets des Produkts, je Art
- * eine Wahl: STIL (Morphe — Pixie: Jaunty, Feathered …), POSE (dreht eigene
- * Knochen — Eirgrids Zöpfe nach hinten, gespreizt) und LÄNGE (skaliert sie).
- * REQUISITEN (`People/Genesis 9/Props`: Tubal-Waffen) hängen an einem
- * Handknochen; ein Stück mit Griffpose (`griff`) baut die Figur neu, damit
- * sich die Finger um den Griff schließen (`anziehenMitGriff`).
+ * Anziehen holt alle Teile des Stücks auf der AKTUELLEN Reglerstellung (projiziert,
+ * `G9folger`) und bindet sie an das Skelett der Figur; ein Reglerzug baut sie mit
+ * (`Genesis9Modell.neuFormen`). Seit 18.09.2026 hat ein Stück neben der Farbvariante
+ * bis zu drei Presets des Produkts, je Art eine Wahl: STIL (Morphe — Pixie: Jaunty,
+ * Feathered …), POSE (dreht eigene Knochen — Eirgrids Zöpfe) und LÄNGE (skaliert sie).
+ * REQUISITEN (`People/Genesis 9/Props`: Tubal-Waffen) hängen an einem Handknochen; ein
+ * Stück mit Griffpose (`griff`) baut die Figur neu (Finger um den Griff, `anziehenMitGriff`).
  */
 export class Genesis9garderobe {
 
@@ -50,8 +48,10 @@ export class Genesis9garderobe {
 
     static async fuellen(inst, behaelter) {
         if (!behaelter) return;
+        behaelter.dataset.figur = inst.id;      // wer zuletzt anfragt, gewinnt (Wettlauf beim Laden)
         behaelter.innerHTML = '<div class="gedaempft">Lade Garderobe …</div>';
         const stuecke = await Genesis9garderobe.liste();
+        if (behaelter.dataset.figur !== inst.id) return;
         behaelter.innerHTML = '';
         if (!stuecke.length) {
             behaelter.innerHTML = '<div class="gedaempft">Keine Daz-Kleidung gefunden.</div>';
@@ -69,7 +69,7 @@ export class Genesis9garderobe {
                 kasten.appendChild(Genesis9garderobe._zeile(inst, stueck));
                 if (stueck.regler?.length && stueck.zeigbar) {
                     kasten.appendChild(Genesis9stueckregler.bauen(inst, stueck,
-                        () => ({ ...(inst.kleidung?.[stueck.id] || {}) })));
+                        () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) })));
                 }
             }
             behaelter.appendChild(kasten);
@@ -84,7 +84,7 @@ export class Genesis9garderobe {
             ? (stueck.knochen ? `${stueck.datei} — an ${stueck.knochen}` : stueck.datei)
                 + (stueck.basis ? ' — Genesis 8, per Auto-Fit auf Genesis 9' : '')
             : stueck.hinweis;
-        const getragen = Boolean(inst.kleidung?.[stueck.id]);
+        const getragen = Boolean(Dazkleidung.kleidung(inst)[stueck.id]);
         const kennung = `g9-kleid-${stueck.id}`;
         zeile.innerHTML = `
             <input type="checkbox" id="${kennung}" ${getragen ? 'checked' : ''}
@@ -101,7 +101,7 @@ export class Genesis9garderobe {
                 `${Genesis9garderobe.ADRESSE}${encodeURIComponent(stueck.id)}/vorschau/`);
             haken.after(bild);
         }
-        const bisher = inst.kleidung?.[stueck.id] || {};
+        const bisher = Dazkleidung.kleidung(inst)[stueck.id] || {};
         const werte = () => Genesis9garderobe.werte(stueck, wahl, felder, inst);
         // Die Farbvarianten mit Daz' Vorschaubild je Eintrag (`Bildauswahl`,
         // 18.09.2026 nachts: „in der Combo box die Farben / icons").
@@ -133,7 +133,7 @@ export class Genesis9garderobe {
         }
         return {
             variante: wahl?.value || '', stil: felder.stil?.value || '', stile,
-            regler: { ...(inst.kleidung?.[stueck.id]?.regler || {}) },
+            regler: { ...(Dazkleidung.kleidung(inst)[stueck.id]?.regler || {}) },
             griff: Boolean(stueck.griff),
             // Eigene Knochen (Eirgrid: 14 Zöpfe) — das Stück hängt im Browser-Skelett.
             knochen: Boolean(stueck.eigene_knochen),
@@ -172,13 +172,13 @@ export class Genesis9garderobe {
 
     static _anziehen(inst, kennung, werte) {
         Genesis9lauf.planen(inst,
-            () => inst.anziehenMitGriff(kennung, werte),
+            () => Dazkleidung.anziehenAuf(inst, kennung, werte),
             () => fn.updateVertexCount?.());
     }
 
     static _ausziehen(inst, kennung) {
         Genesis9lauf.planen(inst,
-            () => inst.ausziehen(kennung),
+            () => Dazkleidung.ausziehenAuf(inst, kennung),
             () => fn.updateVertexCount?.());
     }
 }

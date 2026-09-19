@@ -23,6 +23,8 @@ eigenen Zopfknochen, `G9eigenknochen`) und `regler_stueck` (Viking-Shirt:
 darauf); seine Griffpose stellt die Figur ueber `griffe` (`G9figur`).
 `getragen`/`rang` (19.09.2026): die anderen Stuecke in Anziehreihenfolge
 und der eigene Platz — Kollision Stueck gegen Stueck (`G9lagenanfrage`).
+`figurart: humanbody` mit `geschlecht, bauart, morphs, meta`: dasselbe Stueck
+auf einer HumanBody-Figur (`G9kleidhumanbody`).
 """
 import logging
 
@@ -32,6 +34,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .g9figur import G9figur, FEHLT
+from .g9kleidhumanbody import G9kleidhumanbody
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9lagenanfrage import G9lagenanfrage
 from Genesis9.garderobe import G9garderobe
@@ -73,6 +76,11 @@ class G9garderobeapi:
             return JsonResponse({'fehler': FEHLT}, status=404)
         rumpf = G9figur._rumpf(request)
         eintrag = G9garderobe.eintrag(kennung) or {}
+        if rumpf.get('figurart') == G9kleidhumanbody.FIGURART:
+            # Dasselbe Stueck auf einer HumanBody-Figur (19.09.2026).
+            return G9antworten.liefern(
+                'kleidhb', kennung, rumpf,
+                lambda: G9kleidhumanbody.antwort(kennung, eintrag, rumpf), eintrag=eintrag)
         return G9antworten.liefern(
             'kleid', kennung, rumpf,
             lambda: G9garderobeapi._kleid(kennung, eintrag, rumpf), eintrag=eintrag)

@@ -83,4 +83,11 @@ export class Eigenschaftenbereiche {
             }
         }
     }
+
+    /** Die Daz-Garderobe ZUSÄTZLICH zeigen — eine HumanBody-Figur trägt sie seit dem
+     *  19.09.2026 über `Dazkleidung`, neben ihren eigenen Werkzeugen. */
+    static dazGarderobeDazu(an) {
+        document.getElementById(Eigenschaftenbereiche.GENESIS9)
+            ?.classList.toggle('hb-versteckt', !an);
+    }
 }

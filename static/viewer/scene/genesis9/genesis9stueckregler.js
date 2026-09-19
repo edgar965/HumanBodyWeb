@@ -1,6 +1,7 @@
 import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
 import { Genesis9lauf } from './genesis9lauf.js';
+import { Dazkleidung } from './dazkleidung.js';
 
 /**
  * Genesis9stueckregler — die Anpassungsregler EINES Daz-Kleidungsstücks.
@@ -40,7 +41,7 @@ export class Genesis9stueckregler {
     static _zeile(inst, stueck, regler, werteLesen) {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
-        const wert = inst.kleidung?.[stueck.id]?.regler?.[regler.name] ?? regler.vorgabe ?? 0;
+        const wert = Dazkleidung.kleidung(inst)[stueck.id]?.regler?.[regler.name] ?? regler.vorgabe ?? 0;
         zeile.innerHTML = `
             <label title="${escapeHtml(regler.name)}">${escapeHtml(regler.anzeige)}</label>
             <input type="range" min="${regler.min}" max="${regler.max}" step="0.01" value="${wert}">
@@ -48,14 +49,13 @@ export class Genesis9stueckregler {
         const schieber = zeile.querySelector('input');
         const anzeige = zeile.querySelector('.slider-value');
         schieber.addEventListener('input', () => {
-            const neu = parseFloat(schieber.value);
-            anzeige.textContent = Genesis9stueckregler.text(neu);
-            if (!inst.kleidung?.[stueck.id]) return;    // nicht angezogen: nur merken
-            const werte = werteLesen();
-            werte.regler = { ...(inst.kleidung[stueck.id].regler || {}) };
+            const neu = parseFloat(schieber.value); anzeige.textContent = Genesis9stueckregler.text(neu);
+            const getragen = Dazkleidung.kleidung(inst)[stueck.id];
+            if (!getragen) return;                       // nicht angezogen: nur merken
+            const werte = werteLesen(); werte.regler = { ...(getragen.regler || {}) };
             if (Math.abs(neu) < 1e-6) delete werte.regler[regler.name];
             else werte.regler[regler.name] = neu;
-            Genesis9lauf.planen(inst, () => inst.anziehen(stueck.id, werte), () => {});
+            Genesis9lauf.planen(inst, () => Dazkleidung.anziehenAuf(inst, stueck.id, werte), () => {});
             markDirty();
         });
         return zeile;

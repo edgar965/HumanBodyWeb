@@ -62,7 +62,13 @@ class G9antworten(G9antwortvorrat):
     WARTEN_S = 120.0
     #: Quellen, deren Aenderung jede alte Antwort ungueltig macht.
     QUELLEN = ('Genesis9', 'HumanBodyWeb/core/api', 'HumanBodyWeb/core/daten',
-               'HumanBody/humanbody_core/catmull_clark.py')
+               'HumanBody/humanbody_core/catmull_clark.py',
+               # Dienste, die Stueckantworten rechnen (19.09.2026): Lagen, Daz auf HumanBody.
+               'HumanBodyWeb/core/dienste/g9lagenanfrage.py',
+               'HumanBodyWeb/core/dienste/g9aufhumanbody.py',
+               'HumanBodyWeb/core/dienste/g9hbknochen.py',
+               'HumanBodyWeb/core/dienste/g9garmentfigur.py',
+               'HumanBodyWeb/core/dienste/hbtraeger.py')
 
     _fassung = None
     _auftraege = {}

@@ -3,6 +3,7 @@ import { markDirty } from '../undo.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
 import { Genesis9garderobe } from './genesis9garderobe.js';
+import { Eigenschaftenbereiche } from '../eigenschaftenbereiche.js';
 import { Genesis9posen } from './genesis9posen.js';
 
 /**
@@ -43,6 +44,13 @@ export class Genesis9eigenschaften {
         // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
         await Genesis9garderobe.fuellen(inst,
             document.getElementById(Genesis9garderobe.BEREICH));
+    }
+
+    /** Für eine HumanBody-Figur nur die Daz-Garderobe: Bereich einblenden und füllen
+     *  (`Dazkleidung`, 19.09.2026 — Edgar: „Genesis Kleider auf HumanBody?"). */
+    static garderobeFuerHumanbody(inst) {
+        Eigenschaftenbereiche.dazGarderobeDazu(true);
+        return Genesis9garderobe.fuellen(inst, document.getElementById(Genesis9garderobe.BEREICH));
     }
 
     /** HEISST `leeren`, WEIL `properties.js` SO RUFT (siehe `umapythoneigenschaften.js`). */

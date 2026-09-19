@@ -12,6 +12,7 @@ import { findHeadBoneIndex, skinifyHairGroup }
     from '../character_core.js';
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
+import { Dazkleidung } from './genesis9/dazkleidung.js';
 
 export async function loadRigifySkeleton() {
     try {
@@ -63,6 +64,7 @@ export function convertInstToSkinned(inst) {
     // Animation gebaut — dann gab es hier noch kein Skelett, und sie hängen
     // als starres Netz. Jetzt gibt es eines.
     GarmentcodeAnziehen.nachbinden(inst);
+    Dazkleidung.nachbinden(inst);          // Daz-Stücke auf HumanBody (19.09.2026)
 }
 
 /**

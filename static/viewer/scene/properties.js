@@ -96,8 +96,7 @@ export async function populateProperties(charId) {
     // die 181 .mhclo-Stücke sitzen auf ihr ohne Fit-Regler. Body Type,
     // Morphs und Ausstattung des HumanBody-Körpers hat sie nicht.
     if (makehuman) {
-        Umaeigenschaften.leeren();
-        Smpleigenschaften.leeren();
+        Umaeigenschaften.leeren(); Smpleigenschaften.leeren();
         Formbedienung.leeren();
         Genesis9eigenschaften.leeren();
         await Mheigenschaften.fuellen(inst);
@@ -109,8 +108,7 @@ export async function populateProperties(charId) {
     // Eine Genesis-9-Figur (17.09.2026): Daz' Formregler, Haut, Augen und
     // die Daz-Garderobe — nichts vom HumanBody-Koerper.
     if (genesis9) {
-        Umaeigenschaften.leeren();
-        Smpleigenschaften.leeren();
+        Umaeigenschaften.leeren(); Smpleigenschaften.leeren();
         Umapythoneigenschaften.leeren();
         Formbedienung.leeren();
         await Genesis9eigenschaften.fuellen(inst);
@@ -154,6 +152,7 @@ export async function populateProperties(charId) {
         return;
     }
     Umaeigenschaften.leeren();
+    Genesis9eigenschaften.garderobeFuerHumanbody(inst);   // Daz-Garderobe auch hier (19.09.2026)
     try { await fetchMorphDefs(); } catch (e) { console.error('Failed to fetch morph defs:', e); return; }
     updateEquippedList(inst);
     populateBodyType(inst);
