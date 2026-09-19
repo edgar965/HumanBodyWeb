@@ -37,6 +37,8 @@ export class Ergebnisansicht {
         const feld = document.getElementById('vorschauen');
         if (!feld) return;
         feld.innerHTML = '';
+        // Mit Proportionszeilen (Vorher/Nachher je Ansicht) sind die kleinen Vorschauen doppelt.
+        if ((z.ergebnis || {}).proportionen) return;
         const v = (z.ergebnis || {}).vorschau || {};
         for (const name of ['vorn', 'seite', 'hinten', 'kopf']) {
             if (!v[name]) continue;

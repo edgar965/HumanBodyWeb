@@ -22,6 +22,7 @@ import logging
 import numpy as np
 
 from .bildmodellspeichern import Bildmodellspeichern
+from .bildmodellzielproportionen import Bildmodellzielproportionen
 
 logger = logging.getLogger('core')
 
@@ -109,8 +110,12 @@ class Bildmodellanpassung:
         }
         self._sichern('ergebnis')
 
-    def _ziel_laden(self):
+    def _ziel_laden(self, roh=False):
+        """Das geformte Ziel (`ziel_prop.npz`, Proportionen-Eingaben), sonst das rohe."""
         pfad = self.ablage.ergebnis() / self.ZIEL
+        geformt = self.ablage.ergebnis() / Bildmodellzielproportionen.DATEI
+        if not roh and geformt.is_file():
+            pfad = geformt
         if not pfad.is_file():
             raise RuntimeError('Zielnetz fehlt — Schritt „ziel" zuerst')
         with np.load(pfad) as d:
@@ -126,7 +131,12 @@ class Bildmodellanpassung:
         from .bildmodellhaende import Bildmodellhaende
         from .bildmodelloptionen import Bildmodelloptionen
 
-        punkte, gewicht, gelenke = self._ziel_laden()
+        punkte, gewicht, gelenke = self._ziel_laden(roh=True)
+        if melder:
+            melder(0.02, 'Proportionen aufs Zielnetz')
+        punkte, gelenke, proportionen = Bildmodellzielproportionen(
+            self.job, self.ablage, self.optionen
+        ).formen(punkte, gewicht, gelenke)
         grund, wahl = self.grund()
         satz = self.optionen.get('reglersatz', 'charaktere')
         if melder:
@@ -169,6 +179,7 @@ class Bildmodellanpassung:
             'variablen': len(ableitung.namen),
             'festgehalten': fest,
             'haende': haende,
+            'proportionen': proportionen,
         }
         self.job.ergebnis.pop('rest', None)
         self._sichern('ergebnis')
@@ -241,6 +252,7 @@ class Bildmodellanpassung:
         from Genesis9.vorschaubild import G9vorschaubild
 
         from .bildmodellmasse import Bildmodellmasse
+        from .bildmodellproportionen import Bildmodellproportionen
 
         p, _, _ = G9reglerableitung.lage(G9formung(self.stellung()))
         bild = G9vorschaubild(p)
@@ -258,6 +270,9 @@ class Bildmodellanpassung:
         if melder:
             melder(0.85, 'Außenmaße Foto / Zielnetz / Modell')
         self.job.ergebnis['masse'] = Bildmodellmasse(self.job, self.stellung()).alle()
+        self.job.ergebnis['proportionen'] = Bildmodellproportionen(
+            self.job, self.ablage, self.stellung(), self._ziel_laden
+        ).alle(lambda a, t: melder and melder(0.86 + 0.13 * a, t))
         self._sichern('ergebnis')
 
     # ----------------------------------------------------------- Speichern

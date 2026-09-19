@@ -89,7 +89,8 @@ export class Laufansicht {
         const ab = document.getElementById('ab-schritt')?.value || 'sichtung';
         try {
             const person = window.__bildmodell?.person?.werte?.() || {};
-            await this.auftrag.starten({ ...this.formular.werte(), person }, ab, this.festgehalten());
+            const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
+            await this.auftrag.starten({ ...this.formular.werte(), person, proportionen }, ab, this.festgehalten());
         } catch (fehler) {
             window.alert(`Start fehlgeschlagen: ${fehler.message}`);
         }

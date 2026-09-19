@@ -106,7 +106,8 @@ export class Personenformular {
     }
 
     async neuBerechnen() {
-        const optionen = { ...this.formular.werte(), person: this.werte() };
+        const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
+        const optionen = { ...this.formular.werte(), person: this.werte(), proportionen };
         try {
             await this.auftrag.starten(optionen, 'ziel', this.festgehalten ? this.festgehalten() : {});
         } catch (fehler) {

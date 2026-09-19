@@ -73,7 +73,33 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
             <div class="bildmodell-vorschauen" id="vorschauen"></div>
         </div>
     </div>
+    <div class="bildmodell-propkopf">
+        <h3>Proportionen — Vorher (Ziel, wie eingestellt) und Nachher (Modell)</h3>
+        <label>Zeilenhöhe <input type="range" id="proportionen-hoehe" step="10">
+            <span id="proportionen-hoehe-wert" class="hb-hinweis"></span></label>
+        <button type="button" class="btn btn-secondary btn-sm" id="proportionen-anpassen" disabled>
+            <i class="fas fa-ruler-combined"></i> <span>Proportionen anpassen …</span></button>
+    </div>
+    <div id="proportionen" class="bildmodell-proportionen"></div>
 </div>
+
+<dialog id="proportionen-dialog" class="bildmodell-dialog">
+    <h2>Proportionen einstellen</h2>
+    <p class="hb-hinweis">Eingabe in cm — leer heißt: das Ziel aus den Bildern gilt. Jede Eingabe formt das Zielnetz
+       vor der Anpassung („Neu berechnen"); die Vorher-Linie zeigt sofort die eingestellte Länge.</p>
+    <table class="bildmodell-masse doku">
+        <thead><tr><th>Maß</th><th>Eingabe (cm)</th><th>Ziel aus Bildern</th><th>Modell</th><th>Modell − Ziel</th><th></th></tr></thead>
+        <tbody></tbody>
+    </table>
+    <div class="bildmodell-dialogknoepfe">
+        <button type="button" class="btn btn-secondary btn-sm" data-tat="alle-loeschen">Alle Vorgaben löschen</button>
+        <span class="bildmodell-dialogrechts">
+            <button type="button" class="btn btn-secondary btn-sm" data-tat="schliessen">Schließen</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-tat="uebernehmen">Übernehmen</button>
+            <button type="button" class="btn btn-primary btn-sm" data-tat="rechnen"><i class="fas fa-sync"></i> Übernehmen und neu berechnen</button>
+        </span>
+    </div>
+</dialog>
 
 <details class="card" id="optionen-karte" open>
     <summary><h2>Optionen je Schritt</h2></summary>

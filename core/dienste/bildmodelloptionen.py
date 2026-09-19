@@ -13,6 +13,7 @@ Bilder oder anderer Reglerwahl, ohne die Schätzer erneut zu bemühen.
 """
 
 from .bildmodellkatalog import Bildmodellkatalog
+from .bildmodellpersonkatalog import Bildmodellpersonkatalog
 
 __all__ = ['Bildmodelloptionen']
 
@@ -41,6 +42,9 @@ class Bildmodelloptionen:
     #: werden mit dem Modell abgelegt.
     PERSON = {'alter': (0.0, 120.0), 'groesse_cm': (100.0, 250.0), 'gewicht_kg': (20.0, 250.0),
               'tonus': (0.0, 100.0)}
+    #: Proportionen (Edgar, 19.09.2026: Popup „wo ich diese anpassen kann") — cm je
+    #: Schlüssel aus `G9proportionen.MASSE`; sie formen das Zielnetz vor der Anpassung.
+    PROPORTION_CM = (0.5, 120.0)
 
     # ------------------------------------------------------------ Katalog
 
@@ -52,6 +56,26 @@ class Bildmodelloptionen:
                 aus[feld] = vorgabe
         aus['groesse_cm'] = None
         aus['person'] = {}
+        aus['proportionen'] = {}
+        return aus
+
+    @classmethod
+    def proportionen_pruefen(cls, roh):
+        """`{schluessel: cm}` — nur bekannte, formbare Maße im Bereich `PROPORTION_CM`."""
+        from Genesis9.proportionen import G9proportionen
+
+        roh = roh if isinstance(roh, dict) else {}
+        lo, hi = cls.PROPORTION_CM
+        aus = {}
+        for k, v in roh.items():
+            if not G9proportionen.FORMBAR.get(k):
+                continue
+            try:
+                w = float(v) if v not in (None, '') else None
+            except TypeError, ValueError:
+                w = None
+            if w is not None and lo <= w <= hi:
+                aus[k] = round(w, 1)
         return aus
 
     @classmethod
@@ -89,6 +113,7 @@ class Bildmodelloptionen:
                 w = None
             aus[feld] = min(hi, max(lo, w)) if w is not None else None
         aus['person'] = cls.person_pruefen(roh.get('person'))
+        aus['proportionen'] = cls.proportionen_pruefen(roh.get('proportionen'))
         return aus
 
     @classmethod
@@ -119,7 +144,9 @@ class Bildmodelloptionen:
             'schritte': schritte,
             'zahlenfelder': list(cls.ZAHLENFELDER),
             'person': {feld: list(grenzen) for feld, grenzen in cls.PERSON.items()},
-            'haare': Bildmodellkatalog.haare(),
+            'haare': Bildmodellpersonkatalog.haare(),
+            'proportionen': Bildmodellpersonkatalog.proportionen(),
+            'proportion_cm': list(cls.PROPORTION_CM),
         }
 
     # ----------------------------------------------------- Verfügbarkeit

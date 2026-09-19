@@ -209,6 +209,9 @@ class Bildmodellendpunkte:
         except ValueError:
             rumpf = {}
         optionen = Bildmodelloptionen.pruefen(rumpf.get('optionen') or job.optionen)
+        if 'proportionen' not in (rumpf.get('optionen') or {}):
+            # Ohne eigene Angabe bleiben die gestellten Proportionen (Popup) erhalten.
+            optionen['proportionen'] = (job.optionen or {}).get('proportionen') or {}
         if isinstance(rumpf.get('fest'), dict):
             optionen['fest'] = rumpf['fest']
         ab = rumpf.get('ab') or 'sichtung'

@@ -18,6 +18,7 @@ from .api.auftragsformulare import Auftragsformulare
 from .api.auftragsweiterleitung import Auftragsweiterleitung
 from .api.bibliothek import Bibliotheksendpunkte
 from .api.bildmodell import Bildmodellendpunkte
+from .api.bildmodellproportionen import Bildmodellproportionenendpunkte
 from .api.bvhtext import Bvhtext
 from .api.dateien import Auftragsdateien
 from .api.effekte import Effektendpunkte
@@ -122,12 +123,15 @@ urlpatterns = [
          name='bildmodell_auftrag'),
     path('api/bildmodell/anlegen/', Bildmodellendpunkte.anlegen, name='bildmodell_anlegen'),
     path('api/bildmodell/katalog/', Bildmodellendpunkte.katalog, name='bildmodell_katalog'),
-    path('api/bildmodell/loeschen/', Bildmodellendpunkte.mehrere_loeschen, name='bildmodell_mehrere_loeschen'),
+    path('api/bildmodell/loeschen/', Bildmodellendpunkte.mehrere_loeschen,
+         name='bildmodell_mehrere_loeschen'),
     path('api/bildmodell/<uuid:job_id>/zustand/', Bildmodellendpunkte.zustand, name='bildmodell_zustand'),
     path('api/bildmodell/<uuid:job_id>/bilder/', Bildmodellendpunkte.bilder, name='bildmodell_bilder'),
     path('api/bildmodell/<uuid:job_id>/bild/<str:datei>/', Bildmodellendpunkte.bild, name='bildmodell_bild'),
     path('api/bildmodell/<uuid:job_id>/starten/', Bildmodellendpunkte.starten, name='bildmodell_starten'),
     path('api/bildmodell/<uuid:job_id>/anhalten/', Bildmodellendpunkte.anhalten, name='bildmodell_anhalten'),
+    path('api/bildmodell/<uuid:job_id>/proportionen/', Bildmodellproportionenendpunkte.stellen,
+         name='bildmodell_proportionen'),
     path('api/bildmodell/<uuid:job_id>/loeschen/', Bildmodellendpunkte.loeschen, name='bildmodell_loeschen'),
     path('api/bildmodell/<uuid:job_id>/datei/<str:ordner>/<str:name>', Bildmodellendpunkte.datei,
          name='bildmodell_datei'),

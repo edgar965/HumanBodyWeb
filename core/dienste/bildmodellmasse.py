@@ -7,7 +7,7 @@ des Modells, z.B. Hüftbreite, Nase, Brustform und Brustgröße."
 Vier Breiten (`G9silhouettenmasse`: Schulter, Brust, Taille, Hüfte) als
 Anteil der Körperhöhe und in cm, dreimal mit derselben Messfunktion:
 am FOTO (Personenmaske der frontalen Hauptbilder, Median), am ZIELNETZ
-(SMPL-X aus den Betas, orthografisch gerendert) und am MODELL (Genesis-
+(gepaarter Genesis-Käfig, orthografisch gerendert) und am MODELL (Genesis-
 Käfig mit Reglern und Restmorph). So sieht man, wo eine Abweichung
 entsteht — beim Schätzer (Foto → Zielnetz) oder bei den Reglern
 (Zielnetz → Modell). Läuft im Schritt „vorschau", Ergebnis in
@@ -65,22 +65,21 @@ class Bildmodellmasse:
         return aus
 
     def zielnetz(self):
-        from Genesis9.silhouettenmasse import G9silhouettenmasse
-        from Genesis9.zielnetz import G9zielnetz
+        """Am GEPAARTEN Zielkäfig (Genesis-Topologie, ggf. mit Proportionen geformt).
 
-        s = self.job.ergebnis.get('schaetzung') or {}
-        if not s.get('betas'):
-            return None
-        z = G9zielnetz.aus(s['betas'], symmetrisch=True)
-        k = G9zielnetz.koerper()
-        # Gelenke des SMPL-X-Netzes: Schultern 16/17, Hüften 1/2 (SMPL-X-Reihenfolge).
-        gelenke = {
-            'l_upperarm': z.gelenke[16],
-            'r_upperarm': z.gelenke[17],
-            'l_thigh': z.gelenke[1],
-            'r_thigh': z.gelenke[2],
-        }
-        return G9silhouettenmasse.vom_kaefig(z.punkte, k.faces, gelenke, self.hoehe_cm())
+        Am SMPL-X-Netz selbst lag die Hüfte bei 36,3 statt 33,4 cm — dessen
+        Hände hängen im Hüftband, die Silhouette maß Rumpf mit Hand
+        (19.09.2026). Käfig gegen Käfig hat dieselbe Definition wie `modell()`.
+        """
+        from Genesis9.silhouettenmasse import G9silhouettenmasse
+        from Genesis9.vorschaubild import G9vorschaubild
+
+        from ..daten.bildmodellablage import Bildmodellablage
+        from .bildmodellanpassung import Bildmodellanpassung
+
+        p, _, gelenke = Bildmodellanpassung(self.job, Bildmodellablage(self.job.kennung), {})._ziel_laden()
+        hoehe = float(p[:, 1].max() - p[:, 1].min()) * 100.0
+        return G9silhouettenmasse.vom_kaefig(p, G9vorschaubild(p)._dreiecke(), gelenke, hoehe)
 
     def modell(self):
         from Genesis9.formung import G9formung

@@ -12,6 +12,7 @@ import logging
 import os
 
 from ..daten.wrapperpfad import Wrapperpfad
+from .bildmodellpersonkatalog import Bildmodellpersonkatalog
 
 logger = logging.getLogger('core')
 
@@ -285,28 +286,6 @@ class Bildmodellkatalog:
         return (True, '')
 
     @classmethod
-    def haare(cls):
-        """Die Daz-Haare der Garderobe (`[{id, name}]`) für das Personenfeld „Haar"."""
-        if cls._haare is None:
-            try:
-                from Genesis9.garderobe import G9garderobe
-
-                gesehen = set()
-                aus = []
-                for e in G9garderobe.liste():
-                    if e.get('art') != 'haar' or not e.get('zeigbar') or e.get('id') in gesehen:
-                        continue
-                    gesehen.add(e['id'])
-                    aus.append({'id': e['id'], 'name': e.get('name') or e['id']})
-                cls._haare = sorted(aus, key=lambda h: h['name'].lower())
-            except Exception as fehler:  # noqa: BLE001
-                logger.warning('Haare der Garderobe nicht lesbar: %s', fehler)
-                cls._haare = []
-        return cls._haare
-
-    _haare = None
-
-    @classmethod
     def vergessen(cls):
         cls._zustand = None
-        cls._haare = None
+        Bildmodellpersonkatalog.vergessen()
