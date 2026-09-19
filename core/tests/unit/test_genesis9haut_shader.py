@@ -61,9 +61,13 @@ class DurchlichtShader(SimpleTestCase):
             'uDurchlichtFarbe',
             'attribute float dicke',
             'vDuenne',
-            'customProgramCacheKey',
+            # Seit dem 19.09.2026 ueber `Shaderpatch` (mit Kennung im Schluessel),
+            # sonst loeschte der Hauteinzug der Hautverdeckung diesen Eingriff.
+            "Shaderpatch.anhaengen(material, 'genesis9haut', eingriff)",
+            'eingriff.kennung = () =>',
         ):
             self.assertIn(stueck, text)
+        self.assertNotIn('material.onBeforeCompile =', text)
 
     def test_4_schminke_mischt_hinter_map_und_roughnessmap(self):
         """Schminke (18.09.2026): `mix(diffuseColor, farbe, gewicht)` hinter

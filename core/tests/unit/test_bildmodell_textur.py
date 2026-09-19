@@ -6,17 +6,20 @@ Anpassen, wenn ich ein Bild mit einer Textur entfernt habe … wenn ich die
 Bilder auswähle / abwähle, hinzufüge." Ohne Bibliothek, ohne Schätzer:
 
 1. `Bildmodelltextur.liste`: je Bild gewählt/möglich/Grund/Kamera — ein
-   Körper-Hauptbild mit SMPLest-X-Netz projiziert über den Schätzer, eine
-   Nahaufnahme mit Rig über das Rig, ein Nebenbild ohne Teil ist nicht
-   möglich (Grund), Nutzung „nur Form" ebenso, Videos fehlen.
+   gerendertes Testfallbild mit bekannter Kamera (`kamera_bekannt`), ein Bild
+   mit Rig über das Rig (seit 20.09. gegen das Modell selbst, kein Schätzer-
+   Netz mehr), ein Nebenbild ohne Teil ist nicht möglich (Grund), Nutzung
+   „nur Form" ebenso, Videos fehlen.
 2. `Bildmodellbildtypen.vorgaben_pruefen`: nur eben hochgeladene Dateien, nur
    bekannte Werte; die Sichtung übernimmt die Vorgabe (`optionen.bildtypen`) für
    einen neuen und einen nie von Hand gestellten Eintrag, nicht für einen manuellen.
 3. `Bildmodelloptionen`: der Schritt `textur` steht zwischen `vorschau` und
    `speichern`, die Vorgabe der Textur ist `foto`, `BLEIBEN` kennt die
    gezogenen Linien (die gingen beim ersten Start verloren).
-4. `Bildmodellfototextur.bilder/referenz`: Referenz ist das Körper-Hauptbild
-   von vorn; Nebenbilder ohne Teil und Bilder ohne Netz UND Rig bleiben draußen.
+4. `Bildmodellfototextur.bilder`: nur projizierbare Bilder (Kamera bekannt, Rig,
+   Gesichtspunkte oder Hände); Nebenbilder ohne Teil bleiben draußen. `_eintrag`
+   rechnet die Browserkamera in die OpenCV-Kamera um (Zuschnitt verschiebt den
+   Hauptpunkt) und gibt die Teilnummern eines Nebenbilds mit.
 """
 
 import unittest
@@ -42,7 +45,10 @@ def _bilder():
         {'datei': 'vorn.jpg', 'kategorie': 'koerper', 'ansicht': 'vorne', 'gewicht': 1.0, 'textur': HAUT,
          'schaetzung': SMPLX, 'rigs': {'yolo': {'punkte': []}}},
         {'datei': 'hinten.jpg', 'kategorie': 'koerper', 'ansicht': 'hinten', 'gewicht': 1.0, 'textur': HAUT,
-         'schaetzung': SMPLX},
+         'schaetzung': SMPLX, 'kasten': [100, 0, 1100, 1600], 'breite': 1000, 'hoehe': 1600,
+         'kamera_bekannt': {'matrix': [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0.9, 3.0, 1],
+                            'figur': [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                            'fov': 30.0, 'breite': 1200, 'hoehe': 1600}},
         {'datei': 'gesicht.jpg', 'kategorie': 'neben', 'teil': 'gesicht', 'gewicht': 0.0, 'nutzung': 'textur',
          'textur': dict(HAUT, tauglich=False, grund='kein Hauptbild'),
          'rigs': {'openpifpaf': {'punkte': []}}},
@@ -61,13 +67,22 @@ class _Job:
     def __init__(self, bilder, optionen=None):
         self.bilder = bilder
         self.optionen = optionen or {}
+        self.ergebnis = {}
+
+
+class _Ablage:
+    @staticmethod
+    def zuschnitt():
+        from pathlib import Path
+        return Path('A:/pruef/zuschnitt')
 
 
 class TexturlisteTest(unittest.TestCase):
     def test_1_liste(self):
         liste = {e['datei']: e for e in Bildmodelltextur.liste(_bilder())}
         self.assertNotIn('dreh.mp4', liste)
-        self.assertEqual((liste['vorn.jpg']['gewaehlt'], liste['vorn.jpg']['kamera']), (True, 'schaetzer'))
+        self.assertEqual((liste['vorn.jpg']['gewaehlt'], liste['vorn.jpg']['kamera']), (True, 'rig'))
+        self.assertEqual(liste['hinten.jpg']['kamera'], 'bekannt')
         self.assertEqual((liste['gesicht.jpg']['gewaehlt'], liste['gesicht.jpg']['kamera']), (True, 'rig'))
         self.assertFalse(liste['detail.jpg']['moeglich'])
         self.assertIn('Körperteil', liste['detail.jpg']['grund'])
@@ -89,8 +104,11 @@ class TexturlisteTest(unittest.TestCase):
                          'manuell': True},
                         {'datei': 'frei_z1.jpg', 'quelle': 'frei.jpg', 'kategorie': 'koerper',
                          'gewicht': 1.0}])
+            kamera = {'matrix': [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0.9, 3.0, 1], 'fov': 30.0,
+                      'breite': 1200, 'hoehe': 1600}
             typen = {'a.jpg': {'neben': 'neben/gesicht', 'nutzung': 'textur'},
-                     'alt.jpg': {'neben': 'neben/haende'}, 'frei.jpg': {'neben': 'neben/haende'}}
+                     'alt.jpg': {'neben': 'neben/haende', 'kamera': kamera},
+                     'frei.jpg': {'neben': 'neben/haende'}}
             s = Bildmodellsichtung(job, a, {'bildtypen': typen})
             s._uebernehmen([{'datei': 'a_z1.jpg', 'quelle': 'a.jpg', 'kategorie': 'kopf', 'gewicht': 1.0},
                             {'datei': 'alt_z1.jpg', 'quelle': 'alt.jpg', 'kategorie': 'koerper',
@@ -103,6 +121,8 @@ class TexturlisteTest(unittest.TestCase):
                              'Vorgabe für die neue Datei')
             self.assertTrue(neu['manuell'])
             self.assertEqual(nach['alt_z1.jpg']['kategorie'], 'koerper', 'von Hand gestellt: bleibt')
+            self.assertEqual(nach['alt_z1.jpg']['kamera_bekannt']['fov'], 30.0, 'die Kamera gilt trotzdem')
+            self.assertNotIn('kamera_bekannt', nach['frei_z1.jpg'])
             self.assertEqual(nach['frei_z1.jpg']['teil'], 'haende', 'nie von Hand gestellt: Vorgabe greift')
 
     def test_3_schritt_und_bleiben(self):
@@ -113,10 +133,20 @@ class TexturlisteTest(unittest.TestCase):
         self.assertIn('proportionen_linien', Bildmodelloptionen.BLEIBEN)
         self.assertIn('bildtypen', Bildmodelloptionen.BLEIBEN)
 
-    def test_4_fototextur_bilder_und_referenz(self):
+    def test_4_fototextur_bilder_und_eintrag(self):
         job = _Job(_bilder())
-        ft = Bildmodellfototextur(job, None, {})
-        self.assertEqual(ft.referenz()['datei'], 'vorn.jpg')
+        job.ergebnis = {'anpassung': {'regler': {'Height': 0.4}}, 'rest': {'regler': 'eigen:pruef'}}
+        ft = Bildmodellfototextur(job, _Ablage(), {})
         self.assertEqual([b['datei'] for b in ft.bilder()], ['vorn.jpg', 'hinten.jpg', 'gesicht.jpg'])
-        job.bilder[0]['ansicht'] = 'seite'
-        self.assertEqual(ft.referenz()['datei'], 'hinten.jpg', 'ohne Vorderansicht die nächste in der Reihe')
+        self.assertEqual(ft.stellung(), {'Height': 0.4, 'eigen:pruef': 1.0})
+        e = ft._eintrag(job.bilder[1])
+        self.assertEqual((e['kamera']['cx'], e['kamera']['cy']), (500.0, 800.0),
+                         'Zuschnitt verschiebt den Hauptpunkt')
+        self.assertAlmostEqual(e['kamera']['t'][2], 3.0)
+        self.assertNotIn('teile', e)
+        g = ft._eintrag(job.bilder[2])
+        self.assertNotIn('kamera', g)
+        self.assertEqual(g['teile'], [0], 'Gesicht → Kopf')
+        job.bilder[1].pop('kamera_bekannt')
+        self.assertEqual([b['datei'] for b in ft.bilder()], ['vorn.jpg', 'gesicht.jpg'],
+                         'ohne Kamera und Rig draußen')

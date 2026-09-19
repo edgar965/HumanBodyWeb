@@ -109,6 +109,13 @@ export class Bildmodellauftrag {
         return antwort;
     }
 
+    /** Bekannte Kameras gerenderter Testfallbilder nachtragen: `{name: kamera}` (20.09.2026). */
+    async kamerasNachtragen(kameras) {
+        const antwort = await Serverabruf.senden(this.adresse('kameras/'), kameras);
+        if (antwort.error) throw new Error(antwort.error);
+        return antwort;
+    }
+
     // ------------------------------------------- Ersetzen und Löschen (19.09.2026)
 
     /** Die Antwort der Datei-Endpunkte ist der ganze Zustand. */

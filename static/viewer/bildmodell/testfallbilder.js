@@ -18,7 +18,10 @@
  * `bilderHochladen` in den Auftrag, mit seinem Bildtyp als Vorgabe (`typ`:
  * Hauptbild, Nebenbild-Teil, Nutzung — `Bildmodellbildtypen.vorgaben_pruefen`),
  * die Sichtung übernimmt ihn. Der Lauf kennt die Referenz nicht — er sieht
- * nur Bilder.
+ * nur Bilder. Seit dem 20.09. trägt jede Vorgabe auch die KAMERA des Bildes
+ * (`kamera`: Weltmatrix der Kamera, Öffnungswinkel, Bildgröße, Weltmatrix der
+ * Figur): Die Fototextur projiziert damit exakt, statt die Kamera aus dem Rig
+ * zu schätzen — so sieht man, was die Projektion selbst kann.
  */
 import * as THREE from 'three';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
@@ -170,6 +173,17 @@ export class Testfallbilder {
         this.kamera.lookAt(bereich.mitte);
     }
 
+    /** Die Kamera dieses Bilds, wie sie gerendert hat — für die exakte Projektion der Fototextur. */
+    _kameraDaten(ansicht, modell) {
+        this.kamera.updateMatrixWorld(true);
+        modell.group.updateMatrixWorld(true);
+        return {
+            matrix: this.kamera.matrixWorld.toArray().map(v => Math.round(v * 1e6) / 1e6),
+            fov: Testfallbilder.FOV, breite: ansicht.b, hoehe: ansicht.h,
+            figur: modell.group.matrixWorld.toArray().map(v => Math.round(v * 1e6) / 1e6),
+        };
+    }
+
     _blob(qualitaet = 0.92) {
         return new Promise(r => this.canvas.toBlob(r, 'image/jpeg', qualitaet));
     }
@@ -186,21 +200,28 @@ export class Testfallbilder {
             const vorhanden = new Set(this.auftrag.zustand.originale || []);
             const dateien = [];
             const typen = {};
+            const kameras = {};
             let uebersprungen = 0;
             for (const ansicht of Testfallbilder.ANSICHTEN) {
                 const name = `${figur}_${ansicht.name}.jpg`;
-                if (vorhanden.has(name)) { uebersprungen += 1; continue; }
-                melder(`Rendern: ${ansicht.name}`);
                 this._kameraSetzen(ansicht, this.bereich(modell, ansicht.bereich));
+                if (vorhanden.has(name)) {
+                    // Schon da: nur die Kamera nachtragen (Bilder von vor dem 20.09. kennen sie nicht).
+                    kameras[name] = this._kameraDaten(ansicht, modell);
+                    uebersprungen += 1;
+                    continue;
+                }
+                melder(`Rendern: ${ansicht.name}`);
                 this.renderer.render(this.szene, this.kamera);
                 const blob = await this._blob();
                 dateien.push(new File([blob], name, { type: 'image/jpeg' }));
-                typen[name] = ansicht.typ || {};
+                typen[name] = { ...(ansicht.typ || {}), kamera: this._kameraDaten(ansicht, modell) };
             }
             if (dateien.length) {
                 melder(`${dateien.length} Bilder hochladen …`);
                 await this.auftrag.bilderHochladen(dateien, typen);
             }
+            if (Object.keys(kameras).length) await this.auftrag.kamerasNachtragen(kameras);
             const rest = uebersprungen ? ` (${uebersprungen} schon im Auftrag, übersprungen)` : '';
             melder(`${dateien.length} Bilder aus ${figur} im Auftrag${rest} — jetzt „Neue Dateien sichten" oder Starten`);
             return dateien.length;

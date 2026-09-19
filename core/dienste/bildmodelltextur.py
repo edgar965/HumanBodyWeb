@@ -90,9 +90,8 @@ class Bildmodelltextur:
     @classmethod
     def liste(cls, bilder):
         """Für den Bereich „Textur" der Seite (19.09.2026): je Bild, ob es zur Textur
-        zählt, warum nicht, und wie es projiziert wird (eigenes Netz oder Rig)."""
+        zählt, warum nicht, und wie es projiziert wird (Kamera bekannt oder aus dem Rig)."""
         from .bildmodellbildtypen import Bildmodellbildtypen
-        from .bildmodellfototextur import Bildmodellfototextur
 
         aus = []
         for b in bilder:
@@ -111,10 +110,9 @@ class Bildmodelltextur:
                 grund = 'Gruppenbild oder ohne Befund'
             elif kategorie == 'neben' and not teile:
                 grund = 'Nebenbild ohne Körperteil — Typ wählen'
-            eigenes = Bildmodellfototextur.eigenes_netz(b)
-            rig = any((b.get('rigs') or {}).values()) or bool(b.get('gesicht68'))
-            kamera = 'schaetzer' if (kategorie == 'koerper' and eigenes) else (
-                'rig' if rig else ('schaetzer' if eigenes else 'keine'))
+            rig = (any((b.get('rigs') or {}).values()) or bool(b.get('gesicht68'))
+                   or bool(b.get('haende_punkte')))
+            kamera = 'bekannt' if b.get('kamera_bekannt') else ('rig' if rig else 'keine')
             aus.append({
                 'datei': b['datei'],
                 'kategorie': kategorie,

@@ -2,6 +2,7 @@ import { Serverabruf } from './serverabruf.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9lagen } from './genesis9lagen.js';
+import { Stueckereignis } from './stueckereignis.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -11,6 +12,12 @@ import { Genesis9lagen } from './genesis9lagen.js';
  * Lagen dazukamen — Edgar: „das genesis T-Shirt ist an einigen Stellen
  * kaputt". Was die Lagen sind und warum, steht in `genesis9lagen.js`; hier
  * nur der Weg zum Server und die Netze.
+ *
+ * GEMELDET WIRD WIE EIN GARMENTCODE-STÜCK (`Stueckereignis`), sobald eines
+ * an der Figur hängt: Dessen Haut- und Lagenmaske rechnet gegen ALLE Stücke
+ * — kommt ein Daz-Hemd oder geht es, ist sie falsch. Ohne GarmentCode-Stück
+ * bleibt es still: Die Lagen der Daz-Garderobe macht der Server, und die
+ * Masken kosten auf Stufe 2 Sekunden (19.09.2026, Ärmelsaum-Befund).
  */
 export class Genesis9kleidung {
 
@@ -38,7 +45,16 @@ export class Genesis9kleidung {
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);
+        Genesis9kleidung.melden(inst, kennung, true);
         return daten.teile?.length || 0;
+    }
+
+    /** Haut- und Lagenverdeckung nachziehen — nur mit GarmentCode-Stück. */
+    static melden(inst, kennung, angezogen) {
+        const garmentcode = Object.keys(inst?.clothMeshes || {})
+            .some((schluessel) => schluessel.startsWith('gc_'));
+        if (garmentcode) Stueckereignis.melden(inst, kennung, angezogen);
+        return garmentcode;
     }
 
     /** Ausziehen; `neu`: die Figur wird ohnehin neu gebaut (Griffpose, eigene Knochen). */
@@ -47,5 +63,6 @@ export class Genesis9kleidung {
         delete inst.kleidung[kennung];
         if (neu) await inst.neuFormen();
         else await Genesis9lagen.nachAusziehen(inst, kennung);
+        Genesis9kleidung.melden(inst, kennung, false);
     }
 }

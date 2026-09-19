@@ -89,8 +89,6 @@ export function handleMenuAction(action) {
         document.getElementById('rig-toggle')?.classList.toggle('active', state.rigVisible);
         break;
         case 'mode-translate': fn.setTransformMode('translate'); break;
-        case 'mode-rotate': fn.setTransformMode('rotate'); break;
-        case 'mode-scale': fn.setTransformMode('scale'); break;
         case 'focus-char': if (state.selectedCharacterId) fn.focusCharacter(state.selectedCharacterId); break;
         case 'model-generator': fn.switchTab('modell'); fn.initModelGenerator(); break;
         case 'reset-scene': fn.resetScene(); break;
@@ -126,12 +124,11 @@ export function bindKeyboardShortcuts() {
         }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
         switch (e.key.toLowerCase()) {
-            // G, R und S starten das Greifen (Maus bewegen, Klick setzt ab) und
-            // stellen nebenbei das Gizmo passend. Vorher taten sie nur das
-            // Zweite — wer danach die Maus bewegte, bewegte nichts.
+            // G startet das Greifen (Maus bewegen, Klick setzt ab) und stellt
+            // nebenbei das Gizmo passend. R und S (Drehen, Skalieren) sind seit
+            // 19.09.2026 weg: Ein versehentliches S machte aus den Pfeilen die
+            // bunten Würfel, und Edgar braucht am Gizmo nur das Verschieben.
             case 'g': fn.setTransformMode('translate'); fn.greifenStarten?.('translate'); break;
-            case 'r': fn.setTransformMode('rotate'); fn.greifenStarten?.('rotate'); break;
-            case 's': fn.setTransformMode('scale'); fn.greifenStarten?.('scale'); break;
             case 'delete':
                 if (state._selectedSubMesh) fn._removeSubMesh(state._selectedSubMesh);
                 else fn.deleteSelectedCharacter();

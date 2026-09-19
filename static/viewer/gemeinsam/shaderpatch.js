@@ -18,6 +18,14 @@
  * eigenen Schlüssel bekäme ein ungepatchtes Material dasselbe Programm.
  * `klonen` nimmt das Register mit.
  *
+ * EIN EINGRIFF MIT ZUSTAND (19.09.2026): Die Genesis-9-Haut baut ihren
+ * Shader je nach Zusätzen (Durchlicht, Schminke, Detail, Klarlack) anders;
+ * ihr Programmschlüssel muss das nennen. Trägt die Eingriffsfunktion ein
+ * `kennung()`, hängt der Schlüssel dessen Wert an (`genesis9haut:0.400-s-x-k`).
+ * Bis dahin setzte `genesis9haut.js` `onBeforeCompile` selbst — und löschte
+ * damit den Hauteinzug, sobald ein Bild nachgeladen wurde (oder umgekehrt):
+ * die Haut unter dem GarmentCode-Shirt stand wieder auf 0 statt versenkt.
+ *
  * OHNE THREE.JS: `material` ist irgendein Objekt mit den beiden Feldern —
  * deshalb in Node prüfbar (`core/tests/unit/test_js_shaderpatch.py`).
  */
@@ -67,7 +75,9 @@ export class Shaderpatch {
         material.onBeforeCompile = (shader, renderer) => {
             for (const fn of eintraege.values()) fn(shader, renderer);
         };
-        material.customProgramCacheKey = () => Array.from(eintraege.keys()).sort().join('+');
+        material.customProgramCacheKey = () => Array.from(eintraege.keys()).sort()
+            .map((k) => (typeof eintraege.get(k).kennung === 'function' ? `${k}:${eintraege.get(k).kennung()}` : k))
+            .join('+');
         if ('needsUpdate' in material || material.isMaterial) material.needsUpdate = true;
     }
 

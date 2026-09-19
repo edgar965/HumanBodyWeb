@@ -95,7 +95,9 @@ export class Genesis9garderobe {
         const haken = zeile.querySelector('input');
         if (stueck.vorschau) {
             const bild = document.createElement('img');
-            bild.className = 'garment-thumb';
+            // `daz-vorschau`: heller Grund wie in Daz' Bibliothek — die LVA-Bilder
+            // sind durchsichtig und auf der dunklen Seite fast schwarz (19.09.2026).
+            bild.className = 'garment-thumb daz-vorschau';
             bild.alt = '';
             Bildnachlader.vormerken(bild,
                 `${Genesis9garderobe.ADRESSE}${encodeURIComponent(stueck.id)}/vorschau/`);

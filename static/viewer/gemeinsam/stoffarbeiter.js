@@ -15,7 +15,7 @@
  *   bauen  {kaefig (n·3), frei (n), kanten (E·2), indptr, indices, data,
  *           zeilen, hautIndex (n·4), hautGewicht (n·4), dreiecke (Browser)}
  *   felder {felder: {kanal: {n, d}}}   die JCMs auf dem Käfig (`Stofffelder`)
- *   bild   {M (Knochen·16), W (16), inv (16), kapseln (K·7), dt, werte}
+ *   bild   {M (Knochen·16), W (16), inv (16), kapseln (K·13, `Stoffkoerper`), dt, werte}
  *           → punkte {pos (zeilen·3), nrm (zeilen·3)}   (übertragen, nicht kopiert)
  *
  * SEIT 18.09.2026 ABENDS: `werte` sind die Gelenkkorrekturen dieses Bildes
@@ -25,6 +25,7 @@
  */
 import { Stoffpendel } from './stoffpendel.js';
 import { Stofffelder } from './stofffelder.js';
+import { Stoffkoerper } from './stoffkoerper.js';
 
 class Stoffarbeiter {
 
@@ -88,11 +89,7 @@ class Stoffarbeiter {
         const ziel = Stoffarbeiter.haeuten(d.M, d.W, d.werte);
         zeiten.haut = performance.now() - t0;
         if (Stoffarbeiter.erstes) { pendel.setzen(ziel); Stoffarbeiter.erstes = false; }
-        const kapseln = [];
-        for (let k = 0; k + 6 < d.kapseln.length; k += 7) {
-            kapseln.push({ a: [d.kapseln[k], d.kapseln[k + 1], d.kapseln[k + 2]],
-                           b: [d.kapseln[k + 3], d.kapseln[k + 4], d.kapseln[k + 5]], r: d.kapseln[k + 6] });
-        }
+        const kapseln = Stoffkoerper.lesen(d.kapseln);
         // Sprungschutz und Teilschritte: `Stoffpendel.bild`.
         let t1 = performance.now();
         const { x, zurueckgesetzt } = pendel.bild(ziel, d.dt, kapseln);

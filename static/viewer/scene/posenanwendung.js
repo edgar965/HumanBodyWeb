@@ -4,6 +4,7 @@ import { convertInstToSkinned } from './skeleton.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Posenabsatz } from './posenabsatz.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 /**
  * Posenanwendung — eine gespeicherte Pose auf die ausgewählte Figur legen.
@@ -177,13 +178,18 @@ export class Posenanwendung {
      * MakeHuman- oder UMA-Figur führt ihr EIGENES Skelett mit eigenen Namen
      * (`Pelvis`, `Spine1`); dort trifft kein einziger Name, `anwenden` setzt
      * null Knochen, und die Figur bleibt stehen — ohne Fehler und ohne
-     * Meldung. Die HumanBody-Figur ist die einzige ohne `quelle`.
+     * Meldung. Die HumanBody-Figur trägt seit Version 0.60 (13.09.2026, „eine
+     * Figur, eine Klasse") die Quelle `modell`; bis zum 19.09.2026 galt hier
+     * noch „die einzige ohne `quelle`" — und jede HumanBody-Figur fiel durch
+     * (gefunden, als die Daz-Sandale ihren Absatz nicht bekam).
      */
+    static QUELLE_HUMANBODY = 'modell';
+
     static pruefen(figur) {
         if (!figur) {
             return { ok: false, grund: 'Keine Figur gewählt.' };
         }
-        if (figur.quelle) {
+        if (figur.quelle && figur.quelle !== Posenanwendung.QUELLE_HUMANBODY) {
             return { ok: false,
                      grund: 'Posen gelten für HumanBody-Figuren; diese Figur '
                             + `kommt von ${figur.quelle}.` };
@@ -285,3 +291,7 @@ export class Posenanwendung {
         return Posenabsatz.setzen(figur, info, Posenanwendung.vomServer);
     }
 }
+
+// Fuer Module, die den Kreis ueber skeleton.js nicht schliessen duerfen
+// (`genesis9/dazkleidung.js`: ein Daz-Schuh mit Fusspose, 19.09.2026).
+fn.absatzSetzen = (figur, info) => Posenanwendung.absatzSetzen(figur, info);

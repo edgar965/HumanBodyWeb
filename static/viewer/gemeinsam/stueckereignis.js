@@ -9,6 +9,12 @@
  * (`garmentcode_absatz.js`). `GarmentcodeAnziehen.einhaengen` und
  * `entfernen` melden hier; eigenes Modul, weil `garmentcode_anziehen.js`
  * schon über der Zeilengrenze liegt.
+ *
+ * SEIT DEM 19.09.2026 IN `gemeinsam/`, weil auch die Daz-Garderobe meldet
+ * (`Genesis9kleidung`): Haut- und Lagenverdeckung hörten nur auf
+ * GarmentCode-Stücke. Zog man das Daz-Hemd aus, unter dem ein GarmentCode-
+ * Oberteil maskiert war, blieb dessen Maske stehen — 3.473 von 9.016
+ * Dreiecken gezeichnet, Haut in den Löchern (Edgar, mit Bild vom Ärmelsaum).
  */
 export class Stueckereignis {
 

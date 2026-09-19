@@ -87,9 +87,24 @@ class ReitergedaechtnisTest(SimpleTestCase):
         self.assertNotIn('mehrereSetzen', rumpf)
 
     def test_nur_pfade_dieser_vorlage_werden_gesetzt(self):
-        """`sleeve.cuff.cuff_len` gibt es bei einem Rock nicht."""
+        """`sleeve.cuff.cuff_len` gibt es bei einem Rock nicht — die Regel
+        steht in `Gedaechtniswahl.reglerwert` (node-geprueft), und BEIDE
+        Stellen des Wiederherstellens fragen sie: die gemerkten Werte und
+        die Werte des angehakten Presets. Ein `in regler.vorgaben` daneben
+        liesse `meta.upper` wieder fallen (Edgar, 19.09.2026: „T-Shirt eng
+        anliegend … ist nicht eng anliegend" — das Haekchen stand nach dem
+        Neuladen, gebaut wurde der gerade `Shirt`)."""
         quelle = ReitergedaechtnisTest._quelle('scene/garmentcode_gedaechtnis.js')
-        self.assertIn('in regler.vorgaben', quelle)
+        rumpf = quelle.split('static anwenden(')[1]
+        self.assertEqual(rumpf.count('Gedaechtniswahl.reglerwert(pfad, regler.vorgaben)'), 2)
+        self.assertNotIn('in regler.vorgaben', rumpf)
+
+    def test_ein_abhaken_ohne_davor_wird_gemerkt(self):
+        """Nach dem Seitenstart ist `davor` leer; abgehakt blieb das Preset
+        trotzdem im Gedaechtnis und stand beim naechsten Laden wieder."""
+        preset = ReitergedaechtnisTest._quelle('scene/garmentcode_preset.js')
+        rumpf = preset.split('_abhaken(preset, setzt) {')[1].split('\n    }')[0]
+        self.assertIn('setzt(vorher || {})', rumpf)
 
     def test_die_haekchen_kommen_mit(self):
         """„Angeklickt" ist woertlich gemeint."""

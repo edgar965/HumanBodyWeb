@@ -29,6 +29,7 @@ from .api.g9figur import G9figur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9vorschau import G9vorschau
 from .api.g9stoff import G9stoffapi
+from .api.g9frisurapi import G9frisurapi
 from .api.g9felder import G9felderapi
 from .api.mhfigur import Mhfigur
 from .api.mhproxy import Mhproxy
@@ -157,6 +158,9 @@ CHARAKTER = [
          G9vorschau.stueck, name='g9_figur_vorschau'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/stoff/<int:nummer>/',
          G9stoffapi.bauplan, name='g9_figur_stoffbauplan'),
+    # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
+    path('api/character/genesis9-figur/frisur/<str:name>/',
+         G9frisurapi.netz, name='g9_figur_frisur'),
     path('api/character/genesis9-figur/textur/<path:pfad>', G9garderobeapi.textur,
          name='g9_figur_textur'),
     # Reglerfelder je Stufe (18.09.2026, core/api/g9felder.py): JCMs, Visemes.

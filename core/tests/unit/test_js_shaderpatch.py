@@ -56,6 +56,17 @@ if (k.customProgramCacheKey() !== 'dritter+hauteinzug+weichgewebe') fehl('Schlue
 const einer = Shaderpatch.anhaengen(material(), 'weichgewebe', () => {});
 if (einer.customProgramCacheKey() === m.customProgramCacheKey()) fehl('verschiedene Eingriffe, gleicher Schluessel');
 
+// --- 3b. Ein Eingriff mit Kennung (19.09.2026: Genesis-9-Haut je Zusatz) ----
+const g9 = material();
+let stand = 'x-x';
+const eingriff = (s2) => { s2.vertexShader += stand; };
+eingriff.kennung = () => stand;
+Shaderpatch.anhaengen(g9, 'genesis9haut', eingriff);
+Shaderpatch.anhaengen(g9, 'hauteinzug', () => {});
+if (g9.customProgramCacheKey() !== 'genesis9haut:x-x+hauteinzug') fehl('Kennung fehlt: ' + g9.customProgramCacheKey());
+stand = 's-d';
+if (g9.customProgramCacheKey() !== 'genesis9haut:s-d+hauteinzug') fehl('Kennung veraltet: ' + g9.customProgramCacheKey());
+
 // --- 4. hinterInclude meldet ein fehlendes Include ------------------------
 if (Shaderpatch.hinterInclude(shader(), 'gibt_es_nicht', 'x')) fehl('fehlendes Include gilt als eingefuegt');
 

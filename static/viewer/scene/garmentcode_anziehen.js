@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
 import { GarmentcodeGeometrie } from './garmentcode_geometrie.js';
-import { Stueckereignis } from './garmentcode_stueckereignis.js';
+import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -164,17 +164,16 @@ export class GarmentcodeAnziehen {
      * @returns Anzahl der neu gebundenen Stücke
      */
     static nachbinden(figur) {
-        const inst = figur?.inst || figur;
-        if (!inst || !GarmentcodeAnziehen._skelett(inst)) return 0;
+        const inst = figur?.inst || figur, skelett = GarmentcodeAnziehen._skelett(inst);
+        if (!inst || !skelett) return 0;
         const bestand = inst.clothMeshes || {};
         let gebunden = 0;
         for (const schluessel of Object.keys(bestand)) {
             if (!schluessel.startsWith('gc_')) continue;
             const netz = bestand[schluessel];
-            // Schon gehäutet: nichts zu tun. Ohne Rohdaten geht es nicht —
-            // das ist kein Fehler, sondern ein Stück aus einer Sitzung vor
-            // dieser Änderung.
-            if (!netz || netz.isSkinnedMesh || !netz.userData?.gcRig) continue;
+            // Am Skelett der Figur gehäutet: nichts zu tun; an einem ALTEN (Genesis 9
+            // baut es je Umbau neu, 19.09.2026): neu binden. Ohne Rohdaten geht es nicht.
+            if (!netz || (netz.isSkinnedMesh && netz.skeleton === skelett) || !netz.userData?.gcRig) continue;
             const ergebnis = GarmentcodeAnziehen.einhaengen(
                 inst, netz.userData.gcRig, netz.userData.gcStueck);
             if (ergebnis.angezogen) gebunden += 1;
@@ -250,9 +249,10 @@ export class GarmentcodeAnziehen {
     }
 
     static _skelett(figur) {
-        let skelett = null;
+        // Der Körper zuerst — ein Stück am ALTEN Skelett darf nicht als das der Figur gelten (19.09.2026).
+        let skelett = figur?.bodyMesh?.skeleton || figur?.skelett?.skeleton || null;
         figur?.group?.traverse(o => {
-            if (!skelett && o.isSkinnedMesh && o.skeleton) skelett = o.skeleton;
+            if (!skelett && o.isSkinnedMesh && o.skeleton && !o.userData?.gcRig) skelett = o.skeleton;
         });
         return skelett;
     }

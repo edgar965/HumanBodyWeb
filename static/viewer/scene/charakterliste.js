@@ -288,6 +288,9 @@ export function clearAllCharacters() {
 }
 
 export function setTransformMode(mode) {
+    // Das Gizmo kann nur verschieben (19.09.2026, Edgar): Drehen und Skalieren
+    // laufen über die Zahlenfelder. Wer 'rotate'/'scale' verlangt, bekommt Pfeile.
+    if (mode !== 'translate') mode = 'translate';
     state.currentTransformMode = mode;
     state.transformControls.setMode(mode);
     document.querySelectorAll('.transform-btn[data-mode]').forEach(btn => {

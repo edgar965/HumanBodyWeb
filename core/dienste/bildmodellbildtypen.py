@@ -240,6 +240,26 @@ class Bildmodellbildtypen:
                 sauber['neben'] = wahl['neben']
             if wahl.get('nutzung') in nutzung:
                 sauber['nutzung'] = wahl['nutzung']
+            kamera = cls.kamera_pruefen(wahl.get('kamera'))
+            if kamera:
+                sauber['kamera'] = kamera
             if sauber:
                 aus[name] = sauber
         return aus
+
+    @staticmethod
+    def kamera_pruefen(roh):
+        """Die bekannte Kamera eines gerenderten Testfallbilds (`Testfallbilder._kameraDaten`):
+        Weltmatrix der Kamera und der Figur (16 Zahlen, spaltenweise wie three.js), Öffnungswinkel
+        (Grad, senkrecht), Bildgröße — oder None, wenn etwas fehlt oder keine Zahl ist."""
+        if not isinstance(roh, dict):
+            return None
+        try:
+            matrix = [float(v) for v in roh.get('matrix') or []]
+            figur = [float(v) for v in roh.get('figur') or [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]]
+            fov, breite, hoehe = float(roh.get('fov')), int(roh.get('breite')), int(roh.get('hoehe'))
+        except (TypeError, ValueError):
+            return None
+        if len(matrix) != 16 or len(figur) != 16 or not (1.0 <= fov <= 170.0) or breite < 8 or hoehe < 8:
+            return None
+        return {'matrix': matrix, 'figur': figur, 'fov': fov, 'breite': breite, 'hoehe': hoehe}

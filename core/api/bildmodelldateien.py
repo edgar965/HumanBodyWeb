@@ -4,6 +4,8 @@
 POST /api/bildmodell/<id>/original/<name>/ersetzen/   Formularfeld `bild` → neue Datei
 POST /api/bildmodell/<id>/original/<name>/loeschen/   Original samt Ausschnitten
 POST /api/bildmodell/<id>/bild/<datei>/loeschen/      ein Ausschnitt (Original, wenn keiner bleibt)
+POST /api/bildmodell/<id>/kameras/                    `{name: kamera}` — bekannte Kameras gerenderter
+                                                      Testfallbilder nachtragen (20.09.2026)
 
 Antwort jeweils der ganze Zustand (`Bildmodellendpunkte._zustand`) — die
 Seite zeichnet Bereiche und die Liste „noch nicht gesichtet" daraus neu.
@@ -12,6 +14,7 @@ gerade gesperrt (sie wird noch ausgeliefert), kommt 409 mit der Bitte, es
 noch einmal zu versuchen (`Bildmodelldateien` wartet vorher 1,5 s).
 """
 
+import json
 import logging
 
 from django.http import Http404, JsonResponse
@@ -20,6 +23,7 @@ from django.views.decorators.http import require_POST
 
 from ..daten.bildmodellablage import Bildmodellablage
 from ..dienste.bildmodellarbeiter import Bildmodellarbeiter
+from ..dienste.bildmodellbildtypen import Bildmodellbildtypen
 from ..dienste.bildmodelldateien import Bildmodelldateien
 from ..models import Bildmodellauftrag
 from .bildmodell import Bildmodellendpunkte
@@ -101,3 +105,32 @@ class Bildmodelldateiendpunkte:
         except PermissionError as fehler:
             return Bildmodelldateiendpunkte._gesperrt(fehler)
         return Bildmodelldateiendpunkte._antwort(job)
+
+    @staticmethod
+    @require_POST
+    def kameras(request, job_id):
+        """Bekannte Kameras (`Testfallbilder._kameraDaten`) für schon vorhandene Bilder: in die
+        Vorgaben (`optionen.bildtypen[name].kamera`) und an die Einträge (`kamera_bekannt`)."""
+        job = get_object_or_404(Bildmodellauftrag, pk=job_id)
+        try:
+            roh = json.loads(request.body or b'{}')
+        except ValueError:
+            return JsonResponse({'error': 'Kein JSON'}, status=400)
+        if not isinstance(roh, dict):
+            return JsonResponse({'error': 'Kein Wörterbuch'}, status=400)
+        kameras = {name: Bildmodellbildtypen.kamera_pruefen(k) for name, k in roh.items()}
+        kameras = {name: k for name, k in kameras.items() if k}
+        optionen = dict(job.optionen or {})
+        typen = dict(optionen.get('bildtypen') or {})
+        for name, kamera in kameras.items():
+            typen[name] = {**(typen.get(name) or {}), 'kamera': kamera}
+        optionen['bildtypen'] = typen
+        job.optionen = optionen
+        n = 0
+        for b in job.bilder:
+            kamera = kameras.get(b.get('quelle') or b.get('datei'))
+            if kamera:
+                b['kamera_bekannt'] = kamera
+                n += 1
+        job.save(update_fields=['optionen', 'bilder', 'updated_at'])
+        return JsonResponse({'ok': True, 'kameras': len(kameras), 'bilder': n})

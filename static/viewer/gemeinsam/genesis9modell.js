@@ -7,6 +7,7 @@ import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
 import { Modell } from './modell.js';
+import { Skelettereignis } from './skelettereignis.js';
 
 /**
  * Genesis9Modell — die Daz-Figur Genesis 9 als `Modell` für jede Seite.
@@ -167,21 +168,20 @@ export class Genesis9Modell extends Modell {
     }
 
     /**
-     * Die getragenen Stücke an das FRISCHE Skelett binden — `skelettBauen`
-     * räumt bei jedem Aufruf ab, eine Bindung von vorher zeigte auf Knochen,
-     * die nicht mehr in der Szene hängen (Befund MakeHuman, 07.09.2026).
+     * Die getragenen Stücke an das FRISCHE Skelett binden — `skelettBauen` räumt je Aufruf
+     * ab; eine alte Bindung zeigte auf Knochen außerhalb der Szene (MakeHuman, 07.09.2026).
+     * GarmentCode-Stücke bindet die Szene nach dem `Skelettereignis` um (19.09.2026).
      */
     _kleiderBinden() {
         if (!this.skelett) return;
         for (const [schluessel, altes] of Object.entries(this.clothMeshes)) {
-            const haut = altes?.userData?.hautgewichte;
-            if (!haut) continue;
+            const haut = altes?.userData?.hautgewichte; if (!haut) continue;
             this.group.remove(altes);
             const roh = new THREE.Mesh(altes.geometry, altes.material);
-            roh.name = altes.name;
-            roh.userData = altes.userData;
+            roh.name = altes.name; roh.userData = altes.userData;
             this.clothMeshes[schluessel] = this._einhaengen(roh, haut);
         }
+        Skelettereignis.melden(this);
     }
 
     // ------------------------------------------------------------ Regler

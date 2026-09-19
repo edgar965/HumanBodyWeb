@@ -10,6 +10,7 @@ import { convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Genesis9frisur } from './genesis9/genesis9frisur.js';
 
 export async function loadHairUI() {
     try {
@@ -25,6 +26,8 @@ export async function loadHairUI() {
         Auswahlfeld.ausNamen(colorSelect, Object.keys(state.hairColorData));
         select.addEventListener('change', () => {
             const inst = _selectedInst(); if (!inst) return;
+            // Genesis 9 (19.09.2026): die Frisur kommt vom Server auf DIESEN Kopf gelegt.
+            if (inst.quelle === 'genesis9') { Genesis9frisur.waehlen(inst, select.value, colorSelect?.value || ''); return; }
             if (!select.value) { if (inst.hairMesh) { inst.group.remove(inst.hairMesh);
                 inst.hairMesh.traverse(c => { if (c.isMesh) { c.geometry.dispose();
                     (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } });
@@ -33,7 +36,9 @@ export async function loadHairUI() {
             _loadHairForCharacter(inst, select.value, colorSelect?.value || '');
         });
         if (colorSelect) { colorSelect.addEventListener('change', () => {
-            const inst = _selectedInst(); if (!inst || !inst.hairMesh) return;
+            const inst = _selectedInst(); if (!inst) return;
+            if (inst.quelle === 'genesis9') { Genesis9frisur.faerben(Genesis9frisur.netz(inst), colorSelect.value); return; }
+            if (!inst.hairMesh) return;
             const rgb = state.hairColorData[colorSelect.value]; if (!rgb) return;
             const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
             inst.hairMesh.traverse(c => { if (c.isMesh

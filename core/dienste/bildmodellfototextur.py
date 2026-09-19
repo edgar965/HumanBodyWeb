@@ -1,37 +1,37 @@
 # -*- coding: utf-8 -*-
-"""Bildmodellfototextur — Textur Stufe 2: Fotofarben je Käfigpunkt und je Texel, als UDIM gebacken.
+"""Bildmodellfototextur — Textur Stufe 2: Fotofarbe je Texel, über das Modell selbst, als UDIM gebacken.
 
-Edgar (19.09.2026): „Überlege auch ob eine Textur möglich wäre. Du hast doch
-aus unterschiedlichen Bereichen Textur infos." — und abends: „warum ist das
-Modell noch mit dieser miserablen Textur? … mach ca. 10 Nahaufnahmen von
-Ursula mit HD aus unterschiedlichen Winkeln". Stufe 1 tönt die Daz-Haut
-(`Bildmodelltextur`, Hautton). Stufe 2 nimmt die Farbe der Fotos selbst:
+Edgar (19.09.2026): „warum ist das Modell noch mit dieser miserablen Textur? …
+mach ca. 10 Nahaufnahmen von Ursula mit HD" — und am 20.09.: „ich verstehe
+nicht diese Bilder, mach klare Bilder was in das Bein, Nagel hineinkommt.
+das ist doch reinstes Chaos!" Stufe 1 tönt die Daz-Haut (`Bildmodelltextur`,
+Hautton). Stufe 2 nimmt die Farbe der Fotos selbst:
 
-  1. `_run_fotofarben.py` (python10): je Bild mit Häkchen „Textur" das Netz ins
-     Bild projizieren — ein Körper-Hauptbild mit seinem SMPLest-X-Netz und
-     dessen Kamera; jedes andere Bild (Nahaufnahme, Kopfbild, Nebenbild mit
-     Körperteil) über sein RIG gegen das Netz des Referenz-Hauptbilds
-     (`Nahaufnahme`: PnP, Brennweitensuche — SMPLest-X schätzt auf einem
-     Detail einen ganzen Körper, auf Ursulas Fuß standen 0 Punkte). Tiefen-
-     test, Personenmaske, Sichtwinkel, Haut → Farbe und Gewicht je SMPL-X-
-     Punkt, und je TEXEL der fünf Kacheln (`Fototextur`, Abtastung von
-     `G9texturabtastung`, 2048²) — die Nahaufnahme schlägt das Ganzkörperbild
-     über die absolute Pixeldichte. Ein Nebenbild mit Körperteil färbt nur
-     dieses Teil (`punkte`).
-     Die Texel liegen über `G9flaechenpaarung` AUF dem SMPL-X-Netz (Dreieck +
-     Anteile je Käfigpunkt; der nächste Punkt allein macht ein Mosaik).
-  2. Punkte auf den Genesis-Käfig über die Netzpaarung (`zuordnung`), Lücken
-     über die Käfigkanten füllen (`G9restmorph.glaetten`) — die Füllschicht
-     unter der HD-Schicht.
+  1. `G9texturmodell`: das ANGEPASSTE MODELL (Käfig der Reglerstellung, Füße
+     auf 0) mit Dreiecken, Körperteil je Punkt und Landmarken (COCO, Füße,
+     Hände aus dem Skelett, 68 Gesichtspunkte aus `G9gesichtslandmarken`) —
+     die Textur liegt auf diesem Netz, also projiziert es auch. Bis zum 19.09.
+     lief die Projektion über das SMPL-X-Netz des Schätzers: jedes Bild lag
+     anders daneben, Brauen doppelt, Streifen auf den Beinen.
+  2. `_run_fotofarben.py` (python10): je Bild mit Häkchen „Textur" das Modell
+     ins Bild projizieren — Kamera bekannt (gerenderte Testfallbilder,
+     `kamera_bekannt` → `G9bildkamera`) oder aus dem Rig gegen die Landmarken
+     (`Nahaufnahme`, PnP). Tiefentest, Personenmaske, Sichtwinkel, Haut → je
+     TEXEL der fünf Kacheln (`Fototextur`, Abtastung `G9texturabtastung`,
+     2048²) die Proben aller Bilder; `Texturmischung` gleicht die Helligkeit
+     auf der Überlappung an und blendet mehrbandig. Ein Nebenbild mit
+     Körperteil färbt nur dieses Teil (`teile`). Dazu je Bild und Kachel ein
+     Beitragsbild (welche Pixel des Fotos in die Kachel gehen).
   3. `G9texturbacken`: Albedo der Grundhaut (auf den Stufe-1-Ton getönt),
-     darüber die Punktfarben (Gouraud), darüber die Texelfarben; dazu je
-     Kachel die Herkunftskarte (welches Bild welche Stelle liefert).
+     darüber die Punktfarben (Gouraud, aus den Texeln zurückgerechnet) als
+     Füllung, darüber die Texelfarben; je Kachel die Herkunftskarte, und
+     `G9kachelkarte` beschriftet die Inseln mit ihrem Körperteil.
 
 Ergebnis `ergebnis.fototextur = {kacheln: {1001: 'fototextur_1001.jpg', …},
-herkunft: {1001: 'fototextur_herkunft_1001.png'}, bilder, je_bild, texel,
-punkte_mit_farbe, deckung, hautton, seite, stand}`; die Seite legt die
-Kacheln als `map` auf das Modell (`texturauflage.js`) und zeigt sie unten im
-Bereich „Textur" (`texturansicht.js`). Eigener Schritt `textur` im Lauf.
+herkunft, karten, bilder, je_bild (mit beitraege), texel, deckung, hautton,
+seite, stand}`; die Seite legt die Kacheln als `map` auf das Modell
+(`texturauflage.js`) und zeigt sie unten im Bereich „Textur"
+(`texturansicht.js`, `texturkachel.js`). Eigener Schritt `textur` im Lauf.
 """
 
 import json
@@ -54,18 +54,13 @@ __all__ = ['Bildmodellfototextur']
 
 
 class Bildmodellfototextur:
-    """Fotofarben holen, paaren, backen — Schritt „textur"."""
+    """Modell hinlegen, Runner rufen, backen — Schritt „textur"."""
 
     RUNNER = '_run_fotofarben.py'
     AUFTRAG = 'fotofarben_auftrag.json'
-    FARBEN = 'fotofarben.npz'
+    MODELL = 'fototextur_modell.npz'
     TEXEL = 'fototextur.npz'
-    PAARUNG = 'fotofarben_paarung.npz'
     WARTEZEIT = 1800
-    #: Ein Käfigpunkt gilt als gedeckt, wenn sein SMPL-X-Punkt so viel Gewicht hat.
-    GEWICHT_AB = 0.05
-    #: Reihenfolge, in der ein Körper-Hauptbild Referenz für die Nahaufnahmen wird.
-    REFERENZ = ('vorne', 'dreiviertel', 'hinten', 'seite')
 
     def __init__(self, job, ablage, optionen):
         self.job = job
@@ -75,48 +70,44 @@ class Bildmodellfototextur:
     # -------------------------------------------------------------- Bilder
 
     @staticmethod
-    def eigenes_netz(b):
-        """Hat das Bild ein SMPLest-X-Netz mit Kamera (Körper-Hauptbild)?"""
-        s = b.get('schaetzung') or {}
-        return bool(s.get('posed_vertices_path') and s.get('backend') == 'smplest_x'
-                    and s.get('cam_focal') and s.get('processed_bbox'))
-
-    def referenz(self):
-        """Das Körper-Hauptbild, gegen dessen Netz die Nahaufnahmen registriert werden."""
-        kandidaten = [b for b in self.job.bilder
-                      if b.get('kategorie') == 'koerper' and self.eigenes_netz(b)
-                      and Bildmodellbildtypen.fuer_form(b)]
-        if not kandidaten:
-            return None
-        rang = {a: i for i, a in enumerate(self.REFERENZ)}
-        kandidaten.sort(key=lambda b: (rang.get(b.get('ansicht'), 9), -float(b.get('gewicht') or 0)))
-        return kandidaten[0]
+    def projizierbar(b):
+        """Kamera bekannt, oder ein Rig, Gesichtspunkte oder Hände zum Registrieren."""
+        return bool(b.get('kamera_bekannt') or (b.get('rigs') or {}) or b.get('gesicht68')
+                    or b.get('haende_punkte'))
 
     def bilder(self):
-        """Alle gewählten Bilder, die projizierbar sind: eigenes Netz oder ein Rig."""
+        """Alle gewählten Bilder, die projizierbar sind."""
         aus = []
         for b in self.job.bilder:
             if b.get('video') or not Bildmodelltextur.gewaehlt(b):
                 continue
             if b.get('kategorie') == 'neben' and not Bildmodellbildtypen.textur_teile(b):
                 continue
-            if not (self.eigenes_netz(b) or (b.get('rigs') or {}) or b.get('gesicht68')):
-                continue
-            aus.append(b)
+            if self.projizierbar(b):
+                aus.append(b)
         return aus
 
-    @staticmethod
-    def punkte_je_teil(paarung, teile):
-        """Die SMPL-X-Punkte der Körperteile (`G9koerperteile.TEILE`) — für ein Nebenbild."""
-        from Genesis9.koerperteile import G9koerperteile
-
-        nummern = [G9koerperteile.NUMMER[t] for t in teile if t in G9koerperteile.NUMMER]
-        teil = np.asarray(paarung.neutral.teil)
-        return [int(i) for i in np.where(np.isin(teil, nummern))[0]]
+    def stellung(self):
+        """Die Regler des Ergebnisses samt Restmorph (wie `Bildmodellanpassung.stellung`)."""
+        a = self.job.ergebnis.get('anpassung') or {}
+        stellung = dict(a.get('regler') or {})
+        r = self.job.ergebnis.get('rest') or {}
+        if r.get('regler'):
+            stellung[r['regler']] = 1.0
+        return stellung
 
     # ------------------------------------------------------------- Runner
 
-    def _eintrag(self, b, paarung):
+    @staticmethod
+    def teile_nummern(b):
+        from Genesis9.koerperteile import G9koerperteile
+
+        teile = Bildmodellbildtypen.textur_teile(b)
+        return [G9koerperteile.NUMMER[t] for t in teile if t in G9koerperteile.NUMMER] if teile else None
+
+    def _eintrag(self, b):
+        from Genesis9.bildkamera import G9bildkamera
+
         e = {
             'datei': str(self.ablage.zuschnitt() / b['datei']),
             'gewicht': float(b.get('gewicht') or 1.0) or 1.0,
@@ -126,52 +117,65 @@ class Bildmodellfototextur:
                        for h in (b.get('haende_punkte') or [])],
             'breite': int(b.get('breite') or 0),
             'hoehe': int(b.get('hoehe') or 0),
-            'eigene': bool(b.get('kategorie') == 'koerper' and self.eigenes_netz(b)),
         }
-        if self.eigenes_netz(b):
-            e['posed'] = str(self.ablage.schaetzung() / b['schaetzung']['posed_vertices_path'])
-            e['schaetzung'] = b['schaetzung']
-        teile = Bildmodellbildtypen.textur_teile(b)
+        kamera = G9bildkamera.aus_browser(b.get('kamera_bekannt'), b.get('kasten'))
+        if kamera:
+            e['kamera'] = kamera
+        teile = self.teile_nummern(b)
         if teile:
-            # Ein Nebenbild färbt nur die Punkte seines Teils (Oberkörper, Rücken, Hände …).
-            e['punkte'] = self.punkte_je_teil(paarung, teile)
+            e['teile'] = teile
         return e
 
-    def _auftrag(self, bilder, paarung, abtastung):
-        from Genesis9.flaechenpaarung import G9flaechenpaarung
+    def _gesichtstabelle(self, bilder):
+        """Fehlt die Tabelle der 68 Gesichtspunkte: aus einem Testfallbild mit bekannter Kamera
+        und Gesichtsbefund gegen die Referenzfigur bauen (einmal je Rechner)."""
+        from Genesis9.bildkamera import G9bildkamera
+        from Genesis9.gesichtslandmarken import G9gesichtslandmarken
+        from Genesis9.texturmodell import G9texturmodell
 
+        from .bildmodelltestfall import Bildmodelltestfall
+
+        if G9gesichtslandmarken.holen() is not None:
+            return
+        eintrag = Bildmodelltestfall(self.job, self.optionen).eintrag()
+        if eintrag is None:
+            return
+        kandidaten = [b for b in bilder if b.get('kamera_bekannt') and len(b.get('gesicht68') or []) >= 68]
+        kandidaten.sort(key=lambda b: -float(((b.get('gesicht') or {}).get('hoehe')) or 0))
+        if not kandidaten:
+            return
+        b = kandidaten[0]
+        referenz = G9texturmodell(eintrag['regler'])
+        kamera = G9bildkamera.aus_browser(b['kamera_bekannt'], b.get('kasten'))
+        tabelle = G9gesichtslandmarken.bauen(referenz.punkte, referenz.flaechen, kamera, b['gesicht68'],
+                                             quelle=b['datei'])
+        if tabelle is not None:
+            tabelle.speichern()
+
+    def _auftrag(self, bilder, modell, abtastung):
         ordner = self.ablage.ergebnis()
-        G9flaechenpaarung.holen().speichern(ordner / self.PAARUNG)
+        modell.speichern(ordner / self.MODELL)
+        for alt in ordner.glob('beitrag_*.jpg'):     # Beitragsbilder des letzten Laufs
+            alt.unlink()
         auftrag = {
-            'bilder': [self._eintrag(b, paarung) for b in bilder],
-            'ausgabe': str(ordner / self.FARBEN),
+            'modell': str(ordner / self.MODELL),
+            'bilder': [self._eintrag(b) for b in bilder],
+            'abtastung': str(abtastung.pfad(abtastung.seite)),
+            'ausgabe_textur': str(ordner / self.TEXEL),
+            'beitraege': str(ordner),
         }
-        ref = self.referenz()
-        if ref is not None:
-            auftrag['referenz'] = {
-                'datei': ref['datei'],
-                'posed': str(self.ablage.schaetzung() / ref['schaetzung']['posed_vertices_path']),
-            }
-        if abtastung is not None:
-            auftrag['abtastung'] = str(abtastung.pfad(abtastung.seite))
-            auftrag['paarung'] = str(ordner / self.PAARUNG)
-            auftrag['ausgabe_textur'] = str(ordner / self.TEXEL)
         pfad = ordner / self.AUFTRAG
         with open(pfad, 'w', encoding='utf-8') as f:
             json.dump(auftrag, f)
         return pfad
 
-    def fotofarben(self, bilder, paarung, abtastung, melder=None):
-        """`(farbe (10475, 3), gewicht (10475,), antwort)` aus dem python10-Lauf."""
-        pfad = self._auftrag(bilder, paarung, abtastung)
+    def fotofarben(self, bilder, modell, abtastung):
+        """`(hd {farbe_k, gewicht_k, herkunft_k, punktfarbe, punktgewicht}, antwort)` aus python10."""
+        pfad = self._auftrag(bilder, modell, abtastung)
         prozess = subprocess.Popen(
             [settings.PIPELINE_PYTHON, os.path.join(Wrapperpfad.pfad(), self.RUNNER), str(pfad)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
-            cwd=Wrapperpfad.pfad(),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8',
+            errors='replace', cwd=Wrapperpfad.pfad(),
         )
         try:
             aus, fehler = prozess.communicate(timeout=self.WARTEZEIT)
@@ -181,60 +185,54 @@ class Bildmodellfototextur:
         antwort = Bildmodellmehrbild.antwort(aus)
         if not antwort or 'error' in antwort:
             raise RuntimeError('Fotofarben: %s' % ((antwort or {}).get('error') or (fehler or '')[-400:]))
-        with np.load(self.ablage.ergebnis() / self.FARBEN) as d:
-            return d['farbe'].astype(float), d['gewicht'].astype(float), antwort
+        with np.load(self.ablage.ergebnis() / self.TEXEL) as d:
+            return {k: d[k] for k in d.files}, antwort
 
     # ------------------------------------------------------------- Backen
 
     def backen(self, melder=None):
-        """Alles in einem: Runner, Paarung, Kacheln. None ohne taugliche Bilder."""
-        from Genesis9.netzpaarung import G9netzpaarung
+        """Alles in einem: Modell, Runner, Kacheln, Karten. None ohne taugliche Bilder."""
+        from Genesis9.kachelkarte import G9kachelkarte
         from Genesis9.restmorph import G9restmorph
         from Genesis9.texturabtastung import G9texturabtastung
         from Genesis9.texturbacken import G9texturbacken
+        from Genesis9.texturmodell import G9texturmodell
 
         bilder = self.bilder()
         if not bilder:
             return None
         if melder:
-            melder(0.02, 'Texturabtastung (%d²)' % G9texturabtastung.SEITE)
+            melder(0.02, 'Texturabtastung (%d²) und Modell' % G9texturabtastung.SEITE)
         abtastung = G9texturabtastung.holen()
-        paarung = G9netzpaarung.holen()
+        self._gesichtstabelle(bilder)
+        modell = G9texturmodell(self.stellung())
         if melder:
-            melder(0.05, 'Fotofarben aus %d Bildern (python10)' % len(bilder))
-        farbe, gewicht, antwort = self.fotofarben(bilder, paarung, abtastung, melder)
-        zu = np.asarray(paarung.zuordnung, dtype=np.int64)
-        gepaart = np.asarray(paarung.gewicht, dtype=float) > 0
-        kaefig = np.where(gepaart[:, None], farbe[np.clip(zu, 0, len(farbe) - 1)], 0.0)
-        deckung = np.where(gepaart, gewicht[np.clip(zu, 0, len(gewicht) - 1)], 0.0)
-        gedeckt = deckung >= self.GEWICHT_AB
+            melder(0.05, 'Fototextur aus %d Bildern (python10)' % len(bilder))
+        hd, antwort = self.fotofarben(bilder, modell, abtastung)
+        gedeckt = np.asarray(hd['punktgewicht'], dtype=float) > 0
         if melder:
             melder(0.6, 'Lücken füllen (%d von %d Punkten gedeckt)' % (int(gedeckt.sum()), len(gedeckt)))
         # Lücken: ungedeckte Punkte nehmen den Mittelwert ihrer Nachbarn (Kanten des Käfigs);
         # die Deckung läuft über dieselben Kanten aus (weicher Rand statt harter Kante).
         gewicht_feld = gedeckt.astype(float)
-        gefuellt = G9restmorph.glaetten(kaefig, gewicht_feld, schritte=0)
+        gefuellt = G9restmorph.glaetten(np.asarray(hd['punktfarbe'], dtype=float), gewicht_feld, schritte=0)
         feder = G9restmorph.glaetten(np.repeat(gewicht_feld[:, None], 3, axis=1), gewicht_feld,
                                      schritte=0)[:, 0]
         alpha = np.clip((feder - 0.2) / 0.8, 0.0, 1.0)
         hautton = Bildmodelltextur.hautton(self.job.bilder).get('hautton')
-        hd = None
-        texel_pfad = self.ablage.ergebnis() / self.TEXEL
-        if antwort.get('texel') and texel_pfad.is_file():
-            with np.load(texel_pfad) as d:
-                hd = {k: d[k] for k in d.files}
         if melder:
             melder(0.7, 'Kacheln backen (%d²)' % abtastung.seite)
+        ordner = self.ablage.ergebnis()
         kacheln, herkunft = G9texturbacken(abtastung.seite).backen(
-            gefuellt, alpha, self.ablage.ergebnis(), 'fototextur', hautton, hd)
+            gefuellt, alpha, ordner, 'fototextur', hautton, hd)
+        karten = G9kachelkarte(abtastung, modell.teil).schreiben(ordner)
         texel = antwort.get('texel') or {}
         aus = {
             'kacheln': {str(k): os.path.basename(v) for k, v in kacheln.items()},
             'herkunft': {str(k): os.path.basename(v) for k, v in herkunft.items()},
+            'karten': {str(k): os.path.basename(v) for k, v in karten.items()},
             'bilder': len(bilder),
-            'referenz': (self.referenz() or {}).get('datei'),
             'je_bild': antwort.get('je_bild'),
-            'punkte_mit_farbe': int(antwort.get('punkte_mit_farbe') or 0),
             'deckung': round(float(gedeckt.mean()), 3),
             'deckung_hd': round(float(texel.get('gedeckt', 0)) / max(1, int(texel.get('gesamt', 0) or 1)), 3),
             'seite': abtastung.seite,

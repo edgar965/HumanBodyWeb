@@ -15,9 +15,13 @@ braucht, ueber die `webbruecke` geholt (die Kleidung bleibt drueben):
 
     punkte / dreiecke   Kaefig-Browsernetz (Stufe 0, 27.087 Punkte), Y oben,
                         Fuesse auf dem Boden — die Reglerstellung der Figur
-    sichtbar            dasselbe auf der Ansichtsstufe 1 (104.480 Punkte): gegen
-                        DIESE Flaeche wird der Stoff nachgearbeitet, sonst
-                        schiene die Haut durch (Befund 08.09.2026 bei HumanBody)
+    sichtbar            dasselbe auf der Stufe des Browsers (1: 104.480 Punkte,
+                        2: 410.202) MIT HD-Morphs — `G9koerpernetz.koerperflaeche`,
+                        dieselbe Flaeche wie fuer die Daz-Kleidung: gegen DIESE
+                        Flaeche wird der Stoff nachgearbeitet, sonst schiene die
+                        Haut durch (Befund 08.09.2026 bei HumanBody; 19.09.2026
+                        am Aermelsaum: ohne HD lag das Oberteil 1,7 mm ueber der
+                        gerechneten und 1,0 mm ueber der gezeigten Haut)
     haut                `{knochen, index, gewicht}` — Daz-Knochennamen; damit
                         bindet der Browser das Stueck an das Genesis-Skelett
     segmente            die sechs GarmentCode-Teile aus dem staerksten Knochen
@@ -39,6 +43,8 @@ import numpy as np
 
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.formung import G9formung
+from Genesis9.koerpernetz import G9koerpernetz
+from Genesis9.netzstufe import G9netzstufe
 
 __all__ = ['G9garmentfigur']
 
@@ -61,7 +67,8 @@ class G9garmentfigur:
     SEGMENTE = ('body', 'left_arm', 'left_leg', 'right_arm', 'right_leg', 'face_internal')
     FEMININ = 'BaseFeminine_figure_ctrl_Character'
     MASKULIN = 'BaseMasculine_figure_ctrl_Character'
-    #: Die Stufe, die der Browser zeigt (`G9unterteilung.ANSICHT`).
+    #: Die Stufe, die der Browser zeigt, wenn kein Keks etwas anderes sagt
+    #: (`G9unterteilung.ANSICHT`); `sichtbar()` fragt `G9netzstufe.browser()`.
     SICHTBAR = 1
 
     def __init__(self, regler):
@@ -90,10 +97,21 @@ class G9garmentfigur:
         return np.asarray(self.stufe(0).dreiecke, dtype=np.int64)
 
     def sichtbar(self):
-        u"""(Punkte, Dreiecke) der Ansichtsstufe — die Flaeche, die man sieht."""
-        stufe = self.stufe(self.SICHTBAR)
-        return (np.asarray(stufe.punkte(self.roh()), dtype=np.float64),
-                np.asarray(stufe.dreiecke, dtype=np.int64))
+        u"""(Punkte, Dreiecke) der Flaeche, die man sieht: Browserstufe, mit
+        HD-Morphs (`koerperflaeche`, je Stellung und Stufe zwischengespeichert
+        — der Daz-Weg hat sie meist schon gerechnet)."""
+        stufen = self.sichtbare_stufe()
+        fein, _normalen, _baum = G9koerpernetz(self.formung, stufen=stufen).koerperflaeche()
+        return (np.asarray(fein, dtype=np.float64),
+                np.asarray(self.stufe(stufen).dreiecke, dtype=np.int64))
+
+    @classmethod
+    def sichtbare_stufe(cls):
+        u"""Die Stufe des Browsers — der Keks `netzstufen`, sonst `SICHTBAR`."""
+        try:
+            return int(G9netzstufe.browser())
+        except Exception:  # noqa: BLE001 — ohne Anfrage (Skript, Test): Ansichtsstufe
+            return cls.SICHTBAR
 
     def haut(self):
         u"""`{knochen, index (N, 4), gewicht (N, 4)}` der Kaefig-Browserpunkte."""

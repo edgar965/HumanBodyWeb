@@ -3,7 +3,7 @@ import { markDirty } from './undo.js';
 import { state } from './state.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
-import { Stueckereignis } from './garmentcode_stueckereignis.js';
+import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.

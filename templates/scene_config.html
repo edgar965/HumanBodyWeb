@@ -612,10 +612,9 @@
                     <div class="menu-item checkable checked" data-action="toggle-model">Modell</div>
                     <div class="menu-item checkable" data-action="toggle-rig">Rig</div>
                     <div class="menu-sep"></div>
-                    <div class="menu-item radio checked" data-action="mode-translate">Translate <span
+                    {# Nur Verschieben (19.09.2026, Edgar): Drehen/Skalieren nicht mehr am Gizmo, nur als Zahlenfelder im Seitenpanel. #}
+                    <div class="menu-item radio checked" data-action="mode-translate">Verschieben <span
                          class="shortcut">G</span></div>
-                    <div class="menu-item radio" data-action="mode-rotate">Rotate <span class="shortcut">R</span></div>
-                    <div class="menu-item radio" data-action="mode-scale">Scale <span class="shortcut">S</span></div>
                     <div class="menu-sep"></div>
                     <div class="menu-item" data-action="focus-char">Zum Charakter springen</div>
                 </div>
@@ -653,12 +652,8 @@
             </div>
             <div class="menubar-right">
                 <div class="transform-btn-group">
-                    <button class="transform-btn active" data-mode="translate" title="Translate (G)"><i
+                    <button class="transform-btn active" data-mode="translate" title="Verschieben (G)"><i
                          class="fas fa-arrows-alt"></i></button>
-                    <button class="transform-btn" data-mode="rotate" title="Rotate (R)"><i
-                         class="fas fa-sync-alt"></i></button>
-                    <button class="transform-btn" data-mode="scale" title="Scale (S)"><i
-                         class="fas fa-expand-arrows-alt"></i></button>
                 </div>
                 {% include "_ansichtsschalter.html" %}
             </div>
@@ -676,7 +671,7 @@
             </div>
             <ul id="character-list"></ul>
             <div class="kbd-hint tastenhinweis-fuss">
-                <kbd>G</kbd> Translate <kbd>R</kbd> Rotate <kbd>S</kbd> Scale <kbd>Del</kbd> Delete
+                <kbd>G</kbd> Verschieben <kbd>Del</kbd> Löschen
             </div>
         </div>
 

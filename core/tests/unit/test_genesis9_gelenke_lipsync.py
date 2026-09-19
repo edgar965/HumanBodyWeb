@@ -258,7 +258,12 @@ class Bewegungen(SimpleTestCase):
         self.assertEqual(sorted(G9zuordnung.ausnahmen(SkeletonGenesis9)),
                          sorted([v for v in DEF_ZU_G9.values() if v]
                                 + list(SkeletonGenesis9.DIREKT)))
-        self.assertEqual(G9zuordnung.ausnahmen(Skeleton.get_format('CMU')), [])
+        # Fremde Formate: nur die Schluesselbeine (19.09.2026, Stiernacken — Daz
+        # setzt sie 3,3 Grad fallend an, SMPL-X 12,7; `G9zuordnung.SCHULTERN`).
+        self.assertEqual(G9zuordnung.ausnahmen(Skeleton.get_format('CMU')), ['l_shoulder', 'r_shoulder'])
+        smplx = G9zuordnung.ausnahmen(Skeleton.get_format('SMPLX'))
+        self.assertEqual(smplx.count('l_shoulder'), 1)
+        self.assertIn('l_foot', smplx)
 
 
 class Lippensynchronisation(SimpleTestCase):

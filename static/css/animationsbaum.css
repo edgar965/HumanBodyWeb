@@ -161,6 +161,16 @@
    ausgegraut"). Gedämpft bleibt nur, was nicht zeigbar ist (`.gedaempft`). */
 .slider-row label.stueckname { color: var(--text); }
 
+/* Daz' Vorschaubilder (`<Name>.png` neben der .duf) sind zur Hälfte
+   durchsichtig — Daz zeigt sie auf hellem Grund. Auf der dunklen Seite waren
+   die LVA-Stücke fast schwarz (gemessen: mittlere Helligkeit 24 von 255;
+   Edgar, 19.09.2026: „viele Icons viel zu dunkel … leuchtende Farben, so wie
+   diese Assets auch in Wirklichkeit sind"). Heller Grund wie in Daz, dazu
+   etwas kräftigere Farben. */
+.garment-thumb.daz-vorschau, .bildauswahl-bild {
+    background: #e6e6ea; filter: saturate(1.2);
+}
+
 /* Bildauswahl (`gemeinsam/bildauswahl.js`, 18.09.2026): Farbvarianten der
    Daz-Garderobe mit Vorschaubild je Eintrag — ein `<select>` zeigt keine
    Bilder. Die Liste liegt fest am Bildschirm, damit der rollende Baum sie

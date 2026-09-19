@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Genesis9hautGLSL } from './genesis9hautglsl.js';
+import { Shaderpatch } from './shaderpatch.js';
 
 /**
  * Genesis9haut — Zusätze auf `MeshStandardMaterial`/`MeshPhysicalMaterial`:
@@ -50,8 +51,7 @@ export class Genesis9haut {
      * @param werte     `{gewicht, farbe: [r, g, b]}` aus dem Preset (sRGB)
      */
     static durchlicht(material, werte) {
-        const farbe = new THREE.Color().setRGB(werte.farbe[0], werte.farbe[1], werte.farbe[2],
-                                               THREE.SRGBColorSpace);
+        const farbe = new THREE.Color().setRGB(werte.farbe[0], werte.farbe[1], werte.farbe[2], THREE.SRGBColorSpace);
         const gewicht = Number(werte.gewicht) || 0;
         Genesis9haut._zusatz(material).durchlicht = { gewicht, farbe };
         Genesis9haut._einhaengen(material);
@@ -162,9 +162,10 @@ export class Genesis9haut {
         return material.userData.genesis9;
     }
 
+    /** Über `Shaderpatch` (19.09.2026): direkt gesetzt löschte es den Hauteinzug. */
     static _einhaengen(material) {
         const zusatz = material.userData.genesis9;
-        material.onBeforeCompile = (shader) => {
+        const eingriff = (shader) => {
             if (zusatz.durchlicht) {
                 shader.uniforms.uDurchlicht = { value: zusatz.durchlicht.gewicht };
                 shader.uniforms.uDurchlichtFarbe = { value: zusatz.durchlicht.farbe };
@@ -213,9 +214,8 @@ export class Genesis9haut {
             }
         };
         // Ein anderer Schlüssel je Zusatz, sonst teilt Three das Programm.
-        material.customProgramCacheKey = () => `g9haut-${
-            zusatz.durchlicht ? zusatz.durchlicht.gewicht.toFixed(3) : 'x'}-${
+        eingriff.kennung = () => `${zusatz.durchlicht ? zusatz.durchlicht.gewicht.toFixed(3) : 'x'}-${
             zusatz.schminke ? 's' : 'x'}-${zusatz.detail ? 'd' : 'x'}-${zusatz.klarlack ? 'k' : 'x'}`;
-        material.needsUpdate = true;
+        Shaderpatch.anhaengen(material, 'genesis9haut', eingriff);
     }
 }

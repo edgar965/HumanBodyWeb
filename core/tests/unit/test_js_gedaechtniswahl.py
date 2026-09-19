@@ -93,6 +93,22 @@ pruefe('ohne Praefix', Gedaechtniswahl.reiterName('garmentcode'),
        'garmentcode');
 pruefe('leer', Gedaechtniswahl.reiterName(undefined), '');
 
+// --- 8. Gemerkte Reglerwerte: nur Regler dieser Vorlage — und Bausteine --
+// `meta.upper` hat keinen Regler, eine Form setzt es (19.09.2026: nach
+// dem Neuladen stand „T-Shirt (anliegend)", gebaut wurde der gerade Shirt).
+const vorgaben = {'sleeve.length': 0.3, 'shirt.width': 1.05};
+pruefe('gezeichneter Regler', Gedaechtniswahl.reglerwert('sleeve.length', vorgaben), true);
+pruefe('Regler einer anderen Vorlage',
+       Gedaechtniswahl.reglerwert('sleeve.cuff.cuff_len', vorgaben), false);
+for (const pfad of ['meta.upper', 'meta.bottom', 'meta.wb']) {
+    pruefe('Baustein ' + pfad, Gedaechtniswahl.reglerwert(pfad, vorgaben), true);
+}
+pruefe('Baustein ohne Vorgaben', Gedaechtniswahl.reglerwert('meta.upper', null), true);
+pruefe('Regler ohne Vorgaben', Gedaechtniswahl.reglerwert('sleeve.length', null), false);
+pruefe('Bauwert ist kein Schnittregler', Gedaechtniswahl.reglerwert('bau.anliegen_mm', vorgaben), false);
+pruefe('leerer Pfad', Gedaechtniswahl.reglerwert('', vorgaben), false);
+pruefe('kein Pfad', Gedaechtniswahl.reglerwert(undefined, vorgaben), false);
+
 // --- 7. Zwei Reiter, gleiche Kennung: verschiedene Schluessel ------------
 // Sonst ueberschriebe ein Feld im einen Reiter das gleichnamige im anderen.
 if (Gedaechtniswahl.schluessel('animation', 'x')

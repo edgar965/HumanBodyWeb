@@ -13,6 +13,7 @@ import { findHeadBoneIndex, skinifyHairGroup }
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Dazkleidung } from './genesis9/dazkleidung.js';
+import './garmentcode_nachbindung.js';   // Genesis 9: Stücke folgen dem neuen Skelett
 
 export async function loadRigifySkeleton() {
     try {

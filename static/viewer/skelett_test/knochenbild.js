@@ -22,10 +22,26 @@ const CYL_RADIUS_TOP = 0.003;
 
 const CYL_RADIUS_BOT = 0.004;
 
+// Steg vom Knochenende zum Kindgelenk (nur mit `achsen`): ab 1 mm Versatz.
+const STEG_RADIUS = 0.0015;
+
+const STEG_AB = 0.001;
+
 // =========================================================================
 // Bone Visualization — white cylinders + joint spheres
 // =========================================================================
-export function createBoneViz(bones, skelKey, invScale) {
+/**
+ * `achsen` (optional): `{name: Länge}` — dann geht der Zylinder eines Knochens
+ * von SEINEM Gelenk entlang seiner Achse (+Y), wie Daz seine Knochen zeigt.
+ * Bei Genesis 9 sitzt das Gelenk von `neck2` 12 mm vor dem Ende von `neck1`
+ * (so steht es in `Genesis9.dsf`): Gelenk zu Gelenk gezeichnet knickte der
+ * Hals 20°, den das Retarget nie gemacht hat (Edgar, 19.09.2026: „Knick
+ * zwischen 96, 97 und 110"); nur entlang der Achsen klaffte die Kette
+ * („die Knochen am Hals kommen nicht zusammen"). Deshalb dazu ein STEG vom
+ * Knochenende zu jedem Kindgelenk, das nicht dort sitzt — dünner, damit
+ * der Versatz als Versatz lesbar bleibt.
+ */
+export function createBoneViz(bones, skelKey, invScale, achsen = null) {
     const skel = Testzustand.skeletons[skelKey];
     removeBoneViz(skelKey);
 
@@ -33,6 +49,18 @@ export function createBoneViz(bones, skelKey, invScale) {
     const s = invScale || 1;
     const jointGeo = new THREE.SphereGeometry(JOINT_RADIUS * s, 6, 4);
     const _up = new THREE.Vector3(0, 1, 0);
+    const steg = (eltern, von, nach) => {
+        const weg = nach.clone().sub(von);
+        const len = weg.length();
+        if (len < STEG_AB) return;
+        const cyl = new THREE.Mesh(
+            new THREE.CylinderGeometry(STEG_RADIUS * s, STEG_RADIUS * s, len, 4, 1), BONE_MAT);
+        cyl.renderOrder = 998;
+        cyl.position.copy(von).add(weg.multiplyScalar(0.5));
+        cyl.quaternion.setFromUnitVectors(_up, nach.clone().sub(von).normalize());
+        eltern.add(cyl);
+        skel.vizMeshes.push(cyl);
+    };
 
     for (const bone of bones) {
         // Joint sphere at each bone origin
@@ -41,6 +69,22 @@ export function createBoneViz(bones, skelKey, invScale) {
         bone.add(joint);
         skel.vizMeshes.push(joint);
 
+        if (achsen) {
+            const laenge = achsen[bone.name];
+            if (!laenge) continue;      // Endmarke: kein eigener Knochen
+            const cyl = new THREE.Mesh(
+                new THREE.CylinderGeometry(CYL_RADIUS_TOP * s, CYL_RADIUS_BOT * s, laenge, 4, 1),
+                BONE_MAT);
+            cyl.renderOrder = 998;
+            cyl.position.set(0, laenge / 2, 0);
+            bone.add(cyl);
+            skel.vizMeshes.push(cyl);
+            const ende = new THREE.Vector3(0, laenge, 0);
+            for (const kind of bone.children) {
+                if (kind.isBone) steg(bone, ende, kind.position);
+            }
+            continue;
+        }
         // Cylinder from parent to this bone
         if (!bone.parent || !bone.parent.isBone) continue;
         const len = bone.position.length();

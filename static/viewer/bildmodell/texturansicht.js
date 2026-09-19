@@ -6,29 +6,32 @@
  * Bild mit einer Textur entfernt habe … damit ich sehen kann, wie du die Textur
  * machst und anpasst, wenn ich die Bilder auswähle / abwähle, hinzufüge."
  *
- * Oben die fünf UDIM-Kacheln (`ergebnis.fototextur.kacheln`, 2048², Klick öffnet
- * die Datei) — wahlweise als Herkunftskarte (welches Bild welche Stelle liefert,
- * Palette wie `G9texturbacken.PALETTE`). Darunter die Tabelle der Bilder
- * (`zustand.texturbilder`, `Bildmodelltextur.liste`): Häkchen „für die Textur",
- * Vorschau, Typ, wie das Bild projiziert wird (Schätzer-Netz oder Rig-
- * Registrierung mit Punktzahl und Fehler), Anteil an der HD-Textur, Löschen.
+ * Oben die fünf UDIM-Kacheln (`ergebnis.fototextur.kacheln`, 2048²; Klick öffnet
+ * darunter das `Texturkachelpanel`: Körperteile der Kachel und die Beitragsbilder
+ * der Fotos — Edgar, 20.09.: „mach klare Bilder was in das Bein, Nagel hineinkommt")
+ * — wahlweise als Herkunftskarte (welches Bild welche Stelle liefert, Palette wie
+ * `G9texturbacken.PALETTE`). Darunter die Tabelle der Bilder (`zustand.texturbilder`,
+ * `Bildmodelltextur.liste`): Häkchen „für die Textur", Vorschau, Typ, wie das Bild
+ * projiziert wird (Kamera bekannt — gerenderte Testfallbilder — oder Rig-
+ * Registrierung gegen das Modell, mit Punktzahl und Fehler), Anteil, Texel, Löschen.
  * „Bild für die Textur hinzufügen" lädt mit Nutzung „nur Textur" hoch; „Textur
  * anpassen" startet nur den Schritt `textur` — mit neuen Dateien vorher die
  * Sichtung (Umfang „neue"). Die 3D-Ansicht oben zieht die Kacheln nach
  * (`texturauflage.js`, Marke `stand`).
  */
+import { Texturkachelpanel } from './texturkachel.js';
+
 export class Texturansicht {
 
     static KACHELN = { 1001: 'Kopf', 1002: 'Rumpf', 1003: 'Beine', 1004: 'Arme', 1005: 'Nägel' };
     static PALETTE = [[230, 60, 60], [60, 140, 230], [60, 190, 90], [240, 170, 40],
                       [170, 80, 220], [40, 200, 200], [240, 100, 180], [150, 110, 60],
                       [120, 200, 40], [60, 60, 200], [230, 120, 60], [110, 110, 110]];
-    static KAMERA = { schaetzer: 'Schätzer-Netz', rig: 'Rig', keine: '—' };
-
     constructor(auftrag, katalog, formular, steller) {
         this.auftrag = auftrag;
         this.formular = formular;
         this.steller = steller;
+        this.panel = new Texturkachelpanel(auftrag);
         this.herkunft = false;
         this.geaendert = false;
         this._stand = '';
@@ -62,6 +65,7 @@ export class Texturansicht {
         this._stand = stand;
         this._zahlen(z, ft);
         this._kacheln(ft);
+        this.panel.zeigen(ft);
         this._tabelle(z, ft);
         this._knoepfe(z);
     }
@@ -74,7 +78,6 @@ export class Texturansicht {
                        `HD-Deckung ${Math.round((ft.deckung_hd || 0) * 100)} %`,
                        `Punktfarbe ${Math.round((ft.deckung || 0) * 100)} %`,
                        `${ft.bilder} Bilder`];
-        if (ft.referenz) teile.push(`Referenz für Nahaufnahmen: ${ft.referenz}`);
         feld.textContent = teile.join(' · ');
     }
 
@@ -87,10 +90,11 @@ export class Texturansicht {
         for (const [kachel, name] of Object.entries((ft.kacheln || {}))) {
             const fig = document.createElement('figure');
             fig.className = 'bildmodell-texturkachel';
+            fig.classList.toggle('gewaehlt', this.panel.kachel === kachel);
             const a = document.createElement('a');
             a.href = this.auftrag.dateiAdresse('ergebnis', name) + `?t=${marke}`;
-            a.target = '_blank';
-            a.title = `${kachel} in voller Größe öffnen`;
+            a.title = `${kachel}: zeigen, was hineinkommt`;
+            a.addEventListener('click', e => { e.preventDefault(); this.panel.waehlen(kachel, ft); this._stand = ''; this.zeigen(this._zustand); });
             const bild = document.createElement('img');
             bild.src = a.href;
             bild.alt = kachel;
@@ -104,7 +108,13 @@ export class Texturansicht {
                 a.appendChild(karte);
             }
             const text = document.createElement('figcaption');
-            text.textContent = `${kachel} · ${Texturansicht.KACHELN[kachel] || ''}`;
+            text.textContent = `${kachel} · ${Texturansicht.KACHELN[kachel] || ''} `;
+            const voll = document.createElement('a');
+            voll.href = a.href;
+            voll.target = '_blank';
+            voll.textContent = '⤢';
+            voll.title = `${kachel} in voller Größe öffnen`;
+            text.appendChild(voll);
             fig.append(a, text);
             feld.appendChild(fig);
         }
@@ -163,7 +173,7 @@ export class Texturansicht {
         anteil.textContent = je ? `${(100 * (je.anteil || 0)).toFixed(1).replace('.', ',')} %` : '—';
         const punkte = document.createElement('td');
         punkte.className = 'zahl';
-        punkte.textContent = je ? `${je.sichtbar}` : '—';
+        punkte.textContent = je && je.texel ? je.texel.toLocaleString('de-DE') : '—';
         // Löschen
         const knoepfe = document.createElement('td');
         knoepfe.appendChild(this.steller.loeschenKnopf(`Bild ${b.datei} aus dem Auftrag löschen?`,
@@ -181,8 +191,9 @@ export class Texturansicht {
 
     static kamera(b, je) {
         const art = je ? je.kamera : b.kamera;
-        if (art === 'rig') return je && je.punkte ? `Rig · ${je.punkte} Punkte · ${je.fehler_px} px` : 'Rig';
-        if (art === 'schaetzer') return 'Schätzer-Netz';
+        const rig = je && je.punkte ? `Rig · ${je.punkte} Punkte · ${String(je.fehler_px).replace('.', ',')} px` : 'Rig';
+        if (art === 'bekannt') return je && je.punkte ? `bekannt (gerendert) · ${rig}` : 'bekannt (gerendert)';
+        if (art === 'rig') return rig;
         return '—';
     }
 

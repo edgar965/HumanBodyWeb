@@ -75,6 +75,18 @@
         border-radius: 50%;
         display: inline-block;
     }
+    /* Platznummer (19.09.2026): die Reihenfolge der Spalten; DEF fest auf 1. */
+    .toggle-row .platznummer {
+        width: 2.6em;
+        padding: 1px 2px;
+        font: inherit;
+        text-align: right;
+        background: var(--bg-tertiary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+    }
+    .toggle-row .platznummer:disabled { opacity: 0.55; }
 
     /* CSS2D label overlay container */
     #label-renderer {
@@ -120,46 +132,64 @@
                     <label for="toggle-labels">Bone-Nummern anzeigen</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="def" min="1" max="9"
+                           title="Platz in der Anzeige" disabled>
                     <input type="checkbox" id="toggle-def" checked>
                     <span class="color-dot punkt-def"></span>
                     <label for="toggle-def">AutoRig Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="cmu" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-cmu" checked>
                     <span class="color-dot punkt-cmu"></span>
                     <label for="toggle-cmu">CMU Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="mixamo" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-mixamo" checked>
                     <span class="color-dot punkt-mixamo"></span>
                     <label for="toggle-mixamo">Mixamo Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="mocapnet" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-mocapnet" checked>
                     <span class="color-dot punkt-mocapnet"></span>
                     <label for="toggle-mocapnet">MocapNET Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="bandai" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-bandai" checked>
                     <span class="color-dot punkt-bandai"></span>
                     <label for="toggle-bandai">Bandai Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="smpl" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-smpl" checked>
                     <span class="color-dot punkt-smpl"></span>
                     <label for="toggle-smpl">SMPL Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="uma" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-uma" checked>
                     <span class="color-dot punkt-uma"></span>
                     <label for="toggle-uma">UMA Skeleton (Figurkatalog)</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="genesis9" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-genesis9" checked>
                     <span class="color-dot punkt-genesis9"></span>
                     <label for="toggle-genesis9">Genesis 9 Skeleton (Daz)</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="number" class="platznummer" data-skelett="openpose" min="1" max="9"
+                           title="Platz in der Anzeige">
                     <input type="checkbox" id="toggle-openpose" checked>
                     <span class="color-dot punkt-openpose"></span>
                     <label for="toggle-openpose">OpenPose Skeleton</label>

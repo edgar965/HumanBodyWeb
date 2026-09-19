@@ -181,9 +181,14 @@ class Bildmodellsichtung:
                     eintrag['ansicht'] = vorher['ansicht']
                 eintrag['manuell'] = True
             # Die Wahl der drei Boxen (`Bildmodellbildtypen`) bleibt über die Sichtung hinweg.
-            for feld in ('textur_an', 'teil', 'nutzung'):
+            for feld in ('textur_an', 'teil', 'nutzung', 'kamera_bekannt'):
                 if vorher and feld in vorher:
                     eintrag[feld] = vorher[feld]
+            # Die Kamera eines gerenderten Testfallbilds ist eine Tatsache, keine Wahl: sie gilt immer.
+            vorgaben = self.optionen.get('bildtypen') or {}
+            kamera = (vorgaben.get(eintrag.get('quelle') or datei) or {}).get('kamera')
+            if kamera:
+                eintrag['kamera_bekannt'] = kamera
             for feld in ('schaetzung', 'gesichtsschaetzung'):
                 if vorher and vorher.get(feld):
                     eintrag[feld] = vorher[feld]

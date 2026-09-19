@@ -23,7 +23,18 @@ in dessen Rahmen (Normale, Aufwaertsrichtung, Querachse) zerlegt und im Rahmen
 des gepaarten HumanBody-Punkts DER FIGUR (mit ihren Morphs, nicht der
 Grundfigur) wieder zusammengesetzt, mit dem Hoehenmassstab; die Ergebnisse
 werden nach Naehe gemittelt. So folgt das Stueck der HumanBody-Form, ohne dass
-Genesis dafuer in diese Form gebracht werden muesste. Danach hebt
+Genesis dafuer in diese Form gebracht werden muesste.
+
+FERN VOM KOERPER NUR VERSCHIEBEN (19.09.2026, Edgar mit Bild: der Rock des
+dancing_queen_dress in Kastenfalten): Am Saum, 20 cm vom Koerper, zeigen die
+Normalen der drei Nachbarn in drei Richtungen, und jeder HumanBody-Rahmen
+dreht anders als sein Genesis-Rahmen — der Stoff wird zerrissen. Gemessen als
+Kantendehnung des Kaefigs (`_wegwerf/mess_dazkleid_hb.py`): Rock 0,8–0,9 m
+p90 165 %, max 854 %. Ab `NAH_M` mischt sich die reine VERSCHIEBUNG des
+gepaarten Punkts (Mittel ueber FERN_NACHBARN Koerperpunkte, Gewicht 1/d) ein,
+ab `FERN_M` gilt nur sie: p90 26 %, max 276 %; das Verschiebungsfeld wird dort
+ueber GLAETTUNG_FERN Stoffnachbarn geglaettet. Rumpf und Aermel (unter 1 cm)
+bleiben beim Rahmen. Danach hebt
 `G9kollision` es aus der sichtbaren HumanBody-Haut (Unterteilungsnetz), und
 die Gewichte kommen vom naechsten HumanBody-Dreieck (`GarmentCode.anziehen`,
 DEF-Knochennamen) — der Browser bindet das Stueck an das Rigify-Skelett.
@@ -42,6 +53,7 @@ from Genesis9.formung import G9formung
 from Genesis9.kollision import G9kollision
 
 from .g9garmentfigur import G9garmentfigur
+from .g9hbsitz import G9hbsitz
 from .hbtraeger import Hbtraeger
 from .g9hbknochen import G9hbknochen
 from .skelettgeometrie import Skelettgeometrie
@@ -63,6 +75,12 @@ class G9aufhumanbody:
     #: VERSCHIEBUNGSFELD ueber den Stoff geglaettet (`GLAETTUNG` Stoffnachbarn).
     NACHBARN = 3
     GLAETTUNG = 12
+    #: Bis hierher (Abstand zum naechsten Koerperpunkt, Meter) gilt der Rahmen,
+    #: ab FERN_M nur die Verschiebung; dazwischen linear gemischt.
+    NAH_M = 0.01
+    FERN_M = 0.05
+    FERN_NACHBARN = 64
+    GLAETTUNG_FERN = 48
     #: (geschlecht, bauart) -> Paarung der Grundfiguren.
     _paarungen = {}
 
@@ -73,6 +91,7 @@ class G9aufhumanbody:
         self.meta = dict(meta or {})
         self.paarung = self.paarung_holen(self.geschlecht, self.bauart)
         self._figur = None
+        self._oertlich = None
 
     def figur(self):
         if self._figur is None:
@@ -99,9 +118,14 @@ class G9aufhumanbody:
         hb_seg = Garmentkoerper.segmente(geschlecht) or {}
         massstab = float(hb['punkte'][:, 1].max() / max(g9_punkte[:, 1].max(), 1e-6))
         skaliert = cls.geschaetzt(g9, g9_punkte, massstab)
+        g9_seg = g9.segmente()
+        # Rumpfhoehen nach Landmarken (Schritt, Hueftweite, Taille) — sonst sass
+        # der Bund der Jeans 6,5 cm tiefer als auf Genesis (`G9hbsitz`).
+        skaliert, knoten = G9hbsitz.rumpfhoehen(skaliert, g9_punkte, g9_seg.get('body') or [],
+                                                hb['punkte'], hb_seg.get('body') or [])
         zu = np.full(len(g9_punkte), -1, dtype=np.int64)
         ganz = G9kollision.baum(hb['punkte'])
-        for teil, g9_liste in g9.segmente().items():
+        for teil, g9_liste in g9_seg.items():
             g9_idx = np.asarray(g9_liste, dtype=np.int64)
             hb_idx = np.asarray(hb_seg.get(teil) or [], dtype=np.int64)
             if not len(g9_idx):
@@ -116,11 +140,13 @@ class G9aufhumanbody:
             einig = np.einsum('ik,ijk->ij', g9_normalen[g9_idx], hb['normalen'][kand]) > cls.EINIG
             erster = np.where(einig.any(axis=1), einig.argmax(axis=1), 0)
             zu[g9_idx] = kand[np.arange(len(g9_idx)), erster]
-        logger.info('Daz auf HumanBody: Paarung %s/%s — %d Genesis-Punkte, Massstab %.3f',
-                    geschlecht, bauart, len(zu), massstab)
+        logger.info('Daz auf HumanBody: Paarung %s/%s — %d Genesis-Punkte, Massstab %.3f, '
+                    'Rumpfhoehen %s', geschlecht, bauart, len(zu), massstab,
+                    knoten and {k: [round(v, 3) for v in knoten[k]] for k in ('von', 'nach')})
         return {'zu': zu, 'g9_punkte': g9_punkte, 'g9_normalen': g9_normalen,
                 'g9_rahmen': Hbtraeger.rahmen(g9_normalen), 'g9_baum': G9kollision.baum(g9_punkte),
-                'massstab': massstab}
+                'massstab': massstab, 'knoten': knoten,
+                'g9_rumpf': list(g9_seg.get('body') or []), 'hb_rumpf': list(hb_seg.get('body') or [])}
 
     @classmethod
     def geschaetzt(cls, g9, g9_punkte, massstab):
@@ -145,28 +171,58 @@ class G9aufhumanbody:
             return p
         paar, figur = self.paarung, self.figur()
         hb_rahmen = Hbtraeger.rahmen(figur['normalen'])
-        abstand, nachbar = G9kollision.naechste(paar['g9_baum'], p, k=self.NACHBARN)
+        oertlich = self.oertlich()
+        k_alle = min(self.FERN_NACHBARN, len(paar['g9_punkte']))
+        abstand, nachbar = G9kollision.naechste(paar['g9_baum'], p, k=k_alle)
         abstand = np.asarray(abstand, dtype=np.float64).reshape(len(p), -1)
         nachbar = np.asarray(nachbar).reshape(len(p), -1)
-        gewicht = 1.0 / np.maximum(abstand, 1e-6)
-        gewicht /= gewicht.sum(axis=1, keepdims=True)
-        aus = np.zeros_like(p)
+        # 0 = am Koerper (Rahmen), 1 = fern (nur Verschiebung)
+        fern = np.clip((abstand[:, 0] - self.NAH_M) / (self.FERN_M - self.NAH_M), 0.0, 1.0)[:, None]
+        g_nah = 1.0 / np.maximum(abstand[:, :self.NACHBARN], 1e-6)
+        g_nah /= g_nah.sum(axis=1, keepdims=True)
+        g_fern = 1.0 / np.maximum(abstand, 1e-6)
+        g_fern /= g_fern.sum(axis=1, keepdims=True)
+        mit_rahmen = np.zeros_like(p)
+        verschoben = np.zeros_like(p)
         for k in range(nachbar.shape[1]):
             j = nachbar[:, k]
-            versatz = p - paar['g9_punkte'][j]
-            anteile = np.einsum('ij,iaj->ia', versatz, paar['g9_rahmen'][j]) * paar['massstab']
+            # Versatz im OERTLICHEN Massstab (`G9hbsitz.massstab`), nicht im
+            # Hoehenmassstab: ein 13 cm schmalerer Rumpf bekommt ein engeres Top.
+            versatz = (p - paar['g9_punkte'][j]) * oertlich[j][:, None]
             ziel = paar['zu'][j]
-            neu = figur['punkte'][ziel] + np.einsum('ia,iaj->ij', anteile, hb_rahmen[ziel])
-            aus += gewicht[:, k:k + 1] * neu
-        return p + self.geglaettet(p, aus - p)
+            if k < self.NACHBARN:
+                anteile = np.einsum('ij,iaj->ia', versatz, paar['g9_rahmen'][j])
+                mit_rahmen += g_nah[:, k:k + 1] * (
+                    figur['punkte'][ziel] + np.einsum('ia,iaj->ij', anteile, hb_rahmen[ziel]))
+            verschoben += g_fern[:, k:k + 1] * (figur['punkte'][ziel] + versatz)
+        feld = (1.0 - fern) * mit_rahmen + fern * verschoben - p
+        return p + ((1.0 - fern) * self.geglaettet(p, feld)
+                    + fern * self.geglaettet(p, feld, self.GLAETTUNG_FERN))
+
+    def achsel(self):
+        u"""Genesis-Hoehe, bis zu der der Umfangsmassstab gilt — None ohne Landmarken."""
+        knoten = self.paarung.get('knoten')
+        return knoten and knoten['genesis']['taille'] + G9hbsitz.ACHSEL_UEBER
+
+    def oertlich(self):
+        u"""(N,) Massstab je Genesis-Koerperpunkt auf DIESER Figur — einmal je Traeger."""
+        if getattr(self, '_oertlich', None) is None:
+            paar = self.paarung
+            self._oertlich = G9hbsitz.massstab(paar['g9_punkte'], paar.get('g9_rumpf') or [],
+                                               paar['zu'], self.figur()['punkte'],
+                                               paar.get('hb_rumpf') or [],
+                                               sonst=paar['massstab'], bis=self.achsel())
+        return self._oertlich
 
     @classmethod
-    def geglaettet(cls, punkte, feld):
-        u"""Das Verschiebungsfeld je Punkt als Mittel ueber seine GLAETTUNG naechsten
-        Stoffpunkte — die Form des Stuecks bleibt, das Rauschen der Paarung geht."""
-        if len(punkte) <= cls.GLAETTUNG:
+    def geglaettet(cls, punkte, feld, nachbarn=None):
+        u"""Das Verschiebungsfeld je Punkt als Mittel ueber seine `nachbarn` (Vorgabe
+        GLAETTUNG) naechsten Stoffpunkte — die Form des Stuecks bleibt, das Rauschen
+        der Paarung geht."""
+        nachbarn = nachbarn or cls.GLAETTUNG
+        if len(punkte) <= nachbarn:
             return feld
-        _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=cls.GLAETTUNG)
+        _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte, k=nachbarn)
         return feld[np.asarray(nachbar)].mean(axis=1)
 
     def haut(self, punkte):

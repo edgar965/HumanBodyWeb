@@ -17,10 +17,13 @@ from django.http import JsonResponse
 from .g9figur import G9figur
 from .g9netzantwort import G9netzantwort
 from ..dienste.g9aufhumanbody import G9aufhumanbody
+from ..dienste.g9hbfusspose import G9hbfusspose
+from ..dienste.g9hbteilhaut import G9hbteilhaut
 from Genesis9.formung import G9formung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
+from Genesis9.teilbindung import G9teilbindung
 
 logger = logging.getLogger('core')
 
@@ -68,28 +71,39 @@ class G9kleidhumanbody:
         zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
         hoch = np.array([0.0, formung.boden(), 0.0])
         stufen = G9netzstufe.browser()
-        antwort_teile = []
+        kaefige = []
         for folger, _lage in teile:
             kaefig = traeger.uebertragen(
                 folger.punkte_zu(formung, zusatz, drehung=knochen, lage=None) - hoch)
             if getattr(folger, 'koerperhaut', False):
                 kaefig = traeger.hinaus(kaefig, cls.HAUTABSTAND)
+            kaefige.append(kaefig)
+        # Ein Schuh mit Fusspose: die Figur bekommt den Absatz, das Stueck geht
+        # in die Ruhelage, damit der Fuss es beim Beugen mitnimmt (`G9hbfusspose`).
+        absatz = G9hbfusspose.absatz(kennung, kaefige)
+        antwort_teile = []
+        for (folger, _lage), kaefig in zip(teile, kaefige):
+            if absatz:
+                kaefig = G9hbfusspose.ruhelage(kaefig, traeger.haut(kaefig), absatz, traeger.geschlecht)
             netz = G9koerpernetz.folgernetz(folger, kaefig, bilder, stufen, koerper=koerper)
             if getattr(folger, 'koerperhaut', False):
                 # Auch die UNTERTEILTEN Punkte: Wo der Kaefig eine vorstehende Brust
                 # umspannt, schneidet die Flaeche dazwischen bis 16 mm tief hinein.
                 netz['punkte'] = traeger.hinaus(netz['punkte'], cls.HAUTABSTAND)
                 netz['normalen'] = folger.netzstufe(stufen).normalen(kaefig, netz['punkte'])
-            netz['haut'] = traeger.haut(netz['punkte'])
+            # Im Koerperteil der Daz-Bindung — die Hand neben dem Rock traegt ihn nicht.
+            netz['haut'] = G9hbteilhaut.fuer(traeger.figur()).haut(
+                netz['punkte'], G9teilbindung.stueck(folger, kaefig, netz['punkte']))
             teil = G9netzantwort.aus(netz)
             teil['name'] = folger.name
             teil['stufen'] = netz['stufen']
             teil['knochen'] = None
             antwort_teile.append(teil)
-        logger.info('Daz auf HumanBody: %s — %d Teile, %d Punkte', kennung, len(antwort_teile),
-                    sum(int(t.get('vertex_count') or 0) for t in antwort_teile))
+        logger.info('Daz auf HumanBody: %s — %d Teile, %d Punkte%s', kennung, len(antwort_teile),
+                    sum(int(t.get('vertex_count') or 0) for t in antwort_teile),
+                    ', Absatz %s' % absatz if absatz else '')
         return {'kennung': kennung, 'teile': antwort_teile, 'boden': 0.0, 'stufen': stufen,
-                'figurart': cls.FIGURART, 'innen': [], 'aussen': []}
+                'figurart': cls.FIGURART, 'innen': [], 'aussen': [], 'absatz': absatz}
 
     @staticmethod
     def _woerterbuch(wert):

@@ -76,6 +76,10 @@ export class Gedaechtniswahl {
     /** Trennzeichen im Ablageschlüssel. */
     static TRENNER = '/';
 
+    /** Pfade der Bausteinfelder (`meta.upper`, `meta.bottom`, `meta.wb`):
+     *  kein Regler zeichnet sie, eine FORM setzt sie (`formdaten.py`). */
+    static BAUSTEIN = 'meta.';
+
     /**
      * Darf dieses Feld gemerkt werden?
      *
@@ -89,6 +93,25 @@ export class Gedaechtniswahl {
         if (Gedaechtniswahl.ARTEN_AUS.includes(art)) return false;
         if (Gedaechtniswahl.JE_VORLAGE.includes(kennung)) return false;
         return !Gedaechtniswahl.KENNUNG_AUS.some((p) => kennung.startsWith(p));
+    }
+
+    /**
+     * Darf ein gemerkter Reglerwert dieser Vorlage gesetzt werden?
+     *
+     * Nur Pfade, die es in DIESER Vorlage gibt — `sleeve.cuff.cuff_len`
+     * hat ein Rock nicht; `vorgaben` ist die Liste der gezeichneten
+     * Regler. Die Bausteinfelder haben KEINEN Regler und gehen trotzdem
+     * an den Schnitt: Ohne sie stand nach dem Neuladen das Häkchen
+     * „T-Shirt (anliegend)", gebaut wurde aber der gerade `Shirt`
+     * (Edgar, 19.09.2026: „ist nicht eng anliegend").
+     *
+     * @param pfad      `sleeve.length`, `meta.upper` …
+     * @param vorgaben  `{pfad: Startwert}` der gezeichneten Regler
+     */
+    static reglerwert(pfad, vorgaben) {
+        if (typeof pfad !== 'string' || !pfad) return false;
+        if (pfad.startsWith(Gedaechtniswahl.BAUSTEIN)) return true;
+        return Boolean(vorgaben) && pfad in vorgaben;
     }
 
     /** Der Ablageschlüssel eines Feldes. */

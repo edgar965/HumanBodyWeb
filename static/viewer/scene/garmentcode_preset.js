@@ -113,7 +113,7 @@ class GarmentcodePreset {
         const vorher = this.davor[preset.schluessel];
         this.aktiv.delete(preset.schluessel);
         delete this.davor[preset.schluessel];
-        if (vorher) setzt(vorher);
+        setzt(vorher || {});   // ohne „davor" (nach Seitenstart): nur merken
     }
 
     /** Presets, die dieselben Regler anfassen, können nicht beide gelten. */

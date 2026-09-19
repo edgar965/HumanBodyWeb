@@ -33,7 +33,7 @@
  */
 import { Hautmaske } from '../gemeinsam/hautmaske.js';
 import { Figurhaut } from '../gemeinsam/figurhaut.js';
-import { Stueckereignis } from './garmentcode_stueckereignis.js';
+import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
@@ -90,8 +90,9 @@ export class Hautverdeckung extends Figurhaut {
         return aus;
     }
 
-    /** Figuren, deren Maske aussteht — ein Lauf je Umlauf, nicht je Ereignis. */
-    static _ausstehend = new Set();
+    /** Ruhezeit nach der letzten Meldung; `_ausstehend`: inst -> Zeitgeber. */
+    static RUHE_MS = 400;
+    static _ausstehend = new Map();
 
     /**
      * Auf jedes Stück reagieren — die Vereinigung aller Stücke zählt.
@@ -102,14 +103,16 @@ export class Hautverdeckung extends Figurhaut {
      * dieselbe Maske mehrmals je Umlauf.
      */
     static einhaengen() {
+        // Mit Ruhezeit (19.09.2026): Ein Umbau der Genesis-9-Figur holt Körper und
+        // jedes Daz-Stück einzeln — jede Ankunft meldet, gerechnet wird EINMAL danach.
         Stueckereignis.hoeren(({ inst }) => {
-            if (!inst || Hautverdeckung._ausstehend.has(inst)) return;
-            Hautverdeckung._ausstehend.add(inst);
-            setTimeout(() => {
+            if (!inst) return;
+            clearTimeout(Hautverdeckung._ausstehend.get(inst));
+            Hautverdeckung._ausstehend.set(inst, setTimeout(() => {
                 Hautverdeckung._ausstehend.delete(inst);
                 try { Hautverdeckung.anwenden(inst); }
                 catch (fehler) { Protokoll.warnung('Hautverdeckung', fehler.message); }
-            }, 0);
+            }, Hautverdeckung.RUHE_MS));
         });
     }
 }

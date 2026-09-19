@@ -82,9 +82,17 @@ class PosenklickTest(SimpleTestCase):
         self.assertIn(
             'figur.quelle',
             pruefung,
-            'Nur die HumanBody-Figur hat kein `quelle`; alle anderen Arten fuehren ein eigenes Skelett.',
+            'Die Pruefung unterscheidet die Figurarten an `quelle`; fremde Arten fuehren ein eigenes Skelett.',
         )
         self.assertIn('HumanBody', pruefung, 'Die Meldung muss sagen, fuer wen Posen gelten.')
+        # Seit Version 0.60 traegt auch die HumanBody-Figur eine Quelle (`modell`,
+        # `HumanbodyModell.QUELLE`); bis 19.09.2026 fiel sie hier durch, und kein
+        # Absatz und keine Pose erreichte sie.
+        self.assertIn(
+            'figur.quelle !== Posenanwendung.QUELLE_HUMANBODY',
+            pruefung,
+            'Die HumanBody-Figur (`quelle: modell`) muss die Pruefung bestehen.',
+        )
 
     def test_ohne_treffer_gilt_es_als_fehlschlag(self):
         """Null gesetzte Knochen ist kein Erfolg.

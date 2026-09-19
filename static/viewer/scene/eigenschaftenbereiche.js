@@ -16,6 +16,9 @@ export class Eigenschaftenbereiche {
 
     static PAARE = [['prop-empty', 'prop-content'], ['assets-empty', 'assets-content']];
     static GENESIS9 = 'assets-genesis9-section';
+    /** HumanBody-Bereiche, die eine Genesis-9-Figur AUCH bekommt (19.09.2026: Haar —
+     *  die GLB-Frisuren legt `Genesis9frisur` auf den Genesis-Kopf). */
+    static GENESIS9_AUCH = ['hair'];
     static HUMANBODY = ['prop-equipped-section', 'prop-bodytype-section',
                         'prop-details-section', 'prop-morphs-section'];
 
@@ -73,6 +76,7 @@ export class Eigenschaftenbereiche {
         eigener.classList.toggle('hb-versteckt', !figur);
         for (const bereich of inhalt.querySelectorAll(':scope > .panel-section')) {
             if (bereich === eigener) continue;
+            if (Eigenschaftenbereiche.GENESIS9_AUCH.includes(bereich.dataset.panelKey)) continue;
             if (figur) {
                 if (bereich.classList.contains('hb-versteckt')) continue;
                 bereich.classList.add('hb-versteckt');

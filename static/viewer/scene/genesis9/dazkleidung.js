@@ -5,6 +5,7 @@ import { Genesis9netz } from '../../gemeinsam/genesis9netz.js';
 import { Genesis9lagen } from '../../gemeinsam/genesis9lagen.js';
 import { Genesis9aufbau } from '../../gemeinsam/genesis9aufbau.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { fn } from '../../gemeinsam/registrierung.js';
 
 /**
  * Dazkleidung — ein Daz-Stück (Genesis 9) an einer HumanBody-Figur.
@@ -81,12 +82,30 @@ export class Dazkleidung {
                 Dazkleidung.binden(inst, netz);
         });
         Protokoll.debug('Dazkleidung', `${kennung} auf ${inst.id}: ${daten.teile?.length || 0} Teile`);
+        if (daten.absatz) await Dazkleidung.absatz(inst, daten.absatz);
         return daten.teile?.length || 0;
     }
 
     static ausziehen(inst, kennung) {
         Dazkleidung._weg(inst, kennung);
         if (inst.dazKleidung) delete inst.dazKleidung[kennung];
+        if (inst.absatz?.quelle === `schuh:${kennung}`) Dazkleidung.absatz(inst, null);
+    }
+
+    /**
+     * Ein Daz-Schuh mit Fußpose (Bardot Sandals): Der Server liefert den Absatz
+     * (`winkel_grad`, `sprengung_grad`, `hebung_cm`, Quelle `schuh:<kennung>`),
+     * die Figur bekommt ihn wie einen GarmentCode-Absatz — über die
+     * Registrierung, weil `posenanwendung.js` über `skeleton.js` dieses Modul
+     * schon erreicht (19.09.2026, Edgar: „Die Sandalen fitten nicht").
+     */
+    static async absatz(inst, info) {
+        try {
+            const befund = await fn.absatzSetzen?.(inst, info);
+            if (befund && !befund.ok) Protokoll.warnung('Dazkleidung', `Absatz: ${befund.grund}`);
+        } catch (fehler) {
+            Protokoll.warnung('Dazkleidung', `Absatz: ${fehler.message}`);
+        }
     }
 
     /** Binden, wenn die Figur ein Skelett hat — sonst starr, bis `nachbinden`. */

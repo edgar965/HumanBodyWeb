@@ -23,7 +23,7 @@ import { Hautmaskegeometrie } from '../gemeinsam/hautmaskegeometrie.js';
 import { Hautverdeckung } from './hautverdeckung.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
-import { Stueckereignis } from './garmentcode_stueckereignis.js';
+import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Lagenverdeckung {
@@ -96,17 +96,21 @@ export class Lagenverdeckung {
                                  { normalen: NS, kanten: Saumschnitt.kanten(darueber) });
     }
 
-    static _ausstehend = new Set();
+    /** Ruhezeit nach der letzten Meldung; `_ausstehend`: inst -> Zeitgeber. */
+    static RUHE_MS = 400;
+    static _ausstehend = new Map();
 
     static einhaengen() {
+        // Mit Ruhezeit (19.09.2026): Ein Umbau der Genesis-9-Figur holt Körper und
+        // jedes Daz-Stück einzeln — jede Ankunft meldet, gerechnet wird EINMAL danach.
         Stueckereignis.hoeren(({ inst }) => {
-            if (!inst || Lagenverdeckung._ausstehend.has(inst)) return;
-            Lagenverdeckung._ausstehend.add(inst);
-            setTimeout(() => {
+            if (!inst) return;
+            clearTimeout(Lagenverdeckung._ausstehend.get(inst));
+            Lagenverdeckung._ausstehend.set(inst, setTimeout(() => {
                 Lagenverdeckung._ausstehend.delete(inst);
                 try { Lagenverdeckung.anwenden(inst); }
                 catch (fehler) { Protokoll.warnung('Lagenverdeckung', fehler.message); }
-            }, 0);
+            }, Lagenverdeckung.RUHE_MS));
         });
     }
 }

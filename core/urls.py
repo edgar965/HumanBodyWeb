@@ -135,6 +135,7 @@ urlpatterns = [
          Bildmodelldateiendpunkte.original_ersetzen, name='bildmodell_original_ersetzen'),
     path('api/bildmodell/<uuid:job_id>/original/<str:name>/loeschen/',
          Bildmodelldateiendpunkte.original_loeschen, name='bildmodell_original_loeschen'),
+    path('api/bildmodell/<uuid:job_id>/kameras/', Bildmodelldateiendpunkte.kameras, name='bildmodell_kameras'),
     path('api/bildmodell/<uuid:job_id>/starten/', Bildmodellendpunkte.starten, name='bildmodell_starten'),
     path('api/bildmodell/<uuid:job_id>/anhalten/', Bildmodellendpunkte.anhalten, name='bildmodell_anhalten'),
     path('api/bildmodell/<uuid:job_id>/proportionen/', Bildmodellproportionenendpunkte.stellen,

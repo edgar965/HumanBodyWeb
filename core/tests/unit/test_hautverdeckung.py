@@ -42,7 +42,7 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
 
     def test_die_teilnetz_auswahl_meldet_das_entfernen(self):
         quelle = HautverdeckungVerdrahtungTest._lies('scene', 'teilnetz_auswahl.js')
-        self.assertIn("import { Stueckereignis } from './garmentcode_stueckereignis.js';", quelle)
+        self.assertIn("import { Stueckereignis } from '../gemeinsam/stueckereignis.js';", quelle)
         self.assertIn('Stueckereignis.melden(inst, target.key.slice(3), false);', quelle)
 
     def test_der_volle_index_bleibt_und_die_stoffgrenze_nimmt_ihn(self):

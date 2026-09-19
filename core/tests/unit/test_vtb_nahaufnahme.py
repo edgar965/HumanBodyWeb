@@ -3,9 +3,10 @@
 
 Edgar: „mach ca. 10 Nahaufnahmen von Ursula mit HD aus unterschiedlichen
 Winkeln". SMPLest-X schätzt auf einer Nahaufnahme einen ganzen Körper; hier
-wird die Kamera per PnP aus den Rig-Punkten gefunden. Kunstdaten: ein
-Referenznetz mit 10.475 zufälligen Punkten (die Nummern der Netzpunkte und
-Gesichtsdreiecke müssen existieren), eine bekannte Kamera (f = 1,9 × Kante,
+wird die Kamera per PnP aus den Rig-Punkten gefunden. Kunstdaten: Zielfelder
+(COCO 17, Füße 6, Hände, Gesicht 68 — seit dem 20.09. ein Wörterbuch, das
+`G9texturmodell` aus dem Genesis-Modell liefert; hier zufällige Punkte, das
+Kinn NaN wie beim SMPL-X-Feld), eine bekannte Kamera (f = 1,9 × Kante,
 gedreht, verschoben) projiziert Gelenke, Gesicht und Füße ins Bild.
 
 1. `paare`: COCO-17 + Füße + 51 Gesichtspunkte → 74 Paare; unsichere Punkte
@@ -27,19 +28,20 @@ Wrappersuchpfad.setzen()
 
 from nahaufnahme import Nahaufnahme  # noqa: E402
 
-N, F = 10475, 20908
+N = 10475
 
 
 def _modell(rng):
     punkte = rng.normal(size=(N, 3)) * 0.3
     punkte[:, 1] = rng.uniform(0.0, 1.7, N)
-    flaechen = rng.integers(0, N, size=(F, 3))
-    j = np.zeros((55, N))
-    for g in range(55):
-        j[g, rng.integers(0, N)] = 1.0
-    lmk = rng.integers(0, F, size=51)
-    bary = rng.dirichlet(np.ones(3), size=51)
-    return Nahaufnahme(j, lmk, bary, flaechen), punkte
+
+    def feld(n):
+        return punkte[rng.integers(0, N, size=n)]
+
+    gesicht = feld(68)
+    gesicht[:17] = np.nan                       # Kinnbogen unbekannt (wie beim SMPL-X-Feld)
+    ziele = {'coco': feld(17), 'fuesse': feld(6), 'hand_l': feld(21), 'hand_r': feld(21), 'gesicht': gesicht}
+    return Nahaufnahme(ziele), punkte
 
 
 def _kamera(breite, hoehe, f):
@@ -51,14 +53,7 @@ def _kamera(breite, hoehe, f):
 
 
 def _rig(nah, punkte, rot, t, k, breite, hoehe, rng):
-    gelenke, gesicht = nah.ziele(punkte)
-    welt = []
-    for art, nummer in nah.COCO:
-        welt.append(gelenke[nummer] if art == 'j' else punkte[nummer])
-    for _, nummer in nah.FUESSE:
-        welt.append(punkte[nummer])
-    welt = np.array(welt)
-    welt = np.concatenate([welt, gesicht])
+    welt = np.concatenate([nah.ziele['coco'], nah.ziele['fuesse'], nah.ziele['gesicht'][17:]])
     cam = welt @ rot.T + t
     px = cam @ k.T
     px = px[:, :2] / px[:, 2:3]
@@ -82,15 +77,18 @@ class NahaufnahmeTest(unittest.TestCase):
                                    self.rng)
 
     def test_1_paare(self):
-        bild, welt = self.nah.paare(self.rigs, self.breite, self.hoehe, self.punkte)
+        bild, welt = self.nah.paare(self.rigs, self.breite, self.hoehe)
         self.assertEqual(len(bild), 17 + 6 + 51)
         self.assertEqual(welt.shape, (74, 3))
         unsicher = {'openpifpaf': {'punkte': [[p[0], p[1], 0.1] for p in self.rigs['openpifpaf']['punkte']]}}
-        self.assertEqual(len(self.nah.paare(unsicher, self.breite, self.hoehe, self.punkte)[0]), 0)
-        self.assertEqual(len(self.nah.paare({}, self.breite, self.hoehe, self.punkte)[0]), 0)
+        self.assertEqual(len(self.nah.paare(unsicher, self.breite, self.hoehe)[0]), 0)
+        self.assertEqual(len(self.nah.paare({}, self.breite, self.hoehe)[0]), 0)
+        # Unbekannte Ziele (NaN) bilden kein Paar: ohne Gesichtsfeld nur Körper und Füße.
+        ohne = Nahaufnahme({k: v for k, v in self.nah.ziele.items() if k != 'gesicht'})
+        self.assertEqual(len(ohne.paare(self.rigs, self.breite, self.hoehe)[0]), 23)
 
     def test_2_registrieren(self):
-        reg = self.nah.registrieren(self.rigs, self.breite, self.hoehe, self.punkte)
+        reg = self.nah.registrieren(self.rigs, self.breite, self.hoehe)
         self.assertIsNotNone(reg)
         self.assertGreaterEqual(reg['punkte'], 70)
         self.assertLess(reg['fehler_px'], 1.5)
@@ -101,7 +99,7 @@ class NahaufnahmeTest(unittest.TestCase):
 
     def test_3_sabotage_gespiegelt(self):
         p = [[1.0 - x, y, g] for x, y, g in self.rigs['openpifpaf']['punkte']]
-        reg = self.nah.registrieren({'openpifpaf': {'punkte': p}}, self.breite, self.hoehe, self.punkte)
+        reg = self.nah.registrieren({'openpifpaf': {'punkte': p}}, self.breite, self.hoehe)
         if reg is not None:
             lage = Nahaufnahme.anwenden(reg, self.punkte)
             abstand = np.linalg.norm(lage - (self.punkte @ self.rot.T + self.t), axis=1)

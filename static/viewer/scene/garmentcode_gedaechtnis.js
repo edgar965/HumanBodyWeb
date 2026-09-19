@@ -1,4 +1,5 @@
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
+import { Gedaechtniswahl } from '../gemeinsam/gedaechtniswahl.js';
 import { garmentcodePreset } from './garmentcode_preset.js';
 import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 
@@ -27,6 +28,13 @@ import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
  * Sonst behauptet die Oberfläche „nichts eingestellt", während die Regler auf
  * „eng anliegend" stehen — die Umkehrung des Falls, für den `pruefen()` im
  * Preset-Modul gebaut wurde.
+ *
+ * DIE BAUSTEINFELDER GEHÖREN AUCH DAZU (19.09.2026). Eine Form setzt
+ * `meta.upper` (`FittedShirt`), und dafür gibt es keinen Regler. Wer beim
+ * Wiederherstellen nur gezeichnete Regler zulässt, verliert genau diesen
+ * Wert: Das Häkchen „T-Shirt (anliegend)" stand, gebaut wurde der gerade
+ * `Shirt` (Edgar: „ist nicht eng anliegend"). `Gedaechtniswahl.reglerwert`
+ * entscheidet, was ein gemerkter Pfad darf.
  */
 export class Garmentcodegedaechtnis {
 
@@ -59,9 +67,9 @@ export class Garmentcodegedaechtnis {
         let gesetzt = 0;
         for (const [pfad, wert] of Object.entries(
                 Reitergedaechtnis.gcWerte(vorlage))) {
-            // Nur Pfade, die es in DIESER Vorlage gibt. `vorgaben` steht
-            // nach dem Zeichnen und ist die verlässliche Liste.
-            if (!(pfad in regler.vorgaben)) continue;
+            // Nur Pfade, die es in DIESER Vorlage gibt (`vorgaben` steht
+            // nach dem Zeichnen) — und die Bausteinfelder ohne Regler.
+            if (!Gedaechtniswahl.reglerwert(pfad, regler.vorgaben)) continue;
             regler.werte[pfad] = wert;
             if (regler.nachziehen[pfad]) regler.nachziehen[pfad](wert);
             gesetzt += 1;
@@ -85,7 +93,7 @@ export class Garmentcodegedaechtnis {
             const bau = {};
             for (const [pfad, wert] of Object.entries(preset.werte || {})) {
                 if (pfad.startsWith('bau.')) { bau[pfad] = wert; continue; }
-                if (!(pfad in regler.vorgaben)) continue;
+                if (!Gedaechtniswahl.reglerwert(pfad, regler.vorgaben)) continue;
                 regler.werte[pfad] = wert;
                 if (regler.nachziehen[pfad]) regler.nachziehen[pfad](wert);
             }

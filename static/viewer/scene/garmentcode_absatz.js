@@ -1,7 +1,7 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Posenanwendung } from './posenanwendung.js';
-import { Stueckereignis } from './garmentcode_stueckereignis.js';
+import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 
 /**
  * GarmentcodeAbsatz — ein angezogener Absatzschuh wird zur Pose der Figur.

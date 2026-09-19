@@ -16,7 +16,9 @@
  *                + g·SCHWERKRAFT·dt²·f
  *     Kanten: je Durchgang jede Kante auf ihre Ruhelänge, Verschiebung nach
  *             Freiheit verteilt (f = 0 bewegt sich nicht)
- *     Kapseln: näher als r + ABSTAND an der Achse → auf r + ABSTAND hinaus
+ *     Kapseln: elliptische Kegelkapseln um die Knochen (`stoffkoerper.js`,
+ *             19.09.2026 — EIN Radius je Knochen blähte die Jeans am Knie auf,
+ *             ein runder lag an der breiten Seite des Schenkels in der Haut)
  *
  * Die Zahlen sind Anzeigewerte, keine Daz-Werte: Dämpfung 2 %, Feder frei
  * 2/s, Feder Haftung 30/s, Schwerkraft mit Faktor 0,3 (voll ließ jeden Saum
@@ -24,6 +26,8 @@
  * Kapsel, Zeitschritt höchstens 1/30 s. Gemessen wird in der Szene
  * (`__stoffschwung.probe`), nicht hier.
  */
+import { Stoffkoerper } from './stoffkoerper.js';
+
 export class Stoffpendel {
 
     static DAEMPFUNG = 0.02;
@@ -111,7 +115,8 @@ export class Stoffpendel {
      * Ein Bild rechnen.
      * @param ziel     Float32Array (n·3) die gehäutete Lage dieses Bildes
      * @param dt       Sekunden
-     * @param kapseln  [{a: [x,y,z], b: [x,y,z], r}] Körper (Achse a→b, Radius r)
+     * @param kapseln  [{a, b, u, rua, rwa, rub, rwb}] Körper (`Stoffkoerper`;
+     *                 `{a, b, r}` gilt als runde Kapsel)
      * @returns {Float32Array} die Punkte (this.x)
      */
     schritt(ziel, dt, kapseln = [], werte = Stoffpendel) {
@@ -151,31 +156,9 @@ export class Stoffpendel {
         return x;
     }
 
+    /** Freie Punkte aus den Körperkapseln hinaus — `Stoffkoerper` (elliptische Kegelkapseln). */
     _kapseln(kapseln, abstand) {
-        const { x, frei, n } = this;
-        for (const k of kapseln) {
-            const ax = k.a[0], ay = k.a[1], az = k.a[2];
-            const bx = k.b[0] - ax, by = k.b[1] - ay, bz = k.b[2] - az;
-            const bb = bx * bx + by * by + bz * bz || 1e-12;
-            const r = k.r + abstand;
-            // Grobe Hülle: Achse ± Radius.
-            const minX = Math.min(ax, k.b[0]) - r, maxX = Math.max(ax, k.b[0]) + r;
-            const minY = Math.min(ay, k.b[1]) - r, maxY = Math.max(ay, k.b[1]) + r;
-            const minZ = Math.min(az, k.b[2]) - r, maxZ = Math.max(az, k.b[2]) + r;
-            for (let i = 0; i < n; i++) {
-                if (frei[i] <= 0) continue;
-                const o = 3 * i, px = x[o], py = x[o + 1], pz = x[o + 2];
-                if (px < minX || px > maxX || py < minY || py > maxY || pz < minZ || pz > maxZ) continue;
-                let t = ((px - ax) * bx + (py - ay) * by + (pz - az) * bz) / bb;
-                t = t < 0 ? 0 : (t > 1 ? 1 : t);
-                const qx = ax + bx * t, qy = ay + by * t, qz = az + bz * t;
-                const dx = px - qx, dy = py - qy, dz = pz - qz;
-                const d = Math.hypot(dx, dy, dz);
-                if (d >= r || d < 1e-9) continue;
-                const s = r / d;
-                x[o] = qx + dx * s; x[o + 1] = qy + dy * s; x[o + 2] = qz + dz * s;
-            }
-        }
+        Stoffkoerper.hinaus(this.x, this.frei, this.n, kapseln, abstand);
     }
 
     /** Größter Abstand eines freien Punkts von seiner gehäuteten Lage (m). */

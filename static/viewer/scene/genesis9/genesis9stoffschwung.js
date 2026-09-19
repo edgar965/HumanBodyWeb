@@ -37,6 +37,7 @@ import { base64ToFloat32, base64ToUint32 } from '../../gemeinsam/kodierung.js';
 import { Stoffkapseln, Stoffhaut } from './stoffkapseln.js';
 import { Genesis9felder } from '../../gemeinsam/genesis9felder.js';
 import { Genesis9gelenke } from '../../gemeinsam/genesis9gelenke.js';
+import { Stoffwache } from '../../gemeinsam/stoffwache.js';
 
 export class Genesis9stoffschwung {
 
@@ -118,7 +119,8 @@ export class Genesis9stoffschwung {
         for (let i = 0; i < roh.length; i++) hautIndex[i] = spalte[roh[i]] ?? 0;
         const worker = new Worker(Genesis9stoffschwung.arbeiterpfad(), { type: 'module' });
         worker.onmessage = (ereignis) => Genesis9stoffschwung._angekommen(e, ereignis.data);
-        worker.onerror = (ereignis) => { console.warn('[Stoffschwung] Worker:', ereignis.message); e.bereit = false; };
+        // Nur merken — `_bild` nimmt das Stück dann zurück auf die GPU-Häutung (`Stoffwache`).
+        worker.onerror = (ereignis) => { console.warn('[Stoffschwung] Worker:', ereignis.message); e.fehler = ereignis.message || 'Worker'; };
         worker.postMessage({
             typ: 'bauen', kaefig: stoff.kaefig, frei: stoff.frei, kanten: base64ToUint32(plan.kanten),
             indptr: base64ToUint32(plan.indptr), indices: base64ToUint32(plan.indices), data: base64ToFloat32(plan.data),
@@ -151,6 +153,12 @@ export class Genesis9stoffschwung {
 
     static _bild(e, dt, kapseln) {
         e.dtSumme += dt;
+        // Ein toter oder stummer Worker ließe das Anzeigenetz mit seinen letzten
+        // Punkten stehen, während der Körper weitertanzt („hose animiert nicht").
+        if (!e.ausgefallen && Stoffwache.ausgefallen(e, performance.now())) {
+            console.warn('[Stoffschwung]', e.netz.name, 'ohne Stoffschwung weiter:', e.fehler || 'keine Antwort');
+            Stoffwache.zurueck(e);
+        }
         if (!e.bereit || e.beschaeftigt) return;
         const { netz, anzeige } = e;
         anzeige.updateMatrixWorld(true);
@@ -160,6 +168,7 @@ export class Genesis9stoffschwung {
             kapseln, dt: e.dtSumme, werte: e.felder ? (Genesis9gelenke.werte(e.inst) || null) : null,
         });
         e.beschaeftigt = true;
+        e.gesendet = performance.now();
         e.dtSumme = 0;
     }
 

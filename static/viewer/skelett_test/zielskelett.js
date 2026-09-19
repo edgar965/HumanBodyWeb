@@ -31,7 +31,8 @@ export class Zielskelett {
     /** Schildtext, wenn der Server das Skelett nicht hat. */
     static FEHLT = 'keine Quelle';
 
-    /** `{skeleton, rootBone, bones, boneByName}` aus der Serverantwort — je Unterklasse. */
+    /** `{skeleton, rootBone, bones, boneByName, achsen?}` aus der Serverantwort — je
+     *  Unterklasse; `achsen` = Knochenlängen entlang der eigenen Achse (Daz). */
     static bauen(daten) {   // eslint-disable-line no-unused-vars
         throw new Error(`${this.name}.bauen() ist nicht implementiert`);
     }
@@ -59,7 +60,7 @@ export class Zielskelett {
         platz.bones = gebaut.bones;
         const einpassung = new Einpassung(gebaut.rootBone, gebaut.bones);
         const massstab = einpassung.anwenden(this.PLATZ);
-        createBoneViz(gebaut.bones, this.PLATZ, 1 / massstab);
+        createBoneViz(gebaut.bones, this.PLATZ, 1 / massstab, gebaut.achsen || null);
         createBoneLabels(gebaut.bones, this.PLATZ);
         const herkunft = this.herkunft(daten);
         this.beschriften(herkunft ? `${this.NAME} (${herkunft})` : this.NAME);

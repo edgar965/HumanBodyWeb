@@ -188,15 +188,17 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
                 <i class="fas fa-paint-brush"></i> <span>Textur anpassen</span></button>
         </span>
     </div>
-    <p class="hb-hinweis">Die ganze Textur in 2D: fünf UDIM-Kacheln (2048², Klick öffnet die Datei). Je Texel wird ins Foto
-       geschaut, das die Stelle am schärfsten zeigt — Nahaufnahmen werden über ihr Rig an das Netz des Hauptbilds
-       registriert. „Herkunft zeigen" färbt jede Stelle nach dem Bild, aus dem sie stammt (Farbe = Rahmen in der Tabelle).
-       <span id="textur-lauf"></span></p>
+    <p class="hb-hinweis">Die ganze Textur in 2D: fünf UDIM-Kacheln (2048²) — aufgefaltete Haut des Modells. Ein Klick auf
+       eine Kachel zeigt darunter, welcher Körperteil wo in ihr liegt und welche Pixel welcher Fotos hineinkommen. Jedes Foto
+       wird über das Modell selbst projiziert (Kamera bekannt oder aus dem Rig), die Helligkeit der Bilder auf der Überlappung
+       angeglichen und mehrbandig überblendet. „Herkunft zeigen" färbt jede Stelle nach dem Bild, aus dem sie stammt
+       (Farbe = Rahmen in der Tabelle). <span id="textur-lauf"></span></p>
     <div id="textur-kacheln" class="bildmodell-texturkacheln"></div>
+    <div id="textur-kachelpanel" class="bildmodell-kachelpanel hb-versteckt"></div>
     <table class="db-tabelle sortable bildmodell-texturtabelle" id="textur-bilder" data-sort-key="bildmodell-textur">
         <thead><tr><th title="für die Textur verwenden">✓</th><th>Bild</th><th>Datei · Typ</th><th>Kamera</th>
-            <th class="zahl" title="Anteil der HD-Textur, den dieses Bild liefert">Anteil</th>
-            <th class="zahl" title="sichtbare SMPL-X-Punkte im Bild">Punkte</th><th></th></tr></thead>
+            <th class="zahl" title="Anteil aller Texel, die dieses Bild liefert (bestes Gewicht)">Anteil</th>
+            <th class="zahl" title="Texel, die dieses Bild belegt">Texel</th><th></th></tr></thead>
         <tbody></tbody>
     </table>
     <p class="hb-hinweis" id="textur-leer">Noch keine gesichteten Bilder.</p>

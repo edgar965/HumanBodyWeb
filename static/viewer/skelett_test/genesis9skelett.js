@@ -28,7 +28,23 @@ export class Genesis9skelett extends Zielskelett {
     static bauen(daten) {
         const gebaut = Knochenbau.bauen(daten, new THREE.Group());
         if (!gebaut) throw new Error('Genesis-9-Skelett ohne Knochen');
+        gebaut.achsen = Genesis9skelett.achsen(daten);
         return gebaut;
+    }
+
+    /**
+     * `{name: Länge}` von `kopf` (center_point) zu `schwanz` (end_point) — so
+     * zeichnet Daz seine Knochen. Gelenk zu Gelenk gezeichnet knickte der
+     * Hals: `neck2` sitzt 12 mm vor dem Ende von `neck1` (19.09.2026).
+     */
+    static achsen(daten) {
+        const aus = {};
+        for (const k of daten?.knochen || []) {
+            if (!k.kopf || !k.schwanz) continue;
+            aus[k.name] = Math.hypot(k.schwanz[0] - k.kopf[0], k.schwanz[1] - k.kopf[1],
+                                     k.schwanz[2] - k.kopf[2]);
+        }
+        return aus;
     }
 
     static herkunft(daten) {
