@@ -6,7 +6,8 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
  * Hält `zustand` (wie `/api/bildmodell/<id>/zustand/` ihn liefert), fragt
  * alle `TAKT_MS` nach, solange der Auftrag läuft, und ruft die Zuhörer
  * (`beiAenderung(zustand)`) nach jeder Antwort. Schreibende Aufrufe
- * (starten, anhalten, Bild stellen, Bilder hochladen) gehen von hier aus.
+ * (starten, anhalten, Bild stellen, Bilder hochladen, ersetzen, löschen)
+ * gehen von hier aus.
  */
 export class Bildmodellauftrag {
 
@@ -54,8 +55,9 @@ export class Bildmodellauftrag {
 
     // ------------------------------------------------------------- Aktionen
 
-    async starten(optionen, ab, fest) {
-        const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen, ab, fest: fest || {} });
+    /** `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026). */
+    async starten(optionen, ab, fest, bis = null) {
+        const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen, ab, fest: fest || {}, bis });
         if (antwort.error) throw new Error(antwort.error);
         this.zustand.status = 'laeuft';
         this.zustand.schritt = ab;
@@ -78,7 +80,11 @@ export class Bildmodellauftrag {
         const antwort = await Serverabruf.senden(this.adresse(`bild/${encodeURIComponent(datei)}/`), aenderung);
         if (antwort.error) throw new Error(antwort.error);
         const eintrag = (this.zustand.bilder || []).find(b => b.datei === datei);
-        if (eintrag) Object.assign(eintrag, antwort.bild);
+        if (eintrag) {
+            // Ganz ersetzen: ein Feld, das der Server entfernt hat (`teil`), darf nicht stehen bleiben.
+            for (const k of Object.keys(eintrag)) delete eintrag[k];
+            Object.assign(eintrag, antwort.bild);
+        }
         if (antwort.textur) this.zustand.textur = antwort.textur;   // Hautton der gewählten Bilder
         this._melden();
         return antwort.bild;
@@ -90,8 +96,35 @@ export class Bildmodellauftrag {
         const antwort = await Serverabruf.formular(this.adresse('bilder/'), daten);
         if (antwort.error) throw new Error(antwort.error);
         this.zustand.originale = antwort.originale;
+        // Neu hochgeladene Dateien haben noch keinen Befund — die Seite listet sie zum Sichten.
+        const quellen = new Set((this.zustand.bilder || []).map(b => b.quelle || b.datei));
+        this.zustand.neue = antwort.originale.filter(n => !quellen.has(n));
         this._melden();
         return antwort;
+    }
+
+    // ------------------------------------------- Ersetzen und Löschen (19.09.2026)
+
+    /** Die Antwort der Datei-Endpunkte ist der ganze Zustand. */
+    _uebernehmen(antwort) {
+        if (antwort.error) throw new Error(antwort.error);
+        if (antwort.id) this.zustand = antwort;
+        this._melden();
+        return antwort;
+    }
+
+    async originalErsetzen(name, datei) {
+        const daten = new FormData();
+        daten.append('bild', datei, datei.name);
+        return this._uebernehmen(await Serverabruf.formular(this.adresse(`original/${encodeURIComponent(name)}/ersetzen/`), daten));
+    }
+
+    async originalLoeschen(name) {
+        return this._uebernehmen(await Serverabruf.senden(this.adresse(`original/${encodeURIComponent(name)}/loeschen/`), {}));
+    }
+
+    async bildLoeschen(datei) {
+        return this._uebernehmen(await Serverabruf.senden(this.adresse(`bild/${encodeURIComponent(datei)}/loeschen/`), {}));
     }
 
     // ----------------------------------------------------------- Ergebnis

@@ -6,6 +6,7 @@ import { Ergebnisansicht } from './ergebnisansicht.js';
 import { Ansicht3d } from './ansicht3d.js';
 import { Personenformular } from './personenformular.js';
 import { Proportionenansicht } from './proportionen.js';
+import { Testfallansicht } from './testfallansicht.js';
 
 /**
  * Bildmodellseite — Einstieg der Auftragsseite „Modell aus Dateien".
@@ -24,12 +25,13 @@ export class Bildmodellseite {
         const formular = new Optionenformular(daten.katalog, daten.zustand.optionen);
         const ergebnis = new Ergebnisansicht(auftrag);
         const lauf = new Laufansicht(auftrag, formular, () => ergebnis.festgehalten());
-        const bilder = new Bilderansicht(auftrag);
+        const bilder = new Bilderansicht(auftrag, daten.katalog, formular);
         const ansicht = new Ansicht3d(auftrag);
         const person = new Personenformular(auftrag, daten.katalog, formular, () => ergebnis.festgehalten());
         const proportionen = new Proportionenansicht(auftrag, daten.katalog);
+        const testfall = new Testfallansicht(auftrag, daten.katalog, ansicht);
         auftrag.verfolgen();
-        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen };
+        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen, testfall };
         return window.__bildmodell;
     }
 }

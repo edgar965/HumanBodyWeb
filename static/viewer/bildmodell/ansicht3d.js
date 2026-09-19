@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
+import { Texturauflage } from './texturauflage.js';
 
 /**
  * Ansicht3d — das Ergebnis als Genesis-9-Figur im Browser.
@@ -9,6 +10,8 @@ import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
  * feine Stufe nachgeladen), auf einer eigenen kleinen Bühne: Kamera auf die
  * Figurhöhe, Orbit, zwei Lichter. Neu gebaut, sobald sich die Regler des
  * Ergebnisses ändern (`ergebnisStand`). Ohne WebGL bleibt der Hinweistext.
+ * Ein Testfall (`Testfallansicht`) hängt die Referenzfigur dazu und schaltet
+ * mit `umschalten(an)` zwischen Ergebnis und Referenz um — nur eine ist sichtbar.
  */
 export class Ansicht3d {
 
@@ -17,6 +20,9 @@ export class Ansicht3d {
         this.canvas = document.getElementById('ansicht3d');
         this.text = document.getElementById('ansicht3d-text');
         this.modell = null;
+        this.referenzModell = null;
+        this.referenzAn = false;
+        this.auflage = new Texturauflage(auftrag);
         this._stand = null;
         this._laeuft = false;
         if (!this.canvas) return;
@@ -25,6 +31,20 @@ export class Ansicht3d {
     }
 
     _melden(text) { if (this.text) this.text.textContent = text; }
+
+    // ------------------------------------------------------ Referenz (Testfall)
+
+    /** Die Referenzfigur eines Testfalls — sie liegt schon in der Szene. */
+    referenz(modell) { this.referenzModell = modell; this._sichtbarkeit(); }
+
+    /** `an`: die Referenz zeigen, sonst das Ergebnis. */
+    umschalten(an) { this.referenzAn = !!an; this._sichtbarkeit(); }
+
+    _sichtbarkeit() {
+        const referenz = this.referenzAn && !!this.referenzModell;
+        if (this.modell) this.modell.group.visible = !referenz;
+        if (this.referenzModell) this.referenzModell.group.visible = referenz;
+    }
 
     _buehne() {
         this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
@@ -63,6 +83,8 @@ export class Ansicht3d {
     hauttonAnwenden(textur, versuch = 0) {
         const ton = textur && textur.hautton ? textur.hautton.join(',') : '';
         if (!this.modell || !this.modell.bodyMesh || ton === this._hautton) return;
+        // Mit gebackener Fototextur trägt die Kachel den Ton schon (`G9texturbacken.getoent`).
+        if (this.auflage && this.auflage.aktiv) { this._hautton = ton; return; }
         const lin = v => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
         const materialien = Array.isArray(this.modell.bodyMesh.material)
             ? this.modell.bodyMesh.material : [this.modell.bodyMesh.material];
@@ -110,6 +132,8 @@ export class Ansicht3d {
 
     async zeigen(z) {
         this.hauttonAnwenden(z.textur);
+        // Die Fotokacheln (Stufe 2) bei jedem Stand — auch wenn das Netz schon steht.
+        if (this.modell) this.auflage.anwenden(this.modell, (z.ergebnis || {}).fototextur);
         const stand = this.auftrag.ergebnisStand() + '|' + (((z.optionen || {}).person || {}).haar || '');
         const regler = this.auftrag.stellung();
         if (!Object.keys(regler).length) { this._melden('Noch kein Ergebnis.'); return; }
@@ -131,6 +155,8 @@ export class Ansicht3d {
             this._melden(`${z.name}: ${Object.keys(regler).length} Regler, ${(neu.browserpunkte || 0).toLocaleString('de-DE')} Punkte`);
             this._hautton = null;
             this.hauttonAnwenden(z.textur);
+            this.auflage.anwenden(neu, (z.ergebnis || {}).fototextur);
+            this._sichtbarkeit();
         } catch (fehler) {
             this._melden(`Figur nicht gebaut: ${fehler.message}`);
             this._stand = null;

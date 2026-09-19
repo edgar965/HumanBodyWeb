@@ -1,0 +1,33 @@
+/* Modell aus Dateien — Bildkacheln mit drei Boxen, Ersetzen/Löschen, Testfall-Leiste (19.09.2026). */
+
+/* Steller unter der Kachel: zwei Zeilen Auswahl, Textur, Knöpfe. */
+.bildmodell-steller { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; }
+.bildmodell-stellerzeile { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.bildmodell-stellerzeile select { flex: 1 1 0; min-width: 0; font-size: 0.78rem; }
+.bildmodell-stellerzeile input[type="range"] { width: 64px; flex: 0 0 auto; }
+.bildmodell-gewicht { width: 24px; text-align: right; flex: 0 0 auto; }
+.bildmodell-stellerknoepfe { justify-content: space-between; margin-top: 2px; }
+.bildmodell-stellerknoepfe .btn { padding: 2px 8px; font-size: 0.75rem; }
+.bildmodell-stellerknoepfe .btn i { margin-right: 2px; }
+
+/* Noch nicht gesichtete Dateien: eigene Kacheln mit Ersetzen/Löschen. */
+.bildmodell-originale { flex-direction: column; align-items: stretch; }
+.bildmodell-originale h3 { margin: 6px 0; font-size: 1rem; }
+.bildmodell-originale .bildmodell-original { width: 100%; height: 200px; object-fit: contain; background: #111; border-radius: 6px; }
+
+/* Testfall: Leiste über dem 3D-Modell, Zahlen darunter. */
+.bildmodell-testfall { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bildmodell-testfall.hb-versteckt { display: none; }
+.bildmodell-testfall .btn[aria-pressed="true"] { box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.5); }
+.bildmodell-testfallzahlen { font-size: 0.85rem; display: flex; flex-direction: column; gap: 6px; }
+.bildmodell-testfallkopf b { color: #ffe066; }
+.bildmodell-testfallzahlen details summary { cursor: pointer; color: var(--text-muted, #888); }
+.bildmodell-testfallzahlen .hb-gut { color: #2ecc71; }
+.bildmodell-testfallzahlen .hb-schlecht { color: #e74c3c; }
+
+/* Popup am Bild: die Linien fangen den Klick, der Knopf sitzt oben rechts im Vorher-Bild. */
+.bildmodell-propbild[data-wer="ziel"] { cursor: pointer; }
+.bildmodell-propbild[data-wer="ziel"] .bildmodell-proplinien g { pointer-events: visibleStroke; cursor: crosshair; }
+.bildmodell-propbild[data-wer="ziel"] .bildmodell-proplinien g:hover line { stroke-width: 6; }
+.bildmodell-propknopf { position: absolute; top: 6px; right: 6px; opacity: 0.85; padding: 2px 8px; font-size: 0.75rem; }
+.bildmodell-propknopf:hover { opacity: 1; }

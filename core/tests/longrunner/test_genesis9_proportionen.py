@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Proportionen: messen, formen, abbilden — an der Daz-Bibliothek (19.09.2026).
 
-1. `G9proportionen.messen` liefert alle 18 Maße der Grundfigur, mit
+1. `G9proportionen.messen` liefert alle 19 Maße der Grundfigur, mit
    Endpunkten, die das Maß tatsächlich aufspannen; Schulter > Hüfte > Taille.
 2. `G9proportionsformung.formen`: Hüfte +3 cm, Oberarm +1 cm, Nase −1 cm,
-   Kopfhöhe +1 cm werden auf 0,2 cm getroffen, das Kopfgelenk wandert mit
+   Kopfhöhe +1 cm, Augenabstand +0,5 cm, Brustvorsprung +1 cm werden auf 0,2 cm getroffen, das Kopfgelenk wandert mit
    (nach unten, es liegt unter der Augenlinie), Maße ohne Vorgabe bleiben (bis auf die Schulter, die den
    Oberarmrand teilt) unter 0,3 cm; Sabotage (keine Skalierung) → rot.
 3. `G9proportionenbild.projizieren`: Scheitel und Sohle liegen im Bild
@@ -58,18 +58,21 @@ class ProportionenTest(SimpleTestCase):
             'oberarm_dicke': (vorher['oberarm_dicke'] + 1.0) / 100,
             'nase_breite': (vorher['nase_breite'] - 1.0) / 100,
             'kopf_hoehe': (vorher['kopf_hoehe'] + 1.0) / 100,
-            'augen_abstand': 0.09,  # nicht formbar — wird ignoriert
+            'augen_abstand': (vorher['augen_abstand'] + 0.5) / 100,
+            'brust_vorsprung': (vorher['brust_vorsprung'] + 1.0) / 100,
+            'quatsch': 0.09,  # unbekannt — wird ignoriert
         }
         formung = G9proportionsformung(self.pr)
         p2, g2, bericht = formung.formen(self.p, self.g, ziele)
-        self.assertNotIn('augen_abstand', bericht)
+        self.assertNotIn('quatsch', bericht)
         for k, ziel in ziele.items():
-            if k == 'augen_abstand':
+            if k == 'quatsch':
                 continue
             self.assertAlmostEqual(bericht[k]['nachher'] * 100, ziel * 100, delta=0.2, msg=k)
         nachher = G9proportionen.in_cm(self.pr.messen(p2, g2))
+        # Brusttiefe waechst mit dem Vorsprung (dieselbe Spitze), sonst bleibt alles.
         for k in vorher:
-            if k in ziele or k == 'schulter_breite':
+            if k in ziele or k in ('schulter_breite', 'brust_tiefe'):
                 continue
             self.assertLess(abs(nachher[k] - vorher[k]), 0.3, k)
         # Gelenke im Fenster wandern mit: das Kopfgelenk (Schädelbasis, unter der Augen-

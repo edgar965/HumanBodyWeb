@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Bildmodellschaetzung — Schritt 2: SMPL-X-Parameter je Hauptbild, gemischt.
 
-Körper: alle Ausschnitte der Kategorie `koerper` mit Gewicht > 0 gehen an
-den gewählten Schätzer — SMPLest-X und PyMAF-X in EINEM python10-Prozess
+Körper: alle Ausschnitte der Kategorie `koerper` mit Gewicht > 0 und
+Nutzung „Form" (`Bildmodellbildtypen.fuer_form`) gehen an den gewählten
+Schätzer — dazu, nur für das posierte Netz der Fotofarbe, die Bilder mit
+Nutzung „nur Textur" und die Nebenbilder mit Körperteil (`nur_haut`), die
+in der Mischung nichts zählen — SMPLest-X und PyMAF-X in EINEM python10-Prozess
 (`Bildmodellmehrbild`, Modell einmal geladen), die anderen über
 `photo_analyzer.analyze` je Bild (HMR 2.0 in python10, MediaPipe im
 Prozess). Je Bild bleibt die Rohantwort am Eintrag (`schaetzung`), damit
@@ -24,6 +27,7 @@ import shutil
 import numpy as np
 
 from ..daten.wrapperpfad import Wrapperpfad
+from .bildmodellbildtypen import Bildmodellbildtypen
 from .bildmodellmehrbild import Bildmodellmehrbild
 from .bildmodellsilhouette import Bildmodellsilhouette
 from .bildmodellvideo import Bildmodellvideo
@@ -49,20 +53,31 @@ class Bildmodellschaetzung:
 
     # --------------------------------------------------------------- Lauf
 
+    def nur_haut(self):
+        """Bilder, die nur ihr posiertes Netz für die Fotofarbe brauchen (Textur „foto"):
+        Körperbilder mit Nutzung „nur Textur" und Nebenbilder mit Körperteil."""
+        if self.optionen.get('textur', 'hautton') != 'foto':
+            return []
+        aus = []
+        for b in self.job.bilder:
+            if not Bildmodellbildtypen.fuer_textur(b) or Bildmodellbildtypen.fuer_form(b):
+                continue
+            if b.get('kategorie') == 'koerper' or Bildmodellbildtypen.textur_teile(b):
+                aus.append(b)
+        return aus
+
     def ausfuehren(self, melder=None):
-        koerper = [
-            b for b in self.job.bilder if b.get('kategorie') == 'koerper' and float(b.get('gewicht') or 0) > 0
-        ]
-        koepfe = [
-            b for b in self.job.bilder if b.get('kategorie') == 'kopf' and float(b.get('gewicht') or 0) > 0
-        ]
+        form = [b for b in self.job.bilder if Bildmodellbildtypen.fuer_form(b)]
+        koerper = [b for b in form if b.get('kategorie') == 'koerper']
+        koepfe = [b for b in form if b.get('kategorie') == 'kopf']
+        haut = self.nur_haut()
         backend = self.optionen.get('koerper', 'smplest_x')
         # Nur, was noch keine Antwort DIESES Schätzers hat: ein zweiter Lauf
         # ab „schaetzung" (andere Mischung, andere Grundfigur) lädt das
         # 8-GB-Modell nicht noch einmal; ein anderer Schätzer rechnet neu.
         offen = [
             b
-            for b in koerper
+            for b in koerper + haut
             if (b.get('schaetzung') or {}).get('backend') != backend
             or (b.get('schaetzung') or {}).get('fehler')
             # Eine SMPLest-X-Antwort ohne Pose stammt von vor dem 19.09.2026 —
@@ -84,7 +99,7 @@ class Bildmodellschaetzung:
                 melder,
                 'gesicht',
             )
-        videos = [b for b in self.job.bilder if b.get('video') and float(b.get('gewicht') or 0) > 0]
+        videos = [b for b in self.job.bilder if b.get('video') and Bildmodellbildtypen.fuer_form(b)]
         if self.optionen.get('video', 'gvhmr') == 'gvhmr':
             self._videos(videos, melder)
             # Ein Drehvideo zählt in der Mischung wie ein Hauptbild.

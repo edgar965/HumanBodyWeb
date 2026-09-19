@@ -4,12 +4,13 @@
  * Edgar (19.09.2026): „Mit einem Popup kommt ein Fenster, wo ich diese
  * anpassen kann. Diese Proportionen nutzt du dann für deine Berechnung."
  *
- * Eine Zeile je Maß (`katalog.proportionen`, 18): Eingabe in cm (leer = keine
+ * Eine Zeile je Maß (`katalog.proportionen`, 19): Eingabe in cm (leer = keine
  * Vorgabe, das Ziel aus den Bildern gilt), daneben das Ziel wie gemessen, das
  * Modell und die Differenz. Jede Eingabe zeichnet die Vorher-Linie sofort um
  * (`aenderung`), „Übernehmen" legt die Werte am Auftrag ab (POST
- * `proportionen/`), „… und neu berechnen" startet dazu neu ab „Zielnetz" — in der Anpassung
- * formt `Bildmodellzielproportionen` das Zielnetz. Der Augenabstand ist nicht
+ * `proportionen/`), „… und neu berechnen" startet dazu ab „Anpassung" (ab „Zielnetz", wenn
+ * Größe oder Gewicht geändert sind) — in der Anpassung formt `Bildmodellzielproportionen`
+ * das Zielnetz. Der Augenabstand ist nicht
  * formbar (die Augäpfel folgen dem Käfig nicht) und steht nur zur Ansicht.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -41,7 +42,8 @@ export class Proportionendialog {
         return aus;
     }
 
-    oeffnen(daten) {
+    /** `mass`: dieses Maß bekommt den Fokus (Klick auf die Linie im Bild). */
+    oeffnen(daten, mass = null) {
         if (!this.dialog || !daten) return;
         this.daten = daten;
         this.tabelle.innerHTML = '';
@@ -74,6 +76,10 @@ export class Proportionendialog {
             this.tabelle.appendChild(tr);
         }
         this.dialog.showModal();
+        if (mass) {
+            const feld = this.tabelle.querySelector(`tr[data-mass="${mass}"] input`);
+            if (feld && !feld.disabled) { feld.focus(); feld.select(); feld.closest('tr').scrollIntoView({ block: 'center' }); }
+        }
     }
 
     alleLoeschen() {
@@ -92,8 +98,9 @@ export class Proportionendialog {
             this.dialog.close();
             this.aenderung();
             if (rechnen) {
+                // Größe/Gewicht unverändert: das Zielnetz steht, ab „Anpassung" reicht (spart den Zielschritt).
                 const p = window.__bildmodell?.person;
-                if (p) await p.neuBerechnen();
+                if (p) await p.neuBerechnen(p.unveraendert() ? 'anpassung' : 'ziel');
             }
         } catch (fehler) {
             window.alert(`Proportionen nicht übernommen: ${fehler.message}`);

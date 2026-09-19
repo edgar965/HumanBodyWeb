@@ -37,12 +37,19 @@ Fortschritt, 3D-Ansicht). Tabelle: djangoBase (`Bildmodelltabelle`).
                     {% for wert, anzeige in typen %}<option value="{{ wert }}">{{ anzeige }}</option>{% endfor %}
                 </select>
             </label>
+            <label title="Testfall: eine Figur der Daz-Bibliothek als Referenz — die Auftragsseite rendert ihre Bilder und misst das Ergebnis dagegen">Testfall (Referenzfigur)
+                <select name="testfall" id="bildmodell-testfall">
+                    <option value="">— kein Testfall —</option>
+                    {% for f in testfiguren %}<option value="{{ f.name }}">{{ f.anzeige }}</option>{% endfor %}
+                </select>
+            </label>
         </div>
         <div class="bildmodell-ablage" id="bildmodell-ablage">
             <input type="file" name="bilder" id="bildmodell-dateien" multiple
                    accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.mp4,.mov,.webm,.mkv,.avi,.m4v">
             <p><i class="fas fa-cloud-upload-alt"></i> Bilder oder Drehvideos hierher ziehen oder klicken —
-               JPG, PNG, WebP, MP4, WebM; auch Collagen und Bilder mit mehreren Figuren</p>
+               JPG, PNG, WebP, MP4, WebM; auch Collagen und Bilder mit mehreren Figuren.
+               Ein Testfall kommt auch ohne Bilder aus: die Auftragsseite rendert sie aus der Referenzfigur.</p>
             <div class="bildmodell-vorschauen" id="bildmodell-vorschauen"></div>
         </div>
         <div class="bildmodell-knoepfe">

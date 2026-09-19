@@ -34,11 +34,17 @@ __all__ = ['Bildmodelltextur']
 class Bildmodelltextur:
     @staticmethod
     def gewaehlt(bild):
-        """Zählt das Bild zur Textur? Nutzerwahl vor Tauglichkeit."""
+        """Zählt das Bild zur Textur? Nutzung (nicht „nur Form"/„aus"), dann die
+        Nutzerwahl, sonst die Tauglichkeit — ein Nebenbild mit Körperteil
+        (`Bildmodellbildtypen`, 19.09.2026) gilt mit Hautton als gewählt."""
+        from .bildmodellbildtypen import Bildmodellbildtypen
+
         t = bild.get('textur') or {}
+        if not t.get('hautton') or not Bildmodellbildtypen.fuer_textur(bild):
+            return False
         if 'textur_an' in bild:
-            return bool(bild['textur_an']) and bool(t.get('hautton'))
-        return bool(t.get('tauglich')) and bool(t.get('hautton'))
+            return bool(bild['textur_an'])
+        return bool(t.get('tauglich')) or bool(Bildmodellbildtypen.textur_teile(bild))
 
     @classmethod
     def hautton(cls, bilder):

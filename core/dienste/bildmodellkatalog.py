@@ -6,6 +6,7 @@ Zeilen): hier steht NUR die Tabelle — je Schritt `(feld, name, [(wert, name,
 erklärung)], vorgabe)` — und die Verfügbarkeit der Schätzer, die
 `Bildmodelloptionen.katalog()` daran hängt (`photo_analyzer.get_all_status()`,
 GVHMR-Wurzel). Ein Schätzer ohne Gewichte steht ausgegraut mit Grund.
+Die Felder der Sichtung liegen in `Bildmodellsichtungskatalog`.
 """
 
 import logging
@@ -13,6 +14,7 @@ import os
 
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellpersonkatalog import Bildmodellpersonkatalog
+from .bildmodellsichtungskatalog import Bildmodellsichtungskatalog
 
 logger = logging.getLogger('core')
 
@@ -23,49 +25,7 @@ class Bildmodellkatalog:
     _zustand = None
 
     FELDER = {
-        'sichtung': [
-            (
-                'zuschnitt',
-                'Zuschnitt',
-                [
-                    (
-                        'yolo',
-                        'Objekte trennen (YOLO11-Pose)',
-                        'Jede Person, jeder Kopf wird ein eigenes Bild; Collagen zerfallen',
-                    ),
-                    ('ganz', 'Bilder ganz lassen', 'Jedes Bild bleibt, wie es ist'),
-                ],
-                'yolo',
-            ),
-            (
-                'rig',
-                'Rig auf den Bildern',
-                [
-                    ('alle', 'Alle drei', 'MediaPipe (33) ordnet ein; dazu YOLO11-Pose und openpifpaf'),
-                    ('yolo', 'MediaPipe + YOLO11-Pose', 'YOLO sieht Rumpf, Beine, Füße auch auf Details'),
-                    ('openpifpaf', 'MediaPipe + openpifpaf', '133 Punkte mit Füßen, Gesicht, Händen'),
-                    ('mediapipe', 'Nur MediaPipe', 'Wie bis zum 19.09.: nur ganze Personen'),
-                ],
-                'alle',
-            ),
-            (
-                'einordnung',
-                'Einordnung',
-                [
-                    (
-                        'auto',
-                        'Automatisch (MediaPipe)',
-                        'Haupt-/Nebenbild, Ansicht und Haltung aus den Landmarken',
-                    ),
-                    (
-                        'manuell',
-                        'Meine Einordnung behalten',
-                        'Kategorie und Gewicht, wie auf der Seite gestellt',
-                    ),
-                ],
-                'auto',
-            ),
-        ],
+        'sichtung': Bildmodellsichtungskatalog.FELDER,
         'schaetzung': [
             (
                 'koerper',
@@ -223,7 +183,19 @@ class Bildmodellkatalog:
                 'mittel',
             ),
         ],
-        'vorschau': [],
+        'vorschau': [
+            (
+                'textur',
+                'Textur',
+                [
+                    ('hautton', 'Hautton (Stufe 1)', 'Daz-Haut auf den Hautton der Fotos getönt'),
+                    ('foto', 'Fotofarbe (Stufe 2)',
+                     'Farbe je Punkt aus den Bildern mit Häkchen, als UDIM gebacken (~40 s, python10)'),
+                    ('aus', 'Daz-Haut', 'Unverändert'),
+                ],
+                'hautton',
+            ),
+        ],
         'speichern': [
             (
                 'modell',

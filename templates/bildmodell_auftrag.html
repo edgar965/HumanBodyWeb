@@ -14,6 +14,7 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 {% endcomment %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodellbilder.css' %}">
 <script type="importmap">
 { "imports": { "three": "{% static 'vendor/three/build/three.module.js' %}",
                "three/addons/": "{% static 'vendor/three/examples/jsm/' %}" } }
@@ -68,8 +69,18 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
             <p class="hb-hinweis" id="person-beleg"></p>
         </form>
         <div class="bildmodell-3d">
+            <div class="bildmodell-testfall hb-versteckt" id="testfall">
+                <button type="button" class="btn btn-secondary btn-sm" id="testfall-schalter" aria-pressed="false"
+                        title="Referenzfigur des Testfalls statt des Ergebnisses zeigen">
+                    <i class="fas fa-user-check"></i> <span>Testcase</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" id="testfall-bilder"
+                        title="Die Referenzfigur in zehn Ansichten rendern und als Bilder in den Auftrag laden">
+                    <i class="fas fa-camera"></i> <span>Bilder aus der Referenz erzeugen</span></button>
+                <span class="hb-hinweis" id="testfall-text"></span>
+            </div>
             <canvas id="ansicht3d"></canvas>
             <div class="hb-hinweis" id="ansicht3d-text">Noch kein Ergebnis.</div>
+            <div id="testfall-zahlen" class="bildmodell-testfallzahlen"></div>
             <div class="bildmodell-vorschauen" id="vorschauen"></div>
         </div>
     </div>
@@ -113,16 +124,21 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
             <label class="bildmodell-schalter"><input type="checkbox" id="rig-schalter" checked> Rig einblenden</label>
             <label class="bildmodell-schalter">Rig
                 <select id="rig-wahl" title="Welches Rig über den Bildern liegt — die Sichtung rechnet alle gewählten">
-                    <option value="auto">Automatisch (MediaPipe, sonst YOLO, sonst openpifpaf)</option>
+                    <option value="auto">Automatisch (MediaPipe, sonst ViTPose, YOLO, openpifpaf)</option>
                     <option value="mediapipe">MediaPipe Pose (33)</option>
                     <option value="yolo">YOLO11-Pose (17)</option>
                     <option value="openpifpaf">openpifpaf Wholebody (133)</option>
+                    <option value="vitpose">ViTPose-H (17, das Rig von GVHMR)</option>
                 </select></label>
             <label class="btn btn-secondary btn-sm bildmodell-hochladen"><i class="fas fa-plus"></i> <span>Bilder oder Videos hinzufügen</span>
                 <input type="file" id="bilder-dazu" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.mp4,.mov,.webm,.mkv,.avi,.m4v" hidden></label>
+            <button type="button" class="btn btn-primary btn-sm hb-versteckt" id="neue-sichten"
+                    title="Nur die Sichtung, nur für Dateien ohne Befund — der Rest des Auftrags bleibt stehen">
+                <i class="fas fa-search"></i> <span>Neue Dateien sichten</span></button>
         </span>
     </div>
-    <p class="hb-hinweis">Erst nach dem Schritt „Zuschnitt und Sichtung" stehen die Ausschnitte hier — bis dahin die Originale.</p>
+    <p class="hb-hinweis">Je Bild: Hauptbild-Typ, Nebenbild-Typ, Nutzung, Gewicht, Textur — dazu Ersetzen und Löschen.
+       Hochgeladene oder ersetzte Dateien stehen unter „Noch nicht gesichtet", bis „Neue Dateien sichten" sie einordnet.</p>
     <p class="hb-hinweis" id="textur-stand"></p>
     <div id="originale" class="bildmodell-originale"></div>
     {% for schluessel, name in kategorien %}

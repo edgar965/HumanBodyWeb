@@ -79,15 +79,17 @@ class Bildmodelllauf:
 
     # ------------------------------------------------------------- Laufen
 
-    def ausfuehren(self, ab='sichtung'):
+    def ausfuehren(self, ab='sichtung', bis=None):
+        """Ab `ab` bis zum Ende — oder nur bis `bis` (einschließlich)."""
         reihe = Bildmodelloptionen.REIHENFOLGE
         start = reihe.index(ab) if ab in reihe else 0
+        ende = reihe.index(bis) + 1 if bis in reihe else len(reihe)
         self.job.status = 'laeuft'
         self.job.error_message = ''
         self.job.started_at = timezone.now()
         self.job.save(update_fields=['status', 'error_message', 'started_at', 'updated_at'])
         try:
-            for schritt in reihe[start:]:
+            for schritt in reihe[start:ende]:
                 if self._abgebrochen():
                     logger.info('Bildmodell %s: angehalten vor %s', self.job.kennung, schritt)
                     return False
@@ -95,7 +97,7 @@ class Bildmodelllauf:
                 getattr(self, '_' + schritt)()
                 self.melden(schritt, 1.0, 'fertig')
             self.job.status = 'fertig'
-            self.job.progress = 100
+            self.job.progress = 100 if ende >= len(reihe) else self.BAENDER[reihe[ende - 1]][1]
             self.job.progress_detail = ''
             self.job.finished_at = timezone.now()
             self.job.save(

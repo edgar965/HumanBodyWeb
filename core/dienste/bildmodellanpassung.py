@@ -247,32 +247,11 @@ class Bildmodellanpassung:
         return stellung
 
     def vorschau(self, melder=None):
-        from Genesis9.formung import G9formung
-        from Genesis9.reglerableitung import G9reglerableitung
-        from Genesis9.vorschaubild import G9vorschaubild
+        """Bilder, Maße, Proportionen, Fototextur, Testfall — `Bildmodellvorschau`."""
+        from .bildmodellvorschau import Bildmodellvorschau
 
-        from .bildmodellmasse import Bildmodellmasse
-        from .bildmodellproportionen import Bildmodellproportionen
-
-        p, _, _ = G9reglerableitung.lage(G9formung(self.stellung()))
-        bild = G9vorschaubild(p)
-        ordner = self.ablage.ergebnis()
-        dateien = {'icon': bild.icon(ordner / 'icon.png')}
-        for i, ansicht in enumerate(('vorn', 'seite', 'hinten')):
-            if melder:
-                melder(0.2 + 0.2 * i, 'Ansicht %s' % ansicht)
-            dateien[ansicht] = bild.speichern(ordner / ('vorschau_%s.png' % ansicht), ansicht)
-        from PIL import Image
-
-        Image.fromarray(bild.kopf('vorn', 500), 'RGBA').save(ordner / 'vorschau_kopf.png')
-        dateien['kopf'] = str(ordner / 'vorschau_kopf.png')
-        self.job.ergebnis['vorschau'] = {k: v.split('\\')[-1].split('/')[-1] for k, v in dateien.items()}
-        if melder:
-            melder(0.85, 'Außenmaße Foto / Zielnetz / Modell')
-        self.job.ergebnis['masse'] = Bildmodellmasse(self.job, self.stellung()).alle()
-        self.job.ergebnis['proportionen'] = Bildmodellproportionen(
-            self.job, self.ablage, self.stellung(), self._ziel_laden
-        ).alle(lambda a, t: melder and melder(0.86 + 0.13 * a, t))
+        vorschau = Bildmodellvorschau(self.job, self.ablage, self.optionen, self.stellung(), self._ziel_laden)
+        vorschau.ausfuehren(melder)
         self._sichern('ergebnis')
 
     # ----------------------------------------------------------- Speichern

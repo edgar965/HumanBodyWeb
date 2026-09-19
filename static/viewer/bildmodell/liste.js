@@ -4,8 +4,9 @@ import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
 /**
  * Bildmodellliste — das Dashboard „Modell aus Dateien".
  *
- * Neuer Auftrag: Name, Typ, Bilder (Ablagefeld mit Drag & Drop, Vorschauen
- * sofort) → POST `/api/bildmodell/anlegen/` → sofort starten → zur
+ * Neuer Auftrag: Name, Typ, Testfall (Referenzfigur, optional), Bilder
+ * (Ablagefeld mit Drag & Drop, Vorschauen sofort) → POST
+ * `/api/bildmodell/anlegen/` → sofort starten (wenn Bilder da sind) → zur
  * Auftragsseite. Tabelle: Klick auf eine Zeile öffnet den Auftrag, Kästchen
  * + „Gewählte löschen" (Shift-Bereich über `Zeilenwahl`).
  */
@@ -78,19 +79,22 @@ export class Bildmodellliste {
 
     async anlegen() {
         const name = document.getElementById('bildmodell-name').value.trim();
+        // Testfall (19.09.2026): Referenzfigur aus dem Genesis-9-Katalog — Bilder rendert die Auftragsseite.
+        const testfall = document.getElementById('bildmodell-testfall')?.value || '';
         if (!name) { this.melden('Bitte einen Namen angeben', true); return; }
-        if (!this.dateien.length) { this.melden('Bitte Bilder wählen', true); return; }
+        if (!this.dateien.length && !testfall) { this.melden('Bitte Bilder wählen (oder einen Testfall)', true); return; }
         const daten = new FormData();
         daten.append('name', name);
         daten.append('typ', document.getElementById('bildmodell-typ').value);
+        if (testfall) daten.append('optionen', JSON.stringify({ testfall: { figur: testfall } }));
         for (const d of this.dateien) daten.append('bilder', d, d.name);
         const knopf = document.getElementById('bildmodell-anlegen');
         knopf.disabled = true;
-        this.melden(`${this.dateien.length} Bilder werden hochgeladen …`);
+        this.melden(this.dateien.length ? `${this.dateien.length} Bilder werden hochgeladen …` : 'Auftrag wird angelegt …');
         try {
             const antwort = await Serverabruf.formular(Bildmodellliste.ANLEGEN, daten);
             if (antwort.error) throw new Error(antwort.error);
-            await Serverabruf.senden(`/api/bildmodell/${antwort.id}/starten/`, { ab: 'sichtung' });
+            if (this.dateien.length) await Serverabruf.senden(`/api/bildmodell/${antwort.id}/starten/`, { ab: 'sichtung' });
             window.location.href = antwort.url;
         } catch (fehler) {
             this.melden(`Anlegen fehlgeschlagen: ${fehler.message}`, true);

@@ -30,7 +30,9 @@ class Bildmodellhaende:
         from Genesis9.handmasse import G9handmasse
         from Genesis9.reglerableitung import G9reglerableitung
 
-        gemessen = G9handmasse.aus_bildern(self.job.bilder)
+        from .bildmodellbildtypen import Bildmodellbildtypen
+
+        gemessen = G9handmasse.aus_bildern([b for b in self.job.bilder if Bildmodellbildtypen.fuer_haende(b)])
         if not gemessen:
             return {}, {'haende': 0}
         grenzen = {r['name']: (r['min'], r['max']) for r in G9reglerableitung.regler('proportionen')}

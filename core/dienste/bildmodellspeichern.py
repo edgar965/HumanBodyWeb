@@ -35,8 +35,17 @@ class Bildmodellspeichern:
                 'pose': '',
                 'ausdruck': '',
                 'kleidung': {person['haar']: {}} if person.get('haar') else {},
+                'fototextur': self.fototextur(),
                 'herkunft': {'auftrag': self.job.kennung, 'art': 'modell aus bildern', 'person': person},
             },
+        }
+
+    def fototextur(self):
+        """`{kachel: Adresse}` der gebackenen Kacheln (Stufe 2) — leer ohne Fototextur."""
+        f = self.job.ergebnis.get('fototextur') or {}
+        return {
+            k: '/api/bildmodell/%s/datei/ergebnis/%s' % (self.job.id, name)
+            for k, name in (f.get('kacheln') or {}).items()
         }
 
     def speichern(self, melder=None):

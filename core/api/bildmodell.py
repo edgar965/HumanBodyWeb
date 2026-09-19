@@ -8,7 +8,8 @@ GET  /api/bildmodell/katalog/                           Optionen je Schritt mit 
 GET  /api/bildmodell/<id>/zustand/                      Status, Fortschritt, Bilder, Ergebnis
 POST /api/bildmodell/<id>/bilder/                       weitere Bilder hochladen
 POST /api/bildmodell/<id>/bild/<datei>/                 Kategorie/Gewicht eines Bildes stellen
-POST /api/bildmodell/<id>/starten/                      {optionen, ab} → Arbeitsprozess
+POST /api/bildmodell/<id>/starten/                      {optionen, ab, bis} → Arbeitsprozess
+     Bilder ersetzen und löschen: `Bildmodelldateiendpunkte` (bildmodelldateien.py)
 POST /api/bildmodell/<id>/anhalten/
 POST /api/bildmodell/<id>/loeschen/, /api/bildmodell/loeschen/ (mehrere)
 GET  /api/bildmodell/<id>/datei/<ordner>/<name>         Bilder und Vorschauen
@@ -26,8 +27,11 @@ from django.views.decorators.http import require_GET, require_POST
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.bildmodellablage import Bildmodellablage
 from ..dienste.bildmodellarbeiter import Bildmodellarbeiter
+from ..dienste.bildmodellbildtypen import Bildmodellbildtypen
+from ..dienste.bildmodelldateien import Bildmodelldateien
 from ..dienste.bildmodelllauf import Bildmodelllauf
 from ..dienste.bildmodelloptionen import Bildmodelloptionen
+from ..dienste.bildmodellpersonkatalog import Bildmodellpersonkatalog
 from ..dienste.bildmodelltabelle import Bildmodelltabelle
 from ..dienste.bildmodelltextur import Bildmodelltextur
 from ..models import Bildmodellauftrag
@@ -51,7 +55,11 @@ class Bildmodellendpunkte:
         return render(
             request,
             'bildmodell.html',
-            {'tabelle': Bildmodelltabelle(auftraege).tabelle(), 'typen': Bildmodellauftrag.TYP_CHOICES},
+            {
+                'tabelle': Bildmodelltabelle(auftraege).tabelle(),
+                'typen': Bildmodellauftrag.TYP_CHOICES,
+                'testfiguren': Bildmodellpersonkatalog.testfiguren(),
+            },
         )
 
     @staticmethod
@@ -141,6 +149,7 @@ class Bildmodellendpunkte:
             'modell': job.modell,
             'laeuft': job.laeuft,
             'originale': Bildmodellendpunkte._eingaenge(Bildmodellablage(job.kennung)),
+            'neue': Bildmodelldateien(job, Bildmodellablage(job.kennung)).ohne_befund(),
             'updated_at': job.updated_at.isoformat() if job.updated_at else None,
         }
 
@@ -181,18 +190,8 @@ class Bildmodellendpunkte:
             rumpf = json.loads(request.body or b'{}')
         except ValueError:
             return JsonResponse({'error': 'Kein JSON'}, status=400)
-        kategorie = rumpf.get('kategorie')
-        if kategorie in dict(Bildmodellauftrag.KATEGORIEN):
-            eintrag['kategorie'] = kategorie
-        if 'gewicht' in rumpf:
-            try:
-                eintrag['gewicht'] = max(0.0, min(1.0, float(rumpf['gewicht'])))
-            except TypeError, ValueError:
-                pass
-        if 'kategorie' in rumpf or 'gewicht' in rumpf:
-            eintrag['manuell'] = True
-        if 'textur_an' in rumpf:
-            eintrag['textur_an'] = bool(rumpf['textur_an'])
+        # Hauptbild-/Nebenbild-Typ, Nutzung, Kategorie, Gewicht, Textur-Häkchen (19.09.2026).
+        Bildmodellbildtypen.stellen(eintrag, rumpf)
         job.save(update_fields=['bilder', 'updated_at'])
         return JsonResponse({'ok': True, 'bild': eintrag, 'textur': Bildmodelltextur.hautton(job.bilder)})
 
@@ -217,13 +216,15 @@ class Bildmodellendpunkte:
         ab = rumpf.get('ab') or 'sichtung'
         if ab not in Bildmodelloptionen.REIHENFOLGE:
             ab = 'sichtung'
+        # `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026).
+        bis = rumpf.get('bis') if rumpf.get('bis') in Bildmodelloptionen.REIHENFOLGE else None
         optionen['ab'] = ab  # für `Bildmodelllauf.relativ`: Balken ab dem Startschritt
         job.optionen = optionen
         job.progress = 0
         job.schritt = ab
         job.save(update_fields=['optionen', 'progress', 'schritt', 'updated_at'])
-        pid = Bildmodellarbeiter.starten(job, ab)
-        return JsonResponse({'ok': True, 'pid': pid, 'ab': ab})
+        pid = Bildmodellarbeiter.starten(job, ab, bis)
+        return JsonResponse({'ok': True, 'pid': pid, 'ab': ab, 'bis': bis})
 
     @staticmethod
     @require_POST

@@ -10,6 +10,11 @@ und der Gesichtskasten — die Auftragsseite zeichnet daraus das Rig.
 Was der Nutzer auf der Seite umgestellt hat (`manuell: true`), bleibt beim
 nächsten Lauf stehen; mit Einordnung „manuell" bleibt alles wie gestellt
 und nur neue Ausschnitte werden eingeordnet.
+
+Umfang „neue" (Vorgabe seit 19.09.2026, `Bildmodellsichtungskatalog`):
+gesichtet wird nur, was noch keinen Eintrag hat — ein hinzugefügtes oder
+ersetztes Bild (`Bildmodelldateien`) — oder dem ein gewähltes Rig bzw. die
+Hautprobe fehlt; die Einträge der übrigen Dateien bleiben, wie sie sind.
 """
 
 import json
@@ -41,14 +46,15 @@ class Bildmodellsichtung:
     # --------------------------------------------------------------- Lauf
 
     #: Welche Rigs `--rigs` je Wahl anfordert (MediaPipe läuft immer, es ordnet ein).
-    RIGS = {'alle': 'yolo,openpifpaf', 'yolo': 'yolo', 'openpifpaf': 'openpifpaf', 'mediapipe': ''}
+    RIGS = {'alle': 'yolo,openpifpaf,vitpose', 'yolo': 'yolo', 'openpifpaf': 'openpifpaf',
+            'vitpose': 'vitpose', 'mediapipe': ''}
 
     def befehl(self, pfade):
         runner = os.path.join(Wrapperpfad.pfad(), self.RUNNER)
         befehl = [settings.PIPELINE_PYTHON, runner]
         if self.optionen.get('zuschnitt', 'yolo') == 'yolo':
             befehl += ['--zuschnitt', str(self.ablage.zuschnitt())]
-        rigs = self.RIGS.get(self.optionen.get('rig', 'alle'), 'yolo,openpifpaf')
+        rigs = self.RIGS.get(self.optionen.get('rig', 'alle'), self.RIGS['alle'])
         if rigs:
             befehl += ['--rigs', rigs]
         # Hautton und Texturtauglichkeit je Ausschnitt (`hauttonprobe.py`, 19.09.2026).
@@ -62,15 +68,42 @@ class Bildmodellsichtung:
             raise RuntimeError('Keine Bilder oder Videos im Auftrag')
         self.ablage.anlegen()
         befunde = []
-        if originale:
+        dran = originale if self.optionen.get('umfang', 'neue') == 'alle' else self.zu_sichten(originale)
+        if dran:
             if self.optionen.get('zuschnitt', 'yolo') != 'yolo':
-                self._ganz_kopieren(originale)
+                self._ganz_kopieren(dran)
             if melder:
-                melder(0.05, '%d Bilder: Zuschnitt und Sichtung' % len(originale))
-            befunde = self._laufen(self.befehl(originale), melder)
-        self._uebernehmen(befunde, videos)
+                melder(0.05, '%d von %d Bildern: Zuschnitt und Sichtung' % (len(dran), len(originale)))
+            befunde = self._laufen(self.befehl(dran), melder)
+        elif melder:
+            melder(0.5, 'Alle %d Bilder haben ihren Befund' % len(originale))
+        bleiben = {p.name for p in originale} - {p.name for p in dran}
+        self._uebernehmen(befunde, videos, bleiben)
         self.job.save(update_fields=['bilder', 'updated_at'])
         return self.job.bilder
+
+    def rigs_gewuenscht(self):
+        """Die Rigs, die jeder Eintrag tragen soll (`rigs.<name>`), dazu `textur`."""
+        rigs = self.RIGS.get(self.optionen.get('rig', 'alle'), self.RIGS['alle'])
+        return {r for r in rigs.split(',') if r}
+
+    def zu_sichten(self, originale):
+        """Originale ohne Eintrag — oder mit einem Eintrag, dem ein Rig oder die Hautprobe fehlt."""
+        rigs = self.rigs_gewuenscht()
+        nach_quelle = {}
+        for b in self.job.bilder:
+            if not b.get('video'):
+                nach_quelle.setdefault(b.get('quelle') or b.get('datei'), []).append(b)
+        dran = []
+        for p in originale:
+            eintraege = nach_quelle.get(p.name)
+            if not eintraege:
+                dran.append(p)
+                continue
+            fehlt = any(rigs - set(b.get('rigs') or {}) or 'textur' not in b for b in eintraege)
+            if fehlt:
+                dran.append(p)
+        return dran
 
     def _ganz_kopieren(self, originale):
         """Ohne Zuschnitt: die Originale als JPG in den Zuschnittordner, damit
@@ -117,13 +150,16 @@ class Bildmodellsichtung:
 
     # ------------------------------------------------------ Übernehmen
 
-    def _uebernehmen(self, befunde, videos=()):
+    def _uebernehmen(self, befunde, videos=(), bleiben=()):
         """Ohne Zuschnitt heißen die Dateien wie die Originale (als JPG) —
         die Befunde tragen dann `datei` = Originalname; auf den JPG-Namen
-        umschreiben. `videos` kommen fertig von `Bildmodellvideo.sichten`."""
+        umschreiben. `videos` kommen fertig von `Bildmodellvideo.sichten`;
+        die Einträge der Quellen in `bleiben` werden unverändert übernommen."""
         alt = {b.get('datei'): b for b in self.job.bilder if b.get('datei')}
         manuell = self.optionen.get('einordnung') == 'manuell'
         neu = list(videos)
+        neu += [b for b in self.job.bilder
+                if not b.get('video') and (b.get('quelle') or b.get('datei')) in bleiben]
         for befund in befunde:
             datei = befund.get('datei')
             if not datei:
@@ -140,9 +176,13 @@ class Bildmodellsichtung:
             if vorher and (manuell or vorher.get('manuell')):
                 eintrag['kategorie'] = vorher.get('kategorie', eintrag['kategorie'])
                 eintrag['gewicht'] = vorher.get('gewicht', eintrag['gewicht'])
+                if vorher.get('ansicht'):
+                    eintrag['ansicht'] = vorher['ansicht']
                 eintrag['manuell'] = True
-            if vorher and 'textur_an' in vorher:
-                eintrag['textur_an'] = vorher['textur_an']
+            # Die Wahl der drei Boxen (`Bildmodellbildtypen`) bleibt über die Sichtung hinweg.
+            for feld in ('textur_an', 'teil', 'nutzung'):
+                if vorher and feld in vorher:
+                    eintrag[feld] = vorher[feld]
             for feld in ('schaetzung', 'gesichtsschaetzung'):
                 if vorher and vorher.get(feld):
                     eintrag[feld] = vorher[feld]

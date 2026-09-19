@@ -95,6 +95,8 @@ export class Genesis9netz {
                 material.side = THREE.DoubleSide;
             }
             geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, liste.length);
+            material.userData.gruppe = gruppe.name;
+            material.userData.kachel = gruppe.kachel;
             liste.push(material);
             Genesis9netz.texturen(material, gruppe.bilder || {});
         }

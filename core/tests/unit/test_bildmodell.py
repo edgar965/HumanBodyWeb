@@ -122,8 +122,8 @@ class SichtungUebernahmeTest(unittest.TestCase):
         self.assertTrue(befehl[1].endswith('_run_bildsichtung.py'))
         s = Bildmodellsichtung(job, self.ablage, {'zuschnitt': 'ganz'})
         self.assertNotIn('--zuschnitt', s.befehl([Path('x.jpg')]))
-        # Rigs (19.09.2026): Vorgabe alle drei, `mediapipe` fordert keine dazu.
-        self.assertIn('yolo,openpifpaf', befehl)
+        # Rigs (19.09.2026): Vorgabe alle vier, `mediapipe` fordert keine dazu.
+        self.assertIn('yolo,openpifpaf,vitpose', befehl)
         nur_mp = Bildmodellsichtung(job, self.ablage, {'rig': 'mediapipe'}).befehl([Path('x.jpg')])
         self.assertNotIn('--rigs', nur_mp)
         self.assertIn('yolo', Bildmodellsichtung(job, self.ablage, {'rig': 'yolo'}).befehl([Path('x.jpg')]))

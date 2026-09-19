@@ -14,6 +14,11 @@
  * gebracht (`px_je_m`); das Bild selbst folgt nach „Neu berechnen". Rechts
  * das Modell mit den gemessenen Werten. Zeilenhöhe über den Schieber, gemerkt
  * in `localStorage` (`bildmodell.prop.hoehe`).
+ *
+ * Das Popup öffnet sich AM BILD (Edgar, 19.09.2026: „fehlt das Popup beim Bild,
+ * wo ich die Maße angeben kann"): Klick auf eine Maßlinie springt im Popup zu
+ * diesem Maß, Klick auf das Bild oder den Knopf „Maße …" in jedem Vorher-Bild
+ * öffnet es ganz; die Linien fangen den Klick (`pointer-events` auf `g`).
  */
 import { Proportionendialog } from './proportionendialog.js';
 
@@ -88,12 +93,24 @@ export class Proportionenansicht {
                 fig.style.aspectRatio = `${a.breite} / ${a.hoehe}`;
                 const src = this.auftrag.dateiAdresse('ergebnis', a.bild[wer]) + `?t=${Date.now()}`;
                 fig.innerHTML = `<img src="${src}" alt="${titel}"><svg viewBox="0 0 ${a.breite} ${a.hoehe}" class="bildmodell-proplinien"></svg>`
-                    + `<figcaption>${titel}</figcaption>`;
+                    + `<figcaption>${titel}</figcaption>`
+                    + (wer === 'ziel' ? '<button type="button" class="btn btn-secondary btn-sm bildmodell-propknopf" title="Proportionen einstellen">'
+                        + '<i class="fas fa-ruler-combined"></i> Maße …</button>' : '');
+                fig.title = wer === 'ziel' ? 'Klick auf eine Linie: dieses Maß einstellen' : titel;
+                fig.addEventListener('click', e => this.amBild(e, wer));
                 zeile.appendChild(fig);
             }
             this.feld.appendChild(zeile);
         }
         this.linienZeichnen();
+    }
+
+    /** Klick im Bild: auf einer Linie → das Maß im Popup, sonst das Popup. */
+    amBild(e, wer) {
+        const gruppe = e.target.closest ? e.target.closest('g[data-mass]') : null;
+        const mass = gruppe ? gruppe.dataset.mass : null;
+        if (wer !== 'ziel' && !mass) return;
+        this.dialog.oeffnen(this.daten(), mass);
     }
 
     /** Linien neu zeichnen — beim Anzeigen und nach jeder Eingabe im Popup. */

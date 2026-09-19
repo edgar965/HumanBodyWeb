@@ -12,6 +12,7 @@ ab jedem Schritt neu anlaufen (`ab=`), z. B. nach geänderter Einordnung der
 Bilder oder anderer Reglerwahl, ohne die Schätzer erneut zu bemühen.
 """
 
+from .bildmodellbildtypen import Bildmodellbildtypen
 from .bildmodellkatalog import Bildmodellkatalog
 from .bildmodellpersonkatalog import Bildmodellpersonkatalog
 
@@ -57,6 +58,7 @@ class Bildmodelloptionen:
         aus['groesse_cm'] = None
         aus['person'] = {}
         aus['proportionen'] = {}
+        aus['testfall'] = {}
         return aus
 
     @classmethod
@@ -97,6 +99,19 @@ class Bildmodelloptionen:
         return aus
 
     @classmethod
+    def testfall_pruefen(cls, roh):
+        """`{figur}` — eine Referenzfigur aus dem Genesis-9-Katalog (Edgar, 19.09.2026:
+        „Testcase … das Ursula9-Modell zum Vergleich mit dem, was du erzeugt hast")."""
+        roh = roh if isinstance(roh, dict) else {}
+        figur = roh.get('figur')
+        if not isinstance(figur, str) or not figur.strip():
+            return {}
+        figur = figur.strip()[:80]
+        if figur not in {f['name'] for f in Bildmodellpersonkatalog.testfiguren()}:
+            return {}
+        return {'figur': figur}
+
+    @classmethod
     def pruefen(cls, roh):
         """Nur bekannte Felder mit bekannten Werten; Rest Vorgabe."""
         aus = cls.vorgaben()
@@ -114,6 +129,7 @@ class Bildmodelloptionen:
             aus[feld] = min(hi, max(lo, w)) if w is not None else None
         aus['person'] = cls.person_pruefen(roh.get('person'))
         aus['proportionen'] = cls.proportionen_pruefen(roh.get('proportionen'))
+        aus['testfall'] = cls.testfall_pruefen(roh.get('testfall'))
         return aus
 
     @classmethod
@@ -147,6 +163,8 @@ class Bildmodelloptionen:
             'haare': Bildmodellpersonkatalog.haare(),
             'proportionen': Bildmodellpersonkatalog.proportionen(),
             'proportion_cm': list(cls.PROPORTION_CM),
+            'bildtypen': Bildmodellbildtypen.katalog(),
+            'testfiguren': Bildmodellpersonkatalog.testfiguren(),
         }
 
     # ----------------------------------------------------- Verfügbarkeit

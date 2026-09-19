@@ -105,11 +105,22 @@ export class Personenformular {
             + `${z.progress_detail ? ' · ' + z.progress_detail : ''}`;
     }
 
-    async neuBerechnen() {
+    /** Sind die Personenfelder noch die des letzten Laufs? Dann reicht ein Start ab „Anpassung". */
+    unveraendert() {
+        const alt = (this.auftrag.zustand.optionen || {}).person || {};
+        const neu = this.werte();
+        const schluessel = new Set([...Object.keys(alt), ...Object.keys(neu)]);
+        for (const k of schluessel) {
+            if (String(alt[k] ?? '') !== String(neu[k] ?? '')) return false;
+        }
+        return true;
+    }
+
+    async neuBerechnen(ab = 'ziel') {
         const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
         const optionen = { ...this.formular.werte(), person: this.werte(), proportionen };
         try {
-            await this.auftrag.starten(optionen, 'ziel', this.festgehalten ? this.festgehalten() : {});
+            await this.auftrag.starten(optionen, ab, this.festgehalten ? this.festgehalten() : {});
         } catch (fehler) {
             window.alert(`Neu berechnen fehlgeschlagen: ${fehler.message}`);
         }

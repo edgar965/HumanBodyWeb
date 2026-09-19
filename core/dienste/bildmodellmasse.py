@@ -19,6 +19,7 @@ import logging
 import numpy as np
 
 from ..daten.wrapperpfad import Wrapperpfad
+from .bildmodellbildtypen import Bildmodellbildtypen
 
 logger = logging.getLogger('core')
 
@@ -42,7 +43,7 @@ class Bildmodellmasse:
         for b in self.job.bilder:
             # Nur neutrale Haltung: in der Hocke ist die „Hüftbreite" die Beinspreizung
             # (Damira, posiertes Bild: 74,5 cm).
-            if b.get('kategorie') != 'koerper' or float(b.get('gewicht') or 0) <= 0:
+            if b.get('kategorie') != 'koerper' or not Bildmodellbildtypen.fuer_form(b):
                 continue
             if b.get('haltung') != 'neutral':
                 continue
