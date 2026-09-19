@@ -44,8 +44,8 @@ export class Genesis9aufbau {
      */
     static async alles(inst, stufen) {
         const koerper = inst.koerperAufbauen(stufen);   // zählt `_lauf` hoch, bevor die Stücke ihn lesen
-        await Promise.all([koerper, ...inst.getragen().map(
-            kennung => inst.anziehen(kennung, inst.kleidung[kennung], stufen))]);
+        await Promise.all([koerper, ...inst.getragen().map(     // ohne Kaskade: alle kommen ohnehin
+            kennung => inst.anziehen(kennung, inst.kleidung[kennung], stufen, false))]);
         return inst;
     }
 

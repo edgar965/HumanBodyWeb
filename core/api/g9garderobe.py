@@ -5,9 +5,11 @@ u"""Genesis-9-Garderobe (Daz) fuer Szene und Studio: Liste, Stuecknetz, Texturen
          {stuecke: [{id, name, art, varianten, stile, regler, vorschau,
                      zeigbar, hinweis}], anzahl}
     POST /api/character/genesis9-figur/garderobe/<kennung>/netz/
-         {regler, pose, ausdruck, griffe, variante, stil, regler_stueck}
+         {regler, pose, ausdruck, griffe, variante, stil, regler_stueck,
+          getragen: [{kennung, stil, regler_stueck}], rang}
          {kennung, teile: [{name, vertices, faces, normals, uvs, gruppen,
-                            hautgewichte, knochen}], boden, stufen}
+                            hautgewichte, knochen}], boden, stufen,
+          innen: [kennung], aussen: [kennung]}
     GET  /api/character/genesis9-figur/textur/<pfad>          Bilddatei
 
 Bis 18.09.2026 in `g9figur.py` (das wuchs ueber 300 Zeilen). `pose` ist
@@ -19,6 +21,8 @@ eigenen Zopfknochen, `G9eigenknochen`) und `regler_stueck` (Viking-Shirt:
 `Adj Inflate Collar`) sind die eigenen Kanaele des Stuecks. Ein PROP
 (`G9requisit`) kommt an seinen Knochen (`knochen` je Teil, Haut ganz
 darauf); seine Griffpose stellt die Figur ueber `griffe` (`G9figur`).
+`getragen`/`rang` (19.09.2026): die anderen Stuecke in Anziehreihenfolge
+und der eigene Platz — Kollision Stueck gegen Stueck (`G9lagenanfrage`).
 """
 import logging
 
@@ -29,6 +33,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from .g9figur import G9figur, FEHLT
 from ..dienste.g9antworten import G9antworten
+from ..dienste.g9lagenanfrage import G9lagenanfrage
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.material import G9material
@@ -97,10 +102,14 @@ class G9garderobeapi:
         hoch = np.array([0.0, formung.boden(), 0.0])
         stufen = G9netzstufe.browser()
         koerper = G9koerpernetz(formung, stufen=stufen).koerperflaeche()
+        kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
+                   for folger, lage in teile]
+        # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
+        # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
+        koerper, innen, aussen = G9lagenanfrage(rumpf, formung, koerper).vorbereiten(
+            kennung, [(f, p) for (f, _lage), p in zip(teile, kaefige)])
         antwort_teile = []
-        for folger, lage in teile:
-            punkte = folger.punkte_zu(stueckformung, zusatz, drehung=knochen,
-                                      lage=lage) - hoch
+        for (folger, lage), punkte in zip(teile, kaefige):
             hd_werte = dict(formung.morphwerte())
             hd_werte.update(zusatz)
             netz = G9koerpernetz.folgernetz(folger, punkte, bilder, stufen,
@@ -114,7 +123,8 @@ class G9garderobeapi:
             teil['knochen'] = lage.knochen if lage is not None else None
             antwort_teile.append(teil)
         return {'kennung': kennung, 'teile': antwort_teile,
-                'boden': round(hoch[1], 4), 'stufen': stufen}
+                'boden': round(hoch[1], 4), 'stufen': stufen,
+                'innen': innen, 'aussen': aussen}
 
     # -------------------------------------------------------------- Texturen
 

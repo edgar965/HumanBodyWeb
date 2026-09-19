@@ -5,6 +5,7 @@ import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
+import { Genesis9kleidung } from './genesis9kleidung.js';
 import { Modell } from './modell.js';
 
 /**
@@ -59,8 +60,9 @@ export class Genesis9Modell extends Modell {
         /** Daz-Posenpreset (Standbild: Netz UND Skelett stehen in der Pose) und Ausdruck (FACS). */
         this.pose = daten.pose || '';
         this.ausdruck = daten.ausdruck || '';
-        /** Getragene Stücke: Kennung → `{variante}`. Die Netze hängen in `clothMeshes`. */
-        this.kleidung = { ...(daten.kleidung || {}) };
+        /** Getragene Stücke in Anziehreihenfolge: Kennung → `{variante}`; Netze in `clothMeshes`,
+         *  Lagen (`{innen, aussen}`, `Genesis9kleidung`) in `lagen`. */
+        this.kleidung = { ...(daten.kleidung || {}) }; this.lagen = {};
         /** Die Anhänge: Schlüssel → Netz. */
         this.anhangNetze = {};
         this.hoehe = 0;
@@ -233,33 +235,16 @@ export class Genesis9Modell extends Modell {
     // ---------------------------------------------------------- Kleidung
 
     /**
-     * Ein Stück der Daz-Garderobe anziehen — alle seine Teile.
+     * Ein Stück der Daz-Garderobe anziehen — alle seine Teile, über den getragenen
+     * Stücken darunter (`Genesis9kleidung`; `kaskade`: die Stücke darüber neu holen).
      * `werte`: `{variante, stil, stile: {pose, laenge}, regler, griff}` — die
      * Stile gehen als Liste (`Genesis9garderobe.werte`), je Art eine Wahl.
      */
-    async anziehen(kennung, werte = null, stufen = null) {
-        this.kleidung[kennung] = { ...(werte || {}) };
-        const lauf = this._lauf;
-        const daten = await Serverabruf.senden(Genesis9aufbau.adresse(
-            `${Genesis9Modell.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
-                regler: this.regler || {}, variante: werte?.variante || '',
-                stil: Genesis9Modell.stilliste(werte), regler_stueck: werte?.regler || {},
-                pose: this.pose, ausdruck: this.ausdruck, griffe: this.griffe(),
-            });
-        if (daten.fehler) throw new Error(daten.fehler);
-        if (lauf !== this._lauf || !this.kleidung[kennung]) return 0;   // überholt oder ausgezogen
-        this._stueckWeg(kennung);
-        (daten.teile || []).forEach((teil, nummer) => {
-            const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
-            this.clothMeshes[`${kennung}/${nummer}`] = this._einhaengen(netz, teil.hautgewichte);
-        });
-        return daten.teile?.length || 0;
+    anziehen(kennung, werte = null, stufen = null, kaskade = true) {
+        return Genesis9kleidung.anziehen(this, kennung, werte, stufen, kaskade);
     }
 
-    /** `[stil, pose, laenge]` eines Stücks ohne Leere. */
-    static stilliste(werte) {
-        return [werte?.stil || '', ...Object.values(werte?.stile || {})].filter(Boolean);
-    }
+    static stilliste(werte) { return Genesis9kleidung.stilliste(werte); }
 
     /**
      * Anziehen — und die Figur neu, wenn das Stück das Skelett ändert: ein
@@ -272,12 +257,11 @@ export class Genesis9Modell extends Modell {
         return this.neuFormen();
     }
 
-    /** Ausziehen — Griffpose öffnet die Finger, eigene Knochen verlassen das Skelett (Figur neu). */
-    async ausziehen(kennung) {
-        const neu = Boolean(this.kleidung[kennung]?.griff || this.kleidung[kennung]?.knochen);
-        this._stueckWeg(kennung);
-        delete this.kleidung[kennung];
-        if (neu) await this.neuFormen();
+    /** Ausziehen — Griffpose öffnet die Finger, eigene Knochen verlassen das Skelett (Figur neu);
+     *  sonst holt `Genesis9kleidung` die Stücke neu, die über dem ausgezogenen lagen. */
+    ausziehen(kennung) {
+        return Genesis9kleidung.ausziehen(this, kennung,
+            Boolean(this.kleidung[kennung]?.griff || this.kleidung[kennung]?.knochen));
     }
 
     /** Kennungen der getragenen Props mit Griffpose. */
