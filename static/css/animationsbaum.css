@@ -155,6 +155,12 @@
                 white-space: nowrap; }
 .garment-haken { color: var(--success); margin-left: 4px; }
 
+/* Daz-Garderobe (`genesis9garderobe.js`): Der Stückname ist kein Reglertitel.
+   Als `<label>` in `.slider-row` bekam er `--text-muted` wie die Regler und
+   las sich wie gesperrt (Edgar, 19.09.2026: „die meisten genesis kleider sind
+   ausgegraut"). Gedämpft bleibt nur, was nicht zeigbar ist (`.gedaempft`). */
+.slider-row label.stueckname { color: var(--text); }
+
 /* Bildauswahl (`gemeinsam/bildauswahl.js`, 18.09.2026): Farbvarianten der
    Daz-Garderobe mit Vorschaubild je Eintrag — ein `<select>` zeigt keine
    Bilder. Die Liste liegt fest am Bildschirm, damit der rollende Baum sie

@@ -12,13 +12,13 @@ import { Genesis9stueckregler } from './genesis9stueckregler.js';
  * Die Liste ist der Ordner `People/Genesis 9/Clothing` und `…/Hair` der
  * Daz-Bibliothek (`Genesis9/garderobe.py`): jedes `wearable` eine Zeile mit
  * Häkchen, davor Daz' Vorschaubild (`<Name>.png` neben der `.duf`, nachgeladen
- * wie die MakeHuman-Stücke — Edgar 18.09.2026: „mach auch ein Icon in dem
- * Tab"), daneben die Farbvarianten des Produkts als Auswahl. Sie steht im
- * Assets-Reiter als eigener Bereich (Edgar, 17.09.2026: „machst Du einen
- * extra Reiter dafür bei Assets?"), sichtbar nur bei einer Genesis-9-Figur
- * (`Eigenschaftenbereiche.genesis9Garderobe`). Ein Stück,
- * das nicht zeigbar ist (dForce-Stranghaar ohne Flächen), steht mit seinem
- * Grund da, ausgegraut — nicht verschwiegen.
+ * wie die MakeHuman-Stücke — Edgar 18.09.2026: „mach auch ein Icon in dem Tab"),
+ * daneben die Farbvarianten des Produkts als Auswahl. Sie steht im Assets-Reiter
+ * als eigener Bereich (Edgar, 17.09.2026: „machst Du einen extra Reiter dafür
+ * bei Assets?"), sichtbar nur bei einer Genesis-9-Figur
+ * (`Eigenschaftenbereiche.genesis9Garderobe`). Nur ein Stück, das nicht zeigbar
+ * ist (dForce-Stranghaar ohne Flächen), steht ausgegraut da, mit Grund; der Name
+ * trägt `stueckname` — als `<label>` in `.slider-row` las er sich sonst gesperrt.
  *
  * Anziehen holt alle Teile des Stücks auf der AKTUELLEN Reglerstellung
  * (projiziert, `G9folger`) und bindet sie an das Skelett der Figur; ein
@@ -89,7 +89,7 @@ export class Genesis9garderobe {
         zeile.innerHTML = `
             <input type="checkbox" id="${kennung}" ${getragen ? 'checked' : ''}
                    ${stueck.zeigbar ? '' : 'disabled'}>
-            <label for="${kennung}" class="${stueck.zeigbar ? '' : 'gedaempft'}">${
+            <label for="${kennung}" class="stueckname${stueck.zeigbar ? '' : ' gedaempft'}">${
                 escapeHtml(stueck.name)}${
                 stueck.basis ? ' <span class="gedaempft">G8</span>' : ''}</label>`;
         const haken = zeile.querySelector('input');
