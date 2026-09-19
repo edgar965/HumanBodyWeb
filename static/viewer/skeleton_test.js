@@ -2,7 +2,7 @@
  * Skeleton Test — die Skelettspalten der Vergleichsseite (`testzustand.js`).
  *
  * Reihe 1: DEF (rot) | CMU (grün) | Mixamo (orange) | MocapNET (blau) | Bandai (lila) | OpenPose
- * Reihe 2: SMPL (gelb, hinter DEF) | UMA (rosa, hinter CMU)
+ * Reihe 2: SMPL (gelb, hinter DEF) | UMA (rosa, hinter CMU) | Genesis 9 (grau, hinter Mixamo)
  */
 import 'three/addons/controls/OrbitControls.js';
 import 'three/addons/loaders/BVHLoader.js';

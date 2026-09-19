@@ -105,6 +105,9 @@ CHARAKTER = [
     # UMA-Skelett aus dem Figurkatalog, fuer die Vergleichsseite (05.09.2026).
     path('api/character/uma-skeleton/', Skelettdaten.umaskelett,
          name='character_uma_skeleton'),
+    # Genesis-9-Skelett der Grundstellung, fuer die Vergleichsseite (19.09.2026).
+    path('api/character/genesis9-skeleton/', Skelettdaten.genesis9skelett,
+         name='character_genesis9_skeleton'),
     # UMA-Figur aus dem Figurkatalog fuer die Szene-Seite: Dateien, Zettel,
     # Form-Regler (05.09.2026, core/api/umafigur.py).
     # Bauen auf Zuruf (06.09.2026) — vor `uma-figur/<str:name>/`, sonst hieße

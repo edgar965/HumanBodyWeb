@@ -48,8 +48,9 @@ export class Testzustand {
     static allAnimations = {};
 
     /**
-     * Die acht Skelettspalten: DEF ganz links vorn, die BVH-Formate rechts
-     * davon; in der zweiten Reihe SMPL hinter DEF und das zweite Ziel UMA.
+     * Die neun Skelettspalten: DEF ganz links vorn, die BVH-Formate rechts
+     * davon; in der zweiten Reihe SMPL hinter DEF und die Ziele UMA und
+     * Genesis 9 (19.09.2026).
      */
     static skeletons = {
         def:      spalte(0xff4444, -3.0),
@@ -59,6 +60,7 @@ export class Testzustand {
         bandai:   spalte(0xbb44ff, 3.0),
         smpl:     spalte(0xffff00, -3.0, -2.0),
         uma:      spalte(0xff66cc, -1.5, -2.0),
+        genesis9: spalte(0xdddddd, 0.0, -2.0),
         openpose: spalte(0x44dddd, 4.5),
     };
 }

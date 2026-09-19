@@ -29,7 +29,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 export class Vergleichswiedergabe {
 
     /** Die Zielskelette: Platz und Server-Kennung (`target=`); DEF ist die Vorgabe. */
-    static ZIELE = [['def', null], ['uma', 'uma']];
+    static ZIELE = [['def', null], ['uma', 'uma'], ['genesis9', 'genesis9']];
 
     /** Der Platz für ein Format; ohne eigenen Platz der Ersatzplatz. */
     static platz(format) {

@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET
 
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.skingewichte import Skingewichte
+from ..dienste.g9retargetziel import G9retargetziel
 from ..dienste.umaskelett import Umaskelett, UmaskelettFehlt
 
 logger = logging.getLogger(__name__)
@@ -102,3 +103,22 @@ class Skelettdaten:
             # Eine GLB, die kein Skelett hergibt — Klartext statt Stack.
             logger.warning('UMA-Skelett unlesbar: %s', fehler)
             return JsonResponse({'error': 'UMA-GLB unlesbar: %s' % fehler}, status=500)
+
+    @staticmethod
+    @require_GET
+    def genesis9skelett(request):
+        """Das Genesis-9-Skelett der Grundstellung, wie `Knochenbau.bauen` es liest.
+
+        `{name, knochen: [{name, eltern, kopf, schwanz, pos, quat, ende}]}` in
+        Metern, Y oben, Fuesse am Boden — DIESELBE Kette, gegen die der
+        Retarget mit `target=genesis9` rechnet (`G9retargetziel`). Fuer die
+        Vergleichsseite (Edgar, 19.09.2026: „den Genesis Rig als neuen Rig
+        hinzufuegen, so wie andere"). Ohne Daz-Bibliothek eine 404 mit Klartext.
+        """
+        from Genesis9.pfade import G9pfade
+
+        if not G9pfade.vorhanden():
+            return JsonResponse({'error': G9retargetziel.FEHLT}, status=404)
+        from Genesis9.formung import G9formung
+
+        return JsonResponse({**G9formung({}).skelett().bauen(), 'figur': 'basis'})

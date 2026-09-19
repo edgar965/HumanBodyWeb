@@ -6,6 +6,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Sichtschalter } from './sichtschalter.js';
 import { Testszene } from './testszene.js';
 import { Umaskelett } from './umaskelett.js';
+import { Genesis9skelett } from './genesis9skelett.js';
 
 /**
  * Aufbau der Vergleichsseite: Szene, Umschalter, Zeichenschleife.
@@ -49,6 +50,7 @@ export async function init() {
 
     loadRigifySkeleton();
     Umaskelett.laden();       // zweites Ziel — fehlt die GLB, bleibt die Spalte leer
+    Genesis9skelett.laden();  // drittes Ziel (19.09.2026) — ohne Daz-Bibliothek leer
     loadAnimationTree();
 }
 

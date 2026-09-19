@@ -11,6 +11,7 @@ export class Sichtschalter {
     /** Kästchen-ID -> Schlüssel in `Testzustand.skeletons`. */
     static SKELETTE = {
         'toggle-uma': 'uma',
+        'toggle-genesis9': 'genesis9',
         'toggle-def': 'def',
         'toggle-cmu': 'cmu',
         'toggle-mixamo': 'mixamo',
