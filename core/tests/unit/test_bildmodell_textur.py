@@ -150,3 +150,28 @@ class TexturlisteTest(unittest.TestCase):
         job.bilder[1].pop('kamera_bekannt')
         self.assertEqual([b['datei'] for b in ft.bilder()], ['vorn.jpg', 'gesicht.jpg'],
                          'ohne Kamera und Rig draußen')
+
+    def test_5_referenzkacheln(self):
+        from unittest import mock
+
+        from Genesis9.charaktere import G9charaktere
+
+        bilder = {'Head': {'albedo': 'Runtime/Textures/X/Head_1001.jpg'},
+                  'Body': {'albedo': r'Runtime\Textures\X\Body_1002.jpg'},
+                  'Legs': {}, 'Fingernails': {'albedo': 'Runtime/Textures/X/Nails_1005.jpg'}}
+        eintrag = mock.patch.object(G9charaktere, 'eintrag',
+                                    lambda name: {'name': name} if name == 'x' else None)
+        haut = mock.patch.object(G9charaktere, 'hautbilder', lambda eintrag, preset=None: bilder)
+        with eintrag, haut:
+            kacheln = {'1001': 'Runtime/Textures/X/Head_1001.jpg',
+                       '1002': 'Runtime/Textures/X/Body_1002.jpg',
+                       '1005': 'Runtime/Textures/X/Nails_1005.jpg'}
+            r = Bildmodelltextur.referenz({'testfall': {'figur': 'x'}})
+            self.assertEqual(r['kacheln'], kacheln)
+            self.assertIn('Referenzfigur x', r['name'])
+            # ohne Testfall: Standardhaut nach Geschlecht der Anpassung
+            r = Bildmodelltextur.referenz({}, {'anpassung': {'basis': 'masculine'}})
+            self.assertEqual(r['kacheln'], kacheln)
+            self.assertIn('Masculine', r['name'])
+            self.assertIn('Feminine', Bildmodelltextur.referenz({'testfall': {'figur': 'fremd'}})['name'])
+            self.assertIn('Feminine', Bildmodelltextur.referenz({})['name'])

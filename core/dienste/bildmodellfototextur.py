@@ -190,12 +190,48 @@ class Bildmodellfototextur:
 
     # ------------------------------------------------------------- Backen
 
+    def _kacheln(self, hd, abtastung, melder=None):
+        """`(kacheln, herkunft, hautton)` — Lücken füllen, Kacheln backen (python14, Sekunden)."""
+        from Genesis9.restmorph import G9restmorph
+        from Genesis9.texturbacken import G9texturbacken
+
+        gedeckt = np.asarray(hd['punktgewicht'], dtype=float) > 0
+        if melder:
+            melder(0.6, 'Lücken füllen (%d von %d Punkten gedeckt)' % (int(gedeckt.sum()), len(gedeckt)))
+        # Lücken: ungedeckte Punkte nehmen den Mittelwert ihrer Nachbarn (Kanten des Käfigs);
+        # die Deckung läuft über dieselben Kanten aus (weicher Rand statt harter Kante).
+        gewicht_feld = gedeckt.astype(float)
+        gefuellt = G9restmorph.glaetten(np.asarray(hd['punktfarbe'], dtype=float), gewicht_feld, schritte=0)
+        feder = G9restmorph.glaetten(np.repeat(gewicht_feld[:, None], 3, axis=1), gewicht_feld,
+                                     schritte=0)[:, 0]
+        alpha = np.clip((feder - 0.2) / 0.8, 0.0, 1.0)
+        hautton = Bildmodelltextur.hautton(self.job.bilder).get('hautton')
+        if melder:
+            melder(0.7, 'Kacheln backen (%d²)' % abtastung.seite)
+        kacheln, herkunft = G9texturbacken(abtastung.seite).backen(
+            gefuellt, alpha, self.ablage.ergebnis(), 'fototextur', hautton, hd)
+        return kacheln, herkunft, hautton
+
+    def nachbacken(self, melder=None):
+        """Nur die Kacheln neu, aus `fototextur.npz` (kein python10, Sekunden) — nach einer
+        Änderung am Backen (weißer Hintergrund, 20.09.2026). None ohne Texel oder Ergebnis."""
+        from Genesis9.texturabtastung import G9texturabtastung
+
+        pfad = self.ablage.ergebnis() / self.TEXEL
+        alt = self.job.ergebnis.get('fototextur')
+        if not pfad.is_file() or not alt:
+            return None
+        with np.load(pfad) as d:
+            hd = {k: d[k] for k in d.files}
+        kacheln, herkunft, hautton = self._kacheln(hd, G9texturabtastung.holen(), melder)
+        return dict(alt, kacheln={str(k): os.path.basename(v) for k, v in kacheln.items()},
+                    herkunft={str(k): os.path.basename(v) for k, v in herkunft.items()},
+                    hautton=hautton, stand=int(time.time()))
+
     def backen(self, melder=None):
         """Alles in einem: Modell, Runner, Kacheln, Karten. None ohne taugliche Bilder."""
         from Genesis9.kachelkarte import G9kachelkarte
-        from Genesis9.restmorph import G9restmorph
         from Genesis9.texturabtastung import G9texturabtastung
-        from Genesis9.texturbacken import G9texturbacken
         from Genesis9.texturmodell import G9texturmodell
 
         bilder = self.bilder()
@@ -210,21 +246,8 @@ class Bildmodellfototextur:
             melder(0.05, 'Fototextur aus %d Bildern (python10)' % len(bilder))
         hd, antwort = self.fotofarben(bilder, modell, abtastung)
         gedeckt = np.asarray(hd['punktgewicht'], dtype=float) > 0
-        if melder:
-            melder(0.6, 'Lücken füllen (%d von %d Punkten gedeckt)' % (int(gedeckt.sum()), len(gedeckt)))
-        # Lücken: ungedeckte Punkte nehmen den Mittelwert ihrer Nachbarn (Kanten des Käfigs);
-        # die Deckung läuft über dieselben Kanten aus (weicher Rand statt harter Kante).
-        gewicht_feld = gedeckt.astype(float)
-        gefuellt = G9restmorph.glaetten(np.asarray(hd['punktfarbe'], dtype=float), gewicht_feld, schritte=0)
-        feder = G9restmorph.glaetten(np.repeat(gewicht_feld[:, None], 3, axis=1), gewicht_feld,
-                                     schritte=0)[:, 0]
-        alpha = np.clip((feder - 0.2) / 0.8, 0.0, 1.0)
-        hautton = Bildmodelltextur.hautton(self.job.bilder).get('hautton')
-        if melder:
-            melder(0.7, 'Kacheln backen (%d²)' % abtastung.seite)
+        kacheln, herkunft, hautton = self._kacheln(hd, abtastung, melder)
         ordner = self.ablage.ergebnis()
-        kacheln, herkunft = G9texturbacken(abtastung.seite).backen(
-            gefuellt, alpha, ordner, 'fototextur', hautton, hd)
         karten = G9kachelkarte(abtastung, modell.teil).schreiben(ordner)
         texel = antwort.get('texel') or {}
         aus = {

@@ -57,9 +57,10 @@ export class Bildmodellauftrag {
 
     /** `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026);
      *  `schritte`: genau diese Schritte („Textur anpassen" = [sichtung,] textur). */
-    async starten(optionen, ab, fest, bis = null, schritte = null) {
+    async starten(optionen, ab, fest, bis = null, schritte = null, ansicht = null) {
         const rumpf = { optionen, ab, fest: fest || {}, bis };
         if (schritte && schritte.length) { rumpf.schritte = schritte; ab = schritte[0]; }
+        if (ansicht) rumpf.ansicht = ansicht;  // nur diese Ansicht rendern (Knopf je Zeile)
         const antwort = await Serverabruf.senden(this.adresse('starten/'), rumpf);
         if (antwort.error) throw new Error(antwort.error);
         this.zustand.status = 'laeuft';
@@ -113,6 +114,14 @@ export class Bildmodellauftrag {
     async kamerasNachtragen(kameras) {
         const antwort = await Serverabruf.senden(this.adresse('kameras/'), kameras);
         if (antwort.error) throw new Error(antwort.error);
+        return antwort;
+    }
+
+    /** Die Zeilen der Bildtabelle in dieser Reihe (Spalte „Nr.", 20.09.2026): `[datei, …]`. */
+    async reihenfolgeSetzen(dateien) {
+        const antwort = await Serverabruf.senden(this.adresse('reihenfolge/'), { reihenfolge: dateien });
+        if (antwort.error) throw new Error(antwort.error);
+        if (this.zustand && antwort.fotolinien) { this.zustand.fotolinien = antwort.fotolinien; this._melden(); }
         return antwort;
     }
 

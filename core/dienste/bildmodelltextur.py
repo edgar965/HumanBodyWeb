@@ -128,3 +128,37 @@ class Bildmodelltextur:
                 'hoehe': b.get('hoehe'),
             })
         return aus
+
+    # ------------------------------------------------------------- Referenz
+
+    #: Hautgruppe der Daz-Figur → UDIM-Kachel (Genesis 9; Nägel teilen 1005).
+    GRUPPENKACHEL = {'Head': 1001, 'Body': 1002, 'Legs': 1003, 'Arms': 1004, 'Fingernails': 1005}
+
+    @classmethod
+    def referenz(cls, optionen, ergebnis=None):
+        """`{name, kacheln: {kachel: Bibliothekspfad}}` — zum Vergleich unter den gebackenen
+        Kacheln: die TATSÄCHLICHE Haut der Referenzfigur eines Testfalls (Edgar, 20.09.2026:
+        „mach einen Bereich mit der tatsächlichen Textur von Ursula darunter, damit ich
+        vergleichen kann"), sonst die Standard-Genesis-Haut nach dem Geschlecht der
+        Anpassung (`ergebnis.anpassung.basis`; Edgar an websites-02: Damira ist kein
+        Testfall). Die Seite holt die Bilder über `Genesis9texturen.ADRESSE`."""
+        from Genesis9.charaktere import G9charaktere
+
+        from .bildmodelltestfall import Bildmodelltestfall
+
+        name = Bildmodelltestfall.figur(optionen)
+        eintrag = G9charaktere.eintrag(name) if name else None
+        if eintrag:
+            titel = 'Referenzfigur %s (Daz-Albedo, dieselben Kacheln)' % (eintrag.get('anzeige') or name)
+        else:
+            basis = ((ergebnis or {}).get('anpassung') or {}).get('basis') or 'feminine'
+            maennlich = str(basis).lower().startswith('masc')
+            eintrag = {'haut': G9charaktere.HAUT_M if maennlich else G9charaktere.HAUT_W}
+            titel = 'Standard-Genesis-Textur (Base %s)' % ('Masculine' if maennlich else 'Feminine')
+        bilder = G9charaktere.hautbilder(eintrag) or {}
+        kacheln = {}
+        for gruppe, kachel in cls.GRUPPENKACHEL.items():
+            albedo = (bilder.get(gruppe) or {}).get('albedo')
+            if albedo:
+                kacheln[str(kachel)] = str(albedo).replace('\\', '/')
+        return {'name': titel, 'kacheln': kacheln} if kacheln else {}

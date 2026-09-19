@@ -9,7 +9,8 @@ Diagonalen), oberste Reihe gebunden (Freiheit 0), der Rest frei:
 2. Mit Schwerkraft sackt der Saum, aber keine Kante wird laenger als ihre
    Ruhelaenge plus 10 % (Kantenbedingungen); gebundene Punkte ruehren sich nicht.
 3. Springt die gehaeutete Lage seitlich, bleibt der Saum zurueck (Traegheit)
-   und kommt danach zurueck (Feder).
+   und kommt danach zurueck (Schwerkraft; seit 20.09.2026 mit Schwerkraft
+   gerechnet, die Feder ist nur noch Formgedaechtnis - `stoffpendel.js`).
 4. Eine Kapsel im Weg drueckt die Punkte auf Radius plus Abstand hinaus.
 5. Sprungschutz (18.09.2026 abends, Edgar: „kleider animieren nicht" — das
    Kleid hing in Fetzen, weil die Figur bei Sekunden je Bild weitersprang):
@@ -27,10 +28,13 @@ MODUL = Jsmodul('gemeinsam', 'stoffpendel.js')
 SKRIPT = """
 const { Stoffpendel: S } = await import(MODUL);
 const dt = 1 / 30;
-// 2 Spalten x 6 Reihen, y von 1,0 abwaerts, Kante 0,05.
+// 2 Spalten x 6 Reihen, y von 1,0 abwaerts, Kante 0,05. Die zweite Spalte
+// liegt 5 mm tiefer (z): ein exakt ebener Streifen ist in der Ebene ein
+// starres Fachwerk und kann sich nach einem Sprung ueberkreuzen, ohne dass
+// eine Kante es merkt - echter Stoff ist nie eben und dreht sich heraus.
 const ruhe = [], frei = [];
 for (let r = 0; r < 6; r++) for (let c = 0; c < 2; c++) {
-    ruhe.push(c * 0.05, 1.0 - r * 0.05, 0);
+    ruhe.push(c * 0.05, 1.0 - r * 0.05, c * 0.005);
     frei.push(r === 0 ? 0 : 1);
 }
 const dreiecke = [];
@@ -72,13 +76,16 @@ if (Math.abs(p.x[1] - 1.0) > 1e-9 || Math.abs(p.x[4] - 1.0) > 1e-9) {
 }
 
 // --- 3. Sprung der Lage: Traegheit, dann Rueckkehr -------------------------
+//        MIT Schwerkraft (seit 20.09.2026): zurueck bringt den haengenden
+//        Streifen die Schwerkraft, nicht mehr die Feder - die ist nur noch
+//        Formgedaechtnis.
 p = bau();
-for (let i = 0; i < 30; i++) p.schritt(ziel, dt, [], ohne);
+for (let i = 0; i < 30; i++) p.schritt(ziel, dt);
 const versetzt = Float32Array.from(ruhe.map((w, k) => k % 3 === 0 ? w + 0.3 : w));
-p.schritt(versetzt, dt, [], ohne);
+p.schritt(versetzt, dt);
 const sprung = p.auslenkung(versetzt);
 if (!(sprung > 0.15)) throw new Error('keine Traegheit: ' + sprung);
-for (let i = 0; i < 120; i++) p.schritt(versetzt, dt, [], ohne);
+for (let i = 0; i < 120; i++) p.schritt(versetzt, dt);
 const danach = p.auslenkung(versetzt);
 if (!(danach < 0.02)) throw new Error('kehrt nicht zurueck: ' + danach);
 

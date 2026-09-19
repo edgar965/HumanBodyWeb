@@ -16,18 +16,28 @@
  * Foto, gemerkte Züge eingemischt; die Linien des gerenderten Ziels je
  * Ansicht). Quellen heißen `foto:<datei>` und `ziel:<ansicht>`. Ein Zug setzt
  * Lage und Wert (die Schwesterlinien in anderen Bildern folgen der Länge),
- * eine getippte Zahl streckt alle Linien des Maßes um ihre Mitte, „×" stellt
- * die Startlagen her. „Übernehmen" legt Werte UND die gezogenen Linien der
+ * eine getippte Zahl streckt alle Linien des Maßes um ihre Mitte, „×" in der
+ * Tabelle löscht die Vorgabe (Linien zurück auf die Startlage). Im Bild-Reiter
+ * (Edgar, 20.09.2026: „einzelne Marker LÖSCHEN … ALLE Maße rechts, auf die Figur
+ * ziehen"): × an der Linie oder in der Liste rechts nimmt den MARKER aus diesem
+ * Bild (`entfernt`, je Foto gemerkt), ⤓ zieht ein fehlendes Maß ins Bild
+ * (`markerSetzen`: Linie an der Stelle, Länge = Wert). Das Fenster ist
+ * vergrößerbar, die Größe steht im `localStorage`. „Übernehmen" legt Werte UND die gezogenen Linien der
  * Fotos am Auftrag ab (POST `proportionen/`), „… und neu berechnen" startet ab
  * „Anpassung" (ab „Zielnetz", wenn Größe oder Gewicht geändert sind).
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Proportionenbildtab } from './proportionenbildtab.js';
 import { Proportionenlinien } from './proportionenlinien.js';
+import { Proportionenliste } from './proportionenliste.js';
+import { Proportionenmasstab } from './proportionenmasstab.js';
+import { Dialoggroesse } from './dialoggroesse.js';
 
 export class Proportionendialog {
 
-    static ANSICHT = { vorn: 'vorn', seite: 'seite', kopf: 'Kopf' };
+    static GROESSE = 'bildmodell.prop.dialog';
+    /** Länge einer neu gesetzten Linie ohne Wert (cm). */
+    static NEU_CM = 20;
     static TITEL = { vorn: 'Vorderansicht', seite: 'Seitenansicht', hinten: 'Rückansicht', kopf: 'Kopf' };
 
     constructor(auftrag, katalog, aenderung) {
@@ -38,12 +48,19 @@ export class Proportionendialog {
         this.eingaben = { ...((auftrag.zustand.optionen || {}).proportionen || {}) };
         this.quellen = {};
         this.start = {};
+        this.serverStart = {};
         this.lagen = {};
+        this.entfernt = {};
         this._quellstand = null;
         if (!this.dialog) return;
         this.tabelle = this.dialog.querySelector('tbody');
+        this.masstab = new Proportionenmasstab(this.tabelle, this.katalog, (k, cm) => this.wertGetippt(k, cm));
         this.bild = new Proportionenbildtab(this.dialog.querySelector('#proportionen-bildtab'), this.katalog,
-            (id, k, linie) => this.lageGezogen(id, k, linie));
+            (id, k, linie) => this.lageGezogen(id, k, linie), k => this.markerLoeschen(k));
+        this.liste = new Proportionenliste(this.dialog.querySelector('#proportionen-bildliste'), this.katalog, this.bild,
+            (k, punkt) => this.markerSetzen(k, punkt), k => this.markerLoeschen(k),
+            k => { this.bild.aktiv = k; this.bild.zeichnen(); this.listeZeigen(); });
+        Dialoggroesse.merken(this.dialog, Proportionendialog.GROESSE);
         for (const knopf of this.dialog.querySelectorAll('[data-tab-knopf]')) {
             knopf.addEventListener('click', () => this.reiter(knopf.dataset.tabKnopf));
         }
@@ -83,6 +100,7 @@ export class Proportionendialog {
             this.quellen[id] = { id, art: 'foto', datei: f.datei, ansicht: f.ansicht, breite: f.breite, hoehe: f.hoehe,
                                  px_je_m: f.px_je_m, src: this.auftrag.dateiAdresse('zuschnitt', f.datei), titel: f.datei };
             this.start[id] = Proportionendialog._kopie(f.linien || {});
+            if (!this.entfernt[id]) this.entfernt[id] = new Set(f.entfernt || []);
         }
         for (const [a, r] of Object.entries(p.ansichten || {})) {
             const id = `ziel:${a}`;
@@ -91,6 +109,8 @@ export class Proportionendialog {
                                  titel: `Vorher — Ziel, ${Proportionendialog.TITEL[a] || a}` };
             this.start[id] = Proportionendialog._kopie((r.linien || {}).ziel || {});
         }
+        for (const [id, weg] of Object.entries(this.entfernt)) for (const k of weg) delete (this.start[id] || {})[k];
+        this.serverStart = Proportionendialog._kopie(this.start);
         this.lagen = Proportionendialog._kopie(this.start);
         for (const k of Object.keys(this.werte())) this._strecken(k, this.eingaben[k]);
         // Ist das Popup gerade offen (Zustand kam vom Lauf), zeigt sein Bild die neuen Lagen.
@@ -128,7 +148,13 @@ export class Proportionendialog {
             knopf.setAttribute('aria-selected', String(knopf.dataset.tabKnopf === name));
         }
         for (const feld of this.dialog.querySelectorAll('[data-tab]')) feld.hidden = feld.dataset.tab !== name;
-        if (name === 'bild') this.bild.zeichnen();
+        if (name === 'bild') { this.bild.zeichnen(); this.listeZeigen(); }
+    }
+
+    listeZeigen() {
+        const q = this.bild.quelle;
+        if (!q) return;
+        this.liste.zeigen(this.lagen[q.id] || {}, this.entfernt[q.id] || new Set(), k => this.wert(q.id, k), this.bild.aktiv);
     }
 
     /** `quelleId`: das Bild, auf das geklickt wurde (ohne: Reiter Maße); `mass`: hervorgehoben. */
@@ -136,38 +162,13 @@ export class Proportionendialog {
         if (!this.dialog) return;
         this.quellenAufbauen();
         const daten = this.daten();
-        this._tabelleFuellen(daten);
+        this.masstab.fuellen(daten, this.eingaben);
         const q = quelleId ? this.quellen[quelleId] : null;
         this.bild.zeigen(q, q ? this.lagen[q.id] : {}, this.eingaben, daten.ziel || {}, mass);
         this.dialog.querySelector('[data-tab-knopf="bild"]').hidden = !q;
         this.reiter(q ? 'bild' : 'masse');
         this.dialog.showModal();
         if (mass) this.tabelle.querySelector(`tr[data-mass="${mass}"]`)?.classList.add('prop-aktiv');
-    }
-
-    _tabelleFuellen(daten) {
-        this.tabelle.innerHTML = '';
-        const [lo, hi] = this.katalog.proportion_cm || [0.5, 120];
-        for (const m of this.katalog.proportionen || []) {
-            const k = m.schluessel;
-            const ziel = daten.ziel[k], modell = daten.modell[k];
-            const tr = document.createElement('tr');
-            tr.dataset.mass = k;
-            const wert = this.eingaben[k] ?? '';
-            const diff = (ziel !== undefined && modell !== undefined) ? (modell - ziel).toFixed(1) : '–';
-            const formung = (daten.formung || {})[k];
-            const hinweis = !m.formbar ? '<span class="hb-hinweis">nur Ansicht — Augäpfel folgen nicht</span>'
-                : formung ? `<span class="hb-hinweis">geformt ${formung.vorher} → ${formung.nachher} cm</span>` : '';
-            tr.innerHTML = `<th>${m.name}<br><span class="hb-hinweis">${Proportionendialog.ANSICHT[m.ansicht] || m.ansicht}</span></th>`
-                + `<td><input type="number" step="0.1" min="${lo}" max="${hi}" value="${wert}" placeholder="${ziel ?? ''}" ${m.formbar ? '' : 'disabled'}>`
-                + `<button type="button" class="btn btn-sm btn-secondary" data-tat="leeren" title="Vorgabe löschen — Linien zurück auf ihre Startlage">×</button></td>`
-                + `<td>${ziel !== undefined ? ziel.toFixed(1) : '–'}</td><td>${modell !== undefined ? modell.toFixed(1) : '–'}</td>`
-                + `<td>${diff}</td><td>${hinweis}</td>`;
-            const input = tr.querySelector('input');
-            input.addEventListener('input', () => this.wertGetippt(k, input.value === '' ? null : Number(input.value)));
-            tr.querySelector('[data-tat="leeren"]').addEventListener('click', () => { input.value = ''; this.wertGetippt(k, null); });
-            this.tabelle.appendChild(tr);
-        }
     }
 
     // --------------------------------------------------------- Änderung
@@ -188,29 +189,69 @@ export class Proportionendialog {
         if (cm === null) return;
         this.eingaben[k] = cm;
         this._strecken(k, cm, id);
-        const feld = this.tabelle.querySelector(`tr[data-mass="${k}"] input`);
-        if (feld) feld.value = cm;
+        this.masstab.setzen(k, cm);
+        this.aenderung();
+        const zeile = this.liste.feld?.querySelector(`[data-mass="${k}"] .wert`);
+        if (zeile) zeile.textContent = `${cm.toFixed(1).replace('.', ',')} cm`;
+    }
+
+    /** Den Marker eines Maßes aus dem gezeigten Bild nehmen — gemerkt je Foto (`entfernt`). */
+    markerLoeschen(k) {
+        const q = this.bild.quelle;
+        if (!q) return;
+        delete (this.lagen[q.id] || {})[k];
+        delete (this.start[q.id] || {})[k];
+        (this.entfernt[q.id] = this.entfernt[q.id] || new Set()).add(k);
+        if (this.bild.aktiv === k) this.bild.aktiv = null;
+        this.bild.zeichnen();
+        this.listeZeigen();
         this.aenderung();
     }
 
+    /** Ein Maß ins gezeigte Bild: waagerecht um `punkt` (sonst Bildmitte), Länge = Wert in cm. */
+    markerSetzen(k, punkt) {
+        const q = this.bild.quelle;
+        if (!q || (this.lagen[q.id] || {})[k]) return;
+        const cm = Number(this.wert(q.id, k)) || Proportionendialog.NEU_CM;
+        const l = q.px_je_m ? cm / 100 * q.px_je_m : q.breite * 0.2;
+        const [cx, cy] = punkt || [q.breite / 2, q.hoehe / 2];
+        const linie = [[Math.round((cx - l / 2) * 10) / 10, cy], [Math.round((cx + l / 2) * 10) / 10, cy]];
+        (this.lagen[q.id] = this.lagen[q.id] || {})[k] = linie;
+        (this.start[q.id] = this.start[q.id] || {})[k] = Proportionendialog._kopie(linie);
+        if (this.entfernt[q.id]) this.entfernt[q.id].delete(k);
+        this.bild.aktiv = k;
+        this.bild.zeichnen();
+        this.listeZeigen();
+        this.aenderung();
+    }
+
+    /** Alle Vorgaben weg, entfernte Marker wieder da, Linien wie vom Server. */
     alleLoeschen() {
         for (const k of Object.keys(this.eingaben)) this.eingaben[k] = null;
+        this.entfernt = {};
+        this._quellstand = null;
+        this.quellenAufbauen();
         this.lagen = Proportionendialog._kopie(this.start);
         for (const i of this.tabelle.querySelectorAll('input')) i.value = '';
         this.bild.lagen = this.bild.quelle ? this.lagen[this.bild.quelle.id] : {};
         this.bild.zeichnen();
+        this.listeZeigen();
         this.aenderung();
     }
 
-    /** Die Linien der Fotos zu Maßen mit Eingabe — `{datei: {linien}}`. */
+    /** Je Foto: Linien der Maße mit Eingabe und alle von Hand gesetzten, dazu die entfernten Marker. */
     linienZumSpeichern() {
         const werte = this.werte();
         const aus = {};
         for (const [id, q] of Object.entries(this.quellen)) {
             if (q.art !== 'foto') continue;
             const linien = {};
-            for (const k of Object.keys(werte)) if ((this.lagen[id] || {})[k]) linien[k] = this.lagen[id][k];
-            if (Object.keys(linien).length) aus[q.datei] = { linien };
+            for (const [k, linie] of Object.entries(this.lagen[id] || {})) {
+                const vomServer = JSON.stringify((this.serverStart[id] || {})[k] || null);
+                if (werte[k] !== undefined || vomServer !== JSON.stringify(linie)) linien[k] = linie;
+            }
+            const entfernt = [...(this.entfernt[id] || [])];
+            if (Object.keys(linien).length || entfernt.length) aus[q.datei] = { linien, entfernt };
         }
         return aus;
     }

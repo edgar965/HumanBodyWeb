@@ -11,7 +11,7 @@ Position." Die Rechnung hinter den Griffen des Popups, ohne DOM:
 4. `mitEnde`: nur das gezogene Ende wandert, das andere bleibt — und die
    Länge folgt dem Ende (so wird aus einem Zug ein anderer Wert).
 5. `markup`: je Maß eine Gruppe mit Linie, Beschriftung am rechten Ende und
-   — nur mit Griffen — zwei Kreisen; Klassen für eingestellt und aktiv.
+   — nur mit Griffen — die Pfeilspitzen als Griffe, keine Kreise; Klassen für eingestellt und aktiv.
 6. Sabotage: ein Ende, das beim Verschieben stehen bliebe, änderte die Länge.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
@@ -54,10 +54,15 @@ pruefe('Länge folgt dem Ende', Math.round(L.cm(e, 1000) * 10) / 10, 25.3);
 const m = L.markup([{ k: 'huefte_breite', name: 'Hüftbreite', p: [100, 300], q: [300, 300], wert: 37.8, eingestellt: true, aktiv: true }], 600, true);
 pruefe('Gruppe', m.includes('data-mass="huefte_breite"'), true);
 pruefe('Klassen', m.includes('class="prop-linie prop-eingestellt prop-aktiv"'), true);
-pruefe('zwei Griffe', (m.match(/prop-griff/g) || []).length, 2);
-pruefe('Beschriftung rechts', m.includes('<text x="311.2" y="305">Hüftbreite 37.8</text>'), true);
+pruefe('zwei Griffe = die Pfeilspitzen', (m.match(/prop-griff" data-ende=/g) || []).length, 2);
+pruefe('keine Kugeln', m.includes('<circle'), false);
+pruefe('× zum Löschen am linken Ende', m.includes('class="prop-loeschen" x="74"') && m.includes('>×</text>'), true);
+pruefe('Beschriftung rechts', m.includes('<text x="320" y="305">Hüftbreite 37.8</text>'), true);
 const ohne = L.markup([{ k: 'x', name: 'X', p: [0, 0], q: [10, 0], wert: 3, eingestellt: false, aktiv: false }], 600);
 pruefe('ohne Griffe', ohne.includes('prop-griff'), false);
+pruefe('ohne Griffe kein ×', ohne.includes('prop-loeschen'), false);
+pruefe('Pfeilspitzen an beiden Enden, auch ohne Griffe', (ohne.match(/prop-pfeil/g) || []).length, 2);
+pruefe('Pfeilspitze zeigt zum Ende', ohne.includes('points="10,0 1,3.6 1,-3.6"'), true);
 pruefe('ganze Zahl ohne Komma', ohne.includes('>X 3<'), true);
 pruefe('Bezug breit', L.bezug(1200, 1600), 1200);
 pruefe('Bezug hochkant', L.bezug(319, 1600), 960);

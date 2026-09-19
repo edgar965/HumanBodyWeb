@@ -59,12 +59,13 @@ export class Texturansicht {
         this._zustand = z;
         const ft = (z.ergebnis || {}).fototextur || null;
         if (z.status === 'fertig' && ft && this._letzterStand !== ft.stand) { this.geaendert = false; this._letzterStand = ft.stand; }
-        const stand = JSON.stringify([ft ? ft.stand : null, z.texturbilder, z.status, z.schritt, z.progress,
+        const stand = JSON.stringify([ft ? ft.stand : null, z.texturbilder, z.texturreferenz, z.status, z.schritt, z.progress,
                                       (z.neue || []).length, this.herkunft, this.geaendert]);
         if (stand === this._stand) return;
         this._stand = stand;
         this._zahlen(z, ft);
         this._kacheln(ft);
+        this.panel.referenz(z, ft);
         this.panel.zeigen(ft);
         this._tabelle(z, ft);
         this._knoepfe(z);

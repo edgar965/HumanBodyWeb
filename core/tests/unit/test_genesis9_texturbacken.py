@@ -114,6 +114,18 @@ class TexturbackenTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             b.hd_schicht(1001, {'farbe_1001': farbe[:-1], 'gewicht_1001': gewicht[:-1]})
 
+    def test_6_aussen_weiss(self):
+        # Edgar (20.09.2026): „Hintergrund weiß … warum ist der ganze Hintergrund hautfarben???"
+        a = _abtastung()
+        b = _Backen(a)
+        drin = a.stellen(1001)[0]
+        bild = np.full((64, 64, 3), 0.6)
+        b.aussen_weiss(bild, drin)
+        self.assertTrue(np.allclose(bild[0, 0], 1.0), 'die Ecke ist weiß')
+        self.assertTrue(np.allclose(bild[32, 32], 0.6), 'die Insel bleibt')
+        self.assertTrue(np.allclose(bild[6, 32], 0.6), 'der Filterrand (RAND_PX) bleibt')
+        self.assertTrue(np.allclose(bild[2, 32], 1.0), 'jenseits des Rands weiß')
+
     def test_5_herkunftsbild(self):
         a = _abtastung()
         b = _Backen(a)

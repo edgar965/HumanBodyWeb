@@ -33,6 +33,7 @@ from ..dienste.bildmodellfotolinien import Bildmodellfotolinien
 from ..dienste.bildmodelllauf import Bildmodelllauf
 from ..dienste.bildmodelloptionen import Bildmodelloptionen
 from ..dienste.bildmodellpersonkatalog import Bildmodellpersonkatalog
+from ..dienste.bildmodellstart import Bildmodellstart
 from ..dienste.bildmodelltabelle import Bildmodelltabelle
 from ..dienste.bildmodelltextur import Bildmodelltextur
 from ..models import Bildmodellauftrag
@@ -148,6 +149,7 @@ class Bildmodellendpunkte:
             'ergebnis': job.ergebnis,
             'textur': Bildmodelltextur.hautton(job.bilder),
             'texturbilder': Bildmodelltextur.liste(job.bilder),
+            'texturreferenz': Bildmodelltextur.referenz(job.optionen, job.ergebnis),
             'fotolinien': Bildmodellfotolinien(job).alle(),
             'modell': job.modell,
             'laeuft': job.laeuft,
@@ -221,30 +223,8 @@ class Bildmodellendpunkte:
             rumpf = json.loads(request.body or b'{}')
         except ValueError:
             rumpf = {}
-        optionen = Bildmodelloptionen.pruefen(rumpf.get('optionen') or job.optionen)
-        for feld in Bildmodelloptionen.BLEIBEN:
-            # Ohne eigene Angabe bleiben Proportionen (Popup), Testfall, gezogene Linien und
-            # Bildtypen-Vorgaben erhalten — `pruefen` kennt sie nicht.
-            if feld not in (rumpf.get('optionen') or {}):
-                optionen[feld] = (job.optionen or {}).get(feld) or {}
-        if isinstance(rumpf.get('fest'), dict):
-            optionen['fest'] = rumpf['fest']
-        ab = rumpf.get('ab') or 'sichtung'
-        if ab not in Bildmodelloptionen.REIHENFOLGE:
-            ab = 'sichtung'
-        # `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026).
-        bis = rumpf.get('bis') if rumpf.get('bis') in Bildmodelloptionen.REIHENFOLGE else None
-        # `schritte`: genau diese Schritte — „Textur anpassen" = [sichtung,] textur (19.09.2026).
-        schritte = [s for s in (rumpf.get('schritte') or []) if s in Bildmodelloptionen.REIHENFOLGE]
-        if schritte:
-            ab, bis = schritte[0], schritte[-1]
-        optionen['ab'] = ab  # für `Bildmodelllauf.relativ`: Balken ab dem Startschritt
-        job.optionen = optionen
-        job.progress = 0
-        job.schritt = ab
-        job.save(update_fields=['optionen', 'progress', 'schritt', 'updated_at'])
-        pid = Bildmodellarbeiter.starten(job, ab, bis, schritte or None)
-        return JsonResponse({'ok': True, 'pid': pid, 'ab': ab, 'bis': bis, 'schritte': schritte})
+        # Optionen, Schritte und `ansicht` (Knopf „Bild neu" je Zeile): `Bildmodellstart`.
+        return JsonResponse(Bildmodellstart.starten(job, rumpf))
 
     @staticmethod
     @require_POST

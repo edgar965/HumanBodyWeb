@@ -8,7 +8,7 @@ import { Texturauflage } from './texturauflage.js';
  *
  * Dieselbe Klasse wie Szene und Studio (`Genesis9Modell`, Käfig sofort,
  * feine Stufe nachgeladen), auf einer eigenen kleinen Bühne: Kamera auf die
- * Figurhöhe, Orbit, zwei Lichter. Neu gebaut, sobald sich die Regler des
+ * Figurhöhe, Orbit, Lichter an der Kamera. Neu gebaut, sobald sich die Regler des
  * Ergebnisses ändern (`ergebnisStand`). Ohne WebGL bleibt der Hinweistext.
  * Ein Testfall (`Testfallansicht`) hängt die Referenzfigur dazu und schaltet
  * mit `umschalten(an)` zwischen Ergebnis und Referenz um — nur eine ist sichtbar.
@@ -56,16 +56,30 @@ export class Ansicht3d {
         this.steuerung = new OrbitControls(this.kamera, this.canvas);
         this.steuerung.target.set(0, 0.9, 0);
         this.steuerung.enableDamping = true;
-        this.szene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.1));
-        const licht = new THREE.DirectionalLight(0xffffff, 1.6);
-        licht.position.set(1.5, 3, 2.5);
-        this.szene.add(licht);
+        this._lichter();
         const boden = new THREE.GridHelper(2, 10, 0x445566, 0x2a3340);
         this.szene.add(boden);
         this._groesse();
         window.addEventListener('resize', () => this._groesse());
         const lauf = () => { this.steuerung.update(); this.renderer.render(this.szene, this.kamera); requestAnimationFrame(lauf); };
         requestAnimationFrame(lauf);
+    }
+
+    /**
+     * Gleichmäßig von allen Seiten: das Hauptlicht hängt an der KAMERA und
+     * dreht mit ihr, die dem Betrachter zugewandte Seite ist immer beleuchtet
+     * (ein festes Licht von vorn rechts ließ die linke Rückseite im Dunkeln,
+     * und die Fototextur trägt den Schatten der Fotos schon in sich). Dazu ein
+     * neutraler Himmel/Boden statt des blauen Bodens, der die Haut kühl färbte.
+     */
+    _lichter() {
+        this.szene.add(new THREE.HemisphereLight(0xffffff, 0xc8c2ba, 1.3));
+        const haupt = new THREE.DirectionalLight(0xffffff, 1.0);
+        haupt.position.set(1, 1.5, 2);
+        const fuell = new THREE.DirectionalLight(0xffffff, 0.35);
+        fuell.position.set(-2, -0.5, 1.5);
+        this.kamera.add(haupt, fuell);
+        this.szene.add(this.kamera);
     }
 
     _groesse() {

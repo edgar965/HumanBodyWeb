@@ -5,37 +5,57 @@
  * kein dForce (Daz simuliert vorab, Sekunden je Bild), sondern eine Näherung,
  * die live läuft: Verlet-Teilchen auf den Browserpunkten eines Stücks,
  * die Kanten des Netzes als Längenbedingungen (Position-Based Dynamics,
- * Müller et al. 2007), eine Feder zur GEHÄUTETEN Lage (die Form, die das
- * Stück ohne Schwung hätte — sie ersetzt Biegesteifigkeit und Gedächtnis),
- * Schwerkraft, und Kapseln um die Knochen als Körper. Je Punkt eine
- * FREIHEIT 0..1 vom Server (`Genesis9/stoff.py`: Daz' Dynamics Strength mal
- * Abstand zur Haut in Ruhe): 0 = folgt der Haut, 1 = hängt frei.
+ * Müller et al. 2007), ein Reichweiten-Anker je Punkt (`stoffanker.js`),
+ * eine schwache Feder zur GEHÄUTETEN Lage (die Form, die das Stück ohne
+ * Schwung hätte — Formgedächtnis, kein Halteseil), Schwerkraft, und Kapseln
+ * um die Knochen als Körper. Je Punkt eine FREIHEIT 0..1 vom Server
+ * (`Genesis9/stoff.py`: Daz' Dynamics Strength mal Abstand zur Haut in
+ * Ruhe): 0 = folgt der Haut, 1 = hängt frei.
  *
- *     v      = (x − xAlt)·(1 − DAEMPFUNG)
- *     x'     = x + v + (ziel − x)·min(1, dt·(FEDER_FREI + (1 − f)·FEDER_HAFT))
- *                + g·SCHWERKRAFT·dt²·f
+ *     v      = (x − xAlt)·(1 − DAEMPFUNG·dt)
+ *     x'     = x + v + (ziel − x)·(min(1, dt·(1 − f)·FEDER_HAFT) + FEDER·dt²·f)
+ *                + g·dt²·f
  *     Kanten: je Durchgang jede Kante auf ihre Ruhelänge, Verschiebung nach
  *             Freiheit verteilt (f = 0 bewegt sich nicht)
+ *     Anker:  kein Punkt weiter von seinem gebundenen Anker als der Stoffweg
  *     Kapseln: elliptische Kegelkapseln um die Knochen (`stoffkoerper.js`,
  *             19.09.2026 — EIN Radius je Knochen blähte die Jeans am Knie auf,
  *             ein runder lag an der breiten Seite des Schenkels in der Haut)
  *
- * Die Zahlen sind Anzeigewerte, keine Daz-Werte: Dämpfung 2 %, Feder frei
- * 2/s, Feder Haftung 30/s, Schwerkraft mit Faktor 0,3 (voll ließ jeden Saum
- * 16 cm unter die gehäutete Lage sacken), 4 Durchgänge, 6 mm über der
- * Kapsel, Zeitschritt höchstens 1/30 s. Gemessen wird in der Szene
- * (`__stoffschwung.probe`), nicht hier.
+ * WARUM DIE FORMEL SO IST (20.09.2026, Edgar: „das kleid muss nach unten
+ * animieren!!!", „bei der Jump animation verliert die Person das Kleid!!"):
+ * Bis dahin galt `(ziel − x)·dt·2` gegen `g·0,3·dt²` — die Feder war eine
+ * Verschiebung je Bild, die Schwerkraft eine Beschleunigung; ihr Gleichgewicht
+ * lag bei 9,81·0,3/(30·2) = 4,9 cm (gemessen 5,0), an 60 Hz die Hälfte davon.
+ * Ein 40 cm waagerecht modellierter Rock blieb also 40 cm abstehen, und die
+ * hängenden Arme liefen hindurch. Jetzt sind beide Beschleunigungen: die Feder
+ * hält gegen die Schwerkraft nur noch tan θ = FEDER·s/g — bei 40 cm Stoffweg
+ * 14 Grad aus der Senkrechten, unabhängig von der Bildrate. Beim Sprung rissen
+ * die Kanten (1,89-fache Länge: vier Durchgänge ziehen vier Reihen, der Rest
+ * blieb stehen); der Anker zieht den straff hängenden Rock im selben Bild mit.
+ *
+ * Die Zahlen sind Anzeigewerte, keine Daz-Werte: Dämpfung 1,5/s, Feder 6/s²,
+ * Feder Haftung 30/s, volle Schwerkraft, 4 Durchgänge, 6 mm über der Kapsel,
+ * Zeitschritt höchstens 1/30 s. Gemessen wird in der Szene
+ * (`__stoffschwung.probe`); die Kunststreifen prüft `test_js_stoffpendel*`.
  */
+import { Stoffanker } from './stoffanker.js';
 import { Stoffkoerper } from './stoffkoerper.js';
 
 export class Stoffpendel {
 
-    static DAEMPFUNG = 0.02;
-    static FEDER_FREI = 2.0;
+    /** Dämpfung der Geschwindigkeit je Sekunde (Luft, Reibung). */
+    static DAEMPFUNG = 1.5;
+    /** Feder zur gehäuteten Lage, als Beschleunigung [1/s²] — Formgedächtnis, sonst nichts. */
+    static FEDER = 6.0;
+    /** Kinematisches Folgen an der Haut für Punkte mit kleiner Freiheit [1/s]. */
     static FEDER_HAFT = 30.0;
     static SCHWERKRAFT = 9.81;
-    static SCHWERE = 0.3;
+    /** Anteil der Schwerkraft — 1: der Stoff fällt wie Stoff. */
+    static SCHWERE = 1.0;
     static DURCHGAENGE = 4;
+    /** Anteil je Bild, um den eine gestauchte Biegebedingung ausgeglichen wird (0 = Stoff ohne Steifigkeit). */
+    static BIEGUNG = 0.1;
     static ABSTAND = 0.006;
     static MAX_DT = 1 / 30;
     /** Ab dieser Bildzeit (Sekunden) gilt das Bild als Sprung: die Figur ist
@@ -44,8 +64,10 @@ export class Stoffpendel {
      *  hing in Fetzen, das Haar schwebte neben der Figur; Ladezeiten von
      *  Sekunden je Bild bei hoher Auflösung). */
     static SPRUNG_DT = 0.25;
-    /** Ab dieser Auslenkung (Meter) ist die Simulation entgleist: zurück auf die Lage. */
-    static ENTGLEIST_M = 0.5;
+    /** Ab dieser Auslenkung (Meter) ist die Simulation entgleist: zurück auf die Lage.
+     *  Ein langer Rock schwingt legitim über 0,5 m von seiner Lage weg; der Anker
+     *  verhindert das Entgleisen ohnehin, die Grenze fängt nur noch Sprünge. */
+    static ENTGLEIST_M = 1.0;
     static G = [0, -1, 0];
 
     /**
@@ -59,6 +81,8 @@ export class Stoffpendel {
         this.x = Float32Array.from(ruhe);
         this.xAlt = Float32Array.from(ruhe);
         this.kanten = kanten;
+        this.anker = Stoffanker.rechnen(this.n, kanten, this.frei);
+        this.biegung = Stoffanker.biegung(this.n, kanten, this.x);
     }
 
     /** Aus Dreiecken (Indizes je drei): jede Kante einmal, mit Ruhelänge. */
@@ -104,6 +128,10 @@ export class Stoffpendel {
      */
     bild(ziel, dt, kapseln = [], werte = Stoffpendel) {
         if (!(dt >= 0) || dt > werte.SPRUNG_DT) { this.setzen(ziel); return { x: this.x, zurueckgesetzt: true }; }
+        // Die Lage selbst ist weggesprungen (Szenenwechsel, Teleport): setzen statt
+        // ziehen. Nach dem Schritt sieht man das nicht mehr - der Anker holt jeden
+        // Punkt im selben Bild in seine Reichweite, als waagerechte Peitsche.
+        if (this.auslenkung(ziel) > werte.ENTGLEIST_M) { this.setzen(ziel); return { x: this.x, zurueckgesetzt: true }; }
         const teile = dt > werte.MAX_DT ? 2 : 1;
         let x = this.x;
         for (let t = 0; t < teile; t++) x = this.schritt(ziel, dt / teile, kapseln, werte);
@@ -123,14 +151,14 @@ export class Stoffpendel {
         dt = Math.min(Math.max(dt, 0), werte.MAX_DT);
         const { x, xAlt, frei, n } = this;
         const g = werte.SCHWERKRAFT * werte.SCHWERE * dt * dt;
-        const dv = 1 - werte.DAEMPFUNG;
+        const dv = Math.max(0, 1 - werte.DAEMPFUNG * dt);
         for (let i = 0; i < n; i++) {
             const f = frei[i], o = 3 * i;
             if (f <= 0) {
                 x[o] = xAlt[o] = ziel[o]; x[o + 1] = xAlt[o + 1] = ziel[o + 1]; x[o + 2] = xAlt[o + 2] = ziel[o + 2];
                 continue;
             }
-            const zug = Math.min(1, dt * (werte.FEDER_FREI + (1 - f) * werte.FEDER_HAFT));
+            const zug = Math.min(1, dt * (1 - f) * werte.FEDER_HAFT) + werte.FEDER * dt * dt * f;
             for (let k = 0; k < 3; k++) {
                 const alt = x[o + k];
                 x[o + k] = alt + (alt - xAlt[o + k]) * dv + (ziel[o + k] - alt) * zug + werte.G[k] * g * f;
@@ -152,8 +180,28 @@ export class Stoffpendel {
                 x[j] -= dx * kj; x[j + 1] -= dy * kj; x[j + 2] -= dz * kj;
             }
         }
+        this._biegen(werte.BIEGUNG);
+        if (this.anker) Stoffanker.halten(x, frei, n, this.anker.anker, this.anker.reichweite);
         if (kapseln.length) this._kapseln(kapseln, werte.ABSTAND);
         return x;
+    }
+
+    /** Gestauchte Biegebedingungen (`Stoffanker.biegung`) um `anteil` ausgleichen. */
+    _biegen(anteil) {
+        if (!(anteil > 0) || !this.biegung) return;
+        const { x, frei } = this, { a, b, l } = this.biegung;
+        for (let e = 0; e < a.length; e++) {
+            const i = 3 * a[e], j = 3 * b[e];
+            const wi = frei[a[e]], wj = frei[b[e]], summe = wi + wj;
+            if (summe <= 0) continue;
+            const dx = x[j] - x[i], dy = x[j + 1] - x[i + 1], dz = x[j + 2] - x[i + 2];
+            const len = Math.hypot(dx, dy, dz);
+            if (len < 1e-9 || len >= l[e]) continue;
+            const diff = anteil * (len - l[e]) / len;
+            const ki = diff * wi / summe, kj = diff * wj / summe;
+            x[i] += dx * ki; x[i + 1] += dy * ki; x[i + 2] += dz * ki;
+            x[j] -= dx * kj; x[j + 1] -= dy * kj; x[j + 2] -= dz * kj;
+        }
     }
 
     /** Freie Punkte aus den Körperkapseln hinaus — `Stoffkoerper` (elliptische Kegelkapseln). */

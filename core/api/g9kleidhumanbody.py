@@ -13,17 +13,18 @@ import logging
 
 import numpy as np
 from django.http import JsonResponse
-
-from .g9figur import G9figur
-from .g9netzantwort import G9netzantwort
-from ..dienste.g9aufhumanbody import G9aufhumanbody
-from ..dienste.g9hbfusspose import G9hbfusspose
-from ..dienste.g9hbteilhaut import G9hbteilhaut
 from Genesis9.formung import G9formung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.teilbindung import G9teilbindung
+
+from ..daten.netzantwort import Netzantwort
+from ..dienste.g9aufhumanbody import G9aufhumanbody
+from ..dienste.g9hbfusspose import G9hbfusspose
+from ..dienste.g9hbteilhaut import G9hbteilhaut
+from .g9figur import G9figur
+from .g9netzantwort import G9netzantwort
 
 logger = logging.getLogger('core')
 
@@ -98,6 +99,19 @@ class G9kleidhumanbody:
             teil['name'] = folger.name
             teil['stufen'] = netz['stufen']
             teil['knochen'] = None
+            # Stoffschwung auch auf HumanBody (20.09.2026, Edgar: „das kleid muss nach
+            # unten animieren"): `netz['stoff']` traegt bereits den HumanBody-Kaefig und
+            # die Freiheit gegen die HumanBody-Haut (`folgernetz` mit `koerper`). Was
+            # fehlte, war die HAUT des Kaefigs: der Bauplan (`G9stoffapi`) nennt dafuer
+            # Daz-Knochen, die das Rigify-Skelett nicht hat - der Worker startete nie.
+            # Deshalb kommt die Kaefighaut mit DEF-Namen hier mit; `genesis9stoffschwung.js`
+            # nimmt sie dem Bauplan vor. Gemessen vorher: 33 von 40 Armproben im Kleid,
+            # 42,8 cm tief (`test_kleid_arme_frei`).
+            if teil.get('stoff') and netz.get('stoff') is not None:
+                kaefig_stoff = netz['stoff']['kaefig']
+                haut_kaefig = G9hbteilhaut.fuer(traeger.figur()).haut(
+                    kaefig_stoff, G9teilbindung.stueck(folger, kaefig, kaefig_stoff))
+                teil['stoff']['hautgewichte'] = Netzantwort.hautgewichte(haut_kaefig, kompakt=True)
             antwort_teile.append(teil)
         logger.info('Daz auf HumanBody: %s — %d Teile, %d Punkte%s', kennung, len(antwort_teile),
                     sum(int(t.get('vertex_count') or 0) for t in antwort_teile),

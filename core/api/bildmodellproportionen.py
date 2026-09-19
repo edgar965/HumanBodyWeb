@@ -12,6 +12,10 @@ Linien (`Bildmodellfotolinien.linien_pruefen`, Pixel des Fotos je Bild) nach
 `job.optionen.proportionen_linien`. Wirksam werden sie mit dem nächsten Lauf ab „Anpassung"
 (`Bildmodellzielproportionen` formt das Zielnetz); der Start-Endpunkt behält
 sie, wenn der Aufruf keine eigenen mitbringt.
+
+POST `api/bildmodell/<id>/reihenfolge/` mit `{reihenfolge: [datei, …]}` nummeriert die
+Zeilen der Bildtabelle (Spalte „Nr.", editierbar — Edgar, 20.09.2026); die Nummer steht
+als `reihe` am Bild, `Bildmodellfotolinien.hauptbilder` sortiert danach.
 """
 
 import json
@@ -28,7 +32,24 @@ __all__ = ['Bildmodellproportionenendpunkte']
 
 
 class Bildmodellproportionenendpunkte:
-    """Ein Endpunkt: Proportionen stellen."""
+    """Zwei Endpunkte: Proportionen stellen, Reihenfolge der Bildtabelle."""
+
+    @staticmethod
+    @require_POST
+    def reihenfolge(request, job_id):
+        """`{reihenfolge: [datei, …]}` — die Zeilen der Bildtabelle in dieser Reihe
+        (Spalte „Nr.", `bilder[].reihe`); Antwort mit den neuen `fotolinien`."""
+        job = get_object_or_404(Bildmodellauftrag, pk=job_id)
+        try:
+            rumpf = json.loads(request.body or b'{}')
+        except ValueError:
+            return JsonResponse({'error': 'Kein JSON'}, status=400)
+        linien = Bildmodellfotolinien(job)
+        nummern = linien.reihenfolge(rumpf.get('reihenfolge'))
+        if not nummern:
+            return JsonResponse({'error': 'Keine bekannten Dateien in der Reihenfolge'}, status=400)
+        job.save(update_fields=['bilder', 'updated_at'])
+        return JsonResponse({'ok': True, 'reihe': nummern, 'fotolinien': linien.alle()})
 
     @staticmethod
     @require_POST

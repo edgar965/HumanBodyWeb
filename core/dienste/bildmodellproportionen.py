@@ -64,8 +64,14 @@ class Bildmodellproportionen:
         bilder = {'ziel': G9proportionenbild(bild_p), 'modell': G9proportionenbild(modell_p)}
         befunde = {'ziel': ziel, 'modell': modell}
         ordner = self.ablage.ergebnis()
-        ansichten = {}
+        # `nur_ansicht` (Knopf „Bild neu" je Zeile, 20.09.2026): nur diese Ansicht rendern,
+        # die anderen Einträge bleiben aus dem letzten Ergebnis stehen.
+        nur = (self.job.optionen or {}).get('nur_ansicht')
+        alt = ((self.job.ergebnis.get('proportionen') or {}).get('ansichten') or {}) if nur else {}
+        ansichten = {k: v for k, v in alt.items() if k in self.ANSICHTEN}
         for i, ansicht in enumerate(self.ANSICHTEN):
+            if nur and ansicht != nur:
+                continue
             if melder:
                 melder(0.1 + 0.8 * i / len(self.ANSICHTEN), 'Proportionen: Ansicht %s' % ansicht)
             eintrag = {'linien': {}, 'bild': {}}

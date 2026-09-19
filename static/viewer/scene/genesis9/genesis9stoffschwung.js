@@ -112,9 +112,16 @@ export class Genesis9stoffschwung {
         if (!antwort.ok) throw new Error(`Bauplan ${antwort.status}`);
         const plan = await antwort.json();
         if (!e.anzeige.parent) return;                  // inzwischen ausgezogen
-        const spalte = Eigenhaut.spaltenNummern(plan.hautgewichte.knochen, inst.skelett);
+        // Auf HumanBody bringt das Stück die Käfighaut mit Rigify-Namen mit
+        // (`G9kleidhumanbody`); der Bauplan nennt Daz-Knochen. Die Namen stehen
+        // wie in Blender (`DEF-breast.L`), Three kennt `DEF-breast_L` - `boneByName`
+        // übersetzt (wie `Dazkleidung.mitThreeNamen`).
+        const nach = inst.skelett.boneByName || null;
+        let haut = stoff.hautgewichte || plan.hautgewichte;
+        if (nach) haut = { ...haut, knochen: (haut.knochen || []).map(n => nach[n]?.name ?? n) };
+        const spalte = Eigenhaut.spaltenNummern(haut.knochen, inst.skelett);
         if (!spalte) throw new Error('Käfighaut nennt Knochen, die das Skelett nicht hat');
-        const { index: roh, gewicht: hautGewicht } = Eigenhaut.gewichte(plan.hautgewichte);
+        const { index: roh, gewicht: hautGewicht } = Eigenhaut.gewichte(haut);
         const hautIndex = new Float32Array(roh.length);
         for (let i = 0; i < roh.length; i++) hautIndex[i] = spalte[roh[i]] ?? 0;
         const worker = new Worker(Genesis9stoffschwung.arbeiterpfad(), { type: 'module' });

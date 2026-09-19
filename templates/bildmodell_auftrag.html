@@ -109,8 +109,14 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
     </div>
     <div data-tab="bild" class="bildmodell-reiterfeld">
         <p class="hb-hinweis">Griff an einem Ende ziehen setzt dieses Ende, Ziehen an der Linie verschiebt sie — die Länge
-           ist der Wert in cm (grün = eingestellt). Jede Einstellung formt das Zielnetz vor der Anpassung („Neu berechnen“).</p>
-        <div id="proportionen-bildtab"></div>
+           ist der Wert in cm (grün = eingestellt) und gilt sofort in allen Bildern. Das × am linken Ende (oder Entf auf der
+           markierten Linie) löscht den Marker aus diesem Bild; rechts stehen alle Maße — ⤓ zieht ein fehlendes ins Bild.
+           Jede Einstellung formt das Zielnetz vor der Anpassung („Neu berechnen“). Das Fenster lässt sich an der Ecke
+           rechts unten vergrößern.</p>
+        <div class="bildmodell-bildreiter">
+            <div id="proportionen-bildtab"></div>
+            <div id="proportionen-bildliste" class="bildmodell-propliste"></div>
+        </div>
     </div>
     <div data-tab="masse" class="bildmodell-reiterfeld" hidden>
         <p class="hb-hinweis">Eingabe in cm — leer heißt: das Ziel aus den Bildern gilt. Jede Eingabe formt das Zielnetz
@@ -121,7 +127,8 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
         </table>
     </div>
     <div class="bildmodell-dialogknoepfe">
-        <button type="button" class="btn btn-secondary btn-sm" data-tat="alle-loeschen">Alle Vorgaben löschen</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-tat="alle-loeschen"
+                title="Alle Eingaben leeren, gelöschte Marker wieder zeigen, Linien wie vom Server">Alle Vorgaben löschen</button>
         <span class="bildmodell-dialogrechts">
             <button type="button" class="btn btn-secondary btn-sm" data-tat="schliessen">Schließen</button>
             <button type="button" class="btn btn-secondary btn-sm" data-tat="uebernehmen">Übernehmen</button>
@@ -194,6 +201,7 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
        angeglichen und mehrbandig überblendet. „Herkunft zeigen" färbt jede Stelle nach dem Bild, aus dem sie stammt
        (Farbe = Rahmen in der Tabelle). <span id="textur-lauf"></span></p>
     <div id="textur-kacheln" class="bildmodell-texturkacheln"></div>
+    <div id="textur-referenz" class="bildmodell-texturreferenz hb-versteckt"></div>
     <div id="textur-kachelpanel" class="bildmodell-kachelpanel hb-versteckt"></div>
     <table class="db-tabelle sortable bildmodell-texturtabelle" id="textur-bilder" data-sort-key="bildmodell-textur">
         <thead><tr><th title="für die Textur verwenden">✓</th><th>Bild</th><th>Datei · Typ</th><th>Kamera</th>

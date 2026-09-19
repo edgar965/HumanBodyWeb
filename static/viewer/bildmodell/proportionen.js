@@ -15,6 +15,9 @@
  * Lagen und Werte der Linien hält der `Proportionendialog`; Bildhöhe über den
  * Schieber (`localStorage`); „Bild hinzufügen" lädt eine Datei in den Auftrag
  * und lässt sie sichten (die Sichtung ordnet sie ein, die Typ-Box korrigiert).
+ * Spalte „Nr." (Edgar, 20.09.2026: „Wenn ich die Zahl ändere, dann ändert sich
+ * die Reihenfolge der Bilder gleich"): die Zeile springt sofort an die Stelle,
+ * die Nummern rücken nach, der Server merkt sich die Reihe (`bilder[].reihe`).
  */
 import { Bildsteller } from './bildsteller.js';
 import { Proportionendialog } from './proportionendialog.js';
@@ -24,7 +27,9 @@ export class Proportionenansicht {
 
     static MERKER = 'bildmodell.prop.hoehe';
     static HOEHE = { min: 160, max: 900, vorgabe: 320 };
-    static SPALTEN = ['Bild', 'Löschen', 'Ersetzen', 'Bild vorher (Ziel)', 'Bild nachher (Modell)'];
+    static SPALTEN = ['Nr.', 'Bild', 'Löschen', 'Ersetzen', 'Neu', 'Bild vorher (Ziel)', 'Bild nachher (Modell)'];
+    /** Was der Knopf „Bild neu" rechnet: Anpassung, Restmorph, Vorschau, Speichern — ohne Textur. */
+    static SCHRITTE_BILD = ['anpassung', 'rest', 'vorschau', 'speichern'];
     static ANSICHT = { vorne: 'von vorn', seite: 'von der Seite', hinten: 'von hinten', dreiviertel: 'dreiviertel' };
 
     constructor(auftrag, katalog) {
@@ -101,17 +106,29 @@ export class Proportionenansicht {
         tabelle.className = 'db-tabelle bildmodell-proptabelle';
         tabelle.innerHTML = `<thead><tr>${Proportionenansicht.SPALTEN.map(s => `<th>${s}</th>`).join('')}</tr></thead>`;
         const rumpf = document.createElement('tbody');
-        for (const f of fotos) rumpf.appendChild(this._zeile(f, (p.ansichten || {})[f.ansicht], z));
+        fotos.forEach((f, i) => rumpf.appendChild(this._zeile(f, (p.ansichten || {})[f.ansicht], z, i + 1, fotos.length)));
         tabelle.appendChild(rumpf);
         this.feld.appendChild(tabelle);
         this.linienZeichnen();
     }
 
-    _zeile(f, r, z) {
+    _zeile(f, r, z, nr, n) {
         const b = (z.bilder || []).find(e => e.datei === f.datei) || { datei: f.datei };
         const tr = document.createElement('tr');
         tr.dataset.datei = f.datei;
         tr.dataset.ansicht = f.ansicht || '';
+        // 0. die Nummer — editierbar, ändert die Reihenfolge sofort
+        const nummer = document.createElement('td');
+        nummer.className = 'bildmodell-propnr';
+        const eingabe = document.createElement('input');
+        eingabe.type = 'number';
+        eingabe.min = 1; eingabe.max = n; eingabe.step = 1;
+        eingabe.value = nr;
+        eingabe.title = 'Nummer ändern = Zeile an diese Stelle';
+        eingabe.addEventListener('change', () => this._umordnen(tr, Number(eingabe.value)));
+        eingabe.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); eingabe.blur(); } });
+        nummer.appendChild(eingabe);
+        tr.appendChild(nummer);
         // 1. das Foto mit Linien und Typ-Boxen
         const foto = document.createElement('td');
         foto.className = 'bildmodell-propfoto';
@@ -130,6 +147,10 @@ export class Proportionenansicht {
         const ersetzen = document.createElement('td');
         ersetzen.appendChild(this.steller.ersetzenKnopf(b.quelle || b.datei));
         tr.append(loeschen, ersetzen);
+        // 3b. Bild neu: Modell mit den aktuellen Maßen rechnen, nur diese Ansicht rendern
+        const neu = document.createElement('td');
+        if (r) neu.appendChild(this._neuKnopf(f.ansicht, z));
+        tr.appendChild(neu);
         // 4./5. Vorher (Ziel) und Nachher (Modell) der Ansicht
         for (const wer of ['ziel', 'modell']) {
             const td = document.createElement('td');
@@ -148,6 +169,41 @@ export class Proportionenansicht {
             tr.appendChild(td);
         }
         return tr;
+    }
+
+    /** Knopf „Bild neu" (Edgar, 20.09.2026: „das errechnete Bild für DIESE Zeile neu berechnen,
+     *  das muss schnell gehen"): Anpassung, Restmorph, Vorschau und Speichern — ohne die Textur
+     *  (Minuten) —, und Vorschau wie Proportionenbilder nur für diese Ansicht. */
+    _neuKnopf(ansicht, z) {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'btn btn-sm btn-primary bildmodell-propneu';
+        knopf.textContent = '↻ Bild neu';
+        knopf.title = 'Modell mit den aktuellen Maßen neu rechnen und die Bilder dieser Zeile neu rendern (ohne Textur)';
+        knopf.disabled = z.status === 'laeuft';
+        knopf.addEventListener('click', async () => {
+            knopf.disabled = true;
+            const p = window.__bildmodell?.person;
+            if (p) { await p.neuBerechnen('anpassung', Proportionenansicht.SCHRITTE_BILD, ansicht); return; }
+            try {
+                await this.auftrag.starten({ ...(this.auftrag.zustand.optionen || {}), proportionen: this.werte() },
+                    'anpassung', {}, null, Proportionenansicht.SCHRITTE_BILD, ansicht);
+            } catch (fehler) { window.alert(`Bild neu fehlgeschlagen: ${fehler.message}`); knopf.disabled = false; }
+        });
+        return knopf;
+    }
+
+    /** Die Zeile an Stelle `ziel` (1..n) setzen, alle Nummern nachrücken, die Reihe ablegen. */
+    async _umordnen(tr, ziel) {
+        const rumpf = tr.parentElement;
+        if (!rumpf) return;
+        const zeilen = [...rumpf.children].filter(z => z !== tr);
+        const stelle = Math.min(Math.max(1, Math.round(ziel) || 1), zeilen.length + 1) - 1;
+        zeilen.splice(stelle, 0, tr);
+        zeilen.forEach((z, i) => { rumpf.appendChild(z); const e = z.querySelector('.bildmodell-propnr input'); if (e) e.value = i + 1; });
+        try {
+            await this.auftrag.reihenfolgeSetzen(zeilen.map(z => z.dataset.datei));
+        } catch (fehler) { window.alert(`Reihenfolge nicht gespeichert: ${fehler.message}`); }
     }
 
     _figur(id, breite, hoehe, src, text, titel) {

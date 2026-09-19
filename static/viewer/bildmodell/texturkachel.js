@@ -9,7 +9,10 @@
  * in die Kachel liefert, sein Beitragsbild (`beitrag_<nr>_<k>.jpg`, `Texturbeitrag`:
  * die benutzten Pixel in voller Farbe mit Saum in der Kachelfarbe, der Rest
  * abgedunkelt) mit dem Anteil an den Texeln der Kachel, absteigend sortiert.
+ * `referenz(z, ft)`: unter den Kacheln die tatsächliche Haut der Referenzfigur.
  */
+import { Genesis9texturen } from '../gemeinsam/genesis9texturen.js';
+
 export class Texturkachelpanel {
 
     static NAMEN = { 1001: 'Kopf', 1002: 'Rumpf', 1003: 'Beine', 1004: 'Arme', 1005: 'Nägel' };
@@ -71,6 +74,48 @@ export class Texturkachelpanel {
             reihe.appendChild(leer);
         }
         this.feld.append(kopf, reihe);
+    }
+
+    /**
+     * Die TATSÄCHLICHE Haut der Referenzfigur eines Testfalls — ohne Testfall die
+     * Standard-Genesis-Haut nach Geschlecht — als zweite Reihe unter den gebackenen
+     * Kacheln (Edgar, 20.09.2026: „mach einen Bereich mit der tatsächlichen Textur
+     * von Ursula darunter, damit ich vergleichen kann"; Damira: Standardhaut).
+     * `z.texturreferenz = {name, kacheln: {kachel: Bibliothekspfad}}`, Bilder über
+     * den Texturvorrat-Endpunkt.
+     */
+    referenz(z, ft) {
+        const feld = document.getElementById('textur-referenz');
+        if (!feld) return;
+        feld.innerHTML = '';
+        const referenz = z.texturreferenz || {};
+        const pfade = referenz.kacheln || {};
+        const kacheln = Object.keys(pfade).filter(k => !ft || (ft.kacheln || {})[k]);
+        if (!ft || !kacheln.length) { feld.classList.add('hb-versteckt'); return; }
+        feld.classList.remove('hb-versteckt');
+        const kopf = document.createElement('p');
+        kopf.className = 'bildmodell-referenzkopf';
+        kopf.textContent = `Zum Vergleich: ${referenz.name || 'Referenz'}`;
+        const reihe = document.createElement('div');
+        reihe.className = 'bildmodell-texturkacheln';
+        for (const kachel of kacheln) {
+            const adresse = Genesis9texturen.adresse(pfade[kachel]);
+            const fig = document.createElement('figure');
+            fig.className = 'bildmodell-texturkachel';
+            const a = document.createElement('a');
+            a.href = adresse;
+            a.target = '_blank';
+            a.title = `${kachel} der Referenz in voller Größe öffnen`;
+            const img = document.createElement('img');
+            img.src = adresse;
+            img.alt = `Referenz ${kachel}`;
+            a.appendChild(img);
+            const text = document.createElement('figcaption');
+            text.textContent = `${kachel} · ${Texturkachelpanel.NAMEN[kachel] || ''} · Referenz`;
+            fig.append(a, text);
+            reihe.appendChild(fig);
+        }
+        feld.append(kopf, reihe);
     }
 
     /** `[{datei, anteil, texel, bild}]` der Fotos, die in die Kachel liefern — absteigend nach Anteil. */

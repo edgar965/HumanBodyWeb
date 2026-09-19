@@ -40,13 +40,20 @@ class Bildmodellvorschau:
         p, _, _ = G9reglerableitung.lage(G9formung(self.stellung))
         bild = G9vorschaubild(p)
         ordner = self.ablage.ergebnis()
-        dateien = {'icon': bild.icon(ordner / 'icon.png')}
+        # `nur_ansicht` (Knopf „Bild neu" je Zeile, 20.09.2026): nur diese Ansicht neu, die
+        # anderen Dateien bleiben, wie sie im Ergebnis stehen.
+        nur = (self.job.optionen or {}).get('nur_ansicht')  # `pruefen` kennt es nicht
+        dateien = dict(self.job.ergebnis.get('vorschau') or {}) if nur else {}
+        dateien['icon'] = bild.icon(ordner / 'icon.png')
         for i, ansicht in enumerate(('vorn', 'seite', 'hinten')):
+            if nur and ansicht != nur:
+                continue
             if melder:
                 melder(0.2 + 0.2 * i, 'Ansicht %s' % ansicht)
             dateien[ansicht] = bild.speichern(ordner / ('vorschau_%s.png' % ansicht), ansicht)
-        Image.fromarray(bild.kopf('vorn', 500), 'RGBA').save(ordner / 'vorschau_kopf.png')
-        dateien['kopf'] = str(ordner / 'vorschau_kopf.png')
+        if not nur or nur == 'kopf':
+            Image.fromarray(bild.kopf('vorn', 500), 'RGBA').save(ordner / 'vorschau_kopf.png')
+            dateien['kopf'] = str(ordner / 'vorschau_kopf.png')
         return {k: str(v).replace('\\', '/').split('/')[-1] for k, v in dateien.items()}
 
     def ausfuehren(self, melder=None):

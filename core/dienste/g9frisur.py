@@ -22,6 +22,16 @@ Hub hoechstens 18 mm (Dutt 54 mm — er sass im tieferen Genesis-Hinterkopf).
 Das Haar liegt danach median 9–11 mm ueber der Kopfhaut, wie auf HumanBody
 (dort 12,7 mm).
 
+WAS AUF HUMANBODY IN DER HAUT STECKT, DARF ES AUCH HIER (Edgar, 19.09.2026
+spaet: „Ballerina Dutt funktioniert nicht auf Genesis Modell"): Der Dutt
+(`ballerina_dutt.glb`, 219 Punkte) ist eine Kugel von 9 cm, die auf
+HumanBody zur Haelfte im Hinterkopf steckt — 75 Punkte bis 47 mm tief,
+gewollt, man sieht nur die aeussere Haelfte. Punktweise auf `ABSTAND`
+gehoben wurde die Kugel platt (10 x 7 x 10 cm -> 12 x 8 x 6,5 cm, Hub bis
+54 mm; `_wegwerf/mess_dutt_genesis.py`). Deshalb bekommt jeder Punkt als
+Ziel seine Tiefe auf HumanBody, wenn er dort in der Haut lag, sonst
+`ABSTAND` (`zieltiefe`).
+
 Gebunden wird alles an `head` (Gewicht 1): Die Frisur folgt dem Kopf, wie
 auf HumanBody. Kein UV, keine Bilder — die Farbe setzt der Browser wie bei
 HumanBody (`hairColorData`).
@@ -118,6 +128,16 @@ class G9frisur:
                  & (np.asarray(haut['gewicht']) > self.KOPFGEWICHT)).any(axis=1)
         return self._kasten(self.figur.punkte()[maske])
 
+    def zieltiefe(self, punkte):
+        u"""Je Haarpunkt der Abstand zur Genesis-Haut, den er mindestens haben
+        soll: `ABSTAND` — oder seine Tiefe auf HumanBody, wenn er dort in der
+        Haut steckt (Modulkopf, der Dutt)."""
+        hb = Hbtraeger.laden(self.geschlecht, None, {}, {})
+        fein = np.asarray(hb['fein'], dtype=np.float64)
+        tiefe = G9kollision.tiefe(punkte, fein, np.asarray(hb['fein_normalen'], dtype=np.float64),
+                                  G9kollision.baum(fein))
+        return np.minimum(tiefe, self.ABSTAND)
+
     @staticmethod
     def _kasten(p):
         if not len(p):
@@ -131,13 +151,14 @@ class G9frisur:
         uv, gruppen, haut, name, hub_mm}` — Punkte in Browserlage (Y oben,
         Fuesse auf dem Boden), wie die Daz-Stuecke."""
         punkte, dreiecke = self.laden(self.pfad(name))
+        ziel = self.zieltiefe(punkte)
         hb, g9 = self.kopf_hb(self.geschlecht), self.kopf_g9()
         skala = (g9['max'] - g9['min']) / np.maximum(hb['max'] - hb['min'], 1e-6)
         mitte_hb = self._bezug(hb)
         mitte_g9 = self._bezug(g9)
         gelegt = (punkte - mitte_hb) * skala + mitte_g9
         fein, normalen, baum = G9koerpernetz(self.figur.formung, stufen=stufen).koerperflaeche()
-        frei = G9kollision.hinaus(gelegt, fein, normalen, abstand=self.ABSTAND, baum=baum,
+        frei = G9kollision.hinaus(gelegt, fein, normalen, abstand=ziel, baum=baum,
                                   durchgaenge=self.DURCHGAENGE)
         hub = float(np.linalg.norm(frei - gelegt, axis=1).max()) * 1e3
         logger.info('Genesis 9: Frisur %s — %d Punkte, Skala %.3f/%.3f/%.3f, Hub max %.1f mm',

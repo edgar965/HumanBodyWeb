@@ -9,6 +9,11 @@ verschoben stecken 25 % der Haarpunkte im Schaedel, achsweise skaliert 1,4 %,
 mit dem Heben aus der Haut 0. Die Zahlen hier sind Kunstkoepfe; die Regel
 (achsweise Skala um Scheitel und Kastenmitte, `head` traegt alles) ist das,
 was geprueft wird.
+
+Der Dutt (19.09.2026 spaet, Edgar: „Ballerina Dutt funktioniert nicht auf
+Genesis Modell"): Was auf HumanBody in der Haut steckt, bleibt auch auf
+Genesis so tief — `zieltiefe` je Punkt statt eines Abstands fuer alle.
+Gegen die echte Datei prueft `longrunner/test_genesis9_frisur_sitz`.
 """
 from unittest import mock
 
@@ -58,16 +63,7 @@ class G9frisurTest(SimpleTestCase):
         g9 = {'min': np.array([-0.15, 1.5, -0.2]), 'max': np.array([0.15, 1.7, 0.2]),
               'scheitel': np.array([0.0, 1.7, 0.0])}
         haar = np.array([[0.1, 1.7, 0.1], [-0.1, 1.6, -0.1], [0.0, 1.45, 0.0]])   # letzter im Kopf
-        dreiecke = np.array([[0, 1, 2]])
-        frisur = G9frisur.__new__(G9frisur)
-        frisur.figur = mock.Mock(formung=object())
-        frisur.geschlecht = 'female'
-        with mock.patch.object(G9frisur, 'laden', staticmethod(lambda pfad: (haar, dreiecke))), \
-                mock.patch.object(G9frisur, 'pfad', classmethod(lambda cls, name: name)), \
-                mock.patch.object(G9frisur, 'kopf_hb', classmethod(lambda cls, g: hb)), \
-                mock.patch.object(G9frisur, 'kopf_g9', lambda self: g9), \
-                mock.patch.object(g9frisur, 'G9koerpernetz', _Netz):
-            netz = frisur.bauen('probe', stufen=1)
+        netz = self._gebaut(haar, hb, g9, ziel=np.full(3, G9frisur.ABSTAND))
         p = netz['punkte']
         # Breite x 1,5, Tiefe x 2, Hoehe x 1 — um Scheitel/Kastenmitte
         np.testing.assert_allclose(p[0], [0.15, 1.7, 0.2], atol=1e-9)
@@ -79,6 +75,45 @@ class G9frisurTest(SimpleTestCase):
         self.assertEqual(netz['haut']['gewicht'].shape, (3, 4))
         np.testing.assert_allclose(netz['haut']['gewicht'][:, 0], 1.0)
         self.assertEqual(netz['name'], 'probe')
+
+    def test_was_auf_humanbody_in_der_haut_steckt_bleibt_so_tief(self):
+        # Gleiche Koepfe; der dritte Punkt steckte auf HumanBody 5 cm in der
+        # Haut (Dutt) — er wird NICHT ueber die Kopfhaut gehoben.
+        hb = {'min': np.array([-0.1, 1.5, -0.1]), 'max': np.array([0.1, 1.7, 0.1]),
+              'scheitel': np.array([0.0, 1.7, 0.0])}
+        haar = np.array([[0.1, 1.7, 0.1], [-0.1, 1.6, -0.1], [0.0, 1.45, 0.0]])
+        netz = self._gebaut(haar, hb, hb, ziel=np.array([G9frisur.ABSTAND, G9frisur.ABSTAND, -0.05]))
+        np.testing.assert_allclose(netz['punkte'][2], [0.0, 1.45, 0.0], atol=1e-9)
+        self.assertEqual(netz['hub_mm'], 0.0)
+        # Steckte er nur 2 cm tief, kommt er auf diese Tiefe hoch — nicht weiter.
+        netz = self._gebaut(haar, hb, hb, ziel=np.array([G9frisur.ABSTAND, G9frisur.ABSTAND, -0.02]))
+        self.assertAlmostEqual(netz['punkte'][2][1], 1.48, places=6)
+
+    def test_zieltiefe_ist_die_humanbody_tiefe_hoechstens_abstand(self):
+        # Flache HumanBody-"Haut" bei y = 1.5 (Normale nach oben): ein Punkt
+        # 3 cm darueber bekommt ABSTAND, einer 4 cm darunter seine Tiefe.
+        x, z = np.meshgrid(np.linspace(-0.2, 0.2, 9), np.linspace(-0.2, 0.2, 9))
+        haut = np.column_stack([x.ravel(), np.full(x.size, 1.5), z.ravel()])
+        figur = {'fein': haut, 'fein_normalen': np.tile([0.0, 1.0, 0.0], (len(haut), 1))}
+        frisur = G9frisur.__new__(G9frisur)
+        frisur.geschlecht = 'female'
+        with mock.patch.object(g9frisur.Hbtraeger, 'laden', classmethod(lambda cls, *a: figur)):
+            ziel = frisur.zieltiefe(np.array([[0.0, 1.53, 0.0], [0.0, 1.46, 0.0]]))
+        np.testing.assert_allclose(ziel, [G9frisur.ABSTAND, -0.04], atol=1e-9)
+
+    @staticmethod
+    def _gebaut(haar, hb, g9, ziel):
+        dreiecke = np.array([[0, 1, 2]])
+        frisur = G9frisur.__new__(G9frisur)
+        frisur.figur = mock.Mock(formung=object())
+        frisur.geschlecht = 'female'
+        with mock.patch.object(G9frisur, 'laden', staticmethod(lambda pfad: (haar, dreiecke))), \
+                mock.patch.object(G9frisur, 'pfad', classmethod(lambda cls, name: name)), \
+                mock.patch.object(G9frisur, 'kopf_hb', classmethod(lambda cls, g: hb)), \
+                mock.patch.object(G9frisur, 'kopf_g9', lambda self: g9), \
+                mock.patch.object(G9frisur, 'zieltiefe', lambda self, p: ziel), \
+                mock.patch.object(g9frisur, 'G9koerpernetz', _Netz):
+            return frisur.bauen('probe', stufen=1)
 
     def test_die_adresse_und_der_browserweg_stehen(self):
         from django.conf import settings

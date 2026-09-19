@@ -17,6 +17,9 @@ wird. Kunstdaten wie in `test_bildmodell_fotomasse` (Figur von vorn, Rumpf
    verwirft Unbekanntes und rundet.
 4. Sabotage: eine anliegend-breite Brustzeile (Arm im Segment) bekommt den
    Zielwert um die Mitte, nicht die Armbreite.
+5. Spalte „Nr." (20.09.2026): `reihenfolge([...])` nummeriert `reihe` 1..n, die
+   Zeilen kommen in dieser Reihe, nicht Genannte hinten nach Typ; unbekannte
+   Namen zählen nicht, eine leere Liste nummeriert nichts.
 """
 
 from django.test import SimpleTestCase
@@ -115,3 +118,20 @@ class FotolinienTest(SimpleTestCase):
         brust = linien['brust_breite']
         self.assertAlmostEqual((brust[1][0] - brust[0][0]) / (HOEHE / 1.70), 0.30 * 1.70, delta=0.01)
         self.assertAlmostEqual((brust[0][0] + brust[1][0]) / 2 / BREITE, 0.5, delta=0.01)
+
+    def test_5_reihenfolge_von_hand(self):
+        seite = dict(self.bild, datei='seite.jpg', ansicht='seite')
+        kopf = dict(self.bild, datei='kopf.jpg', kategorie='kopf', ansicht='vorne')
+        job = _Job([kopf, seite, self.bild], optionen={'person': {'groesse_cm': 170}})
+        f = Bildmodellfotolinien(job)
+        self.assertEqual([b['datei'] for b in f.hauptbilder()], ['vorn.jpg', 'seite.jpg', 'kopf.jpg'])
+        self.assertEqual(f.reihenfolge(['kopf.jpg', 'quatsch.jpg', 'vorn.jpg']),
+                         {'kopf.jpg': 1, 'vorn.jpg': 2})
+        self.assertEqual([b['datei'] for b in f.hauptbilder()], ['kopf.jpg', 'vorn.jpg', 'seite.jpg'],
+                         'nummerierte zuerst, der Rest nach Typ')
+        self.assertEqual([z['reihe'] for z in f.alle()], [1, 2, 3])
+        self.assertNotIn('reihe', seite)
+        self.assertEqual(f.reihenfolge([]), {})
+        self.assertEqual(f.reihenfolge('kopf.jpg'), {}, 'kein Text als Liste')
+        self.assertEqual([b['datei'] for b in f.hauptbilder()], ['vorn.jpg', 'seite.jpg', 'kopf.jpg'],
+                         'ohne Nummern wieder nach Typ')

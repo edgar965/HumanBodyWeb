@@ -70,8 +70,11 @@ export class Genesis9netz {
         netz.receiveShadow = true;
         // dForce-Kleidung: Freiheit und Lage des Käfigs für den Stoffschwung (`genesis9stoffschwung.js`).
         if (daten.stoff) {
+            // `hautgewichte` nur auf HumanBody: die Käfighaut mit Rigify-Namen (der
+            // Bauplan nennt Daz-Knochen) - `genesis9stoffschwung.js` nimmt sie zuerst.
             netz.userData.stoff = { frei: base64ToFloat32(daten.stoff.frei),
-                                    kaefig: base64ToFloat32(daten.stoff.kaefig), stufen: daten.stufen || 0 };
+                                    kaefig: base64ToFloat32(daten.stoff.kaefig), stufen: daten.stufen || 0,
+                                    hautgewichte: daten.stoff.hautgewichte || null };
         }
         return netz;
     }
