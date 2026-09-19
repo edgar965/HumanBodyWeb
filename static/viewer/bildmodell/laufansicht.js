@@ -10,7 +10,7 @@ export class Laufansicht {
 
     static NAMEN = { sichtung: 'Zuschnitt und Sichtung', schaetzung: 'Schätzung', ziel: 'Zielnetz',
                      anpassung: 'Anpassung', rest: 'Restmorph', vorschau: 'Vorschau',
-                     speichern: 'Speichern' };
+                     textur: 'Textur', speichern: 'Speichern' };
     static STATUS = { angelegt: ['Angelegt', 'hb-laeuft'], laeuft: ['Läuft', 'hb-laeuft'],
                       fertig: ['Fertig', 'hb-gut'], gescheitert: ['Fehlgeschlagen', 'hb-schlecht'],
                       angehalten: ['Angehalten', 'hb-laeuft'] };

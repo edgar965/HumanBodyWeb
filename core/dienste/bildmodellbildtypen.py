@@ -207,3 +207,39 @@ class Bildmodellbildtypen:
                     eintrag.pop('teil', None)
                 return True
         return False
+
+    # ----------------------------------------------------------- Vorgaben
+
+    @classmethod
+    def vorgaben_pruefen(cls, roh, namen):
+        """`{datei: {haupt, neben, nutzung}}` aus dem Upload-Feld `typen` (JSON) — nur für
+        die eben abgelegten Dateien, nur bekannte Werte (19.09.2026: die Testfallbilder und
+        „Bild für die Textur" kennen ihren Typ, bevor die Sichtung läuft)."""
+        import json
+
+        if not roh:
+            return {}
+        try:
+            daten = json.loads(roh) if isinstance(roh, str) else roh
+        except ValueError:
+            return {}
+        if not isinstance(daten, dict):
+            return {}
+        haupt = {w for w, _, _, _ in cls.HAUPT}
+        neben = {w for w, _, _, _, _ in cls.NEBEN}
+        nutzung = {w for w, _, _ in cls.NUTZUNG}
+        aus = {}
+        for name in namen:
+            wahl = daten.get(name)
+            if not isinstance(wahl, dict):
+                continue
+            sauber = {}
+            if wahl.get('haupt') in haupt:
+                sauber['haupt'] = wahl['haupt']
+            if wahl.get('neben') in neben:
+                sauber['neben'] = wahl['neben']
+            if wahl.get('nutzung') in nutzung:
+                sauber['nutzung'] = wahl['nutzung']
+            if sauber:
+                aus[name] = sauber
+        return aus

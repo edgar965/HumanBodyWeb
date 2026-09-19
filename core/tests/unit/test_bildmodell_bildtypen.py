@@ -261,7 +261,7 @@ class EndpunkteTest(TestCase):
                                                       'optionen': {'umfang': 'neue'}}),
                                      content_type='application/json')
             self.assertEqual(r.json()['bis'], 'sichtung')
-            start.assert_called_once_with(mock.ANY, 'sichtung', 'sichtung')
+            start.assert_called_once_with(mock.ANY, 'sichtung', 'sichtung', None)
             job.refresh_from_db()
             self.assertEqual(job.optionen['umfang'], 'neue')
             self.assertEqual(job.optionen['testfall'], {'figur': 'zz_referenz'})
@@ -290,7 +290,7 @@ class LaufBisTest(unittest.TestCase):
                 pass
 
         lauf.job = Job()
-        for s in ('sichtung', 'schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'speichern'):
+        for s in ('sichtung', 'schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern'):
             setattr(lauf, '_' + s, (lambda name: (lambda: gelaufen.append(name)))(s))
         self.assertTrue(lauf.ausfuehren('sichtung', bis='sichtung'))
         self.assertEqual(gelaufen, ['sichtung'])
@@ -298,5 +298,10 @@ class LaufBisTest(unittest.TestCase):
         self.assertEqual(lauf.job.progress, 15, 'Ende des Sichtungsbands, nicht 100')
         gelaufen.clear()
         self.assertTrue(lauf.ausfuehren('vorschau'))
-        self.assertEqual(gelaufen, ['vorschau', 'speichern'])
+        self.assertEqual(gelaufen, ['vorschau', 'textur', 'speichern'])
         self.assertEqual(lauf.job.progress, 100)
+        # `schritte`: genau diese, in Reihenfolge — „Textur anpassen" mit neuen Dateien (19.09.2026).
+        gelaufen.clear()
+        self.assertTrue(lauf.ausfuehren('speichern', schritte=['textur', 'sichtung']))
+        self.assertEqual(gelaufen, ['sichtung', 'textur'])
+        self.assertEqual(lauf.job.progress, 98, 'Ende des Texturbands')

@@ -12,7 +12,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 export class Bildmodellauftrag {
 
     static TAKT_MS = 2000;
-    static SCHRITTE = ['sichtung', 'schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'speichern'];
+    static SCHRITTE = ['sichtung', 'schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern'];
 
     constructor(zustand) {
         this.zustand = zustand;
@@ -55,9 +55,12 @@ export class Bildmodellauftrag {
 
     // ------------------------------------------------------------- Aktionen
 
-    /** `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026). */
-    async starten(optionen, ab, fest, bis = null) {
-        const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen, ab, fest: fest || {}, bis });
+    /** `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026);
+     *  `schritte`: genau diese Schritte („Textur anpassen" = [sichtung,] textur). */
+    async starten(optionen, ab, fest, bis = null, schritte = null) {
+        const rumpf = { optionen, ab, fest: fest || {}, bis };
+        if (schritte && schritte.length) { rumpf.schritte = schritte; ab = schritte[0]; }
+        const antwort = await Serverabruf.senden(this.adresse('starten/'), rumpf);
         if (antwort.error) throw new Error(antwort.error);
         this.zustand.status = 'laeuft';
         this.zustand.schritt = ab;
@@ -86,13 +89,16 @@ export class Bildmodellauftrag {
             Object.assign(eintrag, antwort.bild);
         }
         if (antwort.textur) this.zustand.textur = antwort.textur;   // Hautton der gewählten Bilder
+        if (antwort.texturbilder) this.zustand.texturbilder = antwort.texturbilder;
         this._melden();
         return antwort.bild;
     }
 
-    async bilderHochladen(dateien) {
+    /** `typen`: `{dateiname: {haupt, neben, nutzung}}` — die Sichtung übernimmt die Wahl (19.09.2026). */
+    async bilderHochladen(dateien, typen = null) {
         const daten = new FormData();
         for (const d of dateien) daten.append('bilder', d, d.name);
+        if (typen && Object.keys(typen).length) daten.append('typen', JSON.stringify(typen));
         const antwort = await Serverabruf.formular(this.adresse('bilder/'), daten);
         if (antwort.error) throw new Error(antwort.error);
         this.zustand.originale = antwort.originale;

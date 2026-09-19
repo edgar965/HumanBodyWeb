@@ -25,6 +25,7 @@ import subprocess
 from django.conf import settings
 
 from ..daten.wrapperpfad import Wrapperpfad
+from .bildmodellbildtypen import Bildmodellbildtypen
 from .bildmodellvideo import Bildmodellvideo
 
 logger = logging.getLogger('core')
@@ -186,6 +187,12 @@ class Bildmodellsichtung:
             for feld in ('schaetzung', 'gesichtsschaetzung'):
                 if vorher and vorher.get(feld):
                     eintrag[feld] = vorher[feld]
+            if not (vorher and vorher.get('manuell')):
+                # Vorgabe des Uploads (`optionen.bildtypen[quelle]`: Testfallbilder, „Bild für
+                # die Textur") — gilt wie eine Wahl von Hand, solange niemand von Hand gewählt hat.
+                vorgabe = (self.optionen.get('bildtypen') or {}).get(eintrag.get('quelle') or datei)
+                if vorgabe:
+                    Bildmodellbildtypen.stellen(eintrag, vorgabe)
             neu.append(eintrag)
         neu.sort(
             key=lambda e: (

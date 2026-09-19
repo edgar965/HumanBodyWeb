@@ -32,8 +32,8 @@ __all__ = ['Bildmodelltextur']
 
 
 class Bildmodelltextur:
-    @staticmethod
-    def gewaehlt(bild):
+    @classmethod
+    def gewaehlt(cls, bild):
         """Zählt das Bild zur Textur? Nutzung (nicht „nur Form"/„aus"), dann die
         Nutzerwahl, sonst die Tauglichkeit — ein Nebenbild mit Körperteil
         (`Bildmodellbildtypen`, 19.09.2026) gilt mit Hautton als gewählt."""
@@ -44,7 +44,25 @@ class Bildmodelltextur:
             return False
         if 'textur_an' in bild:
             return bool(bild['textur_an'])
-        return bool(t.get('tauglich')) or bool(Bildmodellbildtypen.textur_teile(bild))
+        return cls.tauglich(bild) or bool(Bildmodellbildtypen.textur_teile(bild))
+
+    #: Wie `Hauttonprobe.ANTEIL_AB`/`MASKE_AB`: die Tauglichkeit eines Hauptbilds, hier neu
+    #: gerechnet — die Sichtung schrieb `tauglich: False, kein Hauptbild`, als das Bild noch
+    #: Nebenbild war; wer es per Box zum Hauptbild macht, soll es in der Textur haben.
+    ANTEIL_AB = 0.25
+    MASKE_AB = 400
+
+    @classmethod
+    def tauglich(cls, bild):
+        """Taugt das Bild von sich aus für die Textur (Hauptbild mit genug Haut)?"""
+        from .bildmodellbildtypen import Bildmodellbildtypen
+
+        t = bild.get('textur') or {}
+        if not t.get('hautton'):
+            return False
+        if bild.get('kategorie') not in Bildmodellbildtypen.HAUPTKATEGORIEN or 'anteil' not in t:
+            return bool(t.get('tauglich'))
+        return float(t.get('anteil') or 0) >= cls.ANTEIL_AB and int(t.get('maske_px') or 0) >= cls.MASKE_AB
 
     @classmethod
     def hautton(cls, bilder):
@@ -55,7 +73,7 @@ class Bildmodelltextur:
         tauglich = 0
         for b in bilder:
             t = b.get('textur') or {}
-            if t.get('tauglich'):
+            if cls.tauglich(b):
                 tauglich += 1
             if not cls.gewaehlt(b):
                 continue
@@ -68,3 +86,47 @@ class Bildmodelltextur:
         if gewicht <= 0:
             return {'hautton': None, 'bilder': 0, 'tauglich': tauglich}
         return {'hautton': [int(round(v)) for v in summe / gewicht], 'bilder': n, 'tauglich': tauglich}
+
+    @classmethod
+    def liste(cls, bilder):
+        """Für den Bereich „Textur" der Seite (19.09.2026): je Bild, ob es zur Textur
+        zählt, warum nicht, und wie es projiziert wird (eigenes Netz oder Rig)."""
+        from .bildmodellbildtypen import Bildmodellbildtypen
+        from .bildmodellfototextur import Bildmodellfototextur
+
+        aus = []
+        for b in bilder:
+            if b.get('video'):
+                continue
+            t = b.get('textur') or {}
+            kategorie = b.get('kategorie') or 'neben'
+            teile = Bildmodellbildtypen.textur_teile(b)
+            grund = ''
+            if not Bildmodellbildtypen.fuer_textur(b):
+                grund = 'Nutzung: %s' % dict((w, a) for w, a, _ in Bildmodellbildtypen.NUTZUNG)[
+                    Bildmodellbildtypen.nutzung(b)]
+            elif not t.get('hautton'):
+                grund = 'keine Hautprobe — noch nicht gesichtet'
+            elif kategorie in ('gruppe', 'leer'):
+                grund = 'Gruppenbild oder ohne Befund'
+            elif kategorie == 'neben' and not teile:
+                grund = 'Nebenbild ohne Körperteil — Typ wählen'
+            eigenes = Bildmodellfototextur.eigenes_netz(b)
+            rig = any((b.get('rigs') or {}).values()) or bool(b.get('gesicht68'))
+            kamera = 'schaetzer' if (kategorie == 'koerper' and eigenes) else (
+                'rig' if rig else ('schaetzer' if eigenes else 'keine'))
+            aus.append({
+                'datei': b['datei'],
+                'kategorie': kategorie,
+                'ansicht': b.get('ansicht'),
+                'teil': b.get('teil'),
+                'nutzung': Bildmodellbildtypen.nutzung(b),
+                'hautton': t.get('hautton'),
+                'gewaehlt': cls.gewaehlt(b),
+                'moeglich': not grund,
+                'grund': grund,
+                'kamera': kamera,
+                'breite': b.get('breite'),
+                'hoehe': b.get('hoehe'),
+            })
+        return aus

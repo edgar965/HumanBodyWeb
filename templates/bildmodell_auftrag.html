@@ -74,7 +74,7 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
                         title="Referenzfigur des Testfalls statt des Ergebnisses zeigen">
                     <i class="fas fa-user-check"></i> <span>Testcase</span></button>
                 <button type="button" class="btn btn-secondary btn-sm" id="testfall-bilder"
-                        title="Die Referenzfigur in zehn Ansichten rendern und als Bilder in den Auftrag laden">
+                        title="Die Referenzfigur in 24 Ansichten rendern (11 Haupt- und Detailbilder, 13 HD-Nahaufnahmen nur für die Textur) und als Bilder in den Auftrag laden">
                     <i class="fas fa-camera"></i> <span>Bilder aus der Referenz erzeugen</span></button>
                 <span class="hb-hinweis" id="testfall-text"></span>
             </div>
@@ -85,9 +85,12 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
         </div>
     </div>
     <div class="bildmodell-propkopf">
-        <h3>Proportionen — Vorher (Ziel, wie eingestellt) und Nachher (Modell)</h3>
-        <label>Zeilenhöhe <input type="range" id="proportionen-hoehe" step="10">
+        <h3>Bilder und Proportionen — Bild, Löschen, Ersetzen, Vorher, Nachher</h3>
+        <label>Bildhöhe <input type="range" id="proportionen-hoehe" step="10">
             <span id="proportionen-hoehe-wert" class="hb-hinweis"></span></label>
+        <label class="btn btn-secondary btn-sm bildmodell-hochladen" title="Ein weiteres Foto in den Auftrag — die Sichtung ordnet es einer Zeile zu">
+            <i class="fas fa-plus"></i> <span>Bild hinzufügen</span>
+            <input type="file" id="proportionen-dazu" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff" hidden></label>
         <button type="button" class="btn btn-secondary btn-sm" id="proportionen-anpassen" disabled>
             <i class="fas fa-ruler-combined"></i> <span>Proportionen anpassen …</span></button>
     </div>
@@ -95,13 +98,28 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 </div>
 
 <dialog id="proportionen-dialog" class="bildmodell-dialog">
-    <h2>Proportionen einstellen</h2>
-    <p class="hb-hinweis">Eingabe in cm — leer heißt: das Ziel aus den Bildern gilt. Jede Eingabe formt das Zielnetz
-       vor der Anpassung („Neu berechnen"); die Vorher-Linie zeigt sofort die eingestellte Länge.</p>
-    <table class="bildmodell-masse doku">
-        <thead><tr><th>Maß</th><th>Eingabe (cm)</th><th>Ziel aus Bildern</th><th>Modell</th><th>Modell − Ziel</th><th></th></tr></thead>
-        <tbody></tbody>
-    </table>
+    <div class="bildmodell-dialogkopf">
+        <h2>Proportionen einstellen</h2>
+        <div class="bildmodell-reiter" role="tablist">
+            <button type="button" role="tab" data-tab-knopf="bild" aria-selected="true"
+                    title="Die Maßlinien im Bild ziehen"><i class="fas fa-arrows-alt-h"></i> Bild</button>
+            <button type="button" role="tab" data-tab-knopf="masse" aria-selected="false"
+                    title="Die Maße als Zahlen"><i class="fas fa-table"></i> Maße</button>
+        </div>
+    </div>
+    <div data-tab="bild" class="bildmodell-reiterfeld">
+        <p class="hb-hinweis">Griff an einem Ende ziehen setzt dieses Ende, Ziehen an der Linie verschiebt sie — die Länge
+           ist der Wert in cm (grün = eingestellt). Jede Einstellung formt das Zielnetz vor der Anpassung („Neu berechnen“).</p>
+        <div id="proportionen-bildtab"></div>
+    </div>
+    <div data-tab="masse" class="bildmodell-reiterfeld" hidden>
+        <p class="hb-hinweis">Eingabe in cm — leer heißt: das Ziel aus den Bildern gilt. Jede Eingabe formt das Zielnetz
+           vor der Anpassung („Neu berechnen“); die Vorher-Linie zeigt sofort die eingestellte Länge.</p>
+        <table class="bildmodell-masse doku">
+            <thead><tr><th>Maß</th><th>Eingabe (cm)</th><th>Ziel aus Bildern</th><th>Modell</th><th>Modell − Ziel</th><th></th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
     <div class="bildmodell-dialogknoepfe">
         <button type="button" class="btn btn-secondary btn-sm" data-tat="alle-loeschen">Alle Vorgaben löschen</button>
         <span class="bildmodell-dialogrechts">
@@ -155,6 +173,33 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
         <div id="zahlen" class="bildmodell-zahlen"></div>
         <div id="reglerliste" class="bildmodell-regler"></div>
     </div>
+</div>
+
+<div class="card" id="textur-karte">
+    <div class="bildmodell-listenkopf">
+        <h2>Textur <span class="hb-hinweis" id="textur-zahlen"></span></h2>
+        <span class="bildmodell-bilderknoepfe">
+            <label class="bildmodell-schalter"><input type="checkbox" id="textur-herkunft"> Herkunft zeigen</label>
+            <label class="btn btn-secondary btn-sm bildmodell-hochladen" title="Weitere Fotos nur für die Textur — Nahaufnahmen in der Haltung des Hauptbilds">
+                <i class="fas fa-plus"></i> <span>Bild für die Textur hinzufügen</span>
+                <input type="file" id="textur-dazu" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff" hidden></label>
+            <button type="button" class="btn btn-secondary btn-sm" id="textur-anpassen"
+                    title="Nur die Textur neu backen — aus den Bildern mit Häkchen; neue Dateien werden vorher gesichtet">
+                <i class="fas fa-paint-brush"></i> <span>Textur anpassen</span></button>
+        </span>
+    </div>
+    <p class="hb-hinweis">Die ganze Textur in 2D: fünf UDIM-Kacheln (2048², Klick öffnet die Datei). Je Texel wird ins Foto
+       geschaut, das die Stelle am schärfsten zeigt — Nahaufnahmen werden über ihr Rig an das Netz des Hauptbilds
+       registriert. „Herkunft zeigen" färbt jede Stelle nach dem Bild, aus dem sie stammt (Farbe = Rahmen in der Tabelle).
+       <span id="textur-lauf"></span></p>
+    <div id="textur-kacheln" class="bildmodell-texturkacheln"></div>
+    <table class="db-tabelle sortable bildmodell-texturtabelle" id="textur-bilder" data-sort-key="bildmodell-textur">
+        <thead><tr><th title="für die Textur verwenden">✓</th><th>Bild</th><th>Datei · Typ</th><th>Kamera</th>
+            <th class="zahl" title="Anteil der HD-Textur, den dieses Bild liefert">Anteil</th>
+            <th class="zahl" title="sichtbare SMPL-X-Punkte im Bild">Punkte</th><th></th></tr></thead>
+        <tbody></tbody>
+    </table>
+    <p class="hb-hinweis" id="textur-leer">Noch keine gesichteten Bilder.</p>
 </div>
 {% endblock %}
 

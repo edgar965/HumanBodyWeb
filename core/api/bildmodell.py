@@ -6,9 +6,9 @@ GET  /humanbody/modell-aus-dateien/<kennung>/           Auftragsseite (Bilder, O
 POST /api/bildmodell/anlegen/                           name, typ, bilder[] → {kennung, url}
 GET  /api/bildmodell/katalog/                           Optionen je Schritt mit Verfügbarkeit
 GET  /api/bildmodell/<id>/zustand/                      Status, Fortschritt, Bilder, Ergebnis
-POST /api/bildmodell/<id>/bilder/                       weitere Bilder hochladen
+POST /api/bildmodell/<id>/bilder/                       weitere Bilder hochladen (+ `typen` JSON je Datei)
 POST /api/bildmodell/<id>/bild/<datei>/                 Kategorie/Gewicht eines Bildes stellen
-POST /api/bildmodell/<id>/starten/                      {optionen, ab, bis} → Arbeitsprozess
+POST /api/bildmodell/<id>/starten/                      {optionen, ab, bis, schritte} → Arbeitsprozess
      Bilder ersetzen und löschen: `Bildmodelldateiendpunkte` (bildmodelldateien.py)
 POST /api/bildmodell/<id>/anhalten/
 POST /api/bildmodell/<id>/loeschen/, /api/bildmodell/loeschen/ (mehrere)
@@ -29,6 +29,7 @@ from ..daten.bildmodellablage import Bildmodellablage
 from ..dienste.bildmodellarbeiter import Bildmodellarbeiter
 from ..dienste.bildmodellbildtypen import Bildmodellbildtypen
 from ..dienste.bildmodelldateien import Bildmodelldateien
+from ..dienste.bildmodellfotolinien import Bildmodellfotolinien
 from ..dienste.bildmodelllauf import Bildmodelllauf
 from ..dienste.bildmodelloptionen import Bildmodelloptionen
 from ..dienste.bildmodellpersonkatalog import Bildmodellpersonkatalog
@@ -146,6 +147,8 @@ class Bildmodellendpunkte:
             'bilder': job.bilder,
             'ergebnis': job.ergebnis,
             'textur': Bildmodelltextur.hautton(job.bilder),
+            'texturbilder': Bildmodelltextur.liste(job.bilder),
+            'fotolinien': Bildmodellfotolinien(job).alle(),
             'modell': job.modell,
             'laeuft': job.laeuft,
             'originale': Bildmodellendpunkte._eingaenge(Bildmodellablage(job.kennung)),
@@ -173,10 +176,20 @@ class Bildmodellendpunkte:
         job = get_object_or_404(Bildmodellauftrag, pk=job_id)
         ablage = Bildmodellablage(job.kennung)
         n = 0
+        namen = []
         for f in request.FILES.getlist('bilder'):
             if Bildmodellablage.ist_eingang(f.name):
                 ablage.original_ablegen(f)
+                namen.append(Bildmodellablage.sauber(f.name))
                 n += 1
+        # Bildtypen-Vorgaben je Datei (`{name: {haupt, neben, nutzung}}`, 19.09.2026): die
+        # Testfallbilder und „Bild für die Textur" kennen ihren Typ, die Sichtung übernimmt ihn.
+        typen = Bildmodellbildtypen.vorgaben_pruefen(request.POST.get('typen'), namen)
+        if typen:
+            optionen = dict(job.optionen or {})
+            optionen['bildtypen'] = {**(optionen.get('bildtypen') or {}), **typen}
+            job.optionen = optionen
+            job.save(update_fields=['optionen', 'updated_at'])
         return JsonResponse({'ok': True, 'neu': n, 'originale': Bildmodellendpunkte._eingaenge(ablage)})
 
     @staticmethod
@@ -193,7 +206,8 @@ class Bildmodellendpunkte:
         # Hauptbild-/Nebenbild-Typ, Nutzung, Kategorie, Gewicht, Textur-Häkchen (19.09.2026).
         Bildmodellbildtypen.stellen(eintrag, rumpf)
         job.save(update_fields=['bilder', 'updated_at'])
-        return JsonResponse({'ok': True, 'bild': eintrag, 'textur': Bildmodelltextur.hautton(job.bilder)})
+        return JsonResponse({'ok': True, 'bild': eintrag, 'textur': Bildmodelltextur.hautton(job.bilder),
+                             'texturbilder': Bildmodelltextur.liste(job.bilder)})
 
     # ------------------------------------------------------------- Starten
 
@@ -208,8 +222,9 @@ class Bildmodellendpunkte:
         except ValueError:
             rumpf = {}
         optionen = Bildmodelloptionen.pruefen(rumpf.get('optionen') or job.optionen)
-        for feld in ('proportionen', 'testfall'):
-            # Ohne eigene Angabe bleiben die gestellten Proportionen (Popup) und der Testfall erhalten.
+        for feld in Bildmodelloptionen.BLEIBEN:
+            # Ohne eigene Angabe bleiben Proportionen (Popup), Testfall, gezogene Linien und
+            # Bildtypen-Vorgaben erhalten — `pruefen` kennt sie nicht.
             if feld not in (rumpf.get('optionen') or {}):
                 optionen[feld] = (job.optionen or {}).get(feld) or {}
         if isinstance(rumpf.get('fest'), dict):
@@ -219,13 +234,17 @@ class Bildmodellendpunkte:
             ab = 'sichtung'
         # `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026).
         bis = rumpf.get('bis') if rumpf.get('bis') in Bildmodelloptionen.REIHENFOLGE else None
+        # `schritte`: genau diese Schritte — „Textur anpassen" = [sichtung,] textur (19.09.2026).
+        schritte = [s for s in (rumpf.get('schritte') or []) if s in Bildmodelloptionen.REIHENFOLGE]
+        if schritte:
+            ab, bis = schritte[0], schritte[-1]
         optionen['ab'] = ab  # für `Bildmodelllauf.relativ`: Balken ab dem Startschritt
         job.optionen = optionen
         job.progress = 0
         job.schritt = ab
         job.save(update_fields=['optionen', 'progress', 'schritt', 'updated_at'])
-        pid = Bildmodellarbeiter.starten(job, ab, bis)
-        return JsonResponse({'ok': True, 'pid': pid, 'ab': ab, 'bis': bis})
+        pid = Bildmodellarbeiter.starten(job, ab, bis, schritte or None)
+        return JsonResponse({'ok': True, 'pid': pid, 'ab': ab, 'bis': bis, 'schritte': schritte})
 
     @staticmethod
     @require_POST

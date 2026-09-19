@@ -203,17 +203,18 @@ class Bildmodellkatalog:
                 'mittel',
             ),
         ],
-        'vorschau': [
+        'textur': [
             (
                 'textur',
                 'Textur',
                 [
+                    ('foto', 'Fotofarbe in HD (Stufe 2)',
+                     'Je Texel aus den Bildern mit Häkchen — Nahaufnahmen über ihr Rig registriert, '
+                     'als UDIM 2048² gebacken (python10, ~1–3 min)'),
                     ('hautton', 'Hautton (Stufe 1)', 'Daz-Haut auf den Hautton der Fotos getönt'),
-                    ('foto', 'Fotofarbe (Stufe 2)',
-                     'Farbe je Punkt aus den Bildern mit Häkchen, als UDIM gebacken (~40 s, python10)'),
                     ('aus', 'Daz-Haut', 'Unverändert'),
                 ],
-                'hautton',
+                'foto',
             ),
         ],
         'speichern': [

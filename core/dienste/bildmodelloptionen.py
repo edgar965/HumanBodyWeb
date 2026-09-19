@@ -27,10 +27,17 @@ class Bildmodelloptionen:
         ('anpassung', 'Anpassung der Regler'),
         ('rest', 'Restmorph'),
         ('vorschau', 'Vorschau rendern'),
+        ('textur', 'Textur aus den Bildern'),
         ('speichern', 'Modell speichern'),
     ]
     #: Wo die Datei je Schritt in der Kette steht — für `ab=`.
     REIHENFOLGE = [s for s, _ in SCHRITTE]
+    #: Felder, die `pruefen` nicht kennt und die ein Start vom Auftrag übernimmt, wenn
+    #: der Rumpf sie nicht mitbringt: Popup-Proportionen, Testfall, gezogene Linien,
+    #: Bildtypen-Vorgaben für hochgeladene Dateien (19.09.2026 — die Linien gingen sonst
+    #: beim ersten Start verloren).
+    DURCHREICHEN = ('proportionen_linien', 'bildtypen')
+    BLEIBEN = ('proportionen', 'testfall') + DURCHREICHEN
 
     #: Felder je Schritt: (feld, anzeige, [(wert, anzeige, erklaerung)], vorgabe)
     FELDER = Bildmodellkatalog.FELDER
@@ -130,6 +137,11 @@ class Bildmodelloptionen:
         aus['person'] = cls.person_pruefen(roh.get('person'))
         aus['proportionen'] = cls.proportionen_pruefen(roh.get('proportionen'))
         aus['testfall'] = cls.testfall_pruefen(roh.get('testfall'))
+        for feld in cls.DURCHREICHEN:
+            # Geprüft beim Schreiben (`Bildmodellfotolinien.linien_pruefen`, `Bildmodellbildtypen.
+            # vorgaben_pruefen`); hier nur durchreichen — der Lauf prüft `job.optionen` erneut.
+            if isinstance(roh.get(feld), dict):
+                aus[feld] = roh[feld]
         return aus
 
     @classmethod

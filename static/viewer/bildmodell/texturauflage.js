@@ -7,6 +7,8 @@
  * wird die Kachel als `map` eingehängt und die Farbe auf Weiß gestellt — der Hautton der
  * Stufe 1 (`ansicht3d.hauttonAnwenden`) steckt schon in der Kachel. Die Albedo aus dem
  * Texturvorrat kann später kommen als das Netz: darum bis 20× nachfassen, wie beim Hautton.
+ * `fototextur.stand` (Zeit des Backens) gehört zum Stand: „Textur anpassen" schreibt dieselben
+ * Dateinamen neu, die Kacheln müssen trotzdem neu geladen werden.
  */
 import * as THREE from 'three';
 
@@ -23,20 +25,23 @@ export class Texturauflage {
         this.aktiv = Object.keys(kacheln).length > 0;
         if (!this.aktiv || !modell || !modell.bodyMesh) return;
         // Ein Lauf je Stand: derselbe Kachelsatz wird nicht noch einmal angestoßen.
-        const stand = JSON.stringify(kacheln) + '|' + (modell.bodyMesh.uuid || '');
+        const marke = String((fototextur || {}).stand || '');
+        const stand = JSON.stringify(kacheln) + '@' + marke + '|' + (modell.bodyMesh.uuid || '');
         if (versuch === 0) { if (stand === this._stand) return; this._stand = stand; }
         const materialien = Array.isArray(modell.bodyMesh.material) ? modell.bodyMesh.material : [modell.bodyMesh.material];
         let belegt = 0;
         for (const m of materialien) {
             const kachel = m && m.userData ? String(m.userData.kachel) : '';
             if (!kacheln[kachel]) continue;
-            if (m.userData.fotokachel === kacheln[kachel]) { belegt += 1; continue; }
-            const adresse = this.auftrag.dateiAdresse('ergebnis', kacheln[kachel]) + `?t=${Date.now()}`;
+            const kennung = kacheln[kachel] + '@' + marke;
+            if (m.userData.fotokachel === kennung) { belegt += 1; continue; }
+            m.userData.fotokachel = kennung;
+            const adresse = this.auftrag.dateiAdresse('ergebnis', kacheln[kachel]) + `?t=${marke || Date.now()}`;
             this._lader.load(adresse, bild => {
                 bild.colorSpace = THREE.SRGBColorSpace;
+                if (m.userData.fotokachel !== kennung) return;   // inzwischen ein neuerer Stand
                 m.map = bild;
                 m.color.setRGB(1, 1, 1);
-                m.userData.fotokachel = kacheln[kachel];
                 m.needsUpdate = true;
             });
             belegt += 1;

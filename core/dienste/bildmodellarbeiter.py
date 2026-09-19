@@ -27,7 +27,7 @@ class Bildmodellarbeiter:
     BEFEHL = 'bildmodell_fahren'
 
     @classmethod
-    def starten(cls, job, ab='sichtung', bis=None):
+    def starten(cls, job, ab='sichtung', bis=None, schritte=None):
         ablage = Bildmodellablage(job.kennung)
         ablage.anlegen()
         befehl = [
@@ -40,6 +40,8 @@ class Bildmodellarbeiter:
         ]
         if bis:
             befehl += ['--bis', bis]
+        if schritte:
+            befehl += ['--schritte', ','.join(schritte)]
         with open(ablage.log(), 'ab') as protokoll:
             prozess = Auftragsarbeiter._popen(befehl, protokoll)
         ablage.pid().write_text(str(prozess.pid))

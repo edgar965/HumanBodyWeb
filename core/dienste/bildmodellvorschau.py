@@ -7,12 +7,12 @@ am Fortschrittsband:
 
     0,00–0,80  Icon und Ansichten vorn/seite/hinten/Kopf (`G9vorschaubild`)
     0,85       Außenmaße Foto / Zielnetz / Modell (`Bildmodellmasse`)
-    0,86–0,94  Proportionen Vorher/Nachher (`Bildmodellproportionen`)
-    0,94–0,98  Fotofarbe als UDIM, nur mit Textur „foto" (`Bildmodellfototextur`)
-    0,98–1,00  Testfall: Abstand zur Referenzfigur (`Bildmodelltestfall`)
+    0,86–0,96  Proportionen Vorher/Nachher (`Bildmodellproportionen`)
+    0,96–1,00  Testfall: Abstand zur Referenzfigur (`Bildmodelltestfall`)
 
 Alles landet in `job.ergebnis` (`vorschau`, `masse`, `proportionen`,
-`fototextur`, `testfall`); was ein Lauf nicht mehr liefert, wird entfernt.
+`testfall`); was ein Lauf nicht mehr liefert, wird entfernt. Die Fototextur
+ist seit dem 19.09. abends ein eigener Schritt `textur` (`Bildmodelllauf._textur`).
 """
 
 import logging
@@ -50,7 +50,6 @@ class Bildmodellvorschau:
         return {k: str(v).replace('\\', '/').split('/')[-1] for k, v in dateien.items()}
 
     def ausfuehren(self, melder=None):
-        from .bildmodellfototextur import Bildmodellfototextur
         from .bildmodellmasse import Bildmodellmasse
         from .bildmodellproportionen import Bildmodellproportionen
         from .bildmodelltestfall import Bildmodelltestfall
@@ -61,16 +60,10 @@ class Bildmodellvorschau:
         self.job.ergebnis['masse'] = Bildmodellmasse(self.job, self.stellung).alle()
         self.job.ergebnis['proportionen'] = Bildmodellproportionen(
             self.job, self.ablage, self.stellung, self._ziel_laden
-        ).alle(lambda a, t: melder and melder(0.86 + 0.08 * a, t))
-        self.job.ergebnis.pop('fototextur', None)
-        if self.optionen.get('textur', 'hautton') == 'foto':
-            textur = Bildmodellfototextur(self.job, self.ablage, self.optionen)
-            self.job.ergebnis['fototextur'] = textur.backen(
-                lambda a, t: melder and melder(0.94 + 0.04 * a, t)
-            )
+        ).alle(lambda a, t: melder and melder(0.86 + 0.10 * a, t))
         self.job.ergebnis.pop('testfall', None)
         if Bildmodelltestfall.figur(self.optionen):
             self.job.ergebnis['testfall'] = Bildmodelltestfall(self.job, self.optionen).vergleichen(
-                self.stellung, lambda a, t: melder and melder(0.98 + 0.02 * a, t)
+                self.stellung, lambda a, t: melder and melder(0.96 + 0.04 * a, t)
             )
         return self.job.ergebnis

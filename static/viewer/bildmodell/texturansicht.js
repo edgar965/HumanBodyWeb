@@ -1,0 +1,228 @@
+/**
+ * Texturansicht — der Bereich „Textur" ganz unten auf der Auftragsseite.
+ *
+ * Edgar (19.09.2026): „Mach mir ganz unten einen Bereich nur für Textur. Darin
+ * erstmal die ganze Textur in 2D, und einen Button zum Anpassen, wenn ich ein
+ * Bild mit einer Textur entfernt habe … damit ich sehen kann, wie du die Textur
+ * machst und anpasst, wenn ich die Bilder auswähle / abwähle, hinzufüge."
+ *
+ * Oben die fünf UDIM-Kacheln (`ergebnis.fototextur.kacheln`, 2048², Klick öffnet
+ * die Datei) — wahlweise als Herkunftskarte (welches Bild welche Stelle liefert,
+ * Palette wie `G9texturbacken.PALETTE`). Darunter die Tabelle der Bilder
+ * (`zustand.texturbilder`, `Bildmodelltextur.liste`): Häkchen „für die Textur",
+ * Vorschau, Typ, wie das Bild projiziert wird (Schätzer-Netz oder Rig-
+ * Registrierung mit Punktzahl und Fehler), Anteil an der HD-Textur, Löschen.
+ * „Bild für die Textur hinzufügen" lädt mit Nutzung „nur Textur" hoch; „Textur
+ * anpassen" startet nur den Schritt `textur` — mit neuen Dateien vorher die
+ * Sichtung (Umfang „neue"). Die 3D-Ansicht oben zieht die Kacheln nach
+ * (`texturauflage.js`, Marke `stand`).
+ */
+export class Texturansicht {
+
+    static KACHELN = { 1001: 'Kopf', 1002: 'Rumpf', 1003: 'Beine', 1004: 'Arme', 1005: 'Nägel' };
+    static PALETTE = [[230, 60, 60], [60, 140, 230], [60, 190, 90], [240, 170, 40],
+                      [170, 80, 220], [40, 200, 200], [240, 100, 180], [150, 110, 60],
+                      [120, 200, 40], [60, 60, 200], [230, 120, 60], [110, 110, 110]];
+    static KAMERA = { schaetzer: 'Schätzer-Netz', rig: 'Rig', keine: '—' };
+
+    constructor(auftrag, katalog, formular, steller) {
+        this.auftrag = auftrag;
+        this.formular = formular;
+        this.steller = steller;
+        this.herkunft = false;
+        this.geaendert = false;
+        this._stand = '';
+        document.getElementById('textur-herkunft')?.addEventListener('change', e => {
+            this.herkunft = e.target.checked;
+            this._stand = '';
+            if (this._zustand) this.zeigen(this._zustand);
+        });
+        const dazu = document.getElementById('textur-dazu');
+        dazu?.addEventListener('change', async () => {
+            if (!dazu.files.length) return;
+            const typen = {};
+            for (const d of dazu.files) typen[d.name] = { nutzung: 'textur' };
+            try { await this.auftrag.bilderHochladen([...dazu.files], typen); this.geaendert = true; }
+            catch (fehler) { window.alert(fehler.message); }
+            dazu.value = '';
+        });
+        document.getElementById('textur-anpassen')?.addEventListener('click', () => this.anpassen());
+        auftrag.zuhoeren(z => this.zeigen(z));
+    }
+
+    // ------------------------------------------------------------ Zeigen
+
+    zeigen(z) {
+        this._zustand = z;
+        const ft = (z.ergebnis || {}).fototextur || null;
+        if (z.status === 'fertig' && ft && this._letzterStand !== ft.stand) { this.geaendert = false; this._letzterStand = ft.stand; }
+        const stand = JSON.stringify([ft ? ft.stand : null, z.texturbilder, z.status, z.schritt, z.progress,
+                                      (z.neue || []).length, this.herkunft, this.geaendert]);
+        if (stand === this._stand) return;
+        this._stand = stand;
+        this._zahlen(z, ft);
+        this._kacheln(ft);
+        this._tabelle(z, ft);
+        this._knoepfe(z);
+    }
+
+    _zahlen(z, ft) {
+        const feld = document.getElementById('textur-zahlen');
+        if (!feld) return;
+        if (!ft) { feld.textContent = 'noch keine Fototextur — „Textur anpassen" backt sie aus den gewählten Bildern'; return; }
+        const teile = [`${Object.keys(ft.kacheln || {}).length} Kacheln ${ft.seite || ''}²`,
+                       `HD-Deckung ${Math.round((ft.deckung_hd || 0) * 100)} %`,
+                       `Punktfarbe ${Math.round((ft.deckung || 0) * 100)} %`,
+                       `${ft.bilder} Bilder`];
+        if (ft.referenz) teile.push(`Referenz für Nahaufnahmen: ${ft.referenz}`);
+        feld.textContent = teile.join(' · ');
+    }
+
+    _kacheln(ft) {
+        const feld = document.getElementById('textur-kacheln');
+        if (!feld) return;
+        feld.innerHTML = '';
+        if (!ft) return;
+        const marke = ft.stand || Date.now();
+        for (const [kachel, name] of Object.entries((ft.kacheln || {}))) {
+            const fig = document.createElement('figure');
+            fig.className = 'bildmodell-texturkachel';
+            const a = document.createElement('a');
+            a.href = this.auftrag.dateiAdresse('ergebnis', name) + `?t=${marke}`;
+            a.target = '_blank';
+            a.title = `${kachel} in voller Größe öffnen`;
+            const bild = document.createElement('img');
+            bild.src = a.href;
+            bild.alt = kachel;
+            a.appendChild(bild);
+            const h = (ft.herkunft || {})[kachel];
+            if (this.herkunft && h) {
+                const karte = document.createElement('img');
+                karte.className = 'bildmodell-texturherkunft';
+                karte.src = this.auftrag.dateiAdresse('ergebnis', h) + `?t=${marke}`;
+                karte.alt = `Herkunft ${kachel}`;
+                a.appendChild(karte);
+            }
+            const text = document.createElement('figcaption');
+            text.textContent = `${kachel} · ${Texturansicht.KACHELN[kachel] || ''}`;
+            fig.append(a, text);
+            feld.appendChild(fig);
+        }
+    }
+
+    // ----------------------------------------------------------- Tabelle
+
+    _tabelle(z, ft) {
+        const koerper = document.querySelector('#textur-bilder tbody');
+        if (!koerper) return;
+        koerper.innerHTML = '';
+        const je = new Map(((ft || {}).je_bild || []).map((e, i) => [e.datei, { ...e, nummer: i }]));
+        for (const b of (z.texturbilder || [])) koerper.appendChild(this._zeile(b, je.get(b.datei)));
+        const leer = document.getElementById('textur-leer');
+        if (leer) leer.classList.toggle('hb-versteckt', (z.texturbilder || []).length > 0);
+    }
+
+    _zeile(b, je) {
+        const tr = document.createElement('tr');
+        tr.dataset.datei = b.datei;
+        tr.classList.toggle('textur-aus', !b.gewaehlt);
+        // Häkchen
+        const wahl = document.createElement('td');
+        const kasten = document.createElement('input');
+        kasten.type = 'checkbox';
+        kasten.checked = !!b.gewaehlt;
+        kasten.disabled = !b.moeglich;
+        kasten.title = b.moeglich ? 'für die Textur verwenden' : b.grund;
+        kasten.addEventListener('change', async () => {
+            try { await this.auftrag.bildStellen(b.datei, { textur_an: kasten.checked }); this.geaendert = true; }
+            catch (fehler) { window.alert(fehler.message); }
+        });
+        wahl.appendChild(kasten);
+        // Bild
+        const bild = document.createElement('td');
+        const img = document.createElement('img');
+        img.className = 'bildmodell-texturvorschau';
+        img.src = this.auftrag.dateiAdresse('zuschnitt', b.datei);
+        img.alt = b.datei;
+        img.title = `${b.datei} · ${b.breite || '?'} × ${b.hoehe || '?'} px`;
+        if (je && je.nummer >= 0 && (je.anteil || 0) > 0) {
+            const f = Texturansicht.PALETTE[je.nummer % Texturansicht.PALETTE.length];
+            img.style.outline = `3px solid rgb(${f.join(',')})`;
+        }
+        bild.appendChild(img);
+        // Datei und Typ
+        const typ = document.createElement('td');
+        typ.innerHTML = `<div class="bildmodell-texturdatei">${b.datei}</div><div class="hb-hinweis">${Texturansicht.typ(b)}</div>`
+            + (b.grund ? `<div class="hb-hinweis bildmodell-texturgrund">${b.grund}</div>` : '');
+        // Kamera
+        const kamera = document.createElement('td');
+        kamera.textContent = Texturansicht.kamera(b, je);
+        // Anteil und Punkte
+        const anteil = document.createElement('td');
+        anteil.className = 'zahl';
+        anteil.textContent = je ? `${(100 * (je.anteil || 0)).toFixed(1).replace('.', ',')} %` : '—';
+        const punkte = document.createElement('td');
+        punkte.className = 'zahl';
+        punkte.textContent = je ? `${je.sichtbar}` : '—';
+        // Löschen
+        const knoepfe = document.createElement('td');
+        knoepfe.appendChild(this.steller.loeschenKnopf(`Bild ${b.datei} aus dem Auftrag löschen?`,
+            async () => { await this.auftrag.bildLoeschen(b.datei); this.geaendert = true; }));
+        tr.append(wahl, bild, typ, kamera, anteil, punkte, knoepfe);
+        return tr;
+    }
+
+    static typ(b) {
+        if (b.kategorie === 'koerper') return `Hauptbild Körper ${b.ansicht || ''}`;
+        if (b.kategorie === 'kopf') return `Hauptbild Kopf ${b.ansicht || ''}`;
+        if (b.kategorie === 'neben') return b.teil ? `Nebenbild · ${b.teil}` : 'Nebenbild';
+        return b.kategorie || '';
+    }
+
+    static kamera(b, je) {
+        const art = je ? je.kamera : b.kamera;
+        if (art === 'rig') return je && je.punkte ? `Rig · ${je.punkte} Punkte · ${je.fehler_px} px` : 'Rig';
+        if (art === 'schaetzer') return 'Schätzer-Netz';
+        return '—';
+    }
+
+    // ------------------------------------------------------------ Knöpfe
+
+    _knoepfe(z) {
+        const knopf = document.getElementById('textur-anpassen');
+        const text = document.getElementById('textur-lauf');
+        const neue = (z.neue || []).length;
+        if (knopf) {
+            knopf.disabled = z.status === 'laeuft';
+            knopf.querySelector('span').textContent = neue
+                ? `${neue} neue ${neue === 1 ? 'Datei' : 'Dateien'} sichten und Textur anpassen`
+                : 'Textur anpassen';
+            knopf.classList.toggle('btn-primary', this.geaendert || neue > 0);
+            knopf.classList.toggle('btn-secondary', !(this.geaendert || neue > 0));
+        }
+        if (text) {
+            if (z.status === 'laeuft' && ['sichtung', 'textur'].includes(z.schritt)) {
+                text.textContent = `${z.schritt === 'textur' ? 'Textur' : 'Sichtung'} läuft · ${z.progress_detail || ''}`;
+            } else if (this.geaendert) {
+                text.textContent = 'Auswahl geändert — „Textur anpassen" backt die Textur neu';
+            } else {
+                text.textContent = '';
+            }
+        }
+    }
+
+    /** Nur die Textur — mit neuen Dateien vorher die Sichtung (Umfang „neue"). */
+    async anpassen() {
+        const z = this.auftrag.zustand;
+        const schritte = (z.neue || []).length ? ['sichtung', 'textur'] : ['textur'];
+        try {
+            const person = window.__bildmodell?.person?.werte?.() || {};
+            const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
+            const optionen = { ...(this.formular ? this.formular.werte() : {}), person, proportionen,
+                               umfang: 'neue', textur: 'foto' };
+            await this.auftrag.starten(optionen, schritte[0], {}, null, schritte);
+        } catch (fehler) {
+            window.alert(`Textur nicht gestartet: ${fehler.message}`);
+        }
+    }
+}

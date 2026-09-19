@@ -9,16 +9,21 @@
  * tauglich, grund); das Häkchen schreibt `textur_an` an den Eintrag, der
  * Server mischt sofort neu und die 3D-Ansicht tönt die Haut (`Ansicht3d.
  * hauttonAnwenden`). Untaugliche Bilder zeigen den Grund und sind abgewählt.
+ * Ob ein Bild gewählt ist, sagt der Server (`zustand.texturbilder`, `Bildmodelltextur.
+ * liste` — ein per Box zum Hauptbild gemachtes Bild zählt, obwohl die Sichtung es als
+ * Nebenbild für untauglich hielt); ohne Eintrag gilt die alte Regel.
  */
 export class Texturwahl {
 
     /** Das Feld für die Kachel — oder null, wenn die Sichtung nichts gemessen hat. */
-    static feld(b, stellen) {
+    static feld(b, stellen, info = null) {
         const t = b.textur;
         if (!t) return null;
         const zeile = document.createElement('label');
         zeile.className = 'bildmodell-textur';
-        const an = 'textur_an' in b ? !!b.textur_an : !!t.tauglich;
+        const an = info ? !!info.gewaehlt : ('textur_an' in b ? !!b.textur_an : !!t.tauglich);
+        const moeglich = info ? !!info.moeglich : !!t.tauglich;
+        const grund = info ? info.grund : (t.grund || '');
         if (t.hautton) {
             const farbe = document.createElement('span');
             farbe.className = 'bildmodell-hautton';
@@ -30,12 +35,12 @@ export class Texturwahl {
         kasten.type = 'checkbox';
         kasten.checked = an && !!t.hautton;
         kasten.disabled = !t.hautton;
-        kasten.title = t.tauglich ? 'für die Textur (Hautton) verwenden' : `nicht tauglich: ${t.grund || ''}`;
+        kasten.title = moeglich ? 'für die Textur verwenden' : `nicht tauglich: ${grund}`;
         kasten.addEventListener('change', () => stellen(b.datei, { textur_an: kasten.checked }));
         zeile.appendChild(kasten);
         const text = document.createElement('span');
         text.className = 'hb-hinweis';
-        text.textContent = t.tauglich ? 'Textur' : (t.grund || 'nicht tauglich');
+        text.textContent = moeglich ? 'Textur' : (grund || 'nicht tauglich');
         zeile.appendChild(text);
         return zeile;
     }

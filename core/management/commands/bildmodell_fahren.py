@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""`manage.py bildmodell_fahren <id> [--ab <schritt>] [--bis <schritt>]` — einen Bildmodell-Auftrag rechnen.
+"""`manage.py bildmodell_fahren <id> [--ab <schritt>] [--bis <schritt>] [--schritte a,b]` — ein Auftrag.
 
 Der Arbeitsprozess, den `Bildmodellarbeiter` startet (19.09.2026) — wie
 `auftrag_fahren` für Video → BVH: `Bildmodelllauf` in einem eigenen
@@ -22,6 +22,7 @@ class Command(BaseCommand):
         parser.add_argument('job_id', help='Die Kennung (UUID) des Bildmodellauftrags')
         parser.add_argument('--ab', default='sichtung', help='Erster Schritt (Vorgabe: sichtung)')
         parser.add_argument('--bis', default=None, help='Letzter Schritt (Vorgabe: bis zum Ende)')
+        parser.add_argument('--schritte', default='', help='Genau diese Schritte, kommagetrennt')
 
     def handle(self, *args, **options):
         from core.daten.bildmodellablage import Bildmodellablage
@@ -39,7 +40,8 @@ class Command(BaseCommand):
         job.save(update_fields=['pid', 'updated_at'])
         logger.info('Bildmodell %s: Arbeitsprozess rechnet ab %s', job.kennung, options['ab'])
         try:
-            Bildmodelllauf(jid).ausfuehren(ab=options['ab'], bis=options.get('bis'))
+            schritte = [s for s in (options.get('schritte') or '').split(',') if s]
+            Bildmodelllauf(jid).ausfuehren(ab=options['ab'], bis=options.get('bis'), schritte=schritte)
         except Exception:  # noqa: BLE001
             logger.exception('Bildmodell %s: Arbeitsprozess abgestürzt', job.kennung)
             job.refresh_from_db()

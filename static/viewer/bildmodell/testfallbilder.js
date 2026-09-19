@@ -9,10 +9,16 @@
  * wie in der Szene), feine Stufe und alle Texturen abgewartet, dann je
  * Ansicht eine Kamera (Perspektive 30°, wie ein Porträtobjektiv) auf einen
  * Bereich, den das Skelett vorgibt: ganzer Körper (vorn, Seite, hinten,
- * dreiviertel), Kopf (vorn, Seite), je Hand, Füße, Oberkörper, Rücken. Jedes
- * Bild geht als JPG (`<figur>_<ansicht>.jpg`) über `bilderHochladen` in den
- * Auftrag; die Sichtung ordnet es dann wie ein Foto ein. Der Lauf kennt die
- * Referenz nicht — er sieht nur Bilder.
+ * dreiviertel), Kopf (vorn, Seite), je Hand, Füße, Oberkörper, Rücken — und
+ * seit dem Abend (Edgar: „mach ca. 10 Nahaufnahmen von Ursula mit HD aus
+ * unterschiedlichen Winkeln, damit ich sehen kann, wie du die Textur machst")
+ * 13 Nahaufnahmen in 2400 px nur für die Textur: Gesicht vorn/links/rechts/
+ * Seite, Oberkörper links/rechts, Hüfte vorn/hinten/Seite, Beine vorn/hinten,
+ * je Arm. Jedes Bild geht als JPG (`<figur>_<ansicht>.jpg`) über
+ * `bilderHochladen` in den Auftrag, mit seinem Bildtyp als Vorgabe (`typ`:
+ * Hauptbild, Nebenbild-Teil, Nutzung — `Bildmodellbildtypen.vorgaben_pruefen`),
+ * die Sichtung übernimmt ihn. Der Lauf kennt die Referenz nicht — er sieht
+ * nur Bilder.
  */
 import * as THREE from 'three';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
@@ -20,19 +26,33 @@ import { Genesis9texturen } from '../gemeinsam/genesis9texturen.js';
 
 export class Testfallbilder {
 
-    /** name, Drehung um die Figur (0 = von vorn), Bereich, Bildgröße. */
+    /** name, Drehung um die Figur (0 = von vorn), Bereich, Bildgröße, Bildtyp als Vorgabe. */
     static ANSICHTEN = [
-        { name: 'vorn', grad: 0, bereich: 'koerper', b: 1200, h: 1600 },
-        { name: 'seite', grad: 90, bereich: 'koerper', b: 1200, h: 1600 },
-        { name: 'hinten', grad: 180, bereich: 'koerper', b: 1200, h: 1600 },
-        { name: 'dreiviertel', grad: 40, bereich: 'koerper', b: 1200, h: 1600 },
-        { name: 'kopf_vorn', grad: 0, bereich: 'kopf', b: 1200, h: 1200 },
-        { name: 'kopf_seite', grad: 90, bereich: 'kopf', b: 1200, h: 1200 },
-        { name: 'hand_l', grad: 0, bereich: 'hand_l', b: 1000, h: 1000 },
-        { name: 'hand_r', grad: 0, bereich: 'hand_r', b: 1000, h: 1000 },
-        { name: 'fuesse', grad: 0, bereich: 'fuesse', b: 1400, h: 1000 },
-        { name: 'oberkoerper', grad: 0, bereich: 'oberkoerper', b: 1200, h: 1200 },
-        { name: 'ruecken', grad: 180, bereich: 'oberkoerper', b: 1200, h: 1200 },
+        { name: 'vorn', grad: 0, bereich: 'koerper', b: 1200, h: 1600, typ: { haupt: 'koerper/vorne' } },
+        { name: 'seite', grad: 90, bereich: 'koerper', b: 1200, h: 1600, typ: { haupt: 'koerper/seite' } },
+        { name: 'hinten', grad: 180, bereich: 'koerper', b: 1200, h: 1600, typ: { haupt: 'koerper/hinten' } },
+        { name: 'dreiviertel', grad: 40, bereich: 'koerper', b: 1200, h: 1600, typ: { haupt: 'koerper/dreiviertel' } },
+        { name: 'kopf_vorn', grad: 0, bereich: 'kopf', b: 1200, h: 1200, typ: { haupt: 'kopf/vorne' } },
+        { name: 'kopf_seite', grad: 90, bereich: 'kopf', b: 1200, h: 1200, typ: { haupt: 'kopf/seite' } },
+        { name: 'hand_l', grad: 0, bereich: 'hand_l', b: 1600, h: 1600, typ: { neben: 'neben/haende' } },
+        { name: 'hand_r', grad: 0, bereich: 'hand_r', b: 1600, h: 1600, typ: { neben: 'neben/haende' } },
+        { name: 'fuesse', grad: 0, bereich: 'fuesse', b: 2000, h: 1400, typ: { neben: 'neben/fuesse', nutzung: 'textur' } },
+        { name: 'oberkoerper', grad: 0, bereich: 'oberkoerper', b: 2400, h: 2400, typ: { neben: 'neben/oberkoerper', nutzung: 'textur' } },
+        { name: 'ruecken', grad: 180, bereich: 'oberkoerper', b: 2400, h: 2400, typ: { neben: 'neben/ruecken', nutzung: 'textur' } },
+        // Nahaufnahmen in HD, nur für die Textur (19.09.2026, abends).
+        { name: 'gesicht_nah', grad: 0, bereich: 'gesicht', b: 2400, h: 2400, typ: { neben: 'neben/gesicht', nutzung: 'textur' } },
+        { name: 'gesicht_links', grad: -50, bereich: 'gesicht', b: 2400, h: 2400, typ: { neben: 'neben/gesicht', nutzung: 'textur' } },
+        { name: 'gesicht_rechts', grad: 50, bereich: 'gesicht', b: 2400, h: 2400, typ: { neben: 'neben/gesicht', nutzung: 'textur' } },
+        { name: 'gesicht_seite', grad: -90, bereich: 'gesicht', b: 2400, h: 2400, typ: { neben: 'neben/gesicht', nutzung: 'textur' } },
+        { name: 'oberkoerper_links', grad: -45, bereich: 'oberkoerper', b: 2400, h: 2400, typ: { neben: 'neben/oberkoerper', nutzung: 'textur' } },
+        { name: 'oberkoerper_rechts', grad: 45, bereich: 'oberkoerper', b: 2400, h: 2400, typ: { neben: 'neben/oberkoerper', nutzung: 'textur' } },
+        { name: 'huefte_vorn', grad: 0, bereich: 'becken', b: 2400, h: 2400, typ: { neben: 'neben/becken', nutzung: 'textur' } },
+        { name: 'huefte_hinten', grad: 180, bereich: 'becken', b: 2400, h: 2400, typ: { neben: 'neben/becken', nutzung: 'textur' } },
+        { name: 'huefte_seite', grad: 90, bereich: 'becken', b: 2400, h: 2400, typ: { neben: 'neben/becken', nutzung: 'textur' } },
+        { name: 'beine_vorn', grad: 0, bereich: 'beine', b: 2000, h: 2400, typ: { neben: 'neben/beine', nutzung: 'textur' } },
+        { name: 'beine_hinten', grad: 180, bereich: 'beine', b: 2000, h: 2400, typ: { neben: 'neben/beine', nutzung: 'textur' } },
+        { name: 'arm_l', grad: 0, bereich: 'arm_l', b: 1600, h: 2400, typ: { neben: 'neben/arme', nutzung: 'textur' } },
+        { name: 'arm_r', grad: 0, bereich: 'arm_r', b: 1600, h: 2400, typ: { neben: 'neben/arme', nutzung: 'textur' } },
     ];
     static FOV = 30;
     static HINTERGRUND = 0xd9d6d0;
@@ -110,6 +130,26 @@ export class Testfallbilder {
                 const m = mitte('spine3', 'spine4') || new THREE.Vector3(0, H * 0.72, 0);
                 return { mitte: m, hoehe: H * 0.42 };
             }
+            case 'gesicht': {
+                // Enger als „kopf": Stirn bis Kinn füllt das Bild (Nahaufnahme, 2400 px).
+                const m = mitte('head') || new THREE.Vector3(0, H * 0.93, 0);
+                return { mitte: m.clone().add(new THREE.Vector3(0, H * 0.035, 0)), hoehe: H * 0.17 };
+            }
+            case 'becken': {
+                const m = mitte('pelvis', 'hip') || new THREE.Vector3(0, H * 0.52, 0);
+                return { mitte: m, hoehe: H * 0.36 };
+            }
+            case 'beine': {
+                // Vom Schritt bis über den Knöchel: Mitte zwischen Knie und Hüfte/Fuß.
+                const m = mitte('l_shin', 'r_shin') || new THREE.Vector3(0, H * 0.3, 0);
+                return { mitte: new THREE.Vector3(m.x, H * 0.31, m.z), hoehe: H * 0.56 };
+            }
+            case 'arm_l':
+            case 'arm_r': {
+                const s = art.slice(-1);
+                const m = mitte(`${s}_upperarm`, `${s}_hand`) || new THREE.Vector3(s === 'l' ? 0.3 : -0.3, H * 0.6, 0);
+                return { mitte: m, hoehe: H * 0.5 };
+            }
             default:
                 return { mitte: new THREE.Vector3(0, H * 0.5, 0), hoehe: H * 1.08 };
         }
@@ -142,17 +182,27 @@ export class Testfallbilder {
         let modell = null;
         try {
             modell = await this._figur(figur, melder);
+            // Was schon im Auftrag liegt, bleibt (sonst hieße es `_2.jpg`); Löschen erzwingt ein neues Bild.
+            const vorhanden = new Set(this.auftrag.zustand.originale || []);
             const dateien = [];
+            const typen = {};
+            let uebersprungen = 0;
             for (const ansicht of Testfallbilder.ANSICHTEN) {
+                const name = `${figur}_${ansicht.name}.jpg`;
+                if (vorhanden.has(name)) { uebersprungen += 1; continue; }
                 melder(`Rendern: ${ansicht.name}`);
                 this._kameraSetzen(ansicht, this.bereich(modell, ansicht.bereich));
                 this.renderer.render(this.szene, this.kamera);
                 const blob = await this._blob();
-                dateien.push(new File([blob], `${figur}_${ansicht.name}.jpg`, { type: 'image/jpeg' }));
+                dateien.push(new File([blob], name, { type: 'image/jpeg' }));
+                typen[name] = ansicht.typ || {};
             }
-            melder(`${dateien.length} Bilder hochladen …`);
-            await this.auftrag.bilderHochladen(dateien);
-            melder(`${dateien.length} Bilder aus ${figur} im Auftrag — jetzt „Neue Dateien sichten" oder Starten`);
+            if (dateien.length) {
+                melder(`${dateien.length} Bilder hochladen …`);
+                await this.auftrag.bilderHochladen(dateien, typen);
+            }
+            const rest = uebersprungen ? ` (${uebersprungen} schon im Auftrag, übersprungen)` : '';
+            melder(`${dateien.length} Bilder aus ${figur} im Auftrag${rest} — jetzt „Neue Dateien sichten" oder Starten`);
             return dateien.length;
         } finally {
             if (modell) { this.szene.remove(modell.group); modell.dispose?.(); }

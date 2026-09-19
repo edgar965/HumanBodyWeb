@@ -7,12 +7,13 @@ import { Ansicht3d } from './ansicht3d.js';
 import { Personenformular } from './personenformular.js';
 import { Proportionenansicht } from './proportionen.js';
 import { Testfallansicht } from './testfallansicht.js';
+import { Texturansicht } from './texturansicht.js';
 
 /**
  * Bildmodellseite — Einstieg der Auftragsseite „Modell aus Dateien".
  *
  * Liest Zustand und Optionenkatalog aus `#bildmodell-daten`, baut die
- * Teile (Lauf, Optionen, Bilder, Ergebnis, 3D) und lässt den Auftrag
+ * Teile (Lauf, Optionen, Bilder, Ergebnis, 3D, Textur) und lässt den Auftrag
  * nachfragen, solange er läuft. Die 3D-Ansicht kommt zuletzt und fängt
  * ihre Fehler selbst (ohne WebGL bleibt der Rest der Seite bedienbar).
  */
@@ -30,8 +31,9 @@ export class Bildmodellseite {
         const person = new Personenformular(auftrag, daten.katalog, formular, () => ergebnis.festgehalten());
         const proportionen = new Proportionenansicht(auftrag, daten.katalog);
         const testfall = new Testfallansicht(auftrag, daten.katalog, ansicht);
+        const textur = new Texturansicht(auftrag, daten.katalog, formular, bilder.steller);
         auftrag.verfolgen();
-        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen, testfall };
+        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen, testfall, textur };
         return window.__bildmodell;
     }
 }

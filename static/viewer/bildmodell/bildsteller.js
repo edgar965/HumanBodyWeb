@@ -33,7 +33,8 @@ export class Bildsteller {
         feld.className = 'bildmodell-steller';
         feld.appendChild(this._wahlzeile(b));
         feld.appendChild(this._nutzungszeile(b));
-        const textur = Texturwahl.feld(b, (datei, aenderung) => this.stellen(datei, aenderung));
+        const info = (this.auftrag.zustand.texturbilder || []).find(e => e.datei === b.datei) || null;
+        const textur = Texturwahl.feld(b, (datei, aenderung) => this.stellen(datei, aenderung), info);
         if (textur) feld.appendChild(textur);
         feld.appendChild(this._knopfzeile(b));
         return feld;
@@ -67,6 +68,9 @@ export class Bildsteller {
         if (k !== 'neben') return k;
         return b.teil ? `neben/${b.teil}` : 'neben';
     }
+
+    /** Die beiden Boxen Hauptbild/Nebenbild allein — für die Tabelle der Proportionen. */
+    wahlzeile(b) { return this._wahlzeile(b); }
 
     _wahlzeile(b) {
         const zeile = document.createElement('div');

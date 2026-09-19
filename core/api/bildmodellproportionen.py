@@ -4,10 +4,12 @@
 Edgar (19.09.2026): „Mit einem Popup kommt ein Fenster, wo ich diese anpassen
 kann. Diese Proportionen nutzt du dann für deine Berechnung."
 
-POST `api/bildmodell/<id>/proportionen/` mit `{proportionen: {schluessel: cm}}`
-schreibt die geprüften Werte (`Bildmodelloptionen.proportionen_pruefen`) nach
-`job.optionen.proportionen` — leer heißt „keine Vorgabe", das rohe Zielnetz
-gilt. Wirksam werden sie mit dem nächsten Lauf ab „Anpassung"
+POST `api/bildmodell/<id>/proportionen/` mit `{proportionen: {schluessel: cm},
+linien: {datei: {linien}}}` schreibt die geprüften Werte
+(`Bildmodelloptionen.proportionen_pruefen`) nach `job.optionen.proportionen` —
+leer heißt „keine Vorgabe", das rohe Zielnetz gilt — und die im Popup gezogenen
+Linien (`Bildmodellfotolinien.linien_pruefen`, Pixel des Fotos je Bild) nach
+`job.optionen.proportionen_linien`. Wirksam werden sie mit dem nächsten Lauf ab „Anpassung"
 (`Bildmodellzielproportionen` formt das Zielnetz); der Start-Endpunkt behält
 sie, wenn der Aufruf keine eigenen mitbringt.
 """
@@ -18,6 +20,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 
+from ..dienste.bildmodellfotolinien import Bildmodellfotolinien
 from ..dienste.bildmodelloptionen import Bildmodelloptionen
 from ..models import Bildmodellauftrag
 
@@ -38,6 +41,9 @@ class Bildmodellproportionenendpunkte:
         werte = Bildmodelloptionen.proportionen_pruefen(rumpf.get('proportionen'))
         optionen = dict(job.optionen or {})
         optionen['proportionen'] = werte
+        if 'linien' in rumpf:
+            optionen[Bildmodellfotolinien.OPTION] = Bildmodellfotolinien.linien_pruefen(rumpf.get('linien'))
         job.optionen = optionen
         job.save(update_fields=['optionen', 'updated_at'])
-        return JsonResponse({'ok': True, 'proportionen': werte})
+        return JsonResponse({'ok': True, 'proportionen': werte,
+                             'linien': optionen.get(Bildmodellfotolinien.OPTION) or {}})

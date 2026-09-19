@@ -11,6 +11,7 @@ brauchen Minuten, und jede Python-Änderung lädt den Server neu.
     anpassung   Regler per beschränkter Ausgleichung (`G9formanpassung`)
     rest        Rest als Eigenmorph (`G9restmorph`)
     vorschau    Icon und Ansichten (pyrender)
+    textur      Fotofarbe je Texel als UDIM (`Bildmodellfototextur`, python10)
     speichern   `data/models/<Name>.json`
 
 Jeder Schritt schreibt `schritt`, `progress`, `progress_detail`; ein
@@ -42,8 +43,9 @@ class Bildmodelllauf:
         'ziel': (60, 65),
         'anpassung': (65, 85),
         'rest': (85, 90),
-        'vorschau': (90, 97),
-        'speichern': (97, 100),
+        'vorschau': (90, 94),
+        'textur': (94, 98),
+        'speichern': (98, 100),
     }
 
     def __init__(self, job_id):
@@ -79,17 +81,25 @@ class Bildmodelllauf:
 
     # ------------------------------------------------------------- Laufen
 
-    def ausfuehren(self, ab='sichtung', bis=None):
-        """Ab `ab` bis zum Ende — oder nur bis `bis` (einschließlich)."""
+    def ausfuehren(self, ab='sichtung', bis=None, schritte=None):
+        """Ab `ab` bis zum Ende — oder nur bis `bis` (einschließlich); `schritte` nennt
+        stattdessen genau die Schritte (in Reihenfolge), etwa `sichtung` + `textur` für
+        „Textur anpassen" mit neuen Dateien (19.09.2026)."""
         reihe = Bildmodelloptionen.REIHENFOLGE
-        start = reihe.index(ab) if ab in reihe else 0
-        ende = reihe.index(bis) + 1 if bis in reihe else len(reihe)
+        if schritte:
+            folge = [s for s in reihe if s in set(schritte)]
+        else:
+            start = reihe.index(ab) if ab in reihe else 0
+            ende = reihe.index(bis) + 1 if bis in reihe else len(reihe)
+            folge = reihe[start:ende]
+        if not folge:
+            folge = reihe[:]
         self.job.status = 'laeuft'
         self.job.error_message = ''
         self.job.started_at = timezone.now()
         self.job.save(update_fields=['status', 'error_message', 'started_at', 'updated_at'])
         try:
-            for schritt in reihe[start:ende]:
+            for schritt in folge:
                 if self._abgebrochen():
                     logger.info('Bildmodell %s: angehalten vor %s', self.job.kennung, schritt)
                     return False
@@ -97,7 +107,7 @@ class Bildmodelllauf:
                 getattr(self, '_' + schritt)()
                 self.melden(schritt, 1.0, 'fertig')
             self.job.status = 'fertig'
-            self.job.progress = 100 if ende >= len(reihe) else self.BAENDER[reihe[ende - 1]][1]
+            self.job.progress = 100 if folge[-1] == reihe[-1] else self.BAENDER[folge[-1]][1]
             self.job.progress_detail = ''
             self.job.finished_at = timezone.now()
             self.job.save(
@@ -157,6 +167,15 @@ class Bildmodelllauf:
         Bildmodellanpassung(self.job, self.ablage, self.optionen).vorschau(
             lambda a, t: self.melden('vorschau', a, t)
         )
+
+    def _textur(self):
+        from .bildmodellfototextur import Bildmodellfototextur
+
+        self.job.ergebnis.pop('fototextur', None)
+        if self.optionen.get('textur', 'foto') == 'foto':
+            textur = Bildmodellfototextur(self.job, self.ablage, self.optionen)
+            self.job.ergebnis['fototextur'] = textur.backen(lambda a, t: self.melden('textur', a, t))
+        self.job.save(update_fields=['ergebnis', 'updated_at'])
 
     def _speichern(self):
         from .bildmodellanpassung import Bildmodellanpassung
