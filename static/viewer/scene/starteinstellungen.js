@@ -2,6 +2,7 @@ import { THREE } from './state.js';
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bereichsgedaechtnis } from './bereichsgedaechtnis.js';
+import { Startfigur } from './startfigur.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -43,7 +44,9 @@ export class Starteinstellungen {
 
     anwenden(daten) {
         const eigene = daten.ui_prefs || {};
-        if (daten.scene) state.defaultPresetName = daten.scene;
+        // Name, Figurart und Bereich des Standard-Modells (19.09.2026).
+        Startfigur.setzen(daten.scene, eigene.default_model_scene_quelle,
+                          eigene.default_model_scene_bereich);
         if (daten.default_anim_scene) state._defaultAnimUrl = daten.default_anim_scene;
         this.pose = eigene.default_pose || Starteinstellungen.VORGABEPOSE;
         this.mhKleidung = this._mhKleidung(eigene);

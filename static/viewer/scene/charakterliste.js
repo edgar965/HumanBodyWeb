@@ -12,6 +12,7 @@ import { Figurplatzierung } from './figurplatzierung.js';
 import { Figurarten } from './figurarten.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Speichernmenue } from './speichernmenue.js';
+import { Startfigur } from './startfigur.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -128,12 +129,9 @@ export async function addCharacterFromPreset(presetName, lage = null) {
                                    { lage, name: presetName });
 }
 
-export async function loadDefaultCharacter() {
-    try {
-        await addCharacterFromPreset(state.defaultPresetName);
-    } catch (e) {
-        Protokoll.warnung('charakterliste', 'Failed to load default character:', e);
-    }
+/** Das Standard-Modell aus den Einstellungen, in jeder Figurart (`Startfigur`). */
+export function loadDefaultCharacter() {
+    return Startfigur.laden();
 }
 
 export function selectCharacter(id) {

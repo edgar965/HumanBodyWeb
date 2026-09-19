@@ -17,8 +17,12 @@ class SzeneEinstellungen(Einstellungsseite):
 
     #: Diese Werte liegen in `ui_prefs` statt in einer eigenen Spalte. Sie
     #: werden nur GESETZT, wenn das Formular etwas schickt — ein leeres Feld
-    #: soll die vorhandene Vorgabe nicht löschen.
-    VORLIEBEN = ('default_pose', 'kleider_bone_model')
+    #: soll die vorhandene Vorgabe nicht löschen. Figurart und Bereich des
+    #: Standard-Modells (19.09.2026) gehören zum Namen in `default_model_scene`:
+    #: `modell` = HumanBody wie bisher, sonst `smpl`, `makehuman`, `uma`,
+    #: `umapython`, `genesis9` — was `Figurkataloge` kennt.
+    VORLIEBEN = ('default_pose', 'kleider_bone_model',
+                 'default_model_scene_quelle', 'default_model_scene_bereich')
 
     def uebernehmen(self, s, post):
         s.default_model_scene = F.text(post, 'default_model_scene', 'femaleWithClothes')

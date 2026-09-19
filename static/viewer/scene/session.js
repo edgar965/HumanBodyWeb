@@ -9,6 +9,7 @@ import { szenenteile } from './szenenteile.js';
 import { Szenenzustand } from './szenenzustand.js';
 import { Figurarten } from './figurarten.js';
 import { Reiterstand } from './reiterstand.js';
+import { Startfigur } from './startfigur.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -17,7 +18,7 @@ export function saveSessionState() {
     try {
         if (!fn.gatherSceneState) return;
         const sceneData = fn.gatherSceneState();
-        sceneData._defaultPresetSnapshot = state.defaultPresetName;
+        sceneData._defaultPresetSnapshot = Startfigur.kennung();
         // Die gewählte Figur (Edgar, 18.09.2026: „merke dir die letzte Auswahl /
         // den letzten Tab links, und mach den auf beim nächsten Laden"): ohne
         // Auswahl bleiben die Figur-Reiter gesperrt, und das Reitergedächtnis
@@ -40,9 +41,9 @@ export async function restoreSessionState() {
         const data = JSON.parse(raw);
         sessionStorage.removeItem(SESSION_KEY);
 
-        if (data._defaultPresetSnapshot && data._defaultPresetSnapshot !== state.defaultPresetName) {
+        if (data._defaultPresetSnapshot && data._defaultPresetSnapshot !== Startfigur.kennung()) {
             Protokoll.debug('Scene', 'Default model changed from', data._defaultPresetSnapshot, 'to',
-                state.defaultPresetName, '— discarding session.');
+                Startfigur.kennung(), '— discarding session.');
             return false;
         }
 
