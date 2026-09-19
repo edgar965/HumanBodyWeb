@@ -7,9 +7,11 @@ unveraendert weiterlaufen.
 """
 
 from .auftrag import BVHJob
+from .bildmodellauftrag import Bildmodellauftrag
 from .bvhdatei import BVHFile
 from .effektauftrag import Effektauftrag
 from .einstellungen import AppSettings
 from .fotoauftrag import PhotoAnalysisJob
 
-__all__ = ['BVHJob', 'BVHFile', 'AppSettings', 'Effektauftrag', 'PhotoAnalysisJob']
+__all__ = ['BVHJob', 'BVHFile', 'AppSettings', 'Effektauftrag', 'PhotoAnalysisJob',
+           'Bildmodellauftrag']

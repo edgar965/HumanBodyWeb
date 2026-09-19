@@ -33,6 +33,7 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 from backendpruefung import Backendpruefung  # noqa: E402
+from fremdlauf import Fremdlauf  # noqa: E402
 from koerpermasse import Koerpermasse  # noqa: E402
 from photo_analyzer import Fotobackends  # noqa: E402
 from unterlauf import Unterlauf  # noqa: E402
@@ -141,6 +142,13 @@ class DerUnterlauf(unittest.TestCase):
         with Pruefablage.datei('x', endung='.jpg') as pfad:
             lauf = Unterlauf('Probe', 'C:/gibt/es/nicht.exe', 'r.py', '.')
             self.assertIsNone(lauf.analysieren(pfad))
+
+    def test_der_unterprozess_bekommt_torch_home_auf_a(self):
+        """openpifpaf (PyMAF-X) legt seinen Detektor sonst unter C: ab (19.09.2026)."""
+        umgebung = Unterlauf.umgebung()
+        self.assertEqual(umgebung['TORCH_HOME'], Fremdlauf.TORCH_HOME)
+        self.assertIn(os.path.join('models', 'torch_hub'), umgebung['TORCH_HOME'])
+        self.assertIn('PATH', umgebung, 'die uebrige Umgebung bleibt erhalten')
 
 
 class DieKoerpermasse(unittest.TestCase):

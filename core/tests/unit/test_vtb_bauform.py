@@ -26,6 +26,7 @@ BDD - GEGEBEN / DANN
 import ast
 import re
 import unittest
+from pathlib import Path
 
 from ._wrapperquellen import Wrapperquellen
 from ._wrappersuchpfad import WRAPPERS, Wrappersuchpfad
@@ -239,14 +240,28 @@ class JederRunnerLiefertSeineFelder(unittest.TestCase):
     Standes.
     """
 
-    #: Zwei Felder stehen nicht in `KAMERAFELDER`, weil sie woanders
+    #: Vier Felder stehen nicht in `KAMERAFELDER`, weil sie woanders
     #: gelesen werden: der YOLO-Rahmen in `silhouettenauftrag`, der
-    #: Vertexpfad in `smplx_archiv`.
-    AUSSERHALB = ('bbox_xyxy', 'posed_vertices_path')
+    #: Vertexpfad in `smplx_archiv`, die FLAME-Gesichtsform und der
+    #: FLAME-Kopf in `bildmodellschaetzung` (Modell aus Bildern, 19.09.2026).
+    AUSSERHALB = ('bbox_xyxy', 'posed_vertices_path', 'face_shape', 'flame_vertices_path',
+                  'pose', 'jaw_pose', 'datei')
+
+    #: … und `bildmodellschaetzung._eintragen` liest sie wirklich — sonst
+    #: stuende hier ein Name ohne Leser (`test_ausserhalb_hat_leser`).
+    LESER = {'face_shape': 'core/dienste/bildmodellschaetzung.py',
+             'flame_vertices_path': 'core/dienste/bildmodellschaetzung.py',
+             'pose': 'core/dienste/bildmodellschaetzung.py',
+             'jaw_pose': 'core/dienste/bildmodellschaetzung.py',
+             'datei': 'core/dienste/bildmodellmehrbild.py',
+             'bbox_xyxy': 'core/dienste/silhouettenauftrag.py',
+             'posed_vertices_path': 'core/dienste/smplx_archiv.py'}
 
     #: Die Runner mit Zusatzfeldern. `_run_hmr2` hat keine — HMR 2.0
-    #: liefert nur die Form, keine Kameradaten.
-    RUNNER = ('_run_pymafx.py', '_run_smplest_x.py')
+    #: liefert nur die Form, keine Kameradaten. PyMAF-X fuellt seit dem
+    #: 19.09.2026 in `pymafxbild.py` (Einzel- und Mehrbildrunner teilen es),
+    #: SMPLest-X ueber Bilder in `_run_smplest_x_bilder.py` (mit `pose`).
+    RUNNER = ('pymafxbild.py', '_run_smplest_x.py', '_run_smplest_x_bilder.py')
 
     @staticmethod
     def _zusatzfelder(name):
@@ -279,12 +294,20 @@ class JederRunnerLiefertSeineFelder(unittest.TestCase):
         ueberfluessig = self._alle() - gelesen
         self.assertEqual(ueberfluessig, set(), 'Diese Felder liest niemand: %s' % sorted(ueberfluessig))
 
+    def test_ausserhalb_hat_leser(self):
+        """Jedes `AUSSERHALB`-Feld wird in der genannten Datei gelesen."""
+        from django.conf import settings
+        for feld, datei in self.LESER.items():
+            text = (Path(settings.BASE_DIR) / datei).read_text(encoding='utf-8')
+            self.assertIn(feld, text, '%s liest %s nicht' % (datei, feld))
+
     def test_die_backendnamen_stehen_fest(self):
         """`photo_analyzer` waehlt den Runner ueber diesen Namen."""
         erwartet = {
             '_run_hmr2.py': "'hmr2'",
-            '_run_pymafx.py': "'pymafx'",
+            'pymafxbild.py': "'pymafx'",
             '_run_smplest_x.py': "'smplest_x'",
+            '_run_smplest_x_bilder.py': "'smplest_x'",
         }
         for name, backend in erwartet.items():
             with self.subTest(runner=name):
@@ -296,8 +319,9 @@ class JederRunnerLiefertSeineFelder(unittest.TestCase):
         10.475 Vertices); wer sie verwechselt, bekommt Netzsalat."""
         for name, art in (
             ('_run_hmr2.py', "'smpl'"),
-            ('_run_pymafx.py', "'smplx'"),
+            ('pymafxbild.py', "'smplx'"),
             ('_run_smplest_x.py', "'smplx'"),
+            ('_run_smplest_x_bilder.py', "'smplx'"),
         ):
             with self.subTest(runner=name):
                 text = (WRAPPERS / name).read_text(encoding='utf-8')

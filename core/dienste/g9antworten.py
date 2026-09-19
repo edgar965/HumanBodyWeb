@@ -133,10 +133,26 @@ class G9antworten(G9antwortvorrat):
 
     @classmethod
     def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None):
-        text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung()],
+        text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung(),
+                           cls._eigenstand(rumpf, eintrag)],
                           sort_keys=True, default=str)
         return '%s_%s_%s' % (art, cls._sicher(name),
                              hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])
+
+    @staticmethod
+    def _eigenstand(rumpf, eintrag):
+        u"""Eigenmorphe (`eigen:<kennung>`, `G9eigenmorphe`) erkennt der
+        Schluessel nicht am Namen — ein neuer Lauf „Modell aus Bildern" schreibt
+        dieselbe Kennung neu. Deshalb die juengste Aenderung der Ablage mit,
+        sobald ein Eigenmorph im Spiel ist (ein Verzeichnislisting, sonst 0)."""
+        regler = {}
+        for quelle in (rumpf, eintrag):
+            if isinstance(quelle, dict) and isinstance(quelle.get('regler'), dict):
+                regler.update(quelle['regler'])
+        if not any(str(k).startswith('eigen:') for k in regler):
+            return 0
+        from Genesis9.eigenmorphe import G9eigenmorphe
+        return G9eigenmorphe.stand()
 
     @staticmethod
     def _sicher(name):

@@ -17,6 +17,7 @@ from .api.auftrag_upload import Uploadseiten
 from .api.auftragsformulare import Auftragsformulare
 from .api.auftragsweiterleitung import Auftragsweiterleitung
 from .api.bibliothek import Bibliotheksendpunkte
+from .api.bildmodell import Bildmodellendpunkte
 from .api.bvhtext import Bvhtext
 from .api.dateien import Auftragsdateien
 from .api.effekte import Effektendpunkte
@@ -115,6 +116,21 @@ urlpatterns = [
     path('api/jobs/bulk-delete/', Auftragsendpunkte.mehrere_loeschen, name='bulk_delete_jobs'),
     path('api/job/create-from-file/', Auftragsendpunkte.aus_datei, name='create_job_from_file'),
     # HumanBody
+    # Modell aus Dateien (Bilder → Genesis-9-Figur, 19.09.2026)
+    path('humanbody/modell-aus-dateien/', Bildmodellendpunkte.dashboard, name='bildmodell'),
+    path('humanbody/modell-aus-dateien/<kennung:kennung>/', Bildmodellendpunkte.auftragsseite,
+         name='bildmodell_auftrag'),
+    path('api/bildmodell/anlegen/', Bildmodellendpunkte.anlegen, name='bildmodell_anlegen'),
+    path('api/bildmodell/katalog/', Bildmodellendpunkte.katalog, name='bildmodell_katalog'),
+    path('api/bildmodell/loeschen/', Bildmodellendpunkte.mehrere_loeschen, name='bildmodell_mehrere_loeschen'),
+    path('api/bildmodell/<uuid:job_id>/zustand/', Bildmodellendpunkte.zustand, name='bildmodell_zustand'),
+    path('api/bildmodell/<uuid:job_id>/bilder/', Bildmodellendpunkte.bilder, name='bildmodell_bilder'),
+    path('api/bildmodell/<uuid:job_id>/bild/<str:datei>/', Bildmodellendpunkte.bild, name='bildmodell_bild'),
+    path('api/bildmodell/<uuid:job_id>/starten/', Bildmodellendpunkte.starten, name='bildmodell_starten'),
+    path('api/bildmodell/<uuid:job_id>/anhalten/', Bildmodellendpunkte.anhalten, name='bildmodell_anhalten'),
+    path('api/bildmodell/<uuid:job_id>/loeschen/', Bildmodellendpunkte.loeschen, name='bildmodell_loeschen'),
+    path('api/bildmodell/<uuid:job_id>/datei/<str:ordner>/<str:name>', Bildmodellendpunkte.datei,
+         name='bildmodell_datei'),
     path('humanbody/photo-to-3d/', seiten.photo_to_3d_page, name='photo_to_3d'),
     path(
         'humanbody/photo-to-3d/jobs/',

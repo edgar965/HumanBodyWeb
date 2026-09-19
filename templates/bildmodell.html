@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Modell aus Dateien{% endblock %}
+
+{% comment %}
+Dashboard „Modell aus Dateien" (Edgar, 18./19.09.2026): Bilder eines
+Daz-Produkts hochladen, Name und Typ angeben, Auftrag anlegen — die Tabelle
+darunter führt je Auftrag eine Zeile mit dem gerenderten Modell als Icon;
+Klick auf die Zeile öffnet die Auftragsseite (Bilder, Optionen je Schritt,
+Fortschritt, 3D-Ansicht). Tabelle: djangoBase (`Bildmodelltabelle`).
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-images"></i> Modell aus Dateien</h1>
+    <p class="hb-hinweis">Bilder eines Daz-Produkts hochladen — jede Person, jeder Kopf wird
+    zugeschnitten, eingeordnet (Hauptbild Körper / Kopf, Nebenbild), geschätzt und auf die
+    Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einzeln einstellen.</p>
+</div>
+
+<div class="card" id="bildmodell-neu">
+    <h2>Neuer Auftrag</h2>
+    <form id="bildmodell-form" class="bildmodell-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bildmodell-felder">
+            <label>Name des Modells
+                <input type="text" name="name" id="bildmodell-name" required maxlength="200"
+                       placeholder="z. B. Damira">
+            </label>
+            <label>Typ
+                <select name="typ" id="bildmodell-typ">
+                    {% for wert, anzeige in typen %}<option value="{{ wert }}">{{ anzeige }}</option>{% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="bildmodell-ablage" id="bildmodell-ablage">
+            <input type="file" name="bilder" id="bildmodell-dateien" multiple
+                   accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.mp4,.mov,.webm,.mkv,.avi,.m4v">
+            <p><i class="fas fa-cloud-upload-alt"></i> Bilder oder Drehvideos hierher ziehen oder klicken —
+               JPG, PNG, WebP, MP4, WebM; auch Collagen und Bilder mit mehreren Figuren</p>
+            <div class="bildmodell-vorschauen" id="bildmodell-vorschauen"></div>
+        </div>
+        <div class="bildmodell-knoepfe">
+            <button type="submit" class="btn btn-primary" id="bildmodell-anlegen">
+                <i class="fas fa-plus"></i> <span>Auftrag anlegen und starten</span></button>
+            <span class="hb-hinweis" id="bildmodell-meldung"></span>
+        </div>
+    </form>
+</div>
+
+<div class="card" id="auftragsliste">
+    <div class="bildmodell-listenkopf">
+        <h2>Aufträge</h2>
+        <button type="button" class="btn btn-danger btn-sm" id="bulk-delete-btn" disabled>
+            <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="bulk-count">0</span>)</span></button>
+    </div>
+    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/djangobase/js/tabellen_sortierung.js?v={{ djangobase.statik_v }}"></script>
+<script src="/static/djangobase/js/tabellen_breiten.js?v={{ djangobase.statik_v }}"></script>
+<script type="module">
+import { Bildmodellliste } from "{% fassungspfad 'viewer/bildmodell/liste.js' %}";
+Bildmodellliste.aufbauen();
+</script>
+{% endblock %}

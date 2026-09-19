@@ -99,12 +99,18 @@ class AbleitungTest(SimpleTestCase):
         """Der erste Eintrag ist die Wurzel (`_wurzelknochen`)."""
         self.assertEqual(next(iter(Umazuordnung.fuer(SkeletonMixamo))), 'Hips')
 
-    def test_ausnahmen_werden_uebersetzt(self):
+    def test_ausnahmen_werden_uebersetzt_ohne_hals_und_kopf(self):
+        """Fuesse und Zehen kommen mit; Hals und Kopf sind eine
+        Rigify-Ausnahme und bleiben draussen (19.09.2026, siehe
+        `test_halsknick_fremde_ziele`)."""
         ausnahmen = Umazuordnung.ausnahmen(SkeletonMocapNet)
         for name in ausnahmen:
             self.assertIn(name, DEF_ZU_UMA.values())
-        erwartet = [n for n in SkeletonMocapNet.SKIP_DIR_CORRECTION if n in DEF_ZU_UMA]
-        self.assertEqual(len(ausnahmen), len(erwartet))
+        erwartet = [DEF_ZU_UMA[n] for n in SkeletonMocapNet.SKIP_DIR_CORRECTION
+                    if n in DEF_ZU_UMA and n not in ('DEF-spine.004', 'DEF-spine.006')]
+        self.assertEqual(ausnahmen, erwartet)
+        self.assertNotIn('Neck', ausnahmen)
+        self.assertNotIn('Head', ausnahmen)
 
 
 class EchteGlbTest(SimpleTestCase):

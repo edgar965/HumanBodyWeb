@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Modell aus Dateien · {{ job.name }}{% endblock %}
+
+{% comment %}
+Auftragsseite „Modell aus Dateien" (Edgar, 18./19.09.2026): oben der Lauf
+(Schritte, Fortschritt, Start ab Schritt), dann die Optionen je Schritt
+(`Bildmodelloptionen.katalog()`), die Bilder nach Kategorie getrennt —
+Hauptbilder Körper, Hauptbilder Kopf, Nebenbilder, Gruppenbilder, ohne
+Befund — jedes mit dem Rig (MediaPipe-Landmarken) darüber, Kategorie und
+Gewicht änderbar; unten das Ergebnis: 3D-Ansicht (Genesis9Modell), die
+gerenderten Ansichten, Regler und Zahlen. Zustand und Katalog kommen als
+JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<script type="importmap">
+{ "imports": { "three": "{% static 'vendor/three/build/three.module.js' %}",
+               "three/addons/": "{% static 'vendor/three/examples/jsm/' %}" } }
+</script>
+{% endblock %}
+
+{% block content %}
+<script id="bildmodell-daten" type="application/json">{"zustand": {{ zustand_json|safe }}, "katalog": {{ katalog_json|safe }}}</script>
+
+<div class="page-header bildmodell-kopf">
+    <div>
+        <a href="{% url 'bildmodell' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Modell aus Dateien</a>
+        <h1><i class="fas fa-user"></i> <span id="auftrag-name">{{ job.name }}</span>
+            <small class="hb-hinweis">{{ job.get_typ_display }} · {{ job.kennung }}</small></h1>
+    </div>
+    <div class="bildmodell-status" id="auftrag-status"></div>
+</div>
+
+<div class="card" id="lauf">
+    <div class="bildmodell-schritte" id="schritte"></div>
+    <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
+    <div class="bildmodell-laufzeile">
+        <span id="fortschritt-text" class="hb-hinweis"></span>
+        <span class="bildmodell-laufknoepfe">
+            <label>Start ab <select id="ab-schritt"></select></label>
+            <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Starten</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        </span>
+    </div>
+    <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
+</div>
+
+<div class="card" id="person-karte">
+    <div class="bildmodell-person">
+        <form id="personenformular" class="bildmodell-personfelder" onsubmit="return false">
+            <h2>Person</h2>
+            <label>Alter <input type="number" name="alter" min="0" max="120" step="1" placeholder="Jahre"></label>
+            <label>Größe <input type="number" name="groesse_cm" min="100" max="250" step="0.5" placeholder="cm"></label>
+            <label>Gewicht <input type="number" name="gewicht_kg" min="20" max="250" step="0.5" placeholder="kg"></label>
+            <label>Tonus <input type="range" name="tonus" min="0" max="100" step="1" value="50">
+                <span id="tonus-wert" class="hb-hinweis"></span></label>
+            <label>Haar <select name="haar"><option value="">— keins —</option></select></label>
+            <button type="button" class="btn btn-primary" id="neu-berechnen">
+                <i class="fas fa-sync"></i> <span>Neu berechnen</span></button>
+            <div class="bildmodell-personlauf hb-versteckt" id="person-lauf">
+                <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="person-fortschritt" style="width:0%"></div></div>
+                <span class="hb-hinweis" id="person-lauf-text"></span>
+            </div>
+            <p class="hb-hinweis">Größe skaliert das Zielnetz, Gewicht stellt seine Fülle (Volumen × 1000 kg/m³),
+               Haar kommt ins Modell. Alter und Tonus haben in den Starter Essentials keinen Regler —
+               sie werden mit dem Modell gespeichert. „Neu berechnen" läuft ab „Zielnetz".</p>
+            <p class="hb-hinweis" id="person-beleg"></p>
+        </form>
+        <div class="bildmodell-3d">
+            <canvas id="ansicht3d"></canvas>
+            <div class="hb-hinweis" id="ansicht3d-text">Noch kein Ergebnis.</div>
+            <div class="bildmodell-vorschauen" id="vorschauen"></div>
+        </div>
+    </div>
+</div>
+
+<details class="card" id="optionen-karte" open>
+    <summary><h2>Optionen je Schritt</h2></summary>
+    <div class="bildmodell-optionen" id="optionen"></div>
+</details>
+
+<div class="card" id="bilder-karte">
+    <div class="bildmodell-listenkopf">
+        <h2>Bilder <span class="hb-hinweis" id="bilder-anzahl"></span></h2>
+        <span class="bildmodell-bilderknoepfe">
+            <label class="bildmodell-schalter"><input type="checkbox" id="rig-schalter" checked> Rig einblenden</label>
+            <label class="bildmodell-schalter">Rig
+                <select id="rig-wahl" title="Welches Rig über den Bildern liegt — die Sichtung rechnet alle gewählten">
+                    <option value="auto">Automatisch (MediaPipe, sonst YOLO, sonst openpifpaf)</option>
+                    <option value="mediapipe">MediaPipe Pose (33)</option>
+                    <option value="yolo">YOLO11-Pose (17)</option>
+                    <option value="openpifpaf">openpifpaf Wholebody (133)</option>
+                </select></label>
+            <label class="btn btn-secondary btn-sm bildmodell-hochladen"><i class="fas fa-plus"></i> <span>Bilder oder Videos hinzufügen</span>
+                <input type="file" id="bilder-dazu" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.mp4,.mov,.webm,.mkv,.avi,.m4v" hidden></label>
+        </span>
+    </div>
+    <p class="hb-hinweis">Erst nach dem Schritt „Zuschnitt und Sichtung" stehen die Ausschnitte hier — bis dahin die Originale.</p>
+    <p class="hb-hinweis" id="textur-stand"></p>
+    <div id="originale" class="bildmodell-originale"></div>
+    {% for schluessel, name in kategorien %}
+    <section class="bildmodell-bereich" id="bereich-{{ schluessel }}" data-kategorie="{{ schluessel }}">
+        <h3>{{ name }} <span class="hb-hinweis bildmodell-zaehler"></span></h3>
+        <div class="bildmodell-kacheln"></div>
+    </section>
+    {% endfor %}
+</div>
+
+<div class="card" id="ergebnis-karte">
+    <h2>Ergebnis</h2>
+    <div class="bildmodell-ergebnis">
+        <div id="zahlen" class="bildmodell-zahlen"></div>
+        <div id="reglerliste" class="bildmodell-regler"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Bildmodellseite } from "{% fassungspfad 'viewer/bildmodell/index.js' %}";
+Bildmodellseite.aufbauen();
+</script>
+{% endblock %}

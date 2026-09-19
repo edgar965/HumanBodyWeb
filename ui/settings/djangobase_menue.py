@@ -24,6 +24,7 @@ MENUE = [
             {'label': 'Konfiguration', 'icon': 'bi-sliders', 'url': '/humanbody/config/'},
             {'label': 'Foto To 3D', 'icon': 'bi-camera', 'url': '/humanbody/photo-to-3d/'},
             {'label': 'Jobs', 'icon': 'bi-list-ul', 'url': '/humanbody/photo-to-3d/jobs/'},
+            {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/humanbody/modell-aus-dateien/'},
             {'label': 'Animationen', 'icon': 'bi-person-walking', 'url': '/humanbody/animations/'},
             {'label': 'Pattern Editor', 'icon': 'bi-compass', 'url': '/humanbody/config/#tab-creator'},
         ],
