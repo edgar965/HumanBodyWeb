@@ -9,18 +9,14 @@ Garderobe in `api/kleidung.py`. Warum das der Weg ist, steht in
 import json
 import logging
 import os
-from collections import namedtuple
 
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from GarmentCode.dienst import GarmentcodeDienst
 
+from .garmentanfrage import Garmentanfrage
+
 logger = logging.getLogger(__name__)
-
-
-#: Was der Browser für Schnitt, Masse und Drapierung mitschickt — drei Leser,
-#: eine Form (`aus_anfrage`).
-Garmentanfrage = namedtuple('Garmentanfrage', 'vorlage geschlecht bauart morphs regler meta koerper smpl')
 
 
 class Garmentcode:
@@ -89,6 +85,8 @@ class Garmentcode:
                 fein=fein,
                 sim=sim,
                 getragen=getragen,
+                figurart=anfrage.figurart,
+                regler_figur=anfrage.regler_figur,
             )
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
@@ -152,6 +150,8 @@ class Garmentcode:
             bauart=anfrage.bauart,
             koerper=anfrage.koerper,
             meta=anfrage.meta,
+            figurart=anfrage.figurart,
+            regler_figur=anfrage.regler_figur,
         )
         return JsonResponse(
             {
@@ -167,39 +167,8 @@ class Garmentcode:
 
     @staticmethod
     def aus_anfrage(request):
-        """Geschlecht, Bauart und Morphs aus dem Rumpf der Anfrage.
-
-        Die Morphs kommen als JSON, weil es Dutzende sind und sie sonst
-        einzeln im Formular staenden.
-        """
-        # `koerper`: ein Referenzkoerper von GarmentCode statt der Figur —
-        # Masse aus dessen YAML, Drapierung auf ihm (06.09.2026). Ob er die
-        # SMPL-Segmentierung braucht, weiss der Server selbst; der Browser
-        # muss es nicht mitschicken.
-        from ..dienste.smplfigur import Smplfiguren
-
-        koerper = request.POST.get('koerper') or None
-        return Garmentanfrage(
-            vorlage=request.POST.get('vorlage', 't-shirt'),
-            geschlecht=request.POST.get('geschlecht', 'female'),
-            bauart=request.POST.get('bauart') or None,
-            morphs=Garmentcode._woerterbuch(request.POST, 'morphs', 'Morphs unlesbar, nehme Grundkoerper'),
-            regler=Garmentcode._woerterbuch(request.POST, 'regler', 'Reglerwerte unlesbar, nehme Vorgabe'),
-            meta=Garmentcode._woerterbuch(request.POST, 'meta', 'Metaregler unlesbar, nehme keine'),
-            koerper=koerper,
-            smpl=bool(koerper) and Smplfiguren.ist_smpl(koerper),
-        )
-
-    @staticmethod
-    def _woerterbuch(felder, name, warnung):
-        """Ein JSON-Feld des Formulars als dict; unlesbar oder keins -> leer,
-        mit Warnung."""
-        try:
-            wert = json.loads(felder.get(name) or '{}')
-        except ValueError:
-            logger.warning('GarmentCode: %s', warnung)
-            return {}
-        return wert if isinstance(wert, dict) else {}
+        """Die Formulardaten — `Garmentanfrage.lesen` (seit 19.09.2026 dort)."""
+        return Garmentanfrage.lesen(request)
 
     @staticmethod
     @require_POST
@@ -217,6 +186,8 @@ class Garmentcode:
                 regler=anfrage.regler,
                 koerper=anfrage.koerper,
                 meta=anfrage.meta,
+                figurart=anfrage.figurart,
+                regler_figur=anfrage.regler_figur,
             )
         except EntwurfFehler as fehler:
             logger.warning('GarmentCode gescheitert: %s', fehler)

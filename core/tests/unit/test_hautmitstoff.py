@@ -185,7 +185,9 @@ class NacharbeitTest(SimpleTestCase):
 
     def test_der_einzelbau_reicht_getragen_bis_zur_nacharbeit(self):
         quelle = open(settings.ASSETS_ROOT / 'GarmentCode' / 'drapierdienst.py', encoding='utf-8').read()
-        self.assertIn('Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', quelle)
+        # Die Nacharbeit selbst steht seit dem 19.09.2026 in `stoffbindung.py` (Genesis 9 als zweiter Traeger).
+        bindung = open(settings.ASSETS_ROOT / 'GarmentCode' / 'stoffbindung.py', encoding='utf-8').read()
+        self.assertIn('Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', bindung)
         lauf = quelle.index('def lauf(')
         self.assertIn('getragen=getragen', quelle[lauf : quelle.index('def _variantenordner', lauf)])
 

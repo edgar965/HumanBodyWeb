@@ -207,7 +207,7 @@ class VerdrahtungTest(SimpleTestCase):
 
     def test_beide_bauwege_geben_die_bundmaske_ans_anlegen(self):
         self.assertIn(
-            'Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', self._quelle('drapierdienst.py')
+            'Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', self._quelle('stoffbindung.py')
         )
         self.assertIn('anleger.anlegen(punkte, anliegen_mm, fest)', self._quelle('stoffnacharbeit.py'))
         gemeinsam = self._quelle('gemeinsamablage.py')

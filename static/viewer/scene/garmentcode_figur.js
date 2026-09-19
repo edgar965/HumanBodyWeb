@@ -13,6 +13,11 @@ import { state } from './state.js';
  *   SMPL        `koerper` und `smpl=1` — der Server nimmt die VORGEGEBENEN
  *               Maße von GarmentCode und drapiert auf diesem Körper; exakt
  *               der Weg des Online-Tools, ohne Messung.
+ *   Genesis 9   `figurart=genesis9` und die Daz-Regler (`regler_figur`) —
+ *               der Server baut daraus Netz, Segmente und Haut
+ *               (`genesis9drapierung.py`, 19.09.2026). Ohne das schickte die
+ *               Figur weder Bauart noch Morphs: vermessen wurde der
+ *               HumanBody-Grundkörper, das Rig trug DEF-Namen, kein Knochen traf.
  */
 export class GarmentcodeFigur {
 
@@ -38,6 +43,13 @@ export class GarmentcodeFigur {
             daten.append('morphs', '{}');
             return daten;
         }
+        if (inst.quelle === 'genesis9') {
+            daten.append('figurart', 'genesis9');
+            daten.append('regler_figur', JSON.stringify(inst.regler || {}));
+            daten.append('geschlecht', GarmentcodeFigur.geschlechtGenesis(inst.regler));
+            daten.append('morphs', '{}');
+            return daten;
+        }
         const bauart = inst.bodyType || inst.body_type || '';
         daten.append('geschlecht',
             bauart.toLowerCase().startsWith('m') ? 'male'
@@ -60,7 +72,14 @@ export class GarmentcodeFigur {
      */
     static ohneMorphs(figur) {
         const inst = figur?.inst;
-        if (!inst || inst.quelle === 'smpl') return false;
+        if (!inst || inst.quelle === 'smpl' || inst.quelle === 'genesis9') return false;
         return Object.keys(inst.morphs || {}).length === 0;
+    }
+
+    /** Wie der Server (`G9garmentfigur.geschlecht`): Masculine über Feminine → männlich. */
+    static geschlechtGenesis(regler) {
+        const wert = name => Number(regler?.[name]) || 0;
+        return wert('BaseMasculine_figure_ctrl_Character') > wert('BaseFeminine_figure_ctrl_Character')
+            ? 'male' : 'female';
     }
 }
