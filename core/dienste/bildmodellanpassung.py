@@ -22,6 +22,7 @@ import logging
 import numpy as np
 
 from .bildmodellspeichern import Bildmodellspeichern
+from .bildmodellumriss import Bildmodellumriss
 from .bildmodellzielproportionen import Bildmodellzielproportionen
 
 logger = logging.getLogger('core')
@@ -133,10 +134,13 @@ class Bildmodellanpassung:
 
         punkte, gewicht, gelenke = self._ziel_laden(roh=True)
         if melder:
+            melder(0.01, 'Umriss der Fotos aufs Zielnetz')
+        punkte, gelenke, umriss = Bildmodellumriss(self.job, self.optionen).formen(punkte, gelenke)
+        if melder:
             melder(0.02, 'Proportionen aufs Zielnetz')
         punkte, gelenke, proportionen = Bildmodellzielproportionen(
             self.job, self.ablage, self.optionen
-        ).formen(punkte, gewicht, gelenke)
+        ).formen(punkte, gewicht, gelenke, vorgeformt=umriss is not None)
         grund, wahl = self.grund()
         satz = self.optionen.get('reglersatz', 'charaktere')
         if melder:
@@ -180,6 +184,7 @@ class Bildmodellanpassung:
             'festgehalten': fest,
             'haende': haende,
             'proportionen': proportionen,
+            'umriss': umriss,
         }
         self.job.ergebnis.pop('rest', None)
         self._sichern('ergebnis')

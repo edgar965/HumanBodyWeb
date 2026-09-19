@@ -62,6 +62,21 @@ class Bildmodelltestfall:
         return np.asarray(p, float), gelenke
 
     @staticmethod
+    def flaechenabstand(punkte, referenz):
+        """Abstand jedes Modellpunkts zur FLÄCHE der Referenz (nächstes Dreieck), Meter.
+
+        Punkt gegen Punkt zählt auch, wo ein Punkt nur auf der Fläche verrutscht ist
+        (Ursulas Morph schiebt Punkte entlang der Haut) — nach der Umrissformung stimmte
+        die Silhouette auf 5 mm, der Punktabstand blieb bei 11 mm. Die Fläche misst die Form.
+        """
+        import trimesh
+        from Genesis9.kaefigumriss import G9kaefigumriss
+
+        netz = trimesh.Trimesh(np.asarray(referenz, float), G9kaefigumriss.dreiecke(), process=False)
+        _, abstand, _ = trimesh.proximity.closest_point(netz, np.asarray(punkte, float))
+        return np.asarray(abstand, float)
+
+    @staticmethod
     def je_teil(abstand):
         """RMS in mm je Körperteil (`G9koerperteile.TEILE`)."""
         from Genesis9.haut import G9haut
@@ -87,6 +102,7 @@ class Bildmodelltestfall:
         ref_p, ref_g = self.kaefig(eintrag['regler'])
         mod_p, mod_g = self.kaefig(stellung)
         abstand = np.linalg.norm(mod_p - ref_p, axis=1)
+        flaeche = self.flaechenabstand(mod_p, ref_p)
         pr = G9proportionen()
         if melder:
             melder(0.6, 'Testfall: Proportionen beider Figuren')
@@ -97,6 +113,9 @@ class Bildmodelltestfall:
             'rms_mm': round(float(np.sqrt((abstand ** 2).mean())) * 1000.0, 2),
             'max_mm': round(float(abstand.max()) * 1000.0, 1),
             'je_teil': self.je_teil(abstand),
+            'flaeche_mm': round(float(np.sqrt((flaeche ** 2).mean())) * 1000.0, 2),
+            'flaeche_max_mm': round(float(flaeche.max()) * 1000.0, 1),
+            'flaeche_je_teil': self.je_teil(flaeche),
             'hoehe_cm': {
                 'referenz': round(float(ref_p[:, 1].max()) * 100.0, 1),
                 'modell': round(float(mod_p[:, 1].max()) * 100.0, 1),
@@ -107,7 +126,7 @@ class Bildmodelltestfall:
             },
         }
         logger.info(
-            'Bildmodell %s: Testfall %s — RMS %.2f mm, max %.1f, Höhe %s',
-            self.job.kennung, aus['figur'], aus['rms_mm'], aus['max_mm'], aus['hoehe_cm'],
+            'Bildmodell %s: Testfall %s — RMS %.2f mm, max %.1f, Fläche %.2f mm, Höhe %s',
+            self.job.kennung, aus['figur'], aus['rms_mm'], aus['max_mm'], aus['flaeche_mm'], aus['hoehe_cm'],
         )
         return aus

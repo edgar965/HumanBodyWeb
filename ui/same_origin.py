@@ -51,13 +51,22 @@ sind dadurch NICHT geschützt — die brauchen `@require_POST`; deshalb wurde
 import logging
 from urllib.parse import urlsplit
 
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.http import HttpResponseForbidden, JsonResponse
 
 logger = logging.getLogger('core')
 
 
 class GleicherUrsprungMiddleware:
-    """Weist schreibende Anfragen ab, die nicht von der eigenen Seite kommen."""
+    """Weist schreibende Anfragen ab, die nicht von der eigenen Seite kommen.
+
+    Läuft synchron UND asynchron (19.09.2026): Eine nur synchrone Middleware
+    vor den asynchronen aus djangoBase schloss den Ring, in dem der Server
+    stand — Vorfall und Rahmen in `djangobase/middleware_basis.py`.
+    """
+
+    sync_capable = True
+    async_capable = True
 
     SCHREIBEND = frozenset({'POST', 'PUT', 'PATCH', 'DELETE'})
 
@@ -66,15 +75,26 @@ class GleicherUrsprungMiddleware:
 
     def __init__(self, get_response):
         self.get_response = get_response
+        if iscoroutinefunction(get_response):
+            markcoroutinefunction(self)
 
     def __call__(self, request):
+        if iscoroutinefunction(self):
+            return self.__acall__(request)
+        return self.abweisung(request) or self.get_response(request)
+
+    async def __acall__(self, request):
+        return self.abweisung(request) or await self.get_response(request)
+
+    def abweisung(self, request):
+        """Die 403-Antwort für eine fremde Anfrage — sonst None."""
         grund = self._fremd(request)
-        if grund:
-            logger.warning('Fremder Ursprung abgewiesen: %s %s (%s)', request.method, request.path, grund)
-            if request.path.startswith('/api/'):
-                return JsonResponse({'error': 'Anfrage von fremdem Ursprung abgelehnt'}, status=403)
-            return HttpResponseForbidden('Anfrage von fremdem Ursprung abgelehnt')
-        return self.get_response(request)
+        if not grund:
+            return None
+        logger.warning('Fremder Ursprung abgewiesen: %s %s (%s)', request.method, request.path, grund)
+        if request.path.startswith('/api/'):
+            return JsonResponse({'error': 'Anfrage von fremdem Ursprung abgelehnt'}, status=403)
+        return HttpResponseForbidden('Anfrage von fremdem Ursprung abgelehnt')
 
     def _fremd(self, request):
         """Grund als Text, wenn die Anfrage fremd ist — sonst None."""

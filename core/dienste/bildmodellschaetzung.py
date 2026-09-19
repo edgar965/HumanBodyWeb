@@ -13,7 +13,7 @@ ein neuer Lauf ab „ziel" nichts neu rechnen muss.
 
 Gesicht: mit `pymafx_flame` laufen die Kopf- UND Körperbilder durch
 PyMAF-X; der neutrale FLAME-Kopf (5.023 × 3) des Bildes mit dem größten
-Gesicht wird das Kopfziel (`schaetzung/<stamm>_flame.npy`).
+Gesicht wird das Kopfziel (`schaetzung/<stamm>_gesicht_flame.npy`).
 
 Mischung der Körperparameter: Median (Vorgabe), gewichtetes Mittel oder
 das beste Bild — und das Geschlecht aus dem Schulter-Hüft-Verhältnis der
@@ -29,6 +29,7 @@ import numpy as np
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellbildtypen import Bildmodellbildtypen
 from .bildmodellmehrbild import Bildmodellmehrbild
+from .bildmodellmischung import Bildmodellmischung
 from .bildmodellsilhouette import Bildmodellsilhouette
 from .bildmodellvideo import Bildmodellvideo
 
@@ -43,8 +44,6 @@ class Bildmodellschaetzung:
     #: verwarf trotzdem Damiras Vorderansicht (YOLOv8x 0,38 bei 640 — die
     #: anderen Hauptbilder 0,56 und 0,92; bei 1280 alle unter 0,2).
     ZUVERSICHT = 0.2
-    #: Schulter zu Hüfte (Bildbreite der Landmarken) — darüber „masculine".
-    MASKULIN_AB = 1.25
 
     def __init__(self, job, ablage, optionen):
         self.job = job
@@ -83,6 +82,7 @@ class Bildmodellschaetzung:
             # Eine SMPLest-X-Antwort ohne Pose stammt von vor dem 19.09.2026 —
             # der Silhouettenabgleich braucht sie; einmal neu rechnen.
             or (backend == 'smplest_x' and not (b.get('schaetzung') or {}).get('pose'))
+            or (backend == 'smplest_x' and not self._smplx_netz(b))
         ]
         if backend != 'keiner' and offen:
             self._schaetzen(offen, backend, melder)
@@ -108,6 +108,23 @@ class Bildmodellschaetzung:
         self.job.ergebnis['schaetzung'] = self.mischen(koerper, koepfe)
         self.job.save(update_fields=['bilder', 'ergebnis', 'updated_at'])
         return self.job.ergebnis['schaetzung']
+
+    #: Punkte eines SMPL-X-Netzes — ein SMPL-Netz von PyMAF-X (6.890) hat hier nichts verloren.
+    SMPLX_PUNKTE = 10475
+
+    def _smplx_netz(self, b):
+        """Liegt das posierte SMPL-X-Netz des Bildes vollständig da? (Bis 19.09.2026 konnte
+        PyMAF-X es unter demselben Namen überschreiben — dann noch einmal schätzen.)"""
+        name = (b.get('schaetzung') or {}).get('posed_vertices_path')
+        if not name:
+            return False
+        pfad = self.ablage.schaetzung() / name
+        if not pfad.is_file():
+            return False
+        try:
+            return np.load(pfad, mmap_mode='r').shape[0] == self.SMPLX_PUNKTE
+        except (OSError, ValueError):
+            return False
 
     # ------------------------------------------------------------- Videos
 
@@ -193,13 +210,17 @@ class Bildmodellschaetzung:
             ):
                 if k in roh and roh[k] is not None:
                     eintrag[k] = roh[k]
+            # Die Gesichtsschätzung bekommt eigene Namen: PyMAF-X legt ein SMPL-Netz (6.890) als
+            # `_posed.npy` ab und überschrieb damit das SMPL-X-Netz (10.475) von SMPLest-X — die
+            # Fotofarbe brach dann mit „index 9259 out of bounds" (Ursula-Testfall, 19.09.2026).
+            vorsatz = '_gesicht' if feld == 'gesichtsschaetzung' else ''
             for quelle, name in (
                 ('posed_vertices_path', '_posed.npy'),
                 ('flame_vertices_path', '_flame.npy'),
             ):
                 p = roh.get(quelle)
                 if p and os.path.isfile(p):
-                    ziel = self.ablage.schaetzung() / (stamm + name)
+                    ziel = self.ablage.schaetzung() / (stamm + vorsatz + name)
                     shutil.move(p, ziel)
                     eintrag[quelle] = ziel.name
         bild[feld] = eintrag
@@ -207,79 +228,5 @@ class Bildmodellschaetzung:
     # ----------------------------------------------------------- mischen
 
     def mischen(self, koerper, koepfe):
-        art = self.optionen.get('mischung', 'median')
-        reihen, gewichte, quellen = [], [], []
-        for b in koerper:
-            s = b.get('schaetzung') or {}
-            if s.get('betas'):
-                reihen.append(np.asarray(s['betas'], dtype=float)[:10])
-                gewichte.append(float(b.get('gewicht') or 0) * float(s.get('confidence') or 1.0))
-                quellen.append(b['datei'])
-        betas = None
-        if reihen:
-            m = np.array([np.pad(r, (0, 10 - len(r))) for r in reihen])
-            w = np.array(gewichte)
-            if art == 'bestes':
-                betas = m[int(w.argmax())]
-            elif art == 'mittel' and w.sum() > 0:
-                betas = (m * w[:, None]).sum(0) / w.sum()
-            else:
-                betas = np.median(m, axis=0)
-        kopf = self._kopf(koepfe + koerper)
-        return {
-            'betas': [round(float(v), 5) for v in betas] if betas is not None else None,
-            'bilder': quellen,
-            'mischung': art,
-            'anzahl': len(reihen),
-            'kopf': kopf,
-            'geschlecht': self.geschlecht(betas, koerper),
-        }
-
-    def _kopf(self, bilder):
-        """Der FLAME-Kopf des Bildes mit dem größten Gesicht — Dateiname oder None."""
-        beste, groesse = None, 0.0
-        for b in bilder:
-            p = (b.get('gesichtsschaetzung') or {}).get('flame_vertices_path') or (
-                b.get('schaetzung') or {}
-            ).get('flame_vertices_path')
-            if not p:
-                continue
-            kasten = b.get('gesicht') or {}
-            h = float(kasten.get('hoehe') or 0.1) * float(b.get('gewicht') or 0)
-            if h > groesse:
-                beste, groesse = p, h
-        return beste
-
-    def geschlecht(self, betas, koerper):
-        """`feminine`/`masculine` — aus den SMPL-X-Parametern
-        (`Morphzuordnung.geschlecht_schaetzen`: welchem Grundkörper die
-        Gestalt näher liegt), sonst aus dem Schulter-Hüft-Verhältnis der
-        Landmarken (über 1,25 masculine).
-
-        Erst Landmarken allein: Damira (Frau) kam auf 1,3 — MediaPipes
-        Hüftpunkte sind die Gelenke, nicht die Hüftbreite (19.09.2026).
-        """
-        if betas is not None:
-            try:
-                with Wrapperpfad():
-                    from morphzuordnung import Morphzuordnung
-
-                    return (
-                        'masculine'
-                        if Morphzuordnung.geschlecht_schaetzen([float(b) for b in betas]) == 'male'
-                        else 'feminine'
-                    )
-            except Exception as fehler:  # noqa: BLE001
-                logger.warning('Geschlecht aus Betas nicht schätzbar: %s', fehler)
-        werte = []
-        for b in koerper:
-            lm = b.get('landmarken')
-            if not lm or len(lm) < 29:
-                continue
-            schulter = abs(lm[11][0] - lm[12][0])
-            huefte = abs(lm[23][0] - lm[24][0])
-            if huefte > 1e-6 and b.get('ansicht') in ('vorne', 'hinten'):
-                werte.append(schulter / huefte)
-        if not werte:
-            return 'feminine'
-        return 'masculine' if float(np.median(werte)) > self.MASKULIN_AB else 'feminine'
+        """`{betas, bilder, mischung, anzahl, kopf, geschlecht}` — `Bildmodellmischung`."""
+        return Bildmodellmischung(self.optionen).mischen(koerper, koepfe)

@@ -4,9 +4,9 @@
 1. `G9proportionen.messen` liefert alle 19 Maße der Grundfigur, mit
    Endpunkten, die das Maß tatsächlich aufspannen; Schulter > Hüfte > Taille.
 2. `G9proportionsformung.formen`: Hüfte +3 cm, Oberarm +1 cm, Nase −1 cm,
-   Kopfhöhe +1 cm, Augenabstand +0,5 cm, Brustvorsprung +1 cm werden auf 0,2 cm getroffen, das Kopfgelenk wandert mit
-   (nach unten, es liegt unter der Augenlinie), Maße ohne Vorgabe bleiben (bis auf die Schulter, die den
-   Oberarmrand teilt) unter 0,3 cm; Sabotage (keine Skalierung) → rot.
+   Kopfhöhe +1 cm, Augenabstand +0,5 cm, Brustvorsprung +1 cm werden auf 0,2 cm getroffen, das
+   Kopfgelenk wandert mit (nach unten, es liegt unter der Augenlinie), Maße ohne Vorgabe bleiben
+   (bis auf die Schulter, die den Oberarmrand teilt) unter 0,3 cm; Sabotage (keine Skalierung) → rot.
 3. `G9proportionenbild.projizieren`: Scheitel und Sohle liegen im Bild
    `RAND` vom Rand, `px_je_m` passt zur gemessenen Figurhöhe.
 """
@@ -56,6 +56,8 @@ class ProportionenTest(SimpleTestCase):
         ziele = {
             'huefte_breite': (vorher['huefte_breite'] + 3.0) / 100,
             'oberarm_dicke': (vorher['oberarm_dicke'] + 1.0) / 100,
+            # `becken` in den Teilen des Oberschenkels wurde zu `l_cken` gespiegelt (19.09.2026).
+            'oberschenkel_dicke': (vorher['oberschenkel_dicke'] + 1.5) / 100,
             'nase_breite': (vorher['nase_breite'] - 1.0) / 100,
             'kopf_hoehe': (vorher['kopf_hoehe'] + 1.0) / 100,
             'augen_abstand': (vorher['augen_abstand'] + 0.5) / 100,

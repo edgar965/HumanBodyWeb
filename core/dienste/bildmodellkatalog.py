@@ -102,6 +102,26 @@ class Bildmodellkatalog:
                 ],
                 'schaetzer',
             ),
+            (
+                'umriss',
+                'Umriss der Fotos',
+                [
+                    ('an', 'Silhouette Zeile für Zeile',
+                     'Breiten von vorn/hinten, Vorder- und Rückkante von der Seite formen das Ziel'),
+                    ('aus', 'Aus', 'Nur Maße und Eingaben'),
+                ],
+                'an',
+            ),
+            (
+                'fotomasse',
+                'Maße aus den Fotos',
+                [
+                    ('an', 'Silhouette formt das Ziel',
+                     'Hüfte, Taille, Oberschenkel, Wade (vorn), Brust-, Bauch-, Gesäßtiefe (Seite)'),
+                    ('aus', 'Nur Eingaben', 'Das Ziel bleibt der Schätzer; das Popup formt'),
+                ],
+                'an',
+            ),
         ],
         'anpassung': [
             (

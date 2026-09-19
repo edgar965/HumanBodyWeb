@@ -14,6 +14,12 @@ Vorschau und Maße lesen dann das geformte Ziel (`Bildmodellanpassung.
 _ziel_laden`). Ohne Eingaben wird die Datei entfernt — es gilt das rohe
 Ziel. Der Bericht (`ergebnis.anpassung.proportionen`) nennt je Maß
 vorher, Ziel, nachher in cm — gemessen am geformten Netz.
+
+FOTOMASSE (19.09.2026, Testfall Ursula): Wo der Nutzer nichts eingibt, formen
+die Maße der Silhouette (`Bildmodellfotomasse`: Hüfte, Taille, Oberschenkel,
+Wade von vorn; Brust-, Bauch-, Gesäßtiefe und Brustvorsprung von der Seite)
+— sonst blieb das Ziel die schlanke Schätzung (Hüfte 34,6 statt 38,4 cm).
+Der Bericht nennt je Maß die `quelle` (eingabe / foto). Option `fotomasse`.
 """
 
 import logging
@@ -50,23 +56,55 @@ class Bildmodellzielproportionen:
                 aus[str(k)] = cm / 100.0
         return aus
 
+    def fotomasse_m(self):
+        """`{schluessel: Meter}` aus den Fotos — leer, wenn die Option aus ist."""
+        from Genesis9.proportionen import G9proportionen
+
+        from .bildmodellfotomasse import Bildmodellfotomasse
+
+        if not Bildmodellfotomasse.an(self.optionen, self.job):
+            return {}
+        hoehe = ((self.job.ergebnis or {}).get('ziel') or {}).get('hoehe_ziel_cm')
+        cm = Bildmodellfotomasse(self.job, hoehe).messen()['cm']
+        return {k: v / 100.0 for k, v in cm.items() if G9proportionen.FORMBAR.get(k) and v > 0}
+
+    def ziele_m(self, ohne_foto=False):
+        """`({schluessel: Meter}, {schluessel: quelle})` — Fotomaße, Eingaben darüber.
+
+        `ohne_foto`: der Umriss hat das Ziel schon Zeile für Zeile geformt — dann formen die
+        Fotomaße nicht noch einmal (dieselben Silhouetten, an Schulter und Brustvorsprung mit
+        anderer Definition: Ursulas Vorsprung 6,2 statt 4,2 cm). Eingaben gelten weiter.
+        """
+        ziele, quelle = {}, {}
+        foto = {} if ohne_foto else self.fotomasse_m()
+        for name, werte in (('foto', foto), ('eingabe', self.eingaben_m())):
+            for k, v in werte.items():
+                ziele[k] = v
+                quelle[k] = name
+        return ziele, quelle
+
     def pfad(self):
         return self.ablage.ergebnis() / self.DATEI
 
-    def formen(self, punkte, gewicht, gelenke):
-        """`(punkte, gelenke, bericht)` — geformt, wenn Eingaben da sind; sonst unverändert.
+    def formen(self, punkte, gewicht, gelenke, vorgeformt=False):
+        """`(punkte, gelenke, bericht)` — geformt, wenn Ziele da sind; sonst unverändert.
 
-        `bericht` ist None ohne Eingaben, sonst `{schluessel: {vorher, ziel, nachher}}` in cm.
+        `bericht` ist None ohne Ziele, sonst `{schluessel: {vorher, ziel, nachher, quelle}}` in cm.
+        `vorgeformt`: die Punkte tragen schon den Umriss (`Bildmodellumriss`) — dann wird
+        `ziel_prop.npz` auch ohne Ziele geschrieben, sonst läse die Anpassung das rohe Ziel.
         """
-        ziele = self.eingaben_m()
+        ziele, quelle = self.ziele_m(ohne_foto=vorgeformt)
         pfad = self.pfad()
-        if not ziele:
+        if not ziele and not vorgeformt:
             if pfad.is_file():
                 pfad.unlink()
             return punkte, gelenke, None
         from Genesis9.proportionsformung import G9proportionsformung
 
-        p, g, bericht = G9proportionsformung().formen(punkte, gelenke, ziele, gewicht > 0)
+        if ziele:
+            p, g, bericht = G9proportionsformung().formen(punkte, gelenke, ziele, gewicht > 0)
+        else:
+            p, g, bericht = np.asarray(punkte, float), gelenke, {}
         np.savez_compressed(
             pfad,
             punkte=p.astype(np.float32),
@@ -79,6 +117,7 @@ class Bildmodellzielproportionen:
                 'vorher': round(b['vorher'] * 100, 1),
                 'ziel': round(b['ziel'] * 100, 1),
                 'nachher': round(b['nachher'] * 100, 1) if b.get('nachher') is not None else None,
+                'quelle': quelle.get(k),
             }
             for k, b in bericht.items()
         }

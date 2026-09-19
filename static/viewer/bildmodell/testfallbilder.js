@@ -9,7 +9,7 @@
  * wie in der Szene), feine Stufe und alle Texturen abgewartet, dann je
  * Ansicht eine Kamera (Perspektive 30°, wie ein Porträtobjektiv) auf einen
  * Bereich, den das Skelett vorgibt: ganzer Körper (vorn, Seite, hinten,
- * dreiviertel), Kopf (vorn, Seite), Hände, Füße, Oberkörper, Rücken. Jedes
+ * dreiviertel), Kopf (vorn, Seite), je Hand, Füße, Oberkörper, Rücken. Jedes
  * Bild geht als JPG (`<figur>_<ansicht>.jpg`) über `bilderHochladen` in den
  * Auftrag; die Sichtung ordnet es dann wie ein Foto ein. Der Lauf kennt die
  * Referenz nicht — er sieht nur Bilder.
@@ -28,7 +28,8 @@ export class Testfallbilder {
         { name: 'dreiviertel', grad: 40, bereich: 'koerper', b: 1200, h: 1600 },
         { name: 'kopf_vorn', grad: 0, bereich: 'kopf', b: 1200, h: 1200 },
         { name: 'kopf_seite', grad: 90, bereich: 'kopf', b: 1200, h: 1200 },
-        { name: 'haende', grad: 0, bereich: 'haende', b: 1600, h: 1000 },
+        { name: 'hand_l', grad: 0, bereich: 'hand_l', b: 1000, h: 1000 },
+        { name: 'hand_r', grad: 0, bereich: 'hand_r', b: 1000, h: 1000 },
         { name: 'fuesse', grad: 0, bereich: 'fuesse', b: 1400, h: 1000 },
         { name: 'oberkoerper', grad: 0, bereich: 'oberkoerper', b: 1200, h: 1200 },
         { name: 'ruecken', grad: 180, bereich: 'oberkoerper', b: 1200, h: 1200 },
@@ -95,11 +96,11 @@ export class Testfallbilder {
                 const m = mitte('head') || new THREE.Vector3(0, H * 0.93, 0);
                 return { mitte: m.clone().add(new THREE.Vector3(0, H * 0.04, 0)), hoehe: H * 0.24 };
             }
-            case 'haende': {
-                const m = mitte('l_hand', 'r_hand') || new THREE.Vector3(0, H * 0.45, 0);
-                const l = p('l_hand'), r = p('r_hand');
-                const breite = l && r ? l.distanceTo(r) + H * 0.12 : H * 0.6;
-                return { mitte: m, hoehe: breite * 1000 / 1600, breite };
+            case 'hand_l':
+            case 'hand_r': {
+                // Handwurzel plus ein halbes Handmaß nach unten: die Finger hängen in der A-Pose.
+                const m = p(`${art.slice(-1)}_hand`) || new THREE.Vector3(art === 'hand_l' ? 0.35 : -0.35, H * 0.45, 0);
+                return { mitte: m.clone().add(new THREE.Vector3(0, -H * 0.06, 0)), hoehe: H * 0.24 };
             }
             case 'fuesse': {
                 const m = mitte('l_foot', 'r_foot') || new THREE.Vector3(0, H * 0.05, 0);

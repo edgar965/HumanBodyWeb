@@ -1,9 +1,11 @@
 /* Modell aus Dateien — Bildkacheln mit drei Boxen, Ersetzen/Löschen, Testfall-Leiste (19.09.2026). */
 
 /* Steller unter der Kachel: zwei Zeilen Auswahl, Textur, Knöpfe. */
-.bildmodell-steller { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; }
-.bildmodell-stellerzeile { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.bildmodell-stellerzeile select { flex: 1 1 0; min-width: 0; font-size: 0.78rem; }
+.bildmodell-steller { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; min-width: 0; }
+/* Die Zeile ist Flex-Kind einer Spalte: ohne `min-width: 0` wächst sie auf die Breite
+   ihrer beiden Auswahlfelder (323 px) und ragt aus der 220-px-Kachel (19.09.2026). */
+.bildmodell-stellerzeile { display: flex; align-items: center; gap: 6px; min-width: 0; width: 100%; }
+.bildmodell-stellerzeile select { flex: 1 1 0; width: 0; min-width: 0; font-size: 0.78rem; }
 .bildmodell-stellerzeile input[type="range"] { width: 64px; flex: 0 0 auto; }
 .bildmodell-gewicht { width: 24px; text-align: right; flex: 0 0 auto; }
 .bildmodell-stellerknoepfe { justify-content: space-between; margin-top: 2px; }

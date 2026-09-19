@@ -7,7 +7,9 @@ POST /api/bildmodell/<id>/bild/<datei>/loeschen/      ein Ausschnitt (Original, 
 
 Antwort jeweils der ganze Zustand (`Bildmodellendpunkte._zustand`) — die
 Seite zeichnet Bereiche und die Liste „noch nicht gesichtet" daraus neu.
-Läuft der Auftrag, wird nichts angefasst (409).
+Läuft der Auftrag, wird nichts angefasst (409); hält Windows eine Datei
+gerade gesperrt (sie wird noch ausgeliefert), kommt 409 mit der Bitte, es
+noch einmal zu versuchen (`Bildmodelldateien` wartet vorher 1,5 s).
 """
 
 import logging
@@ -40,6 +42,11 @@ class Bildmodelldateiendpunkte:
         return JsonResponse({'ok': True, **Bildmodellendpunkte._zustand(job)})
 
     @staticmethod
+    def _gesperrt(fehler):
+        text = 'Datei ist gerade in Gebrauch — bitte noch einmal: %s' % fehler
+        return JsonResponse({'error': text}, status=409)
+
+    @staticmethod
     @require_POST
     def original_ersetzen(request, job_id, name):
         job, fehler = Bildmodelldateiendpunkte._frei(job_id)
@@ -54,7 +61,10 @@ class Bildmodelldateiendpunkte:
         datei = request.FILES.get('bild')
         if datei is None or not Bildmodellablage.ist_eingang(datei.name):
             return JsonResponse({'error': 'Keine Bild- oder Videodatei im Feld „bild"'}, status=400)
-        neu = Bildmodelldateien(job, ablage).original_ersetzen(name, datei)
+        try:
+            neu = Bildmodelldateien(job, ablage).original_ersetzen(name, datei)
+        except PermissionError as fehler:
+            return Bildmodelldateiendpunkte._gesperrt(fehler)
         antwort = Bildmodelldateiendpunkte._antwort(job)
         logger.info('Bildmodell %s: %s → %s', job.kennung, name, neu)
         return antwort
@@ -72,7 +82,10 @@ class Bildmodelldateiendpunkte:
             raise Http404('Pfad') from None
         if not vorhanden and not Bildmodelldateien(job, ablage).eintraege_zu(name):
             raise Http404('Kein Original %s' % name)
-        Bildmodelldateien(job, ablage).original_entfernen(name)
+        try:
+            Bildmodelldateien(job, ablage).original_entfernen(name)
+        except PermissionError as fehler:
+            return Bildmodelldateiendpunkte._gesperrt(fehler)
         return Bildmodelldateiendpunkte._antwort(job)
 
     @staticmethod
@@ -83,5 +96,8 @@ class Bildmodelldateiendpunkte:
             return fehler
         if job.bild(datei) is None:
             raise Http404('Kein Bild %s' % datei)
-        Bildmodelldateien(job, Bildmodellablage(job.kennung)).bild_entfernen(datei)
+        try:
+            Bildmodelldateien(job, Bildmodellablage(job.kennung)).bild_entfernen(datei)
+        except PermissionError as fehler:
+            return Bildmodelldateiendpunkte._gesperrt(fehler)
         return Bildmodelldateiendpunkte._antwort(job)

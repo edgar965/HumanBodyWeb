@@ -44,13 +44,24 @@ haengen an der Herkunft. Wer bisher ueber `localhost` gearbeitet hat, findet
 seine gemerkten Reitereinstellungen einmalig nicht wieder — sie liegen unter
 der alten Herkunft. Ab dann ist es EINE Ablage statt zweier, die je nach
 Tippweise auseinanderliefen.
+
+BEIDE BETRIEBSARTEN (19.09.2026): Der Server stand — Ereignisschleife und
+Arbeitsfaden warteten aufeinander (`py-spy dump`: `ThreadSensitiveContext.
+__aexit__` gegen `AsyncToSync.__call__`), weil diese Middleware nur synchron
+war und Django den Rest der Kette in `async_to_sync` wickelte. Der Vorfall
+und der Rahmen stehen in `djangobase/middleware_basis.py`; hier braucht es
+den Rahmen von Hand, weil `ziel()` die Kette abbrechen darf.
 """
 
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.conf import settings
 from django.http import HttpResponseRedirect
 
 
 class Schnelleadresse:
+    sync_capable = True
+    async_capable = True
+
     #: Der Name, der ueber IPv6 in die Sackgasse laeuft.
     LANGSAM = 'localhost'
     #: Wohin stattdessen.
@@ -60,12 +71,22 @@ class Schnelleadresse:
 
     def __init__(self, get_response):
         self.get_response = get_response
+        if iscoroutinefunction(get_response):
+            markcoroutinefunction(self)
 
     def __call__(self, request):
+        if iscoroutinefunction(self):
+            return self.__acall__(request)
         ziel = self.ziel(request)
         if ziel:
             return HttpResponseRedirect(ziel)
         return self.get_response(request)
+
+    async def __acall__(self, request):
+        ziel = self.ziel(request)
+        if ziel:
+            return HttpResponseRedirect(ziel)
+        return await self.get_response(request)
 
     def ziel(self, request):
         """Die Adresse, auf die weiterzuleiten ist — oder `None`."""

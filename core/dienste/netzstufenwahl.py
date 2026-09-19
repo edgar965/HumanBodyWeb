@@ -27,14 +27,29 @@ Anfrage darf ihre Stufe selbst nennen (`?stufen=0` … `3`) — der Browser holt
 die Genesis-Figur erst als Käfig (Stufe 0) und dann mit der gewählten
 Stufe nach (`gemeinsam/genesis9aufbau.js`). Die Anfrage schlägt den Keks;
 0 heißt Käfig (nur Genesis 9 unterscheidet 0 von 1).
+
+BEIDE BETRIEBSARTEN (19.09.2026): Als letztes eigenes Glied vor den
+asynchronen djangoBase-Middlewares war diese hier der Punkt, an dem Django
+den Rest der Kette in `async_to_sync` wickelte — und beim Abbruch einer
+Anfrage (Browser weg, Bilder noch unterwegs) schloss sich der Ring: die
+Ereignisschleife wartete im `ThreadSensitiveContext.__aexit__` auf den
+Faden, der Faden in Zeile `return self.get_response(request)` auf die
+Schleife. Der Server antwortete auf NICHTS mehr (15:33 bis Neustart).
+Vorfall und Rahmen: `djangobase/middleware_basis.py`. Die Kontextvariable
+trägt asgiref in den Arbeitsfaden der synchronen Ansicht (`copy_context`).
 """
 import contextvars
+
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 
 __all__ = ['Netzstufenwahl']
 
 
 class Netzstufenwahl:
     u"""Django-Middleware und Leser des Kekses `netzstufen`."""
+
+    sync_capable = True
+    async_capable = True
 
     KEKS = 'netzstufen'
     MINI, MAXI = 1, 3
@@ -44,16 +59,30 @@ class Netzstufenwahl:
 
     def __init__(self, get_response):
         self.get_response = get_response
+        if iscoroutinefunction(get_response):
+            markcoroutinefunction(self)
 
     def __call__(self, request):
-        gewaehlt = self.aus_anfrage(request.GET)
-        if gewaehlt is None:
-            gewaehlt = self.aus_cookies(request.COOKIES)
-        marke = self._gewaehlt.set(gewaehlt)
+        if iscoroutinefunction(self):
+            return self.__acall__(request)
+        marke = self._stellen(request)
         try:
             return self.get_response(request)
         finally:
             self._gewaehlt.reset(marke)
+
+    async def __acall__(self, request):
+        marke = self._stellen(request)
+        try:
+            return await self.get_response(request)
+        finally:
+            self._gewaehlt.reset(marke)
+
+    def _stellen(self, request):
+        gewaehlt = self.aus_anfrage(request.GET)
+        if gewaehlt is None:
+            gewaehlt = self.aus_cookies(request.COOKIES)
+        return self._gewaehlt.set(gewaehlt)
 
     @classmethod
     def aus_cookies(cls, cookies):

@@ -51,8 +51,16 @@ aber erst nach Ruecksprache, nicht als Nebenwirkung einer Fehlerbehebung.
 """
 
 
-class Datenfrische:
-    """`Cache-Control: no-store` fuer alles unter `/api/`."""
+from djangobase.middleware_basis import ZweiwegMiddleware
+
+
+class Datenfrische(ZweiwegMiddleware):
+    """`Cache-Control: no-store` fuer alles unter `/api/`.
+
+    Auf dem djangoBase-Rahmen (19.09.2026), damit sie synchron UND asynchron
+    laeuft — eine nur synchrone Middleware vor den asynchronen aus djangoBase
+    schloss den Ring, in dem der Server stand (`middleware_basis.py`).
+    """
 
     #: Was als Datenweg gilt. Bewusst der Pfad und nicht der Inhaltstyp:
     #: Die Seiten liefern ihre Vorlagen als `text/html`, und `djangobase`
@@ -62,20 +70,18 @@ class Datenfrische:
 
     WERT = 'no-store, no-cache, must-revalidate'
 
-    def __init__(self, get_response):
-        self.get_response = get_response
+    #: Ein Fehler hier waere ein Programmfehler — nicht verschlucken.
+    fehler_schlucken = False
 
-    def __call__(self, request):
-        antwort = self.get_response(request)
+    def nachbereiten(self, request, antwort):
         if not request.path.startswith(Datenfrische.PRAEFIXE):
-            return antwort
+            return
         # Ein Endpunkt, der seine Frische selbst regelt, behaelt sie: Es
         # gibt Antworten, die absichtlich lange gelten (ausgelieferte
         # Netze mit Fingerabdruck im Pfad). Ueberschreiben hiesse, deren
         # Entscheidung stillschweigend zu kassieren.
         if antwort.has_header('Cache-Control'):
-            return antwort
+            return
         antwort['Cache-Control'] = Datenfrische.WERT
         antwort['Pragma'] = 'no-cache'
         antwort['Expires'] = '0'
-        return antwort

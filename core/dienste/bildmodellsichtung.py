@@ -189,7 +189,7 @@ class Bildmodellsichtung:
             neu.append(eintrag)
         neu.sort(
             key=lambda e: (
-                self.KATEGORIEN.index(e['kategorie']) if e['kategorie'] in self.KATEGORIEN else 9,
+                self.KATEGORIEN.index(e.get('kategorie')) if e.get('kategorie') in self.KATEGORIEN else 9,
                 -float(e.get('gewicht') or 0),
                 e['datei'],
             )

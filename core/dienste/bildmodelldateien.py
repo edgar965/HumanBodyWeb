@@ -24,6 +24,7 @@ zum nächsten Lauf.
 
 import logging
 import os
+import time
 
 logger = logging.getLogger('core')
 
@@ -47,6 +48,10 @@ class Bildmodelldateien:
 
     # ---------------------------------------------------------- Löschen
 
+    #: Windows hält eine Datei, die gerade ausgeliefert wird (`FileResponse`), kurz gesperrt.
+    VERSUCHE = 6
+    WARTEN_S = 0.25
+
     def _weg(self, unterordner, name):
         if not name:
             return
@@ -54,8 +59,16 @@ class Bildmodelldateien:
             pfad = self.ablage.datei(unterordner, name)
         except ValueError:
             return
-        if pfad.is_file():
-            pfad.unlink()
+        for versuch in range(self.VERSUCHE):
+            if not pfad.is_file():
+                return
+            try:
+                pfad.unlink()
+                return
+            except PermissionError:
+                if versuch == self.VERSUCHE - 1:
+                    raise
+                time.sleep(self.WARTEN_S)
 
     def _eintrag_dateien_weg(self, eintrag):
         """Ausschnitt und Schätzernetze eines Eintrags."""
@@ -71,7 +84,7 @@ class Bildmodelldateien:
             for k in ('posed_vertices_path', 'flame_vertices_path'):
                 if s.get(k):
                     self._weg(self.ablage.SCHAETZUNG, os.path.basename(s[k]))
-        for anhang in ('_posed.npy', '_flame.npy'):
+        for anhang in ('_posed.npy', '_flame.npy', '_gesicht_posed.npy', '_gesicht_flame.npy'):
             self._weg(self.ablage.SCHAETZUNG, stamm + anhang)
 
     def _eintraege_weg(self, eintraege):
