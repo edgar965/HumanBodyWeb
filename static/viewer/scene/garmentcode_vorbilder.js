@@ -2,6 +2,7 @@ import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
 import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { garmentcodePreset } from './garmentcode_preset.js';
+import { Gedaechtniswahl } from '../gemeinsam/gedaechtniswahl.js';
 
 /**
  * Vorbilder — die Bibliotheksstücke als Knöpfe unter den Voreinstellungen.
@@ -243,13 +244,23 @@ export class GarmentcodeVorbilder {
                 continue;
             }
             // Nur Pfade, die es in DIESER Vorlage gibt. Ein Pfad ohne Regler
-            // ginge stumm an den Server und würde dort verworfen.
-            if (!(pfad in garmentcodeRegler.vorgaben)) continue;
+            // ginge stumm an den Server und würde dort verworfen — die
+            // Bausteine (`meta.*`) haben keinen Regler und gehören trotzdem
+            // dazu (20.09.2026, Edgar: „ich habe ein Höschen bauen wollen,
+            // du erzeugst aber eine Unterwäsche Oberteil???" — der String
+            // brachte `meta.bottom: Pants` mit, hier fiel es weg, und der
+            // Server nahm die Vorgabe der Unterwäsche: den BH).
+            if (!Gedaechtniswahl.reglerwert(pfad, garmentcodeRegler.vorgaben)) continue;
             garmentcodeRegler.werte[pfad] = wert;
             if (garmentcodeRegler.nachziehen[pfad]) {
                 garmentcodeRegler.nachziehen[pfad](wert);
             }
             gesetzt += 1;
+        }
+        // Auch die neuen Werte gegen die Häkchen halten: Ein Höschen-Vorbild
+        // nimmt dem BH sein Häkchen (sein Kern `meta.upper` stimmt nicht mehr).
+        for (const pfad of Object.keys(werte)) {
+            garmentcodePreset.pruefen(pfad, (p) => garmentcodeRegler.wertVon(p));
         }
         return gesetzt;
     }

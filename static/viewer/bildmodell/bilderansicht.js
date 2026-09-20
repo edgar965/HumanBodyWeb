@@ -52,8 +52,10 @@ export class Bilderansicht {
         Texturwahl.zusammenfassung(zustand);
         const bilder = zustand.bilder || [];
         const neue = zustand.neue || [];
-        const stand = JSON.stringify(bilder.map(b => [b.datei, b.kategorie, b.ansicht, b.teil, b.nutzung, b.gewicht, b.manuell, b.textur_an]))
-            + '|' + (zustand.originale || []).join(',') + '|' + neue.join(',') + '|' + this.rigWahl + '|' + zustand.status;
+        const stand = JSON.stringify(bilder.map(b => [b.datei, b.kategorie, b.ansicht, b.teil, b.nutzung, b.gewicht, b.manuell, b.textur_an,
+            b.gvhmr ? (b.gvhmr.stand || b.gvhmr.fehler) : '']))
+            + '|' + (zustand.originale || []).join(',') + '|' + neue.join(',') + '|' + this.rigWahl + '|' + zustand.status
+            + '|' + zustand.schritt + '|' + ((zustand.optionen || {}).gvhmr_bild || '');
         if (stand === this._stand) return;
         this._stand = stand;
         this._neue(zustand, neue);

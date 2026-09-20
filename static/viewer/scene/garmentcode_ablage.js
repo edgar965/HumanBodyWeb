@@ -45,11 +45,13 @@ export class GarmentcodeAblage {
      * @param stueck  Name der Vorlage, z. B. `hose`
      * @param netz    die Antwort von `/api/garmentcode/drapieren/`
      */
-    static merken(inst, stueck, netz) {
+    static merken(inst, stueck, netz, titel = null) {
         if (!inst || !stueck || !netz?.rig_url) return false;
         if (!inst.gcStuecke) inst.gcStuecke = {};
         inst.gcStuecke[GarmentcodeAnziehen.schluessel(stueck)] = {
             stueck,
+            // Der bestellte Name (Vorbild/Form) — kommt mit der Szene zurück.
+            titel: titel || null,
             rig_url: netz.rig_url,
             // Der Ordner ist für die Stoffvorschau nötig; sie bindet daraus
             // die Ergebnisdatei (`Stoffnachfuehrung.netzpfad`).
@@ -126,9 +128,10 @@ export class GarmentcodeAblage {
             if (!eintrag?.stueck || !eintrag?.rig_url) continue;
             try {
                 await GarmentcodeAnziehen.anziehen(
-                    inst, eintrag.rig_url, eintrag.stueck);
+                    inst, eintrag.rig_url, eintrag.stueck, eintrag.titel || null);
                 inst.gcStuecke[GarmentcodeAnziehen.schluessel(eintrag.stueck)] = {
                     stueck: eintrag.stueck,
+                    titel: eintrag.titel || null,
                     rig_url: eintrag.rig_url,
                     ordner: eintrag.ordner || null,
                 };

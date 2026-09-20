@@ -170,6 +170,22 @@ class ReitergedaechtnisTest(SimpleTestCase):
         self.assertIn('garmentcodeRegler.zuruecksetzen(alt)', rumpf)
         self.assertIn('garmentcodePreset.pruefen(pfad', rumpf)
 
+    def test_ein_vorbild_bringt_seine_bausteine_mit(self):
+        """Edgar, 20.09.2026: „ich habe ein Höschen bauen wollen, du erzeugst
+        aber eine Unterwäsche Oberteil???" — `meta.*` hat keinen Regler und
+        steht nicht in `vorgaben`; `pfad in vorgaben` warf `meta.bottom:
+        Pants` weg, der Server nahm die Vorgabe (BH). `Gedaechtniswahl.
+        reglerwert` laesst die Bausteine durch — dieselbe Regel wie beim
+        Wiederherstellen (`garmentcode_gedaechtnis.js`)."""
+        quelle = ReitergedaechtnisTest._quelle('scene/garmentcode_vorbilder.js')
+        rumpf = quelle.split('static _reglerStellen(')[1]
+        self.assertIn('Gedaechtniswahl.reglerwert(pfad, garmentcodeRegler.vorgaben)', rumpf)
+        self.assertNotIn('pfad in garmentcodeRegler.vorgaben', rumpf)
+        self.assertIn("import { Gedaechtniswahl } from '../gemeinsam/gedaechtniswahl.js'", quelle)
+        # und die neuen Werte nehmen dem BH sein Haekchen
+        nach = rumpf.split('gesetzt += 1;')[1]
+        self.assertIn('garmentcodePreset.pruefen(pfad', nach)
+
     @staticmethod
     def _quelle(pfad):
         return open(settings.BASE_DIR / 'static' / 'viewer' / pfad, encoding='utf-8').read()

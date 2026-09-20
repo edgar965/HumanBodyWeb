@@ -80,7 +80,9 @@ class KombilisteBauTest(SimpleTestCase):
 
     def test_uebernehmen_gibt_die_bauregler_mit(self):
         kombi = _lies('static', 'viewer', 'scene', 'garmentcode_kombi.js')
-        self.assertIn('GarmentcodeBauregler.werte(), material)', kombi)
+        # Beide Wege — neu in die Liste und Ersetzen (20.09.2026) — geben die
+        # Bauregler mit.
+        self.assertEqual(kombi.count('GarmentcodeBauregler.werte(),'), 2, kombi.count('GarmentcodeBauregler.werte(),'))
         bauregler = _lies('static', 'viewer', 'scene', 'garmentcode_bauregler.js')
         self.assertIn('static werte()', bauregler)
 
@@ -103,11 +105,8 @@ class KombilisteBauTest(SimpleTestCase):
         # und „Uebernehmen" nimmt das Aussehen vom getragenen Stueck, nicht
         # den Panel-Stand, der fuer alle Stuecke derselbe ist
         kombi = _lies('static', 'viewer', 'scene', 'garmentcode_kombi.js')
-        self.assertIn(
-            'GarmentcodeMaterial.getragen(\n            GarmentcodeMaterial.figur(), vorlage) '
-            '|| GarmentcodeMaterial.stand',
-            kombi,
-        )
+        self.assertIn('const getragen = GarmentcodeMaterial.getragen(GarmentcodeMaterial.figur(), vorlage);', kombi)
+        self.assertIn('getragen || GarmentcodeMaterial.stand', kombi)
 
     def test_nur_die_juengste_reglerantwort_zeichnet(self):
         """Zwei Anfragen in der Luft (Seitenstart: Vorgabe + gemerkte

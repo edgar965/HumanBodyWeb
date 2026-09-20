@@ -16,10 +16,11 @@ import { Materialziel } from './materialziel.js';
  * Auf das ANGEKLICKTE Stück, wie im Kleider-Reiter — ein GarmentCode-Stück
  * ist seit dem 08.09.2026 ein eigenes Objekt in `clothMeshes` und damit
  * auswählbar. Ist keines ausgewählt, wirkt ein Regler, den der NUTZER
- * bedient, auf alle GarmentCode-Stücke der Figur (12.09.2026, Edgar:
- * „ändere ich das Gewebe, oder andere Einstellungen, tut sich nichts" —
- * die Überschrift versprach es, der Code tat es nicht). Der Stand wird
- * dazu GEMERKT und gilt für das nächste Stück, das gebaut wird.
+ * bedient, auf das Stück der GEWÄHLTEN VORLAGE (seit 20.09.2026, Edgar:
+ * „möchte ein T-Shirt erzeugen, sobald ich die Farbe eingeben will, wird
+ * die Farbe der Leggings geändert" — vom 12.09. bis dahin auf alle Stücke
+ * der Figur). Der Stand wird dazu GEMERKT und gilt für das nächste Stück,
+ * das gebaut wird.
  *
  * VOM 09. BIS 12.09.2026 FASSTE ER OHNE AUSWAHL NICHTS AN, davor galt er
  * ohne Auswahl für alle `gc_*`-Netze — und das war der Fehler hinter zwei
@@ -90,7 +91,8 @@ export class GarmentcodeMaterial {
         const inst = figur?.inst || figur;
         const netze = Materialziel.netze({
             gewaehlt: GarmentcodeMaterial.gewaehltesStueck(inst),
-            stuecke: inst?.clothMeshes, nutzer });
+            stuecke: inst?.clothMeshes, nutzer,
+            aktuell: GarmentcodeAnziehen.schluessel(GarmentcodeMaterial.vorlage()) });
         let gesetzt = 0;
         for (const netz of netze) {
             gesetzt += GarmentcodeMaterial._auflegen(netz, werte);
@@ -189,6 +191,11 @@ export class GarmentcodeMaterial {
     static figur() {
         return GarmentcodeMaterial.figurgeber
             ? GarmentcodeMaterial.figurgeber() : null;
+    }
+
+    /** Die im Reiter gewählte Vorlage — das Stück, das der Nutzer meint. */
+    static vorlage() {
+        return document.getElementById('gc-vorlage')?.value || '';
     }
 
     /** Der Name eines Stücks — für Aufrufer, die nur den Schlüssel haben. */

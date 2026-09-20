@@ -7,24 +7,35 @@
  * Nebenbild-Typ, dritte nur Textur?"
  *
  * Drei Auswahlfelder aus `katalog.bildtypen` (`Bildmodellbildtypen`):
- * Hauptbild (Körper vorn/Seite/hinten/dreiviertel, Kopf vorn/Seite, Video),
- * Nebenbild (Körperteil: Hände, Gesicht, Oberkörper, Rücken, Hüfte, Arme,
- * Beine, Füße; Gruppe; ohne Befund) und Nutzung (Form und Textur / nur Form /
- * nur Textur / aus). Die ersten beiden schließen sich aus — wer ein Hauptbild
- * wählt, leert das Nebenbild und umgekehrt; der Server schreibt Kategorie,
- * Ansicht und Teil. Dazu Gewicht, das Textur-Häkchen (`Texturwahl`),
+ * Bildtyp (Körper vorn/Seite/hinten/dreiviertel, Kopf vorn/Seite/hinten,
+ * Video), zweite Box mit den Gruppen „Hauptbild" (Hauptbild vorn/hinten/
+ * seitlich, Kopf-Hauptbild vorn/hinten/seitlich — Edgar, 20.09.2026: nur
+ * die markierten bauen den Körper, `Bildmodellhauptgewicht`) und
+ * „Nebenbild" (Körperteil: Hände, Gesicht, Oberkörper, Rücken, Hüfte, Arme,
+ * Beine, Füße; Gruppe; ohne Befund), und Nutzung (Form und Textur / nur Form /
+ * nur Textur / aus). Typ und Nebenbild schließen sich aus — wer einen Typ
+ * wählt, leert das Nebenbild und umgekehrt; ein Hauptbild setzt den Typ mit.
+ * Der Server schreibt Kategorie, Ansicht, Teil und Markierung. Dazu Gewicht, das Textur-Häkchen (`Texturwahl`),
  * „Ersetzen" (Datei wählen → `original/<quelle>/ersetzen/`, alle Ausschnitte
- * dieser Quelle gehen mit) und „Löschen" (`bild/<datei>/loeschen/`).
+ * dieser Quelle gehen mit), „SMPL (GVHMR)" (`Gvhmrknopf`, 20.09.2026) und
+ * „Löschen" (`bild/<datei>/loeschen/`).
  */
 import { Texturwahl } from './texturwahl.js';
+import { Gvhmrknopf } from './gvhmrknopf.js';
+import { Flameknopf } from './flameknopf.js';
+import { Freisteller } from './freisteller.js';
 
 export class Bildsteller {
 
     static DATEIEN = '.jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.mp4,.mov,.webm,.mkv,.avi,.m4v';
+    static _freisteller = null;   // EIN Fenster je Seite (Tabelle und Kacheln teilen es)
 
     constructor(auftrag, katalog) {
         this.auftrag = auftrag;
         this.typen = (katalog || {}).bildtypen || { haupt: [], neben: [], nutzung: [] };
+        this.gvhmr = new Gvhmrknopf(auftrag);
+        this.flame = new Flameknopf(auftrag);   // „Kopf (FLAME)" an Kopfbildern (20.09.2026)
+        this.freisteller = Bildsteller._freisteller || (Bildsteller._freisteller = new Freisteller(auftrag));
     }
 
     /** Das Feld unter der Kachel des Eintrags `b`. */
@@ -45,11 +56,19 @@ export class Bildsteller {
     _auswahl(liste, wert, titel, beiWahl) {
         const wahl = document.createElement('select');
         wahl.title = titel;
+        const gruppen = new Map();
         for (const e of liste) {
             const o = document.createElement('option');
             o.value = e.wert; o.textContent = e.anzeige; o.selected = e.wert === wert;
             if (e.erklaerung) o.title = e.erklaerung;
-            wahl.appendChild(o);
+            if (!e.gruppe) { wahl.appendChild(o); continue; }
+            if (!gruppen.has(e.gruppe)) {
+                const g = document.createElement('optgroup');
+                g.label = e.gruppe;
+                gruppen.set(e.gruppe, g);
+                wahl.appendChild(g);
+            }
+            gruppen.get(e.gruppe).appendChild(o);
         }
         wahl.addEventListener('change', () => beiWahl(wahl.value));
         return wahl;
@@ -62,9 +81,15 @@ export class Bildsteller {
         return `${k}/${['vorne', 'seite', 'hinten', 'dreiviertel', 'drehung'].includes(ansicht) ? ansicht : 'vorne'}`;
     }
 
+    static hauptbild(b) {
+        if (!b.hauptbild || !['koerper', 'kopf'].includes(b.kategorie)) return '';
+        if (!['vorne', 'hinten', 'seite'].includes(b.ansicht)) return '';
+        return `haupt/${b.kategorie === 'kopf' ? 'kopf-' : ''}${b.ansicht}`;
+    }
+
     static neben(b) {
         const k = b.kategorie || 'neben';
-        if (['koerper', 'kopf', 'video'].includes(k)) return '';
+        if (['koerper', 'kopf', 'video'].includes(k)) return Bildsteller.hauptbild(b);
         if (k !== 'neben') return k;
         return b.teil ? `neben/${b.teil}` : 'neben';
     }
@@ -76,11 +101,11 @@ export class Bildsteller {
         const zeile = document.createElement('div');
         zeile.className = 'bildmodell-stellerzeile';
         const haupt = this._auswahl(this.typen.haupt, Bildsteller.haupt(b),
-            'Hauptbild — Körperbilder gehen an den Schätzer, Kopfbilder an FLAME',
+            'Bildtyp — Körperbilder gehen an den Schätzer, Kopfbilder an FLAME',
             wert => this.stellen(b.datei, { haupt: wert }));
-        const neben = this._auswahl(this.typen.neben.filter(e => e.wert !== '' || Bildsteller.haupt(b) === ''),
-            Bildsteller.neben(b),
-            'Nebenbild — Hände liefern die Fingerlänge, jedes Teil seine Fotofarbe',
+        const neben = this._auswahl(this.typen.neben, Bildsteller.neben(b),
+            'Hauptbild (nur die markierten bauen den Körper, das Kopf-Hauptbild den Kopf) oder Nebenbild '
+            + '(Hände liefern die Fingerlänge, jedes Teil seine Fotofarbe)',
             wert => this.stellen(b.datei, { neben: wert }));
         if (b.video) neben.disabled = true;
         zeile.append(haupt, neben);
@@ -115,7 +140,9 @@ export class Bildsteller {
     _knopfzeile(b) {
         const zeile = document.createElement('div');
         zeile.className = 'bildmodell-stellerzeile bildmodell-stellerknoepfe';
-        zeile.append(this.ersetzenKnopf(b.quelle || b.datei), this.loeschenKnopf(
+        const gvhmr = this.gvhmr.element(b) || this.flame.element(b);
+        const frei = this.freisteller.element(b);
+        zeile.append(this.ersetzenKnopf(b.quelle || b.datei), ...(gvhmr ? [gvhmr] : []), ...(frei ? [frei] : []), this.loeschenKnopf(
             `Bild ${b.datei} löschen?` + (b.quelle && b.quelle !== b.datei ? ' (Das Original bleibt, solange ein anderer Ausschnitt es braucht.)' : ''),
             () => this.auftrag.bildLoeschen(b.datei)));
         return zeile;

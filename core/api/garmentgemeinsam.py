@@ -54,21 +54,44 @@ class Garmentgemeinsamendpunkte:
         stuecke = Garmentgemeinsamendpunkte._stuecke(request)
         if not stuecke:
             return JsonResponse({'fehler': 'Keine Stücke angegeben'}, status=400)
+        # Die Kennung der Anfrage, unter der der Abbrechen-Knopf den
+        # Simulationsprozess findet (`GarmentCode.laufregister`).
+        from GarmentCode.laufregister import Laufregister
+
         try:
-            ergebnis = Garmentgemeinsam.lauf(
-                stuecke,
-                geschlecht=anfrage.geschlecht,
-                morphs=anfrage.morphs,
-                bauart=anfrage.bauart,
-                meta=anfrage.meta,
-            )
+            # Genesis 9 (20.09.2026, Edgar: „funktioniert auch nicht"): Der
+            # Browser schickt `figurart` und `regler_figur` wie beim Einzelbau
+            # — ohne diese Verzweigung baute der gemeinsame Weg auf der
+            # HumanBody-Figur, waehrend Kin in der Szene stand.
+            with Laufregister.lauf(request.POST.get('anfrage')):
+                if anfrage.figurart == 'genesis9':
+                    from GarmentCode.genesis9gemeinsam import Genesis9gemeinsam
+
+                    ergebnis = Genesis9gemeinsam.lauf(
+                        stuecke,
+                        anfrage.regler_figur or {},
+                        getragen=Garmentcode.getragene(request.POST.get('getragen')),
+                    )
+                else:
+                    ergebnis = Garmentgemeinsam.lauf(
+                        stuecke,
+                        geschlecht=anfrage.geschlecht,
+                        morphs=anfrage.morphs,
+                        bauart=anfrage.bauart,
+                        meta=anfrage.meta,
+                    )
         except (GemeinsamFehler, AblageFehler, DrapierFehler) as fehler:
             logger.warning('Gemeinsamer Lauf gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
         except Exception as fehler:  # noqa: BLE001
             logger.exception('Gemeinsamer Lauf: unerwarteter Fehler')
             return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
-        return JsonResponse(Garmentgemeinsamendpunkte._antwort(ergebnis))
+        antwort = Garmentgemeinsamendpunkte._antwort(ergebnis)
+        # Ein gemeinsamer Lauf dauert eine Minute — Zeit genug fuer einen
+        # Neustart des Dev-Servers (`garmentantwort.py`).
+        from .garmentantwort import Garmentantwort
+        Garmentantwort.ablegen(request.POST.get('anfrage'), antwort)
+        return JsonResponse(antwort)
 
     #: Was ein Stueck an Bauwerten mitbringen darf — dieselben Felder wie
     #: beim Einzelbau (`Baufeineinstellung.aus_anfrage`), hier je Stueck.
@@ -139,6 +162,7 @@ class Garmentgemeinsamendpunkte:
             stuecke.append(kopie)
         return {
             'stuecke': stuecke,
+            'figurart': ergebnis.get('figurart'),
             'punkte': ergebnis.get('punkte'),
             'dreiecke': ergebnis.get('dreiecke'),
             'dauer_s': ergebnis.get('dauer_s'),

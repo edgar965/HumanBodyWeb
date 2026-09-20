@@ -27,6 +27,7 @@ from .api.hauttexturen import Hauttexturen
 from .api.brauen import Brauenendpunkte
 from .api.g9figur import G9figur
 from .api.g9garderobe import G9garderobeapi
+from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9vorschau import G9vorschau
 from .api.g9stoff import G9stoffapi
 from .api.g9frisurapi import G9frisurapi
@@ -152,6 +153,8 @@ CHARAKTER = [
          name='g9_figur_posen'),
     path('api/character/genesis9-figur/garderobe/', G9garderobeapi.garderobe,
          name='g9_figur_garderobe'),
+    path('api/character/genesis9-figur/garderobe/kategorien/',
+         G9garderobekategorienapi.kategorien, name='g9_figur_garderobe_kategorien'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/netz/',
          G9garderobeapi.kleidnetz, name='g9_figur_kleidnetz'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/vorschau/',

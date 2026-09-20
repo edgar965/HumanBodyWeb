@@ -24,6 +24,14 @@ export class Katalogpflege {
             loeschen: '/api/character/katalog/modell/loeschen/',
             was: 'Modell',
         },
+        // Ein gespeichertes Genesis-9-Modell ist dieselbe Datei wie ein
+        // HumanBody-Modell (`data/models/<name>.json`, `quelle: genesis9`,
+        // `Modellablage`) — dieselben Endpunkte (20.09.2026).
+        genesis9: {
+            umbenennen: '/api/character/katalog/modell/umbenennen/',
+            loeschen: '/api/character/katalog/modell/loeschen/',
+            was: 'Modell',
+        },
     };
 
     /**

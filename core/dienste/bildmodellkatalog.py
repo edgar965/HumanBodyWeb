@@ -33,6 +33,9 @@ class Bildmodellkatalog:
                 'koerper',
                 'Körperschätzer',
                 [
+                    ('gvhmr', 'GVHMR (Standvideo je Bild)',
+                     'SMPL-X mit Rig und Weltlage je Körper-Hauptbild; Häkchen „Verwenden" in der Tabelle; '
+                     '~60 s je Bild beim ersten Mal, danach liest der Lauf das Ergebnis'),
                     ('smplest_x', 'SMPLest-X', 'SMPL-X aus jedem Hauptbild; 8-GB-Modell, ~45 s Laden'),
                     ('pymafx', 'PyMAF-X', 'SMPL-X mit FLAME-Gesichtsform; braucht den openpifpaf-Detektor'),
                     ('hmr2', 'HMR 2.0', 'SMPL (Körper); Gesicht neutral'),
@@ -77,11 +80,15 @@ class Bildmodellkatalog:
                 'mischung',
                 'Mehrere Hauptbilder',
                 [
+                    ('haupt', 'Nur die Hauptbilder',
+                     'Nur die in der zweiten Box markierten Hauptbilder (vorn/hinten/seitlich) bauen den '
+                     'Körper, der Kopf kommt vom Kopf-Hauptbild; ohne Markierung die ersten zwei '
+                     'Körperzeilen der Tabelle (Edgar, 20.09.2026)'),
                     ('median', 'Median', 'Je Parameter der mittlere Wert — unempfindlich gegen Ausreißer'),
                     ('mittel', 'Gewichtetes Mittel', 'Gewicht je Bild aus der Sichtung'),
                     ('bestes', 'Nur das beste Bild', 'Das Bild mit dem höchsten Gewicht und Zuversicht'),
                 ],
-                'median',
+                'haupt',
             ),
         ],
         'ziel': Bildmodellzielkatalog.FELDER,
@@ -99,6 +106,18 @@ class Bildmodellkatalog:
                     ('alle', 'Alle Formregler', 'dazu die Asymmetrie-Regler als Links-Rechts-Paare'),
                 ],
                 'charaktere',
+            ),
+            (
+                'kopffit',
+                'Kopf-Fit',
+                [
+                    ('an', 'Gesichtsregler auf den FLAME-Kopf',
+                     'Zweite Stufe nur auf den Kopfpunkten: Kopfregler des Satzes (mit „200 Plus '
+                     'Genesis 9 Edition": Brauen, Wangen, Nase, Mund, Kinn, Ohren, Kopfform), '
+                     'Körper bleibt wie gestellt (20.09.2026)'),
+                    ('aus', 'Aus', 'Nur die Körperstufe — der Kopf bleibt Grundfigur/Charaktermischung'),
+                ],
+                'an',
             ),
             (
                 'basis',
@@ -205,6 +224,7 @@ class Bildmodellkatalog:
             )
         aus[('gesicht', 'pymafx_flame')] = aus[('koerper', 'pymafx')]
         aus[('video', 'gvhmr')] = cls._gvhmr()
+        aus[('koerper', 'gvhmr')] = aus[('video', 'gvhmr')]
         cls._zustand = aus
         return aus
 

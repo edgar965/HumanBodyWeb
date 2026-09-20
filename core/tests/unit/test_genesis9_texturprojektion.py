@@ -20,8 +20,8 @@ selbst; hier die Bausteine ohne Daz-Bibliothek:
    Herkunft folgt dem größeren Gewicht, ungedeckte Texel bleiben leer.
    Sabotage: ohne Normalisierung über die Deckung zöge die Kachelkante Schwarz
    hinein — das Mittel im Innern eines Bilds bleibt hier auf ±2 %.
-4. `Bildmodellbildtypen.kamera_pruefen`: nur vollständige Zahlen; die
-   Vorgabe `kamera` läuft durch `vorgaben_pruefen`.
+4. `Bildmodellbildvorgaben.kamera`: nur vollständige Zahlen; die
+   Vorgabe `kamera` läuft durch `Bildmodellbildvorgaben.pruefen`.
 """
 
 import unittest
@@ -30,7 +30,7 @@ import numpy as np
 from Genesis9.bildkamera import G9bildkamera
 from Genesis9.gesichtslandmarken import G9gesichtslandmarken
 
-from core.dienste.bildmodellbildtypen import Bildmodellbildtypen
+from core.dienste.bildmodellbildvorgaben import Bildmodellbildvorgaben
 from core.tests.unit._wrappersuchpfad import Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
@@ -165,15 +165,15 @@ class TexturmischungTest(unittest.TestCase):
 class KameravorgabeTest(unittest.TestCase):
     def test_5_kamera_pruefen(self):
         gut = _browserkamera()
-        k = Bildmodellbildtypen.kamera_pruefen(gut)
+        k = Bildmodellbildvorgaben.kamera(gut)
         self.assertEqual((k['breite'], k['hoehe'], k['fov']), (1200, 1600, 30.0))
         self.assertEqual(len(k['matrix']), 16)
         self.assertEqual(k['figur'][0], 1.0)
-        self.assertIsNone(Bildmodellbildtypen.kamera_pruefen({**gut, 'matrix': gut['matrix'][:15]}))
-        self.assertIsNone(Bildmodellbildtypen.kamera_pruefen({**gut, 'fov': 'breit'}))
-        self.assertIsNone(Bildmodellbildtypen.kamera_pruefen({**gut, 'breite': 0}))
-        self.assertIsNone(Bildmodellbildtypen.kamera_pruefen('nein'))
-        aus = Bildmodellbildtypen.vorgaben_pruefen({'a.jpg': {'neben': 'neben/gesicht', 'kamera': gut}},
+        self.assertIsNone(Bildmodellbildvorgaben.kamera({**gut, 'matrix': gut['matrix'][:15]}))
+        self.assertIsNone(Bildmodellbildvorgaben.kamera({**gut, 'fov': 'breit'}))
+        self.assertIsNone(Bildmodellbildvorgaben.kamera({**gut, 'breite': 0}))
+        self.assertIsNone(Bildmodellbildvorgaben.kamera('nein'))
+        aus = Bildmodellbildvorgaben.pruefen({'a.jpg': {'neben': 'neben/gesicht', 'kamera': gut}},
                                                    ['a.jpg'])
         self.assertEqual(aus['a.jpg']['neben'], 'neben/gesicht')
         self.assertEqual(aus['a.jpg']['kamera']['hoehe'], 1600)

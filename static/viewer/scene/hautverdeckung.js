@@ -34,6 +34,7 @@
 import { Hautmaske } from '../gemeinsam/hautmaske.js';
 import { Figurhaut } from '../gemeinsam/figurhaut.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
+import { Skelettereignis } from '../gemeinsam/skelettereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
@@ -78,16 +79,28 @@ export class Hautverdeckung extends Figurhaut {
         return { verdeckt: 0, dreiecke: 0, stuecke: 0, ms: 0 };
     }
 
-    /** Die Stücke der Figur, jedes in der Lage des Körpers (Ruhelage). */
+    /**
+     * Die Stücke der Figur, jedes in der Lage des Körpers (Ruhelage). Ein
+     * Daz-Stück zählt nur als Kleidung (`userData.art`, 20.09.2026): unter
+     * Haar und Requisiten bleibt die Haut — ein Strang- oder Kartenhaar
+     * verdeckt keine Kopfhaut, ein Dolch keine Hand.
+     */
     static stoffe(inst) {
         const aus = [];
         for (const [schluessel, netz] of Object.entries(inst?.clothMeshes || {})) {
             const g = netz?.geometry;
             if (!g?.attributes?.position || !g.index) continue;
+            if (!Hautverdeckung.zaehlt(netz)) continue;
             aus.push({ schluessel, punkte: g.attributes.position.array,
                        dreiecke: Hautverdeckung.vollerIndex(g) });
         }
         return aus;
+    }
+
+    /** Ohne `art` (GarmentCode, MakeHuman, UMA) wie bisher; mit `art` nur `kleidung`. */
+    static zaehlt(netz) {
+        const art = netz?.userData?.art;
+        return !art || art === 'kleidung';
     }
 
     /** Ruhezeit nach der letzten Meldung; `_ausstehend`: inst -> Zeitgeber. */
@@ -105,15 +118,20 @@ export class Hautverdeckung extends Figurhaut {
     static einhaengen() {
         // Mit Ruhezeit (19.09.2026): Ein Umbau der Genesis-9-Figur holt Körper und
         // jedes Daz-Stück einzeln — jede Ankunft meldet, gerechnet wird EINMAL danach.
-        Stueckereignis.hoeren(({ inst }) => {
-            if (!inst) return;
-            clearTimeout(Hautverdeckung._ausstehend.get(inst));
-            Hautverdeckung._ausstehend.set(inst, setTimeout(() => {
-                Hautverdeckung._ausstehend.delete(inst);
-                try { Hautverdeckung.anwenden(inst); }
-                catch (fehler) { Protokoll.warnung('Hautverdeckung', fehler.message); }
-            }, Hautverdeckung.RUHE_MS));
-        });
+        Stueckereignis.hoeren(({ inst }) => Hautverdeckung.planen(inst));
+        // Auch ein frisches Skelett (neuer Körper, Käfig → feine Stufe, 20.09.2026):
+        // der neue Körper hat keine Maske, die Stücke melden sich nicht noch einmal.
+        Skelettereignis.hoeren(({ inst }) => Hautverdeckung.planen(inst));
+    }
+
+    static planen(inst) {
+        if (!inst) return;
+        clearTimeout(Hautverdeckung._ausstehend.get(inst));
+        Hautverdeckung._ausstehend.set(inst, setTimeout(() => {
+            Hautverdeckung._ausstehend.delete(inst);
+            try { Hautverdeckung.anwenden(inst); }
+            catch (fehler) { Protokoll.warnung('Hautverdeckung', fehler.message); }
+        }, Hautverdeckung.RUHE_MS));
     }
 }
 

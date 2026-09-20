@@ -1,4 +1,5 @@
 import { Dazachsen } from './dazachsen.js';
+import { Genesis9drehknochen } from './genesis9drehknochen.js';
 import { Gelenkformeln } from './gelenkformeln.js';
 import { Genesis9felder } from './genesis9felder.js';
 
@@ -58,6 +59,9 @@ export class Genesis9gelenke {
         const eintrag = Genesis9gelenke._eintrag(inst);
         if (!eintrag?.felder) return null;
         const { felder, knochen } = eintrag;
+        // Twist-Knochen ZUERST (20.09.2026 nachts, „der Arm ist kaputt"): sie
+        // nehmen am Gelenk einen Teil der Verdrehung ihres Glieds zurück.
+        Genesis9drehknochen.takt(eintrag.drehknochen);
         /** @type {Object<string, number[]>} */
         const winkel = {};
         for (const name of felder.graph.knochen) {
@@ -79,19 +83,29 @@ export class Genesis9gelenke {
         return werte;
     }
 
-    /** Die getragenen Stücke: Felder holen, sobald ein Stück neu ist, und Teil für Teil anwenden. */
+    /**
+     * Die getragenen Stücke: Felder holen, sobald ein Stück neu ist oder seine
+     * Passform (Länge/Weite) sich geändert hat, und Teil für Teil anwenden.
+     * Ein Stück mit Passform hat eigene Felder (20.09.2026): der verkürzte Saum
+     * liegt über anderer Haut als Daz' Ruhelage.
+     */
     static _kleidung(inst, eintrag, werte) {
-        const stuecke = eintrag.stuecke;
+        const stuecke = eintrag.stuecke;          // kennung -> {passform, teile|null}
         for (const kennung of Object.keys(inst.kleidung || {})) {
-            if (stuecke.has(kennung)) continue;
-            stuecke.set(kennung, null);
-            Genesis9felder.holenStueck(Genesis9gelenke.GRUPPE, kennung, inst.stufen).then(teile => {
-                if (Genesis9gelenke._figuren.get(inst) === eintrag) stuecke.set(kennung, teile || []);
+            const passform = Genesis9felder.passform(inst.kleidung[kennung]?.regler);
+            const marke = Genesis9felder.passformAnfrage(passform);
+            if (stuecke.get(kennung)?.passform === marke) continue;
+            const stand = { passform: marke, teile: null };
+            stuecke.set(kennung, stand);
+            Genesis9felder.holenStueck(Genesis9gelenke.GRUPPE, kennung, inst.stufen, passform).then(teile => {
+                if (Genesis9gelenke._figuren.get(inst) === eintrag && stuecke.get(kennung) === stand) {
+                    stand.teile = teile || [];
+                }
             });
         }
         for (const [schluessel, netz] of Object.entries(inst.clothMeshes || {})) {
             const [kennung, nummer] = schluessel.split('/');
-            const eigene = stuecke.get(kennung)?.[Number(nummer)];
+            const eigene = stuecke.get(kennung)?.teile?.[Number(nummer)];
             if (eigene && Object.keys(eigene).length) {
                 Genesis9felder.anwenden(netz, Genesis9gelenke.GRUPPE, eigene, werte);
             }
@@ -117,13 +131,14 @@ export class Genesis9gelenke {
             return eintrag;
         }
         eintrag = { skelett: inst.skelett, stufen: inst.stufen, felder: null, knochen: null, werte: null,
-                    stuecke: new Map() };          // kennung -> [{kanal: {n, d}}] je Teil (null = lädt)
+                    drehknochen: [], stuecke: new Map() };          // kennung -> {passform, teile: [{kanal: {n, d}}] je Teil | null (lädt)}
         Genesis9gelenke._figuren.set(inst, eintrag);
         Genesis9felder.holen(Genesis9gelenke.GRUPPE, inst.stufen).then(felder => {
             if (!felder || Genesis9gelenke._figuren.get(inst) !== eintrag) return;
             const alle = Dazachsen.vorbereiten(inst.skelett, felder.achsen);
             eintrag.knochen = Object.fromEntries(
                 felder.graph.knochen.filter(n => alle[n]).map(n => [n, alle[n]]));
+            eintrag.drehknochen = Genesis9drehknochen.vorbereiten(alle, felder.achsen);
             eintrag.felder = felder;
         });
         return eintrag;

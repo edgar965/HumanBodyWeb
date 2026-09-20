@@ -1,0 +1,42 @@
+{% comment %}Das Ausgabefenster „SMPL-X mit GVHMR" je Bild (20.09.2026, Edgar: „eines um eine GVHMR
+erkennung zu machen, mit ausgabe fenster dazu!" — „in 3D mit dem SMPL modell dazu inkl. Rig"). Gefüllt und
+gesteuert von `gvhmrfenster.js`: links das Foto, rechts SMPL-X-Netz und Rig in 3D — in der Kamera des Fotos,
+Leinwand im Seitenverhältnis des Fotos (Edgar: „Immer das 3D Modell in genau der gleichen pose und ausschnitt wie
+das 2D Bild!!!") —, darunter Fortschritt und die Zahlen des Laufs. Zweimal eingebunden (20.09.2026):
+ohne Variablen für GVHMR, mit `dialog_id=flame-dialog dialog_titel="FLAME-Kopf" dialog_rig='aus'` für den
+Kopf-Knopf (`flamefenster.js`).{% endcomment %}
+<dialog id="{{ dialog_id|default:'gvhmr-dialog' }}" class="bildmodell-dialog bildmodell-gvhmrdialog">
+    <div class="bildmodell-dialogkopf">
+        <h2>{{ dialog_titel|default:'SMPL-X mit GVHMR' }} — <span data-feld="datei"></span></h2>
+        <span class="bildmodell-gvhmrkopfrechts">
+            {% if dialog_rig != 'aus' %}
+            <label class="bildmodell-3dgitter" title="Das Rig: 55 Gelenke und Knochen, durch die Haut sichtbar">
+                <input type="checkbox" data-tat="rig" checked> Rig</label>
+            {% endif %}
+            <label class="bildmodell-3dgitter" title="Kanten des SMPL-X-Netzes zeigen">
+                <input type="checkbox" data-tat="gitter"> Gitter</label>
+            <button type="button" class="btn btn-sm btn-secondary" data-tat="foto"
+                    title="Zurück zur Sicht des Fotos — Kamera, Pose und Ausschnitt wie im 2D-Bild"><i class="fas fa-camera"></i> Fotoansicht</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-tat="schliessen" title="Fenster schließen">×</button>
+        </span>
+    </div>
+    <div class="bildmodell-gvhmrfeld">
+        <figure class="bildmodell-gvhmrfoto"><img alt="Das Bild" data-feld="foto"></figure>
+        <div class="bildmodell-gvhmr3d"><canvas class="bildmodell-3dcanvas" data-feld="canvas"></canvas></div>
+    </div>
+    <div class="bildmodell-gvhmrlauf">
+        <progress max="100" value="0" data-feld="balken" hidden></progress>
+        <span class="hb-hinweis" data-feld="text">—</span>
+    </div>
+    <table class="db-tabelle bildmodell-gvhmrzahlen" data-feld="zahlen"><tbody></tbody></table>
+    <div class="bildmodell-dialogknoepfe">
+        <span class="hb-hinweis" data-feld="dateien"></span>
+        <span class="bildmodell-dialogrechts">
+            <button type="button" class="btn btn-secondary btn-sm" data-tat="oben"
+                    title="Dieses Netz oben in der 3D-Ansicht der Seite zeigen"><i class="fas fa-cube"></i> Oben zeigen</button>
+            <button type="button" class="btn btn-primary btn-sm" data-tat="rechnen"
+                    title="{{ dialog_rechnen|default:'GVHMR für dieses Bild (neu) rechnen — Standvideo aus 30 Bildern, Vorstufe, Modell' }}"><i class="fas fa-sync"></i> Neu rechnen</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-tat="schliessen">Schließen</button>
+        </span>
+    </div>
+</dialog>

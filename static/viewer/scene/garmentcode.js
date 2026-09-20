@@ -18,6 +18,7 @@ import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { GarmentcodeMasse } from './garmentcode_masse.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
+import { GarmentcodeLauf } from './garmentcode_lauf.js';
 import { GarmentcodeLive } from './garmentcode_live.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { garmentcodeKombi } from './garmentcode_kombi.js';
@@ -75,6 +76,9 @@ class GarmentcodeReiter {
             document.getElementById(kennung)?.addEventListener(
                 'click', () => this.bauen(modus));
         }
+        // „Abbrechen" (20.09.2026): nur waehrend eines Laufs klickbar.
+        document.getElementById(GarmentcodeLauf.ABBRECHEN)?.addEventListener(
+            'click', () => GarmentcodeLauf.abbrechen(this));
 
         // Ein anderes Kleidungsstück hat andere Einstellungen — eine Hose
         // hat keinen Kragen. Deshalb bei jedem Wechsel neu holen.

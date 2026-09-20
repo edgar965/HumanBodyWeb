@@ -35,7 +35,11 @@ export class Lagenverdeckung {
         Hautverdeckung.merken(geo);
         const stoffe = Hautverdeckung.stoffe(inst);
         for (const s of stoffe) Hautverdeckung.merken(inst.clothMeshes[s.schluessel].geometry);
-        if (stoffe.length < 2) return Lagenverdeckung.aufheben(inst);
+        // Nur mit GarmentCode-Stück (20.09.2026: `Stueckereignis` kommt jetzt für jedes
+        // Daz-Stück, damit die Hautverdeckung läuft) — Daz gegen Daz macht der Server
+        // (`Genesis9/lagen.py`), und die Lagenmaske kostete auf Stufe 2 91 s.
+        const garmentcode = stoffe.some((s) => s.schluessel.startsWith('gc_'));
+        if (stoffe.length < 2 || !garmentcode) return Lagenverdeckung.aufheben(inst);
         const t0 = performance.now();
         const koerper = { punkte: geo.attributes.position.array, dreiecke: geo.userData.indexVoll.index };
         const ergebnis = Lagenmaske.verdeckt(koerper, stoffe);

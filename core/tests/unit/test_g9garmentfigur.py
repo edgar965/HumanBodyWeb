@@ -15,6 +15,8 @@ Ohne Daz-Bibliothek (Kunstdaten): Netzstufe und Haut sind Attrappen.
 3. `geschlecht` aus Feminine/Masculine; `projekt` dreht Y oben -> Z oben.
 4. `Garmentanfrage.lesen`: `figurart=genesis9` mit `regler_figur`; eine
    unbekannte Figurart faellt auf None; ohne Feld bleibt der alte Weg.
+5. `_haltung` (20.09.2026): `stellung.griffe` -> Drehung und Griffregler,
+   der Eintrag verlaesst die Regler.
 """
 from unittest import mock
 
@@ -113,3 +115,36 @@ class Anfrage(SimpleTestCase):
         self.assertIsNone(a.figurart)
         self.assertEqual(a.regler_figur, {})
         self.assertEqual((a.geschlecht, a.bauart, a.morphs), ('male', 'Male_Caucasian', {'a': 1}))
+
+
+class Haltung(SimpleTestCase):
+    u"""`stellung.griffe` in `regler_figur` (20.09.2026): die Fusspose der Schuhe
+    kommt in die Drehung, ihre Posensteuerungen in die Regler — und der
+    Eintrag selbst verlaesst die Regler, bevor die Formung sie liest.
+
+    Befund: Olesia1 in Bardot-Sandalen stand im Browser 4,9 cm hoeher als die
+    GarmentCode-Figur, das Oberteil hing eine Handbreit zu tief.
+    Sabotage-Gegenprobe: in `_haltung` `return regler, {}` vor die Schleife
+    ziehen -> rot."""
+    databases = set()
+
+    def test_griffe_werden_zu_drehung_und_reglern(self):
+        with mock.patch('Genesis9.garderobe.G9garderobe.griff',
+                        side_effect=lambda k: {'l_foot': {'rotation/x': 40.0}} if k == 'sandale' else {}), \
+             mock.patch('Genesis9.garderobe.G9garderobe.griffregler',
+                        side_effect=lambda k: {'CTRLGrasp': 1} if k == 'sandale' else {}):
+            regler, drehung = G9garmentfigur._haltung({'a': 1}, {'griffe': ['sandale', 'nichts', 7]})
+        self.assertEqual(drehung, {'l_foot': {'rotation/x': 40.0}})
+        self.assertEqual(regler, {'a': 1, 'CTRLGrasp': 1})
+
+    def test_ohne_griffe_bleibt_alles(self):
+        self.assertEqual(G9garmentfigur._haltung({'a': 1}, None), ({'a': 1}, {}))
+        self.assertEqual(G9garmentfigur._haltung({'a': 1}, {'griffe': []}), ({'a': 1}, {}))
+        self.assertEqual(G9garmentfigur._haltung({'a': 1}, 'unsinn'), ({'a': 1}, {}))
+
+    def test_stellung_verlaesst_die_regler(self):
+        with mock.patch('core.dienste.g9garmentfigur.G9formung.aus_abfrage',
+                        return_value=None) as formung:
+            f = G9garmentfigur({'a': 1, 'stellung': {'griffe': []}})
+        self.assertEqual(f.regler, {'a': 1})
+        formung.assert_called_once_with({'a': 1}, {})

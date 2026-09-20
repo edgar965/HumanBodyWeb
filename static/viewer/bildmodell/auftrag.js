@@ -26,7 +26,30 @@ export class Bildmodellauftrag {
     adresse(pfad) { return `/api/bildmodell/${this.id}/${pfad}`; }
 
     dateiAdresse(ordner, name) {
-        return `/api/bildmodell/${this.id}/datei/${ordner}/${encodeURIComponent(name)}`;
+        const adresse = `/api/bildmodell/${this.id}/datei/${ordner}/${encodeURIComponent(name)}`;
+        // Ein freigestellter Ausschnitt trägt denselben Namen — `freisteller.stand` bricht den
+        // Browser-Cache, damit die Seite überall das neue Bild zeigt (20.09.2026).
+        if (ordner === 'zuschnitt') {
+            const e = (this.zustand.bilder || []).find(b => b.datei === name);
+            const stand = e && e.freisteller && e.freisteller.stand;
+            if (stand) return `${adresse}?t=${encodeURIComponent(stand)}`;
+        }
+        return adresse;
+    }
+
+    /** Antwort `{bild, textur, texturbilder}` (Bild stellen, Freisteller) in den Zustand übernehmen. */
+    eintragUebernehmen(antwort) {
+        const bild = antwort.bild || {};
+        const eintrag = (this.zustand.bilder || []).find(b => b.datei === bild.datei);
+        if (eintrag) {
+            // Ganz ersetzen: ein Feld, das der Server entfernt hat (`teil`), darf nicht stehen bleiben.
+            for (const k of Object.keys(eintrag)) delete eintrag[k];
+            Object.assign(eintrag, bild);
+        }
+        if (antwort.textur) this.zustand.textur = antwort.textur;   // Hautton der gewählten Bilder
+        if (antwort.texturbilder) this.zustand.texturbilder = antwort.texturbilder;
+        this._melden();
+        return bild;
     }
 
     zuhoeren(fn) { this.zuhoerer.push(fn); fn(this.zustand); }
@@ -57,8 +80,9 @@ export class Bildmodellauftrag {
 
     /** `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026);
      *  `schritte`: genau diese Schritte („Textur anpassen" = [sichtung,] textur). */
-    async starten(optionen, ab, fest, bis = null, schritte = null) {
-        const rumpf = { optionen, ab, fest: fest || {}, bis };
+    async starten(optionen, ab, fest, bis = null, schritte = null, extra = null) {
+        // `extra`: weitere Felder des Rumpfs — `bild`/`neu` des Einzelschritts `gvhmr` (20.09.2026).
+        const rumpf = { optionen, ab, fest: fest || {}, bis, ...(extra || {}) };
         if (schritte && schritte.length) { rumpf.schritte = schritte; ab = schritte[0]; }
         const antwort = await Serverabruf.senden(this.adresse('starten/'), rumpf);
         if (antwort.error) throw new Error(antwort.error);
@@ -90,16 +114,7 @@ export class Bildmodellauftrag {
     async bildStellen(datei, aenderung) {
         const antwort = await Serverabruf.senden(this.adresse(`bild/${encodeURIComponent(datei)}/`), aenderung);
         if (antwort.error) throw new Error(antwort.error);
-        const eintrag = (this.zustand.bilder || []).find(b => b.datei === datei);
-        if (eintrag) {
-            // Ganz ersetzen: ein Feld, das der Server entfernt hat (`teil`), darf nicht stehen bleiben.
-            for (const k of Object.keys(eintrag)) delete eintrag[k];
-            Object.assign(eintrag, antwort.bild);
-        }
-        if (antwort.textur) this.zustand.textur = antwort.textur;   // Hautton der gewählten Bilder
-        if (antwort.texturbilder) this.zustand.texturbilder = antwort.texturbilder;
-        this._melden();
-        return antwort.bild;
+        return this.eintragUebernehmen(antwort);
     }
 
     /** `typen`: `{dateiname: {haupt, neben, nutzung}}` — die Sichtung übernimmt die Wahl (19.09.2026). */

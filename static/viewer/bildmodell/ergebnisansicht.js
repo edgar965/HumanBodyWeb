@@ -8,6 +8,7 @@
  * Wert. `festgehalten()` liefert das Wörterbuch für den Start.
  */
 import { Massetabelle } from './massetabelle.js';
+import { Massbandtabelle } from './massbandtabelle.js';
 
 export class Ergebnisansicht {
 
@@ -44,7 +45,7 @@ export class Ergebnisansicht {
             if (!v[name]) continue;
             const bild = document.createElement('img');
             bild.className = 'bildmodell-ansichtbild';
-            bild.src = this.auftrag.dateiAdresse('ergebnis', v[name]) + `?t=${Date.now()}`;
+            bild.src = this.auftrag.dateiAdresse('ergebnis', v[name]) + `?t=${encodeURIComponent(z.finished_at || '')}`;
             bild.title = name;
             feld.appendChild(bild);
         }
@@ -68,7 +69,9 @@ export class Ergebnisansicht {
             zeilen.push(['Anpassung', `${a.punkte_rms_mm} mm RMS, Gelenke ${a.gelenke_mm ?? '–'} mm, ${Object.keys(a.regler || {}).length} Regler aktiv von ${a.variablen} (${a.reglersatz}, ${a.basis})`]);
             const teile = Object.entries(a.teile || {}).map(([k, v]) => `${Ergebnisansicht.TEILE[k] || k} ${v}`).join(' · ');
             if (teile) zeilen.push(['je Teil (mm)', teile]);
-            if (a.verlauf) zeilen.push(['Verlauf', a.verlauf.map(v => `${v.durchgang}: ${v.rms_mm} mm`).join(' → ')]);
+            if (a.verlauf) zeilen.push(['Verlauf', a.verlauf.map(v => `${v.stufe === 'kopf' ? 'Kopf ' : ''}${v.durchgang}: ${v.rms_mm} mm`).join(' → ')]);
+            // Kopfstufe (20.09.2026, „200 Plus Genesis 9 Edition"): Gesichtsregler auf den FLAME-Kopf.
+            if (a.kopf) zeilen.push(['Kopf-Fit', `${a.kopf.rms_mm} mm RMS auf ${a.kopf.punkte} Kopfpunkten, ${a.kopf.aktiv} Kopfregler aktiv von ${a.kopf.variablen}`]);
         }
         if (a && a.haende && a.haende.haende) {
             const h = a.haende;
@@ -78,7 +81,8 @@ export class Ergebnisansicht {
         if (r && !r.aus) zeilen.push(['Restmorph', `${r.regler}: ${r.punkte} Punkte, bis ${r.max_mm} mm; Rest ${r.rest_vorher_mm} → ${r.rms_mit_morph_mm ?? r.rest_nachher_mm} mm`]);
         if (z.modell) zeilen.push(['Modell', `gespeichert als „${z.modell}" — in Szene, Studio und Theatre unter Genesis 9 · gespeichert`]);
         feld.innerHTML = zeilen.map(([k, v]) => `<div class="bildmodell-zahl"><b>${k}</b><span>${v}</span></div>`).join('')
-            + Massetabelle.html(e.masse);
+            + Massetabelle.html(e.masse)
+            + Massbandtabelle.html(e.massband);
     }
 
     regler(z) {

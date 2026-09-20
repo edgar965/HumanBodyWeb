@@ -8,8 +8,11 @@ dem 09.09. wirkten die Regler nur auf ein angeklicktes Stück; die
 dieser Figur". Die Grenze liegt jetzt beim Urheber des Ereignisses:
 
 1. Ein gewähltes Stück bekommt den Stand — immer, und nur es.
-2. Ohne Auswahl bekommen ihn ALLE `gc_*`-Stücke der Figur, wenn der
-   Nutzer das Feld bedient hat (`isTrusted`).
+2. Ohne Auswahl bekommt ihn das Stück der GEWÄHLTEN VORLAGE (`aktuell`),
+   wenn der Nutzer das Feld bedient hat (`isTrusted`) und es hängt —
+   nicht mehr alle Stücke (20.09.2026, Edgar: „möchte ein T-Shirt
+   erzeugen, sobald ich die Farbe eingeben will, wird die Farbe der
+   Leggings geändert").
 3. Ohne Auswahl bekommt ihn NIEMAND, wenn Code das Feld gesetzt hat
    (Reitergedächtnis beim Seitenstart, Vorbild aus dem Kleider-Reiter) —
    das war der Fehler vom 09.09., als eine gespeicherte Farbe beim Laden
@@ -33,20 +36,24 @@ const stuecke = { 'gc_t-shirt': shirt, gc_hose: hose, 'gar_shoes/x': schuhe, gc_
 // 1. gewaehlt: nur dieses, egal wer
 pruefe('gewaehlt, Nutzer', M.netze({ gewaehlt: hose, stuecke, nutzer: true }), [hose]);
 pruefe('gewaehlt, Code', M.netze({ gewaehlt: hose, stuecke, nutzer: false }), [hose]);
-// 2. ohne Auswahl, Nutzer: alle gc_*, nicht gar_*, nicht leer
-pruefe('Nutzer breit', M.netze({ gewaehlt: null, stuecke, nutzer: true }), [shirt, hose]);
+// 2. ohne Auswahl, Nutzer: das Stueck der gewaehlten Vorlage — nicht die anderen
+pruefe('Nutzer, Vorlage haengt', M.netze({ gewaehlt: null, stuecke, nutzer: true, aktuell: 'gc_hose' }), [hose]);
+pruefe('Nutzer, Vorlage haengt nicht', M.netze({ gewaehlt: null, stuecke, nutzer: true, aktuell: 'gc_rock' }), []);
+pruefe('Nutzer, leerer Eintrag', M.netze({ stuecke, nutzer: true, aktuell: 'gc_leer' }), []);
+pruefe('Nutzer, kein gc_', M.netze({ stuecke, nutzer: true, aktuell: 'gar_shoes/x' }), []);
+pruefe('Nutzer ohne Vorlage', M.netze({ gewaehlt: null, stuecke, nutzer: true }), []);
 // 3. ohne Auswahl, Code: niemand
-pruefe('Code nichts', M.netze({ gewaehlt: null, stuecke, nutzer: false }), []);
+pruefe('Code nichts', M.netze({ gewaehlt: null, stuecke, nutzer: false, aktuell: 'gc_hose' }), []);
 pruefe('Code nichts, Vorgabe', M.netze({ stuecke }), []);
 // 4. Raender
-pruefe('keine Figur', M.netze({ nutzer: true }), []);
-pruefe('keine Stuecke', M.netze({ stuecke: {}, nutzer: true }), []);
+pruefe('keine Figur', M.netze({ nutzer: true, aktuell: 'gc_hose' }), []);
+pruefe('keine Stuecke', M.netze({ stuecke: {}, nutzer: true, aktuell: 'gc_hose' }), []);
 pruefe('leer', M.netze(), []);
 console.log(JSON.stringify({ ok: true }));
 """
 
 
 class MaterialzielTest(SimpleTestCase):
-    def test_nutzer_wirkt_breit_code_nur_auf_die_auswahl(self):
+    def test_nutzer_wirkt_auf_die_vorlage_code_nur_auf_die_auswahl(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)

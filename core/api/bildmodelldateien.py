@@ -23,7 +23,7 @@ from django.views.decorators.http import require_POST
 
 from ..daten.bildmodellablage import Bildmodellablage
 from ..dienste.bildmodellarbeiter import Bildmodellarbeiter
-from ..dienste.bildmodellbildtypen import Bildmodellbildtypen
+from ..dienste.bildmodellbildvorgaben import Bildmodellbildvorgaben
 from ..dienste.bildmodelldateien import Bildmodelldateien
 from ..models import Bildmodellauftrag
 from .bildmodell import Bildmodellendpunkte
@@ -118,7 +118,7 @@ class Bildmodelldateiendpunkte:
             return JsonResponse({'error': 'Kein JSON'}, status=400)
         if not isinstance(roh, dict):
             return JsonResponse({'error': 'Kein Wörterbuch'}, status=400)
-        kameras = {name: Bildmodellbildtypen.kamera_pruefen(k) for name, k in roh.items()}
+        kameras = {name: Bildmodellbildvorgaben.kamera(k) for name, k in roh.items()}
         kameras = {name: k for name, k in kameras.items() if k}
         optionen = dict(job.optionen or {})
         typen = dict(optionen.get('bildtypen') or {})

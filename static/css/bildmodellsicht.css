@@ -1,0 +1,46 @@
+/* Modell aus Dateien — die Modellsicht oben auf der Auftragsseite (20.09.2026):
+   3D links, das Bild mit den Pfeilen und die Liste der Maße in der Mitte, die Maße als Schieber rechts.
+   Edgar: „Modell-View mit 3D links, 2D rechts … Wenn ich die Regler ändere, dann ändert sich gleich
+   das 3D Modell links." Alle drei Spalten gleich hoch (--sicht-hoehe); darunter die Person als Zeile. */
+.bildmodell-modellsicht { --sicht-hoehe: 640px; display: grid; grid-template-columns: minmax(360px, 1fr) minmax(420px, 1.15fr) minmax(300px, 400px);
+    gap: 16px; align-items: start; }
+.bildmodell-modellsicht .bildmodell-3d { min-width: 0; }
+.bildmodell-modellsicht #ansicht3d { height: var(--sicht-hoehe); }
+.bildmodell-3dleiste { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 0.85rem; }
+.bildmodell-3dwahl { display: flex; gap: 12px; }
+.bildmodell-3dwahl label, .bildmodell-3dleiste .bildmodell-3dgitter { display: flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; }
+.bildmodell-3dwahl input { margin: 0; }
+#modell-livetext { font-size: 0.75rem; min-height: 1.1em; }
+
+.bildmodell-2d { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bildmodell-2dkopf { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+.bildmodell-2dkopf label { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; margin: 0; }
+.bildmodell-2dkopf select { flex: 1 1 auto; min-width: 0; }
+.bildmodell-2dfeld { height: var(--sicht-hoehe); }
+#modell-bildtab { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; justify-content: center; background: var(--bg-darker, #181825); border-radius: 6px; }
+.bildmodell-2d .bildmodell-propliste { flex: 0 0 210px; }
+.bildmodell-2d > p { margin: 0; font-size: 0.75rem; }
+
+.bildmodell-reglerspalte { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bildmodell-reglerspalte h3 { margin: 0; font-size: 1rem; display: flex; flex-direction: column; gap: 2px; }
+.bildmodell-reglerspalte h3 small { font-weight: normal; font-size: 0.75rem; }
+.bildmodell-reglerspalte .bildmodell-3dregler { max-height: var(--sicht-hoehe); border: 1px solid var(--border, #3a4250); border-radius: 8px; padding: 4px 8px; }
+.bildmodell-modellknoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Die Person: eine Zeile unter der Sicht (vorher eine Spalte links neben dem 3D). */
+.bildmodell-person { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, #3a4250); }
+.bildmodell-personfelder { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.bildmodell-personfelder h2 { margin: 0; font-size: 1rem; }
+.bildmodell-personfelder label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.9rem; }
+.bildmodell-personfelder input[type="number"] { width: 84px; }
+.bildmodell-personfelder input[type="range"] { width: 110px; }
+.bildmodell-personfelder .btn { margin: 0; }
+.bildmodell-personlauf { flex: 1 1 240px; }
+.bildmodell-person > p { margin: 0; font-size: 0.8rem; }
+
+@media (max-width: 1500px) {
+    .bildmodell-modellsicht { grid-template-columns: minmax(360px, 1fr) minmax(400px, 1.15fr); }
+    .bildmodell-reglerspalte { grid-column: 1 / -1; }
+    .bildmodell-reglerspalte .bildmodell-3dregler { max-height: 360px; }
+}
+@media (max-width: 900px) { .bildmodell-modellsicht { grid-template-columns: 1fr; --sicht-hoehe: 520px; } }

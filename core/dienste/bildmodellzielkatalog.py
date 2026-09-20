@@ -62,6 +62,17 @@ class Bildmodellzielkatalog:
             'an',
         ),
         (
+            'popup',
+            'Eingaben aus dem Popup',
+            [
+                ('an', 'Formen das Ziel', 'Die cm-Werte der gezogenen Linien (`optionen.proportionen`) '
+                                          'überschreiben das Ziel — auch das aus GVHMR'),
+                ('aus', 'Aus', 'Das Ziel bleibt der Schätzer; die Linien sind nur Anzeige '
+                               '(der GVHMR-Lauf stellt das so, 20.09.2026)'),
+            ],
+            'an',
+        ),
+        (
             'gelenkhoehen',
             'Gliedlängen aus dem Rig',
             [

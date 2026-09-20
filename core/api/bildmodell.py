@@ -28,6 +28,7 @@ from ..daten.auftragskennung import Auftragskennung
 from ..daten.bildmodellablage import Bildmodellablage
 from ..dienste.bildmodellarbeiter import Bildmodellarbeiter
 from ..dienste.bildmodellbildtypen import Bildmodellbildtypen
+from ..dienste.bildmodellbildvorgaben import Bildmodellbildvorgaben
 from ..dienste.bildmodelldateien import Bildmodelldateien
 from ..dienste.bildmodellfotolinien import Bildmodellfotolinien
 from ..dienste.bildmodelllauf import Bildmodelllauf
@@ -186,7 +187,7 @@ class Bildmodellendpunkte:
                 n += 1
         # Bildtypen-Vorgaben je Datei (`{name: {haupt, neben, nutzung}}`, 19.09.2026): die
         # Testfallbilder und „Bild für die Textur" kennen ihren Typ, die Sichtung übernimmt ihn.
-        typen = Bildmodellbildtypen.vorgaben_pruefen(request.POST.get('typen'), namen)
+        typen = Bildmodellbildvorgaben.pruefen(request.POST.get('typen'), namen)
         if typen:
             optionen = dict(job.optionen or {})
             optionen['bildtypen'] = {**(optionen.get('bildtypen') or {}), **typen}

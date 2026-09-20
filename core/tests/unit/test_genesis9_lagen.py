@@ -72,6 +72,41 @@ class Einordnen(SimpleTestCase):
         self.assertEqual(self.lagen.einordnen(a, [('b', b, False)]), (['b'], []))
 
 
+def wand(abstand, y0, y1, schritt=0.01):
+    u"""Ein senkrechtes Punktgitter x = abstand vor der Wand x = 0, y0..y1, z −0,3..0,3."""
+    ys = np.arange(y0, y1, schritt)
+    zs = np.arange(-0.3, 0.3, schritt)
+    y, z = np.meshgrid(ys, zs)
+    return np.column_stack([np.full(y.size, abstand), y.ravel(), z.ravel()])
+
+
+class SaumUeberBund(SimpleTestCase):
+    u"""Saum ueber Bund schlaegt die Tiefe (20.09.2026): das Hemd (3 mm vor der
+    Wand, y 0,3–0,9) ueberlappt die Hose (10 mm, y 0–0,4) an seinem unteren und
+    ihrem oberen Rand — es liegt aussen, obwohl es naeher an der Haut steht.
+    Sabotage: `saum_ueber_bund` immer False -> Fall 1 rot (Tiefe: Hose aussen).
+    Ohne Randlage (Bund im Inneren des Hemds: Hose bis y 0,9) gilt die Tiefe."""
+    databases = set()
+
+    def setUp(self):
+        haut = wand(0.0, -0.5, 1.5)
+        normalen = np.tile([1.0, 0.0, 0.0], (len(haut), 1))
+        self.lagen = G9lagen((haut, normalen, G9kollision.baum(haut)))
+
+    def test_1_saum_ueber_bund_liegt_aussen_trotz_geringerer_tiefe(self):
+        hemd, hose = wand(0.003, 0.3, 0.9), wand(0.010, 0.0, 0.4)
+        self.assertEqual(self.lagen.einordnen(hemd, [('hose', hose, False)]), (['hose'], []))
+        self.assertEqual(self.lagen.einordnen(hose, [('hemd', hemd, True)]), ([], ['hemd']))
+
+    def test_2_ohne_randlage_entscheidet_die_tiefe(self):
+        hemd, overall = wand(0.003, 0.3, 0.9), wand(0.010, 0.0, 0.9)     # Overall bis oben
+        self.assertEqual(self.lagen.einordnen(hemd, [('overall', overall, False)]), ([], ['overall']))
+        # Kleinteile ohne Rand (Niete, 2 cm hoch) zaehlen nie als Saum oder Bund.
+        niete = wand(0.010, 0.38, 0.40)
+        self.assertFalse(G9lagen.saum_ueber_bund(hemd, np.ones(len(hemd), dtype=bool),
+                                                 niete, np.ones(len(niete), dtype=bool)))
+
+
 class Flaeche(SimpleTestCase):
     databases = set()
 
@@ -101,6 +136,23 @@ class Flaeche(SimpleTestCase):
         self.assertTrue((gehoben[:, 1] >= 0.007 + G9kollision.ABSTAND - 1e-9).all(), gehoben)
         haut, hn, hb = self.koerper                # Gegenprobe: nackte Haut hebt nicht
         np.testing.assert_allclose(G9kollision.hinaus(saum, haut, hn, baum=hb), saum)
+
+    def test_eine_tasche_ueber_dem_hosenbein_ist_die_aeussere_lage(self):
+        # Hosenbein bei 10 mm, darueber eine Tasche (x, z in [-0,1, 0,1)) bei 22 mm:
+        # unter der Tasche faellt das Hosenbein aus der Flaeche — sonst hebt
+        # `hinaus` einen Saumpunkt nur ueber das Bein, nie ueber die Tasche
+        # (20.09.2026, Angie Jeans durch das Base Shirt +10 cm). Sabotage:
+        # `aussenlage` gibt `stoff` zurueck -> `gehoben` bleibt bei 13 mm, rot.
+        bein, tasche = gitter(0.010), gitter(0.022, -0.1, 0.1, -0.1, 0.1)
+        aussen = self.lagen.aussenlage(np.vstack([bein, tasche]))
+        unter_tasche = (np.abs(aussen[:, 0]) < 0.08) & (np.abs(aussen[:, 2]) < 0.08)
+        self.assertTrue((aussen[unter_tasche, 1] > 0.02).all())      # nur die Tasche
+        self.assertTrue((aussen[:, 1] < 0.02).any())                  # das Bein daneben bleibt
+        p, n, _ = self.lagen.flaeche([np.vstack([bein, tasche])])
+        saum = np.array([[0.0, 0.012, 0.0], [0.4, 0.012, 0.4]])      # unter der Tasche / neben ihr
+        gehoben = G9kollision.hinaus(saum, p, n)
+        self.assertGreaterEqual(gehoben[0, 1], 0.022 + G9kollision.ABSTAND - 1e-9)
+        self.assertAlmostEqual(gehoben[1, 1], 0.010 + G9kollision.ABSTAND, places=6)
 
 
 class Anfrage(SimpleTestCase):

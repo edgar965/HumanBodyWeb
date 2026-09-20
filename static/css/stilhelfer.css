@@ -661,6 +661,11 @@
     color: var(--text-muted);
 }
 
+/* Heller Grund unter dem Bild (Edgar, 20.09.2026: „Es fehlen auch viele
+   Icons bei der Unterwäsche"): Die `.thumb` der Bibliothek sind
+   durchsichtige PNGs mit dunklem Stück darauf — Unterwäsche mit median
+   37–85 von 255 Helligkeit auf 16–27 % der Fläche. Auf dem dunklen Panel
+   verschwanden sie; die Dateien waren alle da (26 von 26, HTTP 200). */
 .kleidungsbild.kleidungsbild.kleidungsbild {
     width: 36px;
     height: 36px;
@@ -668,6 +673,7 @@
     object-fit: cover;
     flex-shrink: 0;
     margin-right: 6px;
+    background: #d9dde6;
 }
 
 .kleidungsname.kleidungsname.kleidungsname {

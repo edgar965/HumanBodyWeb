@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Netzgeometrie } from './netzgeometrie.js';
 import { base64ToFloat32 } from './kodierung.js';
+import { Genesis9strangtreffer } from './genesis9strangtreffer.js';
 
 /**
  * Genesis9strang — dForce-Stranghaar von Daz als Linien.
@@ -23,6 +24,9 @@ import { base64ToFloat32 } from './kodierung.js';
  * das Preset eine Spitzenfarbe mit (`bilder.farbe_spitze`, OmniHair
  * `Hair Root/Tip Color` — HS Viola Hair, `G9haarfarben`, 20.09.2026), wird
  * statt dessen von der Wurzel- zur Spitzenfarbe gemischt, wie Daz' Shader.
+ *
+ * Ein Klick trifft die Strähnen als Strecken (`Genesis9strangtreffer`) — ein
+ * entartetes Dreieck träfe Three nie, und Viola war nicht auswählbar (20.09.2026).
  */
 export class Genesis9strang {
 
@@ -50,7 +54,7 @@ export class Genesis9strang {
         netz.name = name;
         netz.castShadow = false;
         netz.receiveShadow = false;
-        return netz;
+        return Genesis9strangtreffer.anbringen(netz);
     }
 
     /** Die Presetfarbe (sRGB bei Daz) linear — wie `Genesis9netz.farbe`. */

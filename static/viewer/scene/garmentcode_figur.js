@@ -45,7 +45,15 @@ export class GarmentcodeFigur {
         }
         if (inst.quelle === 'genesis9') {
             daten.append('figurart', 'genesis9');
-            daten.append('regler_figur', JSON.stringify(inst.regler || {}));
+            // Mit der HALTUNG der Figur (20.09.2026): die Griffposen ihrer Schuhe
+            // und Props (`stellung.griffe`, `G9garmentfigur.STELLUNG`). Ohne sie
+            // stand die GarmentCode-Figur flach auf dem Boden, während die Figur
+            // im Browser in Sandalen 4,9 cm höher stand — das Oberteil hing
+            // danach eine Handbreit zu tief.
+            daten.append('regler_figur', JSON.stringify({
+                ...(inst.regler || {}),
+                stellung: { griffe: typeof inst.griffe === 'function' ? inst.griffe() : [] },
+            }));
             daten.append('geschlecht', GarmentcodeFigur.geschlechtGenesis(inst.regler));
             daten.append('morphs', '{}');
             return daten;

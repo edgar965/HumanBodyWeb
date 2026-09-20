@@ -5,6 +5,8 @@ import { GarmentcodePanels } from './garmentcode_panels.js';
 import { GarmentcodeVorschau3d } from './garmentcode_vorschau3d.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { Laufwache } from '../gemeinsam/laufwache.js';
+import { GarmentcodeLauf } from './garmentcode_lauf.js';
+import { GarmentcodeAbbruch } from './garmentcode_abbruch.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeSchritte } from './garmentcode_schritte.js';
 
@@ -50,15 +52,8 @@ export class GarmentcodeAblauf {
     static NUR3D = GarmentcodeSchritte.NUR3D;
     static VORSCHAU = ['vorschau2d', 'vorschau3d'];
 
-    /**
-     * Alle Knoepfe, die waehrend eines Laufs grau sind — EINE Liste.
-     *
-     * `gc-kombi-bauen` gehoert dazu (09.09.2026): Der gemeinsame Lauf
-     * benutzt dieselbe `Laufwache`, und ein Knopf, der klickbar aussieht,
-     * verspricht etwas, das erst die Wache abweist.
-     */
-    static KNOEPFE = ['gc-vorschau-2d', 'gc-vorschau-3d', 'gc-bauen-2d',
-                      'gc-bauen-3d', 'gc-bauen-beides', 'gc-kombi-bauen'];
+    /** Die Knoepfe, die waehrend eines Laufs grau sind (`garmentcode_lauf.js`). */
+    static KNOEPFE = GarmentcodeLauf.KNOEPFE;
 
     static async bauen(reiter, modus = 'komplett') {
         const meldung = document.getElementById('gc-meldung');
@@ -81,8 +76,7 @@ export class GarmentcodeAblauf {
                                                                vorlage);
             return;
         }
-        const knoepfe = GarmentcodeAblauf.KNOEPFE
-            .map(k => document.getElementById(k)).filter(Boolean);
+        const knoepfe = GarmentcodeLauf.knoepfe();
 
         // Der Lauf wird SOFORT abgesichert: Zwischen dem Setzen von
         // `laeuft` und dem `try` darf nichts stehen, was werfen kann —
@@ -117,10 +111,15 @@ export class GarmentcodeAblauf {
             // aufgegebener Lauf, dessen Anfrage doch noch zurueckkommt,
             // ueberschriebe sonst die Meldung des neuen.
             if (Laufwache.aktuell(reiter, lauf)) {
-                garmentcodeFortschritt.gescheitert(
-                    GarmentcodeAblauf.NUR3D.includes(modus) ? 'drape' : 'schnitt',
-                    String(fehler.message || fehler));
-                meldung.textContent = `Fehler: ${fehler.message || fehler}`;
+                const schritt = GarmentcodeAblauf.NUR3D.includes(modus) ? 'drape' : 'schnitt';
+                // Der eigene Abbrechen-Knopf (20.09.2026): kein Fehler, die
+                // Meldung hat `GarmentcodeLauf.abbrechen` schon geschrieben.
+                if (GarmentcodeAbbruch.istAbbruch(fehler)) {
+                    garmentcodeFortschritt.gescheitert(schritt, 'abgebrochen');
+                } else {
+                    garmentcodeFortschritt.gescheitert(schritt, String(fehler.message || fehler));
+                    meldung.textContent = `Fehler: ${fehler.message || fehler}`;
+                }
             }
         } finally {
             GarmentcodeAblauf.beenden(reiter, knoepfe, lauf);
@@ -154,42 +153,10 @@ export class GarmentcodeAblauf {
             + '— erst „2D", dann „3D".';
     }
 
-    /**
-     * Ist der Reiter frei — und wenn nicht, sagt er es.
-     *
-     * @returns den Stand der `Laufwache` (`{darf, grund, seit}`)
-     *
-     * Die Entscheidung trifft `Laufwache` (ohne DOM, deshalb pruefbar);
-     * hier steht nur, was der Nutzer davon zu sehen bekommt. Frueher stand
-     * an dieser Stelle `if (reiter.laeuft) return;` — stumm, und damit die
-     * Ursache des Befundes vom 08.09.2026.
-     */
-    static frei(reiter, meldung) {
-        const stand = Laufwache.pruefen(reiter);
-        if (stand.grund === 'besetzt' && meldung) {
-            meldung.textContent = `Es läuft noch ein Bau (seit ${stand.seit} s) `
-                + '— bitte abwarten, die Knöpfe kommen von selbst zurück.';
-        } else if (stand.grund === 'verloren' && meldung) {
-            meldung.textContent = `Der vorige Bau meldet sich seit ${stand.seit} s `
-                + 'nicht mehr — er gilt als verloren, dieser Klick übernimmt.';
-        }
-        return stand;
-    }
-
-    /** Den Reiter besetzen und die Knoepfe sperren. */
-    static beginnen(reiter, knoepfe) {
-        const lauf = Laufwache.beginnen(reiter);
-        knoepfe.forEach(k => { k.disabled = true; });
-        return lauf;
-    }
-
-    /** Freigeben — nur, wenn dieser Lauf noch der aktuelle ist. */
-    static beenden(reiter, knoepfe, lauf) {
-        if (!Laufwache.beenden(reiter, lauf)) return false;
-        knoepfe.forEach(k => { k.disabled = false; });
-        garmentcodeFortschritt.beenden();
-        return true;
-    }
+    /** Besetzen, sperren, freigeben, abbrechen: `garmentcode_lauf.js` (20.09.2026). */
+    static frei(reiter, meldung) { return GarmentcodeLauf.frei(reiter, meldung); }
+    static beginnen(reiter, knoepfe) { return GarmentcodeLauf.beginnen(reiter, knoepfe); }
+    static beenden(reiter, knoepfe, lauf) { return GarmentcodeLauf.beenden(reiter, knoepfe, lauf); }
 
     /**
      * Schnitt bauen, merken, und bei `2d` gleich an die Figur legen.

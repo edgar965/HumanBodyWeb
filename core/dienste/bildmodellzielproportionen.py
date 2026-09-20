@@ -42,7 +42,10 @@ class Bildmodellzielproportionen:
         self.optionen = optionen
 
     def eingaben_m(self):
-        """`{schluessel: Meter}` der gültigen Eingaben (Katalog prüft die Grenzen)."""
+        """`{schluessel: Meter}` der gültigen Eingaben (Katalog prüft die Grenzen) — leer mit
+        Option `popup: aus` (der GVHMR-Lauf: das Ziel bleibt der Schätzer, 20.09.2026)."""
+        if self.optionen.get('popup', 'an') == 'aus':
+            return {}
         roh = self.optionen.get('proportionen')
         if not isinstance(roh, dict):
             roh = (self.job.optionen or {}).get('proportionen') or {}

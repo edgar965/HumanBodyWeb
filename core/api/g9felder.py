@@ -6,9 +6,11 @@ u"""Reglerfelder von Genesis 9 fuer den Browser: Gelenkkorrekturen und Visemes.
     GET /api/character/genesis9-figur/felder/visemes/?stufen=1
         {stufen, visemes: [{id, name}], achsen, felder}
     GET /api/character/genesis9-figur/garderobe/<kennung>/felder/gelenke/?stufen=1
-        {kennung, gruppe, stufen, teile: [{kanal: {n, d}}]}   (`G9stueckfelder`)
+        {kennung, gruppe, stufen, passform, teile: [{kanal: {n, d}}]}   (`G9stueckfelder`)
     … ?kaefig=1   dieselben Felder auf Daz' Kaefigpunkten (`stufen: null`) —
                   fuer den Stoff-Worker (18.09.2026 abends)
+    … &laenge=-14.5&weite=-2.7   die Felder des Stuecks MIT Passform (cm,
+                  `G9passformhaut`, 20.09.2026) — der Saum liegt ueber anderer Haut
 
 `felder` = {koerper: {kanal: {n, d}}, anhaenge: {schluessel: {kanal: {n, d}}},
 knochen: {kanal: {knochen: {'rotation/x': Grad, …}}}} — `n` Punktnummern
@@ -30,6 +32,7 @@ from django.views.decorators.http import require_GET
 
 from core.daten.netzantwort import Netzantwort
 from .g9figur import FEHLT
+from Genesis9.drehknochen import G9drehknochen
 from Genesis9.gelenkkorrekturen import G9gelenkkorrekturen
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
@@ -79,15 +82,28 @@ class G9felderapi:
             return JsonResponse({'fehler': 'Unbekannte Gruppe %s' % gruppe},
                                 status=404)
         stufen = None if request.GET.get('kaefig') else G9felderapi.stufen(request)
+        passform = G9felderapi.passform(request)
         try:
-            felder = G9stueckfelder.holen(gruppe, kanaele, kennung, stufen)
+            felder = G9stueckfelder.holen(gruppe, kanaele, kennung, stufen, passform)
         except ValueError as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=404)
         return JsonResponse({
             'kennung': kennung, 'gruppe': gruppe, 'stufen': stufen,
+            'passform': felder.passform,
             'teile': [{k: G9felderapi.paar(*v) for k, v in teil.items()}
                       for teil in felder.teile],
         })
+
+    @staticmethod
+    def passform(request):
+        u"""`?laenge=-14.5&weite=-2.7` (cm) — die Passform des Stuecks, dessen
+        Felder gefragt sind (`G9passformhaut`, 20.09.2026); None ohne."""
+        try:
+            laenge = float(request.GET.get('laenge') or 0.0)
+            weite = float(request.GET.get('weite') or 0.0)
+        except (TypeError, ValueError):
+            return None
+        return (laenge, weite) if (laenge or weite) else None
 
     @staticmethod
     def kanaele(gruppe):
@@ -107,10 +123,22 @@ class G9felderapi:
 
     @staticmethod
     def achsen():
-        u"""`{knochen: {o: [x, y, z] Grad, r: 'XYZ'}}` aller 138 Knochen."""
-        return {k['name']: {'o': [round(float(w), 4) for w in k['orientation']],
-                            'r': k['reihenfolge']}
-                for k in G9skelett.roh()}
+        u"""`{knochen: {o: [x, y, z] Grad, r: 'XYZ', dreh?}}` aller 138 Knochen.
+
+        `dreh` = `{von, quelle, achse, faktor}` an den 14 Twist-Knochen
+        (`G9drehknochen`, 20.09.2026): der Browser stellt sie je Bild aus
+        dem Daz-Winkel ihres Glieds — sonst sitzt die ganze Verdrehung am
+        Gelenk („der Arm ist kaputt").
+        """
+        dreh = G9drehknochen.tabelle()
+        aus = {}
+        for k in G9skelett.roh():
+            eintrag = {'o': [round(float(w), 4) for w in k['orientation']],
+                       'r': k['reihenfolge']}
+            if k['name'] in dreh:
+                eintrag['dreh'] = dreh[k['name']]
+            aus[k['name']] = eintrag
+        return aus
 
     @staticmethod
     def paar(nummern, deltas):

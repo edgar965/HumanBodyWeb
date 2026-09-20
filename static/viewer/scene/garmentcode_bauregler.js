@@ -108,6 +108,23 @@ export class GarmentcodeBauregler {
         return gesetzt;
     }
 
+    /**
+     * Die drei Werte eines Kombi-Eintrags stellen (`werte()`-Form, ohne
+     * Ereignis) und für die Vorlage merken — der Eintrag wird bearbeitet
+     * (`garmentcode_kombi_bearbeiten.js`, 20.09.2026). Was fehlt, bleibt.
+     */
+    static stellen(werte) {
+        let gesetzt = 0;
+        for (const [name, kennung] of Object.entries(GarmentcodeBauregler.FELDER)) {
+            const wert = Number(werte?.[name]);
+            if (Number.isFinite(wert) && GarmentcodeBauregler._stellen(kennung, wert)) {
+                gesetzt += 1;
+            }
+        }
+        if (gesetzt) GarmentcodeBauregler.merken();
+        return gesetzt;
+    }
+
     static vorgaben() {
         return { hautabstand_mm: GarmentcodeBauregler.HAUTABSTAND_VORGABE,
                  aufloesung: GarmentcodeBauregler.AUFLOESUNG_VORGABE,

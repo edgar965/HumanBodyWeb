@@ -84,7 +84,14 @@ class Bildmodellschaetzung:
             or (backend == 'smplest_x' and not (b.get('schaetzung') or {}).get('pose'))
             or (backend == 'smplest_x' and not self._smplx_netz(b))
         ]
-        if backend != 'keiner' and offen:
+        if backend == 'gvhmr':
+            # GVHMR je Körper-Hauptbild (`Bildmodellgvhmr`, 20.09.2026): rechnet, was fehlt, und
+            # übernimmt die Betas der Bilder mit Häkchen „Verwenden" in `schaetzung`.
+            self._gvhmr([b['datei'] for b in koerper], melder)
+            form = [b for b in self.job.bilder if Bildmodellbildtypen.fuer_form(b)]
+            koerper = [b for b in form if b.get('kategorie') == 'koerper']
+            koepfe = [b for b in form if b.get('kategorie') == 'kopf']
+        elif backend != 'keiner' and offen:
             self._schaetzen(offen, backend, melder)
         wahl = self.optionen.get('silhouette', 'aus')
         Bildmodellsilhouette.zuruecksetzen(koerper)
@@ -106,7 +113,7 @@ class Bildmodellschaetzung:
             koerper = koerper + [b for b in videos if (b.get('schaetzung') or {}).get('betas')]
         self.job.ergebnis = dict(self.job.ergebnis or {})
         self.job.ergebnis['schaetzung'] = self.mischen(koerper, koepfe)
-        self.job.save(update_fields=['bilder', 'ergebnis', 'updated_at'])
+        self.job.bilder_sichern('ergebnis')
         return self.job.ergebnis['schaetzung']
 
     #: Punkte eines SMPL-X-Netzes — ein SMPL-Netz von PyMAF-X (6.890) hat hier nichts verloren.
@@ -125,6 +132,37 @@ class Bildmodellschaetzung:
             return np.load(pfad, mmap_mode='r').shape[0] == self.SMPLX_PUNKTE
         except (OSError, ValueError):
             return False
+
+    # -------------------------------------------------------------- GVHMR
+
+    def _gvhmr(self, dateien, melder):
+        """Fehlende GVHMR-Ergebnisse rechnen (je Bild ein Runner, `ausfuehren` liest den Auftrag
+        danach frisch — darum über Dateinamen, nicht über die Einträge), dann `schaetzung` setzen:
+        Betas der verwendeten Bilder, `ausgelassen` für die abgewählten."""
+        from .bildmodellgvhmr import Bildmodellgvhmr
+        from .bildmodellmassband import Bildmodellmassband
+
+        dienst = Bildmodellgvhmr(self.job, self.ablage)
+        n = max(1, len(dateien))
+        for i, datei in enumerate(dateien):
+            g = (self.job.bild(datei) or {}).get('gvhmr') or {}
+            if g.get('netz') or g.get('fehler'):
+                continue
+            try:
+                dienst.ausfuehren(datei, lambda a, t, i=i: melder and melder(0.1 + 0.8 * (i + a) / n, t))
+            except ValueError as fehler:
+                logger.warning('Bildmodell %s: GVHMR %s: %s', self.job.kennung, datei, fehler)
+        for datei in dateien:
+            b = self.job.bild(datei)
+            if b is None:
+                continue
+            g = b.get('gvhmr') or {}
+            if Bildmodellmassband.verwendet(b):
+                b['schaetzung'] = {'backend': 'gvhmr', 'betas': g['betas'], 'frames': g.get('frames')}
+            elif g.get('fehler'):
+                b['schaetzung'] = {'backend': 'gvhmr', 'fehler': g['fehler']}
+            else:
+                b['schaetzung'] = {'backend': 'gvhmr', 'ausgelassen': True}
 
     # ------------------------------------------------------------- Videos
 
@@ -229,4 +267,4 @@ class Bildmodellschaetzung:
 
     def mischen(self, koerper, koepfe):
         """`{betas, bilder, mischung, anzahl, kopf, geschlecht}` — `Bildmodellmischung`."""
-        return Bildmodellmischung(self.optionen).mischen(koerper, koepfe)
+        return Bildmodellmischung(self.optionen, self.job).mischen(koerper, koepfe)

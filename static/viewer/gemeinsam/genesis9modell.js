@@ -179,6 +179,9 @@ export class Genesis9Modell extends Modell {
             this.group.remove(altes);
             const roh = new THREE.Mesh(altes.geometry, altes.material);
             roh.name = altes.name; roh.userData = altes.userData;
+            // Stranghaar prüft Klicks selbst (`Genesis9strangtreffer`, eigene Eigenschaft
+            // des Netzes) — ohne das war Viola nach dem ersten Reglerzug wieder unwählbar.
+            if (Object.hasOwn(altes, 'raycast')) roh.raycast = altes.raycast;
             this.clothMeshes[schluessel] = this._einhaengen(roh, haut);
         }
         Skelettereignis.melden(this);

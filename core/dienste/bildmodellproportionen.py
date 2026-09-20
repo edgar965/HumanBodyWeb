@@ -21,6 +21,7 @@ Läuft im Schritt „vorschau", Ergebnis in `ergebnis.proportionen`.
 import logging
 
 import numpy as np
+from django.utils import timezone
 
 logger = logging.getLogger('core')
 
@@ -96,4 +97,8 @@ class Bildmodellproportionen:
             'modell': G9proportionen.in_cm(modell),
             'formung': anpassung.get('proportionen'),
             'ansichten': ansichten,
+            # Stand der Bilder: die Seite hängt ihn als `?t=` an die Adressen — die Dateinamen sind
+            # fest, und `Date.now()` bei jeder Nachfrage ließ die Bilder im Lauf blinken (Edgar,
+            # 20.09.2026: „die bilder blinken während des Laufs sinnlos").
+            'stand': timezone.now().isoformat(),
         }

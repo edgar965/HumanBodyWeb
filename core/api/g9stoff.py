@@ -16,6 +16,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from Genesis9.garderobe import G9garderobe
 from Genesis9.netzstufe import G9netzstufe
+from Genesis9.passform import G9passform
 from Genesis9.pfade import G9pfade
 from Genesis9.stoff import G9stoff
 
@@ -45,11 +46,15 @@ class G9stoffapi:
             stufen = int(request.GET.get('stufen', G9netzstufe.browser()))
         except TypeError, ValueError:
             stufen = G9netzstufe.browser()
-        plan = G9stoff.bauplan(folger, folger.netzstufe(stufen))
+        # Mit Passform (`?laenge=&weite=`, cm) die Haut des verschobenen Kaefigs.
+        passform = folger.passformhaut(G9stoffapi.passform(request))
+        stufe = passform.netzstufe(stufen) if passform is not None else folger.netzstufe(stufen)
+        plan = G9stoff.bauplan(folger, stufe, passform)
         return JsonResponse(
             {
                 'kennung': kennung,
                 'nummer': int(nummer),
+                'passform': passform.schluessel if passform is not None else None,
                 'stufen': stufen,
                 'punkte': plan['punkte'],
                 'zeilen': plan['zeilen'],
@@ -60,3 +65,14 @@ class G9stoffapi:
                 'hautgewichte': Netzantwort.hautgewichte(plan['haut']),
             }
         )
+
+    @staticmethod
+    def passform(request):
+        u"""`{passform:laenge, passform:weite}` aus `?laenge=&weite=` — leer ohne."""
+        aus = {}
+        for name, feld in ((G9passform.LAENGE, 'laenge'), (G9passform.WEITE, 'weite')):
+            try:
+                aus[name] = float(request.GET.get(feld) or 0.0)
+            except (TypeError, ValueError):
+                aus[name] = 0.0
+        return aus

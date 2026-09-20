@@ -1,5 +1,5 @@
 /**
- * Personenformular — Alter, Größe, Gewicht, Tonus, Haar und „Neu berechnen".
+ * Personenformular — Alter, Größe, Gewicht, Tonus, Haar, „Neu berechnen" und „Abbrechen".
  *
  * Edgar (19.09.2026): „mache mir ein paar Felder oben für die Eingaben
  * zusätzlicher Daten, und einen ‚Neu Berechnen'-Button." Die Werte gehen als
@@ -34,6 +34,9 @@ export class Personenformular {
         tonus?.addEventListener('input', () => { this._tonusText(tonus.value); });
         this._tonusText(tonus?.value);
         document.getElementById('neu-berechnen')?.addEventListener('click', () => this.neuBerechnen());
+        // Edgar (20.09.2026): „mach ein Abbrechen-Button neben dem Berechnen; der Berechnen soll
+        // ausgegraut sein, sobald eine Berechnung läuft" — Abbrechen = `anhalten/` (Status, Prozess).
+        document.getElementById('neu-abbrechen')?.addEventListener('click', () => this.abbrechen());
         auftrag.zuhoeren(z => this.zeigen(z));
     }
 
@@ -80,6 +83,10 @@ export class Personenformular {
             knopf.querySelector('span').textContent = laeuft ? 'Berechnet …' : 'Neu berechnen';
             knopf.querySelector('i')?.classList.toggle('fa-spin', laeuft);
         }
+        const abbrechen = document.getElementById('neu-abbrechen');
+        if (abbrechen) abbrechen.disabled = !laeuft;
+        // Auch „Übernehmen und neu berechnen" in der Modellsicht und im Proportionen-Popup.
+        for (const k of document.querySelectorAll('[data-tat="rechnen"]')) k.disabled = laeuft;
         this._lauf(z, laeuft);
         const beleg = ((z.ergebnis || {}).ziel || {}).gewicht;
         const t = document.getElementById('person-beleg');
@@ -114,6 +121,11 @@ export class Personenformular {
             if (String(alt[k] ?? '') !== String(neu[k] ?? '')) return false;
         }
         return true;
+    }
+
+    async abbrechen() {
+        try { await this.auftrag.anhalten(); }
+        catch (fehler) { window.alert(`Abbrechen fehlgeschlagen: ${fehler.message}`); }
     }
 
     async neuBerechnen(ab = 'ziel') {

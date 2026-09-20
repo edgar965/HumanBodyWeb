@@ -1,4 +1,5 @@
 import { Htmltext } from '/static/djangobase/js/htmltext.js';
+import { Kontextmenue } from './kontextmenue.js';
 
 /**
  * Figurwahlzeile — eine Zeile in den Listen des Figurwahl-Dialogs.
@@ -7,6 +8,15 @@ import { Htmltext } from '/static/djangobase/js/htmltext.js';
  * Dialog eine zweite Aufgabe bekam (Modell austauschen). Die Zeile kennt
  * den Dialog nicht: Sie bekommt gesagt, was bei Klick, Doppelklick und den
  * Pflege-Knöpfen geschehen soll.
+ *
+ * RECHTSKLICK (Edgar, 20.09.2026: „bei den gespeicherten Modellen, mach ein
+ * Kontextmenü, mit dem ich das Modell löschen kann, dann wird es von der
+ * Platte gelöscht"): Auf einer Zeile mit Pflege öffnet die rechte Maustaste
+ * das Menü der Seite (`Kontextmenue`) mit Umbenennen und Löschen — dieselben
+ * zwei Werkzeuge wie die Knöpfe rechts in der Zeile, und derselbe Weg dahinter
+ * (`pflegen(was)`, in der Szene `Katalogpflege` mit Rückfrage und Löschen der
+ * Datei). Eine Zeile ohne Pflege — ein Körpertyp, ein Katalogeintrag — hat
+ * kein Menü, sie ist keine Datei.
  */
 export class Figurwahlzeile {
 
@@ -31,7 +41,19 @@ export class Figurwahlzeile {
             li.querySelector(`[data-tun="${was}"]`)
                 ?.addEventListener('click', () => pflegen(was));
         }
+        if (pflegen) {
+            // Der Rechtsklick wählt die Zeile mit — man sieht, wovon das Menü spricht.
+            Kontextmenue.binden(li, () => { waehlen(); return Figurwahlzeile.menue(pflegen); });
+        }
         return li;
+    }
+
+    /** Die Einträge des Rechtsklickmenüs — dieselben zwei Werkzeuge wie die Knöpfe. */
+    static menue(pflegen) {
+        return [
+            { symbol: 'fa-pen', text: 'Umbenennen', tun: () => pflegen('umbenennen') },
+            { symbol: 'fa-trash', text: 'Löschen', tun: () => pflegen('loeschen') },
+        ];
     }
 
     static markup(eintrag, mitPflege) {

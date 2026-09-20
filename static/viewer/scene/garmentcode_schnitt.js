@@ -1,4 +1,4 @@
-import { Fristabruf } from '../gemeinsam/fristabruf.js';
+import { Antwortnachholen } from '../gemeinsam/antwortnachholen.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 
@@ -40,8 +40,9 @@ export class GarmentcodeSchnitt {
         daten.append('regler', garmentcodeRegler.alsJson());
         // Gemessen 0,2 bis 14 s; 60 s sind reichlich. Ohne Frist bliebe
         // der Reiter besetzt, wenn die Antwort ausbleibt (09.09.2026).
-        const ergebnis = await Fristabruf.formular(
-            '/api/garmentcode/erzeugen/', daten, 60);
+        const ergebnis = await Antwortnachholen.formular(
+            '/api/garmentcode/erzeugen/', daten, 60,
+            (text) => { meldung.textContent = text; }, reiter.abbruch);
 
         if (ergebnis.fehler) {
             garmentcodeFortschritt.gescheitert('schnitt', 'Fehler');

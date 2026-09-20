@@ -50,7 +50,7 @@ class _Formung:
                 'body_ctrl_FlexionAutoStrength': 0.123456}.get(kanal, 0.0)
 
 
-def _delta(folger, formung, basis):
+def _delta(folger, formung, basis, projektion=None):
     u"""Kanal `a` bewegt Punkt 1 des Teils um 2 mm, `b` nichts."""
     if formung.regler != {'a': 1.0}:
         return None

@@ -1,9 +1,11 @@
 import { Kombiliste } from '../gemeinsam/kombiliste.js';
+import { GarmentcodeTitel } from './garmentcode_titel.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { GarmentcodeGemeinsam } from './garmentcode_gemeinsam.js';
+import { GarmentcodeKombiBearbeiten } from './garmentcode_kombi_bearbeiten.js';
 
 /**
  * Der Bedienteil für „Mehrere Stücke gemeinsam".
@@ -14,12 +16,14 @@ import { GarmentcodeGemeinsam } from './garmentcode_gemeinsam.js';
  * dann das zweite. Was übernommen wurde, ist ein Abzug der Reglerwerte von
  * DIESEM Augenblick — spätere Züge am Panel ändern den Eintrag nicht mehr.
  *
- * EIN EINTRAG LÄSST SICH NICHT NACHBEARBEITEN, und das ist eine
- * Entscheidung: Die Werte in den Reiter zurückzuladen hiesse, die Vorlage
- * zu wechseln (`garmentcodeRegler.laden` ist asynchron und stellt danach
- * das Gedächtnis dieser Vorlage her, nicht den Eintrag). Zwei Quellen für
- * dieselben Zahlen liefen auseinander. Wer etwas ändern will, nimmt den
- * Eintrag heraus und übernimmt neu; was drinsteht, sagt der Tooltip.
+ * EIN EINTRAG LÄSST SICH NACHBEARBEITEN — über den Reiter, nicht in der
+ * Zeile (Edgar, 20.09.2026: „kann ich die Eigenschaften des Stücks nicht
+ * mehr nachträglich ändern. Fixe"): Der Stift lädt den Eintrag in den
+ * Reiter (`garmentcode_kombi_bearbeiten.js`), die Zeile ist solange
+ * markiert, und „Übernehmen" schreibt ihn an seiner Stelle zurück. Der
+ * Eintrag folgt keinem Reglerzug von selbst — zwei Quellen für dieselben
+ * Zahlen liefen auseinander; was drinsteht, sagt der Tooltip. Wer die
+ * Vorlage wechselt, verlässt die Bearbeitung.
  *
  * Die Liste selbst (ohne DOM) steht in `gemeinsam/kombiliste.js`.
  */
@@ -28,6 +32,8 @@ class GarmentcodeKombi {
     constructor() {
         this.liste = new Kombiliste();
         this.reiter = null;
+        /** Nummer des Eintrags, der gerade im Reiter steht — oder null. */
+        this.bearbeitet = null;
     }
 
     /** @param reiter der `GarmentcodeReiter` */
@@ -46,6 +52,12 @@ class GarmentcodeKombi {
             ?.addEventListener('click',
                                () => GarmentcodeGemeinsam.bauen(reiter,
                                                                 this.liste));
+        // Eine andere Vorlage im Reiter heisst: nicht mehr dieser Eintrag.
+        document.getElementById('gc-vorlage')?.addEventListener('change', (ereignis) => {
+            const eintrag = this.bearbeitet === null
+                ? null : this.liste.eintraege[this.bearbeitet];
+            if (eintrag && ereignis.target.value !== eintrag.vorlage) this.abbrechen();
+        });
         // Was beim letzten Mal in der Liste stand (Edgar, 09.09.2026:
         // „merke dir die letzten Einstellungen auf allen Tabs").
         this.liste.laden();
@@ -53,31 +65,71 @@ class GarmentcodeKombi {
         return true;
     }
 
-    /** Das gerade eingestellte Stück in die Liste nehmen. */
+    /** Das gerade eingestellte Stück in die Liste nehmen — oder den
+     *  bearbeiteten Eintrag an seiner Stelle ersetzen. */
     uebernehmen() {
         const auswahl = document.getElementById('gc-vorlage');
         const vorlage = auswahl ? auswahl.value : '';
         // Das Aussehen: vom getragenen Stück dieser Vorlage, wenn es eines
         // gibt — das ist die Farbe, die der Nutzer ihm gegeben hat. Sonst
         // der Stand des Panels (11.09.2026: „es wurde nur 1 Farbe genommen").
-        const material = GarmentcodeMaterial.getragen(
-            GarmentcodeMaterial.figur(), vorlage) || GarmentcodeMaterial.stand;
-        const stand = this.liste.hinzufuegen(
-            vorlage, GarmentcodeAblauf.titel(vorlage), garmentcodeRegler.werte,
-            GarmentcodeBauregler.werte(), material);
+        const getragen = GarmentcodeMaterial.getragen(GarmentcodeMaterial.figur(), vorlage);
+        // Der bestellte Name: Vorbild, Form oder Vorlage (20.09.2026,
+        // `garmentcode_titel.js`) — so heisst das Stueck dann auch in der Szene.
+        const titel = GarmentcodeTitel.aktuell(vorlage);
+        const nummer = this.bearbeitet;
+        const ersetzt = nummer !== null && this.liste.eintraege[nummer]?.vorlage === vorlage;
+        // Beim Ersetzen ohne getragenes Stück bleibt das Material des Eintrags.
+        const stand = ersetzt
+            ? this.liste.ersetzen(nummer, vorlage, titel, garmentcodeRegler.werte,
+                                  GarmentcodeBauregler.werte(), getragen)
+            : this.liste.hinzufuegen(vorlage, titel, garmentcodeRegler.werte,
+                                     GarmentcodeBauregler.werte(),
+                                     getragen || GarmentcodeMaterial.stand);
         const wieviel = this.liste.anzahl === 1
             ? 'ein Stück' : `${this.liste.anzahl} Stücke`;
-        this.melden(stand.ok
-            ? `„${GarmentcodeAblauf.titel(vorlage)}" übernommen — `
-              + `${wieviel} in der Kombination.`
-            : stand.grund);
+        let text = stand.grund;
+        if (stand.ok) {
+            text = ersetzt ? `„${titel}" (${nummer + 1}.) geändert übernommen.`
+                : `„${titel}" übernommen — ${wieviel} in der Kombination.`;
+            this.bearbeitet = null;
+        }
+        this.melden(text);
         this.liste.sichern();
+        this.zeichnen();
+    }
+
+    /** Einen Eintrag in den Reiter laden, um ihn zu ändern. */
+    async bearbeiten(nummer) {
+        const eintrag = this.liste.eintraege[nummer];
+        if (!eintrag) return false;
+        this.bearbeitet = nummer;
+        this.zeichnen();
+        this.melden(`„${eintrag.titel}" (${nummer + 1}.) wird geladen …`);
+        const da = await GarmentcodeKombiBearbeiten.laden(eintrag);
+        if (this.bearbeitet !== nummer) return false;      // inzwischen abgebrochen
+        this.melden(da
+            ? `„${eintrag.titel}" (${nummer + 1}.) steht im Reiter — ändern, `
+              + 'dann schreibt „Übernehmen" es an seine Stelle zurück.'
+            : `„${eintrag.titel}" liess sich nicht laden — die Regler der Vorlage fehlen.`);
+        if (!da) this.abbrechen();
+        return da;
+    }
+
+    /** Die Bearbeitung verlassen, ohne etwas zu ändern. */
+    abbrechen() {
+        if (this.bearbeitet === null) return;
+        this.bearbeitet = null;
         this.zeichnen();
     }
 
     /** Eine Zeile herausnehmen. */
     entfernen(nummer) {
         this.liste.entfernen(nummer);
+        if (this.bearbeitet !== null) {
+            if (this.bearbeitet === nummer) this.bearbeitet = null;
+            else if (this.bearbeitet > nummer) this.bearbeitet -= 1;
+        }
         this.liste.sichern();
         this.zeichnen();
     }
@@ -106,18 +158,30 @@ class GarmentcodeKombi {
         });
         const bauen = document.getElementById('gc-kombi-bauen');
         if (bauen) bauen.disabled = !this.liste.darfBauen().ok;
+        const hinzu = document.getElementById('gc-kombi-hinzu');
+        if (hinzu) {
+            hinzu.innerHTML = this.bearbeitet === null
+                ? '<i class="fas fa-plus"></i> Stück übernehmen'
+                : `<i class="fas fa-check"></i> Änderung übernehmen (${this.bearbeitet + 1}.)`;
+        }
     }
 
     _zeile(eintrag, nummer) {
         const zeile = document.createElement('div');
-        zeile.className = 'slider-row';
+        zeile.className = 'slider-row' + (nummer === this.bearbeitet ? ' gc-kombi-aktiv' : '');
         zeile.dataset.vorlage = eintrag.vorlage;
         const name = document.createElement('label');
         // Die Nummer ist die LAGE in der Liste, keine Aussage darüber, was
         // aussen liegt — das entscheidet die Simulation. Deshalb steht sie
         // nur als Ordnungszahl da und nicht als „Schicht".
         name.textContent = `${nummer + 1}. ${eintrag.titel}`;
-        name.title = GarmentcodeKombi._reglertext(eintrag);
+        // Klick auf den Eintrag lädt ihn zum Ändern (Edgar, 20.09.2026:
+        // „Wenn ich also auf einen der Jobs klicke, soll ich die
+        // Einstellungen dazu ändern können") — der Stift daneben tut dasselbe.
+        name.title = 'Anklicken: in den Reiter laden und ändern.\n'
+            + GarmentcodeKombi._reglertext(eintrag);
+        name.className = 'gc-kombi-name';
+        name.addEventListener('click', () => this.bearbeiten(nummer));
         // Die Farbe des Stücks als Punkt — sichtbar, nicht nur im Tooltip.
         // Vom getragenen Stück, wenn es eines gibt (das gewinnt beim Bau),
         // sonst vom Eintrag. `Garmentstoff.werte` liefert die Farbe als
@@ -135,12 +199,18 @@ class GarmentcodeKombi {
         const rechts = document.createElement('span');
         rechts.className = 'slider-val';
         rechts.textContent = GarmentcodeKombi._kurztext(eintrag);
+        const stift = document.createElement('button');
+        stift.className = 'btn-toggle hb-fest';
+        stift.title = 'In den Reiter laden und ändern — „Übernehmen" schreibt '
+            + 'den Eintrag dann an seine Stelle zurück';
+        stift.innerHTML = '<i class="fas fa-pen"></i>';
+        stift.addEventListener('click', () => this.bearbeiten(nummer));
         const weg = document.createElement('button');
         weg.className = 'btn-toggle hb-fest';
         weg.title = 'Aus der Kombination nehmen';
         weg.innerHTML = '<i class="fas fa-times"></i>';
         weg.addEventListener('click', () => this.entfernen(nummer));
-        zeile.append(name, rechts, weg);
+        zeile.append(name, rechts, stift, weg);
         return zeile;
     }
 

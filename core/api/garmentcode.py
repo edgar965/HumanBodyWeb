@@ -15,6 +15,7 @@ from django.views.decorators.http import require_GET, require_POST
 from GarmentCode.dienst import GarmentcodeDienst
 
 from .garmentanfrage import Garmentanfrage
+from .garmentantwort import Garmentantwort
 
 logger = logging.getLogger(__name__)
 
@@ -72,22 +73,27 @@ class Garmentcode:
         # Die Stuecke, die die Figur schon traegt (11.09.2026): Der Koerper
         # wird um sie erweitert, das neue Stueck legt sich darueber.
         getragen = Garmentcode.getragene(request.POST.get('getragen'))
+        # Unter der Kennung der Anfrage meldet `Drapierung` ihren Prozess
+        # an — der Abbrechen-Knopf beendet ihn darueber (`garmentabbruch.py`).
+        from GarmentCode.laufregister import Laufregister
+
         try:
             anfrage = Garmentcode.aus_anfrage(request)
-            ergebnis = GarmentcodeDienst.drapieren(
-                spez,
-                koerper=anfrage.koerper,
-                geschlecht=anfrage.geschlecht,
-                morphs=anfrage.morphs,
-                bauart=anfrage.bauart,
-                smpl=anfrage.smpl,
-                meta=anfrage.meta,
-                fein=fein,
-                sim=sim,
-                getragen=getragen,
-                figurart=anfrage.figurart,
-                regler_figur=anfrage.regler_figur,
-            )
+            with Laufregister.lauf(request.POST.get('anfrage')):
+                ergebnis = GarmentcodeDienst.drapieren(
+                    spez,
+                    koerper=anfrage.koerper,
+                    geschlecht=anfrage.geschlecht,
+                    morphs=anfrage.morphs,
+                    bauart=anfrage.bauart,
+                    smpl=anfrage.smpl,
+                    meta=anfrage.meta,
+                    fein=fein,
+                    sim=sim,
+                    getragen=getragen,
+                    figurart=anfrage.figurart,
+                    regler_figur=anfrage.regler_figur,
+                )
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -110,6 +116,9 @@ class Garmentcode:
         datei = ergebnis.get('rig_datei')
         if ordner and datei:
             ergebnis['rig_url'] = '/api/garmentcode/datei/%s/%s/' % (ordner, datei)
+        # Fuer den Fall, dass die Antwort den Browser nicht erreicht
+        # (Neustart des Dev-Servers waehrend der 30 s — `garmentantwort.py`).
+        Garmentantwort.ablegen(request.POST.get('anfrage'), ergebnis)
         return JsonResponse(ergebnis)
 
     @staticmethod
@@ -202,6 +211,7 @@ class Garmentcode:
         ergebnis['vorschau'] = (
             '/api/garmentcode/datei/%s/%s/' % (os.path.basename(ordner), bild) if bild else ''
         )
+        Garmentantwort.ablegen(request.POST.get('anfrage'), ergebnis)
         return JsonResponse(ergebnis)
 
     @staticmethod

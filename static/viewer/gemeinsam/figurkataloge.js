@@ -48,10 +48,14 @@ export class Figurkataloge {
         umapython: { titel: 'UMA Python', adresse: '/api/umapython/rassen/',
                      leer: 'Kein UMA-Katalog gefunden (UMA_PROJEKT).', pflege: false },
         // Daz Genesis 9 (17.09.2026): Reglerstellungen mit Haut aus der
-        // installierten Daz-Bibliothek — nichts davon im Repo, keine Pflege.
+        // installierten Daz-Bibliothek — nichts davon im Repo. Pflege gibt es
+        // trotzdem (20.09.2026), denn sie gilt nur für den Bereich „gespeichert"
+        // (`Figurwahldialog._zeile`): ein gespeichertes Genesis-9-Modell ist eine
+        // Datei `data/models/<name>.json` wie ein HumanBody-Modell, und Edgar
+        // will sie aus dem Dialog löschen können.
         genesis9: { titel: 'Genesis 9', adresse: '/api/character/genesis9-figur/',
                     leer: 'Daz-Bibliothek mit Genesis 9 fehlt (Genesis9/HERKUNFT.md).',
-                    pflege: false },
+                    pflege: true },
     };
 
     /** Die Zeilen einer Quelle: [{name, anzeige, unterzeile}]. */

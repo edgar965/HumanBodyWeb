@@ -67,6 +67,9 @@ export class Eigenhaut {
         // (`MhFigur._kleiderBinden`). Ohne sie ist die zweite Bindung
         // nicht mehr moeglich, und das Stueck bleibt still starr.
         gebunden.userData = netz.userData;
+        // Eine eigene Trefferprüfung (Stranghaar: Strecken statt Dreiecke,
+        // `Genesis9strangtreffer`) gehört zum Netz, nicht zur Klasse — sie zieht mit.
+        if (Object.hasOwn(netz, 'raycast')) gebunden.raycast = netz.raycast;
         return gebunden;
     }
 

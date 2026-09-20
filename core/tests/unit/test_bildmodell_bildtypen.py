@@ -39,6 +39,32 @@ class BildtypenTest(unittest.TestCase):
         self.assertEqual(e['kategorie'], 'neben')
         self.assertEqual(T.neben(e), 'neben')
 
+    def test_hauptbild_in_der_zweiten_box(self):
+        # Edgar (20.09.2026): „Warum gibt es keine Kategorie Hauptbild in der zweiten Combo?"
+        e = {'datei': 'a.jpg', 'kategorie': 'neben', 'teil': 'haende', 'gewicht': 0.0}
+        self.assertTrue(T.stellen(e, {'neben': 'haupt/hinten'}))
+        self.assertEqual((e['kategorie'], e['ansicht'], e['hauptbild'], e['gewicht']),
+                         ('koerper', 'hinten', True, 1.0))
+        self.assertNotIn('teil', e)
+        self.assertEqual((T.haupt(e), T.neben(e)), ('koerper/hinten', 'haupt/hinten'))
+        T.stellen(e, {'neben': 'haupt/kopf-seite'})
+        self.assertEqual((e['kategorie'], e['ansicht'], T.neben(e)), ('kopf', 'seite', 'haupt/kopf-seite'))
+        # Typ auf dreiviertel: Markierung fällt, Typ bleibt
+        T.stellen(e, {'haupt': 'koerper/dreiviertel'})
+        self.assertNotIn('hauptbild', e)
+        self.assertEqual(T.neben(e), '')
+        # „keins" bei markiertem Hauptbild nimmt nur die Markierung
+        T.stellen(e, {'neben': 'haupt/vorne'})
+        T.stellen(e, {'neben': ''})
+        self.assertEqual((e['kategorie'], e.get('hauptbild')), ('koerper', None))
+        # ein Nebenbild löscht die Markierung
+        T.stellen(e, {'neben': 'haupt/vorne'})
+        T.stellen(e, {'neben': 'neben/haende'})
+        self.assertEqual((e['kategorie'], e.get('hauptbild')), ('neben', None))
+        gruppen = {x['wert']: x.get('gruppe') for x in T.katalog()['neben']}
+        self.assertEqual((gruppen['haupt/vorne'], gruppen['neben/haende'], gruppen['']),
+                         ('Hauptbild', 'Nebenbild', ''))
+
     def test_nebenbild_mit_teil_und_ohne(self):
         e = {'datei': 'a.jpg', 'kategorie': 'koerper', 'ansicht': 'vorne', 'gewicht': 1.0}
         T.stellen(e, {'neben': 'neben/oberkoerper'})

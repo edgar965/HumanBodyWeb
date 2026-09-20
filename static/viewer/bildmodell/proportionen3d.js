@@ -10,37 +10,29 @@
  * Ein schwebendes Fenster IM Proportionen-Dialog (der ist modal — ein zweiter
  * `<dialog>` daneben wäre unbedienbar), rechts am Bildschirmrand, vergrößerbar:
  * oben das Zielnetz (`Proportionen3dbuehne`), darunter die 19 Maße als
- * Schieber (`Proportionen3dregler`). Jede Änderung — Pfeil im Bild, Zahl in
- * der Tabelle, Schieber hier — ruft `nachziehen()`: die aktuellen Werte gehen
- * gebündelt (120 ms) an `zielnetz3d/`, die Antwort tauscht die Punkte. Läuft
- * gerade eine Anfrage, wartet die nächste, bis sie zurück ist (kein Stau).
- * Der Server formt dasselbe wie der Lauf: Umriss der Fotos (einmal abgelegt)
- * plus die Eingaben — kein Modell-Lauf, nichts wird gespeichert.
+ * Schieber (`Proportionen3dregler`). Das Netz kommt von der geteilten
+ * `Zielnetzlive` des Dialogs — dieselbe Antwort wie für die Modellsicht oben
+ * auf der Seite (seit 20.09.2026 abends), eine Anfrage je Zug. Der Dialog ruft
+ * nach jeder Änderung `nachziehen()`: Schieber auf den Stand, die Anfrage
+ * stellt `Zielnetzlive` (gebündelt, eine in der Luft).
  */
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Proportionen3dbuehne } from './proportionen3dbuehne.js';
 import { Proportionen3dregler } from './proportionen3dregler.js';
 
 export class Proportionen3d {
 
-    static WARTEN_MS = 120;
-
     /**
      * @param feld      das Fenster (`#proportionen-3d`, im Dialog)
      * @param auftrag   `Auftrag` (Adresse, Zustand)
      * @param katalog   `{proportionen}`
-     * @param dialog    der `Proportionendialog` (Werte, Ziel, `wertGeschoben`)
+     * @param dialog    der `Proportionendialog` (Werte, Ziel, `wertGeschoben`, `live`)
      */
     constructor(feld, auftrag, katalog, dialog) {
         this.feld = feld;
         this.auftrag = auftrag;
         this.dialog = dialog;
         this.buehne = null;
-        this.bericht = {};
-        this._warte = null;
-        this._laeuft = false;
-        this._nochmal = false;
-        this._netzDa = false;
+        this._hoerer = null;
         if (!this.feld) return;
         this.text = this.feld.querySelector('.bildmodell-3dtext');
         this.regler = new Proportionen3dregler(this.feld.querySelector('.bildmodell-3dregler'), katalog,
@@ -50,6 +42,8 @@ export class Proportionen3d {
     }
 
     get offen() { return !!this.feld && !this.feld.hidden; }
+
+    get bericht() { return this.dialog.live ? this.dialog.live.bericht : {}; }
 
     _melden(t) { if (this.text) this.text.textContent = t; }
 
@@ -62,6 +56,10 @@ export class Proportionen3d {
         this.feld.hidden = false;
         this.buehne?.starten();
         this.regler.fuellen(this.dialog.werte(), this.dialog.daten().ziel || {}, this.bericht);
+        if (this.dialog.live && !this._hoerer) {
+            this._hoerer = (antwort, netz, text) => this._antwort(antwort, netz, text);
+            this.dialog.live.zuhoeren(this._hoerer);
+        }
         this.nachziehen(true);
     }
 
@@ -69,6 +67,7 @@ export class Proportionen3d {
         if (!this.feld) return;
         this.feld.hidden = true;
         this.buehne?.anhalten();
+        if (this.dialog.live && this._hoerer) { this.dialog.live.vergessen(this._hoerer); this._hoerer = null; }
     }
 
     umschalten() { if (this.offen) this.schliessen(); else this.oeffnen(); }
@@ -77,34 +76,12 @@ export class Proportionen3d {
     nachziehen(sofort = false) {
         if (!this.offen) return;
         this.regler.aktualisieren(this.dialog.werte(), this.dialog.daten().ziel || {}, this.bericht);
-        clearTimeout(this._warte);
-        this._warte = setTimeout(() => this._holen(), sofort ? 0 : Proportionen3d.WARTEN_MS);
+        this.dialog.live?.nachziehen(sofort);
     }
 
-    async _holen() {
-        if (this._laeuft) { this._nochmal = true; return; }
-        this._laeuft = true;
-        const werte = this.dialog.werte();
-        try {
-            const t = performance.now();
-            const antwort = await Serverabruf.senden(this.auftrag.adresse('zielnetz3d/'),
-                { proportionen: werte, netz: !this._netzDa });
-            if (antwort.error) throw new Error(antwort.error);
-            if (this.buehne) {
-                if (!this._netzDa && antwort.dreiecke) { this.buehne.netzSetzen(antwort); this._netzDa = true; }
-                else this.buehne.punkteSetzen(antwort);
-            }
-            this.bericht = antwort.bericht || {};
-            this.regler.aktualisieren(werte, this.dialog.daten().ziel || {}, this.bericht);
-            const n = Object.keys(werte).length;
-            this._melden(`Zielnetz mit Umriss${n ? ` und ${n} Vorgabe${n === 1 ? '' : 'n'}` : ''} — `
-                + `${(antwort.anzahl || 0).toLocaleString('de-DE')} Punkte, ${antwort.hoehe_cm} cm, `
-                + `Server ${antwort.dauer_ms} ms, gesamt ${Math.round(performance.now() - t)} ms`);
-        } catch (fehler) {
-            this._melden(`Zielnetz nicht geformt: ${fehler.message}`);
-        } finally {
-            this._laeuft = false;
-            if (this._nochmal) { this._nochmal = false; this._holen(); }
-        }
+    _antwort(antwort, netz, text) {
+        if (antwort && this.buehne) this.buehne.setzen(antwort, netz);
+        this.regler.aktualisieren(this.dialog.werte(), this.dialog.daten().ziel || {}, this.bericht);
+        this._melden(text);
     }
 }

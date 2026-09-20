@@ -24,9 +24,10 @@ import { base64ToFloat32 } from './kodierung.js';
  * dieselbe Erfahrung wie bei UMA (`umapythonnetz.js`).
  *
  * Gruppen OHNE Bilder (Augenfeuchte, Träne) werden als Glanzschicht
- * gezeichnet: durchsichtig, glatt. Gruppen mit `alpha` (Haare) bekommen
- * `alphaTest`, damit die Reihenfolge der Dreiecke nicht zählt; BRAUEN und
- * WIMPERN (`WEICH`) dagegen eine weiche Deckkraft ohne Tiefenschreiben —
+ * gezeichnet: durchsichtig, glatt. Gruppen mit `alpha` (Haarkarten) bekommen
+ * MSAA-Deckung (`alphaToCoverage`, 20.09.2026 — vorher ein Alpha-Schnitt bei
+ * 0,3, der Kins feine Fäden wegschnitt), damit die Reihenfolge der Dreiecke
+ * nicht zählt; BRAUEN und WIMPERN (`WEICH`) dagegen eine weiche Deckkraft ohne Tiefenschreiben —
  * Daz' Cutout-Bild `OpacityCutout01_Thin` hat weiche Härchen, der Schnitt
  * bei 0,3 ließ nur ihre Kerne stehen (Edgar, 18.09.2026: „ich sehe bei
  * allen Genesis9 keine Augenbrauen"). Die Braue liegt auf opaker Haut, die
@@ -133,13 +134,22 @@ export class Genesis9netz {
         // 8K-Detailnormalen (nur mit Strg+Alt+H, `Genesis9/browserbilder.py`) über den Grundnormalen.
         if (bilder.detailnormalen && bilder.normalen) Genesis9haut.detail(material, bilder.detailgewicht);
         if (bilder.alpha) {
-            material.transparent = true;
             material.side = THREE.DoubleSide;
             if (Genesis9netz.WEICH.some(g => gruppe.name.startsWith(g))) {
+                material.transparent = true;
                 material.alphaTest = 0.02;
                 material.depthWrite = false;
             } else {
-                material.alphaTest = 0.3;
+                // Haarkarten (Edgar, 20.09.2026: „Kin Haar ist dünn, das sind ja
+                // krebskranke Haare"): Kins Deckkraftbild `HairT.jpg` hat im Mittel
+                // 0,05 — nur 5 % der Texel über 0,5, 9 % über 0,1. Ein Schnitt bei
+                // 0,3 ließ von jeder Karte ein paar Fäden stehen; Daz rechnet die
+                // Deckkraft anteilig, und zwanzig Karten übereinander werden voll.
+                // Hier dasselbe über die MSAA-Deckung (`alphaToCoverage`, die
+                // Bühne zeichnet mit `antialias: true`): Alpha wird zum Anteil der
+                // Abtastpunkte, ohne Sortierung, mit Tiefe — kein Schnitt mehr.
+                material.alphaToCoverage = true;
+                material.alphaTest = 0.02;
             }
         }
         return material;

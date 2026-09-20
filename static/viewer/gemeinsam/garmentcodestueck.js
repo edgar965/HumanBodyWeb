@@ -76,7 +76,8 @@ export class Garmentcodestueck {
             isGarment: true,
             gcStueck: this.eintrag.stueck,
             [Garmentcodestueck.KENNUNG]: daten,
-            beschriftung: `${this.eintrag.stueck || 'Kleidung'} (GarmentCode)`,
+            titel: this.eintrag.titel || this.eintrag.stueck,
+            beschriftung: `${this.eintrag.titel || this.eintrag.stueck || 'Kleidung'} (GarmentCode)`,
         });
         Protokoll.debug('garmentcodestueck', '✓ geladen:', this.eintrag.stueck,
                         geometrie.attributes.position.count, 'Punkte');

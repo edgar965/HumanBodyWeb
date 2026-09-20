@@ -3,6 +3,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
 import { GarmentcodeGeometrie } from './garmentcode_geometrie.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
+import { GarmentcodeTitel } from './garmentcode_titel.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -71,16 +72,16 @@ export class GarmentcodeAnziehen {
      * @returns Objekt mit punkte, dreiecke, angezogen, zugeordnet —
      *          oder wirft
      */
-    static async anziehen(figur, url, stueck) {
+    static async anziehen(figur, url, stueck, titel = null) {
         const daten = await fetch(url, { cache: 'no-store' }).then(a => {
             if (!a.ok) throw new Error(`Rig nicht ladbar (${a.status})`);
             return a.json();
         });
-        return GarmentcodeAnziehen.einhaengen(figur, daten, stueck);
+        return GarmentcodeAnziehen.einhaengen(figur, daten, stueck, titel);
     }
 
     /** Derselbe Schritt mit schon geladenen Daten — so ist er prüfbar. */
-    static einhaengen(figur, daten, stueck) {
+    static einhaengen(figur, daten, stueck, titel = null) {
         const geometrie = GarmentcodeGeometrie.aus(daten);
         // Das bisherige Aussehen überlebt das Neu-Einhängen — diese Methode
         // läuft auch aus `nachbinden` (`garmentcode_stoff.js`, 09.09.2026).
@@ -124,8 +125,11 @@ export class GarmentcodeAnziehen {
         netz.userData.gcRig = daten;
         netz.userData.gcStueck = stueck;
         netz.frustumCulled = false;      // das Netz verlässt beim Posieren die Box
-        // Die Beschriftung fürs Auswahlmenü — sonst stünde dort `gc_kleid`.
-        netz.userData.beschriftung = `${stueck || 'Kleidung'} (GarmentCode)`;
+        // Die Beschriftung fürs Auswahlmenü: der Titel, unter dem das Stück
+        // bestellt wurde (Vorbild, Form oder Vorlage — `garmentcode_titel.js`,
+        // 20.09.2026: „Bandbikinislip", nicht „unterwaesche").
+        netz.userData.titel = titel || stueck;
+        netz.userData.beschriftung = GarmentcodeTitel.beschriftung(titel, stueck);
         figur.group.add(netz);
         // Erst DAMIT ist das Stück ein eigenes Objekt: auswählbar,
         // hervorhebbar, einzeln löschbar (siehe `schluessel`).
@@ -175,7 +179,8 @@ export class GarmentcodeAnziehen {
             // baut es je Umbau neu, 19.09.2026): neu binden. Ohne Rohdaten geht es nicht.
             if (!netz || (netz.isSkinnedMesh && netz.skeleton === skelett) || !netz.userData?.gcRig) continue;
             const ergebnis = GarmentcodeAnziehen.einhaengen(
-                inst, netz.userData.gcRig, netz.userData.gcStueck);
+                inst, netz.userData.gcRig, netz.userData.gcStueck,
+                netz.userData.titel || null);
             if (ergebnis.angezogen) gebunden += 1;
         }
         return gebunden;

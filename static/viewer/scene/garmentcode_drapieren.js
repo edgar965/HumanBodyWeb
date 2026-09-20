@@ -1,8 +1,9 @@
-import { Fristabruf } from '../gemeinsam/fristabruf.js';
+import { Antwortnachholen } from '../gemeinsam/antwortnachholen.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Stoffvorschau } from './stoffvorschau.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { GarmentcodeTitel } from './garmentcode_titel.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { fn } from '../gemeinsam/registrierung.js';
@@ -52,8 +53,11 @@ export class GarmentcodeDrapierung {
             // MIT FRIST (09.09.2026): Eine Drapierung, deren Antwort nie
             // kommt, liess den Reiter besetzt und alle Knoepfe grau —
             // Begruendung und Logauszug in `gemeinsam/fristabruf.js`.
-            const netz = await Fristabruf.formular(
-                '/api/garmentcode/drapieren/', daten);
+            // Reisst die Verbindung (Neustart des Dev-Servers, 20.09.2026),
+            // wird die abgelegte Antwort nachgeholt statt neu gerechnet.
+            const netz = await Antwortnachholen.formular(
+                '/api/garmentcode/drapieren/', daten, undefined,
+                (text) => { meldung.textContent = text; }, reiter.abbruch);
             if (netz.fehler) {
                 garmentcodeFortschritt.entfallen('rig');
                 garmentcodeFortschritt.gescheitert('drape', 'Fehler');
@@ -113,7 +117,7 @@ export class GarmentcodeDrapierung {
      * Wirft bei einem Fehler weiter — der Aufrufer entscheidet, ob das den
      * ganzen Lauf beendet.
      */
-    static async einhaengen(figur, netz, stueck) {
+    static async einhaengen(figur, netz, stueck, titel = null) {
         // ERST DAS SKELETT (Edgar, 08.09.2026: „warum denn der hinweistext:
         // Figur hat kein Skelett?? die hat doch skelett").
         //
@@ -129,13 +133,15 @@ export class GarmentcodeDrapierung {
         const inst = figur?.inst || figur;
         if (inst && !inst.isSkinned) fn.convertInstToSkinned?.(inst);
         let getragen = null;
+        // Der Name, unter dem das Stück bestellt wurde (20.09.2026).
+        titel = titel || netz.titel || GarmentcodeTitel.aktuell(stueck);
         if (netz.rig_url) {
             // `inst`, nicht `figur.inst`: Die Zeile oben löst beide Formen
             // auf (Reiter-Wrapper `{id, inst}` ODER die Instanz selbst).
             // Mit `figur.inst` fiel der zweite Fall um — `undefined.group`
             // in `GarmentcodeAnziehen.einhaengen`, gemessen 09.09.2026.
             getragen = await GarmentcodeAnziehen.anziehen(
-                inst, netz.rig_url, stueck);
+                inst, netz.rig_url, stueck, titel);
         }
         // Ab jetzt folgt das Stueck den Reglern, ohne neue Simulation
         // (Edgar, 08.09.2026: „mach mir auch einen 3D Vorschau der schnell
@@ -146,7 +152,7 @@ export class GarmentcodeDrapierung {
         Stoffvorschau.hinweisAus();
         // In die Ablage der Figur, damit „Speichern" es findet
         // (08.09.2026: „beim neu laden sind die Garment Code items weg").
-        GarmentcodeAblage.merken(inst, stueck, netz);
+        GarmentcodeAblage.merken(inst, stueck, netz, titel);
         // Das frisch eingehängte Stück bekommt ein neues Material mit den
         // Vorgabewerten. Ohne diesen Schritt spränge die eingestellte Farbe
         // bei jedem Bau zurück (08.09.2026).

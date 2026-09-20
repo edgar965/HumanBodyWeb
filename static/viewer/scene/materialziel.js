@@ -23,6 +23,15 @@
  * darf breit wirken. Was Code in die Felder schreibt, wird gemerkt und
  * gilt für das nächste gebaute Stück — wie seit dem 09.09.
  *
+ * „BREIT" HEISST SEIT DEM 20.09.2026 NICHT MEHR „ALLE", SONDERN „DAS STÜCK
+ * DER GEWÄHLTEN VORLAGE" (Edgar: „ich habe Kin1 aktiviert und möchte ein
+ * T-Shirt erzeugen, sobald ich die Farbe eingeben will, wird die Farbe der
+ * Leggings geändert!!"): Wer im Reiter „Oberteil" stehen hat und die Farbe
+ * für das T-Shirt einstellt, das er gleich baut, meint nicht die Leggings,
+ * die schon hängen. Ohne Auswahl bekommt den Stand also nur das Stück, das
+ * zur gewählten Vorlage gehört (`gc_<vorlage>`), falls es hängt; sonst
+ * niemand — der Stand wird gemerkt und liegt auf dem nächsten Bau.
+ *
  * Ohne DOM und ohne Three.js, damit die Entscheidung in Node prüfbar ist.
  */
 export class Materialziel {
@@ -37,15 +46,17 @@ export class Materialziel {
      * @param {Object|null} [wahl.gewaehlt]  das angeklickte GarmentCode-Stück
      * @param {Object|null} [wahl.stuecke]  `inst.clothMeshes` der Figur
      * @param {boolean} [wahl.nutzer]  hat der Nutzer das Feld bedient?
+     * @param {string|null} [wahl.aktuell]  Schlüssel des Stücks der
+     *        gewählten Vorlage (`gc_oberteil`)
      * @returns {Array<Object>} gewählt → nur dieses; sonst bei einer
-     *          Nutzeraktion alle `gc_*`-Stücke der Figur; sonst keines
+     *          Nutzeraktion das Stück der gewählten Vorlage, falls es
+     *          hängt; sonst keines
      */
-    static netze({ gewaehlt = null, stuecke = null, nutzer = false } = {}) {
+    static netze({ gewaehlt = null, stuecke = null, nutzer = false,
+                   aktuell = null } = {}) {
         if (gewaehlt) return [gewaehlt];
-        if (!nutzer) return [];
-        return Object.entries(stuecke || {})
-            .filter(([schluessel, netz]) => netz
-                && String(schluessel).startsWith(Materialziel.VORSILBE))
-            .map(([, netz]) => netz);
+        if (!nutzer || !aktuell) return [];
+        const netz = (stuecke || {})[aktuell];
+        return netz && String(aktuell).startsWith(Materialziel.VORSILBE) ? [netz] : [];
     }
 }

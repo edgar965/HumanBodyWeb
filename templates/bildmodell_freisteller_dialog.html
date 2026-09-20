@@ -1,0 +1,41 @@
+{% comment %}Das Fenster „Hintergrund entfernen" je Bild (20.09.2026, Edgar: „mach einen Button zum Entfernen
+des Hintergrunds für die Bilder, mit Regler und Preview-Fenster, Speichern des neuen Bildes"). Gefüllt und
+gesteuert von `freisteller.js`: links das Bild, rechts die Vorschau vom Server, darunter die Regler.{% endcomment %}
+<dialog id="freisteller-dialog" class="bildmodell-dialog bildmodell-gvhmrdialog">
+    <div class="bildmodell-dialogkopf">
+        <h2>Hintergrund entfernen — <span data-feld="datei"></span></h2>
+        <span class="bildmodell-gvhmrkopfrechts">
+            <button type="button" class="btn btn-sm btn-secondary" data-tat="schliessen" title="Fenster schließen">×</button>
+        </span>
+    </div>
+    <div class="bildmodell-gvhmrfeld bildmodell-freistellerfeld">
+        <figure class="bildmodell-gvhmrfoto"><img alt="Das Bild" data-feld="foto"></figure>
+        <figure class="bildmodell-gvhmrfoto bildmodell-freistellervorschau"><img alt="Vorschau ohne Hintergrund" data-feld="vorschau"></figure>
+    </div>
+    <div class="bildmodell-freistellerregler">
+        <label title="Wo die weiche Maske kippt — höher: weniger Hintergrund bleibt, feines Haar geht mit">Schwelle
+            <input type="range" min="0" max="100" step="1" value="50" data-regler="schwelle" data-einheit=" %"><span data-wert="schwelle"></span></label>
+        <label title="Kante weichzeichnen (Pixel)">Weich
+            <input type="range" min="0" max="30" step="1" value="2" data-regler="weich" data-einheit=" px"><span data-wert="weich"></span></label>
+        <label title="Maske schrumpfen (−) oder wachsen lassen (+), Pixel">Rand
+            <input type="range" min="-20" max="20" step="1" value="0" data-regler="rand" data-einheit=" px"><span data-wert="rand"></span></label>
+        <label title="Womit der Hintergrund gefüllt wird (JPEG kennt keine Transparenz)">Hintergrund
+            <select data-regler="hintergrund">
+                <option value="weiss">Weiß</option>
+                <option value="schwarz">Schwarz</option>
+                <option value="grau">Grau</option>
+                <option value="gruen">Grün</option>
+            </select></label>
+    </div>
+    <div class="bildmodell-gvhmrlauf"><span class="hb-hinweis" data-feld="text">—</span></div>
+    <div class="bildmodell-dialogknoepfe">
+        <span class="hb-hinweis">Speichern ersetzt den Ausschnitt unter demselben Namen — Textur, Hauptbild, GVHMR, FLAME lesen dann das neue Bild.</span>
+        <span class="bildmodell-dialogrechts">
+            <button type="button" class="btn btn-secondary btn-sm" data-tat="zurueck" disabled
+                    title="Das Bild von vor dem Freistellen zurückholen"><i class="fas fa-undo"></i> Zurücksetzen</button>
+            <button type="button" class="btn btn-primary btn-sm" data-tat="speichern"
+                    title="Das freigestellte Bild in voller Größe speichern"><i class="fas fa-save"></i> Speichern</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-tat="schliessen">Schließen</button>
+        </span>
+    </div>
+</dialog>

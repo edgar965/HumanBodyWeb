@@ -71,10 +71,47 @@ class G9garmentfigur:
     #: (`G9unterteilung.ANSICHT`); `sichtbar()` fragt `G9netzstufe.browser()`.
     SICHTBAR = 1
 
+    #: Der Eintrag in `regler_figur`, der keine Reglerstellung ist, sondern die
+    #: HALTUNG der Figur: `{'griffe': [kennung, …]}`.
+    STELLUNG = 'stellung'
+
     def __init__(self, regler):
         self.regler = {str(k): v for k, v in (regler or {}).items()}
-        self.formung = G9formung.aus_abfrage(dict(self.regler), {})
+        stellung = self.regler.pop(self.STELLUNG, None)
+        regler, drehung = self._haltung(dict(self.regler), stellung)
+        self.formung = G9formung.aus_abfrage(regler, drehung)
         self._roh = None
+
+    @staticmethod
+    def _haltung(regler, stellung):
+        u"""Regler und Knochendrehung um die Griffposen der getragenen Stuecke
+        erweitert — dieselbe Figur, die der Browser zeigt.
+
+        BEFUND (Edgar, 20.09.2026, Olesia1 in Bardot-Sandalen: das Oberteil sass
+        nach dem Laden eine Handbreit zu tief, in der Animation ebenso): Der
+        Browser baut die Figur mit der Fusspose ihrer Schuhe (`G9figur.formung`,
+        `griffe`) — die Zehen zeigen nach unten, und weil die Figur auf dem
+        tiefsten Punkt steht, hebt sie das um die Absatzhoehe: gemessen 1,7504 m
+        statt 1,7010 m, also 4,9 cm. Die GarmentCode-Figur kannte die Schuhe
+        nicht, der Stoff wurde auf der flach stehenden Figur drapiert und
+        dann 4,9 cm zu tief an das hoehere Skelett gebunden.
+
+        Nur die GRIFFE, nicht die Pose (`inst.pose`): Drapiert wird in der
+        Grundhaltung mit offenen Armen; eine Figur in Sitzpose bekaeme sonst
+        ihre Aermel ueber die Knie gezogen.
+        """
+        griffe = (stellung or {}).get('griffe') if isinstance(stellung, dict) else None
+        if not griffe:
+            return regler, {}
+        from Genesis9.garderobe import G9garderobe
+        drehung = {}
+        for kennung in griffe:
+            if not isinstance(kennung, str) or not kennung:
+                continue
+            for name, kanaele in G9garderobe.griff(kennung).items():
+                drehung.setdefault(name, {}).update(kanaele)
+            regler.update(G9garderobe.griffregler(kennung))
+        return regler, drehung
 
     # ---------------------------------------------------------------- Netz
 

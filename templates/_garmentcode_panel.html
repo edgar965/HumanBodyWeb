@@ -87,6 +87,13 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                     <button id="gc-bauen-beides" class="btn-toggle hb-dehnt"
                             title="Schnitt, Drapierung und Anziehen in einem Zug &mdash; das echte Ergebnis"><i
                          class="fas fa-cut"></i> 2D + 3D</button>
+                    {% comment %}Nur waehrend eines Laufs klickbar
+                    (20.09.2026, `scene/garmentcode_lauf.js`): beendet den
+                    Abruf im Browser UND den Simulationsprozess auf dem
+                    Server.{% endcomment %}
+                    <button id="gc-abbrechen" class="btn-toggle hb-fest" disabled
+                            title="Den laufenden Bau beenden &mdash; im Browser und die Simulation auf dem Server"><i
+                         class="fas fa-stop"></i> Abbrechen</button>
                 </div>
                 {% comment %}Zwei Stellschrauben des Bauens, bis zum
                 09.09.2026 Konstanten im Code (Edgar: „die 3 mm Mindestabstand
@@ -180,7 +187,7 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
             <div class="panel-body">
                 <div class="hb-display-flex">
                     <button id="gc-kombi-hinzu" class="btn-toggle hb-dehnt"
-                            title="Das oben gewählte Kleidungsstück mit seinen jetzigen Feineinstellungen in die Kombination nehmen. Spätere Reglerzüge ändern den Eintrag nicht mehr."><i
+                            title="Das oben gewählte Kleidungsstück mit seinen jetzigen Feineinstellungen in die Kombination nehmen. Spätere Reglerzüge ändern den Eintrag nicht von selbst — der Stift an der Zeile lädt ihn zum Ändern in den Reiter, Übernehmen schreibt ihn zurück."><i
                          class="fas fa-plus"></i> St&uuml;ck &uuml;bernehmen</button>
                     <button id="gc-kombi-leeren" class="btn-toggle hb-fest"
                             title="Die Kombination leeren"><i

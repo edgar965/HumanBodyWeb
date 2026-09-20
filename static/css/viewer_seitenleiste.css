@@ -131,6 +131,16 @@
     border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
+/* Kombiliste: Klick auf den Namen laedt den Eintrag zum Aendern (20.09.2026). */
+.gc-kombi-name { cursor: pointer; }
+.gc-kombi-name:hover { text-decoration: underline; }
+
+/* Kombiliste: der Eintrag, der gerade im Reiter bearbeitet wird (20.09.2026). */
+.gc-kombi-aktiv {
+    outline: 1px solid rgba(120, 190, 255, 0.8);
+    background: rgba(120, 190, 255, 0.12);
+}
+
 /* 3x */
 .hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }
 

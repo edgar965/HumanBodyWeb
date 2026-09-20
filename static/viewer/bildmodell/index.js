@@ -8,14 +8,17 @@ import { Personenformular } from './personenformular.js';
 import { Proportionenansicht } from './proportionen.js';
 import { Testfallansicht } from './testfallansicht.js';
 import { Texturansicht } from './texturansicht.js';
+import { Modellsicht } from './modellsicht.js';
 
 /**
  * Bildmodellseite — Einstieg der Auftragsseite „Modell aus Dateien".
  *
  * Liest Zustand und Optionenkatalog aus `#bildmodell-daten`, baut die
- * Teile (Lauf, Optionen, Bilder, Ergebnis, 3D, Textur) und lässt den Auftrag
- * nachfragen, solange er läuft. Die 3D-Ansicht kommt zuletzt und fängt
- * ihre Fehler selbst (ohne WebGL bleibt der Rest der Seite bedienbar).
+ * Teile (Lauf, Optionen, Bilder, Ergebnis, 3D, Modellsicht, Textur) und lässt
+ * den Auftrag nachfragen, solange er läuft. Die 3D-Ansicht fängt ihre Fehler
+ * selbst (ohne WebGL bleibt der Rest der Seite bedienbar); die Modellsicht
+ * (3D links, Bild mit Pfeilen rechts, Schieber) hängt am Dialog der
+ * Proportionen, der den Zustand hält.
  */
 export class Bildmodellseite {
 
@@ -31,9 +34,10 @@ export class Bildmodellseite {
         const person = new Personenformular(auftrag, daten.katalog, formular, () => ergebnis.festgehalten());
         const proportionen = new Proportionenansicht(auftrag, daten.katalog);
         const testfall = new Testfallansicht(auftrag, daten.katalog, ansicht);
+        const modellsicht = new Modellsicht(auftrag, daten.katalog, proportionen.dialog, ansicht);
         const textur = new Texturansicht(auftrag, daten.katalog, formular, bilder.steller);
         auftrag.verfolgen();
-        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen, testfall, textur };
+        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen, modellsicht, testfall, textur };
         return window.__bildmodell;
     }
 }

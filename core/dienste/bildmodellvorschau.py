@@ -6,7 +6,8 @@ stand bei 291 Zeilen), als der Testfall dazukam. Reihenfolge und Anteile
 am Fortschrittsband:
 
     0,00–0,80  Icon und Ansichten vorn/seite/hinten/Kopf (`G9vorschaubild`)
-    0,85       Außenmaße Foto / Zielnetz / Modell (`Bildmodellmasse`)
+    0,85       Außenmaße Foto / Zielnetz / Modell (`Bildmodellmasse`) und rund 40 Körpermaße
+               SMPL-X (GVHMR) / Ziel / Modell (`Bildmodellmassband`, 20.09.2026)
     0,86–0,96  Proportionen Vorher/Nachher (`Bildmodellproportionen`)
     0,96–1,00  Testfall: Abstand zur Referenzfigur (`Bildmodelltestfall`)
 
@@ -58,6 +59,10 @@ class Bildmodellvorschau:
         if melder:
             melder(0.85, 'Außenmaße Foto / Zielnetz / Modell')
         self.job.ergebnis['masse'] = Bildmodellmasse(self.job, self.stellung).alle()
+        # Rund 40 Körpermaße SMPL-X (GVHMR) / Ziel / Modell (`G9massband`, 20.09.2026).
+        from .bildmodellmassband import Bildmodellmassband
+
+        self.job.ergebnis['massband'] = Bildmodellmassband(self.job, self.stellung, self._ziel_laden).alle()
         self.job.ergebnis['proportionen'] = Bildmodellproportionen(
             self.job, self.ablage, self.stellung, self._ziel_laden
         ).alle(lambda a, t: melder and melder(0.86 + 0.10 * a, t))

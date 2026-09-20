@@ -91,6 +91,32 @@ export class Kombiliste {
         return true;
     }
 
+    /**
+     * Einen Eintrag an seiner Stelle durch einen neuen Stand ersetzen.
+     *
+     * Edgar, 20.09.2026: „bei «Mehrere Stücke gemeinsam» kann ich die
+     * Eigenschaften des Stücks nicht mehr nachträglich ändern." Bis dahin
+     * war der Weg: herausnehmen, neu übernehmen — und der Eintrag wanderte
+     * ans Ende. Die Stelle bleibt, weil die Reihenfolge die Nummer in der
+     * Wunschliste ist, an der das Material hängt (`garmentcode_gemeinsam.js`).
+     * Ohne `material` bleibt das bisherige.
+     */
+    ersetzen(nummer, vorlage, titel, regler, bau = null, material = null) {
+        if (nummer < 0 || nummer >= this.eintraege.length) {
+            return { ok: false, grund: 'Kein solcher Eintrag.' };
+        }
+        if (!vorlage) return { ok: false, grund: 'Kein Kleidungsstück gewählt.' };
+        const alt = this.eintraege[nummer];
+        this.eintraege[nummer] = {
+            vorlage,
+            titel: titel || vorlage,
+            regler: { ...(regler || {}) },
+            bau: { ...(bau || {}) },
+            material: material ? JSON.parse(JSON.stringify(material)) : alt.material,
+        };
+        return { ok: true };
+    }
+
     leeren() {
         this.eintraege = [];
     }

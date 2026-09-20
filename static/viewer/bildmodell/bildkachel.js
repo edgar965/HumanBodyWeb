@@ -62,11 +62,16 @@ export class Bildkachel {
         }
         const s = b.schaetzung;
         if (s && s.fehler) teile.push(`Schätzer: ${s.fehler}`);
+        else if (s && s.ausgelassen) teile.push(`${s.backend}: nicht verwendet`);
         else if (s && s.frames) teile.push(`${s.backend}: eine Form aus ${s.frames} Bildern`);
         else if (s) teile.push(`${s.backend}: ${Math.round((s.confidence || 0) * 100)} %`);
         if (s && s.silhouette && s.silhouette.iou_nachher != null) {
             teile.push(`Silhouette ${Math.round(s.silhouette.iou_vorher * 100)} → ${Math.round(s.silhouette.iou_nachher * 100)} %`);
         } else if (s && s.silhouette && s.silhouette.fehler) teile.push(`Silhouette: ${s.silhouette.fehler}`);
+        // SMPL-X mit GVHMR für dieses Bild (Knopf an der Kachel, 20.09.2026).
+        const g = b.gvhmr;
+        if (g && g.fehler) teile.push(`GVHMR: ${g.fehler}`);
+        else if (g && g.netz) teile.push(`GVHMR: SMPL-X${g.hoehe_m ? ' ' + g.hoehe_m.toFixed(2) + ' m' : ''} in ${g.dauer_s ?? '?'} s`);
         if (b.fehler) teile.push(b.fehler);
         text.innerHTML = `<span class="bildmodell-quelle" title="${b.quelle || ''}">${(b.quelle || b.datei)}</span>`
             + `<span class="bildmodell-befund">${teile.join(' · ')}</span>`;

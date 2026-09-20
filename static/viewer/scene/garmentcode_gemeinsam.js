@@ -1,4 +1,4 @@
-import { Fristabruf } from '../gemeinsam/fristabruf.js';
+import { Antwortnachholen } from '../gemeinsam/antwortnachholen.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeDrapierung } from './garmentcode_drapieren.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
@@ -6,6 +6,7 @@ import { GarmentcodePanels } from './garmentcode_panels.js';
 import { GarmentcodeVorschau3d } from './garmentcode_vorschau3d.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { Laufwache } from '../gemeinsam/laufwache.js';
+import { GarmentcodeAbbruch } from './garmentcode_abbruch.js';
 import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
 
 /**
@@ -77,9 +78,14 @@ export class GarmentcodeGemeinsam {
             await GarmentcodeGemeinsam._lauf(reiter, liste, figur, meldung);
         } catch (fehler) {
             if (Laufwache.aktuell(reiter, lauf)) {
-                garmentcodeFortschritt.gescheitert(
-                    'gemeinsam', String(fehler.message || fehler));
-                meldung.textContent = `Fehler: ${fehler.message || fehler}`;
+                // Der Abbrechen-Knopf (20.09.2026) ist kein Fehler.
+                if (GarmentcodeAbbruch.istAbbruch(fehler)) {
+                    garmentcodeFortschritt.gescheitert('gemeinsam', 'abgebrochen');
+                } else {
+                    garmentcodeFortschritt.gescheitert(
+                        'gemeinsam', String(fehler.message || fehler));
+                    meldung.textContent = `Fehler: ${fehler.message || fehler}`;
+                }
             }
         } finally {
             GarmentcodeAblauf.beenden(reiter, knoepfe, lauf);
@@ -96,9 +102,10 @@ export class GarmentcodeGemeinsam {
 
         const daten = reiter.figurdaten(figur);
         daten.append('stuecke', JSON.stringify(liste.fuerServer()));
-        const antwort = await Fristabruf.formular(
+        const antwort = await Antwortnachholen.formular(
             '/api/garmentcode/gemeinsam/', daten,
-            GarmentcodeGemeinsam.FRIST_S);
+            GarmentcodeGemeinsam.FRIST_S,
+            (text) => { meldung.textContent = text; }, reiter.abbruch);
         if (antwort.fehler) {
             garmentcodeFortschritt.entfallen('einhaengen');
             garmentcodeFortschritt.gescheitert('gemeinsam', 'Fehler');
@@ -130,7 +137,7 @@ export class GarmentcodeGemeinsam {
             // „es wurde nur 1 Farbe genommen"). Ohne Eintrag gilt der Stand.
             const eintrag = liste?.eintraege?.[stueck.nummer] || null;
             berichte.push(await GarmentcodeGemeinsam._eines(
-                figur, stueck, eintrag?.material || null));
+                figur, stueck, eintrag?.material || null, eintrag?.titel || null));
         }
         garmentcodeFortschritt.fertig(
             'einhaengen', `${berichte.filter((b) => b.ok).length} von `
@@ -141,7 +148,7 @@ export class GarmentcodeGemeinsam {
     }
 
     /** Ein einzelnes Stück; ein Fehler stoppt die anderen nicht. */
-    static async _eines(figur, stueck, material = null) {
+    static async _eines(figur, stueck, material = null, titel = null) {
         if (stueck.fehler || !stueck.rig_url) {
             return { ok: false, stueck,
                      grund: stueck.fehler || 'kein Netz geliefert' };
@@ -153,7 +160,7 @@ export class GarmentcodeGemeinsam {
             // ohne beides bleibt der Panel-Stand aus `einhaengen`.
             const bisher = GarmentcodeMaterial.getragen(figur, stueck.stueck);
             const getragen = await GarmentcodeDrapierung.einhaengen(
-                figur, stueck, stueck.stueck);
+                figur, stueck, stueck.stueck, titel);
             const werte = bisher || material;
             if (werte) GarmentcodeMaterial.aufStueck(figur, stueck.stueck, werte);
             return { ok: true, stueck, getragen };

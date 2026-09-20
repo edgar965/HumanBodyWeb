@@ -17,10 +17,13 @@ from unittest import mock
 
 import numpy as np
 from django.test import SimpleTestCase
+from Genesis9.anhangmorphe import G9anhangmorphe
 from Genesis9.autofit import G9autofit
 from Genesis9.dson import G9dson
 from Genesis9.fremdstueck import G9fremdstueck
 from Genesis9.haut import G9haut
+from Genesis9.hautglaettung import G9hautglaettung
+from Genesis9.passform import G9passform
 from Genesis9.pfade import G9pfade
 from Genesis9.requisit import G9requisit
 
@@ -147,3 +150,104 @@ class Genesis9Fremdfiguren(SimpleTestCase):
                          ['CloneGenesis8Female', 'CloneGenesis8Male'])
         self.assertEqual(len(G9pfade.PEOPLE_FREMD), 7)
         self.assertIn('Genesis8Female.dsf', G9fremdstueck.FIGUREN)
+
+    def test_7_folger_ohne_fuehrer_sind_keine_regler(self):
+        # Worker-Uniform-Helm: 40 Ausdruecke eines fehlenden Pakets unter `/Morph
+        # Loader`, `facs_bs_BrowDownLeft` (Original heisst `facs_BrowDownLeft`);
+        # Hime Cut: `Angela9_head_bs_Head`. Genesis 1: `FBMHeavy` nach Gruppe.
+        # Bleiben muessen Daz' eigene `body_bs_ExpandAll` und `FBMExpandFabric`.
+        def s(gruppe):
+            return {'label': 'x', 'gruppe': gruppe, 'min': 0, 'max': 1, 'sichtbar': True}
+        morphe = G9anhangmorphe({}, {
+            'facs_ctrl_Afraid': s('/Morph Loader'), 'facs_bs_BrowDownLeft': s('/Brow'),
+            'Angela9_head_bs_Head': s('/Head/People/Feminine'),
+            'FBMHeavy': s('/Universal/Real World'), 'FBMExpandFabric': s('/Tankini'),
+            'body_bs_ExpandAll': s('/Adjustments'), 'Loosen Lower': s('/Adjustments'),
+            'body_bs_BodyLithe': s('/Adjustments')})
+        regler = morphe.regler(koerperkanaele={'body_bs_BodyLithe'})
+        self.assertEqual([r['name'] for r in regler],
+                         ['body_bs_ExpandAll', 'Loosen Lower', 'FBMExpandFabric'])
+
+    def test_8_fremde_knochen_der_bindung_werden_uebersetzt(self):
+        # JS Pants (20.09.2026): `lShin` kannte niemand, die Umleitung lief die
+        # Eltern hoch bis `pelvis` — die Hosenbeine hingen am Becken.
+        doc = G9dson('x', {'node_library': [
+            {'id': 'pelvis', 'type': 'bone', 'parent': '#hip'},
+            {'id': 'lThigh', 'type': 'bone', 'parent': '#pelvis'},
+            {'id': 'lShin', 'type': 'bone', 'parent': '#lThigh'},
+            {'id': 'sash1', 'type': 'bone', 'parent': '#lShin'},
+            {'id': 'abdomenLower', 'type': 'bone', 'parent': '#hip'}]})
+        bekannt = {'hip', 'pelvis', 'l_thigh', 'l_shin', 'r_foot', 'spine1', 'l_thightwist1'}
+        alt = G9haut.umleitung(doc, bekannt)
+        self.assertEqual(alt, {'lThigh': 'pelvis', 'lShin': 'pelvis', 'sash1': 'pelvis',
+                               'abdomenLower': 'hip'})
+        neu = G9haut.umleitung(doc, bekannt, G9autofit.g9name, gelenke=['rFoot', 'lThighTwist'])
+        self.assertEqual(neu, {'lThigh': 'l_thigh', 'lShin': 'l_shin', 'sash1': 'l_shin',
+                               'abdomenLower': 'spine1', 'rFoot': 'r_foot',
+                               'lThighTwist': 'l_thightwist1'})
+
+    def test_9_passform_laenge_und_weite(self):
+        folger = SimpleNamespace(
+            punkte=np.array([[0.0, 0.0, 0.0], [0.0, 0.25, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]]),
+            polys=[[0, 0, 0, 1, 2, 3]],
+            normalen=lambda p: np.tile([1.0, 0.0, 0.0], (len(p), 1)))
+        punkte = folger.punkte.copy()
+        self.assertIs(G9passform.anwenden(folger, punkte, {}), punkte)
+        lang = G9passform.anwenden(folger, punkte, {'passform:laenge': 10.0})
+        np.testing.assert_allclose(lang[:, 1], [-0.10, 0.20, 0.5, 1.0], atol=1e-9)
+        weit = G9passform.anwenden(folger, punkte, {'passform:weite': 2.0})
+        np.testing.assert_allclose(weit[:, 0], [0.02] * 4, atol=1e-9)
+        # Kuerzer ist ein SCHNITT (20.09.2026 nachts, „das G9 Base Shirt wirft
+        # Falten"): der Punkt unter der Linie (10 cm ueber dem Rand) rueckt auf
+        # seiner Kante GENAU auf die Linie, der Rest bleibt — keine Stauchung.
+        kurz = G9passform.anwenden(folger, punkte, {'passform:laenge': -10.0})
+        np.testing.assert_allclose(kurz[:, 1], [0.1, 0.25, 0.5, 1.0], atol=1e-9)
+        # Hoechstens KUERZUNG der Hoehe faellt weg: −90 cm schneidet bei 0,7;
+        # Punkt 1 hat keinen Nachbarn darueber und rueckt auf den Saum.
+        kurz = G9passform.anwenden(folger, punkte, {'passform:laenge': -90.0})
+        np.testing.assert_allclose(kurz[:, 1], [0.7, 0.7, 0.7, 1.0], atol=1e-9)
+        self.assertEqual([r['einheit'] for r in G9passform.regler()], ['cm', 'cm'])
+        self.assertEqual(G9passform.werte({'passform:laenge': 'x'}), (0.0, 0.0))
+
+    def test_10_koerpergewichte_werden_ueber_die_kanten_geglaettet(self):
+        # Ein Viereck 0-1-2-3, links (0, 1) Knochen 0, rechts (2, 3) Knochen 1:
+        # der Sprung an der Kante 1-2 wird zum Uebergang (0,56 / 0,44 nach drei
+        # Durchgaengen), Summen bleiben 1, die eigene Seite bleibt die staerkere.
+        polys = [[0, 0, 0, 1, 2, 3]]
+        index = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]])
+        gewicht = np.array([[1.0, 0, 0, 0]] * 4)
+        neu_index, neu_gewicht = G9hautglaettung.glaetten(polys, index, gewicht, 4, 2)
+        np.testing.assert_allclose(neu_gewicht.sum(axis=1), [1.0] * 4, atol=1e-9)
+        links = dict(zip(neu_index[0].tolist(), neu_gewicht[0].tolist(), strict=True))
+        rechts = dict(zip(neu_index[2].tolist(), neu_gewicht[2].tolist(), strict=True))
+        self.assertAlmostEqual(links[0], 0.5625, places=6)
+        self.assertAlmostEqual(links[1], 0.4375, places=6)
+        self.assertAlmostEqual(rechts[1], 0.5625, places=6)
+        # Ohne Kanten bleibt alles, wie es war.
+        i2, g2 = G9hautglaettung.glaetten([], index, gewicht, 4, 2)
+        np.testing.assert_array_equal(i2, index)
+        np.testing.assert_array_equal(g2, gewicht)
+
+    def test_11_laenge_wandert_am_koerper_entlang(self):
+        # Haut: eine Wand z = 0 fuer y >= 0, darunter springt sie 2 cm vor
+        # (z = 0,02), Normalen +z, Raster 5 mm bis x 0,095. Vier Stoffpunkte
+        # 1 cm vor der oberen Wand (Projektion auf den Hautpunkt (0, 0,05, 0)):
+        # (0) um 10 cm gesenkt stuende er 1 cm IN der unteren Wand und bekommt
+        # seinen Abstand zurueck (z 0,03); (1) neben der Wand (x 0,15) findet
+        # keine Haut unter dem Lot — bleibt senkrecht verschoben; (2) unter der
+        # Wand (y −0,25) ebenso; (3) ohne Weg bleibt, wo er ist.
+        ys, xs = np.meshgrid(np.arange(-0.2, 0.2, 0.005), np.arange(-0.1, 0.1, 0.005), indexing='ij')
+        haut = np.stack([xs.ravel(), ys.ravel(), np.where(ys.ravel() < 0, 0.02, 0.0)], axis=1)
+        normalen = np.tile([0.0, 0.0, 1.0], (len(haut), 1))
+        oben = 50 * 40 + 20
+        np.testing.assert_allclose(haut[oben], [0.0, 0.05, 0.0], atol=1e-12)
+        folger = SimpleNamespace(projektion=lambda: (np.full((4, 3), oben), np.array([[1.0, 0, 0]] * 4)))
+        aus = np.array([[0.0, 0.05, 0.01], [0.15, 0.05, 0.01], [0.0, 0.05, 0.01], [0.0, 0.05, 0.01]])
+        richtung = np.tile([0.0, 0.0, 1.0], (4, 1))
+        neu = G9passform.entlang(folger, aus, np.array([0.1, 0.05, 0.3, 0.0]), richtung, haut, normalen)
+        np.testing.assert_allclose(neu, [[0.0, -0.05, 0.03], [0.15, 0.0, 0.01],
+                                         [0.0, -0.25, 0.01], [0.0, 0.05, 0.01]], atol=1e-9)
+        # Ohne Koerper nur senkrecht (Test 9 rechnet so).
+        nur = G9passform.entlang(folger, aus, np.array([0.1, 0.05, 0.3, 0.0]), None, None, None)
+        np.testing.assert_allclose(nur[:, 1], [-0.05, 0.0, -0.25, 0.05], atol=1e-9)
+        np.testing.assert_allclose(nur[:, 2], [0.01] * 4, atol=1e-9)

@@ -149,7 +149,7 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         """
         drapieren = _quelle('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
         gemeinsam = _quelle('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
-        self.assertIn('static async einhaengen(figur, netz, stueck)', drapieren)
+        self.assertIn('static async einhaengen(figur, netz, stueck, titel = null)', drapieren)
         self.assertIn('GarmentcodeDrapierung.einhaengen(figur, netz', drapieren)
         self.assertIn('GarmentcodeDrapierung.einhaengen(', gemeinsam)
         # Und der gemeinsame Weg baut die Kette NICHT selbst nach.
@@ -175,8 +175,13 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         Frist muss laenger sein als die des Einzelbaus: Ein gemeinsamer
         Lauf kostet gemessen rund 30 s je Stueck."""
         gemeinsam = _quelle('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
-        self.assertIn('Fristabruf.formular(', gemeinsam)
+        # Seit 20.09.2026 ueber `Antwortnachholen` — das die Frist von
+        # `Fristabruf` weiterreicht und die Antwort nachholt, wenn die
+        # Verbindung reisst (`antwortnachholen.js`).
+        self.assertIn('Antwortnachholen.formular(', gemeinsam)
         self.assertNotIn('Serverabruf.formular(', gemeinsam)
+        nachholen = _quelle('static', 'viewer', 'gemeinsam', 'antwortnachholen.js')
+        self.assertIn('Fristabruf.formular(adresse, daten, frist_s)', nachholen)
         frist = re.search(r'FRIST_S\s*=\s*(\d+)', gemeinsam)
         self.assertIsNotNone(frist)
         self.assertGreaterEqual(int(Sicher.wert(frist, 'Frist').group(1)), 300)

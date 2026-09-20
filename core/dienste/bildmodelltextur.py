@@ -36,11 +36,21 @@ class Bildmodelltextur:
     def gewaehlt(cls, bild):
         """Zählt das Bild zur Textur? Nutzung (nicht „nur Form"/„aus"), dann die
         Nutzerwahl, sonst die Tauglichkeit — ein Nebenbild mit Körperteil
-        (`Bildmodellbildtypen`, 19.09.2026) gilt mit Hautton als gewählt."""
+        (`Bildmodellbildtypen`, 19.09.2026) gilt mit Hautton als gewählt.
+
+        Nie gewählt, was `liste` als unmöglich führt (Gruppenbild, ohne Befund, Nebenbild
+        ohne Körperteil): sonst steht das Häkchen an UND gesperrt, und niemand kommt mehr
+        heran (Edgar, 20.09.2026: „kann sie nicht unchecken" — drei Körperbilder, per Box
+        zum Nebenbild gemacht, blieben als tauglich gewählt)."""
         from .bildmodellbildtypen import Bildmodellbildtypen
 
         t = bild.get('textur') or {}
         if not t.get('hautton') or not Bildmodellbildtypen.fuer_textur(bild):
+            return False
+        kategorie = bild.get('kategorie') or 'neben'
+        if kategorie in ('gruppe', 'leer'):
+            return False
+        if kategorie == 'neben' and not Bildmodellbildtypen.textur_teile(bild):
             return False
         if 'textur_an' in bild:
             return bool(bild['textur_an'])
@@ -87,14 +97,37 @@ class Bildmodelltextur:
             return {'hautton': None, 'bilder': 0, 'tauglich': tauglich}
         return {'hautton': [int(round(v)) for v in summe / gewicht], 'bilder': n, 'tauglich': tauglich}
 
+    @staticmethod
+    def reihenfolge(bilder, dateien):
+        """Die Zeilen der Texturtabelle in dieser Reihe nummerieren (`textur_reihe` 1..n) — wie
+        `Bildmodellfotolinien.reihenfolge` für die Proportionentabelle (Edgar, 20.09.2026: „ändere
+        ich die Zahl, wird das Bild sofort verschoben"). Gibt die Nummern zurück."""
+        bekannt = {b.get('datei'): b for b in bilder}
+        aus = {}
+        for d in dateien if isinstance(dateien, (list, tuple)) else []:
+            if bekannt.get(str(d)) is not None and str(d) not in aus:
+                aus[str(d)] = len(aus) + 1
+        for b in bilder:
+            if b.get('datei') in aus:
+                b['textur_reihe'] = aus[b['datei']]
+            else:
+                b.pop('textur_reihe', None)
+        return aus
+
+    @staticmethod
+    def _reihe(b):
+        r = b.get('textur_reihe')
+        return int(r) if isinstance(r, int) and r > 0 else 10 ** 6
+
     @classmethod
     def liste(cls, bilder):
         """Für den Bereich „Textur" der Seite (19.09.2026): je Bild, ob es zur Textur
-        zählt, warum nicht, und wie es projiziert wird (Kamera bekannt oder aus dem Rig)."""
+        zählt, warum nicht, und wie es projiziert wird (Kamera bekannt oder aus dem Rig) —
+        in der Reihe der Spalte „Nr." (`textur_reihe`), sonst wie im Auftrag."""
         from .bildmodellbildtypen import Bildmodellbildtypen
 
         aus = []
-        for b in bilder:
+        for b in sorted(bilder, key=cls._reihe):
             if b.get('video'):
                 continue
             t = b.get('textur') or {}
@@ -115,6 +148,7 @@ class Bildmodelltextur:
             kamera = 'bekannt' if b.get('kamera_bekannt') else ('rig' if rig else 'keine')
             aus.append({
                 'datei': b['datei'],
+                'reihe': b.get('textur_reihe'),
                 'kategorie': kategorie,
                 'ansicht': b.get('ansicht'),
                 'teil': b.get('teil'),

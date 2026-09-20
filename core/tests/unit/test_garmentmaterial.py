@@ -36,7 +36,9 @@ Einstellungen, tut sich nichts"): „Ohne Auswahl nichts" war zu viel des
 Guten — die Überschrift des Bereichs versprach „ohne Auswahl für alle
 GarmentCode-Stücke dieser Figur", und wer ihr folgte, sah nichts. Die
 Grenze liegt jetzt beim URHEBER, nicht bei der Auswahl: Ein Ereignis vom
-Nutzer (`isTrusted`) wirkt ohne Auswahl auf alle `gc_*`-Stücke der Figur;
+Nutzer (`isTrusted`) wirkt ohne Auswahl auf das Stück der gewählten
+Vorlage (seit 20.09.2026 — bis dahin auf alle `gc_*`-Stücke der Figur, und
+das färbte die Leggings um, wenn Edgar die Farbe des T-Shirts einstellte);
 eines aus `dispatchEvent` (Reitergedächtnis, Vorbild) nur auf ein
 gewähltes. Die Entscheidung liegt in `materialziel.js` und wird in Node
 geprüft (`test_js_materialziel`); hier steht, dass die Handler den

@@ -72,6 +72,7 @@ export class Genesis9kleidung {
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
             netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);
+            netz.userData.art = daten.art || null;          // kleidung | haar | requisit
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);
@@ -79,12 +80,20 @@ export class Genesis9kleidung {
         return daten.teile?.length || 0;
     }
 
-    /** Haut- und Lagenverdeckung nachziehen — nur mit GarmentCode-Stück. */
+    /**
+     * Haut- und Lagenverdeckung nachziehen. Bis 20.09.2026 nur mit GarmentCode-
+     * Stück — die Daz-Garderobe blieb ohne Maske („ihre Lagen macht der Server").
+     * Edgar mit Bild (Olesia, Base Shirt −14,5/−2,7 cm im Tanz): Haut in Streifen
+     * am unteren Rücken. Zwei Flächen, die 3 mm auseinanderliegen und getrennt
+     * gehäutet werden, kommen sich an jedem Gelenk um Millimeter nahe — keine
+     * Gewichte helfen (`hautmaske.js`, Befund vom 11.09.). Die Haut unter einem
+     * Daz-Stück der Art `kleidung` wird deshalb genauso nicht gezeichnet
+     * (`Hautverdeckung.stoffe` filtert nach `userData.art`); Stufe 1 mit Shirt
+     * und Jeans 2,4 s einmal je Umbau. Die Lagenmaske bleibt GarmentCode-Sache.
+     */
     static melden(inst, kennung, angezogen) {
-        const garmentcode = Object.keys(inst?.clothMeshes || {})
-            .some((schluessel) => schluessel.startsWith('gc_'));
-        if (garmentcode) Stueckereignis.melden(inst, kennung, angezogen);
-        return garmentcode;
+        Stueckereignis.melden(inst, kennung, angezogen);
+        return Object.keys(inst?.clothMeshes || {}).some((schluessel) => schluessel.startsWith('gc_'));
     }
 
     /** Ausziehen; `neu`: die Figur wird ohnehin neu gebaut (Griffpose, eigene Knochen). */

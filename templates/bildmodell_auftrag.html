@@ -4,17 +4,19 @@
 
 {% comment %}
 Auftragsseite „Modell aus Dateien" (Edgar, 18./19.09.2026): oben der Lauf
-(Schritte, Fortschritt, Start ab Schritt), dann die Optionen je Schritt
+(Schritte, Fortschritt, Start ab Schritt), dann die Modellsicht (20.09.2026:
+3D links, Bild mit Pfeilen rechts, Maße als Schieber), die Person, die
+Tabelle der Bilder mit Vorher/Nachher, die Optionen je Schritt
 (`Bildmodelloptionen.katalog()`), die Bilder nach Kategorie getrennt —
 Hauptbilder Körper, Hauptbilder Kopf, Nebenbilder, Gruppenbilder, ohne
-Befund — jedes mit dem Rig (MediaPipe-Landmarken) darüber, Kategorie und
-Gewicht änderbar; unten das Ergebnis: 3D-Ansicht (Genesis9Modell), die
-gerenderten Ansichten, Regler und Zahlen. Zustand und Katalog kommen als
+Befund — jedes mit dem Rig darüber, Kategorie und Gewicht änderbar; unten
+das Ergebnis (Regler und Zahlen) und die Textur. Zustand und Katalog kommen als
 JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 {% endcomment %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodellbilder.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodellsicht.css' %}">
 <script type="importmap">
 { "imports": { "three": "{% static 'vendor/three/build/three.module.js' %}",
                "three/addons/": "{% static 'vendor/three/examples/jsm/' %}" } }
@@ -48,6 +50,69 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 </div>
 
 <div class="card" id="person-karte">
+    {% comment %}
+    Modellsicht (Edgar, 20.09.2026: „Modell-View mit 3D links, 2D rechts. Rechts habe ich alle Pfeile.
+    Wenn ich die Regler ändere, dann ändert sich gleich das 3D Modell links"): links die 3D-Ansicht
+    (Ziel folgt den Pfeilen / Modell), in der Mitte ein Bild mit den Maßlinien und die Liste aller
+    Maße, rechts die Maße als Schieber. Zustand: `Proportionendialog`, Sicht: `Modellsicht`.
+    {% endcomment %}
+    <div class="bildmodell-modellsicht">
+        <div class="bildmodell-3d">
+            <div class="bildmodell-3dleiste">
+                <span class="bildmodell-3dwahl" role="radiogroup" aria-label="Was die 3D-Ansicht zeigt">
+                    <label title="Das Zielnetz — folgt sofort jedem Pfeil, jeder Zahl und jedem Schieber">
+                        <input type="radio" name="ansicht3d-was" value="ziel" checked> Ziel (folgt den Pfeilen)</label>
+                    <label title="Das gerechnete Genesis-9-Modell mit Haut und Haar — Stand des letzten Laufs">
+                        <input type="radio" name="ansicht3d-was" value="modell"> Modell (Ergebnis)</label>
+                    <label id="ansicht3d-gvhmr-wahl" hidden
+                           title="Das SMPL-X-Netz, das GVHMR aus EINEM Bild schätzt — Knopf „SMPL (GVHMR)" an der Kachel">
+                        <input type="radio" name="ansicht3d-was" value="gvhmr"> SMPL-X (GVHMR)</label>
+                </span>
+                <label class="bildmodell-3dgitter" title="Kanten des Käfigs zeigen — Wellen sieht man daran zuerst">
+                    <input type="checkbox" id="ansicht3d-gitter"> Gitter</label>
+            </div>
+            <div class="bildmodell-testfall hb-versteckt" id="testfall">
+                <button type="button" class="btn btn-secondary btn-sm" id="testfall-schalter" aria-pressed="false"
+                        title="Referenzfigur des Testfalls statt des Ergebnisses zeigen">
+                    <i class="fas fa-user-check"></i> <span>Testcase</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" id="testfall-bilder"
+                        title="Die Referenzfigur in 24 Ansichten rendern (11 Haupt- und Detailbilder, 13 HD-Nahaufnahmen nur für die Textur) und als Bilder in den Auftrag laden">
+                    <i class="fas fa-camera"></i> <span>Bilder aus der Referenz erzeugen</span></button>
+                <span class="hb-hinweis" id="testfall-text"></span>
+            </div>
+            <canvas id="ansicht3d"></canvas>
+            <div class="hb-hinweis" id="modell-livetext"></div>
+            <div class="hb-hinweis" id="ansicht3d-text">Noch kein Ergebnis.</div>
+            <div id="testfall-zahlen" class="bildmodell-testfallzahlen"></div>
+        </div>
+        <div class="bildmodell-2d">
+            <div class="bildmodell-2dkopf">
+                <label>Bild <select id="modell-bildwahl" title="Welches Bild rechts liegt — jedes Hauptfoto mit Maßstab und jede gerenderte Ziel-Ansicht"></select></label>
+                <button type="button" class="btn btn-sm btn-secondary" id="modell-gross" title="Dasselbe Bild groß im Popup (mit Tabelle der Maße)">
+                    <i class="fas fa-expand"></i> Groß</button>
+            </div>
+            <div class="bildmodell-bildreiter bildmodell-2dfeld">
+                <div id="modell-bildtab"></div>
+                <div id="modell-bildliste" class="bildmodell-propliste"></div>
+            </div>
+            <p class="hb-hinweis">Pfeilspitze ziehen setzt dieses Ende, Ziehen an der Linie verschiebt sie — die Länge ist der Wert in cm
+               (grün = eingestellt) und gilt sofort in allen Bildern und im Zielnetz links. Klick auf eine Linie und Entf löscht den
+               Marker aus diesem Bild; ⤓ in der Liste zieht ein fehlendes Maß ins Bild.</p>
+        </div>
+        <div class="bildmodell-reglerspalte" id="modell-knoepfe">
+            <h3>Maße <small class="hb-hinweis">Schieber, Zahl oder Pfeil — das Ziel links folgt sofort</small></h3>
+            <div class="bildmodell-3dregler" id="modell-regler"></div>
+            <div class="bildmodell-modellknoepfe">
+                <button type="button" class="btn btn-secondary btn-sm" data-tat="alle-loeschen"
+                        title="Alle Eingaben leeren, gelöschte Marker wieder zeigen, Linien wie vom Server">Alle Vorgaben löschen</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-tat="uebernehmen"
+                        title="Werte und gezogene Linien am Auftrag ablegen">Übernehmen</button>
+                <button type="button" class="btn btn-primary btn-sm" data-tat="rechnen"
+                        title="Ablegen und das Modell neu rechnen (ab Anpassung; ab Zielnetz, wenn Größe/Gewicht/Haar geändert sind)">
+                    <i class="fas fa-sync"></i> Übernehmen und neu berechnen</button>
+            </div>
+        </div>
+    </div>
     <div class="bildmodell-person">
         <form id="personenformular" class="bildmodell-personfelder" onsubmit="return false">
             <h2>Person</h2>
@@ -59,30 +124,19 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
             <label>Haar <select name="haar"><option value="">— keins —</option></select></label>
             <button type="button" class="btn btn-primary" id="neu-berechnen">
                 <i class="fas fa-sync"></i> <span>Neu berechnen</span></button>
+            <button type="button" class="btn btn-secondary" id="neu-abbrechen" disabled
+                    title="Den laufenden Lauf beenden (Prozess samt Kindern)">
+                <i class="fas fa-stop"></i> <span>Abbrechen</span></button>
             <div class="bildmodell-personlauf hb-versteckt" id="person-lauf">
                 <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="person-fortschritt" style="width:0%"></div></div>
                 <span class="hb-hinweis" id="person-lauf-text"></span>
             </div>
-            <p class="hb-hinweis">Größe skaliert das Zielnetz, Gewicht stellt seine Fülle (Volumen × 1000 kg/m³),
-               Haar kommt ins Modell. Alter und Tonus haben in den Starter Essentials keinen Regler —
-               sie werden mit dem Modell gespeichert. „Neu berechnen" läuft ab „Zielnetz".</p>
-            <p class="hb-hinweis" id="person-beleg"></p>
         </form>
-        <div class="bildmodell-3d">
-            <div class="bildmodell-testfall hb-versteckt" id="testfall">
-                <button type="button" class="btn btn-secondary btn-sm" id="testfall-schalter" aria-pressed="false"
-                        title="Referenzfigur des Testfalls statt des Ergebnisses zeigen">
-                    <i class="fas fa-user-check"></i> <span>Testcase</span></button>
-                <button type="button" class="btn btn-secondary btn-sm" id="testfall-bilder"
-                        title="Die Referenzfigur in 24 Ansichten rendern (11 Haupt- und Detailbilder, 13 HD-Nahaufnahmen nur für die Textur) und als Bilder in den Auftrag laden">
-                    <i class="fas fa-camera"></i> <span>Bilder aus der Referenz erzeugen</span></button>
-                <span class="hb-hinweis" id="testfall-text"></span>
-            </div>
-            <canvas id="ansicht3d"></canvas>
-            <div class="hb-hinweis" id="ansicht3d-text">Noch kein Ergebnis.</div>
-            <div id="testfall-zahlen" class="bildmodell-testfallzahlen"></div>
-            <div class="bildmodell-vorschauen" id="vorschauen"></div>
-        </div>
+        <p class="hb-hinweis">Größe skaliert das Zielnetz, Gewicht stellt seine Fülle (Volumen × 1000 kg/m³),
+           Haar kommt ins Modell. Alter und Tonus haben in den Starter Essentials keinen Regler —
+           sie werden mit dem Modell gespeichert. „Neu berechnen" läuft ab „Zielnetz".
+           <span id="person-beleg"></span></p>
+        <div class="bildmodell-vorschauen" id="vorschauen"></div>
     </div>
     <div class="bildmodell-propkopf">
         <h3>Bilder und Proportionen — Bild, Löschen, Ersetzen, Vorher, Nachher</h3>
@@ -150,6 +204,9 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
         </span>
     </div>
 </dialog>
+{% include 'bildmodell_gvhmr_dialog.html' %}
+{% include 'bildmodell_freisteller_dialog.html' %}
+{% include 'bildmodell_gvhmr_dialog.html' with dialog_id='flame-dialog' dialog_titel='FLAME-Kopf (PyMAF-X)' dialog_rig='aus' dialog_rechnen='FLAME für dieses Kopfbild neu rechnen — PyMAF-X, danach das Modell mit Kopf-Fit' %}
 
 <details class="card" id="optionen-karte" open>
     <summary><h2>Optionen je Schritt</h2></summary>
@@ -218,7 +275,8 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
     <div id="textur-referenz" class="bildmodell-texturreferenz hb-versteckt"></div>
     <div id="textur-kachelpanel" class="bildmodell-kachelpanel hb-versteckt"></div>
     <table class="db-tabelle sortable bildmodell-texturtabelle" id="textur-bilder" data-sort-key="bildmodell-textur">
-        <thead><tr><th title="für die Textur verwenden">✓</th><th>Bild</th><th>Datei · Typ</th><th>Kamera</th>
+        <thead><tr><th class="zahl" title="Nummer ändern = Zeile an diese Stelle">Nr.</th>
+            <th title="für die Textur verwenden">✓</th><th>Bild</th><th>Datei · Typ</th><th>Kamera</th>
             <th class="zahl" title="Anteil aller Texel, die dieses Bild liefert (bestes Gewicht)">Anteil</th>
             <th class="zahl" title="Texel, die dieses Bild belegt">Texel</th><th></th></tr></thead>
         <tbody></tbody>

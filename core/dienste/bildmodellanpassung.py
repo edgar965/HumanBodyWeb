@@ -7,8 +7,11 @@ Rechnet im Arbeitsprozess mit dem Genesis-9-Paket (python14, kein Browser):
                 (Zielpunkte und Gewichte je Käfigpunkt aus `G9netzpaarung`);
                 mit `weg = silhouette` stattdessen `Bildmodellsilhouettenziel`
                 (Grundfigur → Umriss → Regler in Runden, ohne 3D-Schätzer)
-    anpassung   `G9reglerableitung` (Reglersatz, Grundfigur) + `G9formanpassung`
-                → `ergebnis.anpassung` (Regler, RMS je Teil, Verlauf)
+    anpassung   `G9reglerableitung` (Reglersatz, Grundfigur, Teil `koerper`)
+                + `G9formanpassung` → `ergebnis.anpassung` (Regler, RMS je
+                Teil, Verlauf); danach die Kopfstufe (`Bildmodellkopfanpassung`,
+                Teil `kopf`, nur Kopfpunkte, Körper als Grund — seit 20.09.2026
+                mit den Gesichtsreglern von „200 Plus Genesis 9 Edition")
     rest        `G9restmorph.ablegen` → Eigenmorph `eigen:<kennung>`,
                 Regler um ihn ergänzt, RMS danach gemessen
     vorschau    `G9vorschaubild`: Icon, vorn, seite, hinten, Kopf
@@ -155,9 +158,9 @@ class Bildmodellanpassung:
         satz = self.optionen.get('reglersatz', 'charaktere')
         if melder:
             melder(0.05, 'Reglerableitung %s' % satz)
-        ableitung = G9reglerableitung.holen(satz, grund)
+        ableitung = G9reglerableitung.holen(satz, grund, teil='koerper')
         if melder:
-            melder(0.3, 'Ausgleichung (%d Regler)' % len(ableitung.namen))
+            melder(0.3, 'Ausgleichung Körper (%d Regler)' % len(ableitung.namen))
         fest = self._festgehalten(ableitung)
         haende = {'haende': 0}
         if self.optionen.get('nebenbilder', 'aus') == 'haende':
@@ -177,9 +180,17 @@ class Bildmodellanpassung:
         )
         e = anpassung.anpassen(
             lambda d, n, z: (
-                melder and melder(0.3 + 0.6 * d / n, 'Durchgang %d/%d: %.2f mm' % (d, n, z['rms_mm']))
+                melder and melder(0.3 + 0.4 * d / n, 'Körper %d/%d: %.2f mm' % (d, n, z['rms_mm']))
             )
         )
+        kopf = None
+        if self.optionen.get('kopffit', 'an') == 'an':
+            from .bildmodellkopfanpassung import Bildmodellkopfanpassung
+
+            kopf = Bildmodellkopfanpassung(self.job, self.optionen).anpassen(
+                satz, grund, e, punkte, gewicht, fest, melder)
+            if kopf:
+                e = kopf.pop('ergebnis')
         np.save(self.ablage.ergebnis() / 'rest.npy', e['rest'].astype(np.float32))
         self.job.ergebnis['anpassung'] = {
             'regler': e['regler'],
@@ -190,7 +201,8 @@ class Bildmodellanpassung:
             'reglersatz': satz,
             'grund': grund,
             'basis': wahl,
-            'variablen': len(ableitung.namen),
+            'variablen': len(ableitung.namen) + (kopf or {}).get('variablen', 0),
+            'kopf': kopf,
             'festgehalten': fest,
             'haende': haende,
             'proportionen': proportionen,

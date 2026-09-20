@@ -73,6 +73,11 @@ pruefe('genesis9', Figurkataloge.zeilen('genesis9', {
        [['amala', 'Amala', 'standard', true, 'weiblich · 25.182 Punkte · 2 Regler gesetzt'],
         ['Meine', 'Meine', 'gespeichert', false, 'gespeichert · 1 Regler · 1 Stücke']]);
 
+// --- Pflege (Umbenennen, Löschen) nur, wo Dateien liegen: HumanBody, UMA
+// und seit dem 20.09.2026 Genesis 9 (gespeicherte Modelle, `data/models/`) ---
+pruefe('pflege', Object.entries(Figurkataloge.QUELLEN).filter(([, q]) => q.pflege).map(([k]) => k),
+       ['modell', 'uma', 'genesis9']);
+
 // --- Leer und unbekannt ------------------------------------------------------
 pruefe('leer', Figurkataloge.zeilen('uma', {}), []);
 pruefe('null', Figurkataloge.zeilen('modell', null), []);

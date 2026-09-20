@@ -169,6 +169,30 @@ class FormpresetsTest(SimpleTestCase):
         top = next(p for p in Katalog.passform('oberteil') if p['titel'] == 'Trägertop')
         self.assertIn('sleeve.length', top['zurueck'])
 
+    def test_jede_oberteilform_hat_schultern_und_der_bau_meldet_traegerlos(self):
+        # Regression 20.09.2026 (Edgar, mit Bild: das T-Shirt als Schlauch um
+        # die Huefte): `shirt.strapless` aus einem frueheren Vorbild blieb
+        # stehen, die Form „T-Shirt (anliegend)" nahm es nicht zurueck, und
+        # `bodice.py` schnitt den Rumpf ohne Schultern. Jede Oberteil-Form
+        # bringt den Wert jetzt mit; wer trotzdem traegerlos baut, liest es.
+        from GarmentCode.traegerlos import Traegerlos
+
+        for form in Katalog.passform('oberteil'):
+            if not form['schluessel'].startswith('form_'):
+                continue
+            self.assertIs(form['werte'].get('shirt.strapless'), False,
+                          '%s laesst Traegerlos stehen' % form['titel'])
+        stehen = {'meta.upper': 'FittedShirt', 'shirt.strapless': True, 'sleeve.sleeveless': False}
+        self.assertEqual(len(Traegerlos.hinweise(stehen, 'oberteil')), 1)
+        self.assertIn('keine Schultern', Traegerlos.hinweise(stehen, 'oberteil')[0])
+        # Der gerade `Shirt` kennt den Regler nicht; Sabotage-Gegenprobe:
+        # `upper != TAILLIERT` in `hinweise` entfernen -> hier rot.
+        self.assertEqual(Traegerlos.hinweise({'shirt.strapless': True}, 'oberteil'), [])
+        self.assertEqual(Traegerlos.hinweise({'shirt.strapless': True, 'meta.upper': 'Shirt'}), [])
+        self.assertEqual(Traegerlos.hinweise({'meta.upper': 'FittedShirt', 'shirt.strapless': False}), [])
+        # Alias mit taillierter Form: der Katalog liefert `upper`.
+        self.assertEqual(len(Traegerlos.hinweise({'shirt.strapless': 'true'}, 't-shirt-anliegend')), 1)
+
     def test_die_vorbilder_folgen_dem_zweck_nicht_der_deutung(self):
         """Edgar: „Erstelle Unterwäsche, wo du alles mit Bra und Höschen
         hineinpackst … Unter Kleid sind Anzüge die dahin verschoben werden
@@ -212,3 +236,18 @@ class FormpresetsTest(SimpleTestCase):
             self.assertIn(erwartet, titel)
         self.assertIn('Rei Ayanami', [p['titel'] for p in Vorbildpresets.fuer('anzug')])
         self.assertNotIn('Rei Ayanami', [p['titel'] for p in Vorbildpresets.fuer('rock')])
+
+    def test_eine_form_haengt_nur_an_bausteinen_und_schaltern(self):
+        """Edgar, 20.09.2026: Ein Aermel-Preset oder der Schieber `sleeve.length`
+        nahm dem „T-Shirt (anliegend)" das Haekchen. Kern = `meta.*` und die
+        Schalter; Aermellaenge und Kragen sind Mitgaben."""
+        formen = {f['schluessel']: f for f in Formpresets.fuer('oberteil')}
+        kern = formen['form_t_shirt_anliegend']['kern']
+        self.assertEqual(
+            set(kern), {'meta.upper', 'meta.wb', 'meta.bottom', 'shirt.strapless', 'sleeve.sleeveless'}
+        )
+        self.assertNotIn('sleeve.length', kern)
+        self.assertNotIn('collar.f_collar', formen['form_hemd']['kern'])
+        self.assertEqual(
+            Formpresets.kern({'meta.bottom': 'PencilSkirt', 'pants.length': 0.85}), ['meta.bottom']
+        )

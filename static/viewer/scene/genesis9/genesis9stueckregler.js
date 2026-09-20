@@ -44,12 +44,12 @@ export class Genesis9stueckregler {
         const wert = Dazkleidung.kleidung(inst)[stueck.id]?.regler?.[regler.name] ?? regler.vorgabe ?? 0;
         zeile.innerHTML = `
             <label title="${escapeHtml(regler.name)}">${escapeHtml(regler.anzeige)}</label>
-            <input type="range" min="${regler.min}" max="${regler.max}" step="0.01" value="${wert}">
-            <span class="slider-value">${Genesis9stueckregler.text(wert)}</span>`;
+            <input type="range" min="${regler.min}" max="${regler.max}" step="${regler.schritt || 0.01}" value="${wert}">
+            <span class="slider-value">${Genesis9stueckregler.text(wert, regler)}</span>`;
         const schieber = zeile.querySelector('input');
         const anzeige = zeile.querySelector('.slider-value');
         schieber.addEventListener('input', () => {
-            const neu = parseFloat(schieber.value); anzeige.textContent = Genesis9stueckregler.text(neu);
+            const neu = parseFloat(schieber.value); anzeige.textContent = Genesis9stueckregler.text(neu, regler);
             const getragen = Dazkleidung.kleidung(inst)[stueck.id];
             if (!getragen) return;                       // nicht angezogen: nur merken
             const werte = werteLesen(); werte.regler = { ...(getragen.regler || {}) };
@@ -61,7 +61,9 @@ export class Genesis9stueckregler {
         return zeile;
     }
 
-    static text(wert) {
+    /** Daz-Regler in Prozent; Passform-Regler (`einheit: cm`, `Genesis9/passform.py`) in Zentimetern. */
+    static text(wert, regler = null) {
+        if (regler?.einheit === 'cm') return `${(Math.round(wert * 10) / 10).toFixed(1)} cm`;
         return `${Math.round(wert * 100)} %`;
     }
 }

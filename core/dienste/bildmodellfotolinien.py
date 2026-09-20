@@ -33,7 +33,7 @@ class Bildmodellfotolinien:
                ('koerper', 'hinten'): 'hinten', ('kopf', 'vorne'): 'kopf'}
     #: Reihenfolge der Zeilen: Körper vorn, Seite, hinten, dreiviertel, dann Kopf.
     REIHE = ['koerper/vorne', 'koerper/seite', 'koerper/hinten', 'koerper/dreiviertel',
-             'kopf/vorne', 'kopf/seite']
+             'kopf/vorne', 'kopf/seite', 'kopf/hinten']
     OPTION = 'proportionen_linien'
 
     def __init__(self, job):

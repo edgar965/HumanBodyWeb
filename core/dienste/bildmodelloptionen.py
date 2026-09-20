@@ -32,6 +32,11 @@ class Bildmodelloptionen:
     ]
     #: Wo die Datei je Schritt in der Kette steht — für `ab=`.
     REIHENFOLGE = [s for s, _ in SCHRITTE]
+    #: Einzelschritte außerhalb der Kette — nur auf ausdrückliche Nennung in `schritte`,
+    #: nie in einem Lauf „ab …": `gvhmr` = SMPL-X mit GVHMR für EIN Bild (Knopf je Kachel,
+    #: `optionen.gvhmr_bild`, 20.09.2026 — `Bildmodellgvhmr`); `flame` = der FLAME-Kopf für
+    #: EIN Kopfbild (Knopf „Kopf (FLAME)", dasselbe Feld — `Bildmodellflame`).
+    EINZELN = ('gvhmr', 'flame')
     #: Felder, die `pruefen` nicht kennt und die ein Start vom Auftrag übernimmt, wenn
     #: der Rumpf sie nicht mitbringt: Popup-Proportionen, Testfall, gezogene Linien,
     #: Bildtypen-Vorgaben für hochgeladene Dateien (19.09.2026 — die Linien gingen sonst

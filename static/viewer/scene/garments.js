@@ -59,6 +59,9 @@ export function _renderGarmentList() {
         for (const g of garments) {
             const item = document.createElement('div');
             item.className = 'anim-item garment-item' + (g.id === state._selectedGarmentId ? ' active' : '');
+            // Der Klick auf das Stück in der Szene findet seine Zeile hierüber
+            // (`Stueckmarkierung`, 20.09.2026).
+            item.dataset.garmentId = g.id;
             if (g.has_thumb) {
                 const img = document.createElement('img');
                 img.alt = g.name;

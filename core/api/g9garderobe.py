@@ -38,11 +38,13 @@ from .g9kleidhumanbody import G9kleidhumanbody
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9lagenanfrage import G9lagenanfrage
 from Genesis9.garderobe import G9garderobe
+from Genesis9.garderobekategorien import G9garderobekategorien
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.material import G9material
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
+from Genesis9.stueckfelder import G9stueckfelder
 
 logger = logging.getLogger('core')
 
@@ -58,7 +60,10 @@ class G9garderobeapi:
         if not G9pfade.vorhanden():
             return JsonResponse({'stuecke': [], 'anzahl': 0, 'fehler': FEHLT})
         from .g9vorschau import G9vorschau
-        stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s))
+        # `kategorie`: die Vorgabe aus Daz' Metadaten (Oberteile, Hosen, …) —
+        # Edgars eigene Zuordnung liegt darueber (`G9garderobekategorien`).
+        stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s),
+                        kategorie=G9garderobekategorien.vorgabe(s))
                    for s in G9garderobe.liste()]
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
 
@@ -120,8 +125,13 @@ class G9garderobeapi:
         for (folger, lage), punkte in zip(teile, kaefige):
             hd_werte = dict(formung.morphwerte())
             hd_werte.update(zusatz)
+            # Laenge/Weite verschieben den Kaefig am Koerper entlang — die Haut
+            # muss von dort kommen, nicht aus der Ruhelage (20.09.2026).
+            passform = (folger.passformhaut(zusatz)
+                        if G9stueckfelder.folgt(folger, lage) else None)
             netz = G9koerpernetz.folgernetz(folger, punkte, bilder, stufen,
-                                            koerper=koerper, werte=hd_werte)
+                                            koerper=koerper, werte=hd_werte,
+                                            passform=passform)
             if lage is not None:
                 # Ein Prop haengt ganz an seinem Knochen (`G9requisit.haut`).
                 netz['haut'] = lage.haut(len(netz['punkte'])).fuer()
@@ -132,7 +142,10 @@ class G9garderobeapi:
             antwort_teile.append(teil)
         return {'kennung': kennung, 'teile': antwort_teile,
                 'boden': round(hoch[1], 4), 'stufen': stufen,
-                'innen': innen, 'aussen': aussen}
+                'innen': innen, 'aussen': aussen,
+                # Die Art entscheidet im Browser, ob die Haut darunter
+                # ausgeblendet wird (`Hautverdeckung`, nur `kleidung`).
+                'art': eintrag.get('art')}
 
     # -------------------------------------------------------------- Texturen
 

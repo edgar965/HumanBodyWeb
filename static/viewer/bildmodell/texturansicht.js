@@ -19,6 +19,7 @@
  * Sichtung (Umfang „neue"). Die 3D-Ansicht oben zieht die Kacheln nach
  * (`texturauflage.js`, Marke `stand`).
  */
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Texturkachelpanel } from './texturkachel.js';
 
 export class Texturansicht {
@@ -128,15 +129,45 @@ export class Texturansicht {
         if (!koerper) return;
         koerper.innerHTML = '';
         const je = new Map(((ft || {}).je_bild || []).map((e, i) => [e.datei, { ...e, nummer: i }]));
-        for (const b of (z.texturbilder || [])) koerper.appendChild(this._zeile(b, je.get(b.datei)));
+        const bilder = z.texturbilder || [];
+        bilder.forEach((b, i) => koerper.appendChild(this._zeile(b, je.get(b.datei), i + 1, bilder.length)));
         const leer = document.getElementById('textur-leer');
         if (leer) leer.classList.toggle('hb-versteckt', (z.texturbilder || []).length > 0);
     }
 
-    _zeile(b, je) {
+    /** Die Zeile an Stelle `ziel` (1..n) setzen, alle Nummern nachrücken, die Reihe ablegen. */
+    async _umordnen(tr, ziel) {
+        const rumpf = tr.parentElement;
+        if (!rumpf) return;
+        const zeilen = [...rumpf.children].filter(z => z !== tr);
+        const stelle = Math.min(Math.max(1, Math.round(ziel) || 1), zeilen.length + 1) - 1;
+        zeilen.splice(stelle, 0, tr);
+        zeilen.forEach((z, i) => { rumpf.appendChild(z); const e = z.querySelector('.bildmodell-propnr input'); if (e) e.value = i + 1; });
+        try {
+            const antwort = await Serverabruf.senden(this.auftrag.adresse('texturreihenfolge/'), { reihenfolge: zeilen.map(z => z.dataset.datei) });
+            if (antwort.error) throw new Error(antwort.error);
+            this.auftrag.zustand.texturbilder = antwort.texturbilder;
+        } catch (fehler) { window.alert(`Reihenfolge nicht gespeichert: ${fehler.message}`); }
+    }
+
+    _zeile(b, je, nr = 0, n = 0) {
         const tr = document.createElement('tr');
         tr.dataset.datei = b.datei;
         tr.classList.toggle('textur-aus', !b.gewaehlt);
+        // Nr. (Edgar, 20.09.2026: „ändere ich die, wird das Bild sofort verschoben") — wie in der
+        // Proportionentabelle: die Zeile rückt an die Stelle, die Nummern rücken nach, `texturreihenfolge/`.
+        const nummer = document.createElement('td');
+        nummer.className = 'bildmodell-propnr num';
+        nummer.dataset.sort = String(nr);
+        const eingabe = document.createElement('input');
+        eingabe.type = 'number';
+        eingabe.min = 1; eingabe.max = n; eingabe.step = 1;
+        eingabe.value = nr;
+        eingabe.title = 'Nummer ändern = Zeile an diese Stelle';
+        eingabe.addEventListener('change', () => this._umordnen(tr, Number(eingabe.value)));
+        eingabe.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); eingabe.blur(); } });
+        nummer.appendChild(eingabe);
+        tr.appendChild(nummer);
         // Häkchen
         const wahl = document.createElement('td');
         const kasten = document.createElement('input');

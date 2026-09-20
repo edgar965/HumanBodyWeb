@@ -6,6 +6,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Genesis9stueckregler } from './genesis9stueckregler.js';
+import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
 
 /**
  * Genesis9garderobe — Daz-Kleidung und -Haare einer Genesis-9-Figur (`Dazkleidung`: auch HumanBody).
@@ -27,11 +28,13 @@ import { Genesis9stueckregler } from './genesis9stueckregler.js';
  * Feathered …), POSE (dreht eigene Knochen — Eirgrids Zöpfe) und LÄNGE (skaliert sie).
  * REQUISITEN (`People/Genesis 9/Props`: Tubal-Waffen) hängen an einem Handknochen; ein
  * Stück mit Griffpose (`griff`) baut die Figur neu (Finger um den Griff, `anziehenMitGriff`).
+ *
+ * Die Gruppen sind seit 20.09.2026 Edgars Kategorien (`Genesis9garderobekategorien`:
+ * Vorgabe Kleidung/Haare/Requisiten nach Art, Rechtsklick auf eine Zeile verschiebt).
  */
 export class Genesis9garderobe {
 
     static ADRESSE = '/api/character/genesis9-figur/garderobe/';
-    static ARTEN = [['kleidung', 'Kleidung'], ['haar', 'Haare'], ['requisit', 'Requisiten']];
     /** Die Preset-Arten eines Stücks (`Genesis9/garderobeeintrag.py`, `ARTEN`). */
     static STILARTEN = [['stil', 'Stil'], ['pose', 'Pose'], ['laenge', 'Länge']];
     /** Der Behälter im Assets-Reiter (`_genesis9_garderobe.html`). */
@@ -50,23 +53,24 @@ export class Genesis9garderobe {
         if (!behaelter) return;
         behaelter.dataset.figur = inst.id;      // wer zuletzt anfragt, gewinnt (Wettlauf beim Laden)
         behaelter.innerHTML = '<div class="gedaempft">Lade Garderobe …</div>';
-        const stuecke = await Genesis9garderobe.liste();
+        const [stuecke, stand] = await Promise.all([Genesis9garderobe.liste(),
+                                                    Genesis9garderobekategorien.stand()]);
         if (behaelter.dataset.figur !== inst.id) return;
         behaelter.innerHTML = '';
         if (!stuecke.length) {
             behaelter.innerHTML = '<div class="gedaempft">Keine Daz-Kleidung gefunden.</div>';
             return;
         }
-        for (const [art, titel] of Genesis9garderobe.ARTEN) {
-            const eigene = stuecke.filter(s => s.art === art);
-            if (!eigene.length) continue;
+        const neuzeichnen = () => Genesis9garderobe.fuellen(inst, behaelter);
+        for (const [titel, eigene] of Genesis9garderobekategorien.gruppen(stuecke, stand)) {
             const kasten = document.createElement('details');
             kasten.className = 'uma-gruppe';
-            kasten.open = art === 'kleidung';
-            kasten.innerHTML = `<summary>${titel} `
+            kasten.open = Genesis9garderobekategorien.offen(titel);
+            kasten.innerHTML = `<summary>${escapeHtml(titel)} `
                 + `<span class="gedaempft">(${eigene.length})</span></summary>`;
+            kasten.addEventListener('toggle', () => Genesis9garderobekategorien.merken(titel, kasten.open));
             for (const stueck of eigene) {
-                kasten.appendChild(Genesis9garderobe._zeile(inst, stueck));
+                kasten.appendChild(Genesis9garderobe._zeile(inst, stueck, neuzeichnen));
                 if (stueck.regler?.length && stueck.zeigbar) {
                     kasten.appendChild(Genesis9stueckregler.bauen(inst, stueck,
                         () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) })));
@@ -82,10 +86,11 @@ export class Genesis9garderobe {
         return treffer ? `G${treffer[1] || '1'}` : '';
     }
 
-    static _zeile(inst, stueck) {
+    static _zeile(inst, stueck, neuzeichnen) {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         zeile.inst = inst;
+        Genesis9garderobekategorien.menue(zeile, stueck, neuzeichnen);
         const herkunft = stueck.herkunft || (stueck.basis ? 'Genesis 8' : '');
         zeile.title = stueck.zeigbar
             ? (stueck.knochen ? `${stueck.datei} — an ${stueck.knochen}` : stueck.datei)

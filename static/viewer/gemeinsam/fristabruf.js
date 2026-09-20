@@ -47,16 +47,25 @@ export class Fristabruf {
      * @param adresse   URL
      * @param daten     FormData
      * @param frist_s   Sekunden bis zum Abbruch (Vorgabe `FRIST_S`)
+     * @param signal    optionales `AbortSignal` des Aufrufers — der
+     *                  Abbrechen-Knopf (20.09.2026); sein `reason` wird
+     *                  geworfen wie die Frist
      * @throws bei Fehlercode wie `Serverabruf`, und bei Ablauf der Frist mit
      *         einer Meldung, die die Frist NENNT — „Failed to fetch" allein
      *         sähe aus wie ein Serverfehler.
      */
-    static async formular(adresse, daten, frist_s = Fristabruf.FRIST_S) {
+    static async formular(adresse, daten, frist_s = Fristabruf.FRIST_S,
+                          signal = null) {
         const steuerung = new AbortController();
         const uhr = setTimeout(
             () => steuerung.abort(new Error(
                 `Keine Antwort binnen ${frist_s} s (${adresse})`)),
             frist_s * 1000);
+        if (signal) {
+            if (signal.aborted) steuerung.abort(signal.reason);
+            else signal.addEventListener('abort', () => steuerung.abort(signal.reason),
+                                         { once: true });
+        }
         try {
             return await Serverabruf.json(adresse, {
                 method: 'POST',

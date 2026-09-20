@@ -58,15 +58,18 @@ export class Genesis9felder {
     /**
      * Die Felder eines Kleidungsstücks: `[{kanal: {n, d}}]` je Teil — einmal
      * geholt, null bei Fehler. `stufen = 'kaefig'`: auf Daz' Käfigpunkten
-     * (für den Stoff-Worker, 18.09.2026 abends).
+     * (für den Stoff-Worker, 18.09.2026 abends). `passform` (`{laenge, weite}`,
+     * `Genesis9felder.passform`): die Felder des Stücks MIT Länge/Weite — der
+     * verkürzte Saum liegt über anderer Haut (20.09.2026, `G9passformhaut`).
      */
-    static holenStueck(gruppe, kennung, stufen) {
-        const schluessel = `${gruppe}/${stufen}/stueck/${kennung}`;
+    static holenStueck(gruppe, kennung, stufen, passform = null) {
+        const zusatz = Genesis9felder.passformAnfrage(passform);
+        const schluessel = `${gruppe}/${stufen}/stueck/${kennung}${zusatz}`;
         let lader = Genesis9felder._lader.get(schluessel);
         if (!lader) {
             const wahl = stufen === 'kaefig' ? 'kaefig=1' : `stufen=${stufen}`;
             const adresse = `${Genesis9felder.WURZEL}garderobe/${
-                encodeURIComponent(kennung)}/felder/${gruppe}/?${wahl}`;
+                encodeURIComponent(kennung)}/felder/${gruppe}/?${wahl}${zusatz}`;
             lader = Serverabruf.json(adresse)
                 .then(daten => (!daten || daten.fehler) ? null
                     : (daten.teile || []).map(teil => Genesis9felder._kanaele(teil)))
@@ -78,6 +81,22 @@ export class Genesis9felder {
             Genesis9felder._lader.set(schluessel, lader);
         }
         return lader;
+    }
+
+    /**
+     * `{laenge, weite}` (cm) aus den Stückreglern (`inst.kleidung[kennung].regler`:
+     * `passform:laenge`, `passform:weite`) — null, wenn beide 0.
+     */
+    static passform(regler) {
+        const zahl = (name) => { const v = Number(regler?.[name]); return Number.isFinite(v) ? v : 0; };
+        const laenge = zahl('passform:laenge'), weite = zahl('passform:weite');
+        return (laenge || weite) ? { laenge, weite } : null;
+    }
+
+    /** `&laenge=-14.5&weite=-2.7` — leer ohne Passform; dient auch als Schlüssel. */
+    static passformAnfrage(passform) {
+        if (!passform) return '';
+        return `&laenge=${encodeURIComponent(passform.laenge)}&weite=${encodeURIComponent(passform.weite)}`;
     }
 
     /** `{kanal: {n, d}}` einer Antwort — base64 zu Typed Arrays. */

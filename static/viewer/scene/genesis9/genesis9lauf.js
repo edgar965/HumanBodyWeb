@@ -1,4 +1,5 @@
 import { markDirty } from '../undo.js';
+import { state } from '../state.js';
 import { Sanduhr } from '../../gemeinsam/sanduhr.js';
 
 /**
@@ -14,6 +15,15 @@ import { Sanduhr } from '../../gemeinsam/sanduhr.js';
  *
  * Der Lauf ist JE FIGUR gemerkt: Zwei Genesis-9-Figuren in der Szene
  * dürfen sich nicht gegenseitig die Wünsche wegnehmen.
+ *
+ * EIN LAUF, DESSEN FIGUR NICHT MEHR IN DER SZENE IST, MELDET NICHTS (Edgar,
+ * 20.09.2026: „undo funktioniert nicht bei den HB Morphs"): Rückgängig
+ * während der Server noch rechnet baut die Szene aus dem Schnappschuss neu —
+ * die Figur ist dann eine ANDERE Instanz. Kam der alte Lauf danach zurück,
+ * schrieb `danach` (`nachziehen`) die Werte der verwaisten Instanz in die
+ * Schieber (100 % am Regler, 0 in der Figur) und `markDirty` legte einen
+ * Rückgängig-Stand davon an. Gemessen im Chrome: Regler „1", Figur ohne den
+ * Morph. Jetzt: verwaist → weder Schieber noch Stapel anfassen.
  */
 export class Genesis9lauf {
 
@@ -53,6 +63,7 @@ export class Genesis9lauf {
         Sanduhr.an('Figur wird neu gerechnet …');
         try {
             await aktion();
+            if (!Genesis9lauf.inSzene(inst)) { lauf.nachholen = null; return; }
             markDirty();
             danach?.();
         } catch (fehler) {
@@ -65,6 +76,11 @@ export class Genesis9lauf {
             lauf.nachholen = null;
             if (offen) Genesis9lauf._ausfuehren(inst, ...offen);
         }
+    }
+
+    /** Ist diese Instanz noch die Figur der Szene (nicht durch Rückgängig ersetzt, nicht gelöscht)? */
+    static inSzene(inst) {
+        return state.characters.get(inst.id) === inst;
     }
 
     static vergessen(inst) {

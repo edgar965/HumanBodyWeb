@@ -137,7 +137,9 @@ class Fristen(SimpleTestCase):
     def test_die_bauanfragen_haben_eine_frist(self):
         for datei, adresse in Fristen.LANGE_ANFRAGEN.items():
             quelle = _js('scene', datei)
-            self.assertIn('Fristabruf.formular(', quelle, datei)
+            # `Antwortnachholen.formular` ist `Fristabruf.formular` plus das
+            # Nachholen einer verlorenen Antwort (20.09.2026).
+            self.assertIn('Antwortnachholen.formular(', quelle, datei)
             self.assertIn(adresse, quelle, datei)
             self.assertNotIn(
                 'Serverabruf.formular(',

@@ -68,7 +68,7 @@ class Garmentvorschauendpunkte:
             except ValueError:
                 return {}
         roh = request.POST.dict()
-        for feld in ('morphs', 'meta'):
+        for feld in ('morphs', 'meta', 'regler_figur'):
             if roh.get(feld):
                 try:
                     roh[feld] = json.loads(roh[feld])
@@ -92,7 +92,26 @@ class Garmentvorschauendpunkte:
             if pfad is None:
                 raise ValueError('Referenzkörper %r nicht gefunden' % name)
             return Umapythonpaare.obj_lesen(pfad)
+        # Eine Genesis-9-Figur (20.09.2026): bis dahin legte die Vorschau den
+        # Schnitt an den HumanBody-Grundkoerper, waehrend die Szene Kin zeigte.
+        if wunsch.get('figurart') == 'genesis9':
+            return Umapythonpaare.obj_lesen(Garmentvorschauendpunkte._genesis9koerper(wunsch))
         return Umapythonpaare.obj_lesen(Garmentvorschauendpunkte._figurkoerper(wunsch))
+
+    @staticmethod
+    def _genesis9koerper(wunsch):
+        """Die OBJ der Genesis-9-Figur — derselbe Weg wie beim Drapieren
+        (`Genesis9drapierung.bereitstellen`), dieselbe Ablage."""
+        from GarmentCode.genesis9drapierung import Genesis9drapierung
+
+        regler = wunsch.get('regler_figur') or {}
+        if not isinstance(regler, dict):
+            regler = {}
+        figur = Genesis9drapierung.figur(regler)
+        punkte = figur.projekt(figur.punkte())
+        masse, _ = Genesis9drapierung.masse(regler, figur)
+        ablage = Genesis9drapierung.bereitstellen(figur, punkte, figur.dreiecke(), masse)
+        return os.path.join(ablage['ordner'], '%s.obj' % ablage['name'])
 
     @staticmethod
     def _figurkoerper(wunsch):

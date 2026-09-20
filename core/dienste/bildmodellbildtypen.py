@@ -6,9 +6,19 @@ auswählen kann … Erste Combo Box: Hauptbild-Typ, zweite Nebenbild-Typ,
 dritte nur Textur?"
 
     Hauptbild   Körper von vorn / Seite / hinten / dreiviertel, Kopf von
-                vorn / Seite, Drehvideo → `kategorie` + `ansicht`. Körper-
+                vorn / Seite / hinten, Drehvideo → `kategorie` + `ansicht`. Die
+                ersten zwei Körper-Hauptbilder (vorn/hinten/Seite) tragen die
+                Mehrheit der Form (`Bildmodellhauptgewicht`, 20.09.2026). Körper-
                 Hauptbilder gehen an SMPLest-X, Kopfbilder an PyMAF-X/FLAME,
                 die Ansicht entscheidet die Geschlechtsschätzung (vorn/hinten).
+    Hauptbild   (zweite Box, Gruppe „Hauptbild", Edgar 20.09.2026: „Mach eine
+                Kategorie: Hauptbild Vorne, Hauptbild Hinten, Hauptbild
+                Seitlich. Dann für Kopf die 3 Hauptbild-Kategorien … ab sofort
+                den Gesamtkörper nur anhand der Hauptbilder aus der Combo
+                bauen") → `hauptbild: True` + `kategorie` + `ansicht`. Nur die
+                markierten Körper-Hauptbilder bauen die Form, das markierte
+                Kopf-Hauptbild den Kopf (`Bildmodellhauptgewicht`); ohne
+                Markierung gelten die ersten zwei Körperzeilen der Tabelle.
     Nebenbild   ein Körperteil → `kategorie: neben` + `teil`. Hände liefern
                 die Fingerlänge (`Bildmodellhaende`); jedes andere Teil geht
                 mit Textur „Fotofarbe" durch den Schätzer und färbt NUR die
@@ -22,7 +32,8 @@ dritte nur Textur?"
 
 `stellen(eintrag, rumpf)` schreibt die Wahl an den Eintrag, `fuer_form` und
 `fuer_textur` fragen sie ab — an einer Stelle, damit Schätzung, Maße,
-Silhouette und Textur dieselbe Antwort bekommen.
+Silhouette und Textur dieselbe Antwort bekommen. Die Vorgaben aus dem Upload
+(`typen`, Kamera der Testfallbilder) prüft `Bildmodellbildvorgaben`.
 """
 
 __all__ = ['Bildmodellbildtypen']
@@ -41,11 +52,21 @@ class Bildmodellbildtypen:
         ('koerper/dreiviertel', 'Körper dreiviertel', 'koerper', 'dreiviertel'),
         ('kopf/vorne', 'Kopf vorn', 'kopf', 'vorne'),
         ('kopf/seite', 'Kopf Seite', 'kopf', 'seite'),
+        ('kopf/hinten', 'Kopf von hinten', 'kopf', 'hinten'),
         ('video/drehung', 'Drehvideo', 'video', 'drehung'),
+    )
+    #: (wert, anzeige, kategorie, ansicht) — Gruppe „Hauptbild" der zweiten Box
+    HAUPTBILD = (
+        ('haupt/vorne', 'Hauptbild: vorn', 'koerper', 'vorne'),
+        ('haupt/hinten', 'Hauptbild: hinten', 'koerper', 'hinten'),
+        ('haupt/seite', 'Hauptbild: seitlich', 'koerper', 'seite'),
+        ('haupt/kopf-vorne', 'Kopf-Hauptbild: vorn', 'kopf', 'vorne'),
+        ('haupt/kopf-hinten', 'Kopf-Hauptbild: hinten', 'kopf', 'hinten'),
+        ('haupt/kopf-seite', 'Kopf-Hauptbild: seitlich', 'kopf', 'seite'),
     )
     #: (wert, anzeige, kategorie, teil, Körperteile nach `G9koerperteile.TEILE`)
     NEBEN = (
-        ('', '— kein Nebenbild —', None, None, ()),
+        ('', '— kein Hauptbild, kein Nebenbild —', None, None, ()),
         ('neben', 'Nebenbild', 'neben', None, ()),
         ('neben/haende', 'Hände', 'neben', 'haende', ('l_hand', 'r_hand')),
         ('neben/gesicht', 'Gesicht (Detail)', 'neben', 'gesicht', ('kopf',)),
@@ -79,7 +100,8 @@ class Bildmodellbildtypen:
         """Für die Seite: die drei Listen."""
         return {
             'haupt': [{'wert': w, 'anzeige': a} for w, a, _, _ in cls.HAUPT],
-            'neben': [{'wert': w, 'anzeige': a} for w, a, _, _, _ in cls.NEBEN],
+            'neben': [{'wert': w, 'anzeige': a, 'gruppe': 'Hauptbild'} for w, a, _, _ in cls.HAUPTBILD]
+            + [{'wert': w, 'anzeige': a, 'gruppe': 'Nebenbild' if w else ''} for w, a, _, _, _ in cls.NEBEN],
             'nutzung': [{'wert': w, 'anzeige': a, 'erklaerung': e} for w, a, e in cls.NUTZUNG],
         }
 
@@ -99,11 +121,21 @@ class Bildmodellbildtypen:
         return sorted(werte)[0] if k != 'koerper' else 'koerper/vorne'
 
     @classmethod
+    def hauptbild(cls, b):
+        """Der Wert der Gruppe „Hauptbild" für diesen Eintrag ('' = nicht markiert)."""
+        if not b.get('hauptbild'):
+            return ''
+        for w, _, kategorie, ansicht in cls.HAUPTBILD:
+            if b.get('kategorie') == kategorie and b.get('ansicht') == ansicht:
+                return w
+        return ''
+
+    @classmethod
     def neben(cls, b):
-        """Der Wert der zweiten Box ('' = kein Nebenbild)."""
+        """Der Wert der zweiten Box: Hauptbild-Markierung, Nebenbild oder '' (keins)."""
         k = b.get('kategorie') or 'neben'
         if k not in cls.NEBENKATEGORIEN:
-            return ''
+            return cls.hauptbild(b)
         if k != 'neben':
             return k
         teil = b.get('teil')
@@ -169,6 +201,10 @@ class Bildmodellbildtypen:
             eintrag['nutzung'] = rumpf['nutzung']
         if 'textur_an' in rumpf:
             eintrag['textur_an'] = bool(rumpf['textur_an'])
+        # „Verwenden" (Edgar, 20.09.2026: „baue für jedes Bild das GVHMR, dann entscheide ich,
+        # welche davon genommen werden"): zählt das GVHMR-Ergebnis dieses Bildes zur Form?
+        if 'gvhmr_an' in rumpf:
+            eintrag['gvhmr_an'] = bool(rumpf['gvhmr_an'])
         if manuell:
             eintrag['manuell'] = True
         return manuell
@@ -178,6 +214,7 @@ class Bildmodellbildtypen:
         if wert == '':
             if eintrag.get('kategorie') in cls.HAUPTKATEGORIEN:
                 eintrag['kategorie'] = 'neben'
+                eintrag.pop('hauptbild', None)
                 return True
             return False
         for w, _, kategorie, ansicht in cls.HAUPT:
@@ -185,6 +222,8 @@ class Bildmodellbildtypen:
                 eintrag['kategorie'] = kategorie
                 eintrag['ansicht'] = ansicht
                 eintrag.pop('teil', None)
+                if not any(kategorie == k and ansicht == a for _, _, k, a in cls.HAUPTBILD):
+                    eintrag.pop('hauptbild', None)   # dreiviertel, Video: kein Hauptbild
                 if float(eintrag.get('gewicht') or 0) <= 0:
                     eintrag['gewicht'] = 1.0   # sonst zählt das neue Hauptbild nirgends
                 return True
@@ -193,73 +232,29 @@ class Bildmodellbildtypen:
     @classmethod
     def _neben_stellen(cls, eintrag, wert):
         if wert == '':
+            if eintrag.pop('hauptbild', None):
+                return True   # Typ bleibt, nur die Markierung „Hauptbild" fällt
             if eintrag.get('kategorie') in cls.NEBENKATEGORIEN:
                 eintrag['kategorie'] = 'leer'
                 eintrag.pop('teil', None)
                 return True
             return False
+        for w, _, kategorie, ansicht in cls.HAUPTBILD:
+            if w == wert:
+                eintrag['kategorie'] = kategorie
+                eintrag['ansicht'] = ansicht
+                eintrag['hauptbild'] = True
+                eintrag.pop('teil', None)
+                if float(eintrag.get('gewicht') or 0) <= 0:
+                    eintrag['gewicht'] = 1.0
+                return True
         for w, _, kategorie, teil, _ in cls.NEBEN:
             if w == wert:
                 eintrag['kategorie'] = kategorie
+                eintrag.pop('hauptbild', None)
                 if teil:
                     eintrag['teil'] = teil
                 else:
                     eintrag.pop('teil', None)
                 return True
         return False
-
-    # ----------------------------------------------------------- Vorgaben
-
-    @classmethod
-    def vorgaben_pruefen(cls, roh, namen):
-        """`{datei: {haupt, neben, nutzung}}` aus dem Upload-Feld `typen` (JSON) — nur für
-        die eben abgelegten Dateien, nur bekannte Werte (19.09.2026: die Testfallbilder und
-        „Bild für die Textur" kennen ihren Typ, bevor die Sichtung läuft)."""
-        import json
-
-        if not roh:
-            return {}
-        try:
-            daten = json.loads(roh) if isinstance(roh, str) else roh
-        except ValueError:
-            return {}
-        if not isinstance(daten, dict):
-            return {}
-        haupt = {w for w, _, _, _ in cls.HAUPT}
-        neben = {w for w, _, _, _, _ in cls.NEBEN}
-        nutzung = {w for w, _, _ in cls.NUTZUNG}
-        aus = {}
-        for name in namen:
-            wahl = daten.get(name)
-            if not isinstance(wahl, dict):
-                continue
-            sauber = {}
-            if wahl.get('haupt') in haupt:
-                sauber['haupt'] = wahl['haupt']
-            if wahl.get('neben') in neben:
-                sauber['neben'] = wahl['neben']
-            if wahl.get('nutzung') in nutzung:
-                sauber['nutzung'] = wahl['nutzung']
-            kamera = cls.kamera_pruefen(wahl.get('kamera'))
-            if kamera:
-                sauber['kamera'] = kamera
-            if sauber:
-                aus[name] = sauber
-        return aus
-
-    @staticmethod
-    def kamera_pruefen(roh):
-        """Die bekannte Kamera eines gerenderten Testfallbilds (`Testfallbilder._kameraDaten`):
-        Weltmatrix der Kamera und der Figur (16 Zahlen, spaltenweise wie three.js), Öffnungswinkel
-        (Grad, senkrecht), Bildgröße — oder None, wenn etwas fehlt oder keine Zahl ist."""
-        if not isinstance(roh, dict):
-            return None
-        try:
-            matrix = [float(v) for v in roh.get('matrix') or []]
-            figur = [float(v) for v in roh.get('figur') or [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]]
-            fov, breite, hoehe = float(roh.get('fov')), int(roh.get('breite')), int(roh.get('hoehe'))
-        except (TypeError, ValueError):
-            return None
-        if len(matrix) != 16 or len(figur) != 16 or not (1.0 <= fov <= 170.0) or breite < 8 or hoehe < 8:
-            return None
-        return {'matrix': matrix, 'figur': figur, 'fov': fov, 'breite': breite, 'hoehe': hoehe}

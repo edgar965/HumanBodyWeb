@@ -81,6 +81,16 @@
     color: #fff;
 }
 
+/* Die GEWÄHLTE Zeile der Kleider-, MakeHuman- und Daz-Liste. `selected` wurde
+   seit dem 06.09.2026 gesetzt (`_kleiderSelectById`, `Mhproxyordner._waehlen`),
+   hatte aber nie eine Regel — man sah der Liste nichts an. Edgar, 20.09.2026:
+   „soll in der Toolbar genau das ausgewählt sein". */
+.anim-item.selected, .slider-row.selected {
+    background: var(--accent);
+    color: #fff;
+}
+.slider-row.selected label.stueckname, .slider-row.selected .gedaempft { color: #fff; }
+
 .anim-item .frames {
     font-size: 0.7rem;
     opacity: 0.7;

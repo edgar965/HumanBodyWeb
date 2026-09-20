@@ -19,7 +19,10 @@ from .api.auftragsweiterleitung import Auftragsweiterleitung
 from .api.bibliothek import Bibliotheksendpunkte
 from .api.bildmodell import Bildmodellendpunkte
 from .api.bildmodelldateien import Bildmodelldateiendpunkte
+from .api.bildmodellfreisteller import Bildmodellfreistellerendpunkte
+from .api.bildmodellgvhmr import Bildmodellgvhmrendpunkte
 from .api.bildmodellproportionen import Bildmodellproportionenendpunkte
+from .api.bildmodelltextur import Bildmodelltexturendpunkte
 from .api.bvhtext import Bvhtext
 from .api.dateien import Auftragsdateien
 from .api.effekte import Effektendpunkte
@@ -27,6 +30,8 @@ from .api.figurvideo import Figurvideoendpunkte
 from .api.garmentabsatz import Garmentabsatz
 from .api.garmentabsatzvorschau import Garmentabsatzvorschau
 from .api.garmentcode import Garmentcode
+from .api.garmentantwort import Garmentantwort
+from .api.garmentabbruch import Garmentabbruch
 from .api.garmentgemeinsam import Garmentgemeinsamendpunkte
 from .api.garmentsimulation import Garmentsimulation
 from .api.garmentvorbilder import Garmentvorbilder
@@ -137,16 +142,28 @@ urlpatterns = [
          Bildmodelldateiendpunkte.original_loeschen, name='bildmodell_original_loeschen'),
     path('api/bildmodell/<uuid:job_id>/kameras/', Bildmodelldateiendpunkte.kameras,
          name='bildmodell_kameras'),
+    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/vorschau/',
+         Bildmodellfreistellerendpunkte.vorschau, name='bildmodell_freisteller_vorschau'),
+    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/speichern/',
+         Bildmodellfreistellerendpunkte.speichern, name='bildmodell_freisteller_speichern'),
+    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/zuruecksetzen/',
+         Bildmodellfreistellerendpunkte.zuruecksetzen, name='bildmodell_freisteller_zuruecksetzen'),
     path('api/bildmodell/<uuid:job_id>/starten/', Bildmodellendpunkte.starten, name='bildmodell_starten'),
     path('api/bildmodell/<uuid:job_id>/anhalten/', Bildmodellendpunkte.anhalten, name='bildmodell_anhalten'),
     path('api/bildmodell/<uuid:job_id>/proportionen/', Bildmodellproportionenendpunkte.stellen,
          name='bildmodell_proportionen'),
     path('api/bildmodell/<uuid:job_id>/reihenfolge/', Bildmodellproportionenendpunkte.reihenfolge,
          name='bildmodell_reihenfolge'),
+    path('api/bildmodell/<uuid:job_id>/texturreihenfolge/', Bildmodelltexturendpunkte.reihenfolge,
+         name='bildmodell_texturreihenfolge'),
     path('api/bildmodell/<uuid:job_id>/zeilenbild/<str:ansicht>/', Bildmodellproportionenendpunkte.zeilenbild,
          name='bildmodell_zeilenbild'),
     path('api/bildmodell/<uuid:job_id>/zielnetz3d/', Bildmodellproportionenendpunkte.zielnetz3d,
          name='bildmodell_zielnetz3d'),
+    path('api/bildmodell/<uuid:job_id>/gvhmr3d/<str:datei>/', Bildmodellgvhmrendpunkte.netz3d,
+         name='bildmodell_gvhmr3d'),
+    path('api/bildmodell/<uuid:job_id>/flame3d/<str:datei>/', Bildmodellgvhmrendpunkte.flame3d,
+         name='bildmodell_flame3d'),
     path('api/bildmodell/<uuid:job_id>/loeschen/', Bildmodellendpunkte.loeschen, name='bildmodell_loeschen'),
     path('api/bildmodell/<uuid:job_id>/datei/<str:ordner>/<str:name>', Bildmodellendpunkte.datei,
          name='bildmodell_datei'),
@@ -248,6 +265,12 @@ urlpatterns = [
     # Vorschau 3D (08.09.2026): der Schnitt am Koerper, ohne Simulation.
     path('api/garmentcode/vorschau3d/', Garmentvorschauendpunkte.vorschau3d, name='garmentcode_vorschau3d'),
     path('api/garmentcode/datei/<str:ordner>/<str:name>/', Garmentcode.datei, name='garmentcode_datei'),
+    # Die Antwort eines langen Laufs nachholen, wenn die Verbindung riss
+    # (20.09.2026, `api/garmentantwort.py`).
+    path('api/garmentcode/antwort/<str:kennung>/', Garmentantwort.holen, name='garmentcode_antwort'),
+    # Der Abbrechen-Knopf: beendet den Simulationsprozess zur Kennung
+    # (20.09.2026, `api/garmentabbruch.py`).
+    path('api/garmentcode/abbrechen/', Garmentabbruch.abbrechen, name='garmentcode_abbrechen'),
     # Video der animierten, angezogenen Figur (11.09.2026) — Unterprozess,
     # der Stand kommt aus einer Datei; siehe `dienste/figurvideo.py`.
     path('api/animation/video/', Figurvideoendpunkte.starten, name='figurvideo_starten'),

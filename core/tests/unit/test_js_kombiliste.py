@@ -85,6 +85,24 @@ pruefe('daneben negativ', liste.entfernen(-1), false);
 liste.leeren();
 pruefe('geleert', liste.anzahl, 0);
 
+// --- 6b. Ersetzen an Ort und Stelle (20.09.2026) --------------------------
+// Edgar: „kann ich die Eigenschaften des Stuecks nicht mehr nachtraeglich
+// aendern." Die Stelle bleibt (an ihr haengt das Material), ohne Material
+// bleibt das bisherige.
+liste = new Kombiliste();
+liste.hinzufuegen('hose', 'Hose', {a: 1}, {anliegen_mm: 2}, {farbe: '#111111'});
+liste.hinzufuegen('t-shirt', 'T-Shirt', {b: 1});
+pruefe('ersetzt', liste.ersetzen(0, 'hose', 'Hose', {a: 5}, {anliegen_mm: 0}).ok, true);
+pruefe('Stelle bleibt', liste.eintraege.map(e => e.vorlage), ['hose', 't-shirt']);
+pruefe('neue Werte', liste.eintraege[0].regler, {a: 5});
+pruefe('neue Bauwerte', liste.eintraege[0].bau, {anliegen_mm: 0});
+pruefe('Material bleibt', liste.eintraege[0].material, {farbe: '#111111'});
+pruefe('Material neu', liste.ersetzen(0, 'hose', 'Hose', {}, {}, {farbe: '#222222'}).ok, true);
+pruefe('Material ersetzt', liste.eintraege[0].material, {farbe: '#222222'});
+pruefe('daneben', liste.ersetzen(7, 'hose', 'Hose', {}).ok, false);
+pruefe('ohne Vorlage', liste.ersetzen(0, '', 'Hose', {}).ok, false);
+pruefe('unveraendert', liste.eintraege[0].regler, {});
+
 // --- 7. Der Server bekommt Vorlage, Regler und Bauwerte ------------------
 // Titel und Zaehler sind Sache der Oberflaeche. `bau` seit 11.09.2026
 // (`test_gemeinsambau`), ohne Angabe leer.

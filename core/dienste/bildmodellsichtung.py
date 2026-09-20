@@ -80,7 +80,7 @@ class Bildmodellsichtung:
             melder(0.5, 'Alle %d Bilder haben ihren Befund' % len(originale))
         bleiben = {p.name for p in originale} - {p.name for p in dran}
         self._uebernehmen(befunde, videos, bleiben)
-        self.job.save(update_fields=['bilder', 'updated_at'])
+        self.job.bilder_sichern()
         return self.job.bilder
 
     def rigs_gewuenscht(self):

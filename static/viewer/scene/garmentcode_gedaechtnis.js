@@ -86,12 +86,18 @@ export class Garmentcodegedaechtnis {
         // die Leggings trugen so eine Rüsche weiter, die es im Preset nicht
         // mehr gab, und am Knöchel schien die Haut durch. Direkt gesetzt
         // wie oben — kein Bau beim Seitenstart.
+        // Eine FORM holt nur ihren Kern zurück (20.09.2026, Edgar: die
+        // Ärmellänge am „T-Shirt (anliegend)"): Was man nach dem Anhaken
+        // geändert hat, steht in den gemerkten Werten und bleibt — auch der
+        // Kragen, den `zurueck` beim Anhaken auf die Vorgabe nahm.
         for (const schluessel of Array.isArray(namen) ? namen : []) {
             const preset = garmentcodePreset.preset(schluessel);
             if (!preset) continue;
-            regler.zuruecksetzen(preset.zurueck || []);
+            const kern = preset.form ? garmentcodePreset.kern(preset) : null;
+            if (!kern) regler.zuruecksetzen(preset.zurueck || []);
             const bau = {};
             for (const [pfad, wert] of Object.entries(preset.werte || {})) {
+                if (kern && !kern.includes(pfad)) continue;
                 if (pfad.startsWith('bau.')) { bau[pfad] = wert; continue; }
                 if (!Gedaechtniswahl.reglerwert(pfad, regler.vorgaben)) continue;
                 regler.werte[pfad] = wert;

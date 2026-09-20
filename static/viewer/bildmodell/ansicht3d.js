@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Texturauflage } from './texturauflage.js';
+import { Zielkaefig } from './zielkaefig.js';
 
 /**
  * Ansicht3d — das Ergebnis als Genesis-9-Figur im Browser.
@@ -12,6 +13,19 @@ import { Texturauflage } from './texturauflage.js';
  * Ergebnisses ändern (`ergebnisStand`). Ohne WebGL bleibt der Hinweistext.
  * Ein Testfall (`Testfallansicht`) hängt die Referenzfigur dazu und schaltet
  * mit `umschalten(an)` zwischen Ergebnis und Referenz um — nur eine ist sichtbar.
+ *
+ * ZIEL LIVE (20.09.2026, abends — Edgar: „3D links, 2D rechts … Wenn ich die
+ * Regler ändere, dann ändert sich gleich das 3D Modell links"): in derselben
+ * Szene liegt das Zielnetz als `Zielkaefig`; `zielSetzen(antwort, netz)` kommt
+ * von der `Zielnetzlive` der Modellsicht nach jedem Pfeil und Schieber. Die
+ * Wahl „Ziel (folgt den Pfeilen)" / „Modell (Ergebnis)" (`wasZeigen`) ist
+ * beim Öffnen auf dem Ziel, sobald es eines gibt — das ist die Anzeige, die
+ * den Reglern folgt; das Ergebnis mit Haut und Haar ist einen Klick entfernt.
+ *
+ * SMPL-X (GVHMR) je Bild (20.09.2026, Edgar: „ein SMPL mit GVHMR erzeuge und
+ * ansehen kann, für jedes Bild"): ein zweiter `Zielkaefig` (`smplx`, bläulich)
+ * mit dem Netz aus `gvhmr3d/<datei>/` (`gvhmrSetzen`, vom `Gvhmrknopf`); die
+ * dritte Wahl „SMPL-X (GVHMR)" erscheint mit dem ersten Netz.
  */
 export class Ansicht3d {
 
@@ -22,15 +36,70 @@ export class Ansicht3d {
         this.modell = null;
         this.referenzModell = null;
         this.referenzAn = false;
+        this.kaefig = null;
+        this.was = 'ziel';
         this.auflage = new Texturauflage(auftrag);
         this._stand = null;
         this._laeuft = false;
+        this._kameraSteht = false;
         if (!this.canvas) return;
         try { this._buehne(); } catch (fehler) { this._melden(`Keine 3D-Ansicht: ${fehler.message}`); return; }
+        this.kaefig = new Zielkaefig(this.szene);
+        this.smplx = new Zielkaefig(this.szene);
+        this.smplxDatei = null;
+        this._schalter();
         auftrag.zuhoeren(z => this.zeigen(z));
     }
 
     _melden(text) { if (this.text) this.text.textContent = text; }
+
+    // -------------------------------------------------------- Ziel (live)
+
+    /** Die Knöpfe über der Ansicht: Ziel/Modell, Gitter. */
+    _schalter() {
+        for (const r of document.querySelectorAll('input[name="ansicht3d-was"]')) {
+            r.addEventListener('change', () => { if (r.checked) this.wasZeigen(r.value); });
+        }
+        document.getElementById('ansicht3d-gitter')?.addEventListener('change', e => {
+            this.kaefig?.gitterZeigen(e.target.checked);
+            this.smplx?.gitterZeigen(e.target.checked);
+        });
+    }
+
+    /** `was`: `ziel` (folgt den Pfeilen), `modell` (Ergebnis mit Haut) oder `gvhmr` (SMPL-X eines Bildes). */
+    wasZeigen(was) {
+        this.was = ['modell', 'gvhmr'].includes(was) ? was : 'ziel';
+        for (const r of document.querySelectorAll('input[name="ansicht3d-was"]')) r.checked = r.value === this.was;
+        this._sichtbarkeit();
+    }
+
+    /** Das SMPL-X-Netz eines Bildes (`gvhmr3d/`): immer neu gebaut, bläulich, dann gezeigt. */
+    gvhmrSetzen(antwort) {
+        if (!this.smplx || !antwort || !antwort.punkte) return;
+        this.smplx.netzSetzen(antwort);
+        if (this.smplx.netz) this.smplx.netz.material.color.set(0xb9c6da);
+        this.smplxDatei = antwort.datei || null;
+        const wahl = document.getElementById('ansicht3d-gvhmr-wahl');
+        if (wahl) { wahl.hidden = false; wahl.title = `SMPL-X aus GVHMR: ${this.smplxDatei || ''}`; }
+        if (!this._kameraSteht && this.smplx.da) this._kameraAuf(this.smplx.hoehe);
+        this._melden(`SMPL-X (GVHMR) aus ${this.smplxDatei || '?'}: ${(antwort.anzahl || 0).toLocaleString('de-DE')} Punkte, ${antwort.hoehe_cm || '?'} cm`);
+        this.wasZeigen('gvhmr');
+    }
+
+    /** Eine Antwort von `Zielnetzlive`: Netz bauen oder Punkte tauschen; die erste stellt die Kamera. */
+    zielSetzen(antwort, netz) {
+        if (!this.kaefig || !antwort) return;
+        this.kaefig.setzen(antwort, netz);
+        if (!this._kameraSteht && this.kaefig.da) this._kameraAuf(this.kaefig.hoehe);
+        this._sichtbarkeit();
+    }
+
+    _kameraAuf(hoehe) {
+        hoehe = hoehe || 1.7;
+        this.steuerung.target.set(0, hoehe * 0.52, 0);
+        this.kamera.position.set(0, hoehe * 0.55, hoehe * 2.4);
+        this._kameraSteht = true;
+    }
 
     // ------------------------------------------------------ Referenz (Testfall)
 
@@ -40,10 +109,15 @@ export class Ansicht3d {
     /** `an`: die Referenz zeigen, sonst das Ergebnis. */
     umschalten(an) { this.referenzAn = !!an; this._sichtbarkeit(); }
 
+    /** Genau eine Figur ist zu sehen: Referenz vor SMPL-X vor Ziel vor Modell — die Wahl nur, wenn da. */
     _sichtbarkeit() {
         const referenz = this.referenzAn && !!this.referenzModell;
-        if (this.modell) this.modell.group.visible = !referenz;
+        const gvhmr = !referenz && this.was === 'gvhmr' && !!(this.smplx && this.smplx.da);
+        const ziel = !referenz && !gvhmr && this.was === 'ziel' && !!(this.kaefig && this.kaefig.da);
+        if (this.modell) this.modell.group.visible = !referenz && !ziel && !gvhmr;
         if (this.referenzModell) this.referenzModell.group.visible = referenz;
+        if (this.kaefig) this.kaefig.visible = ziel;
+        if (this.smplx) this.smplx.visible = gvhmr;
     }
 
     _buehne() {
@@ -163,9 +237,7 @@ export class Ansicht3d {
             if (this.modell) { this.szene.remove(this.modell.group); this.modell.dispose?.(); }
             this.modell = neu;
             this.szene.add(neu.group);
-            const hoehe = neu.hoehe || 1.7;
-            this.steuerung.target.set(0, hoehe * 0.52, 0);
-            this.kamera.position.set(0, hoehe * 0.55, hoehe * 2.4);
+            if (!this._kameraSteht) this._kameraAuf(neu.hoehe);
             this._melden(`${z.name}: ${Object.keys(regler).length} Regler, ${(neu.browserpunkte || 0).toLocaleString('de-DE')} Punkte`);
             this._hautton = null;
             this.hauttonAnwenden(z.textur);

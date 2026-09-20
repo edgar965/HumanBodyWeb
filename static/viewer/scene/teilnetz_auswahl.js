@@ -4,7 +4,7 @@ import { state } from './state.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
-import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
+import { Stueckmarkierung } from './stueckmarkierung.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -70,7 +70,16 @@ export function _setSubMeshEmissive(target, color) {
     for (const m of _getMeshesOf(target.meshObj)) {
         if (m.material) {
             const mats = Array.isArray(m.material) ? m.material : [m.material];
-            for (const mat of mats) { if (mat.emissive) mat.emissive.copy(color); }
+            for (const mat of mats) {
+                if (mat.emissive) { mat.emissive.copy(color); continue; }
+                // Stranghaar (`Genesis9strang`): MeshBasicMaterial ohne `emissive`. Die
+                // Grundfarbe multipliziert die Strähnenfarben — 1 + 20·Leuchtfarbe hebt
+                // sie bläulich an (Auswahl: Blau ×1,9), Null → weiß = unverändert.
+                // Sonst sähe man einer gewählten Viola nichts an (20.09.2026).
+                if (mat.wireframe && mat.vertexColors) {
+                    mat.color.setRGB(1 + 20 * color.r, 1 + 20 * color.g, 1 + 20 * color.b);
+                }
+            }
         }
     }
 }
@@ -101,22 +110,15 @@ export function clearSubMeshSelection() {
 }
 
 /**
- * Den Reiter aufschlagen, der zu dem angeklickten Teilnetz gehört.
- *
- * Bei einem GarmentCode-Stück wird zusätzlich SEINE Vorlage im Reiter
- * gewählt: Ein Reiter, der die Regler eines anderen Stücks zeigt, ist keine
- * Hilfe — und genau daraus entstand am 09.09.2026 ein Bau, der „sommerkleid"
- * erzeugte, während die Figur eine Hose tragen sollte.
- *
- * Die Zuordnung selbst steht in `Reiterzuordnung` (ohne DOM, prüfbar). Wird
- * ein Teilnetz ABgewählt (`ziel === null`), bleibt es beim Vorgabereiter —
- * so war es auch vorher.
+ * Den Reiter aufschlagen, der zu dem angeklickten Teilnetz gehört, und
+ * dort SEINE Zeile markieren (`Stueckmarkierung`, Edgar 20.09.2026: „soll in
+ * der Toolbar genau das ausgewählt sein"). Wird ein Teilnetz ABgewählt
+ * (`ziel === null`), bleibt es beim Vorgabereiter — so war es auch vorher.
  */
+const markierung = new Stueckmarkierung(state);
+
 function _reiterZeigen(ziel) {
-    const reiter = Reiterzuordnung.fuer(ziel?.key);
-    fn.switchTab(reiter);
-    const vorlage = Reiterzuordnung.vorlageVon(ziel?.key);
-    if (vorlage) fn.garmentcodeVorlageZeigen?.(vorlage);
+    markierung.zeigen(ziel);
 }
 
 export function _doSubMeshClick(hitTarget) {
@@ -149,7 +151,19 @@ export function _removeSubMesh(target) {
 
     switch (target.type) {
         case 'cloth': {
-            if (typeof inst.ausziehen === 'function' && inst.kleidung) {
+            if (String(target.key).startsWith('gc_')) {
+                // GarmentCode ZUERST — auch an einer Genesis-9-Figur (Edgar, 20.09.2026,
+                // mit Bild: „nach löschen ist das Modell kaputt", ein schwarzes Band
+                // quer über der Brust). Der Daz-Weg darunter (`inst.ausziehen`) nahm
+                // das Netz zwar weg, meldete aber kein `Stueckereignis` mehr — die
+                // Hautverdeckung des gelöschten Stücks blieb stehen (ausgeblendete
+                // Dreiecke, versenkte Randhaut), und die Ablage wusste nichts davon:
+                // beim nächsten Laden wäre das Stück wieder da gewesen.
+                if (Netzentsorgung.ausAblage(inst.group, inst.clothMeshes, target.key)) {
+                    GarmentcodeAblage.vergessen(inst, target.key);
+                    Stueckereignis.melden(inst, target.key.slice(3), false);
+                }
+            } else if (typeof inst.ausziehen === 'function' && inst.kleidung) {
                 // Genesis 9: ein Stueck sind mehrere Teile (`kennung/n`), und die
                 // Figur merkt sich das Getragene in `kleidung` — nur das Netz zu
                 // entfernen brachte das Stueck beim naechsten Neubau zurueck
@@ -158,16 +172,7 @@ export function _removeSubMesh(target) {
                 inst.ausziehen(String(target.key).split('/')[0]);
             } else if (Netzentsorgung.ausAblage(inst.group, inst.clothMeshes,
                                                 target.key)) {
-                if (target.key.startsWith('gc_')) {
-                    // GarmentCode fuehrt seine eigene Ablage; ohne diese
-                    // Zeile kaeme ein geloeschtes Stueck beim naechsten
-                    // Laden der Szene zurueck.
-                    GarmentcodeAblage.vergessen(inst, target.key);
-                    // Wer auf das Ereignis hoert (Absatz, Hautverdeckung),
-                    // erfaehrt es sonst nur beim Einhaengen — hier geht das
-                    // Stueck an `GarmentcodeAnziehen.entfernen` vorbei.
-                    Stueckereignis.melden(inst, target.key.slice(3), false);
-                } else if (target.key.startsWith('gar_')) {
+                if (target.key.startsWith('gar_')) {
                     const garId = target.key.slice(4);
                     inst.garments = (inst.garments || []).filter(g => g.id !== garId);
                     delete inst.garmentState[target.key];

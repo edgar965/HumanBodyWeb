@@ -82,6 +82,29 @@ class Bildmodellauftrag(models.Model):
                 return eintrag
         return None
 
+    #: Was der Nutzer an einem Eintrag stellt (`Bildmodellbildtypen.stellen`, Spalte „Nr.") —
+    #: der Arbeitsprozess darf es beim Speichern seiner Befunde nicht überschreiben.
+    NUTZERFELDER = ('kategorie', 'ansicht', 'teil', 'hauptbild', 'gewicht', 'nutzung',
+                    'textur_an', 'gvhmr_an', 'reihe', 'textur_reihe', 'manuell', 'freisteller')
+
+    def bilder_sichern(self, *weitere):
+        """`bilder` (und `weitere` Felder) speichern — die Nutzerfelder der Einträge kommen
+        frisch aus der Datenbank: Ein Lauf hält `bilder` minutenlang im Speicher; was der
+        Nutzer derweil auf der Seite stellt (Typ, Häkchen, Nummer), wäre beim Speichern
+        des Laufs sonst weg (20.09.2026)."""
+        frisch = type(self).objects.filter(pk=self.pk).values_list('bilder', flat=True).first() or []
+        nach = {b.get('datei'): b for b in frisch if isinstance(b, dict)}
+        for b in self.bilder:
+            alt = nach.get(b.get('datei'))
+            if not alt:
+                continue
+            for feld in self.NUTZERFELDER:
+                if feld in alt:
+                    b[feld] = alt[feld]
+                else:
+                    b.pop(feld, None)
+        self.save(update_fields=['bilder', *weitere, 'updated_at'])
+
     def nach_kategorie(self):
         """`{kategorie: [bilder]}` in fester Reihenfolge (`KATEGORIEN`)."""
         aus = {k: [] for k, _ in self.KATEGORIEN}

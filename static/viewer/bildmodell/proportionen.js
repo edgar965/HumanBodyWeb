@@ -19,7 +19,10 @@
  * die Reihenfolge der Bilder gleich"): die Zeile springt sofort an die Stelle,
  * die Nummern rücken nach, der Server merkt sich die Reihe (`bilder[].reihe`).
  */
+import { dbTabelle } from '/static/djangobase/js/tabelle_bauen.js';
+import { tabellenBinden } from '/static/djangobase/js/tabellen_auto.js';
 import { Bildsteller } from './bildsteller.js';
+import { Gvhmrknopf } from './gvhmrknopf.js';
 import { Proportionendialog } from './proportionendialog.js';
 import { Proportionenlinien } from './proportionenlinien.js';
 
@@ -27,7 +30,21 @@ export class Proportionenansicht {
 
     static MERKER = 'bildmodell.prop.hoehe';
     static HOEHE = { min: 160, max: 900, vorgabe: 320 };
-    static SPALTEN = ['Nr.', 'Bild', 'Löschen', 'Ersetzen', 'Neu', 'Bild vorher (Ziel)', 'Bild nachher (Modell)'];
+    /** Die Spalten nach djangoBase-Muster (`tabelle_bauen.js`): sortierbar Nr., Bild, SMPL; die Knöpfe
+     *  und die gerenderten Bilder nicht (`sortAus`). Edgar (20.09.2026): „Mach die Tabelle nach djangoBase
+     *  muster, sortierbar" — „ich brauch kein ‚Bild neu' sondern eines um eine GVHMR erkennung zu machen". */
+    static SPALTEN = [
+        { label: 'Nr.', key: 'nr', num: true, titel: 'Platz in der Tabelle — Nummer ändern = Zeile an diese Stelle' },
+        { label: 'Bild', key: 'bild', titel: 'Ansicht und Datei — Klick ins Bild: Maße ziehen' },
+        { label: 'Löschen', key: 'loeschen', sortAus: true },
+        { label: 'Ersetzen', key: 'ersetzen', sortAus: true },
+        { label: 'SMPL (GVHMR)', key: 'gvhmr', titel: 'SMPL-X mit GVHMR für dieses Bild — Ausgabefenster mit Netz, Rig und Zahlen' },
+        { label: 'SMPL-X mit Rig', key: 'smplx', sortAus: true },
+        { label: 'Verwenden', key: 'verwenden', titel: 'Welche GVHMR-Ergebnisse in die Form eingehen (Edgar: „dann entscheide ich, welche davon genommen werden")' },
+        { label: 'Bild vorher (Ziel)', key: 'ziel', sortAus: true },
+        { label: 'Bild nachher (Modell)', key: 'modell', sortAus: true },
+    ];
+    static KEY = 'bildmodell-proportionen';
     static ANSICHT = { vorne: 'von vorn', seite: 'von der Seite', hinten: 'von hinten', dreiviertel: 'dreiviertel' };
 
     constructor(auftrag, katalog) {
@@ -89,8 +106,12 @@ export class Proportionenansicht {
         this.dialog.quellenAufbauen();
         const p = (z.ergebnis || {}).proportionen || {};
         const fotos = z.fotolinien || [];
-        const stand = JSON.stringify([z.updated_at, Object.keys(p.ansichten || {}), fotos.map(f => [f.datei, f.ansicht, f.px_je_m]),
-            (z.bilder || []).map(b => [b.datei, b.kategorie, b.ansicht, b.nutzung, b.gewicht])]);
+        // Kein `updated_at`: das ändert sich im Lauf bei jedem Fortschritt und baute die Tabelle samt
+        // Bildern alle paar Sekunden neu (Blinken). `p.stand` wechselt nur, wenn die Bilder neu sind.
+        const stand = JSON.stringify([p.stand || '', Object.keys(p.ansichten || {}), fotos.map(f => [f.datei, f.ansicht, f.px_je_m]),
+            (z.bilder || []).map(b => [b.datei, b.kategorie, b.ansicht, b.nutzung, b.gewicht, b.gvhmr_an,
+                b.gvhmr ? (b.gvhmr.stand || b.gvhmr.fehler) : '']),
+            z.status, z.schritt, (z.optionen || {}).gvhmr_bild || '']);
         if (stand === this._stand) return;
         this._stand = stand;
         this.feld.innerHTML = '';
@@ -100,13 +121,12 @@ export class Proportionenansicht {
             this.feld.innerHTML = '<p class="hb-hinweis">Noch kein Hauptbild — „Bild hinzufügen" oder Bilder unten als Hauptbild einordnen.</p>';
             return;
         }
-        const tabelle = document.createElement('table');
-        tabelle.className = 'db-tabelle bildmodell-proptabelle';
-        tabelle.innerHTML = `<thead><tr>${Proportionenansicht.SPALTEN.map(s => `<th>${s}</th>`).join('')}</tr></thead>`;
-        const rumpf = document.createElement('tbody');
+        // Kopf und Rahmen aus djangoBase, die Zeilen als DOM (Bilder mit SVG, Knöpfe mit Handlern).
+        this.feld.innerHTML = dbTabelle({ key: Proportionenansicht.KEY, spalten: Proportionenansicht.SPALTEN,
+                                          zeilen: [], klasse: 'bildmodell-proptabelle' });
+        const rumpf = this.feld.querySelector('tbody');
         fotos.forEach((f, i) => rumpf.appendChild(this._zeile(f, (p.ansichten || {})[f.ansicht], z, i + 1, fotos.length)));
-        tabelle.appendChild(rumpf);
-        this.feld.appendChild(tabelle);
+        tabellenBinden(this.feld);
         this.linienZeichnen();
     }
 
@@ -117,7 +137,8 @@ export class Proportionenansicht {
         tr.dataset.ansicht = f.ansicht || '';
         // 0. die Nummer — editierbar, ändert die Reihenfolge sofort
         const nummer = document.createElement('td');
-        nummer.className = 'bildmodell-propnr';
+        nummer.className = 'bildmodell-propnr num';
+        nummer.dataset.sort = String(nr);
         const eingabe = document.createElement('input');
         eingabe.type = 'number';
         eingabe.min = 1; eingabe.max = n; eingabe.step = 1;
@@ -130,6 +151,7 @@ export class Proportionenansicht {
         // 1. das Foto mit Linien und Typ-Boxen
         const foto = document.createElement('td');
         foto.className = 'bildmodell-propfoto';
+        foto.dataset.sort = `${b.kategorie || ''} ${b.ansicht || ''} ${f.datei}`;
         const id = `foto:${f.datei}`;
         const fig = this._figur(id, f.breite, f.hoehe, this.auftrag.dateiAdresse('zuschnitt', f.datei),
             `${b.kategorie === 'kopf' ? 'Kopf' : 'Körper'} ${Proportionenansicht.ANSICHT[b.ansicht] || b.ansicht || ''} · ${f.datei}`,
@@ -144,16 +166,61 @@ export class Proportionenansicht {
         loeschen.appendChild(this.steller.loeschenKnopf(`Bild ${b.datei} löschen?`, () => this.auftrag.bildLoeschen(b.datei)));
         const ersetzen = document.createElement('td');
         ersetzen.appendChild(this.steller.ersetzenKnopf(b.quelle || b.datei));
+        const frei = this.steller.freisteller.element(b);   // „Hintergrund" (20.09.2026)
+        if (frei) ersetzen.appendChild(frei);
         tr.append(loeschen, ersetzen);
-        // 3b. Bild neu: Modell mit den aktuellen Maßen rechnen, nur diese Ansicht rendern
-        const neu = document.createElement('td');
-        if (r) neu.appendChild(this._neuKnopf(f.ansicht, z));
-        tr.appendChild(neu);
+        // 3. SMPL-X mit GVHMR für dieses Bild — Knopf und Stand (Höhe, Dauer), `Gvhmrknopf` über den Steller.
+        const gvhmr = document.createElement('td');
+        gvhmr.className = 'bildmodell-propgvhmr';
+        // Kopfbild: „Kopf (FLAME)" statt GVHMR (20.09.2026) — Knopf, Stand und Bild aus `b.flame`.
+        const kopf = Gvhmrknopf.kopfbild(b);
+        const knopfdienst = kopf ? this.steller.flame : this.steller.gvhmr;
+        const gvhmrKnopf = knopfdienst.element(b);
+        if (gvhmrKnopf) gvhmr.appendChild(gvhmrKnopf);
+        const stand = knopfdienst.constructor.stand(b);
+        gvhmr.dataset.sort = '';   // ohne Ergebnis: leer = ans Ende, nicht der Knopftext
+        if (stand) {
+            gvhmr.dataset.sort = String(stand.sort);
+            const text = document.createElement('div');
+            text.className = 'hb-hinweis klein';
+            text.textContent = stand.text;
+            gvhmr.appendChild(text);
+        }
+        tr.appendChild(gvhmr);
+        // 3b. Das SMPL-X-Netz mit Rig als Bild (Edgar: „das SMPL ausgabefenster nun auch dauernd sichtbar,
+        //     als neue Spalte") — gerendert nach dem Lauf (`Bildmodellgvhmrbild`); Klick öffnet das Fenster.
+        const smplx = document.createElement('td');
+        const netz = kopf ? b.flame : b.gvhmr;
+        if (netz && netz.bild) {
+            const src = this.auftrag.dateiAdresse('ergebnis', netz.bild) + `?t=${encodeURIComponent(netz.stand || '')}`;
+            // Seit 20.09. spät im Ausschnitt und in der Kamera des Fotos (`bild_breite`/`bild_hoehe`);
+            // ältere Läufe: aufgestellt von vorn, 480 × 640. Kopfbild: der FLAME-Kopf von vorn.
+            const text = kopf
+                ? `FLAME-Kopf (PyMAF-X) · ${(netz.punkte || 0).toLocaleString('de-DE')} Punkte`
+                : `SMPL-X (GVHMR)${netz.gelenke ? ' mit Rig' : ''}${netz.kamera ? ' · Sicht des Fotos' : ' · von vorn (alt)'}`
+                  + ` · ${netz.hoehe_m ? netz.hoehe_m.toFixed(2) + ' m' : ''}`;
+            const g = this._figur(`smplx:${f.datei}`, netz.bild_breite || 480, netz.bild_hoehe || 640, src, text,
+                kopf ? 'Klick: Ausgabefenster mit dem FLAME-Kopf in 3D' : 'Klick: Ausgabefenster mit Netz, Rig und Zahlen');
+            g.dataset.wer = 'smplx';
+            g.addEventListener('click', () => knopfdienst.fenster.oeffnen(f.datei, false));
+            smplx.appendChild(g);
+        } else {
+            smplx.className = 'hb-hinweis';
+            smplx.textContent = netz && netz.bild_fehler ? `Bild: ${netz.bild_fehler}` : '—';
+        }
+        tr.appendChild(smplx);
+        // 3c. Verwenden: Häkchen je Ergebnis, sortierbar (ja vor nein vor ohne Ergebnis).
+        const verwenden = document.createElement('td');
+        const kasten = this.steller.gvhmr.verwendenFeld(b);
+        verwenden.dataset.sort = kasten ? (Gvhmrknopf.verwendet(b) ? '2' : '1') : '';
+        if (kasten) verwenden.appendChild(kasten);
+        tr.appendChild(verwenden);
         // 4./5. Vorher (Ziel) und Nachher (Modell) der Ansicht
         for (const wer of ['ziel', 'modell']) {
             const td = document.createElement('td');
             if (r) {
-                const src = this.auftrag.dateiAdresse('ergebnis', r.bild[wer]) + `?t=${Date.now()}`;
+                const stand = ((z.ergebnis || {}).proportionen || {}).stand || '';
+                const src = this.auftrag.dateiAdresse('ergebnis', r.bild[wer]) + `?t=${encodeURIComponent(stand)}`;
                 const g = this._figur(wer === 'ziel' ? `ziel:${f.ansicht}` : `modell:${f.ansicht}`, r.breite, r.hoehe, src,
                     wer === 'ziel' ? 'Vorher — Ziel, wie eingestellt' : 'Nachher — aus dem Modell',
                     wer === 'ziel' ? 'Klick: Maße im Zielnetz ziehen' : 'Nachher — aus dem Modell');
@@ -167,30 +234,6 @@ export class Proportionenansicht {
             tr.appendChild(td);
         }
         return tr;
-    }
-
-    /** Knopf „Bild neu" (Edgar, 20.09.2026: „nicht das gesamte 3D-Modell, sondern eine schnelle
-     *  Bildberechnung der einzelnen Zeile"): Zielnetz mit den aktuellen Maßen geformt, Vorher- und
-     *  Nachher-Bild NUR dieser Ansicht neu gerendert — kein Lauf, das Modell bleibt (Sekunden). */
-    _neuKnopf(ansicht, z) {
-        const knopf = document.createElement('button');
-        knopf.type = 'button';
-        knopf.className = 'btn btn-sm btn-primary bildmodell-propneu';
-        knopf.textContent = '↻ Bild neu';
-        knopf.title = 'Nur die Bilder dieser Zeile mit den aktuellen Maßen neu rechnen (Sekunden, kein Modell-Lauf)';
-        knopf.disabled = z.status === 'laeuft';
-        knopf.addEventListener('click', async () => {
-            knopf.disabled = true;
-            knopf.textContent = '… rechnet';
-            try {
-                await this.auftrag.zeilenbild(ansicht, this.werte());
-            } catch (fehler) {
-                window.alert(`Bild neu fehlgeschlagen: ${fehler.message}`);
-                knopf.disabled = false;
-                knopf.textContent = '↻ Bild neu';
-            }
-        });
-        return knopf;
     }
 
     /** Die Zeile an Stelle `ziel` (1..n) setzen, alle Nummern nachrücken, die Reihe ablegen. */
@@ -217,9 +260,11 @@ export class Proportionenansicht {
         return fig;
     }
 
-    /** Klick im Bild: auf einer Linie → dieses Maß im Popup, sonst das Popup mit diesem Bild. */
+    /** Klick im Bild: auf einer Linie → dieses Maß im Popup, sonst das Popup mit diesem Bild —
+     *  und die Modellsicht oben zeigt danach dasselbe Bild (20.09.2026). */
     amBild(e, id) {
         const gruppe = e.target.closest ? e.target.closest('g[data-mass]') : null;
+        window.__bildmodell?.modellsicht?.quelleWaehlen?.(id, true);
         this.dialog.oeffnen(id, gruppe ? gruppe.dataset.mass : null);
     }
 

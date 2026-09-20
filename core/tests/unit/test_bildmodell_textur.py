@@ -10,7 +10,7 @@ Bilder auswähle / abwähle, hinzufüge." Ohne Bibliothek, ohne Schätzer:
    mit Rig über das Rig (seit 20.09. gegen das Modell selbst, kein Schätzer-
    Netz mehr), ein Nebenbild ohne Teil ist nicht möglich (Grund), Nutzung
    „nur Form" ebenso, Videos fehlen.
-2. `Bildmodellbildtypen.vorgaben_pruefen`: nur eben hochgeladene Dateien, nur
+2. `Bildmodellbildvorgaben.pruefen`: nur eben hochgeladene Dateien, nur
    bekannte Werte; die Sichtung übernimmt die Vorgabe (`optionen.bildtypen`) für
    einen neuen und einen nie von Hand gestellten Eintrag, nicht für einen manuellen.
 3. `Bildmodelloptionen`: der Schritt `textur` steht zwischen `vorschau` und
@@ -27,7 +27,7 @@ import unittest
 from django.test import override_settings
 
 from core.daten.bildmodellablage import Bildmodellablage
-from core.dienste.bildmodellbildtypen import Bildmodellbildtypen as T
+from core.dienste.bildmodellbildvorgaben import Bildmodellbildvorgaben
 from core.dienste.bildmodellfototextur import Bildmodellfototextur
 from core.dienste.bildmodelloptionen import Bildmodelloptionen
 from core.dienste.bildmodellsichtung import Bildmodellsichtung
@@ -93,10 +93,10 @@ class TexturlisteTest(unittest.TestCase):
     def test_2_vorgaben_und_sichtung(self):
         roh = '{"a.jpg": {"neben": "neben/gesicht", "nutzung": "textur", "haupt": "quatsch"}, ' \
               '"fremd.jpg": {"nutzung": "textur"}, "b.jpg": "kaputt"}'
-        self.assertEqual(T.vorgaben_pruefen(roh, ['a.jpg', 'b.jpg']),
+        self.assertEqual(Bildmodellbildvorgaben.pruefen(roh, ['a.jpg', 'b.jpg']),
                          {'a.jpg': {'neben': 'neben/gesicht', 'nutzung': 'textur'}})
-        self.assertEqual(T.vorgaben_pruefen('nicht json', ['a.jpg']), {})
-        self.assertEqual(T.vorgaben_pruefen('', ['a.jpg']), {})
+        self.assertEqual(Bildmodellbildvorgaben.pruefen('nicht json', ['a.jpg']), {})
+        self.assertEqual(Bildmodellbildvorgaben.pruefen('', ['a.jpg']), {})
         with Pruefablage.ordner('bm_textur_') as ordner, override_settings(OBJECTS_ROOT=ordner):
             a = Bildmodellablage('pruef')
             a.anlegen()

@@ -20,6 +20,14 @@
  * „Eng anliegend, lang" und „Weit fallend" beide zu haken hätte keinen
  * definierten Zustand — beim Anhaken wird jedes andere mit gemeinsamen
  * Reglern abgehakt, VOR dem Setzen (das Setzen merkt die aktive Liste).
+ *
+ * EINE FORM HÄNGT NUR AN IHREM KERN (Edgar, 20.09.2026: „wenn ich Checkboxen
+ * für das T-Shirt ändere (z.B. Ärmellänge) dann werden andere Checkboxen
+ * ausgeschaltet (z.B. T-Shirt eng anliegend)"): „T-Shirt (anliegend)" IST
+ * `meta.upper: FittedShirt` mit Ärmeln — die Ärmellänge 0,5 ist nur die
+ * Mitgabe beim Anhaken. Der Server nennt den Kern (`kern`, `formpresets.py`);
+ * geprüft und ausgeschlossen wird eine Form nur daran, ein Preset ohne
+ * `kern` an allen seinen Werten wie bisher.
  */
 import { garmentcodeReglerhilfe } from './garmentcode_reglerhilfe.js';
 
@@ -116,12 +124,25 @@ class GarmentcodePreset {
         setzt(vorher || {});   // ohne „davor" (nach Seitenstart): nur merken
     }
 
-    /** Presets, die dieselben Regler anfassen, können nicht beide gelten. */
+    /**
+     * Die Pfade, an denen ein Preset hängt: sein `kern` (Formen), sonst
+     * alle seine Werte — siehe Modulkopf.
+     */
+    kern(preset) {
+        return Array.isArray(preset.kern) && preset.kern.length
+            ? preset.kern : Object.keys(preset.werte || {});
+    }
+
+    /**
+     * Presets, deren Kern das neue anfasst, können nicht mit ihm gelten.
+     * Ein Ärmel-Preset trifft `sleeve.length` — den Kern einer Form
+     * nicht; eine Form trifft `sleeve.length` — und damit das Ärmel-Preset.
+     */
     _andereAbhaken(preset) {
         const meine = new Set(Object.keys(preset.werte));
         for (const andere of this.liste) {
             if (andere.schluessel === preset.schluessel) continue;
-            const gemeinsam = Object.keys(andere.werte).some((p) => meine.has(p));
+            const gemeinsam = this.kern(andere).some((p) => meine.has(p));
             if (!gemeinsam) continue;
             this.aktiv.delete(andere.schluessel);
             delete this.davor[andere.schluessel];
@@ -133,12 +154,15 @@ class GarmentcodePreset {
 
     /**
      * Nach einer Änderung von Hand: Häkchen entfernen, wo das Preset nicht
-     * mehr gilt. `liest` liefert den geltenden Wert eines Pfades.
+     * mehr gilt. `liest` liefert den geltenden Wert eines Pfades. Eine Form
+     * gilt weiter, solange ihr Kern steht — die Ärmellänge darf wandern.
      */
     pruefen(geaenderterPfad, liest) {
         for (const schluessel of Array.from(this.aktiv)) {
             const preset = this.liste.find((p) => p.schluessel === schluessel);
-            if (!preset || !(geaenderterPfad in preset.werte)) continue;
+            if (!preset || !this.kern(preset).includes(geaenderterPfad)) {
+                continue;
+            }
             if (this._gleich(liest(geaenderterPfad), preset.werte[geaenderterPfad])) {
                 continue;
             }

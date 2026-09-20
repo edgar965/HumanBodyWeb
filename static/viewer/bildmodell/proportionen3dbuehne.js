@@ -1,30 +1,22 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { base64ToFloat32, base64ToUint32 } from '../gemeinsam/kodierung.js';
+import { Zielkaefig } from './zielkaefig.js';
 
 /**
  * Proportionen3dbuehne — das Zielnetz als Genesis-9-Käfig im 3D-Popup.
  *
  * Eine kleine Bühne wie `Ansicht3d` (Kamera auf Figurhöhe, Orbit, Lichter an
  * der Kamera), aber OHNE `Genesis9Modell`: das Netz kommt fertig vom Server
- * (`zielnetz3d/` — Dreiecke einmal, danach nur noch die Punkte je Zug) und
- * wird an Ort und Stelle ausgetauscht (`punkteSetzen`: Positionsattribut
- * überschreiben, Normalen neu — 25.182 Punkte in Millisekunden). Matte Haut
- * mit Licht von der Kamera, dazu ein Gitter zum Zuschalten: Donauwellen
- * sieht man an den Kanten schneller als an der Schattierung. Ungepaarte
- * Punkte (Gewicht 0) bekommen Grau — was dort steht, ist Modell, nicht Ziel.
- * Gezeichnet wird nur, solange das Popup offen ist (`starten`/`anhalten`).
+ * (`zielnetz3d/` über `Zielnetzlive`) und liegt als `Zielkaefig` in der
+ * Szene — Dreiecke einmal, danach nur noch die Punkte je Zug. Gezeichnet
+ * wird nur, solange das Popup offen ist (`starten`/`anhalten`).
  */
 export class Proportionen3dbuehne {
 
-    static HAUT = 0xd9b39c;
-    static UNGEPAART = 0x8a8f99;
-
     constructor(canvas) {
         this.canvas = canvas;
-        this.netz = null;
-        this.gitter = null;
         this._laeuft = false;
+        this.foto = null;     // Kamera des Fotos (`fotokamera`) oder null = freie Kamera
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -42,17 +34,48 @@ export class Proportionen3dbuehne {
         this.kamera.add(haupt, fuell);
         this.szene.add(this.kamera);
         this.szene.add(new THREE.GridHelper(2, 10, 0x445566, 0x2a3340));
+        this.kaefig = new Zielkaefig(this.szene);
         if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.groesse()).observe(canvas);
     }
+
+    get netz() { return this.kaefig.netz; }
 
     groesse() {
         const b = this.canvas.clientWidth || 400, h = this.canvas.clientHeight || 500;
         if (this.renderer.domElement.width === Math.round(b * this.renderer.getPixelRatio())
             && this.renderer.domElement.height === Math.round(h * this.renderer.getPixelRatio())) return;
         this.renderer.setSize(b, h, false);
-        this.kamera.aspect = b / h;
+        // Mit Fotokamera bleibt das Seitenverhältnis das des Fotos (die Leinwand ist danach geschnitten).
+        this.kamera.aspect = this.foto ? this.foto.breite / this.foto.hoehe : b / h;
         this.kamera.updateProjectionMatrix();
     }
+
+    /** Die Kamera des Fotos (GVHMR `K_fullimg`: fx, fy, cx, cy in Fotopixeln, breite, hoehe) —
+     *  Kamera im Ursprung, Blick nach −z, Öffnungswinkel aus fy, Hauptpunkt über `setViewOffset`;
+     *  das Netz in Kamerasicht (`kamera.punkte` von `gvhmr3d/`) erscheint dann genau im Ausschnitt
+     *  des Fotos (Edgar, 20.09.2026: „Immer das 3D Modell in genau der gleichen pose und ausschnitt
+     *  wie das 2D Bild!!!"). Orbit dreht um den Punkt der Blickachse in der Tiefe des Netzes;
+     *  `fotoansicht()` stellt die Sicht wieder her. `null` = zurück zur freien Kamera. */
+    fotokamera(k, tiefe = 2.0) {
+        this.foto = k || null;
+        if (!k) {
+            this.kamera.clearViewOffset();
+            this.kamera.fov = 30;
+            this.groesse();
+            return;
+        }
+        this.kamera.fov = 2 * Math.atan(k.hoehe / (2 * k.fy)) * 180 / Math.PI;
+        this.kamera.aspect = k.breite / k.hoehe;
+        this.kamera.setViewOffset(k.breite, k.hoehe, k.breite / 2 - k.cx, k.hoehe / 2 - k.cy, k.breite, k.hoehe);
+        this.kamera.updateProjectionMatrix();
+        this.kamera.position.set(0, 0, 0);
+        this.steuerung.target.set(0, 0, -Math.max(0.2, tiefe));
+        this.steuerung.update();
+        this.steuerung.saveState();
+    }
+
+    /** Zurück zur Sicht des Fotos (nach dem Drehen). */
+    fotoansicht() { if (this.foto) this.steuerung.reset(); }
 
     starten() {
         if (this._laeuft) return;
@@ -69,73 +92,25 @@ export class Proportionen3dbuehne {
 
     anhalten() { this._laeuft = false; }
 
-    /** Erste Antwort mit Dreiecken: Netz bauen; Kamera auf die Figurhöhe. */
-    netzSetzen(antwort) {
-        const punkte = base64ToFloat32(antwort.punkte);
-        const dreiecke = base64ToUint32(antwort.dreiecke);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        geo.setIndex(new THREE.BufferAttribute(dreiecke, 1));
-        geo.setAttribute('color', new THREE.BufferAttribute(this._farben(antwort.gewicht, punkte.length / 3), 3));
-        geo.computeVertexNormals();
-        if (this.netz) { this.szene.remove(this.netz); this.netz.geometry.dispose(); }
-        if (this.gitter) { this.szene.remove(this.gitter); }
-        this.netz = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-            vertexColors: true, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide,
-        }));
-        this.szene.add(this.netz);
-        this.gitter = new THREE.LineSegments(new THREE.WireframeGeometry(geo),
-            new THREE.LineBasicMaterial({ color: 0x223344, transparent: true, opacity: 0.35 }));
-        this.gitter.visible = this._gitterAn || false;
-        this.szene.add(this.gitter);
-        const hoehe = (antwort.hoehe_cm || 170) / 100;
-        this.steuerung.target.set(0, hoehe * 0.52, 0);
-        this.kamera.position.set(0, hoehe * 0.55, hoehe * 2.4);
-    }
-
-    /** Jede weitere Antwort: nur die Punkte tauschen, Normalen und Gitter neu. */
-    punkteSetzen(antwort) {
-        if (!this.netz) return;
-        const punkte = base64ToFloat32(antwort.punkte);
-        const lage = this.netz.geometry.attributes.position;
-        if (punkte.length !== lage.array.length) return;
-        lage.array.set(punkte);
-        lage.needsUpdate = true;
-        this.netz.geometry.computeVertexNormals();
-        this.netz.geometry.computeBoundingSphere();
-        this._gitterAlt = true;
-        if (this.gitter && this.gitter.visible) this._gitterNeu();
-    }
-
-    /** Das Gitter folgt den Punkten — neu gebaut nur, wenn es sichtbar ist (50.000 Dreiecke). */
-    _gitterNeu() {
-        if (!this.gitter || !this.netz) return;
-        this.gitter.geometry.dispose();
-        this.gitter.geometry = new THREE.WireframeGeometry(this.netz.geometry);
-        this._gitterAlt = false;
-    }
-
-    gitterZeigen(an) {
-        this._gitterAn = !!an;
-        if (!this.gitter) return;
-        this.gitter.visible = this._gitterAn;
-        if (this._gitterAn && this._gitterAlt) this._gitterNeu();
-    }
-
-    _farben(gewichtB64, anzahl) {
-        const farben = new Float32Array(anzahl * 3);
-        const haut = new THREE.Color(Proportionen3dbuehne.HAUT), grau = new THREE.Color(Proportionen3dbuehne.UNGEPAART);
-        const gewicht = gewichtB64 ? base64ToFloat32(gewichtB64) : null;
-        for (let i = 0; i < anzahl; i++) {
-            const f = gewicht && !(gewicht[i] > 0) ? grau : haut;
-            farben[i * 3] = f.r; farben[i * 3 + 1] = f.g; farben[i * 3 + 2] = f.b;
+    /** Eine Antwort von `Zielnetzlive`: erste mit Netz bauen (Kamera auf die Figurhöhe), sonst Punkte tauschen. */
+    setzen(antwort, netz) {
+        const neu = !this.kaefig.da;
+        this.kaefig.setzen(antwort, netz);
+        if (neu && this.kaefig.da) {
+            const hoehe = this.kaefig.hoehe || 1.7;
+            this.steuerung.target.set(0, hoehe * 0.52, 0);
+            this.kamera.position.set(0, hoehe * 0.55, hoehe * 2.4);
         }
-        return farben;
     }
+
+    netzSetzen(antwort) { this.setzen(antwort, null); }
+
+    punkteSetzen(antwort) { this.kaefig.punkteSetzen(antwort); }
+
+    gitterZeigen(an) { this.kaefig.gitterZeigen(an); }
 
     dispose() {
         this.anhalten();
-        if (this.netz) { this.szene.remove(this.netz); this.netz.geometry.dispose(); this.netz = null; }
-        if (this.gitter) { this.szene.remove(this.gitter); this.gitter.geometry.dispose(); this.gitter = null; }
+        this.kaefig.dispose();
     }
 }
