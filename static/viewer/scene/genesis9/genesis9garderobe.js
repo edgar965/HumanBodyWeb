@@ -76,13 +76,20 @@ export class Genesis9garderobe {
         }
     }
 
+    /** `Genesis 8 Female` → `G8`, `Genesis` → `G1` — wie `G9fremdstueck.kurz`. */
+    static kurz(herkunft) {
+        const treffer = /Genesis(?: (\d))?/.exec(herkunft || '');
+        return treffer ? `G${treffer[1] || '1'}` : '';
+    }
+
     static _zeile(inst, stueck) {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         zeile.inst = inst;
+        const herkunft = stueck.herkunft || (stueck.basis ? 'Genesis 8' : '');
         zeile.title = stueck.zeigbar
             ? (stueck.knochen ? `${stueck.datei} — an ${stueck.knochen}` : stueck.datei)
-                + (stueck.basis ? ' — Genesis 8, per Auto-Fit auf Genesis 9' : '')
+                + (herkunft ? ` — ${herkunft}, per Auto-Fit auf Genesis 9` : '')
             : stueck.hinweis;
         const getragen = Boolean(Dazkleidung.kleidung(inst)[stueck.id]);
         const kennung = `g9-kleid-${stueck.id}`;
@@ -91,7 +98,7 @@ export class Genesis9garderobe {
                    ${stueck.zeigbar ? '' : 'disabled'}>
             <label for="${kennung}" class="stueckname${stueck.zeigbar ? '' : ' gedaempft'}">${
                 escapeHtml(stueck.name)}${
-                stueck.basis ? ' <span class="gedaempft">G8</span>' : ''}</label>`;
+                herkunft ? ` <span class="gedaempft">${Genesis9garderobe.kurz(herkunft)}</span>` : ''}</label>`;
         const haken = zeile.querySelector('input');
         if (stueck.vorschau) {
             const bild = document.createElement('img');

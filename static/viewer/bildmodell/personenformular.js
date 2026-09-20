@@ -116,12 +116,11 @@ export class Personenformular {
         return true;
     }
 
-    /** `schritte`/`ansicht`: der Knopf je Tabellenzeile rechnet ohne Textur und rendert nur diese Ansicht. */
-    async neuBerechnen(ab = 'ziel', schritte = null, ansicht = null) {
+    async neuBerechnen(ab = 'ziel') {
         const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
         const optionen = { ...this.formular.werte(), person: this.werte(), proportionen };
         try {
-            await this.auftrag.starten(optionen, ab, this.festgehalten ? this.festgehalten() : {}, null, schritte, ansicht);
+            await this.auftrag.starten(optionen, ab, this.festgehalten ? this.festgehalten() : {});
         } catch (fehler) {
             window.alert(`Neu berechnen fehlgeschlagen: ${fehler.message}`);
         }

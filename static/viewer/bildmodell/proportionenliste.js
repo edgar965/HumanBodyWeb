@@ -10,8 +10,10 @@
  * Linie), „entfernt" oder „nicht im Bild". Ein Maß ohne Linie hat einen Griff
  * (⤓): mit gedrücktem Zeiger auf das Bild ziehen setzt die Linie an der
  * losgelassenen Stelle, ein Klick setzt sie in die Bildmitte (`beiSetzen(k,
- * punkt|null)`). Ein Maß mit Linie hat ein × (`beiLoeschen(k)`) — dasselbe wie
- * das × an der Linie im Bild.
+ * punkt|null)`). Ein Maß mit Linie hat ein × (`beiLoeschen(k)`) — wie Entf auf
+ * der markierten Linie im Bild. Der Knopf „Alle Maße ins Bild" (`beiAlle`) setzt
+ * jedes fehlende Maß der Ansicht an seine vorgeschlagene Stelle (Edgar,
+ * 20.09.2026: „Mach einen Button zum Hinzufügen aller Maße").
  */
 export class Proportionenliste {
 
@@ -22,14 +24,16 @@ export class Proportionenliste {
      * @param beiSetzen   `(schluessel, punkt|null)` — Linie ins Bild
      * @param beiLoeschen `(schluessel)` — Linie aus dem Bild
      * @param beiWahl     `(schluessel)` — Linie im Bild markieren
+     * @param beiAlle     `()` — alle fehlenden Maße der Ansicht ins Bild
      */
-    constructor(feld, katalog, bildtab, beiSetzen, beiLoeschen, beiWahl) {
+    constructor(feld, katalog, bildtab, beiSetzen, beiLoeschen, beiWahl, beiAlle) {
         this.feld = feld;
         this.katalog = katalog || {};
         this.bildtab = bildtab;
         this.beiSetzen = beiSetzen;
         this.beiLoeschen = beiLoeschen;
         this.beiWahl = beiWahl;
+        this.beiAlle = beiAlle || (() => {});
         this.zug = null;
         if (!this.feld) return;
         this.feld.addEventListener('pointerdown', e => this._anfassen(e));
@@ -48,8 +52,15 @@ export class Proportionenliste {
         this.feld.innerHTML = '';
         const kopf = document.createElement('div');
         kopf.className = 'bildmodell-proplistekopf';
-        kopf.textContent = 'Alle Maße — ⤓ ins Bild ziehen, × aus dem Bild löschen';
+        kopf.textContent = 'Alle Maße — ⤓ ins Bild ziehen, × aus dem Bild (im Bild: Klick + Entf)';
         this.feld.appendChild(kopf);
+        const alle = document.createElement('button');
+        alle.type = 'button';
+        alle.className = 'btn btn-sm btn-secondary bildmodell-propalle';
+        alle.textContent = 'Alle Maße ins Bild';
+        alle.title = 'Jedes fehlende Maß dieser Ansicht an seine vorgeschlagene Stelle setzen (Höhe aus dem Zielbild)';
+        alle.addEventListener('click', () => this.beiAlle());
+        this.feld.appendChild(alle);
         for (const m of this.katalog.proportionen || []) {
             const k = m.schluessel;
             const drin = !!(lagen || {})[k];

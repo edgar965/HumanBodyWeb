@@ -6,10 +6,10 @@
  * rechten Ende (damit sich Schulter, Brust und Oberarm nicht überdecken). Im
  * Popup sind die Pfeilspitzen selbst die Griffe (`prop-griff`, `data-ende`) —
  * größer, KEINE Kugeln („ich sagte Pfeile im Popup, keine Kugeln am Ende!!!",
- * Edgar, 20.09.2026) — und am linken Ende steht ein × (`prop-loeschen`: den
- * Marker aus diesem Bild löschen). Klassen: `prop-eingestellt` (Wert von
- * Edgar), `prop-aktiv` (hervorgehoben). Reine Markup-Erzeugung ohne DOM —
- * deshalb in Node prüfbar.
+ * Edgar, 20.09.2026). Kein × an der Linie — löschen heißt Klick und Entf
+ * („Im Popup brauche ich keine × zum Entfernen der Pfeile", Edgar, 20.09.2026).
+ * Klassen: `prop-eingestellt` (Wert von Edgar), `prop-aktiv` (hervorgehoben).
+ * Reine Markup-Erzeugung ohne DOM — deshalb in Node prüfbar.
  */
 export class Proportionenlinien {
 
@@ -28,7 +28,7 @@ export class Proportionenlinien {
     /**
      * @param eintraege  `[{k, name, p, q, wert, eingestellt, aktiv}]` — p, q in Bildpixeln
      * @param bezug      Bildmaß (`bezug(breite, hoehe)`) für Pfeile und Schrift
-     * @param griffe     true (Popup): die Pfeilspitzen sind anfassbare Griffe, dazu das ×
+     * @param griffe     true (Popup): die Pfeilspitzen sind anfassbare Griffe
      */
     static markup(eintraege, bezug, griffe = false) {
         const s = (bezug / Proportionenlinien.BEZUG).toFixed(3);
@@ -36,15 +36,12 @@ export class Proportionenlinien {
         return eintraege.map(e => {
             const klasse = 'prop-linie' + (e.eingestellt ? ' prop-eingestellt' : '') + (e.aktiv ? ' prop-aktiv' : '');
             const rechts = e.p[0] >= e.q[0] ? e.p : e.q;
-            const links = rechts === e.p ? e.q : e.p;
             const wert = e.wert === null || e.wert === undefined ? '' : ` ${Proportionenlinien.zahl(e.wert)}`;
             const abstand = griffe ? pfeil + 4 * s : 5 * s;
             return `<g class="${klasse}" data-mass="${e.k}" style="--s:${s}"><title>${e.name}: ${wert} cm</title>`
                 + `<line x1="${e.p[0]}" y1="${e.p[1]}" x2="${e.q[0]}" y2="${e.q[1]}"/>`
                 + Proportionenlinien.pfeile(e.p, e.q, pfeil, griffe)
                 + `<text x="${rechts[0] + abstand}" y="${rechts[1] + 5 * s}">${e.name}${wert}</text>`
-                + (griffe ? `<text class="prop-loeschen" x="${links[0] - abstand - 6 * s}" y="${links[1] + 6 * s}" text-anchor="end">`
-                    + `<title>${e.name} aus diesem Bild löschen</title>×</text>` : '')
                 + '</g>';
         }).join('');
     }

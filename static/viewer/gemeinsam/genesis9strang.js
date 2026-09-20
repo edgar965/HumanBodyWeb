@@ -19,8 +19,10 @@ import { base64ToFloat32 } from './kodierung.js';
  * (WebGL); Daz zeigt Strähnen im Ansichtsfenster ebenso.
  *
  * Die Farbe läuft zur Spitze hin heller (Wurzel 60 %, Spitze 100 % der
- * Presetfarbe) — eine Darstellung, damit die Linien Tiefe bekommen; Daz'
- * Haarshader hat dafür eigene Kanäle, die hier nicht gelesen werden.
+ * Presetfarbe) — eine Darstellung, damit die Linien Tiefe bekommen. Bringt
+ * das Preset eine Spitzenfarbe mit (`bilder.farbe_spitze`, OmniHair
+ * `Hair Root/Tip Color` — HS Viola Hair, `G9haarfarben`, 20.09.2026), wird
+ * statt dessen von der Wurzel- zur Spitzenfarbe gemischt, wie Daz' Shader.
  */
 export class Genesis9strang {
 
@@ -35,11 +37,12 @@ export class Genesis9strang {
         const farben = new Float32Array(geo.attributes.position.count * 3);
         for (const gruppe of gruppen) {
             const farbe = Genesis9strang.farbe(gruppe.bilder || {});
+            const spitze = Genesis9strang.spitze(gruppe.bilder || {});
             geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, materialien.length);
             materialien.push(new THREE.MeshBasicMaterial({
                 color: 0xffffff, wireframe: true, vertexColors: true,
             }));
-            Genesis9strang._faerben(geo, gruppe, farbe, anteil, farben);
+            Genesis9strang._faerben(geo, gruppe, farbe, anteil, farben, spitze);
         }
         geo.setAttribute('color', new THREE.BufferAttribute(farben, 3));
         const netz = new THREE.Mesh(geo, materialien.length ? materialien
@@ -74,13 +77,31 @@ export class Genesis9strang {
             : new THREE.Color(0x3a2a1e);
     }
 
-    /** Die Punkte der Gruppe färben — über die Indizes ihres Bereichs. */
-    static _faerben(geo, gruppe, farbe, anteil, farben) {
+    /** Die Spitzenfarbe des OmniHair-Shaders (sRGB) — oder null. */
+    static spitze(bilder) {
+        const f = bilder.farbe_spitze;
+        return (Array.isArray(f) && f.length >= 3)
+            ? new THREE.Color().setRGB(f[0], f[1], f[2], THREE.SRGBColorSpace)
+            : null;
+    }
+
+    /**
+     * Die Punkte der Gruppe färben — über die Indizes ihres Bereichs. Mit
+     * `spitze` Wurzel → Spitze gemischt (Daz' Root-Tip Blend), sonst die
+     * Wurzelfarbe zur Spitze hin aufgehellt.
+     */
+    static _faerben(geo, gruppe, farbe, anteil, farben, spitze = null) {
         const index = geo.index.array;
         const ende = gruppe.index_ab + gruppe.index_anzahl;
         for (let i = gruppe.index_ab; i < ende; i++) {
             const p = index[i];
             const t = anteil ? anteil[p] : 1;
+            if (spitze) {
+                farben[p * 3] = farbe.r + (spitze.r - farbe.r) * t;
+                farben[p * 3 + 1] = farbe.g + (spitze.g - farbe.g) * t;
+                farben[p * 3 + 2] = farbe.b + (spitze.b - farbe.b) * t;
+                continue;
+            }
             const hell = Genesis9strang.WURZEL + (1 - Genesis9strang.WURZEL) * t;
             farben[p * 3] = farbe.r * hell;
             farben[p * 3 + 1] = farbe.g * hell;

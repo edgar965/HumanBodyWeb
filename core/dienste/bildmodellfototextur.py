@@ -78,10 +78,15 @@ class Bildmodellfototextur:
     def bilder(self):
         """Alle gewählten Bilder, die projizierbar sind."""
         aus = []
+        # Option `textur_nebenbilder = aus`: nur Hauptbilder, die auch die Form geben (Edgar, 20.09.2026:
+        # „die Option, die Nebenbilder einzubinden oder nicht, damit ich sehen kann, ob das was bringt").
+        nur_haupt = (self.optionen or {}).get('textur_nebenbilder', 'an') == 'aus'
         for b in self.job.bilder:
             if b.get('video') or not Bildmodelltextur.gewaehlt(b):
                 continue
             if b.get('kategorie') == 'neben' and not Bildmodellbildtypen.textur_teile(b):
+                continue
+            if nur_haupt and not Bildmodellbildtypen.fuer_form(b):
                 continue
             if self.projizierbar(b):
                 aus.append(b)

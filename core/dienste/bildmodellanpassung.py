@@ -4,7 +4,9 @@
 Rechnet im Arbeitsprozess mit dem Genesis-9-Paket (python14, kein Browser):
 
     ziel        `G9zielnetz.aus(betas, kopf)` → `ergebnis/ziel.npz`
-                (Zielpunkte und Gewichte je Käfigpunkt aus `G9netzpaarung`)
+                (Zielpunkte und Gewichte je Käfigpunkt aus `G9netzpaarung`);
+                mit `weg = silhouette` stattdessen `Bildmodellsilhouettenziel`
+                (Grundfigur → Umriss → Regler in Runden, ohne 3D-Schätzer)
     anpassung   `G9reglerableitung` (Reglersatz, Grundfigur) + `G9formanpassung`
                 → `ergebnis.anpassung` (Regler, RMS je Teil, Verlauf)
     rest        `G9restmorph.ablegen` → Eigenmorph `eigen:<kennung>`,
@@ -59,6 +61,14 @@ class Bildmodellanpassung:
         from Genesis9.netzpaarung import G9netzpaarung
         from Genesis9.zielnetz import G9zielnetz
 
+        from .bildmodellsilhouettenziel import Bildmodellsilhouettenziel
+
+        # Option `weg = silhouette` (Vorgabe): kein SMPL-X — die Bilder formen die Regler
+        # (20.09.2026); ohne neutrale Körperbilder fällt es auf den Schätzer zurück (None).
+        if Bildmodellsilhouettenziel.an(self.optionen):
+            aus = Bildmodellsilhouettenziel(self.job, self.ablage, self.optionen, self).rechnen(melder)
+            if aus is not None:
+                return aus
         s = self.job.ergebnis.get('schaetzung') or {}
         betas = s.get('betas')
         kopf = None

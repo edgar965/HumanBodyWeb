@@ -100,6 +100,8 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 <dialog id="proportionen-dialog" class="bildmodell-dialog">
     <div class="bildmodell-dialogkopf">
         <h2>Proportionen einstellen</h2>
+        <button type="button" class="btn btn-sm btn-secondary" data-tat="3d"
+                title="Das Zielnetz als 3D-Figur — folgt jedem Pfeil, jeder Zahl und den Schiebern im Popup"><i class="fas fa-cube"></i> 3D-Modell</button>
         <div class="bildmodell-reiter" role="tablist">
             <button type="button" role="tab" data-tab-knopf="bild" aria-selected="true"
                     title="Die Maßlinien im Bild ziehen"><i class="fas fa-arrows-alt-h"></i> Bild</button>
@@ -109,8 +111,9 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
     </div>
     <div data-tab="bild" class="bildmodell-reiterfeld">
         <p class="hb-hinweis">Griff an einem Ende ziehen setzt dieses Ende, Ziehen an der Linie verschiebt sie — die Länge
-           ist der Wert in cm (grün = eingestellt) und gilt sofort in allen Bildern. Das × am linken Ende (oder Entf auf der
-           markierten Linie) löscht den Marker aus diesem Bild; rechts stehen alle Maße — ⤓ zieht ein fehlendes ins Bild.
+           ist der Wert in cm (grün = eingestellt) und gilt sofort in allen Bildern. Klick auf eine Linie und Entf löscht
+           den Marker aus diesem Bild; rechts stehen alle Maße — ⤓ zieht ein fehlendes ins Bild, „3D-Modell" zeigt das
+           Zielnetz, das jedem Pfeil folgt.
            Jede Einstellung formt das Zielnetz vor der Anpassung („Neu berechnen“). Das Fenster lässt sich an der Ecke
            rechts unten vergrößern.</p>
         <div class="bildmodell-bildreiter">
@@ -125,6 +128,17 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
             <thead><tr><th>Maß</th><th>Eingabe (cm)</th><th>Ziel aus Bildern</th><th>Modell</th><th>Modell − Ziel</th><th></th></tr></thead>
             <tbody></tbody>
         </table>
+    </div>
+    <div id="proportionen-3d" class="bildmodell-3dpopup" hidden>
+        <div class="bildmodell-3dkopf">
+            <strong>3D-Modell — Zielnetz</strong>
+            <label class="bildmodell-3dgitter" title="Kanten des Käfigs zeigen — Wellen sieht man daran zuerst">
+                <input type="checkbox" data-tat="3d-gitter"> Gitter</label>
+            <button type="button" class="btn btn-sm btn-secondary" data-tat="3d-schliessen" title="3D-Popup schließen">×</button>
+        </div>
+        <canvas class="bildmodell-3dcanvas"></canvas>
+        <div class="hb-hinweis bildmodell-3dtext">Zielnetz wird geformt …</div>
+        <div class="bildmodell-3dregler"></div>
     </div>
     <div class="bildmodell-dialogknoepfe">
         <button type="button" class="btn btn-secondary btn-sm" data-tat="alle-loeschen"

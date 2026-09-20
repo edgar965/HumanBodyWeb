@@ -13,7 +13,7 @@
  * an den Dialog, der Lage und Wert hält und Tabelle und Zeilenbilder nachzieht.
  * Das SVG fängt den Zeiger (`setPointerCapture` auf dem SVG — die Griffe
  * werden bei jedem Zeichnen neu gebaut). Das × am linken Ende einer Linie
- * (oder Entf auf der markierten Linie) geht als `beiLoeschen(schluessel)` an
+ * (Entf auf der markierten Linie) geht als `beiLoeschen(schluessel)` an
  * den Dialog: das Maß verliert seine Vorgabe, in ALLEN Bildern.
  */
 import { Proportionenlinien } from './proportionenlinien.js';
@@ -24,7 +24,7 @@ export class Proportionenbildtab {
      * @param feld     Element des Reiters (wird gefüllt)
      * @param katalog  `katalog.proportionen` liefert Name und formbar je Maß
      * @param beiLage  `(quelleId, schluessel, linie)` — eine Linie wurde gezogen
-     * @param beiLoeschen  `(schluessel)` — das × einer Linie oder Entf auf der markierten
+     * @param beiLoeschen  `(schluessel)` — Entf auf der markierten Linie
      */
     constructor(feld, katalog, beiLage, beiLoeschen) {
         this.feld = feld;
@@ -120,7 +120,6 @@ export class Proportionenbildtab {
         const k = gruppe.dataset.mass;
         const m = (this.katalog.proportionen || []).find(x => x.schluessel === k);
         if (m && m.formbar === false) return;
-        if (e.target.closest('.prop-loeschen')) { e.preventDefault(); this.beiLoeschen(k); return; }
         this.svg.focus({ preventScroll: true });
         const linie = this.lagen[k];
         const punkt = this._bildpunkt(e);

@@ -12,11 +12,13 @@
  * so vielen, wie der Worker schafft.
  *
  * Nachrichten:
- *   bauen  {kaefig (n·3), frei (n), kanten (E·2), indptr, indices, data,
- *           zeilen, hautIndex (n·4), hautGewicht (n·4), dreiecke (Browser)}
- *   felder {felder: {kanal: {n, d}}}   die JCMs auf dem Käfig (`Stofffelder`)
- *   bild   {M (Knochen·16), W (16), inv (16), kapseln (K·13, `Stoffkoerper`), dt, werte}
- *           → punkte {pos (zeilen·3), nrm (zeilen·3)}   (übertragen, nicht kopiert)
+ *   bauen   {kaefig (n·3), frei (n), kanten (E·2), indptr, indices, data,
+ *            zeilen, hautIndex (n·4), hautGewicht (n·4), dreiecke (Browser)}
+ *   felder  {felder: {kanal: {n, d}}}   die JCMs auf dem Käfig (`Stofffelder`)
+ *   koerper {n, pos, nrm, index, gewicht}  Stichprobe der Haut (`Stoffoberflaeche`, 20.09.2026)
+ *   bild    {M (Knochen·16), W (16), inv (16), kapseln (K·13, `Stoffkoerper`),
+ *            Mk (Knochen·16), Wk (16) für die Haut, dt, werte}
+ *            → punkte {pos (zeilen·3), nrm (zeilen·3)}   (übertragen, nicht kopiert)
  *
  * SEIT 18.09.2026 ABENDS: `werte` sind die Gelenkkorrekturen dieses Bildes
  * (`Genesis9gelenke.werte`); mit den Käfigfeldern (`felder`) wird der
@@ -26,6 +28,7 @@
 import { Stoffpendel } from './stoffpendel.js';
 import { Stofffelder } from './stofffelder.js';
 import { Stoffkoerper } from './stoffkoerper.js';
+import { Stoffoberflaeche } from './stoffoberflaeche.js';
 
 class Stoffarbeiter {
 
@@ -38,6 +41,7 @@ class Stoffarbeiter {
     static matrix = null;
     static dreiecke = null;
     static zeilen = 0;
+    static oberflaeche = null;
 
     static bauen(d) {
         Stoffarbeiter.kaefig = d.kaefig;
@@ -51,6 +55,11 @@ class Stoffarbeiter {
         Stoffarbeiter.dreiecke = d.dreiecke;
         Stoffarbeiter.zeilen = d.zeilen;
         Stoffarbeiter.erstes = true;
+    }
+
+    /** Die Haut der Figur als Körper (kommt einmal, nach `bauen`). */
+    static koerper(d) {
+        Stoffarbeiter.oberflaeche = new Stoffoberflaeche(d);
     }
 
     /** Die Käfigfelder der JCMs nachreichen (kommen asynchron). */
@@ -90,8 +99,11 @@ class Stoffarbeiter {
         zeiten.haut = performance.now() - t0;
         if (Stoffarbeiter.erstes) { pendel.setzen(ziel); Stoffarbeiter.erstes = false; }
         const kapseln = Stoffkoerper.lesen(d.kapseln);
-        // Sprungschutz und Teilschritte: `Stoffpendel.bild`.
         let t1 = performance.now();
+        const haut = Stoffarbeiter.oberflaeche;
+        pendel.oberflaeche = haut && d.Mk && d.Wk ? haut.haeuten(d.Mk, d.Wk) : null;
+        zeiten.koerper = performance.now() - t1; t1 = performance.now();
+        // Sprungschutz und Teilschritte: `Stoffpendel.bild`.
         const { x, zurueckgesetzt } = pendel.bild(ziel, d.dt, kapseln);
         zeiten.schritt = performance.now() - t1; t1 = performance.now();
         // Browserpunkte = Matrix · Käfig (Welt), dann in den Raum des Anzeigenetzes.
@@ -129,7 +141,7 @@ class Stoffarbeiter {
             nrm[c] += nx; nrm[c + 1] += ny; nrm[c + 2] += nz;
         }
         for (let i = 0; i < zeilen; i++) {
-            const o = 3 * i, l = Math.hypot(nrm[o], nrm[o + 1], nrm[o + 2]) || 1;
+            const o = 3 * i, l = Math.sqrt(nrm[o] * nrm[o] + nrm[o + 1] * nrm[o + 1] + nrm[o + 2] * nrm[o + 2]) || 1;
             nrm[o] /= l; nrm[o + 1] /= l; nrm[o + 2] /= l;
         }
         return nrm;
@@ -140,5 +152,6 @@ self.onmessage = (ereignis) => {
     const d = ereignis.data;
     if (d.typ === 'bauen') Stoffarbeiter.bauen(d);
     else if (d.typ === 'felder') Stoffarbeiter.feldsatz(d);
+    else if (d.typ === 'koerper') Stoffarbeiter.koerper(d);
     else if (d.typ === 'bild') Stoffarbeiter.bild(d);
 };

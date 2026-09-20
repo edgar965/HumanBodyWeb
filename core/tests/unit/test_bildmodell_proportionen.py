@@ -57,3 +57,32 @@ class EndpunktTest(TestCase):
                              content_type='application/json')
             self.job.refresh_from_db()
             self.assertEqual(self.job.optionen['proportionen'], {})
+
+    def test_zeilenbild_prueft_ansicht_und_zielnetz(self):
+        # Knopf „Bild neu" je Zeile (20.09.2026): nur die Bilder einer Ansicht, kein Lauf.
+        antwort = self.client.post('/api/bildmodell/%s/zeilenbild/quatsch/' % self.job.id,
+                                   data=json.dumps({}), content_type='application/json')
+        self.assertEqual(antwort.status_code, 400)
+        # Ohne Zielnetz (kein Lauf gelaufen) gibt es nichts zu formen: 409 mit Grund.
+        antwort = self.client.post('/api/bildmodell/%s/zeilenbild/vorn/' % self.job.id,
+                                   data=json.dumps({'proportionen': {'huefte_breite': 31}}),
+                                   content_type='application/json')
+        self.assertEqual(antwort.status_code, 409)
+        self.assertIn('Zielnetz', antwort.json()['error'])
+        # Die mitgeschickten Popup-Werte sind trotzdem abgelegt.
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.optionen['proportionen'], {'huefte_breite': 31.0})
+
+    def test_zielnetz3d_prueft_json_und_zielnetz(self):
+        # 3D-Popup (20.09.2026): das Zielnetz mit den Popup-Werten geformt — kein Lauf, nichts abgelegt.
+        antwort = self.client.post('/api/bildmodell/%s/zielnetz3d/' % self.job.id,
+                                   data='{quatsch', content_type='application/json')
+        self.assertEqual(antwort.status_code, 400)
+        antwort = self.client.post('/api/bildmodell/%s/zielnetz3d/' % self.job.id,
+                                   data=json.dumps({'proportionen': {'huefte_breite': 31}, 'netz': True}),
+                                   content_type='application/json')
+        self.assertEqual(antwort.status_code, 409)
+        self.assertIn('Zielnetz', antwort.json()['error'])
+        # Anders als „Bild neu" legt das Popup die Werte NICHT ab — das tut erst „Übernehmen".
+        self.job.refresh_from_db()
+        self.assertNotIn('proportionen', self.job.optionen or {})

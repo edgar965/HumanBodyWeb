@@ -143,9 +143,15 @@ class G9aufhumanbody:
         logger.info('Daz auf HumanBody: Paarung %s/%s — %d Genesis-Punkte, Massstab %.3f, '
                     'Rumpfhoehen %s', geschlecht, bauart, len(zu), massstab,
                     knoten and {k: [round(v, 3) for v in knoten[k]] for k in ('von', 'nach')})
+        # `skaliert` und `segmente` seit 20.09.2026 fuer die HB-Morphs
+        # (`Hbmorpheaufgenesis`): die mitteln ueber MEHRERE HumanBody-Punkte
+        # je Genesis-Punkt und brauchen dafuer dessen geschaetzte Lage.
         return {'zu': zu, 'g9_punkte': g9_punkte, 'g9_normalen': g9_normalen,
                 'g9_rahmen': Hbtraeger.rahmen(g9_normalen), 'g9_baum': G9kollision.baum(g9_punkte),
-                'massstab': massstab, 'knoten': knoten,
+                'massstab': massstab, 'knoten': knoten, 'skaliert': skaliert,
+                'segmente': {teil: (np.asarray(g9_seg.get(teil) or [], dtype=np.int64),
+                                    np.asarray(hb_seg.get(teil) or [], dtype=np.int64))
+                             for teil in g9_seg},
                 'g9_rumpf': list(g9_seg.get('body') or []), 'hb_rumpf': list(hb_seg.get('body') or [])}
 
     @classmethod

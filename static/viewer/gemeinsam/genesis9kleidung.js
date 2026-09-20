@@ -18,10 +18,38 @@ import { Stueckereignis } from './stueckereignis.js';
  * — kommt ein Daz-Hemd oder geht es, ist sie falsch. Ohne GarmentCode-Stück
  * bleibt es still: Die Lagen der Daz-Garderobe macht der Server, und die
  * Masken kosten auf Stufe 2 Sekunden (19.09.2026, Ärmelsaum-Befund).
+ *
+ * DAS SCHILD DER SCHWEBEANZEIGE (20.09.2026, Edgar: „der hover text bei Genesis
+ * Kleidern ist falsch, der zeigt geometry (genesis) anstelle der Genesis asset
+ * namen"): Der Server nennt je Teil den Daz-Geometrienamen (`geometry`, `Dress`,
+ * `TL Rivet`); der Name des Stücks steht nur im Katalog (`{id, name}`). Der wird
+ * einmal geholt und gemerkt — `anzeigename` — und mehrteilige Stücke tragen ihren
+ * Teilnamen dahinter („Dancing Queen Dress · Dress").
  */
 export class Genesis9kleidung {
 
+    static KATALOG = '/api/character/genesis9-figur/garderobe/';
+    static _namen = null;
+
     static stilliste(werte) { return Genesis9lagen.stilliste(werte); }
+
+    /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */
+    static async anzeigename(kennung) {
+        if (!Genesis9kleidung._namen) {
+            try {
+                const daten = await Serverabruf.json(Genesis9kleidung.KATALOG);
+                Genesis9kleidung._namen = Object.fromEntries(
+                    (daten.stuecke || []).map((s) => [s.id, s.name || s.id]));
+            } catch { Genesis9kleidung._namen = {}; }
+        }
+        return Genesis9kleidung._namen[kennung] || kennung;
+    }
+
+    /** Das Schild: Name des Stücks, bei mehreren Teilen mit Teilname (nie `geometry`). */
+    static beschriftung(name, teilname, anzahl, herkunft = 'Genesis 9') {
+        const teil = anzahl > 1 && teilname && teilname !== 'geometry' ? ` · ${teilname}` : '';
+        return `${name}${teil} (${herkunft})`;
+    }
 
     /**
      * Ein Stück anziehen — alle seine Teile, über den getragenen Stücken darunter.
@@ -40,8 +68,10 @@ export class Genesis9kleidung {
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;   // überholt oder ausgezogen
         inst._stueckWeg(kennung);
+        const name = await Genesis9kleidung.anzeigename(kennung);
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
+            netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);

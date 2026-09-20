@@ -5,13 +5,16 @@ import { Genesis9lauf } from './genesis9lauf.js';
 import { Genesis9garderobe } from './genesis9garderobe.js';
 import { Eigenschaftenbereiche } from '../eigenschaftenbereiche.js';
 import { Genesis9posen } from './genesis9posen.js';
+import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
  *
  * Was diese Figur hat (18.09.2026): Daz' eigene Formregler in vier Bereichen
- * (Figur, Körper, Kopf, Mimik — `Genesis9/reglerplan.py`, 352 von 1.503+
- * Kanälen; der Rest sind Knochen-Posensteuerungen und Verstecktes), Hautsätze
+ * (Figur, Körper, Kopf, Mimik — `Genesis9/reglerplan.py`) und seit dem
+ * 20.09.2026 die Posensteuerungen des Körpers in sechs weiteren (Rumpf mit
+ * Brüsten und Taille, Hals, Arme, Hände, Beine, Füße — 480 von 1.512
+ * Kanälen; der Rest ist Verstecktes und Unwirksames), Hautsätze
  * und Augen der Starter Essentials und der Charakterordner, Brauenstil,
  * Wimpern, Nagellack und Schminke je Kategorie (`praesets`) sowie Daz-Posen
  * und -Ausdrücke (`genesis9posen.js`). Die Daz-Garderobe
@@ -30,6 +33,7 @@ export class Genesis9eigenschaften {
     static BEREICH = 'prop-genesis9-section';
     static ADRESSE = '/api/character/genesis9-figur/regler/';
     static _plan = null;
+    static _griff = null;
 
     static async fuellen(inst) {
         const bereich = document.getElementById(Genesis9eigenschaften.BEREICH);
@@ -40,6 +44,7 @@ export class Genesis9eigenschaften {
         Genesis9eigenschaften._haut(inst, plan);
         await Genesis9posen.fuellen(inst);
         Genesis9eigenschaften._regler(inst, plan);
+        Genesis9eigenschaften._reglergriff();
         // Die Garderobe steht im Assets-Reiter (`_genesis9_garderobe.html`,
         // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
         await Genesis9garderobe.fuellen(inst,
@@ -220,6 +225,22 @@ export class Genesis9eigenschaften {
             }
             behaelter.appendChild(kasten);
         }
+    }
+
+    /**
+     * Der Griff unter der Reglerliste (Edgar, 20.09.2026: „mach unten an der
+     * Stelle einen Griff, mit dem ich die Ansicht nach unten verschieben
+     * kann, merke dir die Position"). Einmal verdrahtet — das Feld ist Teil
+     * der Vorlage, `_regler` tauscht nur seinen Inhalt.
+     */
+    static _reglergriff() {
+        if (Genesis9eigenschaften._griff) return;
+        Genesis9eigenschaften._griff = new Hoehengriff({
+            griff: document.getElementById('prop-genesis9-regler-griff'),
+            bereich: document.getElementById('prop-genesis9-regler'),
+            min: 120, max: 1600, vorgabe: 300,
+            schluessel: 'scene_genesis9_regler_hoehe',
+        }).verdrahten();
     }
 
     static _zeile(inst, regler) {

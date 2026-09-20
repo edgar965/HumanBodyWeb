@@ -68,6 +68,35 @@ export class Kleidungsmass {
         return aus;
     }
 
+    /**
+     * Normalen eines geschlossenen Körpers nach AUSSEN drehen, wenn sie nach innen
+     * zeigen: Zeigt die Mehrheit von der Mitte weg (Summe von n·(p − Mitte) > 0),
+     * bleibt alles; sonst werden alle umgedreht. Gibt +1 (waren außen) oder −1 zurück.
+     *
+     * WARUM (20.09.2026): HumanBodys feines Körpernetz (`fein_dreiecke`, 553.216
+     * Dreiecke) ist zu 100 % GEGEN seine eigenen Normalen gewickelt (`fein_normalen`
+     * zeigen nach außen, das Kreuzprodukt der Ecken nach innen); im Browser tragen
+     * seine Punkte die Normalen aus den Flächen, also nach innen, und das Material
+     * ist beidseitig - man sieht es nicht. Gemessen: das Kleid in Ruhe „39 mm in der
+     * Haut" (Probe) und in Wahrheit 6 mm davor (`_wegwerf/hb_figurhoehe.py`);
+     * die Haut als Stoffkörper zog den Rock hinein statt hinaus. Genesis 9 ist
+     * richtig gewickelt. Für eine Figur (Mitte im Rumpf) ist die Mehrheit eindeutig -
+     * Achselhöhlen und Schritt sind die Ausnahme, nicht die Regel.
+     */
+    static auswaerts(punkte, normalen, n) {
+        let mx = 0, my = 0, mz = 0;
+        for (let i = 0; i < n; i++) { mx += punkte[3 * i]; my += punkte[3 * i + 1]; mz += punkte[3 * i + 2]; }
+        mx /= n || 1; my /= n || 1; mz /= n || 1;
+        let summe = 0;
+        for (let i = 0; i < n; i++) {
+            const o = 3 * i;
+            summe += normalen[o] * (punkte[o] - mx) + normalen[o + 1] * (punkte[o + 1] - my) + normalen[o + 2] * (punkte[o + 2] - mz);
+        }
+        if (summe >= 0) return 1;
+        for (let i = 0; i < 3 * n; i++) normalen[i] = -normalen[i];
+        return -1;
+    }
+
     /** Ein Würfelraster über `punkte` (n·3) mit Zellweite `weite` (Meter). */
     static raster(punkte, n, weite) {
         const zellen = new Map(), w = weite;

@@ -6,7 +6,8 @@ Zeilen): hier steht NUR die Tabelle — je Schritt `(feld, name, [(wert, name,
 erklärung)], vorgabe)` — und die Verfügbarkeit der Schätzer, die
 `Bildmodelloptionen.katalog()` daran hängt (`photo_analyzer.get_all_status()`,
 GVHMR-Wurzel). Ein Schätzer ohne Gewichte steht ausgegraut mit Grund.
-Die Felder der Sichtung liegen in `Bildmodellsichtungskatalog`.
+Die Felder der Sichtung liegen in `Bildmodellsichtungskatalog`, die von Zielnetz und
+Textur in `Bildmodellzielkatalog` (20.09.2026, die Datei stand bei 295 Zeilen).
 """
 
 import logging
@@ -15,6 +16,7 @@ import os
 from ..daten.wrapperpfad import Wrapperpfad
 from .bildmodellpersonkatalog import Bildmodellpersonkatalog
 from .bildmodellsichtungskatalog import Bildmodellsichtungskatalog
+from .bildmodellzielkatalog import Bildmodellzielkatalog
 
 logger = logging.getLogger('core')
 
@@ -82,47 +84,7 @@ class Bildmodellkatalog:
                 'median',
             ),
         ],
-        'ziel': [
-            (
-                'symmetrie',
-                'Symmetrie',
-                [
-                    ('an', 'Symmetrisch', 'Links und rechts gemittelt (Daz-Figuren sind symmetrisch)'),
-                    ('aus', 'Wie geschätzt', ''),
-                ],
-                'an',
-            ),
-            (
-                'groesse',
-                'Körpergröße',
-                [
-                    ('schaetzer', 'Aus dem Schätzer', 'Relativ zum Durchschnitt beider Modelle'),
-                    ('basis', 'Wie die Grundfigur', '170 cm bleiben'),
-                    ('cm', 'Angabe in cm', 'Feld „Größe cm"'),
-                ],
-                'schaetzer',
-            ),
-            (
-                'umriss',
-                'Umriss der Fotos',
-                [
-                    ('an', 'Silhouette Zeile für Zeile',
-                     'Breiten von vorn/hinten, Vorder- und Rückkante von der Seite formen das Ziel'),
-                    ('aus', 'Aus', 'Nur Maße und Eingaben'),
-                ],
-                'an',
-            ),
-            (
-                'fotomasse',
-                'Maße aus den Fotos',
-                [
-                    ('an', 'Silhouette formt das Ziel',
-                     'Hüfte, Taille, Oberschenkel, Wade (vorn), Brust-, Bauch-, Gesäßtiefe (Seite)'),
-                    ('aus', 'Nur Eingaben', 'Das Ziel bleibt der Schätzer; das Popup formt'),
-                ],
-                'an',
-            ),
-        ],
+        'ziel': Bildmodellzielkatalog.FELDER,
         'anpassung': [
             (
                 'reglersatz',
@@ -203,20 +165,7 @@ class Bildmodellkatalog:
                 'mittel',
             ),
         ],
-        'textur': [
-            (
-                'textur',
-                'Textur',
-                [
-                    ('foto', 'Fotofarbe in HD (Stufe 2)',
-                     'Je Texel aus den Bildern mit Häkchen — Nahaufnahmen über ihr Rig registriert, '
-                     'als UDIM 2048² gebacken (python10, ~1–3 min)'),
-                    ('hautton', 'Hautton (Stufe 1)', 'Daz-Haut auf den Hautton der Fotos getönt'),
-                    ('aus', 'Daz-Haut', 'Unverändert'),
-                ],
-                'foto',
-            ),
-        ],
+        'textur': Bildmodellzielkatalog.TEXTUR,
         'speichern': [
             (
                 'modell',

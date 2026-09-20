@@ -254,8 +254,9 @@ class KleidArmeFrei(SimpleTestCase):
         stoff, hinweise = self.im_browser(antwort, name)
         steckende, proben = self.steckende(stoff, figur, segmente)
         self.assertGreaterEqual(proben, 30, 'zu wenige Armproben')
-        meldung = self.meldung('%s (nach %.0f s Stoffschwung)' % (name, self.SEKUNDEN), steckende, proben,
-                               zusatz='; gehäutet, vor dem Schwung: %d; %s' % (len(vorher), ', '.join(hinweise)))
+        zusatz = '; gehäutet, vor dem Schwung: %d; %s' % (len(vorher), ', '.join(hinweise))
+        titel = '%s (nach %.0f s Stoffschwung)' % (name, self.SEKUNDEN)
+        meldung = self.meldung(titel, steckende, proben, zusatz)
         print(' ' + meldung)
         self.assertEqual(steckende, [], meldung)
 

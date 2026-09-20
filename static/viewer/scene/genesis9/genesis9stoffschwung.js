@@ -6,8 +6,11 @@
  * `dForce Simulation` wird in Daz Studio über die Animation vorab simuliert
  * (Sekunden je Bild), das Ergebnis ist eine Punktfolge. Hier läuft eine
  * NÄHERUNG live in einem Web Worker (`gemeinsam/stoffarbeiter.js` mit
- * `gemeinsam/stoffpendel.js`: Verlet auf dem Käfig, Kantenlängen, Feder zur
- * gehäuteten Lage, Schwerkraft, Kapseln um die Knochen). Der Server gibt je
+ * `gemeinsam/stoffpendel.js`: Verlet auf dem Käfig, Kantenlängen, Anker,
+ * Feder zur gehäuteten Lage, Schwerkraft, Kapseln um die Knochen und seit
+ * dem 20.09.2026 die Haut selbst als Körper, `gemeinsam/stoffoberflaeche.js`
+ * - eine Stichprobe des Körpernetzes, je Bild mit dessen Knochenmatrizen
+ * gehäutet). Der Server gibt je
  * Reglerzug Freiheit und Lage des Käfigs mit dem Netz (`teil.stoff` →
  * `userData.stoff`, `Genesis9/stoff.py`) und einmal je Stück den Bauplan
  * (Kanten, Unterteilungsmatrix, Käfighaut — `garderobe/<kennung>/stoff/<n>/`).
@@ -66,10 +69,13 @@ export class Genesis9stoffschwung {
             inst.group.updateMatrixWorld(true);
             if (!figur.kapseln) figur.kapseln = Stoffkapseln.anlegen(inst);
             const kapseln = Stoffkapseln.bild(figur.kapseln);
+            // Die Haut je Bild: Knochenmatrizen des Körpernetzes (einmal je Figur, alle Stücke teilen sie).
+            const haut = inst.bodyMesh?.isSkinnedMesh
+                ? { Mk: Stoffhaut.matrizen(inst.bodyMesh), Wk: Float32Array.from(inst.bodyMesh.matrixWorld.elements) } : null;
             for (const netz of netze) {
                 let e = figur.stuecke.get(netz);
                 if (!e) { e = Genesis9stoffschwung._anlegen(inst, netz); figur.stuecke.set(netz, e); }
-                Genesis9stoffschwung._bild(e, dt, kapseln);
+                Genesis9stoffschwung._bild(e, dt, kapseln, haut);
             }
         }
         const lebend = new Set(state.characters.values());
@@ -105,7 +111,9 @@ export class Genesis9stoffschwung {
     }
 
     static async _laden(inst, e) {
-        const treffer = /^genesis9_kleid_(.+)_(\d+)$/.exec(e.netz.name);
+        // `genesis9_kleid_<kennung>_<n>` auf Genesis, `daz_<kennung>_<n>` auf HumanBody
+        // (`Dazkleidung.PRAEFIX`) - beide tragen denselben Daz-Käfig.
+        const treffer = /^(?:genesis9_kleid|daz)_(.+)_(\d+)$/.exec(e.netz.name);
         if (!treffer) return;
         const stoff = e.netz.userData.stoff;
         const antwort = await fetch(`${Genesis9stoffschwung.ADRESSE}${encodeURIComponent(treffer[1])}/stoff/${treffer[2]}/?stufen=${stoff.stufen}`);
@@ -134,9 +142,15 @@ export class Genesis9stoffschwung {
             zeilen: plan.zeilen, hautIndex, hautGewicht,
             dreiecke: Uint32Array.from(e.netz.geometry.index.array),
         });
+        // Die Haut der Figur als Körper (`Stoffoberflaeche`): eine Stichprobe des Körpernetzes,
+        // einmal je Stück - der Rock fiel sonst ins Becken, wo keine Kapsel ist (20.09.2026).
+        const probe = Stoffhaut.stichprobe(inst.bodyMesh);
+        if (probe) worker.postMessage({ typ: 'koerper', ...probe });
         e.worker = worker;
         e.bereit = true;
-        Genesis9stoffschwung._felder(e, treffer[1], Number(treffer[2]));
+        // Die Käfigfelder der JCMs gehören zu Daz' Gelenken - auf HumanBody (eigene
+        // Käfighaut mit Rigify-Namen) gibt es sie nicht.
+        if (!stoff.hautgewichte) Genesis9stoffschwung._felder(e, treffer[1], Number(treffer[2]));
     }
 
     /** Die Käfigfelder der JCMs dieses Teils an den Worker geben (asynchron, einmal je Stück). */
@@ -158,7 +172,7 @@ export class Genesis9stoffschwung {
         return meta || new URL('../../gemeinsam/stoffarbeiter.js', import.meta.url).href;
     }
 
-    static _bild(e, dt, kapseln) {
+    static _bild(e, dt, kapseln, haut = null) {
         e.dtSumme += dt;
         // Ein toter oder stummer Worker ließe das Anzeigenetz mit seinen letzten
         // Punkten stehen, während der Körper weitertanzt („hose animiert nicht").
@@ -172,7 +186,8 @@ export class Genesis9stoffschwung {
         e.worker.postMessage({
             typ: 'bild', M: Stoffhaut.matrizen(netz), W: Float32Array.from(netz.matrixWorld.elements),
             inv: Float32Array.from(Genesis9stoffschwung._inv.copy(anzeige.matrixWorld).invert().elements),
-            kapseln, dt: e.dtSumme, werte: e.felder ? (Genesis9gelenke.werte(e.inst) || null) : null,
+            kapseln, Mk: haut?.Mk || null, Wk: haut?.Wk || null,
+            dt: e.dtSumme, werte: e.felder ? (Genesis9gelenke.werte(e.inst) || null) : null,
         });
         e.beschaeftigt = true;
         e.gesendet = performance.now();

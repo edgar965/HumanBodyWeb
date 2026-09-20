@@ -276,7 +276,9 @@ export function updateVertexCount() {
             });
         }
     });
-    document.getElementById('vertex-count').textContent = total.toLocaleString();
+    // Das Feld gibt es auf der Szene-Seite nicht mehr (Statuszeile weg, 20.09.2026).
+    const feld = document.getElementById('vertex-count');
+    if (feld) feld.textContent = total.toLocaleString();
 }
 
 export function clearAllCharacters() {

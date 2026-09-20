@@ -1,5 +1,6 @@
 import { THREE } from '../state.js';
 import { Kapselmass } from '../../gemeinsam/kapselmass.js';
+import { Kleidungsmass } from '../../gemeinsam/kleidungsmass.js';
 import { Stoffkoerper } from '../../gemeinsam/stoffkoerper.js';
 
 /**
@@ -33,6 +34,19 @@ export class Stoffkapseln {
     static MINDESTPUNKTE = 200;
     static MINDESTRADIUS = 0.02;
     static HOECHSTENS = 32;
+    /**
+     * Nur GLIEDMASSEN bekommen eine Kapsel (Daz: l_thigh, l_thightwist1, l_shin, l_foot,
+     * l_toes, l_upperarm, l_forearm, l_hand, Finger; Rigify: DEF-thigh_L, DEF-shin_L,
+     * DEF-foot_L, DEF-upper_arm_L, DEF-forearm_L, DEF-hand_L, DEF-f_…). Rumpf, Becken
+     * und Kopf hält seit dem 20.09.2026 die Haut selbst (`Stoffoberflaeche`): Ein Rumpf
+     * ist keine Ellipse, und die Kugelkappen der Wirbelsegmente (Rigify: DEF-spine_001…003,
+     * Radien 11–14 cm) standen aus dem Rücken heraus und schoben die Punkte des Oberteils
+     * je Bild in verschiedene Richtungen. Gemessen (HumanBody, Idle, Browser): mit
+     * Rumpfkapseln Kantendehnung p99 3,22, ohne 1,79; Haut −0,7 mm in beiden Fällen.
+     * Gliedmaßen brauchen die Kapsel weiter: ein Bein zieht beim Sprung 10 cm je Bild
+     * durch den Rock, die Haut (Reichweite 5 cm) sähe die Punkte erst dahinter.
+     */
+    static GLIEDER = /thigh|shin|foot|toe|upperarm|upper_arm|forearm|hand|shldr|shoulder|f_|thumb|index|mid|ring|pinky|carpal/i;
     /** Die Achse spannt die Hautpunkte auf — ohne die äußersten 2 % je Ende. */
     static RAND = 0.02;
 
@@ -58,7 +72,8 @@ export class Stoffkapseln {
         const d = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), o = new THREE.Vector3();
         const aus = [];
         bones.forEach((bone, nummer) => {
-            const kinder = bone.children.filter(k => k.isBone);
+            if (!Stoffkapseln.GLIEDER.test(bone.name)) return;
+            const kinder = Stoffkapseln.achsenkinder(bone);
             if (!kinder.length) return;
             bone.getWorldPosition(a); Stoffkapseln.mittel(kinder, b, q);
             Stoffkapseln.basis(a, b, d, e1, e2);
@@ -87,6 +102,21 @@ export class Stoffkapseln {
         });
         aus.sort((x, y) => y.punkte - x.punkte);
         return aus.slice(0, Stoffkapseln.HOECHSTENS);
+    }
+
+    /**
+     * Die Knochenkinder, zu deren Mittel die Achse zeigt. Setzt ein Kind die Kette
+     * fort (Rigify: `DEF-spine` → `DEF-spine_001`), zählt nur dieses: `DEF-spine`
+     * hat fünf Kinder (Becken links/rechts, beide Schenkel, die Wirbelsäule), ihr
+     * Mittel liegt 7 cm vom Kopf, und die Kapsel war ein Kegel von 1,6 cm Radius
+     * am Kopf - das Becken hatte keinen Körper, der Rock fiel hinein (HumanBody,
+     * Idle: Haut −38 mm, gemessen 20.09.2026). Daz' Namen kennen keine
+     * Fortsetzung, dort bleibt es beim Mittel aller Kinder.
+     */
+    static achsenkinder(bone) {
+        const kinder = bone.children.filter(k => k.isBone);
+        const kette = kinder.find(k => k.name === bone.name + '_001' || k.name === bone.name + '.001');
+        return kette ? [kette] : kinder;
     }
 
     /** Achse `d` = b − a (Einheit) und eine Basis `e1`, `e2` senkrecht dazu. */
@@ -127,6 +157,39 @@ export class Stoffhaut {
 
     static _m = new THREE.Matrix4();
     static _bind = new THREE.Matrix4();
+    /** Rasterweite (m) der Stichprobe für `Stoffoberflaeche`: ein Hautpunkt je Zelle der Ruhelage.
+     *  2,5 cm: auf einem Schenkel (Radius 10 cm) weicht die Sehne zwischen zwei Proben 0,8 mm von
+     *  der Haut ab - genau genug, und der Worker prüft je Stoffpunkt ein Drittel der Hautpunkte
+     *  gegenüber 1,5 cm (Node: `oberflaeche.hinaus` 22 ms → siehe pendel_zeit2). */
+    static STICHPROBE_ZELLE = 0.025;
+
+    /**
+     * Eine Stichprobe des Körpernetzes für den Worker (`Stoffoberflaeche`): je Rasterzelle
+     * der Ruhelage der erste Punkt, mit Normale und Hautgewichten - 8–12k statt 70–104k.
+     * null ohne Normalen oder Haut. `{n, pos, nrm, index, gewicht}` (Float32Arrays).
+     */
+    static stichprobe(netz, zelle = Stoffhaut.STICHPROBE_ZELLE) {
+        const a = netz?.geometry?.attributes;
+        if (!netz?.isSkinnedMesh || !a?.normal || !a.skinIndex || !a.skinWeight) return null;
+        const pos = a.position.array, nrm = a.normal.array, si = a.skinIndex.array, sw = a.skinWeight.array;
+        const gesehen = new Set(), wahl = [];
+        for (let i = 0; i < a.position.count; i++) {
+            const k = Math.floor(pos[3 * i] / zelle) + ',' + Math.floor(pos[3 * i + 1] / zelle) + ',' + Math.floor(pos[3 * i + 2] / zelle);
+            if (gesehen.has(k)) continue;
+            gesehen.add(k); wahl.push(i);
+        }
+        const n = wahl.length, aus = { n, pos: new Float32Array(n * 3), nrm: new Float32Array(n * 3),
+                                       index: new Float32Array(n * 4), gewicht: new Float32Array(n * 4) };
+        wahl.forEach((i, j) => {
+            for (let k = 0; k < 3; k++) { aus.pos[3 * j + k] = pos[3 * i + k]; aus.nrm[3 * j + k] = nrm[3 * i + k]; }
+            for (let k = 0; k < 4; k++) { aus.index[4 * j + k] = si[4 * i + k]; aus.gewicht[4 * j + k] = sw[4 * i + k]; }
+        });
+        // HumanBodys feines Netz trägt Normalen nach INNEN (gegen die eigenen Flächen gewickelt,
+        // beidseitiges Material - siehe `Kleidungsmass.auswaerts`); als Körper zog es den Rock
+        // in den Bauch. Deshalb nach außen drehen, bevor die Stichprobe zum Worker geht.
+        aus.auswaerts = Kleidungsmass.auswaerts(aus.pos, aus.nrm, n);
+        return aus;
+    }
 
     /** Je Knochen die Matrix `bindMatrixInverse · matrixWorld · boneInverse · bindMatrix`, als 16er-Block. */
     static matrizen(netz) {

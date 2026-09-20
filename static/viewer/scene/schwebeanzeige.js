@@ -65,32 +65,49 @@ export class Schwebeanzeige {
         this._knochenwechsel(treffer.knochen, treffer.koerpernetz);
     }
 
-    /** Alle anstrahlbaren Objekte: Kleidungsstücke und Körpernetze. */
+    /**
+     * Alle anstrahlbaren Objekte: Kleidungsstücke und Körpernetze. Eine
+     * Genesis-Figur hat keine Knochenbereiche — ihr Körper und ihre Anhänge
+     * (Augen, Brauen, Zähne) zeigen den Namen des Modells (20.09.2026, Edgar:
+     * „auch bei der genesis figur soll der name des Modells angezeigt werden").
+     */
     static _ziele() {
         const teilnetze = getAllSubMeshTargets();
         const wurzeln = teilnetze.map(t => t.meshObj);
         const koerper = [];
+        const figuren = new Map();
         state.characters.forEach((figur, id) => {
             if (figur.generatedConfig && figur.bodyMesh
                 && figur.bodyMesh.userData.boneVertexRanges) {
                 koerper.push({ bodyMesh: figur.bodyMesh, charId: id });
                 wurzeln.push(figur.bodyMesh);
+            } else if (figur.quelle === 'genesis9' && figur.bodyMesh) {
+                const schild = `${figur.presetName || figur.name || id} (Genesis 9)`;
+                for (const netz of [figur.bodyMesh, ...Object.values(figur.anhangNetze || {})]) {
+                    if (!netz) continue;
+                    figuren.set(netz, schild);
+                    wurzeln.push(netz);
+                }
             }
         });
-        return { teilnetze, wurzeln, koerper };
+        return { teilnetze, wurzeln, koerper, figuren };
     }
 
     /**
      * @returns {{teilnetz: Object|null, knochen: string|null,
-     *            koerpernetz: Object|null}}
+     *            koerpernetz: Object|null, figur: string|null}}
      */
     _treffer(ziele) {
-        const leer = { teilnetz: null, knochen: null, koerpernetz: null };
+        const leer = { teilnetz: null, knochen: null, koerpernetz: null, figur: null };
         const treffer = state.raycaster.intersectObjects(ziele.wurzeln, true);
         if (treffer.length === 0) return leer;
         const teilnetz = _findSubMeshForObject(treffer[0].object,
                                                ziele.teilnetze);
         if (teilnetz) return { ...leer, teilnetz };
+        // Die Genesis-Figur selbst: Netz oder eines seiner Elternteile (Anhänge sind Gruppen).
+        for (let o = treffer[0].object; o; o = o.parent) {
+            if (ziele.figuren?.has(o)) return { ...leer, figur: ziele.figuren.get(o) };
+        }
         // Kein Kleidungsstück — dann vielleicht ein Knochen des Körpernetzes.
         for (const eintrag of ziele.koerper) {
             if (treffer[0].object !== eintrag.bodyMesh) continue;
@@ -104,7 +121,7 @@ export class Schwebeanzeige {
 
     _schild(e, rahmen, treffer) {
         const text = treffer.teilnetz ? treffer.teilnetz.label
-                                      : treffer.knochen;
+                                      : (treffer.figur || treffer.knochen);
         if (!text || !this.schild) {
             if (this.schild) this.schild.style.display = 'none';
             this.canvas.style.cursor = '';

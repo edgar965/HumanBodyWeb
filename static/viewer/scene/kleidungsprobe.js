@@ -64,6 +64,7 @@ export class Kleidungsprobe {
             const kw = Stoffhaut.welt(inst.bodyMesh);
             const raster = Kleidungsmass.raster(kw, koerper.n, Kleidungsprobe.WEITE);
             const kn = Kleidungsmass.normalen(kw, koerper.index, koerper.n);
+            Kleidungsmass.auswaerts(kw, kn, koerper.n);   // HumanBody: Flächen nach innen gewickelt
             const arm = Kleidungsprobe._arm(kw, koerper);
             for (const s of stuecke) s.werte.push(Kleidungsprobe._messen(inst, s, raster, kn, arm));
             // Zwischen den Bildern die Schleife freigeben (MessageChannel: auch im versteckten Tab ungedrosselt).

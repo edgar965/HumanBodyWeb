@@ -17,9 +17,10 @@ die hängenden Arme laufen hindurch. Beim Sprung folgt ein freier Punkt der
 Lage mit 2/s: bei 2 m/s bleibt er einen Meter zurück, ab 0,5 m setzt
 `ENTGLEIST_M` ihn hart auf die Lage — das Kleid springt der Figur nach.
 
-DIESE FÄLLE SIND ROT, BIS DER STOFF FÄLLT UND FOLGT. Sie beschreiben, was
-Edgar sieht — nicht, was die Formel kann. Sie wurden geschrieben, nicht
-gelaufen (Edgar, 19.09.2026: „keine tests wenn ich nichts sage").
+Die Fälle beschreiben, was Edgar sieht — nicht, was die Formel kann. Seit
+dem 20.09.2026 (Schwerkraft voll, Anker, Mitnahme, Kapseln mit Seite von
+vorhin — `stoffpendel.js`) sind sie grün; Edgar hat den Lauf angesagt („und
+warum laufen sie nicht und fixt du sie nicht", „fixe es").
 
 1. Ein Streifen, der in der gehäuteten Lage WAAGERECHT vom Bund absteht
    (9 Reihen à 5 cm = 40 cm, Bund gebunden), hängt nach 3 s zu mindestens
@@ -32,10 +33,27 @@ gelaufen (Edgar, 19.09.2026: „keine tests wenn ich nichts sage").
    hängt der Saum wieder an seiner Lage (Auslenkung < 5 cm). „Verliert das
    Kleid" heißt: eines davon ist verletzt. Dass der Streifen nach dem Stopp
    aufbauscht (Trägheit), ist Stoff, kein Fehler.
+3. Eine Kapsel (Schenkel, Radius 6 cm) fegt in einem Bild von 1/30 s um 15 cm
+   durch den hängenden Streifen hindurch — wie das Bein, das beim Sprung
+   anzieht. Die Punkte müssen auf der Seite bleiben, von der die Kapsel kam
+   (vor ihr), und ein Bild später darf keine Kante über 10 % gedehnt sein
+   (im Bild des Durchgangs selbst sind die Nachbarreihen noch nicht nach:
+   gemessen 1,51, nur gemeldet). Radial hinausgedrückt (die alte Rechnung)
+   landeten sie hinter der Kapsel, die Kante zum Nachbarn quer durch das
+   Bein (Browser, Jump: Dehnung p99 4,75, Haut −31 mm).
+4. Ein Streifen MIT SPIEL im Anker (Reichweite verdoppelt — der Anker greift
+   nie, wie bei einem Rock mit Falten oder Ausstellung, der nicht am Ende
+   seines Stoffwegs hängt) wird 0,3 s lang mit 4 g nach oben beschleunigt.
+   Ohne Mitnahme bleibt alles hinter den ersten vier Kantenreihen zurück
+   (vier Durchgänge): Dehnung 1,89 (gemessen). Mit Mitnahme kommt über die
+   Dehnung in Ruhe (1,11 — acht freie Reihen unter Schwerkraft mit vier
+   Durchgängen ohne Anker) nichts hinzu: gemessen +0,000, verlangt < +0,02.
 
-Sabotage-Gegenprobe (wenn die Fälle einmal grün sind): `SCHWERE` auf 0 →
-Fall 1 rot (nichts fällt); `ENTGLEIST_M` auf 0,05 → Fall 2 rot (jedes
-Sprungbild setzt zurück). Die echten Kleider auf den echten Figuren prüft
+Sabotage-Gegenprobe: `SCHWERE` auf 0 → Fall 1 rot (nichts fällt);
+`ENTGLEIST_M` auf 0,05 → Fall 2 rot (jedes Sprungbild setzt zurück); in
+`Stoffkoerper.hinaus` `alt` nicht durchreichen → Fall 3 rot (Punkte hinter
+der Kapsel); `MITNAHME` 0 → Fall 4 rot (Dehnung 1,89, im Fall selbst als
+Gegenprobe gerechnet). Die echten Kleider auf den echten Figuren prüft
 `longrunner/test_kleid_arme_frei.py`.
 """
 from django.test import SimpleTestCase
@@ -49,10 +67,10 @@ MODUL = Jsmodul('gemeinsam', 'stoffpendel.js')
 VORSPANN = """
 const { Stoffpendel: S } = await import(MODUL);
 const dt = 1 / 30, REIHEN = 9, KANTE = 0.05, BUND = 1.0;
-const streifen = (richtung) => {
+const streifen = (richtung, zickzack = 0) => {
     const ruhe = [], frei = [];
     for (let r = 0; r < REIHEN; r++) for (let c = 0; c < 2; c++) {
-        ruhe.push(richtung[0] * r * KANTE + (richtung[0] ? 0 : c * KANTE),
+        ruhe.push(richtung[0] * r * KANTE + (richtung[0] ? 0 : c * KANTE) + (r % 2 ? zickzack : 0),
                   BUND + richtung[1] * r * KANTE,
                   richtung[0] ? c * KANTE : 0);
         frei.push(r === 0 ? 0 : 1);
@@ -122,6 +140,53 @@ console.log(JSON.stringify({
 }));
 """
 
+KAPSEL = VORSPANN + """
+// --- 3. Eine Kapsel fegt durch den hängenden Streifen: die Seite bleibt -----
+const { ruhe, pendel: p } = streifen([0, -1, 0]);
+const ziel = Float32Array.from(ruhe);
+for (let i = 0; i < 30; i++) p.bild(ziel, dt);
+// Waagerechter Schenkel (Achse x) auf Höhe der Streifenmitte, 12 cm hinter dem
+// Streifen (z = −0,12), Radius 6 cm — er kommt in einem Bild auf z = +0,03.
+const kapsel = (z) => [{ a: [-0.1, BUND - 0.2, z], b: [0.15, BUND - 0.2, z], r: 0.06 }];
+p.bild(ziel, dt, kapsel(-0.12));
+p.bild(ziel, dt, kapsel(0.03));
+let vorn = 0, hinten = 0;
+for (let i = 2; i < 2 * REIHEN; i++) {
+    const y = p.x[3 * i + 1], z = p.x[3 * i + 2];
+    if (Math.abs(y - (BUND - 0.2)) > 0.055) continue;   // nur die Reihen im Band der Kapsel (Radius 6 cm)
+    if (z >= 0.03) vorn++; else hinten++;
+}
+const zFrei = Array.from({ length: 2 * REIHEN - 2 }, (_, k) => p.x[3 * (k + 2) + 2]);
+const z_min_cm = +(Math.min(...zFrei) * 100).toFixed(1);
+// Im Bild des Durchgangs sind die Nachbarreihen noch nicht nach (Kanten vor dem Körper
+// gerechnet, gemessen 1,51); ein Bild später müssen sie es sein.
+const dehnungDurchgang = +dehnung(p).toFixed(3);
+p.bild(ziel, dt, kapsel(0.03));
+console.log(JSON.stringify({ vorn, hinten, dehnung_durchgang: dehnungDurchgang,
+                             dehnung: +dehnung(p).toFixed(3), z_min_cm }));
+"""
+
+BESCHLEUNIGUNG = VORSPANN + """
+// --- 4. Streifen mit Spiel im Anker, 0,3 s mit 4 g nach oben: Mitnahme gegen Dehnung ---
+const lauf = (werte) => {
+    const { ruhe, pendel: p } = streifen([0, -1, 0]);
+    // Spiel: der Anker greift nie
+    for (let i = 0; i < p.anker.reichweite.length; i++) p.anker.reichweite[i] *= 2;
+    const lage = (hub) => Float32Array.from(ruhe.map((w, k) => k % 3 === 1 ? w + hub : w));
+    for (let i = 0; i < 30; i++) p.bild(lage(0), dt, [], werte);
+    const inRuhe = dehnung(p);
+    let max = 0;
+    for (let i = 1; i <= 9; i++) {
+        const t = i * dt;
+        p.bild(lage(0.5 * 4 * 9.81 * t * t), dt, [], werte);
+        max = Math.max(max, dehnung(p));
+    }
+    return { ruhe: +inRuhe.toFixed(3), max: +max.toFixed(3) };
+};
+const mit = lauf(S), ohne = lauf(Object.assign({}, S, { MITNAHME: 0 }));
+console.log(JSON.stringify({ dehnung_ruhe: mit.ruhe, dehnung: mit.max, dehnung_ohne_mitnahme: ohne.max }));
+"""
+
 
 class StoffpendelHaengtTest(SimpleTestCase):
 
@@ -167,3 +232,27 @@ class StoffpendelHaengtTest(SimpleTestCase):
                          'Dehnung danach %.2f)'
                          % ('; '.join(fehler), ausgabe['zurueck_waehrend_cm'],
                             ausgabe['bausch_cm'], ausgabe['dehnung_danach']))
+
+    def test_3_eine_kapsel_die_durch_den_stoff_fegt_laesst_ihn_vor_sich(self):
+        ausgabe = MODUL.laufen(KAPSEL)
+        self.assertGreater(ausgabe['vorn'] + ausgabe['hinten'], 0,
+                           'keine Reihe auf Kapselhöhe gemessen: %s' % ausgabe)
+        self.assertEqual(ausgabe['hinten'], 0,
+                         '%d Punkte landeten HINTER der Kapsel, die von hinten durch den Stoff kam '
+                         '(tiefster z %.1f cm, Kapselvorderseite bei 3 cm): radial hinausgedrückt statt '
+                         'auf der Seite von vorhin — so spannt die Kante quer durchs Bein.'
+                         % (ausgabe['hinten'], ausgabe['z_min_cm']))
+        self.assertLess(ausgabe['dehnung'], self.DEHNUNG, 'Kante gerissen: %s' % ausgabe)
+
+    #: Mehr als das darf die Beschleunigung über die Dehnung in Ruhe hinaus bringen (gemessen +0,000).
+    MITNAHME_ZUSATZ = 0.02
+
+    def test_4_beschleunigt_der_koerper_nimmt_er_den_stoff_mit(self):
+        ausgabe = MODUL.laufen(BESCHLEUNIGUNG)
+        self.assertLess(ausgabe['dehnung'], ausgabe['dehnung_ruhe'] + self.MITNAHME_ZUSATZ,
+                        'Ein Streifen mit Spiel im Anker dehnt sich beim Beschleunigen auf das %.2f-Fache '
+                        '(in Ruhe %.2f, ohne Mitnahme %.2f): der Körper zieht weg, die Kanten kommen '
+                        'nicht nach.'
+                        % (ausgabe['dehnung'], ausgabe['dehnung_ruhe'], ausgabe['dehnung_ohne_mitnahme']))
+        # Gegenprobe im selben Lauf: ohne Mitnahme reißt es (gemessen 1,89).
+        self.assertGreater(ausgabe['dehnung_ohne_mitnahme'], 1.5, ausgabe)

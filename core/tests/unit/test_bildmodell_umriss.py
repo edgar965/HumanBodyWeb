@@ -164,3 +164,19 @@ class SperreKommtAnTest(SimpleTestCase):
         aus = pr._auf_kaefig(foto, 0.0, 1.0)
         # Nur ein Drittel der Rumpfstufen ist nan — und eine gefüllte Formung nähme die Nachbarn.
         self.assertLess(np.isnan(aus[42:111]).sum(), 30)
+
+    def test_zone_wird_interpoliert_nicht_eins(self):
+        # Ursula (20.09.2026): Gesäß ×1,09, Schrittzone ×1,0, Oberschenkel ×1,15 — die Welle.
+        pr = self._profile()
+        f = np.full(192, np.nan)
+        f[80:100] = 1.09
+        f[100:108] = np.nan  # die Zone: Anteile 0,52..0,56
+        f[108:130] = 1.15
+        aus = pr._zonen_interpoliert(f, [(0.52, 0.56)])
+        self.assertTrue(np.allclose(aus[100:108], np.linspace(1.09, 1.15, 10)[1:-1], atol=0.01), aus[98:110])
+        # Sabotage: ohne Zone bleibt die Lücke nan (und würde Faktor 1).
+        self.assertTrue(np.isnan(pr._zonen_interpoliert(f, [])[100:108]).all())
+        # Eine Zone ohne Stütze auf einer Seite bleibt, wie sie ist.
+        g = f.copy()
+        g[108:] = np.nan
+        self.assertTrue(np.isnan(pr._zonen_interpoliert(g, [(0.52, 0.56)])[100:108]).all())

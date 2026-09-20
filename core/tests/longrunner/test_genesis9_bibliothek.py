@@ -214,8 +214,12 @@ class ApiTest(SimpleTestCase):
         self.assertTrue(d['vorhanden'])
         self.assertIn('amala', [f['name'] for f in d['figuren']])
         r = self.c.get('/api/character/genesis9-figur/regler/').json()
-        self.assertEqual([b['schluessel'] for b in r['bereiche']],
-                         ['figur', 'koerper', 'kopf', 'mimik'])   # Mimik seit 18.09.2026
+        # Bereiche nach Daz-Region (20.09.2026; Inhalt: `test_genesis9_neue_pakete`).
+        schluessel = [b['schluessel'] for b in r['bereiche']]
+        self.assertEqual(schluessel[:13], ['figur', 'koerper', 'kopf', 'mimik', 'hals',
+                                           'brust', 'ruecken', 'taille', 'huefte',
+                                           'arme', 'haende', 'beine', 'fuesse'])
+        self.assertTrue(all(s.startswith('hb_') for s in schluessel[13:]), schluessel)
         # Seit 18.09.2026 hinter den 8 Starter-Hautsaetzen und 15 Augenbildern
         # die der Charakterordner (Amala G9 Skin MAT, Ursula, Kin, Anime …).
         self.assertGreaterEqual(len(r['haut']), 8)

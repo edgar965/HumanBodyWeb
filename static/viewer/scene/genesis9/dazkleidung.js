@@ -3,6 +3,7 @@ import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Genesis9netz } from '../../gemeinsam/genesis9netz.js';
 import { Genesis9lagen } from '../../gemeinsam/genesis9lagen.js';
+import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Genesis9aufbau } from '../../gemeinsam/genesis9aufbau.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { fn } from '../../gemeinsam/registrierung.js';
@@ -74,10 +75,11 @@ export class Dazkleidung {
         if (daten.fehler) throw new Error(daten.fehler);
         if (!inst.dazKleidung[kennung]) return 0;           // inzwischen ausgezogen
         Dazkleidung._weg(inst, kennung);
+        const name = await Genesis9kleidung.anzeigename(kennung);
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `${Dazkleidung.PRAEFIX}${kennung}_${nummer}`);
             netz.userData.hautgewichte = teil.hautgewichte || null;
-            netz.userData.beschriftung = `${kennung} (Daz)`;
+            netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length, 'Daz');
             inst.clothMeshes[`${Dazkleidung.PRAEFIX}${kennung}/${nummer}`] =
                 Dazkleidung.binden(inst, netz);
         });

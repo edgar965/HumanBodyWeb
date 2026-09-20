@@ -28,8 +28,6 @@ export class Proportionenansicht {
     static MERKER = 'bildmodell.prop.hoehe';
     static HOEHE = { min: 160, max: 900, vorgabe: 320 };
     static SPALTEN = ['Nr.', 'Bild', 'Löschen', 'Ersetzen', 'Neu', 'Bild vorher (Ziel)', 'Bild nachher (Modell)'];
-    /** Was der Knopf „Bild neu" rechnet: Anpassung, Restmorph, Vorschau, Speichern — ohne Textur. */
-    static SCHRITTE_BILD = ['anpassung', 'rest', 'vorschau', 'speichern'];
     static ANSICHT = { vorne: 'von vorn', seite: 'von der Seite', hinten: 'von hinten', dreiviertel: 'dreiviertel' };
 
     constructor(auftrag, katalog) {
@@ -171,24 +169,26 @@ export class Proportionenansicht {
         return tr;
     }
 
-    /** Knopf „Bild neu" (Edgar, 20.09.2026: „das errechnete Bild für DIESE Zeile neu berechnen,
-     *  das muss schnell gehen"): Anpassung, Restmorph, Vorschau und Speichern — ohne die Textur
-     *  (Minuten) —, und Vorschau wie Proportionenbilder nur für diese Ansicht. */
+    /** Knopf „Bild neu" (Edgar, 20.09.2026: „nicht das gesamte 3D-Modell, sondern eine schnelle
+     *  Bildberechnung der einzelnen Zeile"): Zielnetz mit den aktuellen Maßen geformt, Vorher- und
+     *  Nachher-Bild NUR dieser Ansicht neu gerendert — kein Lauf, das Modell bleibt (Sekunden). */
     _neuKnopf(ansicht, z) {
         const knopf = document.createElement('button');
         knopf.type = 'button';
         knopf.className = 'btn btn-sm btn-primary bildmodell-propneu';
         knopf.textContent = '↻ Bild neu';
-        knopf.title = 'Modell mit den aktuellen Maßen neu rechnen und die Bilder dieser Zeile neu rendern (ohne Textur)';
+        knopf.title = 'Nur die Bilder dieser Zeile mit den aktuellen Maßen neu rechnen (Sekunden, kein Modell-Lauf)';
         knopf.disabled = z.status === 'laeuft';
         knopf.addEventListener('click', async () => {
             knopf.disabled = true;
-            const p = window.__bildmodell?.person;
-            if (p) { await p.neuBerechnen('anpassung', Proportionenansicht.SCHRITTE_BILD, ansicht); return; }
+            knopf.textContent = '… rechnet';
             try {
-                await this.auftrag.starten({ ...(this.auftrag.zustand.optionen || {}), proportionen: this.werte() },
-                    'anpassung', {}, null, Proportionenansicht.SCHRITTE_BILD, ansicht);
-            } catch (fehler) { window.alert(`Bild neu fehlgeschlagen: ${fehler.message}`); knopf.disabled = false; }
+                await this.auftrag.zeilenbild(ansicht, this.werte());
+            } catch (fehler) {
+                window.alert(`Bild neu fehlgeschlagen: ${fehler.message}`);
+                knopf.disabled = false;
+                knopf.textContent = '↻ Bild neu';
+            }
         });
         return knopf;
     }

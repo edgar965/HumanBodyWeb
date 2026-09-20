@@ -6,18 +6,23 @@ kannst du das einbauen").
 Ein haengender Streifen aus 2 × 6 Punkten (Kantenlaenge 5 cm, 21 Kanten mit
 Diagonalen), oberste Reihe gebunden (Freiheit 0), der Rest frei:
 1. Ohne Bewegung und ohne Schwerkraft bleibt alles auf der gehaeuteten Lage.
-2. Mit Schwerkraft sackt der Saum, aber keine Kante wird laenger als ihre
-   Ruhelaenge plus 10 % (Kantenbedingungen); gebundene Punkte ruehren sich nicht.
-3. Springt die gehaeutete Lage seitlich, bleibt der Saum zurueck (Traegheit)
-   und kommt danach zurueck (Schwerkraft; seit 20.09.2026 mit Schwerkraft
-   gerechnet, die Feder ist nur noch Formgedaechtnis - `stoffpendel.js`).
+2. Mit Schwerkraft bleibt der haengende Streifen straff (Anker), keine Kante
+   wird laenger als ihre Ruhelaenge plus 10 %; gebundene Punkte ruehren sich nicht.
+3. Springt die gehaeutete Lage seitlich um 30 cm, geht der Streifen MIT
+   (Mitnahme, seit 20.09.2026 nachts: jeder freie Punkt bekommt die
+   Beschleunigung seines Ankers - Stoff haengt am Koerper, Traegheit nur
+   gegenueber der eigenen Bewegung): Auslenkung unter 2 cm, keine Kante ueber
+   Ruhelaenge plus 10 %. Gegenprobe im selben Fall: mit MITNAHME 0 bleibt der
+   Saum wie frueher ueber 15 cm zurueck. Danach zieht die Schwerkraft ihn in
+   die Lage (die Feder ist nur noch Formgedaechtnis).
 4. Eine Kapsel im Weg drueckt die Punkte auf Radius plus Abstand hinaus.
 5. Sprungschutz (18.09.2026 abends, Edgar: „kleider animieren nicht" — das
    Kleid hing in Fetzen, weil die Figur bei Sekunden je Bild weitersprang):
    `bild` setzt bei dt > SPRUNG_DT und bei Entgleisung auf die Lage.
 
-Sabotage-Gegenprobe: die Kantenschleife weglassen -> Fall 2 rot (der Saum
-faellt ungebremst); `(alt - xAlt)` weglassen -> Fall 3 rot (keine Traegheit).
+Sabotage-Gegenprobe: die Kantenschleife UND den Anker weglassen -> Fall 2 rot
+(der Saum faellt ungebremst); `(alt - xAlt)` weglassen -> Fall 3 rot (die Gegenprobe ohne Mitnahme zeigt
+keine Traegheit); die Mitnahme-Zeile weglassen -> Fall 3 rot (nicht mitgenommen).
 """
 from django.test import SimpleTestCase
 
@@ -64,27 +69,39 @@ const ruht = p.auslenkung(ziel);
 if (ruht > 1e-6) throw new Error('Ruhe wandert: ' + ruht);
 if (p.kanten.a.length !== 21) throw new Error('Kanten: ' + p.kanten.a.length);
 
-// --- 2. Schwerkraft: der Saum sackt, die Kanten halten ---------------------
+// --- 2. Schwerkraft: der haengende Streifen bleibt straff, die Kanten halten -
+//        (seit 20.09.2026: der Reichweiten-Anker haelt jeden Punkt exakt auf
+//        seinem Stoffweg zum Bund - ein straff haengender Streifen sackt nicht
+//        mehr, vorher gab die Nachgiebigkeit der vier Kantendurchgaenge ein
+//        paar Millimeter nach. Dass die Schwerkraft wirkt, zeigt Fall 1 in
+//        `test_js_stoffpendel_haengt`: ein waagerechter Streifen faellt.)
 p = bau();
 for (let i = 0; i < 90; i++) p.schritt(ziel, dt);
 const sack = p.auslenkung(ziel);
 const dehnung = laengen(p);
-if (!(sack > 0.005)) throw new Error('kein Sacken: ' + sack);
+if (!(sack < 0.005)) throw new Error('haengt nicht straff: ' + sack);
 if (!(dehnung < 1.10)) throw new Error('Kante gedehnt: ' + dehnung);
 if (Math.abs(p.x[1] - 1.0) > 1e-9 || Math.abs(p.x[4] - 1.0) > 1e-9) {
     throw new Error('gebundene Reihe bewegt');
 }
 
-// --- 3. Sprung der Lage: Traegheit, dann Rueckkehr -------------------------
-//        MIT Schwerkraft (seit 20.09.2026): zurueck bringt den haengenden
-//        Streifen die Schwerkraft, nicht mehr die Feder - die ist nur noch
-//        Formgedaechtnis.
+// --- 3. Sprung der Lage: Mitnahme, dann Rueckkehr --------------------------
+//        Der Streifen geht mit seinem Anker (MITNAHME 1); ohne Mitnahme
+//        (die alte Welt, MITNAHME 0) bleibt der Saum zurueck. Zurueck in die
+//        Lage bringt ihn die Schwerkraft, die Feder ist nur Formgedaechtnis.
 p = bau();
 for (let i = 0; i < 30; i++) p.schritt(ziel, dt);
 const versetzt = Float32Array.from(ruhe.map((w, k) => k % 3 === 0 ? w + 0.3 : w));
 p.schritt(versetzt, dt);
-const sprung = p.auslenkung(versetzt);
-if (!(sprung > 0.15)) throw new Error('keine Traegheit: ' + sprung);
+const sprung = p.auslenkung(versetzt), sprungDehnung = laengen(p);
+if (!(sprung < 0.02)) throw new Error('nicht mitgenommen: ' + sprung);
+if (!(sprungDehnung < 1.10)) throw new Error('beim Mitnehmen gedehnt: ' + sprungDehnung);
+const ohneMitnahme = Object.assign({}, S, { MITNAHME: 0 });
+let p2 = bau();
+for (let i = 0; i < 30; i++) p2.schritt(ziel, dt, [], ohneMitnahme);
+p2.schritt(versetzt, dt, [], ohneMitnahme);
+const traege = p2.auslenkung(versetzt);
+if (!(traege > 0.15)) throw new Error('ohne Mitnahme keine Traegheit: ' + traege);
 for (let i = 0; i < 120; i++) p.schritt(versetzt, dt);
 const danach = p.auslenkung(versetzt);
 if (!(danach < 0.02)) throw new Error('kehrt nicht zurueck: ' + danach);
@@ -116,7 +133,8 @@ if (!ent.zurueckgesetzt || p.auslenkung(weit) > 1e-9) throw new Error('Entgleisu
 
 console.log(JSON.stringify({
     ok: true, sack_cm: +(sack * 100).toFixed(1), dehnung: +dehnung.toFixed(3),
-    sprung_cm: +(sprung * 100).toFixed(1), danach_cm: +(danach * 100).toFixed(2),
+    sprung_cm: +(sprung * 100).toFixed(2), traege_cm: +(traege * 100).toFixed(1),
+    danach_cm: +(danach * 100).toFixed(2),
     kapsel_cm: +(naechster * 100).toFixed(2), sprungschutz: true}));
 """
 
@@ -129,6 +147,7 @@ class StoffpendelTest(SimpleTestCase):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)
         self.assertLess(ausgabe['dehnung'], 1.10)
-        self.assertGreater(ausgabe['sprung_cm'], 15)
+        self.assertLess(ausgabe['sprung_cm'], 2)
+        self.assertGreater(ausgabe['traege_cm'], 15)
         self.assertLess(ausgabe['danach_cm'], 2)
         self.assertTrue(ausgabe['sprungschutz'])

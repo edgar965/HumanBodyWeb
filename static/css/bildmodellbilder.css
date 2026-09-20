@@ -49,6 +49,26 @@
 .bildmodell-propgross { position: relative; margin: 0; height: 100%; max-width: 100%; background: var(--bildmodell-bildgrund); border-radius: 6px; }
 .bildmodell-propliste { flex: 0 0 250px; overflow: auto; font-size: 0.8rem; border-left: 1px solid var(--border, #3a4250); padding-left: 10px; }
 .bildmodell-proplistekopf { color: var(--text-muted, #999); margin-bottom: 6px; }
+.bildmodell-propalle { margin-bottom: 8px; width: 100%; }
+/* Das 3D-Popup: schwebt IM modalen Dialog (ein zweiter Dialog wäre unbedienbar), rechts am Rand, vergrößerbar. */
+.bildmodell-3dpopup { position: fixed; right: 12px; top: 12px; width: 440px; height: calc(100vh - 24px); min-width: 300px; min-height: 360px;
+    max-width: 90vw; max-height: 98vh; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; resize: both; overflow: hidden;
+    background: var(--bg-card, #1e2430); color: var(--text, #eee); border: 1px solid var(--border, #3a4250); border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); }
+.bildmodell-3dpopup[hidden] { display: none; }
+.bildmodell-3dkopf { display: flex; align-items: center; gap: 10px; }
+.bildmodell-3dkopf strong { flex: 1 1 auto; }
+.bildmodell-3dgitter { display: flex; align-items: center; gap: 4px; margin: 0; font-size: 0.85rem; color: var(--text-muted, #aaa); }
+.bildmodell-3dcanvas { flex: 0 0 55%; width: 100%; min-height: 200px; background: var(--bg-darker, #181825); border-radius: 6px; touch-action: none; }
+.bildmodell-3dtext { font-size: 0.75rem; }
+.bildmodell-3dregler { flex: 1 1 auto; overflow: auto; font-size: 0.8rem; }
+.bildmodell-3dzeile { display: grid; grid-template-columns: 7.5em 1fr 4.6em auto 3.2em; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid var(--border, #2c3340); }
+.bildmodell-3dzeile .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bildmodell-3dzeile.eingestellt .name { color: #a8ff9c; }
+.bildmodell-3dzeile input[type="range"] { width: 100%; min-width: 0; }
+.bildmodell-3dzeile input[type="number"] { width: 100%; padding: 1px 4px; }
+.bildmodell-3dzeile .btn { padding: 0 6px; }
+.bildmodell-3dzeile .nachher { color: var(--text-muted, #999); font-size: 0.72rem; white-space: nowrap; }
 .bildmodell-proplistezeile { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name knopf" "wert knopf" "stand knopf"; column-gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--border, #2c3340); }
 .bildmodell-proplistezeile .name { grid-area: name; font-weight: 600; }
 .bildmodell-proplistezeile.drin .name { cursor: pointer; }
@@ -67,10 +87,8 @@
 .bildmodell-propgriffe .prop-griff { stroke: #fff; stroke-width: calc(1 * var(--s, 1)); cursor: crosshair; }
 .bildmodell-propgriffe g:hover .prop-griff, .bildmodell-propgriffe .prop-aktiv .prop-griff { stroke-width: calc(2.5 * var(--s, 1)); }
 .bildmodell-propgriffe .prop-aktiv line { stroke-width: calc(5 * var(--s, 1)); }
-.bildmodell-propgriffe .prop-loeschen { fill: #ff8080; font-size: calc(20px * var(--s, 1)); font-weight: 700; cursor: pointer; }
-.bildmodell-propgriffe .prop-loeschen:hover { fill: #fff; }
 .bildmodell-propgriffe:focus { outline: none; }
-.bildmodell-propgriffe text { font-size: calc(18px * var(--s, 1)); }
+.bildmodell-propgriffe text { font-size: calc(11px * var(--s, 1)); stroke-width: calc(2px * var(--s, 1)); }  /* kleiner zu den Pfeilen (Edgar, 20.09.2026) */
 .bildmodell-dialog tr.prop-aktiv th { color: #a8ff9c; }
 /* Die Tabelle der Bilder: eine Zeile je Hauptbild, Bilder in Bildhöhe, Knöpfe oben in der Zelle. */
 .bildmodell-proptabelle { width: auto; border-collapse: collapse; }

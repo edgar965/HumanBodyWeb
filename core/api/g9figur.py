@@ -227,6 +227,8 @@ class G9figur:
                 continue
             for name, kanaele in G9garderobe.griff(kennung).items():
                 drehung.setdefault(name, {}).update(kanaele)
+            # Dark Fantasy Weapons (Genesis 8) greifen ueber Posensteuerungen.
+            regler.update(G9garderobe.griffregler(kennung))
         return G9formung.aus_abfrage(regler, drehung)
 
     @staticmethod

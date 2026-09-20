@@ -57,10 +57,9 @@ export class Bildmodellauftrag {
 
     /** `bis`: nur bis zu diesem Schritt (die Sichtung neuer Dateien, 19.09.2026);
      *  `schritte`: genau diese Schritte („Textur anpassen" = [sichtung,] textur). */
-    async starten(optionen, ab, fest, bis = null, schritte = null, ansicht = null) {
+    async starten(optionen, ab, fest, bis = null, schritte = null) {
         const rumpf = { optionen, ab, fest: fest || {}, bis };
         if (schritte && schritte.length) { rumpf.schritte = schritte; ab = schritte[0]; }
-        if (ansicht) rumpf.ansicht = ansicht;  // nur diese Ansicht rendern (Knopf je Zeile)
         const antwort = await Serverabruf.senden(this.adresse('starten/'), rumpf);
         if (antwort.error) throw new Error(antwort.error);
         this.zustand.status = 'laeuft';
@@ -71,6 +70,14 @@ export class Bildmodellauftrag {
         this.zustand.error = '';
         this._melden();
         this.verfolgen();
+        return antwort;
+    }
+
+    /** Knopf „Bild neu" je Zeile: nur die Bilder dieser Ansicht, synchron in Sekunden, kein Lauf. */
+    async zeilenbild(ansicht, proportionen) {
+        const antwort = await Serverabruf.senden(this.adresse(`zeilenbild/${ansicht}/`), { proportionen: proportionen || {} });
+        if (antwort.error) throw new Error(antwort.error);
+        await this.nachfragen();
         return antwort;
     }
 

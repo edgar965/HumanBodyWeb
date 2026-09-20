@@ -287,8 +287,24 @@ class Genesis9BrauenUndHautwahl(SimpleTestCase):
     def test_12_reglerplan_bereiche(self):
         self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Head/Mouth',
                                                'label': 'Jaw Open'}), 'mimik')
-        self.assertIsNone(G9reglerplan.bereich({'gruppe': '/Pose Controls/Arms',
-                                                'label': 'Arms Up'}))
+        # Posensteuerungen des Koerpers seit 20.09.2026 (Edgar: „Brust, Taille …
+        # baue die ein") — im Bereich ihres Koerperteils, der Torso am Label
+        # geteilt (Body Shapes: `test_genesis9_reglerbereiche`).
+        self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Arms',
+                                               'label': 'Arms Up'}), 'arme')
+        self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Torso/Feminine',
+                                               'label': 'Breasts Up-Down'}), 'brust')
+        self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Torso',
+                                               'label': 'Waist Bend'}), 'taille')
+        self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Hip',
+                                               'label': 'Flex Glute Clench Left'}),
+                         'huefte')
+        self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Feet/Left',
+                                               'label': 'Left Foot Roll'}), 'fuesse')
+        self.assertIsNone(G9reglerplan.bereich({'gruppe': '/Pose Controls/Quatsch',
+                                                'label': 'x'}))
+        self.assertIsNone(G9reglerplan.bereich({'gruppe': '/Pose Controls',
+                                                'label': 'x'}))
         self.assertIsNone(G9reglerplan.bereich({'gruppe': '/Pose Controls/Head/Mouth/'
                                                           'Base Anime', 'label': 'x'}))
         self.assertEqual(G9reglerplan.bereich({'gruppe': '/Morphs',

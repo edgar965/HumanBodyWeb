@@ -22,15 +22,19 @@
  * ziehen"): × an der Linie oder in der Liste rechts nimmt den MARKER aus diesem
  * Bild (`entfernt`, je Foto gemerkt), ⤓ zieht ein fehlendes Maß ins Bild
  * (`markerSetzen`: Linie an der Stelle, Länge = Wert). Das Fenster ist
- * vergrößerbar, die Größe steht im `localStorage`. „Übernehmen" legt Werte UND die gezogenen Linien der
- * Fotos am Auftrag ab (POST `proportionen/`), „… und neu berechnen" startet ab
- * „Anpassung" (ab „Zielnetz", wenn Größe oder Gewicht geändert sind).
+ * vergrößerbar, die Größe steht im `localStorage`. „Übernehmen" und „… und neu
+ * berechnen": `Proportionenuebernahme`. Der Knopf „3D-Modell" öffnet das
+ * 3D-Popup (`Proportionen3d`): das Zielnetz folgt jedem Pfeil, jeder Zahl und
+ * jedem Schieber dort (Edgar, 20.09.2026: „das 3D Modell interaktiv anpassen,
+ * wenn ich die Pfeile ändere … wie die Morph-Slider bei Genesis").
  */
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Proportionen3d } from './proportionen3d.js';
 import { Proportionenbildtab } from './proportionenbildtab.js';
 import { Proportionenlinien } from './proportionenlinien.js';
 import { Proportionenliste } from './proportionenliste.js';
 import { Proportionenmasstab } from './proportionenmasstab.js';
+import { Proportionenuebernahme } from './proportionenuebernahme.js';
+import { Proportionenvorschlag } from './proportionenvorschlag.js';
 import { Dialoggroesse } from './dialoggroesse.js';
 
 export class Proportionendialog {
@@ -43,7 +47,8 @@ export class Proportionendialog {
     constructor(auftrag, katalog, aenderung) {
         this.auftrag = auftrag;
         this.katalog = katalog || {};
-        this.aenderung = aenderung || (() => {});
+        // Jede Änderung geht an die Seite (Tabelle) und ans 3D-Popup, wenn es offen ist.
+        this.aenderung = () => { (aenderung || (() => {}))(); this.dreid?.nachziehen(); };
         this.dialog = document.getElementById('proportionen-dialog');
         this.eingaben = { ...((auftrag.zustand.optionen || {}).proportionen || {}) };
         this.quellen = {};
@@ -59,13 +64,16 @@ export class Proportionendialog {
             (id, k, linie) => this.lageGezogen(id, k, linie), k => this.markerLoeschen(k));
         this.liste = new Proportionenliste(this.dialog.querySelector('#proportionen-bildliste'), this.katalog, this.bild,
             (k, punkt) => this.markerSetzen(k, punkt), k => this.markerLoeschen(k),
-            k => { this.bild.aktiv = k; this.bild.zeichnen(); this.listeZeigen(); });
+            k => { this.bild.aktiv = k; this.bild.zeichnen(); this.listeZeigen(); }, () => this.alleSetzen());
+        this.dreid = new Proportionen3d(this.dialog.querySelector('#proportionen-3d'), auftrag, this.katalog, this);
+        this.dialog.querySelector('[data-tat="3d"]')?.addEventListener('click', () => this.dreid.umschalten());
+        this.dialog.addEventListener('close', () => { this._dreidWar = this.dreid.offen; this.dreid.schliessen(); });
         Dialoggroesse.merken(this.dialog, Proportionendialog.GROESSE);
         for (const knopf of this.dialog.querySelectorAll('[data-tab-knopf]')) {
             knopf.addEventListener('click', () => this.reiter(knopf.dataset.tabKnopf));
         }
-        this.dialog.querySelector('[data-tat="uebernehmen"]')?.addEventListener('click', () => this.uebernehmen(false));
-        this.dialog.querySelector('[data-tat="rechnen"]')?.addEventListener('click', () => this.uebernehmen(true));
+        this.dialog.querySelector('[data-tat="uebernehmen"]')?.addEventListener('click', () => Proportionenuebernahme.uebernehmen(this, false));
+        this.dialog.querySelector('[data-tat="rechnen"]')?.addEventListener('click', () => Proportionenuebernahme.uebernehmen(this, true));
         this.dialog.querySelector('[data-tat="alle-loeschen"]')?.addEventListener('click', () => this.alleLoeschen());
         this.dialog.querySelector('[data-tat="schliessen"]')?.addEventListener('click', () => this.dialog.close());
     }
@@ -169,6 +177,7 @@ export class Proportionendialog {
         this.reiter(q ? 'bild' : 'masse');
         this.dialog.showModal();
         if (mass) this.tabelle.querySelector(`tr[data-mass="${mass}"]`)?.classList.add('prop-aktiv');
+        if (this._dreidWar) this.dreid.oeffnen();
     }
 
     // --------------------------------------------------------- Änderung
@@ -179,6 +188,13 @@ export class Proportionendialog {
         this._strecken(k, wert);
         this.bild.zeichnen();
         this.aenderung();
+    }
+
+    /** Aus dem 3D-Popup (Schieber): wie getippt, dazu Tabellenfeld und Liste nachziehen. */
+    wertGeschoben(k, cm) {
+        this.masstab.setzen(k, cm);
+        this.wertGetippt(k, cm);
+        this.listeZeigen();
     }
 
     /** Aus dem Bild: Lage merken, Wert = Länge, Schwesterlinien auf die Länge, Tabelle nachziehen. */
@@ -209,7 +225,7 @@ export class Proportionendialog {
     }
 
     /** Ein Maß ins gezeigte Bild: waagerecht um `punkt` (sonst Bildmitte), Länge = Wert in cm. */
-    markerSetzen(k, punkt) {
+    markerSetzen(k, punkt, zeichnen = true) {
         const q = this.bild.quelle;
         if (!q || (this.lagen[q.id] || {})[k]) return;
         const cm = Number(this.wert(q.id, k)) || Proportionendialog.NEU_CM;
@@ -220,6 +236,22 @@ export class Proportionendialog {
         (this.start[q.id] = this.start[q.id] || {})[k] = Proportionendialog._kopie(linie);
         if (this.entfernt[q.id]) this.entfernt[q.id].delete(k);
         this.bild.aktiv = k;
+        if (!zeichnen) return;
+        this.bild.zeichnen();
+        this.listeZeigen();
+        this.aenderung();
+    }
+
+    /** Alle fehlenden Maße der Ansicht ins gezeigte Bild — Lage aus der Ziel-Ansicht (`Proportionenvorschlag`). */
+    alleSetzen() {
+        const q = this.bild.quelle;
+        if (!q) return;
+        const reihe = (this.daten().ansichten || {})[q.ansicht];
+        for (const m of this.katalog.proportionen || []) {
+            if ((this.lagen[q.id] || {})[m.schluessel]) continue;
+            const punkt = Proportionenvorschlag.lage(m.schluessel, q, reihe, this.lagen[q.id] || {});
+            if (punkt) this.markerSetzen(m.schluessel, punkt, false);
+        }
         this.bild.zeichnen();
         this.listeZeigen();
         this.aenderung();
@@ -239,42 +271,6 @@ export class Proportionendialog {
         this.aenderung();
     }
 
-    /** Je Foto: Linien der Maße mit Eingabe und alle von Hand gesetzten, dazu die entfernten Marker. */
-    linienZumSpeichern() {
-        const werte = this.werte();
-        const aus = {};
-        for (const [id, q] of Object.entries(this.quellen)) {
-            if (q.art !== 'foto') continue;
-            const linien = {};
-            for (const [k, linie] of Object.entries(this.lagen[id] || {})) {
-                const vomServer = JSON.stringify((this.serverStart[id] || {})[k] || null);
-                if (werte[k] !== undefined || vomServer !== JSON.stringify(linie)) linien[k] = linie;
-            }
-            const entfernt = [...(this.entfernt[id] || [])];
-            if (Object.keys(linien).length || entfernt.length) aus[q.datei] = { linien, entfernt };
-        }
-        return aus;
-    }
-
-    async uebernehmen(rechnen) {
-        const proportionen = this.werte();
-        const linien = this.linienZumSpeichern();
-        try {
-            const antwort = await Serverabruf.senden(this.auftrag.adresse('proportionen/'), { proportionen, linien });
-            if (antwort.error) throw new Error(antwort.error);
-            this.auftrag.zustand.optionen = { ...(this.auftrag.zustand.optionen || {}), proportionen: antwort.proportionen,
-                                              proportionen_linien: antwort.linien };
-            for (const k of Object.keys(this.eingaben)) delete this.eingaben[k];
-            Object.assign(this.eingaben, antwort.proportionen);
-            this.dialog.close();
-            this.aenderung();
-            if (rechnen) {
-                // Größe/Gewicht unverändert: das Zielnetz steht, ab „Anpassung" reicht (spart den Zielschritt).
-                const p = window.__bildmodell?.person;
-                if (p) await p.neuBerechnen(p.unveraendert() ? 'anpassung' : 'ziel');
-            }
-        } catch (fehler) {
-            window.alert(`Proportionen nicht übernommen: ${fehler.message}`);
-        }
-    }
+    /** Für Aufrufer von außen (Tests, Seite): die Linien, die „Übernehmen" speichert. */
+    linienZumSpeichern() { return Proportionenuebernahme.linien(this); }
 }

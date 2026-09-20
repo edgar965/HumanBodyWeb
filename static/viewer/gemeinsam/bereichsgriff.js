@@ -24,10 +24,15 @@
  * `seite` sagt, an welchem Rand des Bereichs der Griff sitzt: `'rechts'`
  * (Bereich links im Fenster, wächst nach rechts) oder `'links'` (Bereich
  * rechts im Fenster, wächst nach links).
+ *
+ * Die Achse steckt in drei Haken (`CURSOR`, `_koordinate`, `_anwenden`) und
+ * dem Nachziehen der Leinwand (`_nachziehen`) — `Hoehengriff` setzt sie für
+ * die Unterkante eines Felds um (20.09.2026), alles andere ist geteilt.
  */
 export class Bereichsgriff {
 
     static AKTIV = 'aktiv';
+    static CURSOR = 'col-resize';
 
     constructor({ griff, bereich, seite = 'rechts', min = 200, max = 600,
                   vorgabe = 300, schluessel = null, variable = null }) {
@@ -58,14 +63,25 @@ export class Bereichsgriff {
     setzen(breite, merken = true) {
         this.breite = Bereichsgriff.begrenzen(breite, this.min, this.max);
         const px = `${this.breite}px`;
-        this.bereich.style.width = px;
+        this._anwenden(px);
         if (this.variable) {
             document.documentElement.style.setProperty(this.variable, px);
         }
         if (merken) this._merken();
-        window.dispatchEvent(new Event('resize'));
+        this._nachziehen();
         return this.breite;
     }
+
+    // -- Achse (Haken für `Hoehengriff`) ----------------------------------------
+
+    /** Die Mauslage entlang der Achse des Griffs. */
+    _koordinate(e) { return e.clientX; }
+
+    /** Das Maß am Bereich setzen. */
+    _anwenden(px) { this.bereich.style.width = px; }
+
+    /** Nach jeder Änderung: die Leinwand zieht am Fenster-`resize` nach. */
+    _nachziehen() { window.dispatchEvent(new Event('resize')); }
 
     /** Die neue Breite aus Start und Mausweg — richtungsabhängig. */
     static naechsteBreite(startBreite, weg, richtung, min, max) {
@@ -81,9 +97,9 @@ export class Bereichsgriff {
     // -- Ziehen ---------------------------------------------------------------
 
     _beginn(e) {
-        this._start = { x: e.clientX, breite: this.breite };
+        this._start = { x: this._koordinate(e), breite: this.breite };
         this.griff.classList.add(Bereichsgriff.AKTIV);
-        document.body.style.cursor = 'col-resize';
+        document.body.style.cursor = this.constructor.CURSOR;
         document.body.style.userSelect = 'none';
         document.addEventListener('mousemove', this._bewegen);
         document.addEventListener('mouseup', this._loslassen);
@@ -93,7 +109,7 @@ export class Bereichsgriff {
     _ziehen(e) {
         if (!this._start) return;
         this.setzen(Bereichsgriff.naechsteBreite(
-            this._start.breite, e.clientX - this._start.x,
+            this._start.breite, this._koordinate(e) - this._start.x,
             this.richtung, this.min, this.max), false);
     }
 

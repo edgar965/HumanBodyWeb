@@ -155,10 +155,16 @@ class G9antworten(G9antwortvorrat):
         for quelle in (rumpf, eintrag):
             if isinstance(quelle, dict) and isinstance(quelle.get('regler'), dict):
                 regler.update(quelle['regler'])
-        if not any(str(k).startswith('eigen:') for k in regler):
-            return 0
-        from Genesis9.eigenmorphe import G9eigenmorphe
-        return G9eigenmorphe.stand()
+        stand = 0
+        if any(str(k).startswith('eigen:') for k in regler):
+            from Genesis9.eigenmorphe import G9eigenmorphe
+            stand = G9eigenmorphe.stand()
+        # HB-Morphs (`hb:`, 20.09.2026) genauso: `hbmorphe_bauen` schreibt
+        # dieselben Kennungen neu — der Bestand traegt den Stand.
+        if any(str(k).startswith('hb:') for k in regler):
+            from Genesis9.hbmorphe import G9hbmorphe
+            stand = (stand, G9hbmorphe.stand())
+        return stand
 
     @staticmethod
     def _sicher(name):

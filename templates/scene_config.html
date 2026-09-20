@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{% fassungspfad 'css/viewer_seitenleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/menueleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hoehengriff.css' %}">
 {# Der Stoffschwung-Worker (dForce-Kleidung) liegt außerhalb des Bündels: Pfad mit Fassung. #}
 <meta name="stoffarbeiter" content="{% fassungspfad 'viewer/gemeinsam/stoffarbeiter.js' %}">
 <style>
@@ -1713,13 +1714,7 @@
 
             {% include "_garmentcode_panel.html" %}
         </div><!-- /panel-tab-content -->
-
-        <!-- Status -->
-        <div class="status-bar">
-            <span id="vertex-count">—</span> vertices
-            &nbsp;|&nbsp; <span id="fps-display">—</span> fps
-            &nbsp;|&nbsp; <span id="char-count">0</span> Charaktere
-        </div>
+        {# Die Statuszeile („vertices | fps | Charaktere") ist weg (Edgar, 20.09.2026: „diese Anzeige links unter den Tools mach weg"); die Schreiber in `charakterliste.js` und `szenenschleife.js` vertragen das fehlende Feld. #}
     </div><!-- /viewer-panel -->
         <div class="canvas-wrap">
             <canvas id="viewer-canvas"></canvas>

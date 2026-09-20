@@ -49,7 +49,9 @@ class Bildmodellproportionen:
         gelenke = {e['name']: np.asarray(e['kopf'], float) for e in f.skelett().gelenkknochen()}
         return np.asarray(p, float), gelenke
 
-    def alle(self, melder=None):
+    def alle(self, melder=None, nur=None):
+        """`nur`: nur diese Ansicht rendern (Knopf „Bild neu" je Zeile, `Bildmodellzeilenbild`),
+        die anderen Einträge bleiben aus dem letzten Ergebnis stehen."""
         from Genesis9.proportionen import G9proportionen
         from Genesis9.proportionenbild import G9proportionenbild
 
@@ -64,9 +66,6 @@ class Bildmodellproportionen:
         bilder = {'ziel': G9proportionenbild(bild_p), 'modell': G9proportionenbild(modell_p)}
         befunde = {'ziel': ziel, 'modell': modell}
         ordner = self.ablage.ergebnis()
-        # `nur_ansicht` (Knopf „Bild neu" je Zeile, 20.09.2026): nur diese Ansicht rendern,
-        # die anderen Einträge bleiben aus dem letzten Ergebnis stehen.
-        nur = (self.job.optionen or {}).get('nur_ansicht')
         alt = ((self.job.ergebnis.get('proportionen') or {}).get('ansichten') or {}) if nur else {}
         ansichten = {k: v for k, v in alt.items() if k in self.ANSICHTEN}
         for i, ansicht in enumerate(self.ANSICHTEN):

@@ -58,7 +58,11 @@ export class Ergebnisansicht {
         const s = e.schaetzung;
         if (s) zeilen.push(['Schätzung', `${s.anzahl} Hauptbild(er), ${s.mischung}; Grundfigur ${s.geschlecht}${s.kopf ? '; FLAME-Kopf' : ''}`]);
         const t = e.ziel;
-        if (t) zeilen.push(['Zielnetz', `${t.hoehe_ziel_cm ?? t.hoehe_cm} cm, ${t.paarung ? t.paarung.zugeordnet + ' von ' + t.paarung.punkte + ' Punkten zugeordnet' : ''}${t.ohne_betas ? ' — ohne Schätzung (Grundfigur)' : ''}`]);
+        if (t && t.quelle === 'silhouette') {
+            // Weg „Silhouetten" (20.09.2026): Grundfigur → Umriss → Regler in Runden, ohne 3D-Schätzer.
+            const runden = (t.runden || []).map(r => `${r.runde}: Umriss vorn ${(r.umriss?.vorn || {}).vorher_mm ?? '–'} mm, Seite ${(r.umriss?.seite || {}).vorher_mm ?? '–'} mm → Regler ${r.rms_mm} mm`).join(' · ');
+            zeilen.push(['Zielnetz', `${t.hoehe_ziel_cm} cm aus den Silhouetten (${t.basis}${t.kopf === 'schaetzer' ? ', Kopf vom Gesichtsschätzer' : ''}); ${runden}`]);
+        } else if (t) zeilen.push(['Zielnetz', `${t.hoehe_ziel_cm ?? t.hoehe_cm} cm, ${t.paarung ? t.paarung.zugeordnet + ' von ' + t.paarung.punkte + ' Punkten zugeordnet' : ''}${t.ohne_betas ? ' — ohne Schätzung (Grundfigur)' : ''}`]);
         const a = e.anpassung;
         if (a) {
             zeilen.push(['Anpassung', `${a.punkte_rms_mm} mm RMS, Gelenke ${a.gelenke_mm ?? '–'} mm, ${Object.keys(a.regler || {}).length} Regler aktiv von ${a.variablen} (${a.reglersatz}, ${a.basis})`]);

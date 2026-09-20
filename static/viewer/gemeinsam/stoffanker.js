@@ -63,7 +63,7 @@ export class Stoffanker {
             if (r <= 0 || a < 0 || a === i || frei[i] <= 0) continue;
             const o = 3 * i, p = 3 * a;
             const dx = x[o] - x[p], dy = x[o + 1] - x[p + 1], dz = x[o + 2] - x[p + 2];
-            const d = Math.hypot(dx, dy, dz);
+            const d = Math.sqrt(dx * dx + dy * dy + dz * dz);   // kein Math.hypot: siehe `Stoffkanten`
             if (d <= r) continue;
             const s = r / d;
             x[o] = x[p] + dx * s; x[o + 1] = x[p + 1] + dy * s; x[o + 2] = x[p + 2] + dz * s;

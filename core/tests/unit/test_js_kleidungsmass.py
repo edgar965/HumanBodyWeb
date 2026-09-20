@@ -10,9 +10,16 @@ Kunstdaten, kein Netz, kein Retarget:
 3. Tiefe hinter einer Flaeche: ein Punkt vor der Flaeche positiv, dahinter
    negativ; `wahl` schliesst Flaechenpunkte aus (NaN).
 4. Kennzahlen ohne NaN.
+5. `auswaerts` (20.09.2026): Ein Wuerfel (8 Ecken, Normalen von der Mitte weg)
+   bleibt, wie er ist (+1); derselbe Wuerfel mit umgedrehten Normalen wird
+   umgedreht (-1) und zeigt danach wieder nach aussen. Anlass: HumanBodys
+   feines Koerpernetz ist gegen seine Normalen gewickelt - die Probe meldete
+   das Kleid „39 mm in der Haut", das 6 mm davor liegt, und die Haut als
+   Stoffkoerper zog den Rock in den Bauch.
 
 Sabotage-Gegenprobe: in `naechster` `d2 = Infinity` statt `weite²` -> Fall 2
-rot (der ferne Punkt bekaeme einen echten Abstand statt der Weite).
+rot (der ferne Punkt bekaeme einen echten Abstand statt der Weite); in
+`auswaerts` `summe >= 0` durch `true` ersetzen -> Fall 5 rot.
 """
 from django.test import SimpleTestCase
 
@@ -51,7 +58,18 @@ if (!Number.isNaN(tw[0])) throw new Error('wahl');
 // 4. Kennzahlen ohne NaN
 const z = K.kennzahlen([3, NaN, 1, 2]);
 if (z.n !== 3 || z.min !== 1 || z.max !== 3) throw new Error('Kennzahlen ' + JSON.stringify(z));
-console.log(JSON.stringify({ ok: true, kanten: k.a.length, nah_cm: +(nah.d * 100).toFixed(2), tiefe_mm: +(t[1] * 1000).toFixed(1) }));
+// 5. auswaerts: Wuerfel um (1, 2, 3), Normalen von der Mitte weg / nach innen
+const ecken = [], nach = [], w3 = Math.sqrt(3);
+for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+    ecken.push(1 + sx, 2 + sy, 3 + sz); nach.push(sx / w3, sy / w3, sz / w3);
+}
+const aussen = Float64Array.from(nach), innen = Float64Array.from(nach.map(v => -v));
+const s1 = K.auswaerts(Float32Array.from(ecken), aussen, 8);
+const s2 = K.auswaerts(Float32Array.from(ecken), innen, 8);
+if (s1 !== 1 || Math.abs(aussen[0] - nach[0]) > 1e-9) throw new Error('auswaerts: aussen bewegt: ' + s1);
+if (s2 !== -1 || Math.abs(innen[0] - nach[0]) > 1e-9) throw new Error('auswaerts: innen bleibt: ' + s2);
+console.log(JSON.stringify({ ok: true, kanten: k.a.length, nah_cm: +(nah.d * 100).toFixed(2),
+                             tiefe_mm: +(t[1] * 1000).toFixed(1), auswaerts: [s1, s2] }));
 """
 
 
@@ -64,6 +82,7 @@ class KleidungsmassTest(SimpleTestCase):
         self.assertTrue(ausgabe.get('ok'), ausgabe)
         self.assertEqual(ausgabe['kanten'], 5)
         self.assertLess(ausgabe['tiefe_mm'], 0)
+        self.assertEqual(ausgabe['auswaerts'], [1, -1])
 
     def test_die_probe_ist_in_der_szene_registriert(self):
         from django.conf import settings
