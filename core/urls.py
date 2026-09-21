@@ -144,6 +144,8 @@ urlpatterns = [
          name='bildmodell_kameras'),
     path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/vorschau/',
          Bildmodellfreistellerendpunkte.vorschau, name='bildmodell_freisteller_vorschau'),
+    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/grundlage/',
+         Bildmodellfreistellerendpunkte.grundlage, name='bildmodell_freisteller_grundlage'),
     path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/speichern/',
          Bildmodellfreistellerendpunkte.speichern, name='bildmodell_freisteller_speichern'),
     path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/zuruecksetzen/',

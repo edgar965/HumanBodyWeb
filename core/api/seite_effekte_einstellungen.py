@@ -18,7 +18,6 @@ from effekte.figurparameter import Figurparameter
 
 from ..daten.einstellungsfelder import Einstellungsfelder
 from ..dienste.animationsauswahl import Animationsauswahl
-from ..dienste.modellvorlagen import Modellvorlagen
 from ..models import AppSettings, Effektauftrag
 
 
@@ -50,7 +49,6 @@ class EffekteEinstellungenSeite(View):
             self.VORLAGE,
             {
                 'settings': s,
-                'available_models': Modellvorlagen.namen(),
                 'pipelines': Effektauftrag.PIPELINE_CHOICES,
                 'windrichtungen': list(Figurparameter.WAHLEN['windrichtung'][1]),
                 **anim_teil,

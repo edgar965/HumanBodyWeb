@@ -31,25 +31,25 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
         max_length=200,
         default='femaleWithClothes',
         blank=True,
-        help_text='Default model preset for Konfiguration page',
+        help_text=Einstellungsfelder.hilfetext('default_model_config'),
     )
     default_model_scene = models.CharField(
         max_length=200,
         default='femaleWithClothes',
         blank=True,
-        help_text='Default model preset for Szene page',
+        help_text=Einstellungsfelder.hilfetext('default_model_scene'),
     )
     default_model_animations = models.CharField(
         max_length=200,
         default='femaleWithClothes',
         blank=True,
-        help_text='Default model preset for Animationen page',
+        help_text=Einstellungsfelder.hilfetext('default_model_animations'),
     )
     default_model_result = models.CharField(
         max_length=200,
         default='femaleWithClothes',
         blank=True,
-        help_text='Default model preset for Process result page',
+        help_text=Einstellungsfelder.hilfetext('default_model_result'),
     )
     show_rig_config = models.BooleanField(
         default=False,
@@ -226,7 +226,7 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
         max_length=100,
         default='FemaleNew',
         blank=True,
-        help_text='Default HumanBody model preset for SMPL test page',
+        help_text=Einstellungsfelder.hilfetext('smpl_default_humanbody_preset'),
     )
 
     # --- Theatre.js defaults ---
@@ -234,7 +234,7 @@ class AppSettings(LifterEinstellungen, EffektEinstellungen, NetzEinstellungen):
         max_length=200,
         default='FemaleWithHair',
         blank=True,
-        help_text='Default model preset for Theatre page',
+        help_text=Einstellungsfelder.hilfetext('theatre_default_model'),
     )
     theatre_default_animation = models.CharField(
         max_length=300,

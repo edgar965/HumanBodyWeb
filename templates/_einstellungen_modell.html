@@ -1,0 +1,47 @@
+{% comment %}
+Eine Einstellungszeile „Standard-Modell" — Name, Knopf zum Figurwahl-Dialog,
+darunter Figurart und Herkunft. Eingebunden über `{% templatetag openblock %} modell "feld" {% templatetag closeblock %}`
+(`core/templatetags/einstellungszeile.py`); das JS dazu ist
+`js/einstellungen/standardmodell.js`, das über `data-modellkasten` jeden
+Kasten der Seite findet (`Standardmodell.alleStarten()`).
+
+WARUM (Edgar, 21.09.2026): Der Dialog stand seit dem 19.09.2026 nur auf der
+Szene-Seite; die sechs anderen Standard-Modell-Felder waren noch `<select>`.
+
+  feld        `name` des versteckten Felds — der Modellname
+  wert        gespeicherter Name
+  titel       fette Überschrift links
+  beschriftung erklärender Text links (aus dem Register)
+  leer        Anzeigetext ohne Modell; gesetzt = Feld darf leer sein, Knopf „Keins"
+  figurarten  wahr nur für die Szene: zwei weitere versteckte Felder tragen
+              Figurart (`quelle`) und Bereich (`bereich`) mit
+{% endcomment %}
+<div class="settings-row">
+    <div class="settings-label">
+        <strong>{{ titel }}</strong>
+        <small>{{ beschriftung }}</small>
+    </div>
+    <div class="settings-input modellkasten" id="standardmodell-{{ feld }}" data-modellkasten
+         data-quellen="{% if figurarten %}alle{% else %}modell{% endif %}" data-leer="{{ leer }}">
+        <input type="hidden" name="{{ feld }}" data-feld="name"
+               value="{{ wert }}">
+        {% if figurarten %}
+        <input type="hidden" name="{{ feld }}_quelle" data-feld="quelle"
+               value="{{ quelle }}">
+        <input type="hidden" name="{{ feld }}_bereich" data-feld="bereich"
+               value="{{ bereich }}">
+        {% endif %}
+        <div class="modellkasten-zeile">
+            <strong class="modellkasten-name" data-anzeige="name">{{ wert|default:leer }}</strong>
+            <span class="modellkasten-knoepfe">
+                <button type="button" class="btn btn-sm" data-tun="waehlen">
+                    <i class="fas fa-user"></i> Modell wählen …</button>
+                {% if leer %}
+                <button type="button" class="btn btn-sm" data-tun="leeren" title="Kein Modell vorwählen">
+                    <i class="fas fa-times"></i> Keins</button>
+                {% endif %}
+            </span>
+        </div>
+        <small class="modellkasten-meta" data-anzeige="meta"></small>
+    </div>
+</div>

@@ -20,7 +20,7 @@
 import { Lagenmaske } from '../gemeinsam/lagenmaske.js';
 import { Hautmaske } from '../gemeinsam/hautmaske.js';
 import { Hautmaskegeometrie } from '../gemeinsam/hautmaskegeometrie.js';
-import { Hautverdeckung } from './hautverdeckung.js';
+import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';

@@ -1,7 +1,7 @@
-import { THREE } from '../state.js';
-import { Kapselmass } from '../../gemeinsam/kapselmass.js';
-import { Kleidungsmass } from '../../gemeinsam/kleidungsmass.js';
-import { Stoffkoerper } from '../../gemeinsam/stoffkoerper.js';
+import * as THREE from 'three';
+import { Kapselmass } from './kapselmass.js';
+import { Kleidungsmass } from './kleidungsmass.js';
+import { Stoffkoerper } from './stoffkoerper.js';
 
 /**
  * Stoffkapseln — der Körper für den Stoffschwung, als Kapseln um die Knochen,

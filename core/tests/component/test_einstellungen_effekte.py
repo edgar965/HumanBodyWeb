@@ -48,8 +48,11 @@ class EinstellungenEffekte(Effektseite):
         antwort = self.client.get(reverse('settings_effekte'))
         self.assertEqual(antwort.status_code, 200)
         text = antwort.content.decode('utf-8')
-        self.assertIn('name="effekte_default_model"', text)
-        self.assertIn('<option value="Female2"', text)
+        # Seit 21.09.2026 der Figurwahl-Dialog statt eines <select> — der
+        # gespeicherte Name steht im versteckten Feld und in der Anzeige.
+        self.assertRegex(text, r'name="effekte_default_model" data-feld="name"\s+value="Female2"')
+        self.assertIn('data-leer="(Kein Modell vorwählen)"', text)
+        self.assertIn('data-tun="leeren"', text)
         self.assertIn('name="effekte_default_pipeline"', text)
         for name in ('effekte_video_fps', 'effekte_video_width', 'effekte_video_height', 'effekte_wind'):
             self.assertIn('name="%s"' % name, text)

@@ -146,8 +146,10 @@ export class Projektdaten {
             blendIn: c.blendIn, blendOut: c.blendOut,
         };
         if (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf'
-            || c.type === 'script' || c.type === 'lipsync') {
+            || c.type === 'script' || c.type === 'lipsync' || c.type === 'freeze') {
             cd.data = c.data;
+        } else if (c.type === 'bvh' && c.data?.remap?.length) {
+            cd.data = { remap: c.data.remap };
         } else if (c.type === 'model') {
             cd.data = { preset: c.data.preset, bodyType: c.data.bodyType,
                         quelle: c.data.quelle || 'modell' };

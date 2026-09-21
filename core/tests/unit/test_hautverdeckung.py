@@ -30,12 +30,12 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.modul = HautverdeckungVerdrahtungTest._lies('scene', 'hautverdeckung.js')
+        self.modul = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hautverdeckung.js')
         self.figurhaut = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'figurhaut.js')
 
     def test_wird_geladen_und_hoert_auf_das_stueckereignis(self):
         self.assertIn(
-            "import './hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js')
+            "import '../gemeinsam/hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js')
         )
         self.assertIn('Stueckereignis.hoeren(', self.modul)
         self.assertIn('Hautverdeckung.einhaengen();', self.modul)

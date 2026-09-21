@@ -97,7 +97,7 @@ class SaumbandJsTest(SimpleTestCase):
         einzug = (viewer / 'gemeinsam' / 'hauteinzug.js').read_text(encoding='utf-8')
         self.assertIn('static EINZUG_M = Saumband.TIEFE_M;', einzug)
         self.assertIn('stand.weg = Saumband.weg(maske, abstaende);', einzug)
-        for ordner, name in (('scene', 'hautverdeckung.js'), ('gemeinsam', 'figurhaut.js')):
+        for ordner, name in (('gemeinsam', 'hautverdeckung.js'), ('gemeinsam', 'figurhaut.js')):
             quelle = (viewer / ordner / name).read_text(encoding='utf-8')
             self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', quelle, name)
             self.assertNotIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', quelle, name)

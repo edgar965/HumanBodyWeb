@@ -4,6 +4,11 @@ import { Netzentsorgung } from './netzentsorgung.js';
 import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Genesis9hautmischung } from './genesis9hautmischung.js';
+import { Oberflaechenbindung } from './oberflaechenbindung.js';
+// Nebenwirkung des Imports: die Hautverdeckung hoert auf Stueck- und Skelettereignis —
+// damit bekommt JEDE Seite, die eine Genesis-9-Figur baut (Szene, Studio, Theatre,
+// Ergebnisseite), die Maske unter der Kleidung (21.09.2026, Konzept Fitting, Schicht 1).
+import './hautverdeckung.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
@@ -161,6 +166,8 @@ export class Genesis9Modell extends Modell {
         const gebunden = (this.skelett && haut) ? Eigenhaut.binden(netz, this.skelett, haut) : netz;
         gebunden.userData.hautgewichte = haut || null;
         Eigenhaut.einhaengen(this.group, gebunden, this.skelett);
+        // Anliegende Kleidung folgt der Oberflaeche je Bild (Attribute aus `Genesis9kleidung`).
+        Oberflaechenbindung.verdrahten(this, gebunden);
         return gebunden;
     }
 

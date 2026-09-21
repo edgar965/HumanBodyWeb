@@ -94,6 +94,33 @@ def animation(context, kennung, auswahl, wertformat=''):
     return daten
 
 
+@register.inclusion_tag('_einstellungen_modell.html', takes_context=True)
+def modell(context, kennung, leer='', figurarten=False):
+    """Eine Einstellungszeile „Standard-Modell" mit dem Figurwahl-Dialog.
+
+    Edgar (21.09.2026): „bei Modellauswahl standard bitte den neuen
+    Modellauswahldialog von /settings/scene/. Korrigiere das auch bei den
+    anderen." Bis dahin: `<select>` mit `Modellfeld` auf vier Seiten, ein
+    `<select>` aus `Modellvorlagen.namen()` auf drei weiteren — sieben
+    Fassungen, keine kannte die Körpertypen.
+
+    @param kennung    Feldname in `AppSettings`; der Wert ist der Modellname
+    @param leer       Anzeigetext für „kein Modell" — wenn gesetzt, darf das
+                      Feld leer sein und bekommt einen Knopf zum Leeren
+    @param figurarten True nur für die Szene: sie lädt jede Figurart, die
+                      Wahl trägt dann Figurart und Bereich in `ui_prefs`
+                      (`<kennung>_quelle`, `<kennung>_bereich`) mit
+    """
+    # Dictionary gewollt: Es IST der Kontext der eingebundenen Vorlage.
+    daten = Einstellungszeile.kontext(context, kennung)
+    daten['leer'] = leer
+    daten['figurarten'] = figurarten
+    prefs = context['settings'].ui_prefs or {}
+    daten['quelle'] = prefs.get(kennung + '_quelle') or 'modell'
+    daten['bereich'] = prefs.get(kennung + '_bereich') or 'gespeichert'
+    return daten
+
+
 @register.inclusion_tag('_einstellungen_kaestchen.html', takes_context=True)
 def kaestchen(context, kennung):
     """Eine Einstellungszeile mit Ankreuzfeld.

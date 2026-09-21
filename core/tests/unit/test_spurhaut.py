@@ -98,8 +98,9 @@ class SpurhautTest(SimpleTestCase):
         self.assertIn("import * as THREE from 'three';", einzug)
         self.assertNotIn("from './state.js'", einzug)
         self.assertNotIn("from '../scene/", einzug)
-        for name in ('hautverdeckung.js', 'lagenverdeckung.js'):
-            self.assertIn("from '../gemeinsam/hauteinzug.js'", SpurhautTest._lies_modul(SZENE, name), name)
+        # `hautverdeckung.js` liegt seit dem 21.09.2026 in `gemeinsam/` (alle Seiten).
+        self.assertIn("from './hauteinzug.js'", SpurhautTest._lies_modul(GEMEINSAM, 'hautverdeckung.js'))
+        self.assertIn("from '../gemeinsam/hauteinzug.js'", SpurhautTest._lies_modul(SZENE, 'lagenverdeckung.js'))
 
     @staticmethod
     def _lies_modul(ordner, name):

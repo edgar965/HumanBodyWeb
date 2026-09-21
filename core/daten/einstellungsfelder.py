@@ -49,6 +49,35 @@ class Einstellungsfelder:
         'smpl_default_wireframe': F(
             'Wireframe', 'Body als Drahtgitter anzeigen', zusatz='Wireframe aktivieren'
         ),
+        # ------------------------------------------ Standard-Modelle (21.09.2026)
+        # Sieben Seiten, ein Baustein: `{% modell %}` mit dem Figurwahl-Dialog
+        # (Edgar: „bei Modellauswahl standard bitte den neuen Modellauswahl-
+        # dialog von /settings/scene/. Korrigiere das auch bei den anderen").
+        'default_model_scene': F(
+            'Standard-Modell',
+            'Modell, das beim Öffnen der Szene-Seite geladen wird — jede Figurart '
+            '(HumanBody, SMPL-X, MakeHuman, UMA, UMA Python, Genesis 9)',
+        ),
+        'default_model_config': F(
+            'Konfiguration', 'HumanBody-Modell, das beim Öffnen der Konfigurationsseite geladen wird'
+        ),
+        'default_model_animations': F(
+            'Animationen', 'HumanBody-Modell, das beim Öffnen der Animationen-Seite geladen wird'
+        ),
+        'default_model_result': F(
+            'Standard-Modell', 'HumanBody-Modell, das beim Öffnen der Ergebnisseite geladen wird'
+        ),
+        'theatre_default_model': F(
+            'Standard-Modell', 'HumanBody-Modell, das beim Laden der Theatre-Seite angezeigt wird'
+        ),
+        'effekte_default_model': F(
+            'Standard-Modell',
+            'HumanBody-Modell (Pipeline „HumanBody-Figur"), das die Effekte-Seite beim Laden '
+            'vorwählt. Ein Modell, das es nicht mehr gibt, bleibt unbesetzt',
+        ),
+        'smpl_default_humanbody_preset': F(
+            'HumanBody-Modell', 'HumanBody-Modell neben dem SMPL-Körper auf der SMPL-Seite'
+        ),
         # ------------------------------------------ Standard-Animationen
         # Fuenfmal dasselbe Feld fuer fuenf Seiten. Vier davon hatten gar
         # keinen Titel und liefen unter der Vorgabe „Default Animation" —

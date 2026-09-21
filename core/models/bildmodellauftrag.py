@@ -87,11 +87,13 @@ class Bildmodellauftrag(models.Model):
     NUTZERFELDER = ('kategorie', 'ansicht', 'teil', 'hauptbild', 'gewicht', 'nutzung',
                     'textur_an', 'gvhmr_an', 'reihe', 'textur_reihe', 'manuell', 'freisteller')
 
-    def bilder_sichern(self, *weitere):
+    def bilder_sichern(self, *weitere, behalten=()):
         """`bilder` (und `weitere` Felder) speichern — die Nutzerfelder der Einträge kommen
         frisch aus der Datenbank: Ein Lauf hält `bilder` minutenlang im Speicher; was der
         Nutzer derweil auf der Seite stellt (Typ, Häkchen, Nummer), wäre beim Speichern
-        des Laufs sonst weg (20.09.2026)."""
+        des Laufs sonst weg (20.09.2026). `behalten`: Nutzerfelder, die der Aufrufer selbst
+        gerade gesetzt hat — der Freisteller schreibt `freisteller` und verlor es hier sofort
+        wieder (21.09.2026, Edgar: „altes Bild mit Hintergrund")."""
         frisch = type(self).objects.filter(pk=self.pk).values_list('bilder', flat=True).first() or []
         nach = {b.get('datei'): b for b in frisch if isinstance(b, dict)}
         for b in self.bilder:
@@ -99,6 +101,8 @@ class Bildmodellauftrag(models.Model):
             if not alt:
                 continue
             for feld in self.NUTZERFELDER:
+                if feld in behalten:
+                    continue
                 if feld in alt:
                     b[feld] = alt[feld]
                 else:

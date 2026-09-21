@@ -55,7 +55,8 @@ class Bildmodellfreistellerkorrektur:
                 if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
                     punkte.append([x, y])
             if punkte:
-                aus.append({'art': s['art'], 'breite': max(0.002, min(0.2, breite)), 'punkte': punkte})
+                # Mindestbreite 0,0002 = 1 px bei 5000 px (Edgar: „der Stift ist viel zu dick").
+                aus.append({'art': s['art'], 'breite': max(0.0002, min(0.2, breite)), 'punkte': punkte})
         return aus
 
     @classmethod

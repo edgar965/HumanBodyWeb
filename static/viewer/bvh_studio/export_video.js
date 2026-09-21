@@ -20,6 +20,7 @@ export let exportCancelled = false;
 
 export async function exportBVH() { return Bvhausgabe.spur(); }
 export async function saveBvhAs() { return Bvhausgabe.speichernUnter(); }
+export async function saveBvhToLibrary() { return Bvhausgabe.inBibliothekSpeichern(); }
 
 export function setupExportPanel() {
     _feld('export-target-dir', feld => {
@@ -115,3 +116,4 @@ function _laufAnzeigen(felder, laeuft) {
 // Register functions in registry
 fn.exportBVH = exportBVH;
 fn.saveBvhAs = saveBvhAs;
+fn.saveBvhToLibrary = saveBvhToLibrary;

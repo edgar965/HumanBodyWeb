@@ -12,10 +12,10 @@ wo es vorkommt, ersetzt werden (Textur, Hauptbild usw.)."
     speichern(datei, regler) in voller Größe über den Ausschnitt in `zuschnitt/` — derselbe
                             Dateiname, damit ALLE Stellen ihn lesen (Textur, GVHMR, FLAME,
                             Fotolinien, Vorher/Nachher); die alte Datei geht einmalig nach
-                            `zuschnitt/vorher/` (`zuruecksetzen` holt sie zurück). Was aus
-                            dem alten Bild gerechnet war, fällt am Eintrag weg (Schätzung,
-                            Gesichtsschätzung, GVHMR, FLAME samt Netzdateien); Hautton und
-                            Tauglichkeit (`textur`) werden am neuen Bild neu gemessen.
+                            `zuschnitt/vorher/` (`zuruecksetzen` holt sie zurück). Die Maske
+                            des alten Bildes fällt weg; Hautton und Tauglichkeit (`textur`)
+                            werden am neuen Bild neu gemessen. Schätzung, GVHMR und FLAME
+                            bleiben (der Hintergrund bewegt die Person nicht, 21.09.2026).
 
 Regler (`regler`): `schwelle` 0–100 (wo die weiche Maske kippt), `weich` 0–30 px (Kante
 weichzeichnen), `rand` −20…+20 px (Maske schrumpfen/wachsen), `hintergrund` weiss | schwarz |
@@ -54,12 +54,20 @@ class Bildmodellfreisteller:
                # 21.09.2026: Modell (rembg-Sitzung oder `weisskey`), Matting, SAM-Punkte,
                # GrabCut-Verfeinerung, Pinselstriche — `Bildmodellfreistellerkorrektur`.
                'modell': 'u2net_human_seg', 'matting': False, 'punkte': [], 'verfeinern': '',
-               'striche': []}
+               'striche': [], 'toleranz': 20,
+               # Positivliste (`Bildmodellhauttonmaske`): erweitert die Netzmaske um hautfarbene
+               # Flecken, die an ihr hängen — innen bleibt alles (Edgar, 21.09.2026 abends).
+               'positiv': False}
+    #: Regler NACH dem Speichern: das gespeicherte Bild samt Maske ist der neue Ausgangspunkt —
+    #: Striche, Punkte, Rand, Weichzeichnen sind eingerechnet und dürfen nicht noch einmal wirken
+    #: (Edgar, 21.09.2026: „Bei Speichern soll das Bild neu gerechnet werden und die roten
+    #: Markierungen entfernt werden"). Nur der Hintergrund bleibt gewählt.
+    NEUTRAL = dict(VORGABE, weich=0)
+    #: Maskenwert, ab dem ein Pixel bei jeder Schwelle sicher Person ist.
+    SICHER = 0.95
     MODELLE = ('u2net_human_seg', 'isnet-general-use', 'birefnet-portrait', 'birefnet-general',
                'bria-rmbg', 'sam', 'weisskey')
     VERFEINERN = ('', 'grabcut')
-    #: Ergebnisse, die aus dem alten Bild gerechnet waren.
-    ABGELEITET = ('schaetzung', 'gesichtsschaetzung', 'gvhmr', 'flame')
 
     def __init__(self, job, ablage):
         self.job = job
@@ -146,7 +154,7 @@ class Bildmodellfreisteller:
         """Die vier Regler, begrenzt; Unbekanntes bekommt die Vorgabe."""
         roh = roh if isinstance(roh, dict) else {}
         aus = dict(cls.VORGABE)
-        for feld, lo, hi in (('schwelle', 0, 100), ('weich', 0, 30), ('rand', -20, 20)):
+        for feld, lo, hi in (('schwelle', 0, 100), ('weich', 0, 30), ('rand', -20, 20), ('toleranz', 0, 60)):
             try:
                 aus[feld] = int(max(lo, min(hi, float(roh.get(feld, aus[feld])))))
             except (TypeError, ValueError):
@@ -157,6 +165,8 @@ class Bildmodellfreisteller:
 
         if roh.get('modell') in cls.MODELLE:
             aus['modell'] = roh['modell']
+        # `positiv` war bis 21.09.2026 abends das Modell `hautton` (alte `angewandt`-Einträge).
+        aus['positiv'] = bool(roh.get('positiv')) or roh.get('modell') == 'hautton'
         aus['matting'] = bool(roh.get('matting'))
         aus['punkte'] = K.punkte_pruefen(roh.get('punkte'))
         aus['verfeinern'] = roh['verfeinern'] if roh.get('verfeinern') in cls.VERFEINERN else ''
@@ -165,8 +175,11 @@ class Bildmodellfreisteller:
 
     @classmethod
     def alpha(cls, maske, regler, rgb=None):
-        """Die Alphamaske (float 0–1) nach den Reglern: GrabCut (mit `rgb`), Rand (Morphologie),
-        Schwelle (Mitte der weichen Kante), Weichzeichnen (Gauß) — zuletzt die Pinselstriche."""
+        """Die Alphamaske (float 0–1) nach den Reglern: GrabCut (mit `rgb`), Positivliste (mit
+        `rgb`: der Kern — erodiertes Innere plus Marken — bleibt ganz, außerhalb nur anhängende
+        Hauttöne), Rand
+        (Morphologie), Schwelle (Mitte der weichen Kante), Weichzeichnen (Gauß) — zuletzt die
+        Pinselstriche. Dieselbe Reihenfolge rechnet `freistellervorschau.js` im Browser."""
         import cv2
 
         from .bildmodellfreistellerkorrektur import Bildmodellfreistellerkorrektur as K
@@ -174,15 +187,24 @@ class Bildmodellfreisteller:
         a = maske.astype(np.float32) / 255.0
         if regler.get('verfeinern') == 'grabcut' and rgb is not None:
             a = K.grabcut(rgb, a, regler.get('striche'))
+        if regler.get('positiv') and rgb is not None:
+            from .bildmodellhauttonmaske import Bildmodellhauttonmaske as H
+
+            netz = np.clip(a * 255.0 + 0.5, 0, 255).astype(np.uint8)
+            a = H.erweitern(rgb, H.kern(netz, regler), regler).astype(np.float32) / 255.0
         rand = int(regler['rand'])
         if rand:
             k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * abs(rand) + 1, 2 * abs(rand) + 1))
             a = cv2.dilate(a, k) if rand > 0 else cv2.erode(a, k)
-        t = float(regler['schwelle']) / 100.0
         # Die weiche Maske um die Schwelle herum strecken: unter t → 0, über t → 1, dazwischen linear
-        # in einem Band von ±0,15 — hart genug für eine Kante, weich genug fürs Haar.
-        band = 0.15
-        a = np.clip((a - (t - band)) / (2 * band), 0.0, 1.0)
+        # in einem Band von ±0,15 — hart genug für eine Kante, weich genug fürs Haar. Die Schwelle
+        # läuft nur bis SICHER (rembg gibt im Rumpf 0,97–0,99, nicht 1): mit festem Band bis 1 machte
+        # Schwelle 100 % die ganze Person durchsichtig (Edgar, 21.09.2026: „änderst du das gesamte
+        # Bild, auch die Person selber!"). Was ≥ SICHER ist, bleibt bei jeder Schwelle 1.
+        t = float(regler['schwelle']) / 100.0 * cls.SICHER
+        band = min(0.15, t, cls.SICHER - t)
+        unten, oben = max(0.0, t - band), max(t + band, t - band + 1e-3)   # 0 bleibt 0, auch bei Schwelle 0
+        a = np.clip((a - unten) / (oben - unten), 0.0, 1.0)
         weich = int(regler['weich'])
         if weich > 0:
             a = cv2.GaussianBlur(a, (0, 0), sigmaX=weich * 0.5, sigmaY=weich * 0.5)
@@ -243,9 +265,11 @@ class Bildmodellfreisteller:
         # Textur, GVHMR-Silhouette lesen `<stamm>_maske.png`, nicht eine neue Netzschätzung.
         self.ordner().mkdir(parents=True, exist_ok=True)
         Image.fromarray(np.clip(alpha * 255.0 + 0.5, 0, 255).astype(np.uint8), 'L').save(str(self.maskenpfad(datei)))
-        eintrag[self.FELD] = {'stand': timezone.now().isoformat(), 'regler': regler, 'vorher': True}
+        eintrag[self.FELD] = {'stand': timezone.now().isoformat(), 'vorher': True,
+                              'regler': dict(self.NEUTRAL, hintergrund=regler['hintergrund']),
+                              'angewandt': regler}
         self._hautton_messen(eintrag)
-        self.job.bilder_sichern()
+        self.job.bilder_sichern(behalten=('freisteller',))
         logger.info('Bildmodell %s: %s freigestellt (%s)', self.job.kennung, datei, regler)
         return eintrag
 
@@ -259,27 +283,17 @@ class Bildmodellfreisteller:
         self._abgeleitetes_weg(eintrag)
         eintrag.pop(self.FELD, None)
         self._hautton_messen(eintrag)
-        self.job.bilder_sichern()
+        self.job.bilder_sichern(behalten=('freisteller',))
         logger.info('Bildmodell %s: %s zurückgesetzt', self.job.kennung, datei)
         return eintrag
 
     def _abgeleitetes_weg(self, eintrag):
-        from .bildmodelldateien import Bildmodelldateien
-
-        stamm = os.path.splitext(eintrag.get('datei') or '')[0]
-        dateien = Bildmodelldateien(self.job, self.ablage)
-        for feld in ('schaetzung', 'gesichtsschaetzung'):
-            s = eintrag.get(feld) or {}
-            for k in ('posed_vertices_path', 'flame_vertices_path'):
-                if s.get(k):
-                    dateien._weg(self.ablage.SCHAETZUNG, os.path.basename(s[k]))
-        for anhang in ('_posed.npy', '_flame.npy', '_gesicht_posed.npy', '_gesicht_flame.npy'):
-            dateien._weg(self.ablage.SCHAETZUNG, stamm + anhang)
-        for feld in self.ABGELEITET:
-            eintrag.pop(feld, None)
+        """Nur die Maske gehört zum alten Bild. Schätzung, GVHMR und FLAME bleiben: der Hintergrund
+        bewegt die Person nicht — bis 21.09.2026 fielen sie weg, und Edgar stand nach dem Speichern
+        ohne SMPL da („altes Bild mit Hintergrund, kein SMPL??")."""
         maske = self.maskenpfad(eintrag.get('datei') or '')
         if maske.is_file():
-            maske.unlink()   # die Maske gehört zum alten Bild
+            maske.unlink()
 
     def _hautton_messen(self, eintrag):
         antwort = self._runner('hautton', str(self.ablage.zuschnitt() / eintrag['datei']),

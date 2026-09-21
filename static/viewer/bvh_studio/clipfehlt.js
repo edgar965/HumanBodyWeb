@@ -20,7 +20,9 @@
  * und Modellspuren (`addClipToTrack` nahm jede Spur); dort fand die erste
  * Fassung sie nicht — „A_Results/002_Dance_gem gibt es nicht mehr — 0 Clips
  * entfernt", und der Clip blieb. Gesucht wird darum überall, gemeint sind
- * nur Bewegungsclips (`type === 'bvh'`).
+ * nur Bewegungsclips (`type === 'bvh'`) — dazu Standbilder (`type === 'freeze'`,
+ * 21.09.2026): Die zeigen dieselbe Quelldatei und liefen sonst gegen ein 404,
+ * das niemand mehr auf 'bvh' geprüft hätte.
  *
  * Ohne Import von `state.js` (das zieht Three.js nach): `state` und `fn`
  * kommen als Parameter, damit das Modul in Node prüfbar ist
@@ -64,7 +66,8 @@ export class Clipfehlt {
         // Von hinten: Ein `splice` beim Vorwärtslaufen überspringt den Nachbarn.
         for (let i = spur.clips.length - 1; i >= 0; i--) {
             const clip = spur.clips[i];
-            if (clip.type !== 'bvh' || clip.category !== kategorie || clip.name !== name) continue;
+            if ((clip.type !== 'bvh' && clip.type !== 'freeze')
+                || clip.category !== kategorie || clip.name !== name) continue;
             if (spur.mixer) {
                 spur.mixer.stopAllAction();
                 // Ohne `uncacheClip` bleibt die Animation im Speicher des Mixers.

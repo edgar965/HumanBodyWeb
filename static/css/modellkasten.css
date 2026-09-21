@@ -1,0 +1,9 @@
+/* Standard-Modell auf den Einstellungsseiten (`_einstellungen_modell.html`):
+ * Name, Knöpfe zum Figurwahl-Dialog, darunter Figurart und Herkunft.
+ * Bis zum 21.09.2026 Inline-Stil in `settings_scene.html`; seit der Kasten
+ * auf sieben Seiten steht, hier. Der Dialog selbst: `figurwahldialog.css`. */
+.modellkasten { display: flex; flex-direction: column; gap: 4px; }
+.modellkasten-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.modellkasten-name { word-break: break-all; }
+.modellkasten-knoepfe { display: flex; gap: 6px; flex-shrink: 0; }
+.modellkasten-meta { color: var(--text-muted); }

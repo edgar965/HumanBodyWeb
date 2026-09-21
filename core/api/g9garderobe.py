@@ -114,7 +114,12 @@ class G9garderobeapi:
         zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
         hoch = np.array([0.0, formung.boden(), 0.0])
         stufen = G9netzstufe.browser()
-        koerper = G9koerpernetz(formung, stufen=stufen).koerperflaeche()
+        koerpernetz = G9koerpernetz(formung, stufen=stufen)
+        koerper = koerpernetz.koerperflaeche()
+        # Oberflaechenbindung (21.09.2026, Konzept Fitting): nur Kleidung, gegen
+        # den REINEN Koerper — die Lagenflaeche unten traegt die Stuecke darunter,
+        # deren Indizes gibt es im Browser nicht.
+        bindung = koerpernetz.bindungsflaeche() if eintrag.get('art') == 'kleidung' else None
         kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
                    for folger, lage in teile]
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
@@ -131,7 +136,8 @@ class G9garderobeapi:
                         if G9stueckfelder.folgt(folger, lage) else None)
             netz = G9koerpernetz.folgernetz(folger, punkte, bilder, stufen,
                                             koerper=koerper, werte=hd_werte,
-                                            passform=passform)
+                                            passform=passform,
+                                            bindung=bindung if lage is None else None)
             if lage is not None:
                 # Ein Prop haengt ganz an seinem Knochen (`G9requisit.haut`).
                 netz['haut'] = lage.haut(len(netz['punkte'])).fuer()

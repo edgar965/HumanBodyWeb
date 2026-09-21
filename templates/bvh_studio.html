@@ -939,6 +939,8 @@
          class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead (S)</div>
+    <div class="ctx-item" data-action="ctx-freeze-insert"><i
+         class="fas fa-pause hb-symbolspalte"></i> Standbild einfügen (B)</div>
     <div class="ctx-item" data-action="ctx-duplicate"><i class="fas fa-copy hb-symbolspalte"></i> Duplizieren</div>
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen (Del)</div>
     <div class="hb-trennlinie"></div>
@@ -952,6 +954,8 @@
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-save-bvh"><i
          class="fas fa-file-export hb-symbolspalte"></i> BVH speichern unter...</div>
+    <div class="ctx-item" data-action="ctx-save-bvh-library"><i
+         class="fas fa-book hb-symbolspalte"></i> In Bibliothek speichern unter...</div>
     <div class="ctx-item" data-action="ctx-smooth"><i class="fas fa-wave-square hb-symbolspalte"></i> Smooth</div>
     <div class="ctx-item" data-action="ctx-ground"><i class="fas fa-shoe-prints hb-symbolspalte"></i> Bodenniveau</div>
 </div>
@@ -1205,7 +1209,7 @@
     max-height:300px;
     overflow-y:auto;
 }
-#help-modal {
+#help-modal, .lade-hinweis {
     display:none;
     position:fixed;
     inset:0;
@@ -1214,6 +1218,14 @@
     align-items:center;
     justify-content:center;
 }
+/* Play, waehrend die Animation noch laedt (21.09.2026, `ladehinweis.js`). */
+.lade-hinweis-liste { margin:8px 0 0 18px; padding:0; }
+.lade-hinweis-knoepfe { display:flex; justify-content:flex-end; margin-top:16px; }
+.lade-hinweis-knoepfe button {
+    padding:4px 10px; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:4px; color:var(--text-muted); cursor:pointer; font-size:0.78rem;
+}
+.lade-hinweis-knoepfe button:hover { color:var(--text); border-color:var(--accent); }
 
 /* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
    Die Namen sagen, was das Element IST — nicht, welche Eigenschaft

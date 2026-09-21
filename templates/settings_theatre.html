@@ -11,22 +11,7 @@
             Diese Werte werden beim Laden der Theatre-Seite als Standardwerte verwendet.
         </p>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Standard-Modell</strong>
-                <small>Welches Modell automatisch beim Laden der Theatre-Seite angezeigt wird.</small>
-            </div>
-            <div class="settings-input">
-                <select name="theatre_default_model" class="settings-select">
-                    <option value=""
-                         {% if not settings.theatre_default_model %}selected{% endif %}>(Kein Auto-Load)</option>
-                    {% for preset in available_presets %}
-                    <option value="{{ preset }}"
-                         {% if settings.theatre_default_model == preset %}selected{% endif %}>{{ preset }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
+        {% modell "theatre_default_model" leer="(Kein Auto-Load)" %}
 
         {% comment %}wertformat="pfad": Theatre speichert <kat>/<name>,
         nicht die Viewer-URL — siehe Animationsauswahl.{% endcomment %}
@@ -148,6 +133,8 @@
 
 <script type="module">
 import { Animationsauswahl } from "{% fassungspfad 'js/einstellungen/animationsauswahl.js' %}";
+import { Standardmodell } from "{% fassungspfad 'js/einstellungen/standardmodell.js' %}";
 Animationsauswahl.alleStarten();
+Standardmodell.alleStarten();
 </script>
 {% endblock %}

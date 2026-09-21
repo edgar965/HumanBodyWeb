@@ -60,9 +60,15 @@ export class Clipbearbeitung {
     /**
      * `data` eines Clips kopieren — Script-Einstellungen sind verschachtelt
      * (Blinzeln, Blick, …), eine flache Kopie teilte sie zwischen den Hälften.
+     * Dieselbe Falle hätte `data.remap` (Geschwindigkeitskurve, `zeitkurve.js`)
+     * eines BVH-Clips: eine flache Kopie teilte das Punkte-Array, ein Punkt
+     * verschieben würde dann BEIDE Clips ändern. `audio` bleibt flach — sein
+     * `data.audioBuffer` ist ein echtes `AudioBuffer`-Objekt, das JSON nicht
+     * übersteht (stillschweigend zu `{}` würde).
      */
     static _datenKopie(clip) {
-        return clip.type === 'script' ? JSON.parse(JSON.stringify(clip.data)) : { ...clip.data };
+        return (clip.type === 'script' || clip.type === 'bvh')
+            ? JSON.parse(JSON.stringify(clip.data)) : { ...clip.data };
     }
 
     /** Die Bearbeitungswerte eines Clips auf einen anderen übertragen. */
@@ -195,8 +201,14 @@ export class Clipbearbeitung {
             if (zeit <= beginn || zeit >= beginn + clip.duration) continue;
             const stelle = Math.round((zeit - beginn) * clip.fps * clip.speed)
                 + clip.trimIn;
-            spur.clips.splice(i + 1, 0, Clipbearbeitung._zweiteHaelfte(clip, stelle));
+            const zweite = Clipbearbeitung._zweiteHaelfte(clip, stelle);
+            spur.clips.splice(i + 1, 0, zweite);
             clip.trimOut = clip.totalFrames - stelle;
+            // Eine Geschwindigkeitskurve (`data.remap`) beschreibt Zeitanteile
+            // der BISHERIGEN Clipdauer — nach dem Schnitt hat keine der beiden
+            // Hälften mehr dieselbe Dauer, die alte Kurve verzerrte sonst still.
+            if (clip.type === 'bvh') clip.data = {};
+            if (zweite.type === 'bvh') zweite.data = {};
             fn.updateDuration();
             fn.renderTimeline();
             Protokoll.debug('BVH Studio', `Split clip at frame ${stelle}`);
@@ -215,6 +227,64 @@ export class Clipbearbeitung {
         return zweite;
     }
 
+    // --------------------------------------------------------------- Standbild
+
+    /** Vorgabedauer eines neu eingefügten Standbilds, in Sekunden. */
+    static STANDBILD_SEKUNDEN = 2;
+
+    /**
+     * Den Clip unter dem Abspielkopf teilen und dazwischen ein Standbild
+     * einfügen — die Pose bleibt für die Dauer des Standbilds auf dem Bild
+     * stehen, an dem geteilt wurde (Edgar, 21.09.2026: „Standbild an einer
+     * Stelle zeigen, Kamera/Licht laufen weiter"). Die läuft auf EIGENEN
+     * Spuren (`Bvhspur`/`Lichtspurwerte`) und ist davon unberührt — nur die
+     * Länge steht in `clip.duration`, siehe `models.js`.
+     *
+     * Anders als `teilen()` wird die Spur dabei LÄNGER: Das Standbild ist
+     * zusätzliche Zeit, die vorher nicht da war. Spätere Clips DERSELBEN Spur
+     * rutschen deshalb um die Standbild-Dauer weiter — andere Spuren (Musik,
+     * Kamera) bleiben unverändert stehen, wo sie sind.
+     */
+    static standbildEinfuegen() {
+        if (state.selectedTrackIdx < 0) return;
+        const spur = state.project.tracks[state.selectedTrackIdx];
+        if (spur.type !== 'bvh') return;
+        const zeit = state.playheadFrame / state.project.fps;
+        for (let i = 0; i < spur.clips.length; i++) {
+            const clip = spur.clips[i];
+            if (clip.type !== 'bvh') continue;
+            const beginn = clip.startFrame / state.project.fps;
+            if (zeit <= beginn || zeit >= beginn + clip.duration) continue;
+            pushUndo('Standbild einfügen');
+            const stelle = Math.round((zeit - beginn) * clip.fps * clip.speed)
+                + clip.trimIn;
+            const sourceTime = stelle / clip.fps;
+            const zweite = Clipbearbeitung._zweiteHaelfte(clip, stelle);
+            clip.trimOut = clip.totalFrames - stelle;
+            clip.data = {};
+            zweite.data = {};
+
+            const bilder = Math.max(1, Math.round(
+                Clipbearbeitung.STANDBILD_SEKUNDEN * state.project.fps));
+            const standbild = new Clip(clip.category, clip.name, bilder,
+                                       state.project.fps);
+            standbild.type = 'freeze';
+            standbild.startFrame = state.playheadFrame;
+            standbild.data = { sourceTime };
+            zweite.startFrame = state.playheadFrame + bilder;
+
+            spur.clips.splice(i + 1, 0, standbild, zweite);
+            for (let j = i + 3; j < spur.clips.length; j++) {
+                spur.clips[j].startFrame += bilder;
+            }
+            fn.loadClipAnimation?.(spur, standbild);
+            Clipbearbeitung._nachtragen();
+            fn.serverLog?.('freeze_inserted', `track=${spur.name} clip=${clip.name} `
+                          + `bei=${sourceTime.toFixed(2)}s dauer=${Clipbearbeitung.STANDBILD_SEKUNDEN}s`);
+            return;
+        }
+    }
+
     // ------------------------------------------------------------------ Länge
 
     /**
@@ -224,7 +294,7 @@ export class Clipbearbeitung {
      */
     static laenge(art, wert = null) {
         const wahl = Clipbearbeitung.auswahl();
-        if (!wahl || !['bvh', 'audio', 'model', 'script'].includes(wahl.clip.type)) return;
+        if (!wahl || !['bvh', 'audio', 'model', 'script', 'freeze'].includes(wahl.clip.type)) return;
         const clip = wahl.clip;
         const ohneQuelle = Cliplaenge.OHNE_QUELLE.includes(clip.type);
         const bezug = ohneQuelle ? Clipbearbeitung._modellbezug(clip) : null;

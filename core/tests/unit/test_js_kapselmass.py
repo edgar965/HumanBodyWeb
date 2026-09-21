@@ -113,7 +113,7 @@ class KapselmassTest(SimpleTestCase):
     def test_die_kapseln_der_szene_sind_konisch(self):
         from django.conf import settings
         statik = settings.BASE_DIR / 'static' / 'viewer'
-        kapseln = (statik / 'scene' / 'genesis9' / 'stoffkapseln.js').read_text(encoding='utf-8')
+        kapseln = (statik / 'gemeinsam' / 'stoffkapseln.js').read_text(encoding='utf-8')
         self.assertIn('Kapselmass.ellipse(x1, x2, anteile)', kapseln)
         self.assertIn('Stoffkapseln.mittel(kinder, b, q)', kapseln)
         self.assertIn('new Float32Array(kapseln.length * je)', kapseln)

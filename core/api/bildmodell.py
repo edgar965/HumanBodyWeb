@@ -53,6 +53,20 @@ class Bildmodellendpunkte:
         return [p.name for p in ablage.originale() + ablage.videos()]
 
     @staticmethod
+    def _bilder(job, ablage):
+        """`job.bilder` mit `bildstand` (mtime des Ausschnitts): der Browser hängt ihn an die
+        Bildadresse, sonst zeigt sein Speicher nach Zurücksetzen oder Neuschnitt das alte Bild
+        (Edgar, 21.09.2026: „beim ersten Bild habe ich … ein altes")."""
+        aus = []
+        for b in job.bilder or []:
+            try:
+                stand = int(ablage.datei(Bildmodellablage.ZUSCHNITT, b.get('datei') or '').stat().st_mtime)
+            except (OSError, ValueError):
+                stand = None
+            aus.append(dict(b, bildstand=stand))
+        return aus
+
+    @staticmethod
     def dashboard(request):
         auftraege = Bildmodellauftrag.objects.all()
         return render(
@@ -146,7 +160,7 @@ class Bildmodellendpunkte:
             'lauf': Bildmodelllauf.relativ(job),
             'error': job.error_message,
             'optionen': job.optionen,
-            'bilder': job.bilder,
+            'bilder': Bildmodellendpunkte._bilder(job, Bildmodellablage(job.kennung)),
             'ergebnis': job.ergebnis,
             'textur': Bildmodelltextur.hautton(job.bilder),
             'texturbilder': Bildmodelltextur.liste(job.bilder),

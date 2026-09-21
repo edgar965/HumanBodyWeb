@@ -1,0 +1,117 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Fitting: warum Haut durch Kleidung kam, wie andere es
+loesen, die vier Schichten des Konzepts und der Stand der Umsetzung.
+
+Edgar, 21.09.2026 (mit Bild aus dem BVH Studio): „Mach ein besseres Konzept,
+da wir dieses Problem schon 20 Mal hatten … schau nach wie andere das
+machen" — „schreibe die Erkenntnis in die Seite Hilfe - Kleidung - Fitting".
+
+Alle Zahlen und Zustaende kommen aus `kleidung.fitting.Kleidungsfitting`.
+{% endcomment %}
+
+{% block title %}Kleidung — Fitting{% endblock %}
+{% block topbar_title %}Kleidung — Fitting: Haut, die nicht durchkommt{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Fitting: Warum Haut durch Kleidung kam — und was dagegen gilt</h1>
+
+  <p>
+    Ein Kleidungsstück sitzt in Ruhe sauber, und in der Animation stehen Flecken Haut
+    heraus. Das Problem kam in zehn Tagen sechsmal zurück, jedes Mal auf einer anderen
+    Seite oder Figurart. Diese Seite hält fest, <strong>warum</strong>, wie andere
+    Systeme es lösen, und welches Konzept hier gilt. Das Konzeptpapier:
+    <code>Docu/konzepte/2026-09-21_kleidung-ohne-durchschimmern-konzept.md</code>.
+  </p>
+
+  <h2>Was gemessen ist</h2>
+  <p>
+    Die Kollision hebt jedes Stück in Ruhe {{ kollision_mm }} mm über die Haut. Ohne
+    Korrektur je Bild stehen enge Oberteile im Stand zu
+    {{ stand_prozent.0 }}–{{ stand_prozent.1 }} % im Körper, jede Hose im Sitzen zu
+    {{ sitzen_prozent }} % (Genesis 9, 20.09.2026). {{ kollision_mm }} mm Luft sind
+    gegen {{ sitzen_prozent }} % nichts — das ist kein Gewichte-Problem.
+  </p>
+
+  <h2>Die Vorfälle</h2>
+  <table class="doku">
+    <thead><tr><th>Datum</th><th>Fix</th><th>Reichweite</th></tr></thead>
+    <tbody>
+      {% for datum, fix, reichweite in vorfaelle %}
+      <tr><td>{{ datum }}</td><td>{{ fix }}</td><td>{{ reichweite }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Drei Ursachen, die in jedem Vorfall wiederkamen</h2>
+  <ol class="stufen-liste">
+    {% for titel, text in ursachen %}
+    <li><strong>{{ titel }}.</strong> {{ text }}</li>
+    {% endfor %}
+  </ol>
+
+  <h2>Wie andere es machen</h2>
+  <p>
+    Alle Systeme, die Kleidung auf posierte Figuren legen, kombinieren dieselben
+    Schichten — keines verlässt sich auf Gewichte allein. Was niemand macht:
+    Kleidung mit übertragenen Gewichten in Ruhe 3 mm anheben und hoffen.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Schicht</th><th>System</th><th>Weg</th><th>Quelle</th></tr></thead>
+    <tbody>
+      {% for schicht, system, weg, quelle in andere %}
+      <tr><td>{{ schicht }}</td><td>{{ system }}</td><td>{{ weg }}</td>
+          <td><a href="{{ quelle }}" target="_blank" rel="noopener">Quelle</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Das Konzept: vier Schichten, eine Klasse</h2>
+  <p>
+    Eine Klasse (<code>gemeinsam/kleidungsbindung.js</code>) entscheidet je Stück aus
+    dem Ruheabstand, welche Schicht welcher Punkt bekommt — für HumanBody, Genesis 9,
+    MakeHuman und UMA gleich. Seiten rufen nichts mehr selbst.
+  </p>
+  <ol class="stufen-liste">
+    {% for titel, text in schichten %}
+    <li><strong>{{ titel }}.</strong> {{ text }}</li>
+    {% endfor %}
+  </ol>
+
+  <h2>Abnahme: Bilder, nicht Perzentile</h2>
+  <p>{{ abnahme }}</p>
+
+  <h2>Stand der Umsetzung</h2>
+  <table class="doku">
+    <thead><tr><th>Schritt</th><th>Stand</th><th>Gemessen</th></tr></thead>
+    <tbody>
+      {% for schritt, zustand, messung in stand %}
+      <tr><td>{{ schritt }}</td><td>{{ zustand }}</td><td>{{ messung }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was ausdrücklich nicht vorgeschlagen wird</h2>
+  <ul class="doku-liste">
+    {% for titel, text in nicht %}<li><strong>{{ titel }}:</strong> {{ text }}</li>{% endfor %}
+  </ul>
+
+  <h2>Quellen</h2>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Adresse</th></tr></thead>
+    <tbody>
+      {% for name, adresse in quellen %}
+      <tr><td>{{ name }}</td><td><a href="{{ adresse }}" target="_blank" rel="noopener"><code>{{ adresse }}</code></a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

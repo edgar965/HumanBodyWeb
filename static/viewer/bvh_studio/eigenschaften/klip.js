@@ -11,6 +11,7 @@ import { Schluesselbildeigenschaften } from './klip_schluesselbilder.js';
 import { Mimikeigenschaften } from './mimik.js';
 import { Scripteigenschaften } from './script.js';
 import { Lipsynceigenschaften } from './lipsync.js';
+import { Zeitkurveneigenschaften } from './zeitkurve.js';
 
 /** Vorgabelaenge, wenn ein Dauerfeld leer gelassen wird. */
 const VORGABE_BILDER = 300;
@@ -26,6 +27,7 @@ export class Klipeigenschaften {
         if (clip.type === 'audio') return Klipeigenschaften._ton(clip);
         if (clip.type === 'object_clip') return Klipeigenschaften._objekt(clip);
         if (clip.type === 'model') return Klipeigenschaften._modell(clip);
+        if (clip.type === 'freeze') return Klipeigenschaften._standbild(clip);
         return Klipeigenschaften._bvh(clip);
     }
 
@@ -45,9 +47,29 @@ export class Klipeigenschaften {
             Klipeigenschaften._objektBinden(clip);
         } else if (art === 'model') {
             Klipeigenschaften._modellBinden(clip);
+        } else if (art === 'freeze') {
+            Klipeigenschaften._standbildBinden(clip);
         } else {
             Klipeigenschaften._bvhBinden(clip);
+            Zeitkurveneigenschaften.binden(clip);
         }
+    }
+
+    /** Nur die Info + Start/Dauer — die Dauer setzt das Kontextmenü „Länge" (wie beim Modellclip). */
+    static _standbild(clip) {
+        const f = ' <span class="winzig">f</span>';
+        return M.gruppe(`Standbild: ${clip.name}`, `
+            ${M.zeile('Start', M.zahl('prop-freeze-start', clip.startFrame, 'min="0"') + f)}
+            <div class="fussnote">Zeigt durchgehend das Bild, auf dem eingefroren wurde — Dauer über
+                das Kontextmenü „Länge" einstellen.</div>`);
+    }
+
+    static _standbildBinden(clip) {
+        M.an('prop-freeze-start', 'change', (e) => {
+            clip.startFrame = parseInt(e.target.value) || 0;
+            fn.updateDuration();
+            fn.renderTimeline();
+        });
     }
 
     static _ton(clip) {
@@ -99,7 +121,8 @@ export class Klipeigenschaften {
             ${M.zeile('Smooth', M.zahl('prop-clip-smooth', clip.smoothSigma, 'min="0" max="10" step="0.5"'))}
             ${M.zeile('Boden', `<input type="checkbox" ${clip.groundFix ? 'checked' : ''} id="prop-clip-ground">`)}
             ${M.zeile('Blend In', M.zahl('prop-clip-blend-in', clip.blendIn, 'min="0"') + f)}
-            ${M.zeile('Blend Out', M.zahl('prop-clip-blend-out', clip.blendOut, 'min="0"') + f)}`);
+            ${M.zeile('Blend Out', M.zahl('prop-clip-blend-out', clip.blendOut, 'min="0"') + f)}`)
+            + Zeitkurveneigenschaften.maske(clip);
     }
 
     static _tonBinden(clip) {

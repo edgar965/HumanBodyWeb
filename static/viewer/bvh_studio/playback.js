@@ -12,6 +12,7 @@ import { Abspielende } from './abspielende.js';
 import { Mimikanwendung } from './mimikanwendung.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
 import { Endlosschalter } from './endlosschalter.js';
+import { Ladehinweis } from './ladehinweis.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
@@ -50,6 +51,14 @@ export function setupPlayback() {
             e.preventDefault();
             fn.splitClipAtPlayhead();
         }
+        if (e.code === 'KeyB' && !e.ctrlKey) {
+            e.preventDefault();
+            // Nur auf einer Animationsspur — `standbildEinfuegen` prüft das
+            // selbst noch einmal (Aufruf auch aus dem Kontextmenü möglich).
+            if (state.project.tracks[state.selectedTrackIdx]?.type === 'bvh') {
+                fn.standbildEinfuegen();
+            }
+        }
         if (e.code === 'KeyK') {
             e.preventDefault();
             if (state.selectedTrackIdx >= 0) {
@@ -77,6 +86,9 @@ export function setupPlayback() {
 }
 
 export function togglePlay() {
+    // Laedt noch etwas (Figur, Retarget), zeigt ein Popup, was fehlt, und spielt,
+    // sobald alles da ist (Edgar, 21.09.2026: 'bei start auf Play tut sich nichts').
+    if (!state.playing && Ladehinweis.zeigen(state, togglePlay)) return;
     state.playing = !state.playing;
     const icon = document.getElementById('pb-play-icon');
     if (icon) icon.className = state.playing ? 'fas fa-pause' : 'fas fa-play';

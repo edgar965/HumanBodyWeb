@@ -43,13 +43,7 @@
     gap:12px;
     align-items:center;
 }
-/* Standard-Modell: Name, Knopf zum Dialog, darunter Figurart und Herkunft. */
-.modellkasten { display:flex; flex-direction:column; gap:4px; }
-.modellkasten-zeile { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.modellkasten-name { word-break:break-all; }
-.modellkasten-meta { color:var(--text-muted); }
 </style>
-<link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
 {% endblock %}
 
 {% block einstellungen_titel %}Einstellungen — Szene{% endblock %}
@@ -58,30 +52,11 @@
     <div class="settings-card">
         <h2><i class="fas fa-lightbulb"></i> Szene</h2>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Standard-Modell</strong>
-                <small>Modell, das beim Öffnen der Szene-Seite geladen wird — jede Figurart
-                     (HumanBody, SMPL-X, MakeHuman, UMA, UMA Python, Genesis 9).</small>
-            </div>
-            {% comment %}Die Wahl trifft der Figurwahl-Dialog der Szene (19.09.2026, Edgar:
-            „auch ein Genesis, UMA usw. als Standard-Modell"); drei versteckte Felder
-            tragen sie ins Formular — `js/einstellungen/standardmodell.js`.{% endcomment %}
-            <div class="settings-input modellkasten" id="standard-modell-scene">
-                <input type="hidden" name="default_model_scene" data-feld="name"
-                       value="{{ settings.default_model_scene }}">
-                <input type="hidden" name="default_model_scene_quelle" data-feld="quelle"
-                       value="{{ settings.ui_prefs.default_model_scene_quelle|default:'modell' }}">
-                <input type="hidden" name="default_model_scene_bereich" data-feld="bereich"
-                       value="{{ settings.ui_prefs.default_model_scene_bereich|default:'gespeichert' }}">
-                <div class="modellkasten-zeile">
-                    <strong class="modellkasten-name" data-anzeige="name">{{ settings.default_model_scene }}</strong>
-                    <button type="button" class="btn btn-sm" data-tun="waehlen">
-                        <i class="fas fa-user"></i> Modell wählen …</button>
-                </div>
-                <small class="modellkasten-meta" data-anzeige="meta"></small>
-            </div>
-        </div>
+        {% comment %}Die Wahl trifft der Figurwahl-Dialog der Szene (19.09.2026, Edgar:
+        „auch ein Genesis, UMA usw. als Standard-Modell"); drei versteckte Felder
+        tragen sie ins Formular — `js/einstellungen/standardmodell.js`. Nur diese
+        Seite lädt jede Figurart, deshalb `figurarten=True`.{% endcomment %}
+        {% modell "default_model_scene" figurarten=True %}
         {% kaestchen "show_rig_scene" %}
         {% animation "default_anim_scene" "anim-sel-scene" %}
         <div class="settings-row">
@@ -216,11 +191,7 @@ import { Tabfelder } from "{% fassungspfad 'js/einstellungen/tabfelder.js' %}";
 import { Animationsauswahl } from "{% fassungspfad 'js/einstellungen/animationsauswahl.js' %}";
 import { Kleiderfelder } from "{% fassungspfad 'js/einstellungen/kleiderfelder.js' %}";
 
-new Standardmodell(document.getElementById('standard-modell-scene'), {
-    name: "{{ settings.default_model_scene|escapejs }}",
-    quelle: "{{ settings.ui_prefs.default_model_scene_quelle|default:'modell'|escapejs }}",
-    bereich: "{{ settings.ui_prefs.default_model_scene_bereich|default:'gespeichert'|escapejs }}",
-}, 'standardmodell-scene').anbinden();
+Standardmodell.alleStarten();
 Modellfeld.fuellen('kleider-bone-model',
     "{{ settings.ui_prefs.kleider_bone_model|default:'Rig1'|escapejs }}");
 

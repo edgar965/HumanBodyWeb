@@ -1,7 +1,11 @@
 import { state } from './state.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Bvhtext } from './bvhtext.js';
+import { pushUndo } from './undo.js';
+import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 
 /**
  * Bvhausgabe — BVH-Dateien herunterladen (ganze Spur oder ein Clip).
@@ -21,6 +25,13 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * =====================================
  * `URL.createObjectURL` hält den Blob im Speicher, bis die Seite neu lädt. Bei
  * 30 Exporten einer 40-MB-BVH ist das über ein Gigabyte.
+ *
+ * TRIM GEHÖRT IN DEN EXPORT (Befund 21.09.2026)
+ * ==============================================
+ * `text()` holte bisher immer die VOLLE Quelldatei — ein geteilter Clip (Split)
+ * exportierte damit jedes Mal die ganze ungeschnittene Animation, `trimIn`/
+ * `trimOut` wurden schlicht ignoriert. Jetzt schneidet `Bvhtext.ausschnitt()`
+ * den Text, bevor er das Modul verlässt.
  */
 export class Bvhausgabe {
 
@@ -67,10 +78,13 @@ export class Bvhausgabe {
         return texte;
     }
 
+    /** Der Clip-Text — mit `trimIn`/`trimOut` angewendet, nicht die volle Quelle. */
     static async text(clip) {
-        return Serverabruf.text(
+        const voll = await Serverabruf.text(
             `${Bvhausgabe.QUELLE}/${encodeURIComponent(clip.category)}`
             + `/${encodeURIComponent(clip.name)}/`);
+        if (!clip.trimIn && !clip.trimOut) return voll;
+        return new Bvhtext(voll).ausschnitt(clip.trimIn, clip.trimOut).text();
     }
 
     // ------------------------------------------------------- Speichern unter
@@ -118,6 +132,76 @@ export class Bvhausgabe {
             Protokoll.warnung('BVH Studio',
                               'Dateidialog gescheitert — Download stattdessen',
                               fehler);
+            return false;
+        }
+    }
+
+    // ------------------------------------------------- In Bibliothek speichern
+
+    /**
+     * Den (getrimmten) Clip als NEUE Datei in der BVH-Bibliothek ablegen —
+     * anders als `speichernUnter()` (reiner lokaler Download, siehe Klassendoku
+     * oben) landet die Datei serverseitig unter `3DObjects/animations/bvh/…`,
+     * und der Clip im Projekt zeigt danach auf sie (Trim ist eingerechnet,
+     * `trimIn`/`trimOut` also 0). Das ist der Weg für „Teil einer geschnittenen
+     * Animation dauerhaft weiterverwenden" (Edgar, 21.09.2026).
+     */
+    static async inBibliothekSpeichern() {
+        if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) {
+            alert('Clip auswählen.');
+            return;
+        }
+        const spur = state.project.tracks[state.selectedTrackIdx];
+        const clip = spur.clips[state.selectedClipIdx];
+        if (clip.type !== 'bvh') {
+            alert('Nur bei einem BVH-Clip möglich.');
+            return;
+        }
+        const eingabe = prompt('In Bibliothek speichern unter (Ordner/Name):',
+                               `${clip.category}/${clip.name}`);
+        if (!eingabe) return;
+        const trenner = eingabe.lastIndexOf('/');
+        const kategorie = trenner >= 0 ? eingabe.slice(0, trenner).trim() : '';
+        const name = trenner >= 0 ? eingabe.slice(trenner + 1).trim() : '';
+        if (!kategorie || !name) {
+            alert('Format: Ordner/Name — z. B. A_Results/Tanz Teil 1');
+            return;
+        }
+        if (kategorie === clip.category && name === clip.name) {
+            alert('Das ist die bestehende Datei — für einen Ausschnitt einen anderen Namen wählen.');
+            return;
+        }
+        try {
+            if (await Bvhausgabe._existiert(kategorie, name)
+                && !confirm(`"${kategorie}/${name}.bvh" gibt es schon in der Bibliothek — überschreiben?`)) {
+                return;
+            }
+            const text = await Bvhausgabe.text(clip);
+            await Serverabruf.senden('/api/character/save-bvh-text/',
+                                     { category: kategorie, name, bvh_text: text });
+            pushUndo('BVH in Bibliothek speichern');
+            clip.totalFrames = clip.totalFrames - clip.trimIn - clip.trimOut;
+            clip.trimIn = 0;
+            clip.trimOut = 0;
+            clip.category = kategorie;
+            clip.name = name;
+            clip.animClip = null;
+            fn.loadClipAnimation?.(spur, clip);
+            fn.renderTimeline?.();
+            Bibliothekskanal.melden('save', { category: kategorie, name });
+            Protokoll.info('BVH Studio', `In Bibliothek gespeichert: ${kategorie}/${name}`);
+        } catch (fehler) {
+            alert('In Bibliothek speichern fehlgeschlagen: ' + fehler.message);
+        }
+    }
+
+    /** `true`, wenn unter Ordner/Name schon eine BVH in der Bibliothek liegt. */
+    static async _existiert(kategorie, name) {
+        try {
+            await Serverabruf.text(`${Bvhausgabe.QUELLE}/${encodeURIComponent(kategorie)}`
+                                   + `/${encodeURIComponent(name)}/`);
+            return true;
+        } catch (fehler) {
             return false;
         }
     }

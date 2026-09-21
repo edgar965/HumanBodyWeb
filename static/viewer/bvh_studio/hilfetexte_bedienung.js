@@ -86,14 +86,23 @@ export const HILFE_BEDIENUNG = {
 <p><b>Kontextmenü (Rechtsklick auf Clip):</b></p>
 <ul class="hilfe-zeile">
 <li><b>Split an Playhead (S)</b> — Teilt den Clip an der Playhead-Position</li>
+<li><b>Standbild einfügen (B)</b> — Friert die Pose an der Playhead-Position für ein paar Sekunden ein
+    (Länge über das Kontextmenü „Länge"); Kamera und Licht laufen dabei auf ihren eigenen Spuren
+    normal weiter, nur die Figur hält still. Taste B wirkt bei ausgewählter Animationsspur, auch
+    ohne Rechtsklick</li>
 <li><b>Duplizieren</b> — Erstellt eine Kopie hinter dem Clip</li>
 <li><b>Löschen (Del)</b> — Entfernt den Clip</li>
 <li><b>Anfang trimmen (+10f)</b> — Kürzt den Clip um 10 Frames von vorne</li>
 <li><b>Ende trimmen (+10f)</b> — Kürzt den Clip um 10 Frames von hinten</li>
 <li><b>Trim zurücksetzen</b> — Stellt die volle Länge wieder her</li>
-<li><b>BVH speichern unter...</b> — Speichert die BVH-Datei</li>
+<li><b>BVH speichern unter...</b> — Lädt die BVH-Datei (mit Trim) auf die eigene Platte herunter; der Clip im Projekt bleibt unverändert</li>
+<li><b>In Bibliothek speichern unter...</b> — Legt den (getrimmten) Clip als neue Datei in der BVH-Bibliothek ab; der Clip im Projekt zeigt danach auf diese neue Datei</li>
 <li><b>Smooth / Bodenniveau</b> — Tools auf den Clip anwenden</li>
 </ul>
+<p><b>Geschwindigkeitskurve</b> (Eigenschaften-Panel eines BVH-Clips): Punkte am Abspielkopf
+setzen, die einen Zeitanteil des Clips auf einen Quellanteil biegen — ohne Punkte läuft der Clip
+mit konstanter Geschwindigkeit (Speed-Regler) weiter. Zwei Punkte mit demselben Wert halten die
+Bewegung dazwischen weich an; „weich" als Interpolation rundet den Übergang.</p>
 
 <h4 class="hilfe-abschnitt">Hinweise</h4>
 <ul class="hilfe-zeile">

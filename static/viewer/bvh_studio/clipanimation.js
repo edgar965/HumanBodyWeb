@@ -47,8 +47,13 @@ export class Clipanimation {
             Protokoll.warnung('BVH Studio', `No animation data for ${clip.name}`);
             return;
         }
-        clip.totalFrames = daten.frame_count;
-        clip.fps = daten.frame_count / daten.duration;
+        // Standbild: `totalFrames`/`fps` sind die ANZEIGE-Dauer (wie bei einem
+        // Modellclip), nicht die Länge der Quelle — die bliebe sonst stehen,
+        // sobald der Retarget zurückkommt (Clipbearbeitung.standbildEinfuegen).
+        if (clip.type !== 'freeze') {
+            clip.totalFrames = daten.frame_count;
+            clip.fps = daten.frame_count / daten.duration;
+        }
         await Clipanimation._figurSichern(spur);
         if (spur.skeleton) {
             clip.animClip = Clipanimation.bauen(daten, spur.skeleton);

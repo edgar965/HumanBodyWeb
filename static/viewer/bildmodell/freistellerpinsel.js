@@ -17,15 +17,20 @@ export class Freistellerpinsel {
 
     static FARBEN = { 'pinsel-drin': 'rgba(60,200,90,0.55)', 'pinsel-draussen': 'rgba(230,60,60,0.55)',
                       'punkt-drin': '#3cc85a', 'punkt-draussen': '#e63c3c' };
-    /** Pinselbreite als Anteil der Bildbreite: Regler 1–100 → 0,004–0,2. */
-    static BREITE = (wert) => 0.004 + (Math.max(1, Math.min(100, Number(wert) || 20)) - 1) / 99 * 0.196;
+    /** Pinselbreite in BILDPIXELN: Regler 1–100 → 1 … 400 px, quadratisch (unten fein gestuft).
+     *  Edgar (21.09.2026, Bild): „der Stift ist viel zu dick, auch wenn ich die geringste Größe wähle" —
+     *  vorher war das Minimum 0,4 % der Bildbreite (8 px bei 2000 px). Gespeichert wird weiter der
+     *  Anteil der Bildbreite (`breite`), damit Vorschau (720 px) und volle Größe gleich rechnen. */
+    static BREITE_PX = (wert) => Math.round(1 + ((Math.max(1, Math.min(100, Number(wert) || 20)) - 1) / 99) ** 2 * 399);
+    /** Längste Leinwandseite — die Leinwand hat die Auflösung des Bildes, damit ein 1-px-Strich 1 px ist. */
+    static LEINWAND_MAX = 4096;
 
     constructor(leinwand, foto, onAenderung) {
         this.leinwand = leinwand;
         this.foto = foto;
         this.onAenderung = onAenderung;
         this.werkzeug = '';
-        this.breite = Freistellerpinsel.BREITE(20);
+        this.regler = 20;        // Reglerstellung; `breite` (Anteil) folgt daraus und aus der Bildbreite
         this._striche = [];
         this._punkte = [];
         this._folge = [];       // Reihenfolge für Rückgängig: 'strich' | 'punkt'
@@ -87,15 +92,21 @@ export class Freistellerpinsel {
 
     // ------------------------------------------------------------ Zeigen
 
-    /** Leinwand deckungsgleich mit dem angezeigten Foto (das Foto ist `object-fit: contain`). */
+    /** Pinselbreite als Anteil der Bildbreite (so wird sie gespeichert und gerechnet). */
+    get breite() { return Freistellerpinsel.BREITE_PX(this.regler) / (this.foto?.naturalWidth || 1000); }
+
+    /** Leinwand deckungsgleich mit dem angezeigten Foto (das Foto ist `object-fit: contain`), in
+     *  Bildauflösung (bis LEINWAND_MAX) — CSS skaliert sie auf die Anzeige, der Zoom vergrößert mit. */
     passen() {
         const f = this.foto;
         if (!f || !f.naturalWidth) return;
         const zb = f.clientWidth, zh = f.clientHeight;
         const s = Math.min(zb / f.naturalWidth, zh / f.naturalHeight);
         const b = Math.round(f.naturalWidth * s), h = Math.round(f.naturalHeight * s);
-        this.leinwand.width = b;
-        this.leinwand.height = h;
+        const k = Math.min(1, Freistellerpinsel.LEINWAND_MAX / Math.max(f.naturalWidth, f.naturalHeight));
+        this.leinwand.width = Math.round(f.naturalWidth * k);
+        this.leinwand.height = Math.round(f.naturalHeight * k);
+        this._jeCss = this.leinwand.width / Math.max(1, b);   // Leinwandpixel je CSS-Pixel
         this.leinwand.style.width = `${b}px`;
         this.leinwand.style.height = `${h}px`;
         this.leinwand.style.left = `${f.offsetLeft + Math.round((zb - b) / 2)}px`;
@@ -108,9 +119,10 @@ export class Freistellerpinsel {
         ctx.clearRect(0, 0, c.width, c.height);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        const je = this._jeCss || 1;   // Marken (Punkte, Pinselkreis) bleiben in CSS-Pixeln gleich groß
         for (const s of [...this._striche, ...(this._aktiv ? [this._aktiv] : [])]) {
             ctx.strokeStyle = Freistellerpinsel.FARBEN[`pinsel-${s.art}`];
-            ctx.lineWidth = Math.max(1, s.breite * c.width);
+            ctx.lineWidth = Math.max(1, s.breite * c.width);   // Leinwand = Bildauflösung: so breit rechnet der Server
             ctx.beginPath();
             s.punkte.forEach(([x, y], i) => { if (i) ctx.lineTo(x * c.width, y * c.height); else ctx.moveTo(x * c.width, y * c.height); });
             if (s.punkte.length === 1) ctx.lineTo(s.punkte[0][0] * c.width + 0.1, s.punkte[0][1] * c.height);
@@ -119,9 +131,9 @@ export class Freistellerpinsel {
         for (const [x, y, l] of this._punkte) {
             ctx.fillStyle = Freistellerpinsel.FARBEN[l ? 'punkt-drin' : 'punkt-draussen'];
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * je;
             ctx.beginPath();
-            ctx.arc(x * c.width, y * c.height, 7, 0, 2 * Math.PI);
+            ctx.arc(x * c.width, y * c.height, 7 * je, 0, 2 * Math.PI);
             ctx.fill();
             ctx.stroke();
         }
@@ -130,10 +142,10 @@ export class Freistellerpinsel {
         if (this._zeiger && this.werkzeug.startsWith('pinsel-')) {
             const [x, y] = this._zeiger;
             ctx.strokeStyle = this.werkzeug === 'pinsel-drin' ? '#3cc85a' : '#e63c3c';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([4, 3]);
+            ctx.lineWidth = 1.5 * je;
+            ctx.setLineDash([4 * je, 3 * je]);
             ctx.beginPath();
-            ctx.arc(x * c.width, y * c.height, Math.max(1, this.breite * c.width / 2), 0, 2 * Math.PI);
+            ctx.arc(x * c.width, y * c.height, Math.max(0.5, this.breite * c.width / 2), 0, 2 * Math.PI);
             ctx.stroke();
             ctx.setLineDash([]);
         }
@@ -142,7 +154,7 @@ export class Freistellerpinsel {
     }
 
     /** Pinselbreite in Bildpixeln (voll aufgelöst) — für die Anzeige neben dem Regler. */
-    breitePx() { return Math.round(this.breite * (this.foto?.naturalWidth || 0)); }
+    breitePx() { return this.foto?.naturalWidth ? Freistellerpinsel.BREITE_PX(this.regler) : 0; }
 
     // ------------------------------------------------------------ Zeiger
 
@@ -153,7 +165,7 @@ export class Freistellerpinsel {
     }
 
     _anfang(e) {
-        if (!this.werkzeug || e.button !== 0) return;
+        if (!this.werkzeug || e.button !== 0 || e.ctrlKey) return;   // Strg + Ziehen schiebt das Bild (Zoom)
         e.preventDefault();
         const [x, y] = this._lage(e);
         this._zurueck = [];       // Neues nach einem Rückgängig: das Wiederholen verfällt
@@ -165,7 +177,7 @@ export class Freistellerpinsel {
             return;
         }
         this._aktiv = { art: this.werkzeug === 'pinsel-drin' ? 'drin' : 'draussen', breite: this.breite, punkte: [[x, y]] };
-        this.leinwand.setPointerCapture?.(e.pointerId);
+        try { this.leinwand.setPointerCapture(e.pointerId); } catch (_) { /* kein echter Zeiger */ }
         this.zeichnen();
     }
 
@@ -184,7 +196,7 @@ export class Freistellerpinsel {
         this._striche.push(this._aktiv);
         this._folge.push('strich');
         this._aktiv = null;
-        this.leinwand.releasePointerCapture?.(e.pointerId);
+        try { this.leinwand.releasePointerCapture(e.pointerId); } catch (_) { /* kein echter Zeiger */ }
         this.zeichnen();
         this.onAenderung?.();
     }

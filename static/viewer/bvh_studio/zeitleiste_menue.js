@@ -24,9 +24,11 @@ const RAND = 10;
 /** Was die Eintraege des Clipmenues tun. */
 const CLIPBEFEHLE = {
     'ctx-split': () => fn.splitClipAtPlayhead(),
+    'ctx-freeze-insert': () => fn.standbildEinfuegen(),
     'ctx-delete': () => fn.deleteSelectedClip(),
     'ctx-duplicate': () => fn.duplicateSelectedClip(),
     'ctx-save-bvh': () => fn.saveBvhAs(),
+    'ctx-save-bvh-library': () => fn.saveBvhToLibrary(),
     'ctx-smooth': () => fn.smoothSelectedClip(),
     'ctx-ground': () => fn.groundFixSelectedClip(),
     'ctx-trim-start': () => fn.trimSelectedClip('start', 10),
@@ -191,5 +193,24 @@ export class Zeitleistenmenue {
             eintrag.style.display =
                 (eintrag.dataset.action === 'ctx-playhead' || treffer) ? '' : 'none';
         });
+        Zeitleistenmenue._standbildEintraege(menue, treffer, spur);
+    }
+
+    /**
+     * Ein Standbild hat keine eigene Quelle zum Trimmen/Glätten — die Einträge
+     * wirkten sonst auf die QUELLDATEI (dieselbe `category`/`name` wie der Clip,
+     * aus dem es entstand). „Standbild einfügen" selbst ergibt in einem
+     * Standbild ebenfalls keinen Sinn (dann läge Standbild in Standbild).
+     */
+    static _standbildEintraege(menue, treffer, spur) {
+        const clip = treffer && spur ? spur.clips[treffer.clipIdx] : null;
+        const istStandbild = clip?.type === 'freeze';
+        for (const aktion of ['ctx-trim-start', 'ctx-trim-end', 'ctx-trim-reset',
+                              'ctx-smooth', 'ctx-ground', 'ctx-save-bvh', 'ctx-save-bvh-library']) {
+            const eintrag = menue.querySelector(`[data-action="${aktion}"]`);
+            if (eintrag && treffer) eintrag.style.display = istStandbild ? 'none' : '';
+        }
+        const einfuegen = menue.querySelector('[data-action="ctx-freeze-insert"]');
+        if (einfuegen && treffer) einfuegen.style.display = istStandbild ? 'none' : '';
     }
 }

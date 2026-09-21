@@ -231,6 +231,10 @@ export class Zeitleistenspuren {
         const ctx = Zeitleistenflaeche.ctx;
         ctx.fillStyle = '#fff';
         ctx.font = '10px sans-serif';
+        if (clip.type === 'freeze') {
+            ctx.fillText('⏸ ' + clip.name, x + 4, oben + hoehe / 2 + 3, breite - 8);
+            return;
+        }
         if (clip.type !== 'model' || !clip.data?.preset) {
             ctx.fillText(clip.name, x + 4, oben + hoehe / 2 + 3, breite - 8);
             return;

@@ -155,7 +155,7 @@ export class Projektwiederherstellung {
         if (cd.data) clip.data = cd.data;
         track.clips.push(clip);
 
-        if (clip.type === 'bvh') {
+        if (clip.type === 'bvh' || clip.type === 'freeze') {
             wartend.push(fn.loadClipAnimation(track, clip));
         } else if (clip.type === 'object_clip' && clip.data?.url
                    && track.type === 'scene_object') {

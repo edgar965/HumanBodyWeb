@@ -9,8 +9,11 @@ gesteuert von `freisteller.js`: links das Bild, rechts die Vorschau vom Server, 
         </span>
     </div>
     <div class="bildmodell-gvhmrfeld bildmodell-freistellerfeld">
-        <figure class="bildmodell-gvhmrfoto bildmodell-freistellerfoto"><img alt="Das Bild" data-feld="foto"><canvas class="bildmodell-freistellerleinwand" data-feld="leinwand"></canvas></figure>
-        <figure class="bildmodell-gvhmrfoto bildmodell-freistellervorschau"><img alt="Vorschau ohne Hintergrund" data-feld="vorschau"></figure>
+        {% comment %}Die Bühnen zoomt `freistellerzoom.js` (Rad vergrößert, mittlere Taste schiebt).{% endcomment %}
+        <figure class="bildmodell-gvhmrfoto bildmodell-freistellerfoto" title="Mausrad: vergrößern · mittlere Taste oder Strg + linke Taste gedrückt: verschieben">
+            <div class="bildmodell-freistellerbuehne" data-feld="buehne-foto"><img alt="Das Bild" data-feld="foto"><canvas class="bildmodell-freistellerleinwand" data-feld="leinwand"></canvas></div></figure>
+        <figure class="bildmodell-gvhmrfoto bildmodell-freistellervorschau" title="Mausrad: vergrößern · mittlere Taste oder Strg + linke Taste gedrückt: verschieben">
+            <div class="bildmodell-freistellerbuehne" data-feld="buehne-vorschau"><canvas aria-label="Vorschau ohne Hintergrund" data-feld="vorschau"></canvas></div></figure>
     </div>
     {% comment %}21.09.2026: automatisch (Modell, Matting), halbautomatisch (SAM-Punkte, GrabCut), von Hand
     (Pinsel) — `freistellerpinsel.js` zeichnet links, der Server rechnet (`Bildmodellfreistellerkorrektur`).{% endcomment %}
@@ -27,6 +30,7 @@ gesteuert von `freisteller.js`: links das Bild, rechts die Vorschau vom Server, 
         <button type="button" class="btn btn-secondary btn-sm" data-tat="rueckgaengig" disabled title="Letzten Strich oder Punkt zurücknehmen (Strg+Z)"><i class="fas fa-undo"></i> Rückgängig</button>
         <button type="button" class="btn btn-secondary btn-sm" data-tat="wiederholen" disabled title="Zurückgenommenes wieder herstellen (Strg+Y)"><i class="fas fa-redo"></i> Wiederholen</button>
         <button type="button" class="btn btn-secondary btn-sm" data-tat="striche-weg" disabled title="Alle Striche und Punkte entfernen (Rückgängig holt sie zurück)">Alle weg</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-tat="einpassen" disabled title="Vergrößerung zurück auf das ganze Bild (Mausrad über dem Bild vergrößert, mittlere Taste oder Strg + Ziehen verschiebt)"><i class="fas fa-expand"></i> Einpassen</button><span data-wert="zoom"></span>
     </div>
     <div class="bildmodell-freistellerregler">
         <label title="Womit die Maske gerechnet wird — ein neues Modell lädt rembg beim ersten Mal aus dem Netz (170 MB – 1 GB)">Modell
@@ -46,8 +50,17 @@ gesteuert von `freisteller.js`: links das Bild, rechts die Vorschau vom Server, 
                 <option value="grabcut">GrabCut</option>
             </select></label>
     </div>
+    {% comment %}Edgar (21.09.2026): „WO IST DIE POSITIVSCHWELLE?? markiere die deutlich als solche!" — eigener,
+    abgesetzter Block. Seit dem Abend gilt sie NUR außerhalb der Figur (Regler `positiv`): der Kern — erodiertes
+    Innere der Maske plus Marken — bleibt ganz, außerhalb bleibt nur, was Hautton hat und am Kern hängt.{% endcomment %}
+    <div class="bildmodell-freistellerregler bildmodell-freistellerpositiv">
+        <label class="bildmodell-freistellerpositivan" title="Nur außerhalb der Figur: was du mit „Pinsel Person"/„Punkt Person" markierst (und das Innere der Maske) bleibt ganz — Haar, Augen, Kleidung; außerhalb bleibt nur, was einen Hautton der Figur hat und an ihr hängt. Alles andere wird Hintergrund."><input type="checkbox" data-regler="positiv"> <strong>Positivliste (Hauttöne)</strong></label>
+        <label title="Positivschwelle: wie weit eine Farbe außerhalb der Figur von deren Hauttönen abweichen darf (ΔE im Lab-Raum), um noch zur Person zu zählen. Ziehen schaltet die Positivliste ein.">Positivschwelle
+            <input type="range" min="0" max="60" step="1" value="20" data-regler="toleranz" data-einheit=" ΔE"><span data-wert="toleranz"></span></label>
+        <span class="hb-hinweis">Figur markieren: „Pinsel Person" über Kopf und Körper — das bleibt ganz; außerhalb zählt nur Hautton</span>
+    </div>
     <div class="bildmodell-freistellerregler">
-        <label title="Wo die weiche Maske kippt — höher: weniger Hintergrund bleibt, feines Haar geht mit">Schwelle
+        <label title="Wo die weiche Maskenkante kippt — höher: weniger Hintergrund bleibt, feines Haar geht mit." data-feld="schwelle-feld">Schwelle (Kante)
             <input type="range" min="0" max="100" step="1" value="50" data-regler="schwelle" data-einheit=" %"><span data-wert="schwelle"></span></label>
         <label title="Kante weichzeichnen (Pixel)">Weich
             <input type="range" min="0" max="30" step="1" value="2" data-regler="weich" data-einheit=" px"><span data-wert="weich"></span></label>

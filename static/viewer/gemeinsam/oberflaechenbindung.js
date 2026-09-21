@@ -1,0 +1,136 @@
+import * as THREE from 'three';
+import { base64ToFloat32 } from './kodierung.js';
+import { Koerperlage } from './koerperlage.js';
+import { OberflaecheGLSL } from './oberflaecheglsl.js';
+import { Shaderpatch } from './shaderpatch.js';
+import { Protokoll } from './protokoll.js';
+
+/**
+ * Oberflaechenbindung — anliegende Kleidung folgt der Körperoberfläche, je
+ * Bild, im Vertex-Shader (Konzept Fitting, Schicht 2 + 3, 21.09.2026).
+ *
+ * Edgar: „Überlege dir ein Konzept, z.B. dass die Kleider dehnbar sind, oder
+ * anders an die Oberfläche angepasst werden." Der Server gibt jedem
+ * Kleidungsteil seine Ruhe-Zuordnung mit (`G9oberflaechenbindung`: je Punkt
+ * drei Körperpunkte, Baryzentrik, Abstand entlang der Körpernormale,
+ * `mischung` 1 = anliegend … 0 = frei). Hier wird sie zu Attributen, und die
+ * Materialien des Teils bekommen den Eingriff (`OberflaecheGLSL.VERTEX`):
+ * gebundene Punkte stehen dort, wo ihr Körperdreieck gerade ist, plus ihrem
+ * Ruheabstand — Durchdringen ist für sie konstruktiv unmöglich. Freie und
+ * halbfreie Punkte werden aus den Gliedmaßenkapseln gedrückt (Schicht 3).
+ *
+ * WANN ES GILT: nur, wenn der Körper auf DERSELBEN Stufe steht wie die
+ * Bindung (`stufen`) — beim Laden kommt erst der Käfig (Stufe 0), dann die
+ * Browserstufe; die Indizes einer Stufe treffen auf der anderen falsche
+ * Punkte. `verdrahten` prüft das je Bild über `uOberflaecheAn`.
+ *
+ * NICHT für Stücke im Stoffschwung (`userData.stoff`): dort setzt der
+ * Worker die Lage je Bild; zwei Herren über einem Netz ergäben ein Zittern.
+ */
+export class Oberflaechenbindung {
+
+    /** Mindestabstand über der Kapsel (Meter) — wie `G9kollision.ABSTAND`. */
+    static KAPSELABSTAND = 0.003;
+    static SCHLUESSEL = 'oberflaeche';
+    /** Schalter fuer Gegenproben (A/B im Tab): Oberflaeche und Kapseln getrennt. */
+    static AKTIV = true;
+    static KAPSELN_AKTIV = true;
+
+    /**
+     * Die Bindung aus der Serverantwort eines Teils als Attribute ans Netz.
+     * @returns true, wenn das Netz gebunden ist
+     */
+    static anlegen(netz, teil) {
+        const b = teil?.bindung;
+        const geo = netz?.geometry;
+        if (!b || !geo?.attributes?.position || teil.stoff) return false;
+        const n = geo.attributes.position.count;
+        const dreieck = base64ToFloat32(b.dreieck), bary = base64ToFloat32(b.bary);
+        const abstand = base64ToFloat32(b.abstand), mischung = base64ToFloat32(b.mischung);
+        if (dreieck.length !== 3 * n || mischung.length !== n) {
+            Protokoll.warnung('Oberflaechenbindung', `${netz.name}: Bindung passt nicht (${mischung.length} zu ${n})`);
+            return false;
+        }
+        geo.setAttribute('bindung', new THREE.BufferAttribute(dreieck, 3));
+        geo.setAttribute('bary', new THREE.BufferAttribute(bary, 3));
+        geo.setAttribute('bindabstand', new THREE.BufferAttribute(abstand, 1));
+        geo.setAttribute('mischung', new THREE.BufferAttribute(mischung, 1));
+        geo.userData.bindung = { stufen: Number(b.stufen) || 0, gebunden: Oberflaechenbindung._anzahl(mischung) };
+        return true;
+    }
+
+    /**
+     * Ein Netz (nach dem Einhängen, auch nach dem Neubinden) mit der Figur
+     * verdrahten: Eingriff an jedem Material, Körperlage je Bild.
+     */
+    static verdrahten(inst, netz) {
+        const bindung = netz?.geometry?.userData?.bindung;
+        if (!bindung) return false;
+        const materialien = Array.isArray(netz.material) ? netz.material : [netz.material];
+        for (const m of materialien) Oberflaechenbindung._eingriff(m);
+        netz.onBeforeRender = (renderer) => Oberflaechenbindung._vorZeichnen(renderer, inst, netz);
+        return true;
+    }
+
+    static _vorZeichnen(renderer, inst, netz) {
+        const lage = Koerperlage.sichern(renderer, inst);
+        const passt = Oberflaechenbindung.AKTIV && Boolean(lage)
+            && (inst.stufen || 0) === netz.geometry.userData.bindung.stufen;
+        const materialien = Array.isArray(netz.material) ? netz.material : [netz.material];
+        for (const m of materialien) {
+            const u = m.userData.oberflaeche;
+            if (!u) continue;
+            u.uOberflaecheAn.value = passt ? 1 : 0;
+            u.uKapselAn.value = Oberflaechenbindung.KAPSELN_AKTIV && lage && lage.anzahl ? 1 : 0;
+            if (!lage) continue;
+            u.uKoerperLage.value = lage.lage;
+            u.uKoerperNormale.value = lage.normale;
+            u.uLageBreite.value = lage.breite;
+            u.uKapselAnzahl.value = lage.anzahl;
+            if (lage.kapseln) u.uKapseln.value = lage.kapseln;
+        }
+    }
+
+    /** Die Uniforms EINMAL je Material anlegen — sie bleiben dieselben Objekte
+     *  (Three hält je Programm die Uniforms des zuletzt kompilierten, `genesis9.md`). */
+    static _eingriff(material) {
+        if (material.userData.oberflaeche) return;
+        const platzhalter = new THREE.DataTexture(new Float32Array([0, 0, 0, 1]), 1, 1, THREE.RGBAFormat, THREE.FloatType);
+        platzhalter.needsUpdate = true;
+        const u = material.userData.oberflaeche = {
+            uOberflaecheAn: { value: 0 },
+            uKoerperLage: { value: platzhalter },
+            uKoerperNormale: { value: platzhalter },
+            uLageBreite: { value: 1 },
+            uKapselAn: { value: 0 },
+            uKapselAbstand: { value: Oberflaechenbindung.KAPSELABSTAND },
+            uKapselAnzahl: { value: 0 },
+            uKapseln: { value: Array.from({ length: 4 * OberflaecheGLSL.KAPSELN }, () => new THREE.Vector4()) },
+        };
+        const eingriff = (shader) => {
+            Object.assign(shader.uniforms, u);
+            shader.vertexShader = shader.vertexShader
+                .replace('#include <common>', '#include <common>\n' + OberflaecheGLSL.UNIFORMS)
+                .replace('#include <skinning_vertex>', OberflaecheGLSL.VERTEX);
+        };
+        eingriff.kennung = () => 'o';
+        Shaderpatch.anhaengen(material, Oberflaechenbindung.SCHLUESSEL, eingriff);
+        material.needsUpdate = true;
+    }
+
+    static _anzahl(mischung) {
+        let n = 0;
+        for (let i = 0; i < mischung.length; i++) if (mischung[i] >= 1) n++;
+        return n;
+    }
+
+    /** Für Proben: Stand einer Figur — gebundene Punkte je Stück. */
+    static stand(inst) {
+        const aus = {};
+        for (const [schluessel, netz] of Object.entries(inst?.clothMeshes || {})) {
+            const b = netz?.geometry?.userData?.bindung;
+            if (b) aus[schluessel] = { ...b, an: Boolean(netz.onBeforeRender && netz.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender) };
+        }
+        return aus;
+    }
+}

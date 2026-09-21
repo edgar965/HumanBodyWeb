@@ -3,6 +3,7 @@ import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
+import { Oberflaechenbindung } from './oberflaechenbindung.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -73,6 +74,9 @@ export class Genesis9kleidung {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
             netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
+            // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;
+            // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden).
+            Oberflaechenbindung.anlegen(netz, teil);
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);

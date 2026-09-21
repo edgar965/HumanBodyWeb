@@ -61,6 +61,24 @@ export class Bvhtext {
     }
 
     /**
+     * Nur die Bilder `trimIn` .. `länge − trimOut` — Skelett-Kopf unverändert,
+     * `Frames:` auf die neue Anzahl. Für einen geschnittenen Clip: eine BVH,
+     * die zum Export "Speichern unter" gehört, muss den Ausschnitt enthalten,
+     * nicht die volle Quelle (die trägt `Bvhausgabe.text()` sonst unverändert
+     * weiter, egal wie der Clip getrimmt ist).
+     */
+    ausschnitt(trimIn, trimOut) {
+        const alle = this.bewegungszeilen();
+        const behalten = alle.slice(trimIn, alle.length - trimOut);
+        const kopfBis = alle.length ? alle[0] : this.zeilen.length;
+        const kopf = this.zeilen.slice(0, kopfBis).map(
+            zeile => zeile.trim().startsWith('Frames:') ? `Frames: ${behalten.length}` : zeile);
+        const neu = new Bvhtext('');
+        neu.zeilen = [...kopf, ...behalten.map(nummer => this.zeilen[nummer])];
+        return neu;
+    }
+
+    /**
      * Einen Kanal über alle Bilder neu setzen.
      * @param werte (bildnummer) => Zahl
      * @returns Anzahl geänderter Bilder

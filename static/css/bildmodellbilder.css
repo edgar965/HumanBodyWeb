@@ -170,7 +170,9 @@
 .bildmodell-freistellerregler input[type=range] { width: 140px; }
 .bildmodell-freistellerregler [data-wert] { min-width: 3.5em; color: var(--text-muted, #aab); }
 /* Pinsel-Leinwand deckungsgleich über dem Foto links (`freistellerpinsel.js` setzt Maß und Lage). */
-.bildmodell-freistellerfoto { position: relative; }
+/* Bühne = was `freistellerzoom.js` transformiert (Foto + Leinwand bzw. Vorschau); füllt das Feld, Ursprung oben links. */
+.bildmodell-freistellerbuehne { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; justify-content: center; align-items: center; transform-origin: 0 0; }
+.bildmodell-freistellerbuehne img, .bildmodell-freistellerbuehne canvas[data-feld="vorschau"] { max-width: 100%; max-height: 100%; object-fit: contain; }
 .bildmodell-freistellerleinwand { position: absolute; left: 0; top: 0; pointer-events: none; touch-action: none; }
 .bildmodell-freistellerwerkzeuge { margin-top: 10px; }
 .bildmodell-freistellerwahl { display: flex; flex-wrap: wrap; gap: 4px 14px; }
@@ -178,3 +180,9 @@
 .bildmodell-freistellerfarbe { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
 .bildmodell-freistellerfarbe.drin { background: rgba(60, 200, 90, 0.85); }
 .bildmodell-freistellerfarbe.draussen { background: rgba(230, 60, 60, 0.85); }
+/* Positivliste (Hauttöne): eigener, abgesetzter Block — Edgar: „WO IST DIE POSITIVSCHWELLE??" */
+.bildmodell-freistellerpositiv { border: 1px solid rgba(60, 200, 90, 0.5); border-radius: 6px; padding: 6px 10px; }
+.bildmodell-freistellerpositiv.an { border-color: rgba(60, 200, 90, 0.95); background: rgba(60, 200, 90, 0.08); }
+.bildmodell-freistellerpositivan { cursor: pointer; }
+.bildmodell-freistellerpositiv input[type=range] { width: 200px; }
+.bildmodell-freistelleraus { opacity: 0.45; }

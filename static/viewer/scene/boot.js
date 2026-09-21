@@ -34,7 +34,7 @@ import './kleider.js';
 import './garmentcode.js';
 import './garmentcode_vorbilder.js';
 import './garmentcode_absatz.js';
-import './hautverdeckung.js';
+import '../gemeinsam/hautverdeckung.js';
 import './lagenverdeckung.js';
 import './kleidungsprobe.js';
 import './garmentcode_absatzregler.js';

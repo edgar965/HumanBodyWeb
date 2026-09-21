@@ -146,6 +146,12 @@ HILFE_EXTRA = [
                 'url': '/hilfe/kleidung/koerperphysik/',
                 'aktiv': 'hilfe_koerper_physik',
             },
+            {
+                'label': 'Fitting',
+                'icon': 'bi-body-text',
+                'url': '/hilfe/kleidung/fitting/',
+                'aktiv': 'hilfe_kleidung_fitting',
+            },
         ],
     },
 ]

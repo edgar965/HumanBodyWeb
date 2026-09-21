@@ -31,7 +31,9 @@ export class Bildmodellauftrag {
         // Browser-Cache, damit die Seite überall das neue Bild zeigt (20.09.2026).
         if (ordner === 'zuschnitt') {
             const e = (this.zustand.bilder || []).find(b => b.datei === name);
-            const stand = e && e.freisteller && e.freisteller.stand;
+            // … und `bildstand` (mtime des Ausschnitts, Server) nach Zurücksetzen oder Neuschnitt —
+            // sonst zeigt der Bildspeicher des Browsers unter derselben Adresse das alte Bild (21.09.2026).
+            const stand = e && ((e.freisteller && e.freisteller.stand) || e.bildstand);
             if (stand) return `${adresse}?t=${encodeURIComponent(stand)}`;
         }
         return adresse;

@@ -24,8 +24,8 @@
  */
 export class Cliplaenge {
 
-    /** Clips ohne Quelle: `totalFrames` IST die Länge (Modell, Script). */
-    static OHNE_QUELLE = ['model', 'script'];
+    /** Clips ohne Quelle: `totalFrames` IST die Länge (Modell, Script, Standbild). */
+    static OHNE_QUELLE = ['model', 'script', 'freeze'];
 
     /** Wenigstens ein Bild bzw. eine Zehntelsekunde bleibt immer. */
     static MINDESTBILDER = 1;

@@ -1,5 +1,5 @@
 {% extends "einstellungsseite.html" %}
-{% load einstellungszeile %}
+{% load einstellungszeile %}{% load fassung %}
 {% block title %}SMPL Body - Einstellungen{% endblock %}
 
 {% block einstellungen_stile %}
@@ -143,21 +143,7 @@
             Welches HumanBody-Preset auf der SMPL Test-Seite geladen wird.
         </p>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Preset</strong>
-                <small>Standard-Modell f&uuml;r den HumanBody auf der SMPL-Seite.</small>
-            </div>
-            <div class="settings-input">
-                <select name="smpl_default_humanbody_preset" class="settings-select">
-                    {% for preset in available_presets %}
-                    <option value="{{ preset }}"
-                         {% if settings.smpl_default_humanbody_preset == preset %}selected{% endif %}>
-                        {{ preset }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
+        {% modell "smpl_default_humanbody_preset" %}
     </div>
 {% endblock %}
 
@@ -272,5 +258,9 @@
         });
     }
 })();
+</script>
+<script type="module">
+import { Standardmodell } from "{% fassungspfad 'js/einstellungen/standardmodell.js' %}";
+Standardmodell.alleStarten();
 </script>
 {% endblock %}

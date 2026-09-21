@@ -24,7 +24,15 @@ DIE BLÖCKE:
 `{% templatetag openblock %} csrf_token {% templatetag closeblock %}` steht hier ein Mal statt achtmal. Es fehlt
 nicht: Ohne das Zeichen weist Django das Speichern mit 403 ab.
 {% endcomment %}
-{% load static %}
+{% load static %}{% load fassung %}
+
+{% comment %}Der Figurwahl-Dialog und der Modellkasten (`{% templatetag openblock %} modell {% templatetag closeblock %}`)
+stehen seit dem 21.09.2026 auf sieben der Seiten — ihre Stile gehören deshalb hierher,
+nicht siebenmal in `einstellungen_stile`.{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/modellkasten.css' %}">
+{% endblock %}
 
 {% block content %}
 {% block einstellungen_stile %}{% endblock %}

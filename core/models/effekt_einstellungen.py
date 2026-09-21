@@ -36,7 +36,7 @@ class EffektEinstellungen(models.Model):
         max_length=200,
         default='Female2',
         blank=True,
-        help_text='Vorgewähltes HumanBody-Modell der Effekte-Seite',
+        help_text=Einstellungsfelder.hilfetext('effekte_default_model'),
     )
     effekte_default_animation = models.CharField(
         max_length=300,

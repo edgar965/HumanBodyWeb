@@ -36,16 +36,18 @@ class Bildmodellspeichern:
                 'ausdruck': '',
                 'kleidung': {person['haar']: {}} if person.get('haar') else {},
                 'fototextur': self.fototextur(),
+                'hautverschiebung': self.fototextur('verschiebung'),
                 'herkunft': {'auftrag': self.job.kennung, 'art': 'modell aus bildern', 'person': person},
             },
         }
 
-    def fototextur(self):
-        """`{kachel: Adresse}` der gebackenen Kacheln (Stufe 2) — leer ohne Fototextur."""
+    def fototextur(self, feld='kacheln'):
+        """`{kachel: Adresse}` der gebackenen Kacheln (Stufe 2) bzw. der Verschiebungskacheln
+        (`verschiebung`, Alter/Tonus/Masse) — leer ohne Fototextur."""
         f = self.job.ergebnis.get('fototextur') or {}
         return {
             k: '/api/bildmodell/%s/datei/ergebnis/%s' % (self.job.id, name)
-            for k, name in (f.get('kacheln') or {}).items()
+            for k, name in (f.get(feld) or {}).items()
         }
 
     def speichern(self, melder=None):

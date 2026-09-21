@@ -260,9 +260,10 @@ class Bildmodellfototextur:
         with np.load(pfad) as d:
             hd = {k: d[k] for k in d.files}
         kacheln, herkunft, hautton = self._kacheln(hd, G9texturabtastung.holen(), melder)
-        return dict(alt, kacheln={str(k): os.path.basename(v) for k, v in kacheln.items()},
-                    herkunft={str(k): os.path.basename(v) for k, v in herkunft.items()},
-                    hautton=hautton, stand=int(time.time()))
+        return self._verschiebung(dict(
+            alt, kacheln={str(k): os.path.basename(v) for k, v in kacheln.items()},
+            herkunft={str(k): os.path.basename(v) for k, v in herkunft.items()},
+            hautton=hautton, stand=int(time.time())), melder)
 
     def _posen(self, bilder, melder=None):
         """T1: Pose und Kamera je Körperbild aus GVHMR nachholen (`Bildmodellposierung.nachholen`)."""
@@ -307,4 +308,11 @@ class Bildmodellfototextur:
         }
         logger.info('Bildmodell %s: Fototextur %s', self.job.kennung,
                     {k: v for k, v in aus.items() if k != 'je_bild'})
-        return aus
+        return self._verschiebung(aus, melder)
+
+    def _verschiebung(self, aus, melder=None):
+        """Alter/Tonus/Masse als Verschiebungskacheln dazu (`Bildmodellhautverschiebung`, 21.09.2026)."""
+        from .bildmodellhautverschiebung import Bildmodellhautverschiebung
+
+        return Bildmodellhautverschiebung.anfuegen(aus, self.optionen.get('person'),
+                                                   self.ablage.ergebnis(), melder)

@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { Stoffhaut } from './genesis9/stoffkapseln.js';
+import { Stoffhaut } from '../gemeinsam/stoffkapseln.js';
 import { Genesis9stoffschwung } from './genesis9/genesis9stoffschwung.js';
 import { Kleidungsmass } from '../gemeinsam/kleidungsmass.js';
 

@@ -19,7 +19,9 @@ export async function saveBvhWithEffects() {
     for (const track of state.project.tracks) {
         if (track.type !== 'bvh') continue;
         for (const clip of track.clips) {
-            if (clip.category && clip.name) clips.push(clip);
+            // Standbild zeigt dieselbe Quelldatei wie der Clip, aus dem es
+            // entstand — die steht schon in der Liste, kein zweiter Eintrag nötig.
+            if (clip.category && clip.name && clip.type !== 'freeze') clips.push(clip);
         }
     }
     if (clips.length === 0) {

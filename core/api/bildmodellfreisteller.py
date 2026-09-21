@@ -46,6 +46,26 @@ class Bildmodellfreistellerendpunkte:
 
     @staticmethod
     @require_POST
+    def grundlage(request, job_id, datei):
+        """Bild, Maske (und Abstandskarte) in Vorschaugröße — der Browser rechnet die Regler selbst
+        (21.09.2026, Edgar: „die slider sollen sofort wirken")."""
+        from ..dienste.bildmodellfreistellergrundlage import Bildmodellfreistellergrundlage
+
+        job, dienst, fehler = Bildmodellfreistellerendpunkte._dienst(job_id, datei)
+        if fehler:
+            return fehler
+        try:
+            rumpf = Bildmodellfreistellerendpunkte._rumpf(request)
+            aus = Bildmodellfreistellergrundlage(dienst).holen(datei, rumpf)
+        except (RuntimeError, ValueError, OSError) as fehler:
+            logger.warning('Bildmodell %s: Freisteller-Grundlage %s: %s', job.kennung, datei, fehler)
+            return JsonResponse({'error': str(fehler)}, status=500)
+        antwort = JsonResponse(aus)
+        antwort['Cache-Control'] = 'no-store'
+        return antwort
+
+    @staticmethod
+    @require_POST
     def vorschau(request, job_id, datei):
         job, dienst, fehler = Bildmodellfreistellerendpunkte._dienst(job_id, datei)
         if fehler:
@@ -61,6 +81,12 @@ class Bildmodellfreistellerendpunkte:
 
     @staticmethod
     def _antwort(job, eintrag):
+        # `bildstand` wie im Zustand (`Bildmodellendpunkte._bilder`): Adresse des Ausschnitts wechselt.
+        try:
+            pfad = Bildmodellablage(job.kennung).datei(Bildmodellablage.ZUSCHNITT, eintrag.get('datei') or '')
+            eintrag = dict(eintrag, bildstand=int(pfad.stat().st_mtime))
+        except (OSError, ValueError):
+            pass
         return JsonResponse({'ok': True, 'bild': eintrag, 'textur': Bildmodelltextur.hautton(job.bilder),
                              'texturbilder': Bildmodelltextur.liste(job.bilder)})
 

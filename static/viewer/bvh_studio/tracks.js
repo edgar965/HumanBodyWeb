@@ -21,7 +21,7 @@
 import { fn } from '../gemeinsam/registrierung.js';
 import { addClipToTrack, loadClipAnimation, buildClipFromData,
          duplicateSelectedClip, deleteSelectedClip, trimSelectedClip,
-         splitClipAtPlayhead } from './spur_clips.js';
+         splitClipAtPlayhead, standbildEinfuegen } from './spur_clips.js';
 import { addLightKeyframePair, addLightKeyframe } from './spur_lichter.js';
 import { loadTrackCharacter } from './spur_charakter.js';
 import { Spurerzeugung } from './spurerzeugung.js';
@@ -59,3 +59,4 @@ fn.duplicateSelectedClip = duplicateSelectedClip;
 fn.deleteSelectedClip = deleteSelectedClip;
 fn.trimSelectedClip = trimSelectedClip;
 fn.splitClipAtPlayhead = splitClipAtPlayhead;
+fn.standbildEinfuegen = standbildEinfuegen;

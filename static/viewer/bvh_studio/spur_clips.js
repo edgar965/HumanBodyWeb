@@ -104,3 +104,4 @@ export function trimSelectedClip(mode, frames = 10) {
     Clipbearbeitung.kuerzen(mode, frames);
 }
 export function splitClipAtPlayhead() { Clipbearbeitung.teilen(); }
+export function standbildEinfuegen() { Clipbearbeitung.standbildEinfuegen(); }

@@ -16,7 +16,6 @@ from django.shortcuts import redirect, render
 from django.views import View
 
 from ..dienste.animationsauswahl import Animationsauswahl
-from ..dienste.modellvorlagen import Modellvorlagen
 from ..models import AppSettings
 
 
@@ -57,7 +56,6 @@ class TheatreEinstellungenSeite(View):
             self.VORLAGE,
             {
                 'settings': s,
-                'available_presets': Modellvorlagen.namen(),
                 **anim_teil,
                 'available_lighting_presets': [{'value': w, 'label': t} for w, t in self.LICHTVORLAGEN],
             },

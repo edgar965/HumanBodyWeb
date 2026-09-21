@@ -69,9 +69,9 @@ class GarmentcodeNachbindungTest(SimpleTestCase):
         """Ein Umbau holt Koerper und jedes Daz-Stueck einzeln; jede Ankunft
         meldet. Ohne Ruhezeit liefe die Maske je Meldung (auf Stufe 2 je
         Lauf zweistellige Sekunden)."""
-        for name, klasse in (('hautverdeckung.js', 'Hautverdeckung'),
-                             ('lagenverdeckung.js', 'Lagenverdeckung')):
-            quelle = _quelle('scene', name)
+        for ordner, name, klasse in (('gemeinsam', 'hautverdeckung.js', 'Hautverdeckung'),
+                                     ('scene', 'lagenverdeckung.js', 'Lagenverdeckung')):
+            quelle = _quelle(ordner, name)
             self.assertIn('static RUHE_MS = 400;', quelle, name)
             self.assertIn('clearTimeout(%s._ausstehend.get(inst))' % klasse, quelle, name)
             self.assertIn('}, %s.RUHE_MS));' % klasse, quelle, name)

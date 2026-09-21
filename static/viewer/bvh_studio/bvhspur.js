@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Retargetziel } from './retargetziel.js';
 import { Spurfigurarten } from './spurfigurarten.js';
+import { Zeitkurve } from './zeitkurve.js';
 
 /**
  * Bvhspur — den passenden Bewegungsclip am Abspielkopf laufen lassen.
@@ -44,7 +45,7 @@ export class Bvhspur {
             }
             const beginn = clip.startFrame / state.project.fps;
             if (zeit < beginn || zeit >= beginn + clip.duration) continue;
-            const ort = (zeit - beginn) * clip.speed + clip.trimIn / clip.fps;
+            const ort = Bvhspur._quellzeit(clip, zeit, beginn);
             if (spur._activeClip !== clip) Bvhspur._starten(spur, clip, zeit, ort);
             else if (!spur._activeAction.isRunning()) Bvhspur._weiter(spur, clip);
             spur._activeAction.time = ort;
@@ -53,6 +54,31 @@ export class Bvhspur {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Stelle im Quellmaterial (Sekunden ab dessen Bild 0), die bei `zeit`
+     * gezeigt wird.
+     *
+     * Standbild (`type: 'freeze'`): immer derselbe, beim Einfügen
+     * festgehaltene Zeitpunkt — die Pose bewegt sich nicht (`clipbearbeitung.js`).
+     *
+     * Normaler BVH-Clip MIT Kurve (`data.remap`, `zeitkurve.js`): `u` ist der
+     * Zeitanteil seit Clipbeginn, `Zeitkurve.quellanteil` biegt ihn zu einem
+     * Quellanteil `v` — ohne Punkte ist das exakt `v=u`, also bitgleich mit
+     * der Formel darunter (siehe `Zeitkurve`-Klassendoku).
+     *
+     * Ohne Kurve: die bisherige Formel unverändert — konstantes `speed`.
+     */
+    static _quellzeit(clip, zeit, beginn) {
+        if (clip.type === 'freeze') return clip.data.sourceTime;
+        if (!clip.data?.remap?.length) {
+            return (zeit - beginn) * clip.speed + clip.trimIn / clip.fps;
+        }
+        const u = clip.duration > 0 ? (zeit - beginn) / clip.duration : 0;
+        const quellbereich = clip.totalFrames - clip.trimIn - clip.trimOut;
+        const v = Zeitkurve.quellanteil(clip.data.remap, u);
+        return (clip.trimIn + v * quellbereich) / clip.fps;
     }
 
     static _starten(spur, clip, zeit, ort) {

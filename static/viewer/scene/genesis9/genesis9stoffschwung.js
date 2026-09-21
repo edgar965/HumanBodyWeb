@@ -37,7 +37,7 @@
 import { THREE, state } from '../state.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 import { base64ToFloat32, base64ToUint32 } from '../../gemeinsam/kodierung.js';
-import { Stoffkapseln, Stoffhaut } from './stoffkapseln.js';
+import { Stoffkapseln, Stoffhaut } from '../../gemeinsam/stoffkapseln.js';
 import { Genesis9felder } from '../../gemeinsam/genesis9felder.js';
 import { Genesis9gelenke } from '../../gemeinsam/genesis9gelenke.js';
 import { Stoffwache } from '../../gemeinsam/stoffwache.js';

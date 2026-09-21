@@ -11,6 +11,10 @@ Standard-Modell auswählen … in einem Dialog."
    fallen auf die Vorgabe zurück (HumanBody, femaleWithClothes, gespeichert).
 4. Ein Lader des Dialogs ruft `uebernehmen` mit dem Eintrag — so kommt der
    Bereich (standard/gespeichert) mit, den die Szene beim Laden braucht.
+5. Seit 21.09.2026 auf allen Einstellungsseiten (Edgar: „Korrigiere das auch
+   bei den anderen"): `ausKasten` liest Reiter (`data-quellen`) und Leertext
+   (`data-leer`) vom Kasten; nur HumanBody für Theatre und Co., „Keins"
+   leert das Feld, und ohne Leertext bleibt die alte Vorgabe.
 
 Sabotage-Gegenprobe: `eintrag?.bereich || 'standard'` → `'standard'` in
 `uebernehmen` → Fall 2 rot.
@@ -64,6 +68,36 @@ if (c.wahl.quelle !== 'smpl' || c.wahl.bereich !== 'standard' || c.wahl.name !==
 // --- 4. der Lader des Dialogs -----------------------------------------------
 const ergebnis = await sm.dialog.lader.makehuman('base', null, { name: 'base', bereich: 'standard' });
 if (ergebnis.quelle !== 'makehuman' || felder['feld:quelle'].value !== 'makehuman') fehl('Lader: ' + JSON.stringify(ergebnis));
+
+// --- 5. nur HumanBody, leer erlaubt (Theatre, Effekte) -----------------------
+const felder5 = {};
+const kasten5 = { id: 'standardmodell-theatre_default_model',
+    dataset: { quellen: 'modell', leer: '(Kein Auto-Load)' },
+    querySelector(wahl) {
+        const m = wahl.match(/\\[data-(feld|anzeige|tun)="(\\w+)"\\]/);
+        if (!m) return null;
+        if (m[1] === 'feld' && m[2] !== 'name') return null;   // nur das Namensfeld
+        const k = m[1] + ':' + m[2];
+        return felder5[k] || (felder5[k] = { value: '', textContent: '', addEventListener() {} });
+    } };
+const t = Standardmodell.ausKasten(kasten5);
+if (t.dialog.quellen.join() !== 'modell') fehl('Theatre-Reiter: ' + t.dialog.quellen.join());
+if (t.dialog.kennung !== 'standardmodell-theatre_default_model-dialog') fehl('Kennung: ' + t.dialog.kennung);
+if (t.wahl.name !== '') fehl('leer erlaubt, aber Name: ' + t.wahl.name);
+t.zeigen(null);
+if (felder5['anzeige:name'].textContent !== '(Kein Auto-Load)') fehl('Leertext: ' + felder5['anzeige:name'].textContent);
+if (felder5['anzeige:meta'].textContent !== '') fehl('Meta bei leer: ' + felder5['anzeige:meta'].textContent);
+t.uebernehmen('modell', 'Female_Caucasian', { name: 'Female_Caucasian', anzeige: 'Female Caucasian',
+                                              bereich: 'standard', unterzeile: 'weiblich · Körpertyp' });
+if (felder5['feld:name'].value !== 'Female_Caucasian') fehl('Theatre-Name: ' + felder5['feld:name'].value);
+if (felder5['anzeige:meta'].textContent !== 'HumanBody · Standard-Modell · weiblich · Körpertyp') fehl('Theatre-Meta: ' + felder5['anzeige:meta'].textContent);
+t.leeren();
+if (felder5['feld:name'].value !== '') fehl('Keins: ' + felder5['feld:name'].value);
+if (felder5['anzeige:name'].textContent !== '(Kein Auto-Load)') fehl('Keins-Anzeige: ' + felder5['anzeige:name'].textContent);
+// Ohne Leertext bleibt die Vorgabe, auch wenn das Feld leer ankommt.
+felder5['feld:name'].value = '';
+const u = Standardmodell.ausKasten({ ...kasten5, dataset: { quellen: 'modell', leer: '' } });
+if (u.wahl.name !== 'femaleWithClothes') fehl('Vorgabe ohne Leertext: ' + u.wahl.name);
 
 console.log(JSON.stringify({ ok: fehler.length === 0, fehler }));
 """

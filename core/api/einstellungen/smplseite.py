@@ -7,7 +7,6 @@ import logging
 from django.contrib import messages
 from django.shortcuts import redirect
 
-from ...dienste.modellvorlagen import Modellvorlagen
 from ...models import AppSettings
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
@@ -54,7 +53,6 @@ class SmplEinstellungen(Einstellungsseite):
             'xoffset_pct': int(round(s.smpl_default_xoffset * 100)),
             'scene_settings': szene,
             'lichter': self._lichter(szene),
-            'available_presets': Modellvorlagen.namen(),
         }
 
     @classmethod

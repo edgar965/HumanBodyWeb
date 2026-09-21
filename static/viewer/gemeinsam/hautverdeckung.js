@@ -31,13 +31,13 @@
  * `doppelcode`, 17.09.2026). Eigen bleibt, WO Körper und Stücke liegen
  * (`inst.bodyMesh`, `inst.clothMeshes`) und das Ereignis, das sie anstößt.
  */
-import { Hautmaske } from '../gemeinsam/hautmaske.js';
-import { Figurhaut } from '../gemeinsam/figurhaut.js';
-import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
-import { Skelettereignis } from '../gemeinsam/skelettereignis.js';
-import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
-import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
+import { Hautmaske } from './hautmaske.js';
+import { Figurhaut } from './figurhaut.js';
+import { Stueckereignis } from './stueckereignis.js';
+import { Skelettereignis } from './skelettereignis.js';
+import { Protokoll } from './protokoll.js';
+import { Hauteinzug } from './hauteinzug.js';
+import { Saumschnitt } from './saumschnitt.js';
 
 export class Hautverdeckung extends Figurhaut {
 

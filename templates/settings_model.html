@@ -48,17 +48,7 @@
         </div>
 
         <!-- Konfiguration -->
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Konfiguration</strong>
-                <small>Standard-Modell das beim Öffnen der Konfigurationsseite geladen wird.</small>
-            </div>
-            <div class="settings-input">
-                <select name="default_model_config" id="default-model-config" class="settings-select">
-                    <option value="">— wird geladen —</option>
-                </select>
-            </div>
-        </div>
+        {% modell "default_model_config" %}
         {% kaestchen "show_rig_config" %}
         {% animation "default_anim_config" "anim-sel-config" %}
         <div class="settings-row">
@@ -71,17 +61,7 @@
         </div>
 
         <!-- Animationen -->
-        <div class="settings-row zeile-abgesetzt">
-            <div class="settings-label">
-                <strong>Animationen</strong>
-                <small>Standard-Modell das beim Öffnen der Animationen-Seite geladen wird.</small>
-            </div>
-            <div class="settings-input">
-                <select name="default_model_animations" id="default-model-animations" class="settings-select">
-                    <option value="">— wird geladen —</option>
-                </select>
-            </div>
-        </div>
+        <div class="zeile-abgesetzt">{% modell "default_model_animations" %}</div>
         {% kaestchen "show_rig_animations" %}
         {% animation "default_anim_animations" "anim-sel-anims" %}
     </div>
@@ -110,12 +90,11 @@ Animationsauswahl lagen als Inline-Skript hier — und wortgleich noch dreimal i
 settings_result/scene/theatre. Jetzt drei ES-Module unter static/js/einstellungen/;
 hier bleiben nur die Werte, die diese Seite von den anderen unterscheiden.{% endcomment %}
 <script type="module">
-import { Modellfeld } from "{% fassungspfad 'js/einstellungen/modellfeld.js' %}";
+import { Standardmodell } from "{% fassungspfad 'js/einstellungen/standardmodell.js' %}";
 import { Tabfelder } from "{% fassungspfad 'js/einstellungen/tabfelder.js' %}";
 import { Animationsauswahl } from "{% fassungspfad 'js/einstellungen/animationsauswahl.js' %}";
 
-Modellfeld.fuellen('default-model-config', "{{ settings.default_model_config|escapejs }}");
-Modellfeld.fuellen('default-model-animations', "{{ settings.default_model_animations|escapejs }}");
+Standardmodell.alleStarten();
 
 Tabfelder.bauen('panels-config-wrap', [
     ['body_type', 'Body Type'], ['morphs', 'Morphs'],

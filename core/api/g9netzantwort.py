@@ -6,6 +6,8 @@ Breiten aus `Netzantwort.TYPEN`, Hautgewichte kompakt (uint16/uint8).
 Aus `g9figur.py` herausgeloest (18.09.2026 nachts, die Datei stand bei 304
 Zeilen); `G9figur._netzantwort` zeigt weiter hierher.
 """
+import numpy as np
+
 from ..daten.netzantwort import Netzantwort
 
 __all__ = ['G9netzantwort']
@@ -28,6 +30,15 @@ class G9netzantwort:
             antwort['stoff'] = {'frei': Netzantwort.feld(netz['stoff']['frei'], 'frei'),
                                 'kaefig': Netzantwort.feld(netz['stoff']['kaefig'],
                                                            'kaefig')}
+        if netz.get('bindung') is not None:
+            # Oberflaechenbindung (`G9oberflaechenbindung`, 21.09.2026): je Punkt
+            # drei Koerperpunkte (als float32 — der Shader liest Attribute als
+            # Gleitkomma, -1 = ungebunden), Baryzentrik, Abstand, Mischung.
+            b = netz['bindung']
+            antwort['bindung'] = {art: Netzantwort.feld(b[art], art, typ=np.float32)
+                                  for art in ('dreieck', 'bary', 'abstand', 'mischung')}
+            # Die Stufe des KOERPERS (nicht des Stuecks: Nieten bleiben Kaefig).
+            antwort['bindung']['stufen'] = int(b.get('stufen') or 0)
         if netz.get('art'):
             # Stranghaar: Linien statt Flaechen, `anteil` 0 (Wurzel) .. 1 (Spitze);
             # `kappe`: die Haarkappe darunter, unbeleuchtet.
