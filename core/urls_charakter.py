@@ -28,6 +28,7 @@ from .api.brauen import Brauenendpunkte
 from .api.g9figur import G9figur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
+from .api.g9hautmischung import G9hautmischungapi
 from .api.g9vorschau import G9vorschau
 from .api.g9stoff import G9stoffapi
 from .api.g9frisurapi import G9frisurapi
@@ -161,6 +162,9 @@ CHARAKTER = [
          G9vorschau.stueck, name='g9_figur_vorschau'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/stoff/<int:nummer>/',
          G9stoffapi.bauplan, name='g9_figur_stoffbauplan'),
+    # Texturmischung (21.09.2026, core/api/g9hautmischung.py): Bilder eines Hautsatzes.
+    path('api/character/genesis9-figur/haut/<str:preset>/bilder/',
+         G9hautmischungapi.bilder, name='g9_figur_hautbilder'),
     # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
     path('api/character/genesis9-figur/frisur/<str:name>/',
          G9frisurapi.netz, name='g9_figur_frisur'),

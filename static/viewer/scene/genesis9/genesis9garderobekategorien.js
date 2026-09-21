@@ -20,18 +20,18 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
  * „Neue Kategorie …" (Name per Abfrage). Nach dem Verschieben zeichnet der
  * Aufrufer die Liste neu — der Stand kommt mit der Antwort zurück.
  *
- * Welche Kategorien aufgeklappt sind, merkt sich dieser Browser
- * (`localStorage`, umschlossen wie in `Bereichsgedaechtnis`); ohne Erinnerung
- * stehen alle offen bis auf die Requisiten (51 Waffen).
+ * Alle Kategorien stehen ZU (Edgar, 21.09.2026); offen ist die des in der Szene
+ * gewählten Stücks (`Genesis9garderobe.gewaehltesStueck`) und was dieser Browser
+ * sich als offen gemerkt hat (`localStorage`, umschlossen wie in `Bereichsgedaechtnis`).
  */
 export class Genesis9garderobekategorien {
 
     static ADRESSE = '/api/character/genesis9-figur/garderobe/kategorien/';
-    static SCHLUESSEL = 'hb_g9_garderobe_offen';
+    /** Neuer Schlüssel seit der Vorgabe ZU (21.09.2026): unter dem alten stand in jedem
+     *  Browser „alle offen" — die erste Merkung hatte damals alle Kategorien mitgenommen. */
+    static SCHLUESSEL = 'hb_g9_garderobe_offen_2';
     /** Art -> Vorgabe, wenn der Server keine `kategorie` mitgibt (`G9dazkategorien.NACH_ART`). */
     static VORGABE = { kleidung: 'Oberteile', haar: 'Haare', requisit: 'Requisiten' };
-    /** Ohne Erinnerung zu: die Waffen. */
-    static ZU = ['Requisiten'];
     static _stand = null;
 
     /** `{kategorien: [Name], zuordnung: {kennung: Name}}` — einmal geholt. */
@@ -107,17 +107,15 @@ export class Genesis9garderobekategorien {
 
     // ------------------------------------------------------------ Aufgeklappt
 
-    static offen(name) {
-        const gemerkt = Genesis9garderobekategorien._gemerkt();
-        return gemerkt ? gemerkt.includes(name) : !Genesis9garderobekategorien.ZU.includes(name);
+    /** Offen ist eine Kategorie nur, wenn sie das in der Szene gewählte Stück
+     *  enthält oder dieser Browser sie sich als offen gemerkt hat — die Vorgabe
+     *  ist ZU (Edgar, 21.09.2026: „per default alle Kategorien zugeklappt"). */
+    static offen(name, enthaeltGewaehltes = false) {
+        return enthaeltGewaehltes || Genesis9garderobekategorien._gemerkt().includes(name);
     }
 
     static merken(name, offen) {
-        // Ohne Erinnerung gelten alle besetzten als offen (bis auf `ZU`) — die
-        // erste Merkung nimmt sie mit, sonst klappte alles andere zu.
-        const alle = new Set(Genesis9garderobekategorien._gemerkt()
-            || (Genesis9garderobekategorien._stand?.kategorien || [])
-                .filter(n => !Genesis9garderobekategorien.ZU.includes(n)));
+        const alle = new Set(Genesis9garderobekategorien._gemerkt());
         if (offen) alle.add(name); else alle.delete(name);
         try {
             localStorage.setItem(Genesis9garderobekategorien.SCHLUESSEL, JSON.stringify([...alle]));
@@ -126,18 +124,16 @@ export class Genesis9garderobekategorien {
         }
     }
 
-    /** Die gemerkten offenen Namen — `null`, wenn nie etwas gemerkt wurde oder
-     *  ein gemerkter Name nicht mehr existiert (die Erinnerung „Kleidung" von vor
-     *  den Daz-Kategorien hätte sonst alle 14 neuen zugeklappt). */
+    /** Die gemerkten offenen Namen — ohne die, die es nicht mehr gibt (die Erinnerung
+     *  „Kleidung" von vor den Daz-Kategorien). Leer, wenn nie etwas gemerkt wurde. */
     static _gemerkt() {
         try {
             const roh = JSON.parse(localStorage.getItem(Genesis9garderobekategorien.SCHLUESSEL));
-            if (!Array.isArray(roh)) return null;
+            if (!Array.isArray(roh)) return [];
             const bekannt = Genesis9garderobekategorien._stand?.kategorien;
-            if (bekannt && roh.some(n => !bekannt.includes(n))) return null;
-            return roh.length ? roh : null;
+            return bekannt ? roh.filter(n => bekannt.includes(n)) : roh;
         } catch (fehler) {
-            return null;
+            return [];
         }
     }
 }

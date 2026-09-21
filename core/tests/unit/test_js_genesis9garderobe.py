@@ -29,7 +29,14 @@ class GarderobeKategorienJsTest(SimpleTestCase):
         text = quelltext('scene', 'genesis9', 'genesis9garderobe.js')
         self.assertNotIn('static ARTEN', text, 'die festen drei Arten sind durch Kategorien ersetzt')
         self.assertIn('Genesis9garderobekategorien.gruppen(stuecke, stand)', text)
-        self.assertIn('Genesis9garderobekategorien.offen(titel)', text)
+        # 21.09.2026: alle zu, offen nur die Kategorie des in der Szene gewählten Stücks
+        # (seine Zeile markiert), Kopf in der Schrift von „Farbe / Material".
+        self.assertIn("Genesis9garderobekategorien.offen(titel, eigene.some(s => s.id === gewaehlt))", text)
+        self.assertIn("if (stueck.id === gewaehlt) zeile.classList.add('selected')", text)
+        self.assertIn('<summary class="aufklappkopf">', text)
+        kategorien = quelltext('scene', 'genesis9', 'genesis9garderobekategorien.js')
+        self.assertIn('static offen(name, enthaeltGewaehltes = false)', kategorien)
+        self.assertNotIn('static ZU', kategorien, 'keine Ausnahme mehr — die Vorgabe ist zu')
         self.assertIn('Genesis9garderobekategorien.menue(zeile, stueck, neuzeichnen)', text)
         self.assertIn('escapeHtml(titel)', text, 'Kategorienamen kommen von Edgar — als Text')
 

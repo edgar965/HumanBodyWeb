@@ -162,9 +162,10 @@ class FormpresetsTest(SimpleTestCase):
         bh = Katalog.entwurf('unterwaesche')
         self.assertEqual(
             (bh['meta']['upper']['v'], bh['meta']['bottom']['v'], bh['shirt']['length']['v']),
-            ('FittedShirt', None, 0.5),
+            ('Shirt', None, 0.65),
         )
-        self.assertEqual(Katalog.entwurf('hoeschen')['meta']['bottom']['v'], 'Pants')
+        # Seit 20.09.2026 der Slip-Baustein (`slip/`), keine kuerzeste Hose mehr.
+        self.assertEqual(Katalog.entwurf('hoeschen')['meta']['bottom']['v'], 'Briefs')
         # Ein Trägertop nimmt die Ärmellänge des Hemds zurück.
         top = next(p for p in Katalog.passform('oberteil') if p['titel'] == 'Trägertop')
         self.assertIn('sleeve.length', top['zurueck'])
@@ -222,8 +223,11 @@ class FormpresetsTest(SimpleTestCase):
         werte = Vorbildgruppen.werte(
             't-shirt', 'Sport-Bra01', {'shirt.length': 1.0, 'sleeve.sleeveless': True}
         )
-        self.assertEqual(werte['shirt.length'], 0.5)
-        self.assertEqual(werte['meta.upper'], 'FittedShirt')
+        # Seit 20.09.2026 gerades Shirt bis unter die Brust (0,65): Das
+        # FittedShirt endet immer an der Taille, `shirt.length` wirkt dort
+        # nicht — gemessen an Kin: „BH" mit 0,5 reichte 1 cm unter die Taille.
+        self.assertEqual(werte['shirt.length'], 0.65)
+        self.assertEqual(werte['meta.upper'], 'Shirt')
 
     def test_jedes_gemessene_vorbild_erscheint_genau_einmal(self):
         alle = Vorbildpresets.alle()

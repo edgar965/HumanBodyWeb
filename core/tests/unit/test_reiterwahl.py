@@ -56,13 +56,17 @@ class KlickAufEinStueck(SimpleTestCase):
         )
 
     def test_die_entscheidung_kommt_aus_der_zuordnung(self):
-        quelle = _js('scene', 'teilnetz_auswahl.js')
-        self.assertIn('Reiterzuordnung', quelle)
-        self.assertIn('Reiterzuordnung.fuer(', quelle)
+        # Seit 20.09.2026 (parallele Sitzung, `Stueckmarkierung`) trifft
+        # `stueckmarkierung.js` die Entscheidung; `teilnetz_auswahl.js` ruft sie.
+        auswahl = _js('scene', 'teilnetz_auswahl.js')
+        markierung = _js('scene', 'stueckmarkierung.js')
+        self.assertIn("import { Stueckmarkierung } from './stueckmarkierung.js';", auswahl)
+        self.assertIn('Reiterzuordnung', markierung)
+        self.assertIn('Reiterzuordnung.fuer(', markierung)
 
     def test_die_vorlage_wird_mitgesetzt(self):
         """Ein Reiter mit den Reglern eines ANDEREN Stuecks hilft nicht."""
-        self.assertIn('garmentcodeVorlageZeigen', _js('scene', 'teilnetz_auswahl.js'))
+        self.assertIn('garmentcodeVorlageZeigen', _js('scene', 'stueckmarkierung.js'))
         self.assertIn('fn.garmentcodeVorlageZeigen', _js('scene', 'garmentcode.js'))
 
     @skipUnless(

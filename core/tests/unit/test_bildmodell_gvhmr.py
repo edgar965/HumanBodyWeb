@@ -6,7 +6,7 @@ dafür in jeder Zeile mit der ich ein SMPL mit GVHMR erzeuge und ansehen kann,
 für jedes Bild!" Ohne GVHMR, ohne Prozess:
 
 1. `Bildmodelllauf.folge`: `schritte=['gvhmr']` ergibt diesen Schritt und danach
-   Schätzung bis Vorschau (`NACH_GVHMR`, ohne Textur und Speichern) — vorher fiel
+   Schätzung bis Speichern (`NACH_GVHMR`, seit 21.09.2026 mit Textur und Speichern) — vorher fiel
    ein unbekannter Schritt aus der Liste und der Lauf rechnete die ganze Kette
    (Sabotage im Test). Ein Lauf „ab ziel" enthält ihn nie. `melden` lässt den
    Balken beim Übergang 50 → 15 nicht zurückfallen.
@@ -48,18 +48,18 @@ class FolgeTest(SimpleTestCase):
     databases = set()
 
     #: Was auf den Einzelschritt folgt (Edgar, 20.09.2026: „Berechne auch die [Vorher/Nachher-
-    #: Bilder] immer neu, mit dem GVHMR lauf") — bis Vorschau, ohne Textur und Speichern.
-    KETTE = ['schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau']
+    #: Bilder] immer neu, mit dem GVHMR lauf") — die ganze Kette bis Speichern (Edgar, 21.09.2026:
+    #: „warum baust du den Lauf nicht so, dass es alle Zwischenschritte hat??").
+    KETTE = ['schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern']
 
     def test_einzelschritt_mit_modell_danach(self):
         self.assertEqual(Bildmodelllauf.folge(schritte=['gvhmr']), ['gvhmr'] + self.KETTE)
         self.assertEqual(Bildmodelllauf.folge(schritte=['gvhmr', 'sichtung']),
                          ['sichtung', 'gvhmr'] + self.KETTE)
-        # Was schon genannt ist, kommt nicht doppelt — und nie Textur oder Speichern.
+        # Was schon genannt ist, kommt nicht doppelt; Textur und Speichern gehören dazu.
         folge = Bildmodelllauf.folge(schritte=['gvhmr', 'vorschau'])
-        self.assertEqual(folge, ['vorschau', 'gvhmr', 'schaetzung', 'ziel', 'anpassung', 'rest'])
-        self.assertNotIn('textur', folge)
-        self.assertNotIn('speichern', folge)
+        self.assertEqual(folge, ['vorschau', 'gvhmr', 'schaetzung', 'ziel', 'anpassung', 'rest',
+                                 'textur', 'speichern'])
 
     def test_kette_ohne_einzelschritt(self):
         reihe = Bildmodelloptionen.REIHENFOLGE

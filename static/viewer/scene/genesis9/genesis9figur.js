@@ -21,6 +21,7 @@ export class Genesis9Figur extends Genesis9Modell {
             brauen: this.brauen,
             brauenstil: this.brauenstil,
             praesets: { ...this.praesets },
+            hautmischung: { ...this.hautmischung },
             pose: this.pose,
             ausdruck: this.ausdruck,
             kleidung: { ...this.kleidung },

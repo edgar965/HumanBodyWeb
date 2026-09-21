@@ -55,8 +55,10 @@ class Bildmodelllauf:
     #: Was nach dem Einzelschritt `gvhmr` von selbst folgt (Edgar, 20.09.2026: „Berechne auch
     #: die [Bilder vorher/nachher] immer neu, mit dem GVHMR-Lauf"): Schätzung (liest die
     #: GVHMR-Ergebnisse, `koerper: gvhmr`), Zielnetz aus den Betas (`weg: schaetzer`), Regler,
-    #: Rest, Vorschau (Vorher/Nachher-Bilder, Maßband). Keine Textur, kein Speichern.
-    NACH_GVHMR = ('schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau')
+    #: Rest, Vorschau (Vorher/Nachher-Bilder, Maßband) — und seit 21.09.2026 auch Textur und
+    #: Speichern (Edgar: „warum baust du den Lauf nicht so, dass es alle Zwischenschritte
+    #: hat??" — ein GVHMR-Lauf ließ die Fototextur auf dem alten Käfig stehen).
+    NACH_GVHMR = ('schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern')
     #: Einzelschritte, auf die diese Kette folgt: `gvhmr` (Körperbild) und `flame` (Kopfbild —
     #: Edgar, 20.09.2026: „warum gibt es beim Kopf keine Button zum Lauf?", `Bildmodellflame`).
     EINZELN_MIT_KETTE = ('gvhmr', 'flame')

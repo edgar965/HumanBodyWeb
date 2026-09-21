@@ -78,12 +78,12 @@ export class Genesis9hautGLSL {
 `;
 
     /** Der Ersatz für `normal_fragment_maps`, je nach Zusätzen zusammengesetzt. */
-    static normalen(mitGlitzer, mitDetail) {
+    static normalen(mitGlitzer, mitDetail, mischung = 0) {
         return `
 #if defined( USE_NORMALMAP_TANGENTSPACE )
     {
         vec3 basisN = texture2D( normalMap, vNormalMapUv ).xyz;
-${mitGlitzer ? Genesis9hautGLSL.GLITZER : ''}
+${Genesis9hautGLSL.mischungNormalen(mischung)}${mitGlitzer ? Genesis9hautGLSL.GLITZER : ''}
         vec3 mapN = basisN * 2.0 - 1.0;
         mapN.xy *= normalScale;
 ${mitDetail ? Genesis9hautGLSL.DETAIL : Genesis9hautGLSL.OHNE_DETAIL}
@@ -94,7 +94,53 @@ ${mitDetail ? Genesis9hautGLSL.DETAIL : Genesis9hautGLSL.OHNE_DETAIL}
 `;
     }
 
-    static KLARLACK_ALT = '( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat;';
+    /**
+     * TEXTURMISCHUNG (21.09.2026, Edgar: „Textur mit allen Texturen … und Regler
+     * dazu in %"): je Schicht i ein weiterer Hautsatz über der gewählten Haut —
+     * Albedo hinter `map_fragment` (VOR der Schminke, die bleibt obenauf),
+     * Rauheit hinter `roughnessmap_fragment` (Three liest den G-Kanal),
+     * Normalen im Bildraum vor `mapN` (lineare Mischung zweier Karten — für
+     * ein Gewicht reicht das, RNM wäre für Detail-ÜBER-Basis, nicht für „statt").
+     * `uMischAn` = Bild schon geladen, `uMischGewicht` = Regler (0..1).
+     */
+    static mischungFarbe(anzahl) {
+        let aus = '#ifdef USE_MAP\n';
+        for (let i = 0; i < anzahl; i++) {
+            aus += `    diffuseColor.rgb = mix( diffuseColor.rgb, texture2D( uMischFarbe${i}, vMapUv ).rgb, `
+                + `uMischGewicht${i} * uMischAn${i} );\n`;
+        }
+        return aus + '#endif\n';
+    }
+
+    static mischungRauheit(anzahl) {
+        let aus = '#ifdef USE_MAP\n';
+        for (let i = 0; i < anzahl; i++) {
+            aus += `    roughnessFactor = mix( roughnessFactor, texture2D( uMischRauheit${i}, vMapUv ).g, `
+                + `uMischGewicht${i} * uMischRauheitAn${i} );\n`;
+        }
+        return aus + '#endif\n';
+    }
+
+    static mischungNormalen(anzahl) {
+        let aus = '';
+        for (let i = 0; i < anzahl; i++) {
+            aus += `        basisN = mix( basisN, texture2D( uMischNormalen${i}, vNormalMapUv ).xyz, `
+                + `uMischGewicht${i} * uMischNormalenAn${i} );\n`;
+        }
+        return aus;
+    }
+
+    static mischungUniforms(anzahl) {
+        let aus = '';
+        for (let i = 0; i < anzahl; i++) {
+            aus += `uniform float uMischAn${i}; uniform float uMischGewicht${i}; uniform sampler2D uMischFarbe${i};\n`
+                + `uniform float uMischNormalenAn${i}; uniform sampler2D uMischNormalen${i};\n`
+                + `uniform float uMischRauheitAn${i}; uniform sampler2D uMischRauheit${i};\n`;
+        }
+        return aus;
+    }
+
+    static KLARLACK_ALT ='( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat;';
     static KLARLACK_NEU = '( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat * uKlarlackFarbe;';
 
     static DURCHLICHT = `

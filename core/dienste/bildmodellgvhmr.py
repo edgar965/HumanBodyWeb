@@ -16,6 +16,7 @@ Kodierung wie `zielnetz3d/`, damit `Zielkaefig` sie unverändert zeigt.
 """
 
 import base64
+import json
 import logging
 import os
 import shutil
@@ -70,7 +71,7 @@ class Bildmodellgvhmr:
         if melder:
             melder(0.05, 'GVHMR: %s' % datei)
         start = time.monotonic()
-        antwort = self._runner(self.ablage.zuschnitt() / datei, ordner)
+        antwort = self._runner(self.ablage.zuschnitt() / datei, ordner, self._rig_datei(eintrag, ordner))
         ergebnis = self.eintrag(antwort, time.monotonic() - start)
         # Der Lauf dauert eine Minute — die Seite kann derweil Häkchen und Gewichte an den
         # Einträgen geändert haben. Erst frisch lesen, dann an den Eintrag schreiben.
@@ -129,10 +130,37 @@ class Bildmodellgvhmr:
         eintrag[self.FELD] = g
         return g.get('bild')
 
-    def _runner(self, bild, ordner):
+    RIG = '%s_rig.json'
+
+    def _rig_datei(self, eintrag, ordner):
+        """Das 2D-Rig der Sichtung als JSON für den Runner (T1: `Posefeinabgleich` zieht die
+        GVHMR-Pose an die Rigpunkte) — oder None ohne Rig."""
+        rigs = {k: v for k, v in (eintrag.get('rigs') or {}).items() if v and v.get('punkte')}
+        if not rigs:
+            return None
+        pfad = ordner / (self.RIG % os.path.splitext(eintrag['datei'])[0])
+        with open(pfad, 'w', encoding='utf-8') as f:
+            json.dump({'rigs': rigs, 'maske': self._maske(eintrag['datei'])}, f)
+        return pfad
+
+    def _maske(self, datei):
+        """Pfad der Personenmaske (rembg, ~4 s, einmal je Bild) für die Silhouette im
+        Feinabgleich (21.09.2026) — None, wenn sie nicht zu rechnen ist: dann läuft der
+        Abgleich ohne Silhouette, mit Warnung im Log."""
+        from .bildmodellfreisteller import Bildmodellfreisteller
+        freisteller = Bildmodellfreisteller(self.job, self.ablage)
+        try:
+            freisteller.maske(datei)
+            return str(freisteller.maskenpfad(datei))
+        except Exception as fehler:  # noqa: BLE001
+            logger.warning('Bildmodell %s: keine Maske für %s — Feinabgleich ohne Silhouette: %s',
+                           self.job.kennung, datei, fehler)
+            return None
+
+    def _runner(self, bild, ordner, rig=None):
         runner = os.path.join(Wrapperpfad.pfad(), self.RUNNER)
         prozess = subprocess.Popen(
-            [settings.PIPELINE_PYTHON, runner, str(bild), str(ordner)],
+            [settings.PIPELINE_PYTHON, runner, str(bild), str(ordner)] + ([str(rig)] if rig else []),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
             encoding='utf-8', errors='replace', cwd=Wrapperpfad.pfad(),
         )
@@ -160,7 +188,8 @@ class Bildmodellgvhmr:
         # in genau der gleichen pose und ausschnitt wie das 2D Bild!!!"
         k = antwort.get('kamera')
         if isinstance(k, dict) and k.get('netz') and k.get('fx'):
-            aus['kamera'] = {n: k[n] for n in ('netz', 'gelenke', 'breite', 'hoehe', 'fx', 'fy', 'cx', 'cy')
+            aus['kamera'] = {n: k[n] for n in ('netz', 'gelenke', 'breite', 'hoehe', 'fx', 'fy', 'cx', 'cy',
+                                               'feinabgleich', 'betas')
                              if k.get(n) is not None}
         return aus
 

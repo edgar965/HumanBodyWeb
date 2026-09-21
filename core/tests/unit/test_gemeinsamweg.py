@@ -162,10 +162,14 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
 
     def test_die_knopfliste_steht_nur_an_einer_stelle(self):
         """Sonst bliebe ein Knopf klickbar, waehrend ein Bau laeuft."""
+        # Seit 20.09.2026 (Abbrechen-Knopf) liegt die Liste in
+        # `garmentcode_lauf.js`; der Ablauf reicht sie nur durch.
+        lauf = _quelle('static', 'viewer', 'scene', 'garmentcode_lauf.js')
         ablauf = _quelle('static', 'viewer', 'scene', 'garmentcode_ablauf.js')
         gemeinsam = _quelle('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
-        self.assertIn("static KNOEPFE = ['gc-vorschau-2d'", ablauf)
-        self.assertIn("'gc-kombi-bauen'", ablauf)
+        self.assertIn("static KNOEPFE = ['gc-vorschau-2d'", lauf)
+        self.assertIn("'gc-kombi-bauen'", lauf)
+        self.assertIn('static KNOEPFE = GarmentcodeLauf.KNOEPFE;', ablauf)
         self.assertIn('GarmentcodeAblauf.KNOEPFE', gemeinsam)
         self.assertNotIn('static KNOEPFE', gemeinsam)
 
@@ -181,7 +185,7 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         self.assertIn('Antwortnachholen.formular(', gemeinsam)
         self.assertNotIn('Serverabruf.formular(', gemeinsam)
         nachholen = _quelle('static', 'viewer', 'gemeinsam', 'antwortnachholen.js')
-        self.assertIn('Fristabruf.formular(adresse, daten, frist_s)', nachholen)
+        self.assertIn('Fristabruf.formular(adresse, daten, frist_s, signal)', nachholen)
         frist = re.search(r'FRIST_S\s*=\s*(\d+)', gemeinsam)
         self.assertIsNotNone(frist)
         self.assertGreaterEqual(int(Sicher.wert(frist, 'Frist').group(1)), 300)

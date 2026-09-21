@@ -13,19 +13,22 @@ Edgar, 20.09.2026: „bei 2D+3D bauen soll es einen Abbrechen-Button geben".
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
 
-import json
-
 from django.conf import settings
 from django.test import SimpleTestCase
+from djangobase.testhelfer import Webmodul
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'garmentcode_abbruch.js')
-NACHHOLEN = Jsmodul('gemeinsam', 'antwortnachholen.js')
+#: Beide Module in EINEM Einstieg: `Webmodul` spiegelt nur den Importgraphen
+#: des Einstiegs (sonst faende `serverabruf.js` seine djangoBase-Vorlage nicht).
+EINSTIEG = settings.BASE_DIR / '_wegwerf' / 'js_abbruch_probe.js'
+EINSTIEG_TEXT = (
+    "export { GarmentcodeAbbruch } from '../static/viewer/scene/garmentcode_abbruch.js';\n"
+    "export { Antwortnachholen } from '../static/viewer/gemeinsam/antwortnachholen.js';\n"
+)
 
-SKRIPT = """
-const { GarmentcodeAbbruch: G } = await import(MODUL);
-const { Antwortnachholen: A } = await import(%(nachholen)s);
+SKRIPT = Jsmodul.PRUEFE + """
+const { GarmentcodeAbbruch: G, Antwortnachholen: A } = await import(MODUL);
 A.TAKT_S = 0.01;
 globalThis.document = { cookie: '', querySelector: () => null };
 const antwortJson = (status, daten) => ({
@@ -85,7 +88,12 @@ class GarmentcodeAbbruchTest(SimpleTestCase):
     databases = set()
 
     def test_abbrechen_beendet_abruf_und_nachholen_und_meldet_dem_server(self):
-        ausgabe = MODUL.laufen(SKRIPT % {'nachholen': json.dumps(NACHHOLEN.pfad.as_uri())})
+        EINSTIEG.parent.mkdir(parents=True, exist_ok=True)
+        EINSTIEG.write_text(EINSTIEG_TEXT, encoding='utf-8')
+        try:
+            ausgabe = Webmodul(EINSTIEG, Jsmodul.WURZELN).laufen(SKRIPT)
+        finally:
+            EINSTIEG.unlink(missing_ok=True)
         self.assertTrue(ausgabe.get('ok'), ausgabe)
 
     def test_der_knopf_haengt_an_beiden_wegen(self):

@@ -7,6 +7,8 @@ import { Genesis9lauf } from './genesis9lauf.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Genesis9stueckregler } from './genesis9stueckregler.js';
 import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
+import { Reiterzuordnung } from '../../gemeinsam/reiterzuordnung.js';
+import { state } from '../state.js';
 
 /**
  * Genesis9garderobe — Daz-Kleidung und -Haare einer Genesis-9-Figur (`Dazkleidung`: auch HumanBody).
@@ -30,7 +32,11 @@ import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
  * Stück mit Griffpose (`griff`) baut die Figur neu (Finger um den Griff, `anziehenMitGriff`).
  *
  * Die Gruppen sind seit 20.09.2026 Edgars Kategorien (`Genesis9garderobekategorien`:
- * Vorgabe Kleidung/Haare/Requisiten nach Art, Rechtsklick auf eine Zeile verschiebt).
+ * Vorgabe aus Daz' Metadaten, Rechtsklick auf eine Zeile verschiebt). Ihr Kopf trägt
+ * die Schrift von „Farbe / Material" (`aufklappkopf`, Edgar 21.09.2026: „die Schrift
+ * der Kategorien soll so sein wie diese"); alle stehen ZU — bis auf die des Stücks,
+ * das in der Szene gewählt ist (`state._selectedSubMesh`): die ist offen, seine Zeile
+ * markiert, wie ein Klick über `Stueckmarkierung`.
  */
 export class Genesis9garderobe {
 
@@ -62,15 +68,21 @@ export class Genesis9garderobe {
             return;
         }
         const neuzeichnen = () => Genesis9garderobe.fuellen(inst, behaelter);
+        const gewaehlt = Genesis9garderobe.gewaehltesStueck(inst);
         for (const [titel, eigene] of Genesis9garderobekategorien.gruppen(stuecke, stand)) {
             const kasten = document.createElement('details');
-            kasten.className = 'uma-gruppe';
-            kasten.open = Genesis9garderobekategorien.offen(titel);
-            kasten.innerHTML = `<summary>${escapeHtml(titel)} `
+            kasten.className = 'g9-kategorie';
+            kasten.open = Genesis9garderobekategorien.offen(titel, eigene.some(s => s.id === gewaehlt));
+            kasten.innerHTML = `<summary class="aufklappkopf">${escapeHtml(titel)} `
                 + `<span class="gedaempft">(${eigene.length})</span></summary>`;
-            kasten.addEventListener('toggle', () => Genesis9garderobekategorien.merken(titel, kasten.open));
+            // Gemerkt wird nur Edgars Klick — `toggle` feuert auch, wenn `Stueckmarkierung`
+            // die Kategorie des angeklickten Stücks öffnet, und die bliebe dann für immer offen.
+            kasten.querySelector('summary').addEventListener('click',
+                () => Genesis9garderobekategorien.merken(titel, !kasten.open));
             for (const stueck of eigene) {
-                kasten.appendChild(Genesis9garderobe._zeile(inst, stueck, neuzeichnen));
+                const zeile = Genesis9garderobe._zeile(inst, stueck, neuzeichnen);
+                if (stueck.id === gewaehlt) zeile.classList.add('selected');
+                kasten.appendChild(zeile);
                 if (stueck.regler?.length && stueck.zeigbar) {
                     kasten.appendChild(Genesis9stueckregler.bauen(inst, stueck,
                         () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) })));
@@ -78,6 +90,15 @@ export class Genesis9garderobe {
             }
             behaelter.appendChild(kasten);
         }
+    }
+
+    /** Die Kennung des Daz-Stücks, das in der Szene auf DIESER Figur gewählt ist — sonst null
+     *  (`Reiterzuordnung.stueckVon`: `angie_jeans/2` und `daz_angie_jeans/2` → `angie_jeans`). */
+    static gewaehltesStueck(inst) {
+        const ziel = state._selectedSubMesh;
+        if (!ziel || ziel.charId !== inst.id) return null;
+        const stueck = Reiterzuordnung.stueckVon(ziel.key);
+        return stueck?.liste === 'daz' ? stueck.kennung : null;
     }
 
     /** `Genesis 8 Female` → `G8`, `Genesis` → `G1` — wie `G9fremdstueck.kurz`. */

@@ -8,7 +8,8 @@ Bilder auswähle / abwähle, hinzufüge." Ohne Bibliothek, ohne Schätzer:
 1. `Bildmodelltextur.liste`: je Bild gewählt/möglich/Grund/Kamera — ein
    gerendertes Testfallbild mit bekannter Kamera (`kamera_bekannt`), ein Bild
    mit Rig über das Rig (seit 20.09. gegen das Modell selbst, kein Schätzer-
-   Netz mehr), ein Nebenbild ohne Teil ist nicht möglich (Grund), Nutzung
+   Netz mehr), ein Nebenbild ohne Teil ist ein Ganzkörperbild (möglich, Vorgabe nach
+   Tauglichkeit — es zu sperren war die Regression „ausgegraut", 20.09.), Nutzung
    „nur Form" ebenso, Videos fehlen.
 2. `Bildmodellbildvorgaben.pruefen`: nur eben hochgeladene Dateien, nur
    bekannte Werte; die Sichtung übernimmt die Vorgabe (`optionen.bildtypen`) für
@@ -17,7 +18,7 @@ Bilder auswähle / abwähle, hinzufüge." Ohne Bibliothek, ohne Schätzer:
    `speichern`, die Vorgabe der Textur ist `foto`, `BLEIBEN` kennt die
    gezogenen Linien (die gingen beim ersten Start verloren).
 4. `Bildmodellfototextur.bilder`: nur projizierbare Bilder (Kamera bekannt, Rig,
-   Gesichtspunkte oder Hände); Nebenbilder ohne Teil bleiben draußen. `_eintrag`
+   Gesichtspunkte oder Hände); ein abgewähltes Nebenbild bleibt draußen. `_eintrag`
    rechnet die Browserkamera in die OpenCV-Kamera um (Zuschnitt verschiebt den
    Hauptpunkt) und gibt die Teilnummern eines Nebenbilds mit.
 """
@@ -84,8 +85,7 @@ class TexturlisteTest(unittest.TestCase):
         self.assertEqual((liste['vorn.jpg']['gewaehlt'], liste['vorn.jpg']['kamera']), (True, 'rig'))
         self.assertEqual(liste['hinten.jpg']['kamera'], 'bekannt')
         self.assertEqual((liste['gesicht.jpg']['gewaehlt'], liste['gesicht.jpg']['kamera']), (True, 'rig'))
-        self.assertFalse(liste['detail.jpg']['moeglich'])
-        self.assertIn('Körperteil', liste['detail.jpg']['grund'])
+        self.assertEqual((liste['detail.jpg']['gewaehlt'], liste['detail.jpg']['moeglich']), (False, True))
         self.assertFalse(liste['form.jpg']['moeglich'])
         self.assertIn('Nur Form', liste['form.jpg']['grund'])
         self.assertEqual(liste['ohne.jpg']['kamera'], 'keine')

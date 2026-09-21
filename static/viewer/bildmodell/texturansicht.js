@@ -130,6 +130,16 @@ export class Texturansicht {
         koerper.innerHTML = '';
         const je = new Map(((ft || {}).je_bild || []).map((e, i) => [e.datei, { ...e, nummer: i }]));
         const bilder = z.texturbilder || [];
+        // Anteile über die GEWÄHLTEN Bilder umrechnen, damit ihre Summe immer 100 % ist — auch
+        // nach einer Abwahl, bevor „Textur anpassen" neu gebacken hat (Edgar, 21.09.2026:
+        // „ich habe die meisten Bilder abgewählt … die Summe der Anteile soll 100 % ergeben").
+        // Abgewählte Bilder zeigen „—"; der gebackene Stand liefert dieselben Zahlen.
+        const summe = bilder.reduce((s, b) => s + (b.gewaehlt ? ((je.get(b.datei) || {}).anteil || 0) : 0), 0);
+        for (const b of bilder) {
+            const e = je.get(b.datei);
+            if (!e) continue;
+            e.anteil_gewaehlt = b.gewaehlt && summe > 0 ? (e.anteil || 0) / summe : null;
+        }
         bilder.forEach((b, i) => koerper.appendChild(this._zeile(b, je.get(b.datei), i + 1, bilder.length)));
         const leer = document.getElementById('textur-leer');
         if (leer) leer.classList.toggle('hb-versteckt', (z.texturbilder || []).length > 0);
@@ -176,8 +186,13 @@ export class Texturansicht {
         kasten.disabled = !b.moeglich;
         kasten.title = b.moeglich ? 'für die Textur verwenden' : b.grund;
         kasten.addEventListener('change', async () => {
-            try { await this.auftrag.bildStellen(b.datei, { textur_an: kasten.checked }); this.geaendert = true; }
-            catch (fehler) { window.alert(fehler.message); }
+            try {
+                await this.auftrag.bildStellen(b.datei, { textur_an: kasten.checked });
+                // `bildStellen` meldet den Zustand, BEVOR `geaendert` steht — darum noch einmal
+                // zeigen: Anteile der gewählten Bilder (Summe 100 %) und der Hinweis am Knopf.
+                this.geaendert = true;
+                this.zeigen(this.auftrag.zustand);
+            } catch (fehler) { window.alert(fehler.message); }
         });
         wahl.appendChild(kasten);
         // Bild
@@ -202,7 +217,11 @@ export class Texturansicht {
         // Anteil und Punkte
         const anteil = document.createElement('td');
         anteil.className = 'zahl';
-        anteil.textContent = je ? `${(100 * (je.anteil || 0)).toFixed(1).replace('.', ',')} %` : '—';
+        anteil.textContent = je && je.anteil_gewaehlt !== null && je.anteil_gewaehlt !== undefined
+            ? `${(100 * je.anteil_gewaehlt).toFixed(1).replace('.', ',')} %` : '—';
+        if (je && je.anteil_gewaehlt !== null && je.anteil_gewaehlt !== undefined && this.geaendert) {
+            anteil.title = 'umgerechnet auf die gewählte Auswahl — „Textur anpassen" misst neu';
+        }
         const punkte = document.createElement('td');
         punkte.className = 'zahl';
         punkte.textContent = je && je.texel ? je.texel.toLocaleString('de-DE') : '—';
@@ -226,6 +245,11 @@ export class Texturansicht {
         const rig = je && je.punkte ? `Rig · ${je.punkte} Punkte · ${String(je.fehler_px).replace('.', ',')} px` : 'Rig';
         if (art === 'bekannt') return je && je.punkte ? `bekannt (gerendert) · ${rig}` : 'bekannt (gerendert)';
         if (art === 'rig') return rig;
+        // T1: Käfig in Pose und Kamera des Fotos (GVHMR); das Rig misst nur den Restfehler.
+        if (art === 'gvhmr') {
+            if (je && je.ausgelassen) return `Pose (GVHMR) · nicht verwendet — ${je.ausgelassen}`;
+            return je && je.punkte ? `Pose (GVHMR) · ${rig}` : 'Pose (GVHMR)';
+        }
         return '—';
     }
 
@@ -259,10 +283,9 @@ export class Texturansicht {
         const z = this.auftrag.zustand;
         const schritte = (z.neue || []).length ? ['sichtung', 'textur'] : ['textur'];
         try {
-            const person = window.__bildmodell?.person?.werte?.() || {};
-            const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
-            const optionen = { ...(this.formular ? this.formular.werte() : {}), person, proportionen,
-                               umfang: 'neue', textur: 'foto' };
+            // Ohne `person`/`proportionen`: die bleiben am Auftrag, wie sie sind (ein zweiter Tab
+            // mit altem Formular schickte sonst sein Haar mit — Edgar, 21.09.2026).
+            const optionen = { ...(this.formular ? this.formular.werte() : {}), umfang: 'neue', textur: 'foto' };
             await this.auftrag.starten(optionen, schritte[0], {}, null, schritte);
         } catch (fehler) {
             window.alert(`Textur nicht gestartet: ${fehler.message}`);

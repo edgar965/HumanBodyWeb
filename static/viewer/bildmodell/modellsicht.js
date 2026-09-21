@@ -141,7 +141,7 @@ export class Modellsicht {
     /** Nach jeder Änderung (Dialog): Schieber auf den Stand, Zielnetz holen, 3D auf „Ziel". */
     nachziehen() {
         this.regler.aktualisieren(this.dialog.werte(), this.dialog.daten().ziel || {}, this.dialog.live.bericht);
-        if (this.ansicht && this.ansicht.was !== 'ziel' && this.ansicht.kaefig) this.ansicht.wasZeigen('ziel');
+        if (this.ansicht && this.ansicht.was !== 'ziel' && this.ansicht.kaefig) this.ansicht.wasZeigen('ziel', false);   // nicht merken: automatisch, keine Wahl
         this.dialog.live.nachziehen();
     }
 

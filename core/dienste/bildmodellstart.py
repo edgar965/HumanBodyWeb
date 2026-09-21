@@ -26,9 +26,13 @@ class Bildmodellstart:
     def optionen(cls, job, rumpf):
         """Die Optionen des Laufs: geprüft, mit dem, was bleibt, und `fest`."""
         optionen = Bildmodelloptionen.pruefen(rumpf.get('optionen') or job.optionen)
-        for feld in Bildmodelloptionen.BLEIBEN:
-            # Ohne eigene Angabe bleiben Proportionen (Popup), Testfall, gezogene Linien und
-            # Bildtypen-Vorgaben erhalten — `pruefen` kennt sie nicht.
+        for feld in Bildmodelloptionen.BLEIBEN + ('person',):
+            # Ohne eigene Angabe bleiben Proportionen (Popup), Testfall, gezogene Linien,
+            # Bildtypen-Vorgaben UND die Person (Alter, Größe, Haar …) erhalten — `pruefen`
+            # kennt sie nicht bzw. würde „kein Haar" von „nicht angegeben" nicht unterscheiden.
+            # Edgar (21.09.2026): „ich habe angeklickt: Ohne Haar, aber es wird immer wieder mit
+            # Haar gerechnet" — ein Start aus einem zweiten Tab schickte dessen altes Formular mit.
+            # Textur/Sichtung/GVHMR schicken darum keine Person mehr; nur Starten/Neu berechnen.
             if feld not in (rumpf.get('optionen') or {}):
                 optionen[feld] = (job.optionen or {}).get(feld) or {}
         if isinstance(rumpf.get('fest'), dict):

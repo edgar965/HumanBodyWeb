@@ -109,6 +109,7 @@ class G9figur:
                             'brauen': eintrag.get('brauen') or '',
                             'kleidung': dict(eintrag.get('kleidung') or {}),
                             'praesets': dict(eintrag.get('praesets') or {}),
+                            'hautmischung': dict(eintrag.get('hautmischung') or {}),
                             'brauenstil': eintrag.get('brauenstil') or '',
                             'pose': eintrag.get('pose') or '',
                             'ausdruck': eintrag.get('ausdruck') or '',
@@ -136,6 +137,8 @@ class G9figur:
                 'brauen': figur.get('brauen') or '',
                 'kleidung': figur.get('kleidung') or {},
                 'praesets': figur.get('praesets') or {},
+                # Texturmischung (21.09.2026): {hautsatz: prozent}, gemischt im Browser.
+                'hautmischung': figur.get('hautmischung') or {},
                 'brauenstil': figur.get('brauenstil') or '',
                 'pose': figur.get('pose') or '',
                 'ausdruck': figur.get('ausdruck') or '',

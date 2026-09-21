@@ -84,8 +84,6 @@ class Bildmodellfototextur:
         for b in self.job.bilder:
             if b.get('video') or not Bildmodelltextur.gewaehlt(b):
                 continue
-            if b.get('kategorie') == 'neben' and not Bildmodellbildtypen.textur_teile(b):
-                continue
             if nur_haupt and not Bildmodellbildtypen.fuer_form(b):
                 continue
             if self.projizierbar(b):
@@ -110,7 +108,7 @@ class Bildmodellfototextur:
         teile = Bildmodellbildtypen.textur_teile(b)
         return [G9koerperteile.NUMMER[t] for t in teile if t in G9koerperteile.NUMMER] if teile else None
 
-    def _eintrag(self, b):
+    def _eintrag(self, b, posierung=None):
         from Genesis9.bildkamera import G9bildkamera
 
         e = {
@@ -122,14 +120,44 @@ class Bildmodellfototextur:
                        for h in (b.get('haende_punkte') or [])],
             'breite': int(b.get('breite') or 0),
             'hoehe': int(b.get('hoehe') or 0),
+            # Kopfbild → das Gesicht kommt nur von ihm (21.09.2026, Edgar: „Das soll nur von dem
+            # Gesicht kommen"); Maske aus dem Freisteller (rembg, weich) statt YOLO-Seg im Runner.
+            'kategorie': b.get('kategorie'),
+            'maske': self._maske(b['datei']),
         }
         kamera = G9bildkamera.aus_browser(b.get('kamera_bekannt'), b.get('kasten'))
         if kamera:
             e['kamera'] = kamera
+        elif posierung is not None:
+            # T1 (Konzept 20.09., nachts): der Käfig in der Pose und Kamera des Fotos aus GVHMR —
+            # statt Käfig in Ruhehaltung + starrer Rig-Registrierung (Damira: 15,8–46,1 px daneben).
+            try:
+                pose = posierung.fuer_bild(b)
+            except Exception as fehler:  # noqa: BLE001 — dann wie bisher über das Rig
+                logger.warning('Bildmodell %s: Posierung von %s fehlgeschlagen: %s',
+                               self.job.kennung, b.get('datei'), fehler)
+                pose = None
+            if pose:
+                e.update(pose)
         teile = self.teile_nummern(b)
         if teile:
             e['teile'] = teile
         return e
+
+    def _maske(self, datei):
+        """Pfad der weichen Personenmaske (rembg, `Bildmodellfreisteller`, einmal je Bild ~4 s) —
+        None, wenn sie nicht zu rechnen ist: dann nimmt der Runner die YOLO-Maske wie vor dem
+        21.09.2026 (grobe Kante, graue Ränder in der Textur)."""
+        from .bildmodellfreisteller import Bildmodellfreisteller
+
+        freisteller = Bildmodellfreisteller(self.job, self.ablage)
+        try:
+            freisteller.maske(datei)
+            return str(freisteller.maskenpfad(datei))
+        except Exception as fehler:  # noqa: BLE001
+            logger.warning('Bildmodell %s: keine Maske für %s — Textur mit YOLO-Maske: %s',
+                           self.job.kennung, datei, fehler)
+            return None
 
     def _gesichtstabelle(self, bilder):
         """Fehlt die Tabelle der 68 Gesichtspunkte: aus einem Testfallbild mit bekannter Kamera
@@ -162,9 +190,12 @@ class Bildmodellfototextur:
         modell.speichern(ordner / self.MODELL)
         for alt in ordner.glob('beitrag_*.jpg'):     # Beitragsbilder des letzten Laufs
             alt.unlink()
+        from .bildmodellposierung import Bildmodellposierung
+
+        posierung = Bildmodellposierung(self.job, self.ablage, modell)
         auftrag = {
             'modell': str(ordner / self.MODELL),
-            'bilder': [self._eintrag(b) for b in bilder],
+            'bilder': [self._eintrag(b, posierung) for b in bilder],
             'abtastung': str(abtastung.pfad(abtastung.seite)),
             'ausgabe_textur': str(ordner / self.TEXEL),
             'beitraege': str(ordner),
@@ -233,6 +264,12 @@ class Bildmodellfototextur:
                     herkunft={str(k): os.path.basename(v) for k, v in herkunft.items()},
                     hautton=hautton, stand=int(time.time()))
 
+    def _posen(self, bilder, melder=None):
+        """T1: Pose und Kamera je Körperbild aus GVHMR nachholen (`Bildmodellposierung.nachholen`)."""
+        from .bildmodellposierung import Bildmodellposierung
+
+        Bildmodellposierung.nachholen(self.job, self.ablage, bilder, melder)
+
     def backen(self, melder=None):
         """Alles in einem: Modell, Runner, Kacheln, Karten. None ohne taugliche Bilder."""
         from Genesis9.kachelkarte import G9kachelkarte
@@ -246,6 +283,7 @@ class Bildmodellfototextur:
             melder(0.02, 'Texturabtastung (%d²) und Modell' % G9texturabtastung.SEITE)
         abtastung = G9texturabtastung.holen()
         self._gesichtstabelle(bilder)
+        self._posen(bilder, melder)
         modell = G9texturmodell(self.stellung())
         if melder:
             melder(0.05, 'Fototextur aus %d Bildern (python10)' % len(bilder))

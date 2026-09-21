@@ -9,8 +9,42 @@ gesteuert von `freisteller.js`: links das Bild, rechts die Vorschau vom Server, 
         </span>
     </div>
     <div class="bildmodell-gvhmrfeld bildmodell-freistellerfeld">
-        <figure class="bildmodell-gvhmrfoto"><img alt="Das Bild" data-feld="foto"></figure>
+        <figure class="bildmodell-gvhmrfoto bildmodell-freistellerfoto"><img alt="Das Bild" data-feld="foto"><canvas class="bildmodell-freistellerleinwand" data-feld="leinwand"></canvas></figure>
         <figure class="bildmodell-gvhmrfoto bildmodell-freistellervorschau"><img alt="Vorschau ohne Hintergrund" data-feld="vorschau"></figure>
+    </div>
+    {% comment %}21.09.2026: automatisch (Modell, Matting), halbautomatisch (SAM-Punkte, GrabCut), von Hand
+    (Pinsel) — `freistellerpinsel.js` zeichnet links, der Server rechnet (`Bildmodellfreistellerkorrektur`).{% endcomment %}
+    <div class="bildmodell-freistellerregler bildmodell-freistellerwerkzeuge">
+        <span class="bildmodell-freistellerwahl" role="radiogroup" aria-label="Werkzeug auf dem Foto links">
+            <label title="Nur ansehen"><input type="radio" name="freisteller-werkzeug" value="" checked> Ansehen</label>
+            <label title="Pinsel: was darunter liegt, gehört zur Person"><input type="radio" name="freisteller-werkzeug" value="pinsel-drin"> <span class="bildmodell-freistellerfarbe drin"></span> Pinsel Person</label>
+            <label title="Pinsel: was darunter liegt, ist Hintergrund"><input type="radio" name="freisteller-werkzeug" value="pinsel-draussen"> <span class="bildmodell-freistellerfarbe draussen"></span> Pinsel Hintergrund</label>
+            <label title="Klickpunkt für SAM: hier ist die Person (Modell „SAM (Klickpunkte)")"><input type="radio" name="freisteller-werkzeug" value="punkt-drin"> ● Punkt Person</label>
+            <label title="Klickpunkt für SAM: hier ist Hintergrund"><input type="radio" name="freisteller-werkzeug" value="punkt-draussen"> ● Punkt Hintergrund</label>
+        </span>
+        <label title="Pinselbreite — der gestrichelte Kreis am Zeiger zeigt sie im Bild">Breite
+            <input type="range" min="1" max="100" step="1" value="20" data-pinsel="breite"><span data-wert="breite"></span></label>
+        <button type="button" class="btn btn-secondary btn-sm" data-tat="rueckgaengig" disabled title="Letzten Strich oder Punkt zurücknehmen (Strg+Z)"><i class="fas fa-undo"></i> Rückgängig</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-tat="wiederholen" disabled title="Zurückgenommenes wieder herstellen (Strg+Y)"><i class="fas fa-redo"></i> Wiederholen</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-tat="striche-weg" disabled title="Alle Striche und Punkte entfernen (Rückgängig holt sie zurück)">Alle weg</button>
+    </div>
+    <div class="bildmodell-freistellerregler">
+        <label title="Womit die Maske gerechnet wird — ein neues Modell lädt rembg beim ersten Mal aus dem Netz (170 MB – 1 GB)">Modell
+            <select data-regler="modell">
+                <option value="u2net_human_seg">U²-Net Person (Vorgabe)</option>
+                <option value="isnet-general-use">ISNet allgemein</option>
+                <option value="birefnet-portrait">BiRefNet Porträt</option>
+                <option value="birefnet-general">BiRefNet allgemein</option>
+                <option value="bria-rmbg">BRIA RMBG</option>
+                <option value="sam">SAM (Klickpunkte)</option>
+                <option value="weisskey">Weiß-Key (Rendering auf einfarbigem Grund)</option>
+            </select></label>
+        <label title="Alpha-Matting an der Kante — feiner an Haar, etwa doppelte Dauer"><input type="checkbox" data-regler="matting"> Matting</label>
+        <label title="GrabCut legt die Maske an die Bildkanten; Pinselstriche sind dabei feste Vorgabe">Verfeinern
+            <select data-regler="verfeinern">
+                <option value="">—</option>
+                <option value="grabcut">GrabCut</option>
+            </select></label>
     </div>
     <div class="bildmodell-freistellerregler">
         <label title="Wo die weiche Maske kippt — höher: weniger Hintergrund bleibt, feines Haar geht mit">Schwelle

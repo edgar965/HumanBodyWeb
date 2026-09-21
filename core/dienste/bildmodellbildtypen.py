@@ -162,7 +162,8 @@ class Bildmodellbildtypen:
 
     @classmethod
     def textur_teile(cls, b):
-        """Die Körperteile, die ein Nebenbild färben darf — leer für Hauptbilder (alles)."""
+        """Die Körperteile, die ein Nebenbild färben darf — leer für Hauptbilder und das schlichte
+        Nebenbild ohne Körperteil (beide färben alles)."""
         if b.get('kategorie') != 'neben':
             return ()
         return cls.TEILE.get(b.get('teil') or '', ())

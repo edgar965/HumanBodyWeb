@@ -914,6 +914,11 @@
     cursor: pointer; font-size: 0.72rem; text-transform: uppercase;
     letter-spacing: .04em; opacity: .8; padding: 3px 0;
 }
+/* Die Kategorien der Daz-Garderobe (21.09.2026, Edgar: „die Schrift der Kategorien
+   soll so sein wie «Farbe / Material»"): der Kopf ist ein `aufklappkopf`
+   (`viewer_huelle.css`, Akzentfarbe, 0.85rem), nicht die graue UMA-Gruppenzeile. */
+.g9-kategorie { margin: 4px 0; }
+.g9-kategorie > summary.aufklappkopf { padding: 3px 0; }
 
 /* UMA-Garderobe in den Platzhaltern der Reiter „Kleider" und „Assets" (05.09.2026).
    Dreifach, weil `.prop-empty` zentriert und die Liste linksbündig stehen soll. */

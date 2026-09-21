@@ -5,6 +5,7 @@ import { Genesis9lauf } from './genesis9lauf.js';
 import { Genesis9garderobe } from './genesis9garderobe.js';
 import { Eigenschaftenbereiche } from '../eigenschaftenbereiche.js';
 import { Genesis9posen } from './genesis9posen.js';
+import { Genesis9texturmischung } from './genesis9texturmischung.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 
 /**
@@ -45,6 +46,8 @@ export class Genesis9eigenschaften {
         await Genesis9posen.fuellen(inst);
         Genesis9eigenschaften._regler(inst, plan);
         Genesis9eigenschaften._reglergriff();
+        // Texturmischung ganz unten (21.09.2026): alle Hautsaetze mit Prozent.
+        Genesis9texturmischung.fuellen(inst, plan);
         // Die Garderobe steht im Assets-Reiter (`_genesis9_garderobe.html`,
         // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
         await Genesis9garderobe.fuellen(inst,

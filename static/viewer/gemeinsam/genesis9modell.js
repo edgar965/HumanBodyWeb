@@ -3,6 +3,7 @@ import { Serverabruf } from './serverabruf.js';
 import { Netzentsorgung } from './netzentsorgung.js';
 import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
+import { Genesis9hautmischung } from './genesis9hautmischung.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
@@ -58,6 +59,8 @@ export class Genesis9Modell extends Modell {
         this.brauenstil = daten.brauenstil || '';
         /** Wimpern, Nagellack, Rouge, Lidschatten, Eyeliner, Lippen, Bemalung: Kategorie → Preset-Id. */
         this.praesets = { ...(daten.praesets || {}) };
+        /** Texturmischung (21.09.2026): weitere Hautsätze mit Prozent über der Haut (`Genesis9hautmischung`). */
+        this.hautmischung = { ...(daten.hautmischung || {}) };
         /** Daz-Posenpreset (Standbild: Netz UND Skelett stehen in der Pose) und Ausdruck (FACS). */
         this.pose = daten.pose || '';
         this.ausdruck = daten.ausdruck || '';
@@ -104,6 +107,7 @@ export class Genesis9Modell extends Modell {
         if (!this.brauen) this.brauen = eintrag.brauen || '';
         if (!this.brauenstil) this.brauenstil = eintrag.brauenstil || '';
         if (!Object.keys(this.praesets).length) this.praesets = { ...(eintrag.praesets || {}) };
+        if (!Object.keys(this.hautmischung).length) this.hautmischung = { ...(eintrag.hautmischung || {}) };
         if (!this.pose) this.pose = eintrag.pose || '';
         if (!this.ausdruck) this.ausdruck = eintrag.ausdruck || '';
         if (!Object.keys(this.kleidung).length) this.kleidung = { ...(eintrag.kleidung || {}) };
@@ -143,6 +147,8 @@ export class Genesis9Modell extends Modell {
         /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
         this.hdkanaele = daten.hdkanaele || [];
         this._kleiderBinden();
+        // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
+        if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
         Protokoll.debug('Genesis9Modell',
             `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} `
             + `(${this.browserpunkte}), ${(this.hoehe * 100).toFixed(1)} cm, `
@@ -227,6 +233,15 @@ export class Genesis9Modell extends Modell {
         if (kennung) this.praesets[kategorie] = kennung;
         else delete this.praesets[kategorie];
         return this.koerperAufbauen();
+    }
+
+    /** Ein Hautsatz der Texturmischung auf Prozent (0 = raus) — ohne Neubau des Körpers:
+     *  Gewichte sind Uniforms; nur eine neue oder verschwundene Schicht baut die Programme um. */
+    async hautmischungSetzen(id, prozent) {
+        if (prozent > 0) this.hautmischung[id] = Math.min(100, Math.round(prozent));
+        else delete this.hautmischung[id];
+        if (!Genesis9hautmischung.gewichte(this)) await Genesis9hautmischung.anwenden(this);
+        return this;
     }
 
     /** Pose oder Ausdruck (leer = Ruhelage) — die Kleidung sitzt auf der Pose, also alles neu. */

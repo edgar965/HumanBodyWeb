@@ -6,6 +6,7 @@ import { Ergebnisansicht } from './ergebnisansicht.js';
 import { Ansicht3d } from './ansicht3d.js';
 import { Personenformular } from './personenformular.js';
 import { Proportionenansicht } from './proportionen.js';
+import { Reglerfeld } from './reglerfeld.js';
 import { Testfallansicht } from './testfallansicht.js';
 import { Texturansicht } from './texturansicht.js';
 import { Modellsicht } from './modellsicht.js';
@@ -28,16 +29,21 @@ export class Bildmodellseite {
         const auftrag = new Bildmodellauftrag(daten.zustand);
         const formular = new Optionenformular(daten.katalog, daten.zustand.optionen);
         const ergebnis = new Ergebnisansicht(auftrag);
-        const lauf = new Laufansicht(auftrag, formular, () => ergebnis.festgehalten());
-        const bilder = new Bilderansicht(auftrag, daten.katalog, formular);
+        // Ebene 3 (21.09.2026): alle Genesis-Regler mit Schieber, Fit-Marke und Schloss; die Figur
+        // oben folgt jedem Zug. Vor der 3D-Ansicht registriert, damit ihr Fit-Stand zuerst da ist.
+        const regler = new Reglerfeld(auftrag, null);
         const ansicht = new Ansicht3d(auftrag);
-        const person = new Personenformular(auftrag, daten.katalog, formular, () => ergebnis.festgehalten());
+        regler.ansicht = ansicht;
+        ansicht.stellungGeber = () => regler.stellung();
+        const lauf = new Laufansicht(auftrag, formular, () => regler.festgehalten());
+        const bilder = new Bilderansicht(auftrag, daten.katalog, formular);
+        const person = new Personenformular(auftrag, daten.katalog, formular, () => regler.festgehalten());
         const proportionen = new Proportionenansicht(auftrag, daten.katalog);
         const testfall = new Testfallansicht(auftrag, daten.katalog, ansicht);
         const modellsicht = new Modellsicht(auftrag, daten.katalog, proportionen.dialog, ansicht);
         const textur = new Texturansicht(auftrag, daten.katalog, formular, bilder.steller);
         auftrag.verfolgen();
-        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, person, proportionen, modellsicht, testfall, textur };
+        window.__bildmodell = { auftrag, formular, lauf, bilder, ergebnis, ansicht, regler, person, proportionen, modellsicht, testfall, textur };
         return window.__bildmodell;
     }
 }

@@ -88,6 +88,53 @@ export class Genesis9haut {
         return material;
     }
 
+    /**
+     * Die Texturmischung (21.09.2026): `anzahl` Schichten weiterer Hautsätze
+     * über der Grundhaut, je Schicht Albedo, Normalen, Rauheit und ein Gewicht
+     * (`gemeinsam/genesis9hautmischung.js`). Eine andere Anzahl ist ein anderes
+     * Programm (`kennung`); Platzhalter halten die Sampler, bis die Bilder da sind.
+     */
+    static mischung(material, anzahl) {
+        const zusatz = Genesis9haut._zusatz(material);
+        // DIE UNIFORM-OBJEKTE BLEIBEN JE MATERIAL DIESELBEN (21.09.2026): Three
+        // ruft `onBeforeCompile` je Programmschlüssel nur EINMAL je Material und
+        // hält dessen Uniforms fest — neue Objekte nach 1 → 0 → 1 Schichten hätte
+        // das gemerkte Programm nie gesehen (gemessen: Rot mit Gewicht 1, Bild
+        // unverändert). Deshalb ein wachsender Vorrat, nie ersetzt.
+        zusatz.mischungSchichten = zusatz.mischungSchichten || [];
+        for (let i = zusatz.mischungSchichten.length; i < anzahl; i++) {
+            zusatz.mischungSchichten.push({
+                [`uMischAn${i}`]: { value: 0 },
+                [`uMischGewicht${i}`]: { value: 0 },
+                [`uMischFarbe${i}`]: { value: Genesis9haut.platzhalter(0, 0, 0, THREE.SRGBColorSpace) },
+                [`uMischNormalenAn${i}`]: { value: 0 },
+                [`uMischNormalen${i}`]: { value: Genesis9haut.platzhalter(128, 128, 255) },
+                [`uMischRauheitAn${i}`]: { value: 0 },
+                [`uMischRauheit${i}`]: { value: Genesis9haut.platzhalter(0, 128, 0) },
+            });
+        }
+        if ((zusatz.mischung?.anzahl || 0) === anzahl) return material;
+        zusatz.mischung = anzahl ? { anzahl, schichten: zusatz.mischungSchichten } : null;
+        Genesis9haut._einhaengen(material);
+        material.needsUpdate = true;
+        return material;
+    }
+
+    /** Ein Bild einer Schicht einhängen (`art`: farbe | normalen | rauheit). */
+    static mischungBild(material, i, art, bild) {
+        const s = material.userData.genesis9?.mischung?.schichten[i];
+        if (!s || !bild) return;
+        if (art === 'farbe') { bild.colorSpace = THREE.SRGBColorSpace; s[`uMischFarbe${i}`].value = bild; s[`uMischAn${i}`].value = 1; }
+        if (art === 'normalen') { s[`uMischNormalen${i}`].value = bild; s[`uMischNormalenAn${i}`].value = 1; }
+        if (art === 'rauheit') { s[`uMischRauheit${i}`].value = bild; s[`uMischRauheitAn${i}`].value = 1; }
+    }
+
+    /** Das Gewicht einer Schicht (0..1) — ohne Neubau, ohne neues Programm. */
+    static mischungGewicht(material, i, gewicht) {
+        const s = material.userData.genesis9?.mischung?.schichten[i];
+        if (s) s[`uMischGewicht${i}`].value = Math.min(1, Math.max(0, Number(gewicht) || 0));
+    }
+
     static detailBild(material, bild) {
         const d = material.userData.genesis9?.detail;
         if (!d || !bild) return;
@@ -201,10 +248,27 @@ export class Genesis9haut {
                     .replace('#include <roughnessmap_fragment>',
                              '#include <roughnessmap_fragment>\n' + Genesis9hautGLSL.RAUHEIT);
             }
-            if (zusatz.detail || zusatz.schminke) {
+            const mischung = zusatz.mischung?.anzahl || 0;
+            // Die Uniform-Objekte IMMER anhängen, auch ohne Schicht: Three hält je
+            // Material und Programmschlüssel das Programm UND die Uniforms des
+            // zuletzt kompilierten fest — nach 1 → 0 → 1 Schichten kam das gemerkte
+            // m1-Programm mit den Uniforms von m0 (ohne `uMisch*`), und die Mischung
+            // wurde nie hochgeladen (gemessen 21.09.2026: Rot mit Gewicht 1, nichts).
+            for (const s of zusatz.mischungSchichten || []) Object.assign(shader.uniforms, s);
+            if (mischung) {
+                // NACH der Schminke eingesetzt: die steht dann hinter der Mischung
+                // (`map_fragment` → Mischung → Schminke), Daz' Makeup liegt obenauf.
+                shader.fragmentShader = shader.fragmentShader
+                    .replace('#include <common>', '#include <common>\n' + Genesis9hautGLSL.mischungUniforms(mischung))
+                    .replace('#include <map_fragment>',
+                             '#include <map_fragment>\n' + Genesis9hautGLSL.mischungFarbe(mischung))
+                    .replace('#include <roughnessmap_fragment>',
+                             '#include <roughnessmap_fragment>\n' + Genesis9hautGLSL.mischungRauheit(mischung));
+            }
+            if (zusatz.detail || zusatz.schminke || mischung) {
                 shader.fragmentShader = shader.fragmentShader.replace(
                     '#include <normal_fragment_maps>',
-                    Genesis9hautGLSL.normalen(Boolean(zusatz.schminke), Boolean(zusatz.detail)));
+                    Genesis9hautGLSL.normalen(Boolean(zusatz.schminke), Boolean(zusatz.detail), mischung));
             }
             if (zusatz.klarlack) {
                 Object.assign(shader.uniforms, zusatz.klarlack);
@@ -215,7 +279,8 @@ export class Genesis9haut {
         };
         // Ein anderer Schlüssel je Zusatz, sonst teilt Three das Programm.
         eingriff.kennung = () => `${zusatz.durchlicht ? zusatz.durchlicht.gewicht.toFixed(3) : 'x'}-${
-            zusatz.schminke ? 's' : 'x'}-${zusatz.detail ? 'd' : 'x'}-${zusatz.klarlack ? 'k' : 'x'}`;
+            zusatz.schminke ? 's' : 'x'}-${zusatz.detail ? 'd' : 'x'}-${zusatz.klarlack ? 'k' : 'x'}-m${
+            zusatz.mischung?.anzahl || 0}`;
         Shaderpatch.anhaengen(material, 'genesis9haut', eingriff);
     }
 }

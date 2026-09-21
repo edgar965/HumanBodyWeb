@@ -1,11 +1,10 @@
 /**
- * Ergebnisansicht — Vorschauen, Zahlen und die gefundenen Regler.
+ * Ergebnisansicht — Vorschauen und Zahlen des Ergebnisses.
  *
  * Zahlen kommen aus `ergebnis` (Schätzung, Zielnetz, Anpassung je Teil,
  * Restmorph) — gemessen im Arbeitsprozess, hier nur gezeigt. Die Regler
- * stehen als Liste mit Wert; ein Haken „festhalten" nimmt den Regler beim
- * nächsten Start ab „anpassung" als Vorgabe (`fest`), das Feld daneben den
- * Wert. `festgehalten()` liefert das Wörterbuch für den Start.
+ * selbst stehen seit dem 21.09.2026 im `Reglerfeld` (Schieber, Fit-Marke,
+ * Schloss = festhalten).
  */
 import { Massetabelle } from './massetabelle.js';
 import { Massbandtabelle } from './massbandtabelle.js';
@@ -31,7 +30,6 @@ export class Ergebnisansicht {
         this._stand = stand;
         this.vorschauen(z);
         this.zahlen(z);
-        this.regler(z);
     }
 
     vorschauen(z) {
@@ -85,39 +83,4 @@ export class Ergebnisansicht {
             + Massbandtabelle.html(e.massband);
     }
 
-    regler(z) {
-        const feld = document.getElementById('reglerliste');
-        if (!feld) return;
-        const a = (z.ergebnis || {}).anpassung;
-        feld.innerHTML = '';
-        if (!a || !a.regler) return;
-        const fest = a.festgehalten || {};
-        const kopf = document.createElement('div');
-        kopf.className = 'bildmodell-reglerkopf';
-        kopf.innerHTML = '<b>Regler</b><span class="hb-hinweis">Haken = beim nächsten Start ab „Anpassung" festhalten</span>';
-        feld.appendChild(kopf);
-        const eintraege = Object.entries(a.regler).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]));
-        for (const [name, wert] of eintraege) {
-            const zeile = document.createElement('label');
-            zeile.className = 'bildmodell-reglerzeile';
-            const haken = document.createElement('input');
-            haken.type = 'checkbox'; haken.dataset.regler = name; haken.checked = name in fest;
-            const text = document.createElement('span');
-            text.textContent = name.replace('_figure_ctrl_Character', '').replace('_bs_', ' ').replace('_ctrl_', ' ');
-            text.title = name;
-            const zahl = document.createElement('input');
-            zahl.type = 'number'; zahl.step = '0.01'; zahl.value = String(wert); zahl.dataset.regler = name;
-            zeile.append(haken, text, zahl);
-            feld.appendChild(zeile);
-        }
-    }
-
-    festgehalten() {
-        const aus = {};
-        for (const haken of document.querySelectorAll('#reglerliste input[type="checkbox"]:checked')) {
-            const zahl = document.querySelector(`#reglerliste input[type="number"][data-regler="${CSS.escape(haken.dataset.regler)}"]`);
-            aus[haken.dataset.regler] = zahl ? Number(zahl.value) : 0;
-        }
-        return aus;
-    }
 }

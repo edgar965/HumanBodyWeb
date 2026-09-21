@@ -1,5 +1,6 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Dialoggroesse } from './dialoggroesse.js';
+import { Freistellerpinsel } from './freistellerpinsel.js';
 
 /**
  * Freisteller — „Hintergrund weg" an jeder Bildzeile und Bildkachel (20.09.2026).
@@ -15,12 +16,21 @@ import { Dialoggroesse } from './dialoggroesse.js';
  * das Bild über den Ausschnitt (derselbe Name — Textur, GVHMR, FLAME, Fotolinien
  * lesen ihn), „Zurücksetzen" holt das Bild von vorher. Nach beidem tauscht die
  * Seite alle Bilder dieses Ausschnitts (`dateiAdresse` hängt `freisteller.stand` an).
+ *
+ * Seit 21.09.2026 dazu (Edgar: „mehr automatische, halbautomatische und manuelle
+ * Möglichkeiten zur Korrektur"): Modellwahl (rembg-Sitzungen, SAM mit Klickpunkten,
+ * Weiß-Key), Matting, GrabCut-Verfeinerung und Pinselstriche auf dem Foto links
+ * (`Freistellerpinsel`) — alles Teil der Regler, gespeichert am Eintrag, beim Öffnen zurück.
  */
 export class Freisteller {
 
     static MERKER = 'bildmodell.freisteller.groesse';
     static WARTEN_MS = 250;
-    static VORGABE = { schwelle: 50, weich: 2, rand: 0, hintergrund: 'weiss' };
+    static VORGABE = { schwelle: 50, weich: 2, rand: 0, hintergrund: 'weiss',
+                       modell: 'u2net_human_seg', matting: false, verfeinern: '', striche: [], punkte: [] };
+    /** Modelle, die rembg beim ersten Mal lädt — die Vorschau dauert dann Minuten, nicht Sekunden. */
+    static LANGSAM = { 'isnet-general-use': '170 MB', 'birefnet-portrait': '900 MB', 'birefnet-general': '900 MB',
+                       'bria-rmbg': '170 MB', 'sam': '400 MB' };
 
     constructor(auftrag) {
         this.auftrag = auftrag;
@@ -37,7 +47,47 @@ export class Freisteller {
         for (const r of this.dialog.querySelectorAll('[data-regler]')) {
             r.addEventListener('input', () => { this._werteZeigen(); this._vorschauSpaeter(); });
         }
+        // Pinsel und Klickpunkte auf dem Foto links; jeder Strich holt die Vorschau neu.
+        this.pinsel = new Freistellerpinsel(this.felder.leinwand, this.felder.foto, () => { this._knoepfeSchalten(); this._vorschauSpaeter(); });
+        for (const r of this.dialog.querySelectorAll('input[name="freisteller-werkzeug"]')) {
+            r.addEventListener('change', () => { if (r.checked) { this.pinsel.werkzeug = r.value; this.pinsel.zeichnen(); this._werkzeugHinweis(); } });
+        }
+        const breite = this.dialog.querySelector('[data-pinsel="breite"]');
+        breite?.addEventListener('input', () => { this.pinsel.breite = Freistellerpinsel.BREITE(breite.value); this._breiteZeigen(); this.pinsel.zeichnen(); });
+        this.dialog.querySelector('[data-tat="rueckgaengig"]')?.addEventListener('click', () => this.pinsel.rueckgaengig());
+        this.dialog.querySelector('[data-tat="wiederholen"]')?.addEventListener('click', () => this.pinsel.wiederholen());
+        this.dialog.querySelector('[data-tat="striche-weg"]')?.addEventListener('click', () => this.pinsel.leeren());
+        // Strg+Z / Strg+Y im Fenster (nicht in Eingabefeldern).
+        this.dialog.addEventListener('keydown', e => {
+            if (!(e.ctrlKey || e.metaKey) || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+            if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); this.pinsel.rueckgaengig(); }
+            if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); this.pinsel.wiederholen(); }
+        });
+        this.felder.foto?.addEventListener('load', () => this._breiteZeigen());
         Dialoggroesse.merken(this.dialog, Freisteller.MERKER);
+    }
+
+    /** Rückgängig / Wiederholen / Alle weg nur, wenn es etwas zu tun gibt. */
+    _knoepfeSchalten() {
+        const p = this.pinsel;
+        const setzen = (tat, an) => { const k = this.dialog.querySelector(`[data-tat="${tat}"]`); if (k) k.disabled = !an; };
+        setzen('rueckgaengig', p.rueckgaengigMoeglich);
+        setzen('wiederholen', p.wiederholenMoeglich);
+        setzen('striche-weg', !p.leer);
+    }
+
+    _breiteZeigen() {
+        const w = this.dialog.querySelector('[data-wert="breite"]');
+        if (w) w.textContent = this.pinsel.breitePx() ? `${this.pinsel.breitePx()} px` : '';
+    }
+
+    /** SAM braucht Punkte: wer einen Punkt setzt, bekommt das Modell dazu gestellt. */
+    _werkzeugHinweis() {
+        const modell = this.dialog.querySelector('[data-regler="modell"]');
+        if (this.pinsel.werkzeug.startsWith('punkt-') && modell && modell.value !== 'sam') {
+            modell.value = 'sam';
+            this._melden('Modell auf „SAM (Klickpunkte)" gestellt — Punkte setzen: grün Person, rot Hintergrund');
+        }
     }
 
     /** Der Knopf für den Eintrag `b` — keiner für ein Drehvideo. */
@@ -60,15 +110,23 @@ export class Freisteller {
     regler() {
         const aus = { ...Freisteller.VORGABE };
         for (const r of this.dialog.querySelectorAll('[data-regler]')) {
-            aus[r.dataset.regler] = r.type === 'range' ? Number(r.value) : r.value;
+            aus[r.dataset.regler] = r.type === 'range' ? Number(r.value) : r.type === 'checkbox' ? r.checked : r.value;
         }
+        if (this.pinsel) { aus.striche = this.pinsel.striche(); aus.punkte = this.pinsel.punkte(); }
         return aus;
     }
 
     _reglerSetzen(werte) {
         for (const r of this.dialog.querySelectorAll('[data-regler]')) {
-            if (werte[r.dataset.regler] !== undefined) r.value = String(werte[r.dataset.regler]);
+            if (werte[r.dataset.regler] === undefined) continue;
+            if (r.type === 'checkbox') r.checked = !!werte[r.dataset.regler];
+            else r.value = String(werte[r.dataset.regler]);
         }
+        this.pinsel?.setzen(werte.striche || [], werte.punkte || []);
+        const ansehen = this.dialog.querySelector('input[name="freisteller-werkzeug"][value=""]');
+        if (ansehen) { ansehen.checked = true; this.pinsel.werkzeug = ''; }
+        this._knoepfeSchalten();
+        this._breiteZeigen();
         this._werteZeigen();
     }
 
@@ -91,6 +149,7 @@ export class Freisteller {
         if (zurueck) zurueck.disabled = !(e.freisteller && e.freisteller.vorher);
         if (!this.dialog.open) this.dialog.showModal();
         this._melden('Maske wird gerechnet (rembg, beim ersten Mal einige Sekunden) …');
+        this.pinsel?.passen();
         this._vorschau();
     }
 
@@ -105,6 +164,9 @@ export class Freisteller {
 
     async _vorschau() {
         const lauf = ++this._lauf;
+        const modell = this.regler().modell;
+        if (Freisteller.LANGSAM[modell]) this._melden(`Vorschau — Modell ${modell} (beim ersten Mal lädt rembg ${Freisteller.LANGSAM[modell]}) …`);
+        else if (this.regler().verfeinern) this._melden('Vorschau — GrabCut rechnet …');
         try {
             const antwort = await fetch(this.auftrag.adresse(`freisteller/${encodeURIComponent(this.datei)}/vorschau/`), {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...Serverabruf._csrfKopf() },

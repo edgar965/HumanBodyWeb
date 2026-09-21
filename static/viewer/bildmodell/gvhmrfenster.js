@@ -127,6 +127,9 @@ export class Gvhmrfenster {
         if (h > zh) { h = zh; b = zh * seitig; }
         leinwand.style.width = `${Math.floor(b)}px`;
         leinwand.style.height = `${Math.floor(h)}px`;
+        // Puffer sofort nachziehen — nicht auf den ResizeObserver warten (der kommt erst mit dem
+        // nächsten Bild; bis dahin rendert die Bühne mit dem Puffer der ganzen Zelle, verzerrt).
+        this.buehne?.groesse();
     }
 
     _melden(t) { if (this.felder.text) this.felder.text.textContent = t; }

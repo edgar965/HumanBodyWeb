@@ -118,9 +118,8 @@ export class Bilderansicht {
     /** Nur die Sichtung, nur für die Dateien ohne Befund (Umfang „neue"). */
     async neueSichten() {
         try {
-            const person = window.__bildmodell?.person?.werte?.() || {};
-            const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
-            const optionen = { ...(this.formular ? this.formular.werte() : {}), person, proportionen, umfang: 'neue' };
+            // Ohne `person`/`proportionen`: die bleiben am Auftrag (`Bildmodellstart`, 21.09.2026).
+            const optionen = { ...(this.formular ? this.formular.werte() : {}), umfang: 'neue' };
             await this.auftrag.starten(optionen, 'sichtung', {}, 'sichtung');
         } catch (fehler) {
             window.alert(`Sichtung nicht gestartet: ${fehler.message}`);

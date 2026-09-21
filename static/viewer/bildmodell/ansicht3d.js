@@ -29,6 +29,9 @@ import { Zielkaefig } from './zielkaefig.js';
  */
 export class Ansicht3d {
 
+    /** localStorage-Schlüssel der Wahl Ziel/Modell. */
+    static MERKER = 'bildmodell.ansicht3d.was';
+
     constructor(auftrag) {
         this.auftrag = auftrag;
         this.canvas = document.getElementById('ansicht3d');
@@ -66,11 +69,23 @@ export class Ansicht3d {
         });
     }
 
-    /** `was`: `ziel` (folgt den Pfeilen), `modell` (Ergebnis mit Haut) oder `gvhmr` (SMPL-X eines Bildes). */
-    wasZeigen(was) {
+    /** `was`: `ziel` (folgt den Pfeilen), `modell` (Ergebnis mit Haut) oder `gvhmr` (SMPL-X eines Bildes).
+     *  `merken`: die Wahl überlebt ein Neuladen (`MERKER`) — `gvhmr` nicht, das Netz ist dann weg. */
+    wasZeigen(was, merken = true) {
         this.was = ['modell', 'gvhmr'].includes(was) ? was : 'ziel';
         for (const r of document.querySelectorAll('input[name="ansicht3d-was"]')) r.checked = r.value === this.was;
         this._sichtbarkeit();
+        if (merken && this.was !== 'gvhmr') { try { localStorage.setItem(Ansicht3d.MERKER, this.was); } catch (e) { /* privat */ } }
+    }
+
+    /** Was beim Laden gezeigt wird: die gemerkte Wahl — sonst das Modell, sobald eine Fototextur
+     *  da ist (Edgar, 21.09.2026: „keine neue Textur auf dem 3D Modell ganz oben" — die Seite stand
+     *  auf „Ziel", dem Käfig ohne Haut), und der Käfig, wenn es noch keine gibt. */
+    _anfangswahl(z) {
+        let gemerkt = null;
+        try { gemerkt = localStorage.getItem(Ansicht3d.MERKER); } catch (e) { /* privat */ }
+        if (gemerkt === 'ziel' || gemerkt === 'modell') return gemerkt;
+        return ((z.ergebnis || {}).fototextur || {}).kacheln ? 'modell' : 'ziel';
     }
 
     /** Das SMPL-X-Netz eines Bildes (`gvhmr3d/`): immer neu gebaut, bläulich, dann gezeigt. */
@@ -222,11 +237,41 @@ export class Ansicht3d {
         this.hauttonAnwenden(z.textur);
         // Die Fotokacheln (Stufe 2) bei jedem Stand — auch wenn das Netz schon steht.
         if (this.modell) this.auflage.anwenden(this.modell, (z.ergebnis || {}).fototextur);
+        // Erste Wahl beim Laden; eine NEU gebackene Textur schaltet auf „Modell" — sonst sieht
+        // man sie nicht (Käfig „Ziel" hat keine Haut).
+        const texturstand = ((z.ergebnis || {}).fototextur || {}).stand || null;
+        if (this._texturstand === undefined) this.wasZeigen(this._anfangswahl(z), false);
+        else if (texturstand && texturstand !== this._texturstand && this.was !== 'gvhmr') this.wasZeigen('modell');
+        this._texturstand = texturstand;
         const stand = this.auftrag.ergebnisStand() + '|' + (((z.optionen || {}).person || {}).haar || '');
-        const regler = this.auftrag.stellung();
+        const regler = this.stellungGeber ? this.stellungGeber() : this.auftrag.stellung();
         if (!Object.keys(regler).length) { this._melden('Noch kein Ergebnis.'); return; }
         if (stand === this._stand || this._laeuft) return;
         this._stand = stand;
+        await this._bauen(regler, z);
+    }
+
+    /**
+     * Die Figur mit dieser Reglerstellung neu bauen — vom `Reglerfeld` je Schieberzug
+     * (Ebene 3, 21.09.2026). Entprellt; läuft gerade ein Bau, wird der Wunsch gemerkt und
+     * danach EINMAL gebaut (kein Stau, keine überholten Antworten).
+     */
+    reglerSetzen(regler) {
+        this._eigen = regler;
+        if (this._reglerWarte) clearTimeout(this._reglerWarte);
+        this._reglerWarte = setTimeout(async () => {
+            this._reglerWarte = null;
+            if (this._laeuft) { this._nochmal = true; return; }
+            await this._bauen(this._stellung(regler), this.auftrag.zustand);
+        }, 150);
+    }
+
+    /** Die Stellung für einen Bau: vom `Reglerfeld` (`stellungGeber`), sonst die übergebene/Fit. */
+    _stellung(sonst) {
+        return this.stellungGeber ? this.stellungGeber() : (sonst || this.auftrag.stellung());
+    }
+
+    async _bauen(regler, z) {
         this._laeuft = true;
         this._melden('Figur wird gebaut …');
         try {
@@ -248,6 +293,7 @@ export class Ansicht3d {
             this._stand = null;
         } finally {
             this._laeuft = false;
+            if (this._nochmal) { this._nochmal = false; await this._bauen(this._stellung(this._eigen || regler), this.auftrag.zustand); }
         }
     }
 }

@@ -148,7 +148,11 @@
 .bildmodell-gvhmrfoto { margin: 0; min-height: 0; display: flex; justify-content: center; background: var(--bg-darker, #181825); border-radius: 6px; overflow: hidden; }
 .bildmodell-gvhmrfoto img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .bildmodell-gvhmr3d { min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-darker, #181825); border-radius: 6px; overflow: hidden; }
-.bildmodell-gvhmrfeld .bildmodell-3dcanvas { width: 100%; height: 100%; min-height: 0; display: block; background: var(--bg-darker, #181825); }
+/* `flex: none`: `.bildmodell-3dcanvas` bringt `flex: 0 0 55%` mit (Proportionen-Popup) — im
+   Flex-Feld des GVHMR-Fensters schlug die Basis 55 % die per JS gesetzte Breite im Foto-
+   Seitenverhältnis (154 px → 345 px): das Netz war 2,2-fach in die Breite gezogen, Edgar
+   (21.09.2026): „warum die Person so völlig kaputt??" — das Netz selbst passte ins Foto. */
+.bildmodell-gvhmrfeld .bildmodell-3dcanvas { flex: none; width: 100%; height: 100%; min-height: 0; display: block; background: var(--bg-darker, #181825); }
 .bildmodell-gvhmrlauf { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 0.85rem; }
 .bildmodell-gvhmrlauf progress { width: 220px; }
 .bildmodell-gvhmrlauf progress[hidden] { display: none; }
@@ -165,3 +169,12 @@
 .bildmodell-freistellerregler label { display: flex; align-items: center; gap: 6px; }
 .bildmodell-freistellerregler input[type=range] { width: 140px; }
 .bildmodell-freistellerregler [data-wert] { min-width: 3.5em; color: var(--text-muted, #aab); }
+/* Pinsel-Leinwand deckungsgleich über dem Foto links (`freistellerpinsel.js` setzt Maß und Lage). */
+.bildmodell-freistellerfoto { position: relative; }
+.bildmodell-freistellerleinwand { position: absolute; left: 0; top: 0; pointer-events: none; touch-action: none; }
+.bildmodell-freistellerwerkzeuge { margin-top: 10px; }
+.bildmodell-freistellerwahl { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.bildmodell-freistellerwahl label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.bildmodell-freistellerfarbe { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.bildmodell-freistellerfarbe.drin { background: rgba(60, 200, 90, 0.85); }
+.bildmodell-freistellerfarbe.draussen { background: rgba(230, 60, 60, 0.85); }

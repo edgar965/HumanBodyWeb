@@ -58,9 +58,25 @@ export class Personenformular {
     fuellen(person) {
         for (const name of Personenformular.FELDER) {
             const e = this.feld.querySelector(`[name=${name}]`);
-            if (!e || person[name] === undefined || person[name] === null) continue;
+            if (!e) continue;
+            // Haar fehlt im Auftrag = „— keins —" (der Server speichert kein Haar als kein Feld);
+            // Zahlen ohne Wert bleiben, wie sie sind.
+            if (person[name] === undefined || person[name] === null) { if (name === 'haar') e.value = ''; continue; }
             e.value = String(person[name]);
         }
+        this._stand = JSON.stringify(this.werte());
+        this._tonusText(this.feld.querySelector('[name=tonus]')?.value);
+    }
+
+    /** Der Stand am Auftrag hat sich geändert (Lauf aus einem anderen Tab, Neuladen des
+     *  Zustands): übernehmen, solange hier nichts eigenes eingetragen ist — sonst bleibt die
+     *  eigene Eingabe (Edgar, 21.09.2026: „merke dir die Einstellungen die ich mal gemacht habe"). */
+    _abgleichen(z) {
+        const person = (z.optionen || {}).person || {};
+        const jetzt = JSON.stringify(person);
+        if (jetzt === this._serverstand) return;
+        this._serverstand = jetzt;
+        if (this._stand === undefined || JSON.stringify(this.werte()) === this._stand) this.fuellen(person);
     }
 
     werte() {
@@ -76,6 +92,7 @@ export class Personenformular {
     }
 
     zeigen(z) {
+        this._abgleichen(z);
         const knopf = document.getElementById('neu-berechnen');
         const laeuft = z.status === 'laeuft';
         if (knopf) {

@@ -38,10 +38,11 @@ class Bildmodelltextur:
         Nutzerwahl, sonst die Tauglichkeit — ein Nebenbild mit Körperteil
         (`Bildmodellbildtypen`, 19.09.2026) gilt mit Hautton als gewählt.
 
-        Nie gewählt, was `liste` als unmöglich führt (Gruppenbild, ohne Befund, Nebenbild
-        ohne Körperteil): sonst steht das Häkchen an UND gesperrt, und niemand kommt mehr
-        heran (Edgar, 20.09.2026: „kann sie nicht unchecken" — drei Körperbilder, per Box
-        zum Nebenbild gemacht, blieben als tauglich gewählt)."""
+        Nie gewählt, was `liste` als unmöglich führt (Gruppenbild, ohne Befund): sonst steht
+        das Häkchen an UND gesperrt, und niemand kommt mehr heran (Edgar, 20.09.2026: „kann
+        sie nicht unchecken"). Ein schlichtes Nebenbild ohne Körperteil ist ein Ganzkörperbild
+        (färbt alles, wie ein Hauptbild) — es zu sperren war die Regression „Bilder
+        ausgegraut" (Edgar, 20.09., nachts)."""
         from .bildmodellbildtypen import Bildmodellbildtypen
 
         t = bild.get('textur') or {}
@@ -49,8 +50,6 @@ class Bildmodelltextur:
             return False
         kategorie = bild.get('kategorie') or 'neben'
         if kategorie in ('gruppe', 'leer'):
-            return False
-        if kategorie == 'neben' and not Bildmodellbildtypen.textur_teile(bild):
             return False
         if 'textur_an' in bild:
             return bool(bild['textur_an'])
@@ -64,13 +63,16 @@ class Bildmodelltextur:
 
     @classmethod
     def tauglich(cls, bild):
-        """Taugt das Bild von sich aus für die Textur (Hauptbild mit genug Haut)?"""
+        """Taugt das Bild von sich aus für die Textur (Ganzkörperbild mit genug Haut)? Ganzkörper =
+        Hauptbild oder schlichtes Nebenbild ohne Körperteil."""
         from .bildmodellbildtypen import Bildmodellbildtypen
 
         t = bild.get('textur') or {}
         if not t.get('hautton'):
             return False
-        if bild.get('kategorie') not in Bildmodellbildtypen.HAUPTKATEGORIEN or 'anteil' not in t:
+        ganz = (bild.get('kategorie') in Bildmodellbildtypen.HAUPTKATEGORIEN
+                or (bild.get('kategorie') == 'neben' and not Bildmodellbildtypen.textur_teile(bild)))
+        if not ganz or 'anteil' not in t:
             return bool(t.get('tauglich'))
         return float(t.get('anteil') or 0) >= cls.ANTEIL_AB and int(t.get('maske_px') or 0) >= cls.MASKE_AB
 
@@ -132,7 +134,6 @@ class Bildmodelltextur:
                 continue
             t = b.get('textur') or {}
             kategorie = b.get('kategorie') or 'neben'
-            teile = Bildmodellbildtypen.textur_teile(b)
             grund = ''
             if not Bildmodellbildtypen.fuer_textur(b):
                 grund = 'Nutzung: %s' % dict((w, a) for w, a, _ in Bildmodellbildtypen.NUTZUNG)[
@@ -141,8 +142,6 @@ class Bildmodelltextur:
                 grund = 'keine Hautprobe — noch nicht gesichtet'
             elif kategorie in ('gruppe', 'leer'):
                 grund = 'Gruppenbild oder ohne Befund'
-            elif kategorie == 'neben' and not teile:
-                grund = 'Nebenbild ohne Körperteil — Typ wählen'
             rig = (any((b.get('rigs') or {}).values()) or bool(b.get('gesicht68'))
                    or bool(b.get('haende_punkte')))
             kamera = 'bekannt' if b.get('kamera_bekannt') else ('rig' if rig else 'keine')
