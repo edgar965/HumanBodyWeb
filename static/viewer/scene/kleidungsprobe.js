@@ -29,7 +29,11 @@ export class Kleidungsprobe {
     /** Haar, Schuhe und Kleinteile (Nieten) sind keine Kleidung für diese Probe. */
     static AUSSEN = /hair|frisur|sneaker|schuh|shoe|sandal|boot/i;
     static MINDESTPUNKTE = 500;
-    static ARM = /hand|palm|thumb|f_index|f_middle|f_ring|f_pinky|forearm|upper_arm|upperarm|carpal|^[lr]_(index|mid|ring|pinky)/i;
+    // `(?!\w*toe)` (23.09.2026): Genesis9 nennt die Zehen wie die Finger
+    // (`l_indextoe1`, `l_midtoe1`, `l_ringtoe1`, `l_pinkytoe1`) — ohne die
+    // Ausnahme zählte diese Probe Zehenpunkte als Armpunkte. Dieselbe Falle
+    // wie in `Koerperzuordnung.gruppenindex`, dort mit Bild belegt.
+    static ARM = /hand|palm|thumb|f_index|f_middle|f_ring|f_pinky|forearm|upper_arm|upperarm|carpal|^[lr]_(?!\w*toe)(index|mid|ring|pinky)/i;
     static OBERTEIL = /^(DEF-spine\.00[1-5]|DEF-breast|DEF-shoulder|spine[1-4]|[lr]_pectoral|[lr]_shoulder|neck)/;
     /**
      * Schwellen, gemessen an Dance1_smplx auf Ursula (Tagebuch 19.09.2026, Abschnitt 12):

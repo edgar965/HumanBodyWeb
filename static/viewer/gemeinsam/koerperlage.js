@@ -129,6 +129,9 @@ export class Koerperlage {
         for (const z of s.ziele || []) z.dispose();
         s.punkte?.material?.dispose();
         s.ziele = null; s.punkte = null; s.quelle = null;
+        // Die Kapseln gehören zum alten Körper (Knochenobjekte, Maße aus
+        // dessen Haut) — mit ihm werden sie ungültig, siehe `_kapseln`.
+        s.kapseln = null; s.skelett = null;
     }
 
     /** Die Attribute des Koerpers teilen — je Bild, denn die Gelenkfelder
@@ -151,7 +154,18 @@ export class Koerperlage {
      * `oberflaecheglsl.js`).
      */
     static _kapseln(s, inst, koerper) {
-        if (!s.kapseln) s.kapseln = Stoffkapseln.anlegen(inst);
+        // AM SKELETT FESTMACHEN (23.09.2026): `anlegen` merkt sich Knochen-
+        // OBJEKTE; wird der Körper neu aufgebaut (Stufenwechsel Käfig ->
+        // Browserstufe, Modellneubau), hängen die alten Kapseln an Knochen,
+        // die niemand mehr animiert — sie bleiben dann in der Ruhepose stehen,
+        // während die Figur sich bewegt. Gemessen an Olesia1 im Spagat: die
+        // erste Kapsel stand bei Bild 673 UND 680 auf (0,093|0,484|-0,016),
+        // während die Hand 40 cm entfernt war. Der Shader drückte den Stoff
+        // damit gegen Kapseln, die nicht am Körper sitzen.
+        if (!s.kapseln || s.skelett !== koerper.skeleton) {
+            s.kapseln = Stoffkapseln.anlegen(inst);
+            s.skelett = koerper.skeleton;
+        }
         const kapseln = s.kapseln;
         const max = Koerperlage.KAPSELN;
         if (!s.kapselwerte) s.kapselwerte = Array.from({ length: 4 * max }, () => new THREE.Vector4());

@@ -52,8 +52,24 @@ export class Oberflaechenbindung {
      * nichts geaendert, weil Schicht 2 (diese Projektion) selbst die Ursache
      * ist, nicht Schicht 3 (Kapseln). Bis das Verfahren nur auf wirklich
      * dehnbare, eng anliegende Stoffbereiche begrenzt ist (nicht auf starre
-     * Schuhe und Nahtkanten), bleibt die ganze Schicht aus — reines
-     * Skinning wie vor dem 21.09.2026.
+     * Schuhe und Nahtkanten), bleibt SCHICHT 2 aus — reines Skinning wie vor
+     * dem 21.09.2026.
+     *
+     * KAPSELN KURZ AN, DANN WIEDER AUS (23.09.2026): Auf „OK, dann schalte das
+     * ein" hin lief Schicht 3 allein (Schicht 2 blieb aus). Am Schuh hat das
+     * getragen — Edgar: „Schuhe sind nicht mehr kaputt" —, aber das T-Shirt war
+     * danach kaputt, und darauf ging es wieder aus. Was dabei repariert wurde
+     * und unabhängig von diesem Schalter gilt:
+     *   1. `Koerperzuordnung.gruppenindex` steckte 16 Zehenknochen je Figur in
+     *      die ARM-Gruppe (Genesis9 nennt die Zehen wie die Finger:
+     *      `l_indextoe1`, `l_midtoe1`, …). Der eigene Fuß galt für die
+     *      Schuhspitze damit als FREMDE Gliedmaße und drückte die Kappe heraus
+     *      — Edgars Bild mit der aufgerissenen Sneaker-Spitze.
+     *   2. `Koerperlage._kapseln` erneuerte die Kapseln nach einem Körper-
+     *      Neuaufbau nicht; sie standen dann in der Ruhepose still.
+     * OFFEN bleibt das Oberteil: eine Messung über 22 Spagat-Bilder ergab für
+     * das Shirt 0 Kapseltreffer — der sichtbare Schaden kommt also NICHT aus
+     * dieser Schleife, sondern woanders her. Bis das geklärt ist, bleibt aus.
      */
     static AKTIV = false;
     static KAPSELN_AKTIV = false;

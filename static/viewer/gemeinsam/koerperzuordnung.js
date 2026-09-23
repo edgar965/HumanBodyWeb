@@ -30,14 +30,32 @@ export class Koerperzuordnung {
 
     /** Arm, Bein oder '' — dieselben Muster wie `Stoffkapseln.GLIEDER`, aber getrennt. */
     static ARM = /upperarm|upper_arm|forearm|hand|shldr|shoulder|f_|thumb|index|mid(?!dle)|ring|pinky|carpal/i;
-    static BEIN = /thigh|shin|foot|toe/i;
+    static BEIN = /thigh|shin|foot|toe|metatarsal/i;
 
-    /** Gruppen-ID (0 = keine) eines Knochennamens — `GRUPPEN` oder 0. */
+    /**
+     * Gruppen-ID (0 = keine) eines Knochennamens — `GRUPPEN` oder 0.
+     *
+     * BEIN WIRD ZUERST GEPRÜFT (23.09.2026, Edgar mit Bild: die Angie
+     * Sneakers an der Zehenspitze aufgerissen, braune Sohle sichtbar):
+     * Genesis9 nennt die Zehen wie die Finger — `l_indextoe1`, `l_midtoe1`,
+     * `l_ringtoe1`, `l_pinkytoe1`. Die ARM-Muster (`index`, `mid`, `ring`,
+     * `pinky`) treffen die also mit, und bei ARM-zuerst landeten **16
+     * Zehenknochen je Figur in der ARM-Gruppe** (gemessen am laufenden
+     * Olesia1: `l_indextoe1 -> 1`, während `l_bigtoe1 -> 3` richtig lag —
+     * nur der große Zeh heißt nicht wie ein Finger). Ein Schuhpunkt an der
+     * Zehenspitze bekam damit `bindgruppe` ARM; der eigene Fuß galt im
+     * Kapselfilter (`oberflaecheglsl.js`) als FREMDE Gliedmaße und drückte
+     * die Schuhkappe heraus — genau die Verformung an der Spitze.
+     * Umgekehrt ist die Reihenfolge sicher: kein ARM-Knochen trägt
+     * `thigh`, `shin`, `foot`, `toe` oder `metatarsal` im Namen, auch nicht
+     * in Rigify-Schreibweise (`DEF-f_index.01.L` bleibt Arm).
+     * `metatarsal` steht neu dabei — der Mittelfuß fiel vorher in Gruppe 0.
+     */
     static gruppenindex(name) {
         const seite = Koerperzuordnung.seite(name);
         if (!seite) return 0;
-        if (Koerperzuordnung.ARM.test(name)) return Koerperzuordnung.GRUPPEN[seite + '_arm'];
         if (Koerperzuordnung.BEIN.test(name)) return Koerperzuordnung.GRUPPEN[seite + '_bein'];
+        if (Koerperzuordnung.ARM.test(name)) return Koerperzuordnung.GRUPPEN[seite + '_arm'];
         return 0;
     }
 
