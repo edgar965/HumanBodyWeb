@@ -31,17 +31,33 @@ export class Genesis9kleidung {
 
     static KATALOG = '/api/character/genesis9-figur/garderobe/';
     static _namen = null;
+    static _namenLauf = null;
 
     static stilliste(werte) { return Genesis9lagen.stilliste(werte); }
 
-    /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */
+    /**
+     * Der Name des Stücks aus dem Katalog — sonst die Kennung.
+     *
+     * EIN LAUF FÜR ALLE (23.09.2026, Edgar: „Ladezeit deutlich länger als
+     * 12 s"): Beim Start ziehen mehrere Stücke GLEICHZEITIG an (Jeans, Shirt,
+     * Haar, Schuhe) und riefen bis dahin alle VIER ihren eigenen Katalog-Fetch
+     * — `if (!_namen)` schützt nur gegen einen ZWEITEN Aufruf, NACHDEM der
+     * erste fertig ist, nicht gegen vier, die noch vor dem ersten `await`
+     * gleichzeitig starten. Die Katalog-View ist synchron (Daphnes einer
+     * geteilter Thread) — vier gleichzeitige Aufrufe standen hintereinander
+     * an: 1,62 + 2,07 + 0,69 + 0,99 s statt einmal ~0,3 s (Serverlog
+     * 11:17:59–11:18:05). Jetzt merkt sich `_namenLauf` das LAUFENDE Promise,
+     * alle vier warten auf dasselbe.
+     */
     static async anzeigename(kennung) {
         if (!Genesis9kleidung._namen) {
-            try {
-                const daten = await Serverabruf.json(Genesis9kleidung.KATALOG);
-                Genesis9kleidung._namen = Object.fromEntries(
-                    (daten.stuecke || []).map((s) => [s.id, s.name || s.id]));
-            } catch { Genesis9kleidung._namen = {}; }
+            if (!Genesis9kleidung._namenLauf) {
+                Genesis9kleidung._namenLauf = Serverabruf.json(Genesis9kleidung.KATALOG)
+                    .then((daten) => Object.fromEntries(
+                        (daten.stuecke || []).map((s) => [s.id, s.name || s.id])))
+                    .catch(() => ({}));
+            }
+            Genesis9kleidung._namen = await Genesis9kleidung._namenLauf;
         }
         return Genesis9kleidung._namen[kennung] || kennung;
     }

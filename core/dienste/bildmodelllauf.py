@@ -208,7 +208,9 @@ class Bildmodelllauf:
     def _textur(self):
         from .bildmodellfototextur import Bildmodellfototextur
 
-        self.job.ergebnis.pop('fototextur', None)
+        # „Textur: aus/Hautton" heißt „jetzt nicht neu backen" — NICHT „die vorhandene Fotofarbe
+        # löschen" (23.09.2026, Edgar: „kein Ergebnis sichtbar" — eine Kette mit anderer Textur-Wahl
+        # hatte die schon gebackene Fotofarbe ersatzlos entfernt, ohne dass der User das wollte).
         if self.optionen.get('textur', 'foto') == 'foto':
             textur = Bildmodellfototextur(self.job, self.ablage, self.optionen)
             self.job.ergebnis['fototextur'] = textur.backen(lambda a, t: self.melden('textur', a, t))

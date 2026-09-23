@@ -70,15 +70,21 @@ if (uOberflaecheAn > 0.5 && mischung > 0.0 && bindung.x >= 0.0) {
     vec3 n = normalize(bary.x * g9Normale(bindung.x) + bary.y * g9Normale(bindung.y) + bary.z * g9Normale(bindung.z));
     transformed = mix(transformed, q + bindabstand * n, mischung);
 }
-// FREIE Punkte werden von JEDER Kapsel gedrueckt; GEBUNDENE (mischung > 0) nur
-// von Kapseln FREMDER Gliedmassen (bindgruppe vs. der Gruppe der Kapsel, in
-// ka.w) — die eigene Kapsel ist groesser als die reine Haut (90. Perzentil,
-// 1-4 cm darueber) und wuerde sonst die gerade gesetzte Bindung wieder
-// verzerren (gemessen an der Jeans, 21.09.2026: 3,8 cm heraus).
+// FREIE Punkte werden von JEDER Kapsel gedrueckt; GEBUNDENE (mischung > 0) nur,
+// wenn der Punkt SELBST einer Gliedmasse gehoert (bindgruppe > 0, z. B. Jeans
+// auf dem Bein) UND die Kapsel einer ANDEREN Gliedmasse ist (Spagat, Arm im
+// Oberschenkel, 21.09.2026). Ruempfe/Kopf-gebundene Punkte (bindgruppe == 0,
+// z. B. das Hemd an Brust und Ruecken) werden NIE von einer Kapsel gedrueckt —
+// sonst reisst die Schulternaht: ein Hemdpunkt an der Schulter ist an einen
+// Rumpfknochen gebunden (bindgruppe 0), die direkt angrenzende Schulter-Kapsel
+// zaehlt als „fremd" und drueckte ihn 22.09.2026 aus der Naht (Edgars Bild:
+// Loch am Aermelansatz), waehrend die Nachbarpunkte auf dem Arm (bindgruppe
+// ARM, von ihrer eigenen Kapsel ausgenommen) an Ort blieben.
 if (uKapselAn > 0.5) {
     for (int k = 0; k < ${OberflaecheGLSL.KAPSELN}; k++) {
         if (k >= uKapselAnzahl) break;
         vec4 ka = uKapseln[4 * k], kb = uKapseln[4 * k + 1], ku = uKapseln[4 * k + 2], kr = uKapseln[4 * k + 3];
+        if (mischung > 0.0 && bindgruppe < 0.5) continue;
         if (mischung > 0.0 && bindgruppe > 0.5 && abs(ka.w - bindgruppe) < 0.5) continue;
         vec3 ab = kb.xyz - ka.xyz;
         float L = length(ab);

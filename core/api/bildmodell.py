@@ -18,6 +18,7 @@ GET  /api/bildmodell/<id>/datei/<ordner>/<name>         Bilder und Vorschauen
 import json
 import logging
 
+from asgiref.sync import sync_to_async
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -175,7 +176,21 @@ class Bildmodellendpunkte:
 
     @staticmethod
     @require_GET
-    def zustand(request, job_id):
+    async def zustand(request, job_id):
+        # ASYNC (23.09.2026, Edgar: „Ladezeit deutlich laenger als 12 s"): dieser
+        # Endpunkt haengt an jeder offenen „Modell aus Dateien"-Seite (Polling alle
+        # 1-2 s je Tab) und war SYNCHRON — jeder Aufruf lief ueber Daphnes EINEN
+        # geteilten Thread (asgiref `thread_sensitive=True`, dieselbe Falle wie bei
+        # `core/api/retarget.py`). Mit mehreren offenen Tabs stand die Warteschlange
+        # jedem anderen sync View im Weg, auch dem BVH-Studio-Seitenaufbau
+        # (Serverlog 23.09.2026: `garderobe/`-Aufrufe 0,7-2,1 s statt ~0,3 s, waehrend
+        # drei `zustand/`-Polls gleichzeitig liefen). `thread_sensitive=False` nutzt
+        # asgirefs allgemeinen Threadpool statt des einen geteilten Fadens.
+        daten = await sync_to_async(Bildmodellendpunkte._zustand_rechnen, thread_sensitive=False)(job_id)
+        return JsonResponse(daten)
+
+    @staticmethod
+    def _zustand_rechnen(job_id):
         job = get_object_or_404(Bildmodellauftrag, pk=job_id)
         if job.laeuft and not Bildmodellarbeiter.lebt(job):
             job.refresh_from_db()
@@ -183,7 +198,7 @@ class Bildmodellendpunkte:
                 job.status = 'gescheitert'
                 job.error_message = job.error_message or 'Arbeitsprozess lebt nicht mehr (auftrag.log)'
                 job.save(update_fields=['status', 'error_message', 'updated_at'])
-        return JsonResponse(Bildmodellendpunkte._zustand(job))
+        return Bildmodellendpunkte._zustand(job)
 
     # -------------------------------------------------------------- Bilder
 

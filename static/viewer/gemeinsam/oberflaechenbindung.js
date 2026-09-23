@@ -33,9 +33,30 @@ export class Oberflaechenbindung {
     /** Mindestabstand über der Kapsel (Meter) — wie `G9kollision.ABSTAND`. */
     static KAPSELABSTAND = 0.003;
     static SCHLUESSEL = 'oberflaeche';
-    /** Schalter fuer Gegenproben (A/B im Tab): Oberflaeche und Kapseln getrennt. */
-    static AKTIV = true;
-    static KAPSELN_AKTIV = true;
+    /**
+     * Schalter fuer Gegenproben (A/B im Tab): Oberflaeche und Kapseln getrennt.
+     *
+     * BEIDE AUS (23.09.2026, Edgar mit Bild: Loch an der Schulternaht des
+     * G9-Base-Shirts UND die Angie Sneakers sichtbar verformt/abgeloest):
+     * gemessen an der laufenden Figur (Olesia1, TechnoDance) lag `mischung`
+     * ueber FAST DER GANZEN Schuh-Geometrie bei 0,88-1,0 (Server-Formel in
+     * `Genesis9/oberflaechenbindung.py`: mischung=1 unter 2,5 cm Abstand zum
+     * naechsten Koerperdreieck) — ein Schuh haelt sich aber komplett innerhalb
+     * dieses Radius um den Fuss, WIRD ALSO GANZ auf die Fussoberflaeche
+     * projiziert, Punkt fuer Punkt UNABHAENGIG voneinander (kein starres
+     * Mitschwingen wie bei normalem Skinning). An Stellen mit wechselnder
+     * Kruemmung (Ferse, Schuhsohle, Aermelnaht) springt die naechste-Dreieck-
+     * Wahl zwischen Nachbarpunkten — das reisst genau die Naht/Sohle auf, die
+     * Edgar zeigte. Der eigentliche Kapsel-Fix von heute Nacht (Rumpf-
+     * gebundene Punkte nie druecken, siehe `oberflaecheglsl.js`) hat daran
+     * nichts geaendert, weil Schicht 2 (diese Projektion) selbst die Ursache
+     * ist, nicht Schicht 3 (Kapseln). Bis das Verfahren nur auf wirklich
+     * dehnbare, eng anliegende Stoffbereiche begrenzt ist (nicht auf starre
+     * Schuhe und Nahtkanten), bleibt die ganze Schicht aus — reines
+     * Skinning wie vor dem 21.09.2026.
+     */
+    static AKTIV = false;
+    static KAPSELN_AKTIV = false;
 
     /**
      * Die Bindung aus der Serverantwort eines Teils als Attribute ans Netz.
