@@ -89,6 +89,19 @@ HILFE_EXTRA = [
         'url': '/hilfe/video-to-bvh/',
         'aktiv': 'hilfe_video_to_bvh',
     },
+    # Foto-zu-3D-Kopf-Verfahren: eigene (gemessen) und fremde (recherchiert) —
+    # Edgar (22.09.2026): „mach seite Hilfe - Foto - 3D in der du alle Modell
+    # erwähnst … recherchiere was von denen am besten ist, und was davon du
+    # nachbauen kannst"; benannt „2D->3D" auf Edgars Wunsch (23.09.2026).
+    # Adresse/Dateinamen bleiben `kopf_pipelines`/`kopf-pipelines` (nur die
+    # Beschriftung wurde geändert, um nicht mit dem Menüpunkt „Foto To 3D"
+    # (Ganzkörper-Werkzeug) zu kollidieren).
+    {
+        'label': '2D -> 3D',
+        'icon': 'bi-person-bounding-box',
+        'url': '/hilfe/kopf-pipelines/',
+        'aktiv': 'hilfe_kopf_pipelines',
+    },
     # Mimik, Haare, Kleidung, Wind — wie Studios es machen und welcher
     # offene Code in Frage kommt (Edgar, 12.09.2026: „schreibe schon mal
     # alles hinein in Hilfe - Animationseffekte").

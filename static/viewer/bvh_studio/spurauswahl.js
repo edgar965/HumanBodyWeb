@@ -42,15 +42,25 @@ export class Spurauswahl {
      * zu sehen war davon nichts, sie stand 400 px unter dem Rand.
      */
     static einblenden(index, spur) {
+        // Sammelvorgang (Projekt-Wiederherstellung, Aufräumen kaputter Spuren):
+        // JEDE neu angelegte Spur läuft über `Spurerzeugung.besonders()` und
+        // damit über `waehlen()`/`einblenden()` — ohne diese Bremse klappt eine
+        // wiederhergestellte Lichtspur die Gruppe „Licht" bei jedem Laden auf,
+        // obwohl niemand sie angeklickt hat (Edgar, 22.09.2026: „Licht Bereich
+        // ist wieder aufgeklappt!!!", per `console.trace` auf den Setter
+        // nachgewiesen: `Projektwiederherstellung._spurAnlegen` → `addSpecialTrack`
+        // → `Spurerzeugung.besonders` → hierher).
+        if (state._undoSuppressed) return;
         if (spur?.type === 'light' && state.lightGroupCollapsed) {
             state.lightGroupCollapsed = false;
         }
         if (spur?.type === 'scene_object' && state.sceneGroupCollapsed) {
             state.sceneGroupCollapsed = false;
         }
-        // Eine Animation unter einer zugeklappten Modellspur: aufklappen.
+        // Animation, Mimik, Script oder Effekte unter einer zugeklappten
+        // Modellspur: aufklappen (22.09.2026 auch für Mimik/Script/Effekte).
         const traeger = state.project.tracks[
-            Modellgruppen.traeger(state.project.tracks, index)];
+            Modellgruppen.eigentuemerModell(state.project.tracks, index)];
         if (traeger?.zugeklappt) traeger.zugeklappt = false;
         const rahmen = Zeitleistenflaeche.rahmen;
         const oben = Reihen.yFuerSpur(index);

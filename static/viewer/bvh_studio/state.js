@@ -17,6 +17,7 @@ export const TRACK_COLORS = {
     model: '#e91e63',
     mimik: '#ff8a65',
     script: '#ba68c8',
+    effekte: '#26c6da',
 };
 
 export const TRACK_ICONS = {
@@ -27,6 +28,7 @@ export const TRACK_ICONS = {
     model: 'fa-user',
     mimik: 'fa-smile',
     script: 'fa-scroll',
+    effekte: 'fa-gauge-high',
 };
 
 export const state = {
@@ -49,6 +51,10 @@ export const state = {
 
     // Camera edit mode state
     cameraEditMode: false,
+
+    // Gruppe „Licht" startet zugeklappt (Edgar, 22.09.2026: „ständig
+    // aufgeklappt beim Laden") — „Szene" bleibt offen, wie bisher.
+    lightGroupCollapsed: true,
 
     // Undo suppression
     _undoSuppressed: false,

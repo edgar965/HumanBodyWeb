@@ -16,6 +16,7 @@ import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Modellmenue } from './zeitleiste_modellmenue.js';
 import { Mimikmenue } from './zeitleiste_mimikmenue.js';
 import { Scriptmenue } from './zeitleiste_scriptmenue.js';
+import { Effektemenue } from './zeitleiste_effektemenue.js';
 import { Untermenuelage } from './untermenuelage.js';
 
 /** Abstand, den ein Menue zum unteren Fensterrand haelt. */
@@ -57,7 +58,8 @@ export class Zeitleistenmenue {
         document.addEventListener('click', Zeitleistenmenue.schliessen);
         // Untermenüs („Hinzufügen", „Länge") bleiben im Fenster.
         for (const menue of [Zeitleistenmenue.clipmenue, Zeitleistenmenue.spurmenue,
-                             Modellmenue.menue, Mimikmenue.menue, Scriptmenue.menue]) {
+                             Modellmenue.menue, Mimikmenue.menue, Scriptmenue.menue,
+                             Effektemenue.menue]) {
             Untermenuelage.alleAnbinden(menue);
         }
         Zeitleistenmenue.clipmenue?.querySelectorAll('.ctx-item').forEach(eintrag => {
@@ -74,7 +76,7 @@ export class Zeitleistenmenue {
 
     static schliessen() {
         for (const m of [Zeitleistenmenue.clipmenue, Modellmenue.menue, Mimikmenue.menue,
-                         Scriptmenue.menue]) {
+                         Scriptmenue.menue, Effektemenue.menue]) {
             if (m) m.style.display = 'none';
         }
     }
@@ -131,6 +133,13 @@ export class Zeitleistenmenue {
             if (Zeitleistenmenue.spurmenue) Zeitleistenmenue.spurmenue.style.display = 'none';
             Scriptmenue.mausX = Zeitleistenmenue.mausX;
             Scriptmenue.zeigen(e, spur, spurNr, treffer, klickbild, Zeitleistenmenue._zeigen);
+            return;
+        }
+        if (spur && spur.type === 'effekte') {
+            Zeitleistenmenue.clipmenue.style.display = 'none';
+            if (Zeitleistenmenue.spurmenue) Zeitleistenmenue.spurmenue.style.display = 'none';
+            Effektemenue.mausX = Zeitleistenmenue.mausX;
+            Effektemenue.zeigen(e, spur, spurNr, treffer, klickbild, Zeitleistenmenue._zeigen);
             return;
         }
 
@@ -201,16 +210,25 @@ export class Zeitleistenmenue {
      * wirkten sonst auf die QUELLDATEI (dieselbe `category`/`name` wie der Clip,
      * aus dem es entstand). „Standbild einfügen" selbst ergibt in einem
      * Standbild ebenfalls keinen Sinn (dann läge Standbild in Standbild).
+     *
+     * Ein Speed-Ereignis (`speed_kf`, Effekte-Spur) ist ein Punkt ohne Dauer —
+     * zusätzlich auch „Split" und „Länge" ausblenden (Edgar, 21.09.2026: nach
+     * dem alten Standbild-Bug keine ungenutzten Einträge mehr zeigen).
      */
     static _standbildEintraege(menue, treffer, spur) {
         const clip = treffer && spur ? spur.clips[treffer.clipIdx] : null;
-        const istStandbild = clip?.type === 'freeze';
+        const ohneQuelle = clip?.type === 'freeze' || clip?.type === 'speed_kf';
         for (const aktion of ['ctx-trim-start', 'ctx-trim-end', 'ctx-trim-reset',
                               'ctx-smooth', 'ctx-ground', 'ctx-save-bvh', 'ctx-save-bvh-library']) {
             const eintrag = menue.querySelector(`[data-action="${aktion}"]`);
-            if (eintrag && treffer) eintrag.style.display = istStandbild ? 'none' : '';
+            if (eintrag && treffer) eintrag.style.display = ohneQuelle ? 'none' : '';
         }
         const einfuegen = menue.querySelector('[data-action="ctx-freeze-insert"]');
-        if (einfuegen && treffer) einfuegen.style.display = istStandbild ? 'none' : '';
+        if (einfuegen && treffer) einfuegen.style.display = ohneQuelle ? 'none' : '';
+        const ohneDauer = clip?.type === 'speed_kf';
+        const split = menue.querySelector('[data-action="ctx-split"]');
+        if (split && treffer) split.style.display = ohneDauer ? 'none' : '';
+        const laenge = document.getElementById('clip-ctx-laenge');
+        if (laenge && treffer) laenge.style.display = ohneDauer ? 'none' : '';
     }
 }

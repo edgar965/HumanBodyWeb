@@ -75,7 +75,9 @@ export class Genesis9kleidung {
             netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
             // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;
-            // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden).
+            // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden — DORT
+            // steht `inst.bodyMesh` sicher, hier oft noch nicht: Koerper und
+            // Kleidung laufen gleichzeitig, siehe `Oberflaechenbindung.anlegen`).
             Oberflaechenbindung.anlegen(netz, teil);
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });

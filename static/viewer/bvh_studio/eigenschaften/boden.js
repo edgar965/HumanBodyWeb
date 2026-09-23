@@ -41,6 +41,7 @@ export class Bodeneigenschaften {
                 (track.floorRoughness ?? 0.9).toFixed(2), ANTEIL))}
             ${M.zeile('Metall', M.zahl('prop-floor-metalness',
                 (track.floorMetalness ?? 0.05).toFixed(2), ANTEIL))}
+            ${M.zeile('Höhe Y', M.zahl('prop-floor-y', (mitte.y ?? -0.001).toFixed(2), 'step="0.05"') + ' m')}
             <h3 class="gruppentitel">Durchsicht (versunkene Füße bleiben sichtbar)</h3>
             ${Bodeneigenschaften._regler('prop-floor-transparenz', 'Transparenz',
                 track.floorTransparenz ?? Bodenuntergrund.TRANSPARENZ, 100, '%')}
@@ -76,6 +77,9 @@ export class Bodeneigenschaften {
         });
         M.an('prop-floor-roughness', 'change', material('floorRoughness', 0.9));
         M.an('prop-floor-metalness', 'change', material('floorMetalness', 0.05));
+        M.an('prop-floor-y', 'change', (e) => {
+            fn.setFloorHeight?.(track, parseFloat(e.target.value) || 0);
+        });
         // Die Regler wirken beim Ziehen, die Zahl daneben läuft mit.
         for (const [id, feld] of [['prop-floor-transparenz', 'floorTransparenz'],
                                   ['prop-floor-tiefe', 'floorTiefe']]) {

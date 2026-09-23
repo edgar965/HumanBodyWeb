@@ -175,6 +175,8 @@ CHARAKTER = [
          name='g9_figur_felder_gelenke'),
     path('api/character/genesis9-figur/felder/visemes/', G9felderapi.visemes,
          name='g9_figur_felder_visemes'),
+    path('api/character/genesis9-figur/felder/mimik/', G9felderapi.mimik,
+         name='g9_figur_felder_mimik'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/felder/<str:gruppe>/',
          G9felderapi.stueck, name='g9_felder_stueck'),
     path('api/character/genesis9-figur/<str:name>/netz/', G9figur.netz,

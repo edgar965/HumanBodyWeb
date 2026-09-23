@@ -104,6 +104,18 @@ setzen, die einen Zeitanteil des Clips auf einen Quellanteil biegen — ohne Pun
 mit konstanter Geschwindigkeit (Speed-Regler) weiter. Zwei Punkte mit demselben Wert halten die
 Bewegung dazwischen weich an; „weich" als Interpolation rundet den Übergang.</p>
 
+<h4 class="hilfe-abschnitt">Effekte-Spur — Speed-Ereignisse (Taste G)</h4>
+<p>Eine eigene Spurart „Effekte" (Hinzufügen → Spur → Effekte), mit einer BVH-Spur verknüpft
+(Rechtsklick auf die Effekte-Spur → Verknüpfung). Sie schneidet die Animation NICHT durch: Auf
+der verknüpften Animationsspur setzt <b>Taste G</b> am Abspielkopf ein Speed-Ereignis mit dem
+aktuell eingestellten Wiedergabetempo (Schieberegler neben der Zeitanzeige, 0–3×, stufenlos).
+Zwischen zwei Ereignissen wird das Tempo interpoliert; 0× ist ein Standbild — am Ende des Balkens
+läuft die Animation von genau der Stelle weiter, an der sie am Anfang stand. Vor dem ersten und
+nach dem letzten Ereignis gilt normales Tempo (1×). Steht ein Balken irgendwo auf der Spur, dehnt
+oder staucht das die Animation dort — spätere Clips derselben BVH-Spur rutschen sichtbar mit,
+ohne dass ein Clip geteilt oder verändert wird; Kamera, Licht und Ton laufen unabhängig davon auf
+ihren eigenen Spuren weiter.</p>
+
 <h4 class="hilfe-abschnitt">Hinweise</h4>
 <ul class="hilfe-zeile">
 <li>Klick auf eine Animation markiert sie (lila) für Toolbar-Aktionen</li>

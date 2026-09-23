@@ -25,7 +25,7 @@ export class Spurerzeugung {
     static ERSATZMODELL = 'Rig2';
     static ERSATZKOERPER = 'Female_Caucasian';
     static NAMEN = { camera: 'Kamera', light: 'Licht', audio: 'Audio', mimik: 'Mimik',
-                     script: 'Script' };
+                     script: 'Script', effekte: 'Effekte' };
     static OBJEKTFARBE = '#7c5cbf';
 
     /** Eine Animationsspur (BVH-Clips). */
@@ -49,6 +49,28 @@ export class Spurerzeugung {
         spur.muted = false;
         spur._currentPreset = null;
         spur._linkedAnimIdx = -1;
+        return Spurerzeugung.einhaengen(spur, false);
+    }
+
+    /**
+     * Eine Effekte-Spur — Speed-Ereignisse (Taste G) fuer eine verknuepfte
+     * Animationsspur (`_linkedAnimIdx`, wie bei der Modellspur). Ohne
+     * Angabe verknuepft sie sich mit der aktuell gewaehlten BVH-Spur, sonst
+     * mit der ersten im Projekt — leer bleibt sie unverknuepft, die
+     * Verknuepfung laesst sich im Spur-Kontextmenue nachtragen (Edgar,
+     * 21.09.2026, „andersrum").
+     */
+    static effekte(name, linkIdx = null) {
+        pushUndo('Effekte-Spur hinzufügen');
+        const nummer = state.project.effekteTracks.length + 1;
+        const spur = new Track(name || `Effekte ${nummer}`);
+        spur.type = 'effekte';
+        spur.color = TRACK_COLORS.effekte;
+        const ziel = linkIdx != null ? linkIdx
+            : (state.project.tracks[state.selectedTrackIdx]?.type === 'bvh'
+                ? state.selectedTrackIdx : state.project.animations.length
+                    ? state.project.indexOf(state.project.animations[0]) : -1);
+        spur._linkedAnimIdx = ziel;
         return Spurerzeugung.einhaengen(spur, false);
     }
 

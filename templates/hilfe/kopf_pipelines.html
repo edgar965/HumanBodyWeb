@@ -1,0 +1,106 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kopf-Pipelines: Foto-zu-3D-Kopf-Verfahren, gemessen (eigene) und
+recherchiert (fremde), getrennt gehalten — sie sind nicht vergleichbar
+(`core/dienste/kopfpipelinevergleich.py`). Edgar (22.09.2026): „mach seite
+Hilfe - Foto - 3D in der du alle Modell erwähnst … recherchiere was von denen
+am besten ist, und was davon du nachbauen kannst".
+{% endcomment %}
+
+{% block title %}2D -> 3D — Vergleich{% endblock %}
+{% block topbar_title %}2D -> 3D: Foto zu 3D-Kopf im Vergleich{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kopf_pipelines.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite">
+
+  <h1>2D -> 3D: Foto zu 3D-Kopf</h1>
+
+  <p>
+    Der Schritt „Kopf" (<code>Bildmodellkopf</code>, Seite „Modell aus Dateien") baut
+    aus den per Häkchen gewählten Kopffotos einen FLAME-Kopf. Diese Seite ist NICHT
+    das ältere Ganzkörper-Werkzeug <a href="/humanbody/photo-to-3d/">„Foto To 3D"</a> —
+    hier geht es nur um den Kopf, und um die Frage, welches Verfahren dafür am besten
+    passt.
+  </p>
+
+  <div class="info-box info-box-purple">
+    <strong>Zwei Gruppen, keine gemeinsame Rangliste:</strong> unten zuerst die drei
+    Verfahren, die in diesem Projekt eingebaut UND an einem echten Auftrag GEMESSEN
+    sind; danach kommerzielle/fremde Werkzeuge, die nur RECHERCHIERT (nicht an
+    unseren Fotos getestet) sind. Beide Gruppen gegeneinander zu werten wäre eine
+    unbelegte Zahl.
+  </div>
+
+  <h2>Gemessen (in diesem Projekt)</h2>
+  <p>
+    Lauf an <strong>{{ messung.auftrag }}</strong> ({{ messung.fotos }} Kopffotos,
+    schwache Qualität — ein kleiner, entfernter Seitenausschnitt), {{ messung.datum }}.
+    Abstand = Procrustes-Abstand (Drehung/Verschiebung, kein Maßstab) zur
+    {{ messung.referenz }}. Kein Ground-Truth-Scan — eine Einordnung der Verfahren
+    zueinander, keine absolute Genauigkeitsaussage.
+  </p>
+
+  <div class="db-tabelle-rahmen">
+  <table class="db-tabelle sortable kp-tabelle" id="kpGemessen" data-sort-key="hilfe-kopf-gemessen">
+    <thead>
+      <tr>
+        <th>Verfahren</th>
+        <th>Fotos</th>
+        <th class="num">Abstand Ø (mm)</th>
+        <th class="num">Abstand max (mm)</th>
+        <th>Dauer</th>
+        <th data-sort-aus="1">Beschreibung</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in gemessen %}
+      <tr>
+        <td data-sort="{{ e.name }}"><strong>{{ e.name }}</strong></td>
+        <td>{{ e.fotos }}</td>
+        <td class="num" data-sort="{{ e.abstand_mm|default_if_none:'' }}">
+          {% if e.abstand_mm is not None %}{{ e.abstand_mm }}{% else %}<span class="kp-fehlt">– (Referenz)</span>{% endif %}
+        </td>
+        <td class="num" data-sort="{{ e.abstand_max_mm|default_if_none:'' }}">
+          {% if e.abstand_max_mm is not None %}{{ e.abstand_max_mm }}{% else %}<span class="kp-fehlt">–</span>{% endif %}
+        </td>
+        <td>{{ e.dauer }}</td>
+        <td>{{ e.beschreibung }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Recherchiert, nicht getestet (Stand 22.09.2026)</h2>
+  <p>
+    Kommerzielle bzw. fremde Werkzeuge — Zahlen und Aussagen stammen aus den
+    Herstellerseiten/Foren (Quelle je Zeile), nicht aus einem eigenen Test.
+    „Nachbaubar" heißt: ließe sich das ohne Handarbeit (Blender-Klicks,
+    Character-Creator-GUI) als eigener Schritt in <code>Bildmodellkopf</code>
+    einbinden — nicht, ob das Werkzeug gut ist.
+  </p>
+
+  <ol class="kp-karten">
+    {% for e in extern %}
+    <li class="kp-karte kp-karte-{% if e.nachbaubar.0 == True %}ja{% elif e.nachbaubar.0 == False %}nein{% else %}offen{% endif %}">
+      <h3>{{ e.name }} <span class="kp-art">{{ e.art }}</span></h3>
+      <p class="kp-nachbaubar">
+        <strong>Nachbaubar:</strong>
+        {% if e.nachbaubar.0 == True %}Ja{% elif e.nachbaubar.0 == False %}Nein{% else %}Ungeklärt{% endif %}
+        — {{ e.nachbaubar.1 }}
+      </p>
+      <p><strong>Stärke:</strong> {{ e.staerke }}</p>
+      <p><strong>Einschätzung für unsere Pipeline:</strong> {{ e.einschaetzung }}</p>
+      <p class="kp-quelle"><a href="{{ e.quelle }}" target="_blank" rel="noopener">Quelle</a></p>
+    </li>
+    {% endfor %}
+  </ol>
+
+</div>
+{% endblock %}

@@ -36,6 +36,8 @@ export class Werkzeugleiste {
             ['dd-add-camera', () => fn.addSpecialTrack('camera')],
             ['dd-add-light', () => fn.addSpecialTrack('light')],
             ['dd-add-audio', () => fn.addSpecialTrack('audio')],
+            ['dd-add-effekte', () => fn.addEffekteTrack()],
+            ['dd-add-floor', () => fn.addFloorTrack()],
             // Modell: Dialog mit Modell und Lage, wie in der Szene (11.09.2026).
             ['dd-add-model', () => Modellwahl.oeffnen()],
         ]],

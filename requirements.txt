@@ -23,6 +23,11 @@ djangorestframework==3.16.1
 numpy==2.4.4
 scipy==1.17.1
 trimesh==4.11.5
+# ujson: bisher nur transitiv über autobahn im venv — seit 23.09.2026 auch
+# direkt importiert (core/dienste/retargetdaten.py, core/api/retarget.py):
+# rund 3,4x schneller als die Standardbibliothek bei den grossen
+# Retarget-Antworten (Dance2, 20 MB: 1,01 s -> 0,30 s, gemessen).
+ujson==5.12.0
 
 # --- Offscreen-Render für Vorschaubilder und den Figurfilm ---
 pyrender==0.1.45

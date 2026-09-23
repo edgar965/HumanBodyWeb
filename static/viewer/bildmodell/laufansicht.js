@@ -8,8 +8,8 @@
  */
 export class Laufansicht {
 
-    static NAMEN = { sichtung: 'Zuschnitt und Sichtung', schaetzung: 'Schätzung', ziel: 'Zielnetz',
-                     anpassung: 'Anpassung', rest: 'Restmorph', vorschau: 'Vorschau',
+    static NAMEN = { sichtung: 'Zuschnitt und Sichtung', schaetzung: 'Schätzung', kopf: 'Kopf (FLAME-Pipeline)',
+                     ziel: 'Zielnetz', anpassung: 'Anpassung', rest: 'Restmorph', vorschau: 'Vorschau',
                      textur: 'Textur', speichern: 'Speichern', gvhmr: 'SMPL-X mit GVHMR (ein Bild)',
                      flame: 'FLAME-Kopf (ein Kopfbild)' };
     static STATUS = { angelegt: ['Angelegt', 'hb-laeuft'], laeuft: ['Läuft', 'hb-laeuft'],

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Die 230 ES-Module der Szene-Seite als EINE Datei ausliefern.
+"""Die ES-Module einer Seite als EINE Datei ausliefern (Szene, BVH Studio).
 
 BEFUND (Edgar, 10.09.2026): „laden dauert doch noch immer länger als 10 s!!"
 
@@ -48,6 +48,20 @@ Kosten: der erste Aufruf nach einer Aenderung dauert rund eine Sekunde
 laenger (Node starten und buendeln), jeder weitere gar nichts. Gemessen
 mit laufendem Node: 84-422 ms je Neubau, davon 786 ms allein der
 Node-Start, wenn er kalt ist.
+
+ZWEITE SEITE: BVH STUDIO (22.09.2026)
+=====================================
+Edgar: „ich weiss nicht, wie du phantasierst — ein refresh immer noch > 10 s!!!",
+danach direkt: „warum dauert denn laden von 230 modulen laenger als laden
+einer gebuendelten datei???" BVH Studio lud seine ~290 Module bis dahin
+GENAUSO einzeln wie die Szene vor dem 10.09. — das Buendel-Verfahren gab es
+nur fuer `scene/main.js`. Jetzt je Seite ein Eintrag in `SEITEN`
+(Einstiegspunkt, Dateiname/Adresse); `EXTERN` bleibt fuer beide gleich —
+BVH Studio traegt `three`/`three/addons/*` als BARE SPECIFIER genau wie die
+Szene in seiner eigenen Import-Map (nur auf eine lokale Vendor-Kopie statt
+auf ein CDN gemappt, `templates/bvh_studio.html`); esbuild sieht nur den
+Specifier-STRING, nicht, wohin die Import-Map ihn aufloest — der Ausschluss
+wirkt unveraendert.
 """
 
 import logging
@@ -64,10 +78,15 @@ logger = logging.getLogger('core')
 
 
 class Modulbuendel:
-    """Baut und findet das gebündelte Skript der Szene-Seite."""
+    """Baut und findet das gebündelte Skript einer Seite."""
 
-    #: Einstiegspunkt, relativ zum Statik-Ordner.
-    EINSTIEG = 'viewer/scene/main.js'
+    #: Einstiegspunkt je Seite, relativ zum Statik-Ordner — `seite` ist der
+    #: Schlüssel hier UND das letzte Wort in Datei-/Adressname
+    #: (`scene.js`/`studio.js`).
+    EINSTIEGE = {
+        'scene': 'viewer/scene/main.js',
+        'studio': 'viewer/bvh_studio/index.js',
+    }
 
     #: Wohin die fertigen Bündel kommen.
     #:
@@ -104,17 +123,17 @@ class Modulbuendel:
         return os.path.join(settings.BASE_DIR, cls.ORDNER)
 
     @classmethod
-    def dateiname(cls, fassung):
-        return 'scene_%s.js' % fassung
+    def dateiname(cls, seite, fassung):
+        return '%s_%s.js' % (seite, fassung)
 
     @classmethod
-    def adresse(cls, fassung):
+    def adresse(cls, seite, fassung):
         """Die Adresse, unter der die Seite das Bündel lädt."""
-        return '/buendel/%s/scene.js' % fassung
+        return '/buendel/%s/%s.js' % (fassung, seite)
 
     @classmethod
-    def pfad(cls, fassung):
-        return os.path.join(cls.ablage(), cls.dateiname(fassung))
+    def pfad(cls, seite, fassung):
+        return os.path.join(cls.ablage(), cls.dateiname(seite, fassung))
 
     @classmethod
     def esbuild(cls):
@@ -130,35 +149,36 @@ class Modulbuendel:
         return shutil.which('esbuild')
 
     @classmethod
-    def bereit(cls, fassung):
-        """Ist das Bündel zu dieser Fassung da? Sonst: bauen.
+    def bereit(cls, seite, fassung):
+        """Ist das Bündel dieser Seite zu dieser Fassung da? Sonst: bauen.
 
         Gibt den relativen Pfad zurück, oder None — dann lädt die Seite die
         Einzelmodule wie bisher.
         """
-        ziel = cls.pfad(fassung)
+        ziel = cls.pfad(seite, fassung)
         if os.path.isfile(ziel) and os.path.getsize(ziel) > 0:
-            return cls.adresse(fassung)
+            return cls.adresse(seite, fassung)
         with cls._schloss:
             # Zweite Prüfung im Schloss: Wer hier wartete, findet die Datei
             # womöglich schon fertig vor.
             if os.path.isfile(ziel) and os.path.getsize(ziel) > 0:
-                return cls.adresse(fassung)
-            return cls.adresse(fassung) if cls._bauen(ziel) else None
+                return cls.adresse(seite, fassung)
+            return cls.adresse(seite, fassung) if cls._bauen(seite, ziel) else None
 
     @classmethod
-    def _bauen(cls, ziel):
+    def _bauen(cls, seite, ziel):
         werkzeug = cls.esbuild()
         if not werkzeug:
             logger.info(
-                'Modulbuendel: esbuild fehlt — die Szene-Seite laedt '
+                'Modulbuendel: esbuild fehlt — die Seite laedt '
                 'die Einzelmodule (langsamer, aber richtig)'
             )
             return False
+        einstieg = cls.EINSTIEGE[seite]
         os.makedirs(os.path.dirname(ziel), exist_ok=True)
         befehl = [
             werkzeug,
-            os.path.join(cls.wurzel(), *cls.EINSTIEG.split('/')),
+            os.path.join(cls.wurzel(), *einstieg.split('/')),
             '--bundle',
             '--format=esm',
             '--outfile=%s' % ziel,
@@ -175,20 +195,24 @@ class Modulbuendel:
         if lauf.returncode != 0 or not os.path.isfile(ziel):
             logger.error('Modulbuendel: esbuild meldet %s — %s', lauf.returncode, (lauf.stderr or '')[:500])
             return False
-        cls._aufraeumen(os.path.dirname(ziel), os.path.basename(ziel))
+        cls._aufraeumen(seite, os.path.dirname(ziel), os.path.basename(ziel))
         logger.info('Modulbuendel: %s gebaut (%d KB)', os.path.basename(ziel), os.path.getsize(ziel) // 1024)
         return True
 
     @classmethod
-    def _aufraeumen(cls, ordner, behalten):
-        """Alte Fassungen wegräumen.
+    def _aufraeumen(cls, seite, ordner, behalten):
+        """Alte Fassungen DIESER Seite wegräumen.
 
         Ohne das sammelt sich je Codeänderung ein 760-KB-Bündel an — bei
         einem Arbeitstag mit zwanzig Änderungen 15 MB, die niemand mehr
-        zuordnen kann.
+        zuordnen kann. Der Ordner ist SEITENÜBERGREIFEND (Szene und Studio
+        legen ihre Bündel nebeneinander ab, 22.09.2026) — ohne den
+        Präfix-Filter hätte der Bau des einen Bündels das andere gleich
+        mitgelöscht.
         """
+        praefix = seite + '_'
         for name in os.listdir(ordner):
-            if name == behalten or not name.endswith('.js'):
+            if name == behalten or not name.endswith('.js') or not name.startswith(praefix):
                 continue
             try:
                 os.remove(os.path.join(ordner, name))

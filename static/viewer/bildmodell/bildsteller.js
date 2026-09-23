@@ -127,12 +127,34 @@ export class Bildsteller {
         gewicht.addEventListener('input', () => { wert.textContent = Number(gewicht.value).toFixed(1); });
         gewicht.addEventListener('change', () => this.stellen(b.datei, { gewicht: Number(gewicht.value) }));
         zeile.append(nutzung, gewicht, wert);
+        const kopf = this.kopfFeld(b);
+        if (kopf) zeile.appendChild(kopf);
         if (b.manuell) {
             const m = document.createElement('span');
             m.className = 'bildmodell-manuell'; m.title = 'von Hand gestellt'; m.textContent = '✎';
             zeile.appendChild(m);
         }
         return zeile;
+    }
+
+    /** Häkchen „Kopf" (Edgar, 22.09.2026: „mehrere Fotos auswählen für den Kopf") — dieses Foto
+     *  geht in die Kopf-Pipeline (`Bildmodellkopf.bilder`, Schritt „Kopf"). Kein Video; ohne
+     *  Häkchen an irgendeinem Bild gelten die Kopf-Hauptbilder wie bisher. */
+    kopfFeld(b) {
+        if (b.video) return null;
+        const feld = document.createElement('label');
+        feld.className = 'bildmodell-kopfauswahl';
+        feld.title = 'Für die Kopf-Pipeline (FLAME/MICA/FaceBuilder) verwenden — ohne Häkchen an '
+            + 'irgendeinem Bild gelten die Kopf-Hauptbilder';
+        const kasten = document.createElement('input');
+        kasten.type = 'checkbox';
+        kasten.checked = !!b.kopf_an;
+        kasten.addEventListener('change', async () => {
+            try { await this.auftrag.bildStellen(b.datei, { kopf_an: kasten.checked ? true : null }); }
+            catch (fehler) { kasten.checked = !kasten.checked; window.alert(fehler.message); }
+        });
+        feld.append(kasten, document.createTextNode(' Kopf'));
+        return feld;
     }
 
     // ----------------------------------------------------------- Knöpfe

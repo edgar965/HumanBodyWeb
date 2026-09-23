@@ -105,6 +105,11 @@ class Bildmodellzielkatalog:
                  'Je Texel aus den Bildern mit Häkchen — Nahaufnahmen über ihr Rig registriert, '
                  'als UDIM 2048² gebacken (python10, ~1–3 min)'),
                 ('hautton', 'Hautton (Stufe 1)', 'Daz-Haut auf den Hautton der Fotos getönt'),
+                # 23.09.2026, Edgar: „für das textur baking mach eine Combo die auswählt zwischen
+                # dem was wir jetzt haben und Ken[Tools]" — Baustein für später, siehe
+                # `Bildmodellkatalog.verfuegbarkeit()` für den Grund der Sperre.
+                ('keentools', 'KeenTools FaceBuilder (Blender)',
+                 'Textur-Projektion über FaceBuilders eigenes Baking statt unseres Runners'),
                 ('aus', 'Daz-Haut', 'Unverändert'),
             ],
             'foto',

@@ -39,6 +39,7 @@ export class Spurmenue {
         scene_object: ['fa-cube', '#7c5cbf'],
         camera: ['fa-video', '#00bcd4'],
         light: ['fa-lightbulb', '#ffc107'],
+        effekte: ['fa-gauge-high', '#26c6da'],
     };
     static ORDNER_FARBE = 'var(--text-muted)';
 
@@ -71,6 +72,8 @@ export class Spurmenue {
             camera: () => this._einzeleintrag('Kameraposition',
                 () => fn.addCameraKeyframe(this.nummer, this.bild)),
             light: () => new Menuelicht(this).fuellen(),
+            effekte: () => this._einzeleintrag('Speed-Ereignis (G)',
+                () => fn.addSpeedKeyframe(this.nummer, this.bild)),
         };
         const weg = wege[this.spur.type];
         if (!weg) {

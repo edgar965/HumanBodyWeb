@@ -17,6 +17,8 @@ import { updateTrackHeaders } from './zeitleiste_kopfspalte.js';
 import { renderTimeline } from './zeitleiste_zeichnen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Zeitleistentreffer } from './zeitleiste_treffer.js';
+import { Zeitleistenfolge } from './zeitleiste_folgen.js';
+import { Kameraschluessel } from './kameraschluessel.js';
 
 export class Zeitleistenziehen {
     /** 'none' | 'clip-drag' | 'trim-left' | 'trim-right' | 'scrub' | 'pan' */
@@ -39,9 +41,14 @@ export class Zeitleistenziehen {
             (e) => { if (e.button === 1) e.preventDefault(); });
     }
 
-    /** Abspielkopf auf die Mausposition setzen. */
+    /**
+     * Abspielkopf auf die Mausposition setzen — und die Zeitleiste mitziehen,
+     * wenn er dabei den sichtbaren Rand erreicht (Edgar, 21.09.2026), genau wie
+     * beim Abspielen und beim Fortschrittsbalken (`Zeitleistenfolge`).
+     */
     static abspielkopfSetzen(mx) {
         state.playheadFrame = Zeitleistentreffer.bildBei(mx);
+        Zeitleistenfolge.nachziehen(state, Zeitleistenflaeche.breite - HEADER_WIDTH);
         renderTimeline();
         fn.updatePlaybackUI();
         fn.applyPlayhead();
@@ -188,6 +195,21 @@ export class Zeitleistenziehen {
     static _loslassen() {
         const art = Zeitleistenziehen.art;
         if (art === 'clip-drag' || art === 'trim-left' || art === 'trim-right') {
+            // Kamerapositionen bleiben aufsteigend nummeriert, auch nach dem
+            // Verschieben — ein Ziehen kann die Zeitreihenfolge ändern, und
+            // `renummerieren` sortiert `spur.clips` gleich mit. Die Auswahl
+            // (Index in dieses Array) muss dem gezogenen Clip folgen, sonst
+            // zeigt das Eigenschaften-Feld danach einen anderen Clip an
+            // (Edgar, 22.09.2026).
+            const spur = state.project.tracks[Zeitleistenziehen.clip?.trackIdx];
+            const clip = spur?.clips[Zeitleistenziehen.clip?.clipIdx];
+            if (art === 'clip-drag' && spur?.type === 'camera' && clip) {
+                Kameraschluessel.renummerieren(spur);
+                if (state.selectedClipIdx === Zeitleistenziehen.clip.clipIdx) {
+                    state.selectedClipIdx = spur.clips.indexOf(clip);
+                }
+                renderTimeline();
+            }
             Zeitleistenziehen.clip = null;
             fn.updateProperties();
         }

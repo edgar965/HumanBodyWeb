@@ -28,11 +28,12 @@ export class Schaltknopf {
      * @param kennung  `id` des Knopfs
      * @param an       Zustand — bestimmt Farbe und Aufschrift
      * @param schmal   engere Bauform (Schlüsselbild- und Lichtleiste)
+     * @param beschriftung  eigene Texte statt „An"/„Aus" — `[textAn, textAus]`
      * @returns {string} HTML
      */
-    static bauen(kennung, an, schmal = false) {
+    static bauen(kennung, an, schmal = false, beschriftung = ['An', 'Aus']) {
         const klassen = `schaltknopf ${an ? 'an' : 'aus'}${schmal ? ' schmal' : ''}`;
         return `<button id="${kennung}" class="${klassen}">`
-            + `${an ? 'An' : 'Aus'}</button>`;
+            + `${an ? beschriftung[0] : beschriftung[1]}</button>`;
     }
 }

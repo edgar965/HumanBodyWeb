@@ -12,7 +12,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 export class Bildmodellauftrag {
 
     static TAKT_MS = 2000;
-    static SCHRITTE = ['sichtung', 'schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern'];
+    static SCHRITTE = ['sichtung', 'schaetzung', 'kopf', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern'];
 
     constructor(zustand) {
         this.zustand = zustand;
@@ -67,6 +67,12 @@ export class Bildmodellauftrag {
     }
 
     _stopp() { if (this._timer) { clearTimeout(this._timer); this._timer = null; } }
+
+    /** Den ganzen Zustand ersetzen (Antwort eines Endpunkts mit `{ok, ...zustand}`) und melden —
+     *  für Endpunkte außerhalb dieser Klasse (FaceBuilder-Netz-Upload, 22.09.2026). */
+    zustandUebernehmen(antwort) {
+        if (antwort && antwort.id) { this.zustand = antwort; this._melden(); }
+    }
 
     async nachfragen() {
         try {

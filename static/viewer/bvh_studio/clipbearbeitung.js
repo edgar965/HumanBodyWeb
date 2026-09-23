@@ -6,6 +6,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Studioanzeige } from './studioanzeige.js';
 import { Cliplaenge } from './cliplaenge.js';
 import { Spurfigurarten } from './spurfigurarten.js';
+import { Kameraschluessel } from './kameraschluessel.js';
 
 /**
  * Clipbearbeitung — Clips duplizieren, löschen, kürzen, teilen.
@@ -53,6 +54,8 @@ export class Clipbearbeitung {
         Clipbearbeitung._eigenschaften(clip, kopie);
         if (clip.data) kopie.data = Clipbearbeitung._datenKopie(clip);
         spur.clips.push(kopie);
+        // Kamerapositionen bleiben aufsteigend nummeriert (Edgar, 22.09.2026).
+        if (spur.type === 'camera') Kameraschluessel.renummerieren(spur);
         Clipbearbeitung._nachtragen();
         fn.serverLog('clip_duplicated');
     }
@@ -94,6 +97,8 @@ export class Clipbearbeitung {
         state.selectedClipIdx = -1;
         Clipbearbeitung._figurVerstecken(spur, clip);
         Clipbearbeitung._objektEntfernen(spur, clip);
+        // Kamerapositionen bleiben aufsteigend nummeriert (Edgar, 22.09.2026).
+        if (spur.type === 'camera') Kameraschluessel.renummerieren(spur);
         Clipbearbeitung._nachtragen();
         fn.applyPlayhead?.();
         Clipbearbeitung._leereSpur(spur);
@@ -199,8 +204,7 @@ export class Clipbearbeitung {
             const clip = spur.clips[i];
             const beginn = clip.startFrame / state.project.fps;
             if (zeit <= beginn || zeit >= beginn + clip.duration) continue;
-            const stelle = Math.round((zeit - beginn) * clip.fps * clip.speed)
-                + clip.trimIn;
+            const stelle = Clipbearbeitung._splitpunkt(clip, zeit, beginn);
             const zweite = Clipbearbeitung._zweiteHaelfte(clip, stelle);
             spur.clips.splice(i + 1, 0, zweite);
             clip.trimOut = clip.totalFrames - stelle;
@@ -214,6 +218,23 @@ export class Clipbearbeitung {
             Protokoll.debug('BVH Studio', `Split clip at frame ${stelle}`);
             return;
         }
+    }
+
+    /**
+     * Den Bild-Schnittpunkt für `teilen()`/`standbildEinfuegen()` berechnen —
+     * auf die Quell-Bilder DIESES Clips geklemmt.
+     *
+     * BEFUND (21.09.2026, Edgar: „hast du gerade die Animation zerschnitten?"):
+     * Ohne Klemmung konnte Rundung den Rohwert über `totalFrames` hinaus- oder
+     * unter `trimIn` heraustragen — `clip.trimOut = totalFrames - stelle` wurde
+     * dann NEGATIV, die zweite Hälfte fast leer (0,2 s statt der erwarteten
+     * Restlänge), sichtbar als Sprung/Überlappung in der Zeitleiste.
+     */
+    static _splitpunkt(clip, zeit, beginn) {
+        const roh = Math.round((zeit - beginn) * clip.fps * clip.speed) + clip.trimIn;
+        const unten = clip.trimIn + 1;
+        const oben = clip.totalFrames - clip.trimOut - 1;
+        return Math.min(oben, Math.max(unten, roh));
     }
 
     static _zweiteHaelfte(clip, stelle) {
@@ -256,8 +277,7 @@ export class Clipbearbeitung {
             const beginn = clip.startFrame / state.project.fps;
             if (zeit <= beginn || zeit >= beginn + clip.duration) continue;
             pushUndo('Standbild einfügen');
-            const stelle = Math.round((zeit - beginn) * clip.fps * clip.speed)
-                + clip.trimIn;
+            const stelle = Clipbearbeitung._splitpunkt(clip, zeit, beginn);
             const sourceTime = stelle / clip.fps;
             const zweite = Clipbearbeitung._zweiteHaelfte(clip, stelle);
             clip.trimOut = clip.totalFrames - stelle;

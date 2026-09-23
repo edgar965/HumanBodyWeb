@@ -107,6 +107,28 @@ export async function loadHairColors() {
     return false;
 }
 
+/**
+ * Alle vier HumanBody-Ladevorgänge zusammen, EINMAL angestoßen (gecachtes
+ * Versprechen) — nur `Spurfigurarten.BAUER.modell` (die HumanBody-Figurart)
+ * liest `sharedState.rigifySkeletonData`/`skinWeightData`/… danach; UMA,
+ * MakeHuman, SMPL, UMA Python und Genesis 9 brauchen keinen davon.
+ *
+ * WARUM (22.09.2026, Edgar: „optimiere die Ladezeiten in BVH-Studio"): Das
+ * Studio wartete bisher bei JEDEM Start pauschal auf diese ~4,7 s (Skin-
+ * Gewichte allein knapp 3 s), bevor auch nur ein Clip zu laden begann — auch
+ * bei einem reinen Genesis-9-Projekt, das sie nie liest (`TechnoDance`,
+ * gemessen). Jetzt läuft das Laden NEBENHER; wer HumanBody tatsächlich
+ * braucht (`loadTrackCharacter`), wartet gezielt hier statt der ganze Start.
+ */
+let _humanbodyDatenPromise = null;
+export function humanbodyDatenLaden() {
+    if (!_humanbodyDatenPromise) {
+        _humanbodyDatenPromise = Promise.all(
+            [loadRigifySkeleton(), loadSkinWeights(), loadSkinColors(), loadHairColors()]);
+    }
+    return _humanbodyDatenPromise;
+}
+
 // =========================================================================
 // Skin Weight Algorithm (shared core)
 // =========================================================================

@@ -3,6 +3,7 @@ import { base64ToFloat32 } from './kodierung.js';
 import { Koerperlage } from './koerperlage.js';
 import { OberflaecheGLSL } from './oberflaecheglsl.js';
 import { Shaderpatch } from './shaderpatch.js';
+import { Koerperzuordnung } from './koerperzuordnung.js';
 import { Protokoll } from './protokoll.js';
 
 /**
@@ -38,6 +39,12 @@ export class Oberflaechenbindung {
 
     /**
      * Die Bindung aus der Serverantwort eines Teils als Attribute ans Netz.
+     * `bindgruppe` (welche Gliedmaße der Punkt trägt, für den Kapselfilter
+     * in `verdrahten`) steht hier nur als Platzhalter (0) — den Körper
+     * gibt es zu diesem Zeitpunkt oft noch nicht (`Genesis9aufbau.alles`:
+     * Körper und Kleidung laufen GLEICHZEITIG, ein Stück kann vor dem
+     * Körper ankommen). `verdrahten` füllt ihn, sobald `inst.bodyMesh` da
+     * ist — bei jedem Einhängen, auch nach `_kleiderBinden`.
      * @returns true, wenn das Netz gebunden ist
      */
     static anlegen(netz, teil) {
@@ -55,8 +62,29 @@ export class Oberflaechenbindung {
         geo.setAttribute('bary', new THREE.BufferAttribute(bary, 3));
         geo.setAttribute('bindabstand', new THREE.BufferAttribute(abstand, 1));
         geo.setAttribute('mischung', new THREE.BufferAttribute(mischung, 1));
+        geo.setAttribute('bindgruppe', new THREE.BufferAttribute(new Float32Array(n), 1));
         geo.userData.bindung = { stufen: Number(b.stufen) || 0, gebunden: Oberflaechenbindung._anzahl(mischung) };
         return true;
+    }
+
+    /**
+     * Gruppen-ID je Stoffpunkt nachtragen — die Gruppe des ERSTEN
+     * Körperdreieckpunkts (`Koerperzuordnung`). Ohne Körper oder ohne
+     * dessen Skinning-Attribute bleibt 0 (jede Kapsel gilt als fremd —
+     * schlechter gefiltert, aber nicht falsch).
+     */
+    static _bindgruppenNachtragen(inst, netz) {
+        const geo = netz?.geometry;
+        const dreieck = geo?.attributes?.bindung?.array;
+        const bindgruppe = geo?.attributes?.bindgruppe;
+        const gruppeJePunkt = inst?.bodyMesh ? Koerperzuordnung.gruppeJePunkt(inst.bodyMesh) : null;
+        if (!dreieck || !bindgruppe || !gruppeJePunkt) return;
+        const aus = bindgruppe.array;
+        for (let i = 0; i < aus.length; i++) {
+            const k = dreieck[3 * i];
+            aus[i] = k >= 0 && k < gruppeJePunkt.length ? gruppeJePunkt[k] : 0;
+        }
+        bindgruppe.needsUpdate = true;
     }
 
     /**
@@ -66,6 +94,7 @@ export class Oberflaechenbindung {
     static verdrahten(inst, netz) {
         const bindung = netz?.geometry?.userData?.bindung;
         if (!bindung) return false;
+        Oberflaechenbindung._bindgruppenNachtragen(inst, netz);
         const materialien = Array.isArray(netz.material) ? netz.material : [netz.material];
         for (const m of materialien) Oberflaechenbindung._eingriff(m);
         netz.onBeforeRender = (renderer) => Oberflaechenbindung._vorZeichnen(renderer, inst, netz);

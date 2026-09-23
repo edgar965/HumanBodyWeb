@@ -9,6 +9,7 @@
  */
 import { state, TRACK_HEIGHT, HEADER_WIDTH, RULER_HEIGHT } from './state.js';
 import { Reihen } from './zeitleiste_reihen.js';
+import { Effektebindung } from './effektebindung.js';
 
 /** Breite der Anfasszone an den Clipraendern in Pixeln. */
 const RANDZONE = 6;
@@ -35,13 +36,15 @@ export class Zeitleistentreffer {
             if (reihe.header) continue;
             const ti = reihe.trackIdx;
             const spur = state.project.tracks[ti];
+            const bvhIdx = spur.type === 'bvh' ? ti : -1;
             const y = RULER_HEIGHT + ri * TRACK_HEIGHT;
             for (let ci = 0; ci < spur.clips.length; ci++) {
                 const clip = spur.clips[ci];
+                const bildAnzeige = bvhIdx >= 0
+                    ? Effektebindung.anzeigeBild(bvhIdx, clip.startFrame) : clip.startFrame;
                 const cx = HEADER_WIDTH
-                    + (clip.startFrame / state.project.fps) * pps - state.timelineScrollX;
-                const treffer = (clip.type === 'camera_kf' || clip.type === 'light_kf'
-                                 || clip.type === 'mimik_kf')
+                    + (bildAnzeige / state.project.fps) * pps - state.timelineScrollX;
+                const treffer = ['camera_kf', 'light_kf', 'mimik_kf', 'speed_kf'].includes(clip.type)
                     ? Zeitleistentreffer._schluesselbild(clip, mx, my, cx, y)
                     : Zeitleistentreffer._clip(clip, mx, my, cx, y, pps);
                 if (treffer) return { trackIdx: ti, clipIdx: ci, ...treffer };

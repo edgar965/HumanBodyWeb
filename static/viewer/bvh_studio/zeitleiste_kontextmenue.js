@@ -65,11 +65,15 @@ export class Spurkontextmenue {
                                                       : 'Ausschalten';
     }
 
-    /** Die Liste „mit Animation verknüpfen" gibt es nur bei Figurenspuren. */
+    /**
+     * Die Liste „mit Animation verknüpfen" gibt es bei Figurenspuren (stellen
+     * die Animation) und Effekte-Spuren (steuern ihre Geschwindigkeit,
+     * `spurerzeugung.js effekte`, Edgar 21.09.2026).
+     */
     static _verknuepfung(spur, menue) {
         const abschnitt = document.getElementById('track-ctx-link-section');
         const liste = document.getElementById('track-ctx-link-list');
-        if (spur.type !== 'model' || !abschnitt || !liste) {
+        if (!['model', 'effekte'].includes(spur.type) || !abschnitt || !liste) {
             if (abschnitt) abschnitt.style.display = 'none';
             return;
         }

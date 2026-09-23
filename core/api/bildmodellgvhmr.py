@@ -6,6 +6,9 @@ GET /api/bildmodell/<id>/gvhmr3d/<datei>/   `{ok, datei, anzahl, punkte (base64 
                                             hoehe_cm, betas, frames, stand}`
 GET /api/bildmodell/<id>/flame3d/<datei>/   dasselbe für den FLAME-Kopf eines Kopfbilds
                                             (`Bildmodellflame`, Knopf „Kopf (FLAME)", 20.09.2026)
+GET /api/bildmodell/<id>/kopf3d/            dasselbe für das Ergebnis der Kopf-Pipeline
+                                            (`Bildmodellkopf`, Knopf „Kopf berechnen", 22.09.2026 —
+                                            job-weit, nicht an ein Bild gebunden)
 
 Gerechnet wird nicht hier: der Knopf „SMPL (GVHMR)" je Kachel startet den
 Arbeitsprozess mit `schritte: ['gvhmr'], bild: <datei>` über `starten/`
@@ -22,6 +25,7 @@ from django.views.decorators.http import require_GET
 from ..daten.bildmodellablage import Bildmodellablage
 from ..dienste.bildmodellflame import Bildmodellflame
 from ..dienste.bildmodellgvhmr import Bildmodellgvhmr
+from ..dienste.bildmodellkopf import Bildmodellkopf
 from ..models import Bildmodellauftrag
 
 logger = logging.getLogger('core')
@@ -59,3 +63,16 @@ class Bildmodellgvhmrendpunkte:
         except (OSError, ValueError) as fehler:
             logger.warning('Bildmodell %s: FLAME-Netz %s nicht lesbar: %s', job.kennung, datei, fehler)
             return JsonResponse({'error': 'FLAME-Netz nicht lesbar: %s' % fehler}, status=500)
+
+    @staticmethod
+    @require_GET
+    def kopf3d(request, job_id):
+        job = get_object_or_404(Bildmodellauftrag, pk=job_id)
+        try:
+            dienst = Bildmodellkopf(job, Bildmodellablage(job.kennung), job.optionen or {})
+            return JsonResponse(dienst.netz3d())
+        except FileNotFoundError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=404)
+        except (OSError, ValueError) as fehler:
+            logger.warning('Bildmodell %s: Kopf-Netz nicht lesbar: %s', job.kennung, fehler)
+            return JsonResponse({'error': 'Kopf-Netz nicht lesbar: %s' % fehler}, status=500)

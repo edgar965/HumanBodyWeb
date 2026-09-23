@@ -1,0 +1,53 @@
+/* Hilfe -> Kopf-Pipelines: gemessene Tabelle + Karten der recherchierten Werkzeuge.
+ *
+ * Wie `hilfe_video_to_bvh.css`: die Tabelle ist eine djangoBase-Tabelle
+ * (`db-tabelle sortable`), hier nur die Zugaben dieser Seite.
+ */
+
+.kp-tabelle td {
+    vertical-align: top;
+    font-size: 0.9em;
+}
+
+.kp-fehlt {
+    opacity: 0.6;
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.kp-karten {
+    padding-left: 0;
+    list-style: none;
+}
+
+.kp-karte {
+    margin: 0.6em 0;
+    padding: 0.6em 0.9em;
+    border-left: 4px solid #6b7280;
+    background: rgba(107, 114, 128, 0.06);
+}
+
+.kp-karte h3 {
+    margin: 0 0 0.3em 0;
+    font-size: 1.05em;
+}
+
+.kp-art {
+    font-size: 0.8em;
+    font-weight: 400;
+    opacity: 0.75;
+}
+
+/* Nachbaubar als Farbe UND Wort — nicht nur die Farbe. */
+.kp-karte-ja { border-left-color: #3fb950; }
+.kp-karte-nein { border-left-color: #f85149; }
+.kp-karte-offen { border-left-color: #d29922; }
+
+.kp-nachbaubar {
+    font-size: 0.92em;
+}
+
+.kp-quelle {
+    font-size: 0.85em;
+    opacity: 0.85;
+}

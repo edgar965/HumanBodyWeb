@@ -1,7 +1,6 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { loadRigifySkeleton, loadSkinWeights, loadSkinColors,
-         loadHairColors } from '../character_core.js';
+import { humanbodyDatenLaden } from '../character_core.js';
 import { loadLibrary, setupLibraryManagement, setupSidebarResize } from './library.js';
 import { createSceneLightTracks } from './spur_lichter.js';
 import { setupTimeline } from './timeline.js';
@@ -43,8 +42,29 @@ export class Studiostart {
 
     async starten() {
         new Studiobuehne().bauen();
-        await Promise.all([loadRigifySkeleton(), loadSkinWeights(),
-                           loadSkinColors(), loadHairColors()]);
+        // Die Renderschleife startet JETZT, nicht erst nach dem Projekt (23.09.2026,
+        // Edgar: „ich möchte nur die Figur sehen und die rotieren können, alles
+        // andere asynchron und parallel"): Vorher stand `new Studioschleife()
+        // .starten()` am Ende dieser Methode, hinter zwei `await`s (Einstellungen,
+        // Sitzung/Vorgabeprojekt) — der Viewport hatte zwar Kamera und
+        // `OrbitControls` (aus `Studiobuehne().bauen()`, synchron), aber OHNE
+        // laufende Schleife ruft niemand `renderer.render(...)` auf: Drehen am
+        // leeren/eingefrorenen Bild bis das ganze Projekt (Figur, Kleidung,
+        // Kamera-/Licht-Spuren, Retarget) fertig war. `Studioschleife.schritt()`
+        // braucht nur `state.clock`/`state.controls`/`state.renderer`/`state.scene`/
+        // `state.camera` (alle synchron in `Studiobuehne().bauen()` bzw. beim
+        // Modul-Start in `state.js` gesetzt) und `state.project.tracks` (leeres
+        // Array bis das Projekt da ist, `Timeline`-Vorgabe) — sicher vor jedem Laden.
+        // Die Figur selbst erscheint weiterhin erst, wenn ihr Netz da ist (async,
+        // unverändert) — sie fällt dann einfach in die schon laufende, schon
+        // drehbare Szene.
+        new Studioschleife().starten();
+        // NICHT mehr blockierend (22.09.2026, „optimiere die Ladezeiten"): nur
+        // HumanBody-Spuren brauchen diese Daten, `loadTrackCharacter` wartet
+        // gezielt selbst darauf (`character_core.humanbodyDatenLaden`) — der
+        // Start eines reinen Genesis-9-/UMA-/…-Projekts wartet nicht mehr auf
+        // ~4,7 s Skin-Gewichte, die es nie liest.
+        humanbodyDatenLaden();
         const einstellungen = (await Studioeinstellungen.holen()).anwenden();
         this.bibliothek();
         for (const aufbau of Studiostart.AUFBAUEN) aufbau();
@@ -55,7 +75,6 @@ export class Studiostart {
             await this.vorgabeprojekt(einstellungen);
         }
         this.szenenspuren();
-        new Studioschleife().starten();
         this.debugzugaenge();
         fn.updateStudioInfo?.();
         Protokoll.debug('BVH Studio', 'gestartet'

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Das gebündelte Szene-Skript ausliefern.
+"""Das gebündelte Seitenskript ausliefern (Szene, BVH Studio).
 
 Eine eigene Route, weil das Bündel bewusst NICHT unter `static/` liegt:
 Die Fassung ist die jüngste Änderungszeit im Statik-Baum, ein Bündel dort
@@ -22,13 +22,13 @@ from ..dienste.modulbuendel import Modulbuendel
 __all__ = ['buendel_datei']
 
 
-def buendel_datei(request, fassung):
-    """`/buendel/<fassung>/scene.js`."""
+def buendel_datei(request, fassung, seite):
+    """`/buendel/<fassung>/<seite>.js` — `seite` eines von `Modulbuendel.EINSTIEGE`."""
     # Nur Ziffern: Die Fassung kommt aus dem Pfad, und `os.path.join` mit
     # „..“ darin läge sonst außerhalb der Ablage.
-    if not fassung.isdigit():
-        raise Http404('unbekannte Fassung')
-    pfad = Modulbuendel.pfad(fassung)
+    if not fassung.isdigit() or seite not in Modulbuendel.EINSTIEGE:
+        raise Http404('unbekannte Fassung oder Seite')
+    pfad = Modulbuendel.pfad(seite, fassung)
     if not os.path.isfile(pfad):
         # Nicht heimlich neu bauen: Wer hier landet, hat eine Adresse aus
         # einer alten Seite. Ein 404 lässt ihn neu laden und die aktuelle

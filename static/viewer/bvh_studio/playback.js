@@ -1,7 +1,7 @@
 /**
  * BVH Studio — Playback controls, audio, apply playhead to tracks.
  */
-import { state } from './state.js';
+import { state, HEADER_WIDTH } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { startAudioPlayback, stopAllAudio, stopAudioTrack } from './spur_ton.js';
 import { _schedulePreloads } from './vorladen.js';
@@ -13,6 +13,8 @@ import { Mimikanwendung } from './mimikanwendung.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
 import { Endlosschalter } from './endlosschalter.js';
 import { Ladehinweis } from './ladehinweis.js';
+import { Zeitleistenfolge } from './zeitleiste_folgen.js';
+import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
@@ -22,8 +24,10 @@ export function setupPlayback() {
     document.getElementById('pb-next')?.addEventListener('click', () => stepFrame(1));
     document.getElementById('pb-start')?.addEventListener('click', () => springen(0));
     document.getElementById('pb-end')?.addEventListener('click', () => springen(abspielende()));
-    document.getElementById('pb-speed')?.addEventListener('change', (e) => {
-        state.playbackSpeed = parseFloat(e.target.value);
+    document.getElementById('pb-speed')?.addEventListener('input', (e) => {
+        state.playbackSpeed = parseFloat(e.target.value) || 0;
+        const anzeige = document.getElementById('pb-speed-val');
+        if (anzeige) anzeige.textContent = state.playbackSpeed.toFixed(2) + '×';
     });
 
     // Ctrl shortcuts registered globally at module top level (index.js)
@@ -57,6 +61,15 @@ export function setupPlayback() {
             // selbst noch einmal (Aufruf auch aus dem Kontextmenü möglich).
             if (state.project.tracks[state.selectedTrackIdx]?.type === 'bvh') {
                 fn.standbildEinfuegen();
+            }
+        }
+        if (e.code === 'KeyG' && !e.ctrlKey) {
+            e.preventDefault();
+            const spur = state.project.tracks[state.selectedTrackIdx];
+            if (spur?.type === 'bvh') {
+                fn.addSpeedKeyframeAufAnimation(state.selectedTrackIdx);
+            } else if (spur?.type === 'effekte') {
+                fn.addSpeedKeyframe(state.selectedTrackIdx);
             }
         }
         if (e.code === 'KeyK') {
@@ -138,6 +151,7 @@ export function stopPlayback() {
     if (icon) icon.className = 'fas fa-play';
     stopAllAudio();
     state.controls.enabled = true;  // re-enable OrbitControls
+    Zeitleistenfolge.nachziehen(state, Zeitleistenflaeche.breite - HEADER_WIDTH);
     applyPlayhead();
     fn.renderTimeline();
     updatePlaybackUI();
@@ -147,9 +161,18 @@ export function stepFrame(delta) {
     springen(state.playheadFrame + delta);
 }
 
-/** Den Abspielkopf auf ein Bild setzen (Anfang, Ende, Schritt) — Abspielen läuft weiter. */
+/**
+ * Den Abspielkopf auf ein Bild setzen (Anfang, Ende, Schritt) — Abspielen
+ * läuft weiter. Zieht die Zeitleiste mit, wenn der Kopf dabei den sichtbaren
+ * Rand verlässt (22.09.2026, Edgar: „mit dem Playhead blättern … hat schon
+ * mal funktioniert, warum wieder weg???") — `Zeitleistenfolge` deckte bisher
+ * nur Abspielen, Fortschrittsbalken und Ziehen ab (`zeitleiste_ziehen.js`),
+ * nicht die Sprungknöpfe (pb-start/-end/-prev/-next) und Pos1/Ende/Pfeiltasten,
+ * die alle über diese Funktion laufen.
+ */
 export function springen(bild) {
     state.playheadFrame = Math.max(0, Math.round(bild) || 0);
+    Zeitleistenfolge.nachziehen(state, Zeitleistenflaeche.breite - HEADER_WIDTH);
     applyPlayhead();
     fn.renderTimeline();
     updatePlaybackUI();

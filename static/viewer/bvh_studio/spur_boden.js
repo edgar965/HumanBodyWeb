@@ -13,51 +13,68 @@ import { Track } from './models.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Bodenuntergrund } from './bodenuntergrund.js';
+import { pushUndo } from './undo.js';
+import { Spurauswahl } from './spurauswahl.js';
 
 let _cachedFloorTextures = null;
 const _textureLoader = new THREE.TextureLoader();
 
-export function createFloorTrack() {
-    if (state.project.tracks.some(t => t._sceneItem === 'floor')) return;
-    const override = state.project._pendingSceneOverrides?.sceneFloor;
-    // Legacy: quadratische "size" → in width+length konvertieren
-    const legacySize = override?.size;
-    const width = override?.width ?? legacySize ?? 6;
-    const length = override?.length ?? legacySize ?? 6;
-    const cx = override?.centerX ?? 0;
-    const cz = override?.centerZ ?? 0;
-    const color = override?.color ?? '#3a3a4a';
-    const roughness = override?.roughness ?? 0.9;
-    const metalness = override?.metalness ?? 0.05;
-
+/**
+ * Boden-Track samt Netz bauen — der gemeinsame Kern von `createFloorTrack`
+ * (der geschützte Start-Boden) und `addFloorTrack` (weitere, frei
+ * platzierbare Böden, Edgar 22.09.2026: „Boden kann auch mehrfach
+ * hinzugefügt werden, auch z-Position (Höhe) ist einstellbar").
+ */
+function _bodenBauen(name, werte) {
+    const { width, length, cx, cy, cz, color, roughness, metalness } = werte;
     const geo = new THREE.PlaneGeometry(width, length, 1, 1);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color), roughness, metalness, side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(cx, -0.001, cz);
+    mesh.position.set(cx, cy, cz);
     mesh.receiveShadow = true;
     mesh.userData.isFloor = true;
     state.scene.add(mesh);
 
-    const track = new Track('Boden');
+    const track = new Track(name);
     track.type = 'scene_object';
     track.subtype = 'floor';
     track.color = '#795548';
-    track._sceneItem = 'floor';
     track.mesh = mesh;
     track.floorWidth = width;
     track.floorLength = length;
     track.floorSize = Math.max(width, length);  // Legacy-Feld für Abwärtskompatibilität
-    track.floorTexture = override?.texture || 'none';
     track.floorColor = color;
     track.floorRoughness = roughness;
     track.floorMetalness = metalness;
     // Durchsichtiger Boden mit Platte darunter (13.09.2026, `Bodenuntergrund`).
-    track.floorTransparenz = override?.transparenz ?? Bodenuntergrund.TRANSPARENZ;
-    track.floorTiefe = override?.tiefe ?? Bodenuntergrund.TIEFE_CM;
+    track.floorTransparenz = werte.transparenz ?? Bodenuntergrund.TRANSPARENZ;
+    track.floorTiefe = werte.tiefe ?? Bodenuntergrund.TIEFE_CM;
     Bodenuntergrund.nachziehen(track);
+    return track;
+}
+
+export function createFloorTrack() {
+    if (state.project.tracks.some(t => t._sceneItem === 'floor')) return;
+    const override = state.project._pendingSceneOverrides?.sceneFloor;
+    // Legacy: quadratische "size" → in width+length konvertieren
+    const legacySize = override?.size;
+    const track = _bodenBauen('Boden', {
+        width: override?.width ?? legacySize ?? 6,
+        length: override?.length ?? legacySize ?? 6,
+        cx: override?.centerX ?? 0,
+        cy: override?.centerY ?? -0.001,
+        cz: override?.centerZ ?? 0,
+        color: override?.color ?? '#3a3a4a',
+        roughness: override?.roughness ?? 0.9,
+        metalness: override?.metalness ?? 0.05,
+        transparenz: override?.transparenz,
+        tiefe: override?.tiefe,
+    });
+    track._sceneItem = 'floor';
+    track.floorTexture = override?.texture || 'none';
     track.muted = override?.muted || false;
     state.project.addTrack(track);
     // Grid-Sichtbarkeit aus Save wiederherstellen
@@ -78,6 +95,27 @@ export function createFloorTrack() {
             });
         }, 0);
     }
+    return track;
+}
+
+/**
+ * Einen WEITEREN Boden hinzufügen — anders als der Start-Boden nicht
+ * geschützt (kein `_sceneItem`), also normal löschbar; über die Höhe
+ * (`prop-floor-y` im Eigenschaften-Panel) als eigene Ebene/Bühne platzierbar.
+ */
+export function addFloorTrack() {
+    pushUndo('Boden hinzufügen');
+    const anzahl = state.project.tracks.filter(t => t.subtype === 'floor').length;
+    const track = _bodenBauen(`Boden ${anzahl + 1}`, {
+        width: 6, length: 6, cx: 0, cy: -0.001, cz: 0,
+        color: '#3a3a4a', roughness: 0.9, metalness: 0.05,
+    });
+    track.floorTexture = 'none';
+    track.muted = false;
+    state.project.addTrack(track);
+    fn.updateTrackHeaders();
+    fn.renderTimeline();
+    Spurauswahl.waehlen(state.project.tracks.length - 1);
     return track;
 }
 
@@ -178,6 +216,18 @@ export function setFloorSize(track, size) {
     setFloorGeometry(track, size, size);
 }
 
+/**
+ * Höhe (Y-Position) eines Bodens setzen — braucht mehrere Böden auf
+ * verschiedenen Ebenen (Edgar, 22.09.2026: „auch z-Position (Höhe) ist
+ * einstellbar", gemeint ist die vertikale Achse; die Breite/Länge-Achsen
+ * heißen im Panel bereits X/Z).
+ */
+export function setFloorHeight(track, hoehe) {
+    if (!track?.mesh) return;
+    track.mesh.position.y = hoehe;
+    Bodenuntergrund.nachziehen(track);        // die Platte hängt unter dem Boden
+}
+
 export async function getFloorTextures() {
     if (_cachedFloorTextures) return _cachedFloorTextures;
     try {
@@ -189,6 +239,8 @@ export async function getFloorTextures() {
     return _cachedFloorTextures;
 }
 
+fn.addFloorTrack = addFloorTrack;
+fn.setFloorHeight = setFloorHeight;
 fn.updateFloorMaterial = updateFloorMaterial;
 fn.applyFloorTexture = applyFloorTexture;
 fn.setFloorGeometry = setFloorGeometry;

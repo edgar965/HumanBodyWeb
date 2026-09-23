@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load fassung %}
+{% load szenenskript %}
 {% block title %}BVH Studio{% endblock %}
 
 {% block extra_head %}
@@ -495,8 +496,12 @@
                     <div class="toolbar-dd-item" id="dd-add-light"><i
                          class="fas fa-lightbulb hb-symbolspalte-warn"></i> Licht</div>
                     <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music symbol-audio"></i> Audio</div>
+                    <div class="toolbar-dd-item" id="dd-add-effekte"><i
+                         class="fas fa-gauge-high" style="color:#26c6da;"></i> Effekte</div>
                     <div class="toolbar-dd-item" id="dd-add-3d-object"><i
                          class="fas fa-cube symbol-objekt"></i> 3D-Objekt...</div>
+                    <div class="toolbar-dd-item" id="dd-add-floor"><i
+                         class="fas fa-vector-square" style="color:#795548;"></i> Boden</div>
                 </div>
             </div>
         </div>
@@ -621,12 +626,9 @@
                 <span class="playback-time">/</span>
                 <span class="playback-time" id="pb-duration">00:00.00</span>
                 <div class="hb-dehnt"></div>
-                <select id="pb-speed" title="Geschwindigkeit">
-                    <option value="0.25">0.25x</option>
-                    <option value="0.5">0.5x</option>
-                    <option value="1" selected>1x</option>
-                    <option value="2">2x</option>
-                </select>
+                <input type="range" id="pb-speed" title="Geschwindigkeit (auch für Taste G: Speed-Ereignis)"
+                       min="0" max="3" step="0.05" value="1">
+                <span class="playback-time" id="pb-speed-val">1.00×</span>
             </div>
         </div>
     </div>
@@ -1003,6 +1005,15 @@
     <div class="ctx-item" data-action="ctx-mimik-einrechnen"><i class="fas fa-file-export hb-symbolspalte"></i> Mimik einrechnen (zur BVH)</div>
 </div>
 
+<!-- Effekte Context Menu (Speed-Ereignisse, 22.09.2026) -->
+<div id="effekte-context-menu" class="hb-kontextmenue">
+    <div class="ctx-item" data-action="ctx-effekte-speed"><i class="fas fa-gauge-high hb-symbolspalte"></i> Speed-Ereignis hinzufügen</div>
+    <div class="ctx-item" data-action="ctx-effekte-standbild"><i class="fas fa-pause hb-symbolspalte"></i> Standbild einfügen</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
+    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
+</div>
+
 <!-- Mimik Context Menu (Gesichtsspur, 14.09.2026) -->
 <div id="mimik-context-menu" class="hb-kontextmenue">
     <div class="ctx-item" data-action="ctx-mimik-pose"><i class="fas fa-smile hb-symbolspalte"></i> Pose setzen…</div>
@@ -1127,12 +1138,12 @@
     width:80px;
 }
 #pb-speed {
-    padding:2px 4px;
-    background:var(--bg-card);
-    color:var(--text);
-    border:1px solid var(--border);
-    border-radius:3px;
-    font-size:0.78rem;
+    width:80px;
+    vertical-align:middle;
+}
+#pb-speed-val {
+    min-width:38px;
+    display:inline-block;
 }
 #tool-smooth-radius {
     font-size:0.8rem;
@@ -1394,7 +1405,7 @@
     }
 }
 </script>
-<script type="module" src="{% fassungspfad 'viewer/bvh_studio/index.js' %}"></script>
+<script type="module" src="{% studioskript %}"></script>
 <script>
 // Timeline splitter drag
 (function() {

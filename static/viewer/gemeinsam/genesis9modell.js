@@ -118,8 +118,21 @@ export class Genesis9Modell extends Modell {
         if (!Object.keys(this.kleidung).length) this.kleidung = { ...(eintrag.kleidung || {}) };
     }
 
-    /** Körper, Skelett und Anhänge holen und neu einhängen (`stufen`: null = Stufe des Browsers). */
-    async koerperAufbauen(stufen = null) {
+    /**
+     * Körper, Skelett und Anhänge holen und neu einhängen (`stufen`: null = Stufe des
+     * Browsers).
+     *
+     * `skelettFrisch`: Regler- und Posenzüge (`neuFormen`) können Gelenke verschieben —
+     * das ganze `THREE.Skeleton` muss neu; ein reiner Material-/Presetwechsel (Haut,
+     * Augen, Brauen, Makeup: `hautSetzen` & Co.) bewegt KEINEN Knochen. Trotzdem riss
+     * `koerperAufbauen` bis 22.09.2026 bei JEDEM Aufruf das Skelett ab und neu auf und
+     * feuerte `Skelettereignis` — das stößt Hautverdeckung (2,4 s je Umbau,
+     * `genesis9-passform.md`) und die GarmentCode-Nachbindung neu an, für eine reine
+     * Augenfarbe (Edgar, 22.09.2026: „nicht immer Skelett umbauen, das dauert auch ewig
+     * im UI"). Jetzt bleibt das Skelett stehen, wenn der Aufrufer weiß, dass er es nicht
+     * bewegt hat — `!this.skelett` erzwingt den ersten Bau trotzdem.
+     */
+    async koerperAufbauen(stufen = null, skelettFrisch = true) {
         const lauf = this._lauf = (this._lauf || 0) + 1;
         const daten = await Serverabruf.senden(Genesis9aufbau.adresse(
             `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen), {
@@ -131,10 +144,13 @@ export class Genesis9Modell extends Modell {
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== this._lauf) return this;          // überholt: ein neuer Zug läuft
         this._altesWeg();
-        // Mit den eigenen Knochen der getragenen Stücke (Eirgrid: 14 Zöpfe an `spine4`);
-        // ihre Namen bekommt der Zopfschwung (`scene/genesis9/genesis9zopfschwung.js`).
-        this.skelettBauen(daten.skelett);
-        this.eigeneKnochen = daten.skelett?.eigene || [];
+        const neuesSkelett = skelettFrisch || !this.skelett;
+        if (neuesSkelett) {
+            // Mit den eigenen Knochen der getragenen Stücke (Eirgrid: 14 Zöpfe an
+            // `spine4`); ihre Namen bekommt der Zopfschwung (`genesis9zopfschwung.js`).
+            this.skelettBauen(daten.skelett);
+            this.eigeneKnochen = daten.skelett?.eigene || [];
+        }
         this.bodyMesh = this._einhaengen(
             Genesis9netz.bauen(daten, `genesis9_koerper_${this.id}`), daten.hautgewichte);
         this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
@@ -151,7 +167,7 @@ export class Genesis9Modell extends Modell {
         this.gelenkregler = daten.gelenkregler || {};   // JCM-Schalter (`genesis9gelenke.js`)
         /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
         this.hdkanaele = daten.hdkanaele || [];
-        this._kleiderBinden();
+        this._kleiderBinden(neuesSkelett);
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
         if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
         Protokoll.debug('Genesis9Modell',
@@ -184,9 +200,14 @@ export class Genesis9Modell extends Modell {
      * Die getragenen Stücke an das FRISCHE Skelett binden — `skelettBauen` räumt je Aufruf
      * ab; eine alte Bindung zeigte auf Knochen außerhalb der Szene (MakeHuman, 07.09.2026).
      * GarmentCode-Stücke bindet die Szene nach dem `Skelettereignis` um (19.09.2026).
+     *
+     * `skelettNeu = false` (22.09.2026): das Skelett-OBJEKT ist dasselbe geblieben (reiner
+     * Material-/Presetwechsel, siehe `koerperAufbauen`) — die bestehende Bindung der
+     * Stücke gilt weiter, ein Umbinden und das `Skelettereignis` (GarmentCode-Nachbindung,
+     * Hautverdeckung) wären hier reine Verschwendung.
      */
-    _kleiderBinden() {
-        if (!this.skelett) return;
+    _kleiderBinden(skelettNeu = true) {
+        if (!this.skelett || !skelettNeu) return;
         for (const [schluessel, altes] of Object.entries(this.clothMeshes)) {
             const haut = altes?.userData?.hautgewichte; if (!haut) continue;
             this.group.remove(altes);
@@ -214,32 +235,35 @@ export class Genesis9Modell extends Modell {
         return this.neuFormen();
     }
 
+    // Haut, Augen, Brauen und Makeup-Presets bewegen keinen Knochen — `koerperAufbauen`
+    // bekommt `skelettFrisch = false` und lässt das Skelett unangetastet (siehe dort).
+
     async hautSetzen(preset) {
         this.haut = preset || '';
-        return this.koerperAufbauen();
+        return this.koerperAufbauen(null, false);
     }
 
     async augenSetzen(nummer) {
         this.augen = nummer || '01';
-        return this.koerperAufbauen();
+        return this.koerperAufbauen(null, false);
     }
 
     async brauenSetzen(farbe) {
         this.brauen = farbe || '';
-        return this.koerperAufbauen();
+        return this.koerperAufbauen(null, false);
     }
 
     async brauenstilSetzen(stil, farbe = undefined) {
         this.brauenstil = stil || '';
         if (farbe !== undefined) this.brauen = farbe || '';
-        return this.koerperAufbauen();
+        return this.koerperAufbauen(null, false);
     }
 
     /** Ein Preset einer Kategorie wählen (leer = keins). */
     async praesetSetzen(kategorie, kennung) {
         if (kennung) this.praesets[kategorie] = kennung;
         else delete this.praesets[kategorie];
-        return this.koerperAufbauen();
+        return this.koerperAufbauen(null, false);
     }
 
     /** Ein Hautsatz der Texturmischung auf Prozent (0 = raus) — ohne Neubau des Körpers:

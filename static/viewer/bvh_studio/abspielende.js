@@ -15,15 +15,28 @@
  * Ohne „Endlos" hält das Abspielen dort an (Pause am letzten Bild); mit
  * „Endlos" beginnt es von vorn. Ohne DOM, damit es in Node prüfbar ist.
  */
+import { Effektespur } from './effektespur.js';
+
 export class Abspielende {
 
-    /** Das Bild, an dem die letzte Animation endet (oder die Projektdauer). */
+    /**
+     * Das Bild, an dem die letzte Animation endet (oder die Projektdauer).
+     * Fuer eine Animationsspur mit verknuepfter Effekte-Spur zaehlt die
+     * ANZEIGE-Stelle des letzten Clips, nicht seine unveraenderte
+     * Inhalt-Stelle — sonst haelt das Abspielen mitten in einem gedehnten
+     * Standbild/einer Zeitlupe an (Edgar, 21.09.2026, `effektebindung.js`).
+     */
     static bild(spuren, fps, dauerSekunden) {
         let ende = 0;
-        for (const spur of spuren) {
+        for (let i = 0; i < spuren.length; i++) {
+            const spur = spuren[i];
             if (spur.type !== 'bvh') continue;
+            const effekte = spuren.find(t => t.type === 'effekte' && t._linkedAnimIdx === i);
+            const schluessel = effekte ? Effektespur.schluessel(effekte.clips) : [];
             for (const clip of spur.clips || []) {
-                if (clip.endFrame > ende) ende = clip.endFrame;
+                const bild = schluessel.length
+                    ? Effektespur.anzeige(schluessel, clip.endFrame) : clip.endFrame;
+                if (bild > ende) ende = bild;
             }
         }
         return ende > 0 ? ende : Math.round((dauerSekunden || 0) * fps);

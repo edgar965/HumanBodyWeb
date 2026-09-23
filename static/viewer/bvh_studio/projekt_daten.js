@@ -97,6 +97,10 @@ export class Projektdaten {
             td._currentPreset = t._currentPreset;
             td.zugeklappt = Boolean(t.zugeklappt);
         }
+        if (t.type === 'effekte') {
+            // Dieselbe Stelle-statt-Laufzeit-Index-Regel wie beim Modell (siehe oben).
+            td._linkedAnimIdx = Projektdaten._stelle(t._linkedAnimIdx);
+        }
         if (t.type === 'camera') td.cameraActive = t.cameraActive;
         if (t.type === 'mimik' || t.type === 'script') {
             // Stelle der Modellspur im GESPEICHERTEN Feld (ohne Szene-Elemente) —
@@ -104,11 +108,21 @@ export class Projektdaten {
             td._modellIdx = Projektdaten._stelle(t._modellIdx);
         }
         if (t.type === 'light' && t.light) Projektdaten._licht(td, t);
+        if (t.type === 'scene_object') td.subtype = t.subtype;
         if (t.type === 'scene_object' && t.subtype === 'custom' && t.mesh) {
             td.objectTint = t.objectTint || '#ffffff';
             td.objectPosition = { x: t.mesh.position.x, y: t.mesh.position.y, z: t.mesh.position.z };
             td.objectRotation = { x: t.mesh.rotation.x, y: t.mesh.rotation.y, z: t.mesh.rotation.z };
             td.objectScale = t.mesh.scale.x;  // einheitlicher Faktor
+        }
+        // WEITERE Böden (`addFloorTrack`, 22.09.2026) — der geschützte Start-Boden
+        // (`_sceneItem`) läuft weiter über `sceneFloor` in `sammeln()`, nicht hier.
+        if (t.type === 'scene_object' && t.subtype === 'floor' && !t._sceneItem && t.mesh) {
+            td.floorWidth = t.floorWidth; td.floorLength = t.floorLength;
+            td.floorColor = t.floorColor; td.floorRoughness = t.floorRoughness;
+            td.floorMetalness = t.floorMetalness; td.floorTexture = t.floorTexture;
+            td.floorTransparenz = t.floorTransparenz; td.floorTiefe = t.floorTiefe;
+            td.floorPosition = { x: t.mesh.position.x, y: t.mesh.position.y, z: t.mesh.position.z };
         }
         td.clips = t.clips.map(Projektdaten._klip);
         return td;
@@ -146,7 +160,8 @@ export class Projektdaten {
             blendIn: c.blendIn, blendOut: c.blendOut,
         };
         if (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf'
-            || c.type === 'script' || c.type === 'lipsync' || c.type === 'freeze') {
+            || c.type === 'script' || c.type === 'lipsync' || c.type === 'freeze'
+            || c.type === 'speed_kf') {
             cd.data = c.data;
         } else if (c.type === 'bvh' && c.data?.remap?.length) {
             cd.data = { remap: c.data.remap };

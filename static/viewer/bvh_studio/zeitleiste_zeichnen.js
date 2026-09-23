@@ -61,6 +61,7 @@ function _reihen(breite, pps) {
         const spur = state.project.tracks[ti];
         Zeitleistenspuren.hintergrund(ti, y, breite);
         Zeitleistenspuren.balken(spur, y, pps, breite);
+        Zeitleistenspuren.effektbalken(spur, y, pps, breite);
         Zeitleistenspuren.linien(spur, y, pps);
         Zeitleistenspuren.klips(spur, ti, y, pps);
         Zeitleistenspuren.ueberblendung(spur, y, pps, breite);

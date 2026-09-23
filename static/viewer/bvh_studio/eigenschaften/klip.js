@@ -12,6 +12,7 @@ import { Mimikeigenschaften } from './mimik.js';
 import { Scripteigenschaften } from './script.js';
 import { Lipsynceigenschaften } from './lipsync.js';
 import { Zeitkurveneigenschaften } from './zeitkurve.js';
+import { Speedeigenschaften } from './speedkf.js';
 
 /** Vorgabelaenge, wenn ein Dauerfeld leer gelassen wird. */
 const VORGABE_BILDER = 300;
@@ -21,6 +22,7 @@ export class Klipeigenschaften {
         if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
             return Schluesselbildeigenschaften.maske(clip);
         }
+        if (clip.type === 'speed_kf') return Speedeigenschaften.maske(clip);
         if (clip.type === 'mimik_kf') return Mimikeigenschaften.schluesselMaske(clip);
         if (clip.type === 'script') return Scripteigenschaften.clipMaske(clip);
         if (clip.type === 'lipsync') return Lipsynceigenschaften.maske(clip);
@@ -35,6 +37,8 @@ export class Klipeigenschaften {
         const art = clip.type || 'bvh';
         if (art === 'camera_kf' || art === 'light_kf') {
             Schluesselbildeigenschaften.binden(track, clip);
+        } else if (art === 'speed_kf') {
+            Speedeigenschaften.binden(clip);
         } else if (art === 'mimik_kf') {
             Mimikeigenschaften.schluesselBinden(track, clip);
         } else if (art === 'script') {

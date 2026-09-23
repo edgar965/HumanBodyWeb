@@ -4,6 +4,7 @@ import { Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { Lebendigkeit } from './lebendigkeit.js';
 import { Modellkindspur } from './modellkindspur.js';
+import { Spurauswahl } from './spurauswahl.js';
 
 /**
  * Scriptspur — die Script-Spur einer Modellspur: anlegen, Clips setzen.
@@ -45,12 +46,16 @@ export class Scriptspur {
         clip.data = einstellung ? JSON.parse(JSON.stringify(einstellung)) : Lebendigkeit.vorgabe();
         spur.clips.push(clip);
         spur.clips.sort((a, b) => a.startFrame - b.startFrame);
-        state.selectedTrackIdx = state.project.tracks.indexOf(spur);
+        const spurNr = state.project.tracks.indexOf(spur);
+        state.selectedTrackIdx = spurNr;
         state.selectedClipIdx = spur.clips.indexOf(clip);
         fn.applyPlayhead();
         fn.updateDuration();
         fn.renderTimeline();
         fn.updateProperties();
+        // Steckt die Script-Spur unter einer zugeklappten Modellspur, wäre der
+        // neue Clip sonst unsichtbar (Edgar, 22.09.2026: „erscheint nicht im Track").
+        Spurauswahl.einblenden(spurNr, spur);
         return clip;
     }
 

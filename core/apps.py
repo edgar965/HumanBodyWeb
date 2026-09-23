@@ -29,3 +29,11 @@ class CoreConfig(AppConfig):
         from core.dienste.g9aufwaermen import G9aufwaermen
         if G9aufwaermen.angebracht():
             G9aufwaermen.starten()
+        # HumanBody-Merker (Hautgewichte, Morphs) ebenso (22.09.2026): BVH
+        # Studio ruft sie bei JEDEM Start ab, auch fuer reine Genesis-9-
+        # Projekte — kalt kosteten sie zusammen ueber 10 s (`hbaufwaermen.py`).
+        # `G9aufwaermen.angebracht()` prueft nur runserver/RUN_MAIN, nichts
+        # Genesis-9-Spezifisches — derselbe Gate fuer beide Faeden.
+        from core.dienste.hbaufwaermen import Hbaufwaermen
+        if G9aufwaermen.angebracht():
+            Hbaufwaermen.starten()

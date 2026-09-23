@@ -29,9 +29,11 @@ import { Spurabbau } from './spurabbau.js';
 import { Spurauswahl } from './spurauswahl.js';
 import { Kameraschluessel } from './kameraschluessel.js';
 import { Audiospur } from './audiospur.js';
+import './effektschluessel.js';   // registriert fn.addSpeedKeyframe(AufAnimation)
 
 export function addTrack(name) { return Spurerzeugung.animation(name); }
 export function addModelTrack(name) { return Spurerzeugung.modell(name); }
+export function addEffekteTrack(name, linkIdx) { return Spurerzeugung.effekte(name, linkIdx); }
 export function addSpecialTrack(type, name) {
     return Spurerzeugung.besonders(type, name);
 }
@@ -45,6 +47,7 @@ export function selectTrack(idx) { Spurauswahl.waehlen(idx); }
 // Register functions in registry
 fn.addTrack = addTrack;
 fn.addModelTrack = addModelTrack;
+fn.addEffekteTrack = addEffekteTrack;
 fn.addSpecialTrack = addSpecialTrack;
 fn.addClipToTrack = addClipToTrack;
 fn.addCameraKeyframe = addCameraKeyframe;

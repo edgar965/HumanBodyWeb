@@ -4,6 +4,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Retargetziel } from './retargetziel.js';
 import { Spurfigurarten } from './spurfigurarten.js';
 import { Zeitkurve } from './zeitkurve.js';
+import { Effektebindung } from './effektebindung.js';
 
 /**
  * Bvhspur — den passenden Bewegungsclip am Abspielkopf laufen lassen.
@@ -23,14 +24,24 @@ import { Zeitkurve } from './zeitkurve.js';
  */
 export class Bvhspur {
 
+    /**
+     * `zeit` ist Wanduhrzeit (Abspielkopf). Eine verknuepfte Effekte-Spur
+     * (`effektebindung.js`) kann sie auf eine andere Stelle im Quellmaterial
+     * abbilden — Standbild und Zeitlupe/-raffer ohne den Clip zu schneiden
+     * (Edgar, 21.09.2026, „andersrum"). Ohne verknuepfte Effekte-Spur ist die
+     * Abbildung die Identitaet, bitgleich mit vorher.
+     */
     static anwenden(spur, zeit) {
         if (!spur.mixer) {
             Bvhspur._melden(spur, 'no-mixer', 'bvh_no_mixer',
                             `track=${spur.name} mesh=${!!spur.mesh} preset=${spur.preset}`);
             return;
         }
-        const gefunden = Bvhspur._laufen(spur, zeit);
-        if (!gefunden) Bvhspur._anhalten(spur, zeit);
+        const bvhIdx = state.project.indexOf(spur);
+        const inhaltBild = Effektebindung.inhaltBild(bvhIdx, Math.round(zeit * state.project.fps));
+        const inhaltZeit = inhaltBild / state.project.fps;
+        const gefunden = Bvhspur._laufen(spur, inhaltZeit);
+        if (!gefunden) Bvhspur._anhalten(spur, inhaltZeit);
         if (!spur._modelControlled && spur.group) spur.group.visible = gefunden;
     }
 

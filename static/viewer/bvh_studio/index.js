@@ -18,6 +18,13 @@ import './vorschau.js';
 import './mimikspur.js';
 import './scriptspur.js';
 import './mimikeinrechnen.js';
+// Genesis 9 baut sein Skelett bei jedem Umbau neu (Morph, Retarget, Pose) —
+// ohne diesen Zuhörer bleibt ein GarmentCode-Stück an den ALTEN Knochen
+// hängen und explodiert, sobald die neuen Knochen woanders stehen (Edgar,
+// 22.09.2026, Bild: zersplittertes Kleid auf einer riesigen Kugel). Die
+// Szene-Seite hatte den Zuhörer schon (`scene/skeleton.js`), das Studio nie
+// — derselbe Fehler wie bei `garmentcodebindung.js` (siehe `studio.md`).
+import '../scene/garmentcode_nachbindung.js';
 import { Projektdatei } from './project.js';
 import { Sitzung } from './sitzung.js';
 import { Studiostart } from './studiostart.js';

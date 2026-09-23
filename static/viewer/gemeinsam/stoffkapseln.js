@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Kapselmass } from './kapselmass.js';
 import { Kleidungsmass } from './kleidungsmass.js';
 import { Stoffkoerper } from './stoffkoerper.js';
+import { Koerperzuordnung } from './koerperzuordnung.js';
 
 /**
  * Stoffkapseln — der Körper für den Stoffschwung, als Kapseln um die Knochen,
@@ -56,18 +57,10 @@ export class Stoffkapseln {
         if (!netz?.isSkinnedMesh || !netz.skeleton) return [];
         const bones = netz.skeleton.bones;
         const welt = Stoffhaut.welt(netz);
-        const index = netz.geometry.attributes.skinIndex.array;
-        const gewicht = netz.geometry.attributes.skinWeight.array;
         const n = netz.geometry.attributes.position.count;
-        // Der stärkste Knochen je Hautpunkt.
-        const zuordnung = new Int32Array(n);
-        for (let i = 0; i < n; i++) {
-            let beste = 0, w = -1;
-            for (let k = 0; k < 4; k++) {
-                if (gewicht[4 * i + k] > w) { w = gewicht[4 * i + k]; beste = index[4 * i + k]; }
-            }
-            zuordnung[i] = beste;
-        }
+        // Der stärkste Knochen je Hautpunkt — dieselbe Zuordnung, die
+        // `Oberflaechenbindung` für die Gruppen der Kleidungspunkte nutzt.
+        const zuordnung = Koerperzuordnung.staerksterKnochen(netz);
         const a = new THREE.Vector3(), b = new THREE.Vector3(), q = new THREE.Vector3();
         const d = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), o = new THREE.Vector3();
         const aus = [];
@@ -98,7 +91,8 @@ export class Stoffkapseln {
             // u in den Knochenraum — dreht dann mit dem Knochen (`bild`).
             const u = e1.clone().multiplyScalar(Math.cos(m.theta)).addScaledVector(e2, Math.sin(m.theta));
             u.applyQuaternion(bone.getWorldQuaternion(new THREE.Quaternion()).invert());
-            aus.push({ bone, kinder, u, ta, tb, rua: m.rua, rwa: m.rwa, rub: m.rub, rwb: m.rwb, punkte: lauf.length });
+            aus.push({ bone, kinder, u, ta, tb, rua: m.rua, rwa: m.rwa, rub: m.rub, rwb: m.rwb,
+                       punkte: lauf.length, gruppe: Koerperzuordnung.gruppenindex(bone.name) });
         });
         aus.sort((x, y) => y.punkte - x.punkte);
         return aus.slice(0, Stoffkapseln.HOECHSTENS);
@@ -149,6 +143,15 @@ export class Stoffkapseln {
             aus[o + 9] = k.rua; aus[o + 10] = k.rwa; aus[o + 11] = k.rub; aus[o + 12] = k.rwb;
         });
         return aus;
+    }
+
+    /**
+     * Gruppen-ID je Kapsel (`Koerperzuordnung.GRUPPEN`, 0 = keine) — parallel
+     * zu `bild()`, für den Gruppenfilter der Oberflächenbindung
+     * (`oberflaecheglsl.js`): eine Kapsel bewegt nur Punkte FREMDER Gruppen.
+     */
+    static gruppen(kapseln) {
+        return Float32Array.from(kapseln, (k) => k.gruppe || 0);
     }
 }
 

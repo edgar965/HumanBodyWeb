@@ -103,6 +103,15 @@ export class Eigenschaftsfeld {
                 Entf entfernt die Spur samt Figur.</div>
         </div>`;
         }
+        if (track.type === 'effekte') {
+            const verbunden = state.project.tracks[track._linkedAnimIdx];
+            return `<div class="prop-group">
+            <div class="prop-row"><label>Verknüpft:</label><span
+                class="marke-akzent">${verbunden?.type === 'bvh' ? verbunden.name : '(keine)'}</span></div>
+            <div class="fussnote">Taste G auf der verknüpften Animationsspur setzt ein
+                Speed-Ereignis am Abspielkopf. Rechtsklick hier: Spur verknüpfen.</div>
+        </div>`;
+        }
         if (track.type === 'audio') {
             return `<div class="prop-group">
             <div class="abstand-unten-6">
@@ -119,10 +128,10 @@ export class Eigenschaftsfeld {
     }
 
     static _klipliste(track) {
-        const titel = (track.type === 'camera' || track.type === 'light' || track.type === 'mimik')
+        const titel = ['camera', 'light', 'mimik', 'effekte'].includes(track.type)
             ? 'Keyframes' : 'Clips';
         const eintraege = track.clips.map((c, i) => {
-            const dauer = (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf')
+            const dauer = ['camera_kf', 'light_kf', 'mimik_kf', 'speed_kf'].includes(c.type)
                 ? `F${c.startFrame}` : `${c.duration.toFixed(1)}s`;
             const gewaehlt = i === state.selectedClipIdx;
             return `<div class="prop-clip-item${gewaehlt ? ' gewaehlt' : ''}"

@@ -17,6 +17,18 @@
  * Gliedmaßen gedrückt — elliptischer Kegel wie `Stoffkoerper.hinaus`, aber
  * ohne Iteration: liegt der Punkt in der Ellipse (im Maß der Halbachsen plus
  * Abstand), wird sein Querversatz radial auf den Rand skaliert.
+ *
+ * FREMDE GLIEDMASSEN (22.09.2026, Fund Edgar: Spagat-Animation, der Arm
+ * dringt in den angehobenen Oberschenkel ein, die Jeans zeigt an der Stelle
+ * einen hellen Fleck — durchscheinende Armhaut): Die Kapselschleife lief
+ * bis dahin NUR für `mischung <= 0` (freie Punkte) — ein an die Beinoberfläche
+ * GEBUNDENER Jeans-Punkt (`mischung > 0`, „Durchdringen ist konstruktiv
+ * unmöglich") wurde nie geprüft, auch wenn ihn ein FREMDER Körperteil (Arm)
+ * durchquert: Die Bindung schützt nur vor dem EIGENEN Körper darunter.
+ * Jetzt läuft die Schleife für JEDEN Punkt, aber eine Kapsel wirkt nur auf
+ * Punkte einer ANDEREN Gliedmaßen-Gruppe (`bindgruppe` vs. `uKapselGruppe`,
+ * `Koerperzuordnung.GRUPPEN`) — sonst genau der alte Fehler von vorher
+ * (halbgebundene Punkte 3,8 cm aus dem eigenen Bein gedrückt, siehe unten).
  */
 export class OberflaecheGLSL {
 
@@ -36,6 +48,7 @@ attribute vec3 bindung;
 attribute vec3 bary;
 attribute float bindabstand;
 attribute float mischung;
+attribute float bindgruppe;
 
 vec3 g9Lage(float nummer) {
     int i = int(nummer + 0.5);
@@ -57,13 +70,16 @@ if (uOberflaecheAn > 0.5 && mischung > 0.0 && bindung.x >= 0.0) {
     vec3 n = normalize(bary.x * g9Normale(bindung.x) + bary.y * g9Normale(bindung.y) + bary.z * g9Normale(bindung.z));
     transformed = mix(transformed, q + bindabstand * n, mischung);
 }
-// Nur FREIE Punkte (in Ruhe > FERN von der Haut): die Kapseln sind 90. Perzentil der
-// Haut, also 1–4 cm ueber ihr — halbgebundene Punkte drueckten sie um 3,8 cm heraus
-// (gemessen an der Jeans, 21.09.2026), die Oberflaeche haelt sie ohnehin.
-if (uKapselAn > 0.5 && mischung <= 0.0) {
+// FREIE Punkte werden von JEDER Kapsel gedrueckt; GEBUNDENE (mischung > 0) nur
+// von Kapseln FREMDER Gliedmassen (bindgruppe vs. der Gruppe der Kapsel, in
+// ka.w) — die eigene Kapsel ist groesser als die reine Haut (90. Perzentil,
+// 1-4 cm darueber) und wuerde sonst die gerade gesetzte Bindung wieder
+// verzerren (gemessen an der Jeans, 21.09.2026: 3,8 cm heraus).
+if (uKapselAn > 0.5) {
     for (int k = 0; k < ${OberflaecheGLSL.KAPSELN}; k++) {
         if (k >= uKapselAnzahl) break;
         vec4 ka = uKapseln[4 * k], kb = uKapseln[4 * k + 1], ku = uKapseln[4 * k + 2], kr = uKapseln[4 * k + 3];
+        if (mischung > 0.0 && bindgruppe > 0.5 && abs(ka.w - bindgruppe) < 0.5) continue;
         vec3 ab = kb.xyz - ka.xyz;
         float L = length(ab);
         if (L < 1e-4) continue;

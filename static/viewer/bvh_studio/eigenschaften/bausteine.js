@@ -16,6 +16,12 @@ export class Maskenbausteine {
         return `<input type="number" value="${wert}" id="${id}" ${zusatz}>`;
     }
 
+    /** Schieberegler (stufenlos) mit Zahlenanzeige daneben. */
+    static schieber(id, wert, min, max, step) {
+        return `<input type="range" id="${id}" min="${min}" max="${max}" step="${step}" `
+             + `value="${wert}"> <span class="winzig" id="${id}-wert">${(+wert).toFixed(2)}</span>`;
+    }
+
     /** Abschnitt mit Ueberschrift. */
     static gruppe(titel, inhalt) {
         return `<div class="prop-group">`

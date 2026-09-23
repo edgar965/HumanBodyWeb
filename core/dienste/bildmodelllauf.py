@@ -7,6 +7,7 @@ brauchen Minuten, und jede Python-Änderung lädt den Server neu.
 
     sichtung    Zuschnitt (YOLO) + Sichtung (MediaPipe), python10-Unterprozess
     schaetzung  SMPL-X-Parameter je Hauptbild (SMPLest-X, PyMAF-X, …)
+    kopf        FLAME-Kopf aus den gewählten Kopffotos (MICA, PyMAF-X, FaceBuilder — `Bildmodellkopf`)
     ziel        Zielnetz aus den gemischten Parametern (+ FLAME-Kopf)
     anpassung   Regler per beschränkter Ausgleichung (`G9formanpassung`)
     rest        Rest als Eigenmorph (`G9restmorph`)
@@ -39,7 +40,8 @@ class Bildmodelllauf:
     #: Fortschrittsband je Schritt (von, bis) in Prozent.
     BAENDER = {
         'sichtung': (2, 15),
-        'schaetzung': (15, 60),
+        'schaetzung': (15, 52),
+        'kopf': (52, 60),
         'ziel': (60, 65),
         'anpassung': (65, 85),
         'rest': (85, 90),
@@ -58,7 +60,7 @@ class Bildmodelllauf:
     #: Rest, Vorschau (Vorher/Nachher-Bilder, Maßband) — und seit 21.09.2026 auch Textur und
     #: Speichern (Edgar: „warum baust du den Lauf nicht so, dass es alle Zwischenschritte
     #: hat??" — ein GVHMR-Lauf ließ die Fototextur auf dem alten Käfig stehen).
-    NACH_GVHMR = ('schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern')
+    NACH_GVHMR = ('schaetzung', 'kopf', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern')
     #: Einzelschritte, auf die diese Kette folgt: `gvhmr` (Körperbild) und `flame` (Kopfbild —
     #: Edgar, 20.09.2026: „warum gibt es beim Kopf keine Button zum Lauf?", `Bildmodellflame`).
     EINZELN_MIT_KETTE = ('gvhmr', 'flame')
@@ -173,6 +175,11 @@ class Bildmodelllauf:
         Bildmodellschaetzung(self.job, self.ablage, self.optionen).ausfuehren(
             lambda a, t: self.melden('schaetzung', a, t)
         )
+
+    def _kopf(self):
+        from .bildmodellkopf import Bildmodellkopf
+
+        Bildmodellkopf(self.job, self.ablage, self.optionen).ausfuehren(lambda a, t: self.melden('kopf', a, t))
 
     def _ziel(self):
         from .bildmodellanpassung import Bildmodellanpassung

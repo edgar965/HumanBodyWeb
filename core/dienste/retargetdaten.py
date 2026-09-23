@@ -21,9 +21,10 @@ protokolliert: Wenn sie es JEDES Mal ist, sucht man sonst lange.
 """
 
 import hashlib
-import json
 import logging
 import os
+
+import ujson
 
 from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
 from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG
@@ -108,7 +109,7 @@ class Retargetdaten:
             return None  # die BVH-Datei ist neuer
         try:
             with open(pfad) as datei:
-                return Bewegungsspuren.aus_dict(json.load(datei))
+                return Bewegungsspuren.aus_dict(ujson.load(datei))
         except OSError, ValueError:
             logger.warning('[retarget] Zwischenspeicher %s unlesbar, wird neu gerechnet', pfad, exc_info=True)
             return None
@@ -116,7 +117,7 @@ class Retargetdaten:
     def merken(self, ergebnis):
         try:
             with open(self.ablage, 'w') as datei:
-                json.dump(ergebnis.als_dict(), datei)
+                ujson.dump(ergebnis.als_dict(), datei)
         except Exception:
             logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 

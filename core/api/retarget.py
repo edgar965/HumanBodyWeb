@@ -11,10 +11,14 @@ gebraucht. Die dreifach ausgeschriebene Pfadpruefung („pruefen, dann `is_file`
 dann 404 mit passendem Text") steht einmal in `_bibliothekspfad`.
 """
 
+import asyncio
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 
-from django.http import HttpResponseNotFound, JsonResponse
+import ujson
+from asgiref.sync import sync_to_async
+from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -37,6 +41,22 @@ class Retargetendpunkte:
 
     #: Koerpergroesse in Metern, wenn keine mitkommt.
     VORGABE_GROESSE = 1.68
+
+    #: Eigener Pool fuer die Retarget-Rechnung (22.09.2026, Edgar: „immer noch
+    #: 13 s Ladezeit"). Daphne fuehrt eine SYNCHRONE View ueber
+    #: `sync_to_async(thread_sensitive=True)` aus — das serialisiert ALLE
+    #: synchronen Views auf einem einzigen Faden (gemessen fuer 230
+    #: Moduldateien in `modulbuendel.py`). Vier Clips eines Projekts (Dance1,
+    #: 0001_Dance, Spagat, Dance2) feuerten ihre Retarget-Anfrage zwar
+    #: gleichzeitig vom Browser (Resource-Timing: alle vier starten binnen
+    #: 2 ms) — aber die SERVERSEITIGE Bearbeitungszeit (aus `django.log`) war
+    #: 1,0-2,3 s je Clip, waehrend der BROWSER 3,6-6,0 s Gesamtdauer maß: der
+    #: Rest ist Warteschlange vor dem einen Faden, nicht Rechenzeit. NumPy gibt
+    #: das GIL bei den schweren Rechenschritten frei (`humanbody_core.skeleton
+    #: .retarget`), echte Parallelitaet ist also moeglich — `umsetzen()` ist
+    #: darum eine ASYNC View, die die Rechnung in DIESEN Pool auslagert statt
+    #: sie im Daphne-Einzelfaden zu blockieren.
+    _POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix='retarget')
 
     # ------------------------------------------------------------- Zuordnung
 
@@ -91,7 +111,7 @@ class Retargetendpunkte:
     # -------------------------------------------------------------- Umsetzen
 
     @classmethod
-    def umsetzen(cls, request):
+    async def umsetzen(cls, request):
         """EINE Adresse fuer Auftrags- und Bibliotheks-BVH.
 
         GET  /api/retarget/?job=<uuid>                 → BVH des Auftrags
@@ -117,7 +137,9 @@ class Retargetendpunkte:
         kategorie = werte.get('category')
         name = werte.get('name')
         if auftrag:
-            pfad = cls._auftragspfad(auftrag)
+            # `_auftragspfad` liest per ORM (`get_object_or_404`) — das darf
+            # nicht direkt im Async-Kontext laufen (SynchronousOnlyOperation).
+            pfad = await sync_to_async(cls._auftragspfad)(auftrag)
         elif kategorie and name:
             pfad = cls._bibliothekspfad('%s/%s' % (kategorie, name))
         else:
@@ -125,20 +147,9 @@ class Retargetendpunkte:
         if not isinstance(pfad, str):
             return pfad  # fertige Fehlerantwort
         try:
-            return JsonResponse(
-                Retargetdaten(
-                    pfad,
-                    wahl.groesse,
-                    wahl.format,
-                    wahl.fusskorrektur,
-                    wahl.delta_norm,
-                    wahl.ziel,
-                    figur=wahl.figur,
-                    formung=cls._formung(wahl),
-                )
-                .holen()
-                .als_dict()
-            )
+            json_text = await asyncio.get_running_loop().run_in_executor(
+                cls._POOL, cls._rechnen, pfad, wahl)
+            return HttpResponse(json_text, content_type='application/json')
         except UmaskelettFehlt as fehler:
             return JsonResponse({'error': str(fehler)}, status=404)
         except ValueError as fehler:
@@ -146,6 +157,35 @@ class Retargetendpunkte:
             # Frage des Aufrufers, kein Serverfehler — und die Meldung
             # gehoert in die Zeile unter der Leiste, nicht ins Nichts.
             return JsonResponse({'error': str(fehler)}, status=400)
+
+    @classmethod
+    def _rechnen(cls, pfad, wahl):
+        """Die eigentliche Rechnung — laeuft im `_POOL`, nicht im Daphne-Faden.
+
+        Kodiert das Ergebnis GLEICH HIER zu JSON-Text (23.09.2026, Edgar: „es
+        gibt doch schnellere Methoden"): `ujson` statt der Standardbibliothek
+        ist bei den grossen Antworten ca. 3,4x schneller (gemessen: Dance2,
+        20 MB, `dumps` 1,01 s -> 0,30 s; Cache-Datei lesen 0,69 s -> 0,26 s in
+        `Retargetdaten.gemerkt`, dieselbe Umstellung dort). Waere die Kodierung
+        stattdessen erst in `JsonResponse(...)` im Aufrufer passiert, liefe sie
+        auf dem EVENT-LOOP-Faden — genau der Faden, den `_POOL` hier entlasten
+        soll — und haette wieder alle anderen Anfragen blockiert.
+        """
+        ergebnis = (
+            Retargetdaten(
+                pfad,
+                wahl.groesse,
+                wahl.format,
+                wahl.fusskorrektur,
+                wahl.delta_norm,
+                wahl.ziel,
+                figur=wahl.figur,
+                formung=cls._formung(wahl),
+            )
+            .holen()
+            .als_dict()
+        )
+        return ujson.dumps(ergebnis)
 
     @staticmethod
     def _werte(request):
@@ -190,12 +230,12 @@ class Retargetendpunkte:
 
     @staticmethod
     @require_GET
-    def bibliotheks_bvh(request, category, name):
+    async def bibliotheks_bvh(request, category, name):
         """Aeltere Adresse — leitet auf `umsetzen` weiter."""
         request.GET = request.GET.copy()
         request.GET['category'] = category
         request.GET['name'] = name
-        return Retargetendpunkte.umsetzen(request)
+        return await Retargetendpunkte.umsetzen(request)
 
     @staticmethod
     @require_GET

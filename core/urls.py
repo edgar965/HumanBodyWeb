@@ -27,11 +27,11 @@ from .api.bvhtext import Bvhtext
 from .api.dateien import Auftragsdateien
 from .api.effekte import Effektendpunkte
 from .api.figurvideo import Figurvideoendpunkte
+from .api.garmentabbruch import Garmentabbruch
 from .api.garmentabsatz import Garmentabsatz
 from .api.garmentabsatzvorschau import Garmentabsatzvorschau
-from .api.garmentcode import Garmentcode
 from .api.garmentantwort import Garmentantwort
-from .api.garmentabbruch import Garmentabbruch
+from .api.garmentcode import Garmentcode
 from .api.garmentgemeinsam import Garmentgemeinsamendpunkte
 from .api.garmentsimulation import Garmentsimulation
 from .api.garmentvorbilder import Garmentvorbilder
@@ -102,9 +102,10 @@ urlpatterns = [
     path('settings/model/', einstellungen.app_settings_model, name='settings_model'),
     path('settings/result/', einstellungen.app_settings_result, name='settings_result'),
     path('settings/scene/', einstellungen.app_settings_scene, name='settings_scene'),
-    # Das gebuendelte Szene-Skript. Die Fassung im Pfad wirkt wie bei der
-    # uebrigen Statik: neue Fassung = neue Adresse = kein alter Stand.
-    path('buendel/<str:fassung>/scene.js', buendel.buendel_datei, name='buendel_scene'),
+    # Das gebuendelte Seitenskript (Szene, BVH Studio). Die Fassung im Pfad
+    # wirkt wie bei der uebrigen Statik: neue Fassung = neue Adresse = kein
+    # alter Stand; `seite` ist eines von `Modulbuendel.EINSTIEGE`.
+    path('buendel/<str:fassung>/<str:seite>.js', buendel.buendel_datei, name='buendel_datei'),
     path('settings/video-to-bvh/', Webseiten.einstellungen_videobvh, name='settings_videobvh'),
     path('settings/video-to-bvh-2d/', einstellungen.app_settings_videobvh_2d, name='settings_videobvh_2d'),
     path('settings/video-to-bvh-3d/', einstellungen.app_settings_videobvh_3d, name='settings_videobvh_3d'),
@@ -166,6 +167,8 @@ urlpatterns = [
          name='bildmodell_gvhmr3d'),
     path('api/bildmodell/<uuid:job_id>/flame3d/<str:datei>/', Bildmodellgvhmrendpunkte.flame3d,
          name='bildmodell_flame3d'),
+    path('api/bildmodell/<uuid:job_id>/kopf3d/', Bildmodellgvhmrendpunkte.kopf3d,
+         name='bildmodell_kopf3d'),
     path('api/bildmodell/<uuid:job_id>/loeschen/', Bildmodellendpunkte.loeschen, name='bildmodell_loeschen'),
     path('api/bildmodell/<uuid:job_id>/datei/<str:ordner>/<str:name>', Bildmodellendpunkte.datei,
          name='bildmodell_datei'),

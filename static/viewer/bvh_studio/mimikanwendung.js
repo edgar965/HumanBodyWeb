@@ -76,7 +76,12 @@ export class Mimikanwendung {
     static anwenden(modellIdx, gewichte, ganz = true, visemes = null) {
         const figur = Mimikanwendung.figur(modellIdx);
         if (!figur) return;
-        if (Mimikgenesis9.passt(figur)) { Mimikgenesis9.setzen(figur.modell, visemes || {}); return; }
+        if (Mimikgenesis9.passt(figur)) {
+            // Mimik-Posen UND Script-Zuschlag gehen mit (22.09.2026) — vorher
+            // nur `visemes`, `gewichte` (MB-Lab-Einheiten) wurde verworfen.
+            Mimikgenesis9.setzen(figur.modell, visemes || {}, gewichte || {});
+            return;
+        }
         if (Mimiksmplx.passt(figur)) { Mimiksmplx.setzen(figur.mesh, gewichte); return; }
         if (figur.skelett && Mimikbasis.bereit) Mimikanwendung.setzen(figur.skelett, gewichte, ganz);
     }

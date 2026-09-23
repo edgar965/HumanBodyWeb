@@ -8,6 +8,8 @@
  */
 import { state, TRACK_HEIGHT, HEADER_WIDTH } from './state.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
+import { Effektebindung } from './effektebindung.js';
+import { Effektespur } from './effektespur.js';
 
 export class Zeitleistenspuren {
     /** Hintergrund einer Spurzeile. */
@@ -20,6 +22,36 @@ export class Zeitleistenspuren {
         Zeitleistenflaeche.ctx.lineTo(w, y + TRACK_HEIGHT);
         Zeitleistenflaeche.ctx.stroke();
         
+    }
+
+    /**
+     * Balken zwischen den Speed-Ereignissen einer Effekte-Spur — der
+     * „Balken", von dem Edgar (21.09.2026) spricht: die Strecke, die
+     * gedehnt/gestaucht wird. Farbe zeigt grob die Geschwindigkeit (rot =
+     * langsamer/Standbild, gruen = schneller).
+     */
+    static effektbalken(track, y, pps, w) {
+        if (track.type !== 'effekte') return;
+        const kfs = track.clips.filter(c => c.type === 'speed_kf')
+            .sort((a, b) => a.startFrame - b.startFrame);
+        if (kfs.length < 2) return;
+        const ctx = Zeitleistenflaeche.ctx;
+        const oben = y + 4;
+        const hoehe = TRACK_HEIGHT - 8;
+        for (let i = 0; i < kfs.length - 1; i++) {
+            const a = kfs[i], b = kfs[i + 1];
+            const ax = HEADER_WIDTH + (a.startFrame / state.project.fps) * pps - state.timelineScrollX;
+            const bx = HEADER_WIDTH + (b.startFrame / state.project.fps) * pps - state.timelineScrollX;
+            const segX = Math.max(ax, HEADER_WIDTH);
+            const segW = Math.min(bx, w) - segX;
+            if (segW <= 0) continue;
+            const mittel = ((a.data?.speed ?? 1) + (b.data?.speed ?? 1)) / 2;
+            const farbe = mittel <= 0.05 ? '#ef4444' : mittel < 1 ? '#f59e0b' : '#4caf50';
+            ctx.fillStyle = farbe;
+            ctx.globalAlpha = 0.25;
+            ctx.fillRect(segX, oben, segW, hoehe);
+            ctx.globalAlpha = 1.0;
+        }
     }
 
     /** Balken zwischen den Schluesselbildern einer Kamera- oder Lichtspur. */
@@ -95,7 +127,7 @@ export class Zeitleistenspuren {
     /** Verbindungslinien ueber den Balken. */
     static linien(track, y, pps) {
         // Draw interpolation lines for camera/light keyframe tracks (über Balken gelegt)
-        if ((track.type === 'camera' || track.type === 'light' || track.type === 'mimik')
+        if (['camera', 'light', 'mimik', 'effekte'].includes(track.type)
             && track.clips.length > 1) {
             Zeitleistenflaeche.ctx.strokeStyle = track.color;
             Zeitleistenflaeche.ctx.lineWidth = 1.5;
@@ -121,18 +153,38 @@ export class Zeitleistenspuren {
      * (Rechtecke mit Beschriftung). Jetzt drei Methoden, die je EINE Form
      * zeichnen; die Auswahl trifft `klips`.
      */
+    /**
+     * Bei einer BVH-Spur mit verknuepfter Effekte-Spur (`effektebindung.js`)
+     * stehen Clips an der ANZEIGE-Stelle, nicht an ihrer unveraenderten
+     * Inhalt-Stelle (`clip.startFrame`) — sonst zeigt die Zeitleiste ein
+     * Standbild/eine Zeitlupe nicht als Luecke, obwohl sie eine ist (Edgar,
+     * 21.09.2026, „andersrum": nicht mehr schneiden, aber sichtbar bleiben).
+     */
     static klips(track, ti, y, pps) {
+        const bvhIdx = track.type === 'bvh' ? ti : -1;
         for (let ci = 0; ci < track.clips.length; ci++) {
             const clip = track.clips[ci];
-            const x = HEADER_WIDTH
-                + (clip.startFrame / state.project.fps) * pps
+            const bildAnzeige = bvhIdx >= 0
+                ? Effektebindung.anzeigeBild(bvhIdx, clip.startFrame) : clip.startFrame;
+            const x = HEADER_WIDTH + (bildAnzeige / state.project.fps) * pps
                 - state.timelineScrollX;
             const gewaehlt = (ti === state.selectedTrackIdx
                               && ci === state.selectedClipIdx);
-            if (clip.type === 'camera_kf' || clip.type === 'light_kf' || clip.type === 'mimik_kf') {
-                Zeitleistenspuren._marker(clip, track, x, y, gewaehlt);
+            if (['camera_kf', 'light_kf', 'mimik_kf', 'speed_kf'].includes(clip.type)) {
+                // Beschriftung nach links spiegeln, sobald schon ein Marker
+                // DESSELBEN Typs links davon liegt (22.09.2026, Edgar: „die
+                // Marker links vom Punkt, wenn der gleiche Marker schon mal
+                // links davon war") — sonst laufen eng stehende Marker
+                // (Standbild-Rampe: Anfahrt/Start nur 2 Bilder auseinander)
+                // mit ihrer Beschriftung ineinander.
+                const schonLinks = track.clips.slice(0, ci).some(c => c.type === clip.type);
+                Zeitleistenspuren._marker(clip, track, x, y, gewaehlt, schonLinks);
             } else {
-                Zeitleistenspuren._rechteck(clip, track, x, y, pps, gewaehlt);
+                const breitePx = bvhIdx >= 0
+                    ? Math.max(((Effektebindung.anzeigeBild(bvhIdx, clip.endFrame) - bildAnzeige)
+                                / state.project.fps) * pps, 4)
+                    : null;
+                Zeitleistenspuren._rechteck(clip, track, x, y, pps, gewaehlt, breitePx);
             }
         }
     }
@@ -147,7 +199,7 @@ export class Zeitleistenspuren {
      * Schluesselbild als Diamant. Paare sitzen versetzt (`trackPosition`),
      * damit zwei Marker auf demselben Bild sichtbar bleiben.
      */
-    static _marker(clip, track, x, y, gewaehlt) {
+    static _marker(clip, track, x, y, gewaehlt, schonLinks = false) {
         const ctx = Zeitleistenflaeche.ctx;
         const lage = clip.data?.trackPosition;
         const my = lage === 'upper' ? y + TRACK_HEIGHT * Zeitleistenspuren.MARKER_OBEN
@@ -172,11 +224,15 @@ export class Zeitleistenspuren {
             ctx.stroke();
         }
         ctx.globalAlpha = 1.0;
-        if (clip.name) {
+        const beschriftung = clip.type === 'speed_kf'
+            ? `${Effektespur.formatSpeed(clip.data?.speed)}×` : clip.name;
+        if (beschriftung) {
             ctx.fillStyle = gewaehlt ? '#fff' : 'rgba(255,255,255,0.75)';
             ctx.font = '10px sans-serif';
             ctx.textBaseline = 'middle';
-            ctx.fillText(clip.name, x + gr + 4, my);
+            ctx.textAlign = schonLinks ? 'right' : 'left';
+            ctx.fillText(beschriftung, schonLinks ? x - gr - 4 : x + gr + 4, my);
+            ctx.textAlign = 'left';   // Vorgabe fuer alle anderen Zeichenstellen
         }
     }
 
@@ -190,10 +246,14 @@ export class Zeitleistenspuren {
         ctx.closePath();
     }
 
-    /** BVH-, Ton- und Modellclips als Rechteck. */
-    static _rechteck(clip, track, x, y, pps, gewaehlt) {
+    /**
+     * BVH-, Ton- und Modellclips als Rechteck. `breitePxOverride` kommt von
+     * `klips()` fuer eine BVH-Spur mit Effekte-Spur — die ANZEIGE-Breite kann
+     * von `clip.duration * pps` abweichen (siehe dort).
+     */
+    static _rechteck(clip, track, x, y, pps, gewaehlt, breitePxOverride = null) {
         const ctx = Zeitleistenflaeche.ctx;
-        const breite = Math.max(clip.duration * pps, 4);
+        const breite = breitePxOverride ?? Math.max(clip.duration * pps, 4);
         const oben = y + 4;
         const hoehe = TRACK_HEIGHT - 8;
 

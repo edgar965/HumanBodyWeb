@@ -11,9 +11,9 @@ in der Mischung nichts zählen — SMPLest-X und PyMAF-X in EINEM python10-Proze
 Prozess). Je Bild bleibt die Rohantwort am Eintrag (`schaetzung`), damit
 ein neuer Lauf ab „ziel" nichts neu rechnen muss.
 
-Gesicht: mit `pymafx_flame` laufen die Kopf- UND Körperbilder durch
-PyMAF-X; der neutrale FLAME-Kopf (5.023 × 3) des Bildes mit dem größten
-Gesicht wird das Kopfziel (`schaetzung/<stamm>_gesicht_flame.npy`).
+Gesicht: der FLAME-Kopf kommt seit 22.09.2026 aus dem eigenen Schritt `kopf`
+(`Bildmodellkopf`: MICA, PyMAF-X, FaceBuilder, mehrere Fotos); `_schaetzen(…, 'gesicht')`
+bleibt der PyMAF-X-Weg dorthin (`schaetzung/<stamm>_gesicht_flame.npy`).
 
 Mischung der Körperparameter: Median (Vorgabe), gewichtetes Mittel oder
 das beste Bild — und das Geschlecht aus dem Schulter-Hüft-Verhältnis der
@@ -99,13 +99,8 @@ class Bildmodellschaetzung:
             Bildmodellsilhouette(self.ablage).ausfuehren(
                 Bildmodellsilhouette.offen(koerper), melder, ersetzen=(wahl == 'an')
             )
-        if self.optionen.get('gesicht') == 'pymafx_flame':
-            self._schaetzen(
-                [b for b in koepfe + koerper if not (b.get('gesichtsschaetzung') or {}).get('face_shape')],
-                'pymafx',
-                melder,
-                'gesicht',
-            )
+        # Der FLAME-Kopf ist seit 22.09.2026 der eigene Schritt `kopf` (`Bildmodellkopf`); die
+        # Mischung trägt noch den Kopf aus vorhandenen Dateien ein, der Schritt überschreibt ihn.
         videos = [b for b in self.job.bilder if b.get('video') and Bildmodellbildtypen.fuer_form(b)]
         if self.optionen.get('video', 'gvhmr') == 'gvhmr':
             self._videos(videos, melder)

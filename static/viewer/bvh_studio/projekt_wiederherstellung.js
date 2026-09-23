@@ -50,7 +50,17 @@ export class Projektwiederherstellung {
                 Projektwiederherstellung._klipAnlegen(track, td, cd, wartend);
             }
         }
-        await Promise.all(wartend);
+        // NICHT auf die Retarget-Antworten warten (23.09.2026, Edgar: „retarget
+        // asynchron!"): die Seite muss bedienbar sein, waehrend die Bewegungen
+        // noch vom Server kommen (siehe auch `clipanimation.js`, „Seite bedienbar,
+        // auch wenn Retarget noch laeuft"). `_zuordnen`/`_modellspurenVerlinken`
+        // lesen nur gespeicherte Indizes, kein `clip.animClip` — unabhaengig vom
+        // Ladezustand. Jeder Clip zeichnet sich selbst neu, sobald sein eigenes
+        // `Clipanimation.laden()` zurueckkommt (ruft dort schon `renderTimeline()`);
+        // ein Fehlschlag geht nicht verloren (`Clipanimation._holen` faengt ihn,
+        // markiert den Clip `_loadError`, meldet ihn ueber `Protokoll.fehler`).
+        Promise.all(wartend).catch(fehler =>
+            Protokoll.fehler('Restore', 'Clip-Laden fehlgeschlagen', fehler));
 
         Projektwiederherstellung._zuordnen(eingang, angelegt);
         Projektwiederherstellung._modellspurenVerlinken();
@@ -100,6 +110,17 @@ export class Projektwiederherstellung {
                 ? neueNummer[gespeichert] : -1;
             track._currentPreset = td._currentPreset || null;
             track.zugeklappt = Boolean(td.zugeklappt);
+        } else if (art === 'effekte') {
+            track = fn.addEffekteTrack(td.name, -1);
+            const gespeichert = td._linkedAnimIdx ?? -1;
+            track._linkedAnimIdx = (gespeichert >= 0 && neueNummer[gespeichert] != null)
+                ? neueNummer[gespeichert] : -1;
+        } else if (art === 'scene_object' && td.subtype === 'floor') {
+            // Weiterer Boden (`addFloorTrack`, 22.09.2026) — der geschützte
+            // Start-Boden läuft weiter über `sceneFloor`/`createFloorTrack`,
+            // nicht über diesen Zweig (er steht gar nicht in `tracks[]`).
+            track = fn.addFloorTrack();
+            Projektwiederherstellung._bodenUebernehmen(track, td);
         } else {
             track = fn.addSpecialTrack(art, td.name);
         }
@@ -112,6 +133,25 @@ export class Projektwiederherstellung {
             Projektwiederherstellung._lichtUebernehmen(track, td);
         }
         return track;
+    }
+
+    static _bodenUebernehmen(track, td) {
+        if (!track) return;
+        fn.setFloorGeometry?.(track, td.floorWidth, td.floorLength,
+                              td.floorPosition?.x, td.floorPosition?.z);
+        if (td.floorPosition?.y != null) fn.setFloorHeight?.(track, td.floorPosition.y);
+        track.floorColor = td.floorColor ?? track.floorColor;
+        track.floorRoughness = td.floorRoughness ?? track.floorRoughness;
+        track.floorMetalness = td.floorMetalness ?? track.floorMetalness;
+        track.floorTransparenz = td.floorTransparenz ?? track.floorTransparenz;
+        track.floorTiefe = td.floorTiefe ?? track.floorTiefe;
+        fn.updateFloorMaterial?.(track);
+        if (td.floorTexture && td.floorTexture !== 'none') {
+            fn.getFloorTextures?.().then(list => {
+                const found = list?.find(x => x.name === td.floorTexture);
+                if (found?.url) fn.applyFloorTexture?.(track, found.url);
+            });
+        }
     }
 
     static _lichtUebernehmen(track, td) {
@@ -188,7 +228,7 @@ export class Projektwiederherstellung {
      */
     static _zuordnen(eingang, angelegt) {
         eingang.forEach((td, i) => {
-            if (td.type === 'model') {
+            if (td.type === 'model' || td.type === 'effekte') {
                 const ziel = angelegt[td._linkedAnimIdx ?? -1];
                 angelegt[i]._linkedAnimIdx = ziel?.type === 'bvh'
                     ? state.project.tracks.indexOf(ziel) : -1;

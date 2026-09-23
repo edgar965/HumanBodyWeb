@@ -40,6 +40,7 @@ from Genesis9.reglerfelder import G9reglerfelder
 from Genesis9.skelett import G9skelett
 from Genesis9.stueckfelder import G9stueckfelder
 from Genesis9.visemes import G9visemes
+from Genesis9.mimik import G9mimik
 
 __all__ = ['G9felderapi']
 
@@ -69,6 +70,21 @@ class G9felderapi:
         felder = G9visemes.felder(stufen)
         return JsonResponse({
             'stufen': stufen, 'visemes': G9visemes.liste(),
+            'achsen': G9felderapi.achsen(), 'felder': G9felderapi.kodiert(felder),
+        })
+
+    @staticmethod
+    @require_GET
+    def mimik(request):
+        u"""Allgemeine Mimik (Braue/Auge/Wange/Mund/Nase/Zunge, `G9mimik`) —
+        Mimik- und Script-Spur (22.09.2026: „ich hatte das ALLES in Auftrag
+        gegeben", nicht nur Lipsync)."""
+        if not G9pfade.vorhanden():
+            return JsonResponse({'fehler': FEHLT}, status=404)
+        stufen = G9felderapi.stufen(request)
+        felder = G9mimik.felder(stufen)
+        return JsonResponse({
+            'stufen': stufen, 'mimik': G9mimik.liste(),
             'achsen': G9felderapi.achsen(), 'felder': G9felderapi.kodiert(felder),
         })
 

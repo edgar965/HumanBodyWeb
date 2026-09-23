@@ -5,6 +5,8 @@ import { Spurerzeugung } from './spurerzeugung.js';
 import { Mimikspur } from './mimikspur.js';
 import { Mimikdialog } from './mimikdialog.js';
 import { Scriptspur } from './scriptspur.js';
+import { Effektschluessel } from './effektschluessel.js';
+import { Spurauswahl } from './spurauswahl.js';
 
 /**
  * Modellhinzufuegen — das zweigeteilte „Hinzufügen" einer Modellspur, für
@@ -42,6 +44,18 @@ export class Modellhinzufuegen {
                 Mimikdialog.oeffnen(mimik, klickbild, null);
             },
             'ctx-script-track': () => Scriptspur.hinzufuegen(spurNr, klickbild),
+            // Effekte haengt an der ANIMATION (nicht am Modell selbst, 22.09.2026) —
+            // ohne verknuepfte Animation erst eine anlegen, wie bei „Animation hinzufügen".
+            'ctx-effekte-track': () => {
+                const modell = state.project.tracks[spurNr];
+                let bewegung = state.project.getLinkedAnimation(modell);
+                if (!bewegung) {
+                    bewegung = Spurerzeugung.animation();
+                    modell._linkedAnimIdx = state.project.indexOf(bewegung);
+                }
+                const fx = Effektschluessel.spurZuAnimation(state.project.indexOf(bewegung));
+                Spurauswahl.waehlen(state.project.indexOf(fx));
+            },
         };
         for (const [aktion, befehl] of Object.entries(befehle)) {
             const eintrag = menue.querySelector(`[data-action="${aktion}"]`);

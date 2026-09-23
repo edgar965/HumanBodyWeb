@@ -14,6 +14,7 @@ import logging
 import os
 
 from ..daten.wrapperpfad import Wrapperpfad
+from .bildmodellkopfkatalog import Bildmodellkopfkatalog
 from .bildmodellpersonkatalog import Bildmodellpersonkatalog
 from .bildmodellsichtungskatalog import Bildmodellsichtungskatalog
 from .bildmodellzielkatalog import Bildmodellzielkatalog
@@ -44,15 +45,8 @@ class Bildmodellkatalog:
                 ],
                 'smplest_x',
             ),
-            (
-                'gesicht',
-                'Gesichtsform',
-                [
-                    ('pymafx_flame', 'FLAME aus PyMAF-X', '100 Formparameter des Gesichts'),
-                    ('keiner', 'Aus dem Körperschätzer', 'Kopf aus den 10 Körperparametern'),
-                ],
-                'keiner',
-            ),
+            # `gesicht` (FLAME aus PyMAF-X) ist seit 22.09.2026 der eigene Schritt `kopf`
+            # (`Bildmodellkopfkatalog`: MICA, PyMAF-X, FaceBuilder, mehrere Fotos).
             (
                 'silhouette',
                 'Silhouettenabgleich',
@@ -91,6 +85,7 @@ class Bildmodellkatalog:
                 'haupt',
             ),
         ],
+        'kopf': Bildmodellkopfkatalog.FELDER,
         'ziel': Bildmodellzielkatalog.FELDER,
         'anpassung': [
             (
@@ -222,11 +217,20 @@ class Bildmodellkatalog:
                 bool(s.get('available')),
                 '' if s.get('available') else str(s.get('info') or 'nicht eingerichtet'),
             )
-        aus[('gesicht', 'pymafx_flame')] = aus[('koerper', 'pymafx')]
+        aus.update(Bildmodellkopfkatalog.verfuegbarkeit(aus[('koerper', 'pymafx')]))
         aus[('video', 'gvhmr')] = cls._gvhmr()
         aus[('koerper', 'gvhmr')] = aus[('video', 'gvhmr')]
+        aus[('textur', 'keentools')] = cls._keentools()
         cls._zustand = aus
         return aus
+
+    @staticmethod
+    def _keentools():
+        """23.09.2026: Core Library (`pykeentools`) liegt lizenzlos in `_werkzeuge/keentools/core`,
+        das Blender-Addon ist installiert, aber es gibt weder eine aktive Lizenz (Edgars Konto)
+        noch einen Runner, der FaceBuilder headless für unsere Fotos aufruft — reine Vorbereitung
+        auf der Combo, kein Lauf dahinter."""
+        return (False, 'KeenTools-Anbindung noch nicht gebaut (keine Lizenz aktiviert, kein Runner)')
 
     @staticmethod
     def _gvhmr():

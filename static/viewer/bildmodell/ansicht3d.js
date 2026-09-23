@@ -31,6 +31,9 @@ export class Ansicht3d {
 
     /** localStorage-Schlüssel der Wahl Ziel/Modell. */
     static MERKER = 'bildmodell.ansicht3d.was';
+    //: Kamera-Position/-Blick, job-übergreifend gemerkt (23.09.2026, Edgar: „im Ergebnis Modell
+    //: rechts solltest du dir die Position des Modells merken") — wie bei `Kopfpipelineansicht`.
+    static KAMERA_MERKER = 'bildmodell.ansicht3d.kamera';
 
     constructor(auftrag) {
         this.auftrag = auftrag;
@@ -111,9 +114,44 @@ export class Ansicht3d {
 
     _kameraAuf(hoehe) {
         hoehe = hoehe || 1.7;
-        this.steuerung.target.set(0, hoehe * 0.52, 0);
-        this.kamera.position.set(0, hoehe * 0.55, hoehe * 2.4);
+        const gemerkt = this._kameraGemerkt();
+        if (gemerkt) {
+            this.kamera.position.set(gemerkt.px, gemerkt.py, gemerkt.pz);
+            this.steuerung.target.set(gemerkt.tx, gemerkt.ty, gemerkt.tz);
+        } else {
+            this.steuerung.target.set(0, hoehe * 0.52, 0);
+            this.kamera.position.set(0, hoehe * 0.55, hoehe * 2.4);
+        }
         this._kameraSteht = true;
+    }
+
+    _kameraGemerkt() {
+        try { return JSON.parse(localStorage.getItem(Ansicht3d.KAMERA_MERKER) || 'null'); }
+        catch (fehler) { return null; }
+    }
+
+    _kameraSpeichern() {
+        const p = this.kamera.position, t = this.steuerung.target;
+        try {
+            localStorage.setItem(Ansicht3d.KAMERA_MERKER, JSON.stringify(
+                { px: p.x, py: p.y, pz: p.z, tx: t.x, ty: t.y, tz: t.z }));
+        } catch (fehler) { /* privat */ }
+    }
+
+    /** Jede Änderung (Ziehen, Zoomen) 400 ms entprellt gemerkt, zusätzlich sofort bei
+     *  `pointerup`/`wheel` auf der Leinwand (23.09.2026, wie `Kopfpipelineansicht` — direkt am
+     *  DOM-Ereignis, falls OrbitControls' eigene Änderungserkennung einen Zug mal nicht zählt). */
+    _kameraMerkenEinrichten() {
+        this.canvas.addEventListener('pointerup', () => this._kameraSpeichern());
+        this.canvas.addEventListener('wheel', () => {
+            clearTimeout(this._kameraZeitstempel);
+            this._kameraZeitstempel = setTimeout(() => this._kameraSpeichern(), 400);
+        }, { passive: true });
+        let zeitstempel = null;
+        this.steuerung.addEventListener('change', () => {
+            clearTimeout(zeitstempel);
+            zeitstempel = setTimeout(() => this._kameraSpeichern(), 400);
+        });
     }
 
     // ------------------------------------------------------ Referenz (Testfall)
@@ -145,6 +183,7 @@ export class Ansicht3d {
         this.steuerung = new OrbitControls(this.kamera, this.canvas);
         this.steuerung.target.set(0, 0.9, 0);
         this.steuerung.enableDamping = true;
+        this._kameraMerkenEinrichten();
         this._lichter();
         const boden = new THREE.GridHelper(2, 10, 0x445566, 0x2a3340);
         this.szene.add(boden);

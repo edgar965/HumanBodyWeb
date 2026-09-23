@@ -7,6 +7,13 @@
  * Alternativen und Verfügbarkeit; hier wird je Feld eine Auswahl gebaut,
  * nicht verfügbare Einträge ausgegraut mit Grund im Titel, dazu das
  * Zahlenfeld „Größe cm". `werte()` liefert das Wörterbuch für den Start.
+ *
+ * Die Blöcke „Kopf" (`kopfBlock`) und „Textur" (`texturBlock`) werden NICHT unter `#optionen`
+ * gehängt, sondern nur gebaut und gehalten — `Kopfpipelineansicht` (22.09.2026, Edgar: „ich
+ * brauche Auswahlboxen für Fotos, daneben Auswahl für die Pipeline, daneben das Ergebnis in
+ * 3D"; 23.09.2026: „die Texturberechnung in dem gleiche Workflow, unter den Combo boxen für
+ * Flame usw" — die Kette „Kopf berechnen" läuft ja bis „textur" durch) hängt beide direkt an
+ * die Kopf-Fotos. `stellen()`/`werte()` finden sie trotzdem — egal wo sie im Dokument hängen.
  */
 export class Optionenformular {
 
@@ -14,12 +21,16 @@ export class Optionenformular {
         this.katalog = katalog;
         this.optionen = optionen || {};
         this.feld = document.getElementById('optionen');
+        this.kopfBlock = null;
+        this.texturBlock = null;
         this.bauen();
     }
 
     bauen() {
         if (!this.feld) return;
         this.feld.innerHTML = '';
+        this.kopfBlock = null;
+        this.texturBlock = null;
         for (const schritt of this.katalog.schritte) {
             if (!schritt.felder.length) continue;
             const block = document.createElement('fieldset');
@@ -30,6 +41,8 @@ export class Optionenformular {
             block.appendChild(titel);
             for (const f of schritt.felder) block.appendChild(this.zeile(f));
             if (schritt.schluessel === 'ziel') block.appendChild(this.groesse());
+            if (schritt.schluessel === 'kopf') { this.kopfBlock = block; continue; }
+            if (schritt.schluessel === 'textur') { this.texturBlock = block; continue; }
             this.feld.appendChild(block);
         }
         this.stellen(this.optionen);
@@ -81,7 +94,8 @@ export class Optionenformular {
     stellen(optionen) {
         if (!this.feld) return;
         for (const [feld, wert] of Object.entries(optionen || {})) {
-            const e = this.feld.querySelector(`[name="${feld}"]`);
+            const e = this.feld.querySelector(`[name="${feld}"]`) || this.kopfBlock?.querySelector(`[name="${feld}"]`)
+                || this.texturBlock?.querySelector(`[name="${feld}"]`);
             if (!e || wert === null || wert === undefined) continue;
             const alt = e.value;
             e.value = String(wert);
@@ -93,7 +107,10 @@ export class Optionenformular {
     werte() {
         const aus = {};
         if (!this.feld) return aus;
-        for (const e of this.feld.querySelectorAll('select[name], input[name]')) {
+        const felder = [...this.feld.querySelectorAll('select[name], input[name]')];
+        if (this.kopfBlock) felder.push(...this.kopfBlock.querySelectorAll('select[name], input[name]'));
+        if (this.texturBlock) felder.push(...this.texturBlock.querySelectorAll('select[name], input[name]'));
+        for (const e of felder) {
             aus[e.name] = e.type === 'number' ? (e.value === '' ? null : Number(e.value)) : e.value;
         }
         return aus;

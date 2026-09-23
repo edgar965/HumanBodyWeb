@@ -3,11 +3,11 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { sharedState } from '../character_core.js';
 import { loadTrackCharacter } from './spur_charakter.js';
 import { Clipfehlt } from './clipfehlt.js';
 import { Studioanzeige } from './studioanzeige.js';
 import { Retargetziel } from './retargetziel.js';
+import { Modellzustaendigkeit } from './modellzustaendigkeit.js';
 
 /**
  * Clipanimation — die retargetete Bewegung eines Clips holen und einhängen.
@@ -37,6 +37,23 @@ export class Clipanimation {
 
     /** Bewegung laden, glätten, einhängen. */
     static async laden(spur, clip) {
+        // ERST die Figur sichern, DANN das Ziel bestimmen (22.09.2026, Edgar:
+        // „2 mal retarget" — gefunden per Log: jeder Genesis-9-/UMA-/…-Clip
+        // holte den Retarget ZWEIMAL). Vorher stand `Retargetziel.wahl` hier
+        // VOR `_figurSichern` — auf einer frischen Spur sind `spur.modell`/
+        // `spur.figurHoehe` dann noch leer (erst `Spurfigur.laden()` setzt sie,
+        // aufgerufen aus `_figurSichern`), `wahl(undefined)` liefert darum den
+        // generischen DEF-Schlüssel statt z. B. `genesis9:Olesia1:1.605`. Der
+        // erste Retarget lief also fürs FALSCHE Ziel — und sobald die Figur
+        // kurz danach stand, erkannte `Bvhspur._neuHolen` den Schlüsselwechsel
+        // und holte denselben Clip ein zweites Mal, diesmal richtig. Gemessen
+        // (TechnoDance, vier Clips): 2,6 s je Clip verschwendet für den ersten,
+        // falschen Retarget. Die Umstellung macht die Seite NICHT weniger
+        // bedienbar — beide Aufrufe liefen schon vorher asynchron, ohne den
+        // Hauptfaden zu blockieren (Edgar: „Seite bedienbar, auch wenn Retarget
+        // noch läuft" — das bleibt so, `_figurSichern` ist ebenfalls nur ein
+        // `await`); sie spart nur den unnötigen ersten Durchlauf.
+        await Clipanimation._figurSichern(spur);
         // Die Figur der Spur bestimmt das Zielskelett (15.09.2026): HumanBody →
         // DEF, sonst UMA/SMPL/MakeHuman/UMA Python mit ihren Namen.
         const ziel = Retargetziel.wahl(spur.modell, spur.figurHoehe);
@@ -51,6 +68,19 @@ export class Clipanimation {
         // Modellclip), nicht die Länge der Quelle — die bliebe sonst stehen,
         // sobald der Retarget zurückkommt (Clipbearbeitung.standbildEinfuegen).
         if (clip.type !== 'freeze') {
+            // `trimIn`/`trimOut` sind ABSOLUTE Bildzahlen einer Split-Hälfte
+            // (Clipbearbeitung.teilen/standbildEinfuegen) — bezogen auf das
+            // BISHERIGE `totalFrames`. Liefert ein Retarget-Zielwechsel eine
+            // andere Bildzahl (Edgar, 21.09.2026: „hast du gerade die Animation
+            // zerschnitten?" — ein Standbild-Rest driftete nach Modellwechsel),
+            // bliebe der Trim auf den ALTEN Bildzahlen stehen und die Hälfte
+            // verlängerte oder verkürzte sich unbemerkt. Proportional umrechnen.
+            if (clip.totalFrames > 0 && (clip.trimIn > 0 || clip.trimOut > 0)
+                    && daten.frame_count !== clip.totalFrames) {
+                const faktor = daten.frame_count / clip.totalFrames;
+                clip.trimIn = Math.round(clip.trimIn * faktor);
+                clip.trimOut = Math.round(clip.trimOut * faktor);
+            }
             clip.totalFrames = daten.frame_count;
             clip.fps = daten.frame_count / daten.duration;
         }
@@ -110,9 +140,22 @@ export class Clipanimation {
     /** Figur nachladen, wenn die Spur noch keine hat. */
     static async _figurSichern(spur) {
         if (spur.mesh) return;
-        if (!sharedState.rigifySkeletonData || !sharedState.skinWeightData) return;
+        // `loadTrackCharacter` wartet selbst auf die HumanBody-Daten, wenn die
+        // Spur sie braucht (`quelle === 'modell'`) — alle anderen Figurarten
+        // (Genesis 9, UMA, MakeHuman, SMPL, UMA Python) nie (`spur_charakter.js`).
         await loadTrackCharacter(spur);
         if (spur.group) spur.group.visible = true;
+        // Ohne das hier hielt `Modellspur.anwenden()` (spur_anwenden → modellspur.js)
+        // dasselbe Preset weiterhin für „nicht geladen" — der erste `applyPlayhead()`
+        // nach diesem Bau baute die IDENTISCHE Figur ein zweites Mal (Edgar,
+        // 22.09.2026: „ich brauche auch die Beschleunigung im BVH-Studio"; gemessen:
+        // jeder Projektstart/jedes Undo lud Genesis 9 zweimal statt einmal, macht bei
+        // körper+4 Kleidungsstücken × käfig+fein 20 statt 10 Anfragen). Passt das
+        // tatsächlich gewünschte Preset einer Modellspur später NICHT zu diesem hier
+        // (z. B. ein Modell-Clip verlangt eine ANDERE Figur), erkennt `Modellspur.
+        // anwenden` das trotzdem korrekt (der Vergleich schlägt dann fehl) und baut
+        // neu — dieser Eintrag ist nur eine Abkürzung für den Treffer-Fall.
+        spur.meshActive = Modellzustaendigkeit.schluessel({ quelle: spur.quelle, preset: spur.preset });
     }
 
     // ------------------------------------------------------------------ Bauen

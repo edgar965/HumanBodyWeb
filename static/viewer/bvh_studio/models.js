@@ -3,6 +3,7 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
+import { Effektebindung } from './effektebindung.js';
 
 // =========================================================================
 // Timeline — top-level container for the project timeline.
@@ -36,13 +37,23 @@ export class Timeline {
     get modelTracks()  { return this._allTracks.filter(t => t.type === 'model'); }
     get cameraTracks() { return this._allTracks.filter(t => t.type === 'camera'); }
     get lightTracks()  { return this._allTracks.filter(t => t.type === 'light'); }
+    get effekteTracks(){ return this._allTracks.filter(t => t.type === 'effekte'); }
 
-    // ----- Computed duration (seconds) -----
+    /**
+     * Berechnete Dauer (Sekunden). Fuer eine BVH-Spur mit verknuepfter
+     * Effekte-Spur zaehlt die ANZEIGE-Stelle ihrer Clips, nicht die
+     * Inhalt-Stelle (`clip.endFrame`) — ein Standbild/eine Zeitlupe am Ende
+     * der Spur macht das Projekt sonst zu frueh „fertig" (Edgar, 21.09.2026).
+     */
     get duration() {
         let maxEnd = 0;
-        for (const track of this._allTracks) {
+        for (let i = 0; i < this._allTracks.length; i++) {
+            const track = this._allTracks[i];
+            const gestreckt = track.type === 'bvh';
             for (const clip of track.clips) {
-                const end = clip.endFrame / this.fps;
+                const bild = gestreckt ? Effektebindung.anzeigeBild(i, clip.endFrame)
+                                       : clip.endFrame;
+                const end = bild / this.fps;
                 if (end > maxEnd) maxEnd = end;
             }
         }
@@ -73,7 +84,7 @@ export class Timeline {
         // (letzteres fehlte bis 15.09.2026 — nach dem Löschen einer Spur davor
         // zeigte die Mimikspur auf die falsche Spur).
         for (const t of this._allTracks) {
-            if (t.type === 'model' && t._linkedAnimIdx >= 0) {
+            if ((t.type === 'model' || t.type === 'effekte') && t._linkedAnimIdx >= 0) {
                 if (t._linkedAnimIdx === idx) t._linkedAnimIdx = -1;
                 else if (t._linkedAnimIdx > idx) t._linkedAnimIdx--;
             }
@@ -108,7 +119,7 @@ export class Timeline {
 export class Track {
     constructor(name, preset = 'FemaleGarment', bodyType = 'Female_Caucasian') {
         this.name = name;
-        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model' | 'mimik' | 'script'
+        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model' | 'mimik' | 'script' | 'effekte'
         this.preset = preset;
         this.quelle = 'modell';   // Figurart: modell (HumanBody) | uma | makehuman | smpl | umapython | genesis9
         this.bodyType = bodyType;
@@ -142,7 +153,7 @@ export class Track {
 // =========================================================================
 export class Clip {
     constructor(category, name, totalFrames, fps) {
-        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf' | 'script' | 'lipsync'
+        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf' | 'script' | 'lipsync' | 'freeze' | 'speed_kf'
         this.category = category;
         this.name = name;
         this.totalFrames = totalFrames;
@@ -160,12 +171,12 @@ export class Clip {
         this.data = {};
     }
     get duration() {
-        if (this.type === 'camera_kf' || this.type === 'light_kf') return 0;
+        if (this.type === 'camera_kf' || this.type === 'light_kf' || this.type === 'speed_kf') return 0;
         if (this.type === 'audio') return (this.data.audioDuration || 0) / this.speed;
         return (this.totalFrames - this.trimIn - this.trimOut) / (this.fps * this.speed);
     }
     get endFrame() {
-        if (this.type === 'camera_kf' || this.type === 'light_kf') return this.startFrame;
+        if (this.type === 'camera_kf' || this.type === 'light_kf' || this.type === 'speed_kf') return this.startFrame;
         return this.startFrame + Math.ceil(this.duration * state.project.fps);
     }
 }

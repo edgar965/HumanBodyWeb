@@ -13,7 +13,9 @@ import { Zielkaefig } from './zielkaefig.js';
  */
 export class Proportionen3dbuehne {
 
-    constructor(canvas) {
+    /** @param optionen `{gitter}` — Bodenraster zeigen (Vorgabe an; Edgar, 23.09.2026: „Gitter
+     *  weg in dem 3D des Kopfes" — beim freischwebenden Kopf ohne Bezug zum Boden). */
+    constructor(canvas, optionen = {}) {
         this.canvas = canvas;
         this._laeuft = false;
         this.foto = null;     // Kamera des Fotos (`fotokamera`) oder null = freie Kamera
@@ -33,7 +35,7 @@ export class Proportionen3dbuehne {
         fuell.position.set(-2, -0.5, 1.5);
         this.kamera.add(haupt, fuell);
         this.szene.add(this.kamera);
-        this.szene.add(new THREE.GridHelper(2, 10, 0x445566, 0x2a3340));
+        if (optionen.gitter !== false) this.szene.add(new THREE.GridHelper(2, 10, 0x445566, 0x2a3340));
         this.kaefig = new Zielkaefig(this.szene);
         if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.groesse()).observe(canvas);
     }

@@ -30,19 +30,32 @@ export class Kameraschluessel {
         if (!spur || spur.type !== 'camera') return;
         pushUndo('Kamera Keyframe');
         const stelle = (bild != null) ? bild : state.playheadFrame;
-        const schluessel = new Clip(null,
-                                    `Kameraposition ${spur.clips.length + 1}`,
-                                    0, state.project.fps);
+        const schluessel = new Clip(null, '', 0, state.project.fps);
         schluessel.type = 'camera_kf';
         schluessel.startFrame = stelle;
         schluessel.data = Kameraschluessel._stand();
         spur.clips.push(schluessel);
-        spur.clips.sort((a, b) => a.startFrame - b.startFrame);
+        Kameraschluessel.renummerieren(spur);
         fn.updateDuration();
         fn.renderTimeline();
         fn.updateProperties();
         Protokoll.info('BVH Studio',
                        `Kameraposition gespeichert bei Frame ${stelle}`);
+    }
+
+    /**
+     * Kamerapositionen als aufsteigende Zahlen in Zeitreihenfolge — wird eine
+     * dazwischen eingefügt (oder eine gelöscht/verschoben), ändern sich die
+     * Nummern der anderen mit (Edgar, 22.09.2026). Sortiert `spur.clips`
+     * gleich mit, statt nur die Namen zu vergeben.
+     */
+    static renummerieren(spur) {
+        spur.clips.sort((a, b) => a.startFrame - b.startFrame);
+        let n = 0;
+        for (const clip of spur.clips) {
+            if (clip.type !== 'camera_kf') continue;
+            clip.name = `Kameraposition ${++n}`;
+        }
     }
 
     static _stand() {

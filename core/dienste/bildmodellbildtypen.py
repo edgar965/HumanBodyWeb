@@ -206,6 +206,10 @@ class Bildmodellbildtypen:
         # welche davon genommen werden"): zählt das GVHMR-Ergebnis dieses Bildes zur Form?
         if 'gvhmr_an' in rumpf:
             eintrag['gvhmr_an'] = bool(rumpf['gvhmr_an'])
+        # „Kopf" (Edgar, 22.09.2026: „mehrere Fotos auswählen für den Kopf"): geht dieses Bild in
+        # die Kopf-Pipeline (`Bildmodellkopf.bilder`)? None = Vorgabe (Kopf-Hauptbilder).
+        if 'kopf_an' in rumpf:
+            eintrag['kopf_an'] = None if rumpf['kopf_an'] is None else bool(rumpf['kopf_an'])
         if manuell:
             eintrag['manuell'] = True
         return manuell

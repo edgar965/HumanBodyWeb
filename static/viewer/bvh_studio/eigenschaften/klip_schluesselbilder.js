@@ -37,8 +37,8 @@ export class Schluesselbildeigenschaften {
             ${M.zeile('Frame', M.zahl('prop-kf-frame', clip.startFrame, 'min="0"'))}
             ${lage}${dreh}
             ${M.zeile('FOV', M.zahl('prop-kf-fov', d.fov || 50, 'min="10" max="120"'))}
-            ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''}
-                id="prop-kf-fade"> <span class="kaestchen-hinweis">aus = Sprung</span>`)}
+            ${M.zeile('Bis zum nächsten', Schaltknopf.bauen('prop-kf-fade', d.fade !== false,
+                true, ['Interpoliert', 'Statisch']))}
             ${M.zeile('Interp.', `<select id="prop-kf-interp" ${d.fade === false ? 'disabled'
                 : ''}>${stufen}</select>`)}
             <div class="abstand-6">
@@ -63,8 +63,8 @@ export class Schluesselbildeigenschaften {
             ${d.distance == null ? ''
                 : Lichtfelder.reichweite('prop-lkf', d.distance)}
             ${M.zeile('Licht', Schaltknopf.bauen('prop-lkf-visible', an, true))}
-            ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''}
-                id="prop-lkf-fade"> <span class="kaestchen-hinweis">aus = Sprung</span>`)}`);
+            ${M.zeile('Bis zum nächsten', Schaltknopf.bauen('prop-lkf-fade', d.fade !== false,
+                true, ['Interpoliert', 'Statisch']))}`);
     }
 
     /** Bildnummer aendern: Clips neu sortieren, Zeitleiste neu zeichnen. */
@@ -89,9 +89,9 @@ export class Schluesselbildeigenschaften {
              (e) => { clip.data.fov = parseFloat(e.target.value) || 50; });
         M.an('prop-kf-interp', 'change',
              (e) => { clip.data.interpolation = e.target.value; });
-        M.an('prop-kf-fade', 'change', (e) => {
-            clip.data.fade = e.target.checked;
-            fn.updateProperties();  // Auswahl Interpolation frei-/sperren
+        M.an('prop-kf-fade', 'click', () => {
+            clip.data.fade = clip.data.fade === false;   // umschalten
+            fn.updateProperties();  // Knopftext + Auswahl Interpolation frei-/sperren
         });
         M.an('prop-kf-set-view', 'click',
              () => Schluesselbildeigenschaften._ansichtUebernehmen(clip));
@@ -130,7 +130,10 @@ export class Schluesselbildeigenschaften {
         });
         M.an('prop-lkf-distance', 'change',
              (e) => { clip.data.distance = parseFloat(e.target.value) || 50; });
-        M.an('prop-lkf-fade', 'change', (e) => { clip.data.fade = e.target.checked; });
+        M.an('prop-lkf-fade', 'click', () => {
+            clip.data.fade = clip.data.fade === false;   // umschalten
+            fn.updateProperties();  // Knopftext neu
+        });
         M.an('prop-lkf-visible', 'click', () => {
             clip.data.visible = !(clip.data.visible !== false);  // undefined → true
             fn.updateProperties();

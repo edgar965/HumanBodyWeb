@@ -85,7 +85,7 @@ class Bildmodellauftrag(models.Model):
     #: Was der Nutzer an einem Eintrag stellt (`Bildmodellbildtypen.stellen`, Spalte „Nr.") —
     #: der Arbeitsprozess darf es beim Speichern seiner Befunde nicht überschreiben.
     NUTZERFELDER = ('kategorie', 'ansicht', 'teil', 'hauptbild', 'gewicht', 'nutzung',
-                    'textur_an', 'gvhmr_an', 'reihe', 'textur_reihe', 'manuell', 'freisteller')
+                    'textur_an', 'gvhmr_an', 'kopf_an', 'reihe', 'textur_reihe', 'manuell', 'freisteller')
 
     def bilder_sichern(self, *weitere, behalten=()):
         """`bilder` (und `weitere` Felder) speichern — die Nutzerfelder der Einträge kommen

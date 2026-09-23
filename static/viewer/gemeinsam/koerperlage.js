@@ -143,13 +143,20 @@ export class Koerperlage {
         }
     }
 
-    /** Die Kapseln der Gliedmaßen im lokalen Raum der Figur, als flaches vec4-Feld. */
+    /**
+     * Die Kapseln der Gliedmaßen im lokalen Raum der Figur, als flaches
+     * vec4-Feld. Die Gruppen-ID der Kapsel (`Koerperzuordnung.GRUPPEN`)
+     * reitet im sonst ungenutzten `.w` des ersten Vector4 mit — der
+     * Stoff-Shader überspringt damit die eigene Gliedmaße (22.09.2026,
+     * `oberflaecheglsl.js`).
+     */
     static _kapseln(s, inst, koerper) {
         if (!s.kapseln) s.kapseln = Stoffkapseln.anlegen(inst);
         const kapseln = s.kapseln;
         const max = Koerperlage.KAPSELN;
         if (!s.kapselwerte) s.kapselwerte = Array.from({ length: 4 * max }, () => new THREE.Vector4());
         const welt = Stoffkapseln.bild(kapseln);
+        const gruppen = Stoffkapseln.gruppen(kapseln);
         const lokal = Koerperlage._m.copy(koerper.matrixWorld).invert();
         const dreh = Koerperlage._q.setFromRotationMatrix(lokal);
         const v = Koerperlage._v;
@@ -157,7 +164,7 @@ export class Koerperlage {
         s.anzahl = Math.min(max, kapseln.length);
         for (let i = 0; i < s.anzahl; i++) {
             const o = je * i, w = s.kapselwerte;
-            v.set(welt[o], welt[o + 1], welt[o + 2]).applyMatrix4(lokal); w[4 * i].set(v.x, v.y, v.z, 0);
+            v.set(welt[o], welt[o + 1], welt[o + 2]).applyMatrix4(lokal); w[4 * i].set(v.x, v.y, v.z, gruppen[i]);
             v.set(welt[o + 3], welt[o + 4], welt[o + 5]).applyMatrix4(lokal); w[4 * i + 1].set(v.x, v.y, v.z, 0);
             v.set(welt[o + 6], welt[o + 7], welt[o + 8]).applyQuaternion(dreh); w[4 * i + 2].set(v.x, v.y, v.z, 0);
             w[4 * i + 3].set(welt[o + 9], welt[o + 10], welt[o + 11], welt[o + 12]);

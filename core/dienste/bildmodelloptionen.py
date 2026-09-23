@@ -22,7 +22,10 @@ __all__ = ['Bildmodelloptionen']
 class Bildmodelloptionen:
     SCHRITTE = [
         ('sichtung', 'Zuschnitt und Sichtung'),
-        ('schaetzung', 'Schätzung (Körper, Gesicht)'),
+        ('schaetzung', 'Schätzung (Körper)'),
+        # 22.09.2026: eigene Pipeline für den Kopf (`Bildmodellkopf`: MICA, PyMAF-X, FaceBuilder,
+        # mehrere Fotos) — ihr FLAME-Kopf geht ins Zielnetz und in den Kopf-Fit.
+        ('kopf', 'Kopf (FLAME-Pipeline)'),
         ('ziel', 'Zielnetz'),
         ('anpassung', 'Anpassung der Regler'),
         ('rest', 'Restmorph'),
