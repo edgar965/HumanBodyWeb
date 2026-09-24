@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% fassungspfad 'css/menueleiste.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hoehengriff.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/stueckfarbe.css' %}">
 {# Der Stoffschwung-Worker (dForce-Kleidung) liegt außerhalb des Bündels: Pfad mit Fassung. #}
 <meta name="stoffarbeiter" content="{% fassungspfad 'viewer/gemeinsam/stoffarbeiter.js' %}">
 <style>
@@ -698,6 +699,12 @@
                     Charakter auswählen
                 </div>
                 <div id="prop-content" class="hb-versteckt">
+                    <!-- Daz-Stück: Teilnetze und Farben je Materialgruppe (`dazeigenschaften.js`) —
+                         oben, weil die Figur-Bereiche darunter bei Genesis 9 sichtbar bleiben -->
+                    <div class="prop-section hb-versteckt" id="prop-daz-section">
+                        <div class="prop-section-title">Daz-Stück · Teilnetze und Farben</div>
+                        <div id="prop-daz-teile"></div>
+                    </div>
                     {% include "_gemeinsame_regler.html" %}
                     <!-- Transform (body context) -->
                     <div class="panel-section prop-section" id="prop-transform-section">

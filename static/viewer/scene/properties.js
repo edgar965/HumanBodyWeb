@@ -16,6 +16,7 @@ import { Smpleigenschaften } from './smpl/smpleigenschaften.js';
 import { Umapythoneigenschaften } from './umapython/umapythoneigenschaften.js';
 import { Mheigenschaften } from './makehuman/mheigenschaften.js';
 import { Genesis9eigenschaften } from './genesis9/genesis9eigenschaften.js';
+import { Dazeigenschaften } from './genesis9/dazeigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
@@ -265,14 +266,13 @@ export function updateEquippedList(inst) {
 export function _updatePropContext() {
     const bodySections = ['prop-transform-section', 'prop-equipped-section', 'prop-bodytype-section',
         'prop-details-section', 'prop-morphs-section'];
-    // Beide Pruefungen fragen dasselbe dreimal ab; nur die Vorsilbe des
-    // Schluessels unterscheidet sie.
+    // Nur die Vorsilbe des Schluessels unterscheidet die Stoffarten; Daz: `Dazeigenschaften`.
     const teilnetz = state._selectedSubMesh;
     const istStoff = Boolean(teilnetz) && teilnetz.type === 'cloth';
     const isGarment = istStoff && teilnetz.key.startsWith('gar_');
     const isMH = istStoff && teilnetz.key.startsWith('mh_');
     const isHair = state._selectedSubMesh && state._selectedSubMesh.type === 'hair';
-    const isAsset = isGarment || isMH || isHair;
+    const isAsset = isGarment || isMH || isHair || Dazeigenschaften.zeigen(teilnetz);
     for (const id of bodySections) { const el = document.getElementById(id); if (el) el.style.display = isAsset
         ? 'none' : ''; }
     // Klasse UND Stil wie beim Haar darunter — sonst bleibt `hb-versteckt`

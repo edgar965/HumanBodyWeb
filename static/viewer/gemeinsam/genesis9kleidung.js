@@ -4,6 +4,7 @@ import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
+import { Umfaerbung } from './umfaerbung.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -108,6 +109,7 @@ export class Genesis9kleidung {
             Oberflaechenbindung.anlegen(netz, teil);
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
+        Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);    // eigene Farbe (24.09.2026)
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);
         Genesis9kleidung.melden(inst, kennung, true);
         return daten.teile?.length || 0;

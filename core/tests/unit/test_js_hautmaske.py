@@ -29,13 +29,17 @@ Hier wird die Entscheidung geprüft, WAS als „unter dem Stoff" gilt:
    wie die 136 Wimpernstreifen des HumanBody-Netzes — bleibt frei
    (12.09.2026, Edgar: „die Wimperneinstellung funktioniert nicht": mit
    Kleidung waren alle 3.672 Wimpernecken „verdeckt", Gruppe 2 leer).
+9. Eine Insel über der Punktgrenze, aber unter der Flächengrenze wird
+   geschlossen (24.09.2026, Genesis-9-Achsel: 298 Punkte, 38 cm²); über der
+   Flächengrenze oder ohne sie bleibt sie frei.
 
 Sabotage-Gegenprobe: `t >= -tiefe` → `true` in `_einStueck` macht Fall 3 rot;
 `Math.abs(d) > eng` → `true` in `lockereRandpunkte` macht Fall 1 rot (Streifen
 am anliegenden Rohr); `vol >= 0 ? 1 : -1` → `1` (`hautmaskegeometrie.js`)
 macht Fall 4 rot; `maske[a] && maske[b] && maske[c]` → `maske[a] || ...`
 macht Fall 5 rot; `g <= hoechstens && g < groesste` → `false` (`maskeninseln.js`)
-macht Fall 6 rot; `kueste.has(r)` weggelassen macht Fall 7 rot.
+macht Fall 6 rot; `kueste.has(r)` weggelassen macht Fall 7 rot;
+`<= flaecheMax` → `false` (`maskeninseln.js`) macht Fall 9 rot.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
@@ -198,6 +202,32 @@ if (ohne.gruppen.length !== 0 || ohne.index.length !== neu.index.length) fehl('o
     const zuMit = Maskeninseln.schliessen(mit, Uint32Array.from(T8), 200, P8);
     if (zuOhne !== 4) fehl('ohne Lagen: ' + zuOhne + ' geschlossen statt 4');
     if (zuMit !== 0) fehl('mit Lagen: Naht-Kopie trennt die freie Haut (' + zuMit + ' geschlossen)');
+}
+
+// --- 9. Viele Punkte, kleine Flaeche: die Insel schliesst nach Flaeche ----
+{
+    const { Maskeninseln } = await import(MODUL.replace('hautmaske.js', 'maskeninseln.js'));
+    // Gitter 60 x 60 im Abstand von 1 mm; ein verdeckter Ring um r, c = 5..34,
+    // darin die Insel r, c = 6..33 (784 Punkte, 27 x 27 mm = 0,000729 m²),
+    // draussen die freie Haut (2.700 Punkte, die groesste Gruppe).
+    const N = 60, P9 = new Float32Array(N * N * 3), T9 = [];
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) P9.set([0.001 * c, 0.001 * r, 0], 3 * (r * N + c));
+    for (let r = 0; r + 1 < N; r++) for (let c = 0; c + 1 < N; c++) {
+        const a = r * N + c; T9.push(a, a + 1, a + N, a + 1, a + N + 1, a + N);
+    }
+    const ring = () => {
+        const m = new Uint8Array(N * N);
+        for (let r = 5; r <= 34; r++) for (let c = 5; c <= 34; c++) if (r === 5 || r === 34 || c === 5 || c === 34) m[r * N + c] = 1;
+        return m;
+    };
+    const nurPunkte = ring(), zuGross = ring(), klein = ring();
+    const a = Maskeninseln.schliessen(nurPunkte, Uint32Array.from(T9), 200, P9, 0);
+    const b = Maskeninseln.schliessen(zuGross, Uint32Array.from(T9), 200, P9, 0.0005);
+    const c = Maskeninseln.schliessen(klein, Uint32Array.from(T9), 200, P9, 0.001);
+    if (a !== 0) fehl('ohne Flaeche: 784 Punkte ueber der Punktgrenze geschlossen (' + a + ')');
+    if (b !== 0) fehl('0,000729 m² ueber 0,0005 m² geschlossen (' + b + ')');
+    if (c !== 784) fehl('Insel unter 0,001 m² nicht geschlossen: ' + c + ' statt 784');
+    if (klein[0] !== 0) fehl('freie Haut nach Flaeche verdeckt');
 }
 
 console.log(JSON.stringify({ ok: true, unter, frei, entfernt: neu.entfernt }));

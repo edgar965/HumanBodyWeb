@@ -124,52 +124,6 @@ export class Zeitleistenspuren {
         }
     }
 
-    /**
-     * Klarer Hinweis, wenn eine Animation gerade NICHT spielt — Figur noch
-     * nicht geladen, oder keine Bewegung an dieser Abspielkopf-Stelle (Edgar,
-     * 23.09.2026: „mal funktioniert Kin1 Animation mal nicht ... mach einen
-     * klaren Hinweis, falls die noch nicht geladen ist, oder nicht spielt").
-     * `Bvhspur` schreibt `_lastLogState` bei jedem Zustandswechsel
-     * (`no-mixer`, `no-clip-in-range`, `playing`, `stopped`) — hier nur
-     * gelesen, kein eigener Zustand. Eine Modellspur zeigt den Hinweis ihrer
-     * verknüpften Animation mit an, auch wenn die Unterreihe zugeklappt ist.
-     */
-    static status(track, y) {
-        const spur = track.type === 'model'
-            ? state.project.getLinkedAnimation(track) : track;
-        if (!spur || spur.type !== 'bvh') return;
-        // Eine Spur ganz ohne Bewegungsclips hat nie einen Mixer — das ist
-        // der Normalzustand vor dem ersten Clip, kein "lädt noch".
-        if (!spur.clips.some(c => c.type === 'bvh' || c.type === 'freeze')) return;
-        let text, farbe;
-        if (spur._loadingPreset) {
-            // Konkrete Wartezeit statt vager Formulierung — gemessen (23.09.2026,
-            // Kin1: Netz allein ~7 s, mit Retarget bis zu ~35 s) kann Netz + erster
-            // Bewegungsabgleich zusammen bis über eine Minute dauern.
-            const sek = spur._loadingSeit ? Math.round((Date.now() - spur._loadingSeit) / 1000) : 0;
-            text = `⏳ „${spur._loadingPreset}" lädt seit ${sek}s (kann bis zu 1 Min. dauern)`;
-            farbe = 'rgba(245,158,11,0.9)';
-        } else if (spur._lastLogState === 'no-mixer') {
-            text = '⏳ Figur lädt …';
-            farbe = 'rgba(245,158,11,0.9)';
-        } else if (spur._lastLogState === 'no-clip-in-range') {
-            text = '⚠ keine Bewegung hier';
-            farbe = 'rgba(239,68,68,0.9)';
-        } else {
-            return;
-        }
-        const ctx = Zeitleistenflaeche.ctx;
-        ctx.font = 'bold 10px sans-serif';
-        const breite = ctx.measureText(text).width + 10;
-        const x = HEADER_WIDTH + 4;
-        ctx.fillStyle = farbe;
-        ctx.fillRect(x, y + 4, breite, 16);
-        ctx.fillStyle = '#fff';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, x + 5, y + 12);
-        ctx.textBaseline = 'alphabetic';
-    }
-
     /** Verbindungslinien ueber den Balken. */
     static linien(track, y, pps) {
         // Draw interpolation lines for camera/light keyframe tracks (über Balken gelegt)

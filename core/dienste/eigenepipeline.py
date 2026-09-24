@@ -86,7 +86,7 @@ class Eigenepipeline:
         {
             'teil': 'Hände (2 × 15)',
             'laeuft': 'SMPLest-X (je Bild) oder GEM-X (SOMA-Finger, zeitlich modelliert — '
-            '`Somahaende` überträgt sie ohne Retarget: gleiche Ruhelage, Mittelhand '
+            '`Somahaende` überträgt sie ohne Retarget, Ruhelagen je Glied angeglichen, Mittelhand '
             'und Grundgelenk verkettet)',
             'kandidat': 'HaMeR (Berkeley, je Bild)',
             'anmerkung': 'SMPL-X’ Handmodell IST MANO; SMPLest-X’ Vorhersage ist relativ zur '

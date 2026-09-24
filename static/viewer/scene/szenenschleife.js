@@ -50,6 +50,8 @@ export class Szenenschleife extends Zeichenschleife {
         this._arbeitsvektor = new THREE.Vector3();
         /** Zeit der Animation beim letzten Bodenfix — für den Zeitregler bei Pause. */
         this._bodenZeit = null;
+        /** Zeit der Aktion bei der letzten Frame-Anzeige — Nachziehen bei Pause. */
+        this._angezeigteZeit = null;
     }
 
     /**
@@ -89,6 +91,11 @@ export class Szenenschleife extends Zeichenschleife {
             // dieses Bildes gesetzt hat.
             Posenabsatz.takt();
             this.zeitanzeige();
+        } else if (state.currentAction && state.currentAction.time !== this._angezeigteZeit) {
+            // Bei Pause verstellt die Zeitleiste (Maus oder Pfeiltasten) die
+            // Aktion ohne diesen Takt — die Frame-Anzeige blieb dann stehen
+            // (Edgar, 24.09.2026). Nachgezogen wird nur, wenn sich die Zeit änderte.
+            this.zeitanzeige();
         }
         // Zopfschwung (18.09.2026): die eigenen Knochen der Daz-Haare — NACH
         // dem Mixer, VOR dem Weichgewebe, das ihr Tempo liest.
@@ -119,6 +126,7 @@ export class Szenenschleife extends Zeichenschleife {
         const clip = aktion?.getClip();
         if (!clip) return;
         const zeit = aktion.time;
+        this._angezeigteZeit = zeit;
         const dauer = clip.duration;
         const bildzeit = clip.tracks[0]?.times?.[1]
                          || Szenenschleife.ERSATZ_BILDZEIT_S;

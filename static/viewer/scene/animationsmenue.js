@@ -60,7 +60,7 @@ export class Animationsmenue {
                 category: kategorie, name, new_name: neu })) {
             return false;
         }
-        if (danach) danach('rename');
+        if (danach) danach('rename', { category: kategorie, name, new_name: neu });
         return true;
     }
 

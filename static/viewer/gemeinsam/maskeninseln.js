@@ -35,8 +35,16 @@ export class Maskeninseln {
      * Index nicht mehr verbunden sind — der Censor wäre so eine eigene
      * Insel von 173 Punkten und am Bikinirand „geschlossen". Mit `koerper`
      * (Punktlagen) werden Kopien zuerst mit ihrem Original vereint.
+     *
+     * AUCH NACH FLÄCHE (24.09.2026, Edgar mit Bild: Arabesque Bild 134, Haut
+     * unter der rechten Achsel durch das G9 Base Shirt): Die Punktgrenze ist
+     * an HumanBody (70.851 Punkte) bemessen. Genesis 9 ist in der Achsel viel
+     * feiner — dort war die freie Insel unter dem Ärmel 298 Punkte groß, aber
+     * nur 38 cm², blieb offen und kam beim Armheben durch den Stoff. Mit
+     * `flaecheMax` (m², braucht `koerper`) wird eine Insel auch geschlossen,
+     * wenn ihre freien Dreiecke zusammen höchstens so groß sind.
      */
-    static schliessen(maske, dreiecke, hoechstens, koerper = null) {
+    static schliessen(maske, dreiecke, hoechstens, koerper = null, flaecheMax = 0) {
         const n = maske.length;
         const wurzel = new Int32Array(n);
         for (let i = 0; i < n; i++) wurzel[i] = i;
@@ -62,14 +70,32 @@ export class Maskeninseln {
         // Die größte Gruppe ist die freie Haut selbst — nie eine Insel.
         let groesste = 0;
         for (const g of groesse.values()) if (g > groesste) groesste = g;
+        const flaeche = (koerper && flaecheMax > 0) ? Maskeninseln.flaechen(koerper, dreiecke, maske, finde) : null;
         let geschlossen = 0;
         for (let i = 0; i < n; i++) {
             if (maske[i]) continue;
             const r = finde(i);
             const g = groesse.get(r);
-            if (g <= hoechstens && g < groesste && kueste.has(r)) { maske[i] = 1; geschlossen += 1; }
+            const klein = g <= hoechstens || (flaeche !== null && (flaeche.get(r) || 0) <= flaecheMax);
+            if (klein && g < groesste && kueste.has(r)) { maske[i] = 1; geschlossen += 1; }
         }
         return geschlossen;
+    }
+
+    /** Je freier Gruppe (Wurzel) die Fläche ihrer ganz freien Dreiecke (m²). */
+    static flaechen(koerper, dreiecke, maske, finde) {
+        const aus = new Map();
+        const P = koerper;
+        for (let k = 0; k + 2 < dreiecke.length; k += 3) {
+            const a = dreiecke[k], b = dreiecke[k + 1], c = dreiecke[k + 2];
+            if (maske[a] || maske[b] || maske[c]) continue;
+            const ux = P[3 * b] - P[3 * a], uy = P[3 * b + 1] - P[3 * a + 1], uz = P[3 * b + 2] - P[3 * a + 2];
+            const vx = P[3 * c] - P[3 * a], vy = P[3 * c + 1] - P[3 * a + 1], vz = P[3 * c + 2] - P[3 * a + 2];
+            const x = uy * vz - uz * vy, y = uz * vx - ux * vz, z = ux * vy - uy * vx;
+            const r = finde(a);
+            aus.set(r, (aus.get(r) || 0) + Math.sqrt(x * x + y * y + z * z) / 2);
+        }
+        return aus;
     }
 
     /**

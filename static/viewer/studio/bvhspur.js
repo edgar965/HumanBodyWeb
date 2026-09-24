@@ -154,9 +154,30 @@ export class Bvhspur {
             spur._lastLogState = 'stopped';
             return;
         }
+        // Liegt HIER ein Clip, der nur keine Animation hat (Datei fehlt,
+        // Retarget gescheitert — `_loadError`/`clipfehlt.js`), ist „keine
+        // Bewegung hier" die falsche Meldung: Sie klingt nach einer Lücke,
+        // dabei liegt hier ein Clip, dessen Schicksal längst geklärt ist
+        // (der Nutzer hat ihn über den Dialog bewusst stehen lassen oder er
+        // verschwindet gleich). Edgar, 24.09.2026: „mach die weg" — kein
+        // eigener Text dafür, `_lastLogState` bleibt unbekannt und
+        // `zeitleiste_spuren.js` zeigt dann gar nichts (Fallthrough).
+        if (Bvhspur._kaputterClipHier(spur, zeit)) {
+            spur._lastLogState = 'clip-broken';
+            return;
+        }
         Bvhspur._melden(spur, 'no-clip-in-range', 'bvh_no_clip_in_range',
                         `track=${spur.name} t=${zeit.toFixed(2)}s `
                         + `clips=[${Bvhspur._bereiche(spur) || 'none'}]`);
+    }
+
+    /** Deckt ein Clip OHNE Animation gerade `zeit` ab? */
+    static _kaputterClipHier(spur, zeit) {
+        return spur.clips.some((clip) => {
+            if (clip.animClip) return false;
+            const beginn = clip.startFrame / state.project.fps;
+            return zeit >= beginn && zeit < beginn + clip.duration;
+        });
     }
 
     static _bereiche(spur) {

@@ -12,8 +12,19 @@ nicht gibt, dann entfernen." Vorher blieb er rot markiert stehen
 2. Der Mixer gibt die Animation frei (`uncacheClip`), die leere Spur wird
    unsichtbar, Dauer/Zeitleiste/Eigenschaften werden nachgezogen.
 3. Bleibt auf keiner Spur ein Clip, hält die Wiedergabe an.
-4. `verschwunden` meldet, was fehlt und wie viele Clips weg sind, und
-   schreibt ins Serverprotokoll; ohne Treffer meldet es 0.
+4. `verschwunden` fragt (24.09.2026: „Fehlermeldung, mit Abfrage ob die
+   gelöscht werden sollen" — vorher entfernte es ohne Rückfrage), meldet, was
+   fehlt, und schreibt ins Serverprotokoll.
+5. Bei „Nein" bleibt der Clip stehen (`_loadError`), nichts wird entfernt.
+6. Dieselbe Datei wird in derselben Sitzung nur EINMAL gefragt.
+7. NACHGEBESSERT, noch am 24.09.2026 (Edgar: „Popup kommt, aber die
+   Animationen sind immer noch drin ... 'keine Bewegung hier' - was soll
+   das??"): mehrere VERSCHIEDENE fehlende Dateien, die kurz nacheinander
+   auftauchen (ein Projekt lädt mehrere Clips parallel), landen in EINEM
+   gesammelten Dialog (`WARTE_MS`) statt in mehreren `confirm()`
+   nacheinander — die hatte Chrome nach ein paar Stück automatisch als
+   „Abbrechen" unterdrückt, und die betroffenen Clips blieben unbemerkt bei
+   „Nein" hängen.
 
 Sabotage-Gegenprobe: `i--` in `_spurRaeumen` zu `i++` → Fall 1 rot.
 """
@@ -42,6 +53,16 @@ const gerufen = [];
 const fn = { updateDuration: () => gerufen.push('dauer'), renderTimeline: () => gerufen.push('leiste'),
              updateProperties: () => gerufen.push('eigenschaften'), serverLog: (a, t) => gerufen.push('log:' + a) };
 
+// `verschwunden` fragt jetzt (24.09.2026) statt stillschweigend zu entfernen —
+// gesammelt (`WARTE_MS`), damit mehrere verschiedene fehlende Dateien nicht in
+// mehreren `confirm()` nacheinander landen. Kurzes Fenster fuer den Test.
+Clipfehlt.WARTE_MS = 10;
+let confirmAntwort = true;
+let confirmAufrufe = 0;
+let confirmText = '';
+globalThis.confirm = (text) => { confirmAufrufe++; confirmText = text; return confirmAntwort; };
+const warten = (ms = 40) => new Promise((weiter) => setTimeout(weiter, ms));
+
 // --- 1. alle Clips der Datei, sonst nichts --------------------------------
 const weg = Clipfehlt.entfernen('Results', 'tanz', state, fn);
 if (weg !== 4) fehl('entfernt: ' + weg + ' statt 4');
@@ -64,15 +85,53 @@ modell.clips.length = 0; kamera.clips.length = 0;
 Clipfehlt.entfernen('Mixamo', 'gehen', state, fn);
 if (state.playing !== false) fehl('Wiedergabe laeuft ohne Clips weiter');
 
-// --- 4. verschwunden meldet -----------------------------------------------
+// --- 4. verschwunden markiert sofort, fragt erst nach dem Sammelfenster ----
 spurA.clips.push(clip('A_Results', 'gem'));
+const gemClip = spurA.clips[spurA.clips.length - 1];
 const meldungen = [];
-const anzahl = Clipfehlt.verschwunden({ category: 'A_Results', name: 'gem' }, state, fn, t => meldungen.push(t));
-if (anzahl !== 1) fehl('verschwunden: ' + anzahl);
-if (meldungen.length !== 1 || !/A_Results\\/gem gibt es nicht mehr — 1 Clip aus der Zeitleiste entfernt/.test(meldungen[0])) fehl('Meldung: ' + meldungen);
+Clipfehlt.verschwunden(gemClip, state, fn, t => meldungen.push(t));
+if (gemClip._loadError !== true) fehl('nicht sofort als Fehler markiert');
+if (confirmAufrufe !== 0) fehl('confirm zu frueh gerufen: ' + confirmAufrufe);
+await warten();
+if (confirmAufrufe !== 1) fehl('confirm nicht gerufen: ' + confirmAufrufe);
+if (!/A_Results\\/gem/.test(confirmText)) fehl('Dialogtext nennt die Datei nicht: ' + confirmText);
+if (spurA.clips.includes(gemClip)) fehl('Clip nach Ja nicht entfernt');
+if (meldungen.length !== 1 || !/1 Clip.*entfernt/.test(meldungen[0])) fehl('Meldung: ' + meldungen);
 if (!gerufen.includes('log:clip_removed_missing')) fehl('kein Serverprotokoll');
-const keiner = Clipfehlt.verschwunden({ category: 'X', name: 'y' }, state, fn, t => meldungen.push(t));
-if (keiner !== 0 || !/0 Clips/.test(meldungen[1])) fehl('ohne Treffer: ' + keiner + ' / ' + meldungen[1]);
+
+// --- 5. Nein laesst den Clip stehen, rot markiert --------------------------
+confirmAntwort = false;
+spurB.clips.push(clip('A_Results', 'bleibt'));
+const bleibtClip = spurB.clips[spurB.clips.length - 1];
+const aufrufeVorNein = confirmAufrufe;
+Clipfehlt.verschwunden(bleibtClip, state, fn, t => meldungen.push(t));
+await warten();
+if (aufrufeVorNein + 1 !== confirmAufrufe) fehl('confirm bei Nein nicht gerufen');
+if (spurB.clips.indexOf(bleibtClip) === -1) fehl('Clip bei Nein aus der Spur genommen');
+if (bleibtClip._loadError !== true) fehl('Clip bei Nein nicht als Fehler markiert');
+
+// --- 6. dieselbe fehlende Datei wird nur einmal gefragt --------------------
+Clipfehlt.verschwunden({ category: 'A_Results', name: 'bleibt' }, state, fn, t => meldungen.push(t));
+await warten();
+if (confirmAufrufe !== aufrufeVorNein + 1) fehl('dieselbe Datei fragt zweimal: ' + confirmAufrufe);
+
+// --- 7. mehrere VERSCHIEDENE fehlende Dateien kurz hintereinander: EIN Dialog
+confirmAntwort = false;
+const aufrufeVorSammlung = confirmAufrufe;
+const x1 = clip('A_Results', 'x1'), x2 = clip('A_Results', 'x2'), x3 = clip('A_Results', 'x3');
+spurA.clips.push(x1, x2);
+spurB.clips.push(x3);
+Clipfehlt.verschwunden(x1, state, fn, t => meldungen.push(t));
+Clipfehlt.verschwunden(x2, state, fn, t => meldungen.push(t));
+Clipfehlt.verschwunden(x3, state, fn, t => meldungen.push(t));
+if (confirmAufrufe !== aufrufeVorSammlung) fehl('confirm lief schon vor dem Sammelfenster');
+await warten();
+if (confirmAufrufe !== aufrufeVorSammlung + 1) fehl('mehrere Dateien fragten mehrfach: ' + confirmAufrufe);
+if (!/3 Animationen/.test(confirmText)) fehl('Sammeltext nennt nicht alle drei: ' + confirmText);
+for (const c of [x1, x2, x3]) if (c._loadError !== true) fehl(c.name + ' nicht markiert');
+if (!spurA.clips.includes(x1) || !spurA.clips.includes(x2) || !spurB.clips.includes(x3)) {
+    fehl('bei Nein trotzdem entfernt');
+}
 
 console.log(JSON.stringify({ ok: fehler.length === 0, fehler }));
 """

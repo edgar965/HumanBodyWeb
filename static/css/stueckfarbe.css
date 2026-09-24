@@ -1,0 +1,64 @@
+/* Eigene Farbe eines Daz-Stücks (`stueckfarbe.js`, 24.09.2026): ein Farbknopf
+   plus „×". Der Knopf öffnet den Farbdialog (`stueckfarbdialog.js`); ohne
+   eigene Farbe zeigt er einen Farbkreis — „Farbe aus Daz", nicht „grau". */
+.hb-stueckfarbe { display: inline-flex; align-items: center; gap: 1px; flex: 0 0 auto; }
+.hb-stueckfarbe-knopf {
+    width: 20px; height: 20px; padding: 0; cursor: pointer; flex: 0 0 20px;
+    border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 50%;
+    background: conic-gradient(#e33, #ec3, #3c5, #3ae, #93e, #e33);
+}
+.hb-stueckfarbe-knopf:hover { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
+.hb-stueckfarbe-weg {
+    background: none; border: none; color: inherit; cursor: pointer;
+    padding: 0 2px; line-height: 1; font-size: 13px; opacity: 0.7;
+}
+.hb-stueckfarbe-weg:hover { opacity: 1; }
+
+/* Die Zeile im Assets-Reiter: Der Knopf braucht Platz — die Variantenauswahl
+   (`hb-dehnt`) gibt ihn her, statt den Knopf rechts hinauszuschieben (so stand
+   das Farbfeld abgeschnitten da, Edgar mit Bild, 24.09.2026). */
+.slider-row:has(> .hb-stueckfarbe) > .hb-dehnt { min-width: 0; }
+
+/* Eigenschaften eines gewählten Daz-Stücks (`dazeigenschaften.js`): je
+   Teilnetz ein Kopf, darunter seine Materialgruppen mit Farbknopf. */
+.daz-teil-kopf { margin: 8px 0 2px; font-size: 12px; opacity: 0.8; }
+.daz-teil-kopf.gewaehlt { font-weight: 600; opacity: 1; }
+.daz-gruppe { display: flex; align-items: center; gap: 6px; padding: 1px 4px; border-radius: 3px; }
+.daz-gruppe > span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daz-gruppe.getroffen { background: rgba(80, 150, 255, 0.22); }
+
+/* Der Farbdialog: Hintergrund frei (man will die Figur beim Wählen sehen),
+   der Dialog rechts neben dem Seitenfeld. */
+.scene-modal-overlay.stueckfarb-huelle {
+    background: none; backdrop-filter: none; pointer-events: none;
+    justify-content: flex-end; align-items: flex-start; padding: 70px 24px 0 0;
+}
+.stueckfarb-huelle .stueckfarb-dialog { pointer-events: auto; width: min(360px, 94vw); max-height: 80vh; }
+.stueckfarb-titel {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text-muted); margin: 10px 0 6px;
+}
+.stueckfarb-titel:first-child { margin-top: 0; }
+.stueckfarb-ziele { display: flex; flex-wrap: wrap; gap: 4px; }
+.stueckfarb-ziel {
+    display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+    background: var(--bg-tertiary, rgba(255, 255, 255, 0.05)); color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; font-size: 0.78rem;
+}
+.stueckfarb-ziel.gewaehlt { border-color: var(--accent, #e94560); box-shadow: 0 0 0 1px var(--accent, #e94560); }
+.stueckfarb-punkt { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.5); }
+.stueckfarb-punkt.leer { background: conic-gradient(#e33, #ec3, #3c5, #3ae, #93e, #e33); }
+.stueckfarb-palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.stueckfarb-kachel {
+    aspect-ratio: 1; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 5px;
+    cursor: pointer; padding: 0;
+}
+.stueckfarb-kachel:hover { transform: scale(1.08); }
+.stueckfarb-kachel.gewaehlt { outline: 2px solid #fff; outline-offset: 1px; }
+.stueckfarb-eigen { display: flex; align-items: center; gap: 8px; }
+.stueckfarb-eigen .hb-farbfeld.hb-farbfeld.hb-farbfeld { width: 44px; height: 28px; }
+.stueckfarb-hex {
+    width: 84px; background: var(--bg-primary, #111); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-family: monospace;
+}
+.stueckfarb-daz { width: auto; margin-left: auto; }

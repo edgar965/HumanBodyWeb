@@ -20,6 +20,7 @@ import shutil
 
 from .bvhablage import Bvhablage
 from .dienstfehler import DienstFehler
+from .studioprojekt_umbenennung import Studioprojektumbenennung
 
 logger = logging.getLogger('core')
 
@@ -120,7 +121,16 @@ class Bvhverwaltung:
         for c in caches:
             c.rename(c.with_name(c.name.replace(alt.stem, ziel.stem, 1)))
         logger.info('[bvh-manage] Renamed: %s -> %s', alt, ziel)
-        return {'ok': True, 'new_name': neu}
+        # Die Datei ist schon umbenannt — schlaegt der Projektabgleich fehl,
+        # bleibt die eigentliche Umbenennung trotzdem gueltig; nur die
+        # Zeitleisten gespeicherter Projekte zeigen dann bis zum naechsten
+        # manuellen Abgleich noch den alten Namen.
+        try:
+            dateien, clips = Studioprojektumbenennung.umbenennen(kategorie, name, neu)
+        except Exception:  # noqa: BLE001
+            logger.exception('[bvh-manage] Projektabgleich fehlgeschlagen: %s/%s -> %s', kategorie, name, neu)
+            dateien, clips = 0, 0
+        return {'ok': True, 'new_name': neu, 'projects_updated': dateien, 'clips_updated': clips}
 
     @staticmethod
     def _verschieben(daten):

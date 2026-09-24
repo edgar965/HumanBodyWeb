@@ -8,6 +8,7 @@ import { Genesis9stueckregler } from './genesis9stueckregler.js';
 import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
 import { Reiterzuordnung } from '../../gemeinsam/reiterzuordnung.js';
 import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
+import { Stueckfarbe } from './stueckfarbe.js';
 import { state } from '../state.js';
 
 /**
@@ -151,6 +152,10 @@ export class Genesis9garderobe {
             felder[art] = Genesis9garderobe._auswahl(zeile, stueck, eintraege, titel, vorgabe,
                                                     haken, () => werte());
         }
+        // Eigene Farbe (24.09.2026, „kann die Farbe der Haare auch angepasst werden?"):
+        // getragen sofort, sonst gemerkt bis zum Anziehen (`werte`).
+        felder.farbe = Stueckfarbe.feld({ inst, kennung: stueck.id, wert: bisher.farbe || '' });
+        if (stueck.zeigbar) zeile.appendChild(felder.farbe);
         haken.addEventListener('change', () => {
             if (haken.checked) Genesis9garderobe._anziehen(inst, stueck.id, werte());
             else Genesis9garderobe._ausziehen(inst, stueck.id);
@@ -158,15 +163,18 @@ export class Genesis9garderobe {
         return zeile;
     }
 
-    /** `{variante, stil, stile: {pose, laenge}, regler, griff, knochen}` aus den Feldern der Zeile. */
+    /** `{variante, stil, stile, regler, farbe, gruppenfarben, griff, knochen}` aus den Feldern der Zeile. */
     static werte(stueck, wahl, felder, inst) {
         const stile = {};
         for (const art of ['pose', 'laenge']) {
             if (felder[art]?.value) stile[art] = felder[art].value;
         }
+        const bisher = Dazkleidung.kleidung(inst)[stueck.id] || {};
         return {
             variante: wahl?.value || '', stil: felder.stil?.value || '', stile,
-            regler: { ...(Dazkleidung.kleidung(inst)[stueck.id]?.regler || {}) },
+            regler: { ...(bisher.regler || {}) },
+            farbe: felder.farbe?.wert ?? (bisher.farbe || ''),
+            gruppenfarben: { ...(bisher.gruppenfarben || {}) },
             griff: Boolean(stueck.griff),
             // Eigene Knochen (Eirgrid: 14 Zöpfe) — das Stück hängt im Browser-Skelett.
             knochen: Boolean(stueck.eigene_knochen),

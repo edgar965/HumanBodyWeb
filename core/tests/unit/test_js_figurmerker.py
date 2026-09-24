@@ -8,9 +8,10 @@ Property beim nächsten Mal, wenn ich die Person auswähle."
 Geprüft wird die Ablage selbst, ohne Seite: dass je Kennung getrennt gemerkt
 wird, dass ein Eintrag den anderen nicht überschreibt, dass `vergessen` nur
 die eine Figur trifft, dass eine leere Kennung (nichts ausgewählt) NICHTS
-schreibt, und dass der Zettel im sessionStorage landet und von dort
-zurückkommt — sonst wäre er nach einem Reload weg, obwohl die Szene
-(`session.js`) wiederkommt.
+schreibt, dass eine umbenannte Animation bei allen Figuren, die sie gewählt
+hatten, auf Name UND Adresse umgestellt wird (24.09.2026), und dass der
+Zettel im sessionStorage landet und von dort zurückkommt — sonst wäre er
+nach einem Reload weg, obwohl die Szene (`session.js`) wiederkommt.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
@@ -81,6 +82,17 @@ pruefe('einmal geschrieben', geschrieben.length, vorher + 1);
 pruefe('unbekannt = 0, nichts geschrieben', Figurmerker.animationVergessen('/nix/'), 0);
 pruefe('leer = 0', Figurmerker.animationVergessen(''), 0);
 pruefe('nicht geschrieben', geschrieben.length, vorher + 1);
+
+// --- eine umbenannte Animation wird bei ALLEN Figuren umgestellt (24.09.2026) --
+const vorherUmbenannt = geschrieben.length;
+pruefe('einer umbenannt', Figurmerker.animationUmbenannt('Run', '02', '02_neu'), 1);
+pruefe('c neuer Name', Figurmerker.animation('c').name, '02_neu');
+pruefe('c neue URL', Figurmerker.animation('c').url, '/api/character/bvh/Run/02_neu/');
+pruefe('einmal geschrieben (umbenannt)', geschrieben.length, vorherUmbenannt + 1);
+pruefe('unbekannt = 0, nichts geschrieben', Figurmerker.animationUmbenannt('X', 'y', 'z'), 0);
+pruefe('leere Kategorie = 0', Figurmerker.animationUmbenannt('', 'y', 'z'), 0);
+pruefe('nicht geschrieben (unbekannt)', geschrieben.length, vorherUmbenannt + 1);
+
 Figurmerker.vergessen('c');
 
 // --- vergessen trifft nur die eine Figur -----------------------------------

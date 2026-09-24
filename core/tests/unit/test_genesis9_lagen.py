@@ -198,3 +198,38 @@ class Anfrage(SimpleTestCase):
             anfrage.vorbereiten('x', [(mock.Mock(koerperhaut=False), gitter(0.01))])
         andere = ein.call_args[0][1]
         self.assertEqual([(k, s) for k, _p, s in andere], [('a', False), ('b', True)])
+
+
+class Hohlkehle(SimpleTestCase):
+    u"""Edgar (24.09.2026, Bild): Toon Base Shorts ueber der Toon Base Panty — in der
+    Gesaessfalte ein Knaeuel mit Loch. Die Panty ueberbrueckt die Falte (Ebene z = −0,12,
+    Normale −z) und hat in der Mitte eine Reihe Punkte in der Ebene x = 0, deren
+    naechster Hautpunkt an der Wand einer Backe liegt: Normale ±x. Mit ihr schob
+    `hinaus` einen Shorts-Punkt SEITWAERTS durch die Mitte.
+    Sabotage: `stoffnormalen` gibt die Hautnormalen zurueck -> beide Faelle rot."""
+    databases = set()
+
+    def _panty(self):
+        bruecke = np.array([[x, y, -0.12] for x in np.arange(-0.1, 0.1001, 0.01)
+                            for y in np.arange(0.0, 0.2001, 0.01)])
+        flosse = np.array([[0.0, y, z] for y in np.arange(0.0, 0.2001, 0.01)
+                           for z in (-0.115, -0.11, -0.105)])
+        normalen = np.vstack([np.tile([0.0, 0.0, -1.0], (len(bruecke), 1)),
+                              [[1.0 if i % 2 else -1.0, 0.0, 0.0] for i in range(len(flosse))]])
+        return np.vstack([bruecke, flosse]), normalen, len(bruecke)
+
+    def test_die_flosse_schiebt_aus_der_falte_heraus_nicht_seitwaerts(self):
+        stoff, haut, n_bruecke = self._panty()
+        normalen = G9lagen(Kunsthaut.koerper()).stoffnormalen(stoff, haut)
+        flosse = normalen[n_bruecke:]
+        self.assertTrue((np.abs(flosse[:, 0]) < 0.5).all(), flosse[:5])
+        self.assertTrue((flosse[:, 2] < -0.8).all(), flosse[:5])
+        np.testing.assert_allclose(np.linalg.norm(normalen, axis=1), 1.0, atol=1e-9)
+
+    def test_ein_shorts_punkt_an_der_flosse_bleibt_auf_seiner_seite(self):
+        stoff, haut, _n = self._panty()
+        normalen = G9lagen(Kunsthaut.koerper()).stoffnormalen(stoff, haut)
+        punkt = np.array([[-0.003, 0.1, -0.113]])            # 7 mm vor der Bruecke, links der Mitte
+        gehoben = G9kollision.hinaus(punkt, stoff, normalen)
+        self.assertAlmostEqual(gehoben[0, 0], -0.003, delta=0.001)
+        self.assertLess(gehoben[0, 2], punkt[0, 2])            # nach hinten, heraus

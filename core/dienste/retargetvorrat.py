@@ -75,7 +75,10 @@ class Retargetvorrat:
                     'Retargetvorrat %s: %s (%s Bilder) -> %d Ablage(n)',
                     job.kennung,
                     os.path.basename(pfad),
-                    ergebnis.get('frame_count', '?'),
+                    # `holen()` liefert `Bewegungsspuren`, kein Dictionary mehr — das
+                    # `.get` warf nach der fertigen Ablage und meldete „nicht gerechnet"
+                    # (Auftrag 2026.09.24.13.39.32, 24.09.2026).
+                    ergebnis.frame_count,
                     len(abgelegt),
                 )
             except Exception:  # noqa: BLE001

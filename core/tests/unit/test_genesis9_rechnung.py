@@ -12,8 +12,14 @@ Sabotage-Gegenproben (jede einzeln ausprobiert, 17.09.2026):
 - `G9haut.umleitung`: Elternkette nicht verfolgt → Fall 6 rot.
 """
 
+import json as _json
+import shutil
+from pathlib import Path
+
 import numpy as np
 from django.test import SimpleTestCase
+
+from core.projekt_temp import ProjektTemp
 
 from ._humanbodypfad import Humanbodypfad
 
@@ -284,3 +290,82 @@ class ZielTest(SimpleTestCase):
         # kein DEF-Knochen doppelt vergeben
         ziele = list(DEF_ZU_G9.values())
         self.assertEqual(len(ziele), len(set(ziele)))
+
+
+class G9materialToonfarbeTest(SimpleTestCase):
+    """`G9material` und der FilaToon-Konturknoten (Befund 24.09.2026).
+
+    Edgar: Damira eine 'Toon Base Female Bra' angezogen, Farbe gruen gewaehlt
+    — es kam Schwarz-Weiss statt Gruen. Ursache, an der echten Datei
+    nachgewiesen (`Toon Base Green Bra.duf`, Materials/Underwear Female/
+    Base + Diffuse): FilaToon legt jeden sichtbaren Knoten (`Bra_5382`)
+    zusaetzlich als Kontur-Knoten an (`Bra_5382_ToonOutline`), Farbe DORT
+    immer Schwarz, kein Bild — aber `_farbe`/`_animation` lesen nur den
+    Gruppennamen `Bra_Main`, nicht den Knoten davor. Die Kontur kommt in der
+    `.duf` NACH der Flaeche und ueberschrieb die echte gruene Farbe im
+    `farben`-Dict mit Schwarz — und selbst OHNE die Ueberschreibung hätte die
+    alte Regel „hat die Gruppe ein Bild, faellt die Farbe weg" die echte
+    Farbe verworfen (dasselbe Bild dient allen Farbvarianten als neutrale
+    Basis, siehe `Toon Base Red/Green/Yellow Bra.duf` — nur der Farbwert
+    unterscheidet sie).
+    """
+
+    databases = set()
+
+    def _duf_schreiben(self, animationen, materialien):
+        ordner = Path(ProjektTemp.ordner(prefix='g9material_'))
+        self.addCleanup(shutil.rmtree, ordner, ignore_errors=True)
+        pfad = ordner / 'probe.duf'
+        doc = {
+            'file_version': '0.6.0.0',
+            'asset_info': {},
+            'image_library': [],
+            'scene': {'materials': materialien, 'animations': animationen},
+        }
+        pfad.write_text(_json.dumps(doc), encoding='utf-8')
+        return pfad
+
+    def test_toonrand_erkennt_nur_den_konturknoten(self):
+        self.assertTrue(G9material._toonrand(
+            {'url': 'Bra_5382_ToonOutline#materials/Bra_Main:?diffuse/value'}))
+        self.assertFalse(G9material._toonrand(
+            {'url': 'Bra_5382#materials/Bra_Main:?diffuse/value'}))
+        self.assertFalse(G9material._toonrand({'url': None}))
+
+    def test_farbige_toon_textur_behaelt_ihre_farbe(self):
+        """Nachbau von `Toon Base Green Bra.duf`: Flaeche gruen, Kontur schwarz."""
+        materialien = [{
+            'id': 'Bra_Main', 'groups': ['Bra_Main'],
+            'url': '/data/x/FilaToon - Base.dsf#FilaToon - Base',
+            'diffuse': {'channel': {'value': [0.75, 0.75, 0.75]}},
+        }]
+        animationen = [
+            {'url': 'Bra_5382#materials/Bra_Main:?diffuse/value',
+             'keys': [[0, [0.49, 0.70, 0.42]]]},
+            {'url': 'Bra_5382#materials/Bra_Main:?diffuse/image_file',
+             'keys': [[0, '/Runtime/Textures/x/ToonBra6_BaseColor.jpg']]},
+            # Die Kontur — kommt WIE IN DER ECHTEN DATEI nach der Flaeche.
+            {'url': 'Bra_5382_ToonOutline#materials/Bra_Main:?diffuse/value',
+             'keys': [[0, [0, 0, 0]]]},
+        ]
+        pfad = self._duf_schreiben(animationen, materialien)
+        aus = G9material.bilder_aus(pfad)
+        self.assertEqual(aus['Bra_Main']['albedo'], 'Runtime/Textures/x/ToonBra6_BaseColor.jpg')
+        self.assertEqual(aus['Bra_Main']['farbe'], [0.49, 0.7, 0.42])
+
+    def test_echtes_schwarz_faellt_weiterhin_weg(self):
+        """Die urspruengliche Absicht vom 18.09.2026 bleibt: Schwarz + Bild -> keine Farbe."""
+        materialien = [{
+            'id': 'X', 'groups': ['X'],
+            'url': '/data/x/FilaToon - Base.dsf#FilaToon - Base',
+            'diffuse': {'channel': {'value': [0, 0, 0]}},
+        }]
+        animationen = [
+            {'url': 'Knoten#materials/X:?diffuse/value', 'keys': [[0, [0, 0, 0]]]},
+            {'url': 'Knoten#materials/X:?diffuse/image_file',
+             'keys': [[0, '/Runtime/Textures/x/y.jpg']]},
+        ]
+        pfad = self._duf_schreiben(animationen, materialien)
+        aus = G9material.bilder_aus(pfad)
+        self.assertEqual(aus['X']['albedo'], 'Runtime/Textures/x/y.jpg')
+        self.assertNotIn('farbe', aus['X'])

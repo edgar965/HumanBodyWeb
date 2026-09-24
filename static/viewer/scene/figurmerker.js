@@ -60,6 +60,29 @@ export class Figurmerker {
     }
 
     /**
+     * Eine umbenannte Animation bei ALLEN Figuren auf den neuen Namen ziehen
+     * (24.09.2026) — sonst zeigt Play beim nächsten Versuch auf die alte,
+     * jetzt nicht mehr vorhandene Datei. Liefert, wie viele Figuren sie
+     * gemerkt hatten.
+     */
+    static animationUmbenannt(kategorie, alterName, neuerName) {
+        if (!kategorie || !alterName) return 0;
+        const alle = Figurmerker._alle();
+        let anzahl = 0;
+        for (const eintrag of Object.values(alle)) {
+            const anim = eintrag.animation;
+            if (anim && anim.category === kategorie && anim.name === alterName) {
+                anim.name = neuerName;
+                anim.url = `/api/character/bvh/${encodeURIComponent(kategorie)}`
+                    + `/${encodeURIComponent(neuerName)}/`;
+                anzahl += 1;
+            }
+        }
+        if (anzahl) Figurmerker._speichern();
+        return anzahl;
+    }
+
+    /**
      * Eine gelöschte Animation von ALLEN Figuren nehmen (12.09.2026) — sonst
      * lädt Play auf einer Figur, die sie einmal gewählt hatte, ins Leere.
      * Liefert, wie viele Figuren sie gemerkt hatten.

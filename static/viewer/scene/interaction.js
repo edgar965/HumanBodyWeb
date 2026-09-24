@@ -55,6 +55,9 @@ export function bindCanvasClick() {
                 if (hitTarget) {
                     if (state.selectedCharacterId !== charId) { clearSubMeshSelection(); fn.selectCharacter(charId); }
                     _clearBoneSelection();
+                    // Die Materialgruppe unter dem Zeiger — `Dazeigenschaften` markiert sie (24.09.2026).
+                    state._getroffeneGruppe = { key: hitTarget.key,
+                        gruppe: [hitObj.material].flat()[hits[0].face?.materialIndex ?? 0]?.userData?.gruppe };
                     _doSubMeshClick(hitTarget);
                     return;
                 }

@@ -11,8 +11,9 @@ nicht. Seither klemmt `Fingergrenzen` die 30 Finger beim Schreiben
 BDD - GEGEBEN / DANN
 ====================
     DerGelenkrahmen     ... beugt jeden Finger zur Flaeche, auch den schraegen kleinen
-    DieFingergrenzen    ... fangen 120 Grad Grundgelenk und Seitbewegung im Mittelgelenk
-    DasWerkzeug         ... laesst Koerper und Wurzelbahn einer BVH unangetastet
+    DieFingergrenzen    ... fangen 120 Grad Grundgelenk und Seitbewegung im Mittelgelenk,
+                            lassen geschlossene Finger geschlossen (24.09.2026)
+    DasWerkzeug        ... laesst Koerper und Wurzelbahn einer BVH unangetastet
 
 Sabotage-Gegenprobe (12.09.2026): `_spreizfaktor` auf 1 -> „gebeugt spreizt
 nicht" rot; `np.cross(n, t)` zu `np.cross(t, n)` -> „zur Flaeche" rot.
@@ -79,9 +80,46 @@ class DieFingergrenzen(unittest.TestCase):
         self.assertEqual(Fingergrenzen.anwenden(feld, np), 1)
         beugung, spreizung, _ = _im_rahmen(feld[0, gelenk], B)
         self.assertAlmostEqual(beugung, 90.0, places=3)
-        self.assertAlmostEqual(spreizung, 0.0, places=3)
+        # Gebeugt laeuft die Spreizung auf die GESCHLOSSENE Lage, nicht auf
+        # die gefaecherte SMPL-X-Ruhelage (24.09.2026).
+        self.assertAlmostEqual(spreizung, Fingergrenzen.neutral(gelenk, np), places=3)
         _, spreizung, _ = _im_rahmen(feld[1, gelenk], B)
         self.assertAlmostEqual(spreizung, 20.0, places=3)
+
+    def test_geschlossen_heisst_parallel_zur_handachse(self):
+        """Um `neutral` gespreizt liegt jedes Grundglied entlang ±x — auch der schraege kleine Finger."""
+        for name in ('left_index1', 'left_pinky1', 'right_ring1', 'right_pinky1'):
+            with self.subTest(gelenk=name):
+                gelenk = Smplxfinger.NAMEN.index(name)
+                n, t, _f = Fingergrenzen.rahmen(gelenk, np).T
+                gedreht = Rotation.from_rotvec(np.radians(Fingergrenzen.neutral(gelenk, np)) * n).apply(t)
+                self.assertGreater(abs(gedreht[0]), 0.99)
+                self.assertLess(abs(gedreht[2]), 0.02)
+        self.assertLess(abs(Fingergrenzen.neutral(Smplxfinger.NAMEN.index('left_pinky1'), np)), 40)
+        self.assertGreater(abs(Fingergrenzen.neutral(Smplxfinger.NAMEN.index('left_pinky1'), np)), 35)
+
+    def test_geschlossene_finger_werden_nicht_aufgespreizt(self):
+        """Die geschlossene Lage liegt 38 Grad neben der SMPL-X-Ruhe — und bleibt, wie sie ist."""
+        gelenk = Smplxfinger.NAMEN.index('left_pinky1')
+        n, _t, f = Fingergrenzen.rahmen(gelenk, np).T
+        mitte = Fingergrenzen.neutral(gelenk, np)
+        feld = self._feld()
+        feld[0, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(40) * f) * Rotation.from_rotvec(np.radians(mitte) * n))
+        feld[1, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(mitte) * n))
+        vorher = feld.copy()
+        self.assertEqual(Fingergrenzen.anwenden(feld, np), 0)
+        np.testing.assert_array_equal(feld, vorher)
+
+    def test_verdrehung_des_grundglieds_bis_35_grad_bleibt(self):
+        """GEM-X dreht die Grundglieder 4-30 Grad um ihre Achse (Hohlhand) — gemessen, kein Ausreisser."""
+        gelenk = Smplxfinger.NAMEN.index('right_pinky1')
+        _n, t, _f = Fingergrenzen.rahmen(gelenk, np).T
+        feld = self._feld()
+        feld[0, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(-30) * t))
+        feld[1, gelenk] = _wxyz(Rotation.from_rotvec(np.radians(50) * t))
+        self.assertEqual(Fingergrenzen.anwenden(feld, np), 1)
+        _, _, verdrehung = _im_rahmen(feld[1, gelenk], Fingergrenzen.rahmen(gelenk, np))
+        self.assertAlmostEqual(verdrehung, Fingergrenzen.GRENZEN[1][5], places=3)
 
     def test_mittelgelenk_ist_ein_scharnier(self):
         gelenk = Smplxfinger.NAMEN.index('right_middle2')

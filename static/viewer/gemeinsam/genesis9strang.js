@@ -43,9 +43,11 @@ export class Genesis9strang {
             const farbe = Genesis9strang.farbe(gruppe.bilder || {});
             const spitze = Genesis9strang.spitze(gruppe.bilder || {});
             geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, materialien.length);
-            materialien.push(new THREE.MeshBasicMaterial({
+            const material = new THREE.MeshBasicMaterial({
                 color: 0xffffff, wireframe: true, vertexColors: true,
-            }));
+            });
+            material.userData.gruppe = gruppe.name;     // Gruppenfarbe (`Umfaerbung`)
+            materialien.push(material);
             Genesis9strang._faerben(geo, gruppe, farbe, anteil, farben, spitze);
         }
         geo.setAttribute('color', new THREE.BufferAttribute(farben, 3));

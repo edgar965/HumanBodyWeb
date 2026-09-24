@@ -74,6 +74,11 @@ export class Hautmaske {
     static ENG_M = 0.004;
     /** Freie Inseln im Verdeckten bis zu dieser Punktzahl gelten als verdeckt. */
     static INSEL_MAX = 200;
+    /** … oder bis zu dieser Fläche (m²) — die Punktzahl hängt am Netz
+     *  (`maskeninseln.js`). Gemessen an Genesis 9 „Ursula1“ (24.09.2026):
+     *  Achselinsel unter dem Ärmel 38 cm² (schließen), freie Rückenhaut
+     *  unter dem lockeren Shirt 262 cm² (bleibt, wie bisher). */
+    static INSEL_FLAECHE_M2 = 0.005;
 
     /**
      * Je Körperpunkt 1, wenn ihn eines der Stücke verdeckt.
@@ -89,7 +94,8 @@ export class Hautmaske {
      *                     Messungen fragen damit auch nach Stoff HINTER der
      *                     Haut (`abstand` negativ); `inseln`: Höchstgröße
      *                     freier Inseln, die noch geschlossen werden (0 = aus;
-     *                     Messungen lassen die Maske roh).
+     *                     Messungen lassen die Maske roh); `inselflaeche`:
+     *                     ebenso als Fläche in m² (0 = nur die Punktzahl).
      */
     static verdeckt(koerper, dreiecke, stoffe, optionen = {}) {
         const abstand = optionen.abstand ?? Hautmaske.ABSTAND_M;
@@ -98,6 +104,7 @@ export class Hautmaske {
         const eng = optionen.eng ?? Hautmaske.ENG_M;
         const suchweite = optionen.suchweite ?? Math.max(abstand, tiefe);
         const inseln = optionen.inseln ?? Hautmaske.INSEL_MAX;
+        const inselflaeche = optionen.inselflaeche ?? Hautmaske.INSEL_FLAECHE_M2;
         const n = koerper.length / 3;
         const maske = new Uint8Array(n);
         const normalen = optionen.normalen || G.normalen(koerper, dreiecke);
@@ -107,7 +114,7 @@ export class Hautmaske {
             if (!stoff?.punkte?.length || !stoff?.dreiecke?.length) continue;
             Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite);
         }
-        if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper);
+        if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper, inselflaeche);
         return maske;
     }
 

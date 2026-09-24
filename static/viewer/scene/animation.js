@@ -20,6 +20,7 @@ import { Figurmerker } from './figurmerker.js';
 import { Animationsentfernung } from './animationsentfernung.js';
 import { Bvhladen } from './bvhladen.js';
 import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
+import { Fehlendeanimation } from './fehlendeanimation.js';
 
 /** Play/Stop/Zeitleiste — und Play meint die ausgewählte Figur (Klassendoku dort). */
 const abspielsteuerung = new Abspielsteuerung(state, fn);
@@ -69,8 +70,10 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             const clip = await Umaanimation.starten(inst, url, rawBvhText);
             abspielsteuerung.meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
         } catch (fehler) {
-            abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
-            Protokoll.fehler('Umaanimation', 'Retarget auf UMA fehlgeschlagen', fehler);
+            if (!Fehlendeanimation.behandeln(fehler, { url, name }, (t) => abspielsteuerung.meldung(t))) {
+                abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
+                Protokoll.fehler('Umaanimation', 'Retarget auf UMA fehlgeschlagen', fehler);
+            }
         }
         abspielsteuerung.knoepfeAngleichen();
         return;
@@ -84,9 +87,11 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             const clip = await Eigenanimation.starten(inst, url, rawBvhText);
             abspielsteuerung.meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
         } catch (fehler) {
-            abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
-            Protokoll.fehler('Eigenanimation',
-                             `Retarget auf ${inst.quelle} fehlgeschlagen`, fehler);
+            if (!Fehlendeanimation.behandeln(fehler, { url, name }, (t) => abspielsteuerung.meldung(t))) {
+                abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
+                Protokoll.fehler('Eigenanimation',
+                                 `Retarget auf ${inst.quelle} fehlgeschlagen`, fehler);
+            }
         }
         abspielsteuerung.knoepfeAngleichen();
         return;
@@ -263,7 +268,10 @@ export async function loadAnimationUI() {
                 // heisst dann anders oder ist weg. Das Loeschen stoppt
                 // dazu die laufende Animation und waehlt den Nachfolger
                 // (`Animationsentfernung`, 12.09.2026).
-                Animationsmenue.binden(item, cat, anim.name, (aktion) => {
+                Animationsmenue.binden(item, cat, anim.name, (aktion, details) => {
+                    if (aktion === 'rename' && details) {
+                        _umbenennungAnwenden(details.category, details.name, details.new_name);
+                    }
                     if (aktion !== 'delete') return loadAnimationUI();
                     const eintraege = Animationsentfernung.eintraege(tree);
                     // Sofort aus dem Baum — der Neubau kann unter Last
@@ -286,8 +294,30 @@ export async function loadAnimationUI() {
     abspielsteuerung.verdrahten();
 }
 
+/**
+ * Eine Umbenennung auf die gemerkte Auswahl je Figur (`Figurmerker`) und die
+ * gerade laufende Animation dieser Seite ziehen — sonst zeigt Play beim
+ * nächsten Versuch auf die alte Datei (24.09.2026, wie `Clipfehlt.umbenannt`
+ * im Studio). Läuft sowohl nach der eigenen Umbenennung (Kontextmenü) als
+ * auch, wenn ein ANDERER Tab umbenannt hat (`Bibliothekskanal`).
+ */
+function _umbenennungAnwenden(kategorie, alterName, neuerName) {
+    Figurmerker.animationUmbenannt(kategorie, alterName, neuerName);
+    if (state.currentAnimName === alterName
+            && state.currentAnimUrl.includes(`/${kategorie}/${alterName}/`)) {
+        state.currentAnimName = neuerName;
+        state.currentAnimUrl = `/api/character/bvh/${encodeURIComponent(kategorie)}`
+            + `/${encodeURIComponent(neuerName)}/`;
+    }
+}
+
 // Ein anderer Tab (Studio, Animationen) hat die Bibliothek geändert.
-Bibliothekskanal.hoeren(() => loadAnimationUI());
+Bibliothekskanal.hoeren((meldung) => {
+    if (meldung.aktion === 'rename' && meldung.category && meldung.name && meldung.new_name) {
+        _umbenennungAnwenden(meldung.category, meldung.name, meldung.new_name);
+    }
+    loadAnimationUI();
+});
 
 fn.loadAnimationUI = loadAnimationUI;
 fn.loadBVHAnimation = loadBVHAnimation;

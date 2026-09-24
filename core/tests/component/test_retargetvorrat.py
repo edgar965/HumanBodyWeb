@@ -40,8 +40,13 @@ BVH = (
 
 
 class Ergebnisattrappe:
+    """Wie `Bewegungsspuren`: Attribute und `als_dict`, KEIN `.get` — die frühere
+    `get`-Methode der Attrappe verdeckte, dass `Retargetvorrat` nach der fertigen
+    Ablage an `ergebnis.get` scheiterte (24.09.2026)."""
+
     def __init__(self, bilder=2):
         self.bilder = bilder
+        self.frame_count = bilder
 
     def als_dict(self):
         return {
@@ -52,9 +57,6 @@ class Ergebnisattrappe:
             'position_track': None,
             'mapped_bones': [],
         }
-
-    def get(self, name, ersatz=None):
-        return self.als_dict().get(name, ersatz)
 
 
 class RetargetvorratTest(TestCase):
@@ -86,8 +88,9 @@ class RetargetvorratTest(TestCase):
     def test_ablage_neben_bvh_und_bibliothekskopie(self):
         job = self._auftrag()
         meldungen = []
-        with mock.patch(
-            'core.dienste.retargetdaten.Retargetdaten._rechnen', return_value=Ergebnisattrappe(7)
+        with (
+            mock.patch('core.dienste.retargetdaten.Retargetdaten._rechnen', return_value=Ergebnisattrappe(7)),
+            self.assertNoLogs('core', 'WARNING'),
         ):
             ablagen = Retargetvorrat.anlegen(job, meldungen.append)
         self.assertEqual(len(ablagen), 6)

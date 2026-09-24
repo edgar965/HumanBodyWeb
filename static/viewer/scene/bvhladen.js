@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Fehlendeanimation } from './fehlendeanimation.js';
 
 /**
  * Bvhladen — eine BVH auf die HumanBody-Figur bringen: über den Retarget
@@ -58,8 +59,10 @@ export class Bvhladen {
             state.playing = true;
             meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
         } catch (e) {
-            meldung(`Fehler: ${e.message || e}`);
-            Protokoll.fehler('Bvhladen', 'Retarget fehlgeschlagen', e);
+            if (!Fehlendeanimation.behandeln(e, { url, name }, meldung)) {
+                meldung(`Fehler: ${e.message || e}`);
+                Protokoll.fehler('Bvhladen', 'Retarget fehlgeschlagen', e);
+            }
         }
     }
 
