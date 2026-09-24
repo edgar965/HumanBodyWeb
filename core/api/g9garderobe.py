@@ -28,7 +28,6 @@ auf einer HumanBody-Figur (`G9kleidhumanbody`).
 """
 import logging
 
-import numpy as np
 from asgiref.sync import sync_to_async
 from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -37,7 +36,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from .g9figur import G9figur, FEHLT
 from .g9kleidhumanbody import G9kleidhumanbody
 from ..dienste.g9antworten import G9antworten
-from ..dienste.g9lagenanfrage import G9lagenanfrage
+from ..dienste.g9stueckteile import G9stueckteile
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
 from Genesis9.koerpernetz import G9koerpernetz
@@ -45,7 +44,6 @@ from Genesis9.material import G9material
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
-from Genesis9.stueckfelder import G9stueckfelder
 
 logger = logging.getLogger('core')
 
@@ -110,46 +108,31 @@ class G9garderobeapi:
         # Schuh bleibt in seiner (schon getragenen) Ruhelage (`G9autofit`).
         stueckformung = (G9figur.formung(rumpf, {}, ohne_griff=kennung)
                          if eintrag.get('fusspose') else formung)
+        stufen = G9netzstufe.browser()
+        koerpernetz = G9koerpernetz(formung, stufen=stufen)
+        # Oberflaechenbindung (21.09.2026, Konzept Fitting): nur Kleidung, gegen
+        # den REINEN Koerper — die Lagenflaeche traegt die Stuecke darunter,
+        # deren Indizes gibt es im Browser nicht.
+        bindung = koerpernetz.bindungsflaeche() if eintrag.get('art') == 'kleidung' else None
+        # Die Rechnung selbst teilt sich die Antwort seit 24.09.2026 mit dem
+        # GarmentCode-Bau auf Genesis 9 (`G9stueckteile`); GarmentCode-Stuecke
+        # der Figur liegen mit in der Lagenrechnung (`gc_getragen`).
         try:
+            # Die Bilder erst hier: wie vorher erst nach `teile` — eine
+            # unbekannte Kennung bleibt eine 404, keine 500.
             teile = G9garderobe.teile(kennung)
+            bilder = G9garderobe.bilder(kennung, G9figur._name(rumpf.get('variante')))
+            netze, innen, aussen, hoch = G9stueckteile.netze(
+                kennung, eintrag, rumpf, formung, koerpernetz.koerperflaeche(), stufen,
+                bilder=bilder, stueckformung=stueckformung, bindung=bindung,
+                gc_vorrat=rumpf.get('gc_getragen'), teile=teile)
         except ValueError as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=404)
         except (OSError, KeyError) as fehler:
             logger.warning('Genesis 9: Stück %s nicht ladbar: %s', kennung, fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
-        bilder = G9garderobe.bilder(kennung, G9figur._name(rumpf.get('variante')))
-        werte, knochen = G9garderobe.stilwerte(kennung,
-                                               G9figur._namen(rumpf.get('stil')))
-        # Vorgaben des Presets (Angie: `HD Wrinkles` 1), darueber Stil und Regler.
-        zusatz = dict(eintrag.get('vorgaben') or {})
-        zusatz.update(werte)
-        zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
-        hoch = np.array([0.0, formung.boden(), 0.0])
-        stufen = G9netzstufe.browser()
-        koerpernetz = G9koerpernetz(formung, stufen=stufen)
-        koerper = koerpernetz.koerperflaeche()
-        # Oberflaechenbindung (21.09.2026, Konzept Fitting): nur Kleidung, gegen
-        # den REINEN Koerper — die Lagenflaeche unten traegt die Stuecke darunter,
-        # deren Indizes gibt es im Browser nicht.
-        bindung = koerpernetz.bindungsflaeche() if eintrag.get('art') == 'kleidung' else None
-        kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
-                   for folger, lage in teile]
-        # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
-        # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
-        koerper, innen, aussen = G9lagenanfrage(rumpf, formung, koerper).vorbereiten(
-            kennung, [(f, p) for (f, _lage), p in zip(teile, kaefige)])
         antwort_teile = []
-        for (folger, lage), punkte in zip(teile, kaefige):
-            hd_werte = dict(formung.morphwerte())
-            hd_werte.update(zusatz)
-            # Laenge/Weite verschieben den Kaefig am Koerper entlang — die Haut
-            # muss von dort kommen, nicht aus der Ruhelage (20.09.2026).
-            passform = (folger.passformhaut(zusatz)
-                        if G9stueckfelder.folgt(folger, lage) else None)
-            netz = G9koerpernetz.folgernetz(folger, punkte, bilder, stufen,
-                                            koerper=koerper, werte=hd_werte,
-                                            passform=passform,
-                                            bindung=bindung if lage is None else None)
+        for folger, lage, netz in netze:
             if lage is not None:
                 # Ein Prop haengt ganz an seinem Knochen (`G9requisit.haut`).
                 netz['haut'] = lage.haut(len(netz['punkte'])).fuer()

@@ -2,6 +2,7 @@ import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Genesis9lagen } from '../gemeinsam/genesis9lagen.js';
 
 /**
  * GarmentCode-Stücke in der gespeicherten Szene.
@@ -44,18 +45,25 @@ export class GarmentcodeAblage {
      * @param inst    Szeneninstanz (nicht der Reiter-Wrapper)
      * @param stueck  Name der Vorlage, z. B. `hose`
      * @param netz    die Antwort von `/api/garmentcode/drapieren/`
+     * @param quelle  `GarmentcodeTitel.quelle()` zum Bauzeitpunkt — die
+     *                Kennung, mit der ein späterer Klick auf das Stück den
+     *                Knopf oder das Häkchen wiederfindet (24.09.2026).
      */
-    static merken(inst, stueck, netz, titel = null) {
+    static merken(inst, stueck, netz, titel = null, quelle = null) {
         if (!inst || !stueck || !netz?.rig_url) return false;
         if (!inst.gcStuecke) inst.gcStuecke = {};
         inst.gcStuecke[GarmentcodeAnziehen.schluessel(stueck)] = {
             stueck,
             // Der bestellte Name (Vorbild/Form) — kommt mit der Szene zurück.
             titel: titel || null,
+            quelle: quelle || null,
             rig_url: netz.rig_url,
             // Der Ordner ist für die Stoffvorschau nötig; sie bindet daraus
             // die Ergebnisdatei (`Stoffnachfuehrung.netzpfad`).
             ordner: netz.ordner || null,
+            // Ein Neubau schreibt dieselbe Rig-Datei — `stand` unterscheidet ihn
+            // in der Lagenrechnung der Daz-Stücke (`Genesis9lagen.gcGetragen`).
+            stand: String(Date.now()),
         };
         return true;
     }
@@ -132,8 +140,10 @@ export class GarmentcodeAblage {
                 inst.gcStuecke[GarmentcodeAnziehen.schluessel(eintrag.stueck)] = {
                     stueck: eintrag.stueck,
                     titel: eintrag.titel || null,
+                    quelle: eintrag.quelle || null,
                     rig_url: eintrag.rig_url,
                     ordner: eintrag.ordner || null,
+                    stand: eintrag.stand || String(Date.now()),
                 };
                 GarmentcodeAblage._materialSetzen(
                     inst.clothMeshes?.[
@@ -148,6 +158,15 @@ export class GarmentcodeAblage {
                     `„${eintrag.stueck}" nicht wiederherstellbar: `
                     + `${fehler.message || fehler}`);
             }
+        }
+        // Genesis 9 (24.09.2026, Edgar: Damiras Haare unter dem Kleid): Die Daz-Stücke
+        // kamen beim Laden VOR den GarmentCode-Stücken und kennen sie nicht. Nach der
+        // feinen Stufe (sonst überholt deren Antwort diese) alle neu holen — die
+        // Lagenrechnung des Servers legt dann jedes über oder unter das Stück.
+        if (fertig && inst.quelle === 'genesis9') {
+            Promise.resolve(inst.fein)
+                .then(() => Genesis9lagen.nachGcBau(inst, liste.map(e => e?.stueck).filter(Boolean), []))
+                .catch(f => Protokoll.warnung('GarmentCode', `Daz-Stücke nicht nachgezogen: ${f.message || f}`));
         }
         return fertig;
     }

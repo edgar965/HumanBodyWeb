@@ -52,7 +52,13 @@ class TastenTest(SimpleTestCase):
         self.assertIn("getElementById('pb-end')", abspiel)
         self.assertIn("e.code === 'Home'", abspiel)
         self.assertIn("e.code === 'End'", abspiel)
-        self.assertIn('springen(abspielende())', abspiel)
+        # 24.09.2026: „Ende" springt zur VOLLEN Projektdauer (alle Spurarten,
+        # `projektende()`), nicht mehr nur zum letzten Bewegungsclip
+        # (`abspielende()`, weiter fuer den Play-/Endlos-Loop in Gebrauch)
+        # — sonst war eine präsente, aber unbewegte Figur über die Zeitleiste
+        # nicht mehr erreichbar.
+        self.assertIn('springen(projektende())', abspiel)
+        self.assertIn('export function projektende()', abspiel)
         html = (WURZEL / 'templates' / 'bvh_studio.html').read_text(encoding='utf-8')
         self.assertIn('id="pb-start"', html)
         self.assertIn('id="pb-end"', html)

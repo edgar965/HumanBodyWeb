@@ -237,18 +237,11 @@ class Garmentcode:
 
     @staticmethod
     def _rigpfad(wurzel, eintrag):
-        """Der Pfad eines Eintrags `{ordner, rig_datei}` — oder None, wenn er
-        nicht die Form hat, aus der Wurzel fuehrt oder nicht existiert."""
-        if not isinstance(eintrag, dict):
-            return None
-        ordner = os.path.basename(str(eintrag.get('ordner') or ''))
-        name = str(eintrag.get('rig_datei') or '')
-        if not ordner or not name.endswith('_rig.json'):
-            return None
-        pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
-        if pfad.startswith(wurzel + os.sep) and os.path.isfile(pfad):
-            return pfad
-        return None
+        """Der Pfad eines Eintrags `{ordner, rig_datei}` — `Gcrigpfad` (seit
+        24.09.2026 ein Dienst, den auch die Daz-Lagenrechnung nutzt)."""
+        from ..dienste.gcrigpfad import Gcrigpfad
+
+        return Gcrigpfad.pfad(eintrag, wurzel)
 
     @staticmethod
     @require_GET

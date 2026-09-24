@@ -40,15 +40,27 @@ export class Humanbodybindung {
 
     static takt(figuren) {
         for (const inst of figuren) {
-            if (inst?.quelle !== Humanbodybindung.QUELLE) continue;
+            if (inst?.quelle !== Humanbodybindung.QUELLE && inst?.quelle !== 'genesis9') continue;
             const koerper = inst.bodyMesh;
             if (!koerper?.isSkinnedMesh || !koerper.skeleton) continue;
-            for (const netz of Object.values(inst.clothMeshes || {})) {
+            for (const [schluessel, netz] of Object.entries(inst.clothMeshes || {})) {
+                if (!Humanbodybindung.zustaendig(inst, schluessel)) continue;
                 if (!netz?.isSkinnedMesh || netz.skeleton !== koerper.skeleton) continue;
                 if (Humanbodybindung._gerechnet.get(netz) === koerper.geometry) continue;
                 Humanbodybindung.binden(inst, koerper, netz);
             }
         }
+    }
+
+    /**
+     * Welche Stücke hier gebunden werden: auf HumanBody alle; auf Genesis 9 nur
+     * GarmentCode (`gc_`, 24.09.2026, Edgar: „ob wir von dem Genesis Fitting
+     * lernen könnten bei Garment Code") — Daz-Stücke bringen ihre Bindung
+     * vom Server mit (`G9oberflaechenbindung`), GarmentCode-Stücke hatten keine.
+     */
+    static zustaendig(inst, schluessel) {
+        if (inst?.quelle === Humanbodybindung.QUELLE) return true;
+        return inst?.quelle === 'genesis9' && String(schluessel).startsWith('gc_');
     }
 
     static binden(inst, koerper, netz) {
@@ -76,17 +88,28 @@ export class Humanbodybindung {
         let r = Humanbodybindung._rechner.get(geo);
         if (r) return r;
         const lage = geo.attributes.position, normale = geo.attributes.normal;
-        const index = geo.userData?.indexVoll || geo.index;
-        if (!lage || !normale || !index) return null;
+        const feld = Humanbodybindung.vollerIndex(geo);
+        if (!lage || !normale || !feld?.length) return null;
         const punkte = Float32Array.from(lage.array);
         const roh = Float32Array.from(normale.array);
         const vorzeichen = Bindungsrechner.vorzeichen(punkte, roh);
         if (vorzeichen < 0) for (let i = 0; i < roh.length; i++) roh[i] = -roh[i];
-        const feld = index.array || index;
         r = new Bindungsrechner(punkte, feld, roh);
         r.vorzeichen = vorzeichen;
         Humanbodybindung._rechner.set(geo, r);
         return r;
+    }
+
+    /**
+     * Der unmaskierte Index des Körpers als Zahlenfeld. Die Hautverdeckung legt
+     * ihn ab, bevor sie maskiert — auf HumanBody als Index, auf Genesis 9 als
+     * `{index, gruppen}` (24.09.2026: dort las die Bindung 0 Dreiecke und band
+     * 0 von 9.966 Punkten der Harem Pants).
+     */
+    static vollerIndex(geo) {
+        const voll = geo?.userData?.indexVoll;
+        const index = voll?.index ?? voll ?? geo?.index;
+        return index?.array || (ArrayBuffer.isView(index) || Array.isArray(index) ? index : null);
     }
 
     /** Stoff in Ruhe (Bindpose) im Raum des Körpers: inv(B_körper) · B_stoff · p. */

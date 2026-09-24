@@ -40,7 +40,15 @@ export class Stueckmarkierung {
         Stueckmarkierung.reiterKlicken(reiter);
         const stueck = Reiterzuordnung.stueckVon(ziel?.key);
         if (!stueck) { Stueckmarkierung.loeschen(); return Promise.resolve(); }
-        return Reiterinhalt.bauen(reiter).then(() => this.markieren(stueck));
+        return Reiterinhalt.bauen(reiter).then(() => this.markieren(stueck, ziel));
+    }
+
+    /** Die gemerkte Herkunft (Vorbild/Form) des angeklickten GC-Stücks —
+     *  `null` ohne Ziel, ohne `charId` (Testaufrufe) oder ohne bekannte
+     *  Herkunft (freie Regler). */
+    static gcQuelle(zustand, ziel) {
+        const inst = ziel && zustand?.characters?.get(ziel.charId);
+        return inst?.gcStuecke?.[ziel.key]?.quelle || null;
     }
 
     /** Abwahl: die Daz-Zeile ist nur unsere Marke — weg damit. Kleider, MakeHuman und
@@ -59,8 +67,13 @@ export class Stueckmarkierung {
     static WARTEN_MS = 250;
     static VERSUCHE = 12;
 
-    async markieren({ liste, kennung }) {
-        if (liste === 'garmentcode') { fn.garmentcodeVorlageZeigen?.(kennung); return; }
+    async markieren({ liste, kennung }, ziel = null) {
+        if (liste === 'garmentcode') {
+            // Vorbild-Knopf oder Form-Häkchen des angeklickten Stücks mit-
+            // zeigen (24.09.2026) — gemerkt beim Bau, in `inst.gcStuecke`.
+            fn.garmentcodeQuelleZeigen?.(kennung, Stueckmarkierung.gcQuelle(this.zustand, ziel));
+            return;
+        }
         if (liste === 'kleider') { fn.kleiderSelectById?.(kennung); return; }
         if (liste === 'garment') this.zustand._selectedGarmentId = kennung;
         if (liste === 'makehuman') this.zustand._selectedMHId = kennung;

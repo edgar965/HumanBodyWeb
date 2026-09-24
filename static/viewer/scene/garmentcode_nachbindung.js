@@ -1,6 +1,7 @@
 import { Skelettereignis } from '../gemeinsam/skelettereignis.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Gcreglerfolge } from '../gemeinsam/gcreglerfolge.js';
 
 /**
  * GarmentcodeNachbindung — GarmentCode-Stücke folgen einem neuen Skelett.
@@ -24,6 +25,9 @@ export class GarmentcodeNachbindung {
         Skelettereignis.hoeren(({ inst }) => {
             if (!inst) return;
             try {
+                // Erst die Form (Genesis 9 nach einem Reglerzug, 24.09.2026), dann binden.
+                const geformt = Gcreglerfolge.anwenden(inst);
+                if (geformt) Protokoll.debug('GarmentCode', `${geformt} Stück(e) dem neuen Körper nachgeformt`);
                 const anzahl = GarmentcodeAnziehen.nachbinden(inst);
                 if (anzahl) Protokoll.debug('GarmentCode', `${anzahl} Stück(e) an das neue Skelett gebunden`);
             } catch (fehler) {

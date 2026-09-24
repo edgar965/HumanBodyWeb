@@ -116,11 +116,13 @@ SKRIPT = DOM + """
 const { fn } = await import(new URL('../gemeinsam/registrierung.js', MODUL).href);
 const { Stueckmarkierung } = await import(MODUL);
 const aufrufe = [];
-fn.garmentcodeVorlageZeigen = v => aufrufe.push(['gc', v]);
+fn.garmentcodeQuelleZeigen = (v, q) => aufrufe.push(['gc', v, q]);
 fn.kleiderSelectById = v => aufrufe.push(['kleider', v]);
 fn.mhAuswahlGeaendert = () => aufrufe.push(['mh']);
 Stueckmarkierung.WARTEN_MS = 1;
-const zustand = {};
+// `characters` wie `scene/state.js`: eine Map charId -> Instanz mit `gcStuecke`.
+const gcHose = {gcStuecke: {gc_hose: {quelle: {art: 'vorbild', schluessel: 'vorbild_x'}}}};
+const zustand = {characters: new Map([['fig1', gcHose]])};
 const markierung = new Stueckmarkierung(zustand);
 
 // --- 1. Daz-Stueck auf Genesis 9: Assets-Reiter geklickt, Zeile markiert ---
@@ -154,11 +156,20 @@ pruefe('Garment-Zeile', zeileGar.classList.contains('active'), true);
 pruefe('Kategorie offen', kategorie.classList.contains('open'), true);
 
 // --- 5. GarmentCode und Kleider gehen an ihre eigene Auswahl --------------
-await markierung.zeigen({key: 'gc_hose'});
+// Mit `charId` (24.09.2026, Edgar: „soll die Toolbox links exakt zu dem
+// hinspringen"): die gemerkte Herkunft (`inst.gcStuecke[...].quelle`) geht
+// als drittes Argument mit — ein Stueck ohne Eintrag (`gc_schuh`) liefert
+// `null`, keinen Fehler.
+await markierung.zeigen({key: 'gc_hose', charId: 'fig1'});
 pruefe('GC-Reiter', reiter.garmentcode.klicks, 1);
+await markierung.zeigen({key: 'gc_schuh', charId: 'fig1'});
 await markierung.zeigen({key: 'kld_dress01'});
 pruefe('Kleider-Reiter', reiter.kleider.klicks, 1);
-pruefe('Auswahlen', aufrufe.filter(a => a[0] !== 'mh'), [['gc', 'hose'], ['kleider', 'dress01']]);
+pruefe('Auswahlen', aufrufe.filter(a => a[0] !== 'mh'), [
+    ['gc', 'hose', {art: 'vorbild', schluessel: 'vorbild_x'}],
+    ['gc', 'schuh', null],
+    ['kleider', 'dress01'],
+]);
 
 // --- 6. Abwahl: Vorgabereiter, nichts markiert ---------------------------
 await markierung.zeigen(null);

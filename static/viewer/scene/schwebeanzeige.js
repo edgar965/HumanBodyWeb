@@ -3,6 +3,7 @@ import { _clearBoneHover, _createBoneOverlay, _getBoneFromIntersection,
          _removeBoneOverlay } from './knochenmarkierung.js';
 import { _findSubMeshForObject, _sameSubMesh, _setSubMeshEmissive,
          getAllSubMeshTargets } from './teilnetz_auswahl.js';
+import { Trefferwahl } from './trefferwahl.js';
 
 /**
  * Was unter dem Mauszeiger liegt: Kleidungsstück oder Knochen, mit Namensschild
@@ -101,8 +102,8 @@ export class Schwebeanzeige {
         const leer = { teilnetz: null, knochen: null, koerpernetz: null, figur: null };
         const treffer = state.raycaster.intersectObjects(ziele.wurzeln, true);
         if (treffer.length === 0) return leer;
-        const teilnetz = _findSubMeshForObject(treffer[0].object,
-                                               ziele.teilnetze);
+        // Wie der Klick (`Trefferwahl`): durch den Stoff stechende Haut zeigt den Stoff.
+        const teilnetz = Trefferwahl.waehlen(treffer, ziele.teilnetze, _findSubMeshForObject).ziel;
         if (teilnetz) return { ...leer, teilnetz };
         // Die Genesis-Figur selbst: Netz oder eines seiner Elternteile (Anhänge sind Gruppen).
         for (let o = treffer[0].object; o; o = o.parent) {

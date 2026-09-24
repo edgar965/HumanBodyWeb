@@ -207,6 +207,19 @@ class GarmentcodePreset {
         return gesetzt;
     }
 
+    /**
+     * Alle Häkchen weg, OHNE Werte zu ändern — ein Vorbild aus der Kleiderbibliothek
+     * wurde gewählt und hat die Regler selbst gestellt (`GarmentcodeAuswahlwechsel`,
+     * 24.09.2026). `davor` geht mit: ein späteres Abhaken hat nichts zurückzugeben.
+     */
+    alleAbhaken() {
+        this.aktiv.clear();
+        this.davor = {};
+        for (const kaestchen of document.querySelectorAll('input[data-preset]')) {
+            kaestchen.checked = false;
+        }
+    }
+
     /** Das gezeichnete Preset zu einem Schlüssel — oder `null`. */
     preset(schluessel) {
         return this.liste.find((p) => p.schluessel === schluessel) || null;

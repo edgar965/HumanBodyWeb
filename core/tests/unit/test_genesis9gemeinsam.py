@@ -42,6 +42,9 @@ class Figurattrappe:
     def haut(self):
         return {'index': [[0, 1]], 'gewicht': [[0.5, 0.5]], 'knochen': ['hip', 'chest']}
 
+    def getragene_stoffe(self):
+        return []
+
 
 class Genesis9gemeinsamTest(SimpleTestCase):
     databases = set()
@@ -75,6 +78,7 @@ class Genesis9gemeinsamTest(SimpleTestCase):
         self.assertEqual(traeger.sichtbar[0], 'projekt_fein_p')
         self.assertEqual(ergebnis['figurart'], 'genesis9')
         self.assertEqual(ergebnis['stuecke'], ['b1', 'b2'])
+        self.assertEqual((verteilen.call_args[1]['stoffe'], ergebnis['daz_aussen']), ([], []))
 
     def test_der_endpunkt_verzweigt_an_der_figurart(self):
         from core.api import garmentgemeinsam

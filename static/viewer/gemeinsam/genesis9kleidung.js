@@ -93,6 +93,7 @@ export class Genesis9kleidung {
                 stil: Genesis9kleidung.stilliste(werte), regler_stueck: werte?.regler || {},
                 pose: inst.pose, ausdruck: inst.ausdruck, griffe: inst.griffe(),
                 ...Genesis9lagen.anfrage(inst.kleidung, kennung),
+                gc_getragen: Genesis9lagen.gcGetragen(inst),
             });
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;   // überholt oder ausgezogen

@@ -65,6 +65,9 @@ class G9antworten(G9antwortvorrat):
                'HumanBody/humanbody_core/catmull_clark.py',
                # Dienste, die Stueckantworten rechnen (19.09.2026): Lagen, Daz auf HumanBody.
                'HumanBodyWeb/core/dienste/g9lagenanfrage.py',
+               # Die Stueckrechnung selbst und die GarmentCode-Stuecke darin (24.09.2026).
+               'HumanBodyWeb/core/dienste/g9stueckteile.py',
+               'HumanBodyWeb/core/dienste/gcrigpfad.py',
                'HumanBodyWeb/core/dienste/g9aufhumanbody.py',
                'HumanBodyWeb/core/dienste/g9hbknochen.py',
                'HumanBodyWeb/core/dienste/g9garmentfigur.py',

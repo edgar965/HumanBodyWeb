@@ -17,6 +17,7 @@ import { Zeitleistenfolge } from './zeitleiste_folgen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Schluesselpaar } from './schluesselpaar.js';
 import { globaleSichtbarkeit } from './globale_sichtbarkeit.js';
+import { Schluesseltasten } from './schluesseltasten.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
@@ -25,7 +26,7 @@ export function setupPlayback() {
     document.getElementById('pb-prev')?.addEventListener('click', () => stepFrame(-1));
     document.getElementById('pb-next')?.addEventListener('click', () => stepFrame(1));
     document.getElementById('pb-start')?.addEventListener('click', () => springen(0));
-    document.getElementById('pb-end')?.addEventListener('click', () => springen(abspielende()));
+    document.getElementById('pb-end')?.addEventListener('click', () => springen(projektende()));
     document.getElementById('pb-speed')?.addEventListener('input', (e) => {
         state.playbackSpeed = parseFloat(e.target.value) || 0;
         const anzeige = document.getElementById('pb-speed-val');
@@ -41,7 +42,7 @@ export function setupPlayback() {
         if (e.code === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
         if (e.code === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
         if (e.code === 'Home') { e.preventDefault(); springen(0); }
-        if (e.code === 'End') { e.preventDefault(); springen(abspielende()); }
+        if (e.code === 'End') { e.preventDefault(); springen(projektende()); }
         if (e.code === 'Delete' || e.code === 'Backspace') {
             e.preventDefault();
             // Priorität: Clip-Selektion → Library-Selektion → Track-Selektion
@@ -74,16 +75,9 @@ export function setupPlayback() {
                 fn.addSpeedKeyframe(state.selectedTrackIdx);
             }
         }
-        if (e.code === 'KeyK') {
-            e.preventDefault();
-            const t = state.project.tracks[state.selectedTrackIdx];
-            if (t?.type === 'camera') fn.addCameraKeyframe(state.selectedTrackIdx);
-        }
-        if (e.code === 'KeyL') {
-            e.preventDefault();
-            const t = state.project.tracks[state.selectedTrackIdx];
-            if (t?.type === 'light') fn.addLightKeyframe(state.selectedTrackIdx);
-        }
+        // K/L global, nicht nur auf der gewählten Spur — siehe `Schluesseltasten`.
+        if (e.code === 'KeyK' && !e.ctrlKey) { e.preventDefault(); Schluesseltasten.kamera(); }
+        if (e.code === 'KeyL' && !e.ctrlKey) { e.preventDefault(); Schluesseltasten.licht(); }
         // Ctrl shortcuts handled in capture-phase handler above
         if (e.key === 'F2') {
             e.preventDefault();
@@ -137,6 +131,25 @@ export function togglePlay() {
 /** Das Bild, an dem die letzte Animation endet — siehe `Abspielende`. */
 export function abspielende() {
     return Abspielende.bild(state.project.tracks, state.project.fps, state.project.duration);
+}
+
+/**
+ * Das Bild am Ende der GESAMTEN Projektdauer — über alle Spurarten, auch ohne
+ * eigenen Bewegungsclip dort (Modell-/Ton-/Kamera-/Licht-Präsenz).
+ *
+ * Anders als `abspielende()` (Loop-/Anhaltepunkt beim Abspielen, bewusst nur
+ * die letzte BEWEGUNG — siehe `Abspielende`-Kommentar, „Figur stand still,
+ * bis der Ton zu Ende war") gilt für die reine NAVIGATION (Sprungtaste
+ * „Ende", Knopf `pb-end`) die volle Dauer: Eine Figur ohne eigenen
+ * Bewegungsclip bleibt trotzdem als Modell-Clip präsent, oft weit über das
+ * Ende der letzten Bewegung hinaus (24.09.2026, Edgar: „die Modelle sind weit
+ * über den sichtbaren Timeline-Bereich, ich möchte dahin blättern" — zwei von
+ * drei BVH-Dateien fehlten auf der Platte, ihre Bewegungsclips wurden beim
+ * Laden entfernt, nur die Modell-Präsenz blieb). `state.project.duration`
+ * (`models.js`) ist bereits das Maximum über ALLE Clip-Typen.
+ */
+export function projektende() {
+    return Math.round(state.project.duration * state.project.fps);
 }
 
 /** Anhalten, ohne den Abspielkopf zu bewegen (Ende ohne „Endlos"). */

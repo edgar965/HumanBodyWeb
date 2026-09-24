@@ -38,13 +38,56 @@ export class Genesis9lagen {
         };
     }
 
+    /**
+     * Die GarmentCode-Stücke einer Genesis-9-Figur für die Lagenrechnung
+     * (24.09.2026, Edgar: „GarmentCode Pants Harem zieht die Kleider bei Genesis
+     * nicht über existierende Genesis-Kleider"): `[{stueck, ordner, rig_datei,
+     * stand}]` — nur Stücke, deren Netz noch hängt (`gc_<stück>`; die Ablage
+     * vergisst gelöschte nicht). `stand` macht einen Neubau unter demselben
+     * Dateinamen für den Antwortvorrat des Servers unterscheidbar.
+     */
+    static gcGetragen(inst) {
+        if (inst?.quelle !== 'genesis9') return [];
+        return Object.values(inst.gcStuecke || {}).map((e) => {
+            const teile = String(e?.rig_url || '').split('/').filter(Boolean);
+            const schluessel = `gc_${String(e?.stueck || 'kleidung').replace(/[^a-z0-9_-]/gi, '_')}`;
+            // Einem Reglerzug nachgeformt (`Gcreglerfolge`): die Punkte, wie sie hängen.
+            const rig = inst.clothMeshes?.[schluessel]?.userData?.gcRig;
+            return {
+                stueck: e?.stueck, ordner: teile[teile.length - 2], rig_datei: teile[teile.length - 1],
+                stand: rig?.nachgeformt ? `${e?.stand || ''}:${rig.nachgeformt}` : (e?.stand || ''),
+                ...(rig?.punkte64 ? { punkte: rig.punkte64 } : {}),
+                haengt: !!inst.clothMeshes?.[schluessel],
+            };
+        }).filter(e => e.haengt && e.ordner && e.rig_datei)
+            .map(({ haengt, ...e }) => e);
+    }
+
     /** Nach der Antwort: Lagen merken und die äußeren Stücke neu holen. */
     static async nachziehen(inst, kennung, daten, stufen, kaskade) {
         inst.lagen[kennung] = { innen: daten.innen || [], aussen: daten.aussen || [] };
         if (!kaskade) return;
+        // `gc:`-Stücke stehen nicht in `inst.kleidung` — die baut nur GarmentCode neu.
         await Promise.all((daten.aussen || [])
             .filter(andere => inst.kleidung[andere])
             .map(andere => inst.anziehen(andere, inst.kleidung[andere], stufen, false)));
+    }
+
+    /**
+     * Nach einem GarmentCode-Bau (24.09.2026): jedes Daz-Stück neu holen, das
+     * NICHT als innere Lage in den Bau einging (`unter` = `ueber_getragene` der
+     * Antwort) — der Server legt es dann über das neue Stück (`gc:` in den Lagen).
+     * Erst holte das nur die als außen gemeldeten Kleidungsstücke (`daz_aussen`);
+     * Damiras Haar ist keine Kleidung und blieb unter dem Kleid (Edgar: „die
+     * Haare müssten nach GarmentCode nach außen angepasst werden"). Ohne Haken
+     * „über getragene" ist `unter` leer: alles kommt neu. `stuecke`: ein Name oder
+     * mehrere (gemeinsamer Bau). Gibt die neu geholten Kennungen zurück.
+     */
+    static async nachGcBau(inst, stuecke, unter = []) {
+        if (inst?.quelle !== 'genesis9' || ![].concat(stuecke || []).length) return [];
+        const neu = Object.keys(inst.kleidung || {}).filter(k => !(unter || []).includes(k));
+        await Promise.all(neu.map(k => inst.anziehen(k, inst.kleidung[k], null, true)));
+        return neu;
     }
 
     /** Nach dem Ausziehen: die Stücke neu holen, die über dem ausgezogenen lagen. */

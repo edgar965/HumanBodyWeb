@@ -1,10 +1,9 @@
 import { state, HEADER_WIDTH } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { Abspielende } from './abspielende.js';
 import { Fortschrittsmass } from './fortschrittsmass.js';
 import { Zeitleistenfolge } from './zeitleiste_folgen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
-import { formatTime } from './playback.js';
+import { formatTime, projektende } from './playback.js';
 
 /**
  * Fortschrittsbalken — unter allen Spuren, immer sichtbar, über die ganze
@@ -15,9 +14,15 @@ import { formatTime } from './playback.js';
  * Play-Position zu verschieben"): Die Zeitleiste zeigt beim Zoom 100 nur
  * wenige Sekunden, und wer senkrecht blättert, sieht den Kopf nicht. Der
  * Balken liegt AUSSERHALB des scrollenden Rahmens (eigene Leinwand
- * `#timeline-fortschritt`), sein Bezug ist das Abspielende (`Abspielende.bild`
- * — die letzte Bewegung, sonst die Projektdauer). Nach dem Setzen blättert die
- * Zeitleiste zum Kopf (`Zeitleistenfolge`).
+ * `#timeline-fortschritt`). Nach dem Setzen blättert die Zeitleiste zum Kopf
+ * (`Zeitleistenfolge`).
+ *
+ * Sein Bezug ist die VOLLE Projektdauer (`projektende()`), nicht
+ * `Abspielende.bild()` (24.09.2026, Edgar: „Zeitleiste lässt sich nur bei ca.
+ * 21 Sekunden verschieben" — genau dieser Balken war auf das Ende der letzten
+ * Bewegung geklemmt; eine präsente, aber unbewegte Figur (Modell-Clip ohne
+ * eigenen Bewegungsclip) war damit über ihn nicht erreichbar). Das
+ * Play-/Endlos-Loop-Ende bleibt bewusst `Abspielende.bild()` — siehe dort.
  */
 export class Fortschrittsbalken {
     /** Höhe der Leinwand in Pixeln. */
@@ -53,7 +58,7 @@ export class Fortschrittsbalken {
     }
 
     static get ende() {
-        return Abspielende.bild(state.project.tracks, state.project.fps, state.project.duration);
+        return projektende();
     }
 
     /** Linker Rand und Breite des Balkens in Leinwandpixeln. */

@@ -172,4 +172,8 @@ class Garmentgemeinsamendpunkte:
             'auf_figur': ergebnis.get('auf_figur'),
             'drapierkoerper': ergebnis.get('drapierkoerper'),
             'gemeinsam': os.path.basename(ergebnis.get('ordner') or ''),
+            # Daz-Stuecke, deren Saum ueber dem Bund haengt, und die, die als innere Lage
+            # eingingen — alle anderen zieht der Browser danach neu an (`nachGcBau`).
+            'daz_aussen': ergebnis.get('daz_aussen') or [],
+            'ueber_getragene': ergebnis.get('ueber_getragene') or [],
         }

@@ -10,6 +10,7 @@ import { _clearBoneHighlightCache, _clearBoneSelection, _createBoneOverlay, _get
 import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _setBodyEmissive, _setSubMeshEmissive,
     clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 import { Schwebeanzeige } from './schwebeanzeige.js';
+import { Trefferwahl } from './trefferwahl.js';
 
 // =========================================================================
 // Canvas click binding
@@ -47,17 +48,18 @@ export function bindCanvasClick() {
 
         const hits = state.raycaster.intersectObjects(meshes, false);
         if (hits.length > 0) {
-            const hitObj = hits[0].object;
-            const charId = hitObj.userData._parentCharId;
+            const charId = hits[0].object.userData._parentCharId;
             if (charId) {
-                const subTargets = getSelectableSubMeshes(charId);
-                const hitTarget = _findSubMeshForObject(hitObj, subTargets);
+                // Durch den Stoff stechende Haut zählt nicht (`Trefferwahl`, Ballerina 24.09.2026).
+                const { treffer, ziel: hitTarget } = Trefferwahl.waehlen(hits, getSelectableSubMeshes(charId),
+                                                                    _findSubMeshForObject);
+                const hitObj = treffer.object;
                 if (hitTarget) {
                     if (state.selectedCharacterId !== charId) { clearSubMeshSelection(); fn.selectCharacter(charId); }
                     _clearBoneSelection();
                     // Die Materialgruppe unter dem Zeiger — `Dazeigenschaften` markiert sie (24.09.2026).
                     state._getroffeneGruppe = { key: hitTarget.key,
-                        gruppe: [hitObj.material].flat()[hits[0].face?.materialIndex ?? 0]?.userData?.gruppe };
+                        gruppe: [hitObj.material].flat()[treffer.face?.materialIndex ?? 0]?.userData?.gruppe };
                     _doSubMeshClick(hitTarget);
                     return;
                 }

@@ -16,6 +16,12 @@
  * in `clothMeshes` und in der Ablage; nur die Beschriftung ändert sich. Ein
  * Stück, das aus einer Szenendatei zurückkommt, bringt seinen Titel mit
  * (`titel` im Eintrag der Ablage) — der Reiter zeigt dann etwas anderes.
+ *
+ * `quelle()` (24.09.2026, Edgar: „wenn ich ein Garment Code anklicke, soll
+ * die Toolbox links exakt zu dem hinspringen … in der Kleiderbibliothek das
+ * Garment Code selektieren, oder die Checkboxen aktivieren") liefert dieselbe
+ * Herkunft als KENNUNG statt Anzeigetext — die eindeutige Adresse, mit der
+ * `garmentcode_stueckquelle.js` später den Knopf wiederfindet.
  */
 export class GarmentcodeTitel {
 
@@ -51,5 +57,19 @@ export class GarmentcodeTitel {
     /** Die Beschriftung eines Netzes: der Titel, dahinter die Herkunft. */
     static beschriftung(titel, stueck) {
         return `${titel || stueck || 'Kleidung'} (GarmentCode)`;
+    }
+
+    /** Die Herkunft des GERADE gebauten Stücks als Kennung — oder `null`
+     *  bei freien Reglern ohne Vorbild oder Form. */
+    static quelle() {
+        const vorbild = document.querySelector('#gc-vorbilder .vorbild-knopf.active');
+        if (vorbild?.dataset.schluessel) {
+            return { art: 'vorbild', schluessel: vorbild.dataset.schluessel };
+        }
+        const form = document.querySelector('#gc-passform input[data-preset^="form_"]:checked');
+        if (form?.dataset.preset) {
+            return { art: 'form', schluessel: form.dataset.preset };
+        }
+        return null;
     }
 }

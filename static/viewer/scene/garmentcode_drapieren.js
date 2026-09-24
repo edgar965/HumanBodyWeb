@@ -10,6 +10,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
 import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 import { GarmentcodeSimulation } from './garmentcode_simulation.js';
+import { Genesis9lagen } from '../gemeinsam/genesis9lagen.js';
 
 /**
  * GarmentcodeDrapierung — den Stoff auf den Körper fallen lassen und ihn
@@ -48,6 +49,7 @@ export class GarmentcodeDrapierung {
         if (document.getElementById('gc-ueber-getragene')?.checked !== false) {
             daten.append('getragen', JSON.stringify(
                 GarmentcodeAblage.getragen(figur?.inst || figur, stueck)));
+            GarmentcodeDrapierung.getrageneDaz(daten, figur?.inst || figur);
         }
         try {
             // MIT FRIST (09.09.2026): Eine Drapierung, deren Antwort nie
@@ -78,6 +80,23 @@ export class GarmentcodeDrapierung {
         }
     }
 
+    /**
+     * Die getragenen Daz-Stücke einer Genesis-9-Figur in die Stellung
+     * (`regler_figur.stellung.getragen`, 24.09.2026, Edgar: „GarmentCode Pants
+     * Harem zieht die Kleider bei Genesis nicht über existierende Genesis-
+     * Kleider hoch"). Der Server rechnet ihre Netze wie beim Anziehen und legt
+     * das neue Stück in der Nacharbeit darüber (`G9garmentfigur.getragene_stoffe`).
+     */
+    static getrageneDaz(daten, inst) {
+        const getragen = Genesis9lagen.anfrage(inst?.kleidung, null).getragen;
+        const roh = daten.get('regler_figur');
+        if (inst?.quelle !== 'genesis9' || !getragen.length || !roh) return false;
+        const regler = JSON.parse(roh);
+        regler.stellung = { ...(regler.stellung || {}), getragen };
+        daten.set('regler_figur', JSON.stringify(regler));
+        return true;
+    }
+
     /** Das gerechnete Netz an die Figur hängen und Bilanz ziehen. */
     static async anziehen(figur, netz, meldung, stueck) {
         garmentcodeFortschritt.laeuft('rig');
@@ -92,6 +111,9 @@ export class GarmentcodeDrapierung {
                 + `${fehler.message || fehler}`;
             return;
         }
+        // Daz-Stücke über dem neuen Stück neu holen (Genesis 9, 24.09.2026).
+        const nachgezogen = await Genesis9lagen.nachGcBau(figur?.inst || figur, stueck, netz.ueber_getragene)
+            .catch(fehler => `Daz-Stücke nicht nachgezogen: ${fehler.message || fehler}`);
         garmentcodeFortschritt.fertig('rig', getragen
             ? (getragen.angezogen
                 ? `${getragen.zugeordnet} Knochen zugeordnet`
@@ -103,6 +125,8 @@ export class GarmentcodeDrapierung {
         // stehen nur nicht mehr im Weg.
         meldung.textContent = GarmentcodeBilanz.kurzbilanz(netz, getragen);
         meldung.title = GarmentcodeBilanz.bilanz(netz, getragen);
+        if (typeof nachgezogen === 'string') meldung.textContent += ` · ${nachgezogen}`;
+        else if (nachgezogen?.length) meldung.textContent += ` · darüber neu: ${nachgezogen.join(', ')}`;
     }
 
     /**
@@ -116,8 +140,13 @@ export class GarmentcodeDrapierung {
      *
      * Wirft bei einem Fehler weiter — der Aufrufer entscheidet, ob das den
      * ganzen Lauf beendet.
+     *
+     * `quelle` (24.09.2026): wie `titel` — von außen NUR, wenn der Aufrufer
+     * sie besser kennt als der DOM-Zustand (der gemeinsame Bau mehrerer
+     * Stücke, `garmentcode_gemeinsam.js`, reicht bisher `null` durch wie
+     * beim Titel); sonst kommt sie aus dem gerade offenen Reiter.
      */
-    static async einhaengen(figur, netz, stueck, titel = null) {
+    static async einhaengen(figur, netz, stueck, titel = null, quelle = null) {
         // ERST DAS SKELETT (Edgar, 08.09.2026: „warum denn der hinweistext:
         // Figur hat kein Skelett?? die hat doch skelett").
         //
@@ -133,8 +162,11 @@ export class GarmentcodeDrapierung {
         const inst = figur?.inst || figur;
         if (inst && !inst.isSkinned) fn.convertInstToSkinned?.(inst);
         let getragen = null;
-        // Der Name, unter dem das Stück bestellt wurde (20.09.2026).
+        // Der Name, unter dem das Stück bestellt wurde (20.09.2026), und
+        // seine Herkunft (24.09.2026) — Vorbild-Knopf oder Form-Häkchen,
+        // damit ein späterer Klick auf das Stück dieselbe Wahl wiederfindet.
         titel = titel || netz.titel || GarmentcodeTitel.aktuell(stueck);
+        quelle = quelle || GarmentcodeTitel.quelle();
         if (netz.rig_url) {
             // `inst`, nicht `figur.inst`: Die Zeile oben löst beide Formen
             // auf (Reiter-Wrapper `{id, inst}` ODER die Instanz selbst).
@@ -152,7 +184,7 @@ export class GarmentcodeDrapierung {
         Stoffvorschau.hinweisAus();
         // In die Ablage der Figur, damit „Speichern" es findet
         // (08.09.2026: „beim neu laden sind die Garment Code items weg").
-        GarmentcodeAblage.merken(inst, stueck, netz, titel);
+        GarmentcodeAblage.merken(inst, stueck, netz, titel, quelle);
         // Das frisch eingehängte Stück bekommt ein neues Material mit den
         // Vorgabewerten. Ohne diesen Schritt spränge die eingestellte Farbe
         // bei jedem Bau zurück (08.09.2026).
@@ -170,14 +202,16 @@ export class GarmentcodeDrapierung {
      * Das Stück an den Körper binden, damit es den Reglern folgt.
      *
      * Nur für HumanBody-Figuren: Ein SMPL-Referenzkörper hat keine Morphs,
-     * da gibt es nichts nachzuziehen. Und nur, wenn der Server einen
-     * Ergebnisordner gemeldet hat — ohne ihn findet er das Netz nicht.
+     * da gibt es nichts nachzuziehen. Genesis 9 auch nicht (24.09.2026): Der
+     * Stoffkanal bindet an das MakeHuman-Grundnetz — ein fremder Körper, dessen
+     * Reglerzüge das Stück sonst mitgezogen hätten. Und nur, wenn der Server
+     * einen Ergebnisordner gemeldet hat — ohne ihn findet er das Netz nicht.
      */
     static vorschauBinden(figur, netz, stueck) {
         // Beide Formen, wie in `einhaengen` — sonst bindet die Vorschau
         // stumm nicht, wenn die Instanz selbst hereingereicht wird.
         const inst = figur?.inst || figur;
-        if (!inst || inst.quelle === 'smpl' || !netz.ordner) return false;
+        if (!inst || inst.quelle === 'smpl' || inst.quelle === 'genesis9' || !netz.ordner) return false;
         const gehaengt = inst.group?.getObjectByName(
             GarmentcodeAnziehen.name(stueck));
         if (!gehaengt) return false;

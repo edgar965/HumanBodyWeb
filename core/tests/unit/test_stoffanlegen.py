@@ -130,6 +130,41 @@ class StoffanlegenTest(SimpleTestCase):
         self.assertGreater(bilanz['saum_gehoben_mm'], 50)
         self.assertGreater(neu[:, 2].min(), 0.03)
 
+    def test_die_schlussrunde_hebt_nur_heraus(self):
+        """`nur_heraus` (24.09.2026): Die Schlussrunden nach der Glaettung ziehen
+        nichts mehr heran — ein volles Anlegen dort klappte im Schritt der Harem
+        Pants 21 Dreiecke wieder um. Abstehendes bleibt, Eingesunkenes kommt heraus.
+        Sabotage: `np.maximum(weg, 0.0)` weglassen -> rot."""
+        kv, kf = StoffanlegenTest._kugel()
+        ab, dreiecke = StoffanlegenTest._streifen([(0.13, -0.01), (0.13, 0.01)])
+        anleger = Stoffanlegen.aus_netz(kv, kf, dreiecke)
+        neu, nah = anleger._anlegen(ab, 0.002, nur_heraus=True)
+        self.assertTrue(nah.all())
+        np.testing.assert_allclose(neu, ab)
+        drin, _ = StoffanlegenTest._streifen([(0.09, -0.01), (0.09, 0.01)])
+        neu, _ = anleger._anlegen(drin, 0.002, nur_heraus=True)
+        self.assertGreater((self._abstand(neu) * 1000).min(), 1.4)
+
+    def test_umgeklappte_falten_werden_zur_faltenzone(self):
+        """`_faltengewicht` (24.09.2026, Harem Pants an den Knoecheln): Klappt das
+        Anlegen ein Dreieck um, wo der Stoff vorher tief stand, gehoeren seine
+        Punkte (Gewicht 1) und ihre Nachbarn zur Faltenzone; ohne Umklappen keine.
+        Sabotage: die Pruefung `kipp` immer False -> rot."""
+        kv, kf = StoffanlegenTest._kugel()
+        stoff, dreiecke = StoffanlegenTest._streifen([(0.13, -0.01), (0.13, 0.01)])
+        anleger = Stoffanlegen.aus_netz(kv, kf, dreiecke)
+        kanten = anleger._nachbarschaft(len(stoff))
+        flach = stoff * (0.102 / 0.13)
+        self.assertIsNone(anleger._faltengewicht(stoff, flach, kanten))
+        verdreht = flach.copy()
+        verdreht[[0, 1]] = verdreht[[1, 0]]  # zwei Nachbarn im Ring vertauscht
+        gewicht = anleger._faltengewicht(stoff, verdreht, kanten)
+        self.assertEqual((gewicht[0], gewicht[1]), (1.0, 1.0))
+        self.assertLess(gewicht[24], 0.5)  # gegenueber im Ring: weit weg
+        soll = anleger._faltensoll(stoff, 0.002, gewicht)
+        self.assertGreater(soll[0], 0.002)
+        self.assertAlmostEqual(soll[24], 0.002, delta=0.002)
+
     def test_bilanz_nennt_den_hautabstand(self):
         kv, kf = StoffanlegenTest._kugel()
         stoff, dreiecke = StoffanlegenTest._streifen([(0.13, -0.01), (0.13, 0.01)])

@@ -27,9 +27,25 @@ import { Lichtschluessel } from './lichtschluessel.js';
  * Ein VOR diesem Tag gespeichertes Projekt hat gar kein `"Ambient"`-Feld —
  * die Spur gab es beim Speichern noch nicht. Ohne Sonderfall sähe das genau
  * wie „Nutzer hat Ambient gelöscht" aus, und das Licht verschwände beim
- * ersten Laden jedes alten Projekts wieder ersatzlos. Der Marker
- * `__ambientSpur` (`projekt_daten.js`) unterscheidet die beiden Fälle: fehlt
- * er, ist es ein alter Speicherstand → Ambient trotzdem anlegen.
+ * ersten Laden jedes alten Projekts wieder ersatzlos.
+ *
+ * VIERTER FALL: EIN ZWISCHENSTAND ÜBERLEBT DIE NÄCHSTE ÄNDERUNG
+ * ===============================================================
+ * Derselbe Tag, zwei Änderungen kurz hintereinander: Die Ambient-Spur kam
+ * zuerst mit `coneVisible: true` (Vorgabe wie bei den anderen drei), erst
+ * danach auf `false` (die Lichtform lag sonst sichtbar bei (0,0,0) — Three.js
+ * setzt ein AmbientLight immer dorthin — mitten in der Figur, Edgar-Bild:
+ * Platte unter den Füßen). Dazwischen lief eine Sitzung, die den ersten Stand
+ * (`coneVisible: true`) in `sessionStorage` einfror — jeder Reload holte ihn
+ * zurück und überschrieb den neuen Code-Default. „Speichern schlägt Code"
+ * gilt nur, wenn der Nutzer den Wert WIRKLICH gewählt hat, nicht wenn er nur
+ * der zufällige Stand zwischen zwei Fixes war.
+ *
+ * `__ambientFassung` (`projekt_daten.js`) macht beide Fälle unterscheidbar:
+ * fehlt sie, kennt der Speicherstand „Ambient" noch gar nicht (→ Fall drei);
+ * steht sie unter `CONE_FASSUNG`, kennt er die Spur, aber noch nicht deren
+ * `coneVisible`-Vorgabe (→ dieser vierte Fall: den gespeicherten Wert für
+ * GENAU dieses eine Feld verwerfen, alles andere normal übernehmen).
  */
 export class Szenenlichter {
 
@@ -41,13 +57,18 @@ export class Szenenlichter {
         { name: 'Ambient', ref: 'sceneAmbient' },
     ];
 
+    /** Fassung von `sceneLights` — bei jeder Migration hier hochzählen. */
+    static AMBIENT_FASSUNG = 1;      // ab hier: die Spur selbst existiert
+    static CONE_FASSUNG = 2;         // ab hier: coneVisible-Vorgabe = aus
+
     /** Spuren anlegen und gespeicherte Werte übernehmen. */
     static spurenAnlegen() {
         const gespeichert = state.project._pendingSceneOverrides?.sceneLights;
         const ausSave = gespeichert !== undefined && gespeichert !== null;
+        const fassung = ausSave ? (gespeichert.__ambientFassung || 0) : Infinity;
         // Migration: ein Speicherstand von VOR der Ambient-Spur kennt sie
         // nicht — das darf nicht als „gelöscht" gelten (siehe Klassenkommentar).
-        const altOhneAmbient = ausSave && !gespeichert.__ambientSpur;
+        const altOhneAmbient = ausSave && fassung < Szenenlichter.AMBIENT_FASSUNG;
         for (const { name, ref } of Szenenlichter.LICHTER) {
             const licht = state[ref];
             if (!licht) continue;
@@ -58,7 +79,7 @@ export class Szenenlichter {
             }
             Szenenlichter._spur(name, licht);
         }
-        Szenenlichter.uebernehmen(gespeichert);
+        Szenenlichter.uebernehmen(gespeichert, fassung);
         fn.updateTrackHeaders?.();
         fn.renderTimeline?.();
     }
@@ -101,16 +122,16 @@ export class Szenenlichter {
      * Gespeicherte Werte auf die vorhandenen Szenenlicht-Spuren übernehmen.
      *
      * Auch mitten in einer Sitzung aufrufbar (Projekt laden, während die Spuren
-     * schon stehen).
+     * schon stehen) — dann ohne `fassung` (Vorgabe: aktuell, nichts verwerfen).
      */
-    static uebernehmen(werte) {
+    static uebernehmen(werte, fassung = Infinity) {
         if (!werte) return;
         for (const spur of state.project.tracks) {
             if (!spur._sceneLight || !spur.light) continue;
             const gespeichert = werte[spur.name];
             if (!gespeichert) continue;
             Szenenlichter._lichtwerte(spur.light, gespeichert);
-            Szenenlichter._spurwerte(spur, gespeichert);
+            Szenenlichter._spurwerte(spur, gespeichert, fassung);
             Szenenlichter._clips(spur, gespeichert);
         }
     }
@@ -132,12 +153,16 @@ export class Szenenlichter {
         }
     }
 
-    static _spurwerte(spur, werte) {
+    static _spurwerte(spur, werte, fassung = Infinity) {
         spur.lightVisible = werte.visible ?? false;
         // Lichtkegel: gespeichert seit je (`Projektdaten._lichter`), gelesen
         // erst seit dem 11.09.2026 (Edgar: „Lichtkegel (aus) gesetzt und
-        // projekt gespeichert, beim neu laden war der alte Status").
-        spur.coneVisible = werte.coneVisible ?? true;
+        // projekt gespeichert, beim neu laden war der alte Status"). Beim
+        // Szenen-Ambient NUR ab `CONE_FASSUNG` übernehmen (siehe Klassenkommentar,
+        // „vierter Fall") — davor bleibt es beim `_spur()`-Default (aus).
+        const ignorieren = spur.light?.isAmbientLight
+                          && fassung < Szenenlichter.CONE_FASSUNG;
+        spur.coneVisible = ignorieren ? false : (werte.coneVisible ?? true);
         spur.muted = werte.muted ?? false;
         spur.light.visible = !spur.muted;
         if (spur.lightHelper) {

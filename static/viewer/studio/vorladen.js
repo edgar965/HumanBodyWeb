@@ -11,6 +11,46 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Modellzustaendigkeit } from './modellzustaendigkeit.js';
 
 
+/**
+ * Warteschlange fürs Vorladen — höchstens EIN Preset gleichzeitig im Bau.
+ *
+ * WARUM (Edgar, 24.09.2026, „fixe teuere Sprünge"): `_schedulePreloads` stößt
+ * bei jedem `applyPlayhead()` ALLE Modell-Presets des Projekts an — jedes davon
+ * fächert selbst in viele Garderobe-Netz-Anfragen auf. Bei drei Figuren liefen
+ * so an die zwanzig `/netz/`-Anfragen gleichzeitig los, blockierten sich
+ * gegenseitig (Browser-Verbindungslimit, Server-Last) und liefen bis zu 39 s
+ * (`client.log`, 24.09.2026: `.../Damira1/netz/ ok 28428ms`,
+ * `.../kin_hair/netz/ ok 39492ms`) — ein Sprung in einen noch nicht geladenen
+ * Bereich landete mitten in diesem Stau. Jetzt läuft ein Preset nach dem
+ * anderen; das GERADE benötigte Preset (`Modellspur._laden`, direkter Aufruf
+ * ohne diese Schlange) muss sich dann höchstens gegen EIN Hintergrund-Preset
+ * durchsetzen, nicht gegen alle.
+ */
+const _vorladeSchlange = [];
+let _vorladeLaeuft = false;
+
+function _einreihen(aufgabe) {
+    return new Promise((resolve, reject) => {
+        _vorladeSchlange.push({ aufgabe, resolve, reject });
+        _vorladeWeiter();
+    });
+}
+
+async function _vorladeWeiter() {
+    if (_vorladeLaeuft) return;
+    const naechste = _vorladeSchlange.shift();
+    if (!naechste) return;
+    _vorladeLaeuft = true;
+    try {
+        naechste.resolve(await naechste.aufgabe());
+    } catch (e) {
+        naechste.reject(e);
+    } finally {
+        _vorladeLaeuft = false;
+        _vorladeWeiter();
+    }
+}
+
 // Preload-Cache: lädt Preset-Assets im Hintergrund via Shadow-Track.
 // Resolved zu {group, mesh, skeleton, mixer}. Beim Switch wird die vorbereitete
 // Gruppe atomic in den echten Track übernommen.
@@ -28,7 +68,10 @@ export async function _preloadPreset(animTrack, preset) {
     };
     shadow.group.visible = false;
     state.scene.add(shadow.group);
-    const promise = fn.loadTrackCharacter(shadow).then(() => ({
+    // Das Registrieren (Cache-Eintrag) bleibt sofort/synchron, damit
+    // `_schedulePreloads` denselben Preset nicht beim nächsten Bild erneut
+    // anstösst — nur der teure Teil (`loadTrackCharacter`) wartet in der Schlange.
+    const promise = _einreihen(() => fn.loadTrackCharacter(shadow)).then(() => ({
         group: shadow.group, mesh: shadow.mesh, skeleton: shadow.skeleton, mixer: shadow.mixer,
         modell: shadow.modell, figurHoehe: shadow.figurHoehe,
     })).catch(e => {

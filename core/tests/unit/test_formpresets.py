@@ -229,6 +229,26 @@ class FormpresetsTest(SimpleTestCase):
         self.assertEqual(werte['shirt.length'], 0.65)
         self.assertEqual(werte['meta.upper'], 'Shirt')
 
+    def test_socken_bekommen_die_form_socke(self):
+        """Edgar (24.09.2026): „Garment Code Schuhe sehen kaputt aus. z.B. CrudeHighSocks" —
+        als Stiefel gedeutet bekamen Socken Leder, Schaftweite 1,2 und die am fremden Netz
+        gemessene Weite 1,236 (auf Damira median 20,7 mm vor der Haut). Die Schafthoehe bleibt
+        gemessen; ohne Schaft (Slipper) die kurze Socke. Sabotage: Socken-Regel in `ziel`
+        weg -> rot."""
+        from GarmentCode.vorbildgruppen import Vorbildgruppen
+
+        self.assertEqual(Vorbildgruppen.ziel('stiefel', 'Crudehighsocks')[:2], ('schuh', 'form_socke'))
+        self.assertEqual(Vorbildgruppen.ziel('stiefel', 'Bootsviking')[:2], ('schuh', 'form_stiefel'))
+        werte = Vorbildgruppen.werte(
+            'stiefel', 'Crudehighsocks', {'shoe.width': 1.236, 'shoe.length': 1.102, 'boot.height': 0.695}
+        )
+        self.assertEqual(
+            [werte[p] for p in ('shoe.width', 'shoe.length', 'boot.ease', 'shoe.material', 'boot.height')],
+            [1.0, 1.0, 1.0, 'cloth', 0.695],
+        )
+        kurz = Vorbildgruppen.werte('slipper', 'Sockslacefrill', {'shoe.width': 1.061})
+        self.assertEqual(kurz['boot.height'], Vorbildgruppen.SOCKE_KURZ)
+
     def test_jedes_gemessene_vorbild_erscheint_genau_einmal(self):
         alle = Vorbildpresets.alle()
         if not alle:

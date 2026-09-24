@@ -33,6 +33,8 @@ import './figurvideo.js';
 import './kleider.js';
 import './garmentcode.js';
 import './garmentcode_vorbilder.js';
+import './garmentcode_auswahlwechsel.js';
+import './garmentcode_stueckquelle.js';
 import './garmentcode_absatz.js';
 import '../gemeinsam/hautverdeckung.js';
 import './lagenverdeckung.js';

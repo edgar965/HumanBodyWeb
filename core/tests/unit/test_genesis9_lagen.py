@@ -106,6 +106,15 @@ class SaumUeberBund(SimpleTestCase):
         self.assertFalse(G9lagen.saum_ueber_bund(hemd, np.ones(len(hemd), dtype=bool),
                                                  niete, np.ones(len(niete), dtype=bool)))
 
+    def test_3_ein_ganz_bedecktes_stueck_ist_kein_saum(self):
+        """Edgar (24.09.2026): der BH unter „Fem Suit2" kam darueber — ganz in der
+        Ueberlappung, die Punkte meist unten (Koerbchen dicht, Traeger duenn), also
+        der Median im unteren Viertel. Ein Saum ist nur ein Teil des Stuecks
+        (`SAUM_ANTEIL`). Sabotage: `SAUM_ANTEIL` auf 1,0 -> rot (BH aussen)."""
+        bh = np.vstack([wand(0.003, 0.60, 0.70)] * 6 + [wand(0.003, 0.70, 0.90)[::4]])
+        anzug = wand(0.010, 0.0, 0.9)
+        self.assertEqual(self.lagen.einordnen(bh, [('anzug', anzug, False)]), ([], ['anzug']))
+
 
 class Flaeche(SimpleTestCase):
     databases = set()

@@ -13,6 +13,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Szenenlichter } from './szenenlichter.js';
 
 export class Projektdaten {
     /** Vollstaendiger Projektstand als speicherbare Struktur. */
@@ -34,13 +35,16 @@ export class Projektdaten {
      * Licht-Eigenschaften der Szenenlichter (Key/Fill/Back/Ambient + Theatre)
      * als {name: {eigenschaften, clips}} fuer den Speicher-Rundlauf.
      *
-     * `__ambientSpur` markiert Speicherstände AB der Ambient-Spur (24.09.2026):
-     * ohne die Marke weiß `Szenenlichter.spurenAnlegen()` beim Laden nicht, ob
-     * ein fehlendes "Ambient" ein alter Speicherstand ist (Spur anlegen) oder
-     * eine bewusste Löschung (Spur weglassen) — siehe dortiger Kommentar.
+     * `__ambientFassung` markiert den Migrationsstand von `sceneLights`
+     * (`Szenenlichter.AMBIENT_FASSUNG`/`CONE_FASSUNG`, 24.09.2026): ohne sie
+     * weiß `Szenenlichter.spurenAnlegen()` beim Laden nicht, ob ein fehlendes
+     * "Ambient" ein alter Speicherstand ist (Spur anlegen) oder eine bewusste
+     * Löschung (weglassen) — und ob ein vorhandenes "Ambient" seine
+     * `coneVisible`-Vorgabe schon kennt oder nur der Zwischenstand vor deren
+     * Einführung ist. Siehe dortiger Kommentar.
      */
     static _lichter() {
-        const out = { __ambientSpur: true };
+        const out = { __ambientFassung: Szenenlichter.CONE_FASSUNG };
         for (const t of state.project.tracks) {
             if (t.type !== 'light' || !t._sceneLight || !t.light) continue;
             out[t.name] = {

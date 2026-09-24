@@ -8,6 +8,7 @@ import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { Laufwache } from '../gemeinsam/laufwache.js';
 import { GarmentcodeAbbruch } from './garmentcode_abbruch.js';
 import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
+import { Genesis9lagen } from '../gemeinsam/genesis9lagen.js';
 
 /**
  * GarmentcodeGemeinsam — mehrere Stücke in EINEM Lauf anziehen.
@@ -102,6 +103,10 @@ export class GarmentcodeGemeinsam {
 
         const daten = reiter.figurdaten(figur);
         daten.append('stuecke', JSON.stringify(liste.fuerServer()));
+        // Genesis 9: über die getragenen Daz-Stücke bauen, wie der Einzelbau (24.09.2026).
+        if (document.getElementById('gc-ueber-getragene')?.checked !== false) {
+            GarmentcodeDrapierung.getrageneDaz(daten, figur?.inst || figur);
+        }
         const antwort = await Antwortnachholen.formular(
             '/api/garmentcode/gemeinsam/', daten,
             GarmentcodeGemeinsam.FRIST_S,
@@ -142,8 +147,13 @@ export class GarmentcodeGemeinsam {
         garmentcodeFortschritt.fertig(
             'einhaengen', `${berichte.filter((b) => b.ok).length} von `
             + `${berichte.length} angezogen`);
+        // Daz-Stücke über den neuen Stücken neu holen (Genesis 9, 24.09.2026).
+        const nachgezogen = await Genesis9lagen.nachGcBau(figur?.inst || figur,
+            berichte.filter(b => b.ok).map(b => b.stueck.stueck), antwort.ueber_getragene)
+            .catch(fehler => [`nicht nachgezogen: ${fehler.message || fehler}`]);
         meldung.textContent = GarmentcodeGemeinsam.kurzbilanz(antwort,
                                                               berichte);
+        if (nachgezogen.length) meldung.textContent += ` · Daz darüber neu: ${nachgezogen.join(', ')}`;
         meldung.title = GarmentcodeGemeinsam.bilanz(antwort, berichte);
     }
 

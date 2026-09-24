@@ -81,6 +81,10 @@ class G9garmentfigur:
         regler, drehung = self._haltung(dict(self.regler), stellung)
         self.formung = G9formung.aus_abfrage(regler, drehung)
         self._roh = None
+        #: Die getragenen Daz-Stuecke `[{kennung, stil, regler_stueck}]`
+        #: (24.09.2026) — ueber sie legt die Nacharbeit das neue Stueck.
+        roh = stellung.get('getragen') if isinstance(stellung, dict) else None
+        self.getragen = [e for e in roh if isinstance(e, dict)] if isinstance(roh, list) else []
 
     @staticmethod
     def _haltung(regler, stellung):
@@ -153,6 +157,21 @@ class G9garmentfigur:
     def haut(self):
         u"""`{knochen, index (N, 4), gewicht (N, 4)}` der Kaefig-Browserpunkte."""
         return self.stufe(0).haut
+
+    def getragene_stoffe(self):
+        u"""`[(kennung, Punkte in Projektlage)]` der getragenen Daz-Stuecke —
+        fertig gehoben, wie der Browser sie zeigt (`G9stueckteile.getragene`).
+
+        Edgar (24.09.2026): „GarmentCode Pants Harem zieht die Kleider bei
+        Genesis nicht ueber existierende Genesis-Kleider hoch" — die Nacharbeit
+        kannte nur GarmentCode-Stuecke als getragen. Jetzt gehen diese Netze wie
+        eine Rig-Datei in `Hautmitstoff`."""
+        if not self.getragen:
+            return []
+        from .g9stueckteile import G9stueckteile
+        return [(kennung, self.projekt(punkte))
+                for kennung, punkte in G9stueckteile.getragene(
+                    self.formung, self.getragen, stufen=self.sichtbare_stufe())]
 
     @staticmethod
     def projekt(punkte):
