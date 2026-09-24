@@ -12,9 +12,11 @@ Erste Seite: „Andere Modelle" — hochaufloesende Figuren im Vergleich
 from django.urls import path
 
 from .api.hilfe_andere_modelle import AndereModelle, Figurbild
+from .api.hilfe_webserver import HilfeWebserver
 
 urlpatterns = [
     path('andere-modelle/', AndereModelle.ansicht(), name='hilfe_andere_modelle'),
+    path('webserver/', HilfeWebserver.ansicht(), name='hilfe_webserver'),
     path(
         'andere-modelle/vorschau/<str:ordner>/<str:datei>',
         Figurbild.vorschau,

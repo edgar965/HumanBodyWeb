@@ -1,4 +1,4 @@
-import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
+import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 import { Animationsbrowser } from './animationsbrowser.js';
 import { Effektformular } from './effektformular.js';
 import { Effektverlauf } from './effektverlauf.js';

@@ -19,10 +19,12 @@ from django.views.decorators.http import require_POST
 
 from ..daten.anfragerumpf import Anfragerumpf
 from ..daten.hochgeladen import Hochgeladen
+from ..dienste.audiomischer import Audiomischer
 from ..dienste.bildfolgen_render import BildfolgenRender, RenderFehler
 from ..dienste.videokodierer import VideoFehler, Videokodierer
 from ..projekt_temp import ProjektTemp
 from ..safe_paths import PfadAbgelehnt, SafePath
+from .studio_video_stapel import TheatrevideoStapel
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +154,23 @@ class Theatrevideo:
     @csrf_exempt
     @require_POST
     def bilder_kodieren(request):
-        """Hochgeladene PNG-Bilder zu einem Video kodieren."""
+        """Hochgeladene PNG-Bilder zu einem Video kodieren.
+
+        Zwei Wege, unterschieden am Feld `session_id` (Umbau 24.09.2026,
+        `TheatrevideoStapel`): OHNE das Feld der ALTE Weg — alle Bilder in
+        EINER Anfrage (weiterhin von TheatreJS/`bildexport.js` genutzt). MIT
+        dem Feld der NEUE Paket-Weg (`bvh_studio/video_schreiben.js`): jedes
+        Paket eine eigene, kleine Anfrage; ein letztes Paket mit `finish=1`
+        loest das Kodieren aus. Der alte Weg kann bei langen Exporten an
+        Djangos Datei-Limit scheitern (siehe `studio_video_stapel.py`) — er
+        bleibt fuer TheatreJS unveraendert, statt ihn ungefragt mit
+        umzubauen.
+        """
+        session_id = request.POST.get('session_id')
+        if session_id is not None:
+            if request.POST.get('finish') == '1':
+                return TheatrevideoStapel.abschliessen(request, session_id)
+            return TheatrevideoStapel.paket(request, session_id)
         bilder = request.FILES.getlist('frames')
         if not bilder:
             return JsonResponse({'error': 'No frames uploaded'}, status=400)
@@ -213,6 +231,7 @@ class Theatrevideo:
                 int(werte.get('height', 0)),
             )
         )
+        ausgabe = Theatrevideo._ton_einmischen(werte, ausgabe, arbeitsordner, endung, format_, anzahl / fps)
         logger.info('Bilder kodiert: %d Bilder, %d fps, %s', anzahl, fps, format_)
         if zielpfad:
             os.makedirs(os.path.dirname(zielpfad), exist_ok=True)
@@ -222,6 +241,26 @@ class Theatrevideo:
         return Theatrevideo._datei_und_aufraeumen(
             ausgabe, Videokodierer.inhaltstyp(format_), 'theatre_export.' + endung, arbeitsordner
         )
+
+    @staticmethod
+    def _ton_einmischen(werte, ausgabe, arbeitsordner, endung, format_, video_dauer):
+        """Audiospuren aus dem Formular in `ausgabe` einmischen — oder unveraendert zurueckgeben.
+
+        Schlaegt das Mischen fehl (defekte Tondatei, ffmpeg-Fehler), bleibt das
+        STUMME Video die Antwort: ein Ton-Bug darf den Export nicht ganz
+        scheitern lassen, der Grund steht im Protokoll.
+        """
+        clips = Audiomischer.aus_anfrage(werte.get('audio_clips'))
+        if not clips:
+            return ausgabe
+        mit_ton = os.path.join(arbeitsordner, 'output_audio.' + endung)
+        try:
+            Videokodierer.ausfuehren(Audiomischer.einbetten(ausgabe, clips, mit_ton, format_, video_dauer))
+        except VideoFehler as fehler:
+            logger.warning('[studio] Ton-Einbettung fehlgeschlagen, Video bleibt stumm: %s', fehler)
+            return ausgabe
+        logger.info('Ton eingemischt: %d Clip(s)', len(clips))
+        return mit_ton
 
     # ----------------------------------------------------------- Hilfsmittel
 

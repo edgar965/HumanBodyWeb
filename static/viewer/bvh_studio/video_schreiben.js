@@ -35,12 +35,81 @@ export async function saveBlobAs(blob, suggestedName, mimeType) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Audio-Clips im Exportbereich einsammeln — für die Mischung auf dem Server.
+ *
+ * Zeiten stehen in PROJEKT-Sekunden (`state.project.fps`), nicht in
+ * Export-Bildern: `fromFrame`/`toFrame` sind Projekt-Frames, die Ausgabe-FPS
+ * des Videos (`angaben.bilder`) zählt nur die Bilder, ändert aber nicht die
+ * Position der Projekt-Zeitleiste. Ein Clip, der über den Rand des
+ * Exportbereichs hinausragt, wird beschnitten (Versatz wandert in
+ * `source_offset_sec`, damit die Tondatei an der richtigen Stelle weiterläuft).
+ */
+function _sammleAudioClips(fromFrame, toFrame) {
+    const fps = state.project.fps;
+    const exportStart = fromFrame / fps;
+    const exportEnde = toFrame / fps;
+    const ergebnis = [];
+    for (const spur of state.project.tracks) {
+        if (spur.type !== 'audio' || spur.muted) continue;
+        for (const clip of spur.clips || []) {
+            if (clip.type !== 'audio') continue;
+            if (!clip.data.audioUrl) {
+                Protokoll.warnung('BVH Studio',
+                    `Ton "${clip.data.fileName || clip.name}" nicht hochgeladen — fehlt im Export.`);
+                continue;
+            }
+            const clipStart = clip.startFrame / fps;
+            const clipEnde = clipStart + clip.duration;
+            const start = Math.max(clipStart, exportStart);
+            const ende = Math.min(clipEnde, exportEnde);
+            if (ende <= start) continue;
+            ergebnis.push({
+                url: clip.data.audioUrl,
+                delay_sec: start - exportStart,
+                source_offset_sec: (clip.data.offset || 0) + (start - clipStart),
+                duration_sec: ende - start,
+                volume: clip.data.volume != null ? clip.data.volume : 1,
+                fade_in_sec: clip.data.fadeIn || 0,
+                fade_out_sec: clip.data.fadeOut || 0,
+            });
+        }
+    }
+    return ergebnis;
+}
+
+/**
+ * Bilder je Anfrage beim Server-Export. Vorher gingen ALLE Bilder eines
+ * Exports in EINER Anfrage — Django prüft sein 500-MB-Limit am GESAMTEN
+ * Anfrage-Körper, nicht je Bild; überschritt ein langer Export das, öffnete
+ * Django beim Auspacken für JEDES Bild eine eigene Temp-Datei GLEICHZEITIG
+ * und stürzte mit „Too many open files" ab (Fund 24.09.2026, nach 123,5 s).
+ * Jetzt ist jedes Paket eine eigene, kleine Anfrage — die Temp-Dateien der
+ * vorigen sind längst wieder zu, bevor die nächste beginnt (Server-Gegenstück
+ * `core/api/studio_video_stapel.py`, `TheatrevideoStapel`).
+ */
+const STAPEL_GROESSE = 150;
+
+async function _stapelHochladen(sessionId, startIndex, stapel) {
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    formData.append('start_index', startIndex);
+    stapel.forEach((blob, i) => formData.append('frames', blob, `${String(startIndex + i).padStart(6, '0')}.png`));
+    const resp = await fetch('/api/theatre/encode-frames/', { method: 'POST', body: formData });
+    if (!resp.ok) throw new Error(await resp.text());
+    const daten = await resp.json();
+    return daten.session_id;
+}
+
 export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText,
     progressBar) {
     const totalFrames = toFrame - fromFrame;
-    const frames = [];
+    let sessionId = '';
+    let stapel = [];
+    let stapelStart = 0;
 
-    // Phase 1: Capture frames
+    // Phase 1: Bilder aufnehmen, in Paketen hochladen (nicht alle im
+    // Speicher halten UND nicht alle in einer Anfrage, siehe oben).
     for (let f = fromFrame; f < toFrame; f++) {
         if (exportCancelled) { statusText.textContent = 'Abgebrochen.'; return; }
 
@@ -49,11 +118,23 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
         offRenderer.render(state.scene, state.camera);
 
         const blob = await new Promise(r => offCanvas.toBlob(r, 'image/png'));
-        frames.push(blob);
+        stapel.push(blob);
 
-        const pct = Math.round((f - fromFrame) / totalFrames * 100);
-        statusText.textContent = `Aufnahme: Frame ${f - fromFrame + 1}/${totalFrames} (${pct}%)`;
+        const bildnummer = f - fromFrame;
+        const pct = Math.round(bildnummer / totalFrames * 100);
+        statusText.textContent = `Aufnahme: Frame ${bildnummer + 1}/${totalFrames} (${pct}%)`;
         progressBar.style.width = `${pct * 0.8}%`;  // 80% for capture, 20% for encoding
+
+        if (stapel.length >= STAPEL_GROESSE || f === toFrame - 1) {
+            try {
+                sessionId = await _stapelHochladen(sessionId, stapelStart, stapel);
+            } catch (e) {
+                statusText.textContent = 'Fehler beim Hochladen: ' + e.message;
+                return;
+            }
+            stapelStart += stapel.length;
+            stapel = [];
+        }
 
         // Yield EVERY frame so Cancel-Button-Click zeitnah gegriffen wird.
         // Vorher nur alle 5 Frames → bis zu 500ms Verzögerung bis der Click
@@ -63,16 +144,22 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
     }
 
     if (exportCancelled) { statusText.textContent = 'Abgebrochen.'; return; }
+    if (!sessionId) { statusText.textContent = 'Fehler: keine Bilder aufgenommen.'; return; }
 
-    // Phase 2: Send to server
+    // Phase 2: Encoding abschließen
     statusText.textContent = 'Encoding auf Server...';
     progressBar.style.width = '85%';
 
     const formData = new FormData();
-    frames.forEach((blob, i) => formData.append('frames', blob, `${String(i).padStart(6, '0')}.png`));
+    formData.append('session_id', sessionId);
+    formData.append('finish', '1');
+    formData.append('frame_count', stapelStart);
     formData.append('fps', fps);
     formData.append('format', 'mp4');
     formData.append('crf', crf);
+
+    const audioClips = _sammleAudioClips(fromFrame, toFrame);
+    if (audioClips.length) formData.append('audio_clips', JSON.stringify(audioClips));
 
     // Build save path -- always save to server disk
     const outputDir = (document.getElementById('export-target-dir')?.value || '').trim()
@@ -104,7 +191,8 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
     }
 
     Protokoll.info('BVH Studio',
-        `Server export done: ${totalFrames} frames, crf=${crf}, save_path=${formData.get('save_path')}`);
+        `Server export done: ${stapelStart} frames, crf=${crf}, audio=${audioClips.length}, `
+        + `save_path=${savePath}`);
 }
 
 export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText,

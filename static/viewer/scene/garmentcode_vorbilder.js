@@ -1,4 +1,4 @@
-import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { garmentcodePreset } from './garmentcode_preset.js';

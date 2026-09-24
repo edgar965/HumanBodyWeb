@@ -89,8 +89,8 @@ export class Modellwahl {
                 || Spurerzeugung.animation();
             bewegung.preset = name;
             bewegung.quelle = quelle;
-            bewegung.position = [x, 0, bewegung.position?.[2] || 0];
-            bewegung.group.position.set(x, 0, bewegung.position[2]);
+            bewegung.position = [x, bewegung.position?.[1] || 0, bewegung.position?.[2] || 0];
+            bewegung.group.position.set(x, bewegung.position[1], bewegung.position[2]);
             modell = Spurerzeugung.modell(name);
             modell._linkedAnimIdx = state.project.indexOf(bewegung);
             Modellmenue.vorlageSetzen(state.project.indexOf(modell), name, quelle);

@@ -26,7 +26,7 @@ export class Studioeinstellungen {
         videoziel: ['studio_video_output', String, ''],
         bvhziel: ['studio_bvh_output', String, ''],
         projektpfad: ['studio_project_path', String, ''],
-        vorladeSekunden: ['studio_preload_seconds', parseFloat, 3],
+        vorladenAlle: ['studio_preload_all', String, '1'],
         vorgabeprojekt: ['studio_default_project', String, ''],
     };
 
@@ -66,7 +66,7 @@ export class Studioeinstellungen {
         state.project.videoOutputPath = this.videoziel;
         state.project.bvhOutputPath = this.bvhziel;
         state.project.projectPath = this.projektpfad;
-        state.project.preloadSeconds = this.vorladeSekunden;
+        state.project.preloadAll = this.vorladenAlle !== '0';
         state.timelineZoom = this.zeitleistenZoom;
         return this;
     }

@@ -94,43 +94,70 @@ export class Lichtschluessel {
 
     // -------------------------------------------------------- Vom Nutzer gesetzt
 
-    /** Ein einzelner Keyframe am Abspielkopf (oder am angegebenen Bild). */
+    /**
+     * Ein Keyframe am Abspielkopf (oder am angegebenen Bild) — für ALLE
+     * Lichtspuren zugleich, nicht nur die gerade gewählte (Edgar, 23.09.2026:
+     * „das Event soll für alle Lichter gelten" — mit nur der gewählten Spur
+     * blieben die übrigen Lichter auf ihrem alten Stand stehen, obwohl sie im
+     * 3D-Fenster längst anders standen). `spurnummer` entscheidet nur, OB
+     * überhaupt eine Lichtspur gemeint ist (Aufrufer prüfen das meist schon
+     * selbst) — jede Spur erhält danach IHREN EIGENEN aktuellen Zustand.
+     */
     static einzeln(spurnummer, bild) {
-        const spur = Lichtschluessel._spur(spurnummer);
-        if (!spur) return;
+        if (!Lichtschluessel._spur(spurnummer)) return;
+        const lichtspuren = Lichtschluessel._alle();
+        if (lichtspuren.length === 0) return;
         pushUndo('Licht Keyframe');
         const stelle = bild != null ? bild : state.playheadFrame;
-        spur.clips.push(Lichtschluessel.bauen(
-            spur, stelle, `Licht ${spur.clips.length + 1}`));
-        spur.clips.sort((a, b) => a.startFrame - b.startFrame);
+        const nummer = Lichtschluessel._naechsteNummer(lichtspuren);
+        for (const s of lichtspuren) {
+            s.clips.push(Lichtschluessel.bauen(s, stelle, `Licht ${nummer}`));
+            s.clips.sort((a, b) => a.startFrame - b.startFrame);
+        }
         Lichtschluessel._nachtragen();
         Protokoll.info('BVH Studio',
-                       `Licht-Keyframe gespeichert bei Frame ${stelle}`);
+                       `Licht-Keyframe für ${lichtspuren.length} Lichter `
+                       + `gespeichert bei Frame ${stelle}`);
     }
 
     /**
-     * Zwei Keyframes am GLEICHEN Bild — vor und nach dem Schnitt.
+     * Zwei Keyframes am GLEICHEN Bild — vor und nach dem Schnitt, für ALLE
+     * Lichtspuren (siehe `einzeln`).
      *
      * Damit lässt sich das Licht an einer Stelle hart umschalten. In der
      * Zeitleiste werden sie oben/unten versetzt gezeichnet (`trackPosition`).
      */
     static paar(spurnummer, bild) {
-        const spur = Lichtschluessel._spur(spurnummer);
-        if (!spur) return;
+        if (!Lichtschluessel._spur(spurnummer)) return;
+        const lichtspuren = Lichtschluessel._alle();
+        if (lichtspuren.length === 0) return;
         pushUndo('Lichteigenschaft-Pair');
         const stelle = bild != null ? bild : state.playheadFrame;
-        const nummer = spur.clips.length + 1;
-        spur.clips.push(Lichtschluessel.bauen(spur, stelle,
-                                             `Licht ${nummer} (vor)`,
-                                             { trackPosition: 'upper',
-                                               fade: false }));
-        spur.clips.push(Lichtschluessel.bauen(spur, stelle,
-                                             `Licht ${nummer + 1} (nach)`,
-                                             { trackPosition: 'lower' }));
-        spur.clips.sort(Lichtschluessel._reihenfolge);
+        const nummer = Lichtschluessel._naechsteNummer(lichtspuren);
+        for (const s of lichtspuren) {
+            s.clips.push(Lichtschluessel.bauen(s, stelle,
+                                               `Licht ${nummer} (vor)`,
+                                               { trackPosition: 'upper',
+                                                 fade: false }));
+            s.clips.push(Lichtschluessel.bauen(s, stelle,
+                                               `Licht ${nummer + 1} (nach)`,
+                                               { trackPosition: 'lower' }));
+            s.clips.sort(Lichtschluessel._reihenfolge);
+        }
         Lichtschluessel._nachtragen();
-        fn.serverLog?.('light_kf_pair_added',
-                       `track=${spur.name} frame=${stelle}`);
+        fn.serverLog?.('light_kf_pair_added', `frame=${stelle}`);
+    }
+
+    /** Alle Lichtspuren des Projekts mit angeschlossenem Licht. */
+    static _alle() {
+        return state.project.tracks.filter(t => t.type === 'light' && t.light);
+    }
+
+    /** Höchste vorhandene Keyframe-Zahl über alle Spuren + 1 — hält die
+     *  Namen synchron, auch wenn eine Spur schon eigene (ältere) Keyframes
+     *  hatte, die eine andere noch nicht kennt. */
+    static _naechsteNummer(lichtspuren) {
+        return Math.max(0, ...lichtspuren.map(s => s.clips.length)) + 1;
     }
 
     /** Nach Bild, bei gleichem Bild der obere zuerst. */

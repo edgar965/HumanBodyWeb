@@ -2,12 +2,12 @@ import { escapeHtml } from '../utils.js';
 import { Bildnachlader } from '../../gemeinsam/bildnachlader.js';
 import { Bildauswahl } from '../../gemeinsam/bildauswahl.js';
 import { fn } from '../../gemeinsam/registrierung.js';
-import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Genesis9stueckregler } from './genesis9stueckregler.js';
 import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
 import { Reiterzuordnung } from '../../gemeinsam/reiterzuordnung.js';
+import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { state } from '../state.js';
 
 /**
@@ -45,14 +45,12 @@ export class Genesis9garderobe {
     static STILARTEN = [['stil', 'Stil'], ['pose', 'Pose'], ['laenge', 'Länge']];
     /** Der Behälter im Assets-Reiter (`_genesis9_garderobe.html`). */
     static BEREICH = 'assets-genesis9-garderobe';
-    static _liste = null;
 
-    static async liste() {
-        if (!Genesis9garderobe._liste) {
-            const daten = await Serverabruf.json(Genesis9garderobe.ADRESSE);
-            Genesis9garderobe._liste = daten.stuecke || [];
-        }
-        return Genesis9garderobe._liste;
+    /** Derselbe Katalog wie `Genesis9kleidung.anzeigename` (23.09.2026) — EIN
+     *  Serverlauf statt zwei (Assets-Reiter UND Schwebeanzeige fragten ihn
+     *  vorher unabhängig voneinander ab). */
+    static liste() {
+        return Genesis9kleidung.stuecke();
     }
 
     static async fuellen(inst, behaelter) {

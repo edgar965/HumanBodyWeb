@@ -95,7 +95,7 @@ class SeitenTest(TestCase):
         Seite mit 200 und bleibt eine leere Bühne."""
         for pfad, merkmal in (
             ('/humanbody/theatre/', 'theatre/theatre-app.js'),
-            ('/humanbody/bvh-studio/', 'viewer/bvh_studio/index.js'),
+            ('/studio/', 'viewer/bvh_studio/index.js'),
         ):
             with self.subTest(pfad=pfad):
                 self.assertContains(self.client.get(pfad), merkmal)

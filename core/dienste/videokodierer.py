@@ -62,9 +62,15 @@ class Videokodierer:
 
     @staticmethod
     def _kodierschalter(format, crf):
-        """x264 fuer MP4, VP9 fuer WebM — an einer Stelle."""
+        """NVENC (GPU) fuer MP4, VP9 (CPU) fuer WebM — an einer Stelle.
+
+        Kein NVIDIA-VP9-Encoder auf diesem Rechner (nur Intel Quick Sync,
+        `ffmpeg -encoders` geprueft 23.09.2026) — WebM bleibt CPU/libvpx-vp9.
+        `-cq` ist NVENCs Gegenstueck zu `-crf` bei libx264 (dieselbe 0-51-Skala).
+        """
         if format == 'mp4':
-            return ['-c:v', 'libx264', '-preset', 'fast', '-crf', str(crf), '-pix_fmt', 'yuv420p']
+            return ['-c:v', 'h264_nvenc', '-preset', 'p7', '-tune', 'hq',
+                    '-rc', 'vbr', '-cq', str(crf), '-pix_fmt', 'yuv420p']
         return ['-c:v', 'libvpx-vp9', '-crf', str(crf), '-b:v', '0']
 
     # ---------------------------------------------------------------- ausfuehren

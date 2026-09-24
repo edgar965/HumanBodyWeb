@@ -61,6 +61,30 @@ export class Clipfehlt {
         return weg;
     }
 
+    /**
+     * Eine BVH-Bibliotheksdatei wurde umbenannt: alle Clips, die noch den
+     * ALTEN Namen tragen, auf den neuen umstellen — statt sie beim nächsten
+     * Laden als 404 zu verlieren (Edgar, 24.09.2026: „die Umbenennung soll
+     * sofort im UI sichtbar sein"). `clip.animClip` bleibt unangetastet: Eine
+     * schon geladene Animation ist weiterhin gültig, nur ihr Name/Ordner im
+     * Projekt muss zum neuen Dateinamen passen, damit ein SPÄTERES Laden
+     * (Reload, `_neuHolen`) die Datei wiederfindet.
+     * @returns {number} Anzahl der umgestellten Clips
+     */
+    static umbenannt(kategorie, alterName, neuerName, state, fn) {
+        let geaendert = 0;
+        for (const spur of state.project.tracks) {
+            for (const clip of spur.clips) {
+                if ((clip.type !== 'bvh' && clip.type !== 'freeze')
+                    || clip.category !== kategorie || clip.name !== alterName) continue;
+                clip.name = neuerName;
+                geaendert++;
+            }
+        }
+        if (geaendert > 0) Clipfehlt._nachtragen(state, fn);
+        return geaendert;
+    }
+
     static _spurRaeumen(spur, kategorie, name) {
         let entfernt = 0;
         // Von hinten: Ein `splice` beim Vorwärtslaufen überspringt den Nachbarn.

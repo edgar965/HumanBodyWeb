@@ -65,6 +65,7 @@ function _reihen(breite, pps) {
         Zeitleistenspuren.linien(spur, y, pps);
         Zeitleistenspuren.klips(spur, ti, y, pps);
         Zeitleistenspuren.ueberblendung(spur, y, pps, breite);
+        Zeitleistenspuren.status(spur, y);
     }
 }
 

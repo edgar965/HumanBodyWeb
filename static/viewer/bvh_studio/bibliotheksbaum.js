@@ -4,6 +4,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Menueanimationen } from './menue_animationen.js';
 import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
+import { Clipfehlt } from './clipfehlt.js';
 
 /**
  * Bibliotheksbaum — der Ordnerbaum der BVH-Bibliothek in der Seitenleiste.
@@ -33,7 +34,16 @@ export class Bibliotheksbaum {
         /** Worauf das Kontextmenü zeigt. */
         this.menueziel = null;
         // Ein anderer Tab hat gelöscht, umbenannt, gespeichert (16.09.2026).
-        Bibliothekskanal.hoeren(() => this.laden());
+        // Bei einer Umbenennung zusätzlich DIESES Projekts eigene Clips
+        // umstellen, statt sie beim nächsten Laden als 404 zu verlieren
+        // (Edgar, 24.09.2026: „sofort im UI sichtbar").
+        Bibliothekskanal.hoeren((meldung) => {
+            if (meldung.aktion === 'rename' && meldung.category
+                    && meldung.name && meldung.new_name) {
+                Clipfehlt.umbenannt(meldung.category, meldung.name, meldung.new_name, state, fn);
+            }
+            this.laden();
+        });
     }
 
     /**

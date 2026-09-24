@@ -5,6 +5,7 @@ import { OberflaecheGLSL } from './oberflaecheglsl.js';
 import { Shaderpatch } from './shaderpatch.js';
 import { Koerperzuordnung } from './koerperzuordnung.js';
 import { Protokoll } from './protokoll.js';
+import { Kleidereinstellungen } from './kleidereinstellungen.js';
 
 /**
  * Oberflaechenbindung — anliegende Kleidung folgt der Körperoberfläche, je
@@ -32,6 +33,16 @@ export class Oberflaechenbindung {
 
     /** Mindestabstand über der Kapsel (Meter) — wie `G9kollision.ABSTAND`. */
     static KAPSELABSTAND = 0.003;
+    /** Luft über der Haut, die ein gebundener Punkt höchstens verlangt (Meter);
+     *  wer in Ruhe näher lag, darf so nah bleiben. 3 mm (wie `G9kollision.ABSTAND`)
+     *  ließen bei `001_ShyrinKurz_smplx` Bild 229 einen Hautstreifen in der Achsel
+     *  stehen — die Hautfalte wölbt sich zwischen den gebundenen Punkten vor; mit
+     *  1 cm war er weg (Sichtprobe 24.09.2026, Grenzen 12 cm änderten nichts). */
+    static LUFT = 0.01;
+    /** Tiefer im Körper ist der Punkt nicht über SEINEM Dreieck (Meter). */
+    static TIEF_GRENZE = 0.04;
+    /** Seitlich weiter weg hat er die Tangentialebene verlassen (Meter). */
+    static SEIT_GRENZE = 0.03;
     static SCHLUESSEL = 'oberflaeche';
     /**
      * Schalter fuer Gegenproben (A/B im Tab): Oberflaeche und Kapseln getrennt.
@@ -70,8 +81,23 @@ export class Oberflaechenbindung {
      * OFFEN bleibt das Oberteil: eine Messung über 22 Spagat-Bilder ergab für
      * das Shirt 0 Kapseltreffer — der sichtbare Schaden kommt also NICHT aus
      * dieser Schleife, sondern woanders her. Bis das geklärt ist, bleibt aus.
+     *
+     * SCHICHT 2 WIEDER AN (24.09.2026, Edgar: Haut durch das Shirt,
+     * `001_ShyrinKurz_smplx` Bild 229): nicht mehr als Projektion, sondern NUR
+     * HINAUS (`oberflaecheglsl.js`) — der Stoff bleibt beim Skinning und wird
+     * nur geschoben, wo er tiefer liegt als in Ruhe. Die Ursache der zerrissenen
+     * Schuhe (jeder Punkt für sich auf die Fußoberfläche gesetzt) gibt es damit
+     * nicht mehr; ein Punkt über dem Fuß bewegt sich nie. Ob sie läuft, steht
+     * seither unter Einstellungen → Kleider (`Kleidereinstellungen`, Vorgabe An).
+     *
+     * NORMALEN AUS DER FLÄCHE (derselbe Tag): Der helle Fleck in der Achsel bei
+     * Bild 229 war KEINE Haut — mit ausgeblendetem Körper blieb er stehen, mit
+     * `flatShading` war er weg. In der Achsel mischt jeder Stoffpunkt Arm- und
+     * Rumpfknochen; die gemischte Normale passt nicht mehr zur gestauchten
+     * Fläche, und das Material (`metalness` 1) spiegelt dort die helle
+     * Umgebung. Der Fragment-Eingriff zieht die Normale zur echten Flächen-
+     * normale, wo beide auseinanderlaufen (`OberflaecheGLSL.FRAGMENT`).
      */
-    static AKTIV = false;
     static KAPSELN_AKTIV = false;
 
     /**
@@ -140,13 +166,15 @@ export class Oberflaechenbindung {
 
     static _vorZeichnen(renderer, inst, netz) {
         const lage = Koerperlage.sichern(renderer, inst);
-        const passt = Oberflaechenbindung.AKTIV && Boolean(lage)
+        const passt = Kleidereinstellungen.an('kleider_oberflaechenbindung') && Boolean(lage)
             && (inst.stufen || 0) === netz.geometry.userData.bindung.stufen;
+        const flaeche = Kleidereinstellungen.an('kleider_normalen_aus_flaeche');
         const materialien = Array.isArray(netz.material) ? netz.material : [netz.material];
         for (const m of materialien) {
             const u = m.userData.oberflaeche;
             if (!u) continue;
             u.uOberflaecheAn.value = passt ? 1 : 0;
+            u.uNormaleAusFlaeche.value = flaeche ? 1 : 0;
             u.uKapselAn.value = Oberflaechenbindung.KAPSELN_AKTIV && lage && lage.anzahl ? 1 : 0;
             if (!lage) continue;
             u.uKoerperLage.value = lage.lage;
@@ -168,6 +196,10 @@ export class Oberflaechenbindung {
             uKoerperLage: { value: platzhalter },
             uKoerperNormale: { value: platzhalter },
             uLageBreite: { value: 1 },
+            uLuft: { value: Oberflaechenbindung.LUFT },
+            uTiefGrenze: { value: Oberflaechenbindung.TIEF_GRENZE },
+            uSeitGrenze: { value: Oberflaechenbindung.SEIT_GRENZE },
+            uNormaleAusFlaeche: { value: 1 },
             uKapselAn: { value: 0 },
             uKapselAbstand: { value: Oberflaechenbindung.KAPSELABSTAND },
             uKapselAnzahl: { value: 0 },
@@ -178,8 +210,11 @@ export class Oberflaechenbindung {
             shader.vertexShader = shader.vertexShader
                 .replace('#include <common>', '#include <common>\n' + OberflaecheGLSL.UNIFORMS)
                 .replace('#include <skinning_vertex>', OberflaecheGLSL.VERTEX);
+            shader.fragmentShader = shader.fragmentShader
+                .replace('#include <common>', '#include <common>\n' + OberflaecheGLSL.FRAGMENT_UNIFORMS)
+                .replace('#include <normal_fragment_begin>', OberflaecheGLSL.FRAGMENT);
         };
-        eingriff.kennung = () => 'o';
+        eingriff.kennung = () => 'o2';
         Shaderpatch.anhaengen(material, Oberflaechenbindung.SCHLUESSEL, eingriff);
         material.needsUpdate = true;
     }

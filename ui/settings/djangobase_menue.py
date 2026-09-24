@@ -10,7 +10,7 @@ MENUE = [
         'label': 'Dashboard',
         'icon': 'bi-speedometer2',
         'untermenu': [
-            {'label': 'BVH Studio', 'icon': 'bi-scissors', 'url': '/humanbody/bvh-studio/'},
+            {'label': 'Studio', 'icon': 'bi-scissors', 'url': '/studio/'},
             {'label': 'Szene', 'icon': 'bi-lightbulb', 'url': '/humanbody/scene/'},
             {'label': 'Szene - Modell', 'icon': 'bi-person-gear', 'url': '/humanbody/scene-model/'},
             {'label': 'Result', 'icon': 'bi-play-circle', 'url': '/process/result/'},
@@ -69,6 +69,7 @@ EINSTELLUNGEN_EXTRA = [
     {'label': 'Theatre', 'url': '/settings/theatre/', 'icon': 'bi-mask'},
     {'label': 'BVH Studio', 'url': '/settings/bvh-studio/', 'icon': 'bi-scissors'},
     {'label': 'Effekte', 'url': '/settings/effekte/', 'icon': 'bi-wind'},
+    {'label': 'Kleider', 'url': '/settings/kleider/', 'icon': 'bi-bag'},
 ]
 
 
@@ -122,6 +123,14 @@ HILFE_EXTRA = [
                 'icon': 'bi-people',
                 'url': '/hilfe/architektur/andere-modelle/',
                 'aktiv': 'hilfe_andere_modelle',
+            },
+            # Vergleich der ASGI-Server (Edgar, 23.09.2026: „mach mir einen
+            # Vergleich auf Hilfe - Architektur - Webserver").
+            {
+                'label': 'Webserver',
+                'icon': 'bi-hdd-rack',
+                'url': '/hilfe/architektur/webserver/',
+                'aktiv': 'hilfe_webserver',
             },
         ],
     },

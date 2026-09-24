@@ -51,9 +51,41 @@ class OberflaechenbindungJsTest(SimpleTestCase):
         self.assertNotIn('mischung <= 0.0) {', glsl, 'die Schleife laeuft jetzt fuer alle Punkte')
         self.assertIn('if (mischung > 0.0 && bindgruppe > 0.5 && abs(ka.w - bindgruppe) < 0.5) continue;', glsl)
         self.assertIn('attribute float bindgruppe;', glsl)
-        self.assertIn('transformed = mix(transformed, q + bindabstand * n, mischung);', glsl)
         self.assertIn('texelFetch(uKoerperLage', glsl)
         self.assertIn('#include <skinning_vertex>', glsl, 'die Bindung kommt NACH dem Skinning')
+
+    def test_6_nur_hinaus_nie_hinziehen(self):
+        """24.09.2026: Die erste Fassung SETZTE jeden gebundenen Punkt auf die
+        Oberflaeche (`mix(transformed, q + d·n, mischung)`) — Sneaker und
+        Schulternaht rissen, die Bindung war seit 23.09. aus. Jetzt wird nur
+        geschoben, wo der Punkt tiefer liegt als in Ruhe (hoechstens `uLuft`)."""
+        glsl = quelltext('gemeinsam', 'oberflaecheglsl.js')
+        self.assertNotIn('mix(transformed, q + bindabstand * n, mischung)', glsl, 'keine Projektion mehr')
+        self.assertIn('float tief = min(bindabstand, uLuft) - hoehe;', glsl)
+        self.assertIn('if (tief > 0.0 && tief < uTiefGrenze && length(o - hoehe * n) < uSeitGrenze) {', glsl)
+        self.assertIn('transformed += tief * n;', glsl)
+
+    def test_7_schalter_aus_den_einstellungen(self):
+        """Einstellungen → Kleider (24.09.2026, Vorgabe An): je Bild gelesen, nicht
+        beim Verdrahten festgehalten — die Vorlieben kommen oft nach dem ersten Stueck."""
+        text = quelltext('gemeinsam', 'oberflaechenbindung.js')
+        self.assertIn("Kleidereinstellungen.an('kleider_oberflaechenbindung')", text)
+        self.assertIn("Kleidereinstellungen.an('kleider_normalen_aus_flaeche')", text)
+        self.assertNotIn('static AKTIV', text, 'kein fest verdrahteter Schalter mehr')
+        einstellungen = quelltext('gemeinsam', 'kleidereinstellungen.js')
+        self.assertIn('kleider_oberflaechenbindung: true,', einstellungen)
+        self.assertIn('kleider_normalen_aus_flaeche: true,', einstellungen)
+        pfad = Path(settings.BASE_DIR) / 'core' / 'api' / 'seite_kleider_einstellungen.py'
+        seite = pfad.read_text(encoding='utf-8')
+        self.assertIn("'kleider_oberflaechenbindung': '1',", seite, 'Seite und Browser mit derselben Vorgabe')
+        self.assertIn("'kleider_normalen_aus_flaeche': '1',", seite)
+
+    def test_8_normale_aus_der_flaeche_im_fragment(self):
+        glsl = quelltext('gemeinsam', 'oberflaecheglsl.js')
+        self.assertIn('#include <normal_fragment_begin>', glsl)
+        self.assertIn('cross(dFdx(vViewPosition), dFdy(vViewPosition))', glsl)
+        text = quelltext('gemeinsam', 'oberflaechenbindung.js')
+        self.assertIn(".replace('#include <normal_fragment_begin>', OberflaecheGLSL.FRAGMENT)", text)
 
     def test_3_stufe_muss_passen_uniforms_einmal(self):
         text = quelltext('gemeinsam', 'oberflaechenbindung.js')

@@ -29,6 +29,7 @@ auf einer HumanBody-Figur (`G9kleidhumanbody`).
 import logging
 
 import numpy as np
+from asgiref.sync import sync_to_async
 from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
@@ -70,12 +71,22 @@ class G9garderobeapi:
     @staticmethod
     @csrf_exempt
     @require_http_methods(['GET', 'POST'])
-    def kleidnetz(request, kennung):
+    async def kleidnetz(request, kennung):
         u"""Ein Stueck auf der GEFORMTEN (und posierten) Figur.
 
         Die Teile eines Stuecks (ein Outfit hat mehrere Netze) werden auf die
         Koerperpunkte dieser Stellung projiziert (`G9folger`); die Haut traegt
         die Knochennamen des Koerpers.
+
+        ASYNC (23.09.2026, Edgar: „ladezeit ... mehr als 30 s"): eine Figur mit
+        Outfit fragt mehrere Stuecke GLEICHZEITIG ab (hier: Haar, Jeans, Schuhe,
+        Shirt). Als plain-sync View liefen alle vier nacheinander auf Daphnes
+        einem geteilten `thread_sensitive`-Faden — Log zeigte 25,7/27,0/27,2/
+        28,7 s je Anfrage fuer dieselbe Seite, die vorher (vor der Umstellung von
+        `retarget.py`/`bildmodell.zustand` auf async) schon einmal als dieselbe
+        Fehlerklasse gefunden wurde. Nur die schwere Rechnung (`G9antworten.
+        liefern`, mit ihrem `threading.Event().wait`) geht auf einen eigenen
+        Thread — `request` bleibt synchron, VOR dem `await` gelesen.
         """
         if not G9pfade.vorhanden():
             return JsonResponse({'fehler': FEHLT}, status=404)
@@ -83,12 +94,13 @@ class G9garderobeapi:
         eintrag = G9garderobe.eintrag(kennung) or {}
         if rumpf.get('figurart') == G9kleidhumanbody.FIGURART:
             # Dasselbe Stueck auf einer HumanBody-Figur (19.09.2026).
-            return G9antworten.liefern(
-                'kleidhb', kennung, rumpf,
-                lambda: G9kleidhumanbody.antwort(kennung, eintrag, rumpf), eintrag=eintrag)
-        return G9antworten.liefern(
-            'kleid', kennung, rumpf,
-            lambda: G9garderobeapi._kleid(kennung, eintrag, rumpf), eintrag=eintrag)
+            bauen = lambda: G9kleidhumanbody.antwort(kennung, eintrag, rumpf)
+            art = 'kleidhb'
+        else:
+            bauen = lambda: G9garderobeapi._kleid(kennung, eintrag, rumpf)
+            art = 'kleid'
+        return await sync_to_async(G9antworten.liefern, thread_sensitive=False)(
+            art, kennung, rumpf, bauen, eintrag=eintrag)
 
     @staticmethod
     def _kleid(kennung, eintrag, rumpf):

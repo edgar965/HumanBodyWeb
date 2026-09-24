@@ -54,6 +54,13 @@ export function _swapToPreloaded(animTrack, assets, activePreset) {
         });
     }
     animTrack.group = assets.group;
+    // Die vorgeladene Gruppe entsteht frisch im Ursprung (0,0,0) — ohne das
+    // hier zurückzusetzen, springt die Figur bei jedem Preset-Wechsel auf
+    // Position 0 (Edgar, 23.09.2026: „Kin1 hat bei Frame 1045 die Position
+    // 5 m, sie wird jedoch bei 0 angezeigt"). `animTrack.position` bleibt die
+    // ganze Zeit unverändert, nur die THREE-Gruppe wird ausgetauscht.
+    const p = animTrack.position || [0, 0, 0];
+    animTrack.group.position.set(p[0] || 0, p[1] || 0, p[2] || 0);
     animTrack.group.visible = true;
     animTrack.mesh = assets.mesh;
     animTrack.modell = assets.modell;
@@ -69,26 +76,34 @@ export function _swapToPreloaded(animTrack, assets, activePreset) {
     fn.serverLog('preset_swap_preloaded', `track=${animTrack.name} preset=${activePreset}`);
 }
 
-// Prüft Model-Tracks: startet Preload für Presets die demnächst aktiv werden.
+/**
+ * Prüft Model-Tracks: startet Preload für jedes Preset, das noch nicht geladen
+ * ist oder gerade lädt. Bis 23.09.2026 nur für Presets, deren Clip innerhalb
+ * eines Zeit-Vorlaufs lag (`state.project.preloadSeconds`) — bei einer echten
+ * Ladezeit von bis zu einer Minute (Netz + Retarget) reichten die Sekunden
+ * Vorlauf oft nicht: Der Abspielkopf erreichte den Clip, bevor das Modell
+ * fertig war, und die Figur "animierte gerade nicht" (Edgar, 23.09.2026).
+ * Jetzt (Einstellungen → Studio → „Alle Modelle vorladen"): ALLE Modell-Clips
+ * des Projekts werden angestoßen, unabhängig von ihrer Position — die
+ * Wächter unten (`meshActive`/`_loadingPreset`/`_preloadCache`) sorgen dafür,
+ * dass ein bereits geladenes oder ladendes Preset nicht doppelt angefasst
+ * wird. Bewegungen (Retarget) laufen unverändert immer eager beim Laden des
+ * Projekts (`projekt_wiederherstellung.js`, `_klipAnlegen`).
+ */
 export function _schedulePreloads(t) {
-    const lookahead = state.project.preloadSeconds;
-    if (!lookahead || lookahead <= 0) return;
+    if (state.project.preloadAll === false) return;
     for (const track of state.project.tracks) {
         if (track.type !== 'model') continue;
         const animTrack = state.project.getLinkedAnimation(track);
         if (!animTrack) continue;
         for (const clip of track.clips) {
             if (clip.type !== 'model' || !clip.data?.preset) continue;
-            const cs = clip.startFrame / state.project.fps;
-            // Clip beginnt innerhalb lookahead-Fensters — bereits geladen oder am Laden? Skip.
-            if (cs > t && cs - t <= lookahead) {
-                const preset = Modellzustaendigkeit.schluessel(clip.data);
-                if (animTrack.meshActive === preset) continue;
-                if (animTrack._loadingPreset === preset) continue;
-                if (animTrack._preloadCache?.[preset]) continue;
-                _preloadPreset(animTrack, preset).catch((e) => { Protokoll.debug('vorladen',
-                    `Vorladen von ${preset} fehlgeschlagen`, e); });
-            }
+            const preset = Modellzustaendigkeit.schluessel(clip.data);
+            if (animTrack.meshActive === preset) continue;
+            if (animTrack._loadingPreset === preset) continue;
+            if (animTrack._preloadCache?.[preset]) continue;
+            _preloadPreset(animTrack, preset).catch((e) => { Protokoll.debug('vorladen',
+                `Vorladen von ${preset} fehlgeschlagen`, e); });
         }
     }
 }

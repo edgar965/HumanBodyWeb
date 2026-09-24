@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Bibliothekablage } from './bibliothekablage.js';
+import { Clipfehlt } from './clipfehlt.js';
 
 /**
  * Bibliothekmenues — Kontextmenüs und Werkzeugleiste der BVH-Bibliothek.
@@ -94,6 +95,10 @@ export class Bibliothekmenues {
         if (!name || name === ziel.name) return;
         if (await Bibliothekablage.senden('rename', {
                 category: ziel.category, name: ziel.name, new_name: name })) {
+            // Clips DIESES Projekts, die noch den alten Namen tragen, sofort
+            // umstellen — sonst zeigt die Zeitleiste bis zum nächsten Laden
+            // weiter den alten Namen (Edgar, 24.09.2026).
+            Clipfehlt.umbenannt(ziel.category, ziel.name, name, state, fn);
             this.baum.laden({ category: ziel.category, name });
         }
     }

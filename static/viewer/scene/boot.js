@@ -37,6 +37,7 @@ import './garmentcode_absatz.js';
 import '../gemeinsam/hautverdeckung.js';
 import './lagenverdeckung.js';
 import './kleidungsprobe.js';
+import './animationszugriff.js';
 import './garmentcode_absatzregler.js';
 import './modellgenerator_ui.js';
 import './mh_proxy.js';

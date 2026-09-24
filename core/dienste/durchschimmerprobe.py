@@ -173,9 +173,17 @@ class Durchschimmerprobe:
             aus.append((teil.name, gehaeutet, gebunden, teil.haut))
         return aus
 
-    @staticmethod
-    def binden(gehaeutet, bindung, koerper):
-        u"""Die Formel des Shaders: q = u·A + v·B + w·C + d·n, gemischt mit `mischung`."""
+    #: Wie `Oberflaechenbindung.LUFT`, `TIEF_GRENZE`, `SEIT_GRENZE` im Browser.
+    LUFT_M = 0.01
+    TIEF_GRENZE_M = 0.04
+    SEIT_GRENZE_M = 0.03
+
+    @classmethod
+    def binden(cls, gehaeutet, bindung, koerper):
+        u"""Die Formel des Shaders (`oberflaecheglsl.js`, seit 24.09.2026 „nur hinaus"):
+        q = u·A + v·B + w·C, n die gemischte Normale; liegt der Punkt tiefer als
+        min(d, LUFT) ueber q, wird er entlang n dorthin geschoben — innerhalb der
+        Grenzen fuer Tiefe und seitlichen Versatz. Sonst bleibt er gehaeutet."""
         if bindung is None:
             return gehaeutet
         ecken = np.asarray(bindung['dreieck']).astype(np.int64)
@@ -188,8 +196,12 @@ class Durchschimmerprobe:
         q = np.einsum('kc,kcj->kj', bary[dabei], koerper.punkte[e])
         n = np.einsum('kc,kcj->kj', bary[dabei], koerper.normalen[e])
         n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
-        ziel = q + d[dabei, None] * n
-        aus[dabei] = aus[dabei] + (ziel - aus[dabei]) * m[dabei, None]
+        o = aus[dabei] - q
+        hoehe = np.einsum('kj,kj->k', o, n)
+        tief = np.minimum(d[dabei], cls.LUFT_M) - hoehe
+        seitlich = np.linalg.norm(o - hoehe[:, None] * n, axis=1)
+        schieben = (tief > 0) & (tief < cls.TIEF_GRENZE_M) & (seitlich < cls.SEIT_GRENZE_M)
+        aus[dabei] = aus[dabei] + np.where(schieben, tief, 0.0)[:, None] * n
         return aus
 
     # --------------------------------------------------------------- Bild

@@ -1,4 +1,4 @@
-import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 /**
  * Alle übrigen Stellschrauben der Drapierung — aufklappbar unter „Bauen".

@@ -27,6 +27,8 @@ import * as THREE from 'three';
 export class Genesis9texturen {
 
     static ADRESSE = '/api/character/genesis9-figur/textur/';
+    /** Alle Bilder eines Netzes in EINER Anfrage (`core/api/g9texturbuendel.py`). */
+    static BUENDEL = '/api/character/genesis9-figur/texturbuendel/';
     /** Adresse -> {textur, fertig: Promise<THREE.Texture|null>} */
     static _vorrat = new Map();
     static _lader = null;
@@ -34,6 +36,105 @@ export class Genesis9texturen {
     /** Die Adresse eines Bibliothekspfads. */
     static adresse(pfad) {
         return Genesis9texturen.ADRESSE + pfad.split('/').map(encodeURIComponent).join('/');
+    }
+
+    /**
+     * Die Bilder EINES Netzes in EINER Anfrage vorladen (23.09.2026, Edgar:
+     * „weniger einzelne Texturanfragen (Bündelung/Sprite)").
+     *
+     * Chrome hält je Herkunft nur SECHS Verbindungen offen (HTTP/1.1, und
+     * Daphne kann kein HTTP/2): die rund vierzig Bilder einer angezogenen
+     * Figur liefen in sieben Wellen, jede Welle so langsam wie ihr langsamstes
+     * Bild. Hier kommen sie als ein Datenstrom (`g9texturbuendel.py`).
+     *
+     * NICHT AWAITEN: Die Platzhalter stehen VOR dem ersten `await` im Vorrat —
+     * `Genesis9netz.bauen` läuft gleich danach synchron weiter, findet sie und
+     * startet deshalb KEINE Einzelanfragen. Wer schon eine Textur in der Hand
+     * hat, behält sie: scheitert das Bündel (oder lässt der Server ein zu
+     * großes Bild draußen), wird DASSELBE Texturobjekt einzeln nachgeladen —
+     * nie gelöscht, sonst bliebe ein ausgegebenes Material für immer weiß.
+     *
+     * @param eintraege [{pfad, srgb}] — `srgb` nur für Farbbilder (Albedo).
+     */
+    static vorladen(eintraege) {
+        const offen = new Map();
+        for (const e of eintraege || []) {
+            const pfad = e?.pfad;
+            if (!pfad || offen.has(pfad)) continue;
+            const adresse = Genesis9texturen.adresse(pfad);
+            if (Genesis9texturen._vorrat.has(adresse)) continue;   // liegt schon oder lädt
+            let loesen;
+            const fertig = new Promise(r => { loesen = r; });
+            const textur = Genesis9texturen._leereTextur(pfad, e.srgb);
+            offen.set(pfad, { textur, loesen });
+            Genesis9texturen._vorrat.set(adresse, { textur, fertig });
+        }
+        if (offen.size) Genesis9texturen._buendelHolen(offen);
+    }
+
+    static _leereTextur(pfad, srgb) {
+        const textur = new THREE.Texture();
+        textur.flipY = false;                    // die Bitmap kommt schon gewendet
+        textur.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        textur.name = pfad.split('/').pop();
+        return textur;
+    }
+
+    static async _buendelHolen(offen) {
+        let puffer = null;
+        let kopf = null;
+        let versatz = 0;
+        try {
+            const antwort = await fetch(Genesis9texturen.BUENDEL, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pfade: [...offen.keys()] }),
+            });
+            if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
+            puffer = await antwort.arrayBuffer();
+            const kopflaenge = new DataView(puffer).getUint32(0);
+            kopf = JSON.parse(new TextDecoder().decode(new Uint8Array(puffer, 4, kopflaenge)));
+            versatz = 4 + kopflaenge;
+        } catch (fehler) {
+            // Kein Bündel: jedes Bild einzeln, wie vor dem 23.09.2026.
+            for (const [pfad, eintrag] of offen) Genesis9texturen._einzeln(pfad, eintrag);
+            return;
+        }
+        for (const teil of kopf.teile || []) {
+            const eintrag = offen.get(teil.pfad);
+            if (!eintrag) continue;
+            offen.delete(teil.pfad);
+            if (!teil.art || !teil.bytes) {       // war zu groß fürs Bündel
+                Genesis9texturen._einzeln(teil.pfad, eintrag);
+                continue;
+            }
+            const roh = new Uint8Array(puffer, versatz, teil.bytes);
+            versatz += teil.bytes;
+            Genesis9texturen._bitmap(new Blob([roh], { type: teil.art }))
+                .then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
+                .catch(() => Genesis9texturen._einzeln(teil.pfad, eintrag));
+        }
+        // Was der Kopf nicht nennt (dürfte nicht vorkommen): einzeln holen.
+        for (const [pfad, eintrag] of offen) Genesis9texturen._einzeln(pfad, eintrag);
+    }
+
+    static _bitmap(blob) {
+        return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
+    }
+
+    static _fertig(eintrag, bitmap) {
+        eintrag.textur.image = bitmap;
+        eintrag.textur.needsUpdate = true;
+        eintrag.loesen(eintrag.textur);
+    }
+
+    /** Ein Bild des Bündels einzeln nachladen — in DASSELBE Texturobjekt. */
+    static _einzeln(pfad, eintrag) {
+        return Genesis9texturen.lader().loadAsync(Genesis9texturen.adresse(pfad))
+            .then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
+            .catch(() => {
+                Genesis9texturen._vorrat.delete(Genesis9texturen.adresse(pfad));
+                eintrag.loesen(null);
+            });
     }
 
     /**
@@ -58,10 +159,7 @@ export class Genesis9texturen {
         const adresse = Genesis9texturen.adresse(pfad);
         let eintrag = Genesis9texturen._vorrat.get(adresse);
         if (eintrag) return eintrag;
-        const textur = new THREE.Texture();
-        textur.flipY = false;                    // die Bitmap kommt schon gewendet
-        textur.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-        textur.name = pfad.split('/').pop();
+        const textur = Genesis9texturen._leereTextur(pfad, srgb);
         const fertig = Genesis9texturen.lader().loadAsync(adresse).then(bitmap => {
             textur.image = bitmap;
             textur.needsUpdate = true;

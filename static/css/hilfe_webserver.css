@@ -1,0 +1,9 @@
+/* Hilfe -> Architektur -> Webserver: volle Breite statt der 960px-Vorgabe
+ * von `.doku-seite` (dokuseite.css, bewusst schmal für Rigging/Theatre).
+ * Zehn Spalten mit Fließtext (Vorteile/Nachteile/Empfehlung) brauchen den
+ * Platz — Edgar, 23.09.2026: „Formatierung kaputt, mach das über die ganze
+ * Seite" (`~/.claude/rules/volle-breite.md`: keine zentrierte Box).
+ */
+.doku-seite.wb-breit {
+    max-width: none;
+}

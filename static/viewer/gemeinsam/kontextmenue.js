@@ -11,6 +11,8 @@
  * ZWEIMAL" — und praktisch stünden irgendwann zwei Menüs gleichzeitig offen,
  * weil jedes nur seinen eigenen schließt.
  */
+import { fn } from './registrierung.js';
+
 export class Kontextmenue {
 
     /** Die eine Kennung: Ein zweites Menü gibt es nicht, es wird ersetzt. */
@@ -84,6 +86,10 @@ export class Kontextmenue {
         zeile.appendChild(document.createTextNode(text));
         zeile.addEventListener('click', () => {
             Kontextmenue.verbergen();
+            // Protokoll VOR `tun()`: wirft die Aktion, steht wenigstens fest,
+            // WAS geklickt wurde (Edgar, 24.09.2026: „alle rechtsklick und
+            // server aufrufe sollen geloggt werden").
+            fn.serverLog?.('kontextmenue_aktion', text);
             tun();
         });
         return zeile;

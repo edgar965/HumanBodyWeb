@@ -67,14 +67,41 @@ export class Eigenschaftsfeld {
         return html + '</div>';
     }
 
+    /**
+     * Position-X/Y/Z-Felder (Meter) — NUR im Eigenschaften-Panel der
+     * Modellspur (dem Kopf der Gruppe, `Modellgruppen`), auch wenn die Lage
+     * technisch an der verknüpften Animationsspur hängt (`position`, `group`).
+     * Zunächst standen die Felder an BEIDEN Spuren — zwei Eingaben für denselben
+     * Wert (23.09.2026, Edgar: „entferne das doppelte Setzen ... NUR bei der
+     * Modell Timeline").
+     */
+    static _positionFelder(spur) {
+        if (!spur) return '<div class="fussnote">Keine Animation verknüpft.</div>';
+        return `
+            <div class="prop-row"><label>X (m):</label><input type="number" step="0.1" value="${spur.position[0]}"
+                id="prop-pos-x"></div>
+            <div class="prop-row"><label>Y (m):</label><input type="number" step="0.1" value="${spur.position[1] || 0}"
+                id="prop-pos-y"></div>
+            <div class="prop-row"><label>Z (m):</label><input type="number" step="0.1" value="${spur.position[2]}"
+                id="prop-pos-z"></div>`;
+    }
+
+    static _positionBinden(spur) {
+        if (!spur) return;
+        const achsen = { 0: 'x', 1: 'y', 2: 'z' };
+        for (const [id, i] of [['prop-pos-x', 0], ['prop-pos-y', 1], ['prop-pos-z', 2]]) {
+            M.an(id, 'change', (e) => {
+                spur.position[i] = parseFloat(e.target.value) || 0;
+                spur.group.position[achsen[i]] = spur.position[i];
+            });
+        }
+    }
+
     static _spurmaske(track) {
         if (track.type === 'bvh') {
             return `<div class="prop-group">
             <div class="prop-row"><label>Modell:</label><span class="marke-akzent">${track.preset}</span></div>
-            <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${track.position[0]}"
-                id="prop-pos-x"></div>
-            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${track.position[2]}"
-                id="prop-pos-z"></div>
+            <div class="fussnote">Position: Eigenschaften der Modellspur darüber.</div>
         </div>`;
         }
         if (track.type === 'camera') {
@@ -99,6 +126,7 @@ export class Eigenschaftsfeld {
                 class="marke-akzent">${preset || '(keins am Abspielkopf)'}</span></div>
             <div class="prop-row"><label>Verknüpft:</label><span
                 class="marke-akzent">${verbunden ? verbunden.name : '(keiner)'}</span></div>
+            ${Eigenschaftsfeld._positionFelder(verbunden)}
             <div class="fussnote">Rechtsklick auf die Modellspur in der Zeitleiste: Modell wählen.
                 Entf entfernt die Spur samt Figur.</div>
         </div>`;
@@ -145,7 +173,15 @@ export class Eigenschaftsfeld {
 
     static _kopfBinden(track) {
         M.an('prop-track-name', 'change', (e) => {
+            // Umbenennen ist rein client-seitig (kein Server-Aufruf) — ohne
+            // diese Zeile stand nirgends im Log, OB der Handler ueberhaupt
+            // lief (Edgar, 24.09.2026: "siehe logs" nach einer Umbenennung,
+            // die nicht ankam — im Log stand dazu buchstaeblich nichts).
+            const alt = track.name;
             track.name = e.target.value;
+            fn.serverLog('track_renamed',
+                `type=${track.type} alt="${alt}" neu="${track.name}" `
+                + `idx=${state.selectedTrackIdx} gespeichert=nein (Strg+S noetig)`);
             fn.updateTrackHeaders();
         });
         M.an('prop-track-mute', 'change', (e) => { track.muted = e.target.checked; });
@@ -174,13 +210,8 @@ export class Eigenschaftsfeld {
     }
 
     static _spurBinden(track) {
-        if (track.type === 'bvh') {
-            for (const [id, i] of [['prop-pos-x', 0], ['prop-pos-z', 2]]) {
-                M.an(id, 'change', (e) => {
-                    track.position[i] = parseFloat(e.target.value) || 0;
-                    track.group.position[i === 0 ? 'x' : 'z'] = track.position[i];
-                });
-            }
+        if (track.type === 'model') {
+            Eigenschaftsfeld._positionBinden(state.project.getLinkedAnimation(track));
         } else if (track.type === 'camera') {
             M.an('prop-cam-active', 'change', (e) => { track.cameraActive = e.target.checked; });
             M.an('prop-cam-add-kf', 'click',

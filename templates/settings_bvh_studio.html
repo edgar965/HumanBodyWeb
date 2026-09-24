@@ -69,13 +69,14 @@
 <div class="settings-section">
     <h3>Playback</h3>
     <div class="settings-row">
-        <label>Preload-Vorlauf:</label>
-        <input type="number" name="studio_preload_seconds" id="studio_preload_seconds"
-             value="{{ prefs.studio_preload_seconds|default:'3' }}" min="0" max="30" step="0.5"> Sekunden
-        <span
-             class="hint">Zeit-Vorlauf in Sekunden: das nächste Modell-Preset wird so viele Sekunden vor dem Model-Clip
-                  im Hintergrund geladen (0 = aus). KEIN Modell-Selektor — welches Modell geladen wird ergibt sich aus
-                       dem jeweiligen Model-Clip auf der Timeline.</span>
+        <label>Alle Modelle vorladen:</label>
+        <input type="hidden" name="studio_preload_all" value="0">
+        <input type="checkbox" name="studio_preload_all" id="studio_preload_all" value="1"
+             {% if prefs.studio_preload_all|default:'1' == '1' %}checked{% endif %}>
+        <span class="hint">Alle Modelle des Projekts sofort beim Öffnen im Hintergrund laden, nicht erst kurz vor
+                 ihrem Auftritt auf der Zeitleiste. Bewegungen (Retarget) werden schon immer beim Öffnen für alle
+                      Spuren geladen. Aus = ein Modell lädt erst, wenn der Abspielkopf seinen Clip erreicht
+                           (kann dann ein paar Sekunden bis über eine Minute dauern, siehe Hinweis in der Zeitleiste).</span>
     </div>
 </div>
 

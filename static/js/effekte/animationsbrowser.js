@@ -1,5 +1,5 @@
 import { Htmltext } from '/static/djangobase/js/htmltext.js';
-import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
+import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../../viewer/gemeinsam/kategoriekasten.js';
 
 /**

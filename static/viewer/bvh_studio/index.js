@@ -18,6 +18,7 @@ import './vorschau.js';
 import './mimikspur.js';
 import './scriptspur.js';
 import './mimikeinrechnen.js';
+import './kontextmenue_protokoll.js';
 // Genesis 9 baut sein Skelett bei jedem Umbau neu (Morph, Retarget, Pose) —
 // ohne diesen Zuhörer bleibt ein GarmentCode-Stück an den ALTEN Knochen
 // hängen und explodiert, sobald die neuen Knochen woanders stehen (Edgar,

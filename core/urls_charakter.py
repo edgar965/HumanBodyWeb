@@ -29,6 +29,7 @@ from .api.g9figur import G9figur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9hautmischung import G9hautmischungapi
+from .api.g9texturbuendel import G9texturbuendelapi
 from .api.g9vorschau import G9vorschau
 from .api.g9stoff import G9stoffapi
 from .api.g9frisurapi import G9frisurapi
@@ -168,6 +169,11 @@ CHARAKTER = [
     # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
     path('api/character/genesis9-figur/frisur/<str:name>/',
          G9frisurapi.netz, name='g9_figur_frisur'),
+    # Alle Bilder eines Netzes in EINER Antwort (23.09.2026,
+    # core/api/g9texturbuendel.py) — steht VOR `textur/<path:pfad>`, sonst
+    # liefe die Adresse in den Einzelbild-Weg.
+    path('api/character/genesis9-figur/texturbuendel/', G9texturbuendelapi.buendel,
+         name='g9_figur_texturbuendel'),
     path('api/character/genesis9-figur/textur/<path:pfad>', G9garderobeapi.textur,
          name='g9_figur_textur'),
     # Reglerfelder je Stufe (18.09.2026, core/api/g9felder.py): JCMs, Visemes.

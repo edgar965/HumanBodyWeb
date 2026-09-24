@@ -1,0 +1,52 @@
+{% extends "einstellungsseite.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Einstellungen — Kleider{% endblock %}
+
+{% block einstellungen_titel %}Kleider Einstellungen{% endblock %}
+{% block formular_zusatz %} id="kleider-settings-form"{% endblock %}
+
+{% block einstellungen_karten %}
+<div class="settings-section">
+    <h3>Kleidung in der Bewegung</h3>
+    <div class="settings-row">
+        <label>Stoff bleibt über der Haut:</label>
+        <input type="hidden" name="kleider_oberflaechenbindung" value="0">
+        <input type="checkbox" name="kleider_oberflaechenbindung" id="kleider_oberflaechenbindung" value="1"
+             {% if prefs.kleider_oberflaechenbindung == '1' %}checked{% endif %}>
+        <span class="hint">Anliegende Kleidung (bis 8 cm über der Haut) wird je Bild aus dem Körper geschoben,
+            wo sie beim Animieren tiefer läge als in Ruhe — der Stoff dehnt sich nach außen, statt dass die
+            Haut durchkommt. Nur hinaus, nie hin: was über der Haut liegt (Schuhe, weite Ärmel), bleibt, wie
+            das Skinning es stellt. Genesis 9, alle Seiten.</span>
+    </div>
+    <div class="settings-row">
+        <label>Schattierung aus der Fläche:</label>
+        <input type="hidden" name="kleider_normalen_aus_flaeche" value="0">
+        <input type="checkbox" name="kleider_normalen_aus_flaeche" id="kleider_normalen_aus_flaeche" value="1"
+             {% if prefs.kleider_normalen_aus_flaeche == '1' %}checked{% endif %}>
+        <span class="hint">An Achsel, Ellbogen und Leiste passt die gehäutete Normale nicht mehr zur gestauchten
+            Fläche; der Stoff leuchtet dort hell, als käme Haut durch. An: wo beide mehr als 25° auseinander
+            liegen, gilt die echte Flächennormale.</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block einstellungen_nachtrag %}
+<style>
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
+.settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+</style>
+<script type="module">
+import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+
+Vorgabenformular.anmelden('kleider-settings-form', 'Kleider-Einstellungen gespeichert — gilt nach dem Neuladen der Seiten.');
+</script>
+{% endblock %}

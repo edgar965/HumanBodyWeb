@@ -1,0 +1,50 @@
+{% comment %}
+Teilvorlage von `webserver.html`: die fünf Server als djangoBase-Tabelle
+(Edgar, 23.09.2026: „Tabelle nach Django-Muster sortierbar", wie
+`_andere_modelle_tabelle.html`). Zahlenzellen tragen `data-sort` mit dem
+Rohwert; Vor-/Nachteile/Empfehlung sind Text ohne Sortierschlüssel.
+{% endcomment %}
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable" id="webserverVergleich"
+       data-sort-key="hilfe-architektur-webserver">
+  <thead>
+    <tr>
+      <th class="num">Rang</th>
+      <th>Server</th>
+      <th class="num">Verbreitung (GitHub-Sterne)</th>
+      <th class="num">Wartbarkeit (Tage seit letztem Push)</th>
+      <th>Open Source</th>
+      <th>HTTP/2</th>
+      <th>WebSocket / Channels</th>
+      <th>Vorteile</th>
+      <th>Nachteile</th>
+      <th>Empfehlung</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for z in zeilen %}
+    <tr{% if z.aktuell %} class="wb-aktuell"{% endif %}>
+      <td class="num" data-sort="{{ z.rang }}">{{ z.rang }}</td>
+      <td data-sort="{{ z.name }}">
+        {{ z.name }}{% if z.aktuell %} <span class="wb-marke">aktuell</span>{% endif %}
+      </td>
+      <td class="num" data-sort="{{ z.sterne }}">{{ z.sterne }}</td>
+      <td class="num" data-sort="{{ z.tage_still }}">{{ z.tage_still }}</td>
+      <td>{{ z.lizenz }}</td>
+      <td>{{ z.http2 }}</td>
+      <td>{{ z.websocket }}</td>
+      <td>{{ z.vorteile }}</td>
+      <td>{{ z.nachteile }}</td>
+      <td>{{ z.empfehlung }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<style>
+  #webserverVergleich .wb-aktuell { background: color-mix(in srgb, var(--accent, #4fc1ff) 10%, transparent); }
+  #webserverVergleich .wb-marke {
+    font-size: 0.72rem; font-weight: 600; color: var(--accent, #4fc1ff);
+    border: 1px solid currentColor; border-radius: 3px; padding: 0 4px;
+  }
+</style>

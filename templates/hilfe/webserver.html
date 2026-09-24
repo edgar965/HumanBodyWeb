@@ -1,0 +1,79 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Architektur -> Webserver: ASGI-Server im Vergleich zu Daphne
+(Edgar, 23.09.2026: „mach mir einen Vergleich auf Hilfe - Architektur -
+Webserver mit einer Tabelle der Alternativen, Tabelle nach Django-Muster
+sortierbar"). Zahlen aus `core/dienste/webserveralternativen.py`
+(GitHub-Sterne, Tage seit letztem Push — gemessen, nicht geschätzt).
+{% endcomment %}
+
+{% block title %}Webserver{% endblock %}
+{% block topbar_title %}Architektur — Webserver im Vergleich{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_webserver.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite wb-breit">
+
+  <h1>Webserver: Daphne im Vergleich zu vier Alternativen</h1>
+
+  <p>
+    Anlass: die Frage, ob ein anderer Server HTTP/2 bringt und damit die rund
+    vierzig Einzelanfragen einer Genesis-9-Figur (Texturen, Netzbau) in
+    weniger Verbindungswellen liefert. Aktueller Server dieses Projekts:
+    <strong>Daphne</strong> (<code>ui/asgi.py</code>, <code>start_server.ps1</code>).
+  </p>
+
+  <div class="info-box info-box-orange">
+    <strong>Richtigstellung:</strong> Ich hatte vorher gesagt, Daphne könne
+    kein HTTP/2. Das stimmt nicht. Daphne terminiert HTTP/2 nativ — aber nur
+    mit TLS und den Twisted-Extras <code>pip install "Twisted[tls,http2]"</code>
+    (<code>h2</code>, <code>priority</code>). Geprüft ({{ stand }}):
+    <code>Twisted</code> 25.5.0 ist installiert, <code>h2</code>/<code>priority</code>
+    fehlen — HTTP/2 ist technisch erreichbar, aber nicht eingerichtet.
+  </div>
+
+  <div class="info-box info-box-blue">
+    <strong>Der eigentliche Haken ist nicht der Server, sondern TLS:</strong>
+    Chrome verhandelt HTTP/2 nur über <code>https</code> — bei JEDEM der vier
+    Server unten. Das ist eine ANDERE Herkunft als <code>http://127.0.0.1:8081/</code>,
+    und <code>localStorage</code> hängt an der Herkunft: Reiterstände,
+    Kategorien-Aufklappzustände und GarmentCode-Reglergedächtnis (<code>szene.md</code>)
+    stünden auf einmal leer da.
+  </div>
+
+  <p>
+    Zahlen gemessen am {{ stand }} über <code>gh api repos/&lt;repo&gt;</code>
+    (GitHub-Sterne, Tage seit dem letzten Push) und die PyPI-Metadaten der
+    Pakete — kein Schätzwert. Jede Spalte ist sortierbar — Klick auf den Kopf.
+  </p>
+
+  {% include "hilfe/_webserver_tabelle.html" with zeilen=zeilen %}
+
+  <h2>Empfehlung</h2>
+  <p>
+    <strong>Bei Daphne bleiben.</strong> Es ist der Referenzserver von Django
+    Channels, genau die Kombination, die dieses Projekt schon einsetzt — keine
+    Umstellung, kein Risiko für die WebSocket-Fortschrittsanzeige der
+    Pipelines (<code>core/consumers.py</code>). Der eigentliche Hebel gegen
+    die vielen Einzelanfragen war die Bündelung selbst (<code>g9texturbuendel.py</code>,
+    23.09.2026) — nicht der Server.
+  </p>
+  <p>
+    Will Edgar echtes HTTP/2 dennoch: <strong>Hypercorn</strong> ist der
+    naheliegende nächste Schritt (derselbe ASGI-Einstiegspunkt wie Daphne,
+    von den Channels-Dokumenten selbst als Alternative genannt, HTTP/2 nativ)
+    — aber erst nach dem TLS-Entscheid oben, und mit dem Hinweis, dass das
+    Projekt seit 319 Tagen ruhiger gepflegt wird als die anderen drei.
+    <strong>Granian</strong> ist vielversprechend (aktiv, schnell wachsend),
+    aber die eigenen Melde-Issues zeigen noch Aussetzer bei genau der
+    Kombination, auf der dieses Projekt läuft (Django-Channels-WebSocket) —
+    für den Pipeline-Fortschritt kein Risiko, das ich jetzt eingehen würde.
+  </p>
+
+</div>
+{% endblock %}

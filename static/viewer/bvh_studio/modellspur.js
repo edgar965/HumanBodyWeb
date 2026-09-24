@@ -37,18 +37,39 @@ export class Modellspur {
         if (bewegung._loadingPreset) {
             // Warten: Die alte Figur darf nicht auftauchen.
             if (bewegung.group) bewegung.group.visible = false;
+            Modellspur._sichtbarkeitMelden(bewegung, spur, false, preset, zeit);
             return;
         }
         if (preset === bewegung.meshActive) {
             if (bewegung.group) bewegung.group.visible = !!preset;
+            Modellspur._sichtbarkeitMelden(bewegung, spur, !!preset, preset, zeit);
             return;
         }
         if (bewegung.group) bewegung.group.visible = false;
+        Modellspur._sichtbarkeitMelden(bewegung, spur, false, preset, zeit);
         if (!preset) {
             bewegung.meshActive = null;
             return;
         }
         Modellspur._laden(bewegung, preset);
+    }
+
+    /**
+     * Eine Zeile ins Server-Log, GENAU wenn eine Modellspur sichtbar bzw.
+     * unsichtbar wird — bisher stand nirgends, WANN eine Figur am Abspielkopf
+     * zu sehen sein sollte (nur `preset_load_*`/`bvh_action_*`, die den
+     * MECHANISMUS zeigen, nicht das Ergebnis). Edgar, 23.09.2026: „mach dir
+     * selber server logs, die den Anfang der Animation anzeigen." Nur bei
+     * Zustandswechsel (wie `Bvhspur._melden`), sonst eine Zeile je Bild.
+     */
+    static _sichtbarkeitMelden(bewegung, modellspur, sichtbar, preset, zeit) {
+        if (bewegung._sichtbarZuletzt === sichtbar) return;
+        bewegung._sichtbarZuletzt = sichtbar;
+        const bild = Math.round(zeit * state.project.fps);
+        fn.serverLog(sichtbar ? 'model_track_visible' : 'model_track_hidden',
+            `modell=${modellspur.name} animation=${bewegung.name} `
+            + `preset=${preset || bewegung.meshActive || '?'} frame=${bild} `
+            + `mesh=${!!bewegung.mesh} loadingPreset=${bewegung._loadingPreset || '-'}`);
     }
 
     /** Das Preset des Clips, der `zeit` enthält — oder `null`. */
@@ -62,6 +83,7 @@ export class Modellspur {
             Modellspur._ausCache(bewegung, preset, vorgeladen);
             return;
         }
+        if (bewegung._loadingPreset !== preset) bewegung._loadingSeit = Date.now();
         bewegung._loadingPreset = preset;
         const teile = Modellzustaendigkeit.zerlegen(preset);
         bewegung.preset = teile.preset;
@@ -75,6 +97,7 @@ export class Modellspur {
     }
 
     static _ausCache(bewegung, preset, vorgeladen) {
+        if (bewegung._loadingPreset !== preset) bewegung._loadingSeit = Date.now();
         bewegung._loadingPreset = preset;
         Promise.resolve(vorgeladen).then(teile => {
             if (bewegung._loadingPreset !== preset) return;   // überholt

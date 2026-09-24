@@ -6,12 +6,25 @@
  * Punkte in zwei Gleitkomma-Texturen (Lage, Normale; Texel = Punktnummer).
  * Der Stoff-Vertex-Shader liest je Punkt seine drei Körperecken daraus:
  *
- *     q = u·A + v·B + w·C + d · normalize(u·nA + v·nB + w·nC)
- *     transformed = mix(transformed, q, mischung)
+ *     q = u·A + v·B + w·C,  n = normalize(u·nA + v·nB + w·nC)
+ *     tief = min(d, LUFT) − (transformed − q)·n
+ *     tief > 0  →  transformed += tief · n
  *
  * — NACH `skinning_vertex`, im selben lokalen Raum (Körper und Stoff hängen
  * in derselben Gruppe an demselben Skelett; `transformed` ist bei beiden die
  * gehäutete Lage vor `modelMatrix`).
+ *
+ * NUR HINAUS, NIE HINZIEHEN (24.09.2026, Edgar: Haut durch das G9 Base Shirt,
+ * `001_ShyrinKurz_smplx` Bild 229; die Bindung war seit 23.09. aus). Die erste
+ * Fassung SETZTE jeden gebundenen Punkt auf `q + d·n` — jeder Punkt für sich
+ * auf die Fußoberfläche, der Sneaker verlor seine Form, die Sohle riss. Jetzt
+ * bleibt der Stoff beim Skinning und wird nur dort herausgeschoben, wo er
+ * TIEFER liegt als in Ruhe (höchstens `uLuft` unter der Haut): In Ruhe ist
+ * `tief` ≤ 0, nichts bewegt sich; ein Schuh über dem Fuß bleibt starr, ein
+ * Punkt, der beim Beugen in den Rücken taucht, dehnt den Stoff nach außen.
+ * Zwei Grenzen gegen falsche Zuordnung: tiefer als `uTiefGrenze` oder seitlich
+ * weiter als `uSeitGrenze` von seinem Dreieck ist der Punkt woanders
+ * (durch ein dünnes Glied gefahren, Tangentialebene verlassen) — er bleibt.
  *
  * KAPSELN (Schicht 3): was nicht voll gebunden ist, wird aus den Kapseln der
  * Gliedmaßen gedrückt — elliptischer Kegel wie `Stoffkoerper.hinaus`, aber
@@ -40,6 +53,9 @@ uniform float uOberflaecheAn;
 uniform sampler2D uKoerperLage;
 uniform sampler2D uKoerperNormale;
 uniform float uLageBreite;
+uniform float uLuft;
+uniform float uTiefGrenze;
+uniform float uSeitGrenze;
 uniform float uKapselAn;
 uniform float uKapselAbstand;
 uniform int uKapselAnzahl;
@@ -62,13 +78,38 @@ vec3 g9Normale(float nummer) {
 }
 `;
 
-    /** Nach `skinning_vertex`: Oberfläche mischen, dann Kapseln. */
+    static FRAGMENT_UNIFORMS = `
+uniform float uNormaleAusFlaeche;
+`;
+
+    /**
+     * Nach `normal_fragment_begin`: die Normale zur Flächennormale ziehen, wo die
+     * gehäutete Punktnormale von ihr abweicht (Achsel, Ellbogen, Leiste — dort
+     * mischt ein Punkt Knochen, die sich gegeneinander drehen). Bis 25° Abweichung
+     * (dot ≥ 0,9) bleibt die glatte Normale, ab 60° (dot ≤ 0,5) gilt die Fläche.
+     * Die Flächennormale aus den Ableitungen der Sichtlage ist dieselbe, die Three
+     * bei `flatShading` nimmt; sie zeigt wie `normal` zur Kamera.
+     */
+    static FRAGMENT = `
+#include <normal_fragment_begin>
+if (uNormaleAusFlaeche > 0.5) {
+    vec3 flach = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));
+    normal = normalize(mix(flach, normal, smoothstep(0.5, 0.9, dot(normal, flach))));
+}
+`;
+
+    /** Nach `skinning_vertex`: aus der Oberfläche hinausdrücken, dann Kapseln. */
     static VERTEX = `
 #include <skinning_vertex>
 if (uOberflaecheAn > 0.5 && mischung > 0.0 && bindung.x >= 0.0) {
     vec3 q = bary.x * g9Lage(bindung.x) + bary.y * g9Lage(bindung.y) + bary.z * g9Lage(bindung.z);
     vec3 n = normalize(bary.x * g9Normale(bindung.x) + bary.y * g9Normale(bindung.y) + bary.z * g9Normale(bindung.z));
-    transformed = mix(transformed, q + bindabstand * n, mischung);
+    vec3 o = transformed - q;
+    float hoehe = dot(o, n);
+    float tief = min(bindabstand, uLuft) - hoehe;
+    if (tief > 0.0 && tief < uTiefGrenze && length(o - hoehe * n) < uSeitGrenze) {
+        transformed += tief * n;
+    }
 }
 // FREIE Punkte werden von JEDER Kapsel gedrueckt; GEBUNDENE (mischung > 0) nur,
 // wenn der Punkt SELBST einer Gliedmasse gehoert (bindgruppe > 0, z. B. Jeans

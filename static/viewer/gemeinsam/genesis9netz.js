@@ -86,8 +86,37 @@ export class Genesis9netz {
      * Ursulas Style 02, Kins Layer) matt und leicht durchscheinend, sonst
      * stehen sie als glänzende schwarze Klötze im Gesicht (18.09.2026).
      */
+    /**
+     * Die Bilder ALLER Gruppen eines Netzes — für das Bündel (23.09.2026,
+     * Edgar: „weniger einzelne Texturanfragen"). `srgb` nur für Farbbilder:
+     * Albedo und die Schminkfarbe; Normalen, Rauheit, Metall, Deckkraft und
+     * die übrigen Schminkbilder sind lineare Daten.
+     */
+    static bildpfade(gruppen) {
+        const aus = [];
+        const dazu = (pfad, srgb = false) => { if (pfad) aus.push({ pfad, srgb }); };
+        for (const gruppe of gruppen || []) {
+            const bilder = gruppe.bilder || {};
+            dazu(bilder.albedo, true);
+            dazu(bilder.normalen);
+            dazu(bilder.alpha);
+            dazu(bilder.rauheit);
+            dazu(bilder.metall);
+            // Die 8K-Detailnormale bleibt DRAUSSEN: 97 MB je Kachel
+            // (`genesis9-inhalte.md`) — daran hinge das ganze Bündel.
+            for (const art of ['farbe', 'gewicht', 'rauheit', 'glanz', 'normalen']) {
+                dazu(bilder.schminke?.[art], art === 'farbe');
+            }
+        }
+        return aus;
+    }
+
     static materialien(geo, gruppen, brauen = false) {
         if (!gruppen.length) return Genesis9netz.haut();
+        // EINE Anfrage für alle Bilder dieses Netzes, bevor die Materialien
+        // gebaut werden — `vorladen` legt die Vorratseinträge SYNCHRON an,
+        // deshalb holt `Genesis9netz.texturen` unten keines mehr einzeln.
+        Genesis9texturen.vorladen(Genesis9netz.bildpfade(gruppen));
         const liste = [];
         for (const gruppe of gruppen) {
             const material = Genesis9netz.material(gruppe);

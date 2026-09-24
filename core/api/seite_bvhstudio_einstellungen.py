@@ -29,6 +29,7 @@ class BvhStudioEinstellungenSeite(TemplateView):
         'studio_zoom': '100',
         'studio_export_resolution': '1080',
         'studio_export_crf': '18',
+        'studio_preload_all': '1',
     }
 
     def get_context_data(self, **kwargs):

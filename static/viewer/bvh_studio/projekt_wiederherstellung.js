@@ -127,7 +127,10 @@ export class Projektwiederherstellung {
         track.color = td.color || track.color;
         track.muted = td.muted || false;
         track.position = td.position || [0, 0, 0];
-        if (track.group) track.group.position.set(track.position[0], 0, track.position[2]);
+        if (track.group) {
+            track.group.position.set(track.position[0], track.position[1] || 0,
+                                     track.position[2]);
+        }
         if (art === 'camera') track.cameraActive = td.cameraActive ?? true;
         if (art === 'light' && track.light && td.lightPosition) {
             Projektwiederherstellung._lichtUebernehmen(track, td);

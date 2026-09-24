@@ -15,6 +15,7 @@ import { Endlosschalter } from './endlosschalter.js';
 import { Ladehinweis } from './ladehinweis.js';
 import { Zeitleistenfolge } from './zeitleiste_folgen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
+import { Schluesselpaar } from './schluesselpaar.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
@@ -74,11 +75,13 @@ export function setupPlayback() {
         }
         if (e.code === 'KeyK') {
             e.preventDefault();
-            if (state.selectedTrackIdx >= 0) {
-                const t = state.project.tracks[state.selectedTrackIdx];
-                if (t.type === 'camera') fn.addCameraKeyframe(state.selectedTrackIdx);
-                else if (t.type === 'light') fn.addLightKeyframe(state.selectedTrackIdx);
-            }
+            const t = state.project.tracks[state.selectedTrackIdx];
+            if (t?.type === 'camera') fn.addCameraKeyframe(state.selectedTrackIdx);
+        }
+        if (e.code === 'KeyL') {
+            e.preventDefault();
+            const t = state.project.tracks[state.selectedTrackIdx];
+            if (t?.type === 'light') fn.addLightKeyframe(state.selectedTrackIdx);
         }
         // Ctrl shortcuts handled in capture-phase handler above
         if (e.key === 'F2') {
@@ -183,26 +186,30 @@ export function springen(bild) {
 //  1. Wenn track.muted=true → immer aus (User-Override via Aus-Button)
 //  2. Letzter Keyframe vor/an Playhead mit .data.visible != null → dessen Wert
 //  3. Default: an (!track.muted)
+//
+// Wie bei der Kamera: außerhalb der Keyframes wird auf den NÄCHSTLIEGENDEN
+// geklemmt, nicht auf "aus" — sonst geht ein Licht, das an drei Stellen als
+// "an" gespeichert wurde, überall SONST im Projekt aus (Edgar, 23.09.2026:
+// "Lichter sind dauernd aus ... Events werden ignoriert"). `Schluesselpaar`
+// liefert diese Klemmung schon (`vorher` ist vor dem ersten KF der erste,
+// nach dem letzten der letzte) — dieselbe Stelle, die auch Kamera und
+// Lichtwerte (Position/Farbe/Stärke) benutzen.
 function _lightVisibleAtPlayhead(track) {
     if (track.muted) return false;
-    const pf = state.playheadFrame;
     const kfs = track.clips.filter(c => c.type === 'light_kf');
     // Ohne Keyframes: Licht im Default-Zustand (an wenn nicht muted).
     // Standard-Keyframes werden NICHT mehr automatisch angelegt — das Licht ist
     // einfach immer aktiv bis der User Keyframes für Animation hinzufügt.
     if (kfs.length === 0) return true;
-    // Mit Keyframes: zeitabhängige Animation. Vor erstem/nach letztem KF → Licht aus
-    // (sinnvoll nur wenn User explizit Anfang/Ende definiert).
     const sorted = [...kfs].sort((a, b) => {
         if (a.startFrame !== b.startFrame) return a.startFrame - b.startFrame;
         return (a.data?.trackPosition === 'upper' ? 0 : 1) - (b.data?.trackPosition === 'upper' ? 0 : 1);
     });
-    if (pf < sorted[0].startFrame || pf > sorted[sorted.length - 1].startFrame) return false;
-    let activeKf = sorted[0];
-    for (const c of sorted) {
-        if (c.startFrame <= pf) activeKf = c;
-    }
-    return activeKf.data?.visible !== false;
+    const paar = Schluesselpaar.finden(sorted, state.playheadFrame);
+    // `vorher` ist "der letzte Keyframe mit startFrame <= Bild" innerhalb der
+    // Spanne, und der geklemmte Rand außerhalb — in beiden Fällen der
+    // richtige An/Aus-Zustand für einen Schalter (kein Zwischenwert nötig).
+    return !paar || paar.vorher.data?.visible !== false;
 }
 
 // Synchronisiert visible state für alle Lichter — wird JEDEN Frame vom

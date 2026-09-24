@@ -1,4 +1,4 @@
-import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
+import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 
 /**
  * Effektverlauf — den Zustand EINES Effektauftrags nachfragen und im

@@ -41,17 +41,27 @@ export class Genesis9eigenschaften {
         if (!bereich) return;
         bereich.classList.remove('hb-versteckt');
         Genesis9eigenschaften._kopf(inst);
-        const plan = await Genesis9eigenschaften.plan();
-        Genesis9eigenschaften._haut(inst, plan);
-        await Genesis9posen.fuellen(inst);
-        Genesis9eigenschaften._regler(inst, plan);
-        Genesis9eigenschaften._reglergriff();
-        // Texturmischung ganz unten (21.09.2026): alle Hautsaetze mit Prozent.
-        Genesis9texturmischung.fuellen(inst, plan);
-        // Die Garderobe steht im Assets-Reiter (`_genesis9_garderobe.html`,
-        // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
-        await Genesis9garderobe.fuellen(inst,
-            document.getElementById(Genesis9garderobe.BEREICH));
+        // PARALLEL statt nacheinander (23.09.2026, Edgar: „mach das laden
+        // parallel und asynchron wie auf BVH Studio"): Regler-Plan, Posenliste
+        // und Garderobe sind DREI unabhaengige Serveranfragen in drei
+        // getrennte Behaelter — nur `_haut`/`_regler`/Texturmischung brauchen
+        // den Plan, Posen und Garderobe brauchen ihn nicht. Vorher liefen sie
+        // als `await`-Kette hintereinander (Log: drei Anfragen ueber ~2 s
+        // verteilt statt gleichzeitig).
+        await Promise.all([
+            Genesis9eigenschaften.plan().then(plan => {
+                Genesis9eigenschaften._haut(inst, plan);
+                Genesis9eigenschaften._regler(inst, plan);
+                Genesis9eigenschaften._reglergriff();
+                // Texturmischung ganz unten (21.09.2026): alle Hautsaetze mit Prozent.
+                Genesis9texturmischung.fuellen(inst, plan);
+            }),
+            Genesis9posen.fuellen(inst),
+            // Die Garderobe steht im Assets-Reiter (`_genesis9_garderobe.html`,
+            // Edgar 17.09.2026: „machst Du einen extra Reiter dafür bei Assets?").
+            Genesis9garderobe.fuellen(inst,
+                document.getElementById(Genesis9garderobe.BEREICH)),
+        ]);
     }
 
     /** Für eine HumanBody-Figur nur die Daz-Garderobe: Bereich einblenden und füllen
