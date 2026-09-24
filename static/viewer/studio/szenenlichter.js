@@ -21,6 +21,15 @@ import { Lichtschluessel } from './lichtschluessel.js';
  *
  * Das zu verwechseln heißt: Gelöschte Lichter kommen beim nächsten Laden wieder.
  * Deshalb `!== undefined && !== null` und nicht bloß ein Wahrheitstest.
+ *
+ * DRITTER FALL SEIT DER AMBIENT-SPUR (24.09.2026)
+ * ================================================
+ * Ein VOR diesem Tag gespeichertes Projekt hat gar kein `"Ambient"`-Feld —
+ * die Spur gab es beim Speichern noch nicht. Ohne Sonderfall sähe das genau
+ * wie „Nutzer hat Ambient gelöscht" aus, und das Licht verschwände beim
+ * ersten Laden jedes alten Projekts wieder ersatzlos. Der Marker
+ * `__ambientSpur` (`projekt_daten.js`) unterscheidet die beiden Fälle: fehlt
+ * er, ist es ein alter Speicherstand → Ambient trotzdem anlegen.
  */
 export class Szenenlichter {
 
@@ -36,10 +45,14 @@ export class Szenenlichter {
     static spurenAnlegen() {
         const gespeichert = state.project._pendingSceneOverrides?.sceneLights;
         const ausSave = gespeichert !== undefined && gespeichert !== null;
+        // Migration: ein Speicherstand von VOR der Ambient-Spur kennt sie
+        // nicht — das darf nicht als „gelöscht" gelten (siehe Klassenkommentar).
+        const altOhneAmbient = ausSave && !gespeichert.__ambientSpur;
         for (const { name, ref } of Szenenlichter.LICHTER) {
             const licht = state[ref];
             if (!licht) continue;
-            if (ausSave && !(name in gespeichert)) {
+            const fehltImSave = ausSave && !(name in gespeichert);
+            if (fehltImSave && !(name === 'Ambient' && altOhneAmbient)) {
                 Szenenlichter._entfernen(licht, ref);
                 continue;
             }
@@ -69,7 +82,12 @@ export class Szenenlichter {
         spur.light = licht;
         spur.lightType = Lichtanzeiger.art(licht);
         spur.lightVisible = false;      // Helferlinien: Vorgabe aus
-        spur.coneVisible = true;        // Lichtform: Vorgabe an
+        // Lichtform: Vorgabe an — außer bei Ambient. Three.js erzeugt ein
+        // AmbientLight immer auf (0,0,0), also mitten in der Szene: die Form
+        // (`lichtanzeiger.js`, flaches Rechteck) läge sonst sichtbar in der
+        // Figur (24.09.2026, Edgar-Bild: Platte unter den Füßen). Per Kästchen
+        // in der Licht-Leiste bleibt sie trotzdem zuschaltbar.
+        spur.coneVisible = !licht.isAmbientLight;
         spur._sceneLight = true;
         spur.lightHelper = Lichtanzeiger.helfer(licht);
         if (spur.lightHelper) state.scene.add(spur.lightHelper);

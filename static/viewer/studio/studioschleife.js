@@ -9,6 +9,7 @@ import { Abspielende } from './abspielende.js';
 import { updateDebugPanel } from './debug.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 import { Figurmarkierung } from './figurmarkierung.js';
+import { globaleSichtbarkeit } from './globale_sichtbarkeit.js';
 
 /**
  * Studioschleife — die Renderschleife des BVH-Studios.
@@ -34,7 +35,15 @@ export class Studioschleife extends Zeichenschleife {
     schritt() {
         const dt = Math.min(state.clock.getDelta(), Studioschleife.MAX_SCHRITT_S);
         if (state.playing) this.abspielen(dt);
-        else syncLightVisibility();
+        else {
+            // `syncLightVisibility()` respektiert nur Spur-Mute und Keyframes;
+            // ohne den globalen Schalter hier setzt der nächste Frame ein per
+            // Knopf ausgeschaltetes Licht sofort wieder an — im Pause-Zustand
+            // (Normalfall beim Bearbeiten) lief bisher NUR dieser Zweig, nie
+            // `applyPlayhead()`, wo `anwenden()` als letzter Schritt hängt.
+            syncLightVisibility();
+            globaleSichtbarkeit.anwenden();
+        }
         if (!this.kameraspurAktiv()) state.controls.update();
         Figurmarkierung.nachziehen();   // Rahmen um die gewählte Figur
         state.renderer.render(state.scene, state.camera);

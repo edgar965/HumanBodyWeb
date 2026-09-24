@@ -38,10 +38,15 @@ export class GlobaleSichtbarkeit {
     }
 
     /**
-     * Kleidung steckt an keiner eigenen Spur, sondern als `userData.isGarment`
-     * an Kind-Objekten der Modell-Gruppe (`gemeinsam/modellzubehoer.js:79`,
-     * projektübergreifend so markiert). Nichts setzt das pro Bild neu —
-     * direktes Umschalten reicht, ohne Haken in `applyPlayhead()`.
+     * Kleidung steckt an keiner eigenen Spur, sondern an Kind-Objekten der
+     * Modell-Gruppe. HumanBody/GarmentCode markieren mit `userData.isGarment`
+     * (`gemeinsam/modellzubehoer.js:79`), Genesis 9 stattdessen mit
+     * `userData.art === 'kleidung'` (`gemeinsam/genesis9kleidung.js:104` —
+     * `art` unterscheidet dort zusätzlich `haar`/`requisit`, die nicht als
+     * Kleidung gelten sollen). Beide Markierungen prüfen, sonst blieb Genesis-9-
+     * Kleidung vom Knopf „Alle Kleider ausblenden" unberührt.
+     * Nichts setzt das pro Bild neu — direktes Umschalten reicht, ohne Haken
+     * in `applyPlayhead()`.
      */
     kleidungUmschalten(sichtbar) {
         this.kleidung = sichtbar;
@@ -49,7 +54,8 @@ export class GlobaleSichtbarkeit {
             const bewegung = state.project.getLinkedAnimation(track);
             if (!bewegung?.group) continue;
             bewegung.group.traverse(obj => {
-                if (obj.userData?.isGarment) obj.visible = sichtbar;
+                const ud = obj.userData;
+                if (ud?.isGarment || ud?.art === 'kleidung') obj.visible = sichtbar;
             });
         }
     }

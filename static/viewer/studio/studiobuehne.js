@@ -10,7 +10,10 @@ import { createSceneSetup } from '../character_core.js';
  * aber die drei gerichteten Lichter wieder. Grund (aus dem ursprünglichen
  * Kommentar): Im Studio soll das Licht über Licht-SPUREN kommen, die der
  * Benutzer selbst anlegt. Das Umgebungslicht bleibt als Szenenelement, sonst
- * wären importierte Objekte und Modelle völlig schwarz.
+ * wären importierte Objekte und Modelle völlig schwarz — es bekommt aber
+ * (24.09.2026) selbst eine Spur (`Szenenlichter`), damit es über die
+ * Licht-Leiste aus-/einschaltbar ist. Vorher lief jedes Mute/„Alle Lichter
+ * aus" an ihm vorbei: `state.sceneAmbient` stand fest auf `null`.
  */
 export class Studiobuehne {
 
@@ -35,12 +38,13 @@ export class Studiobuehne {
             teile.scene.remove(licht);
             licht.dispose?.();
         }
-        // Keine Spuren für diese Lichter — auch nicht für das Umgebungslicht,
-        // das in der Szene bleibt.
+        // Keine Spuren für diese drei. Das Umgebungslicht bleibt in der Szene
+        // UND bekommt seine State-Referenz behalten — `Szenenlichter.spurenAnlegen()`
+        // legt daraus die vierte Spur „Ambient" an (siehe Klassenkommentar).
         state.sceneKeyLight = null;
         state.sceneFillLight = null;
         state.sceneBackLight = null;
-        state.sceneAmbient = null;
+        state.sceneAmbient = teile.ambient || null;
     }
 
     _groesseVerfolgen() {

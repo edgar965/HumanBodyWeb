@@ -33,9 +33,14 @@ export class Projektdaten {
     /**
      * Licht-Eigenschaften der Szenenlichter (Key/Fill/Back/Ambient + Theatre)
      * als {name: {eigenschaften, clips}} fuer den Speicher-Rundlauf.
+     *
+     * `__ambientSpur` markiert Speicherstände AB der Ambient-Spur (24.09.2026):
+     * ohne die Marke weiß `Szenenlichter.spurenAnlegen()` beim Laden nicht, ob
+     * ein fehlendes "Ambient" ein alter Speicherstand ist (Spur anlegen) oder
+     * eine bewusste Löschung (Spur weglassen) — siehe dortiger Kommentar.
      */
     static _lichter() {
-        const out = {};
+        const out = { __ambientSpur: true };
         for (const t of state.project.tracks) {
             if (t.type !== 'light' || !t._sceneLight || !t.light) continue;
             out[t.name] = {
