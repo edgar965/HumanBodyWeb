@@ -97,8 +97,39 @@ class Modellkatalog:
                 continue
             name = dateiname[:-5]
             daten = cls._lesen(os.path.join(ordner, dateiname))
+            if cls._koerperart_unbrauchbar(daten):
+                continue
             aus.append({'name': name, 'label': name, 'quelle': cls.quelle(daten)})
         return aus
+
+    @classmethod
+    def _koerperart_unbrauchbar(cls, daten):
+        u"""True für eine HumanBody-Datei mit einer Körperart, die weder ein
+        echter MB-Lab-Typ noch ein erzeugtes Modell (Rig-Baukasten,
+        `type: "generated_model"`) ist.
+
+        FUND (24.09.2026, Studio-Assettest „lade alle Assets"): zwei
+        Modelldateien (`FrauBasic.json`, `Rig4.json`) tragen
+        `body_type: "Rig Bones"` — den Marker, den der Rig-Baukasten für
+        seine erzeugten Modelle setzt (`scene/modellgenerator/speicher.js`,
+        `Modellspeicher._daten`) — OHNE dessen `type: "generated_model"` und
+        ohne `bone_parts`. Ohne die Kennung nimmt `HumanbodyModell` sie als
+        normale Figur und schickt „Rig Bones" als `body_type` an
+        `/api/character/mesh/` — dort kennt `CharacterState.set_body_type`
+        nur die 13 MB-Lab-Typen, `compute()` liefert `None`, die Antwort ist
+        ein 500. Die anderen erzeugten Modelle (`Rig`, `Rig1`–`Rig3`, `Rig5`,
+        `TriadischRock`) tragen `type: "generated_model"` korrekt und bauen
+        über `Erzeugtesmodell` — die bleiben im Katalog stehen, nur die zwei
+        unvollständigen Speicherstände werden ausgeblendet. Die Dateien
+        selbst bleiben unangetastet (`HumanBody/data/` ist nur-lesen).
+        """
+        if not isinstance(daten, dict):
+            return False
+        if cls.quelle(daten) != cls.VORGABE_QUELLE:
+            return False   # Genesis 9 & Co. pruefen ihre Koerperart selbst.
+        if daten.get('type') == 'generated_model':
+            return False   # Rig-Baukasten-Modell, geht ueber Erzeugtesmodell.
+        return daten.get('body_type') not in MorphData.BODY_TYPES
 
     @classmethod
     def gespeichert(cls, name, quelle):

@@ -121,7 +121,22 @@ function _zuschneider(ausschnitt) {
 
 export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, format, crf, ausschnitt,
     filename, statusText, progressBar) {
-    const totalFrames = toFrame - fromFrame;
+    // `fromFrame`/`toFrame` stehen auf der PROJEKT-Zeitleiste (Projekt-FPS,
+    // meist 30) — `fps` ist die gewählte AUSGABE-Framerate und kann davon
+    // abweichen (Edgar, 24.09.2026, mit `2.mp4`: „das sind doch keine 4K,
+    // die Geschwindigkeit ist kaputt"). Vorher lief `f` 1:1 von `fromFrame`
+    // bis `toFrame` und wurde direkt als Ausgabebild UND als Playhead
+    // benutzt — bei FPS 60 auf einem 30-fps-Projekt kamen so nur halb so
+    // viele Bilder heraus, wie ein 60-fps-Video für dieselbe Dauer braucht:
+    // das Video lief exakt doppelt so schnell (gemessen: 1850 Bilder bei
+    // 60 fps ergaben 30,8 s statt der beabsichtigten 61,7 s — dieselbe
+    // Bildzahl wie ein 30-fps-Export derselben Spanne). Jetzt wird auf die
+    // AUSGABE-Bildzahl umgerechnet und die Projekt-Zeit entsprechend
+    // abgetastet — wie `_sampleFrames` in `export_nutzlast.js` es für den
+    // Stoff-Export schon vormacht.
+    const projFps = state.project.fps || fps;
+    const verhaeltnis = projFps / fps;               // Projekt-Bilder je Ausgabebild
+    const totalFrames = Math.max(1, Math.round((toFrame - fromFrame) / verhaeltnis));
     let sessionId = '';
     let stapel = [];
     let stapelStart = 0;
@@ -129,10 +144,10 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
 
     // Phase 1: Bilder aufnehmen, in Paketen hochladen (nicht alle im
     // Speicher halten UND nicht alle in einer Anfrage, siehe oben).
-    for (let f = fromFrame; f < toFrame; f++) {
+    for (let bildnummer = 0; bildnummer < totalFrames; bildnummer++) {
         if (exportCancelled) { statusText.textContent = 'Abgebrochen.'; return; }
 
-        state.playheadFrame = f;
+        state.playheadFrame = Math.round(fromFrame + bildnummer * verhaeltnis);
         fn.applyPlayhead();
         offRenderer.render(state.scene, state.camera);
 
@@ -140,12 +155,11 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
         const blob = await new Promise(r => quelle.toBlob(r, 'image/png'));
         stapel.push(blob);
 
-        const bildnummer = f - fromFrame;
         const pct = Math.round(bildnummer / totalFrames * 100);
         statusText.textContent = `Aufnahme: Frame ${bildnummer + 1}/${totalFrames} (${pct}%)`;
         progressBar.style.width = `${pct * 0.8}%`;  // 80% for capture, 20% for encoding
 
-        if (stapel.length >= STAPEL_GROESSE || f === toFrame - 1) {
+        if (stapel.length >= STAPEL_GROESSE || bildnummer === totalFrames - 1) {
             try {
                 sessionId = await _stapelHochladen(sessionId, stapelStart, stapel);
             } catch (e) {
@@ -219,7 +233,16 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
 
 export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText,
     progressBar) {
-    const totalFrames = toFrame - fromFrame;
+    // Dieselbe Umrechnung wie in `exportServerFfmpeg` (24.09.2026, siehe
+    // dort): `fromFrame`/`toFrame` sind Projekt-Frames, `fps` die gewählte
+    // Ausgabe-Framerate. Der MediaRecorder zeichnet in ECHTZEIT auf (die
+    // Wartezeit zwischen zwei Bildern ist `frameInterval`) — lief die
+    // Schleife weiterhin `toFrame - fromFrame` mal (Projekt-Bilder statt
+    // Ausgabebilder), war die AUFNAHMEDAUER selbst falsch: bei FPS 60 auf
+    // einem 30-fps-Projekt nur halb so lang wie beabsichtigt.
+    const projFps = state.project.fps || fps;
+    const verhaeltnis = projFps / fps;               // Projekt-Bilder je Ausgabebild
+    const totalFrames = Math.max(1, Math.round((toFrame - fromFrame) / verhaeltnis));
     const stream = offCanvas.captureStream(0);  // 0 = manual frame push
     const chunks = [];
 
@@ -231,10 +254,10 @@ export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFra
     recorder.start();
 
     const frameInterval = 1000 / fps;
-    for (let f = fromFrame; f < toFrame; f++) {
+    for (let bildnummer = 0; bildnummer < totalFrames; bildnummer++) {
         if (exportCancelled) { recorder.stop(); statusText.textContent = 'Abgebrochen.'; return; }
 
-        state.playheadFrame = f;
+        state.playheadFrame = Math.round(fromFrame + bildnummer * verhaeltnis);
         fn.applyPlayhead();
         offRenderer.render(state.scene, state.camera);
 
@@ -242,8 +265,8 @@ export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFra
         const track = stream.getVideoTracks()[0];
         if (track && track.requestFrame) track.requestFrame();
 
-        const pct = ((f - fromFrame) / totalFrames * 100).toFixed(0);
-        statusText.textContent = `Aufnahme: Frame ${f - fromFrame + 1}/${totalFrames} (${pct}%)`;
+        const pct = (bildnummer / totalFrames * 100).toFixed(0);
+        statusText.textContent = `Aufnahme: Frame ${bildnummer + 1}/${totalFrames} (${pct}%)`;
         progressBar.style.width = `${pct}%`;
 
         await new Promise(r => setTimeout(r, frameInterval));

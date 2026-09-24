@@ -7,6 +7,7 @@ import { MakehumanModell } from '../gemeinsam/makehumanmodell.js';
 import { SmplModell } from '../gemeinsam/smplmodell.js';
 import { UmapythonModell } from '../gemeinsam/umapythonmodell.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
+import { Spurgarmentcode } from './spurgarmentcode.js';
 
 /**
  * Spurfigurarten — welche Modellklasse die Figur einer Spur baut.
@@ -75,6 +76,7 @@ export class Spurfigurarten {
             const modell = new Genesis9Modell(spur.name, { figur: spur.preset });
             await modell.bauen();
             beiKoerper(modell);
+            await Spurgarmentcode.genesis9(modell);
             return modell;
         },
     };

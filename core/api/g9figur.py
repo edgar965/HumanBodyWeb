@@ -108,6 +108,7 @@ class G9figur:
                             'augen': eintrag.get('augen') or '',
                             'brauen': eintrag.get('brauen') or '',
                             'kleidung': dict(eintrag.get('kleidung') or {}),
+                            'garmentcode': list(eintrag.get('garmentcode') or []),
                             'praesets': dict(eintrag.get('praesets') or {}),
                             'hautmischung': dict(eintrag.get('hautmischung') or {}),
                             'brauenstil': eintrag.get('brauenstil') or '',
@@ -136,6 +137,8 @@ class G9figur:
                 'augen': figur.get('augen') or '',
                 'brauen': figur.get('brauen') or '',
                 'kleidung': figur.get('kleidung') or {},
+                # GarmentCode-Stücke (`GarmentcodeAblage`): Studio/Theatre ziehen sie an (24.09.2026).
+                'garmentcode': figur.get('garmentcode') if isinstance(figur.get('garmentcode'), list) else [],
                 'praesets': figur.get('praesets') or {},
                 # Texturmischung (21.09.2026): {hautsatz: prozent}, gemischt im Browser.
                 'hautmischung': figur.get('hautmischung') or {},

@@ -67,10 +67,18 @@ class Videokodierer:
         Kein NVIDIA-VP9-Encoder auf diesem Rechner (nur Intel Quick Sync,
         `ffmpeg -encoders` geprueft 23.09.2026) — WebM bleibt CPU/libvpx-vp9.
         `-cq` ist NVENCs Gegenstueck zu `-crf` bei libx264 (dieselbe 0-51-Skala).
+
+        `-b:v 0` ist bei NVENC PFLICHT, sobald `-cq` die Qualitaet steuern soll
+        (Edgar, 24.09.2026, `2.mp4`: „das sind doch keine 4K"): Ohne `-b:v 0`
+        greift ffmpegs eigener, von der Aufloesung unabhaengiger Standard-
+        Zielbitrate und deckelt den VBR-Modus — gemessen 971 kbit/s Video bei
+        3840x2160 statt der von `-cq 18` erwarteten Qualitaet (ffprobe:
+        4,3 MB / 30,8 s). Die VP9-Zeile hatte `-b:v 0` bereits richtig gesetzt,
+        nur die NVENC-Zeile nicht.
         """
         if format == 'mp4':
             return ['-c:v', 'h264_nvenc', '-preset', 'p7', '-tune', 'hq',
-                    '-rc', 'vbr', '-cq', str(crf), '-pix_fmt', 'yuv420p']
+                    '-rc', 'vbr', '-cq', str(crf), '-b:v', '0', '-pix_fmt', 'yuv420p']
         return ['-c:v', 'libvpx-vp9', '-crf', str(crf), '-b:v', '0']
 
     # ---------------------------------------------------------------- ausfuehren

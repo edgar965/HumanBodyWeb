@@ -47,10 +47,19 @@ export class Modellspur {
         }
         if (bewegung.group) bewegung.group.visible = false;
         Modellspur._sichtbarkeitMelden(bewegung, spur, false, preset, zeit);
-        if (!preset) {
-            bewegung.meshActive = null;
-            return;
-        }
+        // Nur ausblenden, `meshActive` NICHT löschen (24.09.2026, Edgar: „Pfeiltasten
+        // zum Bewegen … blockiert immer nach dem ca. 5. Klick"): Ein Bereich ohne
+        // Clip heißt nur „gerade nichts zu zeigen" — die schon gebaute Figur bleibt
+        // in `bewegung.mesh`/`group` stehen. Stand hier bis heute `meshActive = null`,
+        // baute JEDER Sprung zurück in denselben Clip eine Genesis-9-Figur komplett
+        // neu (Körper + jedes Kleidungsstück, Käfig- UND Feinstufe — bis zu zehn
+        // Anfragen, `client.log` 21:11:19–20: zwei volle Ursula1-Bauten binnen 1 s).
+        // Pfeiltasten nahe einer Clip-Grenze lösten so bei jedem Überschreiten einen
+        // Neubau aus; mehrere schnell hintereinander stauten sich (dieselbe Klasse
+        // wie beim doppelten Bau nach Undo, `clipanimation.js:_figurSichern`,
+        // 22.09.2026). Mit `meshActive` stehengelassen erkennt die Prüfung oben
+        // (`preset === bewegung.meshActive`) den Rücksprung und blendet nur wieder ein.
+        if (!preset) return;
         Modellspur._laden(bewegung, preset);
     }
 
