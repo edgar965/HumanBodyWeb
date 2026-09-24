@@ -10,7 +10,7 @@ sah das fuer Edgar aus wie „die Leggings wird nicht gebaut". Dieselbe
 Fehlerklasse wie `~/.claude/rules/es-module-stumme-fehler.md`.
 
 Beim ersten Lauf fand der Pruefer gleich einen zweiten Fall:
-`bvh_studio/spurfigur.js` nutzte `Koerpernetz.materialsatz` ohne Import.
+`studio/spurfigur.js` nutzte `Koerpernetz.materialsatz` ohne Import.
 
 Was geprueft wird: `Name.` mit grossem Anfangsbuchstaben — Klassen und
 Namensraeume. Lokale Grossbuchstaben-Namen (Parameter, Destrukturierung)

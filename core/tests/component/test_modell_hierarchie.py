@@ -47,7 +47,7 @@ ARTEN = {
 #: Seite → (Datei, was sie vom Modell ruft)
 SEITEN = {
     # Seit 15.09.2026 wählt `spurfigurarten.js` die Klasse je Figurart — dort steht der Bau.
-    'BVH Studio': (VIEWER / 'bvh_studio' / 'spurfigurarten.js', 'await modell.bauen({'),
+    'BVH Studio': (VIEWER / 'studio' / 'spurfigurarten.js', 'await modell.bauen({'),
     'Theatre': (THEATRE / 'laden' / 'vorgabefigur.js', 'await modell.bauen({ zubehoer: true })'),
     'Theatre UMA': (THEATRE / 'studio' / 'figurwahl.js', 'new UmaModell('),
     'Ergebnisseite': (VIEWER / 'result_character' / 'mesh_loading.js', 'await modell.koerper('),
@@ -63,9 +63,9 @@ SZENE = {
     'genesis9/genesis9figur.js': 'class Genesis9Figur extends Genesis9Modell {',
 }
 ALTE_BAUER = (
-    'bvh_studio/spurzubehoer.js',
-    'bvh_studio/spurhaut.js',
-    'bvh_studio/spurdetails.js',
+    'studio/spurzubehoer.js',
+    'studio/spurhaut.js',
+    'studio/spurdetails.js',
     'scene/figurbasis.js',
 )
 

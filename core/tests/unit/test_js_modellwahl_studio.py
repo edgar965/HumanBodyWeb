@@ -33,11 +33,11 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 
 WURZEL = Path(settings.BASE_DIR)
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+STUDIO = Jsmodul.VIEWER / 'studio'
 GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
 
-PLATZ = Jsmodul('bvh_studio', 'modellplatz.js')
-GRUPPEN = Jsmodul('bvh_studio', 'modellgruppen.js')
+PLATZ = Jsmodul('studio', 'modellplatz.js')
+GRUPPEN = Jsmodul('studio', 'modellgruppen.js')
 
 PRUEFE = """
 const bvh = (x, extra = {}) => ({ type: 'bvh', clips: [], position: [x, 0, 0], ...extra });

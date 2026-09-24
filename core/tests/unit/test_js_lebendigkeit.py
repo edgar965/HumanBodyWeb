@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'lebendigkeit.js')
+MODUL = Jsmodul('studio', 'lebendigkeit.js')
 
 SKRIPT = """
 const { Lebendigkeit: L } = await import(MODUL);

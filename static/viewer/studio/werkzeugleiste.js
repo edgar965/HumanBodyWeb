@@ -9,12 +9,14 @@ import { _fixedPos, applyFixedPositionAll,
 import { groundFixSelectedClip, saveBvhWithEffects } from './werkzeug_boden.js';
 import { Hilfefenster } from './hilfefenster.js';
 import { Modellwahl } from './modellwahl.js';
+import { globaleSichtbarkeit } from './globale_sichtbarkeit.js';
+import { TheatrejsEditor } from './theatrejs_editor.js';
 
 /**
  * Werkzeugleiste — die obere Leiste des BVH-Studios: Menüs, Knöpfe,
  * Spur-Kontextmenü und die Werkzeuge (Glättung, Boden, feste Position).
  *
- * Aus bvh_studio/tools.js herausgeloest (Umbau 16.08.2026): `setupToolbar()`
+ * Aus studio/tools.js herausgeloest (Umbau 16.08.2026): `setupToolbar()`
  * hatte 155 Zeilen, davon waren die meisten Wiederholungen:
  *
  *  * 17 Menüeinträge, jeder als eigene Zeile mit demselben Rumpf
@@ -85,6 +87,8 @@ export class Werkzeugleiste {
         this._werkzeuge();
         this._reiter();
         this._spurkontext();
+        this._globaleSichtbarkeit();
+        this._theatrejsKnopf();
         Hilfefenster.verdrahten(this.menues.get('help-dropdown'));
         this._menuesSchliessen();
         return this;
@@ -228,6 +232,39 @@ export class Werkzeugleiste {
                 _fixedPos.radius = zentimeter / 100;
                 if (_fixedPos.active) applyFixedPositionAll();
             });
+    }
+
+    // ------------------------------------------------- Globale Sichtbarkeit
+
+    /** Alle Lichter/Modelle/Kleidung auf einmal ein-/ausblenden (Vorbild Theatre). */
+    _globaleSichtbarkeit() {
+        this._sichtbarkeitsknopf('btn-toggle-lichter', 'lichter', an => {
+            globaleSichtbarkeit.lichter = an;
+            fn.applyPlayhead();
+        });
+        this._sichtbarkeitsknopf('btn-toggle-modell', 'modell', an => {
+            globaleSichtbarkeit.modell = an;
+            fn.applyPlayhead();
+        });
+        this._sichtbarkeitsknopf('btn-toggle-kleidung', 'kleidung', an =>
+            globaleSichtbarkeit.kleidungUmschalten(an));
+    }
+
+    _sichtbarkeitsknopf(knopfId, feld, umschalten) {
+        const knopf = document.getElementById(knopfId);
+        knopf?.addEventListener('click', () => {
+            const an = !globaleSichtbarkeit[feld];
+            umschalten(an);
+            knopf.classList.toggle('an', an);
+        });
+    }
+
+    /** Theatre.js-Studio-Editor (Kamera): siehe `theatrejs_editor.js`. */
+    _theatrejsKnopf() {
+        const knopf = document.getElementById('btn-toggle-theatrejs');
+        knopf?.addEventListener('click', () => {
+            knopf.classList.toggle('an', TheatrejsEditor.sichtbarkeitUmschalten());
+        });
     }
 
     // --------------------------------------------------------- Spur-Kontextmenü

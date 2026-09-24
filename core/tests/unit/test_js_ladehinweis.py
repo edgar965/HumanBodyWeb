@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'ladehinweis.js')
+MODUL = Jsmodul('studio', 'ladehinweis.js')
 
 SKRIPT = """
 const { Ladehinweis } = await import(MODUL);
@@ -59,5 +59,5 @@ class LadehinweisTest(SimpleTestCase):
         from pathlib import Path
 
         from django.conf import settings
-        text = (Path(settings.BASE_DIR) / 'static' / 'viewer' / 'bvh_studio' / 'playback.js').read_text(encoding='utf-8')
+        text = (Path(settings.BASE_DIR) / 'static' / 'viewer' / 'studio' / 'playback.js').read_text(encoding='utf-8')
         self.assertIn('if (!state.playing && Ladehinweis.zeigen(state, togglePlay)) return;', text)

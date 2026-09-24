@@ -28,22 +28,22 @@ class Weiterleitung(TestCase):
         self.werk = RequestFactory()
         self.schicht = Schnelleadresse(lambda anfrage: 'durchgereicht')
 
-    def _seite(self, pfad='/humanbody/scene/', host='localhost:8081', accept=HTML):
+    def _seite(self, pfad='/Charakter/', host='localhost:8081', accept=HTML):
         return self.werk.get(pfad, HTTP_HOST=host, HTTP_ACCEPT=accept)
 
     @override_settings(DEBUG=True, ALLOWED_HOSTS=['*'])
     def test_seite_ueber_localhost_wird_umgeleitet(self):
         antwort = self.schicht(self._seite())
         self.assertEqual(antwort.status_code, 302)
-        self.assertEqual(antwort['Location'], 'http://127.0.0.1:8081/humanbody/scene/')
+        self.assertEqual(antwort['Location'], 'http://127.0.0.1:8081/Charakter/')
 
     @override_settings(DEBUG=True, ALLOWED_HOSTS=['*'])
     def test_die_abfrage_bleibt_erhalten(self):
         """Ohne sie kaeme die Seite ohne ihre Parameter an."""
-        anfrage = self._seite('/humanbody/scene/?figur=3&reiter=garmentcode')
+        anfrage = self._seite('/Charakter/?figur=3&reiter=garmentcode')
         antwort = self.schicht(anfrage)
         self.assertEqual(
-            antwort['Location'], 'http://127.0.0.1:8081/humanbody/scene/?figur=3&reiter=garmentcode'
+            antwort['Location'], 'http://127.0.0.1:8081/Charakter/?figur=3&reiter=garmentcode'
         )
 
     @override_settings(DEBUG=True, ALLOWED_HOSTS=['*'])
@@ -78,7 +78,7 @@ class Weiterleitung(TestCase):
     @override_settings(DEBUG=True, ALLOWED_HOSTS=['*'])
     def test_ohne_accept_kopf_nicht(self):
         """`curl http://localhost:8081/...` meint die Adresse so, wie sie ist."""
-        anfrage = self.werk.get('/humanbody/scene/', HTTP_HOST='localhost:8081')
+        anfrage = self.werk.get('/Charakter/', HTTP_HOST='localhost:8081')
         self.assertEqual(self.schicht(anfrage), 'durchgereicht')
 
     @override_settings(DEBUG=False, ALLOWED_HOSTS=['*'])

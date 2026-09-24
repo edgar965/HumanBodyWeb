@@ -114,9 +114,23 @@ export class Oberflaechenbindung {
         const b = teil?.bindung;
         const geo = netz?.geometry;
         if (!b || !geo?.attributes?.position || teil.stoff) return false;
+        return Oberflaechenbindung.anlegenAusFeldern(netz, {
+            dreieck: base64ToFloat32(b.dreieck), bary: base64ToFloat32(b.bary),
+            abstand: base64ToFloat32(b.abstand), mischung: base64ToFloat32(b.mischung),
+        }, { stufen: Number(b.stufen) || 0 });
+    }
+
+    /**
+     * Dieselben Attribute aus fertigen Feldern — für Bindungen, die der Browser
+     * rechnet (`Humanbodybindung`). `kopf`: `stufen`, dazu wahlweise `punkte`
+     * (Punktzahl des Körpers, gegen den gerechnet wurde) und `vorzeichen`
+     * (−1: das `normal`-Attribut des Körpers zeigt nach innen).
+     */
+    static anlegenAusFeldern(netz, felder, kopf) {
+        const geo = netz?.geometry;
+        if (!geo?.attributes?.position) return false;
         const n = geo.attributes.position.count;
-        const dreieck = base64ToFloat32(b.dreieck), bary = base64ToFloat32(b.bary);
-        const abstand = base64ToFloat32(b.abstand), mischung = base64ToFloat32(b.mischung);
+        const { dreieck, bary, abstand, mischung } = felder;
         if (dreieck.length !== 3 * n || mischung.length !== n) {
             Protokoll.warnung('Oberflaechenbindung', `${netz.name}: Bindung passt nicht (${mischung.length} zu ${n})`);
             return false;
@@ -126,8 +140,16 @@ export class Oberflaechenbindung {
         geo.setAttribute('bindabstand', new THREE.BufferAttribute(abstand, 1));
         geo.setAttribute('mischung', new THREE.BufferAttribute(mischung, 1));
         geo.setAttribute('bindgruppe', new THREE.BufferAttribute(new Float32Array(n), 1));
-        geo.userData.bindung = { stufen: Number(b.stufen) || 0, gebunden: Oberflaechenbindung._anzahl(mischung) };
+        geo.userData.bindung = { ...kopf, gebunden: Oberflaechenbindung._anzahl(mischung) };
         return true;
+    }
+
+    /** Gilt die Bindung für den Körper, wie er JETZT ist? Stufe gleich, und —
+     *  wo vermerkt — dieselbe Punktzahl (ein neuer Körpertyp hat andere Indizes). */
+    static _passt(inst, bindung) {
+        if ((inst.stufen || 0) !== bindung.stufen) return false;
+        return bindung.punkte === undefined
+            || inst.bodyMesh?.geometry?.attributes?.position?.count === bindung.punkte;
     }
 
     /**
@@ -166,15 +188,26 @@ export class Oberflaechenbindung {
 
     static _vorZeichnen(renderer, inst, netz) {
         const lage = Koerperlage.sichern(renderer, inst);
+        const bindung = netz.geometry.userData.bindung;
         const passt = Kleidereinstellungen.an('kleider_oberflaechenbindung') && Boolean(lage)
-            && (inst.stufen || 0) === netz.geometry.userData.bindung.stufen;
+            && Oberflaechenbindung._passt(inst, bindung);
         const flaeche = Kleidereinstellungen.an('kleider_normalen_aus_flaeche');
+        // Stoff- und Körperraum: `transformed` ist bei beiden lokal zum eigenen Netz
+        // (Threes „attached"-Bindung), also zu dessen `matrixWorld`.
+        const koerper = inst.bodyMesh;
+        if (passt && koerper) {
+            netz.updateWorldMatrix(true, false);
+            Oberflaechenbindung._zu.copy(koerper.matrixWorld).invert().multiply(netz.matrixWorld);
+            Oberflaechenbindung._von.copy(Oberflaechenbindung._zu).invert();
+        }
         const materialien = Array.isArray(netz.material) ? netz.material : [netz.material];
         for (const m of materialien) {
             const u = m.userData.oberflaeche;
             if (!u) continue;
             u.uOberflaecheAn.value = passt ? 1 : 0;
             u.uNormaleAusFlaeche.value = flaeche ? 1 : 0;
+            u.uNormalVorzeichen.value = bindung.vorzeichen || 1;
+            if (passt) { u.uZuKoerper.value.copy(Oberflaechenbindung._zu); u.uVonKoerper.value.copy(Oberflaechenbindung._von); }
             u.uKapselAn.value = Oberflaechenbindung.KAPSELN_AKTIV && lage && lage.anzahl ? 1 : 0;
             if (!lage) continue;
             u.uKoerperLage.value = lage.lage;
@@ -200,6 +233,9 @@ export class Oberflaechenbindung {
             uTiefGrenze: { value: Oberflaechenbindung.TIEF_GRENZE },
             uSeitGrenze: { value: Oberflaechenbindung.SEIT_GRENZE },
             uNormaleAusFlaeche: { value: 1 },
+            uNormalVorzeichen: { value: 1 },
+            uZuKoerper: { value: new THREE.Matrix4() },
+            uVonKoerper: { value: new THREE.Matrix4() },
             uKapselAn: { value: 0 },
             uKapselAbstand: { value: Oberflaechenbindung.KAPSELABSTAND },
             uKapselAnzahl: { value: 0 },
@@ -218,6 +254,9 @@ export class Oberflaechenbindung {
         Shaderpatch.anhaengen(material, Oberflaechenbindung.SCHLUESSEL, eingriff);
         material.needsUpdate = true;
     }
+
+    static _zu = new THREE.Matrix4();
+    static _von = new THREE.Matrix4();
 
     static _anzahl(mischung) {
         let n = 0;

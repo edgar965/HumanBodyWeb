@@ -35,7 +35,7 @@ AUSNAHMEN = {
     'smooth-sigma': 'Szene, Reiter Animation: Der Glättungsbereich hat nie '
     'einen Hörer bekommen (gefunden 09.09.2026). Die '
     'Funktion gibt es im BVH-Studio '
-    '(`bvh_studio/werkzeug_glaettung.js`, dort '
+    '(`studio/werkzeug_glaettung.js`, dort '
     '`tool-smooth-*`), in der Szene nicht.',
     'smooth-apply': 'dasselbe — der Knopf „Smooth" tut nichts.',
     'smooth-reset': 'dasselbe — der Knopf „Reset" tut nichts.',

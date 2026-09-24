@@ -8,7 +8,7 @@
  * Spuren entstehen wuerden.
  *
  * WARUM eine Datei statt fuenf (Umbau 16.08.2026): Es gab
- * bvh_studio/registry.js, scene/registry.js, viewer/registry.js,
+ * studio/registry.js, scene/registry.js, viewer/registry.js,
  * photo_to_3d/registry.js und result_character/registry.js — inhaltlich
  * dieselbe Zeile, unterschiedlich nur in der Seitenbezeichnung im Kommentar.
  *

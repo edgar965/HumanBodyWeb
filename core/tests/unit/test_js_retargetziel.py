@@ -27,9 +27,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._studiovorlage import Studiovorlage
 
-MODUL = Jsmodul('bvh_studio', 'retargetziel.js')
-ZUSTAENDIG = Jsmodul('bvh_studio', 'modellzustaendigkeit.js')
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+MODUL = Jsmodul('studio', 'retargetziel.js')
+ZUSTAENDIG = Jsmodul('studio', 'modellzustaendigkeit.js')
+STUDIO = Jsmodul.VIEWER / 'studio'
 
 SKRIPT = """
 const { Retargetziel: R } = await import(MODUL);

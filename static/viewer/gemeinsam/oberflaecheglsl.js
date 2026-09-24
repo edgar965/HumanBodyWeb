@@ -26,6 +26,12 @@
  * weiter als `uSeitGrenze` von seinem Dreieck ist der Punkt woanders
  * (durch ein dünnes Glied gefahren, Tangentialebene verlassen) — er bleibt.
  *
+ * ZWEI RÄUME (HumanBody, 24.09.2026): Die Körperlage steht im lokalen Raum des
+ * Körpers, `transformed` im lokalen Raum des Stücks — bei Genesis 9 derselbe,
+ * bei HumanBody-Kleidung, die mit eigener Matrix gebunden ist, nicht.
+ * `uZuKoerper`/`uVonKoerper` rechnen hin und zurück (bei Genesis 9 Einheit).
+ * `uNormalVorzeichen` −1: HumanBodys Körpernormalen zeigen nach innen.
+ *
  * KAPSELN (Schicht 3): was nicht voll gebunden ist, wird aus den Kapseln der
  * Gliedmaßen gedrückt — elliptischer Kegel wie `Stoffkoerper.hinaus`, aber
  * ohne Iteration: liegt der Punkt in der Ellipse (im Maß der Halbachsen plus
@@ -56,6 +62,9 @@ uniform float uLageBreite;
 uniform float uLuft;
 uniform float uTiefGrenze;
 uniform float uSeitGrenze;
+uniform float uNormalVorzeichen;
+uniform mat4 uZuKoerper;
+uniform mat4 uVonKoerper;
 uniform float uKapselAn;
 uniform float uKapselAbstand;
 uniform int uKapselAnzahl;
@@ -103,12 +112,14 @@ if (uNormaleAusFlaeche > 0.5) {
 #include <skinning_vertex>
 if (uOberflaecheAn > 0.5 && mischung > 0.0 && bindung.x >= 0.0) {
     vec3 q = bary.x * g9Lage(bindung.x) + bary.y * g9Lage(bindung.y) + bary.z * g9Lage(bindung.z);
-    vec3 n = normalize(bary.x * g9Normale(bindung.x) + bary.y * g9Normale(bindung.y) + bary.z * g9Normale(bindung.z));
-    vec3 o = transformed - q;
+    vec3 n = uNormalVorzeichen * normalize(
+        bary.x * g9Normale(bindung.x) + bary.y * g9Normale(bindung.y) + bary.z * g9Normale(bindung.z));
+    vec3 p = (uZuKoerper * vec4(transformed, 1.0)).xyz;
+    vec3 o = p - q;
     float hoehe = dot(o, n);
     float tief = min(bindabstand, uLuft) - hoehe;
     if (tief > 0.0 && tief < uTiefGrenze && length(o - hoehe * n) < uSeitGrenze) {
-        transformed += tief * n;
+        transformed = (uVonKoerper * vec4(p + tief * n, 1.0)).xyz;
     }
 }
 // FREIE Punkte werden von JEDER Kapsel gedrueckt; GEBUNDENE (mischung > 0) nur,

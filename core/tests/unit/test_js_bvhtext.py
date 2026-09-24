@@ -3,7 +3,7 @@
 
 Warum ein Python-Test für JavaScript: Das Projekt hat eine Test-Suite, die über
 `manage.py test` läuft — dort soll auch die JS-Logik auftauchen, die ohne Browser
-prüfbar ist. `Bvhtext` (static/viewer/bvh_studio/bvhtext.js) ist so ein Fall: Sie
+prüfbar ist. `Bvhtext` (static/viewer/studio/bvhtext.js) ist so ein Fall: Sie
 findet den Yposition-Kanal im Kopf einer BVH und ersetzt Werte in den
 Bewegungszeilen. Genau das entschied beim Bodenrichten, ob die Korrektur in der
 Datei landet oder verloren geht.
@@ -22,7 +22,7 @@ import unittest
 
 from ..jsmodul import Jsmodul
 
-BVHTEXT = Jsmodul('bvh_studio', 'bvhtext.js')
+BVHTEXT = Jsmodul('studio', 'bvhtext.js')
 
 #: Kleine, aber vollständige BVH: Wurzel mit 6 Kanälen, ein Gelenk mit 3.
 BVH = '\n'.join(

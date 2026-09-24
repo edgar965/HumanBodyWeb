@@ -10,6 +10,7 @@ import { Figurmerker } from './figurmerker.js';
  * einen Klick in den Baum des Reiters „Animation", und der entsteht erst,
  * wenn der Reiter offen ist (`reiterinhalt.js`).
  *
+ *     await __animation.figur('Female with Clothes')   // Modell holen und auswählen
  *     await __animation.laden('A_Results', '001_ShyrinKurz_smplx')
  *     __animation.stellen(229)          // Bild wie in der Zeitanzeige
  *     __animation.stand()
@@ -33,6 +34,15 @@ export class Animationszugriff {
         state.currentAnimName = anim.name;
         await fn.loadBVHAnimation(anim.url, anim.name, anim.frames || 0);
         return Animationszugriff.stand();
+    }
+
+    /** Ein gespeichertes Modell in die Szene holen und auswählen — `laden` gilt dann ihr.
+     *  „Datei → Laden…" öffnet dagegen den Dateidialog des Browsers, und der hält
+     *  eine ferngesteuerte Seite an. */
+    static async figur(name) {
+        const inst = await fn.addCharacterFromPreset(name);
+        if (inst?.id) fn.selectCharacter(inst.id);
+        return { id: inst?.id, quelle: inst?.quelle, name };
     }
 
     static stellen(bild) {

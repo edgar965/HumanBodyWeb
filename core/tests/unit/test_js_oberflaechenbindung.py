@@ -63,7 +63,8 @@ class OberflaechenbindungJsTest(SimpleTestCase):
         self.assertNotIn('mix(transformed, q + bindabstand * n, mischung)', glsl, 'keine Projektion mehr')
         self.assertIn('float tief = min(bindabstand, uLuft) - hoehe;', glsl)
         self.assertIn('if (tief > 0.0 && tief < uTiefGrenze && length(o - hoehe * n) < uSeitGrenze) {', glsl)
-        self.assertIn('transformed += tief * n;', glsl)
+        self.assertIn('transformed = (uVonKoerper * vec4(p + tief * n, 1.0)).xyz;', glsl)
+        self.assertIn('vec3 p = (uZuKoerper * vec4(transformed, 1.0)).xyz;', glsl, 'Stoffraum -> Koerperraum')
 
     def test_7_schalter_aus_den_einstellungen(self):
         """Einstellungen → Kleider (24.09.2026, Vorgabe An): je Bild gelesen, nicht
@@ -89,7 +90,8 @@ class OberflaechenbindungJsTest(SimpleTestCase):
 
     def test_3_stufe_muss_passen_uniforms_einmal(self):
         text = quelltext('gemeinsam', 'oberflaechenbindung.js')
-        self.assertIn("=== netz.geometry.userData.bindung.stufen", text)
+        self.assertIn('Oberflaechenbindung._passt(inst, bindung)', text)
+        self.assertIn('if ((inst.stufen || 0) !== bindung.stufen) return false;', text)
         self.assertIn('if (material.userData.oberflaeche) return;', text)
         self.assertIn("if (!b || !geo?.attributes?.position || teil.stoff) return false;", text,
                       'Stoffschwung-Stuecke bleiben beim Worker')

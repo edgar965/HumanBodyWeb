@@ -85,7 +85,7 @@ class Modulbuendel:
     #: (`scene.js`/`studio.js`).
     EINSTIEGE = {
         'scene': 'viewer/scene/main.js',
-        'studio': 'viewer/bvh_studio/index.js',
+        'studio': 'viewer/studio/index.js',
     }
 
     #: Wohin die fertigen Bündel kommen.
@@ -102,7 +102,13 @@ class Modulbuendel:
     #: Was NICHT mit hineingebündelt wird. `three` kommt aus dem CDN und
     #: steht in der Import-Map der Seite; die djangoBase-Module liegen
     #: außerhalb dieses Projekts und haben ihre eigene Fassung.
-    EXTERN = ('three', 'three/addons/*', 'three-subdivide', '/static/djangobase/*')
+    #: `@theatre/*` kommt aus `static/vendor/theatre/` (eigener Vite-Bau,
+    #: `TheatreJS/vite.vendor-theatre.config.js`) — genau wie `three` steht es
+    #: als Bare Specifier in der Import-Map von `bvh_studio.html` statt im
+    #: Bündel; esbuild kann es hier ohnehin nicht auflösen (liegt außerhalb
+    #: dieses `node_modules`, siehe `TheatreJS/node_modules`).
+    EXTERN = ('three', 'three/addons/*', 'three-subdivide', '/static/djangobase/*',
+              '@theatre/core', '@theatre/studio')
 
     #: Länger darf ein Bündel nicht brauchen. Schlägt es fehl, liefert die
     #: Seite die Einzelmodule — langsamer, aber immer richtig.

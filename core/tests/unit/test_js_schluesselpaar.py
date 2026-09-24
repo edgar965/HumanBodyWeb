@@ -29,7 +29,7 @@ import unittest
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'schluesselpaar.js')
+MODUL = Jsmodul('studio', 'schluesselpaar.js')
 
 SKRIPT = """
 const { Schluesselpaar } = await import(MODUL);

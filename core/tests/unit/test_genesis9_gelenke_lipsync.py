@@ -298,3 +298,52 @@ class Lippensynchronisation(SimpleTestCase):
                 self.assertEqual(r.call_count, 1)      # zweites Mal aus der Ablage
             with self.assertRaises(LipsyncFehler):
                 Lippensync.cues(os.path.join(ordner, 'fehlt.wav'))
+
+    def test_12_charaktereigene_correctives_extern(self):
+        u"""24.09.2026 (Damira „Naturally Bending"): ein `_cbs_*`-Kanal
+        ausserhalb von Base Correctives/Flexions, dessen mult-Formel den
+        Koerper-Kanal SEINES Charakters abfragt — ein Kanal, der NICHT Teil
+        des Graphen ist. `_verknuepfen` muss ihn als `extern` melden,
+        `regler()` seinen Wert aus der vollen Reglerstellung lesen.
+
+        Sabotage: der `elif`-Zweig in `_verknuepfen` (das Sammeln von
+        `extern`) weg -> `g['extern']` bliebe `[]`, `regler()` fehlte der
+        Gate-Wert, das Correctives zuendete nie (genau der Fund an Damiras
+        eigenen Dateien vor diesem Fix)."""
+        from pathlib import Path
+        figur = 'l_thigh:' + BASIS + 'Genesis9.dsf#l_thigh'
+        rot_x = {'op': 'push', 'url': figur + '?rotation/x'}
+        koerper = {'op': 'push',
+                   'url': 'Genesis9:' + BASIS + 'Koerper.dsf#Koerper-0x1?value'}
+        modifikatoren = [
+            _morph('cbs_char', 'Genesis9-1', [
+                _formel('Genesis9:#cbs_char?value',
+                        [rot_x, {'op': 'push', 'val': 1 / 35}, {'op': 'mult'}]),
+                _formel('Genesis9:#cbs_char?value', [koerper], 'mult')]),
+        ]
+        doc = G9dson('k.dsf', {'modifier_library': modifikatoren})
+        with mock.patch.object(G9dson, 'lesen', return_value=doc):
+            with tempfile.TemporaryDirectory(dir=os.getcwd()) as ordner:
+                datei = Path(ordner) / 'k.dsf'
+                datei.write_text('{}', encoding='utf-8')
+                g = G9gelenkkorrekturen.lesen([], [datei])
+        self.assertEqual(g['extern'], ['Koerper-0x1'])
+        self.assertIn('cbs_char', g['morphe'])
+
+        class _Formung:
+            def __init__(self):
+                self.formeln = self
+
+            def wert(self, kanal):
+                return 1.0 if kanal == 'Koerper-0x1' else 0.0
+
+        with mock.patch.object(G9gelenkkorrekturen, '_graph', g):
+            regler = G9gelenkkorrekturen.regler(_Formung())
+        self.assertEqual(regler['Koerper-0x1'], 1.0)
+        w = G9gelenkkorrekturen.werte({'l_thigh': {'rotation/x': 35}}, g, regler=regler)
+        self.assertAlmostEqual(w['cbs_char'], 1.0)
+        # Charakter nicht aktiv (Gate 0) -> das Correctives bleibt still,
+        # obwohl der Knochen sich genauso dreht.
+        w_aus = G9gelenkkorrekturen.werte(
+            {'l_thigh': {'rotation/x': 35}}, g, regler={'Koerper-0x1': 0.0})
+        self.assertEqual(w_aus, {})

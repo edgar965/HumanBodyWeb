@@ -29,8 +29,8 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._sicher import Sicher
 
-MODUL = Jsmodul('bvh_studio', 'fortschrittsmass.js')
-STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
+MODUL = Jsmodul('studio', 'fortschrittsmass.js')
+STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'studio'
 VORLAGE = settings.BASE_DIR / 'templates' / 'bvh_studio.html'
 
 SKRIPT = """

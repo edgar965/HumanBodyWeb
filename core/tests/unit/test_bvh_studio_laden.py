@@ -24,7 +24,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 WURZEL = Path(settings.BASE_DIR)
-STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
+STUDIO = WURZEL / 'static' / 'viewer' / 'studio'
 
 
 def _studio(name):

@@ -9,6 +9,7 @@ import { Genesis9zopfschwung } from './genesis9/genesis9zopfschwung.js';
 import { Genesis9stoffschwung } from './genesis9/genesis9stoffschwung.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
 import { Genesis9lipsync } from './genesis9/genesis9lipsync.js';
+import { Humanbodybindung } from '../gemeinsam/humanbodybindung.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -105,6 +106,9 @@ export class Szenenschleife extends Zeichenschleife {
         // Neu dazugekommene Figuren bekommen ihre Knochenlinien von selbst;
         // gedrosselt, siehe `Rigsichtbarkeit.ABGLEICH_MS`.
         Rigsichtbarkeit.abgleichen();
+        // HumanBody-Kleidung an die Körperoberfläche binden (24.09.2026) — einmal je
+        // Stück und Körpernetz, danach nur ein Blick in eine WeakMap.
+        Humanbodybindung.takt(state.characters.values());
         state.renderer.render(state.scene, state.camera);
         this.kameraanzeige();
         this.bildrate(dt);

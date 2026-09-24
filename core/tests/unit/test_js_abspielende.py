@@ -31,9 +31,9 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 
 WURZEL = Path(settings.BASE_DIR)
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+STUDIO = Jsmodul.VIEWER / 'studio'
 
-MODUL = Jsmodul('bvh_studio', 'abspielende.js')
+MODUL = Jsmodul('studio', 'abspielende.js')
 
 SKRIPT = """
 const { Abspielende } = await import(MODUL);

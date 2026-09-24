@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'eigenschaften', 'lichtfelder.js')
+MODUL = Jsmodul('studio', 'eigenschaften', 'lichtfelder.js')
 
 SKRIPT = """
 const { Lichtfelder } = await import(MODUL);

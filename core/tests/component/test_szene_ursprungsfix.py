@@ -166,7 +166,7 @@ class DasUrsprungsfixDrahtformat(TestCase):
         text = self.quelle('static', 'viewer', 'scene', 'ursprungsfix.js')
         self.assertIn('static VORGABE_CM = 50;', text)
         self.assertIn("ENDPUNKT = '/api/retarget/save-bvh-effects/'", text)
-        studio = self.quelle('static', 'viewer', 'bvh_studio', 'werkzeug_position.js')
+        studio = self.quelle('static', 'viewer', 'studio', 'werkzeug_position.js')
         self.assertIn('radius: 0.5', studio)
 
     def test_der_dialog_fragt_den_radius_von_null_an(self):

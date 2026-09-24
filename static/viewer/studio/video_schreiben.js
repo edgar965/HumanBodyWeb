@@ -101,12 +101,31 @@ async function _stapelHochladen(sessionId, startIndex, stapel) {
     return daten.session_id;
 }
 
-export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText,
-    progressBar) {
+/**
+ * Bildausschnitt (Crop) VOR dem Hochladen: ein zweites, kleineres Canvas
+ * bekommt nur den gewählten Ausschnitt aus dem vollen Bild — der Server sieht
+ * dann bereits die Zielgröße und braucht keinen eigenen Crop-Schalter.
+ */
+function _zuschneider(ausschnitt) {
+    if (!ausschnitt || !ausschnitt.breite || !ausschnitt.hoehe) return null;
+    const zielcanvas = document.createElement('canvas');
+    zielcanvas.width = ausschnitt.breite;
+    zielcanvas.height = ausschnitt.hoehe;
+    const kontext = zielcanvas.getContext('2d');
+    return (quellcanvas) => {
+        kontext.drawImage(quellcanvas, ausschnitt.x, ausschnitt.y, ausschnitt.breite, ausschnitt.hoehe,
+            0, 0, ausschnitt.breite, ausschnitt.hoehe);
+        return zielcanvas;
+    };
+}
+
+export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, format, crf, ausschnitt,
+    filename, statusText, progressBar) {
     const totalFrames = toFrame - fromFrame;
     let sessionId = '';
     let stapel = [];
     let stapelStart = 0;
+    const zuschneiden = _zuschneider(ausschnitt);
 
     // Phase 1: Bilder aufnehmen, in Paketen hochladen (nicht alle im
     // Speicher halten UND nicht alle in einer Anfrage, siehe oben).
@@ -117,7 +136,8 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
         fn.applyPlayhead();
         offRenderer.render(state.scene, state.camera);
 
-        const blob = await new Promise(r => offCanvas.toBlob(r, 'image/png'));
+        const quelle = zuschneiden ? zuschneiden(offCanvas) : offCanvas;
+        const blob = await new Promise(r => quelle.toBlob(r, 'image/png'));
         stapel.push(blob);
 
         const bildnummer = f - fromFrame;
@@ -155,7 +175,7 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
     formData.append('finish', '1');
     formData.append('frame_count', stapelStart);
     formData.append('fps', fps);
-    formData.append('format', 'mp4');
+    formData.append('format', format);
     formData.append('crf', crf);
 
     const audioClips = _sammleAudioClips(fromFrame, toFrame);
@@ -181,7 +201,9 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
                 // Server returned file blob (no save_path configured)
                 statusText.textContent = 'Fertig! Speichern...';
                 const blob = await resp.blob();
-                await saveBlobAs(blob, filename, 'video/mp4');
+                const mime = { mp4: 'video/mp4', webm: 'video/webm', png: 'application/zip' }[format]
+                    || 'application/octet-stream';
+                await saveBlobAs(blob, filename, mime);
             }
         } else {
             statusText.textContent = 'Encoding fehlgeschlagen: ' + await resp.text();
@@ -232,7 +254,10 @@ export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFra
 
     const blob = new Blob(chunks, { type: mimeType });
     statusText.textContent = 'Fertig! Speichern...';
-    await saveBlobAs(blob, filename.replace('.mp4', '.webm'), mimeType);
+    // MediaRecorder liefert IMMER WebM — unabhängig vom Format-Feld (das nur
+    // für den Server-Weg gilt, siehe „Engine" in `templates/bvh_studio.html`).
+    const dateiname = filename.replace(/\.[^.]+$/, '') + '.webm';
+    await saveBlobAs(blob, dateiname, mimeType);
     statusText.textContent = 'Fertig!';
     progressBar.style.width = '100%';
     Protokoll.info('BVH Studio', `Browser export: ${totalFrames} frames`);

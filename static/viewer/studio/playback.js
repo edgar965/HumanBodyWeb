@@ -16,6 +16,7 @@ import { Ladehinweis } from './ladehinweis.js';
 import { Zeitleistenfolge } from './zeitleiste_folgen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Schluesselpaar } from './schluesselpaar.js';
+import { globaleSichtbarkeit } from './globale_sichtbarkeit.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
@@ -274,6 +275,10 @@ export function applyPlayhead() {
     // Die Mimik NACH allen Bewegungsspuren: sie überschreibt die Gesichtsknochen,
     // die der Mischer der Körperanimation gerade gesetzt hat (14.09.2026).
     Mimikanwendung.alle(t);
+    // Globale Sichtbarkeits-Schalter als letzter Schritt (siehe
+    // `globale_sichtbarkeit.js`) — sonst überschreibt die Spur-Anwendung
+    // hier drüber ein zuvor ausgeschaltetes Licht/Modell wieder.
+    globaleSichtbarkeit.anwenden();
 }
 
 export function updatePlaybackUI() {

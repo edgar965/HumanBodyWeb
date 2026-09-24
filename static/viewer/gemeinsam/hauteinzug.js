@@ -42,7 +42,7 @@
  * dafür die Maske `weg` zurück, mit der der Index gekürzt wird.
  *
  * Liegt in `gemeinsam/`, weil das BVH Studio dieselbe Maske braucht
- * (`bvh_studio/spurhaut.js`, 11.09.2026).
+ * (`studio/spurhaut.js`, 11.09.2026).
  */
 import * as THREE from 'three';
 import { Shaderpatch } from './shaderpatch.js';

@@ -64,7 +64,7 @@ class BibliothekskanalTest(SimpleTestCase):
     def test_sender_und_hoerer_haengen_am_kanal(self):
         melden = 'Bibliothekskanal.melden('
         sender = (
-            ('bvh_studio', 'bibliothekablage.js', melden + 'aktion, daten);'),
+            ('studio', 'bibliothekablage.js', melden + 'aktion, daten);'),
             ('scene', 'animationsmenue.js', melden + 'aktion, daten);'),
             ('animation', 'baum.js', melden + 'action, data);'),
             ('scene', 'animation.js', melden + "'save', { category, name });"),
@@ -73,14 +73,14 @@ class BibliothekskanalTest(SimpleTestCase):
             self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
         hoeren = 'Bibliothekskanal.hoeren(() => '
         hoerer = (
-            ('bvh_studio', 'bibliotheksbaum.js', hoeren + 'this.laden());'),
+            ('studio', 'bibliotheksbaum.js', hoeren + 'this.laden());'),
             ('scene', 'animation.js', hoeren + 'loadAnimationUI());'),
             ('animation', 'baum.js', hoeren + 'loadAnimationTree());'),
         )
         for ordner, datei, marke in hoerer:
             self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
         # Sofort aus dem Baum, bevor das Neuladen (unter Last Sekunden) fertig ist.
-        studio = BibliothekskanalTest._text('bvh_studio', 'bibliothekmenues.js')
+        studio = BibliothekskanalTest._text('studio', 'bibliothekmenues.js')
         self.assertLess(
             studio.index('this.baum.eintragEntfernen(ziel.category, ziel.name);'),
             studio.index('this.baum.laden();', studio.index('async loeschen(ziel)')),

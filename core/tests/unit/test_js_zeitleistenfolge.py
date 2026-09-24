@@ -27,8 +27,8 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'zeitleiste_folgen.js')
-SCHLEIFE = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio' / 'studioschleife.js'
+MODUL = Jsmodul('studio', 'zeitleiste_folgen.js')
+SCHLEIFE = settings.BASE_DIR / 'static' / 'viewer' / 'studio' / 'studioschleife.js'
 
 SKRIPT = """
 const { Zeitleistenfolge: Z } = await import(MODUL);

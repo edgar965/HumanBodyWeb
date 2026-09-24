@@ -24,7 +24,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'studiostand.js')
+MODUL = Jsmodul('studio', 'studiostand.js')
 
 SKRIPT = """
 const { Studiostand } = await import(MODUL);

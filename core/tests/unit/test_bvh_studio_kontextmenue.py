@@ -29,7 +29,7 @@ from ._studiovorlage import Studiovorlage
 
 WURZEL = Path(settings.BASE_DIR)
 VORLAGE = WURZEL / 'templates' / 'bvh_studio.html'
-STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
+STUDIO = WURZEL / 'static' / 'viewer' / 'studio'
 
 # Die Module, die Menüs der Zeitleiste einblenden.
 ZEIGER = ['zeitleiste_menue.js', 'zeitleiste_kontextmenue.js']

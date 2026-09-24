@@ -22,7 +22,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'clipfehlt.js')
+MODUL = Jsmodul('studio', 'clipfehlt.js')
 
 SKRIPT = """
 const { Clipfehlt } = await import(MODUL);

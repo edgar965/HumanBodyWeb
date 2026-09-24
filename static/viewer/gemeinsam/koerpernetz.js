@@ -102,7 +102,7 @@ export class Koerpernetz {
      *
      * WARUM ZUSAMMEN (28.08.2026, Befund `doppelcode`): Die beiden gehören
      * zusammen und standen trotzdem dreimal getrennt da — in `bauen()` hier,
-     * in `bvh_studio/spurfigur.js` und in `photo_to_3d/fotokoerpernetz.js`.
+     * in `studio/spurfigur.js` und in `photo_to_3d/fotokoerpernetz.js`.
      *
      * Der Rückgabewert ist der heikle Teil: OHNE Gruppen kann Three.js mit
      * einem Array nichts anfangen und rendert das Netz SCHWARZ. Deshalb dann

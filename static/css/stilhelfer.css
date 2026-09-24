@@ -489,7 +489,7 @@
 }
 
 /* Erklärung neben einem Ankreuzfeld („aus = Sprung"), 2x in
- * bvh_studio/eigenschaften/klip_schluesselbilder.js. */
+ * studio/eigenschaften/klip_schluesselbilder.js. */
 .kaestchen-hinweis.kaestchen-hinweis.kaestchen-hinweis {
     font-size: 0.72rem;
     color: var(--text-muted);
@@ -497,7 +497,7 @@
 }
 
 /* Der Dateiname hinter einem Auswahlknopf, 2x in
- * bvh_studio/eigenschaften/objekt.js. */
+ * studio/eigenschaften/objekt.js. */
 .dateiname-hinweis.dateiname-hinweis.dateiname-hinweis {
     margin-left: 6px;
     font-size: 0.65rem;

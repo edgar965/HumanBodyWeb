@@ -6,7 +6,7 @@ Aus `bvh_projektion._parse_bvh_to_2d` herausgelöst (17.08.2026).
 DIESE RECHNUNG MUSS ZU `fitOverlayCamera` PASSEN
 ================================================
 Das Skelettvideo wird über das echte Video gelegt. Der Browser rechnet dieselbe
-Projektion in `static/viewer/bvh_studio/playback.js`; weicht diese Fassung ab,
+Projektion in `static/viewer/studio/playback.js`; weicht diese Fassung ab,
 liegt das gezeichnete Skelett neben der Person — und zwar gleichmäßig verschoben,
 was nach einem Kalibrierfehler der Pipeline aussieht und keiner ist.
 

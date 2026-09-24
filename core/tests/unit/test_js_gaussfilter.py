@@ -31,7 +31,7 @@ import unittest
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'gaussfilter.js')
+MODUL = Jsmodul('studio', 'gaussfilter.js')
 
 SKRIPT = """
 const { Gaussfilter } = await import(MODUL);

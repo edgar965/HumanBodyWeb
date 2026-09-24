@@ -2,7 +2,7 @@
  * Ausgabeoptionen — was bei einem Videoexport neben den Bilddaten mitgeht.
  *
  * WARUM (Befund `doppelcode`, 30.08.2026): Dieselben sechs Zuweisungen standen
- * in `bvh_studio/export1.js` und `scene/cloth_export.js`. Beide bauen eine
+ * in `studio/export1.js` und `scene/cloth_export.js`. Beide bauen eine
  * Nutzlast aus Netz- und Animationsdaten und hängen danach dieselben sechs
  * Felder an.
  *

@@ -74,9 +74,14 @@ class Kleidfelder(SimpleTestCase):
             drehung, g, regler={'schalter': 0.5})['cbs_x35p'], 0.5)
 
     def test_2_regler_der_stellung_und_reglerplan(self):
-        self.assertEqual(G9gelenkkorrekturen.regler(_Formung({})),
-                         {'body_basejointcorrectives': 1.0,
-                          'body_ctrl_FlexionAutoStrength': 0.1235})
+        # 24.09.2026: `regler()` liefert zusaetzlich die externen Gate-Kanaele
+        # charaktereigener Correctives (Damira, Ursula, …) - `_Formung({})`
+        # kennt keinen von ihnen, sie kommen also mit Wert 0.0 dazu; nur die
+        # zwei FESTEN Regler pruefen, nicht das ganze Dict (sonst haengt der
+        # Test an der Anzahl gekaufter Charaktere in der Bibliothek).
+        ergebnis = G9gelenkkorrekturen.regler(_Formung({}))
+        self.assertEqual(ergebnis['body_basejointcorrectives'], 1.0)
+        self.assertEqual(ergebnis['body_ctrl_FlexionAutoStrength'], 0.1235)
         misc = {'gruppe': '/General/Misc', 'label': 'x'}
         for kanal in G9gelenkkorrekturen.REGLER:
             self.assertEqual(G9reglerplan.bereich(dict(misc, id=kanal)), 'koerper')

@@ -17,6 +17,7 @@ import { Anfasser } from './anfasser.js';
 import { setupViewportContextMenu } from './szenenmenue.js';
 import { Studiobuehne } from './studiobuehne.js';
 import { Studioschleife } from './studioschleife.js';
+import { TheatrejsEditor } from './theatrejs_editor.js';
 import { Studioeinstellungen } from './studioeinstellungen.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -42,6 +43,8 @@ export class Studiostart {
 
     async starten() {
         new Studiobuehne().bauen();
+        // Braucht `state.camera` — die steht seit der Zeile darüber.
+        TheatrejsEditor.kameraRegistrieren();
         // Die Renderschleife startet JETZT, nicht erst nach dem Projekt (23.09.2026,
         // Edgar: „ich möchte nur die Figur sehen und die rotieren können, alles
         // andere asynchron und parallel"): Vorher stand `new Studioschleife()

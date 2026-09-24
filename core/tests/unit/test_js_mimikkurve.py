@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'mimikkurve.js')
+MODUL = Jsmodul('studio', 'mimikkurve.js')
 
 SKRIPT = """
 const { Mimikkurve: K } = await import(MODUL);

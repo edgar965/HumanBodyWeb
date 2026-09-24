@@ -89,12 +89,12 @@ class EigeneGliederAsyncTest(SimpleTestCase):
     def test_schnelleadresse_leitet_um_und_reicht_sonst_weiter(self):
         mw = Schnelleadresse(_antwort)
         with override_settings(DEBUG=True):
-            anfrage = self.fabrik.get('/humanbody/scene/', HTTP_HOST='localhost:8081',
+            anfrage = self.fabrik.get('/Charakter/', HTTP_HOST='localhost:8081',
                                       HTTP_ACCEPT='text/html')
             antwort = self._lauf(mw(anfrage))
             self.assertEqual(antwort.status_code, 302)
             self.assertIn('127.0.0.1', antwort['Location'])
-            anfrage = self.fabrik.get('/humanbody/scene/', HTTP_HOST='127.0.0.1:8081',
+            anfrage = self.fabrik.get('/Charakter/', HTTP_HOST='127.0.0.1:8081',
                                       HTTP_ACCEPT='text/html')
             self.assertEqual(self._lauf(mw(anfrage)).content, b'ok')
 

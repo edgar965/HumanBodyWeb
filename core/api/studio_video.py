@@ -159,7 +159,7 @@ class Theatrevideo:
         Zwei Wege, unterschieden am Feld `session_id` (Umbau 24.09.2026,
         `TheatrevideoStapel`): OHNE das Feld der ALTE Weg — alle Bilder in
         EINER Anfrage (weiterhin von TheatreJS/`bildexport.js` genutzt). MIT
-        dem Feld der NEUE Paket-Weg (`bvh_studio/video_schreiben.js`): jedes
+        dem Feld der NEUE Paket-Weg (`studio/video_schreiben.js`): jedes
         Paket eine eigene, kleine Anfrage; ein letztes Paket mit `finish=1`
         loest das Kodieren aus. Der alte Weg kann bei langen Exporten an
         Djangos Datei-Limit scheitern (siehe `studio_video_stapel.py`) — er
@@ -218,6 +218,8 @@ class Theatrevideo:
         """
         fps = int(werte.get('fps', Theatrevideo.VORGABE_FPS))
         format_ = werte.get('format', 'mp4')
+        if format_ == 'png':
+            return Theatrevideo._als_zip(ordner, arbeitsordner, zielpfad)
         endung = Videokodierer.endung(format_)
         ausgabe = os.path.join(arbeitsordner, 'output.' + endung)
         Videokodierer.ausfuehren(
@@ -241,6 +243,33 @@ class Theatrevideo:
         return Theatrevideo._datei_und_aufraeumen(
             ausgabe, Videokodierer.inhaltstyp(format_), 'theatre_export.' + endung, arbeitsordner
         )
+
+    @staticmethod
+    def _als_zip(ordner, arbeitsordner, zielpfad):
+        """PNG-Sequenz statt Video: die Bilder ungeschnitten als ZIP.
+
+        Eigene Zieldatei ausserhalb `ordner`/`arbeitsordner` (`ProjektTemp`,
+        wie bei `umwandeln()`) — sonst zippt `shutil.make_archive` in den
+        Ordner hinein, den es gerade selbst einliest (beim Paket-Export ist
+        `ordner` sogar `arbeitsordner` selbst, siehe `studio_video_stapel.py`).
+        """
+        zip_pfad = str(ProjektTemp.datei(suffix='.zip', prefix='studio_frames_'))
+        shutil.make_archive(zip_pfad[:-4], 'zip', ordner)
+        if zielpfad:
+            ziel_zip = os.path.splitext(zielpfad)[0] + '.zip'
+            os.makedirs(os.path.dirname(ziel_zip), exist_ok=True)
+            shutil.copy2(zip_pfad, ziel_zip)
+            shutil.rmtree(arbeitsordner, ignore_errors=True)
+            ProjektTemp.weg(zip_pfad)
+            return JsonResponse({'saved': ziel_zip})
+        antwort = FileResponse(
+            open(zip_pfad, 'rb'), content_type='application/zip',
+            as_attachment=True, filename='studio_export.zip'
+        )
+        antwort._resource_closers.append(
+            lambda: (shutil.rmtree(arbeitsordner, ignore_errors=True), ProjektTemp.weg(zip_pfad))
+        )
+        return antwort
 
     @staticmethod
     def _ton_einmischen(werte, ausgabe, arbeitsordner, endung, format_, video_dauer):

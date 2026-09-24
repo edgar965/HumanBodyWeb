@@ -5,7 +5,7 @@ WARUM (Umbau 24.09.2026)
 =========================
 `Theatrevideo.bilder_kodieren` (`studio_video.py`) nahm bis dahin ALLE
 Bilder eines Exports in EINER Anfrage entgegen (ein `FormData` mit jedem
-PNG als eigenem Feld, `bvh_studio/video_schreiben.js`). Django prueft das
+PNG als eigenem Feld, `studio/video_schreiben.js`). Django prueft das
 500-MB-Limit (`FILE_UPLOAD_MAX_MEMORY_SIZE`) am GESAMTEN Request-Body,
 nicht je Bild — ueberschreitet ein langer Export das, faellt JEDES Bild
 auf eine eigene Temp-Datei zurueck, und Django oeffnet sie beim Parsen

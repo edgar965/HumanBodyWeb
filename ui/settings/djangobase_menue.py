@@ -11,9 +11,7 @@ MENUE = [
         'icon': 'bi-speedometer2',
         'untermenu': [
             {'label': 'Studio', 'icon': 'bi-scissors', 'url': '/studio/'},
-            {'label': 'Szene', 'icon': 'bi-lightbulb', 'url': '/humanbody/scene/'},
-            {'label': 'Szene - Modell', 'icon': 'bi-person-gear', 'url': '/humanbody/scene-model/'},
-            {'label': 'Result', 'icon': 'bi-play-circle', 'url': '/process/result/'},
+            {'label': 'Charakter', 'icon': 'bi-lightbulb', 'url': '/Charakter/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -22,6 +20,7 @@ MENUE = [
         'icon': 'bi-person',
         'untermenu': [
             {'label': 'Konfiguration', 'icon': 'bi-sliders', 'url': '/humanbody/config/'},
+            {'label': 'Charakter Alt', 'icon': 'bi-person-gear', 'url': '/humanbody/scene-model/'},
             {'label': 'Foto To 3D', 'icon': 'bi-camera', 'url': '/humanbody/photo-to-3d/'},
             {'label': 'Jobs', 'icon': 'bi-list-ul', 'url': '/humanbody/photo-to-3d/jobs/'},
             {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/humanbody/modell-aus-dateien/'},
@@ -36,6 +35,7 @@ MENUE = [
             {'label': '2D', 'icon': 'bi-upload', 'url': '/process/'},
             {'label': '3D', 'icon': 'bi-magic', 'url': '/process/VideoToBVH/'},
             {'label': 'Verarbeitet', 'icon': 'bi-list-ul', 'url': '/process/list/'},
+            {'label': 'Result', 'icon': 'bi-play-circle', 'url': '/process/result/'},
             {'label': 'Effekte', 'icon': 'bi-stars', 'url': '/process/effekte/'},
         ],
     },

@@ -6,7 +6,7 @@ kodierte immer nur die reine Bildfolge — die Audiospuren des Studios wurden
 weder gesammelt noch je in ein exportiertes Video eingemischt. Edgar meldete es
 nach einem echten Export ("das audio wurde nicht exportiert").
 
-Das Frontend (`bvh_studio/video_schreiben.js`, `_sammleAudioClips`) schickt je
+Das Frontend (`studio/video_schreiben.js`, `_sammleAudioClips`) schickt je
 Audio-Clip im Exportbereich eine rohe Angabe mit — Adresse, Versatz, Dauer,
 Lautstaerke, Ein-/Ausblendzeit. Diese Klasse prueft sie (Adresse -> Datei unter
 MEDIA_ROOT/studio_audio, sonst PfadAbgelehnt/Ablehnung mit Protokollzeile,

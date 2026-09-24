@@ -181,7 +181,7 @@ urlpatterns = [
         name='photo_analysis_jobs',
     ),
     path('humanbody/config/', seiten.character_viewer, name='humanbody_config'),
-    path('humanbody/scene/', seiten.scene_config, name='humanbody_scene'),
+    path('Charakter/', seiten.scene_config, name='humanbody_scene'),
     path('humanbody/scene-model/', seiten.scene_model, name='humanbody_scene_model'),
     path('humanbody/theatre/', seiten.theatre_page, name='theatre'),
     path('studio/', seiten.bvh_studio_page, name='bvh_studio'),

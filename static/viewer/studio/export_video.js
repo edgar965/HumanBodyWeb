@@ -37,6 +37,58 @@ export function setupExportPanel() {
             if (reiter.dataset.tab === 'export') _bereichAuffrischen();
         });
     });
+    _aufloesungsfeld();
+    _cropfeld();
+    _crfregler();
+}
+
+/** „Benutzerdefiniert" in der Aufloesungs-Auswahl blendet die Breite/Hoehe-Felder ein. */
+function _aufloesungsfeld() {
+    const auswahl = document.getElementById('export-resolution');
+    const feld = document.getElementById('export-custom-res');
+    if (!auswahl || !feld) return;
+    const auffrischen = () => feld.classList.toggle('an', auswahl.value === 'custom');
+    auswahl.addEventListener('change', auffrischen);
+    auffrischen();
+}
+
+/** Die Checkbox „Bildausschnitt" blendet die Crop-Felder ein. */
+function _cropfeld() {
+    const schalter = document.getElementById('export-crop-an');
+    const feld = document.getElementById('export-crop-felder');
+    if (!schalter || !feld) return;
+    const auffrischen = () => feld.classList.toggle('an', schalter.checked);
+    schalter.addEventListener('change', auffrischen);
+    auffrischen();
+}
+
+/** Der CRF-Regler zeigt seinen Wert direkt daneben (wie Theatre). */
+function _crfregler() {
+    const regler = document.getElementById('export-crf');
+    const anzeige = document.getElementById('export-crf-val');
+    if (!regler || !anzeige) return;
+    regler.addEventListener('input', () => { anzeige.textContent = regler.value; });
+}
+
+/** Feste Aufloesungen der Auswahlliste (Vorbild: Theatre `Bildexport.AUFLOESUNGEN`). */
+const AUFLOESUNGEN = {
+    '720': [1280, 720], '1080': [1920, 1080],
+    '1440': [2560, 1440], '2160': [3840, 2160],
+};
+
+/** Breite/Hoehe aus der Aufloesungs-Auswahl. */
+function _masse() {
+    const wahl = document.getElementById('export-resolution')?.value || '1080';
+    if (wahl === 'viewport') {
+        const leinwand = state.renderer?.domElement;
+        if (leinwand) return [leinwand.clientWidth || leinwand.width, leinwand.clientHeight || leinwand.height];
+        return [1920, 1080];
+    }
+    if (wahl === 'custom') {
+        const zahl = (kennung, vorgabe) => parseInt(document.getElementById(kennung)?.value) || vorgabe;
+        return [zahl('export-width', 1920), zahl('export-height', 1080)];
+    }
+    return AUFLOESUNGEN[wahl] || [1920, 1080];
 }
 
 function _bereichAuffrischen() {
@@ -66,15 +118,34 @@ function _angaben() {
         alert('Keine Frames zum Exportieren.');
         return null;
     }
+    const [breite, hoehe] = _masse();
+    const ausschnittAn = document.getElementById('export-crop-an')?.checked || false;
+    const format = document.getElementById('export-format')?.value || 'mp4';
+    const dateiname = document.getElementById('export-filename')?.value
+        || 'bvh_studio_export.mp4';
     return {
         von, bis,
         bilder: zahl('export-fps', state.project.fps),
-        hoehe: zahl('export-resolution', 1080),
-        guete: document.getElementById('export-quality')?.value || '18',
+        breite, hoehe,
+        format,
+        guete: zahl('export-crf', 18),
+        hintergrund: document.getElementById('export-bg')?.value || 'scene',
+        ausschnitt: ausschnittAn ? {
+            x: zahl('export-crop-x', 0), y: zahl('export-crop-y', 0),
+            breite: zahl('export-crop-w', 0), hoehe: zahl('export-crop-h', 0),
+        } : null,
         motor: document.getElementById('export-engine')?.value || 'server',
-        dateiname: document.getElementById('export-filename')?.value
-            || 'bvh_studio_export.mp4',
+        // Endung folgt dem gewählten Format — sonst hieße eine WebM-Datei
+        // nach der Wahl noch ".mp4" (Dateiname-Feld ändert sich nicht mit).
+        dateiname: _mitEndung(dateiname, format),
     };
+}
+
+const FORMAT_ENDUNG = { mp4: 'mp4', webm: 'webm', png: 'zip' };
+
+function _mitEndung(dateiname, format) {
+    const endung = FORMAT_ENDUNG[format] || 'mp4';
+    return dateiname.replace(/\.[^.]+$/, '') + '.' + endung;
 }
 
 async function startExport() {

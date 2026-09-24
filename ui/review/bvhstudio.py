@@ -18,10 +18,10 @@ BEREICHE = [
         # `tracks.js` ist seit dem 18.08.2026 nur noch die Registrierung; die
         # Arbeit steht in diesen vier Klassen.
         'dateien': [
-            'HumanBodyWeb/static/viewer/bvh_studio/spurerzeugung.js',
-            'HumanBodyWeb/static/viewer/bvh_studio/spurabbau.js',
-            'HumanBodyWeb/static/viewer/bvh_studio/kameraschluessel.js',
-            'HumanBodyWeb/static/viewer/bvh_studio/audiospur.js',
+            'HumanBodyWeb/static/viewer/studio/spurerzeugung.js',
+            'HumanBodyWeb/static/viewer/studio/spurabbau.js',
+            'HumanBodyWeb/static/viewer/studio/kameraschluessel.js',
+            'HumanBodyWeb/static/viewer/studio/audiospur.js',
         ],
         'hinweis': (
             'Verwaltet die Spuren des BVH-Studios: Ausschnitte, Verschiebungen, '
@@ -40,7 +40,7 @@ BEREICHE = [
     {
         'slug': 'studio_timeline',
         'name': 'BVH-Studio: Zeitleiste (Zeichnen und Maus)',
-        'dateien': ['HumanBodyWeb/static/viewer/bvh_studio/timeline.js'],
+        'dateien': ['HumanBodyWeb/static/viewer/studio/timeline.js'],
         'hinweis': (
             '1.176 Zeilen: zeichnet Spuren, Clips, Schlüsselbilder auf ein Canvas '
             'und '
@@ -70,7 +70,7 @@ BEREICHE = [
     {
         'slug': 'studio_props',
         'name': 'BVH-Studio: Eigenschaften-Bedienfeld',
-        'dateien': ['HumanBodyWeb/static/viewer/bvh_studio/properties.js'],
+        'dateien': ['HumanBodyWeb/static/viewer/studio/properties.js'],
         'hinweis': (
             'updateProperties (Zeile 54) ist eine einzige Funktion von ueber 700 '
             'Zeilen: '
@@ -102,7 +102,7 @@ BEREICHE = [
     {
         'slug': 'studio_tools',
         'name': 'BVH-Studio: Werkzeuge (Glättung, Bodenfix)',
-        'dateien': ['HumanBodyWeb/static/viewer/bvh_studio/tools.js'],
+        'dateien': ['HumanBodyWeb/static/viewer/studio/tools.js'],
         'hinweis': (
             'Die Werkzeugleiste: Gauss-Glaettung ueber alle Clips, feste '
             'Position, '
@@ -134,7 +134,7 @@ BEREICHE = [
     {
         'slug': 'studio_project',
         'name': 'BVH-Studio: Projekt speichern, laden, wiederherstellen',
-        'dateien': ['HumanBodyWeb/static/viewer/bvh_studio/project.js'],
+        'dateien': ['HumanBodyWeb/static/viewer/studio/project.js'],
         'hinweis': (
             'buildProjectData sammelt den Zustand, restoreProjectData baut ihn '
             'wieder '

@@ -15,8 +15,8 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._studiovorlage import Studiovorlage
 
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
-MODUL = Jsmodul('bvh_studio', 'hilfetexte_zeitleiste.js')
+STUDIO = Jsmodul.VIEWER / 'studio'
+MODUL = Jsmodul('studio', 'hilfetexte_zeitleiste.js')
 
 SKRIPT = """
 const { HILFE_ZEITLEISTE } = await import(MODUL);

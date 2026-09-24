@@ -40,7 +40,7 @@ class DatenfrischeTest(SimpleTestCase):
     def test_andere_wege_bleiben_unberuehrt(self):
         """Statik und Seiten regelt djangoBase — zwei Zustaendigkeiten fuer
         dieselbe Antwort waeren eine Quelle fuer Widersprueche."""
-        for pfad in ('/humanbody/scene/', '/statik/v-1/viewer/scene/state.js', '/hilfe/tests/'):
+        for pfad in ('/Charakter/', '/statik/v-1/viewer/scene/state.js', '/hilfe/tests/'):
             antwort = DatenfrischeTest._durch(pfad, HttpResponse('x'))
             self.assertFalse(antwort.has_header('Cache-Control'), pfad)
 

@@ -5,7 +5,7 @@ WARUM (28.08.2026, Befund `doppelcode`)
 =======================================
 Materialliste bauen und Materialgruppen setzen gehören zusammen und standen
 trotzdem dreimal getrennt da — in `Koerpernetz.bauen`, in
-`bvh_studio/spurfigur.js` und in `photo_to_3d/fotokoerpernetz.js`.
+`studio/spurfigur.js` und in `photo_to_3d/fotokoerpernetz.js`.
 
 DIE STELLE, DIE WEHTUT
 ======================

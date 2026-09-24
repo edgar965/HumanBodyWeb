@@ -43,7 +43,7 @@ class DieDeckung(SimpleTestCase):
     #: Wer das gemeinsame Zubehoer nimmt (statt eigener Lader).
     NUTZER = (
         os.path.join(THEATRE, 'laden', 'vorgabefigur.js'),
-        os.path.join(VIEWER, 'bvh_studio', 'spurfigur.js'),
+        os.path.join(VIEWER, 'studio', 'spurfigur.js'),
     )
     #: Wo gebunden wird (das Theatre bindet im Skinner, nicht beim Laden).
     BINDER = (

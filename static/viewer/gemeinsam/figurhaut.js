@@ -10,7 +10,7 @@ import { Protokoll } from './protokoll.js';
  * Figurhaut — die Haut unter der Kleidung einer selbst gebauten Figur wird
  * nicht gezeichnet, und Stoff unter Stoff auch nicht.
  *
- * HERKUNFT: `bvh_studio/spurhaut.js` (Edgar, 11.09.2026: „die haut ist immer
+ * HERKUNFT: `studio/spurhaut.js` (Edgar, 11.09.2026: „die haut ist immer
  * noch sichtbar im BVH Studio, spiele die Animation ab"). Am 12.09.2026
  * dasselbe auf der Ergebnisseite („bei einer animation mit Female2 scheint
  * die Haut durch das Kleid"): `result_character/garmentcode_stuecke.js`

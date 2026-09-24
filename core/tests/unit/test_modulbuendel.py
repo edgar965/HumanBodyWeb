@@ -49,7 +49,7 @@ class ModulbuendelTest(SimpleTestCase):
     def test_studio_ist_eine_eigene_seite(self):
         """Zweite Seite, eigener Einstiegspunkt und eigene Adresse."""
         self.assertEqual(Modulbuendel.adresse('studio', '1789043967'), '/buendel/1789043967/studio.js')
-        self.assertIn('bvh_studio', Modulbuendel.EINSTIEGE['studio'])
+        self.assertEqual(Modulbuendel.EINSTIEGE['studio'], 'viewer/studio/index.js')
 
     def test_zwei_fassungen_sind_zwei_dateien(self):
         """Der Name haengt an der Fassung — sonst gibt es stille Altstaende."""

@@ -4,7 +4,7 @@ import { float32ToBase64, uint32ToBase64 } from './kodierung.js';
  * Netznutzlast — die dreizehn Felder, die jeder Export an den Server schickt.
  *
  * WARUM (Befund `doppelcode`, 30.08.2026): Dieselbe Aufzählung stand in
- * `bvh_studio/export_nutzlast.js` und `scene/cloth_export.js` — Zeichen für
+ * `studio/export_nutzlast.js` und `scene/cloth_export.js` — Zeichen für
  * Zeichen gleich, nur die Quelle der Werte unterschied sich. Das BVH-Studio
  * legt Kamera, Lichter und Ton obendrauf, der Kleiderexport die Knochenteile.
  *

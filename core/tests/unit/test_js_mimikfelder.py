@@ -24,8 +24,8 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'mimikfelder.js')
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+MODUL = Jsmodul('studio', 'mimikfelder.js')
+STUDIO = Jsmodul.VIEWER / 'studio'
 
 SKRIPT = """
 const { Mimikfelder: M } = await import(MODUL);

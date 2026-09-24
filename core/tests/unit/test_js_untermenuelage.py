@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'untermenuelage.js')
+MODUL = Jsmodul('studio', 'untermenuelage.js')
 
 SKRIPT = """
 const { Untermenuelage } = await import(MODUL);

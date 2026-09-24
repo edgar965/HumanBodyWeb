@@ -12,7 +12,7 @@
  * — in `scene/cloth.js` (dreimal), `scene/hair.js` (viermal),
  * `scene/charmorph_hair.js` (zweimal), `scene/properties.js` (zweimal),
  * `viewer/hair.js` (zweimal), `viewer/kleiderpakete.js`,
- * `bvh_studio/eigenschaften/boden.js`, `gemeinsam/kategoriewahl.js` und
+ * `studio/eigenschaften/boden.js`, `gemeinsam/kategoriewahl.js` und
  * `vergleich/vergleichsregler.js`. Fünf davon waren in EINE Zeile gequetscht
  * (bis 240 Zeichen) und darum als lange Zeile gemeldet.
  *

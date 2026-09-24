@@ -30,7 +30,7 @@ KLAPPBAR = (
 
 class SzeneDetails(TestCase):
     def setUp(self):
-        antwort = Client().get('/humanbody/scene/')
+        antwort = Client().get('/Charakter/')
         self.assertEqual(antwort.status_code, 200)
         self.text = antwort.content.decode('utf-8')
         self.tabelle = JS.read_text(encoding='utf-8')

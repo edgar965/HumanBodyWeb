@@ -28,7 +28,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+STUDIO = Jsmodul.VIEWER / 'studio'
 GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
 SZENE = Jsmodul.VIEWER / 'scene'
 

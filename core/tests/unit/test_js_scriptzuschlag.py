@@ -27,8 +27,8 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._studiovorlage import Studiovorlage
 
-MODUL = Jsmodul('bvh_studio', 'scriptzuschlag.js')
-STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+MODUL = Jsmodul('studio', 'scriptzuschlag.js')
+STUDIO = Jsmodul.VIEWER / 'studio'
 
 SKRIPT = """
 const { Scriptzuschlag: S } = await import(MODUL);

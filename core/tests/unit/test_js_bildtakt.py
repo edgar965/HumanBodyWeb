@@ -23,8 +23,8 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('bvh_studio', 'bildtakt.js')
-SCHLEIFE = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio' / 'studioschleife.js'
+MODUL = Jsmodul('studio', 'bildtakt.js')
+SCHLEIFE = settings.BASE_DIR / 'static' / 'viewer' / 'studio' / 'studioschleife.js'
 
 SKRIPT = """
 const { Bildtakt } = await import(MODUL);

@@ -43,7 +43,7 @@ class SeitenTest(TestCase):
     #: Seitenmenü und würde eine leere Seite durchgehen lassen.
     SEITEN = (
         ('/humanbody/config/', 'HumanBody · Konfiguration'),
-        ('/humanbody/scene/', 'HumanBody · Szene'),
+        ('/Charakter/', 'HumanBody · Szene'),
         ('/humanbody/scene-model/', 'HumanBody Szene - Modell'),
         ('/humanbody/animations/', 'HumanBody · Animationen'),
         ('/humanbody/theatre-studio/', 'Theatre Studio'),
@@ -95,7 +95,7 @@ class SeitenTest(TestCase):
         Seite mit 200 und bleibt eine leere Bühne."""
         for pfad, merkmal in (
             ('/humanbody/theatre/', 'theatre/theatre-app.js'),
-            ('/studio/', 'viewer/bvh_studio/index.js'),
+            ('/studio/', 'viewer/studio/index.js'),
         ):
             with self.subTest(pfad=pfad):
                 self.assertContains(self.client.get(pfad), merkmal)

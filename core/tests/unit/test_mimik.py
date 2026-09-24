@@ -37,7 +37,7 @@ from humanbody_core.mimik.mblab_ausdruecke import MblabAusdruecke
 from ._pruefablage import Pruefablage
 from ._studiovorlage import Studiovorlage
 
-STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
+STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'studio'
 MIMIK = settings.BASE_DIR / 'static' / 'mimik'
 
 

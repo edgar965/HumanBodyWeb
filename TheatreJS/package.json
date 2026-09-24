@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "watch": "vite build --watch"
+    "watch": "vite build --watch",
+    "build:vendor-theatre": "vite build --config vite.vendor-theatre.config.js"
   },
   "dependencies": {
     "@theatre/core": "^0.7.2",

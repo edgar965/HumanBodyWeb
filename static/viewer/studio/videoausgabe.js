@@ -35,7 +35,18 @@ import { exportBrowserMediaRecorder, exportServerFfmpeg } from './video_schreibe
  */
 export class Videoausgabe {
 
-    static SEITENVERHAELTNIS = 16 / 9;
+    /**
+     * Clearfarbe je Hintergrund-Wahl (Vorbild: Theatre, `export-bg` in
+     * `theatre.html:1038`). `scene` fasst die Clearfarbe NICHT an — vorher
+     * setzte dieser Renderer nie eine, THREE's Standard (schwarz, deckend)
+     * blieb also erhalten; das bleibt so, nur jetzt benannt.
+     */
+    static HINTERGRUENDE = {
+        transparent: [0x000000, 0],
+        greenscreen: [0x00ff00, 1],
+        black: [0x000000, 1],
+        white: [0xffffff, 1],
+    };
 
     /** Die Kamera-Spur, die den Export treibt — oder `null`. */
     static kameraspur() {
@@ -44,15 +55,22 @@ export class Videoausgabe {
     }
 
     /** Ein Renderer in Ausgabegröße, außerhalb des Bildschirms. */
-    static renderer(hoehe) {
-        const breite = Math.round(hoehe * Videoausgabe.SEITENVERHAELTNIS);
+    static renderer(breite, hoehe, hintergrund = 'scene') {
         const leinwand = document.createElement('canvas');
         leinwand.width = breite;
         leinwand.height = hoehe;
+        // `alpha: true` erlaubt eine durchsichtige Clearfarbe (Hintergrund
+        // „transparent"); die Standard-Clearalpha bleibt bei 1 (deckend),
+        // solange `setClearColor` nicht mit Alpha < 1 aufgerufen wird — für
+        // `scene` also unverändert zum bisherigen Verhalten.
         const renderer = new THREE.WebGLRenderer({
-            canvas: leinwand, antialias: true, preserveDrawingBuffer: true });
+            canvas: leinwand, antialias: true, preserveDrawingBuffer: true, alpha: true });
         renderer.setSize(breite, hoehe, false);
         renderer.setPixelRatio(1);
+        if (hintergrund !== 'scene') {
+            const [farbe, alpha] = Videoausgabe.HINTERGRUENDE[hintergrund] || [0x000000, 1];
+            renderer.setClearColor(farbe, alpha);
+        }
         return { renderer, leinwand, breite, hoehe };
     }
 
@@ -98,14 +116,18 @@ export class Videoausgabe {
             return false;
         }
         const { renderer, leinwand, breite, hoehe } =
-            Videoausgabe.renderer(angaben.hoehe);
+            Videoausgabe.renderer(angaben.breite, angaben.hoehe, angaben.hintergrund);
         const zurueck = Videoausgabe.kameraUebernehmen(spur, breite, hoehe);
         try {
             const schreiben = angaben.motor === 'server'
                 ? exportServerFfmpeg : exportBrowserMediaRecorder;
+            // Bildausschnitt (Crop) nur am Server-Weg — dort trifft der Zuschnitt
+            // vor dem Hochladen jedes Bilds, ohne den laufenden MediaRecorder-
+            // Stream umzubauen (wie bei Theatre: „Bildausschnitt (Server only)").
             const werte = angaben.motor === 'server'
                 ? [renderer, leinwand, angaben.von, angaben.bis, angaben.bilder,
-                   angaben.guete, angaben.dateiname, felder.status, felder.balken]
+                   angaben.format, angaben.guete, angaben.ausschnitt, angaben.dateiname,
+                   felder.status, felder.balken]
                 : [renderer, leinwand, angaben.von, angaben.bis, angaben.bilder,
                    angaben.dateiname, felder.status, felder.balken];
             await schreiben(...werte);

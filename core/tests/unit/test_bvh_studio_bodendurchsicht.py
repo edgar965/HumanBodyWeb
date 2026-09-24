@@ -5,7 +5,7 @@ WARUM (Edgar, 13.09.2026: „gibt es eine Möglichkeit, beim Boden eine
 Transparenzeinstellung zu machen? Die Füße des Modells versinken immer noch
 im Boden, die sollen dann nicht verschwinden, sondern noch sichtbar sein.
 Vielleicht zwei Balken — Transparenz in % und Transparenz bis zu wieviel cm"):
-`bvh_studio/bodenuntergrund.js` setzt `opacity = 1 − Transparenz` am Boden
+`studio/bodenuntergrund.js` setzt `opacity = 1 − Transparenz` am Boden
 und legt `Tiefe` cm darunter eine undurchsichtige Platte (Kind des Bodens,
 gleiche Geometrie). Geprüft am Text, weil die Module `three` importieren:
 
@@ -26,7 +26,7 @@ import re
 from django.conf import settings
 from django.test import SimpleTestCase
 
-STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'bvh_studio'
+STUDIO = settings.BASE_DIR / 'static' / 'viewer' / 'studio'
 
 
 class BodendurchsichtTest(SimpleTestCase):

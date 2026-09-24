@@ -7,7 +7,7 @@ import { Skelettdaten } from './skelettdaten.js';
  * `type: 'generated_model'`) statt aus dem Netz des Servers.
  *
  * Stand dreimal: `scene/charakter_koerper.js` (`ausKonfiguration`),
- * `bvh_studio/spurfigur.js` (`_knochennetz`) und `TheatreJS/src/laden/
+ * `studio/spurfigur.js` (`_knochennetz`) und `TheatreJS/src/laden/
  * figurnetz.js` (`erzeugtesModell`) — dieselben zwei Wege, `rig` über die
  * Rig-Knochen des Servers, `def` über Skelett und Hautgewichte. Seit
  * 13.09.2026 EINMAL hier, gerufen aus `HumanbodyModell.bauen`.

@@ -59,8 +59,12 @@ class GelenkeLipsyncTest(SimpleTestCase):
 
     def test_1_jcm_graph(self):
         g = G9gelenkkorrekturen.graph()
+        # 157/117/52 waren die Zahlen ohne charaktereigene Correctives; seit
+        # 24.09.2026 (Damira „Naturally Bending") kommen die _cbs_*-Dateien
+        # der gekauften Charaktere (Damira, Ursula, Kin, Olesia) dazu — die
+        # Summe haengt am Bibliotheksstand, wie hier ueblich (`tests.md`).
         self.assertEqual((len(g['kanaele']), len(g['morphe']), len(g['knochen'])),
-                         (157, 117, 52))
+                         (218, 164, 54))
         self.assertEqual(G9gelenkkorrekturen.werte({'l_thigh': {'rotation/x': 35}}),
                          {'body_cbs_thigh_x35p_l': 1.0})
         w = G9gelenkkorrekturen.werte(
@@ -78,7 +82,7 @@ class GelenkeLipsyncTest(SimpleTestCase):
         r = self.client.get('/api/character/genesis9-figur/felder/gelenke/?stufen=1')
         self.assertEqual(r.status_code, 200, r.content[:300])
         d = r.json()
-        self.assertEqual(len(d['felder']['koerper']), 117)
+        self.assertEqual(len(d['felder']['koerper']), 164)
         self.assertIn('mund', d['felder']['anhaenge'])
         self.assertEqual(len(d['achsen']), 138)
         self.assertEqual(d['achsen']['l_thigh']['r'], 'YZX')
@@ -181,9 +185,12 @@ class GelenkeLipsyncTest(SimpleTestCase):
                              'anhaenge': False}),
             content_type='application/json')
         self.assertEqual(r.status_code, 200, r.content[:300])
-        self.assertEqual(r.json()['gelenkregler'],
-                         {'body_basejointcorrectives': 1.0,
-                          'body_ctrl_FlexionAutoStrength': 1.0})
+        # Seit 24.09.2026 kommen die externen Gate-Kanaele anderer Charaktere
+        # mit (Wert 0, Fabrice ist weder Damira noch Ursula/Kin/Olesia) -
+        # nur die zwei fuer Fabrice gestellten Werte pruefen.
+        gelenkregler = r.json()['gelenkregler']
+        self.assertEqual(gelenkregler['body_basejointcorrectives'], 1.0)
+        self.assertEqual(gelenkregler['body_ctrl_FlexionAutoStrength'], 1.0)
 
     # -------------------------------------------------------------- Lipsync
 

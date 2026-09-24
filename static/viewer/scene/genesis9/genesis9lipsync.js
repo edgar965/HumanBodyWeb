@@ -5,7 +5,7 @@
  *
  * WARUM (18.09.2026 abends, Offen-Punkt „Lipsync in der Szene — die Szene
  * hat keine Tonspur"): Das BVH Studio hatte Tonspur und Lippensync
- * (`bvh_studio/audiospur.js`, `mimikgenesis9.js`), die Szene nur die
+ * (`studio/audiospur.js`, `mimikgenesis9.js`), die Szene nur die
  * Animation. Hier bekommt der Reiter Animation einen Abschnitt
  * (`_szene_lipsync.html`): Tondatei wählen → Upload wie im Studio
  * (`/api/studio/audio-upload/`) → Rhubarb (`POST /api/studio/lipsync/`,
@@ -24,7 +24,7 @@ import { state } from '../state.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Lipsynckurve, Lipsyncformen } from '../../gemeinsam/lipsynckurve.js';
-import { Mimikgenesis9 } from '../../bvh_studio/mimikgenesis9.js';
+import { Mimikgenesis9 } from '../../studio/mimikgenesis9.js';
 
 export class Genesis9lipsync {
 

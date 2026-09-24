@@ -4,7 +4,7 @@
  * Edgar (12.09.2026): „es gab eine Funktion: Animation immer auf
  * Ursprungspunkt, findest du die noch? ich brauche die in /humanbody/scene/
  * im Menü Animation". Die gab es im BVH Studio als „Feste Position"
- * (Werkzeuge, `bvh_studio/werkzeug_position.js`, seit April 2026): Die
+ * (Werkzeuge, `studio/werkzeug_position.js`, seit April 2026): Die
  * Wurzel bleibt in jedem Bild innerhalb eines Kreises um ihren Startpunkt
  * (Bild 0) — wer weiter tanzt, wird auf den Rand gezogen, kleine Schritte
  * bleiben. Vorgabe 50 cm wie dort; der Radius wird je Aufruf im Dialog

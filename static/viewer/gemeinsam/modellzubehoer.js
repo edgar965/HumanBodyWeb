@@ -14,7 +14,7 @@ import { Figurhaut } from './figurhaut.js';
  * Modellzubehoer — Haare, Kleidung und GarmentCode-Stücke eines
  * `HumanbodyModell`, dazu die Hautmaske.
  *
- * WARUM HIER (13.09.2026): Das stand dreimal — `bvh_studio/spurzubehoer.js`,
+ * WARUM HIER (13.09.2026): Das stand dreimal — `studio/spurzubehoer.js`,
  * `TheatreJS/src/laden/vorgabefigur.js` (+ `kleidungsnetz.js`) und
  * `result_character/{hair,cloth_garments,garmentcode_stuecke}.js` — und jede
  * Fassung vergaß etwas anderes (das Theatre die GarmentCode-Stücke, das
