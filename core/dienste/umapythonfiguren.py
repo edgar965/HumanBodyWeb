@@ -37,10 +37,12 @@ class Umapythonfiguren:
     #: Wieviele Rassen gleichzeitig gehalten werden. Eine Figur belegt
     #: gemessen rund 16.000 Punkte mit fuenf Gewichten — ein paar Megabyte.
     #: Drei reichen fuer den Fall, den Edgar nennt (Male, Female, Elf).
-    PLAETZE = 3
+    #: Seit die Kleidung zum Schluessel gehoert (25.09.2026) vier: je Rasse
+    #: kann ein nackter und ein angezogener Bau nebeneinander liegen.
+    PLAETZE = 4
 
     _schloss = threading.RLock()
-    _gebaut = {}  # rasse -> Gebaut
+    _gebaut = {}  # (rasse, kleidung) -> Gebaut
     _reihenfolge = []
     _figur = None
 
@@ -69,32 +71,58 @@ class Umapythonfiguren:
 
     # -------------------------------------------------------------- Bauen
 
+    @staticmethod
+    def schluessel(rasse, kleidung=None):
+        """Rasse UND Kleidung — sonst bekaeme eine angezogene Figur den
+        nackten Bau derselben Rasse aus der Ablage (Edgar, 25.09.2026: „baue
+        das für UMA"; bis dahin hiess der Schluessel nur `rasse`)."""
+        return (rasse, tuple(sorted({str(n) for n in (kleidung or ()) if n})))
+
     @classmethod
     def bauen(cls, rasse, kleidung=None):
-        """Die gebaute Figur einer Rasse — beim ersten Mal gerechnet."""
+        """Die gebaute Figur einer Rasse mit dieser Kleidung — beim ersten Mal gerechnet."""
+        schluessel = cls.schluessel(rasse, kleidung)
         with cls._schloss:
-            vorhanden = cls._gebaut.get(rasse)
+            vorhanden = cls._gebaut.get(schluessel)
             if vorhanden is not None:
-                cls._vormerken(rasse)
+                cls._vormerken(schluessel)
                 return vorhanden
-        gebaut = cls.figur().bauen(rasse, kleidung=kleidung)
+        gebaut = cls.figur().bauen(rasse, kleidung=list(schluessel[1]))
         with cls._schloss:
-            cls._gebaut[rasse] = gebaut
-            cls._vormerken(rasse)
+            cls._gebaut[schluessel] = gebaut
+            cls._vormerken(schluessel)
             cls._aufraeumen()
         logger.info(
-            'UMA Python: %s gebaut (%d Punkte, %d Knochen)',
+            'UMA Python: %s gebaut (%d Punkte, %d Knochen, %d Kleidungsrezepte)',
             rasse,
             len(gebaut.netz.punkte),
             len(gebaut.netz.knochen),
+            len(gebaut.kleidung),
         )
         return gebaut
 
     @classmethod
-    def _vormerken(cls, rasse):
-        if rasse in cls._reihenfolge:
-            cls._reihenfolge.remove(rasse)
-        cls._reihenfolge.append(rasse)
+    def mit_slot(cls, rasse, slot):
+        """Ein gehaltener Bau der Rasse, der `slot` enthaelt — fuer die Texturen.
+
+        Die Texturadresse traegt nur Rasse und Slot. Ein Kleidungsslot steckt
+        nicht im nackten Bau; gesucht wird deshalb unter den gehaltenen Bauten
+        dieser Rasse, und erst ohne Treffer der nackte gebaut.
+        """
+        from UMA_Python.szene import Szenenfigur
+
+        with cls._schloss:
+            kandidaten = [g for (r, _k), g in cls._gebaut.items() if r == rasse]
+        for gebaut in kandidaten:
+            if slot in Szenenfigur.texturen(gebaut):
+                return gebaut
+        return cls.bauen(rasse)
+
+    @classmethod
+    def _vormerken(cls, schluessel):
+        if schluessel in cls._reihenfolge:
+            cls._reihenfolge.remove(schluessel)
+        cls._reihenfolge.append(schluessel)
 
     @classmethod
     def _aufraeumen(cls):

@@ -30,6 +30,8 @@ class BvhStudioEinstellungenSeite(TemplateView):
         'studio_export_resolution': '1080',
         'studio_export_crf': '18',
         'studio_preload_all': '1',
+        # Auswahlanzeige in der 3D-Ansicht (Studio UND Szene, `gemeinsam/auswahlaura.js`).
+        'auswahl_stil': 'aura',
     }
 
     def get_context_data(self, **kwargs):

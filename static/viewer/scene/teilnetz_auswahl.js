@@ -5,6 +5,7 @@ import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Stueckmarkierung } from './stueckmarkierung.js';
+import { Dazkleidung } from './genesis9/dazkleidung.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -65,6 +66,10 @@ export function _getMeshesOf(root) {
     return meshes;
 }
 
+/** Grundfarbe der Stränge bei Auswahl/Hover (multipliziert die Strähnenfarben). */
+const STRANG_AUSWAHL = [1.9, 1.35, 0.7];
+const STRANG_HOVER = [1.35, 1.45, 1.6];
+
 export function _setSubMeshEmissive(target, color) {
     if (!target || !target.meshObj) return;
     for (const m of _getMeshesOf(target.meshObj)) {
@@ -77,7 +82,13 @@ export function _setSubMeshEmissive(target, color) {
                 // sie bläulich an (Auswahl: Blau ×1,9), Null → weiß = unverändert.
                 // Sonst sähe man einer gewählten Viola nichts an (20.09.2026).
                 if (mat.wireframe && mat.vertexColors) {
-                    mat.color.setRGB(1 + 20 * color.r, 1 + 20 * color.g, 1 + 20 * color.b);
+                    // Seit 25.09.2026 sind die Leuchtfarben schwarz (`auswahlaura.js`), die
+                    // Kontur sieht aber Stränge nicht (Dreiecke ohne Fläche) — hier also
+                    // weiter die Grundfarbe: orange bei Auswahl, hell bei Hover.
+                    const ton = color === state._SELECT_EMISSIVE ? STRANG_AUSWAHL
+                              : (color === state._HOVER_EMISSIVE ? STRANG_HOVER : null);
+                    if (ton) mat.color.setRGB(...ton);
+                    else mat.color.setRGB(1 + 20 * color.r, 1 + 20 * color.g, 1 + 20 * color.b);
                 }
             }
         }
@@ -151,7 +162,15 @@ export function _removeSubMesh(target) {
 
     switch (target.type) {
         case 'cloth': {
-            if (String(target.key).startsWith('gc_')) {
+            const schluessel = String(target.key);
+            if (schluessel.startsWith(Dazkleidung.PRAEFIX)) {
+                // Daz-/Genesis-Stück an einer HumanBody-Figur (`daz_<kennung>/n`): aus
+                // `dazKleidung` nehmen — sonst blieb das Häkchen in den Assets stehen.
+                Dazkleidung.ausziehen(inst, schluessel.slice(Dazkleidung.PRAEFIX.length).split('/')[0]);
+            } else if (schluessel.startsWith('gc_') && !schluessel.includes('/')) {
+                // Nur das LIVE gebaute GarmentCode-Stück heißt `gc_<stück>` ohne `/` — die
+                // gebackenen Genesis-Stücke heißen auch `gc_…`, aber `gc_t_shirt/0` (25.09.2026:
+                // Entf ließ ihr Häkchen stehen, sie gingen nie durch `ausziehen`).
                 // GarmentCode ZUERST — auch an einer Genesis-9-Figur (Edgar, 20.09.2026,
                 // mit Bild: „nach löschen ist das Modell kaputt", ein schwarzes Band
                 // quer über der Brust). Der Daz-Weg darunter (`inst.ausziehen`) nahm
@@ -205,5 +224,9 @@ export function _removeSubMesh(target) {
     if (_sameSubMesh(state._hoveredSubMesh, target)) state._hoveredSubMesh = null;
     fn.updateEquippedList(inst);
     fn.updateVertexCount();
+    // Das Häkchen im Assets-Reiter (Genesis-9-Garderobe) blieb sonst gesetzt —
+    // es wird nur beim Klick auf die Checkbox selbst neu gezeichnet, nicht bei
+    // diesem Weg (Entf-Taste, Kreuz in „Objekte", Alles-entfernen-Knopf).
+    fn.refreshGenesis9Garderobe?.(inst);
     markDirty();
 }

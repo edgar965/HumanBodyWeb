@@ -10,7 +10,7 @@
  * Gruppenfarben teilt sich die Leinwand seither mit der Kopfspalte.
  */
 
-import { state, TRACK_HEIGHT, RULER_HEIGHT } from './state.js';
+import { state } from './state.js';
 import { Reihen } from './zeitleiste_reihen.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
@@ -49,10 +49,7 @@ export function renderTimeline() {
 
 /** Spuren und Klips — nach Anzeigereihen, damit Gruppenzeilen mitkommen. */
 function _reihen(breite, pps) {
-    const reihen = Reihen.liste();
-    for (let ri = 0; ri < reihen.length; ri++) {
-        const reihe = reihen[ri];
-        const y = RULER_HEIGHT + ri * TRACK_HEIGHT;
+    for (const { reihe, y } of Reihen.lagen()) {
         if (reihe.header) {
             Gruppenzeile.zeichnen(reihe, y, breite);
             continue;

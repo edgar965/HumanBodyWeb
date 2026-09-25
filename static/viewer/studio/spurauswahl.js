@@ -1,8 +1,9 @@
-import { state, TRACK_HEIGHT, RULER_HEIGHT } from './state.js';
+import { state, RULER_HEIGHT } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Reihen } from './zeitleiste_reihen.js';
 import { Modellgruppen } from './modellgruppen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
+import { Spurhoehe } from './spurhoehe.js';
 
 /**
  * Spurauswahl — welche Spur im Studio gerade bearbeitet wird.
@@ -65,7 +66,7 @@ export class Spurauswahl {
         const rahmen = Zeitleistenflaeche.rahmen;
         const oben = Reihen.yFuerSpur(index);
         if (!rahmen || oben < 0) return;
-        const unten = oben + TRACK_HEIGHT;
+        const unten = oben + Spurhoehe.von(spur);
         if (oben - RULER_HEIGHT < rahmen.scrollTop) {
             rahmen.scrollTop = oben - RULER_HEIGHT;
         } else if (unten > rahmen.scrollTop + rahmen.clientHeight) {

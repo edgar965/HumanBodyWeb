@@ -96,7 +96,7 @@ export class Projektdaten {
     static _spur(t) {
         const td = {
             name: t.name, type: t.type, preset: t.preset, quelle: t.quelle, bodyType: t.bodyType,
-            color: t.color, muted: t.muted, position: t.position,
+            color: t.color, muted: t.muted, position: t.position, hoehe: t.hoehe,
         };
         if (t.type === 'model') {
             // Stelle im GESPEICHERTEN Feld, wie bei `_modellIdx` (15.09.2026): Der

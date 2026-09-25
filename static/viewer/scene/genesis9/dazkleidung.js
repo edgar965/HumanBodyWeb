@@ -7,6 +7,7 @@ import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Genesis9aufbau } from '../../gemeinsam/genesis9aufbau.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Umfaerbung } from '../../gemeinsam/umfaerbung.js';
+import { Stoffwerte } from '../../gemeinsam/stoffwerte.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 
 /**
@@ -85,6 +86,7 @@ export class Dazkleidung {
                 Dazkleidung.binden(inst, netz);
         });
         Umfaerbung.stueck(inst, kennung, inst.dazKleidung[kennung]);   // eigene Farbe (24.09.2026)
+        Stoffwerte.stueck(inst, kennung, inst.dazKleidung[kennung]);   // Rauheit, Metall, Gewebe
         Protokoll.debug('Dazkleidung', `${kennung} auf ${inst.id}: ${daten.teile?.length || 0} Teile`);
         if (daten.absatz) await Dazkleidung.absatz(inst, daten.absatz);
         return daten.teile?.length || 0;

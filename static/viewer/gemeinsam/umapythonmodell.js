@@ -47,6 +47,8 @@ export class UmapythonModell extends Modell {
         this.bodyType = this.rasse;
         /** Reglerstellungen, die vom Rezept abweichen. */
         this.dna = { ...(daten.dna || {}) };
+        /** Angezogene Kleidungsrezepte (Namen aus `uma-garderobe/`, 25.09.2026). */
+        this.kleidung = [...(daten.kleidung || [])];
         /** Was der Server über die Regler dieser Rasse sagt. */
         this.regler = [];
         this.bilanz = null;
@@ -78,10 +80,21 @@ export class UmapythonModell extends Modell {
         return this._holen();
     }
 
+    /**
+     * Andere Kleidung anziehen — ein NEUER Bau auf dem Server (6–14 s beim
+     * ersten Mal je Rasse und Auswahl, danach aus der Ablage). Edgar,
+     * 25.09.2026: „baue das für UMA" — der Port zieht an wie Unity.
+     */
+    async kleidungSetzen(namen) {
+        this.kleidung = [...namen];
+        return this._holen();
+    }
+
     async _holen() {
         const daten = await Serverabruf.senden(UmapythonModell.ADRESSE, {
             rasse: this.rasse,
             dna: this.dna,
+            kleidung: this.kleidung,
         });
         if (daten.fehler) throw new Error(daten.fehler);
         this._setzen(daten);
@@ -102,8 +115,12 @@ export class UmapythonModell extends Modell {
         this.bilanz = daten.bilanz || null;
         this.regler = daten.regler || [];
         this.bodyType = daten.rasse || this.rasse;
+        // Was der Server wirklich angezogen hat — ein unbekanntes Rezept fehlt hier.
+        if (Array.isArray(daten.kleidung)) this.kleidungGetragen = daten.kleidung;
         this._skelettSetzen(daten.skelett);
         this._netzSetzen(daten.netz, daten.haut);
+        // Lose Kleidungsslots für den Stoffschwung (`scene/umapython/umapythonstoffschwung.js`, 25.09.2026).
+        if (this.bodyMesh) this.bodyMesh.userData.umastoff = daten.stoff || null;
         this.hoehe = Number(daten.bilanz?.hoehe_m) || 0;
     }
 

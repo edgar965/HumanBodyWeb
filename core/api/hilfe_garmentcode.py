@@ -24,14 +24,20 @@ class KleidungGarmentcode(Hilfeseite):
 
     #: Der Weg vom Koerper zum angezogenen Stueck. Je Schritt: was
     #: passiert, wo es steht, und was dabei schon schiefgegangen ist.
+    #: Nachgezogen 25.09.2026 gegen den Code (Edgar: „die Architektur von
+    #: Garment Code update ggf."): Dateien umgezogen, Nacharbeit als eigener
+    #: Schritt, Anziehen ueber Dreiecke, drei Figurarten.
     SCHRITTE = [
         {
             'nr': 1,
             'titel': 'Körper bereitstellen',
-            'was': 'Das Figurnetz wird EINMAL gerechnet (CharacterState.compute '
-            'über 18.210 bzw. 17.996 Punkte) und an Maßmessung, '
-            'Drapierkörper und Verankerung durchgereicht.',
-            'wo': 'core/dienste/garmentcode.py · garmentkoerper.py',
+            'was': 'Das Figurnetz wird EINMAL gerechnet und an Maßmessung, '
+            'Drapierkörper und Verankerung durchgereicht. Drei Figurarten: '
+            'HumanBody (MorphData, 18.210 bzw. 17.996 Punkte), SMPL-X '
+            '(A40, 6.890 Punkte) und Genesis 9 (Netz mit HD-Morphs, '
+            'sichtbare Fläche, Haut, sechs Segmente, Schulterneigung).',
+            'wo': 'GarmentCode/dienst.py · koerperdienst.py · koerperablage.py · '
+            'core/dienste/g9garmentfigur.py',
             'falle': 'Das Grundnetz war bis zum 07.09.2026 immer das '
             'weibliche — eine männliche Figur ohne Regler wurde am '
             'falschen Netz vermessen.',
@@ -51,10 +57,10 @@ class KleidungGarmentcode(Hilfeseite):
         {
             'nr': 3,
             'titel': 'Maße messen',
-            'was': '26 Körpermaße am eigenen Netz: Umfänge über Hüllen, '
-            'Rückenbreiten als Bogen, Messhöhen aus dem Profil '
-            '(Hüfte = Maximum über dem Schritt, Taille = Minimum, '
-            'Brust = Maximum darüber).',
+            'was': '27 Körpermaße am eigenen Netz (dazu 16 Fußmaße für '
+            'Schuhe): Umfänge über Hüllen, Rückenbreiten als Bogen, '
+            'Messhöhen aus dem Profil (Hüfte = Maximum über dem Schritt, '
+            'Taille = Minimum, Brust = Maximum darüber).',
             'wo': 'GarmentCode/koerpermasse.py · koerperprofil.py',
             'falle': 'Dünn besetzte Scheiben lieferten Scheinminima; die '
             'Taille lag beim 195-cm-Mann bei 54 % statt 65 % der '
@@ -88,20 +94,41 @@ class KleidungGarmentcode(Hilfeseite):
             'was': 'Die Simulation hält 2,5 mm Abstand; was spitzer aus dem '
             'Netz ragt, steht hindurch. Eingesunkene Punkte werden '
             'entlang der KÖRPERnormale herausgeschoben, der Weg auf '
-            '15 mm gedeckelt.',
-            'wo': 'GarmentCode/stoffkorrektur.py',
+            '15 mm gedeckelt; seit 24.09.2026 auch Haut, die zwischen den '
+            'Stoffpunkten durch ein Dreieck sticht (Lot ins Dreieck).',
+            'wo': 'GarmentCode/stoffkorrektur.py · flaechendurchstich.py',
             'falle': 'Mit der Stoffnormale als Richtung schiebt die Korrektur '
             'hinein statt heraus — aus 20 mm Einsinken wurden 35.',
         },
         {
             'nr': 7,
+            'titel': 'Nacharbeit',
+            'was': 'Gegen die SICHTBARE Haut plus die schon getragenen Stücke '
+            '(auch Daz-Stücke auf Genesis 9): Hosen hochziehen (Schritt '
+            'an den Körperschritt), auf festen Hautabstand anlegen '
+            '(„Eng anliegend", Leggings 2,0 mm), Faltenzone am Knöchel '
+            'ohne Glättung; Daz-Stücke, deren Saum über dem Bund hängt, '
+            'kommen danach außen darüber.',
+            'wo': 'GarmentCode/stoffnacharbeit.py · stoffhochziehen.py · '
+            'stoffanlegen.py · stofffalten.py · hautmitstoff.py · stofflagen.py',
+            'falle': 'Gegen die nackte Haut gerechnet zog das Anlegen den Bund '
+            'der Leggings durch das T-Shirt an die Haut — und die Harem-'
+            'Hose 2 mm über der Haut in die Jeans.',
+        },
+        {
+            'nr': 8,
             'titel': 'Anziehen',
-            'was': 'Das Netz bekommt Knochengewichte vom nächsten '
-            'Körperpunkt und eine Verankerung; der Versatz der Anker '
-            'IST der Hautabstand.',
-            'wo': 'GarmentCode/anziehen.py',
-            'falle': 'Je Stück ein eigener Name an der Figur — mit einem '
-            'festen Namen nahm die Hose dem T-Shirt den Platz.',
+            'was': 'Jeder Stoffpunkt wird am nächsten Körper-DREIECK '
+            'verankert (Baryzentrik und Versatz im mitgedrehten '
+            'Dreiecksrahmen), die Knochengewichte der drei Ecken im '
+            'selben Verhältnis gemischt; dieselbe Projektion trägt den '
+            'Stoff bei Reglerzügen mit. Der Träger (HumanBody oder '
+            'Genesis 9) kommt in einer Form: Steuernetz, Gewichte, Knochen.',
+            'wo': 'GarmentCode/stoffbindung.py · anziehen.py · gewichtsuebertragung.py',
+            'falle': 'Mit dem nächsten Körperpunkt statt dem Dreieck sprangen '
+            'die Gewichte an Dreiecksgrenzen (47 % andere Hauptknochen '
+            'auf 3.000 Probepunkten) — der Stoff riss beim Armheben. Je '
+            'Stück ein eigener Name, sonst nahm die Hose dem T-Shirt den Platz.',
         },
     ]
 
@@ -178,12 +205,15 @@ class KleidungGarmentcode(Hilfeseite):
             'Definition wäre geraten, nicht gemessen.',
         },
         {
-            'was': 'Das Stück hängt starr an der Figur',
-            'messung': 'Der Körper in der Szene ist ein Mesh, kein '
-            'SkinnedMesh — ein Skelett bekommt die Figur erst beim '
-            'Animieren.',
-            'schluss': 'Die Bindung ist gebaut und greift, sobald ein Skelett '
-            'da ist; solange sagt die Meldung „aber unbeweglich".',
+            'was': 'Reglerzüge nach dem Neuladen',
+            'messung': 'Auf Genesis 9 folgt das Stück Reglerzügen über die '
+            'Dreiecksbindung an den zuletzt gemerkten Körper '
+            '(`Gcnachformung`; Ursula, BodyHeavy 1: Hose median 32 mm '
+            'mitgewandert, Hautabstand 3,4 → 3,8 mm). Nach einem '
+            'Neuladen der Szene steht wieder die Form vom Bau.',
+            'schluss': 'Kein Fehler der Bindung, sondern ein fehlender '
+            'Speicherstand des letzten Körpers; bis dahin hilft ein '
+            'neuer Bau.',
         },
     ]
 

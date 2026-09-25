@@ -9,6 +9,9 @@ import { Abspielende } from './abspielende.js';
 import { updateDebugPanel } from './debug.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 import { Figurmarkierung } from './figurmarkierung.js';
+import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
+
+Auswahlaura.laden();   // Stil aus Einstellungen → Studio
 import { globaleSichtbarkeit } from './globale_sichtbarkeit.js';
 
 /**
@@ -45,8 +48,11 @@ export class Studioschleife extends Zeichenschleife {
             globaleSichtbarkeit.anwenden();
         }
         if (!this.kameraspurAktiv()) state.controls.update();
-        Figurmarkierung.nachziehen();   // Rahmen um die gewählte Figur
-        state.renderer.render(state.scene, state.camera);
+        // Die gewählte Figur mit der Auswahlanzeige (25.09.2026, `gemeinsam/auswahlaura.js`,
+        // Stil in Einstellungen → Studio) statt des Kastens um die Knochen.
+        const figur = Figurmarkierung.figur(state.project?.tracks?.[state.selectedTrackIdx] || null);
+        Auswahlaura.rendern(state.renderer, state.scene, state.camera,
+                            figur ? Auswahlaura.netze(figur.group) : []);
         updateDebugPanel();
     }
 

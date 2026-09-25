@@ -33,6 +33,10 @@ export class Netzstufe {
     static DAUER_S = 365 * 24 * 3600;
     static TASTE = 'KeyH';
     static ABZEICHEN_ID = 'netzstufe-abzeichen';
+    /** Das Abzeichen auch OHNE gewählte Stufe zeigen — als Hinweis auf die Taste
+     *  (BVH Studio, Edgar 25.09.2026: „schreibe die Tastenkombination unten rechts"). */
+    static hinweis = false;
+    static HINWEIS = 'Hohe Auflösung: Strg+Alt+H';
 
     /** Die gewählte Stufe (1–3) oder null, wenn die Einstellung gilt. */
     static gewaehlt(keks = document.cookie) {
@@ -81,7 +85,8 @@ export class Netzstufe {
      */
     static abzeichen(stufe = Netzstufe.gewaehlt(), laedt = false) {
         let feld = document.getElementById(Netzstufe.ABZEICHEN_ID);
-        if (stufe === null && !laedt) { feld?.remove(); return null; }
+        const nurHinweis = stufe === null && !laedt;
+        if (nurHinweis && !Netzstufe.hinweis) { feld?.remove(); return null; }
         if (!feld) {
             feld = document.createElement('div');
             feld.id = Netzstufe.ABZEICHEN_ID;
@@ -93,7 +98,10 @@ export class Netzstufe {
             });
             document.body.appendChild(feld);
         }
-        feld.textContent = Netzstufe.text(stufe, laedt);
+        feld.textContent = nurHinweis ? Netzstufe.HINWEIS : Netzstufe.text(stufe, laedt);
+        // Der stille Hinweis dezent, die gewählte hohe Stufe orange wie bisher.
+        feld.style.background = nurHinweis ? 'rgba(40, 44, 60, 0.85)' : 'rgba(255, 153, 64, 0.92)';
+        feld.style.color = nurHinweis ? '#c8cedc' : '#1a1a1a';
         return feld;
     }
 
@@ -107,7 +115,8 @@ export class Netzstufe {
      * Auf jeder Figurseite einmal rufen: Taste anbinden, Abzeichen zeigen.
      * `umbauen(stufe)` (optional): Umbau ohne Neustart — true, wenn erledigt.
      */
-    static einrichten(fenster = window, umbauen = null) {
+    static einrichten(fenster = window, umbauen = null, { hinweis = false } = {}) {
+        Netzstufe.hinweis = hinweis;
         fenster.addEventListener('keydown', ereignis => {
             if (!Netzstufe.istTaste(ereignis)) return;
             ereignis.preventDefault();

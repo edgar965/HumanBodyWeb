@@ -177,8 +177,9 @@ export const state = {
     // Sub-mesh selection
     _hoveredSubMesh: null,
     _selectedSubMesh: null,
-    _HOVER_EMISSIVE: new THREE.Color(0x08081a),
-    _SELECT_EMISSIVE: new THREE.Color(0x12123a),
+    // Schwarz seit 25.09.2026: Auswahl und Hover zeigt `gemeinsam/auswahlaura.js`.
+    _HOVER_EMISSIVE: new THREE.Color(0x000000),
+    _SELECT_EMISSIVE: new THREE.Color(0x000000),
     _ZERO_EMISSIVE: new THREE.Color(0x000000),
     _hoverPending: false,
     _lastMouseEvent: null,

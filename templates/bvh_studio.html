@@ -237,8 +237,14 @@
     .track-header {
         height: 40px; padding: 0 8px; display: flex; align-items: center;
         border-bottom: 1px solid var(--border); font-size: 0.78rem; color: var(--text);
-        cursor: pointer;
+        cursor: pointer; position: relative; box-sizing: border-box;
     }
+    /* Ziehgriff der Spurhöhe (`Spurhoehengriff`), je Spur einzeln. */
+    .spurhoehe-griff {
+        position: absolute; left: 0; right: 0; bottom: -3px; height: 6px;
+        cursor: row-resize; z-index: 1;
+    }
+    .spurhoehe-griff:hover { background: var(--accent); opacity: 0.5; }
     .track-header.selected { background: rgba(124,92,191,0.2); }
     .track-header:hover { background: rgba(255,255,255,0.03); }
 

@@ -1,5 +1,6 @@
 from django.urls import path, register_converter
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import RedirectView
 
 # Die drei Seiten MIT Logik stehen als je eine Klasse in eigenen Modulen —
 # `seiten.py` fuehrt nur noch die reinen Vorlagen (Umbau 17.08.2026).
@@ -102,7 +103,9 @@ urlpatterns = [
     path('settings/', Webseiten.einstellungen, name='settings'),
     path('settings/model/', einstellungen.app_settings_model, name='settings_model'),
     path('settings/result/', einstellungen.app_settings_result, name='settings_result'),
-    path('settings/scene/', einstellungen.app_settings_scene, name='settings_scene'),
+    path('settings/charakter/', einstellungen.app_settings_scene, name='settings_scene'),
+    # Alte Adresse (bis 25.09.2026) — Lesezeichen landen auf der neuen.
+    path('settings/scene/', RedirectView.as_view(url='/settings/charakter/', permanent=True)),
     # Das gebuendelte Seitenskript (Szene, BVH Studio). Die Fassung im Pfad
     # wirkt wie bei der uebrigen Statik: neue Fassung = neue Adresse = kein
     # alter Stand; `seite` ist eines von `Modulbuendel.EINSTIEGE`.
@@ -113,10 +116,12 @@ urlpatterns = [
     path('settings/smpl/', einstellungen.app_settings_smpl, name='settings_smpl'),
     path('settings/theatre/', seite_theatre_einstellungen.theatre_settings_page, name='settings_theatre'),
     path(
-        'settings/bvh-studio/',
+        'settings/studio/',
         seite_bvhstudio_einstellungen.bvh_studio_settings_page,
         name='settings_bvh_studio',
     ),
+    # Alte Adresse (bis 25.09.2026) — Lesezeichen landen auf der neuen.
+    path('settings/bvh-studio/', RedirectView.as_view(url='/settings/studio/', permanent=True)),
     path('settings/effekte/', seite_effekte_einstellungen.effekte_settings_page, name='settings_effekte'),
     path('settings/kleider/', seite_kleider_einstellungen.kleider_settings_page, name='settings_kleider'),
     path('api/job/<uuid:job_id>/start/', Auftragsendpunkte.starten, name='api_start_processing'),

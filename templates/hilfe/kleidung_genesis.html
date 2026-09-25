@@ -1,0 +1,121 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Genesis: die Genesis-9-Garderobe (Daz) gegen die
+GarmentCode-Kleiderbibliothek (MakeHuman), warum MakeHuman-Stücke nicht auf
+Genesis passen, was der Genesis-Leser von einem Asset verlangt, und der Weg,
+ein MakeHuman-Stück als Genesis-Asset abzulegen.
+
+Edgar, 25.09.2026: „erzeuge eine Seite Hilfe - Kleidung - Genesis wo du die
+Erkenntnisse hineinschreibst und den Vergleich mit Garment Code".
+
+Alle Zahlen und Zustände kommen aus `kleidung.genesis.Kleidungsgenesis`.
+{% endcomment %}
+
+{% block title %}Kleidung — Genesis{% endblock %}
+{% block topbar_title %}Kleidung — Genesis 9: Daz-Garderobe und GarmentCode{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Genesis 9: zwei Kleiderbibliotheken, ein Körper</h1>
+
+  <p>
+    Die Daz-Garderobe ({{ daz_stuecke }} Stücke) ist für den Genesis-Körper geformt und sitzt
+    darauf in Sekundenbruchteilen — auf HumanBody über eine Knochenrahmen-Paarung (Median
+    {{ paarung_mm }} mm). Die Kleiderbibliothek des GarmentCode-Reiters ({{ mh_stuecke }}
+    <code>.mhclo</code>) stammt von MakeHuman und passt auf Genesis überhaupt nicht. Diese Seite
+    hält fest, <strong>warum</strong>, was ein Genesis-Asset enthalten muss, wie sich beide Wege
+    unterscheiden, und wie ein MakeHuman-Stück zu einem Genesis-Asset wird.
+  </p>
+
+  <h2>Die zwei Bibliotheken</h2>
+  <table class="doku">
+    <thead><tr><th>Merkmal</th><th>Genesis 9 (Daz)</th><th>Kleiderbibliothek (MakeHuman)</th></tr></thead>
+    <tbody>
+      {% for merkmal, genesis, mh in bibliotheken %}
+      <tr><td><strong>{{ merkmal }}</strong></td><td>{{ genesis }}</td><td>{{ mh }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Warum MakeHuman-Stücke nicht auf Genesis passen</h2>
+  <ol class="stufen-liste">
+    {% for titel, text in warum_nicht %}
+    <li><strong>{{ titel }}.</strong> {{ text }}</li>
+    {% endfor %}
+  </ol>
+
+  <div class="info-box info-box-blue">
+    <strong>Die Folgerung: nicht über HumanBody, sondern direkt.</strong> Jede bisherige
+    Übertragung ging MakeHuman → HumanBody → Genesis — zwei Paarungen, die erste im Median
+    {{ mh_karte_mm }} mm daneben. Daz löst dasselbe Problem für Genesis 1–8 anders: Es formt
+    das eigene Netz in die Gestalt der fremden Figur (<code>CloneGenesis8</code>) und rechnet
+    das fremde Stück <em>dort</em> mit seiner eigenen Bindung aus. Umgekehrt heißt das: das
+    MakeHuman-Grundnetz in Genesis-Gestalt bringen — dann rechnet die <code>.mhclo</code>
+    das Stück selbst auf Genesis, und kein Stoffpunkt wird geraten.
+  </div>
+
+  <h2>Was der Genesis-Leser von einem Asset verlangt</h2>
+  <table class="doku">
+    <thead><tr><th>Teil</th><th>Befund</th><th>Code</th></tr></thead>
+    <tbody>
+      {% for teil, befund, code in leser %}
+      <tr><td><strong>{{ teil }}</strong></td><td>{{ befund }}</td><td><code>{{ code }}</code></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Genesis-Fitting gegen GarmentCode</h2>
+  <p>
+    Zwei Prinzipien: Genesis <em>passt ein fertiges Netz an</em>, GarmentCode <em>konstruiert
+    das Stück aus Maßen</em>. Seit dem 24.09.2026 kennen sich beide auf der Genesis-Figur
+    (Lagen in beide Richtungen). Einzelheiten zu GarmentCode:
+    <a href="/hilfe/kleidung/garmentcode/">Kleidung → GarmentCode</a>, zum Sitz in Bewegung:
+    <a href="/hilfe/kleidung/fitting/">Kleidung → Fitting</a>.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Merkmal</th><th>Genesis 9 (Daz-Stück)</th><th>GarmentCode</th></tr></thead>
+    <tbody>
+      {% for merkmal, genesis, gc in vergleich %}
+      <tr><td><strong>{{ merkmal }}</strong></td><td>{{ genesis }}</td><td>{{ gc }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Der Weg: MakeHuman-Stück → Genesis-Asset</h2>
+  <table class="doku">
+    <thead><tr><th>Schritt</th><th>Was</th><th>Stand</th></tr></thead>
+    <tbody>
+      {% for schritt, was, zustand in weg %}
+      <tr><td><strong>{{ schritt }}</strong></td><td>{{ was }}</td><td>{{ zustand }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Stand</h2>
+  <table class="doku">
+    <thead><tr><th>Schritt</th><th>Stand</th><th>Gemessen</th></tr></thead>
+    <tbody>
+      {% for schritt, zustand, messung in stand %}
+      <tr><td>{{ schritt }}</td><td>{{ zustand }}</td><td>{{ messung }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was daran unsicher ist</h2>
+  <ul class="doku-liste">
+    {% for titel, text in risiken %}<li><strong>{{ titel }}:</strong> {{ text }}</li>{% endfor %}
+  </ul>
+
+  <p class="doku-abschluss">
+    Alle Verfahren nebeneinander: <a href="/hilfe/kleidung/">Kleidung → Allgemein</a> ·
+    fünf Welten, eine Figur: <a href="/hilfe/kleidung/neu/">Kleidung → Neu</a>
+  </p>
+
+</div>
+{% endblock %}

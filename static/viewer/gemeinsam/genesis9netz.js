@@ -63,6 +63,11 @@ export class Genesis9netz {
         const material = daten.art === 'kappe'
             ? Genesis9strang.kappe(geo, daten.gruppen || [])
             : Genesis9netz.materialien(geo, daten.gruppen || [], daten.schluessel === 'brauen');
+        // Eigene Stücke (GarmentCode gebacken, MakeHuman, OBJ) sind eine Stofffläche:
+        // beide Seiten zeichnen, wie die live gebauten Stücke (`stoffabruf.js`).
+        if (daten.zweiseitig) {
+            for (const m of Array.isArray(material) ? material : [material]) m.side = THREE.DoubleSide;
+        }
         const netz = new THREE.Mesh(geo, material);
         netz.name = name;
         // Was Auswahl und Schwebeanzeige zeigen — sonst stünde dort `angie_jeans/0`.
@@ -158,6 +163,12 @@ export class Genesis9netz {
             material.specularIntensity = bilder.glanzgewicht;
         }
         if (bilder.metall) material.metalness = Number.isFinite(bilder.metallgewicht) ? bilder.metallgewicht : 1;
+        // Durchsicht ohne Textur (MB-Stuecke ohne Alpha-Loecher, reiner Skalarwert
+        // aus `.mhmat` `opacity`, 25.09.2026): nur ohne Cutout-Bild, das hätte Vorrang.
+        if (Number.isFinite(bilder.alphawert) && !bilder.alpha && bilder.alphawert < 0.999) {
+            material.transparent = true;
+            material.opacity = bilder.alphawert;
+        }
         if (bilder.durchlicht) Genesis9haut.durchlicht(material, bilder.durchlicht);
         if (bilder.schminke) Genesis9haut.schminke(material);
         // 8K-Detailnormalen (nur mit Strg+Alt+H, `Genesis9/browserbilder.py`) über den Grundnormalen.

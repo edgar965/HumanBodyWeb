@@ -83,6 +83,16 @@ pruefe('vorlage leer', Reiterzuordnung.vorlageVon(null), null);
 // Sonst zoege ein Stueck namens „magc_..." mit.
 pruefe('nicht vorn', Reiterzuordnung.fuer('magc_hose'), 'eigenschaften');
 
+// --- 6. Aus GarmentCode GEBACKENE Genesis-Stücke (25.09.2026) --------------
+// `gc_t_shirt/0` ist ein Daz-Stück der Garderobe, kein live gebautes — sonst
+// öffnete der Klick den GarmentCode-Reiter und Entf ließ das Häkchen stehen.
+pruefe('gebacken reiter', Reiterzuordnung.fuer('gc_t_shirt/0'), 'assets');
+pruefe('gebacken stueck', Reiterzuordnung.stueckVon('gc_t_shirt/0'),
+       {reiter: 'assets', liste: 'daz', kennung: 'gc_t_shirt'});
+pruefe('gebacken vorlage', Reiterzuordnung.vorlageVon('gc_t_shirt/0'), null);
+pruefe('live', Reiterzuordnung.gcLive('gc_hose'), true);
+pruefe('gebacken nicht live', Reiterzuordnung.gcLive('gc_t_shirt/0'), false);
+
 console.log(JSON.stringify({ok: true}));
 """
 

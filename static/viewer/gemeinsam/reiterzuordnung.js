@@ -61,6 +61,7 @@ export class Reiterzuordnung {
         const name = String(schluessel || '');
         for (const [praefix, reiter, liste] of Reiterzuordnung.NACH_PRAEFIX) {
             if (!name.startsWith(praefix)) continue;
+            if (praefix === 'gc_' && !Reiterzuordnung.gcLive(name)) continue;
             const rest = name.slice(praefix.length);
             const kennung = liste === 'daz' ? Reiterzuordnung.dazKennung(rest) : rest;
             return kennung ? { reiter, liste, kennung } : null;
@@ -88,6 +89,17 @@ export class Reiterzuordnung {
      */
     static vorlageVon(schluessel) {
         const name = String(schluessel || '');
-        return name.startsWith('gc_') ? name.slice(3) : null;
+        return Reiterzuordnung.gcLive(name) ? name.slice(3) : null;
+    }
+
+    /**
+     * Ein LIVE gebautes GarmentCode-Stück: `gc_<stück>` ohne `/`. Die aus GarmentCode
+     * GEBACKENEN Genesis-Stücke der Garderobe heißen auch `gc_…`, aber mit Teilnummer
+     * (`gc_t_shirt/0`) — sie sind Daz-Stücke (25.09.2026: Entf ließ ihr Häkchen stehen,
+     * ein Klick öffnete den GarmentCode-Reiter statt der Assets).
+     */
+    static gcLive(schluessel) {
+        const name = String(schluessel || '');
+        return name.startsWith('gc_') && !name.includes('/');
     }
 }

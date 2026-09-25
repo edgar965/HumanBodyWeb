@@ -5,6 +5,8 @@ import { Umfaerbung } from '../../gemeinsam/umfaerbung.js';
 import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Stueckfarbe } from './stueckfarbe.js';
+import { Stueckstoff } from './stueckstoff.js';
+import { Gcherkunft } from './gcherkunft.js';
 
 /**
  * Dazeigenschaften — der Eigenschaften-Bereich eines gewählten Daz-Stücks.
@@ -63,6 +65,10 @@ export class Dazeigenschaften {
         kopf.appendChild(Stueckfarbe.feld({ inst, kennung, wert: werte.farbe || '',
                                             titel: 'Farbe des Stücks' }));
         inhalt.appendChild(kopf);
+        // Rauheit, Metall, Gewebe (25.09.2026) und bei GC-Stücken der Weg zurück in den Schnitt.
+        inhalt.appendChild(Stueckstoff.felder(inst, kennung));
+        const schnitt = Gcherkunft.knopf(inst, kennung);
+        if (schnitt) inhalt.appendChild(schnitt);
         let getroffen = null;
         for (const { schluessel, netz } of Umfaerbung.netze(inst, kennung)) {
             const teil = document.createElement('div');

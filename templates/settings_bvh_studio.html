@@ -67,6 +67,23 @@
 </div>
 
 <div class="settings-section">
+    <h3>Auswahl in der 3D-Ansicht</h3>
+    <div class="settings-row">
+        <label>Anzeige:</label>
+        <select name="auswahl_stil" id="auswahl_stil">
+            <option value="aura" {% if prefs.auswahl_stil|default:'aura' == 'aura' %}selected{% endif %}>Aura
+                 (Three.js: Kontur mit weichem Glühen)</option>
+            <option value="kontur" {% if prefs.auswahl_stil == 'kontur' %}selected{% endif %}>Kontur (wie Blender,
+                 Unity, Unreal)</option>
+            <option value="rand" {% if prefs.auswahl_stil == 'rand' %}selected{% endif %}>Randleuchten (wie in
+                 Spielen)</option>
+        </select>
+        <span class="hint">Gilt für BVH Studio und Charakter-Seite: Auswahl orange, Stück unter der Maus hell.
+             Die Stärke stellt Einstellungen → Charakter („Deckkraft der Auswahl") ein.</span>
+    </div>
+</div>
+
+<div class="settings-section">
     <h3>Playback</h3>
     <div class="settings-row">
         <label>Alle Modelle vorladen:</label>

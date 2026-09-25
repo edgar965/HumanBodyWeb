@@ -1,0 +1,122 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Vergleich: die vier Kleider- und Fitting-Bibliotheken
+(MakeHuman, Genesis 9, GarmentCode, UMA) in Spalten, einheitliche Schritte in
+Zeilen — Grundlage für eine gemeinsame Kleiderbibliothek für UMA, HumanBody
+und Genesis.
+
+Edgar, 25.09.2026: „mache dazu eine neue Seite: Hilfe - Kleidung - Vergleich",
+dann „tabelle nach djangoBase format und verständlicher". Die Tabelle ist
+`djangobase/_tabelle.html`; die Struktur baut `KleidungVergleich.tabelle`,
+die Inhalte stehen in `kleidung.schrittvergleich.Kleidungsschritte`.
+{% endcomment %}
+
+{% block title %}Kleidung — Vergleich{% endblock %}
+{% block topbar_title %}Kleidung — Vergleich: vier Bibliotheken, Schritt für Schritt{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung_vergleich.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Vier Kleiderbibliotheken, Schritt für Schritt</h1>
+
+  <p>
+    Vier Wege bringen in diesem Projekt ein Kleidungsstück an eine Figur. Der größte
+    Unterschied liegt ganz am Anfang: <strong>was sie von der Figur brauchen</strong> — ein
+    Netz mit fester Punktnummerierung (MakeHuman), einen passend modellierten Grundkörper
+    (Genesis), Körpermaße (GarmentCode) oder nur das Skelett (UMA). Daraus folgt fast alles
+    Weitere: wie viel Nacharbeit nötig ist, wie schnell es geht, und was passiert, wenn man
+    die Figur umformt.
+  </p>
+  <p>
+    So liest man die Tabelle: je Schritt erklärt die zweite Spalte, worum es geht; in jeder
+    Zelle steht fett die Antwort, darunter klein die Einzelheiten und Codenamen. Stand
+    25.09.2026, aus dem Code gelesen.
+  </p>
+
+  <div class="schritte-prinzip">
+    {% for s in spalten %}
+    <div class="schicht-karte schritte-{{ s.kuerzel }}">
+      <h4>{{ s.name }}</h4>
+      <p>{{ s.prinzip }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+
+  <h2>Der komplette Ablauf im Code</h2>
+  <p>
+    Dieselben vier Spalten, jetzt als Weg eines Stücks vom Klick bis zum THREE-Objekt: je
+    Schritt fett die Adresse oder die Klasse mit Methode, darunter, was sie aufruft und welche
+    Dateien sie liest oder schreibt. <code>…/</code> steht für <code>/api/character/</code>.
+    Bei UMA ist der Python-Port beschrieben, der Unity-Bau steht unter „Andere Wege".
+  </p>
+
+  {% include "djangobase/_tabelle.html" with tabelle=ablauf %}
+
+  <h2>Empfehlung: welcher Weg trägt?</h2>
+  <p>
+    Edgars Fragen vom 25.09.2026 — Genesis 9 hauptsächlich, auch HumanBody, UMA nachrangig:
+    welcher Weg ist der beste und schnellste, wie könnte eine einheitliche Asset-Toolbox
+    aussehen, wie entstehen neue Kleider ohne viel Aufwand, wie kommen heruntergeladene
+    Stücke (z. B. als OBJ) leicht hinein. Vier Antworten, aus dem Code oben abgeleitet.
+  </p>
+
+  {% for abschnitt in empfehlung %}
+  <div class="schicht-karte kleidung-empfehlung">
+    <h3>{{ abschnitt.titel }}</h3>
+    {% for absatz in abschnitt.absaetze %}
+    <p>{{ absatz|safe }}</p>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <h2 id="eigenes-stueck">Eigenes Stück aus einem OBJ</h2>
+  <p>
+    Der erste Baustein von Punkt 2 („universelles Anziehen"): ein OBJ — heruntergeladen, aus
+    Blender oder aus GarmentCode — wird ein Genesis-9-Stück in der eigenen Bibliothek
+    (Hersteller <code>EIGEN</code>) und steht danach in der Genesis-Garderobe, mit
+    Passform-Reglern. Gleich danach wird es auf der Genesis-Grundfigur und auf HumanBody
+    gerechnet und abgebildet — über dieselben Wege, die auch die Szene nimmt.
+    Das Stück muss grob um eine stehende Figur modelliert sein (Füße auf dem Boden); Einheit
+    und Achse werden erkannt oder hier gewählt. Konzept:
+    <code>Docu/konzepte/2026-09-25_garmentcode-als-genesis-stuecke-konzept.md</code>.
+  </p>
+
+  <form id="eigenstueck-formular" class="schicht-karte eigenstueck-formular">
+    {% csrf_token %}
+    <label>OBJ-Datei <input type="file" name="obj" accept=".obj" required></label>
+    <label>dazu (optional) .mtl und Texturen
+      <input type="file" name="mtl" accept=".mtl">
+      <input type="file" name="textur" accept=".png,.jpg,.jpeg,.tga,.bmp,.webp" multiple></label>
+    <label>Name <input type="text" name="name" maxlength="80" required placeholder="z. B. Sommerkleid blau"></label>
+    <label>Kategorie <select name="kategorie">
+      {% for schluessel, titel in eigenstueck_kategorien %}<option value="{{ schluessel }}">{{ titel }}</option>{% endfor %}
+    </select></label>
+    <label>Farbe <input type="color" name="farbe" value="#8c9ccc"></label>
+    <label>Einheit <select name="einheit">
+      <option value="auto">erkennen</option><option value="m">m</option><option value="dm">dm</option>
+      <option value="cm">cm</option><option value="mm">mm</option>
+    </select></label>
+    <label>Oben ist <select name="oben"><option value="y">Y (Daz, Three, die meisten OBJ)</option>
+      <option value="z">Z (Blender)</option></select></label>
+    <label><input type="checkbox" name="zentrieren" checked> auf die Körpermitte schieben</label>
+    <label>Maßstab <input type="number" name="massstab" value="1" min="0.01" max="100" step="0.01"></label>
+    <label>Höhe versetzen (cm) <input type="number" name="versatz_cm" value="0" min="-200" max="200" step="0.5"></label>
+    <div class="eigenstueck-knopfzeile">
+      <button type="submit" id="eigenstueck-bauen" class="btn btn-primary">Bauen und prüfen</button>
+      <span id="eigenstueck-stand" class="eigenstueck-stand"></span>
+    </div>
+  </form>
+  <div id="eigenstueck-ergebnis"></div>
+
+</div>
+<script type="module" src="{% fassungspfad 'js/hilfe/eigenstueck.js' %}"></script>
+{% endblock %}

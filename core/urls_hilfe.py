@@ -20,14 +20,18 @@ from django.urls import path
 
 from .api.hilfe_fitting import KleidungFitting
 from .api.hilfe_garmentcode import KleidungGarmentcode
+from .api.hilfe_genesis import KleidungGenesis
 from .api.hilfe_kleiderphysik import KleidungPhysik
 from .api.hilfe_kleidung import KleidungAllgemein
+from .api.hilfe_kleidungvergleich import KleidungVergleich
 from .api.hilfe_koerperphysik import KoerperPhysik
 from .api.hilfe_neu import KleidungNeu
 
 urlpatterns = [
     path('', KleidungAllgemein.ansicht(), name='hilfe_kleidung'),
     path('garmentcode/', KleidungGarmentcode.ansicht(), name='hilfe_kleidung_garmentcode'),
+    path('genesis/', KleidungGenesis.ansicht(), name='hilfe_kleidung_genesis'),
+    path('vergleich/', KleidungVergleich.ansicht(), name='hilfe_kleidung_vergleich'),
     path('neu/', KleidungNeu.ansicht(), name='hilfe_kleidung_neu'),
     path('physik/', KleidungPhysik.ansicht(), name='hilfe_kleidung_physik'),
     path('fitting/', KleidungFitting.ansicht(), name='hilfe_kleidung_fitting'),

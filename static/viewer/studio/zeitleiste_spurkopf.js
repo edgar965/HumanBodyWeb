@@ -2,6 +2,8 @@ import { state, TRACK_ICONS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Spurkontextmenue } from './zeitleiste_kontextmenue.js';
+import { Spurhoehe } from './spurhoehe.js';
+import { Spurhoehengriff } from './spurhoehengriff.js';
 
 /**
  * Die Zeile einer Spur in der Kopfspalte: Sinnbild, Name, Rechtsklickmenü und
@@ -26,6 +28,7 @@ export class Spurkopf {
         el.className = 'track-header'
             + (index === state.selectedTrackIdx ? ' selected' : '')
             + (reihe.indent ? ' spur-eingerueckt' : '');
+        el.style.height = Spurhoehe.von(spur) + 'px';
         const bild = TRACK_ICONS[spur.type] || 'fa-running';
         el.innerHTML = Spurkopf._pfeil(reihe)
             + `<i class="fas ${bild}" style="color:${spur.color};`
@@ -44,6 +47,7 @@ export class Spurkopf {
             Spurkontextmenue.oeffnen(spur, index, e);
         });
         Spurkopf._ablageziel(el, index);
+        Spurhoehengriff.anbringen(el, spur);
         return el;
     }
 

@@ -5,8 +5,8 @@
       -> {rassen: [{name, gruppe}], beispiele: [...]}
 
     POST /api/umapython/figur/
-         {rasse, dna: {name: 0..1}}
-      -> {rasse, netz, skelett, bilanz, regler}
+         {rasse, dna: {name: 0..1}, kleidung: [rezeptname, …]}
+      -> {rasse, netz, skelett, bilanz, regler, kleidung}
 
 WARUM (Edgar, 08.09.2026: „Beim Modell UMA Python habe ich immer noch keine
 Portierung. Ich moechte doch ein Male, Female, Elf usw. auswaehlen, genau so
@@ -86,8 +86,9 @@ class Umafigurbau:
         if not rasse:
             return JsonResponse({'fehler': 'Keine Rasse angegeben'}, status=400)
         dna = Umafigurbau._dna(wunsch.get('dna'))
+        kleidung = Umafigurbau._kleidung(wunsch.get('kleidung'))
         try:
-            gebaut = Umapythonfiguren.bauen(rasse)
+            gebaut = Umapythonfiguren.bauen(rasse, kleidung)
         except (OSError, ValueError) as fehler:
             logger.warning('UMA Python: %s nicht baubar: %s', rasse, fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -97,7 +98,24 @@ class Umafigurbau:
 
         antwort = Szenenfigur.alles(gebaut, dna)
         antwort['regler'] = Szenenfigur.regler(gebaut)
+        # Was wirklich angezogen ist — ein unbekanntes Rezept ueberspringt
+        # `Figur._kleidungsrezepte` mit Warnung, der Browser soll es sehen.
+        antwort['kleidung'] = [r.name for r in gebaut.kleidung]
         return JsonResponse(antwort)
+
+    #: Obergrenze fuer die Rezeptliste aus dem Browser — UMA kennt rund 20
+    #: Plaetze; mehr ist kein Wunsch, sondern ein Fehler.
+    HOECHSTENS = 40
+
+    @staticmethod
+    def _kleidung(roh):
+        """Rezeptnamen aus der Anfrage (Edgar, 25.09.2026: „baue das für UMA" —
+        der Port zieht an, `Figur.bauen(kleidung=…)`). Nur Namen, die Liste
+        waehlt im Katalog aus und wird nie zu einem Pfad."""
+        if not isinstance(roh, list):
+            return []
+        namen = [str(n).strip() for n in roh[:Umafigurbau.HOECHSTENS] if isinstance(n, str)]
+        return [n for n in namen if n and len(n) <= 200]
 
     @staticmethod
     def _dna(roh):

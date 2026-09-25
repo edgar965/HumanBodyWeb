@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
+import { Umapythonkleider } from './umapythonkleider.js';
 
 /**
  * Umapythoneigenschaften — der Eigenschaften-Reiter einer UMA-Python-Figur.
@@ -45,6 +46,7 @@ export class Umapythoneigenschaften {
         Umapythoneigenschaften._kopf(inst);
         Umapythoneigenschaften._regler(inst);
         Umapythoneigenschaften._bilanz(inst);
+        Umapythonkleider.fuellen(inst);
     }
 
     /**

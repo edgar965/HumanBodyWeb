@@ -25,6 +25,8 @@ from .api.bvhdateien import Bvhauslieferung
 from .api.fotoabgleich import Fotoabgleich
 from .api.hauttexturen import Hauttexturen
 from .api.brauen import Brauenendpunkte
+from .api.eigenstueck import Eigenstueckapi
+from .api.gcgenesis import Gcgenesisapi
 from .api.g9figur import G9figur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
@@ -155,6 +157,12 @@ CHARAKTER = [
          name='g9_figur_posen'),
     path('api/character/genesis9-figur/garderobe/', G9garderobeapi.garderobe,
          name='g9_figur_garderobe'),
+    # Eigenes Stück aus einem OBJ (Hilfe → Kleidung → Vergleich, 25.09.2026).
+    path('api/character/eigenstueck/bauen/', Eigenstueckapi.bauen, name='eigenstueck_bauen'),
+    path('api/character/eigenstueck/<str:kennung>/<str:datei>/', Eigenstueckapi.bild,
+         name='eigenstueck_bild'),
+    path('api/garmentcode/genesis/speichern/', Gcgenesisapi.speichern, name='gcgenesis_speichern'),
+    path('api/garmentcode/genesis/<str:stueck>/', Gcgenesisapi.herkunft, name='gcgenesis_herkunft'),
     path('api/character/genesis9-figur/garderobe/kategorien/',
          G9garderobekategorienapi.kategorien, name='g9_figur_garderobe_kategorien'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/netz/',

@@ -4,6 +4,7 @@ import { Garmentstoff } from './garmentcode_stoff.js';
 import { GarmentcodeGeometrie } from './garmentcode_geometrie.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { GarmentcodeTitel } from './garmentcode_titel.js';
+import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -173,7 +174,7 @@ export class GarmentcodeAnziehen {
         const bestand = inst.clothMeshes || {};
         let gebunden = 0;
         for (const schluessel of Object.keys(bestand)) {
-            if (!schluessel.startsWith('gc_')) continue;
+            if (!Reiterzuordnung.gcLive(schluessel)) continue;
             const netz = bestand[schluessel];
             // Am Skelett der Figur gehäutet: nichts zu tun; an einem ALTEN (Genesis 9
             // baut es je Umbau neu, 19.09.2026): neu binden. Ohne Rohdaten geht es nicht.

@@ -6,7 +6,8 @@
  * war 330 Zeilen — Lineal, Gruppenkoepfe, fuenf verschiedene Spurdarstellungen
  * und der Abspielkopf in einer Funktion.
  */
-import { state, TRACK_HEIGHT, HEADER_WIDTH } from './state.js';
+import { state, HEADER_WIDTH } from './state.js';
+import { Spurhoehe } from './spurhoehe.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Effektebindung } from './effektebindung.js';
 import { Effektespur } from './effektespur.js';
@@ -15,13 +16,12 @@ export class Zeitleistenspuren {
     /** Hintergrund einer Spurzeile. */
     static hintergrund(ti, y, w) {
         Zeitleistenflaeche.ctx.fillStyle = ti === state.selectedTrackIdx ? 'rgba(124,92,191,0.1)' : 'rgba(0,0,0,0.2)';
-        Zeitleistenflaeche.ctx.fillRect(HEADER_WIDTH, y, w - HEADER_WIDTH, TRACK_HEIGHT);
+        Zeitleistenflaeche.ctx.fillRect(HEADER_WIDTH, y, w - HEADER_WIDTH, Spurhoehe.von(state.project.tracks[ti]));
         Zeitleistenflaeche.ctx.strokeStyle = '#1e293b';
         Zeitleistenflaeche.ctx.beginPath();
-        Zeitleistenflaeche.ctx.moveTo(HEADER_WIDTH, y + TRACK_HEIGHT);
-        Zeitleistenflaeche.ctx.lineTo(w, y + TRACK_HEIGHT);
+        Zeitleistenflaeche.ctx.moveTo(HEADER_WIDTH, y + Spurhoehe.von(state.project.tracks[ti]));
+        Zeitleistenflaeche.ctx.lineTo(w, y + Spurhoehe.von(state.project.tracks[ti]));
         Zeitleistenflaeche.ctx.stroke();
-        
     }
 
     /**
@@ -37,7 +37,7 @@ export class Zeitleistenspuren {
         if (kfs.length < 2) return;
         const ctx = Zeitleistenflaeche.ctx;
         const oben = y + 4;
-        const hoehe = TRACK_HEIGHT - 8;
+        const hoehe = Spurhoehe.von(track) - 8;
         for (let i = 0; i < kfs.length - 1; i++) {
             const a = kfs[i], b = kfs[i + 1];
             const ax = HEADER_WIDTH + (a.startFrame / state.project.fps) * pps - state.timelineScrollX;
@@ -69,7 +69,7 @@ export class Zeitleistenspuren {
                     if (a.startFrame !== b.startFrame) return a.startFrame - b.startFrame;
                     return (a.data?.trackPosition === 'upper' ? 0 : 1) - (b.data?.trackPosition === 'upper' ? 0 : 1);
                 });
-                const halfH = (TRACK_HEIGHT - 8) / 2;
+                const halfH = (Spurhoehe.von(track) - 8) / 2;
                 const topY = y + 4;
                 const botY = y + 4 + halfH;
                 const segments = [];  // { from, to, offsetIdx }
@@ -136,8 +136,8 @@ export class Zeitleistenspuren {
             for (let ci = 0; ci < track.clips.length; ci++) {
                 const sekunde = track.clips[ci].startFrame / state.project.fps;
     const cx = HEADER_WIDTH + sekunde * pps - state.timelineScrollX;
-                if (ci === 0) Zeitleistenflaeche.ctx.moveTo(cx, y + TRACK_HEIGHT / 2);
-                else Zeitleistenflaeche.ctx.lineTo(cx, y + TRACK_HEIGHT / 2);
+                if (ci === 0) Zeitleistenflaeche.ctx.moveTo(cx, y + Spurhoehe.von(track) / 2);
+                else Zeitleistenflaeche.ctx.lineTo(cx, y + Spurhoehe.von(track) / 2);
             }
             Zeitleistenflaeche.ctx.stroke();
             Zeitleistenflaeche.ctx.globalAlpha = 1.0;
@@ -202,9 +202,9 @@ export class Zeitleistenspuren {
     static _marker(clip, track, x, y, gewaehlt, schonLinks = false) {
         const ctx = Zeitleistenflaeche.ctx;
         const lage = clip.data?.trackPosition;
-        const my = lage === 'upper' ? y + TRACK_HEIGHT * Zeitleistenspuren.MARKER_OBEN
-                 : lage === 'lower' ? y + TRACK_HEIGHT * Zeitleistenspuren.MARKER_UNTEN
-                 : y + TRACK_HEIGHT / 2;
+        const my = lage === 'upper' ? y + Spurhoehe.von(track) * Zeitleistenspuren.MARKER_OBEN
+                 : lage === 'lower' ? y + Spurhoehe.von(track) * Zeitleistenspuren.MARKER_UNTEN
+                 : y + Spurhoehe.von(track) / 2;
         const gr = gewaehlt ? Zeitleistenspuren.MARKER_GROSS
                             : Zeitleistenspuren.MARKER_KLEIN;
         ctx.fillStyle = track.color;
@@ -255,7 +255,7 @@ export class Zeitleistenspuren {
         const ctx = Zeitleistenflaeche.ctx;
         const breite = breitePxOverride ?? Math.max(clip.duration * pps, 4);
         const oben = y + 4;
-        const hoehe = TRACK_HEIGHT - 8;
+        const hoehe = Spurhoehe.von(track) - 8;
 
         ctx.fillStyle = track.color;
         ctx.globalAlpha = gewaehlt ? 1.0 : 0.7;
@@ -322,7 +322,7 @@ export class Zeitleistenspuren {
                 const ox = HEADER_WIDTH + (b.startFrame / state.project.fps) * pps - state.timelineScrollX;
                 const oEnd = HEADER_WIDTH + (aEndFrame / state.project.fps) * pps - state.timelineScrollX;
                 const ow = Math.max(2, oEnd - ox);
-                const oy = y + 4, oh = TRACK_HEIGHT - 8;
+                const oy = y + 4, oh = Spurhoehe.von(track) - 8;
                 if (ox + ow < HEADER_WIDTH || ox > w) continue;  // off-screen
                 // Basis (orange-transparent) + Kreuz-Schraffur
                 Zeitleistenflaeche.ctx.fillStyle = 'rgba(255, 152, 0, 0.45)';

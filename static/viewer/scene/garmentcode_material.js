@@ -4,6 +4,7 @@ import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
 import { GarmentcodeGewebe } from './garmentcode_gewebe.js';
 import { Materialziel } from './materialziel.js';
+import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 
 /**
  * Farbe und Material der GarmentCode-Stücke.
@@ -149,7 +150,7 @@ export class GarmentcodeMaterial {
     static gewaehltesStueck(inst) {
         const wahl = state._selectedSubMesh;
         if (!wahl || wahl.type !== 'cloth' || !wahl.key) return null;
-        if (!String(wahl.key).startsWith('gc_')) return null;
+        if (!Reiterzuordnung.gcLive(wahl.key)) return null;
         if (inst && wahl.charId && inst.id && wahl.charId !== inst.id) return null;
         const traeger = inst || (state.characters?.get?.(wahl.charId));
         return traeger?.clothMeshes?.[wahl.key] || null;

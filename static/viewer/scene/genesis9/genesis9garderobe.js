@@ -222,4 +222,17 @@ export class Genesis9garderobe {
             () => Dazkleidung.ausziehenAuf(inst, kennung),
             () => fn.updateVertexCount?.());
     }
+
+    /**
+     * Die Liste neu zeichnen, nachdem ein Stück auf einem ANDEREN Weg von der
+     * Figur genommen wurde — Entf-Taste oder Kreuz in „Objekte" laufen über
+     * `_removeSubMesh` (`teilnetz_auswahl.js`), nicht über das Häkchen hier.
+     * Ohne diesen Aufruf blieb die Zeile angehakt, obwohl das Stück weg war
+     * (Edgar, 25.09.2026: „erscheint es links bei den Assets noch angehakt").
+     */
+    static aktualisieren(inst) {
+        return Genesis9garderobe.fuellen(inst, document.getElementById(Genesis9garderobe.BEREICH));
+    }
 }
+
+fn.refreshGenesis9Garderobe = Genesis9garderobe.aktualisieren;

@@ -46,8 +46,10 @@ export class Stoffkapseln {
      * Rumpfkapseln Kantendehnung p99 3,22, ohne 1,79; Haut −0,7 mm in beiden Fällen.
      * Gliedmaßen brauchen die Kapsel weiter: ein Bein zieht beim Sprung 10 cm je Bild
      * durch den Rock, die Haut (Reichweite 5 cm) sähe die Punkte erst dahinter.
+     * UMA (25.09.2026): `LeftUpLeg`, `LeftLeg`, `LeftArm` — `UpLeg|Leg$|Arm$`; die
+     * `*Adjust`-Hilfsknochen enden anders und bleiben draußen.
      */
-    static GLIEDER = /thigh|shin|foot|toe|upperarm|upper_arm|forearm|hand|shldr|shoulder|f_|thumb|index|mid|ring|pinky|carpal/i;
+    static GLIEDER = /thigh|shin|foot|toe|upperarm|upper_arm|forearm|hand|shldr|shoulder|f_|thumb|index|mid|ring|pinky|carpal|UpLeg|Leg$|Arm$/i;
     /** Die Achse spannt die Hautpunkte auf — ohne die äußersten 2 % je Ende. */
     static RAND = 0.02;
 

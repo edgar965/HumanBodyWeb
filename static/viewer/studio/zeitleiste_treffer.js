@@ -7,7 +7,7 @@
  * (Abspielkopf setzen, Kontextmenue der Spur, Kontextmenue des Clips) — hier
  * einmal als `bildBei`.
  */
-import { state, TRACK_HEIGHT, HEADER_WIDTH, RULER_HEIGHT } from './state.js';
+import { state, HEADER_WIDTH } from './state.js';
 import { Reihen } from './zeitleiste_reihen.js';
 import { Effektebindung } from './effektebindung.js';
 
@@ -30,14 +30,11 @@ export class Zeitleistentreffer {
      */
     static clipBei(mx, my) {
         const pps = state.timelineZoom;
-        const reihen = Reihen.liste();
-        for (let ri = 0; ri < reihen.length; ri++) {
-            const reihe = reihen[ri];
+        for (const { reihe, y, h } of Reihen.lagen()) {
             if (reihe.header) continue;
             const ti = reihe.trackIdx;
             const spur = state.project.tracks[ti];
             const bvhIdx = spur.type === 'bvh' ? ti : -1;
-            const y = RULER_HEIGHT + ri * TRACK_HEIGHT;
             for (let ci = 0; ci < spur.clips.length; ci++) {
                 const clip = spur.clips[ci];
                 const bildAnzeige = bvhIdx >= 0
@@ -45,8 +42,8 @@ export class Zeitleistentreffer {
                 const cx = HEADER_WIDTH
                     + (bildAnzeige / state.project.fps) * pps - state.timelineScrollX;
                 const treffer = ['camera_kf', 'light_kf', 'mimik_kf', 'speed_kf'].includes(clip.type)
-                    ? Zeitleistentreffer._schluesselbild(clip, mx, my, cx, y)
-                    : Zeitleistentreffer._clip(clip, mx, my, cx, y, pps);
+                    ? Zeitleistentreffer._schluesselbild(clip, mx, my, cx, y, h)
+                    : Zeitleistentreffer._clip(clip, mx, my, cx, y, pps, h);
                 if (treffer) return { trackIdx: ti, clipIdx: ci, ...treffer };
             }
         }
@@ -57,20 +54,20 @@ export class Zeitleistentreffer {
      * Schluesselbilder eines Paares sitzen versetzt (oben/unten), damit sich
      * beide einzeln anklicken lassen.
      */
-    static _schluesselbild(clip, mx, my, cx, y) {
+    static _schluesselbild(clip, mx, my, cx, y, h) {
         const lage = clip.data?.trackPosition;
-        const mitte = lage === 'upper' ? y + TRACK_HEIGHT * 0.28
-                    : lage === 'lower' ? y + TRACK_HEIGHT * 0.72
-                    : y + TRACK_HEIGHT / 2;
+        const mitte = lage === 'upper' ? y + h * 0.28
+                    : lage === 'lower' ? y + h * 0.72
+                    : y + h / 2;
         const drin = mx >= cx - MARKE && mx <= cx + MARKE
                   && my >= mitte - MARKE && my <= mitte + MARKE;
         return drin ? { clipX: cx, clipW: 0 } : null;
     }
 
-    static _clip(clip, mx, my, cx, y, pps) {
+    static _clip(clip, mx, my, cx, y, pps, h) {
         const breite = Math.max(clip.duration * pps, 4);
         const oben = y + 4;
-        const hoehe = TRACK_HEIGHT - 8;
+        const hoehe = h - 8;
         if (mx < cx || mx > cx + breite || my < oben || my > oben + hoehe) return null;
         let rand = null;
         if (mx - cx < RANDZONE && breite > 16) rand = 'left';

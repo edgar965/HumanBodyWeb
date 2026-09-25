@@ -45,6 +45,7 @@ export class Schwebeanzeige {
             _setSubMeshEmissive(state._hoveredSubMesh, state._ZERO_EMISSIVE);
         }
         state._hoveredSubMesh = null;
+        state._hoveredCharId = null;
         _clearBoneHover();
         if (this.schild) this.schild.style.display = 'none';
         this.canvas.style.cursor = '';
@@ -62,6 +63,8 @@ export class Schwebeanzeige {
         const ziele = Schwebeanzeige._ziele();
         const treffer = this._treffer(ziele);
         this._schild(e, rahmen, treffer);
+        // Die Figur unter der Maus — für die helle Aura (`scene/auswahlziele.js`).
+        state._hoveredCharId = treffer.teilnetz ? null : (treffer.figurId || null);
         this._teilnetzwechsel(treffer.teilnetz);
         this._knochenwechsel(treffer.knochen, treffer.koerpernetz);
     }
@@ -86,7 +89,7 @@ export class Schwebeanzeige {
                 const schild = `${figur.presetName || figur.name || id} (Genesis 9)`;
                 for (const netz of [figur.bodyMesh, ...Object.values(figur.anhangNetze || {})]) {
                     if (!netz) continue;
-                    figuren.set(netz, schild);
+                    figuren.set(netz, { schild, id });
                     wurzeln.push(netz);
                 }
             }
@@ -107,12 +110,15 @@ export class Schwebeanzeige {
         if (teilnetz) return { ...leer, teilnetz };
         // Die Genesis-Figur selbst: Netz oder eines seiner Elternteile (Anhänge sind Gruppen).
         for (let o = treffer[0].object; o; o = o.parent) {
-            if (ziele.figuren?.has(o)) return { ...leer, figur: ziele.figuren.get(o) };
+            if (ziele.figuren?.has(o)) {
+                const { schild, id } = ziele.figuren.get(o);
+                return { ...leer, figur: schild, figurId: id };
+            }
         }
         // Kein Kleidungsstück — dann vielleicht ein Knochen des Körpernetzes.
         for (const eintrag of ziele.koerper) {
             if (treffer[0].object !== eintrag.bodyMesh) continue;
-            return { teilnetz: null,
+            return { teilnetz: null, figurId: eintrag.charId,
                      knochen: _getBoneFromIntersection(treffer[0],
                                                        eintrag.bodyMesh),
                      koerpernetz: eintrag.bodyMesh };

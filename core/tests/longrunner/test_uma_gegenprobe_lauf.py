@@ -18,12 +18,16 @@ sys.path.insert(0, str(Path(settings.ASSETS_ROOT)))
 
 import numpy as np  # noqa: E402
 
-from .test_uma_gegenprobe import (
+from .test_uma_gegenprobe import (  # noqa: E402
     KLEIDUNG,
-    RASSE,  # noqa: E402
-    _bauen,
-    _referenz,
+    RASSE,  # noqa: F401
+    Unityreferenz,
 )
+
+# Seit dem Umbau auf `Unityreferenz` (Testhelfer in ihre Klasse, 17.09.2026) gab
+# es `_bauen`/`_referenz` nicht mehr — diese Datei war seitdem nicht ladbar.
+_bauen = Unityreferenz.bauen
+_referenz = Unityreferenz.referenz
 
 #: Eine BVH aus dem Bestand — Arme seitlich, also viel Bewegung in den
 #: Gliedmaßen und wenig im Rumpf. Fehlt sie, wird übersprungen statt
@@ -144,30 +148,24 @@ class KleidungAufBeiden(unittest.TestCase):
         self.assertLess(float(np.median(abstand)), 0.5)
 
     def test_die_kleidung_liegt_am_selben_ort(self):
-        """Der offene Rest, mit seiner gemessenen Größe.
+        """Die Kleidung sitzt wie in Unity — gemessen in der RICHTIGEN Lage.
 
-        Gruppenweise gegen Unitys Atlanten gemessen (Unity fasst Slots
-        nach Material zusammen: 1.668 + 3.906 = 5.574 und
-        3.131 + 4.824 = 7.955):
+        Bis 25.09.2026 stand hier ein „offener Rest": Hoodie + Shorts
+        Median 6,65 mm, max 35,45 mm, gedeutet als Formanpassung, die
+        Unity vornimmt und der Port nicht. Es war die Messung: Unitys
+        GLB-Export spiegelt x, und verglichen wurde gegen die
+        ungespiegelte Wolke. Der Körper und die Stiefel sind
+        links-rechts-symmetrisch — der nächste Punkt der Gegenseite liegt
+        genauso nah, deshalb fiel es dort nicht auf. Hoodie und Shorts
+        sind es nicht.
 
-            Innenmund + Stiefel   Median 0,129 mm   max  0,84 mm
-            Hoodie + Shorts       Median 6,65  mm   max 35,45 mm
+        Gemessen (`ProjektTemp/uma_kleidung/gegen_unity_gespiegelt.py`):
+            ungespiegelt   Hoodie + Shorts   Median 6,510 mm  max 35,45
+            gespiegelt     Hoodie + Shorts   Median 0,128 mm  max  0,40
+        und Punkt-zu-Fläche im Rohnetz 0,000 mm (`flaechenabstand.py`).
+        Der Rest ist die Reglerstellung, wie am Körper (0,114 mm).
 
-        Die STARRE Kleidung sitzt also exakt, die verformbare nicht.
-        Der Versatz hat keine Richtung (Mittelwert 0,7 / -0,03 /
-        -0,11 mm bei 5 mm Streuung je Achse) und ist am Rumpf doppelt
-        so groß wie am Becken (10,1 gegen 5,6 mm) — er sieht aus wie
-        eine Anpassung an die Körperform, die Unity vornimmt und der
-        Port nicht. `UMAClothingConformer` ist es NICHT: Die Klasse hat
-        im ganzen Upstream keinen Aufrufer außerhalb von Editor und
-        Tests. Auch die vorgebackene Form ist es nicht — ohne sie
-        ändert sich der Wert um keinen Hundertstelmillimeter (6,652 in
-        beiden Fällen), und die Kleidungsslots führen gar keine
-        BlendShapes.
-
-        Die Schwelle steht auf dem gemessenen Wert. Wer die Ursache
-        findet, macht diesen Test schärfer — er ist die Stelle, an der
-        es auffällt.
+        Sabotage: `self.unity.punkte` statt `punkte_portlage` → rot.
         """
         from UMA_Python.gegenprobe import Unityglb
 
@@ -176,8 +174,9 @@ class KleidungAufBeiden(unittest.TestCase):
         stoff = [n for n in stellen if 'hoodie' in n or 'shorts' in n]
         self.assertEqual(len(stoff), 2)
         eigen = np.concatenate([punkte[stellen[n][0] : stellen[n][1]] for n in stoff])
-        abstand = Unityglb.abstaende(eigen, self.unity.punkte)
-        self.assertLess(float(np.median(abstand)), 12.0, 'die Kleidung ist weiter abgewandert als gemessen')
+        abstand = Unityglb.abstaende(eigen, self.unity.punkte_portlage)
+        self.assertLess(float(np.median(abstand)), 0.5, 'die Kleidung liegt nicht, wo Unity sie hat')
+        self.assertLess(float(abstand.max()), 2.0)
 
     def test_die_kleidung_haengt_am_selben_skelett(self):
         """Der Grund, warum UMA-Kleidung sitzt — und die Probe darauf.

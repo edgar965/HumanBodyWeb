@@ -35,6 +35,7 @@ import './garmentcode.js';
 import './garmentcode_vorbilder.js';
 import './garmentcode_auswahlwechsel.js';
 import './garmentcode_stueckquelle.js';
+import './garmentcode_alsgenesis.js';
 import './garmentcode_absatz.js';
 import '../gemeinsam/hautverdeckung.js';
 import './lagenverdeckung.js';

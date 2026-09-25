@@ -25,6 +25,7 @@ import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 
 export class Lagenverdeckung {
 
@@ -38,7 +39,7 @@ export class Lagenverdeckung {
         // Nur mit GarmentCode-Stück (20.09.2026: `Stueckereignis` kommt jetzt für jedes
         // Daz-Stück, damit die Hautverdeckung läuft) — Daz gegen Daz macht der Server
         // (`Genesis9/lagen.py`), und die Lagenmaske kostete auf Stufe 2 91 s.
-        const garmentcode = stoffe.some((s) => s.schluessel.startsWith('gc_'));
+        const garmentcode = stoffe.some((s) => Reiterzuordnung.gcLive(s.schluessel));
         if (stoffe.length < 2 || !garmentcode) return Lagenverdeckung.aufheben(inst);
         const t0 = performance.now();
         const koerper = { punkte: geo.attributes.position.array, dreiecke: geo.userData.indexVoll.index };

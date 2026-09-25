@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Bindungsrechner } from './bindungsrechner.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
 import { Protokoll } from './protokoll.js';
+import { Reiterzuordnung } from './reiterzuordnung.js';
 
 /**
  * Humanbodybindung — die Oberflächenbindung für HumanBody-Figuren
@@ -60,7 +61,7 @@ export class Humanbodybindung {
      */
     static zustaendig(inst, schluessel) {
         if (inst?.quelle === Humanbodybindung.QUELLE) return true;
-        return inst?.quelle === 'genesis9' && String(schluessel).startsWith('gc_');
+        return inst?.quelle === 'genesis9' && Reiterzuordnung.gcLive(schluessel);
     }
 
     static binden(inst, koerper, netz) {

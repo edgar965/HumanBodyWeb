@@ -54,7 +54,7 @@ class SeitenTest(TestCase):
         ('/humanbody/test-smpl/', 'SMPL Test'),
         ('/humanbody/photo-to-3d/', 'Foto To 3D'),
         ('/humanbody/photo-to-3d/jobs/', 'Photo-to-3D Jobs'),
-        ('/settings/bvh-studio/', 'BVH Studio'),
+        ('/settings/studio/', 'BVH Studio'),
         ('/settings/smpl/', 'SMPL Body'),
         ('/settings/video-to-bvh-2d/', 'Video to BVH: 2D'),
         ('/settings/video-to-bvh-3d/', 'Video to BVH: 3D'),

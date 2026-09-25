@@ -48,7 +48,7 @@ class Umatextur:
         if art not in Umatextur.ARTEN:
             return JsonResponse({'fehler': 'Unbekannte Art %r' % art}, status=400)
         try:
-            gebaut = Umapythonfiguren.bauen(rasse)
+            gebaut = Umapythonfiguren.mit_slot(rasse, slot)
         except (OSError, ValueError) as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=404)
         pfad = (Szenenfigur.texturen(gebaut).get(slot) or {}).get(art)

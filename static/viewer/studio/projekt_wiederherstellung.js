@@ -126,6 +126,7 @@ export class Projektwiederherstellung {
         }
         track.color = td.color || track.color;
         track.muted = td.muted || false;
+        if (Number.isFinite(td.hoehe)) track.hoehe = td.hoehe;   // Spurhoehe (25.09.2026)
         track.position = td.position || [0, 0, 0];
         if (track.group) {
             track.group.position.set(track.position[0], track.position[1] || 0,

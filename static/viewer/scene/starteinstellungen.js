@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bereichsgedaechtnis } from './bereichsgedaechtnis.js';
 import { Startfigur } from './startfigur.js';
+import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -96,10 +97,9 @@ export class Starteinstellungen {
     /** Helligkeit, mit der Auswahl und Zeigen unter der Maus leuchten. */
     auswahlhelligkeit(wert) {
         if (typeof wert !== 'number') return;
-        state._SELECT_EMISSIVE = new THREE.Color(wert * 0.071, wert * 0.071,
-                                                 wert * 0.227);
-        state._HOVER_EMISSIVE = new THREE.Color(wert * 0.031, wert * 0.031,
-                                                wert * 0.102);
+        // Seit 25.09.2026 die Stärke der Auswahlanzeige (`gemeinsam/auswahlaura.js`);
+        // das Eigenleuchten bleibt aus — es färbte den Stoff um, sichtbar war es kaum.
+        Auswahlaura.deckkraft(wert);
     }
 
     /** Serverpfad der Anfangspose, oder null wenn keine gesetzt werden soll. */

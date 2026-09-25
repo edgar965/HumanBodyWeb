@@ -61,13 +61,13 @@ MENUE = [
 
 EINSTELLUNGEN_EXTRA = [
     {'label': 'Modell', 'url': '/settings/model/', 'icon': 'bi-person'},
-    {'label': 'Szene', 'url': '/settings/scene/', 'icon': 'bi-lightbulb'},
+    {'label': 'Charakter', 'url': '/settings/charakter/', 'icon': 'bi-lightbulb'},
     {'label': 'Result', 'url': '/settings/result/', 'icon': 'bi-camera-video'},
     {'label': 'Video to BVH: 2D', 'url': '/settings/video-to-bvh-2d/', 'icon': 'bi-film'},
     {'label': 'Video to BVH: 3D', 'url': '/settings/video-to-bvh-3d/', 'icon': 'bi-box'},
     {'label': 'SMPL Body', 'url': '/settings/smpl/', 'icon': 'bi-person-standing'},
     {'label': 'Theatre', 'url': '/settings/theatre/', 'icon': 'bi-mask'},
-    {'label': 'BVH Studio', 'url': '/settings/bvh-studio/', 'icon': 'bi-scissors'},
+    {'label': 'BVH Studio', 'url': '/settings/studio/', 'icon': 'bi-scissors'},
     {'label': 'Effekte', 'url': '/settings/effekte/', 'icon': 'bi-wind'},
     {'label': 'Kleider', 'url': '/settings/kleider/', 'icon': 'bi-bag'},
 ]
@@ -149,6 +149,23 @@ HILFE_EXTRA = [
                 'icon': 'bi-rulers',
                 'url': '/hilfe/kleidung/garmentcode/',
                 'aktiv': 'hilfe_kleidung_garmentcode',
+            },
+            # Daz-Garderobe gegen GarmentCode, MakeHuman-Stücke als Genesis-
+            # Assets (Edgar, 25.09.2026: „erzeuge eine Seite Hilfe - Kleidung -
+            # Genesis").
+            {
+                'label': 'Genesis',
+                'icon': 'bi-person-standing-dress',
+                'url': '/hilfe/kleidung/genesis/',
+                'aktiv': 'hilfe_kleidung_genesis',
+            },
+            # MakeHuman, Genesis, GarmentCode, UMA Schritt für Schritt (Edgar,
+            # 25.09.2026: „mache dazu eine neue Seite: Hilfe - Kleidung - Vergleich").
+            {
+                'label': 'Vergleich',
+                'icon': 'bi-table',
+                'url': '/hilfe/kleidung/vergleich/',
+                'aktiv': 'hilfe_kleidung_vergleich',
             },
             {
                 'label': 'Neu',

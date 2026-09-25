@@ -167,7 +167,7 @@ class AnimationsEndpunktTest(AnimationsBaum, TestCase):
 class EinstellungsseitenTest(AnimationsBaum, TestCase):
     """Kern des Befunds: die Seiten duerfen nicht mit dem Bestand wachsen."""
 
-    SEITEN = ('/settings/model/', '/settings/result/', '/settings/scene/', '/settings/theatre/')
+    SEITEN = ('/settings/model/', '/settings/result/', '/settings/charakter/', '/settings/theatre/')
 
     def test_seiten_enthalten_nur_die_koepfe(self):
         for seite in self.SEITEN:

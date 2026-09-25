@@ -144,7 +144,12 @@ DJANGOBASE_KONFORM_AUS = ('docs/',)
 #: Sie enthaelt three.js und Theatre.js mit; die Tabelle darin gehoert einer
 #: Fremdbibliothek. Aendern liesse sie sich nur, indem man den Build anfasst —
 #: und beim naechsten `npm run build` waere es wieder weg (28.08.2026).
-DJANGOBASE_KONFORM_TABELLEN_AUS = ('static/theatre/',)
+#:
+#: `static/vendor/theatre/` (seit 23.09.2026, Theatre.js-Kamera-Editor im
+#: BVH Studio) sind die unveraenderten Vendor-Bündel von Theatre.js
+#: (`studio.esm.js`) — dieselbe Fremdbibliothek, nur fertig bezogen statt
+#: selbst gebaut. `test_gebaute_tabellen_*` meldete ihre `<table >` (25.09.2026).
+DJANGOBASE_KONFORM_TABELLEN_AUS = ('static/theatre/', 'static/vendor/theatre/')
 
 from .djangobase_conf import DJANGOBASE  # noqa: E402,F401
 

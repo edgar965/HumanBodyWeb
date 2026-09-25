@@ -99,6 +99,7 @@ class G9kleidhumanbody:
             teil['name'] = folger.name
             teil['stufen'] = netz['stufen']
             teil['knochen'] = None
+            teil['zweiseitig'] = bool(eintrag.get('eigen'))   # wie `g9garderobe._kleid`
             # Stoffschwung auch auf HumanBody (20.09.2026, Edgar: „das kleid muss nach
             # unten animieren"): `netz['stoff']` traegt bereits den HumanBody-Kaefig und
             # die Freiheit gegen die HumanBody-Haut (`folgernetz` mit `koerper`). Was

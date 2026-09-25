@@ -140,6 +140,12 @@ class G9garderobeapi:
             teil['name'] = folger.name
             teil['stufen'] = netz['stufen']
             teil['knochen'] = lage.knochen if lage is not None else None
+            # Eigene Stücke (GC, MakeHuman, OBJ) sind EINE Stofffläche wie die live
+            # gebauten (`stoffabruf.js`: DoubleSide) — an Aufschlag, Falte und offenem
+            # Schaft sieht man die Innenseite; nur von vorn gezeichnet stand dort ein
+            # Loch (25.09.2026, `ProjektTemp/gcstuecke/durchsicht.py`: Socken, Stiefel,
+            # Achseln; 2–14 % der hautnahen Flächen zeigen zur Haut).
+            teil['zweiseitig'] = bool(eintrag.get('eigen'))
             antwort_teile.append(teil)
         return {'kennung': kennung, 'teile': antwort_teile,
                 'boden': round(hoch[1], 4), 'stufen': stufen,

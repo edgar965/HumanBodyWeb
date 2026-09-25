@@ -249,6 +249,20 @@ class FormpresetsTest(SimpleTestCase):
         kurz = Vorbildgruppen.werte('slipper', 'Sockslacefrill', {'shoe.width': 1.061})
         self.assertEqual(kurz['boot.height'], Vorbildgruppen.SOCKE_KURZ)
 
+    def test_eine_als_slipper_gedeutete_stiefelette_wird_stiefelette(self):
+        """Edgar (25.09.2026): „Boots-Ankle … voellig unfoermig" — die Fersenkappe (1,103 der
+        Knoechelhoehe) steht ueber dem Knoechel, der Schaft (unter 1,15) aber nicht hoch genug fuer
+        `Schuhdeutung`; als Slipper kappte der Bau sie auf 0,32 und baute einen Stoffslipper. Ein
+        echter Slipper (0,45) bleibt Halbschuh aus Stoff. Sabotage: `FERSE_STIEFELETTE` auf 10 -> rot."""
+        from GarmentCode.vorbildgruppen import Vorbildgruppen
+
+        gemessen = {'shoe.quarter_height': 1.103, 'shoe.length': 1.0, 'shoe.width': 0.95}
+        werte = Vorbildgruppen.werte('slipper', 'Boots Ankle', gemessen)
+        pfade = ('meta.feet', 'shoe.quarter_height', 'shoe.material', 'shoe.width')
+        self.assertEqual([werte.get(p) for p in pfade], ['Stiefel', 0.6, None, 0.95])
+        slipper = Vorbildgruppen.werte('slipper', 'Mj-Shoes', dict(gemessen, **{'shoe.quarter_height': 0.45}))
+        self.assertEqual([slipper['meta.feet'], slipper['shoe.material']], ['Halbschuh', 'cloth'])
+
     def test_jedes_gemessene_vorbild_erscheint_genau_einmal(self):
         alle = Vorbildpresets.alle()
         if not alle:

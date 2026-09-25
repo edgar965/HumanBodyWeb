@@ -91,10 +91,18 @@ class G9lagenanfrage:
         innen, aussen = self.lagen.einordnen(kaefig, andere)
         # Ein GarmentCode-Stueck ist EINE Stofflage — ohne `aussenlage` (24.09.2026,
         # `Genesis9/lagenflaeche.py`: 22 % der Kleidpunkte fielen dort heraus).
+        # Dasselbe gilt für die EIGENEN Stücke der zweiten Bibliothek (GarmentCode
+        # gebacken, MakeHuman, OBJ — 25.09.2026): ein Netz, keine Innenlage.
         unten = [(k, p) for k, p, _s in andere if k in innen]
         flaeche = self.lagen.flaeche([p for _k, p in unten],
-                                     einlagig=[k.startswith(self.GC) for k, _p in unten])
+                                     einlagig=[self._einlagig(k) for k, _p in unten])
         return flaeche, innen, aussen
+
+    def _einlagig(self, kennung):
+        if kennung.startswith(self.GC):
+            return True
+        from Genesis9.garderobe import G9garderobe
+        return bool((G9garderobe.eintrag(kennung) or {}).get('eigen'))
 
     def _kaefig(self, kennung, stile, regler):
         u"""Der gehobene Kaefig eines getragenen Stuecks — aus dem Vorrat oder gerechnet."""

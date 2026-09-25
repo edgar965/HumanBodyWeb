@@ -5,6 +5,8 @@ import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
 import { Umfaerbung } from './umfaerbung.js';
+import { Stoffwerte } from './stoffwerte.js';
+import { Reiterzuordnung } from './reiterzuordnung.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -111,6 +113,7 @@ export class Genesis9kleidung {
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
         Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);    // eigene Farbe (24.09.2026)
+        Stoffwerte.stueck(inst, kennung, inst.kleidung[kennung]);    // Rauheit, Metall, Gewebe (25.09.2026)
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);
         Genesis9kleidung.melden(inst, kennung, true);
         return daten.teile?.length || 0;
@@ -129,7 +132,7 @@ export class Genesis9kleidung {
      */
     static melden(inst, kennung, angezogen) {
         Stueckereignis.melden(inst, kennung, angezogen);
-        return Object.keys(inst?.clothMeshes || {}).some((schluessel) => schluessel.startsWith('gc_'));
+        return Object.keys(inst?.clothMeshes || {}).some((schluessel) => Reiterzuordnung.gcLive(schluessel));
     }
 
     /** Ausziehen; `neu`: die Figur wird ohnehin neu gebaut (Griffpose, eigene Knochen). */

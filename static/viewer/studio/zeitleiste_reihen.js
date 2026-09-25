@@ -9,8 +9,9 @@
  * Hin- und Rueckrechnung MUESSEN dieselbe Reihenliste benutzen — sonst greift man
  * neben den Clip. Genau darum stehen sie jetzt in einer Klasse.
  */
-import { state, TRACK_HEIGHT, RULER_HEIGHT } from './state.js';
+import { state, RULER_HEIGHT } from './state.js';
 import { Modellgruppen } from './modellgruppen.js';
+import { Spurhoehe } from './spurhoehe.js';
 
 export class Reihen {
     /**
@@ -38,20 +39,32 @@ export class Reihen {
         }
     }
 
+    /**
+     * Reihen mit Lage: `[{reihe, y, h}]`. Seit dem 25.09.2026 hat jede Spur ihre
+     * eigene Höhe (`Spurhoehe`) — `y` ist die Summe der Höhen darüber, nicht
+     * mehr `Nummer × TRACK_HEIGHT`. Zeichnen und Treffer nehmen BEIDE diese Liste.
+     */
+    static lagen() {
+        const spuren = state.project.tracks;
+        let y = RULER_HEIGHT;
+        return this.liste().map((reihe) => {
+            const h = Spurhoehe.reihe(reihe, spuren);
+            const lage = { reihe, y, h };
+            y += h;
+            return lage;
+        });
+    }
+
     /** Reihe unter einer Maus-Y-Position, oder null ausserhalb. */
     static beiY(my) {
-        const idx = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
-        const reihen = this.liste();
-        return (idx >= 0 && idx < reihen.length) ? reihen[idx] : null;
+        const lage = this.lagen().find((l) => my >= l.y && my < l.y + l.h);
+        return lage ? lage.reihe : null;
     }
 
     /** Obere Kante der Reihe einer Spur, oder -1 wenn sie nicht gezeigt wird. */
     static yFuerSpur(trackIdx) {
-        const reihen = this.liste();
-        for (let i = 0; i < reihen.length; i++) {
-            if (reihen[i].trackIdx === trackIdx) return RULER_HEIGHT + i * TRACK_HEIGHT;
-        }
-        return -1;
+        const lage = this.lagen().find((l) => l.reihe.trackIdx === trackIdx);
+        return lage ? lage.y : -1;
     }
 
     /**
@@ -62,7 +75,8 @@ export class Reihen {
      * 14 Reihen versteckte elf davon, ohne Scrollbalken.
      */
     static noetigeHoehe(rahmen) {
-        return Math.max(rahmen.clientHeight,
-                        RULER_HEIGHT + this.liste().length * TRACK_HEIGHT);
+        const lagen = this.lagen();
+        const letzte = lagen[lagen.length - 1];
+        return Math.max(rahmen.clientHeight, letzte ? letzte.y + letzte.h : RULER_HEIGHT);
     }
 }

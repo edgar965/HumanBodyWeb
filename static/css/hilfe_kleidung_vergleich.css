@@ -1,0 +1,67 @@
+/* Hilfe -> Kleidung -> Vergleich: vier Bibliotheken in Spalten, Schritte in Zeilen.
+ *
+ * Die Tabelle ist `djangobase/_tabelle.html` (Gitter aus `tabellen.css`); hier
+ * nur, was diese Seite braucht. Eigene Datei, weil `hilfe_kleidung.css` schon
+ * an der Grenze von 300 Zeilen steht (`struktur.md`). Die Karten nutzen
+ * `.schicht-karte` von dort.
+ */
+
+.doku-seite .schritte-prinzip {
+    display: grid; gap: 1rem; margin: 1rem 0 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+/* Je Bibliothek eine Randfarbe an der Karte. */
+.doku-seite .schritte-mh  { border-top: 3px solid #8A5A00; }
+.doku-seite .schritte-g9  { border-top: 3px solid #1F7A6D; }
+.doku-seite .schritte-gc  { border-top: 3px solid #3F5FA8; }
+.doku-seite .schritte-uma { border-top: 3px solid #8A3F8F; }
+
+.kleidung-schritte { min-width: 64rem; }
+.kleidung-schritte td { vertical-align: top; }
+.kleidung-schritte td strong { display: block; }
+.kleidung-schritte .schritt-genau { font-size: .82em; opacity: .75; margin-top: .2rem; }
+.kleidung-schritte .schritt-genau code { font-size: .95em; overflow-wrap: anywhere; }
+.kleidung-schritte td.schritt-erklaerung { font-style: italic; opacity: .85; }
+
+/* Abschnittszeile (`data-gruppe`): eine Zelle über die volle Breite. */
+.kleidung-schritte tr.schritte-gruppe td {
+    font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    padding-top: .8rem; background: rgba(128, 138, 152, .14);
+}
+
+/* Empfehlung (25.09.2026): Prosa statt Kacheln — `.schicht-karte` ist für schmale
+ * Prinzip-Karten gebaut, hier soll sie die volle Breite nehmen und lesbar bleiben. */
+.kleidung-empfehlung {
+    margin: 1rem 0; padding: 1.2rem 1.5rem; max-width: none;
+}
+.kleidung-empfehlung h3 { margin-top: 0; }
+.kleidung-empfehlung p { margin: 0 0 .8rem; line-height: 1.55; }
+.kleidung-empfehlung p:last-child { margin-bottom: 0; }
+.kleidung-empfehlung code { overflow-wrap: anywhere; }
+
+/* Eigenes Stück (25.09.2026): Formular im Raster, Ergebnis mit zwei Probebildern. */
+.doku-seite .eigenstueck-formular {
+    display: grid; gap: .6rem 1.2rem; margin: 1rem 0;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+.eigenstueck-formular label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; }
+.eigenstueck-formular label:has(input[type=checkbox]) { flex-direction: row; align-items: center; }
+/* Native Felder erben das Theme nicht — sonst helle Schrift auf weißem Grund
+ * (gemessen am <select>: rgb(224,224,224) auf rgb(255,255,255), `kontrast-lesbarkeit.md`). */
+.eigenstueck-formular input[type=text], .eigenstueck-formular input[type=number],
+.eigenstueck-formular input[type=file], .eigenstueck-formular select {
+    background: var(--bg-secondary, #1a1a2e); color: var(--db-fg, #e0e8f0);
+    border: 1px solid var(--border, #2a2a4a); border-radius: 4px; padding: .3rem .45rem;
+    color-scheme: dark;
+}
+.eigenstueck-formular option { background: var(--bg-secondary, #1a1a2e); color: var(--db-fg, #e0e8f0); }
+.eigenstueck-formular ::placeholder { color: var(--text-muted, #888); }
+.eigenstueck-knopfzeile { grid-column: 1 / -1; display: flex; gap: 1rem; align-items: center; }
+.eigenstueck-stand { font-size: .9rem; opacity: .85; }
+.eigenstueck-bilanz { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; }
+.eigenstueck-bilanz dt { font-weight: 600; }
+.eigenstueck-bilanz dd { margin: 0; overflow-wrap: anywhere; }
+.eigenstueck-warnung { grid-column: 1 / -1; color: #e0a040; }
+.eigenstueck-proben figure { margin: 1rem 0; }
+.eigenstueck-proben img { width: 100%; height: auto; border-radius: 6px; }

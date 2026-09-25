@@ -30,6 +30,12 @@ import { Projektdatei } from './project.js';
 import { Sitzung } from './sitzung.js';
 import { Studiostart } from './studiostart.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzstufe } from '../gemeinsam/netzstufe.js';
+
+// Strg+Alt+H: hohe Auflösung — bis 25.09.2026 nur in Szene und Modellseite angebunden,
+// im Studio wirkte die Taste nicht. Umschalten lädt neu, die Sitzung stellt das Projekt her.
+// Der Hinweis unten rechts steht immer da (Edgar: „schreibe die Tastenkombination unten rechts").
+Netzstufe.einrichten(window, null, { hinweis: true });
 
 Protokoll.debug('BVH Studio', 'v2.1 geladen (ES-Module, Klassen)');
 

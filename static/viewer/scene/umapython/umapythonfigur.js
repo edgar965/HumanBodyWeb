@@ -16,6 +16,7 @@ export class UmapythonFigur extends UmapythonModell {
             ...Figurablage.grunddaten(this),
             rasse: this.rasse,
             dna: { ...this.dna },
+            kleidung: [...this.kleidung],
         };
     }
 
