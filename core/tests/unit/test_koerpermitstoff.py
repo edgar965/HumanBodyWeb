@@ -152,10 +152,10 @@ class BrowserTest(SimpleTestCase):
     databases = set()
 
     def test_der_browser_schickt_die_getragenen_ohne_das_neue(self):
-        drapieren = _lies('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
+        drapieren = _lies('static', 'viewer', 'charakter', 'garmentcode_drapieren.js')
         self.assertIn("document.getElementById('gc-ueber-getragene')?.checked !== false", drapieren)
         self.assertIn('GarmentcodeAblage.getragen(figur?.inst || figur, stueck)', drapieren)
-        ablage = _lies('static', 'viewer', 'scene', 'garmentcode_ablage.js')
+        ablage = _lies('static', 'viewer', 'charakter', 'garmentcode_ablage.js')
         stelle = ablage.index('static getragen(inst, ausser = null)')
         block = ablage[stelle : ablage.index('static vergessen', stelle)]
         self.assertIn('GarmentcodeAnziehen.schluessel(ausser)) continue', block)

@@ -89,8 +89,10 @@ export async function populateProperties(charId) {
     const makehuman = inst.quelle === 'makehuman';
     const umapython = inst.quelle === 'umapython';
     const genesis9 = inst.quelle === 'genesis9';
+    // „Ausstattung"/„Assets" bleibt bei Genesis 9 sichtbar (26.09.2026) — sie
+    // zaehlt `inst.clothMeshes`/`inst.hairMesh`, das fuehrt Genesis 9 genauso.
     Eigenschaftenbereiche.humanbodyTeile(!uma && !smpl && !makehuman && !umapython
-                                         && !genesis9);
+                                         && !genesis9, genesis9);
     Eigenschaftenbereiche.umaGarderobe(uma ? inst : null);
     Eigenschaftenbereiche.genesis9Garderobe(genesis9 ? inst : null);
     // Eine MakeHuman-Figur (06.09.2026) bringt ihre eigene Garderobe mit —
@@ -171,11 +173,16 @@ export async function populateProperties(charId) {
 /**
  * Reiter, Animation und Kleidungsstück, die diese Figur zuletzt hatte
  * (`Figurmerker`). Früher sprang jede Auswahl auf „Eigenschaften"; wer im
- * Animation-Reiter die Figur wechselte, musste zurückklicken. Eine Figur ohne
- * Merkzettel lässt den Reiter, wo er ist.
+ * Animation-Reiter die Figur wechselte, musste zurückklicken. Eine Figur mit
+ * eigenem Merkzettel lässt den Reiter, wo er ist — eine Figur OHNE (frisch
+ * hinzugefügt, noch nie ausgewählt) springt auf „Eigenschaften" (25.09.2026,
+ * Edgar: „wenn ich ein Modell auswähle, soll der Tab zu den Eigenschaften des
+ * Modells springen"): sonst blieb z. B. der GarmentCode-Reiter der VORHER
+ * gewählten Figur stehen, und die neue SMPL-X-Figur zeigte dort nichts von
+ * sich — kein Fehler, aber leer und verwirrend.
  */
 function _gemerktesHerstellen(charId) {
-    const tab = Figurmerker.tab(charId);
+    const tab = Figurmerker.tab(charId) || 'eigenschaften';
     if (tab && document.querySelector(`.panel-tab[data-tab="${tab}"]`)) switchTab(tab);
     fn.animationMarkieren?.(Figurmerker.animation(charId)?.name || null);
     const kleid = Figurmerker.kleider(charId);

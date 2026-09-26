@@ -699,6 +699,21 @@
                     Charakter auswählen
                 </div>
                 <div id="prop-content" class="hb-versteckt">
+                    <!-- Assets (body context) -->
+                    {% comment %}Ganz am Anfang des Reiters (Edgar, 26.09.2026: „ich sehe die
+                    Ausstattung Sektion nicht, mach die ganz am Anfang des Modell Tabs"), vorher
+                    stand sie nach allen Figur-Bereichen. Alle Bereiche dieses Reiters klappen wie
+                    „Augen · Wimpern" (Edgar, 12.09.2026: „FORMAT des Zuklappbaren bereichs … für
+                    alle, also auch Körper, gesicht usw"): `panel-section` + `h3` +
+                    `panel-body`.{% endcomment %}
+                    <div class="panel-section prop-section" id="prop-equipped-section">
+                        <h3>Assets <span class="chevron">&#9660;</span></h3>
+                        <div class="panel-body">
+                            <ul id="prop-equipped-list">
+                                <li class="equipped-empty">Keine Objekte</li>
+                            </ul>
+                        </div>
+                    </div>
                     <!-- Daz-Stück: Teilnetze und Farben je Materialgruppe (`dazeigenschaften.js`) —
                          oben, weil die Figur-Bereiche darunter bei Genesis 9 sichtbar bleiben -->
                     <div class="prop-section hb-versteckt" id="prop-daz-section">
@@ -716,18 +731,6 @@
                     {% include "_umapython_eigenschaften.html" %}
                     {% include "_genesis9_eigenschaften.html" %}
                     {% include "_makehuman_eigenschaften.html" %}
-                    <!-- Equipped Items (body context) -->
-                    {% comment %}Alle Bereiche dieses Reiters klappen wie „Augen · Wimpern"
-                    (Edgar, 12.09.2026: „FORMAT des Zuklappbaren bereichs … für alle, also
-                    auch Körper, gesicht usw"): `panel-section` + `h3` + `panel-body`.{% endcomment %}
-                    <div class="panel-section prop-section" id="prop-equipped-section">
-                        <h3>Ausstattung <span class="chevron">&#9660;</span></h3>
-                        <div class="panel-body">
-                            <ul id="prop-equipped-list">
-                                <li class="equipped-empty">Keine Objekte</li>
-                            </ul>
-                        </div>
-                    </div>
                     <!-- Garment Properties (garment context) -->
                     <div class="prop-section hb-versteckt" id="prop-garment-section">
                         <div class="prop-section-title">Garment Eigenschaften</div>
@@ -2153,7 +2156,7 @@
 
 {% block extra_scripts %}
 {% include "_importmap.html" with subdivide=1 %}
-{# Eine Anfrage statt 230; abschaltbar unter Einstellungen -> Szene. Der Einstieg ist 'viewer/scene/main.js' (Buendel: core/dienste/modulbuendel.py) — der Name steht hier, damit ein Pruefer den Weg von der Vorlage aus findet. #}
+{# Eine Anfrage statt 230; abschaltbar unter Einstellungen -> Szene. Der Einstieg ist 'viewer/charakter/main.js' (Buendel: core/dienste/modulbuendel.py) — der Name steht hier, damit ein Pruefer den Weg von der Vorlage aus findet. #}
 <script type="module" src="{% szenenskript %}"></script>
 <script>
 // Panel resize handle

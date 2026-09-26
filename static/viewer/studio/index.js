@@ -25,7 +25,7 @@ import './kontextmenue_protokoll.js';
 // 22.09.2026, Bild: zersplittertes Kleid auf einer riesigen Kugel). Die
 // Szene-Seite hatte den Zuhörer schon (`scene/skeleton.js`), das Studio nie
 // — derselbe Fehler wie bei `garmentcodebindung.js` (siehe `studio.md`).
-import '../scene/garmentcode_nachbindung.js';
+import '../charakter/garmentcode_nachbindung.js';
 import { Projektdatei } from './project.js';
 import { Sitzung } from './sitzung.js';
 import { Studiostart } from './studiostart.js';

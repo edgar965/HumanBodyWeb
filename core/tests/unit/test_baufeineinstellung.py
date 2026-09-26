@@ -146,7 +146,7 @@ class DieKetteReichtDieWerteDurch(TestCase):
         self.assertIn('.anlegen(punkte, anliegen_mm, fest)', nacharbeit)
 
     def test_das_js_haengt_beide_werte_an_die_anfrage(self):
-        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene', 'garmentcode_drapieren.js')
+        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'charakter', 'garmentcode_drapieren.js')
         self.assertIn('GarmentcodeBauregler.anhaengen(daten)', quelle)
 
     def test_die_vorlage_hat_beide_regler(self):
@@ -158,6 +158,6 @@ class DieKetteReichtDieWerteDurch(TestCase):
     def test_js_und_python_kennen_dieselben_vorgaben(self):
         """Zwei Vorgaben, die auseinanderlaufen, zeigen einen Wert an und
         bauen einen anderen."""
-        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene', 'garmentcode_bauregler.js')
+        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'charakter', 'garmentcode_bauregler.js')
         self.assertIn('HAUTABSTAND_VORGABE = %.1f' % Baufeineinstellung.HAUTABSTAND_VORGABE, quelle)
         self.assertIn('AUFLOESUNG_VORGABE = %.1f' % Baufeineinstellung.AUFLOESUNG_VORGABE, quelle)

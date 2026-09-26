@@ -8,7 +8,7 @@ import { Testzustand } from './testzustand.js';
  * eine Gruppe pro Skelett.
  *
  * `Testszene` und nicht `Szenenaufbau` — der Name ist in
- * `static/viewer/scene/szenenaufbau.js` schon für die Modellseite vergeben, und
+ * `static/viewer/charakter/szenenaufbau.js` schon für die Modellseite vergeben, und
  * zwei Klassen desselben Namens meldet `namens-dubletten`.
  *
  * Aus aufbau.js herausgelöst (Umbau 27.08.2026, Befund `jsfunktionen`:

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GarmentcodeAnziehen } from '../scene/garmentcode_anziehen.js';
+import { GarmentcodeAnziehen } from '../charakter/garmentcode_anziehen.js';
 import { Garmentcodestueck } from './garmentcodestueck.js';
 import { Protokoll } from './protokoll.js';
 

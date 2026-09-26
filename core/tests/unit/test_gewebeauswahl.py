@@ -121,21 +121,21 @@ class GewebeartenTest(SimpleTestCase):
         self.assertLess(stelle, vorlage.index('"gc-faeden"'))
 
     def test_das_material_haengt_die_auswahl_ein(self):
-        material = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_material.js')
+        material = GewebeartenTest._lies('static', 'viewer', 'charakter', 'garmentcode_material.js')
         self.assertIn('GarmentcodeGewebe.einhaengen(GarmentcodeMaterial)', material)
         self.assertIn('gewebe: { ...Garmentstoff.GEWEBE }', material)
-        auswahl = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_gewebe.js')
+        auswahl = GewebeartenTest._lies('static', 'viewer', 'charakter', 'garmentcode_gewebe.js')
         # Beim Seitenstart (synthetisches `change`) keine Vorgaben setzen.
         self.assertIn('if (ereignis.isTrusted)', auswahl)
 
     def test_das_gewebe_geht_in_die_szenendatei_und_zurueck(self):
-        stoff = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_stoff.js')
+        stoff = GewebeartenTest._lies('static', 'viewer', 'charakter', 'garmentcode_stoff.js')
         self.assertIn('gewebe: m.userData?.gewebe ? { ...m.userData.gewebe } : null', stoff)
         self.assertIn("if (werte.gewebe && typeof werte.gewebe === 'object')", stoff)
         # Ein Stueck ohne UV bekommt keine Karte, behaelt aber seine Angabe.
         self.assertIn('material.userData.gewebe = wahl', stoff)
         # Die Ablage schreibt `werte()` unveraendert — das Gewebe kommt mit.
-        ablage = GewebeartenTest._lies('static', 'viewer', 'scene', 'garmentcode_ablage.js')
+        ablage = GewebeartenTest._lies('static', 'viewer', 'charakter', 'garmentcode_ablage.js')
         self.assertIn('...werte,', ablage)
 
     @staticmethod

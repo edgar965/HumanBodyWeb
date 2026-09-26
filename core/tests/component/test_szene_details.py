@@ -17,7 +17,7 @@ import re
 from django.conf import settings
 from django.test import Client, TestCase
 
-JS = settings.BASE_DIR / 'static' / 'viewer' / 'scene' / 'detailbereiche.js'
+JS = settings.BASE_DIR / 'static' / 'viewer' / 'charakter' / 'detailbereiche.js'
 BEREICHE = ('haut', 'augen', 'brauen', 'mund', 'naegel')
 KLAPPBAR = (
     'prop-transform-section',

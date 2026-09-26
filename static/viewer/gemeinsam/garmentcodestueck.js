@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { GarmentcodeGeometrie } from '../scene/garmentcode_geometrie.js';
-import { Garmentstoff } from '../scene/garmentcode_stoff.js';
+import { GarmentcodeGeometrie } from '../charakter/garmentcode_geometrie.js';
+import { Garmentstoff } from '../charakter/garmentcode_stoff.js';
 import { Protokoll } from './protokoll.js';
 
 /**

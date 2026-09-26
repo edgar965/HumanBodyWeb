@@ -25,12 +25,15 @@ class KleiderEinstellungenSeite(TemplateView):
     }
 
     def get_context_data(self, **kwargs):
+        from ..dienste.garmentbauart import Garmentbauart
         from ..models import AppSettings
 
         prefs = dict(AppSettings.load().ui_prefs or {})
         for name, wert in self.VORGABEN.items():
             prefs[name] = '1' if str(prefs.get(name, wert)) in ('1', 'True', 'true') else '0'
-        return dict(super().get_context_data(**kwargs), prefs=prefs)
+        # GarmentCode-Bau (25.09.2026): eine Wahl, kein Schalter.
+        return dict(super().get_context_data(**kwargs), prefs=prefs,
+                    gc_bauart=Garmentbauart.aus(prefs), gc_bauarten=Garmentbauart.WAHLEN)
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heisst sonst ``view``.

@@ -63,6 +63,9 @@ SMPL_MODELS_DIR = VIDEOTOBVH_ROOT / 'models' / 'smpl'
 # (`VideoToBVH/wrappers/baum.py`, `SMPLX_ORTE`) — Netz, Skelett und Haut der
 # SMPL-Figur kommen seither von hier (`core/dienste/smplxrig.py`).
 SMPLX_MODELS_DIR = OBJECTS_ROOT / 'Archiv' / 'SMPL-X'
+# BEDLAM-Hauttexturen (26.09.2026, Meshcapade/MPI Tuebingen, CC-BY-NC-4.0,
+# `SMPL/HERKUNFT.md`) — von Edgar von Hand heruntergeladen, nicht im Repo.
+SMPLX_BEDLAM_DIR = OBJECTS_ROOT / 'SMPLX' / 'bedlam_body_textures_meshcapade'
 
 # ------------------------------------------------------------------ HumanBody
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'
@@ -85,6 +88,12 @@ HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 # (A:\Roomguest) liest sie von hier (core/api/figur_export.py, 05.09.2026).
 HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
+# Modell-Export aus dem Kontextmenü der Charakterliste (26.09.2026,
+# Docu/konzept_modellexport.md): Vorgabe-Zielordner, wählbar im Dialog.
+HUMANBODY_MODELLEXPORT_VORGABE_DIR = BASE_DIR / 'output' / 'Export'
+#: Blender-Skript, das eine GLB in eine .blend umschreibt — nur gerufen, wenn
+#: „.blend" im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
+MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'
 
 # ------------------------------------------------------------------- Effekte
 # Pipeline „Kleid + Wind" (Process Videos -> Effekte, 12.09.2026): das

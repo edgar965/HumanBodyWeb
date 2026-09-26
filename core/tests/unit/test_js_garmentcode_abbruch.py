@@ -23,7 +23,7 @@ from ..jsmodul import Jsmodul
 #: des Einstiegs (sonst faende `serverabruf.js` seine djangoBase-Vorlage nicht).
 EINSTIEG = settings.BASE_DIR / '_wegwerf' / 'js_abbruch_probe.js'
 EINSTIEG_TEXT = (
-    "export { GarmentcodeAbbruch } from '../static/viewer/scene/garmentcode_abbruch.js';\n"
+    "export { GarmentcodeAbbruch } from '../static/viewer/charakter/garmentcode_abbruch.js';\n"
     "export { Antwortnachholen } from '../static/viewer/gemeinsam/antwortnachholen.js';\n"
 )
 
@@ -97,7 +97,7 @@ class GarmentcodeAbbruchTest(SimpleTestCase):
         self.assertTrue(ausgabe.get('ok'), ausgabe)
 
     def test_der_knopf_haengt_an_beiden_wegen(self):
-        statik = settings.BASE_DIR / 'static' / 'viewer' / 'scene'
+        statik = settings.BASE_DIR / 'static' / 'viewer' / 'charakter'
         for modul in ('garmentcode_drapieren.js', 'garmentcode_schnitt.js',
                       'garmentcode_gemeinsam.js'):
             quelle = open(statik / modul, encoding='utf-8').read()

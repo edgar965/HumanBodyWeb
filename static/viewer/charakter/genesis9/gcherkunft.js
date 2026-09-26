@@ -64,6 +64,20 @@ export class Gcherkunft {
         for (let i = 0; i < Gcherkunft.VERSUCHE && !bereit(); i += 1) {
             await new Promise((weiter) => setTimeout(weiter, Gcherkunft.WARTEN_MS));
         }
+        // NIE BLIND ANWENDEN (25.09.2026, Edgar: „ich baue gerade eine Hose
+        // für SMPL-X, es wird aber ein Kleid gebaut"): Ist die Vorlage
+        // inzwischen NICHT die des Stücks — Warteschleife ausgelaufen, oder
+        // der Nutzer hat selbst weitergeklickt —, gehören `herkunft.werte`
+        // NICHT auf den jetzt geladenen Regler. `meta.bottom`/`meta.upper`
+        // gelten für JEDE Vorlage (`Gedaechtniswahl.reglerwert`), und ein
+        // gleichnamiger Pfad wie `pants.length` existiert bei mehreren
+        // Stücken — beides überschrieb sonst lautlos die falsche Vorlage
+        // (Kleid-Werte in einer Hose auf SMPL-X).
+        if (document.getElementById('gc-vorlage')?.value !== herkunft.vorlage) {
+            console.warn('Gcherkunft: Vorlage beim Öffnen von', kennung,
+                        'nicht übernommen (inzwischen gewechselt) — Werte NICHT angewendet');
+            return false;
+        }
         GarmentcodeVorbilder._reglerStellen(herkunft.werte || {});
         Gcherkunft.material(herkunft);
         return true;

@@ -29,6 +29,22 @@
             liegen, gilt die echte Flächennormale.</span>
     </div>
 </div>
+<div class="settings-section">
+    <h3>GarmentCode bauen</h3>
+    <div class="settings-row">
+        <label for="garmentcode_drapierung">Drapierung:</label>
+        <select name="garmentcode_drapierung" id="garmentcode_drapierung">
+            {% for wert, text in gc_bauarten.items %}
+            <option value="{{ wert }}"{% if wert == gc_bauart %} selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+        </select>
+        <span class="hint">Wie SMPL: GarmentCodes Kollisionsabstand (2,5 mm), danach keine Nacharbeit — der
+            Stoff fällt nach dem Schnitt, wie auf dem SMPL-Körper. Mit Nacharbeit: 0,5 mm Abstand, danach
+            werden eingesunkene Punkte herausgeschoben, das Stück auf „An die Haut ziehen" angelegt und Hosen
+            an den Schritt gezogen — der Stoff folgt der Haut (Brustform). Gilt für jeden Bau im
+            GarmentCode-Reiter, einzeln und gemeinsam.</span>
+    </div>
+</div>
 {% endblock %}
 
 {% block einstellungen_nachtrag %}

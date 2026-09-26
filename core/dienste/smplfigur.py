@@ -67,6 +67,32 @@ class Smplfiguren:
         'm_smpl_average_A40': {'geschlecht': 'male', 'smpl': True},
     }
 
+    #: Hautfarbige Fotofläche für den ganzen Körper (25.09.2026, „SMPL-X-
+    #: Texturen") — abgeleitet aus den Meshcapade-Beispieltexturen für
+    #: SMPL/SMPL-X (`f_01_alb.002.png`/`m_01_alb.002.png`, SMPL-Body
+    #: CC-BY-4.0, https://github.com/Meshcapade/SMPL_texture_samples):
+    #: Gesicht/Hände/Füße sind das Originalfoto, die dort aufgedruckte
+    #: Beispiel-Kleidung (Torso/Arme/Beine) wurde durch die echte
+    #: Hautfarbe der angrenzenden Fotostellen ersetzt (Inpainting,
+    #: `ProjektTemp/_wegwerf/smplxuv/hautfuellen2.py`) — eine erfundene
+    #: Ausstrahlung ins Nichts wäre schlimmer als eine glatte Fläche.
+    TEXTUR_DATEI = {'female': 'weiblich_haut.jpg', 'male': 'maennlich_haut.jpg'}
+
+    @classmethod
+    def textur_pfad(cls, geschlecht):
+        """Pfad zur Hautfoto-Textur — oder `None`, wenn sie fehlt."""
+        datei = cls.TEXTUR_DATEI.get(str(geschlecht))
+        if not datei:
+            return None
+        pfad = os.path.join(cls.ordner_texturen(), datei)
+        return pfad if os.path.isfile(pfad) else None
+
+    @staticmethod
+    def ordner_texturen():
+        from django.conf import settings
+
+        return os.path.join(str(settings.SMPLX_MODELS_DIR), 'texturen')
+
     @staticmethod
     def ordner():
         from GarmentCode.entwurf import Entwurf
@@ -127,7 +153,60 @@ class Smplfiguren:
                     else os.path.isfile(os.path.join(cls.ordner(), name + '.yaml')),
                 }
             )
+        # Dahinter die GESPEICHERTEN SMPL-X-Figuren (`data/models/*.json` mit
+        # `quelle: smpl`, 25.09.2026 — bis dahin zeigte „Charakter hinzufuegen"
+        # im SMPL-X-Reiter nur den Katalog, ein gespeichertes Modell wie
+        # „SMPLX1" tauchte dort nie auf; Edgar musste es ueber „Datei laden"
+        # umgehen). `gespeichert: True`, der Dialog stellt sie in den zweiten
+        # Bereich (wie bei Genesis 9, `G9figur._gespeicherte`).
+        aus += cls._gespeicherte()
         return aus
+
+    @classmethod
+    def _gespeicherte(cls):
+        from ..dienste.modellkatalog import Modellkatalog
+
+        aus = []
+        for eintrag in Modellkatalog.gespeicherte():
+            if eintrag['quelle'] != 'smpl':
+                continue
+            figur = Modellkatalog.gespeichert(eintrag['name'], 'smpl')
+            if figur is None:
+                continue
+            aus.append(
+                {
+                    'name': eintrag['name'],
+                    'anzeige': eintrag['name'],
+                    'geschlecht': figur.get('geschlecht') or 'female',
+                    'smpl': True,
+                    'bytes': 0,
+                    'masse_vorhanden': False,
+                    'gespeichert': True,
+                }
+            )
+        return aus
+
+    @classmethod
+    def uv_felder(cls, dreiecke):
+        u"""`{uv, uv_dreiecke, uv_ursprung}` fuers Browsernetz — oder `None`,
+        wenn die UV-Datei fehlt oder die Topologie nicht passt (kein SMPL-X-
+        Netz). Nur fuer `smpl`-Koerper aufrufen (25.09.2026, „SMPL-X-
+        Texturen"); `Smplxuv` prueft die Dreieckszahl trotzdem selbst.
+        """
+        from SMPL.xuv import Smplxuv
+
+        if not Smplxuv.vorhanden():
+            return None
+        try:
+            uv, uv_dreiecke, ursprung = Smplxuv.teilen(dreiecke)
+        except ValueError as fehler:
+            logger.warning('SMPL-X-UV nicht anwendbar: %s', fehler)
+            return None
+        return {
+            'uv': uv.tolist(),
+            'uv_dreiecke': uv_dreiecke.tolist(),
+            'uv_ursprung': ursprung.tolist(),
+        }
 
     @classmethod
     def masse(cls, name):

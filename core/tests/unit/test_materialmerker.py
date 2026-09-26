@@ -42,11 +42,11 @@ def _quelle(*teile):
 
 
 def _merker():
-    return _quelle('static', 'viewer', 'scene', 'materialmerker.js')
+    return _quelle('static', 'viewer', 'charakter', 'materialmerker.js')
 
 
 def _prop():
-    return _quelle('static', 'viewer', 'scene', 'prop_garments.js')
+    return _quelle('static', 'viewer', 'charakter', 'prop_garments.js')
 
 
 def _linear(kanal):
@@ -136,14 +136,14 @@ class DieKetteZumSpeichernTest(SimpleTestCase):
     databases = set()
 
     def test_beide_speicherwege_rechnen_den_zustand_ein(self):
-        charakter = _quelle('static', 'viewer', 'scene', 'character.js')
-        ausgabe = _quelle('static', 'viewer', 'scene', 'szenenausgabe.js')
+        charakter = _quelle('static', 'viewer', 'charakter', 'character.js')
+        ausgabe = _quelle('static', 'viewer', 'charakter', 'szenenausgabe.js')
         self.assertIn('Garderobenstand.liste(this)', charakter)
         self.assertIn('garments: Garderobenstand.liste(figur),', ausgabe)
         self.assertNotIn('garments: figur.garments', ausgabe)
 
     def test_der_garderobenstand_liest_den_zustand(self):
-        stand = _quelle('static', 'viewer', 'scene', 'garderobenstand.js')
+        stand = _quelle('static', 'viewer', 'charakter', 'garderobenstand.js')
         self.assertIn('zustaende[Garderobenstand.VORSILBE + stueck.id]', stand)
         self.assertIn('Kleidungszustand.ausJson(zustand).zuJson()', stand)
 
@@ -151,7 +151,7 @@ class DieKetteZumSpeichernTest(SimpleTestCase):
         """Sonst überschriebe das Speichern die Werte einer älteren Datei
         mit Vorgaben, nur weil das Stück in dieser Sitzung nie gewählt war."""
         self.assertIn(
-            'if (!zustand) return stueck;', _quelle('static', 'viewer', 'scene', 'garderobenstand.js')
+            'if (!zustand) return stueck;', _quelle('static', 'viewer', 'charakter', 'garderobenstand.js')
         )
 
     def test_der_farbwaehler_zeigt_den_zustand_an(self):
@@ -175,7 +175,7 @@ class DieRegionsverschiebungKommtAnTest(SimpleTestCase):
     databases = set()
 
     def _zubehoer(self):
-        return _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')
+        return _quelle('static', 'viewer', 'charakter', 'charakter_zubehoer.js')
 
     def test_die_verschiebung_wird_angewandt(self):
         self.assertIn('_applyGarmentRegionOffsets(inst, key);', self._zubehoer())
@@ -193,14 +193,14 @@ class DieRegionsverschiebungKommtAnTest(SimpleTestCase):
         Anwendung beim Laden wirkungslos, weil der Wert nie in der Datei
         stünde.
         """
-        zustand = _quelle('static', 'viewer', 'scene', 'kleidungszustand.js')
+        zustand = _quelle('static', 'viewer', 'charakter', 'kleidungszustand.js')
         # Die Feldnamen entstehen als `'region' + region` — wörtlich steht
         # `regionTop` nirgends.
         self.assertIn("REGIONEN = ['Top', 'Upper', 'Mid', 'Lower', 'Bottom']", zustand)
         self.assertIn("daten['region' + region] = this['region' + region];", zustand)
         self.assertIn(
             'Kleidungszustand.ausJson(zustand).zuJson()',
-            _quelle('static', 'viewer', 'scene', 'garderobenstand.js'),
+            _quelle('static', 'viewer', 'charakter', 'garderobenstand.js'),
         )
 
     def test_kein_stiller_fang_mehr_in_dieser_datei(self):

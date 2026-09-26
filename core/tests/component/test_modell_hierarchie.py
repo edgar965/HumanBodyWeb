@@ -83,7 +83,7 @@ class ModellHierarchie(unittest.TestCase):
             self.assertIn('export class %s extends Modell {' % klasse, text)
             self.assertRegex(text, r'\n    async bauen\(', datei)
             self.assertNotIn('state.js', text, datei)
-            self.assertNotIn("from '../scene/", text, datei)
+            self.assertNotIn("from '../charakter/", text, datei)
 
     def test_humanbody_koerper_in_der_richtigen_reihenfolge(self):
         text = ModellHierarchie._text(GEMEINSAM / 'humanbodymodell.js')

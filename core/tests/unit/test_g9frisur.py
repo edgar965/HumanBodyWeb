@@ -119,7 +119,7 @@ class G9frisurTest(SimpleTestCase):
         from django.conf import settings
         urls = (settings.BASE_DIR / 'core' / 'urls_charakter.py').read_text(encoding='utf-8')
         self.assertIn("genesis9-figur/frisur/<str:name>/", urls)
-        statik = settings.BASE_DIR / 'static' / 'viewer' / 'scene'
+        statik = settings.BASE_DIR / 'static' / 'viewer' / 'charakter'
         haar = (statik / 'hair.js').read_text(encoding='utf-8')
         self.assertIn("if (inst.quelle === 'genesis9') { Genesis9frisur.waehlen(", haar)
         self.assertIn("Genesis9frisur.faerben(Genesis9frisur.netz(inst)", haar)

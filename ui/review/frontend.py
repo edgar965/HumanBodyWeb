@@ -13,7 +13,7 @@ BEREICHE = [
         'slug': 'frontend',
         'name': 'Frontend: Szene-Zustand und Retarget-Brücke',
         'dateien': [
-            'HumanBodyWeb/static/viewer/scene/state.js',
+            'HumanBodyWeb/static/viewer/charakter/state.js',
             'HumanBodyWeb/static/viewer/retarget_hybrid.js',
         ],
         'hinweis': (
@@ -102,9 +102,9 @@ BEREICHE = [
         'slug': 'scene_mhproxy',
         'name': 'Szene: MakeHuman-Proxy anpassen (Browser-Seite)',
         'dateien': [
-            'HumanBodyWeb/static/viewer/scene/mh_proxy.js',
-            'HumanBodyWeb/static/viewer/scene/mhproxy_anpassen.js',
-            'HumanBodyWeb/static/viewer/scene/mhproxynetz.js',
+            'HumanBodyWeb/static/viewer/charakter/mh_proxy.js',
+            'HumanBodyWeb/static/viewer/charakter/mhproxy_anpassen.js',
+            'HumanBodyWeb/static/viewer/charakter/mhproxynetz.js',
         ],
         'hinweis': (
             'Die Browser-Seite des Proxy-Fits: Der Nutzer waehlt ein '
@@ -140,8 +140,8 @@ BEREICHE = [
         'slug': 'scene_kleider',
         'name': 'Szene: Kleidung anlegen und anpassen',
         'dateien': [
-            'HumanBodyWeb/static/viewer/scene/kleider.js',
-            'HumanBodyWeb/static/viewer/scene/garments.js',
+            'HumanBodyWeb/static/viewer/charakter/kleider.js',
+            'HumanBodyWeb/static/viewer/charakter/garments.js',
         ],
         'hinweis': (
             'Zwei Wege fuer Kleidung in der Mehr-Charakter-Szene: '
@@ -170,8 +170,8 @@ BEREICHE = [
         'slug': 'scene_saveload',
         'name': 'Szene: speichern, laden, Charaktere',
         'dateien': [
-            'HumanBodyWeb/static/viewer/scene/save_load.js',
-            'HumanBodyWeb/static/viewer/scene/character.js',
+            'HumanBodyWeb/static/viewer/charakter/save_load.js',
+            'HumanBodyWeb/static/viewer/charakter/character.js',
         ],
         'hinweis': (
             'gatherSceneState sammelt, loadSceneFromData baut auf — dasselbe '

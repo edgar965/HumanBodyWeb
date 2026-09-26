@@ -214,13 +214,13 @@ class DieKetteReichtBisInDieSimulation(TestCase):
         self.assertIn('einstellungen=einstellungen', quelle)
 
     def test_das_js_haengt_die_abweichenden_werte_an(self):
-        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene', 'garmentcode_drapieren.js')
+        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'charakter', 'garmentcode_drapieren.js')
         self.assertIn('GarmentcodeSimulation.anhaengen(daten)', quelle)
 
     def test_die_vorsilbe_ist_auf_beiden_seiten_dieselbe(self):
         """`sim_` im JS und `'sim_' + schluessel` in Python — laufen sie
         auseinander, kommt kein einziger Wert an."""
-        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene', 'garmentcode_simulation.js')
+        quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'charakter', 'garmentcode_simulation.js')
         self.assertIn("VORSILBE = 'sim_'", quelle)
         python = self._quelle('Assets', 'GarmentCode', 'simulationsregler.py')
         self.assertIn("'sim_' + feld['schluessel']", python)

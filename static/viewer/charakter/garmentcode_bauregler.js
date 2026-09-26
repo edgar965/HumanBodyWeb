@@ -249,8 +249,11 @@ export class GarmentcodeBauregler {
             && feinheit !== GarmentcodeBauregler.AUFLOESUNG_VORGABE) {
             teile.push(`Netzfeinheit ${feinheit.toFixed(1).replace('.', ',')}×`);
         }
+        // Einstellungen → Kleider (25.09.2026) — nur wenn es NICHT die Vorgabe ist.
+        if (feineinstellung.wie_smpl === false) teile.push('mit Nacharbeit');
         const anliegen = Number(feineinstellung.anliegen_mm);
-        if (feineinstellung.anliegen_mm != null && Number.isFinite(anliegen)) {
+        if (!feineinstellung.wie_smpl && feineinstellung.anliegen_mm != null
+            && Number.isFinite(anliegen)) {
             teile.push(`an die Haut gezogen (${anliegen.toFixed(1).replace('.', ',')} mm)`);
         }
         return teile.length ? `, ${teile.join(', ')}` : '';

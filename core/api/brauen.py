@@ -13,7 +13,6 @@ import logging
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.http import require_GET
 
-from ..dienste.brauenbogen import Brauenbogen
 from ..dienste.brauendecal import Brauendecal
 
 logger = logging.getLogger('core')
@@ -27,9 +26,16 @@ class Brauenendpunkte:
         return 'male' if request.GET.get('geschlecht') == 'male' else 'female'
 
     @staticmethod
+    def quelle(request):
+        """`smplx` für die SMPL-X-Haut (25.09.2026), sonst HumanBody."""
+        return 'smplx' if request.GET.get('quelle') == 'smplx' else ''
+
+    @staticmethod
     @require_GET
     def fenster(request):
-        bogen = Brauenbogen.laden(Brauenendpunkte.geschlecht(request))
+        bogen = Brauendecal.bogen(Brauenendpunkte.geschlecht(request), Brauenendpunkte.quelle(request))
+        if not bogen:
+            return JsonResponse({'fehler': 'Kein Brauenbogen'}, status=404)
         return JsonResponse(
             {
                 'fenster': bogen['fenster'],
@@ -44,7 +50,7 @@ class Brauenendpunkte:
     @require_GET
     def bild(request):
         regler = Brauendecal.regler(request.GET)
-        pfad = Brauendecal.bild(Brauenendpunkte.geschlecht(request), regler)
+        pfad = Brauendecal.bild(Brauenendpunkte.geschlecht(request), regler, Brauenendpunkte.quelle(request))
         antwort = FileResponse(open(pfad, 'rb'), content_type='image/png')
         antwort['Cache-Control'] = Brauenendpunkte.CACHE
         return antwort

@@ -1,10 +1,10 @@
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
-import { GarmentcodeAblage } from '../scene/garmentcode_ablage.js';
+import { GarmentcodeAblage } from '../charakter/garmentcode_ablage.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 // Nebenwirkung des Imports: Genesis 9 baut sein Skelett nach dem Käfig mit der
 // feinen Stufe neu (`Skelettereignis`) — ohne diesen Hörer hinge das Kleid an
 // den alten Knochen und stünde in der Animation still (wie in der Szene, 19.09.2026).
-import '../scene/garmentcode_nachbindung.js';
+import '../charakter/garmentcode_nachbindung.js';
 
 /**
  * Spurgarmentcode — die GarmentCode-Stücke eines gespeicherten Genesis-9-Modells

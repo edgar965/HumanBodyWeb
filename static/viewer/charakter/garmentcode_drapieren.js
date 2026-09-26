@@ -36,6 +36,13 @@ export class GarmentcodeDrapierung {
         // drapiert wird, und die Knochengewichte fürs Anziehen.
         const daten = reiter.figurdaten(figur);
         daten.append('spezifikation', spezifikation);
+        // Die Vorlage (25.09.2026): Hose/Shorts/Anzug/Schuh brauchen das
+        // Hochziehen (Schritt an den Schritt) IMMER, auch bei „wie SMPL" —
+        // ohne Vorlage wusste der Server das an dieser Stelle nicht und
+        // baute die Hose ohne Nacharbeit: Beinabschluss blieb weit offen,
+        // Pluderhose statt Hose (Edgar, Screenshot).
+        const vorlage = document.getElementById('gc-vorlage')?.value;
+        if (vorlage) daten.append('vorlage', vorlage);
         // Hautabstand und Netzfeinheit aus den Reglern unter „Bauen"
         // (09.09.2026). Sie betreffen nur die Drapierung — deshalb hier und
         // nicht in `figurdaten`, das auch das Erzeugen eines Schnitts nutzt.

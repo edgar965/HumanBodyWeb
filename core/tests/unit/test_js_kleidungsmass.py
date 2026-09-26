@@ -86,7 +86,7 @@ class KleidungsmassTest(SimpleTestCase):
 
     def test_die_probe_ist_in_der_szene_registriert(self):
         from django.conf import settings
-        statik = settings.BASE_DIR / 'static' / 'viewer' / 'scene'
+        statik = settings.BASE_DIR / 'static' / 'viewer' / 'charakter'
         self.assertIn("import './kleidungsprobe.js';", (statik / 'boot.js').read_text(encoding='utf-8'))
         probe = (statik / 'kleidungsprobe.js').read_text(encoding='utf-8')
         self.assertIn('window.__kleidungsprobe = Kleidungsprobe;', probe)

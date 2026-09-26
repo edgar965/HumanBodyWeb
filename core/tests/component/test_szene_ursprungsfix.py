@@ -158,12 +158,12 @@ class DasUrsprungsfixDrahtformat(TestCase):
         self.assertLess(ursprung - boden, 300)
 
     def test_der_dispatch_ruft_den_ursprungsfix(self):
-        text = self.quelle('static', 'viewer', 'scene', 'menubar.js')
+        text = self.quelle('static', 'viewer', 'charakter', 'menubar.js')
         self.assertIn("case 'anim-origin-fix': Ursprungsfix.fragen(); break;", text)
         self.assertIn("import { Ursprungsfix } from './ursprungsfix.js';", text)
 
     def test_die_vorgabe_ist_der_radius_des_studios(self):
-        text = self.quelle('static', 'viewer', 'scene', 'ursprungsfix.js')
+        text = self.quelle('static', 'viewer', 'charakter', 'ursprungsfix.js')
         self.assertIn('static VORGABE_CM = 50;', text)
         self.assertIn("ENDPUNKT = '/api/retarget/save-bvh-effects/'", text)
         studio = self.quelle('static', 'viewer', 'studio', 'werkzeug_position.js')
@@ -175,7 +175,7 @@ class DasUrsprungsfixDrahtformat(TestCase):
             '{% include "_ursprungsfix_dialog.html" %}', self.quelle('templates', 'scene_config.html')
         )
         dialog = self.quelle('templates', '_ursprungsfix_dialog.html')
-        modul = self.quelle('static', 'viewer', 'scene', 'ursprungsfix.js')
+        modul = self.quelle('static', 'viewer', 'charakter', 'ursprungsfix.js')
         self.assertIn('id="ursprungsfix-radius" min="0" max="200"', dialog)
         for kennung in (
             'ursprungsfix-dialog',

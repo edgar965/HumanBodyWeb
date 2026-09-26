@@ -27,7 +27,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 CSS = settings.BASE_DIR / 'static' / 'css' / 'animationsbaum.css'
-GARDEROBE = settings.BASE_DIR / 'static' / 'viewer' / 'scene' / 'genesis9' / 'genesis9garderobe.js'
+GARDEROBE = settings.BASE_DIR / 'static' / 'viewer' / 'charakter' / 'genesis9' / 'genesis9garderobe.js'
 BILDAUSWAHL = settings.BASE_DIR / 'static' / 'viewer' / 'gemeinsam' / 'bildauswahl.js'
 
 

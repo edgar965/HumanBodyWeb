@@ -21,6 +21,12 @@ export class Eigenschaftenbereiche {
     static GENESIS9_AUCH = ['hair'];
     static HUMANBODY = ['prop-equipped-section', 'prop-bodytype-section',
                         'prop-details-section', 'prop-morphs-section'];
+    /** Aus HUMANBODY die IDs, die eine Genesis-9-Figur AUCH bekommt (26.09.2026,
+     *  Edgar: „ich sehe die Ausstattung Sektion nicht" auf einer Genesis-9-Figur):
+     *  „Ausstattung"/„Assets" zaehlt `inst.clothMeshes`/`inst.hairMesh` auf — das
+     *  fuehrt Genesis 9 genauso wie HumanBody. Body Type, Details und Morphs bleiben
+     *  HumanBody-Sache (Daz' eigene Regler stehen im Genesis-9-Bereich darueber). */
+    static HUMANBODY_GENESIS9_AUCH = ['prop-equipped-section'];
 
     /** Inhalt zeigen (`true`) oder den Platzhalter „Charakter auswählen". */
     static zeigen(zeigen) {
@@ -35,10 +41,13 @@ export class Eigenschaftenbereiche {
         Reiterfreigabe.anwenden(!!zeigen);
     }
 
-    /** Die HumanBody-Abschnitte (Ausstattung, Body Type, Morphs) zeigen oder verbergen. */
-    static humanbodyTeile(sichtbar) {
+    /** Die HumanBody-Abschnitte (Ausstattung, Body Type, Morphs) zeigen oder verbergen.
+     *  `genesis9`: die Ausnahmen aus `HUMANBODY_GENESIS9_AUCH` bleiben trotzdem sichtbar. */
+    static humanbodyTeile(sichtbar, genesis9 = false) {
         for (const id of Eigenschaftenbereiche.HUMANBODY) {
-            document.getElementById(id)?.classList.toggle('hb-versteckt', !sichtbar);
+            const zeigen = sichtbar
+                || (genesis9 && Eigenschaftenbereiche.HUMANBODY_GENESIS9_AUCH.includes(id));
+            document.getElementById(id)?.classList.toggle('hb-versteckt', !zeigen);
         }
     }
 

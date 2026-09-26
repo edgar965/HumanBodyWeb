@@ -125,13 +125,13 @@ class GarmentcodeZweiDTest(SimpleTestCase):
         self.assertIn('gc-knopfgruppe">Bauen<', quelle)
 
     def test_alle_fuenf_knoepfe_sind_verdrahtet(self):
-        _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode.js')
+        _, quelle = _lesen('static', 'viewer', 'charakter', 'garmentcode.js')
         for kennung, modus in GarmentcodeZweiDTest.KNOEPFE.items():
             self.assertIn("'%s': %s," % (kennung, modus), quelle)
         self.assertIn('GarmentcodeReiter.KNOEPFE', quelle)
 
     def test_der_ablauf_kennt_alle_moden(self):
-        _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode_ablauf.js')
+        _, quelle = _lesen('static', 'viewer', 'charakter', 'garmentcode_ablauf.js')
         anfang = quelle.index('static async dreid(')
         rumpf = quelle[anfang:]
         self.assertIn("modus === 'vorschau3d'", rumpf)
@@ -154,10 +154,10 @@ class GarmentcodeZweiDTest(SimpleTestCase):
         auseinander, und dann baut der eine Weg einen Schnitt, den der
         andere nicht erwartet. Genau das haelt dieser Fall fest.
         """
-        _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode_ablauf.js')
+        _, quelle = _lesen('static', 'viewer', 'charakter', 'garmentcode_ablauf.js')
         self.assertIn('static NUR3D = GarmentcodeSchritte.NUR3D;', quelle)
         self.assertIn('GarmentcodeAblauf.NUR3D.includes(modus)', quelle)
-        _, plan = _lesen('static', 'viewer', 'scene', 'garmentcode_schritte.js')
+        _, plan = _lesen('static', 'viewer', 'charakter', 'garmentcode_schritte.js')
         self.assertIn("static NUR3D = ['3d', 'vorschau3d'];", plan)
 
     def test_3d_prueft_ob_der_schnitt_zur_figur_gehoert(self):
@@ -166,7 +166,7 @@ class GarmentcodeZweiDTest(SimpleTestCase):
         Morphs den Ergebnisordner ueberschrieb und eine Stunde Messlaeufe
         auf dem falschen Schnitt rechneten.
         """
-        _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode_ablauf.js')
+        _, quelle = _lesen('static', 'viewer', 'charakter', 'garmentcode_ablauf.js')
         self.assertIn('schnittPasst(reiter, figur, vorlage)', quelle)
         anfang = quelle.index('static schnittPasst(')
         ende = quelle.index(chr(10) + '    }', anfang)

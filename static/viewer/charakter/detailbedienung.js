@@ -154,6 +154,10 @@ export class Detailbedienung {
      */
     static anwenden(inst, feld = null) {
         if (!inst.bodyMesh) return;
+        // Eine Figurart mit eigener Umsetzung derselben Felder (SMPL-X, 25.09.2026:
+        // Shader + Wimpern-/Mundnetze, `gemeinsam/smpldetails.js`).
+        // Eigener Name: `HumanbodyModell.detailsAnwenden(neue)` gibt es auch — mit Punkten, nicht Feldern.
+        if (typeof inst.detailfeldAnwenden === 'function') { inst.detailfeldAnwenden(feld); return; }
         if (Detailbereiche.neubau(feld)) { Charakterkoerper.details(inst); return; }
         if (!inst.details.haut) Charakterkoerper.hautfarbe(inst, Charakterkoerper.materialien(inst));
         Koerperdetails.anwenden(inst.bodyMesh, inst.details);

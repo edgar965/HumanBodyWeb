@@ -35,7 +35,7 @@ class GarmentcodeObjektTest(SimpleTestCase):
 
     def setUp(self):
         self.quelle = settings.BASE_DIR.joinpath(
-            'static', 'viewer', 'scene', 'garmentcode_anziehen.js'
+            'static', 'viewer', 'charakter', 'garmentcode_anziehen.js'
         ).read_text(encoding='utf-8')
 
     def _rumpf(self, name):
@@ -77,8 +77,8 @@ class GarmentcodeObjektTest(SimpleTestCase):
 
     def test_beschriftung_schlaegt_den_schluessel(self):
         """Im Auswahlmenue soll „kleid (GarmentCode)" stehen, nicht `gc_kleid`."""
-        auswahl = settings.BASE_DIR.joinpath('static', 'viewer', 'scene', 'teilnetz_auswahl.js').read_text(
-            encoding='utf-8'
-        )
+        auswahl = settings.BASE_DIR.joinpath(
+            'static', 'viewer', 'charakter', 'teilnetz_auswahl.js'
+        ).read_text(encoding='utf-8')
         self.assertIn('mesh.userData?.beschriftung || key', auswahl)
         self.assertIn('userData.beschriftung', self._rumpf('einhaengen'))

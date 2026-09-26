@@ -7,7 +7,8 @@
                                               material (JSON), quelle
                                               → {stueck, kennung, name, sekunden, stoff}
 
-Das Speichern drapiert neu auf der Genesis-Grundfigur (~25–60 s, wie „Bauen 2D + 3D"),
+Das Speichern drapiert neu auf der Genesis-Figur des Reiters (`regler_figur`, sonst der
+Grundfigur; ~25–60 s, wie „Bauen 2D + 3D"),
 schreibt das Stück in die eigene Bibliothek und lässt die Garderobe neu lesen.
 Beide Views `@staticmethod` — `require_*` liest `args[0].method` (`garmentcode.py`).
 """
@@ -65,8 +66,10 @@ class Gcgenesisapi:
         titel = (request.POST.get('titel') or '').strip() or vorlage
         start = time.time()
         try:
+            # Die Figur des Reiters (25.09.2026, `G9gcfigurbau`) — leer = Grundfigur.
             bilanz = G9gceigenes.bauen(vorlage, werte, titel, material,
-                                       request.POST.get('quelle') or 'reiter')
+                                       request.POST.get('quelle') or 'reiter',
+                                       Gcgenesisapi._json(request.POST.get('regler_figur'), {}))
         except (DrapierFehler, EntwurfFehler, ValueError) as fehler:
             logger.warning('GC → Genesis gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -77,4 +80,5 @@ class Gcgenesisapi:
                              'name': bilanz['name'], 'stoff': bilanz.get('stoff') or {},
                              'sekunden': round(time.time() - start, 1),
                              'haut_median_mm': bilanz['haut_median_mm'],
+                             'figurbau': bilanz.get('figurbau'),
                              'angepasst': bilanz.get('angepasst') or {}})

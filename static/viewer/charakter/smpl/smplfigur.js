@@ -16,7 +16,12 @@ export class SmplFigur extends SmplModell {
             ...Figurablage.grunddaten(this),
             koerper: this.koerper,
             geschlecht: this.geschlecht,
-            form: { groesse: this.form.groesse, fuelle: this.form.fuelle },
+            // Alle zehn Formregler (Größe, Fülle, form3..form10) — nicht nur
+            // die zwei benannten (25.09.2026, „SMPL-X für Vollausstattung").
+            form: { ...this.form },
+            haut: this.haut ? { ...this.haut } : undefined,
+            // Augen, Brauen, Mund, Nägel — dieselben Felder wie HumanBody (25.09.2026).
+            details: this.details ? { ...this.details } : undefined,
         };
     }
 

@@ -113,15 +113,38 @@ class Brauendecal:
         )
         return hashlib.sha1(text.encode()).hexdigest()[:12]
 
+    #: Figurarten mit eigenem Brauenbogen (25.09.2026: SMPL-X, `Smplxdetaildienst`).
+    QUELLEN = ('smplx',)
+
     @classmethod
-    def bild(cls, geschlecht, regler):
-        """Pfad der PNG für diesen Reglerstand — aus der Ablage oder frisch."""
+    def bogen(cls, geschlecht, quelle=''):
+        """Der Brauenbogen der Figurart — HumanBody (MB-Lab-Albedo) oder SMPL-X."""
+        if quelle == 'smplx':
+            from .smplxdetaildienst import Smplxdetaildienst
+
+            return Smplxdetaildienst.bogen(geschlecht)
+        return Brauenbogen.laden(geschlecht)
+
+    @classmethod
+    def bild(cls, geschlecht, regler, quelle=''):
+        """Pfad der PNG für diesen Reglerstand — aus der Ablage oder frisch.
+
+        `quelle` 'smplx' zeichnet auf den Brauenbogen der SMPL-X-UV; der Name
+        trägt sie dann vorn (HumanBody-Namen bleiben wie sie waren)."""
         geschlecht = 'male' if geschlecht == 'male' else 'female'
+        quelle = quelle if quelle in cls.QUELLEN else ''
         cls.ORDNER.mkdir(parents=True, exist_ok=True)
-        name = '%s_%s.png' % (geschlecht, cls.kennung(geschlecht, regler))
+        # Die SMPL-X-Karte haengt am Brauenbogen DIESER Fassung (`Smplxdetails.FASSUNG`,
+        # artefakte-benennen) — sonst laege nach einem neuen Bogen die alte Braue.
+        praefix = ''
+        if quelle == 'smplx':
+            from SMPL.xdetails import Smplxdetails
+
+            praefix = 'smplx%d_' % Smplxdetails.FASSUNG
+        name = '%s%s_%s.png' % (praefix, geschlecht, cls.kennung(geschlecht, regler))
         ziel = cls.ORDNER / name
         if not ziel.is_file():
-            bogen = Brauenbogen.laden(geschlecht)
+            bogen = cls.bogen(geschlecht, quelle)
             cls.zeichnen(bogen, regler).save(ziel)
             logger.info('Brauendecal %s: %s', geschlecht, ziel.name)
         return ziel

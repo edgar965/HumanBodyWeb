@@ -64,7 +64,11 @@ class Garmentcode:
         # Die beiden Regler unter „Bauen" (Edgar, 09.09.2026). Sie gehoeren
         # nur hierher, nicht in `aus_anfrage` — das Erzeugen eines Schnitts
         # kennt weder Haut noch Simulation.
+        from ..dienste.garmentbauart import Garmentbauart
+
         fein = Baufeineinstellung.aus_anfrage(request.POST)
+        vorlage = request.POST.get('vorlage') or Garmentbauart.vorlage_aus(spez)
+        fein.wie_smpl = Garmentbauart.wie_smpl(vorlage, fein.anliegen_mm)
         # Die Simulationsregler aus dem aufklappbaren Bereich darunter. Sie
         # kommen mit der Vorsilbe `sim_` und nur, soweit sie abweichen.
         from GarmentCode.simulationsregler import Simulationsregler

@@ -39,7 +39,8 @@ export class Charakterdialog {
      */
     static LADER = {
         uma: (name, lage) => Umakatalog.hinzufuegen(name, lage),
-        smpl: (name, lage) => Smplkatalog.hinzufuegen(name, lage),
+        // Der Eintrag geht mit: ein gespeichertes Modell laedt anders als der Katalog.
+        smpl: (name, lage, eintrag) => Smplkatalog.hinzufuegen(name, lage, eintrag),
         makehuman: (name, lage) => Mhkatalog.hinzufuegen(name, lage),
         modell: (name, lage) => fn.addCharacterFromPreset(name, lage),
         umapython: (name, lage) => Umapythonkatalog.hinzufuegen(name, lage),

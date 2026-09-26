@@ -15,7 +15,7 @@ import { Genesis9garderobe } from './genesis9/genesis9garderobe.js';
  * gehabt, bei der Portierung zu Genesis der Garment Codes gibt es die alle
  * nicht"): Die 171 gebackenen Stücke tragen nur die Werte ihres Vorbilds. Hier
  * backt der Server den GERADE eingestellten Schnitt — Regler, Bauwerte, Titel,
- * Material — auf der Genesis-Grundfigur (`POST /api/garmentcode/genesis/speichern/`,
+ * Material — auf der gewählten Genesis-Figur (`POST /api/garmentcode/genesis/speichern/`,
  * `G9gceigenes.bauen`, ~30 s) als eigenes Genesis-Stück; danach zieht die gewählte
  * Figur es an, mit Rauheit, Metall und Gewebe als `werte.stoff`.
  *
@@ -50,6 +50,14 @@ export class GarmentcodeAlsgenesis {
         daten.append('material', JSON.stringify({ farbe: stand.farbe, rauheit: stand.rauheit,
                                                   metall: stand.metall, gewebe: stand.gewebe }));
         daten.append('quelle', GarmentcodeTitel.quelle()?.schluessel || 'reiter');
+        // Gebaut wird auf der Genesis-Figur des Reiters, wie „Bauen 2D + 3D"
+        // (25.09.2026, `G9gcfigurbau`) — auf der Grundfigur legte das Folgen
+        // Damiras Brustform in den Stoff. Keine Genesis-Figur: Grundfigur.
+        const figur = GarmentcodeFigur.gewaehlt();
+        if (figur?.inst?.quelle === 'genesis9') {
+            const rf = GarmentcodeFigur.formulardaten(figur).get('regler_figur');
+            if (rf) daten.append('regler_figur', rf);
+        }
         return daten;
     }
 
@@ -62,7 +70,7 @@ export class GarmentcodeAlsgenesis {
         const knopf = document.getElementById(GarmentcodeAlsgenesis.KNOPF);
         GarmentcodeAlsgenesis._laeuft = true;
         if (knopf) knopf.disabled = true;
-        sagen('Genesis-Stück wird gebaut: Schnitt, Drapierung auf der Grundfigur, Schreiben (~30 s) …');
+        sagen('Genesis-Stück wird gebaut: Schnitt, Drapierung auf der Figur, Schreiben (~30–60 s) …');
         try {
             const antwort = await Antwortnachholen.formular(
                 '/api/garmentcode/genesis/speichern/', GarmentcodeAlsgenesis.formular(vorlage),

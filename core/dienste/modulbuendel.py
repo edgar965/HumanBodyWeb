@@ -84,7 +84,7 @@ class Modulbuendel:
     #: Schlüssel hier UND das letzte Wort in Datei-/Adressname
     #: (`scene.js`/`studio.js`).
     EINSTIEGE = {
-        'scene': 'viewer/scene/main.js',
+        'scene': 'viewer/charakter/main.js',
         'studio': 'viewer/studio/index.js',
     }
 

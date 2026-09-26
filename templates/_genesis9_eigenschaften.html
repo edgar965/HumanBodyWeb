@@ -13,35 +13,38 @@ Abend des 17.09.2026 im Assets-Reiter (`_genesis9_garderobe.html`, Edgar:
 „machst Du einen extra Reiter dafür bei Assets?"). Gelesen wird alles in
 Python aus der installierten Daz-Bibliothek — nichts davon liegt im Repo
 (`Genesis9/HERKUNFT.md`).{% endcomment %}
-<div class="prop-section hb-versteckt" id="prop-genesis9-section">
-    <div class="prop-section-header">
-        <h4>Genesis 9</h4>
+<div class="panel-section prop-section hb-versteckt" id="prop-genesis9-section">
+    {% comment %}Zuklappbar wie die übrigen Bereiche des Reiters (Edgar, 26.09.2026:
+    „auch Genesis zuklappbar") — vorher `prop-section-header` + `h4`, ohne
+    Klappmechanik.{% endcomment %}
+    <h3>Genesis 9 <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div id="prop-genesis9-kopf" class="hb-font-size-0-72rem"></div>
+        <div class="hb-font-size-0-72rem">
+            Daz Genesis 9: 25.182 Punkte, 138 Knochen, 4K-Haut je Kachel. Die
+            Regler sind Daz' Morphkan&auml;le; die Gelenke wandern &uuml;ber
+            Daz' Formeln mit. Augen, Mund und Wimpern h&auml;ngen als Anh&auml;nge
+            am selben Skelett. Herkunft und Lizenz: <code>Genesis9/HERKUNFT.md</code>.
+        </div>
+        <details class="uma-gruppe" open>
+            <summary>Haut, Augen, Brauen, Schminke</summary>
+            <div id="prop-genesis9-haut"></div>
+        </details>
+        <details class="uma-gruppe">
+            <summary>Pose und Ausdruck (Daz-Presets)</summary>
+            <div id="prop-genesis9-pose"></div>
+        </details>
+        <details class="uma-gruppe" open>
+            <summary>Form (Daz-Regler)</summary>
+            <div id="prop-genesis9-regler" class="anim-tree"></div>
+            {# Griff (20.09.2026, Edgar): Höhe der Liste ziehen, gemerkt je Browser — `gemeinsam/hoehengriff.js`. #}
+            <div class="hoehengriff" id="prop-genesis9-regler-griff"
+                 title="Ziehen: Höhe der Reglerliste · Doppelklick: Vorgabe"></div>
+        </details>
+        {# Texturmischung (21.09.2026, Edgar: „ganz unten … «Textur» mit allen Texturen … Regler in %") — `genesis9texturmischung.js`. #}
+        <details class="uma-gruppe">
+            <summary>Textur</summary>
+            <div id="prop-genesis9-textur"></div>
+        </details>
     </div>
-    <div id="prop-genesis9-kopf" class="hb-font-size-0-72rem"></div>
-    <div class="hb-font-size-0-72rem">
-        Daz Genesis 9: 25.182 Punkte, 138 Knochen, 4K-Haut je Kachel. Die
-        Regler sind Daz' Morphkan&auml;le; die Gelenke wandern &uuml;ber
-        Daz' Formeln mit. Augen, Mund und Wimpern h&auml;ngen als Anh&auml;nge
-        am selben Skelett. Herkunft und Lizenz: <code>Genesis9/HERKUNFT.md</code>.
-    </div>
-    <details class="uma-gruppe" open>
-        <summary>Haut, Augen, Brauen, Schminke</summary>
-        <div id="prop-genesis9-haut"></div>
-    </details>
-    <details class="uma-gruppe">
-        <summary>Pose und Ausdruck (Daz-Presets)</summary>
-        <div id="prop-genesis9-pose"></div>
-    </details>
-    <details class="uma-gruppe" open>
-        <summary>Form (Daz-Regler)</summary>
-        <div id="prop-genesis9-regler" class="anim-tree"></div>
-        {# Griff (20.09.2026, Edgar): Höhe der Liste ziehen, gemerkt je Browser — `gemeinsam/hoehengriff.js`. #}
-        <div class="hoehengriff" id="prop-genesis9-regler-griff"
-             title="Ziehen: Höhe der Reglerliste · Doppelklick: Vorgabe"></div>
-    </details>
-    {# Texturmischung (21.09.2026, Edgar: „ganz unten … «Textur» mit allen Texturen … Regler in %") — `genesis9texturmischung.js`. #}
-    <details class="uma-gruppe">
-        <summary>Textur</summary>
-        <div id="prop-genesis9-textur"></div>
-    </details>
 </div>

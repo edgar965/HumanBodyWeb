@@ -95,12 +95,18 @@ export class Figurkataloge {
             unterzeile: `${f.geschlecht} · ${(f.bytes / 1048576).toFixed(1)} MB · ${f.stand}`,
             bereich: 'gespeichert',
         })),
+        // `gespeichert` (25.09.2026): eine ueber „Modell speichern" abgelegte
+        // SMPL-X-Figur (eigener Name, Regler, Haut) steht im zweiten Bereich,
+        // wie bei Genesis 9 — vorher zeigte dieser Reiter NUR den Katalog.
         smpl: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,
             anzeige: f.anzeige || f.name,
-            unterzeile: `${f.geschlecht} · ${f.smpl ? 'SMPL-X' : 'GarmentCode-Modell'} · `
-                + (f.masse_vorhanden ? 'Maße vorgegeben' : 'ohne Maße'),
-            bereich: 'standard',
+            unterzeile: f.gespeichert
+                ? `${f.geschlecht} · gespeicherte Figur`
+                : `${f.geschlecht} · ${f.smpl ? 'SMPL-X' : 'GarmentCode-Modell'} · `
+                    + (f.masse_vorhanden ? 'Maße vorgegeben' : 'ohne Maße'),
+            bereich: f.gespeichert ? 'gespeichert' : 'standard',
+            gespeichert: Boolean(f.gespeichert),
         })),
         makehuman: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,

@@ -137,7 +137,9 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         self.assertIn('data-panel-key="gc_kombi"', vorlage)
 
     def test_der_reiter_haengt_die_liste_ein(self):
-        self.assertIn('garmentcodeKombi.einhaengen(', _quelle('static', 'viewer', 'scene', 'garmentcode.js'))
+        self.assertIn(
+            'garmentcodeKombi.einhaengen(', _quelle('static', 'viewer', 'charakter', 'garmentcode.js')
+        )
 
     def test_beide_wege_benutzen_denselben_einhaeng_weg(self):
         """Der Einzelbau UND der gemeinsame Lauf rufen `einhaengen`.
@@ -147,8 +149,8 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         gebautes — es fehlte etwa der Eintrag in der Ablage, und beim
         naechsten Laden stuende die Figur nackt da (08.09.2026).
         """
-        drapieren = _quelle('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
-        gemeinsam = _quelle('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
+        drapieren = _quelle('static', 'viewer', 'charakter', 'garmentcode_drapieren.js')
+        gemeinsam = _quelle('static', 'viewer', 'charakter', 'garmentcode_gemeinsam.js')
         self.assertIn('static async einhaengen(figur, netz, stueck, titel = null)', drapieren)
         self.assertIn('GarmentcodeDrapierung.einhaengen(figur, netz', drapieren)
         self.assertIn('GarmentcodeDrapierung.einhaengen(', gemeinsam)
@@ -164,9 +166,9 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         """Sonst bliebe ein Knopf klickbar, waehrend ein Bau laeuft."""
         # Seit 20.09.2026 (Abbrechen-Knopf) liegt die Liste in
         # `garmentcode_lauf.js`; der Ablauf reicht sie nur durch.
-        lauf = _quelle('static', 'viewer', 'scene', 'garmentcode_lauf.js')
-        ablauf = _quelle('static', 'viewer', 'scene', 'garmentcode_ablauf.js')
-        gemeinsam = _quelle('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
+        lauf = _quelle('static', 'viewer', 'charakter', 'garmentcode_lauf.js')
+        ablauf = _quelle('static', 'viewer', 'charakter', 'garmentcode_ablauf.js')
+        gemeinsam = _quelle('static', 'viewer', 'charakter', 'garmentcode_gemeinsam.js')
         self.assertIn("static KNOEPFE = ['gc-vorschau-2d'", lauf)
         self.assertIn("'gc-kombi-bauen'", lauf)
         self.assertIn('static KNOEPFE = GarmentcodeLauf.KNOEPFE;', ablauf)
@@ -178,7 +180,7 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         ausbleibt — der Befund vom 09.09.2026 (`fristabruf.js`). Und die
         Frist muss laenger sein als die des Einzelbaus: Ein gemeinsamer
         Lauf kostet gemessen rund 30 s je Stueck."""
-        gemeinsam = _quelle('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
+        gemeinsam = _quelle('static', 'viewer', 'charakter', 'garmentcode_gemeinsam.js')
         # Seit 20.09.2026 ueber `Antwortnachholen` — das die Frist von
         # `Fristabruf` weiterreicht und die Antwort nachholt, wenn die
         # Verbindung reisst (`antwortnachholen.js`).

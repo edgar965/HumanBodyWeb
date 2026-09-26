@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Figurwahldialog } from '../gemeinsam/figurwahldialog.js';
 import { Figurkataloge } from '../gemeinsam/figurkataloge.js';
-import { Katalogpflege } from '../scene/katalogpflege.js';
+import { Katalogpflege } from '../charakter/katalogpflege.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Spurerzeugung } from './spurerzeugung.js';
 import { Modellmenue } from './zeitleiste_modellmenue.js';

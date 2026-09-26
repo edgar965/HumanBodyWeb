@@ -36,7 +36,7 @@ class GarderobeStueckname(SimpleTestCase):
                                     '`stueckname` in genesis9garderobe.js prüfen')
 
     def test_der_stueckname_traegt_die_klasse_und_gedaempft_nur_ungezeigt(self):
-        js = self._lesen(STATIK / 'viewer' / 'scene' / 'genesis9' / 'genesis9garderobe.js')
+        js = self._lesen(STATIK / 'viewer' / 'charakter' / 'genesis9' / 'genesis9garderobe.js')
         label = re.search(r'<label for="\$\{kennung\}" class="([^"]*)"', js)
         self.assertIsNotNone(label)
         self.assertTrue(label.group(1).startswith('stueckname'), label.group(1))

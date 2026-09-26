@@ -133,8 +133,25 @@ CHARAKTER = [
     path('api/character/smpl-figur/', Smplfigur.liste, name='smpl_figur_liste'),
     path('api/character/smpl-figur/formen/', Smplformung.formen,
          name='smpl_figur_formen'),
+    # Benannte Massregler (Armlänge, Brustgröße, …) mit gemessener Wirkung
+    # je Geschlecht (25.09.2026, SMPL/xmassregler.py).
+    path('api/character/smpl-figur/massregler/<str:geschlecht>/', Smplformung.massregler,
+         name='smpl_figur_massregler'),
     path('api/character/smpl-figur/<str:name>/netz/', Smplfigur.netz,
          name='smpl_figur_netz'),
+    # Hautfoto-Textur je Geschlecht (25.09.2026, „SMPL-X-Texturen") —
+    # ueberschneidet sich nicht mit `<str:name>/netz/`: das zweite
+    # Wegstueck ist dort immer das feste Wort „netz".
+    path('api/character/smpl-figur/textur/<str:geschlecht>/', Smplfigur.textur,
+         name='smpl_figur_textur'),
+    # Detailmaske (Lippen, Nägel, Augen) der SMPL-X-Haut (25.09.2026, SMPL/xdetails.py).
+    path('api/character/smpl-figur/details/<str:geschlecht>/maske/', Smplfigur.details_maske,
+         name='smpl_figur_details_maske'),
+    # BEDLAM-Hauttexturen (26.09.2026, core/dienste/smplxbedlamdienst.py).
+    path('api/character/smpl-figur/bedlam/<str:geschlecht>/', Smplfigur.bedlam_liste,
+         name='smpl_figur_bedlam_liste'),
+    path('api/character/smpl-figur/bedlam/<str:geschlecht>/<str:schluessel>/',
+         Smplfigur.bedlam_textur, name='smpl_figur_bedlam_textur'),
     # MakeHuman-Basiskoerper (06.09.2026, core/api/mhfigur.py). Die Garderobe
     # steht VOR `<str:name>/netz/`, sonst hiesse das Modell „garderobe".
     path('api/character/mh-figur/', Mhfigur.liste, name='mh_figur_liste'),

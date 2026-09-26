@@ -39,7 +39,7 @@ def _quelle(*teile):
 
 
 def _anpassung():
-    return _quelle('static', 'viewer', 'scene', 'kleideranpassung.js')
+    return _quelle('static', 'viewer', 'charakter', 'kleideranpassung.js')
 
 
 class AusgangspunkteTest(SimpleTestCase):
@@ -88,7 +88,7 @@ class ZweiterFehlerDerselbenArtTest(SimpleTestCase):
     databases = set()
 
     def _zubehoer(self):
-        return _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')
+        return _quelle('static', 'viewer', 'charakter', 'charakter_zubehoer.js')
 
     def test_keine_undefinierte_farbvariable_mehr(self):
         quelle = self._zubehoer()
@@ -113,7 +113,7 @@ class KleiderLaufenNebeneinanderTest(SimpleTestCase):
     databases = set()
 
     def test_die_anfragen_starten_zusammen(self):
-        quelle = _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')
+        quelle = _quelle('static', 'viewer', 'charakter', 'charakter_zubehoer.js')
         self.assertIn('await Promise.all(inst.garments.map(', quelle)
         # Kein `await` mehr in der Schleife über die Stücke.
         schleife = quelle[quelle.index('for (const { g, daten: data') :]
@@ -134,11 +134,11 @@ class ListeWirdGepflegtTest(SimpleTestCase):
     databases = set()
 
     def test_der_assets_weg_traegt_das_stueck_in_die_liste_ein(self):
-        quelle = _quelle('static', 'viewer', 'scene', 'kleidung_anpassen.js')
+        quelle = _quelle('static', 'viewer', 'charakter', 'kleidung_anpassen.js')
         self.assertIn('figur.garments.push({ id: kennung', quelle)
 
     def test_die_liste_steht_im_gespeicherten_modell(self):
         """Beide Speicherwege der gewöhnlichen Figur führen `garments`."""
-        charakter = _quelle('static', 'viewer', 'scene', 'character.js')
+        charakter = _quelle('static', 'viewer', 'charakter', 'character.js')
         self.assertIn('garments,', charakter)
-        self.assertIn('garments', _quelle('static', 'viewer', 'scene', 'szenenausgabe.js'))
+        self.assertIn('garments', _quelle('static', 'viewer', 'charakter', 'szenenausgabe.js'))

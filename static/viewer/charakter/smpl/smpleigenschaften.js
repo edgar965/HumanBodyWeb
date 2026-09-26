@@ -5,6 +5,8 @@ import { markDirty } from '../undo.js';
 import { SmplFigur } from './smplfigur.js';
 import { Smplkatalog } from './smplkatalog.js';
 import { Smplformregler } from './smplformregler.js';
+import { Smplhautregler } from './smplhautregler.js';
+import { Smpldetailbereich } from './smpldetailbereich.js';
 
 /**
  * Smpleigenschaften — der Eigenschaften-Reiter für einen GarmentCode-Körper.
@@ -30,14 +32,19 @@ export class Smpleigenschaften {
                 + `${inst.hoehe ? (inst.hoehe * 100).toFixed(0) : '?'} cm`;
         }
         Smpleigenschaften._koerper(inst, document.getElementById('prop-smpl-geschlecht'));
-        // Die zwei Regler, die das Online-Tool nicht hat (smplformregler.js).
+        // Die zehn Regler, die das Online-Tool nicht hat (smplformregler.js).
         Smplformregler.fuellen(inst, document.getElementById('prop-smpl-form'));
+        Smplhautregler.fuellen(inst, document.getElementById('prop-smpl-haut'));
         Smpleigenschaften._masse(inst, document.getElementById('prop-smpl-masse'));
+        // Augen, Brauen, Mund, Nägel — derselbe Bereich wie bei HumanBody (25.09.2026),
+        // nur bei echten SMPL-X-Körpern (Fototextur + UV).
+        if (inst._uvUrsprung) Smpldetailbereich.zeigen(inst);
     }
 
     static leeren() {
         const bereich = document.getElementById(Smpleigenschaften.BEREICH);
         if (bereich) bereich.classList.add('hb-versteckt');
+        Smpldetailbereich.verbergen();
     }
 
     /** Ein anderer Körper aus der Liste des Tools — die Figur wird getauscht. */
@@ -82,7 +89,9 @@ export class Smpleigenschaften {
 
     static async _tauschen(inst, koerper) {
         if (koerper === inst.koerper) return;
-        const neu = new SmplFigur(inst.id, { koerper });
+        // Haut mitnehmen — sonst faellt ein Koerperwechsel die eigene
+        // Hautfarbe wieder auf Grau zurueck (25.09.2026).
+        const neu = new SmplFigur(inst.id, { koerper, haut: inst.haut, details: inst.details });
         try {
             await neu.bauen();
         } catch (fehler) {

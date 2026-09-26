@@ -68,11 +68,16 @@ class Smplvarianten:
 
     @classmethod
     def name(cls, geschlecht, betas):
-        b = np.zeros(10)
-        betas = np.asarray(betas or [], dtype=np.float64)
-        b[: min(10, len(betas))] = betas[:10]
+        betas = np.asarray(betas if betas is not None else [], dtype=np.float64)
+        b = np.zeros(max(10, len(betas)))
+        b[: len(betas)] = betas
         if not np.any(np.abs(b) >= 0.0005):
             return cls.DURCHSCHNITT[geschlecht]
+        # Fingerabdruck ueber zehn Betas, solange 10.. leer sind — so behalten
+        # alle Varianten von vor den Massreglern (25.09.2026) ihren Namen und
+        # ihre abgelegte Datei; mit Massreglern ueber alle.
+        if not np.any(np.abs(b[10:]) >= 0.0005):
+            b = b[:10]
         rohbytes = np.round(b, 3).astype(np.float32).tobytes()
         kennung = hashlib.sha1(rohbytes).hexdigest()[:12]
         return '%s%s_%s' % (cls.PRAEFIX, geschlecht[0], kennung)
@@ -182,22 +187,44 @@ class Smplvarianten:
             'SMPL-X-Variante %s: %s, Betas %s, %.1f cm, Taille %.0f cm',
             name,
             geschlecht,
-            daten['betas'],
+            daten['betas'][:10] + (['… %d Betas' % len(daten['betas'])] if len(daten['betas']) > 10 else []),
             daten['hoehe'] * 100,
             masse.get('waist', 0),
         )
         return daten
 
     @classmethod
-    def aus_reglern(cls, geschlecht, groesse=0.0, fuelle=0.0):
-        """Der Weg, den das Bedienfeld geht: zwei Regler statt zehn Betas.
+    def aus_reglern(cls, geschlecht, groesse=0.0, fuelle=0.0, weitere=None, masse=None):
+        """Der Weg, den das Bedienfeld geht: Regler statt roher Betas.
 
+        `weitere`: die acht ungemessenen Formregler (`Smplform.WEITERE_SCHLUESSEL`).
         Die Umrechnung samt der je Geschlecht verschiedenen Vorzeichen steht
         in `SMPL/form.py` — dort auch, warum sie gemessen und nicht geraten ist.
+        `masse`: die benannten Massregler {armlaenge: -100..100, …}
+        (`SMPL/xmassregler.py`) — sie addieren ihre kalibrierte Richtung
+        ueber 300 Betas auf die zehn der Formregler.
         """
         from SMPL.form import Smplform
+        from SMPL.xmassregler import Smplxmassregler
 
-        return cls.erzeugen(geschlecht, Smplform.betas(geschlecht, groesse, fuelle))
+        betas = Smplform.betas(geschlecht, groesse, fuelle, weitere)
+        if masse and any(abs(float(w or 0)) >= 0.5 for w in masse.values()):
+            zusatz = Smplxmassregler.betas(cls.massregler(geschlecht), masse, Smplxmassregler.BETAS)
+            voll = np.zeros(Smplxmassregler.BETAS)
+            voll[: len(betas)] = betas
+            betas = [float(x) for x in np.round(voll + zusatz, 4)]
+        return cls.erzeugen(geschlecht, betas)
+
+    _massregler = {}
+
+    @classmethod
+    def massregler(cls, geschlecht):
+        """Die abgelegten Richtungen der Massregler (einmal je Geschlecht)."""
+        from SMPL.xmassregler import Smplxmassregler
+
+        if geschlecht not in cls._massregler:
+            cls._massregler[geschlecht] = Smplxmassregler.laden(cls.MODELLE, geschlecht)
+        return cls._massregler[geschlecht]
 
     @classmethod
     def sicherstellen(cls, name):

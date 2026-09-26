@@ -1,7 +1,7 @@
 import { UmaModell } from '../../../static/viewer/gemeinsam/umamodell.js';
 import { Figurwahldialog }
     from '../../../static/viewer/gemeinsam/figurwahldialog.js';
-import { Katalogpflege } from '../../../static/viewer/scene/katalogpflege.js';
+import { Katalogpflege } from '../../../static/viewer/charakter/katalogpflege.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { Figurlage } from '../laden/figurlage.js';
 import { Buehnenschatten } from '../laden/buehnenschatten.js';

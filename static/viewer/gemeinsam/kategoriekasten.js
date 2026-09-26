@@ -3,8 +3,8 @@
  *
  * WARUM (Befund `doppelcode`, 29.08.2026): Diese Zeilen standen SIEBENMAL —
  *
- *     static/viewer/animation/baum.js            static/viewer/scene/animation.js
- *     static/viewer/scene/garments.js            static/viewer/viewer/animation.js
+ *     static/viewer/animation/baum.js            static/viewer/charakter/animation.js
+ *     static/viewer/charakter/garments.js            static/viewer/viewer/animation.js
  *     static/viewer/skelett_test/animationsbaum.js
  *     static/viewer/viewer/kleiderliste.js       static/viewer/viewer/smpl_kleiderliste.js
  *

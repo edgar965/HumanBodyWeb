@@ -64,7 +64,7 @@ class Weiterleitung(TestCase):
         schneller zu werden — der Browser schickt fuer Module kein
         `text/html` im `Accept`.
         """
-        anfrage = self._seite('/statik/v-1/viewer/scene/main.js', accept='*/*')
+        anfrage = self._seite('/statik/v-1/viewer/charakter/main.js', accept='*/*')
         self.assertEqual(self.schicht(anfrage), 'durchgereicht')
 
     @override_settings(DEBUG=True, ALLOWED_HOSTS=['*'])

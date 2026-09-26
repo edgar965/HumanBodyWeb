@@ -107,6 +107,8 @@ class Garmentgemeinsamendpunkte:
         """
         from GarmentCode.baufeineinstellung import Baufeineinstellung
 
+        from ..dienste.garmentbauart import Garmentbauart
+
         try:
             roh = json.loads(request.POST.get('stuecke') or '[]')
         except ValueError:
@@ -129,7 +131,9 @@ class Garmentgemeinsamendpunkte:
                     'nummer': nummer,
                     'regler': regler if isinstance(regler, dict) else {},
                     'fein': Baufeineinstellung(
-                        **{f: bau.get(f) for f in Garmentgemeinsamendpunkte.BAUFELDER}
+                        **{f: bau.get(f) for f in Garmentgemeinsamendpunkte.BAUFELDER},
+                        wie_smpl=Garmentbauart.wie_smpl(eintrag['vorlage'],
+                                                        bau.get('anliegen_mm')),
                     ),
                 }
             )

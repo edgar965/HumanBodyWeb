@@ -79,18 +79,18 @@ class KombilisteBauTest(SimpleTestCase):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
 
     def test_uebernehmen_gibt_die_bauregler_mit(self):
-        kombi = _lies('static', 'viewer', 'scene', 'garmentcode_kombi.js')
+        kombi = _lies('static', 'viewer', 'charakter', 'garmentcode_kombi.js')
         # Beide Wege — neu in die Liste und Ersetzen (20.09.2026) — geben die
         # Bauregler mit.
         self.assertEqual(kombi.count('GarmentcodeBauregler.werte(),'), 2, kombi.count('GarmentcodeBauregler.werte(),'))
-        bauregler = _lies('static', 'viewer', 'scene', 'garmentcode_bauregler.js')
+        bauregler = _lies('static', 'viewer', 'charakter', 'garmentcode_bauregler.js')
         self.assertIn('static werte()', bauregler)
 
     def test_jedes_stueck_bekommt_sein_material(self):
         """Der gemeinsame Weg legt nach dem Einhaengen das Aussehen des
         GETRAGENEN Stuecks wieder auf — das ist die Farbe, die der Nutzer
         ihm gegeben hat; erst dann den Listeneintrag (ueber `nummer`)."""
-        gemeinsam = _lies('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
+        gemeinsam = _lies('static', 'viewer', 'charakter', 'garmentcode_gemeinsam.js')
         self.assertIn('liste?.eintraege?.[stueck.nummer]', gemeinsam)
         eines = gemeinsam.index('static async _eines(')
         bisher = gemeinsam.index('GarmentcodeMaterial.getragen(figur, stueck.stueck)', eines)
@@ -98,13 +98,13 @@ class KombilisteBauTest(SimpleTestCase):
         self.assertLess(bisher, einhaengen, 'das Aussehen muss VOR dem Ersetzen gelesen werden')
         self.assertIn('const werte = bisher || material;', gemeinsam)
         self.assertIn('GarmentcodeMaterial.aufStueck(figur, stueck.stueck, werte)', gemeinsam)
-        material = _lies('static', 'viewer', 'scene', 'garmentcode_material.js')
+        material = _lies('static', 'viewer', 'charakter', 'garmentcode_material.js')
         self.assertIn('static aufStueck(figur, stueck, werte = null)', material)
         self.assertIn('static getragen(figur, stueck)', material)
         self.assertIn('werte || GarmentcodeMaterial.stand', material)
         # und „Uebernehmen" nimmt das Aussehen vom getragenen Stueck, nicht
         # den Panel-Stand, der fuer alle Stuecke derselbe ist
-        kombi = _lies('static', 'viewer', 'scene', 'garmentcode_kombi.js')
+        kombi = _lies('static', 'viewer', 'charakter', 'garmentcode_kombi.js')
         self.assertIn('const getragen = GarmentcodeMaterial.getragen(GarmentcodeMaterial.figur(), vorlage);', kombi)
         self.assertIn('getragen || GarmentcodeMaterial.stand', kombi)
 
@@ -112,7 +112,7 @@ class KombilisteBauTest(SimpleTestCase):
         """Zwei Anfragen in der Luft (Seitenstart: Vorgabe + gemerkte
         Vorlage): Kam die aeltere zuletzt, merkte ihr Preset `bau.*` unter
         der Vorlage im Feld — die 2 mm der Leggings landeten beim T-Shirt."""
-        regler = _lies('static', 'viewer', 'scene', 'garmentcode_regler.js')
+        regler = _lies('static', 'viewer', 'charakter', 'garmentcode_regler.js')
         laden = regler.index('async laden(vorlage)')
         block = regler[laden : regler.index('zeichnen(ziel, gruppen)', laden)]
         self.assertIn('const meine = (this.laufnummer = (this.laufnummer || 0) + 1);', block)
@@ -123,7 +123,7 @@ class KombilisteBauTest(SimpleTestCase):
         )
 
     def test_eine_alte_kombiliste_wird_im_reiter_gesagt(self):
-        kombi = _lies('static', 'viewer', 'scene', 'garmentcode_kombi.js')
+        kombi = _lies('static', 'viewer', 'charakter', 'garmentcode_kombi.js')
         self.assertIn('this.liste.verworfen', kombi)
         self.assertIn('aus einer älteren Fassung', kombi)
 
