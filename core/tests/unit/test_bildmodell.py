@@ -225,9 +225,13 @@ class EndpunkteTest(TestCase):
             z = self.client.get('/api/bildmodell/%s/zustand/' % job.id).json()
             self.assertEqual(z['originale'], ['a.png'])
             self.assertEqual(
-                self.client.get('/humanbody/modell-aus-dateien/%s/' % job.kennung).status_code, 200
+                self.client.get('/modell-aus-dateien/%s/' % job.kennung).status_code, 200
             )
-            self.assertEqual(self.client.get('/humanbody/modell-aus-dateien/').status_code, 200)
+            self.assertEqual(self.client.get('/modell-aus-dateien/').status_code, 200)
+            # Die alten Adressen (bis 26.09.2026 unter /humanbody/) leiten dauerhaft um.
+            alt = self.client.get('/humanbody/modell-aus-dateien/%s/' % job.kennung)
+            self.assertEqual((alt.status_code, alt['Location']), (301, '/modell-aus-dateien/%s/' % job.kennung))
+            self.assertEqual(self.client.get('/humanbody/modell-aus-dateien/').status_code, 301)
             # Datei nur im Auftrag
             datei = self.client.get('/api/bildmodell/%s/datei/original/a.png' % job.id)
             self.assertEqual(datei.status_code, 200)

@@ -1,0 +1,45 @@
+{% comment %}
+Reiter „Mesh" auf „Modell aus Dateien" (Edgar, 26.09.2026: „Im neuen Tab Mesh möchte ich
+Fotos angeben können (upload files), mit batch upload … Optionen auswählen (mach
+Vorschlag) und du erzeugst ein Mesh daraus (OBJ, GLB oder sowas)"). Fotos per Ablage
+(mehrere auf einmal), je Foto eine Rolle, die Optionen aus `Meshoptionen.KATALOG`
+(`mesh/meshformular.js` baut die Felder aus `mesh_katalog_json`), darunter die Aufträge
+(`Meshtabelle`). Endpunkte: `core/api/mesh.py`.
+{% endcomment %}
+<div class="card" id="mesh-neu">
+    <h2>Neues Mesh aus Fotos</h2>
+    <p class="hb-hinweis">Ein oder mehrere Fotos eines Objekts oder einer Person — ideal ein Ganzkörperbild von vorn,
+    dazu hinten/seitlich und eine Nahaufnahme des Gesichts. Das Formmodell baut die Form, die Textur kommt aus
+    deinen Fotos (aufprojiziert, Lücken aus der Modelltextur). Ergebnis: GLB, auf Wunsch OBJ und PLY.</p>
+    <form id="mesh-form" class="bildmodell-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bildmodell-felder">
+            <label>Name
+                <input type="text" name="name" id="mesh-name" required maxlength="200" placeholder="z. B. Damira">
+            </label>
+        </div>
+        <div class="bildmodell-ablage" id="mesh-ablage">
+            <input type="file" name="bilder" id="mesh-dateien" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff">
+            <p><i class="fas fa-cloud-upload-alt"></i> Fotos hierher ziehen oder klicken — mehrere auf einmal
+               (JPG, PNG, WebP, BMP, TIFF). Je Foto lässt sich die Rolle wählen; „Automatisch" erkennt Vorder-,
+               Rückansicht und Nahaufnahme selbst.</p>
+            <div class="mesh-vorschauen" id="mesh-vorschauen"></div>
+        </div>
+        <div class="mesh-optionen" id="mesh-optionen"></div>
+        <div class="bildmodell-knoepfe">
+            <button type="submit" class="btn btn-primary" id="mesh-anlegen">
+                <i class="fas fa-cubes"></i> <span>Mesh erzeugen</span></button>
+            <span class="hb-hinweis" id="mesh-meldung"></span>
+        </div>
+    </form>
+</div>
+
+<div class="card" id="mesh-liste">
+    <div class="bildmodell-listenkopf">
+        <h2>Meshes</h2>
+        <button type="button" class="btn btn-danger btn-sm" id="mesh-bulk-delete" disabled>
+            <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="mesh-bulk-count">0</span>)</span></button>
+    </div>
+    {% include "djangobase/_tabelle.html" with tabelle=mesh_tabelle %}
+</div>
+{{ mesh_katalog|json_script:"mesh-katalog" }}

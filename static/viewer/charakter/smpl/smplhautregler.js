@@ -1,4 +1,6 @@
 import { markDirty } from '../undo.js';
+import { Sanduhr } from '../../gemeinsam/sanduhr.js';
+import { SmplModell } from '../../gemeinsam/smplmodell.js';
 
 /**
  * Smplhautregler — Farbe, Rauheit und Glanz eines SMPL-X-Körpers.
@@ -62,6 +64,13 @@ export class Smplhautregler {
             inst.hautAnwenden();
             sperren();
             markDirty();
+            // Ein Hautfoto kommt vom Server (Meshcapade oder BEDLAM) — beim
+            // ersten Mal braucht das Bild einen Moment (Edgar, 26.09.2026:
+            // „wenn ich eine Eigenschaft ändere, die Zeit braucht, mach
+            // Sanduhr"); schon geladen: `texturBereit` liefert `null`, also
+            // keine Sanduhr für nichts.
+            const wartend = SmplModell.texturBereit(inst.geschlecht, inst.haut.textur);
+            if (wartend) Sanduhr.um('Hautfoto wird geladen …', () => wartend);
         });
         Smplhautregler._bedlamListe(inst.geschlecht).then((liste) => {
             if (!liste.length || !wahl.isConnected) return;

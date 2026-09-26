@@ -912,8 +912,17 @@
 .uma-gruppe.uma-gruppe.uma-gruppe { margin: 4px 0; }
 .uma-gruppe.uma-gruppe.uma-gruppe > summary {
     cursor: pointer; font-size: 0.72rem; text-transform: uppercase;
-    letter-spacing: .04em; opacity: .8; padding: 3px 0;
+    letter-spacing: .04em; padding: 3px 0;
+    /* Dieselbe Farbe wie die Panelköpfe (26.09.2026, Edgar: „die aufklappbaren
+       Bereiche ALLER Tabs sollen die Fontfarbe rot haben") — vorher nur
+       `opacity: .8` auf dem normalen Text, kein `--accent`. */
+    color: var(--accent);
 }
+/* Formpresets einer Genesis-9-Pose (genesis9posen.js, „Form · <Quelle>"): blieb
+   bisher ganz ohne Farbregel (26.09.2026, Edgar: „die aufklappbaren Bereiche
+   ALLER Tabs sollen die Fontfarbe rot haben"). */
+.hb-formpresets > summary { cursor: pointer; color: var(--accent); }
+
 /* Die Kategorien der Daz-Garderobe (21.09.2026, Edgar: „die Schrift der Kategorien
    soll so sein wie «Farbe / Material»"): der Kopf ist ein `aufklappkopf`
    (`viewer_huelle.css`, Akzentfarbe, 0.85rem), nicht die graue UMA-Gruppenzeile. */

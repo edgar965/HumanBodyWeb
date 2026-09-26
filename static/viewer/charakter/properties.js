@@ -115,6 +115,11 @@ export async function populateProperties(charId) {
         Umapythoneigenschaften.leeren();
         Formbedienung.leeren();
         await Genesis9eigenschaften.fuellen(inst);
+        // Die Assets-Liste bleibt sonst leer, bis wer ein Teilnetz anklickt —
+        // `getSelectableSubMeshes` liest `clothMeshes`/`hairMesh` unabhaengig
+        // von der Auswahl, nur gerufen wurde sie hier nie (26.09.2026, Edgar:
+        // "warum keine Objekte bei Assets", Damira1 mit Kleidung und Haaren).
+        updateEquippedList(inst);
         _updatePropContext();
         _gemerktesHerstellen(charId);
         return;

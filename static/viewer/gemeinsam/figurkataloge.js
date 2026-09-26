@@ -16,9 +16,10 @@ import { Serverabruf } from './serverabruf.js';
  */
 export class Figurkataloge {
 
-    /** Reihenfolge und Namen der Reiter nach Ansage (Edgar, 07.09.2026). */
-    static REIHENFOLGE = ['modell', 'smpl', 'makehuman', 'uma', 'umapython',
-                          'genesis9'];
+    /** Reihenfolge und Namen der Reiter nach Ansage (Edgar, 07.09.2026;
+     *  Genesis 9 an erste Stelle vor HumanBody, Edgar 26.09.2026). */
+    static REIHENFOLGE = ['genesis9', 'modell', 'smpl', 'makehuman', 'uma',
+                          'umapython'];
 
     /**
      * Die zwei Bereiche je Reiter (Edgar, 17.09.2026: „mach zwei zugeklappte

@@ -1,0 +1,63 @@
+{# Rechtsklick auf die Modellzeile -> „Exportieren …" (scene/modellexport_dialog.js). #}
+<div class="scene-modal-overlay" id="modellexport-dialog">
+    <div class="scene-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-file-export"></i> Modell exportieren</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body">
+            <div class="hb-font-size-0-75rem-gedaempft">Formate</div>
+            <div class="modellexport-reihe">
+                <label><input type="checkbox" id="modellexport-fmt-glb" checked> GLB</label>
+                <label><input type="checkbox" id="modellexport-fmt-obj"> OBJ</label>
+                <label><input type="checkbox" id="modellexport-fmt-ply"> PLY</label>
+                <label><input type="checkbox" id="modellexport-fmt-stl"> STL</label>
+                <label><input type="checkbox" id="modellexport-fmt-dae"> DAE</label>
+                <label><input type="checkbox" id="modellexport-fmt-blend"> .blend</label>
+            </div>
+
+            <div class="hb-font-size-0-75rem-gedaempft">Inhalt</div>
+            <div class="modellexport-reihe">
+                <label><input type="checkbox" id="modellexport-rig" checked> Rig</label>
+                <label><input type="checkbox" id="modellexport-textur" checked> Textur</label>
+                <label><input type="checkbox" id="modellexport-assets" checked> Assets (Kleider inkl. Haare)</label>
+                <label><input type="checkbox" id="modellexport-animation" checked>
+                    Animation <span id="modellexport-anim-name" class="gedaempft"></span></label>
+            </div>
+
+            <div class="hb-font-size-0-75rem-gedaempft">Texturauflösung</div>
+            <select class="scene-name-input" id="modellexport-aufloesung">
+                <option value="0" selected>Original</option>
+                <option value="2048">2048 px</option>
+                <option value="1024">1024 px</option>
+                <option value="512">512 px (schnelle Vorschau)</option>
+            </select>
+
+            <div id="modellexport-pose-zeile" hidden>
+                <div class="hb-font-size-0-75rem-gedaempft">Pose (OBJ/PLY/STL, oder Rig aus)</div>
+                <div class="modellexport-reihe">
+                    <label><input type="radio" name="modellexport-pose" value="ruhelage" checked> Ruhelage</label>
+                    <label><input type="radio" name="modellexport-pose" value="aktuell"> angezeigtes Animationsbild</label>
+                </div>
+            </div>
+
+            <div class="hb-font-size-0-75rem-gedaempft">Ordner</div>
+            <input class="scene-name-input" id="modellexport-ordner" type="text" autocomplete="off">
+
+            <div class="hb-font-size-0-75rem-gedaempft">Dateiname</div>
+            <input class="scene-name-input" id="modellexport-name" type="text" autocomplete="off">
+
+            <div id="modellexport-warnungen" class="modellexport-warnungen"></div>
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="modellexport-confirm">Exportieren</button>
+        </div>
+    </div>
+</div>
+<style>
+.modellexport-reihe { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 10px; }
+.modellexport-reihe label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; white-space: nowrap; }
+.modellexport-warnungen { margin-top: 8px; }
+.modellexport-warnungen div { font-size: 0.78rem; color: #d9a441; padding: 2px 0; }
+</style>

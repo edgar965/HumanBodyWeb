@@ -13,6 +13,7 @@ from django.urls import path
 
 from .api.charmorph_bestand import CharmorphBestand
 from .api.figur_export import Figurexport
+from .api.modellexport import Modellexportanfrage
 from .api.fotoauftraege import Fotoauftraege
 from .api.kleidungsbibliothek import Kleiderendpunkte
 from .api.retarget import Retargetendpunkte
@@ -57,6 +58,9 @@ CHARAKTER = [
     # Fertige Figur als GLB (Datei -> Exportieren), Abnehmer: Roomguest.
     path('api/character/figur-glb/', Figurexport.liste, name='figur_glb_liste'),
     path('api/character/figur-glb/<str:name>/', Figurexport.datei, name='figur_glb'),
+    path('api/character/modellexport/vorgabe/', Modellexportanfrage.vorgabe,
+         name='modellexport_vorgabe'),
+    path('api/character/modellexport/', Modellexportanfrage.ablegen, name='modellexport_ablegen'),
     path('api/character/figur-glb/<str:name>/ablegen/', Figurexport.ablegen,
          name='figur_glb_ablegen'),
     path('api/character/analyze-photo/', Fotoauftraege.analysieren,

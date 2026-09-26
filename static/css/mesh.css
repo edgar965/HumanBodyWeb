@@ -1,0 +1,60 @@
+/* Reiter „Mesh" auf „Modell aus Dateien" (26.09.2026) — Formular, Fotokarten, Optionen,
+   Auftragsseite. `.bildmodell-*`-Klassen (Formular, Ablage, Vorschau, Knöpfe, Listenkopf)
+   kommen aus `bildmodell.css` und werden hier mitbenutzt, nicht verdoppelt. */
+
+/* -------------------------------------------------------------- Seitenreiter */
+.seitenreiter { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border, #3a4250); }
+.seitenreiter [role="tab"] {
+    background: transparent; color: var(--text-muted, #999); border: 1px solid var(--border, #3a4250);
+    border-bottom: none; border-radius: 6px 6px 0 0; padding: 8px 20px; cursor: pointer; font-size: 1rem;
+}
+.seitenreiter [role="tab"][aria-selected="true"] { color: var(--text, #eee); background: var(--bg-darker, #181825); }
+.seitenreiter [role="tab"] i { margin-right: 6px; }
+
+/* -------------------------------------------------------------------- Fotokarten */
+.mesh-vorschauen { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.mesh-fotokarte {
+    display: flex; flex-direction: column; gap: 4px; width: 120px; position: relative;
+    background: var(--bg-darker, #181825); border-radius: 6px; padding: 6px;
+}
+.mesh-vorschau { width: 108px; height: 108px; object-fit: cover; border-radius: 4px; }
+.mesh-rollenwahl { font-size: 0.75rem; padding: 2px 4px; }
+.mesh-gewichtzeile { display: flex; align-items: center; gap: 4px; }
+.mesh-gewichtzeile input[type="range"] { flex: 1 1 auto; width: auto; }
+.mesh-gewichtwert { font-size: 0.7rem; color: var(--text-muted, #999); width: 2.4em; text-align: right; }
+.mesh-fotoentfernen {
+    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; line-height: 18px;
+    border-radius: 50%; border: none; background: rgba(0, 0, 0, 0.6); color: #fff; cursor: pointer;
+    font-size: 0.9rem; padding: 0;
+}
+.mesh-fotoentfernen:hover { background: #e74c3c; }
+
+/* --------------------------------------------------------------------- Optionen */
+.mesh-optionen { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 20px; }
+.mesh-optionsfeld { display: flex; flex-direction: column; gap: 4px; }
+.mesh-optionsfeld label { font-size: 0.85rem; color: var(--text-muted, #999); }
+.mesh-kaestchengruppe { display: flex; flex-wrap: wrap; gap: 10px; }
+.mesh-kaestchen { display: flex; align-items: center; gap: 4px; font-size: 0.9rem; font-weight: normal; }
+.viewer-eingabe {
+    background: var(--bg-darker, #181825); color: var(--text, #eee); border: 1px solid var(--border, #3a4250);
+    border-radius: 4px; padding: 4px 8px;
+}
+
+/* ---------------------------------------------------------------- Auftragsseite */
+.mesh-auftragskopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.mesh-hauptbereich { display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap; }
+.mesh-betrachter { flex: 1 1 520px; min-width: 320px; height: 560px; background: #11141c; border-radius: 8px; position: relative; }
+.mesh-betrachter canvas { border-radius: 8px; }
+.mesh-seitenspalte { flex: 0 0 320px; display: flex; flex-direction: column; gap: 16px; }
+.mesh-downloads { display: flex; flex-direction: column; gap: 6px; }
+.mesh-downloads a { display: flex; align-items: center; gap: 8px; }
+.mesh-fotoliste { display: flex; flex-wrap: wrap; gap: 8px; }
+.mesh-kennzahlen { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 0.9rem; }
+.mesh-kennzahlen dt { color: var(--text-muted, #999); }
+.mesh-kennzahlen dd { margin: 0; text-align: right; }
+.mesh-betrachter-hinweis {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted, #999); text-align: center; padding: 20px;
+}
+.mesh-texturzeile { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+.mesh-texturzeile .hb-hinweis { margin: 0; }

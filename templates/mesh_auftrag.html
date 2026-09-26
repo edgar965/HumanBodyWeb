@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Mesh · {{ job.name }}{% endblock %}
+
+{% comment %}
+Auftragsseite Reiter „Mesh" (26.09.2026): oben Lauf (Fortschritt, Start/Anhalten), links
+die Fotos mit ihrer Rolle, rechts das erzeugte Netz interaktiv (Three.js, `GLTFLoader`) mit
+Downloads (GLB/OBJ/PLY) und Kennzahlen. Zustand und Katalog kommen als JSON in die Seite,
+Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<script type="importmap">
+{ "imports": { "three": "{% static 'vendor/three/build/three.module.js' %}",
+               "three/addons/": "{% static 'vendor/three/examples/jsm/' %}" } }
+</script>
+{% endblock %}
+
+{% block content %}
+<script id="mesh-daten" type="application/json">{"zustand": {{ zustand_json|safe }}, "katalog": {{ katalog_json|safe }}}</script>
+
+<div class="page-header mesh-auftragskopf">
+    <div>
+        <a href="{% url 'bildmodell' %}#mesh" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Modell aus Dateien</a>
+        <h1><i class="fas fa-cubes"></i> <span id="auftrag-name">{{ job.name }}</span>
+            <small class="hb-hinweis">Mesh · {{ job.kennung }}</small></h1>
+    </div>
+    <div class="bildmodell-status" id="auftrag-status"></div>
+</div>
+
+<div class="card" id="lauf">
+    <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
+    <div class="bildmodell-laufzeile">
+        <span id="fortschritt-text" class="hb-hinweis"></span>
+        <span class="bildmodell-laufknoepfe">
+            <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        </span>
+    </div>
+    <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
+</div>
+
+<div class="card">
+    <div class="mesh-hauptbereich">
+        <div class="mesh-betrachter" id="betrachter">
+            <div class="mesh-betrachter-hinweis" id="betrachter-hinweis">Noch kein Netz — links „Neu berechnen" oder warten, bis der Lauf fertig ist.</div>
+        </div>
+        <div class="mesh-seitenspalte">
+            <div>
+                <h2>Ergebnis</h2>
+                <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
+                <div class="mesh-downloads" id="downloads"></div>
+            </div>
+            <div>
+                <h2>Optionen</h2>
+                <div class="mesh-optionen" id="mesh-optionen"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Fotos</h2>
+    <p class="hb-hinweis">Rolle, Gewicht (%) und „Neu berechnen" — bereits vorbereitete Fotos (freigestellt) werden wiederverwendet. Das Gewicht wirkt auf die Vorschau sofort; Ansehen ändert nur die Anzeige, nichts wird gespeichert.</p>
+    <div class="mesh-fotoliste" id="fotoliste"></div>
+    <div class="mesh-texturzeile">
+        <button type="button" class="btn btn-secondary btn-sm" id="textur-uebernehmen">
+            <i class="fas fa-paint-roller"></i> <span>Textur übernehmen (Fotogewichte fest ins Netz rechnen)</span>
+        </button>
+        <span class="hb-hinweis" id="textur-hinweis-live"></span>
+    </div>
+    <div class="bildmodell-ablage" id="mesh-nachtraeglich">
+        <input type="file" id="mesh-weitere-dateien" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff">
+        <p><i class="fas fa-cloud-upload-alt"></i> Weitere Fotos hinzufügen</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Meshauftragseite } from "{% fassungspfad 'viewer/mesh/meshauftragseite.js' %}";
+Meshauftragseite.starten("{{ job.id }}");
+</script>
+{% endblock %}

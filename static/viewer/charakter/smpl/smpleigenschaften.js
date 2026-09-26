@@ -2,6 +2,7 @@ import { escapeHtml } from '../utils.js';
 import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { markDirty } from '../undo.js';
+import { Sanduhr } from '../../gemeinsam/sanduhr.js';
 import { SmplFigur } from './smplfigur.js';
 import { Smplkatalog } from './smplkatalog.js';
 import { Smplformregler } from './smplformregler.js';
@@ -93,7 +94,7 @@ export class Smpleigenschaften {
         // Hautfarbe wieder auf Grau zurueck (25.09.2026).
         const neu = new SmplFigur(inst.id, { koerper, haut: inst.haut, details: inst.details });
         try {
-            await neu.bauen();
+            await Sanduhr.um('Körper wird gebaut …', () => neu.bauen());
         } catch (fehler) {
             alert(`Körper nicht ladbar: ${fehler.message}`);
             return;
@@ -108,7 +109,7 @@ export class Smpleigenschaften {
         fn.updateCharacterListUI();
         fn.updateVertexCount();
         fn.selectCharacter(inst.id);
-        markDirty('GarmentCode-Körper');
+        markDirty('SMPLX');
     }
 
     /** Die vorgegebenen Maße — Zentimeter und Grad, wie in der YAML. */

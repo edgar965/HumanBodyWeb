@@ -21,6 +21,14 @@ from .wurzeln import BASE_DIR, HUMANBODY_ROOT, MOCAPNET_ROOT, OBJECTS_ROOT, TOOL
 #: Pipeline-Python (venv mit CUDA-PyTorch, ONNX Runtime GPU).
 PIPELINE_PYTHON = str(TOOLS_ROOT / 'python10' / 'Scripts' / 'python.exe')
 
+#: Mesh-Python (26.09.2026, Reiter „Mesh" auf „Modell aus Dateien"): eigene venv für
+#: TRELLIS.2 und Hunyuan3D — deren Pakete (xformers, CuMesh, FlexGEMM, o_voxel,
+#: nvdiffrec, hy3dgen) sollen `python10` mit GVHMR/WHAM/MICA nicht verbiegen.
+#: Eingerichtet über `ProjektTemp/mesh_env/umgebung_anlegen.cmd` + `erweiterungen_bauen.cmd`.
+MESH_PYTHON = str(TOOLS_ROOT / 'python10_mesh' / 'Scripts' / 'python.exe')
+#: Gewichte der Bild-zu-3D-Modelle (Hugging-Face-Ablage, wie `HF_HOME` der Pipelines).
+HF_HOME_DIR = TOOLS_ROOT / 'hf_home'
+
 #: Django-Python (3.14) — derselbe Interpreter, der diesen Server fährt. Hilfe →
 #: Tests startet damit die Test-Befehle. Abgeleitet aus TOOLS_ROOT, nicht
 #: eingetippt: Auf einem zweiten Rechner mit anderem Laufwerk wäre ein fester

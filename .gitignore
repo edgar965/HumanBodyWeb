@@ -18,6 +18,8 @@ media/hauttexturen/
 media/vorschau/
 # Fertige Unterteiler-Teile je Stufe (17.09.2026): drei Stufen bauen 66 s, laden < 1 s.
 media/unterteilung/
+# Fortschritt + Protokoll des GC-Stapellaufs (26.09.2026, Knopf auf /settings/kleider/).
+media/gcstuecke_lauf/
 
 # Node
 node_modules/

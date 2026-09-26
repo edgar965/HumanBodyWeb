@@ -1,6 +1,10 @@
 # Konzept: Modell-Export aus dem Kontextmenü (`/Charakter/`)
 
-Stand 26.09.2026, Fassung 2 — Konzept, noch nichts gebaut.
+Stand 26.09.2026, Fassung 3 — **gebaut**, Server neu gestartet, noch nicht im
+Browser durchgeklickt (`nur-echter-chrome.md`: dafür Chrome-MCP nötig, hier
+nicht ausgelöst). Ordner sind zwischenzeitlich von `scene/` nach `charakter/`
+umbenannt worden (Commit `2447e6b`) — alle Pfade unten sind der ALTE Stand vor
+dieser Umbenennung; der tatsächliche Code liegt unter `static/viewer/charakter/`.
 
 ## Auftrag
 

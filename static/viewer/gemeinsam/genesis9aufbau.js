@@ -41,11 +41,20 @@ export class Genesis9aufbau {
      * GLEICHZEITIG angefragt (18.09.2026 nachts): der Server rechnet Anfragen
      * nebeneinander (gemessen 3,6 s nacheinander gegen 2,4 s Wand), und ein Stück,
      * das vor dem Körper ankommt, bindet `_kleiderBinden` an das frische Skelett.
+     *
+     * EIN STÜCK DARF DIE FIGUR NICHT KOSTEN (26.09.2026, Edgar: „Modell laden
+     * funktioniert nicht"): Ursula1 trug ein längst verschwundenes MakeHuman-
+     * Stück (`mb_t_shirt`, 404 „Unbekanntes Stück") — ohne Fang riss das per
+     * `Promise.all` den KÖRPER mit, die Figur blieb ganz aus der Szene. Nur der
+     * Körper bleibt fatal; ein Stück, das scheitert, wird gemeldet und fehlt.
      */
     static async alles(inst, stufen) {
         const koerper = inst.koerperAufbauen(stufen);   // zählt `_lauf` hoch, bevor die Stücke ihn lesen
-        await Promise.all([koerper, ...inst.getragen().map(     // ohne Kaskade: alle kommen ohnehin
-            kennung => inst.anziehen(kennung, inst.kleidung[kennung], stufen, false))]);
+        const stuecke = inst.getragen().map(             // ohne Kaskade: alle kommen ohnehin
+            kennung => inst.anziehen(kennung, inst.kleidung[kennung], stufen, false).catch(fehler => {
+                Protokoll.warnung('Genesis 9', `${kennung} nicht geladen: ${fehler.message}`);
+            }));
+        await Promise.all([koerper, ...stuecke]);
         return inst;
     }
 

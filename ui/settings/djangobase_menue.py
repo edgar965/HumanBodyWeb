@@ -12,6 +12,9 @@ MENUE = [
         'untermenu': [
             {'label': 'Studio', 'icon': 'bi-scissors', 'url': '/studio/'},
             {'label': 'Charakter', 'icon': 'bi-lightbulb', 'url': '/Charakter/'},
+            # Seit 26.09.2026 hier statt unter HumanBody (Edgar: „lege das Menü unter
+            # ‚Dashboard', vor Theatre"); Reiter 3D (Genesis) und Mesh (Fotos → Netz).
+            {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/modell-aus-dateien/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -23,7 +26,6 @@ MENUE = [
             {'label': 'Charakter Alt', 'icon': 'bi-person-gear', 'url': '/humanbody/scene-model/'},
             {'label': 'Foto To 3D', 'icon': 'bi-camera', 'url': '/humanbody/photo-to-3d/'},
             {'label': 'Jobs', 'icon': 'bi-list-ul', 'url': '/humanbody/photo-to-3d/jobs/'},
-            {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/humanbody/modell-aus-dateien/'},
             {'label': 'Animationen', 'icon': 'bi-person-walking', 'url': '/humanbody/animations/'},
             {'label': 'Pattern Editor', 'icon': 'bi-compass', 'url': '/humanbody/config/#tab-creator'},
         ],

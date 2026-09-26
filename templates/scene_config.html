@@ -436,7 +436,10 @@
         font-weight: 600;
         font-size: 0.75rem;
         text-transform: uppercase;
-        color: var(--text-muted);
+        /* Dieselbe Farbe wie die anderen aufklappbaren Köpfe (26.09.2026,
+           Edgar: „die aufklappbaren Bereiche ALLER Tabs sollen die
+           Fontfarbe rot haben") — vorher `--text-muted` (grau). */
+        color: var(--accent);
         user-select: none;
         gap: 4px;
     }
@@ -1736,6 +1739,7 @@
 
 <!-- Add Character Dialog -->
 {% include "_ursprungsfix_dialog.html" %}
+{% include "_modellexport_dialog.html" %}
 
 <!-- Save Scene Dialog -->
 <div class="scene-modal-overlay" id="save-scene-dialog">

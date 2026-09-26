@@ -12,6 +12,7 @@ from .bvhdatei import BVHFile
 from .effektauftrag import Effektauftrag
 from .einstellungen import AppSettings
 from .fotoauftrag import PhotoAnalysisJob
+from .meshauftrag import Meshauftrag
 
 __all__ = ['BVHJob', 'BVHFile', 'AppSettings', 'Effektauftrag', 'PhotoAnalysisJob',
-           'Bildmodellauftrag']
+           'Bildmodellauftrag', 'Meshauftrag']

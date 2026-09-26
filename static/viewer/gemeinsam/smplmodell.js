@@ -49,14 +49,21 @@ export class SmplModell extends Modell {
      *  gecacht, damit ein Formregler-Zug sie nicht neu lädt (25.09.2026). */
     static TEXTURADRESSE = '/api/character/smpl-figur/textur/';
     static _texturVorrat = new Map();
+    //: Dieselben Schlüssel wie `_texturVorrat`, aber als Promise — löst sich
+    //: erst, wenn das Bild wirklich da ist (`Sanduhr` in `smplhautregler.js`).
+    static _texturBereit = new Map();
 
     static _textur(geschlecht) {
         const schluessel = geschlecht === 'male' ? 'male' : 'female';
         if (!SmplModell._texturVorrat.has(schluessel)) {
             const textur = new THREE.TextureLoader().load(
-                `${SmplModell.TEXTURADRESSE}${schluessel}/`);
+                `${SmplModell.TEXTURADRESSE}${schluessel}/`,
+                () => SmplModell._texturBereit.get(schluessel)?._geloest(),
+                undefined,
+                () => SmplModell._texturBereit.get(schluessel)?._geloest());
             textur.colorSpace = THREE.SRGBColorSpace;
             SmplModell._texturVorrat.set(schluessel, textur);
+            SmplModell._texturBereit.set(schluessel, SmplModell._versprechen());
         }
         return SmplModell._texturVorrat.get(schluessel);
     }
@@ -66,17 +73,46 @@ export class SmplModell extends Modell {
      *  wie `_textur`. `haut.textur` trägt dann `bedlam:<schlüssel>`. */
     static BEDLAM_ADRESSE = '/api/character/smpl-figur/bedlam/';
     static _bedlamVorrat = new Map();
+    static _bedlamBereit = new Map();
 
     static _bedlamTextur(geschlecht, schluessel) {
         const g = geschlecht === 'male' ? 'male' : 'female';
         const eintrag = `${g}:${schluessel}`;
         if (!SmplModell._bedlamVorrat.has(eintrag)) {
             const textur = new THREE.TextureLoader().load(
-                `${SmplModell.BEDLAM_ADRESSE}${g}/${encodeURIComponent(schluessel)}/`);
+                `${SmplModell.BEDLAM_ADRESSE}${g}/${encodeURIComponent(schluessel)}/`,
+                () => SmplModell._bedlamBereit.get(eintrag)?._geloest(),
+                undefined,
+                () => SmplModell._bedlamBereit.get(eintrag)?._geloest());
             textur.colorSpace = THREE.SRGBColorSpace;
             SmplModell._bedlamVorrat.set(eintrag, textur);
+            SmplModell._bedlamBereit.set(eintrag, SmplModell._versprechen());
         }
         return SmplModell._bedlamVorrat.get(eintrag);
+    }
+
+    /** Ein Promise, dessen Auflösung von außen ausgelöst wird (`_geloest`
+     *  hängt es hinein) — `TextureLoader.load` kennt nur Callbacks. */
+    static _versprechen() {
+        let geloest;
+        const versprechen = new Promise((r) => { geloest = r; });
+        versprechen._geloest = geloest;
+        return versprechen;
+    }
+
+    /**
+     * Wird `haut.textur` gerade zum ERSTEN Mal gebraucht, ist das Bild noch
+     * unterwegs — der Aufrufer (`Smplhautregler`) zeigt solange die Sanduhr.
+     * Schon geladen oder „keine": `null`, dann ist nichts abzuwarten.
+     */
+    static texturBereit(geschlecht, texturwert) {
+        if (!texturwert || texturwert === 'keine') return null;
+        const g = geschlecht === 'male' ? 'male' : 'female';
+        if (texturwert.startsWith('bedlam:')) {
+            const eintrag = `${g}:${texturwert.slice(7)}`;
+            return SmplModell._bedlamVorrat.has(eintrag) ? SmplModell._bedlamBereit.get(eintrag) : null;
+        }
+        return SmplModell._texturVorrat.has(g) ? SmplModell._texturBereit.get(g) : null;
     }
 
     constructor(id, daten) {

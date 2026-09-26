@@ -35,7 +35,7 @@ export class Szenenaufbau {
     static AUFBAUEN = [
         'bindLightingUI', 'bindRendererUI', 'bindCameraUI', 'bindActions',
         'bindMenubar', 'initCharacterDialog', 'initSceneDialogs',
-        '_initSaveAnimDialog', 'bindKeyboardShortcuts', 'bindCanvasClick',
+        '_initSaveAnimDialog', 'initModellexportDialog', 'bindKeyboardShortcuts', 'bindCanvasClick',
         'greifenBeobachten',
         'initSubMeshInteraction', 'initTabs', 'bindVisibilityToggles',
         'initPropGarmentControls', '_initPropMHControls', 'initPropHairControls',

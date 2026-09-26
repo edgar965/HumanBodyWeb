@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kontextmenue } from '../gemeinsam/kontextmenue.js';
 import { Szenenausgabe } from './szenenausgabe.js';
+import { Modellexportdialog } from './modellexport_dialog.js';
 
 /**
  * Speichern — Modell oder Szene.
@@ -99,6 +100,9 @@ export class Speichernmenue {
                   tun: () => Speichernmenue.szene(false) },
                 { symbol: 'fa-folder-open', text: 'Szene speichern unter …',
                   tun: () => Speichernmenue.szene(true) },
+                null,
+                { symbol: 'fa-file-export', text: 'Exportieren …',
+                  tun: () => Modellexportdialog.oeffnen(charId) },
             ];
         });
     }

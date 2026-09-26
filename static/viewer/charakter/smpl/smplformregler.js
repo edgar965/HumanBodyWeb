@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { markDirty } from '../undo.js';
 import { SmplFigur } from './smplfigur.js';
+import { Sanduhr } from '../../gemeinsam/sanduhr.js';
 
 /**
  * Smplformregler — Größe und Fülle eines SMPL-Körpers.
@@ -148,7 +149,7 @@ export class Smplformregler {
             details: inst.details,
         });
         try {
-            await neu.bauen();
+            await Sanduhr.um('Körper wird gebaut …', () => neu.bauen());
         } catch (fehler) {
             if (stand) stand.textContent = `Fehler: ${fehler.message}`;
             return;

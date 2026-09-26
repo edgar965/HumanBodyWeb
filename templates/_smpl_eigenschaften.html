@@ -1,32 +1,35 @@
-{% comment %}Eigenschaften eines GarmentCode-Referenzkörpers — `scene/smpl/smpleigenschaften.js`{% endcomment %}
-<div class="prop-section hb-versteckt" id="prop-smpl-section">
-    <div class="prop-section-header">
-        <h4>GarmentCode-Körper</h4>
+{% comment %}Eigenschaften eines GarmentCode-Referenzkörpers — `scene/smpl/smpleigenschaften.js`.
+Zuklappbar wie die übrigen Bereiche des Reiters, „SMPLX" statt „GarmentCode-Körper"
+(Edgar, 26.09.2026: „benenne um … in SMPLX, das soll zuklappbar sein wie Transform") —
+vorher `prop-section-header` + `h4`, ohne Klappmechanik.{% endcomment %}
+<div class="panel-section prop-section hb-versteckt" id="prop-smpl-section">
+    <h3>SMPLX <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div id="prop-smpl-kopf" class="hb-font-size-0-72rem"></div>
+        <div class="hb-font-size-0-72rem">
+            Körper und Maße von GarmentCode, wie das Online-Tool sie nimmt
+            (<code>mean_all</code> ist dessen Körper). Die Maße werden nicht
+            gemessen, sondern sind vorgegeben — mit ihnen baut der
+            GarmentCode-Reiter den Schnitt.
+        </div>
+        <div id="prop-smpl-geschlecht"></div>
+        {% comment %}Form der Figur — die zwei Regler aus `scene/smpl/smplformregler.js`.
+        Das Online-Tool hat sie nicht: sein 3D-Körper bleibt bei jedem Maß derselbe
+        (gemessen 06.09.2026, siehe GarmentCode/smplform.py).{% endcomment %}
+        <details class="uma-gruppe" open>
+            <summary>Form (SMPL-Blendshapes)</summary>
+            <div id="prop-smpl-form" class="anim-tree"></div>
+        </details>
+        {% comment %}Haut — Farbe/Rauheit/Glanz, `scene/smpl/smplhautregler.js`
+        (25.09.2026, „SMPL-X für Vollausstattung"): ohne gesetzte Farbe bleibt der
+        Körper grau wie der Referenzkörper von GarmentCode.{% endcomment %}
+        <details class="uma-gruppe" open>
+            <summary>Haut</summary>
+            <div id="prop-smpl-haut"></div>
+        </details>
+        <details class="uma-gruppe" open>
+            <summary>Vorgegebene Maße (cm, Grad)</summary>
+            <div id="prop-smpl-masse" class="anim-tree hb-max-height-300px"></div>
+        </details>
     </div>
-    <div id="prop-smpl-kopf" class="hb-font-size-0-72rem"></div>
-    <div class="hb-font-size-0-72rem">
-        Körper und Maße von GarmentCode, wie das Online-Tool sie nimmt
-        (<code>mean_all</code> ist dessen Körper). Die Maße werden nicht
-        gemessen, sondern sind vorgegeben — mit ihnen baut der
-        GarmentCode-Reiter den Schnitt.
-    </div>
-    <div id="prop-smpl-geschlecht"></div>
-    {% comment %}Form der Figur — die zwei Regler aus `scene/smpl/smplformregler.js`.
-    Das Online-Tool hat sie nicht: sein 3D-Körper bleibt bei jedem Maß derselbe
-    (gemessen 06.09.2026, siehe GarmentCode/smplform.py).{% endcomment %}
-    <details class="uma-gruppe" open>
-        <summary>Form (SMPL-Blendshapes)</summary>
-        <div id="prop-smpl-form" class="anim-tree"></div>
-    </details>
-    {% comment %}Haut — Farbe/Rauheit/Glanz, `scene/smpl/smplhautregler.js`
-    (25.09.2026, „SMPL-X für Vollausstattung"): ohne gesetzte Farbe bleibt der
-    Körper grau wie der Referenzkörper von GarmentCode.{% endcomment %}
-    <details class="uma-gruppe" open>
-        <summary>Haut</summary>
-        <div id="prop-smpl-haut"></div>
-    </details>
-    <details class="uma-gruppe" open>
-        <summary>Vorgegebene Maße (cm, Grad)</summary>
-        <div id="prop-smpl-masse" class="anim-tree hb-max-height-300px"></div>
-    </details>
 </div>

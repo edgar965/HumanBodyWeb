@@ -45,6 +45,25 @@
             GarmentCode-Reiter, einzeln und gemeinsam.</span>
     </div>
 </div>
+<div class="settings-section">
+    <h3>GarmentCode-Garderobe</h3>
+    <div class="settings-row">
+        <button type="button" id="gcstuecke-start" class="btn btn-secondary">Neu backen</button>
+        <label style="min-width: auto;">
+            <input type="checkbox" id="gcstuecke-neu">
+            auch unveränderte Stücke neu bauen
+        </label>
+        <span class="hint">Baut jedes GarmentCode-Stück neu, das als Genesis-9-Asset veraltet ist — z. B. weil
+            die Drapierung oben sich geändert hat (`manage.py gcstuecke`, „GC …" in der Genesis-9-Garderobe).
+            Ohne Häkchen werden unveränderte Stücke übersprungen (Fingerabdruck passt noch), mit Häkchen baut
+            jedes der ~171 Stücke neu (`--neu`). Läuft im Hintergrund auf der GPU, je Stück ~20–45 s, der ganze
+            Bestand kann Stunden dauern. Danach den Server neu starten, damit die Garderobe die neuen Stücke zeigt.</span>
+    </div>
+    <div class="progress-bar" id="gcstuecke-fortschritt">
+        <div class="progress-fill" id="gcstuecke-balken" style="width: 0%"></div>
+    </div>
+    <div class="settings-row"><span id="gcstuecke-zeile" class="hint"></span></div>
+</div>
 {% endblock %}
 
 {% block einstellungen_nachtrag %}
@@ -63,7 +82,9 @@
 </style>
 <script type="module">
 import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+import { Gcstueckeknopf } from "{% fassungspfad 'js/einstellungen/gcstueckeknopf.js' %}";
 
 Vorgabenformular.anmelden('kleider-settings-form', 'Kleider-Einstellungen gespeichert — gilt nach dem Neuladen der Seiten.');
+Gcstueckeknopf.aufbauen();
 </script>
 {% endblock %}

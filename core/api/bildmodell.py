@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Bildmodellendpunkte — „Modell aus Dateien": Seiten und API.
 
-GET  /humanbody/modell-aus-dateien/                     Dashboard (Tabelle + neuer Auftrag)
-GET  /humanbody/modell-aus-dateien/<kennung>/           Auftragsseite (Bilder, Optionen, 3D)
+GET  /modell-aus-dateien/                               Dashboard (Reiter 3D und Mesh, Tabelle, neuer Auftrag)
+GET  /modell-aus-dateien/<kennung>/                     Auftragsseite (Bilder, Optionen, 3D)
+     (bis 26.09.2026 unter /humanbody/…, die alten Adressen leiten um — `core/urls_bildmodell.py`)
 POST /api/bildmodell/anlegen/                           name, typ, bilder[] → {kennung, url}
 GET  /api/bildmodell/katalog/                           Optionen je Schritt mit Verfügbarkeit
 GET  /api/bildmodell/<id>/zustand/                      Status, Fortschritt, Bilder, Ergebnis
@@ -34,9 +35,7 @@ from ..dienste.bildmodelldateien import Bildmodelldateien
 from ..dienste.bildmodellfotolinien import Bildmodellfotolinien
 from ..dienste.bildmodelllauf import Bildmodelllauf
 from ..dienste.bildmodelloptionen import Bildmodelloptionen
-from ..dienste.bildmodellpersonkatalog import Bildmodellpersonkatalog
 from ..dienste.bildmodellstart import Bildmodellstart
-from ..dienste.bildmodelltabelle import Bildmodelltabelle
 from ..dienste.bildmodelltextur import Bildmodelltextur
 from ..models import Bildmodellauftrag
 
@@ -67,18 +66,7 @@ class Bildmodellendpunkte:
             aus.append(dict(b, bildstand=stand))
         return aus
 
-    @staticmethod
-    def dashboard(request):
-        auftraege = Bildmodellauftrag.objects.all()
-        return render(
-            request,
-            'bildmodell.html',
-            {
-                'tabelle': Bildmodelltabelle(auftraege).tabelle(),
-                'typen': Bildmodellauftrag.TYP_CHOICES,
-                'testfiguren': Bildmodellpersonkatalog.testfiguren(),
-            },
-        )
+    # Das Dashboard (Reiter 3D und Mesh) steht seit 26.09.2026 in `modellausdateien.py`.
 
     @staticmethod
     def auftragsseite(request, kennung):

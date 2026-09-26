@@ -13,15 +13,29 @@ Fortschritt, 3D-Ansicht). Tabelle: djangoBase (`Bildmodelltabelle`).
 <link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1><i class="fas fa-images"></i> Modell aus Dateien</h1>
-    <p class="hb-hinweis">Bilder eines Daz-Produkts hochladen — jede Person, jeder Kopf wird
-    zugeschnitten, eingeordnet (Hauptbild Körper / Kopf, Nebenbild), geschätzt und auf die
-    Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einzeln einstellen.</p>
 </div>
+
+{% comment %}Zwei Reiter (Edgar, 26.09.2026: „Aktueller Tabname: 3D, neuer Tab: Mesh"):
+3D = Genesis-9-Figur aus Fotos (bisheriges Dashboard), Mesh = freies Netz aus Fotos
+(TRELLIS.2/Hunyuan3D). Umschalten: `gemeinsam/seitenreiter.js` (#mesh in der Adresse,
+sonst der zuletzt gewählte).{% endcomment %}
+<div class="seitenreiter" role="tablist" id="modell-reiter">
+    <button type="button" role="tab" data-reiter="3d" aria-selected="true"
+            title="Genesis-9-Figur aus Fotos: Regler, Rig, Textur"><i class="fas fa-user"></i> 3D</button>
+    <button type="button" role="tab" data-reiter="mesh" aria-selected="false"
+            title="Freies Netz aus Fotos (TRELLIS.2, Hunyuan3D) als GLB/OBJ"><i class="fas fa-cubes"></i> Mesh</button>
+</div>
+
+<div data-reiterfeld="3d">
+<p class="hb-hinweis">Bilder eines Daz-Produkts hochladen — jede Person, jeder Kopf wird
+zugeschnitten, eingeordnet (Hauptbild Körper / Kopf, Nebenbild), geschätzt und auf die
+Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einzeln einstellen.</p>
 
 <div class="card" id="bildmodell-neu">
     <h2>Neuer Auftrag</h2>
@@ -68,13 +82,22 @@ Fortschritt, 3D-Ansicht). Tabelle: djangoBase (`Bildmodelltabelle`).
     </div>
     {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
 </div>
+</div>
+
+<div data-reiterfeld="mesh" hidden>
+{% include "_mesh_reiter.html" %}
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/djangobase/js/tabellen_sortierung.js?v={{ djangobase.statik_v }}"></script>
-<script src="/static/djangobase/js/tabellen_breiten.js?v={{ djangobase.statik_v }}"></script>
+<script type="module" src="/static/djangobase/js/tabellen_sortierung.js?v={{ djangobase.statik_v }}"></script>
+<script type="module" src="/static/djangobase/js/tabellen_breiten.js?v={{ djangobase.statik_v }}"></script>
 <script type="module">
 import { Bildmodellliste } from "{% fassungspfad 'viewer/bildmodell/liste.js' %}";
+import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
+import { Meshliste } from "{% fassungspfad 'viewer/mesh/meshliste.js' %}";
+Seitenreiter.binden(document.getElementById('modell-reiter'), 'modell_aus_dateien_reiter');
 Bildmodellliste.aufbauen();
+Meshliste.aufbauen();
 </script>
 {% endblock %}

@@ -19,12 +19,6 @@ from .api.auftrag_upload import Uploadseiten
 from .api.auftragsformulare import Auftragsformulare
 from .api.auftragsweiterleitung import Auftragsweiterleitung
 from .api.bibliothek import Bibliotheksendpunkte
-from .api.bildmodell import Bildmodellendpunkte
-from .api.bildmodelldateien import Bildmodelldateiendpunkte
-from .api.bildmodellfreisteller import Bildmodellfreistellerendpunkte
-from .api.bildmodellgvhmr import Bildmodellgvhmrendpunkte
-from .api.bildmodellproportionen import Bildmodellproportionenendpunkte
-from .api.bildmodelltextur import Bildmodelltexturendpunkte
 from .api.bvhtext import Bvhtext
 from .api.dateien import Auftragsdateien
 from .api.effekte import Effektendpunkte
@@ -38,6 +32,7 @@ from .api.garmentgemeinsam import Garmentgemeinsamendpunkte
 from .api.garmentsimulation import Garmentsimulation
 from .api.garmentvorbilder import Garmentvorbilder
 from .api.garmentvorschau import Garmentvorschauendpunkte
+from .api.gcstueckeendpunkte import Gcstueckeendpunkte
 from .api.personendateien import Personendateien
 from .api.retarget import Retargetendpunkte
 from .api.schnittvorschau import Schnittvorschauendpunkte
@@ -58,6 +53,10 @@ from .daten.kennungskonverter import Kennungskonverter
 from .urls_charakter import CHARAKTER
 
 register_converter(Kennungskonverter, 'kennung')
+
+# Nach dem Konverter: beide Listen nutzen `<kennung:…>`, Django prüft ihn schon beim `path()`.
+from .urls_bildmodell import BILDMODELL  # noqa: E402
+from .urls_mesh import MESH  # noqa: E402
 
 urlpatterns = [
     path('', Webseiten.start, name='dashboard'),
@@ -124,6 +123,11 @@ urlpatterns = [
     path('settings/bvh-studio/', RedirectView.as_view(url='/settings/studio/', permanent=True)),
     path('settings/effekte/', seite_effekte_einstellungen.effekte_settings_page, name='settings_effekte'),
     path('settings/kleider/', seite_kleider_einstellungen.kleider_settings_page, name='settings_kleider'),
+    # Knopf „Neu backen" auf /settings/kleider/ (26.09.2026) — Unterprozess,
+    # der Stand kommt aus einer Datei; siehe `dienste/gcstueckelauf.py`.
+    path('api/kleider/gcstuecke/starten/', Gcstueckeendpunkte.starten, name='gcstuecke_starten'),
+    path('api/kleider/gcstuecke/stand/', Gcstueckeendpunkte.stand, name='gcstuecke_stand'),
+    path('api/kleider/gcstuecke/stoppen/', Gcstueckeendpunkte.stoppen, name='gcstuecke_stoppen'),
     path('api/job/<uuid:job_id>/start/', Auftragsendpunkte.starten, name='api_start_processing'),
     path('api/job/<uuid:job_id>/stop/', Auftragsendpunkte.anhalten, name='api_stop_processing'),
     path('api/job/<uuid:job_id>/status/', Auftragsendpunkte.zustand, name='job_status_api'),
@@ -131,54 +135,6 @@ urlpatterns = [
     path('api/jobs/bulk-delete/', Auftragsendpunkte.mehrere_loeschen, name='bulk_delete_jobs'),
     path('api/job/create-from-file/', Auftragsendpunkte.aus_datei, name='create_job_from_file'),
     # HumanBody
-    # Modell aus Dateien (Bilder → Genesis-9-Figur, 19.09.2026)
-    path('humanbody/modell-aus-dateien/', Bildmodellendpunkte.dashboard, name='bildmodell'),
-    path('humanbody/modell-aus-dateien/<kennung:kennung>/', Bildmodellendpunkte.auftragsseite,
-         name='bildmodell_auftrag'),
-    path('api/bildmodell/anlegen/', Bildmodellendpunkte.anlegen, name='bildmodell_anlegen'),
-    path('api/bildmodell/katalog/', Bildmodellendpunkte.katalog, name='bildmodell_katalog'),
-    path('api/bildmodell/loeschen/', Bildmodellendpunkte.mehrere_loeschen,
-         name='bildmodell_mehrere_loeschen'),
-    path('api/bildmodell/<uuid:job_id>/zustand/', Bildmodellendpunkte.zustand, name='bildmodell_zustand'),
-    path('api/bildmodell/<uuid:job_id>/bilder/', Bildmodellendpunkte.bilder, name='bildmodell_bilder'),
-    path('api/bildmodell/<uuid:job_id>/bild/<str:datei>/', Bildmodellendpunkte.bild, name='bildmodell_bild'),
-    path('api/bildmodell/<uuid:job_id>/bild/<str:datei>/loeschen/', Bildmodelldateiendpunkte.bild_loeschen,
-         name='bildmodell_bild_loeschen'),
-    path('api/bildmodell/<uuid:job_id>/original/<str:name>/ersetzen/',
-         Bildmodelldateiendpunkte.original_ersetzen, name='bildmodell_original_ersetzen'),
-    path('api/bildmodell/<uuid:job_id>/original/<str:name>/loeschen/',
-         Bildmodelldateiendpunkte.original_loeschen, name='bildmodell_original_loeschen'),
-    path('api/bildmodell/<uuid:job_id>/kameras/', Bildmodelldateiendpunkte.kameras,
-         name='bildmodell_kameras'),
-    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/vorschau/',
-         Bildmodellfreistellerendpunkte.vorschau, name='bildmodell_freisteller_vorschau'),
-    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/grundlage/',
-         Bildmodellfreistellerendpunkte.grundlage, name='bildmodell_freisteller_grundlage'),
-    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/speichern/',
-         Bildmodellfreistellerendpunkte.speichern, name='bildmodell_freisteller_speichern'),
-    path('api/bildmodell/<uuid:job_id>/freisteller/<str:datei>/zuruecksetzen/',
-         Bildmodellfreistellerendpunkte.zuruecksetzen, name='bildmodell_freisteller_zuruecksetzen'),
-    path('api/bildmodell/<uuid:job_id>/starten/', Bildmodellendpunkte.starten, name='bildmodell_starten'),
-    path('api/bildmodell/<uuid:job_id>/anhalten/', Bildmodellendpunkte.anhalten, name='bildmodell_anhalten'),
-    path('api/bildmodell/<uuid:job_id>/proportionen/', Bildmodellproportionenendpunkte.stellen,
-         name='bildmodell_proportionen'),
-    path('api/bildmodell/<uuid:job_id>/reihenfolge/', Bildmodellproportionenendpunkte.reihenfolge,
-         name='bildmodell_reihenfolge'),
-    path('api/bildmodell/<uuid:job_id>/texturreihenfolge/', Bildmodelltexturendpunkte.reihenfolge,
-         name='bildmodell_texturreihenfolge'),
-    path('api/bildmodell/<uuid:job_id>/zeilenbild/<str:ansicht>/', Bildmodellproportionenendpunkte.zeilenbild,
-         name='bildmodell_zeilenbild'),
-    path('api/bildmodell/<uuid:job_id>/zielnetz3d/', Bildmodellproportionenendpunkte.zielnetz3d,
-         name='bildmodell_zielnetz3d'),
-    path('api/bildmodell/<uuid:job_id>/gvhmr3d/<str:datei>/', Bildmodellgvhmrendpunkte.netz3d,
-         name='bildmodell_gvhmr3d'),
-    path('api/bildmodell/<uuid:job_id>/flame3d/<str:datei>/', Bildmodellgvhmrendpunkte.flame3d,
-         name='bildmodell_flame3d'),
-    path('api/bildmodell/<uuid:job_id>/kopf3d/', Bildmodellgvhmrendpunkte.kopf3d,
-         name='bildmodell_kopf3d'),
-    path('api/bildmodell/<uuid:job_id>/loeschen/', Bildmodellendpunkte.loeschen, name='bildmodell_loeschen'),
-    path('api/bildmodell/<uuid:job_id>/datei/<str:ordner>/<str:name>', Bildmodellendpunkte.datei,
-         name='bildmodell_datei'),
     path('humanbody/photo-to-3d/', seiten.photo_to_3d_page, name='photo_to_3d'),
     path(
         'humanbody/photo-to-3d/jobs/',
@@ -304,3 +260,7 @@ urlpatterns = [
 # Die Charakter- und SMPL-Routen stehen in `urls_charakter.py` —
 # 74 Eintraege, die zusammengehoeren (30.08.2026).
 urlpatterns += CHARAKTER
+
+# „Modell aus Dateien": Reiter 3D (Genesis) und Mesh (Fotos → Netz), 26.09.2026.
+urlpatterns += BILDMODELL
+urlpatterns += MESH
