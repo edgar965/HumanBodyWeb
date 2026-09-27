@@ -68,10 +68,15 @@ class Meshfigurauftrag(models.Model):
         return self.status == 'fertig'
 
     def stellung(self):
-        """Die Regler des Ergebnisses samt Eigenmorph — `{regler: wert}` (leer vor der Anpassung)."""
+        """Die Regler des Ergebnisses samt Eigenmorph und „Kopf-Eigen" (Seite „Gesichtsform",
+        `G9schnittmorph`) — `{regler: wert}` (leer vor der Anpassung). Die Ketten lesen
+        `ergebnis.regler`, sie sehen beide Morphe nicht."""
         e = self.ergebnis or {}
         stellung = dict((e.get('regler') or {}).get('stellung') or {})
         rest = e.get('rest') or {}
         if rest.get('regler'):
             stellung[rest['regler']] = 1.0
+        kopf = e.get('kopfeigen') or {}
+        if stellung and kopf.get('regler'):
+            stellung[kopf['regler']] = float(kopf.get('wert', 1.0))
         return stellung

@@ -4,6 +4,15 @@
 .meshfigur-dateiliste { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .meshfigur-datei { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
 
+/* Pfade der Netze (Reiter und Auftragsseite): zwei Felder, volle Breite, Pfade sind lang. */
+.meshfigur-pfade { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px 16px; margin: 10px 0; }
+.meshfigur-pfade label { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; }
+.meshfigur-pfade input { width: 100%; font-family: var(--font-mono, monospace); font-size: 0.85rem; }
+.meshfigur-exportoptionen { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 0.85rem; }
+.meshfigur-exportoptionen label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.meshfigur-exportoptionen .meshfigur-exportname { flex: 1 1 100%; }
+.meshfigur-exportoptionen .meshfigur-exportname input { width: 100%; }
+
 .meshfigur-schritte { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0 0 10px; }
 .meshfigur-schritt {
     padding: 3px 10px; border-radius: 12px; font-size: 0.85rem;
@@ -39,3 +48,9 @@
 @media (max-width: 900px) {
     .meshfigur-buehnenspalte .mesh-betrachter { min-height: 440px; }
 }
+
+/* Karte „Haar" (Schritt „haar"): 2 × 3 Bilder, Netz ohne Haar | nur Haar, je vorn/seitlich/hinten. */
+.meshfigur-haarraster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.meshfigur-haarraster figure { margin: 0; }
+.meshfigur-haarraster img { width: 100%; height: auto; display: block; border-radius: 6px; }
+.meshfigur-haarraster figcaption { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }

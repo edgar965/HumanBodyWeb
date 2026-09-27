@@ -25,6 +25,10 @@ export class Genesis9Figur extends Genesis9Modell {
             pose: this.pose,
             ausdruck: this.ausdruck,
             kleidung: { ...this.kleidung },
+            // Fotokacheln und Herkunft (27.09.2026): ohne sie verlor „Modell speichern" die Haut
+            // eines Modells aus „Mesh to 3D", und der Auftrag erkannte sein Modell nicht wieder.
+            fototextur: { ...this.fototextur },
+            herkunft: this.herkunft,
         };
     }
 

@@ -1,3 +1,4 @@
+import { Auftragduplizieren } from '../gemeinsam/auftragduplizieren.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
 
@@ -112,7 +113,10 @@ export class Bildmodellliste {
         this.wahl = new Zeilenwahl(tabelle, anzahl => {
             if (knopf) knopf.disabled = anzahl === 0;
             if (zaehler) zaehler.textContent = String(anzahl);
+            this.duplikat?.anzeigen(anzahl);
         });
+        this.duplikat = new Auftragduplizieren('bildmodell', 'bildmodell-duplizieren',
+            'bildmodell-duplizieren-count', this.wahl);
         this.wahl.binden();
         tabelle.addEventListener('click', e => {
             const zeile = e.target.closest('tr[data-id]');

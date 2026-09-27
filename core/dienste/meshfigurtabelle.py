@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Meshfigurtabelle — die Aufträge des Reiters „Mesh to 3D" als djangoBase-Tabelle.
 
-Wie `Meshtabelle`: Kästchen, Icon (die angepasste Figur, `ergebnis/icon.png`), Name, Netz
+Wie `Meshtabelle`: Kästchen, Vorlage (das Körpernetz von vorn, `ergebnis/vorlage.png`, seit
+27.09.2026), Icon (die angepasste Figur mit Textur, `ergebnis/icon.png`), Name, Netz
 (Originaldatei), Status mit Fortschritt, Abstand Figur ↔ Netz (RMS in mm, aus dem Schritt
 „vorschau"), Regler (wie viele von der Grundfigur abweichen), Dauer, Erstellt. Die Zeile trägt
 `data-id`; `meshfigur/meshfigurliste.js` öffnet auf Klick die Auftragsseite.
@@ -25,7 +26,8 @@ class Meshfigurtabelle(Meshtabelle):
             'key': 'wahl',
             'sortAus': True,
         },
-        {'label': 'Figur', 'key': 'icon', 'sortAus': True},
+        {'label': 'Vorlage', 'key': 'vorlage', 'sortAus': True, 'titel': 'Das Körpernetz, von vorn'},
+        {'label': 'Figur', 'key': 'icon', 'sortAus': True, 'titel': 'Die Genesis-Figur mit Textur, von vorn'},
         {'label': 'Name', 'key': 'name'},
         {'label': 'Netz', 'key': 'netz'},
         {'label': 'Status', 'key': 'status'},
@@ -61,7 +63,11 @@ class Meshfigurtabelle(Meshtabelle):
                 ''.join(
                     (
                         self._kaestchen(a),
-                        self._figuricon(a, seite),
+                        self._bild(a, seite, e.get('vorlage'), 'Vorlage', 'noch kein Bild des Netzes'),
+                        self._bild(
+                            a, seite, ((e.get('vorschau') or {}).get('dateien') or {}).get('icon'),
+                            'Figur', 'noch keine Vorschau',
+                        ),
                         self._name(a, seite),
                         format_html('<td data-sort="{}" title="{}">{}</td>', netz, netz, netz[:40]),
                         self._status(a),
@@ -75,18 +81,26 @@ class Meshfigurtabelle(Meshtabelle):
         }
 
     @staticmethod
-    def _figuricon(a, seite):
-        if ((a.ergebnis or {}).get('vorschau') or {}).get('dateien', {}).get('icon'):
+    def _bild(a, seite, datei, text, fehlt):
+        """Ein Tabellenbild aus `ergebnis/` — mit dem Stand des Auftrags in der Adresse, sonst
+        zeigte der Browser nach einem neuen Lauf das alte Bild (gleicher Name)."""
+        if datei:
+            adresse = '%s?v=%d' % (
+                reverse('meshfigur_datei', args=[a.id, 'ergebnis', datei]),
+                int(a.updated_at.timestamp()),
+            )
             return format_html(
                 '<td class="hb-kaestchen"><a href="{}"><img class="bildmodell-icon" src="{}" '
-                'alt="Figur"></a></td>',
+                'alt="{}" loading="lazy"></a></td>',
                 seite,
-                reverse('meshfigur_datei', args=[a.id, 'ergebnis', 'icon.png']),
+                adresse,
+                text,
             )
         return format_html(
             '<td class="hb-kaestchen"><a href="{}" class="bildmodell-icon bildmodell-icon-leer" '
-            'title="noch keine Vorschau">–</a></td>',
+            'title="{}">–</a></td>',
             seite,
+            fehlt,
         )
 
     @staticmethod

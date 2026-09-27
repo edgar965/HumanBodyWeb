@@ -61,6 +61,10 @@ class Bildmodellspeichern:
         # Dieselbe Bereinigung wie „Modell speichern" (`Modelldateien.modell_sichern`).
         sauber = re.sub(r'[^\w\s\-]', '', daten['name']).strip() or 'Modell'
         daten['name'] = sauber
+        from .modelltexturen import Modelltexturen
+
+        # Kacheln neben das Modell kopieren — Szene und Export lesen sie dort (27.09.2026).
+        daten['figur'] = Modelltexturen.sichern(sauber, daten['figur'])
         ordner = settings.HUMANBODY_MODELS_DIR
         ordner.mkdir(parents=True, exist_ok=True)
         with open(ordner / (sauber + '.json'), 'w', encoding='utf-8') as f:

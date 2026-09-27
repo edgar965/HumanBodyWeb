@@ -20,7 +20,7 @@ import json
 import logging
 
 from asgiref.sync import sync_to_async
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -28,6 +28,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.bildmodellablage import Bildmodellablage
+from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.bildmodellarbeiter import Bildmodellarbeiter
 from ..dienste.bildmodellbildtypen import Bildmodellbildtypen
 from ..dienste.bildmodellbildvorgaben import Bildmodellbildvorgaben
@@ -294,4 +295,4 @@ class Bildmodellendpunkte:
             raise Http404('Pfad') from None
         if not pfad.is_file():
             raise Http404('Datei %s' % name)
-        return FileResponse(open(pfad, 'rb'))
+        return Auftragsdatei.antwort(request, pfad, kennung=request.GET.get('v'))

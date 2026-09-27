@@ -26,7 +26,14 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
         <h1><i class="fas fa-cubes"></i> <span id="auftrag-name">{{ job.name }}</span>
             <small class="hb-hinweis">Mesh · {{ job.kennung }}</small></h1>
     </div>
-    <div class="bildmodell-status" id="auftrag-status"></div>
+    <div class="auftrag-kopfknoepfe">
+        <div class="bildmodell-status" id="auftrag-status"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
+                data-adresse="{% url 'mesh_loeschen' job.id %}"
+                data-ziel="{% url 'bildmodell' %}#mesh"
+                data-frage="Diesen Mesh-Auftrag samt Fotos und Ergebnisdateien löschen? Die Kopie in output/Export/Foto3D bleibt.">
+            <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
+    </div>
 </div>
 
 <div class="card" id="lauf">
@@ -51,6 +58,10 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
                 <h2>Ergebnis</h2>
                 <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
                 <div class="mesh-downloads" id="downloads"></div>
+                {# Wo das Netz liegt (Edgar, 27.09.2026): Ergebnisordner, die Dateien und die #}
+                {# Ablagekopie unter output/Export/Foto3D — je Zeile kopierbar. #}
+                <h3 class="mesh-pfadkopf">Gespeichert unter</h3>
+                <div class="mesh-pfade" id="mesh-pfade"></div>
             </div>
             <div>
                 <h2>Optionen</h2>
@@ -86,6 +97,8 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
 {% block extra_scripts %}
 <script type="module">
 import { Meshauftragseite } from "{% fassungspfad 'viewer/mesh/meshauftragseite.js' %}";
+import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
 Meshauftragseite.starten("{{ job.id }}");
+Auftragloeschen.binden();
 </script>
 {% endblock %}

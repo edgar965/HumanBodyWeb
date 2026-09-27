@@ -28,6 +28,7 @@ from ..daten.wrapperpfad import Wrapperpfad
 from ..models import Meshauftrag
 from ..pipeline_process import PipelineProzess, PipelineStille
 from .meshexportablage import Meshexportablage
+from .meshicon import Meshicon
 from .meshoptionen import Meshoptionen
 
 logger = logging.getLogger('core')
@@ -40,7 +41,13 @@ class Meshlauf:
     RUNNER = '_run_mesh.py'
     #: So lange darf der Runner schweigen: Laden von TRELLIS.2 (16 GB) und die
     #: 1536³-Dekodierung geben minutenlang keine Zeile aus.
-    STILLE_S = 1800
+    #: **Von 1800 auf 5400 s erhöht (27.09.2026)** — die Kombination „TRELLIS.2-Form +
+    #: Hunyuan-Malerei" lädt ZWEI große Modelle in einem Lauf, und zwei von Edgars Läufen
+    #: (`18.50.22`, `19.32.41`) wurden mitten im Rechnen abgeschossen: einmal im Remesh,
+    #: einmal in der Malerei. Der Runner meldet in den bekannten stummen Abschnitten jetzt
+    #: jede Minute ein Lebenszeichen (`mesh_basis.lebenszeichen`); blockiert ein
+    #: Fremdmodul dabei die GIL, kommt auch das nicht durch — dann trägt nur diese Grenze.
+    STILLE_S = 5400
 
     def __init__(self, job_id):
         self.job = Meshauftrag.objects.get(pk=job_id)
@@ -101,6 +108,31 @@ class Meshlauf:
             logger.info('Mesh %s: abgelegt unter %s', self.job.kennung, ziel)
         except OSError as fehler:
             logger.warning('Mesh %s: Ablagekopie fehlgeschlagen (%s)', self.job.kennung, fehler)
+        self._icon(quelle)
+
+    def _icon(self, glb):
+        """Die beiden Tabellenbilder (Edgar, 27.09.2026): „Mesh" ist eine Ansicht des NETZES,
+        „Vorlage" das verkleinerte erste Foto. Gerendert hier im Arbeitsprozess, weil
+        `python10_mesh` kein pyrender hat (`Meshicon`). Wie die Ablagekopie ohne Scheitern:
+        ein fehlendes Vorschaubild macht keinen Lauf kaputt."""
+        ordner = self.ablage.unter(Meshablage.ERGEBNIS)
+        neu = {}
+        name = Meshicon.schreiben(glb, ordner)
+        if name:
+            neu['icon'] = name
+        bilder = self.job.bilder or []
+        if bilder and bilder[0].get('datei'):
+            quelle = self.ablage.unter(Meshablage.EINGANG) / bilder[0]['datei']
+            vorlage = Meshicon.vorlage_schreiben(quelle, ordner) if quelle.is_file() else ''
+            if vorlage:
+                neu['vorlage'] = vorlage
+        if not neu:
+            return
+        self.job.refresh_from_db()
+        ergebnis = dict(self.job.ergebnis or {})
+        ergebnis['dateien'] = {**(ergebnis.get('dateien') or {}), **neu}
+        self.job.ergebnis = ergebnis
+        self.job.save(update_fields=['ergebnis', 'updated_at'])
 
     def beschreibung(self, ab=None):
         """Was der Runner rechnen soll — Pfade, Rollen, Optionen (JSON-Datei)."""

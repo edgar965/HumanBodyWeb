@@ -147,6 +147,24 @@ export class Meshfigurberichte {
             + ` (${k.gesicht_fehler_px} px); vorn bei ${(k.ausrichtung || {}).azimut}°, nachgedreht ${k.feinausrichtung_grad}°`
             + `; Einheit ${(k.einheit || {}).grund}${k.skalierung ? `; auf ${k.skalierung.ziel_cm} cm gestreckt (× ${k.skalierung.faktor})` : ''}.`;
         feld.appendChild(text);
+        if (k.kopf) {
+            const kopf = document.createElement('p');
+            kopf.className = k.kopf.fehler ? 'hb-hinweis hb-schlecht' : 'hb-hinweis';
+            kopf.textContent = k.kopf.fehler ? `Kopfnetz nicht verwendet: ${k.kopf.fehler}` : Meshfigurberichte.kopftext(k.kopf);
+            feld.appendChild(kopf);
+        }
         for (const name of Object.values(k.bilder)) feld.appendChild(this._bild('ergebnis', name, 'meshfigur-erkennungsbild'));
+    }
+
+    /** Der Abgleich des Kopfnetzes in einem Satz (`Meshfigurkopfnetz.einpassen`). */
+    static kopftext(kopf) {
+        const a = kopf.abgleich || {}, s = kopf.schnitt || {}, f = kopf.farbe || {}, aus = kopf.ausrichtung || {};
+        const zahl = w => String(w).replace('.', ',');
+        return `Kopfnetz: ${a.genutzt} von ${a.punkte} Gesichtspunkten genutzt, Rest ${Meshfigurberichte.mm(a.rest_median_mm)}`
+            + ` (p90 ${Meshfigurberichte.mm(a.rest_p90_mm)}), Maßstab × ${zahl(a.massstab)}, gedreht ${zahl(a.drehung_grad)}°;`
+            + ` Hochachse ${aus.hochachse}, frontal ${zahl(aus.frontal)}; Schnitt ${zahl(s.ueber_schulter_cm)} cm über der`
+            + ` Schulterlinie (Kinn ${zahl(s.kinn_ueber_schulter_cm)} cm); Hautton Körper/Kopf`
+            + ` × ${(f.faktor || []).map(zahl).join(' / ')} (linear)`
+            + `${f.hinweis ? ` (${f.hinweis})` : ''}${s.hinweis ? ` — ${s.hinweis}` : ''}.`;
     }
 }

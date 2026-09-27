@@ -6,18 +6,24 @@ Ruhelage (über die Hautmischung zurückgerechnet, einseitige Punkte unter Haar 
 Auf Wunsch symmetrisch (Daz-Figuren sind es, ein Netz aus Fotos nie ganz): je Punkt der
 Mittelwert mit seinem Spiegelpunkt (`G9netzbereiche.spiegel`), wo nur eine Seite getroffen ist,
 deren gespiegelter Wert. Dann dieselbe Glättung wie im Reiter „3D" (`G9restmorph`: Lücken aus
-den Nachbarn, 6 Laplace-Schritte) und als `eigen:<kennung>` abgelegt.
+den Nachbarn, 6 Laplace-Schritte) und als `eigen:<kennung>` abgelegt. Die Augenpartie (Lider und
+Körpernachbarn des Augapfels) ist dabei Lücke (`Meshfiguraugenhoehle`): sonst zog der Rest sie in
+die Augenmulde des Netzes, und der Augapfel stach durch die Lider.
 
 TEXTUR: Der Runner liefert je Texel der fünf Kacheln die Farbe des Netzes (`meshtextur.npz`,
 Format wie `_run_fotofarben.py`); gebacken wird mit `G9texturbacken` — Daz-Albedo auf den
 Hautton des Netzes getönt, darüber die Netzfarbe. Ergebnis wie beim Reiter „3D" unter
-`ergebnis.fototextur` (die Seite legt die Kacheln mit `Texturauflage` auf).
+`ergebnis.fototextur` (die Seite legt die Kacheln mit `Texturauflage` auf). Dazu das Daz-Augenbild
+in der Irisfarbe des Netzes (`Meshfiguraugenbild`, `fototextur.augen`).
 """
 
 import logging
 import time
 
 import numpy as np
+
+from .meshfiguraugenbild import Meshfiguraugenbild
+from .meshfiguraugenhoehle import Meshfiguraugenhoehle
 
 logger = logging.getLogger('core')
 
@@ -56,6 +62,8 @@ class Meshfigurende:
         e = self.lauf.runner('rest', von=0.05, bis=0.85)
         with np.load(self.ablage.arbeit('rest.npz')) as d:
             rest, gewicht = d['rest'].astype(float), d['gewicht'].astype(float)
+        # Augenpartie aus der Umgebung füllen — nicht in die Augenmulde des Netzes ziehen.
+        rest, gewicht, augen = Meshfiguraugenhoehle.luecke(rest, gewicht)
         if self.optionen.get('symmetrie') == 'an':
             rest, gewicht = self.symmetrisch(rest, gewicht)
         self.lauf.melden(0.9, 'Eigenmorph glätten')
@@ -68,7 +76,32 @@ class Meshfigurende:
             **zahlen,
             'rest_rms_mm': e.get('rest_rms_mm'),
             'getroffen': e.get('rest_punkte'),
+            'augenpartie_luecke': augen,
             'verlauf': e.get('verlauf'),
+        }
+        self.kopfeigen_nachziehen()
+
+    def kopfeigen_nachziehen(self):
+        """„Kopf-Eigen" (Seite „Gesichtsform") mit seinen gespeicherten Zielkurven auf die NEUE Figur
+        rechnen — sonst trüge die Figur den Morph einer anderen Reglerstellung."""
+        from Genesis9.schnittmorph import G9schnittmorph
+
+        from .gesichtsformquelle import Gesichtsformquelle
+
+        kopf = self.job.ergebnis.get('kopfeigen') or {}
+        name = Gesichtsformquelle.auftragsname(self.job)
+        ziel = (G9schnittmorph.steckbrief(name).get('ziel') or {}) if kopf.get('regler') else {}
+        if not ziel.get('schnitte') and not ziel.get('punkte'):
+            return
+        self.lauf.melden(0.95, 'Kopf-Eigen nachziehen')
+        morph = G9schnittmorph(self.job.stellung(), name)
+        e = morph.rechnen(G9schnittmorph.ziel_aus_seite(ziel), 'nachgezogen')
+        self.job.ergebnis['kopfeigen'] = {
+            **kopf,
+            'regler': e['regler'],
+            'guete': e['guete'],
+            'max_mm': e['max_mm'],
+            'punkte': e['punkte'],
         }
 
     @staticmethod
@@ -106,19 +139,32 @@ class Meshfigurende:
         self.job.ergebnis['textur'] = {
             'hautton': hautton,
             'deckung': e.get('deckung_je_kachel'),
+            'farbangleich': e.get('farbangleich'),
+            'iris': e.get('iris'),
             'wahl': wahl,
         }
         if wahl != 'mesh':
             self.job.ergebnis.pop('fototextur', None)
             return
         self.lauf.melden(0.75, 'Kacheln backen')
-        self.job.ergebnis['fototextur'] = self.backen(hautton, abtastung.seite)
+        fototextur = self.backen(hautton, abtastung.seite)
+        # Daz-Augapfel mit der Irisfarbe des Netzes (`Meshfiguraugenbild`), neben den Kacheln.
+        augen = Meshfiguraugenbild.schreiben(self.ablage.ergebnis(), (e.get('iris') or {}).get('farbe'))
+        if augen:
+            fototextur['augen'] = augen['datei']
+            self.job.ergebnis['textur']['augenbild'] = augen
+        self.job.ergebnis['fototextur'] = fototextur
 
     def backen(self, hautton, seite):
+        from Genesis9.texturabtastung import G9texturabtastung
         from Genesis9.texturbacken import G9texturbacken
+
+        from .meshfigurtexelpruefung import Meshfigurtexelpruefung
 
         with np.load(self.ablage.arbeit('meshtextur.npz')) as d:
             hd = {k: d[k] for k in d.files}
+        # Helle Füllflächen, Schattenklumpen und die fleckige Kopfhaut vor dem Backen säubern.
+        hd, pruefung = Meshfigurtexelpruefung(G9texturabtastung.holen(seite)).pruefen(hd)
         kacheln, _ = G9texturbacken(seite).backen(
             hd['punktfarben'],
             hd['deckung'],
@@ -131,6 +177,7 @@ class Meshfigurende:
             'kacheln': {str(k): self._name(p) for k, p in kacheln.items()},
             'seite': int(seite),
             'hautton': hautton,
+            'pruefung': pruefung,
             'stand': time.strftime('%Y%m%d%H%M%S'),
         }
 

@@ -10,6 +10,8 @@ import { Oberflaechenbindung } from './oberflaechenbindung.js';
 // Ergebnisseite), die Maske unter der Kleidung (21.09.2026, Konzept Fitting, Schicht 1).
 import './hautverdeckung.js';
 import { Genesis9netz } from './genesis9netz.js';
+import { Genesis9fototextur } from './genesis9fototextur.js';
+import { Genesis9vorgabe } from './genesis9vorgabe.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
 import { Modell } from './modell.js';
@@ -72,6 +74,9 @@ export class Genesis9Modell extends Modell {
         /** Getragene Stücke in Anziehreihenfolge: Kennung → `{variante}`; Netze in `clothMeshes`,
          *  Lagen (`{innen, aussen}`, `Genesis9kleidung`) in `lagen`. */
         this.kleidung = { ...(daten.kleidung || {}) }; this.lagen = {};
+        /** Fotokacheln eines gespeicherten Modells (`{1001: Adresse}`, `Genesis9fototextur`) und
+         *  woher es stammt (Auftrag) — beides geht mit „Modell speichern" wieder in die Datei. */
+        this.fototextur = { ...(daten.fototextur || {}) }; this.herkunft = daten.herkunft || null;
         /** Die Anhänge: Schlüssel → Netz. */
         this.anhangNetze = {};
         this.hoehe = 0;
@@ -98,24 +103,9 @@ export class Genesis9Modell extends Modell {
         return (daten.figuren || []).find(f => f.name === figur) || null;
     }
 
-    /**
-     * Regler des Eintrags übernehmen — und bei einem GESPEICHERTEN Modell
-     * (Studio, Theatre: dort ist nur der Name bekannt, 17.09.2026) auch Haut,
-     * Augen, Brauen und Kleidung, soweit hier nichts gesetzt ist.
-     */
+    /** Regler des Eintrags — bei einem GESPEICHERTEN Modell alles Weitere (`Genesis9vorgabe`). */
     async _vorgabeUebernehmen() {
-        const eintrag = await Genesis9Modell.eintrag(this.figur);
-        this.regler = { ...(eintrag?.regler || {}) };
-        if (!eintrag?.gespeichert) return;
-        if (!this.haut) this.haut = eintrag.haut || '';
-        if (this.augen === '01' && eintrag.augen) this.augen = eintrag.augen;
-        if (!this.brauen) this.brauen = eintrag.brauen || '';
-        if (!this.brauenstil) this.brauenstil = eintrag.brauenstil || '';
-        if (!Object.keys(this.praesets).length) this.praesets = { ...(eintrag.praesets || {}) };
-        if (!Object.keys(this.hautmischung).length) this.hautmischung = { ...(eintrag.hautmischung || {}) };
-        if (!this.pose) this.pose = eintrag.pose || '';
-        if (!this.ausdruck) this.ausdruck = eintrag.ausdruck || '';
-        if (!Object.keys(this.kleidung).length) this.kleidung = { ...(eintrag.kleidung || {}) };
+        Genesis9vorgabe.uebernehmen(this, await Genesis9Modell.eintrag(this.figur));
     }
 
     /**
@@ -151,10 +141,13 @@ export class Genesis9Modell extends Modell {
             this.skelettBauen(daten.skelett);
             this.eigeneKnochen = daten.skelett?.eigene || [];
         }
+        // Fotokacheln des Modells statt der Daz-Albedo (27.09.2026, `Genesis9fototextur`).
+        const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur) };
         this.bodyMesh = this._einhaengen(
-            Genesis9netz.bauen(daten, `genesis9_koerper_${this.id}`), daten.hautgewichte);
+            Genesis9netz.bauen(koerper, `genesis9_koerper_${this.id}`), daten.hautgewichte);
         this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
-        for (const anhang of daten.anhaenge || []) {
+        for (const roh of daten.anhaenge || []) {
+            const anhang = Genesis9fototextur.anhang(roh, this.fototextur);   // Augenbild des Modells
             this.anhangNetze[anhang.schluessel] = this._einhaengen(
                 Genesis9netz.bauen(anhang, `genesis9_${anhang.schluessel}_${this.id}`),
                 anhang.hautgewichte);

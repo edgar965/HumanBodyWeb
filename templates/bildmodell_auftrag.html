@@ -32,7 +32,14 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
         <h1><i class="fas fa-user"></i> <span id="auftrag-name">{{ job.name }}</span>
             <small class="hb-hinweis">{{ job.get_typ_display }} · {{ job.kennung }}</small></h1>
     </div>
-    <div class="bildmodell-status" id="auftrag-status"></div>
+    <div class="auftrag-kopfknoepfe">
+        <div class="bildmodell-status" id="auftrag-status"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
+                data-adresse="{% url 'bildmodell_loeschen' job.id %}"
+                data-ziel="{% url 'bildmodell' %}"
+                data-frage="Diesen Auftrag samt Bildern und Ergebnissen löschen? Gespeicherte Modelle bleiben.">
+            <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
+    </div>
 </div>
 
 <div class="card" id="lauf">
@@ -288,6 +295,8 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 {% block extra_scripts %}
 <script type="module">
 import { Bildmodellseite } from "{% fassungspfad 'viewer/bildmodell/index.js' %}";
+import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
 Bildmodellseite.aufbauen();
+Auftragloeschen.binden();
 </script>
 {% endblock %}

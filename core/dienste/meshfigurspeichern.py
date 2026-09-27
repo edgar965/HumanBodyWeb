@@ -34,6 +34,7 @@ class Meshfigurspeichern:
     ZUSATZ = 'Mesh'
     BILDER = (
         'icon.png',
+        'vorlage.png',
         'vorschau_vorn.png',
         'vorschau_seite.png',
         'vorschau_hinten.png',
@@ -75,12 +76,18 @@ class Meshfigurspeichern:
             },
         }
 
-    def _adressen(self):
+    def _bilder(self):
+        """`{1001: Datei, …, 'augen': Datei}` — die Kacheln und das gefärbte Augenbild
+        (`Meshfiguraugenbild`; `Genesis9fototextur` legt es auf die Augäpfel)."""
         f = self.job.ergebnis.get('fototextur') or {}
-        return {
-            k: '/api/meshfigur/%s/datei/ergebnis/%s' % (self.job.id, n)
-            for k, n in (f.get('kacheln') or {}).items()
-        }
+        aus = dict(f.get('kacheln') or {})
+        if f.get('augen'):
+            aus['augen'] = f['augen']
+        return aus
+
+    def _adressen(self):
+        stamm = '/api/meshfigur/%s/datei/ergebnis/' % self.job.id
+        return {k: stamm + n for k, n in self._bilder().items()}
 
     # ------------------------------------------------------------- Ablauf
 
@@ -91,15 +98,46 @@ class Meshfigurspeichern:
         aus['ablage'] = self.ablegen()
         self.job.ergebnis['gespeichert'] = aus
 
-    def modell_speichern(self):
+    @classmethod
+    def fuer(cls, job):
+        """Ohne Lauf — für „Als Genesis-Figur speichern" auf der Auftragsseite."""
+        from types import SimpleNamespace
+
+        from ..daten.meshfigurablage import Meshfigurablage
+        from .meshfiguroptionen import Meshfiguroptionen
+
+        return cls(
+            SimpleNamespace(
+                job=job, ablage=Meshfigurablage(job.kennung), optionen=Meshfiguroptionen.pruefen(job.optionen)
+            )
+        )
+
+    def modell_speichern(self, wunsch=None):
+        """Modell `<Name> Mesh` (nächste freie Nummer, wenn der Name einer fremden Figur gehört) —
+        oder genau `wunsch`: dann wird eine fremde Figur nicht überschrieben, sondern abgelehnt."""
         ordner = Path(settings.HUMANBODY_MODELS_DIR)
         ordner.mkdir(parents=True, exist_ok=True)
+        if wunsch is not None:
+            name = re.sub(r'[^\w\s\-]', '', str(wunsch)).strip()
+            if not name:
+                raise ValueError('Name fehlt')
+            if (ordner / (name + '.json')).is_file() and not self._eigenes(ordner / (name + '.json')):
+                raise ValueError('„%s" gibt es schon als andere Figur — bitte einen anderen Namen' % name)
+            return self._schreiben(ordner, name)
         stamm = re.sub(r'[^\w\s\-]', '', '%s %s' % (self.job.name, self.ZUSATZ)).strip() or 'Modell Mesh'
         name, n = stamm, 2
         while (ordner / (name + '.json')).is_file() and not self._eigenes(ordner / (name + '.json')):
             name, n = '%s %d' % (stamm, n), n + 1
+        return self._schreiben(ordner, name)
+
+    def _schreiben(self, ordner, name):
+        from .modelltexturen import Modelltexturen
+
+        daten = self.modelldaten(name, self._adressen())
+        # Die Kacheln neben das Modell (Szene, Export; überleben das Löschen des Auftrags).
+        daten['figur'] = Modelltexturen.sichern(name, daten['figur'])
         with open(ordner / (name + '.json'), 'w', encoding='utf-8') as f:
-            json.dump(self.modelldaten(name, self._adressen()), f, ensure_ascii=False, indent=2)
+            json.dump(daten, f, ensure_ascii=False, indent=2)
         self.job.modell = name
         self.job.save(update_fields=['modell', 'updated_at'])
         return name
@@ -132,7 +170,7 @@ class Meshfigurspeichern:
         ziel = self.zielordner()
         ziel.mkdir(parents=True, exist_ok=True)
         dateien = []
-        kacheln = (self.job.ergebnis.get('fototextur') or {}).get('kacheln') or {}
+        kacheln = self._bilder()
         for name in list(kacheln.values()) + list(self.BILDER):
             quelle = self.ablage.ergebnis(name)
             if quelle.is_file():

@@ -33,8 +33,10 @@ export class Genesis9texturen {
     static _vorrat = new Map();
     static _lader = null;
 
-    /** Die Adresse eines Bibliothekspfads. */
+    /** Die Adresse eines Bibliothekspfads — eine eigene Adresse (`/api/…`, die Fotokacheln eines
+     *  gespeicherten Modells, `Genesis9fototextur`) geht unverändert durch. */
     static adresse(pfad) {
+        if (pfad.startsWith('/')) return pfad;
         return Genesis9texturen.ADRESSE + pfad.split('/').map(encodeURIComponent).join('/');
     }
 
@@ -60,7 +62,8 @@ export class Genesis9texturen {
         const offen = new Map();
         for (const e of eintraege || []) {
             const pfad = e?.pfad;
-            if (!pfad || offen.has(pfad)) continue;
+            // Das Bündel kennt nur die Daz-Bibliothek; eigene Adressen lädt `holen` einzeln.
+            if (!pfad || offen.has(pfad) || pfad.startsWith('/')) continue;
             const adresse = Genesis9texturen.adresse(pfad);
             if (Genesis9texturen._vorrat.has(adresse)) continue;   // liegt schon oder lädt
             let loesen;
@@ -76,7 +79,7 @@ export class Genesis9texturen {
         const textur = new THREE.Texture();
         textur.flipY = false;                    // die Bitmap kommt schon gewendet
         textur.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-        textur.name = pfad.split('/').pop();
+        textur.name = pfad.split('?')[0].split('/').filter(Boolean).pop();
         return textur;
     }
 

@@ -9,7 +9,9 @@ Der Ordner liegt unter `HumanBody/data/models/`. Das ist der einzige Ort in
 `data/`, den die Anwendung beschreibt — dort speichert der Nutzer seine
 eigenen Modelle (`Modelldateien.modell_sichern`), es sind keine
 Produktionsassets wie Morphs oder Netze. Gelöscht wird deshalb genau eine
-Datei, nie ein Verzeichnis und nichts rekursiv. 06.09.2026.
+Datei, nie ein Verzeichnis und nichts rekursiv. 06.09.2026. Seit 27.09.2026
+dazu die Fotokacheln des Modells unter `Texturen/<name>/` (nur Bilddateien,
+der Ordner nur, wenn er danach leer ist — `Modelltexturen.entfernen`).
 """
 
 import logging
@@ -48,6 +50,14 @@ class Modellablage:
         if os.path.exists(neu_pfad):
             raise Ablagefehler('Es gibt schon ein Modell %s' % neu)
         os.rename(alt_pfad, neu_pfad)
+        # Die Fotokacheln eines Genesis-Modells ziehen mit (27.09.2026, `Modelltexturen`) — sonst
+        # zeigte das Modell auf einen Ordner, den das nächste „<alt>" überschreibt.
+        from .modelltexturen import Modelltexturen
+
+        try:
+            Modelltexturen.umbenennen(alt, neu, neu_pfad)
+        except (OSError, ValueError):
+            logger.exception('Texturen von %s nicht mit umbenannt', alt)
         logger.info('Modell umbenannt: %s -> %s', alt, neu)
         return neu
 
@@ -69,5 +79,12 @@ class Modellablage:
             # Ein Modell gilt als gelöscht, auch wenn die Netze bleiben —
             # die Datei ist weg, und daran hängt die Anzeige.
             logger.exception('Netze der Szene %s nicht entfernt', name)
+        # Die Fotokacheln des Modells (`Texturen/<name>/`, nur Bilder, flach — `Modelltexturen`).
+        from .modelltexturen import Modelltexturen
+
+        try:
+            Modelltexturen.entfernen(name)
+        except (OSError, ValueError):
+            logger.exception('Texturen von %s nicht entfernt', name)
         logger.info('Modell gelöscht: %s', name)
         return True

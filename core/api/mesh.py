@@ -4,12 +4,14 @@
 GET  /modell-aus-dateien/mesh/<kennung>/            Auftragsseite (Fortschritt, 3D, Downloads)
 POST /api/mesh/anlegen/                             name, optionen (JSON), rollen (JSON), bilder[]
 GET  /api/mesh/katalog/                             Optionen mit Verfügbarkeit je Formmodell
-GET  /api/mesh/<id>/zustand/                        Status, Fortschritt, Bilder, Ergebnis
+GET  /api/mesh/<id>/zustand/                        Status, Fortschritt, Bilder, Ergebnis, Pfade
 POST /api/mesh/<id>/starten/                        {optionen?, ab?} → Arbeitsprozess
 POST /api/mesh/<id>/anhalten/
 POST /api/mesh/<id>/bilder/                         weitere Fotos
 POST /api/mesh/<id>/rolle/<datei>/                  {rolle} je Foto
 POST /api/mesh/<id>/gewicht/<datei>/                {gewicht, bereich?} je Foto (26.09.2026 abends)
+POST /api/mesh/<id>/reihenfolge/                    {datei, index} — Foto an Stelle `index` (1-basiert)
+POST /api/mesh/<id>/verwendung/                     {verwendung} ganz|koerper|kopf (Kennzeichnung)
 POST /api/mesh/<id>/retexturieren/                  nur Textur neu (Form aus Cache, `ab='textur'`)
 POST /api/mesh/<id>/loeschen/, /api/mesh/loeschen/  (mehrere: {ids})
 GET  /api/mesh/<id>/datei/<ordner>/<name>           Fotos, Freisteller, GLB/OBJ/PLY, Vorschauen
@@ -20,7 +22,7 @@ import logging
 import mimetypes
 
 from asgiref.sync import sync_to_async
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -28,8 +30,11 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.meshablage import Meshablage
+from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.mesharbeiter import Mesharbeiter
+from ..dienste.meshicon import Meshicon
 from ..dienste.meshoptionen import Meshoptionen
+from ..dienste.meshpfade import Meshpfade
 from ..models import Meshauftrag
 
 logger = logging.getLogger('core')
@@ -102,7 +107,7 @@ class Meshendpunkte:
             'id': str(job.id), 'kennung': job.kennung, 'name': job.name, 'status': job.status,
             'schritt': job.schritt, 'progress': job.progress, 'progress_detail': job.progress_detail,
             'error': job.error_message, 'optionen': Meshoptionen.pruefen(job.optionen), 'bilder': job.bilder,
-            'ergebnis': job.ergebnis, 'laeuft': job.laeuft,
+            'ergebnis': job.ergebnis, 'laeuft': job.laeuft, 'pfade': Meshpfade.fuer(job),
             'started_at': job.started_at.isoformat() if job.started_at else None,
             'finished_at': job.finished_at.isoformat() if job.finished_at else None,
             'updated_at': job.updated_at.isoformat() if job.updated_at else None,
@@ -203,6 +208,78 @@ class Meshendpunkte:
 
     @staticmethod
     @require_POST
+    def reihenfolge(request, job_id):
+        """Ein Foto an eine andere Stelle schieben (Edgar, 27.09.2026: „einen Index darunter,
+        wenn ich den verstelle, wird gleich geändert"). `index` ist 1-basiert wie im Feld.
+
+        Die Reihenfolge ist keine Rechenoption — sie entscheidet, welches Foto in der Tabelle
+        als „Vorlage" steht. Deshalb wird das Vorschaubild gleich mit neu geschrieben, sonst
+        zeigte die Liste weiter das alte erste Bild.
+        """
+        job = get_object_or_404(Meshauftrag, pk=job_id)
+        rumpf = Meshendpunkte._rumpf(request)
+        datei = str(rumpf.get('datei') or '')
+        bilder = list(job.bilder or [])
+        stelle = next((i for i, b in enumerate(bilder) if b.get('datei') == datei), None)
+        if stelle is None:
+            raise Http404('Kein Bild %s' % datei)
+        try:
+            ziel = int(rumpf.get('index'))
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'index fehlt oder ist keine Zahl'}, status=400)
+        ziel = max(0, min(len(bilder) - 1, ziel - 1))
+        vorher = bilder[0].get('datei')
+        bilder.insert(ziel, bilder.pop(stelle))
+        job.bilder = bilder
+        # NICHT `bilder_sichern()`: das übernimmt die Reihenfolge aus der Datenbank (Schutz
+        # gegen einen Lauf, der seine alte Ordnung zurückschreibt) — und hätte hier genau die
+        # Änderung verworfen, die der Aufruf bewirken soll. Erst im Browser aufgefallen: Der
+        # Endpunkt meldete 200 und tat nichts. `job.bilder` ist frisch aus der Datenbank
+        # gelesen, die Nutzerfelder sind also ohnehin aktuell.
+        job.save(update_fields=['bilder', 'updated_at'])
+        if bilder[0].get('datei') != vorher:
+            Meshendpunkte._vorlage_erneuern(job)
+        return JsonResponse({'ok': True, 'bilder': job.bilder})
+
+    @staticmethod
+    def _vorlage_erneuern(job):
+        """Das verkleinerte Vorlagenbild der Tabelle neu schreiben (`Meshicon`). Nur Pillow,
+        kein OpenGL — das darf im Serverprozess laufen; das NETZ-Icon dagegen entsteht
+        weiterhin nur im Arbeitsprozess."""
+        bilder = job.bilder or []
+        if not bilder or not bilder[0].get('datei'):
+            return
+        ablage = Meshablage(job.kennung)
+        quelle = ablage.unter(Meshablage.EINGANG) / bilder[0]['datei']
+        ergebnis = ablage.unter(Meshablage.ERGEBNIS)
+        if not quelle.is_file() or not ergebnis.is_dir():
+            return
+        name = Meshicon.vorlage_schreiben(quelle, ergebnis)
+        if not name:
+            return
+        daten = dict(job.ergebnis or {})
+        daten['dateien'] = {**(daten.get('dateien') or {}), 'vorlage': name}
+        job.ergebnis = daten
+        job.save(update_fields=['ergebnis', 'updated_at'])
+
+    @staticmethod
+    @require_POST
+    def verwendung(request, job_id):
+        """Kopf/Körper setzen, OHNE neu zu rechnen (Edgar, 27.09.2026: „beim Anlegen des Jobs,
+        oder beim Job selber nachträglich setzen"). Es ist eine Kennzeichnung für die Frage,
+        welches Netz in „Mesh to 3D" den Körper und welches den Kopf liefert — kein Wert, der
+        in den Lauf eingeht. Deshalb auch erlaubt, während der Auftrag rechnet."""
+        werte = [w for w, _ in Meshoptionen.eintrag('verwendung')['werte']]
+        wunsch = str(Meshendpunkte._rumpf(request).get('verwendung') or '')
+        if wunsch not in werte:
+            return JsonResponse({'error': 'Unbekannter Wert: %s' % wunsch}, status=400)
+        job = get_object_or_404(Meshauftrag, pk=job_id)
+        job.optionen = {**(job.optionen or {}), 'verwendung': wunsch}
+        job.save(update_fields=['optionen', 'updated_at'])
+        return JsonResponse({'ok': True, 'verwendung': wunsch})
+
+    @staticmethod
+    @require_POST
     def retexturieren(request, job_id):
         """Nur die Textur neu — Form kommt aus `form_cache.npz` (`Meshlauf`/`_run_mesh.py`),
         kein neuer Formlauf. Braucht einen vorherigen fertigen Lauf (sonst kein Cache)."""
@@ -271,6 +348,5 @@ class Meshendpunkte:
             raise Http404('Pfad') from None
         if not pfad.is_file():
             raise Http404('Datei %s' % name)
-        herunterladen = request.GET.get('laden') == '1'
-        return FileResponse(open(pfad, 'rb'), as_attachment=herunterladen, filename=pfad.name,
-                            content_type=mimetypes.guess_type(pfad.name)[0] or 'application/octet-stream')
+        return Auftragsdatei.antwort(request, pfad, herunterladen=request.GET.get('laden') == '1',
+                                     kennung=request.GET.get('v'))

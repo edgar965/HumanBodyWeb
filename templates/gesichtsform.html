@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Gesichtsform · Kopf-Eigen{% endblock %}
+
+{% comment %}
+Seite „Gesichtsform" (27.09.2026, Edgar: „ein Panel wo man die Gesichtsform malen kann, Schnitte aus
+unterschiedlichen Perspektiven (vorne, seitlich, 5-10 Schnitte horizontal und vertikal)"). Die Figur eines
+„Mesh to 3D"-Auftrags (?auftrag=) oder eines gespeicherten Modells (?modell=) in 3D, darunter die
+Vorderansicht (Lage und Größe von Augen, Brauen, Nase, Lippen) und die Schnitte als Tiefenprofile.
+Rot = Ziel (ziehbar), grau = Figur ohne Kopf-Eigen, blau = mit. „Morph rechnen" legt den Morph
+`eigen:kopf_<Name>` ab (`G9schnittmorph`), er steht im Reglerabschnitt „Kopf-Eigen".
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/gesichtsform.css' %}">
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{% if auftrag %}/modell-aus-dateien/meshfigur/{{ auftrag }}/{% else %}/Charakter/{% endif %}"
+           class="hb-hinweis"><i class="fas fa-arrow-left"></i>
+            {% if auftrag %}zum Auftrag{% else %}zur Szene{% endif %}</a>
+        <h1><i class="fas fa-draw-polygon"></i> Gesichtsform <span id="gf-titel"></span>
+            <small class="hb-hinweis">Kopf-Eigen</small></h1>
+    </div>
+</div>
+
+<div class="card">
+    <p class="hb-hinweis">Die Figur ohne ihren Kopf-Eigen-Morph (<span class="gf-grau">grau</span>), mit ihm
+        (<span class="gf-blau">blau</span>) und das Ziel (<span class="gf-rot">rot</span>). Ziel ziehen: in einem Schnitt
+        mit der Maus (Pinselbreite), mit <kbd>Alt</kbd> löschen (keine Vorgabe). Vorderansicht: Punkt ziehen, mit
+        <kbd>Umschalt</kbd> die ganze Kontur verschieben, mit <kbd>Strg</kbd> sie um ihre Mitte vergrößern
+        (nach oben) oder verkleinern. Das Oval zeigt nur die Lage — die Gesichtsseiten formen die Schnitte.</p>
+    <div class="gf-leiste">
+        <label>Schnitte waagerecht <select id="gf-waagerecht" class="viewer-select"></select></label>
+        <label>senkrecht <select id="gf-senkrecht" class="viewer-select"></select></label>
+        <button type="button" class="btn btn-secondary btn-sm" id="gf-neu-messen">
+            <i class="fas fa-ruler"></i> <span>Neu messen</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" id="gf-ziel-figur">
+            <i class="fas fa-undo"></i> <span>Ziel = Figur</span></button>
+        <label>Pinsel <input type="range" id="gf-pinsel" min="2" max="30" step="1" value="10">
+            <span id="gf-pinsel-wert">10 mm</span></label>
+        <button type="button" class="btn btn-primary btn-sm" id="gf-rechnen">
+            <i class="fas fa-calculator"></i> <span>Morph rechnen</span></button>
+        <label>Stärke <input type="range" id="gf-wert" min="0" max="2" step="0.05" value="1">
+            <span id="gf-wert-text">1,00</span></label>
+        <button type="button" class="btn btn-secondary btn-sm" id="gf-speichern" disabled>
+            <i class="fas fa-save"></i> <span>Im Modell speichern</span></button>
+    </div>
+    <div id="gf-meldung" class="hb-hinweis gf-meldung"></div>
+</div>
+
+<div class="gf-haupt">
+    <div class="card gf-buehnenkarte">
+        <div class="gf-ansichtwahl">
+            <label><input type="radio" name="gf-ansicht" value="vorn" checked> von vorn</label>
+            <label><input type="radio" name="gf-ansicht" value="seite"> von der Seite</label>
+            <label><input type="radio" name="gf-ansicht" value="schraeg"> schräg</label>
+            <label><input type="checkbox" id="gf-linien" checked> Schnittlinien</label>
+        </div>
+        <div id="gf-buehne" class="gf-buehne"><div class="gf-buehnenhinweis" id="gf-buehnenhinweis">Figur wird gebaut …</div></div>
+    </div>
+    <div class="card gf-vornkarte">
+        <h2>Vorderansicht — Lage und Größe</h2>
+        <div id="gf-vorn" class="gf-vorn"></div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Schnitte waagerecht <small class="hb-hinweis">von oben, vorn ist oben</small></h2>
+    <div id="gf-schnitte-waagerecht" class="gf-felder"></div>
+</div>
+<div class="card">
+    <h2>Schnitte senkrecht <small class="hb-hinweis">von der Seite, vorn ist rechts</small></h2>
+    <div id="gf-schnitte-senkrecht" class="gf-felder"></div>
+</div>
+<div class="card">
+    <h2>Güte der letzten Rechnung</h2>
+    <div id="gf-guete" class="hb-hinweis">Noch nicht gerechnet.</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Gesichtsformseite } from "{% fassungspfad 'viewer/gesichtsform/gesichtsformseite.js' %}";
+Gesichtsformseite.starten({ auftrag: "{{ auftrag|escapejs }}", modell: "{{ modell|escapejs }}" });
+</script>
+{% endblock %}

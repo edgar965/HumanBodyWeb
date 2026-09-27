@@ -33,6 +33,10 @@
 .inline-progress .status-text { font-size: 0.82rem; white-space: nowrap; color: #3498db; }
 .progress-bar-mini { flex: 1; height: 6px; background: #2a2a3e; border-radius: 3px; overflow: hidden; min-width: 60px; }
 .progress-fill-mini {
+    /* `display: block` wegen der Tabellenzeilen: dort sind Spur und Füllung `<span>`
+       (`Bildmodelltabelle._balken`, ein `<div>` im `<td>` wäre in einer Textzelle falsch).
+       Ein inline-Element ignoriert `height` — der Balken bliebe unsichtbar. */
+    display: block;
     height: 100%;
     background: linear-gradient(90deg, #3498db, #2ecc71);
     border-radius: 3px;

@@ -29,6 +29,7 @@ from .api.brauen import Brauenendpunkte
 from .api.eigenstueck import Eigenstueckapi
 from .api.gcgenesis import Gcgenesisapi
 from .api.g9figur import G9figur
+from .api.g9fototextur import G9fototextur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9hautmischung import G9hautmischungapi
@@ -205,6 +206,9 @@ CHARAKTER = [
          name='g9_figur_texturbuendel'),
     path('api/character/genesis9-figur/textur/<path:pfad>', G9garderobeapi.textur,
          name='g9_figur_textur'),
+    # Fotokacheln gespeicherter Modelle (27.09.2026, `Modelltexturen`, core/api/g9fototextur.py).
+    path('api/character/genesis9-figur/fototextur/<str:modell>/<str:datei>/', G9fototextur.datei,
+         name='g9_figur_fototextur'),
     # Reglerfelder je Stufe (18.09.2026, core/api/g9felder.py): JCMs, Visemes.
     path('api/character/genesis9-figur/felder/gelenke/', G9felderapi.gelenke,
          name='g9_figur_felder_gelenke'),

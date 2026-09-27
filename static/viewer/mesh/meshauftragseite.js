@@ -1,7 +1,9 @@
+import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from './meshoptionenformular.js';
 import { Meshbetrachter } from './meshbetrachter.js';
 import { Meshfotogewicht } from './meshfotogewicht.js';
+import { Meshpfadliste } from './meshpfadliste.js';
 
 /**
  * Meshauftragseite — die Auftragsseite des Reiters „Mesh" (26.09.2026): Lauf verfolgen
@@ -42,6 +44,11 @@ export class Meshauftragseite {
     aufbauen() {
         this.betrachter = new Meshbetrachter(document.getElementById('betrachter'));
         Meshoptionenformular.bauen(document.getElementById('mesh-optionen'), this.katalog, this.zustand.optionen);
+        // „Kopf/Körper" ist keine Rechenoption, sondern eine Kennzeichnung — sie wird SOFORT
+        // gespeichert, nicht erst bei „Neu berechnen" (Edgar, 27.09.2026: „beim Job selber
+        // nachträglich setzen"). Alle anderen Felder gelten weiter erst für den nächsten Lauf.
+        document.querySelector('#mesh-optionen [name="verwendung"]')
+            ?.addEventListener('change', e => this.verwendungSetzen(e.target.value));
         document.getElementById('starten').addEventListener('click', () => this.starten());
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
         document.getElementById('mesh-weitere-dateien').addEventListener('change', e => this.weitereBilder([...e.target.files]));
@@ -52,11 +59,23 @@ export class Meshauftragseite {
 
     // ---------------------------------------------------------------- Lauf
 
+    /** „Neu berechnen" — der Knopf ist ab dem Klick gesperrt, nicht erst wenn der Server
+     *  „läuft" meldet (Edgar, 27.09.2026: „soll den Button deaktivieren, um keine 2 Jobs zu
+     *  starten"). Scheitert der Start, gibt `Knopfsperre` ihn wieder frei. */
     async starten() {
         const optionen = Meshoptionenformular.lesen(document.getElementById('mesh-optionen'));
-        const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen });
-        if (antwort.error) { window.alert(antwort.error); return; }
+        try {
+            await Knopfsperre.waehrend(document.getElementById('starten'), async () => {
+                const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen });
+                if (antwort.error) throw new Error(antwort.error);
+            }, 'Startet …');
+        } catch (fehler) {
+            window.alert(fehler.daten?.error || fehler.message);
+            return;
+        }
         this.zustand.status = 'laeuft';
+        this.zustand.progress = 0;
+        this.zustand.progress_detail = 'Wird gestartet …';
         this.zeigen();
         this.nachfragen();
     }
@@ -79,6 +98,15 @@ export class Meshauftragseite {
         if (antwort.bild) {
             const eintrag = this.zustand.bilder.find(b => b.datei === datei);
             if (eintrag) eintrag.rolle = antwort.bild.rolle;
+        }
+    }
+
+    async verwendungSetzen(wert) {
+        try {
+            await Serverabruf.senden(this.adresse('verwendung/'), { verwendung: wert });
+            this.zustand.optionen = { ...(this.zustand.optionen || {}), verwendung: wert };
+        } catch (fehler) {
+            window.alert(`Kopf/Körper konnte nicht gespeichert werden: ${fehler.daten?.error || fehler.message}`);
         }
     }
 
@@ -167,7 +195,11 @@ export class Meshauftragseite {
         status.textContent = { angelegt: 'Angelegt', laeuft: 'Läuft', fertig: 'Fertig',
                                gescheitert: 'Fehlgeschlagen', angehalten: 'Angehalten' }[z.status] || z.status;
         status.className = `bildmodell-status hb-${z.status === 'fertig' ? 'gut' : z.status === 'gescheitert' ? 'schlecht' : 'laeuft'}`;
-        document.getElementById('starten').disabled = z.status === 'laeuft';
+        const start = document.getElementById('starten');
+        start.disabled = z.status === 'laeuft';
+        // Die Beschriftung gehört zum Zustand, nicht zum Klick: `Knopfsperre` setzt beim
+        // Start „Startet …", hier steht ab dann, was wirklich läuft.
+        start.querySelector('span').textContent = z.status === 'laeuft' ? 'Berechnet …' : 'Neu berechnen';
         document.getElementById('anhalten').disabled = z.status !== 'laeuft';
         this._texturlauf();
         const fehler = document.getElementById('fehler');
@@ -175,6 +207,7 @@ export class Meshauftragseite {
         fehler.classList.toggle('hb-versteckt', !z.error);
         this._kennzahlen();
         this._downloads();
+        Meshpfadliste.zeichnen(document.getElementById('mesh-pfade'), this.zustand.pfade);
         this._fotoliste();
         this._netzLaden();
     }
@@ -247,8 +280,36 @@ export class Meshauftragseite {
                 this.gewichtLokalSetzen(eintrag.datei, Number(gewicht.value));
             });
             gewichtZeile.append(gewicht, gewichtWert);
-            karte.append(bild, rolle, gewichtZeile);
+            karte.append(bild, rolle, gewichtZeile, this._indexzeile(eintrag));
             behaelter.appendChild(karte);
+        }
+    }
+
+    /** Platz in der Reihenfolge (Edgar, 27.09.2026). Das erste Foto ist die „Vorlage" in der
+     *  Tabelle — deshalb wirkt eine Änderung sofort, nicht erst beim nächsten Lauf. */
+    _indexzeile(eintrag) {
+        const zeile = document.createElement('label');
+        zeile.className = 'mesh-indexzeile';
+        zeile.append('Platz ');
+        const feld = document.createElement('input');
+        feld.type = 'number';
+        feld.className = 'viewer-eingabe mesh-indexfeld';
+        feld.min = '1';
+        feld.max = String((this.zustand.bilder || []).length);
+        feld.value = String((this.zustand.bilder || []).indexOf(eintrag) + 1);
+        feld.title = 'Platz in der Reihenfolge — Platz 1 ist die Vorlage in der Übersicht';
+        feld.addEventListener('change', () => this.reihenfolgeSetzen(eintrag.datei, Number(feld.value)));
+        zeile.appendChild(feld);
+        return zeile;
+    }
+
+    async reihenfolgeSetzen(datei, index) {
+        try {
+            const antwort = await Serverabruf.senden(this.adresse('reihenfolge/'), { datei, index });
+            if (antwort.bilder) { this.zustand.bilder = antwort.bilder; this._fotoliste(); }
+        } catch (fehler) {
+            window.alert(`Reihenfolge konnte nicht gespeichert werden: ${fehler.daten?.error || fehler.message}`);
+            this._fotoliste();
         }
     }
 

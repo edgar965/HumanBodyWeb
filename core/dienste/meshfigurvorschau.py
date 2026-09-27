@@ -40,9 +40,10 @@ class Meshfigurvorschau:
         if not stellung:
             raise RuntimeError('Regler fehlen — Schritte „koerper"/„gesicht" zuerst')
         punkte, _, _ = G9reglerableitung.lage(G9formung(stellung))
-        bild = G9vorschaubild(punkte)
+        bild = G9vorschaubild(punkte, kacheln=self.kacheln())
         dateien = {'icon': 'icon.png'}
-        bild.icon(self.ablage.ergebnis('icon.png'))
+        # Von vorn wie das Vorlagebild daneben (`Meshfigurlauf.vorlage`), nicht dreiviertel.
+        bild.speichern(self.ablage.ergebnis('icon.png'), 'vorn', 256, 256)
         for ansicht, name in self.BILDER.items():
             bild.speichern(self.ablage.ergebnis(name), ansicht)
             dateien[ansicht] = name
@@ -66,8 +67,30 @@ class Meshfigurvorschau:
             'abstand': verlauf[-1],
             'haut': e.get('haut'),
         }
+        self.lauf.melden(0.87, 'Haar als Objekt')
+        self.haarobjekt()
         self.lauf.melden(0.9, 'Testfall')
         self.job.ergebnis['testfall'] = self.testfall(stellung, punkte)
+
+    def haarobjekt(self):
+        """Das Haar aus Schritt „haar" als Objekt auf der Figur (`Meshfigurhaar.objekt`) — hier, weil erst
+        jetzt `genesis_ende.npz` zur Figur gehört. Scheitert es, steht der Grund in `ergebnis.haar.objekt`;
+        die Vorschau selbst ist davon unberührt."""
+        from .meshfigurhaar import Meshfigurhaar
+
+        try:
+            Meshfigurhaar(self.lauf).objekt()
+        except Exception as fehler:  # noqa: BLE001 — sichtbar im Ergebnis und im Log, der Lauf geht weiter
+            logger.exception('Mesh to 3D %s: Haarobjekt gescheitert', self.job.kennung)
+            if self.job.ergebnis.get('haar'):
+                self.job.ergebnis['haar']['objekt'] = {'fehler': str(fehler)[:300]}
+
+    def kacheln(self):
+        """Die Kacheln aus Schritt „textur" (`{kachel: Pfad}`) — die Bilder zeigen die Figur mit
+        der Haut, die Szene und Export tragen (27.09.2026). Leer ohne Fototextur."""
+        f = self.job.ergebnis.get('fototextur') or {}
+        pfade = {k: self.ablage.ergebnis(n) for k, n in (f.get('kacheln') or {}).items()}
+        return {k: p for k, p in pfade.items() if p.is_file()}
 
     # -------------------------------------------------------------- Testfall
 

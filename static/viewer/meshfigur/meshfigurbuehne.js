@@ -1,20 +1,17 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
-import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
-import { Texturauflage } from '../bildmodell/texturauflage.js';
+import { Meshfigurhaarobjekt } from './meshfigurhaarobjekt.js';
+import { Meshfigurnetze } from './meshfigurnetze.js';
 
 /**
- * Meshfigurbuehne — die angepasste Genesis-Figur und das hochgeladene Netz auf einer Bühne.
+ * Meshfigurbuehne — die angepasste Genesis-Figur und das Netz (bzw. Körper- und Kopfnetz) auf einer Bühne.
  *
  * Die Figur ist dieselbe Klasse wie in Szene und Studio (`Genesis9Modell`: Käfig sofort, feine
- * Stufe nach) mit den gestellten Reglern samt Eigenmorph; die gebackenen Kacheln legt
- * `Texturauflage` auf (wie im Reiter „3D"). Das Netz kommt aus dem Eingang des Auftrags und wird
- * mit der Matrix der Erkennung in dieselbe Lage gebracht (Y oben, Blick +Z, Füße auf 0, ggf. auf
- * die Körpergröße gestreckt) — „Nebeneinander" rückt es um `ABSTAND` nach rechts.
+ * Stufe nach) mit den gestellten Reglern samt Eigenmorph und den gebackenen Kacheln als Albedo
+ * (`fototextur`, derselbe Weg wie ein gespeichertes Modell in der Szene). Die Netze lädt
+ * `Meshfigurnetze` in der Lage der Erkennung (Y oben, Blick +Z, Füße auf 0, ggf. auf die
+ * Körpergröße gestreckt) — „Nebeneinander" rückt sie um `ABSTAND` nach rechts.
  */
 export class Meshfigurbuehne {
 
@@ -26,11 +23,11 @@ export class Meshfigurbuehne {
         this.hinweis = document.getElementById('buehne-hinweis');
         this.was = 'figur';
         this.modell = null;
-        this.netz = null;
-        this.auflage = new Texturauflage(seite);
         this._stand = null;
         this._baut = false;
         try { this._buehne(); } catch (fehler) { this._melden(`Keine 3D-Ansicht: ${fehler.message}`); return; }
+        this.netze = new Meshfigurnetze(seite, this.szene, text => this._melden(text));
+        this.haar = new Meshfigurhaarobjekt(seite, text => this._melden(text));
         for (const r of document.querySelectorAll('input[name="meshfigur-was"]')) {
             r.addEventListener('change', () => { if (r.checked) { this.was = r.value; this._sichtbarkeit(); } });
         }
@@ -45,6 +42,8 @@ export class Meshfigurbuehne {
         this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        // Körper- und Kopfnetz werden am Hals geschnitten (`Meshfigurnetze`, Ebenen je Werkstoff).
+        this.renderer.localClippingEnabled = true;
         this.szene = new THREE.Scene();
         this.kamera = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
         this.kamera.position.set(0, 1.0, 4.4);
@@ -73,10 +72,8 @@ export class Meshfigurbuehne {
 
     _sichtbarkeit() {
         if (this.modell) this.modell.group.visible = this.was !== 'netz';
-        if (this.netz) {
-            this.netz.visible = this.was !== 'figur';
-            this.netz.position.x = this.was === 'beide' ? Meshfigurbuehne.ABSTAND : 0;
-        }
+        this.netze.sichtbar(this.was !== 'figur');
+        this.netze.verschieben(this.was === 'beide' ? Meshfigurbuehne.ABSTAND : 0);
         const mitte = this.was === 'beide' ? Meshfigurbuehne.ABSTAND / 2 : 0;
         this.steuerung.target.x = mitte;
     }
@@ -86,29 +83,49 @@ export class Meshfigurbuehne {
     async zeigen(z) {
         if (!this.renderer) return;
         const e = z.ergebnis || {};
-        if (!this.netz && e.erkennung && e.erkennung.matrix) this._netzLaden(z);
+        // Nur nach einem Neuladen: `_sichtbarkeit` setzt das Drehziel — alle 2 s gerufen, nähme es
+        // dem Nutzer jedes Verschieben der Ansicht wieder weg.
+        if (this.netze.zeigen(z)) this._sichtbarkeit();
+        this.haar.zeigen(z, this.modell?.group || null);
         const stellung = z.stellung || {};
         if (!Object.keys(stellung).length) { this._melden('Noch keine Figur — erst nach der Körperkette.'); return; }
-        const stand = JSON.stringify(stellung);
-        if (this.modell) this.auflage.anwenden(this.modell, e.fototextur);
+        const kacheln = this.kacheln(e.fototextur);
+        // Neue Textur („Textur" neu gebacken) baut die Figur ebenso neu wie neue Regler.
+        const stand = JSON.stringify([stellung, kacheln]);
         if (stand === this._stand || this._baut) return;
         this._stand = stand;
-        await this._bauen(stellung, z);
+        await this._bauen(stellung, z, kacheln);
     }
 
-    async _bauen(stellung, z) {
+    /**
+     * Die Kacheln als Adressen (`{1001: …}`), mit dem Stand des Backens — sie gehen VOR dem Bau als
+     * Albedo in die Figur (`Genesis9fototextur`), in JEDE Stufe. Bis 27.09.2026 legte `Texturauflage`
+     * sie nachträglich auf und fasste nur 30 s nach; kam die feine Stufe später (kalter Server), ersetzte
+     * sie die Materialien, und die Figur stand mit Daz-Haut da (Befund Edgar, Bildschirmfoto).
+     */
+    kacheln(fototextur) {
+        const f = fototextur || {}, marke = encodeURIComponent(f.stand || '');
+        // Dazu das Augenbild (Daz-Iris in der Farbe des Netzes) — `Genesis9fototextur.anhang`.
+        const bilder = { ...(f.kacheln || {}), ...(f.augen ? { augen: f.augen } : {}) };
+        return Object.fromEntries(Object.entries(bilder)
+            .map(([k, name]) => [k, `${this.seite.dateiAdresse('ergebnis', name)}?t=${marke}`]));
+    }
+
+    async _bauen(stellung, z, kacheln) {
         this._baut = true;
         this._melden('Figur wird gebaut …');
         try {
-            const neu = new Genesis9Modell('meshfigur', { figur: 'basis', regler: stellung, presetName: z.name });
+            const neu = new Genesis9Modell('meshfigur', {
+                figur: 'basis', regler: stellung, presetName: z.name, fototextur: kacheln,
+            });
             await neu.bauen();
             if (this.modell) { this.szene.remove(this.modell.group); this.modell.dispose?.(); }
             this.modell = neu;
             this.szene.add(neu.group);
+            this.haar.anhaengen(neu.group);
             const h = neu.hoehe || 1.7;
             this.steuerung.target.set(0, h * 0.52, 0);
             this.kamera.position.set(0, h * 0.55, h * 2.6);
-            this.auflage.anwenden(neu, (z.ergebnis || {}).fototextur);
             this._sichtbarkeit();
             this._melden('');
         } catch (fehler) {
@@ -117,44 +134,5 @@ export class Meshfigurbuehne {
         } finally {
             this._baut = false;
         }
-    }
-
-    // ---------------------------------------------------------------- Netz
-
-    _lader(name) {
-        const endung = name.toLowerCase().split('.').pop();
-        if (endung === 'glb' || endung === 'gltf') return ['gltf', new GLTFLoader()];
-        if (endung === 'obj') return ['obj', new OBJLoader()];
-        if (endung === 'ply') return ['ply', new PLYLoader()];
-        if (endung === 'stl') return ['stl', new STLLoader()];
-        return [null, null];
-    }
-
-    _netzLaden(z) {
-        const datei = (z.eingang || {}).datei;
-        const [art, lader] = datei ? this._lader(datei) : [null, null];
-        if (!lader) return;
-        this.netz = new THREE.Group();
-        this.netz.visible = false;
-        this.szene.add(this.netz);
-        const e = z.ergebnis || {};
-        const m = e.erkennung.matrix;
-        const faktor = ((e.erkennung || {}).skalierung || {}).faktor || 1;
-        const matrix = new THREE.Matrix4().set(...m[0], ...m[1], ...m[2], ...m[3]);
-        matrix.premultiply(new THREE.Matrix4().makeScale(faktor, faktor, faktor));
-        lader.load(this.seite.dateiAdresse('eingang', datei), ergebnis => {
-            let objekt = ergebnis.scene || ergebnis;
-            if (ergebnis.isBufferGeometry) {
-                ergebnis.computeVertexNormals();
-                objekt = new THREE.Mesh(ergebnis, new THREE.MeshStandardMaterial({ color: 0xc9b4a4, roughness: 0.8 }));
-            }
-            objekt.updateMatrixWorld(true);
-            const innen = new THREE.Group();
-            innen.matrixAutoUpdate = false;
-            innen.matrix.copy(matrix);
-            innen.add(objekt);
-            this.netz.add(innen);
-            this._sichtbarkeit();
-        }, undefined, fehler => this._melden(`Netz (${art}) nicht geladen: ${fehler.message || fehler}`));
     }
 }

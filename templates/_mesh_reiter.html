@@ -37,8 +37,13 @@ Vorschlag) und du erzeugst ein Mesh daraus (OBJ, GLB oder sowas)"). Fotos per Ab
 <div class="card" id="mesh-liste">
     <div class="bildmodell-listenkopf">
         <h2>Meshes</h2>
-        <button type="button" class="btn btn-danger btn-sm" id="mesh-bulk-delete" disabled>
-            <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="mesh-bulk-count">0</span>)</span></button>
+        <div class="bildmodell-listenknoepfe">
+            <button type="button" class="btn btn-secondary btn-sm" id="mesh-duplizieren" disabled
+                    title="Neuer Auftrag mit denselben Fotos, Rollen, Gewichten und Optionen — ohne Netz, startet nicht von selbst">
+                <i class="fas fa-clone"></i> <span>Job duplizieren (<span id="mesh-duplizieren-count">0</span>)</span></button>
+            <button type="button" class="btn btn-danger btn-sm" id="mesh-bulk-delete" disabled>
+                <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="mesh-bulk-count">0</span>)</span></button>
+        </div>
     </div>
     {% include "djangobase/_tabelle.html" with tabelle=mesh_tabelle %}
 </div>

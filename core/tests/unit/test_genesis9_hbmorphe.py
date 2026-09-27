@@ -148,4 +148,5 @@ class HbmorpheTest(SimpleTestCase):
             with mock.patch.object(G9reglerplan, 'holen', return_value=[]):
                 schluessel = [b['schluessel'] for b in G9reglerplan.bereiche()]
             self.assertEqual(schluessel[:len(G9reglerplan.BEREICHE)], list(G9reglerplan.BEREICHE))
-            self.assertEqual(schluessel[len(G9reglerplan.BEREICHE):], ['hb_fantasie'])
+            # Dahinter „Kopf-Eigen" (`G9schnittmorph.bereich`, 27.09.2026) — immer, auch leer.
+            self.assertEqual(schluessel[len(G9reglerplan.BEREICHE):], ['hb_fantasie', 'kopf_eigen'])

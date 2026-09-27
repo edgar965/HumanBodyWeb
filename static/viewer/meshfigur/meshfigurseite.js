@@ -1,8 +1,12 @@
+import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
 import { Meshfigurbuehne } from './meshfigurbuehne.js';
 import { Meshfigurberichte } from './meshfigurberichte.js';
 import { Meshfigurexport } from './meshfigurexport.js';
+import { Meshfigurhaar } from './meshfigurhaar.js';
+import { Meshfigurpfade } from './meshfigurpfade.js';
+import { Meshfigurspeicher } from './meshfigurspeicher.js';
 
 /**
  * Meshfigurseite — die Auftragsseite des Reiters „Mesh to 3D" (27.09.2026): Lauf verfolgen
@@ -15,7 +19,7 @@ export class Meshfigurseite {
     static TAKT_MS = 2000;
     static NAMEN = {
         erkennung: 'Erkennung', kalibrierung: 'Kalibrierung', koerper: 'Körperkette', gesicht: 'Gesichtskette',
-        rest: 'Eigenmorph', textur: 'Textur', vorschau: 'Vorschau', speichern: 'Speichern',
+        haar: 'Haar', rest: 'Eigenmorph', textur: 'Textur', vorschau: 'Vorschau', speichern: 'Speichern',
     };
 
     static starten(jobId) {
@@ -49,23 +53,35 @@ export class Meshfigurseite {
         }
         document.getElementById('starten').addEventListener('click', () => this.starten());
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
+        this.pfade = new Meshfigurpfade();
+        this.pfade.fuellen(this.zustand.eingang);
         this.buehne = new Meshfigurbuehne(this);
         this.berichte = new Meshfigurberichte(this);
         this.export = new Meshfigurexport(this);
+        this.haar = new Meshfigurhaar(this);
+        this.speicher = new Meshfigurspeicher(this);
         this.zeigen();
         this.verfolgen();
     }
 
     // ---------------------------------------------------------------- Lauf
 
+    /** „Neu berechnen" — gesperrt ab dem Klick, damit kein zweiter Lauf auf denselben
+     *  Arbeitsdateien startet (Edgar, 27.09.2026). */
     async starten() {
         const optionen = Meshoptionenformular.lesen(document.getElementById('meshfigur-optionen'));
         const ab = document.getElementById('ab-schritt').value;
         try {
-            const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen, ab });
-            if (antwort.error) throw new Error(antwort.error);
+            await Knopfsperre.waehrend(document.getElementById('starten'), async () => {
+                const antwort = await Serverabruf.senden(this.adresse('starten/'),
+                                                         { optionen, ab, pfade: this.pfade.lesen() });
+                if (antwort.error) throw new Error(antwort.error);
+                this.pfade.melden(antwort.neu_eingelesen
+                    ? 'Netze neu eingelesen — der Lauf beginnt bei der Erkennung.'
+                    : 'Netze unverändert.');
+            }, 'Startet …');
         } catch (fehler) {
-            this.fehler(`Start fehlgeschlagen: ${fehler.message}`);
+            this.fehler(`Start fehlgeschlagen: ${fehler.daten?.error || fehler.message}`);
             return;
         }
         this.zustand.status = 'laeuft';
@@ -110,13 +126,17 @@ export class Meshfigurseite {
         document.getElementById('fortschritt').style.width = `${z.progress || 0}%`;
         document.getElementById('fortschritt-text').textContent =
             z.laeuft ? `${z.progress || 0} % · ${z.progress_detail || ''}` : (z.progress_detail || '');
-        document.getElementById('starten').disabled = !!z.laeuft;
+        const start = document.getElementById('starten');
+        start.disabled = !!z.laeuft;
+        start.querySelector('span').textContent = z.laeuft ? 'Berechnet …' : 'Neu berechnen';
         document.getElementById('anhalten').disabled = !z.laeuft;
         this.fehler(z.status === 'gescheitert' ? (z.error || 'Fehlgeschlagen — siehe auftrag.log') : '');
         this.schritte();
         this.berichte.zeigen(z);
+        this.haar.zeigen(z);
         this.buehne.zeigen(z);
         this.export.zeigen(z);
+        this.speicher.zeigen(z);
     }
 
     schritte() {

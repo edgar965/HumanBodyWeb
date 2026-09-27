@@ -6,9 +6,10 @@
 Auftragsseite „Mesh to 3D" (27.09.2026): oben der Lauf (Schritte, Fortschritt, neu ab Schritt,
 Anhalten), darunter die Figur in 3D (Genesis 9 mit den gestellten Reglern, Eigenmorph und der Textur
 aus dem Netz) neben dem Netz, der Vergleich (Netz · Figur · Tiefenabweichung), die Kennzahlen der
-Körper- und Gesichtskette, die gestellten Regler und die Erkennung. Export der Figur als GLB (mit Rig
-und Textur) in die Ablage unter output/Export/MeshTo3D. Zustand und Katalog kommen als JSON in die
-Seite, Nachfrage über `/api/meshfigur/<id>/zustand/`.
+Körper- und Gesichtskette, die gestellten Regler und die Erkennung. Export der Figur als GLB (Textur-
+auflösung, mit/ohne Textur und Rig, Name je Fassung) in die Ablage unter output/Export/MeshTo3D. Die
+Pfade von Körper- und Kopfnetz gelten beim „Neu berechnen“ (`Meshfigureingang`). Zustand und Katalog
+kommen als JSON in die Seite, Nachfrage über `/api/meshfigur/<id>/zustand/`.
 {% endcomment %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
@@ -30,7 +31,14 @@ three-mesh-bvh.{% endcomment %}
         <h1><i class="fas fa-user-check"></i> <span id="auftrag-name">{{ job.name }}</span>
             <small class="hb-hinweis">Mesh to 3D · {{ job.kennung }}</small></h1>
     </div>
-    <div class="bildmodell-status" id="auftrag-status"></div>
+    <div class="auftrag-kopfknoepfe">
+        <div class="bildmodell-status" id="auftrag-status"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
+                data-adresse="{% url 'meshfigur_loeschen' job.id %}"
+                data-ziel="{% url 'bildmodell' %}#meshto3d"
+                data-frage="Diese Figur samt Auftragsordner löschen? Gespeicherte Modelle und die Ablage in MeshTo3D bleiben.">
+            <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
+    </div>
 </div>
 
 <div class="card" id="lauf">
@@ -44,6 +52,16 @@ three-mesh-bvh.{% endcomment %}
             <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
         </span>
     </div>
+    <div class="meshfigur-pfade" id="eingangspfade">
+        <label>Körpernetz – Pfad
+            <input type="text" id="pfad-koerper" autocomplete="off" spellcheck="false">
+        </label>
+        <label>Kopfnetz – Pfad (optional, leer = ohne eigenes Kopfnetz)
+            <input type="text" id="pfad-kopf" autocomplete="off" spellcheck="false">
+        </label>
+    </div>
+    <div class="hb-hinweis" id="pfad-hinweis">Geänderte Pfade (oder eine inzwischen neu geschriebene Datei) werden beim
+        „Neu berechnen“ eingelesen; der Lauf beginnt dann bei der Erkennung.</div>
     <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
 </div>
 
@@ -54,6 +72,8 @@ three-mesh-bvh.{% endcomment %}
                 <label><input type="radio" name="meshfigur-was" value="figur" checked> Figur</label>
                 <label><input type="radio" name="meshfigur-was" value="netz"> Netz</label>
                 <label><input type="radio" name="meshfigur-was" value="beide"> Nebeneinander</label>
+                <label hidden title="Das Haar aus dem Netz (Schritt „Haar“) als eigenes Objekt auf der Figur">
+                    <input type="checkbox" id="buehne-haar" checked> Haar</label>
             </div>
             <div class="mesh-betrachter" id="buehne">
                 <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>
@@ -64,9 +84,38 @@ three-mesh-bvh.{% endcomment %}
                 <h2>Ergebnis</h2>
                 <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
                 <div class="meshfigur-export">
+                    <div class="meshfigur-exportoptionen" id="export-optionen">
+                        <label>Textur
+                            <select id="export-aufloesung" class="viewer-select">
+                                <option value="0" selected>Original</option>
+                                <option value="2048">2048 px</option>
+                                <option value="1024">1024 px</option>
+                                <option value="512">512 px</option>
+                            </select>
+                        </label>
+                        <label><input type="checkbox" id="export-textur" checked> mit Textur</label>
+                        <label><input type="checkbox" id="export-rig" checked> mit Rig (Skelett)</label>
+                        <label class="meshfigur-exportname">Dateiname
+                            <input type="text" id="export-name" autocomplete="off" spellcheck="false"></label>
+                    </div>
                     <button type="button" class="btn btn-primary btn-sm" id="exportieren" disabled>
                         <i class="fas fa-file-export"></i> <span>Figur als GLB exportieren</span></button>
                     <div class="hb-hinweis" id="export-meldung"></div>
+                </div>
+                <div class="meshfigur-export">
+                    <div class="meshfigur-exportoptionen">
+                        <label class="meshfigur-exportname">Als Genesis-Figur speichern – Name
+                            <input type="text" id="modell-name" autocomplete="off" spellcheck="false"></label>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
+                        <i class="fas fa-save"></i> <span>Als Genesis-Figur speichern</span></button>
+                    <div class="hb-hinweis" id="modell-meldung">Erscheint unter „Charakter hinzufügen → Genesis 9 →
+                        Gespeicherte Modelle“ (Szene, Studio, Theatre).</div>
+                </div>
+                <div class="meshfigur-export">
+                    <a class="btn btn-secondary btn-sm" href="{% url 'gesichtsform' %}?auftrag={{ job.kennung }}">
+                        <i class="fas fa-draw-polygon"></i> <span>Gesichtsform (Kopf-Eigen)</span></a>
+                    <div class="hb-hinweis">Schnitte und Konturen des Kopfnetzes als eigener Morph — ansehen, malen, rechnen.</div>
                 </div>
             </div>
             <div>
@@ -75,6 +124,15 @@ three-mesh-bvh.{% endcomment %}
             </div>
         </div>
     </div>
+</div>
+
+<div class="card" id="haar-karte">
+    <h2>Haar — Netz ohne Haar / nur Haar</h2>
+    <p class="hb-hinweis">Das Haar aus dem Netz geschnitten (Schritt „Haar", Paket <code>Haar</code>): je Fläche die Farbe
+    (keine Haut → Haar), das innere Gesicht bleibt immer Haut, geglättet auf dem Netz. Oben das Netz ohne Haar, unten das Haar
+    allein — beide im selben Ausschnitt. In der 3D-Ansicht oben sitzt dasselbe Haar als eigenes Objekt auf der Figur
+    (Schalter „Haar").</p>
+    <div id="haar"></div>
 </div>
 
 <div class="card" id="vergleich-karte">
@@ -107,6 +165,8 @@ three-mesh-bvh.{% endcomment %}
 {% block extra_scripts %}
 <script type="module">
 import { Meshfigurseite } from "{% fassungspfad 'viewer/meshfigur/meshfigurseite.js' %}";
+import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
 Meshfigurseite.starten("{{ job.id }}");
+Auftragloeschen.binden();
 </script>
 {% endblock %}

@@ -8,7 +8,7 @@ Auftragsseite `/modell-aus-dateien/mesh/<kennung>/`.
 """
 
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.timezone import template_localtime
 
@@ -26,9 +26,12 @@ class Meshtabelle(Bildmodelltabelle):
             'key': 'wahl',
             'sortAus': True,
         },
-        {'label': 'Mesh', 'key': 'icon', 'sortAus': True},
+        {'label': 'Vorlage', 'key': 'vorlage', 'sortAus': True, 'titel': 'Das erste hochgeladene Foto'},
+        {'label': 'Mesh', 'key': 'icon', 'sortAus': True, 'titel': 'Ansicht des erzeugten Netzes (von vorn)'},
         {'label': 'Name', 'key': 'name'},
         {'label': 'Formmodell', 'key': 'formmodell'},
+        {'label': 'Kopf/Körper', 'key': 'verwendung', 'sortAus': True,
+         'titel': 'Wozu dieses Netz dienen soll — direkt hier umstellbar, ohne neuen Lauf'},
         {'label': 'Auflösung', 'key': 'aufloesung', 'titel': 'Voxelauflösung des Formmodells'},
         {'label': 'Bilder', 'key': 'bilder', 'num': True},
         {'label': 'Status', 'key': 'status'},
@@ -55,10 +58,12 @@ class Meshtabelle(Bildmodelltabelle):
             'klasse': 'mesh-zeile',
             'html': mark_safe(''.join((
                 self._kaestchen(a),
+                self._vorlage(a, seite),
                 self._meshicon(a, seite),
                 self._name(a, seite),
                 format_html('<td data-sort="{}" title="{}">{}</td>', modell, modelle.get(modell, ''),
                             modelle.get(modell, modell).split(' — ')[0]),
+                self._verwendung(a),
                 self._aufloesung(a),
                 format_html('<td class="num" data-sort="{}">{}</td>', len(a.bilder or []), len(a.bilder or [])),
                 self._status(a),
@@ -67,6 +72,22 @@ class Meshtabelle(Bildmodelltabelle):
                 self._erstellt(a),
             ))),
         }
+
+    @staticmethod
+    def _verwendung(a):
+        """Kopf/Körper als Auswahlfeld direkt in der Zeile (Edgar, 27.09.2026: „beim Anlegen
+        des Jobs, oder beim Job selber nachträglich setzen"). `mesh/meshliste.js` schickt die
+        Änderung an `/api/mesh/<id>/verwendung/` — ohne Neuberechnung, es ist nur eine
+        Kennzeichnung. Der Kurztext ist der Teil vor dem Gedankenstrich, sonst sprengt die
+        Auswahl die Spalte."""
+        eintrag = Meshoptionen.eintrag('verwendung')
+        jetzt = (a.optionen or {}).get('verwendung') or eintrag['vorgabe']
+        optionen = format_html_join('', '<option value="{}"{}>{}</option>',
+                                    ((w, mark_safe(' selected') if w == jetzt else '', t.split(' — ')[0])
+                                     for w, t in eintrag['werte']))
+        return format_html('<td data-sort="{}"><select class="viewer-select mesh-verwendung" '
+                           'data-id="{}" data-vorher="{}" title="{}">{}</select></td>',
+                           jetzt, str(a.id), jetzt, dict(eintrag['werte'])[jetzt], optionen)
 
     @staticmethod
     def _aufloesung(a):
@@ -81,13 +102,47 @@ class Meshtabelle(Bildmodelltabelle):
                            texte[stufe].split(' — ')[0])
 
     @staticmethod
+    def _vorlage(a, seite):
+        """Das erste hochgeladene Foto (Edgar, 27.09.2026) — unverändert aus `eingang/`, nicht
+        das freigestellte: Es soll zeigen, WAS der Lauf bekommen hat. `bilder` ist die Reihenfolge
+        des Hochladens, also ist der erste Eintrag „das erste Vorlagebild"."""
+        bilder = a.bilder or []
+        if not bilder or not bilder[0].get('datei'):
+            return format_html('<td class="hb-kaestchen"><a href="{}" class="bildmodell-icon '
+                               'bildmodell-icon-leer" title="kein Foto">–</a></td>', seite)
+        erstes = bilder[0]
+        # Bevorzugt das verkleinerte `ergebnis/vorlage.png` (`Meshicon.vorlage_schreiben`);
+        # solange es fehlt (Auftrag noch nie gelaufen), das Original — lieber ein großes Bild
+        # als eine leere Zelle.
+        klein = ((a.ergebnis or {}).get('dateien') or {}).get('vorlage')
+        quelle = Meshtabelle._mit_stand(a, (('ergebnis', klein) if klein else ('eingang', erstes['datei'])))
+        return format_html('<td class="hb-kaestchen"><a href="{}"><img class="bildmodell-icon" src="{}" '
+                           'alt="Vorlage" title="{}" loading="lazy"></a></td>', seite, quelle,
+                           erstes.get('original') or erstes['datei'])
+
+    @staticmethod
+    def _mit_stand(a, ort):
+        """Bildadresse mit dem Stand des Auftrags als Kennung.
+
+        Ohne sie liefert `Auftragsdatei` nur `no-cache` (jeder Aufruf fragt nach, spart
+        aber wenigstens den Inhalt); MIT ihr gilt die Antwort ein Jahr, und ein neu
+        gerendertes Icon ist trotzdem sofort da — es steht dann unter einer anderen
+        Adresse. Gemessen am 27.09.2026: 50 Vorschaubilder, 2,86 MB, 0,99 s bei JEDEM
+        Seitenaufruf, weil `/api/` pauschal `no-store` trug.
+        """
+        ordner, datei = ort
+        return '%s?v=%d' % (reverse('mesh_datei', args=[a.id, ordner, datei]),
+                            int(a.updated_at.timestamp()))
+
+    @staticmethod
     def _meshicon(a, seite):
         icon = ((a.ergebnis or {}).get('dateien') or {}).get('icon')
         if icon:
             return format_html('<td class="hb-kaestchen"><a href="{}"><img class="bildmodell-icon" src="{}" '
-                               'alt="Mesh"></a></td>', seite, reverse('mesh_datei', args=[a.id, 'ergebnis', icon]))
-        return format_html('<td class="hb-kaestchen"><a href="{}" class="bildmodell-icon bildmodell-icon-leer" '
-                           'title="noch keine Vorschau">–</a></td>', seite)
+                               'alt="Mesh" title="Erzeugtes Netz, von vorn" loading="lazy"></a></td>',
+                               seite, Meshtabelle._mit_stand(a, ('ergebnis', icon)))
+        return format_html('<td class="hb-kaestchen"><a href="{}" class="bildmodell-icon '
+                           'bildmodell-icon-leer" title="noch kein Netz">–</a></td>', seite)
 
     @staticmethod
     def _zahl(wert):

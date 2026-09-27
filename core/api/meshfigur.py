@@ -3,9 +3,11 @@
 
 GET  /modell-aus-dateien/meshfigur/<kennung>/        Auftragsseite (Fortschritt, 3D, Vergleich, Regler)
 POST /api/meshfigur/anlegen/                         name, optionen (JSON), netz[] (Netz + OBJ-Beilagen)
+                                                     oder pfad_koerper; dazu pfad_kopf (Kopfnetz)
 GET  /api/meshfigur/katalog/                         Optionen
 GET  /api/meshfigur/<id>/zustand/                    Status, Fortschritt, Ergebnis, Stellung
-POST /api/meshfigur/<id>/starten/                    {optionen?, ab?} → Arbeitsprozess
+POST /api/meshfigur/<id>/starten/                    {optionen?, ab?, pfade?: {koerper, kopf}} → Lauf;
+                                                     geänderte Netze → Lauf ab der Erkennung
 POST /api/meshfigur/<id>/anhalten/
 POST /api/meshfigur/<id>/loeschen/, /api/meshfigur/loeschen/  (mehrere: {ids})
 GET  /api/meshfigur/<id>/datei/<ordner>/<name>       Netz (eingang), Bilder und Kacheln (ergebnis)
@@ -16,7 +18,7 @@ import logging
 import mimetypes
 
 from asgiref.sync import sync_to_async
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -24,7 +26,10 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.meshfigurablage import Meshfigurablage
+from ..dienste.auftragsdatei import Auftragsdatei
 from ..dienste.meshfigurarbeiter import Meshfigurarbeiter
+from ..dienste.meshfigureingang import Meshfigureingang
+from ..dienste.meshfigurlauf import Meshfigurlauf
 from ..dienste.meshfiguroptionen import Meshfiguroptionen
 from ..models import Meshfigurauftrag
 
@@ -37,7 +42,8 @@ mimetypes.add_type('model/obj', '.obj')
 
 
 class Meshfigurendpunkte:
-    SCHRITTE = ('erkennung', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau', 'speichern')
+    #: Eine Liste, eine Stelle: die des Laufs (27.09.2026 kam „haar" dazu).
+    SCHRITTE = Meshfigurlauf.SCHRITTE
 
     @staticmethod
     def seite(request, kennung):
@@ -65,26 +71,28 @@ class Meshfigurendpunkte:
     def anlegen(request):
         name = (request.POST.get('name') or '').strip()[:200]
         dateien = request.FILES.getlist('netz')
-        netze = [f for f in dateien if Meshfigurablage.ist_netz(f.name)]
+        pfad_koerper, pfad_kopf = request.POST.get('pfad_koerper'), request.POST.get('pfad_kopf')
         if not name:
             return JsonResponse({'error': 'Name fehlt'}, status=400)
-        if len(netze) != 1:
-            return JsonResponse(
-                {'error': 'Genau ein Netz (GLB, GLTF, OBJ, PLY, STL, OFF) — gefunden: %d' % len(netze)},
-                status=400,
-            )
+        try:
+            # Erst prüfen, dann einen Ordner anlegen — ein falscher Pfad hinterlässt nichts.
+            if Meshfigureingang.pfad(pfad_koerper) is None:
+                if len([f for f in dateien if Meshfigurablage.ist_netz(f.name)]) != 1:
+                    raise ValueError(
+                        'Genau ein Körpernetz (GLB, GLTF, OBJ, PLY, STL, OFF) hochladen oder als Pfad angeben'
+                    )
+            Meshfigureingang.pfad(pfad_kopf)
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
         kennung = Auftragskennung.frei(
             timezone.now(), lambda k: Meshfigurauftrag.objects.filter(kennung=k).exists()
         )
         ablage = Meshfigurablage(kennung)
-        netz = ablage.ablegen(netze[0])
-        beilagen = [ablage.ablegen(f) for f in dateien if Meshfigurablage.ist_beilage(f.name)]
-        eingang = {
-            'datei': netz,
-            'original': netze[0].name,
-            'bytes': int(netze[0].size),
-            'beilagen': beilagen,
-        }
+        try:
+            eingang = Meshfigureingang(ablage).anlegen(dateien, pfad_koerper, pfad_kopf)
+        except ValueError as fehler:
+            ablage.loeschen()
+            return JsonResponse({'error': str(fehler)}, status=400)
         job = Meshfigurauftrag.objects.create(
             kennung=kennung,
             name=name,
@@ -173,13 +181,44 @@ class Meshfigurendpunkte:
             job.optionen = Meshfiguroptionen.pruefen({**(job.optionen or {}), **rumpf['optionen']})
             job.save(update_fields=['optionen', 'updated_at'])
         ab = rumpf.get('ab') if rumpf.get('ab') in Meshfigurendpunkte.SCHRITTE else None
-        return JsonResponse({'ok': True, 'pid': Meshfigurarbeiter.starten(job, ab=ab)})
+        neu_eingelesen = False
+        if isinstance(rumpf.get('pfade'), dict):
+            try:
+                job.eingang, neu_eingelesen = Meshfigureingang(Meshfigurablage(job.kennung)).aendern(
+                    job.eingang, rumpf['pfade']
+                )
+            except ValueError as fehler:
+                return JsonResponse({'error': str(fehler)}, status=400)
+            if neu_eingelesen:
+                # Ein anderes Netz ist ein anderer Auftrag: alles ab der Erkennung.
+                ab = None
+                job.save(update_fields=['eingang', 'updated_at'])
+        pid = Meshfigurarbeiter.starten(job, ab=ab)
+        return JsonResponse({'ok': True, 'pid': pid, 'neu_eingelesen': neu_eingelesen})
 
     @staticmethod
     @require_POST
     def anhalten(request, job_id):
         Meshfigurarbeiter.anhalten(get_object_or_404(Meshfigurauftrag, pk=job_id))
         return JsonResponse({'ok': True})
+
+    @staticmethod
+    @require_POST
+    def modell(request, job_id):
+        """{name} → die Figur als Genesis-Modell (`data/models/<name>.json`, dasselbe Format wie „Modell
+        speichern" der Szene) — erscheint unter „Charakter hinzufügen → Genesis 9 → Gespeicherte Modelle"."""
+        from ..dienste.meshfigurspeichern import Meshfigurspeichern
+
+        job = get_object_or_404(Meshfigurauftrag, pk=job_id)
+        if job.laeuft or not job.stellung():
+            return JsonResponse({'error': 'Erst wenn die Figur fertig ist'}, status=409)
+        try:
+            name = Meshfigurspeichern.fuer(job).modell_speichern(
+                Meshfigurendpunkte._rumpf(request).get('name')
+            )
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, 'modell': name})
 
     # --------------------------------------------------------------- Löschen
 
@@ -220,9 +259,5 @@ class Meshfigurendpunkte:
             raise Http404('Pfad') from None
         if not pfad.is_file():
             raise Http404('Datei %s' % name)
-        return FileResponse(
-            open(pfad, 'rb'),
-            as_attachment=request.GET.get('laden') == '1',
-            filename=pfad.name,
-            content_type=mimetypes.guess_type(pfad.name)[0] or 'application/octet-stream',
-        )
+        return Auftragsdatei.antwort(request, pfad, herunterladen=request.GET.get('laden') == '1',
+                                     kennung=request.GET.get('v'))

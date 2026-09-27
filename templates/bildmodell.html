@@ -81,8 +81,13 @@ Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einze
 <div class="card" id="auftragsliste">
     <div class="bildmodell-listenkopf">
         <h2>Aufträge</h2>
-        <button type="button" class="btn btn-danger btn-sm" id="bulk-delete-btn" disabled>
-            <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="bulk-count">0</span>)</span></button>
+        <div class="bildmodell-listenknoepfe">
+            <button type="button" class="btn btn-secondary btn-sm" id="bildmodell-duplizieren" disabled
+                    title="Neuer Auftrag mit denselben Bildern und Optionen — ohne Ergebnisse, startet nicht von selbst">
+                <i class="fas fa-clone"></i> <span>Job duplizieren (<span id="bildmodell-duplizieren-count">0</span>)</span></button>
+            <button type="button" class="btn btn-danger btn-sm" id="bulk-delete-btn" disabled>
+                <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="bulk-count">0</span>)</span></button>
+        </div>
     </div>
     {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
 </div>
@@ -102,6 +107,7 @@ Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einze
 <script type="module" src="/static/djangobase/js/tabellen_breiten.js?v={{ djangobase.statik_v }}"></script>
 <script type="module">
 import { Bildmodellliste } from "{% fassungspfad 'viewer/bildmodell/liste.js' %}";
+import { Laufbalken } from "{% fassungspfad 'viewer/gemeinsam/laufbalken.js' %}";
 import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
 import { Meshliste } from "{% fassungspfad 'viewer/mesh/meshliste.js' %}";
 import { Meshfigurliste } from "{% fassungspfad 'viewer/meshfigur/meshfigurliste.js' %}";
@@ -109,5 +115,8 @@ Seitenreiter.binden(document.getElementById('modell-reiter'), 'modell_aus_dateie
 Bildmodellliste.aufbauen();
 Meshliste.aufbauen();
 Meshfigurliste.aufbauen();
+// Einmal für alle drei Tabellen — ein Abruf je Takt (`gemeinsam/laufbalken.js`). Die
+// Bereichsnamen sagen: Taucht hier ein Lauf auf, der in keiner Tabelle steht, neu laden.
+Laufbalken.aufbauen(['mesh', 'meshfigur', 'bildmodell']);
 </script>
 {% endblock %}

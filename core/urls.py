@@ -58,6 +58,7 @@ register_converter(Kennungskonverter, 'kennung')
 from .urls_bildmodell import BILDMODELL  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
+from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
 
 urlpatterns = [
     path('', Webseiten.start, name='dashboard'),
@@ -267,3 +268,5 @@ urlpatterns += BILDMODELL
 urlpatterns += MESH
 # Reiter „Mesh to 3D" (Netz → Genesis-9-Figur), 27.09.2026.
 urlpatterns += MESHFIGUR
+# Seite „Gesichtsform": Kopf-Eigen aus Schnitten und Konturen, 27.09.2026.
+urlpatterns += GESICHTSFORM

@@ -6,7 +6,7 @@ Zwei Welten wechseln sich ab: Die Registrierung rechnet auf der Karte in python1
 python14 — zwischen den Runden wird die Figur ECHT nachgerechnet (Formelketten, Knochen-
 skalierung, Gelenkkorrekturen), bevor die nächste Runde auf ihr aufsetzt.
 
-    erkennung     Netz ausrichten, Landmarken (Körper 33, Gesicht 478), Übersichtsbilder
+    erkennung     Netz ausrichten, Landmarken (Körper 33, Gesicht 478), Übersichtsbilder, Vorlagebild
     kalibrierung  nur einmal je Rechner: Genesis durch denselben Detektor (`G9netzlandmarken`)
     koerper       Körperkette in Runden (`Meshfigurkette`), dazwischen ggf. auf „Körpergröße"
     gesicht       Gesichtskette (296 Kopfregler, 478 Gesichtspunkte)
@@ -39,11 +39,13 @@ __all__ = ['Meshfigurlauf']
 
 
 class Meshfigurlauf:
-    SCHRITTE = ('erkennung', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau', 'speichern')
+    SCHRITTE = ('erkennung', 'haar', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau',
+                'speichern')
     BAENDER = {
         'erkennung': (0, 10),
-        'kalibrierung': (10, 13),
-        'koerper': (13, 62),
+        'haar': (10, 12),
+        'kalibrierung': (12, 14),
+        'koerper': (14, 62),
         'gesicht': (62, 80),
         'rest': (80, 85),
         'textur': (85, 92),
@@ -69,6 +71,7 @@ class Meshfigurlauf:
 
     def ausfuehren(self, ab=None):
         from .meshfigurende import Meshfigurende
+        from .meshfigurhaar import Meshfigurhaar
         from .meshfigurkette import Meshfigurkette
         from .meshfigurspeichern import Meshfigurspeichern
         from .meshfigurvorschau import Meshfigurvorschau
@@ -79,6 +82,7 @@ class Meshfigurlauf:
         start = self.SCHRITTE.index(ab) if ab in self.SCHRITTE else 0
         schritte = {
             'erkennung': self._erkennung,
+            'haar': lambda: Meshfigurhaar(self).ausfuehren(),
             'kalibrierung': self._kalibrierung,
             'koerper': lambda: Meshfigurkette(self).koerper(),
             'gesicht': lambda: Meshfigurkette(self).gesicht(),
@@ -150,6 +154,9 @@ class Meshfigurlauf:
             'ordner': {'arbeit': str(self.ablage.arbeit()), 'ergebnis': str(self.ablage.ergebnis())},
             **self.zusatz,
         }
+        kopf = self.ablage.netzdatei('kopf') if (self.job.eingang or {}).get('kopf') else None
+        if kopf is not None:
+            daten['kopfnetz'] = str(kopf)
         pfad.write_text(json.dumps(daten, ensure_ascii=False, indent=1), encoding='utf-8')
         return pfad
 
@@ -207,6 +214,22 @@ class Meshfigurlauf:
     def _erkennung(self):
         e = self.runner('erkennung')
         self.job.ergebnis['erkennung'] = e
+        self.job.ergebnis['vorlage'] = self.vorlage()
+
+    def vorlage(self):
+        """Tabellenbild des Körpernetzes (`ergebnis/vorlage.png`, Edgar 27.09.2026: „eine Spalte
+        für die Vorlage … so ähnlich wie bei #mesh"), von vorn in der Lage der Erkennung — hier
+        in python14 gerendert wie `Meshicon` im Reiter „Mesh". None, wenn es scheitert."""
+        import numpy as np
+
+        from .meshicon import Meshicon
+
+        lage, matrix = self.ablage.arbeit('scan_lage.npz'), None
+        if lage.is_file():
+            with np.load(lage) as d:
+                matrix = d['matrix']
+        netz = self.ablage.netzdatei()
+        return Meshicon.schreiben(netz, self.ablage.ergebnis(), Meshicon.VORLAGE, matrix) or None
 
     def _kalibrierung(self):
         """Genesis durch denselben Detektor — nur, wenn die Tabelle auf diesem Rechner fehlt."""

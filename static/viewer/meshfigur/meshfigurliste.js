@@ -1,3 +1,4 @@
+import { Auftragduplizieren } from '../gemeinsam/auftragduplizieren.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
 import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
@@ -40,6 +41,7 @@ export class Meshfigurliste {
             return;
         }
         Meshoptionenformular.bauen(optionen, this.katalog);
+        document.getElementById('meshfigur-pfad-koerper')?.addEventListener('change', e => this.nameAusPfad(e.target.value));
         eingabe.addEventListener('change', () => this.dateienHinzufuegen([...eingabe.files]));
         ablage.addEventListener('dragover', e => { e.preventDefault(); ablage.classList.add('aktiv'); });
         ablage.addEventListener('dragleave', () => ablage.classList.remove('aktiv'));
@@ -51,13 +53,19 @@ export class Meshfigurliste {
         form.addEventListener('submit', e => { e.preventDefault(); this.anlegen(); });
     }
 
+    /** Leeres Namensfeld aus dem Dateinamen füllen: „Damira_hunyuan2_ki_….glb" → „Damira". */
+    nameAusPfad(pfad) {
+        const name = document.getElementById('meshfigur-name');
+        const datei = String(pfad || '').replace(/^["']|["']$/g, '').split(/[\\/]/).pop();
+        if (name && datei && !name.value.trim()) name.value = datei.replace(/\.[^.]+$/, '').split('_')[0];
+    }
+
     dateienHinzufuegen(neue) {
         for (const d of neue) {
             if (Meshfigurliste.NETZ.test(d.name)) {
                 this.dateien = this.dateien.filter(x => !Meshfigurliste.NETZ.test(x.name));
                 this.dateien.unshift(d);
-                const name = document.getElementById('meshfigur-name');
-                if (name && !name.value.trim()) name.value = d.name.replace(/\.[^.]+$/, '').split('_')[0];
+                this.nameAusPfad(d.name);
             } else if (Meshfigurliste.BEILAGE.test(d.name)) {
                 this.dateien.push(d);
             }
@@ -98,15 +106,26 @@ export class Meshfigurliste {
     async anlegen() {
         const name = document.getElementById('meshfigur-name').value.trim();
         const netz = this.dateien.filter(d => Meshfigurliste.NETZ.test(d.name));
+        const pfadKoerper = document.getElementById('meshfigur-pfad-koerper')?.value.trim() || '';
+        const pfadKopf = document.getElementById('meshfigur-pfad-kopf')?.value.trim() || '';
         if (!name) { this.melden('Bitte einen Namen angeben', true); return; }
-        if (netz.length !== 1) { this.melden('Bitte genau ein Netz wählen (GLB, OBJ, PLY, STL, OFF)', true); return; }
+        if (pfadKoerper && netz.length) {
+            this.melden('Körpernetz entweder hochladen oder als Pfad angeben, nicht beides', true);
+            return;
+        }
+        if (!pfadKoerper && netz.length !== 1) {
+            this.melden('Bitte genau ein Körpernetz wählen (GLB, OBJ, PLY, STL, OFF) oder seinen Pfad angeben', true);
+            return;
+        }
         const daten = new FormData();
         daten.append('name', name);
+        daten.append('pfad_koerper', pfadKoerper);
+        daten.append('pfad_kopf', pfadKopf);
         daten.append('optionen', JSON.stringify(Meshoptionenformular.lesen(document.getElementById('meshfigur-optionen'))));
         for (const d of this.dateien) daten.append('netz', d, d.name);
         const knopf = document.getElementById('meshfigur-anlegen');
         knopf.disabled = true;
-        this.melden('Netz wird hochgeladen …');
+        this.melden(netz.length ? 'Netz wird hochgeladen …' : 'Netz wird vom Pfad eingelesen …');
         try {
             const antwort = await Serverabruf.formular(Meshfigurliste.ANLEGEN, daten);
             if (antwort.error) throw new Error(antwort.error);
@@ -127,7 +146,10 @@ export class Meshfigurliste {
         this.wahl = new Zeilenwahl(tabelle, anzahl => {
             if (knopf) knopf.disabled = anzahl === 0;
             if (zaehler) zaehler.textContent = String(anzahl);
+            this.duplikat?.anzeigen(anzahl);
         });
+        this.duplikat = new Auftragduplizieren('meshfigur', 'meshfigur-duplizieren', 'meshfigur-duplizieren-count',
+            this.wahl);
         this.wahl.binden();
         // Eigenes Kopfkästchen (`#meshfigur-select-all`) — drei Tabellen stehen zugleich im DOM,
         // `Zeilenwahl` kennt nur `#select-all` (siehe `Meshliste.tabelleBinden`).

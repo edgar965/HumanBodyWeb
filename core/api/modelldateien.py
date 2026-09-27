@@ -154,6 +154,12 @@ class Modelldateien:
             from GarmentCode.szenenstuecke import Szenenstuecke
 
             daten['garmentcode'] = Szenenstuecke.sichern(sauber, daten['garmentcode'])
+        # Dasselbe für die Fotokacheln eines Genesis-Modells (27.09.2026, `Modelltexturen`):
+        # unter neuem Namen gespeichert, bekommt es eine eigene Kopie.
+        if daten.get('quelle') == 'genesis9' and isinstance(daten.get('figur'), dict):
+            from ..dienste.modelltexturen import Modelltexturen
+
+            daten['figur'] = Modelltexturen.sichern(sauber, daten['figur'])
         with open(pfad, 'w', encoding='utf-8') as datei:
             json.dump(daten, datei, indent=2, ensure_ascii=False)
         return JsonResponse({'ok': True, 'filename': '%s.json' % sauber})

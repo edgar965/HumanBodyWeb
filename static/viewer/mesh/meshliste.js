@@ -1,3 +1,4 @@
+import { Auftragduplizieren } from '../gemeinsam/auftragduplizieren.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from './meshoptionenformular.js';
 import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
@@ -128,7 +129,9 @@ export class Meshliste {
         this.wahl = new Zeilenwahl(tabelle, anzahl => {
             if (knopf) knopf.disabled = anzahl === 0;
             if (zaehler) zaehler.textContent = String(anzahl);
+            this.duplikat?.anzeigen(anzahl);
         });
+        this.duplikat = new Auftragduplizieren('mesh', 'mesh-duplizieren', 'mesh-duplizieren-count', this.wahl);
         this.wahl.binden();
         // `Zeilenwahl` sucht das Kopfkästchen fest unter `#select-all` — auf dieser Seite
         // stehen ZWEI Tabellen (Reiter 3D und Mesh) zugleich im DOM, ein zweites `#select-all`
@@ -143,11 +146,38 @@ export class Meshliste {
         });
         tabelle.addEventListener('click', e => {
             const zeile = e.target.closest('tr[data-id]');
-            if (!zeile || e.target.closest('input, a, button')) return;
+            // `select` gehört dazu: sonst öffnet der Klick auf „Kopf/Körper" die Auftragsseite,
+            // bevor man einen Wert wählen kann.
+            if (!zeile || e.target.closest('input, a, button, select')) return;
             const link = zeile.querySelector('a[href]');
             if (link) window.location.href = link.getAttribute('href');
         });
+        // Kopf/Körper direkt in der Zeile umstellen — ohne Neuberechnung (Edgar, 27.09.2026).
+        tabelle.addEventListener('change', e => {
+            const feld = e.target.closest('select.mesh-verwendung');
+            if (feld) this.verwendungSetzen(feld);
+        });
         knopf?.addEventListener('click', () => this.loeschen());
+    }
+
+    /** Kopf/Körper eines Auftrags speichern. Scheitert es, springt das Feld auf den alten
+     *  Wert zurück — ein stehen gebliebener neuer Wert würde etwas behaupten, was der Server
+     *  nicht hat. */
+    async verwendungSetzen(feld) {
+        const vorher = feld.dataset.vorher || '';
+        feld.disabled = true;
+        try {
+            await Serverabruf.senden(`/api/mesh/${feld.dataset.id}/verwendung/`, { verwendung: feld.value });
+            feld.dataset.vorher = feld.value;
+            const titel = feld.options[feld.selectedIndex]?.textContent || '';
+            feld.title = titel;
+            feld.closest('td')?.setAttribute('data-sort', feld.value);
+        } catch (fehler) {
+            if (vorher) feld.value = vorher;
+            window.alert(`Kopf/Körper konnte nicht gespeichert werden: ${fehler.daten?.error || fehler.message}`);
+        } finally {
+            feld.disabled = false;
+        }
     }
 
     async loeschen() {

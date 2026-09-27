@@ -7,6 +7,7 @@ import { Eigenschaftenbereiche } from '../eigenschaftenbereiche.js';
 import { Genesis9posen } from './genesis9posen.js';
 import { Genesis9texturmischung } from './genesis9texturmischung.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
+import { Kopfeigenlink } from './kopfeigenlink.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -236,6 +237,7 @@ export class Genesis9eigenschaften {
             for (const r of bereich.regler) {
                 kasten.appendChild(Genesis9eigenschaften._zeile(inst, r));
             }
+            Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
             behaelter.appendChild(kasten);
         }
     }

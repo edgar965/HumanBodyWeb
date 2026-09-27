@@ -94,11 +94,17 @@ class Bildmodelltabelle:
     def _icon(a, seite):
         v = (a.ergebnis or {}).get('vorschau') or {}
         if v.get('icon'):
+            # Stand des Auftrags in der Adresse (wie `Meshfigurtabelle._bild`): So darf der
+            # Browser das Bild behalten, und ein neu gerendertes Icon ist trotzdem sofort da.
+            # `loading="lazy"` fehlte hier als einziger der drei Tabellen — diese vier Bilder
+            # luden deshalb auch dann, wenn ihr Reiter gar nicht offen war.
+            adresse = '%s?v=%d' % (reverse('bildmodell_datei', args=[a.id, 'ergebnis', v['icon']]),
+                                   int(a.updated_at.timestamp()))
             return format_html(
                 '<td class="hb-kaestchen"><a href="{}">'
-                '<img class="bildmodell-icon" src="{}" alt="Modell"></a></td>',
+                '<img class="bildmodell-icon" src="{}" alt="Modell" loading="lazy"></a></td>',
                 seite,
-                reverse('bildmodell_datei', args=[a.id, 'ergebnis', v['icon']]),
+                adresse,
             )
         return format_html(
             '<td class="hb-kaestchen"><a href="{}" class="bildmodell-icon bildmodell-icon-leer" '
@@ -112,8 +118,11 @@ class Bildmodelltabelle:
 
     def _status(self, a):
         if a.status == 'laeuft':
+            # `data-status="laeuft"` ist der Griff für `gemeinsam/laufbalken.js` — es zieht
+            # Balken und Prozenttext im Takt nach, ohne die Seite neu zu laden.
             return format_html(
-                '<td id="status-{}" data-sort="1" class="hb-laeuft"><i class="fas fa-spinner fa-spin"></i> '
+                '<td id="status-{}" data-sort="1" data-status="laeuft" class="hb-laeuft">'
+                '<i class="fas fa-spinner fa-spin"></i> '
                 '{} <span class="hb-fortschritt">{} % {}</span></td>',
                 a.id,
                 self._balken(a.progress),
@@ -139,9 +148,15 @@ class Bildmodelltabelle:
 
     @staticmethod
     def _balken(prozent, variante=''):
+        """Der Mini-Balken braucht DREI Ebenen: Hülle (`inline-progress`, Flex), Spur
+        (`progress-bar-mini`, 6 px hoch) und Füllung (`progress-fill-mini`, `height: 100 %`).
+        Bis 27.09.2026 fehlte die Spur — die Füllung erbte damit die Höhe der Hülle, und die
+        ist 0: im DOM gemessen 283 px breit, 0 px hoch, also unsichtbar. Edgar sah bei keinem
+        Job einen Balken („mach fortschrittsbalken bei allen Jobs")."""
         klasse = 'progress-fill-mini' + (' progress-fill-mini--%s' % variante if variante else '')
         return format_html(
-            '<span class="inline-progress"><span class="{}" style="width:{}%"></span></span>', klasse, prozent
+            '<span class="inline-progress"><span class="progress-bar-mini">'
+            '<span class="{}" style="width:{}%"></span></span></span>', klasse, prozent
         )
 
     @staticmethod

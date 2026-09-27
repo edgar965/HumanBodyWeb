@@ -78,14 +78,24 @@ class Meshauftrag(models.Model):
         return None
 
     def bilder_sichern(self, *weitere):
-        """`bilder` (und `weitere` Felder) speichern — die Rolle je Bild kommt frisch aus
-        der Datenbank (der Lauf hält `bilder` minutenlang im Speicher, die Seite darf
-        derweil umstellen; dieselbe Falle wie `Bildmodellauftrag.bilder_sichern`)."""
-        frisch = type(self).objects.filter(pk=self.pk).values_list('bilder', flat=True).first() or []
-        nach = {b.get('datei'): b for b in frisch if isinstance(b, dict)}
+        """`bilder` (und `weitere` Felder) speichern — die Rolle je Bild UND die Reihenfolge
+        kommen frisch aus der Datenbank (der Lauf hält `bilder` minutenlang im Speicher, die
+        Seite darf derweil umstellen; dieselbe Falle wie `Bildmodellauftrag.bilder_sichern`).
+
+        Die Reihenfolge zählt dazu, seit sie einstellbar ist (27.09.2026): Sie bestimmt, welches
+        Foto als „Vorlage" in der Tabelle steht. Ohne diesen Schutz würde ein Lauf, der nach der
+        Umsortierung fertig wird, seine eigene Reihenfolge zurückschreiben.
+        """
+        frisch = [b for b in (type(self).objects.filter(pk=self.pk)
+                              .values_list('bilder', flat=True).first() or []) if isinstance(b, dict)]
+        nach = {b.get('datei'): b for b in frisch}
         for b in self.bilder or []:
             alt = nach.get(b.get('datei'))
             for feld in self.NUTZERFELDER:
                 if alt and feld in alt:
                     b[feld] = alt[feld]
+        rang = {b.get('datei'): i for i, b in enumerate(frisch)}
+        # Neue Bilder (in der Datenbank noch unbekannt) behalten ihre Lage am Ende.
+        self.bilder = sorted(self.bilder or [],
+                             key=lambda b: rang.get(b.get('datei'), len(rang) + 1))
         self.save(update_fields=['bilder', *weitere, 'updated_at'])

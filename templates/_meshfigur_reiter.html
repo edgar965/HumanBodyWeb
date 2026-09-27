@@ -8,7 +8,9 @@ einem Bild, sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden kön
 {% endcomment %}
 <div class="card" id="meshfigur-neu">
     <h2>Genesis-Figur aus einem Netz</h2>
-    <p class="hb-hinweis">Ein Menschen-Netz hochladen, zum Beispiel ein Ergebnis aus dem Reiter „Mesh“. Die Figur wird
+    <p class="hb-hinweis">Ein Menschen-Netz hochladen oder seinen Pfad angeben, zum Beispiel ein Ergebnis aus dem Reiter
+    „Mesh“. Optional ein zweites Netz nur für den Kopf (etwa aus einer Nahaufnahme): Es wird über die Gesichtspunkte
+    an den Kopf des Körpernetzes gelegt, am Hals angesetzt und in der Farbe angeglichen. Die Figur wird
     in die Haltung des Netzes gestellt, danach werden alle Genesis-Regler so geregelt, dass der Abstand zum Netz am
     kleinsten ist: erst Größe und Proportionen, dann Körpertyp und Charaktere, dann die Körperbereiche, zuletzt in
     einer eigenen Kette das Gesicht. Was die Regler nicht erreichen, wird zum Eigenmorph; die Farbe des Netzes
@@ -28,6 +30,16 @@ einem Bild, sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden kön
                OBJ mit MTL und Texturbildern, PLY, STL oder OFF. Bei OBJ die Beilagen einfach mitziehen.</p>
             <div class="meshfigur-dateiliste" id="meshfigur-dateiliste"></div>
         </div>
+        <div class="meshfigur-pfade">
+            <label>Körpernetz – Pfad (statt Hochladen)
+                <input type="text" id="meshfigur-pfad-koerper" autocomplete="off" spellcheck="false"
+                       placeholder="z. B. A:\3DTools\HumanBodyWeb\output\Export\Foto3D\Damira_hunyuan2.glb">
+            </label>
+            <label>Kopfnetz – Pfad (optional, wird an den Körper angepasst)
+                <input type="text" id="meshfigur-pfad-kopf" autocomplete="off" spellcheck="false"
+                       placeholder="z. B. A:\3DTools\HumanBodyWeb\output\Export\Foto3D\Damira_kopf.glb">
+            </label>
+        </div>
         <div class="mesh-optionen" id="meshfigur-optionen"></div>
         <div class="bildmodell-knoepfe">
             <button type="submit" class="btn btn-primary" id="meshfigur-anlegen">
@@ -40,8 +52,13 @@ einem Bild, sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden kön
 <div class="card" id="meshfigur-liste">
     <div class="bildmodell-listenkopf">
         <h2>Figuren aus Netzen</h2>
-        <button type="button" class="btn btn-danger btn-sm" id="meshfigur-bulk-delete" disabled>
-            <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="meshfigur-bulk-count">0</span>)</span></button>
+        <div class="bildmodell-listenknoepfe">
+            <button type="button" class="btn btn-secondary btn-sm" id="meshfigur-duplizieren" disabled
+                    title="Neuer Auftrag mit denselben Netzen und Optionen — ohne Figur, startet nicht von selbst">
+                <i class="fas fa-clone"></i> <span>Job duplizieren (<span id="meshfigur-duplizieren-count">0</span>)</span></button>
+            <button type="button" class="btn btn-danger btn-sm" id="meshfigur-bulk-delete" disabled>
+                <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="meshfigur-bulk-count">0</span>)</span></button>
+        </div>
     </div>
     {% include "djangobase/_tabelle.html" with tabelle=meshfigur_tabelle %}
 </div>

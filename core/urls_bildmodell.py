@@ -13,12 +13,14 @@ erst NACH `register_converter` eingebunden (Django prüft ihn schon beim `path()
 from django.urls import path
 from django.views.generic import RedirectView
 
+from .api.auftragsduplikat import Auftragsduplikatendpunkte
 from .api.bildmodell import Bildmodellendpunkte
 from .api.bildmodelldateien import Bildmodelldateiendpunkte
 from .api.bildmodellfreisteller import Bildmodellfreistellerendpunkte
 from .api.bildmodellgvhmr import Bildmodellgvhmrendpunkte
 from .api.bildmodellproportionen import Bildmodellproportionenendpunkte
 from .api.bildmodelltextur import Bildmodelltexturendpunkte
+from .api.laufendeauftraege import Laufendeauftraege
 from .api.modellausdateien import Modellausdateien
 
 __all__ = ['BILDMODELL']
@@ -33,6 +35,12 @@ BILDMODELL = [
                                                                query_string=True)),
     path('humanbody/modell-aus-dateien/<kennung:kennung>/',
          RedirectView.as_view(pattern_name='bildmodell_auftrag', permanent=True, query_string=True)),
+    # Der Fortschritt aller laufenden Aufträge der drei Reiter in einer Antwort — die Quelle
+    # der wachsenden Balken in den Tabellen (`gemeinsam/laufbalken.js`).
+    path('api/modell-aus-dateien/laufende/', Laufendeauftraege.liste, name='auftraege_laufende'),
+    # „Job duplizieren" über allen drei Tabellen: Eingabe und Parameter, keine Ausgabe.
+    path('api/modell-aus-dateien/<str:bereich>/duplizieren/', Auftragsduplikatendpunkte.duplizieren,
+         name='auftraege_duplizieren'),
     path('api/bildmodell/anlegen/', Bildmodellendpunkte.anlegen, name='bildmodell_anlegen'),
     path('api/bildmodell/katalog/', Bildmodellendpunkte.katalog, name='bildmodell_katalog'),
     path('api/bildmodell/loeschen/', Bildmodellendpunkte.mehrere_loeschen,

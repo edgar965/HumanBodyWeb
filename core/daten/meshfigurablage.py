@@ -2,7 +2,9 @@
 """Meshfigurablage — die Dateien eines Auftrags „Mesh to 3D" (27.09.2026).
 
 `<OBJECTS_ROOT>/meshfigurauftraege/<kennung>/`
-    eingang/     das hochgeladene Netz, unverändert (GLB, OBJ + MTL + Texturen, PLY, STL, OFF)
+    eingang/     das Körpernetz, unverändert (GLB, OBJ + MTL + Texturen, PLY, STL, OFF) —
+                 hochgeladen oder vom angegebenen Pfad kopiert (`Meshfigureingang`)
+    eingang_kopf/ das Kopfnetz, falls angegeben (eigener Ordner: OBJ-Beilagen behalten ihre Namen)
     arbeit/      auftrag.json, Lage des Netzes, Landmarken, Genesis-Dateien je Runde,
                  Zustand (Haltung), Rest, Texelfarben — Zwischenstände der Schritte
     ergebnis/    Übersichtsbilder der Erkennung, Vergleichsbild, Vorschauen, Icon,
@@ -27,11 +29,12 @@ __all__ = ['Meshfigurablage']
 class Meshfigurablage:
     ORDNER = 'meshfigurauftraege'
     EINGANG = 'eingang'
+    KOPF = 'eingang_kopf'
     ARBEIT = 'arbeit'
     ERGEBNIS = 'ergebnis'
     LOG = 'auftrag.log'
     PID = 'auftrag.pid'
-    LESBAR = (EINGANG, ERGEBNIS)
+    LESBAR = (EINGANG, KOPF, ERGEBNIS)
     #: Netzformate, die trimesh liest; OBJ darf seine MTL und Bilder mitbringen.
     NETZE = ('.glb', '.gltf', '.obj', '.ply', '.stl', '.off')
     BEILAGEN = ('.mtl', '.png', '.jpg', '.jpeg', '.bin', '.webp', '.tga', '.bmp')
@@ -94,9 +97,25 @@ class Meshfigurablage:
                 aus.write(stueck)
         return ziel.name
 
-    def netzdatei(self):
+    def eingang(self, teil='koerper'):
+        """Eingangsordner für `koerper` oder `kopf`, angelegt."""
+        ordner = self.unter(self.KOPF if teil == 'kopf' else self.EINGANG)
+        ordner.mkdir(parents=True, exist_ok=True)
+        return ordner
+
+    def leeren(self, ordner):
+        """Die Dateien eines Eingangsordners entfernen (vor dem Kopieren eines neuen Netzes) — nur
+        innerhalb dieses Auftrags."""
+        ordner = Path(ordner)
+        if not ordner.resolve().is_relative_to(self.ordner().resolve()) or not ordner.is_dir():
+            raise ValueError('Kein Eingangsordner dieses Auftrags: %s' % ordner)
+        for p in ordner.iterdir():
+            if p.is_file():
+                p.unlink()
+
+    def netzdatei(self, teil='koerper'):
         """Pfad des Netzes im Eingang (das erste mit Netzendung) — oder None."""
-        ordner = self.unter(self.EINGANG)
+        ordner = self.unter(self.KOPF if teil == 'kopf' else self.EINGANG)
         if not ordner.is_dir():
             return None
         for p in sorted(ordner.iterdir()):

@@ -18,6 +18,9 @@
 .bildmodell-vorschau { height: 90px; border-radius: 4px; object-fit: cover; }
 .bildmodell-knoepfe { display: flex; align-items: center; gap: 12px; }
 .bildmodell-listenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* „Job duplizieren" + „Gewählte löschen" als EINE Gruppe rechts — sonst verteilt `space-between`
+   drei Elemente über die Breite und der erste Knopf steht mitten im Kopf. */
+.bildmodell-listenknoepfe { display: flex; align-items: center; gap: 8px; }
 .bildmodell-icon { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: var(--bildmodell-bildgrund); display: inline-block; }
 .bildmodell-icon-leer { color: var(--text-muted, #888); text-align: center; line-height: 56px; text-decoration: none; }
 .bildmodell-zeile { cursor: pointer; }
@@ -28,6 +31,10 @@
 /* Auftragsseite */
 .bildmodell-kopf { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
 .bildmodell-status { font-weight: 600; padding: 4px 10px; border-radius: 12px; background: var(--bg-darker, #181825); }
+/* Status + „Auftrag löschen" rechts im Seitenkopf. Steht hier und nicht in mesh.css, weil
+   diese Datei als einzige auf ALLEN drei Auftragsseiten liegt (Modell aus Bildern, Mesh,
+   Mesh to 3D) — Knopf und Verhalten: `viewer/gemeinsam/auftragloeschen.js`. */
+.auftrag-kopfknoepfe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .bildmodell-schritte { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; }
 .bildmodell-schritt { display: flex; align-items: center; gap: 6px; color: var(--text-muted, #888); font-size: 0.9rem; }
 .bildmodell-schrittpunkt { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border, #3a4250); }

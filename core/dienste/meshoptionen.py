@@ -74,16 +74,30 @@ class Meshoptionen:
             ('hunyuan3d_2mv', 'Hunyuan3D-2mv — mehrere Ansichten fließen in die Form ein (Forschungslizenz)'),
             ('hunyuan3d_21', 'Hunyuan3D-2.1 — ein Bild (in Vorbereitung)'),
         ], 'hinweis': 'Hunyuan3D: Tencent-Forschungslizenz, gilt nicht in der EU/UK/Südkorea.'},
+        {'schluessel': 'verwendung', 'titel': 'Kopf/Körper', 'art': 'wahl', 'vorgabe': 'ganz', 'werte': [
+            ('ganz', 'Ganze Figur'),
+            ('koerper', 'Körper — Kopf kommt aus einem anderen Lauf'),
+            ('kopf', 'Kopf / Gesicht — für den Kopf eines anderen Laufs'),
+        ], 'hinweis': 'Nur eine Kennzeichnung, sie ändert den Lauf NICHT. Sie sagt, wozu dieses '
+                      'Netz dienen soll, wenn Kopf und Körper aus verschiedenen Läufen kommen '
+                      '(„Mesh to 3D" nimmt beide Netze getrennt entgegen). Jederzeit änderbar — '
+                      'in der Tabellenspalte „Kopf/Körper" auch ohne neuen Lauf.'},
         {'schluessel': 'mehrbildmodus', 'titel': 'Mehrere Fotos', 'art': 'wahl',
          'vorgabe': 'einzelbild', 'werte': [
             ('einzelbild', 'Nur „Vorne" bestimmt die Form (Vorgabe)'),
             ('fusion', 'Je Foto ein eigenes Netz, per Fotogewicht gemittelt (langsamer, gröber)'),
         ], 'hinweis': 'Fusion rechnet die Form je gewichtetem Foto neu und mittelt — deutlich '
-                      'länger, gröberes Ergebnis, danach nur Foto-Textur (keine KI-Textur).'},
+                      'länger, gröberes Ergebnis, danach nur Foto-Textur (keine KI-Textur). '
+                      '**Die Feinheit kommt dann vom Fusion-Gitter, nicht von „Flächen":** '
+                      'bei 96³ hat das Ergebnis rund 8.000–15.000 Flächen, ganz gleich, was '
+                      'oben eingestellt ist (gemessen 27.09.2026). Und die Fotos brauchen '
+                      'eine gesetzte Rolle (Vorne/Hinten/Links/Rechts) — mit weniger als '
+                      'zwei davon läuft der gewöhnliche Einzelbildweg.'},
         {'schluessel': 'aufloesung', 'titel': 'Auflösung', 'art': 'wahl', 'vorgabe': 'hoch', 'werte': [
             ('schnell', 'Schnell — TRELLIS 512³ / Hunyuan Octree 256'),
             ('mittel', 'Mittel — TRELLIS 1024³ / Hunyuan Octree 384'),
             ('hoch', 'Hoch — TRELLIS 1536³ / Hunyuan Octree 512 (braucht Textur 4096 + 500.000 Flächen)'),
+            ('sehr_hoch', 'Sehr hoch — nur Hunyuan3D (Octree 768); TRELLIS.2 rechnet wie „Hoch"'),
         ], 'hinweis': 'Eine hohe Auflösung will auch eine große Textur und viele Flächen: '
                       '1536³ mit nur 2048 px und 100.000 Flächen gab bei TRELLIS.2 dunkle '
                       'Flecken über den ganzen Körper (9,3 % Lücken beim Texturbacken statt '
@@ -92,13 +106,81 @@ class Meshoptionen:
             ('auto', 'Automatisch freistellen (BiRefNet)'),
             ('alpha', 'Alphakanal der Datei verwenden'),
         ]},
+        {'schluessel': 'maskenkante', 'titel': 'Maskenkante', 'art': 'wahl', 'vorgabe': 'hart', 'fein': True,
+         'werte': [
+            ('hart', 'Halbdurchsichtiges begradigen (Vorgabe)'),
+            ('weich', 'Rohe Wahrscheinlichkeit des Freistellers'),
+        ], 'hinweis': 'BiRefNet gibt eine weiche Maske aus. Am Gesichtsfoto lagen 7,5 % aller '
+                      'Pixel im Graubereich — alle an fliegenden Haarsträhnen, und beide '
+                      'Formmodelle bauen daraus freischwebende Fetzen. „Hart" spreizt den '
+                      'Bereich 35–65 % auf 0/100 %, lässt aber einen schmalen Saum stehen.'},
+        {'schluessel': 'straehnen', 'titel': 'Feine Ausläufer öffnen (Radius)', 'art': 'zahl',
+         'vorgabe': 4, 'min': 0, 'max': 16, 'schritt': 1, 'fein': True,
+         'hinweis': 'Entfernt vor dem Formlauf alles aus der Maske, was dünner ist als dieser '
+                    'Radius (bezogen auf eine Bildkante von 1024 px) — fliegende Haarsträhnen, '
+                    'aus denen beide Formmodelle ihre weißen Zapfen bauen. **Bei einer '
+                    'Nahaufnahme des Kopfes lohnt 8**: Drei Läufe am selben Gesichtsfoto gaben '
+                    '4,42 → 3,91 → 3,36 Oberfläche je Höhe² (Radius 0/4/8), und erst bei 8 sind '
+                    'die Zapfen auch im Bild weg. Höher NICHT pauschal einstellen: Am '
+                    'Ganzkörperfoto nimmt Radius 4 nur 0,04 % der Silhouette, Radius 8 aber '
+                    'schon ein Fingerglied. Eine Haarerkennung wäre hier der falsche Hebel — sie '
+                    'findet den kompakten Haarblock, nicht die Strähnen (nur 10 % der '
+                    'halbdurchsichtigen Pixel liegen in ihrer Haarklasse).'},
+        {'schluessel': 'bildrand', 'titel': 'Rand um das Motiv (%)', 'art': 'zahl',
+         'vorgabe': 0, 'min': 0, 'max': 30, 'schritt': 5, 'fein': True,
+         'hinweis': 'Luft rundum, bevor das Foto ins Formmodell geht. Der Zuschnitt legt das '
+                    'Quadrat sonst genau auf das Motiv, und die Silhouette berührt alle vier '
+                    'Bildränder (am Damira-Kopf gemessen: Material von Zeile 0 bis 2665 bei '
+                    'Bildhöhe 2666). Dann weiß das Modell nicht, wo das Haar aufhört, und zieht '
+                    'es als senkrechte Vorhänge nach unten weiter — die „Eiszapfen" seitlich am '
+                    'Kopf. Hunyuan3D gibt seinem eigenen Vorverarbeiter dafür 15 %. '
+                    '**Achtung bei „Textur: Fotos":** Die Projektion passt das Foto über die '
+                    'Netz-Spanne ein und kennt den Rand nicht — dort 0 lassen, sonst sitzt die '
+                    'Farbe um genau diesen Anteil verschoben.'},
+        {'schluessel': 'fetzen', 'titel': 'Kleinteile entfernen (%)', 'art': 'zahl', 'vorgabe': 1,
+         'min': 0, 'max': 50, 'schritt': 0.5, 'fein': True,
+         'hinweis': 'Teilkörper unter diesem Anteil der größten zusammenhängenden Fläche fallen '
+                    'weg — 0 schaltet ab. Das gibt dem Gesicht sein Flächenbudget zurück: Ein '
+                    'Kopf mit rekonstruierten Haaren hatte die 4- bis 10-fache Oberfläche eines '
+                    'ganzen Körpernetzes, und das Flächenziel verteilt sich darauf.'},
+        {'schluessel': 'kopfanteil', 'titel': 'Kopfanteil für „Gesicht" (%)', 'art': 'zahl',
+         'vorgabe': 0, 'min': 0, 'max': 99, 'schritt': 1, 'fein': True,
+         'hinweis': 'AUS (0), weil der Lauf vom 27.09.2026 das Gegenteil brachte: Ein Foto mit '
+                    'der Rolle „Nahaufnahme Gesicht" färbt damit die obersten so viel Prozent der '
+                    'Netzhöhe — aber der quadratische Zuschnitt des Freistellers umfasst Kopf, '
+                    'Hals und Schulteransatz, ein fester Höhenanteil trifft ihn nicht, und das '
+                    'Gesicht landet verschoben und verwaschen auf dem Kopf (Vergleichsbilder in '
+                    'mesh-laeufe.md). Wer es ausprobieren will, stellt hier einen Wert ein. Sauber '
+                    'geht es nur über Gesichtslandmarken — das macht der Reiter „Mesh to 3D".'},
         {'schluessel': 'textur', 'titel': 'Textur', 'art': 'wahl', 'vorgabe': 'fotos_ki', 'werte': [
             ('fotos_ki', 'Fotos aufprojiziert, Lücken aus der Modelltextur'),
             ('fotos', 'Nur Fotos (Lücken aufgefüllt)'),
             ('ki', 'Nur die Textur des Formmodells (TRELLIS.2: PBR; Hunyuan3D: eigene Texturmalerei)'),
+            ('malerei', 'Hunyuan3D malt die Textur — auch auf einer TRELLIS.2-Form'),
             ('keine', 'Keine (grau)'),
         ], 'hinweis': 'Hunyuan3D ohne kompilierte Rasterizer-Erweiterung fällt bei „ki"/„fotos_ki" '
-                      'automatisch auf die Fotoprojektion zurück.'},
+                      'automatisch auf die Fotoprojektion zurück. **„fotos_ki" heißt bei '
+                      'Hunyuan3D trotzdem Malerei** (die Fotos kommen nur zum Zug, wenn sie '
+                      'scheitert) — wer wirklich projizieren will, nimmt „fotos", zahlt das '
+                      'aber mit Punktfarben statt einer UV-Textur. **„Hunyuan3D malt"** ist '
+                      'die Kombination, nach der die Form von TRELLIS.2 kommt (auf 1024 px '
+                      'konditioniert) und die Textur von Hunyuan3D: die feinere Form mit '
+                      'einer echten UV-Textur statt TRELLIS.2s Voxel-PBR.'},
+        {'schluessel': 'relief', 'titel': 'Relief aus den Fotos', 'art': 'wahl', 'vorgabe': 'aus', 'werte': [
+            ('aus', 'Aus'),
+            ('an', 'Feinstruktur der Fotos als Normal Map'),
+        ], 'hinweis': 'Poren, Härchen und Lippenrillen kann die FORM nicht tragen — bei '
+                      'Hunyuan3D steckt die ganze Gestalt in 3072 Latents, und das Foto sieht '
+                      'das Modell als 37 × 37 Merkmalsraster. Im Foto sind sie aber da. Diese '
+                      'Option holt das Feine (Hochpass) aus den Fotos und legt es als Normal '
+                      'Map an die Textur: Das Netz bleibt glatt, die Beleuchtung wird fein. '
+                      'Braucht eine UV-Textur, wirkt also nicht bei Textur „fotos" (Punktfarben). '
+                      'Was im Foto FARBE ist (Sommersprossen, Muttermale), wird dabei zu Relief '
+                      '— deshalb die Stärke zurückhaltend halten.'},
+        {'schluessel': 'relief_staerke', 'titel': 'Relief-Stärke (%)', 'art': 'zahl', 'vorgabe': 100,
+         'min': 0, 'max': 400, 'schritt': 10, 'fein': True,
+         'hinweis': '100 % = die gemessene Fotostruktur. Höher übertreibt die Schattierung, '
+                    '0 schaltet das Relief aus.'},
         {'schluessel': 'gesicht', 'titel': 'Gesicht', 'art': 'wahl', 'vorgabe': 'an', 'werte': [
             ('an', 'Nahaufnahme für Form und Textur des Kopfes nutzen'),
             ('textur', 'Nahaufnahme nur für die Textur'),

@@ -10,7 +10,8 @@ alles, was die Registrierung von Genesis braucht, EINMAL je Runde in ein npz ges
     orientierung, reihenfolge wandern mit den Reglern), Daz-Achsen und Drehreihenfolge — damit
                               die Registrierung posiert wie `G9knochenmatrizen` und der Browser
     haut_index, haut_gewicht  vier Einflüsse je Punkt (`G9haut`), Knochennummer in `knochen`
-    bereich, spiegel, teil    `G9netzbereiche`, `G9koerperteile`
+    bereich, spiegel, teil    `G9netzbereiche` (Augenpartie als INNEN, siehe `bereiche`),
+                              `G9koerperteile`; `bereich_textur` ohne die Augenpartie-Ausnahme
     frei, frei_skala          welche Knochen sich drehen dürfen (Rumpf, Hals, Kopf, Arme, Beine —
                               nicht Finger, Zehen, Gesicht, Verdrillung) und wie weit (weicher Prior)
     lm_*                      Ziele der Landmarken aus `G9netzlandmarken` (Genesis durch denselben
@@ -89,7 +90,9 @@ class Meshfigurgenesis:
             'reihenfolge': np.array([roh[n]['reihenfolge'] for n in namen]),
             'haut_index': umrechnen[np.asarray(haut.index, np.int64)],
             'haut_gewicht': np.asarray(haut.gewicht, np.float32),
-            'bereich': G9netzbereiche.bereiche().astype(np.int8),
+            'bereich': self.bereiche(),
+            # Die Textur liest die Lider weiter aus dem Netz (INNEN wäre dort „ohne Farbe").
+            'bereich_textur': G9netzbereiche.bereiche().astype(np.int8),
             'gesichtskern': G9netzbereiche.gesichtskern(),
             'spiegel': G9netzbereiche.spiegel().astype(np.int32),
             'teil': G9koerperteile.genesis_punkte(haut).astype(np.int8),
@@ -97,6 +100,26 @@ class Meshfigurgenesis:
         }
         aus.update(self._frei(namen))
         aus.update(self._landmarken(nummer))
+        return aus
+
+    @staticmethod
+    def bereiche():
+        """`G9netzbereiche` — dazu die Augenpartie (Lider, Körpernachbarn des Augapfels) als INNEN.
+
+        Hunyuan legt statt des Auges eine Mulde mit aufgemaltem Auge an. Zählte die Augenpartie im
+        Flächenabgleich, zog sie die Lidregler an den Anschlag (`Eyelids Lower Height` 1,0, `… Sunken`
+        −0,94) und der Rest die Augenhöhle hinein — der starre Augapfel stach durch die Lider (Damira,
+        27.09.2026: 419 statt 195 mm² sichtbar). Als INNEN (Gewicht 0) formen die Lidlandmarken die
+        Lider, und der Rest füllt die Partie aus der Umgebung (`Meshfiguraugenhoehle`).
+        """
+        from Genesis9.netzbereiche import G9netzbereiche
+
+        from .meshfiguraugenhoehle import Meshfiguraugenhoehle
+
+        aus = G9netzbereiche.bereiche().astype(np.int8)
+        maske = Meshfiguraugenhoehle.maske()
+        if len(maske) == len(aus):
+            aus[maske] = G9netzbereiche.INNEN
         return aus
 
     def speichern(self, pfad):

@@ -15,6 +15,7 @@
  * dem Startschritt (`Bildmodelllauf.relativ`), nicht den Gesamtbalken, der
  * bei einem Start ab Zielnetz schon auf 60 % stünde.
  */
+import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Laufansicht } from './laufansicht.js';
 
 export class Personenformular {
@@ -145,13 +146,23 @@ export class Personenformular {
         catch (fehler) { window.alert(`Abbrechen fehlgeschlagen: ${fehler.message}`); }
     }
 
+    /** Der Knopf ist ab dem Klick gesperrt, nicht erst wenn der Server „läuft" meldet
+     *  (Edgar, 27.09.2026: „soll den Button deaktivieren, um keine 2 Jobs zu starten") —
+     *  mitgesperrt werden die gleichwertigen Knöpfe „Übernehmen und neu berechnen"
+     *  (`[data-tat="rechnen"]` in Modellsicht und Proportionen-Popup), sonst startet der
+     *  zweite Lauf einfach von dort. */
     async neuBerechnen(ab = 'ziel') {
         const proportionen = window.__bildmodell?.proportionen?.werte?.() || {};
         const optionen = { ...this.formular.werte(), person: this.werte(), proportionen };
+        const weitere = [...document.querySelectorAll('[data-tat="rechnen"]:not([disabled])')];
+        for (const k of weitere) k.disabled = true;
         try {
-            await this.auftrag.starten(optionen, ab, this.festgehalten ? this.festgehalten() : {});
+            await Knopfsperre.waehrend(document.getElementById('neu-berechnen'),
+                () => this.auftrag.starten(optionen, ab, this.festgehalten ? this.festgehalten() : {}),
+                'Startet …');
         } catch (fehler) {
-            window.alert(`Neu berechnen fehlgeschlagen: ${fehler.message}`);
+            for (const k of weitere) k.disabled = false;
+            window.alert(`Neu berechnen fehlgeschlagen: ${fehler.daten?.error || fehler.message}`);
         }
     }
 }

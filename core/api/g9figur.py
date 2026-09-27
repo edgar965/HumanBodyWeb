@@ -114,6 +114,7 @@ class G9figur:
                             'brauenstil': eintrag.get('brauenstil') or '',
                             'pose': eintrag.get('pose') or '',
                             'ausdruck': eintrag.get('ausdruck') or '',
+                            'fototextur': dict(eintrag.get('fototextur') or {}),
                             'gespeichert': True})
         return aus
 
@@ -145,6 +146,8 @@ class G9figur:
                 'brauenstil': figur.get('brauenstil') or '',
                 'pose': figur.get('pose') or '',
                 'ausdruck': figur.get('ausdruck') or '',
+                # Fotokacheln (27.09.2026, `Modelltexturen`): {kachel: Adresse}, im Browser die Albedo.
+                'fototextur': figur.get('fototextur') if isinstance(figur.get('fototextur'), dict) else {},
                 'bilder': grund.get('bilder') or {},
                 'gespeichert': True}
 
