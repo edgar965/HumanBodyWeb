@@ -1,0 +1,41 @@
+/* Reiter „Mesh to 3D" (27.09.2026): Dateiliste der Ablage, Schrittleiste, Bühne, Regler, Bilder.
+   Farben über die Variablen des Grundlayouts — hell und dunkel lesbar. */
+
+.meshfigur-dateiliste { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.meshfigur-datei { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+
+.meshfigur-schritte { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0 0 10px; }
+.meshfigur-schritt {
+    padding: 3px 10px; border-radius: 12px; font-size: 0.85rem;
+    border: 1px solid var(--border-color, #455); color: var(--text-secondary, #aab);
+}
+.meshfigur-schritt small { opacity: 0.75; }
+.meshfigur-schritt-fertig { border-color: #3c8a4f; color: #3c8a4f; }
+.meshfigur-schritt-laeuft { border-color: #d59b1f; color: #d59b1f; font-weight: 600; }
+.meshfigur-schritt-fehler { border-color: #c0392b; color: #c0392b; font-weight: 600; }
+
+/* Die Spalte übernimmt die Flex-Rolle von `.mesh-betrachter` (mesh.css: flex 1 1 520px) — sonst
+   schrumpft die Bühne auf die Breite ihres Inhalts (gemessen 27.09.2026: 190 px). */
+.meshfigur-buehnenspalte { display: flex; flex-direction: column; gap: 6px; flex: 1 1 560px; min-width: 320px; }
+.meshfigur-schalter { display: flex; gap: 14px; font-size: 0.9rem; }
+.meshfigur-buehnenspalte .mesh-betrachter { position: relative; flex: 1 1 auto; width: 100%; height: 680px; }
+.meshfigur-leinwand { width: 100%; height: 100%; display: block; position: absolute; inset: 0; }
+.meshfigur-export { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+
+.meshfigur-vergleichsbild { max-width: 100%; height: auto; display: block; border-radius: 6px; }
+.meshfigur-erkennungsbild { max-width: 100%; height: auto; display: block; margin: 6px 0; border-radius: 6px; }
+.meshfigur-rot { color: #d03030; font-weight: 600; }
+.meshfigur-blau { color: #3050d0; font-weight: 600; }
+
+.meshfigur-kettentabelle td, .meshfigur-kettentabelle th { padding: 3px 10px; text-align: left; }
+.meshfigur-reglerraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 3px 16px; }
+.meshfigur-reglerzeile { position: relative; height: 20px; font-size: 0.8rem; }
+.meshfigur-reglerbalken {
+    position: absolute; left: 0; top: 2px; bottom: 2px; background: rgba(60, 140, 90, 0.35); border-radius: 3px;
+}
+.meshfigur-reglerbalken.negativ { background: rgba(190, 80, 60, 0.35); }
+.meshfigur-reglertext { position: relative; padding-left: 4px; white-space: nowrap; }
+
+@media (max-width: 900px) {
+    .meshfigur-buehnenspalte .mesh-betrachter { min-height: 440px; }
+}

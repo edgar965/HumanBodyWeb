@@ -13,14 +13,28 @@
  * außerhalb dieses Viewers braucht diese Werte — sie gehören nicht in den
  * Export.
  */
+import { Einzugbacken } from './einzugbacken.js';
+
 export class Netzattribute {
 
     //: Was `GLTFExporter` (und externe Werkzeuge wie Blender/MeshLab) als
     //: glTF-Standardattribute kennen. Alles andere ist eigene Shader-Kost.
     static STANDARD = ['position', 'normal', 'uv', 'uv2', 'color', 'skinIndex', 'skinWeight', 'tangent'];
 
-    /** `geometrie` (MUTIERT — der Aufrufer übergibt eine eigene Kopie). */
+    /**
+     * `geometrie` (MUTIERT — der Aufrufer übergibt eine eigene Kopie).
+     *
+     * EINES DER EIGENEN ATTRIBUTE DARF NICHT EINFACH WEG: `einzug` hält die
+     * verdeckte Haut unter Kleid und Schuh — ohne ihn sticht sie hindurch
+     * (`Einzugbacken`, Fund 26.09.2026 an Damiras Schuhen). Er wird deshalb
+     * hier in die Punkte gerechnet, bevor er gelöscht wird. Das steht
+     * absichtlich AN DIESER STELLE und nicht bei den Aufrufern: Beide
+     * Exportwege (`Netzpose.gebacken` und der GLB-Pfad mit Rig) kommen hier
+     * vorbei — beim vollen Index war genau das vergessen worden und der
+     * gerigte Export behielt monatelang seine Löcher.
+     */
     static eigeneEntfernen(geometrie) {
+        Einzugbacken.anwenden(geometrie);
         for (const name of Object.keys(geometrie.attributes)) {
             if (!Netzattribute.STANDARD.includes(name)) geometrie.deleteAttribute(name);
         }

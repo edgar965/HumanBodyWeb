@@ -188,6 +188,18 @@ export class Genesis9texturen {
         return { bilder: Genesis9texturen._vorrat.size, fertig };
     }
 
+    /**
+     * Warten, bis JEDES Bild im Vorrat entweder da ist oder endgültig
+     * gescheitert ist (Fund 26.09.2026: ein Export direkt nach dem Laden
+     * einer Figur traf `material.map.image === undefined`, weil `vorladen()`
+     * bewusst NICHT wartet — `GLTFExporter`/`ObjMtl` lassen ein Bild ohne
+     * `.image` einfach weg, still, ohne Fehler). Bereits fertige Einträge
+     * kosten nichts (Promise ist schon aufgelöst).
+     */
+    static wartenAufAlle() {
+        return Promise.all([...Genesis9texturen._vorrat.values()].map(e => e.fertig));
+    }
+
     /** Alles freigeben (Seitenwechsel, Proben). */
     static leeren() {
         for (const e of Genesis9texturen._vorrat.values()) e.textur.dispose();

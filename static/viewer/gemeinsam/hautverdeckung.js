@@ -92,9 +92,28 @@ export class Hautverdeckung extends Figurhaut {
             if (!g?.attributes?.position || !g.index) continue;
             if (!Hautverdeckung.zaehlt(netz)) continue;
             aus.push({ schluessel, punkte: g.attributes.position.array,
-                       dreiecke: Hautverdeckung.vollerIndex(g) });
+                       dreiecke: Hautverdeckung.vollerIndex(g), starr: Hautverdeckung.starr(schluessel) });
         }
         return aus;
+    }
+
+    /**
+     * STARRE Stücke (bisher nur der GarmentCode-Schuh, Schlüssel immer
+     * `gc_schuh` — `GarmentCode.schuhdeutung` erkennt ihn serverseitig an
+     * Kategorie/Maßen, der Name ist keine Produktbezeichnung) lassen keinen
+     * Randstreifen frei (`hautmaske.js`, `RANDRINGE`). Der Streifen ist für
+     * eine LOCKERE Stoffkante gedacht, die sich beim Bewegen hebt und sonst
+     * ein Loch freigäbe — ein Schuh biegt sich am oberen Rand nicht so.
+     *
+     * BEFUND (27.09.2026, Damira1/Flats, Edgar mit Bild „im ursprungsmodell
+     * geht die Haut nicht durch"): Auch mit dem Abstands-Fallback (`NAHE_M`)
+     * blieb der Schuh bei 6,0 % Fremdfarbe (vorher 16,8 %) — knapp über der
+     * Schwelle. Der Randstreifen an der Schuhöffnung war der Rest: ohne ihn
+     * (probehalber `randringe:0` in der laufenden Szene) erkannte die Maske
+     * 3.268 weitere Punkte als verdeckt, geschätzt genau dort.
+     */
+    static starr(schluessel) {
+        return schluessel === 'gc_schuh';
     }
 
     /** Ohne `art` (GarmentCode, MakeHuman, UMA) wie bisher; mit `art` nur `kleidung`. */

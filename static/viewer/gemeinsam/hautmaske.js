@@ -81,6 +81,23 @@ export class Hautmaske {
     static INSEL_FLAECHE_M2 = 0.005;
 
     /**
+     * BEFUND (27.09.2026, Damira1/Flats, Edgar mit Bild: „im ursprungsmodell
+     * geht die Haut nicht durch"): Der Strahl entlang der Körpernormale ist
+     * RICHTUNGSABHÄNGIG — an der Schuhspitze und am Rist krümmt sich der
+     * Schuh anders als die Zehen darunter, der Strahl streift die Schuhwand
+     * statt sie zu durchstechen. Gemessen in der laufenden Szene: 3.124
+     * Fußpunkte blieben ungezeichnet unmaskiert, obwohl der NÄCHSTE PUNKT
+     * auf einem erlaubten Schuhdreieck bei 860 davon unter 5 mm entfernt lag
+     * (einer bei 0,65 mm) — eng anliegender Stoff wie ein Bund trifft der
+     * Strahl zuverlässig, ein steifer Schuh mit eigener Krümmung nicht.
+     * Deshalb zusätzlich zum Strahl ein richtungsloser Abstandstest: liegt
+     * der Punkt näher als das am nächsten ERLAUBTEN Dreieck (nicht am
+     * gesperrten Rand, `ok` bleibt in Kraft), gilt er auch ohne Strahltreffer
+     * als verdeckt. Der Hauteinzug (`Saumband.TIEFE_M`, 10 mm) versenkt ihn
+     * dann sichtbar unter die Schuhwand statt ihn nur zu markieren. */
+    static NAHE_M = 0.012;
+
+    /**
      * Je Körperpunkt 1, wenn ihn eines der Stücke verdeckt.
      *
      * @param koerper      Float32Array/Float64Array, Punkte in Ruhelage (xyz)
@@ -102,7 +119,8 @@ export class Hautmaske {
         const tiefe = optionen.tiefe ?? Hautmaske.TIEFE_M;
         const ringe = optionen.randringe ?? Hautmaske.RANDRINGE;
         const eng = optionen.eng ?? Hautmaske.ENG_M;
-        const suchweite = optionen.suchweite ?? Math.max(abstand, tiefe);
+        const nahe = optionen.nahe ?? Hautmaske.NAHE_M;
+        const suchweite = optionen.suchweite ?? Math.max(abstand, tiefe, nahe);
         const inseln = optionen.inseln ?? Hautmaske.INSEL_MAX;
         const inselflaeche = optionen.inselflaeche ?? Hautmaske.INSEL_FLAECHE_M2;
         const n = koerper.length / 3;
@@ -112,13 +130,17 @@ export class Hautmaske {
         const basis = { koerper, normalen, koerpergitter };
         for (const stoff of stoffe || []) {
             if (!stoff?.punkte?.length || !stoff?.dreiecke?.length) continue;
-            Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite);
+            // Ein STARRES Stück (Schuh) biegt sich am Rand nicht wie ein
+            // Bund — der Randstreifen, der eine lockere Kante beim Heben
+            // vor einem Loch schützt, bleibt hier zu (`hautverdeckung.js`).
+            const stueckRinge = stoff.starr ? 0 : ringe;
+            Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, stueckRinge, eng, suchweite, nahe);
         }
         if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper, inselflaeche);
         return maske;
     }
 
-    static _einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite) {
+    static _einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite, nahe) {
         const { koerper, normalen } = basis;
         const P = stoff.punkte, T = stoff.dreiecke, nP = P.length / 3;
         const { rand, nachbarn } = Hautmaske.randpunkte(T, nP);
@@ -141,11 +163,19 @@ export class Hautmaske {
             // bis `abstand` darüber, muss ein zulässiges Dreieck treffen.
             const nx = normalen[3 * i], ny = normalen[3 * i + 1], nz = normalen[3 * i + 2];
             const liste = umkreis(nah.j);
+            let naechster2 = Infinity;
             for (let l = 0; l < liste.length; l++) {
                 const k = liste[l];
                 const t = G.strahlDreieck(P, T[k], T[k + 1], T[k + 2], px, py, pz, nx, ny, nz);
                 if (t !== null && t >= -tiefe && t <= abstand) { maske[i] = 1; break; }
+                // Richtungsloser Fallback (27.09.2026, Schuh-Befund oben): der
+                // Strahl kann ein nahes, aber anders gekrümmtes Dreieck
+                // verfehlen. Nur unter denselben ERLAUBTEN Dreiecken gesucht —
+                // der gesperrte Randstreifen (`ok`) bleibt unangetastet frei.
+                const d2 = G.punktDreieckAbstand2(P, T[k], T[k + 1], T[k + 2], px, py, pz);
+                if (d2 < naechster2) naechster2 = d2;
             }
+            if (!maske[i] && naechster2 <= nahe * nahe) maske[i] = 1;
         }
     }
 

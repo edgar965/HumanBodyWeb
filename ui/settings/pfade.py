@@ -98,7 +98,13 @@ HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
 # Modell-Export aus dem Kontextmenü der Charakterliste (26.09.2026,
 # Docu/konzept_modellexport.md): Vorgabe-Zielordner, wählbar im Dialog.
-HUMANBODY_MODELLEXPORT_VORGABE_DIR = BASE_DIR / 'output' / 'Export'
+HUMANBODY_MODELLEXPORT_VORGABE_DIR = BASE_DIR / 'output' / 'Export' / 'Models'
+# Jedes fertige Mesh aus dem Reiter „Mesh" (Fotos -> freies Netz) landet zusätzlich
+# hier als GLB (Edgar, 26.09.2026) — der Auftragsordner bleibt die Quelle.
+MESH_FOTO3D_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Foto3D'
+# Reiter „Mesh to 3D" (Netz -> Genesis-9-Figur, 27.09.2026): je Auftrag ein Ordner mit Modell,
+# Kacheln, Eigenmorph, Bildern und Bericht; die GLB schreibt der Browser-Export dazu.
+MESHFIGUR_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshTo3D'
 #: Blender-Skript, das eine GLB in eine .blend umschreibt — nur gerufen, wenn
 #: „.blend" im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
 MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'

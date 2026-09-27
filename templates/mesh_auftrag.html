@@ -70,6 +70,12 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
         </button>
         <span class="hb-hinweis" id="textur-hinweis-live"></span>
     </div>
+    {# Eigener Fortschritt am Knopf (Edgar, 27.09.2026): Der Balken oben im Kasten „Lauf" #}
+    {# zeigt denselben Auftrag, steht aber ausserhalb des Blickfelds, wenn man hier klickt. #}
+    <div class="mesh-texturlauf hb-versteckt" id="textur-lauf">
+        <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="textur-fortschritt" style="width:0%"></div></div>
+        <span class="hb-hinweis" id="textur-fortschritt-text"></span>
+    </div>
     <div class="bildmodell-ablage" id="mesh-nachtraeglich">
         <input type="file" id="mesh-weitere-dateien" multiple accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff">
         <p><i class="fas fa-cloud-upload-alt"></i> Weitere Fotos hinzufügen</p>

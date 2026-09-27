@@ -58,3 +58,12 @@
 }
 .mesh-texturzeile { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
 .mesh-texturzeile .hb-hinweis { margin: 0; }
+/* Feineinstellungen der Modelle — zugeklappt, damit sie die Hauptfelder nicht zuschütten. */
+.mesh-feineinstellungen { margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 8px; }
+.mesh-feineinstellungen > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.mesh-optionshinweis { display: block; margin: 2px 0 0; font-size: 0.85em; line-height: 1.35; }
+
+/* Fortschritt des Retextur-Laufs, direkt unter seinem Knopf (27.09.2026). */
+.mesh-texturlauf { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.mesh-texturlauf .bildmodell-balken { flex: 1; margin: 0; }
+.mesh-texturlauf .hb-hinweis { margin: 0; white-space: nowrap; }

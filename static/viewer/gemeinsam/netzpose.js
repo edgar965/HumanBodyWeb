@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { Netzattribute } from './netzattribute.js';
+import { Dreieckfilter } from './dreieckfilter.js';
+import { Strangbaender } from './strangbaender.js';
+import { Vollindex } from './vollindex.js';
 
 /**
  * Netzpose — ein SkinnedMesh als STARRES Netz, in einer gewählten Pose.
@@ -45,21 +48,49 @@ export class Netzpose {
         }
         // Eigene Shader-Attribute (`dicke`, `einzug`, …) raus — siehe `Netzattribute`.
         Netzattribute.eigeneEntfernen(geometrie);
+        // DIE GANZE HAUT, nicht nur die sichtbare (Fund 26.09.2026, Edgar:
+        // „an den Wangen gibt es auch Fehler in den 3D Mesh"): Die Szene nimmt
+        // Hautdreiecke unter Kleid und Haaren aus dem Index — im Viewer sieht
+        // sie niemand, und es spart Zeichenzeit (`hautverdeckung.js`). Der
+        // Export aber landet in einem fremden Programm mit anderer
+        // Darstellung: dort klafften genau dort Löcher, und durch sie sah man
+        // Innenflächen (am Hals den rötlichen Mundinnenraum). Bei Damira1
+        // fehlten so 12.164 der 804.992 Körperdreiecke.
+        // Dieselbe Rechnung braucht auch der GLB-Pfad mit Rig — deshalb liegt
+        // sie in `Vollindex` und nicht hier.
+        Vollindex.setzen(geometrie, mesh.geometry);
+        // Entartete Dreiecke raus — aber NIE bei Wireframe-Netzen: dort sind
+        // sie die Zeichnung selbst, nicht ein Rest (siehe `Dreieckfilter`).
+        const werkstoffe = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        const strichnetz = werkstoffe.some((m) => m && m.wireframe);
+        if (!strichnetz) Dreieckfilter.entfernen(geometrie);
         if (pose === Netzpose.AKTUELL && mesh.isSkinnedMesh && mesh.skeleton) {
             Netzpose._skinnen(mesh, geometrie);
         }
-        geometrie.computeVertexNormals();
-        const netz = new THREE.Mesh(geometrie, mesh.material);
+        // Strähnen erst JETZT verbreitern — die Punkte stehen in Endlage.
+        const baender = strichnetz ? Strangbaender.bauen(geometrie) : null;
+        const endgeometrie = baender || geometrie;
+        endgeometrie.computeVertexNormals();
+        const netz = new THREE.Mesh(endgeometrie, mesh.material);
         netz.name = mesh.name;
         mesh.updateWorldMatrix(true, false);
         mesh.matrixWorld.decompose(netz.position, netz.quaternion, netz.scale);
         return netz;
     }
 
-    /** Punkte in `geometrie.attributes.position` durch die AKTUELLE Pose ersetzen. */
+    /**
+     * Punkte in `geometrie.attributes.position` durch die AKTUELLE Pose ersetzen.
+     *
+     * DIE AUSGANGSPUNKTE KOMMEN AUS DER KOPIE, nicht aus dem Original: in
+     * der Kopie steckt der Hauteinzug schon drin (`Einzugbacken`, gerufen aus
+     * `Netzattribute.eigeneEntfernen`). Läse man hier wieder das Original,
+     * wäre er überschrieben und die verdeckte Haut stäche in jeder Pose außer
+     * der Ruhelage wieder durch Schuh und Kleid. Die Knochengewichte kommen
+     * weiter aus dem Original — dort stehen sie noch.
+     */
     static _skinnen(mesh, geometrie) {
         const quelle = mesh.geometry;
-        const pos = quelle.getAttribute('position');
+        const pos = geometrie.getAttribute('position');
         const skinIndex = quelle.getAttribute('skinIndex');
         const skinWeight = quelle.getAttribute('skinWeight');
         if (!pos || !skinIndex || !skinWeight) return;

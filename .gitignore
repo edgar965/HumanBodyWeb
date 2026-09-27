@@ -92,6 +92,9 @@ _wegwerf/
 #   output/  Renderergebnisse und Exporte
 .cache/
 output/
+# Modellexporte (27.09.2026): OBJ/GLB samt Texturen, 1,6 GB — Ergebnisse, kein Quelltext.
+# Das Mesh-Archiv liegt unter output/Export/Foto3D und ist damit schon ausgenommen.
+Export/
 
 # Gebuendeltes Szene-Skript (wird bei Bedarf gebaut, siehe core/dienste/modulbuendel.py)
 _buendel/

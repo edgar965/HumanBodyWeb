@@ -57,6 +57,7 @@ register_converter(Kennungskonverter, 'kennung')
 # Nach dem Konverter: beide Listen nutzen `<kennung:…>`, Django prüft ihn schon beim `path()`.
 from .urls_bildmodell import BILDMODELL  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
+from .urls_meshfigur import MESHFIGUR  # noqa: E402
 
 urlpatterns = [
     path('', Webseiten.start, name='dashboard'),
@@ -264,3 +265,5 @@ urlpatterns += CHARAKTER
 # „Modell aus Dateien": Reiter 3D (Genesis) und Mesh (Fotos → Netz), 26.09.2026.
 urlpatterns += BILDMODELL
 urlpatterns += MESH
+# Reiter „Mesh to 3D" (Netz → Genesis-9-Figur), 27.09.2026.
+urlpatterns += MESHFIGUR

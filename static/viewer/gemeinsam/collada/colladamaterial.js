@@ -63,7 +63,9 @@ export class Colladamaterial {
         let images = '';
         let texturKanal = '';
         if (textur && mat.map && mat.map.image) {
-            const blob = await Werkstoffbild.png(mat.map.image, maxSeite);
+            // `flipY` mitgeben — sonst steht die Karte im fremden Programm
+            // auf dem Kopf (siehe `Werkstoffbild.png`).
+            const blob = await Werkstoffbild.png(mat.map.image, maxSeite, mat.map.flipY);
             if (blob) {
                 const dateiname = `${praefix}${id}.png`;
                 if (!bildnamen.has(dateiname)) { bildnamen.add(dateiname); bilder.push({ dateiname, blob }); }

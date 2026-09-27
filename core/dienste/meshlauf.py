@@ -27,6 +27,7 @@ from ..daten.meshablage import Meshablage
 from ..daten.wrapperpfad import Wrapperpfad
 from ..models import Meshauftrag
 from ..pipeline_process import PipelineProzess, PipelineStille
+from .meshexportablage import Meshexportablage
 from .meshoptionen import Meshoptionen
 
 logger = logging.getLogger('core')
@@ -79,6 +80,27 @@ class Meshlauf:
         job.finished_at = timezone.now()
         job.save(update_fields=['ergebnis', 'status', 'progress', 'progress_detail', 'finished_at', 'updated_at'])
         logger.info('Mesh %s: fertig (%s Flächen)', job.kennung, self._ergebnis.get('flaechen'))
+        self._ablegen()
+
+    def _ablegen(self):
+        """Die fertige GLB zusätzlich in den festen Exportordner (`Meshexportablage`).
+
+        Nach dem Speichern und bewusst ohne Scheitern: Der Lauf IST fertig, das
+        Ergebnis liegt im Auftragsordner — ein voller Datenträger oder ein
+        sperrender Virenscanner darf ihn nicht nachträglich rot machen.
+        """
+        name = (self._ergebnis.get('dateien') or {}).get('glb')
+        if not name:
+            return
+        quelle = self.ablage.unter(Meshablage.ERGEBNIS) / name
+        if not quelle.is_file():
+            logger.warning('Mesh %s: GLB %s fehlt, keine Ablagekopie', self.job.kennung, quelle)
+            return
+        try:
+            ziel = Meshexportablage.kopieren(self.job, quelle)
+            logger.info('Mesh %s: abgelegt unter %s', self.job.kennung, ziel)
+        except OSError as fehler:
+            logger.warning('Mesh %s: Ablagekopie fehlgeschlagen (%s)', self.job.kennung, fehler)
 
     def beschreibung(self, ab=None):
         """Was der Runner rechnen soll — Pfade, Rollen, Optionen (JSON-Datei)."""
@@ -87,8 +109,13 @@ class Meshlauf:
         bilder = []
         for name in self.ablage.eingaenge():
             eintrag = job.bild(name) or {}
+            # `gewicht`/`bereich` MÜSSEN mit (26.09.2026): `mesh_fototextur.gewichte_aus_bildern`
+            # und `mesh_fusion.form_fusion` lesen sie aus genau diesem Eintrag. Ohne sie fiel
+            # jedes Foto auf `.get('gewicht', 100)` zurück — der Regler der Seite blieb wirkungslos.
             bilder.append({'datei': name, 'pfad': str(self.ablage.unter(Meshablage.EINGANG) / name),
-                           'rolle': Meshoptionen.rolle_pruefen(eintrag.get('rolle'))})
+                           'rolle': Meshoptionen.rolle_pruefen(eintrag.get('rolle')),
+                           'gewicht': Meshoptionen.gewicht_pruefen(eintrag.get('gewicht', 100)),
+                           'bereich': Meshoptionen.bereich_pruefen(eintrag.get('bereich'))})
         return {
             'kennung': job.kennung,
             'name': job.name,
@@ -101,16 +128,27 @@ class Meshlauf:
         }
 
     def umgebung(self):
-        """HF-Ablage auf A:, Zwischendateien im Auftrag (nie System-Temp), xformers für die
-        Sparse-Attention von TRELLIS.2 (kein flash-attn unter Windows/sm_120)."""
+        """HF-Ablage auf A:, Zwischendateien im Auftrag (nie System-Temp), flash-attn für die
+        Sparse-Attention von TRELLIS.2.
+
+        Bis 26.09.2026 stand hier `xformers` mit der Notiz „kein flash-attn unter
+        Windows/sm_120" — beides war falsch: xformers' Wheel (PyPI wie PyTorch-Index) bringt
+        `TORCH_CUDA_ARCH_LIST = 7.5 8.0+PTX 8.0 9.0a`, also KEIN sm_120, und scheitert auf
+        dieser Karte mit „requires device with capability <= (9,0), your GPU has (12,0)";
+        sein eigener Blackwell-Pfad zielt auf sm_100 (Datacenter, über `fbgemm_gpu`) und ist
+        binär inkompatibel zu sm_120. flash-attn 2.8.4 kennt sm_120 dagegen ausdrücklich und
+        ist jetzt für genau diese Architektur gebaut (`ProjektTemp/mesh_env/
+        flashattn_bauen.cmd`, dort auch die Windows-Fallen). `sdpa` ist keine Alternative:
+        TRELLIS.2 erlaubt es nur für die dichte, nicht für die Sparse-Attention.
+        """
         tmp = self.ablage.unter(Meshablage.ARBEIT) / 'tmp'
         tmp.mkdir(parents=True, exist_ok=True)
         return {
             'HF_HOME': str(settings.HF_HOME_DIR),
             'HF_HUB_OFFLINE': '1',
             'TORCH_HOME': str(settings.VIDEOTOBVH_ROOT / 'models' / 'torch_hub'),
-            'ATTN_BACKEND': 'xformers',
-            'SPARSE_ATTN_BACKEND': 'xformers',
+            'ATTN_BACKEND': 'flash_attn',
+            'SPARSE_ATTN_BACKEND': 'flash_attn',
             'PYTORCH_CUDA_ALLOC_CONF': 'expandable_segments:True',
             'OPENCV_IO_ENABLE_OPENEXR': '1',
             'TMP': str(tmp),

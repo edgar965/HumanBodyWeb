@@ -48,6 +48,11 @@
             <input class="scene-name-input" id="modellexport-name" type="text" autocomplete="off">
 
             <div id="modellexport-warnungen" class="modellexport-warnungen"></div>
+            <div id="modellexport-aufbau" class="modellexport-aufbau" hidden>
+                <i class="fas fa-hourglass-half"></i>
+                Die Figur wird noch auf die volle Auflösung gebracht — der Export wartet,
+                sonst enthielte er das grobe Netz.
+            </div>
         </div>
         <div class="scene-modal-footer">
             <button data-close>Abbrechen</button>
@@ -60,4 +65,5 @@
 .modellexport-reihe label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; white-space: nowrap; }
 .modellexport-warnungen { margin-top: 8px; }
 .modellexport-warnungen div { font-size: 0.78rem; color: #d9a441; padding: 2px 0; }
+.modellexport-aufbau { margin-top: 8px; font-size: 0.78rem; color: #7fc4e8; }
 </style>

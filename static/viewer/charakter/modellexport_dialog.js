@@ -4,6 +4,7 @@ import { closeDialog, openDialog } from './utils.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Modellexportinhalt, STATISCHE_FORMATE } from './modellexport_inhalt.js';
 import { Modellexport } from './modellexport.js';
+import { Figuraufbaustand } from '../gemeinsam/figuraufbaustand.js';
 
 /**
  * Modellexportdialog — der Dialog hinter „Exportieren …" im Kontextmenü der
@@ -35,6 +36,26 @@ export class Modellexportdialog {
             document.getElementById(id)?.addEventListener('change', () => Modellexportdialog._warnungenZeichnen());
         }
         document.getElementById('modellexport-confirm')?.addEventListener('click', () => Modellexportdialog._exportieren());
+        // Solange die Figur nachlädt, bleibt der Knopf zu — und geht von
+        // selbst auf, sobald sie steht (Edgar, 26.09.2026: „aktiviere export
+        // nur wenn die Figur ganz geladen ist").
+        document.addEventListener(Figuraufbaustand.EREIGNIS, () => Modellexportdialog._sperreZeichnen());
+    }
+
+    /**
+     * Knopf und Hinweis nach dem Aufbaustand der Figur. Getrennt von
+     * `_warnungenZeichnen`, weil die Warnungen an den Häkchen hängen und
+     * dieser Zustand an der Figur — sonst überschriebe eins das andere.
+     */
+    static _sperreZeichnen() {
+        const inst = state.characters.get(Modellexportdialog._instId);
+        const knopf = document.getElementById('modellexport-confirm');
+        const hinweis = document.getElementById('modellexport-aufbau');
+        if (!knopf || !hinweis) return;
+        const laeuft = Figuraufbaustand.laeuft(inst);
+        // Ein laufender Export hat den Knopf selbst gesperrt — nicht dazwischenfunken.
+        if (knopf.textContent !== 'Exportiere …') knopf.disabled = laeuft;
+        hinweis.hidden = !laeuft;
     }
 
     /** Den Dialog für eine Figur öffnen — Rechtsklick-Eintrag ruft das. */
@@ -59,6 +80,7 @@ export class Modellexportdialog {
 
         openDialog(dialog);
         Modellexportdialog._warnungenZeichnen();
+        Modellexportdialog._sperreZeichnen();
     }
 
     /** Zuletzt genutzte Formate/Inhalt/Pose/Auflösung ins Markup übernehmen. */

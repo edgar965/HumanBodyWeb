@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Mesh to 3D · {{ job.name }}{% endblock %}
+
+{% comment %}
+Auftragsseite „Mesh to 3D" (27.09.2026): oben der Lauf (Schritte, Fortschritt, neu ab Schritt,
+Anhalten), darunter die Figur in 3D (Genesis 9 mit den gestellten Reglern, Eigenmorph und der Textur
+aus dem Netz) neben dem Netz, der Vergleich (Netz · Figur · Tiefenabweichung), die Kennzahlen der
+Körper- und Gesichtskette, die gestellten Regler und die Erkennung. Export der Figur als GLB (mit Rig
+und Textur) in die Ablage unter output/Export/MeshTo3D. Zustand und Katalog kommen als JSON in die
+Seite, Nachfrage über `/api/meshfigur/<id>/zustand/`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
+{% comment %}Dieselbe Importkarte wie die Szene (character_viewer.html): three r170 VOLLSTÄNDIG — der Export
+(`Modellexport` mit GLTFExporter) und die Netzlader (PLY, STL) fehlen in der lokalen Kopie unter
+static/vendor (gemessen 27.09.2026: 404), und die Szenenmodule des Exports erwarten three-subdivide und
+three-mesh-bvh.{% endcomment %}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
+{% endblock %}
+
+{% block content %}
+<script id="meshfigur-daten" type="application/json">{"zustand": {{ zustand_json|safe }}, "katalog": {{ katalog_json|safe }}}</script>
+
+<div class="page-header mesh-auftragskopf">
+    <div>
+        <a href="{% url 'bildmodell' %}#meshto3d" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Modell aus Dateien</a>
+        <h1><i class="fas fa-user-check"></i> <span id="auftrag-name">{{ job.name }}</span>
+            <small class="hb-hinweis">Mesh to 3D · {{ job.kennung }}</small></h1>
+    </div>
+    <div class="bildmodell-status" id="auftrag-status"></div>
+</div>
+
+<div class="card" id="lauf">
+    <ol class="meshfigur-schritte" id="schritte"></ol>
+    <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
+    <div class="bildmodell-laufzeile">
+        <span id="fortschritt-text" class="hb-hinweis"></span>
+        <span class="bildmodell-laufknoepfe">
+            <label class="hb-hinweis">ab <select id="ab-schritt" class="viewer-select"></select></label>
+            <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        </span>
+    </div>
+    <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
+</div>
+
+<div class="card">
+    <div class="mesh-hauptbereich">
+        <div class="meshfigur-buehnenspalte">
+            <div class="meshfigur-schalter" id="buehnen-schalter">
+                <label><input type="radio" name="meshfigur-was" value="figur" checked> Figur</label>
+                <label><input type="radio" name="meshfigur-was" value="netz"> Netz</label>
+                <label><input type="radio" name="meshfigur-was" value="beide"> Nebeneinander</label>
+            </div>
+            <div class="mesh-betrachter" id="buehne">
+                <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>
+            </div>
+        </div>
+        <div class="mesh-seitenspalte">
+            <div>
+                <h2>Ergebnis</h2>
+                <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
+                <div class="meshfigur-export">
+                    <button type="button" class="btn btn-primary btn-sm" id="exportieren" disabled>
+                        <i class="fas fa-file-export"></i> <span>Figur als GLB exportieren</span></button>
+                    <div class="hb-hinweis" id="export-meldung"></div>
+                </div>
+            </div>
+            <div>
+                <h2>Optionen</h2>
+                <div class="mesh-optionen" id="meshfigur-optionen"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card" id="vergleich-karte">
+    <h2>Vergleich Netz · Figur · Abweichung</h2>
+    <p class="hb-hinweis">Unten die Tiefenabweichung aus derselben Kamera: <span class="meshfigur-rot">rot</span> = das Netz liegt
+    weiter außen (Figur dort zu dünn), <span class="meshfigur-blau">blau</span> = die Figur liegt weiter außen, Skala ±2 cm;
+    orange nur Netz (Haar, Fäuste), hellblau nur Figur.</p>
+    <div id="vergleich"></div>
+</div>
+
+<div class="card">
+    <h2>Körper- und Gesichtskette</h2>
+    <div class="meshfigur-ketten" id="ketten"></div>
+</div>
+
+<div class="card">
+    <h2>Gestellte Regler</h2>
+    <div id="regler"></div>
+</div>
+
+<div class="card">
+    <h2>Erkennung</h2>
+    <p class="hb-hinweis">Das Netz aus acht Richtungen und das Gesicht aus fünfzehn gerendert; MediaPipe findet die Punkte
+    (grün), trianguliert ergeben sie 3D-Landmarken (rot zurückprojiziert). Dieselbe Erkennung lief einmal über Genesis selbst,
+    so bedeutet jede Landmarke auf beiden Seiten dasselbe.</p>
+    <div id="erkennung"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Meshfigurseite } from "{% fassungspfad 'viewer/meshfigur/meshfigurseite.js' %}";
+Meshfigurseite.starten("{{ job.id }}");
+</script>
+{% endblock %}

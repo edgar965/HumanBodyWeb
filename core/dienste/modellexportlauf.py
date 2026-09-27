@@ -60,10 +60,13 @@ class Modellexportlauf:
         """Wirft `ZielAbgelehnt` — sonst `{ordner, dateien: [{name, bytes}]}`."""
         ordner = Modellexportziel.ordner(self.ordner_roh)
         stamm = Modellexportziel.name(self.name_roh)
-        endungen = {self._endung(f.name) for f in self.dateien}
-        if self.blend_quelle is not None:
-            endungen.add('.blend')
-        stamm = Modellexportziel.eindeutiger_stamm(ordner, stamm, endungen)
+        # Ein Export = ein Unterordner (Edgar, 26.09.2026): eine `.obj` bringt
+        # `.mtl` und ein PNG JE MATERIALZONE mit — bei Genesis 9 sind das
+        # siebzehn Bilder, die sonst mit denen jedes anderen Exports im selben
+        # Verzeichnis liegen. Alles beieinander heißt zugleich, dass die
+        # relativen Verweise (`mtllib`, `map_Kd`) weiter stimmen.
+        ordner = self._freie_ablage(ordner, stamm)
+        stamm = ordner.name
 
         geschrieben = []
         for datei in self.dateien:
@@ -86,6 +89,21 @@ class Modellexportlauf:
     def _endung(dateiname):
         idx = dateiname.rfind('.')
         return dateiname[idx:].lower() if idx >= 0 else ''
+
+    @staticmethod
+    def _freie_ablage(ordner, stamm):
+        """Ein noch nicht belegter Unterordner `<ordner>/<stamm>`, angelegt.
+
+        Der Ordnername IST der Namensstamm der Dateien darin — ein zweiter
+        Export unter demselben Namen wird zu `<stamm>_2`, nicht zu einem
+        Mischmasch im selben Verzeichnis.
+        """
+        for versuch in range(1, 1000):
+            ziel = ordner / (stamm if versuch == 1 else '%s_%d' % (stamm, versuch))
+            if not ziel.exists():
+                ziel.mkdir(parents=True)
+                return ziel
+        raise ZielAbgelehnt('Kein freier Unterordner für „%s"' % stamm)
 
     @staticmethod
     def _umbenannt(dateiname, stamm):

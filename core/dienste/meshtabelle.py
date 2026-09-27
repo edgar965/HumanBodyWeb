@@ -86,7 +86,9 @@ class Meshtabelle(Bildmodelltabelle):
         if not sekunden:
             return '<td class="num" data-sort="0"></td>'
         s = int(round(float(sekunden)))
-        return format_html('<td class="num" data-sort="{}">{}:{:02d} min</td>', s, s // 60, s % 60)
+        # `format_html` escapt jedes Argument zu `SafeString` — ein Zahlenformat wie `{:02d}`
+        # scheitert daran ("Unknown format code 'd'"). Erst rechnen, dann einsetzen.
+        return format_html('<td class="num" data-sort="{}">{} min</td>', s, '%d:%02d' % (s // 60, s % 60))
 
     @staticmethod
     def _erstellt(a):

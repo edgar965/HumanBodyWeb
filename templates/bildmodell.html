@@ -14,6 +14,7 @@ Fortschritt, 3D-Ansicht). Tabelle: djangoBase (`Bildmodelltabelle`).
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -21,15 +22,18 @@ Fortschritt, 3D-Ansicht). Tabelle: djangoBase (`Bildmodelltabelle`).
     <h1><i class="fas fa-images"></i> Modell aus Dateien</h1>
 </div>
 
-{% comment %}Zwei Reiter (Edgar, 26.09.2026: „Aktueller Tabname: 3D, neuer Tab: Mesh"):
-3D = Genesis-9-Figur aus Fotos (bisheriges Dashboard), Mesh = freies Netz aus Fotos
-(TRELLIS.2/Hunyuan3D). Umschalten: `gemeinsam/seitenreiter.js` (#mesh in der Adresse,
-sonst der zuletzt gewählte).{% endcomment %}
+{% comment %}Drei Reiter (Edgar, 26.09.2026: „Aktueller Tabname: 3D, neuer Tab: Mesh"; 27.09.2026:
+„mache einen neuen Tab Mesh to 3D"): 3D = Genesis-9-Figur aus Fotos (bisheriges Dashboard),
+Mesh = freies Netz aus Fotos (TRELLIS.2/Hunyuan3D), Mesh to 3D = Genesis-9-Figur aus einem Netz.
+Umschalten: `gemeinsam/seitenreiter.js` (#mesh / #meshto3d in der Adresse, sonst der zuletzt
+gewählte).{% endcomment %}
 <div class="seitenreiter" role="tablist" id="modell-reiter">
     <button type="button" role="tab" data-reiter="3d" aria-selected="true"
             title="Genesis-9-Figur aus Fotos: Regler, Rig, Textur"><i class="fas fa-user"></i> 3D</button>
     <button type="button" role="tab" data-reiter="mesh" aria-selected="false"
             title="Freies Netz aus Fotos (TRELLIS.2, Hunyuan3D) als GLB/OBJ"><i class="fas fa-cubes"></i> Mesh</button>
+    <button type="button" role="tab" data-reiter="meshto3d" aria-selected="false"
+            title="Genesis-9-Figur aus einem Netz: alle Regler so stellen, dass die Figur dem Netz am nächsten kommt"><i class="fas fa-user-check"></i> Mesh to 3D</button>
 </div>
 
 <div data-reiterfeld="3d">
@@ -87,6 +91,10 @@ Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einze
 <div data-reiterfeld="mesh" hidden>
 {% include "_mesh_reiter.html" %}
 </div>
+
+<div data-reiterfeld="meshto3d" hidden>
+{% include "_meshfigur_reiter.html" %}
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -96,8 +104,10 @@ Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einze
 import { Bildmodellliste } from "{% fassungspfad 'viewer/bildmodell/liste.js' %}";
 import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
 import { Meshliste } from "{% fassungspfad 'viewer/mesh/meshliste.js' %}";
+import { Meshfigurliste } from "{% fassungspfad 'viewer/meshfigur/meshfigurliste.js' %}";
 Seitenreiter.binden(document.getElementById('modell-reiter'), 'modell_aus_dateien_reiter');
 Bildmodellliste.aufbauen();
 Meshliste.aufbauen();
+Meshfigurliste.aufbauen();
 </script>
 {% endblock %}

@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+"""Meshfigurende — die Schritte „rest" und „textur" von „Mesh to 3D" auf der python14-Seite.
+
+REST → EIGENMORPH: Was die Regler nicht erreichen, liefert der Runner je Käfigpunkt in der
+Ruhelage (über die Hautmischung zurückgerechnet, einseitige Punkte unter Haar nur nach innen).
+Auf Wunsch symmetrisch (Daz-Figuren sind es, ein Netz aus Fotos nie ganz): je Punkt der
+Mittelwert mit seinem Spiegelpunkt (`G9netzbereiche.spiegel`), wo nur eine Seite getroffen ist,
+deren gespiegelter Wert. Dann dieselbe Glättung wie im Reiter „3D" (`G9restmorph`: Lücken aus
+den Nachbarn, 6 Laplace-Schritte) und als `eigen:<kennung>` abgelegt.
+
+TEXTUR: Der Runner liefert je Texel der fünf Kacheln die Farbe des Netzes (`meshtextur.npz`,
+Format wie `_run_fotofarben.py`); gebacken wird mit `G9texturbacken` — Daz-Albedo auf den
+Hautton des Netzes getönt, darüber die Netzfarbe. Ergebnis wie beim Reiter „3D" unter
+`ergebnis.fototextur` (die Seite legt die Kacheln mit `Texturauflage` auf).
+"""
+
+import logging
+import time
+
+import numpy as np
+
+logger = logging.getLogger('core')
+
+__all__ = ['Meshfigurende']
+
+
+class Meshfigurende:
+    PRAEFIX = 'meshfigur'
+
+    def __init__(self, lauf):
+        self.lauf = lauf
+        self.job = lauf.job
+        self.ablage = lauf.ablage
+        self.optionen = lauf.optionen
+
+    def _haltung(self):
+        return (self.job.ergebnis.get('koerper') or {}).get('haltung') or {}
+
+    def _genesis(self, stellung):
+        from .meshfigurgenesis import Meshfigurgenesis
+
+        return Meshfigurgenesis(stellung, self._haltung()).speichern(self.ablage.arbeit('genesis_ende.npz'))
+
+    # ---------------------------------------------------------------- Rest
+
+    def rest(self):
+        from Genesis9.restmorph import G9restmorph
+
+        if self.optionen.get('eigenmorph') != 'an':
+            self.job.ergebnis['rest'] = {'aus': True}
+            return
+        stellung = dict((self.job.ergebnis.get('regler') or {}).get('stellung') or {})
+        if not stellung:
+            raise RuntimeError('Regler fehlen — Schritte „koerper"/„gesicht" zuerst')
+        self._genesis(stellung)
+        e = self.lauf.runner('rest', von=0.05, bis=0.85)
+        with np.load(self.ablage.arbeit('rest.npz')) as d:
+            rest, gewicht = d['rest'].astype(float), d['gewicht'].astype(float)
+        if self.optionen.get('symmetrie') == 'an':
+            rest, gewicht = self.symmetrisch(rest, gewicht)
+        self.lauf.melden(0.9, 'Eigenmorph glätten')
+        name = '%s Mesh %s' % (self.job.name, self.job.kennung[-8:].replace('.', ''))
+        regler, zahlen = G9restmorph.ablegen(
+            name, rest, gewicht, {'quelle': 'mesh to 3d', 'auftrag': self.job.kennung}
+        )
+        self.job.ergebnis['rest'] = {
+            'regler': regler,
+            **zahlen,
+            'rest_rms_mm': e.get('rest_rms_mm'),
+            'getroffen': e.get('rest_punkte'),
+            'verlauf': e.get('verlauf'),
+        }
+
+    @staticmethod
+    def symmetrisch(rest, gewicht):
+        from Genesis9.netzbereiche import G9netzbereiche
+
+        s = G9netzbereiche.spiegel()
+        gespiegelt = rest[s] * np.array([-1.0, 1.0, 1.0])
+        g_sp = gewicht[s]
+        beide = (gewicht > 0) & (g_sp > 0)
+        aus = np.where(
+            beide[:, None], 0.5 * (rest + gespiegelt), np.where((g_sp > 0)[:, None], gespiegelt, rest)
+        )
+        return aus, np.maximum(gewicht, g_sp)
+
+    # --------------------------------------------------------------- Textur
+
+    def textur(self):
+        from Genesis9.texturabtastung import G9texturabtastung
+
+        wahl = self.optionen.get('textur')
+        if wahl == 'aus':
+            self.job.ergebnis['textur'] = {'aus': True}
+            self.job.ergebnis.pop('fototextur', None)
+            return
+        stellung = self.job.stellung()
+        if not stellung:
+            raise RuntimeError('Regler fehlen — Schritte „koerper"/„gesicht" zuerst')
+        self._genesis(stellung)
+        abtastung = G9texturabtastung.holen()
+        self.lauf.zusatz['abtastung'] = str(G9texturabtastung.pfad(abtastung.seite))
+        e = self.lauf.runner('textur', von=0.05, bis=0.7)
+        self.lauf.zusatz.pop('abtastung', None)
+        hautton = (e.get('haut') or {}).get('hautton')
+        self.job.ergebnis['textur'] = {
+            'hautton': hautton,
+            'deckung': e.get('deckung_je_kachel'),
+            'wahl': wahl,
+        }
+        if wahl != 'mesh':
+            self.job.ergebnis.pop('fototextur', None)
+            return
+        self.lauf.melden(0.75, 'Kacheln backen')
+        self.job.ergebnis['fototextur'] = self.backen(hautton, abtastung.seite)
+
+    def backen(self, hautton, seite):
+        from Genesis9.texturbacken import G9texturbacken
+
+        with np.load(self.ablage.arbeit('meshtextur.npz')) as d:
+            hd = {k: d[k] for k in d.files}
+        kacheln, _ = G9texturbacken(seite).backen(
+            hd['punktfarben'],
+            hd['deckung'],
+            self.ablage.ergebnis(),
+            praefix=self.PRAEFIX,
+            hautton=hautton,
+            hd=hd,
+        )
+        return {
+            'kacheln': {str(k): self._name(p) for k, p in kacheln.items()},
+            'seite': int(seite),
+            'hautton': hautton,
+            'stand': time.strftime('%Y%m%d%H%M%S'),
+        }
+
+    @staticmethod
+    def _name(pfad):
+        return str(pfad).replace('\\', '/').rsplit('/', 1)[-1]

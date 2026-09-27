@@ -104,16 +104,37 @@ export class Meshauftragseite {
         const hinweis = document.getElementById('textur-hinweis-live');
         knopf.disabled = true;
         hinweis.textContent = '';
+        this._texturLaeuft = true;
         try {
             await Serverabruf.senden(this.adresse('retexturieren/'), {});
         } catch (fehler) {
             hinweis.textContent = fehler.daten?.error || fehler.message || 'Textur übernehmen fehlgeschlagen';
             knopf.disabled = false;
+            this._texturLaeuft = false;
+            this._texturlauf();
             return;
         }
         this.zustand.status = 'laeuft';
+        this.zustand.progress = 0;
+        this.zustand.progress_detail = 'Wird gestartet …';
         this.zeigen();
         this.nachfragen();
+    }
+
+    /** Der Fortschritt am Knopf selbst — dieselben Zahlen wie der Balken im Kasten „Lauf",
+     *  aber nur sichtbar, solange ein von HIER gestarteter Retextur-Lauf rechnet. Ein über
+     *  „Neu berechnen" gestarteter Lauf bleibt beim oberen Balken, sonst stünden zwei
+     *  gleich aussehende Anzeigen nebeneinander und keine sagt, welche gemeint ist. */
+    _texturlauf() {
+        const zeile = document.getElementById('textur-lauf');
+        if (!zeile) return;
+        const z = this.zustand;
+        if (this._texturLaeuft && z.status !== 'laeuft') this._texturLaeuft = false;
+        zeile.classList.toggle('hb-versteckt', !this._texturLaeuft);
+        if (!this._texturLaeuft) return;
+        document.getElementById('textur-fortschritt').style.width = `${z.progress || 0}%`;
+        document.getElementById('textur-fortschritt-text').textContent =
+            `${z.progress || 0} % — ${z.progress_detail || z.schritt || 'Textur wird neu gerechnet …'}`;
     }
 
     verfolgen() {
@@ -148,6 +169,7 @@ export class Meshauftragseite {
         status.className = `bildmodell-status hb-${z.status === 'fertig' ? 'gut' : z.status === 'gescheitert' ? 'schlecht' : 'laeuft'}`;
         document.getElementById('starten').disabled = z.status === 'laeuft';
         document.getElementById('anhalten').disabled = z.status !== 'laeuft';
+        this._texturlauf();
         const fehler = document.getElementById('fehler');
         fehler.textContent = z.error || '';
         fehler.classList.toggle('hb-versteckt', !z.error);

@@ -114,24 +114,34 @@ class Bildmodelltabelle:
         if a.status == 'laeuft':
             return format_html(
                 '<td id="status-{}" data-sort="1" class="hb-laeuft"><i class="fas fa-spinner fa-spin"></i> '
-                '<span class="inline-progress">'
-                '<span class="progress-fill-mini" style="width:{}%"></span></span> '
-                '<span class="hb-fortschritt">{} % {}</span></td>',
+                '{} <span class="hb-fortschritt">{} % {}</span></td>',
                 a.id,
-                a.progress,
+                self._balken(a.progress),
                 a.progress,
                 a.progress_detail or '',
             )
         klasse, symbol, text = self.ZUSTAENDE.get(a.status, ('', 'fa-question', a.status))
         titel = a.error_message or ''
+        # Bei Abbruch/Fehler den zuletzt erreichten Fortschritt als Balken stehen lassen —
+        # sonst sieht man einer gescheiterten Zeile nicht an, ob sie bei 1 % oder 90 % endete.
+        zeigt_balken = a.status in ('gescheitert', 'angehalten') and a.progress
+        balken = self._balken(a.progress, 'schlecht') if zeigt_balken else ''
         return format_html(
-            '<td id="status-{}" data-sort="{}" class="{}" title="{}"><i class="fas {}"></i> {}</td>',
+            '<td id="status-{}" data-sort="{}" class="{}" title="{}"><i class="fas {}"></i> {}{}</td>',
             a.id,
             a.status,
             klasse,
             titel,
             symbol,
             text,
+            balken,
+        )
+
+    @staticmethod
+    def _balken(prozent, variante=''):
+        klasse = 'progress-fill-mini' + (' progress-fill-mini--%s' % variante if variante else '')
+        return format_html(
+            '<span class="inline-progress"><span class="{}" style="width:{}%"></span></span>', klasse, prozent
         )
 
     @staticmethod

@@ -142,6 +142,9 @@ class Meshendpunkte:
         job = get_object_or_404(Meshauftrag, pk=job_id)
         if job.laeuft and Mesharbeiter.lebt(job):
             return JsonResponse({'error': 'Auftrag läuft schon'}, status=409)
+        belegt = Meshendpunkte._anderer_lauf(job)
+        if belegt:
+            return JsonResponse({'error': belegt}, status=409)
         rumpf = Meshendpunkte._rumpf(request)
         if isinstance(rumpf.get('optionen'), dict):
             job.optionen = Meshoptionen.pruefen({**(job.optionen or {}), **rumpf['optionen']})
@@ -208,7 +211,28 @@ class Meshendpunkte:
             return JsonResponse({'error': 'Auftrag läuft schon'}, status=409)
         if job.status != 'fertig':
             return JsonResponse({'error': 'Erst einen Lauf abschließen, dann nachschärfen'}, status=409)
+        belegt = Meshendpunkte._anderer_lauf(job)
+        if belegt:
+            return JsonResponse({'error': belegt}, status=409)
         return JsonResponse({'ok': True, 'pid': Mesharbeiter.starten(job, ab='textur')})
+
+    @staticmethod
+    def _anderer_lauf(job):
+        """Meldung, wenn schon ein ANDERER Mesh-Auftrag rechnet — sonst leer.
+
+        Es gibt genau eine GPU, und die Formmodelle belegen sie ganz (TRELLIS.2-4B lädt
+        allein rund 16 GB). Zwei Läufe zugleich enden nicht in einer Warteschlange,
+        sondern im Absturz: Am 27.09.2026 wurde `Damira_trellis2_ki` gestartet, während
+        ein anderer TRELLIS.2-Lauf rechnete — der zweite Prozess starb beim Laden der
+        Gewichte mit Rückgabewert 3221225477 (0xC0000005, Zugriffsverletzung), und im
+        Auftrag stand nur ein abgeschnittener Fortschrittsbalken als „Fehlermeldung".
+        Ein fertiges Ergebnis war damit weg.
+        """
+        for anderer in Meshauftrag.objects.filter(status='laeuft').exclude(pk=job.pk):
+            if Mesharbeiter.lebt(anderer):
+                return ('„%s" rechnet gerade (es gibt nur eine Grafikkarte). '
+                        'Erst abwarten oder dort anhalten.' % (anderer.name or anderer.kennung))
+        return ''
 
     # -------------------------------------------------------------- Löschen
 

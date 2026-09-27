@@ -124,4 +124,49 @@ export class Hautmaskegeometrie {
         if (v < 0 || u + v > 1) return null;
         return f * (e2x * qx + e2y * qy + e2z * qz);
     }
+
+    /**
+     * Quadrat des Abstands vom Punkt zum nächsten Punkt auf dem Dreieck abc
+     * (Ericson, „Real-Time Collision Detection", Punkt-Dreieck) — anders als
+     * `strahlDreieck` unabhängig von jeder Richtung. Baryzentrisch projiziert,
+     * an den Kanten/Ecken geklemmt.
+     */
+    static punktDreieckAbstand2(P, a, b, c, px, py, pz) {
+        const ax = P[3 * a], ay = P[3 * a + 1], az = P[3 * a + 2];
+        const bx = P[3 * b], by = P[3 * b + 1], bz = P[3 * b + 2];
+        const cx = P[3 * c], cy = P[3 * c + 1], cz = P[3 * c + 2];
+        const abx = bx - ax, aby = by - ay, abz = bz - az;
+        const acx = cx - ax, acy = cy - ay, acz = cz - az;
+        const apx = px - ax, apy = py - ay, apz = pz - az;
+        const d1 = abx * apx + aby * apy + abz * apz, d2 = acx * apx + acy * apy + acz * apz;
+        if (d1 <= 0 && d2 <= 0) return apx * apx + apy * apy + apz * apz;
+        const bpx = px - bx, bpy = py - by, bpz = pz - bz;
+        const d3 = abx * bpx + aby * bpy + abz * bpz, d4 = acx * bpx + acy * bpy + acz * bpz;
+        if (d3 >= 0 && d4 <= d3) return bpx * bpx + bpy * bpy + bpz * bpz;
+        const vc = d1 * d4 - d3 * d2;
+        if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+            const t = d1 / (d1 - d3);
+            const qx = ax + t * abx - px, qy = ay + t * aby - py, qz = az + t * abz - pz;
+            return qx * qx + qy * qy + qz * qz;
+        }
+        const cpx = px - cx, cpy = py - cy, cpz = pz - cz;
+        const d5 = abx * cpx + aby * cpy + abz * cpz, d6 = acx * cpx + acy * cpy + acz * cpz;
+        if (d6 >= 0 && d5 <= d6) return cpx * cpx + cpy * cpy + cpz * cpz;
+        const vb = d5 * d2 - d1 * d6;
+        if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+            const t = d2 / (d2 - d6);
+            const qx = ax + t * acx - px, qy = ay + t * acy - py, qz = az + t * acz - pz;
+            return qx * qx + qy * qy + qz * qz;
+        }
+        const va = d3 * d6 - d5 * d4;
+        if (va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0) {
+            const t = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+            const qx = bx + t * (cx - bx) - px, qy = by + t * (cy - by) - py, qz = bz + t * (cz - bz) - pz;
+            return qx * qx + qy * qy + qz * qz;
+        }
+        const denom = 1 / (va + vb + vc);
+        const v = vb * denom, w = vc * denom;
+        const qx = ax + abx * v + acx * w - px, qy = ay + aby * v + acy * w - py, qz = az + abz * v + acz * w - pz;
+        return qx * qx + qy * qy + qz * qz;
+    }
 }

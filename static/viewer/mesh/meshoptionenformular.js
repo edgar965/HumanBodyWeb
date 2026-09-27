@@ -5,6 +5,10 @@
  * Jedes Feld nach `art`: `wahl` → `<select>`, `mehrfach` → Kästchen, `zahl` → `<input
  * type="number">`. Eine Option mit `fehlt` (Text) wird angezeigt, aber deaktiviert —
  * genau der Fall „Formmodell noch nicht heruntergeladen/verdrahtet".
+ *
+ * Felder mit `fein` (die Stellschrauben der Pipelines selbst, seit 27.09.2026) stehen in
+ * einem zugeklappten `<details>` darunter: Sie gehören ins Formular, sollen aber die acht
+ * Felder, die man täglich braucht, nicht zuschütten.
  */
 export class Meshoptionenformular {
 
@@ -15,23 +19,45 @@ export class Meshoptionenformular {
      */
     static bauen(behaelter, katalog, werte = {}) {
         behaelter.innerHTML = '';
-        for (const feld of katalog.optionen) {
-            const zeile = document.createElement('div');
-            zeile.className = 'mesh-optionsfeld';
-            const label = document.createElement('label');
-            label.textContent = feld.titel;
-            if (feld.hinweis) label.title = feld.hinweis;
-            zeile.appendChild(label);
-            const wert = werte[feld.schluessel] ?? feld.vorgabe;
-            if (feld.art === 'wahl') {
-                zeile.appendChild(Meshoptionenformular._wahl(feld, wert));
-            } else if (feld.art === 'mehrfach') {
-                zeile.appendChild(Meshoptionenformular._mehrfach(feld, wert));
-            } else if (feld.art === 'zahl') {
-                zeile.appendChild(Meshoptionenformular._zahl(feld, wert));
-            }
-            behaelter.appendChild(zeile);
+        const fein = katalog.optionen.filter(f => f.fein);
+        for (const feld of katalog.optionen.filter(f => !f.fein)) {
+            behaelter.appendChild(Meshoptionenformular._zeile(feld, werte));
         }
+        if (!fein.length) return;
+        const klappe = document.createElement('details');
+        klappe.className = 'mesh-feineinstellungen';
+        const titel = document.createElement('summary');
+        titel.textContent = 'Feineinstellungen der Modelle';
+        klappe.appendChild(titel);
+        for (const feld of fein) klappe.appendChild(Meshoptionenformular._zeile(feld, werte));
+        behaelter.appendChild(klappe);
+    }
+
+    static _zeile(feld, werte) {
+        const zeile = document.createElement('div');
+        zeile.className = 'mesh-optionsfeld';
+        const label = document.createElement('label');
+        label.textContent = feld.titel;
+        if (feld.hinweis) label.title = feld.hinweis;
+        zeile.appendChild(label);
+        const wert = werte[feld.schluessel] ?? feld.vorgabe;
+        if (feld.art === 'wahl') {
+            zeile.appendChild(Meshoptionenformular._wahl(feld, wert));
+        } else if (feld.art === 'mehrfach') {
+            zeile.appendChild(Meshoptionenformular._mehrfach(feld, wert));
+        } else if (feld.art === 'zahl') {
+            zeile.appendChild(Meshoptionenformular._zahl(feld, wert));
+        }
+        // Nur bei den Feineinstellungen steht der Hinweis auch als Text da — sie sind neu
+        // und erklärungsbedürftig; bei den Hauptfeldern bliebe es beim Tooltip, sonst wird
+        // aus acht Feldern eine Textwand.
+        if (feld.hinweis && feld.fein) {
+            const hinweis = document.createElement('span');
+            hinweis.className = 'hb-hinweis mesh-optionshinweis';
+            hinweis.textContent = feld.hinweis;
+            zeile.appendChild(hinweis);
+        }
+        return zeile;
     }
 
     static _wahl(feld, wert) {
@@ -73,6 +99,7 @@ export class Meshoptionenformular {
         eingabe.className = 'viewer-eingabe';
         eingabe.min = String(feld.min ?? '');
         eingabe.max = String(feld.max ?? '');
+        if (feld.schritt) eingabe.step = String(feld.schritt);
         eingabe.value = String(wert);
         return eingabe;
     }

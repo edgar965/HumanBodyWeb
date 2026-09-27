@@ -1,0 +1,48 @@
+{% comment %}
+Reiter „Mesh to 3D" auf „Modell aus Dateien" (Edgar, 27.09.2026: „mache einen neuen Tab Mesh to 3D.
+Darin soll, ein wenig ähnlich wie im Tab 3D, ein Genesis-3D-Objekt erzeugt werden, aber nicht aus
+einem Bild, sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden können."). Ein Netz
+(GLB/GLTF/OBJ mit MTL und Texturen/PLY/STL/OFF) per Ablage, Optionen aus
+`Meshfiguroptionen.KATALOG` (gebaut von `mesh/meshoptionenformular.js`), darunter die Aufträge
+(`Meshfigurtabelle`). Endpunkte: `core/api/meshfigur.py`.
+{% endcomment %}
+<div class="card" id="meshfigur-neu">
+    <h2>Genesis-Figur aus einem Netz</h2>
+    <p class="hb-hinweis">Ein Menschen-Netz hochladen, zum Beispiel ein Ergebnis aus dem Reiter „Mesh“. Die Figur wird
+    in die Haltung des Netzes gestellt, danach werden alle Genesis-Regler so geregelt, dass der Abstand zum Netz am
+    kleinsten ist: erst Größe und Proportionen, dann Körpertyp und Charaktere, dann die Körperbereiche, zuletzt in
+    einer eigenen Kette das Gesicht. Was die Regler nicht erreichen, wird zum Eigenmorph; die Farbe des Netzes
+    kommt auf die Genesis-Haut. Ergebnis: ein Genesis-Modell (Szene, Studio) und eine Ablage in
+    <code>output/Export/MeshTo3D</code>.</p>
+    <form id="meshfigur-form" class="bildmodell-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="bildmodell-felder">
+            <label>Name
+                <input type="text" name="name" id="meshfigur-name" required maxlength="200" placeholder="z. B. Damira">
+            </label>
+        </div>
+        <div class="bildmodell-ablage" id="meshfigur-ablage">
+            <input type="file" name="netz" id="meshfigur-dateien" multiple
+                   accept=".glb,.gltf,.obj,.ply,.stl,.off,.mtl,.png,.jpg,.jpeg,.bin,.webp,.tga,.bmp">
+            <p><i class="fas fa-cloud-upload-alt"></i> Netz hierher ziehen oder klicken: GLB (Textur eingebettet),
+               OBJ mit MTL und Texturbildern, PLY, STL oder OFF. Bei OBJ die Beilagen einfach mitziehen.</p>
+            <div class="meshfigur-dateiliste" id="meshfigur-dateiliste"></div>
+        </div>
+        <div class="mesh-optionen" id="meshfigur-optionen"></div>
+        <div class="bildmodell-knoepfe">
+            <button type="submit" class="btn btn-primary" id="meshfigur-anlegen">
+                <i class="fas fa-user-check"></i> <span>Figur erzeugen</span></button>
+            <span class="hb-hinweis" id="meshfigur-meldung"></span>
+        </div>
+    </form>
+</div>
+
+<div class="card" id="meshfigur-liste">
+    <div class="bildmodell-listenkopf">
+        <h2>Figuren aus Netzen</h2>
+        <button type="button" class="btn btn-danger btn-sm" id="meshfigur-bulk-delete" disabled>
+            <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="meshfigur-bulk-count">0</span>)</span></button>
+    </div>
+    {% include "djangobase/_tabelle.html" with tabelle=meshfigur_tabelle %}
+</div>
+{{ meshfigur_katalog|json_script:"meshfigur-katalog" }}

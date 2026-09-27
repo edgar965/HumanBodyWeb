@@ -7,9 +7,15 @@ import { state } from './state.js';
 import { Modellexportinhalt } from './modellexport_inhalt.js';
 import { Netzpose } from '../gemeinsam/netzpose.js';
 import { ObjMtl } from '../gemeinsam/objmtl.js';
+import { Gruppennetze } from '../gemeinsam/gruppennetze.js';
+import { Klarflaechen } from '../gemeinsam/klarflaechen.js';
+import { Vollindex } from '../gemeinsam/vollindex.js';
+import { Zusatzdaten } from '../gemeinsam/zusatzdaten.js';
 import { Werkstoffvariante } from '../gemeinsam/werkstoffvariante.js';
 import { Texturskalierung } from '../gemeinsam/texturskalierung.js';
 import { Netzattribute } from '../gemeinsam/netzattribute.js';
+import { Genesis9texturen } from '../gemeinsam/genesis9texturen.js';
+import { Figuraufbaustand } from '../gemeinsam/figuraufbaustand.js';
 import { Colladaschreiber } from '../gemeinsam/collada/colladaschreiber.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -35,6 +41,19 @@ export class Modellexport {
      * @returns {ordner, dateien, warnungen} — vom Server
      */
     static async exportieren(inst, optionen) {
+        // ERST WENN DIE FIGUR GANZ DA IST (26.09.2026, Edgar: „aktiviere
+        // export nur wenn die Figur ganz geladen ist"): Genesis 9 kommt in
+        // zwei Zügen; zwischen Käfig und voller Stufe steht die Figur
+        // vollständig in der Szene und hat ein Sechzehntel ihrer Dreiecke.
+        // Ein Export in diesem Fenster ergab 49.552 statt 792.828
+        // Körperdreiecken — ohne Meldung (`Figuraufbaustand`).
+        await Figuraufbaustand.warten(inst);
+        // Bei einer frisch hinzugefügten Figur laufen Texturanfragen noch —
+        // `vorladen()` trägt sofort leere Platzhalter ein und füllt sie erst
+        // später (siehe `Genesis9texturen.wartenAufAlle`-Doku). Ohne dieses
+        // Warten exportiert ein Export direkt nach dem Laden ohne Textur.
+        if (optionen.textur) await Genesis9texturen.wartenAufAlle();
+
         const anim = Modellexportinhalt.animationsstand(inst);
         const animationOk = !!(optionen.animation && anim.aktiv && !anim.fremd);
         const warnungen = Modellexportinhalt.warnungen(inst, optionen);
@@ -95,51 +114,45 @@ export class Modellexport {
         // Bei „Rig aus" ist `objekte` schon `Netzpose.gebacken()`-Kopien, die
         // eigene Attribute bereits los sind — beim rigged (LIVE-)Pfad noch nicht.
         const zuruecksetzenGeo = optionen.rig ? Netzattribute.tauschen(objekte) : null;
+        // … und derselbe Pfad trägt den GEKÜRZTEN Index der Szene: ohne das
+        // hier behielte ein GLB mit Skelett die Löcher unter Kleid und Haaren
+        // (`Vollindex`). Nach `Netzattribute.tauschen`, damit die Kopie
+        // getauscht wird und nicht die lebende Geometrie.
+        const zuruecksetzenVoll = optionen.rig ? Vollindex.tauschen(objekte) : null;
         // Skelett-Wurzeln MIT ins Array — siehe `Modellexportinhalt.skelettWurzeln`.
         const wurzeln = optionen.rig ? Modellexportinhalt.skelettWurzeln(objekte) : [];
-        const zuruecksetzenUserData = Modellexport._userDataLeeren([...objekte, ...wurzeln]);
+        const zuruecksetzenUserData = Zusatzdaten.leeren([...objekte, ...wurzeln]);
         try {
             const clips = animationOk && optionen.rig ? [anim.clip] : [];
             return await new GLTFExporter().parseAsync([...objekte, ...wurzeln], { binary: true, onlyVisible: true, animations: clips });
         } finally {
             zuruecksetzenUserData();
+            zuruecksetzenVoll?.();
             zuruecksetzenGeo?.();
             zuruecksetzenTextur?.();
         }
     }
 
-    /**
-     * `GLTFExporter` kopiert `object.userData`/`material.userData` 1:1 nach
-     * `extras` — bei Genesis 9 stecken dort App-interne Daten (`gruppe`,
-     * `kachel`, `regler`, …), bis über 6 MB JE MESH (Fund 26.09.2026: eine
-     * 510-MB-GLB, wovon 425 MB reiner JSON-Text waren). Kein Zielformat
-     * braucht das — kurz leeren, nach dem Export zurückstellen.
-     */
-    static _userDataLeeren(objekte) {
-        const eintraege = [];
-        const leeren = (obj) => {
-            if (obj.userData && Object.keys(obj.userData).length) {
-                eintraege.push([obj, 'userData', obj.userData]);
-                obj.userData = {};
-            }
-            const mats = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
-            for (const mat of mats) {
-                if (mat.userData && Object.keys(mat.userData).length) {
-                    eintraege.push([mat, 'userData', mat.userData]);
-                    mat.userData = {};
-                }
-            }
-        };
-        objekte.forEach((obj) => obj.traverse(leeren));
-        return () => eintraege.forEach(([ziel, feld, wert]) => { ziel[feld] = wert; });
-    }
-
-    static async _obj(objekte, optionen) {
+    static async _obj(rohe, optionen) {
+        // OBJ kennt keine Materialzonen je Netz — vorher aufteilen, sonst
+        // verliert `OBJExporter` die Zuordnung still (siehe `Gruppennetze`).
+        const zerlegt = Gruppennetze.zerlegen(rohe);
+        // Hornhaut und Tränenfilm raus: OBJ kennt keine Durchsichtigkeit, und
+        // MeshLab zeichnet die kartenlose Schale als weiße Kugel über der
+        // Iris (siehe `Klarflaechen`).
+        const { netze: objekte, weggelassen } = Klarflaechen.entfernen(zerlegt);
         const zuruecksetzen = optionen.textur ? null : Werkstoffvariante.tauschen(objekte);
         try {
             const { mtl, bilder, warnungen } = await ObjMtl.bauen(
                 objekte, optionen.textur, `${Modellexport.PLATZHALTER}_`, optionen.aufloesung
             );
+            if (weggelassen.length) {
+                warnungen.push(
+                    `OBJ kennt keine Durchsichtigkeit — ${weggelassen.length} fast durchsichtige `
+                    + `Fläche(n) ohne Farbkarte wurden weggelassen (${weggelassen.join(', ')}); `
+                    + 'sonst verdecken sie, was dahinter liegt (z. B. die Iris).'
+                );
+            }
             const gruppe = new THREE.Group();
             objekte.forEach((o) => gruppe.add(o));
             gruppe.updateMatrixWorld(true);
@@ -200,3 +213,8 @@ export class Modellexport {
         return { ...antwort, warnungen: [...new Set([...warnungen, ...(antwort.warnungen || [])])] };
     }
 }
+
+// Für Proben und Testfälle: Export ohne Kontextmenü und Dialog auslösen —
+// `window.__modellexport.exportieren(inst, optionen)`, Figuren über
+// `window.__characters` (dasselbe Muster, `pose_apply.js`).
+if (typeof window !== 'undefined') window.__modellexport = Modellexport;

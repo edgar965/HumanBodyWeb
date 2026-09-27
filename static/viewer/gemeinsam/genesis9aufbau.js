@@ -1,4 +1,5 @@
 import { Protokoll } from './protokoll.js';
+import { Figuraufbaustand } from './figuraufbaustand.js';
 
 /**
  * Genesis9aufbau — die Figur in zwei Zügen: Käfig sofort, volle Stufe nach.
@@ -29,11 +30,23 @@ export class Genesis9aufbau {
     /** Käfig jetzt, volle Stufe im Hintergrund; liefert die Figur nach dem ersten Zug. */
     static async progressiv(inst) {
         await Genesis9aufbau.alles(inst, Genesis9aufbau.GROB);
-        inst.fein = Genesis9aufbau.alles(inst, null).catch(fehler => {
-            Protokoll.warnung('Genesis 9', `Feine Stufe nicht geladen: ${fehler.message}`);
-            return inst;
-        });
+        inst.fein = Genesis9aufbau._nachzug(inst, 'Feine Stufe nicht geladen');
         return inst;
+    }
+
+    /**
+     * Der Nachzug auf die volle Stufe, im Aufbaustand vermerkt — solange er
+     * läuft, zeigt die Szene das grobe Netz, und ein Export daraus wäre
+     * stillschweigend ein Sechzehntel der Figur (`Figuraufbaustand`).
+     */
+    static _nachzug(inst, meldung) {
+        Figuraufbaustand.beginnen(inst);
+        return Genesis9aufbau.alles(inst, null)
+            .catch(fehler => {
+                Protokoll.warnung('Genesis 9', `${meldung}: ${fehler.message}`);
+                return inst;
+            })
+            .finally(() => Figuraufbaustand.beenden(inst));
     }
 
     /**
@@ -73,10 +86,7 @@ export class Genesis9aufbau {
         if (!alle.length) return false;
         if (andere) Protokoll.info('Genesis 9', `${andere} andere Figur(en) bleiben auf ihrer Stufe bis zum nächsten Laden`);
         await Promise.all(alle.map(inst => {
-            inst.fein = Genesis9aufbau.alles(inst, null).catch(fehler => {
-                Protokoll.warnung('Genesis 9', `Stufe nicht umgebaut: ${fehler.message}`);
-                return inst;
-            });
+            inst.fein = Genesis9aufbau._nachzug(inst, 'Stufe nicht umgebaut');
             return inst.fein;
         }));
         return true;
