@@ -102,6 +102,10 @@ export class Modellexportdialog {
             const sel = document.getElementById('modellexport-aufloesung');
             if (sel) sel.value = String(einstellungen.aufloesung);
         }
+        if (einstellungen.fps) {
+            const feld = document.getElementById('modellexport-fps');
+            if (feld) feld.value = String(einstellungen.fps);
+        }
     }
 
     static async _ordnerVorgabe(prefs) {
@@ -132,6 +136,7 @@ export class Modellexportdialog {
             pose: document.querySelector('input[name="modellexport-pose"]:checked')?.value || 'ruhelage',
             //: 0 = Original — `<select>`-Werte sind Strings, deshalb `Number(...)`.
             aufloesung: Number(document.getElementById('modellexport-aufloesung')?.value || 0),
+            fps: Math.min(120, Math.max(1, Math.round(Number(document.getElementById('modellexport-fps')?.value) || 30))),
             ordner: document.getElementById('modellexport-ordner')?.value.trim(),
             name: document.getElementById('modellexport-name')?.value.trim(),
         };
@@ -174,6 +179,7 @@ export class Modellexportdialog {
                 [Modellexportdialog.EINSTELLUNGEN_SCHLUESSEL]: {
                     formate: optionen.formate, rig: optionen.rig, textur: optionen.textur,
                     assets: optionen.assets, pose: optionen.pose, aufloesung: optionen.aufloesung,
+                    fps: optionen.fps,
                 },
             }).catch(() => {});
             closeDialog(document.getElementById('modellexport-dialog'));

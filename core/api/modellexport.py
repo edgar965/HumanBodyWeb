@@ -39,6 +39,7 @@ class Modellexportanfrage:
             name_roh=request.POST.get('name'),
             dateien=dateien,
             blend_quelle=request.FILES.get('blend_quelle'),
+            fps=_fps(request.POST.get('fps')),
         )
         try:
             ergebnis = lauf.ausfuehren()
@@ -49,6 +50,15 @@ class Modellexportanfrage:
             logger.info('Modellexport: %s — Warnungen: %s', ergebnis['ordner'], '; '.join(warnungen))
         ergebnis['warnungen'] = warnungen
         return JsonResponse(ergebnis)
+
+
+def _fps(roh):
+    """Bildrate aus dem Dialog, 1–120; fehlt sie oder ist sie unbrauchbar: 30."""
+    try:
+        wert = int(round(float(roh)))
+    except (TypeError, ValueError):
+        return 30
+    return min(120, max(1, wert))
 
 
 def _liste(roh):

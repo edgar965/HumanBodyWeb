@@ -33,6 +33,20 @@ Skin, das durch den Schuh sticht, lag bei 17,3 % (Damira1/DanceKurz,
 GRENZEN: Nur sinnvoll für WERKSTOFFE OHNE eigene Bildkarte (sonst ist
 Farbvielfalt im Umriss gewollt). Sagt nicht, WESSEN Farbe da durchsticht —
 dafür reicht der Augenschein am Fund (hier: Hautton).
+
+FALSCHER ALARM AM SILHOUETTENRAND (27.09.2026, Damira1/Flats, nach dem
+Hautmaske-Fix): Der Schuh maß weiterhin 6,0 % — visuell aber sauber. Die
+markierten Punkte lagen alle (98 von 312 direkt, 288 von 312 innerhalb
+3 Pixel) auf einer dünnen Linie GENAU am oberen Schuhrand: Silhouette
+(Schuh allein vor leerem Hintergrund) und Vollbild (Schuh neben Haut) glätten
+denselben Rand geometrisch identisch, aber MIT VERSCHIEDENEM NACHBARN — das
+Antialiasing mischt dort mit Schwarz/Transparent statt mit Hautfarbe, eine
+andere Mischfarbe als `GLEICH` vorsieht. Bei einer großen Fläche (Kleid,
+165.884 Silhouettenpunkte) geht dieser 1–3 Pixel breite Rand in 0,45 % unter;
+beim kleinen Schuh (5.175 Punkte, weil die Kamera auf die GANZE Figur rahmt,
+nicht auf den Schuh) macht er allein 6 % aus. Deshalb wird die Silhouette vor
+der Auswertung um `RAND_PX` erodiert — ein echter Fund (17,3 % in der Fläche,
+nicht am Rand) bleibt davon unberührt, siehe `test_5_...` unten.
 """
 from pathlib import Path
 
@@ -43,6 +57,12 @@ class Exportfleckenpruefung:
     #: Kanaldifferenzen (R+G+B) höchstens so groß ist — deckt Kanten-
     #: Antialiasing ab (gemessen: dessen Nachbarn liegen bei 0–12).
     GLEICH = 16
+
+    #: So viele Pixel wird die Silhouette vor der Auswertung eingezogen —
+    #: nimmt den Antialiasing-Rand zwischen Silhouette und Vollbild heraus
+    #: (gemessen am Schuh-Fehlalarm: 288 von 312 Punkten lagen innerhalb
+    #: dieser Tiefe). Ein Fund MITTEN im Umriss bleibt davon unberührt.
+    RAND_PX = 3
 
     #: Ab diesem Anteil abweichender Punkte gilt die Silhouette als fleckig.
     #: Das Kleid (sauber) maß 0,8 %; der durchstechende Fuß 17,3 % — die
@@ -63,6 +83,7 @@ class Exportfleckenpruefung:
         """
         import numpy as np
         from PIL import Image
+        from scipy import ndimage
 
         voll = np.asarray(Image.open(self.vollbild_pfad).convert('RGBA'), dtype=np.int16)
         sil = np.asarray(Image.open(self.silhouette_pfad).convert('RGBA'), dtype=np.int16)
@@ -72,7 +93,13 @@ class Exportfleckenpruefung:
                 'beide müssen mit demselben Bildrahmen gerendert sein.'
                 % (voll.shape[:2], sil.shape[:2]))
 
-        maske = sil[:, :, 3] > 128
+        roh = sil[:, :, 3] > 128
+        # Randerosion (siehe Docstring „FALSCHER ALARM AM SILHOUETTENRAND"):
+        # bleibt nach dem Einziehen nichts übrig (ein sehr dünnes Teil), gilt
+        # die ungeschmälerte Maske — sonst würde jedes schmale Teil als leer
+        # gemeldet statt als das, was es ist.
+        eng = ndimage.binary_erosion(roh, iterations=self.RAND_PX)
+        maske = eng if eng.any() else roh
         punkte = int(maske.sum())
         if punkte == 0:
             return {'punkte': 0, 'hauptfarbe': None, 'hauptanteil': 0.0,

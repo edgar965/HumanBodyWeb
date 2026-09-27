@@ -33,6 +33,7 @@ def argumente(argv):
     parser = argparse.ArgumentParser(prog='modellexportblend')
     parser.add_argument('--glb', required=True)
     parser.add_argument('--blend', required=True)
+    parser.add_argument('--fps', type=int, default=30)
     # Blender reicht alles vor "--" unverändert mit durch; nur der Teil danach
     # gehört uns.
     trenner = argv.index('--') if '--' in argv else len(argv)
@@ -151,17 +152,43 @@ def zeitleiste():
     return {'aktionen': [a.name for a in aktionen], 'von': von, 'bis': bis}
 
 
+def fps_setzen(fps):
+    """Die Szenen-FPS auf die Exportrate setzen — die GLB ist im Browser schon
+    genau in dieser Rate abgetastet (`clipabtastung.js`), so liegt jedes
+    Keyframe auf einem eigenen, ganzen Frame.
+
+    FUND 27.09.2026 (Edgar: „export blender noch schlimmer, als ob viele
+    Frames fehlen"): `import_scene.gltf` rechnet jede Keyframe-Zeit über die
+    SZENEN-FPS in eine Framenummer um. Werkseinstellung 24 fps gegen eine
+    60er-Quelle (DanceKurz, `Frame Time: 0.016667`) ergab krumme und doppelte
+    Frames. Ein zwischenzeitlicher Fix mit pauschal 240 fps machte es
+    schlimmer: die Szenen-FPS ist auch die Wiedergaberate der Datei, und
+    jedes gerenderte Bild rückte nur um 1/240 s vor.
+
+    Dazu Wiedergabe mit „Frame Dropping": Die Figur ist schwer (792.828
+    Körperdreiecke); schafft der Rechner die Rate nicht, läuft die Animation
+    trotzdem in Echtzeit-Tempo und lässt Bilder aus, statt in Zeitlupe zu
+    fallen.
+    """
+    szene = bpy.context.scene
+    szene.render.fps = fps
+    szene.render.fps_base = 1.0
+    szene.sync_mode = 'FRAME_DROP'
+    return fps
+
+
 def main():
     a = argumente(sys.argv)
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    fps = fps_setzen(a.fps)
     bpy.ops.import_scene.gltf(filepath=a.glb)
     fremd = fremdkoerper_entfernen()
     ansichten = materialvorschau()
     blick = ansicht_auf_figur()
     spur = zeitleiste()
     bpy.ops.wm.save_as_mainfile(filepath=a.blend)
-    print('modellexportblend: geschrieben %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s)'
-          % (a.blend, fremd, ansichten, blick, spur), flush=True)
+    print('modellexportblend: geschrieben %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s, FPS %s)'
+          % (a.blend, fremd, ansichten, blick, spur, fps), flush=True)
 
 
 if __name__ == '__main__':

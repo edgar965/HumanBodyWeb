@@ -19,6 +19,7 @@ import { Figuraufbaustand } from '../gemeinsam/figuraufbaustand.js';
 import { Colladaschreiber } from '../gemeinsam/collada/colladaschreiber.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Clipabtastung } from '../gemeinsam/clipabtastung.js';
 
 /**
  * Modellexport — sammelt Objekte, schreibt die gewählten Formate, schickt
@@ -37,10 +38,11 @@ export class Modellexport {
 
     /**
      * @param inst      die Figur (`state.characters.get(...)`)
-     * @param optionen  {formate, rig, textur, assets, animation, pose, ordner, name}
+     * @param optionen  {formate, rig, textur, assets, animation, pose, fps, ordner, name}
      * @returns {ordner, dateien, warnungen} — vom Server
      */
     static async exportieren(inst, optionen) {
+        optionen = { ...optionen, fps: optionen.fps || Clipabtastung.VORGABE_FPS };
         // ERST WENN DIE FIGUR GANZ DA IST (26.09.2026, Edgar: „aktiviere
         // export nur wenn die Figur ganz geladen ist"): Genesis 9 kommt in
         // zwei Zügen; zwischen Käfig und voller Stufe steht die Figur
@@ -123,7 +125,7 @@ export class Modellexport {
         const wurzeln = optionen.rig ? Modellexportinhalt.skelettWurzeln(objekte) : [];
         const zuruecksetzenUserData = Zusatzdaten.leeren([...objekte, ...wurzeln]);
         try {
-            const clips = animationOk && optionen.rig ? [anim.clip] : [];
+            const clips = animationOk && optionen.rig ? [Clipabtastung.abtasten(anim.clip, optionen.fps)] : [];
             return await new GLTFExporter().parseAsync([...objekte, ...wurzeln], { binary: true, onlyVisible: true, animations: clips });
         } finally {
             zuruecksetzenUserData();
@@ -188,7 +190,7 @@ export class Modellexport {
 
     static async _dae(objekte, optionen, animationOk, wurzel) {
         const animation = animationOk && optionen.rig
-            ? { wurzel, mixer: state.mixer, action: state.currentAction } : null;
+            ? { wurzel, mixer: state.mixer, action: state.currentAction, fps: optionen.fps } : null;
         const { xml, bilder, warnungen } = await Colladaschreiber.bauen(objekte, {
             textur: optionen.textur, rig: optionen.rig, animation, praefix: `${Modellexport.PLATZHALTER}_`,
             aufloesung: optionen.aufloesung,
@@ -206,6 +208,7 @@ export class Modellexport {
         const formular = new FormData();
         formular.append('ordner', optionen.ordner);
         formular.append('name', optionen.name);
+        formular.append('fps', String(optionen.fps));
         formular.append('warnungen', JSON.stringify(warnungen));
         for (const d of dateien) formular.append('dateien', d.blob, d.name);
         if (blendQuelle) formular.append('blend_quelle', blendQuelle, `${Modellexport.PLATZHALTER}.glb`);

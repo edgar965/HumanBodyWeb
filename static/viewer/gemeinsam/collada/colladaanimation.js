@@ -25,10 +25,10 @@ export class Colladaanimation {
      * @param skeleton  `mesh.skeleton`
      * @param sids  wie `Colladaskin.knochenSids(skeleton)`
      */
-    static bauen(wurzel, mixer, action, skeleton, sids) {
+    static bauen(wurzel, mixer, action, skeleton, sids, fps = Colladaanimation.FPS) {
         const clip = action.getClip();
-        const dauer = Math.max(clip.duration, 1 / Colladaanimation.FPS);
-        const bilder = Math.max(2, Math.ceil(dauer * Colladaanimation.FPS) + 1);
+        const dauer = Math.max(clip.duration, 1 / fps);
+        const bilder = Math.max(2, Math.ceil(dauer * fps) + 1);
         const urTime = action.time;
         const urPaused = action.paused;
 
@@ -37,7 +37,7 @@ export class Colladaanimation {
         action.play();
         action.paused = true;
         for (let f = 0; f < bilder; f++) {
-            const t = Math.min(f / Colladaanimation.FPS, dauer);
+            const t = Math.min(f / fps, dauer);
             action.time = t;
             mixer.update(0);
             wurzel.updateMatrixWorld(true);

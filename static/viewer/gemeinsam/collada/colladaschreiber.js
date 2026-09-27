@@ -62,7 +62,8 @@ export class Colladaschreiber {
                 gelenkbaeume += Colladaknoten.gelenkbaum(obj.skeleton, sids);
                 if (animation) {
                     animationsXml += Colladaanimation.bauen(
-                        animation.wurzel, animation.mixer, animation.action, obj.skeleton, sids
+                        animation.wurzel, animation.mixer, animation.action, obj.skeleton, sids,
+                        animation.fps
                     );
                 }
             }
