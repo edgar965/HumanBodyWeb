@@ -29,6 +29,7 @@ class Meshtabelle(Bildmodelltabelle):
         {'label': 'Mesh', 'key': 'icon', 'sortAus': True},
         {'label': 'Name', 'key': 'name'},
         {'label': 'Formmodell', 'key': 'formmodell'},
+        {'label': 'Auflösung', 'key': 'aufloesung', 'titel': 'Voxelauflösung des Formmodells'},
         {'label': 'Bilder', 'key': 'bilder', 'num': True},
         {'label': 'Status', 'key': 'status'},
         {'label': 'Flächen', 'key': 'flaechen', 'num': True},
@@ -58,6 +59,7 @@ class Meshtabelle(Bildmodelltabelle):
                 self._name(a, seite),
                 format_html('<td data-sort="{}" title="{}">{}</td>', modell, modelle.get(modell, ''),
                             modelle.get(modell, modell).split(' — ')[0]),
+                self._aufloesung(a),
                 format_html('<td class="num" data-sort="{}">{}</td>', len(a.bilder or []), len(a.bilder or [])),
                 self._status(a),
                 self._zahl(e.get('flaechen')),
@@ -65,6 +67,18 @@ class Meshtabelle(Bildmodelltabelle):
                 self._erstellt(a),
             ))),
         }
+
+    @staticmethod
+    def _aufloesung(a):
+        """Die Auflösungsstufe als Wort, sortiert nach ihrer Höhe — nicht alphabetisch
+        („hoch" stünde sonst vor „mittel" vor „schnell", also genau falsch herum)."""
+        stufen = [w for w, _ in Meshoptionen.eintrag('aufloesung')['werte']]
+        texte = dict(Meshoptionen.eintrag('aufloesung')['werte'])
+        stufe = (a.optionen or {}).get('aufloesung', '')
+        if stufe not in texte:
+            return '<td data-sort="0"></td>'
+        return format_html('<td data-sort="{}" title="{}">{}</td>', stufen.index(stufe) + 1, texte[stufe],
+                           texte[stufe].split(' — ')[0])
 
     @staticmethod
     def _meshicon(a, seite):
