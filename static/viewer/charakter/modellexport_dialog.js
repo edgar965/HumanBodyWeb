@@ -102,6 +102,10 @@ export class Modellexportdialog {
             const sel = document.getElementById('modellexport-aufloesung');
             if (sel) sel.value = String(einstellungen.aufloesung);
         }
+        if (einstellungen.polygone !== undefined) {
+            const sel = document.getElementById('modellexport-polygone');
+            if (sel) sel.value = String(einstellungen.polygone);
+        }
         if (einstellungen.fps) {
             const feld = document.getElementById('modellexport-fps');
             if (feld) feld.value = String(einstellungen.fps);
@@ -136,6 +140,9 @@ export class Modellexportdialog {
             pose: document.querySelector('input[name="modellexport-pose"]:checked')?.value || 'ruhelage',
             //: 0 = Original — `<select>`-Werte sind Strings, deshalb `Number(...)`.
             aufloesung: Number(document.getElementById('modellexport-aufloesung')?.value || 0),
+            //: Anteil der Dreiecke, die im `.blend`-Export bleiben — 1 = Original,
+            //: kleiner nur über Blenders Decimate-Modifier (`modellexportblend.py`).
+            polygone: Number(document.getElementById('modellexport-polygone')?.value || 1),
             fps: Math.min(120, Math.max(1, Math.round(Number(document.getElementById('modellexport-fps')?.value) || 30))),
             ordner: document.getElementById('modellexport-ordner')?.value.trim(),
             name: document.getElementById('modellexport-name')?.value.trim(),
@@ -179,7 +186,7 @@ export class Modellexportdialog {
                 [Modellexportdialog.EINSTELLUNGEN_SCHLUESSEL]: {
                     formate: optionen.formate, rig: optionen.rig, textur: optionen.textur,
                     assets: optionen.assets, pose: optionen.pose, aufloesung: optionen.aufloesung,
-                    fps: optionen.fps,
+                    fps: optionen.fps, polygone: optionen.polygone,
                 },
             }).catch(() => {});
             closeDialog(document.getElementById('modellexport-dialog'));

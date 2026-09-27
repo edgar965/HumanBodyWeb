@@ -50,12 +50,13 @@ TEXTFORMATE = {'.obj', '.mtl', '.dae'}
 class Modellexportlauf:
     """Ein Exportauftrag: Ziel prüfen, Dateien ablegen, .blend bauen."""
 
-    def __init__(self, ordner_roh, name_roh, dateien, blend_quelle=None, fps=30):
+    def __init__(self, ordner_roh, name_roh, dateien, blend_quelle=None, fps=30, polygone=1.0):
         self.ordner_roh = ordner_roh
         self.name_roh = name_roh
         self.dateien = dateien  # Liste von UploadedFile, Namen mit PLATZHALTER
         self.blend_quelle = blend_quelle  # UploadedFile oder None
         self.fps = fps  # Szenen-FPS der .blend — die GLB ist schon in dieser Rate abgetastet
+        self.polygone = polygone  # Anteil der Dreiecke im .blend-Export (1 = Original)
 
     def ausfuehren(self):
         """Wirft `ZielAbgelehnt` — sonst `{ordner, dateien: [{name, bytes}]}`."""
@@ -145,6 +146,7 @@ class Modellexportlauf:
                 str(settings.BLENDER_EXE), '-b', '--factory-startup', '--python',
                 str(settings.MODELLEXPORT_BLENDER_SKRIPT), '--',
                 '--glb', str(glb_temp), '--blend', str(blend_pfad), '--fps', str(self.fps),
+                '--polygone', str(self.polygone),
             ]
             ergebnis = subprocess.run(
                 befehl, capture_output=True, text=True, timeout=BLENDER_TIMEOUT_S,

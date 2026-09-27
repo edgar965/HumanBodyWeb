@@ -40,6 +40,7 @@ class Modellexportanfrage:
             dateien=dateien,
             blend_quelle=request.FILES.get('blend_quelle'),
             fps=_fps(request.POST.get('fps')),
+            polygone=_polygone(request.POST.get('polygone')),
         )
         try:
             ergebnis = lauf.ausfuehren()
@@ -59,6 +60,15 @@ def _fps(roh):
     except (TypeError, ValueError):
         return 30
     return min(120, max(1, wert))
+
+
+def _polygone(roh):
+    """Anteil der Dreiecke im `.blend`-Export, 0,05–1; fehlt er: 1 (Original)."""
+    try:
+        wert = float(roh)
+    except (TypeError, ValueError):
+        return 1.0
+    return min(1.0, max(0.05, wert))
 
 
 def _liste(roh):

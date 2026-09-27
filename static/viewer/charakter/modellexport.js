@@ -42,7 +42,8 @@ export class Modellexport {
      * @returns {ordner, dateien, warnungen} — vom Server
      */
     static async exportieren(inst, optionen) {
-        optionen = { ...optionen, fps: optionen.fps || Clipabtastung.VORGABE_FPS };
+        optionen = { ...optionen, fps: optionen.fps || Clipabtastung.VORGABE_FPS,
+                     polygone: optionen.polygone ?? 1 };
         // ERST WENN DIE FIGUR GANZ DA IST (26.09.2026, Edgar: „aktiviere
         // export nur wenn die Figur ganz geladen ist"): Genesis 9 kommt in
         // zwei Zügen; zwischen Käfig und voller Stufe steht die Figur
@@ -209,6 +210,7 @@ export class Modellexport {
         formular.append('ordner', optionen.ordner);
         formular.append('name', optionen.name);
         formular.append('fps', String(optionen.fps));
+        formular.append('polygone', String(optionen.polygone));
         formular.append('warnungen', JSON.stringify(warnungen));
         for (const d of dateien) formular.append('dateien', d.blob, d.name);
         if (blendQuelle) formular.append('blend_quelle', blendQuelle, `${Modellexport.PLATZHALTER}.glb`);

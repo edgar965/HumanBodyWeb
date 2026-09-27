@@ -34,6 +34,7 @@ def argumente(argv):
     parser.add_argument('--glb', required=True)
     parser.add_argument('--blend', required=True)
     parser.add_argument('--fps', type=int, default=30)
+    parser.add_argument('--polygone', type=float, default=1.0)
     # Blender reicht alles vor "--" unverändert mit durch; nur der Teil danach
     # gehört uns.
     trenner = argv.index('--') if '--' in argv else len(argv)
@@ -165,16 +166,52 @@ def fps_setzen(fps):
     schlimmer: die Szenen-FPS ist auch die Wiedergaberate der Datei, und
     jedes gerenderte Bild rückte nur um 1/240 s vor.
 
-    Dazu Wiedergabe mit „Frame Dropping": Die Figur ist schwer (792.828
-    Körperdreiecke); schafft der Rechner die Rate nicht, läuft die Animation
-    trotzdem in Echtzeit-Tempo und lässt Bilder aus, statt in Zeitlupe zu
-    fallen.
+    WIEDERGABE 28.09.2026 (Edgar: „stelle den Export wieder um, der soll
+    alle Frames anzeigen"): erst `FRAME_DROP` gesetzt, damit „Play" im
+    Echtzeit-Tempo bleibt — bei dieser schweren Figur (792.828
+    Körperdreiecke) heißt das aber, dass der Viewport Bilder AUSLÄSST
+    („nur jeder ca. 30. Frame"). Das war kein Fehler, sondern die Kehrseite
+    von Echtzeit-Tempo bei einer Figur, die der Rechner nicht in Echtzeit
+    rendert. Jetzt `NONE`: „Play" zeigt jedes Bild, dafür läuft die
+    Wiedergabe in Zeitlupe, wenn der Rechner nicht mitkommt. Manuelles
+    Scrubben und Render > Render Animation zeigen ohnehin immer jedes Bild,
+    unabhängig vom Sync-Modus.
     """
     szene = bpy.context.scene
     szene.render.fps = fps
     szene.render.fps_base = 1.0
-    szene.sync_mode = 'FRAME_DROP'
+    szene.sync_mode = 'NONE'
     return fps
+
+
+def polygone_reduzieren(quote):
+    """Jedes Netz per Decimate-Modifier auf `quote` (0,05–1) seiner Dreiecke
+    bringen — Wunsch 28.09.2026 (Edgar: „bei einer kleineren Auflösung
+    brauche ich doch nicht so viele Polygone").
+
+    REIHENFOLGE ZÄHLT: der glTF-Importer legt je Netz genau EIN
+    Armature-Modifier an. Decimate wird VOR das Armature-Modifier gehängt
+    (`modifiers.move(idx, 0)`), damit es auf der Ruheform arbeitet — die
+    Armature-Deformation greift danach über dieselben (beim Zusammenfallen
+    interpolierten) Vertex-Gruppen, also bleibt die Animation über die
+    reduzierten Punkte hinweg intakt. `quote >= 1` lässt die Netze
+    unverändert (kein Modifier, kein Aufwand).
+    """
+    if quote >= 0.999:
+        return {'netze': 0, 'dreiecke_vorher': 0, 'dreiecke_nachher': 0}
+    vorher = nachher = netze = 0
+    for obj in list(bpy.data.objects):
+        if obj.type != 'MESH':
+            continue
+        vorher += len(obj.data.polygons)
+        dez = obj.modifiers.new('Export-Decimate', 'DECIMATE')
+        dez.ratio = quote
+        obj.modifiers.move(obj.modifiers.find(dez.name), 0)
+        with bpy.context.temp_override(object=obj, active_object=obj):
+            bpy.ops.object.modifier_apply(modifier=dez.name)
+        nachher += len(obj.data.polygons)
+        netze += 1
+    return {'netze': netze, 'dreiecke_vorher': vorher, 'dreiecke_nachher': nachher}
 
 
 def main():
@@ -183,12 +220,13 @@ def main():
     fps = fps_setzen(a.fps)
     bpy.ops.import_scene.gltf(filepath=a.glb)
     fremd = fremdkoerper_entfernen()
+    polygone = polygone_reduzieren(a.polygone)
     ansichten = materialvorschau()
     blick = ansicht_auf_figur()
     spur = zeitleiste()
     bpy.ops.wm.save_as_mainfile(filepath=a.blend)
-    print('modellexportblend: geschrieben %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s, FPS %s)'
-          % (a.blend, fremd, ansichten, blick, spur, fps), flush=True)
+    print('modellexportblend: geschrieben %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s, FPS %s, '
+          'Polygone %s)' % (a.blend, fremd, ansichten, blick, spur, fps, polygone), flush=True)
 
 
 if __name__ == '__main__':
