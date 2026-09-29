@@ -14,6 +14,7 @@ kommen als JSON in die Seite, Nachfrage über `/api/meshfigur/<id>/zustand/`.
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
 {% comment %}Dieselbe Importkarte wie die Szene (character_viewer.html): three r170 VOLLSTÄNDIG — der Export
 (`Modellexport` mit GLTFExporter) und die Netzlader (PLY, STL) fehlen in der lokalen Kopie unter
@@ -28,7 +29,8 @@ three-mesh-bvh.{% endcomment %}
 <div class="page-header mesh-auftragskopf">
     <div>
         <a href="{% url 'bildmodell' %}#meshto3d" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Modell aus Dateien</a>
-        <h1><i class="fas fa-user-check"></i> <span id="auftrag-name">{{ job.name }}</span>
+        <h1><i class="fas fa-user-check"></i> <span id="auftrag-name"
+                data-adresse="{% url 'auftrag_name' 'meshfigur' job.id %}">{{ job.name }}</span>
             <small class="hb-hinweis">Mesh to 3D · {{ job.kennung }}</small></h1>
     </div>
     <div class="auftrag-kopfknoepfe">
@@ -56,24 +58,41 @@ three-mesh-bvh.{% endcomment %}
         <label>Körpernetz – Pfad
             <input type="text" id="pfad-koerper" autocomplete="off" spellcheck="false">
         </label>
-        <label>Kopfnetz – Pfad (optional, leer = ohne eigenes Kopfnetz)
-            <input type="text" id="pfad-kopf" autocomplete="off" spellcheck="false">
-        </label>
+        <div class="meshfigur-kopffeld">
+            <label><input type="checkbox" id="kopf-an"> Kopfnetz verwenden
+                <small class="hb-hinweis">(aus = Kopf, Gesicht und Haar aus dem Körpernetz)</small></label>
+            <input type="text" id="pfad-kopf" autocomplete="off" spellcheck="false" aria-label="Kopfnetz – Pfad">
+        </div>
     </div>
-    <div class="hb-hinweis" id="pfad-hinweis">Geänderte Pfade (oder eine inzwischen neu geschriebene Datei) werden beim
-        „Neu berechnen“ eingelesen; der Lauf beginnt dann bei der Erkennung.</div>
+    <div class="hb-hinweis" id="pfad-hinweis">Jede Eingabe wird sofort gespeichert. Ein geändertes Netz wird dabei
+        eingelesen; „Neu berechnen“ beginnt dann bei der Erkennung.</div>
     <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
 </div>
 
 <div class="card">
     <div class="mesh-hauptbereich">
         <div class="meshfigur-buehnenspalte">
-            <div class="meshfigur-schalter" id="buehnen-schalter">
-                <label><input type="radio" name="meshfigur-was" value="figur" checked> Figur</label>
-                <label><input type="radio" name="meshfigur-was" value="netz"> Netz</label>
-                <label><input type="radio" name="meshfigur-was" value="beide"> Nebeneinander</label>
-                <label hidden title="Das Haar aus dem Netz (Schritt „Haar“) als eigenes Objekt auf der Figur">
-                    <input type="checkbox" id="buehne-haar" checked> Haar</label>
+            {% comment %}Jeder Teil der Bühne einzeln schaltbar (29.09.2026) — die Vorgabe steht hier als
+            Klasse `active`, gebunden werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`.
+            Stil `schaltknoepfe.css` (Edgars Vorlage: die Werkzeugleiste im Theatre).{% endcomment %}
+            <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
+                <button type="button" class="schaltknopf" data-schalter="mesh"
+                        title="Das eingelesene Netz (Körper- und ggf. Kopfnetz) in der Lage der Erkennung">
+                    <i class="fas fa-draw-polygon"></i> Mesh</button>
+                <button type="button" class="schaltknopf active" data-schalter="haare"
+                        title="Das Haar auf der Figur — welches, wählt das Feld daneben">
+                    <i class="fas fa-hat-wizard"></i> Haare</button>
+                <label hidden id="buehne-haarwahl-feld" title="Welches Haar die Figur trägt — auch im Export: die Frisur aus Schritt „Frisur“ (Daz oder „Haar Eigen“), das Haar aus dem Netz oder die Haarkarten aus seiner Schale">
+                    <select id="buehne-haarwahl" aria-label="Welches Haar"></select></label>
+                <button type="button" class="schaltknopf active" data-schalter="kleider"
+                        title="Die Kleidungsstücke der Figur — auch im Export">
+                    <i class="fas fa-tshirt"></i> Kleider</button>
+                <button type="button" class="schaltknopf" data-schalter="nebeneinander"
+                        title="Netz und Figur nebeneinander statt übereinander">
+                    <i class="fas fa-columns"></i> Nebeneinander</button>
+                <button type="button" class="schaltknopf active" data-schalter="modell"
+                        title="Die angepasste Genesis-9-Figur">
+                    <i class="fas fa-user"></i> 3DModell</button>
             </div>
             <div class="mesh-betrachter" id="buehne">
                 <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>
@@ -104,13 +123,22 @@ three-mesh-bvh.{% endcomment %}
                 </div>
                 <div class="meshfigur-export">
                     <div class="meshfigur-exportoptionen">
-                        <label class="meshfigur-exportname">Als Genesis-Figur speichern – Name
+                        <label>Format
+                            <select id="modell-format" class="viewer-select">
+                                <option value="genesis" selected>Eigenes Format (Genesis-Preset)</option>
+                                <option value="glb">GLB</option>
+                                <option value="blend">Blender (.blend)</option>
+                                <option value="obj">OBJ</option>
+                            </select>
+                        </label>
+                        <label class="meshfigur-exportname">Name
                             <input type="text" id="modell-name" autocomplete="off" spellcheck="false"></label>
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
-                        <i class="fas fa-save"></i> <span>Als Genesis-Figur speichern</span></button>
-                    <div class="hb-hinweis" id="modell-meldung">Erscheint unter „Charakter hinzufügen → Genesis 9 →
-                        Gespeicherte Modelle“ (Szene, Studio, Theatre).</div>
+                        <i class="fas fa-save"></i> <span>Modell speichern</span></button>
+                    <div class="hb-hinweis" id="modell-meldung">Genesis-Preset erscheint unter „Charakter hinzufügen →
+                        Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre); GLB/Blender/OBJ gehen in die
+                        Export-Ablage des Auftrags.</div>
                 </div>
                 <div class="meshfigur-export">
                     <a class="btn btn-secondary btn-sm" href="{% url 'gesichtsform' %}?auftrag={{ job.kennung }}">
@@ -131,8 +159,23 @@ three-mesh-bvh.{% endcomment %}
     <p class="hb-hinweis">Das Haar aus dem Netz geschnitten (Schritt „Haar", Paket <code>Haar</code>): je Fläche die Farbe
     (keine Haut → Haar), das innere Gesicht bleibt immer Haut, geglättet auf dem Netz. Oben das Netz ohne Haar, unten das Haar
     allein — beide im selben Ausschnitt. In der 3D-Ansicht oben sitzt dasselbe Haar als eigenes Objekt auf der Figur
-    (Schalter „Haar").</p>
+    (Auswahl „Haar").</p>
     <div id="haar"></div>
+    <h3>Frisur</h3>
+    <p class="hb-hinweis">Schritt „Frisur": jede Frisur der Garderobe (Daz, Klone, „Haar Eigen") in jedem Stil auf der
+    Figur, gemessen als Hülle gegen die Hülle des Netzhaars; die besten bekommen ihre Formregler gestellt. Die Haarkarten
+    wachsen an der Schale des Netzhaars entlang. Welches Haar die Figur oben trägt, wählt „Haar" über der 3D-Ansicht.</p>
+    <div id="frisur"></div>
+</div>
+
+<div class="card" id="kleidung-karte">
+    <h2>Kleidung — Netz ohne Kleidung / nur Kleidung</h2>
+    <p class="hb-hinweis">Die Kleidung aus dem Netz geschnitten (Schritt „Kleidung“, Paket <code>Kleidung</code>): Was
+    nicht Haut ist, ist Stoff — Haut erkennt der Hautton der <em>kahlen</em> Stellen (Gesicht, Hände, Unterarme,
+    Unterschenkel), nicht der von Rumpf und Oberschenkeln, wo man Kleidung trägt. Ein Körperabschnitt gilt in Bändern
+    von 5 cm als Ganzes bedeckt oder kahl. Oben sitzt dieselbe Kleidung als eigenes Objekt auf der Figur (Schalter
+    „Kleider“); die Figur selbst ist der Körper darunter.</p>
+    <div id="kleidung"></div>
 </div>
 
 <div class="card" id="vergleich-karte">
@@ -166,7 +209,9 @@ three-mesh-bvh.{% endcomment %}
 <script type="module">
 import { Meshfigurseite } from "{% fassungspfad 'viewer/meshfigur/meshfigurseite.js' %}";
 import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 Meshfigurseite.starten("{{ job.id }}");
 Auftragloeschen.binden();
+Auftragname.binden();
 </script>
 {% endblock %}

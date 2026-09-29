@@ -18,7 +18,8 @@ KOPF (`teil='kopf'`, 296 Regler — die Gesichtskette)
     13 Ohren und alles Übrige
     0  gar nicht: `ProportionSmaller/Larger` (verkleinern die ganze Figur mit Kinderproportionen —
        doppelt zu Height), die Grundfigur selbst (steht schon auf 1, Ableitung 0), Mundhöhle,
-       „Ears Gone"
+       „Ears Gone", `HipGenitalBulge` (die Anpassung stellte ihn auf 100 %, um die Beule der Shorts
+       nachzuformen — bei Edgar ein Klumpen; jetzt fest, siehe `festwerte`)
 
 Die Ableitung kommt aus der Ablage (`G9reglerableitung.holen`, an der Grundfigur — dieselbe
 Datei wie im Reiter „3D"); python10 liest `punkte`/`gelenke` direkt daraus (`ablagepfad`). Hier
@@ -48,7 +49,13 @@ class Meshfigurregler:
         'BaseFeminine_body_bs',
         'Mouth Cavity',
         'Ears Gone',
+        'HipGenitalBulge',
     )
+    #: Der Genitalbereich der Genesis-9-Grundfigur ist EIN Regler (`Hip Genital Bulge`, 0–1: bis 2,9 cm nach vorn,
+    #: 170 Punkte); ein Anatomie-Paket ist nicht installiert (nur sein UV-Satz). Für die männliche Grundfigur steht
+    #: er fest auf `genitalform` % der Optionen, sonst auf 0.
+    GENITAL_REGLER = 'body_bs_HipGenitalBulge'
+    GENITAL_VORGABE = 30
     KOPF_GROSS = ('ProportionHeadSize', 'Cranium', 'Face ', 'ForeHead', 'Jaw Height', 'Head Shape')
     KOPF_ZUEGE = (
         'Nose',
@@ -74,6 +81,15 @@ class Meshfigurregler:
         #: Marken gesperrter Regler (`sperrmarken`): Testfall „blind" — die Charakterregler der
         #: Referenzfigur darf die Anpassung nicht benutzen, sonst misst der Test nur, ob sie sie findet.
         self.gesperrt = list(gesperrt or [])
+
+    @classmethod
+    def festwerte(cls, optionen):
+        """`{regler: wert}`, die ab der ersten Runde in der Stellung stehen und die Kette nicht ändert (Stufe 0)."""
+        if (optionen or {}).get('basis') != 'masculine':
+            return {}
+        prozent = float((optionen or {}).get('genitalform', cls.GENITAL_VORGABE))
+        wert = round(min(max(prozent / 100.0, 0.0), 1.0), 4)
+        return {cls.GENITAL_REGLER: wert} if wert >= cls.NULL_UNTER else {}
 
     @staticmethod
     def marke(name):

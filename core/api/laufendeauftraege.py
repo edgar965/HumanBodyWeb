@@ -24,7 +24,7 @@ from asgiref.sync import sync_to_async
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
-from ..models import Bildmodellauftrag, Meshauftrag, Meshfigurauftrag
+from ..models import Bildmodellauftrag, Blendermodellauftrag, Meshauftrag, Meshfigurauftrag
 
 logger = logging.getLogger('core')
 
@@ -33,9 +33,10 @@ __all__ = ['Laufendeauftraege']
 
 class Laufendeauftraege:
     #: Schlüssel in der Antwort → Modell. Die Schlüssel sind dieselben Namen, die die
-    #: Tabellen als `key` tragen (`Meshtabelle`, `Meshfigurtabelle`, `Bildmodelltabelle`).
+    #: Tabellen als `key` tragen (`Meshtabelle`, `Meshfigurtabelle`, `Bildmodelltabelle`,
+    #: `Blendermodelltabelle`).
     BEREICHE = (('mesh', Meshauftrag), ('meshfigur', Meshfigurauftrag),
-                ('bildmodell', Bildmodellauftrag))
+                ('bildmodell', Bildmodellauftrag), ('blendermodell', Blendermodellauftrag))
     FELDER = ('id', 'status', 'progress', 'progress_detail', 'schritt')
 
     @staticmethod

@@ -11,13 +11,13 @@
 .seitenreiter [role="tab"][aria-selected="true"] { color: var(--text, #eee); background: var(--bg-darker, #181825); }
 .seitenreiter [role="tab"] i { margin-right: 6px; }
 
-/* -------------------------------------------------------------------- Fotokarten */
+/* ------------------------------------ Fotokarten: ganzes Foto, oben bündig (29.09.2026) */
 .mesh-vorschauen { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .mesh-fotokarte {
-    display: flex; flex-direction: column; gap: 4px; width: 120px; position: relative;
+    display: flex; flex-direction: column; gap: 4px; width: 172px; position: relative;
     background: var(--bg-darker, #181825); border-radius: 6px; padding: 6px;
 }
-.mesh-vorschau { width: 108px; height: 108px; object-fit: cover; border-radius: 4px; }
+.mesh-vorschau { width: 160px; height: 300px; object-fit: contain; object-position: top center; border-radius: 4px; }
 .mesh-rollenwahl { font-size: 0.75rem; padding: 2px 4px; }
 .mesh-gewichtzeile { display: flex; align-items: center; gap: 4px; }
 .mesh-gewichtzeile input[type="range"] { flex: 1 1 auto; width: auto; }
@@ -68,6 +68,38 @@
 /* Platz in der Reihenfolge, unter jeder Fotokarte (27.09.2026). */
 .mesh-indexzeile { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted, #999); }
 .mesh-indexfeld { width: 56px; text-align: right; }
+
+/* Fotos austauschen (29.09.2026): Knopfzeile über der Liste, „Ersetzen"/„Entfernen" je Karte,
+   und der Auswahldialog mit Dateien ODER Ordner (`viewer/mesh/meshfotowahl.js`). */
+.mesh-fotoknoepfe { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.mesh-tauschzeile { display: flex; gap: 4px; }
+.mesh-tauschzeile .btn { padding: 2px 6px; font-size: 0.72rem; }
+.mesh-tauschzeile .btn:first-child { flex: 1 1 auto; }
+.mesh-fotowahl-schicht {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 2000;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.mesh-fotowahl {
+    background: var(--bg-card, #22222e); border: 1px solid var(--border, #3a4250); border-radius: 8px;
+    padding: 16px; width: min(900px, 100%); max-height: 85vh; display: flex; flex-direction: column; gap: 12px;
+}
+.mesh-fotowahl h3 { margin: 0; }
+.mesh-fotowahl-knoepfe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mesh-fotowahl-knoepfe .hb-hinweis { margin: 0; }
+.mesh-fotowahl-liste {
+    display: flex; flex-wrap: wrap; gap: 8px; overflow-y: auto; flex: 1 1 auto; min-height: 120px;
+    align-content: flex-start;
+}
+.mesh-fotowahl-karte {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; width: 132px; padding: 6px;
+    background: var(--bg-darker, #181825); border-radius: 6px; cursor: pointer;
+}
+.mesh-fotowahl-karte img { width: 120px; height: 220px; object-fit: contain; object-position: top center; border-radius: 4px; }
+.mesh-fotowahl-name {
+    font-size: 0.7rem; color: var(--text-muted, #999); width: 120px; text-align: center;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mesh-fotowahl-fuss { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* Ablageorte des Netzes (27.09.2026): Label über dem Pfad — die Seitenspalte ist 320 px
    breit, ein Label DANEBEN ließe für den Pfad selbst kaum Platz. */

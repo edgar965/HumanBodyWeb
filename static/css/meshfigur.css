@@ -7,7 +7,10 @@
 /* Pfade der Netze (Reiter und Auftragsseite): zwei Felder, volle Breite, Pfade sind lang. */
 .meshfigur-pfade { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 8px 16px; margin: 10px 0; }
 .meshfigur-pfade label { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; }
-.meshfigur-pfade input { width: 100%; font-family: var(--font-mono, monospace); font-size: 0.85rem; }
+.meshfigur-kopffeld { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; }
+.meshfigur-kopffeld label { display: block; }
+.meshfigur-kopffeld input[type="checkbox"] { width: auto; }
+.meshfigur-pfade input[type="text"] { width: 100%; font-family: var(--font-mono, monospace); font-size: 0.85rem; }
 .meshfigur-exportoptionen { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 0.85rem; }
 .meshfigur-exportoptionen label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .meshfigur-exportoptionen .meshfigur-exportname { flex: 1 1 100%; }
@@ -26,7 +29,11 @@
 /* Die Spalte übernimmt die Flex-Rolle von `.mesh-betrachter` (mesh.css: flex 1 1 520px) — sonst
    schrumpft die Bühne auf die Breite ihres Inhalts (gemessen 27.09.2026: 190 px). */
 .meshfigur-buehnenspalte { display: flex; flex-direction: column; gap: 6px; flex: 1 1 560px; min-width: 320px; }
-.meshfigur-schalter { display: flex; gap: 14px; font-size: 0.9rem; }
+/* Leiste und Knöpfe kommen aus `schaltknoepfe.css` (Klasse `schalterleiste`); hier steht nur, was
+   diese Seite zusätzlich braucht: das Auswahlfeld für die Haarquelle steht mitten in der Knopfreihe
+   und bekommt etwas Luft, damit es nicht wie ein weiterer Knopf wirkt. */
+.meshfigur-schalter #buehne-haarwahl-feld { margin: 0 8px 0 4px; font-size: 0.85rem; }
+.meshfigur-farbfeld { display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; border-radius: 3px; border: 1px solid rgba(128, 128, 128, 0.6); }
 .meshfigur-buehnenspalte .mesh-betrachter { position: relative; flex: 1 1 auto; width: 100%; height: 680px; }
 .meshfigur-leinwand { width: 100%; height: 100%; display: block; position: absolute; inset: 0; }
 .meshfigur-export { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -54,3 +61,12 @@
 .meshfigur-haarraster figure { margin: 0; }
 .meshfigur-haarraster img { width: 100%; height: auto; display: block; border-radius: 6px; }
 .meshfigur-haarraster figcaption { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+
+/* Karte „Kleidung" (29.09.2026): sechs Hochformatbilder — je Teil drei Ansichten, zwei Teile untereinander
+   (die Bilder sind 300 × 640, ein Körper ist schmal; nebeneinander wären sie zu klein). */
+.meshfigur-kleidungsraster { display: grid; grid-template-columns: repeat(3, minmax(0, 300px)); gap: 8px; }
+.meshfigur-kleidungsraster figure { margin: 0; }
+.meshfigur-kleidungsraster img { width: 100%; height: auto; display: block; border-radius: 6px; }
+.meshfigur-kleidungsraster figcaption { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+.meshfigur-kleidungsstuecke { margin: 6px 0 10px; padding-left: 18px; font-size: 0.85rem; }
+@media (max-width: 900px) { .meshfigur-kleidungsraster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

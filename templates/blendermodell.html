@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}BlenderModel{% endblock %}
+
+{% comment %}
+Dashboard „BlenderModel" (Edgar, 29.09.2026: „mach ein neues Menü Dashboard - BlenderModel, das eine Kopie der
+Seite, Struktur und Jobergebnissen ist wie #meshto3d. Darin möchte ich eine neue Pipeline einbauen."):
+Aufbau und Tabelle wie der Reiter „Mesh to 3D" (`_meshfigur_reiter.html`), aber der Eingang sind Fotos mit
+Rollen statt eines Netzes — der Lauf baut daraus erst ein Netz und dann die Figur (`Blendermodelllauf`).
+Die Optionen kommen in zwei Gruppen aus `Blendermodelloptionen.katalog()`; die Felder baut
+`mesh/meshoptionenformular.js`. Endpunkte: `core/api/blendermodell*.py`. Tabelle: djangoBase
+(`Blendermodelltabelle`).
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/blendermodell.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-cube"></i> BlenderModel</h1>
+</div>
+
+<div class="card" id="blendermodell-liste">
+    <div class="bildmodell-listenkopf">
+        <h2>Aufträge</h2>
+        <div class="bildmodell-listenknoepfe">
+            <button type="button" class="btn btn-secondary btn-sm" id="blendermodell-duplizieren" disabled
+                    title="Neuer Auftrag mit denselben Fotos, Rollen, Gewichten und Optionen — ohne Ergebnisse, startet nicht von selbst">
+                <i class="fas fa-clone"></i> <span>Job duplizieren (<span id="blendermodell-duplizieren-count">0</span>)</span></button>
+            <button type="button" class="btn btn-danger btn-sm" id="blendermodell-bulk-delete" disabled>
+                <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="blendermodell-bulk-count">0</span>)</span></button>
+        </div>
+    </div>
+    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="/static/djangobase/js/tabellen_sortierung.js?v={{ djangobase.statik_v }}"></script>
+<script type="module" src="/static/djangobase/js/tabellen_breiten.js?v={{ djangobase.statik_v }}"></script>
+<script type="module">
+import { Laufbalken } from "{% fassungspfad 'viewer/gemeinsam/laufbalken.js' %}";
+import { Blendermodellliste } from "{% fassungspfad 'viewer/blendermodell/blendermodellliste.js' %}";
+Blendermodellliste.aufbauen();
+// Ein Abruf je Takt für die Tabelle (`gemeinsam/laufbalken.js`). Der Bereichsname sagt: Taucht hier ein Lauf
+// auf, der in keiner Zeile steht, neu laden.
+Laufbalken.aufbauen(['blendermodell']);
+</script>
+{% endblock %}

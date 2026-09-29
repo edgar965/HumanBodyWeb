@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
-import { Meshfigurhaarobjekt } from './meshfigurhaarobjekt.js';
+import { Meshfigurhaarwahl } from './meshfigurhaarwahl.js';
+import { Meshfigurkleider } from './meshfigurkleider.js';
 import { Meshfigurnetze } from './meshfigurnetze.js';
+import { Meshfigurschalter } from './meshfigurschalter.js';
 
 /**
  * Meshfigurbuehne — die angepasste Genesis-Figur und das Netz (bzw. Körper- und Kopfnetz) auf einer Bühne.
@@ -12,25 +14,27 @@ import { Meshfigurnetze } from './meshfigurnetze.js';
  * (`fototextur`, derselbe Weg wie ein gespeichertes Modell in der Szene). Die Netze lädt
  * `Meshfigurnetze` in der Lage der Erkennung (Y oben, Blick +Z, Füße auf 0, ggf. auf die
  * Körpergröße gestreckt) — „Nebeneinander" rückt sie um `ABSTAND` nach rechts.
+ *
+ * Was davon zu sehen ist, schalten die Kästchen über der Ansicht einzeln (`Meshfigurschalter`):
+ * Mesh · Haare · Kleider · Nebeneinander · 3DModell.
  */
 export class Meshfigurbuehne {
 
-    static ABSTAND = 0.75;
+    /** Seitlicher Versatz des Netzes bei „Nebeneinander" (Edgar: „um ca. 1,5 m verschoben"). */
+    static ABSTAND = 1.5;
 
     constructor(seite) {
         this.seite = seite;
         this.feld = document.getElementById('buehne');
         this.hinweis = document.getElementById('buehne-hinweis');
-        this.was = 'figur';
         this.modell = null;
         this._stand = null;
         this._baut = false;
         try { this._buehne(); } catch (fehler) { this._melden(`Keine 3D-Ansicht: ${fehler.message}`); return; }
         this.netze = new Meshfigurnetze(seite, this.szene, text => this._melden(text));
-        this.haar = new Meshfigurhaarobjekt(seite, text => this._melden(text));
-        for (const r of document.querySelectorAll('input[name="meshfigur-was"]')) {
-            r.addEventListener('change', () => { if (r.checked) { this.was = r.value; this._sichtbarkeit(); } });
-        }
+        this.haar = new Meshfigurhaarwahl(seite, text => this._melden(text));
+        this.kleider = new Meshfigurkleider(seite, text => this._melden(text));
+        this.schalter = new Meshfigurschalter(() => this._sichtbarkeit());
     }
 
     _melden(text) { if (this.hinweis) { this.hinweis.textContent = text; this.hinweis.hidden = !text; } }
@@ -70,12 +74,32 @@ export class Meshfigurbuehne {
         this.kamera.updateProjectionMatrix();
     }
 
+    /**
+     * Die Knöpfe auf die Bühne übertragen. „Nebeneinander" ZEIGT das Netz (Edgar, 29.09.2026:
+     * „nebeneinander soll das Mesh zeigen um ca. 1,5 m verschoben") — es schaltet „Mesh" also mit an,
+     * statt gesperrt zu sein, solange man es nicht selbst eingeschaltet hat. Sichtbar am Knopf, nicht
+     * heimlich: `setzen` lässt „Mesh" dabei aufleuchten.
+     */
     _sichtbarkeit() {
-        if (this.modell) this.modell.group.visible = this.was !== 'netz';
-        this.netze.sichtbar(this.was !== 'figur');
-        this.netze.verschieben(this.was === 'beide' ? Meshfigurbuehne.ABSTAND : 0);
-        const mitte = this.was === 'beide' ? Meshfigurbuehne.ABSTAND / 2 : 0;
-        this.steuerung.target.x = mitte;
+        if (this.schalter.stand.nebeneinander) this.schalter.setzen('mesh', true);
+        const an = this.schalter.stand;
+        if (this.modell) this.modell.group.visible = an.modell;
+        this.netze.sichtbar(an.mesh);
+        this.netze.verschieben(an.nebeneinander ? Meshfigurbuehne.ABSTAND : 0);
+        this.steuerung.target.x = an.nebeneinander ? Meshfigurbuehne.ABSTAND / 2 : 0;
+        this._haarUndKleider();
+    }
+
+    /**
+     * Haar und Kleider nachziehen — ihre Netze kommen nach dem Bau der Figur nach, also läuft das bei
+     * JEDEM Stand der Seite mit. Fasst das Drehziel nicht an (`_sichtbarkeit` täte das, und alle 2 s
+     * gerufen nähme es dem Nutzer jedes Verschieben der Ansicht wieder weg).
+     */
+    _haarUndKleider() {
+        this.kleider.setzen(this.modell, this.haar.frisur?.kennung);
+        const an = this.schalter.stand;
+        this.haar.sichtbarkeit(an.haare);
+        this.kleider.sichtbar(an.kleider);
     }
 
     // --------------------------------------------------------------- Stand
@@ -87,14 +111,18 @@ export class Meshfigurbuehne {
         // dem Nutzer jedes Verschieben der Ansicht wieder weg.
         if (this.netze.zeigen(z)) this._sichtbarkeit();
         this.haar.zeigen(z, this.modell?.group || null);
+        this.kleider.zeigen(z, this.modell?.group || null);
+        this._haarUndKleider();
         const stellung = z.stellung || {};
         if (!Object.keys(stellung).length) { this._melden('Noch keine Figur — erst nach der Körperkette.'); return; }
         const kacheln = this.kacheln(e.fototextur);
-        // Neue Textur („Textur" neu gebacken) baut die Figur ebenso neu wie neue Regler.
-        const stand = JSON.stringify([stellung, kacheln]);
+        // Neue Textur („Textur" neu gebacken) oder eine neue Frisur (Schritt „frisur") baut die Figur
+        // ebenso neu wie neue Regler.
+        const kleidung = Meshfigurhaarwahl.kleidung(z);
+        const stand = JSON.stringify([stellung, kacheln, kleidung]);
         if (stand === this._stand || this._baut) return;
         this._stand = stand;
-        await this._bauen(stellung, z, kacheln);
+        await this._bauen(stellung, z, kacheln, kleidung);
     }
 
     /**
@@ -111,18 +139,19 @@ export class Meshfigurbuehne {
             .map(([k, name]) => [k, `${this.seite.dateiAdresse('ergebnis', name)}?t=${marke}`]));
     }
 
-    async _bauen(stellung, z, kacheln) {
+    async _bauen(stellung, z, kacheln, kleidung) {
         this._baut = true;
         this._melden('Figur wird gebaut …');
         try {
             const neu = new Genesis9Modell('meshfigur', {
-                figur: 'basis', regler: stellung, presetName: z.name, fototextur: kacheln,
+                figur: 'basis', regler: stellung, presetName: z.name, fototextur: kacheln, kleidung,
             });
             await neu.bauen();
             if (this.modell) { this.szene.remove(this.modell.group); this.modell.dispose?.(); }
             this.modell = neu;
             this.szene.add(neu.group);
-            this.haar.anhaengen(neu.group);
+            this.haar.anhaengen(neu);
+            this.kleider.anhaengen(neu);
             const h = neu.hoehe || 1.7;
             this.steuerung.target.set(0, h * 0.52, 0);
             this.kamera.position.set(0, h * 0.55, h * 2.6);

@@ -51,3 +51,41 @@
     font-size: 0.85em;
     opacity: 0.85;
 }
+
+/* Volle Seitenbreite (Edgar, 29.09.2026) — wie `.vtb-breit`/`.wb-breit`/`.kleidung-breit`: die
+   Vorlage bleibt schmal (960px, `dokuseite.css`), einzelne Seiten mit langem Fließtext oder
+   breiten Ketten-Diagrammen heben das gezielt auf. */
+.doku-seite.kp-breit {
+    max-width: none;
+}
+
+/* Die Werkzeugkette „Blender"-Abschnitt: eine Stufe je Karte, damit direkt sichtbar ist, wo
+   tatsächlich Blender laeuft und wo nicht (Python/PyTorch/TRELLIS ohne jede 3D-Software). */
+.kp-kette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8em;
+    margin: 1em 0 1.4em;
+}
+
+.kp-stufe {
+    flex: 1 1 220px;
+    padding: 0.7em 0.9em;
+    border-left: 4px solid #6b7280;
+    background: rgba(107, 114, 128, 0.06);
+}
+
+.kp-stufe.kp-stufe-blender { border-left-color: #e8833a; background: rgba(232, 131, 58, 0.08); }
+.kp-stufe.kp-stufe-python { border-left-color: #4fc1ff; background: rgba(79, 193, 255, 0.07); }
+
+.kp-stufe h4 { margin: 0 0 0.3em; font-size: 0.98em; }
+.kp-stufe p { margin: 0; font-size: 0.87em; }
+.kp-stufe-marke {
+    display: inline-block;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.85;
+    margin-bottom: 0.25em;
+}

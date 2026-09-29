@@ -9,6 +9,7 @@ sondern aus einem Mesh. Mesh soll per Upload hochgeladen werden können." Endpun
 from django.urls import path
 
 from .api.meshfigur import Meshfigurendpunkte
+from .api.meshfigureinstellungen import Meshfigureinstellungen
 
 __all__ = ['MESHFIGUR']
 
@@ -22,6 +23,11 @@ MESHFIGUR = [
     path('api/meshfigur/<uuid:job_id>/zustand/', Meshfigurendpunkte.zustand, name='meshfigur_zustand'),
     path('api/meshfigur/<uuid:job_id>/starten/', Meshfigurendpunkte.starten, name='meshfigur_starten'),
     path('api/meshfigur/<uuid:job_id>/anhalten/', Meshfigurendpunkte.anhalten, name='meshfigur_anhalten'),
+    path(
+        'api/meshfigur/<uuid:job_id>/einstellungen/',
+        Meshfigureinstellungen.speichern,
+        name='meshfigur_einstellungen',
+    ),
     path('api/meshfigur/<uuid:job_id>/modell/', Meshfigurendpunkte.modell, name='meshfigur_modell'),
     path('api/meshfigur/<uuid:job_id>/loeschen/', Meshfigurendpunkte.loeschen, name='meshfigur_loeschen'),
     path(

@@ -35,10 +35,24 @@ class Gesichtsformziel:
     _vorrat = {}
 
     def __init__(self, job):
-        from ..daten.meshfigurablage import Meshfigurablage
-
         self.job = job
-        self.ablage = Meshfigurablage(job.kennung)
+        self.ablage = self._ablage_fuer(job)
+
+    @staticmethod
+    def _ablage_fuer(job):
+        """Die Ablage nach dem Auftragstyp — nicht immer „Mesh to 3D": BlenderModel (29.09.2026) nutzt
+        dieselben Figur-Schritte (`Meshfigurkette`, `Meshfigurhaar`, …) auf EIGENEN Ordnern
+        (`blendermodellauftraege/`, `Blendermodellablage`). Fest auf `Meshfigurablage` verdrahtet, fiel das
+        erst beim ersten echten End-zu-End-Lauf auf: `FileNotFoundError … meshfigurauftraege\\<kennung>\\…`
+        für einen Auftrag, der gar keinen solchen Ordner hat (Edgar, 29.09.2026)."""
+        from ..daten.meshfigurablage import Meshfigurablage
+        from ..models import Blendermodellauftrag
+
+        if isinstance(job, Blendermodellauftrag):
+            from ..daten.blendermodellablage import Blendermodellablage
+
+            return Blendermodellablage(job.kennung)
+        return Meshfigurablage(job.kennung)
 
     def laden(self):
         """`(scan, gesicht)` — das Netz in der Lage des Körpers und seine Gesichtspunkte (478, 3)."""

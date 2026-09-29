@@ -89,21 +89,31 @@ class AuftragsduplikatTest(TestCase):
         self.assertEqual(list((ordner / 'arbeit').iterdir()), [])
         self.assertEqual(list((ordner / 'ergebnis').iterdir()), [])
 
-    def test_bildmodell_originale_ohne_ausschnitte(self):
+    def test_bildmodell_einordnung_von_hand_kommt_mit_ohne_ergebnis(self):
+        """Edgar, 28.09.2026, nachdem `bilder` in der ersten Fassung leer blieb: „alles was ich
+        am Hauptjob eingestellt habe (Kategorie usw) soll in der Kopie dabei sein". Kategorie,
+        Hauptbild, Gewicht, Boxen, Freisteller sind `Bildmodellauftrag.NUTZERFELDER` — Eingabe,
+        auch wenn sie im Befund der Sichtung stehen. Sie brauchen Ausschnitt UND Maske, deshalb
+        müssen `zuschnitt/` und `schaetzung/` mitkommen, nicht nur `original/`."""
         job = Bildmodellauftrag.objects.create(
             kennung='2026.09.27.12.00.00', name='Mila', typ='genesis9', status='fertig',
             optionen={'einordnung': 'manuell', 'bildtypen': {'a.jpg': {'kategorie': 'koerper'}}},
-            bilder=[{'datei': 'a_0.jpg', 'quelle': 'a.jpg', 'kategorie': 'koerper'}],
+            bilder=[{'datei': 'a_0.jpg', 'quelle': 'a.jpg', 'kategorie': 'koerper', 'hauptbild': True,
+                     'gewicht': 1.0, 'manuell': True, 'landmarken': [[1, 2]],
+                     'freisteller': {'stand': '2026-09-27', 'angewandt': {'hintergrund': 'weiss'}}}],
             ergebnis={'anpassung': {'punkte_rms_mm': 4.2}}, modell='Mila')
-        for pfad in ('original/a.jpg', 'original/dreh.mp4', 'zuschnitt/a_0.jpg', 'ergebnis/icon.png'):
+        for pfad in ('original/a.jpg', 'original/dreh.mp4', 'zuschnitt/a_0.jpg',
+                     'schaetzung/freisteller/a_0_maske.png', 'ergebnis/icon.png'):
             self._datei('modellauftraege', job.kennung, pfad)
         neu = Bildmodellauftrag.objects.get(pk=self._duplizieren('bildmodell', job)['id'])
         self.assertEqual((neu.typ, neu.optionen), ('genesis9', job.optionen))
-        self.assertEqual((neu.bilder, neu.ergebnis, neu.modell), ([], {}, ''),
-                         'die Ausschnitte entstehen erst in der Sichtung')
+        self.assertEqual(neu.bilder, job.bilder, 'die Einordnung von Hand kommt vollständig mit')
+        self.assertEqual((neu.ergebnis, neu.modell), ({}, ''), 'nur die fertige Anpassung ist Ausgabe')
         ordner = self.tmp / 'modellauftraege' / neu.kennung
         self.assertEqual(sorted(p.name for p in (ordner / 'original').iterdir()), ['a.jpg', 'dreh.mp4'])
-        self.assertEqual(list((ordner / 'zuschnitt').iterdir()), [])
+        self.assertTrue((ordner / 'zuschnitt' / 'a_0.jpg').is_file())
+        self.assertTrue((ordner / 'schaetzung' / 'freisteller' / 'a_0_maske.png').is_file())
+        self.assertEqual(list((ordner / 'ergebnis').iterdir()), [], 'ergebnis/ bleibt leer — Ausgabe')
 
     def test_unbekannter_bereich_und_leere_wahl(self):
         antwort = self.client.post('/api/modell-aus-dateien/bvh/duplizieren/', '{"ids": []}',

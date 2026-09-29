@@ -47,8 +47,10 @@ class Effektrender:
         szene = bpy.context.scene
         szene.frame_set(szene.frame_start)
         rig = self.figur.rig
-        links = rig.matrix_world @ rig.pose.bones['LeftShoulder'].head
-        rechts = rig.matrix_world @ rig.pose.bones['RightShoulder'].head
+        # Knochennamen der Figur (MPFB: LeftShoulder/RightShoulder; Genesis 9: l_shoulder/r_shoulder).
+        links_name, rechts_name = getattr(self.figur, 'SCHULTERN', ('LeftShoulder', 'RightShoulder'))
+        links = rig.matrix_world @ rig.pose.bones[links_name].head
+        rechts = rig.matrix_world @ rig.pose.bones[rechts_name].head
         richtung = Vector((0.0, 0.0, 1.0)).cross(rechts - links)
         richtung.z = 0.0
         return richtung.normalized() if richtung.length > 1e-6 else Vector((0.0, -1.0, 0.0))
@@ -96,10 +98,10 @@ class Effektrender:
         # Der MPFB-Koerper kommt ohne Werkstoff (weiss) und brannte in Eevee
         # aus; Workbench faerbt ihn selbst.
         koerper = self.figur.basemesh.data
-        koerper.materials.clear()
-        haut = bpy.data.materials.new('Haut')
-        self.faerben(haut, self.HAUTFARBE)
-        koerper.materials.append(haut)
+        if not koerper.materials:      # eine GLB-Figur bringt ihren Atlas mit (BlenderModel)
+            haut = bpy.data.materials.new('Haut')
+            self.faerben(haut, self.HAUTFARBE)
+            koerper.materials.append(haut)
 
     @staticmethod
     def faerben(werkstoff, farbe):

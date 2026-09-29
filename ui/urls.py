@@ -22,9 +22,10 @@ urlpatterns = [
     # bekommt; dann waere der eigene Pfad sonst stumm verdeckt.
     path('hilfe/kleidung/', include('core.urls_hilfe')),
     path('hilfe/video-to-bvh/', include('core.urls_hilfe_video')),
+    path('hilfe/bvh-aus-video/', include('core.urls_hilfe_bvh_video')),
     path('hilfe/animationseffekte/', include('core.urls_hilfe_effekte')),
     path('hilfe/architektur/', include('core.urls_hilfe_architektur')),
-    path('hilfe/kopf-pipelines/', include('core.urls_hilfe_kopf')),
+    path('hilfe/2d-3d/', include('core.urls_hilfe_kopf')),
     path('hilfe/', include('djangobase.urls')),
     # Statik unter einer Adresse, die die Fassung TRAEGT
     # (`/statik/v-<zahl>/viewer/...`). Der Grund steht in

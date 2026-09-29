@@ -35,6 +35,11 @@
    diese Datei als einzige auf ALLEN drei Auftragsseiten liegt (Modell aus Bildern, Mesh,
    Mesh to 3D) — Knopf und Verhalten: `viewer/gemeinsam/auftragloeschen.js`. */
 .auftrag-kopfknoepfe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+/* Name des Auftrags in der Überschrift ändern (`viewer/gemeinsam/auftragname.js`, 29.09.2026) */
+.auftrag-name-editierbar { cursor: text; border-bottom: 1px dashed transparent; }
+.auftrag-name-editierbar:hover { border-bottom-color: var(--border, #3a4250); }
+.auftrag-name-stift { vertical-align: middle; }
+.auftrag-name-eingabe { font-size: inherit; font-weight: inherit; min-width: 20ch; width: 60%; max-width: 100%; }
 .bildmodell-schritte { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; }
 .bildmodell-schritt { display: flex; align-items: center; gap: 6px; color: var(--text-muted, #888); font-size: 0.9rem; }
 .bildmodell-schrittpunkt { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border, #3a4250); }

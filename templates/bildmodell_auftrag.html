@@ -29,7 +29,8 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 <div class="page-header bildmodell-kopf">
     <div>
         <a href="{% url 'bildmodell' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Modell aus Dateien</a>
-        <h1><i class="fas fa-user"></i> <span id="auftrag-name">{{ job.name }}</span>
+        <h1><i class="fas fa-user"></i> <span id="auftrag-name"
+                data-adresse="{% url 'auftrag_name' 'bildmodell' job.id %}">{{ job.name }}</span>
             <small class="hb-hinweis">{{ job.get_typ_display }} · {{ job.kennung }}</small></h1>
     </div>
     <div class="auftrag-kopfknoepfe">
@@ -296,7 +297,9 @@ JSON in die Seite, die Nachfrage läuft über `/api/bildmodell/<id>/zustand/`.
 <script type="module">
 import { Bildmodellseite } from "{% fassungspfad 'viewer/bildmodell/index.js' %}";
 import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 Bildmodellseite.aufbauen();
 Auftragloeschen.binden();
+Auftragname.binden();
 </script>
 {% endblock %}

@@ -1,0 +1,60 @@
+/* Schaltknöpfe: eine Reihe kleiner Kacheln, die je einen Teil der Ansicht ein- und ausschalten.
+   Angelegt am 29.09.2026 für die Schalterreihe über der 3D-Ansicht in „Mesh to 3D" (Edgar: „toggle
+   boxen wie bei", dazu sein Bildschirmfoto der Theatre-Werkzeugleiste).
+
+   DER STIL IST NICHT NEU: Er stand bis dahin dreifach im Projekt — als `.toolbar-btn` INLINE in
+   `templates/theatre.html` (Edgars Vorlage), als `.viewer-btn` in `viewer_huelle.css` (Szene,
+   Modellseite) und als `.rc-toggle-btn` auf der Ergebnisseite. Hier steht er zum ersten Mal in einer
+   Datei, die jede Seite laden kann, ohne das Layout einer Viewer-Seite mitzunehmen (`viewer_huelle.css`
+   bringt `.viewer-panel`, `.panel-section` und mehr mit). Die drei anderen Stellen sind NICHT
+   umgestellt — das wäre ein eigener Auftrag; wer es tut, prüft Theatre, Szene und Ergebnisseite im
+   Browser nach.
+
+   Farben kommen aus `theme.css` (`--accent` ist das Rot der aktiven Kachel). */
+
+.schalterleiste {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.schaltknopf {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.2s;
+}
+
+.schaltknopf i { font-size: 0.9em; }
+
+.schaltknopf:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+
+.schaltknopf.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Gesperrt: es gibt nichts zu schalten (keine Frisur, keine Kleidung, „Nebeneinander" ohne beide
+   Seiten). Der Knopf behält seinen Stand — blass heißt „wirkt gerade nicht", nicht „ist aus". */
+.schaltknopf:disabled { opacity: 0.4; cursor: default; }
+
+/* Ein Auswahlfeld in der Reihe (etwa die Haarquelle) sieht sonst aus wie ein Fremdkörper: ein
+   natives `select` erbt kein Theme und steht weiß in der dunklen Leiste (`kontrast-lesbarkeit.md`).
+   `color-scheme: dark` gilt der aufgeklappten Liste — ohne sie rendert Windows weiß auf weiß. */
+.schalterleiste select {
+    padding: 5px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    color-scheme: dark;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.schalterleiste select:hover { border-color: var(--accent); }

@@ -12,6 +12,7 @@ erst NACH `register_converter` eingebunden.
 from django.urls import path
 
 from .api.mesh import Meshendpunkte
+from .api.meshfotos import Meshfotoendpunkte
 
 __all__ = ['MESH']
 
@@ -25,6 +26,12 @@ MESH = [
     path('api/mesh/<uuid:job_id>/anhalten/', Meshendpunkte.anhalten, name='mesh_anhalten'),
     path('api/mesh/<uuid:job_id>/bilder/', Meshendpunkte.bilder, name='mesh_bilder'),
     path('api/mesh/<uuid:job_id>/rolle/<str:datei>/', Meshendpunkte.rolle, name='mesh_rolle'),
+    # Fotos austauschen (29.09.2026) — `core/api/meshfotos.py`.
+    path('api/mesh/<uuid:job_id>/fotos/', Meshfotoendpunkte.hinzufuegen, name='mesh_fotos_hinzufuegen'),
+    path('api/mesh/<uuid:job_id>/foto/<str:datei>/ersetzen/', Meshfotoendpunkte.ersetzen,
+         name='mesh_foto_ersetzen'),
+    path('api/mesh/<uuid:job_id>/foto/<str:datei>/loeschen/', Meshfotoendpunkte.loeschen,
+         name='mesh_foto_loeschen'),
     path('api/mesh/<uuid:job_id>/gewicht/<str:datei>/', Meshendpunkte.gewicht, name='mesh_gewicht'),
     path('api/mesh/<uuid:job_id>/reihenfolge/', Meshendpunkte.reihenfolge, name='mesh_reihenfolge'),
     path('api/mesh/<uuid:job_id>/verwendung/', Meshendpunkte.verwendung, name='mesh_verwendung'),

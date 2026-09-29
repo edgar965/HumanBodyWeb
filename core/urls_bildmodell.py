@@ -14,6 +14,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from .api.auftragsduplikat import Auftragsduplikatendpunkte
+from .api.auftragsname import Auftragsnameendpunkte
 from .api.bildmodell import Bildmodellendpunkte
 from .api.bildmodelldateien import Bildmodelldateiendpunkte
 from .api.bildmodellfreisteller import Bildmodellfreistellerendpunkte
@@ -41,6 +42,9 @@ BILDMODELL = [
     # „Job duplizieren" über allen drei Tabellen: Eingabe und Parameter, keine Ausgabe.
     path('api/modell-aus-dateien/<str:bereich>/duplizieren/', Auftragsduplikatendpunkte.duplizieren,
          name='auftraege_duplizieren'),
+    # Den Namen eines Auftrags ändern — ein Endpunkt für alle drei Reiter (29.09.2026).
+    path('api/modell-aus-dateien/<str:bereich>/<uuid:job_id>/name/', Auftragsnameendpunkte.setzen,
+         name='auftrag_name'),
     path('api/bildmodell/anlegen/', Bildmodellendpunkte.anlegen, name='bildmodell_anlegen'),
     path('api/bildmodell/katalog/', Bildmodellendpunkte.katalog, name='bildmodell_katalog'),
     path('api/bildmodell/loeschen/', Bildmodellendpunkte.mehrere_loeschen,

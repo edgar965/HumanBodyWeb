@@ -172,6 +172,8 @@ class Meshfigurende:
             praefix=self.PRAEFIX,
             hautton=hautton,
             hd=hd,
+            # Ein ganz bekleideter Rumpf hat keine Netzfarbe — seine Kachel ist die getönte Daz-Haut, nicht die weiße.
+            auch_ohne_deckung=True,
         )
         return {
             'kacheln': {str(k): self._name(p) for k, p in kacheln.items()},

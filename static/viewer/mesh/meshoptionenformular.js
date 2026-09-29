@@ -47,6 +47,8 @@ export class Meshoptionenformular {
             zeile.appendChild(Meshoptionenformular._mehrfach(feld, wert));
         } else if (feld.art === 'zahl') {
             zeile.appendChild(Meshoptionenformular._zahl(feld, wert));
+        } else if (feld.art === 'text') {
+            zeile.appendChild(Meshoptionenformular._text(feld, wert));
         }
         // Nur bei den Feineinstellungen steht der Hinweis auch als Text da — sie sind neu
         // und erklärungsbedürftig; bei den Hauptfeldern bliebe es beim Tooltip, sonst wird
@@ -104,6 +106,18 @@ export class Meshoptionenformular {
         return eingabe;
     }
 
+    /** Textfeld (Pfad, Name) — Art `text`, seit dem 29.09.2026 für die BVH-Datei von „BlenderModel". */
+    static _text(feld, wert) {
+        const eingabe = document.createElement('input');
+        eingabe.type = 'text';
+        eingabe.name = feld.schluessel;
+        eingabe.className = 'viewer-eingabe';
+        eingabe.autocomplete = 'off';
+        eingabe.spellcheck = false;
+        eingabe.value = String(wert ?? '');
+        return eingabe;
+    }
+
     /** Liest die aktuell im Behälter stehenden Werte als `{schluessel: wert}`. */
     static lesen(behaelter) {
         const aus = {};
@@ -111,6 +125,7 @@ export class Meshoptionenformular {
         for (const eingabe of behaelter.querySelectorAll('input[type="number"][name]')) {
             aus[eingabe.name] = Number(eingabe.value);
         }
+        for (const eingabe of behaelter.querySelectorAll('input[type="text"][name]')) aus[eingabe.name] = eingabe.value;
         for (const gruppe of behaelter.querySelectorAll('.mesh-kaestchengruppe[data-feld]')) {
             aus[gruppe.dataset.feld] = [...gruppe.querySelectorAll('input:checked')].map(k => k.value);
         }

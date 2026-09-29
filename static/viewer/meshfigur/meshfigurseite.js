@@ -3,8 +3,11 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
 import { Meshfigurbuehne } from './meshfigurbuehne.js';
 import { Meshfigurberichte } from './meshfigurberichte.js';
+import { Meshfigureinstellungen } from './meshfigureinstellungen.js';
 import { Meshfigurexport } from './meshfigurexport.js';
+import { Meshfigurfrisur } from './meshfigurfrisur.js';
 import { Meshfigurhaar } from './meshfigurhaar.js';
+import { Meshfigurkleidung } from './meshfigurkleidung.js';
 import { Meshfigurpfade } from './meshfigurpfade.js';
 import { Meshfigurspeicher } from './meshfigurspeicher.js';
 
@@ -19,7 +22,8 @@ export class Meshfigurseite {
     static TAKT_MS = 2000;
     static NAMEN = {
         erkennung: 'Erkennung', kalibrierung: 'Kalibrierung', koerper: 'Körperkette', gesicht: 'Gesichtskette',
-        haar: 'Haar', rest: 'Eigenmorph', textur: 'Textur', vorschau: 'Vorschau', speichern: 'Speichern',
+        haar: 'Haar', kleidung: 'Kleidung', rest: 'Eigenmorph', textur: 'Textur', vorschau: 'Vorschau',
+        frisur: 'Frisur', speichern: 'Speichern',
     };
 
     static starten(jobId) {
@@ -55,10 +59,13 @@ export class Meshfigurseite {
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
         this.pfade = new Meshfigurpfade();
         this.pfade.fuellen(this.zustand.eingang);
+        this.einstellungen = new Meshfigureinstellungen(this);
         this.buehne = new Meshfigurbuehne(this);
         this.berichte = new Meshfigurberichte(this);
         this.export = new Meshfigurexport(this);
         this.haar = new Meshfigurhaar(this);
+        this.kleidung = new Meshfigurkleidung(this);
+        this.frisur = new Meshfigurfrisur();
         this.speicher = new Meshfigurspeicher(this);
         this.zeigen();
         this.verfolgen();
@@ -73,8 +80,10 @@ export class Meshfigurseite {
         const ab = document.getElementById('ab-schritt').value;
         try {
             await Knopfsperre.waehrend(document.getElementById('starten'), async () => {
-                const antwort = await Serverabruf.senden(this.adresse('starten/'),
-                                                         { optionen, ab, pfade: this.pfade.lesen() });
+                // Pfade und Kopfnetz-Schalter speichert die Seite selbst (`Meshfigureinstellungen`) —
+                // der Start schickt sie nicht noch einmal, sonst käme ein abgeschaltetes Kopfnetz zurück.
+                if (!await this.einstellungen.jetzt()) throw new Error('Eingaben nicht gespeichert');
+                const antwort = await Serverabruf.senden(this.adresse('starten/'), { optionen, ab });
                 if (antwort.error) throw new Error(antwort.error);
                 this.pfade.melden(antwort.neu_eingelesen
                     ? 'Netze neu eingelesen — der Lauf beginnt bei der Erkennung.'
@@ -134,6 +143,8 @@ export class Meshfigurseite {
         this.schritte();
         this.berichte.zeigen(z);
         this.haar.zeigen(z);
+        this.kleidung.zeigen(z);
+        this.frisur.zeigen(z);
         this.buehne.zeigen(z);
         this.export.zeigen(z);
         this.speicher.zeigen(z);

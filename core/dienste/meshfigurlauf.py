@@ -7,12 +7,16 @@ python14 — zwischen den Runden wird die Figur ECHT nachgerechnet (Formelketten
 skalierung, Gelenkkorrekturen), bevor die nächste Runde auf ihr aufsetzt.
 
     erkennung     Netz ausrichten, Landmarken (Körper 33, Gesicht 478), Übersichtsbilder, Vorlagebild
+    haar          das Haar aus dem Kopfnetz schneiden (`Meshfigurhaar`, Paket `Haar`)
+    kleidung      die Kleidung aus dem Körpernetz schneiden (`Meshfigurkleidung`, Paket `Kleidung`) — Hautton der
+                  kahlen Stellen, Bänder, Stücke; das Objekt auf der Figur entsteht am Ende von „vorschau"
     kalibrierung  nur einmal je Rechner: Genesis durch denselben Detektor (`G9netzlandmarken`)
     koerper       Körperkette in Runden (`Meshfigurkette`), dazwischen ggf. auf „Körpergröße"
     gesicht       Gesichtskette (296 Kopfregler, 478 Gesichtspunkte)
     rest          Eigenmorph aus dem Rest (`Meshfigurende`)
     textur        Farbe des Netzes auf die Genesis-Kacheln (`Meshfigurende`)
     vorschau      Bilder, Abstände, Vergleich, Testfall (`Meshfigurvorschau`)
+    frisur        Daz-Frisur / „Haar Eigen" gegen das Netzhaar, Haarkarten (`Meshfigurfrisur`)
     speichern     Modell und Ablage in `output/Export/MeshTo3D` (`Meshfigurspeichern`)
 
 Runner-Zeilen: `[fortschritt] <0..100> <Text>` (je Schritt auf sein Band umgerechnet),
@@ -39,18 +43,20 @@ __all__ = ['Meshfigurlauf']
 
 
 class Meshfigurlauf:
-    SCHRITTE = ('erkennung', 'haar', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau',
-                'speichern')
+    SCHRITTE = ('erkennung', 'haar', 'kleidung', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur',
+                'vorschau', 'frisur', 'speichern')
     BAENDER = {
         'erkennung': (0, 10),
-        'haar': (10, 12),
+        'haar': (10, 11),
+        'kleidung': (11, 12),
         'kalibrierung': (12, 14),
         'koerper': (14, 62),
         'gesicht': (62, 80),
         'rest': (80, 85),
         'textur': (85, 92),
-        'vorschau': (92, 97),
-        'speichern': (97, 100),
+        'vorschau': (92, 95),
+        'frisur': (95, 99),
+        'speichern': (99, 100),
     }
     RUNNER = '_run_meshfigur.py'
     #: So lange darf der Runner schweigen (Modelle laden, eine lange Stufe).
@@ -71,8 +77,10 @@ class Meshfigurlauf:
 
     def ausfuehren(self, ab=None):
         from .meshfigurende import Meshfigurende
+        from .meshfigurfrisur import Meshfigurfrisur
         from .meshfigurhaar import Meshfigurhaar
         from .meshfigurkette import Meshfigurkette
+        from .meshfigurkleidung import Meshfigurkleidung
         from .meshfigurspeichern import Meshfigurspeichern
         from .meshfigurvorschau import Meshfigurvorschau
 
@@ -83,12 +91,14 @@ class Meshfigurlauf:
         schritte = {
             'erkennung': self._erkennung,
             'haar': lambda: Meshfigurhaar(self).ausfuehren(),
+            'kleidung': lambda: Meshfigurkleidung(self).ausfuehren(),
             'kalibrierung': self._kalibrierung,
             'koerper': lambda: Meshfigurkette(self).koerper(),
             'gesicht': lambda: Meshfigurkette(self).gesicht(),
             'rest': lambda: Meshfigurende(self).rest(),
             'textur': lambda: Meshfigurende(self).textur(),
             'vorschau': lambda: Meshfigurvorschau(self).ausfuehren(),
+            'frisur': lambda: Meshfigurfrisur(self).ausfuehren(),
             'speichern': lambda: Meshfigurspeichern(self).ausfuehren(),
         }
         t0 = time.perf_counter()

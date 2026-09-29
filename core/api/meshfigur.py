@@ -190,9 +190,13 @@ class Meshfigurendpunkte:
             except ValueError as fehler:
                 return JsonResponse({'error': str(fehler)}, status=400)
             if neu_eingelesen:
-                # Ein anderes Netz ist ein anderer Auftrag: alles ab der Erkennung.
-                ab = None
                 job.save(update_fields=['eingang', 'updated_at'])
+        # Auch ein Netz, das die Seite schon vorher gespeichert hat (`Meshfigureinstellungen`).
+        from .meshfigureinstellungen import Meshfigureinstellungen
+
+        if Meshfigureinstellungen.neu_eingelesen(job) or neu_eingelesen:
+            # Ein anderes Netz ist ein anderer Auftrag: alles ab der Erkennung.
+            ab, neu_eingelesen = None, True
         pid = Meshfigurarbeiter.starten(job, ab=ab)
         return JsonResponse({'ok': True, 'pid': pid, 'neu_eingelesen': neu_eingelesen})
 

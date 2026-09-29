@@ -69,8 +69,24 @@ class Meshfigurvorschau:
         }
         self.lauf.melden(0.87, 'Haar als Objekt')
         self.haarobjekt()
+        self.lauf.melden(0.88, 'Kleidung als Objekt')
+        self.kleidungsobjekt()
         self.lauf.melden(0.9, 'Testfall')
         self.job.ergebnis['testfall'] = self.testfall(stellung, punkte)
+
+    def kleidungsobjekt(self):
+        """Die Kleidung aus Schritt „kleidung" als Objekt auf der Figur (`Meshfigurkleidung.objekt`) — wie das Haar
+        erst jetzt, wenn `genesis_ende.npz` und `posiert.npy` zur Figur gehören (das Netz steht in der Haltung der
+        Person, die Bühne zeigt die Figur in Ruhe). Scheitert es, steht der Grund in `ergebnis.kleidung.objekt`;
+        die Vorschau selbst ist davon unberührt."""
+        from .meshfigurkleidung import Meshfigurkleidung
+
+        try:
+            Meshfigurkleidung(self.lauf).objekt()
+        except Exception as fehler:  # noqa: BLE001 — sichtbar im Ergebnis und im Log, der Lauf geht weiter
+            logger.exception('Mesh to 3D %s: Kleidungsobjekt gescheitert', self.job.kennung)
+            if self.job.ergebnis.get('kleidung'):
+                self.job.ergebnis['kleidung']['objekt'] = {'fehler': str(fehler)[:300]}
 
     def haarobjekt(self):
         """Das Haar aus Schritt „haar" als Objekt auf der Figur (`Meshfigurhaar.objekt`) — hier, weil erst

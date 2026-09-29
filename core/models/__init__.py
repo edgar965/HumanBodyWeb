@@ -8,6 +8,7 @@ unveraendert weiterlaufen.
 
 from .auftrag import BVHJob
 from .bildmodellauftrag import Bildmodellauftrag
+from .blendermodellauftrag import Blendermodellauftrag
 from .bvhdatei import BVHFile
 from .effektauftrag import Effektauftrag
 from .einstellungen import AppSettings
@@ -16,4 +17,4 @@ from .meshauftrag import Meshauftrag
 from .meshfigurauftrag import Meshfigurauftrag
 
 __all__ = ['BVHJob', 'BVHFile', 'AppSettings', 'Effektauftrag', 'PhotoAnalysisJob',
-           'Bildmodellauftrag', 'Meshauftrag', 'Meshfigurauftrag']
+           'Bildmodellauftrag', 'Blendermodellauftrag', 'Meshauftrag', 'Meshfigurauftrag']

@@ -15,6 +15,9 @@ MENUE = [
             # Seit 26.09.2026 hier statt unter HumanBody (Edgar: „lege das Menü unter
             # ‚Dashboard', vor Theatre"); Reiter 3D (Genesis) und Mesh (Fotos → Netz).
             {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/modell-aus-dateien/'},
+            # Seit 29.09.2026 (Edgar: „mach ein neues Menü Dashboard - BlenderModel"): Fotos → Netz → Figur,
+            # eine Kopie des Reiters „Mesh to 3D" mit eigener Pipeline (`core/dienste/blendermodelllauf.py`).
+            {'label': 'BlenderModel', 'icon': 'bi-badge-3d', 'url': '/blendermodell/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -92,17 +95,26 @@ HILFE_EXTRA = [
         'url': '/hilfe/video-to-bvh/',
         'aktiv': 'hilfe_video_to_bvh',
     },
+    # Eigene SMPL-X-Pipeline als eigenständige Seite mit Startskript zum
+    # Herunterladen (Edgar, 29.09.2026: „mach eine Seite Hilfe - BVH aus
+    # Video … und ein Skript erstellst (downloadbar)").
+    {
+        'label': 'BVH aus Video',
+        'icon': 'bi-person-video3',
+        'url': '/hilfe/bvh-aus-video/',
+        'aktiv': 'hilfe_bvh_aus_video',
+    },
     # Foto-zu-3D-Kopf-Verfahren: eigene (gemessen) und fremde (recherchiert) —
     # Edgar (22.09.2026): „mach seite Hilfe - Foto - 3D in der du alle Modell
     # erwähnst … recherchiere was von denen am besten ist, und was davon du
-    # nachbauen kannst"; benannt „2D->3D" auf Edgars Wunsch (23.09.2026).
-    # Adresse/Dateinamen bleiben `kopf_pipelines`/`kopf-pipelines` (nur die
-    # Beschriftung wurde geändert, um nicht mit dem Menüpunkt „Foto To 3D"
-    # (Ganzkörper-Werkzeug) zu kollidieren).
+    # nachbauen kannst"; benannt „2D->3D" auf Edgars Wunsch (23.09.2026), seit
+    # 29.09.2026 auch die ADRESSE (`/hilfe/2d-3d/` statt `/hilfe/kopf-pipelines/`
+    # — Python-Dateinamen/interner Django-Name bleiben `kopf_pipelines`, `>`
+    # ist in einer URL nicht sauber darstellbar).
     {
         'label': '2D -> 3D',
         'icon': 'bi-person-bounding-box',
-        'url': '/hilfe/kopf-pipelines/',
+        'url': '/hilfe/2d-3d/',
         'aktiv': 'hilfe_kopf_pipelines',
     },
     # Mimik, Haare, Kleidung, Wind — wie Studios es machen und welcher

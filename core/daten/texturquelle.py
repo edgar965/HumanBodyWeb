@@ -16,9 +16,11 @@ __all__ = ['Texturquelle']
 
 
 class Texturquelle:
-    #: Adresse → (Auftragsart). Die Endpunkte: `Meshfigurendpunkte.datei`, `Bildmodellendpunkte.datei`.
+    #: Adresse → (Auftragsart). Die Endpunkte: `Meshfigurendpunkte.datei`, `Bildmodellendpunkte.datei`,
+    #: `Blendermodellendpunkte.datei` (seit 29.09.2026).
     MUSTER = re.compile(
-        r'^/api/(?P<art>meshfigur|bildmodell)/(?P<id>[0-9a-fA-F-]{36})/datei/ergebnis/(?P<name>[^/?#]+)/?$'
+        r'^/api/(?P<art>meshfigur|bildmodell|blendermodell)/(?P<id>[0-9a-fA-F-]{36})/datei/ergebnis/'
+        r'(?P<name>[^/?#]+)/?$'
     )
 
     @classmethod
@@ -35,6 +37,12 @@ class Texturquelle:
 
                 job = Meshfigurauftrag.objects.filter(pk=treffer['id']).first()
                 return Meshfigurablage(job.kennung).datei('ergebnis', name) if job else None
+            if treffer['art'] == 'blendermodell':
+                from ..daten.blendermodellablage import Blendermodellablage
+                from ..models import Blendermodellauftrag
+
+                job = Blendermodellauftrag.objects.filter(pk=treffer['id']).first()
+                return Blendermodellablage(job.kennung).datei('ergebnis', name) if job else None
             from ..daten.bildmodellablage import Bildmodellablage
             from ..models import Bildmodellauftrag
 

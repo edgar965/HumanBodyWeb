@@ -76,9 +76,14 @@ class Bvhnamen:
         m = self.BILDZEIT.search(self.bewegung)
         return int(round(1.0 / float(m.group(1)))) if m and float(m.group(1)) > 0 else 0
 
+    #: Fingergelenke der SMPL-X-Dateien (`left_index1` …): Der SMPL-Rigplan des Retargeters kennt keine
+    #: Finger; sie bleiben unbenannt in der Datei stehen und werden nicht übertragen (29.09.2026,
+    #: `DanceKurz.bvh` aus VideoToBVH mit 30 Fingergelenken).
+    FINGER = re.compile(r'^(left|right)_(index|middle|ring|pinky|thumb)\d$')
+
     def unbekannte(self):
-        """Gelenke, die der Retargeter nicht kennt — leer heisst: passt."""
-        return [g for g in self.gelenke() if g not in self.NAMEN]
+        """Gelenke, die der Retargeter nicht kennt — leer heisst: passt. Finger zaehlen nicht."""
+        return [g for g in self.gelenke() if g not in self.NAMEN and not self.FINGER.match(g)]
 
     # ------------------------------------------------------------ Umbenennen
 

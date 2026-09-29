@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}BlenderModel · {{ job.name }}{% endblock %}
+
+{% comment %}
+Auftragsseite „BlenderModel" (Edgar, 29.09.2026: „Im Job soll es eine Bildauswahl geben wie in [Mesh-Auftrag] und die
+3D Modell Ausgabe wie in [Mesh-to-3D-Auftrag] sowie alle Optionen für Jobs neu berechnen, umbenennen usw"):
+oben der Lauf (Schritte mit Dauer, Fortschritt, neu ab einem Schritt, Anhalten), darunter die BILDAUSWAHL (Fotos mit
+Rolle, Gewicht, Platz; hinzufügen, ersetzen, entfernen — wie im Reiter „Mesh"), dann die 3D-AUSGABE wie bei „Mesh to
+3D": die Figur mit den gestellten Reglern, Eigenmorph und Textur neben dem Netz aus den Fotos, Kennzahlen, Export als
+GLB, Speichern als Genesis-Figur, die Optionen beider Gruppen — und die Berichte (Haar, Kleidung, Vergleich, Ketten,
+Regler, Erkennung). Die Anzeige der Figur ist die von „Mesh to 3D" (`static/viewer/meshfigur/`), unverändert
+benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Katalog kommen als JSON in die Seite, Nachfrage über
+`/api/blendermodell/<id>/zustand/`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/blendermodell.css' %}">
+{% comment %}Dieselbe Importkarte wie die Szene und „Mesh to 3D": three r170 VOLLSTÄNDIG — der Export (`Modellexport` mit
+GLTFExporter) und die Netzlader fehlen in der lokalen Kopie unter static/vendor, und die Szenenmodule des Exports
+erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
+{% endblock %}
+
+{% block content %}
+{{ daten|json_script:"blendermodell-daten" }}
+
+<div class="page-header mesh-auftragskopf">
+    <div>
+        <a href="{% url 'blendermodell' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> BlenderModel</a>
+        <h1><i class="fas fa-cube"></i> <span id="auftrag-name"
+                data-adresse="{% url 'auftrag_name' 'blendermodell' job.id %}">{{ job.name }}</span>
+            <small class="hb-hinweis">BlenderModel · {{ job.kennung }}</small></h1>
+    </div>
+    <div class="auftrag-kopfknoepfe">
+        <div class="bildmodell-status" id="auftrag-status"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
+                data-adresse="{% url 'blendermodell_loeschen' job.id %}"
+                data-ziel="{% url 'blendermodell' %}"
+                data-frage="Diesen Auftrag samt Fotos und Ergebnisdateien löschen? Gespeicherte Modelle und die Ablage in BlenderModel bleiben.">
+            <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
+    </div>
+</div>
+
+{% comment %}Zwei Reiter (Edgar, 29.09.2026: „Iterationen so dass man den Fortschritt sehen kann, in einem zweiten Tab des
+Jobs"): „Auftrag" ist die Seite wie bisher, „Iterationen" die Runden des Kostüm-Kreislaufs (`Blendermodelliterationen`).{% endcomment %}
+<div class="seitenreiter" role="tablist" id="auftrag-reiter">
+    <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cube"></i> Auftrag</button>
+    <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
+        Iterationen <span id="iterationen-anzahl"></span></button>
+</div>
+<div id="reiter-auftrag">
+<div class="card" id="lauf">
+    <ol class="meshfigur-schritte" id="schritte"></ol>
+    <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
+    <div class="bildmodell-laufzeile">
+        <span id="fortschritt-text" class="hb-hinweis"></span>
+        <span class="bildmodell-laufknoepfe">
+            <label class="hb-hinweis">ab <select id="ab-schritt" class="viewer-select"></select></label>
+            <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        </span>
+    </div>
+    <div class="hb-hinweis" id="lauf-hinweis">Jede Eingabe wird sofort gespeichert. „Neu berechnen“ beginnt beim gewählten
+        Schritt: „Grundfigur“ baut die Genesis-9-Figur neu, „Kostüm“ rechnet weitere Runden des Kreislaufs (immer ab dem
+        besten bisherigen Kostüm), danach Rig, Blender-Film und Ablage. Nur weitere Kostüm-Runden: Reiter „Iterationen“ →
+        „Weiter iterieren“. <span id="einstellungen-meldung"></span></div>
+    <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
+</div>
+
+<div class="card" id="bildauswahl">
+    <h2>Bildauswahl</h2>
+    <p class="hb-hinweis blendermodell-fotohinweis">Die Fotos sind die VORLAGE des Kostüm-Kreislaufs: Jede Runde rendert das
+        Kostüm aus dem Blickwinkel jedes Fotos und misst die Abweichung. Den Blickwinkel gibt die Rolle (Vorne, Links,
+        Rechts, Hinten) oder der Name eines Schnittbilds des Ansichtenbogens („ansicht_R_S“); der Kreislauf misst ihn
+        einmal nach. „Nicht verwenden“ schließt ein Foto aus (etwa den ganzen Bogen), das Gewicht zählt es mehr oder
+        weniger. Platz 1 ist die Vorlage in der Übersicht. Hinzufügen, Ersetzen und Entfernen gehen jederzeit; ein
+        laufender Kreislauf sieht die Änderung ab dem nächsten Lauf.</p>
+    <div class="mesh-fotoknoepfe" id="foto-knoepfe"></div>
+    <div class="mesh-fotoliste" id="fotoliste"></div>
+</div>
+
+{% comment %}Die Optionen stehen in einer eigenen Karte über die volle Breite, nicht in der Seitenspalte der Bühne wie bei
+„Mesh to 3D“: Zwei Gruppen mit zusammen ~50 Feldern machen die Spalte so lang, dass die Bühne (Flex, streckt sich mit)
+über 3.000 px hoch wurde (gemessen 29.09.2026).{% endcomment %}
+{% comment %}„Netz aus den Fotos“ (Formmodell TRELLIS.2/Hunyuan3D) ist am 29.09.2026 ausgebaut — auf der Hauptseite,
+hier und in der Pipeline (Edgar: „trellis soll nicht laufen"): die Vorlagen dieses Bereichs sind gemalte
+Illustrationen, TRELLIS/Hunyuan3D liefern darauf kein brauchbares Netz. Der Körper ist die Grundfigur, das Kostüm
+baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
+<div class="card" id="optionen-karte">
+    <h2>Optionen</h2>
+    <h3 class="blendermodell-gruppe">Grundfigur</h3>
+    <div class="mesh-optionen" id="blendermodell-optionen-figur"></div>
+    <h3 class="blendermodell-gruppe">Kostüm-Kreislauf</h3>
+    <div class="mesh-optionen" id="blendermodell-optionen-kostuem"></div>
+    <h3 class="blendermodell-gruppe">Blender — Bewegung und Video</h3>
+    <div class="mesh-optionen" id="blendermodell-optionen-blender"></div>
+</div>
+
+<div class="card">
+    <div class="mesh-hauptbereich">
+        <div class="meshfigur-buehnenspalte">
+            {% comment %}Jeder Teil der Bühne einzeln schaltbar — die Vorgabe steht hier als Klasse `active`, gebunden
+            werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`. „Mesh“ ist hier das Netz, das der Lauf aus
+            den Fotos gebaut hat.{% endcomment %}
+            <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
+                <button type="button" class="schaltknopf" data-schalter="mesh"
+                        title="Das Netz, das der Lauf aus den Fotos gebaut hat, in der Lage der Erkennung">
+                    <i class="fas fa-draw-polygon"></i> Mesh</button>
+                <button type="button" class="schaltknopf active" data-schalter="haare"
+                        title="Das Haar auf der Figur — welches, wählt das Feld daneben">
+                    <i class="fas fa-hat-wizard"></i> Haare</button>
+                <label hidden id="buehne-haarwahl-feld" title="Welches Haar die Figur trägt — auch im Export: die Frisur aus Schritt „Frisur“ (Daz oder „Haar Eigen“), das Haar aus dem Netz oder die Haarkarten aus seiner Schale">
+                    <select id="buehne-haarwahl" aria-label="Welches Haar"></select></label>
+                <button type="button" class="schaltknopf active" data-schalter="kleider"
+                        title="Die Kleidungsstücke der Figur — auch im Export">
+                    <i class="fas fa-tshirt"></i> Kleider</button>
+                <button type="button" class="schaltknopf" data-schalter="nebeneinander"
+                        title="Netz und Figur nebeneinander statt übereinander">
+                    <i class="fas fa-columns"></i> Nebeneinander</button>
+                <button type="button" class="schaltknopf active" data-schalter="modell"
+                        title="Die angepasste Genesis-9-Figur">
+                    <i class="fas fa-user"></i> 3DModell</button>
+            </div>
+            <div class="mesh-betrachter" id="buehne">
+                <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>
+            </div>
+            {% comment %}Bewegung LIVE auf der Figur oben, nicht als eigenes Video-Fenster (Edgar, 29.09.2026:
+            „ich brauche kein extra Animationsfenster, Play soll im Hauptausgabefenster funktionieren"):
+            `Blendermodellanimation` spielt die retargetete BVH-Bewegung per `THREE.AnimationMixer` auf dem
+            Genesis-9-Modell der Bühne ab — dieselbe Technik wie das BVH-Studio.{% endcomment %}
+            <div class="blendermodell-animationsleiste" id="animations-leiste" hidden>
+                <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück">
+                    <i class="fas fa-step-backward"></i></button>
+                <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause">
+                    <i class="fas fa-play"></i></button>
+                <button type="button" id="anim-vor" class="btn btn-secondary btn-sm" title="Ein Bild vor">
+                    <i class="fas fa-step-forward"></i></button>
+                <input type="range" id="anim-scrubber" class="blendermodell-scrubber" min="0" max="1000" value="0" step="1">
+                <span id="anim-zeit" class="hb-hinweis blendermodell-animationszeit">0:00 / 0:00</span>
+            </div>
+        </div>
+        <div class="mesh-seitenspalte blendermodell-seitenspalte">
+            <div>
+                <h2>Ergebnis</h2>
+                <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
+                <div class="meshfigur-export">
+                    <div class="meshfigur-exportoptionen" id="export-optionen">
+                        <label>Textur
+                            <select id="export-aufloesung" class="viewer-select">
+                                <option value="0" selected>Original</option>
+                                <option value="2048">2048 px</option>
+                                <option value="1024">1024 px</option>
+                                <option value="512">512 px</option>
+                            </select>
+                        </label>
+                        <label><input type="checkbox" id="export-textur" checked> mit Textur</label>
+                        <label><input type="checkbox" id="export-rig" checked> mit Rig (Skelett)</label>
+                        <label class="meshfigur-exportname">Dateiname
+                            <input type="text" id="export-name" autocomplete="off" spellcheck="false"></label>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="exportieren" disabled>
+                        <i class="fas fa-file-export"></i> <span>Figur als GLB exportieren</span></button>
+                    <div class="hb-hinweis" id="export-meldung"></div>
+                </div>
+                <div class="meshfigur-export">
+                    <div class="meshfigur-exportoptionen">
+                        <label>Format
+                            <select id="modell-format" class="viewer-select">
+                                <option value="genesis" selected>Eigenes Format (Genesis-Preset)</option>
+                                <option value="glb">GLB</option>
+                                <option value="blend">Blender (.blend)</option>
+                                <option value="obj">OBJ</option>
+                            </select>
+                        </label>
+                        <label class="meshfigur-exportname">Name
+                            <input type="text" id="modell-name" autocomplete="off" spellcheck="false"></label>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
+                        <i class="fas fa-save"></i> <span>Modell speichern</span></button>
+                    <div class="hb-hinweis" id="modell-meldung">Genesis-Preset erscheint unter „Charakter hinzufügen →
+                        Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre); GLB/Blender/OBJ gehen in die
+                        Export-Ablage des Auftrags.</div>
+                </div>
+            </div>
+            <div class="blendermodell-netzkarte">
+                <h3 class="mesh-pfadkopf">Gespeichert unter</h3>
+                <div class="mesh-pfade" id="blendermodell-pfade"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card" id="haar-karte">
+    <h2>Haar — Netz ohne Haar / nur Haar</h2>
+    <p class="hb-hinweis">Das Haar aus dem Netz geschnitten (Schritt „Haar", Paket <code>Haar</code>): je Fläche die Farbe
+    (keine Haut → Haar), das innere Gesicht bleibt immer Haut, geglättet auf dem Netz. Oben das Netz ohne Haar, unten das Haar
+    allein — beide im selben Ausschnitt. In der 3D-Ansicht oben sitzt dasselbe Haar als eigenes Objekt auf der Figur
+    (Auswahl „Haar").</p>
+    <div id="haar"></div>
+    <h3>Frisur</h3>
+    <p class="hb-hinweis">Schritt „Frisur": jede Frisur der Garderobe (Daz, Klone, „Haar Eigen") in jedem Stil auf der
+    Figur, gemessen als Hülle gegen die Hülle des Netzhaars; die besten bekommen ihre Formregler gestellt. Die Haarkarten
+    wachsen an der Schale des Netzhaars entlang. Welches Haar die Figur oben trägt, wählt „Haar" über der 3D-Ansicht.</p>
+    <div id="frisur"></div>
+</div>
+
+<div class="card" id="kleidung-karte">
+    <h2>Kleidung — Netz ohne Kleidung / nur Kleidung</h2>
+    <p class="hb-hinweis">Die Kleidung aus dem Netz geschnitten (Schritt „Kleidung“, Paket <code>Kleidung</code>): Was
+    nicht Haut ist, ist Stoff — Haut erkennt der Hautton der <em>kahlen</em> Stellen (Gesicht, Hände, Unterarme,
+    Unterschenkel), nicht der von Rumpf und Oberschenkeln, wo man Kleidung trägt. Ein Körperabschnitt gilt in Bändern
+    von 5 cm als Ganzes bedeckt oder kahl. Oben sitzt dieselbe Kleidung als eigenes Objekt auf der Figur (Schalter
+    „Kleider“); die Figur selbst ist der Körper darunter.</p>
+    <div id="kleidung"></div>
+</div>
+
+<div class="card" id="vergleich-karte">
+    <h2>Vergleich Netz · Figur · Abweichung</h2>
+    <p class="hb-hinweis">Unten die Tiefenabweichung aus derselben Kamera: <span class="meshfigur-rot">rot</span> = das Netz liegt
+    weiter außen (Figur dort zu dünn), <span class="meshfigur-blau">blau</span> = die Figur liegt weiter außen, Skala ±2 cm;
+    orange nur Netz (Haar, Fäuste), hellblau nur Figur.</p>
+    <div id="vergleich"></div>
+</div>
+
+<div class="card">
+    <h2>Körper- und Gesichtskette</h2>
+    <div class="meshfigur-ketten" id="ketten"></div>
+</div>
+
+<div class="card">
+    <h2>Gestellte Regler</h2>
+    <div id="regler"></div>
+</div>
+
+<div class="card">
+    <h2>Erkennung</h2>
+    <p class="hb-hinweis">Das Netz aus acht Richtungen und das Gesicht aus fünfzehn gerendert; MediaPipe findet die Punkte
+    (grün), trianguliert ergeben sie 3D-Landmarken (rot zurückprojiziert). Dieselbe Erkennung lief einmal über Genesis selbst,
+    so bedeutet jede Landmarke auf beiden Seiten dasselbe.</p>
+    <div id="erkennung"></div>
+</div>
+</div>
+
+<div id="reiter-iterationen" hidden>
+    <div class="card">
+        <h2>Iterationen — Kostüm-Kreislauf</h2>
+        <p class="hb-hinweis">Jede Runde baut Blender einige Abwandlungen des besten Kostüms (Optimierer), rendert sie aus den
+        Blickwinkeln der Vorlagen und benotet sie: Abweichung = (1 − Deckung des Umrisses) + Farbabstand, kleiner ist
+        besser. Alle paar Runden sieht sich die Prüf-KI (lokal, Ollama) die Tafel an und schlägt Werte vor. Übernommen wird
+        nur, was besser ist (die Prüf-KI darf um die eingestellte Toleranz schlechter sein). Jeder Lauf setzt beim besten
+        Kostüm an — „Weiter iterieren“ beliebig oft. Neueste Runde oben; je Runde oben die Vorlage, darunter der Render.</p>
+        <div class="blendermodell-iterationsleiste">
+            <label class="hb-hinweis">Runden <input type="number" id="iterationen-runden" class="viewer-eingabe"
+                   min="1" max="1000" value="20"></label>
+            <button type="button" class="btn btn-primary btn-sm" id="iterationen-weiter">
+                <i class="fas fa-forward"></i> <span>Weiter iterieren</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="iterationen-anhalten" disabled>
+                <i class="fas fa-stop"></i> <span>Anhalten</span></button>
+            <span class="hb-hinweis" id="iterationen-stand"></span>
+        </div>
+        <div id="iterationen-verlauf"></div>
+        <div id="iterationen-vergleich"></div>
+        <div id="iterationen"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Blendermodellseite } from "{% fassungspfad 'viewer/blendermodell/blendermodellseite.js' %}";
+import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
+Blendermodellseite.starten("{{ job.id }}");
+Auftragloeschen.binden();
+Auftragname.binden();
+</script>
+{% endblock %}

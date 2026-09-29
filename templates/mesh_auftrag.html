@@ -23,7 +23,8 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
 <div class="page-header mesh-auftragskopf">
     <div>
         <a href="{% url 'bildmodell' %}#mesh" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Modell aus Dateien</a>
-        <h1><i class="fas fa-cubes"></i> <span id="auftrag-name">{{ job.name }}</span>
+        <h1><i class="fas fa-cubes"></i> <span id="auftrag-name"
+                data-adresse="{% url 'auftrag_name' 'mesh' job.id %}">{{ job.name }}</span>
             <small class="hb-hinweis">Mesh · {{ job.kennung }}</small></h1>
     </div>
     <div class="auftrag-kopfknoepfe">
@@ -74,6 +75,7 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
 <div class="card">
     <h2>Fotos</h2>
     <p class="hb-hinweis">Rolle, Gewicht (%) und „Neu berechnen" — bereits vorbereitete Fotos (freigestellt) werden wiederverwendet. Das Gewicht wirkt auf die Vorschau sofort; Ansehen ändert nur die Anzeige, nichts wird gespeichert.</p>
+    <div class="mesh-fotoknoepfe" id="foto-knoepfe"></div>
     <div class="mesh-fotoliste" id="fotoliste"></div>
     <div class="mesh-texturzeile">
         <button type="button" class="btn btn-secondary btn-sm" id="textur-uebernehmen">
@@ -98,7 +100,9 @@ Nachfrage über `/api/mesh/<id>/zustand/` (wie `bildmodell_auftrag.html`).
 <script type="module">
 import { Meshauftragseite } from "{% fassungspfad 'viewer/mesh/meshauftragseite.js' %}";
 import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 Meshauftragseite.starten("{{ job.id }}");
 Auftragloeschen.binden();
+Auftragname.binden();
 </script>
 {% endblock %}

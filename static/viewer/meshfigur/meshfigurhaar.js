@@ -59,10 +59,18 @@ export class Meshfigurhaar {
     static text(h) {
         const f = h.farbe || {}, rgb = w => (w ? `(${w.join(', ')})` : '–');
         const z = Meshfigurhaar.zahl;
+        // Die Farbe der Frisur ist das BELICHTETE Haar (`farbe.haar`, die hellere Hälfte); ältere Läufe kennen nur den Median.
+        const farbe = f.haar
+            ? `Farbe ${rgb(f.haar)} (belichtetes Haar; Median ${rgb(f.median)}, p10 ${rgb(f.p10)}, p90 ${rgb(f.p90)})`
+            : `Farbe Median ${rgb(f.median)}, p10 ${rgb(f.p10)}, p90 ${rgb(f.p90)}`;
+        const b = h.bart;
+        const bart = b && b.flaechen
+            ? ` Bart: ${z(b.cm2, 0)} cm² ${b.aktiv ? 'gehören zur Haut, nicht zum Haar' : ''}, Farbe ${rgb(b.farbe)} (${b.grund}).`
+            : (b && b.grund ? ` Bart: ${b.grund}.` : '');
         return `Aus dem ${h.quelle}: Haar ${z(h.anteil_prozent)} % der Kopffläche (${z(h.haar_cm2, 0)} cm², `
             + `${h.flaechen} von ${h.flaechen_gesamt} Flächen); reicht ${z(h.ueber_haut_mm, 0)} mm über den Scheitel `
-            + `der Haut und ${z(h.unter_kinn_mm, 0)} mm unter das Kinn; Farbe Median ${rgb(f.median)}, `
-            + `p10 ${rgb(f.p10)}, p90 ${rgb(f.p90)}; Hautton ${z(h.hautton, 0)}. `
+            + `der Haut und ${z(h.unter_kinn_mm, 0)} mm unter das Kinn; ${farbe}; Hautton ${z(h.hautton, 0)}`
+            + `${h.hauttest ? ` (Haut erkannt über: ${h.hauttest})` : ''}.${bart} `
             + `Rechenzeit Maske ${z((h.sekunden || {}).maske)} s, Bilder ${z((h.sekunden || {}).bilder)} s.`;
     }
 }

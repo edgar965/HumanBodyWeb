@@ -57,7 +57,9 @@ class Meshfigurkette:
 
     def koerper(self):
         regler = self._regler()
-        stellung, haltung = dict(regler.grund), {}
+        # Feste Werte (Genitalbereich der männlichen Grundfigur) stehen von Anfang an in der Stellung; die Kette
+        # darf sie nicht ändern (`Meshfigurregler.AUS`) — sie stellte den Regler sonst auf 100 %.
+        stellung, haltung = {**regler.grund, **regler.festwerte(self.optionen)}, {}
         # Frisch beginnen: die Haltung eines früheren Laufs (`arbeit/zustand.npz`) wäre ein Warmstart,
         # der zwei Läufe mit denselben Optionen verschieden rechnen ließe.
         self.ablage.arbeit('zustand.npz').unlink(missing_ok=True)
@@ -79,6 +81,7 @@ class Meshfigurkette:
                     'verlauf': e['verlauf'],
                     'haut': e.get('haut'),
                     'lage': e.get('lage'),
+                    'landmarken_flaeche': e.get('landmarken_flaeche'),
                     'sekunden': e.get('sekunden'),
                     'stufen': stufen,
                     'hoehe_cm': round(self.hoehe(stellung) * 100, 1),
@@ -135,6 +138,7 @@ class Meshfigurkette:
             'stufen': stufen,
             'sekunden': e.get('sekunden'),
             'haltung': e['haltung'],
+            'landmarken_flaeche': e.get('landmarken_flaeche'),
         }
         self.job.ergebnis['koerper']['haltung'] = e['haltung']
         e_regler['stellung'] = stellung

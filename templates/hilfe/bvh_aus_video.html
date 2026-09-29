@@ -1,0 +1,94 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> BVH aus Video: die eigene SMPL-X-Pipeline als eigenständige Seite,
+mit Startskript zum Herunterladen (29.09.2026).
+
+Die Beschreibung ist derselbe Abschnitt wie auf „Hilfe -> Video to BVH"
+(`hilfe/_video_to_bvh_eigene.html`, Daten aus `Eigenepipeline`) — hier nur
+eingebunden, nicht verdoppelt. Neu ist der Abschnitt „Selbst ausführen".
+{% endcomment %}
+
+{% block title %}BVH aus Video — SMPL-X (eigen){% endblock %}
+{% block topbar_title %}BVH aus Video — die eigene SMPL-X-Pipeline{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_video_to_bvh.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite vtb-breit">
+
+  <h1>BVH aus Video — SMPL-X als Rückgrat</h1>
+
+  <p>
+    Diese Seite beschreibt die eigene Video-zu-BVH-Pipeline (Schlüssel
+    <code>smplx</code>, auf der Seite „Process Videos" als
+    <strong>SMPL-X (eigen)</strong>) und zeigt, wie sie sich ohne die
+    Weboberfläche direkt starten lässt. Den Vergleich mit den anderen
+    Pipelines (GVHMR, WHAM, PromptHMR, DuoMo, GEM-SMPL) zeigt
+    <a href="{% url 'hilfe_video_to_bvh' %}">Hilfe → Video to BVH</a>.
+  </p>
+
+  {% include "hilfe/_video_to_bvh_eigene.html" %}
+
+  <h2 id="selbst">Selbst ausführen</h2>
+  <p>
+    Dasselbe Startskript, das dieser Knopf ausliefert, ruft auf, was auch die
+    Weboberfläche ruft (<code>lift_3d.py --pipeline smplx</code>, gebaut von
+    <code>core/pipelines/smplbefehl.Smplbefehl</code>) — mit denselben
+    Standardquellen: Körper <strong>{{ quellen_vorgabe.body_source }}</strong>,
+    Hände <strong>{{ quellen_vorgabe.hands_source }}</strong>,
+    Gesicht <strong>{{ quellen_vorgabe.face_source }}</strong>,
+    Handgelenk aus <strong>{{ quellen_vorgabe.wrist_source }}</strong>.
+  </p>
+
+  <p>
+    <a class="btn-primary" href="{% url 'hilfe_bvh_aus_video_skript' %}" download>
+      <i class="bi bi-download"></i> {{ skript_name }} herunterladen
+    </a>
+  </p>
+
+  <div class="info-box info-box-blue">
+    <strong>Läuft nur auf diesem Rechner.</strong> Kein portables Werkzeug —
+    das Skript ruft fest <code>A:\3DTools\python10\Scripts\python.exe</code>
+    und <code>A:\3DTools\VideoToBVH\wrappers\lift_3d.py</code>. Voraussetzung:
+    das venv <code>python10</code> (Python 3.10, CUDA-Torch) und im Repo
+    <code>VideoToBVH</code> die eingelagerten Gewichte für die gewählte
+    Körper- (GEM-SMPL/GVHMR/DuoMo), Hand- (GEM-X/SMPLest-X) und
+    Gesichtsquelle (SMPLest-X) — siehe <code>requirements-ml.txt</code> und
+    die READMEs der jeweiligen Quelle.
+  </div>
+
+  <h3>Aufruf</h3>
+  <pre><code>python bvh_aus_video_starten.py mein_video.mp4
+# oder mit Ziel und eigenen Quellen:
+python bvh_aus_video_starten.py mein_video.mp4 ziel.bvh \
+    --body gem --hands gemx --face smplestx --wrist hand</code></pre>
+
+  <h3>Wählbare Quellen</h3>
+  <div class="db-tabelle-rahmen">
+  <table class="db-tabelle doku vtb-eigene">
+    <thead><tr><th>Schalter</th><th>Werte</th><th>Vorgabe</th></tr></thead>
+    <tbody>
+      <tr><td><code>--body</code></td><td>gem, gvhmr, duomo</td><td>{{ quellen_vorgabe.body_source }}</td></tr>
+      <tr><td><code>--hands</code></td><td>gemx, smplestx</td><td>{{ quellen_vorgabe.hands_source }}</td></tr>
+      <tr><td><code>--face</code></td><td>smplestx, keins</td><td>{{ quellen_vorgabe.face_source }}</td></tr>
+      <tr><td><code>--wrist</code></td><td>hand, koerper</td><td>{{ quellen_vorgabe.wrist_source }}</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ergebnis</h3>
+  <p>
+    Neben dem Video (oder unter dem angegebenen Ziel):
+  </p>
+  <ul>
+    <li><code>&lt;ziel&gt;.bvh</code> — 54 Gelenke (24 Körper nach AIST-Namen, 30 Finger nach SMPL-X-Namen)</li>
+    <li><code>&lt;ziel&gt;_blendshapes.json</code> — Kiefer und Mimik, vom Retarget zusätzlich zur BVH gelesen (`Gesichtsspuren`)</li>
+    <li><code>&lt;ziel&gt;_smplx.mp4</code> — das SMPL-X-Netz über dem Originalvideo (ohne <code>--kein_video</code>)</li>
+  </ul>
+
+</div>
+{% endblock %}

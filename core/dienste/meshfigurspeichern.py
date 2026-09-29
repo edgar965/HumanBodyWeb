@@ -66,7 +66,8 @@ class Meshfigurspeichern:
                 'praesets': {},
                 'pose': '',
                 'ausdruck': '',
-                'kleidung': {},
+                # Die Frisur aus Schritt „frisur" (`Meshfigurfrisur`, 29.09.2026) — leer ohne Wahl.
+                'kleidung': dict((self.job.ergebnis.get('frisur') or {}).get('kleidung') or {}),
                 'fototextur': kacheln,
                 'herkunft': {
                     'auftrag': self.job.kennung,

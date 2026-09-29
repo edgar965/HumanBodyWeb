@@ -17,7 +17,7 @@ am besten ist, und was davon du nachbauen kannst".
 {% endblock %}
 
 {% block doku_inhalt %}
-<div class="doku-seite">
+<div class="doku-seite kp-breit">
 
   <h1>2D -> 3D: Foto zu 3D-Kopf</h1>
 
@@ -101,6 +101,173 @@ am besten ist, und was davon du nachbauen kannst".
     </li>
     {% endfor %}
   </ol>
+
+  <h2>TRELLIS und Hunyuan3D — Umsetzung und was wir gelernt haben</h2>
+  <p>
+    Beide Formmodelle stecken hinter dem Schritt „Netz" (Reiter „Mesh"), auswählbar über die
+    Option „Formmodell". Sie sind keine Konkurrenten im Vergleich oben (der ist FLAME-Köpfe),
+    sondern die Werkzeuge, mit denen dieses Projekt selbst Netze aus Fotos baut — und beide
+    haben eigene Fallstricke gezeigt, die erst am gemessenen Ergebnis sichtbar wurden.
+  </p>
+
+  <div class="kp-kette">
+    <div class="kp-stufe kp-stufe-python">
+      <span class="kp-stufe-marke">Microsoft, MIT-Lizenz</span>
+      <h4>TRELLIS.2-4B</h4>
+      <p>Ein Foto → bis zu 1536³ Voxelauflösung, EIGENE gelernte PBR-Textur
+      (<code>o_voxel.postprocess.to_glb</code>). Nutzt immer nur das Foto mit der Rolle „Vorne" —
+      mehrere Fotos beeinflussen nur die Textur-Projektion danach, nicht die Form.</p>
+    </div>
+    <div class="kp-stufe kp-stufe-python">
+      <span class="kp-stufe-marke">Tencent, Forschungslizenz — NICHT in EU/UK/Südkorea</span>
+      <h4>Hunyuan3D-2.0 / -2mv</h4>
+      <p>-2.0: ein Foto, <code>hy3dgen.shapegen</code> für die Form, dazu wahlweise eigene
+      Multiview-Diffusions-Texturmalerei (<code>hy3dgen.texgen</code>) statt Fotoprojektion.
+      -2mv ist das einzige ECHTE Multiview-Formmodell hier: bis zu vier Fotos (vorne/hinten/
+      links/rechts) gehen GEMEINSAM in einen Formlauf. Braucht eine von Hand kompilierte
+      <code>custom_rasterizer</code>-Erweiterung — fehlt sie, fällt der Lauf automatisch auf
+      Fotoprojektion zurück, ohne den Auftrag scheitern zu lassen.</p>
+    </div>
+  </div>
+
+  <div class="info-box info-box-orange">
+    <strong>Die teuerste Lehre: Auflösung, Textur und Flächenzahl sind KEINE unabhängigen
+    Regler.</strong> 1536³ Voxel mit nur 2048 px Textur und 100.000 Flächen ergab dunkle Flecken
+    über den ganzen Körper — 9,3 % Lücken beim Texturbacken statt 0,1 % —, weil der UV-Atlas in
+    tausende winzige Inseln zerfällt. Für einen ganzen Körper ist 300.000 Flächen die
+    verlässliche Wahl (22 Minuten statt 60, ohne die senkrechten „Vorhänge", die 500.000 aus den
+    Haaren baut); beim UV-Unwrap (xatlas, nur wenn Hunyuan3D malt) wächst die Zeit
+    überproportional: 63,5 s bei 50.000 Flächen, 408,4 s bei 100.000, 1.020,2 s bei 200.000 —
+    eine halbe Million liegt damit bei ein bis zwei Stunden allein fürs Unwrap.
+  </div>
+
+  <table class="db-tabelle" style="margin: 1em 0 1.4em;">
+    <thead><tr><th>Befund</th><th>Messung</th><th>Behebung</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Freigestellte Maske ist an fliegenden Haarsträhnen halbdurchsichtig</td>
+        <td>7,5 % aller Pixel im Graubereich am Gesichtsfoto — beide Formmodelle bauen daraus
+        freischwebende Fetzen</td>
+        <td>Maskenkante „hart": 35–65 % auf 0/100 % gespreizt</td>
+      </tr>
+      <tr>
+        <td>Dünne Haarsträhnen werden zu „Eiszapfen"</td>
+        <td>Drei Läufe am selben Gesichtsfoto: Oberfläche/Höhe² 4,42 → 3,91 → 3,36 bei
+        Ausläufer-Radius 0/4/8 — am Ganzkörperfoto frisst Radius 8 dagegen schon ein
+        Fingerglied</td>
+        <td>Radius separat für Kopf-Nahaufnahme (8) und Ganzkörper (4) einstellen</td>
+      </tr>
+      <tr>
+        <td>Asymmetrisches Licht im Foto verwirrt die Multiview-Diffusion</td>
+        <td>Damira-Porträt: eine Gesichtshälfte 24 Stufen unter der anderen (124,3 gegen
+        100,2) — Schmierer am Mundwinkel, ungleiche Augen</td>
+        <td>Tiefpass-Division nur innerhalb der Maske, Faktor auf 0,4–2,5 begrenzt</td>
+      </tr>
+      <tr>
+        <td>Silhouette berührt den Bildrand</td>
+        <td>Damira-Kopf: Material von Bildzeile 0 bis 2665 bei Höhe 2666 — Haar wird als
+        senkrechter Vorhang bis zum Rand weitergezogen</td>
+        <td>15 % Luft um das Motiv (Hunyuan3Ds eigener Vorverarbeiter macht es genauso)</td>
+      </tr>
+      <tr>
+        <td>Rekonstruierte Haare fressen das Flächenbudget des Gesichts</td>
+        <td>Ein Kopf mit rekonstruierten Haaren hatte die 4- bis 10-fache Oberfläche eines
+        ganzen Körpernetzes</td>
+        <td>Kleinteile unter 1 % der größten zusammenhängenden Fläche entfernen</td>
+      </tr>
+      <tr>
+        <td>Hunyuan3Ds Texturmalerei macht matschige Gesichter</td>
+        <td>Die Malerei ist ein Stable-Diffusion-2-Netz, auf 512 px trainiert; darin ist bei
+        1,70 m Körperhöhe das Gesicht rund 40 px hoch — Fotos haben 4000 px. Höhere
+        „Malansicht"-Werte liegen außerhalb der Trainingsverteilung: doppelte Augen,
+        gespiegelte Züge</td>
+        <td>„Fotos in die Textur backen": Fotofarbe Texel für Texel NACH der Malerei einlegen —
+        bis zu 16,8 Mio. Texel statt 149.832 Punktfarben aus reiner Fotoprojektion</td>
+      </tr>
+      <tr>
+        <td>Poren, Härchen, Lippenrillen fehlen ganz</td>
+        <td>Hunyuan3D steckt die ganze Figur in 3072 Latents, sieht das Foto als 37×37-Raster —
+        Feinstruktur kann die Form gar nicht tragen</td>
+        <td>Hochpass der Fotos als Normal Map auf die Textur legen („Relief aus den Fotos"),
+        Form bleibt glatt</td>
+      </tr>
+      <tr>
+        <td>Gesichtstextur sitzt verschoben</td>
+        <td>Einpassung über den Kopfumriss: 23–28 % der Gesichtslänge zu hoch (Foto 21° von
+        unten aufgenommen)</td>
+        <td>Einpassung über die 478 MediaPipe-Gesichtspunkte statt Umriss: Fehler auf 2 %</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box info-box-purple">
+    <strong>Zusammengefasst:</strong> TRELLIS.2 ist der verlässliche Standardweg (MIT-Lizenz,
+    eine PBR-Textur, ein Foto reicht) — Hunyuan3D lohnt sich dort, wo seine Multiview-Malerei
+    oder die 2mv-Mehrbild-Form wirklich gebraucht wird, kostet dann aber Zeit (UV-Unwrap) und
+    braucht das Fotobacken, um nicht matschig zu wirken. Keine der beiden Modellformen trifft ein
+    Gesicht von sich aus zuverlässig — das übernimmt in „Mesh to 3D" die eigene, auf
+    MediaPipe-Landmarken gestützte Anpassung, nicht das Formmodell selbst.
+  </div>
+
+  <h2>Blender</h2>
+  <p>
+    Frage Edgar (29.09.2026): „womit machst du den Foto-Netz-Figur-Lauf? Sind das
+    Blender-Python-Skripte?" — Nein, für den ganzen Weg von den Fotos bis zur fertigen
+    Genesis-9-Figur läuft <strong>keine einzige Zeile in Blender</strong>. Blender kommt erst
+    im letzten, neuen Schritt des Bereichs „BlenderModel" dazu — dort, wo eine BVH-Animation
+    auf die Figur soll und ein Video gerendert wird. Die Kette der Reihe nach:
+  </p>
+
+  <div class="kp-kette">
+    <div class="kp-stufe kp-stufe-python">
+      <span class="kp-stufe-marke">Schritt „netz"</span>
+      <h4>Foto → Netz: TRELLIS.2 / Hunyuan3D</h4>
+      <p>Ein Bilderzeugungsmodell (Microsofts TRELLIS.2, alternativ Hunyuan3D-2) baut aus den
+      Fotos direkt ein texturiertes Netz — Diffusion, kein Rendering, kein Blender. Läuft als
+      eigener Python-Unterprozess in einer zweiten virtuellen Umgebung
+      (<code>python10</code>, <code>settings.PIPELINE_PYTHON</code>), damit die schweren
+      KI-Pakete nicht im Webserver selbst stecken.</p>
+    </div>
+    <div class="kp-stufe kp-stufe-python">
+      <span class="kp-stufe-marke">Schritte „erkennung", „koerper", „gesicht", „rest", „textur"</span>
+      <h4>Netz → Figur: eigene Optimierung, PyTorch</h4>
+      <p>Kein 3D-Programm — reines Python (PyTorch, NumPy, SciPy) im selben <code>python10</code>.
+      Die Genesis-9-Regler (Statur, 296 Kopf-/Gesichtsregler) werden per Gradientenabstieg auf
+      das Netz gepasst; die Fortschrittszeilen im Lauf
+      (<code>„haltung: Schritt 150/300, Verlust 0.0027"</code>) sind genau diese
+      Optimierungsschritte. Landmarken kommen von MediaPipe (Körper 33, Gesicht 478 Punkte),
+      Haar/Kleidung werden über Farbe und Lage der Netzflächen getrennt (<code>Haar</code>,
+      <code>Kleidung</code>, eigene Python-Pakete).</p>
+    </div>
+    <div class="kp-stufe kp-stufe-python">
+      <span class="kp-stufe-marke">Schritt „export"</span>
+      <h4>Figur → GLB mit Rig: läuft direkt im Webserver</h4>
+      <p>Kein Unterprozess mehr nötig: <code>Genesis9.figurrigglb.G9figurrigglb</code> schreibt
+      Netz, Skelett (138 Knochen) und Hautbindung direkt als glTF-Binärdatei — reines Python
+      (NumPy), synchron im Django-Prozess (<code>python14</code>).</p>
+    </div>
+    <div class="kp-stufe kp-stufe-blender">
+      <span class="kp-stufe-marke">Schritt „blender" — HIER startet echtes Blender</span>
+      <h4>GLB + Bewegung → Video: Blender ohne Fenster</h4>
+      <p>Erst hier läuft wirklich <code>blender -b --factory-startup --python
+      blendermodell.py</code> als eigener Prozess. Die Bewegung selbst rechnet aber NICHT
+      Blender: Ein eigener Python-Kern (<code>core.dienste.retargetdaten.Retargetdaten</code>,
+      derselbe, den auch die Studio-Vorschau im Browser benutzt) legt die BVH-Datei auf das
+      Genesis-9-Skelett und schreibt Drehungen je Knochen als JSON. Blender importiert nur noch
+      die GLB und setzt diese fertigen Drehungen als Keyframes
+      (<code>effekte/blender/posenspuren.py</code>) — kein Retarget-Addon, keine eigene
+      Bewegungsberechnung in Blender. Danach Kamera, Licht, Rendern (Workbench oder Eevee) zu
+      <code>video.mp4</code>.</p>
+    </div>
+  </div>
+
+  <div class="info-box info-box-blue">
+    <strong>Warum das so aufgeteilt ist:</strong> Die KI-Modelle (TRELLIS, MediaPipe, PyTorch)
+    brauchen eine andere Paketwelt als Blender und als der Webserver — deshalb drei getrennte
+    Python-Umgebungen (<code>python14</code> für Django und den Blender-Aufruf,
+    <code>python10</code> für die KI-Schritte, Blenders eigenes Python für den Blender-Prozess
+    selbst) statt eines Blender-Addons, das versucht, alles in einem Programm zu tun.
+  </div>
 
 </div>
 {% endblock %}

@@ -2,20 +2,31 @@
 """Auftragsduplikat — einen Auftrag der drei Reiter auf „Modell aus Dateien" duplizieren.
 
 Edgar (28.09.2026): „mach mir einen Button bei der Jobtabelle aller tabs: Job Duplizieren, das
-dupliziert mir alle Eingabedateien und Parameter, nicht aber die Ausgabe".
+dupliziert mir alle Eingabedateien und Parameter, nicht aber die Ausgabe" — und, nachdem die
+erste Fassung `bilder` bei „3D" leer ließ: „alles was ich am Hauptjob eingestellt habe (Kategorie
+usw) soll in der Kopie dabei sein". Kategorie, Hauptbild, Gewicht, die drei Boxen (Textur/GVHMR/
+Kopf), die Reihenfolge und der Freisteller sind vom Nutzer gesetzt (`Bildmodellauftrag.
+NUTZERFELDER`) — auch wenn sie technisch im Ergebnis der Sichtung stehen, sind sie Eingabe, keine
+Ausgabe. Der Freisteller schreibt dafür über den Ausschnitt UND legt eine Maske ab
+(`Bildmodellfreisteller.speichern`); ohne `zuschnitt/` und `schaetzung/` in der Kopie wäre die
+Einordnung zwar in der Datenbank, aber Bild und Maske dazu fehlten. Deshalb kommen bei „3D" jetzt
+alle drei Arbeitsordner mit, nicht nur `original/` — die Grenze liegt bei `ergebnis/` (der
+fertigen Genesis-9-Anpassung), nicht mehr bei der Sichtung.
 
 Was mitkommt und was nicht, je Bereich:
 
-    bildmodell  original/ (hochgeladene Bilder, Videos)     name, typ, optionen
-                NICHT: zuschnitt/, schaetzung/, ergebnis/, `bilder` (die Ausschnitte samt Befund
-                entstehen erst in der Sichtung — sie sind die Ausgabe des ersten Schritts),
-                `ergebnis`, `modell`
+    bildmodell  original/, zuschnitt/, schaetzung/           name, typ, optionen, bilder (voll,
+                (Bilder, Videos, Ausschnitte, Masken,                     samt Einordnung, Gewicht,
+                Schätzungen je Bild)                                      Boxen, Freisteller)
+                NICHT: ergebnis/, `ergebnis` (die fertige Anpassung: Regler, RMS, Vorschau), `modell`
     mesh        eingang/ (Fotos)                            name, optionen, je Foto
                                                             datei, original, rolle, gewicht, bereich
                 NICHT: vorbereitet/, arbeit/, ergebnis/, der Befund der Vorbereitung je Foto,
                 `ergebnis`
     meshfigur   eingang/, eingang_kopf/ (Netze + Beilagen)  name, optionen, eingang
                 NICHT: arbeit/, ergebnis/, `ergebnis`, `modell`
+    blendermodell  eingang/ (Fotos)                         name, optionen (beide Gruppen), je Foto wie „mesh"
+                NICHT: vorbereitet/, netz/, arbeit/, ergebnis/, `ergebnis`, `eingang` (das Netz), `modell`
 
 Die Kopie ist ein NEUER Auftrag (eigene Kennung, eigener Ordner) im Zustand „angelegt" — sie
 startet nicht von selbst: Wer dupliziert, will meist erst eine Option ändern, und es gibt nur
@@ -32,9 +43,10 @@ from django.utils import timezone
 
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.bildmodellablage import Bildmodellablage
+from ..daten.blendermodellablage import Blendermodellablage
 from ..daten.meshablage import Meshablage
 from ..daten.meshfigurablage import Meshfigurablage
-from ..models import Bildmodellauftrag, Meshauftrag, Meshfigurauftrag
+from ..models import Bildmodellauftrag, Blendermodellauftrag, Meshauftrag, Meshfigurauftrag
 
 logger = logging.getLogger('core')
 
@@ -47,9 +59,12 @@ class Auftragsduplikat:
     #: Bereich → (Modell, Ablage, Eingangsordner). Die Bereichsnamen sind die `key` der Tabellen
     #: (`Bildmodelltabelle`, `Meshtabelle`, `Meshfigurtabelle`) — wie in `Laufendeauftraege`.
     BEREICHE = {
-        'bildmodell': (Bildmodellauftrag, Bildmodellablage, (Bildmodellablage.ORIGINAL,)),
+        'bildmodell': (Bildmodellauftrag, Bildmodellablage,
+                       (Bildmodellablage.ORIGINAL, Bildmodellablage.ZUSCHNITT, Bildmodellablage.SCHAETZUNG)),
         'mesh': (Meshauftrag, Meshablage, (Meshablage.EINGANG,)),
         'meshfigur': (Meshfigurauftrag, Meshfigurablage, (Meshfigurablage.EINGANG, Meshfigurablage.KOPF)),
+        # BlenderModel (29.09.2026): die Bildauswahl wie bei „mesh" — eingang/, je Foto Datei + Nutzerfelder.
+        'blendermodell': (Blendermodellauftrag, Blendermodellablage, (Blendermodellablage.EINGANG,)),
     }
     #: Was je Foto eines Mesh-Auftrags Eingabe ist: die Datei und was der Nutzer stellt.
     #: Der Rest des Eintrags ist Befund der Vorbereitung (Ausgabe).
@@ -98,7 +113,12 @@ class Auftragsduplikat:
         }
         if self.bereich == 'bildmodell':
             felder['typ'] = job.typ
-        elif self.bereich == 'mesh':
+            # Voll, nicht nur NUTZERFELDER: `landmarken`/`schaetzung`/`breite` usw. sind zwar
+            # Befund der Sichtung, aber ohne sie zeigt die Auftragsseite der Kopie kaputte
+            # Kacheln (Landmarken, Maße) für Bilder, die eigentlich vollständig da sind —
+            # die zugehörigen Dateien (`zuschnitt/`, `schaetzung/`) kommen ja mit.
+            felder['bilder'] = copy.deepcopy(job.bilder or [])
+        elif self.bereich in ('mesh', 'blendermodell'):
             felder['bilder'] = [
                 {feld: b[feld] for feld in self.MESH_BILDFELDER if feld in b}
                 for b in job.bilder or [] if isinstance(b, dict) and b.get('datei')

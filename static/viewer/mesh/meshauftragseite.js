@@ -3,6 +3,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from './meshoptionenformular.js';
 import { Meshbetrachter } from './meshbetrachter.js';
 import { Meshfotogewicht } from './meshfotogewicht.js';
+import { Meshfotowahl } from './meshfotowahl.js';
 import { Meshpfadliste } from './meshpfadliste.js';
 
 /**
@@ -280,9 +281,88 @@ export class Meshauftragseite {
                 this.gewichtLokalSetzen(eintrag.datei, Number(gewicht.value));
             });
             gewichtZeile.append(gewicht, gewichtWert);
-            karte.append(bild, rolle, gewichtZeile, this._indexzeile(eintrag));
+            karte.append(bild, rolle, gewichtZeile, this._indexzeile(eintrag),
+                         this._tauschzeile(eintrag));
             behaelter.appendChild(karte);
         }
+        this._fotoknoepfe();
+    }
+
+    /** „Ersetzen" und „Entfernen" je Foto (Edgar, 29.09.2026). */
+    _tauschzeile(eintrag) {
+        const zeile = document.createElement('div');
+        zeile.className = 'mesh-tauschzeile';
+        const ersetzen = document.createElement('button');
+        ersetzen.type = 'button';
+        ersetzen.className = 'btn btn-secondary btn-sm';
+        ersetzen.title = 'Dieses Foto durch ein anderes ersetzen — Rolle, Gewicht und Platz bleiben';
+        ersetzen.innerHTML = '<i class="fas fa-right-left"></i> <span>Ersetzen</span>';
+        ersetzen.addEventListener('click', () => this.fotoErsetzen(eintrag.datei, ersetzen));
+        const entfernen = document.createElement('button');
+        entfernen.type = 'button';
+        entfernen.className = 'btn btn-secondary btn-sm';
+        entfernen.title = 'Dieses Foto aus dem Auftrag entfernen';
+        entfernen.innerHTML = '<i class="fas fa-trash"></i>';
+        entfernen.addEventListener('click', () => this.fotoEntfernen(eintrag.datei, entfernen));
+        zeile.append(ersetzen, entfernen);
+        return zeile;
+    }
+
+    /** „Fotos hinzufügen" über der Liste — einmal gebaut, nicht bei jedem Neuzeichnen. */
+    _fotoknoepfe() {
+        const zeile = document.getElementById('foto-knoepfe');
+        if (!zeile || zeile.dataset.gebaut) return;
+        zeile.dataset.gebaut = '1';
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'btn btn-secondary btn-sm';
+        knopf.innerHTML = '<i class="fas fa-plus"></i> <span>Fotos hinzufügen</span>';
+        knopf.addEventListener('click', () => this.fotosHinzufuegen(knopf));
+        zeile.appendChild(knopf);
+    }
+
+    async fotosHinzufuegen(knopf) {
+        const dateien = await Meshfotowahl.oeffnen({ mehrfach: true, titel: 'Fotos hinzufügen',
+                                                     uebernehmen: 'Hinzufügen' });
+        if (!dateien.length) return;
+        const daten = new FormData();
+        dateien.forEach((datei) => daten.append('bilder', datei, datei.name));
+        await this._fotosSenden(knopf, this.adresse('fotos/'), daten, 'Lädt hoch …');
+    }
+
+    async fotoErsetzen(datei, knopf) {
+        const gewaehlt = await Meshfotowahl.oeffnen({ mehrfach: false, titel: `„${datei}" ersetzen durch`,
+                                                      uebernehmen: 'Ersetzen' });
+        if (!gewaehlt.length) return;
+        const daten = new FormData();
+        daten.append('bild', gewaehlt[0], gewaehlt[0].name);
+        await this._fotosSenden(knopf, this.adresse(`foto/${encodeURIComponent(datei)}/ersetzen/`),
+                                daten, 'Ersetzt …');
+    }
+
+    async fotoEntfernen(datei, knopf) {
+        if (!window.confirm(`Foto „${datei}" aus dem Auftrag entfernen?`)) return;
+        await this._fotosSenden(knopf, this.adresse(`foto/${encodeURIComponent(datei)}/loeschen/`),
+                                null, 'Entfernt …');
+    }
+
+    /** Gemeinsamer Weg der drei Fotoänderungen: senden, Liste neu, Vorschau neu aufbauen. */
+    async _fotosSenden(knopf, adresse, daten, text) {
+        try {
+            await Knopfsperre.waehrend(knopf, async () => {
+                const antwort = daten ? await Serverabruf.formular(adresse, daten)
+                                      : await Serverabruf.senden(adresse, {});
+                if (antwort.error) throw new Error(antwort.error);
+                this.zustand.bilder = antwort.bilder;
+            }, text);
+        } catch (fehler) {
+            window.alert(fehler.daten?.error || fehler.message);
+            return;
+        }
+        // Die freigestellten Fassungen sind serverseitig verworfen — die Live-Vorschau muss
+        // ihre Bilder neu holen, sonst zeigt sie das alte Foto auf dem Netz.
+        this._fotogewichtBereit = false;
+        this._fotoliste();
     }
 
     /** Platz in der Reihenfolge (Edgar, 27.09.2026). Das erste Foto ist die „Vorlage" in der

@@ -56,6 +56,7 @@ register_converter(Kennungskonverter, 'kennung')
 
 # Nach dem Konverter: beide Listen nutzen `<kennung:…>`, Django prüft ihn schon beim `path()`.
 from .urls_bildmodell import BILDMODELL  # noqa: E402
+from .urls_blendermodell import BLENDERMODELL  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
 from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
@@ -270,3 +271,5 @@ urlpatterns += MESH
 urlpatterns += MESHFIGUR
 # Seite „Gesichtsform": Kopf-Eigen aus Schnitten und Konturen, 27.09.2026.
 urlpatterns += GESICHTSFORM
+# Bereich „BlenderModel" (Fotos → Netz → Figur), 29.09.2026.
+urlpatterns += BLENDERMODELL
