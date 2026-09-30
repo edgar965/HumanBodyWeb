@@ -46,16 +46,28 @@ class Iterationsbild:
         return cls._normieren(rgba[..., :3], rgba[..., 3] > 0.5, groesse)
 
     @classmethod
-    def _normieren(cls, rgb, maske, groesse=None):
-        breite, hoehe = groesse or (cls.BREITE, cls.HOEHE)
+    def abbildung(cls, maske):
+        """(cx, y0, y1) der Figur in einer Maske (Pixel): Schwerpunkt des Rumpfbands, erste und letzte Zeile mit
+        Figur — die Normierung, die `_normieren` anwendet; die Fotoprojektion liest sie am Kennfarbenrender ab
+        (`iterationen2d3d.Fotoprojektion`). None, wenn keine Figur zu sehen ist."""
+        maske = np.asarray(maske, dtype=bool)
         zeilen = np.flatnonzero(maske.sum(axis=1) >= cls.MINDESTENS)
         if len(zeilen) < 2:
-            return cls(np.zeros((hoehe, breite, 3), np.float32), np.zeros((hoehe, breite), bool))
+            return None
         y0, y1 = int(zeilen[0]), int(zeilen[-1]) + 1
         rumpf = maske[y0 + int(0.3 * (y1 - y0)) : y0 + int(0.7 * (y1 - y0))]
         spalten = np.flatnonzero(rumpf.sum(axis=0) > 0)
         gewichte = rumpf.sum(axis=0)[spalten]
         cx = float(np.average(spalten, weights=gewichte)) if len(spalten) else maske.shape[1] / 2
+        return cx, y0, y1
+
+    @classmethod
+    def _normieren(cls, rgb, maske, groesse=None):
+        breite, hoehe = groesse or (cls.BREITE, cls.HOEHE)
+        abbildung = cls.abbildung(maske)
+        if abbildung is None:
+            return cls(np.zeros((hoehe, breite, 3), np.float32), np.zeros((hoehe, breite), bool))
+        cx, y0, y1 = abbildung
         massstab = hoehe * (1 - 2 * cls.RAND) / (y1 - y0)
         links = cx - breite / 2 / massstab
         oben = y0 - cls.RAND * hoehe / massstab

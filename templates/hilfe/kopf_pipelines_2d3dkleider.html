@@ -6,7 +6,7 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
 {% endcomment %}
 <h2 id="kleider2d3d">2D3D Kleider: Fotos → Figur mit Kleidern und Haar aus der Genesis-Garderobe</h2>
 <p>
-  <a href="/haarengine/">Dashboard → 2D3D Kleider</a> (Bezeichner <code>haarengine</code>, seit 30.09.2026) ist der zweite Weg vom
+  <a href="/2d3dKleider/">Dashboard → 2D3D Kleider</a> (Bezeichner <code>haarengine</code>, seit 30.09.2026) ist der zweite Weg vom
   Foto zur angezogenen Figur. Er hat dieselbe Jobstruktur und dieselben Seiten wie BlenderModel (Auftrag, Iterationen, Bühne,
   Film); Bau, Render und Note laufen in Python (pyrender). Blender ist hier <strong>erlaubt, aber nicht der Rechenkern</strong>:
   Wenn es dazukommt, dann als Arbeiter für einzelne Rechnungen (Stoffsimulation, Haar-Knoten, Projektionsmalerei) über EINE
@@ -208,8 +208,47 @@ Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
   </li>
 </ul>
 
+<h3 id="ortsmorphe">Ortsmorphe, feste Regler, Sichtkörper, Drapieren (30.09.2026, nachts)</h3>
+<p>
+  Alles, was ein Foto verlangt, ist <em>örtlich</em> — eine Beule am Bauch, ein Saum auf einer Seite, ein Pony nach vorn.
+  Seit dieser Nacht kennt jeder eigene Morph einen <strong>Ort</strong> (<code>G9ortsmorph</code>: Höhenband × Sektor um die
+  Achse, Kugel um eine Landmarke der Grundfigur wie <code>bauch</code>, <code>po</code>, <code>stirn</code>, <code>schlaefe_l</code>,
+  Welle; Richtung entlang der Hautnormale), und der Zustand hat dafür Rezeptfunktionen: <code>morph_ort</code>, <code>kleid_ring</code>
+  (Weite eines Höhenrings als Vielfaches des Körperrings — die Ringmaße des Kostüm-Wegs auf einem fertigen Daz-Stück),
+  <code>kleid_welle</code>, <code>kleid_huelle</code>, <code>koerper_ort</code>, <code>koerper_huelle</code>, <code>haltung_gelenk</code>,
+  <code>haar_trim</code>, <code>haar_clump</code>, <code>haar_noise</code>, <code>haar_straighten</code>, <code>haar_biegen</code>,
+  <code>haar_anlegen</code> (nach dem Muster von Blenders Hair-Nodes: Operation × Ortsgewicht) und <code>kleid_drapieren</code>.
+</p>
+<ul>
+  <li>
+    <strong>Feste Regler im UI</strong> (Edgar: „bei allen Kleidern, Haaren und im Modell diese neuen Regler"): jedes Kleidungsstück
+    trägt die Gruppe „Form (Ort)" (Weite unten/Mitte/oben, Vorn, Hinten, Links, Rechts, Saum, Oben auf, Falten am Saum, Falten
+    längs), jede Frisur „Operationen" (Trim, Clump, Noise, Straighten, Anlegen, Pony kürzer, Pony nach vorn, Links/Rechts/Nacken
+    kürzer, Seiten hinters Ohr), der Körper-Reiter den Bereich „Nachformung (Ort)" (Bauch, Po, Brust, Schultern, Taille, Hüfte,
+    Oberschenkel, Waden, Kinn, Rücken; −200…200 %). Die Deltas entstehen <em>beim ersten Zug</em> und liegen danach neben der
+    Bibliothek (Base Shirt „Links": 3.732 Punkte, 19 mm, erster Zug 0,42 s, danach 22 ms; Körper „Bauch" 220 Punkte, 22,5 mm bei 150 %
+    — gemessen im Chrome am Netz-Endpunkt).
+  </li>
+  <li>
+    <strong>Sichtkörper der Vorlagen</strong> (der Visual Hull des Kostüm-Wegs in NumPy): aus den Silhouetten der Note und der Höhe des
+    Modells der letzten Runde. Er ist Ziel, nicht Modell — <code>kleid_huelle</code> zieht Ringpunkte bis an seinen Rand (Stärke 0,7 wie
+    im Kostüm-Weg), der Befund trägt je Teil den Hüllenabstand je Band und Abstände je Band × Sektor (Zellen); die Automatik schreibt
+    daraus <code>morph_ort</code> je Zelle ab 8 mm und <code>kleid_huelle</code> ab 12 mm.
+  </li>
+  <li>
+    <strong>Drapieren</strong>: <code>kleid_drapieren</code> lässt ein Stück einmal durch die Stoffsimulation gegen die Grundfigur fallen —
+    Vorgabe ist der eigene GPU-Löser (Newton SolverStyle3D, derselbe wie im Figur-Film; Edgar: „Blender ist opensource — nachbauen?" —
+    nicht nötig, er ist da und war auf denselben Daten besser als Blender Cloth), wahlweise Blender Cloth (mit Druck). Base Shirt, 24
+    Bilder: Saumband 22 mm gefallen, Punkte in der Haut 27 → 21, Kantendehnung p99 1,45, 142 s (davon der Großteil die erstmalige
+    Kernelübersetzung). Weil unsere Kleiderphysik „relativ schlecht" war, ist das Ergebnis ein Regler 0…1 mit Messung, kein Zwang.
+  </li>
+</ul>
+
 <div class="info-box info-box-orange">
-  <strong>Nicht gebaut, nicht geprüft (Stand 30.09.2026, abends):</strong> <code>koerper.quelle = rechnen</code> ist geschrieben,
+  <strong>Nicht gebaut, nicht geprüft (Stand 30.09.2026, nachts):</strong> Render mit Texturen, Fotoprojektion auf Kleid und Haar,
+  Decal, Faltennormalkarte, <code>kleid_schnitt</code>, Mischung nach Ort, Regeln für Körper und Textur in der Automatik; die
+  Sichtkörper-Automatik (<code>morph_ort</code> je Zelle, Hülle) ist mit Kunstdaten getestet, nicht in einem echten Lauf.
+  <code>koerper.quelle = rechnen</code> <code>koerper.quelle = rechnen</code> ist geschrieben,
   aber nie gelaufen; der frühere Modus <code>automatisch</code> (Optimierer und Prüf-KI wie bei BlenderModel) wurde mit den neuen
   Schritten nicht gelaufen; die Regeln von <code>2d3DIterationen</code> sind mit Kunstdaten getestet
   (<code>test_iterationen2d3d</code>), Messwerte eines langen automatischen Laufs stehen hier nicht. Die GLB je Runde hat kein
@@ -221,6 +260,7 @@ Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
 <div class="info-box info-box-blue">
   <strong>Gegenüber dem Blender-Kostüm-Weg oben:</strong> statt Kostümteilen (Mantel, Hut, Bart …) Stücke der Genesis-Garderobe;
   statt dauerhafter Blender-Arbeiter ein Python-Bau ohne Browser (ein Prozess); im Modus „begutachtung" statt Optimierer mit
-  Zufallskandidaten Rezepte, die Claude einreicht oder die Regeln aus dem Befund schreiben; weggelassen sind Fototextur,
-  Umriss-Hülle und Sichtmodell. Gleich geblieben sind Auftrag, Tabelle, Iterationsansicht und Bühne.
+  Zufallskandidaten Rezepte, die Claude einreicht oder die Regeln aus dem Befund schreiben; die Umriss-Hülle gibt es seit dem
+  30.09.2026 nachts als Sichtkörper und <code>kleid_huelle</code>, weggelassen bleiben Fototextur und Sichtmodell. Gleich geblieben
+  sind Auftrag, Tabelle, Iterationsansicht und Bühne.
 </div>

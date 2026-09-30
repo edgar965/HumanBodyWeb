@@ -68,11 +68,12 @@ class Iterationsreferenz:
         return aus, ausgelassen
 
     @staticmethod
-    def bild(ablage, datei):
+    def bild(ablage, datei, groesse=None):
         """Das Vorlagenbild der Note: freigestellt aus dem Schritt „netz" (`vorbereitet/<name>.png`, Alpha = Figur),
         wenn es das gibt — ein Foto mit Zimmer dahinter ist sonst als Ganzes „Figur" (30.09.2026, Edgar - TEST: IoU
-        0,32 gegen den Flur). Sonst das Foto selbst mit weißem Grund."""
+        0,32 gegen den Flur). Sonst das Foto selbst mit weißem Grund. `groesse` (Breite, Höhe): eine feinere Fläche
+        als die der Note — die Fotoprojektion liest die Farbe mit 512 × 768."""
         vorbereitet = ablage.unter(Haarengineablage.VORBEREITET) / (datei.rsplit('.', 1)[0] + '.png')
         if vorbereitet.is_file():
-            return Iterationsbild.aus_render(vorbereitet)
-        return Iterationsbild.aus_vorlage(ablage.unter(Haarengineablage.EINGANG) / datei)
+            return Iterationsbild.aus_render(vorbereitet, groesse)
+        return Iterationsbild.aus_vorlage(ablage.unter(Haarengineablage.EINGANG) / datei, groesse)

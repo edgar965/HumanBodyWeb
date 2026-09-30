@@ -102,7 +102,7 @@ class Begutachtungsrunde:
         # Der Sichtkörper der Vorlagen (Konzept 4.1) steht dem Rezept zur Verfügung (`kleid_huelle`, `koerper_huelle`)
         # — gebaut aus den Silhouetten der Note und der Höhe des Modells der LETZTEN Runde (erste Runde: Körper).
         sicht = self._sichtkoerper(referenzen, z)
-        modell.umgebung = Rezeptumgebung(sichtkoerper=sicht)
+        modell.umgebung = Rezeptumgebung(sichtkoerper=sicht, drapierer=self._drapierer())
         if naechste.get('aufrufe'):
             try:
                 rezept = [text for _zeile, text in G9rezept.anwenden(modell, naechste['aufrufe'])]
@@ -120,19 +120,28 @@ class Begutachtungsrunde:
         netznote = Iterationsnetznote.laden(self.ablage)
         messung = Begutachtungsbefund(netznote, sicht)
         je_ansicht, renders, paare = [], {}, []
+        fototextur = {}
         try:
+            # 1. Kennfarben je Ansicht (Teilmasken für Befund und Fotoprojektion), 2. Fotoprojektion, wenn das Rezept sie
+            # will (die Schicht liegt danach neben der Bibliothek, die Teile bekommen ihre Texturen neu),
+            # 3. der Render mit Texturen, der benotet wird (30.09.2026, nachts).
+            for r in referenzen:
+                messung.masken(render, teile, r, aus / ('kennung_%+04d.png' % int(round(r.winkel))), groesse)
+            if getattr(modell, 'fotowuensche', None):
+                self._melden(0.25, 'Runde %d: Fotoprojektion auf %s' % (runde, ', '.join(sorted(modell.fotowuensche))))
+                fototextur = self._fototextur(modell, teile, referenzen, render, bau, aus)
             for nummer, r in enumerate(referenzen):
                 self._melden(0.3 + 0.4 * nummer / max(1, len(referenzen)),
                              'Runde %d: Rendern %d von %d' % (runde, nummer + 1, len(referenzen)))
                 pfad = aus / ('ansicht_%+04d.png' % int(round(r.winkel)))
-                render.bild_teile([(t['punkte'], t['dreiecke'], t['farbe']) for t in teile], r.winkel, pfad,
-                                  groesse=groesse)
+                render.bild_teile([(t['punkte'], t['dreiecke'], t['farbe'], self._textur(t)) for t in teile],
+                                  r.winkel, pfad, groesse=groesse)
                 bild = Iterationsbild.aus_render(pfad)
                 note = Iterationsnote.vergleichen(r.bild, bild)
                 renders[r.datei] = bild
                 je_ansicht.append({'datei': r.datei, 'original': r.original, 'winkel': r.winkel, 'bild': pfad, **note})
                 paare.append((r.gewicht, note))
-                messung.ansicht(render, teile, r, bild, aus / ('kennung_%+04d.png' % int(round(r.winkel))), groesse)
+                messung.render_dazu(r, bild)
         finally:
             render.schliessen()
         foto = Iterationsnote.gesamt(paare) if paare else {'abweichung': 0.0, 'iou': 0.0, 'farbe': 0.0}
@@ -141,6 +150,8 @@ class Begutachtungsrunde:
         note['abweichung'] = round(float(foto['abweichung'] if paare else 0.0)
                                    + self.NETZGEWICHT * float(netz['abweichung'] if netz else 0.0), 4)
         befund = messung.befund(teile)
+        if fototextur:
+            befund['fototextur'] = fototextur
         self._melden(0.8, 'Runde %d: ablegen (Abweichung %.3f)' % (runde, note['abweichung']))
         erg = {'werte': modell.als_dict(), 'note': note, 'je_ansicht': je_ansicht, 'renders': renders,
                'teile': {t['sorte']: 1 for t in teile if t['art'] != 'koerper'}, 'befund': befund}
@@ -149,6 +160,29 @@ class Begutachtungsrunde:
         shutil.rmtree(aus, ignore_errors=True)
         self._melden(1.0, 'Runde %d: Abweichung %.4f — wartet auf Begutachtung' % (runde, note['abweichung']))
         return modell
+
+    @staticmethod
+    def _textur(teil):
+        """Das Texturpaket eines Teils für `Genesishaarrender.bild_teile` — None ohne Bild."""
+        if teil.get('uv') is None or not teil.get('textur'):
+            return None
+        return {'uv': teil['uv'], 'gruppen': teil['textur']}
+
+    def _fototextur(self, modell, teile, referenzen, render, bau, aus):
+        """Die Fotoprojektion der gewünschten Stücke (`Kleidfotoprojektion`) und die Texturen der Teile danach neu."""
+        from .kleidfotoprojektion import Kleidfotoprojektion
+        bericht = Kleidfotoprojektion(self.ablage, render, aus).bauen(modell, teile, referenzen)
+        gebaut = [k for k, b in bericht.items() if not b.get('fehler')]
+        if gebaut:
+            bau.textur_auffrischen(teile, modell, set(gebaut))
+        return bericht
+
+    def _drapierer(self):
+        """Die Stofflöser für `kleid_drapieren` — Newton (Vorgabe) und Blender, beide im Arbeitsordner des Auftrags."""
+        from .haarengineblender import Haarengineblender
+        from .kleiddrapierung import Kleiddrapierung
+        return {'newton': Kleiddrapierung(self.ablage.arbeit('stoff')),
+                'blender': Haarengineblender(self.ablage.arbeit('blender'))}
 
     def _sichtkoerper(self, referenzen, z):
         """`Sichtkoerper` aus den Silhouetten der Vorlagen — je Lauf einmal je Modellhöhe (auf den cm); None ohne Fotos."""

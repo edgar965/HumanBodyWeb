@@ -80,18 +80,51 @@ class Genesishaarrender:
             return (0.28, 0.20, 0.15)
         return tuple(int(roh[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
 
+    def _flach(self, pyrender, szene, punkte, dreiecke, farbe):
+        import trimesh
+        netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64),
+                               faces=np.asarray(dreiecke, dtype=np.int64), process=False)
+        material = pyrender.MetallicRoughnessMaterial(
+            baseColorFactor=(*farbe, 1.0), metallicFactor=0.0, roughnessFactor=0.75, doubleSided=True)
+        szene.add(pyrender.Mesh.from_trimesh(netz, material=material, smooth=False))
+
+    def _textur(self, pyrender, szene, punkte, dreiecke, farbe, textur):
+        """Je Materialgruppe mit Bild ein Netz mit UV und Albedo (`Kleidermodellbau._textur`: ab, anzahl, albedo,
+        faktor); Dreiecke ohne Bild flach. pyrender legt Zeile 0 des Bildes auf v = 1 — wie Daz' UV (OBJ)."""
+        import trimesh
+        from PIL import Image
+        uv = np.asarray(textur['uv'], dtype=np.float64)
+        dreiecke = np.asarray(dreiecke, dtype=np.int64)
+        belegt = np.zeros(len(dreiecke), dtype=bool)
+        for g in textur['gruppen']:
+            if g.get('albedo') is None:
+                continue
+            wahl = dreiecke[g['ab']:g['ab'] + g['anzahl']]
+            if not len(wahl):
+                continue
+            belegt[g['ab']:g['ab'] + g['anzahl']] = True
+            nummern, neu = np.unique(wahl.ravel(), return_inverse=True)
+            netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64)[nummern], faces=neu.reshape(-1, 3),
+                                   process=False)
+            with Image.open(g['albedo']) as roh:
+                bild = np.asarray(roh.convert('RGB'))
+            netz.visual = trimesh.visual.TextureVisuals(uv=uv[nummern])
+            material = pyrender.MetallicRoughnessMaterial(
+                baseColorFactor=(*[float(c) for c in g['faktor'][:3]], 1.0), metallicFactor=0.0, roughnessFactor=0.85,
+                doubleSided=True, baseColorTexture=pyrender.Texture(source=bild, source_channels='RGB'))
+            szene.add(pyrender.Mesh.from_trimesh(netz, material=material, smooth=False))
+        if not belegt.all():
+            self._flach(pyrender, szene, punkte, dreiecke[~belegt], farbe)
+
     def _szene(self, pyrender, teile, mitte, hoehe, winkel):
         szene = pyrender.Scene(bg_color=(0, 0, 0, 0), ambient_light=(self.UMGEBUNG,) * 3)
-        for punkte, dreiecke, farbe in teile:
+        for punkte, dreiecke, farbe, textur in teile:
             if punkte is None or dreiecke is None or not len(dreiecke):
                 continue
-            import trimesh
-            netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64),
-                                   faces=np.asarray(dreiecke, dtype=np.int64), process=False)
-            material = pyrender.MetallicRoughnessMaterial(
-                baseColorFactor=(*farbe, 1.0), metallicFactor=0.0, roughnessFactor=0.75,
-                doubleSided=True)
-            szene.add(pyrender.Mesh.from_trimesh(netz, material=material, smooth=False))
+            if textur and textur.get('uv') is not None and any(g.get('albedo') for g in textur.get('gruppen') or []):
+                self._textur(pyrender, szene, punkte, dreiecke, farbe, textur)
+            else:
+                self._flach(pyrender, szene, punkte, dreiecke, farbe)
         # Orthografisch: die halbe Bildhöhe in Metern ist `ymag`; die Breite folgt dem Seitenverhältnis.
         halb = 0.5 * hoehe * (1.0 + 2.0 * self.RAND)
         kamera = pyrender.OrthographicCamera(xmag=halb * self.BREITE / self.HOEHE, ymag=halb)
@@ -114,13 +147,16 @@ class Genesishaarrender:
         return self.bild_teile(teile, winkel, pfad)
 
     def bild_teile(self, teile, winkel, pfad, groesse=None):
-        """Beliebig viele Teile `[(punkte, dreiecke, farbe rgb 0…1)]` — „2D3D Kleider" (Körper, Kleider, Haar)
-        aus `winkel` Grad, freigestellt nach `pfad`. `groesse` (Breite, Höhe) statt BREITE × HOEHE: ein kleines
-        Bild für die Iterationen, die Note rechnet ohnehin auf 128 × 192."""
+        """Beliebig viele Teile `[(punkte, dreiecke, farbe rgb 0…1[, textur])]` — „2D3D Kleider" (Körper, Kleider,
+        Haar) aus `winkel` Grad, freigestellt nach `pfad`. `textur` (30.09.2026): `{'uv': (N, 2), 'gruppen': [{ab,
+        anzahl, albedo, faktor}]}` — dann trägt das Teil seine Albedo je Materialgruppe (Foto, Decal, Daz-Bild) statt
+        der flachen Farbe. `groesse` (Breite, Höhe) statt BREITE × HOEHE: ein kleines Bild für die Iterationen, die
+        Note rechnet ohnehin auf 128 × 192."""
         import pyrender
         from PIL import Image
 
-        teile = [(p, d, tuple(float(c) for c in np.asarray(f)[:3])) for p, d, f in teile if p is not None]
+        teile = [(t[0], t[1], tuple(float(c) for c in np.asarray(t[2])[:3]), t[3] if len(t) > 3 else None)
+                 for t in teile if t[0] is not None]
         if not teile:
             raise ValueError('Nichts zu rendern — weder Körper noch Frisur')
         if groesse and tuple(groesse) != (self.BREITE, self.HOEHE):

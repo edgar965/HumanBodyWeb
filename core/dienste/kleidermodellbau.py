@@ -62,7 +62,7 @@ class Kleidermodellbau:
             punkte = np.asarray(self.formung.punkte(), dtype=np.float64) - np.array([0.0, self.boden, 0.0])
             self._koerper = {'punkte': punkte[self._ursprung], 'dreiecke': self._dreiecke,
                              'farbe': np.asarray(self.HAUT), 'haut': self._haut, 'art': 'koerper',
-                             'sorte': 'koerper'}
+                             'sorte': 'koerper', 'uv': None, 'normalen': None, 'gruppen': [], 'textur': []}
         return self._koerper
 
     # --------------------------------------------------------------- Stücke
@@ -145,7 +145,7 @@ class Kleidermodellbau:
             if not isinstance(aus, HttpResponse):
                 for teil in aus.get('teile') or []:
                     teil['sorte'] = kennung
-        return self._teile(aus, roh, 'kleidung', np.asarray(self._hex(modell.farben['kleidung'])))
+        return self._teile(aus, roh, 'kleidung', modell)
 
     def _haar(self, modell):
         from ..api.g9garderobe import G9garderobeapi
@@ -162,12 +162,14 @@ class Kleidermodellbau:
             return G9garderobeapi._kleid(kennung, eintrag, r, vor_antwort=sammeln)
 
         aus = G9haarmischbau.antwort(rumpf, kleid)
-        return self._teile(aus, roh, 'haar', np.asarray(self._hex(modell.farben['haar'])))
+        return self._teile(aus, roh, 'haar', modell)
 
-    def _teile(self, aus, roh, art, toenung):
+    def _teile(self, aus, roh, art, modell):
         if isinstance(aus, HttpResponse):
             raise RuntimeError('%s: %s' % (art, getattr(aus, 'content', b'')[:300].decode('utf-8', 'replace')))
-        farben = {sorte: self._farbe(netze, toenung) for sorte, netze in roh.items()}
+        toenungen = {sorte: np.asarray(self._hex(modell.stueckfarbe(art, sorte))) for sorte in roh}
+        grund = np.asarray(self._hex(modell.farben[art]))
+        farben = {sorte: self._farbe(netze, toenungen[sorte]) for sorte, netze in roh.items()}
         teile = []
         for teil in aus.get('teile') or []:
             if teil is None or not teil.get('vertex_count'):
@@ -177,9 +179,52 @@ class Kleidermodellbau:
             if not len(dreiecke):
                 continue                           # Stranghaar (Linien) rendert nicht
             sorte = teil.get('sorte') or art
+            # UV, Normalen und Materialgruppen (mit ihren Bildern, `G9kleidtexturen` schon eingerechnet) für den Render
+            # mit Texturen und die Fotoprojektion (30.09.2026, nachts).
+            uv = self._feld(teil['uvs'], np.float32).reshape(-1, 2).astype(np.float64) if teil.get('uvs') else None
+            normalen = (self._feld(teil['normals'], np.float32).reshape(-1, 3).astype(np.float64)
+                        if teil.get('normals') else None)
+            gruppen = [dict(g) for g in (teil.get('gruppen') or []) if isinstance(g, dict)]
+            toenung = toenungen.get(sorte, grund)
             teile.append({'punkte': punkte, 'dreiecke': dreiecke, 'farbe': farben.get(sorte, toenung),
-                          'haut': self._haut_aus(teil), 'art': art, 'sorte': sorte})
+                          'haut': self._haut_aus(teil), 'art': art, 'sorte': sorte, 'uv': uv, 'normalen': normalen,
+                          'gruppen': gruppen, 'toenung': toenung,
+                          'textur': self._textur(gruppen, {g['name']: g.get('bilder') or {} for g in gruppen}, toenung)})
         return teile
+
+    @staticmethod
+    def _textur(gruppen, bilder, toenung):
+        u"""`[{ab, anzahl, albedo, normalen, faktor}]` je Materialgruppe (Dreiecke, Pfade, Farbfaktor = Daz-Farbe ×
+        2 × Tönung) — leer, wenn keine Gruppe ein Bild trägt (dann bleibt der Render flach)."""
+        from Genesis9.material import G9material
+        aus = []
+        for g in gruppen:
+            b = bilder.get(g['name']) or {}
+            albedo = G9material.datei(b['albedo']) if b.get('albedo') else None
+            normalen = G9material.datei(b['normalen']) if b.get('normalen') else None
+            farbe = b.get('farbe')
+            faktor = np.asarray(farbe[:3], dtype=np.float64) if isinstance(farbe, (list, tuple)) and len(farbe) >= 3 \
+                else np.ones(3)
+            aus.append({'ab': int(g['index_ab']) // 3, 'anzahl': int(g['index_anzahl']) // 3, 'albedo': albedo,
+                        'normalen': normalen, 'faktor': np.clip(faktor * 2.0 * np.asarray(toenung), 0.0, 1.0)})
+        return aus if any(t['albedo'] is not None for t in aus) else []
+
+    @classmethod
+    def textur_auffrischen(cls, teile, modell, sorten):
+        u"""Die Texturen der Teile dieser Sorten neu aus den Daz-Bildern und den Schichten komponieren — nach einer
+        Fotoprojektion in der Runde, damit der Render derselben Runde die Schicht schon zeigt."""
+        from Genesis9.garderobe import G9garderobe
+        from Genesis9.haargenerisch import G9haargenerisch
+        from Genesis9.kleidgenerischwahl import G9kleidgenerischwahl
+        from Genesis9.kleidtexturen import G9kleidtexturen
+        for t in teile:
+            sorte = t.get('sorte')
+            if sorte not in sorten or not t.get('gruppen'):
+                continue
+            regler = (G9haargenerisch.regler_von(sorte, modell.haar) if t['art'] == 'haar'
+                      else G9kleidgenerischwahl.regler_von(sorte, modell.kleidung))
+            bilder = G9kleidtexturen.anwenden(sorte, G9garderobe.bilder(sorte), regler)
+            t['textur'] = cls._textur(t['gruppen'], bilder, t['toenung'])
 
     @staticmethod
     def _hex(text):
@@ -196,18 +241,6 @@ class Kleidermodellbau:
 
     @staticmethod
     def glb(teile, pfad, punkte_je_teil=None):
-        """Alle Teile als GLB mit flachen Farben (`punkte_je_teil`: andere Punkte, etwa gehäutet). Knotenname
-        `<art>__<sorte>__<n>` — die Bühne schaltet daran Haar und Kleider (`Haarenginebuehnenmodell`)."""
-        import trimesh
-        szene = trimesh.Scene()
-        for i, t in enumerate(teile):
-            punkte = t['punkte'] if punkte_je_teil is None else punkte_je_teil[i]
-            netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64),
-                                   faces=np.asarray(t['dreiecke'], dtype=np.int64), process=False)
-            rgb = [int(round(float(c) * 255)) for c in np.asarray(t['farbe'])[:3]]
-            netz.visual = trimesh.visual.ColorVisuals(
-                netz, vertex_colors=np.tile(np.array([*rgb, 255], dtype=np.uint8), (len(netz.vertices), 1)))
-            szene.add_geometry(netz, node_name='%s__%s__%d' % (t.get('art'), t.get('sorte') or t.get('art'), i))
-        pfad.parent.mkdir(parents=True, exist_ok=True)
-        szene.export(str(pfad))
-        return pfad
+        """Alle Teile als GLB — mit Texturen, wo eine Gruppe ein Bild trägt, sonst flache Farben (`Kleidermodellglb`)."""
+        from .kleidermodellglb import Kleidermodellglb
+        return Kleidermodellglb.schreiben(teile, pfad, punkte_je_teil)

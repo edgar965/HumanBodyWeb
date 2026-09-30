@@ -120,3 +120,78 @@ class OrtsmorphTest(SimpleTestCase):
         self.assertIn(u'Sichtkörper', str(fehler.exception))
         with self.assertRaises(ValueError):
             m.haltung_gelenk('l_hand', 'x', 10)
+        with self.assertRaises(ValueError) as fehler:
+            m.kleid_drapieren('shirt')
+        self.assertIn('Newton', str(fehler.exception))
+        with self.assertRaises(ValueError):
+            m.kleid_drapieren('shirt', motor='unity')
+        # Die Lage für den Newton-Löser (Z oben) und zurück ist verlustfrei.
+        from core.dienste.kleiddrapierung import Kleiddrapierung
+        p = np.array([[0.1, 1.2, -0.3]])
+        np.testing.assert_allclose(Kleiddrapierung.nach_y_oben(Kleiddrapierung.nach_z_oben(p)), p)
+        self.assertEqual(Kleiddrapierung.nach_z_oben(p).tolist(), [[0.1, 0.3, 1.2]])
+
+
+class StandardreglerTest(SimpleTestCase):
+    u"""Die festen Regler (`G9standardmorphe`, `G9koerperstandardmorphe`) und die Automatik mit Zellen/Hülle —
+    ohne Bibliothek: Kataloge, Namen, Rezeptzeilen. Sabotage: in `G9standardmorphe.KLEIDUNG` einen Namen ohne
+    `form_` eintragen → Fall 6 rot."""
+    databases = set()
+
+    def test_6_kataloge_und_reglerlisten(self):
+        from Genesis9.koerperstandardmorphe import G9koerperstandardmorphe
+        from Genesis9.standardmorphe import G9standardmorphe
+        for art in ('kleidung', 'haar'):
+            namen = G9standardmorphe.namen(art)
+            self.assertGreaterEqual(len(namen), 10, art)
+            self.assertEqual(len(set(namen)), len(namen))
+            for n in namen:
+                self.assertTrue(G9standardmorphe.ist_standard(n), n)
+                self.assertEqual(G9standardmorphe.art_von(n), art, n)
+            regler = G9standardmorphe.regler(art)
+            self.assertEqual([r['name'] for r in regler], ['eigen.' + n for n in namen])
+            self.assertEqual({r['gruppe'] for r in regler}, {G9standardmorphe.GRUPPE[art]})
+        self.assertFalse(G9standardmorphe.ist_standard('netz_b0'))
+        for name, _a, operation, ort, _p in G9standardmorphe.HAAR:
+            self.assertIn(operation, ('trim', 'clump', 'noise', 'straighten', 'biegen', 'anlegen'), name)
+            self.assertTrue(ort is None or isinstance(ort, dict), name)
+        bereich = G9koerperstandardmorphe.bereich()
+        self.assertEqual(bereich['schluessel'], 'ort')
+        self.assertEqual(len(bereich['regler']), len(G9koerperstandardmorphe.KATALOG))
+        for r in bereich['regler']:
+            self.assertTrue(r['name'].startswith('eigen:ort_'), r)
+            self.assertTrue(G9koerperstandardmorphe.ist_standard(r['name'][len('eigen:'):]), r)
+            self.assertEqual(r['min'], -2.0)
+        self.assertFalse(G9koerperstandardmorphe.ist_standard('ort_quatsch'))
+        form = G9koerperstandardmorphe.form('ort_bauch')
+        self.assertEqual(form['ort']['landmarke'], 'bauch')
+
+    def test_7_automatik_schreibt_ortsmorphe_und_huelle(self):
+        from iterationen2d3d.befundmessung import Befundmessung
+        from iterationen2d3d.iterationkleider import IterationKleider
+        m = ModellMitKleidern().kleid_nur('shirt')
+        zellen = [[0.0] * 8 for _ in range(5)]
+        zellen[2][0] = 30.0                                     # Band 2, Sektor 0: 30 mm zu weit außen
+        befund = {'teile': {'shirt': {'art': 'kleidung', 'netz_mm': 5.0, 'netz_abs_mm': 5.0, 'grund_mm': 0.0,
+                                      'baender': [0.0] * 5, 'zellen': zellen, 'huelle_mm': [20.0] * 5,
+                                      'pixel': 100, 'foto_farbe': [0.5] * 3, 'render_farbe': [0.5] * 3}}}
+        zeilen = IterationKleider(m, befund).aufrufe()
+        text = '\n'.join(zeilen)
+        self.assertIn("m.morph_ort('kleidung', 'shirt', 'netz_b2s0'", text)
+        self.assertIn("'sektor': %r" % (Befundmessung.sektor(0),), text)
+        self.assertIn("m.kleid_huelle('shirt', staerke=0.5)", text)
+        self.assertEqual(sum('netz_b' in z for z in zeilen), 1)
+        m.kleidung['shirt.eigen.huelle'] = 0.5
+        m.kleidung['shirt.eigen.netz_b2s0'] = -1.0
+        zeilen = IterationKleider(m, befund).aufrufe()
+        self.assertIn("m.morph_wert('kleidung', 'shirt', 'huelle', 0.75)", zeilen)
+        self.assertTrue(any(z.startswith("m.morph_wert('kleidung', 'shirt', 'netz_b2s0'") for z in zeilen))
+
+    def test_8_blender_dreiecke_auf_daz_punkten(self):
+        from core.dienste.haarengineblender import Haarengineblender
+
+        class Folger:
+            dreiecke = np.array([[0, 1, 2, -1], [3, 4, 5, 6]])
+            ursprung = np.array([10, 11, 12, 13, 14, 15, 16])
+        d = Haarengineblender._dreiecke(Folger())
+        self.assertEqual(d.tolist(), [[10, 11, 12], [13, 14, 15], [13, 15, 16]])

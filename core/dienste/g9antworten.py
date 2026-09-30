@@ -201,6 +201,16 @@ class G9antworten(G9antwortvorrat):
         if any(str(k).startswith('hb:') for k in regler):
             from Genesis9.hbmorphe import G9hbmorphe
             stand = (stand, G9hbmorphe.stand())
+        # Eigene Morphe (`eigen.`) und Texturschichten (`bild.`) eines Stuecks (30.09.2026): ein Rezept baut
+        # denselben Namen neu — der Stand beider Ablagen geht mit, sobald einer im Rumpf steht.
+        stueck = rumpf.get('regler_stueck') if isinstance(rumpf, dict) else None
+        if isinstance(stueck, dict) and any(str(k).split('.', 1)[-1].startswith(('eigen.', 'bild.'))
+                                            or str(k).startswith(('eigen.', 'bild.')) for k in stueck):
+            from Genesis9.kleidmorphe import G9kleidmorphe
+            from Genesis9.kleidtexturen import G9kleidtexturen
+            ordner = G9kleidmorphe.ordner()
+            morphe = max((p.stat().st_mtime_ns for p in ordner.glob('*.json')), default=0) if ordner.is_dir() else 0
+            stand = (stand, morphe, G9kleidtexturen.stand())
         return stand
 
     @staticmethod

@@ -79,7 +79,7 @@ class G9haarmischbau:
             haupt = rang == 0
             eintrag = G9garderobe.eintrag(kennung) or {}
             aus = kleid(kennung, eintrag, dict(rumpf, regler_stueck=regler),
-                        vor_antwort=cls._ausduenner(kennung, anteil, haupt))
+                        vor_antwort=cls._ausduenner(kennung, anteil, haupt, G9haarmischung.ort_aus(regler)))
             if isinstance(aus, HttpResponse):
                 if haupt:
                     return aus
@@ -110,11 +110,12 @@ class G9haarmischbau:
                 liste.append(eintrag)
 
     @staticmethod
-    def _ausduenner(kennung, anteil, haupt):
-        u"""Der Eingriff je Teil für `_kleid` — `(nummer, netz) -> netz | None`."""
+    def _ausduenner(kennung, anteil, haupt, ort=None):
+        u"""Der Eingriff je Teil für `_kleid` — `(nummer, netz) -> netz | None`. `ort` (30.09.2026, nachts): die
+        Strähnen dieser Sorte nur in einem Sektor/Band (`G9haarmischung.eignung`); die Kappe bleibt ganz."""
         def eingreifen(nummer, netz):
             if netz.get('art') == 'kappe':
                 return netz if haupt else None
             return G9haarmischung.ausduennen(netz, anteil, '%s/%d' % (kennung, nummer),
-                                             groesste_behalten=haupt)
+                                             groesste_behalten=haupt and not ort, ort=ort)
         return eingreifen

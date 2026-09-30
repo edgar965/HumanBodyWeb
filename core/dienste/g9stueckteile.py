@@ -75,6 +75,10 @@ class G9stueckteile:
         from Genesis9.kleidmorphe import G9kleidmorphe
         kaefige = G9kleidmorphe.anwenden(
             kennung, teile, kaefige, G9kleidmorphe.werte(rumpf.get('regler_stueck')))
+        # Texturschichten der Iterationen (`G9kleidtexturen`, 30.09.2026): Fotoprojektion, Decal, Faltenkarte über
+        # die Daz-Bilder der Gruppen gelegt (`bild.<schicht>` im Rumpf) — die Kachel ersetzt die Albedo VOR dem Bau.
+        from Genesis9.kleidtexturen import G9kleidtexturen
+        bilder = G9kleidtexturen.anwenden(kennung, bilder or {}, rumpf.get('regler_stueck'))
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
         # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)
