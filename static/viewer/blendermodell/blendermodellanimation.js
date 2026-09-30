@@ -35,6 +35,8 @@ export class Blendermodellanimation {
         this.karte = document.getElementById('animations-leiste');
         this.scrubber = document.getElementById('anim-scrubber');
         this.zeit = document.getElementById('anim-zeit');
+        this.bildfeld = document.getElementById('anim-bild');
+        this.bilder = 0;
         this._uhr = new THREE.Clock();
         this.binden();
         this._takt();
@@ -98,6 +100,7 @@ export class Blendermodellanimation {
         this.action.paused = true;
         this.dauer = clip.duration;
         this.fps = daten.duration ? daten.frame_count / daten.duration : 30;
+        this.bilder = daten.frame_count;
         this.mixer.update(0);
         this.knopf(false);
         this.fortschritt();
@@ -122,10 +125,27 @@ export class Blendermodellanimation {
 
     // -------------------------------------------------------------- Bedienung
 
+    /** Ist die Bewegung angefasst — läuft sie, oder steht sie nicht auf Bild 1? Vorher zeigt das Iterationsmodell die
+     *  Haltung seiner Runde (Edgar, 30.09.2026: „zeigt was anderes als im 3D View") statt der ersten Tanzpose. */
+    bewegt() {
+        return !!this.action && (!this.action.paused || this.action.time > 0);
+    }
+
     umschalten() {
+        // Liegt der Blender-Film über der Bühne, gehört der Knopf dem Film — sonst liefe er weiter, während der Knopf die
+        // unsichtbare Figur darunter anhält (Edgar, 30.09.2026: „der Blender Play kann nicht gestoppt werden").
+        if (this.seite.blenderfilm?.sichtbar()) {
+            this.seite.blenderfilm.abspielen();
+            return;
+        }
         if (!this.action) return;
         this.action.paused = !this.action.paused;
         this.knopf(!this.action.paused);
+    }
+
+    /** Das Zeichen des Knopfs wieder auf den Stand der Bewegung setzen (wenn der Film nicht mehr darüber liegt). */
+    knopfNeu() {
+        this.knopf(!!this.action && !this.action.paused);
     }
 
     knopf(spielt) {
@@ -158,6 +178,9 @@ export class Blendermodellanimation {
         }
         this.zeit.textContent =
             `${Blendermodellanimation._mmss(this.action.time)} / ${Blendermodellanimation._mmss(this.dauer)}`;
+        // Edgar, 30.09.2026: aktuelles Bild neben der Sekundenanzeige — Bild 1 … frame_count der Bewegung.
+        const bild = Math.min(this.bilder, Math.floor(this.action.time * this.fps + 1e-6) + 1);
+        this.bildfeld.textContent = `Bild ${bild} / ${this.bilder}`;
     }
 
     static _mmss(sekunden) {

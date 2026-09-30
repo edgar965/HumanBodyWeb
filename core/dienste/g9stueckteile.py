@@ -63,6 +63,13 @@ class G9stueckteile:
         hoch = np.array([0.0, formung.boden(), 0.0])
         kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
                    for folger, lage in teile]
+        # Die fuenf gemeinsamen Formachsen einer Frisur (`G9haarachsen`) — sie sind keine
+        # Daz-Kanaele und laufen deshalb an `G9garderobe.reglerwerte` vorbei. Linear wie
+        # jeder Morph, also einfach dazu.
+        if eintrag.get('art') == 'haar':
+            from Genesis9.haarachsen import G9haarachsen
+            kaefige = G9haarachsen.anwenden(
+                kennung, teile, kaefige, G9haarachsen.werte(rumpf.get('regler_stueck')))
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
         # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Haar Engine · {{ job.name }}{% endblock %}
+
+{% comment %}
+Auftragsseite „Haar Engine" (Kopie von `blendermodell_auftrag.html`, 30.09.2026): oben der Lauf (Schritte mit Dauer,
+Fortschritt, neu ab einem Schritt, Anhalten), darunter die BILDAUSWAHL (die Vorlagen: Fotos mit Rolle, Gewicht, Platz;
+hinzufügen, ersetzen, entfernen — wie im Reiter „Mesh"), die Optionen, dann die 3D-AUSGABE wie bei „Mesh to 3D": die Figur mit
+den gestellten Reglern und dem Modell der letzten Iteration, Kennzahlen, Export als GLB, Speichern als Genesis-Figur — und der
+zweite Reiter „Iterationen" mit den Runden. Die Anzeige der Figur ist die von „Mesh to 3D" (`static/viewer/meshfigur/`),
+unverändert benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Katalog kommen als JSON in die Seite, Nachfrage über
+`/api/haarengine/<id>/zustand/`. Gebaut und gerendert wird von der Genesis Haar Engine (`Genesishaarengine`).
+{% endcomment %}
+{% block extra_head %}
+{% comment %}Tabelle „Iterationen“: djangoBase-Tabellenstil (`tabellen.css`) vor `auftragstabelle.css` (Kästchenspalte, gewählte Zeile).{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/haarengine.css' %}">
+{% comment %}Dieselbe Importkarte wie die Szene und „Mesh to 3D": three r170 VOLLSTÄNDIG — der Export (`Modellexport` mit
+GLTFExporter) und die Netzlader fehlen in der lokalen Kopie unter static/vendor, und die Szenenmodule des Exports
+erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
+{% endblock %}
+
+{% block content %}
+{{ daten|json_script:"haarengine-daten" }}
+
+<div class="page-header mesh-auftragskopf">
+    <div>
+        <a href="{% url 'haarengine' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Haar Engine</a>
+        <h1><i class="fas fa-cut"></i> <span id="auftrag-name"
+                data-adresse="{% url 'auftrag_name' 'haarengine' job.id %}">{{ job.name }}</span>
+            <small class="hb-hinweis">Haar Engine · {{ job.kennung }}</small></h1>
+    </div>
+    <div class="auftrag-kopfknoepfe">
+        <div class="bildmodell-status" id="auftrag-status"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
+                data-adresse="{% url 'haarengine_loeschen' job.id %}"
+                data-ziel="{% url 'haarengine' %}"
+                data-frage="Diesen Auftrag samt Fotos und Ergebnisdateien löschen? Gespeicherte Modelle und die Ablage in Haar Engine bleiben.">
+            <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
+    </div>
+</div>
+
+{% comment %}Zwei Reiter: „Auftrag" ist die Seite wie bei BlenderModel, „Iterationen" die Runden der Iterationen
+(`Haarengineiterationen`).{% endcomment %}
+{% comment %}„Läuft im Hintergrund“ über beiden Reitern: Ein Lauf, der von außen gestartet wurde, soll man sehen und beenden
+können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten“.{% endcomment %}
+<div class="haarengine-laufband" id="laufband" role="status" hidden>
+    <i class="fas fa-spinner fa-spin"></i>
+    <span id="laufband-text">Läuft im Hintergrund …</span>
+    <button type="button" class="btn btn-danger btn-sm" id="laufband-anhalten" title="Beendet den Lauf sofort; eine Runde, die gerade rechnet, geht verloren, alles Abgelegte bleibt">
+        <i class="fas fa-stop"></i> <span>Anhalten</span></button>
+</div>
+<div class="seitenreiter" role="tablist" id="auftrag-reiter">
+    <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cut"></i> Auftrag</button>
+    <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
+        Iterationen <span id="iterationen-anzahl"></span></button>
+</div>
+<div id="reiter-auftrag">
+<div class="card" id="lauf">
+    <ol class="meshfigur-schritte" id="schritte"></ol>
+    <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
+    <div class="bildmodell-laufzeile">
+        <span id="fortschritt-text" class="hb-hinweis"></span>
+        <span class="bildmodell-laufknoepfe">
+            <label class="hb-hinweis">ab <select id="ab-schritt" class="viewer-select"></select></label>
+            <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        </span>
+    </div>
+    <div class="hb-hinweis" id="lauf-hinweis">Jede Eingabe wird sofort gespeichert. „Neu berechnen“ beginnt beim gewählten
+        Schritt: „Grundfigur“ baut die Genesis-9-Figur neu, „Iterationen“ rechnet weitere Runden am Modell (Figur mit
+        Haar, immer ab dem besten bisherigen), danach Rig, Film und Ablage. Nur weitere Runden: Reiter
+        „Iterationen“ → „Weiter iterieren“. <span class="einstellungen-meldung"></span></div>
+    <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
+</div>
+
+<div class="card" id="bildauswahl">
+    <h2>Bildauswahl</h2>
+    <p class="hb-hinweis haarengine-fotohinweis">Die Fotos sind die VORLAGE der Iterationen: Jede Runde rendert das
+        Modell (Figur mit Haar) aus dem Blickwinkel jedes Fotos und misst die Abweichung. Den Blickwinkel gibt die Rolle
+        (Vorne, Links, Rechts, Hinten) oder der Name eines Schnittbilds des Ansichtenbogens („ansicht_R_S“).
+        „Nicht verwenden“ schließt ein Foto aus (etwa den ganzen Bogen), das Gewicht zählt es mehr oder
+        weniger. Platz 1 ist die Vorlage in der Übersicht. Hinzufügen, Ersetzen und Entfernen gehen jederzeit; ein
+        laufender Kreislauf sieht die Änderung ab dem nächsten Lauf.</p>
+    <div class="mesh-fotoknoepfe" id="foto-knoepfe"></div>
+    <div class="mesh-fotoliste" id="fotoliste"></div>
+</div>
+
+{% comment %}Die Optionen stehen in einer eigenen Karte über die volle Breite, nicht in der Seitenspalte der Bühne wie bei
+„Mesh to 3D“: Mehrere Gruppen mit vielen Feldern machen die Spalte so lang, dass die Bühne (Flex, streckt sich mit) über 3.000 px
+hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
+<div class="card" id="optionen-karte">
+    <h2>Optionen</h2>
+    <h3 class="haarengine-gruppe">Grundfigur</h3>
+    <div class="mesh-optionen" id="haarengine-optionen-figur"></div>
+    {% comment %}Die Einstellungen der Iterationen (Runden, Kandidaten, Prüf-KI …) stehen im Reiter „Iterationen“.{% endcomment %}
+    <h3 class="haarengine-gruppe">Film — Bewegung und Video</h3>
+    <div class="mesh-optionen" id="haarengine-optionen-film"></div>
+</div>
+
+<div class="card">
+    <div class="mesh-hauptbereich">
+        <div class="meshfigur-buehnenspalte">
+            {% comment %}Jeder Teil der Bühne einzeln schaltbar — die Vorgabe steht hier als Klasse `active`, gebunden
+            werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`. „Modell (letzte Iteration)“ lädt die GLB der
+            letzten übernommenen Runde — Figur, Haar und Rig — statt der nackten Genesis-Figur
+            (`Haarenginebuehnenmodell`). „Mesh“ und „Nebeneinander“ gehörten zum Netz aus Fotos (dieser Bereich baut
+            keins) und sind versteckt; die Knöpfe bleiben im DOM, weil `Meshfigurschalter` (geteilt mit „Mesh to 3D“) sie
+            liest.{% endcomment %}
+            <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
+                <button type="button" class="schaltknopf" id="buehne-iterationsmodell"
+                        title="Das Modell der letzten übernommenen Iteration: Grundfigur mit Haar, am Rig (spielt auch die Bewegung)">
+                    <i class="fas fa-cut"></i> <span>Modell (letzte Iteration)</span></button>
+                <button type="button" class="schaltknopf" id="buehne-film" hidden
+                        title="Der Film der Haar Engine (Schritt „Film“: Figur mit Haar, Bewegung aus der BVH-Datei) in dieser Ansicht">
+                    <i class="fas fa-film"></i> Film</button>
+                <button type="button" class="schaltknopf" data-schalter="mesh" hidden
+                        title="Das Netz aus Fotos — dieser Bereich baut keins">
+                    <i class="fas fa-draw-polygon"></i> Mesh</button>
+                <button type="button" class="schaltknopf active" data-schalter="haare"
+                        title="Das Haar auf der Figur — welches, wählt das Feld daneben">
+                    <i class="fas fa-hat-wizard"></i> Haare</button>
+                <label hidden id="buehne-haarwahl-feld" title="Welches Haar die Figur trägt — auch im Export: die Frisur aus Schritt „Frisur“ (Daz oder „Haar Eigen“), das Haar aus dem Netz oder die Haarkarten aus seiner Schale">
+                    <select id="buehne-haarwahl" aria-label="Welches Haar"></select></label>
+                <button type="button" class="schaltknopf active" data-schalter="kleider"
+                        title="Die Kleidungsstücke der Figur — auch im Export">
+                    <i class="fas fa-tshirt"></i> Kleider</button>
+                <button type="button" class="schaltknopf" data-schalter="nebeneinander" hidden
+                        title="Netz und Figur nebeneinander statt übereinander">
+                    <i class="fas fa-columns"></i> Nebeneinander</button>
+                <button type="button" class="schaltknopf active" data-schalter="modell"
+                        title="Die Genesis-9-Grundfigur ohne das Haar der Iterationen">
+                    <i class="fas fa-user"></i> Grundfigur</button>
+            </div>
+            <div class="mesh-betrachter" id="buehne">
+                <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>
+            </div>
+            {% comment %}Bewegung LIVE auf der Figur oben, nicht als eigenes Video-Fenster: `Haarengineanimation` spielt die
+            retargetete BVH-Bewegung per `THREE.AnimationMixer` auf dem Genesis-9-Modell der Bühne ab — dieselbe Technik wie das
+            BVH-Studio.{% endcomment %}
+            <div class="haarengine-animationsleiste" id="animations-leiste" hidden>
+                <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück">
+                    <i class="fas fa-step-backward"></i></button>
+                <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause">
+                    <i class="fas fa-play"></i></button>
+                <button type="button" id="anim-vor" class="btn btn-secondary btn-sm" title="Ein Bild vor">
+                    <i class="fas fa-step-forward"></i></button>
+                <input type="range" id="anim-scrubber" class="haarengine-scrubber" min="0" max="1000" value="0" step="1">
+                <span id="anim-zeit" class="hb-hinweis haarengine-animationszeit">0:00 / 0:00</span>
+                <span id="anim-bild" class="hb-hinweis haarengine-animationszeit" title="Aktuelles Bild der Bewegung / Bilder gesamt">Bild 0 / 0</span>
+            </div>
+        </div>
+        <div class="mesh-seitenspalte haarengine-seitenspalte">
+            <div>
+                <h2>Ergebnis</h2>
+                <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
+                <div class="meshfigur-export">
+                    <div class="meshfigur-exportoptionen" id="export-optionen">
+                        <label>Textur
+                            <select id="export-aufloesung" class="viewer-select">
+                                <option value="0" selected>Original</option>
+                                <option value="2048">2048 px</option>
+                                <option value="1024">1024 px</option>
+                                <option value="512">512 px</option>
+                            </select>
+                        </label>
+                        <label><input type="checkbox" id="export-textur" checked> mit Textur</label>
+                        <label><input type="checkbox" id="export-rig" checked> mit Rig (Skelett)</label>
+                        <label class="meshfigur-exportname">Dateiname
+                            <input type="text" id="export-name" autocomplete="off" spellcheck="false"></label>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="exportieren" disabled>
+                        <i class="fas fa-file-export"></i> <span>Figur als GLB exportieren</span></button>
+                    <div class="hb-hinweis" id="export-meldung"></div>
+                </div>
+                <div class="meshfigur-export">
+                    <div class="meshfigur-exportoptionen">
+                        <label>Format
+                            <select id="modell-format" class="viewer-select">
+                                <option value="genesis" selected>Eigenes Format (Genesis-Preset)</option>
+                                <option value="glb">GLB</option>
+                                <option value="blend">Blender (.blend)</option>
+                                <option value="obj">OBJ</option>
+                            </select>
+                        </label>
+                        <label class="meshfigur-exportname">Name
+                            <input type="text" id="modell-name" autocomplete="off" spellcheck="false"></label>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
+                        <i class="fas fa-save"></i> <span>Modell speichern</span></button>
+                    <div class="hb-hinweis" id="modell-meldung">Genesis-Preset erscheint unter „Charakter hinzufügen →
+                        Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre); GLB/Blender/OBJ gehen in die
+                        Export-Ablage des Auftrags.</div>
+                </div>
+            </div>
+            <div class="haarengine-netzkarte">
+                <h3 class="mesh-pfadkopf">Gespeichert unter</h3>
+                <div class="mesh-pfade" id="haarengine-pfade"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% comment %}Haar, Kleidung, Vergleich, Ketten und Erkennung zeigten bei BlenderModel die Ergebnisse der Netz-Kette (die es hier
+nicht gibt) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`, `Meshfigurhaar`, `Meshfigurkleidung` und
+`Meshfigurfrisur` (geteilt mit „Mesh to 3D“) schreiben in diese Felder.{% endcomment %}
+<div class="card" id="haar-karte" hidden>
+    <h2>Haar — Netz ohne Haar / nur Haar</h2>
+    <div id="haar"></div>
+    <h3>Frisur</h3>
+    <div id="frisur"></div>
+</div>
+
+<div class="card" id="kleidung-karte" hidden>
+    <h2>Kleidung — Netz ohne Kleidung / nur Kleidung</h2>
+    <div id="kleidung"></div>
+</div>
+
+<div class="card" id="vergleich-karte" hidden>
+    <h2>Vergleich Netz · Figur · Abweichung</h2>
+    <div id="vergleich"></div>
+</div>
+
+<div class="card" hidden>
+    <h2>Körper- und Gesichtskette</h2>
+    <div class="meshfigur-ketten" id="ketten"></div>
+</div>
+
+<div class="card">
+    <h2>Gestellte Regler</h2>
+    <div id="regler"></div>
+</div>
+
+<div class="card" hidden>
+    <h2>Erkennung</h2>
+    <div id="erkennung"></div>
+</div>
+</div>
+
+<div id="reiter-iterationen" hidden>
+    <div class="card">
+        <h2>Iterationen — Modell (Grundfigur mit Haar)</h2>
+        <p class="hb-hinweis">Jede Runde baut die Genesis Haar Engine einige Abwandlungen des besten Modells (Optimierer:
+        Maße, Farben), rendert sie aus den Blickwinkeln der Vorlagen und benotet sie: Abweichung = (1 − Deckung des Umrisses) +
+        Farbabstand, kleiner ist besser. Alle paar Runden sieht sich die Prüf-KI (lokal, Ollama) die Tafel an, beurteilt die
+        Ähnlichkeit und schlägt Werte vor. Übernommen wird nur, was besser ist (die Prüf-KI darf um die eingestellte Toleranz
+        schlechter sein). Jeder Lauf setzt beim besten Modell an — „Weiter iterieren“ beliebig oft.</p>
+        {% comment %}Die Einstellungen der Iterationen stehen HIER, wo man iteriert. Das Formular baut `Haarengineseite` in
+        diesen Behälter, gespeichert wird sofort (`Haarengineeinstellungen`); während eines Laufs sind die Felder
+        gesperrt.{% endcomment %}
+        <h3 class="haarengine-gruppe">Einstellungen der Iterationen
+            <span class="hb-hinweis einstellungen-meldung"></span></h3>
+        <p class="hb-hinweis" id="optionen-gesperrt" hidden>Ein Lauf rechnet: Die Einstellungen sind gesperrt und gelten
+            ab dem nächsten Start. „Anhalten“ beendet den Lauf.</p>
+        <div class="mesh-optionen" id="haarengine-optionen-iterationen"></div>
+        <div class="haarengine-iterationsleiste">
+            <button type="button" class="btn btn-primary btn-sm" id="iterationen-weiter">
+                <i class="fas fa-forward"></i> <span>Weiter iterieren</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="iterationen-anhalten" disabled>
+                <i class="fas fa-stop"></i> <span>Anhalten</span></button>
+            <span class="hb-hinweis" id="iterationen-stand"></span>
+            <span class="hb-hinweis" id="iterationen-ki"></span>
+        </div>
+        <div id="iterationen-verlauf"></div>
+        {% comment %}Die Runden als Tabelle (`Haarenginerundentabelle`, djangoBase-Tabelle): sortierbar, wählbar, mit Löschen
+        und Sammellöschen; „Zeige nur jede x-te Iteration“ dünnt die Anzeige aus — auch im laufenden Lauf. Je Runde Unterzeilen
+        (Notiz, Prüf-KI, Bilder, Dateien), die auf- und zuklappen.{% endcomment %}
+        <div class="haarengine-tabellenkopf">
+            <label class="hb-hinweis" title="Nur Runden, deren Nummer durch diese Zahl teilbar ist — dazu immer die neueste und die beste. 1 = alle. Nur die Anzeige, gespeichert bleibt alles.">
+                Zeige nur jede <input type="number" id="iterationen-jede" class="viewer-eingabe" min="1" max="100000"
+                       value="1"> . Iteration</label>
+            <span class="hb-hinweis" id="iterationen-angezeigt"></span>
+            <span class="haarengine-tabellenknoepfe">
+                <button type="button" class="btn btn-secondary btn-sm" id="iterationen-alle-auf">
+                    <i class="fas fa-angle-double-down"></i> <span>Alle Details auf</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" id="iterationen-alle-zu">
+                    <i class="fas fa-angle-double-up"></i> <span>Alle zu</span></button>
+                <button type="button" class="btn btn-danger btn-sm" id="iterationen-loeschen" disabled>
+                    <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="iterationen-loeschen-anzahl">0</span>)</span></button>
+            </span>
+        </div>
+        <div class="hb-hinweis" id="iterationen-meldung"></div>
+        <div id="iterationen"></div>
+    </div>
+    {% comment %}Bilder groß (`Haarenginebildfenster`): an der Ecke vergrößerbar, Mausrad zoomt, Ziehen verschiebt, Vorlage und
+    Render mit derselben Vergrößerung, ←/→ blättern.{% endcomment %}
+    <dialog id="bildfenster" class="haarengine-bildfenster">
+        <div class="haarengine-bildfenster-kopf">
+            <strong id="bildfenster-titel"></strong>
+            <span class="haarengine-bildfenster-knoepfe">
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="zurueck" title="Voriger Blickwinkel (←)">
+                    <i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="vor" title="Nächster Blickwinkel (→)">
+                    <i class="fas fa-chevron-right"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="minus" title="Verkleinern (−)">
+                    <i class="fas fa-search-minus"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="massstab" title="Bildpunkte 1:1">100 %</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="plus" title="Vergrößern (+, Mausrad)">
+                    <i class="fas fa-search-plus"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="einpassen" title="Einpassen (0, Doppelklick)">
+                    <i class="fas fa-compress"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="zu" title="Schließen (Esc)">
+                    <i class="fas fa-times"></i></button>
+            </span>
+        </div>
+        <div class="haarengine-bildfenster-flaeche" id="bildfenster-flaeche"></div>
+    </dialog>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Haarengineseite } from "{% fassungspfad 'viewer/haarengine/haarengineseite.js' %}";
+import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
+Haarengineseite.starten("{{ job.id }}");
+Auftragloeschen.binden();
+Auftragname.binden();
+</script>
+{% endblock %}

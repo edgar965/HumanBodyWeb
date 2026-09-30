@@ -39,16 +39,20 @@ class Meshfigurfrisurstueck:
     def grenzen(self):
         return {r['name']: (float(r['min']), float(r['max'])) for r in self.eintrag.get('regler') or []}
 
-    def punkte(self, stil=None, regler=None):
-        """(N, 3) alle Teile hintereinander."""
+    def teilpunkte(self, stil=None, regler=None):
+        """`[(Nᵢ, 3)]` je Teil — die Form, die `G9haarachsen.anwenden` braucht (es rechnet je Netz)."""
         from Genesis9.garderobe import G9garderobe
 
         werte, knochen = G9garderobe.stilwerte(self.kennung, [stil['id']] if stil else [])
         zusatz = dict(self.eintrag.get('vorgaben') or {})
         zusatz.update(werte)
         zusatz.update(regler or {})
-        teile = [f.punkte_zu(self.formung, zusatz, drehung=knochen, lage=lage) for f, lage in self.teile]
-        return np.vstack(teile) - self.hoch
+        return [f.punkte_zu(self.formung, zusatz, drehung=knochen, lage=lage) - self.hoch
+                for f, lage in self.teile]
+
+    def punkte(self, stil=None, regler=None):
+        """(N, 3) alle Teile hintereinander."""
+        return np.vstack(self.teilpunkte(stil, regler))
 
     def deltas(self, stil, namen):
         """`{regler: (N, 3)}` Wirkung bei Wert 1 über dem Stil — Daz-Morphe sind linear."""

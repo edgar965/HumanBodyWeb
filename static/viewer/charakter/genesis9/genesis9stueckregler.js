@@ -16,6 +16,18 @@ import { Dazkleidung } from './dazkleidung.js';
  */
 export class Genesis9stueckregler {
 
+    /** Bis zu so vielen Gruppen stehen sie beim Öffnen AUF — darüber alle zu.
+     *  „Haar – Generisch" bringt eine Gruppe je Frisur mit (18 Gruppen, über 400 Regler);
+     *  alle offen wäre eine Liste, durch die niemand scrollt. Ein gewöhnliches Stück hat
+     *  ein bis drei Gruppen und soll sich nicht schlechter bedienen als vorher. */
+    static OFFEN_BIS = 3;
+
+    /** Welche Gruppen dieser Browser offen gelassen hat — Muster wie
+     *  `Genesis9garderobekategorien.SCHLUESSEL`, aber ein EIGENER Schlüssel: Die Namen
+     *  überschneiden sich (mehrere Stücke haben eine Gruppe „Adjustment"), deshalb steht
+     *  je Eintrag `<stück>/<gruppe>`. */
+    static SCHLUESSEL = 'hb_g9_stueckregler_offen';
+
     static bauen(inst, stueck, werteLesen) {
         const kasten = document.createElement('details');
         kasten.className = 'uma-gruppe genesis9-stueckregler';
@@ -27,15 +39,48 @@ export class Genesis9stueckregler {
             gruppen.get(r.gruppe).push(r);
         }
         for (const [gruppe, regler] of gruppen) {
-            if (gruppen.size > 1) {
-                const kopf = document.createElement('div');
-                kopf.className = 'gedaempft hb-font-size-0-72rem';
-                kopf.textContent = gruppe;
-                kasten.appendChild(kopf);
-            }
-            for (const r of regler) kasten.appendChild(Genesis9stueckregler._zeile(inst, stueck, r, werteLesen));
+            const ziel = gruppen.size > 1
+                ? Genesis9stueckregler._gruppe(kasten, gruppe, regler.length, gruppen.size, stueck.id)
+                : kasten;
+            for (const r of regler) ziel.appendChild(Genesis9stueckregler._zeile(inst, stueck, r, werteLesen));
         }
         return kasten;
+    }
+
+    /** Eine Gruppe als eigener Klappkasten (Edgar, 30.09.2026: „in Kategorien der jeweiligen
+     *  Hauptsorte … und aufklappbar"). Kopf wie die Kategorien der Garderobe. */
+    static _gruppe(kasten, gruppe, anzahl, gruppenzahl, stueckId) {
+        const eigen = document.createElement('details');
+        const merkname = `${stueckId}/${gruppe}`;
+        eigen.className = 'g9-kategorie genesis9-reglergruppe';
+        eigen.open = Genesis9stueckregler._gemerkt().includes(merkname)
+            || gruppenzahl <= Genesis9stueckregler.OFFEN_BIS;
+        eigen.innerHTML = `<summary class="aufklappkopf">${escapeHtml(gruppe)} `
+            + `<span class="gedaempft">(${anzahl})</span></summary>`;
+        eigen.addEventListener('toggle', () => Genesis9stueckregler._merken(merkname, eigen.open));
+        kasten.appendChild(eigen);
+        return eigen;
+    }
+
+    /** Die gemerkten offenen Gruppen. Leer, wenn nie etwas gemerkt wurde oder der Browser
+     *  keine Seitendaten zulässt (privates Fenster). */
+    static _gemerkt() {
+        try {
+            const roh = JSON.parse(localStorage.getItem(Genesis9stueckregler.SCHLUESSEL));
+            return Array.isArray(roh) ? roh : [];
+        } catch (fehler) {
+            return [];
+        }
+    }
+
+    static _merken(name, offen) {
+        const alle = new Set(Genesis9stueckregler._gemerkt());
+        if (offen) alle.add(name); else alle.delete(name);
+        try {
+            localStorage.setItem(Genesis9stueckregler.SCHLUESSEL, JSON.stringify([...alle]));
+        } catch (fehler) {
+            // privates Fenster, gesperrte Seitendaten — dann eben nicht gemerkt
+        }
     }
 
     static _zeile(inst, stueck, regler, werteLesen) {

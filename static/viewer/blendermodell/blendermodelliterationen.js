@@ -1,40 +1,46 @@
 /**
- * Blendermodelliterationen — der zweite Reiter der Auftragsseite: die Runden des Kostüm-Kreislaufs (29.09.2026).
+ * Blendermodelliterationen — der zweite Reiter der Auftragsseite: die Runden des Iterationslaufs (29.09.2026).
  *
  * Edgar: „mach in dem Job Iterationen so dass man den Fortschritt sehen kann, in einem zweiten Tab des Jobs" und
  * „… einen Code der dann später per Knopfdruck durch alle Iterationen bis zum fertigen Ergebnis läuft. Ich kann
- * beliebig Iterationen weiter laufen lassen". Oben „Weiter iterieren" (startet NUR den Schritt „kostuem", ab dem
- * besten bisherigen Kostüm), die Kurve aller Runden (`Blendermodellverlauf`), der Vergleich Vorlage/Ergebnisvideo,
- * darunter je Runde eine Karte (`Blendermodellrunde`). Solange der Reiter offen ist, holt das Modul den Zustand alle
- * `TAKT_MS` selbst.
+ * beliebig Iterationen weiter laufen lassen". Oben die Einstellungen der Iterationen (Runden, Kandidaten, Prüf-KI …,
+ * das Formular baut `Blendermodellseite`), „Weiter iterieren" (startet NUR den Schritt „kostuem", ab dem besten
+ * bisherigen Modell), die Kurve aller Runden (`Blendermodellverlauf`), der Vergleich Vorlage/Ergebnisvideo und die
+ * Tabelle der Runden (`Blendermodellrundentabelle`, Stand 30.09.2026 statt der Karten).
+ *
+ * Den Zustand holt die Seite selbst im Takt (`Blendermodellseite.verfolgen`) und ruft `zeigen`; dieses Modul hat
+ * keinen eigenen Takt mehr.
  */
 import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
-import { Blendermodellrunde } from './blendermodellrunde.js';
+import { Blendermodellbildfenster } from './blendermodellbildfenster.js';
+import { Blendermodellrundenbilder } from './blendermodellrundenbilder.js';
+import { Blendermodellrundentabelle } from './blendermodellrundentabelle.js';
+import { Blendermodellrundenzeilen } from './blendermodellrundenzeilen.js';
 import { Blendermodellverlauf } from './blendermodellverlauf.js';
 
 export class Blendermodelliterationen {
 
-    static TAKT_MS = 5000;
     /** Ohne gemessene Bildrate im Vergleich (`ergebnis.vergleich.video_fps`). */
     static FPS_VORGABE = 30;
 
     constructor(seite) {
         this.seite = seite;
-        this.liste = document.getElementById('iterationen');
-        this.vergleich = document.getElementById('iterationen-vergleich');
-        this.anzahl = document.getElementById('iterationen-anzahl');
-        this.verlauf = document.getElementById('iterationen-verlauf');
-        this.runden = document.getElementById('iterationen-runden');
-        this.weiter = document.getElementById('iterationen-weiter');
-        this.halt = document.getElementById('iterationen-anhalten');
-        this.stand = document.getElementById('iterationen-stand');
-        this.karten = new Blendermodellrunde(name => this.seite.dateiAdresse('iterationen', name));
-        this._timer = null;
+        const $ = id => document.getElementById(id);
+        this.vergleich = $('iterationen-vergleich');
+        this.anzahl = $('iterationen-anzahl');
+        this.verlauf = $('iterationen-verlauf');
+        this.weiter = $('iterationen-weiter');
+        this.halt = $('iterationen-anhalten');
+        this.stand = $('iterationen-stand');
+        this.ki = $('iterationen-ki');
+        const datei = name => seite.dateiAdresse('iterationen', name);
+        const bilder = new Blendermodellrundenbilder(datei, name => seite.fotoAdresse(name), new Blendermodellbildfenster());
+        // Erst nach dem Bau der Seite da: Die Modelle der Bühne entstehen nach den Iterationen.
+        bilder.dreid = (runde, art) => seite[art === 'sicht' ? 'sichtmodell' : 'buehnenmodell'].waehlen(runde);
+        this.tabelle = new Blendermodellrundentabelle(seite, new Blendermodellrundenzeilen(datei, bilder));
         this._stand = '';
         this._fps = Blendermodelliterationen.FPS_VORGABE;
-        const vorgabe = (seite.zustand.optionen || {}).kostuem || {};
-        if (vorgabe.runden) this.runden.value = vorgabe.runden;
         for (const knopf of document.querySelectorAll('#auftrag-reiter [data-reiter]')) {
             knopf.addEventListener('click', () => this.umschalten(knopf.dataset.reiter));
         }
@@ -44,15 +50,14 @@ export class Blendermodelliterationen {
         document.addEventListener('keydown', ereignis => this._taste(ereignis), true);
     }
 
-    /** Nur den Schritt „kostuem" rechnen, mit der hier gewählten Zahl Runden (wird als Option gespeichert). */
+    /** Nur den Schritt „kostuem" rechnen — mit den Einstellungen, die oben im Reiter stehen (schon gespeichert). */
     async weiterIterieren() {
-        const runden = Math.max(1, Math.min(1000, Math.round(Number(this.runden.value) || 1)));
         const beschriftung = this.weiter.querySelector('span');
         const text = beschriftung.textContent;
         try {
             await Knopfsperre.waehrend(this.weiter, async () => {
-                const antwort = await Serverabruf.senden(this.seite.adresse('starten/'),
-                    { ab: 'kostuem', bis: 'kostuem', optionen: { kostuem: { runden } } });
+                if (!await this.seite.einstellungen.jetzt()) throw new Error('Einstellungen nicht gespeichert');
+                const antwort = await Serverabruf.senden(this.seite.adresse('starten/'), { ab: 'kostuem', bis: 'kostuem' });
                 if (antwort.error) throw new Error(antwort.error);
             }, 'Startet …');
         } catch (fehler) {
@@ -74,6 +79,8 @@ export class Blendermodelliterationen {
     _taste(ereignis) {
         if (ereignis.key !== 'ArrowLeft' && ereignis.key !== 'ArrowRight') return;
         if (document.getElementById('reiter-iterationen').hidden) return;
+        // Im Bildfenster blättern ←/→ die Blickwinkel (`Blendermodellbildfenster`), nicht das Video.
+        if (document.querySelector('dialog[open]')) return;
         if (ereignis.target.closest?.('input, select, textarea')) return;
         const video = this.vergleich.querySelector('video');
         if (!video || !Number.isFinite(video.duration)) return;
@@ -92,40 +99,31 @@ export class Blendermodelliterationen {
         }
         document.getElementById('reiter-auftrag').hidden = name !== 'auftrag';
         document.getElementById('reiter-iterationen').hidden = name !== 'iterationen';
-        clearTimeout(this._timer);
-        if (name === 'iterationen') this.nachladen();
-    }
-
-    async nachladen() {
-        try {
-            const z = await Serverabruf.json(this.seite.adresse('zustand/'));
-            if (!z.error) {
-                this.seite.zustand = z;
-                this.zeigen(z);
-            }
-        } catch (fehler) {
-            this.liste.textContent = `Zustand nicht geladen: ${fehler.message}`;
-        }
-        this._timer = setTimeout(() => this.nachladen(), Blendermodelliterationen.TAKT_MS);
+        if (name === 'iterationen') this.seite.aktualisieren();
     }
 
     zeigen(z) {
-        const runden = (z.ergebnis || {}).iterationen || [];
-        const vergleich = (z.ergebnis || {}).vergleich || null;
-        const kostuem = (z.ergebnis || {}).kostuem || {};
+        const e = z.ergebnis || {};
+        const runden = e.iterationen || [];
+        const vergleich = e.vergleich || null;
+        const kostuem = e.kostuem || {};
+        const o = (z.optionen || {}).kostuem || {};
         this.anzahl.textContent = runden.length ? `(${runden.length})` : '';
         this.weiter.disabled = !!z.laeuft;
         this.halt.disabled = !z.laeuft;
         this.stand.textContent = z.laeuft ? `${z.progress || 0} % · ${z.progress_detail || ''}`
-            : kostuem.note ? `Bestes Kostüm: Runde ${kostuem.runde_bester}, Abweichung `
-                + `${Blendermodellrunde.zahl(kostuem.note.abweichung, 4)}` : '';
-        const stand = JSON.stringify([runden, vergleich, kostuem.verlauf]);
-        if (stand === this._stand) return;
-        this._stand = stand;
-        Blendermodellverlauf.zeichnen(this.verlauf, kostuem.verlauf);
-        this.vergleich.replaceChildren(...(vergleich ? [this._vergleich(vergleich)] : []));
-        this.liste.replaceChildren(...[...runden].reverse().map(r => this.karten.karte(r)));
-        if (!runden.length) this.liste.textContent = 'Noch keine Runde abgelegt.';
+            : kostuem.note ? `Bestes Modell: Runde ${kostuem.runde_bester}, Abweichung `
+                + `${Blendermodellrundenzeilen.zahl(kostuem.note.abweichung, 4)}` : '';
+        this.ki.textContent = o.pruefki && o.pruefki !== 'aus'
+            ? `Prüf-KI: ${o.pruefki}, alle ${o.pruefki_alle} Runden` : 'Prüf-KI: aus';
+        const verlauf = kostuem.verlauf || [];
+        const stand = JSON.stringify([vergleich, verlauf.length, verlauf[verlauf.length - 1]]);
+        if (stand !== this._stand) {
+            this._stand = stand;
+            Blendermodellverlauf.zeichnen(this.verlauf, kostuem.verlauf);
+            this.vergleich.replaceChildren(...(vergleich ? [this._vergleich(vergleich)] : []));
+        }
+        this.tabelle.zeigen(z);
     }
 
     _vergleich(v) {

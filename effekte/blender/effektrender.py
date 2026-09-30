@@ -29,6 +29,9 @@ class Effektrender:
     SONNE_W_M2 = 1.5
     WELT_STAERKE = 0.3
     HAUTFARBE = (0.55, 0.45, 0.4, 1.0)
+    BODENFARBE = (0.55, 0.55, 0.58, 1.0)
+    #: Licht im Modus „Vertex" (Fototextur): „FLAT" zeigt die Fotofarben unverändert, „STUDIO" dunkelt sie ab.
+    LICHT_VERTEX = 'FLAT'
 
     def __init__(self, figur, parameter, melden=print):
         self.figur = figur
@@ -77,8 +80,13 @@ class Effektrender:
         boden = bpy.context.object
         boden.name = 'Boden'
         stoff = bpy.data.materials.new('Boden')
-        self.faerben(stoff, (0.55, 0.55, 0.58, 1.0))
+        self.faerben(stoff, self.BODENFARBE)
         boden.data.materials.append(stoff)
+        if getattr(self.figur, 'vertexfarben', False):
+            # Im Modus „Vertex" zeigt Workbench nur Farbattribute — ohne eines wäre der Boden weiß.
+            attribut = boden.data.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
+            for punkt in attribut.data:
+                punkt.color = self.BODENFARBE
 
     def licht_setzen(self, szene):
         """Eevee braucht Licht — Workbench nicht. Sonne plus helle Welt;
@@ -125,8 +133,9 @@ class Effektrender:
         else:
             r.engine = 'BLENDER_WORKBENCH'
             s = szene.display.shading
-            s.light = 'STUDIO'
-            s.color_type = 'TEXTURE'
+            vertex = getattr(self.figur, 'vertexfarben', False)
+            s.light = self.LICHT_VERTEX if vertex else 'STUDIO'
+            s.color_type = 'VERTEX' if vertex else 'TEXTURE'
             s.show_shadows = True
             # Im Render zaehlt die Weltfarbe, nicht die des Ansichtsfensters.
             s.background_type = 'WORLD'

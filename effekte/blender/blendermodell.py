@@ -4,7 +4,7 @@
 Aufruf (aus `Blendermodellblender`, Blender ohne Fenster, Werksprofil):
 
     blender -b --factory-startup --python blendermodell.py -- --glb … --bewegung … --aus <ordner>
-        [--bilder 300 --breite 960 --hoehe 960 --renderer workbench|eevee]
+        [--kostuem kostuem.glb] [--bilder 300 --breite 960 --hoehe 960 --renderer workbench|eevee]
 
 `--bewegung` ist KEINE BVH-Datei mehr, sondern die vorgerechnete `bewegung.json`
 (`core.dienste.blendermodellbewegung.Blendermodellbewegung`, derselbe Retarget-Kern wie
@@ -57,6 +57,12 @@ class Blendermodelllauf:
         melden('Blendermodel: Figur laden')
         self.leeren()
         figur = Blendermodellfigur().laden(self.p.glb)
+        if self.p.fotomodell:
+            melden('Blendermodel: Modell mit Fototextur anziehen')
+            figur.fotomodell_anziehen(self.p.fotomodell)
+        elif self.p.kostuem:
+            melden('Blendermodel: Kostüm anziehen')
+            figur.kostuem_anziehen(self.p.kostuem)
         self.bericht['figur'] = figur.beschreibung()
         self.bericht['sekunden']['figur'] = round(time.perf_counter() - t0, 1)
 
@@ -113,6 +119,8 @@ def argumente():
     rest = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     p = argparse.ArgumentParser()
     p.add_argument('--glb', required=True)
+    p.add_argument('--kostuem', default='')
+    p.add_argument('--fotomodell', default='')
     p.add_argument('--bewegung', required=True)
     p.add_argument('--aus', required=True)
     p.add_argument('--bilder', type=int, default=300)
@@ -122,6 +130,8 @@ def argumente():
     a = p.parse_args(rest)
     for feld in ('glb', 'bewegung', 'aus'):
         setattr(a, feld, os.path.abspath(getattr(a, feld)))
+    a.kostuem = os.path.abspath(a.kostuem) if a.kostuem else ''
+    a.fotomodell = os.path.abspath(a.fotomodell) if a.fotomodell else ''
     return a
 
 

@@ -52,13 +52,20 @@ class Koerperpose:
             pb.matrix_basis = Matrix.Identity(4)
         bpy.context.view_layer.update()
 
-    def stellen(self, arme_grad, ellbogen_grad):
+    def stellen(self, arme_grad, ellbogen_grad, ellbogen_stab=None, arm_vor=0.0):
+        """`ellbogen_stab`: der Ellbogen des Arms, der den Stab hält (die RECHTE Seite der Figur = das Vorzeichen
+        der Blickrichtung, wie `Kostuemstab`) — ohne Angabe beugen beide Arme gleich. `arm_vor`: der Oberarm dieses
+        Arms schwingt zusätzlich nach vorn (Grad): In den Seitenansichten der Vorlage steht der Stab 0,4 m vor dem
+        Körper — der Arm allein reicht mit gesenktem Oberarm nur etwa 0,25 m."""
         self.zuruecksetzen()
         for name in self.OBERARME:
             seite = 1.0 if self.knochen_welt(name)[0] > 0 else -1.0
             self._drehen(name, seite * arme_grad, Vector((0.0, 1.0, 0.0)))
+            if arm_vor and seite == self.vorn:
+                self._drehen(name, self.vorn * arm_vor, Vector((1.0, 0.0, 0.0)))
         for name in self.UNTERARME:
-            self._drehen(name, self.vorn * ellbogen_grad, Vector((1.0, 0.0, 0.0)))
+            stab = ellbogen_stab is not None and (1 if self.knochen_welt(name)[0] > 0 else -1) == self.vorn
+            self._drehen(name, self.vorn * (ellbogen_stab if stab else ellbogen_grad), Vector((1.0, 0.0, 0.0)))
 
     def knochen_welt(self, name):
         pb = self.rig.pose.bones[name]
@@ -72,6 +79,14 @@ class Koerperpose:
                 continue
             schulter = self.knochen_welt(oben)
             aus[1 if schulter[0] > 0 else -1] = (schulter, self.knochen_welt(hand))
+        return aus
+
+    def ellbogen(self):
+        """{seite (+1/−1 nach x): Ellbogen} in Weltkoordinaten der aktuellen Haltung."""
+        aus = {}
+        for oben, unten in zip(self.OBERARME, self.UNTERARME, strict=True):
+            if oben in self.rig.pose.bones and unten in self.rig.pose.bones:
+                aus[1 if self.knochen_welt(oben)[0] > 0 else -1] = self.knochen_welt(unten)
         return aus
 
     def punkte(self):

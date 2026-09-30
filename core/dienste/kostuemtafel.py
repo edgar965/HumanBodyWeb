@@ -8,8 +8,6 @@ Dieselbe Tafel bekommt die Prüf-KI (`Kostuemkritik`).
 
 from PIL import Image, ImageDraw
 
-from .kostuembild import Kostuembild
-
 __all__ = ['Kostuemtafel']
 
 
@@ -20,8 +18,10 @@ class Kostuemtafel:
 
     @classmethod
     def bauen(cls, paare, ziel):
-        """`paare`: [(winkel, vorlage: Kostuembild, render: Kostuembild, note)] → PNG unter `ziel`."""
-        w, h = Kostuembild.BREITE, Kostuembild.HOEHE
+        """`paare`: [(winkel, vorlage: Kostuembild, render: Kostuembild, note)] → PNG unter `ziel`. Die Größe
+        eines Felds ist die der Bilder (Anzeige: 128 × 192 wie die Note, Prüf-KI: 256 × 384, siehe
+        `Kostuemrunde.kritiktafel`)."""
+        h, w = paare[0][1].maske.shape
         bild = Image.new('RGB', (w * len(paare), 2 * h + cls.SCHRIFT + 6), cls.HINTERGRUND)
         zeichnen = ImageDraw.Draw(bild)
         for i, (winkel, vorlage, render, note) in enumerate(paare):

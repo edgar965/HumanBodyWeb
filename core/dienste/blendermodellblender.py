@@ -16,6 +16,7 @@ import json
 import os
 import re
 import shutil
+import struct
 from pathlib import Path
 
 from django.conf import settings
@@ -38,6 +39,10 @@ class Blendermodellblender:
     VIDEO, BLEND, BEWEGUNG = 'blender_video.mp4', 'blender_figur.blend', 'blender_bewegung.json'
     #: So lange darf Blender schweigen (ein Renderbild).
     STILLE_S = 600
+    #: Der Film zeigt das Modell mit den Farben der Vorlage (Vertexfarben) statt der flachen Farben. Gemessen am 30.09.2026 (Tanz
+    #: „DanceKurz", Workbench „Vertex" + flaches Licht): Die Fotofarben sind dunkel und verschmiert, das Bild ist unruhiger als
+    #: mit flachen Farben — deshalb aus. Das Sichtmodell taugt für den Film nicht (Hülle zerreißt beim Tanz).
+    FOTOTEXTUR_IM_FILM = False
     RENDERZEILE = re.compile(r'Rendern Bild (\d+) von (\d+)')
 
     def __init__(self, lauf):
@@ -52,8 +57,33 @@ class Blendermodellblender:
                 '--glb', str(glb), '--bewegung', str(bewegung), '--aus', str(aus), '--bilder', str(o['bilder']),
                 '--breite', str(o['breite']), '--hoehe', str(o['hoehe']), '--renderer', str(o['renderer'])]
 
+    def kostuem(self):
+        """`ergebnis/kostuem.glb` des Kreislaufs (Körper + Kostüm am Rig) oder None. Blender nimmt daraus NUR die
+        Kostümteile und hängt sie an das Rig von `figur.glb` (`Blendermodellfigur.kostuem_anziehen`)."""
+        name = (self.job.ergebnis.get('kostuem') or {}).get('glb')
+        pfad = self.ablage.ergebnis(name) if name else None
+        return pfad if pfad is not None and pfad.is_file() else None
+
+    def fotomodell(self):
+        """`ergebnis/kostuem.glb`, wenn es die Fototextur (Vertexfarben `COLOR_0`) trägt, sonst None. Der Film zeigt dann
+        dieses Modell samt Körper mit den Farben der Vorlage — dasselbe wie „Modell" auf der Bühne und die Bilder „Foto-Textur"
+        der Iterationen — statt der flachen Farben (Edgar, 30.09.2026: „Blender-Film und Sichtmodell sind wieder anders")."""
+        pfad = self.kostuem()
+        if not self.FOTOTEXTUR_IM_FILM:
+            return None
+        return pfad if pfad is not None and self._vertexfarben(pfad) else None
+
+    @staticmethod
+    def _vertexfarben(pfad):
+        """Trägt die glTF-Datei Vertexfarben? Nur der JSON-Teil wird gelesen."""
+        with open(pfad, 'rb') as f:
+            f.seek(12)
+            laenge, _ = struct.unpack('<II', f.read(8))
+            kopf = json.loads(f.read(laenge))
+        return any('COLOR_0' in p['attributes'] for netz in kopf.get('meshes', []) for p in netz['primitives'])
+
     def ausfuehren(self):
-        bvh = str(self.optionen.get('bvh') or '').strip()
+        bvh =str(self.optionen.get('bvh') or '').strip()
         if not bvh:
             self.job.ergebnis['blender'] = {'uebersprungen': 'Keine BVH-Datei gewählt'}
             self.lauf.melden(1.0, 'Blender übersprungen: keine BVH-Datei')
@@ -69,7 +99,12 @@ class Blendermodellblender:
         bewegung_pfad, bewegung = Blendermodellbewegung(self.lauf).rechnen(bvh, aus)
         shutil.copyfile(bewegung_pfad, self.ablage.ergebnis(self.BEWEGUNG))
         self.lauf.melden(0.1, 'Blender startet')
-        bericht = self._blender(self.befehl(glb, bewegung_pfad, aus), aus)
+        befehl = self.befehl(glb, bewegung_pfad, aus)
+        if self.kostuem() is not None:
+            befehl += ['--kostuem', str(self.kostuem())]
+        if self.fotomodell() is not None:
+            befehl += ['--fotomodell', str(self.fotomodell())]
+        bericht = self._blender(befehl, aus)
         for quelle, ziel in ((bericht.get('video'), self.VIDEO), (bericht.get('blend'), self.BLEND)):
             if quelle and (aus / quelle).is_file():
                 shutil.copyfile(aus / quelle, self.ablage.ergebnis(ziel))

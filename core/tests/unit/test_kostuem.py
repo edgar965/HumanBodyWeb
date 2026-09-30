@@ -26,7 +26,7 @@ class KostuemparameterTest(SimpleTestCase):
 
     def test_pruefen_zieht_auf_die_grenzen_und_schaltet_binaer(self):
         werte = Kostuemparameter.pruefen({'mantel.luft': 99, 'stab.an': 0.7, 'bart.laenge': 'kaputt', 'x': 1})
-        self.assertEqual(werte['mantel.luft'], 1.6)
+        self.assertEqual(werte['mantel.luft'], Kostuemparameter.schema()['mantel.luft']['max'])
         self.assertEqual(werte['stab.an'], 1)
         self.assertEqual(werte['bart.laenge'], Kostuemparameter.start()['bart.laenge'])
         self.assertNotIn('x', werte)
@@ -59,14 +59,24 @@ class KostuemoptimiererTest(SimpleTestCase):
 
     def test_der_optimierer_schaltet_keine_teile_und_laesst_ausgeschaltete_in_ruhe(self):
         # Erster echter Lauf: er schaltete den Hut ab (−14 %) — Teile an/aus ist Sache der Prüf-KI.
-        start = Kostuemparameter.start()
+        start = dict(Kostuemparameter.start(), **{'stab.an': 0})
         schalter = [k for k, e in Kostuemparameter.schema().items() if e['art'] == 'schalter']
         for runde in range(1, 40):
             for k in Kostuemoptimierer('x').kandidaten(start, 4, runde):
                 self.assertEqual({s: k[s] for s in schalter}, {s: start[s] for s in schalter})
                 self.assertEqual(k['stab.hoehe'], start['stab.hoehe'], 'Stab ist aus')
-        self.assertNotIn('farbe.stab.r', Kostuemoptimierer.veraenderlich(start))
-        self.assertIn('farbe.stab.r', Kostuemoptimierer.veraenderlich(dict(start, **{'stab.an': 1})))
+        self.assertNotIn('stab.hoehe', Kostuemoptimierer.veraenderlich(start))
+        self.assertIn('stab.hoehe', Kostuemoptimierer.veraenderlich(dict(start, **{'stab.an': 1})))
+
+    def test_farben_wuerfelt_der_optimierer_nicht(self):
+        # Lauf vom 29./30.09.2026: Gürtel reines Grün, Unterkleid grelles Gelb, Bart reines Weiß — schwach sichtbare
+        # Farben hatten keinen Gegendruck. Seit Modell Version 2 sind sie gemessen und fest.
+        start = Kostuemparameter.start()
+        self.assertFalse([k for k in Kostuemoptimierer.veraenderlich(start) if k.startswith('farbe.')])
+        for runde in range(1, 20):
+            for k in Kostuemoptimierer('x').kandidaten(start, 4, runde):
+                self.assertEqual({f: v for f, v in k.items() if f.startswith('farbe.')},
+                                 {f: v for f, v in start.items() if f.startswith('farbe.')})
 
     def test_schritt_waechst_bei_erfolg_und_schrumpft_sonst_in_grenzen(self):
         o = Kostuemoptimierer('x')

@@ -20,7 +20,8 @@ export class Blendermodelleinstellungen {
 
     constructor(seite) {
         this.seite = seite;
-        this.meldung = document.getElementById('einstellungen-meldung');
+        // Die Meldung steht auf beiden Reitern (Auftrag: Figur und Blender, Iterationen: die Iterationen).
+        this.meldungen = document.querySelectorAll('.einstellungen-meldung');
         this.behaelter = Object.values(Blendermodelleinstellungen.GRUPPEN).map(id => document.getElementById(id));
         this._uhr = null;
         this._lauf = Promise.resolve();
@@ -61,9 +62,10 @@ export class Blendermodelleinstellungen {
     }
 
     _melden(text, fehler = false) {
-        if (!this.meldung) return;
-        this.meldung.textContent = text;
-        this.meldung.classList.toggle('hb-schlecht', fehler);
+        for (const feld of this.meldungen) {
+            feld.textContent = text;
+            feld.classList.toggle('hb-schlecht', fehler);
+        }
     }
 
     async speichern() {

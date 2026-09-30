@@ -27,6 +27,8 @@ Was mitkommt und was nicht, je Bereich:
                 NICHT: arbeit/, ergebnis/, `ergebnis`, `modell`
     blendermodell  eingang/ (Fotos)                         name, optionen (beide Gruppen), je Foto wie „mesh"
                 NICHT: vorbereitet/, netz/, arbeit/, ergebnis/, `ergebnis`, `eingang` (das Netz), `modell`
+    haarengine  eingang/ (Fotos)                         name, optionen (alle Gruppen), je Foto wie „mesh"
+                NICHT: vorlage/, arbeit/, ergebnis/, iterationen/, `ergebnis`, `eingang`, `modell`
 
 Die Kopie ist ein NEUER Auftrag (eigene Kennung, eigener Ordner) im Zustand „angelegt" — sie
 startet nicht von selbst: Wer dupliziert, will meist erst eine Option ändern, und es gibt nur
@@ -44,9 +46,10 @@ from django.utils import timezone
 from ..daten.auftragskennung import Auftragskennung
 from ..daten.bildmodellablage import Bildmodellablage
 from ..daten.blendermodellablage import Blendermodellablage
+from ..daten.haarengineablage import Haarengineablage
 from ..daten.meshablage import Meshablage
 from ..daten.meshfigurablage import Meshfigurablage
-from ..models import Bildmodellauftrag, Blendermodellauftrag, Meshauftrag, Meshfigurauftrag
+from ..models import Bildmodellauftrag, Blendermodellauftrag, Haarengineauftrag, Meshauftrag, Meshfigurauftrag
 
 logger = logging.getLogger('core')
 
@@ -65,6 +68,8 @@ class Auftragsduplikat:
         'meshfigur': (Meshfigurauftrag, Meshfigurablage, (Meshfigurablage.EINGANG, Meshfigurablage.KOPF)),
         # BlenderModel (29.09.2026): die Bildauswahl wie bei „mesh" — eingang/, je Foto Datei + Nutzerfelder.
         'blendermodell': (Blendermodellauftrag, Blendermodellablage, (Blendermodellablage.EINGANG,)),
+        # Haar Engine (30.09.2026): dieselbe Bildauswahl — eingang/, je Foto Datei + Nutzerfelder.
+        'haarengine': (Haarengineauftrag, Haarengineablage, (Haarengineablage.EINGANG,)),
     }
     #: Was je Foto eines Mesh-Auftrags Eingabe ist: die Datei und was der Nutzer stellt.
     #: Der Rest des Eintrags ist Befund der Vorbereitung (Ausgabe).
@@ -118,7 +123,7 @@ class Auftragsduplikat:
             # Kacheln (Landmarken, Maße) für Bilder, die eigentlich vollständig da sind —
             # die zugehörigen Dateien (`zuschnitt/`, `schaetzung/`) kommen ja mit.
             felder['bilder'] = copy.deepcopy(job.bilder or [])
-        elif self.bereich in ('mesh', 'blendermodell'):
+        elif self.bereich in ('mesh', 'blendermodell', 'haarengine'):
             felder['bilder'] = [
                 {feld: b[feld] for feld in self.MESH_BILDFELDER if feld in b}
                 for b in job.bilder or [] if isinstance(b, dict) and b.get('datei')

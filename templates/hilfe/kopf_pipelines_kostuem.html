@@ -1,0 +1,190 @@
+{% comment %}
+Abschnitt „Schritt kostuem" der Hilfeseite 2D -> 3D (`kopf_pipelines.html`, Abschnitt Blender). Edgar (30.09.2026):
+„schreibe die Erkenntnisse in /hilfe/2d-3d/ im Abschnitt Blender". Alle Zahlen sind am Job „Zauberer" (2026.09.29.21.10.16)
+gemessen; Quelle je Zeile in der Spalte „Gemessen als". Ausführlich: `.claude/rules/blendermodell.md`, Tagebuch 2026-09-30.
+{% endcomment %}
+<h3>Schritt „kostuem": Blender als Messgerät (Nacht vom 30.09.2026)</h3>
+<p>
+  Auch hier läuft Blender ohne Fenster — aber nicht zum Abspielen, sondern zum <strong>Messen</strong>: Aus Teilen (Mantel,
+  Unterkleid, Hut, Bart, Stab, Gürtel …) entsteht ein Kostüm, ein Optimierer verändert dessen Maße, und jede Runde wird aus
+  acht Blickwinkeln gerendert und gegen die acht Vorlagenfotos benotet. Die Note heißt <em>Abweichung</em> und ist
+  <code>(1 − IoU) + Farbabstand</code> (IoU = Überdeckung der Silhouetten, Schnittfläche durch Vereinigungsfläche; kleiner ist
+  besser). Der Optimierer (1+λ-Evolutionsstrategie) rechnete im Hintergrund, die Prüf-KI (qwen3.8:27b, Q4_K_M) lieferte Mängellisten,
+  und Claude sah als Kritiker alle 10 bis 15 Minuten ein Vergleichsbild (Vorlage · Render · Differenz) an — und änderte dann den
+  <strong>Code</strong>, nicht die Werte. Modell Version 2 startete bei 0,434.
+</p>
+
+<h4>Was es gebracht hat</h4>
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable kp-tabelle" id="kpKostuemBausteine" data-sort-key="hilfe-kostuem-bausteine">
+  <thead>
+    <tr>
+      <th>Baustein</th>
+      <th>Wirkung</th>
+      <th data-sort-aus="1">Gemessen als</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Dauerhafte Blender-Arbeiter</strong> (4 Prozesse, Figur einmal laden, Befehle über einen Postfach-Ordner)</td>
+      <td>Runde 23 s → 4–6 s; Renders bitgleich zum Einmal-Aufruf</td>
+      <td>Blender starten + Figur laden kostet je Aufruf 4–9 s, ein Kandidat danach 0,6–0,8 s</td>
+    </tr>
+    <tr>
+      <td><strong>Fototextur</strong> (Vertexfarben aus den Fotos)</td>
+      <td>Farbabstand 0,07–0,107 → 0,027–0,045</td>
+      <td>flache Farben gegen Vertexfarben, Farbabstand je Ansicht; GLB ~16 MB</td>
+    </tr>
+    <tr>
+      <td><strong>Umriss-Hülle</strong> (Mantel folgt den Silhouetten)</td>
+      <td>Abweichung 0,278 → 0,2666; IoU 0,809 → 0,823</td>
+      <td>am besten Wertesatz, ein Schritt</td>
+    </tr>
+    <tr>
+      <td><strong>Zwei Vorlagen mit falschem Winkel</strong> korrigiert</td>
+      <td>Abweichung 0,2505 → 0,2259 in einem Schritt</td>
+      <td>vor und nach dem Tausch von <code>2_3</code> und <code>2_4</code></td>
+    </tr>
+    <tr>
+      <td><strong>Grobe Schritte im Optimierer</strong> (jeder zweite Kandidat springt sechsmal so weit)</td>
+      <td>aus der Flaute: vorher 0,2560 → 0,2559 in 20 Runden</td>
+      <td>Schrittweite schrumpfte in der Flaute auf 0,01 der Spanne</td>
+    </tr>
+    <tr>
+      <td><strong>Langer Lauf</strong> (3000 Runden, 8 Kandidaten, ~2 s je Runde)</td>
+      <td>Abweichung 0,2111 → 0,2022 (Runde 3924), danach Plateau</td>
+      <td>beste Abweichung des Auftrags, 03:55–06:18</td>
+    </tr>
+    <tr>
+      <td><strong>Sichtmodell</strong> (Sichtkörper aus den Silhouetten + Fototextur)</td>
+      <td>
+        IoU bei 0° / 90° / 180° / −90°: 0,921 / 0,874 / 0,921 / 0,875 gegen 0,902 / 0,867 / 0,898 / 0,864 beim Modell aus Teilen.
+        Farbabstand 0,041 / 0,053 / 0,021 / 0,041 gegen 0,046 / 0,042 / 0,033 / 0,038 — bei 90° also <em>schlechter</em>
+      </td>
+      <td>vier Ansichten am besten Wertesatz (<code>sicht_probe.py</code>); GLB 20,3 MB, 142.000 Punkte</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="info-box info-box-purple">
+  <strong>Das Sichtmodell ist der eigentliche Fund — wegen der Textur, nicht des Umrisses.</strong> Zwischen 02:50 und 03:40 stand
+  der Optimierer bei 0,214 fest: Was das Kostüm aus Teilen kann, war ausgereizt, und die Fototextur darauf blieb verschmiert, weil die
+  Geometrie nicht auf die Fotos passt. Der Ausweg war keine bessere Suche, sondern eine andere Form — der
+  <strong>Sichtkörper</strong> (visual hull): jeder Punkt, den mindestens 7 von 8 Fotos für Figur halten, in Schichten von 1,5 cm
+  zu einem Netz. Der Umriss ist kaum besser (die Silhouetten der KI-Fotos widersprechen einander leicht), aber die Textur liegt
+  auf den Zentimeter richtig: Kompass auf dem Rücken, Gürtelschnalle, Fläschchen, Gesicht und Stickereibänder sind scharf und am
+  rechten Ort, wo sie beim Modell aus Teilen verschmiert sind.
+</div>
+
+<h4>Erkenntnisse</h4>
+<ul>
+  <li>
+    <strong>Eine Umriss-Note zeigt einen falsch zugewiesenen Blickwinkel nie an — sie wird nur schlechter.</strong> Zwei von
+    acht Vorlagen (<code>2_3</code>, <code>2_4</code>) waren vertauscht; die Hülle bekam widersprüchliche Silhouetten, und die
+    Fototextur klebte die Rückseiten auf die falsche Seite. Gefunden am Bild (der Stab stand auf der falschen Seite) und bestätigt
+    mit einer Winkelsuche: das beste Modell aus 24 Blickwinkeln gegen jedes Foto. <code>2_4</code> passt bei −135° mit IoU 0,867,
+    beim zugewiesenen +135° nur mit 0,725. Bei jedem neuen Satz Vorlagen zuerst diese Suche laufen lassen.
+  </li>
+  <li>
+    <strong>Erst das Bild ansehen, dann die Zahl deuten.</strong> Goldene Kästen an den Händen (die Ärmelborte lief über 85 % der
+    Glocke), ein Stabkopf, der neben dem Hut schwebte, ein Film mit grauem Kostüm — keines davon zeigte die Note, weil die
+    betroffenen Flächen klein sind.
+  </li>
+  <li>
+    <strong>Der Optimierer nutzt jede Lücke der Note.</strong> Er baute einen Bart bis unter den Gürtel (<code>bart.laenge</code>
+    0,43, in der Vorlage endet er bei rund 0,58 × Körperhöhe), Haar als Kapuzenersatz und einen Mantel, der 80 % weiter war als der
+    Körper. Grenzen setzt man nach dem Bild (<code>bart.laenge</code> ≤ 0,30), nicht nach der Note. Umgekehrt sieht er Maße ohne
+    Wirkung auf die Note nicht — <code>hut.kipp</code> (Gesicht sichtbar) blieb auf dem Startwert und wurde von Hand gesetzt.
+  </li>
+  <li>
+    <strong>Ein Plateau löst man mit einer anderen Form, nicht mit mehr Runden.</strong> Die Abweichung bewegte sich 50 Minuten
+    lang nicht mehr (0,214); scharf wurde die Textur erst durch die andere Form, ohne dass sich die Note dafür verbesserte.
+  </li>
+  <li>
+    <strong>Erst verdichten, dann binden</strong> (beim Sichtmodell; bei den Teilen ist es umgekehrt): Wird das grobe Netz an das
+    Skelett gebunden und danach unterteilt, bekommen die Zwischenpunkte gemischte Gewichte und stehen in der Haltung als Zacken
+    aus dem Mantel. Gesucht wurde zuerst an der falschen Stelle — die Radien waren glatt.
+  </li>
+  <li>
+    <strong>Ohne Stoffdicke zeigen die Flächennormalen nach innen</strong> (Ringe von oben nach unten, gegen den Uhrzeigersinn).
+    Die Fototextur gewichtet nach der Normalen und nahm dann die Rückseite: Farbabstand 0,038 → 0,08.
+  </li>
+</ul>
+
+<h4>Die Prüf-KI: Kritiker gut, Optimierer selten</h4>
+<p>
+  Vier Modelle sahen dieselbe Tafel (Bild + Detailbild) und schlugen neue Werte vor. Stichprobe, keine Wiederholungen — sie belegt
+  keine Rangfolge. Δ = Abweichung nach dem Vorschlag gegen die unveränderte 0,2156.
+</p>
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable kp-tabelle" id="kpKostuemKi" data-sort-key="hilfe-kostuem-ki">
+  <thead>
+    <tr>
+      <th>Modell (Fassung)</th>
+      <th class="num">Dauer (s)</th>
+      <th class="num">Ähnlichkeit (1–10)</th>
+      <th class="num">Δ nach Vorschlag</th>
+      <th data-sort-aus="1">Auffällig</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>qwen3.8:27b (Q4_K_M)</strong> — geblieben</td>
+      <td class="num">73</td><td class="num">5</td><td class="num">+0,0092</td>
+      <td>schnellster; Mängelliste deckt sich mit dem Bild</td>
+    </tr>
+    <tr>
+      <td>qwen3.8:27b-q8_0 (Q8_0)</td>
+      <td class="num">190</td><td class="num">4</td><td class="num">+0,0025</td>
+      <td>2,6 × die Zeit, kein erkennbarer Gewinn</td>
+    </tr>
+    <tr>
+      <td>qwen3.6:35b-a3b-q4_K_M (Q4_K_M)</td>
+      <td class="num">165</td><td class="num">6</td><td class="num">+0,0089</td>
+      <td>nannte „Bart" und „Hutband" als fehlend — beides ist da (Halluzination)</td>
+    </tr>
+    <tr>
+      <td>gemma4:26b-a4b-it-qat (Q4_0)</td>
+      <td class="num">190</td><td class="num">4</td><td class="num">+0,0078</td>
+      <td>gab den Schuhen 1 von 10 (sie sind da, nur klein)</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>
+  <strong>Im langen Lauf</strong> (qwen3.8:27b Q4_K_M, alle 250 Runden oder nach 150 Runden ohne Besserung) waren 20 Vorschläge
+  bewertet: <strong>einer war ein Gewinn</strong> — Runde 3452, 0,2046 gegen 0,2096 davor (−0,0050), der größte Einzelschritt des
+  Laufs —, die anderen 19 lagen um +0,007 bis +0,085 schlechter und wurden verworfen. Über den ganzen Job: 36 bewertete Vorschläge,
+  2 echte Verbesserungen (Runde 7: −0,0376; Runde 3452), 3 innerhalb der Toleranz von 2 %, 31 verworfen. Als alleiniger Optimierer
+  taugt sie also nicht; als seltener Sprung aus einem Plateau kann sie helfen, und ein Verwurf kostet nur ihre 16 bis 52 Sekunden.
+</p>
+
+<h4>Fallen der Werkzeugkette</h4>
+<ul>
+  <li>
+    <strong>Workbench zeigt im Modus „Textur" keine Vertexfarben.</strong> Der Blender-Film zeigte das Kostüm der Fototextur-GLB
+    grau. Ein glTF-Zusatzfeld (<code>extras</code>) kam nicht in der Datei an. Jetzt liegt neben <code>kostuem.glb</code> die
+    Begleitdatei <code>kostuem.farben.json</code> (flache Materialfarbe je Teil), und der Film setzt sie als Anzeigefarbe: Mantel
+    blau, Unterkleid beige, Borten gold (im echten Film, 300 Bilder, gesehen). Die Fototextur selbst zeigen die Bühne (three.js)
+    und Eevee.
+  </li>
+  <li>
+    <strong><code>ruff format</code> schreibt Python 3.14</strong> (<code>target-version = "py314"</code>): Aus
+    <code>except (OSError, ValueError):</code> wird <code>except OSError, ValueError:</code> — Blender 5.0 bringt Python 3.11 mit
+    und bricht mit SyntaxError ab. Nie auf <code>effekte/blender/</code> ohne Gegenprobe.
+  </li>
+  <li>
+    <strong>Ein einziger <code>PermissionError</code> beendete einen Lauf nach 770 Runden</strong> (Windows verweigert kurz nach
+    <code>os.replace</code> das Lesen der Antwortdatei). Jetzt wird 8 Sekunden lang nachgelesen, und die Runde wird einmal mit
+    frischen Arbeitern wiederholt. Ähnlich: Arbeiter, die sich einen Ordner teilen, räumen einander die Dateien weg
+    (<code>_normierung</code> → eigener Ordner je Prozess); und wer Blender-Code ändert, während ein Lauf rechnet, bricht ihn ab.
+  </li>
+</ul>
+
+<div class="info-box info-box-blue">
+  <strong>Grenzen des Sichtmodells:</strong> Es hat keine Ärmel, kein Haar und keinen Bart als Teile — es ist <em>eine</em> Fläche.
+  Bewegt man die Arme, reißen die Übergänge am Achsel-Ansatz; der Stoff bewegt sich nur mit den Knochen (keine Stoffsimulation).
+  Die Kante wellt sich leicht, in der Seitenansicht schweben Finger neben dem Stab, und die Fototextur ist unscharf, wo die Fotos
+  einander widersprechen (Stabposition). Der Blender-Film zeigt deshalb weiter das Modell aus Teilen.
+</div>

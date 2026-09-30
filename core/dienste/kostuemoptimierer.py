@@ -27,8 +27,21 @@ class Kostuemoptimierer:
     SCHRITT_MIN, SCHRITT_MAX = 0.01, 0.3
     WACHSEN, SCHRUMPFEN = 1.25, 0.9
     AENDERUNGEN = (1, 4)
+    #: Faktor der weiten Sprünge (jeder zweite Kandidat), gegenüber `schritt`.
+    GROB = 6.0
+    #: Farben würfelt der Optimierer NICHT (seit Modell Version 2): Eine Farbe, die auf wenig Bildpunkten liegt (Gürtel,
+    #: Stab), hat kaum Gegendruck durch die Note und wanderte im Lauf vom 29./30.09.2026 bis zu reinem Grün (Gürtel), grellem
+    #: Gelb (Unterkleid) und reinem Weiß (Bart). Die Startwerte sind an der Vorlage gemessen (`Kostuemparameter.FARBEN`).
+    FARBEN_FEST = True
     #: Welche Teile eine Farbe trägt (die übrigen Stoffe sind immer zu sehen).
-    FARBE_TEILE = {'stab': ('stab',), 'bart': ('bart', 'haar')}
+    FARBE_TEILE = {
+        'stab': ('stab',),
+        'kristall': ('stab',),
+        'bart': ('bart', 'haar'),
+        'hut': ('hut',),
+        'schuhe': ('schuhe',),
+        'borte': ('borte',),
+    }
 
     def __init__(self, kennung, schritt=None):
         self.kennung = kennung
@@ -51,6 +64,8 @@ class Kostuemoptimierer:
         for k, e in schema.items():
             if e['art'] != 'mass':
                 continue
+            if k.startswith('farbe.') and cls.FARBEN_FEST:
+                continue
             teile = cls.FARBE_TEILE.get(k.split('.')[1], ()) if k.startswith('farbe.') else (k.split('.')[0],)
             if not teile or any(an(t) for t in teile):
                 aus.append(k)
@@ -61,12 +76,17 @@ class Kostuemoptimierer:
         stetig = self.veraenderlich(bester)
         zufall = self._zufall(runde)
         aus = []
-        for _ in range(anzahl):
+        for i in range(anzahl):
+            # Jeder zweite Kandidat springt weiter (`GROB`): Die Schrittweite schrumpft in einer langen Flaute bis zum
+            # Mindestwert (30.09.2026: 0,01 der Spanne, Abweichung 0,2560 → 0,2559 in 20 Runden), und neue Maße —
+            # `hut.seite`, `stab.krone` — brauchten dann Dutzende Erfolge hintereinander, um einen sinnvollen Wert
+            # zu erreichen.
+            breite = min(self.SCHRITT_MAX, self.schritt * (self.GROB if i % 2 else 1.0))
             neu = dict(bester)
             n = int(zufall.integers(self.AENDERUNGEN[0], self.AENDERUNGEN[1] + 1))
             for k in zufall.choice(stetig, size=min(n, len(stetig)), replace=False):
                 e = schema[k]
-                neu[k] = float(neu[k]) + float(zufall.normal(0.0, self.schritt * (e['max'] - e['min'])))
+                neu[k] = float(neu[k]) + float(zufall.normal(0.0, breite * (e['max'] - e['min'])))
             aus.append(Kostuemparameter.pruefen(neu))
         return aus
 

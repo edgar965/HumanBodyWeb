@@ -18,6 +18,11 @@ MENUE = [
             # Seit 29.09.2026 (Edgar: „mach ein neues Menü Dashboard - BlenderModel"): Fotos → Netz → Figur,
             # eine Kopie des Reiters „Mesh to 3D" mit eigener Pipeline (`core/dienste/blendermodelllauf.py`).
             {'label': 'BlenderModel', 'icon': 'bi-badge-3d', 'url': '/blendermodell/'},
+            # Seit 30.09.2026: die Kopie von BlenderModel für die Genesis Haar Engine statt Blender
+            # (`core/dienste/haarenginelauf.py`, `genesishaarengine.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
+            # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
+            # Dashboard – Kleider Engine in Dashboard – Haar Engine").
+            {'label': 'Haar Engine', 'icon': 'bi-brush', 'url': '/haarengine/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -172,6 +177,16 @@ HILFE_EXTRA = [
                 'icon': 'bi-person-standing-dress',
                 'url': '/hilfe/kleidung/genesis/',
                 'aktiv': 'hilfe_kleidung_genesis',
+            },
+            # Aus Fotos eine Genesis-Frisur: der Bestand der 18 Haare, warum sie
+            # kein gemeinsames Netz haben, und was die Iterationen verstellen
+            # (Edgar, 30.09.2026: „schreibe den Plan in eine neue Seite Hilfe -
+            # Kleidung - Haar Engine").
+            {
+                'label': 'Haar Engine',
+                'icon': 'bi-scissors',
+                'url': '/hilfe/kleidung/haarengine/',
+                'aktiv': 'hilfe_kleidung_haarengine',
             },
             # MakeHuman, Genesis, GarmentCode, UMA Schritt für Schritt (Edgar,
             # 25.09.2026: „mache dazu eine neue Seite: Hilfe - Kleidung - Vergleich").

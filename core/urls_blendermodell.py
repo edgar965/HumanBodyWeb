@@ -17,6 +17,7 @@ from .api.blendermodell import Blendermodellendpunkte
 from .api.blendermodelldashboard import Blendermodelldashboard
 from .api.blendermodelleinstellungen import Blendermodelleinstellungen
 from .api.blendermodellfotos import Blendermodellfotoendpunkte
+from .api.blendermodelliterationen import Blendermodelliterationenendpunkte
 
 __all__ = ['BLENDERMODELL']
 
@@ -62,6 +63,12 @@ BLENDERMODELL = [
         'api/blendermodell/<uuid:job_id>/datei/<str:ordner>/<str:name>',
         Blendermodellendpunkte.datei,
         name='blendermodell_datei',
+    ),
+    # Die Runden der Tabelle „Iterationen" (`core/api/blendermodelliterationen.py`)
+    path(
+        'api/blendermodell/<uuid:job_id>/runden/loeschen/',
+        Blendermodelliterationenendpunkte.loeschen,
+        name='blendermodell_runden_loeschen',
     ),
     # Die Bildauswahl (`core/api/blendermodellfotos.py`)
     path(

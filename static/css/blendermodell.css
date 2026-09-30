@@ -28,22 +28,99 @@
 .blendermodell-scrubber { flex: 1 1 120px; min-width: 100px; }
 .blendermodell-animationszeit { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* Reiter „Iterationen": Leiste „Weiter iterieren", Kurve des Kreislaufs, Karten je Runde. Bis 29.09.2026 hatten die
-   Karten keine eigenen Regeln — die Bilder liefen in voller Breite der Datei. */
+/* „Läuft im Hintergrund" über beiden Reitern (`Blendermodellseite`). */
+.blendermodell-laufband {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; padding: 8px 12px;
+    border-radius: 8px; border: 1px solid var(--accent, #4f8cff); background: rgba(var(--accent-rgb, 79 140 255), 0.16);
+}
+.blendermodell-laufband[hidden] { display: none; }
+#laufband-text { flex: 1 1 260px; font-variant-numeric: tabular-nums; }
+
+/* Reiter „Iterationen": Einstellungen, Leiste „Weiter iterieren", Kurve, Tabelle der Runden. */
 .blendermodell-iterationsleiste { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
 .blendermodell-iterationsleiste input[type="number"] { width: 5.5em; }
+.blendermodell-tabellenkopf { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 4px; }
+.blendermodell-tabellenkopf input[type="number"] { width: 5em; }
+.blendermodell-tabellenknoepfe { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 .blendermodell-verlauf { width: 100%; max-width: 900px; height: auto; display: block; margin: 6px 0 12px; }
 .blendermodell-verlauf text { fill: var(--text-muted, #9aa3b2); font-size: 12px; }
 .blendermodell-verlauf-bester { fill: none; stroke: var(--accent, #4f8cff); stroke-width: 2; }
 .blendermodell-verlauf-runde { fill: var(--text-muted, #9aa3b2); opacity: 0.55; }
-.blendermodell-runde { border-top: 1px solid var(--border, #3a4250); padding: 10px 0; }
-.blendermodell-runde h3 { font-size: 0.95rem; margin: 0 0 6px; font-variant-numeric: tabular-nums; }
-.blendermodell-runde img { display: block; max-width: 100%; height: auto; margin: 6px 0; border-radius: 4px; }
-.blendermodell-runde-verworfen { opacity: 0.7; }
+
+/* Tabelle der Runden (`Blendermodellrundentabelle`, `Blendermodellrundenzeilen`): Hauptzeile je Runde, darunter
+   Unterzeilen (Notiz, Prüf-KI, Bilder, Dateien) mit EINER Zelle über die ganze Breite. */
+.blendermodell-rundentabelle td { vertical-align: middle; }
+.blendermodell-rundentabelle .iter-auf { background: none; border: 0; color: inherit; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+.blendermodell-rundentabelle .iter-beste { color: #f5c542; }
+.blendermodell-rundentabelle .iter-verworfen td { opacity: 0.7; }
+.blendermodell-rundentabelle .iter-wird-geloescht td { text-decoration: line-through; opacity: 0.5; }
+.blendermodell-rundentabelle .iter-mini { height: 44px; width: auto; display: block; border-radius: 3px; cursor: zoom-in; background: #fff; }
+.blendermodell-rundentabelle td.iter-vorn { text-align: center; width: 3.2rem; }
+.blendermodell-rundentabelle td.iter-zeit { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.blendermodell-rundentabelle .iter-dauer { display: block; color: var(--text-muted, #9aa3b2); }
+.blendermodell-rundentabelle tr.iter-unterzeile[hidden] { display: none; }
+.blendermodell-rundentabelle tr.iter-unterzeile td { padding: 4px 12px 4px 44px; border-top: 0; }
+.blendermodell-rundentabelle tr.iter-unterzeile.gewaehlt td { background: rgba(var(--accent-rgb, 96 165 250), 0.14); }
+.iter-unter { display: flex; gap: 12px; align-items: flex-start; }
+.iter-unterkopf { flex: 0 0 9.5rem; color: var(--text-muted, #9aa3b2); font-size: 0.82rem; padding-top: 2px; }
+.iter-unterinhalt { flex: 1 1 auto; min-width: 0; }
+.iter-unterinhalt p { margin: 0 0 4px; }
+.iter-kikopf { font-weight: 600; }
+.iter-aenderungen { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.iter-aenderung {
+    font-size: 0.78rem; padding: 1px 6px; border-radius: 10px; font-variant-numeric: tabular-nums;
+    background: var(--bg-input, #151a22); border: 1px solid var(--border, #3a4250);
+}
+.iter-dateien { flex-direction: row; flex-wrap: wrap; gap: 4px 16px; }
 /* Vergleich Vorlage/Ergebnisvideo: nebeneinander, jedes höchstens halb so breit wie die Karte (die Vorlage lief in
    voller Dateibreite, 1.448 px, über den Rand — gemessen 29.09.2026). */
 .blendermodell-vergleichzeile { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .blendermodell-vergleichzeile img, .blendermodell-vergleichzeile video {
     flex: 1 1 320px; max-width: calc(50% - 6px); min-width: 280px; height: auto; border-radius: 4px;
 }
-.blendermodell-runde-verworfen h3 { color: var(--text-muted, #9aa3b2); }
+
+/* Blender-Film über der Bühne (`Blendermodellblenderfilm`) — deckt die Leinwand, bis der Knopf wieder aus ist. */
+.blendermodell-blenderfilm {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; z-index: 2;
+}
+.blendermodell-blenderfilm[hidden] { display: none; }
+
+/* Bilder einer Runde (`Blendermodellrundenbilder`, Unterzeile „Bilder"): je Blickwinkel Vorlage + Render als Knopf. */
+.blendermodell-rundenbilder-raster { display: flex; flex-wrap: wrap; gap: 8px; }
+.blendermodell-rundenbilder-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+.blendermodell-rundenbild {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px; cursor: zoom-in;
+    background: var(--bg-input, #151a22); border: 1px solid var(--border, #3a4250); border-radius: 6px; color: inherit;
+}
+.blendermodell-rundenbild:hover { border-color: var(--accent, #4f8cff); }
+.blendermodell-rundenbild img { height: 150px; width: auto; max-width: none; margin: 0; display: block; border-radius: 4px; }
+.blendermodell-rundenbild-breit img { max-width: 100%; }
+.blendermodell-rundenbild-reihe { display: flex; gap: 4px; align-items: flex-end; }
+.blendermodell-rundenbild > span:last-child { font-size: 0.8rem; color: var(--text-muted, #9aa3b2); text-align: left; }
+
+/* Bildfenster (`Blendermodellbildfenster`): an der Ecke vergrößerbar, Bilder zoom- und verschiebbar. */
+.blendermodell-bildfenster {
+    width: min(1200px, 95vw); height: min(850px, 90vh); max-width: 98vw; max-height: 96vh; min-width: 480px;
+    min-height: 320px; resize: both; overflow: hidden; padding: 0; border: 1px solid var(--border, #3a4250);
+    border-radius: 10px; background: var(--bg-card, #1e2430); color: var(--text, #eee);
+}
+.blendermodell-bildfenster[open] { display: flex; flex-direction: column; }
+.blendermodell-bildfenster::backdrop { background: rgba(0, 0, 0, 0.6); }
+.blendermodell-bildfenster-kopf {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 12px;
+    border-bottom: 1px solid var(--border, #3a4250);
+}
+.blendermodell-bildfenster-knoepfe { display: flex; gap: 4px; flex-wrap: wrap; }
+.blendermodell-bildfenster-flaeche { flex: 1 1 auto; display: flex; gap: 4px; min-height: 0; padding: 4px; }
+.blendermodell-bildfenster-feld {
+    position: relative; flex: 1 1 0; min-width: 0; margin: 0; overflow: hidden; cursor: grab; touch-action: none;
+    background: repeating-conic-gradient(#2a303b 0% 25%, #232833 0% 50%) 50% / 24px 24px; border-radius: 4px;
+}
+.blendermodell-bildfenster-feld:active { cursor: grabbing; }
+.blendermodell-bildfenster-feld img {
+    position: absolute; left: 50%; top: 50%; max-width: none; height: auto; user-select: none; image-rendering: auto;
+}
+.blendermodell-bildfenster-feld figcaption {
+    position: absolute; left: 6px; top: 6px; padding: 2px 6px; font-size: 0.8rem; border-radius: 4px;
+    background: rgba(0, 0, 0, 0.55); color: #fff; pointer-events: none;
+}

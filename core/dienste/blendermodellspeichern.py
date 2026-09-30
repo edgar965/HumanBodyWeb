@@ -71,7 +71,7 @@ class Blendermodellspeichern(Meshfigurspeichern):
         if netz is not None:
             shutil.copy2(netz, self.zielordner() / 'netz.glb')
             aus['dateien'].append('netz.glb')
-        # Das beste Kostüm des Kreislaufs (`Kostuemkreislauf._abschluss`): GLB ohne Körper, .blend mit Körper.
+        # Das beste Kostüm des Kreislaufs (`Kostuemabschluss`): GLB ohne Körper, .blend mit Körper.
         for name in ((self.job.ergebnis.get('kostuem') or {}).get(k) for k in ('glb', 'blend')):
             if name and self.ablage.ergebnis(name).is_file():
                 shutil.copy2(self.ablage.ergebnis(name), self.zielordner() / name)

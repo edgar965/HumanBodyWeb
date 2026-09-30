@@ -32,18 +32,20 @@ from asgiref.sync import sync_to_async
 from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
-
-from .g9figur import G9figur, FEHLT
-from .g9kleidhumanbody import G9kleidhumanbody
-from ..dienste.g9antworten import G9antworten
-from ..dienste.g9stueckteile import G9stueckteile
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
+from Genesis9.haarachsen import G9haarachsen
+from Genesis9.haargenerisch import G9haargenerisch
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.material import G9material
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
+
+from ..dienste.g9antworten import G9antworten
+from ..dienste.g9stueckteile import G9stueckteile
+from .g9figur import FEHLT, G9figur
+from .g9kleidhumanbody import G9kleidhumanbody
 
 logger = logging.getLogger('core')
 
@@ -61,9 +63,16 @@ class G9garderobeapi:
         from .g9vorschau import G9vorschau
         # `kategorie`: die Vorgabe aus Daz' Metadaten (Oberteile, Hosen, …) —
         # Edgars eigene Zuordnung liegt darueber (`G9garderobekategorien`).
+        # „Haar – Generisch" steht VORN (Edgar, 30.09.2026: „an erster Stelle"):
+        # Der Browser gruppiert in der Reihenfolge dieser Liste, der erste
+        # `haar`-Eintrag ist also der erste in der Kategorie „Haare".
+        roh = [G9haargenerisch.eintrag()] + list(G9garderobe.liste())
+        # `regler`: jede Frisur bekommt die fuenf gemeinsamen Formachsen dazu
+        # (`G9haarachsen`) — erst hier, nicht in der abgelegten Liste je Stueck.
         stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s),
-                        kategorie=G9garderobekategorien.vorgabe(s))
-                   for s in G9garderobe.liste()]
+                        kategorie=G9garderobekategorien.vorgabe(s),
+                        regler=G9haarachsen.erweitern(s))
+                   for s in roh]
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
 
     @staticmethod
@@ -89,6 +98,14 @@ class G9garderobeapi:
         if not G9pfade.vorhanden():
             return JsonResponse({'fehler': FEHLT}, status=404)
         rumpf = G9figur._rumpf(request)
+        # „Haar – Generisch" hat kein eigenes Netz: Der groesste `sorte.*`-Wert sagt,
+        # WELCHE Frisur gemeint ist; ihre Regler stehen im Rumpf mit ihrer Kennung
+        # davor. Ab hier laeuft alles wie bei einem ganz gewoehnlichen Stueck.
+        if G9haargenerisch.ist_generisch(kennung):
+            kennung, regler = G9haargenerisch.aufloesen(rumpf.get('regler_stueck'))
+            if not kennung:
+                return JsonResponse({'fehler': 'Keine Frisur in der Garderobe'}, status=404)
+            rumpf = dict(rumpf, regler_stueck=regler)
         eintrag = G9garderobe.eintrag(kennung) or {}
         if rumpf.get('figurart') == G9kleidhumanbody.FIGURART:
             # Dasselbe Stueck auf einer HumanBody-Figur (19.09.2026).

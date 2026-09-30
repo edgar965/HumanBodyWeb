@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 """Kostuembindung — die Kostümteile an das Rig der Grundfigur binden (Hautgewichte + Ruhelage).
 
-Edgar (29.09.2026): „warum enthalten die Runden nur das Kostüm? bitte auch Modell in den Runden" — und offen war,
-dass Blender-Film und Bühne die Figur ohne Kostüm zeigen. Beides braucht dasselbe: ein Kostüm, das an den Knochen
-hängt.
+Edgar (29.09.2026): „warum enthalten die Runden nur das Kostüm? bitte auch Modell in den Runden" — und offen
+war, dass Blender-Film und Bühne die Figur ohne Kostüm zeigen. Beides braucht dasselbe: ein Kostüm, das an den
+Knochen hängt.
 
-Gebaut wird das Kostüm an der GESTELLTEN Figur (`Koerperpose`: Arme gesenkt), benotet wird genau dieser Stand. Die
-Bindung ändert daran nichts Sichtbares:
-    1. Gewichte je Kostümpunkt von den nächsten Körperpunkten der gestellten Figur (vier Nachbarn, nach Abstand
-       gewichtet), aber nur aus der passenden Körpergegend: Ärmel nur vom Arm derselben Seite, Mantel, Unterkleid,
-       Gürtel und Taschen NICHT vom Arm (hängende Arme liegen am Mantel — sonst höbe die Ruhelage den Mantel mit
-       den Armen an), Kopfteile vom ganzen Körper ohne Arme. Stab und Knauf hängen starr an der nächsten Hand.
-    2. Ruhelage: jeden Punkt mit der Umkehrung seiner gemischten Hautmatrix zurückrechnen (lineares Skinning ist
-       je Punkt eine Matrix — umkehrbar). In der Haltung liegt jeder Punkt danach exakt wieder da, wo er gebaut
-       wurde; in der Ruhelage (A-Haltung) folgt er den Knochen.
+Gebaut wird das Kostüm an der GESTELLTEN Figur (`Koerperpose`: Arme gesenkt), benotet wird genau dieser Stand.
+Die Bindung ändert daran nichts Sichtbares:
+    1. Gewichte je Kostümpunkt von den nächsten Körperpunkten der gestellten Figur (vier Nachbarn, nach
+       Abstand gewichtet), aber nur aus der passenden Körpergegend: Ärmel nur vom Arm derselben Seite, Mantel,
+       Unterkleid, Gürtel und Taschen NICHT vom Arm (hängende Arme liegen am Mantel — sonst höbe die Ruhelage
+       den Mantel mit den Armen an), Kopfteile vom ganzen Körper ohne Arme. Stab und Knauf hängen starr an der
+       nächsten Hand.
+    2. Ruhelage: jeden Punkt mit der Umkehrung seiner gemischten Hautmatrix zurückrechnen (lineares Skinning
+       ist je Punkt eine Matrix — umkehrbar). In der Haltung liegt jeder Punkt danach exakt wieder da, wo er
+       gebaut wurde; in der Ruhelage (A-Haltung) folgt er den Knochen.
     3. Armature-Modifier als ERSTER Modifier (vor Glätten und Stoffdicke, wie beim Bau), Eltern = Rig.
 """
 
@@ -29,7 +30,7 @@ __all__ = ['Kostuembindung']
 class Kostuembindung:
     ARM = re.compile(r'^([lr])_(upperarm|forearm|hand|thumb|index|mid|ring|pinky|carpal)')
     HAENDE = ('l_hand', 'r_hand')
-    STARR = ('Stab', 'Stabknauf')
+    STARR = ('Stab', 'Stabfassung', 'Stabkugel', 'Stabknauf', 'Stabkrone')
     NACHBARN = 4
     #: glTF trägt vier Gelenke je Punkt (ein Satz JOINTS_0/WEIGHTS_0).
     GELENKE = 4
@@ -66,8 +67,8 @@ class Kostuembindung:
         return aus
 
     def binden(self, teile, punkte):
-        """`punkte`: Körperpunkte der AKTUELLEN Haltung (Welt, `Koerperpose.punkte()`). → größte Abweichung (mm)
-        eines Kostümpunkts in der Haltung gegenüber dem Bau — die Probe, dass die Ruhelage stimmt."""
+        """`punkte`: Körperpunkte der AKTUELLEN Haltung (Welt, `Koerperpose.punkte()`). → größte Abweichung
+        (mm) eines Kostümpunkts in der Haltung gegenüber dem Bau — die Probe, dass die Ruhelage stimmt."""
         haut = self._hautmatrizen()
         baeume = {}
         gebaut = {}
@@ -82,7 +83,7 @@ class Kostuembindung:
 
     @staticmethod
     def _abweichung_mm(obj, gebaut):
-        """Nur den Armature-Modifier auswerten (Glätten/Dicke ändern die Punktzahl) und gegen den Bau messen."""
+        """Nur den Armature-Modifier auswerten (Glätten/Dicke ändern die Punktzahl), gegen den Bau messen."""
         andere = [m for m in obj.modifiers if m.type != 'ARMATURE' and m.show_viewport]
         for m in andere:
             m.show_viewport = False
@@ -100,13 +101,21 @@ class Kostuembindung:
                 m.show_viewport = True
         return round(float(np.abs(p - gebaut).max()) * 1000.0, 3)
 
+    @staticmethod
+    def _grundname(obj):
+        """Name des Teils ohne Blender-Zähler (`.001`) und ohne `_dicht` (die verdichtete Kopie der Fototextur)."""
+        return obj.name.split('.')[0].removesuffix('_dicht')
+
     def _quelle(self, obj):
-        name = obj.name.split('.')[0]
-        if name.startswith('Aermel_'):
+        name = self._grundname(obj)
+        if name.startswith('Aermel'):
             # Aermel_R liegt bei +x (`Kostuemrumpf.aermel`); die Knochenseite l/r ist die der FIGUR — deshalb
             # nach dem Ort entscheiden, nicht nach dem Namen.
             x = float(np.mean([v.co.x for v in obj.data.vertices]))
             return 'arm', self._seite_bei(x)
+        if name.startswith('Sichtkoerper'):
+            # Der Sichtkörper umschließt auch die Ärmel: Gewichte von ALLEN Körperpunkten, sonst folgten die Arme dem Rumpf.
+            return 'alles', None
         return 'ohne_arm', None
 
     def _seite_bei(self, x):
@@ -119,10 +128,15 @@ class Kostuembindung:
 
     def _gewichte_fuer(self, obj, punkte, baeume):
         co = np.array([v.co[:] for v in obj.data.vertices])
-        if obj.name.split('.')[0] in self.STARR:
+        if self._grundname(obj) in self.STARR:
             return self._starr(co)
         art, seite = self._quelle(obj)
-        maske = (self.gegend == seite) if art == 'arm' else (self.gegend == '')
+        if art == 'arm':
+            maske = self.gegend == seite
+        elif art == 'alles':
+            maske = np.ones(len(self.gegend), dtype=bool)
+        else:
+            maske = self.gegend == ''
         schluessel = (art, seite)
         if schluessel not in baeume:
             indizes = np.flatnonzero(maske)

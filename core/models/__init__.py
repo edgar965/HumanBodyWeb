@@ -13,8 +13,10 @@ from .bvhdatei import BVHFile
 from .effektauftrag import Effektauftrag
 from .einstellungen import AppSettings
 from .fotoauftrag import PhotoAnalysisJob
+from .haarengineauftrag import Haarengineauftrag
 from .meshauftrag import Meshauftrag
 from .meshfigurauftrag import Meshfigurauftrag
 
 __all__ = ['BVHJob', 'BVHFile', 'AppSettings', 'Effektauftrag', 'PhotoAnalysisJob',
-           'Bildmodellauftrag', 'Blendermodellauftrag', 'Meshauftrag', 'Meshfigurauftrag']
+           'Bildmodellauftrag', 'Blendermodellauftrag', 'Haarengineauftrag', 'Meshauftrag',
+           'Meshfigurauftrag']

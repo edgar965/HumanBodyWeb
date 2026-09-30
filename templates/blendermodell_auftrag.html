@@ -14,6 +14,9 @@ benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Katalog kommen al
 `/api/blendermodell/<id>/zustand/`.
 {% endcomment %}
 {% block extra_head %}
+{% comment %}Tabelle „Iterationen“: djangoBase-Tabellenstil (`tabellen.css`) vor `auftragstabelle.css` (Kästchenspalte, gewählte Zeile).{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
@@ -47,6 +50,15 @@ erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
 
 {% comment %}Zwei Reiter (Edgar, 29.09.2026: „Iterationen so dass man den Fortschritt sehen kann, in einem zweiten Tab des
 Jobs"): „Auftrag" ist die Seite wie bisher, „Iterationen" die Runden des Kostüm-Kreislaufs (`Blendermodelliterationen`).{% endcomment %}
+{% comment %}„Läuft im Hintergrund“ über beiden Reitern (Edgar, 30.09.2026: „warum sehe ich nicht ‚Job läuft im
+Hintergrund‘, warum kann ich den Job nicht beenden?"): Ein Lauf, der von außen gestartet wurde, stand vorher nur als kleiner
+Text im Reiter „Auftrag“ — und die Seite fragte nach dem letzten Lauf nicht mehr nach. Das Band zeigt Stand und „Anhalten“.{% endcomment %}
+<div class="blendermodell-laufband" id="laufband" role="status" hidden>
+    <i class="fas fa-spinner fa-spin"></i>
+    <span id="laufband-text">Läuft im Hintergrund …</span>
+    <button type="button" class="btn btn-danger btn-sm" id="laufband-anhalten" title="Beendet den Lauf sofort; eine Runde, die gerade rechnet, geht verloren, alles Abgelegte bleibt">
+        <i class="fas fa-stop"></i> <span>Anhalten</span></button>
+</div>
 <div class="seitenreiter" role="tablist" id="auftrag-reiter">
     <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cube"></i> Auftrag</button>
     <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
@@ -65,18 +77,18 @@ Jobs"): „Auftrag" ist die Seite wie bisher, „Iterationen" die Runden des Kos
         </span>
     </div>
     <div class="hb-hinweis" id="lauf-hinweis">Jede Eingabe wird sofort gespeichert. „Neu berechnen“ beginnt beim gewählten
-        Schritt: „Grundfigur“ baut die Genesis-9-Figur neu, „Kostüm“ rechnet weitere Runden des Kreislaufs (immer ab dem
-        besten bisherigen Kostüm), danach Rig, Blender-Film und Ablage. Nur weitere Kostüm-Runden: Reiter „Iterationen“ →
-        „Weiter iterieren“. <span id="einstellungen-meldung"></span></div>
+        Schritt: „Grundfigur“ baut die Genesis-9-Figur neu, „Iterationen“ rechnet weitere Runden am Modell (Figur mit
+        Kostüm, immer ab dem besten bisherigen), danach Rig, Blender-Film und Ablage. Nur weitere Runden: Reiter
+        „Iterationen“ → „Weiter iterieren“. <span class="einstellungen-meldung"></span></div>
     <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
 </div>
 
 <div class="card" id="bildauswahl">
     <h2>Bildauswahl</h2>
-    <p class="hb-hinweis blendermodell-fotohinweis">Die Fotos sind die VORLAGE des Kostüm-Kreislaufs: Jede Runde rendert das
-        Kostüm aus dem Blickwinkel jedes Fotos und misst die Abweichung. Den Blickwinkel gibt die Rolle (Vorne, Links,
-        Rechts, Hinten) oder der Name eines Schnittbilds des Ansichtenbogens („ansicht_R_S“); der Kreislauf misst ihn
-        einmal nach. „Nicht verwenden“ schließt ein Foto aus (etwa den ganzen Bogen), das Gewicht zählt es mehr oder
+    <p class="hb-hinweis blendermodell-fotohinweis">Die Fotos sind die VORLAGE der Iterationen: Jede Runde rendert das
+        Modell (Figur mit Kostüm) aus dem Blickwinkel jedes Fotos und misst die Abweichung. Den Blickwinkel gibt die Rolle
+        (Vorne, Links, Rechts, Hinten) oder der Name eines Schnittbilds des Ansichtenbogens („ansicht_R_S“).
+        „Nicht verwenden“ schließt ein Foto aus (etwa den ganzen Bogen), das Gewicht zählt es mehr oder
         weniger. Platz 1 ist die Vorlage in der Übersicht. Hinzufügen, Ersetzen und Entfernen gehen jederzeit; ein
         laufender Kreislauf sieht die Änderung ab dem nächsten Lauf.</p>
     <div class="mesh-fotoknoepfe" id="foto-knoepfe"></div>
@@ -94,8 +106,7 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
     <h2>Optionen</h2>
     <h3 class="blendermodell-gruppe">Grundfigur</h3>
     <div class="mesh-optionen" id="blendermodell-optionen-figur"></div>
-    <h3 class="blendermodell-gruppe">Kostüm-Kreislauf</h3>
-    <div class="mesh-optionen" id="blendermodell-optionen-kostuem"></div>
+    {% comment %}Die Einstellungen der Iterationen (Runden, Kandidaten, Prüf-KI …) stehen im Reiter „Iterationen“.{% endcomment %}
     <h3 class="blendermodell-gruppe">Blender — Bewegung und Video</h3>
     <div class="mesh-optionen" id="blendermodell-optionen-blender"></div>
 </div>
@@ -106,8 +117,24 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
             {% comment %}Jeder Teil der Bühne einzeln schaltbar — die Vorgabe steht hier als Klasse `active`, gebunden
             werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`. „Mesh“ ist hier das Netz, das der Lauf aus
             den Fotos gebaut hat.{% endcomment %}
+            {% comment %}„Modell (letzte Iteration)“ (Edgar, 29.09.2026: „mach auch im Hauptfenster das 3D Modell sichtbar,
+            meinetwegen auf Knopfdruck, für die letzte Iteration“): die GLB der letzten übernommenen Runde — Figur,
+            Kostüm und Rig — statt der nackten Genesis-Figur (`Blendermodellbuehnenmodell`). „Mesh“ und
+            „Nebeneinander“ gehörten zum Netz aus den Fotos (ausgebaut) und sind versteckt; die Knöpfe bleiben im
+            DOM, weil `Meshfigurschalter` (geteilt mit „Mesh to 3D“) sie liest.{% endcomment %}
             <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
-                <button type="button" class="schaltknopf" data-schalter="mesh"
+                <button type="button" class="schaltknopf" id="buehne-iterationsmodell"
+                        title="Das Modell der letzten übernommenen Iteration: Grundfigur mit Kostüm, am Rig (spielt auch die Bewegung)">
+                    <i class="fas fa-hat-wizard"></i> <span>Modell (letzte Iteration)</span></button>
+                {% comment %}„Sichtmodell“: der Umriss der Fotos als Netz, mit der Fototextur (`Sichtmodell`, 30.09.2026 nachts) — ein
+                zweites Modell derselben Runde neben dem aus Teilen; die beiden Knöpfe schließen einander aus.{% endcomment %}
+                <button type="button" class="schaltknopf" id="buehne-sichtmodell"
+                        title="Das Sichtmodell: der Umriss der Fotos mit Fototextur, am Rig">
+                    <i class="fas fa-camera"></i> <span>Sichtmodell</span></button>
+                <button type="button" class="schaltknopf" id="buehne-blenderfilm" hidden
+                        title="Der in Blender gerenderte Film (Schritt „Blender“: Figur mit Kostüm, Bewegung aus der BVH-Datei) in dieser Ansicht">
+                    <i class="fas fa-film"></i> Blender-Film</button>
+                <button type="button" class="schaltknopf" data-schalter="mesh" hidden
                         title="Das Netz, das der Lauf aus den Fotos gebaut hat, in der Lage der Erkennung">
                     <i class="fas fa-draw-polygon"></i> Mesh</button>
                 <button type="button" class="schaltknopf active" data-schalter="haare"
@@ -118,12 +145,12 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
                 <button type="button" class="schaltknopf active" data-schalter="kleider"
                         title="Die Kleidungsstücke der Figur — auch im Export">
                     <i class="fas fa-tshirt"></i> Kleider</button>
-                <button type="button" class="schaltknopf" data-schalter="nebeneinander"
+                <button type="button" class="schaltknopf" data-schalter="nebeneinander" hidden
                         title="Netz und Figur nebeneinander statt übereinander">
                     <i class="fas fa-columns"></i> Nebeneinander</button>
                 <button type="button" class="schaltknopf active" data-schalter="modell"
-                        title="Die angepasste Genesis-9-Figur">
-                    <i class="fas fa-user"></i> 3DModell</button>
+                        title="Die Genesis-9-Grundfigur ohne Kostüm">
+                    <i class="fas fa-user"></i> Grundfigur</button>
             </div>
             <div class="mesh-betrachter" id="buehne">
                 <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>
@@ -135,12 +162,13 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
             <div class="blendermodell-animationsleiste" id="animations-leiste" hidden>
                 <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück">
                     <i class="fas fa-step-backward"></i></button>
-                <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause">
+                <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause (Leertaste)">
                     <i class="fas fa-play"></i></button>
                 <button type="button" id="anim-vor" class="btn btn-secondary btn-sm" title="Ein Bild vor">
                     <i class="fas fa-step-forward"></i></button>
                 <input type="range" id="anim-scrubber" class="blendermodell-scrubber" min="0" max="1000" value="0" step="1">
                 <span id="anim-zeit" class="hb-hinweis blendermodell-animationszeit">0:00 / 0:00</span>
+                <span id="anim-bild" class="hb-hinweis blendermodell-animationszeit" title="Aktuelles Bild der Bewegung / Bilder gesamt">Bild 0 / 0</span>
             </div>
         </div>
         <div class="mesh-seitenspalte blendermodell-seitenspalte">
@@ -194,7 +222,10 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
     </div>
 </div>
 
-<div class="card" id="haar-karte">
+{% comment %}Haar, Kleidung, Vergleich, Ketten und Erkennung zeigten die Ergebnisse der Netz-Kette (am 29.09.2026
+ausgebaut) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`, `Meshfigurhaar`, `Meshfigurkleidung`
+und `Meshfigurfrisur` (geteilt mit „Mesh to 3D“) schreiben in diese Felder.{% endcomment %}
+<div class="card" id="haar-karte" hidden>
     <h2>Haar — Netz ohne Haar / nur Haar</h2>
     <p class="hb-hinweis">Das Haar aus dem Netz geschnitten (Schritt „Haar", Paket <code>Haar</code>): je Fläche die Farbe
     (keine Haut → Haar), das innere Gesicht bleibt immer Haut, geglättet auf dem Netz. Oben das Netz ohne Haar, unten das Haar
@@ -208,7 +239,7 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
     <div id="frisur"></div>
 </div>
 
-<div class="card" id="kleidung-karte">
+<div class="card" id="kleidung-karte" hidden>
     <h2>Kleidung — Netz ohne Kleidung / nur Kleidung</h2>
     <p class="hb-hinweis">Die Kleidung aus dem Netz geschnitten (Schritt „Kleidung“, Paket <code>Kleidung</code>): Was
     nicht Haut ist, ist Stoff — Haut erkennt der Hautton der <em>kahlen</em> Stellen (Gesicht, Hände, Unterarme,
@@ -218,7 +249,7 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
     <div id="kleidung"></div>
 </div>
 
-<div class="card" id="vergleich-karte">
+<div class="card" id="vergleich-karte" hidden>
     <h2>Vergleich Netz · Figur · Abweichung</h2>
     <p class="hb-hinweis">Unten die Tiefenabweichung aus derselben Kamera: <span class="meshfigur-rot">rot</span> = das Netz liegt
     weiter außen (Figur dort zu dünn), <span class="meshfigur-blau">blau</span> = die Figur liegt weiter außen, Skala ±2 cm;
@@ -226,7 +257,7 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
     <div id="vergleich"></div>
 </div>
 
-<div class="card">
+<div class="card" hidden>
     <h2>Körper- und Gesichtskette</h2>
     <div class="meshfigur-ketten" id="ketten"></div>
 </div>
@@ -236,7 +267,7 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
     <div id="regler"></div>
 </div>
 
-<div class="card">
+<div class="card" hidden>
     <h2>Erkennung</h2>
     <p class="hb-hinweis">Das Netz aus acht Richtungen und das Gesicht aus fünfzehn gerendert; MediaPipe findet die Punkte
     (grün), trianguliert ergeben sie 3D-Landmarken (rot zurückprojiziert). Dieselbe Erkennung lief einmal über Genesis selbst,
@@ -247,25 +278,73 @@ baut der Kreislauf (`core/dienste/kostuemkreislauf.py`).{% endcomment %}
 
 <div id="reiter-iterationen" hidden>
     <div class="card">
-        <h2>Iterationen — Kostüm-Kreislauf</h2>
-        <p class="hb-hinweis">Jede Runde baut Blender einige Abwandlungen des besten Kostüms (Optimierer), rendert sie aus den
-        Blickwinkeln der Vorlagen und benotet sie: Abweichung = (1 − Deckung des Umrisses) + Farbabstand, kleiner ist
-        besser. Alle paar Runden sieht sich die Prüf-KI (lokal, Ollama) die Tafel an und schlägt Werte vor. Übernommen wird
-        nur, was besser ist (die Prüf-KI darf um die eingestellte Toleranz schlechter sein). Jeder Lauf setzt beim besten
-        Kostüm an — „Weiter iterieren“ beliebig oft. Neueste Runde oben; je Runde oben die Vorlage, darunter der Render.</p>
+        <h2>Iterationen — Modell (Grundfigur mit Kostüm)</h2>
+        <p class="hb-hinweis">Jede Runde baut Blender einige Abwandlungen des besten Modells (Optimierer: Maße, Farben,
+        Haltung), rendert sie aus den Blickwinkeln der Vorlagen und benotet sie: Abweichung = (1 − Deckung des Umrisses) +
+        Farbabstand, kleiner ist besser. Alle paar Runden sieht sich die Prüf-KI (lokal, Ollama) die Tafel an, beurteilt
+        die Ähnlichkeit und schlägt Werte vor. Übernommen wird nur, was besser ist (die Prüf-KI darf um die eingestellte
+        Toleranz schlechter sein). Jeder Lauf setzt beim besten Modell an — „Weiter iterieren“ beliebig oft.</p>
+        {% comment %}Die Einstellungen der Iterationen stehen HIER, wo man iteriert (bis 30.09.2026 ganz unten im Reiter
+        „Auftrag“ — „wo stelle ich die KI ein?"). Das Formular baut `Blendermodellseite` in diesen Behälter, gespeichert
+        wird sofort (`Blendermodelleinstellungen`); während eines Laufs sind die Felder gesperrt.{% endcomment %}
+        <h3 class="blendermodell-gruppe">Einstellungen der Iterationen
+            <span class="hb-hinweis einstellungen-meldung"></span></h3>
+        <p class="hb-hinweis" id="optionen-gesperrt" hidden>Ein Lauf rechnet: Die Einstellungen sind gesperrt und gelten
+            ab dem nächsten Start. „Anhalten“ beendet den Lauf.</p>
+        <div class="mesh-optionen" id="blendermodell-optionen-kostuem"></div>
         <div class="blendermodell-iterationsleiste">
-            <label class="hb-hinweis">Runden <input type="number" id="iterationen-runden" class="viewer-eingabe"
-                   min="1" max="1000" value="20"></label>
             <button type="button" class="btn btn-primary btn-sm" id="iterationen-weiter">
                 <i class="fas fa-forward"></i> <span>Weiter iterieren</span></button>
             <button type="button" class="btn btn-secondary btn-sm" id="iterationen-anhalten" disabled>
                 <i class="fas fa-stop"></i> <span>Anhalten</span></button>
             <span class="hb-hinweis" id="iterationen-stand"></span>
+            <span class="hb-hinweis" id="iterationen-ki"></span>
         </div>
         <div id="iterationen-verlauf"></div>
         <div id="iterationen-vergleich"></div>
+        {% comment %}Die Runden als Tabelle (`Blendermodellrundentabelle`, djangoBase-Tabelle): sortierbar, wählbar, mit
+        Löschen und Sammellöschen; „Zeige nur jede x-te Iteration“ dünnt die Anzeige aus — auch im laufenden Lauf.
+        Je Runde Unterzeilen (Notiz, Prüf-KI, Bilder, Dateien), die auf- und zuklappen.{% endcomment %}
+        <div class="blendermodell-tabellenkopf">
+            <label class="hb-hinweis" title="Nur Runden, deren Nummer durch diese Zahl teilbar ist — dazu immer die neueste und die beste. 1 = alle. Nur die Anzeige, gespeichert bleibt alles.">
+                Zeige nur jede <input type="number" id="iterationen-jede" class="viewer-eingabe" min="1" max="100000"
+                       value="1"> . Iteration</label>
+            <span class="hb-hinweis" id="iterationen-angezeigt"></span>
+            <span class="blendermodell-tabellenknoepfe">
+                <button type="button" class="btn btn-secondary btn-sm" id="iterationen-alle-auf">
+                    <i class="fas fa-angle-double-down"></i> <span>Alle Details auf</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" id="iterationen-alle-zu">
+                    <i class="fas fa-angle-double-up"></i> <span>Alle zu</span></button>
+                <button type="button" class="btn btn-danger btn-sm" id="iterationen-loeschen" disabled>
+                    <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="iterationen-loeschen-anzahl">0</span>)</span></button>
+            </span>
+        </div>
+        <div class="hb-hinweis" id="iterationen-meldung"></div>
         <div id="iterationen"></div>
     </div>
+    {% comment %}Bilder groß (`Blendermodellbildfenster`): an der Ecke vergrößerbar, Mausrad zoomt, Ziehen verschiebt,
+    Vorlage und Render mit derselben Vergrößerung, ←/→ blättern.{% endcomment %}
+    <dialog id="bildfenster" class="blendermodell-bildfenster">
+        <div class="blendermodell-bildfenster-kopf">
+            <strong id="bildfenster-titel"></strong>
+            <span class="blendermodell-bildfenster-knoepfe">
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="zurueck" title="Voriger Blickwinkel (←)">
+                    <i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="vor" title="Nächster Blickwinkel (→)">
+                    <i class="fas fa-chevron-right"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="minus" title="Verkleinern (−)">
+                    <i class="fas fa-search-minus"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="massstab" title="Bildpunkte 1:1">100 %</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="plus" title="Vergrößern (+, Mausrad)">
+                    <i class="fas fa-search-plus"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="einpassen" title="Einpassen (0, Doppelklick)">
+                    <i class="fas fa-compress"></i></button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bildfenster="zu" title="Schließen (Esc)">
+                    <i class="fas fa-times"></i></button>
+            </span>
+        </div>
+        <div class="blendermodell-bildfenster-flaeche" id="bildfenster-flaeche"></div>
+    </dialog>
 </div>
 {% endblock %}
 

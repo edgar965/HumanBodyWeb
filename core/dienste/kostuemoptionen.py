@@ -26,9 +26,10 @@ class Kostuemoptionen:
             'art': 'zahl',
             'vorgabe': 20,
             'min': 1,
-            'max': 1000,
+            'max': 5000,
             'hinweis': 'So viele Runden rechnet ein Druck auf „Weiter iterieren" (oder der Schritt im '
-            'ganzen Lauf). Jeder Lauf setzt beim besten bisherigen Kostüm an.',
+            'ganzen Lauf). Jeder Lauf setzt beim besten bisherigen Modell an. Bei rund 25 s je Runde '
+            '(8 Kandidaten) sind 1.000 Runden etwa 7 Stunden.',
         },
         {
             'schluessel': 'kandidaten',
@@ -38,6 +39,59 @@ class Kostuemoptionen:
             'min': 1,
             'max': 16,
             'hinweis': 'So viele Abwandlungen baut und rendert Blender je Runde in einem Prozess.',
+        },
+        {
+            'schluessel': 'textur',
+            'titel': 'Fototextur im Modell',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — Farben und Stoff der Vorlage im Modell (Vertexfarben)'),
+                ('aus', 'Aus — flache Materialfarben'),
+            ],
+            'hinweis': 'Das Modell einer Runde (GLB für die Bühne) bekommt die Farben und die Stoffstruktur '
+            'der Vorlagenbilder, auf die Oberfläche projiziert. Kostet ~12 s je Modell (GLB ~16 MB); ein '
+            'Modell je 45 s genügt. Die Suche rechnet weiter mit flachen Farben.',
+        },
+        {
+            'schluessel': 'huelle',
+            'titel': 'Mantel folgt dem Umriss der Vorlage',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — Mantelringe an die Silhouetten der Vorlage angepasst'),
+                ('aus', 'Aus — nur die Maße des Optimierers'),
+            ],
+            'hinweis': 'Aus den Silhouetten aller Vorlagenbilder entsteht ein Sichtkörper; die Ringe des '
+            'Mantels werden an dessen Rand gezogen (begrenzt auf ein Vielfaches der Optimierer-Weite). Kostet '
+            'gemessen ein Ausgangs-Render je Blender-Prozess und Ausgangsmodell (~1 s) und wenige '
+            'Millisekunden je Kandidat.',
+        },
+        {
+            'schluessel': 'sichtmodell',
+            'titel': 'Sichtmodell (Umriss der Fotos) mitbauen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — zweites Modell aus den Silhouetten, mit Fototextur'),
+                ('aus', 'Aus — nur das Modell aus Teilen'),
+            ],
+            'hinweis': 'Aus den Silhouetten aller Vorlagenbilder entsteht ein Netz (Schichten von 1,5 cm, 72 Strahlen), '
+            'darauf die Fototextur — es sieht aus den Blickwinkeln der Fotos aus wie die Fotos, hängt am selben Rig, '
+            'ist aber kein Kostüm aus Teilen. Kostet ~10 s je Modell, deshalb nur alle fünf Minuten; Voraussetzung '
+            'sind Fototextur und Mantel-Umriss. Bühne: Knopf „Sichtmodell“.',
+        },
+        {
+            'schluessel': 'parallel',
+            'titel': 'Blender-Prozesse parallel',
+            'art': 'zahl',
+            'vorgabe': 4,
+            'min': 1,
+            'max': 8,
+            'hinweis': 'So viele Blender-Prozesse rechnen die Kandidaten einer Runde gleichzeitig — jeder lädt '
+            'die Figur einmal je Lauf und bleibt dann bereit. Ein Kandidat kostet gemessen 0,6–0,8 s; mehr '
+            'Prozesse belasten den Rechner stärker, bringen ab etwa einem Prozess je zwei Kandidaten kaum '
+            'etwas.',
         },
         {
             'schluessel': 'stillstand',
@@ -63,8 +117,19 @@ class Kostuemoptionen:
             'art': 'zahl',
             'vorgabe': 5,
             'min': 1,
-            'max': 100,
-            'hinweis': 'Dazu jedes Mal, wenn drei Runden hintereinander nichts besser wurde.',
+            'max': 1000,
+            'hinweis': 'Die Prüf-KI sieht sich alle so viele Runden die Tafel an (dazu bei einer Flaute, siehe '
+            'nächste Option). Ein Aufruf kostet 1–3 Minuten — in einer langen Suche alle 250 Runden.',
+        },
+        {
+            'schluessel': 'pruefki_stillstand',
+            'titel': 'Prüf-KI nach … Runden ohne Besserung',
+            'art': 'zahl',
+            'vorgabe': 3,
+            'min': 1,
+            'max': 1000,
+            'hinweis': 'Eine Runde der Prüf-KI dauert je nach Modell 20–60 s; bei 3 Runden Flaute würde sie in '
+            'einer langen Flaute fast jede dritte Runde des Optimierers (2–3 s) verdrängen.',
         },
         {
             'schluessel': 'toleranz',
@@ -110,6 +175,9 @@ class Kostuemoptionen:
             if e['schluessel'] == 'pruefki':
                 if str(wert) == cls.AUS or cls.OLLAMANAME.match(str(wert)):
                     aus['pruefki'] = str(wert)
+            elif e['art'] == 'wahl':
+                if str(wert) in [w for w, _ in e.get('werte', [])]:
+                    aus[e['schluessel']] = str(wert)
             elif e['art'] == 'zahl':
                 try:
                     zahl = float(wert)

@@ -8,7 +8,12 @@ Reihenfolge:
     1. `winkel` am Foto — von Hand in den Eintrag der Bildauswahl gesetzt
     2. der Name der Schnittbilder des Ansichtenbogens (`vorlage_teilen.py`: `ansicht_<reihe>_<spalte>`),
        abgelesen am Bogen `Vorlage.jpeg` (29.09.2026): Reihe 1 vorn, rechte Seite, linke Seite, hinten;
-       Reihe 2 die Schrägen vorn-links, vorn-rechts, hinten-rechts, hinten-links (Grade geschätzt)
+       Reihe 2 die Schrägen vorn-links (35°), vorn-rechts (−45°), hinten-LINKS (135°), hinten-RECHTS (−135°)
+       (Grade geschätzt). **Die beiden hinteren waren bis 30.09.2026 vertauscht** (`2_3` = −135, `2_4` = 135):
+       Die IoU-Kurve des besten Modells über 24 Blickwinkel (`winkel_suche.py`) hat es gezeigt — `2_4` passt bei
+       −135° mit 0,867 (zugewiesen: +135° mit 0,725), und der Stab steht in `2_3` links im Bild wie im Render bei
+       +135°. Zwei von acht Ansichten arbeiteten gegeneinander, und die Fototextur klebte die Rückseiten auf die
+       falsche Seite (verschmierte Farben).
     3. die Rolle: vorne 0, links 90, rechts −90, hinten 180
 
 NICHT gemessen: Eine automatische Suche im ±40°-Fenster über die Umriss-Note hat am 29.09.2026 jede
@@ -29,7 +34,7 @@ __all__ = ['Kostuemreferenz']
 
 
 class Kostuemreferenz:
-    BOGEN = {'1_1': 0, '1_2': -90, '1_3': 90, '1_4': 180, '2_1': 35, '2_2': -45, '2_3': -135, '2_4': 135}
+    BOGEN = {'1_1': 0, '1_2': -90, '1_3': 90, '1_4': 180, '2_1': 35, '2_2': -45, '2_3': 135, '2_4': -135}
     ROLLEN = {'vorne': 0, 'links': 90, 'rechts': -90, 'hinten': 180}
     NAME = re.compile(r'ansicht_(\d_\d)', re.IGNORECASE)
 

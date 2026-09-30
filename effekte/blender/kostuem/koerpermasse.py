@@ -32,12 +32,15 @@ class Koerpermasse:
     # Rumpf.
     ARM_NAEHE = 0.075
 
-    def __init__(self, punkte, arme=None):
+    def __init__(self, punkte, arme=None, ellbogen=None):
         p = np.asarray(punkte, dtype=float)
         self.punkte = p
         #: {seite: (schulter, handgelenk)} aus dem Rig (`Koerperpose.arme`) — ohne Rig misst `arm` an den
         # Punkten.
         self.arme = arme or {}
+        #: {seite: Ellbogen} (`Koerperpose.ellbogen`): Ein gebeugter Arm liegt nicht auf der Strecke
+        # Schulter → Handgelenk; ohne diese Angabe würde sein Unterarm zum Rumpf gezählt.
+        self.ellbogen = ellbogen or {}
         self.boden = float(p[:, 2].min())
         self.scheitel = float(p[:, 2].max())
         self.hoehe = self.scheitel - self.boden
@@ -61,9 +64,15 @@ class Koerpermasse:
         if not self.arme:
             return np.abs(p[:, 0]) < self.RUMPF_X * self.hoehe
         maske = np.ones(len(p), dtype=bool)
-        for schulter, hand in self.arme.values():
-            abstand, t = self._abstand_zur_strecke(p, schulter, hand + (hand - schulter) * 0.35)
-            maske &= ~((abstand < self.ARM_NAEHE) & (t > 0.08))
+        for seite, (schulter, hand) in self.arme.items():
+            e = self.ellbogen.get(seite)
+            if e is None:
+                segmente = [(schulter, hand + (hand - schulter) * 0.35, 0.08)]
+            else:
+                segmente = [(schulter, e, 0.08), (e, hand + (hand - e) * 0.5, 0.0)]
+            for a, b, ab_t in segmente:
+                abstand, t = self._abstand_zur_strecke(p, a, b)
+                maske &= ~((abstand < self.ARM_NAEHE) & (t > ab_t))
         return maske
 
     def ring(self, z, band=0.015, nur_rumpf=True):
@@ -85,7 +94,9 @@ class Koerpermasse:
         p = self.punkte
         if seite in self.arme:
             schulter, hand = (np.asarray(v, dtype=float) for v in self.arme[seite])
-            abstand, t = self._abstand_zur_strecke(p, schulter, hand)
+            # Gebeugt: der Radius wird am Oberarm gemessen (Schulter → Ellbogen), sonst an der ganzen Strecke.
+            ende = np.asarray(self.ellbogen[seite], dtype=float) if seite in self.ellbogen else hand
+            abstand, t = self._abstand_zur_strecke(p, schulter, ende)
             nah = abstand[(abstand < self.ARM_NAEHE) & (t > 0.1) & (t < 0.95)]
             return schulter, hand, float(np.percentile(nah, 80)) if len(nah) > 20 else 0.045
         sel = (np.sign(p[:, 0]) == seite) & (np.abs(p[:, 0]) > self.RUMPF_X * self.hoehe * 1.3)
@@ -105,10 +116,30 @@ class Koerpermasse:
         radius = float(np.percentile(np.linalg.norm(senk, axis=1), 80))
         return schulter, hand, radius
 
+    def fuss(self, seite):
+        """(mitte_x, y_min, y_max, halbbreite, hoehe) des Fußes auf `seite` (Vorzeichen von x): die Punkte in den
+        untersten 7,5 % der Körperhöhe. Für die Schuhe (`Kostuemschuhe`)."""
+        p = self.punkte
+        sel = (p[:, 2] < self.boden + 0.075 * self.hoehe) & (np.sign(p[:, 0]) == seite) & (np.abs(p[:, 0]) > 0.02)
+        q = p[sel]
+        if len(q) < 30:
+            return seite * 0.09, self.mitte_y - 0.10, self.mitte_y + 0.16, 0.045, 0.09
+        x0, x1 = np.percentile(q[:, 0], [2, 98])
+        y0, y1 = np.percentile(q[:, 1], [1, 99])
+        return (
+            float((x0 + x1) / 2),
+            float(y0),
+            float(y1),
+            float((x1 - x0) / 2),
+            float(np.percentile(q[:, 2], 98) - self.boden),
+        )
+
     def kopf(self):
         """(mitte_x, mitte_y, halbbreite, halbtiefe, z_unten) des Kopfes."""
         p = self.punkte
-        q = p[p[:, 2] > self.scheitel - self.KOPF * self.hoehe]
+        # Nur Punkte nahe der Mittellinie: Ein nach vorn geschwungener Arm (`pose.arm_vor`) hebt die Hand bis in
+        # Kopfhöhe — ohne den Filter verschöbe sie Mitte und Breite des Kopfes und mit ihnen Hut, Haar und Bart.
+        q = p[(p[:, 2] > self.scheitel - self.KOPF * self.hoehe) & (np.abs(p[:, 0]) < 0.1 * self.hoehe)]
         x0, x1 = np.percentile(q[:, 0], [1, 99])
         y0, y1 = np.percentile(q[:, 1], [1, 99])
         return (
@@ -141,6 +172,9 @@ class Koerpermasse:
         for name in self.HOEHEN:
             _, _, hb, ht = self.ring(self.z(name))
             aus[name] = {'z': round(self.z(name), 3), 'halbbreite': round(hb, 3), 'halbtiefe': round(ht, 3)}
+        aus['fuss'] = {
+            str(s): [round(v, 3) for v in self.fuss(s)] for s in (1, -1)
+        }  # (mitte_x, y_min, y_max, halbbreite, hoehe)
         kx, ky, kb, kt, kz = self.kopf()
         aus['kopf'] = {
             'mitte': [round(kx, 3), round(ky, 3)],

@@ -10,25 +10,25 @@ import { Meshfigurhaar } from '../meshfigur/meshfigurhaar.js';
 import { Meshfigurkleidung } from '../meshfigur/meshfigurkleidung.js';
 import { Meshfigurspeicher } from '../meshfigur/meshfigurspeicher.js';
 import { Blendermodellanimation } from './blendermodellanimation.js';
+import { Blendermodellblenderfilm } from './blendermodellblenderfilm.js';
+import { Blendermodellleertaste } from './blendermodellleertaste.js';
+import { Blendermodellbuehnenmodell } from './blendermodellbuehnenmodell.js';
 import { Blendermodelleinstellungen } from './blendermodelleinstellungen.js';
 import { Blendermodellfotos } from './blendermodellfotos.js';
 import { Blendermodelliterationen } from './blendermodelliterationen.js';
 
 /**
- * Blendermodellseite — die Auftragsseite des Bereichs „BlenderModel" (Edgar, 29.09.2026): Lauf verfolgen (Schritte
- * mit Dauer, Balken, neu ab einem Schritt, Anhalten), die Bildauswahl (`Blendermodellfotos`), die 3D-Ausgabe und ihre
- * Berichte, die Optionen (`Blendermodelleinstellungen`, sofort gespeichert).
- *
- * DIE 3D-AUSGABE IST DIE VON „MESH TO 3D": Bühne, Berichte, Export, Speichern und die Karten Haar, Kleidung und
- * Frisur sind die Module aus `static/viewer/meshfigur/`, unverändert. Sie sprechen nur mit dem, was diese Seite
- * anbietet — `zustand`, `adresse()`, `dateiAdresse()`, `buehne` — und lesen dieselben Felder aus `zustand.ergebnis`.
+ * Blendermodellseite — die Auftragsseite von „BlenderModel" (29.09.2026): Lauf, Bildauswahl, 3D-Ausgabe, Optionen.
+ * DIE 3D-AUSGABE IST DIE VON „MESH TO 3D" (`static/viewer/meshfigur/`, unverändert); sie spricht nur mit `zustand`,
+ * `adresse()`, `dateiAdresse()`, `buehne`. Dazu Iterationsmodell und Blender-Film auf der Bühne.
  * Der Zustand kommt beim Laden als JSON in die Seite, danach alle `TAKT_MS` vom Server.
  */
 export class Blendermodellseite {
 
     static TAKT_MS = 2000;
+    static TAKT_RUHE_MS = 6000;
     static NAMEN = {
-        grundfigur: 'Grundfigur', kostuem: 'Kostüm', export: 'GLB mit Rig', blender: 'Blender', speichern: 'Speichern',
+        grundfigur: 'Grundfigur', kostuem: 'Iterationen', export: 'GLB mit Rig', blender: 'Blender', speichern: 'Speichern',
     };
     static STATUS = {
         angelegt: 'Angelegt', laeuft: 'Läuft', fertig: 'Fertig', gescheitert: 'Fehlgeschlagen', angehalten: 'Angehalten',
@@ -36,18 +36,14 @@ export class Blendermodellseite {
 
     static starten(jobId) {
         const daten = JSON.parse(document.getElementById('blendermodell-daten').textContent);
-        const seite = new Blendermodellseite(jobId, daten.zustand, daten.katalog);
-        seite.aufbauen();
         // Handle zum Nachsehen im Browser (Bühne, Zustand) — wie `window.__characters` in der Szene.
-        window.__blendermodell = seite;
+        const seite = window.__blendermodell = new Blendermodellseite(jobId, daten.zustand, daten.katalog);
+        seite.aufbauen();
         return seite;
     }
 
     constructor(jobId, zustand, katalog) {
-        this.jobId = jobId;
-        this.zustand = zustand;
-        this.katalog = katalog;
-        this._timer = null;
+        Object.assign(this, { jobId, zustand, katalog, _timer: null });
     }
 
     adresse(pfad) { return `/api/blendermodell/${this.jobId}/${pfad}`; }
@@ -78,6 +74,8 @@ export class Blendermodellseite {
         }
         document.getElementById('starten').addEventListener('click', () => this.starten());
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
+        document.getElementById('laufband-anhalten').addEventListener('click', () => this.anhalten());
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) this.aktualisieren(); });
         // Der Vorschlag für „Als Genesis-Figur speichern": `Meshfigurspeicher` schriebe „<Name> Mesh".
         const modellname = document.getElementById('modell-name');
         if (modellname && !modellname.value) modellname.value = this.zustand.modell || `${this.zustand.name} BlenderModel`;
@@ -86,7 +84,13 @@ export class Blendermodellseite {
         this._pfadstand = null;
         this.iterationen = new Blendermodelliterationen(this);
         this.buehne = new Meshfigurbuehne(this);
+        this.buehnenmodell = new Blendermodellbuehnenmodell(this, this.buehne, 'modell');
+        this.sichtmodell = new Blendermodellbuehnenmodell(this, this.buehne, 'sicht');
+        this.buehnenmodell.geschwister = this.sichtmodell;
+        this.sichtmodell.geschwister = this.buehnenmodell;
+        this.blenderfilm = new Blendermodellblenderfilm(this);
         this.animation = new Blendermodellanimation(this, this.buehne);
+        this.leertaste = new Blendermodellleertaste(this);
         this.berichte = new Meshfigurberichte(this);
         this.export = new Meshfigurexport(this);
         this.haar = new Meshfigurhaar(this);
@@ -120,25 +124,43 @@ export class Blendermodellseite {
         this.verfolgen();
     }
 
+    /** „Anhalten" — vom Knopf des Laufs, vom Band „Läuft im Hintergrund" und vom Reiter „Iterationen". Beendet den
+     *  Arbeitsprozess sofort (`Blendermodellarbeiter.anhalten`); eine Runde, die gerade rechnet, geht verloren, alles
+     *  Abgelegte bleibt. */
     async anhalten() {
+        const knopf = document.getElementById('laufband-anhalten');
+        knopf.disabled = true;
+        document.getElementById('laufband-text').textContent = 'Wird angehalten …';
         try {
             await Serverabruf.senden(this.adresse('anhalten/'), {});
+            await this.aktualisieren();
         } catch (fehler) {
             this.fehler(`Anhalten fehlgeschlagen: ${fehler.message}`);
+        } finally {
+            knopf.disabled = false;
         }
     }
 
+    /** Der Takt läuft IMMER weiter, auch wenn gerade nichts rechnet: Ein Lauf kann von außen gestartet werden
+     *  (Skript, zweiter Tab) — bis 30.09.2026 hörte die Seite nach dem letzten Lauf auf zu fragen und zeigte ihn dann nie.
+     *  Im Leerlauf seltener, und nicht in einem verdeckten Tab (`visibilitychange` holt es nach). */
     verfolgen() {
         if (this._timer) clearTimeout(this._timer);
         this._timer = setTimeout(async () => {
-            try {
-                this.zustand = await Serverabruf.json(this.adresse('zustand/'));
-                this.zeigen();
-            } catch (fehler) {
-                this.fehler(`Zustand nicht lesbar: ${fehler.message}`);
-            }
-            if (this.zustand.laeuft) this.verfolgen();
-        }, Blendermodellseite.TAKT_MS);
+            if (!document.hidden) await this.aktualisieren();
+            this.verfolgen();
+        }, this.zustand.laeuft ? Blendermodellseite.TAKT_MS : Blendermodellseite.TAKT_RUHE_MS);
+    }
+
+    async aktualisieren() {
+        try {
+            const z = await Serverabruf.json(this.adresse('zustand/'));
+            if (z.error) throw new Error(z.error);
+            this.zustand = z;
+            this.zeigen();
+        } catch (fehler) {
+            this.fehler(`Zustand nicht lesbar: ${fehler.message}`);
+        }
     }
 
     // -------------------------------------------------------------- Anzeige
@@ -161,6 +183,13 @@ export class Blendermodellseite {
         start.disabled = !!z.laeuft;
         start.querySelector('span').textContent = z.laeuft ? 'Berechnet …' : 'Neu berechnen';
         document.getElementById('anhalten').disabled = !z.laeuft;
+        // Das Band steht über beiden Reitern: „läuft im Hintergrund" muss man sehen, egal wo man gerade ist.
+        document.getElementById('laufband').hidden = !z.laeuft;
+        if (z.laeuft) {
+            document.getElementById('laufband-text').textContent =
+                `Läuft im Hintergrund — ${z.progress || 0} % · ${z.progress_detail || ''}`;
+        }
+        document.getElementById('optionen-gesperrt').hidden = !z.laeuft;
         this.einstellungen.sperren(!!z.laeuft);
         this.fehler(z.status === 'gescheitert' ? (z.error || 'Fehlgeschlagen — siehe auftrag.log') : '');
         this.schritte();
@@ -172,6 +201,9 @@ export class Blendermodellseite {
         this.kleidung.zeigen(z);
         this.frisur.zeigen(z);
         this.buehne.zeigen(z);
+        this.buehnenmodell.zeigen(z);
+        this.sichtmodell.zeigen(z);
+        this.blenderfilm.zeigen(z);
         this.animation.zeigen(z);
         this.export.zeigen(z);
         this.speicher.zeigen(z);

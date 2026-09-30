@@ -10,6 +10,7 @@ die Anzeige der Figur (`static/viewer/meshfigur/`) liest sie unverändert.
 
 from ..models import Blendermodellauftrag
 from .blendermodelllauf import Blendermodelllauf
+from .kostuemloeschung import Kostuemloeschung
 from .blendermodelloptionen import Blendermodelloptionen
 from .blendermodellpfade import Blendermodellpfade
 from .blendermodellspeichern import Blendermodellspeichern
@@ -33,6 +34,8 @@ class Blendermodellzustand:
             'bilder': job.bilder,
             'eingang': job.eingang,
             'ergebnis': job.ergebnis,
+            # Runden, die der laufende Lauf noch löschen muss (Tabelle „Iterationen", `Kostuemloeschung`).
+            'loeschen_vorgemerkt': Kostuemloeschung(job).vorgemerkt(),
             'stellung': job.stellung(),
             'modell': job.modell,
             'laeuft': job.laeuft,
