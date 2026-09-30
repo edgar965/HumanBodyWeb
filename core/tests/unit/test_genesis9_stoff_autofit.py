@@ -70,8 +70,10 @@ class Genesis9Autofit(SimpleTestCase):
         self.assertEqual(G9autofit.g9name('lFoot'), 'l_foot')
         self.assertEqual(G9autofit.g9name('rSmallToe2_2'), 'r_midtoe2')
         self.assertEqual(G9autofit.g9name('lBigToe_2'), 'l_bigtoe2')
-        self.assertIsNone(G9autofit.g9name('lShldrBend'))
-        self.assertIsNone(G9autofit.g9name('head'))
+        # Fußposen sehen nur die Füße (`NAMEN`); ohne Karte kennt `g9name` seit
+        # 20.09.2026 auch Arme und Mitte (`test_genesis9_fremdfiguren` Fall 2).
+        self.assertIsNone(G9autofit.g9name('lShldrBend', G9autofit.NAMEN))
+        self.assertIsNone(G9autofit.g9name('head', G9autofit.NAMEN))
 
     def test_3_umrechnen_gleiche_drehung_in_der_welt(self):
         """Ein G8-Knochen mit 30° Orientierung um y und ein G9-Knochen ohne:

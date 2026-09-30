@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET
 from humanbody_core.cloth import generate_cloth
 
 from ..daten.kleidungsregler import Kleidungsregler
+from ..daten.netzausgabe import Netzausgabe
 from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.kleiderbibliothek import Kleiderbibliothek
@@ -111,7 +112,8 @@ class Kleidung:
             return JsonResponse({'error': str(fehler)}, status=400)
         if ergebnis is None:
             return JsonResponse({'error': 'Failed to generate cloth'}, status=400)
-        return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht))
+        return Netzausgabe.antwort(
+            Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht), request)
 
     @staticmethod
     def _bauwerte(werte, art):
@@ -160,4 +162,4 @@ class Kleidung:
         huelle = Kleidungsanpassung.huelle_aus_anfrage(request)
         if anpassung.anpassen(regler, huelle) is None:
             return JsonResponse({'error': 'Fitting failed'}, status=500)
-        return JsonResponse(anpassung.als_antwort(kennung, regler))
+        return Netzausgabe.antwort(anpassung.als_antwort(kennung, regler), request)

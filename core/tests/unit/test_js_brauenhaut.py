@@ -93,14 +93,14 @@ class BrauenhautTest(SimpleTestCase):
         self.assertIn('Brauenhaut.anwenden(this.bodyMesh, this.details, this.bodyType)', modell)
         for datei in (
             'gemeinsam/humanbodymodell.js',
-            'scene/detailbedienung.js',
-            'scene/charakter_koerper.js',
+            'charakter/detailbedienung.js',
+            'charakter/charakter_koerper.js',
         ):
             self.assertNotIn('Augenbrauenbau.', BrauenhautTest._text(*datei.split('/')), datei)
         self.assertIn("(farbig ? '?brauen=ohne' : '')", BrauenhautTest._text('gemeinsam', 'hauttextur.js'))
         vorgabe = BrauenhautTest._text('gemeinsam', 'koerperdetails.js')
         felder = sorted(set(re.findall(r'(brauen_[a-z_]+):', vorgabe)))
-        bereiche = BrauenhautTest._text('scene', 'detailbereiche.js')
+        bereiche = BrauenhautTest._text('charakter', 'detailbereiche.js')
         vorlage = (settings.BASE_DIR / 'templates' / '_szene_details.html').read_text(encoding='utf-8')
         for feld in felder:
             self.assertIn("'%s'" % feld, bereiche, feld)
@@ -110,7 +110,7 @@ class BrauenhautTest(SimpleTestCase):
         self.assertIn('id="prop-detail-brauen-vorlage"', vorlage)
         self.assertIn(
             'Brauenvorlagen.anwenden(inst.details, wahl.value, Koerperdetails.VORGABE)',
-            BrauenhautTest._text('scene', 'detailbedienung.js'),
+            BrauenhautTest._text('charakter', 'detailbedienung.js'),
         )
         hauttexturen = (settings.BASE_DIR / 'core' / 'api' / 'hauttexturen.py').read_text(encoding='utf-8')
         self.assertIn("request.GET.get('brauen') == 'ohne'", hauttexturen)

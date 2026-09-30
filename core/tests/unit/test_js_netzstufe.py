@@ -14,8 +14,17 @@ In Node mit Attrappen für `document`, `window` und `location`:
 6. `umschalten(umbauen)` (18.09.2026 abends): liefert `umbauen` true, bleibt
    die Seite stehen (kein `reload`, Abzeichen ohne „lädt"); liefert es false
    oder wirft es, lädt die Seite neu wie bisher.
+7. Einmal-Keks (30.09.2026, „per default lade die modelle nicht in der hohen
+   auflösung"): Vor dem Neuladen auf die hohe Stufe steht `netzstufen_neuladen=1`
+   (der Server behält nur dann die Stufe, `Netzstufenwahl.seite_zuruecksetzen`);
+   beim Zurückschalten und beim Umbau ohne Neuladen nicht.
 
-Sabotage-Gegenprobe: `ereignis.code === TASTE` weg → Fall 3 rot.
+`document.cookie` ist eine Keksdose wie im Browser (jede Zuweisung setzt EINEN
+Keks, `max-age=0` löscht ihn) — die frühere Attrappe ersetzte bei jeder Zuweisung
+den ganzen Text und hätte den Einmal-Keks mit dem Stufen-Keks verwechselt.
+
+Sabotage-Gegenprobe: `ereignis.code === TASTE` weg → Fall 3 rot; die Zeile mit
+`NEULADEN` in `umschalten` weg → Fall 7 rot.
 """
 from django.test import SimpleTestCase
 
@@ -27,8 +36,17 @@ SKRIPT = """
 const elemente = [];
 const element = () => ({ style: {}, textContent: '', id: '', entfernt: false,
                          remove() { this.entfernt = true; } });
+const glas = new Map();
+const gesetzt = [];
 globalThis.document = {
-    cookie: '',
+    get cookie() { return [...glas].map(([k, v]) => `${k}=${v}`).join('; '); },
+    set cookie(text) {
+        gesetzt.push(text);
+        const [paar] = text.split(';');
+        const [name, wert = ''] = paar.split('=');
+        if (wert === '' || /max-age=0(;|$)/.test(text)) glas.delete(name.trim());
+        else glas.set(name.trim(), wert);
+    },
     getElementById: (id) => elemente.find(e => e.id === id && !e.entfernt) || null,
     createElement: () => element(),
     body: { appendChild: (e) => elemente.push(e) },
@@ -75,27 +93,32 @@ druck({ code: 'KeyG' });
 pruefe('andere taste tut nichts', [verhindert, neugeladen], [0, 0]);
 druck({});
 pruefe('verhindert und gestoppt', [verhindert, gestoppt], [1, 1]);
-pruefe('keks gesetzt', document.cookie.startsWith('netzstufen=3; path=/;'), true);
+pruefe('keks gesetzt', [gesetzt.includes(N.keksText(3)), N.gewaehlt()], [true, 3]);
+pruefe('einmal-keks vor dem neuladen', gesetzt.at(-1).startsWith('netzstufen_neuladen=1; path=/;'), true);
+pruefe('beide in der dose', document.cookie, 'netzstufen=3; netzstufen_neuladen=1');
 pruefe('abzeichen laedt', elemente[0].textContent,
        'Netz: hohe Auflösung (3 Stufen) — lädt …');
 pruefe('neu geladen', neugeladen, 1);
 
+glas.clear();
 document.cookie = 'netzstufen=3';
 pruefe('abzeichen mit keks', N.abzeichen().textContent, N.text(3));
 druck({});
-pruefe('zurueck: keks geloescht', document.cookie, N.keksText(null));
+pruefe('zurueck: keks geloescht', [N.gewaehlt(), gesetzt.at(-1)], [null, N.keksText(null)]);
+pruefe('zurueck: kein einmal-keks', document.cookie.includes('netzstufen_neuladen'), false);
 pruefe('zurueck: abzeichen', elemente[0].textContent, N.text(null, true));
-document.cookie = '';
+glas.clear();
 pruefe('ohne keks weg', N.abzeichen(), null);
 pruefe('entfernt', elemente[0].entfernt, true);
 
 // --- 6. Umbau ohne Neustart ---------------------------------------------
-document.cookie = '';
+glas.clear();
 let gebaut = [];
 const vorher = neugeladen;
 pruefe('umbau erledigt', await N.umschalten(async (s) => { gebaut.push(s); return true; }), false);
 pruefe('umbau gerufen mit 3', gebaut, [3]);
 pruefe('kein reload', neugeladen, vorher);
+pruefe('umbau: kein einmal-keks', document.cookie.includes('netzstufen_neuladen'), false);
 pruefe('abzeichen ohne laedt', N.abzeichen().textContent, N.text(3));
 pruefe('umbau verweigert -> reload', await N.umschalten(async () => false), true);
 pruefe('reload gezaehlt', neugeladen, vorher + 1);

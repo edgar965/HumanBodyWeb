@@ -64,7 +64,9 @@ class Genesis9Fremdfiguren(SimpleTestCase):
         self.assertEqual(G9autofit.g9name('lShldrBend'), 'l_upperarm')
         self.assertEqual(G9autofit.g9name('lShldr'), 'l_upperarm')
         self.assertEqual(G9autofit.g9name('head'), 'head')
-        self.assertIsNone(G9autofit.g9name('rEye'))
+        # Gesicht seitig seit 0.62 (`NAMEN`: `Eye`, `Ear`, Brauen — Hautbindung der Fremdstücke).
+        self.assertEqual(G9autofit.g9name('rEye'), 'r_eye')
+        self.assertIsNone(G9autofit.g9name('rEyelidUpper'))
         # Fussposen sehen nur die Fuesse (sonst zaehlte eine Handpose als Fusspose).
         self.assertIsNone(G9autofit.g9name('rHand', G9autofit.NAMEN))
         self.assertEqual(G9autofit.g9name('lFoot', G9autofit.NAMEN), 'l_foot')
@@ -218,8 +220,10 @@ class Genesis9Fremdfiguren(SimpleTestCase):
         gewicht = np.array([[1.0, 0, 0, 0]] * 4)
         neu_index, neu_gewicht = G9hautglaettung.glaetten(polys, index, gewicht, 4, 2)
         np.testing.assert_allclose(neu_gewicht.sum(axis=1), [1.0] * 4, atol=1e-9)
-        links = dict(zip(neu_index[0].tolist(), neu_gewicht[0].tolist(), strict=True))
-        rechts = dict(zip(neu_index[2].tolist(), neu_gewicht[2].tolist(), strict=True))
+        # Je Knochen summiert: `kuerzen` füllt freie Plätze mit (Knochen 0, Gewicht 0) —
+        # ein `dict(zip(...))` ließe den leeren Platz das echte Gewicht von Knochen 0 überschreiben.
+        links = np.bincount(neu_index[0], weights=neu_gewicht[0], minlength=2)
+        rechts = np.bincount(neu_index[2], weights=neu_gewicht[2], minlength=2)
         self.assertAlmostEqual(links[0], 0.5625, places=6)
         self.assertAlmostEqual(links[1], 0.4375, places=6)
         self.assertAlmostEqual(rechts[1], 0.5625, places=6)

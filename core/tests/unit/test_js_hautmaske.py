@@ -123,6 +123,21 @@ maske = Hautmaske.verdeckt(koerper.P, koerper.T, [als(knapp)]);
 let mitte = 0; for (let i = 0; i < maske.length; i++) { const y = yVon(koerper, i); if (y > 0.4 && y < 0.6 && maske[i]) mitte++; }
 if (mitte < 300) fehl('Stoff 3 mm in der Haut muss noch verdecken: ' + mitte);
 
+// --- 3b. Starres Stueck (Schuh): der richtungslose Abstandstest (`NAHE_M`,
+// 27.09.2026) verdeckt auch ohne Strahltreffer — weicher Stoff bekommt ihn
+// nicht (30.09.2026), sonst maskiert jede anliegende Kante 12 mm darueber hinaus.
+// Die Koerperreihe bei y = 0,30 liegt 5 mm neben der Kante bei 0,305.
+const kurz = zylinder(0.102, 0.305, 0.695, 40, 36, true);
+const anDerKante = (m) => {
+    let s = 0;
+    for (let i = 0; i < m.length; i++) if (Math.abs(yVon(koerper, i) - 0.30) < 1e-6) s += m[i];
+    return s;
+};
+const weich = anDerKante(Hautmaske.verdeckt(koerper.P, koerper.T, [als(kurz)]));
+const starr = anDerKante(Hautmaske.verdeckt(koerper.P, koerper.T, [{ ...als(kurz), starr: true }]));
+if (weich !== 0) fehl('weicher Stoff maskiert 5 mm neben der Kante: ' + weich);
+if (starr !== 36) fehl('starres Stueck 5 mm neben dem Punkt muss verdecken: ' + starr);
+
 // --- 4. Rueckwaerts gewickelt: dieselbe Maske ------------------------------
 // Mit 10 mm Abstand, nicht 2: Bei 2 mm deckt die Tiefentoleranz (5 mm) ein
 // falsches Vorzeichen zu — die Sabotage `vz = 1` blieb damit gruen.

@@ -294,11 +294,9 @@ class Genesis9Browserbilder(SimpleTestCase):
     databases = set()
 
     def test_9_detailnormalen_nur_hoch(self):
-        gross = {'Runtime/Textures/x/8k_NM.jpg'}
-
-        def tragbar(relativ, grenze=None):
-            grenze = grenze or G9browserbilder.SCHWER_MB * 1024 * 1024
-            return not (relativ in gross and grenze <= 20 * 1024 * 1024)
+        # Dateigrößen statt `tragbar`: `fuer` verkleinert seit 24.09. zu große Bilder, Detailnormalen nie.
+        def datei(relativ):
+            return mock.Mock(**{'stat.return_value.st_size': (97 if '8k' in relativ else 1) << 20})
 
         bilder = {
             'albedo': 'Runtime/Textures/x/A_D_1001.jpg',
@@ -307,7 +305,9 @@ class Genesis9Browserbilder(SimpleTestCase):
             'detailgewicht': 1.0,
             'farbe': [1, 1, 1],
         }
-        with mock.patch.object(G9browserbilder, 'tragbar', side_effect=tragbar):
+        verkleinert = mock.patch('Genesis9.texturverkleinerung.G9texturverkleinerung.fuer', return_value='k')
+        with mock.patch('Genesis9.material.G9material.datei', side_effect=datei), verkleinert:
+            self.assertEqual(G9browserbilder.fuer({'albedo': '8k'}, hoch=False), {'albedo': 'k'})
             tief = G9browserbilder.fuer(bilder, hoch=False)
             self.assertNotIn('detailnormalen', tief)
             self.assertNotIn('detailgewicht', tief)

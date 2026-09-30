@@ -65,27 +65,35 @@ class BibliothekskanalTest(SimpleTestCase):
         melden = 'Bibliothekskanal.melden('
         sender = (
             ('studio', 'bibliothekablage.js', melden + 'aktion, daten);'),
-            ('scene', 'animationsmenue.js', melden + 'aktion, daten);'),
+            ('charakter', 'animationsmenue.js', melden + 'aktion, daten);'),
             ('animation', 'baum.js', melden + 'action, data);'),
-            ('scene', 'animation.js', melden + "'save', { category, name });"),
+            ('charakter', 'animation.js', melden + "'save', { category, name });"),
         )
         for ordner, datei, marke in sender:
             self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
-        hoeren = 'Bibliothekskanal.hoeren(() => '
-        hoerer = (
-            ('studio', 'bibliotheksbaum.js', hoeren + 'this.laden());'),
-            ('scene', 'animation.js', hoeren + 'loadAnimationUI());'),
-            ('animation', 'baum.js', hoeren + 'loadAnimationTree());'),
+        self.assertIn(
+            'Bibliothekskanal.hoeren(() => loadAnimationTree());',
+            BibliothekskanalTest._text('animation', 'baum.js'),
         )
-        for ordner, datei, marke in hoerer:
-            self.assertIn(marke, BibliothekskanalTest._text(ordner, datei), datei)
+        # Studio und Szene lesen seit dem 24.09.2026 die Meldung selbst (bei
+        # einer Umbenennung ziehen sie die eigenen Verweise nach —
+        # `Clipfehlt.umbenannt`, `_umbenennungAnwenden`): Der Rückruf ist ein
+        # Block, der Baum wird trotzdem bei JEDER Meldung neu geholt.
+        for ordner, datei, einzug, laden in (
+            ('studio', 'bibliotheksbaum.js', '        ', 'this.laden();'),
+            ('charakter', 'animation.js', '', 'loadAnimationUI();'),
+        ):
+            text = BibliothekskanalTest._text(ordner, datei)
+            anfang = text.index('Bibliothekskanal.hoeren((meldung) => {')
+            rueckruf = text[anfang : text.index('\n%s});' % einzug, anfang)]
+            self.assertTrue(rueckruf.rstrip().endswith(laden), '%s: %s' % (datei, rueckruf))
         # Sofort aus dem Baum, bevor das Neuladen (unter Last Sekunden) fertig ist.
         studio = BibliothekskanalTest._text('studio', 'bibliothekmenues.js')
         self.assertLess(
             studio.index('this.baum.eintragEntfernen(ziel.category, ziel.name);'),
             studio.index('this.baum.laden();', studio.index('async loeschen(ziel)')),
         )
-        szene = BibliothekskanalTest._text('scene', 'animation.js')
+        szene = BibliothekskanalTest._text('charakter', 'animation.js')
         entfernt = szene.index('item.remove();')
         self.assertLess(entfernt, szene.index('return Animationsentfernung.nach(anim, cat, {'))
         self.assertLess(

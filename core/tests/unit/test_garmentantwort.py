@@ -73,8 +73,8 @@ class GarmentantwortTest(SimpleTestCase):
         for datei, wieoft in (('garmentcode.py', 2), ('garmentgemeinsam.py', 1)):
             quelle = open(wurzel / datei, encoding='utf-8').read()
             self.assertEqual(quelle.count("Garmentantwort.ablegen(request.POST.get('anfrage')"), wieoft, datei)
-        for modul in ('scene/garmentcode_drapieren.js', 'scene/garmentcode_schnitt.js',
-                      'scene/garmentcode_gemeinsam.js'):
+        for modul in ('charakter/garmentcode_drapieren.js', 'charakter/garmentcode_schnitt.js',
+                      'charakter/garmentcode_gemeinsam.js'):
             quelle = open(settings.BASE_DIR / 'static' / 'viewer' / modul, encoding='utf-8').read()
             self.assertIn('Antwortnachholen.formular(', quelle, modul)
             self.assertNotIn('Fristabruf.formular(', quelle, modul)

@@ -27,11 +27,38 @@ export class Genesis9aufbau {
     /** Die Stufe des ersten Zugs: Daz' Käfig. */
     static GROB = 0;
 
-    /** Käfig jetzt, volle Stufe im Hintergrund; liefert die Figur nach dem ersten Zug. */
+    /** So lange wartet der feine Zug höchstens auf die GarmentCode-Stücke. */
+    static GC_FRIST_MS = 20000;
+
+    /**
+     * Käfig jetzt, volle Stufe im Hintergrund; liefert die Figur nach dem ersten Zug.
+     *
+     * Trägt die Figur GarmentCode-Stücke (`inst.gcBereit`, im Konstruktor aus den
+     * gespeicherten Daten gesetzt), wartet der feine Zug auf sie: Sie hängen erst NACH
+     * `bauen()`, und ein Daz-Stück, das vor ihnen geholt wird, kennt sie in seiner
+     * Lagenrechnung nicht — es müsste hinterher ein zweites Mal kommen
+     * (`Genesis9lagen.nachGcBau`). Mit dem Warten holt der feine Zug jedes Stück genau
+     * EINMAL und gleich richtig gelegt (Edgar, 30.09.2026: „die Kleideranfragen zuerst,
+     * und dann den Aufbau des Modells nur einmal mit ALLEN Kleidern auf einmal"). Der
+     * Käfig steht davon unberührt sofort — die Figur ist genauso schnell zu sehen.
+     *
+     * Die Frist ist das Sicherheitsnetz: Scheitert die Wiederherstellung so, dass niemand
+     * freigibt, bliebe die Figur sonst für immer auf der groben Stufe.
+     */
     static async progressiv(inst) {
         await Genesis9aufbau.alles(inst, Genesis9aufbau.GROB);
-        inst.fein = Genesis9aufbau._nachzug(inst, 'Feine Stufe nicht geladen');
+        inst.fein = Genesis9aufbau._gcAbwarten(inst)
+            .then(() => Genesis9aufbau._nachzug(inst, 'Feine Stufe nicht geladen'));
         return inst;
+    }
+
+    /** Das Versprechen auf die GarmentCode-Stücke — mit Frist, und ohne je zu scheitern. */
+    static _gcAbwarten(inst) {
+        if (!inst?.gcBereit) return Promise.resolve();
+        return Promise.race([
+            Promise.resolve(inst.gcBereit).catch(() => {}),
+            new Promise(loesen => setTimeout(loesen, Genesis9aufbau.GC_FRIST_MS)),
+        ]);
     }
 
     /**

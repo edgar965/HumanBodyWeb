@@ -140,7 +140,7 @@ ${mitDetail ? Genesis9hautGLSL.DETAIL : Genesis9hautGLSL.OHNE_DETAIL}
         return aus;
     }
 
-    static KLARLACK_ALT ='( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat;';
+    static KLARLACK_ALT = '( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat;';
     static KLARLACK_NEU = '( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat * uKlarlackFarbe;';
 
     static DURCHLICHT = `

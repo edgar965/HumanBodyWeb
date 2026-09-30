@@ -23,7 +23,30 @@ class Iterationsoptionen:
     AUS = 'aus'
     VORGABE_KI = 'qwen3.8:27b'
     OLLAMANAME = re.compile(r'^[\w.\-:/]{1,120}$')
+    BEGUTACHTUNG, AUTOMATISCH = 'begutachtung', 'automatisch'
     KATALOG = [
+        {
+            'schluessel': 'modus',
+            'titel': 'Iterationen',
+            'art': 'wahl',
+            'vorgabe': BEGUTACHTUNG,
+            'werte': [
+                (BEGUTACHTUNG, 'Begutachtung — je Runde ein Rezept (Aufrufe an ModellMitKleidern), danach wartet der Auftrag'),
+                (AUTOMATISCH, 'Automatisch — Optimierer und Prüf-KI über die Haarparameter (die frühere Schleife)'),
+            ],
+            'hinweis': 'Begutachtung (Edgar, 30.09.2026): jede Runde wird angesehen, dann kommt neuer Code; der Auftrag steht '
+            'mit „Wartet auf Begutachtung", bis das nächste Rezept kommt (Reiter „Iterationen").',
+        },
+        {
+            'schluessel': 'bildbreite',
+            'titel': 'Renderbreite (px)',
+            'art': 'zahl',
+            'vorgabe': 256,
+            'min': 96,
+            'max': 1024,
+            'hinweis': 'Breite der Renders je Blickwinkel (Höhe = 1,5 × Breite). Die Note rechnet auf 128 × 192, mehr ist nur '
+            'für das Auge. Klein für einen schnellen Durchlauf.',
+        },
         {
             'schluessel': 'runden',
             'titel': 'Runden je Lauf',

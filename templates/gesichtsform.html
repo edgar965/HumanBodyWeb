@@ -11,6 +11,12 @@ Rot = Ziel (ziehbar), grau = Figur ohne Kopf-Eigen, blau = mit. „Morph rechnen
 `eigen:kopf_<Name>` ab (`G9schnittmorph`), er steht im Reglerabschnitt „Kopf-Eigen".
 {% endcomment %}
 {% block extra_head %}
+{% comment %}
+Das Zellgitter der djangoBase-Tabellen kommt aus `tabellen.css` und muss VOR dem eigenen CSS
+stehen (`projekt.md`: „Die Klassen allein machen keine djangoBase-Tabelle"). `Gesichtsformguete`
+baut seit dem 30.09.2026 zwei echte Tabellen über `dbTabelle`.
+{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/gesichtsform.css' %}">
 {% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
 {% endblock %}

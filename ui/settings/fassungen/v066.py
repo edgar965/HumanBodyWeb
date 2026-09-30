@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""Fassung 0.66 (30.09.2026) — Haar und Kleidung generisch, Daz-Stücke bleiben am Modell,
+BlenderModel und Haar Engine."""
+
+FASSUNG = {
+    'version': '0.66',
+    'date': '2026-09-30',
+    'title': 'Genesis 9: Haar – Generisch und Kleidung – Generisch (auch auf HumanBody), '
+    'Daz-Stücke werden mit dem Modell gespeichert; BlenderModel und Haar Engine als neue '
+    'Bereiche; hohe Auflösung nur noch pro Seite',
+    'author': 'edgar965',
+    'body_md': (
+        '- **Haar – Generisch und Kleidung – Generisch (Genesis 9)**: Je Kategorie ein '
+        'Sammeleintrag im Assets-Reiter, dazu „Alle Kategorien“ ganz oben. Jedes Stück hat '
+        'einen Anteilsregler (0–100 %, die Summe muss nicht 100 ergeben), seine eigenen Morphs '
+        'stehen darunter. Gemischt wird an den Hautstellen, an denen beide Stücke vorhanden '
+        'sind: In der Mischzone steht nur eine Fläche, die Mischung aus beiden im angegebenen '
+        'Verhältnis. Die Textur mischt ein eigener Regler live im Shader. Das Haar mischt über '
+        'Strähnen-Inseln, dazu fünf Formachsen (Länge, Kurz, Dichte, Wellig, Dutt) an jeder '
+        'Frisur.\n'
+        '- **Dasselbe auf einer HumanBody-Figur**: Haar und Kleidung mischen dort genauso, '
+        'Stranghaar (Pixie, Hime Cut, Viola) fällt nicht mehr weg. Genesis-Kleider auf HumanBody '
+        'verdecken jetzt die Haut darunter (vorher rechnete die Hautverdeckung dort nie), und das '
+        'GarmentCode-T-Shirt wird gegen die Fläche des Körpers korrigiert, sodass die Brustwarze '
+        'nicht mehr hindurchsteht; eine Stofflänge (PBD) an der Brust senkt die Knicke vorn in '
+        'der Mitte von 129 auf 75. Die Mulde zwischen den Brüsten bleibt (25,9 mm, vorher '
+        '31,8): sie überbrückt nur eine echte Drapierung auf der HumanBody-Figur.\n'
+        '- **Daz-Haar und Daz-Kleidung bleiben beim Speichern erhalten**: Eine HumanBody-Figur '
+        'mit Genesis-Haar und -Kleidern verlor beim Neuladen von /Charakter/ alle Daz-Stücke. '
+        'Das Modell trägt jetzt das Feld `kleidung` (Sitzung, Szene, „Modell speichern“, '
+        'Katalog, Strg+O), und das BVH Studio zieht die Stücke auf dem Skelett der Spur an. Das '
+        'Studio benennt die Knochen um (`DEF-breast.L` → `DEF-breast_L`); die Stücke fanden '
+        'deshalb fast keinen Knochen.\n'
+        '- **Zwei Häkchen kurz hintereinander gingen verloren**: Der Wunsch an die Figur war '
+        'einer je Figur, der zweite verdrängte den ersten — auch bei Haut, Augen, Brauen, '
+        'Schminke, Reglern und Posen. Jetzt gilt der letzte Wunsch je Stück bzw. je '
+        'Einstellung.\n'
+        '- **Hohe Auflösung nur noch pro Seite**: Der Keks für Strg+Alt+H lebte 365 Tage — '
+        'jeder neue Tab lud in der hohen Stufe und brauchte entsprechend lang. Jetzt nimmt jeder '
+        'Seitenaufruf ihn zurück; nur das Neuladen durch die Taste selbst behält ihn. Der Server '
+        'rechnet die hohe Stufe nicht mehr nach jeder Anfrage mit (1,2–15,5 s je Stück, die den '
+        'Ladeanfragen der Tabs im Weg standen), sondern erst, wenn sie verlangt wird. Dazu lädt '
+        '/Charakter/ die zuletzt geladene Figur statt eines festen Standardmodells, und '
+        'Netzantworten gehen als Binärpaket über den Draht.\n'
+        '- **BlenderModel und Haar Engine als neue Bereiche im Dashboard**: Fotos → Netz → Figur '
+        'in einem Auftrag, mit Bildauswahl, Grundfigur, Export mit Rig, Blender und '
+        'Kostüm-Kreislauf, Umriss-Hülle, Fototextur und Sichtmodell; die Haar Engine (Kopie von '
+        'BlenderModel mit der Genesis Haar Engine) steht als Gerüst mit Iterationen bereit, die '
+        'Engine selbst ist noch nicht angebunden.\n'
+        '- **Mesh to 3D**: Haar, Frisur und Kleidung, Sofort-Speichern, Gesichtsform-Editor, '
+        'Modelltexturen, Texel-Prüfung, Auftrag duplizieren; die Mesh-Wrapper sind auf Dateien '
+        'unter 300 Zeilen aufgeteilt (`mesh_hunyuan`, `bildlage`, `fotofarbenmodell`, '
+        '`meshfigur_hautteilung`). Neue Hilfeseite: BVH aus Video.\n'
+        '- **Modellexport**: Polygonanzahl im .blend-Export einstellbar, die Wiedergabe zeigt '
+        'jedes Bild.\n'
+        '- **Behoben**: Der Abstandstest der Hautverdeckung vom 27.09. (für den Schuh) galt für '
+        'jedes Stück und maskierte an weichem Stoff 12 mm über die Kante hinaus — jetzt nur noch '
+        'für starre Stücke. 8K-Detailnormalen kamen seit dem 24.09. auch ohne Strg+Alt+H als '
+        '4K-Kopie. Die Kategorie der Daz-Garderobe bleibt nicht mehr offen, wenn man ein anderes '
+        'Stück anklickt. Hilfe → Versionen zeigte 0.64 nicht, die Hilfe der Zeitleiste nannte K '
+        'statt L für den Licht-Keyframe.\n'
+        '- **Tests**: Die Suite (ohne LongRunner) läuft mit 3.673 Fällen grün; rund 70 Tests, '
+        'die hinter Umbauten der letzten Wochen zurückgeblieben waren, sind nachgezogen, dazu '
+        'Tests für das Feld `kleidung`, die Wunschliste und den Keks der hohen Stufe.'
+    ),
+}

@@ -35,13 +35,13 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
 
     def test_wird_geladen_und_hoert_auf_das_stueckereignis(self):
         self.assertIn(
-            "import '../gemeinsam/hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js')
+            "import '../gemeinsam/hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('charakter', 'boot.js')
         )
         self.assertIn('Stueckereignis.hoeren(', self.modul)
         self.assertIn('Hautverdeckung.einhaengen();', self.modul)
 
     def test_die_teilnetz_auswahl_meldet_das_entfernen(self):
-        quelle = HautverdeckungVerdrahtungTest._lies('scene', 'teilnetz_auswahl.js')
+        quelle = HautverdeckungVerdrahtungTest._lies('charakter', 'teilnetz_auswahl.js')
         self.assertIn("import { Stueckereignis } from '../gemeinsam/stueckereignis.js';", quelle)
         self.assertIn('Stueckereignis.melden(inst, target.key.slice(3), false);', quelle)
 
@@ -56,7 +56,7 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         # Seit dem 13.09.2026 mit `weg` aus dem Einzug: hinter der Maskengrenze
         # bleibt ein Band versenkter Haut (`Saumband`).
         self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', self.modul)
-        aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
+        aufbau = HautverdeckungVerdrahtungTest._lies('charakter', 'weichgewebeaufbau.js')
         self.assertIn('geo.userData?.indexVoll?.index ||', aufbau)
 
     def test_ohne_stuecke_kommt_der_volle_index_zurueck(self):
@@ -74,14 +74,14 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         einzug = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')
         self.assertIn("Shaderpatch.hinterInclude(shader, 'begin_vertex', 'transformed += einzug;')", einzug)
         self.assertIn(
-            "import './lagenverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js')
+            "import './lagenverdeckung.js';", HautverdeckungVerdrahtungTest._lies('charakter', 'boot.js')
         )
-        lagen = HautverdeckungVerdrahtungTest._lies('scene', 'lagenverdeckung.js')
+        lagen = HautverdeckungVerdrahtungTest._lies('charakter', 'lagenverdeckung.js')
         self.assertIn('Stueckereignis.hoeren(', lagen)
         self.assertIn('Lagenmaske.verdeckt(koerper, stoffe)', lagen)
 
     def test_weichgewebe_und_einzug_teilen_sich_das_material(self):
-        aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
+        aufbau = HautverdeckungVerdrahtungTest._lies('charakter', 'weichgewebeaufbau.js')
         self.assertIn('Shaderpatch.klonen(alt)', aufbau)
         self.assertIn("Shaderpatch.anhaengen(mat, 'weichgewebe'", aufbau)
         self.assertNotIn('mat.onBeforeCompile =', aufbau)

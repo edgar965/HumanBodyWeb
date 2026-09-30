@@ -26,7 +26,9 @@ MODUL = Jsmodul('bildmodell', 'zielnetzlive.js')
 
 SKRIPT = """
 const { Zielnetzlive: Z } = await import(MODUL);
-const { Serverabruf } = await import('/static/djangobase/js/serverabruf.js');
+// Der Serverabruf, den das Modul importiert (`gemeinsam/`, er überschreibt `senden`
+// selbst) — eine Attrappe am djangoBase-Original griffe ins Leere.
+const { Serverabruf } = await import(new URL('../gemeinsam/serverabruf.js', MODUL).href);
 globalThis.performance = globalThis.performance || { now: () => Date.now() };
 const anfragen = [];
 let bremse = null;                                     // Promise, die eine Antwort zurückhält

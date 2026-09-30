@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'garmentcode_passform.js')
+MODUL = Jsmodul('charakter', 'garmentcode_passform.js')
 
 SKRIPT = """
 const gehakt = [];

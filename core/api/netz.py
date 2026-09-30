@@ -19,6 +19,7 @@ from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.http import require_GET
 from humanbody_core import CharacterState, MorphData
 
+from ..daten.netzausgabe import Netzausgabe
 from ..dienste.charakterdaten import Charakterdaten
 from .netzanfrage import Netzanfrage
 
@@ -34,12 +35,12 @@ class Netzendpunkte:
     @staticmethod
     @require_GET
     def netz(request):
-        """Netzdaten als JSON mit base64-Binaerteilen — siehe `Netzanfrage`."""
+        """Netzdaten als Binaerpaket, sonst JSON — siehe `Netzanfrage`."""
         anfrage = Netzanfrage(request)
         punkte = anfrage.punkte()
         if punkte is None:
             return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
-        return JsonResponse(anfrage.antwort(punkte))
+        return Netzausgabe.antwort(anfrage.antwort(punkte), request)
 
     @staticmethod
     @require_GET

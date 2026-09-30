@@ -13,6 +13,7 @@ import os
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
+from ...daten.netzausgabe import Netzausgabe
 from .netzansichten import Testnetz
 from .testkern import Testkern
 
@@ -31,7 +32,7 @@ class Testendpunkte:
         antwort = Testnetz(request).antwort()
         if antwort is None:
             return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
-        return JsonResponse(antwort)
+        return Netzausgabe.antwort(antwort, request)
 
     @staticmethod
     @require_GET

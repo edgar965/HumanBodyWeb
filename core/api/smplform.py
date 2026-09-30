@@ -27,6 +27,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from ..daten.netzausgabe import Netzausgabe
+
 logger = logging.getLogger('core')
 
 __all__ = ['Smplformung']
@@ -93,7 +95,7 @@ class Smplformung:
         uv_felder = Smplfiguren.uv_felder(dreiecke)
         if uv_felder:
             antwort.update(uv_felder)
-        return JsonResponse(antwort)
+        return Netzausgabe.antwort(antwort, request)
 
     @staticmethod
     @require_GET

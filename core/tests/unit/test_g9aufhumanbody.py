@@ -143,6 +143,33 @@ class Uebertragung(SimpleTestCase):
         np.testing.assert_allclose(Hbtraeger.nach_aussen(p, -n), n, atol=1e-9)
         np.testing.assert_allclose(Hbtraeger.nach_aussen(p, n), n, atol=1e-9)
 
+    def test_bindung_haelt_den_stoff_bei_seinem_koerperteil(self):
+        u"""30.09.2026, GC T-Shirt unter der Achsel: Unter den Nachbarn eines Seitenteils lagen
+        Genesis-Punkte des Oberarms. Mit der Daz-Bindung (Teil Rumpf) sucht `uebertragen` nur im
+        Rumpf und seinen Nachbarteilen — der Oberarm (kein Nachbar des Rumpfs) zieht nicht mehr.
+        Hier: zwei Kugeln, links Rumpf, rechts Oberarm; auf HumanBody wandert nur der „Arm"."""
+        from Genesis9.koerperteile import G9koerperteile
+        from Genesis9.kollision import G9kollision
+        from Genesis9.teilbindung import G9teilbindung
+        rumpf, n1 = self.kugel([0.0, 1.0, 0.0], r=0.1)
+        arm, n2 = self.kugel([0.25, 1.0, 0.0], r=0.1)
+        g9 = np.vstack([rumpf, arm])
+        n = np.vstack([n1, n2])
+        hb = g9 + np.vstack([np.zeros_like(rumpf), np.tile([0.0, 0.2, 0.0], (len(arm), 1))])
+        tr = G9aufhumanbody.__new__(G9aufhumanbody)
+        teile = np.concatenate([np.full(len(rumpf), G9koerperteile.NUMMER['rumpf']),
+                                np.full(len(arm), G9koerperteile.NUMMER['l_oberarm'])])
+        tr.paarung = {'zu': np.arange(len(g9)), 'g9_punkte': g9, 'g9_normalen': n,
+                      'g9_rahmen': Hbtraeger.rahmen(n), 'g9_baum': G9kollision.baum(g9),
+                      'massstab': 1.0, 'g9_teile': teile}
+        tr._figur = {'punkte': hb, 'normalen': n}
+        tr._oertlich = np.ones(len(g9))
+        stoff = np.array([[0.125, 1.0, 0.0]])                  # genau zwischen beiden Kugeln
+        ohne = tr.uebertragen(stoff)
+        mit = tr.uebertragen(stoff, bindung=G9teilbindung(np.array([G9koerperteile.NUMMER['rumpf']])))
+        self.assertGreater(ohne[0, 1] - 1.0, 0.01)            # ohne Bindung zieht der Arm mit
+        self.assertLess(abs(mit[0, 1] - 1.0), 1e-6)           # mit Bindung bleibt er beim Rumpf
+
     def test_geglaettet_mittelt_ueber_die_nachbarn(self):
         punkte = np.column_stack([np.linspace(0, 1, 40), np.zeros(40), np.zeros(40)])
         feld = np.zeros((40, 3))
@@ -163,9 +190,11 @@ class Weiche(SimpleTestCase):
             '/api/character/genesis9-figur/garderobe/x/netz/',
             data='{"figurart": "humanbody", "geschlecht": "female"}',
             content_type='application/json')
+        from asgiref.sync import async_to_sync
         with mock.patch('core.api.g9garderobe.G9pfade.vorhanden', return_value=True), \
                 mock.patch('core.api.g9garderobe.G9garderobe.eintrag', return_value={}), \
                 mock.patch('core.api.g9garderobe.G9antworten.liefern') as liefern:
             liefern.return_value = 'antwort'
-            self.assertEqual(G9garderobeapi.kleidnetz(anfrage, 'x'), 'antwort')
+            # `kleidnetz` ist seit dem 23.09.2026 asynchron — direkt gerufen gäbe es eine Koroutine.
+            self.assertEqual(async_to_sync(G9garderobeapi.kleidnetz)(anfrage, 'x'), 'antwort')
         self.assertEqual(liefern.call_args[0][0], 'kleidhb')

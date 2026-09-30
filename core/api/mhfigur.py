@@ -45,6 +45,7 @@ from MakeHuman.zielablage import Mhzielablage
 
 from ..daten.netzantwort import Netzantwort
 from ..daten.pfadvergleich import Pfadvergleich
+from ..daten.netzausgabe import Netzausgabe
 
 logger = logging.getLogger('core')
 
@@ -113,7 +114,7 @@ class Mhfigur:
                 'hautgewichte': Netzantwort.hautgewichte(netz.get('haut')),
             }
         )
-        return JsonResponse(antwort)
+        return Netzausgabe.antwort(antwort, request)
 
     @staticmethod
     def _skelett(formung):
@@ -243,7 +244,7 @@ class Mhfigur:
         )
         antwort.update(daten)
         antwort['hautgewichte'] = Netzantwort.hautgewichte(haut)
-        return JsonResponse(antwort)
+        return Netzausgabe.antwort(antwort, request)
 
     @staticmethod
     @require_GET

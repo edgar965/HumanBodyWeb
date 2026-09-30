@@ -52,13 +52,13 @@
     <div class="settings-card">
         <h2><i class="fas fa-lightbulb"></i> Szene</h2>
 
-        {% comment %}Die Wahl trifft der Figurwahl-Dialog der Szene (19.09.2026, Edgar:
-        „auch ein Genesis, UMA usw. als Standard-Modell"); drei versteckte Felder
-        tragen sie ins Formular — `js/einstellungen/standardmodell.js`. Nur diese
-        Seite lädt jede Figurart, deshalb `figurarten=True`.{% endcomment %}
-        {% modell "default_model_scene" figurarten=True %}
+        {% comment %}Standard-Modell und Standard-Animation sind hier WEG (Edgar, 30.09.2026:
+        „entferne das Standardmodell und die Standard Animation. Auf der Seite /Charakter/
+        soll immer nur der letzte geladene Modell und die letzte Animation geladen werden").
+        Die Szene merkt sich stattdessen selbst, was zuletzt geladen war
+        (`viewer/charakter/letztewahl.js`, `localStorage`) — eine Einstellung, die man erst
+        pflegen muss, hat nie beschrieben, woran man gerade arbeitet.{% endcomment %}
         {% kaestchen "show_rig_scene" %}
-        {% animation "default_anim_scene" "anim-sel-scene" %}
         <div class="settings-row">
             <div class="settings-label">
                 <small>Ausgeklappte Tabs</small>
@@ -186,12 +186,9 @@ und die MakeHuman-Kleiderliste lagen hier inline — die ersten drei wortgleich 
 in settings_model/result/theatre. Jetzt ES-Module unter static/js/einstellungen/.{% endcomment %}
 <script type="module">
 import { Modellfeld } from "{% fassungspfad 'js/einstellungen/modellfeld.js' %}";
-import { Standardmodell } from "{% fassungspfad 'js/einstellungen/standardmodell.js' %}";
 import { Tabfelder } from "{% fassungspfad 'js/einstellungen/tabfelder.js' %}";
-import { Animationsauswahl } from "{% fassungspfad 'js/einstellungen/animationsauswahl.js' %}";
 import { Kleiderfelder } from "{% fassungspfad 'js/einstellungen/kleiderfelder.js' %}";
 
-Standardmodell.alleStarten();
 Modellfeld.fuellen('kleider-bone-model',
     "{{ settings.ui_prefs.kleider_bone_model|default:'Rig1'|escapejs }}");
 
@@ -200,8 +197,6 @@ Tabfelder.bauen('panels-scene-wrap', [
     ['kamera', 'Kamera'], ['material_skin', 'Material (Skin)'],
     ['aktionen', 'Aktionen'],
 ], 'panel_scene_', "{{ settings.expanded_panels_scene|escapejs }}");
-
-Animationsauswahl.alleStarten();
 
 Kleiderfelder.fuellen(
     ['mh-default-1', 'mh-default-2', 'mh-default-3', 'mh-default-4'],

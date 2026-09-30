@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'koerpertiefe.js')
+MODUL = Jsmodul('charakter', 'koerpertiefe.js')
 
 SKRIPT = """
 const { Koerpertiefe: K } = await import(MODUL);

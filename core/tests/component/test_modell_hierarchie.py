@@ -66,7 +66,7 @@ ALTE_BAUER = (
     'studio/spurzubehoer.js',
     'studio/spurhaut.js',
     'studio/spurdetails.js',
-    'scene/figurbasis.js',
+    'charakter/figurbasis.js',
 )
 
 
@@ -104,7 +104,7 @@ class ModellHierarchie(unittest.TestCase):
             self.assertIn(aufruf, text, name)
             self.assertNotIn('Koerpernetz.netz(', text, name)
         for datei, kopf in SZENE.items():
-            self.assertIn(kopf, ModellHierarchie._text(VIEWER / 'scene' / datei), datei)
+            self.assertIn(kopf, ModellHierarchie._text(VIEWER / 'charakter' / datei), datei)
         for alt in ALTE_BAUER:
             self.assertFalse((VIEWER / alt).exists(), alt)
         self.assertFalse((THEATRE / 'laden' / 'figurnetz.js').exists())

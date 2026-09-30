@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Haarengineoptionen — was der Bereich „Haar Engine" einstellen lässt, mit Vorgaben (30.09.2026).
+"""Haarengineoptionen — was der Bereich „2D3D Kleider" (`haarengine`) einstellen lässt, mit Vorgaben (30.09.2026).
 
-Drei Gruppen, je mit ihrem eigenen Katalog geprüft (gleichnamige Felder meinen in den Katalogen
+Fünf Gruppen, je mit ihrem eigenen Katalog geprüft (gleichnamige Felder meinen in den Katalogen
 Verschiedenes):
 
     figur        Grundfigur und „Als Modell speichern" (`Meshfiguroptionen` — nur diese zwei Felder)
-    iterationen  Iterationen: Runden, Kandidaten, Stillstand, Prüf-KI (`Iterationsoptionen`)
+    netz         Netz aus den Fotos: Formmodell, Auflösung, Freistellen (`Meshoptionen`, Reiter „Mesh")
+    koerper      woher die Figur kommt: übernehmen aus „Mesh to 3D" oder rechnen (`Haarenginekoerperoptionen`)
+    iterationen  Iterationen: Begutachtung oder automatisch, Runden, Kandidaten, Prüf-KI (`Iterationsoptionen`)
     film         BVH, Bilder, Größe (`Haarenginefilmoptionen`)
 
 `figur.modell` hat hier die Vorgabe „aus" (in „Mesh to 3D" „an"): Jeder Lauf würde sonst ein Genesis-Modell
@@ -14,6 +16,7 @@ speichern".
 """
 
 from .haarenginefilmoptionen import Haarenginefilmoptionen
+from .haarenginekoerperoptionen import Haarenginekoerperoptionen
 from .iterationsoptionen import Iterationsoptionen
 from .meshfiguroptionen import Meshfiguroptionen
 from .meshoptionen import Meshoptionen
@@ -22,20 +25,28 @@ __all__ = ['Haarengineoptionen']
 
 
 class Haarengineoptionen:
-    GRUPPEN = ('figur', 'iterationen', 'film')
+    GRUPPEN = ('figur', 'netz', 'koerper', 'iterationen', 'film')
     #: Felder, die im Formular erscheinen (None = alle des Katalogs).
-    SICHTBAR = {'figur': ('basis', 'modell'), 'iterationen': None, 'film': None}
+    SICHTBAR = {
+        'figur': ('basis', 'modell'),
+        'netz': ('formmodell', 'aufloesung', 'freistellen', 'licht'),
+        'koerper': None,
+        'iterationen': None,
+        'film': None,
+    }
     #: Vorgaben, die hier von der Vorlage abweichen.
-    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'iterationen': {}, 'film': {}}
+    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'netz': {}, 'koerper': {}, 'iterationen': {}, 'film': {}}
     PRUEFER = (
         ('figur', Meshfiguroptionen),
+        ('netz', Meshoptionen),
+        ('koerper', Haarenginekoerperoptionen),
         ('iterationen', Iterationsoptionen),
         ('film', Haarenginefilmoptionen),
     )
 
     @classmethod
     def katalog(cls):
-        """`{figur: {optionen}, iterationen: {optionen}, film: {optionen}, rollen}` für das Formular."""
+        """`{figur: {optionen}, netz: …, koerper: …, iterationen: …, film: …, rollen}` für das Formular."""
         aus = {}
         for gruppe, pruefer in cls.PRUEFER:
             felder = []
@@ -80,6 +91,14 @@ class Haarengineoptionen:
     def figur(cls, optionen):
         """Die Optionen der Figur — dieselbe Form wie `Meshfiguroptionen.pruefen`."""
         return cls.pruefen(optionen)['figur']
+
+    @classmethod
+    def netz(cls, optionen):
+        return cls.pruefen(optionen)['netz']
+
+    @classmethod
+    def koerper(cls, optionen):
+        return cls.pruefen(optionen)['koerper']
 
     @classmethod
     def iterationen(cls, optionen):

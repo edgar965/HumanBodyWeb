@@ -74,6 +74,20 @@ export class Genesis9Modell extends Modell {
         /** Getragene Stücke in Anziehreihenfolge: Kennung → `{variante}`; Netze in `clothMeshes`,
          *  Lagen (`{innen, aussen}`, `Genesis9kleidung`) in `lagen`. */
         this.kleidung = { ...(daten.kleidung || {}) }; this.lagen = {};
+        /**
+         * Kommen GarmentCode-Stücke mit? Sie werden erst NACH `bauen()` wiederhergestellt
+         * (sie brauchen das Skelett, `GarmentcodeAblage.laden`) — der feine Zug wartet
+         * deshalb auf sie, statt hinterher jedes Daz-Stück ein zweites Mal zu holen
+         * (Edgar, 30.09.2026: „die Kleideranfragen zuerst, und dann den Aufbau des
+         * Modells nur einmal mit ALLEN Kleidern auf einmal"). Gemessen am Laden von
+         * Ursula1: Ein einziger GarmentCode-Schuh kostete 4 von 14 Netzanfragen, jede
+         * mit vollem JSON-Parsen und Geometriebau im Browser.
+         * Der Feldname steht hier als Text, weil `GarmentcodeAblage` aus `charakter/`
+         * kommt und `gemeinsam/` nicht dorthin greifen soll.
+         */
+        this.gcBereit = (daten.garmentcode || []).length
+            ? new Promise(loesen => { this._gcFreigeben = loesen; })
+            : null;
         /** Fotokacheln eines gespeicherten Modells (`{1001: Adresse}`, `Genesis9fototextur`) und
          *  woher es stammt (Auftrag) — beides geht mit „Modell speichern" wieder in die Datei. */
         this.fototextur = { ...(daten.fototextur || {}) }; this.herkunft = daten.herkunft || null;
@@ -124,7 +138,7 @@ export class Genesis9Modell extends Modell {
      */
     async koerperAufbauen(stufen = null, skelettFrisch = true) {
         const lauf = this._lauf = (this._lauf || 0) + 1;
-        const daten = await Serverabruf.senden(Genesis9aufbau.adresse(
+        const daten = await Serverabruf.netzSenden(Genesis9aufbau.adresse(
             `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen), {
                 regler: this.regler || {}, haut: this.haut, augen: this.augen,
                 brauen: this.brauen, brauenstil: this.brauenstil, praesets: this.praesets,

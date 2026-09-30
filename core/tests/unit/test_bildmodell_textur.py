@@ -53,8 +53,10 @@ def _bilder():
         {'datei': 'gesicht.jpg', 'kategorie': 'neben', 'teil': 'gesicht', 'gewicht': 0.0, 'nutzung': 'textur',
          'textur': dict(HAUT, tauglich=False, grund='kein Hauptbild'),
          'rigs': {'openpifpaf': {'punkte': []}}},
-        {'datei': 'detail.jpg', 'kategorie': 'neben', 'gewicht': 0.0, 'textur': dict(HAUT, tauglich=False),
-         'rigs': {'yolo': {'punkte': []}}},
+        # Untauglich nach dem MESSWERT (Haut 10 % < 25 %): seit 21.09.2026 rechnet `tauglich` für ein
+        # Ganzkörperbild aus `anteil`/`maske_px` neu, das gespeicherte `tauglich` allein zählt nicht.
+        {'datei': 'detail.jpg', 'kategorie': 'neben', 'gewicht': 0.0,
+         'textur': dict(HAUT, tauglich=False, anteil=0.1), 'rigs': {'yolo': {'punkte': []}}},
         {'datei': 'form.jpg', 'kategorie': 'koerper', 'ansicht': 'seite', 'gewicht': 1.0, 'nutzung': 'form',
          'textur': HAUT, 'schaetzung': SMPLX},
         {'datei': 'ohne.jpg', 'kategorie': 'kopf', 'ansicht': 'vorne', 'gewicht': 1.0, 'textur': HAUT},

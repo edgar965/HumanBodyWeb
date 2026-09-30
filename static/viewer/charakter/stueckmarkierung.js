@@ -1,6 +1,7 @@
 import { fn } from '../gemeinsam/registrierung.js';
 import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 import { Reiterinhalt } from './reiterinhalt.js';
+import { Stueckaufklappung } from './stueckaufklappung.js';
 
 /**
  * Stueckmarkierung — das angeklickte Stück in SEINEM Reiter zeigen, mit
@@ -40,6 +41,9 @@ export class Stueckmarkierung {
         Stueckmarkierung.reiterKlicken(reiter);
         const stueck = Reiterzuordnung.stueckVon(ziel?.key);
         if (!stueck) { Stueckmarkierung.loeschen(); return Promise.resolve(); }
+        // Kein Daz-Stück (GarmentCode, Kleider, MakeHuman): die Daz-Garderobe steht zu —
+        // sonst fände man beim Zurückwechseln die Kategorie des vorigen Stücks offen.
+        if (stueck.liste !== 'daz') Stueckaufklappung.nurDie(null);
         return Reiterinhalt.bauen(reiter).then(() => this.markieren(stueck, ziel));
     }
 
@@ -51,10 +55,13 @@ export class Stueckmarkierung {
         return inst?.gcStuecke?.[ziel.key]?.quelle || null;
     }
 
-    /** Abwahl: die Daz-Zeile ist nur unsere Marke — weg damit. Kleider, MakeHuman und
-     *  Garment Fit führen ihre Listenwahl selbst und behalten sie. */
+    /** Abwahl: die Daz-Zeile ist nur unsere Marke — weg damit, und die Kästen, die wir
+     *  dafür aufgeklappt hatten, wieder zu. Kleider, MakeHuman und Garment Fit führen
+     *  ihre Listenwahl selbst und behalten sie. */
     static loeschen() {
         document.querySelectorAll('.slider-row.selected').forEach(el => el.classList.remove('selected'));
+        Stueckaufklappung.zuklappen();
+        Stueckaufklappung.nurDie(null);          // „woanders geklickt": alle Kategorien zu
     }
 
     static reiterKlicken(reiter) {
@@ -100,23 +107,39 @@ export class Stueckmarkierung {
         const liste = zeile.closest('.anim-tree, #garment-list, #mh-list') || zeile.parentElement;
         liste.querySelectorAll(`.${klasse}`).forEach(el => el.classList.remove(klasse));
         zeile.classList.add(klasse);
+        // Erst die Kästen des VORIGEN Stücks zu — ausser sie enthalten auch dieses.
+        Stueckaufklappung.zuklappen(zeile);
+        // Daz-Garderobe: genau SEINE Kategorie offen, jede andere zu — auch die, die der Bau
+        // der Liste für das vorige Stück geöffnet hatte (`Stueckaufklappung`, Kopf).
+        if (zeile.closest(Stueckaufklappung.KATEGORIE)) Stueckaufklappung.nurDie(zeile);
         Stueckmarkierung.aufklappen(zeile);
         zeile.scrollIntoView({ block: 'nearest' });
     }
 
     /** Der Bereich (`.panel-section`, `collapsed` aus `expanded_panels_scene`), dann `<details>`
-     *  (Daz-Kategorien), `.anim-category` (Garment Fit), `.anim-folder` (MakeHuman). */
+     *  (Daz-Kategorien), `.anim-category` (Garment Fit), `.anim-folder` (MakeHuman).
+     *
+     *  Jeder Kasten, den WIR öffnen, wird gemerkt (`Stueckaufklappung`) und beim nächsten
+     *  Klick woanders wieder zugeklappt — sonst steht nach ein paar Stücken die halbe
+     *  Garderobe offen (Edgar, 30.09.2026: „sonst ist die Navigation unmöglich"). */
     static aufklappen(zeile) {
         zeile.closest('.panel-section')?.classList.remove('collapsed');
         const kasten = zeile.closest('details');
-        if (kasten) kasten.open = true;
-        zeile.closest('.anim-category')?.classList.add('open');
+        Stueckaufklappung.oeffnen(kasten, kasten?.open,
+                                  () => { kasten.open = true; },
+                                  () => { kasten.open = false; });
+        const kategorie = zeile.closest('.anim-category');
+        Stueckaufklappung.oeffnen(kategorie, kategorie?.classList.contains('open'),
+                                  () => kategorie.classList.add('open'),
+                                  () => kategorie.classList.remove('open'));
         const ordner = zeile.closest('.anim-folder');
         if (ordner) {
             const rumpf = ordner.querySelector('.anim-folder-body');
-            if (rumpf) rumpf.style.display = '';
             const pfeil = ordner.querySelector('.chevron');
-            if (pfeil) pfeil.textContent = '▼';
+            Stueckaufklappung.oeffnen(
+                ordner, rumpf && rumpf.style.display !== 'none',
+                () => { if (rumpf) rumpf.style.display = ''; if (pfeil) pfeil.textContent = '▼'; },
+                () => { if (rumpf) rumpf.style.display = 'none'; if (pfeil) pfeil.textContent = '▶'; });
         }
     }
 }

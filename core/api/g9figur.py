@@ -164,11 +164,12 @@ class G9figur:
             return JsonResponse({'fehler': u'Unbekannte Genesis-9-Figur'},
                                 status=404)
         rumpf = G9figur._rumpf(request)
-        # Fertige Antworten je Stellung, Strg+Alt+H-Stufe vorausgerechnet
-        # (`G9antworten`, 18.09.2026 nachts).
+        # Fertige Antworten je Stellung (`G9antworten`, 18.09.2026 nachts); die
+        # Strg+Alt+H-Stufe rechnet seit 30.09.2026 niemand mehr voraus
+        # (`G9antworten.VORAUSRECHNEN`) — erst, wenn sie verlangt wird.
         return G9antworten.liefern(
             'koerper', name, rumpf, lambda: G9figur._koerper(name, eintrag, rumpf),
-            eintrag=eintrag)
+            eintrag=eintrag, request=request)
 
     @staticmethod
     def _koerper(name, eintrag, rumpf):

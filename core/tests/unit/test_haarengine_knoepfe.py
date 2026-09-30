@@ -23,8 +23,10 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
-#: Ordner, in denen die Module des Bereichs liegen (Bühne und Bildauswahl sind gemeinsam).
-JS_ORDNER = ('viewer/haarengine', 'viewer/gemeinsam')
+#: Ordner, in denen die Module des Bereichs liegen. `meshfigur` gehört dazu: Bühne, Export
+#: und „Modell speichern" teilt sich die Seite mit „Mesh to 3D" (sie ist eine Kopie von
+#: BlenderModel, das darauf aufbaut) — `meshfigurspeicher.js`, `meshfigurexport.js`.
+JS_ORDNER = ('viewer/haarengine', 'viewer/gemeinsam', 'viewer/meshfigur')
 
 #: Jedes Bedienelement der beiden Vorlagen — `id` oder, wo es keine gibt, `data-schalter`
 #: bzw. `data-reiter`. Gezählt am 30.09.2026: 5 auf der Übersicht, 33 auf der Auftragsseite.
@@ -109,9 +111,11 @@ class HaarengineknoepfeTest(SimpleTestCase):
             for kennung in erwartet:
                 gesucht = kennung.split(':', 1)[-1]
                 with self.subTest(vorlage=name, element=kennung):
-                    self.assertIn(gesucht, self.js,
-                                  '%s wird in keinem Modul unter %s angefasst'
-                                  % (kennung, ' / '.join(JS_ORDNER)))
+                    # Bewusst `assertTrue` statt `assertIn`: `assertIn` hängt bei einem
+                    # Fehlschlag den ganzen Quelltext an die Meldung — hier 2,2 MB.
+                    self.assertTrue(gesucht in self.js,
+                                    '%s wird in keinem Modul unter %s angefasst'
+                                    % (kennung, ' / '.join(JS_ORDNER)))
 
     # ------------------------------------------------- die Knöpfe, die gefährlich sind
 

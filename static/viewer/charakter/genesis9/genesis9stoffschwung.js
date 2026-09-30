@@ -41,6 +41,7 @@ import { Stoffkapseln, Stoffhaut } from '../../gemeinsam/stoffkapseln.js';
 import { Genesis9felder } from '../../gemeinsam/genesis9felder.js';
 import { Genesis9gelenke } from '../../gemeinsam/genesis9gelenke.js';
 import { Stoffwache } from '../../gemeinsam/stoffwache.js';
+import { Stoffmischung } from '../../gemeinsam/stoffmischung.js';
 
 export class Genesis9stoffschwung {
 
@@ -116,9 +117,13 @@ export class Genesis9stoffschwung {
         const treffer = /^(?:genesis9_kleid|daz)_(.+)_(\d+)$/.exec(e.netz.name);
         if (!treffer) return;
         const stoff = e.netz.userData.stoff;
+        // „Kleidung – Generisch": Der Eintrag fasst mehrere Stücke zusammen, der Bauplan gehört zu dem Stück, aus
+        // dem das Teil stammt (`stoff.stueck`/`nummer`, `G9kleidmischbau`) — nicht zur Kennung des Eintrags.
+        const kennung = stoff.stueck || treffer[1];
+        const nummer = stoff.nummer ?? Number(treffer[2]);
         // Mit Länge/Weite trägt der Käfig die Haut des verschobenen Stücks (20.09.2026).
         const passform = Genesis9felder.passform(inst.kleidung?.[treffer[1]]?.regler);
-        const antwort = await fetch(`${Genesis9stoffschwung.ADRESSE}${encodeURIComponent(treffer[1])}/stoff/${treffer[2]}/?stufen=${stoff.stufen}${Genesis9felder.passformAnfrage(passform)}`);
+        const antwort = await fetch(`${Genesis9stoffschwung.ADRESSE}${encodeURIComponent(kennung)}/stoff/${nummer}/?stufen=${stoff.stufen}${Genesis9felder.passformAnfrage(passform)}`);
         if (!antwort.ok) throw new Error(`Bauplan ${antwort.status}`);
         const plan = await antwort.json();
         if (!e.anzeige.parent) return;                  // inzwischen ausgezogen
@@ -143,6 +148,8 @@ export class Genesis9stoffschwung {
             indptr: base64ToUint32(plan.indptr), indices: base64ToUint32(plan.indices), data: base64ToFloat32(plan.data),
             zeilen: plan.zeilen, hautIndex, hautGewicht,
             dreiecke: Uint32Array.from(e.netz.geometry.index.array),
+            // Gemischtes Stück: der Worker schwingt das ursprüngliche Netz und überträgt es (`Stoffmischung`).
+            misch: stoff.misch ? Stoffmischung.nachricht(stoff.misch, e.netz.geometry) : null,
         });
         // Die Haut der Figur als Körper (`Stoffoberflaeche`): eine Stichprobe des Körpernetzes,
         // einmal je Stück - der Rock fiel sonst ins Becken, wo keine Kapsel ist (20.09.2026).
@@ -152,7 +159,7 @@ export class Genesis9stoffschwung {
         e.bereit = true;
         // Die Käfigfelder der JCMs gehören zu Daz' Gelenken - auf HumanBody (eigene
         // Käfighaut mit Rigify-Namen) gibt es sie nicht.
-        if (!stoff.hautgewichte) Genesis9stoffschwung._felder(e, treffer[1], Number(treffer[2]), passform);
+        if (!stoff.hautgewichte) Genesis9stoffschwung._felder(e, kennung, nummer, passform);
     }
 
     /** Die Käfigfelder der JCMs dieses Teils an den Worker geben (asynchron, einmal je Stück). */

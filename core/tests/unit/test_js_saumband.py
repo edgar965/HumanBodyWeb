@@ -101,5 +101,5 @@ class SaumbandJsTest(SimpleTestCase):
             quelle = (viewer / ordner / name).read_text(encoding='utf-8')
             self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', quelle, name)
             self.assertNotIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', quelle, name)
-        lagen = (viewer / 'scene' / 'lagenverdeckung.js').read_text(encoding='utf-8')
+        lagen = (viewer / 'charakter' / 'lagenverdeckung.js').read_text(encoding='utf-8')
         self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg || maske)', lagen)

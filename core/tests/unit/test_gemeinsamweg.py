@@ -151,7 +151,8 @@ class GemeinsamVerdrahtungTest(SimpleTestCase):
         """
         drapieren = _quelle('static', 'viewer', 'charakter', 'garmentcode_drapieren.js')
         gemeinsam = _quelle('static', 'viewer', 'charakter', 'garmentcode_gemeinsam.js')
-        self.assertIn('static async einhaengen(figur, netz, stueck, titel = null)', drapieren)
+        # `quelle` (Vorbild/Form, 24.09.2026) kam als fünfter Parameter dazu.
+        self.assertIn('static async einhaengen(figur, netz, stueck, titel = null, quelle = null)', drapieren)
         self.assertIn('GarmentcodeDrapierung.einhaengen(figur, netz', drapieren)
         self.assertIn('GarmentcodeDrapierung.einhaengen(', gemeinsam)
         # Und der gemeinsame Weg baut die Kette NICHT selbst nach.

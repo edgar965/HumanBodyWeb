@@ -71,11 +71,15 @@ class LadenTest(SimpleTestCase):
         daten = _studio('projekt_daten.js')
         self.assertIn('coneVisible: t.coneVisible !== false', daten)
         lichter = _studio('szenenlichter.js')
-        spurwerte = lichter[lichter.index('static _spurwerte(spur, werte)') :]
+        # Seit 24.09.2026 mit dritter Angabe `fassung` (Ambient-Spur: ein
+        # gespeicherter Kegel alter Fassung wird verworfen) — der gespeicherte
+        # Wert wird trotzdem gelesen, nur eben hinter der Weiche.
+        spurwerte = lichter[lichter.index('static _spurwerte(spur, werte') :]
         spurwerte = spurwerte[
             : spurwerte.index('static _clips') if 'static _clips' in spurwerte else len(spurwerte)
         ]
-        self.assertIn('spur.coneVisible = werte.coneVisible ?? true', spurwerte)
+        self.assertIn('spur.coneVisible = ', spurwerte)
+        self.assertIn('(werte.coneVisible ?? true)', spurwerte)
 
     def test_bodenwerte_gelten_auch_beim_laden_zur_laufzeit(self):
         boden = _studio('spur_boden.js')

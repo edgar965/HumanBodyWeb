@@ -23,7 +23,9 @@ from core.dienste.bildmodellmischung import Bildmodellmischung
 
 
 def _job(bilder):
-    return SimpleNamespace(bilder=bilder, optionen={}, ergebnis={})
+    # `kennung`: `Bildmodellmischung._flame` sucht eine verlorene FLAME-Datei in der Ablage des
+    # Auftrags (20.09.2026) — einen Ordner dieses Namens gibt es nicht.
+    return SimpleNamespace(bilder=bilder, optionen={}, ergebnis={}, kennung='_test_ohne_ablage')
 
 
 def _bild(datei, kategorie, ansicht, reihe=None, betas=None):

@@ -24,6 +24,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 from ..daten.netzantwort import Netzantwort
+from ..daten.netzausgabe import Netzausgabe
 
 logger = logging.getLogger('core')
 
@@ -47,14 +48,14 @@ class Schnittvorschauendpunkte:
             return JsonResponse({'fehler': '%s: %s' % (type(fehler).__name__, fehler)}, status=500)
         if not len(netz['punkte']):
             return JsonResponse({'fehler': 'Der Schnitt enthält keine baubaren Panels'}, status=400)
-        return JsonResponse(
+        return Netzausgabe.antwort(
             {
                 'vertex_count': int(len(netz['punkte'])),
                 'face_count': int(len(netz['dreiecke'])),
                 'vertices': Netzantwort.feld(netz['punkte'], 'vertices'),
                 'faces': Netzantwort.feld(netz['dreiecke'], 'faces'),
                 'panels': netz['panels'],
-            }
+            }, request
         )
 
     @staticmethod

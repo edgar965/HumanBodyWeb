@@ -1,38 +1,57 @@
 import { state } from './state.js';
 import { Charakterdialog } from './charakterdialog.js';
+import { Letztewahl } from './letztewahl.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
- * Startfigur — das Standard-Modell der Szene-Seite, in jeder Figurart.
+ * Startfigur — die Figur, mit der die Szene-Seite aufgeht.
  *
- * WARUM (Edgar, 19.09.2026, Einstellungen → Szene): „fehlt die Möglichkeit,
- * auch ein Genesis, UMA usw. als Standard-Modell auszuwählen." Bis dahin
- * kannte der Start nur einen Namen (`state.defaultPresetName`) und lud ihn
- * als HumanBody-Vorgabe (`addCharacterFromPreset`). Jetzt kommen Figurart
- * (`default_model_scene_quelle`) und Bereich (`…_bereich`, standard oder
- * gespeichert) aus den Einstellungen mit, und geladen wird über dieselben
- * Lader wie im Dialog „Charakter hinzufügen" (`Charakterdialog.LADER`) —
- * ein gespeichertes Genesis-9-Modell lädt anders als eines aus dem Daz-Katalog.
+ * SEIT DEM 30.09.2026 IST DAS DIE ZULETZT GELADENE (Edgar: „entferne das Standardmodell
+ * und die Standard Animation. Auf der Seite /Charakter/ soll immer nur der letzte
+ * geladene Modell und die letzte Animation geladen werden"). Vorher stand sie als
+ * Einstellung in `/settings/charakter/` (`default_model_scene` samt Figurart und
+ * Bereich) — eine Vorgabe von Hand, die nie beschrieb, woran gerade gearbeitet wurde.
+ * Jetzt kommt sie aus `Letztewahl` (`localStorage`), gesetzt beim Laden jeder Figur.
  *
- * `state.defaultPresetName` bleibt gesetzt: Die Sitzungsablage vergleicht
- * damit, ob sich die Vorgabe geändert hat (`session.js`, über `kennung()`).
+ * Geladen wird über dieselben Lader wie im Dialog „Charakter hinzufügen"
+ * (`Charakterdialog.LADER`) — ein gespeichertes Genesis-9-Modell lädt anders als eines
+ * aus dem Daz-Katalog. `state.defaultPresetName` bleibt gesetzt: Die Sitzungsablage
+ * vergleicht damit, ob sich die Figur geändert hat (`session.js`, über `kennung()`).
  */
 export class Startfigur {
 
-    /** HumanBody, wie es immer war. */
+    /** HumanBody, solange nie etwas geladen wurde. */
     static VORGABE = { name: 'femaleWithClothes', quelle: 'modell', bereich: 'gespeichert' };
 
-    static wahl = { ...Startfigur.VORGABE };
+    /**
+     * Die zuletzt geladene Figur — IMMER frisch aus der Ablage, nie zwischengespeichert:
+     * Die Lader melden dorthin (`Charakterdialog.LADER`), und `session.js` vergleicht
+     * `kennung()` noch im selben Seitenleben. Ein Zwischenspeicher wäre nach dem ersten
+     * Laden veraltet und würde die Sitzung fälschlich verwerfen.
+     */
+    static get wahl() {
+        return Startfigur._aus(Letztewahl.figur());
+    }
 
-    /** Aus den Servereinstellungen (`Starteinstellungen.anwenden`). */
-    static setzen(name, quelle, bereich) {
-        Startfigur.wahl = {
+    /** Eine Wahl auf gültige Werte ziehen — eine unbekannte Figurart fiele sonst auf. */
+    static _aus({ name, quelle, bereich }) {
+        return {
             name: name || Startfigur.VORGABE.name,
             quelle: Charakterdialog.LADER[quelle] ? quelle : Startfigur.VORGABE.quelle,
             bereich: bereich === 'standard' ? 'standard' : 'gespeichert',
         };
-        state.defaultPresetName = Startfigur.wahl.name;
-        return Startfigur.wahl;
+    }
+
+    /**
+     * Eine Figur wurde geladen: Sie ist ab jetzt die Startfigur. Gerufen von jedem
+     * Ladeweg (`Charakterdialog.LADER` umhüllt alle) — nicht nur beim Start, sonst
+     * merkte sich die Szene genau das nicht, was der Nutzer gerade getan hat.
+     */
+    static setzen(name, quelle, bereich) {
+        const wahl = Startfigur._aus({ name, quelle, bereich });
+        state.defaultPresetName = wahl.name;
+        Letztewahl.figurGemerkt(wahl.name, wahl.quelle, wahl.bereich);
+        return wahl;
     }
 
     /** „genesis9:Victoria 9" — was die Sitzungsablage vergleicht. */

@@ -22,7 +22,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 export async function loadSmplxModel() {
     let daten;
     try {
-        daten = await Serverabruf.senden(`${API}/smplx-mesh/`, {
+        daten = await Serverabruf.netzSenden(`${API}/smplx-mesh/`, {
             betas: Smplxnetz.formwerte(state.smplxBetas, state.smplxExpr),
             gender: 'neutral',
         });

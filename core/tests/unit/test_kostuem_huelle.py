@@ -128,7 +128,10 @@ class KostuemoptimiererSchrittTest(SimpleTestCase):
                     for s in Kostuemoptimierer.veraenderlich(start)
                     if k[s] != start[s]
                 ]
-                (grob if i % 2 else fein).append(np.mean(abstaende))
+                # Ein Wert am Anschlag, den `pruefen` zurückzieht, ändert nichts — ein leerer Mittelwert
+                # wäre NaN und machte den ganzen Vergleich zu NaN (30.09.2026).
+                if abstaende:
+                    (grob if i % 2 else fein).append(np.mean(abstaende))
         self.assertGreater(np.mean(grob), 2.5 * np.mean(fein))
 
     def test_der_weite_sprung_ueberschreitet_die_obergrenze_nicht(self):

@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from django.test import Client, TestCase, override_settings
+from django.test import Client, TransactionTestCase, override_settings
 
 from core.dienste.bildmodelloptionen import Bildmodelloptionen
 from core.dienste.bildmodellsichtung import Bildmodellsichtung
@@ -179,7 +179,11 @@ def _png():
     return puffer.getvalue()
 
 
-class EndpunkteTest(TestCase):
+class EndpunkteTest(TransactionTestCase):
+    """`TransactionTestCase`: `zustand` ist seit 23.09.2026 async und liest die Datenbank in einem
+    eigenen Faden (`thread_sensitive=False`). Unter der offenen Transaktion von `TestCase` sperrt
+    SQLite dort die Tabelle — „database table is locked: core_bildmodellauftrag"."""
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(dir=str(Path(__file__).parent)))
         self.client = Client(HTTP_HOST='127.0.0.1')

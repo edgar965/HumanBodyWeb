@@ -72,7 +72,7 @@ export class Mhkleidstueck {
     async anlegen() {
         // POST mit der Reglerstellung: Der Stoff wird auf den GEFORMTEN
         // Körper gerechnet, nicht auf das Basisnetz.
-        const daten = await Serverabruf.senden(
+        const daten = await Serverabruf.netzSenden(
             `${Mhkleidstueck.ADRESSE}${this.kennung}/netz/`,
             this.figur.formung());
         if (daten.fehler) throw new Error(daten.fehler);

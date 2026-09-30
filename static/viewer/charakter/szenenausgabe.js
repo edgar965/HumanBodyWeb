@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { _saveJsonWithPicker } from './szene_dialoge.js';
 import { Szenenzustand } from './szenenzustand.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { DazkleidungAblage } from './genesis9/dazkleidungablage.js';
 import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import { Garderobenstand } from './garderobenstand.js';
 
@@ -71,6 +72,9 @@ export class Szenenausgabe {
         // gerade das Modell gespeichert mit GarmentCode, neu laden
         // funktioniert nicht").
         daten[GarmentcodeAblage.FELD] = GarmentcodeAblage.toJSON(figur);
+        // Die Daz-Stücke, Kleidung und Haar (30.09.2026, Edgar: „beim neu laden sind die
+        // wieder weg") — Feld `kleidung` wie bei Genesis 9 (`DazkleidungAblage`).
+        daten[DazkleidungAblage.FELD] = DazkleidungAblage.toJSON(figur);
         if (figur.details) daten[Koerperdetails.FELD] = { ...figur.details };
         return daten;
     }

@@ -20,7 +20,7 @@ from pathlib import Path
 from unittest import mock
 
 import numpy as np
-from django.test import Client, TestCase, override_settings
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from PIL import Image
 
 from core.daten.bildmodellablage import Bildmodellablage
@@ -48,7 +48,14 @@ def _maske_schreiben(pfad):
     return {'modell': 'u2net_human_seg', 'anteil': 0.17, 'dauer_s': 0.1}
 
 
-class FreistellerAblaufTest(TestCase):
+class _Freistelleraufbau:
+    """Auftrag, Ablage, Bild und Runner-Attrappe — für beide Klassen unten.
+
+    AUFGETEILT AM 30.09.2026 (wie `test_haarengine_endpunkte.py`): `zustand` ist async und liest die
+    Datenbank in einem eigenen Faden; unter der offenen Transaktion von `TestCase` sperrt SQLite dort
+    die Tabelle („database table is locked"). Nur der Fall mit `zustand` läuft als
+    `TransactionTestCase` — der leert nach jedem Fall alle Tabellen und ist langsamer."""
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(dir=str(Path(__file__).parent)))
         self.client = Client(HTTP_HOST='127.0.0.1')
@@ -77,6 +84,8 @@ class FreistellerAblaufTest(TestCase):
             return {'textur': {'ton': [0.86, 0.67, 0.55], 'tauglich': True}}
         return {'error': 'unbekannt: %s' % befehl}
 
+
+class FreistellerAblaufTest(_Freistelleraufbau, TestCase):
     # ------------------------------------------------------------ Dienst
 
     def test_speichern_behaelt_feld_und_schaetzungen(self):
@@ -167,6 +176,10 @@ class FreistellerAblaufTest(TestCase):
         ohne = self.dienst.alpha(maske, self.dienst.regler_pruefen({'weich': 0}), rgb)
         self.assertAlmostEqual(float(ohne[33, 60]), 0.0, places=2, msg='ohne Positivliste kein Arm')
         self.assertTrue(self.dienst.regler_pruefen({'modell': 'hautton'})['positiv'], 'alte Einträge')
+
+
+class FreistellerEndpunkteTest(_Freistelleraufbau, TransactionTestCase):
+    """Der Fall mit `zustand` (async, eigener Faden) — braucht echte Tabellen."""
 
     def test_endpunkte_vorschau_speichern_zustand(self):
         basis = '/api/bildmodell/%s/' % self.job.id

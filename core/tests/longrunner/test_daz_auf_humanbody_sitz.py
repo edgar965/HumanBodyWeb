@@ -67,14 +67,20 @@ def bibliothek_da():
         return False
 
 
+def roh(feld):
+    u"""Die Bytes eines Feldes — seit 30.09.2026 kommt aus den direkten Aufrufen ein
+    Träger (`Netzfeld`), über den HTTP-Weg ohne Paket weiter base64."""
+    return feld.rohdaten if hasattr(feld, 'rohdaten') else base64.b64decode(feld)
+
+
 def punkte_aus(teil):
-    return np.frombuffer(base64.b64decode(teil['vertices']), dtype=np.float32).reshape(-1, 3).astype(np.float64)
+    return np.frombuffer(roh(teil['vertices']), dtype=np.float32).reshape(-1, 3).astype(np.float64)
 
 
 def haut_aus(teil):
     h = teil['hautgewichte']
-    idx = np.frombuffer(base64.b64decode(h['skin_indices']), dtype=np.uint16).reshape(-1, 4)
-    w = np.frombuffer(base64.b64decode(h['skin_weights']), dtype=np.uint8).reshape(-1, 4) / 255.0
+    idx = np.frombuffer(roh(h['skin_indices']), dtype=np.uint16).reshape(-1, 4)
+    w = np.frombuffer(roh(h['skin_weights']), dtype=np.uint8).reshape(-1, 4) / 255.0
     return list(h['knochen']), idx, w
 
 

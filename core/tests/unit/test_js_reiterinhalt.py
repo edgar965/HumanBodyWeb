@@ -29,7 +29,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'reiterinhalt.js')
+MODUL = Jsmodul('charakter', 'reiterinhalt.js')
 
 #: Attrappen für alles, was das Modul beim Laden anfasst.
 UMGEBUNG = """

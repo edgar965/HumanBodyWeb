@@ -7,6 +7,7 @@ import { Smplkatalog } from './smpl/smplkatalog.js';
 import { Mhkatalog } from './makehuman/mhkatalog.js';
 import { Umapythonkatalog } from './umapython/umapythonkatalog.js';
 import { Genesis9katalog } from './genesis9/genesis9katalog.js';
+import { Letztewahl } from './letztewahl.js';
 
 /**
  * Charakterdialog — „Charakter hinzufügen" der Szene-Seite.
@@ -37,7 +38,28 @@ export class Charakterdialog {
      * vierten Quelle war der drei Ebenen tief. `addCharacterFromPreset` kommt
      * aus der Registrierung und wird deshalb erst beim Aufruf geholt.
      */
-    static LADER = {
+    /**
+     * Jeder Ladeweg merkt die Figur als die zuletzt geladene (Edgar, 30.09.2026: „auf der
+     * Seite /Charakter/ soll immer nur der letzte geladene Modell … geladen werden").
+     * Umhüllt wird die ganze Tabelle, damit keine Figurart vergessen wird — und hier, weil
+     * alle drei Ladewege (Dialog, Startfigur, Kontextmenü) durch sie gehen.
+     *
+     * Gemerkt wird NACH dem Laden: Eine Figur, die nicht kommt, soll beim nächsten Start
+     * nicht wieder versucht werden.
+     */
+    static _merkend(tabelle) {
+        const aus = {};
+        for (const [quelle, lader] of Object.entries(tabelle)) {
+            aus[quelle] = async (name, lage, eintrag) => {
+                const figur = await lader(name, lage, eintrag);
+                Letztewahl.figurGemerkt(name, quelle, eintrag?.bereich);
+                return figur;
+            };
+        }
+        return aus;
+    }
+
+    static LADER = Charakterdialog._merkend({
         uma: (name, lage) => Umakatalog.hinzufuegen(name, lage),
         // Der Eintrag geht mit: ein gespeichertes Modell laedt anders als der Katalog.
         smpl: (name, lage, eintrag) => Smplkatalog.hinzufuegen(name, lage, eintrag),
@@ -46,7 +68,7 @@ export class Charakterdialog {
         umapython: (name, lage) => Umapythonkatalog.hinzufuegen(name, lage),
         // Der Eintrag geht mit: ein gespeichertes Modell laedt anders als der Katalog.
         genesis9: (name, lage, eintrag) => Genesis9katalog.hinzufuegen(name, lage, eintrag),
-    };
+    });
 
     static _dialog = null;
 

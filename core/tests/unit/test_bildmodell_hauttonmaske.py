@@ -15,7 +15,10 @@ def kunstbild():
     rgb = np.repeat(np.repeat(y, 160, axis=1), 3, axis=2).astype(np.uint8)
     rgb[40:160, 40:120] = (222, 172, 140)
     rgb[100:120, 40:120] = (240, 200, 170)      # Lichtkante der Haut
-    rgb[10:40, 60:100] = (60, 40, 30)           # Haar
+    # Haar: Buntheit 8,6 wie Damiras gemessenes Haar/Schatten (Lab 22, 5, 9 → 10,3), unter `CHROMA_MIN`.
+    # Bis 30.09.2026 (60, 40, 30) = 12,8, knapp darüber — dann zählt das Haar zur Palette und zieht
+    # den dunklen Grund mit (ΔE 14,8 < 20); `test_erweitern_laesst_den_kern_ganz` war nie grün.
+    rgb[10:40, 60:100] = (55, 42, 35)
     return rgb
 
 

@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.netzantwort import Netzantwort
 from ..daten.wrapperpfad import Wrapperpfad
+from ..daten.netzausgabe import Netzausgabe
 from ..dienste.smplxnetz import SmplxNetz, SmplxNetzFehler
 from ..dienste.texturbacken import Texturbacken
 
@@ -61,7 +62,7 @@ class SmplxAusgabe:
         )
         if ergebnis is None:
             return JsonResponse({'ok': False, 'error': 'SMPL-X model not available'})
-        return JsonResponse(SmplxAusgabe._antwort(ergebnis))
+        return Netzausgabe.antwort(SmplxAusgabe._antwort(ergebnis), request)
 
     @staticmethod
     def _antwort(ergebnis):

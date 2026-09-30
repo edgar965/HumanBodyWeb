@@ -86,7 +86,7 @@ export async function loadGarment(garmentId, opts = {}) {
             if (Math.abs(v) > 0.001) qs += `&meta_${k}=${v}`;
         }
 
-        const data = await Serverabruf.json(`/api/character/garment/fit/?${qs}`);
+        const data = await Serverabruf.netz(`/api/character/garment/fit/?${qs}`);
         if (data.error) {
             console.error('Garment fit error:', data.error);
             return;

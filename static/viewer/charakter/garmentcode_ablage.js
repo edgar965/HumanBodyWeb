@@ -123,7 +123,19 @@ export class GarmentcodeAblage {
      * @returns Anzahl der wiederhergestellten Stücke
      */
     static async laden(inst, liste) {
-        if (!inst || !Array.isArray(liste) || !liste.length) return 0;
+        // Der feine Zug wartet auf diese Stücke (`Genesis9aufbau.progressiv`) — er muss
+        // AUCH dann weiterlaufen, wenn hier nichts zu tun ist oder etwas schiefgeht.
+        const freigeben = () => { const f = inst?._gcFreigeben; inst._gcFreigeben = null; f?.(); };
+        if (!inst || !Array.isArray(liste) || !liste.length) { freigeben(); return 0; }
+        try {
+            return await GarmentcodeAblage._laden(inst, liste);
+        } finally {
+            freigeben();
+        }
+    }
+
+    /** Die eigentliche Wiederherstellung (siehe `laden`). */
+    static async _laden(inst, liste) {
         inst.gcStuecke = inst.gcStuecke || {};
         // Erst das Skelett, dann anziehen — sonst hängt das Stück nach dem
         // Laden einer Szene als starres Netz, bis irgendwann eine Animation
@@ -163,7 +175,12 @@ export class GarmentcodeAblage {
         // kamen beim Laden VOR den GarmentCode-Stücken und kennen sie nicht. Nach der
         // feinen Stufe (sonst überholt deren Antwort diese) alle neu holen — die
         // Lagenrechnung des Servers legt dann jedes über oder unter das Stück.
-        if (fertig && inst.quelle === 'genesis9') {
+        // NUR, wenn der feine Zug nicht ohnehin auf uns wartet (30.09.2026): Beim Laden
+        // eines Modells hält `Genesis9aufbau.progressiv` ihn zurück, bis diese Stücke
+        // hängen — dann holt er jedes Daz-Stück EINMAL und kennt sie dabei schon. Nur wer
+        // GarmentCode nachträglich in eine fertige Figur lädt (`inst._gcFreigeben` ist
+        // dann nie gesetzt worden), braucht das nachträgliche Umlegen.
+        if (fertig && inst.quelle === 'genesis9' && !inst.gcBereit) {
             Promise.resolve(inst.fein)
                 .then(() => Genesis9lagen.nachGcBau(inst, liste.map(e => e?.stueck).filter(Boolean), []))
                 .catch(f => Protokoll.warnung('GarmentCode', `Daz-Stücke nicht nachgezogen: ${f.message || f}`));

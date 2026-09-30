@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..daten.netzantwort import Netzantwort
 from ..daten.smplvorgaben import Smplvorgaben
 from ..daten.stoffantwort import Stoffantwort
+from ..daten.netzausgabe import Netzausgabe
 from ..dienste.charakterdaten import Charakterdaten
 from ..models import AppSettings
 
@@ -60,7 +61,7 @@ class Smplendpunkte:
                 antwort['scene'] = json.loads(gespeichert.smpl_default_scene)
             except json.JSONDecodeError, TypeError:
                 logger.debug('uebergangen', exc_info=True)
-        return JsonResponse(antwort)
+        return Netzausgabe.antwort(antwort, request)
 
     @staticmethod
     def _betas(text):
@@ -126,10 +127,10 @@ class Smplendpunkte:
             return JsonResponse({'error': str(fehler)}, status=404)
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
-        return JsonResponse(
+        return Netzausgabe.antwort(
             Smplendpunkte._netzantwort(
                 netz, vertex_count=netz['vertex_count'], face_count=netz['face_count'], gender=geschlecht
-            )
+            ), request
         )
 
     # --------------------------------------------------------- Kleiderbestand
@@ -152,13 +153,13 @@ class Smplendpunkte:
         except Exception as fehler:
             logger.error('Error loading SMPL garment %s: %s', kennung, fehler)
             return JsonResponse({'error': str(fehler)}, status=500)
-        return JsonResponse(
+        return Netzausgabe.antwort(
             Smplendpunkte._netzantwort(
                 netz,
                 garment_id=kennung,
                 vertex_count=len(netz['vertices']) // 3,
                 face_count=len(netz['faces']) // 3,
-            )
+            ), request
         )
 
     @staticmethod
@@ -201,8 +202,9 @@ class Smplendpunkte:
         )
         if ergebnis is None:
             return JsonResponse({'error': 'Fitting failed'}, status=500)
-        return JsonResponse(
-            Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht, farbe=farbe, garment_id=kennung)
+        return Netzausgabe.antwort(
+            Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht, farbe=farbe, garment_id=kennung),
+            request
         )
 
     @classmethod

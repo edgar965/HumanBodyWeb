@@ -20,16 +20,20 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
  * „Neue Kategorie …" (Name per Abfrage). Nach dem Verschieben zeichnet der
  * Aufrufer die Liste neu — der Stand kommt mit der Antwort zurück.
  *
- * Alle Kategorien stehen ZU (Edgar, 21.09.2026); offen ist die des in der Szene
- * gewählten Stücks (`Genesis9garderobe.gewaehltesStueck`) und was dieser Browser
- * sich als offen gemerkt hat (`localStorage`, umschlossen wie in `Bereichsgedaechtnis`).
+ * Alle Kategorien stehen ZU; offen ist EINZIG die des in der Szene gewählten Stücks
+ * (`Genesis9garderobe.gewaehltesStueck`).
+ *
+ * KEIN GEDÄCHTNIS MEHR (Edgar, 30.09.2026: „ALLE Einträge in den Tabs zu Assets und anderen
+ * sollen beim Laden IMMER zugeklappt sein. das hatte ich schon 10 Mal in Auftrag gegeben …
+ * Nur das aktuell selektierte Item soll den Tab / die Gliederung aufklappen"). Hier stand
+ * bis dahin ein `localStorage`-Gedächtnis („was dieser Browser sich als offen gemerkt hat"),
+ * das die Vorgabe ZU von 21.09.2026 stillschweigend aushebelte: Eine einmal aufgeklappte
+ * Kategorie blieb es für immer, in jedem Seitenaufruf. Genau deshalb kam die Bitte immer
+ * wieder. Aufgeklappt wird nur, was der Nutzer JETZT anklickt.
  */
 export class Genesis9garderobekategorien {
 
     static ADRESSE = '/api/character/genesis9-figur/garderobe/kategorien/';
-    /** Neuer Schlüssel seit der Vorgabe ZU (21.09.2026): unter dem alten stand in jedem
-     *  Browser „alle offen" — die erste Merkung hatte damals alle Kategorien mitgenommen. */
-    static SCHLUESSEL = 'hb_g9_garderobe_offen_2';
     /** Art -> Vorgabe, wenn der Server keine `kategorie` mitgibt (`G9dazkategorien.NACH_ART`). */
     static VORGABE = { kleidung: 'Oberteile', haar: 'Haare', requisit: 'Requisiten' };
     static _stand = null;
@@ -58,6 +62,7 @@ export class Genesis9garderobekategorien {
     static gruppen(stuecke, stand) {
         const nach = new Map((stand.kategorien || []).map(name => [name, []]));
         for (const stueck of stuecke) {
+            if (stueck.oben) continue;      // „Kleidung – Generisch: Alle Kategorien": steht über den Kategorien
             const name = Genesis9garderobekategorien.kategorie(stueck, stand);
             if (!nach.has(name)) nach.set(name, []);
             nach.get(name).push(stueck);
@@ -71,7 +76,7 @@ export class Genesis9garderobekategorien {
     static menue(zeile, stueck, neuzeichnen) {
         Kontextmenue.binden(zeile, () => {
             const stand = Genesis9garderobekategorien._stand;
-            if (!stand) return [];
+            if (!stand || stueck.oben) return [];      // der Eintrag oben gehört zu keiner Kategorie
             const eigene = Genesis9garderobekategorien.kategorie(stueck, stand);
             const eintraege = stand.kategorien
                 .filter(name => name !== eigene)
@@ -101,39 +106,16 @@ export class Genesis9garderobekategorien {
             window.alert(`Verschieben fehlgeschlagen: ${fehler.message}`);
             return;
         }
-        Genesis9garderobekategorien.merken(name, true);
         neuzeichnen?.();
     }
 
     // ------------------------------------------------------------ Aufgeklappt
 
-    /** Offen ist eine Kategorie nur, wenn sie das in der Szene gewählte Stück
-     *  enthält oder dieser Browser sie sich als offen gemerkt hat — die Vorgabe
-     *  ist ZU (Edgar, 21.09.2026: „per default alle Kategorien zugeklappt"). */
+    /** Offen ist eine Kategorie NUR, wenn sie das in der Szene gewählte Stück enthält.
+     *  Kein Gedächtnis — siehe Kopf der Datei (Edgar, 30.09.2026). Ein alter
+     *  `hb_g9_garderobe_offen_2` darf im Browser liegen bleiben: Er wird nicht mehr
+     *  gelesen und kann deshalb nichts mehr offen halten. */
     static offen(name, enthaeltGewaehltes = false) {
-        return enthaeltGewaehltes || Genesis9garderobekategorien._gemerkt().includes(name);
-    }
-
-    static merken(name, offen) {
-        const alle = new Set(Genesis9garderobekategorien._gemerkt());
-        if (offen) alle.add(name); else alle.delete(name);
-        try {
-            localStorage.setItem(Genesis9garderobekategorien.SCHLUESSEL, JSON.stringify([...alle]));
-        } catch (fehler) {
-            // privates Fenster, gesperrte Seitendaten — dann eben nicht gemerkt
-        }
-    }
-
-    /** Die gemerkten offenen Namen — ohne die, die es nicht mehr gibt (die Erinnerung
-     *  „Kleidung" von vor den Daz-Kategorien). Leer, wenn nie etwas gemerkt wurde. */
-    static _gemerkt() {
-        try {
-            const roh = JSON.parse(localStorage.getItem(Genesis9garderobekategorien.SCHLUESSEL));
-            if (!Array.isArray(roh)) return [];
-            const bekannt = Genesis9garderobekategorien._stand?.kategorien;
-            return bekannt ? roh.filter(n => bekannt.includes(n)) : roh;
-        } catch (fehler) {
-            return [];
-        }
+        return enthaeltGewaehltes;
     }
 }

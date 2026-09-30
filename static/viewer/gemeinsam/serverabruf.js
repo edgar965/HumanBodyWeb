@@ -22,8 +22,46 @@
  */
 import { Serverabruf as ServerabrufBasis } from '/static/djangobase/js/serverabruf.js';
 import { fn } from './registrierung.js';
+import { Netzpaket } from './netzpaket.js';
 
 export class Serverabruf extends ServerabrufBasis {
+
+    /**
+     * Eine NETZANTWORT holen — als Binärpaket, wenn der Server es kann.
+     *
+     * Der `Accept`-Kopf handelt das Format aus (`core/daten/netzausgabe.py`): Wer das
+     * Paket annimmt, bekommt die Zahlenfelder als rohe Bytes statt als base64 in JSON —
+     * ein Drittel weniger Umfang und auf beiden Seiten keine Umkodierung mehr. Ein
+     * Endpunkt, der noch nicht umgestellt ist, antwortet weiter mit JSON; deshalb steht
+     * `application/json` mit im Kopf und beide Formen werden gelesen.
+     *
+     * Das Ergebnis sieht in beiden Fällen gleich aus: ein Objekt, dessen Zahlenfelder
+     * `base64ToFloat32` & Co. verstehen (`kodierung.js` reicht fertige Puffer durch).
+     */
+    static async netz(adresse, wahl = undefined) {
+        return Serverabruf._geloggt('GET', adresse,
+                                    () => Serverabruf._netzAbruf(adresse, wahl));
+    }
+
+    /** Dieselbe Aushandlung für eine Netzanfrage per POST (Regler im Rumpf). */
+    static async netzSenden(adresse, nutzlast, kopf = {}) {
+        return Serverabruf._geloggt('POST', adresse, () => Serverabruf._netzAbruf(adresse, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json',
+                       ...ServerabrufBasis._csrfKopf(), ...kopf },
+            body: JSON.stringify(nutzlast),
+        }));
+    }
+
+    static async _netzAbruf(adresse, wahl = undefined) {
+        const gewuenscht = { Accept: `${Netzpaket.TYP}, application/json` };
+        const antwort = await fetch(adresse, {
+            ...wahl, headers: { ...gewuenscht, ...(wahl?.headers || {}) },
+        });
+        if (!antwort.ok) throw await ServerabrufBasis._fehler(antwort, adresse);
+        if (Netzpaket.erkannt(antwort)) return Netzpaket.lesen(await antwort.arrayBuffer());
+        return antwort.json();
+    }
 
     static async json(adresse, wahl = undefined) {
         return Serverabruf._geloggt('GET', adresse, () => super.json(adresse, wahl));

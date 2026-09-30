@@ -114,12 +114,19 @@ class Genesishaarengine:
         return 'haar.glb'
 
     def film(self, glb, bewegung, aus, bilder, breite, hoehe, haarmodell=None, fortschritt=None):
-        """NOCH NICHT GEBAUT — die Iterationen laufen, der Film nicht. Er braucht einen Renderer
-        über die Bewegung (Häutung je Bild plus ffmpeg), nicht nur ein Standbild wie
-        `Genesishaarrender`. Ohne BVH überspringt `Haarenginelauf` den Schritt ohnehin; mit BVH
-        endet der Lauf hier mit dieser Meldung, statt ein leeres Video abzulegen."""
-        logger.warning('Haar Engine %s: film — %s', self.lauf.job.kennung, self.FILM_MELDUNG)
-        raise self.NichtAngebunden(self.FILM_MELDUNG)
+        """Der Film (seit 30.09.2026, `Kleidertanz`): Körper, Kleider und Haar des Modells der Iterationen
+        (`kreislauf.modell`, `ModellMitKleidern`) werden in Python über die Bewegung gehäutet und gerendert —
+        `glb` und `haarmodell` bleiben die Dateien der Bühne, gebaut wird aus der Stellung. Ohne Modell der
+        Iterationen tanzt der nackte Körper."""
+        from Genesis9.modellmitkleidern import ModellMitKleidern
+
+        from .kleidermodellbau import Kleidermodellbau
+        from .kleidertanz import Kleidertanz
+        job = self.lauf.job
+        modell = ModellMitKleidern.aus((job.ergebnis.get('kreislauf') or {}).get('modell'))
+        teile = Kleidermodellbau(job.stellung()).teile(modell)
+        tanz = Kleidertanz(job.stellung(), teile)
+        return tanz.film(Kleidertanz.bewegung(bewegung), aus, bilder, breite, hoehe, fortschritt=fortschritt)
 
     def schliessen(self):
         """Den Renderer freigeben (er hält einen GPU-Kontext) — auch nach einem Fehler oder

@@ -26,7 +26,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'abspielsteuerung.js')
+MODUL = Jsmodul('charakter', 'abspielsteuerung.js')
 
 #: DOM-Attrappe: die Knöpfe, die Meldungszeile, der Bibliotheksbaum.
 DOM = """

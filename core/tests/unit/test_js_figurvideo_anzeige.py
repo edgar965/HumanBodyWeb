@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 from ._sicher import Sicher
 
-MODUL = Jsmodul('scene', 'figurvideo_anzeige.js')
+MODUL = Jsmodul('charakter', 'figurvideo_anzeige.js')
 
 SKRIPT = """
 const { Figurvideoanzeige: A } = await import(MODUL);

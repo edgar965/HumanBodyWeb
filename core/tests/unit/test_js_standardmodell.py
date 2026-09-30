@@ -42,7 +42,9 @@ const kasten = { querySelector(wahl) {
 
 // --- 1. der Dialog --------------------------------------------------------
 const sm = new Standardmodell(kasten, { name: 'Female2', quelle: 'modell', bereich: 'gespeichert' });
-if (sm.dialog.quellen.join() !== 'modell,smpl,makehuman,uma,umapython,genesis9') fehl('Reiter: ' + sm.dialog.quellen.join());
+// Genesis 9 steht seit dem 26.09.2026 vorn (Edgar: „Genesis 9 an erste Stelle vor
+// HumanBody", `Figurkataloge.REIHENFOLGE`).
+if (sm.dialog.quellen.join() !== 'genesis9,modell,smpl,makehuman,uma,umapython') fehl('Reiter: ' + sm.dialog.quellen.join());
 if (sm.dialog.lagefelder !== null) fehl('Lagefelder vorhanden');
 if (sm.dialog.pflege !== null) fehl('Pflege vorhanden');
 if (sm.dialog.knopf !== 'Übernehmen') fehl('Knopf: ' + sm.dialog.knopf);

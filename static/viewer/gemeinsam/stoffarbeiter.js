@@ -13,7 +13,8 @@
  *
  * Nachrichten:
  *   bauen   {kaefig (n·3), frei (n), kanten (E·2), indptr, indices, data,
- *            zeilen, hautIndex (n·4), hautGewicht (n·4), dreiecke (Browser)}
+ *            zeilen, hautIndex (n·4), hautGewicht (n·4), dreiecke (Browser),
+ *            misch (nur gemischte Stücke: quelle, versatz, skinIndex, skinGewicht — `Stoffmischung`)}
  *   felder  {felder: {kanal: {n, d}}}   die JCMs auf dem Käfig (`Stofffelder`)
  *   koerper {n, pos, nrm, index, gewicht}  Stichprobe der Haut (`Stoffoberflaeche`, 20.09.2026)
  *   bild    {M (Knochen·16), W (16), inv (16), kapseln (K·13, `Stoffkoerper`),
@@ -29,6 +30,7 @@ import { Stoffpendel } from './stoffpendel.js';
 import { Stofffelder } from './stofffelder.js';
 import { Stoffkoerper } from './stoffkoerper.js';
 import { Stoffoberflaeche } from './stoffoberflaeche.js';
+import { Stoffmischung } from './stoffmischung.js';
 
 class Stoffarbeiter {
 
@@ -42,6 +44,8 @@ class Stoffarbeiter {
     static dreiecke = null;
     static zeilen = 0;
     static oberflaeche = null;
+    /** „Kleidung – Generisch": ein gemischtes Stück überträgt das schwingende Netz auf seine Punkte. */
+    static mischung = null;
 
     static bauen(d) {
         Stoffarbeiter.kaefig = d.kaefig;
@@ -52,7 +56,10 @@ class Stoffarbeiter {
         Stoffarbeiter.hautIndex = Uint16Array.from(d.hautIndex);
         Stoffarbeiter.hautGewicht = d.hautGewicht;
         Stoffarbeiter.matrix = { indptr: d.indptr, indices: d.indices, data: d.data };
-        Stoffarbeiter.dreiecke = d.dreiecke;
+        // Bei einem gemischten Stück gehören die Dreiecke zum zugeschnittenen Netz: für die Normalen des
+        // ursprünglichen Netzes (`zeilen` Punkte) bekommen sie dessen Nummern.
+        Stoffarbeiter.mischung = d.misch ? new Stoffmischung(d.misch) : null;
+        Stoffarbeiter.dreiecke = Stoffarbeiter.mischung ? Stoffarbeiter.mischung.dreiecke(d.dreiecke) : d.dreiecke;
         Stoffarbeiter.zeilen = d.zeilen;
         Stoffarbeiter.erstes = true;
     }
@@ -122,10 +129,11 @@ class Stoffarbeiter {
         }
         zeiten.matrix = performance.now() - t1; t1 = performance.now();
         const nrm = Stoffarbeiter.normalen(pos, dreiecke, zeilen);
+        const aus = Stoffarbeiter.mischung ? Stoffarbeiter.mischung.anwenden(pos, nrm, d.M) : { pos, nrm };
         zeiten.normalen = performance.now() - t1;
         zeiten.gesamt = performance.now() - t0;
-        self.postMessage({ typ: 'punkte', pos, nrm, auslenkung: pendel.auslenkung(ziel), zeiten, zurueckgesetzt },
-                         [pos.buffer, nrm.buffer]);
+        self.postMessage({ typ: 'punkte', pos: aus.pos, nrm: aus.nrm, auslenkung: pendel.auslenkung(ziel), zeiten,
+                           zurueckgesetzt }, [aus.pos.buffer, aus.nrm.buffer]);
     }
 
     /** Flächennormalen auf die Ecken verteilt, normiert (wie `computeVertexNormals`). */

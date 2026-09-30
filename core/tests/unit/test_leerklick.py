@@ -31,7 +31,7 @@ class DerLeerklickBehaeltDieFigurTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.quelle = _lies('scene', 'interaction.js')
+        self.quelle = _lies('charakter', 'interaction.js')
 
     def test_die_leinwand_waehlt_nicht_ab(self):
         self.assertNotIn('fn.deselectCharacter()', _code(self.quelle))
@@ -49,6 +49,6 @@ class DasAbwaehlenBleibtErreichbarTest(SimpleTestCase):
     databases = set()
 
     def test_escape_und_menue_waehlen_weiter_ab(self):
-        menue = _lies('scene', 'menubar.js')
+        menue = _lies('charakter', 'menubar.js')
         self.assertIn("case 'deselect': fn.deselectCharacter();", menue)
         self.assertIn("case 'escape': fn.deselectCharacter();", menue)

@@ -109,7 +109,7 @@ export class HumanbodyModell extends Modell {
 
     /** Schritte 1–4: Netz holen, Lippen, Hautfarbe, Häutung, Details. */
     async koerper(skelettdaten = null, gewichte = null, hautfarben = null) {
-        const daten = await Serverabruf.json(`${HumanbodyModell.ADRESSE}?${this.frage()}`);
+        const daten = await Serverabruf.netz(`${HumanbodyModell.ADRESSE}?${this.frage()}`);
         if (daten.error) throw new Error(daten.error);
         const netz = Koerpernetz.netz(daten, THREE);
         // Geschlecht und Meta-Regler an der GEOMETRIE (die Häutung baut ein

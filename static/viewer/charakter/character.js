@@ -28,6 +28,7 @@ import {
     updateVertexCount,
 } from './charakterliste.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { DazkleidungAblage } from './genesis9/dazkleidungablage.js';
 import { Garderobenstand } from './garderobenstand.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
@@ -45,6 +46,8 @@ export class CharacterInstance extends HumanbodyModell {
         this.garmentOrigPositions = {};
         this.garmentRegionWeights = {};
         this.initialBodyTop = 0;
+        /** Gespeicherte Daz-Stücke, Kleidung und Haar (Feld `kleidung`) — `bauen` zieht sie an. */
+        this._dazVorgabe = presetData[DazkleidungAblage.FELD] || null;
     }
 
     /**
@@ -69,6 +72,7 @@ export class CharacterInstance extends HumanbodyModell {
             await grunddaten;
             const fertig = await Charakterkoerper.ausKonfiguration(this);
             beiKoerper?.(this);
+            this._dazAnziehen();
             return fertig;
         }
 
@@ -81,6 +85,7 @@ export class CharacterInstance extends HumanbodyModell {
         // HIER IST DIE FIGUR SICHTBAR. Alles Weitere kommt dazu, während sie
         // schon auf der Bühne steht.
         beiKoerper?.(this);
+        this._dazAnziehen();
 
         // Das Zubehör braucht Skelett und Hautgewichte: `Charakterzubehoer`
         // ruft für Haare und Kleidung `convertInstToSkinned`, und das gibt
@@ -100,6 +105,17 @@ export class CharacterInstance extends HumanbodyModell {
     /** Der bisherige Name des Ladens — ruft `bauen`. */
     async load(beiKoerper = null) {
         return this.bauen({ beiKoerper });
+    }
+
+    /**
+     * Die gespeicherten Daz-Stücke anziehen (`DazkleidungAblage`, 30.09.2026) — ohne darauf
+     * zu warten: Sie laufen neben Stoff, Haaren und Proxys, die Figur steht schon. Einmal je
+     * Figur; ein zweites `bauen` holt sie nicht noch einmal. `dazBereit` für wer warten muss.
+     */
+    _dazAnziehen() {
+        const stuecke = this._dazVorgabe;
+        this._dazVorgabe = null;
+        this.dazBereit = DazkleidungAblage.laden(this, stuecke);
     }
 
     dispose() {
@@ -136,6 +152,7 @@ export class CharacterInstance extends HumanbodyModell {
                 // BEIDE Zweige, seit dem 08.09.2026 mit derselben
                 // Begruendung — hier fehlte es noch.
                 [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
+                [DazkleidungAblage.FELD]: DazkleidungAblage.toJSON(this),
             };
         }
 
@@ -160,6 +177,8 @@ export class CharacterInstance extends HumanbodyModell {
             // hingen nur als Netz in der Gruppe, und beim Speichern sah sie
             // niemand an — beim Laden stand die Figur nackt da.
             [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
+            // Die Daz-Stücke, Kleidung und Haar — dieselbe Lücke (30.09.2026).
+            [DazkleidungAblage.FELD]: DazkleidungAblage.toJSON(this),
             rigParams: this._rigParams || null,
             transform: this._lage(),
         };
@@ -221,6 +240,8 @@ export class CharacterInstance extends HumanbodyModell {
         }
 
         const inst = new CharacterInstance(data.id, presetPayload);
+        // Nicht in `presetPayload` (die Liste oben ist eine Auswahl) — `bauen` zieht sie an.
+        inst._dazVorgabe = data[DazkleidungAblage.FELD] || null;
         if (data.presetKey) {
             inst.presetKey = data.presetKey;
             inst.presetName = data.presetKey;

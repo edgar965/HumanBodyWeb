@@ -22,7 +22,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'animationsentfernung.js')
+MODUL = Jsmodul('charakter', 'animationsentfernung.js')
 
 SKRIPT = """
 const { Animationsentfernung: A } = await import(MODUL);

@@ -43,7 +43,7 @@ export class Genesis9felder {
         const schluessel = `${gruppe}/${stufen}`;
         let lader = Genesis9felder._lader.get(schluessel);
         if (!lader) {
-            lader = Serverabruf.json(`${Genesis9felder.ADRESSE}${gruppe}/?stufen=${stufen}`)
+            lader = Serverabruf.netz(`${Genesis9felder.ADRESSE}${gruppe}/?stufen=${stufen}`)
                 .then(daten => Genesis9felder.dekodieren(daten))
                 .catch(fehler => {
                     Protokoll.warnung('Genesis 9', `Felder ${gruppe} nicht ladbar:`, fehler);
@@ -70,7 +70,7 @@ export class Genesis9felder {
             const wahl = stufen === 'kaefig' ? 'kaefig=1' : `stufen=${stufen}`;
             const adresse = `${Genesis9felder.WURZEL}garderobe/${
                 encodeURIComponent(kennung)}/felder/${gruppe}/?${wahl}${zusatz}`;
-            lader = Serverabruf.json(adresse)
+            lader = Serverabruf.netz(adresse)
                 .then(daten => (!daten || daten.fehler) ? null
                     : (daten.teile || []).map(teil => Genesis9felder._kanaele(teil)))
                 .catch(fehler => {

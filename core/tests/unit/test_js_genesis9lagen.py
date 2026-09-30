@@ -83,7 +83,9 @@ const inst = { quelle: 'genesis9', kleidung: { bh: {}, slip: {}, kin_hair: {}, s
 const unter = ['/pfad/hose_rig.json', 'bh', 'slip'];
 const neu = await Genesis9lagen.nachGcBau(inst, ['anzug'], unter);
 pruefe('bh blieb darunter, haar und schuhe neu', neu, ['kin_hair', 'schuhe']);
-pruefe('mit Kaskade', rufe, [['kin_hair', null, true], ['schuhe', null, true]]);
+// Ohne Kaskade (30.09.2026): hier kommt ohnehin jedes äußere Stück neu — die
+// Kaskade holte dieselben Stücke ein zweites Mal (`Genesis9lagen.nachGcBau`).
+pruefe('ohne Kaskade', rufe, [['kin_hair', null, false], ['schuhe', null, false]]);
 const alle = ['bh', 'slip', 'kin_hair', 'schuhe'];
 pruefe('ohne Haken alles', await Genesis9lagen.nachGcBau(inst, 'anzug'), alle);
 pruefe('ohne Stueck nichts', await Genesis9lagen.nachGcBau(inst, [], []), []);

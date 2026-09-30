@@ -20,6 +20,7 @@ from humanbody_core.koerperabstand import Koerperabstand
 
 from ..daten.anfragerumpf import Anfragerumpf
 from ..daten.netzantwort import Netzantwort
+from ..daten.netzjson import Netzjson
 from ..dienste.charakterdaten import Charakterdaten
 
 
@@ -52,7 +53,10 @@ class Netzbearbeitung:
         for platz in set(auswahl):
             if 0 <= platz < len(ergebnis):
                 ergebnis[platz] = nachher[platz]
-        return JsonResponse({'vertices': Netzantwort.feld(ergebnis.astype(np.float32), 'vertices')})
+        # Kein `request` hier (die Aktionen rufen den Helfer), also der
+        # JSON-Weg mit base64 — die Netzbearbeitung schickt nur Punkte zurueck.
+        return JsonResponse({'vertices': Netzantwort.feld(ergebnis.astype(np.float32), 'vertices')},
+                            encoder=Netzjson)
 
     # ---------------------------------------------------------------- Aktionen
 

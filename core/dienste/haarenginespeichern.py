@@ -30,7 +30,7 @@ __all__ = ['Haarenginespeichern']
 
 
 class Haarenginespeichern(Meshfigurspeichern):
-    ZUSATZ = 'Haar Engine'
+    ZUSATZ = '2D3D Kleider'
 
     @classmethod
     def fuer(cls, job):
@@ -48,8 +48,14 @@ class Haarenginespeichern(Meshfigurspeichern):
         return {k: stamm + n for k, n in self._bilder().items()}
 
     def modelldaten(self, name, kacheln):
+        from Genesis9.modellmitkleidern import ModellMitKleidern
         daten = super().modelldaten(name, kacheln)
         daten['figur']['herkunft']['art'] = 'haarengine'
+        # Kleider und Haar der Iterationen (30.09.2026): die beiden Sammeleinträge mit ihren Reglern — so trägt
+        # das gespeicherte Modell in Szene, Studio und Theatre dasselbe wie die Bühne des Auftrags.
+        modell = (self.job.ergebnis.get('kreislauf') or {}).get('modell')
+        if modell:
+            daten['figur']['kleidung'] = ModellMitKleidern.aus(modell).kleidung_modell()
         return daten
 
     @staticmethod

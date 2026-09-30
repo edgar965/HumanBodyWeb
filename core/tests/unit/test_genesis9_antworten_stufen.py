@@ -138,19 +138,23 @@ class AntwortenStufenTest(SimpleTestCase):
     # ---------------------------------------------------------------- 2
 
     def test_2_platte_und_ausduennen(self):
+        u"""Seit 30.09.2026 inhaltsadressiert (`g9antwortvorrat.py`): der Schluessel ist
+        ein Verweis `<schluessel>.ref`, der Inhalt liegt einmal unter seinem Hash."""
         daten = b'{"a":1}'
+        fassung = self.ablage / 'antworten' / G9antworten.fassungsmarke()
         G9antworten.merken('probe_a', daten, platte=False)
         G9antworten._schreiben('probe_a', daten)
         with G9antworten._schloss:
             G9antworten._speicher.clear()
         self.assertEqual(G9antworten.holen('probe_a'), daten)
-        self.assertTrue((self.ablage / 'antworten' / 'probe_a.json').is_file())
+        self.assertTrue((fassung / 'probe_a.ref').is_file())
+        self.assertEqual(len(list((fassung / 'inhalt').glob('*.hbm'))), 1)
         with mock.patch.object(G9antworten, 'PLATTE_MB', 0):
             G9antworten._schreiben('probe_b', b'x' * 10)
         # Deckel 0 MB: alles ueber dem Deckel fliegt, die aelteste zuerst
-        self.assertFalse((self.ablage / 'antworten' / 'probe_a.json').is_file())
+        self.assertFalse((fassung / 'probe_a.ref').is_file())
         G9antworten.vergessen()
-        self.assertEqual(list((self.ablage / 'antworten').glob('*.json')), [])
+        self.assertEqual(list((self.ablage / 'antworten').iterdir()), [])
 
     # ---------------------------------------------------------------- 3
 

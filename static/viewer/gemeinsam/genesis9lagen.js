@@ -86,7 +86,12 @@ export class Genesis9lagen {
     static async nachGcBau(inst, stuecke, unter = []) {
         if (inst?.quelle !== 'genesis9' || ![].concat(stuecke || []).length) return [];
         const neu = Object.keys(inst.kleidung || {}).filter(k => !(unter || []).includes(k));
-        await Promise.all(neu.map(k => inst.anziehen(k, inst.kleidung[k], null, true)));
+        // OHNE KASKADE (30.09.2026, gemessen): Hier kommt ohnehin JEDES Stück neu, das nicht
+        // als innere Lage in den Bau einging. Die Kaskade in `anziehen` holt nach jeder
+        // Antwort zusätzlich deren äußere Lagen — also dieselben Stücke ein zweites Mal.
+        // Beim Laden von Ursula1 (4 Daz-Stücke, ein GarmentCode-Schuh) waren das 4 von
+        // 18 Netzanfragen, jede mit vollem JSON-Parsen und Geometriebau im Browser.
+        await Promise.all(neu.map(k => inst.anziehen(k, inst.kleidung[k], null, false)));
         return neu;
     }
 

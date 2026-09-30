@@ -38,15 +38,18 @@ __all__ = ['Haarenginelauf']
 
 
 class Haarenginelauf:
-    SCHRITTE = ('grundfigur', 'iterationen', 'export', 'film', 'speichern')
-    #: Anteil am Balken 0…100 — die Iterationen sind der lange Teil.
+    SCHRITTE = ('netz', 'koerper', 'grundfigur', 'iterationen', 'export', 'film', 'speichern')
+    #: Anteil am Balken 0…100 — Netz (TRELLIS) und Iterationen sind die langen Teile.
     BAENDER = {
-        'grundfigur': (0, 5),
-        'iterationen': (5, 85),
+        'netz': (0, 25),
+        'koerper': (25, 40),
+        'grundfigur': (40, 43),
+        'iterationen': (43, 85),
         'export': (85, 88),
         'film': (88, 98),
         'speichern': (98, 100),
     }
+    WARTET = 'wartet'
 
     class Angehalten(Exception):
         """Der Nutzer hat angehalten — kein Fehler, der Lauf endet still."""
@@ -66,10 +69,14 @@ class Haarenginelauf:
         from .haarengineexport import Haarengineexport
         from .haarenginefilm import Haarenginefilm
         from .haarenginegrundfigur import Haarenginegrundfigur
+        from .haarenginekoerper import Haarenginekoerper
+        from .haarenginenetz import Haarenginenetz
         from .haarenginespeichern import Haarenginespeichern
         from .iterationskreislauf import Iterationskreislauf
 
         return {
+            'netz': lambda: Haarenginenetz(self).ausfuehren(),
+            'koerper': lambda: Haarenginekoerper(self).ausfuehren(),
             'grundfigur': lambda: Haarenginegrundfigur(self).ausfuehren(),
             'iterationen': lambda: Iterationskreislauf(self).ausfuehren(),
             'export': lambda: Haarengineexport(self).ausfuehren(),
@@ -83,7 +90,7 @@ class Haarenginelauf:
         job.ergebnis = dict(job.ergebnis or {})
         start = self.SCHRITTE.index(ab) if ab in self.SCHRITTE else 0
         ende = self.SCHRITTE.index(bis) + 1 if bis in self.SCHRITTE else len(self.SCHRITTE)
-        if start > 0 and not self.ablage.arbeit('grundkoerper.glb').is_file():
+        if start > self.SCHRITTE.index('grundfigur') and not self.ablage.arbeit('grundkoerper.glb').is_file():
             self._scheitern('Keine Grundfigur — erst den Schritt „Grundfigur" rechnen')
             return
         if start == 0:
@@ -106,14 +113,17 @@ class Haarenginelauf:
             self._scheitern('%s: %s' % (job.schritt, fehler))
             return
         job.ergebnis['dauer_s'] = round(time.perf_counter() - t0, 1)
-        job.status = 'fertig'
+        # Begutachtung (Edgar, 30.09.2026): Endet der Lauf mit den Iterationen, wartet der Auftrag auf das nächste
+        # Rezept — sichtbar als eigener Status, nicht als „fertig".
+        wartet = (bis == 'iterationen' and (job.ergebnis.get('begutachtung') or {}).get('zustand') == self.WARTET)
+        job.status = self.WARTET if wartet else 'fertig'
         job.progress = 100
-        job.progress_detail = 'Fertig'
+        job.progress_detail = 'Wartet auf Begutachtung' if wartet else 'Fertig'
         job.finished_at = timezone.now()
         job.save(
             update_fields=['ergebnis', 'status', 'progress', 'progress_detail', 'finished_at', 'updated_at']
         )
-        logger.info('Haar Engine %s: fertig in %.0f s', job.kennung, job.ergebnis['dauer_s'])
+        logger.info('2D3D Kleider %s: %s in %.0f s', job.kennung, job.status, job.ergebnis['dauer_s'])
 
     def angehalten(self):
         return Haarengineauftrag.objects.filter(pk=self.job.pk, status='angehalten').exists()

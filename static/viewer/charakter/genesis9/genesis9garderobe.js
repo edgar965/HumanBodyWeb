@@ -68,26 +68,33 @@ export class Genesis9garderobe {
         }
         const neuzeichnen = () => Genesis9garderobe.fuellen(inst, behaelter);
         const gewaehlt = Genesis9garderobe.gewaehltesStueck(inst);
+        // „Kleidung – Generisch: Alle Kategorien" steht OBEN, direkt unter der Überschrift „Genesis", in keiner
+        // Kategorie (Edgar, 30.09.2026).
+        for (const stueck of stuecke.filter(s => s.oben)) {
+            Genesis9garderobe._eintrag(inst, stueck, behaelter, gewaehlt, neuzeichnen);
+        }
         for (const [titel, eigene] of Genesis9garderobekategorien.gruppen(stuecke, stand)) {
             const kasten = document.createElement('details');
             kasten.className = 'g9-kategorie';
             kasten.open = Genesis9garderobekategorien.offen(titel, eigene.some(s => s.id === gewaehlt));
             kasten.innerHTML = `<summary class="aufklappkopf">${escapeHtml(titel)} `
                 + `<span class="gedaempft">(${eigene.length})</span></summary>`;
-            // Gemerkt wird nur Edgars Klick — `toggle` feuert auch, wenn `Stueckmarkierung`
-            // die Kategorie des angeklickten Stücks öffnet, und die bliebe dann für immer offen.
-            kasten.querySelector('summary').addEventListener('click',
-                () => Genesis9garderobekategorien.merken(titel, !kasten.open));
-            for (const stueck of eigene) {
-                const zeile = Genesis9garderobe._zeile(inst, stueck, neuzeichnen);
-                if (stueck.id === gewaehlt) zeile.classList.add('selected');
-                kasten.appendChild(zeile);
-                if (stueck.regler?.length && stueck.zeigbar) {
-                    kasten.appendChild(Genesis9stueckregler.bauen(inst, stueck,
-                        () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) })));
-                }
-            }
+            // Kein Merken mehr (Edgar, 30.09.2026): Was der Nutzer aufklappt, bleibt bis zum
+            // nächsten Laden offen — danach steht wieder alles zu außer der Kategorie des
+            // gewählten Stücks. Siehe Kopf von `genesis9garderobekategorien.js`.
+            for (const stueck of eigene) Genesis9garderobe._eintrag(inst, stueck, kasten, gewaehlt, neuzeichnen);
             behaelter.appendChild(kasten);
+        }
+    }
+
+    /** Die Zeile eines Stücks (und darunter seine Regler) in `ziel` — eine Kategorie oder der Bereich selbst. */
+    static _eintrag(inst, stueck, ziel, gewaehlt, neuzeichnen) {
+        const zeile = Genesis9garderobe._zeile(inst, stueck, neuzeichnen);
+        if (stueck.id === gewaehlt) zeile.classList.add('selected');
+        ziel.appendChild(zeile);
+        if (stueck.regler?.length && stueck.zeigbar) {
+            ziel.appendChild(Genesis9stueckregler.bauen(inst, stueck,
+                () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) })));
         }
     }
 
@@ -211,16 +218,17 @@ export class Genesis9garderobe {
         return feld;
     }
 
+    /** Je Stück ein Wunsch (`stueck:<kennung>`): zwei Häkchen kurz hintereinander kommen beide an. */
     static _anziehen(inst, kennung, werte) {
         Genesis9lauf.planen(inst,
             () => Dazkleidung.anziehenAuf(inst, kennung, werte),
-            () => fn.updateVertexCount?.());
+            () => fn.updateVertexCount?.(), `stueck:${kennung}`);
     }
 
     static _ausziehen(inst, kennung) {
         Genesis9lauf.planen(inst,
             () => Dazkleidung.ausziehenAuf(inst, kennung),
-            () => fn.updateVertexCount?.());
+            () => fn.updateVertexCount?.(), `stueck:${kennung}`);
     }
 
     /**

@@ -99,14 +99,18 @@ class Haarengineendpunkte:
     def anlegen(request):
         name = (request.POST.get('name') or '').strip()[:200]
         dateien = [f for f in request.FILES.getlist('bilder') if Haarengineablage.ist_bild(f.name)]
+        # Fotos und Körper aus einem Auftrag „Mesh to 3D" (Edgar, 30.09.2026: „erstelle einen neuen Job, der die
+        # Bilder aus …/meshfigur/2026.09.29.15.42.36/ nimmt") — `Haarengineauftragsquelle`.
+        meshfigur = (request.POST.get('meshfigur') or '').strip()[:19]
         if not name:
             return JsonResponse({'error': 'Name fehlt'}, status=400)
-        if not dateien:
+        if not dateien and not meshfigur:
             return JsonResponse({'error': 'Keine Bilder (JPG, PNG, WebP, BMP, TIFF)'}, status=400)
         kennung = Auftragskennung.frei(
             timezone.now(), lambda k: Haarengineauftrag.objects.filter(kennung=k).exists()
         )
         rollen = Haarengineendpunkte._json_feld(request, 'rollen', {})
+        optionen = Haarengineendpunkte._json_feld(request, 'optionen', {})
         ablage = Haarengineablage(kennung)
         try:
             bilder = []
@@ -121,12 +125,22 @@ class Haarengineendpunkte:
                         'rolle': Meshoptionen.rolle_pruefen(rolle),
                     }
                 )
+            if meshfigur:
+                from ..dienste.haarengineauftragsquelle import Haarengineauftragsquelle
+                bilder += Haarengineauftragsquelle.fotos(meshfigur, ablage)
+                optionen = Haarengineauftragsquelle.optionen(meshfigur, optionen)
+            if not bilder:
+                ablage.loeschen()
+                return JsonResponse({'error': 'Der Auftrag „Mesh to 3D" %s hat keine Fotos' % meshfigur}, status=400)
             job = Haarengineauftrag.objects.create(
                 kennung=kennung,
                 name=name,
                 bilder=bilder,
-                optionen=Haarengineoptionen.pruefen(Haarengineendpunkte._json_feld(request, 'optionen', {})),
+                optionen=Haarengineoptionen.pruefen(optionen),
             )
+        except ValueError as fehler:
+            ablage.loeschen()
+            return JsonResponse({'error': str(fehler)}, status=400)
         except OSError as fehler:
             # Ein halber Ordner ohne Eintrag wäre Müll, den keine Tabelle zeigt und keiner löscht.
             logger.exception('Haar Engine: Anlegen gescheitert (%s)', kennung)

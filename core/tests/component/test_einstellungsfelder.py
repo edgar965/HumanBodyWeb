@@ -150,7 +150,9 @@ class EinstellungsfelderTest(TestCase):
 
         for weg, erwartet in (
             ('/settings/model/', 2),
-            ('/settings/charakter/', 1),
+            # Seit 30.09.2026 ohne Standard-Animation (Edgar: „entferne das
+            # Standardmodell und die Standard Animation") — `szenenseite.py`.
+            ('/settings/charakter/', 0),
             ('/settings/theatre/', 1),
             ('/settings/effekte/', 1),
             ('/settings/result/', 1),

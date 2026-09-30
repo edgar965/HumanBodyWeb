@@ -8,6 +8,7 @@ import { SmplModell } from '../gemeinsam/smplmodell.js';
 import { UmapythonModell } from '../gemeinsam/umapythonmodell.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Spurgarmentcode } from './spurgarmentcode.js';
+import { Spurdazkleidung } from './spurdazkleidung.js';
 
 /**
  * Spurfigurarten — welche Modellklasse die Figur einer Spur baut.
@@ -46,6 +47,8 @@ export class Spurfigurarten {
                 haarfarben: sharedState.hairColorData,
                 beiKoerper,
             });
+            // Daz-Kleidung und -Haar aus dem Feld `kleidung` (30.09.2026) — nicht abgewartet.
+            Spurdazkleidung.humanbody(modell, vorgabe);
             return modell;
         },
         async uma(spur, beiKoerper) {

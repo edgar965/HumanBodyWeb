@@ -83,6 +83,7 @@ class G9hbteilhaut:
     def haut(self, punkte, bindung=None):
         u"""Gewichte je Punkt; `bindung` ist die `G9teilbindung` DIESER Punkte —
         None: der ganze Koerper (wie `G9aufhumanbody.haut`)."""
+        from GarmentCode.gewichtssumme import Gewichtssumme   # GarmentCode kommt zur Laufzeit ueber sys.path
         punkte = np.asarray(punkte, dtype=np.float64)
         if bindung is not None:
             # Nur eine Karte, wo der Stoff auch liegt (Sandale ganz an `pelvis`).
@@ -94,28 +95,29 @@ class G9hbteilhaut:
         for teil, erlaubt, maske in gruppen:
             if not maske.any():
                 continue
-            rig = self.anziehen(erlaubt).anziehen(punkte[maske])
-            paare_je_punkt = rig['gewichte']
+            rig = self.anziehen(erlaubt).felder(punkte[maske])
+            knochen, gewicht_je = rig['knochen'], rig['gewicht']
             if erlaubt is not None and len(erlaubt) > 1 and self.dreiecke({teil}, True) is not None:
-                anteil = np.clip((np.linalg.norm(np.asarray(rig['anker']['versatz']), axis=1)
+                anteil = np.clip((np.linalg.norm(rig['versatz'], axis=1)
                                   - self.NAH_M) / (self.FERN_M - self.NAH_M), 0.0, 1.0)
-                if (anteil > 0).any():
-                    eigen = self.anziehen({teil}, True).anziehen(punkte[maske])['gewichte']
-                    paare_je_punkt = [self.gemischt(nah, fern, a) if a > 0 else nah
-                                      for nah, fern, a in zip(paare_je_punkt, eigen, anteil)]
-            for nr, paare in zip(np.where(maske)[0], paare_je_punkt):
-                beste = sorted((pa for pa in paare if pa[1] > 0), key=lambda pa: -pa[1])
-                beste = beste[:self.JE_PUNKT]
-                summe = sum(w for _k, w in beste) or 1.0
-                for spalte, (knochen, w) in enumerate(beste):
-                    index[nr, spalte], gewicht[nr, spalte] = int(knochen), float(w) / summe
+                weiter = anteil > 0
+                if weiter.any():
+                    # Nur die Punkte, die der Abstand zum eigenen Teil zieht: Die Projektion kostet je
+                    # Punkt, und am Base Shirt (Stufe 2) sind es 37 % (30.09.2026, gemessen).
+                    eigen = self.anziehen({teil}, True).felder(punkte[maske][weiter])
+                    knochen[weiter], gewicht_je[weiter] = self.gemischt(
+                        (knochen[weiter], gewicht_je[weiter]), (eigen['knochen'], eigen['gewicht']),
+                        anteil[weiter])
+            index[maske], gewicht[maske] = knochen, Gewichtssumme.normieren(gewicht_je)[0]
         return {'knochen': self.figur['knochen'], 'index': index, 'gewicht': gewicht}
 
-    @staticmethod
-    def gemischt(nah, fern, anteil):
-        u"""`[[knochen, gewicht]]`: (1 − anteil)·nah + anteil·fern."""
-        summe = {}
-        for paare, faktor in ((nah, 1.0 - anteil), (fern, anteil)):
-            for knochen, w in paare:
-                summe[int(knochen)] = summe.get(int(knochen), 0.0) + faktor * float(w)
-        return [[k, w] for k, w in summe.items()]
+    @classmethod
+    def gemischt(cls, nah, fern, anteil):
+        u"""(knochen, summen) je Zeile: (1 − anteil)·nah + anteil·fern, die `JE_PUNKT` staerksten Knochen nach
+        Summe absteigend (noch nicht auf 1 gebracht). `nah`/`fern` sind (knochen, gewicht) je (N, 4); eine
+        Stelle mit Gewicht 0 ist leer."""
+        from GarmentCode.gewichtssumme import Gewichtssumme
+        ids =np.concatenate([np.where(g > 0, k, -1) for k, g in (nah, fern)], axis=1)
+        beitrag = np.concatenate([(1.0 - anteil)[:, None] * nah[1], anteil[:, None] * fern[1]], axis=1)
+        knochen, summen, _drin = Gewichtssumme.staerkste(ids, beitrag, 0.0, cls.JE_PUNKT)
+        return knochen, summen

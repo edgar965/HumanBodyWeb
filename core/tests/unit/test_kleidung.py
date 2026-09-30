@@ -119,11 +119,11 @@ class BaenderTest(unittest.TestCase):
         self.b = Meshfigurhautbaender(koerper())
 
     def test_hautfleck_im_shirt_wird_stoff(self):
-        # Rumpf: 25 % der Fläche als „Haut" verstreut (das aufgefüllte Innere der Schale) — das Band bleibt bedeckt.
+        # 25 % „Haut" im Rumpf verstreut: seine Bänder bleiben bedeckt (6 von 800 Punkten liegen außerhalb).
         orte = entlang((0, 1.35, 0), (0, 0.95, 0), 800, 0.10, zufall=2)
         haut = np.random.default_rng(3).uniform(size=800) < 0.25
         neu, anteile = self.b.entscheiden(orte, np.ones(800), haut)
-        self.assertFalse(neu.any())
+        self.assertFalse(neu[self.b.zuordnen(orte)[0] == 0].any())  # Achse 0 = Rumpf
         self.assertLess(max(anteile['rumpf']), 0.5)
 
     def test_dunkle_flecken_am_kahlen_arm_bleiben_haut(self):

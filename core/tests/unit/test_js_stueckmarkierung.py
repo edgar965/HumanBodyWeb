@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'stueckmarkierung.js')
+MODUL = Jsmodul('charakter', 'stueckmarkierung.js')
 
 DOM = """
 class Klassen {
@@ -44,39 +44,52 @@ class Element {
         this.classList.add('active');
     }
     scrollIntoView() { this.gerollt += 1; }
+    contains(el) {
+        // Wie `Node.contains`: das Element selbst oder einer seiner Nachkommen (`Stueckaufklappung.zuklappen`).
+        for (let k = el; k; k = k.parentElement) if (k === this) return true;
+        return false;
+    }
     alle() { return this.kinder.flatMap(k => [k, ...k.alle()]); }
     closest(selektor) {
-        const passt = (el) => selektor.split(',').map(s => s.trim()).some(s =>
-            s.startsWith('#') ? el.id === s.slice(1)
-            : s.startsWith('.') ? el.classList.contains(s.slice(1)) : el.art === s);
+        // `#id`, `.klasse`, `art` oder `art.klasse` (`Stueckaufklappung.KATEGORIE`: `details.g9-kategorie`)
+        const passtEins = (el, s) => {
+            if (s.startsWith('#')) return el.id === s.slice(1);
+            const [art, ...klassen] = s.split('.');
+            return (!art || el.art === art) && klassen.every(k => el.classList.contains(k));
+        };
+        const passt = (el) => selektor.split(',').map(s => s.trim()).some(s => passtEins(el, s));
         let el = this;
         while (el) { if (passt(el)) return el; el = el.parentElement; }
         return null;
     }
     querySelector(selektor) { return this.querySelectorAll(selektor)[0] || null; }
     querySelectorAll(selektor) {
-        // Nur die Formen, die die Klasse benutzt: `.a.b`, `#id .klasse[data-x="y"]`
+        // Nur die Formen, die die Klassen benutzen: `.a.b`, `art.a` (`details.g9-kategorie`),
+        // `#id .klasse[data-x="y"]`
         const teile = selektor.trim().split(/\\s+/);
         let kandidaten = this.alle();
         for (const teil of teile) {
-            const m = /^(#([\\w-]+))?((?:\\.[\\w-]+)*)(\\[data-([\\w-]+)="([^"]*)"\\])?$/.exec(teil);
+            const m = /^([a-z]+)?(#([\\w-]+))?((?:\\.[\\w-]+)*)(\\[data-([\\w-]+)="([^"]*)"\\])?$/.exec(teil);
             if (!m) throw new Error('Selektor unerwartet: ' + selektor);
-            if (m[2]) {
-                const start = kandidaten.find(el => el.id === m[2]);
+            if (m[3]) {
+                const start = kandidaten.find(el => el.id === m[3]);
                 kandidaten = start ? start.alle() : [];
                 continue;
             }
-            const klassen = m[3] ? m[3].slice(1).split('.') : [];
-            const feld = m[5] && m[5].replace(/-(\\w)/g, (_, b) => b.toUpperCase());
+            const klassen = m[4] ? m[4].slice(1).split('.') : [];
+            const feld = m[6] && m[6].replace(/-(\\w)/g, (_, b) => b.toUpperCase());
             kandidaten = kandidaten.filter(el =>
-                klassen.every(k => el.classList.contains(k))
-                && (!feld || el.dataset?.[feld] === m[6]));
+                (!m[1] || el.art === m[1])
+                && klassen.every(k => el.classList.contains(k))
+                && (!feld || el.dataset?.[feld] === m[7]));
         }
         return kandidaten;
     }
 }
 const wurzel = new Element('body');
 globalThis.CSS = { escape: s => s };
+// `startmessung.js` (ueber `reiterinhalt.js`) haengt sich an `window` — in Node ist das die globale Sicht.
+globalThis.window = globalThis;
 globalThis.document = {
     querySelector: s => wurzel.querySelector(s),
     querySelectorAll: s => wurzel.querySelectorAll(s),
@@ -93,7 +106,7 @@ reiter.eigenschaften.classList.add('active');
 const bereich = wurzel.anhaengen(new Element('div', {klassen: ['panel-section', 'collapsed']}));
 const garderobe = bereich.anhaengen(
     new Element('div', {id: 'assets-genesis9-garderobe', klassen: ['anim-tree']}));
-const kasten = garderobe.anhaengen(new Element('details'));
+const kasten = garderobe.anhaengen(new Element('details', {klassen: ['g9-kategorie']}));
 const zeileJeans = kasten.anhaengen(new Element('div', {klassen: ['slider-row']}));
 zeileJeans.anhaengen(new Element('input', {id: 'g9-kleid-angie_jeans'}));
 const zeileShirt = kasten.anhaengen(new Element('div', {klassen: ['slider-row', 'selected']}));
@@ -175,6 +188,7 @@ pruefe('Auswahlen', aufrufe.filter(a => a[0] !== 'mh'), [
 await markierung.zeigen(null);
 pruefe('Modell geklickt', reiter.eigenschaften.klicks, 1);
 pruefe('Daz-Marke weg', zeileShirt.classList.contains('selected'), false);
+pruefe('Kategorie wieder zu', kasten.open, false);          // `Stueckaufklappung.nurDie(null)`
 pruefe('MH-Wahl bleibt', zeileMh.classList.contains('selected'), true);
 
 // --- 7. Fehlende Zeile: kein Fehler, nach den Versuchen null --------------

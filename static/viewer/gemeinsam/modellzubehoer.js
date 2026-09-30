@@ -69,7 +69,7 @@ export class Modellzubehoer {
     async kleidungsstueck(kleid) {
         try {
             const frage = Kleiderfrage.fuer(this.modell.frage(), kleid, THREE.Color);
-            const daten = await Serverabruf.json(`/api/character/garment/fit/?${frage}`);
+            const daten = await Serverabruf.netz(`/api/character/garment/fit/?${frage}`);
             if (daten.error) throw new Error(daten.error);
             const geo = Netzgeometrie.bauen({ vertices: daten.vertices, faces: daten.faces }, THREE);
             const stoff = Kleiderwerkstoff.bauen(THREE, Kleiderfrage.kanaele(kleid.color, THREE.Color),

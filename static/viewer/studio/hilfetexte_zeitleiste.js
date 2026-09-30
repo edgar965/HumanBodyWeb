@@ -51,7 +51,7 @@ export const HILFE_ZEITLEISTE = {
     light: {
         titel: 'Licht',
         text: 'Spur wählen, dann <b>Alt+Klick</b> im Bild setzt das Licht dorthin; Farbe, '
-            + 'Stärke und Ziel rechts unter Eigenschaften. <b>K</b> oder <b>Rechtsklick</b> → '
+            + 'Stärke und Ziel rechts unter Eigenschaften. <b>L</b> oder <b>Rechtsklick</b> → '
             + 'Hinzufügen → Lichteigenschaft hält den Zustand als Keyframe fest — ab zwei '
             + 'Keyframes wird dazwischen überblendet.',
     },

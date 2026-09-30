@@ -75,7 +75,7 @@ export class Genesis9posen {
                 for (const [k, w] of Object.entries(e.regler || {})) {
                     if (haken.checked) inst.regler[k] = w; else delete inst.regler[k];
                 }
-                Genesis9lauf.planen(inst, () => inst.neuFormen(), () => {});
+                Genesis9lauf.planen(inst, () => inst.neuFormen(), () => {}, 'formen');
                 markDirty();
             });
             zeile.append(haken, document.createTextNode(` ${e.name}`));
@@ -106,7 +106,7 @@ export class Genesis9posen {
             wahl.appendChild(block);
         }
         wahl.addEventListener('change', () => {
-            Genesis9lauf.planen(inst, () => inst.poseSetzen(feld, wahl.value), () => {});
+            Genesis9lauf.planen(inst, () => inst.poseSetzen(feld, wahl.value), () => {}, `pose:${feld}`);
             markDirty();
         });
         zeile.appendChild(wahl);

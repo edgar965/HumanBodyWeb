@@ -2,6 +2,8 @@ import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
 import { Genesis9lauf } from './genesis9lauf.js';
 import { Dazkleidung } from './dazkleidung.js';
+import { Sortenanteile } from './sortenanteile.js';
+import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
 
 /**
  * Genesis9stueckregler — die Anpassungsregler EINES Daz-Kleidungsstücks.
@@ -16,18 +18,6 @@ import { Dazkleidung } from './dazkleidung.js';
  */
 export class Genesis9stueckregler {
 
-    /** Bis zu so vielen Gruppen stehen sie beim Öffnen AUF — darüber alle zu.
-     *  „Haar – Generisch" bringt eine Gruppe je Frisur mit (18 Gruppen, über 400 Regler);
-     *  alle offen wäre eine Liste, durch die niemand scrollt. Ein gewöhnliches Stück hat
-     *  ein bis drei Gruppen und soll sich nicht schlechter bedienen als vorher. */
-    static OFFEN_BIS = 3;
-
-    /** Welche Gruppen dieser Browser offen gelassen hat — Muster wie
-     *  `Genesis9garderobekategorien.SCHLUESSEL`, aber ein EIGENER Schlüssel: Die Namen
-     *  überschneiden sich (mehrere Stücke haben eine Gruppe „Adjustment"), deshalb steht
-     *  je Eintrag `<stück>/<gruppe>`. */
-    static SCHLUESSEL = 'hb_g9_stueckregler_offen';
-
     static bauen(inst, stueck, werteLesen) {
         const kasten = document.createElement('details');
         kasten.className = 'uma-gruppe genesis9-stueckregler';
@@ -40,7 +30,7 @@ export class Genesis9stueckregler {
         }
         for (const [gruppe, regler] of gruppen) {
             const ziel = gruppen.size > 1
-                ? Genesis9stueckregler._gruppe(kasten, gruppe, regler.length, gruppen.size, stueck.id)
+                ? Genesis9stueckregler._gruppe(kasten, gruppe, regler.length)
                 : kasten;
             for (const r of regler) ziel.appendChild(Genesis9stueckregler._zeile(inst, stueck, r, werteLesen));
         }
@@ -48,48 +38,35 @@ export class Genesis9stueckregler {
     }
 
     /** Eine Gruppe als eigener Klappkasten (Edgar, 30.09.2026: „in Kategorien der jeweiligen
-     *  Hauptsorte … und aufklappbar"). Kopf wie die Kategorien der Garderobe. */
-    static _gruppe(kasten, gruppe, anzahl, gruppenzahl, stueckId) {
+     *  Hauptsorte … und aufklappbar"). Kopf wie die Kategorien der Garderobe.
+     *
+     *  IMMER ZU, OHNE GEDÄCHTNIS (Edgar, 30.09.2026: „ALLE Einträge in den Tabs zu Assets und
+     *  anderen sollen beim Laden IMMER zugeklappt sein. das hatte ich schon 10 Mal in Auftrag
+     *  gegeben"). Ein `localStorage`-Gedächtnis stand hier zwischenzeitlich — genau das hält
+     *  Kästen über Seitenaufrufe hinweg offen und ist der Grund, warum die Bitte immer wieder
+     *  kommt. Aufgeklappt wird nur, was der Nutzer JETZT anklickt. */
+    static _gruppe(kasten, gruppe, anzahl) {
         const eigen = document.createElement('details');
-        const merkname = `${stueckId}/${gruppe}`;
         eigen.className = 'g9-kategorie genesis9-reglergruppe';
-        eigen.open = Genesis9stueckregler._gemerkt().includes(merkname)
-            || gruppenzahl <= Genesis9stueckregler.OFFEN_BIS;
+        eigen.open = false;
         eigen.innerHTML = `<summary class="aufklappkopf">${escapeHtml(gruppe)} `
             + `<span class="gedaempft">(${anzahl})</span></summary>`;
-        eigen.addEventListener('toggle', () => Genesis9stueckregler._merken(merkname, eigen.open));
         kasten.appendChild(eigen);
         return eigen;
-    }
-
-    /** Die gemerkten offenen Gruppen. Leer, wenn nie etwas gemerkt wurde oder der Browser
-     *  keine Seitendaten zulässt (privates Fenster). */
-    static _gemerkt() {
-        try {
-            const roh = JSON.parse(localStorage.getItem(Genesis9stueckregler.SCHLUESSEL));
-            return Array.isArray(roh) ? roh : [];
-        } catch (fehler) {
-            return [];
-        }
-    }
-
-    static _merken(name, offen) {
-        const alle = new Set(Genesis9stueckregler._gemerkt());
-        if (offen) alle.add(name); else alle.delete(name);
-        try {
-            localStorage.setItem(Genesis9stueckregler.SCHLUESSEL, JSON.stringify([...alle]));
-        } catch (fehler) {
-            // privates Fenster, gesperrte Seitendaten — dann eben nicht gemerkt
-        }
     }
 
     static _zeile(inst, stueck, regler, werteLesen) {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         const wert = Dazkleidung.kleidung(inst)[stueck.id]?.regler?.[regler.name] ?? regler.vorgabe ?? 0;
+        const mischen = stueck.mischbar && Sortenanteile.ist(regler.name);
+        // Der Server nennt den Hinweis am Regler (`hinweis`, „Kleidung – Generisch": Anteile ohne feste Summe).
+        const hinweis = mischen ? ' — Summe aller Anteile ist immer 100 %; eine andere Sorte hochziehen, um zu mischen'
+            : (regler.hinweis ? ` — ${regler.hinweis}` : '');
         zeile.innerHTML = `
-            <label title="${escapeHtml(regler.name)}">${escapeHtml(regler.anzeige)}</label>
-            <input type="range" min="${regler.min}" max="${regler.max}" step="${regler.schritt || 0.01}" value="${wert}">
+            <label title="${escapeHtml(regler.name + hinweis)}">${escapeHtml(regler.anzeige)}</label>
+            <input type="range" min="${regler.min}" max="${regler.max}" step="${regler.schritt || 0.01}" value="${wert}"
+                   data-regler="${escapeHtml(regler.name)}">
             <span class="slider-value">${Genesis9stueckregler.text(wert, regler)}</span>`;
         const schieber = zeile.querySelector('input');
         const anzeige = zeile.querySelector('.slider-value');
@@ -98,12 +75,70 @@ export class Genesis9stueckregler {
             const getragen = Dazkleidung.kleidung(inst)[stueck.id];
             if (!getragen) return;                       // nicht angezogen: nur merken
             const werte = werteLesen(); werte.regler = { ...(getragen.regler || {}) };
-            if (Math.abs(neu) < 1e-6) delete werte.regler[regler.name];
-            else werte.regler[regler.name] = neu;
-            Genesis9lauf.planen(inst, () => Dazkleidung.anziehenAuf(inst, stueck.id, werte), () => {});
+            if (Kleidfarbmischung.ist(regler.name)) {
+                // Textur-Regler von „Kleidung – Generisch": wirkt nur im Shader — kein Neubau, keine Anfrage.
+                if (Math.abs(neu - (regler.vorgabe ?? 0)) < 1e-6) delete werte.regler[regler.name];
+                else werte.regler[regler.name] = neu;
+                getragen.regler = werte.regler;
+                Kleidfarbmischung.anwenden(inst, stueck.id, werte.regler);
+                markDirty();
+                return;
+            }
+            if (mischen) {
+                Genesis9stueckregler._aufteilen(schieber, stueck, regler, neu, werte.regler);
+            } else {
+                // Weggelassen wird nur, was auf seiner VORGABE steht — nicht, was auf 0 steht.
+                // Bei „Haar – Generisch" hat die getragene Sorte die Vorgabe 1,0: Wer sie auf 0
+                // zog, löschte damit den Eintrag, und der Server nahm wieder 1,0 an — die
+                // Grundfrisur war nicht herunterzudrehen (Edgar, 30.09.2026).
+                const vorgabe = regler.vorgabe ?? 0;
+                if (Math.abs(neu - vorgabe) < 1e-6) delete werte.regler[regler.name];
+                else werte.regler[regler.name] = neu;
+            }
+            Genesis9stueckregler._zuletzt(werte.regler, regler.name);
+            Genesis9lauf.planen(inst, () => Dazkleidung.anziehenAuf(inst, stueck.id, werte), () => {},
+                                `stueck:${stueck.id}`);
             markDirty();
         });
         return zeile;
+    }
+
+    /**
+     * „Haar – Generisch": die anderen Sortenregler proportional nachziehen, damit die Summe
+     * 100 % bleibt (Edgar, 30.09.2026), und zwar SICHTBAR — jeder Schieber und jede Anzeige
+     * des Stücks springt auf seinen neuen Anteil, auch in zugeklappten Gruppen.
+     *
+     * Gerechnet wird mit den GESPEICHERTEN Werten (Vorgabe, wo keiner steht), nicht mit den
+     * Schiebern: Ein Schieber rundet auf seinen Schritt (0,01), und über mehrere Züge liefe
+     * die Summe davon. Die Schieber zeigen nur an.
+     */
+    static _aufteilen(schieber, stueck, regler, neu, werteRegler) {
+        const vorgaben = Object.fromEntries(stueck.regler
+            .filter(r => Sortenanteile.ist(r.name)).map(r => [r.name, r.vorgabe ?? 0]));
+        const aktuell = {};
+        for (const name of Object.keys(vorgaben)) aktuell[name] = werteRegler[name] ?? vorgaben[name];
+        const aufteilung = Sortenanteile.ziehen(aktuell, regler.name, neu);
+        Sortenanteile.eintragen(werteRegler, aufteilung, vorgaben);
+        const kasten = schieber.closest('.genesis9-stueckregler');
+        for (const s of kasten?.querySelectorAll('input[data-regler^="sorte."]') || []) {
+            const wert = aufteilung[s.dataset.regler] ?? 0;
+            s.value = String(wert);
+            const text = s.closest('.slider-row')?.querySelector('.slider-value');
+            if (text) text.textContent = Genesis9stueckregler.text(wert);
+        }
+    }
+
+    /**
+     * Welchen Sortenregler der Nutzer zuletzt bewegt hat („Haar – Generisch").
+     *
+     * Zwei Frisuren auf 100 % sind serverseitig nicht zu unterscheiden — beide Netze
+     * wären gleich „gewollt", und ohne diese Angabe müsste eine feste Reihenfolge
+     * entscheiden, also der Zufall der Garderobenliste. Der Browser weiß es: Es ist der
+     * Regler unter der Hand des Nutzers (`G9haargenerisch.ZULETZT`).
+     */
+    static _zuletzt(regler, name) {
+        if (!name.startsWith('sorte.')) return;
+        regler.sorte_zuletzt = name.slice('sorte.'.length);
     }
 
     /** Daz-Regler in Prozent; Passform-Regler (`einheit: cm`, `Genesis9/passform.py`) in Zentimetern. */

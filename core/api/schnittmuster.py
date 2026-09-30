@@ -21,6 +21,7 @@ from humanbody_core.cloth import generate_from_pattern
 from humanbody_core.koerperabstand import Koerperabstand
 
 from ..daten.anfragerumpf import Anfragerumpf
+from ..daten.netzausgabe import Netzausgabe
 from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
 from .bereichsstoff import Bereichsstoff
@@ -71,7 +72,7 @@ class Schnittmuster:
         if ergebnis is None:
             return JsonResponse({'error': 'Could not generate mesh from pattern'}, status=400)
         Schnittmuster._aus_der_haut(ergebnis, punkte, koerper.geschlecht, abstand)
-        return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht))
+        return Netzausgabe.antwort(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht), request)
 
     @staticmethod
     def _aus_der_haut(ergebnis, punkte, geschlecht, abstand):
@@ -110,4 +111,4 @@ class Schnittmuster:
             # Topologie fehlt (Datenlage).
             code = 400 if ergebnis is None and 'region' in fehler else 500
             return JsonResponse({'error': fehler}, status=code)
-        return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht))
+        return Netzausgabe.antwort(Stoffantwort.aus(ergebnis, koerper.vertices, koerper.geschlecht), request)

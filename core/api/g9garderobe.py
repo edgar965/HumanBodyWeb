@@ -36,6 +36,7 @@ from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
 from Genesis9.haarachsen import G9haarachsen
 from Genesis9.haargenerisch import G9haargenerisch
+from Genesis9.kleidgenerisch import G9kleidgenerisch
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.material import G9material
 from Genesis9.netzstufe import G9netzstufe
@@ -43,6 +44,8 @@ from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
 
 from ..dienste.g9antworten import G9antworten
+from ..dienste.g9haarmischbau import G9haarmischbau
+from ..dienste.g9kleidmischbau import G9kleidmischbau
 from ..dienste.g9stueckteile import G9stueckteile
 from .g9figur import FEHLT, G9figur
 from .g9kleidhumanbody import G9kleidhumanbody
@@ -66,12 +69,16 @@ class G9garderobeapi:
         # „Haar – Generisch" steht VORN (Edgar, 30.09.2026: „an erster Stelle"):
         # Der Browser gruppiert in der Reihenfolge dieser Liste, der erste
         # `haar`-Eintrag ist also der erste in der Kategorie „Haare".
-        roh = [G9haargenerisch.eintrag()] + list(G9garderobe.liste())
+        # „Kleidung – Generisch“ (`G9kleidgenerisch`, 30.09.2026): je Kategorie ein Sammeleintrag, gleich hinter dem
+        # Haar — der Browser gruppiert in der Reihenfolge dieser Liste, also stehen sie in ihrer Kategorie vorn.
+        roh = [G9haargenerisch.eintrag()] + G9kleidgenerisch.eintraege() + list(G9garderobe.liste())
         # `regler`: jede Frisur bekommt die fuenf gemeinsamen Formachsen dazu
         # (`G9haarachsen`) — erst hier, nicht in der abgelegten Liste je Stueck.
+        # Dazu die eigenen Morphe aus den Iterationen von „2D3D Kleider" (`G9kleidmorphe`, Gruppe „Eigene Morphe").
+        from Genesis9.kleidmorphe import G9kleidmorphe
         stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s),
-                        kategorie=G9garderobekategorien.vorgabe(s),
-                        regler=G9haarachsen.erweitern(s))
+                        kategorie=s.get('kategorie') or G9garderobekategorien.vorgabe(s),
+                        regler=G9kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s))))
                    for s in roh]
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
 
@@ -98,14 +105,54 @@ class G9garderobeapi:
         if not G9pfade.vorhanden():
             return JsonResponse({'fehler': FEHLT}, status=404)
         rumpf = G9figur._rumpf(request)
-        # „Haar – Generisch" hat kein eigenes Netz: Der groesste `sorte.*`-Wert sagt,
-        # WELCHE Frisur gemeint ist; ihre Regler stehen im Rumpf mit ihrer Kennung
-        # davor. Ab hier laeuft alles wie bei einem ganz gewoehnlichen Stueck.
+        # „Haar – Generisch" MISCHT seit dem 30.09.2026 (`G9haarmischbau`): Jede Sorte mit
+        # Anteil wird gebaut und auf ihren Anteil ihrer Straehnen ausgeduennt, die Anteile
+        # ergeben zusammen 100 %. Die Kennung bleibt `haar_generisch` — der Browser haengt
+        # die Teile darunter ein, und die Farbe des Eintrags faerbt alle zugleich.
+        # Auf einer HumanBody-Figur genauso, nur ueber deren Bauweg (`G9kleidhumanbody`,
+        # Edgar: „auf einer HumanBody soll das haar genau so gemischt werden").
         if G9haargenerisch.ist_generisch(kennung):
-            kennung, regler = G9haargenerisch.aufloesen(rumpf.get('regler_stueck'))
+            if rumpf.get('getragen'):
+                # Die getragenen Stuecke kennt die Lagenrechnung nur aufgeloest (wie unten).
+                getragen = G9kleidgenerisch.getragene_aufloesen(rumpf.get('getragen'))
+                rumpf = dict(rumpf, getragen=getragen)
+            humanbody = rumpf.get('figurart') == G9kleidhumanbody.FIGURART
+            kleid = G9kleidhumanbody.antwort if humanbody else G9garderobeapi._kleid
+            bauen = lambda: G9haarmischbau.antwort(rumpf, kleid)
+            return await sync_to_async(G9antworten.liefern, thread_sensitive=False)(
+                'kleidhb' if humanbody else 'kleid', kennung, rumpf, bauen,
+                eintrag=G9haarmischbau.KENNZEICHEN, request=request)
+        # „Kleidung – Generisch“ MISCHT (`G9kleidmischbau`, 30.09.2026): Stehen mehrere Stuecke des Eintrags ueber 0,
+        # wird jedes gebaut und dort zu EINER Flaeche gemischt, wo sie dieselbe Hautstelle bedecken. Ein einzelnes
+        # Stueck baut wie bisher (unten).
+        if G9kleidgenerisch.ist_generisch(kennung):
+            folge, uebergang = G9kleidgenerisch.mischung_aufloesen(kennung, rumpf.get('regler_stueck'))
+            if len(folge) > 1:
+                # Auf einer HumanBody-Figur genauso, nur ueber deren Bauweg und ihre Haut (`G9kleidhumanbody`).
+                humanbody = rumpf.get('figurart') == G9kleidhumanbody.FIGURART
+                # Die Textur-Regler wirken im Browser (Shader) — sie gehoeren nicht in den Schluessel der Antwort.
+                rumpf = dict(rumpf, regler_stueck=G9kleidgenerisch.ohne_textur(rumpf.get('regler_stueck')))
+                if humanbody:
+                    kleid = G9kleidhumanbody.antwort
+                    koerper = lambda: G9kleidhumanbody.bindungsflaeche(rumpf)
+                else:
+                    kleid = G9garderobeapi._kleid
+                    koerper = lambda: G9koerpernetz(
+                        G9figur.formung(rumpf, {}), stufen=G9netzstufe.browser()).bindungsflaeche()
+                bauen = lambda: G9kleidmischbau.antwort(
+                    rumpf, kleid, kennung, folge, uebergang, koerper, humanbody)
+                return await sync_to_async(G9antworten.liefern, thread_sensitive=False)(
+                    'kleidhb' if humanbody else 'kleid', kennung, rumpf, bauen,
+                    eintrag=G9kleidmischbau.KENNZEICHEN, request=request)
+        # „Kleidung – Generisch“ ebenso, je Kategorie ein Eintrag: die Wahl und die gemeinsame Passform gehen an das
+        # gemeinte Stueck. Auch die GETRAGENEN Stuecke werden aufgeloest (Kollision Stueck gegen Stueck).
+        if G9kleidgenerisch.ist_generisch(kennung):
+            kennung, regler = G9kleidgenerisch.aufloesen(kennung, rumpf.get('regler_stueck'))
             if not kennung:
-                return JsonResponse({'fehler': 'Keine Frisur in der Garderobe'}, status=404)
+                return JsonResponse({'fehler': 'Kein Kleidungsstück in dieser Kategorie'}, status=404)
             rumpf = dict(rumpf, regler_stueck=regler)
+        if rumpf.get('getragen'):
+            rumpf = dict(rumpf, getragen=G9kleidgenerisch.getragene_aufloesen(rumpf.get('getragen')))
         eintrag = G9garderobe.eintrag(kennung) or {}
         if rumpf.get('figurart') == G9kleidhumanbody.FIGURART:
             # Dasselbe Stueck auf einer HumanBody-Figur (19.09.2026).
@@ -115,11 +162,16 @@ class G9garderobeapi:
             bauen = lambda: G9garderobeapi._kleid(kennung, eintrag, rumpf)
             art = 'kleid'
         return await sync_to_async(G9antworten.liefern, thread_sensitive=False)(
-            art, kennung, rumpf, bauen, eintrag=eintrag)
+            art, kennung, rumpf, bauen, eintrag=eintrag, request=request)
 
     @staticmethod
-    def _kleid(kennung, eintrag, rumpf):
-        u"""Das Antwort-Dict eines Stuecks — oder eine Fehlerantwort."""
+    def _kleid(kennung, eintrag, rumpf, vor_antwort=None):
+        u"""Das Antwort-Dict eines Stuecks — oder eine Fehlerantwort.
+
+        `vor_antwort(nummer, netz) -> netz | None` greift je Teil ein, BEVOR es kodiert
+        wird — `None` laesst das Teil weg. Genutzt von der Haarmischung
+        (`G9haarmischbau`, 30.09.2026), die jede Sorte auf ihren Anteil ausduennt: Dafuer
+        braucht sie die rohen Felder, nicht die fertigen Bytes."""
         formung = G9figur.formung(rumpf, {})
         # Ein Genesis-8-Schuh mit Fusspose: der Fuss der Figur stellt sich, der
         # Schuh bleibt in seiner (schon getragenen) Ruhelage (`G9autofit`).
@@ -149,10 +201,14 @@ class G9garderobeapi:
             logger.warning('Genesis 9: Stück %s nicht ladbar: %s', kennung, fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
         antwort_teile = []
-        for folger, lage, netz in netze:
+        for nummer, (folger, lage, netz) in enumerate(netze):
             if lage is not None:
                 # Ein Prop haengt ganz an seinem Knochen (`G9requisit.haut`).
                 netz['haut'] = lage.haut(len(netz['punkte'])).fuer()
+            if vor_antwort is not None:
+                netz = vor_antwort(nummer, netz)
+                if netz is None:
+                    continue
             teil = G9figur._netzantwort(netz)
             teil['name'] = folger.name
             teil['stufen'] = netz['stufen']

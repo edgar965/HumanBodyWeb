@@ -79,10 +79,87 @@ class SammeleintragTest(unittest.TestCase):
         self.assertEqual(kennung, G9haargenerisch.VORGABE)
         self.assertEqual(werte, {})
 
+    def test_5a_ein_kleiner_anteil_verdraengt_die_getragene_frisur_nicht(self):
+        """Edgar, 30.09.2026: „falls ich den Anteil eines anderen Haartyps minimal einfüge,
+        ist der Original Type weg, und nur noch der neue Haartyp ist drin". Die Grundsorte
+        trägt voll (1,0) — 5 % einer anderen schlagen sie nicht."""
+        self.assertEqual(G9haargenerisch.sorte({'sorte.toulouse_hair': 0.05}), 'kin_hair')
+        self.assertEqual(G9haargenerisch.sorte({'sorte.toulouse_hair': 0.99}), 'kin_hair')
+
+    def test_5b_ganz_aufgedreht_wechselt_die_frisur(self):
+        """Sonst käme man nie von der Grundsorte weg. Bei Gleichstand gewinnt die
+        ausdrücklich gestellte — die hat der Nutzer gerade angefasst."""
+        self.assertEqual(G9haargenerisch.sorte({'sorte.toulouse_hair': 1.0}), 'toulouse_hair')
+
+    def test_5c_die_grundsorte_laesst_sich_herunterdrehen(self):
+        """Wer Kin ausdrücklich auf 0 stellt, trägt Toulouse — auch mit wenig Anteil."""
+        self.assertEqual(
+            G9haargenerisch.sorte({'sorte.kin_hair': 0.0, 'sorte.toulouse_hair': 0.2}),
+            'toulouse_hair')
+
+    def test_5d_der_regler_der_grundsorte_steht_sichtbar_auf_hundert_prozent(self):
+        """Der Wert, mit dem gerechnet wird, muss der sein, den der Regler zeigt."""
+        regler = {r['name']: r for r in G9haargenerisch.regler()}
+        self.assertEqual(regler['sorte.kin_hair']['vorgabe'], 1.0)
+        self.assertEqual(regler['sorte.toulouse_hair']['vorgabe'], 0.0)
+
+    def test_5e_eine_kennung_die_es_nicht_mehr_gibt_faellt_weg(self):
+        """Ein alter Wertesatz kann Frisuren nennen, die aus der Bibliothek verschwunden sind."""
+        self.assertEqual(G9haargenerisch.sorte({'sorte.weg_damit': 1.0}), 'kin_hair')
+
     def test_6_ist_generisch(self):
         self.assertTrue(G9haargenerisch.ist_generisch('haar_generisch'))
         self.assertFalse(G9haargenerisch.ist_generisch('kin_hair'))
         self.assertFalse(G9haargenerisch.ist_generisch(None))
+
+    # ---- Mischung (Edgar, 30.09.2026: „Summe aller Anteile immer 100%") -------
+
+    def test_7a_die_anteile_ergeben_zusammen_eins(self):
+        """70 : 30, wie der Browser es nach einem Zug schickt."""
+        anteile = G9haargenerisch.anteile({'sorte.kin_hair': 0.7, 'sorte.toulouse_hair': 0.3})
+        self.assertAlmostEqual(anteile['kin_hair'], 0.7)
+        self.assertAlmostEqual(anteile['toulouse_hair'], 0.3)
+        self.assertAlmostEqual(sum(anteile.values()), 1.0)
+
+    def test_7b_ein_alter_wertesatz_wird_auf_hundert_prozent_gebracht(self):
+        """Aus der Rangfolge-Zeit: beide auf 1,0 — das sind jetzt je 50 %, nicht 200 %."""
+        anteile = G9haargenerisch.anteile({'sorte.kin_hair': 1.0, 'sorte.toulouse_hair': 1.0})
+        self.assertAlmostEqual(anteile['kin_hair'], 0.5)
+        self.assertAlmostEqual(anteile['toulouse_hair'], 0.5)
+
+    def test_7c_die_grundsorte_steht_ohne_angabe_auf_ihrer_vorgabe(self):
+        """Nicht gestellt heisst 1,0 — genau das, was ihr Regler zeigt."""
+        anteile = G9haargenerisch.anteile({'sorte.toulouse_hair': 1.0 / 3.0})
+        self.assertAlmostEqual(anteile['kin_hair'], 0.75)
+        self.assertAlmostEqual(anteile['toulouse_hair'], 0.25)
+
+    def test_7d_alles_auf_null_wird_nicht_kahl(self):
+        anteile = G9haargenerisch.anteile({'sorte.kin_hair': 0.0, 'sorte.toulouse_hair': 0.0})
+        self.assertEqual(anteile, {'kin_hair': 1.0})
+
+    def test_7e_die_mischung_nennt_die_hauptsorte_zuerst(self):
+        """Die erste Sorte bringt ihre Kappe mit (`G9haarmischbau`)."""
+        folge = G9haargenerisch.mischung({'sorte.kin_hair': 0.3, 'sorte.toulouse_hair': 0.7})
+        self.assertEqual([k for k, _, _ in folge], ['toulouse_hair', 'kin_hair'])
+
+    def test_7f_jede_sorte_bekommt_ihre_regler_ohne_praefix(self):
+        folge = dict((k, r) for k, _, r in G9haargenerisch.mischung({
+            'sorte.kin_hair': 0.6, 'sorte.toulouse_hair': 0.4,
+            'kin_hair.Bangs': 0.5, 'toulouse_hair.Volume': 1.2, 'toulouse_hair.achse.laenge': 0.3}))
+        self.assertEqual(folge['kin_hair'], {'Bangs': 0.5})
+        self.assertEqual(folge['toulouse_hair'], {'Volume': 1.2, 'achse.laenge': 0.3})
+
+    def test_7g_bei_gleichstand_zaehlt_die_zuletzt_bewegte(self):
+        folge = G9haargenerisch.mischung({'sorte.kin_hair': 0.5, 'sorte.toulouse_hair': 0.5,
+                                          'sorte_zuletzt': 'kin_hair'})
+        self.assertEqual(folge[0][0], 'kin_hair')
+        folge = G9haargenerisch.mischung({'sorte.kin_hair': 0.5, 'sorte.toulouse_hair': 0.5})
+        self.assertEqual(folge[0][0], 'toulouse_hair')     # die Grundsorte tritt zurück
+
+    def test_7h_der_eintrag_ist_als_mischbar_markiert(self):
+        """„Kleidung – Generisch" nutzt `sorte.*` als WAHL und traegt das Zeichen nicht —
+        nur hier zieht der Browser die anderen Regler nach."""
+        self.assertTrue(G9haargenerisch.eintrag()['mischbar'])
 
 
 class AchsenTest(unittest.TestCase):

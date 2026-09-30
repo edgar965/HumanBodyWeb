@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'garmentcode_stueckquelle.js')
+MODUL = Jsmodul('charakter', 'garmentcode_stueckquelle.js')
 
 DOM = """
 globalThis.CSS = { escape: s => s };

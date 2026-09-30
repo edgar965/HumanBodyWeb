@@ -71,7 +71,7 @@ export async function loadGarment(garmentId) {
     try {
         const bodyQs = buildBodyFitQueryString();
         let qs = `garment_id=${encodeURIComponent(garmentId)}&${bodyQs}`;
-        const data = await Serverabruf.json(`/api/character/garment/fit/?${qs}`);
+        const data = await Serverabruf.netz(`/api/character/garment/fit/?${qs}`);
         if (data.error) { console.error('Garment fit error:', data.error); return; }
 
         removeGarment(garmentId, true);

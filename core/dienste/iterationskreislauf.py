@@ -84,6 +84,12 @@ class Iterationskreislauf:
         return z, Iterationsrunde(self.lauf, koerper, referenzen, parallel=int(self.o['parallel']))
 
     def ausfuehren(self):
+        # Modus „Begutachtung" (30.09.2026, „2D3D Kleider"): eine Runde je Rezept, dann wartet der Auftrag
+        # (`Begutachtungsrunde`) — die Schleife unten ist der Modus „automatisch".
+        if self.o.get('modus') == Iterationsoptionen.BEGUTACHTUNG:
+            from .begutachtungsrunde import Begutachtungsrunde
+            Begutachtungsrunde(self.lauf).ausfuehren()
+            return
         z, runde_ = self._vorbereiten()
         try:
             self._runden(z, runde_)

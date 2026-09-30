@@ -148,12 +148,12 @@ export class Genesis9eigenschaften {
              ...(plan.haut || []).map(h => ({ id: h.id, name: `${h.name} (${h.geschlecht})` }))],
             inst.haut || '',
             wert => Genesis9lauf.planen(inst, () => inst.hautSetzen(wert),
-                                        () => Genesis9eigenschaften._kopf(inst))));
+                                        () => Genesis9eigenschaften._kopf(inst), 'haut')));
         behaelter.appendChild(Genesis9eigenschaften._wahl('Augen',
             (plan.augen || []).map(a => ({ id: a.id, name: a.name })),
             inst.augen || '01',
             wert => Genesis9lauf.planen(inst, () => inst.augenSetzen(wert),
-                                        () => Genesis9eigenschaften._kopf(inst))));
+                                        () => Genesis9eigenschaften._kopf(inst), 'augen')));
         Genesis9eigenschaften._brauen(inst, plan, behaelter);
         // Wimpern, Nagellack und Schminke (18.09.2026): je Kategorie ein Preset
         // aus den Charakterordnern und dem Daz-Makeup-System (`Genesis9/schminke.py`).
@@ -163,7 +163,7 @@ export class Genesis9eigenschaften {
                 inst.praesets?.[kategorie.kategorie] || '',
                 wert => Genesis9lauf.planen(inst,
                     () => inst.praesetSetzen(kategorie.kategorie, wert),
-                    () => Genesis9eigenschaften._kopf(inst))));
+                    () => Genesis9eigenschaften._kopf(inst), `praeset:${kategorie.kategorie}`)));
         }
     }
 
@@ -181,7 +181,7 @@ export class Genesis9eigenschaften {
             [{ id: '', name: 'Vorgabe (Brown)' }, ...farben(artVon(inst.brauenstil))],
             inst.brauen || '',
             wert => Genesis9lauf.planen(inst, () => inst.brauenSetzen(wert),
-                                        () => Genesis9eigenschaften._kopf(inst)));
+                                        () => Genesis9eigenschaften._kopf(inst), 'brauen'));
         let farbzeile = farbwahl();
         behaelter.appendChild(Genesis9eigenschaften._wahl('Brauenstil',
             stile, inst.brauenstil || stile[0].id,
@@ -193,7 +193,7 @@ export class Genesis9eigenschaften {
                 farbzeile.replaceWith(neu);
                 farbzeile = neu;
                 Genesis9lauf.planen(inst, () => inst.brauenstilSetzen(wert, farbe),
-                                    () => Genesis9eigenschaften._kopf(inst));
+                                    () => Genesis9eigenschaften._kopf(inst), 'brauenstil');
             }));
         behaelter.appendChild(farbzeile);
     }
@@ -277,7 +277,8 @@ export class Genesis9eigenschaften {
             anzeige.textContent = Genesis9eigenschaften.text(neu);
             Genesis9lauf.planen(inst, () => inst.reglerSetzen(regler.name, neu),
                                 () => { Genesis9eigenschaften._kopf(inst);
-                                        Genesis9eigenschaften.nachziehen(inst, Genesis9eigenschaften._plan); });
+                                        Genesis9eigenschaften.nachziehen(inst, Genesis9eigenschaften._plan); },
+                                `regler:${regler.name}`);
         });
         return zeile;
     }

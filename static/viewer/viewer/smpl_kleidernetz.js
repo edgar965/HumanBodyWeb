@@ -42,7 +42,7 @@ export class Smplkleidernetz {
     static async laden(kennung) {
         let daten;
         try {
-            daten = await Serverabruf.json('/api/smpl/garment/mesh/'
+            daten = await Serverabruf.netz('/api/smpl/garment/mesh/'
                 + `?garment_id=${encodeURIComponent(kennung)}`);
         } catch (fehler) {
             Protokoll.fehler('smpl', 'Kleidungsstück nicht ladbar', fehler);
@@ -116,7 +116,7 @@ export class Smplkleidernetz {
         let daten;
         try {
             ensureSkinned();
-            daten = await Serverabruf.json(
+            daten = await Serverabruf.netz(
                 `/api/smpl/garment/fit/?${Smplkleidernetz._anpassfrage(kennung)}`);
         } catch (fehler) {
             Protokoll.fehler('smpl', 'Anpassen fehlgeschlagen', fehler);

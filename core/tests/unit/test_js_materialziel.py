@@ -26,7 +26,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'materialziel.js')
+MODUL = Jsmodul('charakter', 'materialziel.js')
 
 SKRIPT = """
 const { Materialziel: M } = await import(MODUL);

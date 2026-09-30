@@ -7,7 +7,9 @@ import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Genesis9aufbau } from '../../gemeinsam/genesis9aufbau.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Umfaerbung } from '../../gemeinsam/umfaerbung.js';
+import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
 import { Stoffwerte } from '../../gemeinsam/stoffwerte.js';
+import { Hautverdeckung } from '../../gemeinsam/hautverdeckung.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 
 /**
@@ -69,7 +71,7 @@ export class Dazkleidung {
     static async anziehen(inst, kennung, werte = null) {
         inst.dazKleidung = inst.dazKleidung || {};
         inst.dazKleidung[kennung] = { ...(werte || {}) };
-        const daten = await Serverabruf.senden(
+        const daten = await Serverabruf.netzSenden(
             Genesis9aufbau.adresse(`${Dazkleidung.ADRESSE}${encodeURIComponent(kennung)}/netz/`, null), {
                 ...Dazkleidung.figur(inst), variante: werte?.variante || '',
                 stil: Genesis9lagen.stilliste(werte), regler_stueck: werte?.regler || {},
@@ -82,13 +84,16 @@ export class Dazkleidung {
             const netz = Genesis9netz.bauen(teil, `${Dazkleidung.PRAEFIX}${kennung}_${nummer}`);
             netz.userData.hautgewichte = teil.hautgewichte || null;
             netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length, 'Daz');
+            netz.userData.art = daten.art || null;          // kleidung | haar — wie `Genesis9kleidung`
             inst.clothMeshes[`${Dazkleidung.PRAEFIX}${kennung}/${nummer}`] =
                 Dazkleidung.binden(inst, netz);
         });
         Umfaerbung.stueck(inst, kennung, inst.dazKleidung[kennung]);   // eigene Farbe (24.09.2026)
+        Kleidfarbmischung.anwenden(inst, kennung, inst.dazKleidung[kennung].regler);   // Textur der Mischung (30.09.2026)
         Stoffwerte.stueck(inst, kennung, inst.dazKleidung[kennung]);   // Rauheit, Metall, Gewebe
         Protokoll.debug('Dazkleidung', `${kennung} auf ${inst.id}: ${daten.teile?.length || 0} Teile`);
         if (daten.absatz) await Dazkleidung.absatz(inst, daten.absatz);
+        Dazkleidung.hautNachziehen(inst);
         return daten.teile?.length || 0;
     }
 
@@ -96,6 +101,20 @@ export class Dazkleidung {
         Dazkleidung._weg(inst, kennung);
         if (inst.dazKleidung) delete inst.dazKleidung[kennung];
         if (inst.absatz?.quelle === `schuh:${kennung}`) Dazkleidung.absatz(inst, null);
+        Dazkleidung.hautNachziehen(inst);
+    }
+
+    /**
+     * Die Haut unter dem Stück nicht zeichnen (Edgar, 30.09.2026, Bild: GC T-Shirt auf einer
+     * HumanBody-Figur, „die Brustwarzen schimmern durch"). Auf Genesis 9 meldet jedes
+     * Daz-Stück sich seit dem 20.09.2026 (`Genesis9kleidung.melden`) und die Haut darunter
+     * fällt weg; dieser Weg meldete nie — die Hautverdeckung rechnete hier nur, wenn
+     * zufällig ein GarmentCode-Stück oder ein neues Skelett sie anstieß. Direkt und nicht
+     * über das `Stueckereignis`: Auf das hört auch `GarmentcodeAbsatz`, und das setzte ohne
+     * GarmentCode-Schuh den Absatz zurück — den einer Daz-Sandale eingeschlossen.
+     */
+    static hautNachziehen(inst) {
+        Hautverdeckung.planen(inst);
     }
 
     /**
@@ -128,11 +147,14 @@ export class Dazkleidung {
      * Die Gewichte nennen die Knochen wie Blender (`DEF-breast.L`); die Three-Knochen
      * des Rigify-Skeletts heißen `DEF-breast_L`, nur `boneByName` kennt die Punkte.
      * `Eigenhaut.spaltenNummern` sucht nach `bone.name` — ohne Umschreiben fand es
-     * 171 von 176 Knochen nicht (gemessen 19.09.2026).
+     * 171 von 176 Knochen nicht (gemessen 19.09.2026). Im BVH Studio sind auch die
+     * SCHLÜSSEL schon entschärft (`Clipanimation.namenEntschaerfen`: Punkt → Unterstrich,
+     * 30.09.2026) — dort zählt die zweite Schreibweise.
      */
     static mitThreeNamen(haut, skelett) {
         const nach = skelett.boneByName || {};
-        return { ...haut, knochen: (haut.knochen || []).map(n => nach[n]?.name ?? n) };
+        const knochen = n => (nach[n] || nach[n.replace(/\./g, '_')])?.name ?? n;
+        return { ...haut, knochen: (haut.knochen || []).map(knochen) };
     }
 
     /** Nach dem Skelettaufbau (`convertInstToSkinned`): starre Daz-Stücke häuten. */

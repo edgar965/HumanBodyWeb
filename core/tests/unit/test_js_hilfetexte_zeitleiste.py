@@ -36,7 +36,10 @@ BELEGE = {
     'light': [
         ('Lichteigenschaft', 'menue_licht.js', "'Lichteigenschaft (einzel)'"),
         ('<b>Alt+Klick</b>', 'lichtsetzen.js', 'e.altKey'),
-        ('<b>K</b>', 'playback.js', 'fn.addLightKeyframe(state.selectedTrackIdx)'),
+        # Licht-Keyframe liegt seit 24.09.2026 auf L (K ist die Kamera), global
+        # über `Schluesseltasten` — der Text nannte bis 30.09. noch K.
+        ('<b>L</b>', 'playback.js', "e.code === 'KeyL'"),
+        ('<b>L</b>', 'schluesseltasten.js', 'fn.addLightKeyframe(index)'),
     ],
     'audio': [('Audio-Datei wählen', 'zeitleiste_spurmenue.js', "'Audio-Datei wählen...'")],
     'scene_object': [

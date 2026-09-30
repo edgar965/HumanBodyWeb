@@ -106,16 +106,26 @@ class Genesishaarrender:
 
     def bild(self, punkte, dreiecke, farbe, winkel, pfad):
         """Figur + Frisur aus `winkel` Grad, freigestellt nach `pfad` (PNG mit Alpha)."""
-        import pyrender
-        from PIL import Image
-
         teile = []
         if self._koerper is not None:
             teile.append((self._koerper[0], self._koerper[1], self.HAUT))
         if punkte is not None and dreiecke is not None:
             teile.append((punkte, dreiecke, self._hex(farbe)))
+        return self.bild_teile(teile, winkel, pfad)
+
+    def bild_teile(self, teile, winkel, pfad, groesse=None):
+        """Beliebig viele Teile `[(punkte, dreiecke, farbe rgb 0…1)]` — „2D3D Kleider" (Körper, Kleider, Haar)
+        aus `winkel` Grad, freigestellt nach `pfad`. `groesse` (Breite, Höhe) statt BREITE × HOEHE: ein kleines
+        Bild für die Iterationen, die Note rechnet ohnehin auf 128 × 192."""
+        import pyrender
+        from PIL import Image
+
+        teile = [(p, d, tuple(float(c) for c in np.asarray(f)[:3])) for p, d, f in teile if p is not None]
         if not teile:
             raise ValueError('Nichts zu rendern — weder Körper noch Frisur')
+        if groesse and tuple(groesse) != (self.BREITE, self.HOEHE):
+            self.schliessen()
+            self.BREITE, self.HOEHE = int(groesse[0]), int(groesse[1])
         alle = np.vstack([t[0] for t in teile])
         mitte = np.array([0.0, 0.5 * (alle[:, 1].min() + alle[:, 1].max()), 0.0])
         hoehe = float(alle[:, 1].max() - alle[:, 1].min()) or 1.0

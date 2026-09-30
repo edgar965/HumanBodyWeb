@@ -21,6 +21,7 @@ from Genesis9.pfade import G9pfade
 from Genesis9.stoff import G9stoff
 
 from core.daten.netzantwort import Netzantwort
+from core.daten.netzausgabe import Netzausgabe
 
 from .g9figur import FEHLT
 
@@ -50,7 +51,7 @@ class G9stoffapi:
         passform = folger.passformhaut(G9stoffapi.passform(request))
         stufe = passform.netzstufe(stufen) if passform is not None else folger.netzstufe(stufen)
         plan = G9stoff.bauplan(folger, stufe, passform)
-        return JsonResponse(
+        return Netzausgabe.antwort(
             {
                 'kennung': kennung,
                 'nummer': int(nummer),
@@ -63,7 +64,7 @@ class G9stoffapi:
                 'indices': Netzantwort.feld(plan['indices'], 'indices', typ='int32'),
                 'data': Netzantwort.feld(plan['data'], 'data'),
                 'hautgewichte': Netzantwort.hautgewichte(plan['haut']),
-            }
+            }, request
         )
 
     @staticmethod

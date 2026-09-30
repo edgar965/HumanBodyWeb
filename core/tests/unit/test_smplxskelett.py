@@ -102,7 +102,7 @@ class SmplxskelettTest(SimpleTestCase):
         self.assertIn("smpl: { titel: 'SMPL-X'", kataloge)
         # Der Reiter der Szene heißt, wie `Figurkataloge` ihn nennt: Die Szene
         # baut den Dialog seit dem 17.09.2026 über den gemeinsamen `Figurwahldialog`.
-        dialog = SmplxskelettTest._text(STATIK / 'scene' / 'charakterdialog.js')
+        dialog = SmplxskelettTest._text(STATIK / 'charakter' / 'charakterdialog.js')
         self.assertIn('new Figurwahldialog(', dialog)
         figur = SmplxskelettTest._text(settings.BASE_DIR / 'core' / 'dienste' / 'smplfigur.py')
         self.assertIn("'smplx_female'", figur)

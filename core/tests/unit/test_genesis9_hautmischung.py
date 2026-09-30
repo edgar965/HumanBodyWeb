@@ -51,17 +51,23 @@ class HautmischungTest(SimpleTestCase):
     def test_2_feld_hautmischung_in_allen_schichten(self):
         modell = quelltext('gemeinsam', 'genesis9modell.js')
         self.assertIn('this.hautmischung = { ...(daten.hautmischung || {}) };', modell)
-        self.assertIn('eintrag.hautmischung', modell, 'gespeichertes Modell: Vorgabe uebernehmen')
+        # Die Vorgabe eines gespeicherten Modells übernimmt seit dem 28.09.2026 `Genesis9vorgabe`.
+        self.assertIn('Genesis9vorgabe.uebernehmen(this,', modell)
+        self.assertIn('eintrag.hautmischung', quelltext('gemeinsam', 'genesis9vorgabe.js'),
+                      'gespeichertes Modell: Vorgabe uebernehmen')
         self.assertIn('Genesis9hautmischung.anwenden(this)', modell, 'nach jedem Koerperbau neu einhaengen')
-        figur = quelltext('scene', 'genesis9', 'genesis9figur.js')
+        figur = quelltext('charakter', 'genesis9', 'genesis9figur.js')
         self.assertIn('hautmischung: { ...this.hautmischung },', figur, 'Undo und Speichern')
         server = (Path(settings.BASE_DIR) / 'core' / 'api' / 'g9figur.py').read_text(encoding='utf-8')
-        self.assertEqual(server.count("'hautmischung'"), 2, 'gespeicherte Liste UND Eintrag')
-        ui = quelltext('scene', 'genesis9', 'genesis9texturmischung.js')
+        # Als SCHLÜSSEL gezählt — jede Zeile nennt den Namen zweimal (`'hautmischung': x.get('hautmischung')`).
+        self.assertEqual(server.count("'hautmischung':"), 2, 'gespeicherte Liste UND Eintrag')
+        ui = quelltext('charakter', 'genesis9', 'genesis9texturmischung.js')
         self.assertIn('inst.hautmischungSetzen(satz.id, neu)', ui)
         vorlage = (Path(settings.BASE_DIR) / 'templates' / '_genesis9_eigenschaften.html').read_text(encoding='utf-8')
         self.assertIn('id="prop-genesis9-textur"', vorlage)
-        self.assertTrue(vorlage.rstrip().endswith('</details>\n</div>'), 'der Bereich steht ganz unten')
+        # Ganz unten: nach dem Textur-Bereich beginnt kein weiterer (die Vorlage schließt
+        # zwei `</div>`, der alte Vergleich auf das Dateiende traf das nie).
+        self.assertNotIn('<details', vorlage.split('id="prop-genesis9-textur"')[1], 'der Bereich steht ganz unten')
 
     def test_3_uniforms_bleiben_und_haengen_immer(self):
         haut = quelltext('gemeinsam', 'genesis9haut.js')

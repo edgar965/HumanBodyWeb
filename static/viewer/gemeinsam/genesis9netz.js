@@ -3,6 +3,8 @@ import { Netzgeometrie } from './netzgeometrie.js';
 import { Genesis9strang } from './genesis9strang.js';
 import { Genesis9haut } from './genesis9haut.js';
 import { Genesis9texturen } from './genesis9texturen.js';
+import { Kleidfarbmischung } from './kleidfarbmischung.js';
+import { Stoffmischung } from './stoffmischung.js';
 import { base64ToFloat32 } from './kodierung.js';
 
 /**
@@ -63,6 +65,8 @@ export class Genesis9netz {
         const material = daten.art === 'kappe'
             ? Genesis9strang.kappe(geo, daten.gruppen || [])
             : Genesis9netz.materialien(geo, daten.gruppen || [], daten.schluessel === 'brauen');
+        // „Kleidung – Generisch": die Farbe der Gegenstücke in der Überlappung (`Kleidfarbmischung`, 30.09.2026).
+        if (daten.fremd) Kleidfarbmischung.anlegen(geo, material, daten.fremd);
         // Eigene Stücke (GarmentCode gebacken, MakeHuman, OBJ) sind eine Stofffläche:
         // beide Seiten zeichnen, wie die live gebauten Stücke (`stoffabruf.js`).
         if (daten.zweiseitig) {
@@ -78,9 +82,13 @@ export class Genesis9netz {
         if (daten.stoff) {
             // `hautgewichte` nur auf HumanBody: die Käfighaut mit Rigify-Namen (der
             // Bauplan nennt Daz-Knochen) - `genesis9stoffschwung.js` nimmt sie zuerst.
+            // `stueck`/`nummer`/`misch`: „Kleidung – Generisch" (`G9kleidmischbau`) — aus welchem Stück des Eintrags
+            // das Teil stammt und wie das gemischte Netz aus dem schwingenden entsteht (`Stoffmischung`).
             netz.userData.stoff = { frei: base64ToFloat32(daten.stoff.frei),
                                     kaefig: base64ToFloat32(daten.stoff.kaefig), stufen: daten.stufen || 0,
-                                    hautgewichte: daten.stoff.hautgewichte || null };
+                                    hautgewichte: daten.stoff.hautgewichte || null,
+                                    stueck: daten.stoff.stueck || null, nummer: daten.stoff.nummer ?? null,
+                                    misch: Stoffmischung.lesen(daten.stoff.misch) };
         }
         return netz;
     }

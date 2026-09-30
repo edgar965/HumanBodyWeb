@@ -26,6 +26,7 @@ from MakeHuman.proxy_anpassung import MhProxyAnpassung, MhProxyFehler
 
 from ..daten.anpassungsregler import Anpassungsregler
 from ..daten.netzantwort import Netzantwort
+from ..daten.netzausgabe import Netzausgabe
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.kleidungswerkzeuge import Kleidungswerkzeuge
 
@@ -62,9 +63,9 @@ class Mhproxy:
             punkte = anpassung.anpassen(koerper.vertices, regler)
         except MhProxyFehler as fehler:
             return JsonResponse({'error': str(fehler)}, status=fehler.status)
-        return JsonResponse(
-            MhMaterial(anpassung.verzeichnis).in_antwort(Mhproxy._netzantwort(anpassung, punkte, koerper))
-        )
+        return Netzausgabe.antwort(
+            MhMaterial(anpassung.verzeichnis).in_antwort(Mhproxy._netzantwort(anpassung, punkte, koerper)),
+            request)
 
     @staticmethod
     def _netzantwort(anpassung, punkte, koerper):
@@ -92,9 +93,9 @@ class Mhproxy:
         if not os.path.isfile(pfad):
             return JsonResponse({'error': 'T-pose vertices not found'}, status=404)
         punkte = np.load(pfad).astype(np.float32)
-        return JsonResponse(
-            {'vertices': Netzantwort.feld(punkte, 'vertices'), 'vertex_count': int(len(punkte))}
-        )
+        return Netzausgabe.antwort(
+            {'vertices': Netzantwort.feld(punkte, 'vertices'), 'vertex_count': int(len(punkte))},
+            request)
 
     @staticmethod
     @csrf_exempt
@@ -134,7 +135,7 @@ class Mhproxy:
         ergebnis = Koerperabstand.gerichtet(
             punkte, schiebekoerper, mindestabstand=weg_mm / 1000.0, normalen=normalen
         )
-        return JsonResponse({'vertices': Netzantwort.feld(ergebnis, 'vertices')})
+        return Netzausgabe.antwort({'vertices': Netzantwort.feld(ergebnis, 'vertices')}, request)
 
     @staticmethod
     def _punkte_aus_rumpf(rumpf):

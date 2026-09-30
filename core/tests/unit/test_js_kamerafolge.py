@@ -18,7 +18,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'kamerafolge.js')
+MODUL = Jsmodul('charakter', 'kamerafolge.js')
 
 SKRIPT = """
 const { Kamerafolge } = await import(MODUL);

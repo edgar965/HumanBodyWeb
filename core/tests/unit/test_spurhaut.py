@@ -30,7 +30,7 @@ from ..jsmodul import Jsmodul
 
 STUDIO = Jsmodul.VIEWER / 'studio'
 GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
-SZENE = Jsmodul.VIEWER / 'scene'
+SZENE = Jsmodul.VIEWER / 'charakter'
 
 
 class SpurhautTest(SimpleTestCase):

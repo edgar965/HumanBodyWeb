@@ -48,7 +48,7 @@ class KlickAufEinStueck(SimpleTestCase):
     databases = set()
 
     def test_kein_fester_reiter_mehr(self):
-        quelle = _js('scene', 'teilnetz_auswahl.js')
+        quelle = _js('charakter', 'teilnetz_auswahl.js')
         self.assertNotIn(
             "switchTab('eigenschaften')",
             quelle,
@@ -58,19 +58,22 @@ class KlickAufEinStueck(SimpleTestCase):
     def test_die_entscheidung_kommt_aus_der_zuordnung(self):
         # Seit 20.09.2026 (parallele Sitzung, `Stueckmarkierung`) trifft
         # `stueckmarkierung.js` die Entscheidung; `teilnetz_auswahl.js` ruft sie.
-        auswahl = _js('scene', 'teilnetz_auswahl.js')
-        markierung = _js('scene', 'stueckmarkierung.js')
+        auswahl = _js('charakter', 'teilnetz_auswahl.js')
+        markierung = _js('charakter', 'stueckmarkierung.js')
         self.assertIn("import { Stueckmarkierung } from './stueckmarkierung.js';", auswahl)
         self.assertIn('Reiterzuordnung', markierung)
         self.assertIn('Reiterzuordnung.fuer(', markierung)
 
     def test_die_vorlage_wird_mitgesetzt(self):
         """Ein Reiter mit den Reglern eines ANDEREN Stuecks hilft nicht."""
-        self.assertIn('garmentcodeVorlageZeigen', _js('scene', 'stueckmarkierung.js'))
-        self.assertIn('fn.garmentcodeVorlageZeigen', _js('scene', 'garmentcode.js'))
+        # Seit 24.09.2026 über die Stückquelle: sie setzt die Vorlage und zeigt dazu
+        # den Vorbild-Knopf oder das Form-Häkchen des Stücks.
+        self.assertIn('fn.garmentcodeQuelleZeigen?.(kennung,', _js('charakter', 'stueckmarkierung.js'))
+        self.assertIn('fn.garmentcodeVorlageZeigen?.(vorlage)', _js('charakter', 'garmentcode_stueckquelle.js'))
+        self.assertIn('fn.garmentcodeVorlageZeigen', _js('charakter', 'garmentcode.js'))
 
     @skipUnless(
-        _quelltext('scene', 'garmentdeutung.js'),
+        _quelltext('charakter', 'garmentdeutung.js'),
         'garmentdeutung.js liegt noch nicht im Baum (parallele Sitzung, 09.09.2026).',
     )
     def test_die_deutung_setzt_die_auswahl_STILL(self):
@@ -86,7 +89,7 @@ class KlickAufEinStueck(SimpleTestCase):
         Einstellung des Nutzers. Sie laedt die Regler gleich darunter
         selbst; ein Ereignis braucht sie nicht.
         """
-        quelle = _js('scene', 'garmentdeutung.js')
+        quelle = _js('charakter', 'garmentdeutung.js')
         self.assertIn('auswahl.value = deutung.vorlage', quelle)
         self.assertNotIn(
             'garmentcodeVorlageZeigen', quelle, 'Die Deutung darf die Vorlage nicht merken lassen.'
@@ -98,7 +101,7 @@ class KlickAufEinStueck(SimpleTestCase):
         )
 
     def test_vorlage_zeigen_loest_das_ereignis_aus(self):
-        quelle = _js('scene', 'garmentcode.js')
+        quelle = _js('charakter', 'garmentcode.js')
         self.assertIn("dispatchEvent(new Event('change'", quelle)
 
 
@@ -140,7 +143,7 @@ class Fristen(SimpleTestCase):
 
     def test_die_bauanfragen_haben_eine_frist(self):
         for datei, adresse in Fristen.LANGE_ANFRAGEN.items():
-            quelle = _js('scene', datei)
+            quelle = _js('charakter', datei)
             # `Antwortnachholen.formular` ist `Fristabruf.formular` plus das
             # Nachholen einer verlorenen Antwort (20.09.2026).
             self.assertIn('Antwortnachholen.formular(', quelle, datei)

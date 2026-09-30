@@ -19,6 +19,7 @@ from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.http import require_GET
 
 from ..daten.netzantwort import Netzantwort
+from ..daten.netzausgabe import Netzausgabe
 from ..dienste.smplfigur import Smplfiguren
 
 logger = logging.getLogger('core')
@@ -71,7 +72,7 @@ class Smplfigur:
             uv_felder = Smplfiguren.uv_felder(dreiecke)
             if uv_felder:
                 antwort.update(uv_felder)
-        return JsonResponse(antwort)
+        return Netzausgabe.antwort(antwort, request)
 
     @staticmethod
     @require_GET

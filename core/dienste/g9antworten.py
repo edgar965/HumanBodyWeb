@@ -19,11 +19,16 @@ Deshalb zwei Dinge:
    Seiten-Refresh sie noch hat: der Refresh holt erst den Kaefig (`?stufen=0`),
    dann die Stufe des Browsers — beides liegt dann. Geschrieben wird im
    Hintergrund, die Anfrage wartet nicht auf die Platte.
-2. Nach einer Anfrage in der Ansichtsstufe rechnet ein Hintergrundfaden
+2. Nach einer Anfrage in der Ansichtsstufe rechnete ein Hintergrundfaden
    dieselbe Stellung VORAUS in der Stufe, die Strg+Alt+H setzt (Keks 3 =
    Daz' Renderstufe 2, mit 8K-Details) — sobald der Server zwei Sekunden
    lang keine Netzanfrage mehr bekommen hat, jeweils den juengsten Stand je
    Figur und Stueck. Drueckt Edgar dann die Taste, liegt die Antwort.
+   SEIT 30.09.2026 AUS (`VORAUSRECHNEN`), Edgar: „per default lade die
+   modelle nicht in der hohen auflösung, daher sind die tabs so lange".
+   Gemessen im Log: 1,2–15,5 s je Stueck, 19:44:56–19:45:22 rund 26 s fuer
+   die Figuren EINES Studio-Projekts, waehrend dessen eigene Ladeanfragen
+   warteten. Die hohe Stufe rechnet jetzt erst, wer sie mit Strg+Alt+H holt.
 
 DIE FASSUNG IM SCHLUESSEL (`~/.claude/rules/artefakte-benennen.md`)
 ==================================================================
@@ -41,9 +46,10 @@ import threading
 import time
 from pathlib import Path
 
-from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse
 
+from ..daten.netzausgabe import Netzausgabe
+from ..daten.netzpaket import Netzpaket
 from .g9antwortvorrat import G9antwortvorrat
 
 __all__ = ['G9antworten']
@@ -56,6 +62,8 @@ class G9antworten(G9antwortvorrat):
 
     #: Der Keks-Wert von Strg+Alt+H (`Netzstufe.HOCH` im Browser).
     VORAUS = 3
+    #: Die Strg+Alt+H-Stufe im Hintergrund vorausrechnen? Aus seit 30.09.2026 (Kopf, Punkt 2).
+    VORAUSRECHNEN = False
     #: So lange muss der Server ruhig sein, bevor vorausgerechnet wird.
     RUHE_S = 2.0
     #: Laenger wartet niemand auf eine laufende Rechnung desselben Schluessels.
@@ -67,9 +75,25 @@ class G9antworten(G9antwortvorrat):
                'HumanBodyWeb/core/dienste/g9lagenanfrage.py',
                # Die Stueckrechnung selbst und die GarmentCode-Stuecke darin (24.09.2026).
                'HumanBodyWeb/core/dienste/g9stueckteile.py',
+               # Die Haarmischung von „Haar – Generisch" (30.09.2026).
+               'HumanBodyWeb/core/dienste/g9haarmischbau.py',
+               # Die Kleidungsmischung von „Kleidung – Generisch“ (30.09.2026).
+               'HumanBodyWeb/core/dienste/g9kleidmischbau.py',
                'HumanBodyWeb/core/dienste/gcrigpfad.py',
                'HumanBodyWeb/core/dienste/g9aufhumanbody.py',
                'HumanBodyWeb/core/dienste/g9hbknochen.py',
+               # Der Rest des HumanBody-Wegs (`G9kleidhumanbody`) — fehlte bis 30.09.2026;
+               # g9hbstrang ist neu (Stranghaar auf HumanBody, Haarmischung).
+               'HumanBodyWeb/core/dienste/g9hbfusspose.py',
+               'HumanBodyWeb/core/dienste/g9hbsitz.py',
+               'HumanBodyWeb/core/dienste/g9hbstoffbruecke.py',
+               'HumanBodyWeb/core/dienste/g9hbstoffkorrektur.py',
+               'HumanBodyWeb/core/dienste/g9hbstrang.py',
+               'HumanBodyWeb/core/dienste/g9hbteilhaut.py',
+               # Die Stoffkorrektur von GarmentCode, die `g9hbstoffkorrektur` aufruft.
+               'Assets/GarmentCode/stoffkorrektur.py',
+               'Assets/GarmentCode/flaechendurchstich.py',
+               'Assets/GarmentCode/punktdurchstich.py',
                'HumanBodyWeb/core/dienste/g9garmentfigur.py',
                'HumanBodyWeb/core/dienste/hbtraeger.py')
 
@@ -87,25 +111,35 @@ class G9antworten(G9antwortvorrat):
     # ------------------------------------------------------------ liefern
 
     @classmethod
-    def liefern(cls, art, name, rumpf, bauen, eintrag=None):
+    def liefern(cls, art, name, rumpf, bauen, eintrag=None, request=None):
         u"""Die Antwort zu `bauen()` — aus dem Vorrat, sonst gerechnet und
         gemerkt. `bauen` liefert das Antwort-Dict oder eine fertige
-        `HttpResponse` (Fehler), die unveraendert durchgeht."""
+        `HttpResponse` (Fehler), die unveraendert durchgeht.
+
+        `request` entscheidet nur ueber das FORMAT (Binaerpaket oder JSON,
+        `Netzausgabe`) — und weil der Vorrat die fertigen Bytes ablegt, gehoert
+        es in den Schluessel."""
         from .netzstufenwahl import Netzstufenwahl
         gewaehlt = Netzstufenwahl.gewaehlt()
         cls._letzte_anfrage = time.time()
-        schluessel = cls.schluessel(art, name, rumpf, gewaehlt, eintrag)
+        binaer = Netzausgabe.will_binaer(request)
+        schluessel = cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer)
         daten = cls.holen(schluessel)
         if daten is None:
-            daten = cls.rechnen(schluessel, bauen, platte=cls.platte_an())
+            daten = cls.rechnen(schluessel, bauen, platte=cls.platte_an(),
+                                binaer=binaer)
             if isinstance(daten, HttpResponse):
                 return daten
         if gewaehlt != cls.VORAUS:
-            cls.vorausrechnen(art, name, rumpf, bauen, eintrag)
-        return HttpResponse(daten, content_type='application/json')
+            cls.vorausrechnen(art, name, rumpf, bauen, eintrag, binaer)
+        return HttpResponse(daten, content_type=cls.inhaltstyp(binaer))
+
+    @staticmethod
+    def inhaltstyp(binaer):
+        return Netzpaket.INHALTSTYP if binaer else 'application/json'
 
     @classmethod
-    def rechnen(cls, schluessel, bauen, platte):
+    def rechnen(cls, schluessel, bauen, platte, binaer=False):
         u"""`bauen()` einmal je Schluessel: laeuft es schon, warten und das
         Ergebnis nehmen. Liefert Bytes oder die Fehlerantwort von `bauen`."""
         with cls._schloss:
@@ -125,7 +159,7 @@ class G9antworten(G9antwortvorrat):
             aus = bauen()
             if isinstance(aus, HttpResponse):
                 return aus
-            daten = cls.kodieren(aus)
+            daten = cls.kodieren(aus, binaer)
             cls.merken(schluessel, daten, platte=platte)
             return daten
         finally:
@@ -134,16 +168,16 @@ class G9antworten(G9antwortvorrat):
             laeuft.set()
 
     @staticmethod
-    def kodieren(aus):
-        return json.dumps(aus, cls=DjangoJSONEncoder,
-                          separators=(',', ':')).encode('utf-8')
+    def kodieren(aus, binaer=False):
+        u"""Das Antwort-Dict als Bytes — binaer oder JSON (`Netzausgabe`)."""
+        return Netzausgabe.kodieren(aus, binaer)[0]
 
     # --------------------------------------------------------- Schluessel
 
     @classmethod
-    def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None):
+    def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None, binaer=False):
         text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung(),
-                           cls._eigenstand(rumpf, eintrag)],
+                           cls._eigenstand(rumpf, eintrag), binaer],
                           sort_keys=True, default=str)
         return '%s_%s_%s' % (art, cls._sicher(name),
                              hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])
@@ -209,13 +243,17 @@ class G9antworten(G9antwortvorrat):
         return cls.voraus_an
 
     @classmethod
-    def vorausrechnen(cls, art, name, rumpf, bauen, eintrag=None):
+    def vorausrechnen(cls, art, name, rumpf, bauen, eintrag=None, binaer=False):
         u"""Die Stellung in der Strg+Alt+H-Stufe vormerken; der juengste
-        Auftrag je Figur/Stueck gewinnt."""
-        if not cls.platte_an():
+        Auftrag je Figur/Stueck gewinnt.
+
+        `binaer` reist mit: Vorausgerechnet wird das Format, das der Browser
+        gerade holt — sonst liegt die Antwort in der Fassung bereit, die
+        niemand anfragt."""
+        if not cls.VORAUSRECHNEN or not cls.platte_an():
             return
         with cls._schloss:
-            cls._auftraege[(art, name)] = (rumpf, bauen, eintrag)
+            cls._auftraege[(art, name)] = (rumpf, bauen, eintrag, binaer)
             if cls._faden is None or not cls._faden.is_alive():
                 cls._faden = threading.Thread(target=cls._laufen, daemon=True,
                                               name='g9-voraus')
@@ -231,9 +269,9 @@ class G9antworten(G9antwortvorrat):
                 if not cls._auftraege:
                     return
                 (art, name), auftrag = next(iter(cls._auftraege.items()))
-                rumpf, bauen, eintrag = auftrag
+                rumpf, bauen, eintrag, binaer = auftrag
             try:
-                cls._rechnen(art, name, rumpf, bauen, eintrag)
+                cls._rechnen(art, name, rumpf, bauen, eintrag, binaer)
             except Exception as fehler:  # noqa: BLE001 — nur Vorrat
                 logger.warning('Genesis 9: Vorausrechnen %s %s: %s', art, name, fehler)
             with cls._schloss:
@@ -242,9 +280,9 @@ class G9antworten(G9antwortvorrat):
                     cls._auftraege.pop((art, name), None)
 
     @classmethod
-    def _rechnen(cls, art, name, rumpf, bauen, eintrag):
+    def _rechnen(cls, art, name, rumpf, bauen, eintrag, binaer=False):
         from .netzstufenwahl import Netzstufenwahl
-        schluessel = cls.schluessel(art, name, rumpf, cls.VORAUS, eintrag)
+        schluessel = cls.schluessel(art, name, rumpf, cls.VORAUS, eintrag, binaer)
         if cls.holen(schluessel) is not None:
             return
         kontext = contextvars.copy_context()
@@ -254,7 +292,8 @@ class G9antworten(G9antwortvorrat):
             return bauen()
 
         beginn = time.time()
-        aus = kontext.run(lambda: cls.rechnen(schluessel, im_kontext, platte=True))
+        aus = kontext.run(lambda: cls.rechnen(schluessel, im_kontext, platte=True,
+                                              binaer=binaer))
         if isinstance(aus, HttpResponse):
             return
         logger.info('Genesis 9: %s %s fuer Strg+Alt+H vorausgerechnet (%.1f s)',

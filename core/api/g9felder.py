@@ -31,6 +31,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
 from core.daten.netzantwort import Netzantwort
+from core.daten.netzausgabe import Netzausgabe
 from .g9figur import FEHLT
 from Genesis9.drehknochen import G9drehknochen
 from Genesis9.gelenkkorrekturen import G9gelenkkorrekturen
@@ -56,10 +57,10 @@ class G9felderapi:
         stufen = G9felderapi.stufen(request)
         graph = G9gelenkkorrekturen.graph()
         felder = G9reglerfelder.holen('gelenke', graph['morphe'], stufen)
-        return JsonResponse({
+        return Netzausgabe.antwort({
             'stufen': stufen, 'graph': graph, 'achsen': G9felderapi.achsen(),
             'felder': G9felderapi.kodiert(felder),
-        })
+        }, request)
 
     @staticmethod
     @require_GET
@@ -68,10 +69,10 @@ class G9felderapi:
             return JsonResponse({'fehler': FEHLT}, status=404)
         stufen = G9felderapi.stufen(request)
         felder = G9visemes.felder(stufen)
-        return JsonResponse({
+        return Netzausgabe.antwort({
             'stufen': stufen, 'visemes': G9visemes.liste(),
             'achsen': G9felderapi.achsen(), 'felder': G9felderapi.kodiert(felder),
-        })
+        }, request)
 
     @staticmethod
     @require_GET
@@ -83,10 +84,10 @@ class G9felderapi:
             return JsonResponse({'fehler': FEHLT}, status=404)
         stufen = G9felderapi.stufen(request)
         felder = G9mimik.felder(stufen)
-        return JsonResponse({
+        return Netzausgabe.antwort({
             'stufen': stufen, 'mimik': G9mimik.liste(),
             'achsen': G9felderapi.achsen(), 'felder': G9felderapi.kodiert(felder),
-        })
+        }, request)
 
     @staticmethod
     @require_GET
@@ -103,12 +104,12 @@ class G9felderapi:
             felder = G9stueckfelder.holen(gruppe, kanaele, kennung, stufen, passform)
         except ValueError as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=404)
-        return JsonResponse({
+        return Netzausgabe.antwort({
             'kennung': kennung, 'gruppe': gruppe, 'stufen': stufen,
             'passform': felder.passform,
             'teile': [{k: G9felderapi.paar(*v) for k, v in teil.items()}
                       for teil in felder.teile],
-        })
+        }, request)
 
     @staticmethod
     def passform(request):

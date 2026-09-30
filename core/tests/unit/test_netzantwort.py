@@ -9,9 +9,11 @@ wird auf der Gegenseite falsch gelesen — jeder zweite Wert wird zum Exponenten
 des Nachbarn. Das Modell sieht zerrissen aus, und niemand vermutet einen Typ.
 
 Deshalb prüft dieser Test die Bytes, nicht nur die Schlüssel.
-"""
 
-import base64
+Seit dem 30.09.2026 liefert `Netzantwort` Träger (`Netzfeld`: rohe Bytes plus Typ); ob
+sie als Binärpaket oder base64 in JSON ausgehen, entscheidet die Auslieferung — beide Wege
+schreiben DIESELBEN Bytes (`test_netzpaket.py`). Geprüft werden hier die Bytes selbst.
+"""
 
 import numpy as np
 from django.test import SimpleTestCase
@@ -20,8 +22,8 @@ from core.daten.netzantwort import Netzantwort
 
 
 class NetzantwortTest(SimpleTestCase):
-    def zurueck(self, text, typ):
-        return np.frombuffer(base64.b64decode(text), dtype=typ)
+    def zurueck(self, feld, typ):
+        return np.frombuffer(feld.rohdaten, dtype=typ)
 
     def test_punkte_kommen_als_float32_zurueck(self):
         punkte = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64)
@@ -34,8 +36,9 @@ class NetzantwortTest(SimpleTestCase):
     def test_float64_wird_nicht_durchgelassen(self):
         """Der eigentliche Fehler: doppelte Größe, falsch gelesen."""
         punkte = np.zeros((100, 3), dtype=np.float64)
-        roh = base64.b64decode(Netzantwort.aus(punkte)['vertices'])
-        self.assertEqual(len(roh), 100 * 3 * 4, '4 Byte je Wert, nicht 8')
+        feld = Netzantwort.aus(punkte)['vertices']
+        self.assertEqual(len(feld.rohdaten), 100 * 3 * 4, '4 Byte je Wert, nicht 8')
+        self.assertEqual(feld.typ, 'float32')
 
     def test_dreiecke_als_uint32(self):
         flaechen = np.array([[0, 1, 2], [2, 3, 0]], dtype=np.int64)

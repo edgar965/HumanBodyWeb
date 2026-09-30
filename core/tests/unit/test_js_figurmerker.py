@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'figurmerker.js')
+MODUL = Jsmodul('charakter', 'figurmerker.js')
 
 #: sessionStorage, so viel davon, wie die Klasse anfasst — mit Mitschrift,
 #: damit der Test sieht, WANN geschrieben wird.
@@ -71,12 +71,12 @@ pruefe('ohne url = null', Figurmerker.animation('a'), null);
 // --- eine geloeschte Animation verschwindet von ALLEN Figuren (12.09.2026) --
 Figurmerker.animationMerken('a', {name: 'Walk', url: '/api/character/bvh/Walk/01_01/', category: 'Walk'});
 Figurmerker.animationMerken('b', {name: 'Walk', url: '/api/character/bvh/Walk/01_01/', category: 'Walk'});
-Figurmerker.animationMerken('c', {name: 'Run', url: '/api/character/bvh/Run/02/', category: 'Run'});
+Figurmerker.animationMerken('c', {name: '02', url: '/api/character/bvh/Run/02/', category: 'Run'});
 const vorher = geschrieben.length;
 pruefe('zwei vergessen', Figurmerker.animationVergessen('/api/character/bvh/Walk/01_01/'), 2);
 pruefe('a Animation weg', Figurmerker.animation('a'), null);
 pruefe('b Animation weg', Figurmerker.animation('b'), null);
-pruefe('c bleibt', Figurmerker.animation('c').name, 'Run');
+pruefe('c bleibt', Figurmerker.animation('c').name, '02');
 pruefe('a Reiter bleibt', Figurmerker.tab('a'), 'kleider');
 pruefe('einmal geschrieben', geschrieben.length, vorher + 1);
 pruefe('unbekannt = 0, nichts geschrieben', Figurmerker.animationVergessen('/nix/'), 0);

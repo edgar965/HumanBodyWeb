@@ -164,7 +164,7 @@ class Genesis9Glanz(SimpleTestCase):
             self.assertEqual(Image.open(datei).getpixel((0, 0)), (255, 0, 0))
 
     def test_5_directx_normalen_kehren_die_y_achse(self):
-        with mock.patch.object(G9browserbilder, 'tragbar', return_value=True):
+        with mock.patch.object(G9browserbilder, '_tragbarer_pfad', side_effect=lambda rel, *_: rel):
             aus = G9browserbilder.fuer(
                 {'albedo': 'x/Dagger_MAT_D.png', 'normalen': 'x/Dagger_MAT_Normal_DirectX.png'}, hoch=False
             )
@@ -197,8 +197,8 @@ class Genesis9Glanz(SimpleTestCase):
             self.assertEqual(hd, {'HD Wrinkles': '/x/HD Wrinkles.dhdm'})
             self.assertIn('HD Wrinkles', deltas)
             eigen = G9anhangmorphe(deltas, {}, hd)
-            with mock.patch.object(G9pfade, 'bibliothek', return_value=_Pfad(ordner)):
-                # Die .dhdm fehlt: kein aktiver Kanal.
+            with mock.patch.object(G9pfade, 'finden', side_effect=lambda r: _Pfad(ordner) / r.lstrip('/')):
+                # Die .dhdm fehlt: kein aktiver Kanal (`finden` sucht seit 25.09. Daz- und eigene Wurzel).
                 self.assertEqual(eigen.hd_aktive({'HD Wrinkles': 1.0}), {})
                 with open(os.path.join(ordner, 'x'), 'w'):
                     pass

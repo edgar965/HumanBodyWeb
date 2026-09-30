@@ -119,7 +119,9 @@ class KleidArmeFrei(SimpleTestCase):
 
     @staticmethod
     def feld(text, typ):
-        return np.frombuffer(base64.b64decode(text), dtype=typ)
+        u"""Seit 30.09.2026 kommt aus den direkten Aufrufen ein Träger (`Netzfeld`)."""
+        roh = text.rohdaten if hasattr(text, 'rohdaten') else base64.b64decode(text)
+        return np.frombuffer(roh, dtype=typ)
 
     @classmethod
     def punkte(cls, teil):

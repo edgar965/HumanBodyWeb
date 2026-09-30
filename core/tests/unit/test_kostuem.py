@@ -39,7 +39,8 @@ class KostuemparameterTest(SimpleTestCase):
 
     def test_unterschiede_nennen_nur_merkliche_aenderungen(self):
         alt = Kostuemparameter.start()
-        neu = dict(alt, **{'hut.hoehe': alt['hut.hoehe'] + 0.05, 'stab.an': 1})
+        # Der Stab startet seit 30.09.2026 eingeschaltet — umgeschaltet wird gegen den Startwert.
+        neu = dict(alt, **{'hut.hoehe': alt['hut.hoehe'] + 0.05, 'stab.an': 1 - alt['stab.an']})
         self.assertEqual(set(Kostuemparameter.unterschiede(alt, neu)), {'hut.hoehe', 'stab.an'})
 
 
@@ -127,7 +128,8 @@ class KostuemreferenzTest(SimpleTestCase):
 class KostuemauswahlTest(SimpleTestCase):
     def kreislauf(self, toleranz=2):
         k = Kostuemkreislauf.__new__(Kostuemkreislauf)
-        k.o = {'toleranz': toleranz, 'pruefki': 'qwen3.8:27b', 'pruefki_alle': 5}
+        # `pruefki_stillstand` ist seit 30.09.2026 eine Option (vorher fest 3 Runden).
+        k.o = {'toleranz': toleranz, 'pruefki': 'qwen3.8:27b', 'pruefki_alle': 5, 'pruefki_stillstand': 3}
         return k
 
     @staticmethod

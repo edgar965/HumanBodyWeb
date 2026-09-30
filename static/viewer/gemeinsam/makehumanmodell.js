@@ -90,7 +90,9 @@ export class MakehumanModell extends Modell {
      * angezeigten, und ändert sich durch die Anzeige nicht.
      */
     async koerperAufbauen() {
-        const daten = await Serverabruf.senden(
+        // Binär (`Netzpaket`, 30.09.2026), wenn der Server es anbietet — die Felder kommen dann
+        // als TypedArrays, `Netzgeometrie` nimmt beides.
+        const daten = await Serverabruf.netzSenden(
             `${MakehumanModell.ADRESSE}${encodeURIComponent(this.modell)}/netz/`, {
                 teile: this.teile,
                 glaetten: this.glatt,

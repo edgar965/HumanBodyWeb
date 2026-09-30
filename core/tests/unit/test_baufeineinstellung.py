@@ -92,7 +92,11 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
 
     def test_als_dict_nennt_alle_werte(self):
         werte = Baufeineinstellung(hautabstand_mm=3, aufloesung=2).als_dict()
-        self.assertEqual(werte, {'hautabstand_mm': 3.0, 'aufloesung': 2.0, 'anliegen_mm': None})
+        # `wie_smpl` (25.09.2026): die Bauart aus Einstellungen → Kleider geht mit an den Browser.
+        self.assertEqual(
+            werte, {'hautabstand_mm': 3.0, 'aufloesung': 2.0, 'anliegen_mm': None, 'wie_smpl': False}
+        )
+        self.assertTrue(Baufeineinstellung(wie_smpl=True).als_dict()['wie_smpl'])
 
     # --- Anliegen (Leggings, 11.09.2026) --------------------------------
 

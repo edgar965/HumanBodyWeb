@@ -56,7 +56,7 @@ export class Charakterkoerper {
         // ohnehin nur `position` und `normal`. Gemessen 16.08.2026: 5,24 MB ->
         // 2,26 MB je Reglerbewegung. Passt die Punktzahl NICHT (Wechsel der
         // Koerperart), laedt `inst.load()` unten alles vollstaendig.
-        const data = await Serverabruf.json(
+        const data = await Serverabruf.netz(
             `/api/character/mesh/?${_charQueryParams(inst)}&nur_punkte=1`);
         if (data.error) throw new Error(data.error);
 

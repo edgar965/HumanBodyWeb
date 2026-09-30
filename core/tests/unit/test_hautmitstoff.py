@@ -120,9 +120,12 @@ class HautmitstoffTest(SimpleTestCase):
         self.assertAlmostEqual(float(np.median(neu[knapp, 1])), 0.107, places=3)
         self.assertAlmostEqual(float(np.median(neu[weit, 1])), 0.102, places=3)
         # Gegenprobe: der Basisweg (euklidisch naechster Hautpunkt) legt den
-        # knappen Punkt auf die Haut — genau der Fehler.
+        # knappen Punkt an die Haut, nicht vor das Stueck — genau der Fehler.
+        # Seit den Schlussrunden „nur heraus" (24.09.2026) bleibt die Glaettung
+        # zu den Nachbarn auf dem Stueck stehen: gemessen 0,1045 statt 0,102 —
+        # weiter unter dem Saum (0,107), das ist der Unterschied, der zaehlt.
         ohne, _ = Stoffanlegen(punkte, normalen, dreiecke).anlegen(stoff, 2.0)
-        self.assertAlmostEqual(float(np.median(ohne[knapp, 1])), 0.102, places=3)
+        self.assertLess(float(np.median(ohne[knapp, 1])), 0.106)
 
     def test_die_korrektur_holt_den_stoff_ueber_das_stueck(self):
         stoff, dreiecke = _gitter(0.115)
@@ -187,7 +190,8 @@ class NacharbeitTest(SimpleTestCase):
         quelle = open(settings.ASSETS_ROOT / 'GarmentCode' / 'drapierdienst.py', encoding='utf-8').read()
         # Die Nacharbeit selbst steht seit dem 19.09.2026 in `stoffbindung.py` (Genesis 9 als zweiter Traeger).
         bindung = open(settings.ASSETS_ROOT / 'GarmentCode' / 'stoffbindung.py', encoding='utf-8').read()
-        self.assertIn('Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei)', bindung)
+        # `stoffe=stoffe` (Daz-Garderobe, 24.09.2026) folgt als Schlüsselwort.
+        self.assertIn('Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei,', bindung)
         lauf = quelle.index('def lauf(')
         self.assertIn('getragen=getragen', quelle[lauf : quelle.index('def _variantenordner', lauf)])
 

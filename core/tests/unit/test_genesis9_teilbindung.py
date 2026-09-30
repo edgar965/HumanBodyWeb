@@ -153,5 +153,7 @@ class Teilhauttest(SimpleTestCase):
         self.assertIn("G9hbteilhaut.fuer(traeger.figur()).haut(", api)
         self.assertIn("G9teilbindung.stueck(folger, kaefig, netz['punkte'])", api)
         folger = (settings.BASE_DIR.parent / 'Genesis9' / 'folger.py').read_text(encoding='utf-8')
-        self.assertIn('G9teilbindung.aus_haut(self.dazhaut, len(self.punkte))', folger)
+        # Seit der Passform (20.09.2026) projiziert `projizieren(punkte)` beliebige Käfigpunkte —
+        # die Karte gilt dort für `len(punkte)`, nicht mehr nur für `self.punkte`.
+        self.assertIn('G9teilbindung.aus_haut(self.dazhaut, len(punkte))', folger)
         self.assertIn('self.haut = self.dazhaut', folger)

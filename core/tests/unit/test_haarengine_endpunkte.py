@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TransactionTestCase, override_settings
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from PIL import Image
 
 from core.daten.haarengineablage import Haarengineablage
@@ -45,8 +45,15 @@ def datei(name, farbe=(120, 130, 140)):
     return SimpleUploadedFile(name, png(farbe), content_type='image/png')
 
 
-class HaarengineendpunkteTest(TransactionTestCase):
-    """`TransactionTestCase`: `zustand` ist async und liest die Datenbank in einem eigenen Faden."""
+class Haarengineaufbau:
+    """Auftragsordner, abgefangene Kataloge und ein Client — für beide Klassen unten.
+
+    AUFGETEILT AM 30.09.2026: Die Fälle liefen alle als `TransactionTestCase`, weil EINER davon
+    es braucht (`zustand` ist async und liest die Datenbank in einem eigenen Faden). Ein
+    `TransactionTestCase` leert nach jedem Fall alle Tabellen, statt eine Transaktion
+    zurückzudrehen — das Modul stand damit bei 1,33 s und riss die 1-Sekunden-Schwelle aus
+    `projekt.md`. Die 22 übrigen Fälle laufen jetzt als gewöhnlicher `TestCase`.
+    """
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix='haarengine_', dir=Pruefablage.wurzel()))
@@ -82,6 +89,30 @@ class HaarengineendpunkteTest(TransactionTestCase):
     def _post(self, adresse, daten=None, **weitere):
         return self.client.post(adresse, json.dumps(daten or {}), content_type='application/json', **weitere)
 
+
+class HaarenginezustandTest(Haarengineaufbau, TransactionTestCase):
+    """Der eine Fall, der echte Tabellen braucht: `zustand` ist async und liest die Datenbank in
+    einem eigenen Faden — der sähe von einer offenen Transaktion nichts."""
+
+    def test_seite_und_zustand(self):
+        job, _ = self._anlegen()
+        seite = self.client.get('/haarengine/%s/' % job.kennung)
+        self.assertEqual(seite.status_code, 200)
+        self.assertContains(seite, 'haarengine-daten')
+        zustand = self.client.get('/api/haarengine/%s/zustand/' % job.id).json()
+        self.assertEqual(zustand['schritte'], list(Haarenginelauf.SCHRITTE))
+        self.assertEqual(zustand['status'], 'angelegt')
+        self.assertEqual(len(zustand['bilder']), 2)
+        self.assertEqual({p['art'] for p in zustand['pfade']}, {'ordner', 'ablage'})
+        liste = self.client.get('/haarengine/')
+        self.assertEqual(liste.status_code, 200)
+        self.assertContains(liste, 'haarengine-form', msg_prefix='das Formular „Neuer Auftrag"')
+        self.assertContains(liste, 'haarengine-rollen')
+
+
+class HaarengineendpunkteTest(Haarengineaufbau, TestCase):
+    """Alles übrige — rollt nach jedem Fall eine Transaktion zurück, statt die Tabellen zu leeren."""
+
     # ---------------------------------------------------------------- Anlegen
 
     def test_anlegen_legt_fotos_rollen_und_vorlage_an_und_startet_nicht(self):
@@ -111,21 +142,6 @@ class HaarengineendpunkteTest(TransactionTestCase):
             400,
         )
         self.assertEqual(Haarengineauftrag.objects.count(), 0)
-
-    def test_seite_und_zustand(self):
-        job, _ = self._anlegen()
-        seite = self.client.get('/haarengine/%s/' % job.kennung)
-        self.assertEqual(seite.status_code, 200)
-        self.assertContains(seite, 'haarengine-daten')
-        zustand = self.client.get('/api/haarengine/%s/zustand/' % job.id).json()
-        self.assertEqual(zustand['schritte'], list(Haarenginelauf.SCHRITTE))
-        self.assertEqual(zustand['status'], 'angelegt')
-        self.assertEqual(len(zustand['bilder']), 2)
-        self.assertEqual({p['art'] for p in zustand['pfade']}, {'ordner', 'ablage'})
-        liste = self.client.get('/haarengine/')
-        self.assertEqual(liste.status_code, 200)
-        self.assertContains(liste, 'haarengine-form', msg_prefix='das Formular „Neuer Auftrag"')
-        self.assertContains(liste, 'haarengine-rollen')
 
     # --------------------------------------------------------- Bildauswahl
 

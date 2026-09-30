@@ -6,6 +6,7 @@ import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { Stueckmarkierung } from './stueckmarkierung.js';
 import { Dazkleidung } from './genesis9/dazkleidung.js';
+import { Strangauswahl } from './strangauswahl.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -66,10 +67,6 @@ export function _getMeshesOf(root) {
     return meshes;
 }
 
-/** Grundfarbe der Stränge bei Auswahl/Hover (multipliziert die Strähnenfarben). */
-const STRANG_AUSWAHL = [1.9, 1.35, 0.7];
-const STRANG_HOVER = [1.35, 1.45, 1.6];
-
 export function _setSubMeshEmissive(target, color) {
     if (!target || !target.meshObj) return;
     for (const m of _getMeshesOf(target.meshObj)) {
@@ -77,18 +74,16 @@ export function _setSubMeshEmissive(target, color) {
             const mats = Array.isArray(m.material) ? m.material : [m.material];
             for (const mat of mats) {
                 if (mat.emissive) { mat.emissive.copy(color); continue; }
-                // Stranghaar (`Genesis9strang`): MeshBasicMaterial ohne `emissive`. Die
-                // Grundfarbe multipliziert die Strähnenfarben — 1 + 20·Leuchtfarbe hebt
-                // sie bläulich an (Auswahl: Blau ×1,9), Null → weiß = unverändert.
-                // Sonst sähe man einer gewählten Viola nichts an (20.09.2026).
+                // Stranghaar (`Genesis9strang`): MeshBasicMaterial ohne `emissive`, und die
+                // Aura sieht Stränge nicht (Dreiecke ohne Fläche) — die Grundfarbe zeigt die
+                // Wahl. Bis 30.09.2026 ein fester Faktor [1,9 1,35 0,7]: auf dunklem Haar
+                // (Pixie im Mittel 0,06) blieb das fast schwarz, die Wahl war unsichtbar, und
+                // der zweite Klick wählte sie wieder ab. `Strangauswahl` richtet den Faktor
+                // nach der tatsächlichen Haarfarbe.
                 if (mat.wireframe && mat.vertexColors) {
-                    // Seit 25.09.2026 sind die Leuchtfarben schwarz (`auswahlaura.js`), die
-                    // Kontur sieht aber Stränge nicht (Dreiecke ohne Fläche) — hier also
-                    // weiter die Grundfarbe: orange bei Auswahl, hell bei Hover.
-                    const ton = color === state._SELECT_EMISSIVE ? STRANG_AUSWAHL
-                              : (color === state._HOVER_EMISSIVE ? STRANG_HOVER : null);
-                    if (ton) mat.color.setRGB(...ton);
-                    else mat.color.setRGB(1 + 20 * color.r, 1 + 20 * color.g, 1 + 20 * color.b);
+                    const ziel = color === state._SELECT_EMISSIVE ? Strangauswahl.AUSWAHL
+                               : (color === state._HOVER_EMISSIVE ? Strangauswahl.HOVER : null);
+                    Strangauswahl.setzen(m, mat, ziel);
                 }
             }
         }

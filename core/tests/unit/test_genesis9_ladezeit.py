@@ -20,18 +20,17 @@ in `baum` auf True (mit compact) aendert Fall 3 nicht (gleiche Nachbarn —
 das ist der Punkt), `workers` weg auch nicht: Fall 3 prueft Gleichheit, die
 Zeit steht in `ProjektTemp/g9_kollision_messung.py`.
 """
-import base64
 from pathlib import Path
 
 import numpy as np
 from django.test import RequestFactory, SimpleTestCase
+from Genesis9.dson import G9dson
+from Genesis9.kollision import G9kollision
+from Genesis9.posen import G9posen
 from scipy.spatial import cKDTree
 
 from core.daten.netzantwort import Netzantwort
 from core.dienste.netzstufenwahl import Netzstufenwahl
-from Genesis9.dson import G9dson
-from Genesis9.kollision import G9kollision
-from Genesis9.posen import G9posen
 
 
 class Ladezeit(SimpleTestCase):
@@ -64,8 +63,9 @@ class Ladezeit(SimpleTestCase):
                 'gewicht': np.array([[0.6, 0.4, 0, 0], [1.0, 0, 0, 0]])}
         k = Netzantwort.hautgewichte(haut, kompakt=True)
         self.assertEqual(k['kodierung'], 'u16u8')
-        spalten = np.frombuffer(base64.b64decode(k['skin_indices']), dtype=np.uint16)
-        gewicht = np.frombuffer(base64.b64decode(k['skin_weights']), dtype=np.uint8)
+        # Seit 30.09.2026 Träger (`Netzfeld`) — die Bytes sind dieselben wie im base64.
+        spalten = np.frombuffer(k['skin_indices'].rohdaten, dtype=np.uint16)
+        gewicht = np.frombuffer(k['skin_weights'].rohdaten, dtype=np.uint8)
         self.assertEqual(list(spalten), [0, 1, 0, 0, 1, 0, 0, 0])
         np.testing.assert_allclose(gewicht / 255.0, [0.6, 0.4, 0, 0, 1, 0, 0, 0],
                                    atol=1 / 255)

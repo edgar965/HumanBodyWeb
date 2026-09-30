@@ -157,28 +157,28 @@ class UmfaerbungTest(SimpleTestCase):
         self.assertIn('Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);',
                       quelltext('gemeinsam', 'genesis9kleidung.js'))
         self.assertIn('Umfaerbung.stueck(inst, kennung, inst.dazKleidung[kennung]);',
-                      quelltext('scene', 'genesis9', 'dazkleidung.js'))
+                      quelltext('charakter', 'genesis9', 'dazkleidung.js'))
         self.assertIn('material.userData.gruppe = gruppe.name;', quelltext('gemeinsam', 'genesis9strang.js'))
-        garderobe = quelltext('scene', 'genesis9', 'genesis9garderobe.js')
+        garderobe = quelltext('charakter', 'genesis9', 'genesis9garderobe.js')
         self.assertIn("farbe: felder.farbe?.wert ?? (bisher.farbe || ''),", garderobe)
         self.assertIn('gruppenfarben: { ...(bisher.gruppenfarben || {}) },', garderobe)
-        self.assertIn('Dazeigenschaften.zeigen(teilnetz)', quelltext('scene', 'properties.js'))
-        self.assertRegex(quelltext('scene', 'interaction.js'),
+        self.assertIn('Dazeigenschaften.zeigen(teilnetz)', quelltext('charakter', 'properties.js'))
+        self.assertRegex(quelltext('charakter', 'interaction.js'),
                          r'state\._getroffeneGruppe = \{ key: hitTarget\.key,')
         vorlage = (Path(settings.BASE_DIR) / 'templates' / 'scene_config.html').read_text(encoding='utf-8')
         self.assertIn('id="prop-daz-section"', vorlage)
         self.assertIn('id="prop-daz-teile"', vorlage)
         self.assertIn("css/stueckfarbe.css", vorlage)
-        stueckfarbe = quelltext('scene', 'genesis9', 'stueckfarbe.js')
+        stueckfarbe = quelltext('charakter', 'genesis9', 'stueckfarbe.js')
         self.assertTrue(re.search(r'static gruppe\(inst, kennung, gruppe, hex\)', stueckfarbe))
 
     def test_6_farbdialog_statt_farbfeld_in_der_zeile(self):
         u"""24.09.2026, Edgar mit Bild: „Farben nicht auswählbar" — das Farbfeld stand
         abgeschnitten hinter der Variantenauswahl. Jetzt Knopf + Dialog."""
-        stueckfarbe = quelltext('scene', 'genesis9', 'stueckfarbe.js')
+        stueckfarbe = quelltext('charakter', 'genesis9', 'stueckfarbe.js')
         self.assertNotIn("type = 'color'", stueckfarbe, 'kein Farbfeld mehr in der Zeile')
         self.assertIn('Stueckfarbdialog.oeffnen({ inst, kennung, gruppe,', stueckfarbe)
-        dialog = quelltext('scene', 'genesis9', 'stueckfarbdialog.js')
+        dialog = quelltext('charakter', 'genesis9', 'stueckfarbdialog.js')
         self.assertEqual(dialog.count("['#"), 30, 'Palette mit 30 Farben')
         for teil in ("static hexNormal(text)", "if (e.key === 'Escape') zu();",
                      'Stueckfarbe.gruppe(z.inst, z.kennung, z.ziel, hex);'):

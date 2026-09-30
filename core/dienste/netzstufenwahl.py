@@ -67,16 +67,43 @@ class Netzstufenwahl:
             return self.__acall__(request)
         marke = self._stellen(request)
         try:
-            return self.get_response(request)
+            antwort = self.get_response(request)
         finally:
             self._gewaehlt.reset(marke)
+        return self.seite_zuruecksetzen(request, antwort)
 
     async def __acall__(self, request):
         marke = self._stellen(request)
         try:
-            return await self.get_response(request)
+            antwort = await self.get_response(request)
         finally:
             self._gewaehlt.reset(marke)
+        return self.seite_zuruecksetzen(request, antwort)
+
+    #: Einmal-Keks von `Netzstufe.umschalten`: die gleich neu ladende Seite hat die Stufe bestellt.
+    NEULADEN = 'netzstufen_neuladen'
+
+    @classmethod
+    def seite_zuruecksetzen(cls, request, antwort):
+        u"""Die hohe Auflösung gilt nur für die Seite, auf der Strg+Alt+H sie bestellt hat.
+
+        Edgar, 30.09.2026: „per default lade die modelle nicht in der hohen auflösung, daher
+        sind die tabs so lange". Der Keks lebte 365 Tage: einmal umgeschaltet, lud JEDER neue
+        Tab und jedes Neuladen die Figuren in Stufe 3 (HumanBody 1,1 Mio. Punkte, Genesis 9
+        Stufe 2 mit 8K-Detailnormalen) — bis jemand zurückschaltete. Jetzt nimmt jeder
+        Seitenaufruf (`Sec-Fetch-Dest: document`, also keine Abrufe aus der Seite heraus) den
+        Keks zurück; nur das Neuladen, das die Taste selbst auslöst, trägt den Einmal-Keks
+        und behält die Stufe. Serverseitig, damit keine Netzanfrage der neuen Seite ihn
+        noch sieht.
+        """
+        if (request.method != 'GET' or request.headers.get('Sec-Fetch-Dest') != 'document'
+                or getattr(antwort, 'status_code', None) != 200):
+            return antwort
+        if request.COOKIES.get(cls.NEULADEN):
+            antwort.delete_cookie(cls.NEULADEN, path='/', samesite='Lax')
+        elif cls.KEKS in request.COOKIES:
+            antwort.delete_cookie(cls.KEKS, path='/', samesite='Lax')
+        return antwort
 
     def _stellen(self, request):
         gewaehlt = self.aus_anfrage(request.GET)

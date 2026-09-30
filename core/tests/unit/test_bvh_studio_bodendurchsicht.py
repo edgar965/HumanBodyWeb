@@ -44,9 +44,16 @@ class BodendurchsichtTest(SimpleTestCase):
                 'export function updateFloorMaterial'
             )
         ]
-        for rumpf in (anlegen, laden):
-            self.assertIn('track.floorTransparenz = override', rumpf)
-            self.assertIn('track.floorTiefe = override', rumpf)
+        self.assertIn('track.floorTransparenz = override', laden)
+        self.assertIn('track.floorTiefe = override', laden)
+        # Anlegen seit 22.09.2026 über `_bodenBauen` (gemeinsamer Kern mit
+        # `addFloorTrack`, mehrere Böden): `createFloorTrack` reicht die
+        # gespeicherten Werte hinein, der Kern setzt die Felder.
+        self.assertIn('transparenz: override?.transparenz', anlegen)
+        self.assertIn('tiefe: override?.tiefe', anlegen)
+        kern = boden[boden.index('function _bodenBauen') : boden.index('export function createFloorTrack')]
+        self.assertIn('track.floorTransparenz = werte.transparenz', kern)
+        self.assertIn('track.floorTiefe = werte.tiefe', kern)
         speichern = BodendurchsichtTest._text('projekt_daten.js')
         self.assertIn('transparenz: t.floorTransparenz', speichern)
         self.assertIn('tiefe: t.floorTiefe', speichern)

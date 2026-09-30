@@ -9,6 +9,7 @@ import { Kleidungszustand } from './kleidungszustand.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 /**
  * Kleideranpassung — ein Kleidungsstück am Server an die Figur anpassen lassen
@@ -98,10 +99,18 @@ export class Kleideranpassung {
         frage.set('garment_id', this.kennung);
         if (this.modus) frage.set('fit_mode', this.modus);
 
-        const antwort = await (this.huelle && state._kleiderHullVertices
-            ? this._mitHuelle(frage)
-            : fetch(`${Kleideranpassung.ADRESSE}?${frage}`));
-        const daten = await antwort.json();
+        // Binär, wenn der Server es anbietet (`Netzpaket`, 30.09.2026) — `Netzgeometrie` und
+        // `_skinifyMesh` nehmen TypedArrays wie base64. Ein Fehlerstatus wirft jetzt (vorher
+        // las `antwort.json()` den Fehlerrumpf), deshalb derselbe Hinweis im `catch`.
+        let daten;
+        try {
+            daten = await (this.huelle && state._kleiderHullVertices
+                ? this._mitHuelle(frage)
+                : Serverabruf.netz(`${Kleideranpassung.ADRESSE}?${frage}`));
+        } catch (fehler) {
+            Protokoll.warnung('kleideranpassung', 'Anpassen fehlgeschlagen:', fehler.message);
+            return null;
+        }
         if (!daten.error) return daten;
         Protokoll.warnung('kleideranpassung', 'Anpassen fehlgeschlagen:', daten.error);
         return null;
@@ -114,11 +123,8 @@ export class Kleideranpassung {
     _mitHuelle(frage) {
         const punkte = new Uint8Array(state._kleiderHullVertices.buffer);
         const b64 = btoa(String.fromCharCode(...punkte));
-        return fetch(`${Kleideranpassung.ADRESSE}?${frage}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hull_vertices: b64 }),
-        });
+        return Serverabruf.netzSenden(`${Kleideranpassung.ADRESSE}?${frage}`,
+                                      { hull_vertices: b64 });
     }
 
     // --------------------------------------------------------------------- Netz

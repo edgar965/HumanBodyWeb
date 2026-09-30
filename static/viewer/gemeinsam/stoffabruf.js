@@ -37,7 +37,7 @@ export class Stoffabruf {
     static async netz(params, entfernen) {
         const frage = Object.entries(params)
             .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-        const daten = await Serverabruf.json(`/api/character/cloth/?${frage}`);
+        const daten = await Serverabruf.netz(`/api/character/cloth/?${frage}`);
         if (daten.error) {
             console.error('Cloth error:', daten.error);
             return null;

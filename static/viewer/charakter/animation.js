@@ -7,6 +7,7 @@ import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml, _selectedInst } from './utils.js';
+import { Letztewahl } from './letztewahl.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
 import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -59,6 +60,10 @@ export function stopAnimation(destroy = false) {
 export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     stopAnimation(true);
     state.currentAnimUrl = url;
+    // Die zuletzt geladene Animation kommt beim nächsten Öffnen der Seite wieder
+    // (Edgar, 30.09.2026) — hier, weil JEDER Weg zu einer Animation durch diese
+    // Funktion geht (Baum, Kontextmenü, Studio-Übergabe, gespeicherte Szene).
+    Letztewahl.animationGemerkt(url);
     const groundChk = document.getElementById('scene-ground-fix');
     state.currentAnimGroundFixed = groundChk ? groundChk.checked : false;
     const inst = _selectedInst();

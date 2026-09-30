@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Netzantwort — ein Netz als JSON-taugliches Wörterbuch für den Browser.
+"""Netzantwort — ein Netz als Wörterbuch für den Browser.
+
+SEIT 30.09.2026 STEHEN IN DEN FELDERN TRÄGER, KEINE STRINGS (`netzfeld.py`).
+Ob daraus ein Binärpaket wird oder base64 in JSON, entscheidet erst die
+Auslieferung (`netzausgabe.py`). Alles darunter — besonders der Abschnitt über
+die Typen — gilt unverändert; die Breite ist nach wie vor der gefährliche Teil.
 
 WARUM EINE KLASSE (17.08.2026): `base64.b64encode(x.astype(np.float32)
 .tobytes()).decode('ascii')` stand SECHZEHNMAL im Projekt, verteilt über
@@ -26,13 +31,13 @@ Bytes, aber nur, wenn das Feld C-zusammenhängend ist. Nach einem `[:, [0, 2, 1]
 ist es das nicht mehr.
 """
 
-import base64
-
 import numpy as np
+
+from .netzfeld import Netzfeld
 
 
 class Netzantwort:
-    """Baut das Wörterbuch, das `JsonResponse` an den Browser gibt."""
+    """Baut das Wörterbuch, das `Netzausgabe` an den Browser gibt."""
 
     #: Feldname -> Zieltyp. Der Browser liest genau diese Breiten.
     TYPEN = {
@@ -62,16 +67,21 @@ class Netzantwort:
 
     @classmethod
     def feld(cls, werte, name, typ=None):
-        """Ein Feld als base64 — mit dem Typ, den der Browser erwartet.
+        """Ein Feld als `Netzfeld` — mit dem Typ, den der Browser erwartet.
 
         `typ` schlägt die Tabelle: Für einen zweiten Vertrag (SMPL-X, siehe
         `TYPEN_SMPLX`) wird er ausdrücklich mitgegeben, statt die Tabelle zu
         einer Sammlung von Sonderfällen wachsen zu lassen.
+
+        SEIT DEM 30.09.2026 KOMMT HIER KEIN STRING MEHR HERAUS (`netzfeld.py`):
+        Der Träger hält die rohen Bytes, und erst die Auslieferung entscheidet,
+        ob sie als Binärpaket gehen (`Netzpaket`) oder als base64 in JSON
+        (`Netzjson`). Wer das Ergebnis als Zeichenkette weiterreicht, bekommt
+        beim ersten Aufruf einen `TypeError` — laut, nicht still.
         """
         if typ is None:
             typ = cls.TYPEN.get(name, np.float32)
-        flach = np.ascontiguousarray(np.asarray(werte).ravel(), dtype=typ)
-        return base64.b64encode(flach.tobytes()).decode('ascii')
+        return Netzfeld.aus(werte, typ)
 
     @classmethod
     def smplx_feld(cls, werte, name):

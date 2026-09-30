@@ -19,7 +19,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'fehlendeanimation.js')
+MODUL = Jsmodul('charakter', 'fehlendeanimation.js')
 
 #: `Fehlendeanimation` importiert `Figurmerker`, der `sessionStorage` braucht.
 ABLAGE = """

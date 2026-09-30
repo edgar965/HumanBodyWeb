@@ -52,7 +52,7 @@ export class Genesis9frisur {
         const stufen = inst.stufen ?? 1;
         let daten;
         try {
-            daten = await Serverabruf.senden(
+            daten = await Serverabruf.netzSenden(
                 `${Genesis9frisur.ADRESSE}${encodeURIComponent(name)}/?stufen=${stufen}`,
                 { regler: inst.regler || {} });
         } catch (fehler) {

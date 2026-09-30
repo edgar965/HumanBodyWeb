@@ -5,6 +5,7 @@ import { initFinalizeTab } from './finalize.js';
 import { Szenenbuehne } from './szenenbuehne.js';
 import { Szenenschleife } from './szenenschleife.js';
 import { Starteinstellungen } from './starteinstellungen.js';
+import { Letztewahl } from './letztewahl.js';
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Reiterstand } from './reiterstand.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
@@ -157,6 +158,7 @@ export class Szenenaufbau {
             }
         }
         M.um('  Anfangszustand merken', () => fn.captureInitial?.());
+        await M.umAsync('  Letzte Animation', () => this._letzteAnimation(hatSitzung));
         await M.umAsync('  Pose setzen', () => this._pose(einstellungen));
         M.um('  Vorgabekleidung anstossen',
              () => this._vorgabekleidung(einstellungen, hatSitzung));
@@ -164,6 +166,30 @@ export class Szenenaufbau {
         // Zum Schluss abwarten, damit ein Fehler in den Grunddaten gemeldet
         // wird und nicht als unbehandelte Ablehnung endet.
         await M.umAsync('  Grunddaten abschliessen', () => grunddaten);
+    }
+
+    /**
+     * Die zuletzt geladene Animation wieder aufsetzen (Edgar, 30.09.2026: „auf der Seite
+     * /Charakter/ soll immer nur der letzte geladene Modell und die letzte Animation
+     * geladen werden").
+     *
+     * NICHT nach einer wiederhergestellten Sitzung: Die bringt ihren eigenen Stand mit
+     * (auch „gar keine Animation", wenn man sie gestoppt hat) — ein Nachladen würde ihn
+     * überschreiben. Und nicht ohne Figur: Ein Retarget braucht ein Ziel.
+     *
+     * Ein Fehlschlag bleibt folgenlos und LÖSCHT die Erinnerung: Eine gelöschte oder
+     * umbenannte BVH soll die Szene nicht bei jedem Start erneut aufhalten.
+     */
+    async _letzteAnimation(hatSitzung) {
+        if (hatSitzung || !state.characters.size) return;
+        const url = Letztewahl.animation();
+        if (!url) return;
+        try {
+            await fn.loadBVHAnimation(url, url.split('/').pop() || url);
+        } catch (fehler) {
+            Protokoll.warnung('Scene', 'Letzte Animation nicht ladbar:', fehler);
+            Letztewahl.animationVergessen(url);
+        }
     }
 
     /**

@@ -25,6 +25,8 @@ gesetzt). Deshalb prüft jede Zeile zusätzlich eine Zeichenkette, die nur bei
 richtig gerendertem Inhalt vorkommt.
 """
 
+from unittest import mock
+
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -92,13 +94,25 @@ class SeitenTest(TestCase):
     def test_theatre_und_bvh_studio(self):
         """Die zwei Hauptseiten des Studios — eigener Test, weil hier nicht der
         Titel das Merkmal ist, sondern das Einstiegsskript. Ohne das lädt die
-        Seite mit 200 und bleibt eine leere Bühne."""
-        for pfad, merkmal in (
-            ('/humanbody/theatre/', 'theatre/theatre-app.js'),
-            ('/studio/', 'viewer/studio/index.js'),
+        Seite mit 200 und bleibt eine leere Bühne.
+
+        BVH Studio lädt sein Skript seit dem 22.09.2026 über `{% studioskript %}`:
+        mit Bündel `/buendel/<fassung>/studio.js`, ohne den Einstieg der
+        Einzelmodule. Welcher Weg kommt, hing bis dahin davon ab, ob unter
+        `_buendel/` gerade ein Bündel lag — und ein fehlendes hätte der
+        Seitenaufruf per esbuild GEBAUT. Beide Wege werden deshalb gestellt,
+        nicht vorgefunden (die Marke selbst prüft `test_modulbuendel`)."""
+        from core.dienste.modulbuendel import Modulbuendel
+        from core.templatetags import szenenskript
+
+        self.assertContains(self.client.get('/humanbody/theatre/'), 'theatre/theatre-app.js')
+        with mock.patch.object(szenenskript, '_gewuenscht', return_value=False):
+            self.assertContains(self.client.get('/studio/'), 'viewer/studio/index.js')
+        with (
+            mock.patch.object(szenenskript, '_gewuenscht', return_value=True),
+            mock.patch.object(Modulbuendel, 'bereit', return_value='/buendel/42/studio.js'),
         ):
-            with self.subTest(pfad=pfad):
-                self.assertContains(self.client.get(pfad), merkmal)
+            self.assertContains(self.client.get('/studio/'), 'src="/buendel/42/studio.js"')
 
     def test_foto_seite_darf_im_eigenen_rahmen_laufen(self):
         """`photo_to_3d_page` trägt `xframe_options_sameorigin`. Ging der

@@ -103,12 +103,17 @@ class DazkategorienTest(SimpleTestCase):
         (self.support / 'DAZ_3D_1_Probe.dsx').write_text(DSX, encoding='utf-8')
         self._bib = mock.patch.object(G9pfade, 'bibliothek', classmethod(lambda cls: self.bib))
         self._da = mock.patch.object(G9pfade, 'vorhanden', classmethod(lambda cls: True))
+        # Die ZWEITE Wurzel (`G9pfade.eigene`, seit 25.09.2026 in `bibliotheken()`)
+        # zeigt ins Leere — sonst liest `tabelle()` Edgars eigene Stücke mit (353 statt 13).
+        self._eigene = mock.patch.object(G9pfade, 'eigene', classmethod(lambda cls: self.bib / 'fehlt'))
         self._bib.start()
         self._da.start()
+        self._eigene.start()
         G9dazkategorien.vergessen()
 
     def tearDown(self):
         G9dazkategorien.vergessen()
+        self._eigene.stop()
         self._da.stop()
         self._bib.stop()
         self.ordner.cleanup()

@@ -39,8 +39,16 @@ bleiben beim Rahmen. Danach hebt
 die Gewichte kommen vom naechsten HumanBody-Dreieck (`GarmentCode.anziehen`,
 DEF-Knochennamen) — der Browser bindet das Stueck an das Rigify-Skelett.
 
-WAS NICHT GEHT: Requisiten (haengen an Daz-Knochen) und Stranghaar (keine
-Flaechen). Beides meldet `stueck` als Fehler, nicht als leeres Netz.
+NUR IM EIGENEN KOERPERTEIL (30.09.2026, Edgar mit Bild: GC T-Shirt, „die Drapierung ist bei
+den Bruesten fehlerhaft"): Unter der Achsel lagen unter den Nachbarn eines Seitenteils
+Genesis-Punkte des OBERARMS — deren Rahmen drehen mit dem Arm, und der HumanBody-Arm haengt
+anders. Der Stoff faltete sich dort zusammen. Mit `bindung` (die `G9teilbindung` der
+Stoffpunkte aus Daz' Bindung) sucht `uebertragen` die Nachbarn nur im eigenen Teil und
+seinen Nachbarteilen (Rumpf: Hals, Becken, Schultern — nicht die Oberarme), wie
+`G9hbteilhaut` es fuer die Gewichte schon tat.
+
+WAS NICHT GEHT: Requisiten (haengen an Daz-Knochen). Stranghaar geht seit dem 30.09.2026
+ueber eine Stichprobe (`G9hbstrang`).
 
 Die HumanBody-Figur selbst (Netz, Normalen, sichtbare Flaeche, Gewichte)
 kommt aus `hbtraeger.py` (herausgeloest, als diese Datei 328 Zeilen hatte).
@@ -170,8 +178,9 @@ class G9aufhumanbody:
 
     # -------------------------------------------------------- Uebertragen
 
-    def uebertragen(self, punkte_g9):
-        u"""(M, 3) Stoffpunkte auf dem Genesis-Grundkoerper -> auf der HumanBody-Figur."""
+    def uebertragen(self, punkte_g9, bindung=None):
+        u"""(M, 3) Stoffpunkte auf dem Genesis-Grundkoerper -> auf der HumanBody-Figur.
+        `bindung`: die `G9teilbindung` dieser Punkte — Nachbarn nur im eigenen Koerperteil."""
         p = np.asarray(punkte_g9, dtype=np.float64)
         if not len(p):
             return p
@@ -179,7 +188,10 @@ class G9aufhumanbody:
         hb_rahmen = Hbtraeger.rahmen(figur['normalen'])
         oertlich = self.oertlich()
         k_alle = min(self.FERN_NACHBARN, len(paar['g9_punkte']))
-        abstand, nachbar = G9kollision.naechste(paar['g9_baum'], p, k=k_alle)
+        if bindung is not None and len(bindung.teile) == len(p):
+            abstand, nachbar = bindung.nachbarn(paar['g9_punkte'], self.g9_teile(), p, k_alle)
+        else:
+            abstand, nachbar = G9kollision.naechste(paar['g9_baum'], p, k=k_alle)
         abstand = np.asarray(abstand, dtype=np.float64).reshape(len(p), -1)
         nachbar = np.asarray(nachbar).reshape(len(p), -1)
         # 0 = am Koerper (Rahmen), 1 = fern (nur Verschiebung)
@@ -204,6 +216,16 @@ class G9aufhumanbody:
         feld = (1.0 - fern) * mit_rahmen + fern * verschoben - p
         return p + ((1.0 - fern) * self.geglaettet(p, feld)
                     + fern * self.geglaettet(p, feld, self.GLAETTUNG_FERN))
+
+    def g9_teile(self):
+        u"""(N,) Koerperteil je Genesis-Punkt der Paarung, einmal je Paarung."""
+        if self.paarung.get('g9_teile') is None:
+            from Genesis9.haut import G9haut
+            from Genesis9.koerperteile import G9koerperteile
+            h = G9garmentfigur({}).haut()          # `G9haut.fuer` gibt ein Woerterbuch
+            haut = G9haut(h['knochen'], np.asarray(h['index']), np.asarray(h['gewicht']))
+            self.paarung['g9_teile'] = G9koerperteile.genesis_punkte(haut)
+        return self.paarung['g9_teile']
 
     def achsel(self):
         u"""Genesis-Hoehe, bis zu der der Umfangsmassstab gilt — None ohne Landmarken."""

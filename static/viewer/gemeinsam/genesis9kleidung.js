@@ -1,10 +1,12 @@
 import { Serverabruf } from './serverabruf.js';
+import { Protokoll } from './protokoll.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
 import { Umfaerbung } from './umfaerbung.js';
+import { Kleidfarbmischung } from './kleidfarbmischung.js';
 import { Stoffwerte } from './stoffwerte.js';
 import { Reiterzuordnung } from './reiterzuordnung.js';
 
@@ -55,15 +57,26 @@ export class Genesis9kleidung {
      * unabhängigen Fetches (zwei echte Serverrunden für dieselben Daten).
      */
     static async stuecke() {
-        if (!Genesis9kleidung._stuecke) {
-            if (!Genesis9kleidung._stueckeLauf) {
-                Genesis9kleidung._stueckeLauf = Serverabruf.json(Genesis9kleidung.KATALOG)
-                    .then((daten) => daten.stuecke || [])
-                    .catch(() => []);
-            }
-            Genesis9kleidung._stuecke = await Genesis9kleidung._stueckeLauf;
+        if (Genesis9kleidung._stuecke) return Genesis9kleidung._stuecke;
+        if (!Genesis9kleidung._stueckeLauf) {
+            Genesis9kleidung._stueckeLauf = Serverabruf.json(Genesis9kleidung.KATALOG)
+                .then((daten) => daten.stuecke || [])
+                .catch((fehler) => {
+                    Protokoll.warnung('Genesis 9', 'Garderobe nicht geladen', fehler);
+                    return [];
+                });
         }
-        return Genesis9kleidung._stuecke;
+        const liste = await Genesis9kleidung._stueckeLauf;
+        // EIN FEHLSCHLAG DARF SICH NICHT EINBRENNEN (Edgar, 30.09.2026: „assets zerschossen,
+        // keine mehr da" — die Liste blieb „Keine Daz-Kleidung gefunden", obwohl der Endpunkt
+        // 460 Stücke lieferte). Vorher merkte sich `_stuecke` auch die leere Liste aus dem
+        // `catch`: Ein einziger abgebrochener Abruf — ein Autoreload des Servers mitten im
+        // Laden genügt — machte die Garderobe für den Rest des Seitenlebens leer, ohne
+        // Fehlermeldung. Jetzt wird nur ein ECHTES Ergebnis behalten; nach einem Fehlschlag
+        // darf der nächste Aufruf es neu versuchen.
+        if (liste.length) Genesis9kleidung._stuecke = liste;
+        else Genesis9kleidung._stueckeLauf = null;
+        return liste;
     }
 
     /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */
@@ -89,7 +102,7 @@ export class Genesis9kleidung {
     static async anziehen(inst, kennung, werte, stufen, kaskade) {
         inst.kleidung[kennung] = { ...(werte || {}) };
         const lauf = inst._lauf;
-        const daten = await Serverabruf.senden(Genesis9aufbau.adresse(
+        const daten = await Serverabruf.netzSenden(Genesis9aufbau.adresse(
             `${inst.constructor.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
                 regler: inst.regler || {}, variante: werte?.variante || '',
                 stil: Genesis9kleidung.stilliste(werte), regler_stueck: werte?.regler || {},
@@ -113,6 +126,7 @@ export class Genesis9kleidung {
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
         Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);    // eigene Farbe (24.09.2026)
+        Kleidfarbmischung.anwenden(inst, kennung, inst.kleidung[kennung].regler);   // Textur der Mischung (30.09.2026)
         Stoffwerte.stueck(inst, kennung, inst.kleidung[kennung]);    // Rauheit, Metall, Gewebe (25.09.2026)
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);
         Genesis9kleidung.melden(inst, kennung, true);

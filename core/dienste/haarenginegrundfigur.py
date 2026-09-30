@@ -31,11 +31,22 @@ class Haarenginegrundfigur:
         from .meshfigurregler import Meshfigurregler
 
         basis = self.lauf.optionen.get('basis') or 'masculine'
-        stellung = dict(Meshfigurregler.GRUNDFIGUREN.get(basis, Meshfigurregler.GRUNDFIGUREN['masculine']))
-        self.lauf.melden(0.1, 'Grundfigur Genesis 9 (%s) mit Rig' % basis)
+        # Hat der Schritt „koerper" eine Figur geliefert (übernommen oder gerechnet, `ergebnis.regler`), ist SIE die
+        # Grundfigur — samt Eigenmorph (`job.stellung()`) und gebackenen Kacheln. Sonst die nackte Grundfigur.
+        stellung = self.job.stellung()
+        kacheln = {}
+        if stellung:
+            for k, name in ((self.job.ergebnis.get('fototextur') or {}).get('kacheln') or {}).items():
+                if str(k).isdigit() and self.ablage.ergebnis(name).is_file():
+                    kacheln[int(k)] = str(self.ablage.ergebnis(name))
+            self.lauf.melden(0.1, 'Grundfigur aus dem Körper-Fit (%d Regler) mit Rig' % len(stellung))
+        else:
+            stellung = dict(Meshfigurregler.GRUNDFIGUREN.get(basis, Meshfigurregler.GRUNDFIGUREN['masculine']))
+            self.lauf.melden(0.1, 'Grundfigur Genesis 9 (%s) mit Rig' % basis)
         t = time.perf_counter()
-        bericht = G9figurrigglb(stellung, name=self.job.name).schreiben(self.ablage.arbeit(self.DATEI))
-        self.job.ergebnis['regler'] = {'stellung': stellung}
+        bericht = G9figurrigglb(stellung, kacheln, name=self.job.name).schreiben(self.ablage.arbeit(self.DATEI))
+        if not self.job.ergebnis.get('regler'):
+            self.job.ergebnis['regler'] = {'stellung': stellung}
         self.job.ergebnis['grundfigur'] = {
             'basis': basis,
             'datei': self.DATEI,

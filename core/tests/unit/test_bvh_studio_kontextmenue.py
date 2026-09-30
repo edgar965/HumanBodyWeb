@@ -25,6 +25,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
+from ._sicher import Sicher
 from ._studiovorlage import Studiovorlage
 
 WURZEL = Path(settings.BASE_DIR)
@@ -78,6 +79,13 @@ class ModellLaengeTest(SimpleTestCase):
         self.assertIn("aktion === 'ctx-laenge-sekunden'", modellmenue)
         self.assertIn("classList.toggle('hb-versteckt', !treffer)", modellmenue)
         bearbeitung = (STUDIO / 'clipbearbeitung.js').read_text(encoding='utf-8')
-        self.assertIn("['bvh', 'audio', 'model', 'script'].includes(wahl.clip.type)", bearbeitung)
+        # Die Typliste, die `laenge` zulässt — seit dem Standbild (21.09.2026)
+        # steht dort auch `freeze`; geprüft wird, dass `model` dabei bleibt.
+        typliste = Sicher.wert(
+            re.search(r'\[([^\]]*)\]\.includes\(wahl\.clip\.type\)', bearbeitung),
+            'clipbearbeitung.js: Typliste in laenge()',
+        )
+        typen = set(re.findall(r"'(\w+)'", typliste.group(1)))
+        self.assertLessEqual({'bvh', 'audio', 'model', 'script'}, typen)
         # Prozent messen sich am Ende der ANDEREN Clips, nie am eigenen.
         self.assertIn('anderer !== clip && anderer.endFrame > ende', bearbeitung)

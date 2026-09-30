@@ -44,8 +44,8 @@ class DasNetzBekommtSeineUvTest(SimpleTestCase):
         # Die Geometrie liegt seit dem 11.09.2026 in `garmentcode_geometrie.js`
         # (herausgeloest, als die Koerpernormalen dazukamen); das Material
         # weiter in `garmentcode_anziehen.js`.
-        self.geometrie = _lies('scene', 'garmentcode_geometrie.js')
-        self.quelle = _lies('scene', 'garmentcode_anziehen.js')
+        self.geometrie = _lies('charakter', 'garmentcode_geometrie.js')
+        self.quelle = _lies('charakter', 'garmentcode_anziehen.js')
 
     def test_das_uv_attribut_wird_gesetzt(self):
         self.assertIn("geometrie.setAttribute('uv'", self.geometrie)
@@ -74,7 +74,7 @@ class DasMaterialIstStoffTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.quelle = _lies('scene', 'garmentcode_stoff.js')
+        self.quelle = _lies('charakter', 'garmentcode_stoff.js')
 
     def test_glanzsaum_braucht_das_physical_material(self):
         # Geprueft wird der AUFRUF, nicht das Wort: Der Modulkopf nennt
@@ -134,7 +134,7 @@ class DasMaterialIstStoffTest(SimpleTestCase):
         """Der Assets-Reiter greift jedes `cloth`-Teilnetz, also auch ein
         GarmentCode-Stück; sein Farbfeld darf den weißen Saum nicht
         zurückbringen."""
-        for teile in (('scene', 'stueckbedienung.js'), ('scene', 'materialregler.js')):
+        for teile in (('charakter', 'stueckbedienung.js'), ('charakter', 'materialregler.js')):
             quelle = _lies(*teile)
             self.assertIn('material.sheenColor?.copy(material.color)', quelle, teile)
             self.assertNotIn('auswahl.mesh.material.color.set(', quelle, teile)

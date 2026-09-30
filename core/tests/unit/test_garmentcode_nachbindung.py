@@ -42,20 +42,21 @@ class GarmentcodeNachbindungTest(SimpleTestCase):
 
     def test_das_modell_meldet_nach_dem_umbinden(self):
         quelle = _quelle('gemeinsam', 'genesis9modell.js')
-        rumpf = quelle.split('_kleiderBinden() {')[1].split('\n    }')[0]
+        # `skelettNeu` (22.09.2026): bleibt das Skelett-Objekt, gilt die Bindung weiter.
+        rumpf = quelle.split('_kleiderBinden(skelettNeu = true) {')[1].split('\n    }')[0]
         self.assertIn('Skelettereignis.melden(this)', rumpf)
         self.assertIn("import { Skelettereignis } from './skelettereignis.js';", quelle)
 
     def test_die_szene_hoert_zu_und_bindet_nach(self):
-        quelle = _quelle('scene', 'garmentcode_nachbindung.js')
+        quelle = _quelle('charakter', 'garmentcode_nachbindung.js')
         self.assertIn('Skelettereignis.hoeren(', quelle)
         self.assertIn('GarmentcodeAnziehen.nachbinden(inst)', quelle)
         self.assertIn('GarmentcodeNachbindung.einhaengen();', quelle)
         # Eingehaengt, wo auch der HumanBody-Weg steht — sonst hoert niemand.
-        self.assertIn("import './garmentcode_nachbindung.js';", _quelle('scene', 'skeleton.js'))
+        self.assertIn("import './garmentcode_nachbindung.js';", _quelle('charakter', 'skeleton.js'))
 
     def test_ein_stueck_am_alten_skelett_wird_neu_gebunden(self):
-        quelle = _quelle('scene', 'garmentcode_anziehen.js')
+        quelle = _quelle('charakter', 'garmentcode_anziehen.js')
         rumpf = quelle.split('static nachbinden(figur) {')[1].split('\n    }')[0]
         self.assertIn('netz.isSkinnedMesh && netz.skeleton === skelett', rumpf)
         self.assertNotIn('netz.isSkinnedMesh ||', rumpf)
@@ -70,7 +71,7 @@ class GarmentcodeNachbindungTest(SimpleTestCase):
         meldet. Ohne Ruhezeit liefe die Maske je Meldung (auf Stufe 2 je
         Lauf zweistellige Sekunden)."""
         for ordner, name, klasse in (('gemeinsam', 'hautverdeckung.js', 'Hautverdeckung'),
-                                     ('scene', 'lagenverdeckung.js', 'Lagenverdeckung')):
+                                     ('charakter', 'lagenverdeckung.js', 'Lagenverdeckung')):
             quelle = _quelle(ordner, name)
             self.assertIn('static RUHE_MS = 400;', quelle, name)
             self.assertIn('clearTimeout(%s._ausstehend.get(inst))' % klasse, quelle, name)
@@ -79,6 +80,9 @@ class GarmentcodeNachbindungTest(SimpleTestCase):
 
     def test_daz_stuecke_melden_nur_mit_garmentcode_stueck(self):
         quelle = _quelle('gemeinsam', 'genesis9kleidung.js')
-        self.assertIn("schluessel.startsWith('gc_')", quelle)
+        # Die Frage „ist das ein GarmentCode-Stück?" steht seit dem 25.09.2026 an einer
+        # Stelle (`Reiterzuordnung.gcLive`: `gc_` ohne `/`, also kein Genesis-Stück daraus).
+        self.assertIn('Reiterzuordnung.gcLive(schluessel)', quelle)
+        self.assertIn("name.startsWith('gc_')", _quelle('gemeinsam', 'reiterzuordnung.js'))
         self.assertIn('Genesis9kleidung.melden(inst, kennung, true)', quelle)
         self.assertIn('Genesis9kleidung.melden(inst, kennung, false)', quelle)

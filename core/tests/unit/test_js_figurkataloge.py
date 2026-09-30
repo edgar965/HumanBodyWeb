@@ -19,9 +19,10 @@ MODUL = Jsmodul('gemeinsam', 'figurkataloge.js')
 SKRIPT = """
 const { Figurkataloge } = await import(MODUL);
 
-// --- Reihenfolge der Reiter nach Ansage (07.09.2026) -----------------------
+// --- Reihenfolge der Reiter nach Ansage (07.09.2026; Genesis 9 an erster
+// Stelle vor HumanBody, 26.09.2026) -----------------------------------------
 pruefe('Reihenfolge', Figurkataloge.REIHENFOLGE,
-       ['modell', 'smpl', 'makehuman', 'uma', 'umapython', 'genesis9']);
+       ['genesis9', 'modell', 'smpl', 'makehuman', 'uma', 'umapython']);
 
 // --- HumanBody: Koerpertypen als Standard, Dateien als gespeichert; eine
 // Datei mit fremder `quelle` (gespeichertes Genesis-9-Modell) bleibt draussen
@@ -41,14 +42,17 @@ pruefe('uma', Figurkataloge.zeilen('uma', {
 }), [{ name: 'Elf.glb', anzeige: 'Elf', unterzeile: 'weiblich · 2.5 MB · 08.09.',
        bereich: 'gespeichert' }]);
 
-// --- SMPL: Masse ja/nein ---------------------------------------------------
+// --- SMPL: Masse ja/nein; eine gespeicherte Figur im zweiten Bereich (25.09.2026)
 pruefe('smpl', Figurkataloge.zeilen('smpl', {
     figuren: [{ name: 'mean_all', geschlecht: 'neutral', smpl: true, masse_vorhanden: true },
-              { name: 'f_body', anzeige: 'Frau', geschlecht: 'weiblich', smpl: false }],
+              { name: 'f_body', anzeige: 'Frau', geschlecht: 'weiblich', smpl: false },
+              { name: 'Olga', geschlecht: 'weiblich', gespeichert: true }],
 }), [{ name: 'mean_all', anzeige: 'mean_all', unterzeile: 'neutral · SMPL-X · Maße vorgegeben',
-       bereich: 'standard' },
+       bereich: 'standard', gespeichert: false },
      { name: 'f_body', anzeige: 'Frau', unterzeile: 'weiblich · GarmentCode-Modell · ohne Maße',
-       bereich: 'standard' }]);
+       bereich: 'standard', gespeichert: false },
+     { name: 'Olga', anzeige: 'Olga', unterzeile: 'weiblich · gespeicherte Figur',
+       bereich: 'gespeichert', gespeichert: true }]);
 
 // --- MakeHuman: Punkte und Hoehe in cm --------------------------------------
 pruefe('makehuman', Figurkataloge.zeilen('makehuman', {

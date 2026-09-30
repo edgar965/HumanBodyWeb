@@ -29,6 +29,8 @@ class Haarengineauftrag(models.Model):
         ('fertig', 'Fertig'),
         ('gescheitert', 'Fehlgeschlagen'),
         ('angehalten', 'Angehalten'),
+        # Begutachtung (30.09.2026): die Runde ist gerechnet, der Auftrag wartet auf das nächste Rezept.
+        ('wartet', 'Wartet auf Begutachtung'),
     ]
     LAEUFT = ('laeuft',)
     #: Was der Nutzer je Foto stellt — ein Lauf darf es beim Speichern nicht überschreiben.

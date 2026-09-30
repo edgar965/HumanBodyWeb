@@ -14,7 +14,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'trefferwahl.js')
+MODUL = Jsmodul('charakter', 'trefferwahl.js')
 
 SKRIPT = """
 const { Trefferwahl: T } = await import(MODUL);

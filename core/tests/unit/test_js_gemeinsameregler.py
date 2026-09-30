@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'gemeinsameregler.js')
+MODUL = Jsmodul('charakter', 'gemeinsameregler.js')
 
 #: DOM-Attrappe: nur was die Klasse anfasst — Bereich, Kopfzeile, Liste.
 DOM = """

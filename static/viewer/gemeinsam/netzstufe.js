@@ -23,13 +23,22 @@
  *
  * Solange der Keks steht, zeigt ein Abzeichen unten rechts die Stufe, damit
  * niemand „langsam" meldet, ohne zu wissen, warum.
+ *
+ * NUR FÜR DIESE SEITE (30.09.2026, Edgar: „per default lade die modelle nicht in
+ * der hohen auflösung, daher sind die tabs so lange"): Der Server nimmt den Keks
+ * bei jedem neuen Seitenaufruf zurück (`Netzstufenwahl.seite_zuruecksetzen`) —
+ * ein neuer Tab und ein Neuladen fangen wieder bei der Einstellung an. Nur das
+ * Neuladen, das diese Taste auslöst, behält die Stufe: dafür der Einmal-Keks
+ * `NEULADEN`, den der Server beim Ausliefern der Seite wieder löscht.
  */
 export class Netzstufe {
 
     static KEKS = 'netzstufen';
+    /** Einmal-Keks: das gleich folgende Neuladen hat die Stufe bestellt. */
+    static NEULADEN = 'netzstufen_neuladen';
     /** Die Filmstufe von MB-Lab (`render_levels 3`). */
     static HOCH = 3;
-    /** Ein Jahr — der Keks ist eine Wahl, keine Sitzung. */
+    /** Ein Jahr — der Server nimmt ihn beim nächsten Seitenaufruf ohnehin zurück. */
     static DAUER_S = 365 * 24 * 3600;
     static TASTE = 'KeyH';
     static ABZEICHEN_ID = 'netzstufe-abzeichen';
@@ -75,6 +84,7 @@ export class Netzstufe {
             try { fertig = await umbauen(neu); } catch (fehler) { console.warn('[Netzstufe]', fehler); }
             if (fertig) { Netzstufe.abzeichen(neu); return false; }
         }
+        if (neu !== null) document.cookie = `${Netzstufe.NEULADEN}=1; path=/; max-age=60; SameSite=Lax`;
         location.reload();
         return true;
     }

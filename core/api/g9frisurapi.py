@@ -17,6 +17,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from ..daten.netzausgabe import Netzausgabe
 from ..dienste.g9frisur import G9frisur
 from .g9figur import G9figur
 from .g9netzantwort import G9netzantwort
@@ -52,5 +53,5 @@ class G9frisurapi:
         teil = G9netzantwort.aus(netz)
         teil['name'] = netz['name']
         teil['stufen'] = stufen
-        return JsonResponse({'name': netz['name'], 'teile': [teil], 'hub_mm': netz['hub_mm'],
-                             'stufen': stufen})
+        return Netzausgabe.antwort({'name': netz['name'], 'teile': [teil],
+                                    'hub_mm': netz['hub_mm'], 'stufen': stufen}, request)

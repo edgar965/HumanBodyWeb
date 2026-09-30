@@ -70,6 +70,11 @@ class G9stueckteile:
             from Genesis9.haarachsen import G9haarachsen
             kaefige = G9haarachsen.anwenden(
                 kennung, teile, kaefige, G9haarachsen.werte(rumpf.get('regler_stueck')))
+        # Eigene Morphe aus den Iterationen von „2D3D Kleider" (`G9kleidmorphe`, 30.09.2026): Deltas neben der
+        # Bibliothek, `eigen.<name>` im Rumpf — an Kleid und Haar, linear wie die Achsen.
+        from Genesis9.kleidmorphe import G9kleidmorphe
+        kaefige = G9kleidmorphe.anwenden(
+            kennung, teile, kaefige, G9kleidmorphe.werte(rumpf.get('regler_stueck')))
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
         # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)

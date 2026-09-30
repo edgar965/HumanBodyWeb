@@ -40,16 +40,16 @@ from django.test import SimpleTestCase
 #: Die Figurarten und ihre Datei. Die Liste steht ABSICHTLICH hier und nicht
 #: als Glob: Kommt eine siebte Art dazu, soll dieser Test sie verlangen.
 ARTEN = {
-    'HumanBody': 'scene/character.js',
-    'SMPL': 'scene/smpl/smplfigur.js',
-    'MakeHuman': 'scene/makehuman/mhfigur.js',
-    'UMA': 'scene/uma/umafigur.js',
-    'UMA Python': 'scene/umapython/umapythonfigur.js',
-    'Genesis 9': 'scene/genesis9/genesis9figur.js',
+    'HumanBody': 'charakter/character.js',
+    'SMPL': 'charakter/smpl/smplfigur.js',
+    'MakeHuman': 'charakter/makehuman/mhfigur.js',
+    'UMA': 'charakter/uma/umafigur.js',
+    'UMA Python': 'charakter/umapython/umapythonfigur.js',
+    'Genesis 9': 'charakter/genesis9/genesis9figur.js',
 }
 
 
-BASIS = 'scene/figurablage.js'
+BASIS = 'charakter/figurablage.js'
 #: Womit eine Szene-Art den gemeinsamen Weg ruft.
 ABLAGE_SCHREIBT = '...Figurablage.grunddaten(this),'
 ABLAGE_LIEST = 'return Figurablage.ausJSON('
@@ -78,7 +78,7 @@ class GcAblageTest(SimpleTestCase):
         `test_jede_figurart_schreibt_die_liste` oben genuegt sich mit EINEM
         Vorkommen je Datei, und das zweite stand ja da.
         """
-        quelle = GcAblageTest._dateitext('scene/character.js')
+        quelle = GcAblageTest._dateitext('charakter/character.js')
         rumpf = quelle.split('    toJSON() {')[1]
         rumpf = rumpf.split('    static ')[0]
         self.assertEqual(
@@ -138,7 +138,7 @@ class GcAblageTest(SimpleTestCase):
         Abstand von 0,8 m, den `Figurplatzierung` am 06.09.2026 ersetzt
         hat. Seither gibt es `charakterAusModelldaten` als einzigen Weg.
         """
-        dialoge = GcAblageTest._dateitext('scene/szene_dialoge.js')
+        dialoge = GcAblageTest._dateitext('charakter/szene_dialoge.js')
         self.assertEqual(
             dialoge.count('charakterAusModelldaten'), 2, 'Beide Dateiwege muessen die gemeinsame Kette rufen.'
         )
@@ -150,7 +150,7 @@ class GcAblageTest(SimpleTestCase):
         )
 
     def test_die_gemeinsame_kette_zieht_die_stuecke_an(self):
-        quelle = GcAblageTest._dateitext('scene/charakterliste.js')
+        quelle = GcAblageTest._dateitext('charakter/charakterliste.js')
         rumpf = quelle.split('export async function charakterAusModelldaten')[1]
         rumpf = rumpf.split('export async function')[0]
         for erwartet in ('await inst.load(', 'Figurplatzierung.anwenden(', 'GarmentcodeAblage.laden('):
@@ -165,13 +165,15 @@ class GcAblageTest(SimpleTestCase):
         haengt beim naechsten Laden der Szene wieder an der Figur — ein
         Loeschen, das nur bis zum Speichern haelt.
         """
-        quelle = GcAblageTest._dateitext('scene/teilnetz_auswahl.js')
-        self.assertIn("target.key.startsWith('gc_')", quelle)
-        self.assertIn('GarmentcodeAblage.vergessen(', quelle)
+        quelle = GcAblageTest._dateitext('charakter/teilnetz_auswahl.js')
+        # Nur das LIVE gebaute Stück (`gc_<stück>` ohne `/`, 25.09.2026) — die gebackenen
+        # Genesis-Stücke `gc_t_shirt/0` gehen den Daz-Weg.
+        zweig = quelle.split("schluessel.startsWith('gc_') && !schluessel.includes('/')")[1]
+        self.assertIn('GarmentcodeAblage.vergessen(', zweig.split('} else if')[0])
 
     def test_gebaute_stuecke_landen_in_der_ablage(self):
         """Gemerkt wird beim Anziehen — sonst ist die Liste immer leer."""
-        quelle = GcAblageTest._dateitext('scene/garmentcode_drapieren.js')
+        quelle = GcAblageTest._dateitext('charakter/garmentcode_drapieren.js')
         self.assertIn('GarmentcodeAblage.merken(', quelle)
 
     def test_gegenprobe_der_suchbegriff_trifft_wirklich(self):

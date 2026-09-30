@@ -13,7 +13,7 @@ import io
 import json
 import unittest
 
-from django.test import Client, TestCase, override_settings
+from django.test import Client, TransactionTestCase, override_settings
 
 from core.daten.bildmodellablage import Bildmodellablage
 from core.dienste.bildmodellbildtypen import Bildmodellbildtypen as T
@@ -231,7 +231,7 @@ def _png():
     return puffer.getvalue()
 
 
-class EndpunkteTest(TestCase):
+class EndpunkteTest(TransactionTestCase):  # `zustand` ist async (eigener Faden, test_bildmodell.py)
     def setUp(self):
         self.client = Client(HTTP_HOST='127.0.0.1')
 

@@ -40,7 +40,7 @@ class PosenklickTest(SimpleTestCase):
     """Der Klick loest aus, nicht der Doppelklick."""
 
     def test_die_zeile_wendet_beim_klick_an(self):
-        quelle = PosenklickTest._quelle('scene/pose_apply.js')
+        quelle = PosenklickTest._quelle('charakter/pose_apply.js')
         # Der Klickhoerer der Zeile steht in `_zeileBauen`; er muss neben der
         # Auswahl auch das Anwenden rufen.
         block = quelle.split('function _zeileBauen')[1]
@@ -58,12 +58,12 @@ class PosenklickTest(SimpleTestCase):
         Bei einem Doppelklick feuert `click` zweimal UND `dblclick` — das
         waeren drei Serverabrufe und dreimal dieselbe Rechnung.
         """
-        quelle = PosenklickTest._quelle('scene/pose_apply.js')
+        quelle = PosenklickTest._quelle('charakter/pose_apply.js')
         self.assertNotIn('dblclick', quelle)
 
     def test_jeder_ausstieg_nennt_seinen_grund(self):
         """`vomServer` und `zuruecksetzen` duerfen nicht schweigen."""
-        quelle = PosenklickTest._quelle('scene/posenanwendung.js')
+        quelle = PosenklickTest._quelle('charakter/posenanwendung.js')
         koepfe = {'vomServer': 'static async vomServer(', 'zuruecksetzen': 'static zuruecksetzen('}
         for name, kopf in koepfe.items():
             self.assertIn(kopf, quelle)
@@ -77,7 +77,7 @@ class PosenklickTest(SimpleTestCase):
 
     def test_fremde_figurarten_werden_erkannt(self):
         """Die Pruefung schaut auf `quelle` — das Merkmal der Figurart."""
-        quelle = PosenklickTest._quelle('scene/posenanwendung.js')
+        quelle = PosenklickTest._quelle('charakter/posenanwendung.js')
         pruefung = quelle.split('static pruefen(')[1].split('\n    }')[0]
         self.assertIn(
             'figur.quelle',
@@ -100,17 +100,17 @@ class PosenklickTest(SimpleTestCase):
         Der Fall, der bei SMPL/MakeHuman/UMA eintritt, wenn die Pruefung
         einmal durchgelassen wuerde: `anwenden` laeuft durch und setzt nichts.
         """
-        quelle = PosenklickTest._quelle('scene/posenanwendung.js')
+        quelle = PosenklickTest._quelle('charakter/posenanwendung.js')
         stellen = quelle.split('static _stellen(')[1].split('\n    }')[0]
         self.assertIn('if (!gesetzt)', stellen)
 
     def test_die_statuszeile_gibt_es(self):
         self.assertIn('id="pose-status"', PosenklickTest._vorlage())
-        self.assertIn("getElementById('pose-status')", PosenklickTest._quelle('scene/pose_apply.js'))
+        self.assertIn("getElementById('pose-status')", PosenklickTest._quelle('charakter/pose_apply.js'))
 
     def test_auch_der_weg_aus_dem_hauptmenue_meldet(self):
         """T-Pose/A-Pose kommen aus `menubar.js` ueber diese Funktion."""
-        quelle = PosenklickTest._quelle('scene/pose_apply.js')
+        quelle = PosenklickTest._quelle('charakter/pose_apply.js')
         rumpf = quelle.split('export async function applyPoseFromServer')[1]
         rumpf = rumpf.split('\n}')[0]
         self.assertIn('_status', rumpf)

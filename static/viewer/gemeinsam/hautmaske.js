@@ -90,11 +90,11 @@ export class Hautmaske {
      * auf einem erlaubten Schuhdreieck bei 860 davon unter 5 mm entfernt lag
      * (einer bei 0,65 mm) — eng anliegender Stoff wie ein Bund trifft der
      * Strahl zuverlässig, ein steifer Schuh mit eigener Krümmung nicht.
-     * Deshalb zusätzlich zum Strahl ein richtungsloser Abstandstest: liegt
-     * der Punkt näher als das am nächsten ERLAUBTEN Dreieck (nicht am
-     * gesperrten Rand, `ok` bleibt in Kraft), gilt er auch ohne Strahltreffer
-     * als verdeckt. Der Hauteinzug (`Saumband.TIEFE_M`, 10 mm) versenkt ihn
-     * dann sichtbar unter die Schuhwand statt ihn nur zu markieren. */
+     * Deshalb zusätzlich ein richtungsloser Abstandstest: liegt der Punkt näher
+     * als das am nächsten ERLAUBTEN Dreieck, gilt er auch ohne Strahltreffer als
+     * verdeckt. NUR AN STARREN STÜCKEN (30.09.2026): an weichem Stoff maskierte
+     * er 12 mm über jede anliegende Kante hinaus und Stoff 10 mm IN der Haut
+     * (`test_js_hautmaske` Fall 3, `test_js_lagenmaske` Fall 3). */
     static NAHE_M = 0.012;
 
     /**
@@ -130,11 +130,11 @@ export class Hautmaske {
         const basis = { koerper, normalen, koerpergitter };
         for (const stoff of stoffe || []) {
             if (!stoff?.punkte?.length || !stoff?.dreiecke?.length) continue;
-            // Ein STARRES Stück (Schuh) biegt sich am Rand nicht wie ein
-            // Bund — der Randstreifen, der eine lockere Kante beim Heben
-            // vor einem Loch schützt, bleibt hier zu (`hautverdeckung.js`).
-            const stueckRinge = stoff.starr ? 0 : ringe;
-            Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, stueckRinge, eng, suchweite, nahe);
+            // Ein STARRES Stück (Schuh) biegt sich am Rand nicht wie ein Bund — der
+            // Randstreifen, der eine lockere Kante beim Heben vor einem Loch schützt,
+            // bleibt hier zu (`hautverdeckung.js`); nur hier gilt der Abstandstest.
+            const [stueckRinge, stueckNahe] = stoff.starr ? [0, nahe] : [ringe, 0];
+            Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, stueckRinge, eng, suchweite, stueckNahe);
         }
         if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper, inselflaeche);
         return maske;
@@ -168,11 +168,11 @@ export class Hautmaske {
                 const k = liste[l];
                 const t = G.strahlDreieck(P, T[k], T[k + 1], T[k + 2], px, py, pz, nx, ny, nz);
                 if (t !== null && t >= -tiefe && t <= abstand) { maske[i] = 1; break; }
-                // Richtungsloser Fallback (27.09.2026, Schuh-Befund oben): der
-                // Strahl kann ein nahes, aber anders gekrümmtes Dreieck
-                // verfehlen. Nur unter denselben ERLAUBTEN Dreiecken gesucht —
+                // Richtungsloser Fallback (27.09.2026, Schuh-Befund oben; `nahe` 0 an
+                // weichem Stoff): der Strahl kann ein nahes, aber anders gekrümmtes
+                // Dreieck verfehlen. Nur unter denselben ERLAUBTEN Dreiecken gesucht —
                 // der gesperrte Randstreifen (`ok`) bleibt unangetastet frei.
-                const d2 = G.punktDreieckAbstand2(P, T[k], T[k + 1], T[k + 2], px, py, pz);
+                const d2 = nahe ? G.punktDreieckAbstand2(P, T[k], T[k + 1], T[k + 2], px, py, pz) : Infinity;
                 if (d2 < naechster2) naechster2 = d2;
             }
             if (!maske[i] && naechster2 <= nahe * nahe) maske[i] = 1;

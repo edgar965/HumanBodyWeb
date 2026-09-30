@@ -57,12 +57,12 @@ console.log(JSON.stringify(aus));
         self.assertIn("const name = await Genesis9kleidung.anzeigename(kennung);", kleidung)
         self.assertIn("netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);",
                       kleidung)
-        daz = (STATIK / 'scene' / 'genesis9' / 'dazkleidung.js').read_text(encoding='utf-8')
+        daz = (STATIK / 'charakter' / 'genesis9' / 'dazkleidung.js').read_text(encoding='utf-8')
         self.assertIn("Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length, 'Daz')", daz)
         self.assertNotIn("`${kennung} (Daz)`", daz)
 
     def test_3_die_figur_meldet_den_modellnamen(self):
-        schwebe = (STATIK / 'scene' / 'schwebeanzeige.js').read_text(encoding='utf-8')
+        schwebe = (STATIK / 'charakter' / 'schwebeanzeige.js').read_text(encoding='utf-8')
         self.assertIn("figur.quelle === 'genesis9' && figur.bodyMesh", schwebe)
         self.assertIn("`${figur.presetName || figur.name || id} (Genesis 9)`", schwebe)
         self.assertIn("Object.values(figur.anhangNetze || {})", schwebe)

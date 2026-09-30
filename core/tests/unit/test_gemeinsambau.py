@@ -132,8 +132,13 @@ class EndpunktBauTest(SimpleTestCase):
     databases = set()
 
     def _stuecke(self, liste):
+        # Die Bauart (wie SMPL / mit Nacharbeit, 25.09.2026) liest `_stuecke` aus
+        # `AppSettings` — hier ohne Datenbank fest auf die Vorgabe „wie SMPL".
+        from core.dienste.garmentbauart import Garmentbauart
+
         anfrage = RequestFactory().post('/x/', {'stuecke': json.dumps(liste)})
-        return Garmentgemeinsamendpunkte._stuecke(anfrage)
+        with mock.patch.object(Garmentbauart, 'gewaehlt', return_value=Garmentbauart.SMPL):
+            return Garmentgemeinsamendpunkte._stuecke(anfrage)
 
     def test_bau_je_stueck_wird_zur_feineinstellung(self):
         gewaehlt = self._stuecke(
@@ -149,6 +154,8 @@ class EndpunktBauTest(SimpleTestCase):
         self.assertIsInstance(gewaehlt[0]['fein'], Baufeineinstellung)
         self.assertEqual(gewaehlt[0]['fein'].anliegen_mm, 2.0)
         self.assertIsNone(gewaehlt[1]['fein'].anliegen_mm)
+        # Die Hose braucht das Hochziehen immer, das T-Shirt folgt der Einstellung.
+        self.assertEqual([e['fein'].wie_smpl for e in gewaehlt], [False, True])
         # `nummer` = Stelle in der Wunschliste — auch ueber Luecken hinweg
         self.assertEqual([e['nummer'] for e in gewaehlt], [0, 1])
         mit_luecke = self._stuecke([{'vorlage': 'hose'}, 'muell', {'vorlage': 't-shirt'}])

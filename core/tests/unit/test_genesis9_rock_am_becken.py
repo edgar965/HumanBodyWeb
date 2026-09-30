@@ -103,6 +103,10 @@ class Rockambeckentest(SimpleTestCase):
         stoff = (settings.BASE_DIR.parent / 'Genesis9' / 'stoff.py').read_text(encoding='utf-8')
         self.assertIn('if p90 < cls.ENG_M:', stoff)
         folger = (settings.BASE_DIR.parent / 'Genesis9' / 'folger.py').read_text(encoding='utf-8')
-        self.assertIn('return G9koerperhaut.fuer(self)', folger)
+        # Seit 0.63 (23.09.2026) mit `starre_zehen` fuer Schuhe — die Koerperhaut bleibt der Weg.
+        self.assertIn('return G9koerperhaut.fuer(self, starre_zehen=self.starre_zehen)', folger)
+        # HumanBody: Seit dem 20.09.2026 (Stoffschwung auch dort) faellt `stoff` nicht mehr weg; ein enges
+        # Stueck hat schon im Netz keines (`G9stoff.entscheiden` -> `netz['stoff']` None), und die Antwort
+        # haengt die Kaefighaut nur an, wo es eines gibt.
         api = (settings.BASE_DIR / 'core' / 'api' / 'g9kleidhumanbody.py').read_text(encoding='utf-8')
-        self.assertIn("teil.pop('stoff', None)", api)
+        self.assertIn("if teil.get('stoff') and netz.get('stoff') is not None:", api)

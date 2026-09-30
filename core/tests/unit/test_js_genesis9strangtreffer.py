@@ -56,12 +56,14 @@ class StrangtrefferTest(SimpleTestCase):
         self.assertIn("if (Object.hasOwn(altes, 'raycast')) roh.raycast = altes.raycast;", rumpf.group(1))
 
     def test_3_auswahl_sichtbar_ohne_emissive(self):
-        text = quelltext('scene', 'teilnetz_auswahl.js')
+        text = quelltext('charakter', 'teilnetz_auswahl.js')
         rumpf = re.search(r'export function _setSubMeshEmissive\(target, color\) \{(.*?)\n\}', text, re.S)
         self.assertIsNotNone(rumpf)
         self.assertIn('if (mat.wireframe && mat.vertexColors)', rumpf.group(1))
-        self.assertIn('mat.color.setRGB(1 + 20 * color.r, 1 + 20 * color.g, 1 + 20 * color.b);',
-                      rumpf.group(1))
+        # Seit 30.09.2026 richtet `Strangauswahl` den Faktor nach der Haarfarbe
+        # (fester Faktor ließ dunkles Haar schwarz); ihre Rechnung prüft `test_js_strangauswahl`.
+        self.assertIn('Strangauswahl.setzen(m, mat, ziel);', rumpf.group(1))
+        self.assertIn('Strangauswahl.AUSWAHL', rumpf.group(1))
 
     def test_4_weltpunkte_mit_stempel(self):
         treffer = quelltext('gemeinsam', 'genesis9strangtreffer.js')

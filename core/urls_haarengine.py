@@ -14,6 +14,7 @@ Der Konverter `<kennung:…>` ist in `core/urls.py` registriert; diese Liste wir
 from django.urls import path
 
 from .api.haarengine import Haarengineendpunkte
+from .api.haarenginebegutachtung import Haarenginebegutachtungsendpunkte
 from .api.haarenginedashboard import Haarenginedashboard
 from .api.haarengineeinstellungen import Haarengineeinstellungen
 from .api.haarenginefotos import Haarenginefotoendpunkte
@@ -61,6 +62,22 @@ HAARENGINE = [
         'api/haarengine/<uuid:job_id>/datei/<str:ordner>/<str:name>',
         Haarengineendpunkte.datei,
         name='haarengine_datei',
+    ),
+    # Begutachtung: Rezept einreichen, Rezept lesen, Funktionen (`core/api/haarenginebegutachtung.py`, 30.09.2026)
+    path(
+        'api/haarengine/<uuid:job_id>/begutachtung/',
+        Haarenginebegutachtungsendpunkte.runde,
+        name='haarengine_begutachtung',
+    ),
+    path(
+        'api/haarengine/<uuid:job_id>/rezept/',
+        Haarenginebegutachtungsendpunkte.rezept,
+        name='haarengine_rezept',
+    ),
+    path(
+        'api/haarengine/funktionen/',
+        Haarenginebegutachtungsendpunkte.funktionen,
+        name='haarengine_funktionen',
     ),
     # Die Runden der Tabelle „Iterationen" (`core/api/haarengineiterationen.py`)
     path(

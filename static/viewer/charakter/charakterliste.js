@@ -13,6 +13,7 @@ import { Figurarten } from './figurarten.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Speichernmenue } from './speichernmenue.js';
 import { Startfigur } from './startfigur.js';
+import { Letztewahl } from './letztewahl.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -44,6 +45,24 @@ import { Startfigur } from './startfigur.js';
  * @param daten  der Inhalt einer Modelldatei (`body_type`, `morphs`, …)
  * @param wahl   `{lage, name}` — Lage wie im Dialog, Name für den Katalog
  */
+/**
+ * Merkt eine über die Modelldaten geladene Figur als die zuletzt geladene.
+ *
+ * Der zweite Ladeweg neben `Charakterdialog.LADER` (Edgar, 30.09.2026): „Modell laden"
+ * (Strg+O), „Modell importieren" und die Wiederherstellung einer Sitzung kommen hier an,
+ * nicht über die Lader des Dialogs. Ohne das merkte sich die Szene ausgerechnet die
+ * Figur nicht, die man über den Dialog geöffnet hat.
+ *
+ * Bei einer Szene mit mehreren Figuren gewinnt die zuletzt gebaute — mehr zu raten wäre
+ * eine Szene, die niemand gespeichert hat (`Letztewahl`).
+ */
+function letzteFigurMerken(daten, wahl) {
+    const name = wahl?.name || daten?.name || daten?.figur?.presetName;
+    if (!name) return;
+    Letztewahl.figurGemerkt(name, daten?.quelle || 'modell',
+                            wahl?.bereich || 'gespeichert');
+}
+
 export async function charakterAusModelldaten(daten, wahl = {}) {
     // Eine Datei vom Vormittag des 17.09.2026: Genesis 9 als HumanBody-Datei
     // (`body_type: "Genesis 9"`, ohne `quelle`) — die Grundfigur.
@@ -54,7 +73,9 @@ export async function charakterAusModelldaten(daten, wahl = {}) {
     // baut sie aus `figur` (`Figurarten.KLASSEN[quelle].fromJSON`), die Lage
     // kommt aus dem Dialog, nicht aus der Datei.
     if (daten?.quelle && daten.quelle !== 'modell' && Figurarten.KLASSEN[daten.quelle]) {
-        return figurAusModelldaten(daten, wahl);
+        const figur = await figurAusModelldaten(daten, wahl);
+        letzteFigurMerken(daten, wahl);
+        return figur;
     }
     const id = generateCharacterId();
     const inst = new CharacterInstance(id, daten);
@@ -95,6 +116,7 @@ export async function charakterAusModelldaten(daten, wahl = {}) {
     fn.updateVertexCount();
     fn.selectCharacter(id);
     markDirty();
+    letzteFigurMerken(daten, wahl);
 
     return inst;
 }

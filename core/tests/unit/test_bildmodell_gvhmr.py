@@ -50,7 +50,8 @@ class FolgeTest(SimpleTestCase):
     #: Was auf den Einzelschritt folgt (Edgar, 20.09.2026: „Berechne auch die [Vorher/Nachher-
     #: Bilder] immer neu, mit dem GVHMR lauf") — die ganze Kette bis Speichern (Edgar, 21.09.2026:
     #: „warum baust du den Lauf nicht so, dass es alle Zwischenschritte hat??").
-    KETTE = ['schaetzung', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern']
+    #: Seit 22.09.2026 mit dem Kopf-Schritt (`Bildmodellkopf`) zwischen Schätzung und Zielnetz.
+    KETTE = ['schaetzung', 'kopf', 'ziel', 'anpassung', 'rest', 'vorschau', 'textur', 'speichern']
 
     def test_einzelschritt_mit_modell_danach(self):
         self.assertEqual(Bildmodelllauf.folge(schritte=['gvhmr']), ['gvhmr'] + self.KETTE)
@@ -58,8 +59,7 @@ class FolgeTest(SimpleTestCase):
                          ['sichtung', 'gvhmr'] + self.KETTE)
         # Was schon genannt ist, kommt nicht doppelt; Textur und Speichern gehören dazu.
         folge = Bildmodelllauf.folge(schritte=['gvhmr', 'vorschau'])
-        self.assertEqual(folge, ['vorschau', 'gvhmr', 'schaetzung', 'ziel', 'anpassung', 'rest',
-                                 'textur', 'speichern'])
+        self.assertEqual(folge, ['vorschau', 'gvhmr'] + [s for s in self.KETTE if s != 'vorschau'])
 
     def test_kette_ohne_einzelschritt(self):
         reihe = Bildmodelloptionen.REIHENFOLGE

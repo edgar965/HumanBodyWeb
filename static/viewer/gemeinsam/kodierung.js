@@ -13,20 +13,57 @@
  * rund 150 Aufrufstellen unveraendert bleiben.
  */
 
-/** base64 -> Float32Array (Vertices, Normalen, Gewichte). */
+/**
+ * Ein Feld, das SCHON ein Puffer ist (Binärpaket), als EIGENE Kopie.
+ *
+ * WARUM DIESE FUNKTION (30.09.2026): Seit die Netzdaten als Binärpaket kommen
+ * (`netzpaket.js`), steht in `daten.vertices` kein base64-String mehr, sondern fertig
+ * ein `Float32Array`. Diese eine Stelle macht daraus einen Umbau von drei Funktionen
+ * statt von ~150 Aufrufstellen: `base64ToFloat32(daten.vertices)` bleibt überall stehen.
+ * Eine Antwort, die noch JSON liefert, läuft weiter über base64 — beide Formen dürfen
+ * nebeneinander leben, bis jeder Weg umgestellt ist.
+ *
+ * WARUM KOPIERT WIRD, OBWOHL DAS PAKET GERADE DAS SPAREN SOLLTE: `blenderToThreeCoords`
+ * arbeitet IN PLACE, und zwar an sechs Stellen (`netzgeometrie.js`, `netzpunkte.js` ×3,
+ * `mhproxy_verformung.js`, `vergleichsnetz.js`). Aus base64 kam bisher immer ein frischer
+ * Puffer, also war das sicher. Eine Sicht auf den Antwortpuffer wäre es nicht: Wer
+ * dasselbe Feld zweimal liest, dreht zweimal — und bekommt eine Figur, die um 90° gekippt
+ * neben der Szene liegt, ohne Fehlermeldung. Genau davor warnt der Kopf von
+ * `netzgeometrie.js`, weil es dort schon einmal passiert ist.
+ *
+ * Die Kopie ist ein `memcpy` und damit weit billiger als das, was sie ersetzt (base64
+ * dekodieren: 83 ms je 42 MB, gemessen 18.09.2026). Der Gewinn des Pakets bleibt: ein
+ * Drittel weniger Bytes auf der Leitung, kein base64 auf beiden Seiten, kein JSON-Parse
+ * über einen hundert Megabyte langen String.
+ *
+ * Der Typ wird NICHT umgedeutet: Wer `base64ToUint32` auf ein Float32Array ruft, hat auf
+ * dem Server den falschen Typ gesetzt — das gehört dort behoben (`Netzfeld.ERLAUBT`),
+ * eine Umdeutung hier würde die Bytes still verfälschen.
+ */
+function eigeneKopie(wert) {
+    return ArrayBuffer.isView(wert) ? wert.slice() : null;
+}
+
+/** base64 (oder fertiger Puffer) -> Float32Array (Vertices, Normalen, Gewichte). */
 export function base64ToFloat32(b64) {
+    const fertig = eigeneKopie(b64);
+    if (fertig) return fertig;
     const bytes = base64ToBytes(b64);
     return new Float32Array(bytes.buffer);
 }
 
-/** base64 -> Uint32Array (Dreiecksindizes). */
+/** base64 (oder fertiger Puffer) -> Uint32Array (Dreiecksindizes). */
 export function base64ToUint32(b64) {
+    const fertig = eigeneKopie(b64);
+    if (fertig) return fertig;
     const bytes = base64ToBytes(b64);
     return new Uint32Array(bytes.buffer);
 }
 
-/** base64 -> Uint16Array (Knochenindizes). */
+/** base64 (oder fertiger Puffer) -> Uint16Array (Knochenindizes). */
 export function base64ToUint16(b64) {
+    const fertig = eigeneKopie(b64);
+    if (fertig) return fertig;
     const bytes = base64ToBytes(b64);
     return new Uint16Array(bytes.buffer);
 }
@@ -93,6 +130,12 @@ export function uint32ToBase64(u32) { return pufferZuBase64(u32); }
  * des Browsers je Netzbau (18.09.2026 nachts). Ohne die Funktion der alte Weg.
  */
 export function base64ToBytes(b64) {
+    // Aus einem Binärpaket kommen die uint8-Gewichte schon als Puffer (`eigenhaut.js`,
+    // Kodierung `u16u8`) — dann ist nichts zu dekodieren.
+    if (ArrayBuffer.isView(b64)) {
+        return b64 instanceof Uint8Array
+            ? b64 : new Uint8Array(b64.buffer, b64.byteOffset, b64.byteLength);
+    }
     if (typeof Uint8Array.fromBase64 === 'function') return Uint8Array.fromBase64(b64);
     const binaer = atob(b64);
     const bytes = new Uint8Array(binaer.length);

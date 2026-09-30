@@ -3,7 +3,6 @@
 
 import json
 
-from ...dienste.animationsauswahl import Animationsauswahl
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
 
@@ -17,17 +16,19 @@ class SzeneEinstellungen(Einstellungsseite):
 
     #: Diese Werte liegen in `ui_prefs` statt in einer eigenen Spalte. Sie
     #: werden nur GESETZT, wenn das Formular etwas schickt — ein leeres Feld
-    #: soll die vorhandene Vorgabe nicht löschen. Figurart und Bereich des
-    #: Standard-Modells (19.09.2026) gehören zum Namen in `default_model_scene`:
-    #: `modell` = HumanBody wie bisher, sonst `smpl`, `makehuman`, `uma`,
-    #: `umapython`, `genesis9` — was `Figurkataloge` kennt.
-    VORLIEBEN = ('default_pose', 'kleider_bone_model',
-                 'default_model_scene_quelle', 'default_model_scene_bereich')
+    #: soll die vorhandene Vorgabe nicht löschen.
+    #:
+    #: OHNE STANDARD-MODELL seit dem 30.09.2026 (Edgar: „entferne das Standardmodell
+    #: und die Standard Animation. Auf der Seite /Charakter/ soll immer nur der letzte
+    #: geladene Modell und die letzte Animation geladen werden"). Die Szene merkt sich
+    #: beides selbst (`viewer/charakter/letztewahl.js`); die Felder `default_model_scene`,
+    #: `…_quelle`, `…_bereich` und `default_anim_scene` bleiben in der Datenbank stehen
+    #: — eine Migration, die Spalten wirft, nimmt anderen Seiten ihre Vorgaben
+    #: (`settings_model`, `settings_result`, Theatre und Effekte haben eigene).
+    VORLIEBEN = ('default_pose', 'kleider_bone_model')
 
     def uebernehmen(self, s, post):
-        s.default_model_scene = F.text(post, 'default_model_scene', 'femaleWithClothes')
         s.show_rig_scene = F.schalter(post, 'show_rig_scene')
-        s.default_anim_scene = F.text(post, 'default_anim_scene')
         s.expanded_panels_scene = json.dumps(F.aufgeklappt(post, 'panel_scene_'))
         s.selection_opacity = F.zahl(post, 'selection_opacity', 0.3, mini=0.0, maxi=1.0)
         s.ui_prefs = self._vorlieben(s.ui_prefs or {}, post)
@@ -53,5 +54,4 @@ class SzeneEinstellungen(Einstellungsseite):
         return {
             'selection_opacity_pct': int(round(s.selection_opacity * 100)),
             'module_buendeln': str(prefs.get('module_buendeln', '1')) != '0',
-            **Animationsauswahl().seitenteil([s.default_anim_scene]),
         }

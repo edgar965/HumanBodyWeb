@@ -20,7 +20,7 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('scene', 'figurvideo_stuecke.js')
+MODUL = Jsmodul('charakter', 'figurvideo_stuecke.js')
 
 SKRIPT = """
 const { Figurvideostuecke: F } = await import(MODUL);

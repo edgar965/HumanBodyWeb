@@ -23,7 +23,6 @@ Geprüft wird deshalb nicht „gibt es ein Feld `faces`", sondern: **Ergeben die
 Bytes als uint32 gelesen Indizes, die im Netz liegen?**
 """
 
-import base64
 
 import numpy as np
 from django.test import TestCase
@@ -44,14 +43,14 @@ class StoffantwortTypenTest(TestCase):
         return Stoffantwort.aus(ergebnis, None, 'female')
 
     def test_dreiecke_kommen_als_uint32(self):
-        roh = base64.b64decode(self.antwort()['faces'])
+        roh = self.antwort()['faces'].rohdaten
         self.assertEqual(len(roh), 3 * 4, '4 Byte je Index')
         self.assertEqual(list(np.frombuffer(roh, dtype=np.uint32)), [0, 1, 2])
 
     def test_punkte_und_normalen_kommen_als_float32(self):
         antwort = self.antwort()
         for feld, zahl in (('vertices', 9), ('normals', 9)):
-            werte = np.frombuffer(base64.b64decode(antwort[feld]), dtype=np.float32)
+            werte = np.frombuffer(antwort[feld].rohdaten, dtype=np.float32)
             self.assertEqual(len(werte), zahl, feld)
 
     def test_zaehler_kommen_aus_den_feldern(self):
@@ -95,7 +94,7 @@ class AnpassungsantwortTypenTest(TestCase):
         return anpassung.als_antwort('tops/probe', ReglerAttrappe())
 
     def test_dreiecke_kommen_als_uint32(self):
-        roh = base64.b64decode(Sicher.wert(self.antwort(), 'Antwort')['faces'])
+        roh = Sicher.wert(self.antwort(), 'Antwort')['faces'].rohdaten
         self.assertEqual(len(roh), 3 * 4)
         self.assertEqual(list(np.frombuffer(roh, dtype=np.uint32)), [0, 1, 2])
 
@@ -115,5 +114,5 @@ class AnpassungsantwortTypenTest(TestCase):
             None,
             'female',
         )['faces']
-        gelesen = np.frombuffer(base64.b64decode(kodiert), dtype=np.uint32)
+        gelesen = np.frombuffer(kodiert.rohdaten, dtype=np.uint32)
         self.assertEqual(list(gelesen), [16777217, 16777219, 16777221])
