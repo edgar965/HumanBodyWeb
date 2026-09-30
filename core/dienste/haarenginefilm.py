@@ -87,6 +87,8 @@ class Haarenginefilm:
             bilder=bericht.get('bilder', 0),
             bildrate=bericht.get('bildrate', 0),
             sekunden=bericht.get('sekunden'),
+            bildnummern=bericht.get('bildnummern'),
+            teile=bericht.get('teile'),
         )
         self.lauf.melden(
             1.0, 'Film: %d Bilder bei %d fps' % (bericht.get('bilder', 0), bericht.get('bildrate', 0))

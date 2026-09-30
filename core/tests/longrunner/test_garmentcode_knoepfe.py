@@ -129,19 +129,29 @@ class GarmentcodeKnoepfeTest(SimpleTestCase):
 
     # ---------------------------------------------- Form-Kästchen / Vorbild
 
-    def test_hoeschen_ist_eine_kurze_hose_ohne_oberteil(self):
+    def test_hoeschen_ist_ein_slip_ohne_oberteil(self):
         """Das Form-Kästchen „Höschen" und das Vorbild „Fr Thong" — beide
-        müssen eine Hose ergeben, keinen BH (21:26: 3.218 Punkte BH statt
-        6.160 Punkte Höschen)."""
-        for name, regler in (('Kästchen', {'meta.upper': None, 'meta.wb': 'StraightWB',
-                                           'meta.bottom': 'Pants', 'pants.length': 0.2}),
-                             ('Vorbild', {'meta.upper': None, 'meta.wb': 'StraightWB',
-                                          'meta.bottom': 'Pants', 'pants.length': 0.112})):
-            ergebnis = self.erzeugen('unterwaesche', regler)
+        müssen einen Slip ergeben (Bund plus `briefs_*`), keinen BH (21:26:
+        3.218 Punkte BH statt 6.160 Punkte Höschen).
+
+        Seit 20.09.2026 ist das Höschen der Slip-Baustein `Briefs`
+        (`slip/`), nicht mehr die kürzeste `Pants` — sonst wäre es wieder die
+        Boxershorts. Die Werte kommen vom Server, so wie der Knopf sie
+        schickt: eine von Hand geschriebene Liste mit `meta.bottom: Pants`
+        blieb am 30.09.2026 stehen, als der Katalog (25.09.) fremde `meta.*`
+        zu verwerfen begann — `Pants` gehört nicht zur Unterwäsche."""
+        regler = self.klient.get('/api/garmentcode/regler/', {'vorlage': 'unterwaesche'}).json()
+        kaestchen = next(p for p in regler['passform'] if p['schluessel'] == 'form_hoeschen')
+        vorbilder = self.klient.get('/api/garmentcode/vorbilder/', {'vorlage': 'unterwaesche'}).json()
+        vorbild = next(v for v in vorbilder['vorbilder'] if v['titel'] == 'Fr Thong')
+        for name, eintrag in (('Kästchen', kaestchen), ('Vorbild', vorbild)):
+            ergebnis = self.erzeugen('unterwaesche', eintrag['werte'])
             spez = json.load(open(ergebnis['spezifikation'], encoding='utf-8'))
-            panels = spez['pattern']['panels'].keys()
-            self.assertTrue(any(p.startswith('pant_') for p in panels), (name, list(panels)))
-            self.assertFalse(any('torso' in p for p in panels), (name, list(panels)))
+            panels = list(spez['pattern']['panels'])
+            self.assertTrue(any(p.startswith('briefs_') for p in panels), (name, panels))
+            self.assertTrue(any(p.startswith('wb_') for p in panels), (name, panels))
+            self.assertFalse(any('torso' in p for p in panels), (name, panels))
+            self.assertFalse(any(p.startswith('pant_') for p in panels), (name, panels))
 
     def test_bh_ist_ein_oberteil_ohne_hose(self):
         ergebnis = self.erzeugen('unterwaesche', {'meta.upper': 'FittedShirt', 'meta.wb': None,

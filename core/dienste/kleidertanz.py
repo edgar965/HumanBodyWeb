@@ -79,7 +79,7 @@ class Kleidertanz:
                     alpha = bgr[:, :, 3:4].astype(np.float32) / 255.0
                     bgr = (bgr[:, :, :3].astype(np.float32) * alpha + 255.0 * (1.0 - alpha)).astype(np.uint8)
                 schreiber.write(bgr)
-                if i in (0, len(nummern) - 1):
+                if i in (0, len(nummern) // 2):     # Anfang und Mitte: Anfang und Ende einer Schleife sind gleich
                     stand[i] = punkte
         finally:
             schreiber.release()
@@ -91,11 +91,12 @@ class Kleidertanz:
         """Je Kleiderteil: Abstand zur Körperoberfläche im ersten/letzten Bild und der Weg dazwischen (mm)."""
         if not stand:
             return {}
-        erstes, letztes = stand[min(stand)], stand[max(stand)]
+        erstes, letztes = stand[min(stand)], stand[max(stand)]      # `letztes` = die Mitte der Bewegung
         aus = {}
         for i, t in enumerate(self.teile):
             if t['art'] == 'koerper':
-                aus['koerper'] = {'weg_mm': round(float(np.linalg.norm(letztes[i] - erstes[i], axis=1).mean()) * 1e3, 1)}
+                weg = float(np.linalg.norm(letztes[i] - erstes[i], axis=1).mean()) * 1e3
+                aus['koerper'] = {'weg_mm': round(weg, 1)}
                 continue
             abstand = []
             for punkte in (erstes, letztes):

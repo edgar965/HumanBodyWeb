@@ -156,7 +156,11 @@ class GarmentcodeVersprechenTest(TestCase):
                                            'meta.bottom': 'Briefs', 'briefs.rise': 0.5,
                                            'briefs.leg_cut': 0.6}, 'versprechen_hoeschen')
         m = self.mark
-        self._zwischen(rig.mitte_unten(), m['schritt'] - 2 * CM, m['schritt'] + 4 * CM, 'Zwickel des Slips')
+        # Der Zwickel haengt unter dem Stoffgewicht ein Stueck UNTER dem Schritt:
+        # gemessen 30.09.2026 an Kin in zwei Laeufen 0,8244 und 0,8224 (Schritt
+        # 0,8452) — 2,1 bis 2,3 cm; die Simulation streut um 2 mm. Die erste
+        # Schranke (2 cm) war vor dem ersten Lauf geschaetzt und lag darunter.
+        self._zwischen(rig.mitte_unten(), m['schritt'] - 3 * CM, m['schritt'] + 4 * CM, 'Zwickel des Slips')
         # Kein Hosenbein: neben der Mitte (|x| > 9 cm) haengt nichts unter den
         # Schritt — ein Bein der kuerzesten Hose reichte dort 5 cm tiefer —,
         # und der Beinausschnitt steigt zur Seite (|x| 15-18 cm) um mindestens

@@ -347,9 +347,11 @@ class Animationseffekte:
             ),
             (
                 'Blender 5.0 → 5.2 LTS',
-                'Die neue Haar- und Stoffdynamik liegt '
-                'erst in 5.2. Ob der Umstieg die übrigen Blender-Schritte des '
-                'Projekts (CharMorph, Rigging) stört, ist nicht geprüft.',
+                'Seit 30.09.2026 läuft 5.2.2 LTS (portable unter tools/). '
+                'Geprüft: Kostüm-Bau von BlenderModel bitgleich zu 5.0.1, die '
+                'Retarget-Extension lädt; die Modifier-Eingaben eines '
+                'Geometry-Nodes-Modifiers setzt man in 5.2 über eine Hüll-Nodegruppe. '
+                'Nicht geprüft: CharMorph (toter Symlink schon in 5.0), Haar- und Stoffdynamik.',
             ),
             (
                 'Gelenke oder Verformungsziele?',

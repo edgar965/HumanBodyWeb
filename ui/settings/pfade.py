@@ -38,7 +38,14 @@ PYTHON14 = str(TOOLS_ROOT / 'python14' / 'Scripts' / 'python.exe')
 #: Externe Programme — aus der Umgebung überschreibbar, `local_settings.py`
 #: schlägt beides.
 FFMPEG_EXE = os.environ.get('FFMPEG_EXE') or r'A:\archiv2\_AI\tools\ffmpeg.exe'
-BLENDER_EXE = os.environ.get('BLENDER_EXE') or r'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe'
+#: Blender: seit 30.09.2026 die portable 5.2.2 LTS unter `tools/` (Edgar: „Update blender"; Pflege bis Juli
+#: 2028), das Profil `%APPDATA%\Blender Foundation\Blender\5.2` trägt die Addons und Extensions von 5.0
+#: (`retarget_bvh`, `retarget`, HumanBodyBlender, keentools, MB-Lab …). Gemessen: Kostüm-Bau 1 Kandidat, 2 Ansichten
+#: 6,0 s (5.0.1: 5,3 s), Renders bitgleich, Retarget-Extension lädt unter `--factory-startup`. Fehlt der Ordner
+#: (zweiter Rechner), bleibt die installierte 5.0.
+_BLENDER_522 = TOOLS_ROOT / 'tools' / 'blender-5.2.2-windows-x64' / 'blender.exe'
+BLENDER_EXE = os.environ.get('BLENDER_EXE') or (
+    str(_BLENDER_522) if _BLENDER_522.is_file() else r'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe')
 #: Rhubarb Lip Sync (18.09.2026, `core/dienste/lippensync.py`): Tondatei ->
 #: Mundformen mit Zeiten. Liegt als Fremdprogramm unter `tools/rhubarb/`
 #: (nicht im Git, `tools/**/*.exe`); Herkunft in `Genesis9/HERKUNFT.md`.

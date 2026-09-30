@@ -66,3 +66,30 @@ class Objwerkstoffe:
         genau die Kandidaten für `Exportfleckenpruefung`."""
         ohne = self.werkstoffe_ohne_karte()
         return sorted(o for o, m in self.objekt_werkstoff().items() if m in ohne)
+
+    def werkstoffwerte(self):
+        u"""`{werkstoff: {'Kd': (r, g, b) | None, 'd': float, 'karte': bool}}`
+        aus der `.mtl`. `Kd` ist None, wenn der Block gar keine Zeile `Kd`
+        trägt (verlorene Farbe); `d` ist 1,0 ohne Zeile; `karte` gilt für
+        `map_Kd` UND `map_d` (Haarkarten haben nur die Deckkraftmaske)."""
+        if not self.mtl_pfad or not self.mtl_pfad.is_file():
+            return {}
+        werte = {}
+        aktuell = None
+        with self.mtl_pfad.open('r', encoding='utf-8', errors='replace') as f:
+            for zeile in f:
+                teile = zeile.split()
+                if not teile:
+                    continue
+                if teile[0] == 'newmtl' and len(teile) > 1:
+                    aktuell = zeile.split(None, 1)[1].strip()
+                    werte[aktuell] = {'Kd': None, 'd': 1.0, 'karte': False}
+                elif aktuell is None:
+                    continue
+                elif teile[0] == 'Kd' and len(teile) >= 4:
+                    werte[aktuell]['Kd'] = tuple(float(t) for t in teile[1:4])
+                elif teile[0] == 'd' and len(teile) >= 2:
+                    werte[aktuell]['d'] = float(teile[1])
+                elif teile[0] in ('map_Kd', 'map_d'):
+                    werte[aktuell]['karte'] = True
+        return werte

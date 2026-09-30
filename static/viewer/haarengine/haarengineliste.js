@@ -3,7 +3,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
 
 /**
- * Haarengineliste — die Seite „Haar Engine": das Formular „Neuer Auftrag" (Name, Fotos mit Rollen) und die Tabelle der
+ * Haarengineliste — die Seite „2D3D Kleider": das Formular „Neuer Auftrag" (Name, Fotos mit Rollen) und die Tabelle der
  * Aufträge (Duplizieren, Löschen).
  *
  * Das Formular ist das des Reiters „Mesh" (`Meshliste.formularBinden`) ohne die Optionen: Sie stehen auf der Auftragsseite und
@@ -99,18 +99,21 @@ export class Haarengineliste {
 
     async anlegen() {
         const name = document.getElementById('haarengine-name').value.trim();
+        // Fotos und Körper aus einem Auftrag „Mesh to 3D" (Kennung) — dann sind eigene Fotos nicht nötig (30.09.2026).
+        const meshfigur = (document.getElementById('haarengine-meshfigur')?.value || '').trim();
         if (!name) { this.melden('Bitte einen Namen angeben', true); return; }
-        if (!this.dateien.length) { this.melden('Bitte mindestens ein Foto wählen', true); return; }
+        if (!this.dateien.length && !meshfigur) { this.melden('Bitte mindestens ein Foto wählen oder einen Auftrag „Mesh to 3D" nennen', true); return; }
         const rollen = {};
         for (const d of this.dateien) if (this.rollen.has(d)) rollen[d.name] = this.rollen.get(d);
         const daten = new FormData();
         daten.append('name', name);
         daten.append('rollen', JSON.stringify(rollen));
         daten.append('starten', '0');
+        if (meshfigur) daten.append('meshfigur', meshfigur);
         for (const d of this.dateien) daten.append('bilder', d, d.name);
         const knopf = document.getElementById('haarengine-anlegen');
         knopf.disabled = true;
-        this.melden(`${this.dateien.length} Foto(s) werden hochgeladen …`);
+        this.melden(this.dateien.length ? `${this.dateien.length} Foto(s) werden hochgeladen …` : 'Auftrag wird angelegt …');
         try {
             const antwort = await Serverabruf.formular(Haarengineliste.ANLEGEN, daten);
             if (antwort.error) throw new Error(antwort.error);
@@ -155,7 +158,7 @@ export class Haarengineliste {
     async loeschen() {
         const ids = this.wahl.kennungen();
         if (!ids.length) return;
-        if (!window.confirm(`${ids.length} Auftrag/Aufträge löschen? Gespeicherte Modelle und die Ablage in Haar Engine bleiben.`)) return;
+        if (!window.confirm(`${ids.length} Auftrag/Aufträge löschen? Gespeicherte Modelle und die Ablage in 2D3D Kleider bleiben.`)) return;
         try {
             const antwort = await Serverabruf.senden(Haarengineliste.LOESCHEN, { ids });
             if (antwort.error) throw new Error(antwort.error);

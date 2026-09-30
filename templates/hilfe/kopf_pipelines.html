@@ -29,6 +29,11 @@ am besten ist, und was davon du nachbauen kannst".
     passt.
   </p>
 
+  <p>
+    Weiter unten: <a href="#blender">Blender</a> (der Weg Foto → Netz → Figur → Film, Schritt „kostuem" mit dem Kostüm aus Teilen)
+    und <a href="#kleider2d3d">2D3D Kleider</a> (der Weg Foto → Netz → Genesis-Figur mit Kleidern und Haar, ohne Blender).
+  </p>
+
   <div class="info-box info-box-purple">
     <strong>Zwei Gruppen, keine gemeinsame Rangliste:</strong> unten zuerst die drei
     Verfahren, die in diesem Projekt eingebaut UND an einem echten Auftrag GEMESSEN
@@ -209,14 +214,15 @@ am besten ist, und was davon du nachbauen kannst".
     MediaPipe-Landmarken gestützte Anpassung, nicht das Formmodell selbst.
   </div>
 
-  <h2>Blender</h2>
+  <h2 id="blender">Blender</h2>
   <p>
     Frage Edgar (29.09.2026): „womit machst du den Foto-Netz-Figur-Lauf? Sind das
     Blender-Python-Skripte?" — Nein, für den Weg von den Fotos bis zur fertigen
     Genesis-9-Figur läuft <strong>keine einzige Zeile in Blender</strong>. Blender kommt erst
     in den Schritten „kostuem" (Kostüm bauen und gegen die Fotos benoten, unten) und
     „blender" (BVH-Animation auf die Figur, Video) des Bereichs „BlenderModel" dazu. Die Kette
-    der Reihe nach:
+    der Reihe nach (der Bereich „<a href="#kleider2d3d">2D3D Kleider</a>" ersetzt auch diese beiden
+    letzten Schritte durch reines Python):
   </p>
 
   <div class="kp-kette">
@@ -271,6 +277,8 @@ am besten ist, und was davon du nachbauen kannst".
   </div>
 
   {% include "hilfe/kopf_pipelines_kostuem.html" %}
+
+  {% include "hilfe/kopf_pipelines_2d3dkleider.html" %}
 
 </div>
 {% endblock %}

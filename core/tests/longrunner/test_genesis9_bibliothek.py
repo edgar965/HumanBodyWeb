@@ -23,7 +23,7 @@ from django.test import Client, SimpleTestCase
 
 from humanbody_core.quaternion import Quat
 from humanbody_core.skeleton import Skeleton, SkeletonRigify
-from humanbody_core.skeleton.formats.g9_zuordnung import DEF_ZU_G9, G9zuordnung
+from humanbody_core.skeleton.formats.g9_zuordnung import DEF_ZU_G9, SCHULTERN, G9zuordnung
 from Genesis9.anhang import G9anhang
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.charaktere import G9charaktere
@@ -219,17 +219,17 @@ class ApiTest(SimpleTestCase):
         self.assertEqual(schluessel[:13], ['figur', 'koerper', 'kopf', 'mimik', 'hals',
                                            'brust', 'ruecken', 'taille', 'huefte',
                                            'arme', 'haende', 'beine', 'fuesse'])
-        self.assertTrue(all(s.startswith('hb_') for s in schluessel[13:]), schluessel)
+        # Dahinter die HB-Bereiche und „Kopf-Eigen" (27.09.2026, `G9schnittmorph`).
+        self.assertEqual([s for s in schluessel[13:] if s[:3] != 'hb_'], ['kopf_eigen'])
         # Seit 18.09.2026 hinter den 8 Starter-Hautsaetzen und 15 Augenbildern
         # die der Charakterordner (Amala G9 Skin MAT, Ursula, Kin, Anime …).
-        self.assertGreaterEqual(len(r['haut']), 8)
-        self.assertEqual([h['id'] for h in r['haut']][:8],
-                         [h['id'] for h in r['haut'] if ':' not in h['id']])
+        haut = [h['id'] for h in r['haut']]
+        self.assertGreaterEqual(len(haut), 8)
+        self.assertEqual(haut[:8], [h for h in haut if ':' not in h])
         self.assertGreaterEqual(len(r['augen']), 15)
-        self.assertEqual([a['id'] for a in r['augen']][:15],
-                         ['%02d' % n for n in range(1, 16)])
+        self.assertEqual([a['id'] for a in r['augen']][:15], ['%02d' % n for n in range(1, 16)])
         self.assertTrue(r['brauen'])
-        self.assertEqual(len(r['brauenstile']), 22)     # 21 + Kins eigenes Netz
+        self.assertEqual(len([s for s in r['brauenstile'] if ':' not in s['id']]), 21)
         antwort = self.c.post('/api/character/genesis9-figur/amala/netz/',
                               data=json.dumps({
                                   'regler': {'Amala_figure_ctrl_Character': 1},
@@ -299,12 +299,12 @@ class RetargetTest(SimpleTestCase):
             quelle = self._bvh_richtungen(bvh, bild)
             ziel = self._ziel_richtungen(kette, spuren, bild)
             for bvhname, g9name in zuordnung.items():
-                if g9name and bvhname in quelle and g9name in ziel:
+                if g9name and g9name not in SCHULTERN and bvhname in quelle and g9name in ziel:
                     winkel.append(np.degrees(np.arccos(np.clip(
                         float(np.dot(quelle[bvhname], ziel[g9name])), -1, 1))))
         self.assertGreater(len(winkel), 30)
-        self.assertLess(np.median(winkel), 1.0)          # gemessen 0,20°
-        self.assertLess(np.percentile(winkel, 90), 20.0)  # Schultern/Hals 10–13°
+        self.assertLess(np.median(winkel), 1.0)          # gemessen 0,10°
+        self.assertLess(np.percentile(winkel, 90), 20.0)  # 3,2° ohne Schluesselbeine (Fassung 11)
 
     @staticmethod
     def _bvh_richtungen(bvh, bild):

@@ -100,6 +100,41 @@ class Exportkartenpruefung:
                     material = zeile.split(None, 1)[1].strip()
         return uvs, flaechen
 
+    @staticmethod
+    def _mitten(uvs, liste):
+        u"""`(anzahl, u, v)` — die UV-Mitte jeder Fläche der Liste, auf 0..1
+        gefaltet. `uvs` ist das float32-Feld aus `_lesen`."""
+        import numpy as np
+        f = np.asarray(liste, dtype=np.int64) - 1
+        return len(f), uvs[f, 0].mean(axis=1) % 1.0, uvs[f, 1].mean(axis=1) % 1.0
+
+    def flaechentexel(self):
+        u"""`{material: Feld (n, 3)}` — die Farbe der Karte in der UV-Mitte
+        jeder Fläche, in der Richtung der OBJ-Zeilen (v = 0 unten). Was dort
+        liegt, sieht ein richtig lesendes Programm an dieser Fläche; damit
+        lässt sich vorhersagen, ob ein Teil GEWOLLT farblos ist
+        (`Exportgrauteile`). Materialien ohne Karte oder mit fehlender Datei
+        fehlen im Ergebnis."""
+        import numpy as np
+        from PIL import Image
+
+        uvs, flaechen = self._lesen()
+        if not uvs:
+            return {}
+        uvs = np.asarray(uvs, dtype=np.float32)
+        aus = {}
+        for material, liste in flaechen.items():
+            pfad = self.ordner / self.karten[material]
+            if not pfad.exists():
+                continue
+            feld = np.asarray(Image.open(pfad).convert('RGB'), dtype=np.int16)
+            hoehe, breite = feld.shape[:2]
+            _, u, v = self._mitten(uvs, liste)
+            px = np.clip(u * (breite - 1), 0, breite - 1).astype(np.int32)
+            py = np.clip((1.0 - v) * (hoehe - 1), 0, hoehe - 1).astype(np.int32)
+            aus[material] = feld[py, px]
+        return aus
+
     # ------------------------------------------------------------------ prüfen
 
     def bericht(self):
@@ -131,15 +166,12 @@ class Exportkartenpruefung:
             hoehe, breite = feld.shape[:2]
             rand, rand_anteil = self._randfarbe(feld)
 
-            f = np.asarray(liste, dtype=np.int64) - 1
-            u = uvs[f, 0].mean(axis=1) % 1.0
-            v = uvs[f, 1].mean(axis=1) % 1.0
+            anzahl, u, v = self._mitten(uvs, liste)
             px = np.clip(u * (breite - 1), 0, breite - 1).astype(np.int32)
             gerade = np.clip((1.0 - v) * (hoehe - 1), 0, hoehe - 1).astype(np.int32)
             gedreht = np.clip(v * (hoehe - 1), 0, hoehe - 1).astype(np.int32)
             leer = self._leere(feld, px, gerade, rand)
             leer_gespiegelt = self._leere(feld, px, gedreht, rand)
-            anzahl = len(f)
             je_material[material] = {
                 'flaechen': anzahl, 'leer': leer, 'leer_gespiegelt': leer_gespiegelt,
                 'anteil': leer / anzahl if anzahl else 0.0,

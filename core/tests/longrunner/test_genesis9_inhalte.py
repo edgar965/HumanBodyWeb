@@ -76,10 +76,12 @@ class KatalogeTest(SimpleTestCase):
         self.assertTrue(any('all_mat' in e['id'] for e in katalog['haut']))
 
     def test_brauenstile_21(self):
-        u"""21 Stile der Essentials plus Kins eigenes Netz (18.09.2026 nachts);
-        Ursulas Vorgabe ist `fiber02` in ihrem Schwarz, Kins sein Netz."""
+        u"""21 Stile der Essentials plus die eigenen Netze der Charaktere (Kin
+        18.09.2026 nachts, MB Olesia seit 20.09.); Ursulas Vorgabe ist `fiber02`
+        in ihrem Schwarz, Kins sein Netz. Wie viele Charakternetze installiert
+        sind, ist Edgars Bestand — die Essentials sind fest, die Charaktere kommen dazu."""
         stile = [s['id'] for s in G9brauen.stile()]
-        self.assertEqual(len(stile), 22)
+        self.assertEqual(len([s for s in stile if not s.startswith('charakter:')]), 21)
         self.assertIn('card12', stile)
         self.assertIn('fiber09', stile)
         self.assertIn('charakter:eg_kin_eyebrows', stile)

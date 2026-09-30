@@ -1,0 +1,226 @@
+{% comment %}
+Abschnitt „2D3D Kleider" der Hilfeseite 2D -> 3D (`kopf_pipelines.html`). Edgar (30.09.2026): „passe /hilfe/2d-3d/ an mit den Infos
+der neuen 2d3dKleider Pipeline". Alle Zahlen stammen aus dem Testauftrag „Edgar - TEST" (2026.09.30.21.02.25); Quelle je Zeile.
+Ausführlich: `.claude/rules/haarengine.md`, `2d3DIterationen/README.md`. Konzept der Garderobe (Haar/Kleidung – Generisch):
+Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
+{% endcomment %}
+<h2 id="kleider2d3d">2D3D Kleider: Fotos → Figur mit Kleidern und Haar aus der Genesis-Garderobe</h2>
+<p>
+  <a href="/haarengine/">Dashboard → 2D3D Kleider</a> (Bezeichner <code>haarengine</code>, seit 30.09.2026) ist der zweite Weg vom
+  Foto zur angezogenen Figur. Er hat dieselbe Jobstruktur und dieselben Seiten wie BlenderModel (Auftrag, Iterationen, Bühne,
+  Film); Bau, Render und Note laufen in Python (pyrender). Blender ist hier <strong>erlaubt, aber nicht der Rechenkern</strong>:
+  Wenn es dazukommt, dann als Arbeiter für einzelne Rechnungen (Stoffsimulation, Haar-Knoten, Projektionsmalerei) über EINE
+  Arbeiterklasse — ein Test (<code>BlenderNurUeberEinenArbeiterTest</code>) hält verstreute Aufrufe fern.
+  Kleider und Haar sind hier keine Kostümteile, sondern Stücke der Genesis-Garderobe — die Figur ist ein
+  <em>Zustand</em> aus Körperreglern, Haar- und Kleidungsreglern, den jede Runde durch einen kurzen Text verändert. Das Konzept der
+  beiden Sammeleinträge „Haar – Generisch" und „Kleidung – Generisch" steht unter
+  <a href="/hilfe/kleidung/haarengine/">Hilfe → Kleidung → 2D3D Kleider</a>.
+</p>
+
+<h3>Die Kette</h3>
+<div class="kp-kette">
+  <div class="kp-stufe kp-stufe-python">
+    <span class="kp-stufe-marke">Schritt „netz"</span>
+    <h4>Fotos → Bezugsnetz: TRELLIS (oder Hunyuan3D)</h4>
+    <p>Kopie des ausgebauten Netz-Schritts von BlenderModel: aus den Fotos mit ihren Rollen entsteht ein texturiertes Netz. Es ist
+    die <em>Messlatte</em> des ganzen Laufs — alles Weitere wird gegen dieses Netz und gegen die Fotos benotet.</p>
+  </div>
+  <div class="kp-stufe kp-stufe-python">
+    <span class="kp-stufe-marke">Schritt „koerper"</span>
+    <h4>Körper: aus „Mesh to 3D" übernehmen oder rechnen</h4>
+    <p>Option <code>koerper.quelle</code>: <code>uebernehmen</code> holt Regler, Eigenmorph, Kacheln und Netz samt Lage aus einem
+    fertigen Auftrag „Mesh to 3D" (0 s); <code>rechnen</code> würde dessen Kette hier selbst laufen lassen — <em>geschrieben, aber
+    noch nie gelaufen</em>. „Neuer Auftrag" nimmt deshalb die Kennung eines Mesh-Auftrags und übernimmt dessen Fotos.</p>
+  </div>
+  <div class="kp-stufe kp-stufe-python">
+    <span class="kp-stufe-marke">Schritte „grundfigur", „iterationen"</span>
+    <h4>Genesis-9-Figur mit Kleidern und Haar, Runde für Runde</h4>
+    <p>Die Grundfigur nimmt die Stellung des Körper-Schritts (sonst die nackte Basis). Dann baut jede Runde das Modell
+    (<code>ModellMitKleidern</code>), rendert es aus den Blickwinkeln der Vorlagen (pyrender, Python) und benotet es. Siehe unten.</p>
+  </div>
+  <div class="kp-stufe kp-stufe-python">
+    <span class="kp-stufe-marke">Schritte „export", „film", „speichern"</span>
+    <h4>GLB mit Rig, Tanz-Film, Ablage</h4>
+    <p>Der Export schreibt die Figur als GLB mit Rig (<code>Haarengineexport</code>); der Film rendert das Modell der Iterationen
+    in wenigen Bildern über eine Bewegung (Edgar: höchstens zehn) — lineare Hautmischung in NumPy (<code>G9tanzhaut</code>), Video
+    per OpenCV; „speichern" legt das Modell unter <code>output/Export/HaarEngine</code> ab.</p>
+  </div>
+</div>
+
+<h3>Der Zustand und das Rezept</h3>
+<p>
+  Der Code, den die Iterationen brauchen, steht nicht im Bereich, sondern in <code>Genesis9/modellmitkleidern.py</code> — so
+  generisch, dass er ohne Iterationsangabe auskommt (Edgars Vorgabe). <code>ModellMitKleidern</code> hält vier Dinge:
+  <code>koerper</code> (Regler), <code>haar</code> (Regler von „Haar – Generisch"), <code>kleidung</code> (Regler von
+  „Kleidung – Generisch: Alle Kategorien") und <code>farben</code>. Seine Funktionen sind die Aufrufe einer Iteration
+  (<code>kleid_nur</code>, <code>kleid_anteil</code>, <code>passform</code>, <code>haar_nur</code>, <code>haar_achse</code>,
+  <code>haar_farbe</code>, <code>haltung</code>, <code>morph_neu</code> …); <code>GET /api/haarengine/funktionen/</code> listet sie aus
+  ihren Docstrings.
+</p>
+<div class="info-box info-box-purple">
+  <strong>Ein Rezept ist Text, kein Python.</strong> Eine Runde besteht aus Zeilen wie <code>m.haltung(35.0)</code>, je eine
+  Zeile je Aufruf. <code>G9rezept</code> liest sie mit <code>ast</code> und lässt nur
+  <code>m.&lt;funktion&gt;(Literale)</code> zu — alles andere wird mit Zeilenangabe abgewiesen. Dadurch bleibt jede Änderung als Text
+  nachlesbar und wiederholbar; <code>GET …/rezept/</code> gibt die wirksamen Aufrufe aller Runden als ein Rezept zurück, das man auf
+  ein anderes Modell anwenden kann.
+</div>
+<p>
+  Neue Formen entstehen ebenfalls im Rezept: <code>morph_neu(art, kennung, name, richtung, weg_cm, von, bis, seite, weich)</code>
+  rechnet Deltas auf dem Käfig eines Stücks (radial, oben, unten, vorn, hinten oder Vektor; Höhenbereich mit weichem Auslauf) und
+  legt sie als Morph <code>eigen.&lt;name&gt;</code> neben der Bibliothek ab — Browser und Python sehen dasselbe Stück.
+</p>
+
+<h3>Eine Runde: begutachten statt nur optimieren</h3>
+<ol>
+  <li><strong>Anwenden und bauen</strong> — das Rezept verändert den Zustand; <code>Kleidermodellbau</code> baut Körper, Kleider und
+  Haar über denselben Weg wie die Bühne, nur ohne Browser.</li>
+  <li><strong>Rendern</strong> — pyrender, aus den Blickwinkeln der Vorlagen.</li>
+  <li><strong>Benoten</strong> — zwei Noten: die <em>Fotonote</em> (<code>Iterationsnote</code>: Silhouette und Farbe gegen die
+  freigestellten Vorlagen) und die <em>3D-Note</em> gegen das Bezugsnetz (<code>Iterationsnetznote</code>: Abstand Stoff → Netz in
+  mm und Deckung der Netzproben; <code>abweichung = mm/50 + (1 − Deckung)</code>).</li>
+  <li><strong>Ablegen</strong> — Tafel, Renders, GLB je Runde, der Rezepttext, der Befund.</li>
+  <li><strong>Warten</strong> — im Modus <code>begutachtung</code> (Vorgabe) steht der Auftrag danach auf „Wartet auf
+  Begutachtung". Claude sieht Tafel und Zahlen an und reicht das nächste Rezept ein (<code>POST …/begutachtung/</code>); geändert
+  wird also der <em>Code der Anpassung</em>, nicht ein Wert per Zufall.</li>
+</ol>
+
+<h3>Automatische Iterationen: Ordner <code>2d3DIterationen</code></h3>
+<p>
+  Was sich in den ersten Runden von Hand bewährte, steht als wiederholbare Regel im Ordner <code>A:\3DTools\2d3DIterationen</code>
+  (Paket <code>iterationen2d3d</code>; ein Python-Name darf nicht mit einer Ziffer beginnen). Der Knopf „Automatisch" im Formular
+  der Begutachtung schreibt das Rezept aus dem <em>Befund</em> selbst (<code>IterationModell.rezept()</code>); die Klassen ändern das
+  Modell nie direkt, jede Änderung bleibt ein Rezept. Bis zu 50 Runden laufen in einem Arbeitsprozess, „Anhalten" bricht zwischen
+  zwei Runden ab.
+</p>
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable kp-tabelle" id="kpKleiderRegeln" data-sort-key="hilfe-2d3dkleider-regeln">
+  <thead>
+    <tr>
+      <th>Klasse · Aufruf</th>
+      <th data-sort-aus="1">Regel</th>
+      <th data-sort-aus="1">Herkunft</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>IterationModell</strong> · <code>haltung()</code></td>
+      <td>Armwinkel per Schrittsuche gegen den Abstand Körper → Netz; Start 35°, Schritt 5°, höchstens 43°</td>
+      <td>Der Anschlag kam aus einem Fehler, siehe Kasten unten</td>
+    </tr>
+    <tr>
+      <td><strong>IterationKleider</strong> · <code>anziehen()</code></td>
+      <td>ohne Kleider: Oberteil, wenn das Rumpfband des Fotos keine Haut zeigt; Shorts oder Hose, je nachdem, ob das
+      Oberschenkelband Haut zeigt</td>
+      <td>Runde 2 von Hand: Shirt + Shorts</td>
+    </tr>
+    <tr>
+      <td><code>farbe()</code></td>
+      <td>Tönung × (Fotofarbe ÷ Renderfarbe) unter der Maske des Stücks, gedämpft mit 0,7</td>
+      <td>Ein <em>Zielwert</em> als Tönung trifft nie: Mavick Hair blieb blond, weil die Tönung das Verhältnis braucht</td>
+    </tr>
+    <tr>
+      <td><code>weite()</code></td>
+      <td>Passform-Weite um den negativen mittleren Abstand (mit Vorzeichen) in cm, gedämpft</td>
+      <td>Netznote <code>modell_mm</code></td>
+    </tr>
+    <tr>
+      <td><code>morphe()</code></td>
+      <td>je Höhenband, dessen Abstand um ≥ 8 mm vom Mittel abweicht: eigener Morph <code>netz_b&lt;i&gt;</code>, radial, Wert in cm</td>
+      <td><code>G9kleidmorphe</code></td>
+    </tr>
+    <tr>
+      <td><strong>IterationHaare</strong> · <code>frisur()</code></td>
+      <td>nach 3 Runden ohne Besserung des Haarabstands die nächste Kandidatin aus „Mesh to 3D"</td>
+      <td><code>ergebnis.frisur.kandidaten</code></td>
+    </tr>
+    <tr>
+      <td><code>farbe()</code>, <code>laenge()</code></td>
+      <td>Farbe wie bei den Kleidern unter der Haarmaske; Formachse <code>laenge</code> per Schrittsuche gegen den Haarabstand</td>
+      <td><code>G9haarachsen</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Der <strong>Befund</strong> (<code>Befundmessung</code>, reines NumPy) liefert je Teil den Abstand zum Bezugsnetz <em>mit
+  Vorzeichen</em> (+ außen, − innen; das Vorzeichen wird am Netzschwerpunkt geeicht, weil die Normalen von TRELLIS nicht verlässlich
+  sind) in fünf Höhenbändern, dazu die Fotofarbe unter der Maske jedes Teils (ein zweiter Render je Ansicht mit Kennfarben) gegen
+  die Renderfarbe. <strong>Was es nicht ist:</strong> kein Optimierer über die Körperregler (der Körper kommt aus „Mesh to 3D"), keine
+  Erkennung von Kleidungsstücken im Foto — nur Haut oder keine Haut je Körperband.
+</p>
+
+<h3>Was der Testauftrag „Edgar - TEST" gezeigt hat</h3>
+<p>
+  Auftrag 2026.09.30.21.02.25: Fotos aus einem Mesh-Auftrag, TRELLIS in der Stufe „schnell". Der Lauf ging einmal
+  fehlerfrei durch — <strong>522 s</strong> insgesamt.
+</p>
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable kp-tabelle" id="kpKleiderZeiten" data-sort-key="hilfe-2d3dkleider-zeiten">
+  <thead>
+    <tr>
+      <th>Schritt</th>
+      <th class="num">Dauer (s)</th>
+      <th data-sort-aus="1">Bemerkung</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>netz</strong></td><td class="num" data-sort="467">467</td><td>TRELLIS „schnell", 488.300 Flächen — der längste Teil</td></tr>
+    <tr><td><strong>koerper</strong></td><td class="num" data-sort="0">0</td><td>übernommen aus dem Mesh-Auftrag</td></tr>
+    <tr><td><strong>grundfigur</strong></td><td class="num" data-sort="2">2</td><td></td></tr>
+    <tr><td><strong>iterationen</strong> (Ausgangsrunde)</td><td class="num" data-sort="32">32</td><td>Runde 2 ebenfalls 32 s, Runde 3 36 s</td></tr>
+    <tr><td><strong>export</strong></td><td class="num" data-sort="2">2</td><td></td></tr>
+    <tr><td><strong>film</strong></td><td class="num" data-sort="19">19–36</td><td>der Tanz</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Eine Runde kostet rund eine halbe Minute (32, 32 und 36 s in den ersten drei Runden) — gegen die 467 s für das Netz ist die
+Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
+
+<h4>Erkenntnisse</h4>
+<ul>
+  <li>
+    <strong>Die Fotonote maß gegen den Flur.</strong> Das Vorlagenfoto zeigt ein Zimmer; die Note hielt „nicht weiß" für Figur. IoU
+    0,32. Seit Runde 3 benutzt sie das freigestellte Bild des Netz-Schritts (<code>vorbereitet/&lt;name&gt;.png</code>): IoU
+    0,63/0,59. <em>Eine Note, die gegen das falsche Bild misst, sieht wie eine schlechte Figur aus.</em>
+  </li>
+  <li>
+    <strong>A-Pose gegen hängende Arme.</strong> Die Grundfigur steht in A-Pose, das Foto hat hängende Arme — <code>haltung(grad)</code>
+    dreht die Oberarme. Der Abstand Körper → Netz fiel von 90 auf 32 mm im Mittel; −45° senken die linke Hand von 1,00 auf 0,85 m.
+  </li>
+  <li>
+    <strong>Die Note belohnte eine Haltung, bei der die Arme im Rumpf verschwanden.</strong> Bei 55° stand die Hand bei x = 0,08 m,
+    also <em>im</em> Rumpf (die Hüfte hat 0,18 m), und die Abweichung sank trotzdem von 2,139 auf 1,876 — die Silhouette wurde
+    schmaler. Die A-Pose hat 43° zur Senkrechten (am Bauplan gemessen); <code>ModellMitKleidern.ARME_HOECHSTENS = 43</code> kappt
+    seither, und <code>IterationModell</code> sucht nur bis dorthin. Wie beim Kostüm-Weg: Grenzen setzt man nach dem Bild, nicht nach
+    der Note.
+  </li>
+  <li>
+    <strong>Der Tanz hält die Kleider am Körper.</strong> Gemessen zwischen erstem und mittlerem Bild: Körperpunkte wandern im Mittel
+    879 mm, Shorts 965, Shirt 965, Haar 852 mm — und der Abstand zur Körperoberfläche bleibt: Shirt 9,5 → 10,0 mm, Shorts
+    13,1 → 13,2 mm, Haar 8,5 → 8,5 mm. Die erste Messung verglich Anfang und Ende der Bewegung (dieselbe Pose, 5 mm Weg) und sagte
+    nichts.
+  </li>
+  <li>
+    <strong>Kleine Fehler, die erst der Lauf zeigte:</strong> <code>_start</code> nahm Kin Hair, weil <code>frisur</code> nicht mit
+    kopiert wurde; getragene Stücke müssen <em>aufgelöst</em> in den Rumpf, sonst warnt die Lagenrechnung je Sammeleintrag; die
+    Bühne stellt die Grundfigur jetzt 1,5 m neben das Modell, solange beide leuchten (vorher standen sie ineinander), und die
+    Runden-GLB trägt Knoten <code>&lt;art&gt;__&lt;sorte&gt;__&lt;n&gt;</code>, damit die Schalter „Haare" und „Kleider" an ihr wirken.
+  </li>
+</ul>
+
+<div class="info-box info-box-orange">
+  <strong>Nicht gebaut, nicht geprüft (Stand 30.09.2026, abends):</strong> <code>koerper.quelle = rechnen</code> ist geschrieben,
+  aber nie gelaufen; der frühere Modus <code>automatisch</code> (Optimierer und Prüf-KI wie bei BlenderModel) wurde mit den neuen
+  Schritten nicht gelaufen; die Regeln von <code>2d3DIterationen</code> sind mit Kunstdaten getestet
+  (<code>test_iterationen2d3d</code>), Messwerte eines langen automatischen Laufs stehen hier nicht. Die GLB je Runde hat kein
+  Rig — der Tanz läuft nur im Film. Die Netz-Deckung blieb bei 43 % (der Körper sitzt im Mittel 32 mm vom Netz; der Fit aus dem
+  Mesh-Auftrag sitzt nicht enger — nicht Sache dieser Pipeline). Ein Stück in der Farbe der Fotos bräuchte eine Fototextur; die Tönung trifft nur den
+  Mittelwert.
+</div>
+
+<div class="info-box info-box-blue">
+  <strong>Gegenüber dem Blender-Kostüm-Weg oben:</strong> statt Kostümteilen (Mantel, Hut, Bart …) Stücke der Genesis-Garderobe;
+  statt dauerhafter Blender-Arbeiter ein Python-Bau ohne Browser (ein Prozess); im Modus „begutachtung" statt Optimierer mit
+  Zufallskandidaten Rezepte, die Claude einreicht oder die Regeln aus dem Befund schreiben; weggelassen sind Fototextur,
+  Umriss-Hülle und Sichtmodell. Gleich geblieben sind Auftrag, Tabelle, Iterationsansicht und Bühne.
+</div>

@@ -222,7 +222,9 @@ class G9figur:
         Fuss sitzt (`G9autofit`); die Figur stellt den Fuss, der Schuh bleibt."""
         regler = dict(rumpf['regler'] if isinstance(rumpf.get('regler'), dict)
                       else eintrag.get('regler') or {})
-        drehung = {}
+        # `drehung` direkt im Rumpf (`{knochen: {kanal: grad}}`): die Haltung von „2D3D Kleider"
+        # (`ModellMitKleidern.drehung`, 30.09.2026) — kein Posenpreset, nur im Arbeitsprozess.
+        drehung = {k: dict(v) for k, v in (rumpf.get('drehung') or {}).items() if isinstance(v, dict)}
         for feld in ('ausdruck', 'pose'):
             kennung = G9figur._name(rumpf.get(feld)) or G9figur._name(
                 eintrag.get(feld) if eintrag.get('gespeichert') else None)

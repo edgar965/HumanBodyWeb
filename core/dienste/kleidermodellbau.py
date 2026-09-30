@@ -36,7 +36,9 @@ class Kleidermodellbau:
     HAUT = (0.82, 0.68, 0.60)
     STUFE = 0
 
-    def __init__(self, stellung, stufe=STUFE):
+    def __init__(self, stellung, drehung=None, stufe=STUFE):
+        """`drehung`: die Haltung (`ModellMitKleidern.drehung`) — Körper und Stücke stehen dann so; für den Film
+        bleibt sie weg (die Bewegung ist absolut)."""
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.formung import G9formung
         from Genesis9.haut import G9haut
@@ -44,7 +46,8 @@ class Kleidermodellbau:
         from .netzstufenwahl import Netzstufenwahl
         Netzstufenwahl._gewaehlt.set(int(stufe))
         self.stellung = dict(stellung or {})
-        self.formung = G9formung(self.stellung)
+        self.drehung = dict(drehung or {})
+        self.formung = G9formung.aus_abfrage(self.stellung, self.drehung)
         self.boden = float(self.formung.boden())
         stufe0 = G9basisnetz.netzstufe(0)
         self._ursprung = np.asarray(stufe0.ursprung, dtype=np.int64)
@@ -96,8 +99,20 @@ class Kleidermodellbau:
         return np.clip(grund * 2.0 * np.asarray(toenung), 0.0, 1.0)
 
     def _rumpf(self, modell, kennung, werte, rang):
-        return {'regler': self.stellung, 'regler_stueck': dict(werte), 'getragen': modell.getragene(),
-                'rang': rang}
+        """Der Rumpf wie vom Browser — die getragenen Stücke AUFGELÖST (das stärkste Stück je Sammeleintrag, die
+        Hauptsorte des Haars): `G9lagenanfrage` kennt nur echte Stücke und lässt das eigene aus."""
+        from Genesis9.haargenerisch import G9haargenerisch
+        from Genesis9.kleidgenerisch import G9kleidgenerisch
+        getragen = []
+        for e in modell.getragene():
+            if e['kennung'] == modell.HAAR:
+                sorte, regler = G9haargenerisch.aufloesen(e['regler_stueck'])
+                if sorte:
+                    getragen.append({'kennung': sorte, 'stil': [], 'regler_stueck': regler})
+            else:
+                getragen += G9kleidgenerisch.getragene_aufloesen([e])
+        return {'regler': self.stellung, 'drehung': self.drehung, 'regler_stueck': dict(werte),
+                'getragen': getragen, 'rang': rang}
 
     def _kleidung(self, modell):
         from Genesis9.kleidgenerisch import G9kleidgenerisch
@@ -181,7 +196,8 @@ class Kleidermodellbau:
 
     @staticmethod
     def glb(teile, pfad, punkte_je_teil=None):
-        """Alle Teile als GLB mit flachen Farben (`punkte_je_teil`: andere Punkte, etwa gehäutet)."""
+        """Alle Teile als GLB mit flachen Farben (`punkte_je_teil`: andere Punkte, etwa gehäutet). Knotenname
+        `<art>__<sorte>__<n>` — die Bühne schaltet daran Haar und Kleider (`Haarenginebuehnenmodell`)."""
         import trimesh
         szene = trimesh.Scene()
         for i, t in enumerate(teile):
@@ -191,7 +207,7 @@ class Kleidermodellbau:
             rgb = [int(round(float(c) * 255)) for c in np.asarray(t['farbe'])[:3]]
             netz.visual = trimesh.visual.ColorVisuals(
                 netz, vertex_colors=np.tile(np.array([*rgb, 255], dtype=np.uint8), (len(netz.vertices), 1)))
-            szene.add_geometry(netz, node_name='%s_%d' % (t.get('sorte') or t.get('art'), i))
+            szene.add_geometry(netz, node_name='%s__%s__%d' % (t.get('art'), t.get('sorte') or t.get('art'), i))
         pfad.parent.mkdir(parents=True, exist_ok=True)
         szene.export(str(pfad))
         return pfad

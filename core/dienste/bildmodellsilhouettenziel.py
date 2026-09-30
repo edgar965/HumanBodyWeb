@@ -142,7 +142,8 @@ class Bildmodellsilhouettenziel:
         bericht = {}
         for seite in ('vorn', 'seite'):
             if isinstance((umriss or {}).get(seite), dict):
-                bericht[seite] = {k: umriss[seite].get(k) for k in ('vorher_mm', 'nachher_mm', 'bilder')}
+                bericht[seite] = {k: umriss[seite].get(k)
+                                  for k in ('vorher_mm', 'nachher_mm', 'ausgelassen', 'bilder')}
         # Gliedlängen: die Gelenkhöhen der Fotos (geeicht, `G9rigmasse`) als Zielgelenke — x, z bleiben.
         rig = Bildmodellrigmasse(self.job, self.optionen)
         if self.optionen.get('gelenkhoehen', 'an') == 'an':

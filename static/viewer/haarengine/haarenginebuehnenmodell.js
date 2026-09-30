@@ -1,15 +1,19 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Meshfigurbuehne } from '../meshfigur/meshfigurbuehne.js';
 import { Haarengineposenkopie } from './haarengineposenkopie.js';
 
 /**
  * Haarenginebuehnenmodell — das Modell der letzten Iteration auf der Hauptbühne.
  *
- * Der Knopf `#buehne-iterationsmodell` lädt die GLB `dateien.modell` der jüngsten Runde (`Iterationsrunde.modell`): Grundfigur + Haar
- * am Rig, in der gestellten Haltung, so, wie die Runde benotet wurde. Dabei geht „Grundfigur" aus (sichtbar am Knopf, zum Vergleich
- * wieder einschaltbar). Der Stand des Knopfs bleibt je Browser gemerkt.
+ * Der Knopf `#buehne-iterationsmodell` lädt die GLB `dateien.modell` der jüngsten Runde (`Begutachtungsrunde`: Körper, Kleider,
+ * Haar als je ein Knoten `<art>__<sorte>__<n>`, in der gestellten Haltung, so, wie die Runde benotet wurde). Dabei geht
+ * „Grundfigur" aus; schaltet man sie wieder ein, steht sie zum Vergleich um `Meshfigurbuehne.ABSTAND` (1,5 m) nach rechts
+ * versetzt neben dem Modell (Edgar, 30.09.2026). „Haare" und „Kleider" blenden die Knoten des Modells ein und aus (`_teile`;
+ * ältere GLBs ohne Präfix: `hair` im Namen = Haar, `koerper` = Körper, sonst Kleidung). Der Stand des Knopfs bleibt je
+ * Browser gemerkt.
  *
- * Die Bewegung (`Haarengineanimation`) läuft weiter auf der — dann ausgeblendeten — Genesis-Figur; das Modell übernimmt deren
- * Haltung je Bild (`Haarengineposenkopie`: andere Knochenachsen, gleiche Knochen).
+ * Die Bewegung (`Haarengineanimation`) läuft weiter auf der Genesis-Figur; hat das Modell ein Rig, übernimmt es deren
+ * Haltung je Bild (`Haarengineposenkopie`) — die GLB der Runden hat keins, sie steht.
  */
 export class Haarenginebuehnenmodell {
 
@@ -42,7 +46,42 @@ export class Haarenginebuehnenmodell {
         this.knopf.addEventListener('click', () => this.umschalten());
         this.kopie = null;
         this._quelle = null;
+        const schalter = this.buehne.schalter;
+        if (schalter) {
+            const vorher = schalter.geaendert;
+            schalter.geaendert = () => { vorher(); this._teile(); };
+        }
         this._takt();
+    }
+
+    /** Zu welchem Schalter ein Knoten der Runden-GLB gehört: haar | kleidung | koerper. */
+    static art(name) {
+        const n = String(name || '');
+        if (n.startsWith('haar__')) return 'haar';
+        if (n.startsWith('kleidung__')) return 'kleidung';
+        if (n.startsWith('koerper')) return 'koerper';
+        return /hair|haar/i.test(n) ? 'haar' : 'kleidung';
+    }
+
+    /** „Haare" und „Kleider" auf die Knoten des Modells übertragen, die Grundfigur daneben rücken. */
+    _teile() {
+        this._versetzen();
+        if (!this.gruppe) return;
+        const an = this.buehne.schalter?.stand || {};
+        this.gruppe.traverse(teil => {
+            if (!teil.isMesh) return;
+            const art = Haarenginebuehnenmodell.art(teil.name);
+            if (art === 'haar') teil.visible = an.haare !== false;
+            else if (art === 'kleidung') teil.visible = an.kleider !== false;
+        });
+    }
+
+    /** Die Grundfigur um `Meshfigurbuehne.ABSTAND` nach rechts, solange Modell UND Grundfigur zu sehen sind. */
+    _versetzen() {
+        const figur = this.buehne.modell?.group;
+        if (!figur) return;
+        const versetzt = this.an && !!this.gruppe && !!this.buehne.schalter?.stand.modell;
+        figur.position.x = versetzt ? Meshfigurbuehne.ABSTAND : 0;
     }
 
     _gemerkt() {
@@ -68,6 +107,7 @@ export class Haarenginebuehnenmodell {
         this.knopf.classList.toggle('active', this.an);
         this.buehne.schalter?.setzen('modell', !this.an);
         this.buehne._sichtbarkeit?.();
+        this._teile();
         this.zeigen(this.seite.zustand);
     }
 
@@ -79,9 +119,14 @@ export class Haarenginebuehnenmodell {
         if (this.gruppe) this.gruppe.visible = false;
     }
 
-    /** Jedes Bild: der Haltung der Genesis-Figur folgen, solange eine Bewegung auf ihr liegt. */
+    /**
+     * Jedes Bild: die Grundfigur neben das Modell rücken, solange beide zu sehen sind (die Bühne baut die Figur neu, wenn
+     * sich ihr Stand ändert — deshalb je Bild, nicht einmal); dann der Haltung der Genesis-Figur folgen, solange eine
+     * Bewegung auf ihr liegt.
+     */
     _takt() {
         requestAnimationFrame(() => this._takt());
+        this._versetzen();
         if (!this.an || !this.skelett) return;
         const quelle = this.buehne.modell?.skelett;
         // Genesis 9 baut die feine Stufe mit NEUEN Knochen nach (siehe `Haarengineanimation._pruefen`).
@@ -112,6 +157,7 @@ export class Haarenginebuehnenmodell {
             this.gruppe.name = 'Iterationsmodell_' + this.art;
             this.skelett = Haarenginebuehnenmodell._skelett(this.gruppe);
             this.gruppe.visible = this.an;
+            this._teile();
             this.buehne.szene.add(this.gruppe);
             this._adresse = quelle.adresse;
             this.buehne._melden('');

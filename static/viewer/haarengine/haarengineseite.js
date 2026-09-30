@@ -12,12 +12,13 @@ import { Meshfigurspeicher } from '../meshfigur/meshfigurspeicher.js';
 import { Haarengineanimation } from './haarengineanimation.js';
 import { Haarenginefilmansicht } from './haarenginefilmansicht.js';
 import { Haarenginebuehnenmodell } from './haarenginebuehnenmodell.js';
+import { Haarenginebegutachtung } from './haarenginebegutachtung.js';
 import { Haarengineeinstellungen } from './haarengineeinstellungen.js';
 import { Haarenginefotos } from './haarenginefotos.js';
 import { Haarengineiterationen } from './haarengineiterationen.js';
 
 /**
- * Haarengineseite — die Auftragsseite von „Haar Engine": Lauf, Bildauswahl, 3D-Ausgabe, Optionen, Iterationen.
+ * Haarengineseite — die Auftragsseite von „2D3D Kleider" (Bereich haarengine): Lauf, Bildauswahl, 3D-Ausgabe, Optionen, Iterationen.
  *
  * DIE 3D-AUSGABE IST DIE VON „MESH TO 3D" (`static/viewer/meshfigur/`, unverändert); sie spricht nur mit `zustand`, `adresse()`,
  * `dateiAdresse()`, `buehne`. Dazu das Modell der letzten Iteration und der Film der Engine auf der Bühne. Der Zustand kommt beim
@@ -28,10 +29,12 @@ export class Haarengineseite {
     static TAKT_MS = 2000;
     static TAKT_RUHE_MS = 6000;
     static NAMEN = {
-        grundfigur: 'Grundfigur', iterationen: 'Iterationen', export: 'GLB mit Rig', film: 'Film', speichern: 'Speichern',
+        netz: 'Netz (TRELLIS)', koerper: 'Körper', grundfigur: 'Grundfigur', iterationen: 'Iterationen', export: 'GLB mit Rig',
+        film: 'Film', speichern: 'Speichern',
     };
     static STATUS = {
         angelegt: 'Angelegt', laeuft: 'Läuft', fertig: 'Fertig', gescheitert: 'Fehlgeschlagen', angehalten: 'Angehalten',
+        wartet: 'Wartet auf Begutachtung',
     };
 
     static starten(jobId) {
@@ -51,6 +54,8 @@ export class Haarengineseite {
     /** Eine Datei aus dem Auftrag (`ordner`: eingang, ergebnis, iterationen, vorlage). Die Fotos holt
      *  `fotoAdresse`. */
     dateiAdresse(ordner, name) {
+        // Das Netz aus den Fotos (Schritt „netz") liegt unter `netz/`, die Bühne von „Mesh to 3D" fragt es als `eingang` an.
+        if (ordner === 'eingang' && /\.glb$/i.test(name || '')) ordner = 'netz';
         return `/api/haarengine/${this.jobId}/datei/${ordner}/${encodeURIComponent(name)}`;
     }
 
@@ -60,7 +65,7 @@ export class Haarengineseite {
 
     aufbauen() {
         const werte = this.zustand.optionen || {};
-        for (const gruppe of ['figur', 'iterationen', 'film']) {
+        for (const gruppe of ['figur', 'netz', 'koerper', 'iterationen', 'film']) {
             Meshoptionenformular.bauen(document.getElementById(`haarengine-optionen-${gruppe}`), this.katalog[gruppe],
                 werte[gruppe]);
         }
@@ -77,11 +82,12 @@ export class Haarengineseite {
         document.addEventListener('visibilitychange', () => { if (!document.hidden) this.aktualisieren(); });
         // Der Vorschlag für „Als Genesis-Figur speichern": `Meshfigurspeicher` schriebe „<Name> Mesh".
         const modellname = document.getElementById('modell-name');
-        if (modellname && !modellname.value) modellname.value = this.zustand.modell || `${this.zustand.name} Haar Engine`;
+        if (modellname && !modellname.value) modellname.value = this.zustand.modell || `${this.zustand.name} 2D3D Kleider`;
         this.einstellungen = new Haarengineeinstellungen(this);
         this.fotos = new Haarenginefotos(this);
         this._pfadstand = null;
         this.iterationen = new Haarengineiterationen(this);
+        this.begutachtung = new Haarenginebegutachtung(this);
         this.buehne = new Meshfigurbuehne(this);
         this.buehnenmodell = new Haarenginebuehnenmodell(this, this.buehne);
         this.film = new Haarenginefilmansicht(this);
@@ -193,6 +199,7 @@ export class Haarengineseite {
         this.fotos.zeigen(z);
         this.pfade(z);
         this.iterationen.zeigen(z);
+        this.begutachtung.zeigen(z);
         this.berichte.zeigen(z);
         this.haar.zeigen(z);
         this.kleidung.zeigen(z);

@@ -48,7 +48,7 @@ class Haarenginegrundfigur:
         if not self.job.ergebnis.get('regler'):
             self.job.ergebnis['regler'] = {'stellung': stellung}
         self.job.ergebnis['grundfigur'] = {
-            'basis': basis,
+            'basis': basis if not self.job.ergebnis.get('koerperquelle') else 'koerper (%s)' % basis,
             'datei': self.DATEI,
             'sekunden': round(time.perf_counter() - t, 1),
             **{k: v for k, v in (bericht or {}).items() if k != 'datei' and isinstance(v, (int, float))},

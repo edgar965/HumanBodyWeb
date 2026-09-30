@@ -24,7 +24,8 @@ class Haarenginekoerperoptionen:
                 ('uebernehmen', 'Aus einem fertigen Auftrag „Mesh to 3D" übernehmen (Sekunden)'),
                 ('rechnen', 'Auf dem Netz dieses Auftrags rechnen — die Kette von „Mesh to 3D" (~15 min Grafikkarte)'),
             ],
-            'hinweis': 'Übernehmen: Reglerstellung, Eigenmorph, Kacheln und das Netz des Fits als 3D-Bezug der Iterationen.',
+            'hinweis': 'Übernehmen: Reglerstellung, Eigenmorph, Kacheln und das Netz des Fits als 3D-Bezug der '
+                       'Iterationen.',
         },
         {
             'schluessel': 'auftrag',

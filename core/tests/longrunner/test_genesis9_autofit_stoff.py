@@ -7,7 +7,8 @@
    auf dem Clone-Koerper (Bund unter 10 mm), die Sandalen-Fusspose kommt als
    G9-Drehung (`l_foot` rotation/x ≈ 25,7°).
 2. dForce-Stuecke sind als dynamisch erkannt (Dress in der `.dsf`, Angie
-   Jeans erst ueber die Szene); der Bauplan des Kleids traegt 75.977 Zeilen
+   Jeans erst ueber die Szene — die Jeans wird dann als ENG gehaeutet, nicht
+   simuliert, seit 19.09. nachts); der Bauplan des Kleids traegt 75.977 Zeilen
    auf 18.979 Kaefigpunkten, das Netz je Kaefigpunkt eine Freiheit.
 3. Makeup-Reste: Amelias fuenfter Satz traegt Blendmodi, Snow Queen 03 die
    Glitzer-Normalen und Metall, Lips-Glossy 01 Top Coat Color und Bump —
@@ -28,11 +29,13 @@ import unittest
 import numpy as np
 from django.test import Client, SimpleTestCase
 from Genesis9.autofit import G9autofit
+from Genesis9.dson import G9dson
 from Genesis9.ebenen import G9ebenen
 from Genesis9.formung import G9formung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.pfade import G9pfade
 from Genesis9.schminke import G9schminke
+from Genesis9.stoff import G9stoff
 
 
 def bibliothek_da():
@@ -123,8 +126,15 @@ class AutofitUndStoffTest(SimpleTestCase):
         self.assertTrue(dress[0][0].dynamisch)
         self.assertFalse(dress[1][0].dynamisch)  # Slider: kein dForce
         jeans = G9garderobe.teile('angie_jeans')[0][0]
-        self.assertTrue(jeans.dynamisch)  # 0 in der .dsf, 1 in der Szene
-        dynamik = jeans.dynamik
+        # Erkennung: 0 in der .dsf, 1 in der Szene. Danach nimmt `G9stoff.entscheiden` enge
+        # Stuecke aus (19.09.2026 nachts, p90 Hautabstand 2,1 cm < 5 cm): die Jeans ist
+        # dForce-Stoff, wird aber gehaeutet statt simuliert — `jeans.dynamisch` ist False.
+        netz = G9dson.lesen(jeans.pfad)
+        szene = G9dson.lesen(G9garderobe.datei(G9garderobe.eintrag('angie_jeans')))
+        self.assertFalse(G9stoff.dynamisch(netz))
+        self.assertTrue(G9stoff.dynamisch(netz, szene))
+        self.assertFalse(jeans.dynamisch)
+        dynamik = G9stoff.dynamik(netz, len(jeans.punkte))
         self.assertEqual(len(dynamik), 6089)
         self.assertEqual(int((dynamik < 1.0).sum()), 2834)
         shirt = G9garderobe.teile('g9_base_shirt')[0][0]

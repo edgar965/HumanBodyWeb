@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}{% load fassung %}
-{% block title %}Haar Engine{% endblock %}
+{% block title %}2D3D Kleider{% endblock %}
 
 {% comment %}
 Dashboard „Haar Engine" (Edgar, 30.09.2026: „mach eine Seite Dashboard - Haar Engine" als Kopie der Seite /blendermodell/,
@@ -20,19 +20,24 @@ gespeichert), darunter die Tabelle (djangoBase, `Haarenginetabelle`). Endpunkte:
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-cut"></i> Haar Engine</h1>
+    <h1><i class="fas fa-cut"></i> 2D3D Kleider</h1>
 </div>
 
 <div class="card" id="haarengine-neu">
     <h2>Neuer Auftrag</h2>
-    <p class="hb-hinweis">Die Vorlagen des Haars: ein oder mehrere Fotos der Figur mit ihrem Haar (der Frisur), je Blickwinkel eines
-    (vorn, seitlich, hinten). Die Rolle eines Fotos gibt den Blickwinkel; „Nicht verwenden" schließt es aus. Alles Weitere — Optionen,
-    Bildauswahl, „Neu berechnen" — steht auf der Seite des Auftrags. Der Auftrag startet nicht von selbst.</p>
+    <p class="hb-hinweis">Fotos einer Person (vorn, seitlich, hinten) → Netz (TRELLIS) → Genesis-9-Figur → Kleider und Haar aus der
+    Garderobe, Runde für Runde begutachtet → Figur mit Rig, Tanz. Die Rolle eines Fotos gibt den Blickwinkel; „Nicht verwenden"
+    schließt es aus. Statt eigener Fotos geht die Kennung eines fertigen Auftrags „Mesh to 3D": dann kommen dessen Fotos UND
+    sein Körper-Fit. Alles Weitere — Optionen, Bildauswahl, „Neu berechnen" — steht auf der Seite des Auftrags.</p>
     <form id="haarengine-form" class="bildmodell-form" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="bildmodell-felder">
             <label>Name
-                <input type="text" name="name" id="haarengine-name" required maxlength="200" placeholder="z. B. Zauberer">
+                <input type="text" name="name" id="haarengine-name" required maxlength="200" placeholder="z. B. Edgar - TEST">
+            </label>
+            <label title="Kennung eines fertigen Auftrags „Mesh to 3D“ (etwa 2026.09.29.15.42.36): Fotos und Körper daraus">
+                Aus Auftrag „Mesh to 3D“
+                <input type="text" name="meshfigur" id="haarengine-meshfigur" maxlength="19" placeholder="2026.09.29.15.42.36">
             </label>
         </div>
         <div class="bildmodell-ablage" id="haarengine-ablage">

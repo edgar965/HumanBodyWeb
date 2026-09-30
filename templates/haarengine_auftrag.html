@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}{% load fassung %}
-{% block title %}Haar Engine · {{ job.name }}{% endblock %}
+{% block title %}2D3D Kleider · {{ job.name }}{% endblock %}
 
 {% comment %}
 Auftragsseite „Haar Engine" (Kopie von `blendermodell_auftrag.html`, 30.09.2026): oben der Lauf (Schritte mit Dauer,
@@ -31,17 +31,17 @@ erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
 
 <div class="page-header mesh-auftragskopf">
     <div>
-        <a href="{% url 'haarengine' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Haar Engine</a>
+        <a href="{% url 'haarengine' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> 2D3D Kleider</a>
         <h1><i class="fas fa-cut"></i> <span id="auftrag-name"
                 data-adresse="{% url 'auftrag_name' 'haarengine' job.id %}">{{ job.name }}</span>
-            <small class="hb-hinweis">Haar Engine · {{ job.kennung }}</small></h1>
+            <small class="hb-hinweis">2D3D Kleider · {{ job.kennung }}</small></h1>
     </div>
     <div class="auftrag-kopfknoepfe">
         <div class="bildmodell-status" id="auftrag-status"></div>
         <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
                 data-adresse="{% url 'haarengine_loeschen' job.id %}"
                 data-ziel="{% url 'haarengine' %}"
-                data-frage="Diesen Auftrag samt Fotos und Ergebnisdateien löschen? Gespeicherte Modelle und die Ablage in Haar Engine bleiben.">
+                data-frage="Diesen Auftrag samt Fotos und Ergebnisdateien löschen? Gespeicherte Modelle und die Ablage in 2D3D Kleider bleiben.">
             <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
     </div>
 </div>
@@ -74,9 +74,10 @@ können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten�
         </span>
     </div>
     <div class="hb-hinweis" id="lauf-hinweis">Jede Eingabe wird sofort gespeichert. „Neu berechnen“ beginnt beim gewählten
-        Schritt: „Grundfigur“ baut die Genesis-9-Figur neu, „Iterationen“ rechnet weitere Runden am Modell (Figur mit
-        Haar, immer ab dem besten bisherigen), danach Rig, Film und Ablage. Nur weitere Runden: Reiter
-        „Iterationen“ → „Weiter iterieren“. <span class="einstellungen-meldung"></span></div>
+        Schritt: „Netz“ rechnet das Netz aus den Fotos (TRELLIS), „Körper“ die Genesis-9-Figur dazu (oder übernimmt sie aus
+        „Mesh to 3D“), „Grundfigur“ baut sie mit Rig, „Iterationen“ rechnet eine Runde am Modell (Figur mit Kleidern und
+        Haar), danach Rig, Film (der Tanz) und Ablage. Im Modus „Begutachtung“ kommt jede weitere Runde über ein Rezept im
+        Reiter „Iterationen“. <span class="einstellungen-meldung"></span></div>
     <div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
 </div>
 
@@ -99,6 +100,10 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
     <h2>Optionen</h2>
     <h3 class="haarengine-gruppe">Grundfigur</h3>
     <div class="mesh-optionen" id="haarengine-optionen-figur"></div>
+    <h3 class="haarengine-gruppe">Netz aus den Fotos (Schritt „Netz“)</h3>
+    <div class="mesh-optionen" id="haarengine-optionen-netz"></div>
+    <h3 class="haarengine-gruppe">Körper (Schritt „Körper“)</h3>
+    <div class="mesh-optionen" id="haarengine-optionen-koerper"></div>
     {% comment %}Die Einstellungen der Iterationen (Runden, Kandidaten, Prüf-KI …) stehen im Reiter „Iterationen“.{% endcomment %}
     <h3 class="haarengine-gruppe">Film — Bewegung und Video</h3>
     <div class="mesh-optionen" id="haarengine-optionen-film"></div>
@@ -124,18 +129,18 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                         title="Das Netz aus Fotos — dieser Bereich baut keins">
                     <i class="fas fa-draw-polygon"></i> Mesh</button>
                 <button type="button" class="schaltknopf active" data-schalter="haare"
-                        title="Das Haar auf der Figur — welches, wählt das Feld daneben">
+                        title="Das Haar des Modells der Iterationen ein- und ausblenden">
                     <i class="fas fa-hat-wizard"></i> Haare</button>
                 <label hidden id="buehne-haarwahl-feld" title="Welches Haar die Figur trägt — auch im Export: die Frisur aus Schritt „Frisur“ (Daz oder „Haar Eigen“), das Haar aus dem Netz oder die Haarkarten aus seiner Schale">
                     <select id="buehne-haarwahl" aria-label="Welches Haar"></select></label>
                 <button type="button" class="schaltknopf active" data-schalter="kleider"
-                        title="Die Kleidungsstücke der Figur — auch im Export">
+                        title="Die Kleider des Modells der Iterationen ein- und ausblenden">
                     <i class="fas fa-tshirt"></i> Kleider</button>
                 <button type="button" class="schaltknopf" data-schalter="nebeneinander" hidden
                         title="Netz und Figur nebeneinander statt übereinander">
                     <i class="fas fa-columns"></i> Nebeneinander</button>
                 <button type="button" class="schaltknopf active" data-schalter="modell"
-                        title="Die Genesis-9-Grundfigur ohne das Haar der Iterationen">
+                        title="Die Genesis-9-Grundfigur (A-Pose, mit Rig) — neben dem Modell der Iterationen um 1,5 m nach rechts versetzt">
                     <i class="fas fa-user"></i> Grundfigur</button>
             </div>
             <div class="mesh-betrachter" id="buehne">
@@ -245,12 +250,12 @@ nicht gibt) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`,
 
 <div id="reiter-iterationen" hidden>
     <div class="card">
-        <h2>Iterationen — Modell (Grundfigur mit Haar)</h2>
-        <p class="hb-hinweis">Jede Runde baut die Genesis Haar Engine einige Abwandlungen des besten Modells (Optimierer:
-        Maße, Farben), rendert sie aus den Blickwinkeln der Vorlagen und benotet sie: Abweichung = (1 − Deckung des Umrisses) +
-        Farbabstand, kleiner ist besser. Alle paar Runden sieht sich die Prüf-KI (lokal, Ollama) die Tafel an, beurteilt die
-        Ähnlichkeit und schlägt Werte vor. Übernommen wird nur, was besser ist (die Prüf-KI darf um die eingestellte Toleranz
-        schlechter sein). Jeder Lauf setzt beim besten Modell an — „Weiter iterieren“ beliebig oft.</p>
+        <h2>Iterationen — Modell (Figur mit Kleidern und Haar)</h2>
+        <p class="hb-hinweis">Begutachtung: Jede Runde wendet ein Rezept (Aufrufe an <code>ModellMitKleidern</code>: Kleider,
+        Haar, Mischung, Passform, eigene Morphe) auf das Modell an, baut es über „Kleidung – Generisch“ und „Haar – Generisch“,
+        rendert es aus den Blickwinkeln der Vorlagen und benotet es gegen die Fotos (Umriss und Farbe) UND in 3D gegen das Netz
+        aus den Fotos (Abstand des Stoffs, Deckung). Danach wartet der Auftrag auf die nächste Begutachtung. Modus
+        „automatisch“: die frühere Schleife aus Optimierer und Prüf-KI über die Haarparameter.</p>
         {% comment %}Die Einstellungen der Iterationen stehen HIER, wo man iteriert. Das Formular baut `Haarengineseite` in
         diesen Behälter, gespeichert wird sofort (`Haarengineeinstellungen`); während eines Laufs sind die Felder
         gesperrt.{% endcomment %}
@@ -259,6 +264,31 @@ nicht gibt) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`,
         <p class="hb-hinweis" id="optionen-gesperrt" hidden>Ein Lauf rechnet: Die Einstellungen sind gesperrt und gelten
             ab dem nächsten Start. „Anhalten“ beendet den Lauf.</p>
         <div class="mesh-optionen" id="haarengine-optionen-iterationen"></div>
+        {% comment %}Begutachtung (30.09.2026): Nach jeder Runde wartet der Auftrag. Das Rezept sind Aufrufe an
+        `ModellMitKleidern` (Genesis9, eine Zeile je Aufruf), der Kommentar die Begutachtung — `Haarenginebegutachtung`.{% endcomment %}
+        <div id="begutachtung" hidden>
+            <h3 class="haarengine-gruppe">Begutachtung — nächste Runde <span class="hb-hinweis" id="begutachtung-stand"></span></h3>
+            <div class="begutachtung-formular">
+                <label>Rezept (Aufrufe an <code>m</code>, eine Zeile je Aufruf)
+                    <textarea id="begutachtung-aufrufe" spellcheck="false" placeholder="m.kleid_nur('g9_base_shirt')&#10;m.haar_anteil('toulouse_hair', 0.3)"></textarea></label>
+                <label>Begutachtung (Kommentar zur letzten Runde, warum dieses Rezept)
+                    <textarea id="begutachtung-kommentar"></textarea></label>
+            </div>
+            <div class="haarengine-iterationsleiste">
+                <button type="button" class="btn btn-primary btn-sm" id="begutachtung-runde">
+                    <i class="fas fa-play"></i> <span>Runde rechnen</span></button>
+                <button type="button" class="btn btn-primary btn-sm" id="begutachtung-automatisch"
+                        title="IterationModell (Ordner 2d3DIterationen) schreibt die Rezepte selbst aus dem Befund der letzten Runde: Haltung, Kleider, Farben, Passform, Morphe, Haar">
+                    <i class="fas fa-robot"></i> <span>Automatisch</span></button>
+                <label class="hb-hinweis" title="So viele Runden hintereinander, jede mit ihrem eigenen Rezept">Runden
+                    <input type="number" id="begutachtung-runden" min="1" max="50" value="3" style="width: 4em"></label>
+                <a class="btn btn-secondary btn-sm" id="begutachtung-rezept" href="#" target="_blank">
+                    <i class="fas fa-scroll"></i> Rezept aller Runden</a>
+                <span class="hb-hinweis" id="begutachtung-meldung"></span>
+            </div>
+            <details><summary class="hb-hinweis">Funktionen von ModellMitKleidern</summary>
+                <div id="begutachtung-funktionen"></div></details>
+        </div>
         <div class="haarengine-iterationsleiste">
             <button type="button" class="btn btn-primary btn-sm" id="iterationen-weiter">
                 <i class="fas fa-forward"></i> <span>Weiter iterieren</span></button>

@@ -29,7 +29,9 @@ class Haarengineoptionen:
     #: Felder, die im Formular erscheinen (None = alle des Katalogs).
     SICHTBAR = {
         'figur': ('basis', 'modell'),
-        'netz': ('formmodell', 'aufloesung', 'freistellen', 'licht'),
+        # `textur` seit 30.09.2026 sichtbar: „fotos_ki" legte bei „schnell" Fotoränder auf Arme und Beine, „ki" (die
+        # PBR-Textur von TRELLIS.2, wie im Mesh-Auftrag 2026.09.29.00.09.00) war sauber — Edgar: „bessere Textur".
+        'netz': ('formmodell', 'aufloesung', 'textur', 'freistellen', 'licht'),
         'koerper': None,
         'iterationen': None,
         'film': None,

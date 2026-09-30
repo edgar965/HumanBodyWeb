@@ -63,7 +63,8 @@ class Effektkandidaten:
                 'name': 'Blender Hair Dynamics (Geometry Nodes, XPBD)',
                 'schicht': 'Haare',
                 'lizenz': 'GPL (als Werkzeug; Ergebnisse frei)',
-                'laeuft': 'Blender 5.0 installiert; die Haardynamik kam mit 5.2 LTS',
+                'laeuft': 'Blender 5.2.2 LTS seit 30.09.2026 installiert (portable unter tools/, '
+                '`pfade.BLENDER_EXE`) — die Haardynamik ist damit da; ein Lauf ist nicht geprüft',
                 'liefert': 'Strähnen als biegsame Stäbe mit Kollidern und '
                 'Kraftfeldern (Wind, Turbulenz); Ablage als Cache',
                 'urteil': 'der einzige fertige offene Strähnenlöser — Kandidat für die Haar-Kette',

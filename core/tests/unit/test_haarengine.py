@@ -35,7 +35,8 @@ class HaarengineoptionenTest(SimpleTestCase):
 
     def test_katalog_hat_drei_gruppen_und_die_rollen(self):
         katalog = Haarengineoptionen.katalog()
-        self.assertEqual(set(katalog), {'figur', 'iterationen', 'film', 'rollen'})
+        # Seit dem 30.09.2026 abends fünf Gruppen: Netz (TRELLIS) und Körper kamen mit „2D3D Kleider" dazu.
+        self.assertEqual(set(katalog), {'figur', 'netz', 'koerper', 'iterationen', 'film', 'rollen'})
         figur = [f['schluessel'] for f in katalog['figur']['optionen']]
         self.assertEqual(sorted(figur), ['basis', 'modell'])
         iterationen = {f['schluessel']: f for f in katalog['iterationen']['optionen']}
@@ -58,7 +59,8 @@ class HaarengineoptionenTest(SimpleTestCase):
         optionen = Haarengineoptionen.pruefen(
             {'netz': {'formmodell': 'trellis2'}, 'figur': 'kein dict', 'x': 1}
         )
-        self.assertEqual(set(optionen), {'figur', 'iterationen', 'film'})
+        self.assertEqual(set(optionen), {'figur', 'netz', 'koerper', 'iterationen', 'film'})
+        self.assertEqual(optionen['netz']['formmodell'], 'trellis2')
         self.assertEqual(optionen['figur']['basis'], 'feminine')
         self.assertEqual(Haarengineoptionen.pruefen(None), Haarengineoptionen.pruefen({}))
 
@@ -87,11 +89,11 @@ class HaarenginelaufTest(SimpleTestCase):
             self.assertIn("'%s':" % name, quelle, 'Schritt „%s" fehlt in schrittfolge()' % name)
 
     def test_die_grundfigur_kommt_zuerst_und_es_gibt_kein_netz_aus_fotos(self):
-        self.assertEqual(Haarenginelauf.SCHRITTE[0], 'grundfigur')
-        self.assertNotIn('netz', Haarenginelauf.SCHRITTE)
+        # Seit dem 30.09.2026 abends beginnt der Lauf mit dem Netz aus den Fotos (TRELLIS) und dem Körper dazu;
+        # die Grundfigur mit Rig folgt darauf (Haarenginenetz, Haarenginekoerper).
+        self.assertEqual(Haarenginelauf.SCHRITTE[:3], ('netz', 'koerper', 'grundfigur'))
         quelle = inspect.getsource(Haarenginelauf.schrittfolge).lower()
-        for verboten in ('_run_mesh', 'trellis', 'hunyuan', 'blender'):
-            self.assertNotIn(verboten, quelle, verboten)
+        self.assertNotIn('_run_mesh', quelle, 'das Netz rechnet der Runner (Haarenginenetz), nicht die Schrittfolge')
 
     def test_weiter_iterieren_rechnet_nur_den_schritt_der_iterationen(self):
         # Der Reiter „Iterationen" schickt ab = bis = „iterationen" (`haarengineiterationen.js`).
@@ -101,12 +103,10 @@ class HaarenginelaufTest(SimpleTestCase):
 class HaarengineablageTest(SimpleTestCase):
     def test_lesbar_sind_fotos_vorlage_ergebnis_und_runden_nicht_die_arbeit(self):
         ablage = Haarengineablage('2026.09.30.00.00.00')
-        for ordner in ('eingang', 'vorlage', 'ergebnis', 'iterationen'):
+        for ordner in ('eingang', 'vorlage', 'ergebnis', 'iterationen', 'netz', 'vorbereitet'):
             self.assertTrue(str(ablage.datei(ordner, 'x.png')).endswith('x.png'), ordner)
         for ordner, name in (
             ('arbeit', 'auftrag.json'),
-            ('vorbereitet', 'x.png'),
-            ('netz', 'x.png'),
             ('vorlage', '../a'),
             ('ergebnis', '..'),
             ('eingang', 'a/b.png'),
@@ -120,7 +120,7 @@ class HaarengineablageTest(SimpleTestCase):
 
 
 class GenesishaarengineTest(SimpleTestCase):
-    """Die Engine seit dem 30.09.2026: `rendern` ist gebaut, `film` nicht. Mit Attrappen statt Bau und
+    """Die Engine seit dem 30.09.2026: `rendern` und (seit dem Abend) `film` sind gebaut. Mit Attrappen statt Bau und
     Renderer — die echten brauchen die Daz-Bibliothek und einen GPU-Kontext."""
 
     def engine(self):
@@ -174,10 +174,25 @@ class GenesishaarengineTest(SimpleTestCase):
         render.return_value.schliessen.assert_called_once()
         engine.schliessen()                       # zweimal schließen wirft auch nicht
 
-    def test_der_film_ist_noch_nicht_gebaut_und_sagt_es(self):
-        with self.assertRaises(Genesishaarengine.NichtAngebunden) as gefangen:
-            self.engine().film('figur.glb', 'bewegung.json', 'aus', 10, 64, 64)
-        self.assertIn('Film', str(gefangen.exception))
+    def test_der_film_baut_das_modell_der_iterationen_und_tanzt(self):
+        """Seit dem 30.09.2026 abends (`Kleidertanz`): der Film häutet Körper, Kleider und Haar des Modells aus
+        `kreislauf.modell` über die Bewegung — gebaut aus der Stellung des Auftrags, nicht aus der GLB."""
+        bau = mock.patch('core.dienste.kleidermodellbau.Kleidermodellbau')
+        tanz = mock.patch('core.dienste.kleidertanz.Kleidertanz')
+        for p in (bau, tanz):
+            self.addCleanup(p.stop)
+        bau_k, tanz_k = bau.start(), tanz.start()
+        bau_k.return_value.teile.return_value = ['koerper', 'shirt']
+        tanz_k.return_value.film.return_value = {'video': 'film.mp4', 'bilder': 10}
+        job = SimpleNamespace(kennung='2026.09.30.00.00.00', stellung=lambda: {'FBMHeavy': 0.5},
+                              ergebnis={'kreislauf': {'modell': {'haar': {'sorte.kin_hair': 1.0}}}})
+        bericht = Genesishaarengine(SimpleNamespace(job=job)).film('figur.glb', 'bewegung.json', 'aus', 10, 64, 64)
+        self.assertEqual(bericht['bilder'], 10)
+        bau_k.assert_called_once_with({'FBMHeavy': 0.5})
+        modell = bau_k.return_value.teile.call_args[0][0]
+        self.assertEqual(modell.haar, {'sorte.kin_hair': 1.0})
+        tanz_k.assert_called_once_with({'FBMHeavy': 0.5}, ['koerper', 'shirt'])
+        tanz_k.return_value.film.assert_called_once()
 
     def test_die_meldung_ist_kein_runtimeerror(self):
         # Die Schleife fängt `RuntimeError` an mehreren Stellen ab, um weiterzurechnen (ein
@@ -186,13 +201,17 @@ class GenesishaarengineTest(SimpleTestCase):
         self.assertFalse(issubclass(Genesishaarengine.NichtAngebunden, RuntimeError))
 
 
-class KeinBlenderImBereichTest(SimpleTestCase):
-    """„Alle Blender-Aufrufe werden durch Genesis Haar Engine ersetzt" (Edgar, 30.09.2026): Im Bereich ruft
-    nichts Blender."""
+class BlenderNurUeberEinenArbeiterTest(SimpleTestCase):
+    """Blender-Aufrufe sind im Bereich erlaubt (Edgar, 30.09.2026, nachts: „blender aufrufe sind möglich") — bis
+    dahin hielt `KeinBlenderImBereichTest` den Bereich Blender-frei. Was bleibt: Blender wird nicht in Diensten
+    und Ansichten verstreut gestartet, sondern über EINE Arbeiterklasse (wie `Kostuemblender`/`Kostuemarbeiter`
+    in BlenderModel). Solange es keine gibt, darf kein Modul des Bereichs `blender.exe` oder `BLENDER_EXE` direkt
+    anfassen; sobald eine da ist, steht sie in `ARBEITER` und darf es allein."""
 
-    MUSTER = re.compile(r'BLENDER_EXE|\bimport bpy\b|blender\.exe|effekte/blender|--factory-startup')
+    MUSTER = re.compile(r'BLENDER_EXE|blender\.exe|--factory-startup')
+    ARBEITER = ('haarengineblender.py',)
 
-    def test_kein_code_des_bereichs_startet_blender(self):
+    def test_blender_startet_nur_der_arbeiter_des_bereichs(self):
         dienste = Path(settings.BASE_DIR) / 'core' / 'dienste'
         dateien = [
             *dienste.glob('haarengine*.py'),
@@ -203,5 +222,8 @@ class KeinBlenderImBereichTest(SimpleTestCase):
         ]
         self.assertGreater(len(dateien), 20, 'die Dateien des Bereichs wurden gefunden')
         for datei in dateien:
+            if datei.name in self.ARBEITER:
+                continue
             treffer = self.MUSTER.search(datei.read_text(encoding='utf-8'))
-            self.assertIsNone(treffer, '%s ruft Blender: %s' % (datei.name, treffer and treffer.group(0)))
+            self.assertIsNone(treffer, '%s startet Blender selbst statt über den Arbeiter: %s'
+                              % (datei.name, treffer and treffer.group(0)))

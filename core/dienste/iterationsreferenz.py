@@ -64,5 +64,15 @@ class Iterationsreferenz:
                 continue
             original = eintrag.get('original') or eintrag['datei']
             gewicht = float(eintrag.get('gewicht') or 100) / 100.0
-            aus.append(cls(eintrag['datei'], original, winkel, gewicht, Iterationsbild.aus_vorlage(pfad)))
+            aus.append(cls(eintrag['datei'], original, winkel, gewicht, cls.bild(ablage, eintrag['datei'])))
         return aus, ausgelassen
+
+    @staticmethod
+    def bild(ablage, datei):
+        """Das Vorlagenbild der Note: freigestellt aus dem Schritt „netz" (`vorbereitet/<name>.png`, Alpha = Figur),
+        wenn es das gibt — ein Foto mit Zimmer dahinter ist sonst als Ganzes „Figur" (30.09.2026, Edgar - TEST: IoU
+        0,32 gegen den Flur). Sonst das Foto selbst mit weißem Grund."""
+        vorbereitet = ablage.unter(Haarengineablage.VORBEREITET) / (datei.rsplit('.', 1)[0] + '.png')
+        if vorbereitet.is_file():
+            return Iterationsbild.aus_render(vorbereitet)
+        return Iterationsbild.aus_vorlage(ablage.unter(Haarengineablage.EINGANG) / datei)

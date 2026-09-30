@@ -29,6 +29,16 @@ DER FALL BRAUCHT EINE EXPORTDATEI. Er erzeugt sie nicht selbst — dafür
 müsste eine Genesis-9-Figur im Browser stehen. Liegt keine im Ausgabeordner,
 wird er übersprungen und sagt, was zu tun ist. Nach einem Export im Browser
 ist er scharf.
+
+DIE DATEI IST EDGARS, NICHT DIE DES TESTS (30.09.2026): Er nimmt die zuletzt
+geschriebene `.obj`, und Edgar exportiert, was er gerade baut. Am 27.09.
+kam „TanzfigurK_2" mit Sneakers, deren Sohle und Schnürung GEWOLLT weißgrau
+sind (Flachfarbe `Kd` 0,58, keine Karte): Fußstreifen 29,7 % „farblos", das
+Bild selbst war richtig. Ein Wert, der vom Schuhwerk der gerade exportierten
+Figur abhängt, prüft die Exportlogik nicht. Deshalb rechnet der Fall OHNE die
+Teile, die `Exportgrauteile` als gewollt grau erkennt (Kd in der `.mtl`, grau,
+nicht das Standardweiß, ohne Karte, deckend) — ein verlorenes `Kd` oder eine
+weiße Hornhaut bleiben im Bild und damit im Befund.
 """
 import subprocess
 import unittest
@@ -38,6 +48,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from core.dienste.exportbildpruefung import Exportbildpruefung
+from core.dienste.exportgrauteile import Exportgrauteile
 from core.dienste.exportkartenpruefung import Exportkartenpruefung
 from core.projekt_temp import ProjektTemp
 
@@ -78,15 +89,17 @@ class ModellexportAnsichtTest(SimpleTestCase):
         super().setUpClass()
         cls.obj = neueste_ausgabe()
         cls.bericht = None
+        cls.grau = []
         if not cls.obj:
             return
         ziel = Path(ProjektTemp.ordner('test_modellexport')) / 'ansicht.png'
-        lauf = subprocess.run(
-            [str(settings.BLENDER_EXE), '-b', '--factory-startup', '--python', str(SKRIPT), '--',
-             '--obj', cls.obj.as_posix(), '--png', ziel.as_posix(),
-             '--breite', '700', '--hoehe', '1000'],
-            capture_output=True, text=True, timeout=900,
-        )
+        cls.grau = Exportgrauteile(cls.obj).objekte()
+        befehl = [str(settings.BLENDER_EXE), '-b', '--factory-startup', '--python', str(SKRIPT), '--',
+                  '--obj', cls.obj.as_posix(), '--png', ziel.as_posix(),
+                  '--breite', '700', '--hoehe', '1000']
+        if cls.grau:
+            befehl += ['--ohne-objekte', ','.join(cls.grau)]
+        lauf = subprocess.run(befehl, capture_output=True, text=True, timeout=900)
         if lauf.returncode != 0 or not ziel.is_file():
             raise RuntimeError(f'Blender-Lauf gescheitert:\n{lauf.stdout[-3000:]}\n{lauf.stderr[-2000:]}')
         cls.bild = ziel
@@ -103,8 +116,8 @@ class ModellexportAnsichtTest(SimpleTestCase):
         b = self.bericht
         self.assertGreater(b['punkte'], 10000, 'zu wenig Figur im Bild — stimmt die Kamera?')
         self.assertLess(b['anteil'], GRENZE_GESAMT,
-                        'farblose Flächen im Export: %s\n%s'
-                        % (self.obj, '\n'.join(Exportbildpruefung.zeilen(b))))
+                        'farblose Flächen im Export: %s (ohne gewollt graue Teile: %s)\n%s'
+                        % (self.obj, self.grau or 'keine', '\n'.join(Exportbildpruefung.zeilen(b))))
 
     def test_2_keine_einzelne_koerperpartie_faellt_aus(self):
         u"""Der Gesamtwert allein reicht nicht: die weißen Knie waren nur

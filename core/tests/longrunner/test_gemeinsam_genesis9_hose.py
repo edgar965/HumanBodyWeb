@@ -115,7 +115,21 @@ class GemeinsamGenesis9HoseTest(SimpleTestCase):
             naht = self._naht(p, d, marken, links, rechts)
             self.assertGreater(len(naht), 10, links)
             self.assertGreater(p[naht, 2].min(), mindest, links)       # die Naht sitzt am Schritt
-        self.assertAlmostEqual(p[:, 2].min(), 0.095, delta=0.01)        # Saum am Knoechel
+        # Saum am Knoechel (0,0946). Nicht der tiefste Punkt: Der Saum hat 126 cm Umfang auf
+        # 25 cm Bein, seine Falten streuen ±2 cm. Bis 30.09.2026 zog das Anlegen den Saum
+        # auf den FUSSRUECKEN (naechster Hautpunkt der Spann, Normale nach oben): links
+        # 0,084, rechts 0,073 — „rechts 1,6 cm tiefer" (Median der untersten 3 cm je Seite
+        # 0,0963/0,0801). Seit `Stoffanlegen._seiten_setzen` den Fuss fuer Stoff am oder
+        # ueber dem Knoechel auslaesst: min 0,092/0,087, Median 0,1095/0,1051, beide 0,106.
+        # Ohne Hochziehen bliebe der Saum unter dem Boden.
+        z = p[:, 2]
+        saum = z[z < z.min() + 0.03]
+        self.assertAlmostEqual(float(np.median(saum)), 0.106, delta=0.01)
+        self.assertGreater(z.min(), 0.08)             # kein Saumpunkt mehr als 1,5 cm unter dem Knoechel
+        xm = float(np.median(p[:, 0]))
+        je_seite = [float(np.median(z[seite][z[seite] < z[seite].min() + 0.03]))
+                    for seite in (p[:, 0] < xm, p[:, 0] >= xm)]
+        self.assertLess(abs(je_seite[0] - je_seite[1]), 0.01, je_seite)   # Sabotage (Fuss im Baum): 1,6 cm
 
     def _marken(self):
         """Panelmarke je Punkt des Hosen-Teilnetzes — aus der Segmentierung

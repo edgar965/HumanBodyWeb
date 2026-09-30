@@ -40,6 +40,11 @@ def argumente():
     #: Schuh, ohne Haare/Kleid dazwischen), um Durchstechen zu prüfen ohne
     #: fremde Verdeckung zu melden (`Exportfleckenpruefung`, 27.09.2026).
     p.add_argument('--nur', default='')
+    #: Objekte, die GENAU so heißen (kommagetrennt), bleiben draußen — anders
+    #: als `--ohne` ohne Teilwort-Treffer: `…_sneakers_0_1` würde sonst auch
+    #: `_0_10` bis `_0_12` erwischen. Für Teile, deren Farbe gewollt grau oder
+    #: weiß ist und die den Farblos-Wert verfälschen (`Exportgrauteile`).
+    p.add_argument('--ohne-objekte', default='')
     return p.parse_args(roh)
 
 
@@ -47,7 +52,7 @@ def szene_leeren():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def einlesen(pfad, ohne='', nur=''):
+def einlesen(pfad, ohne='', nur='', ohne_objekte=''):
     u"""Blender 4+/5: `wm.obj_import`. `import_scene.obj` gibt es nicht mehr.
 
     @returns (netze, voller_rahmen) — `netze` sind die zu RENDERNDEN Objekte
@@ -67,6 +72,14 @@ def einlesen(pfad, ohne='', nur=''):
             bpy.data.objects.remove(o, do_unlink=True)
         netze = [o for o in netze if o not in weg]
         print('OHNE %d Objekte mit "%s"' % (len(weg), ohne))
+    if ohne_objekte:
+        # Blender kürzt Objektnamen auf 63 Zeichen — dieselbe Kürzung vergleichen.
+        namen = {n[:63] for n in ohne_objekte.split(',') if n}
+        weg = [o for o in netze if o.name in namen]
+        for o in weg:
+            bpy.data.objects.remove(o, do_unlink=True)
+        netze = [o for o in netze if o not in weg]
+        print('OHNE-OBJEKTE %d von %d genannten Objekten entfernt' % (len(weg), len(namen)))
     if nur:
         teile = [t for t in nur.split(',') if t]
         weg = [o for o in netze if not any(t in o.name for t in teile)]
@@ -154,7 +167,7 @@ def rendern(png, breite, hoehe_px):
 def main():
     a = argumente()
     szene_leeren()
-    netze, voller_rahmen = einlesen(a.obj, a.ohne, a.nur)
+    netze, voller_rahmen = einlesen(a.obj, a.ohne, a.nur, a.ohne_objekte)
     stand = karten_pruefen()
     kamera_und_licht(voller_rahmen)
     rendern(a.png, a.breite, a.hoehe)

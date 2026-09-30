@@ -25,9 +25,10 @@ Fix gemessen wurde, damit die Schwelle nicht geraten ist:
 5. Der Rock haengt nicht an den Haenden: unterhalb der Hueftweite kein Punkt
    des Kleids mit Gewicht an Hand-, Finger- oder Armknochen (vor dem Fix 553),
    und jeder genannte Knochen steht im Rigify-Skelett der Figur.
-6. Die Jeans auf Genesis 9 (Ursula1): alle sieben Teile tragen Hautgewichte,
-   nennen nur Knochen des Skeletts und sind als dForce-Stoff erkannt — sonst
-   bindet `Eigenhaut` nichts und das Teil steht still.
+6. Die Jeans auf Genesis 9 (Ursula1): alle sieben Teile tragen Hautgewichte
+   und nennen nur Knochen des Skeletts — sonst bindet `Eigenhaut` nichts und
+   das Teil steht still. Als enges Stueck wird sie gehaeutet, nicht als dForce-
+   Stoff simuliert (seit 19.09. nachts; vorher verlangte der Fall `stoff`).
 7. Die Vorschaubilder der Garderobe: ein LVA-Stueck (Leder, RGBA mit
    durchsichtigem Grund) hat auf dem hellen Grund der Liste eine mittlere
    Helligkeit ueber 100 von 255, auf dem dunklen Seitengrund unter 50.
@@ -251,7 +252,10 @@ class DazAufHumanbodySitz(SimpleTestCase):
             knochen, _idx, w = haut_aus(teil)
             self.assertTrue(set(knochen) <= im_skelett, sorted(set(knochen) - im_skelett)[:5])
             self.assertTrue((w.sum(axis=1) > 0.5).all(), '%s: Punkte ohne Gewicht' % teil['name'])
-            self.assertTrue(teil.get('stoff'), '%s: kein dForce-Stoff' % teil['name'])
+            # Enge Stuecke (Jeans p90 2,1 cm, Nieten 1,0–1,6) werden seit 19.09. nachts
+            # gehaeutet, nicht simuliert (`G9stoff.entscheiden`): ein Hosenbein blieb im
+            # Stoffschwung haengen. Die Haut oben ist also das, was sie bewegt.
+            self.assertFalse(teil.get('stoff'), '%s: enges Stueck wird simuliert' % teil['name'])
 
     # ----------------------------------------------------------- 7. Icons
 

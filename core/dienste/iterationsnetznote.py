@@ -6,7 +6,8 @@ Netz aus TRELLIS/Hunyuan (`Haarengineablage.bezugsnetz`, in der Lage der Erkennu
 Zwei Zahlen, beide in Metern gemessen:
 
     modell_mm   mittlerer Abstand der Kleider- und Haarpunkte zur Netzoberfläche (Stoff, der zu weit vom Foto absteht)
-    deckung     Anteil der Netzproben, die näher als NAH_M an einem Punkt des Modells liegen (was das Foto zeigt, ist auch da)
+    deckung     Anteil der Netzproben, die näher als NAH_M an einem Punkt des Modells liegen (was das Foto zeigt,
+                ist auch da)
 
 `abweichung = modell_mm / MASS_MM + (1 − deckung)` — kleiner ist besser, wie bei der Fotonote. Gemessen wird gegen
 `PROBEN` Oberflächenproben des Netzes (fest gesät, damit zwei Runden vergleichbar sind).
@@ -30,8 +31,14 @@ class Iterationsnetznote:
         netz = trimesh.load(str(netz_pfad), force='mesh', process=False)
         if lage is not None:
             netz.apply_transform(np.asarray(lage, dtype=np.float64))
-        proben, _flaechen = trimesh.sample.sample_surface(netz, self.PROBEN, seed=self.SAAT)
+        proben, flaechen = trimesh.sample.sample_surface(netz, self.PROBEN, seed=self.SAAT)
         self.proben = np.asarray(proben, dtype=np.float64)
+        #: Normale der Fläche je Probe, nach AUSSEN — für den Abstand mit Vorzeichen (`Befundmessung`, Ordner
+        #: `2d3DIterationen`). Ob die Wicklung nach außen zeigt, sagt das Vorzeichen des Volumens (Divergenzsatz
+        #: über die Flächen); eine Eichung am Schwerpunkt ging schief — er liegt bei einer Figur in der Lücke
+        #: zwischen den Beinen.
+        normalen = np.asarray(netz.face_normals, dtype=np.float64)[np.asarray(flaechen)]
+        self.normalen = -normalen if float(netz.volume) < 0 else normalen
         self._baum = cKDTree(self.proben)
         self.hoehe = float(netz.bounds[1][1] - netz.bounds[0][1])
 

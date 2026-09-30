@@ -115,3 +115,10 @@
     position: absolute; left: 6px; top: 6px; padding: 2px 6px; font-size: 0.8rem; border-radius: 4px;
     background: rgba(0, 0, 0, 0.55); color: #fff; pointer-events: none;
 }
+
+/* Begutachtung (30.09.2026): Rezept als Text, Funktionsliste */
+.iter-rezept { margin: 4px 0; padding: 6px 8px; font-size: 0.85rem; white-space: pre-wrap; background: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+.begutachtung-formular { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.begutachtung-formular textarea { width: 100%; min-height: 140px; font-family: monospace; font-size: 0.85rem; }
+.begutachtung-funktion { font-size: 0.85rem; margin: 2px 0; }
+@media (max-width: 900px) { .begutachtung-formular { grid-template-columns: 1fr; } }

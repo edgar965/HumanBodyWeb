@@ -8,7 +8,8 @@ Zwei Quellen (Option `koerper.quelle`):
                   Netz samt Lage der Erkennung als Bezug für die 3D-Note der Iterationen (`arbeit/bezugsnetz.glb`,
                   `bezugsnetz_lage.npz`). Sekunden statt Minuten; für den ersten Lauf der Pipeline (Edgar, 30.09.2026:
                   „mach erstmal die ganze pipeline in geringer auflösung").
-    rechnen       die Kette von „Mesh to 3D" auf dem Netz dieses Auftrags (Schritt „netz"): erkennung · haar · kleidung ·
+    rechnen       die Kette von „Mesh to 3D" auf dem Netz dieses Auftrags (Schritt „netz"): erkennung · haar ·
+                  kleidung ·
                   kalibrierung · koerper · gesicht · rest · textur · vorschau — dieselben Schrittklassen, unverändert,
                   über `Haarenginekoerperlauf` (rund 15 min Grafikkarte). Frisur und Speichern gehören nicht dazu:
                   Frisur und Kleider sind hier Sache der Iterationen.
@@ -35,7 +36,7 @@ __all__ = ['Haarenginekoerper']
 class Haarenginekoerper:
     #: Was aus dem Ergebnis des fremden Auftrags mitkommt (Felder von `Meshfigurauftrag.ergebnis`).
     FELDER = ('regler', 'rest', 'fototextur', 'kopfeigen', 'erkennung', 'koerper', 'gesicht', 'haar', 'kleidung',
-              'testfall')
+              'testfall', 'frisur')
     #: Schritte der Kette „Mesh to 3D", die hier laufen (Quelle „rechnen").
     KETTE = ('erkennung', 'haar', 'kleidung', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau')
 

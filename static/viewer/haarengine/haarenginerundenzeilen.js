@@ -12,6 +12,7 @@ export class Haarenginerundenzeilen {
 
     static ARTEN = {
         ausgang: 'Ausgangslage', optimierer: 'Optimierer', ki: 'Prüf-KI übernommen', ki_verworfen: 'Prüf-KI verworfen',
+        begutachtung: 'Begutachtung (Rezept)',
     };
     static SPALTEN = [
         { label: '<input type="checkbox" id="iterationen-select-all" title="alle angezeigten wählen / Auswahl aufheben">',
@@ -175,6 +176,8 @@ export class Haarenginerundenzeilen {
         const aus = [];
         const notiz = this._notiz(r);
         if (notiz) aus.push(this._unter(r, 'Notiz und Änderungen', offen, notiz));
+        const begutachtung = this._begutachtung(r);
+        if (begutachtung) aus.push(this._unter(r, 'Begutachtung', offen, begutachtung));
         if (r.kritik) aus.push(this._unter(r, 'Prüf-KI', offen, this._kritik(r)));
         if (this.bilder.gruppen(r).length) {
             const bilder = this._unter(r, 'Bilder', offen, E.el('div', '', 'iter-unterinhalt iter-bilder'));
@@ -211,6 +214,27 @@ export class Haarenginerundenzeilen {
         const inhalt = E.el('div', '', 'iter-unterinhalt');
         if (r.notiz) inhalt.appendChild(E.el('p', r.notiz));
         if (hat) inhalt.append(E.el('span', 'Geändert: ', 'hb-hinweis'), this._aenderungsliste(r.aenderungen));
+        return inhalt;
+    }
+
+    /** Runde im Modus „Begutachtung" (30.09.2026): Kommentar, das Rezept (Aufrufe an `ModellMitKleidern`), ein Fehler
+     *  darin, und die 3D-Note gegen das Netz. Alles `textContent` — das Rezept ist Text, kein Code, der hier läuft. */
+    _begutachtung(r) {
+        const E = Haarenginerundenzeilen;
+        if (!r.aufrufe && !r.kommentar && !r.fehler && !(r.note || {}).netz) return null;
+        const inhalt = E.el('div', '', 'iter-unterinhalt');
+        if (r.kommentar) inhalt.appendChild(E.el('p', r.kommentar));
+        if (r.fehler) inhalt.appendChild(E.el('p', `Rezept fehlerhaft: ${r.fehler}`, 'hb-schlecht'));
+        if (r.aufrufe) {
+            const code = E.el('pre', r.aufrufe, 'iter-rezept');
+            inhalt.appendChild(code);
+        }
+        const n = (r.note || {}).netz;
+        if (n) {
+            inhalt.appendChild(E.el('p', `Netz: Stoff ${E.zahl(n.modell_mm, 1)} mm, Körper ${E.zahl(n.koerper_mm, 1)} mm `
+                + `zur Netzoberfläche · Deckung ${E.zahl(100 * (n.deckung || 0), 1)} % · Netz-Abweichung ${E.zahl(n.abweichung, 4)}`
+                + (r.note.foto != null ? ` · Foto-Abweichung ${E.zahl(r.note.foto, 4)}` : ''), 'hb-hinweis'));
+        }
         return inhalt;
     }
 

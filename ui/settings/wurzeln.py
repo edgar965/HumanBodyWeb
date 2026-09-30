@@ -67,6 +67,15 @@ if str(HUMANBODY_ROOT) not in sys.path:
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
+#: Die automatischen Iterationen von „2D3D Kleider" liegen seit dem 30.09.2026
+#: in `A:\\3DTools\\2d3DIterationen` (Edgar: „mache einen extra Ordner
+#: 2d3DIterationen, wo du alles hineinpackst"). Ein Paketname darf nicht mit
+#: einer Ziffer beginnen, deshalb kommt der ORDNER in den Pfad und das Paket
+#: darin heißt `iterationen2d3d` (README dort).
+ITERATIONEN_ROOT = TOOLS_ROOT / '2d3DIterationen'
+if str(ITERATIONEN_ROOT) not in sys.path:
+    sys.path.insert(0, str(ITERATIONEN_ROOT))
+
 #: `GarmentCode` liegt seit dem 07.09.2026 unter A:\\3DTools\\Assets
 #: (Edgar: „verschiebe A:\\3DTools\\HumanBody\\GarmentCode nach
 #: A:\\3DTools\\Assets\\GarmentCode"). Der Importname bleibt `GarmentCode`,

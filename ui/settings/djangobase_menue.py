@@ -22,7 +22,7 @@ MENUE = [
             # (`core/dienste/haarenginelauf.py`, `genesishaarengine.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
             # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
             # Dashboard – Kleider Engine in Dashboard – Haar Engine").
-            {'label': 'Haar Engine', 'icon': 'bi-brush', 'url': '/haarengine/'},
+            {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/haarengine/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -183,7 +183,7 @@ HILFE_EXTRA = [
             # (Edgar, 30.09.2026: „schreibe den Plan in eine neue Seite Hilfe -
             # Kleidung - Haar Engine").
             {
-                'label': 'Haar Engine',
+                'label': '2D3D Kleider',
                 'icon': 'bi-scissors',
                 'url': '/hilfe/kleidung/haarengine/',
                 'aktiv': 'hilfe_kleidung_haarengine',
