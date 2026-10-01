@@ -4,6 +4,7 @@ import { Genesis9lauf } from './genesis9lauf.js';
 import { Dazkleidung } from './dazkleidung.js';
 import { Sortenanteile } from './sortenanteile.js';
 import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
+import { Genesis9morphformular } from './genesis9morphformular.js';
 
 /**
  * Genesis9stueckregler — die Anpassungsregler EINES Daz-Kleidungsstücks.
@@ -33,6 +34,12 @@ export class Genesis9stueckregler {
                 ? Genesis9stueckregler._gruppe(kasten, gruppe, regler.length)
                 : kasten;
             for (const r of regler) ziel.appendChild(Genesis9stueckregler._zeile(inst, stueck, r, werteLesen));
+        }
+        // Das freie Morph-Formular (01.10.2026) unter den Reglern jedes echten Stücks — Sammeleinträge („Haar –
+        // Generisch", „Kleidung – Generisch") haben kein eigenes Netz, dort nicht.
+        if (['kleidung', 'haar'].includes(stueck.art) && !stueck.mischbar && !/^(haar_generisch|kleidung_generisch)/.test(stueck.id)) {
+            kasten.appendChild(Genesis9morphformular.bauen(inst, stueck, werteLesen,
+                regler => Genesis9stueckregler._zeile(inst, stueck, regler, werteLesen)));
         }
         return kasten;
     }

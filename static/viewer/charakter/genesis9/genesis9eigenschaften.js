@@ -8,6 +8,7 @@ import { Genesis9posen } from './genesis9posen.js';
 import { Genesis9texturmischung } from './genesis9texturmischung.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
+import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -238,6 +239,8 @@ export class Genesis9eigenschaften {
                 kasten.appendChild(Genesis9eigenschaften._zeile(inst, r));
             }
             Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
+            // „Nachformung (Ort)": das freie Morph-Formular für den Körper (01.10.2026).
+            Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));
             behaelter.appendChild(kasten);
         }
     }

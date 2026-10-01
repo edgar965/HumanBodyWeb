@@ -51,13 +51,18 @@ class Iterationsreferenz:
 
     @classmethod
     def laden(cls, job):
-        """→ (referenzen, ausgelassen)."""
+        """→ (referenzen, ausgelassen). Vierte Quelle des Winkels (01.10.2026): die Schätzung aus der Pose des Fotos
+        (`Blickwinkelschaetzung`, `kreislauf.winkel_geschaetzt[datei].winkel`)."""
         ablage = Haarengineablage(job.kennung)
+        geschaetzt = ((job.ergebnis or {}).get('kreislauf') or {}).get('winkel_geschaetzt') or {}
         aus, ausgelassen = [], []
         for eintrag in job.bilder or []:
             if eintrag.get('rolle') == 'aus' or float(eintrag.get('gewicht') or 0) <= 0:
                 continue
             winkel = cls.winkel_von(eintrag)
+            if winkel is None and isinstance(geschaetzt.get(eintrag.get('datei')), dict):
+                w = geschaetzt[eintrag['datei']].get('winkel')
+                winkel = float(w) if isinstance(w, (int, float)) else None
             pfad = ablage.unter(Haarengineablage.EINGANG) / eintrag['datei']
             if winkel is None or not pfad.is_file():
                 ausgelassen.append(eintrag.get('original') or eintrag['datei'])

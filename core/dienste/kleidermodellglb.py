@@ -2,10 +2,11 @@
 """Kleidermodellglb — die Teile eines `Kleidermodellbau` als GLB für die Bühne (30.09.2026, aus `Kleidermodellbau.glb`
 herausgelöst, als die Texturen dazukamen).
 
-Ein Teil ohne Textur wird ein Knoten mit flacher Farbe (Vertexfarben). Ein Teil mit Texturen (`teil['textur']`,
-Gruppen mit Albedo) wird je Materialgruppe ein eigener Knoten mit UV und Bild (`trimesh.visual.TextureVisuals`, PBR mit
-Farbfaktor = Daz-Farbe × Tönung); der Knotenname behält den Vorsatz `<art>__<sorte>__<n>` (die Bühne schaltet daran Haar und
-Kleider, `Haarenginebuehnenmodell.art` liest den Anfang) und hängt `_g<k>` an. Dreiecke ohne Bild bleiben flach.
+Ein Teil ohne UV (Körper, Stranghaar-Bänder) wird ein Knoten mit flacher Farbe (Vertexfarben). Ein Teil mit UV wird
+seit 01.10.2026 JE MATERIALGRUPPE ein eigener Knoten `<art>__<sorte>__<n>_g<k>__<slug>` — mit Bild (PBR, Farbfaktor =
+Daz-Farbe × Tönung), sonst flach, aber mit UV: So kennt die Bühne für jeden Treffer eines Pinselstrichs die Gruppe (der
+Slug ist der von `G9kleidtexturen.pfad`, `Haarenginemalen`), und `Haarenginebuehnenmodell.art` liest weiter den Anfang.
+Dreiecke, die keine Gruppe nennt, bleiben flach.
 """
 
 import numpy as np
@@ -36,42 +37,50 @@ class Kleidermodellglb:
             return bild.copy()
 
     @classmethod
-    def _gruppe(cls, trimesh, punkte, dreiecke, uv, gruppe):
-        """Ein Knoten je Materialgruppe: die Dreiecke der Gruppe auf den Punkten, die sie brauchen."""
-        wahl = np.asarray(dreiecke, dtype=np.int64)[gruppe['ab']:gruppe['ab'] + gruppe['anzahl']]
+    def _gruppe(cls, trimesh, punkte, dreiecke, uv, ab, anzahl, textur, farbe):
+        """Ein Knoten je Materialgruppe: die Dreiecke der Gruppe auf den Punkten, die sie brauchen — mit Bild
+        (`textur`: ab, anzahl, albedo, normalen, faktor) oder flach in `farbe`, in beiden Fällen mit UV."""
+        wahl = np.asarray(dreiecke, dtype=np.int64)[ab:ab + anzahl]
         if not len(wahl):
             return None
         nummern, neu = np.unique(wahl.ravel(), return_inverse=True)
         netz = trimesh.Trimesh(vertices=np.asarray(punkte, dtype=np.float64)[nummern],
                                faces=neu.reshape(-1, 3), process=False)
-        material = trimesh.visual.material.PBRMaterial(
-            baseColorTexture=cls._bild(gruppe['albedo']),
-            baseColorFactor=[int(round(float(c) * 255)) for c in gruppe['faktor']] + [255],
-            metallicFactor=0.0, roughnessFactor=0.85, doubleSided=True)
-        if gruppe.get('normalen') is not None:
-            material.normalTexture = cls._bild(gruppe['normalen'])
+        if textur is not None:
+            material = trimesh.visual.material.PBRMaterial(
+                baseColorTexture=cls._bild(textur['albedo']),
+                baseColorFactor=[int(round(float(c) * 255)) for c in textur['faktor']] + [255],
+                metallicFactor=0.0, roughnessFactor=0.85, doubleSided=True)
+            if textur.get('normalen') is not None:
+                material.normalTexture = cls._bild(textur['normalen'])
+        else:
+            material = trimesh.visual.material.PBRMaterial(
+                baseColorFactor=[int(round(float(c) * 255)) for c in np.asarray(farbe)[:3]] + [255],
+                metallicFactor=0.0, roughnessFactor=0.85, doubleSided=True)
         netz.visual = trimesh.visual.TextureVisuals(uv=np.asarray(uv, dtype=np.float64)[nummern], material=material)
         return netz
 
     @classmethod
     def schreiben(cls, teile, pfad, punkte_je_teil=None):
+        from Genesis9.kleidtexturen import G9kleidtexturen
         import trimesh
         szene = trimesh.Scene()
         for i, t in enumerate(teile):
             punkte = t['punkte'] if punkte_je_teil is None else punkte_je_teil[i]
             name = '%s__%s__%d' % (t.get('art'), t.get('sorte') or t.get('art'), i)
-            textur = t.get('textur') or []
             uv = t.get('uv')
-            mit_bild = [g for g in textur if g.get('albedo') is not None] if uv is not None else []
-            if not mit_bild:
+            gruppen = [g for g in (t.get('gruppen') or []) if int(g.get('index_anzahl') or 0) >= 3]
+            if uv is None or not gruppen:
                 szene.add_geometry(cls._flach(trimesh, punkte, t['dreiecke'], t['farbe']), node_name=name)
                 continue
+            je_ab = {int(g['ab']): g for g in (t.get('textur') or []) if g.get('albedo') is not None}
             belegt = np.zeros(len(t['dreiecke']), dtype=bool)
-            for k, g in enumerate(mit_bild):
-                netz = cls._gruppe(trimesh, punkte, t['dreiecke'], uv, g)
+            for k, g in enumerate(gruppen):
+                ab, anzahl = int(g['index_ab']) // 3, int(g['index_anzahl']) // 3
+                netz = cls._gruppe(trimesh, punkte, t['dreiecke'], uv, ab, anzahl, je_ab.get(ab), t['farbe'])
                 if netz is not None:
-                    belegt[g['ab']:g['ab'] + g['anzahl']] = True
-                    szene.add_geometry(netz, node_name='%s_g%d' % (name, k))
+                    belegt[ab:ab + anzahl] = True
+                    szene.add_geometry(netz, node_name='%s_g%d__%s' % (name, k, G9kleidtexturen.slug(g['name'])))
             if not belegt.all():
                 szene.add_geometry(cls._flach(trimesh, punkte, np.asarray(t['dreiecke'])[~belegt], t['farbe']),
                                    node_name=name + '_flach')

@@ -33,6 +33,11 @@ class Iterationsnetznote:
             netz.apply_transform(np.asarray(lage, dtype=np.float64))
         proben, flaechen = trimesh.sample.sample_surface(netz, self.PROBEN, seed=self.SAAT)
         self.proben = np.asarray(proben, dtype=np.float64)
+        #: Fläche je Probe und Flächenzahl des Netzes — damit die Flächenlabels des Körperschritts
+        #: (`arbeit/kleidung_maske.npz`: haut/kleidung je Fläche) auf die Proben kommen (`labels`, 01.10.2026).
+        self.flaechen = np.asarray(flaechen, dtype=np.int64)
+        self.flaechen_anzahl = int(len(netz.faces))
+        self.labels = None
         #: Normale der Fläche je Probe, nach AUSSEN — für den Abstand mit Vorzeichen (`Befundmessung`, Ordner
         #: `2d3DIterationen`). Ob die Wicklung nach außen zeigt, sagt das Vorzeichen des Volumens (Divergenzsatz
         #: über die Flächen); eine Eichung am Schwerpunkt ging schief — er liegt bei einer Figur in der Lücke
@@ -53,7 +58,26 @@ class Iterationsnetznote:
         if lage_pfad.is_file():
             with np.load(lage_pfad) as d:
                 lage = d['matrix'] if 'matrix' in d.files else None
-        return cls(pfad, lage)
+        note = cls(pfad, lage)
+        note.labels = note._labels(ablage.arbeit('kleidung_maske.npz'))
+        return note
+
+    def _labels(self, pfad):
+        """`{'haut': (P,) bool, 'kleidung': (P,) bool}` je Probe aus den Flächenlabels des Körperschritts
+        (`Meshfigurkleidung`) — None ohne Datei oder wenn sie nicht zu diesem Netz passt. Damit misst `Befundmessung`
+        ein Kleid nur gegen die Stofffläche des Netzes und den Körper nur gegen seine Haut: Die Fotos zeigen hängende
+        Arme, das Modell steht in A-Pose — ohne Labels liefen die Zellenmorphe des Shirts den Armen des Netzes
+        hinterher (±4 cm, 01.10.2026, `.51` Runden 7–22)."""
+        if not pfad.is_file():
+            return None
+        try:
+            with np.load(pfad) as d:
+                if 'haut' not in d.files or 'kleidung' not in d.files or len(d['haut']) != self.flaechen_anzahl:
+                    return None
+                return {'haut': np.asarray(d['haut'], bool)[self.flaechen],
+                        'kleidung': np.asarray(d['kleidung'], bool)[self.flaechen]}
+        except (OSError, ValueError, KeyError):
+            return None
 
     def vergleichen(self, teile):
         """`teile` wie `Kleidermodellbau.teile` → {modell_mm, deckung, abweichung, koerper_mm}."""

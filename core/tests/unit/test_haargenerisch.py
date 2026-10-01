@@ -57,7 +57,14 @@ class SammeleintragTest(unittest.TestCase):
         self.assertEqual(kin[0], 'sorte.kin_hair')              # der Anteil steht oben
         self.assertIn('kin_hair.Bangs', kin)                    # der echte Daz-Morph
         self.assertIn('kin_hair.achse.laenge', kin)             # die gemeinsame Formachse
-        self.assertEqual(len(kin), 1 + 1 + len(G9haarachsen.KANAELE))
+        # Dazu die festen Operationen (`G9standardmorphe.HAAR`, 30.09.2026 nachts) und die vier Ortsregler der Mischung.
+        from Genesis9.haarprofil import G9haarprofil
+        from Genesis9.standardmorphe import G9standardmorphe
+        # Seit 01.10.2026 dazu die Strähnendicke (`G9haarprofil`, 2 Regler); Zusatzsträhnen (`str.*`) nur mit Ablage.
+        self.assertEqual(len(kin), 1 + 1 + len(G9haarachsen.KANAELE) + len(G9standardmorphe.HAAR)
+                         + len(G9haargenerisch.ORT_REGLER) + len(G9haarprofil.REGLER))
+        self.assertIn('kin_hair.eigen.op_trim', kin)
+        self.assertIn('kin_hair.ort.sektor_a', kin)
 
     def test_3_die_grenzen_des_echten_morphs_bleiben(self):
         regler = {r['name']: r for r in G9haargenerisch.eintrag()['regler']}

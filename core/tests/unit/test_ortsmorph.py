@@ -64,7 +64,9 @@ class OrtsmorphTest(SimpleTestCase):
     def test_2_sichtkoerper_innen_rand_netz(self):
         s = self._sicht()
         self.assertEqual(s.innen([[0.0, 0.5, 0.0]]).tolist(), [1.0])
-        self.assertEqual(s.innen([[0.6, 0.5, 0.0]]).tolist(), [0.0])
+        # Außerhalb in BEIDEN Ansichten (x = 0,6 sieht die 90°-Ansicht bei z = 0 noch innen: `innen` ist der Anteil).
+        self.assertEqual(s.innen([[0.6, 0.5, 0.6]]).tolist(), [0.0])
+        self.assertEqual(s.innen([[0.6, 0.5, 0.0]]).tolist(), [0.5])
         # Rand von der Mitte nach +x: die Maske reicht 10 Spalten = 10 / (60·0,94) m ≈ 0,177 m … gemessen in 5-mm-Schritten
         weg = s.rand([[0.0, 0.5, 0.0]], [[1.0, 0.0, 0.0]])
         self.assertTrue(0.16 < float(weg[0]) < 0.20, weg)

@@ -22,7 +22,7 @@ MENUE = [
             # (`core/dienste/haarenginelauf.py`, `genesishaarengine.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
             # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
             # Dashboard – Kleider Engine in Dashboard – Haar Engine").
-            {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/haarengine/'},
+            {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/2d3dKleider/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },

@@ -28,13 +28,22 @@ class Haarengineexport:
                 aus[int(k)] = str(self.ablage.ergebnis(name))
         return aus
 
+    def stellung(self):
+        """Die Stellung des Auftrags samt den Körper- und Gesichtsreglern der Iterationen (`kreislauf.modell.koerper`:
+        `koerper_regler`, `koerper_ort`, `IterationGesicht`) — wie `Kleidermodellbau(…, koerper=)` in Runde und Film;
+        ohne sie zeigte die exportierte Figur den Körper vor der Nachformung (01.10.2026)."""
+        stellung = dict(self.job.stellung())
+        modell = (self.job.ergebnis.get('kreislauf') or {}).get('modell') or {}
+        stellung.update({str(k): v for k, v in (modell.get('koerper') or {}).items()})
+        return stellung
+
     def ausfuehren(self):
         from Genesis9.figurrigglb import G9figurrigglb
 
         self.lauf.melden(0.1, 'Figur als GLB mit Rig und Hautbindung')
         t = time.perf_counter()
         ziel = self.ablage.ergebnis(self.DATEI)
-        bericht = G9figurrigglb(self.job.stellung(), self.kacheln(), name=self.job.name).schreiben(ziel)
+        bericht = G9figurrigglb(self.stellung(), self.kacheln(), name=self.job.name).schreiben(ziel)
         bericht['datei'] = self.DATEI
         bericht['sekunden'] = round(time.perf_counter() - t, 1)
         self.job.ergebnis['export'] = bericht

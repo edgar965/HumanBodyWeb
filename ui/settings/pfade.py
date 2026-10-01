@@ -135,6 +135,9 @@ EFFEKTE_NEWTON_PYTHON = os.environ.get('EFFEKTE_NEWTON_PYTHON') or str(
 )
 EFFEKTE_NEWTON_SKRIPT = BASE_DIR / 'effekte' / 'figur' / 'stoffnewton.py'
 EFFEKTE_WARP_CACHE = TOOLS_ROOT / 'ProjektTemp' / 'kleiderphysik' / 'warp_cache'
+#: Mitsuba 3 (Pfadverfolgung auf der GPU, 01.10.2026): Dr.Jits Kernel- und OptiX-Cache im Projekt — ohne
+#: `DRJIT_CACHE_DIR` legt Dr.Jit ihn unter %TEMP%\drjit auf C: ab (gemessen bei der ersten Probe).
+MITSUBA_CACHE = TOOLS_ROOT / 'ProjektTemp' / 'mitsuba_cache'
 EFFEKTE_KLEIDER_DIR = HUMANBODY_GARMENT_LIBRARY_DIR / 'dresses'
 
 # ------------------------------------------------------------------ MakeHuman

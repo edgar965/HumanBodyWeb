@@ -204,13 +204,15 @@ class G9antworten(G9antwortvorrat):
         # Eigene Morphe (`eigen.`) und Texturschichten (`bild.`) eines Stuecks (30.09.2026): ein Rezept baut
         # denselben Namen neu — der Stand beider Ablagen geht mit, sobald einer im Rumpf steht.
         stueck = rumpf.get('regler_stueck') if isinstance(rumpf, dict) else None
-        if isinstance(stueck, dict) and any(str(k).split('.', 1)[-1].startswith(('eigen.', 'bild.'))
-                                            or str(k).startswith(('eigen.', 'bild.')) for k in stueck):
+        if isinstance(stueck, dict) and any(str(k).split('.', 1)[-1].startswith(('eigen.', 'bild.', 'str.'))
+                                            or str(k).startswith(('eigen.', 'bild.', 'str.')) for k in stueck):
+            from Genesis9.haarzusatz import G9haarzusatz
             from Genesis9.kleidmorphe import G9kleidmorphe
             from Genesis9.kleidtexturen import G9kleidtexturen
             ordner = G9kleidmorphe.ordner()
             morphe = max((p.stat().st_mtime_ns for p in ordner.glob('*.json')), default=0) if ordner.is_dir() else 0
-            stand = (stand, morphe, G9kleidtexturen.stand())
+            # Zusatzstraehnen (`str.`, `G9haarzusatz`, 01.10.2026) ebenso.
+            stand = (stand, morphe, G9kleidtexturen.stand(), G9haarzusatz.stand())
         return stand
 
     @staticmethod

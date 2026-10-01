@@ -16,6 +16,11 @@ Der Winkel zählt in Grad ab vorn, positiv zur LINKEN Seite der Figur (der Vertr
 
 Läuft im Arbeitsprozess (`haarengine_fahren`, python14), nie im Django-Server — pyrender belegt die
 Grafikkarte (`Haar/haarbild.py` hält es ebenso).
+
+**Seit 01.10.2026 rendert Mitsuba 3 auf der Grafikkarte** (`Mitsubaszene`: Pfadverfolgung wie Cycles, Normalkarten,
+Strähnen als Kurven, `MOTOR`); pyrender bleibt nur der Rückfall, wenn Mitsuba oder CUDA fehlt (Warnung im Log, `motor`
+sagt, wer gerendert hat). Dieselbe Kamera, dieselben Dateien. `kennung=True` (Teilmasken) liefert die Kennfarben
+unbeleuchtet und ohne Mischkante.
 """
 
 import logging
@@ -39,11 +44,17 @@ class Genesishaarrender:
     #: Die Haut, wenn der Körper keine eigene Farbe trägt (die Note vergleicht Farbflächen).
     HAUT = (0.82, 0.68, 0.60)
 
+    #: 'mitsuba' (GPU-Pfadverfolgung) oder 'pyrender'.
+    MOTOR = 'mitsuba'
+
     def __init__(self, koerper=None):
         """`koerper`: Pfad einer GLB (die Grundfigur mit Rig) oder `(punkte, dreiecke)` — sie steht in
         jedem Bild mit, sonst verglichen wir eine Frisur ohne Kopf."""
         self._koerper = self._laden(koerper)
         self._renderer = None
+        self._szenen = {}
+        #: Wer das letzte Bild gerendert hat ('mitsuba' | 'pyrender').
+        self.motor = None
 
     # -------------------------------------------------------------- Netze
 
@@ -64,12 +75,60 @@ class Genesishaarrender:
         return self._renderer
 
     def schliessen(self):
+        self._szenen.clear()
+        self._pyrender_zu()
+
+    def _pyrender_zu(self):
         if self._renderer is not None:
             try:
                 self._renderer.delete()
             except Exception:  # noqa: BLE001 — beim Aufräumen zählt nur, dass es weitergeht
                 logger.debug('Haarrender: Renderer ließ sich nicht schließen', exc_info=True)
             self._renderer = None
+
+    def _groesse(self, groesse):
+        if groesse and tuple(groesse) != (self.BREITE, self.HOEHE):
+            self._pyrender_zu()
+            self.BREITE, self.HOEHE = int(groesse[0]), int(groesse[1])
+
+    # --------------------------------------------------------- Mitsuba
+
+    @staticmethod
+    def _schluessel(teile, kennung):
+        """Ein Teilesatz ist dieselbe Szene, solange Punkte, Dreiecke, Farben und Bilder dieselben sind — die Felder
+        hält der Vorrat selbst fest (sonst könnte eine neue Liste die `id` einer freigegebenen bekommen)."""
+        def extra(e):
+            if not e:
+                return None
+            gruppen = tuple((int(g['ab']), int(g['anzahl']), str(g.get('albedo')), str(g.get('normalen')),
+                             tuple(np.round(np.asarray(g.get('faktor', (1, 1, 1)), dtype=np.float64), 4)))
+                            for g in e.get('gruppen') or [])
+            return (id(e.get('uv')), gruppen, id(e.get('kurven')))
+        return (bool(kennung),) + tuple((id(t[0]), id(t[1]), tuple(np.round(t[2], 4)), extra(t[3])) for t in teile)
+
+    def _mitsuba(self, teile, mitte, halb, winkel, kennung):
+        """(H, B, 4) aus Mitsuba — oder None (dann rendert pyrender)."""
+        if self.MOTOR != 'mitsuba':
+            return None
+        from .mitsubaszene import Mitsubaszene
+        if Mitsubaszene.mitsuba() is None:
+            return None
+        schluessel = self._schluessel(teile, kennung)
+        eintrag = self._szenen.get(schluessel)
+        # Dieselben Dreiecke, Farben und Bilder mit neuen Punkten (Film: je Bild gehäutet): nur die Lage tauschen.
+        bau = tuple(s[1:] for s in schluessel[1:])
+        gleich = next((e for s, e in self._szenen.items() if s[0] == schluessel[0] and tuple(x[1:] for x in s[1:]) == bau
+                       and not any(t[3] and t[3].get('kurven') is not None for t in teile)), None)
+        if eintrag is None and gleich is not None:
+            gleich[0].punkte_setzen(teile)
+            self._szenen = {schluessel: (gleich[0], teile)}
+            eintrag = self._szenen[schluessel]
+        if eintrag is None:
+            self._szenen.clear()
+            eintrag = (Mitsubaszene(teile, kennung=kennung), teile)
+            self._szenen[schluessel] = eintrag
+        self.motor = 'mitsuba'
+        return eintrag[0].rendern(mitte, halb, winkel, (self.BREITE, self.HOEHE))
 
     # ------------------------------------------------------------- Bilder
 
@@ -146,29 +205,70 @@ class Genesishaarrender:
             teile.append((punkte, dreiecke, self._hex(farbe)))
         return self.bild_teile(teile, winkel, pfad)
 
-    def bild_teile(self, teile, winkel, pfad, groesse=None):
+    KOPF_HOEHE = 0.34
+    KOPF_UNTER_SCHEITEL = 0.13
+
+    def bild_kopf(self, teile, winkel, pfad, groesse=(512, 512)):
+        """Nur der Kopf: Kamera auf `KOPF_UNTER_SCHEITEL` unter dem höchsten Punkt, Bildhöhe `KOPF_HOEHE` m — für die
+        Gesichtslandmarken (`Gesichtsmasse`, 01.10.2026); auf dem Figurrender wäre das Gesicht 30 Pixel groß."""
+        from PIL import Image
+        teile = self._teile(teile)
+        if not teile:
+            raise ValueError('Nichts zu rendern')
+        self._groesse(groesse)
+        scheitel = max(float(np.asarray(t[0])[:, 1].max()) for t in teile)
+        mitte = np.array([0.0, scheitel - self.KOPF_UNTER_SCHEITEL, 0.0])
+        rgba = self._rgba(teile, mitte, self.KOPF_HOEHE / (1.0 + 2.0 * self.RAND), winkel, False)
+        rgb = rgba[..., :3].copy()
+        rgb[rgba[..., 3] == 0] = 255              # weißer Grund: der Detektor sieht Fotos, keine Alphakanäle
+        pfad.parent.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(rgb, mode='RGB').save(pfad)
+        return pfad
+
+    @staticmethod
+    def extra(teil):
+        """Das Paket eines gebauten Teils (`Kleidermodellbau`) für `bild_teile`: UV + Gruppen mit Bildern, Strähnen als
+        `kurven` (Mitsuba) — None ohne beides (dann flach in der Farbe des Teils)."""
+        aus = {}
+        if teil.get('uv') is not None and teil.get('textur'):
+            aus.update(uv=teil['uv'], gruppen=teil['textur'])
+        if teil.get('kurven') is not None:
+            aus['kurven'] = teil['kurven']
+        return aus or None
+
+    @staticmethod
+    def _teile(teile):
+        return [(t[0], t[1], tuple(float(c) for c in np.asarray(t[2])[:3]), t[3] if len(t) > 3 else None)
+                for t in teile if t[0] is not None]
+
+    def _rgba(self, teile, mitte, hoehe, winkel, kennung):
+        """(H, B, 4) uint8 — Mitsuba, sonst pyrender (Alpha aus der Tiefe)."""
+        feld = self._mitsuba(teile, mitte, 0.5 * hoehe * (1.0 + 2.0 * self.RAND), winkel, kennung)
+        if feld is not None:
+            return np.clip(np.round(feld * 255.0), 0, 255).astype(np.uint8)
+        import pyrender
+        self.motor = 'pyrender'
+        farbbild, tiefe = self.renderer().render(self._szene(pyrender, teile, mitte, hoehe, winkel))
+        alpha = (np.asarray(tiefe) > 0).astype(np.uint8) * 255
+        return np.dstack([np.asarray(farbbild)[..., :3], alpha])
+
+    def bild_teile(self, teile, winkel, pfad, groesse=None, kennung=False):
         """Beliebig viele Teile `[(punkte, dreiecke, farbe rgb 0…1[, textur])]` — „2D3D Kleider" (Körper, Kleider,
         Haar) aus `winkel` Grad, freigestellt nach `pfad`. `textur` (30.09.2026): `{'uv': (N, 2), 'gruppen': [{ab,
-        anzahl, albedo, faktor}]}` — dann trägt das Teil seine Albedo je Materialgruppe (Foto, Decal, Daz-Bild) statt
-        der flachen Farbe. `groesse` (Breite, Höhe) statt BREITE × HOEHE: ein kleines Bild für die Iterationen, die
-        Note rechnet ohnehin auf 128 × 192."""
-        import pyrender
+        anzahl, albedo, normalen, faktor}], 'kurven': …}` — dann trägt das Teil seine Albedo je Materialgruppe (Foto,
+        Decal, Daz-Bild) statt der flachen Farbe, unter Mitsuba auch die Normalkarte, und Stranghaar mit `kurven` wird
+        als Strähnen gerendert. `groesse` (Breite, Höhe) statt BREITE × HOEHE: ein kleines Bild für die Iterationen, die
+        Note rechnet ohnehin auf 128 × 192. `kennung`: Kennfarben für die Teilmasken (unbeleuchtet, ohne Mischkante)."""
         from PIL import Image
 
-        teile = [(t[0], t[1], tuple(float(c) for c in np.asarray(t[2])[:3]), t[3] if len(t) > 3 else None)
-                 for t in teile if t[0] is not None]
+        teile = self._teile(teile)
         if not teile:
             raise ValueError('Nichts zu rendern — weder Körper noch Frisur')
-        if groesse and tuple(groesse) != (self.BREITE, self.HOEHE):
-            self.schliessen()
-            self.BREITE, self.HOEHE = int(groesse[0]), int(groesse[1])
+        self._groesse(groesse)
         alle = np.vstack([t[0] for t in teile])
         mitte = np.array([0.0, 0.5 * (alle[:, 1].min() + alle[:, 1].max()), 0.0])
         hoehe = float(alle[:, 1].max() - alle[:, 1].min()) or 1.0
-        szene = self._szene(pyrender, teile, mitte, hoehe, winkel)
-        farbbild, tiefe = self.renderer().render(szene)
-        alpha = (np.asarray(tiefe) > 0).astype(np.uint8) * 255
-        rgba = np.dstack([np.asarray(farbbild)[..., :3], alpha])
+        rgba = self._rgba(teile, mitte, hoehe, winkel, kennung)
         pfad.parent.mkdir(parents=True, exist_ok=True)
         Image.fromarray(rgba, mode='RGBA').save(pfad)
         return pfad

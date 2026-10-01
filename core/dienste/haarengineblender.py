@@ -72,24 +72,20 @@ class Haarengineblender:
     # ------------------------------------------------------------ Haar-Knoten
 
     HAARSKRIPT = Path(settings.BASE_DIR) / 'effekte' / 'blender' / 'haarengine' / 'haarknoten.py'
-    KNOTEN = ('trim', 'clump', 'curl', 'frizz', 'noise', 'straighten', 'roll', 'smooth', 'braid', 'displace', 'rotate')
+    #: Verformende Knoten (Delta je Punkt → eigener Morph) — seit 01.10.2026 auch Shrinkwrap (Zielobjekt: die
+    #: Grundfigur) und Attach — und erzeugende (Duplicate; Interpolate/Generate → Zusatzsträhnen `str.<name>`).
+    #: Attach, Interpolate und Generate brauchen die Kopfhaut mit EINDEUTIGER UV (`G9kopfhaut`: Daz-Kappe oder Kopf der
+    #: Grundfigur mit Genesis-UV): Die erste Fassung gab der Figur eine Draufsicht als UV, in der Kopf und Füße dieselben
+    #: Werte haben — Attach versetzte alle 236.136 Pixie-Punkte 1,66 m, Interpolate lieferte 14 Einzelpunkte. Die
+    #: Rückführung weist so ein Ergebnis weiter ab.
+    KNOTEN = ('trim', 'clump', 'curl', 'frizz', 'noise', 'straighten', 'roll', 'smooth', 'braid', 'displace', 'rotate',
+              'shrinkwrap', 'attach', 'duplicate', 'interpolate', 'generate')
 
     @staticmethod
     def _straehnen(segmente, anzahl):
-        """`[Index-Feld je Strähne]` aus den Segmenten (S, 2) eines `G9strang` — jede Kette von Anfang bis Ende."""
-        segmente = np.asarray(segmente, dtype=np.int64)
-        naechster = np.full(anzahl, -1, dtype=np.int64)
-        naechster[segmente[:, 0]] = segmente[:, 1]
-        hat_vorgaenger = np.zeros(anzahl, dtype=bool)
-        hat_vorgaenger[segmente[:, 1]] = True
-        aus = []
-        for start in np.flatnonzero((naechster >= 0) & ~hat_vorgaenger):
-            kette, p = [int(start)], int(start)
-            while naechster[p] >= 0 and len(kette) < anzahl:
-                p = int(naechster[p])
-                kette.append(p)
-            aus.append(np.asarray(kette, dtype=np.int64))
-        return aus
+        """`[Index-Feld je Strähne]` aus den Segmenten (S, 2) eines `G9strang` (`G9haarzusatz.ketten`)."""
+        from Genesis9.haarzusatz import G9haarzusatz
+        return G9haarzusatz.ketten(segmente, anzahl)
 
     @staticmethod
     def _eingang(name):
@@ -97,50 +93,69 @@ class Haarengineblender:
         return ' '.join(w.capitalize() for w in str(name).replace('-', '_').split('_'))
 
     def haar(self, sorte, name, knoten, ort=None, **parameter):
-        """Eine Hair-Node-Gruppe auf das STRANGHAAR der Sorte → Steckbrief des Morphs `<sorte>.eigen.<name>`.
+        """Eine Hair-Node-Gruppe auf das STRANGHAAR der Sorte → Steckbrief des Morphs `<sorte>.eigen.<name>` (oder des
+        Zusatzes `<sorte>.str.<name>` bei duplicate/interpolate/generate; `brief['art']` sagt, was es ist).
         `parameter`: Eingänge der Gruppe (`length_factor=0.5` → „Length Factor"); `ort` als Mask je Punkt."""
+        from Genesis9.haarzusatz import G9haarzusatz
         from Genesis9.kleidmorphe import G9kleidmorphe
         from Genesis9.ortsmorph import G9ortsmorph
+
+        from .haarknotenauftrag import Haarknotenauftrag
         if str(knoten) not in self.KNOTEN:
             raise ValueError('knoten: %s' % '|'.join(self.KNOTEN))
         teile, kaefige, y0, y1, mitte, eintrag = G9kleidmorphe.kaefige(sorte)
         if eintrag.get('art') != 'haar':
             raise ValueError(u'%s ist keine Frisur' % sorte)
         werte = {self._eingang(k): v for k, v in parameter.items()}
+        # Trim: „Replace Length" steht in Blender auf An und setzt jede Strähne auf `Length` (1 m) — gemessen 01.10.2026
+        # am Pixie: 500 mm Weg statt der halben Länge. Wer einen Faktor meint, meint Skalieren.
+        if knoten == 'trim' and 'Length' not in werte and 'Replace Length' not in werte:
+            werte['Replace Length'] = False
+            werte.setdefault('Length Factor', 0.5)
+        # Duplicate: Blenders Vorgabe „Amount" 10 machte aus dem Pixie 2,6 Mio. Punkte (gemessen 01.10.2026) — zwei
+        # Kopien je Strähne sind die Vorgabe, wer mehr will, sagt `amount=`.
+        if knoten == 'duplicate':
+            werte.setdefault('Amount', 2)
         self.ordner.mkdir(parents=True, exist_ok=True)
-        deltas, berichte, straenge = [], [], 0
+        hin = Haarknotenauftrag(self.ordner, sorte, knoten, werte, teile=teile, kaefige=kaefige, y0=y0)
+        zusatz = str(knoten) in Haarknotenauftrag.ZUSATZ
+        deltas, je_teil, berichte, straenge = [], [], [], 0
         for nummer, ((folger, _lage), punkte) in enumerate(zip(teile, kaefige, strict=True)):
             punkte = np.asarray(punkte, dtype=np.float64)
+            deltas.append(np.zeros_like(punkte))
+            je_teil.append(None)
             if getattr(folger, 'ART', None) != 'strang':
-                deltas.append(np.zeros_like(punkte))
                 continue
             ketten = self._straehnen(folger.segmente, len(punkte))
-            reihe = np.concatenate(ketten) if ketten else np.zeros(0, dtype=np.int64)
-            if not len(reihe):
-                deltas.append(np.zeros_like(punkte))
+            if not ketten:
                 continue
             maske = (G9ortsmorph.gewicht({'ort': dict(ort)}, punkte, y0, y1, mitte) if ort
                      else np.ones(len(punkte)))
-            stamm = self.ordner / ('%s_%d_%s' % (sorte, nummer, knoten))
-            np.savez_compressed(str(stamm) + '_straehnen.npz', punkte=punkte[reihe].astype(np.float32),
-                                laengen=np.asarray([len(k) for k in ketten], dtype=np.int32),
-                                maske=maske[reihe].astype(np.float32))
-            auftrag = {'straehnen': str(stamm) + '_straehnen.npz', 'aus': str(stamm) + '_nachher.npz',
-                       'bericht': str(stamm) + '_bericht.json', 'knoten': str(knoten), 'werte': werte}
-            AtomarSchreiber.json_schreiben(Path(str(stamm) + '_auftrag.json'), auftrag)
-            bericht = self._laufen(Path(str(stamm) + '_auftrag.json'), Path(auftrag['bericht']), self.HAARSKRIPT)
-            with np.load(auftrag['aus']) as d:
-                nachher = np.asarray(d['punkte'], dtype=np.float64)
-            delta = np.zeros_like(punkte)
-            delta[reihe] = nachher - punkte[reihe]
-            deltas.append(delta)
+            pfad, auftrag = hin.schreiben(nummer, punkte, ketten, maske)
+            bericht = self._laufen(pfad, Path(auftrag['bericht']), self.HAARSKRIPT)
+            if zusatz:
+                je_teil[-1] = Haarknotenauftrag.zusatz(auftrag, folger, punkte)
+                f = je_teil[-1]
+                if f is None or len(f['l']) < 0.01 * len(ketten) or float(np.mean(f['l'])) < 2.0:
+                    raise ValueError(u'%s: Blender erzeugte aus %d Strähnen nichts Brauchbares (%s Strähnen, %s Punkte je '
+                                     u'Strähne) — Dichte/Kopfhaut prüfen (Bericht); haar_duplizieren/'
+                                     u'haar_interpolieren (Python) gehen immer'
+                                     % (knoten, len(ketten), 0 if f is None else len(f['l']),
+                                        0 if f is None else round(float(np.mean(f['l'])), 1)))
+            else:
+                deltas[-1] = Haarknotenauftrag.delta(auftrag, punkte, np.concatenate(ketten), maske)
             berichte.append(bericht)
             straenge += len(ketten)
         if not straenge:
             raise ValueError(u'%s hat kein Stranghaar — Kartenhaar nimmt haar_trim/clump/noise/… (G9haarops)' % sorte)
+        namen = [f.kennung for f, _lage in teile]
+        if zusatz:
+            return G9haarzusatz.ablegen(sorte, name, namen, je_teil,
+                                        {'art': 'haarzusatz', 'knoten': str(knoten), 'werte': werte, 'blender': berichte,
+                                         'kopfhaut': hin.kopfhaut})
         brief = {'art': 'haarknoten', 'knoten': str(knoten), 'werte': werte, 'ort': ort, 'straehnen': straenge,
-                 'blender': berichte}
-        return G9kleidmorphe.ablegen(sorte, name, [f.kennung for f, _lage in teile], deltas, brief)
+                 'blender': berichte, 'kopfhaut': hin.kopfhaut}
+        return G9kleidmorphe.ablegen(sorte, name, namen, deltas, brief)
 
     @staticmethod
     def _dreiecke(folger):

@@ -1,19 +1,25 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Meshfigurbuehne } from '../meshfigur/meshfigurbuehne.js';
 import { Haarengineposenkopie } from './haarengineposenkopie.js';
+import { Haarenginestandbestellung } from './haarenginestandbestellung.js';
 
 /**
- * Haarenginebuehnenmodell — das Modell der letzten Iteration auf der Hauptbühne.
+ * Haarenginebuehnenmodell — das 3D-Modell des LETZTEN Stands auf der Hauptbühne.
  *
- * Der Knopf `#buehne-iterationsmodell` lädt die GLB `dateien.modell` der jüngsten Runde (`Begutachtungsrunde`: Körper, Kleider,
- * Haar als je ein Knoten `<art>__<sorte>__<n>`, in der gestellten Haltung, so, wie die Runde benotet wurde). Dabei geht
- * „Grundfigur" aus; schaltet man sie wieder ein, steht sie zum Vergleich um `Meshfigurbuehne.ABSTAND` (1,5 m) nach rechts
- * versetzt neben dem Modell (Edgar, 30.09.2026). „Haare" und „Kleider" blenden die Knoten des Modells ein und aus (`_teile`;
- * ältere GLBs ohne Präfix: `hair` im Namen = Haar, `koerper` = Körper, sonst Kleidung). Der Stand des Knopfs bleibt je
- * Browser gemerkt.
+ * Edgar, 01.10.2026: „das laden des 3d modells dauert immer lange, meldung: es wird gebaut. Baue beim letzten stand ein 3d
+ * modell (Genesis mit assets) und lades es gleich, das muss schnell gehen." Quelle ist deshalb zuerst die fertige GLB des
+ * Stands (`z.standmodell`, `Haarenginestandmodell` auf dem Server: Körper mit gebackenen Kacheln, Augen, Mund, Wimpern,
+ * Brauen, Kleider und Haar am Rig — gemessen 1,1 s für 46 MB), sonst die GLB der jüngsten Runde. Fehlt die Datei oder ist
+ * sie veraltet, bestellt `Haarenginestandbestellung` sie; bis dahin steht die alte Fassung da.
  *
- * Die Bewegung (`Haarengineanimation`) läuft weiter auf der Genesis-Figur; hat das Modell ein Rig, übernimmt es deren
- * Haltung je Bild (`Haarengineposenkopie`) — die GLB der Runden hat keins, sie steht.
+ * Der Knopf ist von selbst an (nur ein ausdrückliches Aus bleibt je Browser gemerkt). Solange er ein Modell zeigt, ist
+ * „3DModell" (die im Browser gebaute Genesis-Figur) aus — und wird gar nicht erst gebaut (`Meshfigurbuehne.zeigen`). Gibt
+ * es noch kein Modell, bleibt „3DModell" an: Bis 01.10.2026 schaltete ein gemerktes „an" die Figur auch dann aus, wenn
+ * der Auftrag kein Modell hatte, und die Bühne blieb leer (Auftrag `.52`, Befund Edgar „es wird kein 3d modell angezeigt").
+ *
+ * „Haare" und „Kleider" blenden die Knoten des Modells ein und aus (`_teile`, Präfix `<art>__`). Die Bewegung spielt
+ * `Haarengineanimation` direkt auf dem Skelett dieser GLB (`figur()`); nur wenn sie auf der Genesis-Figur liegt, überträgt
+ * `Haarengineposenkopie` deren Haltung.
  */
 export class Haarenginebuehnenmodell {
 
@@ -22,9 +28,12 @@ export class Haarenginebuehnenmodell {
             knopf: 'buehne-iterationsmodell',
             speicher: 'haarengine.buehne.iterationsmodell',
             name: 'Modell',
-            leer: 'Modell (letzte Iteration)',
-            titel: r => `Modell der Runde ${r}: Grundfigur mit Haar, am Rig (spielt auch die Bewegung)`,
-            keine: 'Noch keine Runde mit Modell — erst „Weiter iterieren“ im Reiter „Iterationen“',
+            leer: 'Modell',
+            titel: q => (!q.stand ? `Modell der Runde ${q.runde}: Grundfigur mit Haar`
+                : q.runde ? `Das Modell des letzten Stands (Runde ${q.runde}): Genesis mit Augen, Kleidern und Haar, am Rig`
+                    : 'Noch keine Iteration: die Grundfigur aus dem Schritt „Körper“ mit Augen, Brauen und Wimpern, am Rig — '
+                      + 'Kleider und Haar setzen erst die Iterationen'),
+            keine: 'Noch kein Modell — erst nach dem Schritt „Körper“',
         },
     };
 
@@ -41,8 +50,12 @@ export class Haarenginebuehnenmodell {
         this.geschwister = null;
         this._adresse = null;
         this._laedt = null;
+        this.bestellung = new Haarenginestandbestellung(seite, text => this.buehne._melden(text));
         this.knopf.classList.toggle('active', this.an);
-        if (this.an) this.buehne.schalter?.setzen('modell', false);
+        // Schon hier, aus dem Zustand im Kopf der Seite: `Haarengineseite.zeigen` ruft die Bühne VOR diesem Modell — stünde
+        // „3DModell" beim ersten Takt noch an, finge der Bau im Browser an, den das Modell ersetzen soll.
+        this._hatQuelle = this._ersetzt(seite.zustand || {});
+        this.buehne.schalter?.setzen('modell', !(this.an && this._hatQuelle));
         this.knopf.addEventListener('click', () => this.umschalten());
         this.kopie = null;
         this._quelle = null;
@@ -51,10 +64,17 @@ export class Haarenginebuehnenmodell {
             const vorher = schalter.geaendert;
             schalter.geaendert = () => { vorher(); this._teile(); };
         }
+        // „Haare"/„Kleider" ohne Inhalt sagen beim Klick, warum nichts passiert (Befund Edgar, 01.10.2026: „Buttons Kleider,
+        // haare ohne effekt" — `.52` hat keine Iteration, sein Modell trägt weder Kleider noch Haar).
+        for (const knopf of document.querySelectorAll('button[data-schalter="haare"], button[data-schalter="kleider"]')) {
+            knopf.addEventListener('click', () => {
+                if (this.an && this.gruppe && knopf.classList.contains('ohne-inhalt')) this.buehne._melden(knopf.title);
+            });
+        }
         this._takt();
     }
 
-    /** Zu welchem Schalter ein Knoten der Runden-GLB gehört: haar | kleidung | koerper. */
+    /** Zu welchem Schalter ein Knoten der GLB gehört: haar | kleidung | koerper. */
     static art(name) {
         const n = String(name || '');
         if (n.startsWith('haar__')) return 'haar';
@@ -66,6 +86,7 @@ export class Haarenginebuehnenmodell {
     /** „Haare" und „Kleider" auf die Knoten des Modells übertragen, die Grundfigur daneben rücken. */
     _teile() {
         this._versetzen();
+        this._inhalt();
         if (!this.gruppe) return;
         const an = this.buehne.schalter?.stand || {};
         this.gruppe.traverse(teil => {
@@ -76,6 +97,21 @@ export class Haarenginebuehnenmodell {
         });
     }
 
+    /** „Haare" und „Kleider" blass, wenn das gezeigte Modell nichts davon trägt — gesperrt wird nicht (`Meshfigurschalter`). */
+    _inhalt() {
+        const arten = new Set();
+        if (this.an && this.gruppe) this.gruppe.traverse(t => { if (t.isMesh) arten.add(Haarenginebuehnenmodell.art(t.name)); });
+        for (const [schluessel, art, was] of [['haare', 'haar', 'kein Haar'], ['kleider', 'kleidung', 'keine Kleider']]) {
+            const knopf = document.querySelector(`button[data-schalter="${schluessel}"]`);
+            if (!knopf) continue;
+            knopf.dataset.titel ??= knopf.title;
+            const leer = !!(this.an && this.gruppe) && !arten.has(art);
+            knopf.classList.toggle('ohne-inhalt', leer);
+            knopf.title = leer ? `Das Modell trägt ${was} — die setzen erst die Iterationen (Reiter „Iterationen“)`
+                : knopf.dataset.titel;
+        }
+    }
+
     /** Die Grundfigur um `Meshfigurbuehne.ABSTAND` nach rechts, solange Modell UND Grundfigur zu sehen sind. */
     _versetzen() {
         const figur = this.buehne.modell?.group;
@@ -84,20 +120,34 @@ export class Haarenginebuehnenmodell {
         figur.position.x = versetzt ? Meshfigurbuehne.ABSTAND : 0;
     }
 
+    /** Von selbst an — nur ein ausdrückliches Aus (`'0'`) bleibt gemerkt. */
     _gemerkt() {
-        try { return localStorage.getItem(this.eigen.speicher) === '1'; } catch { return false; }
+        try { return localStorage.getItem(this.eigen.speicher) !== '0'; } catch { return true; }
     }
 
     _merken() {
         try { localStorage.setItem(this.eigen.speicher, this.an ? '1' : '0'); } catch { /* stumm gewollt: nur Bequemlichkeit */ }
     }
 
-    /** Die jüngste Runde mit Datei `schluessel` in `dateien` → {adresse, runde} oder null. */
+    /**
+     * Das Modell des Stands, sonst die jüngste Runde mit GLB → {adresse, runde, stand} oder null. Eine Runde, die jünger
+     * ist als ein veraltetes Modell des Stands (ein Lauf rechnet gerade), geht vor — bis der Lauf es am Ende neu baut.
+     */
     static quelle(z, seite, schluessel = 'modell') {
+        const s = z.standmodell;
         const runden = ((z.ergebnis || {}).iterationen || []).filter(r => (r.dateien || {})[schluessel]);
-        if (!runden.length) return null;
-        const r = runden.reduce((a, b) => (Number(b.runde) > Number(a.runde) ? b : a));
-        return { adresse: seite.dateiAdresse('iterationen', r.dateien[schluessel]), runde: r.runde };
+        const r = runden.length ? runden.reduce((a, b) => (Number(b.runde) > Number(a.runde) ? b : a)) : null;
+        if (s?.datei && (s.aktuell || !r || Number(r.runde) <= Number(s.runde || 0))) {
+            const adresse = `${seite.dateiAdresse('ergebnis', s.datei)}?v=${encodeURIComponent(s.fassung || '')}`;
+            return { adresse, runde: s.runde, stand: true };
+        }
+        if (!r) return null;
+        return { adresse: seite.dateiAdresse('iterationen', r.dateien[schluessel]), runde: r.runde, stand: false };
+    }
+
+    /** Gibt es ein Modell, das die Genesis-Figur ersetzt — die GLB einer Runde, oder die des Stands (da oder bestellt)? */
+    _ersetzt(z) {
+        return !!Haarenginebuehnenmodell.quelle(z, this.seite, this.art) || Haarenginestandbestellung.kommt(z);
     }
 
     umschalten() {
@@ -105,7 +155,7 @@ export class Haarenginebuehnenmodell {
         this.an = !this.an;
         this._merken();
         this.knopf.classList.toggle('active', this.an);
-        this.buehne.schalter?.setzen('modell', !this.an);
+        this.buehne.schalter?.setzen('modell', !(this.an && this._hatQuelle));
         this.buehne._sichtbarkeit?.();
         this._teile();
         this.zeigen(this.seite.zustand);
@@ -119,18 +169,23 @@ export class Haarenginebuehnenmodell {
         if (this.gruppe) this.gruppe.visible = false;
     }
 
+    /** Für `Haarengineanimation`: `{group, skelett}` dieser GLB, solange sie zu sehen ist und ein Rig hat — sonst null. */
+    figur() {
+        return this.an && this.gruppe && this.skelett ? { group: this.gruppe, skelett: this.skelett } : null;
+    }
+
     /**
-     * Jedes Bild: die Grundfigur neben das Modell rücken, solange beide zu sehen sind (die Bühne baut die Figur neu, wenn
-     * sich ihr Stand ändert — deshalb je Bild, nicht einmal); dann der Haltung der Genesis-Figur folgen, solange eine
-     * Bewegung auf ihr liegt.
+     * Jedes Bild: die Grundfigur neben das Modell rücken, solange beide zu sehen sind; dann — nur wenn die Bewegung auf der
+     * Genesis-Figur liegt, nicht auf dieser GLB — deren Haltung übernehmen.
      */
     _takt() {
         requestAnimationFrame(() => this._takt());
         this._versetzen();
-        if (!this.an || !this.skelett) return;
+        if (!this.an || !this.skelett || this.seite.animation?.ziel === this.gruppe) return;
         const quelle = this.buehne.modell?.skelett;
+        if (!quelle) return;
         // Genesis 9 baut die feine Stufe mit NEUEN Knochen nach (siehe `Haarengineanimation._pruefen`).
-        if (quelle && quelle.rootBone?.uuid !== this._quelle) {
+        if (quelle.rootBone?.uuid !== this._quelle) {
             this._quelle = quelle.rootBone?.uuid;
             this.kopie = new Haarengineposenkopie(this.skelett, quelle);
         }
@@ -140,8 +195,18 @@ export class Haarenginebuehnenmodell {
     zeigen(z) {
         if (!this.buehne.szene) return;
         const quelle = Haarenginebuehnenmodell.quelle(z || {}, this.seite, this.art);
-        this.knopf.title = quelle ? this.eigen.titel(quelle.runde) : this.eigen.keine;
-        this.beschriftung.textContent = quelle ? `${this.eigen.name} (Runde ${quelle.runde})` : this.eigen.leer;
+        this.bestellung.pruefen(z || {});
+        this.knopf.title = quelle ? this.eigen.titel(quelle) : this.eigen.keine;
+        this.beschriftung.textContent = quelle?.runde ? `${this.eigen.name} (Runde ${quelle.runde})`
+            : quelle ? `${this.eigen.name} (ohne Iteration)` : this.eigen.leer;
+        // Die Genesis-Figur nur dann ausschalten, wenn es ein Modell gibt (oder gleich gibt), das sie ersetzt — und nur,
+        // wenn sich das ändert: sonst nähme der Takt der Seite (alle 2 s) jedem Klick auf „3DModell" die Wirkung.
+        const hat = this._ersetzt(z || {});
+        if (hat !== this._hatQuelle) {
+            this._hatQuelle = hat;
+            this.buehne.schalter?.setzen('modell', !(this.an && hat));
+            this.buehne._sichtbarkeit?.();
+        }
         if (this.gruppe) this.gruppe.visible = this.an;
         if (!this.an || !quelle || quelle.adresse === this._adresse || this._laedt) return;
         this._laden(quelle);
@@ -149,7 +214,8 @@ export class Haarenginebuehnenmodell {
 
     async _laden(quelle) {
         this._laedt = quelle.adresse;
-        this.buehne._melden(`${this.eigen.name} der Runde ${quelle.runde} wird geladen …`);
+        const t0 = performance.now();
+        this.buehne._melden(`${this.eigen.name} wird geladen …`);
         try {
             const gltf = await new GLTFLoader().loadAsync(quelle.adresse);
             this._entfernen();
@@ -161,8 +227,9 @@ export class Haarenginebuehnenmodell {
             this.buehne.szene.add(this.gruppe);
             this._adresse = quelle.adresse;
             this.buehne._melden('');
+            console.info(`[2D3D Kleider] ${this.eigen.name} geladen in ${Math.round(performance.now() - t0)} ms: ${quelle.adresse}`);
         } catch (fehler) {
-            this.buehne._melden(`${this.eigen.name} der Runde ${quelle.runde} nicht geladen: ${fehler.message}`);
+            this.buehne._melden(`${this.eigen.name} nicht geladen: ${fehler.message}`);
         } finally {
             this._laedt = null;
         }
@@ -173,7 +240,10 @@ export class Haarenginebuehnenmodell {
         this.buehne.szene.remove(this.gruppe);
         this.gruppe.traverse(teil => {
             teil.geometry?.dispose();
-            for (const stoff of [].concat(teil.material || [])) stoff.dispose();
+            for (const stoff of [].concat(teil.material || [])) {
+                stoff.map?.dispose();
+                stoff.dispose();
+            }
         });
         this.gruppe = null;
         this.skelett = null;

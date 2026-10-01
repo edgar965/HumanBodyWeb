@@ -113,15 +113,15 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
     <div class="mesh-hauptbereich">
         <div class="meshfigur-buehnenspalte">
             {% comment %}Jeder Teil der Bühne einzeln schaltbar — die Vorgabe steht hier als Klasse `active`, gebunden
-            werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`. „Modell (letzte Iteration)“ lädt die GLB der
-            letzten übernommenen Runde — Figur, Haar und Rig — statt der nackten Genesis-Figur
-            (`Haarenginebuehnenmodell`). „Mesh“ und „Nebeneinander“ gehörten zum Netz aus Fotos (dieser Bereich baut
+            werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`. „Modell“ lädt die fertige GLB des letzten
+            Stands — Genesis mit Augen, Kleidern, Haar und Rig, auf dem Server gebaut (`Haarenginestandmodell`) — statt die
+            Genesis-Figur im Browser zu bauen (`Haarenginebuehnenmodell`, 01.10.2026). „Mesh“ und „Nebeneinander“ gehörten zum Netz aus Fotos (dieser Bereich baut
             keins) und sind versteckt; die Knöpfe bleiben im DOM, weil `Meshfigurschalter` (geteilt mit „Mesh to 3D“) sie
             liest.{% endcomment %}
             <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
-                <button type="button" class="schaltknopf" id="buehne-iterationsmodell"
-                        title="Das Modell der letzten übernommenen Iteration: Grundfigur mit Haar, am Rig (spielt auch die Bewegung)">
-                    <i class="fas fa-cut"></i> <span>Modell (letzte Iteration)</span></button>
+                <button type="button" class="schaltknopf active" id="buehne-iterationsmodell"
+                        title="Das Modell des letzten Stands: Genesis mit Augen, Kleidern und Haar, am Rig (spielt auch die Bewegung)">
+                    <i class="fas fa-cut"></i> <span>Modell</span></button>
                 <button type="button" class="schaltknopf" id="buehne-film" hidden
                         title="Der Film der Haar Engine (Schritt „Film“: Figur mit Haar, Bewegung aus der BVH-Datei) in dieser Ansicht">
                     <i class="fas fa-film"></i> Film</button>
@@ -142,6 +142,39 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                 <button type="button" class="schaltknopf active" data-schalter="modell"
                         title="Die Genesis-9-Grundfigur (A-Pose, mit Rig) — neben dem Modell der Iterationen um 1,5 m nach rechts versetzt">
                     <i class="fas fa-user"></i> Grundfigur</button>
+                {% comment %}Malen (01.10.2026, `haarenginemalen.js`): mit gedrückter Maus auf das Modell der Runde — die Striche
+                landen als Decal-Schicht am Stück (`G9kleidpinsel`) und wirken ab der nächsten Runde.{% endcomment %}
+                <button type="button" class="schaltknopf" id="buehne-malen"
+                        title="Auf das Modell der Runde malen (Texture Paint): Farbe und Pinsel daneben; der Strich wird eine Decal-Schicht des getroffenen Stücks">
+                    <i class="fas fa-paint-brush"></i> Malen</button>
+                <span id="buehne-malen-felder" hidden>
+                    <input type="color" data-feld="farbe" value="#ff2020" title="Pinselfarbe" aria-label="Pinselfarbe">
+                    <input type="number" data-feld="radius" value="12" min="1" max="200" step="1" title="Pinselradius in Texeln (bei 1024)"
+                           aria-label="Pinselradius" class="haarengine-malzahl">
+                    <input type="text" data-feld="name" value="pinsel" maxlength="30" pattern="[a-z][a-z0-9_]*" title="Name der Schicht (decal_<name>)"
+                           aria-label="Schichtname" class="haarengine-malname">
+                </span>
+                {% comment %}Formen (01.10.2026, `haarengineformen.js`): Sculpt-Pinsel auf Stück, Haar oder Körper — der Zug wird ein
+                eigener Morph (`G9formpinsel`), UV und Fotoprojektion bleiben; wirkt ab der nächsten Runde.{% endcomment %}
+                <button type="button" class="schaltknopf" id="buehne-formen"
+                        title="Die Form modellieren (Sculpt): Ziehen, Drücken, Aufblasen, Glätten, Flach, Greifen — der Zug wird ein eigener Morph des getroffenen Stücks oder des Körpers">
+                    <i class="fas fa-hand-pointer"></i> Formen</button>
+                <span id="buehne-formen-felder" hidden>
+                    <select data-feld="modus" title="Pinsel" aria-label="Pinsel">
+                        <option value="ziehen">Ziehen</option>
+                        <option value="druecken">Drücken</option>
+                        <option value="aufblasen">Aufblasen</option>
+                        <option value="glaetten">Glätten</option>
+                        <option value="flach">Flach</option>
+                        <option value="greifen">Greifen</option>
+                    </select>
+                    <input type="number" data-feld="radius" value="4" min="0.3" max="40" step="0.5" title="Radius in cm"
+                           aria-label="Radius in cm" class="haarengine-malzahl">
+                    <input type="number" data-feld="staerke" value="1" min="0.05" max="10" step="0.05" title="Stärke (1 = 1 mm je Tupfer)"
+                           aria-label="Stärke" class="haarengine-malzahl">
+                    <input type="text" data-feld="name" value="form" maxlength="30" pattern="[a-z][a-z0-9_]*" title="Name des Morphs (eigen.<name> bzw. eigen:form_<name>)"
+                           aria-label="Morphname" class="haarengine-malname">
+                </span>
             </div>
             <div class="mesh-betrachter" id="buehne">
                 <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Lauf rechnet oder ist noch nicht gestartet.</div>

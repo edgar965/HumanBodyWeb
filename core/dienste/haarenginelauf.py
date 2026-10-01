@@ -112,6 +112,7 @@ class Haarenginelauf:
             logger.exception('Haar Engine %s: Schritt %s gescheitert', job.kennung, job.schritt)
             self._scheitern('%s: %s' % (job.schritt, fehler))
             return
+        self._standmodell(self.SCHRITTE[start:ende])
         job.ergebnis['dauer_s'] = round(time.perf_counter() - t0, 1)
         # Begutachtung (Edgar, 30.09.2026): Endet der Lauf mit den Iterationen, wartet der Auftrag auf das nächste
         # Rezept — sichtbar als eigener Status, nicht als „fertig".
@@ -124,6 +125,20 @@ class Haarenginelauf:
             update_fields=['ergebnis', 'status', 'progress', 'progress_detail', 'finished_at', 'updated_at']
         )
         logger.info('2D3D Kleider %s: %s in %.0f s', job.kennung, job.status, job.ergebnis['dauer_s'])
+
+    def _standmodell(self, gelaufen):
+        """Das 3D-Modell des letzten Stands für die Bühne (`Haarenginestandmodell`, 01.10.2026) — nach jedem Lauf, der
+        die Figur geändert hat. Ein Fehler hält den Lauf nicht auf: die Bühne baut die Figur dann im Browser."""
+        if not {'koerper', 'grundfigur', 'iterationen'} & set(gelaufen):
+            return
+        from .haarenginestandmodell import Haarenginestandmodell
+        stand = Haarenginestandmodell(self.job, self.ablage)
+        try:
+            self.melden(1.0, 'Modell des letzten Stands für die Bühne')
+            stand.bauen()
+        except Exception as fehler:  # noqa: BLE001 — siehe Docstring
+            logger.exception('2D3D Kleider %s: Modell des Stands nicht gebaut', self.job.kennung)
+            stand.scheitern(fehler)
 
     def angehalten(self):
         return Haarengineauftrag.objects.filter(pk=self.job.pk, status='angehalten').exists()

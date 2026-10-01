@@ -19,12 +19,15 @@ from .api.haarenginedashboard import Haarenginedashboard
 from .api.haarengineeinstellungen import Haarengineeinstellungen
 from .api.haarenginefotos import Haarenginefotoendpunkte
 from .api.haarengineiterationen import Haarengineiterationenendpunkte
+from .api.haarengineformen import Haarengineformendpunkte
+from .api.haarenginemalen import Haarenginemalendpunkte
+from .api.haarenginestandmodell import Haarenginestandmodellendpunkte
 
 __all__ = ['HAARENGINE']
 
 HAARENGINE = [
-    path('haarengine/', Haarenginedashboard.seite, name='haarengine'),
-    path('haarengine/<kennung:kennung>/', Haarengineendpunkte.seite, name='haarengine_auftrag'),
+    path('2d3dKleider/', Haarenginedashboard.seite, name='haarengine'),
+    path('2d3dKleider/<kennung:kennung>/', Haarengineendpunkte.seite, name='haarengine_auftrag'),
     path('api/haarengine/anlegen/', Haarengineendpunkte.anlegen, name='haarengine_anlegen'),
     path('api/haarengine/katalog/', Haarengineendpunkte.katalog, name='haarengine_katalog'),
     path(
@@ -53,6 +56,12 @@ HAARENGINE = [
         name='haarengine_einstellungen',
     ),
     path('api/haarengine/<uuid:job_id>/modell/', Haarengineendpunkte.modell, name='haarengine_modell'),
+    # Das 3D-Modell des letzten Stands für die Bühne bestellen (`core/api/haarenginestandmodell.py`, 01.10.2026)
+    path(
+        'api/haarengine/<uuid:job_id>/standmodell/',
+        Haarenginestandmodellendpunkte.bauen,
+        name='haarengine_standmodell',
+    ),
     path(
         'api/haarengine/<uuid:job_id>/loeschen/',
         Haarengineendpunkte.loeschen,
@@ -78,6 +87,18 @@ HAARENGINE = [
         'api/haarengine/funktionen/',
         Haarenginebegutachtungsendpunkte.funktionen,
         name='haarengine_funktionen',
+    ),
+    # Von Hand auf das Modell der Runde malen (`core/api/haarenginemalen.py`, 01.10.2026)
+    path(
+        'api/haarengine/<uuid:job_id>/malen/',
+        Haarenginemalendpunkte.malen,
+        name='haarengine_malen',
+    ),
+    # Von Hand auf der Form modellieren (`core/api/haarengineformen.py`, 01.10.2026)
+    path(
+        'api/haarengine/<uuid:job_id>/formen/',
+        Haarengineformendpunkte.formen,
+        name='haarengine_formen',
     ),
     # Die Runden der Tabelle „Iterationen" (`core/api/haarengineiterationen.py`)
     path(

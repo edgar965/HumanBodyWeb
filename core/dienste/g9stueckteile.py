@@ -75,6 +75,12 @@ class G9stueckteile:
         from Genesis9.kleidmorphe import G9kleidmorphe
         kaefige = G9kleidmorphe.anwenden(
             kennung, teile, kaefige, G9kleidmorphe.werte(rumpf.get('regler_stueck')))
+        # Zusatzsträhnen eines Stranghaars (`G9haarzusatz`, 01.10.2026: Duplicate/Interpolate) — `str.<name>` im
+        # Rumpf; das Strang-Teil wird dabei zu `G9strangzusatz` mit erweiterter Punktmenge.
+        if eintrag.get('art') == 'haar':
+            from Genesis9.haarzusatz import G9haarzusatz
+            teile, kaefige = G9haarzusatz.anwenden(
+                kennung, teile, kaefige, G9haarzusatz.werte(rumpf.get('regler_stueck')))
         # Texturschichten der Iterationen (`G9kleidtexturen`, 30.09.2026): Fotoprojektion, Decal, Faltenkarte über
         # die Daz-Bilder der Gruppen gelegt (`bild.<schicht>` im Rumpf) — die Kachel ersetzt die Albedo VOR dem Bau.
         from Genesis9.kleidtexturen import G9kleidtexturen

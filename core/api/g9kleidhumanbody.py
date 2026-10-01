@@ -99,6 +99,16 @@ class G9kleidhumanbody:
             # Genesis-Grundkoerper — also VOR der Uebertragung dazu.
             roh = G9haarachsen.anwenden(kennung, teile, roh,
                                         G9haarachsen.werte(rumpf.get('regler_stueck')))
+        # Eigene Morphe (`eigen.`), Zusatzstraehnen (`str.`) und Texturschichten (`bild.`) der Iterationen wirkten
+        # bis 01.10.2026 nur auf Genesis („`G9kleidhumanbody` kennt die Schichten nicht") — jetzt derselbe Weg wie in
+        # `G9stueckteile.netze`, auf dem Genesis-Grundkoerper VOR der Uebertragung; die Schichten ersetzen die Albedo.
+        from Genesis9.kleidmorphe import G9kleidmorphe
+        from Genesis9.kleidtexturen import G9kleidtexturen
+        roh = G9kleidmorphe.anwenden(kennung, teile, roh, G9kleidmorphe.werte(rumpf.get('regler_stueck')))
+        if eintrag.get('art') == 'haar':
+            from Genesis9.haarzusatz import G9haarzusatz
+            teile, roh = G9haarzusatz.anwenden(kennung, teile, roh, G9haarzusatz.werte(rumpf.get('regler_stueck')))
+        bilder = G9kleidtexturen.anwenden(kennung, bilder or {}, rumpf.get('regler_stueck'))
         kaefige = []
         for (folger, _lage), punkte in zip(teile, roh, strict=True):
             if cls._strang(folger):

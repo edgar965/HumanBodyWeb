@@ -36,9 +36,11 @@ class Kleidermodellbau:
     HAUT = (0.82, 0.68, 0.60)
     STUFE = 0
 
-    def __init__(self, stellung, drehung=None, stufe=STUFE):
+    def __init__(self, stellung, drehung=None, stufe=STUFE, koerper=None):
         """`drehung`: die Haltung (`ModellMitKleidern.drehung`) — Körper und Stücke stehen dann so; für den Film
-        bleibt sie weg (die Bewegung ist absolut)."""
+        bleibt sie weg (die Bewegung ist absolut). `koerper`: die Genesis-Regler des Modells (`ModellMitKleidern.
+        koerper`: `koerper_regler`, `koerper_ort`, `koerper_huelle`) ÜBER der Stellung des Auftrags — bis 01.10.2026
+        kam nur `job.stellung()` an, `IterationKoerper` wirkte damit nicht (Befund der Parallelsitzung)."""
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.formung import G9formung
         from Genesis9.haut import G9haut
@@ -46,6 +48,7 @@ class Kleidermodellbau:
         from .netzstufenwahl import Netzstufenwahl
         Netzstufenwahl._gewaehlt.set(int(stufe))
         self.stellung = dict(stellung or {})
+        self.stellung.update({str(k): v for k, v in (koerper or {}).items()})
         self.drehung = dict(drehung or {})
         self.formung = G9formung.aus_abfrage(self.stellung, self.drehung)
         self.boden = float(self.formung.boden())
@@ -64,6 +67,15 @@ class Kleidermodellbau:
                              'farbe': np.asarray(self.HAUT), 'haut': self._haut, 'art': 'koerper',
                              'sorte': 'koerper', 'uv': None, 'normalen': None, 'gruppen': [], 'textur': []}
         return self._koerper
+
+    def formbezug(self, ordner, runde):
+        """Den Daz-Käfig des Körpers DIESER Runde (25.182 Punkte, Lage der Bühne) als `runde_NNN_formbezug.npz` ablegen
+        → Dateiname. Der Anker, mit dem der Form-Pinsel Striche auf dem Modell der Runde in die Lage der Grundfigur
+        überträgt (`G9formpinsel.uebertragen`, `Haarengineformendpunkte`)."""
+        name = 'runde_%03d_formbezug.npz' % int(runde)
+        kaefig = np.asarray(self.formung.punkte(), dtype=np.float64) - np.array([0.0, self.boden, 0.0])
+        np.savez_compressed(ordner / name, koerper=kaefig.astype(np.float32))
+        return name
 
     # --------------------------------------------------------------- Stücke
 
@@ -177,8 +189,19 @@ class Kleidermodellbau:
             punkte = self._feld(teil['vertices'], np.float32).reshape(-1, 3).astype(np.float64)
             dreiecke = self._feld(teil['faces'], np.uint32).reshape(-1, 3).astype(np.int64)
             if not len(dreiecke):
-                continue                           # Stranghaar (Linien) rendert nicht
+                continue
             sorte = teil.get('sorte') or art
+            haut = self._haut_aus(teil)
+            if teil.get('art') == 'strang':
+                # Stranghaar (01.10.2026): Linien zeichnet pyrender nicht — je Segment ein Band mit dem Profil der
+                # Sorte (`G9haarprofil`, Regler `profil.wurzel/spitze`), Haut je Bandpunkt vom Strähnenpunkt. Mitsuba
+                # rendert dieselben Strähnen als Kurven (`kurven`); Masken, Netznote und GLB bleiben beim Band.
+                kurven = self._kurven(teil, punkte, dreiecke, modell, sorte)
+                punkte, dreiecke, haut = self._band(teil, punkte, dreiecke, haut, modell, sorte)
+                teile.append({'punkte': punkte, 'dreiecke': dreiecke, 'farbe': farben.get(sorte, grund),
+                              'haut': haut, 'art': art, 'sorte': sorte, 'uv': None, 'normalen': None, 'gruppen': [],
+                              'toenung': toenungen.get(sorte, grund), 'textur': [], 'strang': True, 'kurven': kurven})
+                continue
             # UV, Normalen und Materialgruppen (mit ihren Bildern, `G9kleidtexturen` schon eingerechnet) für den Render
             # mit Texturen und die Fotoprojektion (30.09.2026, nachts).
             uv = self._feld(teil['uvs'], np.float32).reshape(-1, 2).astype(np.float64) if teil.get('uvs') else None
@@ -191,6 +214,35 @@ class Kleidermodellbau:
                           'gruppen': gruppen, 'toenung': toenung,
                           'textur': self._textur(gruppen, {g['name']: g.get('bilder') or {} for g in gruppen}, toenung)})
         return teile
+
+    @staticmethod
+    def _band(teil, punkte, dreiecke, haut, modell, sorte):
+        from Genesis9.haargenerisch import G9haargenerisch
+        from Genesis9.haarprofil import G9haarprofil
+        anteil = Kleidermodellbau._feld(teil['anteil'], np.float32) if teil.get('anteil') is not None else None
+        wurzel, spitze = G9haarprofil.werte(G9haargenerisch.regler_von(sorte, modell.haar))
+        neu, dreiecke_neu, quelle = G9haarprofil.bandnetz(punkte, dreiecke, anteil, wurzel, spitze)
+        if haut is not None:
+            haut = {'knochen': haut['knochen'], 'index': haut['index'][quelle], 'gewicht': haut['gewicht'][quelle]}
+        return neu, dreiecke_neu, haut
+
+    @staticmethod
+    def _kurven(teil, punkte, dreiecke, modell, sorte):
+        """Die Strähnen als Ketten für Mitsubas Kurven: Punkte, Reihenfolge, Punkte je Strähne, Radius je Punkt (m)."""
+        from Genesis9.haargenerisch import G9haargenerisch
+        from Genesis9.haarprofil import G9haarprofil
+        from Genesis9.haarzusatz import G9haarzusatz
+        ketten = [k for k in G9haarzusatz.ketten(G9haarprofil.segmente_aus(dreiecke), len(punkte)) if len(k) >= 2]
+        if not ketten:
+            return None
+        anteil = (Kleidermodellbau._feld(teil['anteil'], np.float32).astype(np.float64) if teil.get('anteil') is not None
+                  else np.zeros(len(punkte)))
+        if len(anteil) != len(punkte):
+            anteil = np.zeros(len(punkte))
+        wurzel, spitze = G9haarprofil.werte(G9haargenerisch.regler_von(sorte, modell.haar))
+        return {'punkte': np.asarray(punkte, dtype=np.float32), 'reihe': np.concatenate(ketten),
+                'laengen': np.asarray([len(k) for k in ketten], dtype=np.int64),
+                'radius': (0.5e-3 * (wurzel + (spitze - wurzel) * np.clip(anteil, 0.0, 1.0))).astype(np.float32)}
 
     @staticmethod
     def _textur(gruppen, bilder, toenung):
@@ -206,7 +258,8 @@ class Kleidermodellbau:
             faktor = np.asarray(farbe[:3], dtype=np.float64) if isinstance(farbe, (list, tuple)) and len(farbe) >= 3 \
                 else np.ones(3)
             aus.append({'ab': int(g['index_ab']) // 3, 'anzahl': int(g['index_anzahl']) // 3, 'albedo': albedo,
-                        'normalen': normalen, 'faktor': np.clip(faktor * 2.0 * np.asarray(toenung), 0.0, 1.0)})
+                        'normalen': normalen, 'normalenachse': int(b.get('normalenachse') or 1),
+                        'faktor': np.clip(faktor * 2.0 * np.asarray(toenung), 0.0, 1.0)})
         return aus if any(t['albedo'] is not None for t in aus) else []
 
     @classmethod

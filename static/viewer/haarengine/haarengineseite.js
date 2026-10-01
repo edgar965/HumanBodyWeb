@@ -16,6 +16,8 @@ import { Haarenginebegutachtung } from './haarenginebegutachtung.js';
 import { Haarengineeinstellungen } from './haarengineeinstellungen.js';
 import { Haarenginefotos } from './haarenginefotos.js';
 import { Haarengineiterationen } from './haarengineiterationen.js';
+import { Haarengineformen } from './haarengineformen.js';
+import { Haarenginemalen } from './haarenginemalen.js';
 
 /**
  * Haarengineseite — die Auftragsseite von „2D3D Kleider" (Bereich haarengine): Lauf, Bildauswahl, 3D-Ausgabe, Optionen, Iterationen.
@@ -90,6 +92,8 @@ export class Haarengineseite {
         this.begutachtung = new Haarenginebegutachtung(this);
         this.buehne = new Meshfigurbuehne(this);
         this.buehnenmodell = new Haarenginebuehnenmodell(this, this.buehne);
+        this.malen = new Haarenginemalen(this, this.buehne, this.buehnenmodell);
+        this.formen = new Haarengineformen(this, this.buehne, this.buehnenmodell);
         this.film = new Haarenginefilmansicht(this);
         this.animation = new Haarengineanimation(this, this.buehne);
         this.berichte = new Meshfigurberichte(this);

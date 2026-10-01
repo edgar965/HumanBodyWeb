@@ -262,9 +262,8 @@ class IterationsoptionenTest(SimpleTestCase):
             Iterationsoptionen.pruefen({'pruefki': 'gemma4:26b-a4b-it-qat'})['pruefki'],
             'gemma4:26b-a4b-it-qat',
         )
-        self.assertEqual(
-            Iterationsoptionen.pruefen({'pruefki': 'rm -rf /'})['pruefki'], Iterationsoptionen.VORGABE_KI
-        )
+        # Unlesbar → die Vorgabe des Felds, und die ist seit dem 01.10.2026 „aus" (Edgar: keine lokale Prüf-KI).
+        self.assertEqual(Iterationsoptionen.pruefen({'pruefki': 'rm -rf /'})['pruefki'], Iterationsoptionen.AUS)
         self.assertEqual(
             Iterationsoptionen.pruefen({'runden': 0})['runden'], 20, 'außerhalb der Grenzen → Vorgabe'
         )

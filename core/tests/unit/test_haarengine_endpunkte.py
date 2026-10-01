@@ -104,7 +104,7 @@ class HaarenginezustandTest(Haarengineaufbau, TransactionTestCase):
         self.assertEqual(zustand['status'], 'angelegt')
         self.assertEqual(len(zustand['bilder']), 2)
         self.assertEqual({p['art'] for p in zustand['pfade']}, {'ordner', 'ablage'})
-        liste = self.client.get('/haarengine/')
+        liste = self.client.get('/2d3dKleider/')
         self.assertEqual(liste.status_code, 200)
         self.assertContains(liste, 'haarengine-form', msg_prefix='das Formular „Neuer Auftrag"')
         self.assertContains(liste, 'haarengine-rollen')

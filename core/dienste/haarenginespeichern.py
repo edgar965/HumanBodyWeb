@@ -55,7 +55,13 @@ class Haarenginespeichern(Meshfigurspeichern):
         # das gespeicherte Modell in Szene, Studio und Theatre dasselbe wie die Bühne des Auftrags.
         modell = (self.job.ergebnis.get('kreislauf') or {}).get('modell')
         if modell:
-            daten['figur']['kleidung'] = ModellMitKleidern.aus(modell).kleidung_modell()
+            mk = ModellMitKleidern.aus(modell)
+            daten['figur']['kleidung'] = mk.kleidung_modell()
+            # Körper- und Gesichtsregler der Iterationen (`koerper_regler`, `koerper_ort`, `IterationGesicht`) über der
+            # Stellung — wie `Kleidermodellbau(…, koerper=)` in der Runde; sonst zeigte die Szene den Körper ohne die
+            # Nachformung, gegen die die Kleider gepasst wurden (01.10.2026).
+            daten['figur']['regler'] = dict(daten['figur'].get('regler') or {},
+                                            **{str(k): v for k, v in mk.koerper.items()})
         return daten
 
     @staticmethod

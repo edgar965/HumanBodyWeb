@@ -42,6 +42,8 @@
 /* Gesperrt: es gibt nichts zu schalten (keine Frisur, keine Kleidung, „Nebeneinander" ohne beide
    Seiten). Der Knopf behält seinen Stand — blass heißt „wirkt gerade nicht", nicht „ist aus". */
 .schaltknopf:disabled { opacity: 0.4; cursor: default; }
+/* Klickbar, aber ohne Inhalt (das Modell trägt z. B. kein Haar) — gesperrt wird nicht, der Titel sagt warum. */
+.schaltknopf.ohne-inhalt { opacity: 0.45; }
 
 /* Ein Auswahlfeld in der Reihe (etwa die Haarquelle) sieht sonst aus wie ein Fremdkörper: ein
    natives `select` erbt kein Theme und steht weiß in der dunklen Leiste (`kontrast-lesbarkeit.md`).

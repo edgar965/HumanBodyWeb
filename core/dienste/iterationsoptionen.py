@@ -89,10 +89,11 @@ class Iterationsoptionen:
             'schluessel': 'pruefki',
             'titel': 'Prüf-KI (lokal, Ollama)',
             'art': 'wahl',
-            'vorgabe': VORGABE_KI,
+            'vorgabe': AUS,
             'werte': [],
             'hinweis': 'Sieht Vorlage und Render und schlägt Werte vor (Teile an/aus, Längen, Farben). Nur Modelle, die Bilder '
-            'lesen können. „Aus" = nur der Optimierer.',
+            'lesen können. Vorgabe „Aus" (Edgar, 01.10.2026: „keine Prüfung über lokale KI") — die Begutachtung der '
+            'Runden macht Fable anhand der Vergleichstafeln, die Automatik rechnet ohne Prüf-KI weiter.',
         },
         {
             'schluessel': 'pruefki_alle',

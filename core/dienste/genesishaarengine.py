@@ -124,8 +124,10 @@ class Genesishaarengine:
         from .kleidertanz import Kleidertanz
         job = self.lauf.job
         modell = ModellMitKleidern.aus((job.ergebnis.get('kreislauf') or {}).get('modell'))
-        teile = Kleidermodellbau(job.stellung()).teile(modell)
-        tanz = Kleidertanz(job.stellung(), teile)
+        bau = Kleidermodellbau(job.stellung(), koerper=modell.koerper)
+        teile = bau.teile(modell)
+        # Das Skelett des Tanzes aus DERSELBEN Stellung wie der Bau (samt Reglern des Modells, 01.10.2026).
+        tanz = Kleidertanz(bau.stellung, teile)
         return tanz.film(Kleidertanz.bewegung(bewegung), aus, bilder, breite, hoehe, fortschritt=fortschritt)
 
     def schliessen(self):

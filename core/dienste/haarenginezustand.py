@@ -8,12 +8,17 @@ an die Seite: beim Laden als JSON in den Kopf der Seite und danach im Takt der N
 (`static/viewer/meshfigur/`) liest sie unverändert.
 """
 
+import logging
+
 from ..models import Haarengineauftrag
 from .haarenginelauf import Haarenginelauf
 from .haarengineoptionen import Haarengineoptionen
 from .haarenginepfade import Haarenginepfade
 from .haarenginespeichern import Haarenginespeichern
+from .haarenginestandmodell import Haarenginestandmodell
 from .iterationsloeschung import Iterationsloeschung
+
+logger = logging.getLogger('core')
 
 __all__ = ['Haarenginezustand']
 
@@ -37,6 +42,8 @@ class Haarenginezustand:
             # Runden, die der laufende Lauf noch löschen muss (Tabelle „Iterationen", `Iterationsloeschung`).
             'loeschen_vorgemerkt': Iterationsloeschung(job).vorgemerkt(),
             'stellung': job.stellung(),
+            # Die fertige GLB des letzten Stands — die Bühne lädt sie statt die Genesis-Figur im Browser zu bauen.
+            'standmodell': Haarenginezustand._standmodell(job),
             'modell': job.modell,
             'laeuft': job.laeuft,
             'schritte': list(Haarenginelauf.SCHRITTE),
@@ -46,3 +53,12 @@ class Haarenginezustand:
             'finished_at': job.finished_at.isoformat() if job.finished_at else None,
             'updated_at': job.updated_at.isoformat() if job.updated_at else None,
         }
+
+    @staticmethod
+    def _standmodell(job):
+        """`Haarenginestandmodell.eintrag()` — ein Fehler darin kostet nur die schnelle Bühne, nie den Zustand."""
+        try:
+            return Haarenginestandmodell(job).eintrag()
+        except (OSError, ValueError, TypeError, KeyError) as fehler:
+            logger.warning('2D3D Kleider %s: Modell des Stands nicht gelesen (%s)', job.kennung, fehler)
+            return None

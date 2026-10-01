@@ -62,8 +62,11 @@ class SammeleintragTest(unittest.TestCase):
         for r in G9kleidgenerisch.eintraege()[0]['regler']:
             gruppen.setdefault(r['gruppe'], []).append(r['name'])
         self.assertEqual(set(gruppen), {'Passform', 'Mischung', 'Textur', 'Stiefel A', 'Stiefel B', 'Stiefel C'})
-        self.assertEqual(gruppen['Stiefel B'], ['sorte.stiefel_b', 'stiefel_b.Adj Inflate All'])
-        self.assertEqual(gruppen['Stiefel A'], ['sorte.stiefel_a'])
+        # Jedes Stück trägt dazu die festen Regler „Form (Ort)" (`G9standardmorphe.KLEIDUNG`, 30.09.2026 nachts).
+        from Genesis9.standardmorphe import G9standardmorphe
+        feste = ['stiefel_b.eigen.' + n for n in G9standardmorphe.namen('kleidung')]
+        self.assertEqual(gruppen['Stiefel B'], ['sorte.stiefel_b', 'stiefel_b.Adj Inflate All'] + feste)
+        self.assertEqual(gruppen['Stiefel A'], ['sorte.stiefel_a'] + [n.replace('stiefel_b', 'stiefel_a') for n in feste])
 
     def test_4_das_erste_stueck_traegt_als_vorgabe(self):
         vorgaben = {r['name']: r['vorgabe'] for r in G9kleidgenerisch.eintraege()[0]['regler']

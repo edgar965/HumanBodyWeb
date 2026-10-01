@@ -27,6 +27,7 @@ from django.utils import timezone
 from Genesis9.rezeptumgebung import Rezeptumgebung
 
 from .begutachtungsbefund import Begutachtungsbefund
+from .begutachtungskritik import Begutachtungskritik
 from .haarenginegrundfigur import Haarenginegrundfigur
 from .iterationsbild import Iterationsbild
 from .iterationsnetznote import Iterationsnetznote
@@ -65,7 +66,8 @@ class Begutachtungsrunde:
         from Genesis9.modellmitkleidern import ModellMitKleidern
         if not self.ablage.arbeit(Haarenginegrundfigur.DATEI).is_file():
             raise RuntimeError('Keine Grundfigur — erst den Schritt „Grundfigur" rechnen')
-        z = dict(self.job.ergebnis.get('kreislauf') or {})
+        from .blickwinkelschaetzung import Blickwinkelschaetzung
+        z = Blickwinkelschaetzung(self.job, self.ablage).fuer_lauf()   # Fotos ohne Winkel: aus der Pose (01.10.2026)
         beg = dict(self.job.ergebnis.get('begutachtung') or {})
         referenzen, ausgelassen = Iterationsreferenz.laden(self.job)
         z['ausgelassen'] = ausgelassen
@@ -75,21 +77,27 @@ class Begutachtungsrunde:
         runden = 1
         if naechste.get('automatisch'):
             runden = max(1, min(self.RUNDEN_HOECHSTENS, int(naechste.get('runden') or 1)))
+        grund = naechste.get('kommentar') or 'automatisch (IterationModell)'
         for i in range(runden):
             if i and self.lauf.angehalten():
                 break
             self._lage = (i, runden)
             if naechste.get('automatisch'):
-                naechste = dict(naechste, aufrufe=self._automatisch(modell, z),
-                                kommentar=naechste.get('kommentar') or 'automatisch (IterationModell)')
+                aufrufe, zusatz, fertig = self._automatisch(modell, z)
+                if fertig:
+                    Begutachtungskritik.beenden(self.lauf, z, beg, zusatz)
+                    break
+                naechste = dict(naechste, aufrufe=aufrufe, kommentar=grund + (' · ' + zusatz if zusatz else ''))
             modell = self._runde(z, beg, modell, naechste, referenzen)
 
     def _automatisch(self, modell, z):
-        """Das Rezept der nächsten Runde aus dem Befund der letzten (`IterationModell`)."""
+        """Das Rezept der nächsten Runde aus dem Befund der letzten (`IterationModell`), ergänzt um die Prüf-KI, wenn
+        sie fällig ist (`Begutachtungskritik`) → (aufrufe, Zusatz zum Kommentar, fertig)."""
         from iterationen2d3d.iterationmodell import IterationModell
         kandidaten = [k.get('kennung') for k in (self.job.ergebnis.get('frisur') or {}).get('kandidaten') or []
                       if k.get('kennung')]
-        return IterationModell(modell, z.get('befund'), z.get('verlauf_befunde'), kandidaten).rezept()
+        rezept = IterationModell(modell, z.get('befund'), z.get('verlauf_befunde'), kandidaten).rezept()
+        return Begutachtungskritik(self.o, self.ablage).ergaenzen(rezept, modell, z)
 
     def _runde(self, z, beg, modell, naechste, referenzen):
         from Genesis9.modellrezept import G9rezept
@@ -110,7 +118,7 @@ class Begutachtungsrunde:
                 fehler = str(f)
                 logger.warning('2D3D Kleider %s: Rezept der Runde %d: %s', self.job.kennung, runde, fehler)
         self._melden(0.1, 'Runde %d: Modell bauen' % runde)
-        bau = Kleidermodellbau(self.job.stellung(), modell.drehung())
+        bau = Kleidermodellbau(self.job.stellung(), modell.drehung(), koerper=modell.koerper)
         teile = bau.teile(modell)
         z['modell_hoehe'] = round(float(max(float(np.asarray(t['punkte'])[:, 1].max()) for t in teile)), 4)
         breite = int(self.o.get('bildbreite') or 256)
@@ -134,7 +142,7 @@ class Begutachtungsrunde:
                 self._melden(0.3 + 0.4 * nummer / max(1, len(referenzen)),
                              'Runde %d: Rendern %d von %d' % (runde, nummer + 1, len(referenzen)))
                 pfad = aus / ('ansicht_%+04d.png' % int(round(r.winkel)))
-                render.bild_teile([(t['punkte'], t['dreiecke'], t['farbe'], self._textur(t)) for t in teile],
+                render.bild_teile([(t['punkte'], t['dreiecke'], t['farbe'], Genesishaarrender.extra(t)) for t in teile],
                                   r.winkel, pfad, groesse=groesse)
                 bild = Iterationsbild.aus_render(pfad)
                 note = Iterationsnote.vergleichen(r.bild, bild)
@@ -152,6 +160,11 @@ class Begutachtungsrunde:
         befund = messung.befund(teile)
         if fototextur:
             befund['fototextur'] = fototextur
+        from .gesichtsmasse import Gesichtsmasse    # Foto gegen Kopf-Render (01.10.2026, `IterationGesicht`)
+        try:
+            Gesichtsmasse(self.ablage, render).eintragen(befund, teile, referenzen, aus)
+        finally:
+            render.schliessen()
         self._melden(0.8, 'Runde %d: ablegen (Abweichung %.3f)' % (runde, note['abweichung']))
         erg = {'werte': modell.als_dict(), 'note': note, 'je_ansicht': je_ansicht, 'renders': renders,
                'teile': {t['sorte']: 1 for t in teile if t['art'] != 'koerper'}, 'befund': befund}
@@ -160,13 +173,6 @@ class Begutachtungsrunde:
         shutil.rmtree(aus, ignore_errors=True)
         self._melden(1.0, 'Runde %d: Abweichung %.4f — wartet auf Begutachtung' % (runde, note['abweichung']))
         return modell
-
-    @staticmethod
-    def _textur(teil):
-        """Das Texturpaket eines Teils für `Genesishaarrender.bild_teile` — None ohne Bild."""
-        if teil.get('uv') is None or not teil.get('textur'):
-            return None
-        return {'uv': teil['uv'], 'gruppen': teil['textur']}
 
     def _fototextur(self, modell, teile, referenzen, render, bau, aus):
         """Die Fotoprojektion der gewünschten Stücke (`Kleidfotoprojektion`) und die Texturen der Teile danach neu."""
@@ -239,6 +245,7 @@ class Begutachtungsrunde:
             je_ansicht.append({k: a[k] for k in ('original', 'winkel', 'iou', 'farbe')} | {'render': bild})
         dateien['modell'] = 'runde_%03d_modell.glb' % runde
         bau.glb(teile, ziel / dateien['modell'])
+        dateien['formbezug'] = bau.formbezug(ziel, runde)     # Anker des Form-Pinsels (01.10.2026)
         netz = erg['note'].get('netz') or {}
         notiz = naechste.get('kommentar') or ('Ausgangslage: Frisur aus „Mesh to 3D", keine Kleider' if runde == 1
                                               else '')
@@ -278,10 +285,14 @@ class Begutachtungsrunde:
                  letzte_runde=runde, letzte_note=note, befund=dict(befund, runde=runde, note=note),
                  verlauf_befunde=befunde[-self.VERLAUF_HOECHSTENS:])
         if besser:
-            z.update(note=note, runde_bester=runde, glb=self.GLB)
-            quelle = self.ablage.iterationen('runde_%03d_modell.glb' % runde)
-            if quelle.is_file():
-                shutil.copyfile(quelle, self.ablage.ergebnis(self.GLB))
+            z.update(note=note, runde_bester=runde)
+        # Die GLB der LETZTEN Runde ist der Stand des Kreislaufs (`kreislauf.modell`, von dem Export, Film und
+        # Speichern lesen) — nicht die der besten Zahl: `runde_bester` blieb bei Runde 5 mit der langen Frisur, während
+        # Runde 39 die richtige kurze trug (01.10.2026, `.51`); die Zahl ist ein Hilfsmaß, die Begutachtung entscheidet.
+        z['glb'] = self.GLB
+        quelle = self.ablage.iterationen('runde_%03d_modell.glb' % runde)
+        if quelle.is_file():
+            shutil.copyfile(quelle, self.ablage.ergebnis(self.GLB))
         alle = list(beg.get('rezept') or [])
         if rezept and fehler is None:
             alle.append({'runde': runde, 'aufrufe': rezept, 'kommentar': naechste.get('kommentar') or ''})

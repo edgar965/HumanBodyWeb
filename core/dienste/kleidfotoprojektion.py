@@ -44,7 +44,7 @@ class Kleidfotoprojektion:
         for r in referenzen:
             pfad = self.ordner / ('textur_kennung_%+04d.png' % int(round(r.winkel)))
             self.render.bild_teile([(t['punkte'], t['dreiecke'], farben[i]) for i, t in enumerate(teile)], r.winkel,
-                                   pfad, groesse=self.GROESSE)
+                                   pfad, groesse=self.GROESSE, kennung=True)
             with Image.open(pfad) as bild:
                 abbildung = Iterationsbild.abbildung(np.asarray(bild.convert('RGBA'))[..., 3] > 127)
             if abbildung is None:

@@ -24,7 +24,8 @@ class Begutachtungsbefund:
         Ringe zum Umriss der Fotos (`huelle_mm`)."""
         proben = getattr(netznote, 'proben', None)
         normalen = getattr(netznote, 'normalen', None)
-        self.messung = Befundmessung(proben, normalen if proben is not None else None, sicht)
+        self.messung = Befundmessung(proben, normalen if proben is not None else None, sicht,
+                                     labels=getattr(netznote, 'labels', None))
         #: `datei → (foto_farbe, foto_maske, render_farbe, render_maske, teilmasken)` in der Reihenfolge der Ansichten.
         self._ansichten = {}
 
@@ -32,7 +33,7 @@ class Begutachtungsbefund:
         """Das Kennfarbenbild dieser Ansicht rendern und die Teilmasken merken → Liste der Masken je Teil."""
         farben = Teilmasken.farben(len(teile))
         render.bild_teile([(t['punkte'], t['dreiecke'], farben[i]) for i, t in enumerate(teile)], referenz.winkel,
-                          pfad, groesse=groesse)
+                          pfad, groesse=groesse, kennung=True)
         kennbild = Iterationsbild.aus_render(pfad)
         masken = Teilmasken.zuordnen(kennbild.farbe, kennbild.maske, len(teile))
         self._ansichten[referenz.datei] = [referenz.bild.farbe, referenz.bild.maske, None, None, masken]

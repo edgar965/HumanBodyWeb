@@ -40,18 +40,23 @@ class Gesichtsformziel:
 
     @staticmethod
     def _ablage_fuer(job):
-        """Die Ablage nach dem Auftragstyp — nicht immer „Mesh to 3D": BlenderModel (29.09.2026) nutzt
-        dieselben Figur-Schritte (`Meshfigurkette`, `Meshfigurhaar`, …) auf EIGENEN Ordnern
-        (`blendermodellauftraege/`, `Blendermodellablage`). Fest auf `Meshfigurablage` verdrahtet, fiel das
-        erst beim ersten echten End-zu-End-Lauf auf: `FileNotFoundError … meshfigurauftraege\\<kennung>\\…`
-        für einen Auftrag, der gar keinen solchen Ordner hat (Edgar, 29.09.2026)."""
+        """Die Ablage nach dem Auftragstyp — nicht immer „Mesh to 3D": BlenderModel (29.09.2026) und
+        „2D3D Kleider" (`Haarengineauftrag`, Option `koerper.quelle = rechnen`, 30.09.2026) nutzen dieselben
+        Figur-Schritte (`Meshfigurkette`, `Meshfigurhaar`, …) auf EIGENEN Ordnern. Fest auf `Meshfigurablage`
+        verdrahtet, fiel das erst beim ersten echten End-zu-End-Lauf auf: `FileNotFoundError …
+        meshfigurauftraege\\<kennung>\\…` für einen Auftrag, der gar keinen solchen Ordner hat (Edgar,
+        29.09.2026, und erneut 30.09.2026 mit dem ersten Lauf von „koerper.quelle = rechnen")."""
         from ..daten.meshfigurablage import Meshfigurablage
-        from ..models import Blendermodellauftrag
+        from ..models import Blendermodellauftrag, Haarengineauftrag
 
         if isinstance(job, Blendermodellauftrag):
             from ..daten.blendermodellablage import Blendermodellablage
 
             return Blendermodellablage(job.kennung)
+        if isinstance(job, Haarengineauftrag):
+            from ..daten.haarengineablage import Haarengineablage
+
+            return Haarengineablage(job.kennung)
         return Meshfigurablage(job.kennung)
 
     def laden(self):

@@ -242,13 +242,47 @@ Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
     Bilder: Saumband 22 mm gefallen, Punkte in der Haut 27 → 21, Kantendehnung p99 1,45, 142 s (davon der Großteil die erstmalige
     Kernelübersetzung). Weil unsere Kleiderphysik „relativ schlecht" war, ist das Ergebnis ein Regler 0…1 mit Messung, kein Zwang.
   </li>
+  <li>
+    <strong>Textur (01.10.2026)</strong>: jedes Stück kann Schichten im UV-Raum tragen — <code>kleid_fototextur</code>/<code>haar_fototextur</code>
+    (die Farbe aus den Fotos je Texel, projiziert in der Runde mit derselben Normierung wie die Note; Base Shirt: 89 % der Texel getroffen,
+    4 s), <code>kleid_decal</code> (Farbfläche an einem Ort), <code>kleid_falten</code> (Feinfalten als Normalkarte), <code>kleid_farbe_je_stueck</code>.
+    Regler <code>bild.&lt;schicht&gt;</code> in der Gruppe „Textur" jedes Stücks; der Render der Runde und die GLB der Bühne zeigen die Bilder
+    (Normalkarten nur die Bühne). Dazu <code>kleid_schnitt</code> (GarmentCode-Schnitt als neues Stück), <code>haar_anteil(…, ort)</code>
+    (Strähnen einer Sorte nur in einem Sektor/Band) und <code>haar_knoten</code> (Blenders Hair-Nodes auf Stranghaar: Pixie 236.136 Punkte,
+    2,4 s in Blender). Die Automatik hat Regeln für Körper (unbedeckte Bänder: Genesis-Regler, dann Ortsregler) und Textur (Fototextur bei
+    Stillstand, Falten nach Kantenenergie, Decal nach Farbbändern).
+  </li>
+  <li>
+    <strong>Die Reste (01.10.2026, früh)</strong>: ein <em>freies Morph-Formular</em> unter den Reglern jedes Stücks und im Bereich
+    „Nachformung (Ort)" des Körpers (Ort, Richtung, Weg — der neue Regler steht sofort auf 1); die Schichten und eigenen Morphe wirken
+    auch auf einer <em>HumanBody-Figur</em>; Blenders <em>Shrinkwrap/Attach</em> bekommen die Grundfigur als Ziel (Pixie: 2,8 s in Blender);
+    <em>Zusatzsträhnen</em> (<code>haar_duplizieren</code>, <code>haar_interpolieren</code>, Blenders Duplicate/Interpolate/Generate über
+    <code>haar_knoten</code>) als Rezept aus den vorhandenen Punkten, Regler <code>str.&lt;name&gt;</code>; <em>Strähnendicke</em>
+    (<code>haar_profil</code>): Stranghaar ist im Render und in der GLB der Runde jetzt als Bänder zu sehen (vorher gar nicht);
+    <em>Falten aus der Simulation backen</em> (<code>kleid_falten_backen</code>, Base Shirt aus der Drapierung 2,6 s); <em>Malen von Hand</em>
+    (Knopf „Malen" auf der Bühne: Striche werden eine Decal-Schicht des getroffenen Stücks); <em>Locken und Zopf</em> auch auf Kartenhaar
+    (<code>haar_curl</code>, <code>haar_braid</code>); der <em>Blickwinkel</em> eines Fotos aus der Pose (Ersatz für fSpy) und
+    <em>Gesichtsmaße</em> Foto gegen Kopf-Render mit gedämpften Kopfreglern (Ersatz für FaceBuilder).
+  </li>
+  <li>
+    <strong>Kopfhaut, Mitsuba, Form-Pinsel (01.10.2026, vormittags)</strong>: Blenders <em>Attach, Interpolate und Generate</em>
+    hängen die Strähnen jetzt an die echte Kopfhaut — die Daz-Haarkappe, wenn die Frisur eine hat, sonst den Kopf der Grundfigur
+    mit seiner Genesis-UV (Attach: Wurzeln im Mittel 1,1–1,5 mm bewegt; Interpolate und Generate erzeugen Tausende Strähnen).
+    Gerendert wird mit <em>Mitsuba 3 auf der Grafikkarte</em> (Pfadverfolgung wie Cycles): Normalkarten und gebackene Falten sind im
+    Bild, Stranghaar erscheint als echte Strähnen, die Kamera ist pixelgleich zu vorher. Der <em>Form-Pinsel</em> (Knopf „Formen" auf
+    der Bühne: Ziehen, Drücken, Aufblasen, Glätten, Flach, Greifen) wird ein eigener Morph des Stücks oder des Körpers — UV und
+    Materialgruppen bleiben, die Fotoprojektion der nächsten Runde läuft auf der geformten Fläche.
+  </li>
 </ul>
 
 <div class="info-box info-box-orange">
-  <strong>Nicht gebaut, nicht geprüft (Stand 30.09.2026, nachts):</strong> Render mit Texturen, Fotoprojektion auf Kleid und Haar,
-  Decal, Faltennormalkarte, <code>kleid_schnitt</code>, Mischung nach Ort, Regeln für Körper und Textur in der Automatik; die
+  <strong>Nicht geprüft (Stand 01.10.2026, vormittags):</strong> eine Runde mit Mitsuba an echten Fotos (geprüft am gebauten Modell
+  ohne Auftrag), der Film mit Mitsuba, ein Pinselzug mit der Maus über das Modell (geprüft: Knopf, Modi, Endpunkt);
+  Blickwinkel und Gesichtsmaße sind mit Kunstdaten getestet, nicht an echten Fotos (die Grafikkarte hielt einen anderen Auftrag);
+  die Textur-Automatik (Fototextur, Falten, Decal) ist
+  mit Kunstdaten getestet, nicht in einem echten Lauf; die
   Sichtkörper-Automatik (<code>morph_ort</code> je Zelle, Hülle) ist mit Kunstdaten getestet, nicht in einem echten Lauf.
-  <code>koerper.quelle = rechnen</code> <code>koerper.quelle = rechnen</code> ist geschrieben,
+  <code>koerper.quelle = rechnen</code> ist geschrieben,
   aber nie gelaufen; der frühere Modus <code>automatisch</code> (Optimierer und Prüf-KI wie bei BlenderModel) wurde mit den neuen
   Schritten nicht gelaufen; die Regeln von <code>2d3DIterationen</code> sind mit Kunstdaten getestet
   (<code>test_iterationen2d3d</code>), Messwerte eines langen automatischen Laufs stehen hier nicht. Die GLB je Runde hat kein

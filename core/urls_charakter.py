@@ -33,6 +33,7 @@ from .api.g9fototextur import G9fototextur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9hautmischung import G9hautmischungapi
+from .api.g9morphformular import G9morphformularapi
 from .api.g9texturbuendel import G9texturbuendelapi
 from .api.g9vorschau import G9vorschau
 from .api.g9stoff import G9stoffapi
@@ -193,6 +194,11 @@ CHARAKTER = [
          G9vorschau.stueck, name='g9_figur_vorschau'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/stoff/<int:nummer>/',
          G9stoffapi.bauplan, name='g9_figur_stoffbauplan'),
+    # Freies Morph-Formular (01.10.2026, core/api/g9morphformular.py): Ortsmorph an einem Stück / am Körper.
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/morph/',
+         G9morphformularapi.stueck, name='g9_figur_stueckmorph'),
+    path('api/character/genesis9-figur/morph/', G9morphformularapi.koerper, name='g9_figur_koerpermorph'),
+    path('api/character/genesis9-figur/landmarken/', G9morphformularapi.landmarken, name='g9_figur_landmarken'),
     # Texturmischung (21.09.2026, core/api/g9hautmischung.py): Bilder eines Hautsatzes.
     path('api/character/genesis9-figur/haut/<str:preset>/bilder/',
          G9hautmischungapi.bilder, name='g9_figur_hautbilder'),

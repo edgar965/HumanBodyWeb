@@ -75,7 +75,9 @@ export class Haarengineanimation {
      */
     _pruefen() {
         const film = (this._z.ergebnis || {}).film || {};
-        const modell = this.buehne.modell;
+        // Das Modell des letzten Stands, wenn es zu sehen ist (eigene GLB mit Rig, 01.10.2026) — sonst die Genesis-Figur.
+        // Dieselbe Form `{group, skelett}`; die Knochen tragen dieselben Namen und dieselbe Ruhelage (`Standmodellglb`).
+        const modell = this.seite.buehnenmodell?.figur() || this.buehne.modell;
         const stand = JSON.stringify([film.bewegung, modell?.skelett?.rootBone?.uuid || null]);
         if (stand === this._stand) return;
         this._stand = stand;
@@ -92,6 +94,8 @@ export class Haarengineanimation {
         Clipanimation.namenEntschaerfen(modell.skelett);
         const clip = Clipanimation.bauen(daten, modell.skelett);
         this.mixer = new THREE.AnimationMixer(modell.group);
+        /** Worauf die Bewegung liegt — `Haarenginebuehnenmodell` kopiert keine Haltung auf sein Modell, wenn es das selbst ist. */
+        this.ziel = modell.group;
         this.action = this.mixer.clipAction(clip);
         this.action.setLoop(THREE.LoopRepeat);
         this.action.play();
@@ -107,6 +111,7 @@ export class Haarengineanimation {
     _loeschen() {
         if (this.mixer) this.mixer.stopAllAction();
         this.mixer = null;
+        this.ziel = null;
         this.action = null;
         this.dauer = 0;
     }

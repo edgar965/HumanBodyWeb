@@ -30,6 +30,8 @@ export class Meshfigurbuehne {
         this.modell = null;
         this._stand = null;
         this._baut = false;
+        this._letzter = null;
+        this._holt = false;
         try { this._buehne(); } catch (fehler) { this._melden(`Keine 3D-Ansicht: ${fehler.message}`); return; }
         this.netze = new Meshfigurnetze(seite, this.szene, text => this._melden(text));
         this.haar = new Meshfigurhaarwahl(seite, text => this._melden(text));
@@ -84,6 +86,11 @@ export class Meshfigurbuehne {
         if (this.schalter.stand.nebeneinander) this.schalter.setzen('mesh', true);
         const an = this.schalter.stand;
         if (this.modell) this.modell.group.visible = an.modell;
+        else if (an.modell && this._letzter && !this._baut && !this._holt) {
+            // Nachgeholt, nicht verschachtelt: `zeigen` ruft selbst `_sichtbarkeit`, wenn es die Netze neu lädt.
+            this._holt = true;
+            queueMicrotask(() => { this._holt = false; this.zeigen(this._letzter); });
+        }
         this.netze.sichtbar(an.mesh);
         this.netze.verschieben(an.nebeneinander ? Meshfigurbuehne.ABSTAND : 0);
         this.steuerung.target.x = an.nebeneinander ? Meshfigurbuehne.ABSTAND / 2 : 0;
@@ -119,6 +126,11 @@ export class Meshfigurbuehne {
         // Neue Textur („Textur" neu gebacken) oder eine neue Frisur (Schritt „frisur") baut die Figur
         // ebenso neu wie neue Regler.
         const kleidung = Meshfigurhaarwahl.kleidung(z);
+        // Ist „3DModell" aus, wird die Figur gar nicht gebaut (01.10.2026): „2D3D Kleider" zeigt dann die fertige GLB des
+        // letzten Stands, und der Bau im Browser hielt den Tab gemessen über 45 s fest. Schaltet man sie ein, holt
+        // `_sichtbarkeit` den Bau nach.
+        this._letzter = z;
+        if (!this.schalter.stand.modell && !this.modell) return;
         const stand = JSON.stringify([stellung, kacheln, kleidung]);
         if (stand === this._stand || this._baut) return;
         this._stand = stand;
