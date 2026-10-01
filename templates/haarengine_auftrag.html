@@ -115,9 +115,9 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
             {% comment %}Jeder Teil der Bühne einzeln schaltbar — die Vorgabe steht hier als Klasse `active`, gebunden
             werden die Knöpfe über `data-schalter` in `meshfigurschalter.js`. „Modell“ lädt die fertige GLB des letzten
             Stands — Genesis mit Augen, Kleidern, Haar und Rig, auf dem Server gebaut (`Haarenginestandmodell`) — statt die
-            Genesis-Figur im Browser zu bauen (`Haarenginebuehnenmodell`, 01.10.2026). „Mesh“ und „Nebeneinander“ gehörten zum Netz aus Fotos (dieser Bereich baut
-            keins) und sind versteckt; die Knöpfe bleiben im DOM, weil `Meshfigurschalter` (geteilt mit „Mesh to 3D“) sie
-            liest.{% endcomment %}
+            Genesis-Figur im Browser zu bauen (`Haarenginebuehnenmodell`, 01.10.2026). „Mesh“ zeigt das Netz aus dem Schritt
+            „Netz“ (TRELLIS) — schon vor dem Körper, dann roh auf den Boden gestellt — immer 1,5 m LINKS, „Runde 0“ (die
+            Grundfigur) 1,5 m rechts, das Modell in der Mitte.{% endcomment %}
             <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
                 <button type="button" class="schaltknopf active" id="buehne-iterationsmodell"
                         title="Das Modell des letzten Stands: Genesis mit Augen, Kleidern und Haar, am Rig (spielt auch die Bewegung)">
@@ -125,8 +125,8 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                 <button type="button" class="schaltknopf" id="buehne-film" hidden
                         title="Der Film der Haar Engine (Schritt „Film“: Figur mit Haar, Bewegung aus der BVH-Datei) in dieser Ansicht">
                     <i class="fas fa-film"></i> Film</button>
-                <button type="button" class="schaltknopf" data-schalter="mesh" hidden
-                        title="Das Netz aus Fotos — dieser Bereich baut keins">
+                <button type="button" class="schaltknopf" data-schalter="mesh"
+                        title="Das Netz aus den Fotos (Schritt „Netz“, TRELLIS) — die Vorlage, an die der Körper gefittet wird">
                     <i class="fas fa-draw-polygon"></i> Mesh</button>
                 <button type="button" class="schaltknopf active" data-schalter="haare"
                         title="Das Haar des Modells der Iterationen ein- und ausblenden">
@@ -140,8 +140,8 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                         title="Netz und Figur nebeneinander statt übereinander">
                     <i class="fas fa-columns"></i> Nebeneinander</button>
                 <button type="button" class="schaltknopf active" data-schalter="modell"
-                        title="Die Genesis-9-Grundfigur (A-Pose, mit Rig) — neben dem Modell der Iterationen um 1,5 m nach rechts versetzt">
-                    <i class="fas fa-user"></i> Grundfigur</button>
+                        title="Runde 0: die Grundfigur aus dem Schritt „Körper“ (Genesis 9, A-Pose, mit Rig, ohne Kleider und Haar) — 1,5 m rechts neben dem Modell">
+                    <i class="fas fa-user"></i> Runde 0</button>
                 {% comment %}Malen (01.10.2026, `haarenginemalen.js`): mit gedrückter Maus auf das Modell der Runde — die Striche
                 landen als Decal-Schicht am Stück (`G9kleidpinsel`) und wirken ab der nächsten Runde.{% endcomment %}
                 <button type="button" class="schaltknopf" id="buehne-malen"
@@ -183,12 +183,19 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
             retargetete BVH-Bewegung per `THREE.AnimationMixer` auf dem Genesis-9-Modell der Bühne ab — dieselbe Technik wie das
             BVH-Studio.{% endcomment %}
             <div class="haarengine-animationsleiste" id="animations-leiste" hidden>
-                <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück">
+                <button type="button" id="anim-anfang" class="btn btn-secondary btn-sm" title="An den Anfang (Pos1)">
+                    <i class="fas fa-fast-backward"></i></button>
+                <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück (←)">
                     <i class="fas fa-step-backward"></i></button>
-                <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause">
+                <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause (Leertaste)">
                     <i class="fas fa-play"></i></button>
-                <button type="button" id="anim-vor" class="btn btn-secondary btn-sm" title="Ein Bild vor">
+                <button type="button" id="anim-stopp" class="btn btn-secondary btn-sm"
+                        title="Stopp — zurück an den Anfang, Figur in der Ruhehaltung">
+                    <i class="fas fa-stop"></i></button>
+                <button type="button" id="anim-vor" class="btn btn-secondary btn-sm" title="Ein Bild vor (→)">
                     <i class="fas fa-step-forward"></i></button>
+                <button type="button" id="anim-ende" class="btn btn-secondary btn-sm" title="Ans Ende (Ende)">
+                    <i class="fas fa-fast-forward"></i></button>
                 <input type="range" id="anim-scrubber" class="haarengine-scrubber" min="0" max="1000" value="0" step="1">
                 <span id="anim-zeit" class="hb-hinweis haarengine-animationszeit">0:00 / 0:00</span>
                 <span id="anim-bild" class="hb-hinweis haarengine-animationszeit" title="Aktuelles Bild der Bewegung / Bilder gesamt">Bild 0 / 0</span>
@@ -232,6 +239,9 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
                         <i class="fas fa-save"></i> <span>Modell speichern</span></button>
+                    <button type="button" class="btn btn-primary btn-sm" id="animexport" disabled>
+                        <i class="fas fa-film"></i> <span>Modell mit Animation exportieren (GLB + Blender)</span></button>
+                    <div class="hb-hinweis" id="animexport-meldung"></div>
                     <div class="hb-hinweis" id="modell-meldung">Genesis-Preset erscheint unter „Charakter hinzufügen →
                         Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre); GLB/Blender/OBJ gehen in die
                         Export-Ablage des Auftrags.</div>

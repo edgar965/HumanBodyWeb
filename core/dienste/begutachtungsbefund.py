@@ -28,6 +28,8 @@ class Begutachtungsbefund:
                                      labels=getattr(netznote, 'labels', None))
         #: `datei → (foto_farbe, foto_maske, render_farbe, render_maske, teilmasken)` in der Reihenfolge der Ansichten.
         self._ansichten = {}
+        #: `datei → bool` — zählt das Foto für die Farbe (`Iterationsreferenz.farbe`)? Sonst nur für die Form.
+        self._farbe = {}
 
     def masken(self, render, teile, referenz, pfad, groesse):
         """Das Kennfarbenbild dieser Ansicht rendern und die Teilmasken merken → Liste der Masken je Teil."""
@@ -37,6 +39,7 @@ class Begutachtungsbefund:
         kennbild = Iterationsbild.aus_render(pfad)
         masken = Teilmasken.zuordnen(kennbild.farbe, kennbild.maske, len(teile))
         self._ansichten[referenz.datei] = [referenz.bild.farbe, referenz.bild.maske, None, None, masken]
+        self._farbe[referenz.datei] = bool(getattr(referenz, 'farbe', True))
         return masken
 
     def render_dazu(self, referenz, renderbild):
@@ -53,7 +56,13 @@ class Begutachtungsbefund:
 
     @property
     def ansichten(self):
+        """Die Ansichten für FARBEN (ohne Fotos, die nur für die Form zählen)."""
+        return [tuple(a) for d, a in self._ansichten.items() if a[2] is not None and self._farbe.get(d, True)]
+
+    @property
+    def formansichten(self):
+        """Alle Ansichten — für Umriss und Breiten."""
         return [tuple(a) for a in self._ansichten.values() if a[2] is not None]
 
     def befund(self, teile):
-        return self.messung.befund(teile, self.ansichten)
+        return self.messung.befund(teile, self.ansichten, self.formansichten)

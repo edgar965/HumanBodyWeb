@@ -1,0 +1,65 @@
+{
+ "hinweis": "Prüfreihe „2D3D Kleider“ (01.10.2026, Punkt 6): dieselben Fotos (vorne_2, hinten_1, rechts_3 — rechts_3 trägt anderes Shirt und lila Shorts). Sollwerte: Gesamtnote und Farbfehler aus `.51` Runde 14 (0,735 / 0,053, Fotoprojektion aktiv) mit Rand; kein Regler am Anschlag (`.51` hatte sieben); die Fotoprüfung lässt rechts_3 aus. Alte Aufträge erfüllen das erst nach einem neuen Lauf (`manage.py haarengine_pruefreihe --starten`).",
+ "auftraege": [
+  {
+   "kennung": "2026.10.01.12.38.09",
+   "name": "2D3D Testlauf - Gesamtnote",
+   "ab": "netz",
+   "runden": 20,
+   "soll": {
+    "ohne_fehler": true,
+    "fotos_ausgelassen": ["rechts_3.jpg"],
+    "frisur_kandidaten_mindestens": 2,
+    "messguete": true,
+    "anschlag_hoechstens": 0,
+    "gesamt_hoechstens": 0.8,
+    "farbe_teile_hoechstens": 0.1,
+    "standmodell": true
+   }
+  },
+  {
+   "kennung": "2026.09.30.23.16.51",
+   "name": "2D3D Test - ki+backen",
+   "ab": "netz",
+   "runden": 20,
+   "soll": {
+    "ohne_fehler": true,
+    "fotos_ausgelassen": ["rechts_3.jpg"],
+    "frisur_kandidaten_mindestens": 2,
+    "messguete": true,
+    "anschlag_hoechstens": 0,
+    "gesamt_hoechstens": 0.8,
+    "farbe_teile_hoechstens": 0.1,
+    "standmodell": true
+   }
+  },
+  {
+   "kennung": "2026.09.30.23.16.52",
+   "name": "2D3D Test - nur Fotos",
+   "ab": "netz",
+   "runden": 20,
+   "soll": {
+    "ohne_fehler": true,
+    "fotos_ausgelassen": ["rechts_3.jpg"],
+    "frisur_kandidaten_mindestens": 2,
+    "messguete": true,
+    "anschlag_hoechstens": 0,
+    "gesamt_hoechstens": 0.8,
+    "standmodell": true
+   }
+  },
+  {
+   "kennung": "2026.09.30.23.16.53",
+   "name": "2D3D Test - Fusion vorne+hinten",
+   "ab": "netz",
+   "runden": 20,
+   "soll": {
+    "ohne_fehler": true,
+    "fotos_ausgelassen": ["rechts_3.jpg"],
+    "messguete": true,
+    "anschlag_hoechstens": 0,
+    "standmodell": true
+   }
+  }
+ ]
+}

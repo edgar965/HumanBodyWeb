@@ -10,6 +10,7 @@ from .api import (
     seite_bvhstudio_einstellungen,
     seite_effekte_einstellungen,
     seite_fotoauftraege,
+    seite_kleider2d3d_einstellungen,
     seite_kleider_einstellungen,
     seite_theatre_einstellungen,
     seiten,
@@ -127,6 +128,9 @@ urlpatterns = [
     path('settings/bvh-studio/', RedirectView.as_view(url='/settings/studio/', permanent=True)),
     path('settings/effekte/', seite_effekte_einstellungen.effekte_settings_page, name='settings_effekte'),
     path('settings/kleider/', seite_kleider_einstellungen.kleider_settings_page, name='settings_kleider'),
+    # Renderer von 2D3D Kleider: Mitsuba oder pyrender (01.10.2026, `dienste/renderwahl.py`).
+    path('settings/2d3dkleider/', seite_kleider2d3d_einstellungen.kleider2d3d_settings_page,
+         name='settings_2d3dkleider'),
     # Knopf „Neu backen" auf /settings/kleider/ (26.09.2026) — Unterprozess,
     # der Stand kommt aus einer Datei; siehe `dienste/gcstueckelauf.py`.
     path('api/kleider/gcstuecke/starten/', Gcstueckeendpunkte.starten, name='gcstuecke_starten'),

@@ -85,6 +85,7 @@ class Meshfigurkette:
                     'sekunden': e.get('sekunden'),
                     'stufen': stufen,
                     'hoehe_cm': round(self.hoehe(stellung) * 100, 1),
+                    'pruefung': e.get('pruefung'),
                 }
             )
             if runde == 1 and float(self.optionen.get('hoehe_cm') or 0) > 0:
@@ -100,6 +101,12 @@ class Meshfigurkette:
         }
         self.job.ergebnis.pop('gesicht', None)
         self.job.ergebnis.pop('rest', None)
+        # TOR (01.10.2026): Rumpf flacher als das Netz oder viele Regler am Anschlag → anhalten, statt Gesicht,
+        # Textur und Runden auf einem kaputten Körper zu bauen (`meshfigur_rumpfpruefung.py`).
+        pruefung = verlauf[-1].get('pruefung') or {}
+        if pruefung and not pruefung.get('gueltig', True):
+            self.lauf.sichern('ergebnis')
+            raise RuntimeError('Körper-Tor: %s' % pruefung.get('grund'))
 
     def _skalieren(self, stellung, eintrag):
         ziel = float(self.optionen['hoehe_cm']) / 100.0

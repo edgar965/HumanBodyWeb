@@ -54,6 +54,17 @@ class Iterationsnote:
         return float(np.mean(diffs)) if diffs else 1.0
 
     @classmethod
+    def gesamt_getrennt(cls, ansichten):
+        """`ansichten`: [(gewicht, note, farbe_zaehlt)] → wie `gesamt`, aber der Umriss über ALLE Ansichten, die Farbe
+        nur über die mit `farbe_zaehlt` (ein Foto mit anderer Kleidung zählt nur für die Form, `Iterationsreferenz`)."""
+        form = [(g, n) for g, n, _f in ansichten]
+        farbe = [(g, n) for g, n, f in ansichten if f] or form
+        iou = sum(g * n['iou'] for g, n in form) / (sum(g for g, _ in form) or 1.0)
+        mittel = sum(g * n['farbe'] for g, n in farbe) / (sum(g for g, _ in farbe) or 1.0)
+        return {'abweichung': round(float((1.0 - iou) + cls.FARBGEWICHT * mittel), 4), 'iou': round(float(iou), 4),
+                'farbe': round(float(mittel), 4)}
+
+    @classmethod
     def gesamt(cls, ansichten):
         """`ansichten`: [(gewicht, note)] → gewichteter Mittelwert je Teil samt Einzelwerten."""
         summe = sum(g for g, _ in ansichten) or 1.0

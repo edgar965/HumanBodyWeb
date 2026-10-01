@@ -196,7 +196,7 @@ class Begutachtungskritik:
         lauf.job.ergebnis['kreislauf'] = z
         lauf.job.ergebnis['begutachtung'] = beg
         lauf.sichern('ergebnis')
-        lauf.melden(1.0, 'Prüf-KI: Ergebnis OK nach Runde %s — Lauf beendet' % z.get('letzte_runde'))
+        lauf.melden(1.0, '%s — Lauf beendet' % (zusatz or 'Ergebnis OK nach Runde %s' % z.get('letzte_runde')))
 
     def ergaenzen(self, rezept, modell, z):
         """Das Rezept der Automatik um die Zeilen der Prüf-KI ergänzen, wenn sie fällig ist → (rezept, Zusatz zum

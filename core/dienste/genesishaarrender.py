@@ -18,9 +18,9 @@ Läuft im Arbeitsprozess (`haarengine_fahren`, python14), nie im Django-Server �
 Grafikkarte (`Haar/haarbild.py` hält es ebenso).
 
 **Seit 01.10.2026 rendert Mitsuba 3 auf der Grafikkarte** (`Mitsubaszene`: Pfadverfolgung wie Cycles, Normalkarten,
-Strähnen als Kurven, `MOTOR`); pyrender bleibt nur der Rückfall, wenn Mitsuba oder CUDA fehlt (Warnung im Log, `motor`
-sagt, wer gerendert hat). Dieselbe Kamera, dieselben Dateien. `kennung=True` (Teilmasken) liefert die Kennfarben
-unbeleuchtet und ohne Mischkante.
+Strähnen als Kurven); pyrender ist wählbar (Einstellungen → 2D3D Kleider, `Renderwahl`, Vorgabe Mitsuba) und der
+Rückfall, wenn Mitsuba oder CUDA fehlt (Warnung im Log, `motor` sagt, wer gerendert hat). Dieselbe Kamera, dieselben
+Dateien. `kennung=True` (Teilmasken) liefert die Kennfarben unbeleuchtet und ohne Mischkante.
 """
 
 import logging
@@ -44,12 +44,15 @@ class Genesishaarrender:
     #: Die Haut, wenn der Körper keine eigene Farbe trägt (die Note vergleicht Farbflächen).
     HAUT = (0.82, 0.68, 0.60)
 
-    #: 'mitsuba' (GPU-Pfadverfolgung) oder 'pyrender'.
-    MOTOR = 'mitsuba'
+    #: 'mitsuba' (GPU-Pfadverfolgung) oder 'pyrender'; None = die Einstellung (`Renderwahl`, Einstellungen →
+    #: 2D3D Kleider, Vorgabe Mitsuba).
+    MOTOR = None
 
-    def __init__(self, koerper=None):
+    def __init__(self, koerper=None, motor=None):
         """`koerper`: Pfad einer GLB (die Grundfigur mit Rig) oder `(punkte, dreiecke)` — sie steht in
-        jedem Bild mit, sonst verglichen wir eine Frisur ohne Kopf."""
+        jedem Bild mit, sonst verglichen wir eine Frisur ohne Kopf. `motor` schlägt die Einstellung."""
+        from .renderwahl import Renderwahl
+        self.MOTOR = motor or type(self).MOTOR or Renderwahl.gewaehlt()
         self._koerper = self._laden(koerper)
         self._renderer = None
         self._szenen = {}
@@ -117,8 +120,9 @@ class Genesishaarrender:
         eintrag = self._szenen.get(schluessel)
         # Dieselben Dreiecke, Farben und Bilder mit neuen Punkten (Film: je Bild gehäutet): nur die Lage tauschen.
         bau = tuple(s[1:] for s in schluessel[1:])
-        gleich = next((e for s, e in self._szenen.items() if s[0] == schluessel[0] and tuple(x[1:] for x in s[1:]) == bau
-                       and not any(t[3] and t[3].get('kurven') is not None for t in teile)), None)
+        mit_kurven = any(t[3] and t[3].get('kurven') is not None for t in teile)
+        gleich = next((e for s, e in self._szenen.items()
+                       if s[0] == schluessel[0] and tuple(x[1:] for x in s[1:]) == bau and not mit_kurven), None)
         if eintrag is None and gleich is not None:
             gleich[0].punkte_setzen(teile)
             self._szenen = {schluessel: (gleich[0], teile)}
@@ -128,7 +132,7 @@ class Genesishaarrender:
             eintrag = (Mitsubaszene(teile, kennung=kennung), teile)
             self._szenen[schluessel] = eintrag
         self.motor = 'mitsuba'
-        return eintrag[0].rendern(mitte, halb, winkel, (self.BREITE, self.HOEHE))
+        return eintrag[0].rendern(mitte, halb, winkel, (self.BREITE, self.HOEHE), saat=getattr(self, 'saat', 0))
 
     # ------------------------------------------------------------- Bilder
 
@@ -168,9 +172,18 @@ class Genesishaarrender:
             with Image.open(g['albedo']) as roh:
                 bild = np.asarray(roh.convert('RGB'))
             netz.visual = trimesh.visual.TextureVisuals(uv=uv[nummern])
+            # Die Normalkarte (Daz, Falten aus der Simulation) wie unter Mitsuba — pyrender rechnet die Tangenten im
+            # Shader (Probe 01.10.2026: flach 30, zum Licht gekippt 35, weg 2); DirectX-Karten mit gespiegeltem Grün.
+            karte = None
+            if g.get('normalen') is not None:
+                with Image.open(g['normalen']) as roh:
+                    karte = np.asarray(roh.convert('RGB')).copy()
+                if int(g.get('normalenachse') or 1) < 0:
+                    karte[..., 1] = 255 - karte[..., 1]
             material = pyrender.MetallicRoughnessMaterial(
                 baseColorFactor=(*[float(c) for c in g['faktor'][:3]], 1.0), metallicFactor=0.0, roughnessFactor=0.85,
-                doubleSided=True, baseColorTexture=pyrender.Texture(source=bild, source_channels='RGB'))
+                doubleSided=True, baseColorTexture=pyrender.Texture(source=bild, source_channels='RGB'),
+                normalTexture=pyrender.Texture(source=karte, source_channels='RGB') if karte is not None else None)
             szene.add(pyrender.Mesh.from_trimesh(netz, material=material, smooth=False))
         if not belegt.all():
             self._flach(pyrender, szene, punkte, dreiecke[~belegt], farbe)
@@ -208,9 +221,11 @@ class Genesishaarrender:
     KOPF_HOEHE = 0.34
     KOPF_UNTER_SCHEITEL = 0.13
 
-    def bild_kopf(self, teile, winkel, pfad, groesse=(512, 512)):
+    def bild_kopf(self, teile, winkel, pfad, groesse=(512, 512), saat=0):
         """Nur der Kopf: Kamera auf `KOPF_UNTER_SCHEITEL` unter dem höchsten Punkt, Bildhöhe `KOPF_HOEHE` m — für die
-        Gesichtslandmarken (`Gesichtsmasse`, 01.10.2026); auf dem Figurrender wäre das Gesicht 30 Pixel groß."""
+        Gesichtslandmarken (`Gesichtsmasse`, 01.10.2026); auf dem Figurrender wäre das Gesicht 30 Pixel groß. `saat`:
+        Mitsubas Zufallsfolge (`Gesichtsmasse` mittelt über mehrere)."""
+        self.saat = int(saat)
         from PIL import Image
         teile = self._teile(teile)
         if not teile:
@@ -219,6 +234,7 @@ class Genesishaarrender:
         scheitel = max(float(np.asarray(t[0])[:, 1].max()) for t in teile)
         mitte = np.array([0.0, scheitel - self.KOPF_UNTER_SCHEITEL, 0.0])
         rgba = self._rgba(teile, mitte, self.KOPF_HOEHE / (1.0 + 2.0 * self.RAND), winkel, False)
+        self.saat = 0
         rgb = rgba[..., :3].copy()
         rgb[rgba[..., 3] == 0] = 255              # weißer Grund: der Detektor sieht Fotos, keine Alphakanäle
         pfad.parent.mkdir(parents=True, exist_ok=True)
@@ -226,13 +242,14 @@ class Genesishaarrender:
         return pfad
 
     @staticmethod
-    def extra(teil):
+    def extra(teil, kurven=True):
         """Das Paket eines gebauten Teils (`Kleidermodellbau`) für `bild_teile`: UV + Gruppen mit Bildern, Strähnen als
-        `kurven` (Mitsuba) — None ohne beides (dann flach in der Farbe des Teils)."""
+        `kurven` (Mitsuba) — None ohne beides (dann flach in der Farbe des Teils). `kurven=False` für den Film: die
+        Kurven liegen in der Ruhelage, die gehäuteten Punkte des Teils tanzen."""
         aus = {}
         if teil.get('uv') is not None and teil.get('textur'):
             aus.update(uv=teil['uv'], gruppen=teil['textur'])
-        if teil.get('kurven') is not None:
+        if kurven and teil.get('kurven') is not None:
             aus['kurven'] = teil['kurven']
         return aus or None
 

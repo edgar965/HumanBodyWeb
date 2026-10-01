@@ -145,7 +145,9 @@ class Haarenginestandmodell:
                    'sekunden': round(time.perf_counter() - t, 1), 'knochen': len(glb.knochen),
                    'knochen_ohne_gelenk': sorted(glb.fehlend), **glb.zahl,
                    'teile': sorted({'%s:%s' % (x.get('art'), x.get('sorte')) for x in teile}),
-                   'runde': ((self.job.ergebnis or {}).get('kreislauf') or {}).get('letzte_runde')}
+                   # Der Stand ist die BESTE Runde (`Begutachtungsstand`, 01.10.2026), nicht die letzte.
+                   'runde': ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
+                   or ((self.job.ergebnis or {}).get('kreislauf') or {}).get('letzte_runde')}
         zettel = self.ablage.ergebnis(self.BERICHT + '.teil')
         zettel.write_text(json.dumps(bericht, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(zettel, self.ablage.ergebnis(self.BERICHT))

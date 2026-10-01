@@ -30,6 +30,7 @@ class Haarenginekoerperlauf(Meshfigurlauf):
         figur = dict(koerperoptionen or {})
         figur['basis'] = (aussen.optionen or {}).get('basis') or figur.get('basis') or 'masculine'
         figur['modell'] = 'aus'
+        figur['haarkarten'] = 'aus'                      # die Frisurwahl ja, Haarkarten braucht 2D3D Kleider nicht
         self.optionen = Meshfiguroptionen.pruefen(figur)
         self.zusatz = {}
         self._von, self._bis = 0.0, 1.0
@@ -38,6 +39,7 @@ class Haarenginekoerperlauf(Meshfigurlauf):
 
     def schrittfolge(self):
         from .meshfigurende import Meshfigurende
+        from .meshfigurfrisur import Meshfigurfrisur
         from .meshfigurhaar import Meshfigurhaar
         from .meshfigurkette import Meshfigurkette
         from .meshfigurkleidung import Meshfigurkleidung
@@ -53,6 +55,7 @@ class Haarenginekoerperlauf(Meshfigurlauf):
             'rest': lambda: Meshfigurende(self).rest(),
             'textur': lambda: Meshfigurende(self).textur(),
             'vorschau': lambda: Meshfigurvorschau(self).ausfuehren(),
+            'frisur': lambda: Meshfigurfrisur(self).ausfuehren(),
         }
 
     def band(self, von, bis, name):

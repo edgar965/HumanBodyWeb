@@ -5,8 +5,9 @@ BEIDEN Bildern — derselbe Detektor, seine Eigenheiten kürzen sich).
 
 Je Maß eine Strecke zwischen Landmarken (MediaPipe-Nummern), normiert auf die Gesichtshöhe Stirn (10) – Kinn (152);
 das Verhältnis Foto ÷ Render sagt, ob das Modell dort zu schmal oder zu breit ist. `IterationGesicht` macht daraus
-Kopfregler-Schritte. Der Kopf-Render kommt aus `Genesishaarrender.bild_kopf` (Kamera auf den Kopf, 512 × 512 — auf
-dem Figurrender wäre das Gesicht 30 Pixel groß). Ohne Vorderfoto (|Winkel| > 30°) oder ohne erkanntes Gesicht kein
+Kopfregler-Schritte. Der Kopf-Render kommt aus `Genesishaarrender.bild_kopf` (Kamera auf den Kopf, 1024 × 1024 — auf
+dem Figurrender wäre das Gesicht 30 Pixel groß), seit 01.10.2026 je Kopfstand einmal über vier Saaten
+(`Gesichtsvorrat`, `SAATEN`). Ohne Vorderfoto (|Winkel| > 30°) oder ohne erkanntes Gesicht kein
 Befund (None), ohne Abbruch der Runde.
 """
 
@@ -86,6 +87,22 @@ class Gesichtsmasse:
             cls._kopfregler = aus
         return cls._kopfregler
 
+    #: Saaten des Kopf-Renders, über die neu gemessen wird (Median je Maß; je Render ~0,45 s bei 1024²). Unter zwei
+    #: Renders mit Gesicht kein Befund — ein einzelner Wurf ist genau das Rauschen, das hier wegsoll.
+    SAATEN = (0, 1, 2, 3)
+    #: Fassung der Messart im Schlüssel des Vorrats — wer ändert, WAS gerendert oder wie gemittelt wird, zählt hoch
+    #: (01.10.2026: ein Eintrag aus dem verworfenen Render nur mit dem Körper kam sonst wieder heraus).
+    FASSUNG = 3
+
+    @staticmethod
+    def median(masse):
+        """Je Maß der Median über die Renders mit Gesicht → dict oder None (weniger als zwei mit Gesicht)."""
+        import statistics
+        masse = [m for m in masse if m]
+        if len(masse) < 2:
+            return None
+        return {k: round(float(statistics.median(m[k] for m in masse)), 4) for k in masse[0] if all(k in m for m in masse)}
+
     def eintragen(self, befund, teile, referenzen, aus):
         """`befund['gesicht']` setzen, wenn es zu messen ist — ein Fehler hält die Runde nicht auf."""
         try:
@@ -102,22 +119,36 @@ class Gesichtsmasse:
         if not vorn:
             return None
         r = min(vorn, key=lambda x: abs(float(x.winkel)))
-        pfad = aus / self.RENDER
+        # Gemessen wird je KOPFSTAND einmal (`Gesichtsvorrat`, Schlüssel nur aus dem Körper): Haar und Kragen stehen im
+        # Render wie im Foto, eine Haar-Operation misst aber nicht neu — sie stellt keinen Kopfregler, und jeder neue
+        # Render rauschte (ein unsichtbarer Clump hob die Note um 0,013). Neu gemessen wird über `SAATEN` Renders, je
+        # Maß der Median (Detektor ±1 % je Maß, auch bei 512 Abtastungen; `ProjektTemp/_wegwerf/ortsmorph/kopfrauschen.py`).
+        from .gesichtsvorrat import Gesichtsvorrat
+        kopf = [t for t in teile if t.get('art') == 'koerper'] or list(teile)
+        vorrat = Gesichtsvorrat(self.ablage)
+        schluessel = Gesichtsvorrat.schluessel(kopf, r.winkel, self.RENDER_GROESSE,
+                                               (Fotolandmarken.FASSUNG, self.FASSUNG, len(self.SAATEN)))
+        m_render = vorrat.holen(schluessel)
+        pfade = [] if m_render is not None else [aus / self.RENDER.replace('.png', '_s%d.png' % s) for s in self.SAATEN]
         try:
-            self.render.bild_kopf([(t['punkte'], t['dreiecke'], t['farbe']) for t in teile], r.winkel, pfad,
-                                  groesse=self.RENDER_GROESSE)
+            for saat, pfad in zip(self.SAATEN, pfade, strict=False):
+                self.render.bild_kopf([(t['punkte'], t['dreiecke'], t['farbe']) for t in teile], r.winkel, pfad,
+                                      groesse=self.RENDER_GROESSE, saat=saat)
         except (ValueError, OSError, RuntimeError) as fehler:
             logger.warning('Gesichtsmaße: Kopf-Render fehlgeschlagen (%s)', fehler)
             return None
         from ..daten.haarengineablage import Haarengineablage
         foto = self.ablage.unter(Haarengineablage.EINGANG) / r.datei
-        befunde = Fotolandmarken(self.ablage).holen([foto, pfad])
-        bf, br = befunde.get(r.datei) or {}, befunde.get(pfad.name) or {}
+        befunde = Fotolandmarken(self.ablage).holen([foto] + pfade)
+        bf = befunde.get(r.datei) or {}
         m_foto = self.masse(bf.get('gesicht'), bf.get('breite'), bf.get('hoehe'))
-        m_render = self.masse(br.get('gesicht'), br.get('breite'), br.get('hoehe'))
+        if m_render is None:
+            m_render = self.median([self.masse(b.get('gesicht'), b.get('breite'), b.get('hoehe'))
+                                    for b in (befunde.get(p.name) or {} for p in pfade)])
+            vorrat.ablegen(schluessel, m_render)
         if not m_foto or not m_render:
             logger.info('Gesichtsmaße: kein Gesicht auf %s', 'Foto' if not m_foto else 'Render')
             return None
         verhaeltnis = {k: round(m_foto[k] / m_render[k], 4) for k in m_foto if k in m_render and m_render[k] > 1e-6}
         return {'foto': m_foto, 'render': m_render, 'verhaeltnis': verhaeltnis, 'ansicht': r.original,
-                'winkel': r.winkel, 'kopfregler': self.kopfregler()}
+                'winkel': r.winkel, 'kopfregler': self.kopfregler(), 'fassung': self.FASSUNG}

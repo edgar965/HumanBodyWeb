@@ -10,6 +10,7 @@ import { Meshfigurhaar } from '../meshfigur/meshfigurhaar.js';
 import { Meshfigurkleidung } from '../meshfigur/meshfigurkleidung.js';
 import { Meshfigurspeicher } from '../meshfigur/meshfigurspeicher.js';
 import { Haarengineanimation } from './haarengineanimation.js';
+import { Haarengineanimexport } from './haarengineanimexport.js';
 import { Haarenginefilmansicht } from './haarenginefilmansicht.js';
 import { Haarenginebuehnenmodell } from './haarenginebuehnenmodell.js';
 import { Haarenginebegutachtung } from './haarenginebegutachtung.js';
@@ -96,6 +97,7 @@ export class Haarengineseite {
         this.formen = new Haarengineformen(this, this.buehne, this.buehnenmodell);
         this.film = new Haarenginefilmansicht(this);
         this.animation = new Haarengineanimation(this, this.buehne);
+        this.animexport = new Haarengineanimexport(this);
         this.berichte = new Meshfigurberichte(this);
         this.export = new Meshfigurexport(this);
         this.haar = new Meshfigurhaar(this);
@@ -212,6 +214,7 @@ export class Haarengineseite {
         this.buehnenmodell.zeigen(z);
         this.film.zeigen(z);
         this.animation.zeigen(z);
+        this.animexport.zeigen(z);
         this.export.zeigen(z);
         this.speicher.zeigen(z);
     }

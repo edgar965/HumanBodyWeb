@@ -30,12 +30,16 @@ class Iterationsreferenz:
     ROLLEN = {'vorne': 0, 'links': 90, 'rechts': -90, 'hinten': 180}
     NAME = re.compile(r'ansicht_(\d_\d)', re.IGNORECASE)
 
-    def __init__(self, datei, original, winkel, gewicht, bild):
+    def __init__(self, datei, original, winkel, gewicht, bild, farbe=True):
         self.datei = datei
         self.original = original
         self.winkel = winkel
         self.gewicht = gewicht
         self.bild = bild
+        #: False: das Foto zählt nur für die FORM (Umriss, Sichtkörper, Breiten, Haltung), nicht für Farben, Textur und
+        #: Fotoprojektion — es zeigt andere Kleidung (`mesh_fotopruefung`; Edgar, 01.10.2026: „Seite für Form, nicht
+        #: Farbe"). Ohne Seitenansicht begrenzt kein Foto die Tiefe (Zelt-Shirt aus `kleid_huelle`).
+        self.farbe = farbe
 
     @classmethod
     def winkel_von(cls, eintrag):
@@ -56,6 +60,9 @@ class Iterationsreferenz:
         ablage = Haarengineablage(job.kennung)
         geschaetzt = ((job.ergebnis or {}).get('kreislauf') or {}).get('winkel_geschaetzt') or {}
         aus, ausgelassen = [], []
+        # Fotos, die die Fotoprüfung des Netzschritts ausließ (andere Kleidung, `mesh_fotopruefung`), zählen nur für die
+        # Form (`farbe=False`).
+        anders = set(((job.ergebnis or {}).get('fotopruefung') or {}).get('ausgelassen') or [])
         for eintrag in job.bilder or []:
             if eintrag.get('rolle') == 'aus' or float(eintrag.get('gewicht') or 0) <= 0:
                 continue
@@ -69,7 +76,8 @@ class Iterationsreferenz:
                 continue
             original = eintrag.get('original') or eintrag['datei']
             gewicht = float(eintrag.get('gewicht') or 100) / 100.0
-            aus.append(cls(eintrag['datei'], original, winkel, gewicht, cls.bild(ablage, eintrag['datei'])))
+            aus.append(cls(eintrag['datei'], original, winkel, gewicht, cls.bild(ablage, eintrag['datei']),
+                           farbe=eintrag.get('datei') not in anders))
         return aus, ausgelassen
 
     @staticmethod

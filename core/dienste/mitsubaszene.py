@@ -6,9 +6,9 @@ das alles kann, inkl. Cycles". Mitsuba 3 (EPFL, `pip install mitsuba`, Variante 
 Cycles, rechnet mit OptiX auf der Karte und bringt, was pyrender fehlte: Normalkarten (gebackene Falten, Daz-Normalen),
 echte Strähnen als Kurven (Radius je Punkt aus dem Profil), weiche Schatten, Verdeckung, Kantenglättung — und es ist
 differenzierbar (Fotos ↔ Textur/Form ließen sich später direkt optimieren). Gemessen an der Grundfigur mit Pixie-
-Stranghaar (236.136 Punkte als Kurven) und einer Normalkarte: Szene 0,3 s, erstes Bild 0,6 s (Kernel), danach 1024 × 1536
-mit 64 Abtastungen 0,04 s; Kopf 512² mit Kurven 1,1 s (neu) / 0,11 s (zweite Ansicht). Gegen pyrender (Grundfigur +
-Viereck, 0/30/90/180°): IoU der Umrisse 0,984–0,988, Schwerpunkt ≤ 0,3 Pixel daneben, UV-Richtung gleich.
+Stranghaar (236.136 Punkte als Kurven) und einer Normalkarte: Szene 0,3 s, erstes Bild 0,6 s (Kernel), danach
+1024 × 1536 mit 64 Abtastungen 0,04 s; Kopf 512² mit Kurven 1,1 s (neu) / 0,11 s (zweite Ansicht). Gegen pyrender
+(Grundfigur + Viereck, 0/30/90/180°): IoU der Umrisse 0,984–0,988, Schwerpunkt ≤ 0,3 Pixel daneben, UV-Richtung gleich.
 
 **Die Kamera ist die von `Genesishaarrender`** — orthografisch, Mitte, halbe Bildhöhe `halb` in Metern, Drehung um die
 senkrechte Achse (0 = von vorn, positiv zur linken Seite der Figur). `Fotoprojektion` und `Sichtkoerper` rechnen diese
@@ -79,7 +79,8 @@ class Mitsubaszene:
         self.mi = mi
         self.kennung = bool(kennung)
         self.kante = int(kante)
-        #: `[(form, teil, nummern)]` je Netz — für `punkte_setzen` (Film: dieselben Netze, neue Lage je Bild).
+        #: `[(form, teil, nummern, dreiecke, gruppe)]` je Netz — für `punkte_setzen` (Film: dieselben Netze, neue Lage
+        #: je Bild; `gruppe` = Nahtkopien aus der Ruhelage).
         self._netzliste = []
         formen = {}
         for i, (punkte, dreiecke, farbe, extra) in enumerate(teile):
@@ -104,9 +105,10 @@ class Mitsubaszene:
         dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
         if not len(dreiecke):
             return
+        # Nahtkopien EINMAL je Teil suchen (je Teilnetz und doppelt kostete es 6,3 s je Runde, 01.10.2026).
+        lage = Mitsubamaterial.gruppen(punkte)
         if self.kennung:
-            formen[name] = self._netz(name, punkte, dreiecke, Mitsubamaterial.kennung(farbe))
-            self._merken(name, dreiecke)
+            formen[name] = self._netz(name, punkte, dreiecke, Mitsubamaterial.kennung(farbe), lage=lage)
             return
         uv = extra.get('uv')
         gruppen = [g for g in (extra.get('gruppen') or []) if g.get('albedo') is not None] if uv is not None else []
@@ -123,33 +125,30 @@ class Mitsubaszene:
                 logger.warning('Mitsuba: Bild %s nicht lesbar (%s) — Gruppe flach', g.get('albedo'), fehler)
                 continue
             belegt[ab:ab + anzahl] = True
-            formen['%s_g%d' % (name, k)] = self._netz('%s_g%d' % (name, k), punkte, wahl, bsdf, uv)
-            self._merken('%s_g%d' % (name, k), wahl)
+            formen['%s_g%d' % (name, k)] = self._netz('%s_g%d' % (name, k), punkte, wahl, bsdf, uv, lage)
         if not belegt.all():
-            formen[name] = self._netz(name, punkte, dreiecke[~belegt], Mitsubamaterial.flach(farbe))
-            self._merken(name, dreiecke[~belegt])
-
-    def _merken(self, form, dreiecke):
-        nummern, neu = np.unique(np.asarray(dreiecke, dtype=np.int64).ravel(), return_inverse=True)
-        self._netzliste.append((form, int(form[1:].split('_')[0]), nummern, neu.reshape(-1, 3)))
+            formen[name] = self._netz(name, punkte, dreiecke[~belegt], Mitsubamaterial.flach(farbe), lage=lage)
 
     def punkte_setzen(self, teile):
         """Dieselben Netze, neue Punkte (Film: je Bild gehäutet) — Lage und Normalen tauschen statt neu bauen. Kurven
         bleiben, wo sie sind (der Film rendert Stranghaar als Band)."""
         werte = self.mi.traverse(self.szene)
-        for form, teil, nummern, dreiecke in self._netzliste:
+        for form, teil, nummern, dreiecke, gruppe in self._netzliste:
             p = np.asarray(teile[teil][0], dtype=np.float64)[nummern]
             werte['%s.vertex_positions' % form] = self.mi.Float(np.ascontiguousarray(p, dtype=np.float32).ravel())
-            werte['%s.vertex_normals' % form] = self.mi.Float(Mitsubamaterial.normalen(p, dreiecke).ravel())
+            werte['%s.vertex_normals' % form] = self.mi.Float(Mitsubamaterial.normalen(p, dreiecke, gruppe).ravel())
         werte.update()
 
-    def _netz(self, name, punkte, dreiecke, bsdf, uv=None):
-        """Ein Mitsuba-Netz aus den Punkten, die die Dreiecke brauchen. UV von Daz (v nach oben, OBJ) → Mitsuba (v nach
-        unten: Zeile 0 des Bildes bei v = 0)."""
+    def _netz(self, name, punkte, dreiecke, bsdf, uv=None, lage=None):
+        """Ein Mitsuba-Netz aus den Punkten, die die Dreiecke brauchen, gemerkt für `punkte_setzen` (`lage`: Nahtkopien
+        des ganzen Teils, `Mitsubamaterial.gruppen`). UV von Daz (v nach oben, OBJ) → Mitsuba (v nach unten: Zeile 0 des
+        Bildes bei v = 0)."""
         mi = self.mi
         nummern, neu = np.unique(np.asarray(dreiecke, dtype=np.int64).ravel(), return_inverse=True)
         p = np.asarray(punkte, dtype=np.float64)[nummern]
         d = neu.reshape(-1, 3)
+        gruppe = (Mitsubamaterial.gruppen(punkte) if lage is None else lage)[nummern]
+        self._netzliste.append((name, int(name[1:].split('_')[0]), nummern, d, gruppe))
         eigen = mi.Properties()
         eigen['bsdf'] = mi.load_dict(self._tensoren(bsdf))
         netz = mi.Mesh(name, vertex_count=len(p), face_count=len(d), has_vertex_normals=True,
@@ -157,7 +156,7 @@ class Mitsubaszene:
         werte = mi.traverse(netz)
         werte['vertex_positions'] = mi.Float(np.ascontiguousarray(p, dtype=np.float32).ravel())
         werte['faces'] = mi.UInt32(np.ascontiguousarray(d, dtype=np.uint32).ravel())
-        werte['vertex_normals'] = mi.Float(Mitsubamaterial.normalen(p, d).ravel())
+        werte['vertex_normals'] = mi.Float(Mitsubamaterial.normalen(p, d, gruppe).ravel())
         if uv is not None:
             t = np.asarray(uv, dtype=np.float64)[nummern].copy()
             t[:, 1] = 1.0 - t[:, 1]

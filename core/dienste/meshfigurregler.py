@@ -51,6 +51,11 @@ class Meshfigurregler:
         'Ears Gone',
         'HipGenitalBulge',
     )
+    #: Nur auf der männlichen Grundfigur gesperrt: die Brust-Morphs der Frauenfigur. Unter dem Shirt füllten sie die
+    #: Rumpftiefe (Testauftrag 2026.10.01.12.38.09: `BreastsDiameter`, `BreastsFullnessUpper` auf 1) — der Brustkorb
+    #: eines Mannes kommt aus `Pectorals*`, `MassUpperTorso` und den Körpertypen.
+    MAENNLICH = 'BaseMasculine_figure_ctrl_Character'
+    AUS_MAENNLICH = ('body_bs_Breast',)
     #: Der Genitalbereich der Genesis-9-Grundfigur ist EIN Regler (`Hip Genital Bulge`, 0–1: bis 2,9 cm nach vorn,
     #: 170 Punkte); ein Anatomie-Paket ist nicht installiert (nur sein UV-Satz). Für die männliche Grundfigur steht
     #: er fest auf `genitalform` % der Optionen, sonst auf 0.
@@ -107,6 +112,8 @@ class Meshfigurregler:
 
     def stufe_fuer(self, name, bereich, teil):
         if any(m in self.marke(name) for m in self.gesperrt):
+            return 0
+        if self.MAENNLICH in self.grund and any(a in name for a in self.AUS_MAENNLICH):
             return 0
         return self.stufe(name, bereich, teil)
 

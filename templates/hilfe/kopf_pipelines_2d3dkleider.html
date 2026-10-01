@@ -8,7 +8,8 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
 <p>
   <a href="/2d3dKleider/">Dashboard → 2D3D Kleider</a> (Bezeichner <code>haarengine</code>, seit 30.09.2026) ist der zweite Weg vom
   Foto zur angezogenen Figur. Er hat dieselbe Jobstruktur und dieselben Seiten wie BlenderModel (Auftrag, Iterationen, Bühne,
-  Film); Bau, Render und Note laufen in Python (pyrender). Blender ist hier <strong>erlaubt, aber nicht der Rechenkern</strong>:
+  Film); Bau und Note laufen in Python, gerendert wird mit Mitsuba 3 auf der Grafikkarte oder pyrender
+  (<a href="/settings/2d3dkleider/">Einstellungen → 2D3D Kleider</a>). Blender ist hier <strong>erlaubt, aber nicht der Rechenkern</strong>:
   Wenn es dazukommt, dann als Arbeiter für einzelne Rechnungen (Stoffsimulation, Haar-Knoten, Projektionsmalerei) über EINE
   Arbeiterklasse — ein Test (<code>BlenderNurUeberEinenArbeiterTest</code>) hält verstreute Aufrufe fern.
   Kleider und Haar sind hier keine Kostümteile, sondern Stücke der Genesis-Garderobe — die Figur ist ein
@@ -29,14 +30,14 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
     <span class="kp-stufe-marke">Schritt „koerper"</span>
     <h4>Körper: aus „Mesh to 3D" übernehmen oder rechnen</h4>
     <p>Option <code>koerper.quelle</code>: <code>uebernehmen</code> holt Regler, Eigenmorph, Kacheln und Netz samt Lage aus einem
-    fertigen Auftrag „Mesh to 3D" (0 s); <code>rechnen</code> würde dessen Kette hier selbst laufen lassen — <em>geschrieben, aber
-    noch nie gelaufen</em>. „Neuer Auftrag" nimmt deshalb die Kennung eines Mesh-Auftrags und übernimmt dessen Fotos.</p>
+    fertigen Auftrag „Mesh to 3D" (0 s); <code>rechnen</code> lässt dessen Kette hier selbst laufen (~15 min, „ki+backen",
+    „nur Fotos"), seit dem 01.10.2026 nachmittags samt Frisurwahl — ohne sie hatten die Runden keine Kandidaten.</p>
   </div>
   <div class="kp-stufe kp-stufe-python">
     <span class="kp-stufe-marke">Schritte „grundfigur", „iterationen"</span>
     <h4>Genesis-9-Figur mit Kleidern und Haar, Runde für Runde</h4>
     <p>Die Grundfigur nimmt die Stellung des Körper-Schritts (sonst die nackte Basis). Dann baut jede Runde das Modell
-    (<code>ModellMitKleidern</code>), rendert es aus den Blickwinkeln der Vorlagen (pyrender, Python) und benotet es. Siehe unten.</p>
+    (<code>ModellMitKleidern</code>), rendert es aus den Blickwinkeln der Vorlagen (Mitsuba oder pyrender) und benotet es.</p>
   </div>
   <div class="kp-stufe kp-stufe-python">
     <span class="kp-stufe-marke">Schritte „export", „film", „speichern"</span>
@@ -74,7 +75,8 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
 <ol>
   <li><strong>Anwenden und bauen</strong> — das Rezept verändert den Zustand; <code>Kleidermodellbau</code> baut Körper, Kleider und
   Haar über denselben Weg wie die Bühne, nur ohne Browser.</li>
-  <li><strong>Rendern</strong> — pyrender, aus den Blickwinkeln der Vorlagen.</li>
+  <li><strong>Rendern</strong> — Mitsuba 3 (Vorgabe) oder pyrender, aus den Blickwinkeln der Vorlagen; dazu Kennbilder je Teil
+  und der Kopf für die Gesichtsmaße.</li>
   <li><strong>Benoten</strong> — zwei Noten: die <em>Fotonote</em> (<code>Iterationsnote</code>: Silhouette und Farbe gegen die
   freigestellten Vorlagen) und die <em>3D-Note</em> gegen das Bezugsnetz (<code>Iterationsnetznote</code>: Abstand Stoff → Netz in
   mm und Deckung der Netzproben; <code>abweichung = mm/50 + (1 − Deckung)</code>).</li>
@@ -276,25 +278,21 @@ Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
 </ul>
 
 <div class="info-box info-box-orange">
-  <strong>Nicht geprüft (Stand 01.10.2026, vormittags):</strong> eine Runde mit Mitsuba an echten Fotos (geprüft am gebauten Modell
-  ohne Auftrag), der Film mit Mitsuba, ein Pinselzug mit der Maus über das Modell (geprüft: Knopf, Modi, Endpunkt);
-  Blickwinkel und Gesichtsmaße sind mit Kunstdaten getestet, nicht an echten Fotos (die Grafikkarte hielt einen anderen Auftrag);
-  die Textur-Automatik (Fototextur, Falten, Decal) ist
-  mit Kunstdaten getestet, nicht in einem echten Lauf; die
-  Sichtkörper-Automatik (<code>morph_ort</code> je Zelle, Hülle) ist mit Kunstdaten getestet, nicht in einem echten Lauf.
-  <code>koerper.quelle = rechnen</code> ist geschrieben,
-  aber nie gelaufen; der frühere Modus <code>automatisch</code> (Optimierer und Prüf-KI wie bei BlenderModel) wurde mit den neuen
-  Schritten nicht gelaufen; die Regeln von <code>2d3DIterationen</code> sind mit Kunstdaten getestet
-  (<code>test_iterationen2d3d</code>), Messwerte eines langen automatischen Laufs stehen hier nicht. Die GLB je Runde hat kein
-  Rig — der Tanz läuft nur im Film. Die Netz-Deckung blieb bei 43 % (der Körper sitzt im Mittel 32 mm vom Netz; der Fit aus dem
-  Mesh-Auftrag sitzt nicht enger — nicht Sache dieser Pipeline). Ein Stück in der Farbe der Fotos bräuchte eine Fototextur; die Tönung trifft nur den
-  Mittelwert.
+  <strong>Stand 01.10.2026, mittags.</strong> An echten Fotos gelaufen (76 Runden in „Edgar - TEST", „Edgar - Hoch" und
+  „2D3D Test - ki+backen"): die automatischen Regeln (Farbe je Stück, Weite, Zellen-Morphe, Hülle, Frisurwechsel, Haar anlegen),
+  Fotoprojektion, Decal, Falten, Drapieren, Blickwinkel und Gesichtsmaße; der Körper-Schritt <code>rechnen</code>
+  („ki+backen", „nur Fotos"); Mitsuba in Runde und Film; der Form-Pinsel mit Übertragung auf die Grundfigur. Welche
+  Blender-Funktion wo gelaufen ist, steht in der Tabelle unten. <strong>Offen:</strong> Die Pose deckelt die Umrissnote — die Fotos
+  zeigen hängende Arme, das Modell steht in A-Pose (IoU vorn ~0,6); die Fotoprojektion holt sich dabei unter den Armen die Armhaut.
+  Die GLB je Runde hat kein Rig (das Modell des letzten Stands auf der Bühne schon). Die alte Gesamtabweichung bevorzugte die
+  falsche, lange Frisur (ihr Netzanteil) — seit dem Nachmittag entscheidet die <strong>Gesamtnote</strong> (Kasten unten).
 </div>
 
 <div class="info-box info-box-blue">
   <strong>Gegenüber dem Blender-Kostüm-Weg oben:</strong> statt Kostümteilen (Mantel, Hut, Bart …) Stücke der Genesis-Garderobe;
   statt dauerhafter Blender-Arbeiter ein Python-Bau ohne Browser (ein Prozess); im Modus „begutachtung" statt Optimierer mit
   Zufallskandidaten Rezepte, die Claude einreicht oder die Regeln aus dem Befund schreiben; die Umriss-Hülle gibt es seit dem
-  30.09.2026 nachts als Sichtkörper und <code>kleid_huelle</code>, weggelassen bleiben Fototextur und Sichtmodell. Gleich geblieben
+  30.09.2026 nachts als Sichtkörper und <code>kleid_huelle</code>, die Fototextur seit dem 01.10.2026 als <code>kleid_fototextur</code>;
+  weggelassen bleibt das Sichtmodell. Gleich geblieben
   sind Auftrag, Tabelle, Iterationsansicht und Bühne.
 </div>

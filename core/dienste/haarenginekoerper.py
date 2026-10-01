@@ -10,9 +10,10 @@ Zwei Quellen (Option `koerper.quelle`):
                   „mach erstmal die ganze pipeline in geringer auflösung").
     rechnen       die Kette von „Mesh to 3D" auf dem Netz dieses Auftrags (Schritt „netz"): erkennung · haar ·
                   kleidung ·
-                  kalibrierung · koerper · gesicht · rest · textur · vorschau — dieselben Schrittklassen, unverändert,
-                  über `Haarenginekoerperlauf` (rund 15 min Grafikkarte). Frisur und Speichern gehören nicht dazu:
-                  Frisur und Kleider sind hier Sache der Iterationen.
+                  kalibrierung · koerper · gesicht · rest · textur · vorschau · frisur — dieselben Schrittklassen,
+                  unverändert, über `Haarenginekoerperlauf` (rund 15 min Grafikkarte). Speichern gehört nicht dazu.
+                  Die FRISUR seit 01.10.2026: ohne sie hatten die Iterationen keine Kandidaten und begannen mit der
+                  Vorgabe (`.52`: langes rotes Haar am Mann); die Iterationen wechseln weiter zwischen den Kandidaten.
 
 Danach liegt die Stellung in `ergebnis['regler']['stellung']` (+ `rest`), wie „Mesh to 3D" sie schreibt —
 `Haarenginegrundfigur` baut daraus die Grundfigur mit Rig, `job.stellung()` liest sie für Bühne und Export.
@@ -38,7 +39,8 @@ class Haarenginekoerper:
     FELDER = ('regler', 'rest', 'fototextur', 'kopfeigen', 'erkennung', 'koerper', 'gesicht', 'haar', 'kleidung',
               'testfall', 'frisur')
     #: Schritte der Kette „Mesh to 3D", die hier laufen (Quelle „rechnen").
-    KETTE = ('erkennung', 'haar', 'kleidung', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau')
+    KETTE = ('erkennung', 'haar', 'kleidung', 'kalibrierung', 'koerper', 'gesicht', 'rest', 'textur', 'vorschau',
+             'frisur')
 
     def __init__(self, lauf):
         self.lauf = lauf

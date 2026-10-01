@@ -38,11 +38,18 @@ export class Meshfigurnetze {
         return matrix.premultiply(new THREE.Matrix4().makeScale(faktor, faktor, faktor));
     }
 
+    /** Ohne Lage der Erkennung: das Netz mittig auf den Boden (TRELLIS liefert Y oben, um den Ursprung). */
+    static aufBoden(objekt) {
+        const kasten = new THREE.Box3().setFromObject(objekt), mitte = kasten.getCenter(new THREE.Vector3());
+        return new THREE.Matrix4().makeTranslation(-mitte.x, -kasten.min.y, -mitte.z);
+    }
+
     /** Netze (neu) laden, wenn sich Eingang oder Lage geändert haben — true, wenn neu geladen. */
     zeigen(z) {
         const e = z.ergebnis || {};
         const erkennung = e.erkennung || {};
-        if (!erkennung.matrix) return false;
+        // Ohne Erkennung (gleich nach dem Netz, vor „Körper") das Netz roh, auf den Boden gestellt (01.10.2026).
+        if (!erkennung.matrix && !(z.eingang || {}).datei) return false;
         const kopf = (z.eingang || {}).kopf && erkennung.kopf && erkennung.kopf.matrix_lage ? erkennung.kopf : null;
         const schluessel = JSON.stringify([(z.eingang || {}).datei, ((z.eingang || {}).kopf || {}).datei,
                                            erkennung.matrix, kopf && kopf.matrix_lage, erkennung.skalierung]);
@@ -59,7 +66,8 @@ export class Meshfigurnetze {
         } : null;
         this._ebenen = kopf ? [new THREE.Plane(), new THREE.Plane()] : [];
         this.verschieben(0);
-        this._laden('eingang', z.eingang.datei, Meshfigurnetze.matrix(erkennung.matrix, faktor), this._ebenen[0]);
+        this._laden('eingang', z.eingang.datei, erkennung.matrix ? Meshfigurnetze.matrix(erkennung.matrix, faktor) : null,
+            this._ebenen[0]);
         if (kopf) this._laden('eingang_kopf', z.eingang.kopf.datei, Meshfigurnetze.matrix(kopf.matrix_lage, faktor), this._ebenen[1]);
         return true;
     }
@@ -102,7 +110,7 @@ export class Meshfigurnetze {
             objekt.updateMatrixWorld(true);
             const innen = new THREE.Group();
             innen.matrixAutoUpdate = false;
-            innen.matrix.copy(matrix);
+            innen.matrix.copy(matrix || Meshfigurnetze.aufBoden(objekt));
             innen.add(objekt);
             gruppe.add(innen);
         }, undefined, fehler => this.melden(`Netz (${art}) nicht geladen: ${fehler.message || fehler}`));

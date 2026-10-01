@@ -36,7 +36,7 @@ class Kleidermodellbau:
     HAUT = (0.82, 0.68, 0.60)
     STUFE = 0
 
-    def __init__(self, stellung, drehung=None, stufe=STUFE, koerper=None):
+    def __init__(self, stellung, drehung=None, stufe=STUFE, koerper=None, kacheln=None):
         """`drehung`: die Haltung (`ModellMitKleidern.drehung`) — Körper und Stücke stehen dann so; für den Film
         bleibt sie weg (die Bewegung ist absolut). `koerper`: die Genesis-Regler des Modells (`ModellMitKleidern.
         koerper`: `koerper_regler`, `koerper_ort`, `koerper_huelle`) ÜBER der Stellung des Auftrags — bis 01.10.2026
@@ -52,20 +52,20 @@ class Kleidermodellbau:
         self.drehung = dict(drehung or {})
         self.formung = G9formung.aus_abfrage(self.stellung, self.drehung)
         self.boden = float(self.formung.boden())
-        stufe0 = G9basisnetz.netzstufe(0)
-        self._ursprung = np.asarray(stufe0.ursprung, dtype=np.int64)
-        self._dreiecke = np.asarray(stufe0.dreiecke, dtype=np.int64)
+        self._stufe = G9basisnetz.netzstufe(0)
+        self._ursprung = np.asarray(self._stufe.ursprung, dtype=np.int64)
         self._haut = G9haut.holen().fuer(self._ursprung)
         self._koerper = None
+        #: `{kachel: Pfad}` der gebackenen Haut (`Koerpertextur.kacheln`) — ohne: einfarbig `HAUT`.
+        self.kacheln = dict(kacheln or {})
 
     # --------------------------------------------------------------- Körper
 
     def koerper(self):
         if self._koerper is None:
+            from .koerpertextur import Koerpertextur
             punkte = np.asarray(self.formung.punkte(), dtype=np.float64) - np.array([0.0, self.boden, 0.0])
-            self._koerper = {'punkte': punkte[self._ursprung], 'dreiecke': self._dreiecke,
-                             'farbe': np.asarray(self.HAUT), 'haut': self._haut, 'art': 'koerper',
-                             'sorte': 'koerper', 'uv': None, 'normalen': None, 'gruppen': [], 'textur': []}
+            self._koerper = Koerpertextur.teil(punkte[self._ursprung], self._stufe, self._haut, self.HAUT, self.kacheln)
         return self._koerper
 
     def formbezug(self, ordner, runde):
@@ -193,10 +193,9 @@ class Kleidermodellbau:
             sorte = teil.get('sorte') or art
             haut = self._haut_aus(teil)
             if teil.get('art') == 'strang':
-                # Stranghaar (01.10.2026): Linien zeichnet pyrender nicht — je Segment ein Band mit dem Profil der
-                # Sorte (`G9haarprofil`, Regler `profil.wurzel/spitze`), Haut je Bandpunkt vom Strähnenpunkt. Mitsuba
-                # rendert dieselben Strähnen als Kurven (`kurven`); Masken, Netznote und GLB bleiben beim Band.
-                kurven = self._kurven(teil, punkte, dreiecke, modell, sorte)
+                # Stranghaar: je Segment ein Band (`G9haarprofil`), Haut vom Strähnenpunkt; Mitsuba rendert die Strähnen
+                # als Kurven (`kurven`), Masken, Netznote und GLB bleiben beim Band (01.10.2026).
+                kurven = self._kurven(teil, punkte, dreiecke, modell, sorte, haut)
                 punkte, dreiecke, haut = self._band(teil, punkte, dreiecke, haut, modell, sorte)
                 teile.append({'punkte': punkte, 'dreiecke': dreiecke, 'farbe': farben.get(sorte, grund),
                               'haut': haut, 'art': art, 'sorte': sorte, 'uv': None, 'normalen': None, 'gruppen': [],
@@ -227,8 +226,9 @@ class Kleidermodellbau:
         return neu, dreiecke_neu, haut
 
     @staticmethod
-    def _kurven(teil, punkte, dreiecke, modell, sorte):
-        """Die Strähnen als Ketten für Mitsubas Kurven: Punkte, Reihenfolge, Punkte je Strähne, Radius je Punkt (m)."""
+    def _kurven(teil, punkte, dreiecke, modell, sorte, haut=None):
+        """Die Strähnen als Ketten für Mitsubas Kurven: Punkte, Reihenfolge, Punkte je Strähne, Radius je Punkt (m), dazu
+        die Haut der Strähnenpunkte (`G9haltungshaut` häutet die Kurven in die Haltung)."""
         from Genesis9.haargenerisch import G9haargenerisch
         from Genesis9.haarprofil import G9haarprofil
         from Genesis9.haarzusatz import G9haarzusatz
@@ -240,7 +240,7 @@ class Kleidermodellbau:
         if len(anteil) != len(punkte):
             anteil = np.zeros(len(punkte))
         wurzel, spitze = G9haarprofil.werte(G9haargenerisch.regler_von(sorte, modell.haar))
-        return {'punkte': np.asarray(punkte, dtype=np.float32), 'reihe': np.concatenate(ketten),
+        return {'punkte': np.asarray(punkte, dtype=np.float32), 'reihe': np.concatenate(ketten), 'haut': haut,
                 'laengen': np.asarray([len(k) for k in ketten], dtype=np.int64),
                 'radius': (0.5e-3 * (wurzel + (spitze - wurzel) * np.clip(anteil, 0.0, 1.0))).astype(np.float32)}
 
@@ -292,8 +292,9 @@ class Kleidermodellbau:
 
     # ------------------------------------------------------------------ GLB
 
-    @staticmethod
-    def glb(teile, pfad, punkte_je_teil=None):
-        """Alle Teile als GLB — mit Texturen, wo eine Gruppe ein Bild trägt, sonst flache Farben (`Kleidermodellglb`)."""
-        from .kleidermodellglb import Kleidermodellglb
-        return Kleidermodellglb.schreiben(teile, pfad, punkte_je_teil)
+    def glb(self, teile, pfad):
+        """Alle Teile in der A-Pose als GLB mit Rig (`Rundenglb`, seit 01.10.2026; davor ohne Skelett)."""
+        from .rundenglb import Rundenglb
+        pfad.parent.mkdir(parents=True, exist_ok=True)
+        Rundenglb(self.formung.skelett().bauen()['knochen']).alle(teile).schreiben(pfad)
+        return pfad

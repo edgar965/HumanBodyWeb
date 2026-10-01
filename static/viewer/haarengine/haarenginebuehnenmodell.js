@@ -130,13 +130,13 @@ export class Haarenginebuehnenmodell {
     }
 
     /**
-     * Das Modell des Stands, sonst die jüngste Runde mit GLB → {adresse, runde, stand} oder null. Eine Runde, die jünger
-     * ist als ein veraltetes Modell des Stands (ein Lauf rechnet gerade), geht vor — bis der Lauf es am Ende neu baut.
+     * Das Modell des Stands, sonst die BESTE Runde mit GLB (`kreislauf.runde_bester`, sonst die jüngste) → {adresse,
+     * runde, stand} oder null. Ist der Stand veraltet (ein Lauf rechnet gerade), geht die beste Runde vor.
      */
     static quelle(z, seite, schluessel = 'modell') {
-        const s = z.standmodell;
+        const s = z.standmodell, beste = Number(((z.ergebnis || {}).kreislauf || {}).runde_bester || 0);
         const runden = ((z.ergebnis || {}).iterationen || []).filter(r => (r.dateien || {})[schluessel]);
-        const r = runden.length ? runden.reduce((a, b) => (Number(b.runde) > Number(a.runde) ? b : a)) : null;
+        const r = runden.find(x => Number(x.runde) === beste) || runden.at(-1) || null;   // Runden in Rundenfolge
         if (s?.datei && (s.aktuell || !r || Number(r.runde) <= Number(s.runde || 0))) {
             const adresse = `${seite.dateiAdresse('ergebnis', s.datei)}?v=${encodeURIComponent(s.fassung || '')}`;
             return { adresse, runde: s.runde, stand: true };

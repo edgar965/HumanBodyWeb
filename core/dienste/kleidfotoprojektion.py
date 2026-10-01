@@ -78,7 +78,7 @@ class Kleidfotoprojektion:
             raster = [G9uvraster(teile[i]['punkte'], teile[i]['dreiecke'], teile[i]['uv'], teile[i]['gruppen'],
                                  normalen=teile[i].get('normalen')) for i in indizes]
             try:
-                aus[kennung] = G9kleidfototextur.bauen(kennung, raster, projektion)
+                aus[kennung] = G9kleidfototextur.bauen(kennung, raster, projektion, schicht=modell.fotoschicht())
             except (ValueError, OSError) as fehler:
                 aus[kennung] = {'fehler': str(fehler)}
                 logger.warning('Fotoprojektion %s: %s', kennung, fehler)

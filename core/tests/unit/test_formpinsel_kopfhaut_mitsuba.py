@@ -16,6 +16,7 @@ from Genesis9.kopfhaut import G9kopfhaut
 from core.dienste.genesishaarrender import Genesishaarrender
 from core.dienste.haarknotenauftrag import Haarknotenauftrag
 from core.dienste.mitsubamaterial import Mitsubamaterial
+from core.dienste.renderwahl import Renderwahl
 
 
 def _gitter(n=21, kante=0.2):
@@ -54,14 +55,15 @@ class FormpinselTest(TestCase):
     def test_glaetten_nimmt_eine_spitze_zurueck(self):
         spitze = np.zeros_like(self.punkte)
         spitze[self.mitte, 2] = 0.01
-        aus = G9formpinsel.deltas(self.punkte, self._striche(anzahl=5), 'glaetten', 0.03, 1.0, self.dreiecke, start=spitze)
+        aus = G9formpinsel.deltas(self.punkte, self._striche(anzahl=5), 'glaetten', 0.03, 1.0, self.dreiecke,
+                                  start=spitze)
         self.assertLess(aus[self.mitte, 2], 0.005)
 
     def test_flach_zieht_auf_die_ebene(self):
         buckel = np.zeros_like(self.punkte)
         buckel[:, 2] = 0.01 * G9formpinsel.abfall(np.linalg.norm(self.punkte, axis=1), 0.08)
-        aus = G9formpinsel.deltas(self.punkte, self._striche(p=(0, 0, 0.0), anzahl=8), 'flach', 0.05, 1.0, self.dreiecke,
-                                  start=buckel)
+        aus = G9formpinsel.deltas(self.punkte, self._striche(p=(0, 0, 0.0), anzahl=8), 'flach', 0.05, 1.0,
+                                  self.dreiecke, start=buckel)
         self.assertLess(abs(aus[self.mitte, 2]), 0.25 * buckel[self.mitte, 2])
 
     def test_greifen_folgt_dem_zug(self):
@@ -136,6 +138,17 @@ class MitsubamaterialTest(TestCase):
         np.testing.assert_allclose(n[1], n[3], atol=1e-6)
         np.testing.assert_allclose(n[2], n[4], atol=1e-6)
 
+    def test_gruppen_aus_der_ruhelage_gelten_nach_dem_haeuten(self):
+        # Film: die Nahtkopien werden einmal in Ruhe gesucht; nach einer Drehung (gleiche Haut) bleibt alles gleich.
+        punkte = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0.5]], dtype=np.float64)
+        dreiecke = np.array([[0, 1, 2], [3, 5, 4]])
+        gruppe = Mitsubamaterial.gruppen(punkte)
+        self.assertEqual(gruppe[1], gruppe[3])
+        c, s = np.cos(0.7), np.sin(0.7)
+        gedreht = punkte @ np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]]).T
+        np.testing.assert_allclose(Mitsubamaterial.normalen(gedreht, dreiecke, gruppe),
+                                   Mitsubamaterial.normalen(gedreht, dreiecke), atol=1e-6)
+
     def test_haarabsorption_dunkler_ist_staerker(self):
         hell, dunkel = Mitsubamaterial.haar_sigma((0.8, 0.7, 0.6)), Mitsubamaterial.haar_sigma((0.1, 0.08, 0.06))
         self.assertTrue((dunkel > hell).all())
@@ -151,5 +164,18 @@ class RenderschluesselTest(TestCase):
 
     def test_extra_paket(self):
         self.assertIsNone(Genesishaarrender.extra({'uv': None, 'textur': []}))
-        self.assertEqual(set(Genesishaarrender.extra({'uv': np.zeros((1, 2)), 'textur': [{'ab': 0}]})), {'uv', 'gruppen'})
+        paket = Genesishaarrender.extra({'uv': np.zeros((1, 2)), 'textur': [{'ab': 0}]})
+        self.assertEqual(set(paket), {'uv', 'gruppen'})
         self.assertEqual(set(Genesishaarrender.extra({'kurven': {}})), {'kurven'})
+        self.assertIsNone(Genesishaarrender.extra({'kurven': {}}, kurven=False))
+
+
+class RenderwahlTest(TestCase):
+    def test_vorgabe_mitsuba_unbekanntes_auch(self):
+        self.assertEqual(Renderwahl.aus({}), Renderwahl.MITSUBA)
+        self.assertEqual(Renderwahl.aus(None), Renderwahl.MITSUBA)
+        self.assertEqual(Renderwahl.aus({Renderwahl.SCHLUESSEL: 'cycles'}), Renderwahl.MITSUBA)
+        self.assertEqual(Renderwahl.aus({Renderwahl.SCHLUESSEL: 'pyrender'}), Renderwahl.PYRENDER)
+
+    def test_ausdruecklicher_motor_schlaegt_die_einstellung(self):
+        self.assertEqual(Genesishaarrender(None, motor='pyrender').MOTOR, 'pyrender')

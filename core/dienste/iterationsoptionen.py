@@ -58,6 +58,18 @@ class Iterationsoptionen:
             'setzt beim besten bisherigen Modell an.',
         },
         {
+            'schluessel': 'form',
+            'titel': 'Körper- und Gesichtsform in den Runden',
+            'art': 'wahl',
+            'vorgabe': 'aus',
+            'werte': [
+                ('aus', 'Aus — die Form kommt aus dem Schritt „Körper"'),
+                ('an', 'An — Körper- und Gesichtsregler nachführen (mit Rückschritt)'),
+            ],
+            'hinweis': 'Der Schritt „Körper" fittet die Figur mit Verlustfunktion an das Netz. Die Regeln der Runden '
+            'schoben die Beine von „.51" 40 Runden lang an den Anschlag (01.10.2026) — deshalb sind sie aus.',
+        },
+        {
             'schluessel': 'kandidaten',
             'titel': 'Kandidaten je Runde',
             'art': 'zahl',

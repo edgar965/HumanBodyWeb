@@ -98,8 +98,9 @@ class Mitsubamaterial:
 
     @classmethod
     def flach(cls, farbe_srgb):
-        return cls._beidseitig({'type': 'principled', 'base_color': {'type': 'rgb', 'value': cls.linear(farbe_srgb)[:3].tolist()},
-                                'roughness': cls.RAUHEIT, 'specular': cls.GLANZ})
+        farbe = {'type': 'rgb', 'value': cls.linear(farbe_srgb)[:3].tolist()}
+        return cls._beidseitig({'type': 'principled', 'base_color': farbe, 'roughness': cls.RAUHEIT,
+                                'specular': cls.GLANZ})
 
     @staticmethod
     def kennung(farbe):
@@ -135,16 +136,25 @@ class Mitsubamaterial:
     # ------------------------------------------------------------- Normalen
 
     @staticmethod
-    def normalen(punkte, dreiecke):
-        """Glatte Normalen je Punkt, flächengewichtet, über Punkte gleicher Lage gemittelt (Nahtkopien)."""
+    def gruppen(punkte):
+        """Je Punkt die Nummer seiner Lage — Nahtkopien teilen sie. Im Film einmal aus der Ruhelage (`Mitsubaszene`):
+        Nahtkopien tragen dieselbe Haut und bleiben beisammen, und die Suche kostete je Bild und Netz 0,19 s
+        (01.10.2026)."""
+        p = np.asarray(punkte, dtype=np.float64)
+        return np.unique(np.round(p / 1e-6).astype(np.int64), axis=0, return_inverse=True)[1].ravel()
+
+    @classmethod
+    def normalen(cls, punkte, dreiecke, gruppe=None):
+        """Glatte Normalen je Punkt, flächengewichtet, über Punkte gleicher Lage gemittelt (Nahtkopien; `gruppe` aus
+        `gruppen`, sonst hier gesucht)."""
         p = np.asarray(punkte, dtype=np.float64)
         d = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
         flaeche = np.cross(p[d[:, 1]] - p[d[:, 0]], p[d[:, 2]] - p[d[:, 0]])
-        _lage, gruppe = np.unique(np.round(p / 1e-6).astype(np.int64), axis=0, return_inverse=True)
-        gruppe = gruppe.ravel()
-        summe = np.zeros((int(gruppe.max()) + 1 if len(gruppe) else 0, 3))
-        for ecke in range(3):
-            np.add.at(summe, gruppe[d[:, ecke]], flaeche)
+        gruppe = cls.gruppen(p) if gruppe is None else np.asarray(gruppe, dtype=np.int64)
+        anzahl = int(gruppe.max()) + 1 if len(gruppe) else 0
+        ecken = gruppe[d.T.ravel()]                   # alle Ecke-0-, dann Ecke-1-, dann Ecke-2-Einträge
+        summe = np.stack([np.bincount(ecken, weights=np.tile(flaeche[:, k], 3), minlength=anzahl) for k in range(3)],
+                         axis=1)
         n = summe[gruppe]
         laenge = np.linalg.norm(n, axis=1, keepdims=True)
         leer = laenge[:, 0] < 1e-20

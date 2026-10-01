@@ -1,0 +1,48 @@
+{% extends "einstellungsseite.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Einstellungen — 2D3D Kleider{% endblock %}
+
+{% block einstellungen_titel %}2D3D Kleider Einstellungen{% endblock %}
+{% block formular_zusatz %} id="kleider2d3d-settings-form"{% endblock %}
+
+{% block einstellungen_karten %}
+<div class="settings-section">
+    <h3>Rendern</h3>
+    <div class="settings-row">
+        <label for="{{ schluessel }}">Renderer:</label>
+        <select name="{{ schluessel }}" id="{{ schluessel }}">
+            {% for wert, text in renderer_wahlen.items %}
+            <option value="{{ wert }}"{% if wert == renderer %} selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+        </select>
+        <span class="hint">Gilt für alles, was die Aufträge von 2D3D Kleider rendern: die Bilder jeder Runde
+            (Vergleich mit den Fotos, Kennbilder der Teile, Kopf für die Gesichtsmaße), die Fotoprojektion und den
+            Film. Mitsuba rechnet Licht wie Cycles auf der Grafikkarte und zeigt Stranghaar als Strähnen; gemessen an
+            derselben Runde traf es die Fotos besser (Abweichung 1,725 gegen 1,820) bei etwa 10 s mehr je Runde
+            (72 gegen 62 s). pyrender ist der schnelle OpenGL-Weg; Stranghaar bleibt dort unsichtbar. Die Noten
+            zweier Runden mit verschiedenem Renderer sind nicht vergleichbar. Ein laufender Auftrag übernimmt die
+            Wahl ab der nächsten Runde.</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block einstellungen_nachtrag %}
+<style>
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
+.settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+</style>
+<script type="module">
+import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+
+Vorgabenformular.anmelden('kleider2d3d-settings-form', '2D3D-Kleider-Einstellungen gespeichert — gilt ab der nächsten Runde.');
+</script>
+{% endblock %}

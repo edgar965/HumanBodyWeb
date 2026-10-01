@@ -19,7 +19,8 @@ class Haarenginefilmoptionen:
             'vorgabe': '',
             'hinweis': 'Die Bewegung, die auf das Rig gelegt wird — SMPL-X-Dateien aus VideoToBVH (Gelenke „Pelvis", '
             '„Left_hip" …; Finger werden nicht übertragen) oder eine BVH aus der Bibliothek. Die Bühne spielt sie live auf der '
-            'Figur ab. Leer = der Schritt „film" wird übersprungen.',
+            'Figur ab. Vorgabe: der Tanz der Bibliothek (Daz/Dance.bvh). Leer = der Schritt „film" wird '
+            'übersprungen.',
         },
         {
             'schluessel': 'bilder',
@@ -41,9 +42,23 @@ class Haarenginefilmoptionen:
         {'schluessel': 'hoehe', 'titel': 'Höhe (px)', 'art': 'zahl', 'vorgabe': 960, 'min': 64, 'max': 4096},
     ]
 
+    #: Die Standardbewegung (Edgar, 01.10.2026: „Standard Animation (dance)"), relativ zur BVH-Bibliothek.
+    TANZ = ('Daz', 'Dance.bvh')
+
+    @classmethod
+    def tanz(cls):
+        """Pfad der Standardbewegung, wenn es sie gibt — sonst '' (dann bleibt der Schritt „film" aus)."""
+        import os
+
+        from .bvhverzeichnis import Bvhverzeichnis
+        pfad = os.path.join(Bvhverzeichnis().wurzel(), *cls.TANZ)
+        return pfad if os.path.isfile(pfad) else ''
+
     @classmethod
     def vorgaben(cls):
-        return {e['schluessel']: e['vorgabe'] for e in cls.KATALOG}
+        aus = {e['schluessel']: e['vorgabe'] for e in cls.KATALOG}
+        aus['bvh'] = cls.tanz()
+        return aus
 
     @classmethod
     def katalog(cls):

@@ -66,13 +66,18 @@ class Kleidertanz:
         video = aus / 'film.mp4'
         schreiber = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*'mp4v'), bildrate, (int(breite), int(hoehe)))
         stand = {}
+        # Dieselben Bilder wie in der Runde (Fotoprojektion, Normalkarten) — bis 01.10.2026 tanzten die Teile flach in
+        # ihrer Mittelfarbe, ein fotoprojiziertes Shirt kam im Film hellrosa statt grau. Ein Paket je Teil für alle
+        # Bilder: gleiche Felder = gleiche Szene, Mitsuba tauscht dann nur die Punkte.
+        pakete = [Genesishaarrender.extra(t, kurven=False) for t in self.teile]
         try:
             for i, nummer in enumerate(nummern):
                 if fortschritt:
                     fortschritt('Film: Bild %d von %d' % (i + 1, anzahl))
                 punkte = self.bild(spuren, nummer)
                 pfad = aus / ('bild_%04d.png' % i)
-                render.bild_teile([(p, t['dreiecke'], t['farbe']) for p, t in zip(punkte, self.teile, strict=True)],
+                render.bild_teile([(p, t['dreiecke'], t['farbe'], e)
+                                   for p, t, e in zip(punkte, self.teile, pakete, strict=True)],
                                   0.0, pfad, groesse=(int(breite), int(hoehe)))
                 bgr = cv2.imread(str(pfad), cv2.IMREAD_UNCHANGED)
                 if bgr.shape[2] == 4:                       # Alpha auf Weiß

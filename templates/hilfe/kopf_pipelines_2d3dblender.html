@@ -1,0 +1,166 @@
+{% comment %}
+Abschnitt „Was 2D3D Kleider von Blender übernommen hat" der Hilfeseite 2D -> 3D (`kopf_pipelines.html`). Edgar (01.10.2026):
+„aktualisiere /hilfe/2d-3d/ mit allen Infos zu allen Features die im Moment von Blender übernommen wurden". Quellen: Konzept
+`Docu/konzepte/2026-09-30_2d3d-alles-per-python-blender-mechanismen-konzept.md`, `.claude/rules/ortsmorphe.md`,
+`.claude/rules/haarengine.md`; „Echter Lauf" = die Rezeptfunktion steht in den wirksamen Aufrufen der Aufträge
+„Edgar - TEST", „Edgar - Hoch", „2D3D Test - ki+backen" (gezählt am 01.10.2026, `rezept_nutzung.py`). „Probe 01.10." =
+`ProjektTemp/_wegwerf/ortsmorph/funktionen_messen.py` (Ergebnis `funktionen/ergebnis_*.json`, Ausgabe `funktionen_messen*.txt`):
+eine Rezeptzeile am Modell der letzten Runde von „2D3D Test - ki+backen" (Base Shirt, Base Shorts, Mavick Hair 576.309 Punkte),
+gebaut und Punkt für Punkt gegen den Ausgangsbau verglichen; Zeiten unter GPU-Last eines parallelen Laufs.
+{% endcomment %}
+<h3 id="blender-uebernommen">Was von Blender übernommen ist (Stand 01.10.2026, nachmittags)</h3>
+<p>
+  Edgars Frage vom 30.09.2026: „Kannst du ALLE fehlenden Funktionen von Blender übernehmen?" Jede Blender-Funktion, die für das
+  Anpassen an Fotos zählt, hat jetzt ein Gegenstück — als <strong>Rezeptfunktion</strong> (<code>m.&lt;funktion&gt;(…)</code>),
+  als <strong>fester Regler</strong> im UI oder als <strong>Werkzeug auf der Bühne</strong>. Gerechnet wird auf drei Wegen:
+</p>
+<ul>
+  <li><strong>Python</strong> — nachgebaut auf dem Daz-Käfig (NumPy); das Ergebnis ist fast immer ein eigener, linearer Morph
+  neben der Bibliothek, damit Auto-Fit, Haltung, Tanz und Fotoprojektion ihm folgen.</li>
+  <li><strong>Blender als Arbeiter</strong> — nur über <code>Haarengineblender</code> (ein Test hält andere Aufrufe fern),
+  Blender 5.2.2 ohne Fenster; 4–9 s Start je Lauf. Ergebnis zurück als Morph oder Strähnen-Rezept.</li>
+  <li><strong>Mitsuba 3</strong> — der Ersatz für Cycles: Pfadverfolgung auf der Grafikkarte, wählbar gegen pyrender unter
+  <a href="/settings/2d3dkleider/">Einstellungen → 2D3D Kleider</a> (Vorgabe Mitsuba).</li>
+</ul>
+<p>
+  Spalte „Stand": <em>echter Lauf</em> = in einer Runde an echten Fotos gelaufen; <em>Probe</em> = an einer echten Frisur oder einem
+  gebauten Modell gemessen, nicht in einer Runde. <em>Probe 01.10.</em> = eine Rezeptzeile am Modell der letzten Runde von
+  „2D3D Test – ki+backen" (Base Shirt, Base Shorts, Mavick Hair mit 576.309 Punkten), gebaut und Punkt für Punkt gegen den Bau ohne
+  diese Zeile verglichen: bewegte Punkte (&gt; 1 mm), größter Weg, Lage. Zeiten unter Last eines parallelen Laufs auf der Grafikkarte.
+  Jede Funktion der Tabelle ist damit mindestens einmal an echten Daten gemessen.
+  <em>Runde 01.10.</em> = eine echte Runde (Mitsuba, drei Fotos) am Testauftrag <code>_test_fixe</code> (Kopie von „2D3D Test –
+  ki+backen“), je Funktion eine Rezeptzeile; „±“ ist der Unterschied der Gesamtnote zur Leerrunde (0,9481, dasselbe Modell
+  ohne Änderung, Gesichtsmaße je Kopfstand einmal gemessen, Abschnitt unten), kleiner ist besser, Toleranz der
+  Rundenauswahl 0,002.
+</p>
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable kp-tabelle" id="kpBlenderUebernommen" data-sort-key="hilfe-2d3dkleider-blender">
+  <thead>
+    <tr>
+      <th>Bereich</th>
+      <th>Blender</th>
+      <th data-sort-aus="1">Bei uns</th>
+      <th>Wo</th>
+      <th data-sort-aus="1">Stand</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Form</td><td>Shape Keys</td><td><code>morph_neu</code>, <code>morph_wert</code> — eigene Morphe <code>eigen.&lt;name&gt;</code></td>
+      <td>Python</td><td>echter Lauf (1.027 Aufrufe von <code>morph_wert</code>)</td></tr>
+    <tr><td>Form</td><td>Lattice, Hook, Laplacian Deform, Warp</td><td>Ortsmorph <code>morph_ort</code>, <code>koerper_ort</code>; feste Regler
+      „Form (Ort)" je Stück, „Nachformung (Ort)" am Körper; freies Morph-Formular unter den Reglern</td><td>Python</td>
+      <td><code>morph_ort</code> echter Lauf (115 Aufrufe, Zellen-Automatik); Base Shirt „Links": 3.732 Punkte, 19 mm, erster Zug
+      0,42 s. <code>koerper_ort</code> Probe 01.10. (Bauch, 8 cm, × 1,5): 109 Körperpunkte bis 14,8 mm, alle vorn (±33°), das Shirt
+      folgt (228 Punkte bis 15,1 mm)</td></tr>
+    <tr><td>Form</td><td>Shrinkwrap (Ziel: Netz)</td><td><code>kleid_huelle</code>, <code>koerper_huelle</code> gegen den
+      Sichtkörper der Fotos</td><td>Python</td><td><code>kleid_huelle</code> echter Lauf (3×). <code>koerper_huelle</code> Probe 01.10.
+      (Stärke 0,5): 9.281 von 27.087 Körperpunkten bis 74,5 mm (Mittel 19 mm), 2,4 s; Shorts und Haar folgen (bis 97 / 45 mm).
+      Runde 01.10. (Rumpf 0,55–0,72): −0,0024, übernommen; die Automatik schreibt sie, wenn ein Körperregler am Anschlag steht</td></tr>
+    <tr><td>Form</td><td>Wave, Displace</td><td><code>kleid_welle</code>, Ort <code>welle</code></td><td>Python</td><td>Probe 01.10.
+      (Base Shirt, Band 0,2–0,6, Wellenlänge 5 cm, Tiefe 1 cm): 5.005 Punkte bis 10 mm, 0,3 s; die Shorts darunter weichen mit aus
+      (4.297 Punkte, bis 14 mm). Runde 01.10. (Saum, 6 cm, 0,6 cm tief): +0,0005, neutral — die Automatik schreibt sie nicht</td></tr>
+    <tr><td>Form</td><td>Cloth (Collision, Pressure)</td><td><code>kleid_drapieren</code> — Newton/Style3D auf der GPU (Vorgabe) oder
+      Blender Cloth mit Druck</td><td>Python (GPU) · Blender</td><td>echter Lauf (2×); Base Shirt 24 Bilder: Saum 22 mm gefallen,
+      142 s mit erster Kernelübersetzung</td></tr>
+    <tr><td>Form</td><td>Sculpt (Draw, Inflate, Smooth, Flatten, Grab)</td><td>Knopf „Formen" auf der Bühne: Ziehen, Drücken, Aufblasen,
+      Glätten, Flach, Greifen → eigener Morph; über den Körper der Runde auf die Grundfigur übertragen</td><td>Python</td>
+      <td>echter Lauf (Mauszüge, 01.10.): Formung 2,5–2,7 mm neben dem Strich, Korrektur durch den Anker bis 39 mm</td></tr>
+    <tr><td>Form</td><td>Armature / Pose</td><td><code>haltung</code>, <code>haltung_gelenk</code> — die Haltung der Fotos (MediaPipe:
+      Oberarm zur Seite, Ellbogen); gebaut wird in der A-Pose (GLB, Bühne), Render, Note, Befund und Fotoprojektion häuten alle Teile
+      in die Haltung</td>
+      <td>Python</td><td>Runde 01.10. (Automatik aus den Fotos: Arme 28,3° gesenkt, Unterarme ±6°): Umriss-IoU vorn 0,587 → 0,746,
+      hinten 0,566 → 0,619, Seite 0,782 → 0,820, Fotonote 0,610 → 0,537; gehäutet gegen gebacken 0,00 mm im Mittel</td></tr>
+    <tr><td>Haar</td><td>Trim, Clump, Noise, Straighten, Displace (Hair Nodes)</td><td><code>haar_trim</code>, <code>haar_clump</code>,
+      <code>haar_noise</code>, <code>haar_straighten</code>, <code>haar_biegen</code>, <code>haar_anlegen</code> mit Ortsgewicht;
+      feste Regler „Operationen" je Frisur</td><td>Python (auch Kartenhaar)</td><td><code>haar_anlegen</code> echter Lauf (16×).
+      Probe 01.10. am Mavick Hair: Trim 0,5 im Band 0–0,5 337.085 Punkte bis 35 mm (2,4 s); Noise 40.692 bis 8,7 mm; Straighten
+      34.831 bis 13,9 mm; Biegen vorn 3 cm 47.501 bis 34 mm, nur −32…37°; Clump 0,5 nur 919 Punkte bis 2 mm (wirkt unter der
+      Nackenlinie, Mavick ist kurz), 1,6 s — vor dem 01.10. hing Clump an großem Haar über 20 Minuten (behoben).
+      Runde 01.10.: Trim im Nacken −0,0031 (übernommen; die Automatik schreibt ihn, wo das Haar unten über das Netz ragt),
+      Biegen übernommen, Clump ±0,0000, Noise −0,0001, Straighten −0,0003 — am kurzen Mavick im Bild kaum zu sehen</td></tr>
+    <tr><td>Haar</td><td>Curl, Braid</td><td><code>haar_curl</code>, <code>haar_braid</code></td><td>Python (auch Kartenhaar)</td>
+      <td>Probe 01.10. am Mavick Hair: Curl 2 cm, 8 Windungen/m 43.751 Punkte bis 26,7 mm; Braid hinten 37.435 bis 40,8 mm;
+      je 0,9–1,4 s. Runde 01.10.: Curl +0,0001, Braid −0,0006 — neutral</td></tr>
+    <tr><td>Haar</td><td>alle 26 Hair-Node-Gruppen (auch Frizz, Roll, Smooth, Rotate, Blend)</td><td><code>haar_knoten(sorte, knoten,
+      werte, ort)</code> auf Stranghaar, Ortsgewicht je Punkt</td><td>Blender</td><td>Probe: Pixie 236.136 Punkte, 2,4 s in Blender,
+      6 s mit Start. Runde 01.10. (Pixie mit Profil, Zwischen- und Zusatzsträhnen, Frizz): fehlerfrei, 93 s; die Note +0,12 —
+      die Frisur passt nicht zu den Fotos (Wechsel von Mavick), nicht die Knoten</td></tr>
+    <tr><td>Haar</td><td>Attach / Shrinkwrap an die Kopfhaut</td><td><code>haar_knoten('attach'|'shrinkwrap', …)</code> — Kopfhaut =
+      Daz-Haarkappe oder der Kopf der Grundfigur mit Genesis-UV</td><td>Blender</td><td>Probe: Wurzeln im Mittel 1,14 mm (Pixie) /
+      1,46 mm (Hime Cut) bewegt</td></tr>
+    <tr><td>Haar</td><td>Duplicate, Interpolate, Generate</td><td><code>haar_duplizieren</code>, <code>haar_interpolieren</code> (Python);
+      dieselben Knoten über <code>haar_knoten</code>; neue Strähnen als Rezept aus vorhandenen Punkten (Regler
+      <code>str.&lt;name&gt;</code>)</td><td>Python · Blender</td><td>Probe: Interpolate 5.351 / 1.083, Generate 10.915 / 1.151 Strähnen
+      (Pixie / Hime Cut); Duplicate 43.510 Strähnen 8,8 s</td></tr>
+    <tr><td>Haar</td><td>Set Hair Curve Profile</td><td><code>haar_profil</code> — Stranghaar als Bänder (Dicke Wurzel → Spitze)</td>
+      <td>Python</td><td>Probe: 1,23 Mio. Punkte in 0,5 s</td></tr>
+    <tr><td>Textur</td><td>Project Image (Kamera aufs Objekt)</td><td><code>kleid_fototextur</code>, <code>haar_fototextur</code> —
+      Fotofarbe je Texel unter der Teilmaske, Lücken per Push-Pull</td><td>Python + Renderer</td><td><code>kleid_fototextur</code>
+      echter Lauf: Shirt 97,9 % der Texel, 13 s. <code>haar_fototextur</code> Probe 01.10. (Mitsuba, drei Fotos): Mavick Hair fünf
+      Gruppen à 1024², 60 s; jeder Texel liegt in der Haarmaske mindestens einer Ansicht. Runde 01.10.: Schicht je Auftrag
+      (<code>foto_j20261001140848</code>), 143 s; die Automatik schreibt sie nach drei Runden ohne Änderung des Haarabstands</td></tr>
+    <tr><td>Textur</td><td>Texture Paint (mit Maske)</td><td><code>kleid_decal</code> (Farbe an einem Ort); Knopf „Malen" auf der Bühne
+      → Decal-Schicht</td><td>Python</td><td><code>kleid_decal</code> echter Lauf (2×); Malen Probe: 20 Striche 0,05 s</td></tr>
+    <tr><td>Textur</td><td>Multires + Bake (Normalkarte)</td><td><code>kleid_falten</code> (prozedural), <code>kleid_falten_backen</code>
+      (aus der Drapierung)</td><td>Python</td><td><code>kleid_falten</code> echter Lauf (1×); Backen Probe: Base Shirt 2,6 s</td></tr>
+    <tr><td>Render</td><td>Cycles</td><td>Mitsuba 3 (CUDA/OptiX): Bild, Kennbild, Kopf, Film — die Vorgabe; pyrender nur als
+      wählbarer Rückfall, jetzt auch mit Normalkarten</td><td>Mitsuba</td>
+      <td>echter Lauf: Runde 72 s (pyrender 62 s), Note 1,725 (pyrender 1,820); Film 0,46–0,55 s je Bild. Haartönung: Mitsuba rechnet
+      die Mehrfachstreuung zwischen den Haarkarten — Mavick mit Daz-Bild 131/109/84 gegen 152/140/124 unter pyrender, mit der
+      Schicht <code>grau</code> 161 gegen 155</td></tr>
+    <tr><td>Foto</td><td>fSpy (Kamera aus dem Foto)</td><td>Blickwinkel aus der Pose (Schulter- und Hüftlinie, Gesicht = vorn)</td>
+      <td>Python (MediaPipe in python10)</td><td>echte Fotos: vorne −6°, hinten −173°, Seite −78°</td></tr>
+    <tr><td>Foto</td><td>KeenTools FaceBuilder</td><td>Gesichtsmaße Foto gegen Kopf-Render, sieben Maße → Kopfregler</td>
+      <td>Python + Renderer</td><td>echter Lauf: Augenabstand 1,07 → 1,01; Mund 1,13 und Kinn 1,11 bleiben über den Reglern</td></tr>
+    <tr><td>Kleid</td><td>Garment Tool (Schnitt → Simulation)</td><td><code>kleid_schnitt</code> — GarmentCode-Schnitt als neues
+      Genesis-Stück</td><td>Python (GarmentCode)</td><td>Probe 01.10. (Schnitt „Shorts"): neues Stück mit 5.789 Punkten, angezogen
+      über den Base Shorts (0,64–1,07 m); Schnitt + Simulation 38 s, Bau danach 130 s. Runde 01.10.: fehlerfrei, 163 s; zweite Shorts über
+      den Base Shorts (auf dem Pixie-Stand der Runde davor): +0,10, verworfen — ein Stück für den Wechsel, die Automatik schreibt
+      es nicht</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h4>Was Blender nicht hat — und deshalb unser Code ist</h4>
+<p>
+  Nichts in Blender passt ein Modell an Fotos an. Der eigentliche Fit ist eigener Code: der <strong>Sichtkörper</strong> aus den
+  Silhouetten (Ziel für die Hülle), <strong>Ringmaße relativ zum Körper</strong> (<code>kleid_ring</code>: „Weite × Hüftring" kennt
+  Blender nicht; Probe 01.10.: Base Shirt auf Höhe 0,05 × 1,3 — 1.522 Punkte bis 39,6 mm, 0,3 s; Runde 01.10.: Bund der Shorts
+  +0,0004, neutral; die Automatik schreibt ihn, wenn die Hälfte der Zellen eines Bands am Anschlag steht), der <strong>Befund</strong> je Band
+  und Sektor, die <strong>Noten</strong> gegen Fotos und Netz, die <strong>Automatik</strong> (<code>2d3DIterationen</code>) und das
+  <strong>Rezept</strong> als nachlesbarer Text. Ebenso die <strong>Mischung nach Ort</strong> (<code>haar_anteil(…, ort)</code>:
+  Strähnen einer Sorte nur in einem Sektor) — eine Auswahl von Inseln, keine Verformung; Probe 01.10.: Kin Hair 30 % vorn (±60°) auf
+  dem Mavick Hair — 43.225 Kin-Punkte, 90 % davon zwischen −71° und 82°, Mavick gibt 23 % seiner Punkte ab, Bau 54 s.
+</p>
+
+<div class="info-box info-box-orange">
+  <strong>Noch nicht übernommen oder nur halb</strong> — die Namen sagen, wo eine Funktion wirkt: <code>kleid_*</code> am
+  Kleidungsstück, <code>koerper_*</code>/<code>haltung*</code> an der Figur, <code>haar_*</code> an der Frisur.
+  <ul>
+    <li><strong>Kleid:</strong> <code>kleid_decal</code> malt eine Farbe, kein Bild. Blenders Druck (Pressure) hat nur der
+    Blender-Weg des Drapierens, nicht Newton. <code>kleid_welle</code> und <code>kleid_schnitt</code> laufen in Runden, die Automatik
+    schreibt sie nicht (keine Messung sagt, wann eine Welle oder ein neuer Schnitt fehlt).</li>
+    <li><strong>Haar:</strong> Frizz, Roll und Smooth gibt es nur über <code>haar_knoten</code>, also nur auf Stranghaar (Kartenhaar
+    ist kein Curves-Objekt); „Strähnen einer Insel aus-/einblenden" nur als <code>haar_anteil</code> mit Ort. Clump, Noise,
+    Straighten, Curl, Braid und die Blender-Knoten schreibt die Automatik nicht — am Testauftrag lagen sie alle unter der Toleranz.</li>
+    <li><strong>Pose:</strong> Die Haltung kommt aus den Fotos (Oberarm, Ellbogen); Hände, Beine und Kopf bleiben in der A-Pose.
+    Die Umriss-IoU von vorn bleibt deshalb unter 0,75.</li>
+  </ul>
+</div>
+
+<h4>Seit 01.10.2026, nachmittags: was „Fixe alles" geändert hat</h4>
+<ul>
+  <li><strong>Haltung der Fotos:</strong> Render, Note, Befund und Fotoprojektion häuten Körper, Kleider, Haar und Strähnen in
+  die Haltung (<code>G9haltungshaut</code>); gebaut und angezeigt wird weiter die A-Pose.</li>
+  <li><strong>Ablagen je Auftrag:</strong> Fotoschicht, Hülle, Drapierung, Decal und Körperhülle tragen das Kürzel des Auftrags
+  (<code>foto_j20261001140848</code>) — zwei Aufträge mit demselben Stück überschreiben sich nicht mehr.</li>
+  <li><strong>Runden-GLB mit Rig:</strong> ein Skin mit 138 Knochen, alle Netze gehäutet (Gewichte als Bytes, 36 MB). Im Chrome:
+  Oberarm gedreht → Körper bis 326 mm, Shirt und Ärmel bis 78 mm, Shorts und Haar bleiben.</li>
+  <li><strong>pyrender</strong> bekommt die Normalkarten mit (DirectX-Karten mit gespiegeltem Grün).</li>
+  <li><strong>Gesichtsmaße je Kopfstand einmal:</strong> derselbe Kopf-Render gab bei gleichem Modell 0,9365 und 0,9383, ein im Bild
+  unsichtbarer Clump +0,013 — mehr als die Toleranz von 0,002; die Rundenauswahl verwarf nach Rauschen. Jetzt misst
+  <code>Gesichtsmasse</code> einen Kopfstand (Stirn bis Kinn des Körpers) einmal über vier Saaten (Median) und legt ihn ab
+  (<code>gesicht_vorrat.json</code>); Leerrunden danach bitgleich. Eine beste Runde aus der alten Messung wird einmal umgerechnet.</li>
+  <li><strong>Farbschritt nur auf demselben Renderer:</strong> der Befund merkt sich den Renderer; ein pyrender-Befund stellt
+  keine Tönung für eine Mitsuba-Runde (am Testauftrag lief Runde 41 so von Render 0,64 auf 0,27 bei Foto 0,44).</li>
+</ul>

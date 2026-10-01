@@ -1,0 +1,39 @@
+{% comment %}Hilfe → 2D -> 3D, Abschnitt „2D3D Kleider": vom Foto zum Modell ohne Korrektur von Hand (01.10.2026, nachmittags).
+Eingebunden in kopf_pipelines.html direkt nach kopf_pipelines_2d3dkleider.html.{% endcomment %}
+<h3 class="mt-4">Vom Foto zum Modell ohne Korrektur von Hand (01.10.2026, nachmittags)</h3>
+<p>Edgar zu „2D3D Test - ki+backen" nach 40 Runden: „kaputte Beine, kaputte Textur, Farbe T-Shirt und Haar kaputt". Die Ursachen
+  waren nicht die Regeln allein, sondern dass keine Regel ihre Messung prüfte und jede Runde übernommen wurde, auch eine schlechtere:
+  Die Körperregel maß die Beine aus der Lücke zwischen ihnen (−133 mm gemeldet, nur 37 % der Körperpunkte lagen im Umriss der Fotos)
+  und schob Waden und Oberschenkel 40 Runden lang an den Anschlag; das schwarze Daz-Shirt (Texturmittel 0,067) ließ sich durch Tönen
+  nie aufhellen; und das Seitenfoto zeigt ein anderes Shirt und lila Shorts. Seither sechs Bausteine:</p>
+<table class="db-tabelle">
+  <thead><tr><th>Baustein</th><th>Was er tut</th><th>Gemessen</th></tr></thead>
+  <tbody>
+    <tr><td>Fotoprüfung<br><code>mesh_fotopruefung</code></td>
+      <td>Vor TRELLIS: Farbton und Helligkeit je Band (Rumpf, Hüfte) aller Ganzkörperfotos; ein Foto, das der Mehrheit
+        widerspricht, fällt heraus — auch aus der Note der Runden. Licht ändert die Helligkeit, kaum den Ton.</td>
+      <td>Seitenfoto Abstand 3,6, vorn gegen hinten 0,48 (Grenze 1,0); im Testlauf vor dem Netz ausgelassen</td></tr>
+    <tr><td>Gesamtnote<br><code>Gesamtnote</code></td>
+      <td>Fotonote (1 − IoU + Farbe) + Farbfehler je Kleidungs- und Haarteil + Gesichtsabweichung — ohne Netznote</td>
+      <td>Körper in jeder Runde 87,9 mm neben dem Netz (Pose); ohne Netzanteil liegt die kurze Frisur (0,840) vor der langen (0,875)</td></tr>
+    <tr><td>Rundenauswahl<br><code>Rundenauswahl</code></td>
+      <td>Besser → beste Runde; ein Umbau (anziehen, Frisur, umfärben, Fotoprojektion) darf drei Runden auf Probe laufen; sonst
+        verworfen, die Zeilen für diese Lage gesperrt. Bleibt nichts, endet der Lauf. Der Stand ist die BESTE Runde.</td>
+      <td>an Kunstdaten; der Testlauf zeigt es an echten Fotos</td></tr>
+    <tr><td>Messprüfung<br><code>Messpruefung</code></td>
+      <td>Je Runde: Sichtkörper aus den eigenen Renders muss den Körper enthalten (≥ 0,95, Selbsttest von Renderer und
+        Normierung), Sichtkörper der Fotos den Rumpf (≥ 0,8) — sonst ruhen die Regeln auf dem Umriss</td>
+      <td><code>.51</code>: 0,985 / 0,946</td></tr>
+    <tr><td>Form nur im Schritt „Körper"</td>
+      <td>Option „Körper- und Gesichtsform in den Runden" (Vorgabe aus); wenn an, mit Breitenmessung je Bildzeile und Rückschritt
+        (<code>Reglerpruefung</code>), wenn ein Schritt nicht hilft</td>
+      <td>Beinregler 0: −2,4 mm je Seite gegen die Fotos</td></tr>
+    <tr><td>Prüfreihe<br><code>manage.py haarengine_pruefreihe</code></td>
+      <td>Feste Aufträge mit Sollbereichen (<code>core/daten/haarenginepruefreihe.json</code>); ohne <code>--starten</code>
+        nur Lesen, mit — auf Ansage — über die Server-API neu rechnen</td>
+      <td>Sekunden ohne Grafikkarte</td></tr>
+  </tbody>
+</table>
+<p>Dazu: Umfärben (Schicht <code>grau</code>, <code>kleid_umfaerben</code>/<code>haar_umfaerben</code>, von der Farbregel
+  selbst ausgelöst, wenn keine Tönung die Fotofarbe trifft) und der Tonangleich der Hautkacheln beim Backen (die Daz-Füllung
+  übernimmt den Ton der Netztexel; bläuliche Texel — Socken — fallen außer am Kopf weg).</p>

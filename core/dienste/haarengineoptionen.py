@@ -31,13 +31,17 @@ class Haarengineoptionen:
         'figur': ('basis', 'modell'),
         # `textur` seit 30.09.2026 sichtbar: „fotos_ki" legte bei „schnell" Fotoränder auf Arme und Beine, „ki" (die
         # PBR-Textur von TRELLIS.2, wie im Mesh-Auftrag 2026.09.29.00.09.00) war sauber — Edgar: „bessere Textur".
-        'netz': ('formmodell', 'aufloesung', 'textur', 'freistellen', 'licht'),
+        'netz': ('formmodell', 'aufloesung', 'textur', 'freistellen', 'licht', 'flaechen'),
         'koerper': None,
         'iterationen': None,
         'film': None,
     }
     #: Vorgaben, die hier von der Vorlage abweichen.
-    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'netz': {}, 'koerper': {}, 'iterationen': {}, 'film': {}}
+    #: `netz.flaechen` 100.000 (01.10.2026): Mit 500.000 baute TRELLIS.2 senkrechte Fäden („Eiszapfen", Edgar) über die
+    #: ganze Netzhöhe — Testauftrag 2026.10.01.12.38.09: 102.448 von 461.656 Flächen (`Meshzapfen`); der Mesh-Auftrag
+    #: 2026.09.29.00.09.00 mit 100.000: 8 von 96.598. Haar- und Kleidungsteilung stolperten über die Fäden.
+    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'netz': {'flaechen': '100000'}, 'koerper': {}, 'iterationen': {},
+                    'film': {}}
     PRUEFER = (
         ('figur', Meshfiguroptionen),
         ('netz', Meshoptionen),

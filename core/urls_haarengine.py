@@ -14,6 +14,7 @@ Der Konverter `<kennung:…>` ist in `core/urls.py` registriert; diese Liste wir
 from django.urls import path
 
 from .api.haarengine import Haarengineendpunkte
+from .api.haarengineanimexport import Haarengineanimexportendpunkte
 from .api.haarenginebegutachtung import Haarenginebegutachtungsendpunkte
 from .api.haarenginedashboard import Haarenginedashboard
 from .api.haarengineeinstellungen import Haarengineeinstellungen
@@ -87,6 +88,12 @@ HAARENGINE = [
         'api/haarengine/funktionen/',
         Haarenginebegutachtungsendpunkte.funktionen,
         name='haarengine_funktionen',
+    ),
+    # Modell der besten Runde mit der Bewegung als GLB + Blender (`core/api/haarengineanimexport.py`, 01.10.2026)
+    path(
+        'api/haarengine/<uuid:job_id>/animexport/',
+        Haarengineanimexportendpunkte.exportieren,
+        name='haarengine_animexport',
     ),
     # Von Hand auf das Modell der Runde malen (`core/api/haarenginemalen.py`, 01.10.2026)
     path(

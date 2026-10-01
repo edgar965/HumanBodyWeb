@@ -200,9 +200,13 @@ class Haarengineendpunkte:
         rumpf = Haarengineendpunkte.rumpf(request)
         ab = rumpf.get('ab') if rumpf.get('ab') in Haarengineendpunkte.SCHRITTE else None
         bis = rumpf.get('bis') if rumpf.get('bis') in Haarengineendpunkte.SCHRITTE else None
+        # Wie `Haarenginelauf.ausfuehren`: die Grundfigur braucht erst, wer NACH „grundfigur" beginnt — „koerper"
+        # und „grundfigur" bauen sie ja erst (vorher verlangte die API sie für alles außer „netz").
+        schritte = Haarengineendpunkte.SCHRITTE
         if (
             ab
-            and ab != Haarengineendpunkte.SCHRITTE[0]
+            and 'grundfigur' in schritte
+            and schritte.index(ab) > schritte.index('grundfigur')
             and not Haarengineablage(job.kennung).arbeit('grundkoerper.glb').is_file()
         ):
             return JsonResponse(

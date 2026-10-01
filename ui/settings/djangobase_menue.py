@@ -80,6 +80,9 @@ EINSTELLUNGEN_EXTRA = [
     {'label': 'BVH Studio', 'url': '/settings/studio/', 'icon': 'bi-scissors'},
     {'label': 'Effekte', 'url': '/settings/effekte/', 'icon': 'bi-wind'},
     {'label': 'Kleider', 'url': '/settings/kleider/', 'icon': 'bi-bag'},
+    # Renderer der Aufträge von 2D3D Kleider (Edgar, 01.10.2026: „mach eine Einstellung auf einer neuen Seite
+    # 2d3dKleider wo man beide auswählen kann, default mitsuba").
+    {'label': '2D3D Kleider', 'url': '/settings/2d3dkleider/', 'icon': 'bi-brush'},
 ]
 
 

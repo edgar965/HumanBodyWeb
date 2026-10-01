@@ -13,14 +13,14 @@ import { Meshfigurschalter } from './meshfigurschalter.js';
  * Stufe nach) mit den gestellten Reglern samt Eigenmorph und den gebackenen Kacheln als Albedo
  * (`fototextur`, derselbe Weg wie ein gespeichertes Modell in der Szene). Die Netze lädt
  * `Meshfigurnetze` in der Lage der Erkennung (Y oben, Blick +Z, Füße auf 0, ggf. auf die
- * Körpergröße gestreckt) — „Nebeneinander" rückt sie um `ABSTAND` nach rechts.
+ * Körpergröße gestreckt) und IMMER um `ABSTAND` nach links gerückt (die Grundfigur von „2D3D Kleider" steht rechts).
  *
  * Was davon zu sehen ist, schalten die Kästchen über der Ansicht einzeln (`Meshfigurschalter`):
  * Mesh · Haare · Kleider · Nebeneinander · 3DModell.
  */
 export class Meshfigurbuehne {
 
-    /** Seitlicher Versatz des Netzes bei „Nebeneinander" (Edgar: „um ca. 1,5 m verschoben"). */
+    /** Seitlicher Versatz des Netzes, immer nach links (Edgar: „um ca. 1,5 m verschoben"). */
     static ABSTAND = 1.5;
 
     constructor(seite) {
@@ -92,8 +92,8 @@ export class Meshfigurbuehne {
             queueMicrotask(() => { this._holt = false; this.zeigen(this._letzter); });
         }
         this.netze.sichtbar(an.mesh);
-        this.netze.verschieben(an.nebeneinander ? Meshfigurbuehne.ABSTAND : 0);
-        this.steuerung.target.x = an.nebeneinander ? Meshfigurbuehne.ABSTAND / 2 : 0;
+        // Das Netz steht IMMER `ABSTAND` links neben der Figur, nie in ihr (Edgar, 01.10.2026: „das hatten wir schon 10 Mal").
+        this.netze.verschieben(-Meshfigurbuehne.ABSTAND);
         this._haarUndKleider();
     }
 

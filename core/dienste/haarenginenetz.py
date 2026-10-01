@@ -43,6 +43,7 @@ class Haarenginenetz:
         self.ablage = lauf.ablage
         self.optionen = Haarengineoptionen.netz(self.job.optionen)
         self._ergebnis = None
+        self._fotopruefung = None
 
     def ausfuehren(self):
         auftrag = self.ablage.netz_arbeit('auftrag.json')
@@ -86,7 +87,8 @@ class Haarenginenetz:
             'kennung': job.kennung,
             'name': job.name,
             'ab': None,
-            'optionen': self.optionen,
+            # Fotos mit anderer Kleidung fallen vor der Form heraus (`mesh_fotopruefung`, 01.10.2026).
+            'optionen': dict(self.optionen, fotopruefung='an'),
             'bilder': bilder,
             'ordner': {
                 'vorbereitet': str(self.ablage.unter(Haarengineablage.VORBEREITET)),
@@ -132,6 +134,11 @@ class Haarenginenetz:
             self.lauf.melden(wert / 100.0, teile[1] if len(teile) > 1 else '')
         elif zeile.startswith('[bild] '):
             self._bild(zeile[len('[bild] '):])
+        elif zeile.startswith('[fotopruefung] '):
+            try:
+                self._fotopruefung = json.loads(zeile[len('[fotopruefung] '):])
+            except ValueError:
+                logger.error('2D3D Kleider %s: Fotoprüfung nicht lesbar: %.200s', self.job.kennung, zeile)
         elif zeile.startswith('[ergebnis] '):
             try:
                 self._ergebnis = json.loads(zeile[len('[ergebnis] '):])
@@ -170,6 +177,8 @@ class Haarenginenetz:
             dateien['icon'] = icon
         ergebnis['dateien'] = dateien
         job.ergebnis = {**(job.ergebnis or {}), 'netz': ergebnis}
+        if self._fotopruefung is not None:
+            job.ergebnis['fotopruefung'] = self._fotopruefung
         stat = glb.stat()
         job.eingang = {'datei': glb.name, 'original': glb.name, 'bytes': stat.st_size, 'ursprung': str(glb),
                        'stand': [stat.st_mtime_ns, stat.st_size]}

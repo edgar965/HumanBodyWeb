@@ -47,8 +47,7 @@ class MitsubaAbgleichTest(TestCase):
         shutil.rmtree(self.ordner, ignore_errors=True)
 
     def _maske(self, motor, winkel, kennung=False, teile=None):
-        r = Genesishaarrender(None)
-        r.MOTOR = motor
+        r = Genesishaarrender(None, motor=motor)
         pfad = self.ordner / ('%s_%d.png' % (motor, winkel))
         r.bild_teile(teile or [(self.p, self.d, (0.8, 0.7, 0.6))], winkel, pfad, groesse=(256, 384), kennung=kennung)
         r.schliessen()
@@ -72,12 +71,12 @@ class MitsubaAbgleichTest(TestCase):
         self.assertEqual(set(np.unique(bild[..., 3]).tolist()), {0, 255})
 
     def test_punktetausch_gleich_neubau(self):
-        r = Genesishaarrender(None)
+        r = Genesishaarrender(None, motor='mitsuba')
         verschoben = self.p + np.array([0.05, 0.0, 0.0])
         r.bild_teile([(self.p, self.d, (0.8, 0.7, 0.6))], 0, self.ordner / 'a.png', groesse=(256, 384))
         r.bild_teile([(verschoben, self.d, (0.8, 0.7, 0.6))], 0, self.ordner / 'b.png', groesse=(256, 384))
         r.schliessen()
-        neu = Genesishaarrender(None)
+        neu = Genesishaarrender(None, motor='mitsuba')
         neu.bild_teile([(verschoben, self.d, (0.8, 0.7, 0.6))], 0, self.ordner / 'c.png', groesse=(256, 384))
         neu.schliessen()
         with Image.open(self.ordner / 'b.png') as b, Image.open(self.ordner / 'c.png') as c:

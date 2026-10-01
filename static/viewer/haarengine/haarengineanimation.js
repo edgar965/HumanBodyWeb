@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Clipanimation } from '../studio/clipanimation.js';
+import { Haarengineanimationsbedienung } from './haarengineanimationsbedienung.js';
 
 /**
  * Haarengineanimation — die retargetete BVH-Bewegung LIVE auf dem Genesis-9-Modell der Bühne abspielen.
@@ -36,20 +37,8 @@ export class Haarengineanimation {
         this.bildfeld = document.getElementById('anim-bild');
         this.bilder = 0;
         this._uhr = new THREE.Clock();
-        this.binden();
+        this.bedienung = new Haarengineanimationsbedienung(this);     // Knöpfe und Tasten
         this._takt();
-    }
-
-    binden() {
-        document.getElementById('anim-play').addEventListener('click', () => this.umschalten());
-        document.getElementById('anim-zurueck').addEventListener('click', () => this.bild(-1));
-        document.getElementById('anim-vor').addEventListener('click', () => this.bild(1));
-        this.scrubber.addEventListener('input', () => this.gezogen());
-        this.scrubber.addEventListener('mousedown', () => { this._ziehen = true; });
-        this.scrubber.addEventListener('touchstart', () => { this._ziehen = true; }, { passive: true });
-        const loslassen = () => { this._ziehen = false; };
-        this.scrubber.addEventListener('mouseup', loslassen);
-        this.scrubber.addEventListener('touchend', loslassen);
     }
 
     /** Vom Seitentakt (alle 2 s) gerufen — merkt sich nur den Zustand, das eigentliche Prüfen macht
@@ -98,12 +87,12 @@ export class Haarengineanimation {
         this.ziel = modell.group;
         this.action = this.mixer.clipAction(clip);
         this.action.setLoop(THREE.LoopRepeat);
-        this.action.play();
-        this.action.paused = true;
+        // NICHT abspielen und kein `mixer.update(0)`: Bild 0 der Bewegung läge sonst sofort auf dem Skelett, und die Figur
+        // stünde nach dem Laden verdreht statt in der Ruhehaltung (Edgar, 01.10.2026: „Grundhaltung … verdreht").
+        this._ruhe = modell.skelett.skeleton;
         this.dauer = clip.duration;
         this.fps = daten.duration ? daten.frame_count / daten.duration : 30;
         this.bilder = daten.frame_count;
-        this.mixer.update(0);
         this.knopf(false);
         this.fortschritt();
     }
@@ -128,10 +117,37 @@ export class Haarengineanimation {
 
     // -------------------------------------------------------------- Bedienung
 
+    /** Die Aktion aktiv machen (nach dem Laden und nach „Stopp" läuft sie nicht) — pausiert, an der Stelle `zeit`. */
+    _aktiv(zeit = null) {
+        if (!this.action.isScheduled()) { this.action.reset(); this.action.play(); this.action.paused = true; }
+        if (zeit !== null) this.action.time = Math.min(Math.max(zeit, 0), this.dauer || 0);
+        this.mixer.update(0);
+    }
+
     umschalten() {
         if (!this.action) return;
-        this.action.paused = !this.action.paused;
-        this.knopf(!this.action.paused);
+        const lief = this.action.isScheduled() && !this.action.paused;
+        this._aktiv();
+        this.action.paused = lief;
+        this.knopf(!lief);
+    }
+
+    /** Stopp: Bewegung aus, zurück an den Anfang, die Figur wieder in der Ruhehaltung (A-Pose). */
+    stoppen() {
+        if (!this.action) return;
+        this.action.stop();
+        this._ruhe?.pose();
+        this.knopf(false);
+        this.fortschritt();
+    }
+
+    /** An den Anfang (`ende` false) oder ans letzte Bild — pausiert. */
+    springen(ende) {
+        if (!this.action) return;
+        this._aktiv(ende ? this.dauer - 1 / this.fps : 0);
+        this.action.paused = true;
+        this.knopf(false);
+        this.fortschritt();
     }
 
     knopf(spielt) {
@@ -142,18 +158,16 @@ export class Haarengineanimation {
     /** Ein Bild vor (`richtung` 1) oder zurück (-1) — pausiert, aus der Bildrate der Bewegung. */
     bild(richtung) {
         if (!this.action) return;
+        const laeuft = this.action.isScheduled();
+        this._aktiv(laeuft ? this.action.time + richtung / this.fps : Math.max(0, (richtung - 1) / this.fps));
         this.action.paused = true;
         this.knopf(false);
-        const ziel = this.action.time + richtung / this.fps;
-        this.action.time = Math.min(Math.max(ziel, 0), this.dauer || ziel);
-        this.mixer.update(0);
         this.fortschritt();
     }
 
     gezogen() {
         if (!this.action || !this.dauer) return;
-        this.action.time = (Number(this.scrubber.value) / 1000) * this.dauer;
-        this.mixer.update(0);
+        this._aktiv((Number(this.scrubber.value) / 1000) * this.dauer);
         this.fortschritt();
     }
 
