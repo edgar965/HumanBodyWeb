@@ -27,9 +27,15 @@ export class Meshoptionenformular {
         const klappe = document.createElement('details');
         klappe.className = 'mesh-feineinstellungen';
         const titel = document.createElement('summary');
-        titel.textContent = 'Feineinstellungen der Modelle';
+        // `fein_titel` (02.10.2026): die Gruppe „Mesh" der Haar Engine nennt ihren Bereich wie der TRELLIS.2-Space.
+        titel.textContent = katalog.fein_titel || 'Feineinstellungen der Modelle';
         klappe.appendChild(titel);
-        for (const feld of fein) klappe.appendChild(Meshoptionenformular._zeile(feld, werte));
+        // Die Felder in EINEM Behälter: Ein Raster auf dem `<details>` selbst greift in Chrome nicht (der Inhalt liegt in
+        // `::details-content`) — so kann eine Seite sie mit `.mesh-fein-felder` anordnen; ohne Regel bleibt es wie vorher.
+        const felder = document.createElement('div');
+        felder.className = 'mesh-fein-felder';
+        for (const feld of fein) felder.appendChild(Meshoptionenformular._zeile(feld, werte));
+        klappe.appendChild(felder);
         behaelter.appendChild(klappe);
     }
 

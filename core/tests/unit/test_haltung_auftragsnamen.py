@@ -23,6 +23,7 @@ den Körperrahmen weglassen (Bild-x statt Hüftlinie) → Fall 2 (Seite) rot; in
 entfernen → Fall 5 (nicht am Deckel) rot; `auftragsname` ohne `endswith`-Wächter → Fall 4 (doppelt) rot.
 """
 import math
+from unittest import mock
 
 import numpy as np
 from django.test import SimpleTestCase
@@ -190,9 +191,11 @@ class HaarRegelnTest(SimpleTestCase):
         m.haar['kurz.achse.laenge'] = 0.4
         self.assertEqual(IterationHaare(m, befund).trim(), [])                    # erst die Achse
         verlauf = [{'frisur': 'kurz', 'haar_mm': 30.0 + 0.1 * i} for i in range(4)]
-        self.assertEqual(IterationHaare(m, befund, verlauf).fototextur(), ["m.haar_fototextur('kurz')"])
-        m.haar['kurz.bild.foto_j1'] = 1.0
-        self.assertEqual(IterationHaare(m, befund, verlauf).fototextur(), [])
+        self.assertEqual(IterationHaare(m, befund, verlauf).fototextur(), [])     # aus seit 01.10.2026 (`FOTOTEXTUR`)
+        with mock.patch.object(IterationHaare, 'FOTOTEXTUR', True):
+            self.assertEqual(IterationHaare(m, befund, verlauf).fototextur(), ["m.haar_fototextur('kurz')"])
+            m.haar['kurz.bild.foto_j1'] = 1.0
+            self.assertEqual(IterationHaare(m, befund, verlauf).fototextur(), [])
 
     def test_8_farbschritt_nur_mit_befund_desselben_renderers(self):
         from unittest import mock
@@ -202,6 +205,7 @@ class HaarRegelnTest(SimpleTestCase):
         from core.dienste.renderwahl import Renderwahl
         m = ModellMitKleidern()
         m.haar_nur('kurz')
+        m.haar['kurz.bild.grau'] = 1.0          # schon umgefärbt (`IterationHaare.farbe`: erst umfärben, dann tönen)
         teil = {'art': 'haar', 'pixel': 500, 'foto_farbe': [0.44, 0.37, 0.35], 'render_farbe': [0.64, 0.59, 0.52]}
         z = {'befund': {'motor': 'pyrender', 'teile': {'kurz': teil}}}
         with mock.patch.object(Renderwahl, 'gewaehlt', return_value='mitsuba'), \

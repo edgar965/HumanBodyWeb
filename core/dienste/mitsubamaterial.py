@@ -102,6 +102,15 @@ class Mitsubamaterial:
         return cls._beidseitig({'type': 'principled', 'base_color': farbe, 'roughness': cls.RAUHEIT,
                                 'specular': cls.GLANZ})
 
+    @classmethod
+    def maske(cls, innen, alpha, kante=1024):
+        """Das Material hinter der Alphamaske einer Haarkarte (Daz `Cutout Opacity`, Graustufen) — ohne sie stand jede
+        Karte als geschlossene Fläche im Bild, der Bart als dunkler Block im Gesicht (01.10.2026 abends)."""
+        feld = cls.bild(alpha, kante, 'normalen')[..., :1]
+        return {'type': 'mask', 'bsdf': innen,
+                'opacity': {'type': 'bitmap', 'data': np.ascontiguousarray(feld, dtype=np.float32), 'raw': True,
+                            'filter_type': 'bilinear'}}
+
     @staticmethod
     def kennung(farbe):
         """Kennfarbe (Teilmasken): diffus, damit die Albedo-Ausgabe genau die Farbe trägt."""

@@ -13,7 +13,7 @@ import logging
 
 from iterationen2d3d.blickwinkel import Blickwinkel
 
-from ..daten.haarengineablage import Haarengineablage
+from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from .fotolandmarken import Fotolandmarken
 from .iterationsreferenz import Iterationsreferenz
 
@@ -56,7 +56,7 @@ class Blickwinkelschaetzung:
         offene = [e for e in self.offene() if e['datei'] not in bekannt]
         if not offene:
             return 0
-        eingang = self.ablage.unter(Haarengineablage.EINGANG)
+        eingang = self.ablage.unter(Engine2d3dKleiderablage.EINGANG)
         befunde = Fotolandmarken(self.ablage).holen([eingang / e['datei'] for e in offene])
         neu = 0
         for e in offene:

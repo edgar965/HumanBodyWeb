@@ -1,0 +1,205 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Haar Engine: wie aus Fotos eine Genesis-Frisur wird, warum
+sich die 18 Genesis-Haare nicht in ein Netz packen lassen, und wie das Asset
+„Genesis – Generic Hair" sie trotzdem unter einen Hut bringt.
+
+Edgar, 30.09.2026: „Ich brauche ein neues Asset: Genesis – Generic Hair für die
+Genesis Haare" und „schreibe den Plan in eine neue Seite Hilfe - Kleidung -
+Haar Engine".
+
+Alle Zahlen und Zustände kommen aus `kleidung.engine2d3dkleider.Kleidungsengine2d3dkleider`.
+{% endcomment %}
+
+{% block title %}Kleidung — 2D3D Kleider (Haar Engine){% endblock %}
+{% block topbar_title %}Kleidung — 2D3D Kleider: aus Fotos eine Genesis-Figur mit Kleidern und Haar{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>2D3D Kleider: Figur, Kleider und Haar, die zu den Fotos passen</h1>
+
+  <p>
+    <a href="/2d3dKleider/">Dashboard → 2D3D Kleider</a> bekommt Fotos einer Person und sucht
+    Runde um Runde die Frisur, die ihnen am nächsten kommt — Sorte, Form und Farbe. Die
+    Auswahl kommt aus der Daz-Garderobe: {{ frisuren }} Frisuren mit zusammen
+    {{ regler }} Morph-Reglern, {{ stile }} Stilen und {{ varianten }} Farbvarianten
+    (von {{ katalog }} Stücken im Katalog insgesamt).
+  </p>
+  <p>
+    Diese Seite hält fest, <strong>warum</strong> sich diese {{ frisuren }} Frisuren nicht
+    in ein einziges Netz packen lassen, wie das Asset <em>Genesis&nbsp;– Generic Hair</em>
+    sie trotzdem unter einen Hut bringt, was die Iterationen verstellen — und was daran
+    noch nicht gemessen ist.
+  </p>
+
+  <h2>Der Bestand: {{ frisuren }} Frisuren</h2>
+  <table class="doku">
+    <thead><tr>
+      <th>Frisur</th><th>Regler</th><th>Stile</th><th>Farben</th>
+      <th>Netze (.duf)</th><th>kommt von</th><th>eigene Knochen</th>
+    </tr></thead>
+    <tbody>
+      {% for h in haare %}
+      <tr>
+        <td><strong>{{ h.name }}</strong><br><code>{{ h.kennung }}</code></td>
+        <td>{{ h.regler }}</td>
+        <td>{% if h.stile %}{{ h.stile }}{% else %}&ndash;{% endif %}</td>
+        <td>{{ h.farben }}</td>
+        <td>{% if h.netze > 1 %}<strong>{{ h.netze }}</strong>{% else %}{{ h.netze }}{% endif %}</td>
+        <td>{% if h.klon %}{{ h.klon }} (Auto-Fit){% else %}Genesis 9{% endif %}</td>
+        <td>{% if h.knochen %}<strong>{{ h.knochen }}</strong>{% else %}&ndash;{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="hb-font-size-0-72rem">
+    Gemessen am 30.09.2026 über <code>Genesis9/ablage/garderobe.json</code> und die
+    <code>.duf</code> der Daz-Bibliothek. „Netze (.duf)" zählt die Geometrien, die die
+    Produktdatei einhängt; wie viele davon als Teil geladen werden, kann kleiner sein
+    (Viola: 3 in der Datei, 2 geladen). Auf der Platte liegen {{ morphdateien }}
+    Morphdateien der Haarprodukte — die meisten sind Folgemorphs, die still der Figur
+    folgen und nie als Regler erscheinen (Kin Hair: 35 Dateien, davon 4 sichtbar).
+  </p>
+
+  <h2>Warum nicht alle Haare in ein Netz passen</h2>
+  <ol class="stufen-liste">
+    {% for titel, text in warum_nicht %}
+    <li><strong>{{ titel }}.</strong> {{ text }}</li>
+    {% endfor %}
+  </ol>
+
+  <div class="info-box info-box-blue">
+    <strong>Die Folgerung: nicht ein Netz, sondern eine gemeinsame Sprache.</strong>
+    Statt die {{ frisuren }} Netze ineinander zu zwingen, bekommt <em>jede</em> Frisur
+    dieselben {{ achsen_zahl }} Formachsen — gerechnet als Punkt-Deltas und neben der
+    Bibliothek abgelegt, nicht als geklontes Asset. Damit fallen alle drei Grenzen der
+    Klon-Bauart weg: mehrteilige Netze, Auto-Fit-Klone und eigene Zopfknochen sind egal,
+    denn gerechnet wird auf den Punkten, die <code>G9garderobe.teile()</code> ohnehin liefert.
+  </div>
+
+  <h2>Die drei Schichten</h2>
+  <table class="doku">
+    <thead><tr><th>#</th><th>Schicht</th><th>Was</th><th>Wo</th></tr></thead>
+    <tbody>
+      {% for nr, name, was, wo in schichten %}
+      <tr>
+        <td><strong>{{ nr }}</strong></td>
+        <td><strong>{{ name }}</strong></td>
+        <td>{{ was }}</td>
+        <td>{{ wo }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Die {{ achsen_zahl }} Formachsen</h2>
+  <p>
+    Sie stammen von <em>Haar Eigen</em> (29.09.2026, <code>G9haareigenmorphe</code>) und sind
+    geometrisch gerechnet — kein Hersteller muss sie mitgeliefert haben. Daz-Morphe sind
+    linear, ein halber Wert ist also der halbe Weg.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Achse</th><th>Was sie tut</th></tr></thead>
+    <tbody>
+      {% for name, text in achsen %}
+      <tr><td><strong>{{ name }}</strong></td><td>{{ text }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Das Asset „{{ asset_name }}"</h2>
+  <p>
+    Ein Eintrag im Reiter <em>Assets</em> der Seite <a href="/Charakter/">Charakter</a>,
+    unter <em>Genesis</em>, Kennung <code>{{ asset_kennung }}</code>.
+    Seine Regler stehen je Sorte in einer aufklappbaren Gruppe: ganz oben der Anteil dieser
+    Sorte (0–100 %), darunter ihre echten Morphs und die {{ achsen_zahl }} Formachsen. Der
+    Eintrag hat bewusst <strong>kein eigenes Netz</strong> — jede Sorte bringt ihr echtes Netz
+    mit ihrer echten Textur mit.
+  </p>
+  <div class="info-box">
+    <strong>Was der Prozentregler bedeutet.</strong> Der Anteil ist eine <em>Dichte</em>, und
+    alle Anteile ergeben zusammen 100 %: Zieht man eine Sorte hoch, sinken die anderen im
+    Verhältnis. <em>70 % Kin + 30 % Toulouse</em> trägt 70 von 100 Kin-Strähnen und 30 von 100
+    Toulouse-Strähnen, in einer Farbe. Zwei Netze werden dabei nicht ineinander gemorpht —
+    ihre Strähnen liegen nebeneinander. Die Kappe kommt nur von der Hauptsorte.
+  </div>
+
+  <h3>Wo es zu sehen ist</h3>
+  <table class="doku">
+    <thead><tr><th>Stelle</th><th>Was dort steht</th></tr></thead>
+    <tbody>
+      {% for stelle, was in wo %}
+      <tr><td><strong>{{ stelle }}</strong></td><td>{{ was }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was davon steht und nachgemessen ist</h2>
+  <p>
+    Die Schichten 1 und 2 sind gebaut und am laufenden Server geprüft (30.09.2026). Schicht 3 —
+    die Engine selbst — ist noch nicht angebunden: Ein Lauf endet weiterhin mit der Meldung
+    „Die Genesis Haar Engine ist noch nicht angebunden".
+  </p>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Ergebnis</th></tr></thead>
+    <tbody>
+      {% for was, ergebnis in gemessen %}
+      <tr><td><strong>{{ was }}</strong></td><td>{{ ergebnis }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was ein Lauf tut</h2>
+  <table class="doku">
+    <thead><tr><th>Schritt</th><th>Was</th><th>Stand</th></tr></thead>
+    <tbody>
+      {% for schritt, was, zustand in engine %}
+      <tr><td><code>{{ schritt }}</code></td><td>{{ was }}</td><td>{{ zustand }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was die Iterationen verstellen</h2>
+  <p>
+    Eine Runde ändert nur Zahlen, keinen Code (<code>Haarparameter</code>). Zwei Wege laufen
+    nebeneinander: der Optimierer feilt an den Zahlen, die lokale Prüf-KI sieht Vorlage und
+    Render nebeneinander und darf die Frisur wechseln.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Art</th><th>Schlüssel</th><th>Wer ändert ihn</th></tr></thead>
+    <tbody>
+      {% for art, schluessel, wer in parameter %}
+      <tr><td><strong>{{ art }}</strong></td><td>{{ schluessel }}</td><td>{{ wer }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was noch nicht gemessen ist</h2>
+  <table class="doku">
+    <thead><tr><th>Frage</th><th>Warum sie offen ist</th><th>Vorschlag</th></tr></thead>
+    <tbody>
+      {% for frage, warum, vorschlag in offen %}
+      <tr><td><strong>{{ frage }}</strong></td><td>{{ warum }}</td><td>{{ vorschlag }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was das Konzept bewusst nicht löst</h2>
+  <ul class="doku-liste">
+    {% for titel, text in grenzen_offen %}<li><strong>{{ titel }}:</strong> {{ text }}</li>{% endfor %}
+  </ul>
+
+  <p class="doku-abschluss">
+    Die Garderobe selbst: <a href="/hilfe/kleidung/genesis/">Kleidung → Genesis</a> ·
+    alle Verfahren nebeneinander: <a href="/hilfe/kleidung/">Kleidung → Allgemein</a> ·
+    der Bereich: <a href="/2d3dKleider/">Dashboard → 2D3D Kleider</a>
+  </p>
+
+</div>
+{% endblock %}

@@ -51,6 +51,17 @@ class Meshfigurregler:
         'Ears Gone',
         'HipGenitalBulge',
     )
+    #: Mimik, keine Form: Sie öffnen den Mund. Am verwaschenen Mund des TRELLIS-Netzes stellte die Anpassung
+    #: `Lip Upper Gap` 0,74, `Lip Part` 0,30, `Mouth Opening M/V Shape` −1 — Mund offen, Unterlippe zurück
+    #: (Testauftrag 2026.10.01.12.38.09, Befund Edgar „Unterlippe kaputt"; auf den Fotos ist der Mund zu). Gesperrt
+    #: in der Anpassung (`stufe` 0) UND beim Lesen einer gespeicherten Stellung (`ohne_mimik`, von
+    #: `Engine2d3dKleiderauftrag.stellung` gerufen) — so wirkt die Sperre auf alte Aufträge in Sekunden, ohne die 872 s des
+    #: Körperschritts (Befund Edgar: „eine Mundanpassung muss 2–3 s dauern").
+    MIMIK = ('Lip Part', 'Lip Upper Gap', 'Lip Lower Gap', 'Mouth Opening')
+
+    @classmethod
+    def ohne_mimik(cls, stellung):
+        return {k: v for k, v in (stellung or {}).items() if not any(m in k for m in cls.MIMIK)}
     #: Nur auf der männlichen Grundfigur gesperrt: die Brust-Morphs der Frauenfigur. Unter dem Shirt füllten sie die
     #: Rumpftiefe (Testauftrag 2026.10.01.12.38.09: `BreastsDiameter`, `BreastsFullnessUpper` auf 1) — der Brustkorb
     #: eines Mannes kommt aus `Pectorals*`, `MassUpperTorso` und den Körpertypen.
@@ -121,7 +132,7 @@ class Meshfigurregler:
 
     @classmethod
     def stufe(cls, name, bereich, teil):
-        if any(a in name for a in cls.AUS):
+        if any(a in name for a in cls.AUS + cls.MIMIK):
             return 0
         if teil == 'kopf':
             # Charakterköpfe: `<X>_head_bs_Head`, `MB_Olesia_Head_bs_head-0x…`, `NW Damira Head-0x…`,

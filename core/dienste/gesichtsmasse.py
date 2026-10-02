@@ -137,8 +137,8 @@ class Gesichtsmasse:
         except (ValueError, OSError, RuntimeError) as fehler:
             logger.warning('Gesichtsmaße: Kopf-Render fehlgeschlagen (%s)', fehler)
             return None
-        from ..daten.haarengineablage import Haarengineablage
-        foto = self.ablage.unter(Haarengineablage.EINGANG) / r.datei
+        from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+        foto = self.ablage.unter(Engine2d3dKleiderablage.EINGANG) / r.datei
         befunde = Fotolandmarken(self.ablage).holen([foto] + pfade)
         bf = befunde.get(r.datei) or {}
         m_foto = self.masse(bf.get('gesicht'), bf.get('breite'), bf.get('hoehe'))

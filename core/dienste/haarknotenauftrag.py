@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Haarknotenauftrag — was ein Blender-Haarknoten (`Haarengineblender.haar`) VOR und NACH Blender braucht
+"""Haarknotenauftrag — was ein Blender-Haarknoten (`Engine2d3dKleiderblender.haar`) VOR und NACH Blender braucht
 (01.10.2026, herausgelöst, als Zielobjekt und Topologieänderung dazukamen): die Strähnen eines Teils als `.npz`
 (Punkte in Strähnenreihenfolge, Längen, Ortsmaske), das Zielobjekt (Grundfigur) für Shrinkwrap und Duplicate, die
 KOPFHAUT mit echter UV (`G9kopfhaut`: Daz-Kappe oder Kopf der Grundfigur) für Attach, Interpolate und Generate, und
 danach die Rückführung — ein Delta je Punkt für die verformenden Knoten (`G9kleidmorphe`) oder neue Strähnen als Rezept
 aus den alten Punkten (`G9haarzusatz.aus_blender`) für die erzeugenden.
 
-Startet Blender NICHT selbst — das bleibt `Haarengineblender` (`BlenderNurUeberEinenArbeiterTest`).
+Startet Blender NICHT selbst — das bleibt `Engine2d3dKleiderblender` (`BlenderNurUeberEinenArbeiterTest`).
 """
 
 import numpy as np

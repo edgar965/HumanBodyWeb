@@ -43,6 +43,8 @@ class Bildmodelltabelle:
         'gescheitert': ('hb-schlecht', 'fa-times-circle', 'Fehlgeschlagen'),
         'angelegt': ('hb-laeuft', 'fa-clock', 'Angelegt'),
         'angehalten': ('hb-laeuft', 'fa-pause-circle', 'Angehalten'),
+        # „2D3D Kleider" im Handbetrieb (Befund Edgar 02.10.2026: in der Liste stand „? wartet")
+        'wartet': ('hb-laeuft', 'fa-hourglass-half', 'Wartet auf Rezept'),
     }
     TYPEN = {'genesis9': 'Genesis 9'}
 

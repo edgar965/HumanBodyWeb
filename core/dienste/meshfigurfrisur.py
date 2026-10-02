@@ -56,7 +56,14 @@ class Meshfigurfrisur:
         from .meshfigurhaar import Meshfigurhaar
 
         wahl = self.optionen.get('frisur') or 'beste'
-        aus = self.job.ergebnis['frisur'] = {'option': wahl, 'sekunden': {}}
+        # Unverändertes Netz, schon gemessen: nicht noch einmal (Frage Edgar 02.10.2026 „ein Körperschritt darf keine
+        # 900 s dauern" — gemessen 161 s für 8 Frisuren gegen dieselbe Haarhülle; der Mund-Fix rechnete sie neu).
+        stand = self._netzstand()
+        alt = (self.job.ergebnis or {}).get('frisur') or {}
+        if stand and alt.get('netzstand') == stand and alt.get('option') == wahl and alt.get('kandidaten'):
+            logger.info('Frisur %s: Netz unverändert, Messung bleibt', self.job.kennung)
+            return
+        aus = self.job.ergebnis['frisur'] = {'option': wahl, 'sekunden': {}, 'netzstand': stand}
         netz = Meshfigurhaar(self.lauf).ruhenetz()
         if netz is None:
             aus['fehler'] = 'Kein Haar aus Schritt „haar" (Maske oder Registrierung fehlen)'
@@ -73,6 +80,11 @@ class Meshfigurfrisur:
             t = time.perf_counter()
             aus['karten'] = self.karten(scan, punkte, haar, figur)
             aus['sekunden']['karten'] = round(time.perf_counter() - t, 1)
+
+    def _netzstand(self):
+        """`[Datei, mtime_ns]` des Netzes (die Haarhülle hängt nur an ihm) — None ohne Netz."""
+        netz = self.ablage.netzdatei() if hasattr(self.ablage, 'netzdatei') else None
+        return [str(netz.name), netz.stat().st_mtime_ns] if netz is not None and netz.is_file() else None
 
     # ------------------------------------------------------------ Messung
 

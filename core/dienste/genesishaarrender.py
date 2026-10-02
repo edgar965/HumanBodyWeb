@@ -12,9 +12,9 @@ verschiebt Kopf und Füße je nach Abstand gegeneinander — die Ausrichtung kö
 herausrechnen.
 
 Der Winkel zählt in Grad ab vorn, positiv zur LINKEN Seite der Figur (der Vertrag in
-`Genesishaarengine`, dieselbe Drehrichtung wie `Durchschimmerprobe.ANSICHTEN`).
+`Genesisengine2d3dkleider`, dieselbe Drehrichtung wie `Durchschimmerprobe.ANSICHTEN`).
 
-Läuft im Arbeitsprozess (`haarengine_fahren`, python14), nie im Django-Server — pyrender belegt die
+Läuft im Arbeitsprozess (`engine2d3dkleider_fahren`, python14), nie im Django-Server — pyrender belegt die
 Grafikkarte (`Haar/haarbild.py` hält es ebenso).
 
 **Seit 01.10.2026 rendert Mitsuba 3 auf der Grafikkarte** (`Mitsubaszene`: Pfadverfolgung wie Cycles, Normalkarten,
@@ -104,6 +104,7 @@ class Genesishaarrender:
             if not e:
                 return None
             gruppen = tuple((int(g['ab']), int(g['anzahl']), str(g.get('albedo')), str(g.get('normalen')),
+                             str(g.get('alpha')),
                              tuple(np.round(np.asarray(g.get('faktor', (1, 1, 1)), dtype=np.float64), 4)))
                             for g in e.get('gruppen') or [])
             return (id(e.get('uv')), gruppen, id(e.get('kurven')))
@@ -221,10 +222,10 @@ class Genesishaarrender:
     KOPF_HOEHE = 0.34
     KOPF_UNTER_SCHEITEL = 0.13
 
-    def bild_kopf(self, teile, winkel, pfad, groesse=(512, 512), saat=0):
+    def bild_kopf(self, teile, winkel, pfad, groesse=(512, 512), saat=0, kennung=False):
         """Nur der Kopf: Kamera auf `KOPF_UNTER_SCHEITEL` unter dem höchsten Punkt, Bildhöhe `KOPF_HOEHE` m — für die
         Gesichtslandmarken (`Gesichtsmasse`, 01.10.2026); auf dem Figurrender wäre das Gesicht 30 Pixel groß. `saat`:
-        Mitsubas Zufallsfolge (`Gesichtsmasse` mittelt über mehrere)."""
+        Mitsubas Zufallsfolge (`Gesichtsmasse` mittelt über mehrere); `kennung` wie bei `bild_teile` (`Haarabgleich`)."""
         self.saat = int(saat)
         from PIL import Image
         teile = self._teile(teile)
@@ -233,7 +234,7 @@ class Genesishaarrender:
         self._groesse(groesse)
         scheitel = max(float(np.asarray(t[0])[:, 1].max()) for t in teile)
         mitte = np.array([0.0, scheitel - self.KOPF_UNTER_SCHEITEL, 0.0])
-        rgba = self._rgba(teile, mitte, self.KOPF_HOEHE / (1.0 + 2.0 * self.RAND), winkel, False)
+        rgba = self._rgba(teile, mitte, self.KOPF_HOEHE / (1.0 + 2.0 * self.RAND), winkel, kennung)
         self.saat = 0
         rgb = rgba[..., :3].copy()
         rgb[rgba[..., 3] == 0] = 255              # weißer Grund: der Detektor sieht Fotos, keine Alphakanäle

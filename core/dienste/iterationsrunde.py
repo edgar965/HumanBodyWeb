@@ -2,7 +2,7 @@
 """Iterationsrunde — eine Runde der Iterationen rechnen (bauen, rendern, benoten) und im Auftrag ablegen
 (30.09.2026).
 
-`bewerten`: die Kandidaten der Runde gehen an die Genesis Haar Engine (`Genesishaarengine.rendern`),
+`bewerten`: die Kandidaten der Runde gehen an die Genesis Haar Engine (`Genesisengine2d3dkleider.rendern`),
 je Kandidat kommen die Renders in den Blickwinkeln der Vorlagen zurück und werden gegen die Vorlage benotet
 (`Iterationsnote`, gewichtet nach dem Gewicht der Fotos). `ablegen`: Vergleichstafel, die Renders je
 Blickwinkel (`runde_NNN_ansicht_±WWW.png`, aufklappbar im Reiter) und — bei übernommenen Runden — Figur +
@@ -21,7 +21,7 @@ import time
 
 from django.utils import timezone
 
-from .genesishaarengine import Genesishaarengine
+from .genesisengine2d3dkleider import Genesisengine2d3dkleider
 from .iterationsbild import Iterationsbild
 from .iterationsnote import Iterationsnote
 from .iterationstafel import Iterationstafel
@@ -47,7 +47,7 @@ class Iterationsrunde:
         self.referenzen = referenzen
         self._letztes_modell = None
         # Die Engine (`parallel` Prozesse); `schliessen` am Ende des Laufs.
-        self.engine = Genesishaarengine(lauf, parallel=parallel)
+        self.engine = Genesisengine2d3dkleider(lauf, parallel=parallel)
 
     def schliessen(self):
         self.engine.schliessen()

@@ -14,7 +14,7 @@ import { Dazkleidung } from './dazkleidung.js';
  * Zeile in die Gruppe „Eigene Morphe" gehängt und auf 1 gestellt (der Bau läuft über `Dazkleidung.anziehenAuf`, wenn
  * das Stück getragen ist — sonst bleibt der Wert gemerkt bis zum Anziehen).
  *
- * Immer zu beim Laden (kein Gedächtnis — `haarengine.md`).
+ * Immer zu beim Laden (kein Gedächtnis — `engine2d3dkleider.md`).
  */
 export class Genesis9morphformular {
 

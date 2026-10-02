@@ -10,7 +10,7 @@ lang nicht. Diese Datei lädt three.js in einem Zug.
 Aufbau: ein Skelett (die Knochen der Stellung samt Zunge des Mundes, `G9koerpernetz` → `skelett.knochen`), EIN Skin
 für alle Netze, je Kachel bzw. Materialgruppe ein Netz mit Bild (JPEG; mit Durchsicht PNG als Maske). Die
 Knotennamen folgen der Runden-GLB (`koerper…`, `kleidung__<sorte>__<n>_g<k>__<slug>`, `haar__…`), damit „Haare" und
-„Kleider" sie schalten (`Haarenginebuehnenmodell.art`) und der Pinsel die Gruppe kennt (`Haarenginemalen`).
+„Kleider" sie schalten (`Engine2d3dKleiderbuehnenmodell.art`) und der Pinsel die Gruppe kennt (`Engine2d3dKleidermalen`).
 
 DIE BINDEMATRIZEN sind das Inverse der Weltlage jedes Knochens — Verschiebung UND Ruhedrehung. `G9rigglb.skelett`
 schreibt nur die Verschiebung; three.js nimmt die Matrizen wörtlich, und gemessen stand `figur.glb` von `.51` dort in
@@ -147,6 +147,8 @@ class Standmodellglb(G9rigglb):
                 maske = maske.copy()
             if albedo is None:
                 bild = Image.new('RGB', maske.size, (255, 255, 255))
+            elif bild.size[0] * bild.size[1] < maske.size[0] * maske.size[1]:
+                bild = bild.resize(maske.size)      # Grauschicht ohne Daz-Bild ist 4 × 4 — die Maske (Strähnen) zählt
             maske = maske.resize(bild.size)
             if alphawert < 1.0:
                 maske = maske.point(lambda v: int(v * float(alphawert)))

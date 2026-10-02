@@ -2,7 +2,7 @@
 """Iterationsnetznote — wie weit ein Modell (Körper, Kleider, Haar) vom Netz aus den Fotos abweicht, in 3D.
 
 Ergänzt `Iterationsnote` (Fotos: Umriss und Farbe je Blickwinkel) um das Maß, das nur „2D3D Kleider" hat: das
-Netz aus TRELLIS/Hunyuan (`Haarengineablage.bezugsnetz`, in der Lage der Erkennung — dieselbe wie die Figur).
+Netz aus TRELLIS/Hunyuan (`Engine2d3dKleiderablage.bezugsnetz`, in der Lage der Erkennung — dieselbe wie die Figur).
 Zwei Zahlen, beide in Metern gemessen:
 
     modell_mm   mittlerer Abstand der Kleider- und Haarpunkte zur Netzoberfläche (Stoff, der zu weit vom Foto absteht)

@@ -9,7 +9,7 @@ u"""Texturschichten an Kleid und Haar (30.09.2026, nachts) — Kunstdaten, keine
    Ablagepfade und Reglernamen von `G9kleidtexturen` (`bild.<schicht>`), `werte` liest nur `bild.*`.
 5. `ModellTexturMixin`: `kleid_fototextur` merkt den Wunsch und stellt `bild.foto`, `kleid_farbe_je_stueck` tönt nur das
    eine Stück, die neuen Funktionen stehen in `hilfe()`.
-6. `Haarengineblender._straehnen`/`_eingang`: Ketten aus Segmenten, Socketnamen aus Schlüsselwörtern.
+6. `Engine2d3dKleiderblender._straehnen`/`_eingang`: Ketten aus Segmenten, Socketnamen aus Schlüsselwörtern.
 
 Sabotage-Gegenproben: in `G9uvraster._baryzentrisch` das Klemmen weglassen → Fall 1 rot (Ecken laufen über); in
 `Fotoprojektion.farben` `** self.AUSRICHTUNG` weglassen → Fall 2 bleibt grün (die Rückseite prüft `clip`), aber
@@ -70,8 +70,14 @@ class UvrasterTest(SimpleTestCase):
                                     [[0.0, 0.0, 1.0], [0.0, 0.0, -1.0], [0.0, 0.0, 1.0]])
         self.assertTrue(getroffen[0])
         np.testing.assert_allclose(farbe[0], [1.0, 0.0, 0.0])
-        self.assertTrue(getroffen[1])                                      # Rückseite: Rückfall auf „gesehen"
-        self.assertFalse(getroffen[2])                                     # außerhalb der Teilmaske (rechts)
+        # Rückseite und außerhalb der Teilmaske: kein Fototreffer, aber die Farbe ist das Fotomittel des Stücks
+        # (02.10.2026, Prüfung Runde 17: vorher nahm die Rückseite das Mittel ALLER Ansichten, der Umriss seinen
+        # einen Randwert — dunkler Ring am Ärmel, heller Fleck an der Schulter).
+        self.assertFalse(getroffen[1])
+        self.assertFalse(getroffen[2])
+        self.assertTrue(p.gefuellt)
+        np.testing.assert_allclose(farbe[1], [1.0, 0.0, 0.0], atol=1e-6)
+        np.testing.assert_allclose(farbe[2], [1.0, 0.0, 0.0], atol=1e-6)
 
     def test_3_faltenkarte_kippt_die_normale(self):
         karte = self._viereck().karte({'name': 'Stoff', 'index_ab': 0, 'index_anzahl': 6})
@@ -159,8 +165,8 @@ class TexturschichtTest(SimpleTestCase):
             m.kleid_schnitt('oberteil', regler='kein dict')
 
     def test_6_straehnen_und_socketnamen(self):
-        from core.dienste.haarengineblender import Haarengineblender
-        ketten = Haarengineblender._straehnen([[0, 1], [1, 2], [5, 6]], 7)
+        from core.dienste.engine2d3dkleiderblender import Engine2d3dKleiderblender
+        ketten = Engine2d3dKleiderblender._straehnen([[0, 1], [1, 2], [5, 6]], 7)
         self.assertEqual([k.tolist() for k in ketten], [[0, 1, 2], [5, 6]])
-        self.assertEqual(Haarengineblender._eingang('length_factor'), 'Length Factor')
-        self.assertEqual(Haarengineblender._eingang('curl_radius'), 'Curl Radius')
+        self.assertEqual(Engine2d3dKleiderblender._eingang('length_factor'), 'Length Factor')
+        self.assertEqual(Engine2d3dKleiderblender._eingang('curl_radius'), 'Curl Radius')

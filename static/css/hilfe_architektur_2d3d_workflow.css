@@ -1,0 +1,153 @@
+/* Hilfe -> Architektur -> 2D3D, Reiter „Workflow": Reiterleiste, Kette der Schritte, Zeitleiste, Entscheidungsbäume, Fluss einer Runde,
+   Klassenkarten. Farben aus dem Theme (--bg-*, --border, --text*, --accent), damit helle und dunkle Themes stimmen; die Zeitstufen
+   haben feste Farbtöne, getönt über color-mix, also auf beiden Gründen lesbar. Volle Breite: kein max-width (volle-breite.md). */
+
+.wf-reiter {
+    display: flex; gap: 0.3rem; flex-wrap: wrap; margin: 0 0 1rem; padding-top: 0.35rem;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 6; background: var(--bg-primary);
+}
+.wf-reiter-knopf {
+    background: transparent; border: 1px solid transparent; border-bottom: 0; color: var(--text-muted);
+    padding: 0.45rem 1rem; font-size: 0.9rem; cursor: pointer; border-radius: 6px 6px 0 0;
+}
+.wf-reiter-knopf:hover { color: var(--text); }
+.wf-reiter-knopf.active { color: var(--text); background: var(--bg-card); border-color: var(--border); margin-bottom: -1px; }
+[data-reiter][hidden] { display: none; }
+
+.wf-seite { --wf-linie: color-mix(in srgb, var(--text-muted) 75%, transparent); }
+.wf-seite h2 { margin-top: 2rem; }
+.wf-seite h3 { margin: 1.4rem 0 0.2rem; }
+.wf-frage { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.9rem; }
+.wf-codestelle, .wf-hinweis, .wf-keine { color: var(--text-muted); font-size: 0.76rem; }
+.wf-codestelle { margin: 0.4rem 0 0; }
+.wf-baumkarte, .wf-karte, .wf-abschnitt { scroll-margin-top: 4rem; }
+
+/* Zeitstufen --------------------------------------------------------------------------------------------------------------- */
+.z0 { --zf: #2e9e5b; } .z1 { --zf: #6fae2f; } .z2 { --zf: #c29a1d; } .z3 { --zf: #e0792b; } .z4 { --zf: #d9433f; }
+.zx { --zf: var(--text-muted); }
+.wf-zeit {
+    display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.05rem 0.45rem; border-radius: 4px; white-space: nowrap;
+    font-size: 0.78rem; font-variant-numeric: tabular-nums; border: 1px solid var(--zf); color: var(--zf);
+    background: color-mix(in srgb, var(--zf) 12%, transparent);
+}
+.wf-qnr { font-size: 0.66rem; vertical-align: super; margin-left: 0.15rem; color: var(--text-muted); text-decoration: none; }
+.wf-legende { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; align-items: center; margin: 0.6rem 0 1rem; font-size: 0.82rem; }
+.wf-legende-art { display: inline-flex; align-items: center; gap: 0.35rem; }
+.wf-muster { width: 1.1rem; height: 0.8rem; border-left: 4px solid; background: var(--bg-card); border-radius: 2px; }
+.wf-muster-frage { border-color: #d9a441; } .wf-muster-tat { border-color: #4a90d9; }
+.wf-muster-ende { border-color: #3fa56b; } .wf-muster-offen { border: 1px dashed var(--text-muted); border-left-width: 4px; }
+
+/* Kette der Schritte ----------------------------------------------------------------------------------------------------- */
+.wf-strecke { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.4rem; }
+.wf-schritt {
+    flex: 1 1 15rem; display: flex; flex-direction: column; gap: 0.35rem; padding: 0.7rem 0.8rem; background: var(--bg-card);
+    border: 1px solid var(--border); border-top: 4px solid var(--accent); border-radius: 8px;
+}
+.wf-schrittkopf { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+.wf-nr {
+    display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 0.8rem;
+}
+.wf-pfeil { display: flex; align-items: center; color: var(--text-muted); font-size: 1.3rem; }
+.wf-optionen { margin: 0; padding-left: 1rem; font-size: 0.78rem; }
+.wf-optionen li { margin-bottom: 0.15rem; }
+.wf-baumlink, .wf-baumlinks a {
+    display: inline-block; margin: 0.1rem 0.3rem 0 0; font-size: 0.76rem; text-decoration: none; color: #d9a441;
+}
+.wf-baumlinks { margin-top: 0.4rem; font-size: 0.78rem; color: var(--text-muted); }
+
+/* Zeitleiste --------------------------------------------------------------------------------------------------------------- */
+.wf-zeitleiste { display: flex; height: 2rem; overflow: hidden; border: 1px solid var(--border); border-radius: 6px; }
+.wf-segment { height: 100%; min-width: 3px; }
+.wf-seg1 { background: #4a90d9; } .wf-seg2 { background: #8a6fd1; } .wf-seg3 { background: #3fa56b; }
+.wf-seg4 { background: #e0792b; } .wf-seg5 { background: #d9433f; }
+.wf-segmentliste { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.4rem 1rem; margin: 0.7rem 0; }
+.wf-segmentzeile { display: flex; align-items: center; gap: 0.5rem; font-size: 0.84rem; }
+.wf-chip { width: 0.9rem; height: 0.9rem; border-radius: 3px; flex: 0 0 auto; }
+.wf-anteil { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Entscheidungsbaum: waagerecht, Kanten aus Rändern --------------------------------------------------------------------- */
+.wf-baumrahmen {
+    overflow-x: auto; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary);
+}
+.wf-baum { display: inline-block; min-width: 100%; }
+.wf-zweig { display: flex; align-items: center; }
+.wf-kinder { display: flex; flex-direction: column; position: relative; margin-left: 1.5rem; }
+.wf-kinder::before { content: ''; position: absolute; left: -1.5rem; width: 1.5rem; top: 50%; border-top: 2px solid var(--wf-linie); }
+.wf-ast { display: flex; align-items: center; position: relative; padding: 0.3rem 0; }
+.wf-ast::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid var(--wf-linie); }
+.wf-ast:first-child::before { top: 50%; }
+.wf-ast:last-child::before { bottom: 50%; }
+.wf-ast:only-child::before { display: none; }
+.wf-linie { flex: 0 0 1rem; border-top: 2px solid var(--wf-linie); }
+/* Feste Breite, damit die Kästen einer Ebene untereinander stehen — nicht je nach Länge der Antwort versetzt. */
+.wf-kante {
+    flex: 0 0 9rem; padding: 0.1rem 0.5rem; text-align: center; line-height: 1.25; font-size: 0.74rem;
+    border: 1px solid var(--wf-linie); border-radius: 999px; background: var(--bg-card); color: var(--text);
+}
+.wf-kante-leer { height: 0; padding: 0; border: 0; border-top: 2px solid var(--wf-linie); border-radius: 0; background: none; }
+
+/* Kästen --------------------------------------------------------------------------------------------------------------------- */
+.wf-knoten {
+    flex: 0 0 18rem; width: 18rem; display: flex; flex-direction: column; gap: 0.3rem; padding: 0.55rem 0.7rem;
+    background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--wf-linie); border-radius: 6px;
+}
+.wf-knoten:has(.wf-teile) { flex-basis: 25rem; width: 25rem; }
+.wf-frage-knoten, .wf-knoten.wf-frage { border-left-color: #d9a441; }
+.wf-knoten.wf-tat { border-left-color: #4a90d9; }
+.wf-knoten.wf-ende { border-left-color: #3fa56b; }
+.wf-knoten.wf-offen { border-style: dashed; border-left-style: solid; border-left-color: var(--text-muted); opacity: 0.9; }
+.wf-knoten.wf-vorgabe { box-shadow: 0 0 0 1px var(--accent); }
+.wf-kopf { display: flex; gap: 0.4rem; align-items: baseline; font-weight: 600; font-size: 0.86rem; }
+.wf-text { font-size: 0.78rem; color: var(--text-secondary, var(--text-muted)); line-height: 1.35; }
+.wf-fuss { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.wf-klasse {
+    padding: 0 0.4rem; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.74rem;
+    color: var(--accent); text-decoration: none; background: var(--bg-secondary);
+}
+a.wf-klasse:hover { border-color: var(--accent); }
+.wf-klasse-lose { color: var(--text-muted); }
+.wf-teile { display: flex; flex-direction: column; gap: 0.15rem; margin: 0.2rem 0; }
+.wf-teil { display: grid; grid-template-columns: 1fr 4.5rem auto; gap: 0.4rem; align-items: center; font-size: 0.74rem; }
+.wf-balken { height: 0.5rem; background: var(--bg-tertiary, var(--bg-secondary)); border-radius: 3px; overflow: hidden; }
+.wf-fuellung { display: block; height: 100%; min-width: 2px; background: var(--accent); }
+
+/* Fluss einer Runde ---------------------------------------------------------------------------------------------------------- */
+.wf-fluss { display: flex; flex-direction: column; gap: 0.3rem; }
+.wf-abschnitt { padding: 0.7rem 0.9rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+.wf-abschnittkopf { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; margin-bottom: 0.4rem; }
+.wf-abschnitttitel { font-weight: 600; }
+.wf-nummern { color: var(--text-muted); font-size: 0.78rem; }
+.wf-zeiten { display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin-left: auto; }
+.wf-zeitpaar { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; }
+.wf-schritte { margin: 0; padding-left: 0; list-style: none; }
+.wf-schritte li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; padding: 0.2rem 0; border-top: 1px solid var(--border); font-size: 0.84rem; }
+.wf-schritte .wf-nr { flex: 0 0 1.5rem; background: var(--bg-tertiary, var(--bg-secondary)); color: var(--text); }
+.wf-wann { color: var(--text-muted); font-size: 0.74rem; min-width: 5rem; }
+.wf-schritttext { flex: 1 1 24rem; }
+.wf-fluss > .wf-pfeil { justify-content: center; font-size: 1rem; line-height: 1; }
+
+/* Klassenkarten ---------------------------------------------------------------------------------------------------------------- */
+.wf-karten { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0.7rem; }
+.wf-karte { display: flex; flex-direction: column; gap: 0.3rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.wf-karte:target { outline: 2px solid var(--accent); }
+.wf-karte-kopf { padding: 0.35rem 0.7rem; background: var(--bg-tertiary, var(--bg-secondary)); font-weight: 600; font-family: monospace; font-size: 0.86rem; }
+.wf-karte-datei, .wf-karte-satz, .wf-methoden, .wf-karte-platz { padding: 0 0.7rem; font-size: 0.76rem; }
+.wf-karte-datei { color: var(--text-muted); }
+.wf-methoden { margin: 0; padding-top: 0.2rem; padding-bottom: 0.2rem; list-style: none; font-family: monospace; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.wf-mehr { color: var(--text-muted); }
+.wf-karte-platz { display: flex; flex-wrap: wrap; gap: 0.25rem; padding-bottom: 0.5rem; }
+.wf-marke { padding: 0 0.4rem; border: 1px solid var(--border); border-radius: 999px; font-size: 0.7rem; color: var(--text-muted); }
+a.wf-marke-baum { color: #d9a441; text-decoration: none; border-color: #d9a441; }
+.wf-quellen li { margin-bottom: 0.25rem; font-size: 0.82rem; }
+.wf-quellen li:target { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+/* Umfang des Stoffsolvers gegen Blender ------------------------------------------------------------------------------------ */
+.st-blender { --zf: #2e9e5b; } .st-quelle { --zf: #4a90d9; } .st-eigen { --zf: #9a7be0; }
+.st-teil { --zf: #c29a1d; } .st-nein { --zf: var(--text-muted); }
+.wf-stand {
+    display: inline-block; padding: 0.05rem 0.45rem; border-radius: 4px; font-size: 0.76rem; border: 1px solid var(--zf); color: var(--zf);
+    background: color-mix(in srgb, var(--zf) 12%, transparent);
+}
+.wf-umfang td { vertical-align: top; font-size: 0.84rem; }
+.wf-umfang a { text-decoration: none; margin-right: 0.4rem; }

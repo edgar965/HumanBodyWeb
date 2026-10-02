@@ -101,6 +101,26 @@ class Begutachtungsstand:
         beste.update(gesamt=round(float(beste['gesamt']) - float(alt_gesicht) + teilnoten['gesicht'], 4),
                      gesicht_fassung=fassung)
 
+    def _haar_nachziehen(self, auswahl, teilnoten, befund):
+        """Wie `_gesicht_nachziehen` für den Haarterm (`Haarabgleich.FASSUNG`, 02.10.2026): Misst die beste Runde das
+        Haar nicht oder anders, zählt sie mit dem Haarterm DIESER Runde. Ehrlich ist das nur, wenn diese Runde das Haar
+        nicht ändert — deshalb kommt nach einem Wechsel der Messung zuerst eine Runde ohne Rezept."""
+        fassung = ((befund or {}).get('haarabgleich') or {}).get('fassung')
+        beste = auswahl.beste
+        if not beste or fassung is None:
+            return
+        eintrag = self._eintrag(int(beste['runde'])) or {}
+        if (beste.get('haar_fassung') or ((eintrag.get('befund') or {}).get('haarabgleich') or {}).get('fassung')) \
+                == fassung:
+            return
+        alt = (((eintrag.get('note') or {}).get('teilnoten') or {}).get('haar') or 0.0)
+        logger.info('2D3D Kleider %s: Haarabgleich Fassung %s — beste Runde %s neu gezählt (%.4f → %.4f)',
+                    self.job.kennung, fassung, beste['runde'], float(beste['gesamt']),
+                    float(beste['gesamt']) - float(alt) + teilnoten['haar'])
+        beste.update(gesamt=round(float(beste['gesamt']) - float(alt) + teilnoten['haar'], 4), haar_fassung=fassung)
+        if eintrag:                                 # dasselbe Modell: die Haarregeln lesen den Befund der besten Runde
+            eintrag.setdefault('befund', {})['haarabgleich'] = befund['haarabgleich']
+
     def fortschreiben(self, z, beg, modell, runde, note, rezept, naechste, fehler, befund):
         from Genesis9.modellmitkleidern import ModellMitKleidern
         from iterationen2d3d.gesamtnote import Gesamtnote
@@ -109,7 +129,10 @@ class Begutachtungsstand:
         teilnoten = Gesamtnote.berechnen(note, befund)
         note.update(gesamt=teilnoten['gesamt'], teilnoten=teilnoten)
         auswahl = Rundenauswahl(z.get('auswahl'))
+        if naechste.get('messrunde'):   # neue Auflösungsstufe: die Noten und Sperren der alten gelten nicht mehr
+            auswahl.beste, auswahl.probe, auswahl.gesperrt = None, None, {}      # (`Aufloesungsstufe`, 02.10.2026)
         self._gesicht_nachziehen(auswahl, teilnoten, befund)
+        self._haar_nachziehen(auswahl, teilnoten, befund)
         aktion, weiter = auswahl.nach_runde(runde, teilnoten['gesamt'], rezept if fehler is None else [])
         beste = auswahl.beste
         eintrag = self._eintrag(runde)

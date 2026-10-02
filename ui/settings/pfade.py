@@ -115,7 +115,7 @@ MESHFIGUR_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshTo3D'
 # Bereich „BlenderModel" (Fotos -> Netz -> Figur, 29.09.2026): wie MeshTo3D, ein Ordner je Auftrag.
 BLENDERMODELL_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'BlenderModel'
 # Bereich „Haar Engine" (Vorlagenfotos -> Figur mit Kleidern, 30.09.2026): wie BlenderModel, ein Ordner je Auftrag.
-HAARENGINE_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'HaarEngine'
+ENGINE2D3DKLEIDER_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Engine2d3dKleider'
 #: Blender-Skript, das eine GLB in eine .blend umschreibt — nur gerufen, wenn
 #: „.blend" im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
 MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'
@@ -134,6 +134,11 @@ EFFEKTE_NEWTON_PYTHON = os.environ.get('EFFEKTE_NEWTON_PYTHON') or str(
     TOOLS_ROOT / 'ProjektTemp' / 'kleiderphysik' / 'venv_newton' / 'Scripts' / 'python.exe'
 )
 EFFEKTE_NEWTON_SKRIPT = BASE_DIR / 'effekte' / 'figur' / 'stoffnewton.py'
+#: Stoffsolver (02.10.2026, `Stoffsolver/README.md`): Blenders Cloth als Warp-Löser, läuft in `python14` (warp 1.17, CUDA) als
+#: eigener Prozess — wie Blender mit `drapieren.py`, derselbe Auftrag. Kernelcache: `Stoffsolver/_warp_cache/` (im Paket, nicht auf C:).
+STOFFSOLVER_SKRIPT = TOOLS_ROOT / 'Stoffsolver' / 'werkzeug' / 'stoff_lauf.py'
+#: Dasselbe für die Haar-Dynamik (`haar_dynamik`, `Haardynamik`): derselbe Prozess-Weg, der Auftrag ist der von `Haarauftrag`.
+STOFFSOLVER_HAARSKRIPT = TOOLS_ROOT / 'Stoffsolver' / 'werkzeug' / 'haar_lauf.py'
 EFFEKTE_WARP_CACHE = TOOLS_ROOT / 'ProjektTemp' / 'kleiderphysik' / 'warp_cache'
 #: Mitsuba 3 (Pfadverfolgung auf der GPU, 01.10.2026): Dr.Jits Kernel- und OptiX-Cache im Projekt — ohne
 #: `DRJIT_CACHE_DIR` legt Dr.Jit ihn unter %TEMP%\drjit auf C: ab (gemessen bei der ersten Probe).

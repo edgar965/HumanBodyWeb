@@ -5,7 +5,7 @@ herausgelöst, als die Texturen dazukamen).
 Ein Teil ohne UV (Körper, Stranghaar-Bänder) wird ein Knoten mit flacher Farbe (Vertexfarben). Ein Teil mit UV wird
 seit 01.10.2026 JE MATERIALGRUPPE ein eigener Knoten `<art>__<sorte>__<n>_g<k>__<slug>` — mit Bild (PBR, Farbfaktor =
 Daz-Farbe × Tönung), sonst flach, aber mit UV: So kennt die Bühne für jeden Treffer eines Pinselstrichs die Gruppe (der
-Slug ist der von `G9kleidtexturen.pfad`, `Haarenginemalen`), und `Haarenginebuehnenmodell.art` liest weiter den Anfang.
+Slug ist der von `G9kleidtexturen.pfad`, `Engine2d3dKleidermalen`), und `Engine2d3dKleiderbuehnenmodell.art` liest weiter den Anfang.
 Dreiecke, die keine Gruppe nennt, bleiben flach.
 """
 

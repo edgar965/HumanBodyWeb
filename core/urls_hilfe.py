@@ -21,7 +21,7 @@ from django.urls import path
 from .api.hilfe_fitting import KleidungFitting
 from .api.hilfe_garmentcode import KleidungGarmentcode
 from .api.hilfe_genesis import KleidungGenesis
-from .api.hilfe_haarengine import KleidungHaarEngine
+from .api.hilfe_engine2d3dkleider import KleidungEngine2d3dKleider
 from .api.hilfe_kleiderphysik import KleidungPhysik
 from .api.hilfe_kleidung import KleidungAllgemein
 from .api.hilfe_kleidungvergleich import KleidungVergleich
@@ -32,7 +32,7 @@ urlpatterns = [
     path('', KleidungAllgemein.ansicht(), name='hilfe_kleidung'),
     path('garmentcode/', KleidungGarmentcode.ansicht(), name='hilfe_kleidung_garmentcode'),
     path('genesis/', KleidungGenesis.ansicht(), name='hilfe_kleidung_genesis'),
-    path('haarengine/', KleidungHaarEngine.ansicht(), name='hilfe_kleidung_haarengine'),
+    path('engine2d3dkleider/', KleidungEngine2d3dKleider.ansicht(), name='hilfe_kleidung_engine2d3dkleider'),
     path('vergleich/', KleidungVergleich.ansicht(), name='hilfe_kleidung_vergleich'),
     path('neu/', KleidungNeu.ansicht(), name='hilfe_kleidung_neu'),
     path('physik/', KleidungPhysik.ansicht(), name='hilfe_kleidung_physik'),

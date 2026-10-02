@@ -76,9 +76,9 @@ class Uhrerkennung:
         zeigt."""
         from PIL import Image
 
-        from ..daten.haarengineablage import Haarengineablage
+        from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
         from .fotolandmarken import Fotolandmarken
-        eingang = self.ablage.unter(Haarengineablage.EINGANG)
+        eingang = self.ablage.unter(Engine2d3dKleiderablage.EINGANG)
         farbig = [r for r in referenzen if getattr(r, 'farbe', True)]
         marken = Fotolandmarken(self.ablage).holen([eingang / r.datei for r in farbig])
         aus = {s: {'gefunden': False, 'fotos': {}} for s in self.GELENKE}

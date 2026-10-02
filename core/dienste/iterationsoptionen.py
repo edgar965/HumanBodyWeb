@@ -2,7 +2,7 @@
 """Iterationsoptionen — die Gruppe `iterationen` der Optionen von „Haar Engine": wie lange und womit iteriert
 wird (30.09.2026).
 
-Dieselbe Katalogform wie `Haarenginefilmoptionen` (`schluessel`, `titel`, `art`, `vorgabe`, `werte`,
+Dieselbe Katalogform wie `Engine2d3dKleiderfilmoptionen` (`schluessel`, `titel`, `art`, `vorgabe`, `werte`,
 `hinweis`). Die Prüf-KI ist wählbar: die Liste kommt beim Aufbau der Seite aus Ollama
 (`Ollamamodelle.mit_bildern`) — nur Modelle, die Bilder lesen können. Ein gespeichertes Modell bleibt
 gültig, auch wenn Ollama gerade nicht antwortet (sonst fiele die Wahl still auf die Vorgabe zurück); geprüft
@@ -39,13 +39,35 @@ class Iterationsoptionen:
         },
         {
             'schluessel': 'bildbreite',
-            'titel': 'Renderbreite (px)',
+            'titel': 'Start-Auflösung der Note (px)',
             'art': 'zahl',
-            'vorgabe': 256,
+            # Stufen seit 02.10.2026 (Edgar: „am Anfang kleinere Auflösung … immer höher bis zur maximalen Auflösung, in
+            # der die Vorlagen vorhanden sind", `Aufloesungsstufe`).
+            'vorgabe': 128,
             'min': 96,
             'max': 1024,
-            'hinweis': 'Breite der Renders je Blickwinkel (Höhe = 1,5 × Breite). Die Note rechnet auf 128 × 192, mehr ist nur '
-            'für das Auge. Klein für einen schnellen Durchlauf.',
+            'hinweis': 'Breite der ersten Stufe (Höhe = 1,5 × Breite). Die Note verdoppelt die Auflösung, wenn eine Stufe '
+            'nichts mehr verbessert, bis zur Auflösung der Figur in den Fotos.',
+        },
+        {
+            'schluessel': 'stufe_stillstand',
+            'titel': 'Höhere Auflösung nach … Runden ohne Besserung',
+            'art': 'zahl',
+            'vorgabe': 3,
+            'min': 1,
+            'max': 100,
+            'hinweis': 'Dann rechnet die nächste Runde die beste Runde in doppelter Auflösung neu (Messrunde) — auch, wenn '
+            'die Automatik keine Änderung mehr findet.',
+        },
+        {
+            'schluessel': 'tafelbreite',
+            'titel': 'Prüfbilder (px)',
+            'art': 'zahl',
+            'vorgabe': 384,
+            'min': 128,
+            'max': 1024,
+            'hinweis': 'Mindestbreite der Vergleichstafel je Blickwinkel, an der Fable jede Runde prüft (Kopftafel: '
+            '384 × 384). Gerendert wird in der größeren von Stufe und Prüfbreite.',
         },
         {
             'schluessel': 'runden',

@@ -19,7 +19,7 @@ NICHT dazu — er zeigt mehrere Figuren auf einmal; seine Rolle steht auf „aus
 
 import re
 
-from ..daten.haarengineablage import Haarengineablage
+from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from .iterationsbild import Iterationsbild
 
 __all__ = ['Iterationsreferenz']
@@ -57,7 +57,7 @@ class Iterationsreferenz:
     def laden(cls, job):
         """→ (referenzen, ausgelassen). Vierte Quelle des Winkels (01.10.2026): die Schätzung aus der Pose des Fotos
         (`Blickwinkelschaetzung`, `kreislauf.winkel_geschaetzt[datei].winkel`)."""
-        ablage = Haarengineablage(job.kennung)
+        ablage = Engine2d3dKleiderablage(job.kennung)
         geschaetzt = ((job.ergebnis or {}).get('kreislauf') or {}).get('winkel_geschaetzt') or {}
         aus, ausgelassen = [], []
         # Fotos, die die Fotoprüfung des Netzschritts ausließ (andere Kleidung, `mesh_fotopruefung`), zählen nur für die
@@ -70,7 +70,7 @@ class Iterationsreferenz:
             if winkel is None and isinstance(geschaetzt.get(eintrag.get('datei')), dict):
                 w = geschaetzt[eintrag['datei']].get('winkel')
                 winkel = float(w) if isinstance(w, (int, float)) else None
-            pfad = ablage.unter(Haarengineablage.EINGANG) / eintrag['datei']
+            pfad = ablage.unter(Engine2d3dKleiderablage.EINGANG) / eintrag['datei']
             if winkel is None or not pfad.is_file():
                 ausgelassen.append(eintrag.get('original') or eintrag['datei'])
                 continue
@@ -86,7 +86,7 @@ class Iterationsreferenz:
         wenn es das gibt — ein Foto mit Zimmer dahinter ist sonst als Ganzes „Figur" (30.09.2026, Edgar - TEST: IoU
         0,32 gegen den Flur). Sonst das Foto selbst mit weißem Grund. `groesse` (Breite, Höhe): eine feinere Fläche
         als die der Note — die Fotoprojektion liest die Farbe mit 512 × 768."""
-        vorbereitet = ablage.unter(Haarengineablage.VORBEREITET) / (datei.rsplit('.', 1)[0] + '.png')
+        vorbereitet = ablage.unter(Engine2d3dKleiderablage.VORBEREITET) / (datei.rsplit('.', 1)[0] + '.png')
         if vorbereitet.is_file():
             return Iterationsbild.aus_render(vorbereitet, groesse)
-        return Iterationsbild.aus_vorlage(ablage.unter(Haarengineablage.EINGANG) / datei, groesse)
+        return Iterationsbild.aus_vorlage(ablage.unter(Engine2d3dKleiderablage.EINGANG) / datei, groesse)

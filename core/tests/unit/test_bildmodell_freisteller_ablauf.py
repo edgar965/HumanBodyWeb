@@ -51,7 +51,7 @@ def _maske_schreiben(pfad):
 class _Freistelleraufbau:
     """Auftrag, Ablage, Bild und Runner-Attrappe — für beide Klassen unten.
 
-    AUFGETEILT AM 30.09.2026 (wie `test_haarengine_endpunkte.py`): `zustand` ist async und liest die
+    AUFGETEILT AM 30.09.2026 (wie `test_engine2d3dkleider_endpunkte.py`): `zustand` ist async und liest die
     Datenbank in einem eigenen Faden; unter der offenen Transaktion von `TestCase` sperrt SQLite dort
     die Tabelle („database table is locked"). Nur der Fall mit `zustand` läuft als
     `TransactionTestCase` — der leert nach jedem Fall alle Tabellen und ist langsamer."""

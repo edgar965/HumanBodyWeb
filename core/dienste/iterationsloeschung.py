@@ -8,7 +8,7 @@ Kreislaufs, kein Anzeigestück.
 
 Während eines Laufs schreibt NUR der Lauf in `ergebnis`: Er hält es minutenlang im Speicher und würde eine
 Löschung der Seite bei der nächsten Runde wieder wegspeichern (dieselbe Falle wie
-`Haarengineauftrag.bilder_sichern`). Die Seite legt deshalb eine Liste an (`arbeit/rundenloeschen.json`),
+`Engine2d3dKleiderauftrag.bilder_sichern`). Die Seite legt deshalb eine Liste an (`arbeit/rundenloeschen.json`),
 und der Lauf arbeitet sie zu Beginn jeder Runde ab (`Iterationskreislauf`). Ohne Lauf arbeitet der Endpunkt
 sie selbst ab.
 """
@@ -18,7 +18,7 @@ import logging
 from pathlib import Path
 
 from ..atomic_write import AtomarSchreiber
-from ..daten.haarengineablage import Haarengineablage
+from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 
 logger = logging.getLogger('core')
 
@@ -30,7 +30,7 @@ class Iterationsloeschung:
 
     def __init__(self, job):
         self.job = job
-        self.ablage = Haarengineablage(job.kennung)
+        self.ablage = Engine2d3dKleiderablage(job.kennung)
 
     def _pfad(self):
         return self.ablage.arbeit(self.LISTE)

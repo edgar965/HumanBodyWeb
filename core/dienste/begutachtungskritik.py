@@ -32,7 +32,7 @@ class Begutachtungskritik:
     FERTIG_AB = Begutachtungsprompt.FERTIG_AB
     KRITIKEN_HOECHSTENS = 30
     VERBOTEN = ('haltung', 'haltung_gelenk', 'kleid_huelle', 'koerper_huelle', 'kleid_drapieren', 'kleid_fototextur',
-                'haar_fototextur', 'koerper_regler', 'koerper_regler_setzen', 'kleid_alle_aus')
+                'haar_fototextur', 'koerper_regler', 'koerper_regler_setzen', 'kleid_alle_aus', 'haar_dynamik')
     STUECKE = ('kleid_nur', 'kleid_anteil', 'kleid_aus')
     FRISUREN = ('haar_nur', 'haar_anteil')
     #: Aufrufe, deren erstes Argument ein GETRAGENES Stück bzw. die getragene Frisur sein muss.
@@ -56,7 +56,7 @@ class Begutachtungskritik:
     }
 
     def __init__(self, optionen, ablage, prompt=None):
-        """`optionen`: Gruppe `iterationen` (`Iterationsoptionen.pruefen`), `ablage`: `Haarengineablage` (die Tafeln),
+        """`optionen`: Gruppe `iterationen` (`Iterationsoptionen.pruefen`), `ablage`: `Engine2d3dKleiderablage` (die Tafeln),
         `prompt`: ein `Begutachtungsprompt` — sonst der aus der Bibliothek beim ersten Fragen."""
         self.o = optionen or {}
         self.ablage = ablage

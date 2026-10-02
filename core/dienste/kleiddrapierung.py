@@ -8,7 +8,7 @@ Cloth (Knick 4–8° statt 35–47°, `effekte.md`). Hier bekommt er ein fertige
 Bühne (`G9kleidmorphe.kaefige`), die Grundfigur als stehender Kollider, das obere Band des Stücks (`fest_oben` der Höhe)
 als feste Punkte (Bund, Schultern — sonst rutscht ein Shirt zu Boden), `bilder` Bilder bei `FPS` ohne Wind. Die
 Verschiebung nach dem letzten Bild wird ein eigener Morph `<kennung>.eigen.drapiert` (`G9kleidmorphe.ablegen`), also
-linear stellbar 0…1 wie jeder Regler. Kein Druck (Ausgebeultheit) — das kann nur der Blender-Motor (`Haarengineblender`).
+linear stellbar 0…1 wie jeder Regler. Kein Druck (Ausgebeultheit) — das kann nur der Blender-Motor (`Engine2d3dKleiderblender`).
 
 Der Löser rechnet mit Z OBEN (Blender-Lage, wie der Figur-Film); die Bühne hat Y oben — Umrechnung `(x, y, z) → (x, −z, y)`
 und zurück. Die `.npz` folgt `Stoffauftrag._schreiben`; Körperbewegung gibt es nicht (alle Bilder dieselbe Ruhelage).
@@ -55,7 +55,7 @@ class Kleiddrapierung:
         """→ Steckbrief des Morphs `<kennung>.eigen.<name>`. `druck` wird hier nicht gerechnet (nur Blender)."""
         from Genesis9.kleidmorphe import G9kleidmorphe
 
-        from .haarengineblender import Haarengineblender
+        from .engine2d3dkleiderblender import Engine2d3dKleiderblender
         if druck:
             logger.info('Kleiddrapierung %s: Druck %.1f wird vom Newton-Motor nicht gerechnet', kennung, druck)
         teile, kaefige, y0, y1, _mitte, _e = G9kleidmorphe.kaefige(kennung)
@@ -63,7 +63,7 @@ class Kleiddrapierung:
         self.ordner.mkdir(parents=True, exist_ok=True)
         deltas, berichte = [], []
         for nummer, ((folger, _lage), punkte) in enumerate(zip(teile, kaefige, strict=True)):
-            dreiecke = Haarengineblender._dreiecke(folger)
+            dreiecke = Engine2d3dKleiderblender._dreiecke(folger)
             punkte = np.asarray(punkte, dtype=np.float64)
             if dreiecke is None or not len(dreiecke) or len(punkte) < 4:
                 deltas.append(np.zeros_like(punkte))

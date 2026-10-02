@@ -7,13 +7,12 @@ Stellung als `regler`, die Werte des Sammeleintrags als `regler_stueck`, die get
 Die rohen Netze fängt der Eingriff `vor_antwort` ab; was der Mischbau neu kodiert, wird aus den Netzfeldern
 zurückgelesen. So sieht die Iteration genau das, was später auf der Bühne steht.
 
-Ergebnis je Teil: `{punkte (N, 3), dreiecke (T, 3), farbe (3,), haut {knochen, index, gewicht}, art, sorte}`
-in der Lage der Bühne (Meter, Y oben, Füße auf 0). Der Körper kommt als erstes Teil (Käfigstufe 0 an den
-UV-Nähten geteilt, wie `G9figurrigglb`); seine Haut trägt die Daz-Knochen wie die der Stücke, damit
-`G9tanzhaut` alles gleich häutet.
-
-Die Farbe eines Stücks ist das Mittel seiner Textur (`G9kleidfarbe.farben`), getönt mit der Umfärbung des
-Modells — flach je Stück, weil die Note Farbflächen vergleicht (`Iterationsnote`).
+Ergebnis je Teil: `{punkte (N, 3), dreiecke (T, 3), farbe (3,), haut {knochen, index, gewicht}, art, sorte}` in der
+Lage der Bühne (Meter, Y oben, Füße auf 0). Der Körper kommt als erstes Teil (Käfigstufe 0 an den UV-Nähten geteilt,
+wie `G9figurrigglb`); seine Haut trägt die Daz-Knochen wie die der Stücke, damit `G9tanzhaut` alles gleich häutet.
+Die Farbe eines Stücks ist das Mittel seiner Textur (`G9kleidfarbe.farben`), getönt mit der Umfärbung des Modells —
+flach je Stück, weil die Note Farbflächen vergleicht (`Iterationsnote`). Kleidung und Haar kommen aus dem
+`Teilevorrat`, solange ihr Bauplan gleich bleibt (eine Farbrunde baut nichts neu, 02.10.2026).
 
 Läuft im Arbeitsprozess (python14 mit Django), nie im Server: Die Stufe wird hier auf den Käfig gesetzt
 (`Netzstufenwahl`), sonst rechnete jede Runde die Unterteilung der Bühne mit.
@@ -23,6 +22,9 @@ import logging
 
 import numpy as np
 from django.http import HttpResponse
+
+from .koerperanhaenge import Koerperanhaenge
+from .teilevorrat import Teilevorrat
 
 logger = logging.getLogger('core')
 
@@ -37,10 +39,8 @@ class Kleidermodellbau:
     STUFE = 0
 
     def __init__(self, stellung, drehung=None, stufe=STUFE, koerper=None, kacheln=None):
-        """`drehung`: die Haltung (`ModellMitKleidern.drehung`) — Körper und Stücke stehen dann so; für den Film
-        bleibt sie weg (die Bewegung ist absolut). `koerper`: die Genesis-Regler des Modells (`ModellMitKleidern.
-        koerper`: `koerper_regler`, `koerper_ort`, `koerper_huelle`) ÜBER der Stellung des Auftrags — bis 01.10.2026
-        kam nur `job.stellung()` an, `IterationKoerper` wirkte damit nicht (Befund der Parallelsitzung)."""
+        """`drehung`: die Haltung (`ModellMitKleidern.drehung`; für den Film nicht, die Bewegung ist absolut).
+        `koerper`: Genesis-Regler des Modells ÜBER der Stellung des Auftrags (sonst wirkte `IterationKoerper` nicht)."""
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.formung import G9formung
         from Genesis9.haut import G9haut
@@ -71,7 +71,7 @@ class Kleidermodellbau:
     def formbezug(self, ordner, runde):
         """Den Daz-Käfig des Körpers DIESER Runde (25.182 Punkte, Lage der Bühne) als `runde_NNN_formbezug.npz` ablegen
         → Dateiname. Der Anker, mit dem der Form-Pinsel Striche auf dem Modell der Runde in die Lage der Grundfigur
-        überträgt (`G9formpinsel.uebertragen`, `Haarengineformendpunkte`)."""
+        überträgt (`G9formpinsel.uebertragen`, `Engine2d3dKleiderformendpunkte`)."""
         name = 'runde_%03d_formbezug.npz' % int(runde)
         kaefig = np.asarray(self.formung.punkte(), dtype=np.float64) - np.array([0.0, self.boden, 0.0])
         np.savez_compressed(ordner / name, koerper=kaefig.astype(np.float32))
@@ -100,11 +100,10 @@ class Kleidermodellbau:
 
     @staticmethod
     def _farbe(netze, toenung):
-        from Genesis9.kleidfarbe import G9kleidfarbe
         farben = []
         for netz in netze:
             try:
-                farben.append(np.asarray(G9kleidfarbe.farben(netz), dtype=np.float64).mean(axis=0))
+                farben.append(np.asarray(Teilevorrat.farben(netz), dtype=np.float64).mean(axis=0))
             except (OSError, ValueError, KeyError, TypeError) as fehler:   # ohne Textur: Haut
                 logger.debug('Kleidermodellbau: Farbe nicht lesbar (%s)', fehler)
         grund = np.mean(farben, axis=0) if farben else np.asarray(Kleidermodellbau.HAUT)
@@ -149,11 +148,13 @@ class Kleidermodellbau:
         if len(folge) > 1:
             rumpf = dict(rumpf, regler_stueck=G9kleidgenerisch.ohne_textur(rumpf['regler_stueck']))
             koerper = lambda: G9koerpernetz(G9figur.formung(rumpf, {}), stufen=G9netzstufe.browser()).bindungsflaeche()  # noqa: E731
-            aus = G9kleidmischbau.antwort(rumpf, kleid, modell.KLEIDUNG, folge, uebergang, koerper)
+            aus = Teilevorrat.antwort('kleidung', rumpf, lambda: G9kleidmischbau.antwort(
+                rumpf, kleid, modell.KLEIDUNG, folge, uebergang, koerper), roh)
         else:
             kennung, _anteil, regler = folge[0]
             from Genesis9.garderobe import G9garderobe
-            aus = kleid(kennung, G9garderobe.eintrag(kennung) or {}, dict(rumpf, regler_stueck=regler))
+            aus = Teilevorrat.antwort('kleidung', rumpf, lambda: kleid(
+                kennung, G9garderobe.eintrag(kennung) or {}, dict(rumpf, regler_stueck=regler)), roh)
             if not isinstance(aus, HttpResponse):
                 for teil in aus.get('teile') or []:
                     teil['sorte'] = kennung
@@ -173,7 +174,7 @@ class Kleidermodellbau:
                 return vor_antwort(nummer, netz) if vor_antwort else netz
             return G9garderobeapi._kleid(kennung, eintrag, r, vor_antwort=sammeln)
 
-        aus = G9haarmischbau.antwort(rumpf, kleid)
+        aus = Teilevorrat.antwort('haar', rumpf, lambda: G9haarmischbau.antwort(rumpf, kleid), roh)
         return self._teile(aus, roh, 'haar', modell)
 
     def _teile(self, aus, roh, art, modell):
@@ -227,8 +228,7 @@ class Kleidermodellbau:
 
     @staticmethod
     def _kurven(teil, punkte, dreiecke, modell, sorte, haut=None):
-        """Die Strähnen als Ketten für Mitsubas Kurven: Punkte, Reihenfolge, Punkte je Strähne, Radius je Punkt (m), dazu
-        die Haut der Strähnenpunkte (`G9haltungshaut` häutet die Kurven in die Haltung)."""
+        """Strähnen als Mitsuba-Kurven: Punkte, Reihenfolge, Längen, Radius (m), Haut (für `G9haltungshaut`)."""
         from Genesis9.haargenerisch import G9haargenerisch
         from Genesis9.haarprofil import G9haarprofil
         from Genesis9.haarzusatz import G9haarzusatz
@@ -253,12 +253,12 @@ class Kleidermodellbau:
         for g in gruppen:
             b = bilder.get(g['name']) or {}
             albedo = G9material.datei(b['albedo']) if b.get('albedo') else None
-            normalen = G9material.datei(b['normalen']) if b.get('normalen') else None
+            normalen, alpha = (G9material.datei(b[k]) if b.get(k) else None for k in ('normalen', 'alpha'))
             farbe = b.get('farbe')
             faktor = np.asarray(farbe[:3], dtype=np.float64) if isinstance(farbe, (list, tuple)) and len(farbe) >= 3 \
                 else np.ones(3)
             aus.append({'ab': int(g['index_ab']) // 3, 'anzahl': int(g['index_anzahl']) // 3, 'albedo': albedo,
-                        'normalen': normalen, 'normalenachse': int(b.get('normalenachse') or 1),
+                        'normalen': normalen, 'alpha': alpha, 'normalenachse': int(b.get('normalenachse') or 1),
                         'faktor': np.clip(faktor * 2.0 * np.asarray(toenung), 0.0, 1.0)})
         return aus if any(t['albedo'] is not None for t in aus) else []
 
@@ -287,8 +287,8 @@ class Kleidermodellbau:
         return tuple(int(roh[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
 
     def teile(self, modell):
-        """Körper, Kleider, Haar — in dieser Reihenfolge."""
-        return [self.koerper()] + self._kleidung(modell) + self._haar(modell)
+        """Körper (mit Augen, Mund, Wimpern, Brauen — `Koerperanhaenge`, 02.10.2026), Kleider, Haar."""
+        return [self.koerper()] + Koerperanhaenge.teile(self, modell) + self._kleidung(modell) + self._haar(modell)
 
     # ------------------------------------------------------------------ GLB
 

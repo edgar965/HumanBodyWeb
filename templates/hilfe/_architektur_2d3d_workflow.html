@@ -1,0 +1,150 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „Workflow" (Edgar, 02.10.2026: „mache einen neuen Tab, wo du den Workflow der 2D3D-Erkennung machst,
+mit allen Klassen und allen Optionen (z. B. Blender) — ich brauche grafische Klassen mit Entscheidungsbäumen und Infos, was jeder Schritt
+kostet an Zeit"). Eingebunden in architektur_2d3d.html mit `w` = workflow. Die Daten kommen aus `core/dienste/architektur2d3dworkflow.py`;
+die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht von selbst um).
+{% endcomment %}
+{% with w=workflow %}
+<h1>2D3D Kleider: der Workflow</h1>
+<p>Vom Foto zum Modell in sieben Schritten, mit jeder Option, die der Code kennt — auch Blender —, als Entscheidungsbaum und mit der
+  Zeit, die der Schritt gemessen kostet. <b>Eine Zahl ohne Messung steht hier nicht:</b> wo nichts gemessen ist, steht „nicht gemessen".
+  Die kleine Zahl hinter einer Zeit verweist auf die Quelle (unten, „Quellen der Zeiten"); ein Klassenname führt zur Klassenkarte.</p>
+
+<div class="wf-legende">
+  <span><b>Zeit:</b></span>
+  {% for l in w.legende %}<span class="wf-legende-art"><span class="wf-zeit {{ l.klasse }}">{{ l.text }}</span></span>{% endfor %}
+  <span><b>Kasten:</b></span>
+  <span class="wf-legende-art"><span class="wf-muster wf-muster-frage"></span> Frage (eine Option oder ein Zustand entscheidet)</span>
+  <span class="wf-legende-art"><span class="wf-muster wf-muster-tat"></span> Tat</span>
+  <span class="wf-legende-art"><span class="wf-muster wf-muster-ende"></span> Ergebnis</span>
+  <span class="wf-legende-art"><span class="wf-muster wf-muster-offen"></span> gibt es im Code, nicht gemessen oder nicht gewählt</span>
+</div>
+
+<h2>Die sieben Schritte eines Auftrags</h2>
+<p>Reihenfolge und Klassen aus <code>Engine2d3dKleiderlauf.SCHRITTE</code>; die Optionen sind die, die das Formular der Seite „2D3D Kleider"
+  zeigt (<code>Engine2d3dKleideroptionen.SICHTBAR</code>). Die Zeit unter dem Klassennamen ist die gemessene Spanne des Schritts.</p>
+<div class="wf-strecke">
+  {% for s in w.schritte %}
+  <div class="wf-schritt">
+    <div class="wf-schrittkopf"><span class="wf-nr">{{ s.nr }}</span><span>{{ s.name }}</span></div>
+    <div>{{ s.klasse_html }}</div>
+    <div>{{ s.zeit_html }}</div>
+    {% if s.hinweis %}<div class="wf-hinweis">{{ s.hinweis }}</div>{% endif %}
+    {% if s.optionen %}
+    <ul class="wf-optionen">{% for o in s.optionen %}<li><b>{{ o.name }}</b>: {{ o.werte }}</li>{% endfor %}</ul>
+    {% else %}<p class="wf-keine">keine eigene Option</p>{% endif %}
+    <div>{% for b in s.baeume %}<a class="wf-baumlink" href="#{{ b.anker }}"><i class="bi bi-signpost-split"></i> {{ b.titel }}</a>{% endfor %}</div>
+  </div>
+  {% if not forloop.last %}<div class="wf-pfeil"><i class="bi bi-arrow-right"></i></div>{% endif %}
+  {% endfor %}
+</div>
+
+<h2>Was ein Auftrag kostet</h2>
+<p>Ein vollständiger Auftrag von den Fotos bis zum Export (Auftrag 2026.10.01.20.10.04, 23 Runden): zusammen
+  <b>{{ w.zeitleiste.gesamt }}</b>. Der Aufbau — Netz, Körper, Grundfigur, einmal je Auftrag — kostet <b>{{ w.zeitleiste.aufbau }}</b>,
+  das sind {{ w.zeitleiste.aufbau_prozent }} %; der Rest sind die Runden.<sup><a class="wf-qnr" href="#quelle-{{ w.zeitleiste.quelle }}">{{ w.zeitleiste.quelle }}</a></sup></p>
+<div class="wf-zeitleiste">
+  {% for seg in w.zeitleiste.segmente %}<div class="wf-segment wf-seg{{ forloop.counter }}" style="width: {{ seg.prozent }}%"></div>{% endfor %}
+</div>
+<div class="wf-segmentliste">
+  {% for seg in w.zeitleiste.segmente %}
+  <div class="wf-segmentzeile"><span class="wf-chip wf-seg{{ forloop.counter }}"></span><span>{{ seg.name }}</span>
+    {{ seg.zeit_html }}<span class="wf-anteil">{{ seg.anteil }} %</span></div>
+  {% endfor %}
+</div>
+
+<h2>Entscheidungsbäume des Laufs</h2>
+<p>Je Verzweigung ein Baum: Links die Frage (eine Option oder ein Zustand), an den Kanten die Antworten, rechts die Folge mit Klasse und
+  gemessener Zeit. Mit Rahmen in der Farbe der Vorgabe ist der Weg markiert, den die Vorgabe geht.</p>
+{% for b in w.baeume_lauf %}{{ b.html }}{% endfor %}
+
+<h2>Eine Runde, Abschnitt für Abschnitt</h2>
+<p>Die 22 Schritte einer Runde (Tabelle „Eine Runde, Schritt für Schritt" im ersten Reiter), zusammengefasst zu den Abschnitten, die
+  das <code>auftrag.log</code> zeitlich misst. Die Zeit eines Abschnitts gilt für alle Schritte darin zusammen. „Warm" heißt: zweite oder
+  spätere Runde im selben Lauf; „kalt": die erste Runde eines Laufs, der Prozess startet neu und der Teilevorrat ist leer.</p>
+<div class="wf-fluss">
+  {% for a in w.fluss %}
+  <section class="wf-abschnitt">
+    <div class="wf-abschnittkopf">
+      <span class="wf-abschnitttitel">{{ a.titel }}</span>
+      <span class="wf-nummern">Schritt{% if a.von != a.bis %}e {{ a.von }}–{{ a.bis }}{% else %} {{ a.von }}{% endif %}</span>
+      <span class="wf-zeiten">
+        {% for z in a.zeiten %}<span class="wf-zeitpaar">{% if z.label %}<span>{{ z.label }}</span>{% endif %}{{ z.html }}</span>{% endfor %}
+      </span>
+    </div>
+    {% for z in a.zeiten %}{% if z.hinweis %}<div class="wf-hinweis">{% if z.label %}{{ z.label }}: {% endif %}{{ z.hinweis }}</div>{% endif %}{% endfor %}
+    <ol class="wf-schritte">
+      {% for s in a.schritte %}
+      <li value="{{ s.nr }}"><span class="wf-nr">{{ s.nr }}</span><span class="wf-wann">{{ s.wann }}</span>
+        <span class="wf-schritttext">{{ s.was }}</span>
+        <span class="wf-fuss">{% for k in s.klassen %}{{ k }}{% endfor %}</span></li>
+      {% endfor %}
+    </ol>
+    {% if a.baeume %}
+    <div class="wf-baumlinks"><i class="bi bi-signpost-split"></i> Entscheidungen in diesem Abschnitt:
+      {% for b in a.baeume %}<a href="#{{ b.anker }}">{{ b.titel }}</a>{% endfor %}</div>
+    {% endif %}
+  </section>
+  {% if not forloop.last %}<div class="wf-pfeil"><i class="bi bi-arrow-down"></i></div>{% endif %}
+  {% endfor %}
+</div>
+
+<h2>Entscheidungsbäume der Runde</h2>
+<p>Wer die Runden treibt, wer das Rezept schreibt, wie die Automatik entscheidet — und im Inneren der Runde: Drapieren
+  (<b>Newton oder Blender</b>), Haar-Knoten (Blender), Teilevorrat, Fotoprojektion, Renderer und Rundenauswahl. Blender kommt in der
+  Pipeline nur über den einen Arbeiter <code>Engine2d3dKleiderblender</code> vor und nur per Rezeptzeile; die Automatik wählt für das Drapieren
+  immer Newton.</p>
+{% for b in w.baeume_runde %}{{ b.html }}{% endfor %}
+
+<h2>Der Stoffsolver gegen Blender: was drin ist</h2>
+<p>Der Stoffsolver (<code>Stoffsolver/</code>) ist Blenders Cloth- und Haar-Dynamik als Python/Warp-Paket. Die Tabelle zeigt je Funktion
+  die Klasse im Solver und den <b>Stand</b>. Nur die Zeilen „gegen Blender gemessen" sind mit einem echten Blender-Lauf verglichen;
+  alles, was am 02.10.2026 dazukam, ist nach Blenders Quelltext gebaut und gegen Handrechnung, Finite Differenzen und Gerät gegen Host
+  getestet — <b>kein Blender-Lauf</b>. Die Pipeline wählt den Solver nie selbst: Drapieren und Haar-Dynamik gehen nur per Rezeptzeile.
+  Gezählt: {% for s in w.stoffsolver.zaehlung %}{{ s.anzahl }} × {{ s.text }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+<table class="db-tabelle sortable wf-umfang" data-sort-key="hilfe-2d3d-stoffsolver">
+  <thead><tr><th>Bereich</th><th>Blender</th><th>Klasse im Solver</th><th>Stand</th><th>Anmerkung</th></tr></thead>
+  <tbody>
+  {% for z in w.stoffsolver.zeilen %}
+  <tr>
+    <td>{{ z.bereich }}</td>
+    <td>{{ z.blender }}</td>
+    <td>{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<a href="#{{ k.anker }}">{{ k.klasse }}</a>{% endif %}{% empty %}—{% endfor %}</td>
+    <td><span class="wf-stand st-{{ z.stand }}">{{ z.stand_text }}</span></td>
+    <td>{{ z.hinweis }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="a2d3d-klein">Quelle: {{ w.stoffsolver.quelle }}.</p>
+
+<h2>Alle Klassen</h2>
+<p>Wie im Klassenmodell je Klasse ein Kasten: Name, Datei und Zeilenzahl, Aufgabe (erster Satz des Modul-Docstrings, beim Aufruf aus dem
+  Code gelesen), öffentliche Methoden. Unten im Kasten steht, wo die Klasse im Ablauf vorkommt — gelesen aus den Schritten und Bäumen
+  dieser Seite, nicht von Hand eingetragen.</p>
+{% for g in w.karten %}
+<h3>{{ g.gruppe }} <span class="a2d3d-klein">— {{ g.hinweis }}</span></h3>
+<div class="wf-karten">
+  {% for k in g.karten %}
+  <div class="wf-karte" id="{{ k.anker }}">
+    <div class="wf-karte-kopf">{{ k.klasse }}</div>
+    <div class="wf-karte-datei"><code>{{ k.modul }}</code> · {{ k.zeilen }} Zeilen</div>
+    <div class="wf-karte-satz">{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.fehlt }}</span> {% endif %}{{ k.satz }}</div>
+    {% if k.methoden_gezeigt %}
+    <ul class="wf-methoden">{% for m in k.methoden_gezeigt %}<li>{{ m }}()</li>{% endfor %}{% if k.methoden_mehr %}<li class="wf-mehr">+ {{ k.methoden_mehr }} weitere</li>{% endif %}</ul>
+    {% endif %}
+    <div class="wf-karte-platz">
+      {% for s in k.schritte %}<span class="wf-marke">{{ s }}</span>{% endfor %}
+      {% for b in k.baeume %}<a class="wf-marke wf-marke-baum" href="#{{ b.anker }}">{{ b.titel }}</a>{% endfor %}
+      {% if not k.schritte and not k.baeume %}<span class="wf-marke">in keinem Schritt und keinem Baum genannt</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<h2>Quellen der Zeiten</h2>
+<ol class="wf-quellen">
+  {% for q in w.quellen %}<li id="quelle-{{ q.nr }}" value="{{ q.nr }}">{{ q.text }}</li>{% endfor %}
+</ol>
+{% endwith %}

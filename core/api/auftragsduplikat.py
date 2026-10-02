@@ -23,9 +23,9 @@ __all__ = ['Auftragsduplikatendpunkte']
 
 
 class Auftragsduplikatendpunkte:
-    #: Bereich → Name der Auftragsseite (`urls_bildmodell`, `_mesh`, `_meshfigur`, `_blendermodell`, `_haarengine`).
+    #: Bereich → Name der Auftragsseite (`urls_bildmodell`, `_mesh`, `_meshfigur`, `_blendermodell`, `_engine2d3dkleider`).
     SEITEN = {'bildmodell': 'bildmodell_auftrag', 'mesh': 'mesh_auftrag', 'meshfigur': 'meshfigur_auftrag',
-              'blendermodell': 'blendermodell_auftrag', 'haarengine': 'haarengine_auftrag'}
+              'blendermodell': 'blendermodell_auftrag', 'engine2d3dkleider': 'engine2d3dkleider_auftrag'}
 
     @staticmethod
     @require_POST

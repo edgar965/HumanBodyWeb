@@ -1,0 +1,38 @@
+{% comment %}Hilfe → Architektur → 2D3D: gemessene Dauern (core/dienste/architektur2d3dmessung.py). Eingebunden in
+architektur_2d3d.html mit m = messung.{% endcomment %}
+<h2>Dauer einer Runde</h2>
+<div class="info-box info-box-blue">
+  Ziel: <b>{{ m.ziel }} s</b> je Runde. Gemessen: <b>{{ m.runde_gesamt.1 }} s</b> und <b>{{ m.runde_gesamt.2 }} s</b>
+  für die Runden 10 und 11, {{ m.runde_gesamt.0 }} s für die erste Runde des Laufs (Prozess kalt); drei Runden zusammen
+  {{ m.lauf_gesamt }} s. Quelle: {{ m.quelle }}.
+</div>
+<table class="db-tabelle">
+  <thead><tr><th>Abschnitt im Log</th><th>Was darin steckt</th><th class="a2d3d-zahl">Runde 9 (kalt)</th>
+    <th class="a2d3d-zahl">Runde 10</th><th class="a2d3d-zahl">Runde 11</th></tr></thead>
+  <tbody>
+    {% for z in m.runde %}
+    <tr><td class="a2d3d-takt">{{ z.abschnitt }}</td><td>{{ z.was }}</td>
+      {% for w in z.werte %}<td class="a2d3d-zahl">{{ w }} s</td>{% endfor %}</tr>
+    {% endfor %}
+    <tr><td><b>Runde</b></td><td></td>{% for w in m.runde_gesamt %}<td class="a2d3d-zahl"><b>{{ w }} s</b></td>{% endfor %}</tr>
+  </tbody>
+</table>
+
+<h3>Schon umgesetzt (02.10.2026)</h3>
+<table class="db-tabelle">
+  <thead><tr><th>Maßnahme</th><th>Wirkung</th></tr></thead>
+  <tbody>{% for s in m.schon %}<tr><td>{{ s.massnahme }}</td><td>{{ s.wirkung }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Wo die übrige Zeit steckt — nächste Schritte</h3>
+<table class="db-tabelle">
+  <thead><tr><th>Wo</th><th>Warum es kostet</th><th>Was hilft</th></tr></thead>
+  <tbody>{% for n in m.naechstes %}<tr><td><b>{{ n.wo }}</b></td><td>{{ n.warum }}</td><td>{{ n.was }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Der Körperschritt</h3>
+<p>{{ m.koerper_gesamt }} s am 01.10.2026 (Auftrag test3, <code>ergebnis.dauer_koerper</code>), vor den Änderungen vom 02.10.2026:</p>
+<table class="db-tabelle">
+  <thead><tr><th>Teil</th><th class="a2d3d-zahl">Sekunden</th><th>Seither</th></tr></thead>
+  <tbody>{% for k in m.koerper %}<tr><td>{{ k.teil }}</td><td class="a2d3d-zahl">{{ k.sekunden }}</td><td>{{ k.seither }}</td></tr>{% endfor %}</tbody>
+</table>

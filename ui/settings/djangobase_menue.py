@@ -19,7 +19,7 @@ MENUE = [
             # eine Kopie des Reiters „Mesh to 3D" mit eigener Pipeline (`core/dienste/blendermodelllauf.py`).
             {'label': 'BlenderModel', 'icon': 'bi-badge-3d', 'url': '/blendermodell/'},
             # Seit 30.09.2026: die Kopie von BlenderModel für die Genesis Haar Engine statt Blender
-            # (`core/dienste/haarenginelauf.py`, `genesishaarengine.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
+            # (`core/dienste/engine2d3dkleiderlauf.py`, `genesisengine2d3dkleider.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
             # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
             # Dashboard – Kleider Engine in Dashboard – Haar Engine").
             {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/2d3dKleider/'},
@@ -154,6 +154,15 @@ HILFE_EXTRA = [
                 'url': '/hilfe/architektur/webserver/',
                 'aktiv': 'hilfe_webserver',
             },
+            # Die Iterationen von „2D3D Kleider" (Edgar, 02.10.2026: „Schreibe
+            # alles über die Implementierung der 2D3D Iterationen in eine neue
+            # Seite Hilfe - Architektur 2D3D").
+            {
+                'label': '2D3D',
+                'icon': 'bi-arrow-repeat',
+                'url': '/hilfe/architektur/2d3d/',
+                'aktiv': 'hilfe_architektur_2d3d',
+            },
         ],
     },
     {
@@ -188,8 +197,8 @@ HILFE_EXTRA = [
             {
                 'label': '2D3D Kleider',
                 'icon': 'bi-scissors',
-                'url': '/hilfe/kleidung/haarengine/',
-                'aktiv': 'hilfe_kleidung_haarengine',
+                'url': '/hilfe/kleidung/engine2d3dkleider/',
+                'aktiv': 'hilfe_kleidung_engine2d3dkleider',
             },
             # MakeHuman, Genesis, GarmentCode, UMA Schritt für Schritt (Edgar,
             # 25.09.2026: „mache dazu eine neue Seite: Hilfe - Kleidung - Vergleich").

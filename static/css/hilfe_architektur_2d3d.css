@@ -1,0 +1,29 @@
+/* Hilfe -> Architektur -> 2D3D: volle Breite (`~/.claude/rules/volle-breite.md`), Spalten mit Fließtext. */
+.doku-seite.a2d3d-breit {
+    max-width: none;
+}
+
+.a2d3d-nr {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.a2d3d-zahl {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.a2d3d-fehlt {
+    color: #ff9940;
+    font-weight: 600;
+}
+
+.a2d3d-klein {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.a2d3d-takt {
+    white-space: nowrap;
+}

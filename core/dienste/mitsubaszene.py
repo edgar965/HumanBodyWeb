@@ -121,6 +121,8 @@ class Mitsubaszene:
             try:
                 bsdf = Mitsubamaterial.textur(g['albedo'], g.get('faktor', (1.0, 1.0, 1.0)), g.get('normalen'),
                                               self.kante, int(g.get('normalenachse') or 1))
+                if g.get('alpha') is not None:                   # Haarkarten: Strähnen statt geschlossener Flächen
+                    bsdf = Mitsubamaterial.maske(bsdf, g['alpha'], self.kante)
             except (OSError, ValueError) as fehler:
                 logger.warning('Mitsuba: Bild %s nicht lesbar (%s) — Gruppe flach', g.get('albedo'), fehler)
                 continue

@@ -13,7 +13,7 @@ import logging
 
 from iterationen2d3d.haltungsschaetzung import Haltungsschaetzung
 
-from ..daten.haarengineablage import Haarengineablage
+from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from .fotolandmarken import Fotolandmarken
 
 logger = logging.getLogger('core')
@@ -31,7 +31,7 @@ class Haltungsfotos:
     def fuer_lauf(self, z, referenzen):
         """`z` = `kreislauf`; → die Schätzung (oder None)."""
         try:
-            eingang = self.ablage.unter(Haarengineablage.EINGANG)
+            eingang = self.ablage.unter(Engine2d3dKleiderablage.EINGANG)
             befunde = Fotolandmarken(self.ablage).holen([eingang / r.datei for r in referenzen])
             fotos = [b['pose_welt'] for b in befunde.values() if b.get('pose_welt')]
             haltung = Haltungsschaetzung.schaetzen(fotos)

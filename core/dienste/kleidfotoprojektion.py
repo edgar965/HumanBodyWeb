@@ -39,18 +39,22 @@ class Kleidfotoprojektion:
 
     def _ansichten(self, teile, referenzen):
         """`[(referenz, abbildung, foto, masken)]` je Vorlage mit Blickwinkel."""
-        farben = Teilmasken.farben(len(teile))
         aus = []
         for r in referenzen:
             pfad = self.ordner / ('textur_kennung_%+04d.png' % int(round(r.winkel)))
-            self.render.bild_teile([(t['punkte'], t['dreiecke'], farben[i]) for i, t in enumerate(teile)], r.winkel,
-                                   pfad, groesse=self.GROESSE, kennung=True)
+
+            def kennbild(farben, block, r=r, pfad=pfad):     # je Block ein Bild (`Teilmasken.messen`)
+                ziel = pfad if not block else pfad.with_name('%s_b%d%s' % (pfad.stem, block, pfad.suffix))
+                self.render.bild_teile([(t['punkte'], t['dreiecke'], farben[i]) for i, t in enumerate(teile)],
+                                       r.winkel, ziel, groesse=self.GROESSE, kennung=True)
+                bild = Iterationsbild.aus_render(ziel, self.GROESSE)
+                return bild.farbe, bild.maske
+
+            masken = Teilmasken.messen(len(teile), kennbild)
             with Image.open(pfad) as bild:
                 abbildung = Iterationsbild.abbildung(np.asarray(bild.convert('RGBA'))[..., 3] > 127)
             if abbildung is None:
                 continue
-            kennbild = Iterationsbild.aus_render(pfad, self.GROESSE)
-            masken = Teilmasken.zuordnen(kennbild.farbe, kennbild.maske, len(teile))
             foto = Iterationsreferenz.bild(self.ablage, r.datei, self.GROESSE)
             aus.append((r, abbildung, foto, masken))
         return aus

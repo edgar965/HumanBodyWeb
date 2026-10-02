@@ -33,11 +33,14 @@ class Begutachtungsbefund:
 
     def masken(self, render, teile, referenz, pfad, groesse):
         """Das Kennfarbenbild dieser Ansicht rendern und die Teilmasken merken → Liste der Masken je Teil."""
-        farben = Teilmasken.farben(len(teile))
-        render.bild_teile([(t['punkte'], t['dreiecke'], farben[i]) for i, t in enumerate(teile)], referenz.winkel,
-                          pfad, groesse=groesse, kennung=True)
-        kennbild = Iterationsbild.aus_render(pfad)
-        masken = Teilmasken.zuordnen(kennbild.farbe, kennbild.maske, len(teile))
+        def kennbild(farben, block):                # je Block ein Bild (mehr Teile als Kennfarben, `Teilmasken.messen`)
+            ziel = pfad if not block else pfad.with_name('%s_b%d%s' % (pfad.stem, block, pfad.suffix))
+            render.bild_teile([(t['punkte'], t['dreiecke'], farben[i]) for i, t in enumerate(teile)], referenz.winkel,
+                              ziel, groesse=groesse, kennung=True)
+            bild = Iterationsbild.aus_render(ziel)
+            return bild.farbe, bild.maske
+
+        masken = Teilmasken.messen(len(teile), kennbild)
         self._ansichten[referenz.datei] = [referenz.bild.farbe, referenz.bild.maske, None, None, masken]
         self._farbe[referenz.datei] = bool(getattr(referenz, 'farbe', True))
         return masken

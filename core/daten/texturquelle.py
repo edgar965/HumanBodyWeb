@@ -17,9 +17,9 @@ __all__ = ['Texturquelle']
 
 class Texturquelle:
     #: Adresse → (Auftragsart). Die Endpunkte: `Meshfigurendpunkte.datei`, `Bildmodellendpunkte.datei`,
-    #: `Blendermodellendpunkte.datei` (seit 29.09.2026), `Haarengineendpunkte.datei` (seit 30.09.2026).
+    #: `Blendermodellendpunkte.datei` (seit 29.09.2026), `Engine2d3dKleiderendpunkte.datei` (seit 30.09.2026).
     MUSTER = re.compile(
-        r'^/api/(?P<art>meshfigur|bildmodell|blendermodell|haarengine)/(?P<id>[0-9a-fA-F-]{36})/datei/ergebnis/'
+        r'^/api/(?P<art>meshfigur|bildmodell|blendermodell|engine2d3dkleider)/(?P<id>[0-9a-fA-F-]{36})/datei/ergebnis/'
         r'(?P<name>[^/?#]+)/?$'
     )
 
@@ -43,12 +43,12 @@ class Texturquelle:
 
                 job = Blendermodellauftrag.objects.filter(pk=treffer['id']).first()
                 return Blendermodellablage(job.kennung).datei('ergebnis', name) if job else None
-            if treffer['art'] == 'haarengine':
-                from ..daten.haarengineablage import Haarengineablage
-                from ..models import Haarengineauftrag
+            if treffer['art'] == 'engine2d3dkleider':
+                from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+                from ..models import Engine2d3dKleiderauftrag
 
-                job = Haarengineauftrag.objects.filter(pk=treffer['id']).first()
-                return Haarengineablage(job.kennung).datei('ergebnis', name) if job else None
+                job = Engine2d3dKleiderauftrag.objects.filter(pk=treffer['id']).first()
+                return Engine2d3dKleiderablage(job.kennung).datei('ergebnis', name) if job else None
             from ..daten.bildmodellablage import Bildmodellablage
             from ..models import Bildmodellauftrag
 

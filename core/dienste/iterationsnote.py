@@ -36,9 +36,18 @@ class Iterationsnote:
         }
 
     @classmethod
-    def _farbe(cls, vorlage, render):
+    def felder(cls, breite, hoehe):
+        """Das Raster wächst mit der Fläche (02.10.2026, `Aufloesungsstufe`): 8 × 12 je 128 × 192 — mit festen 8 × 12
+        Feldern sähe die Note auch auf 1024 px nur Flächenmittel, und eine höhere Stufe brächte keine Einzelheit."""
         spalten, zeilen = cls.FELDER
+        return max(spalten, round(spalten * breite / 128)), max(zeilen, round(zeilen * hoehe / 192))
+
+    @classmethod
+    def _farbe(cls, vorlage, render):
+        """Gemessen 02.10.2026 je Ansicht: 128 px 0,003 s, 512 px 0,05 s, 2485 px (155 × 233 Felder) 1,1 s — eine
+        Fassung mit `np.add.reduceat` rechnete bitgleich, aber nicht schneller (1,3 s)."""
         h, w = vorlage.maske.shape
+        spalten, zeilen = cls.felder(w, h)
         diffs = []
         for i in range(zeilen):
             for j in range(spalten):

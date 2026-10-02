@@ -27,7 +27,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 
-from ..models import Bildmodellauftrag, Blendermodellauftrag, Haarengineauftrag, Meshauftrag, Meshfigurauftrag
+from ..models import Bildmodellauftrag, Blendermodellauftrag, Engine2d3dKleiderauftrag, Meshauftrag, Meshfigurauftrag
 
 logger = logging.getLogger('core')
 
@@ -36,9 +36,9 @@ __all__ = ['Auftragsnameendpunkte']
 
 class Auftragsnameendpunkte:
     #: Bereich → Modell. Dieselben Schlüssel wie in `Laufendeauftraege` und `Auftragsduplikat`
-    #: (die `key` der Tabellen; `blendermodell` seit 29.09.2026, `haarengine` seit 30.09.2026).
+    #: (die `key` der Tabellen; `blendermodell` seit 29.09.2026, `engine2d3dkleider` seit 30.09.2026).
     BEREICHE = {'bildmodell': Bildmodellauftrag, 'mesh': Meshauftrag, 'meshfigur': Meshfigurauftrag,
-                'blendermodell': Blendermodellauftrag, 'haarengine': Haarengineauftrag}
+                'blendermodell': Blendermodellauftrag, 'engine2d3dkleider': Engine2d3dKleiderauftrag}
     LAENGE = 200
 
     @staticmethod

@@ -1,0 +1,148 @@
+/* Bereich „Haar Engine" (30.09.2026, Kopie von `blendermodell.css`) — nur, was die Vorlagen nicht kennen. Formular,
+   Fotokarten, Optionen, Schrittleiste, Bühne und Berichte kommen aus `bildmodell.css`, `mesh.css` und `meshfigur.css` und werden
+   mitbenutzt, nicht verdoppelt. */
+
+/* Die Optionsgruppen (Grundfigur, Iterationen, Film) — Überschrift mit Trennlinie. */
+.engine2d3dkleider-gruppe {
+    margin: 14px 0 8px; padding-top: 10px; font-size: 1rem;
+    border-top: 1px solid var(--border, #3a4250);
+}
+#optionen-karte h2 + .engine2d3dkleider-gruppe { border-top: none; padding-top: 0; margin-top: 0; }
+
+/* Bildauswahl auf der Auftragsseite: Hinweiszeile über den Karten. */
+.engine2d3dkleider-fotohinweis { margin: 0 0 10px; }
+.engine2d3dkleider-fotokopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.engine2d3dkleider-fotokopf .mesh-fotoknoepfe { margin-bottom: 0; }
+/* Ein Foto, das der Lauf nicht verwendet („Nicht verwenden"): gedämpft, aber erkennbar. */
+.engine2d3dkleider-foto-aus .mesh-vorschau { opacity: 0.4; }
+
+/* Kennzahlen und Ablageorte in der Seitenspalte. */
+.engine2d3dkleider-netzkarte .mesh-kennzahlen { margin-bottom: 8px; }
+
+/* Die Bewegung (BVH) LIVE auf der Figur der Bühne — Leiste direkt unter der Ansicht, kein eigenes
+   Video-Fenster (Edgar, 29.09.2026: „Play soll im Hauptausgabefenster funktionieren"). */
+.engine2d3dkleider-animationsleiste {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+}
+.engine2d3dkleider-scrubber { flex: 1 1 120px; min-width: 100px; }
+.engine2d3dkleider-animationszeit { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* „Läuft im Hintergrund" über beiden Reitern (`Engine2d3dKleiderseite`). */
+.engine2d3dkleider-laufband {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; padding: 8px 12px;
+    border-radius: 8px; border: 1px solid var(--accent, #4f8cff); background: rgba(var(--accent-rgb, 79 140 255), 0.16);
+}
+.engine2d3dkleider-laufband[hidden] { display: none; }
+#laufband-text { flex: 1 1 260px; font-variant-numeric: tabular-nums; }
+
+/* Reiter „Iterationen": Einstellungen, Leiste „Weiter iterieren", Kurve, Tabelle der Runden. */
+.engine2d3dkleider-iterationsleiste { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.engine2d3dkleider-iterationsleiste input[type="number"] { width: 5.5em; }
+.engine2d3dkleider-tabellenkopf { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 4px; }
+.engine2d3dkleider-tabellenkopf input[type="number"] { width: 5em; }
+.engine2d3dkleider-tabellenknoepfe { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.engine2d3dkleider-verlauf { width: 100%; max-width: 900px; height: auto; display: block; margin: 6px 0 12px; }
+.engine2d3dkleider-verlauf text { fill: var(--text-muted, #9aa3b2); font-size: 12px; }
+.engine2d3dkleider-verlauf-bester { fill: none; stroke: var(--accent, #4f8cff); stroke-width: 2; }
+.engine2d3dkleider-verlauf-runde { fill: var(--text-muted, #9aa3b2); opacity: 0.55; }
+
+/* Tabelle der Runden (`Engine2d3dKleiderrundentabelle`, `Engine2d3dKleiderrundenzeilen`): Hauptzeile je Runde, darunter
+   Unterzeilen (Notiz, Prüf-KI, Bilder, Dateien) mit EINER Zelle über die ganze Breite. */
+.engine2d3dkleider-rundentabelle td { vertical-align: middle; }
+.engine2d3dkleider-rundentabelle .iter-auf { background: none; border: 0; color: inherit; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+.engine2d3dkleider-rundentabelle .iter-beste { color: #f5c542; }
+.engine2d3dkleider-rundentabelle .iter-verworfen td { opacity: 0.7; }
+.engine2d3dkleider-rundentabelle .iter-wird-geloescht td { text-decoration: line-through; opacity: 0.5; }
+.engine2d3dkleider-rundentabelle .iter-mini { height: 44px; width: auto; display: block; border-radius: 3px; cursor: zoom-in; background: #fff; }
+.engine2d3dkleider-rundentabelle td.iter-vorn { text-align: center; width: 3.2rem; }
+.engine2d3dkleider-rundentabelle td.iter-zeit { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.engine2d3dkleider-rundentabelle .iter-dauer { display: block; color: var(--text-muted, #9aa3b2); }
+.engine2d3dkleider-rundentabelle tr.iter-unterzeile[hidden] { display: none; }
+.engine2d3dkleider-rundentabelle tr.iter-unterzeile td { padding: 4px 12px 4px 44px; border-top: 0; }
+.engine2d3dkleider-rundentabelle tr.iter-unterzeile.gewaehlt td { background: rgba(var(--accent-rgb, 96 165 250), 0.14); }
+.iter-unter { display: flex; gap: 12px; align-items: flex-start; }
+.iter-unterkopf { flex: 0 0 9.5rem; color: var(--text-muted, #9aa3b2); font-size: 0.82rem; padding-top: 2px; }
+.iter-unterinhalt { flex: 1 1 auto; min-width: 0; }
+.iter-unterinhalt p { margin: 0 0 4px; }
+.iter-kikopf { font-weight: 600; }
+.iter-aenderungen { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.iter-aenderung {
+    font-size: 0.78rem; padding: 1px 6px; border-radius: 10px; font-variant-numeric: tabular-nums;
+    background: var(--bg-input, #151a22); border: 1px solid var(--border, #3a4250);
+}
+.iter-dateien { flex-direction: row; flex-wrap: wrap; gap: 4px 16px; }
+/* Film der Engine über der Bühne (`Engine2d3dKleiderfilmansicht`) — deckt die Leinwand, bis der Knopf wieder aus ist. */
+.engine2d3dkleider-film {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; z-index: 2;
+}
+.engine2d3dkleider-film[hidden] { display: none; }
+
+/* Bilder einer Runde (`Engine2d3dKleiderrundenbilder`, Unterzeile „Bilder"): je Blickwinkel Vorlage + Render als Knopf. */
+.engine2d3dkleider-rundenbilder-raster { display: flex; flex-wrap: wrap; gap: 8px; }
+.engine2d3dkleider-rundenbild {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px; cursor: zoom-in;
+    background: var(--bg-input, #151a22); border: 1px solid var(--border, #3a4250); border-radius: 6px; color: inherit;
+}
+.engine2d3dkleider-rundenbild:hover { border-color: var(--accent, #4f8cff); }
+.engine2d3dkleider-rundenbild img { height: 150px; width: auto; max-width: none; margin: 0; display: block; border-radius: 4px; }
+.engine2d3dkleider-rundenbild-breit img { max-width: 100%; }
+.engine2d3dkleider-rundenbild-reihe { display: flex; gap: 4px; align-items: flex-end; }
+.engine2d3dkleider-rundenbild > span:last-child { font-size: 0.8rem; color: var(--text-muted, #9aa3b2); text-align: left; }
+
+/* Bildfenster (`Engine2d3dKleiderbildfenster`): an der Ecke vergrößerbar, Bilder zoom- und verschiebbar. */
+.engine2d3dkleider-bildfenster {
+    width: min(1200px, 95vw); height: min(850px, 90vh); max-width: 98vw; max-height: 96vh; min-width: 480px;
+    min-height: 320px; resize: both; overflow: hidden; padding: 0; border: 1px solid var(--border, #3a4250);
+    border-radius: 10px; background: var(--bg-card, #1e2430); color: var(--text, #eee);
+}
+.engine2d3dkleider-bildfenster[open] { display: flex; flex-direction: column; }
+.engine2d3dkleider-bildfenster::backdrop { background: rgba(0, 0, 0, 0.6); }
+.engine2d3dkleider-bildfenster-kopf {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 12px;
+    border-bottom: 1px solid var(--border, #3a4250);
+}
+.engine2d3dkleider-bildfenster-knoepfe { display: flex; gap: 4px; flex-wrap: wrap; }
+.engine2d3dkleider-bildfenster-flaeche { flex: 1 1 auto; display: flex; gap: 4px; min-height: 0; padding: 4px; }
+.engine2d3dkleider-bildfenster-feld {
+    position: relative; flex: 1 1 0; min-width: 0; margin: 0; overflow: hidden; cursor: grab; touch-action: none;
+    background: repeating-conic-gradient(#2a303b 0% 25%, #232833 0% 50%) 50% / 24px 24px; border-radius: 4px;
+}
+.engine2d3dkleider-bildfenster-feld:active { cursor: grabbing; }
+.engine2d3dkleider-bildfenster-feld img {
+    position: absolute; left: 50%; top: 50%; max-width: none; height: auto; user-select: none; image-rendering: auto;
+}
+.engine2d3dkleider-bildfenster-feld figcaption {
+    position: absolute; left: 6px; top: 6px; padding: 2px 6px; font-size: 0.8rem; border-radius: 4px;
+    background: rgba(0, 0, 0, 0.55); color: #fff; pointer-events: none;
+}
+
+/* Begutachtung (30.09.2026): Rezept als Text, Funktionsliste */
+.iter-rezept { margin: 4px 0; padding: 6px 8px; font-size: 0.85rem; white-space: pre-wrap; background: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+.begutachtung-formular { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.begutachtung-formular textarea { width: 100%; min-height: 140px; font-family: monospace; font-size: 0.85rem; }
+.begutachtung-funktion { font-size: 0.85rem; margin: 2px 0; }
+@media (max-width: 900px) { .begutachtung-formular { grid-template-columns: 1fr; } }
+
+/* Größe der Modellansicht (02.10.2026, `engine2d3dkleiderbuehnengroesse.js`): Griff unten rechts in der Bühne */
+.engine2d3dkleider-buehnengriff {
+    position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; z-index: 5; cursor: nwse-resize;
+    touch-action: none; border-bottom-right-radius: 8px;
+    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.35) 60%,
+        transparent 60%, transparent 70%, rgba(255, 255, 255, 0.35) 70%, rgba(255, 255, 255, 0.35) 80%, transparent 80%);
+}
+.engine2d3dkleider-buehnengriff:hover { background-color: rgba(255, 255, 255, 0.08); }
+
+/* Abschnitt „Mesh" (02.10.2026): „Advanced Settings" über die ganze Breite, je Stufe eine Reihe aus den vier Reglern
+   (Guidance Strength, Guidance Rescale, Sampling Steps, Rescale T) — wie im Hugging-Face-Space „microsoft/TRELLIS.2".
+   Ohne das wäre der Bereich eine Zelle des Optionsrasters, 240 px breit und 1.700 px hoch. */
+#engine2d3dkleider-optionen-mesh .engine2d3dkleider-mesh-erzeugen { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#engine2d3dkleider-optionen-mesh .mesh-feineinstellungen { grid-column: 1 / -1; margin-top: 0; }
+#engine2d3dkleider-optionen-mesh .mesh-fein-felder {
+    display: grid; gap: 12px 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 8px;
+}
+@media (max-width: 900px) {
+    #engine2d3dkleider-optionen-mesh .mesh-fein-felder { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+    #engine2d3dkleider-optionen-mesh .mesh-fein-felder { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Modell des letzten Stands von „2D3D Kleider" (01.10.2026): `Standmodellglb` und `Haarenginestandmodell`.
+"""Modell des letzten Stands von „2D3D Kleider" (01.10.2026): `Standmodellglb` und `Engine2d3dKleiderstandmodell`.
 
 Kunstskelett und Kunstauftrag, keine Daz-Bibliothek, keine Datenbank:
 
@@ -20,7 +20,7 @@ from types import SimpleNamespace
 import numpy as np
 from django.test import SimpleTestCase
 
-from core.dienste.haarenginestandmodell import Haarenginestandmodell
+from core.dienste.engine2d3dkleiderstandmodell import Engine2d3dKleiderstandmodell
 from core.dienste.standmodellglb import Standmodellglb
 
 
@@ -68,7 +68,7 @@ class StandmodellglbTest(SimpleTestCase):
         self.assertEqual(glb.gltf['nodes'][-1]['skin'], 0)
 
 
-class HaarenginestandmodellTest(SimpleTestCase):
+class Engine2d3dKleiderstandmodellTest(SimpleTestCase):
 
     def setUp(self):
         self.ordner = Path(tempfile.mkdtemp(prefix='standmodell_', dir=str(Path(__file__).resolve().parents[3]
@@ -82,7 +82,7 @@ class HaarenginestandmodellTest(SimpleTestCase):
 
     def _stand(self, stellung=None, ergebnis=None):
         job = SimpleNamespace(kennung='probe', stellung=lambda: dict(stellung or {}), ergebnis=ergebnis or {})
-        return Haarenginestandmodell(job, self.ablage)
+        return Engine2d3dKleiderstandmodell(job, self.ablage)
 
     def test_4_ohne_figur_kein_eintrag(self):
         self.assertIsNone(self._stand().eintrag())
@@ -96,7 +96,7 @@ class HaarenginestandmodellTest(SimpleTestCase):
     def test_6_alte_fassung_ist_nicht_aktuell(self):
         stand = self._stand({'body_bs_Probe': 0.5})
         (self.ordner / 'ergebnis' / 'stand_alt.glb').write_bytes(b'glTF')
-        (self.ordner / 'ergebnis' / Haarenginestandmodell.BERICHT).write_text(
+        (self.ordner / 'ergebnis' / Engine2d3dKleiderstandmodell.BERICHT).write_text(
             json.dumps({'datei': 'stand_alt.glb', 'fassung': 'alt'}), encoding='utf-8')
         e = stand.eintrag()
         self.assertEqual((e['datei'], e['fassung'], e['aktuell']), ('stand_alt.glb', 'alt', False))

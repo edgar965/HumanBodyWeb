@@ -2,7 +2,7 @@
 Abschnitt „Was 2D3D Kleider von Blender übernommen hat" der Hilfeseite 2D -> 3D (`kopf_pipelines.html`). Edgar (01.10.2026):
 „aktualisiere /hilfe/2d-3d/ mit allen Infos zu allen Features die im Moment von Blender übernommen wurden". Quellen: Konzept
 `Docu/konzepte/2026-09-30_2d3d-alles-per-python-blender-mechanismen-konzept.md`, `.claude/rules/ortsmorphe.md`,
-`.claude/rules/haarengine.md`; „Echter Lauf" = die Rezeptfunktion steht in den wirksamen Aufrufen der Aufträge
+`.claude/rules/engine2d3dkleider.md`; „Echter Lauf" = die Rezeptfunktion steht in den wirksamen Aufrufen der Aufträge
 „Edgar - TEST", „Edgar - Hoch", „2D3D Test - ki+backen" (gezählt am 01.10.2026, `rezept_nutzung.py`). „Probe 01.10." =
 `ProjektTemp/_wegwerf/ortsmorph/funktionen_messen.py` (Ergebnis `funktionen/ergebnis_*.json`, Ausgabe `funktionen_messen*.txt`):
 eine Rezeptzeile am Modell der letzten Runde von „2D3D Test - ki+backen" (Base Shirt, Base Shorts, Mavick Hair 576.309 Punkte),
@@ -17,7 +17,7 @@ gebaut und Punkt für Punkt gegen den Ausgangsbau verglichen; Zeiten unter GPU-L
 <ul>
   <li><strong>Python</strong> — nachgebaut auf dem Daz-Käfig (NumPy); das Ergebnis ist fast immer ein eigener, linearer Morph
   neben der Bibliothek, damit Auto-Fit, Haltung, Tanz und Fotoprojektion ihm folgen.</li>
-  <li><strong>Blender als Arbeiter</strong> — nur über <code>Haarengineblender</code> (ein Test hält andere Aufrufe fern),
+  <li><strong>Blender als Arbeiter</strong> — nur über <code>Engine2d3dKleiderblender</code> (ein Test hält andere Aufrufe fern),
   Blender 5.2.2 ohne Fenster; 4–9 s Start je Lauf. Ergebnis zurück als Morph oder Strähnen-Rezept.</li>
   <li><strong>Mitsuba 3</strong> — der Ersatz für Cycles: Pfadverfolgung auf der Grafikkarte, wählbar gegen pyrender unter
   <a href="/settings/2d3dkleider/">Einstellungen → 2D3D Kleider</a> (Vorgabe Mitsuba).</li>
@@ -59,9 +59,12 @@ gebaut und Punkt für Punkt gegen den Ausgangsbau verglichen; Zeiten unter GPU-L
     <tr><td>Form</td><td>Wave, Displace</td><td><code>kleid_welle</code>, Ort <code>welle</code></td><td>Python</td><td>Probe 01.10.
       (Base Shirt, Band 0,2–0,6, Wellenlänge 5 cm, Tiefe 1 cm): 5.005 Punkte bis 10 mm, 0,3 s; die Shorts darunter weichen mit aus
       (4.297 Punkte, bis 14 mm). Runde 01.10. (Saum, 6 cm, 0,6 cm tief): +0,0005, neutral — die Automatik schreibt sie nicht</td></tr>
-    <tr><td>Form</td><td>Cloth (Collision, Pressure)</td><td><code>kleid_drapieren</code> — Newton/Style3D auf der GPU (Vorgabe) oder
-      Blender Cloth mit Druck</td><td>Python (GPU) · Blender</td><td>echter Lauf (2×); Base Shirt 24 Bilder: Saum 22 mm gefallen,
-      142 s mit erster Kernelübersetzung</td></tr>
+    <tr><td>Form</td><td>Cloth (Collision, Pressure)</td><td><code>kleid_drapieren</code> — Newton/Style3D auf der GPU (Vorgabe), Blender
+      Cloth mit Druck oder der <strong>Stoffsolver</strong> (<code>motor='stoffsolver'</code>, 02.10.2026: Blenders Cloth als
+      Warp-Löser auf der GPU, dieselbe Rechnung, kann ebenfalls Druck)</td><td>Python (GPU) · Blender</td><td>echter Lauf (2×); Base Shirt
+      24 Bilder: Saum 22 mm gefallen, 142 s mit erster Kernelübersetzung. Stoffsolver gegen Blender (Oberteil 17.552 Punkte, 24 Bilder,
+      ganzer Prozess): 2,3 s gegen 55,0 s, Ergebnis im Mittel 2 mm von Blenders — nur mit CUDA-GPU. Blender fällt seit 02.10.2026 entlang
+      −Y (vorher −Z, quer zur Figur) und hält das obere Band fest</td></tr>
     <tr><td>Form</td><td>Sculpt (Draw, Inflate, Smooth, Flatten, Grab)</td><td>Knopf „Formen" auf der Bühne: Ziehen, Drücken, Aufblasen,
       Glätten, Flach, Greifen → eigener Morph; über den Körper der Runde auf die Grundfigur übertragen</td><td>Python</td>
       <td>echter Lauf (Mauszüge, 01.10.): Formung 2,5–2,7 mm neben dem Strich, Korrektur durch den Anker bis 39 mm</td></tr>

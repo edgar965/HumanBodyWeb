@@ -1,12 +1,12 @@
 {% comment %}
 Abschnitt „2D3D Kleider" der Hilfeseite 2D -> 3D (`kopf_pipelines.html`). Edgar (30.09.2026): „passe /hilfe/2d-3d/ an mit den Infos
 der neuen 2d3dKleider Pipeline". Alle Zahlen stammen aus dem Testauftrag „Edgar - TEST" (2026.09.30.21.02.25); Quelle je Zeile.
-Ausführlich: `.claude/rules/haarengine.md`, `2d3DIterationen/README.md`. Konzept der Garderobe (Haar/Kleidung – Generisch):
-Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
+Ausführlich: `.claude/rules/engine2d3dkleider.md`, `2d3DIterationen/README.md`. Konzept der Garderobe (Haar/Kleidung – Generisch):
+Hilfe → Kleidung → 2D3D Kleider (`kleidung_engine2d3dkleider.html`).
 {% endcomment %}
 <h2 id="kleider2d3d">2D3D Kleider: Fotos → Figur mit Kleidern und Haar aus der Genesis-Garderobe</h2>
 <p>
-  <a href="/2d3dKleider/">Dashboard → 2D3D Kleider</a> (Bezeichner <code>haarengine</code>, seit 30.09.2026) ist der zweite Weg vom
+  <a href="/2d3dKleider/">Dashboard → 2D3D Kleider</a> (Bezeichner <code>engine2d3dkleider</code>, seit 30.09.2026) ist der zweite Weg vom
   Foto zur angezogenen Figur. Er hat dieselbe Jobstruktur und dieselben Seiten wie BlenderModel (Auftrag, Iterationen, Bühne,
   Film); Bau und Note laufen in Python, gerendert wird mit Mitsuba 3 auf der Grafikkarte oder pyrender
   (<a href="/settings/2d3dkleider/">Einstellungen → 2D3D Kleider</a>). Blender ist hier <strong>erlaubt, aber nicht der Rechenkern</strong>:
@@ -15,7 +15,7 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
   Kleider und Haar sind hier keine Kostümteile, sondern Stücke der Genesis-Garderobe — die Figur ist ein
   <em>Zustand</em> aus Körperreglern, Haar- und Kleidungsreglern, den jede Runde durch einen kurzen Text verändert. Das Konzept der
   beiden Sammeleinträge „Haar – Generisch" und „Kleidung – Generisch" steht unter
-  <a href="/hilfe/kleidung/haarengine/">Hilfe → Kleidung → 2D3D Kleider</a>.
+  <a href="/hilfe/kleidung/engine2d3dkleider/">Hilfe → Kleidung → 2D3D Kleider</a>.
 </p>
 
 <h3>Die Kette</h3>
@@ -42,9 +42,9 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
   <div class="kp-stufe kp-stufe-python">
     <span class="kp-stufe-marke">Schritte „export", „film", „speichern"</span>
     <h4>GLB mit Rig, Tanz-Film, Ablage</h4>
-    <p>Der Export schreibt die Figur als GLB mit Rig (<code>Haarengineexport</code>); der Film rendert das Modell der Iterationen
+    <p>Der Export schreibt die Figur als GLB mit Rig (<code>Engine2d3dKleiderexport</code>); der Film rendert das Modell der Iterationen
     in wenigen Bildern über eine Bewegung (Edgar: höchstens zehn) — lineare Hautmischung in NumPy (<code>G9tanzhaut</code>), Video
-    per OpenCV; „speichern" legt das Modell unter <code>output/Export/HaarEngine</code> ab.</p>
+    per OpenCV; „speichern" legt das Modell unter <code>output/Export/Engine2d3dKleider</code> ab.</p>
   </div>
 </div>
 
@@ -55,7 +55,7 @@ Hilfe → Kleidung → 2D3D Kleider (`kleidung_haarengine.html`).
   <code>koerper</code> (Regler), <code>haar</code> (Regler von „Haar – Generisch"), <code>kleidung</code> (Regler von
   „Kleidung – Generisch: Alle Kategorien") und <code>farben</code>. Seine Funktionen sind die Aufrufe einer Iteration
   (<code>kleid_nur</code>, <code>kleid_anteil</code>, <code>passform</code>, <code>haar_nur</code>, <code>haar_achse</code>,
-  <code>haar_farbe</code>, <code>haltung</code>, <code>morph_neu</code> …); <code>GET /api/haarengine/funktionen/</code> listet sie aus
+  <code>haar_farbe</code>, <code>haltung</code>, <code>morph_neu</code> …); <code>GET /api/engine2d3dkleider/funktionen/</code> listet sie aus
   ihren Docstrings.
 </p>
 <div class="info-box info-box-purple">
@@ -240,7 +240,10 @@ Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
   <li>
     <strong>Drapieren</strong>: <code>kleid_drapieren</code> lässt ein Stück einmal durch die Stoffsimulation gegen die Grundfigur fallen —
     Vorgabe ist der eigene GPU-Löser (Newton SolverStyle3D, derselbe wie im Figur-Film; Edgar: „Blender ist opensource — nachbauen?" —
-    nicht nötig, er ist da und war auf denselben Daten besser als Blender Cloth), wahlweise Blender Cloth (mit Druck). Base Shirt, 24
+    nicht nötig, er ist da und war auf denselben Daten besser als Blender Cloth), wahlweise Blender Cloth (mit Druck) oder der Stoffsolver
+    (<code>motor='stoffsolver'</code>, 02.10.2026: Blenders Cloth als Warp-Löser auf der GPU — dieselbe Rechnung wie Blender, am Oberteil
+    2,3 s statt 55,0 s und im Mittel 2 mm vom Blender-Ergebnis; braucht eine CUDA-GPU; nur per Rezept von Hand). Blender fällt seit dem
+    02.10.2026 entlang −Y statt −Z (bis dahin quer zur Figur) und hält wie Newton das obere Band fest. Base Shirt, 24
     Bilder: Saumband 22 mm gefallen, Punkte in der Haut 27 → 21, Kantendehnung p99 1,45, 142 s (davon der Großteil die erstmalige
     Kernelübersetzung). Weil unsere Kleiderphysik „relativ schlecht" war, ist das Ergebnis ein Regler 0…1 mit Messung, kein Zwang.
   </li>

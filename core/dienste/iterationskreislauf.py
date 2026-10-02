@@ -4,7 +4,7 @@ verbessern (30.09.2026).
 
 Kopie von `Kostuemkreislauf` (BlenderModel): ein Code, der per Knopfdruck durch alle Iterationen läuft;
 beliebig oft „Weiter iterieren". Gebaut und gerendert wird von der Genesis Haar Engine
-(`Genesishaarengine`) statt von Blender.
+(`Genesisengine2d3dkleider`) statt von Blender.
 
 Ablauf eines Laufs (Optionen `iterationen`, `Iterationsoptionen`):
     1. Vorlagen aus der Bildauswahl samt Blickwinkel (`Iterationsreferenz`)
@@ -28,7 +28,7 @@ import logging
 import shutil
 import time
 
-from .haarenginegrundfigur import Haarenginegrundfigur
+from .engine2d3dkleidergrundfigur import Engine2d3dKleidergrundfigur
 from .haarparameter import Haarparameter
 from .iterationskritik import Iterationskritik
 from .iterationsloeschung import Iterationsloeschung
@@ -69,7 +69,7 @@ class Iterationskreislauf:
             self.lauf.sichern('ergebnis')
 
     def _vorbereiten(self):
-        koerper = self.ablage.arbeit(Haarenginegrundfigur.DATEI)
+        koerper = self.ablage.arbeit(Engine2d3dKleidergrundfigur.DATEI)
         if not koerper.is_file():
             raise RuntimeError('Keine Grundfigur — erst den Schritt „Grundfigur" rechnen')
         z = dict(self.job.ergebnis.get('kreislauf') or {})

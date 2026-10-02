@@ -190,10 +190,10 @@ class StandardreglerTest(SimpleTestCase):
         self.assertTrue(any(z.startswith("m.morph_wert('kleidung', 'shirt', 'netz_b2s0'") for z in zeilen))
 
     def test_8_blender_dreiecke_auf_daz_punkten(self):
-        from core.dienste.haarengineblender import Haarengineblender
+        from core.dienste.engine2d3dkleiderblender import Engine2d3dKleiderblender
 
         class Folger:
             dreiecke = np.array([[0, 1, 2, -1], [3, 4, 5, 6]])
             ursprung = np.array([10, 11, 12, 13, 14, 15, 16])
-        d = Haarengineblender._dreiecke(Folger())
+        d = Engine2d3dKleiderblender._dreiecke(Folger())
         self.assertEqual(d.tolist(), [[10, 11, 12], [13, 14, 15], [13, 15, 16]])

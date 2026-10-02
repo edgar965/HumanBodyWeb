@@ -1,0 +1,143 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Architektur -> 2D3D: wie die Iterationen von „2D3D Kleider" gebaut sind (Edgar, 02.10.2026: „in welchem
+Schritt schaut die KI auf das Ergebnis und baut den Code für die nächste Runde? Schreibe alles über die Implementierung
+der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen kommen aus
+`core/dienste/architektur2d3d.py`, `architektur2d3dklassen.py` (Docstrings aus dem Code) und `architektur2d3dmessung.py`.
+{% endcomment %}
+
+{% block title %}Architektur 2D3D{% endblock %}
+{% block topbar_title %}Architektur — Iterationen von 2D3D Kleider{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_workflow.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite a2d3d-breit wf-seite" data-reiter-seite>
+
+  {% comment %}Zwei Reiter (Edgar, 02.10.2026: „mache einen neuen Tab … Workflow"). Beide Flächen stehen im HTML; `architektur2d3dreiter.js`
+  blendet die jeweils andere aus — ohne das Skript bleibt alles sichtbar.{% endcomment %}
+  <div class="wf-reiter">
+    <button type="button" class="wf-reiter-knopf active" data-aktion="reiter" data-ziel="ablauf"><i class="bi bi-list-ol"></i> Ablauf und Klassen</button>
+    <button type="button" class="wf-reiter-knopf" data-aktion="reiter" data-ziel="workflow"><i class="bi bi-diagram-3"></i> Workflow</button>
+  </div>
+
+  <div data-reiter="ablauf">
+
+  <h1>2D3D Kleider: wie eine Iteration abläuft</h1>
+  <p>Stand {{ stand }}. Aus Fotos einer Person (vorne, hinten, Seite) entsteht eine Genesis-9-Figur mit Kleidern und Haar,
+    die aus den Blickwinkeln der Fotos so aussieht wie die Fotos. Jede Runde ändert das Modell über ein <b>Rezept</b>
+    (Aufrufe <code>m.xxx(…)</code> an <code>ModellMitKleidern</code>), baut es, rendert es aus den Fotowinkeln, benotet
+    es gegen die Fotos und behält die beste Runde.</p>
+
+  <div class="info-box info-box-green">
+    <strong>Vorgabe:</strong> {{ vorgabe }}
+  </div>
+
+  <h2>Die Prüfung nach jeder Runde</h2>
+  <table class="db-tabelle">
+    <thead><tr><th>Schritt</th><th>Was Fable tut</th></tr></thead>
+    <tbody>
+      {% for p in pruefschleife %}<tr><td class="a2d3d-takt"><b>{{ p.schritt }}</b></td><td>{{ p.was }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+
+  <div class="info-box info-box-orange">
+    <strong>Ist-Stand — wo die Vorgabe verletzt wurde:</strong> Im autonomen Lauf vom 01./02.10.2026 liefen Blöcke von
+    3 bis 40 automatischen Runden ohne Prüfung dazwischen; angesehen und am Code verbessert wurde nur zwischen den Blöcken.
+    In diesen Runden schaut <b>niemand</b> auf das Bild: Das Rezept schreibt <code>IterationModell</code> nach festen
+    Regeln aus Messwerten (Schritte 7–8 unten), die Prüf-KI (Schritt 9) steht auf „aus". Automatische Runden sind nur
+    Feinstellen zwischen zwei Prüfungen, kein Ersatz.
+  </div>
+
+  <h2>Wer schreibt das Rezept der nächsten Runde?</h2>
+  <table class="db-tabelle">
+    <thead><tr><th>Weg</th><th>Wann</th><th>Wer sieht was an</th><th>Klassen</th></tr></thead>
+    <tbody>
+      {% for w in wege %}
+      <tr><td><b>{{ w.weg }}</b></td><td>{{ w.wann }}</td><td>{{ w.wer }}</td><td><code>{{ w.klassen }}</code></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Der Lauf</h2>
+  <p>Ein Auftrag rechnet in einem eigenen Prozess (<code>manage.py engine2d3dkleider_fahren</code>, gestartet von
+    <code>Engine2d3dKleiderarbeiter</code>), damit ein Neustart des Servers ihn nicht mitreißt. Folge: Code, der nach dem Start
+    des Prozesses geändert wird, gilt erst im nächsten Lauf. Die Schritte (<code>Engine2d3dKleiderlauf.SCHRITTE</code>):</p>
+  <table class="db-tabelle">
+    <thead><tr><th>Schritt</th><th>Klasse</th><th>Was er tut</th></tr></thead>
+    <tbody>
+      {% for s in lauf %}
+      <tr><td><code>{{ s.schritt }}</code></td><td><code>{{ s.klasse }}</code></td><td>{{ s.was }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>Gestartet wird nur über die Server-API: <code>POST /api/engine2d3dkleider/&lt;id&gt;/starten/</code> mit
+    <code>{ab, bis, optionen}</code> rechnet ab einem Schritt; <code>POST /api/engine2d3dkleider/&lt;id&gt;/begutachtung/</code>
+    mit <code>{aufrufe, kommentar}</code> rechnet eine Runde mit diesem Rezept, mit <code>{automatisch: true, runden: N}</code>
+    bis zu 50 automatische Runden. Auf der Seite: Reiter „Iterationen" („Runde rechnen", „Automatisch"), in der
+    Auftragsliste „Weiterrechnen" (auch für fertige Aufträge).</p>
+
+  <h2>Eine Runde, Schritt für Schritt</h2>
+  <p>Die letzte Spalte nennt den Abschnitt, unter dem der Schritt im <code>auftrag.log</code> gemessen wird
+    (<code>2D3D Kleider &lt;kennung&gt;: x s &lt;Abschnitt&gt;</code>).</p>
+  <table class="db-tabelle">
+    <thead><tr><th class="a2d3d-nr">Nr.</th><th>Wann</th><th>Was</th><th>Klassen</th><th>Abschnitt im Log</th></tr></thead>
+    <tbody>
+      {% for r in runde %}
+      <tr><td class="a2d3d-nr">{{ r.nr }}</td><td>{{ r.wann }}</td><td>{{ r.was }}</td><td><code>{{ r.klassen }}</code></td>
+        <td class="a2d3d-takt">{{ r.takt|default:"–" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% include "hilfe/_architektur_2d3d_rezept.html" %}
+  {% include "hilfe/_architektur_2d3d_messung.html" with m=messung %}
+
+  <h2>Festgelegt von Edgar</h2>
+  <table class="db-tabelle">
+    <thead><tr><th>Regel</th><th>Umsetzung</th></tr></thead>
+    <tbody>
+      {% for r in regeln %}<tr><td><b>{{ r.regel }}</b></td><td>{{ r.umsetzung }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Die Klassen</h2>
+  <p>Erster Satz des Modul-Docstrings und Zeilenzahl, beim Aufruf der Seite aus dem Code gelesen.</p>
+  {% for g in gruppen %}
+  <h3>{{ g.gruppe }} <span class="a2d3d-klein">— {{ g.hinweis }}</span></h3>
+  <table class="db-tabelle sortable" data-sort-key="a2d3d-{{ forloop.counter }}">
+    <thead><tr><th>Klasse</th><th>Datei</th><th class="a2d3d-zahl">Zeilen</th><th>Aufgabe (Docstring)</th></tr></thead>
+    <tbody>
+      {% for k in g.klassen %}
+      <tr><td><code>{{ k.klasse }}</code></td><td><code>{{ k.modul }}</code></td>
+        <td class="a2d3d-zahl">{{ k.zeilen }}</td>
+        <td>{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.fehlt }}</span> {% endif %}{{ k.satz }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+
+  <h2>Offene Befunde</h2>
+  <p>Beim Schreiben dieser Seite gefunden, noch nicht behoben:</p>
+  <ul>
+    {% for o in messung.offen %}<li><b>{{ o.was }}:</b> {{ o.befund }}</li>{% endfor %}
+  </ul>
+
+  </div>{# Ende Reiter ablauf #}
+
+  <div data-reiter="workflow">
+    {% include "hilfe/_architektur_2d3d_workflow.html" %}
+  </div>
+
+</div>
+<script type="module">
+import { Architektur2d3dreiter } from "{% fassungspfad 'js/hilfe/architektur2d3dreiter.js' %}";
+
+Architektur2d3dreiter.aufbauen();
+</script>
+{% endblock %}

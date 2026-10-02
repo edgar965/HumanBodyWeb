@@ -1,0 +1,61 @@
+{% comment %}Hilfe → Architektur → 2D3D: Rezept, Noten, Rundenauswahl, Ablage. Eingebunden in architektur_2d3d.html.{% endcomment %}
+<h2>Das Rezept</h2>
+<p>Ein Rezept ist Text, eine Zeile je Aufruf. Beispiel: Runde 10 von test3 (2026.10.01.20.10.04), so von
+  <code>IterationModell</code> geschrieben:</p>
+<pre># automatisch (IterationModell), Runde nach 9
+m.kleid_farbe_je_stueck('eigen_foto_01201004_hose_f19', '#7c8088')
+m.haar_farbe('#4a5051')
+m.haar_zonenfarbe('hinten', '#2e2e2e')
+m.haar_zonenfarbe('oben', '#535353')
+m.haar_zonenfarbe('seite', '#585858')
+m.haar_zonenfarbe('vorn', '#565656')</pre>
+<ul>
+  <li><b>Kein <code>exec</code>:</b> <code>G9rezept.pruefen</code> liest den Text mit <code>ast.parse</code>. Jede
+    Anweisung muss ein Aufruf <code>m.&lt;name&gt;(…)</code> sein, <code>name</code> eine öffentliche Methode von
+    <code>ModellMitKleidern</code> (<code>hilfe()</code>, auch über die Mixins für Körper, Form, Haar, Textur), die
+    Argumente reine Literale (<code>ast.literal_eval</code>), kein <code>**kwargs</code>. Ein Fehler nennt die Zeile.</li>
+  <li><b>Anwenden:</b> <code>G9rezept.anwenden</code> ruft die Methoden der Reihe nach. Scheitert eine Zeile, sind die
+    davor schon wirksam; die Runde wird mit <code>fehler</code> abgelegt, das Modell bleibt.</li>
+  <li><b>Das Modell</b> ist nur Zustand: Körperregler, Haar- und Kleidungswerte, Farben, Haltung
+    (<code>als_dict</code> / <code>aus</code>). Gebaut wird erst in <code>Kleidermodellbau</code>.</li>
+  <li><b>Reihenfolge der Automatik:</b> Haltung → Körper und Gesicht (nur bei Option „Form" an, Vorgabe aus — die Form
+    kommt aus dem Körperschritt) → Kleider (anziehen, Farbe, Weite, Hülle, Morphe, Ring, Drapieren) → Textur
+    (Fototextur, Falten, Decal) → Haar (Frisur, Bart, Farbe, Zonen, Länge, Anlegen, Trimmen). Ein reiner Farbschritt
+    läuft allein.</li>
+  <li><b>Funktionsliste:</b> <code>GET /api/engine2d3dkleider/funktionen/</code>; das Rezept eines Auftrags als Datei:
+    <code>GET /api/engine2d3dkleider/&lt;id&gt;/rezept/?laden=1</code>.</li>
+</ul>
+
+<h2>Noten und Auswahl der besten Runde</h2>
+<table class="db-tabelle">
+  <thead><tr><th>Größe</th><th>Formel</th><th>Klasse</th></tr></thead>
+  <tbody>
+    <tr><td>Fotonote je Blickwinkel</td><td>(1 − IoU der Umrisse) + Farbabstand in 8 × 12 Feldern, auf 128 × 192</td>
+      <td><code>Iterationsnote</code></td></tr>
+    <tr><td>Netznote</td><td>Abstand in mm / 50 + (1 − Deckung), 60.000 Proben gegen das TRELLIS-Netz</td>
+      <td><code>Iterationsnetznote</code></td></tr>
+    <tr><td>Abweichung</td><td>Fotonote + 1,0 × Netznote — steht in der Rundentabelle und der Kurve</td>
+      <td><code>Begutachtungsrunde</code></td></tr>
+    <tr><td><b>Gesamtnote</b></td><td>Fotonote + Farbe der Teile + Gesicht — <b>entscheidet</b>, die Netznote zählt
+      nicht</td><td><code>Gesamtnote</code></td></tr>
+  </tbody>
+</table>
+<p><code>Rundenauswahl.nach_runde</code>: <b>besser</b> (neue Bestnote, Toleranz 0,002; eine Pflichtzeile wie
+  Fotostücke oder Uhr; ein reiner Farbschritt, der nicht schlechter ist) → Stand der Runde wird der neue Ausgangspunkt.
+  <b>Probe</b>: ein Umbau darf bis zu 3 Runden weiterlaufen, bevor er gewertet wird. <b>Verworfen</b>: die Zeilen werden
+  für diese Lage gesperrt (<code>Begutachtungsstand.ohne_gesperrte</code>), die nächste Runde startet wieder von der
+  besten. Den Messwerten wird nur getraut, wenn <code>Messpruefung</code> sie für gültig hält (Projektion, Rumpf im Foto,
+  Tiefe gesehen).</p>
+
+<h2>Ablage und Anzeige</h2>
+<ul>
+  <li><b>Ordner:</b> <code>3DObjects/engine2d3dkleiderauftraege/&lt;kennung&gt;/</code> mit <code>iterationen/</code>
+    (je Runde <code>runde_NNN_vergleich.png</code>, <code>runde_NNN_ansicht_±WWW.png</code>,
+    <code>runde_NNN_formbezug.npz</code>), <code>ergebnis/</code>, <code>arbeit/</code> (Kennbilder und Kopf-Renders
+    einer Runde, am Ende der Runde gelöscht) und <code>auftrag.log</code>.</li>
+  <li><b>Datenbank</b> (<code>job.ergebnis</code>): <code>iterationen</code> (ein Eintrag je Runde: Note, Rezept,
+    Befund, Auswahl, Dateien, Sekunden), <code>kreislauf</code> (Verlauf, beste Runde, Modell, Winkel, Haltung der Fotos),
+    <code>begutachtung</code> (Zustand, nächstes Rezept).</li>
+  <li><b>Seite des Auftrags</b>, Reiter „Iterationen": Kurve, Rundentabelle (★ = beste Runde) mit Rezept, Notiz und
+    Bildern je Runde, darunter die Vergleichstafel — oben die Fotos, unten die Renders aus denselben Winkeln.</li>
+</ul>

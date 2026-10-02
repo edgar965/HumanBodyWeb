@@ -1,0 +1,97 @@
+{% comment %}Hilfe → 2D -> 3D, Abschnitt „2D3D Kleider": der autonome Lauf am Abend des 01.10.2026 (Fotostücke, Uhr, Beine, Tore).
+Eingebunden in kopf_pipelines.html direkt nach kopf_pipelines_2d3dautomatik.html.{% endcomment %}
+<h3 class="mt-4">Eigene Stücke aus den Fotos, Tore und Haltung (01.10.2026, abends)</h3>
+<p>Ziel (Edgar): das Modell sieht aus wie die Fotos, von allen Seiten; jedes Objekt der Fotos wird ein eigenes Stück; der Code
+  der Runden trägt beim nächsten Modell schon in Runde 1. Geprüft am Testauftrag <code>2026.10.01.12.38.09</code> (Gesamtnote
+  0,83 in Runde 1 → 0,39 in Runde 34), wiederholt mit einem frischen Auftrag aus denselben Fotos.</p>
+<table class="db-tabelle">
+  <thead><tr><th>Baustein</th><th>Was er tut</th><th>Gemessen</th></tr></thead>
+  <tbody>
+    <tr><td>Fäden im Netz<br><code>mesh_zapfen</code>, Vorgabe 100.000 Flächen</td>
+      <td>TRELLIS baut bei 500.000 Flächen senkrechte Fäden über die ganze Höhe („Eiszapfen"). Sie fallen beim Schreiben
+        heraus (Nachbarschaft linienförmig + Säule); neue Aufträge rechnen mit 100.000 Flächen. Die Rohfassung bleibt als
+        <code>mesh_roh.glb</code>.</td>
+      <td>500.000: 102.448 Fadenflächen; 100.000 (Mesh-Auftrag 29.09.): 8</td></tr>
+    <tr><td>Körper-Tor<br><code>meshfigur_rumpfpruefung</code></td>
+      <td>Nach dem Körperschritt: Rumpftiefe der Figur gegen das Netz (≥ 75 %) und Regler am Anschlag (≤ 8) — sonst hält der
+        Lauf an. Unter dem Stoff hält ein Band die Haut 8–20 mm unter der Stoffoberfläche; Feinregler unter Stoff sind
+        gedämpft; die Brust-Morphs der Frauenfigur sind auf der Männerfigur gesperrt.</td>
+      <td>Rumpf vorher 35 % (Brett), danach 82–94 %</td></tr>
+    <tr><td>Fotostücke<br><code>Fotostuecke</code></td>
+      <td>Shirt, Hose und Socken als eigene Genesis-Stücke. Seit Fassung 13 als <b>Hülle der Figur</b>
+        (<code>Fotohuelle</code>): die Hautfläche unter dem Stück (Teilung des Schritts „Kleidung"), um den Abstand zum
+        Netz nach außen versetzt (3–30 mm, geglättet), Farben aus der Netztextur ohne Hautton. Das Shirt schließt die
+        Lücke zum Hosenbund; der Höhenbereich kommt aus dem Netz (Socken ohne die grauen Schienbeine). Sie ersetzen die
+        Bibliotheksstücke; Formregeln (Hülle, Morphe, Drapieren) lassen sie in Ruhe.</td>
+      <td>Vorher (Flächen des Netzes, zurückgerechnet): Ärmel und Achseln zerrissen, Fetzen, Hautstreifen am Bund —
+        das Netz ist dort, wo die Arme anliegen, ein Geflecht. Als Hülle: keine Risse, Ruhelage exakt die der Figur</td></tr>
+    <tr><td>Säume<br><code>Huellenschnitt</code></td>
+      <td>Ein Saum ist eine ebene Linie: Zugehörigkeit je Punkt geglättet, je Randlinie die Ebene durch ihre Punkte, die
+        Flächen an ihr durchgeschnitten. Der Ausschnitt des Oberteils folgt dem Halsansatz der Figur (Hautgewicht der
+        Halsknochen) — das Netz kannte das Shirt nur bis 1,40 m, waagrecht über die Schultern. Das Shirt überbrückt
+        Mulden (Drapieren) und hält 10 mm Luft; die Stofffarbe ist einfarbig.</td>
+      <td>Hosenbein: Zickzack (Höhensprünge je Umfang) 0,29 → 0,05, Spanne 3,4 → 1,2 cm</td></tr>
+    <tr><td>Haut aus den Fotos<br><code>Koerperfotoprojektion</code></td>
+      <td>Einmal je Körper projiziert die Runde die Fotos auf die Hautkacheln (Abbildung wie die Note, unter der
+        Körpermaske), nur Hautfarbe, weicher Übergang zur gebackenen Haut. Die Netzkacheln bleiben als
+        <code>kacheln_netz</code>.</td>
+      <td>Befund Edgar: Beine hinten verwaschen (TRELLIS-Malerei)</td></tr>
+    <tr><td>Haarfarbe je Zone<br><code>Haarzonen</code></td>
+      <td>Oben, hinten, vorn, Seite: Fotohelligkeit je Zone relativ zum ganzen Haar, einmal je Frisur gemessen;
+        <code>m.haar_zonenfarbe</code> färbt die Karten der Zone (Gruppen je Zone, Faktor Zone/Haarfarbe).</td>
+      <td>Fotos: oben weißgrau, Hinterkopf dunkelgrau</td></tr>
+    <tr><td>Mund<br><code>Meshfigurregler.AUS</code></td>
+      <td>Mimikregler, die den Mund öffnen (<code>Lip Part</code>, <code>Lip Upper/Lower Gap</code>,
+        <code>Mouth Opening</code>), stellt die Körperanpassung nicht mehr.</td>
+      <td>Testauftrag: Gap 0,74, Part 0,30, Opening −1 → Unterlippe zurück</td></tr>
+    <tr><td>Bart<br><code>IterationHaare.bart</code></td>
+      <td>Zeigt die Bartzone der Haarmaske (Schritt „haar") Haar, trägt die männliche Figur zusätzlich „Mavick Beard" —
+        außerhalb der Normierung der Frisuranteile, sonst kostete er die halbe Frisur — umgefärbt wie das Haar. Hält
+        der Haarschritt das Kopfhaar für lang, entscheidet Nicht-Haut mitten am Kinn (≥ 10 %). Bildlose Haargruppen
+        werden unter der Grauschicht je Sorte auf dasselbe Grau gebracht (der Bart blieb sonst schwarz).</td>
+      <td>Testauftrag: 2.064 Netzflächen in der Bartzone (Schwelle 300); Kinnmitte in drei Netzen Edgars 0,146–0,155 —
+        eine Gegenprobe ohne Bart fehlt noch</td></tr>
+    <tr><td>Messung der Teile<br><code>Teilmasken</code>, <code>Mitsubamaterial.maske</code></td>
+      <td>Sieben Kennfarben, ab acht Teilen in Blöcken — vorher lief die Palette mit sechs Farben zyklisch, der siebte
+        Teil (Bart) maß die Maske des Körpers. Haarkarten rendern in den Runden mit ihrer Alphamaske.</td>
+      <td>Bart vorher 4.176 px Hautton als „Haar"; Kartendeckung 1,00 → 0,21</td></tr>
+    <tr><td>Uhr<br><code>Uhrerkennung</code>, <code>G9uhrstueck</code></td>
+      <td>Dunkler Ring am Unterarm (Posenlandmarken Handgelenk → Ellbogen) auf einem Farbfoto → eine Uhr als eigenes Stück am
+        richtigen Handgelenk (Band aus dem Querschnitt, Gehäuse auf dem Handrücken).</td>
+      <td>links in vorne und hinten gefunden, rechts in keinem Foto</td></tr>
+    <tr><td>Seitenfoto nur für die Form</td>
+      <td>Ein Foto mit anderer Kleidung zählt für Umriss, Tiefe und Haltung, nicht für Farbe und Textur. Ohne Seite begrenzt
+        der Sichtkörper die Tiefe nicht — die Hülle ruht dann (<code>tiefe_gesehen</code>).</td>
+      <td>vorne+hinten allein: Shirt als Zelt, 70–166 mm über dem Netz</td></tr>
+    <tr><td>Beinstellung<br><code>Haltungsschaetzung.bein</code></td>
+      <td>Spreizung der Beine aus den Fotos (Hüfte → Knöchel); die Runde rendert in dieser Haltung, das Modell bleibt in der
+        A-Pose.</td>
+      <td>Fotos 7,2° je Bein (Figur 4,1°): Umriss 0,735 → 0,782, hinten 0,63 → 0,73</td></tr>
+    <tr><td>Haut der Runden<br><code>Koerpertextur</code></td>
+      <td>Der Körper der Runden trägt die gebackene Haut (UDIM-Kacheln) statt einer festen Hautfarbe.</td>
+      <td>Gesamtnote 0,650 → 0,530, Farbe 0,17 → 0,056</td></tr>
+    <tr><td>Haar</td>
+      <td>Jede Frisur wird erst umgefärbt (Grauschicht), dann getönt — die Strähnengruppen tragen sonst ihren Daz-Grundton.
+        Die Frisur bleibt die gemessen beste (kein Wechsel nach Stillstand). Brauen und Wimpern in der Haarfarbe. Die
+        Länge ruht, wenn der Haarabstand über vier Runden mit verschiedenen Längen auf ±2 mm steht. Keine
+        Haar-Fototextur mehr: die Karten teilen sich die UV-Fläche, die Fotofarben mitteln sich zu Dunkelgrau. Runde 1
+        startet mit der Farbe der Haarflächen des Netzes. Ist das Foto fast unbunt, wird die Tönung grau ohne Stich
+        (unter der Haarmaske liegen Hautpixel: Haar und Bart wurden rosa). Ein Farbschritt läuft allein und gilt bis
+        0,0005 über der besten Note.</td>
+      <td>vorher oben grau, unten braun</td></tr>
+    <tr><td>Rundenauswahl</td>
+      <td>Belegte Garderobe (Fotostücke, Uhr) gilt, auch wenn die grobe Note sie nicht honoriert; reine Farbschritte gelten,
+        wenn sie nicht schlechter sind.</td>
+      <td>Note 128 × 192 sieht weder Risse noch schwebende Stücke</td></tr>
+    <tr><td>Animation</td>
+      <td>Vorgabe-Bewegung „Dance"; Leiste mit Anfang, Bild zurück, Play/Pause, Stopp (A-Pose), Bild vor, Ende; Tasten
+        Leertaste, ← →, Pos1/Ende. Knopf „Modell mit Animation exportieren": beste Runde + Bewegung als GLB und .blend.</td>
+      <td>489 Bilder, 66 Knochen, Blender-Aktion „tanz" 0–488</td></tr>
+  </tbody>
+</table>
+<p>Ein neuer Auftrag rechnet den Körper selbst, wenn keine Kennung eines Auftrags „Mesh to 3D" angegeben ist (vorher
+  scheiterte die Vorgabe „übernehmen" ohne Kennung).</p>
+<p>Runde 1 trägt schon, was nicht vom Render abhängt: Fotostücke, Uhr, Bart, Haarfarbe aus dem Netz (vorher
+  Bibliotheksshirt und braunes Haar bis Runde 2).</p>
+<p>Offen: Gesichtstextur fleckig; dunkle Zone im Nacken zu tief; die Haarmaske zählt auf dem 100k-Netz Shirtrücken als
+  Nackenhaar.</p>
