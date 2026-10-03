@@ -189,10 +189,10 @@ class MischenTest(unittest.TestCase):
         folge = G9kleidgenerisch.mischung(SCHUHE, werte)
         self.assertEqual([k for k, _a, _r in folge], ['stiefel_b', 'stiefel_c', 'stiefel_a'])
 
-    def test_8_hoechstens_vier_stuecke_werden_gemischt(self):
+    def test_8_alle_getragenen_stuecke_werden_gemischt_ohne_grenze(self):
         werte = {'sorte.s%d' % i: 1.0 - i * 0.1 for i in range(5)}
         folge = G9kleidgenerisch.mischung(FUENF, werte)
-        self.assertEqual([k for k, _a, _r in folge], ['s0', 's1', 's2', 's3'])        # das schwächste fällt heraus
+        self.assertEqual([k for k, _a, _r in folge], ['s0', 's1', 's2', 's3', 's4'])   # Edgar, 03.10.2026: unbegrenzt
 
     def test_9_sorte_ist_das_staerkste_stueck(self):
         self.assertEqual(G9kleidgenerisch.sorte(SCHUHE, {'sorte.stiefel_c': 0.6, 'sorte.stiefel_a': 0.2}), 'stiefel_c')

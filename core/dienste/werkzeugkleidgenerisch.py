@@ -93,8 +93,9 @@ class Werkzeugkleidgenerisch:
          'gruppen() und die Eintragsliste brauchen die Daz-Bibliothek (G9garderobe.liste, G9garderobekategorien); '
          'G9kleidgenerischwahl (anteile, mischung, regler_von) kennt nur eine Stückliste und ist ohne Bibliothek prüfbar. '
          'getragene_aufloesen(roh) ersetzt in getragen[] den Sammeleintrag durch das echte (stärkste) Stück — sonst rechnet '
-         'die Kollision (G9lagenanfrage) das Kleid durch die Schuhe. Die Mischung gilt für höchstens 4 Stücke '
-         '(HOECHSTENS). Quelle: Genesis9/kleidgenerisch.py, kleidgenerischwahl.py (30.09.2026).'),
+         'die Kollision (G9lagenanfrage) das Kleid durch die Schuhe. Die Mischung kennt seit 03.10.2026 KEINE Stückgrenze '
+         'mehr (HOECHSTENS = None; vorher 4, Edgar „unbegrenzt"); TEXTUR_RAENGE = 4 gilt nur für die Textur-Regler des '
+         'Browser-Shaders. Quelle: Genesis9/kleidgenerisch.py, kleidgenerischwahl.py (30.09.2026).'),
 
         ('Regel: Anteile bei Kleidung und bei Haar',
          'Hält fest, wie sich die Anteile hier von „Haar – Generisch“ unterscheiden — häufiger Denkfehler.',
