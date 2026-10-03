@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderfotoendpunkte — die Bildauswahl eines Auftrags „Haar Engine".
+"""Engine2d3dKleiderfotoendpunkte — die Bildauswahl eines Auftrags „2D3D Kleider".
 
 Die Fotos sind die VORLAGEN der Iterationen. Die Endpunkte sind die von `Meshendpunkte` (Rolle, Gewicht,
 Platz) und `Meshfotoendpunkte` (hinzufügen, ersetzen, entfernen), auf den eigenen Auftrag gelegt:
@@ -87,7 +87,7 @@ class Engine2d3dKleiderfotoendpunkte:
         job.bilder = bilder
         job.save(update_fields=['bilder', 'updated_at'])
         Engine2d3dKleidervorlage.erneuern(job)
-        logger.info('Haar Engine %s: %d Foto(s) hinzugefügt', job.kennung, len(dateien))
+        logger.info('2D3D Kleider %s: %d Foto(s) hinzugefügt', job.kennung, len(dateien))
         return Engine2d3dKleiderfotoendpunkte._antwort(job)
 
     @staticmethod
@@ -109,7 +109,7 @@ class Engine2d3dKleiderfotoendpunkte:
         job.bilder = bilder
         job.save(update_fields=['bilder', 'updated_at'])
         Engine2d3dKleidervorlage.erneuern(job)
-        logger.info('Haar Engine %s: Foto %s ersetzt', job.kennung, datei)
+        logger.info('2D3D Kleider %s: Foto %s ersetzt', job.kennung, datei)
         return Engine2d3dKleiderfotoendpunkte._antwort(job)
 
     @staticmethod
@@ -126,7 +126,7 @@ class Engine2d3dKleiderfotoendpunkte:
         job.bilder = bilder
         job.save(update_fields=['bilder', 'updated_at'])
         Engine2d3dKleidervorlage.erneuern(job)
-        logger.info('Haar Engine %s: Foto %s entfernt', job.kennung, datei)
+        logger.info('2D3D Kleider %s: Foto %s entfernt', job.kennung, datei)
         return Engine2d3dKleiderfotoendpunkte._antwort(job)
 
     # ------------------------------------------ Rolle, Gewicht, Platz

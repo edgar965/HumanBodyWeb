@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderendpunkte — Bereich „Haar Engine": Grundfigur → Iterationen → Film.
+"""Engine2d3dKleiderendpunkte — Bereich „2D3D Kleider": Grundfigur → Iterationen → Film.
 
 GET  /engine2d3dkleider/<kennung>/                        Auftragsseite (Lauf, Bildauswahl, 3D-Ausgabe, Optionen, Iterationen)
 POST /api/engine2d3dkleider/anlegen/                      name, optionen (JSON), rollen (JSON), bilder[], starten (0/1)
@@ -143,7 +143,7 @@ class Engine2d3dKleiderendpunkte:
             return JsonResponse({'error': str(fehler)}, status=400)
         except OSError as fehler:
             # Ein halber Ordner ohne Eintrag wäre Müll, den keine Tabelle zeigt und keiner löscht.
-            logger.exception('Haar Engine: Anlegen gescheitert (%s)', kennung)
+            logger.exception('2D3D Kleider: Anlegen gescheitert (%s)', kennung)
             ablage.loeschen()
             return JsonResponse({'error': 'Die Fotos ließen sich nicht ablegen: %s' % fehler}, status=500)
         Engine2d3dKleidervorlage.erneuern(job)

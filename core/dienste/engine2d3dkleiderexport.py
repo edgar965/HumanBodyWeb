@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderexport — Schritt „export" von „Haar Engine": die Figur als GLB mit Rig.
+"""Engine2d3dKleiderexport — Schritt „export" von „2D3D Kleider": die Figur als GLB mit Rig.
 
 Bis hierher liegt die Figur als Reglerstellung vor (`job.stellung()`: Genesis-Regler, Eigenmorph, „Kopf
 Eigen") und als gebackene Kacheln in `ergebnis/` (wenn es welche gibt). Der Film der Engine braucht ein Netz

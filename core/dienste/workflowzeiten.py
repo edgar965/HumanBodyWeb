@@ -126,10 +126,10 @@ class Workflowzeiten:
         55.0, quelle=ZEITEN, hinweis='Oberteil 17.552 Punkte, 24 Bilder — ganzer Prozess (Skript 53,8 s, Start 1,2 s)'
     )
     SOLVER_HOSE = Z(
-        2.1, quelle=ZEITEN, hinweis='Hose 3.123 Punkte, 24 Bilder, GPU — ganzer Prozess, davon Python und Importe 0,5 s'
+        2.1, quelle=ZEITEN, hinweis='Hose 3.123 Punkte, 24 Bilder, GPU — ganzer Prozess, davon Python und Importe 0,5 s; am 02.10.2026 vor dem Ausbau des Solvers gemessen'
     )
     SOLVER_OBERTEIL = Z(
-        2.3, quelle=ZEITEN, hinweis='Oberteil 17.552 Punkte, 24 Bilder, GPU — ganzer Prozess; Blender braucht dafür 55 s'
+        2.3, quelle=ZEITEN, hinweis='Oberteil 17.552 Punkte, 24 Bilder, GPU — ganzer Prozess; Blender braucht dafür 55 s; am 02.10.2026 vor dem Ausbau des Solvers gemessen'
     )
     SOLVER_OHNE_GPU = Z(
         462.0,

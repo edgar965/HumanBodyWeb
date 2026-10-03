@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderauftrag — Bereich „Haar Engine": Vorlagenfotos hinein, eine Figur mit Haar heraus.
+"""Engine2d3dKleiderauftrag — Bereich „2D3D Kleider": Vorlagenfotos hinein, eine Figur mit Haar heraus.
 
-Kopie des Bereichs „BlenderModel" (`Blendermodellauftrag`) für die Genesis Haar Engine
+Kopie des Bereichs „BlenderModel" (`Blendermodellauftrag`) für die Genesis-Engine
 (`Genesisengine2d3dkleider`): Auftrag, Iterationen und Seiten sind gleich gebaut, die Blender-Aufrufe sind durch
 die Engine ersetzt. Eigenes Modell, eigene Tabelle, eigene Ordner — was hier geändert wird, trifft
 BlenderModel nicht.
@@ -62,7 +62,7 @@ class Engine2d3dKleiderauftrag(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return '%s (Haar Engine, %s)' % (self.name, self.status)
+        return '%s (2D3D Kleider, %s)' % (self.name, self.status)
 
     @property
     def laeuft(self):

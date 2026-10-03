@@ -1,3 +1,4 @@
+import { Fehlerband } from '../gemeinsam/fehlerband.js';
 import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
@@ -44,6 +45,7 @@ export class Blendermodellseite {
 
     constructor(jobId, zustand, katalog) {
         Object.assign(this, { jobId, zustand, katalog, _timer: null });
+        this.fehlerband = new Fehlerband(); // dauerhaft, mit OK wegklickbar (02.10.2026)
     }
 
     adresse(pfad) { return `/api/blendermodell/${this.jobId}/${pfad}`; }
@@ -159,16 +161,15 @@ export class Blendermodellseite {
             this.zustand = z;
             this.zeigen();
         } catch (fehler) {
-            this.fehler(`Zustand nicht lesbar: ${fehler.message}`);
+            this.fehlerband.lesefehler(`Zustand nicht lesbar: ${fehler.message}`);
         }
     }
 
     // -------------------------------------------------------------- Anzeige
 
+    /** Meldung einer gescheiterten Aktion — bleibt stehen, bis jemand OK klickt (`Fehlerband`). */
     fehler(text) {
-        const feld = document.getElementById('fehler');
-        feld.textContent = text || '';
-        feld.classList.toggle('hb-versteckt', !text);
+        this.fehlerband.meldung(text);
     }
 
     zeigen() {
@@ -191,7 +192,7 @@ export class Blendermodellseite {
         }
         document.getElementById('optionen-gesperrt').hidden = !z.laeuft;
         this.einstellungen.sperren(!!z.laeuft);
-        this.fehler(z.status === 'gescheitert' ? (z.error || 'Fehlgeschlagen — siehe auftrag.log') : '');
+        this.fehlerband.auftrag(z); // der Takt löscht eine stehende Meldung NICHT mehr
         this.schritte();
         this.fotos.zeigen(z);
         this.pfade(z);

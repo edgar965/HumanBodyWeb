@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""Bereich „Haar Engine" — jedes Bedienelement der beiden Seiten (30.09.2026).
+u"""Bereich „2D3D Kleider" — jedes Bedienelement der beiden Seiten (30.09.2026).
 
 Edgar: „schreibe Testcases für alle buttons".
 

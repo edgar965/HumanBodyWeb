@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleidertabelle — die Aufträge des Bereichs „Haar Engine" als djangoBase-Tabelle (30.09.2026).
+"""Engine2d3dKleidertabelle — die Aufträge des Bereichs „2D3D Kleider" als djangoBase-Tabelle (30.09.2026).
 
 Die Spalten von `Blendermodelltabelle`, soweit dieser Bereich sie füllt: das erste Foto der Bildauswahl
 („Vorlage"), Name, Zahl der Fotos, Status mit Fortschrittsbalken, Dauer, Erstellt — dazu zwei Spalten der

@@ -1,8 +1,8 @@
 /**
- * Architektur2d3dreiter — die Reiter der Seite Hilfe → Architektur → 2D3D („Ablauf und Klassen", „Workflow").
+ * Architektur2d3dreiter — die Reiter der Seite Hilfe → Architektur → 2D3D („Ablauf und Klassen", „Workflow", „Tools").
  *
- * Beide Reiter stehen im HTML (`data-reiter="ablauf"`, `data-reiter="workflow"`); ohne dieses Skript sind sie
- * untereinander sichtbar, nichts fehlt. Das Skript blendet den jeweils anderen aus. Gemerkt wird der Reiter in der
+ * Alle Reiter stehen im HTML (`data-reiter="ablauf"`, `"workflow"`, `"tools"`); ohne dieses Skript sind sie
+ * untereinander sichtbar, nichts fehlt. Das Skript blendet die jeweils anderen aus. Gemerkt wird der Reiter in der
  * Adresse (`#workflow`), damit ein Verweis auf ihn funktioniert — und ein Verweis auf eine Klassenkarte oder einen Baum
  * (`#k-Engine2d3dKleidernetz`, `#baum-netz`) öffnet den Reiter, in dem das Ziel steht.
  */

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Bereich „Haar Engine" (30.09.2026) — Optionen, Lauf, Ablage und die Engine-Schnittstelle. Rein rechnend:
+"""Bereich „2D3D Kleider" (30.09.2026) — Optionen, Lauf, Ablage und die Engine-Schnittstelle. Rein rechnend:
 keine Datenbank, keine Dateien, keine Grafikkarte. Die Endpunkte samt gemeinsamer Register:
 `test_engine2d3dkleider_endpunkte.py`, die Schleife der Iterationen: `test_iterationen.py`.
 """

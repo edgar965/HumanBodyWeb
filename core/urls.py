@@ -278,5 +278,5 @@ urlpatterns += MESHFIGUR
 urlpatterns += GESICHTSFORM
 # Bereich „BlenderModel" (Fotos → Netz → Figur), 29.09.2026.
 urlpatterns += BLENDERMODELL
-# Bereich „Haar Engine" (Kopie von BlenderModel, Genesis Haar Engine statt Blender), 30.09.2026.
+# Bereich „2D3D Kleider" (Kopie von BlenderModel, Genesis-Engine statt Blender), 30.09.2026.
 urlpatterns += ENGINE2D3DKLEIDER

@@ -27,7 +27,7 @@ export class Meshoptionenformular {
         const klappe = document.createElement('details');
         klappe.className = 'mesh-feineinstellungen';
         const titel = document.createElement('summary');
-        // `fein_titel` (02.10.2026): die Gruppe „Mesh" der Haar Engine nennt ihren Bereich wie der TRELLIS.2-Space.
+        // `fein_titel` (02.10.2026): die Gruppe „Mesh" der 2D3D Kleider nennt ihren Bereich wie der TRELLIS.2-Space.
         titel.textContent = katalog.fein_titel || 'Feineinstellungen der Modelle';
         klappe.appendChild(titel);
         // Die Felder in EINEM Behälter: Ein Raster auf dem `<details>` selbst greift in Chrome nicht (der Inhalt liegt in
@@ -37,11 +37,30 @@ export class Meshoptionenformular {
         for (const feld of fein) felder.appendChild(Meshoptionenformular._zeile(feld, werte));
         klappe.appendChild(felder);
         behaelter.appendChild(klappe);
+        Meshoptionenformular._gilt(behaelter, katalog.gilt_nach);
+    }
+
+    /**
+     * Felder mit `gilt` (Liste von Werten) zeigt das Formular nur, wenn das Feld `gilt_nach` (02.10.2026: das Modell der Gruppe
+     * „Mesh" von „2D3D Kleider") einen dieser Werte trägt — TRELLIS.2 und Pixal3D haben verschiedene Regler. Ausgeblendet
+     * heißt nicht verworfen: `lesen` liest alle Felder, die Werte bleiben beim Wechsel erhalten.
+     */
+    static _gilt(behaelter, gilt_nach) {
+        const wahl = gilt_nach && behaelter.querySelector(`select[name="${gilt_nach}"]`);
+        if (!wahl) return;
+        const anwenden = () => {
+            for (const zeile of behaelter.querySelectorAll('.mesh-optionsfeld[data-gilt]')) {
+                zeile.classList.toggle('hb-versteckt', !zeile.dataset.gilt.split(' ').includes(wahl.value));
+            }
+        };
+        wahl.addEventListener('change', anwenden);
+        anwenden();
     }
 
     static _zeile(feld, werte) {
         const zeile = document.createElement('div');
         zeile.className = 'mesh-optionsfeld';
+        if (feld.gilt) zeile.dataset.gilt = feld.gilt.join(' ');
         const label = document.createElement('label');
         label.textContent = feld.titel;
         if (feld.hinweis) label.title = feld.hinweis;

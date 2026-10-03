@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleidergrundfigur — Schritt „grundfigur" von „Haar Engine": die Genesis-9-Grundfigur MIT Rig
+"""Engine2d3dKleidergrundfigur — Schritt „grundfigur" von „2D3D Kleider": die Genesis-9-Grundfigur MIT Rig
 (30.09.2026).
 
 Der Körper ist die gewählte Grundfigur (Option „Grundfigur", `Meshfigurregler.GRUNDFIGUREN`); die

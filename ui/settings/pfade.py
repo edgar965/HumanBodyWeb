@@ -114,7 +114,7 @@ MESH_FOTO3D_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Foto3D'
 MESHFIGUR_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshTo3D'
 # Bereich „BlenderModel" (Fotos -> Netz -> Figur, 29.09.2026): wie MeshTo3D, ein Ordner je Auftrag.
 BLENDERMODELL_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'BlenderModel'
-# Bereich „Haar Engine" (Vorlagenfotos -> Figur mit Kleidern, 30.09.2026): wie BlenderModel, ein Ordner je Auftrag.
+# Bereich „2D3D Kleider" (Vorlagenfotos -> Figur mit Kleidern, 30.09.2026): wie BlenderModel, ein Ordner je Auftrag.
 ENGINE2D3DKLEIDER_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Engine2d3dKleider'
 #: Blender-Skript, das eine GLB in eine .blend umschreibt — nur gerufen, wenn
 #: „.blend" im Dialog angehakt ist (die übrigen Formate schreibt der Browser).

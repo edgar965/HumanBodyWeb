@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Routen des Bereichs „Haar Engine" (Kopie von `urls_blendermodell.py`).
+"""Routen des Bereichs „2D3D Kleider" (Kopie von `urls_blendermodell.py`).
 
 Seite unter `/engine2d3dkleider/`, Endpunkte unter `/api/engine2d3dkleider/`: `core/api/engine2d3dkleiderdashboard.py`
 (die Seite), `engine2d3dkleider.py` (Auftrag, Lauf, Dateien), `engine2d3dkleiderfotos.py` (Bildauswahl),

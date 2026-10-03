@@ -3,7 +3,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshfotowahl } from '../mesh/meshfotowahl.js';
 
 /**
- * Engine2d3dKleiderfotos — die Bildauswahl der Auftragsseite „Haar Engine": die Vorlagen der Iterationen.
+ * Engine2d3dKleiderfotos — die Bildauswahl der Auftragsseite „2D3D Kleider": die Vorlagen der Iterationen.
  *
  * Je Foto eine Karte mit Rolle, Gewicht (%), Platz sowie „Ersetzen" und „Entfernen"; darüber „Fotos hinzufügen" (Dateidialog ODER
  * ganzer Ordner, `Meshfotowahl`). Aufgebaut wie der Kasten „Fotos" auf der Seite des Reiters „Mesh" (`Meshauftragseite._fotoliste` und

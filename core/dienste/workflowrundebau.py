@@ -72,9 +72,13 @@ class Workflowrundebau:
                 cls.T,
                 'Stoffsolverdrapierung → Stoffsolver (Blenders Cloth auf der GPU)',
                 'Dieselbe Rechnung wie Blender Cloth (Federn, Biegung, Druck mit Volumenterm, Kollision Dreieck gegen '
-                'Dreieck) als Warp-Löser in python14, ein Prozess je Stück, derselbe Auftrag. Braucht eine CUDA-GPU; '
-                'ohne sie wird abgelehnt. Gleiche Schwerkraft und festes Band wie die anderen Motoren. Nur per Rezept von '
-                'Hand; Ergebnis im Mittel 2 mm von Blenders (Oberteil), bei der rutschenden Hose nicht unterscheidbar.',
+                'Dreieck, dazu Wind und Kraftfelder mit Texturen und bewegten Feldobjekten, Vertexgruppen, Schrumpfen, Nähte, '
+                'weiches und bewegtes Anheften, mehrere und bewegte Körper — die Tabelle „Der Stoffsolver gegen Blender" unten '
+                'führt jede Funktion mit Stand) als Warp-Löser in python14, ein Prozess je Stück, derselbe Auftrag. Braucht eine '
+                'CUDA-GPU; ohne sie wird abgelehnt. Gleiche Schwerkraft und festes Band wie die anderen Motoren. Nur per Rezept von '
+                'Hand; Oberteil 24 Bilder im Mittel 2,7 mm von Blender (Blenders eigenes Rauschen 2,3 mm), bei der rutschenden '
+                'Hose nicht unterscheidbar (200 Blender- gegen 500 Solver-Läufe: Streuung 44,3 gegen 45,2 mm). Die Zeiten sind '
+                'am 02.10.2026 vor dem Ausbau des Solvers gemessen und danach nicht neu.',
                 ('Stoffsolverdrapierung', 'Drapierauftrag', 'Stoffsimulation', 'Rezeptumgebung'),
                 kante='stoffsolver',
                 teile=[

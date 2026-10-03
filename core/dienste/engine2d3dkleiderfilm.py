@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderfilm — Schritt „film" von „Haar Engine": GLB + BVH → Genesis Haar Engine → Video
+"""Engine2d3dKleiderfilm — Schritt „film" von „2D3D Kleider": GLB + BVH → Genesis-Engine → Video
 (30.09.2026).
 
 Ersetzt den Schritt „blender" von BlenderModel: Dort rechnete ein Blender-Prozess (Figur laden, BVH
-auflegen, rendern); hier ruft der Schritt die Genesis Haar Engine (`Genesisengine2d3dkleider.film`). Alles
+auflegen, rendern); hier ruft der Schritt die Genesis-Engine (`Genesisengine2d3dkleider.film`). Alles
 davor ist unverändert:
 
     1. die BVH-Datei aus der Option `film.bvh` auf Genesis 9 retargeten (`Engine2d3dKleiderbewegung`, im Django-Prozess)
@@ -67,7 +67,7 @@ class Engine2d3dKleiderfilm:
             'bewegung_bilder': bewegung.frame_count,
         }
         self.lauf.sichern('ergebnis')
-        self.lauf.melden(0.1, 'Die Haar Engine rendert den Film')
+        self.lauf.melden(0.1, '2D3D Kleider rendert den Film')
         o = self.optionen
         bericht = Genesisengine2d3dkleider(self.lauf).film(
             glb,

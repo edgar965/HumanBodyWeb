@@ -1,0 +1,28 @@
+/* Hilfe → Architektur → 2D3D, Reiter „Tools": Tabelle der Werkzeuge und Beziehungen im Klassenmodell. Die Kästen (.wf-karte) kommen aus hilfe_architektur_2d3d_workflow.css. */
+.tw-gruppe { scroll-margin-top: 4rem; }
+.tw-regeln { margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.86rem; }
+.tw-regeln li { margin-bottom: 0.25rem; }
+.tw-tabelle td { vertical-align: top; font-size: 0.84rem; }
+.tw-aufruf {
+    margin: 0; padding: 0.3rem 0.5rem; white-space: pre-wrap; word-break: break-word; font-size: 0.78rem;
+    background: var(--bg-secondary, rgba(127, 127, 127, 0.12)); border: 1px solid var(--border); border-radius: 4px; max-width: 34rem;
+}
+.tw-klassen a { text-decoration: none; margin-right: 0.4rem; font-family: monospace; font-size: 0.78rem; white-space: nowrap; }
+.tw-hinweis { margin-top: 0.3rem; color: var(--text-muted); font-size: 0.78rem; }
+.tw-art { display: inline-block; padding: 0 0.45rem; border-radius: 999px; font-size: 0.7rem; border: 1px solid var(--zf, var(--border)); color: var(--zf, var(--text-muted)); white-space: nowrap; }
+.tw-art-rezept { --zf: #2e9e5b; } .tw-art-api { --zf: #4a90d9; } .tw-art-cli { --zf: #c29a1d; }
+.tw-art-python { --zf: #9a7be0; } .tw-art-seite { --zf: #d9a441; } .tw-art-regel { --zf: #d95b5b; }
+.tw-beziehungen { padding: 0 0.7rem 0.5rem; font-size: 0.74rem; display: flex; flex-direction: column; gap: 0.12rem; }
+.tw-beziehungen a { text-decoration: none; font-family: monospace; }
+.tw-pfeil { display: inline-block; min-width: 5.2rem; color: var(--text-muted); }
+.tw-befunde ul { margin: 0.3rem 0 0; padding-left: 1.2rem; }
+/* Vergleich mit Blender: die Blender-Spalten stehen rechts und sind abgesetzt */
+.tw-blender th { text-align: left; }
+.tw-kopf-lokal { border-bottom: 2px solid #2e9e5b; }
+.tw-kopf-blender { border-bottom: 2px solid #e87d0d; }
+.tw-blender td.tw-blender-spalte { background: rgba(232, 125, 13, 0.06); }
+.tw-blender .tw-blender-erste { border-left: 2px solid #e87d0d; }
+.tw-zeit { font-size: 0.78rem; min-width: 9rem; }
+.tw-zeit-offen { color: var(--text-muted); font-style: italic; }
+.tw-stand-genutzt { --zf: #2e9e5b; } .tw-stand-gemessen { --zf: #4a90d9; } .tw-stand-vorhanden { --zf: #c29a1d; }
+.tw-stand-addon { --zf: #9a7be0; } .tw-stand-keins { --zf: var(--text-muted); }

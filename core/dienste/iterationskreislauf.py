@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Iterationskreislauf — Schritt „iterationen" von „Haar Engine": das Modell per Knopfdruck Runde um Runde
+"""Iterationskreislauf — Schritt „iterationen" von „2D3D Kleider": das Modell per Knopfdruck Runde um Runde
 verbessern (30.09.2026).
 
 Kopie von `Kostuemkreislauf` (BlenderModel): ein Code, der per Knopfdruck durch alle Iterationen läuft;
-beliebig oft „Weiter iterieren". Gebaut und gerendert wird von der Genesis Haar Engine
+beliebig oft „Weiter iterieren". Gebaut und gerendert wird von der Genesis-Engine
 (`Genesisengine2d3dkleider`) statt von Blender.
 
 Ablauf eines Laufs (Optionen `iterationen`, `Iterationsoptionen`):
@@ -228,7 +228,7 @@ class Iterationskreislauf:
             self._sichern(z)
             runde_.aufraeumen(runde)
             if self.o['stillstand'] and ohne >= self.o['stillstand']:
-                logger.info('Haar Engine %s: %d Runden ohne Besserung — Halt', self.job.kennung, ohne)
+                logger.info('2D3D Kleider %s: %d Runden ohne Besserung — Halt', self.job.kennung, ohne)
                 break
         self._abschluss(runde_, top['werte'], z)
 
@@ -239,7 +239,7 @@ class Iterationskreislauf:
         try:
             vorschlag, bericht = Iterationskritik(self.o['pruefki']).vorschlagen(bester, tafel)
         except Exception as fehler:  # noqa: BLE001 — Ollama weg, Modell fehlt, kaputtes JSON: Runde ohne KI
-            logger.warning('Haar Engine %s: Prüf-KI %s: %s', self.job.kennung, self.o['pruefki'], fehler)
+            logger.warning('2D3D Kleider %s: Prüf-KI %s: %s', self.job.kennung, self.o['pruefki'], fehler)
             return {'modell': self.o['pruefki'], 'fehler': str(fehler)[:500]}, None
         if not bericht['aenderungen']:
             return dict(bericht, fehler='Kein verwertbarer Vorschlag'), None

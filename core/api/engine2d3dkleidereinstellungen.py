@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleidereinstellungen — die Auftragsseite „Haar Engine" speichert jede Eingabe sofort.
+"""Engine2d3dKleidereinstellungen — die Auftragsseite „2D3D Kleider" speichert jede Eingabe sofort.
 
     POST /api/engine2d3dkleider/<id>/einstellungen/   {optionen: {figur?: {…}, iterationen?: {…}, film?: {…}}}
          → {ok, optionen}   (409 während eines Laufs — der Arbeitsprozess hat seine Optionen schon gelesen)

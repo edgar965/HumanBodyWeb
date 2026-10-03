@@ -72,7 +72,7 @@ class Iterationsloeschung:
         for name in namen:
             if Path(name).name != name:  # nie aus dem Ordner „iterationen" heraus
                 logger.warning(
-                    'Haar Engine %s: Dateiname %r der Runde %s übergangen',
+                    '2D3D Kleider %s: Dateiname %r der Runde %s übergangen',
                     self.job.kennung,
                     name,
                     eintrag.get('runde'),
@@ -81,4 +81,4 @@ class Iterationsloeschung:
             try:
                 self.ablage.iterationen(name).unlink(missing_ok=True)
             except OSError as fehler:  # gesperrt (wird gerade ausgeliefert): der Eintrag geht trotzdem
-                logger.warning('Haar Engine %s: %s nicht gelöscht: %s', self.job.kennung, name, fehler)
+                logger.warning('2D3D Kleider %s: %s nicht gelöscht: %s', self.job.kennung, name, fehler)

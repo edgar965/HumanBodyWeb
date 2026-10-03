@@ -34,7 +34,7 @@ class HaarstraehnenTest(SimpleTestCase):
         np.testing.assert_array_equal(s.punkte, PUNKTE[s.reihe])
         lage = s.punkte.astype(np.float32).astype(np.float64) + (0.0, -0.02, 0.0)
         delta = s.delta(lage)
-        np.testing.assert_allclose(delta[[1, 7, 2, 0, 5]], (0.0, -0.02, 0.0), atol=1e-12)
+        np.testing.assert_allclose(delta[[1, 7, 2, 0, 5]], np.tile((0.0, -0.02, 0.0), (5, 1)), atol=1e-12)
         np.testing.assert_array_equal(delta[[3, 6, 8]], 0.0)                         # Punkte ohne Kette bleiben stehen
 
     def test_die_wurzeln_bekommen_genau_null_auch_wenn_der_solver_rundungsrauschen_liefert(self):

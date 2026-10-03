@@ -80,7 +80,7 @@ class HaardynamikTest(SimpleTestCase):
         a.ausfuehren(self.ordner())
         delta = a.abgelegt[0][3][0]
         np.testing.assert_array_equal(delta[[4, 9]], 0.0)
-        np.testing.assert_allclose(delta[[1, 7, 2, 0, 5]], (0.0, -0.02, 0.0), atol=1e-6)
+        np.testing.assert_allclose(delta[[1, 7, 2, 0, 5]], np.tile((0.0, -0.02, 0.0), (5, 1)), atol=1e-6)
         np.testing.assert_array_equal(delta[[3, 6, 8]], 0.0)
 
     def test_der_steckbrief_nennt_motor_schwerkraft_und_was_der_lauf_fand(self):

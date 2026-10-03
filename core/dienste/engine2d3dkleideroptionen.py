@@ -78,6 +78,8 @@ class Engine2d3dKleideroptionen:
             aus[gruppe] = {'optionen': felder}
             if katalog.get('fein_titel'):  # Überschrift des zugeklappten Bereichs (`Meshoptionenformular`)
                 aus[gruppe]['fein_titel'] = katalog['fein_titel']
+            if katalog.get('gilt_nach'):  # Feld, nach dem das Formular Felder mit `gilt` ein- und ausblendet
+                aus[gruppe]['gilt_nach'] = katalog['gilt_nach']
         # Die Rollen der Bildauswahl (vorne/links/rechts/hinten geben den Blickwinkel der Iterationen).
         aus['rollen'] = [{'wert': w, 'text': t} for w, t in Meshoptionen.ROLLEN]
         return aus

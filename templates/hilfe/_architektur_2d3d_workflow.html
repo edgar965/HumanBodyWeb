@@ -98,9 +98,12 @@ die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht
 
 <h2>Der Stoffsolver gegen Blender: was drin ist</h2>
 <p>Der Stoffsolver (<code>Stoffsolver/</code>) ist Blenders Cloth- und Haar-Dynamik als Python/Warp-Paket. Die Tabelle zeigt je Funktion
-  die Klasse im Solver und den <b>Stand</b>. Nur die Zeilen „gegen Blender gemessen" sind mit einem echten Blender-Lauf verglichen;
-  alles, was am 02.10.2026 dazukam, ist nach Blenders Quelltext gebaut und gegen Handrechnung, Finite Differenzen und Gerät gegen Host
-  getestet — <b>kein Blender-Lauf</b>. Die Pipeline wählt den Solver nie selbst: Drapieren und Haar-Dynamik gehen nur per Rezeptzeile.
+  die Klasse im Solver und den <b>Stand</b>. Die Zeilen „gegen Blender gemessen" sind am 02. und 03.10.2026 mit echten Blender-Läufen (Blender 5.2.2,
+  Hintergrundmodus) verglichen: je Funktion Rauschgrenze (Blender gegen Blender), Wirkung, Solver gegen Blender und die Gegenprobe ohne die Funktion.
+  Am 03.10.2026 kamen dazu: der kubische Zweig der Choi–Ko-Dämpfung, Bezier-/NURBS-Führungskurven, die Feldtexturen (Bild, Farbband, Rausch-Arten, Knoten),
+  bewegte Feldobjekte sowie Packer-Pins, <code>merge_overlap</code> und die Zielkachel beim Packen; Cache/Bake und die Szene baut der Solver bewusst nicht.
+  „Nach Quelltext gebaut" heißt: Blender kann es im Hintergrundmodus nicht, der Solver ist nach dem Quelltext gebaut und gegen Handrechnung getestet.
+  Die Pipeline wählt den Solver nie selbst: Drapieren und Haar-Dynamik gehen nur per Rezeptzeile.
   Gezählt: {% for s in w.stoffsolver.zaehlung %}{{ s.anzahl }} × {{ s.text }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
 <table class="db-tabelle sortable wf-umfang" data-sort-key="hilfe-2d3d-stoffsolver">
   <thead><tr><th>Bereich</th><th>Blender</th><th>Klasse im Solver</th><th>Stand</th><th>Anmerkung</th></tr></thead>

@@ -14,16 +14,18 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
 <link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_workflow.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_werkzeuge.css' %}">
 {% endblock %}
 
 {% block doku_inhalt %}
 <div class="doku-seite a2d3d-breit wf-seite" data-reiter-seite>
 
-  {% comment %}Zwei Reiter (Edgar, 02.10.2026: „mache einen neuen Tab … Workflow"). Beide Flächen stehen im HTML; `architektur2d3dreiter.js`
-  blendet die jeweils andere aus — ohne das Skript bleibt alles sichtbar.{% endcomment %}
+  {% comment %}Drei Reiter (Edgar, 02.10.2026: „mache einen neuen Tab … Workflow"; 03.10.2026: „… auf einem neuen Tab: Tools"). Alle Flächen stehen im HTML;
+  `architektur2d3dreiter.js` blendet die jeweils anderen aus — ohne das Skript bleibt alles sichtbar.{% endcomment %}
   <div class="wf-reiter">
     <button type="button" class="wf-reiter-knopf active" data-aktion="reiter" data-ziel="ablauf"><i class="bi bi-list-ol"></i> Ablauf und Klassen</button>
     <button type="button" class="wf-reiter-knopf" data-aktion="reiter" data-ziel="workflow"><i class="bi bi-diagram-3"></i> Workflow</button>
+    <button type="button" class="wf-reiter-knopf" data-aktion="reiter" data-ziel="tools"><i class="bi bi-tools"></i> Tools</button>
   </div>
 
   <div data-reiter="ablauf">
@@ -132,6 +134,10 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
 
   <div data-reiter="workflow">
     {% include "hilfe/_architektur_2d3d_workflow.html" %}
+  </div>
+
+  <div data-reiter="tools">
+    {% include "hilfe/_architektur_2d3d_werkzeuge.html" %}
   </div>
 
 </div>

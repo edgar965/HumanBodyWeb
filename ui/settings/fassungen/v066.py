@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Fassung 0.66 (30.09.2026) — Haar und Kleidung generisch, Daz-Stücke bleiben am Modell,
-BlenderModel und Haar Engine."""
+BlenderModel und 2D3D Kleider."""
 
 FASSUNG = {
     'version': '0.66',
     'date': '2026-09-30',
     'title': 'Genesis 9: Haar – Generisch und Kleidung – Generisch (auch auf HumanBody), '
-    'Daz-Stücke werden mit dem Modell gespeichert; BlenderModel und Haar Engine als neue '
+    'Daz-Stücke werden mit dem Modell gespeichert; BlenderModel und 2D3D Kleider als neue '
     'Bereiche; hohe Auflösung nur noch pro Seite',
     'author': 'edgar965',
     'body_md': (
@@ -42,10 +42,10 @@ FASSUNG = {
         'Ladeanfragen der Tabs im Weg standen), sondern erst, wenn sie verlangt wird. Dazu lädt '
         '/Charakter/ die zuletzt geladene Figur statt eines festen Standardmodells, und '
         'Netzantworten gehen als Binärpaket über den Draht.\n'
-        '- **BlenderModel und Haar Engine als neue Bereiche im Dashboard**: Fotos → Netz → Figur '
+        '- **BlenderModel und 2D3D Kleider als neue Bereiche im Dashboard**: Fotos → Netz → Figur '
         'in einem Auftrag, mit Bildauswahl, Grundfigur, Export mit Rig, Blender und '
-        'Kostüm-Kreislauf, Umriss-Hülle, Fototextur und Sichtmodell; die Haar Engine (Kopie von '
-        'BlenderModel mit der Genesis Haar Engine) steht als Gerüst mit Iterationen bereit, die '
+        'Kostüm-Kreislauf, Umriss-Hülle, Fototextur und Sichtmodell; die 2D3D Kleider (Kopie von '
+        'BlenderModel mit der Genesis-Engine) steht als Gerüst mit Iterationen bereit, die '
         'Engine selbst ist noch nicht angebunden.\n'
         '- **Mesh to 3D**: Haar, Frisur und Kleidung, Sofort-Speichern, Gesichtsform-Editor, '
         'Modelltexturen, Texel-Prüfung, Auftrag duplizieren; die Mesh-Wrapper sind auf Dateien '

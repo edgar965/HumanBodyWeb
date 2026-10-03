@@ -82,7 +82,7 @@ class DrapierauftragTest(SimpleTestCase):
             with self.subTest(klasse.__name__), tempfile.TemporaryDirectory(dir=Path(__file__).parent) as ordner:
                 delta = self.abgelegt(klasse(ordner))['deltas'][0]
                 np.testing.assert_allclose(delta[[4, 5]], 0.0, atol=1e-12)
-                np.testing.assert_allclose(delta[[0, 1, 2, 3]], (0.0, -0.02, 0.0), atol=1e-6)
+                np.testing.assert_allclose(delta[[0, 1, 2, 3]], np.tile((0.0, -0.02, 0.0), (4, 1)), atol=1e-6)
 
     def test_ein_breiteres_band_haelt_mehr_punkte_fest(self):
         """`fest_oben` ist ein Anteil der Höhe: 0,5 hält die obere Hälfte (y ≥ 0,5) — wie bei Newton."""

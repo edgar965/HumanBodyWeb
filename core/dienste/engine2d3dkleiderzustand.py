@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderzustand — was die Seite eines Auftrags „Haar Engine" von ihm wissen muss.
+"""Engine2d3dKleiderzustand — was die Seite eines Auftrags „2D3D Kleider" von ihm wissen muss.
 
 Ein Wörterbuch aus dem Auftrag: Status und Fortschritt, die Bildauswahl (`bilder`), alles Gemessene
 (`ergebnis`), die gestellten Regler (`stellung`), die Schritte des Laufs und die Ablageorte. Es geht zweimal

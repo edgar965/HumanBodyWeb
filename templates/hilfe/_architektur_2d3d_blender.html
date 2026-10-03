@@ -1,0 +1,46 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „Tools": die Tabelle „Wie liefe das mit Blender" (Edgar, 03.10.2026: „mach bei den Tools einen Vergleich, wie das mit Blender laufen würde.
+Also eine Tabelle, wo rechts die Blender-Spalte ist"). Eingebunden in _architektur_2d3d_werkzeuge.html mit `b` = blender. Daten: `core/dienste/architektur2d3dblender.py`
+aus den Dateien `core/dienste/blendervergleich*.py`.
+{% endcomment %}
+<h2 id="blender-vergleich">Wie liefe das mit Blender?</h2>
+<p>Blender hat für fast jede Aufgabe ein eigenes Werkzeug — Modelle erzeugen, Formen verstellen, Kleider, Stoff, Haar, Rigging, UV, Backen, Rendern. Die Tabelle stellt je Aufgabe
+  <b>links das lokale Werkzeug</b> (Genesis 9, Stoffsolver, Pipeline) und <b>rechts das Blender-Werkzeug</b> gegenüber, mit dem Aufruf aus Python im Hintergrundmodus
+  (Blender 5.2.2) und dem Stand: ob das Projekt es benutzt, ob es gegen den Solver gemessen ist, ob es in Blender nur vorhanden ist (in einem Blender-Lauf nachgesehen) oder nur als Add-on
+  existiert. Der Blender-Weg des Projekts selbst läuft nur per Rezeptzeile und nur nach Ansage (siehe die Regeln oben).
+  Die <b>Zeit</b> steht auf beiden Seiten mit Szene, Definition (ganzer Prozess oder nur Rechnung) und Quelle; wo nichts gemessen ist, steht „nicht gemessen" — eine Zeit ohne Messung
+  steht hier nicht.
+  {% if b.zeilen %}Gezählt: {{ b.zeilen }} Aufgaben ({{ b.zeiten_beide }} davon mit gemessener Zeit auf beiden Seiten) — {% for s in b.zaehlung %}{{ s.anzahl }} × {{ s.text }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %}</p>
+
+{% if b.befunde %}
+<div class="info-box info-box-red tw-befunde">
+  <strong>Befunde ({{ b.befunde|length }}) — dieser Teil der Seite stimmt nicht mit dem Code überein:</strong>
+  <ul>{% for x in b.befunde %}<li class="a2d3d-fehlt">{{ x }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% for a in b.abschnitte %}
+<h3 id="tb-{{ a.kennung }}">{{ a.titel }}</h3>
+<p>{{ a.einleitung }}</p>
+<table class="db-tabelle tw-tabelle tw-blender">
+  <thead>
+    <tr><th rowspan="2">Aufgabe</th><th colspan="3" class="tw-kopf-lokal">Lokal (Genesis, Stoffsolver, Pipeline)</th><th colspan="4" class="tw-kopf-blender tw-blender-erste"><i class="bi bi-box"></i> Blender 5.2.2</th></tr>
+    <tr><th>Werkzeug</th><th>Aufruf, Klassen</th><th>Zeit</th><th class="tw-blender-spalte tw-blender-erste">Werkzeug</th><th class="tw-blender-spalte">Aufruf aus Python</th><th class="tw-blender-spalte">Zeit</th><th class="tw-blender-spalte">Stand, Unterschied</th></tr>
+  </thead>
+  <tbody>
+    {% for z in a.zeilen %}
+    <tr>
+      <td><b>{{ z.aufgabe }}</b></td>
+      <td>{{ z.lokal }}</td>
+      <td><pre class="tw-aufruf">{{ z.lokal_aufruf }}</pre>
+        <div class="tw-klassen">{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<code>{{ k.klasse }}</code>{% endif %}{% endfor %}</div></td>
+      <td class="tw-zeit{% if not z.zeit_lokal.gemessen %} tw-zeit-offen{% endif %}">{{ z.zeit_lokal.text }}</td>
+      <td class="tw-blender-spalte tw-blender-erste">{{ z.blender }}</td>
+      <td class="tw-blender-spalte"><pre class="tw-aufruf">{{ z.blender_aufruf }}</pre></td>
+      <td class="tw-blender-spalte tw-zeit{% if not z.zeit_blender.gemessen %} tw-zeit-offen{% endif %}">{{ z.zeit_blender.text }}</td>
+      <td class="tw-blender-spalte"><span class="tw-art tw-stand-{{ z.stand }}">{{ z.stand_text }}</span><div class="tw-hinweis">{{ z.unterschied }}</div></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}

@@ -2,7 +2,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
 
 /**
- * Engine2d3dKleidereinstellungen — jede Eingabe der Auftragsseite „Haar Engine" sofort speichern.
+ * Engine2d3dKleidereinstellungen — jede Eingabe der Auftragsseite „2D3D Kleider" sofort speichern.
  *
  * Auswahlfelder sofort, Text- und Zahlfelder `WARTEN_MS` nach dem letzten Tastendruck. Alle sechs Optionsgruppen (Grundfigur,
  * Netz, Mesh, Körper, Iterationen, Film) gehen an `POST …/einstellungen/`. Während eines Laufs ist alles gesperrt (409, und die Seite sperrt die Felder),

@@ -24,7 +24,8 @@ from ._wrappersuchpfad import Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
-from mesh_trellisregler import Trellisregler  # noqa: E402  (erst nach dem Suchpfad)
+from mesh_trellismehrbild import Trellismehrbild  # noqa: E402  (erst nach dem Suchpfad)
+from mesh_trellisregler import Trellisregler  # noqa: E402
 
 STUFEN = ('ss', 'form', 'tex')
 REGLER = ('fuehrung', 'rescale', 'schritte', 'rescale_t')
@@ -47,9 +48,11 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
     def test_jede_stufe_hat_die_vier_regler_des_space(self):
         vorgaben = Engine2d3dKleidermeshoptionen.vorgaben()
         erwartet = {'%s_%s' % (vor, regler) for vor in STUFEN for regler in REGLER}
-        # Die Hauptfelder des Space in seiner Reihenfolge: Resolution, Seed, Randomize Seed, Decimation Target, Texture Size.
-        haupt = ['aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse']
-        self.assertEqual([k for k in vorgaben if k not in erwartet], haupt)
+        # Die Hauptfelder des Space in seiner Reihenfolge (Resolution, Seed, Randomize Seed, Decimation Target, Texture Size) mit
+        # der Modellwahl davor, dahinter Multi-Image (Fork des Space) und die Felder von Pixal3D.
+        rest = ['modell', 'aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse', 'mehrbild', 'mehrbild_textur',
+                'pixal_fov', 'pixal_speicher']
+        self.assertEqual([k for k in vorgaben if k not in erwartet], rest)
         self.assertLessEqual(erwartet, set(vorgaben))
 
     def test_die_vorgaben_sind_die_der_pipeline_json_von_trellis2(self):
@@ -90,11 +93,55 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
         katalog = Engine2d3dKleideroptionen.katalog()
         self.assertEqual(katalog['mesh']['fein_titel'], Engine2d3dKleidermeshoptionen.FEIN_TITEL)
         felder = katalog['mesh']['optionen']
-        self.assertEqual(len(felder), 17)
-        # Fünf Hauptfelder sichtbar, die zwölf Sampler im zugeklappten Bereich („Advanced Settings").
+        self.assertEqual(len(felder), 22)
+        # Sechs Hauptfelder sichtbar (Modell + die fünf des Space), die zwölf Sampler, die beiden Multi-Image-Felder und die
+        # beiden von Pixal3D im zugeklappten Bereich („Advanced Settings").
         self.assertEqual([f['schluessel'] for f in felder if not f['fein']],
-                         ['aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse'])
-        self.assertEqual(sum(1 for f in felder if f['fein']), 12)
+                         ['modell', 'aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse'])
+        self.assertEqual(sum(1 for f in felder if f['fein']), 16)
+        self.assertEqual(katalog['mesh']['gilt_nach'], 'modell')
+
+    def test_die_felder_wechseln_mit_dem_modell(self):
+        """TRELLIS.2 und Pixal3D haben verschiedene Regler: `gilt` sagt je Feld, zu welchem Modell es gehört; ohne `gilt`
+        gilt es für alle (Auflösung, Seed, Flächen, Texturgröße). Das Formular blendet die übrigen aus (`_gilt`)."""
+        felder = {f['schluessel']: f for f in Engine2d3dKleideroptionen.katalog()['mesh']['optionen']}
+        for schluessel in ('modell', 'aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse'):
+            self.assertNotIn('gilt', felder[schluessel], schluessel)
+        trellis = [k for k in felder if k.split('_')[0] in ('ss', 'form', 'tex') or k.startswith('mehrbild')]
+        self.assertEqual(len(trellis), 14)
+        for schluessel in trellis:
+            self.assertEqual(felder[schluessel]['gilt'], ['trellis2'], schluessel)
+        for schluessel in ('pixal_fov', 'pixal_speicher'):
+            self.assertEqual(felder[schluessel]['gilt'], ['pixal3d', 'pixal3d_mv'], schluessel)
+
+    def test_das_modell_ist_trellis2_pixal3d_oder_pixal3d_mehrbild_und_sonst_die_vorgabe(self):
+        felder = {f['schluessel']: f for f in Engine2d3dKleideroptionen.katalog()['mesh']['optionen']}
+        self.assertEqual([w['wert'] for w in felder['modell']['werte']], ['trellis2', 'pixal3d', 'pixal3d_mv'])
+        self.assertEqual(Engine2d3dKleidermeshoptionen.vorgaben()['modell'], 'trellis2')
+        gewaehlt = Engine2d3dKleideroptionen.pruefen({'mesh': {'modell': 'pixal3d_mv', 'pixal_fov': 0.2,
+                                                               'pixal_speicher': 'sparsam'}})['mesh']
+        self.assertEqual((gewaehlt['modell'], gewaehlt['pixal_fov'], gewaehlt['pixal_speicher']), ('pixal3d_mv', 0.2, 'sparsam'))
+        kaputt = Engine2d3dKleideroptionen.pruefen({'mesh': {'modell': 'hunyuan3d_2', 'pixal_fov': 5,
+                                                             'pixal_speicher': 'alles'}})['mesh']
+        self.assertEqual((kaputt['modell'], kaputt['pixal_fov'], kaputt['pixal_speicher']), ('trellis2', 0, 'auto'))
+
+    def test_das_formular_blendet_nach_dem_modell_aus_und_liest_trotzdem_alles(self):
+        pfad = Path(settings.BASE_DIR) / 'static' / 'viewer' / 'mesh' / 'meshoptionenformular.js'
+        text = pfad.read_text(encoding='utf-8')
+        self.assertIn('static _gilt(behaelter, gilt_nach)', text)
+        self.assertIn("zeile.dataset.gilt = feld.gilt.join(' ')", text)
+        self.assertIn("toggle('hb-versteckt'", text)
+        # `lesen` fragt ALLE Felder ab, ausgeblendete eingeschlossen — beim Wechsel des Modells gehen keine Werte verloren.
+        self.assertNotIn('hb-versteckt', text.split('static lesen(behaelter)')[1])
+
+    def test_multi_image_ist_aus_und_ein_unbekannter_wert_wird_aus(self):
+        vorgaben = Engine2d3dKleidermeshoptionen.vorgaben()
+        self.assertEqual((vorgaben['mehrbild'], vorgaben['mehrbild_textur']), ('aus', 'multidiffusion'))
+        gueltig = Engine2d3dKleideroptionen.pruefen({'mesh': {'mehrbild': 'stochastic', 'mehrbild_textur': 'stochastic'}})['mesh']
+        self.assertEqual((gueltig['mehrbild'], gueltig['mehrbild_textur']), ('stochastic', 'stochastic'))
+        kaputt = Engine2d3dKleideroptionen.pruefen({'mesh': {'mehrbild': 'quatsch', 'mehrbild_textur': 'aus'}})['mesh']
+        # „aus" gibt es nur für die Form; die Textur kennt stochastic und multidiffusion.
+        self.assertEqual((kaputt['mehrbild'], kaputt['mehrbild_textur']), ('aus', 'multidiffusion'))
 
     def test_ein_neuer_auftrag_hat_100000_flaechen_und_texturgroesse_4096(self):
         mesh = Engine2d3dKleideroptionen.pruefen({})['mesh']
@@ -166,3 +213,30 @@ class TrellisreglerTest(SimpleTestCase):
         self.assertEqual(fest, 7)
         self.assertTrue(0 <= wuerfel < 2 ** 31)
         self.assertEqual(ausgabe.getvalue().splitlines(), ['[seed] 7', '[seed] %d' % wuerfel])
+
+
+class TrellismehrbildTest(SimpleTestCase):
+    """Die Auswahl der Fotos und der Modi (`mesh_trellismehrbild`). Das Verhalten der Sampler braucht torch und den Klon —
+    dafür gibt es `ProjektTemp/_wegwerf/trellis_hf/mehrbild_probe.py` (CPU, Kunsttensoren, 14 Prüfungen)."""
+
+    BILDER = [{'rolle': r, 'gewicht': g, 'freigestellt': r} for r, g in (
+        ('hinten', 100), ('gesicht', 100), ('vorne', 100), ('rechts', 0), ('links', 40))]
+
+    def test_aus_ist_die_vorgabe_und_gibt_keine_ansichten(self):
+        self.assertEqual(Trellismehrbild.modi(Engine2d3dKleidermeshoptionen.vorgaben()), (None, None))
+        self.assertEqual(Trellismehrbild.ansichten(Engine2d3dKleidermeshoptionen.vorgaben(), self.BILDER), [])
+
+    def test_die_ansichten_kommen_in_der_reihenfolge_vorne_hinten_links_rechts(self):
+        optionen = {'mehrbild': 'multidiffusion'}
+        rollen = [b['rolle'] for b in Trellismehrbild.ansichten(optionen, self.BILDER)]
+        # „gesicht" ist keine Ansicht des ganzen Körpers, Gewicht 0 schaltet ein Foto ab.
+        self.assertEqual(rollen, ['vorne', 'hinten', 'links'])
+
+    def test_eine_einzige_ansicht_bleibt_beim_einzelbild(self):
+        self.assertEqual(Trellismehrbild.ansichten({'mehrbild': 'stochastic'}, self.BILDER[2:3]), [])
+
+    def test_die_modi_und_die_vorgabe_der_textur(self):
+        self.assertEqual(Trellismehrbild.modi({'mehrbild': 'stochastic'}), ('stochastic', 'multidiffusion'))
+        self.assertEqual(Trellismehrbild.modi({'mehrbild': 'stochastic', 'mehrbild_textur': 'stochastic'}),
+                         ('stochastic', 'stochastic'))
+        self.assertEqual(Trellismehrbild.modi({'mehrbild': 'quatsch'}), (None, None))

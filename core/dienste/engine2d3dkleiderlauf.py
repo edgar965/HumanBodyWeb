@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderlauf — ein Auftrag „Haar Engine": Grundfigur → Iterationen → Figur mit Rig → Film
+"""Engine2d3dKleiderlauf — ein Auftrag „2D3D Kleider": Grundfigur → Iterationen → Figur mit Rig → Film
 (30.09.2026).
 
 DIES IST DIE PIPELINE DES BEREICHS — die Datei, in der gebaut wird. Alles, was um sie herum steht (Seite,
@@ -7,7 +7,7 @@ Tabelle, Fotoauswahl, Neu berechnen, Umbenennen, Duplizieren, Bühne, Export), f
 gibt es (`SCHRITTE`), in welchem Band des Balkens läuft jeder (`BAENDER`), und was steht danach in
 `job.ergebnis`? Ein Schritt ist eine Zeile in `schrittfolge()`.
 
-Kopie von `Blendermodelllauf`, mit der Genesis Haar Engine (`Genesisengine2d3dkleider`) statt Blender:
+Kopie von `Blendermodelllauf`, mit der Genesis-Engine (`Genesisengine2d3dkleider`) statt Blender:
 
     grundfigur   Genesis-9-Grundfigur (Option „Grundfigur") mit Rig, Stellung für Bühne und Export
     iterationen  die Iterationen: Runden aus Optimierer + lokaler Prüf-KI gegen die Vorlagenbilder (`Iterationskreislauf`)
@@ -110,10 +110,10 @@ class Engine2d3dKleiderlauf:
                 job.ergebnis.setdefault('dauer', {})[name] = round(time.perf_counter() - t, 1)
                 self.sichern('ergebnis')
         except self.Angehalten:
-            logger.info('Haar Engine %s: angehalten', job.kennung)
+            logger.info('2D3D Kleider %s: angehalten', job.kennung)
             return
         except Exception as fehler:  # noqa: BLE001 — jeder Fehler beendet den Lauf sichtbar
-            logger.exception('Haar Engine %s: Schritt %s gescheitert', job.kennung, job.schritt)
+            logger.exception('2D3D Kleider %s: Schritt %s gescheitert', job.kennung, job.schritt)
             self._scheitern('%s: %s' % (job.schritt, fehler))
             return
         self._standmodell(self.SCHRITTE[start:ende])

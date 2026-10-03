@@ -1,0 +1,85 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „Tools" (Edgar, 03.10.2026: „schreibe alle lokalen Tools für die Anpassung des Modells auf die Hilfeseite, damit andere
+Sessions das lesen können … Mach auch ein Klassenmodell für diese Tools, also welche Klassen, welche Aufrufe im unteren Bereich der Seite").
+Eingebunden in architektur_2d3d.html mit `t` = werkzeuge. Die Daten liefert `core/dienste/architektur2d3dwerkzeuge.py` aus den Dateien `core/dienste/werkzeug*.py`;
+jede Klasse ist gegen den Code geprüft, Fehlendes steht als Befund auf der Seite.
+{% endcomment %}
+{% with t=werkzeuge %}
+<h1>2D3D Kleider: die Tools zur Anpassung des Modells</h1>
+<p>Alle lokalen Werkzeuge, mit denen ein Genesis-9-Modell an Fotos angepasst wird: Körper und Gesicht, Kleider und Haar, die aus Blender übernommenen Werkzeuge
+  (Stoffsolver) und der Bildvergleich mit den Fotos aus allen Blickwinkeln. Zu jedem Werkzeug stehen <b>der genaue Aufruf</b>, die Klassen, die ihn tragen, und was man vorher
+  wissen muss. Im unteren Teil das <b>Klassenmodell</b>: je Klasse die öffentlichen Methoden, die Aufrufe von außen und welche Klasse welche ruft. Jede genannte Klasse wird beim Aufruf
+  der Seite gegen den Code geprüft; was fehlt, steht rot als Befund. Gezählt: {{ t.zaehlung.gruppen }} Gruppen, {{ t.zaehlung.werkzeuge }} Werkzeuge,
+  {{ t.zaehlung.klassen }} Klassen, {{ t.zaehlung.beziehungen }} Beziehungen.</p>
+
+<div class="info-box info-box-orange">
+  <strong>Was jede Session vor dem Benutzen wissen muss</strong>
+  <ul class="tw-regeln">
+    {% for r in t.regeln %}<li><b>{{ r.regel }}:</b> {{ r.umsetzung }}</li>{% endfor %}
+  </ul>
+</div>
+
+{% if t.befunde %}
+<div class="info-box info-box-red tw-befunde">
+  <strong>Befunde ({{ t.befunde|length }}) — dieser Teil der Seite stimmt nicht mit dem Code überein:</strong>
+  <ul>{% for b in t.befunde %}<li class="a2d3d-fehlt">{{ b }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<h2>Die Gruppen</h2>
+<table class="db-tabelle">
+  <thead><tr><th>Gruppe</th><th class="a2d3d-zahl">Werkzeuge</th><th class="a2d3d-zahl">Klassen</th><th>Wann man sie nimmt</th></tr></thead>
+  <tbody>
+    {% for g in t.gruppen %}
+    <tr><td><a href="#t-{{ g.kennung }}"><b>{{ g.titel }}</b></a></td><td class="a2d3d-zahl">{{ g.zeilen|length }}</td>
+      <td class="a2d3d-zahl"><a href="#tm-{{ g.kennung }}">{{ g.modell|length }}</a></td><td>{{ g.einleitung }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% for g in t.gruppen %}
+<h2 id="t-{{ g.kennung }}" class="tw-gruppe">{{ g.titel }}</h2>
+<p>{{ g.einleitung }}</p>
+<table class="db-tabelle sortable tw-tabelle" data-sort-key="hilfe-2d3d-tools-{{ g.kennung }}">
+  <thead><tr><th>Werkzeug</th><th>Art</th><th>Aufruf</th><th>Klassen</th><th>Wofür, Grenzen</th></tr></thead>
+  <tbody>
+    {% for z in g.zeilen %}
+    <tr>
+      <td><b>{{ z.werkzeug }}</b></td>
+      <td><span class="tw-art tw-art-{{ z.art }}">{{ z.art_text }}</span></td>
+      <td><pre class="tw-aufruf">{{ z.aufruf }}</pre></td>
+      <td class="tw-klassen">{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<a href="#{{ k.anker }}">{{ k.klasse }}</a>{% endif %}{% empty %}—{% endfor %}</td>
+      <td>{{ z.wofuer }}{% if z.hinweis %}<div class="tw-hinweis">{{ z.hinweis }}</div>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+{% include "hilfe/_architektur_2d3d_blender.html" with b=blender %}
+
+<h2>Das Klassenmodell</h2>
+<p>Je Gruppe die Klassen ihrer Werkzeuge. Ein Kasten zeigt Datei und Zeilenzahl, die Aufgabe (erster Satz des Modul-Docstrings, aus dem Code gelesen), die öffentlichen Methoden,
+  <b>Aufrufe von außen</b> (welches Werkzeug dieser Tabelle die Klasse trägt, „Einstieg" = die Klasse, die man ruft) und die <b>Beziehungen</b> innerhalb der Gruppe:
+  „ruft" nennt die Klasse und womit, „gerufen von" die Gegenseite.</p>
+{% for g in t.gruppen %}
+<h3 id="tm-{{ g.kennung }}">{{ g.titel }} <span class="a2d3d-klein">— {{ g.modell|length }} Klassen, {{ g.beziehungen }} Beziehungen</span></h3>
+<div class="wf-karten">
+  {% for k in g.modell %}
+  <div class="wf-karte" id="{{ k.anker }}">
+    <div class="wf-karte-kopf">{{ k.klasse }}</div>
+    <div class="wf-karte-datei"><code>{{ k.modul }}</code> · {{ k.zeilen }} Zeilen</div>
+    <div class="wf-karte-satz">{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.fehlt }}</span> {% endif %}{{ k.satz }}</div>
+    {% if k.methoden_gezeigt %}
+    <ul class="wf-methoden">{% for m in k.methoden_gezeigt %}<li>{{ m }}()</li>{% endfor %}{% if k.methoden_mehr %}<li class="wf-mehr">+ {{ k.methoden_mehr }} weitere</li>{% endif %}</ul>
+    {% endif %}
+    <div class="tw-beziehungen">
+      {% for a in k.aufrufe %}<div><span class="tw-pfeil">{% if a.einstieg %}Einstieg{% else %}beteiligt{% endif %}</span> {{ a.werkzeug }} <span class="a2d3d-klein">({{ a.art_text }})</span></div>{% endfor %}
+      {% for r in k.ruft %}<div><span class="tw-pfeil">ruft</span> <a href="#{{ r.anker }}">{{ r.klasse }}</a> <span class="a2d3d-klein">{{ r.womit }}</span></div>{% endfor %}
+      {% for r in k.gerufen_von %}<div><span class="tw-pfeil">gerufen von</span> <a href="#{{ r.anker }}">{{ r.klasse }}</a></div>{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endwith %}

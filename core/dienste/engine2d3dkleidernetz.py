@@ -44,6 +44,8 @@ class Engine2d3dKleidernetz:
         self.ablage = lauf.ablage
         # Gruppe `mesh` (Interface von TRELLIS.2: Auflösung, Seed, Flächen, Texturgröße, Sampler) liegt über `netz`.
         self.optionen = dict(Engine2d3dKleideroptionen.netz(self.job.optionen), **Engine2d3dKleideroptionen.mesh(self.job.optionen))
+        # Die Wahl „Modell" der Gruppe `mesh` ist das `formmodell` des Runners (trellis2 | pixal3d | pixal3d_mv, `mesh_pixal3d`).
+        self.optionen['formmodell'] = self.optionen.get('modell', 'trellis2')
         self._ergebnis = None
         self._fotopruefung = None
         self._seed = None

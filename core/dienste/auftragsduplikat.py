@@ -68,7 +68,7 @@ class Auftragsduplikat:
         'meshfigur': (Meshfigurauftrag, Meshfigurablage, (Meshfigurablage.EINGANG, Meshfigurablage.KOPF)),
         # BlenderModel (29.09.2026): die Bildauswahl wie bei „mesh" — eingang/, je Foto Datei + Nutzerfelder.
         'blendermodell': (Blendermodellauftrag, Blendermodellablage, (Blendermodellablage.EINGANG,)),
-        # Haar Engine (30.09.2026): dieselbe Bildauswahl — eingang/, je Foto Datei + Nutzerfelder.
+        # 2D3D Kleider (30.09.2026): dieselbe Bildauswahl — eingang/, je Foto Datei + Nutzerfelder.
         'engine2d3dkleider': (Engine2d3dKleiderauftrag, Engine2d3dKleiderablage, (Engine2d3dKleiderablage.EINGANG,)),
     }
     #: Was je Foto eines Mesh-Auftrags Eingabe ist: die Datei und was der Nutzer stellt.

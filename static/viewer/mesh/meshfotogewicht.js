@@ -13,11 +13,13 @@ import * as THREE from 'three';
  * bei einer Formmodell-eigenen Textur (PBR/Hunyuan-Malerei) bleibt die Vorschau aus.
  */
 
+// Dieselbe Tabelle wie `mesh_fototextur.ACHSEN` (dort steht, warum sie so liegt): Bild rechts = +X (vorne), −X (hinten);
+// „rechts" = Foto der rechten Seite = Kamera auf −X. Bis 03.10.2026 war sie an x gespiegelt (Foto links/rechts vertauscht).
 const ACHSEN = {
-    vorne: { blick: [0, 0, 1], u: [-1, 0, 0], v: [0, 1, 0] },
-    hinten: { blick: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0] },
-    rechts: { blick: [1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] },
-    links: { blick: [-1, 0, 0], u: [0, 0, -1], v: [0, 1, 0] },
+    vorne: { blick: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
+    hinten: { blick: [0, 0, -1], u: [-1, 0, 0], v: [0, 1, 0] },
+    rechts: { blick: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] },
+    links: { blick: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0] },
 };
 
 //: Netze über dieser Eckenzahl bekommen keine Live-Vorschau (der Hauptthread würde spürbar

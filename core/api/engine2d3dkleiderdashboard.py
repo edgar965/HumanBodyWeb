@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderdashboard — die Seite „Haar Engine" unter Dashboard (30.09.2026).
+"""Engine2d3dKleiderdashboard — die Seite „2D3D Kleider" unter Dashboard (30.09.2026).
 
 Kopie der Seite „BlenderModel" (`Blendermodelldashboard`): die Tabelle der Aufträge mit Duplizieren und
 Löschen. Dazu ein Formular (Name, Fotos mit Rollen), das einen Auftrag anlegt — die Seite hat keine Reiter,

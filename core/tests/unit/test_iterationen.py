@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Schleife der Iterationen der „Haar Engine" (30.09.2026) — Wertesatz, Optimierer, Note, Referenzwinkel,
+"""Schleife der Iterationen der „2D3D Kleider" (30.09.2026) — Wertesatz, Optimierer, Note, Referenzwinkel,
 Auswahl, Optionen. Rein rechnend: keine Datenbank, keine Engine, kein Ollama.
 
 `Haarparameter` hat noch keine Einträge (die Engine legt fest, welche Maße das Haar hat) — die Tests hängen

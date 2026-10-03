@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderfilmoptionen — die Gruppe `film` der Optionen von „Haar Engine" (30.09.2026).
+"""Engine2d3dKleiderfilmoptionen — die Gruppe `film` der Optionen von „2D3D Kleider" (30.09.2026).
 
 Was der Schritt „film" braucht: die BVH-Datei, die Zahl der Bilder, Bildgröße. Dieselbe Katalogform wie
 `Meshoptionen` (`schluessel`, `titel`, `art`, `vorgabe`, `werte`, `hinweis`), dazu die Art `text` (Pfad der

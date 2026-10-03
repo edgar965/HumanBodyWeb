@@ -18,7 +18,7 @@ MENUE = [
             # Seit 29.09.2026 (Edgar: „mach ein neues Menü Dashboard - BlenderModel"): Fotos → Netz → Figur,
             # eine Kopie des Reiters „Mesh to 3D" mit eigener Pipeline (`core/dienste/blendermodelllauf.py`).
             {'label': 'BlenderModel', 'icon': 'bi-badge-3d', 'url': '/blendermodell/'},
-            # Seit 30.09.2026: die Kopie von BlenderModel für die Genesis Haar Engine statt Blender
+            # Seit 30.09.2026: die Kopie von BlenderModel für die Genesis-Engine statt Blender
             # (`core/dienste/engine2d3dkleiderlauf.py`, `genesisengine2d3dkleider.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
             # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
             # Dashboard – Kleider Engine in Dashboard – Haar Engine").

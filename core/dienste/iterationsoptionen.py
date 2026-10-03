@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Iterationsoptionen — die Gruppe `iterationen` der Optionen von „Haar Engine": wie lange und womit iteriert
+"""Iterationsoptionen — die Gruppe `iterationen` der Optionen von „2D3D Kleider": wie lange und womit iteriert
 wird (30.09.2026).
 
 Dieselbe Katalogform wie `Engine2d3dKleiderfilmoptionen` (`schluessel`, `titel`, `art`, `vorgabe`, `werte`,

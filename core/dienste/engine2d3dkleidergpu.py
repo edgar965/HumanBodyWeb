@@ -6,8 +6,8 @@ Warteschlange, sondern im Absturz (am 27.09.2026 starb ein zweiter TRELLIS.2-Lau
 mit Rückgabewert 3221225477, und im Auftrag stand nur ein abgeschnittener Fortschrittsbalken als
 „Fehlermeldung", `Meshendpunkte._anderer_lauf`).
 
-„Haar Engine" prüft alle Bereiche, die die Karte halten können: sich selbst, „BlenderModel", „Mesh" und
-„Mesh to 3D". Umgekehrt wissen die drei nichts von „Haar Engine" — dort ist nichts geändert.
+„2D3D Kleider" prüft alle Bereiche, die die Karte halten können: sich selbst, „BlenderModel", „Mesh" und
+„Mesh to 3D". Umgekehrt wissen die drei nichts von „2D3D Kleider" — dort ist nichts geändert.
 """
 
 from ..models import Blendermodellauftrag, Engine2d3dKleiderauftrag, Meshauftrag, Meshfigurauftrag
@@ -22,7 +22,7 @@ __all__ = ['Engine2d3dKleidergpu']
 class Engine2d3dKleidergpu:
     #: (Bereich, Modell, Arbeiter) — wer die Karte halten kann.
     BEREICHE = (
-        ('Haar Engine', Engine2d3dKleiderauftrag, Engine2d3dKleiderarbeiter),
+        ('2D3D Kleider', Engine2d3dKleiderauftrag, Engine2d3dKleiderarbeiter),
         ('BlenderModel', Blendermodellauftrag, Blendermodellarbeiter),
         ('Mesh', Meshauftrag, Mesharbeiter),
         ('Mesh to 3D', Meshfigurauftrag, Meshfigurarbeiter),

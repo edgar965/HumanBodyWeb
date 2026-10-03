@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""`manage.py engine2d3dkleider_fahren <id> [--ab <schritt>] [--bis <schritt>]` — ein Auftrag „Haar Engine".
+"""`manage.py engine2d3dkleider_fahren <id> [--ab <schritt>] [--bis <schritt>]` — ein Auftrag „2D3D Kleider".
 
 Der Arbeitsprozess, den `Engine2d3dKleiderarbeiter` startet: `Engine2d3dKleiderlauf` in einem eigenen Prozess, damit der
 Autoreload des Servers den Lauf nicht mitreißt. Von Hand aufrufbar, etwa `--ab iterationen --bis
@@ -15,7 +15,7 @@ logger = logging.getLogger('core')
 
 
 class Command(BaseCommand):
-    help = 'Rechnet einen Auftrag „Haar Engine" (Grundfigur → Iterationen → Film) in diesem Prozess.'
+    help = 'Rechnet einen Auftrag „2D3D Kleider" (Grundfigur → Iterationen → Film) in diesem Prozess.'
 
     def add_arguments(self, parser):
         parser.add_argument('job_id', help='Die Kennung (UUID) des Auftrags')
@@ -30,17 +30,17 @@ class Command(BaseCommand):
         jid = options['job_id']
         job = Engine2d3dKleiderauftrag.objects.filter(id=jid).first()
         if job is None:
-            raise CommandError('Kein Auftrag „Haar Engine" %s' % jid)
+            raise CommandError('Kein Auftrag „2D3D Kleider" %s' % jid)
         ablage = Engine2d3dKleiderablage(job.kennung)
         ablage.anlegen()
         ablage.pid().write_text(str(os.getpid()))
         job.pid = os.getpid()
         job.save(update_fields=['pid', 'updated_at'])
-        logger.info('Haar Engine %s: Arbeitsprozess rechnet', job.kennung)
+        logger.info('2D3D Kleider %s: Arbeitsprozess rechnet', job.kennung)
         try:
             Engine2d3dKleiderlauf(jid).ausfuehren(ab=options.get('ab'), bis=options.get('bis'))
         except Exception:  # noqa: BLE001
-            logger.exception('Haar Engine %s: Arbeitsprozess abgestürzt', job.kennung)
+            logger.exception('2D3D Kleider %s: Arbeitsprozess abgestürzt', job.kennung)
             job.refresh_from_db()
             if job.status != 'angehalten':
                 job.status = 'gescheitert'

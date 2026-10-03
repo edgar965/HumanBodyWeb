@@ -54,6 +54,15 @@
 .bildmodell-laufzeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
 .bildmodell-laufknoepfe { display: flex; align-items: center; gap: 8px; }
 .bildmodell-fehler { margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: rgba(231, 76, 60, 0.12); color: #e74c3c; white-space: pre-wrap; }
+/* Fehlerband (`gemeinsam/fehlerband.js`, 02.10.2026): am Fenster, damit man es auch sieht, wenn man weiter unten geklickt hat,
+   und mit OK wegklickbar. Undurchsichtig (Karten-Hintergrund + roter Schleier), sonst schiene der Inhalt darunter durch. */
+.bildmodell-fehler.bildmodell-fehler-fest { position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    width: min(920px, calc(100vw - 32px)); margin: 0; z-index: 3000; border: 1px solid #e74c3c;
+    background: linear-gradient(rgba(231, 76, 60, 0.16), rgba(231, 76, 60, 0.16)), var(--bg-card, #ffffff);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); max-height: 60vh; overflow: auto; }
+.bildmodell-fehler-zeile { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; }
+.bildmodell-fehler-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.bildmodell-fehler-ok { flex: 0 0 auto; padding: 4px 18px; font-weight: 600; }
 
 details.card > summary { cursor: pointer; list-style: none; }
 details.card > summary h2 { display: inline; }

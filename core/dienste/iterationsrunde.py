@@ -2,7 +2,7 @@
 """Iterationsrunde — eine Runde der Iterationen rechnen (bauen, rendern, benoten) und im Auftrag ablegen
 (30.09.2026).
 
-`bewerten`: die Kandidaten der Runde gehen an die Genesis Haar Engine (`Genesisengine2d3dkleider.rendern`),
+`bewerten`: die Kandidaten der Runde gehen an die Genesis-Engine (`Genesisengine2d3dkleider.rendern`),
 je Kandidat kommen die Renders in den Blickwinkeln der Vorlagen zurück und werden gegen die Vorlage benotet
 (`Iterationsnote`, gewichtet nach dem Gewicht der Fotos). `ablegen`: Vergleichstafel, die Renders je
 Blickwinkel (`runde_NNN_ansicht_±WWW.png`, aufklappbar im Reiter) und — bei übernommenen Runden — Figur +
@@ -105,7 +105,7 @@ class Iterationsrunde:
         try:
             bericht = self.engine.rendern(self.koerper, aus, [('modell', werte)], [], glb=True)
         except RuntimeError as fehler:
-            logger.warning('Haar Engine %s: Modell der Runde %d: %s', self.job.kennung, runde, fehler)
+            logger.warning('2D3D Kleider %s: Modell der Runde %d: %s', self.job.kennung, runde, fehler)
             return None
         eintrag = bericht['kandidaten']['modell']
         datei = aus / 'modell' / (eintrag.get('glb') or 'haar.glb')

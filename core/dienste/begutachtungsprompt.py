@@ -9,7 +9,7 @@ Die Automatik (`IterationModell`) regelt, was sich messen lässt (Abstände zum 
 Kanten); die Prüf-KI (lokal, Ollama, ein Modell mit Bildverständnis) sieht die Vergleichstafel und urteilt über das, was
 keine Zahl sagt: falsches Stück, falscher Schnitt, Falten, Frisurform, Muster, Durchschimmern — und ob das Ergebnis OK
 ist (`fertig`). Sie antwortet mit REZEPTZEILEN (`m.<funktion>(…)`, `G9rezept`), nicht mit Werten eines Schemas wie
-`Iterationskritik` (Weg B der Haar Engine). Der Text steht als Klasse, damit er versioniert und im Test prüfbar ist;
+`Iterationskritik` (Weg B der 2D3D Kleider). Der Text steht als Klasse, damit er versioniert und im Test prüfbar ist;
 Zahlen, Zustand, Funktionsliste und Garderobe kommen je Runde dazu (`text`).
 """
 

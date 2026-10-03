@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderspeichern — Schritt „speichern" von „Haar Engine": Modell und Ablage (30.09.2026).
+"""Engine2d3dKleiderspeichern — Schritt „speichern" von „2D3D Kleider": Modell und Ablage (30.09.2026).
 
-Alles wie `Meshfigurspeichern` (Modell `<Name> Haar Engine` in der Modellbibliothek, wenn die Option
+Alles wie `Meshfigurspeichern` (Modell `<Name> 2D3D Kleider` in der Modellbibliothek, wenn die Option
 `modell` an ist — Vorgabe hier aus, siehe `Engine2d3dKleideroptionen`; Ablage mit Kacheln, Eigenmorph, Bildern
 und `bericht.json`), mit drei Unterschieden:
 

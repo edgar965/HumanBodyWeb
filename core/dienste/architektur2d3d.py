@@ -10,6 +10,8 @@ Messungen und offene Befunde führt `Architektur2d3dmessung`. Jede Klasse ist al
 
 from .architektur2d3dklassen import Architektur2d3dklassen
 from .architektur2d3dmessung import Architektur2d3dmessung
+from .architektur2d3dblender import Architektur2d3dblender
+from .architektur2d3dwerkzeuge import Architektur2d3dwerkzeuge
 from .architektur2d3dworkflow import Architektur2d3dworkflow
 
 __all__ = ['Architektur2d3d']
@@ -150,4 +152,6 @@ class Architektur2d3d:
             'gruppen': gruppen,
             'messung': Architektur2d3dmessung.kontext(),
             'workflow': Architektur2d3dworkflow.kontext(gruppen, cls.LAUF, cls.RUNDE),
+            'werkzeuge': Architektur2d3dwerkzeuge.kontext(),
+            'blender': Architektur2d3dblender.kontext(),
         }

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Genesisengine2d3dkleider — die Genesis Haar Engine: die EINE Stelle, an der „Haar Engine" Haar baut
+"""Genesisengine2d3dkleider — die Genesis-Engine: die EINE Stelle, an der „2D3D Kleider" Haar baut
 und rendert (30.09.2026).
 
 Sie ersetzt alle Blender-Aufrufe von „BlenderModel" (dort `Kostuemblender`/`Kostuemarbeiter` für die
@@ -45,7 +45,7 @@ __all__ = ['Genesisengine2d3dkleider']
 
 class Genesisengine2d3dkleider:
     FILM_MELDUNG = (
-        'Der Film der Genesis Haar Engine ist noch nicht gebaut — die Iterationen laufen, das '
+        'Der Film der Genesis-Engine ist noch nicht gebaut — die Iterationen laufen, das '
         'Rendern einer Bewegung steht aus (`Genesisengine2d3dkleider.film`). Ohne BVH-Datei wird der '
         'Schritt „film" übersprungen.'
     )

@@ -3,13 +3,13 @@
 {% block title %}2D3D Kleider · {{ job.name }}{% endblock %}
 
 {% comment %}
-Auftragsseite „Haar Engine" (Kopie von `blendermodell_auftrag.html`, 30.09.2026): oben der Lauf (Schritte mit Dauer,
+Auftragsseite „2D3D Kleider" (Kopie von `blendermodell_auftrag.html`, 30.09.2026): oben der Lauf (Schritte mit Dauer,
 Fortschritt, neu ab einem Schritt, Anhalten), darunter die BILDAUSWAHL (die Vorlagen: Fotos mit Rolle, Gewicht, Platz;
 hinzufügen, ersetzen, entfernen — wie im Reiter „Mesh"), die Optionen, dann die 3D-AUSGABE wie bei „Mesh to 3D": die Figur mit
 den gestellten Reglern und dem Modell der letzten Iteration, Kennzahlen, Export als GLB, Speichern als Genesis-Figur — und der
 zweite Reiter „Iterationen" mit den Runden. Die Anzeige der Figur ist die von „Mesh to 3D" (`static/viewer/meshfigur/`),
 unverändert benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Katalog kommen als JSON in die Seite, Nachfrage über
-`/api/engine2d3dkleider/<id>/zustand/`. Gebaut und gerendert wird von der Genesis Haar Engine (`Genesisengine2d3dkleider`).
+`/api/engine2d3dkleider/<id>/zustand/`. Gebaut und gerendert wird von der Genesis-Engine (`Genesisengine2d3dkleider`).
 {% endcomment %}
 {% block extra_head %}
 {% comment %}Tabelle „Iterationen“: djangoBase-Tabellenstil (`tabellen.css`) vor `auftragstabelle.css` (Kästchenspalte, gewählte Zeile).{% endcomment %}
@@ -140,7 +140,7 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                         title="Das Modell des letzten Stands: Genesis mit Augen, Kleidern und Haar, am Rig (spielt auch die Bewegung)">
                     <i class="fas fa-cut"></i> <span>Modell</span></button>
                 <button type="button" class="schaltknopf" id="buehne-film" hidden
-                        title="Der Film der Haar Engine (Schritt „Film“: Figur mit Haar, Bewegung aus der BVH-Datei) in dieser Ansicht">
+                        title="Der Film von 2D3D Kleider (Schritt „Film“: Figur mit Haar, Bewegung aus der BVH-Datei) in dieser Ansicht">
                     <i class="fas fa-film"></i> Film</button>
                 <button type="button" class="schaltknopf" data-schalter="mesh"
                         title="Das Netz aus den Fotos (Schritt „Netz“, TRELLIS) — die Vorlage, an die der Körper gefittet wird">

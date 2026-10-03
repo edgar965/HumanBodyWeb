@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Bereich „Haar Engine" (30.09.2026) — Endpunkte: Anlegen, Seite, Bildauswahl, Lauf, Runden, gemeinsame
+"""Bereich „2D3D Kleider" (30.09.2026) — Endpunkte: Anlegen, Seite, Bildauswahl, Lauf, Runden, gemeinsame
 Register.
 
 Die Auftragsordner liegen während der Prüfung in `ProjektTemp/pruefungen` (`Pruefablage`), nie unter

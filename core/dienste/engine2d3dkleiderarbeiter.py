@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Engine2d3dKleiderarbeiter — der abgelöste Prozess eines Auftrags „Haar Engine".
+"""Engine2d3dKleiderarbeiter — der abgelöste Prozess eines Auftrags „2D3D Kleider".
 
 Wie `Meshfigurarbeiter`: `manage.py engine2d3dkleider_fahren <id>` als eigener Prozess ohne Fenster, damit ein
 Neustart des Servers (jede Python-Änderung) den Lauf nicht mitreißt — ein Lauf dauert Minuten bis Stunden
@@ -58,7 +58,7 @@ class Engine2d3dKleiderarbeiter:
             ]
         )
         logger.info(
-            'Haar Engine %s: Arbeitsprozess %s (ab %s bis %s)',
+            '2D3D Kleider %s: Arbeitsprozess %s (ab %s bis %s)',
             job.kennung,
             prozess.pid,
             ab or 'Anfang',
@@ -91,6 +91,6 @@ class Engine2d3dKleiderarbeiter:
             else:
                 os.kill(int(pid), signal.SIGTERM)
         except OSError as fehler:
-            logger.warning('Haar Engine %s: Prozess %s nicht beendet: %s', job.kennung, pid, fehler)
+            logger.warning('2D3D Kleider %s: Prozess %s nicht beendet: %s', job.kennung, pid, fehler)
         job.pid = None
         job.save(update_fields=['pid', 'updated_at'])

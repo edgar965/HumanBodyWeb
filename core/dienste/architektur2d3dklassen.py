@@ -94,21 +94,45 @@ class Architektur2d3dklassen:
             (S + 'haarauftrag.py', 'Haarauftrag'), (S + 'stoffoptionen.py', 'Stoffoptionen'),
             (S + 'auftragsoptionen.py', 'Auftragsoptionen')]),
         # Der Ausbau des Stoffsolvers (02.10.2026, Edgar: „implementiere alles, was am Solver fehlt"): je Bereich eine Gruppe.
-        ('Stoffsolver: Federn und Kräfte', 'Vertexgruppen, Schrumpfen, Innenfedern, Nähte, Anheften, Wind, Druck', [
+        ('Stoffsolver: Federn und Kräfte', 'Federn, Biegung (Winkel, linear, Vielecke), Ruhegestalt, Vertexgruppen, Schrumpfen, Innenfedern, Nähte, Anheften, Wind, Druck', [
+            (S + 'federn.py', 'Federn'), (S + 'federkraefte.py', 'Federkraefte'), (S + 'winkelbiegung.py', 'Winkelbiegung'),
+            (S + 'polygonflaechen.py', 'Polygonflaechen'), (S + 'polygonbiegung.py', 'Polygonbiegung'),
+            (S + 'linearbiegung.py', 'Linearbiegung'), (S + 'ruhegestalt.py', 'Ruhegestalt'),
+            (S + 'federnachfuehrung.py', 'Federnachfuehrung'), (S + 'federverlauf.py', 'Federverlauf'),
+            (S + 'stoffmaterial.py', 'StoffMaterial'), (S + 'schrittzahl.py', 'Schrittzahl'), (S + 'geraeteruhe.py', 'Geraeteruhe'),
+            (S + 'aussenkraefte.py', 'Aussenkraefte'), (S + 'federsteifigkeit.py', 'Federsteifigkeit'),
             (S + 'federgewichte.py', 'Federgewichte'), (S + 'schrumpfen.py', 'Schrumpfen'),
             (S + 'innenfedern.py', 'Innenfedern'), (S + 'naehte.py', 'Naehte'), (S + 'zielfedern.py', 'Zielfedern'),
             (S + 'pinbewegung.py', 'Pinbewegung'), (S + 'windkraft.py', 'Windkraft'), (S + 'kraftfeld.py', 'Kraftfeld'),
+            (S + 'feldkraefte.py', 'Feldkraefte'), (S + 'feldnetz.py', 'Feldnetz'), (S + 'feldsicht.py', 'Feldsicht'),
+            (S + 'feldtextur.py', 'Feldtextur'), (S + 'windfelder.py', 'Windfelder'),
+            (S + 'feldtexbild.py', 'Feldtexbild'), (S + 'feldtexfarbband.py', 'Feldtexfarbband'), (S + 'feldtexzufall.py', 'Feldtexzufall'),
+            (S + 'feldtexknotenbaum.py', 'Feldtexknotenbaum'), (S + 'feldbahn.py', 'Feldbahn'),
+            (S + 'windkraftbewegt.py', 'Windkraftbewegt'), (S + 'warpfeldbewegung.py', 'Warpfeldbewegung'),
+            (S + 'choiko.py', 'Choiko'), (S + 'kubischfedern.py', 'Kubischfedern'),
             (S + 'hydrostatik.py', 'Hydrostatik'), (S + 'druckgruppe.py', 'Druckgruppe')]),
         ('Stoffsolver: Kollision', 'mehrere Körper, Qualität, bewegter Körper im GPU-Graph', [
             (S + 'kollisionseinstellungen.py', 'Kollisionseinstellungen'), (S + 'koerperantwort.py', 'Koerperantwort'),
             (S + 'warpkoerpersatz.py', 'WarpKoerpersatz'), (S + 'warppinbewegung.py', 'WarpPinbewegung')]),
-        ('Stoffsolver: Haar', 'Kontinuum, Pins, Kopf, Erzeugen, Kämmen, Kinder', [
-            (S + 'haarkontinuum.py', 'Haarkontinuum'), (S + 'haarpin.py', 'Haarpin'), (S + 'haarkopf.py', 'Haarkopf'),
+        ('Stoffsolver: Haar', 'Dynamik, Kontinuum, Pins, Gewichte, Kopf, Erzeugen (Dreiecke bis Vielecke), Kämmen, Kinder, Effektoren, Kurven, Texturen', [
+            (S + 'haarnetz.py', 'HaarNetz'), (S + 'haarnetzgewicht.py', 'HaarNetzGewicht'), (S + 'haargewicht.py', 'Haargewicht'),
+            (S + 'haarkontinuum.py', 'Haarkontinuum'), (S + 'haarzufall.py', 'Haarzufall'),
+            (S + 'haarpin.py', 'Haarpin'), (S + 'haarkopf.py', 'Haarkopf'),
             (S + 'haarsystem.py', 'Haarsystem'), (S + 'haarverteilung.py', 'Haarverteilung'),
-            (S + 'haarkamm.py', 'Haarkamm'), (S + 'kinderpfade.py', 'Kinderpfade')]),
-        ('Stoffsolver: UV und Textur', 'UV abwickeln, packen, prüfen, Texturen backen', [
-            (S + 'uvabwicklung.py', 'Uvabwicklung'), (S + 'uvpacker.py', 'Uvpacker'), (S + 'uvpruefung.py', 'Uvpruefung'),
-            (S + 'texturraster.py', 'Texturraster'), (S + 'texturbacker.py', 'Texturbacker')]),
+            (S + 'haarflaechen.py', 'Haarflaechen'), (S + 'haarpolygone.py', 'Haarpolygone'),
+            (S + 'haareckenverteilung.py', 'Haareckenverteilung'), (S + 'haarvolumen.py', 'Haarvolumen'),
+            (S + 'kinderpfade.py', 'Kinderpfade'), (S + 'kinderverteilung.py', 'Kinderverteilung'),
+            (S + 'pfadeffektoren.py', 'Pfadeffektoren'), (S + 'kurvenfuehrung.py', 'Kurvenfuehrung'),
+            (S + 'kurvenspline.py', 'Kurvenspline'), (S + 'kurvenbezier.py', 'Kurvenbezier'), (S + 'kurvennurbs.py', 'Kurvennurbs'),
+            (S + 'haartexturen.py', 'Haartexturen'), (S + 'haarkamm.py', 'Haarkamm'), (S + 'bildschirmkamm.py', 'Bildschirmkamm')]),
+        ('Stoffsolver: UV und Textur', 'UV abwickeln (LSCM, ABF, SLIM, Henkel), packen (Kasten, Form, xatlas), prüfen, Texturen backen, UDIM, Mipmaps', [
+            (S + 'uvabwicklung.py', 'Uvabwicklung'), (S + 'uvloecher.py', 'Uvloecher'), (S + 'uvsymmetrie.py', 'Uvsymmetrie'),
+            (S + 'uvaspekt.py', 'Uvaspekt'), (S + 'uvslim.py', 'Uvslim'), (S + 'uvhenkelschnitt.py', 'Uvhenkelschnitt'),
+            (S + 'uvpacker.py', 'Uvpacker'), (S + 'uvxatlas.py', 'Uvxatlas'), (S + 'uvoptimalpack.py', 'Uvoptimalpack'),
+            (S + 'uvkonvex.py', 'Uvkonvex'), (S + 'uvpackpins.py', 'Uvpackpins'), (S + 'uvpackverschmelzung.py', 'Uvpackverschmelzung'),
+            (S + 'uvpackziel.py', 'Uvpackziel'), (S + 'uvpackweg.py', 'Uvpackweg'), (S + 'uvpruefung.py', 'Uvpruefung'),
+            (S + 'texturraster.py', 'Texturraster'), (S + 'texturbacker.py', 'Texturbacker'), (S + 'texturudim.py', 'Texturudim'),
+            (S + 'texturmip.py', 'Texturmip'), (S + 'texturrandgewicht.py', 'Texturrandgewicht')]),
         ('Optimierer-Schleife', 'Die frühere Schleife, Modus „automatisch" (in keinem Auftrag gewählt)', [
             (D + 'iterationsoptimierer.py', 'Iterationsoptimierer'), (D + 'iterationswahl.py', 'Iterationswahl'),
             (D + 'iterationskritik.py', 'Iterationskritik')]),

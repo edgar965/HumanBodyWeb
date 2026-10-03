@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Hilfe -> Kleidung -> Haar Engine: wie aus Fotos eine Genesis-Frisur wird.
+"""Hilfe -> Kleidung -> 2D3D Kleider: wie aus Fotos eine Genesis-Frisur wird.
 
 Edgar (30.09.2026): „schreibe den Plan in eine neue Seite Hilfe - Kleidung -
-Haar Engine". Die Daten kommen aus `kleidung.engine2d3dkleider.Kleidungsengine2d3dkleider`,
+2D3D Kleider". Die Daten kommen aus `kleidung.engine2d3dkleider.Kleidungsengine2d3dkleider`,
 nicht aus der Vorlage — dieselbe Regel wie bei `KleidungGenesis`.
 """
 

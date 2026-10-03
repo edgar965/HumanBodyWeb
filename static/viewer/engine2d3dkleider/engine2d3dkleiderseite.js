@@ -1,3 +1,4 @@
+import { Fehlerband } from '../gemeinsam/fehlerband.js';
 import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
@@ -20,6 +21,7 @@ import { Engine2d3dKleideriterationen } from './engine2d3dkleideriterationen.js'
 import { Engine2d3dKleiderformen } from './engine2d3dkleiderformen.js';
 import { Engine2d3dKleidermalen } from './engine2d3dkleidermalen.js';
 import { Engine2d3dKleidermeshkarte } from './engine2d3dkleidermeshkarte.js';
+import { Engine2d3dKleidernetzansicht } from './engine2d3dkleidernetzansicht.js';
 
 /**
  * Engine2d3dKleiderseite — die Auftragsseite von „2D3D Kleider" (Bereich engine2d3dkleider): Lauf, Bildauswahl, 3D-Ausgabe, Optionen, Iterationen.
@@ -51,6 +53,7 @@ export class Engine2d3dKleiderseite {
 
     constructor(jobId, zustand, katalog) {
         Object.assign(this, { jobId, zustand, katalog, _timer: null });
+        this.fehlerband = new Fehlerband(); // dauerhaft, mit OK wegklickbar (02.10.2026)
     }
 
     adresse(pfad) { return `/api/engine2d3dkleider/${this.jobId}/${pfad}`; }
@@ -102,6 +105,7 @@ export class Engine2d3dKleiderseite {
         this.begutachtung = new Engine2d3dKleiderbegutachtung(this);
         this.buehne = new Meshfigurbuehne(this);
         this.buehnenmodell = new Engine2d3dKleiderbuehnenmodell(this, this.buehne);
+        this.netzansicht = new Engine2d3dKleidernetzansicht(this, this.buehne);
         this.malen = new Engine2d3dKleidermalen(this, this.buehne, this.buehnenmodell);
         this.formen = new Engine2d3dKleiderformen(this, this.buehne, this.buehnenmodell);
         this.film = new Engine2d3dKleiderfilmansicht(this);
@@ -185,16 +189,15 @@ export class Engine2d3dKleiderseite {
             this.zustand = z;
             this.zeigen();
         } catch (fehler) {
-            this.fehler(`Zustand nicht lesbar: ${fehler.message}`);
+            this.fehlerband.lesefehler(`Zustand nicht lesbar: ${fehler.message}`);
         }
     }
 
     // -------------------------------------------------------------- Anzeige
 
+    /** Meldung einer gescheiterten Aktion — bleibt stehen, bis jemand OK klickt (`Fehlerband`). */
     fehler(text) {
-        const feld = document.getElementById('fehler');
-        feld.textContent = text || '';
-        feld.classList.toggle('hb-versteckt', !text);
+        this.fehlerband.meldung(text);
     }
 
     zeigen() {
@@ -218,7 +221,7 @@ export class Engine2d3dKleiderseite {
         }
         document.getElementById('optionen-gesperrt').hidden = !z.laeuft;
         this.einstellungen.sperren(!!z.laeuft);
-        this.fehler(z.status === 'gescheitert' ? (z.error || 'Fehlgeschlagen — siehe auftrag.log') : '');
+        this.fehlerband.auftrag(z); // der Takt löscht eine stehende Meldung NICHT mehr
         this.schritte();
         this.fotos.zeigen(z);
         this.pfade(z);
@@ -230,6 +233,7 @@ export class Engine2d3dKleiderseite {
         this.frisur.zeigen(z);
         this.buehne.zeigen(z);
         this.buehnenmodell.zeigen(z);
+        this.netzansicht.zeigen(z);
         this.film.zeigen(z);
         this.animation.zeigen(z);
         this.animexport.zeigen(z);

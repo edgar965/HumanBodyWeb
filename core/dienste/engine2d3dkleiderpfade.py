@@ -21,7 +21,7 @@ class Engine2d3dKleiderpfade:
         ablage = Engine2d3dKleiderablage(job.kennung)
         return [
             cls._eintrag('ordner', 'Auftragsordner', ablage.ordner()),
-            cls._eintrag('ablage', 'Ablage (Haar Engine)', Engine2d3dKleiderspeichern.zielordner_fuer(job)),
+            cls._eintrag('ablage', 'Ablage (2D3D Kleider)', Engine2d3dKleiderspeichern.zielordner_fuer(job)),
         ]
 
     @staticmethod

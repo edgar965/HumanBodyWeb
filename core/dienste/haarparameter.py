@@ -3,7 +3,7 @@
 Grenzen (30.09.2026).
 
 Eine Runde der Iterationen ändert nur Zahlen, keinen Code: der Optimierer (`Iterationsoptimierer`) und die
-Prüf-KI (`Iterationskritik`) schlagen Wertesätze vor, die Genesis Haar Engine (`Genesisengine2d3dkleider`) baut
+Prüf-KI (`Iterationskritik`) schlagen Wertesätze vor, die Genesis-Engine (`Genesisengine2d3dkleider`) baut
 daraus jedes Mal dasselbe. Diese Klasse ist der Mechanismus dafür (`schema`, `start`, `pruefen`,
 `unterschiede`), gleich gebaut wie `Kostuemparameter` in BlenderModel.
 
