@@ -20,8 +20,8 @@ class Werkzeuggarmentcode:
         '(Assets/GarmentCode/katalog.py) kennt acht Stücke mit Formen: oberteil, hose, shorts, rock, kleid, anzug, '
         'unterwaesche, schuh. Auf Genesis 9 wird ein Schnitt auf den Maßen der Figur gebaut, auf der Figur drapiert und als '
         'gewöhnliches Garderobenstück „GC <Titel>“ (Kennung gc_…) abgelegt; danach zieht man es wie jedes Daz-Stück an '
-        '(Gruppe „Kleider anziehen und einstellen“). Reihenfolge: 1. Vorlage und Form wählen (Katalog.liste, '
-        'Formpresets.fuer), 2. bauen (kleid_schnitt im Rezept, G9gceigenes.bauen in Python oder der Reiter GarmentCode), '
+        '(Gruppe „Kleider anziehen und einstellen“). Reihenfolge: 1. Vorlage und Form wählen (Katalog.liste und die Formen '
+        'je Stück aus Formpresets), 2. bauen (kleid_schnitt im Rezept, G9gceigenes.bauen in Python oder der Reiter GarmentCode), '
         '3. anziehen mit der Kennung aus der Bilanz (bilanz["stueck"]). Ein Bau kostet rund 25–60 s auf der GPU und '
         'schreibt in die eigene Bibliothek: nicht nebenbei neben Edgars Arbeit starten.')
 
@@ -35,10 +35,12 @@ class Werkzeuggarmentcode:
          [(G + 'modellform.py', 'ModellFormMixin'), (C + 'formpresets.py', 'Formpresets'), (G + 'gceigenes.py', 'G9gceigenes'),
           (G + 'gcstuecke.py', 'G9gcstuecke')],
          'vorlage ∈ oberteil|hose|shorts|rock|kleid|anzug|unterwaesche|schuh; form = Schlüssel eines Formpresets der Vorlage '
-         '(Formpresets.fuer(vorlage)), unbekannt wirft ValueError „form … gibt es für … nicht“; regler = {pfad: wert} wie im '
+         '(die Liste der Formen je Stück, siehe Zeile „Katalog und Formen lesen“), unbekannt wirft ValueError „form … gibt es '
+         'für … nicht“; regler = {pfad: wert} wie im '
          'Reiter (etwa sleeve.length, pants.length, bau.anliegen_mm); farbe #rrggbb; anteil wie kleid_anteil. Dauer ≈ 25 s '
          '(Docstring), die Probe auf der Genesis-Figur 25–60 s (Docstring Gcgenesisapi). Ohne titel heißt das Stück '
-         '„<vorlage> <form>“; ein zweiter Bau mit gleichem Titel bekommt „…_2“, außer das erste kam aus dem Reiter. '
+         '„<vorlage> <form>“; ein Stück gleichen Titels aus einem früheren Rezept oder Reiter wird ÜBERSCHRIEBEN (aus_reiter '
+         'in der Bilanz), nur ein Stapelstück (gcstuecke) bleibt, das neue bekommt dann „ 2“ im Namen (G9gceigenes.auftrag). '
          'kleid_schnitt zieht das Stück selbst an (kleid_anteil mit bilanz["stueck"]); die Kennung steht danach als '
          'sorte.<kennung> in m.kleidung. Quelle: Genesis9/modellform.py, gceigenes.py (25.09.2026).'),
 

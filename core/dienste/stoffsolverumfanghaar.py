@@ -41,8 +41,10 @@ class Stoffsolverumfanghaar:
          [(S + 'kurvenspline.py', 'Kurvenspline'), (S + 'kurvenbezier.py', 'Kurvenbezier'), (S + 'kurvennurbs.py', 'Kurvennurbs')], 'blender',
          'Pfad: 47 Szenen höchstens 0,00025 mm (Poly, Bezier, NURBS, Zyklus, Radius), Haare entlang der Kurve 25 Szenen höchstens 0,0051 mm; als Poly gerechnet 11 bis 1965 mm daneben. '
          'Blender nimmt dafür nur Legacy-Kurven mit `use_path`, nicht die Haar-Kurven. Nicht gebaut: Auto-Griffe, Kurven-Modifikatoren, NURBS-Flächen, Taper.'),
-        ('Haar', 'Haare kämmen (Comb)', [(S + 'haarkamm.py', 'Haarkamm'), (S + 'bildschirmkamm.py', 'Bildschirmkamm')], 'quelle',
-         'Blenders `brush_edit` stürzt im Hintergrundmodus ab (kein GPU-Kontext), deshalb kein Vergleich. Nach Quelltext gebaut, im 3D-Raum und im Bildschirmraum, mit Handrechnung getestet.'),
+        ('Haar', 'Haare kämmen (Comb)', [(S + 'haarkamm.py', 'Haarkamm'), (S + 'bildschirmkamm.py', 'Bildschirmkamm')], 'blender',
+         'Blenders `brush_edit` stürzt im Hintergrundmodus ab (kein GPU-Kontext), mit offenem Blender-Fenster läuft es: 13 Szenen (Pinselgröße und -stärke, Auswahlart PATH/TIP, Wurzel und Längen halten, '
+         'Perspektive, Röntgen, Verdeckung durch den Emitter, lange Striche), Solver gegen Blender höchstens 0,00087 mm bei 2,97 bis 178 mm Wirkung des Strichs, Blender gegen Blender 0 mm '
+         '(`vergleich_haarform.py kamm`, 03.10.2026). Nach Quelltext gebaut, im 3D-Raum und im Bildschirmraum. Offen: die Mitte für `zfac` (Emitter- oder Schlüsselgrenzen) ist in der Szene nicht unterscheidbar.'),
         ('Haar', 'Anschluss an die Pipeline', [('HumanBodyWeb/core/dienste/haardynamik.py', 'Haardynamik')], 'quelle',
          'Rezeptzeile `m.haar_dynamik(sorte)`, nur von Hand, nie von der Automatik; Ergebnis ist ein Regler `<sorte>.eigen.dynamik_…`. Mindestabstand 2 mm ist begründet: in Blender explodieren bei 3 mm Rand '
          '6 von 30 gestörten Läufen (Solver 7 von 28), bei 2 mm keiner (0 von 12, beide). Das Render der Haar-Dynamik ist nicht angesehen.'),

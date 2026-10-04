@@ -9,6 +9,11 @@ gibt es (`SCHRITTE`), in welchem Band des Balkens läuft jeder (`BAENDER`), und 
 
 Kopie von `Blendermodelllauf`, mit der Genesis-Engine (`Genesisengine2d3dkleider`) statt Blender:
 
+    vorbereitung die Fotos aufbereiten: Hintergrund entfernen, auf Wunsch den Körper senkrecht stellen, Zuschnitt, Licht
+                 (`Engine2d3dKleidervorbereitung`, 03.10.2026; getrennt startbar, die Seite zeigt die Ergebnisse unter den Fotos)
+    netz         Fotos → Netz (TRELLIS.2/Pixal3D), nimmt die vorbereiteten Fotos, wenn sie zu den Optionen passen
+    segmentierung OPTIONAL (Option `segmentierung.verwenden`, ausdrücklich gestartet läuft er immer): Sapiens zerlegt die vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, Zubehör und
+                 Haut und legt die Etiketten auf die Flächen des Netzes (`Engine2d3dKleidersegmentierung`, 04.10.2026); der Schritt „kleidung" der Körper-Kette nimmt sie für die Kleidungsmaske
     grundfigur   Genesis-9-Grundfigur (Option „Grundfigur") mit Rig, Stellung für Bühne und Export
     iterationen  die Iterationen: Runden aus Optimierer + lokaler Prüf-KI gegen die Vorlagenbilder (`Iterationskreislauf`)
     export       die Figur als GLB mit Rig (`Engine2d3dKleiderexport`)
@@ -38,11 +43,13 @@ __all__ = ['Engine2d3dKleiderlauf']
 
 
 class Engine2d3dKleiderlauf:
-    SCHRITTE = ('netz', 'koerper', 'grundfigur', 'iterationen', 'export', 'film', 'speichern')
+    SCHRITTE = ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur', 'iterationen', 'export', 'film', 'speichern')
     #: Anteil am Balken 0…100 — Netz (TRELLIS) und Iterationen sind die langen Teile.
     BAENDER = {
-        'netz': (0, 25),
-        'koerper': (25, 40),
+        'vorbereitung': (0, 3),
+        'netz': (3, 24),
+        'segmentierung': (24, 27),
+        'koerper': (27, 40),
         'grundfigur': (40, 43),
         'iterationen': (43, 85),
         'export': (85, 88),
@@ -61,6 +68,8 @@ class Engine2d3dKleiderlauf:
         self.optionen = Engine2d3dKleideroptionen.figur(self.job.optionen)
         self._band = (0, 100)
         self._letzte_db = 0.0
+        #: Der Schritt, bei dem dieser Lauf einsetzt (`ausfuehren(ab=…)`) — ein OPTIONALER Schritt (`segmentierung`) läuft, wenn er so gewählt ist, auch bei Option „aus".
+        self.ab = None
 
     # --------------------------------------------------------------- Ablauf
 
@@ -71,11 +80,15 @@ class Engine2d3dKleiderlauf:
         from .engine2d3dkleidergrundfigur import Engine2d3dKleidergrundfigur
         from .engine2d3dkleiderkoerper import Engine2d3dKleiderkoerper
         from .engine2d3dkleidernetz import Engine2d3dKleidernetz
+        from .engine2d3dkleidersegmentierung import Engine2d3dKleidersegmentierung
         from .engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
+        from .engine2d3dkleidervorbereitung import Engine2d3dKleidervorbereitung
         from .iterationskreislauf import Iterationskreislauf
 
         return {
+            'vorbereitung': lambda: Engine2d3dKleidervorbereitung(self).ausfuehren(),
             'netz': lambda: Engine2d3dKleidernetz(self).ausfuehren(),
+            'segmentierung': lambda: Engine2d3dKleidersegmentierung(self).ausfuehren(),
             'koerper': lambda: Engine2d3dKleiderkoerper(self).ausfuehren(),
             'grundfigur': lambda: Engine2d3dKleidergrundfigur(self).ausfuehren(),
             'iterationen': lambda: Iterationskreislauf(self).ausfuehren(),
@@ -88,6 +101,7 @@ class Engine2d3dKleiderlauf:
         job = self.job
         self.ablage.anlegen()
         job.ergebnis = dict(job.ergebnis or {})
+        self.ab = ab if ab in self.SCHRITTE else None
         start = self.SCHRITTE.index(ab) if ab in self.SCHRITTE else 0
         ende = self.SCHRITTE.index(bis) + 1 if bis in self.SCHRITTE else len(self.SCHRITTE)
         if start > self.SCHRITTE.index('grundfigur') and not self.ablage.arbeit('grundkoerper.glb').is_file():

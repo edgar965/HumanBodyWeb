@@ -1,3 +1,5 @@
+import { Seitenreiterwartet } from './seitenreiterwartet.js';
+
 /**
  * Seitenreiter — Reiter einer ganzen Seite: Knöpfe `[role=tab][data-reiter]` in einer
  * Leiste, Felder `[data-reiterfeld]` im Dokument.
@@ -8,15 +10,23 @@
  * „Mesh" zeigen), sonst der zuletzt gewählte (localStorage, je Seite ein Schlüssel),
  * sonst der erste. Ein Wechsel schreibt die Adresse mit `replaceState` — der Zurück-Knopf
  * bleibt beim Seitenwechsel, nicht beim Reiterwechsel.
+ *
+ * Seit 03.10.2026 meldet ein gewählter Wechsel `reiterwechsel` an der Leiste, und mit `{ wartet: true }` steht bis `reiterfertig`
+ * eine Sanduhr. Die Leiste wird von einem kleinen Modul GEBUNDEN, das nur diese Datei lädt — nicht von der Seitenklasse: Die hängt an
+ * dreißig Modulen und three.js und ist erst nach deren Laden da; so lange blieben die Reiter tot (Edgar: „nicht anklickbar").
  */
 export class Seitenreiter {
 
     /**
      * @param {HTMLElement|null} leiste die Leiste mit den Knöpfen
-     * @param {string} merkschluessel localStorage-Schlüssel für den zuletzt gewählten Reiter
+     * @param {string|null} merkschluessel localStorage-Schlüssel für den zuletzt gewählten Reiter; `null`: nichts merken (die Seite
+     *   öffnet auf dem ersten Reiter, außer die Adresse nennt einen)
+     * @param {{wartet?: boolean}} optionen `wartet`: bis die Seite `reiterfertig` meldet, steht eine Sanduhr (`Seitenreiterwartet`);
+     *   die Seite hört auf `reiterwechsel` an der Leiste (Ereignis mit `detail.name`)
      */
-    static binden(leiste, merkschluessel) {
+    static binden(leiste, merkschluessel, { wartet = false } = {}) {
         if (!leiste) return null;
+        if (wartet) new Seitenreiterwartet(leiste);
         const reiter = new Seitenreiter(leiste, merkschluessel);
         reiter.zeigen(reiter.anfang());
         leiste.addEventListener('click', e => {
@@ -44,7 +54,9 @@ export class Seitenreiter {
         const ausAdresse = location.hash.slice(1);
         if (namen.includes(ausAdresse)) return ausAdresse;
         let gemerkt = null;
-        try { gemerkt = localStorage.getItem(this.merkschluessel); } catch { gemerkt = null; }
+        if (this.merkschluessel) {
+            try { gemerkt = localStorage.getItem(this.merkschluessel); } catch { gemerkt = null; }
+        }
         return namen.includes(gemerkt) ? gemerkt : namen[0];
     }
 
@@ -56,7 +68,10 @@ export class Seitenreiter {
             feld.hidden = feld.dataset.reiterfeld !== name;
         }
         if (!gewaehlt) return;
-        try { localStorage.setItem(this.merkschluessel, name); } catch { /* ohne Speicher: nur diese Sitzung */ }
+        if (this.merkschluessel) {
+            try { localStorage.setItem(this.merkschluessel, name); } catch { /* ohne Speicher: nur diese Sitzung */ }
+        }
         history.replaceState(null, '', `${location.pathname}${location.search}#${name}`);
+        this.leiste.dispatchEvent(new CustomEvent('reiterwechsel', { detail: { name } }));
     }
 }

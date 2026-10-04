@@ -16,6 +16,7 @@ NICHT GELAUFEN (Stand 30.09.2026): Der erste Auftrag übernahm den Körper (`koe
 Weg ist geschrieben, aber ohne Lauf — rund 15 Minuten Grafikkarte.
 """
 
+from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .meshfigurlauf import Meshfigurlauf
 from .meshfiguroptionen import Meshfiguroptionen
 
@@ -32,6 +33,9 @@ class Engine2d3dKleiderkoerperlauf(Meshfigurlauf):
         figur['modell'] = 'aus'
         figur['haarkarten'] = 'aus'                      # die Frisurwahl ja, Haarkarten braucht 2D3D Kleider nicht
         self.optionen = Meshfiguroptionen.pruefen(figur)
+        # Die Kleidungsmaske aus der Sapiens-Segmentierung statt aus Farbe und Lage (Option `segmentierung.verwenden`, 04.10.2026);
+        # `Meshfigurkleidung._sapiens` liest es — „Mesh to 3D" hat das Attribut nicht und rechnet wie bisher.
+        self.sapiens_maske = Engine2d3dKleideroptionen.segmentierung(self.job.optionen).get('verwenden') == 'an'
         self.zusatz = {}
         self._von, self._bis = 0.0, 1.0
         self._letzte_db = 0.0

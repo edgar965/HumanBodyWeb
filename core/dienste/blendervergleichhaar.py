@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Blendervergleichhaar — Abschnitt „Haar“ der Tabelle „Wie liefe das mit Blender“ (Reiter „Tools“, 03.10.2026).
 
-Schema und Stände: `Architektur2d3dblender`. Belege „Blender hat das“: `ProjektTemp/_wegwerf/tools_seite/t5/ergebnis_introspektion.json` und
+Schema und Stände: `Architektur2d3dblender`; die letzten zwei Felder je Zeile sind die Ausführungszeiten (lokal, Blender) mit Quelle und Datum, sonst genau „nicht gemessen“ oder „entfällt“. Belege „Blender hat das“: `ProjektTemp/_wegwerf/tools_seite/t5/ergebnis_introspektion.json` und
 `operatoren.txt` (Blender 5.2.2 LTS, Werksstart, nur Namen; die 26 Hair-Node-Gruppen aus `procedural_hair_node_assets.blend`). Belege „gemessen“:
 `Stoffsolver/README.md`, Abschnitt „Messungen“, und `Stoffsolver/werkzeug/vergleich_haar*.py`.
 """
@@ -15,7 +15,7 @@ class Blendervergleichhaar:
     EINLEITUNG = ('Blender hat für Haar zwei Wege: das Partikelsystem (Typ HAIR, mit Dynamik) und Curves-Objekte mit den 26 Hair-Node-Gruppen. Das Projekt '
                   'ruft die Hair-Nodes auf Stranghaar (`m.haar_knoten`) und hat Erzeugung und Dynamik als Stoffsolver nachgebaut und gegen Blender 5.2.2 '
                   'gemessen; die Frisuren selbst kommen aus Daz.')
-    # (Aufgabe, lokales Werkzeug, lokaler Aufruf, lokale Klassen [(Datei, Klasse)], Blender-Werkzeug, Blender-Aufruf, Blender-Stand, Unterschied)
+    # (Aufgabe, lokales Werkzeug, lokaler Aufruf, lokale Klassen [(Datei, Klasse)], Blender-Werkzeug, Blender-Aufruf, Blender-Stand, Unterschied, zeit_lokal, zeit_blender)
     ZEILEN = [
         ('Frisuren-Bibliothek und Mischen',
          'Daz-Frisuren (18 Sorten) als „Haar – Generisch“: Anteile mischen, fünf Formachsen',
@@ -28,7 +28,10 @@ class Blendervergleichhaar:
          'In `assets/nodes/procedural_hair_node_assets.blend` liegen 26 Knotengruppen und keine Objekte (`hair_asset_objekte` leer, '
          '`ergebnis_introspektion.json`): Blender liefert Werkzeuge, keine Frisuren. Das Projekt hat 18 Daz-Frisuren mit einem gemeinsamen Satz Formachsen '
          '(Länge, Kurz, Dichte, Wellig, Dutt; 18 von 18 gebaut, zusammen 45 s) und mischt Sorten über die Strähnendichte, mit ganzen Inseln nach Saat: '
-         '70 % Kin plus 30 % Toulouse trägt 70 % der Kin-Inseln und 30 % der Toulouse-Inseln (`engine2d3dkleider.md`, 30.09.2026).'),
+         '70 % Kin plus 30 % Toulouse trägt 70 % der Kin-Inseln und 30 % der Toulouse-Inseln (`engine2d3dkleider.md`, 30.09.2026).',
+         '1,5 s kalt, 0,02 s aus dem Vorrat (Endpunkt „Haar – Generisch“ mit Mischung 70 % Kin + 30 % Toulouse; engine2d3dkleider.md, '
+         '30.09.2026)',
+         'entfällt'),
 
         ('Haar erzeugen',
          'Stoffsolver-Haarsystem: Wurzeln verteilen, wachsen, Kinder, Clump, Kink, Effektoren (nach `particle_distribute.cc` und `particle.cc`)',
@@ -42,7 +45,9 @@ class Blendervergleichhaar:
          'Effektoren, Kurven, Texturen, Bearbeitung, Vielecke gleich, 214 Zeilen (`vergleich_haarrest.py`); Bezier- und NURBS-Führungskurven: Pfad 47 Szenen '
          '≤ 0,00025 mm, Haare 25 Szenen ≤ 0,0051 mm, als Poly 11 bis 1965 mm daneben (`vergleich_kurven.py`; `Stoffsolver/README.md`, 02./03.10.2026). Nicht '
          'gegen Blender gemessen: Haarkamm und Bearbeitung von Führungshaaren im Edit-Modus. Die Pipeline ruft die Erzeugung nicht auf (kein Treffer für '
-         '`Haarsystem` in HumanBodyWeb, Genesis9, 2d3DIterationen): Frisuren kommen aus Daz, das Modul dient der Haar-Dynamik und dem Kämmen.'),
+         '`Haarsystem` in HumanBodyWeb, Genesis9, 2d3DIterationen): Frisuren kommen aus Daz, das Modul dient der Haar-Dynamik und dem Kämmen.',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('Haar bearbeiten (Operationen)',
          'Haar-Operationen in Python mit Ortsgewicht: trim, clump, noise, straighten, biegen, anlegen, curl, braid (Karten und Strähnen)',
@@ -56,7 +61,10 @@ class Blendervergleichhaar:
          'Points, Restore Curve Segment Length und Set Hair Curve Profile. Gemessen am Pixie (236.136 Punkte, 21.755 Strähnen): Trim 2,4 s in Blender, 6 s mit '
          'Start; „Replace Length“ steht auf an und setzt jede Strähne auf 1 m (500 mm Weg) — mit Faktor aus; `Mask` wirkt je Strähne, das Ortsgewicht legt Python '
          'je Punkt an (`ortsmorphe.md`, 01.10.2026). Blenders Gruppen arbeiten auf Strähnen (Curves), Kartenhaar ist kein Curves-Objekt — dort rechnet '
-         '`G9haarops`: `haar_clump` 1,6 s an Mavick Hair mit 576.309 Punkten (`ortsmorphe.md`).'),
+         '`G9haarops`: `haar_clump` 1,6 s an Mavick Hair mit 576.309 Punkten (`ortsmorphe.md`).',
+         '1,6 s (haar_clump an Mavick Hair, 576.309 Punkte, Karten; ortsmorphe.md, 01.10.2026)',
+         '2,4 s Rechnung, 6 s mit Blender-Start (Trim am Pixie, 236.136 Punkte, 21.755 Strähnen, nicht dieselbe Szene; ortsmorphe.md, '
+         '01.10.2026)'),
 
         ('Haar verdichten',
          'Zusatzsträhnen in Python: Duplicate und Interpolate als Punktmischung aus vorhandenen Strähnen',
@@ -68,7 +76,9 @@ class Blendervergleichhaar:
          'Am Pixie: Blenders Duplicate mit 2 Kopien 3,5 s (8,8 s mit Start), 43.510 Zusatzsträhnen mit 472.272 Punkten; die Python-Fassung `haar_duplizieren` '
          '2,5 s, `haar_interpolieren` 1,4 s (`ortsmorphe.md`, 01.10.2026). Blenders Vorgabe „Amount“ 10 machte aus 236.136 Punkten 2,6 Mio. — das Projekt nimmt 2. '
          'Mit einer Draufsicht als UV versetzte Attach alle 236.136 Pixie-Punkte um 1,66 m; seit `G9kopfhaut` (Daz-Kappe oder Kopf der Grundfigur mit '
-         'Genesis-UV) stimmt es: Attach 1,14 mm Mittel (`ortsmorphe.md`, 01.10.2026).'),
+         'Genesis-UV) stimmt es: Attach 1,14 mm Mittel (`ortsmorphe.md`, 01.10.2026).',
+         '2,5 s (haar_duplizieren am Pixie, Kopienzahl in der Quelle nicht genannt; haar_interpolieren 1,4 s; ortsmorphe.md, 01.10.2026)',
+         '3,5 s Rechnung, 8,8 s mit Blender-Start (Duplicate am Pixie, 2 Kopien, 43.510 Zusatzsträhnen; ortsmorphe.md, 01.10.2026)'),
 
         ('Strähnendicke',
          'Strähnendicke als Bänder (Wurzel, Spitze in mm), kamera-unabhängig',
@@ -79,7 +89,9 @@ class Blendervergleichhaar:
          'vorhanden',
          'Die Gruppe steht in der Asset-Datei (26 Gruppen, `ergebnis_introspektion.json`); das Projekt ruft sie nicht auf (`Engine2d3dKleiderblender.KNOTEN` '
          'kennt sie nicht). Stranghaar war im Render und in der Runden-GLB unsichtbar (entartete Linien); `G9haarprofil` macht je Segment ein Band '
-         '(Kreuzprodukt Strähne × radial, 1,23 Mio. Punkte in 0,5 s; `ortsmorphe.md`, 01.10.2026).'),
+         '(Kreuzprodukt Strähne × radial, 1,23 Mio. Punkte in 0,5 s; `ortsmorphe.md`, 01.10.2026).',
+         '0,5 s (1,23 Mio. Punkte als Bänder; ortsmorphe.md, 01.10.2026)',
+         'nicht gemessen'),
 
         ('Haar-Dynamik',
          'Stoffsolver-Haardynamik: Cloth-Solver auf Strängen (GPU), Wurzeln fest, Körper als Kollider; nur von Hand',
@@ -94,7 +106,11 @@ class Blendervergleichhaar:
          '13,4 / 99 mm; `vergleich_haar.py`). Zeit, 32.315 Strähnen, 13 Bilder: Blender 193 s (57 s Simulation), Solver 1,2 s; 4.000 Strähnen mit Kopfkollision '
          '69 s gegen 0,5 s. Das Projekt wählt den Solver nur per Rezeptzeile; Mindestabstand Haar–Körper 2 mm statt Blenders 31 mm: In Ruhe liegen 97,9 % '
          '(Pixie) bzw. 93,3 % (Hime Cut) der freien Haarpunkte näher als 31 mm an der Körperfläche, und bei 3 mm Rand explodieren am Hime Cut 6 von 30 '
-         'gestörten Blender-Läufen, bei 2 mm keiner (README; `ortsmorphe.md`).'),
+         'gestörten Blender-Läufen, bei 2 mm keiner (README; `ortsmorphe.md`).',
+         '1,2 s (32.315 Strähnen, 13 Bilder, GPU; 4.000 Strähnen mit Kopfkollision 0,5 s; Aufteilung Start/Rechnung nennt die Quelle nicht; '
+         'vor dem Ausbau des Solvers, 30 % Last durch andere Sitzungen; Stoffsolver/README.md, 02.10.2026)',
+         '193 s (dieselbe Szene, davon 57 s Simulation; 4.000 Strähnen mit Kopfkollision 69 s; vor dem Ausbau des Solvers, 30 % Last durch '
+         'andere Sitzungen; Stoffsolver/README.md, 02.10.2026)'),
 
         ('Haar kämmen',
          'Haarkamm und Bildschirmkamm im Stoffsolver (Python): Führungshaare kämmen',
@@ -102,7 +118,12 @@ class Blendervergleichhaar:
          [('Stoffsolver/haarkamm.py', 'Haarkamm'), ('Stoffsolver/bildschirmkamm.py', 'Bildschirmkamm'), ('Stoffsolver/haarsystem.py', 'Haarsystem')],
          'Partikel-Edit-Modus mit Kamm-Pinsel (`particle.brush_edit`); Curves-Sculpt-Modus (`sculpt_curves.brush_stroke`)',
          "bpy.ops.particle.brush_edit(...)   # Partikel-Edit-Modus, im Hintergrundmodus nur mit GPU-Kontext (Stoffsolver/README.md)",
-         'vorhanden',
-         'Nicht gegen Blender gemessen: `particle.brush_edit` braucht im Hintergrundmodus einen GPU-Kontext, ebenso die Bearbeitung von Führungshaaren im '
-         'Edit-Modus (`Stoffsolver/README.md`, „Was noch fehlt“, 03.10.2026). Beide Operatoren stehen in der Operatorliste von 5.2.2 (`operatoren.txt`).'),
+         'gemessen',
+         'Mit offenem Blender-Fenster gemessen (03.10.2026, `vergleich_haarform.py kamm`): 13 Szenen, Solver gegen Blender höchstens 0,00087 mm bei 2,97 bis 178 mm Wirkung des Strichs, '
+         'Blender gegen Blender 0 mm. Im Hintergrundmodus stürzt `particle.brush_edit` ab (kein GPU-Kontext, Rückgabecode 3221225477), deshalb braucht der Vergleich ein Fenster '
+         '(Blender mit Bildschirm, rund 15 s je Lauf). Nicht gegen Blender gemessen bleibt die Bearbeitung von Führungshaaren im Edit-Modus. Beide Operatoren stehen in der Operatorliste von 5.2.2 (`operatoren.txt`).',
+         '22 bis 197 ms je Strich (13 Szenen, 10 bis 30 Strichelemente; Aufbau der Ansicht und des Tiefenpuffers eingerechnet, Median aus drei Läufen; '
+         '`haarform_kammfenster.py`, 03.10.2026)',
+         '2 bis 66 ms je Strich (13 Szenen, nur der Operator `brush_edit` ohne Prozessstart, Wanduhr; 2 ms mit Röntgen, 25 bis 66 ms mit Tiefenpuffer; '
+         'zwei Läufe; `haarform_kammfenster.py`, 03.10.2026); der ganze Blender-Prozess mit Fenster brauchte 14,9 und 15,4 s'),
     ]

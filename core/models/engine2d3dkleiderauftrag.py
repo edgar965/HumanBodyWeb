@@ -34,7 +34,7 @@ class Engine2d3dKleiderauftrag(models.Model):
     ]
     LAEUFT = ('laeuft',)
     #: Was der Nutzer je Foto stellt — ein Lauf darf es beim Speichern nicht überschreiben.
-    NUTZERFELDER = ('rolle', 'gewicht', 'bereich')
+    NUTZERFELDER = ('rolle', 'gewicht', 'bereich', 'winkel', 'farbe')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     #: Adresse der Seite (`Auftragskennung`, Datum und Uhrzeit der Anlage).
@@ -52,6 +52,18 @@ class Engine2d3dKleiderauftrag(models.Model):
     ergebnis = models.JSONField(default=dict, blank=True)
     #: Name des gespeicherten Modells (`data/models/<modell>.json`), leer bis „speichern".
     modell = models.CharField(max_length=200, blank=True)
+    #: Die Handwertung der Liste (03.10.2026): acht Rangspalten, je Spalte ist der Wert der RANG des Laufs (1 = der beste, jede Zahl höchstens
+    #: einmal; leer = nicht bewertet; `Engine2d3dKleiderqualitaet.FELDER`, `Engine2d3dKleiderrang`). Eigene Spalten statt `optionen`/`ergebnis`:
+    #: Ein Lauf hält beide JSON-Felder minutenlang im Speicher und schreibt sie zurück — eine Wertung, die währenddessen in der Liste gesetzt
+    #: wurde, ginge verloren. Die Läufe speichern mit `update_fields`, an diese Spalten kommen sie nicht heran.
+    qualitaet_mesh = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_3d = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_textur = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_mesh_gesamt = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_kleider = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_haar = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_gesicht = models.SmallIntegerField(null=True, blank=True)
+    qualitaet_koerper = models.SmallIntegerField(null=True, blank=True)
     pid = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

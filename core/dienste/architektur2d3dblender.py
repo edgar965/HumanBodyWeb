@@ -30,7 +30,7 @@ class Architektur2d3dblender:
     PFAD = Path(__file__).resolve().parent
     NICHT_GEMESSEN = 'nicht gemessen'
     #: Reihenfolge der Abschnitte nach `KENNUNG`; nicht genannte folgen alphabetisch nach Dateiname.
-    REIHENFOLGE = []
+    REIHENFOLGE = ['blender-modell', 'blender-kleider', 'blender-haar', 'blender-textur', 'blender-bild']
 
     @classmethod
     def abschnittsklassen(cls):

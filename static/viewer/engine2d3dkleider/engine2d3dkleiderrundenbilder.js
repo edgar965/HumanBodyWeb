@@ -25,7 +25,7 @@ export class Engine2d3dKleiderrundenbilder {
     /** [{titel, bilder: [{src, titel}], winkel}] — erst die Blickwinkel, dann Tafel bzw. Kachel. */
     gruppen(r) {
         const aus = [];
-        const zahl = v => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 });
+        const zahl = v => v == null ? '—' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 });
         for (const a of r.je_ansicht || []) {
             if (!a.render) continue;
             const w = Engine2d3dKleiderrundenbilder.winkelText(a.winkel);

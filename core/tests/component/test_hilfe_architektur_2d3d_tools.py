@@ -25,7 +25,7 @@ class SeiteTools(SimpleTestCase):
     def test_der_reiter_tools_steht_im_html_mit_knopf_und_flaeche(self):
         self.assertIn('data-ziel="tools"', self.text)
         self.assertIn('data-reiter="tools"', self.text)
-        self.assertIn('Die Tools zur Anpassung des Modells', self.text)
+        self.assertIn('die Tools zur Anpassung des Modells', self.text)
 
     def test_die_regeln_nur_nach_ansage_stehen_auf_der_seite(self):
         for regel in self.kontext['regeln']:

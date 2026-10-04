@@ -12,7 +12,7 @@ class Werkzeughaut:
     G = 'Genesis9/'
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
-    I = '2d3DIterationen/iterationen2d3d/'
+    P = '2d3DIterationen/iterationen2d3d/'
     W = 'VideoToBVH/wrappers/'
 
     KENNUNG = 'haut'
@@ -75,7 +75,7 @@ class Werkzeughaut:
          'Koerperfotoprojektion(job, ablage).bauen(teile, referenzen, render, aus)   # in der Runde: Begutachtungswerkzeug.fototextur(…)\n'
          'Koerperfotoprojektion.warm(rgb)   # True = Hautfarbe (R > G > B, R − B > 0,04)',
          [(D + 'koerperfotoprojektion.py', 'Koerperfotoprojektion'), (D + 'begutachtungswerkzeug.py', 'Begutachtungswerkzeug'), (G + 'uvraster.py', 'G9uvraster'),
-          (I + 'fotoprojektion.py', 'Fotoprojektion')],
+          (P + 'fotoprojektion.py', 'Fotoprojektion')],
          'Schritte: je Kachel die Texel des Körpers rastern (RASTER 1024), Farbe aus den Fotos (Gewicht Normale · Blick⁴, Deckung ab Kosinus 0,25 bis 0,6), nur warme Fotofarbe '
          'übernehmen (Shirt, Shorts, Socke bleiben bei der gebackenen Farbe), Deckung glätten (WEICH 3), Lücken füllen. Braucht die gebackenen Kacheln (ergebnis.fototextur.kacheln, '
          'noetig() sonst falsch); Fotos mit anderer Kleidung zählen nur für die Form. Einmal je Körper und Fassung (fototextur.hautfoto.fassung 1); die gebackenen bleiben als '

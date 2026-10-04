@@ -3,7 +3,7 @@
 
 Edgar: „mache einen neuen Tab, wo du den Workflow der 2D3D-Erkennung machst, mit allen Klassen und allen Optionen (z. B. Blender) —
 ich brauche grafische Klassen mit Entscheidungsbäumen und Infos, was jeder Schritt kostet an Zeit". Hier werden die Teile
-zusammengesteckt: die Kette der sieben Schritte (`Workflowstrecke`), die Entscheidungsbäume des Laufs und der Runde
+zusammengesteckt: die Kette der acht Schritte (`Workflowstrecke`), die Entscheidungsbäume des Laufs und der Runde
 (`Workflowlauf`, `Workflowrunde`, `Workflowrundebau`), der Fluss einer Runde (`Workflowfluss`) und die Klassenkarten
 (`Workflowkarten`). Die Quellen der Zeiten werden in der Reihenfolge nummeriert, in der sie auf der Seite zuerst stehen.
 """

@@ -1,6 +1,8 @@
 import { Auftragduplizieren } from '../gemeinsam/auftragduplizieren.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
+import { Engine2d3dKleiderkiwahl } from './engine2d3dkleiderkiwahl.js';
+import { Engine2d3dKleiderqualitaet } from './engine2d3dkleiderqualitaet.js';
 import { Engine2d3dKleiderweiter } from './engine2d3dkleiderweiter.js';
 
 /**
@@ -155,6 +157,10 @@ export class Engine2d3dKleiderliste {
             const link = zeile.querySelector('a[href]');
             if (link) window.location.href = link.getAttribute('href');
         });
+        // „Qualität Mesh" / „Qualität 3D": Handwertung direkt in der Zeile, ohne Neuberechnung (03.10.2026).
+        Engine2d3dKleiderqualitaet.binden(tabelle);
+        // „KI": die Wahl des Formmodells (TRELLIS.2 / Pixal3D / Pixal3D Mehrbild) direkt in der Zeile (03.10.2026).
+        Engine2d3dKleiderkiwahl.binden(tabelle);
         knopf?.addEventListener('click', () => this.loeschen());
     }
 

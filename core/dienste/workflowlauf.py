@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Workflowlauf — die Entscheidungsbäume der sieben Schritte eines Auftrags „2D3D Kleider" (Hilfe → Architektur → 2D3D, 02.10.2026).
+"""Workflowlauf — die Entscheidungsbäume der acht Schritte eines Auftrags „2D3D Kleider" (Hilfe → Architektur → 2D3D, 02.10.2026).
 
 Edgar: „den Workflow der 2D3D mit allen Klassen und allen Optionen (z. B. Blender)" — dieser Teil: wo ein Lauf beginnt, woher
 Netz und Körper kommen, was nach den Iterationen folgt. Jede Verzweigung ist eine Option, die es im Code gibt
@@ -33,11 +33,11 @@ class Workflowlauf:
         ).mit(
             K(
                 cls.T,
-                'ab = netz („Neu berechnen")',
-                'Alle sieben Schritte: netz → koerper → grundfigur → iterationen → export → '
+                'ab = vorbereitung („Neu berechnen")',
+                'Alle acht Schritte: vorbereitung → netz → koerper → grundfigur → iterationen → export → '
                 'film → speichern. Vorher werden die Dauern früherer Läufe aus dem Ergebnis gelöscht.',
                 ('Engine2d3dKleiderlauf',),
-                kante='ab fehlt oder netz',
+                kante='ab fehlt oder vorbereitung',
                 vorgabe=True,
             ).mit(
                 K(
@@ -73,7 +73,7 @@ class Workflowlauf:
         return Workflowbaum(
             'start',
             'Wo beginnt ein Lauf?',
-            'Welche der sieben Schritte rechnet ein Druck auf den Knopf?',
+            'Welche der acht Schritte rechnet ein Druck auf den Knopf?',
             wurzel,
             'Engine2d3dKleiderlauf.ausfuehren(ab, bis), Engine2d3dKleiderlauf.SCHRITTE',
         )

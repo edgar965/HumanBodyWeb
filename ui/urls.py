@@ -26,6 +26,7 @@ urlpatterns = [
     path('hilfe/animationseffekte/', include('core.urls_hilfe_effekte')),
     path('hilfe/architektur/', include('core.urls_hilfe_architektur')),
     path('hilfe/2d-3d/', include('core.urls_hilfe_kopf')),
+    path('hilfe/recherche/', include('core.urls_hilfe_recherche')),
     path('hilfe/', include('djangobase.urls')),
     # Statik unter einer Adresse, die die Fassung TRAEGT
     # (`/statik/v-<zahl>/viewer/...`). Der Grund steht in

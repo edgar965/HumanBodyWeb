@@ -80,7 +80,7 @@ class Werkzeugstoffhaar:
           (S + 'haareckenverteilung.py', 'Haareckenverteilung'), (S + 'haarvolumen.py', 'Haarvolumen')],
          'Haareinstellungen sind Blenders ParticleSettings, deutsch benannt, Vorgaben aus der DNA (DNA_particle_types.h): quelle flaechen|ecken|volumen, verteilung jitter|zufall, '
          'haar_segmente, anzeige_stufe, render_stufe, haarlaenge (= normfac · 4) u. v. m.; Haareinstellungen.aus_blender(**dna) nimmt die DNA-Namen (hair_step, childrad, kink_amp …). Emitter mit '
-         'Vierecken: Haarsystem(punkte, Haarflaechen…) oder vierecke=…; mit Vielecken Haarpolygone(punkte, polygone).flaechen() (Zerlegung wie Blender). Nicht abgebildet, weil ohne Wirkung '
+         'Vierecken: Haarsystem(punkte, dreiecke, e, vierecke=<(Q, 4)>); mit Vielecken Haarsystem(punkte, Haarpolygone(punkte, polygone).flaechen(), e) (Zerlegung wie Blender). Nicht abgebildet, weil ohne Wirkung '
          'auf die Strähnenform: Größen, Lebensdauer, Material, Boids, Instanzen, Effektorgewichte, Kräfte. Gemessen: Strähne für Strähne gleich, 0,0000–0,0016 mm; Vierecke trafen vorher 0 von '
          '100 Wurzeln, jetzt alle; die zweite Achse des Wurzelrahmens ist die erste Kante der Fläche (Origspace wirkt bei Haaren nicht). Nicht ebene Vielecke legt Blender unbestimmt an '
          '(nicht initialisierter Speicher in mesh_tessface_calc), der Solver rechnet sie flach. Stand: blender.'),
@@ -102,7 +102,8 @@ class Werkzeugstoffhaar:
              "e = Haareinstellungen(texturen=(<Partikeltextur>, …))    # Plätze für Länge, Bündelung, Knick, Rauheit, Drall, Dichte, Geschwindigkeit")),
          [(S + 'pfadkraefte.py', 'Pfadkraefte'), (S + 'pfadeffektoren.py', 'Pfadeffektoren'), (S + 'kurvenfuehrung.py', 'Kurvenfuehrung'), (S + 'kurvenspline.py', 'Kurvenspline'),
           (S + 'kurvenbezier.py', 'Kurvenbezier'), (S + 'kurvennurbs.py', 'Kurvennurbs'), (S + 'haartexturen.py', 'Haartexturen')],
-         'Felder wirken auf die Führungshaare, mit apply_effector_to_children auf die Kinder; Führungskurven (Poly, Bezier, NURBS) wirken nie auf Kinder (sie erben über die Eltern). Bei laufender '
+         'Felder wirken auf die Führungshaare; mit apply_effector_to_children wirken sie auf die Kinder und die Führungshaare bleiben unberührt (Pfadkraefte). Führungskurven (Poly, Bezier, '
+         'NURBS) wirken mit apply_effector_to_children je Schlüssel auf die Kinder, nie auf die Führungshaare (Kurvenfuehrung, 18 Szenen mit Kindern gemessen). Bei laufender '
          'Haar-Dynamik wirken Pfadeffektoren nicht (Blender kehrt dann sofort zurück). Der Curve Guide kennt nur den Kugel-Abfall (Röhre und Kegel: Fehler); Taper-Objekte gibt es nicht. '
          'Blender nimmt dafür nur Legacy-Kurven mit use_path, nicht die Haar-Kurven. Gemessen: Kraftfelder höchstens 0,004 mm; Führungskurven Pfad 47 Szenen höchstens 0,00025 mm, Haare entlang '
          'der Kurve 25 Szenen höchstens 0,0051 mm; als Poly gerechnet 11–1965 mm daneben; Texturen gleich, Kinder nach Bearbeitung 0,0003 mm. Nicht gebaut: Auto-Griffe, '
@@ -117,8 +118,10 @@ class Werkzeugstoffhaar:
              "Bildschirmkamm(kamm, Bildschirmansicht.orthogonal(breite, hoehe)).ziehen(von_px, nach_px, radius=50.0, staerke=0.5)    # Mauszug in Pixeln")),
          [(S + 'haarkamm.py', 'Haarkamm'), (S + 'bildschirmkamm.py', 'Bildschirmkamm'), (S + 'bildschirmansicht.py', 'Bildschirmansicht'), (S + 'haarsystem.py', 'Haarsystem')],
          'Auswahl pfad|punkt|spitze; laengen_halten (Vorgabe) hält die Segmentlängen, emitter weist Punkte von der Kopfhaut ab. Blenders brush_edit stürzt im Hintergrundmodus ab (kein '
-         'GPU-Kontext): Der Kamm ist nach dem Quelltext (particle_edit.cc) gebaut und mit Handrechnung getestet, NICHT gegen Blender gemessen; im 3D-Raum misst ziehen den Weg als größte '
-         'Koordinate des Wegvektors (Blender: Bildschirmdistanz). Ebenso die Bearbeitung von Führungshaaren im Edit-Modus. Stand: quelle (kein Blender-Lauf).'),
+         'GPU-Kontext), mit offenem Blender-Fenster läuft es: Der Bildschirmkamm ist nach dem Quelltext (particle_edit.cc) gebaut und am 03.10.2026 in 13 Szenen gegen Blender gemessen '
+         '(Solver gegen Blender höchstens 0,00087 mm bei 2,97 bis 178 mm Wirkung; Aufruf: python14\\Scripts\\python.exe Stoffsolver\\werkzeug\\vergleich_haarform.py kamm, öffnet zweimal ein '
+         'Blender-Fenster). Der 3D-Kamm (`ziehen` im Raum) ist nicht gegen Blender gemessen: er misst den Weg als größte Koordinate des Wegvektors (Blender: Bildschirmdistanz). '
+         'Ebenso nicht gemessen: die Bearbeitung von Führungshaaren im Edit-Modus. Stand: blender für den Bildschirmkamm, quelle für den 3D-Kamm.'),
     ]
     # Klassenmodell: (von, 'ruft', nach, womit)
     BEZIEHUNGEN = [
@@ -129,10 +132,10 @@ class Werkzeugstoffhaar:
         ('Haarsimulation', 'ruft', 'Haarkontinuum', 'Haarkontinuum(**kontinuum): die Haar-Haar-Kopplung'),
         ('Haarsimulation', 'ruft', 'Haarzufall', 'die Biegesteifigkeit je Haar aus bending_random'),
         ('Haarsimulation', 'ruft', 'Haardivergenz', 'pruefen(sim, lage): wirft Haardivergenz, wenn die Lagen nicht endlich sind'),
-        ('Haarsimulation', 'ruft', 'Haarkopfbewegung', 'kopf_bewegen(lagen_neu, koerper_neu, wurzelrahmen): Pins, Ziele und Rahmen je Bild'),
+        ('Haarsimulation', 'ruft', 'Haarkopfbewegung', 'Haarkopfbewegung(sim).bewegen(lagen_neu, koerper_neu, wurzelrahmen) aus kopf_bewegen(): Pins, Ziele und Rahmen je Bild'),
         ('HaarNetzGewicht', 'ruft', 'Haargewicht', 'gemalte Gewichte je Schlüssel: Zwischenpunkte mit Gewicht 1 heften an, freie Wurzel'),
         ('Haarkopf', 'ruft', 'Haarwurzeln', 'Haarwurzeln(kopfpunkte, kopfdreiecke): jede Wurzel dem nächsten Dreieck der Kopfhaut zuordnen'),
-        ('Haarkopf', 'ruft', 'Haarsimulation', 'bewegen(sim, kopf_neu, koerper_neu): ruft sim.kopf_bewegen'),
+        ('Haarkopf', 'ruft', 'Haarsimulation', 'Haarkopf.bewegen(sim, kopf_neu, koerper_neu) ruft sim.kopf_bewegen(lagen, koerper_neu, rahmen)'),
         ('Haarsystem', 'ruft', 'Haareinstellungen', 'die Werte des Partikelsystems (Einstellungen, Texturplätze, Kinderzahl)'),
         ('Haarsystem', 'ruft', 'Haarwachstum', 'erzeugen(punkte, eingabe, einstellungen, …): die Führungshaare'),
         ('Haarsystem', 'ruft', 'Haarpfade', 'fuehrungspfade(…): Pfadcache der Führungshaare mit Segmenten'),
@@ -143,7 +146,7 @@ class Werkzeugstoffhaar:
         ('Haarsystem', 'ruft', 'Pfadkraefte', 'gruppenwert(…): Kraftfelder und Führungskurven auf den Pfaden'),
         ('Haarsystem', 'ruft', 'Haarflaechen', 'von(dreiecke, vierecke): Emitter mit Vierecken oder Vielecken'),
         ('Haarwachstum', 'ruft', 'Haarverteilung', 'die Wurzeln auf der Emitterfläche'),
-        ('Haarpolygone', 'ruft', 'Haarflaechen', 'flaechen(): die Zerlegung der Vielecke in Blenders Form'),
+        ('Haarpolygone', 'ruft', 'Haarflaechen', 'Haarpolygone.flaechen() baut Haarflaechen.aus_polygonen(ecken, herkunft): die Zerlegung der Vielecke in Blenders Form'),
         ('Haareckenverteilung', 'ruft', 'Haarverteilung', 'Wurzeln aus den Ecken des Emitters (quelle=ecken)'),
         ('Pfadkraefte', 'ruft', 'Pfadeffektoren', 'Kraftfelder auf den Darstellungspfaden'),
         ('Kurvenfuehrung', 'ruft', 'Kurvenspline', 'die Kurve: Poly, Bezier oder NURBS, ausgewertet wie Blender'),

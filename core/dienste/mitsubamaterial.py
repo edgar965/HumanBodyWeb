@@ -36,6 +36,9 @@ class Mitsubamaterial:
     #: Rauheit/Glanz der Stoffe und der Haut (Disney „principled") — matt, ein Hauch Glanz.
     RAUHEIT = 0.8
     GLANZ = 0.25
+    #: Klarlack der Glanzstücke (Stiefel): Stärke und Schärfe (1 = sehr scharf) — nur bei Metallic Weight > 0 (`metallglanz`).
+    LACK = 1.0
+    LACK_GLANZ = 0.9
     #: Chiangs azimutale Rauheit β_n der Strähnen (Mitsuba-Vorgabe 0,3).
     HAAR_BETA = 0.3
     VORRAT = 24
@@ -112,19 +115,37 @@ class Mitsubamaterial:
                             'filter_type': 'bilinear'}}
 
     @staticmethod
+    def durchsicht(innen, opazitaet):
+        """Das Material mit fester Deckung (0…1): Mitsubas `mask` mischt `innen` mit „nichts“ — Licht und Sicht gehen durch den Rest
+        (Brillenglas, `G9kleidtransparenz`). Eine Zahl für die ganze Gruppe, keine Karte."""
+        a = float(min(1.0, max(0.0, opazitaet)))
+        return {'type': 'mask', 'bsdf': innen, 'opacity': a}
+
+    @staticmethod
     def kennung(farbe):
         """Kennfarbe (Teilmasken): diffus, damit die Albedo-Ausgabe genau die Farbe trägt."""
         return {'type': 'twosided', 'bsdf': {'type': 'diffuse',
                                              'reflectance': {'type': 'rgb', 'value': [float(c) for c in farbe[:3]]}}}
 
     @classmethod
-    def textur(cls, albedo, faktor, normalen=None, kante=1024, achse=1):
-        """Albedo-Bild × Faktor (linear, wie glTFs baseColorFactor), wahlweise mit Normalkarte."""
+    def metallglanz(cls, metall, rauheit):
+        """`{metallic, roughness}` eines Metallstücks (Stiefel, 03.10.2026) — nur wenn das Stück ein Metallgewicht > 0 trägt
+        (`Metallic Weight` aus `G9materialkanaele`); sonst die matten Vorgaben der Stoffe."""
+        if not metall:
+            return {'roughness': cls.RAUHEIT, 'specular': cls.GLANZ}
+        # Unter dem gleichmäßigen Himmel spiegelt ein REINES Metall nichts und sieht matt aus (Runde 41, 03.10.2026): Teilmetall (Metallic Weight < 1)
+        # plus Klarlack — der Lack spiegelt den Himmel als Randglanz und das Richtlicht als Lichtpunkt, das Metall färbt den Glanz.
+        return {'metallic': float(min(1.0, max(0.0, metall))), 'roughness': float(min(1.0, max(0.05, rauheit if rauheit is not None else 0.3))),
+                'specular': 0.6, 'clearcoat': cls.LACK, 'clearcoat_gloss': cls.LACK_GLANZ}
+
+    @classmethod
+    def textur(cls, albedo, faktor, normalen=None, kante=1024, achse=1, metall=None, rauheit=None):
+        """Albedo-Bild × Faktor (linear, wie glTFs baseColorFactor), wahlweise mit Normalkarte; `metall`/`rauheit` nur für Metallstücke."""
         feld = cls.bild(albedo, kante, 'albedo') * np.asarray(faktor, dtype=np.float32)[:3]
         innen = {'type': 'principled',
                  'base_color': {'type': 'bitmap', 'data': np.ascontiguousarray(feld, dtype=np.float32), 'raw': True,
                                 'filter_type': 'bilinear'},
-                 'roughness': cls.RAUHEIT, 'specular': cls.GLANZ}
+                 **cls.metallglanz(metall, rauheit)}
         if normalen is not None:
             innen = {'type': 'normalmap', 'bsdf': innen,
                      'normalmap': {'type': 'bitmap', 'data': cls.bild(normalen, kante, 'normalen', achse), 'raw': True,

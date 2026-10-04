@@ -33,7 +33,7 @@ aus den Dateien `core/dienste/blendervergleich*.py`.
       <td><b>{{ z.aufgabe }}</b></td>
       <td>{{ z.lokal }}</td>
       <td><pre class="tw-aufruf">{{ z.lokal_aufruf }}</pre>
-        <div class="tw-klassen">{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<code>{{ k.klasse }}</code>{% endif %}{% endfor %}</div></td>
+        <div class="tw-klassen">{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<code>{{ k.klasse }}</code>{% endif %} {% endfor %}</div></td>
       <td class="tw-zeit{% if not z.zeit_lokal.gemessen %} tw-zeit-offen{% endif %}">{{ z.zeit_lokal.text }}</td>
       <td class="tw-blender-spalte tw-blender-erste">{{ z.blender }}</td>
       <td class="tw-blender-spalte"><pre class="tw-aufruf">{{ z.blender_aufruf }}</pre></td>

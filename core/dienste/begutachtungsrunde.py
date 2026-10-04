@@ -10,8 +10,7 @@ letzten Runde selbst schreibt (`naechste.automatisch`, bis zu `naechste.runden` 
     2. das nächste Rezept anwenden — ein Fehler darin wird abgelegt, das Modell bleibt
     3. bauen (`Kleidermodellbau`), rendern aus den Blickwinkeln der Vorlagen (`Genesishaarrender`), benoten gegen die
        Fotos (`Iterationsnote`) und in 3D gegen das Netz (`Iterationsnetznote`), messen (`Begutachtungsbefund`)
-    4. ablegen wie `Iterationsrunde.ablegen` (Tafel, Renders, GLB, Eintrag in `ergebnis['iterationen']`) — dazu
-       `aufrufe`, `kommentar`, `rezept` (die wirksam gewordenen Aufrufe), `fehler`, `befund`
+    4. ablegen: Tafel, Renders, Eintrag in `ergebnis['iterationen']` (`aufrufe`, `kommentar`, `rezept`, `fehler`, `befund`), Prompts
     5. `begutachtung.zustand = 'wartet'`: der Lauf endet mit Status „Wartet auf Begutachtung" (`Engine2d3dKleiderlauf`)
 
 Nach jeder Runde entscheidet `Begutachtungsstand` (Gesamtnote, `Rundenauswahl`, 01.10.2026): Der Stand
@@ -33,6 +32,7 @@ from .begutachtungsbefund import Begutachtungsbefund
 from .begutachtungskritik import Begutachtungskritik
 from .begutachtungsstand import Begutachtungsstand
 from .engine2d3dkleidergrundfigur import Engine2d3dKleidergrundfigur
+from .engine2d3dkleiderprompts import Engine2d3dKleiderprompts
 from .haarabgleich import Haarabgleich
 from .haarzonen import Haarzonen
 from .haltungsfotos import Haltungsfotos
@@ -266,8 +266,7 @@ class Begutachtungsrunde:
             if a['bild'].is_file():
                 Iterationsrunde.zuschneiden(a['bild'], ziel / bild)
             je_ansicht.append({k: a[k] for k in ('original', 'winkel', 'iou', 'farbe')} | {'render': bild})
-        # Keine GLB je Runde (Edgar 02.10.2026: „ich brauche kein GLB je Runde, ich brauche den Vergleich … aus den
-        # gleichen Winkeln wie die Vorlagenfotos") — 56 MB je Runde; die Bühne zeigt das Standmodell des Laufs.
+        # Keine GLB je Runde (Edgar 02.10.2026: 56 MB je Runde, gebraucht wird der Vergleich); die Bühne zeigt das Standmodell.
         dateien['formbezug'] = bau.formbezug(ziel, runde)     # Anker des Form-Pinsels (01.10.2026)
         netz = erg['note'].get('netz') or {}
         notiz = naechste.get('kommentar') or ('Ausgangslage: Frisur aus „Mesh to 3D", keine Kleider' if runde == 1
@@ -298,3 +297,4 @@ class Begutachtungsrunde:
         if fehler:
             eintrag['fehler'] = fehler
         self.job.ergebnis.setdefault('iterationen', []).append(eintrag)
+        Engine2d3dKleiderprompts(self.ablage).runde(eintrag, naechste.get('nutzer'))     # Kommentar und Nachrichten der Runde

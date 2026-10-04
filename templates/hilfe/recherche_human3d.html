@@ -1,0 +1,64 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Recherche -> Human 3D: GitHub-Projekte der letzten zwei Jahre zu Menschenerkennung und -erzeugung in 3D.
+
+Edgar, 04.10.2026: „mach eine intensive Suche auf GitHub nach ALLEN Projekten der letzten 2 Jahre, die mit Menschenerkennung und -erzeugung in 3D zu tun haben … lege ein Menü an:
+Hilfe - Recherche, darunter Menü und Seite Human 3D, darin erstelle eine Tabelle nach djangoBase-Muster mit allen Projekten".
+
+Die Tabelle ist `djangobase/_tabelle.html`; ihre Struktur baut `Recherchetabelle`, die Projekte stehen in `core/daten/recherche_human3d.json` (`Rechercheprojekte`). Das Fenster nach einem
+Klick auf ToDo füllt `js/hilfe/recherchehuman3d.js` aus dem JSON-Block `rc-daten` (Texte per `textContent`, nie als HTML — sie stammen aus fremden READMEs).
+{% endcomment %}
+
+{% block title %}Recherche — Human 3D{% endblock %}
+{% block topbar_title %}Recherche — Human 3D: Menschen erkennen und in 3D erzeugen{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_recherche_human3d.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite rc-breit">
+
+  <h1>Human 3D: {{ anzahl }} GitHub-Projekte der letzten zwei Jahre</h1>
+
+  {% if not anzahl %}
+  <div class="info-box info-box-blue">
+    Noch keine Projekte erfasst — <code>core/daten/recherche_human3d.json</code> fehlt oder ist leer.
+  </div>
+  {% else %}
+  <p>
+    Projekte, die Menschen in Bildern und Videos erkennen (Pose, Körperform, Hände, Gesicht, Segmentierung) oder als 3D-Modell erzeugen
+    (Körper, Avatare, Kleidung, Haar, Bewegung). <strong>Aufgenommen</strong> ist, was seit dem {{ meta.zeitraum_ab_text }} auf GitHub angelegt wurde,
+    mindestens {{ meta.mindeststerne }} Sterne trägt und thematisch passt. Stand der Sterne und Daten: {{ meta.stand_text }}
+    ({{ meta.anzahl_kandidaten }} Treffer aus {{ meta.anzahl_suchen }} Suchanfragen geprüft, {{ anzahl }} aufgenommen).
+  </p>
+  <p class="rc-grenze">
+    <strong>Was „alle" hier heißt:</strong> {{ meta.grenzen }}
+  </p>
+  <p>
+    <strong>ToDo</strong> nennt, was das Projekt kann und unser Projekt nicht hat — gemessen an dem, was im Code steht
+    (Stichwortsuche im Quelltext, {{ meta.bestand_stand_text }}). Ein Klick auf die ToDo-Zelle öffnet ein Fenster mit allen Punkten, weiteren Bildern und den Eckdaten.
+    Die Spaltenköpfe sortieren, die Spaltenbreiten lassen sich ziehen.
+  </p>
+
+  <div class="rc-kategorien">
+    {% for name, n in kategorien %}<span class="rc-chip">{{ name }} <b>{{ n }}</b></span>{% endfor %}
+  </div>
+
+  {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+
+  <dialog id="rc-popup" class="rc-popup" aria-labelledby="rc-popup-titel">
+    <div class="rc-popup-kopf">
+      <h2 id="rc-popup-titel"></h2>
+      <button type="button" class="btn btn-sm rc-popup-zu" id="rc-popup-zu" title="Schließen (Esc)">Schließen</button>
+    </div>
+    <div id="rc-popup-inhalt"></div>
+  </dialog>
+  {{ popup|json_script:"rc-daten" }}
+  {% endif %}
+
+</div>
+<script type="module" src="{% fassungspfad 'js/hilfe/recherchehuman3d.js' %}"></script>
+{% endblock %}

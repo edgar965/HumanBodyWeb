@@ -82,7 +82,9 @@ class Werkzeugkleidform:
          [(G + 'modellform.py', 'ModellFormMixin'), (G + 'kleidring.py', 'G9kleidring'),
           (G + 'kleidmorphe.py', 'G9kleidmorphe')],
          'hoehe 0 unten … 1 oben; weite × Halbbreite, tiefe × Halbtiefe des Körperrings (1,0 = am Körper — die Kollision hebt '
-         'auf 3 mm —, 1,3 = 30 % weiter); sektor (a°, b°) nur dort; band 0,06 Ringhöhe. Grenze: der Körperring nimmt Rumpf, '
+         'auf 3 mm —, 1,3 = 30 % weiter); sektor (a°, b°) nur dort; band 0,06 = Breite des Bandes um die Höhe, als Anteil der '
+         'Stückhöhe. Ohne Körperring auf dieser Höhe (z. B. über dem Rumpf) wirft der Aufruf ValueError; die Ist-Ringe liest '
+         'G9kleidring.messen(kennung) (hoehe, halbbreite, halbtiefe, koerper, faktor). Grenze: der Körperring nimmt Rumpf, '
          'Becken und Beine ohne Arme — an Schulter- und Ärmelhöhe zählt der Stückring die Ärmel mit, dort ist der Faktor '
          'nur ein Anhalt (Modulkopf kleidring.py). Gebaut für Rumpf unter der Achsel, Rock, Hosenbein.'),
 

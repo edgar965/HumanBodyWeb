@@ -1,6 +1,7 @@
 import { Knopfsperre } from '../gemeinsam/knopfsperre.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Meshfotowahl } from '../mesh/meshfotowahl.js';
+import { Engine2d3dKleiderfotozusatz } from './engine2d3dkleiderfotozusatz.js';
 
 /**
  * Engine2d3dKleiderfotos — die Bildauswahl der Auftragsseite „2D3D Kleider": die Vorlagen der Iterationen.
@@ -17,10 +18,14 @@ import { Meshfotowahl } from '../mesh/meshfotowahl.js';
 export class Engine2d3dKleiderfotos {
 
     static GEWICHT_SPEICHERN_MS = 500;
+    /** Rolle der Fotos, die der Schritt „Netz“ nicht bekommt (`Engine2d3dKleiderrollen.NUR_ITERATIONEN`). */
+    static NUR_ITERATIONEN = 'iterationen';
 
     constructor(seite) {
         this.seite = seite;
         this.liste = document.getElementById('fotoliste');
+        this.listeIterationen = document.getElementById('fotoliste-iterationen');
+        this.zusatz = new Engine2d3dKleiderfotozusatz(seite, () => this.neuZeichnen());
         this.knoepfe = document.getElementById('foto-knoepfe');
         this._stand = null;
         this._uhren = {};
@@ -42,7 +47,7 @@ export class Engine2d3dKleiderfotos {
         const stand = JSON.stringify(z.bilder);
         if (stand === this._stand) return;
         const aktiv = document.activeElement;
-        if (aktiv && this.liste.contains(aktiv) && aktiv.matches('input, select')) return;
+        if (aktiv && (this.liste.contains(aktiv) || this.listeIterationen.contains(aktiv)) && aktiv.matches('input, select')) return;
         this._stand = stand;
         this._zeichnen(z);
     }
@@ -52,10 +57,21 @@ export class Engine2d3dKleiderfotos {
         this.zeigen(this.seite.zustand);
     }
 
+    /** Zwei Bereiche: die Fotos des Netz-Schritts (und der Iterationen) oben, die nur für die Iterationen darunter. */
     _zeichnen(z) {
         this.liste.innerHTML = '';
+        this.listeIterationen.innerHTML = '';
         const bilder = z.bilder || [];
-        bilder.forEach((eintrag, i) => this.liste.appendChild(this._karte(eintrag, i, bilder.length)));
+        bilder.forEach((eintrag, i) => {
+            const ziel = eintrag.rolle === Engine2d3dKleiderfotos.NUR_ITERATIONEN ? this.listeIterationen : this.liste;
+            ziel.appendChild(this._karte(eintrag, i, bilder.length));
+        });
+        if (!this.listeIterationen.children.length) {
+            const leer = document.createElement('div');
+            leer.className = 'hb-hinweis';
+            leer.textContent = 'Kein Foto nur für die Iterationen.';
+            this.listeIterationen.appendChild(leer);
+        }
     }
 
     // ------------------------------------------------------------- Karte
@@ -69,8 +85,9 @@ export class Engine2d3dKleiderfotos {
         bild.alt = eintrag.original || eintrag.datei;
         bild.title = eintrag.original || eintrag.datei;
         bild.src = this.seite.fotoAdresse(eintrag.datei);
-        karte.append(bild, this._rolle(eintrag, karte), this._gewicht(eintrag), this._platz(eintrag, index, gesamt),
-                     this._tausch(eintrag));
+        karte.append(bild, this._rolle(eintrag, karte));
+        if (eintrag.rolle === Engine2d3dKleiderfotos.NUR_ITERATIONEN) karte.append(this.zusatz.winkel(eintrag), this.zusatz.farbe(eintrag));
+        karte.append(this._gewicht(eintrag), this._platz(eintrag, index, gesamt), this._tausch(eintrag));
         return karte;
     }
 
@@ -156,8 +173,10 @@ export class Engine2d3dKleiderfotos {
         } catch (fehler) {
             eintrag.rolle = vorher;
             window.alert(`Rolle konnte nicht gespeichert werden: ${fehler.daten?.error || fehler.message}`);
-            this.neuZeichnen();
         }
+        // Zwischen den Bereichen wechselt ein Foto nur über die Rolle „Nur Iterationen“ — dann neu zeichnen.
+        if ((vorher === Engine2d3dKleiderfotos.NUR_ITERATIONEN) !== (eintrag.rolle === Engine2d3dKleiderfotos.NUR_ITERATIONEN)
+            || eintrag.rolle !== rolle) this.neuZeichnen();
     }
 
     /** Gewicht sofort lokal übernehmen, an den Server erst `GEWICHT_SPEICHERN_MS` nach der letzten Bewegung — ein

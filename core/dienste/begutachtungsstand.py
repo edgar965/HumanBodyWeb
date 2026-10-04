@@ -81,6 +81,18 @@ class Begutachtungsstand:
         alle = self.job.ergebnis.get('iterationen') or []
         return next((e for e in reversed(alle) if int(e.get('runde') or 0) == runde), None)
 
+    def _ansichten_gewechselt(self, auswahl, runde):
+        """Zählt diese Runde mehr oder weniger Ansichten (Fotos mit Winkel in der Note, `je_ansicht`) als die beste, sind ihre
+        Noten nicht vergleichbar: Zwischen Runde 37 (vier Ansichten, Abweichung 0,3652) und Runde 39 (acht, 0,4466) lag
+        nur ein anderer Satz Fotos — die Schrägansichten passen schlechter, ohne dass das Modell schlechter wäre
+        (Edgar, 03.10.2026: „du benutzt nicht alle Bilder"; die Schrägen stehen auf „Nur Iterationen")."""
+        beste = auswahl.beste
+        if not beste:
+            return False
+        neu = len((self._eintrag(runde) or {}).get('je_ansicht') or [])
+        alt = len((self._eintrag(int(beste['runde'])) or {}).get('je_ansicht') or [])
+        return bool(neu and alt and neu != alt)
+
     def _gesicht_nachziehen(self, auswahl, teilnoten, befund):
         """Misst diese Runde das Gesicht in anderer Fassung (`Gesichtsmasse.FASSUNG`) als die beste Runde, zählt die
         beste mit dem Gesichtsterm DIESER Runde (Kopf als unverändert angenommen) — sonst verwürfe ein Wechsel der
@@ -131,6 +143,10 @@ class Begutachtungsstand:
         auswahl = Rundenauswahl(z.get('auswahl'))
         if naechste.get('messrunde'):   # neue Auflösungsstufe: die Noten und Sperren der alten gelten nicht mehr
             auswahl.beste, auswahl.probe, auswahl.gesperrt = None, None, {}      # (`Aufloesungsstufe`, 02.10.2026)
+        elif self._ansichten_gewechselt(auswahl, runde):       # anderer Satz Ansichten: dasselbe, diese Runde ist die Messung
+            logger.info('2D3D Kleider %s: Runde %d zählt andere Ansichten als die beste (Runde %s) — neue Messung', self.job.kennung,
+                        runde, auswahl.beste['runde'])
+            auswahl.beste, auswahl.probe, auswahl.gesperrt = None, None, {}
         self._gesicht_nachziehen(auswahl, teilnoten, befund)
         self._haar_nachziehen(auswahl, teilnoten, befund)
         aktion, weiter = auswahl.nach_runde(runde, teilnoten['gesamt'], rezept if fehler is None else [])

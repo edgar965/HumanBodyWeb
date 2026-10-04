@@ -34,7 +34,8 @@ class Werkzeughaarform:
          'Der hängende Teil der Frisur wird faktor-mal so lang (0,5 = halb, 1,5 = länger).',
          'rezept',
          "m.haar_trim('kin_hair', 'kuerzer', faktor=0.5, ort=None)",
-         [(G + 'modellhaar.py', 'ModellHaarMixin'), (G + 'haarops.py', 'G9haarops'), (G + 'kleidmorphe.py', 'G9kleidmorphe')],
+         [(G + 'modellhaar.py', 'ModellHaarMixin'), (G + 'haarops.py', 'G9haarops'), (G + 'kleidmorphe.py', 'G9kleidmorphe'),
+          (G + 'haareigenmorphe.py', 'G9haareigenmorphe')],
          'Nach der Länge der Formachse (G9haareigenmorphe.laenge, Faktor 1,9) mit freiem Faktor und Ortsgewicht; danach aus '
          'dem Körper gehoben. Die Automatik schreibt trim erst, wenn die Längenachse bei 0 steht, je Sektor mit Ort: nach '
          'dem Netz (IterationHaare.trim) oder nach den Fotos, wo die unteren Bänder zu einem Anteil auf Haut liegen '

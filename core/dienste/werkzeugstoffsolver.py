@@ -52,7 +52,8 @@ class Werkzeugstoffsolver:
          'Ergebnis: Morph <sorte>.eigen.dynamik_<Kürzel des Auftrags> (Delta je Käfigpunkt, Wurzeln genau 0), stellbar 0…1. Nur Stranghaar (Pixie, Hime Cut …); Kartenhaar wirft '
          'ValueError — dort haar_trim, haar_clump, haar_noise u. a. nehmen. Braucht eine CUDA-GPU: ohne sie RuntimeError, nie still durch den Kopf. Mindestabstand Haar–Körper '
          '2 mm statt Blenders 31 mm (gemessen: an Hime Cut laufen bei 1 mm 43 von 30.000 Punkten durch den Kopf, bei 1,5, 2 und 3 mm keiner; ortsmorphe.md, 02.10.2026). '
-         'Offener Fehler: ab einer Reichweite abstand + dicke von 3,4 mm stürzt der Gerätelauf an Hime Cut ab (CUDA 700, illegal memory access). '
+         'Ab einer Reichweite abstand + dicke von 3,4 mm divergiert die Rechnung an Hime Cut (Blenders Vorgabe 35 mm auch): Haarsimulation wirft Haardivergenz (ein RuntimeError) — den '
+         'früheren CUDA-Absturz 700 behebt der Code seit warpplatz.py/haardivergenz.py, während ortsmorphe.md und der Docstring von Haardynamik ihn noch „offen“ nennen. '
          'Zeit (Probe an der Bibliothek, NICHT in der Pipeline gemessen, 24 Bilder, warmer Warp-Cache; ortsmorphe.md, workflowhaardynamik.py, 02.10.2026): Pixie (21.755 Strähnen) '
          '5,7 s, im ersten Lauf des Prozesses 8,8 s; Hime Cut (2.292 Strähnen) 4,4 s, erster Lauf 7,5 s. Das Render der Haar-Dynamik ist nicht angesehen. '
          'Nur von Hand: Automatik und Prüf-KI wählen sie nie. Stand: Pipeline-Anschluss nur nach Quelltext (Stoffsolverumfang: quelle); die Dynamik selbst gegen Blender gemessen '
@@ -89,7 +90,7 @@ class Werkzeugstoffsolver:
          'cg=\'blender\', optionen (Stoffoptionen), naehte (K, 2), material_felder, bewegung, pins, vierecke, vielecke, ruhe, verlauf. Die Vorgaben sind die von drapieren.py; Blenders '
          'eigene Vorgaben (0,015 m, Dicke 0) ergäben 13,3 statt 7,1 mm Abstand zum Körper (Docstring Drapierauftrag, 02.10.2026). Achsen: Die Netze von 3dTools sind Y oben, '
          'Vorgabe (0, −9,81, 0); Blenders Szene fällt nach −Z. lage ist (N, 3), Bild 1 ist die Ausgangslage. Ohne CUDA-GPU rechnet rechner=\'auto\' auf dem Host (NumPy): Hose, '
-         '12 Bilder 462 s gegen 10,1 s in Blender (ganzer Prozess; README Messungen, 02.10.2026) — nur als Referenz, siehe Zeile „Gerät und Rechenweg“.'),
+         '12 Bilder 462 s gegen 10,1 s in Blender (ganzer Prozess; README Messungen, 02.10.2026) — nur als Referenz, siehe Zeile „Gerät und Rechenweg“. Stand: gegen Blender 5.2.2 gemessen.'),
         ('Stoffsimulation (Bild für Bild, bewegter Körper und Pins)',
          'Den Ablauf selbst steuern: Zeitschritte, Lagen je Bild, Körper und angeheftete Punkte je Bild bewegen.',
          'python',

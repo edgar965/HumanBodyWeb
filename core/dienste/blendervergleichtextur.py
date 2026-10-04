@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Blendervergleichtextur — Abschnitt „UV und Textur“ der Tabelle „Wie liefe das mit Blender“ (Reiter „Tools“, 03.10.2026).
 
-Schema und Stände: `Architektur2d3dblender`. Belege „Blender hat das“: `ProjektTemp/_wegwerf/tools_seite/t5/ergebnis_introspektion*.json` und
+Schema und Stände: `Architektur2d3dblender`; die letzten zwei Felder je Zeile sind die Ausführungszeiten (lokal, Blender) mit Quelle und Datum, sonst genau „nicht gemessen“ oder „entfällt“. Belege „Blender hat das“: `ProjektTemp/_wegwerf/tools_seite/t5/ergebnis_introspektion*.json` und
 `operatoren.txt` (Blender 5.2.2 LTS, Werksstart, nur Namen). Belege „gemessen“: `Stoffsolver/README.md`, Abschnitt „Messungen“, und
 `Stoffsolver/werkzeug/vergleich_uv*.py`, `vergleich_textur*.py` (Blender im Hintergrundmodus gegen den Solver).
 """
@@ -15,7 +15,7 @@ class Blendervergleichtextur:
     EINLEITUNG = ('UV-Abwicklung, Packen und Backen hat der Stoffsolver aus Blenders Quelltext nachgebaut und gegen Blender 5.2.2 gemessen; die Pipeline '
                   'selbst ruft diesen Teil nicht auf. Fotoprojektion, Decal und Falten sind Eigenbau am Genesis-Modell — Blender hat dafür Texture Paint, '
                   'Project Paint und Bake.')
-    # (Aufgabe, lokales Werkzeug, lokaler Aufruf, lokale Klassen [(Datei, Klasse)], Blender-Werkzeug, Blender-Aufruf, Blender-Stand, Unterschied)
+    # (Aufgabe, lokales Werkzeug, lokaler Aufruf, lokale Klassen [(Datei, Klasse)], Blender-Werkzeug, Blender-Aufruf, Blender-Stand, Unterschied, zeit_lokal, zeit_blender)
     ZEILEN = [
         ('UV abwickeln',
          'Stoffsolver-Abwicklung: Projektion, LSCM, ABF++, SLIM; Löcher, Pins, Symmetrie, Henkel',
@@ -28,7 +28,9 @@ class Blendervergleichtextur:
          'MINIMUM_STRETCH ↔ `slim` (`vergleich_uvslim.py`), dazu Löcher, Pins, Henkel. Ergebnis: gleich bis auf erklärte Gleichstände, Form ~3e-8, Lage ≤ 5e-7 '
          '(`vergleich_uv.py`; `Stoffsolver/README.md`, 02.10.2026). Die Pipeline ruft Blenders UV-Operatoren nicht auf und den Solver-Teil auch nicht: '
          'Kein Treffer für `Uvabwicklung` in HumanBodyWeb, Genesis9, 2d3DIterationen, Assets, HumanBody — außer der Hilfeseite (`stoffsolverumfanguv.py`). '
-         'Die UV der Genesis-Stücke kommen aus Daz (UV je Flächenecke, 5 UDIM-Kacheln, `genesis9.md`), die der GarmentCode-Stücke aus dem Schnitt.'),
+         'Die UV der Genesis-Stücke kommen aus Daz (UV je Flächenecke, 5 UDIM-Kacheln, `genesis9.md`), die der GarmentCode-Stücke aus dem Schnitt.',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('UV packen',
          'Packer des Stoffsolvers: Kasten, konvexe und konkave Form, xatlas, Pins, merge_overlap, Zielkachel',
@@ -40,7 +42,9 @@ class Blendervergleichtextur:
          'Packer-Pins, `merge_overlap` und Zielkachel: Lage ≤ 5,1e-5 in 444 + 168 + 298 Fällen, sieben erklärt (Abbruch der Wurzelsuche bei 1e-4), Rauschgrenze '
          '0 (`vergleich_uv.py packpins packmerge packudim`; `Stoffsolver/README.md`, 03.10.2026). Eine UDIM-Verteilung auf mehrere Kacheln gibt es in 5.2.2 '
          'nicht: `pack_islands` packt alles in ein Quadrat und verschiebt es um einen Versatz (`udim_source` wählt die Zielkachel; README). Die Werte der '
-         'Aufzählungen (shape_method, rotate_method, margin_method) stammen aus der Introspektion (`ergebnis_introspektion4.json`).'),
+         'Aufzählungen (shape_method, rotate_method, margin_method) stammen aus der Introspektion (`ergebnis_introspektion4.json`).',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('Texturen backen',
          'Texturbacker des Stoffsolvers (Lage, Normale, Farbe je Punkt, Dreieck und Material, Foto, UDIM) und `G9texturbacken` für die Genesis-Haut',
@@ -52,7 +56,9 @@ class Blendervergleichtextur:
          'Gemessen: Cycles EMIT mit Rand 0 gegen `Texturbacker.farbe_je_punkt`, `farbe_je_dreieck` und `farbe_je_material` auf derselben UV, dazu UDIM-Kacheln und '
          'die Bildabtastung (`vergleich_texturbake.py`, `vergleich_texturudim.py`; Aufruf in Blender: `blender_textur_lauf.py`). Ohne Blender-Gegenstück: '
          'Fotoprojektion, Mipmaps, weiches Mischen (Eigenbau, `Stoffsolver/README.md`). Die Genesis-Haut backt das Projekt mit `G9texturbacken` (Fotohaut je '
-         'UDIM-Kachel, Seite 2048); den Texturbacker des Solvers ruft die Pipeline nicht auf.'),
+         'UDIM-Kachel, Seite 2048); den Texturbacker des Solvers ruft die Pipeline nicht auf.',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('Haut und Textur aus Fotos',
          'Fotoprojektion je Texel auf Körper, Kleid und Haar (Normierung über Figurhöhe und Rumpfschwerpunkt statt Kamera)',
@@ -66,7 +72,10 @@ class Blendervergleichtextur:
          'Alle drei Bausteine gibt es in 5.2.2 (Operatoren und Modifier UV_PROJECT; Introspektion). Das Projekt hat die Projektion mit eigener Normierung gebaut: '
          'je Texel Gewicht Normale · Blick⁴, Teilmasken je Stück, Lückenfüllung per Push-Pull; Kunstfoto am Base Shirt: 89 % der Texel getroffen, 4,4 s '
          '(`ortsmorphe.md`, 01.10.2026). Das Konzept 30.09.2026 §6.2 erwartet, dass Blender es als Arbeiter rechnen KÖNNTE (`project_image` je Ansicht); gebaut ist '
-         'das nicht, Zeiten dafür sind nicht gemessen.'),
+         'das nicht, Zeiten dafür sind nicht gemessen.',
+         '4,4 s (Kunstfoto am Base Shirt, 89 % der Texel getroffen; ortsmorphe.md, 01.10.2026); 16,0–16,6 s je Runde mit kleid_fototextur '
+         '(workflowzeiten.py, auftrag.log, 02.10.2026)',
+         'nicht gemessen'),
 
         ('Decal und Malen von Hand',
          'Decal (Farbe oder Bild an einem Ort) und Malen von Hand auf der Bühne (Kreise in eine Decal-Schicht)',
@@ -77,7 +86,9 @@ class Blendervergleichtextur:
          'vorhanden',
          'Vorhanden sind die Operatoren und die Pinsel-Asset-Datei (`ergebnis_introspektion.json`, `operatoren.txt`). Das Projekt malt ohne Blender: Raycast auf die '
          'GLB der Runde, UV in glTF-Konvention, Kreise in eine Decal-Schicht (20 Striche 0,05 s; `ortsmorphe.md`, 01.10.2026). Konzept 30.09.2026 §6.2: Eine '
-         'Maske in UV zu malen ist in Pillow eine Zeile — deshalb nicht über Blender.'),
+         'Maske in UV zu malen ist in Pillow eine Zeile — deshalb nicht über Blender.',
+         '0,05 s für 20 Striche (Malen auf der Bühne); Decal am Base Shirt 0,4 s (Texelraum dort einmalig 2,2 s); ortsmorphe.md, 01.10.2026',
+         'nicht gemessen'),
 
         ('Falten backen',
          'Faltenkarte (Normalkarte), prozedural oder aus der Simulation gebacken',
@@ -88,5 +99,7 @@ class Blendervergleichtextur:
          'vorhanden',
          'Alle Bausteine stehen in 5.2.2 (MULTIRES, `object.bake` mit Typ NORMAL, `sculpt.cloth_filter`; Introspektion). Das Projekt backt die Normale der verschobenen '
          'Fläche im Tangentenraum je Texel (Lengyel-Tangenten, UV-Handigkeit über die Bitangente): Base Shirt aus `drapiert` 2,6 s, 90 % der Shirt-Texel gekippt '
-         '(`ortsmorphe.md`, 01.10.2026). Vorbild laut Konzept 30.09.2026 §3.1: Multires und Bake from Multires.'),
+         '(`ortsmorphe.md`, 01.10.2026). Vorbild laut Konzept 30.09.2026 §3.1: Multires und Bake from Multires.',
+         '2,6 s (Base Shirt aus drapiert; ortsmorphe.md, 01.10.2026)',
+         'nicht gemessen'),
     ]

@@ -187,8 +187,10 @@ class Werkzeugstoffvergleich:
              R + 'vergleich_haarform.py [wurzeln] [wachsen] [pfade] [kinder] [kamm] [vierecke] [ecken] [volumen]',
              '# ohne Angabe alle Teile; Ergebnisse: _vergleich/haarform/')),
          [(W + 'haarform_blender.py', 'Haarformblender'), (W + 'haarform_tabelle.py', 'Haarformtabelle'), (W + 'haarform_wurzeln.py', 'Wurzelvergleich'),
-          (W + 'haarform_wachsen.py', 'Wachsvergleich'), (W + 'haarform_pfade.py', 'Pfadvergleich'), (W + 'haarform_kinder.py', 'Kindervergleich'), (W + 'haarform_kamm.py', 'Kammprobe')],
-         'Ergebnis (README, 02.10.2026): gleich, höchstens 0,0016 mm. Der Kamm läuft nur als Probe (brush_edit stürzt in Blender im Hintergrund ab).'),
+          (W + 'haarform_wachsen.py', 'Wachsvergleich'), (W + 'haarform_pfade.py', 'Pfadvergleich'), (W + 'haarform_kinder.py', 'Kindervergleich'), (W + 'haarform_kamm.py', 'Kammprobe'),
+          (W + 'haarform_kammfenster.py', 'Kammfenster'), (W + 'haarform_kammszenen.py', 'Kammszenen')],
+         'Ergebnis (README, 02.10.2026): gleich, höchstens 0,0016 mm. Der Kamm: `brush_edit` stürzt in Blender im Hintergrund ab (die Probe `Kammprobe` belegt das); `Kammfenster` startet Blender MIT Fenster '
+         '(zweimal, rund 15 s je Lauf, ein Fenster erscheint auf dem Bildschirm) und vergleicht 13 Szenen: gleich, höchstens 0,00087 mm bei 2,97 bis 178 mm Wirkung (03.10.2026).'),
         ('Haar-Pfade: Effektoren, Kurven, Texturen, Bearbeitung, Vielecke (vergleich_haarrest.py)',
          'Die übrigen Haar-Funktionen gegen Blender: Kraftfelder auf Pfaden, Führungskurven, Texturen, Edit-Modus, Vielecke als Emitter.',
          'cli',
@@ -263,7 +265,7 @@ class Werkzeugstoffvergleich:
     BEZIEHUNGEN = [
         ('VergleichFedern', 'ruft', 'FederBlender', 'der Blender-Lauf eines Falls'),
         ('VergleichFedern', 'ruft', 'FederVergleich', 'die Maße und das Urteil je Fall'),
-        ('VergleichFedern', 'ruft', 'FederThemaGruppen', 'thema(name): je Thema eine Klasse, hier gruppen (ebenso FederThemaPresets für presets)'),
+        ('VergleichFedern', 'ruft', 'FederThemaGruppen', 'VergleichFedern.thema(name): je Thema eine Klasse, hier gruppen (ebenso FederThemaPresets für presets)'),
         ('VergleichPins', 'ruft', 'Pinfaelle', 'die Fälle für weich und bewegt'),
         ('VergleichPins', 'ruft', 'Windfaelle', 'die Fälle für wind'),
         ('VergleichPins', 'ruft', 'Vergleichsszene', 'eine Beschreibung → Auftrag für Blender und für den Solver'),

@@ -31,8 +31,22 @@ class Architektur2d3dwerkzeuge:
         'regel': 'Regel',
     }
     PFAD = Path(__file__).resolve().parent
-    #: Reihenfolge der Gruppen nach `KENNUNG`; nicht genannte folgen alphabetisch nach Dateiname.
-    REIHENFOLGE = []
+    #: Die Bereiche der Seite in Edgars Reihenfolge (03.10.2026): (Titel, Hinweis, Kennungen der Gruppen). Gruppen, die hier fehlen, stehen unter „Weitere".
+    BEREICHE = [
+        ('Genesis: Körper, Gesicht, Haut', 'Morphs und Regler des Körpers einschließlich Gesicht, Haltung, Haut — die Form der Figur.',
+         ['koerper', 'proportionen', 'meshfigur', 'haltung', 'gesicht', 'haut']),
+        ('Genesis: Kleider und Kleider-Morphs', 'Kleidung generisch, Morphe, Garderobe, GarmentCode, Fototextur, Fotostücke, die Wahl des Drapierers.',
+         ['rezeptkleidung', 'kleidform', 'kleidgenerisch', 'garderobe', 'garmentcode', 'kleidtextur', 'fotostuecke', 'drapieren', 'kleidbau',
+          'kleiderautomatik', 'kleidunghilfe']),
+        ('Genesis: Haar', 'Haar generisch, Haare formen, Haar aus Fotos.', ['haar', 'haarform', 'haarfoto']),
+        ('Aus Blender übernommen: der Stoffsolver', 'Blenders Cloth, Haar-Dynamik und UV als Python/Warp-Paket, mit den Vergleichswerkzeugen.',
+         ['stoffsolver', 'stofffedern', 'stofffelder', 'stoffhaar', 'stoffuv', 'stoffvergleich']),
+        ('Bildvergleich mit den Fotos aus allen Seiten', 'Erst gering aufgelöst, höhere Auflösung, wenn die Unterschiede klein sind.',
+         ['bildfotos', 'bildrender', 'bildnote', 'bildstufen', 'bildtafeln', 'bildbefund', 'bildserver', 'bildlauf']),
+        ('Schleifen über Blender (nur nach Ansage)', 'Der Blender-Weg, wenn der Stoffsolver nicht funktioniert — nur nach Ansage von Edgar.',
+         ['blenderschleife', 'blenderweitere']),
+    ]
+    WEITERE = ('Weitere', 'Gruppen, die keinem Bereich zugeordnet sind.')
     #: Was jede Session beim Benutzen der Tools wissen muss — jede Zeile steht an anderer Stelle des Codes oder der Regeln, hier nur gesammelt.
     REGELN = [
         ('Schleifen und Runden nur nach Ansage',
@@ -69,7 +83,7 @@ class Architektur2d3dwerkzeuge:
                 gefunden.append((stem, None, 'Klasse %s mit KENNUNG fehlt' % stem.capitalize()))
                 continue
             gefunden.append((stem, klasse, ''))
-        rang = {k: i for i, k in enumerate(cls.REIHENFOLGE)}
+        rang = {k: i for i, k in enumerate(kennung for _t, _h, kennungen in cls.BEREICHE for kennung in kennungen)}
         return sorted(gefunden, key=lambda g: (rang.get(getattr(g[1], 'KENNUNG', ''), len(rang)), g[0]))
 
     @classmethod
@@ -136,12 +150,26 @@ class Architektur2d3dwerkzeuge:
                 'beziehungen': len(beziehungen), 'befunde': befunde}
 
     @classmethod
+    def bereiche(cls, gruppen):
+        """Die Gruppen je Bereich in der Reihenfolge von `BEREICHE`; was in keinem steht, kommt unter „Weitere" ans Ende."""
+        vergeben = {k for _t, _h, kennungen in cls.BEREICHE for k in kennungen}
+        eintraege = [(t, h, kennungen) for t, h, kennungen in cls.BEREICHE]
+        eintraege.append((cls.WEITERE[0], cls.WEITERE[1], [g['kennung'] for g in gruppen if g['kennung'] not in vergeben]))
+        aus = []
+        for titel, hinweis, kennungen in eintraege:
+            vorhanden = [g for g in gruppen if g['kennung'] in kennungen]
+            if vorhanden:
+                aus.append({'titel': titel, 'hinweis': hinweis, 'gruppen': vorhanden, 'werkzeuge': sum(len(g['zeilen']) for g in vorhanden)})
+        return aus
+
+    @classmethod
     def kontext(cls):
         geprueft = {}
         gruppen = [cls.gruppe(stem, klasse, fehler, geprueft) for stem, klasse, fehler in cls.gruppenklassen()]
         befunde = [b for g in gruppen for b in g['befunde']]
         return {
             'gruppen': gruppen,
+            'bereiche': cls.bereiche(gruppen),
             'regeln': [{'regel': r, 'umsetzung': u} for r, u in cls.REGELN],
             'zaehlung': {'gruppen': len(gruppen), 'werkzeuge': sum(len(g['zeilen']) for g in gruppen),
                          'klassen': sum(len(g['modell']) for g in gruppen), 'beziehungen': sum(g['beziehungen'] for g in gruppen)},

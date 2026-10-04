@@ -33,11 +33,13 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-    def test_katalog_hat_sechs_gruppen_und_die_rollen(self):
+    def test_katalog_hat_sieben_gruppen_und_die_rollen(self):
         katalog = Engine2d3dKleideroptionen.katalog()
         # Seit dem 30.09.2026 abends fünf Gruppen: Netz (TRELLIS) und Körper kamen mit „2D3D Kleider" dazu; seit dem
-        # 02.10.2026 die sechste, `mesh` (die Regler von TRELLIS.2, `test_engine2d3dkleider_meshoptionen.py`).
-        self.assertEqual(set(katalog), {'figur', 'netz', 'mesh', 'koerper', 'iterationen', 'film', 'rollen'})
+        # 02.10.2026 die sechste, `mesh` (die Regler von TRELLIS.2, `test_engine2d3dkleider_meshoptionen.py`); seit dem
+        # 03.10.2026 die siebte, `vorbereitung` (Körper senkrecht stellen, `test_engine2d3dkleider_vorbereitung.py`).
+        # Seit dem 04.10.2026 die achte, `segmentierung` (Sapiens, optional, `test_engine2d3dkleider_segmentierung.py`).
+        self.assertEqual(set(katalog), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film', 'rollen'})
         figur = [f['schluessel'] for f in katalog['figur']['optionen']]
         self.assertEqual(sorted(figur), ['basis', 'modell'])
         iterationen = {f['schluessel']: f for f in katalog['iterationen']['optionen']}
@@ -60,7 +62,7 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
         optionen = Engine2d3dKleideroptionen.pruefen(
             {'netz': {'formmodell': 'trellis2'}, 'figur': 'kein dict', 'x': 1}
         )
-        self.assertEqual(set(optionen), {'figur', 'netz', 'mesh', 'koerper', 'iterationen', 'film'})
+        self.assertEqual(set(optionen), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film'})
         self.assertEqual(optionen['netz']['formmodell'], 'trellis2')
         self.assertEqual(optionen['figur']['basis'], 'feminine')
         self.assertEqual(Engine2d3dKleideroptionen.pruefen(None), Engine2d3dKleideroptionen.pruefen({}))
@@ -92,7 +94,9 @@ class Engine2d3dKleiderlaufTest(SimpleTestCase):
     def test_die_grundfigur_kommt_zuerst_und_es_gibt_kein_netz_aus_fotos(self):
         # Seit dem 30.09.2026 abends beginnt der Lauf mit dem Netz aus den Fotos (TRELLIS) und dem Körper dazu;
         # die Grundfigur mit Rig folgt darauf (Engine2d3dKleidernetz, Engine2d3dKleiderkoerper).
-        self.assertEqual(Engine2d3dKleiderlauf.SCHRITTE[:3], ('netz', 'koerper', 'grundfigur'))
+        # Seit dem 03.10.2026 steht die Vorbereitung der Fotos (Freistellen, Ausrichten, Zuschnitt) als eigener Schritt davor.
+        # Seit dem 04.10.2026 steht die optionale Segmentierung (Sapiens) zwischen Netz und Körper.
+        self.assertEqual(Engine2d3dKleiderlauf.SCHRITTE[:5], ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur'))
         quelle = inspect.getsource(Engine2d3dKleiderlauf.schrittfolge).lower()
         self.assertNotIn('_run_mesh', quelle, 'das Netz rechnet der Runner (Engine2d3dKleidernetz), nicht die Schrittfolge')
 

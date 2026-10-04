@@ -78,10 +78,12 @@ class Meshfigurkleidung:
             landmarken = daten.landmarken()
             karte = Meshfigurhautkarte(scan, modell, landmarken['koerper'], landmarken.get('treffer'))
             entscheidung = karte.rechnen()
-        maske = Kleidungsmaske(scan.punkte, scan.flaechen, entscheidung['haut'], landmarken['koerper'],
-                               landmarken.get('gesicht'), karte).rechnen()
+        regel = Kleidungsmaske(scan.punkte, scan.flaechen, entscheidung['haut'], landmarken['koerper'],
+                               landmarken.get('gesicht'), karte)
+        maske, sapiens = self._sapiens(regel, regel.rechnen(), karte, scan, daten)
+        # `maske['haut']`, nicht `entscheidung['haut']`: der Hautton nur dort, wo kein Stück gilt (`Kleidungsmaske.abschliessen`) — mit der Sapiens-Maske stand er sonst auf Hose und Socken.
         np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz'), kleidung=maske['kleidung'],
-                            stueck=maske['stueck'], haut=entscheidung['haut'])
+                            stueck=maske['stueck'], haut=maske['haut'])
         teilung = Kleidungsteilung(scan.punkte, scan.flaechen, scan.uv_ecken, entscheidung['farben'], maske,
                                    karte.inhalt)
         t1 = time.perf_counter()
@@ -94,6 +96,26 @@ class Meshfigurkleidung:
             'bilder': bilder,
             'sekunden': {'erkennen': round(t1 - t0, 1), 'bilder': round(time.perf_counter() - t1, 1)},
         }
+        if sapiens is not None:
+            self.job.ergebnis['kleidung']['sapiens'] = sapiens
+
+    def _sapiens(self, regel, maske, karte, scan, daten):
+        """`(maske, bericht)`: die Sapiens-Fassung der Maske (`Kleidung/sapiensmaske.py`), wenn der Lauf sie verlangt — `lauf.sapiens_maske` setzt nur „2D3D Kleider" aus der Option
+        `segmentierung.verwenden`, „Mesh to 3D" hat das Attribut nicht — UND die Stimmen des Schritts „Segmentierung" zu diesem Netz passen. Sonst die Regel unverändert; der
+        Grund steht im Bericht (`ergebnis.kleidung.sapiens`), nie ein stilles Zurückfallen."""
+        if not getattr(self.lauf, 'sapiens_maske', False):
+            return maske, None
+        from Kleidung.sapiensmaske import Sapiensmaske
+
+        try:
+            stimmen = Sapiensmaske.laden(self.ablage.arbeit(), daten.auftrag['netz'], len(scan.flaechen))
+        except Sapiensmaske.Unbrauchbar as grund:
+            logger.warning('Kleidung %s: Sapiens-Maske nicht benutzt (%s) — Farbe und Lage gelten', self.job.kennung, grund)
+            return maske, {'verwendet': False, 'grund': str(grund)}
+        stueck, bericht = Sapiensmaske(stimmen, karte, karte.inhalt, regel.mitte, regel.kopf_ab()).verbinden(maske['stueck'])
+        logger.info('Kleidung %s: Sapiens-Maske, %d von %d Flächen anders als die Regel', self.job.kennung,
+                    bericht['flaechen_geaendert'], len(scan.flaechen))
+        return regel.abschliessen(stueck), bericht
 
     def bilder(self, scan, teilung):
         """`{teil: {ansicht: Datei}}` — beide Teile im selben Ausschnitt (der ganze Körper)."""

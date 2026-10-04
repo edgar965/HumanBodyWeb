@@ -1,5 +1,10 @@
 /* Hilfe → Architektur → 2D3D, Reiter „Tools": Tabelle der Werkzeuge und Beziehungen im Klassenmodell. Die Kästen (.wf-karte) kommen aus hilfe_architektur_2d3d_workflow.css. */
 .tw-gruppe { scroll-margin-top: 4rem; }
+.tw-bereich { margin-top: 2rem; padding-top: 0.4rem; border-top: 2px solid var(--accent, #4a90d9); }
+.tw-bereich-zeile td { background: var(--bg-tertiary, rgba(127, 127, 127, 0.12)); }
+.tw-modell { margin: 0.4rem 0; scroll-margin-top: 4rem; }
+.tw-modell > summary { cursor: pointer; padding: 0.35rem 0.6rem; font-weight: 600; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; }
+.tw-modell[open] > summary { margin-bottom: 0.6rem; }
 .tw-regeln { margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.86rem; }
 .tw-regeln li { margin-bottom: 0.25rem; }
 .tw-tabelle td { vertical-align: top; font-size: 0.84rem; }
@@ -7,6 +12,9 @@
     margin: 0; padding: 0.3rem 0.5rem; white-space: pre-wrap; word-break: break-word; font-size: 0.78rem;
     background: var(--bg-secondary, rgba(127, 127, 127, 0.12)); border: 1px solid var(--border); border-radius: 4px; max-width: 34rem;
 }
+.tw-tabelle { width: 100%; }
+.tw-tabelle td:nth-child(3) { min-width: 16rem; }
+.tw-klassen { min-width: 11rem; max-width: 24rem; }
 .tw-klassen a { text-decoration: none; margin-right: 0.4rem; font-family: monospace; font-size: 0.78rem; white-space: nowrap; }
 .tw-hinweis { margin-top: 0.3rem; color: var(--text-muted); font-size: 0.78rem; }
 .tw-art { display: inline-block; padding: 0 0.45rem; border-radius: 999px; font-size: 0.7rem; border: 1px solid var(--zf, var(--border)); color: var(--zf, var(--text-muted)); white-space: nowrap; }

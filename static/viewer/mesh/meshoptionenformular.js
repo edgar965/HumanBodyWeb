@@ -2,8 +2,8 @@
  * Meshoptionenformular — baut die Optionsfelder aus `Meshoptionen.katalog()` (JSON im
  * `#mesh-katalog`-Script-Tag oder per fetch) in einen Behälter.
  *
- * Jedes Feld nach `art`: `wahl` → `<select>`, `mehrfach` → Kästchen, `zahl` → `<input
- * type="number">`. Eine Option mit `fehlt` (Text) wird angezeigt, aber deaktiviert —
+ * Jedes Feld nach `art`: `wahl` → `<select>`, `mehrfach` → Kästchen, `haken` → ein Häkchen
+ * (Werte `an`/`aus` des Katalogs), `zahl` → `<input type="number">`. Eine Option mit `fehlt` (Text) wird angezeigt, aber deaktiviert —
  * genau der Fall „Formmodell noch nicht heruntergeladen/verdrahtet".
  *
  * Felder mit `fein` (die Stellschrauben der Pipelines selbst, seit 27.09.2026) stehen in
@@ -74,6 +74,10 @@ export class Meshoptionenformular {
             zeile.appendChild(Meshoptionenformular._zahl(feld, wert));
         } else if (feld.art === 'text') {
             zeile.appendChild(Meshoptionenformular._text(feld, wert));
+        } else if (feld.art === 'haken') {
+            zeile.appendChild(Meshoptionenformular._haken(feld, wert));
+        } else if (feld.art === 'farbe') {
+            zeile.appendChild(Meshoptionenformular._farbe(feld, wert));
         }
         // Nur bei den Feineinstellungen steht der Hinweis auch als Text da — sie sind neu
         // und erklärungsbedürftig; bei den Hauptfeldern bliebe es beim Tooltip, sonst wird
@@ -131,6 +135,30 @@ export class Meshoptionenformular {
         return eingabe;
     }
 
+    /**
+     * Ein einzelnes Häkchen — Art `haken` (03.10.2026, „Körper senkrecht stellen" von „2D3D Kleider"): angehakt liefert `lesen` den Wert `feld.an`, sonst `feld.aus`
+     * (zwei Werte des Katalogs, kein Wahrheitswert — der Server speichert, was im Katalog steht).
+     */
+    static _haken(feld, wert) {
+        const eingabe = document.createElement('input');
+        eingabe.type = 'checkbox';
+        eingabe.name = feld.schluessel;
+        eingabe.dataset.an = feld.an;
+        eingabe.dataset.aus = feld.aus;
+        eingabe.checked = wert === feld.an;
+        return eingabe;
+    }
+
+    /** Farbwähler — Art `farbe` (04.10.2026, Renderregler): Wert `#rrggbb`. */
+    static _farbe(feld, wert) {
+        const eingabe = document.createElement('input');
+        eingabe.type = 'color';
+        eingabe.name = feld.schluessel;
+        eingabe.className = 'viewer-eingabe';
+        eingabe.value = String(wert ?? '#808080');
+        return eingabe;
+    }
+
     /** Textfeld (Pfad, Name) — Art `text`, seit dem 29.09.2026 für die BVH-Datei von „BlenderModel". */
     static _text(feld, wert) {
         const eingabe = document.createElement('input');
@@ -151,6 +179,8 @@ export class Meshoptionenformular {
             aus[eingabe.name] = Number(eingabe.value);
         }
         for (const eingabe of behaelter.querySelectorAll('input[type="text"][name]')) aus[eingabe.name] = eingabe.value;
+        for (const eingabe of behaelter.querySelectorAll('input[type="color"][name]')) aus[eingabe.name] = eingabe.value;
+        for (const eingabe of behaelter.querySelectorAll('input[type="checkbox"][name]')) aus[eingabe.name] = eingabe.checked ? eingabe.dataset.an : eingabe.dataset.aus;
         for (const gruppe of behaelter.querySelectorAll('.mesh-kaestchengruppe[data-feld]')) {
             aus[gruppe.dataset.feld] = [...gruppe.querySelectorAll('input:checked')].map(k => k.value);
         }

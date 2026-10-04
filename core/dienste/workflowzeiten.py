@@ -23,6 +23,14 @@ class Workflowzeiten:
               'Läufen als eigener Prozess über denselben Auftrag, Z oben, nichts angeheftet')
 
     # ------------------------------------------------------------------ Lauf (je Auftrag einmal)
+    VORBEREITUNG = Z(hinweis='neu seit 03.10.2026, noch nicht gemessen (BiRefNet laden, Freistellen und Zuschnitt je Foto)')
+    SEGMENTIERUNG = Z(
+        23.0,
+        30.0,
+        'Auftrag 2026.10.01.20.10.04, Schritt allein gestartet, zwei Läufe (23 s und 30 s Auftragszeit), 3 Fotos, 94.970 Flächen, 04.10.2026',
+        'optional (segmentierung.verwenden); Sapiens-1B laden (rund 7 s), je Foto segmentieren, Netz je Ansicht rastern und abstimmen. Beim ersten Lauf kommen die 4,7 GB '
+        'Gewichte dazu (Download ~6 min bei 11 MB/s, nicht im Auftrag gemessen)',
+    )
     NETZ = Z(
         428.3,
         752.6,
@@ -82,7 +90,7 @@ class Workflowzeiten:
     RENDERN_1 = Z(8.7, 10.5, KALT, 'im ersten Bild der Szenenaufbau (warm: 2,7–3,4 s)')
     RENDERN_2 = Z(0.1, 0.2, WARM + ' und ' + KALT)
     RENDERN_3 = Z(12.6, 14.7, KALT, 'danach Netznote, Befund, Messgüte, Gesichtsmaße (warm: 12,9–13,3 s)')
-    PRUEFBILDER = Z(21.1, 24.0, KALT, 'Kopftafel und Vergleichstafel in Prüfbreite; vor Runde 20 7,7–12,9 s')
+    PRUEFBILDER = Z(21.1, 24.0, KALT, 'Kopftafel in Prüfbreite (die Vergleichstafel entsteht im Abschnitt ablegen, Begutachtungsrunde._ablegen); vor Runde 20 7,7–12,9 s')
     ABLEGEN = Z(5.9, 7.1, KALT)
     RUNDE_WARM = Z(
         27.7,

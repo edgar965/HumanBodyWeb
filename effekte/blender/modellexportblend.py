@@ -35,6 +35,7 @@ def argumente(argv):
     parser.add_argument('--blend', required=True)
     parser.add_argument('--fps', type=int, default=30)
     parser.add_argument('--polygone', type=float, default=1.0)
+    parser.add_argument('--audio', default='', help='Audiodatei: läuft als Tonstreifen im Sequenzer mit (03.10.2026)')
     # Blender reicht alles vor "--" unverändert mit durch; nur der Teil danach
     # gehört uns.
     trenner = argv.index('--') if '--' in argv else len(argv)
@@ -153,6 +154,23 @@ def zeitleiste():
     return {'aktionen': [a.name for a in aktionen], 'von': von, 'bis': bis}
 
 
+def tonspur(pfad):
+    """Die Audiodatei als Tonstreifen in den Sequenzer legen (Bild 1, Kanal 1) — Leertaste spielt Bewegung und Ton zusammen.
+
+    Edgar, 03.10.2026: Audio als Option des Exports (Vorgabe: die Audiospur des Studio-Projekts). Eine GLB kann kein Audio tragen,
+    die `.blend` schon. Blender 4.4 hat `sequences` in `strips` umbenannt — beides wird versucht. Die Szene reicht bis zum Ende der
+    Animation, nicht bis zum Ende des Stücks: Der Streifen läuft länger, wird aber beim Abspielen am Szenenende abgeschnitten.
+    """
+    szene = bpy.context.scene
+    editor = szene.sequence_editor_create()
+    streifen = getattr(editor, 'strips', None)
+    if streifen is None:
+        streifen = editor.sequences
+    ton = streifen.new_sound('Audio', pfad, 1, int(szene.frame_start))
+    ton.sound.pack()        # in die .blend einpacken: Sie bleibt abspielbar, auch wenn man sie verschiebt
+    return {'datei': pfad, 'bilder': int(ton.frame_final_duration)}
+
+
 def fps_setzen(fps):
     """Die Szenen-FPS auf die Exportrate setzen — die GLB ist im Browser schon
     genau in dieser Rate abgetastet (`clipabtastung.js`), so liegt jedes
@@ -224,9 +242,10 @@ def main():
     ansichten = materialvorschau()
     blick = ansicht_auf_figur()
     spur = zeitleiste()
+    ton = tonspur(a.audio) if a.audio else None
     bpy.ops.wm.save_as_mainfile(filepath=a.blend)
     print('modellexportblend: geschrieben %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s, FPS %s, '
-          'Polygone %s)' % (a.blend, fremd, ansichten, blick, spur, fps, polygone), flush=True)
+          'Polygone %s, Ton %s)' % (a.blend, fremd, ansichten, blick, spur, fps, polygone, ton), flush=True)
 
 
 if __name__ == '__main__':

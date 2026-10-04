@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Iterationsreferenz — die Vorlagenbilder aus der Bildauswahl des Auftrags, je mit Blickwinkel und Gewicht.
 
-Verwendet wird jedes Foto, dessen Rolle nicht „aus" ist und das ein Gewicht über 0 hat. Den Blickwinkel
+Verwendet wird jedes Foto, dessen Rolle nicht „aus" ist und das ein Gewicht über 0 hat — auch die der Rolle „Nur
+Iterationen" (`Engine2d3dKleiderrollen`: kommt nicht in den Schritt „netz", zählt hier, Winkel am Foto). Den Blickwinkel
 (Grad ab vorn, positiv zur LINKEN Seite der Figur) nimmt es in dieser Reihenfolge:
 
     1. `winkel` am Foto — von Hand in den Eintrag der Bildauswahl gesetzt
@@ -76,8 +77,9 @@ class Iterationsreferenz:
                 continue
             original = eintrag.get('original') or eintrag['datei']
             gewicht = float(eintrag.get('gewicht') or 100) / 100.0
+            # `farbe: false` am Foto (Bildauswahl, „Nur Iterationen"): nur Form, nicht Farbe und Textur (`Engine2d3dKleiderrollen`)
             aus.append(cls(eintrag['datei'], original, winkel, gewicht, cls.bild(ablage, eintrag['datei']),
-                           farbe=eintrag.get('datei') not in anders))
+                           farbe=eintrag.get('datei') not in anders and eintrag.get('farbe') is not False))
         return aus, ausgelassen
 
     @staticmethod

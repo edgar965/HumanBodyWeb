@@ -11,6 +11,18 @@
  */
 export class Engine2d3dKleidermeshkarte {
 
+    /** Die KI des Schritts „Netz" (Option `mesh.modell`) — die Namen der Auswahl in der Liste und im Feld „Modell" dieser Karte. */
+    static KI = { trellis2: 'TRELLIS.2', pixal3d: 'Pixal3D', pixal3d_mv: 'Pixal3D Mehrbild' };
+
+    static ki(z) {
+        return Engine2d3dKleidermeshkarte.KI[z?.optionen?.mesh?.modell] || Engine2d3dKleidermeshkarte.KI.trellis2;
+    }
+
+    /** Der Name eines Schritts in der Laufleiste und in „ab"/„bis": „Netz" trägt die gewählte KI (vorher fest „TRELLIS"). `standard` = der feste Name. */
+    static schrittname(schritt, z, standard) {
+        return schritt === 'netz' ? `Netz (${Engine2d3dKleidermeshkarte.ki(z)})` : standard;
+    }
+
     constructor(seite) {
         this.seite = seite;
         const behaelter = document.getElementById('engine2d3dkleider-optionen-mesh');
@@ -35,5 +47,14 @@ export class Engine2d3dKleidermeshkarte {
     zeigen(z) {
         this.knopf.disabled = !!z.laeuft;
         this.knopf.querySelector('span').textContent = z.laeuft ? 'Berechnet …' : 'Mesh erzeugen';
+        // Überschrift, Knopf und Schrittauswahl nennen die gewählte KI, nicht fest TRELLIS.2.
+        const ki = Engine2d3dKleidermeshkarte.ki(z);
+        const titel = document.getElementById('engine2d3dkleider-ki');
+        if (titel) titel.textContent = ki;
+        this.knopf.title = `Rechnet nur den Schritt „Netz" (Fotos → Netz mit ${ki}). Körper, Grundfigur und die übrigen ` +
+            'Schritte starten danach einzeln: „ab" und „bis" in der Laufleiste oben.';
+        for (const wahl of document.querySelectorAll('#ab-schritt option[value="netz"], #bis-schritt option[value="netz"]')) {
+            wahl.textContent = Engine2d3dKleidermeshkarte.schrittname('netz', z);
+        }
     }
 }

@@ -24,6 +24,7 @@ from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from ..daten.wrapperpfad import Wrapperpfad
 from ..pipeline_process import PipelineProzess, PipelineStille
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
+from .engine2d3dkleiderrollen import Engine2d3dKleiderrollen
 from .engine2d3dkleidervorlage import Engine2d3dKleidervorlage
 from .meshicon import Meshicon
 from .meshoptionen import Meshoptionen
@@ -43,7 +44,8 @@ class Engine2d3dKleidernetz:
         self.job = lauf.job
         self.ablage = lauf.ablage
         # Gruppe `mesh` (Interface von TRELLIS.2: Auflösung, Seed, Flächen, Texturgröße, Sampler) liegt über `netz`.
-        self.optionen = dict(Engine2d3dKleideroptionen.netz(self.job.optionen), **Engine2d3dKleideroptionen.mesh(self.job.optionen))
+        self.optionen = dict(Engine2d3dKleideroptionen.netz(self.job.optionen), **Engine2d3dKleideroptionen.mesh(self.job.optionen),
+                             **Engine2d3dKleideroptionen.vorbereitung(self.job.optionen))
         # Die Wahl „Modell" der Gruppe `mesh` ist das `formmodell` des Runners (trellis2 | pixal3d | pixal3d_mv, `mesh_pixal3d`).
         self.optionen['formmodell'] = self.optionen.get('modell', 'trellis2')
         self._ergebnis = None
@@ -76,24 +78,16 @@ class Engine2d3dKleidernetz:
     def beschreibung(self):
         """Was der Runner rechnen soll — Pfade, Rollen, Optionen (JSON-Datei `netz_arbeit/auftrag.json`)."""
         job = self.job
-        bilder = []
-        for name in self._reihenfolge():
-            eintrag = job.bild(name) or {}
-            bilder.append({
-                'datei': name,
-                'pfad': str(self.ablage.unter(Engine2d3dKleiderablage.EINGANG) / name),
-                'rolle': Meshoptionen.rolle_pruefen(eintrag.get('rolle')),
-                'gewicht': Meshoptionen.gewicht_pruefen(eintrag.get('gewicht', 100)),
-                'bereich': Meshoptionen.bereich_pruefen(eintrag.get('bereich')),
-            })
+        bilder = self.bilder_fuer(job, self.ablage)
         if not bilder:
             raise RuntimeError('Keine Fotos in der Bildauswahl')
         return {
             'kennung': job.kennung,
             'name': job.name,
             'ab': None,
-            # Fotos mit anderer Kleidung fallen vor der Form heraus (`mesh_fotopruefung`, 01.10.2026).
-            'optionen': dict(self.optionen, fotopruefung='an'),
+            # Fotos mit anderer Kleidung fallen vor der Form heraus (`mesh_fotopruefung`, 01.10.2026) — Vorgabe an; die Option
+            # `fotopruefung` der Gruppe `mesh` schaltet es aus (03.10.2026: Seitenfoto im Mehrbild prüfen).
+            'optionen': dict(self.optionen, fotopruefung=self.optionen.get('fotopruefung', 'an')),
             'bilder': bilder,
             'ordner': {
                 'vorbereitet': str(self.ablage.unter(Engine2d3dKleiderablage.VORBEREITET)),
@@ -103,13 +97,33 @@ class Engine2d3dKleidernetz:
             'wurzeln': {'videotobvh': str(settings.VIDEOTOBVH_ROOT)},
         }
 
-    def _reihenfolge(self):
+    @classmethod
+    def bilder_fuer(cls, job, ablage):
+        """Die Fotos, die der Runner bekommt (Schritte „vorbereitung" und „netz"): Datei, Pfad, Rolle, Gewicht, Bereich — in der Reihenfolge der
+        Bildauswahl. Auch die Seite fragt es (`Engine2d3dKleidervorbereitungsliste`: gehört die abgelegte Vorbereitung noch zu diesen Fotos?)."""
+        bilder = []
+        for name in cls._reihenfolge(job, ablage):
+            eintrag = job.bild(name) or {}
+            bilder.append({
+                'datei': name,
+                'pfad': str(ablage.unter(Engine2d3dKleiderablage.EINGANG) / name),
+                'rolle': Meshoptionen.rolle_pruefen(eintrag.get('rolle')),
+                'gewicht': Meshoptionen.gewicht_pruefen(eintrag.get('gewicht', 100)),
+                'bereich': Meshoptionen.bereich_pruefen(eintrag.get('bereich')),
+            })
+        return bilder
+
+    @staticmethod
+    def _reihenfolge(job, ablage):
         """Die Fotos in der Reihenfolge der Bildauswahl (Platz 1 zuerst — bei „Automatisch" gilt das erste als
         „vorne"), dahinter, was nur im Ordner liegt. Ein Foto mit Rolle „aus" bleibt draußen."""
-        da = self.ablage.eingaenge()
-        gewollt = [b.get('datei') for b in self.job.bilder or []
+        da = ablage.eingaenge()
+        gewollt = [b.get('datei') for b in job.bilder or []
                    if isinstance(b, dict) and b.get('rolle') != 'aus']
-        return [n for n in gewollt if n in da] + [n for n in da if n not in gewollt]
+        # „Nur Iterationen" (`Engine2d3dKleiderrollen`): diese Fotos bekommt das Netz nicht, auch nicht „was nur im Ordner liegt".
+        nur_iterationen = Engine2d3dKleiderrollen.nur_iterationen(job.bilder)
+        return [n for n in [n for n in gewollt if n in da] + [n for n in da if n not in gewollt]
+                if n not in nur_iterationen]
 
     def umgebung(self):
         """HF-Ablage auf A:, Zwischendateien im Auftrag (nie System-Temp) — die Werte von `Meshlauf.umgebung`."""

@@ -11,6 +11,13 @@
 .seitenreiter [role="tab"][aria-selected="true"] { color: var(--text, #eee); background: var(--bg-darker, #181825); }
 .seitenreiter [role="tab"] i { margin-right: 6px; }
 
+/* Sanduhr eines Reiterwechsels (03.10.2026, `Seitenreiterwartet`): Zeiger „wartet" auf der ganzen Seite, im gewählten Reiter dreht sich
+   eine Sanduhr statt des Symbols. Die Klasse steht erst nach 150 ms am Dokument — ein schneller Wechsel zeigt nichts. */
+html.seitenreiter-wartet, html.seitenreiter-wartet * { cursor: wait !important; }
+html.seitenreiter-wartet .seitenreiter [role="tab"][aria-selected="true"] i { display: inline-block; animation: seitenreiter-sanduhr 1.2s ease-in-out infinite; }
+html.seitenreiter-wartet .seitenreiter [role="tab"][aria-selected="true"] i::before { content: "\f252"; }
+@keyframes seitenreiter-sanduhr { 0% { transform: rotate(0deg); } 70%, 100% { transform: rotate(180deg); } }
+
 /* ------------------------------------ Fotokarten: ganzes Foto, oben bündig (29.09.2026) */
 .mesh-vorschauen { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .mesh-fotokarte {

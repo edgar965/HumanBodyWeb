@@ -13,15 +13,15 @@ class Werkzeuggesicht:
     G = 'Genesis9/'
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
-    I = '2d3DIterationen/iterationen2d3d/'
+    P = '2d3DIterationen/iterationen2d3d/'
     W = 'VideoToBVH/wrappers/'
 
     KENNUNG = 'gesicht'
     TITEL = 'Gesicht, Augen, Brauen, Mund und Mimik'
     EINLEITUNG = (
         'Das Gesicht einer Genesis-9-Figur sind Kopfregler (Bereich kopf), ein Eigenmorph „Kopf-Eigen“ und die Anhänge Augen, Mund, Wimpern, Brauen. '
-        'Reihenfolge: 1. die Kopfform kommt aus der Gesichtskette von Mesh to 3D (Gruppe „Mesh to 3D“); 2. nachstellen mit m.koerper_regler und den '
-        'Gesichtsmaßen Foto gegen Render (Gesichtsmasse); 3. wo die Regler nicht reichen, Kopf-Eigen aus Schnitten und Konturen; 4. Augen, Brauen, '
+        'Reihenfolge: 1. die Kopfform kommt aus der Gesichtskette von Mesh to 3D (Gruppe „Mesh to 3D“); 2. nachstellen mit m.koerper_regler nach den '
+        'Gesichtsmaßen Foto gegen Render (Gruppe „Bildvergleich: Gesichtsmaße gegen das Foto und Befundmessung“); 3. wo die Regler nicht reichen, Kopf-Eigen aus Schnitten und Konturen; 4. Augen, Brauen, '
         'Wimpern und Mund wählen. Mimik stellt die Pipeline nicht: der Mund bleibt geschlossen (Mimik-Filter).'
     )
     # (Werkzeug, Wofür, Art, Aufruf, Klassen, Hinweis)
@@ -38,34 +38,21 @@ class Werkzeuggesicht:
          'gleichsetzen: 296 Kopfregler im Anpassungssatz der Gesichtskette (27.09.2026), 386 im Bedienfeld-Bereich kopf (Gesichtsmasse, 02.10.2026). Wertebereich '
          'je Regler min…max der Liste, geklemmt beim Bau. Prüf-KI: koerper_regler verboten. Mundöffner (Lip Part, Lip Gaps, Mouth Opening) werden beim Lesen '
          'der Stellung entfernt (Mimik-Filter unten).'),
-        ('Gesichtsmaße Foto gegen Render',
-         'Misst Augenabstand, Nase, Mund, Kinn, Gesichtsbreite und Augenhöhe auf dem Vorderfoto und auf dem Kopf-Render des Modells; das Verhältnis steuert die Kopfregler.',
-         'python',
-         'from core.dienste.gesichtsmasse import Gesichtsmasse\n'
-         'Gesichtsmasse.masse(punkte478, breite_px, hoehe_px)   # {breite, augen, nase, nase_laenge, mund, kinn, augen_hoehe} = Strecke / Gesichtshöhe (Landmarke 10 – 152)\n'
-         'Gesichtsmasse.kopfregler()   # [{name, anzeige}]\n'
-         'Gesichtsmasse(ablage, render).befund(teile, referenzen, aus)   # im Lauf: Foto gegen Kopf-Render, Median über vier Saaten',
-         [(D + 'gesichtsmasse.py', 'Gesichtsmasse'), (D + 'fotolandmarken.py', 'Fotolandmarken'), (D + 'gesichtsvorrat.py', 'Gesichtsvorrat'),
-          (G + 'reglerplan.py', 'G9reglerplan')],
-         'MediaPipe-FaceLandmarker, 478 Punkte (python10-Wrapper _run_fotolandmarken.py; Modelle laden ≈ 2 s, ≈ 0,3 s je Bild). Strecken: breite 234–454, '
-         'augen 468–473, nase 129–358, nase_laenge 168–4, mund 61–291, kinn 17–152. Der Kopf-Render (Genesishaarrender.bild_kopf, 1024 × 1024, je ≈ 0,45 s) wird '
-         'über vier Saaten gemittelt und je Kopfstand einmal abgelegt (Gesichtsvorrat, arbeit/gesicht_vorrat.json, höchstens 200 Einträge; der Schlüssel kommt nur '
-         'aus den Körperpunkten bis 0,20 m unter dem Scheitel). Grenzen: der Detektor springt je Maß um ≈ 1 %, selbst über vier Saaten schwankt der Gesichtsterm der '
-         'Note noch um 0,0125 (bei 512 px, kopfrauschen.py, 01.10.2026), Rundenauswahl.TOLERANZ ist 0,002; ein Render nur aus dem Körper war schlechter (Note +0,036). Ohne Vorderfoto (|Winkel| > 30°) oder ohne '
-         'erkanntes Gesicht kein Befund, die Runde läuft weiter. Wrapper-Fassung 2 sucht das Gesicht auch im Kopfausschnitt der Pose (Ganzkörperfotos).'),
         ('Gesichtsregler der Automatik',
          'Schreibt aus den Gesichtsmaßen Rezeptzeilen m.koerper_regler für sechs Kopfregler — gedämpft und mit Rückschritt; nur bei Option iterationen.form = an.',
          'python',
          'IterationGesicht(modell, befund, regler=None, verlauf=None).aufrufe()   # → ["m.koerper_regler(\'<ID>\', 0.35)", …]\n'
          "# Option iterationen.form = 'an' (Vorgabe 'aus')",
-         [(I + 'iterationgesicht.py', 'IterationGesicht'), (I + 'reglerpruefung.py', 'Reglerpruefung')],
+         [(P + 'iterationgesicht.py', 'IterationGesicht'), (P + 'reglerpruefung.py', 'Reglerpruefung')],
          'Je Maß ein Regler, gesucht über das Wort am Ende der Anzeige: breite → Face Upper Width, augen → Eyes Distance, augen_hoehe → Eyes Height A (Vorzeichen −), '
          'nase → Nose Width Lower, mund → Lips Width, kinn → Chin Length. Namen und Vorzeichen gemessen 01.10.2026 (gesichtsregler_probe.py, Regler 0,8 an der '
          'Grundfigur „Edgar - Hoch“): Eyes Distance +2,0 % Augenabstand, Lips Width +3,7 % Mund, Chin Length +4,4 % Kinn, Eyes Height A −3,3 % Augenhöhe, Nose Width '
          'Lower +1,6 % Nase, Face Upper Width +0,5 % Breite. „Face Width“, „Nose Width“, „Mouth Width“ gibt es bei Genesis 9 nicht; die Nasenlänge bewegt kein Regler '
          'sauber (Nose Size Full −8,4 %, Chin Length −8,7 %) — gemessen, ungeregelt. Schritt = 0,6 × (Verhältnis − 1) × Vorzeichen, höchstens 0,35, Grenze ±1, unter '
          '3 % Abweichung nichts; Reglerpruefung (BESSER 0,005) nimmt einen Fehlschritt zurück. Grenze (.51, 25 Runden): Lips Width stand mit 1,0 an der Grenze und Chin Length '
-         'bei ≈ 0,75, Mund 1,13 und Kinn 1,11 blieben über den Reglern; der Augenabstand konvergierte (1,07 → 0,998) — ein Regler bei 1 ändert ein Maß nur um 2–6 %.'),
+         'bei ≈ 0,75, Mund 1,13 und Kinn 1,11 blieben über den Reglern; der Augenabstand konvergierte (1,07 → 0,998) — ein Regler bei 1 ändert ein Maß nur um 2–6 %. Gemessen wird in der Gruppe '
+         '„Bildvergleich: Gesichtsmaße gegen das Foto und Befundmessung“ (Gesichtsmasse.befund: Kopf-Render über vier Saaten gemittelt, der Detektor springt je Maß um ≈ 1 %, '
+         'Rundenauswahl.TOLERANZ 0,002).'),
         ('Seite „Gesichtsform“ (Kopf-Eigen)',
          'Die Gesichtsform aus Schnitten und Konturen malen und rechnen — für Menschen; Sessions nehmen die API.',
          'seite',
@@ -154,8 +141,6 @@ class Werkzeuggesicht:
     BEZIEHUNGEN = [
         ('G9rezept', 'ruft', 'ModellMitKleidern', 'anwenden(): koerper_regler(<Kopfregler-ID>, wert) je Zeile'),
         ('IterationGesicht', 'ruft', 'Reglerpruefung', 'urteil(punkte): Fehlschritt zurück, danach gesperrt'),
-        ('Gesichtsmasse', 'ruft', 'Fotolandmarken', 'holen(pfade): 478 Gesichtspunkte je Foto und Kopf-Render'),
-        ('Gesichtsmasse', 'ruft', 'Gesichtsvorrat', 'schluessel(), holen(), ablegen(): je Kopfstand einmal messen'),
         ('Gesichtsmasse', 'ruft', 'G9reglerplan', 'bereiche(): kopfregler() sucht die Suchworte in den Anzeigen des Bereichs kopf'),
         ('Gesichtsformendpunkte', 'ruft', 'Gesichtsformquelle', 'aus(rumpf): Auftrag oder Modell; stellung(), uebernehmen(), speichern()'),
         ('Gesichtsformendpunkte', 'ruft', 'Gesichtsformantwort', 'bauen(): Ist, Ergebnis, Ziel, Rahmen und Güte für die Seite'),

@@ -57,6 +57,34 @@ class Werkzeugrezeptkleidung:
          'regler_stueck, stueckfarbe, gruppenfarben, fotoschicht, auftragsname, vorhanden). Die Liste umfasst auch die '
          'Körperaufrufe (koerper_regler, haltung, koerper_ort, …) — die gehören zur Gruppe Körper (T1).'),
 
+        ('Rezept in einem Auftrag einreichen (Runde rechnen)',
+         'Prüft ein Rezept, legt es ab und rechnet die nächste Runde des Auftrags im Arbeitsprozess: anwenden, bauen, '
+         'rendern, benoten.',
+         'api',
+         'POST /api/engine2d3dkleider/<job_id>/begutachtung/   {aufrufe: "m.kleid_nur(…)\\nm.passform(…)", kommentar: "…"}\n'
+         '→ {ok: true, pid}   | 400 {error: "Rezept: …"} | 409 {error: "Auftrag läuft schon"} oder GPU belegt',
+         [(A + 'engine2d3dkleiderbegutachtung.py', 'Engine2d3dKleiderbegutachtungsendpunkte'),
+          (G + 'modellrezept.py', 'G9rezept'), ('HumanBodyWeb/core/dienste/engine2d3dkleiderarbeiter.py', 'Engine2d3dKleiderarbeiter'),
+          ('HumanBodyWeb/core/dienste/engine2d3dkleidergpu.py', 'Engine2d3dKleidergpu'),
+          ('HumanBodyWeb/core/dienste/begutachtungsrunde.py', 'Begutachtungsrunde')],
+         'STARTET eine Runde und belegt die GPU — nur auf Ansage (die Schleife selbst beschreibt die Gruppe Bildvergleich, T4). '
+         'Der Endpunkt prüft nur (G9rezept.pruefen, höchstens 20.000 Zeichen); angewandt wird im Arbeitsprozess auf das Modell '
+         'der letzten Runde (Begutachtungsrunde._runde mit Rezeptumgebung: Sichtkörper, Drapierer, Haar-Dynamik). Ein Fehler '
+         'beim Anwenden (unbekanntes Stück …) steht in der Runde (fehler), das Modell bleibt. {automatisch: true, runden: n} '
+         'lässt IterationModell n Runden schreiben (höchstens RUNDEN_HOECHSTENS = 50). Gemessen: Runde 2 32 s, Runde 3 36 s (Auftrag '
+         '„Edgar - TEST“, 30.09.2026), 45–55 s je Runde bei 512 px (Auftrag .51, 01.10.2026), 43–44 s je Runde im Block '
+         '(Begutachtungswerkzeug.takt, 02.10.2026). Der Arbeitsprozess muss über die Server-API starten: ein Prozess, den ein '
+         'Skript anstößt, stirbt mit dem Skript (engine2d3dkleider.md, 01.10.2026).'),
+
+        ('Wirksame Aufrufe eines Auftrags lesen',
+         'Liefert alle wirksamen Aufrufe der übernommenen Runden als wiederverwendbaren Text — der Weg zu diesem Modell.',
+         'api',
+         'GET /api/engine2d3dkleider/<job_id>/rezept/   → text/plain (mit ?laden=1 als Download rezept_<kennung>.py)',
+         [(A + 'engine2d3dkleiderbegutachtung.py', 'Engine2d3dKleiderbegutachtungsendpunkte'), (G + 'modellrezept.py', 'G9rezept')],
+         'Kopf „# Rezept <Name> (<Kennung>)“ und „# m = ModellMitKleidern()“, dann je Runde ein Kommentar und ihre Zeilen '
+         '(runde["aufrufe"]). Dasselbe Rezept lässt sich auf einer anderen Figur noch einmal anwenden (G9rezept.anwenden). '
+         'Zeilen aus Pinsel und Maler stehen als m.bild_wert(…) bzw. m.morph_wert(…)/m.koerper_regler(…) darin.'),
+
         ('Kleidungsstücke anziehen (nur diese)',
          'Zieht genau die genannten Stücke an, jedes mit Anteil 1; alle bisher gesetzten Stücke gehen auf 0.',
          'rezept',
@@ -65,19 +93,21 @@ class Werkzeugrezeptkleidung:
          'Kennung = id aus der Garderobenliste (geslugter .duf-Name: g9_base_shirt, angie_jeans; mb_… MakeHuman, gc_… '
          'GarmentCode, eigen_… eigene Stücke). Eine '
          'unbekannte Kennung wird still ignoriert (G9kleidgenerischwahl.anteile). Höchstens 4 Stücke werden zugleich gebaut '
-         '(HOECHSTENS), jedes kostet einen eigenen Netzbau. Falle, gelesen und nicht an der Bibliothek ausprobiert: '
-         'kleid_nur legt für das erste Stück der Liste „Alle Kategorien“ keinen Regler an, ein Stück ohne gesetzten Regler '
-         'gilt als Vorgabe 1,0 (nur das erste der Liste) — anders als haar_anteil, das die Grundsorte ausdrücklich auf 0 '
-         'setzt. Nach dem Anziehen m.kleider() lesen und prüfen, was wirklich getragen wird. Quelle: Genesis9/'
-         'kleidgenerischwahl.py (anteile), Genesis9/modellhaar.py (haar_anteil).'),
+         '(HOECHSTENS), jedes kostet einen eigenen Netzbau. Falle: kleid_nur legt für das erste Stück der Liste „Alle '
+         'Kategorien“ keinen Regler an, ein Stück ohne gesetzten Regler gilt als Vorgabe 1,0 (nur das erste der Liste) — '
+         'anders als haar_anteil, das die Grundsorte ausdrücklich auf 0 setzt. An Kunstdaten nachgerechnet (03.10.2026, '
+         'G9kleidgenerischwahl.anteile: aus {sorte.zweites: 1} wird {erstes: 1, zweites: 1}). Welches Stück an der echten '
+         'Bibliothek das erste ist, ist nicht bestätigt: die gemerkte Liste (Genesis9/ablage/garderobe.json, 480 Einträge, '
+         'gelesen 03.10.2026) beginnt mit g9_base_bikini, g9_base_bra, g9_base_shirt, g9_base_shorts — das erste Oberteil '
+         'dürfte g9_base_shirt sein, was die Falle in der Praxis verdeckt. Nach dem Anziehen m.kleider() lesen und prüfen, '
+         'was wirklich getragen wird. Quelle: Genesis9/kleidgenerischwahl.py (anteile), Genesis9/modellhaar.py (haar_anteil).'),
 
         ('Anteil eines Stücks setzen (Mischen)',
          'Stellt den Anteil eines Kleidungsstücks (0…1). Wo sich zwei Stücke überdecken, steht eine Fläche aus dem '
          'Verhältnis ihrer Anteile; 0 nimmt das Stück weg.',
          'rezept',
          "m.kleid_anteil('g9_base_shirt', 1.0)\nm.kleid_anteil('gc_dress_shift', 0.3)",
-         [(G + 'modellmitkleidern.py', 'ModellMitKleidern'), (G + 'kleidgenerischwahl.py', 'G9kleidgenerischwahl'),
-          (G + 'kleidmischung.py', 'G9kleidmischung')],
+         [(G + 'modellmitkleidern.py', 'ModellMitKleidern'), (G + 'kleidgenerischwahl.py', 'G9kleidgenerischwahl')],
          'Anteile sind voneinander unabhängig, die Summe muss nicht 100 % sein (anders als beim Haar); Anteile unter 0,005 '
          'fallen weg (KLEINSTER). Das Stück mit dem größten Anteil trägt die Fläche der Überlappung; bei Gleichstand das '
          'zuletzt bewegte (sorte_zuletzt, schickt nur der Browser), dann das später genannte. Gemischt wird über die Haut, '
@@ -107,12 +137,15 @@ class Werkzeugrezeptkleidung:
         ('Daz-Morph eines Stücks stellen',
          'Stellt einen echten Daz-Morph des Stücks (die Regler, die Daz mitliefert, etwa Adj Inflate).',
          'rezept',
-         "m.kleid_morph('g9_base_shirt', '<Kanalname aus der Reglerliste>', 0.3)",
+         "m.kleid_morph('g9_base_shirt', 'body_bs_LoosenCollars', 0.3)",
          [(G + 'modellmitkleidern.py', 'ModellMitKleidern')],
          'kanal = der name des Reglers in der Reglerliste des Stücks (GET …/garderobe/, Feld regler[].name); ein Name, den '
-         'das Stück nicht hat, bleibt wirkungslos (G9garderobe.reglerwerte nimmt nur Namen aus eintrag[regler]). Wertebereich '
-         'je Regler min/max in derselben Liste. Der Schlüssel im Modell ist <kennung>.<kanal>. Eigene Morphe (eigen.*) '
-         'baut man nicht hiermit, sondern in der Gruppe „Kleider formen“.'),
+         'das Stück nicht hat, bleibt wirkungslos (G9garderobe.reglerwerte nimmt nur Namen aus eintrag[regler]). Gelesen aus '
+         'der gemerkten Liste (03.10.2026): g9_base_shirt hat body_bs_ExpandAll, FitOverPants1…3, body_bs_LoosenButtocks, '
+         '…Collars, …Midriff, …Neck, …Thighs, …WaistLower, …WaistUpper (alle 0…1), angie_jeans body_bs_ExpandAll, '
+         '…LoosenButtocks, …Knees, …Thighs, …WaistLower, …WaistUpper; dazu bei jedem Kleidungsstück passform:laenge und '
+         'passform:weite (die setzt m.passform). Wertebereich je Regler min/max in derselben Liste. Der Schlüssel im Modell ist '
+         '<kennung>.<kanal>. Eigene Morphe (eigen.*) baut man nicht hiermit, sondern in der Gruppe „Kleider formen“.'),
 
         ('Passform: Länge und Weite aller Kleider',
          'Verschiebt den Käfig der Kleider am Körper entlang: Saum länger oder kürzer, Stoff weiter oder enger.',
@@ -185,6 +218,11 @@ class Werkzeugrezeptkleidung:
          'G9rezept.pruefen(): prüft ein eingereichtes Rezept vor dem Start der Runde; funktionen() liefert die Liste'),
         ('Engine2d3dKleiderbegutachtungsendpunkte', 'ruft', 'ModellMitKleidern',
          'ModellMitKleidern.hilfe(): Antwort von GET funktionen/'),
+        ('Engine2d3dKleiderbegutachtungsendpunkte', 'ruft', 'Engine2d3dKleiderarbeiter',
+         'Engine2d3dKleiderarbeiter.starten(job, ab, bis) und lebt(job): startet den Arbeitsprozess für den Schritt iterationen'),
+        ('Engine2d3dKleiderbegutachtungsendpunkte', 'ruft', 'Engine2d3dKleidergpu',
+         'Engine2d3dKleidergpu.belegt_durch(job): 409, wenn die GPU belegt ist'),
+        ('Begutachtungsrunde', 'ruft', 'G9rezept', 'G9rezept.anwenden(modell, aufrufe): _runde() wendet das Rezept an'),
         ('ModellMitKleidern', 'ruft', 'G9kleidgenerisch',
          'G9kleidgenerisch.mischung_aufloesen(): kleider() liefert die getragenen Stücke; die Konstanten PASSFORM, '
          'UEBERGANG, TEXTUR, HOECHSTENS legen die Reglerschlüssel fest'),

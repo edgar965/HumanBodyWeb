@@ -37,7 +37,11 @@ __all__ = ['Mitsubaszene']
 
 class Mitsubaszene:
     VARIANTE = 'cuda_ad_rgb'
-    SPP = 64
+    #: Abtastungen je Pixel: ein Quadrat (12², sonst rundet `multijitter` mit Warnung auf, 128 → 132). Gemessen 03.10.2026 mit
+    #: `_wegwerf/randy/haut_spp_probe.py` (CPU, scalar_rgb, teilverdeckte Hautkugel unter Himmel 0,8 + Richtlicht 1,4): Rauschen
+    #: independent/64 = 5,25 % des Mittels, multijitter/64 = 2,49 %, multijitter/144 = 1,73 % — die Körnung der Haut im Runden-
+    #: bild (Randy, Runde 42) ist dieses Abtastrauschen, nicht die Hauttextur (HF der Kacheln 0,5–0,9 Stufen).
+    SPP = 144
     #: Strahldichte des gleichmäßigen Himmels (linear) und das Richtlicht von oben vorn — fest in der Welt, für alle
     #: Ansichten gleich (pyrender hatte ein Kopflicht je Ansicht; eine Tönung soll in jeder Ansicht dieselbe sein).
     HIMMEL = 0.8
@@ -111,7 +115,7 @@ class Mitsubaszene:
             formen[name] = self._netz(name, punkte, dreiecke, Mitsubamaterial.kennung(farbe), lage=lage)
             return
         uv = extra.get('uv')
-        gruppen = [g for g in (extra.get('gruppen') or []) if g.get('albedo') is not None] if uv is not None else []
+        gruppen = [g for g in (extra.get('gruppen') or []) if g.get('albedo') is not None or g.get('opazitaet') is not None] if uv is not None else []
         belegt = np.zeros(len(dreiecke), dtype=bool)
         for k, g in enumerate(gruppen):
             ab, anzahl = int(g['ab']), int(g['anzahl'])
@@ -119,10 +123,13 @@ class Mitsubaszene:
             if not len(wahl):
                 continue
             try:
-                bsdf = Mitsubamaterial.textur(g['albedo'], g.get('faktor', (1.0, 1.0, 1.0)), g.get('normalen'),
-                                              self.kante, int(g.get('normalenachse') or 1))
+                bsdf = (Mitsubamaterial.textur(g['albedo'], g.get('faktor', (1.0, 1.0, 1.0)), g.get('normalen'),
+                                               self.kante, int(g.get('normalenachse') or 1), g.get('metall'), g.get('rauheit'))
+                        if g.get('albedo') is not None else Mitsubamaterial.flach(g.get('faktor', farbe)))
                 if g.get('alpha') is not None:                   # Haarkarten: Strähnen statt geschlossener Flächen
                     bsdf = Mitsubamaterial.maske(bsdf, g['alpha'], self.kante)
+                if g.get('opazitaet') is not None and float(g['opazitaet']) < 0.999:      # Regler „Transparenz“ (`G9kleidtransparenz`)
+                    bsdf = Mitsubamaterial.durchsicht(bsdf, g['opazitaet'])
             except (OSError, ValueError) as fehler:
                 logger.warning('Mitsuba: Bild %s nicht lesbar (%s) — Gruppe flach', g.get('albedo'), fehler)
                 continue
@@ -212,7 +219,8 @@ class Mitsubaszene:
         return self.mi.load_dict({
             'type': 'orthographic', 'near_clip': 1e-3, 'far_clip': 1e3,
             'to_world': T().look_at(origin=lage.tolist(), target=mitte.tolist(), up=[0.0, 1.0, 0.0]).scale([s, s, 1.0]),
-            'sampler': {'type': 'independent', 'sample_count': int(spp)},
+            # Bild: geschichteter Abtaster (halbes Rauschen bei gleicher Zahl); Kennbild (1 Abtastung): unverändert unabhängig.
+            'sampler': {'type': 'multijitter' if int(spp) > 1 else 'independent', 'sample_count': int(spp)},
             'film': {'type': 'hdrfilm', 'width': b, 'height': h, 'pixel_format': 'rgba',
                      'rfilter': {'type': 'box'}}})
 

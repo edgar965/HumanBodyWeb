@@ -31,8 +31,8 @@ class Werkzeugblenderschleife:
          'NUR NACH ANSAGE VON EDGAR. Quellen: .claude/rules/projekt.md („Blender nicht von selbst starten — den Blender-Test-Weg nutzt Edgar nicht mehr“), Edgar 30.09.2026 („blender aufrufe sind '
          'möglich“, engine2d3dkleider.md: Blender darf als Arbeiter für einzelne Rechnungen dazukommen, aber nur über EINE Arbeiterklasse) und die Regel des Reiters Tools (Edgar, 03.10.2026: '
          'Schleifen über Blender nur nach Ansage). Die ältere Aussage in effekte.md (12.09.2026, „Ich möchte mich nicht mit blender herumschlagen“) betrifft den Effekte-Bereich. '
-         'Entscheidung beim Drapieren: Newton (Vorgabe, Automatik) ist schnell, kann aber keinen Druck: erster Aufruf 142 s (Warp-Kernel übersetzen), danach 590 ms je Bild '
-         '(ortsmorphe.md, Base Shirt 7.552 Punkte). Stoffsolver, wenn Druck (Ausbeulung) oder Blenders Verhalten gewünscht ist und eine CUDA-GPU da ist: Oberteil 24 Bilder 2,3 s. Blender, wenn der '
+         'Entscheidung beim Drapieren: Newton (Vorgabe, Automatik) kann keinen Druck: Base Shirt (7.552 Punkte), 24 Bilder, 142 s beim ersten Aufruf mit Kernelübersetzung, 590 ms '
+         'je Bild (ortsmorphe.md); die 14,2 s eines warmen Laufs sind errechnet, nicht gemessen (workflowzeiten.py). Stoffsolver, wenn Druck (Ausbeulung) oder Blenders Verhalten gewünscht ist und eine CUDA-GPU da ist: Oberteil 24 Bilder 2,3 s. Blender, wenn der '
          'Stoffsolver ausfällt oder die Referenz nötig ist: Hose 19,5 s, Oberteil 55,0 s je Stück (Zeilen darunter). Für Haar-Knoten gibt es keinen Solver-Ersatz — die Knoten sind '
          'Geometry-Nodes, keine Haar-Dynamik (README) —; Kartenhaar nimmt haar_trim, haar_clump, haar_noise u. a. in Python. Ein Blender-Aufruf außerhalb von Engine2d3dKleiderblender ist im '
          'Bereich 2D3D Kleider ein Fehler (Test BlenderNurUeberEinenArbeiterTest). Der Stoffsolver ist Blenders Nachbau und gegen Blender gemessen (Gruppe „Stoffsolver gegen Blender 5.2.2“): '
@@ -122,7 +122,7 @@ class Werkzeugblenderschleife:
         ('ModellFormMixin', 'ruft', 'Engine2d3dKleiderblender', 'drapieren(kennung, bilder, druck, name=) bei motor=blender'),
         ('ModellHaarMixin', 'ruft', 'Rezeptumgebung', 'blender(): der Blender-Arbeiter der Runde, ValueError außerhalb einer Runde'),
         ('ModellHaarMixin', 'ruft', 'Engine2d3dKleiderblender', 'haar(sorte, name, knoten, ort, **parameter)'),
-        ('Begutachtungswerkzeug', 'ruft', 'Engine2d3dKleiderblender', 'drapierer(): Engine2d3dKleiderblender(ablage.arbeit(\'blender\')) als Drapierer „blender“'),
+        ('Begutachtungswerkzeug', 'ruft', 'Engine2d3dKleiderblender', 'Begutachtungswerkzeug.drapierer() baut Engine2d3dKleiderblender(ablage.arbeit(\'blender\')) als Drapierer „blender“'),
         ('Engine2d3dKleiderblender', 'ruft', 'G9kleidmorphe', 'kaefige(kennung), koerper(), ablegen(kennung, name, folger, deltas, brief)'),
         ('Engine2d3dKleiderblender', 'ruft', 'G9haarzusatz', 'ketten(segmente, anzahl), ablegen(…) für erzeugende Knoten'),
         ('Engine2d3dKleiderblender', 'ruft', 'Haarknotenauftrag', 'schreiben(nummer, punkte, ketten, maske) hin; delta(…) und zusatz(…) zurück'),

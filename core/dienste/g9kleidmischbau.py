@@ -70,7 +70,7 @@ class G9kleidmischbau:
 
     #: Der „Eintrag" für den Schlüssel des Antwortvorrats — die Bauart trägt ihre Fassung hier: ändert sich die
     #: Mischregel, gilt keine alte Antwort mehr (`~/.claude/rules/artefakte-benennen.md`).
-    KENNZEICHEN = {'mischung': 'ueberdeckung', 'fassung': 3}
+    KENNZEICHEN = {'mischung': 'ueberdeckung', 'fassung': 4}   # 4: starre Stücke (`G9stoff.STARR`) mischen nicht mit
     #: Diese Felder des fertig kodierten Teils bleiben, wenn seine Geometrie neu kodiert wird.
     BLEIBT = ('name', 'stufen', 'knochen', 'zweiseitig')
 
@@ -134,8 +134,10 @@ class G9kleidmischbau:
     @classmethod
     def _mischen(cls, bauten, uebergang, koerper, humanbody=False):
         u"""Mischt die Teile der Bauten und ersetzt sie in `aus['teile']` (ein weggefallenes Teil wird `None`)."""
+        from Genesis9.stoff import G9stoff
+        # Starre Stücke (Zubehör: Hut, Band, Federn, Brille, Gürtel …) bleiben, wie sie sind: nur Kleidung mischt.
         flaechen = [G9kleidmischflaeche.aus_netz(stueck, nummer, netz, koerper)
-                    for stueck, _anteil, _aus, erfasst in bauten
+                    for stueck, _anteil, _aus, erfasst in bauten if not G9stoff.starr_kennung(stueck)
                     for nummer, netz in enumerate(erfasst) if cls._mischbar(netz, humanbody)]
         if len({f.stueck for f in flaechen}) < 2:
             return

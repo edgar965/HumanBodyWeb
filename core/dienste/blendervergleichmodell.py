@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Blendervergleichmodell — Abschnitt „Modell und Körper“ der Tabelle „Wie liefe das mit Blender“ (Reiter „Tools“, 03.10.2026).
 
-Schema und Stände: `Architektur2d3dblender`. Belege für „Blender hat das“: Introspektion von Blender 5.2.2 LTS im Hintergrundmodus
+Schema und Stände: `Architektur2d3dblender`; die letzten zwei Felder je Zeile sind die Ausführungszeiten (lokal, Blender) mit Quelle und Datum, sonst genau „nicht gemessen“ oder „entfällt“. Belege für „Blender hat das“: Introspektion von Blender 5.2.2 LTS im Hintergrundmodus
 (`blender -b --factory-startup`, nur Namen gelesen, nichts gerechnet) — `ProjektTemp/_wegwerf/tools_seite/t5/ergebnis_introspektion.json`
 (dazu `…2.json`, `…3.json`). „Im Kern“ heißt: im Werksstart vorhanden; was erst installiert oder aktiviert werden muss, ist ein Add-on.
 Stand `genutzt` gilt, sobald das Projekt das Blender-Werkzeug aufruft — auch ein Add-on, dann steht „Add-on“ im Text.
@@ -16,7 +16,7 @@ class Blendervergleichmodell:
     EINLEITUNG = ('Wie Blender 5.2.2 die Aufgaben „Figur erzeugen, formen, häuten, bewegen, speichern“ löst und was das Projekt stattdessen tut. '
                   'Der tatsächliche Blender-Weg des Projekts: glTF als Brücke, Cloth, Haar-Knoten, Workbench-Render, die Add-ons MPFB und '
                   '„BVH and FBX Retargeter“ — die Figur selbst kommt aus Genesis 9 (Daz-Daten), nicht aus Blender.')
-    # (Aufgabe, lokales Werkzeug, lokaler Aufruf, lokale Klassen [(Datei, Klasse)], Blender-Werkzeug, Blender-Aufruf, Blender-Stand, Unterschied)
+    # (Aufgabe, lokales Werkzeug, lokaler Aufruf, lokale Klassen [(Datei, Klasse)], Blender-Werkzeug, Blender-Aufruf, Blender-Stand, Unterschied, zeit_lokal, zeit_blender)
     ZEILEN = [
         ('Mensch-Figur erzeugen',
          'Genesis-9-Figur aus Reglerwerten (Daz-Daten, DSON-Leser; kein Blender)',
@@ -29,7 +29,9 @@ class Blendervergleichmodell:
          '(`effekte/blender/effektfigur.py`, Rig `cmu_mb` mit 31 Knochen, ohne Finger und Gesicht). Die 2D3D-Pipeline nutzt MPFB nicht: Genesis 9 '
          'kommt aus Daz-Daten, ein Steuerregler stellt über einen Formelgraphen gut 60 Morphs (Docstring `Genesis9/formung.py`). Im Blender-Kern '
          'gibt es keinen Menschengenerator: Die Namenssuche „human“ über 2.499 Operatoren des Werksstarts findet nichts; vorhanden sind '
-         'Primitive, der Modifier SKIN und Metaballs (`ergebnis_introspektion.json`).'),
+         'Primitive, der Modifier SKIN und Metaballs (`ergebnis_introspektion.json`).',
+         '0,4 s je Reglerzug (Ansichtsstufe 1, 104.480 Punkte, Server; genesis9.md, 17.09.2026)',
+         'nicht gemessen'),
 
         ('Netz aus Fotos erzeugen',
          'Fotos → Netz mit TRELLIS.2 (Pixal3D wählbar), Schritt „netz“ von 2D3D Kleider',
@@ -42,7 +44,10 @@ class Blendervergleichmodell:
          'Die Namenssuche „photo“ und „reconstruct“ über alle 2.499 Operatoren des Werksstarts findet nichts (`ergebnis_introspektion.json`); '
          'vorhanden ist Motion Tracking (`clip.solve_camera`, `clip.track_markers`, `clip.bundles_to_mesh`). Die Rechnung des Projekts läuft außerhalb von '
          'Blender (`VideoToBVH/wrappers/_run_mesh.py`, eigene Umgebung, GPU). Gemessen an denselben Fotos: Auflösung „hoch“ 579 s, „mittel“ 596 s, '
-         '„schnell“ 467 s (`engine2d3dkleider.md`, 30.09.2026).'),
+         '„schnell“ 467 s (`engine2d3dkleider.md`, 30.09.2026).',
+         '428,3–752,6 s (TRELLIS.2, 8 Aufträge, je nach Auflösung, Textur und Flächenzahl, ganzer Schritt netz; workflowzeiten.py, '
+         'Datenbank gelesen 02.10.2026)',
+         'entfällt'),
 
         ('Figur an ein Netz anpassen',
          'Körper-Fit: Genesis-Regler und Eigenmorph auf das Netz rechnen (Kette von „Mesh to 3D“)',
@@ -55,7 +60,10 @@ class Blendervergleichmodell:
          'Alle genannten Typen und Operatoren gibt es in 5.2.2 (SHRINKWRAP, SURFACE_DEFORM, `object.quadriflow_remesh`, `object.voxel_remesh`). Sie legen '
          'ein Netz an ein Ziel oder bauen es neu auf; Regler stellen sie nicht. Das Projekt rechnet stattdessen die Genesis-9-Regler und einen Eigenmorph '
          'auf das Netz (Quelle „rechnen“: rund 15 min Grafikkarte, Quelle „uebernehmen“: Sekunden — Modulkopf `engine2d3dkleiderkoerper.py`). '
-         'Ein Vergleich Shrinkwrap gegen die Reglerkette ist nicht gemessen.'),
+         'Ein Vergleich Shrinkwrap gegen die Reglerkette ist nicht gemessen.',
+         '694,8–984,1 s (Quelle „rechnen“, 6 Aufträge, ganzer Schritt koerper; „uebernehmen“ 0,0 s; workflowzeiten.py, Datenbank gelesen '
+         '02.10.2026)',
+         'nicht gemessen'),
 
         ('Körperform verstellen',
          'Körperregler (Morphs) der Genesis-9-Figur',
@@ -67,7 +75,9 @@ class Blendervergleichmodell:
          'Beides sind lineare Deltas je Punkt, mischbar: `punkte = basis + Σ wert × deltas` (Docstring `Genesis9/formung.py`); Daz kommt mit einem '
          'Formelgraphen dazu. Blender hat `Object.shape_key_add`, `Key.key_blocks`, `ShapeKey.value` und `driver_add` (Introspektion). Das '
          'eigene Blender-Add-on HumanBodyBlender schreibt Morphs dagegen direkt in die Punkte (`HumanBodyBlender/morph/morpher.py`, '
-         '`vertices.foreach_set("co", …)`), nicht über Shape Keys.'),
+         '`vertices.foreach_set("co", …)`), nicht über Shape Keys.',
+         '0,4 s je Reglerzug (Ansichtsstufe 1, 104.480 Punkte, Server; genesis9.md, 17.09.2026)',
+         'nicht gemessen'),
 
         ('Körper örtlich nachformen',
          'Ortsmorph, Körperhülle und Form-Pinsel am Körper (Eigenmorph neben der Bibliothek)',
@@ -81,7 +91,10 @@ class Blendervergleichmodell:
          'Das Projekt nimmt statt Pinselstrichen einen ORT als Wörterbuch (Band × Sektor, Kugel, Landmarke) und legt das Ergebnis als eigenen Morph '
          'ab (`eigen:ort_<name>`), damit ein Rezept ihn wiederholen kann; der Form-Pinsel (`G9formpinsel`: ziehen, drücken, aufblasen, glätten, flach, '
          'greifen) macht aus Strichen ebenfalls einen Morph. Das Konzept 30.09.2026 §3.1 hält Blenders Sculpt per `bpy` für unhandlich (nur mit '
-         'View-Kontext skriptbar) — Einschätzung, nicht neu gemessen.'),
+         'View-Kontext skriptbar) — Einschätzung, nicht neu gemessen.',
+         '0,42 s erster Zug, danach 22 ms (Ortsmorph „Links“ am Base Shirt, 3.732 Punkte, Netz-Endpunkt; Szene ist ein Kleid, nicht der '
+         'Körper; ortsmorphe.md, 30.09.2026)',
+         'nicht gemessen'),
 
         ('Gelenkkorrekturen',
          'Daz-Joint-Corrective-Morphs (JCMs), je Bild aus den Gelenkwinkeln',
@@ -92,7 +105,9 @@ class Blendervergleichmodell:
          'vorhanden',
          'Daz-JCMs sind 117 Morphe (`Base Correctives` plus `Base Flexions`) mit einem Formelgraphen aus den `.dsf`-Dateien, im Browser 4 ms je Bild '
          'bei 32 aktiven (`genesis9-bewegung.md`, 18.09.2026). Blender hat die Bausteine (Shape Keys, `driver_add`, CORRECTIVE_SMOOTH; Introspektion); '
-         'ein Weg, die Daz-Formeln nach Blender zu bringen, ist im Projekt nicht gebaut.'),
+         'ein Weg, die Daz-Formeln nach Blender zu bringen, ist im Projekt nicht gebaut.',
+         '4 ms je Bild bei 32 aktiven Korrekturen (Browser; genesis9-bewegung.md, 18.09.2026)',
+         'nicht gemessen'),
 
         ('Gesicht an Fotos anpassen',
          'Sieben Gesichtsmaße aus 478 Landmarken auf Foto und Kopf-Render, Kopfregler gedämpft stellen (FaceBuilder-Ersatz)',
@@ -105,7 +120,9 @@ class Blendervergleichmodell:
          'KeenTools 2026.3.1 (`scripts/addons/keentools/__init__.py`: „FaceBuilder: Create Heads“) baut einen Kopf aus Fotos mit Pins; kommerziell und nur '
          'Gesicht (Konzept 30.09.2026 §3.4). Im Kern gibt es keine Landmarken: Die Namenssuche „landmark“ über Operatoren und Typen findet nichts '
          '(`ergebnis_introspektion.json`). Das Projekt stellt die Kopfregler gedämpft (0,6, Schritt höchstens 0,35); die Maße rauschen um etwa 1 % je '
-         'Maß, deshalb gibt es einen `Gesichtsvorrat` (`ortsmorphe.md`, 01.10.2026).'),
+         'Maß, deshalb gibt es einen `Gesichtsvorrat` (`ortsmorphe.md`, 01.10.2026).',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('Rig und Skinning',
          'Genesis-9-Skelett (138 Knochen) mit Daz-Gewichten; Kleidung bekommt die Gewichte des Körpers darunter',
@@ -119,7 +136,9 @@ class Blendervergleichmodell:
          'das Aktivieren ohne Einstellungsdatei meldet einen KeyError, die Operatoren stehen trotzdem in der Liste). Das Projekt ruft die Automatik nirgends auf: '
          'Genesis 9 trägt die Daz-Gewichte, '
          'Kleidung bekommt die des Körpers darunter (drei Projektionsnachbarn gemischt, `genesis9.md`, 17.09.2026). Im BlenderModel-Weg hängt '
-         '`effekte/blender/kostuem/kostuembindung.py` seine Teile mit eigenen Gewichten (4 nächste Körperpunkte) über einen ARMATURE-Modifier an das Rig.'),
+         '`effekte/blender/kostuem/kostuembindung.py` seine Teile mit eigenen Gewichten (4 nächste Körperpunkte) über einen ARMATURE-Modifier an das Rig.',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('Pose und Haltung',
          'Haltung (Arme senken) und einzelne Gelenkwinkel am Rezept, je Bild gehäutet',
@@ -132,7 +151,9 @@ class Blendervergleichmodell:
          'Beides stellt Knochen (`PoseBone.rotation_euler`, `pose.armature_apply`; Introspektion). Die Haltung des Projekts ist ein Rezeptwert (A-Pose bis '
          'hängende Arme, höchstens 43°, gemessen am Bauplan der Grundfigur, 30.09.2026) und wird je Bild gehäutet, nicht als Pose-Zustand in einer Datei '
          'gehalten. Ob Blender-Posen und Genesis-Posen dieselben Knochenachsen haben, ist nicht gemessen — Blenders glTF-Export hat eigene Achsen '
-         '(`blendermodell.md`, 29.09.2026).'),
+         '(`blendermodell.md`, 29.09.2026).',
+         'nicht gemessen',
+         'nicht gemessen'),
 
         ('Retarget im Blender-Kern',
          'Retarget BVH → Genesis 9 (auch DEF, UMA, SMPL, MakeHuman) in Python/NumPy',
@@ -149,7 +170,9 @@ class Blendervergleichmodell:
          '`import_anim.bvh` (Add-on `io_anim_bvh`, mitgeliefert und im Werksstart aktiv), der Constraint COPY_ROTATION, `nla.bake`. Das eigene '
          'Blender-Add-on HumanBodyBlender baut daraus einen Retarget (Rumpf und Beine Bild für Bild in Python, Arme über COPY_ROTATION und `nla.bake`, '
          '`HumanBodyBlender/retarget.py`). Der Retarget von 2D3D Kleider ist reines Python mit Richtungskorrektur und Handausrichtung (`retarget.md`); '
-         'Vorgabe: keinen eigenen Retarget-Code erfinden (`CLAUDE.md`, Edgar 08.09.2026).'),
+         'Vorgabe: keinen eigenen Retarget-Code erfinden (`CLAUDE.md`, Edgar 08.09.2026).',
+         '43 s (7.538 Bilder, erster Abruf je BVH und Ort, vor dem Retargetvorrat; retarget.md, 17.09.2026)',
+         'entfällt'),
 
         ('Retarget mit dem Blender-Add-on',
          'Blender-Aufruf des Projekts: `Bvhretarget` in der Effekte-Pipeline „Kleid + Wind“ (im BlenderModel-Weg bis 29.09.2026)',
@@ -162,7 +185,9 @@ class Blendervergleichmodell:
          'Ziel an den Knochennamen, bringt beide in T-Pose und skaliert; MPFBs `default`-Rig kannte es nicht, `cmu_mb` ja (`effektfigur.py`). Fehler '
          'meldet es als Text statt als Exception (`bvhretarget.py`). Im BlenderModel-Weg stand das Ziel damit kopfüber, weil das Add-on die Ruhe-/T-Pose '
          'seines Ziels selbst erkennt; seit 29.09.2026 setzt `posenspuren.py` die fertigen Drehungen als Keyframes (`blendermodell.md`). Zeit: 1.004 Bilder '
-         '33 s, davon 300 gebraucht (`bvhretarget.py`, 12.09.2026).'),
+         '33 s, davon 300 gebraucht (`bvhretarget.py`, 12.09.2026).',
+         '33 s (1.004 Bilder, 002_Dance, Retarget-Schritt des Add-ons ohne Blender-Start; effekte/blender/bvhretarget.py, 12.09.2026)',
+         '6,2 s (300 Bilder mit useAllFrames=False, derselbe Schritt, nicht dieselbe Bildzahl; effekte.md, 12.09.2026)'),
 
         ('Netz unterteilen',
          'Catmull-Clark auf dem Daz-Käfig (Ansicht Stufe 1, Strg+Alt+H Stufe 2)',
@@ -174,7 +199,9 @@ class Blendervergleichmodell:
          'Gleiches Verfahren. Das Projekt nutzt SUBSURF in „Kleid + Wind“ (`effekte/blender/stoffsimulation.py`, Stoff vor der Simulation unterteilt) und zum '
          'Glätten der Kostümrohre (`effekte/blender/kostuem/rohr.py`). Der eigene Unterteiler rechnet die Daz-Nähte (UV je Flächenecke) und die Haut mit: '
          'Stufe 1 hat 104.480, Stufe 2 410.202 Punkte (`genesis9.md`, 17.09.2026). Falle des eigenen Wegs: Catmull-Clark auf GarmentCodes unregelmäßigem '
-         'Dreiecksnetz gab Beulen — solche Stücke bleiben Käfig (`genesis9-garderobe.md`, 25.09.2026).'),
+         'Dreiecksnetz gab Beulen — solche Stücke bleiben Käfig (`genesis9-garderobe.md`, 25.09.2026).',
+         '0,4 s je Reglerzug Stufe 1 (104.480 Punkte), 0,55 s je Zug Stufe 2 (410.202 Punkte, Strg+Alt+H), Server; genesis9.md, 17.09.2026',
+         'nicht gemessen'),
 
         ('Export als glTF/GLB',
          'Eigene GLB-Schreiber: Körper mit Rig, Kleider, Haar an einem Skin (figur.glb, je Runde modell.glb)',
@@ -190,7 +217,9 @@ class Blendervergleichmodell:
          'eigene Knochenachsen (`Posenspuren` stand „verdreht in der Luft“, `blendermodell.md`); das glTF-Zusatzfeld `export_extras` kam nicht in der GLB an; '
          'nach `import_scene.gltf` steht trotz `--factory-startup` eine „Icosphere“ (42 Punkte) in der Szene, die nicht in der GLB ist (`modellexportblend.py`, '
          '26.09.2026). Der eigene Schreiber setzt Körper (je Kachel mit dem '
-         'gebackenen Foto), Augen, Mund, Wimpern, Brauen, Kleider und Haar an EINEN Skin mit 143 Knochen (`engine2d3dkleider.md`, 01.10.2026).'),
+         'gebackenen Foto), Augen, Mund, Wimpern, Brauen, Kleider und Haar an EINEN Skin mit 143 Knochen (`engine2d3dkleider.md`, 01.10.2026).',
+         '1,8–3,4 s (Schritt export, 5 Aufträge, Körper mit Rig; workflowzeiten.py, Datenbank gelesen 02.10.2026)',
+         '~3 s (Runden-GLB des BlenderModel-Kostüms, ganzer Blender-Aufruf; andere Szene; blendermodell.md, 29.09.2026)'),
 
         ('Automatisierung',
          'Rezeptzeilen `m.<funktion>(literale)` — Text, kein Python; jede Runde ist ein wiederholbares Rezept',
@@ -204,5 +233,8 @@ class Blendervergleichmodell:
          'Edgar Rezepte schreiben, ohne dass ein Rezept mehr kann als das Modell. Blender läuft im Projekt als EIN Prozess je Befehl (`--factory-startup`, '
          'TMP/TEMP in den Auftragsordner, Zeitgrenze 900 s; Start 4–9 s, die Rechnung Sekunden — Modulkopf `engine2d3dkleiderblender.py`). Der '
          'BlenderModel-Weg hielt dauerhafte Arbeiter (Postfach-Ordner): Runde 4,5–6 s statt 23 s (`blendermodell.md`, 30.09.2026). API-Falle 5.2: Eingänge '
-         'eines Geometry-Nodes-Modifiers lassen sich nicht mehr per `mod[identifier]` setzen — Hüll-Nodegruppe nehmen (`CLAUDE.md`).'),
+         'eines Geometry-Nodes-Modifiers lassen sich nicht mehr per `mod[identifier]` setzen — Hüll-Nodegruppe nehmen (`CLAUDE.md`).',
+         '0,1 s (Rezept der Automatik schreiben und anwenden; auftrag.log von 2026.10.01.20.10.04, Runden 9–11; architektur2d3dmessung.py, '
+         '02.10.2026)',
+         '4–9 s (Blender-Start je Befehl; Klassenkommentar engine2d3dkleiderblender.py, 30.09.2026)'),
     ]

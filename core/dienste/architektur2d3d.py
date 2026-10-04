@@ -21,8 +21,13 @@ class Architektur2d3d:
     STAND = '02.10.2026'
     #: Die Schritte von Engine2d3dKleiderlauf.SCHRITTE — (Schritt, Klasse, was er tut).
     LAUF = [
+        ('vorbereitung', 'Engine2d3dKleidervorbereitung', 'Die Fotos aufbereiten: Hintergrund entfernen (BiRefNet), auf Wunsch den Körper '
+         'senkrecht stellen, Zuschnitt als Quadrat um die Silhouette, Licht ausgleichen. Getrennt startbar; der Schritt „netz" übernimmt die Bilder.'),
         ('netz', 'Engine2d3dKleidernetz', 'TRELLIS baut aus den Fotos ein texturiertes Netz (Vorgabe 100.000 Flächen). Es '
          'dient nur noch dem Körperfit und als Herkunft der Fotostücke — die Runden richten sich nach den Fotos.'),
+        ('segmentierung', 'Engine2d3dKleidersegmentierung', 'OPTIONAL: Sapiens (Körperteil-Modell) zerlegt die vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, '
+         'Zubehör und Haut; die Etiketten gehen mit der Projektion der Fotofarbe auf die Flächen des Netzes (verdeckte Flächen stimmen nicht ab). Bei Option „An" nimmt der '
+         'Schritt „kleidung" der Körper-Kette sie für die Kleidungsmaske statt Farbe und Lage. Läuft im vollen Lauf nur bei „An", ausdrücklich gestartet immer.'),
         ('koerper', 'Engine2d3dKleiderkoerper', 'Genesis-9-Figur per Adam-Fit der Morphs an das Netz '
          '(Meshfigurregistrierung, mit Frühstopp), Hautkacheln backen, Frisurkandidaten messen.'),
         ('grundfigur', 'Engine2d3dKleidergrundfigur',
@@ -110,8 +115,9 @@ class Architektur2d3d:
         (18, 'je Runde', 'Gesichtsmaße: Kopf-Render 1024², 4 Saaten, Landmarken gegen das Foto', 'Gesichtsmasse',
          'Rendern n von n'),
         (19, 'je Runde', 'Prüfbilder für die Prüfung durch Fable: Kopftafel (Foto- gegen Render-Kopf aus jedem '
-         'Fotowinkel, 384²), danach die Vergleichstafel in Prüfbreite', 'Pruefbilder', 'Prüfbilder'),
-        (20, 'je Runde', 'Ablegen: Vergleichstafel, Kopftafel, Einzelrenders, Formbezug, Eintrag in '
+         'Fotowinkel, 384²); die Vergleichstafel in Prüfbreite entsteht erst beim Ablegen (Schritt 20, '
+         'Begutachtungsrunde._ablegen)', 'Pruefbilder', 'Prüfbilder'),
+        (20, 'je Runde', 'Ablegen: Vergleichstafel (Prüfbreite), Kopftafel, Einzelrenders, Formbezug, Eintrag in '
          'ergebnis.iterationen', 'Pruefbilder, Iterationstafel, Iterationsrunde, Kleidermodellbau', 'ablegen'),
         (21, 'je Runde', 'Gesamtnote (Foto + Farbe der Teile + Gesicht) und Rundenauswahl: übernehmen, Probe oder '
          'verwerfen (Zeilen gesperrt); eine Messrunde setzt die Bezugsnote neu', 'Begutachtungsstand, Gesamtnote, '

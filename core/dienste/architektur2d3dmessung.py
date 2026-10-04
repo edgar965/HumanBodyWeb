@@ -48,7 +48,8 @@ class Architektur2d3dmessung:
          'Modell bauen kalt 41,7 s → warm 0,1 s für das Modell selbst'),
         ('Keine GLB je Runde', '56 MB je Runde weniger; der Zeitanteil ist nicht getrennt gemessen'),
         ('Kein Standmodell nach reinen Runden', '20 s je Lauf weniger'),
-        ('Renderbreite 128 statt 256', 'die Note rechnet ohnehin auf 128 × 192; Zeitanteil nicht getrennt gemessen'),
+        ('Note und Befund auf 128 × 192 statt 256', 'die Renders der Runde entstehen in max(Auflösungsstufe, tafelbreite 384) wegen der '
+         'Prüfbilder (Begutachtungsrunde, Zeile 166); Zeitanteil nicht getrennt gemessen'),
         ('Mund: Mimikregler beim Lesen filtern', 'statt 872 s Körper neu rechnen: 0 s'),
     ]
     #: Wo die übrigen ~27 s stecken und was als Nächstes kommt (noch nicht umgesetzt).

@@ -51,7 +51,7 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
         # Die Hauptfelder des Space in seiner Reihenfolge (Resolution, Seed, Randomize Seed, Decimation Target, Texture Size) mit
         # der Modellwahl davor, dahinter Multi-Image (Fork des Space) und die Felder von Pixal3D.
         rest = ['modell', 'aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse', 'mehrbild', 'mehrbild_textur',
-                'pixal_fov', 'pixal_speicher']
+                'pixal_fov', 'pixal_speicher', 'pixal_seite', 'pixal_formseite', 'pixal_abstand', 'pixal_remesh', 'fotopruefung']
         self.assertEqual([k for k in vorgaben if k not in erwartet], rest)
         self.assertLessEqual(erwartet, set(vorgaben))
 
@@ -93,12 +93,13 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
         katalog = Engine2d3dKleideroptionen.katalog()
         self.assertEqual(katalog['mesh']['fein_titel'], Engine2d3dKleidermeshoptionen.FEIN_TITEL)
         felder = katalog['mesh']['optionen']
-        self.assertEqual(len(felder), 22)
-        # Sechs Hauptfelder sichtbar (Modell + die fünf des Space), die zwölf Sampler, die beiden Multi-Image-Felder und die
-        # beiden von Pixal3D im zugeklappten Bereich („Advanced Settings").
+        self.assertEqual(len(felder), 27)
+        # Sechs Hauptfelder sichtbar (Modell + die fünf des Space), die zwölf Sampler, die beiden Multi-Image-Felder, die fünf
+        # von Pixal3D (Sichtfeld, Grafikspeicher, Rolle der Seitenfotos, Seitenfotos für die Form, Kameraabstand) und die Fotoprüfung
+        # im zugeklappten Bereich („Advanced Settings").
         self.assertEqual([f['schluessel'] for f in felder if not f['fein']],
                          ['modell', 'aufloesung', 'seed', 'seed_zufall', 'flaechen', 'texturgroesse'])
-        self.assertEqual(sum(1 for f in felder if f['fein']), 16)
+        self.assertEqual(sum(1 for f in felder if f['fein']), 21)
         self.assertEqual(katalog['mesh']['gilt_nach'], 'modell')
 
     def test_die_felder_wechseln_mit_dem_modell(self):
@@ -111,8 +112,9 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
         self.assertEqual(len(trellis), 14)
         for schluessel in trellis:
             self.assertEqual(felder[schluessel]['gilt'], ['trellis2'], schluessel)
-        for schluessel in ('pixal_fov', 'pixal_speicher'):
+        for schluessel in ('pixal_fov', 'pixal_speicher', 'pixal_seite', 'pixal_formseite', 'pixal_abstand', 'pixal_remesh'):
             self.assertEqual(felder[schluessel]['gilt'], ['pixal3d', 'pixal3d_mv'], schluessel)
+        self.assertNotIn('gilt', felder['fotopruefung'])  # gilt für jedes Modell
 
     def test_das_modell_ist_trellis2_pixal3d_oder_pixal3d_mehrbild_und_sonst_die_vorgabe(self):
         felder = {f['schluessel']: f for f in Engine2d3dKleideroptionen.katalog()['mesh']['optionen']}

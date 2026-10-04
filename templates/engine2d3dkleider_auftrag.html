@@ -48,7 +48,22 @@ erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
 
 {% comment %}Zwei Reiter: „Auftrag" ist die Seite wie bei BlenderModel, „Iterationen" die Runden der Iterationen
 (`Engine2d3dKleideriterationen`).{% endcomment %}
-{% comment %}„Läuft im Hintergrund“ über beiden Reitern: Ein Lauf, der von außen gestartet wurde, soll man sehen und beenden
+{% comment %}Die Reiter stehen OBEN und rücken nie: Das Band „Läuft im Hintergrund“ stand bis 03.10.2026 darüber und schob die Reiter bei jedem
+Start und Ende eines Laufs um 64 px nach unten (gemessen im DOM: y 132 → 196) — ein Klick auf „Iterationen“ traf dann das Band.{% endcomment %}
+<div class="seitenreiter" role="tablist" id="auftrag-reiter">
+    <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cut"></i> Auftrag</button>
+    <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
+        Iterationen <span id="iterationen-anzahl"></span></button>
+</div>
+{% comment %}Die Reiter bindet dieses kleine Modul SOFORT (es lädt nur `seitenreiter.js`), nicht die Seitenklasse: Die hängt an dreißig Modulen
+und three.js — bis die geladen sind und alle Bausteine stehen, wäre „Iterationen“ ein toter Knopf. Bis die Seite „fertig“ meldet, steht eine
+Sanduhr (`Seitenreiterwartet`). Nichts wird gemerkt (`null`): Die Seite öffnet auf „Auftrag“ mit der Bühne, außer die Adresse nennt
+`#iterationen`.{% endcomment %}
+<script type="module">
+import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
+Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: true });
+</script>
+{% comment %}„Läuft im Hintergrund“ unter den Reitern, über beiden Feldern: Ein Lauf, der von außen gestartet wurde, soll man sehen und beenden
 können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten“.{% endcomment %}
 <div class="engine2d3dkleider-laufband" id="laufband" role="status" hidden>
     <i class="fas fa-spinner fa-spin"></i>
@@ -56,12 +71,7 @@ können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten�
     <button type="button" class="btn btn-danger btn-sm" id="laufband-anhalten" title="Beendet den Lauf sofort; eine Runde, die gerade rechnet, geht verloren, alles Abgelegte bleibt">
         <i class="fas fa-stop"></i> <span>Anhalten</span></button>
 </div>
-<div class="seitenreiter" role="tablist" id="auftrag-reiter">
-    <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cut"></i> Auftrag</button>
-    <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
-        Iterationen <span id="iterationen-anzahl"></span></button>
-</div>
-<div id="reiter-auftrag">
+<div id="reiter-auftrag" data-reiterfeld="auftrag">
 <div class="card" id="lauf">
     <ol class="meshfigur-schritte" id="schritte"></ol>
     <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
@@ -87,12 +97,43 @@ können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten�
     <h2>Bildauswahl</h2>
     <p class="hb-hinweis engine2d3dkleider-fotohinweis">Die Fotos sind die VORLAGE der Iterationen: Jede Runde rendert das
         Modell (Figur mit Haar) aus dem Blickwinkel jedes Fotos und misst die Abweichung. Den Blickwinkel gibt die Rolle
-        (Vorne, Links, Rechts, Hinten) oder der Name eines Schnittbilds des Ansichtenbogens („ansicht_R_S“).
-        „Nicht verwenden“ schließt ein Foto aus (etwa den ganzen Bogen), das Gewicht zählt es mehr oder
-        weniger. Platz 1 ist die Vorlage in der Übersicht. Hinzufügen, Ersetzen und Entfernen gehen jederzeit; ein
-        laufender Kreislauf sieht die Änderung ab dem nächsten Lauf.</p>
+        (Vorne, Links, Rechts, Hinten), bei „Nur Iterationen“ das Feld „Winkel“, oder der Name eines Schnittbilds des
+        Ansichtenbogens („ansicht_R_S“). „Nicht verwenden“ schließt ein Foto aus (etwa den ganzen Bogen), das Gewicht
+        zählt es mehr oder weniger. Platz 1 ist die Vorlage in der Übersicht. Hinzufügen, Ersetzen und Entfernen gehen
+        jederzeit; ein laufender Kreislauf sieht die Änderung ab dem nächsten Lauf.</p>
     <div class="mesh-fotoknoepfe" id="foto-knoepfe"></div>
-    <div class="mesh-fotoliste" id="fotoliste"></div>
+    <h3 class="engine2d3dkleider-fotogruppe">Für die Netz-Pipeline (TRELLIS.2 / Pixal3D) — und die Iterationen</h3>
+    <p class="hb-hinweis engine2d3dkleider-fotohinweis">Diese Fotos gehen in den Schritt „Netz“ (Form und Textur) und zählen
+        danach in den Iterationen. Die Formmodelle nehmen die vier senkrechten Ansichten (Vorne, Links, Hinten, Rechts).</p>
+    {% comment %}Referenzvideo (04.10.2026, Edgar: „füge franks ergebnis video rechts neben den Vorlagebildern als Frame ein, mit play soll ich das abspielen können"):
+    der Rahmen steht rechts neben den Fotos; gebaut von `Engine2d3dKleiderreferenz` (JS).{% endcomment %}
+    <div class="engine2d3dkleider-vorlagenreihe">
+        <div class="mesh-fotoliste" id="fotoliste"></div>
+        <div class="engine2d3dkleider-referenz" id="referenz-rahmen">
+            <div class="hb-hinweis">Referenz — Franks Ergebnis (zum Vergleichen mit dem Render)</div>
+            <video id="referenz-video" controls preload="metadata" playsinline></video>
+            <div class="engine2d3dkleider-referenzpfad">
+                <input type="text" id="referenz-pfad" placeholder="Pfad der Videodatei (mp4)" spellcheck="false" aria-label="Pfad des Referenzvideos">
+                <button type="button" class="btn btn-sm" id="referenz-uebernehmen">Übernehmen</button>
+            </div>
+            <div class="hb-hinweis" id="referenz-meldung"></div>
+        </div>
+    </div>
+    {% comment %}Schritt „Vorbereitung“ (03.10.2026, Edgar: „einen ersten Vorschritt mit Hintergrund entfernen … getrennt startbar. Zeige die Bilder nach dem
+    Schritt unter den Originalbildern“): Knopf, Option „Körper senkrecht stellen“ und die Bilder nach dem Schritt stehen direkt unter den Originalen.
+    Aufgebaut von `Engine2d3dKleidervorbereitung` (JS); die Option gehört zur Gruppe `vorbereitung`.{% endcomment %}
+    <h3 class="engine2d3dkleider-fotogruppe">Nach dem Schritt „Vorbereitung“ — Hintergrund entfernt, ausgerichtet, zugeschnitten</h3>
+    <p class="hb-hinweis engine2d3dkleider-fotohinweis">Der Schritt „Vorbereitung“ stellt die Fotos frei und schneidet jedes als Quadrat um die Silhouette zu (Körperhöhe
+        in allen Fotos gleich, mittig), gleicht das Licht aus und stellt auf Wunsch den Körper senkrecht. Er läuft für sich (Knopf unten); der Schritt „Netz“ übernimmt die
+        Ergebnisse, solange Fotos und Optionen dazu passen.</p>
+    <div class="mesh-optionen" id="engine2d3dkleider-optionen-vorbereitung"></div>
+    <div class="engine2d3dkleider-vorbereitung-zeile" id="vorbereitung-zeile"></div>
+    <div class="mesh-fotoliste engine2d3dkleider-vorbereitet" id="vorbereitete-fotos"></div>
+    <h3 class="engine2d3dkleider-fotogruppe">Zusätzlich nur für die Iterationen</h3>
+    <p class="hb-hinweis engine2d3dkleider-fotohinweis">Diese Fotos bekommt das Netz nicht (etwa die Schrägansichten); in den
+        Iterationen zählen sie wie die anderen: Blickwinkel, Note, Fotofarbe. Rolle „Nur Iterationen“ verschiebt ein Foto
+        hierher, jede andere Rolle zurück nach oben.</p>
+    <div class="mesh-fotoliste" id="fotoliste-iterationen"></div>
 </div>
 
 {% comment %}Abschnitt „Mesh“ (02.10.2026, Edgar: „das UI für Mesh bitte direkt unter den Bildern so wie das UI von der Hugging
@@ -101,13 +142,29 @@ Seed, Decimation Target, Texture Size, „Generate“ (hier „Mesh erzeugen“)
 „trellis-community/TRELLIS" ist TRELLIS v1 und hat andere Stufen. Die Felder baut `Meshoptionenformular` aus der Gruppe `mesh`, den
 Knopf `Engine2d3dKleidermeshkarte`.{% endcomment %}
 <div class="card" id="mesh-karte">
-    <h2>Mesh — TRELLIS.2</h2>
+    <h2>Mesh — <span id="engine2d3dkleider-ki">TRELLIS.2</span></h2>
     <p class="hb-hinweis" id="engine2d3dkleider-mesh-hinweis">Die Regler des Hugging-Face-Space „microsoft/TRELLIS.2“; die Vorgaben
         sind die der <code>pipeline.json</code> von TRELLIS.2-4B, also dieselben wie dort — eine Änderung ist ein Versuch, kein
         Befund. „Mesh erzeugen“ rechnet nur den Schritt „Netz“, die nächsten Schritte starten getrennt („ab“ und „bis“ in der
         Laufleiste oben). Einen Mehrbild-Modus hat das offizielle TRELLIS.2 nicht: Die Form kommt aus dem Foto „Vorne“, die
         übrigen Fotos gehen in die Textur.</p>
     <div class="mesh-optionen" id="engine2d3dkleider-optionen-mesh"></div>
+</div>
+
+{% comment %}Karte „Segmentierung“ (04.10.2026, Edgar: „baue das ein in den 2d3dKleider jobs — optional nach der Mesh erzeugung“): Sapiens zerlegt die
+vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, Zubehör und Haut; die Etiketten gehen auf die Flächen des Netzes und — bei Option „An“ — in die Kleidungsmaske
+des Schritts „Körper“. Der Knopf rechnet nur den Schritt (getrennt startbar wie „Vorbereitung“). Aufgebaut von `Engine2d3dKleidersegmentierung` (JS); die
+Option gehört zur Gruppe `segmentierung`.{% endcomment %}
+<div class="card" id="segmentierung-karte">
+    <h2>Segmentierung — Sapiens <span class="hb-hinweis">(optional, nach dem Netz)</span></h2>
+    <p class="hb-hinweis">Das Körperteil-Modell von Meta (Sapiens-1B) zerlegt jedes vorbereitete Foto in Oberteil, Hose, Socken/Schuhe, Zubehör und Haut. Die Etiketten werden wie die
+        Fotofarbe auf das Netz gelegt (verdeckte Flächen stimmen nicht ab). Bei Option „An“ benutzt der Schritt „Körper“ (Quelle „rechnen“) sie für die Kleidungsmaske statt Farbe und Lage —
+        daraus entstehen die Fotostücke (Oberteil, Hose, Socken). Der Schritt braucht das Netz und läuft allein über den Knopf; im vollen Lauf nur bei Option „An“. Gewichte unter
+        CC BY-NC 4.0 (nicht kommerziell).</p>
+    <div class="mesh-optionen" id="engine2d3dkleider-optionen-segmentierung"></div>
+    <div class="engine2d3dkleider-vorbereitung-zeile" id="segmentierung-zeile"></div>
+    <div class="engine2d3dkleider-segmentierung-legende" id="segmentierung-legende"></div>
+    <div class="mesh-fotoliste engine2d3dkleider-vorbereitet" id="segmentierte-fotos"></div>
 </div>
 
 {% comment %}Die Optionen stehen in einer eigenen Karte über die volle Breite, nicht in der Seitenspalte der Bühne wie bei
@@ -222,24 +279,86 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
             <div>
                 <h2>Ergebnis</h2>
                 <dl class="mesh-kennzahlen" id="kennzahlen"></dl>
-                <div class="meshfigur-export">
+                {% comment %}Export (Engine2d3dKleideranimexport, 03.10.2026): das Modell, das die Bühne zeigt, als GLB oder Blender-Datei — wahlweise mit der
+                BVH-Animation und mit Audio (beides vorgewählt, Pfade änderbar; Vorgaben aus den Optionen unter „Film“). Ein GLB kann kein Audio tragen: Es liegt
+                als Datei daneben und läuft in der .blend als Tonstreifen mit.{% endcomment %}
+                <div class="meshfigur-export" id="export-block">
                     <div class="meshfigur-exportoptionen" id="export-optionen">
-                        <label>Textur
-                            <select id="export-aufloesung" class="viewer-select">
-                                <option value="0" selected>Original</option>
-                                <option value="2048">2048 px</option>
-                                <option value="1024">1024 px</option>
-                                <option value="512">512 px</option>
-                            </select>
-                        </label>
-                        <label><input type="checkbox" id="export-textur" checked> mit Textur</label>
-                        <label><input type="checkbox" id="export-rig" checked> mit Rig (Skelett)</label>
+                        <label class="engine2d3dkleider-exportzeile" title="Die Bewegung dieser BVH-Datei kommt als Animation in die Datei (Vorgabe: der Tanz; Optionen → Film → BVH-Datei)">
+                            <input type="checkbox" id="export-bvh" checked> <span>BVH-Animation</span>
+                            <input type="text" id="export-bvh-pfad" autocomplete="off" spellcheck="false" placeholder="Pfad der BVH-Datei"></label>
+                        <label class="engine2d3dkleider-exportzeile" title="Die Tonspur: als Datei neben dem Export, in der .blend als Tonstreifen (Vorgabe: die Audiospur des aktuellen BVH-Studio-Projekts; Optionen → Film → Tonspur)">
+                            <input type="checkbox" id="export-audio" checked> <span>Audio</span>
+                            <input type="text" id="export-audio-pfad" autocomplete="off" spellcheck="false" placeholder="Pfad der Audiodatei"></label>
                         <label class="meshfigur-exportname">Dateiname
                             <input type="text" id="export-name" autocomplete="off" spellcheck="false"></label>
                     </div>
-                    <button type="button" class="btn btn-primary btn-sm" id="exportieren" disabled>
+                    <button type="button" class="btn btn-primary btn-sm" id="export-glb" disabled>
                         <i class="fas fa-file-export"></i> <span>Figur als GLB exportieren</span></button>
+                    <button type="button" class="btn btn-primary btn-sm" id="export-blend" disabled>
+                        <i class="fas fa-cube"></i> <span>In Blender exportieren</span></button>
                     <div class="hb-hinweis" id="export-meldung"></div>
+                </div>
+                {% comment %}Render (Engine2d3dKleiderrender, 03.10.2026): das Modell mit der BVH-Bewegung und dem Ton als Video — Länge in Sekunden bis zur ganzen
+                BVH. Audio und BVH gelten wie beim Export (Haken und Pfade darüber). Das Ergebnis steht mit Pfad unter dem Knopf.{% endcomment %}
+                <div class="meshfigur-export" id="render-block">
+                    <div class="meshfigur-exportoptionen">
+                        <label class="engine2d3dkleider-exportzeile" title="Wie lang das Video wird: 10 Bilder bis zur ganzen BVH">
+                            <span>Länge (s)</span>
+                            <input type="number" id="render-sekunden" min="0.33" step="0.01" value="0.33">
+                            <span class="hb-hinweis" id="render-max"></span>
+                            <button type="button" class="btn btn-secondary btn-sm" id="render-10" title="10 Bilder = 0,33 s: erst die Qualität prüfen">10 Bilder</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="render-30" title="30 Bilder = 1 s">30 Bilder</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="render-ganz">ganze BVH</button></label>
+                        <label>Kamera
+                            <select id="render-kamera" class="viewer-select">
+                                <option value="zoom_ein" selected>Zoom hinein</option>
+                                <option value="zoom_aus">Zoom hinaus</option>
+                                <option value="zoom_ein_langsam">Zoom hinein, langsam</option>
+                                <option value="gesicht">Nah: Gesicht, Bart und Federn</option>
+                                <option value="brust">Nah: Brust, Hemd und Ketten</option>
+                            </select></label>
+                        <label>Größe
+                            <select id="render-groesse" class="viewer-select">
+                                <option value="960x1200" selected>960 × 1200 (wie Frank)</option>
+                                <option value="480x600">480 × 600 (Probe)</option>
+                            </select></label>
+                        <label>Qualität
+                            <select id="render-spp" class="viewer-select" title="Proben je Pixel vor dem Entrauschen">
+                                <option value="16">Probe (16 Proben)</option>
+                                <option value="96" selected>Standard (96)</option>
+                                <option value="192">Hoch (192)</option>
+                            </select></label>
+                        <label class="engine2d3dkleider-exportzeile" title="Was ist gegenüber dem Lauf davor anders? Kommt in die Liste der Läufe">
+                            <span>Anmerkung</span>
+                            <input type="text" id="render-anmerkung" maxlength="600" placeholder="was ist anders als im letzten Lauf?"></label>
+                    </div>
+                    {% comment %}Regler für Rendering und Physik (04.10.2026, Edgar: „Baue ALLE Regler ein" — Windstärke, Lichtverhältnisse, Mimik …): fünf Gruppen aus `Figurfilm.Filmregler`
+                    (Katalog vom Server, gespeichert im Auftrag wie die anderen Optionen, vom Arbeitsprozess als `regler.json` an die Skripte gegeben). Die Behälter heißen
+                    `engine2d3dkleider-optionen-<gruppe>`; das Formular baut `Meshoptionenformular`.{% endcomment %}
+                    <div class="engine2d3dkleider-renderregler" id="render-regler">
+                        <h4 class="engine2d3dkleider-reglertitel">Einstellungen für Rendering und Physik</h4>
+                        <details class="engine2d3dkleider-reglergruppe">
+                            <summary>Qualität, Bildaufbau und Stoffmodus</summary>
+                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderqualitaet"></div></details>
+                        <details class="engine2d3dkleider-reglergruppe">
+                            <summary>Licht und Hintergrund</summary>
+                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderlicht"></div></details>
+                        <details class="engine2d3dkleider-reglergruppe">
+                            <summary>Haut und Material</summary>
+                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderhaut"></div></details>
+                        <details class="engine2d3dkleider-reglergruppe">
+                            <summary>Physik: Wind, Haar, Bart, Ketten, Federn, Stoff, Uhr</summary>
+                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-renderphysik"></div></details>
+                        <details class="engine2d3dkleider-reglergruppe">
+                            <summary>Mimik und Lebendigkeit (wie im Studio)</summary>
+                            <div class="mesh-optionen" id="engine2d3dkleider-optionen-rendermimik"></div></details>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="render-starten" disabled>
+                        <i class="fas fa-film"></i> <span>Rendern</span></button>
+                    <div class="hb-hinweis" id="render-meldung"></div>
+                    {% comment %}Die Render-Läufe als eigener Abschnitt (`Engine2d3dKleiderrenderlaeufe`): Nummer, Bilder, Größe, Proben, Dauer, Bogen, Video, Anmerkung.{% endcomment %}
+                    <div class="engine2d3dkleider-renderlaeufe" id="render-laeufe"></div>
                 </div>
                 <div class="meshfigur-export">
                     <div class="meshfigur-exportoptionen">
@@ -256,9 +375,6 @@ hoch würde (gemessen bei BlenderModel, 29.09.2026).{% endcomment %}
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm" id="modell-speichern" disabled>
                         <i class="fas fa-save"></i> <span>Modell speichern</span></button>
-                    <button type="button" class="btn btn-primary btn-sm" id="animexport" disabled>
-                        <i class="fas fa-film"></i> <span>Modell mit Animation exportieren (GLB + Blender)</span></button>
-                    <div class="hb-hinweis" id="animexport-meldung"></div>
                     <div class="hb-hinweis" id="modell-meldung">Genesis-Preset erscheint unter „Charakter hinzufügen →
                         Genesis 9 → Gespeicherte Modelle“ (Szene, Studio, Theatre); GLB/Blender/OBJ gehen in die
                         Export-Ablage des Auftrags.</div>
@@ -308,7 +424,7 @@ nicht gibt) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`,
 </div>
 </div>
 
-<div id="reiter-iterationen" hidden>
+<div id="reiter-iterationen" data-reiterfeld="iterationen" hidden>
     <div class="card">
         <h2>Iterationen — Modell (Figur mit Kleidern und Haar)</h2>
         <p class="hb-hinweis">Begutachtung: Jede Runde wendet ein Rezept (Aufrufe an <code>ModellMitKleidern</code>: Kleider,
@@ -410,7 +526,9 @@ import { Engine2d3dKleiderseite } from "{% fassungspfad 'viewer/engine2d3dkleide
 import { Auftragloeschen } from "{% fassungspfad 'viewer/gemeinsam/auftragloeschen.js' %}";
 import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 import { Engine2d3dKleiderbuehnengroesse } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleiderbuehnengroesse.js' %}";
+import { Engine2d3dKleiderreferenz } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleiderreferenz.js' %}";
 Engine2d3dKleiderseite.starten("{{ job.id }}");
+Engine2d3dKleiderreferenz.starten("{{ job.id }}");
 Auftragloeschen.binden();
 Auftragname.binden();
 new Engine2d3dKleiderbuehnengroesse();

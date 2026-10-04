@@ -27,18 +27,26 @@ jede Klasse ist gegen den Code geprüft, Fehlendes steht als Befund auf der Seit
 {% endif %}
 
 <h2>Die Gruppen</h2>
+<p>Sechs Bereiche in der Reihenfolge der Anpassung: erst die Form der Figur, dann Kleider und Haar, der Stoffsolver, der Bildvergleich mit den Fotos — und, nur nach Ansage, die Schleifen über Blender.
+  Darunter die Tabelle „Wie liefe das mit Blender?" und das Klassenmodell.</p>
 <table class="db-tabelle">
   <thead><tr><th>Gruppe</th><th class="a2d3d-zahl">Werkzeuge</th><th class="a2d3d-zahl">Klassen</th><th>Wann man sie nimmt</th></tr></thead>
   <tbody>
-    {% for g in t.gruppen %}
+    {% for be in t.bereiche %}
+    <tr class="tw-bereich-zeile"><td colspan="4"><b>{{ be.titel }}</b> <span class="a2d3d-klein">— {{ be.hinweis }} ({{ be.gruppen|length }} Gruppen, {{ be.werkzeuge }} Werkzeuge)</span></td></tr>
+    {% for g in be.gruppen %}
     <tr><td><a href="#t-{{ g.kennung }}"><b>{{ g.titel }}</b></a></td><td class="a2d3d-zahl">{{ g.zeilen|length }}</td>
       <td class="a2d3d-zahl"><a href="#tm-{{ g.kennung }}">{{ g.modell|length }}</a></td><td>{{ g.einleitung }}</td></tr>
+    {% endfor %}
     {% endfor %}
   </tbody>
 </table>
 
-{% for g in t.gruppen %}
-<h2 id="t-{{ g.kennung }}" class="tw-gruppe">{{ g.titel }}</h2>
+{% for be in t.bereiche %}
+<h2 class="tw-bereich">{{ be.titel }}</h2>
+<p>{{ be.hinweis }}</p>
+{% for g in be.gruppen %}
+<h3 id="t-{{ g.kennung }}" class="tw-gruppe">{{ g.titel }}</h3>
 <p>{{ g.einleitung }}</p>
 <table class="db-tabelle sortable tw-tabelle" data-sort-key="hilfe-2d3d-tools-{{ g.kennung }}">
   <thead><tr><th>Werkzeug</th><th>Art</th><th>Aufruf</th><th>Klassen</th><th>Wofür, Grenzen</th></tr></thead>
@@ -48,12 +56,13 @@ jede Klasse ist gegen den Code geprüft, Fehlendes steht als Befund auf der Seit
       <td><b>{{ z.werkzeug }}</b></td>
       <td><span class="tw-art tw-art-{{ z.art }}">{{ z.art_text }}</span></td>
       <td><pre class="tw-aufruf">{{ z.aufruf }}</pre></td>
-      <td class="tw-klassen">{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<a href="#{{ k.anker }}">{{ k.klasse }}</a>{% endif %}{% empty %}—{% endfor %}</td>
+      <td class="tw-klassen">{% for k in z.klassen %}{% if k.fehlt %}<span class="a2d3d-fehlt">{{ k.klasse }}: {{ k.fehlt }}</span>{% else %}<a href="#{{ k.anker }}">{{ k.klasse }}</a>{% endif %} {% empty %}—{% endfor %}</td>
       <td>{{ z.wofuer }}{% if z.hinweis %}<div class="tw-hinweis">{{ z.hinweis }}</div>{% endif %}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+{% endfor %}
 {% endfor %}
 
 {% include "hilfe/_architektur_2d3d_blender.html" with b=blender %}
@@ -61,9 +70,11 @@ jede Klasse ist gegen den Code geprüft, Fehlendes steht als Befund auf der Seit
 <h2>Das Klassenmodell</h2>
 <p>Je Gruppe die Klassen ihrer Werkzeuge. Ein Kasten zeigt Datei und Zeilenzahl, die Aufgabe (erster Satz des Modul-Docstrings, aus dem Code gelesen), die öffentlichen Methoden,
   <b>Aufrufe von außen</b> (welches Werkzeug dieser Tabelle die Klasse trägt, „Einstieg" = die Klasse, die man ruft) und die <b>Beziehungen</b> innerhalb der Gruppe:
-  „ruft" nennt die Klasse und womit, „gerufen von" die Gegenseite.</p>
+  „ruft" nennt die Klasse und womit, „gerufen von" die Gegenseite. Die Gruppen sind eingeklappt (die Seite hat über {{ t.zaehlung.klassen }} Kästen); ein Verweis aus der
+  Tabelle oder ein Anker in der Adresse klappt die Gruppe von selbst auf.</p>
 {% for g in t.gruppen %}
-<h3 id="tm-{{ g.kennung }}">{{ g.titel }} <span class="a2d3d-klein">— {{ g.modell|length }} Klassen, {{ g.beziehungen }} Beziehungen</span></h3>
+<details class="tw-modell" id="tm-{{ g.kennung }}">
+<summary>{{ g.titel }} <span class="a2d3d-klein">— {{ g.modell|length }} Klassen, {{ g.beziehungen }} Beziehungen</span></summary>
 <div class="wf-karten">
   {% for k in g.modell %}
   <div class="wf-karte" id="{{ k.anker }}">
@@ -81,5 +92,6 @@ jede Klasse ist gegen den Code geprüft, Fehlendes steht als Befund auf der Seit
   </div>
   {% endfor %}
 </div>
+</details>
 {% endfor %}
 {% endwith %}

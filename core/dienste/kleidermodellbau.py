@@ -258,9 +258,10 @@ class Kleidermodellbau:
             faktor = np.asarray(farbe[:3], dtype=np.float64) if isinstance(farbe, (list, tuple)) and len(farbe) >= 3 \
                 else np.ones(3)
             aus.append({'ab': int(g['index_ab']) // 3, 'anzahl': int(g['index_anzahl']) // 3, 'albedo': albedo,
-                        'normalen': normalen, 'alpha': alpha, 'normalenachse': int(b.get('normalenachse') or 1),
+                        'normalen': normalen, 'alpha': alpha, 'opazitaet': b.get('opazitaet'), 'normalenachse': int(b.get('normalenachse') or 1),
+                        'metall': b.get('metallgewicht'), 'rauheit': b.get('rauheitwert') if b.get('metallgewicht') else None,      # nur Metallstücke (Stiefel): sonst bleibt der Render matt
                         'faktor': np.clip(faktor * 2.0 * np.asarray(toenung), 0.0, 1.0)})
-        return aus if any(t['albedo'] is not None for t in aus) else []
+        return aus if any(t['albedo'] is not None or t['opazitaet'] is not None for t in aus) else []
 
     @classmethod
     def textur_auffrischen(cls, teile, modell, sorten):
@@ -270,13 +271,14 @@ class Kleidermodellbau:
         from Genesis9.haargenerisch import G9haargenerisch
         from Genesis9.kleidgenerischwahl import G9kleidgenerischwahl
         from Genesis9.kleidtexturen import G9kleidtexturen
+        from Genesis9.kleidtransparenz import G9kleidtransparenz
         for t in teile:
             sorte = t.get('sorte')
             if sorte not in sorten or not t.get('gruppen'):
                 continue
             regler = (G9haargenerisch.regler_von(sorte, modell.haar) if t['art'] == 'haar'
                       else G9kleidgenerischwahl.regler_von(sorte, modell.kleidung))
-            bilder = G9kleidtexturen.anwenden(sorte, G9garderobe.bilder(sorte), regler)
+            bilder = G9kleidtransparenz.anwenden(sorte, G9kleidtexturen.anwenden(sorte, G9garderobe.bilder(sorte), regler), regler)
             t['textur'] = cls._textur(t['gruppen'], bilder, t['toenung'])
 
     @staticmethod

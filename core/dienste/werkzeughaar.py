@@ -100,11 +100,13 @@ class Werkzeughaar:
         ('Daz-Morph einer Frisur stellen',
          'Stellt einen echten Daz-Morph der Frisur (Pony, Länge, Zopfform …).',
          'rezept',
-         "m.haar_morph('kin_hair', '<Kanalname aus der Reglerliste>', 0.5)",
+         "m.haar_morph('kin_hair', 'Hair Bangs move forward', 0.5)",
          [(G + 'modellhaar.py', 'ModellHaarMixin'), (G + 'haargenerisch.py', 'G9haargenerisch')],
          'kanal = name des Reglers in der Reglerliste der Frisur (GET …/garderobe/, regler[].name); unbekannte Namen '
-         'bleiben wirkungslos. Der Schlüssel im Modell ist <kennung>.<kanal>. Zahl der Daz-Regler je Frisur: siehe „die 18 '
-         'Frisuren“ (zusammen 304 Daz-Morphe, 30.09.2026).'),
+         'bleiben wirkungslos. Gelesen aus der gemerkten Liste (03.10.2026): kin_hair hat Hair Bangs move forward / backward '
+         '/ left / right (−1…1), mavick_hair ExpandAll (−1…1), Front Hair down, Front Hairline down (0…1), Wind (−0,1…1), '
+         'g9_base_dforce_pixie_hair Feathered, Jaunty, Short, Straight (0…1). Der Schlüssel im Modell ist <kennung>.<kanal>. '
+         'Zahl der Daz-Regler je Frisur: siehe „die 18 Frisuren“ (zusammen 304 Daz-Morphe, 30.09.2026).'),
 
         ('Formachse einer Frisur: Länge, Kurz, Dichte, Wellig, Dutt',
          'Stellt eine der fünf gemeinsamen Formachsen — an jeder Frisur gleich — auf 0…1.',
@@ -157,7 +159,7 @@ class Werkzeughaar:
         ('Sammeleintrag anfragen: Frisuren mischen (Server)',
          'Baut das Netz der Mischung: jede Sorte mit Anteil wird gebaut und auf ihren Anteil an Strähnen ausgedünnt.',
          'api',
-         'POST /api/character/genesis9-figur/garderobe/haar_generisch/netz/\n'
+         'POST /api/character/genesis9-figur/garderobe/<kennung>/netz/   (kennung: haar_generisch)\n'
          '{regler: {…}, regler_stueck: {"sorte.kin_hair": 0.7, "sorte.toulouse_hair": 0.3, "kin_hair.achse.laenge": 0.5}, '
          'getragen: [], rang: 1}\n'
          '→ {kennung: "haar_generisch", teile: […], boden, stufen, innen, aussen, art: "haar"}',

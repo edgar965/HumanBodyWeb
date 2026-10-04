@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Workflowstrecke — die sieben Schritte eines Auftrags „2D3D Kleider" als Kette von Klassenkarten, mit ihren Optionen, ihrer
+"""Workflowstrecke — die Schritte eines Auftrags „2D3D Kleider" (seit 04.10.2026 neun, die Segmentierung ist optional) als Kette von Klassenkarten, mit ihren Optionen, ihrer
 Zeit und der Zeitleiste eines vollständigen Auftrags (Hilfe → Architektur → 2D3D, 02.10.2026).
 
 Die Schritte kommen aus `Architektur2d3d.LAUF` (= `Engine2d3dKleiderlauf.SCHRITTE`), die Optionen aus den Katalogen
@@ -18,6 +18,16 @@ class Workflowstrecke:
     #: (Schritt, Klasse, Zeit, [(Option, Werte)], [Baumkennung]) — Reihenfolge wie `Engine2d3dKleiderlauf.SCHRITTE`.
     SCHRITTE = [
         (
+            'vorbereitung',
+            'Engine2d3dKleidervorbereitung',
+            W.VORBEREITUNG,
+            [
+                ('vorbereitung.ausrichten', 'Häkchen, aus (Vorgabe) · angehakt = Mittelachse: Kopf, Rumpf und Hüfte der Seitenfotos auf eine senkrechte Achse, vorne und hinten um die Körperachse gedreht'),
+                ('netz.freistellen, netz.licht', 'wie beim Schritt „netz" (die Vorbereitung liest dieselben Felder)'),
+            ],
+            [],
+        ),
+        (
             'netz',
             'Engine2d3dKleidernetz',
             W.NETZ,
@@ -34,6 +44,16 @@ class Workflowstrecke:
                 ),
             ],
             ['netz', 'textur'],
+        ),
+        (
+            'segmentierung',
+            'Engine2d3dKleidersegmentierung',
+            W.SEGMENTIERUNG,
+            [
+                ('segmentierung.verwenden', 'aus (Vorgabe: der Schritt entfällt im vollen Lauf, die Maske bleibt nach Farbe und Lage) · an (Sapiens zerlegt die Fotos, '
+                                            'die Kleidungsmaske des Schritts „koerper" folgt den Etiketten); ausdrücklich gestartet läuft der Schritt immer'),
+            ],
+            [],
         ),
         (
             'koerper',

@@ -5,7 +5,6 @@ import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
 import { Meshpfadliste } from '../mesh/meshpfadliste.js';
 import { Meshfigurberichte } from '../meshfigur/meshfigurberichte.js';
 import { Meshfigurbuehne } from '../meshfigur/meshfigurbuehne.js';
-import { Meshfigurexport } from '../meshfigur/meshfigurexport.js';
 import { Meshfigurfrisur } from '../meshfigur/meshfigurfrisur.js';
 import { Meshfigurhaar } from '../meshfigur/meshfigurhaar.js';
 import { Meshfigurkleidung } from '../meshfigur/meshfigurkleidung.js';
@@ -22,6 +21,10 @@ import { Engine2d3dKleiderformen } from './engine2d3dkleiderformen.js';
 import { Engine2d3dKleidermalen } from './engine2d3dkleidermalen.js';
 import { Engine2d3dKleidermeshkarte } from './engine2d3dkleidermeshkarte.js';
 import { Engine2d3dKleidernetzansicht } from './engine2d3dkleidernetzansicht.js';
+import { Engine2d3dKleiderrender } from './engine2d3dkleiderrender.js';
+import { Engine2d3dKleidersegmentierung } from './engine2d3dkleidersegmentierung.js';
+import { Engine2d3dKleidervorbereitung } from './engine2d3dkleidervorbereitung.js';
+import { Engine2d3dKleiderveraltet } from './engine2d3dkleiderveraltet.js';
 
 /**
  * Engine2d3dKleiderseite — die Auftragsseite von „2D3D Kleider" (Bereich engine2d3dkleider): Lauf, Bildauswahl, 3D-Ausgabe, Optionen, Iterationen.
@@ -35,8 +38,8 @@ export class Engine2d3dKleiderseite {
     static TAKT_MS = 2000;
     static TAKT_RUHE_MS = 6000;
     static NAMEN = {
-        netz: 'Netz (TRELLIS)', koerper: 'Körper', grundfigur: 'Grundfigur', iterationen: 'Iterationen', export: 'GLB mit Rig',
-        film: 'Film', speichern: 'Speichern',
+        vorbereitung: 'Vorbereitung', netz: 'Netz', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', iterationen: 'Iterationen',
+        export: 'GLB mit Rig', film: 'Film', speichern: 'Speichern',
     };
     static STATUS = {
         angelegt: 'Angelegt', laeuft: 'Läuft', fertig: 'Fertig', gescheitert: 'Fehlgeschlagen', angehalten: 'Angehalten',
@@ -54,6 +57,7 @@ export class Engine2d3dKleiderseite {
     constructor(jobId, zustand, katalog) {
         Object.assign(this, { jobId, zustand, katalog, _timer: null });
         this.fehlerband = new Fehlerband(); // dauerhaft, mit OK wegklickbar (02.10.2026)
+        this.veraltet = new Engine2d3dKleiderveraltet(); // offener Tab älter als der Code auf dem Server → Band „Neu laden"
     }
 
     adresse(pfad) { return `/api/engine2d3dkleider/${this.jobId}/${pfad}`; }
@@ -72,7 +76,7 @@ export class Engine2d3dKleiderseite {
 
     aufbauen() {
         const werte = this.zustand.optionen || {};
-        for (const gruppe of ['figur', 'netz', 'mesh', 'koerper', 'iterationen', 'film']) {
+        for (const gruppe of Object.keys(this.katalog).filter(g => document.getElementById('engine2d3dkleider-optionen-' + g))) {      // alle Gruppen des Katalogs mit Behälter (04.10.2026: dazu die Renderregler)
             Meshoptionenformular.bauen(document.getElementById(`engine2d3dkleider-optionen-${gruppe}`), this.katalog[gruppe],
                 werte[gruppe]);
         }
@@ -86,10 +90,14 @@ export class Engine2d3dKleiderseite {
             for (const auswahl of [wahl, ende]) {
                 const option = document.createElement('option');
                 option.value = s;
-                option.textContent = Engine2d3dKleiderseite.NAMEN[s] || s;
+                option.textContent = Engine2d3dKleidermeshkarte.schrittname(s, this.zustand, Engine2d3dKleiderseite.NAMEN[s] || s);
                 auswahl.appendChild(option);
             }
         }
+        // Die Reiter bindet `Seitenreiter` im Template, in einem kleinen Modul ohne three.js (03.10.2026, Edgar: „Iterationen“ nicht
+        // anklickbar): Hing der Klick an dieser Klasse, waren die Reiter tot, bis dreißig Module geladen und alle Bausteine gebaut waren
+        // — und für immer, wenn einer davon beim Aufbau warf. Die Seite hört nur noch auf den Wechsel.
+        document.getElementById('auftrag-reiter').addEventListener('reiterwechsel', e => this.reiterGewechselt(e.detail.name));
         document.getElementById('starten').addEventListener('click', () => this.starten());
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
         document.getElementById('laufband-anhalten').addEventListener('click', () => this.anhalten());
@@ -100,6 +108,8 @@ export class Engine2d3dKleiderseite {
         this.einstellungen = new Engine2d3dKleidereinstellungen(this);
         this.meshkarte = new Engine2d3dKleidermeshkarte(this);
         this.fotos = new Engine2d3dKleiderfotos(this);
+        this.vorbereitung = new Engine2d3dKleidervorbereitung(this);
+        this.segmentierung = new Engine2d3dKleidersegmentierung(this);
         this._pfadstand = null;
         this.iterationen = new Engine2d3dKleideriterationen(this);
         this.begutachtung = new Engine2d3dKleiderbegutachtung(this);
@@ -111,14 +121,15 @@ export class Engine2d3dKleiderseite {
         this.film = new Engine2d3dKleiderfilmansicht(this);
         this.animation = new Engine2d3dKleideranimation(this, this.buehne);
         this.animexport = new Engine2d3dKleideranimexport(this);
+        this.render = new Engine2d3dKleiderrender(this);
         this.berichte = new Meshfigurberichte(this);
-        this.export = new Meshfigurexport(this);
         this.haar = new Meshfigurhaar(this);
         this.kleidung = new Meshfigurkleidung(this);
         this.frisur = new Meshfigurfrisur();
         this.speicher = new Meshfigurspeicher(this);
         this.zeigen();
         this.verfolgen();
+        this.reiterFertig(); // ein Klick auf einen Reiter, der kam, bevor die Seite fertig war, wartet nicht länger
     }
 
     // ---------------------------------------------------------------- Lauf
@@ -187,6 +198,7 @@ export class Engine2d3dKleiderseite {
             // scheitert, bleibt dort auf „Läuft" stehen, und die Meldung trägt den Vorsatz „Zustand nicht lesbar".
             const z = await Serverabruf.json(this.adresse('zustand/'));
             this.zustand = z;
+            this.veraltet.pruefen(z);
             this.zeigen();
         } catch (fehler) {
             this.fehlerband.lesefehler(`Zustand nicht lesbar: ${fehler.message}`);
@@ -224,6 +236,8 @@ export class Engine2d3dKleiderseite {
         this.fehlerband.auftrag(z); // der Takt löscht eine stehende Meldung NICHT mehr
         this.schritte();
         this.fotos.zeigen(z);
+        this.vorbereitung.zeigen(z);
+        this.segmentierung.zeigen(z);
         this.pfade(z);
         this.iterationen.zeigen(z);
         this.begutachtung.zeigen(z);
@@ -237,8 +251,22 @@ export class Engine2d3dKleiderseite {
         this.film.zeigen(z);
         this.animation.zeigen(z);
         this.animexport.zeigen(z);
-        this.export.zeigen(z);
+        this.render.zeigen(z);
         this.speicher.zeigen(z);
+    }
+
+    /** Reiter „Auftrag" / „Iterationen" gewechselt (die Felder hat `Seitenreiter` schon umgeschaltet): bei „Iterationen" den Zustand
+     *  frisch holen, danach die Sanduhr beenden (`Seitenreiterwartet`) — auch wenn das Holen scheitert. */
+    async reiterGewechselt(name) {
+        try {
+            if (name === 'iterationen') await this.aktualisieren();
+        } finally {
+            this.reiterFertig();
+        }
+    }
+
+    reiterFertig() {
+        document.getElementById('auftrag-reiter').dispatchEvent(new Event('reiterfertig'));
     }
 
     /** „Gespeichert unter" — die Ablageorte zum Kopieren, neu gezeichnet nur bei Änderung. */
@@ -262,7 +290,7 @@ export class Engine2d3dKleiderseite {
             if (z.laeuft && i === jetzt) art = 'laeuft';
             if (z.status === 'gescheitert' && i === jetzt) art = 'fehler';
             punkt.className = `meshfigur-schritt meshfigur-schritt-${art}`;
-            punkt.textContent = Engine2d3dKleiderseite.NAMEN[s] || s;
+            punkt.textContent = Engine2d3dKleidermeshkarte.schrittname(s, z, Engine2d3dKleiderseite.NAMEN[s] || s);
             if (dauer[s] !== undefined) {
                 const zeit = document.createElement('small');
                 zeit.textContent = ` ${Math.round(dauer[s])} s`;

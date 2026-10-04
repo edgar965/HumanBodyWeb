@@ -100,7 +100,7 @@ class Werkzeugstofffedern:
              '# im Auftrag: "druck": <Kraft>, "fluiddichte": <kg/m³>, "gruppen": "<npz mit druck (N,)>"')),
          [(S + 'aussenkraefte.py', 'Aussenkraefte'), (S + 'flaechenkraefte.py', 'Flaechenkraefte'), (S + 'hydrostatik.py', 'Hydrostatik'), (S + 'druckgruppe.py', 'Druckgruppe')],
          'Innendruck wie Blenders Pressure: (min(V0/V − 1, |P| + 200) + P) · Faktor, der Volumenterm nur bei einem Ausgangsvolumen über 1e-6 m³ (geschlossenes Stück); Schwerkraft × 0,001, '
-         'Luft × 0,01. druck ≠ 0 schaltet den Druck an (sonst nur mit druck_an oder druck_nur_mit_schalter). Newton (Vorgabe der Pipeline) kann keinen Druck, nur Blender und Stoffsolver. '
+         'Luft × 0,01. druck ≠ 0 schaltet den Druck an; mit druck_nur_mit_schalter=True gilt Blenders strenger use_pressure-Schalter (druck_an in material_felder), dann wirkt der Druck nur mit gesetztem Schalter. Newton (Vorgabe der Pipeline) kann keinen Druck, nur Blender und Stoffsolver. '
          'Gemessen: Zielvolumen, Faktor, Deckel 200 und Druckgruppe höchstens 0,0004 mm; Hydrostatik +10, −30 und mit Gruppe höchstens 0,002 mm; −100 liegt in der Streuung der Szene '
          '(Solver gegen sich selbst bei 1e-7 m Störung 0,68 mm). Stand: blender.'),
         ('Kollision: Körper und Selbst, Qualität, Klammern, Gruppenmasken',

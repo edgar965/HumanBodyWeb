@@ -12,7 +12,7 @@ class Werkzeugkoerper:
     G = 'Genesis9/'
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
-    I = '2d3DIterationen/iterationen2d3d/'
+    P = '2d3DIterationen/iterationen2d3d/'
 
     KENNUNG = 'koerper'
     TITEL = 'Körper-Regler und Ortsmorphe (Genesis 9)'
@@ -129,6 +129,23 @@ class Werkzeugkoerper:
          'begrenzt (weg_cm −20…20, radius_cm 0,5…60, weich 0,01…0,5), Landmarken nur aus der Liste des GET. Der Name wird Kennung (a–z, 0–9, _; ä → ae). '
          'Der Browser hängt den Regler sofort an und stellt ihn auf 1 (genesis9koerpermorphformular.js). Jeder POST schreibt eine Datei neben die '
          'Bibliothek (3DObjects/Genesis9/eigenmorphe/) — nur nach Ansage.'),
+        ('HumanBody-Morphe auf Genesis (hb:…)',
+         'Stellt einen der 204 HumanBody-Regler (MB-Lab) als Morph auf dem Genesis-Körper — Brust, Taille, Nase und mehr, wo Daz ohne Kaufpakete keinen Einzelregler hat.',
+         'rezept',
+         "m.koerper_regler('hb:Torso_BreastPosZ', 0.3)",
+         [(G + 'hbmorphe.py', 'G9hbmorphe'), (G + 'formung.py', 'G9formung'), (D + 'hbmorpheaufgenesis.py', 'Hbmorpheaufgenesis')],
+         'Reglername hb:<HumanBody-Regler>, ZWEISEITIG −1…1 mit eigenen Deltas je Richtung (plus für > 0, minus für < 0). 204 Regler: 110 Gesicht, ≈ 85 Körper, 8 Fantasie, '
+         'übertragen auf die 25.182 Käfigpunkte über die Paarung der Grundfiguren; im Bedienfeld „HB-Morphs Körper/Gesicht/Fantasie“ (Bereiche hb_koerper, hb_gesicht, hb_fantasie). '
+         '21 Regler mit Skelettwirkung (Body Size, Längen, Winkel, Head Size, Elfenohren) liegen nur als Steckbrief (rig: true) und sind nicht stellbar: ein Punktversatz ohne '
+         'Skelett-Nachzug blähte die Anhänge auf (Mund 6,8 → 94 cm bei Body Size −100 %, 20.09.2026, genesis9-inhalte.md). Die genauen Namen aus der Reglerliste nehmen; '
+         'Torso_BreastPosZ ist das Beispiel der Klasse, nicht gegen den Bestand geprüft.'),
+        ('HumanBody-Morphe bauen',
+         'Überträgt alle HumanBody-Regler auf den Genesis-Käfig und schreibt sie in die Ablage — nötig nach einer Änderung der HumanBody-Morphpakete oder der Paarung.',
+         'cli',
+         'python14\\Scripts\\python.exe HumanBodyWeb\\manage.py hbmorphe_bauen [--nur-veraltet] [--leise]',
+         [(D + 'hbmorpheaufgenesis.py', 'Hbmorpheaufgenesis'), (G + 'hbmorphe.py', 'G9hbmorphe')],
+         'Schreibt nach Genesis9/ablage/hbmorphe/ (Artefakt, nicht im Git; bestand.json trägt Fassung und Stand) — nur nach Ansage. --nur-veraltet baut nur, wenn der Bestand fehlt oder älter '
+         'ist als die HumanBody-Morphs. Dauer: nicht gemessen.'),
         ('Seite: Szene, Genesis-9-Figur',
          'Regler von Hand ziehen und die Wirkung im 3D-Bild sehen; Figur als Modell speichern.',
          'seite',
@@ -141,7 +158,7 @@ class Werkzeugkoerper:
          'regel',
          "Option iterationen.form = 'aus' (Vorgabe) | 'an'\n"
          "POST /api/engine2d3dkleider/<id>/einstellungen/   {optionen: {iterationen: {form: 'an'}}}",
-         [(I + 'iterationmodell.py', 'IterationModell'), (I + 'iterationkoerper.py', 'IterationKoerper'), (I + 'reglerpruefung.py', 'Reglerpruefung'),
+         [(P + 'iterationmodell.py', 'IterationModell'), (P + 'iterationkoerper.py', 'IterationKoerper'), (P + 'reglerpruefung.py', 'Reglerpruefung'),
           (D + 'iterationsoptionen.py', 'Iterationsoptionen'), (D + 'begutachtungskritik.py', 'Begutachtungskritik')],
          'Der Schritt „koerper“ fittet die Figur mit Verlustfunktion an das Netz; die Regeln der Runden schoben die Beine von „.51“ 40 Runden lang an den '
          'Anschlag (01.10.2026), deshalb Vorgabe aus (Iterationsoptionen). Mit form = an: IterationKoerper je Band Genesis-Regler (±1), dann Ortsregler (±2), '
@@ -156,12 +173,12 @@ class Werkzeugkoerper:
         ('G9figur', 'ruft', 'G9formung', 'formung(rumpf, eintrag): G9formung.aus_abfrage(regler, drehung)'),
         ('G9figur', 'ruft', 'G9koerpernetz', 'G9koerpernetz(formung, eintrag, …).bauen(): Netz, Skelett, Anhänge'),
         ('G9figur', 'ruft', 'G9antworten', "liefern('koerper', name, rumpf, rechnen): Antwortvorrat je Fingerabdruck der Stellung"),
-        ('G9figur', 'ruft', 'G9charaktere', 'liste() / eintrag(name): Katalog der Grundfiguren'),
         ('G9reglerplan', 'ruft', 'G9reglerbereiche', 'bereich(kanal): Bereichsschlüssel nach Daz-region und -group'),
         ('G9reglerplan', 'ruft', 'G9morphablage', 'holen(): alle Kanäle der Daz-Bibliothek'),
         ('G9morphablage', 'ruft', 'G9reglergrenzen', 'anwenden(ablage): einseitige Formregler zweiseitig machen'),
-        ('G9formung', 'ruft', 'G9formeln', 'morphwerte(), posen(), knochen(): Formelgraph aus den Reglerwerten'),
         ('G9formung', 'ruft', 'G9eigenmorphe', 'deltas(name) in _eigen_dazu(): Eigenmorphe auf die Morphpunkte; dateistand() im Fingerabdruck'),
+        ('G9formung', 'ruft', 'G9hbmorphe', 'deltas(name, wert): hb:…-Morphe, die Richtung steckt schon drin'),
+        ('Hbmorpheaufgenesis', 'ruft', 'G9hbmorphe', 'ablegen(kennung, nummern, plus, minus, steckbrief): Morph je HumanBody-Regler schreiben'),
         ('G9rezept', 'ruft', 'ModellMitKleidern', 'anwenden(): getattr(modell, name)(*args, **kwargs) je Zeile'),
         ('ModellMitKleidern', 'erbt', 'ModellKoerperMixin', 'koerper_ort(), koerper_huelle(), haltung_gelenk() stehen im Mixin'),
         ('ModellKoerperMixin', 'ruft', 'G9koerpermorph', 'bauen(name, form, spiegeln): Ortsmorph als Eigenmorph ablegen'),

@@ -1,0 +1,69 @@
+/* Hilfe -> Recherche -> Human 3D (04.10.2026): die Tabelle der GitHub-Projekte und das Fenster nach einem Klick auf ToDo.
+ *
+ * Die Tabelle ist eine djangoBase-Tabelle (`db-tabelle sortable`, Gitter aus djangobase/css/tabellen.css); hier stehen nur die Zugaben dieser Seite. */
+
+/* Volle Breite: neun Spalten passen nicht in 960 px (volle-breite.md). */
+.doku-seite.rc-breit { max-width: none; }
+
+.rc-grenze { opacity: 0.85; }
+
+.rc-kategorien { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+.rc-chip {
+    display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 0.8rem; white-space: nowrap;
+    background: rgba(124, 92, 191, 0.22); border: 1px solid rgba(124, 92, 191, 0.55);
+}
+.rc-chip b { margin-left: 4px; }
+
+/* Spaltenbreiten, bevor jemand zieht (danach gelten die gemerkten). */
+.rc-tabelle th[data-key="name"] { min-width: 150px; }
+.rc-tabelle th[data-key="kurz"] { min-width: 210px; }
+.rc-tabelle th[data-key="github"] { min-width: 150px; }
+.rc-tabelle th[data-key="bild"] { min-width: 170px; }
+.rc-tabelle th[data-key="sterne"] { min-width: 80px; }
+.rc-tabelle th[data-key="aktualisiert"] { min-width: 100px; }
+.rc-tabelle th[data-key="beschreibung"] { min-width: 300px; }
+.rc-tabelle th[data-key="details"] { min-width: 260px; }
+.rc-tabelle th[data-key="todo"] { min-width: 260px; }
+
+.rc-tabelle td { vertical-align: top; font-size: 0.88rem; }
+.rc-tabelle .rc-name { font-weight: 600; }
+.rc-kategorie { font-size: 0.78rem; opacity: 0.7; margin-top: 2px; }
+.rc-fehlt { opacity: 0.55; font-style: italic; }
+.rc-tabelle td a { overflow-wrap: anywhere; }
+
+/* Hauptbild: feste Kachel, das Bild füllt sie ohne Verzerrung (contain: Teaser-Bilder sind oft breit). Heller Grund, damit durchsichtige PNGs zu sehen sind. */
+.rc-bildzelle { padding: 4px; }
+.rc-tabelle img.rc-bild { display: block; width: 150px; height: 100px; object-fit: contain; background: #d9dde2; border-radius: 4px; }
+
+.rc-liste { margin: 0; padding-left: 1.1em; }
+.rc-liste li { margin-bottom: 2px; }
+
+/* ToDo: ganze Zelle klickbar, der Knopf trägt den Text. */
+.rc-tabelle td.rc-todozelle { cursor: pointer; }
+.rc-tabelle td.rc-todozelle:hover { background: rgba(124, 92, 191, 0.14); }
+.rc-todo { all: unset; cursor: pointer; display: block; line-height: 1.35; color: inherit; }
+.rc-todo:focus-visible { outline: 2px solid #7c5cbf; outline-offset: 2px; }
+.rc-mehr { color: #9d7cdf; font-weight: 600; white-space: nowrap; }
+
+/* Das Fenster. */
+.rc-popup {
+    position: fixed; inset: 0; margin: auto; width: min(980px, 95vw); max-height: 92vh; padding: 0;
+    border: 1px solid var(--border, #3a4250); border-radius: 10px; background: var(--bg-card, #1e2430); color: var(--text, #eee);
+    overflow: hidden;
+}
+.rc-popup[open] { display: flex; flex-direction: column; }
+.rc-popup::backdrop { background: rgba(0, 0, 0, 0.6); }
+.rc-popup-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--border, #3a4250); }
+.rc-popup-kopf h2 { margin: 0; font-size: 1.15rem; }
+#rc-popup-inhalt { overflow: auto; padding: 14px 18px 18px; }
+.rc-popup-eckdaten { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.rc-popup-meta { font-size: 0.85rem; opacity: 0.8; }
+.rc-popup-kurz { font-size: 1rem; margin: 4px 0 10px; }
+.rc-abschnitt { margin-top: 14px; }
+.rc-abschnitt h3 { font-size: 0.95rem; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.75; }
+.rc-abschnitt p { margin: 0; }
+.rc-todo-liste, .rc-detail-liste { margin: 0; padding-left: 1.2em; }
+.rc-todo-liste li, .rc-detail-liste li { margin-bottom: 5px; }
+.rc-galerie { display: flex; flex-wrap: wrap; gap: 10px; }
+.rc-galerie-bild { display: block; }
+.rc-galerie img.rc-bild { display: block; max-width: 300px; max-height: 220px; width: auto; height: auto; background: #d9dde2; border-radius: 4px; }

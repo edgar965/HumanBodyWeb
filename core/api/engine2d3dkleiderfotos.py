@@ -25,6 +25,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+from ..dienste.engine2d3dkleiderrollen import Engine2d3dKleiderrollen
 from ..dienste.engine2d3dkleidervorlage import Engine2d3dKleidervorlage
 from ..dienste.meshoptionen import Meshoptionen
 from ..models import Engine2d3dKleiderauftrag
@@ -134,9 +135,17 @@ class Engine2d3dKleiderfotoendpunkte:
     @staticmethod
     @require_POST
     def rolle(request, job_id, datei):
+        """Rolle eines Fotos (auch „Nur Iterationen", `Engine2d3dKleiderrollen`) und, wenn mitgeschickt, sein Blickwinkel in Grad
+        ab vorn (`winkel`, positiv zur linken Seite der Figur; leer = die Pose schätzt ihn)."""
         job = Engine2d3dKleiderfotoendpunkte._job(job_id)
         eintrag = Engine2d3dKleiderfotoendpunkte._bild_oder_404(job, datei)
-        eintrag['rolle'] = Meshoptionen.rolle_pruefen(Engine2d3dKleiderendpunkte.rumpf(request).get('rolle'))
+        rumpf = Engine2d3dKleiderendpunkte.rumpf(request)
+        eintrag['rolle'] = Engine2d3dKleiderrollen.pruefen(rumpf.get('rolle'))
+        if 'winkel' in rumpf:
+            # Immer als Schlüssel (auch None): `bilder_sichern` übernimmt Nutzerfelder nur, wo sie in der Datenbank stehen.
+            eintrag['winkel'] = Engine2d3dKleiderrollen.winkel_pruefen(rumpf.get('winkel'))
+        if 'farbe' in rumpf:
+            eintrag['farbe'] = Engine2d3dKleiderrollen.farbe_pruefen(rumpf.get('farbe')) is not False
         job.save(update_fields=['bilder', 'updated_at'])
         return JsonResponse({'ok': True, 'bild': eintrag})
 

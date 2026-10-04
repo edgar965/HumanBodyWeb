@@ -23,6 +23,14 @@ class Engine2d3dKleiderfilmoptionen:
             'übersprungen.',
         },
         {
+            'schluessel': 'ton',
+            'titel': 'Tonspur (Pfad)',
+            'art': 'text',
+            'vorgabe': '',
+            'hinweis': 'Die Audiodatei, die beim Export (GLB, Blender) und im Film mitläuft: mp3, wav, ogg, m4a oder flac. Vorgabe: die '
+            'Audiospur des aktuellen BVH-Studio-Projekts (`Studioton`). Leer = ohne Ton.',
+        },
+        {
             'schluessel': 'bilder',
             'titel': 'Bilder',
             'art': 'zahl',
@@ -56,8 +64,11 @@ class Engine2d3dKleiderfilmoptionen:
 
     @classmethod
     def vorgaben(cls):
+        from .studioton import Studioton
+
         aus = {e['schluessel']: e['vorgabe'] for e in cls.KATALOG}
         aus['bvh'] = cls.tanz()
+        aus['ton'] = Studioton.pfad()
         return aus
 
     @classmethod

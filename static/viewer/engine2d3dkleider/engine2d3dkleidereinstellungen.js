@@ -4,8 +4,8 @@ import { Meshoptionenformular } from '../mesh/meshoptionenformular.js';
 /**
  * Engine2d3dKleidereinstellungen — jede Eingabe der Auftragsseite „2D3D Kleider" sofort speichern.
  *
- * Auswahlfelder sofort, Text- und Zahlfelder `WARTEN_MS` nach dem letzten Tastendruck. Alle sechs Optionsgruppen (Grundfigur,
- * Netz, Mesh, Körper, Iterationen, Film) gehen an `POST …/einstellungen/`. Während eines Laufs ist alles gesperrt (409, und die Seite sperrt die Felder),
+ * Auswahlfelder sofort, Text- und Zahlfelder `WARTEN_MS` nach dem letzten Tastendruck. Alle acht Optionsgruppen (Grundfigur,
+ * Vorbereitung, Netz, Mesh, Segmentierung, Körper, Iterationen, Film) gehen an `POST …/einstellungen/`. Während eines Laufs ist alles gesperrt (409, und die Seite sperrt die Felder),
  * die Meldung sagt es.
  */
 export class Engine2d3dKleidereinstellungen {
@@ -13,14 +13,11 @@ export class Engine2d3dKleidereinstellungen {
     static WARTEN_MS = 700;
     // `netz`, `mesh` und `koerper` fehlten bis 02.10.2026: Ihre Formulare wurden gebaut, aber nie gespeichert — eine
     // geänderte Auflösung blieb auf dem Server unverändert (an `.14.08.48` gemessen: „mittel" gewählt, „hoch" gespeichert).
-    static GRUPPEN = {
-        figur: 'engine2d3dkleider-optionen-figur',
-        netz: 'engine2d3dkleider-optionen-netz',
-        mesh: 'engine2d3dkleider-optionen-mesh',
-        koerper: 'engine2d3dkleider-optionen-koerper',
-        iterationen: 'engine2d3dkleider-optionen-iterationen',
-        film: 'engine2d3dkleider-optionen-film',
-    };
+    /** Gruppe -> Id des Behälters: jeder Behälter "engine2d3dkleider-optionen-<gruppe>" der Seite (04.10.2026: dazu die Renderregler; die Liste stand vorher fest im Code). */
+    static get GRUPPEN() {
+        const vorsatz = 'engine2d3dkleider-optionen-';
+        return Object.fromEntries([...document.querySelectorAll(`[id^="${vorsatz}"]`)].map(e => [e.id.slice(vorsatz.length), e.id]));
+    }
 
     constructor(seite) {
         this.seite = seite;

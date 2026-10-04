@@ -35,10 +35,10 @@ from ..dienste.engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
 from ..dienste.engine2d3dkleidergpu import Engine2d3dKleidergpu
 from ..dienste.engine2d3dkleiderlauf import Engine2d3dKleiderlauf
 from ..dienste.engine2d3dkleideroptionen import Engine2d3dKleideroptionen
+from ..dienste.engine2d3dkleiderrollen import Engine2d3dKleiderrollen
 from ..dienste.engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
 from ..dienste.engine2d3dkleidervorlage import Engine2d3dKleidervorlage
 from ..dienste.engine2d3dkleiderzustand import Engine2d3dKleiderzustand
-from ..dienste.meshoptionen import Meshoptionen
 from ..models import Engine2d3dKleiderauftrag
 
 logger = logging.getLogger('core')
@@ -122,7 +122,7 @@ class Engine2d3dKleiderendpunkte:
                         'original': f.name,
                         'gewicht': 100,
                         'bereich': None,
-                        'rolle': Meshoptionen.rolle_pruefen(rolle),
+                        'rolle': Engine2d3dKleiderrollen.pruefen(rolle),
                     }
                 )
             if meshfigur:

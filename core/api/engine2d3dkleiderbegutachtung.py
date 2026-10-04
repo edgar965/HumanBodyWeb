@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Engine2d3dKleiderbegutachtungsendpunkte — die Begutachtung der Iterationen von „2D3D Kleider" (30.09.2026).
 
-    POST /api/engine2d3dkleider/<id>/begutachtung/     {aufrufe, kommentar} → das Rezept prüfen, ablegen und die nächste
+    POST /api/engine2d3dkleider/<id>/begutachtung/     {aufrufe, kommentar, nutzer} → das Rezept prüfen, ablegen und die nächste
                                                 Runde rechnen (Arbeitsprozess, nur der Schritt „iterationen");
+                                                (`nutzer`: die Nachrichten des Nutzers zu dieser Runde, Text oder Liste — sie
+                                                 landen mit Kommentar und Rezept in `iterationen/prompts.json`)
                                                 {automatisch: true, runden: n} → `IterationModell` (Ordner
                                                 `2d3DIterationen`) schreibt die Rezepte selbst, n Runden nacheinander
     GET  /api/engine2d3dkleider/<id>/rezept/           alle wirksamen Aufrufe der übernommenen Runden als Text —
@@ -23,6 +25,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..dienste.begutachtungsrunde import Begutachtungsrunde
 from ..dienste.engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
 from ..dienste.engine2d3dkleidergpu import Engine2d3dKleidergpu
+from ..dienste.engine2d3dkleiderprompts import Engine2d3dKleiderprompts
 from ..models import Engine2d3dKleiderauftrag
 from .engine2d3dkleider import Engine2d3dKleiderendpunkte
 
@@ -54,7 +57,8 @@ class Engine2d3dKleiderbegutachtungsendpunkte:
         ergebnis = dict(job.ergebnis or {})
         beg = dict(ergebnis.get('begutachtung') or {})
         beg['naechste'] = {'aufrufe': '' if automatisch else aufrufe, 'automatisch': automatisch, 'runden': runden,
-                           'kommentar': str(rumpf.get('kommentar') or '')[:4000]}
+                           'kommentar': str(rumpf.get('kommentar') or '')[:4000],
+                           'nutzer': Engine2d3dKleiderprompts.nachrichten(rumpf.get('nutzer'))}
         beg['zustand'] = 'rechnet'
         ergebnis['begutachtung'] = beg
         job.ergebnis = ergebnis

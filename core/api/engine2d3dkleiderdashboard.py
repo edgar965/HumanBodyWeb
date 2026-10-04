@@ -9,8 +9,8 @@ sie ist der ganze Bereich. Die Rollen für das Formular kommen ohne die schweren
 
 from django.shortcuts import render
 
+from ..dienste.engine2d3dkleiderrollen import Engine2d3dKleiderrollen
 from ..dienste.engine2d3dkleidertabelle import Engine2d3dKleidertabelle
-from ..dienste.meshoptionen import Meshoptionen
 from ..models import Engine2d3dKleiderauftrag
 
 __all__ = ['Engine2d3dKleiderdashboard']
@@ -24,6 +24,6 @@ class Engine2d3dKleiderdashboard:
             'engine2d3dkleider.html',
             {
                 'tabelle': Engine2d3dKleidertabelle(Engine2d3dKleiderauftrag.objects.all()).tabelle(),
-                'rollen': [{'wert': w, 'text': t} for w, t in Meshoptionen.ROLLEN],
+                'rollen': Engine2d3dKleiderrollen.katalog(),
             },
         )

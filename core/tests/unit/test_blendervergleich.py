@@ -19,6 +19,8 @@ UMSCHREIBUNG = re.compile(r'\b(fuer|ueber|Ueber|Faelle|Koerper|Staerke|Ruecken|m
                           r'Groesse|groesse|Hoehe|hoehe|Naehte|naehte|Schluessel|Uebersicht|oeffnen)\b')
 #: Eine Fundstelle: ein Dateiname mit Punkt (`.py`, `.md`, `.json`) oder das README des Stoffsolvers.
 QUELLE = re.compile(r'\.(py|md|json|blend)\b|README')
+#: Eine Zeit trägt ihre Quelle: Dateiname mit Punkt (`.py`, `.md`, `.json`), das README des Stoffsolvers, eine Regel, die Datenbank oder das Auftragslog.
+QUELLE_ZEIT = re.compile(r'\.(py|md|json)\b|README|Regel|Datenbank|auftrag\.log')
 #: Aufgaben, die der Auftrag mindestens verlangt (Stichwort im Namen der Aufgabe).
 PFLICHT = ['Mensch-Figur erzeugen', 'Körperform', 'Gesicht', 'Haut und Textur aus Fotos', 'Rig und Skinning', 'Retarget', 'Pose', 'Kleidung aus Schnittmuster',
            'Passform', 'Stoffsimulation', 'Kollision', 'Haar erzeugen', 'Haar-Dynamik', 'UV abwickeln', 'UV packen', 'Texturen backen', 'Rendern', 'Bildvergleich',
@@ -36,9 +38,9 @@ def zeilen():
 
 
 def prosa(kennung, z):
-    """Die Felder, die ein Mensch liest: Aufgabe, lokales Werkzeug, Blender-Werkzeug, Unterschied — ohne die Stellen in Rückwärtsstrichen (Bezeichner, Dateien, Aufrufe)."""
-    aufgabe, lokal, _lokal_aufruf, _klassen, blender, _blender_aufruf, _stand, unterschied = z
-    return re.sub(r'`[^`]*`', ' ', ' '.join([aufgabe, lokal, blender, unterschied]))
+    """Die Felder, die ein Mensch liest: Aufgabe, lokales Werkzeug, Blender-Werkzeug, Unterschied, Zeiten — ohne die Stellen in Rückwärtsstrichen (Bezeichner, Dateien, Aufrufe)."""
+    aufgabe, lokal, _lokal_aufruf, _klassen, blender, _blender_aufruf, _stand, unterschied, zeit_lokal, zeit_blender = z
+    return re.sub(r'`[^`]*`', ' ', ' '.join([aufgabe, lokal, blender, unterschied, zeit_lokal, zeit_blender]))
 
 
 class BlendervergleichSchemaTest(SimpleTestCase):
@@ -56,15 +58,34 @@ class BlendervergleichSchemaTest(SimpleTestCase):
         for kennung in kennungen:
             self.assertRegex(kennung, r'^[a-z0-9-]+$', 'KENNUNG nur ASCII, Kleinbuchstaben und Bindestrich')
 
-    def test_jede_zeile_hat_die_acht_felder_des_schemas_und_keine_leeren_texte(self):
+    def test_jede_zeile_hat_die_zehn_felder_des_schemas_und_keine_leeren_texte(self):
         for kennung, z in zeilen():
-            self.assertEqual(len(z), 8, '%s / %s' % (kennung, z[0]))
-            aufgabe, lokal, lokal_aufruf, klassen, blender, blender_aufruf, stand, unterschied = z
+            self.assertEqual(len(z), 10, '%s / %s' % (kennung, z[0]))
+            aufgabe, lokal, lokal_aufruf, klassen, blender, blender_aufruf, stand, unterschied, zeit_lokal, zeit_blender = z
             stelle = '%s / %s' % (kennung, aufgabe)
             for name, text in (('aufgabe', aufgabe), ('lokal', lokal), ('lokal_aufruf', lokal_aufruf), ('blender', blender),
-                               ('blender_aufruf', blender_aufruf), ('stand', stand), ('unterschied', unterschied)):
+                               ('blender_aufruf', blender_aufruf), ('stand', stand), ('unterschied', unterschied),
+                               ('zeit_lokal', zeit_lokal), ('zeit_blender', zeit_blender)):
                 self.assertTrue(str(text).strip(), '%s: %s ist leer' % (stelle, name))
             self.assertIsInstance(klassen, list, stelle)
+
+    def test_ein_zeitfeld_mit_ziffer_nennt_eine_quelle_sonst_steht_genau_nicht_gemessen_oder_entfaellt(self):
+        for kennung, z in zeilen():
+            for name, text in (('zeit_lokal', z[8]), ('zeit_blender', z[9])):
+                stelle = '%s / %s: %s' % (kennung, z[0], name)
+                if re.search(r'\d', text):
+                    self.assertRegex(text, QUELLE_ZEIT, '%s: Zahl ohne Quelle („%s“)' % (stelle, text))
+                else:
+                    self.assertIn(text, ('nicht gemessen', 'entfällt'), '%s: ohne Zahl nur „nicht gemessen“ oder „entfällt“, nicht „%s“' % (stelle, text))
+
+    def test_eine_gemessene_zeit_nennt_ein_datum_und_alte_solverzeiten_den_zusatz_vor_dem_ausbau(self):
+        for kennung, z in zeilen():
+            for name, text in (('zeit_lokal', z[8]), ('zeit_blender', z[9])):
+                stelle = '%s / %s: %s' % (kennung, z[0], name)
+                if re.search(r'\d', text):
+                    self.assertRegex(text, r'\d{2}\.\d{2}\.\d{4}', '%s: Quelle ohne Datum' % stelle)
+                if 'Stoffsolver/README.md' in text:
+                    self.assertIn('vor dem Ausbau', text, '%s: Zeiten aus dem README gelten „vor dem Ausbau“' % stelle)
 
     def test_eine_zeile_ohne_lokale_klasse_sagt_im_aufruf_dass_es_kein_lokales_werkzeug_gibt(self):
         for kennung, z in zeilen():

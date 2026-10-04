@@ -32,9 +32,6 @@ export class Engine2d3dKleideriterationen {
         const bilder = new Engine2d3dKleiderrundenbilder(datei, name => seite.fotoAdresse(name), new Engine2d3dKleiderbildfenster());
         this.tabelle = new Engine2d3dKleiderrundentabelle(seite, new Engine2d3dKleiderrundenzeilen(datei, bilder));
         this._stand = '';
-        for (const knopf of document.querySelectorAll('#auftrag-reiter [data-reiter]')) {
-            knopf.addEventListener('click', () => this.umschalten(knopf.dataset.reiter));
-        }
         this.weiter.addEventListener('click', () => this.weiterIterieren());
         this.halt.addEventListener('click', () => this.seite.anhalten());
     }
@@ -61,15 +58,6 @@ export class Engine2d3dKleideriterationen {
         this.seite.zustand.status = 'laeuft';
         this.seite.zeigen();
         this.seite.verfolgen();
-    }
-
-    umschalten(name) {
-        for (const knopf of document.querySelectorAll('#auftrag-reiter [data-reiter]')) {
-            knopf.setAttribute('aria-selected', String(knopf.dataset.reiter === name));
-        }
-        document.getElementById('reiter-auftrag').hidden = name !== 'auftrag';
-        document.getElementById('reiter-iterationen').hidden = name !== 'iterationen';
-        if (name === 'iterationen') this.seite.aktualisieren();
     }
 
     zeigen(z) {

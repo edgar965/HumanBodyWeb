@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Engine2d3dKleideroptionen — was der Bereich „2D3D Kleider" (`engine2d3dkleider`) einstellen lässt, mit Vorgaben (30.09.2026).
 
-Sechs Gruppen, je mit ihrem eigenen Katalog geprüft (gleichnamige Felder meinen in den Katalogen
+Dreizehn Gruppen (acht der Pipeline, fünf Regler des Renders), je mit ihrem eigenen Katalog geprüft (gleichnamige Felder meinen in den Katalogen
 Verschiedenes):
 
     figur        Grundfigur und „Als Modell speichern" (`Meshfiguroptionen` — nur diese zwei Felder)
+    vorbereitung Schritt „Vorbereitung": Körper senkrecht stellen (`Engine2d3dKleidervorbereitungsoptionen`, 03.10.2026)
+    segmentierung Schritt „Segmentierung" (optional, nach dem Netz): Kleidungsmaske aus Sapiens (`Engine2d3dKleidersegmentierungsoptionen`, 04.10.2026)
     netz         Netz aus den Fotos, NUR mit TRELLIS.2: Textur, Freistellen, Licht (`Meshoptionen`, Reiter „Mesh";
                  Hunyuan3D gestrichen, `Engine2d3dKleidernurtrellis`)
     mesh         das Interface von TRELLIS.2 wie im Hugging-Face-Space: Resolution, Seed, Decimation Target, Texture Size
@@ -12,6 +14,7 @@ Verschiedenes):
     koerper      woher die Figur kommt: übernehmen aus „Mesh to 3D" oder rechnen (`Engine2d3dKleiderkoerperoptionen`)
     iterationen  Iterationen: Begutachtung oder automatisch, Runden, Kandidaten, Prüf-KI (`Iterationsoptionen`)
     film         BVH, Bilder, Größe (`Engine2d3dKleiderfilmoptionen`)
+    render…      renderqualitaet, renderlicht, renderhaut, renderphysik, rendermimik: alle Regler für Rendering und Physik des Films (`Engine2d3dKleiderrenderoptionen`, 04.10.2026)
 
 `figur.modell` hat hier die Vorgabe „aus" (in „Mesh to 3D" „an"): Jeder Lauf würde sonst ein Genesis-Modell
 in die Modellbibliothek schreiben (`HumanBody/data/models`). Gespeichert wird über den Knopf „Modell
@@ -20,8 +23,12 @@ speichern".
 
 from .engine2d3dkleiderfilmoptionen import Engine2d3dKleiderfilmoptionen
 from .engine2d3dkleiderkoerperoptionen import Engine2d3dKleiderkoerperoptionen
+from .engine2d3dkleiderrenderoptionen import Engine2d3dKleiderrenderoptionen
 from .engine2d3dkleidermeshoptionen import Engine2d3dKleidermeshoptionen
 from .engine2d3dkleidernurtrellis import Engine2d3dKleidernurtrellis
+from .engine2d3dkleiderrollen import Engine2d3dKleiderrollen
+from .engine2d3dkleidersegmentierungsoptionen import Engine2d3dKleidersegmentierungsoptionen
+from .engine2d3dkleidervorbereitungsoptionen import Engine2d3dKleidervorbereitungsoptionen
 from .iterationsoptionen import Iterationsoptionen
 from .meshfiguroptionen import Meshfiguroptionen
 from .meshoptionen import Meshoptionen
@@ -30,10 +37,14 @@ __all__ = ['Engine2d3dKleideroptionen']
 
 
 class Engine2d3dKleideroptionen:
-    GRUPPEN = ('figur', 'netz', 'mesh', 'koerper', 'iterationen', 'film')
+    #: Die fünf Reglergruppen des Renders (`Figurfilm.Filmregler.GRUPPEN`, 04.10.2026) kommen hinter dem Film: Qualität, Licht, Haut/Material, Physik, Mimik.
+    RENDERGRUPPEN = ('renderqualitaet', 'renderlicht', 'renderhaut', 'renderphysik', 'rendermimik')
+    GRUPPEN = ('figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film') + RENDERGRUPPEN
     #: Felder, die im Formular erscheinen (None = alle des Katalogs).
     SICHTBAR = {
         'figur': ('basis', 'modell'),
+        'vorbereitung': None,
+        'segmentierung': None,
         # `textur` seit 30.09.2026 sichtbar: „fotos_ki" legte bei „schnell" Fotoränder auf Arme und Beine, „ki" (die
         # PBR-Textur von TRELLIS.2, wie im Mesh-Auftrag 2026.09.29.00.09.00) war sauber — Edgar: „bessere Textur".
         # `formmodell` nicht mehr (02.10.2026): hier gibt es nur TRELLIS.2 (`Engine2d3dKleidernurtrellis`). `aufloesung`,
@@ -44,19 +55,24 @@ class Engine2d3dKleideroptionen:
         'koerper': None,
         'iterationen': None,
         'film': None,
+        **{g: None for g in RENDERGRUPPEN},
     }
     #: Felder, die bis 02.10.2026 in der Gruppe `netz` standen und jetzt zur Gruppe `mesh` gehören: Ein Auftrag, dessen
     #: Gruppe `mesh` sie noch nicht trägt, behält den Wert, den er unter `netz` gespeichert hat.
     UEBERNAHME = ('aufloesung', 'flaechen', 'texturgroesse')
     #: Vorgaben, die hier von der Vorlage abweichen. (`flaechen` 100.000 steht jetzt in `Engine2d3dKleidermeshoptionen`.)
-    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'netz': {}, 'mesh': {}, 'koerper': {}, 'iterationen': {}, 'film': {}}
+    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'vorbereitung': {}, 'netz': {}, 'mesh': {}, 'segmentierung': {}, 'koerper': {}, 'iterationen': {},
+                    'film': {}, **{g: {} for g in RENDERGRUPPEN}}
     PRUEFER = (
         ('figur', Meshfiguroptionen),
+        ('vorbereitung', Engine2d3dKleidervorbereitungsoptionen),
         ('netz', Meshoptionen),
         ('mesh', Engine2d3dKleidermeshoptionen),
+        ('segmentierung', Engine2d3dKleidersegmentierungsoptionen),
         ('koerper', Engine2d3dKleiderkoerperoptionen),
         ('iterationen', Iterationsoptionen),
         ('film', Engine2d3dKleiderfilmoptionen),
+        *[(g, Engine2d3dKleiderrenderoptionen(g)) for g in RENDERGRUPPEN],
     )
 
     @classmethod
@@ -80,8 +96,9 @@ class Engine2d3dKleideroptionen:
                 aus[gruppe]['fein_titel'] = katalog['fein_titel']
             if katalog.get('gilt_nach'):  # Feld, nach dem das Formular Felder mit `gilt` ein- und ausblendet
                 aus[gruppe]['gilt_nach'] = katalog['gilt_nach']
-        # Die Rollen der Bildauswahl (vorne/links/rechts/hinten geben den Blickwinkel der Iterationen).
-        aus['rollen'] = [{'wert': w, 'text': t} for w, t in Meshoptionen.ROLLEN]
+        # Die Rollen der Bildauswahl (vorne/links/rechts/hinten geben den Blickwinkel der Iterationen; „Nur Iterationen" geht nicht
+        # ins Netz).
+        aus['rollen'] = Engine2d3dKleiderrollen.katalog()
         return aus
 
     @classmethod
@@ -119,6 +136,11 @@ class Engine2d3dKleideroptionen:
         return cls.pruefen(optionen)['figur']
 
     @classmethod
+    def vorbereitung(cls, optionen):
+        """Die Optionen des Schritts „Vorbereitung" (`ausrichten`) — der Runner liest sie über `Engine2d3dKleidernetz.beschreibung`."""
+        return cls.pruefen(optionen)['vorbereitung']
+
+    @classmethod
     def netz(cls, optionen):
         return cls.pruefen(optionen)['netz']
 
@@ -126,6 +148,11 @@ class Engine2d3dKleideroptionen:
     def mesh(cls, optionen):
         """Die Regler von TRELLIS.2 (Seed, Stage 1–3) — der Runner liest sie über `Engine2d3dKleidernetz.beschreibung`."""
         return cls.pruefen(optionen)['mesh']
+
+    @classmethod
+    def segmentierung(cls, optionen):
+        """Die Optionen des Schritts „Segmentierung" (`verwenden`, 04.10.2026)."""
+        return cls.pruefen(optionen)['segmentierung']
 
     @classmethod
     def koerper(cls, optionen):

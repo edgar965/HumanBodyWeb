@@ -40,6 +40,7 @@ class Werkzeugdrapieren:
          'Blender (README, 02.10.2026). blender ist die Referenz, kostet je Aufruf einen Prozessstart und ist die '
          'Schleife, die die Seite nur nach Ansage zulässt. Blender darf nur über EINE Klasse laufen '
          '(Engine2d3dKleiderblender, Test BlenderNurUeberEinenArbeiterTest; engine2d3dkleider.md, 30.09.2026). Edgar '
+         '(10.09.2026, Assets/kleidung/physik.py): „blenderCloth nutze ich nicht, garmentCode ist bisher am besten“; '
          '(30.09.2026): „die kleiderphysik war noch relativ schlecht“ — darum ist das Drapieren ein Regler 0…1 mit Messung '
          'im Steckbrief, kein Zwang.'),
 

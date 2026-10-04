@@ -22,6 +22,9 @@ from .api.engine2d3dkleiderfotos import Engine2d3dKleiderfotoendpunkte
 from .api.engine2d3dkleideriterationen import Engine2d3dKleideriterationenendpunkte
 from .api.engine2d3dkleiderformen import Engine2d3dKleiderformendpunkte
 from .api.engine2d3dkleidermalen import Engine2d3dKleidermalendpunkte
+from .api.engine2d3dkleiderqualitaet import Engine2d3dKleiderqualitaetendpunkt
+from .api.engine2d3dkleiderreferenz import Engine2d3dKleiderreferenzendpunkte
+from .api.engine2d3dkleiderrender import Engine2d3dKleiderrenderendpunkte
 from .api.engine2d3dkleiderstandmodell import Engine2d3dKleiderstandmodellendpunkte
 
 __all__ = ['ENGINE2D3DKLEIDER']
@@ -57,6 +60,12 @@ ENGINE2D3DKLEIDER = [
         name='engine2d3dkleider_einstellungen',
     ),
     path('api/engine2d3dkleider/<uuid:job_id>/modell/', Engine2d3dKleiderendpunkte.modell, name='engine2d3dkleider_modell'),
+    # Die Handwertung „Qualität Mesh" / „Qualität 3D" der Liste (`core/api/engine2d3dkleiderqualitaet.py`, 03.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/qualitaet/',
+        Engine2d3dKleiderqualitaetendpunkt.setzen,
+        name='engine2d3dkleider_qualitaet',
+    ),
     # Das 3D-Modell des letzten Stands für die Bühne bestellen (`core/api/engine2d3dkleiderstandmodell.py`, 01.10.2026)
     path(
         'api/engine2d3dkleider/<uuid:job_id>/standmodell/',
@@ -94,6 +103,18 @@ ENGINE2D3DKLEIDER = [
         'api/engine2d3dkleider/<uuid:job_id>/animexport/',
         Engine2d3dKleideranimexportendpunkte.exportieren,
         name='engine2d3dkleider_animexport',
+    ),
+    # Render-Schritt: das Modell mit Bewegung und Ton als Video (`core/api/engine2d3dkleiderrender.py`, 03.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/render/',
+        Engine2d3dKleiderrenderendpunkte.starten,
+        name='engine2d3dkleider_render',
+    ),
+    # Referenzvideo (Franks Ergebnis) neben den Vorlagebildern (`core/api/engine2d3dkleiderreferenz.py`, 04.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/referenz/',
+        Engine2d3dKleiderreferenzendpunkte.uebernehmen,
+        name='engine2d3dkleider_referenz',
     ),
     # Von Hand auf das Modell der Runde malen (`core/api/engine2d3dkleidermalen.py`, 01.10.2026)
     path(

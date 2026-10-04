@@ -234,4 +234,18 @@ HILFE_EXTRA = [
             },
         ],
     },
+    # GitHub-Recherchen (Edgar, 04.10.2026: „lege ein Menü an: Hilfe - Recherche, darunter Menü und
+    # Seite Human 3D"): Projekte der letzten zwei Jahre zu Menschenerkennung und -erzeugung in 3D.
+    {
+        'label': 'Recherche',
+        'icon': 'bi-search',
+        'untermenu': [
+            {
+                'label': 'Human 3D',
+                'icon': 'bi-person-bounding-box',
+                'url': '/hilfe/recherche/human-3d/',
+                'aktiv': 'hilfe_recherche_human3d',
+            },
+        ],
+    },
 ]

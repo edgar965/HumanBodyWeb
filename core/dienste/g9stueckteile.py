@@ -85,6 +85,9 @@ class G9stueckteile:
         # die Daz-Bilder der Gruppen gelegt (`bild.<schicht>` im Rumpf) — die Kachel ersetzt die Albedo VOR dem Bau.
         from Genesis9.kleidtexturen import G9kleidtexturen
         bilder = G9kleidtexturen.anwenden(kennung, bilder or {}, rumpf.get('regler_stueck'))
+        # Regler „Transparenz“ eines Stücks, das ihn trägt (`G9kleidtransparenz`, 03.10.2026): Deckung je Gruppe in die Bilder.
+        from Genesis9.kleidtransparenz import G9kleidtransparenz
+        bilder = G9kleidtransparenz.anwenden(kennung, bilder, rumpf.get('regler_stueck'))
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
         # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)

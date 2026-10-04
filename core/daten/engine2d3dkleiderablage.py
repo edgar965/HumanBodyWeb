@@ -31,6 +31,8 @@ class Engine2d3dKleiderablage(Meshablage):
     VORLAGE = 'vorlage'
     NETZ = 'netz'
     NETZ_ARBEIT = 'netz_arbeit'
+    #: Die Etiketten der Sapiens-Segmentierung: Überlagerungen, `segmentierung.json`, `auftrag.json` des Runners (Schritt „segmentierung", 04.10.2026).
+    SEGMENTIERUNG = 'segmentierung'
     #: Das Netz aus den Fotos — der Name legt der Runner fest (`mesh_export`).
     NETZDATEI = 'mesh.glb'
     #: Das Netz, gegen das die Iterationen in 3D benoten (`Iterationsnetznote`): eine Kopie des Netzes, auf dem der
@@ -39,8 +41,10 @@ class Engine2d3dKleiderablage(Meshablage):
     BEZUGSLAGE = 'bezugsnetz_lage.npz'
     #: Runden der Iterationen (Bilder und GLB je Runde; Reiter „Iterationen" der Seite).
     ITERATIONEN = 'iterationen'
+    #: Referenzvideo des Auftrags (04.10.2026, Edgar: „füge franks ergebnis video rechts neben den Vorlagebildern als Frame ein"): Kopie der Datei, die der Nutzer nennt.
+    REFERENZ = 'referenz'
     #: Welche Unterordner über den Datei-Endpunkt lesbar sind.
-    LESBAR = (Meshablage.EINGANG, Meshablage.VORBEREITET, NETZ, Meshablage.ERGEBNIS, VORLAGE, ITERATIONEN)
+    LESBAR = (Meshablage.EINGANG, Meshablage.VORBEREITET, NETZ, Meshablage.ERGEBNIS, VORLAGE, ITERATIONEN, SEGMENTIERUNG, REFERENZ)
 
     def anlegen(self):
         for name in (self.EINGANG, self.VORBEREITET, self.NETZ, self.NETZ_ARBEIT, self.VORLAGE, self.ARBEIT,
@@ -48,8 +52,16 @@ class Engine2d3dKleiderablage(Meshablage):
             self.unter(name).mkdir(parents=True, exist_ok=True)
         return self.ordner()
 
+    def segmentierung(self, name=''):
+        """`segmentierung/` des Auftrags (legt der Schritt selbst an — alte Aufträge haben den Ordner nicht)."""
+        return self.unter(self.SEGMENTIERUNG) / name if name else self.unter(self.SEGMENTIERUNG)
+
     def iterationen(self, name=''):
         return self.unter(self.ITERATIONEN) / name if name else self.unter(self.ITERATIONEN)
+
+    def referenz(self, name=''):
+        """`referenz/` des Auftrags (legt `Engine2d3dKleiderreferenz` beim Übernehmen an — alte Aufträge haben den Ordner nicht)."""
+        return self.unter(self.REFERENZ) / name if name else self.unter(self.REFERENZ)
 
     # ------------------------------------- was die Schritte der Figur erwarten
 

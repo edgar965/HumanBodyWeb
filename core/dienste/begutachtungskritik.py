@@ -19,6 +19,7 @@ import logging
 from Genesis9.modellrezept import G9rezept
 
 from .begutachtungsprompt import Begutachtungsprompt
+from .engine2d3dkleiderprompts import Engine2d3dKleiderprompts
 from .iterationsoptionen import Iterationsoptionen
 from .ollamamodelle import Ollamamodelle
 
@@ -109,12 +110,20 @@ class Begutachtungskritik:
             self.prompt = prompt
             befund = z.get('befund') or {}
             text = prompt.text(modell, befund, befund.get('note') or z.get('letzte_note') or {}, runde, self.HOECHSTENS)
+            self._ablegen(runde, text)
             antwort, zahlen = Ollamamodelle.fragen(self.modell_name, text, [self._kodieren(tafel)], self.SCHEMA)
         except Exception as fehler:  # noqa: BLE001 — Ollama weg, Unsinn im JSON: der Lauf geht ohne Prüf-KI weiter
             logger.warning('2D3D Kleider: Prüf-KI %s nach Runde %d: %s', self.modell_name, runde, fehler)
             return dict(eintrag, fehler=str(fehler)[:500])
         return dict(eintrag, **self.deuten(antwort, modell, prompt),
                     sekunden=round((zahlen.get('total_duration') or 0) / 1e9, 1))
+
+    def _ablegen(self, runde, text):
+        """Die Frage im Wortlaut in den Auftrag (`Engine2d3dKleiderprompts`) — ein Fehler dabei kostet nicht die Prüf-KI."""
+        try:
+            Engine2d3dKleiderprompts(self.ablage).review(runde, self.modell_name, text)
+        except (OSError, ValueError) as fehler:
+            logger.warning('2D3D Kleider: Prompt der Prüf-KI (Runde %d) nicht abgelegt: %s', runde, fehler)
 
     def deuten(self, antwort, modell, prompt):
         stufe = antwort.get('aehnlichkeit')

@@ -36,7 +36,8 @@ class Engine2d3dKleiderstandmodell:
     FEHLER = 'stand_fehler.json'
     MUSTER = 'stand_%s.glb'
     #: Gehört zur Fassung: Ändert sich der Schreiber (`Standmodellglb`), werden alte Dateien neu gebaut.
-    SCHREIBER = 3
+    #: 8 (04.10.2026): weiße Hose mit Falten (`Hosenfalten`) und ohne Flecken (`Stoffweissung`).
+    SCHREIBER = 8
 
     def __init__(self, job, ablage=None):
         self.job = job
@@ -55,12 +56,29 @@ class Engine2d3dKleiderstandmodell:
     def baubar(self):
         return bool(self.job.stellung())
 
+    def _beste_runde(self):
+        return ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
+
     def fassung(self):
-        """Fingerabdruck des Stands — 12 Zeichen."""
+        """Fingerabdruck des Stands — 12 Zeichen. Mit der besten Runde: Eine neue Runde kann Stoff, Zubehör und Maße des Modells ändern,
+        ohne dass `kreislauf.modell` (Körperwerte, Stücke) sich ändert — Runde 53 (Hemd anliegend, 04.10.2026) baute `stand_3e76741ccddd.glb`
+        unter demselben Namen neu, und ein offener Tab behielt die alte Datei aus dem Browser-Cache (`artefakte-benennen`)."""
         f = (self.job.ergebnis or {}).get('fototextur') or {}
         roh = json.dumps([self.SCHREIBER, self.stellung(), self._kreislaufmodell(), f.get('kacheln'), f.get('augen'),
-                          f.get('stand')], sort_keys=True, default=str)
+                          f.get('stand'), self._beste_runde(), self._zubehoer()], sort_keys=True, default=str)
         return hashlib.md5(roh.encode('utf-8')).hexdigest()[:12]
+
+    @staticmethod
+    def _zubehoer():
+        """Name und Änderungszeit der eigenen Zubehör-Stücke (`<Bibliothek>/data/EIGEN/*/*.dsf`: Hut, Federn, Stiefel, Manschetten …): Wer ein Stück neu schreibt, ohne dass sich
+        eine Runde ändert, bekam bis 04.10.2026 dieselbe Fassung und damit dieselbe Datei (Federn und Hut der Bühne blieben alt). Fehlt der Ordner, bleibt die Liste leer."""
+        try:
+            from Genesis9.pfade import G9pfade
+            ordner = G9pfade.eigene() / 'data' / 'EIGEN'
+            return [[p.parent.name, p.stat().st_mtime_ns] for p in sorted(ordner.glob('*/*.dsf'))] if ordner.is_dir() else []
+        except (ImportError, OSError) as fehler:
+            logger.info('Stand-Fassung: Zubehör-Dateien nicht gelesen (%s)', fehler)
+            return []
 
     def bericht(self, name=BERICHT):
         pfad = self.ablage.ergebnis(name)
@@ -120,6 +138,8 @@ class Engine2d3dKleiderstandmodell:
             raise ValueError('Noch keine Figur — erst nach dem Schritt „Körper"')
         t = time.perf_counter()
         fassung = self.fassung()
+        # Die Netze bleiben in der A-Pose (`{}`); die Haltung der Iterationen kommt unten als Gelenkdrehung dazu (`Standhaltung`). Sie in den
+        # Bau des Körpers zu geben (Versuch 03.10.2026) ließ den Körper gesenkt, aber Hemd, Hose, Stiefel und Zubehör in der A-Pose stehen.
         netz = G9koerpernetz(G9formung.aus_abfrage(self.stellung(), {}), G9charaktere.eintrag('basis'),
                              anhaenge=True, stufen=0).bauen()
         glb = Standmodellglb(netz['skelett']['knochen'])
@@ -135,9 +155,15 @@ class Engine2d3dKleiderstandmodell:
             from .haarzonen import Haarzonen
             from .kleidermodellbau import Kleidermodellbau
             modell = ModellMitKleidern.aus(daten)
-            teile = [x for x in Haarzonen.anwenden(Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper)
-                                                   .teile(modell), modell.farben) if x.get('art') != 'koerper']
+            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper)
+            teile = [x for x in Haarzonen.anwenden(bau.teile(modell), modell.farben) if x.get('art') != 'koerper']
             glb.teile(teile)
+            # Die Haltung der Iterationen als Drehung der Gelenkknoten (`Standhaltung`): Netze und Bindematrizen bleiben in der A-Pose.
+            from Genesis9.haltungshaut import G9haltungshaut
+
+            from .standhaltung import Standhaltung
+            haltung = Standhaltung.anwenden(glb, G9haltungshaut(bau.stellung, modell.drehung(), bau.boden), bau.boden)
+            logger.info('2D3D Kleider %s: Haltung der Iterationen auf %d Gelenke gelegt', self.job.kennung, haltung)
         name = self.MUSTER % fassung
         ziel = self.ablage.ergebnis(name)
         ziel.parent.mkdir(parents=True, exist_ok=True)

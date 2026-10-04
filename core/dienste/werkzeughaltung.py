@@ -12,15 +12,15 @@ class Werkzeughaltung:
     G = 'Genesis9/'
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
-    I = '2d3DIterationen/iterationen2d3d/'
+    P = '2d3DIterationen/iterationen2d3d/'
 
     KENNUNG = 'haltung'
     TITEL = 'Haltung, A-Pose, Rig und Posen'
     EINLEITUNG = (
         'Genesis 9 wird in der A-Pose gebaut, gezeigt und exportiert (Edgar, 30.09.2026); die Haltung der Fotos wirkt nur in Render, Note, Befund und '
-        'Fotoprojektion. Reihenfolge: 1. Haltung der Fotos aus den Posenlandmarken schätzen, 2. m.haltung für beide Arme, m.haltung_gelenk für Ellbogen und '
-        'Beine, 3. die Runde häutet Körper, Kleider und Haar mit G9haltungshaut in diese Haltung. Das Rig (Skelett mit 138 Knochen) liefert '
-        'GET /api/character/genesis9-skeleton/.'
+        'Fotoprojektion. Reihenfolge: 1. die Haltung der Fotos messen (Gruppe „Bildvergleich: Fotos und Blickwinkel“: Haltungsfotos, Haltungsschaetzung), '
+        '2. m.haltung für beide Arme, m.haltung_gelenk für Ellbogen und Beine, 3. die Runde häutet Körper, Kleider und Haar mit G9haltungshaut in diese '
+        'Haltung. Das Rig (Skelett mit 138 Knochen) liefert GET /api/character/genesis9-skeleton/.'
     )
     # (Werkzeug, Wofür, Art, Aufruf, Klassen, Hinweis)
     ZEILEN = [
@@ -31,7 +31,8 @@ class Werkzeughaltung:
          [(G + 'modellmitkleidern.py', 'ModellMitKleidern'), (G + 'modellrezept.py', 'G9rezept')],
          'Signatur haltung(arme_grad=35.0). Wertebereich 0…43 Grad (ARME_HOECHSTENS): in der A-Pose stehen die Oberarme 43° zur Senkrechten; bei 55° stand die '
          'Hand bei x 0,08 m im Rumpf (Hüfte 0,18 m), gemessen 30.09.2026 am Bauplan der Grundfigur. Die Automatik schreibt m.haltung(42,8 − Oberarmwinkel der '
-         'Fotos) mit 1° Toleranz (IterationModell, seit 01.10.2026); ohne Fotolandmarken bleibt es die A-Pose. Prüf-KI: verboten.'),
+         'Fotos, gemessen von Haltungsschaetzung.schaetzen: seitlich, beuge, beine) mit 1° Toleranz (IterationModell, seit 01.10.2026); ohne Fotolandmarken bleibt es die A-Pose. An Edgars '
+         'Fotos (.51, 01.10.2026): vorn 12,7° / 15,9° seitlich, Ellbogen 23° / 21°. Prüf-KI: verboten.'),
         ('Einzelnes Gelenk drehen',
          'Dreht ein Gelenk der Haltung (Ellbogen, Oberschenkel, Kopf …) um eine Achse — ebenfalls nur für Render, Note und Befund.',
          'rezept',
@@ -42,17 +43,6 @@ class Werkzeughaltung:
          '(IterationModell): r_forearm rotation/y +g beugt den Ellbogen nach vorn, links gilt −g; l_thigh rotation/z +g spreizt das linke Bein um g°, rechts −g. '
          'Die A-Pose der Grundfigur hat Ellbogen 13,6° und Beine 4,1° je Bein (Probe haltung_probe.py / bein_probe.py). Die Arme am besten mit haltung(). '
          'Prüf-KI: verboten.'),
-        ('Haltung der Fotos schätzen',
-         'Misst aus MediaPipe-Weltpunkten, wie Arme und Beine auf den Fotos stehen: Oberarmwinkel, Ellbogenbeuge, Beinspreizung.',
-         'python',
-         'Haltungsfotos(job, ablage).fuer_lauf(z, referenzen)   # schreibt z["haltung_foto"] = {seitlich, beuge, arme, beine}\n'
-         'Haltungsschaetzung.arm(punkte33, seite)   # (seitlich °, Beugung °, Gewicht) oder None\n'
-         'Haltungsschaetzung.bein(punkte33, seite)   # (Spreizung °, Gewicht) oder None',
-         [(D + 'haltungsfotos.py', 'Haltungsfotos'), (I + 'haltungsschaetzung.py', 'Haltungsschaetzung'), (D + 'fotolandmarken.py', 'Fotolandmarken')],
-         'Läuft im Lauf von selbst (Schritt 5 der Runde). Gemessen im Körperrahmen der Hüftlinie; ein Arm zählt nur mit Schulter, Ellbogen und Handgelenk '
-         '(SICHTBAR_AB 0,5), gewichtet mit der kleinsten Sichtbarkeit. Die Landmarken rechnet der python10-Wrapper _run_fotolandmarken.py (Modelle laden '
-         '≈ 2 s, ≈ 0,3 s je Bild, Ablage arbeit/fotolandmarken.json; Fotolandmarken-Fassung 2). An Edgars Fotos (.51, 01.10.2026): vorn 12,7° / 15,9° '
-         'seitlich, Ellbogen 23° / 21°, die A-Pose der Figur 42,8° und 13,6°. Scheitert der Wrapper, steht eine Warnung im Log und die A-Pose bleibt.'),
         ('In die Haltung häuten',
          'Häutet Körper, Kleider und Haar einer Runde von der A-Pose in die Haltung der Fotos — für Render, Note, Befund und Fotoprojektion.',
          'python',
@@ -107,7 +97,7 @@ class Werkzeughaltung:
          'Gebaut, angezeigt und exportiert wird in der A-Pose; die Haltung der Fotos steht nur im Render.',
          'regel',
          '— keine Rezeptzeile: m.haltung(…) und m.haltung_gelenk(…) wirken über G9haltungshaut nur in Render, Note, Befund und Fotoprojektion',
-         [(G + 'haltungshaut.py', 'G9haltungshaut'), (I + 'iterationmodell.py', 'IterationModell'), (D + 'begutachtungskritik.py', 'Begutachtungskritik')],
+         [(G + 'haltungshaut.py', 'G9haltungshaut'), (P + 'iterationmodell.py', 'IterationModell'), (D + 'begutachtungskritik.py', 'Begutachtungskritik')],
          'Edgar, 30.09.2026: „Das Modell soll in A-Pose angezeigt werden“. Bis 01.10.2026 ging die Haltung in den Bau: die Kleider wurden auf der A-Pose angepasst, '
          'die Ärmel blieben oben und die Arme hingen durch sie hindurch (Runden 4–9), und die Automatik nahm jede Haltung auf 0 zurück. Seither Bau in der A-Pose und '
          'Häutung in die Haltung. Die Prüf-KI darf haltung und haltung_gelenk nicht schreiben (Begutachtungskritik.VERBOTEN).'),
@@ -116,8 +106,6 @@ class Werkzeughaltung:
     BEZIEHUNGEN = [
         ('G9rezept', 'ruft', 'ModellMitKleidern', 'anwenden(): haltung(), haltung_gelenk() je Zeile'),
         ('ModellMitKleidern', 'erbt', 'ModellKoerperMixin', 'haltung_gelenk() und GELENKE stehen im Mixin; haltung() und drehung() in der Klasse selbst'),
-        ('Haltungsfotos', 'ruft', 'Fotolandmarken', 'holen(pfade): pose_welt je Foto (python10-Wrapper)'),
-        ('Haltungsfotos', 'ruft', 'Haltungsschaetzung', 'schaetzen(fotos): {seitlich, beuge, arme, beine}'),
         ('G9haltungshaut', 'ruft', 'G9formung', 'aus_abfrage(stellung, drehung).matrizen(): Ruhe- und Posenmatrizen je Knochen'),
         ('G9formung', 'ruft', 'G9knochenmatrizen', 'matrizen(): G9knochenmatrizen(posen, knochen, drehung=…)'),
         ('G9formung', 'ruft', 'G9skelett', 'skelett(): G9skelett(knochen, boden, matrizen)'),

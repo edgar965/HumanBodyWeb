@@ -70,7 +70,9 @@ class Architektur2d3dklassen:
             (D + 'iterationstafel.py', 'Iterationstafel'), (D + 'iterationsrunde.py', 'Iterationsrunde')]),
         # Ergänzt am 02.10.2026 für den Reiter „Workflow": die Schritte des Laufs, die Optionen und die Motoren.
         ('Lauf und Schritte', 'Die Schritte eines Auftrags (Engine2d3dKleiderlauf.SCHRITTE)', [
-            (D + 'engine2d3dkleidernetz.py', 'Engine2d3dKleidernetz'), (D + 'engine2d3dkleiderkoerper.py', 'Engine2d3dKleiderkoerper'),
+            (D + 'engine2d3dkleidervorbereitung.py', 'Engine2d3dKleidervorbereitung'),
+            (D + 'engine2d3dkleidernetz.py', 'Engine2d3dKleidernetz'), (D + 'engine2d3dkleidersegmentierung.py', 'Engine2d3dKleidersegmentierung'),
+            (D + 'engine2d3dkleiderkoerper.py', 'Engine2d3dKleiderkoerper'),
             (D + 'engine2d3dkleiderkoerperlauf.py', 'Engine2d3dKleiderkoerperlauf'), (D + 'engine2d3dkleidergrundfigur.py', 'Engine2d3dKleidergrundfigur'),
             (D + 'engine2d3dkleiderexport.py', 'Engine2d3dKleiderexport'), (D + 'engine2d3dkleiderfilm.py', 'Engine2d3dKleiderfilm'),
             (D + 'engine2d3dkleiderbewegung.py', 'Engine2d3dKleiderbewegung'), (D + 'genesisengine2d3dkleider.py', 'Genesisengine2d3dkleider'),
@@ -78,6 +80,7 @@ class Architektur2d3dklassen:
         ('Optionen', 'Was ein Auftrag einstellen lässt — Kataloge mit Vorgaben', [
             (D + 'engine2d3dkleideroptionen.py', 'Engine2d3dKleideroptionen'), (D + 'meshoptionen.py', 'Meshoptionen'),
             (D + 'engine2d3dkleiderkoerperoptionen.py', 'Engine2d3dKleiderkoerperoptionen'),
+            (D + 'engine2d3dkleidersegmentierungsoptionen.py', 'Engine2d3dKleidersegmentierungsoptionen'),
             (D + 'iterationsoptionen.py', 'Iterationsoptionen'), (D + 'engine2d3dkleiderfilmoptionen.py', 'Engine2d3dKleiderfilmoptionen'),
             (D + 'renderwahl.py', 'Renderwahl')]),
         ('Blender und Stoff', 'Drapieren, Haar-Knoten und Haar-Dynamik: Newton, Blender oder Stoffsolver', [

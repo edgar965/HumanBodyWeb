@@ -64,10 +64,52 @@ def _pixalfelder():
                     'wirkt. Beim Mehrbild gilt das Sichtfeld für alle Ansichten, geschätzt wird es am Foto „vorne".'},
         {'schluessel': 'pixal_speicher', 'titel': 'Pixal3D — Grafikspeicher', 'art': 'wahl', 'vorgabe': 'auto',
          'fein': True, 'gilt': PIXAL, 'werte': [
-             ('auto', 'Automatisch — alles auf der GPU, wenn mindestens 24 GB frei sind, sonst stufenweise'),
-             ('sparsam', 'Sparsam — die Modelle kommen stufenweise auf die GPU (laut Autoren etwa 10–12 GB, langsamer)'),
-             ('voll', 'Voll — alle Modelle auf der GPU (laut Autoren etwa 18 GB, schneller)'),
-         ], 'hinweis': 'Die Zahlen der Autoren (Kommentar in `inference.py`); der gemessene Spitzenwert steht im auftrag.log.'},
+             ('auto', 'Automatisch — alles auf der GPU, nichts im Arbeitsspeicher: jedes Modell wird direkt auf der Karte gebaut und nach '
+                      'seiner Stufe wieder freigegeben (Vorgabe)'),
+             ('sparsam', 'Sparsam — die Modelle liegen im Arbeitsspeicher und kommen stufenweise auf die GPU (laut Autoren etwa 10–12 GB, langsamer)'),
+             ('voll', 'Voll — alle Modelle zugleich auf der GPU (Mehrbild mit 1536 gemessen 43 GB: die 32-GB-Karte läuft über)'),
+         ], 'hinweis': 'Der gemessene Spitzenwert je Stufe steht im pixal3d.log (`Stufe …`) und im auftrag.log.'},
+        {'schluessel': 'pixal_seite', 'titel': 'Pixal3D Mehrbild — Rolle der Seitenfotos', 'art': 'wahl', 'vorgabe': 'angegeben',
+         'fein': True, 'gilt': PIXAL, 'werte': [
+             ('angegeben', 'Wie angegeben — die Rolle „links"/„rechts" des Fotos bestimmt die Kamera (Vorgabe)'),
+             ('blick', 'Nach Blickrichtung — die Silhouette entscheidet: Blick nach rechts im Bild = „rechts", nach links = „links"'),
+             ('getauscht', 'Vertauscht — Gegenprobe: die Winkel der beiden Seitenrollen getauscht'),
+         ], 'hinweis': 'Die Rolle „rechts" (Foto der rechten Körperseite, die Person blickt im Bild nach rechts) steht bei 270°, „links" bei 90° '
+                       '(Beispielbilder und Knoten der Autoren, ComfyUI). Ein Seitenfoto auf der falschen Seite gibt einen gespiegelten, von der '
+                       'Vorderkamera abgewandten Körper. „Nach Blickrichtung" misst an den Füßen, wohin die Zehen zeigen (`mesh_blickrichtung`); '
+                       'ohne sicheres Urteil bleibt die angegebene Rolle.'},
+        {'schluessel': 'pixal_formseite', 'titel': 'Pixal3D Mehrbild — Seitenfotos für die Form', 'art': 'wahl', 'vorgabe': 'beide',
+         'fein': True, 'gilt': PIXAL, 'werte': [
+             ('beide', 'Beide — jedes Seitenfoto bestimmt die Form mit (Vorgabe)'),
+             ('rechts', 'Nur „rechts" — das Foto „links" geht nur in die Textur'),
+             ('links', 'Nur „links" — das Foto „rechts" geht nur in die Textur'),
+         ], 'hinweis': 'Das ausgelassene Seitenfoto bleibt im Auftrag und liefert Fotofarbe für die Textur (Fotobacken), es ist nur keine Ansicht des '
+                       'Formmodells. Anlass: Auf den Fotos von Edgar ist der Kopf in „links" (4.jpg) nach unten geneigt; mit diesem Foto als Ansicht '
+                       'war das Gesicht der Form verzerrt, mit nur „rechts" oder nur vorne und hinten ruhig (Sichtprüfung, je ein Lauf). Ob die '
+                       'Textur dabei so gut bleibt wie mit vier Ansichten, ist nicht gemessen.'},
+        {'schluessel': 'pixal_abstand', 'titel': 'Pixal3D Mehrbild — Kameraabstand (Faktor)', 'art': 'zahl', 'vorgabe': 1.0,
+         'min': 0.5, 'max': 2, 'schritt': 0.05, 'fein': True, 'gilt': PIXAL,
+         'hinweis': '1 = die Entfernung, bei der der Würfel das Bild füllt (aus dem Sichtfeld). Das Trainings-Rig des Mehrbilds steht 1,1× weiter '
+                    'weg (ComfyUI: d = 0,55 / tan(Sichtfeld/2)); dort füllt der Würfel 91 % des Bildes — so viel lässt unser Zuschnitt der '
+                    'Person. Bei 1 sitzt die Figur zu klein im Würfel (gemessen 0,885 hoch statt 1,0). Ob 1,1 das Netz verbessert, ist '
+                    'nicht gemessen.'},
+        {'schluessel': 'pixal_remesh', 'titel': 'Pixal3D — Remesh beim Export', 'art': 'wahl', 'vorgabe': 'an', 'fein': True, 'gilt': PIXAL,
+         'werte': [('an', 'An — Dual Contouring baut das Netz neu auf (Vorgabe, wie im Space)'),
+                   ('aus', 'Aus — das dekodierte Netz wird übernommen')],
+         'hinweis': 'Die Autoren des Forks cronos3k/Pixal3D melden, das Remesh verwerfe das dekodierte Netz und baue Facetten. Ob „aus" '
+                    'glattere Flächen gibt (und ob dann Zapfen auftreten), ist nicht gemessen.'},
+    ]
+
+
+def _fotofelder():
+    """Was für jedes Formmodell gilt: die Fotoprüfung vor der Form (`mesh_fotopruefung`, `Engine2d3dKleidernetz`)."""
+    return [
+        {'schluessel': 'fotopruefung', 'titel': 'Fotoprüfung — Fotos mit anderer Kleidung auslassen', 'art': 'wahl',
+         'vorgabe': 'an', 'fein': True, 'werte': [
+             ('an', 'An — ein Foto, dessen Rumpf- oder Hüftfarbe der Mehrheit widerspricht, fällt vor der Form heraus (Vorgabe)'),
+             ('aus', 'Aus — alle Fotos gehen in die Form'),
+         ], 'hinweis': 'Vergleicht Farbton und Helligkeit von Rumpf und Hüfte je Foto. Aus, um zu prüfen, ob ein ausgelassenes '
+                       'Seitenfoto der Form hilft oder schadet; das Ergebnis steht sonst unter „Fotoprüfung" im Ergebnis des Laufs.'},
     ]
 
 
@@ -137,9 +179,12 @@ class Engine2d3dKleidermeshoptionen:
                     'Netzhöhe (102.448 von 461.656 Flächen gegen 8 von 96.598, gemessen 01.10.2026).'},
         {'schluessel': 'texturgroesse', 'titel': 'Texture Size', 'art': 'wahl', 'vorgabe': '4096', 'werte': [
             ('1024', '1024 × 1024'), ('2048', '2048 × 2048'), ('3072', '3072 × 3072'), ('4096', '4096 × 4096'),
+            ('8192', '8192 × 8192 — feiner als das Foto (Probe)'),
         ], 'hinweis': 'Der Space: 1024–4096, Vorgabe 2048. Hier 4096, weil der UV-Atlas bei 1536 tausende Inseln hat '
-                      '(siehe Resolution).'},
-    ] + _stufenfelder(STUFEN) + _mehrbildfelder() + _pixalfelder()
+                      '(siehe Resolution). Gemessen (03.10.2026, Pixal3D, 100.000 Flächen): bei 4096 liegen 0,67 mm auf einem Texel, '
+                      'das Kopffoto trägt 0,42 mm je Pixel — 8192 (0,33 mm) nutzt das Foto ganz, kostet aber Rechenzeit und '
+                      'Grafikspeicher im Betrachter (PNG ~40 MB).'},
+    ] + _stufenfelder(STUFEN) + _mehrbildfelder() + _pixalfelder() + _fotofelder()
 
     @classmethod
     def vorgaben(cls):

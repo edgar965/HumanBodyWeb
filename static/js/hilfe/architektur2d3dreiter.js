@@ -40,7 +40,17 @@ export class Architektur2d3dreiter {
     ausAdresse() {
         const {reiter, ziel} = this.reiterVon(window.location.hash);
         this.zeigen(reiter, false);
+        this.aufklappen(ziel);
         if (ziel) ziel.scrollIntoView();
+    }
+
+    /** Ein Ziel in einer eingeklappten Gruppe (Reiter „Tools", Klassenmodell): erst aufklappen, sonst gibt es nichts anzuspringen. */
+    aufklappen(ziel) {
+        let huelle = ziel ? ziel.closest('details') : null;
+        while (huelle) {
+            huelle.open = true;
+            huelle = huelle.parentElement ? huelle.parentElement.closest('details') : null;
+        }
     }
 
     zeigen(reiter, merken) {

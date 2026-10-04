@@ -12,14 +12,29 @@ geschriebenes Bild ist trotzdem sofort da (`Meshtabelle._mit_stand`).
 """
 
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from .bildmodelltabelle import Bildmodelltabelle
+from .engine2d3dkleiderki import Engine2d3dKleiderki
+from .engine2d3dkleiderqualitaet import Engine2d3dKleiderqualitaet
 from .meshtabelle import Meshtabelle
 
 __all__ = ['Engine2d3dKleidertabelle']
+
+
+def _qualitaetsspalten():
+    """Die acht Rangspalten der Handwertung im Kopf der Tabelle — aus `Engine2d3dKleiderqualitaet.FELDER`, in dessen Reihenfolge."""
+    return tuple(
+        {
+            'label': label,
+            'key': spalte,
+            'num': True,
+            'titel': Engine2d3dKleiderqualitaet.kopftitel(schluessel),
+        }
+        for schluessel, (spalte, label, _frage) in Engine2d3dKleiderqualitaet.FELDER.items()
+    )
 
 
 class Engine2d3dKleidertabelle(Meshtabelle):
@@ -34,6 +49,12 @@ class Engine2d3dKleidertabelle(Meshtabelle):
         {'label': 'Vorlage', 'key': 'vorlage', 'sortAus': True, 'titel': 'Das erste Foto der Bildauswahl'},
         {'label': 'Name', 'key': 'name'},
         {'label': 'Bilder', 'key': 'bilder', 'num': True, 'titel': 'Fotos der Bildauswahl'},
+        {
+            'label': 'KI',
+            'key': 'ki',
+            'titel': 'Welche KI das Netz aus den Fotos rechnet (Schritt „Netz"): TRELLIS.2, Pixal3D oder Pixal3D Mehrbild. '
+            'Von Hand wählbar, gilt beim nächsten Lauf; während eines Laufs gesperrt.',
+        },
         {'label': 'Status', 'key': 'status'},
         {'label': 'Runden', 'key': 'runden', 'num': True, 'titel': 'Abgelegte Runden der Iterationen'},
         {
@@ -42,12 +63,18 @@ class Engine2d3dKleidertabelle(Meshtabelle):
             'num': True,
             'titel': 'Abweichung des besten Modells von der Vorlage: (1 − Umriss-IoU) + Farbabstand, kleiner ist besser',
         },
+        *_qualitaetsspalten(),
         {'label': 'Dauer', 'key': 'dauer', 'num': True, 'titel': 'Rechenzeit des letzten Laufs'},
         {'label': 'Erstellt', 'key': 'erstellt'},
     )
 
     def __init__(self, auftraege):
         Bildmodelltabelle.__init__(self, auftraege, schluessel='engine2d3dkleider')
+        #: Wie viele Läufe je Rangspalte bewertet sind: Die Auswahl eines Felds reicht bis zum nächsten freien Rang (`_qualitaet`).
+        self._bewertet = {
+            spalte: sum(1 for a in self.auftraege if getattr(a, spalte, None))
+            for spalte, _label, _frage in Engine2d3dKleiderqualitaet.FELDER.values()
+        }
 
     def tabelle(self):
         aus = Bildmodelltabelle.tabelle(self)
@@ -70,9 +97,11 @@ class Engine2d3dKleidertabelle(Meshtabelle):
                         format_html(
                             '<td class="num" data-sort="{}">{}</td>', len(a.bilder or []), len(a.bilder or [])
                         ),
+                        self._ki(a),
                         self._status(a),
                         self._zahl(len(e.get('iterationen') or [])),
                         self._abweichung(abweichung),
+                        *(self._qualitaet(a, schluessel) for schluessel in Engine2d3dKleiderqualitaet.FELDER),
                         self._dauer(e.get('dauer_s')),
                         self._erstellt(a),
                     )
@@ -113,6 +142,55 @@ class Engine2d3dKleidertabelle(Meshtabelle):
             seite,
             quelle,
             erstes.get('original') or erstes['datei'],
+        )
+
+    @staticmethod
+    def _ki(a):
+        """Die KI des Schritts „Netz" als Auswahlfeld in der Zeile (`engine2d3dkleider/engine2d3dkleiderkiwahl.js` speichert die Änderung als
+        `mesh.modell` über `/api/engine2d3dkleider/<id>/einstellungen/`). Gesperrt, solange der Auftrag läuft: Der Arbeitsprozess hat seine
+        Optionen schon gelesen, der Server lehnt die Änderung dann mit 409 ab."""
+        jetzt = Engine2d3dKleiderki.aktuell(a.optionen)
+        werte = Engine2d3dKleiderki.werte()
+        optionen = format_html_join(
+            '',
+            '<option value="{}" title="{}"{}>{}</option>',
+            ((w, t, mark_safe(' selected') if w == jetzt else '', k) for w, k, t in werte),
+        )
+        return format_html(
+            '<td data-sort="{}"><select class="viewer-select engine2d3dkleider-ki" data-id="{}" data-vorher="{}" title="{}"{}>{}</select></td>',
+            jetzt,
+            str(a.id),
+            jetzt,
+            next(t for w, _k, t in werte if w == jetzt),
+            mark_safe(' disabled') if a.status == 'laeuft' else '',
+            optionen,
+        )
+
+    def _qualitaet(self, a, schluessel):
+        """Der Rang des Laufs in einer Qualitätsspalte als Auswahlfeld direkt in der Zeile (`engine2d3dkleider/engine2d3dkleiderqualitaet.js`
+        speichert jede Änderung an `/api/engine2d3dkleider/<id>/qualitaet/` und stellt danach die Felder der anderen Zeilen nach). Zur Wahl
+        stehen „–" und die Ränge 1 bis zum nächsten freien (bewertete Läufe + 1, solange dieser Lauf noch keinen hat) — weiter hinten
+        gäbe es eine Lücke. `data-sort` ist der Rang, „nicht bewertet" sortiert ans Ende (`SORT_OHNE_RANG`)."""
+        spalte = Engine2d3dKleiderqualitaet.spalte(schluessel)
+        jetzt = getattr(a, spalte, None) or 0
+        bis = max(self._bewertet.get(spalte, 0) + (0 if jetzt else 1), jetzt, 1)
+        optionen = format_html_join(
+            '',
+            '<option value="{}"{}>{}</option>',
+            (
+                (rang, mark_safe(' selected') if rang == jetzt else '', rang or '–')
+                for rang in range(0, bis + 1)
+            ),
+        )
+        return format_html(
+            '<td class="num" data-sort="{}"><select class="viewer-select engine2d3dkleider-qualitaet" data-id="{}" '
+            'data-feld="{}" data-vorher="{}" title="{}">{}</select></td>',
+            jetzt or Engine2d3dKleiderqualitaet.SORT_OHNE_RANG,
+            str(a.id),
+            schluessel,
+            jetzt,
+            Engine2d3dKleiderqualitaet.titel(schluessel, jetzt),
+            optionen,
         )
 
     @staticmethod

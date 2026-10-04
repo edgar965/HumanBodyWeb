@@ -78,7 +78,8 @@ class Werkzeugfotostuecke:
          "m.kleid_nur('eigen_foto_<kürzel>_oberteil_f20', 'eigen_foto_<kürzel>_hose_f20', 'eigen_foto_<kürzel>_socken_f20')",
          [(G + 'modellmitkleidern.py', 'ModellMitKleidern'), (D + 'fotostuecke.py', 'Fotostuecke')],
          'Die Kennung nicht erraten: sie ist der geslugte .duf-Name, den holen() als Wert liefert (bilanz["stueck"]); '
-         'Präfix eigen_foto_, danach Kürzel des Auftrags (letzte 8 Zeichen der Kennung ohne Punkte), Stückname und Fassung. '
+         'Präfix eigen_foto_, danach Kürzel des Auftrags (letzte 8 Zeichen der Kennung ohne Punkte), Stückname und Fassung '
+         '(so in der gemerkten Liste: eigen_foto_01123809_oberteil_f18; ältere Stände ohne _f<Fassung>). '
          'Die Automatik zieht sie selbst an (Kleiderwahl.soll, wenn befund["fotostuecke"] gesetzt ist) und lässt sie von '
          'Hülle, Weite, Zonen-Morphen und Drapieren aus (Kleiderwahl.fest: sie SIND schon die Form des Netzes). '
          'Fotofarbe über kleid_fototextur ist bei ihnen nicht nötig: Farbe kommt aus dem Netz; die Annahme, die Netzfarbe '

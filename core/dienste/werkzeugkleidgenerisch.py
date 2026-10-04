@@ -24,7 +24,8 @@ class Werkzeugkleidgenerisch:
         'und Textur-Regler stellen, 4. das Netz anfragen (POST …/<eintrag>/netz/). Es gibt KEINE neue Geometrie im Eintrag: '
         'er wählt Stücke, reicht die Regler weiter, und der Bau mischt. Wo zwei Stücke dieselbe Hautstelle bedecken, steht '
         'EINE Fläche aus ihrem Verhältnis. Stand der Bibliothek 30.09.2026: 390 Stücke (165 MakeHuman, 172 GarmentCode, '
-        '53 Daz) in 12 Kategorien (genesis9-garderobe.md).')
+        '53 Daz) in 12 Kategorien (genesis9-garderobe.md); die gemerkte Liste (Genesis9/ablage/garderobe.json, gelesen '
+        '03.10.2026) zählt 411 Kleidungsstücke (davon 21 eigene eigen_…, Fotostücke und Uhr), 18 Frisuren und 51 Requisiten.')
 
     # (Werkzeug, Wofür, Art, Aufruf, Klassen, Hinweis)
     ZEILEN = [
@@ -60,7 +61,8 @@ class Werkzeugkleidgenerisch:
         ('Sammeleintrag anfragen: Stücke anziehen und mischen',
          'Baut das Netz des Sammeleintrags: ein Stück allein wie gewohnt, mehrere Stücke über 0 als EINE gemischte Fläche.',
          'api',
-         'POST /api/character/genesis9-figur/garderobe/kleidung_generisch_alle/netz/\n'
+         'POST /api/character/genesis9-figur/garderobe/<kennung>/netz/   (kennung: kleidung_generisch_alle oder '
+         'kleidung_generisch_<kategorie>)\n'
          '{regler: {…Genesis-Regler der Figur…},\n'
          ' regler_stueck: {"sorte.g9_base_shirt": 1, "sorte.gc_dress_shift": 0.3, "mischung:uebergang": 3, '
          '"passform:laenge": -4},\n'
@@ -117,6 +119,7 @@ class Werkzeugkleidgenerisch:
         ('G9garderobeapi', 'ruft', 'G9kleidgenerisch',
          'eintraege() für die Liste; mischung_aufloesen(), aufloesen(), getragene_aufloesen() in kleidnetz()'),
         ('G9garderobeapi', 'ruft', 'G9garderobe', 'G9garderobe.liste() und eintrag(): die Stücke und ihre Regler'),
+        ('G9garderobeapi', 'ruft', 'G9haargenerisch', 'G9haargenerisch.ist_generisch(): „Haar – Generisch“ baut G9haarmischbau, nicht diese Mischung'),
         ('G9garderobeapi', 'ruft', 'G9kleidmischbau',
          'G9kleidmischbau.antwort(rumpf, kleid, kennung, folge, uebergang, koerper): die Mischung mehrerer Stücke'),
         ('G9kleidgenerisch', 'ruft', 'G9kleidgenerischwahl',

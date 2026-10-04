@@ -108,6 +108,20 @@ class Werkzeugmeshfigur:
          'dem Ohrknochen: dort immer beidseitig, Stirn und Schläfen unter Haar einseitig); Iris 0, Umriss ½; die Dämpfung misst die Wirkung eines Reglers an der Kopfregion. Startet aus der '
          'Stellung der Körperkette. Gemessen (Damira, 27.09.2026): Kopf 4,07 → 1,98 mm; Landmarken Mund 2,5, Augen 3,1, Brauen 3,2, Nase 3,4 mm. Falle: zuerst die Höhe prüfen — wächst der Kopf ins '
          'Haar, wird die Figur 170 statt 167 cm (Cranium Size Larger 1,0). Offen (29.09.2026): 16 von 41 Nasenregler an der Grenze, der gespitzte Mund des Netzes bleibt 4,7 mm (p90 11 mm) daneben.'),
+        ('Prio-Liste der Regler (Stufen)',
+         'Teilt jeden Genesis-Regler einer Stufe zu — in welcher Reihenfolge Mesh to 3D ihn stellt (Größe zuerst, Feinregler zuletzt) oder dass es ihn gar nicht stellt.',
+         'python',
+         'from core.dienste.meshfigurregler import Meshfigurregler\n'
+         'Meshfigurregler.stufe(name, bereich, teil)   # 0 gesperrt, 1–3 Körper, 11–13 Kopf\n'
+         'Meshfigurregler(grund, gesperrt=None).daten(teil, stellung)   # {namen, jetzt, grund, stufe, unten, oben}\n'
+         'Meshfigurregler.festwerte(optionen)   # feste Werte, z. B. die Genitalform der männlichen Grundfigur',
+         [(D + 'meshfigurregler.py', 'Meshfigurregler'), (G + 'reglerableitung.py', 'G9reglerableitung')],
+         'Körper (158 Regler, 27.09.2026): Stufe 1 = Name enthält Proportion oder beginnt mit body_bs_BodyMass (Größe, Beine, Arme, Rumpf, Hals, Schultern, Brustkorb, Hände, Füße); 2 = Bereich '
+         'figur oder koerper (Charakterkörper, Heavy, Pear, Muscular, Fitness, Tone) ohne „Abs “; 3 = die übrigen Bereiche. Kopf (296 Regler): 11 = Name endet auf head oder enthält ProportionHeadSize, '
+         'Cranium, „Face “, ForeHead, Jaw Height, Head Shape; 12 = Nase, Mund, Lippen, Augen, Brauen, Wangen, Kinn, Kiefer, Schläfe, Philtrum, Nostril, Smile; 13 = Ohren und alles Übrige. Stufe 0 '
+         '(nie gestellt): ProportionSmaller/Larger (Kinderproportionen, doppelt zu Height), BaseFeminine_figure_ctrl, BaseFeminine_body_bs, Mouth Cavity, Ears Gone, HipGenitalBulge und die vier '
+         'Mimik-Namen (Mimik-Filter in der Gruppe „Gesicht“); auf der männlichen Grundfigur dazu body_bs_Breast…; im Testfall „blind“ die Charakterregler der Referenzfigur (sperrmarken). Werte unter 0,005 '
+         'werden 0. Grundfiguren: feminine {BaseFeminine_figure_ctrl_Character: 1}, masculine {BaseMasculine_figure_ctrl_Character: 1}, neutral {}.'),
         ('Rest als Eigenmorph',
          'Legt, was die Regler nicht erreichen, als eigenen Morph eigen:<kennung> dazu — links/rechts gemittelt, geglättet.',
          'python',

@@ -13,8 +13,8 @@ class Werkzeugstoffuv:
     KENNUNG = 'stoffuv'
     TITEL = 'Stoffsolver: UV, Packen, Texturen backen'
     EINLEITUNG = (
-        'Der Stoffsolver bringt Blenders UV-Werkzeuge (Smart UV Project, Unwrap, Pack Islands) und das Backen von Texturen in Python mit — für Netze, die noch keine UV haben (etwa ein '
-        'Kleidstück aus einem Fotoumriss oder ein TRELLIS-Netz). Reihenfolge: 1. Uvabwicklung(…).rechnen() legt die UV an und packt sie (Uvpacker), 2. Uvergebnis.punktnetz(punkte) '
+        'Der Stoffsolver bringt Blenders UV-Werkzeuge (Smart UV Project, Unwrap, Pack Islands) und das Backen von Texturen in Python mit — für Netze, die noch keine UV haben. '
+        'Reihenfolge: 1. Uvabwicklung(…).rechnen() legt die UV an und packt sie (Uvpacker), 2. Uvergebnis.punktnetz(punkte) '
         'macht ein Netz mit UV je Punkt, 3. Texturbacker (oder Texturudim) backt Farbe aus dem Netz oder aus Fotos in die Textur. Aus der Pipeline (Genesis9, HumanBodyWeb) nicht aufgerufen: '
         'nur per direktem Python-Aufruf (die Fotoprojektion der Runden läuft über Kleidfotoprojektion, nicht über den Texturbacker). Der Stand je Zeile steht in der Tabelle „Der '
         'Stoffsolver gegen Blender“ (Reiter Workflow).')
@@ -51,8 +51,7 @@ class Werkzeugstoffuv:
         ('Löcher füllen, Symmetrie-Pins, Bildseitenverhältnis, scale_to_bounds',
          'Die Optionen von Unwrap: Löcher mit Dreiecken füllen, Festpunkte symmetrisch wählen, das Seitenverhältnis des Bildes einrechnen, die UV auf 0…1 spannen.',
          'python',
-         '\n'.join((
-             "Uvabwicklung(punkte, dreiecke, fill_holes=True, symmetrie_pins=True, bildaspekt=<Breite / Höhe des Bildes>, auf_grenzen=False)")),
+         "Uvabwicklung(punkte, dreiecke, fill_holes=True, symmetrie_pins=True, bildaspekt=<Breite / Höhe des Bildes>, auf_grenzen=False)",
          [(S + 'uvabwicklung.py', 'Uvabwicklung'), (S + 'uvloecher.py', 'Uvloecher'), (S + 'uvsymmetrie.py', 'Uvsymmetrie'), (S + 'uvaspekt.py', 'Uvaspekt')],
          'fill_holes ist nicht die Vorgabe (Blenders uv.unwrap hat True): True gibt dasselbe Ergebnis wie Blender, verzerrt aber Rohr und Kappe mit Loch viel stärker (Flächenstreuung Rohr '
          '2,3 gegen 0,015) — für Texturen bleibt der Schnitt die Vorgabe. symmetrie_pins (Vorgabe True, Blender hat keinen Schalter): bei einer Insel mit über der Hälfte ihres Randes an einer '
@@ -61,8 +60,7 @@ class Werkzeugstoffuv:
         ('Henkelschnitt (Torus, Tasse)',
          'Flächen mit Henkeln (Geschlecht ≥ 1) automatisch zur Scheibe aufschneiden, damit sie sich abwickeln lassen.',
          'python',
-         '\n'.join((
-             "Uvabwicklung(punkte, dreiecke, schneiden=True, henkel=True, blender_reihenfolge=False).rechnen()")),
+         "Uvabwicklung(punkte, dreiecke, schneiden=True, henkel=True, blender_reihenfolge=False).rechnen()",
          [(S + 'uvhenkelschnitt.py', 'Uvhenkelschnitt'), (S + 'uvschnitt.py', 'Uvschnitt'), (S + 'uvabwicklung.py', 'Uvabwicklung')],
          'Eigenbau, ohne Gegenstück in Blender: Blender schneidet nicht selbst (ohne Naht „Unwrap failed to solve“). Der Algorithmus (kürzeste-Wege-Baum + Maximum-Gegenbaum, 2g Schleifen, '
          'Erickson/Whittlesey) ist nicht gegen die Veröffentlichung geprüft. Ohne henkel=True fallen Henkelinseln auf die Projektion zurück. Mit denselben Nähten wie der Solver rechnet Blender '

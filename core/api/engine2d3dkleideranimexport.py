@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Engine2d3dKleideranimexportendpunkte — das Modell der besten Runde mit der Bewegung als GLB und Blender-Datei (01.10.2026).
 
-    POST /api/engine2d3dkleider/<id>/animexport/   {blend?: true}
-        → {kanaele, fehlend, bilder, sekunden, runde, glb: {datei, bytes, adresse},
-           blend: {datei, bytes, adresse} | {fehler}}
+    POST /api/engine2d3dkleider/<id>/animexport/   {glb?: true, blend?: true, bvh?: true, bvh_pfad?: '', audio?: true, audio_pfad?: '', name?: ''}
+        → {kanaele, fehlend, bilder, sekunden, runde, bvh, audio, glb: {datei, bytes, adresse},
+           blend: {datei, bytes, adresse} | {fehler}, ablage: {ordner, dateien}}
 
 Rechnet im Anfrageprozess (`Engine2d3dKleideranimexport`: umpacken in Sekundenbruchteilen, Blender ~10 s). Während der Auftrag
 rechnet: 409 — die Runden-GLB und die Bewegung könnten gerade neu geschrieben werden.
@@ -34,7 +34,11 @@ class Engine2d3dKleideranimexportendpunkte:
             return JsonResponse({'error': 'Auftrag läuft — exportieren, wenn er fertig ist'}, status=409)
         rumpf = Engine2d3dKleiderendpunkte.rumpf(request)
         try:
-            bericht = Engine2d3dKleideranimexport(job).ausfuehren(blend=rumpf.get('blend', True) is not False)
+            bericht = Engine2d3dKleideranimexport(job).ausfuehren(
+                glb=rumpf.get('glb', True) is not False, blend=rumpf.get('blend', True) is not False,
+                bvh=rumpf.get('bvh', True) is not False, bvh_pfad=str(rumpf.get('bvh_pfad') or ''),
+                audio=rumpf.get('audio', True) is not False and bool(str(rumpf.get('audio_pfad') or '').strip()),
+                audio_pfad=str(rumpf.get('audio_pfad') or ''), name=str(rumpf.get('name') or '')[:120])
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=409)
         except Exception as fehler:  # noqa: BLE001 — sichtbar im Log, die Seite bekommt die Meldung

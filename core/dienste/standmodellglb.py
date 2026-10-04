@@ -12,9 +12,11 @@ für alle Netze, je Kachel bzw. Materialgruppe ein Netz mit Bild (JPEG; mit Durc
 Knotennamen folgen der Runden-GLB (`koerper…`, `kleidung__<sorte>__<n>_g<k>__<slug>`, `haar__…`), damit „Haare" und
 „Kleider" sie schalten (`Engine2d3dKleiderbuehnenmodell.art`) und der Pinsel die Gruppe kennt (`Engine2d3dKleidermalen`).
 
-DIE BINDEMATRIZEN sind das Inverse der Weltlage jedes Knochens — Verschiebung UND Ruhedrehung. `G9rigglb.skelett`
-schreibt nur die Verschiebung; three.js nimmt die Matrizen wörtlich, und gemessen stand `figur.glb` von `.51` dort in
-der Ruhelage verzerrt: die gehäuteten Punkte im Mittel 75 mm, höchstens 651 mm neben ihrer Lage im Netz.
+DIE BINDEMATRIZEN sind das Inverse der Weltlage jedes Knochens — Verschiebung UND Ruhedrehung. Bis 03.10.2026 schrieb
+`G9rigglb.skelett` nur die Verschiebung und diese Klasse rechnete sie selbst nach; three.js nimmt die Matrizen wörtlich,
+und gemessen stand `figur.glb` von `.51` dort in der Ruhelage verzerrt: die gehäuteten Punkte im Mittel 75 mm, höchstens
+651 mm neben ihrer Lage im Netz. Seither kommen sie aus `G9rigglb.skelett` (für alle Schreiber, auch die Grundfigur
+für Blender).
 
 Weggelassen: Feuchtfilm und Träne der Augen (im Browser durchsichtig; deckend gezeichnet verdecken sie die Iris),
 Normalen- und Rauheitsbilder (die Bühne soll schnell laden).
@@ -42,8 +44,13 @@ class Standmodellglb(G9rigglb):
     JPEG_GUETE = 85
     #: Haarkarten der Kleidung/Frisur: harte Maske (viele Lagen übereinander — weiche Durchsicht bräuchte Sortierung).
     #: Wimpern und Brauen: weich (`BLEND`) — mit ihrer Deckkraft 0,7–0,9 fielen die Brauen an der harten Grenze weg.
-    MASKE_GRENZE = 0.35
+    #: 0,35 → 0,15 am 03.10.2026 (Edgar: Modell ≠ Iteration): Der Bart (`mavick_beard`, Maske 130 × 216) hat bei 0,35 nur 28,2 % der Punkte
+    #: (bei 0,15: 43,9 %, bei 0,05: 52,2 %; gemessen `_wegwerf/randy/bart_alpha.py` an stand_98597214b613.glb) — auf der Bühne stand ein
+    #: Stoppelbart, der Mitsuba-Render der Iteration zeigt ihn dicht. Ob 0,15 dem Render genügt, sagt der Blick auf die Bühne.
+    MASKE_GRENZE = 0.15
     DURCHSICHTIG = ('EyeMoisture', 'Cornea', 'Tear')
+    #: Kleidungsstücke dieser Art (`sorte` beginnt so) bekommen Falten und weißen Stoff.
+    HOSE = 'gc_hose'
     #: Wohin ein Punkt gebunden wird, dessen Knochen das Skelett nicht kennt (gezählt in `fehlend`).
     ERSATZ = 'hip'
 
@@ -52,8 +59,9 @@ class Standmodellglb(G9rigglb):
         self.gltf['asset']['generator'] = 'HumanBody 2D3D Kleider (Stand)'
         self.knochen = [k for k in knochen if not k.get('ende')]
         self.nummer = {k['name']: i for i, k in enumerate(self.knochen)}
-        gelenke, wurzel, _ = self.skelett(self.knochen)
-        matrizen = self._zugriff(self._bindungen(gelenke), self.FLOAT, 'MAT4', None)
+        gelenke, wurzel, bind = self.skelett(self.knochen)
+        self.gelenke = gelenke                       # Knotennummern in Knochenreihenfolge (`Standhaltung`)
+        matrizen = self._zugriff(bind, self.FLOAT, 'MAT4', None)
         self.gltf['skins'] = [{'name': 'Genesis 9', 'inverseBindMatrices': matrizen, 'joints': list(gelenke),
                                'skeleton': wurzel}]
         self.gltf['samplers'] = [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 10497, 'wrapT': 10497}]
@@ -61,38 +69,7 @@ class Standmodellglb(G9rigglb):
         self.fehlend = set()
         self.zahl = {'netze': 0, 'punkte': 0, 'dreiecke': 0, 'bilder': 0}
 
-    # ---------------------------------------------------------------- Skelett
-
-    @staticmethod
-    def _drehung(q):
-        x, y, z, w = (float(v) for v in q)
-        return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-                         [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-                         [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
-
-    def welt(self, gelenke):
-        """Weltlage (4×4) je Knochenknoten aus der Kette der Knoten (TRS, Eltern zuerst gerechnet)."""
-        knoten = self.gltf['nodes']
-        eltern = {kind: i for i, k in enumerate(knoten) for kind in k.get('children', [])}
-        lage = {}
-        for start in gelenke:
-            kette, i = [], start
-            while i not in lage:
-                kette.append(i)
-                if i not in eltern:
-                    break
-                i = eltern[i]
-            for i in reversed(kette):
-                m = np.eye(4)
-                m[:3, :3] = self._drehung(knoten[i].get('rotation') or (0, 0, 0, 1))
-                m[:3, 3] = knoten[i].get('translation') or (0, 0, 0)
-                lage[i] = lage[eltern[i]] @ m if i in eltern and eltern[i] in lage else m
-        return lage
-
-    def _bindungen(self, gelenke):
-        """(n, 16) — je Knochen das Inverse seiner Weltlage, spaltenweise wie glTF."""
-        lage = self.welt(gelenke)
-        return np.stack([np.linalg.inv(lage[i]).T.reshape(16) for i in gelenke]).astype(np.float32)
+    # ---------------------------------------------------------------- Haut
 
     def _haut(self, haut, anzahl):
         """(index (N, 4), gewicht (N, 4)) in Knochenreihenfolge, Gewichte auf 1 normiert."""
@@ -126,11 +103,12 @@ class Standmodellglb(G9rigglb):
                 return vorgabe
         return wert if wert is not None else vorgabe
 
-    def _bild(self, albedo=None, alpha=None, alphawert=1.0):
-        """Index der glTF-Textur — je (Bild, Maske, Deckkraft) EINMAL in der Datei; None ohne beides."""
+    def _bild(self, albedo=None, alpha=None, alphawert=1.0, weissen=None):
+        """Index der glTF-Textur — je (Bild, Maske, Deckkraft, Weißung) EINMAL in der Datei; None ohne beides. `weissen`: eine `Stoffweissung` (weißer Stoff der Hose: Flecken der
+        Fotoprojektion auf Weiß, Innenseiten ohne Streifen); ihr `schluessel` gehört zum Bildspeicher."""
         if albedo is None and alpha is None:
             return None
-        schluessel = (str(albedo), str(alpha), round(float(alphawert), 3))
+        schluessel = (str(albedo), str(alpha), round(float(alphawert), 3), weissen.schluessel if weissen is not None else None)
         if schluessel in self._bilder:
             return self._bilder[schluessel]
         from PIL import Image
@@ -140,6 +118,8 @@ class Standmodellglb(G9rigglb):
                 bild = roh.convert('RGB')
                 bild.thumbnail((kante, kante))
                 bild = bild.copy()
+            if weissen is not None:
+                bild = weissen(bild)
         if alpha is not None:
             with Image.open(alpha) as roh:
                 maske = roh.convert('L')
@@ -169,8 +149,9 @@ class Standmodellglb(G9rigglb):
     # -------------------------------------------------------------------- Netz
 
     def _netz(self, name, punkte, dreiecke, normalen, uv, haut, textur=None, faktor=(1.0, 1.0, 1.0), maske=False,
-              zweiseitig=True):
-        """Ein Netz am gemeinsamen Skin — nur die Punkte, die seine Dreiecke brauchen."""
+              zweiseitig=True, glanz=None):
+        """Ein Netz am gemeinsamen Skin — nur die Punkte, die seine Dreiecke brauchen. `glanz`: `{metall, rauheit, opazitaet}` der Materialgruppe
+        (Stiefel glänzen, die Brille ist durchsichtig — wie im Render der Runde, `Mitsubamaterial.metallglanz`/`durchsicht`)."""
         dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
         if not len(dreiecke):
             return
@@ -194,6 +175,7 @@ class Standmodellglb(G9rigglb):
         farbe = [float(v) for v in self.linear(srgb * 255.0)] + [1.0]
         material = {'name': name, 'doubleSided': bool(zweiseitig),
                     'pbrMetallicRoughness': {'baseColorFactor': farbe, 'metallicFactor': 0.0, 'roughnessFactor': 0.8}}
+        self._glanz(material, glanz)
         if textur is not None and uv is not None:
             material['pbrMetallicRoughness']['baseColorTexture'] = {'index': textur}
         if maske == 'BLEND':
@@ -210,6 +192,26 @@ class Standmodellglb(G9rigglb):
         self.zahl['netze'] += 1
         self.zahl['punkte'] += int(len(nummern))
         self.zahl['dreiecke'] += int(len(dreiecke))
+
+    #: Teilmetall höchstens so stark: Die Bühne hat kein Umgebungsbild, reines Metall stünde dort schwarz da (wie `Mitsubamaterial.metallglanz`
+    #: nimmt der Klarlack den Glanz); Lack wie in three.js' `KHR_materials_clearcoat`.
+    METALL_HOECHSTENS = 0.35
+
+    def _glanz(self, material, glanz):
+        """Metall/Lack (Stiefel) und Deckkraft (Brille) an das glTF-Material legen — nichts, wenn die Gruppe beides nicht trägt."""
+        if not glanz:
+            return
+        pbr = material['pbrMetallicRoughness']
+        if glanz.get('metall'):
+            pbr['metallicFactor'] = min(self.METALL_HOECHSTENS, float(glanz['metall']))
+            pbr['roughnessFactor'] = min(1.0, max(0.05, float(glanz.get('rauheit') if glanz.get('rauheit') is not None else 0.3)))
+            material.setdefault('extensions', {})['KHR_materials_clearcoat'] = {'clearcoatFactor': 1.0, 'clearcoatRoughnessFactor': 0.08}
+            if 'KHR_materials_clearcoat' not in self.gltf.setdefault('extensionsUsed', []):
+                self.gltf['extensionsUsed'].append('KHR_materials_clearcoat')
+        opazitaet = glanz.get('opazitaet')
+        if opazitaet is not None and float(opazitaet) < 0.999:
+            pbr['baseColorFactor'][3] = max(0.02, float(opazitaet))
+            material['alphaMode'] = 'BLEND'
 
     @staticmethod
     def _uv(uv):
@@ -278,6 +280,12 @@ class Standmodellglb(G9rigglb):
             name = '%s__%s__%d' % (t.get('art'), t.get('sorte') or t.get('art'), i)
             dreiecke = np.asarray(t['dreiecke'], dtype=np.int64).reshape(-1, 3)
             haut = self._haut(t.get('haut'), len(t['punkte']))
+            weiss = str(t.get('sorte') or '').startswith(self.HOSE)       # weiße Hose: Stoffdrapierung (`Hosenfalten`) und fleckenfreies Weiß (`Stoffweissung`)
+            innen = None
+            if weiss:
+                from .hosenfalten import Hosenfalten
+                innen = Hosenfalten.innen(t['punkte'], dreiecke)
+                t = dict(t, punkte=Hosenfalten.anwenden(t['punkte'], dreiecke), normalen=None)       # Normalen neu aus den verschobenen Punkten, sonst bleiben die Falten ungeschattet
             gruppen = [g for g in (t.get('gruppen') or []) if int(g.get('index_anzahl') or 0) >= 3]
             uv = self._uv(t.get('uv'))
             if uv is None or not gruppen:
@@ -290,11 +298,17 @@ class Standmodellglb(G9rigglb):
                 tx = je_ab.get(ab) or {}
                 b = g.get('bilder') or {}
                 alpha = G9material.datei(b['alpha']) if b.get('alpha') else None
-                textur = self._bild(tx.get('albedo'), alpha, self._zahl(b.get('alphawert'), 1.0))
+                weissen = None
+                if weiss:
+                    from .stoffweissung import Stoffweissung
+                    gewaehlt = dreiecke[ab:ab + anzahl][innen[ab:ab + anzahl]]
+                    weissen = Stoffweissung(uv[gewaehlt] if len(gewaehlt) else None)
+                textur = self._bild(tx.get('albedo'), alpha, self._zahl(b.get('alphawert'), 1.0), weissen=weissen)
                 faktor = tx['faktor'] if tx.get('faktor') is not None else t['farbe']
                 self._netz('%s_g%d__%s' % (name, k, G9kleidtexturen.slug(g['name'])), t['punkte'],
                            dreiecke[ab:ab + anzahl], t.get('normalen'), uv, haut, textur, faktor,
-                           maske=alpha is not None)
+                           maske=alpha is not None,
+                           glanz={'metall': tx.get('metall'), 'rauheit': tx.get('rauheit'), 'opazitaet': tx.get('opazitaet')})
                 belegt[ab:ab + anzahl] = True
             if not belegt.all():
                 self._netz(name + '_flach', t['punkte'], dreiecke[~belegt], t.get('normalen'), None, haut,

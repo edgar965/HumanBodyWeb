@@ -15,6 +15,18 @@
 .engine2d3dkleider-fotokopf .mesh-fotoknoepfe { margin-bottom: 0; }
 /* Ein Foto, das der Lauf nicht verwendet („Nicht verwenden"): gedämpft, aber erkennbar. */
 .engine2d3dkleider-foto-aus .mesh-vorschau { opacity: 0.4; }
+.engine2d3dkleider-fotogruppe { font-size: 1rem; margin: 14px 0 4px; }
+/* Schritt „Vorbereitung": Knopf mit Hinweiszeile, darunter die Bilder nach dem Schritt — auf hellem Grund, damit der durchsichtige Rand zu sehen ist. */
+.engine2d3dkleider-vorbereitung-zeile { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+.engine2d3dkleider-vorbereitet-karte { width: 332px; }
+.engine2d3dkleider-vorbereitet-bild { width: 320px; height: 320px; background: #d9dde2; }
+/* Eine Ablage, die nicht mehr zu Fotos oder Optionen passt: die Bilder bleiben voll erkennbar (Edgar, 04.10.2026: „grau und kaum erkennbar"), nur ein Warnrahmen — der Grund steht in der Zeile darüber. */
+.engine2d3dkleider-vorbereitet-veraltet .engine2d3dkleider-vorbereitet-bild { outline: 2px dashed var(--warning, #f39c12); outline-offset: -2px; }
+#engine2d3dkleider-optionen-vorbereitung select { min-width: 32em; }
+/* Karte „Segmentierung" (04.10.2026): Optionsfeld, Knopf mit Hinweiszeile, Legende der Stückfarben, darunter die Fotos mit den Etiketten. */
+#engine2d3dkleider-optionen-segmentierung select { min-width: 32em; }
+.engine2d3dkleider-segmentierung-legende { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; margin: 4px 0 8px; }
+.engine2d3dkleider-segmentierung-farbe { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: -2px; }
 
 /* Kennzahlen und Ablageorte in der Seitenspalte. */
 .engine2d3dkleider-netzkarte .mesh-kennzahlen { margin-bottom: 8px; }
@@ -146,3 +158,44 @@
 @media (max-width: 560px) {
     #engine2d3dkleider-optionen-mesh .mesh-fein-felder { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Band „Seite veraltet" (`Engine2d3dKleiderveraltet`): unten, über allem, mit Knopf. */
+.engine2d3dkleider-veraltet {
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 3500; display: flex; gap: 14px; align-items: center;
+    padding: 10px 16px; border-radius: 8px; border: 1px solid var(--accent, #4f8cff); background: var(--bg-card, #1c2230);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); max-width: min(900px, calc(100vw - 32px));
+}
+
+/* Reiter „Auftrag" / „Iterationen" (03.10.2026, Edgar: „der Text ist grau, mach den hell, wenn er aktiv ist, soll er rot sein"):
+   hell im Ruhezustand, rot und fett, wenn gewählt. Nur auf dieser Seite — die anderen Reiterleisten (mesh.css) bleiben, wie sie sind. */
+#auftrag-reiter [role="tab"] { color: var(--text, #eee); }
+#auftrag-reiter [role="tab"]:hover { color: var(--text, #eee); background: var(--bg-darker, #181825); }
+#auftrag-reiter [role="tab"][aria-selected="true"] { color: var(--danger, #e74c3c); font-weight: 600; }
+
+/* Render-Läufe (04.10.2026, `Engine2d3dKleiderrenderlaeufe`): der Bogen mit vier Bildern je Lauf, klein, ein Klick öffnet ihn groß. */
+.engine2d3dkleider-renderlaeufe { margin-top: 10px; overflow-x: auto; }
+.engine2d3dkleider-laufbogen { display: block; width: 260px; max-width: 100%; height: auto; border-radius: 4px; }
+/* Der Rahmen der Tabelle lässt sich aufziehen (Griff unten rechts); die Größe merkt `Engine2d3dKleiderrenderlaeufe._groesseMerken`. */
+.db-tabelle-rahmen.engine2d3dkleider-laufrahmen { resize: both; overflow: auto; min-width: 320px; min-height: 90px; max-width: 100%; max-height: 95vh; }
+
+/* Regler für Rendering und Physik (04.10.2026): fünf zuklappbare Gruppen über dem Knopf „Rendern". */
+.engine2d3dkleider-renderregler { margin: 8px 0; }
+.engine2d3dkleider-reglertitel { margin: 4px 0; font-size: 0.95rem; }
+.engine2d3dkleider-reglergruppe { border: 1px solid var(--border, #3a4250); border-radius: 6px; margin: 4px 0; padding: 2px 8px; background: var(--bg-card, #1e2430); }
+.engine2d3dkleider-reglergruppe > summary { cursor: pointer; padding: 4px 0; font-weight: 600; }
+.engine2d3dkleider-reglergruppe .mesh-optionen { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 12px; padding: 6px 0; }
+.engine2d3dkleider-reglergruppe .mesh-feineinstellungen { grid-column: 1 / -1; }
+.engine2d3dkleider-reglergruppe .mesh-fein-felder { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 12px; }
+
+/* Referenzvideo (04.10.2026, `Engine2d3dKleiderreferenz`): der Rahmen mit Franks Video steht rechts neben den Vorlagebildern. */
+.engine2d3dkleider-vorlagenreihe { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.engine2d3dkleider-vorlagenreihe > .mesh-fotoliste { flex: 1 1 360px; min-width: 0; }
+.engine2d3dkleider-referenz { flex: 0 0 340px; max-width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border, #3a4250); border-radius: 8px; background: var(--bg-card, #1e2430); }
+.engine2d3dkleider-referenz video { display: block; width: 100%; height: auto; max-height: 70vh; background: #000; border-radius: 4px; }
+.engine2d3dkleider-referenzpfad { display: flex; gap: 6px; }
+.engine2d3dkleider-referenzpfad input { flex: 1 1 auto; min-width: 0; }
+
+/* Export (03.10.2026): BVH-Animation und Audio je mit Haken und Pfad — eine Zeile, der Pfad füllt den Rest. */
+.meshfigur-exportoptionen .engine2d3dkleider-exportzeile { flex: 1 1 100%; white-space: normal; }
+.engine2d3dkleider-exportzeile input[type="text"] { flex: 1 1 auto; min-width: 0; }
+.meshfigur-export > .btn + .btn { margin-left: 6px; }

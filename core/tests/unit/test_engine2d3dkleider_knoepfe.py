@@ -50,7 +50,10 @@ ERWARTET = {
         # Die Bewegung
         'anim-zurueck', 'anim-play', 'anim-vor', 'anim-scrubber',
         # Ausgabe
-        'export-aufloesung', 'export-textur', 'export-rig', 'export-name', 'exportieren',
+        # Export seit 03.10.2026: GLB und Blender, mit den Beigaben BVH-Animation und Audio (je mit Pfad)
+        'export-bvh', 'export-bvh-pfad', 'export-audio', 'export-audio-pfad', 'export-name', 'export-glb', 'export-blend',
+        # Render seit 03.10.2026: Länge in Sekunden (bis zur ganzen BVH; 04.10.: Stufen 10 und 30 Bilder), Kamera, Größe
+        'render-sekunden', 'render-10', 'render-30', 'render-ganz', 'render-kamera', 'render-groesse', 'render-spp', 'render-anmerkung', 'render-starten',
         'modell-format', 'modell-name', 'modell-speichern',
         # Der Reiter „Iterationen"
         'iterationen-weiter', 'iterationen-anhalten', 'iterationen-jede',
@@ -101,8 +104,8 @@ class Engine2d3dKleiderknoepfeTest(SimpleTestCase):
                 self.assertEqual(sorted(set(self._elemente(self.vorlagen[name]))),
                                  sorted(set(erwartet)))
 
-    def test_2_es_sind_neununddreissig_bedienelemente(self):
-        self.assertEqual(sum(len(v) for v in ERWARTET.values()), 39)
+    def test_2_es_sind_sechsundvierzig_bedienelemente(self):
+        self.assertEqual(sum(len(v) for v in ERWARTET.values()), 50)
 
     # ------------------------------------------------- jedes ist verdrahtet
 
