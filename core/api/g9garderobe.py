@@ -34,6 +34,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
+from Genesis9.garderobepflege import G9garderobepflege
 from Genesis9.haarachsen import G9haarachsen
 from Genesis9.haargenerisch import G9haargenerisch
 from Genesis9.kleidgenerisch import G9kleidgenerisch
@@ -80,6 +81,7 @@ class G9garderobeapi:
                         kategorie=s.get('kategorie') or G9garderobekategorien.vorgabe(s),
                         regler=G9kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s))))
                    for s in roh]
+        stuecke = G9garderobepflege.anwenden(stuecke)       # Umbenennen und Löschen aus dem Kontextmenü (05.10.2026)
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
 
     @staticmethod

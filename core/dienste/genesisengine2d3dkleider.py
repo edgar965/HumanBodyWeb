@@ -124,7 +124,8 @@ class Genesisengine2d3dkleider:
         from .kleidertanz import Kleidertanz
         job = self.lauf.job
         modell = ModellMitKleidern.aus((job.ergebnis.get('kreislauf') or {}).get('modell'))
-        bau = Kleidermodellbau(job.stellung(), koerper=modell.koerper, ablage=self.lauf.ablage)
+        from .iterationsoptionen import Iterationsoptionen
+        bau = Kleidermodellbau(job.stellung(), koerper=modell.koerper, ablage=self.lauf.ablage, haarumbau=Iterationsoptionen.haarumbau(job))
         teile = bau.teile(modell)
         # Das Skelett des Tanzes aus DERSELBEN Stellung wie der Bau (samt Reglern des Modells, 01.10.2026).
         tanz = Kleidertanz(bau.stellung, teile)

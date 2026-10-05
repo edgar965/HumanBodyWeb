@@ -12,8 +12,9 @@ import { Engine2d3dKleiderstandbestellung } from './engine2d3dkleiderstandbestel
  * Brauen, Kleider und Haar am Rig — gemessen 1,1 s für 46 MB), sonst die GLB der jüngsten Runde. Fehlt die Datei oder ist
  * sie veraltet, bestellt `Engine2d3dKleiderstandbestellung` sie; bis dahin steht die alte Fassung da.
  *
- * Der Knopf ist von selbst an (nur ein ausdrückliches Aus bleibt je Browser gemerkt). Solange er ein Modell zeigt, ist
- * „3DModell" (die im Browser gebaute Genesis-Figur) aus — und wird gar nicht erst gebaut (`Meshfigurbuehne.zeigen`). Gibt
+ * Seit 05.10.2026 ist der Knopf von selbst AUS (nur ein ausdrückliches An bleibt je Browser gemerkt, `_gemerkt`): Die Bühne zeigt
+ * die im Browser gebaute Genesis-Figur („3DModell", `Genesis9Modell` wie Szene und Studio) mit der Animation; die GLB des Stands
+ * ist ein Zusatz. Solange der Knopf ein Modell zeigt, ist „3DModell" aus — und wird gar nicht erst gebaut (`Meshfigurbuehne.zeigen`). Gibt
  * es noch kein Modell, bleibt „3DModell" an: Bis 01.10.2026 schaltete ein gemerktes „an" die Figur auch dann aus, wenn
  * der Auftrag kein Modell hatte, und die Bühne blieb leer (Auftrag `.52`, Befund Edgar „es wird kein 3d modell angezeigt").
  *
@@ -125,9 +126,13 @@ export class Engine2d3dKleiderbuehnenmodell {
         figur.position.x = versetzt ? Meshfigurbuehne.ABSTAND : 0;
     }
 
-    /** Von selbst an — nur ein ausdrückliches Aus (`'0'`) bleibt gemerkt. */
+    /**
+     * Von selbst AUS — nur ein ausdrückliches An (`'1'`) bleibt gemerkt. Edgar, 05.10.2026: „in der Bühne brauche ich kein Stand-GLB, sondern das Modell mit Animation, so wie bei der Seite Szene oder
+     * Studio" (davor: „das Laden dauert, baue ein 3D-Modell beim letzten Stand", 01.10.2026). Die Bühne zeigt jetzt standardmäßig die im Browser gebaute Genesis-Figur (`Genesis9Modell`, wie Szene und
+     * Studio) mit der Bewegung der Animation; die GLB des Stands ist ein Zusatz, nur auf Knopfdruck — und nur dann wird sie beim Server bestellt (der kalte Bau dauert 50–60 s, gemessen 05.10.2026).
+     */
     _gemerkt() {
-        try { return localStorage.getItem(this.eigen.speicher) !== '0'; } catch { return true; }
+        try { return localStorage.getItem(this.eigen.speicher) === '1'; } catch { return false; }
     }
 
     _merken() {
@@ -201,7 +206,7 @@ export class Engine2d3dKleiderbuehnenmodell {
     zeigen(z) {
         if (!this.buehne.szene) return;
         const quelle = Engine2d3dKleiderbuehnenmodell.quelle(z || {}, this.seite, this.art);
-        this.bestellung.pruefen(z || {});
+        if (this.an) this.bestellung.pruefen(z || {});           // die GLB des Stands wird nur bestellt, wenn jemand sie sehen will
         this.knopf.title = quelle ? this.eigen.titel(quelle) : this.eigen.keine;
         this.beschriftung.textContent = quelle?.runde ? `${this.eigen.name} (Runde ${quelle.runde})`
             : quelle ? `${this.eigen.name} (ohne Iteration)` : this.eigen.leer;
@@ -234,8 +239,11 @@ export class Engine2d3dKleiderbuehnenmodell {
             this._adresse = quelle.adresse;
             this.buehne._melden('');
             console.info(`[2D3D Kleider] ${this.eigen.name} geladen in ${Math.round(performance.now() - t0)} ms: ${quelle.adresse}`);
+            // Ins Serverprotokoll (`Engine2d3dKleiderAktionslog` hört zu): wie lange der Browser für die GLB braucht — Laden, Auswerten und Einfügen in die Szene.
+            window.dispatchEvent(new CustomEvent('engine2d3dkleider-modell', { detail: { text: `${this.eigen.name} geladen in ${Math.round(performance.now() - t0)}ms: ${quelle.adresse.split('/').pop()}`, stufe: 'info' } }));
         } catch (fehler) {
             this.buehne._melden(`${this.eigen.name} nicht geladen: ${fehler.message}`);
+            window.dispatchEvent(new CustomEvent('engine2d3dkleider-modell', { detail: { text: `${this.eigen.name} nicht geladen nach ${Math.round(performance.now() - t0)}ms: ${fehler.message}`, stufe: 'warning' } }));
         } finally {
             this._laedt = null;
         }

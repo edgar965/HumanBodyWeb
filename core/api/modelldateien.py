@@ -154,6 +154,15 @@ class Modelldateien:
             from GarmentCode.szenenstuecke import Szenenstuecke
 
             daten['garmentcode'] = Szenenstuecke.sichern(sauber, daten['garmentcode'])
+        # Ein Genesis-Modell führt seine Stücke unter `figur.garmentcode` (05.10.2026, Edgar:
+        # „Damira1, das Kleid fittet nicht mehr"): Der Zeiger blieb auf `kleid_genesis9`, und
+        # der nächste Genesis-Kleidbau — gleich welcher Figur — ersetzte Damiras Babydoll am
+        # 30.09. durch ein Kleid für eine 172-cm-Figur. Gleicher Schutz wie oben.
+        figur = daten.get('figur')
+        if isinstance(figur, dict) and figur.get('garmentcode'):
+            from GarmentCode.szenenstuecke import Szenenstuecke
+
+            figur['garmentcode'] = Szenenstuecke.sichern(sauber, figur['garmentcode'])
         # Dasselbe für die Fotokacheln eines Genesis-Modells (27.09.2026, `Modelltexturen`):
         # unter neuem Namen gespeichert, bekommt es eine eigene Kopie.
         if daten.get('quelle') == 'genesis9' and isinstance(daten.get('figur'), dict):

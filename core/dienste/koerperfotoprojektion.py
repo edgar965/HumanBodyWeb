@@ -20,6 +20,16 @@ Kleid im Modell verdeckt, nimmt keine Farbe):
 Einmal je Körper (`ergebnis.fototextur.stand`) und Fassung: Die neuen Kacheln stehen in `fototextur.kacheln` — Runde,
 Bühne (`Engine2d3dKleiderstandmodell`) und Export lesen sie dort —, die gebackenen bleiben als `fototextur.kacheln_netz`.
 Rechnet „Körper" neu, ersetzt er `fototextur` ganz, und die nächste Runde projiziert wieder.
+
+Fassung 2 (05.10.2026, Edgar: „Fotohaut nur auf Wunsch ist schlecht, da in den folgenden Iterationen die Fotohaut dann doch verschlechtert wird … untersuche richtig und fixe"). Gemessen an Sapiens 2
+(`ProjektTemp/_wegwerf/edgar/kopf_probe.py`, Kopfbilder und Kacheln vorher/nachher):
+
+* Die KOPFKACHEL (1001) bleibt die gebackene. Die Projektion kennt keine Kamera der Fotos, sie richtet nur an Höhe und Schwerpunkt der Figur aus; am Kopf (4 cm breite Augen, 6 cm Mund) liegen
+  Augen, Brauen und Mund dadurch einige Millimeter daneben. Das Ergebnis: dunkle Schmieren in den Augenhöhlen, ein grauer Balken über der Oberlippe, Foto-Haar auf Schläfen und Nacken gemalt — das Gesicht
+  mit der gebackenen Kachel sah im Kopfbild deutlich natürlicher aus. Das Haar übernimmt die Haarkappe (`Haarumbau`), die Schläfen- und Nackenbemalung ist nicht mehr nötig.
+* Um Kleider herum nimmt die Haut keine Fotofarbe (`RAND_KLEID`, Pixel der Projektionsfläche): Am Saum der Hose standen schwarze Streifen und neben der Socke ein heller Block auf der Beinkachel — Foto-Pixel der
+  Kleidung, die der um `Fotoprojektion.TOLERANZ` erweiterten Körpermaske zufielen.
+* Die Haltung muss die der Fotos sein (Startrezept, `Standvorabkleider.haltungszeilen`): Mit gespreizten Armen vor Fotos mit hängenden Armen deckte die Fotohaut 0,4 % der Armkachel und 0,5 % des Rumpfs.
 """
 
 import logging
@@ -34,9 +44,18 @@ __all__ = ['Koerperfotoprojektion']
 
 
 class Koerperfotoprojektion:
-    FASSUNG = 1
+    FASSUNG = 2
     GROESSE = (1024, 1536)
     RASTER = 1024
+    #: Kacheln, die die gebackene Haut behalten (Kopf: siehe oben).
+    AUSGENOMMEN = (1001,)
+    #: Abstand zur Kleidung (Pixel der Projektionsfläche, 1 Pixel ≈ 1,1 mm), in dem die Haut keine Fotofarbe nimmt. Gemessen (Sapiens 2, `kopf_probe.py`): bei 4 sind die schwarzen Streifen am Saum und
+    #: der helle Block über der Socke weg; bei 12 war die dünne dunkle Linie unter dem Saum nicht besser (sie liegt schon in der gebackenen Kachel), die Deckung aber kleiner (0,362 statt 0,374).
+    RAND_KLEID = 4
+    #: Abstand zum Rand einer UV-Insel (Texel des Rasters), über den die Fotofarbe auf null ausblendet.
+    RAND_INSEL = 6
+    #: So viele Pixel der Fotofigur am Rand zählen für die Haut nicht (Hintergrundanteil der Randpixel).
+    RAND_FOTO = 3
     #: Deckung: ab `DECKUNG[0]` (Kosinus Normale · Blick) beginnt das Foto, ab `DECKUNG[1]` gilt es ganz.
     DECKUNG = (0.25, 0.6)
     WEICH = 3
@@ -67,30 +86,17 @@ class Koerperfotoprojektion:
         alle = np.vstack([np.asarray(t['punkte']) for t in teile])
         kamera = Fotoprojektion.aus_render(alle, render.RAND, self.GROESSE)
         projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE)
+        koerper = teile[index].get('art') == 'koerper'
         for r, abbildung, foto, masken in kfp._ansichten(teile, referenzen):
-            projektion.ansicht(r.winkel, abbildung, foto.farbe, foto.maske, masken[index])
+            ausschluss, foto_maske = None, foto.maske
+            if koerper:         # Kleidung, Zubehör: ihr Rand nimmt der Haut die Fotofarbe (`RAND_KLEID`); Augen, Mund und Brauen gehören zum Körper
+                andere = [m for i, m in enumerate(masken) if teile[i].get('art') != 'koerper']
+                if andere:
+                    ausschluss = Fotoprojektion.erweitern(np.any(andere, axis=0), self.RAND_KLEID)
+                # Die Randpixel der Fotofigur tragen Hintergrund: sie ergaben helle Linien an den Seiten der Beine (Rand der Fotofläche in der Kachel).
+                foto_maske = ~Fotoprojektion.erweitern(~np.asarray(foto.maske, dtype=bool), self.RAND_FOTO)
+            projektion.ansicht(r.winkel, abbildung, foto.farbe, foto_maske, masken[index], ausschluss)
         return projektion
-
-    #: Am Kopf gilt jede Fotofarbe (Befund Edgar 02.10.2026: „die Haare umfassen nicht den ganzen Kopf" — an Schläfen
-    #: und Nacken zeigt das Foto kurzes graues Haar, die gebackene Haut dort Hautton): Hautgewicht von `head` und seinen
-    #: Kindern ab `KOPF_AB`. Die Maske dafür rendert ohne Haarkarten — sonst deckten die (ohne Alpha) die Kopfhaut ab.
-    KOPF_AB = 0.5
-
-    def _kopf(self, koerper, ruhe):
-        """(N,) Kopfgewicht je Punkt des Körperteils — aus `genesis_ende.npz` (nächster Punkt), 0 ohne Datei."""
-        from scipy.spatial import cKDTree
-
-        from .huellenschnitt import Huellenschnitt
-        pfad = self.ablage.arbeit('genesis_ende.npz')
-        if not pfad.is_file():
-            return np.zeros(len(koerper['punkte']))
-        with np.load(pfad) as d:
-            gewicht = Huellenschnitt.halsgewichte(d, wurzel='head')
-            punkte = np.asarray(d['punkte'], dtype=np.float64)
-        if gewicht is None:
-            return np.zeros(len(koerper['punkte']))
-        _, nah = cKDTree(punkte).query(np.asarray(ruhe['punkte'], dtype=np.float64), workers=-1)
-        return gewicht[nah]
 
     def _deckung(self, projektion, lage, normale):
         beste = np.zeros(len(lage))
@@ -100,10 +106,10 @@ class Koerperfotoprojektion:
         von, bis = self.DECKUNG
         return np.clip((beste - von) / (bis - von), 0.0, 1.0)
 
-    def _kachel(self, projektion, karten, grund_pfad, ziel, kopf=None):
+    def _kachel(self, projektion, karten, grund_pfad, ziel):
         """Eine Kachel: Fotofarbe und Deckung im Raster, über die gebackene Kachel gelegt → Anteil gedeckter Texel."""
         from Genesis9.kleidfototextur import G9kleidfototextur
-        from scipy.ndimage import gaussian_filter
+        from scipy.ndimage import distance_transform_edt, gaussian_filter
         s = self.RASTER
         farbe = np.zeros((s, s, 3), np.float32)
         deckung = np.zeros((s, s), np.float32)
@@ -119,14 +125,14 @@ class Koerperfotoprojektion:
             f, getroffen = projektion.farben(karte['lage'][m], karte['normale'][m])
             d = self._deckung(projektion, karte['lage'][m], karte['normale'][m]) * getroffen
             erlaubt = self.warm(f) | ~self.warm(klein[m])    # Fotofarbe ohne Hautton nur, wo auch die Haut keinen hat
-            if kopf is not None:                            # … oder am Kopf (kurzes Haar, Stoppeln)
-                erlaubt |= kopf(karte['lage'][m])
             d *= erlaubt
             farbe[m], deckung[m] = f, d
             maske |= m
         if not (deckung > 0).any():
             return 0.0
         voll = G9kleidfototextur._fuellen(farbe, deckung > 0, maske)
+        # Zum Rand der UV-Inseln hin blendet die Fotofarbe aus: An den Nähten (Vorder- und Rückseite der Beine) sah die Projektion nur streifende Blickwinkel und legte helle Linien entlang der Beine.
+        deckung = deckung * np.clip(distance_transform_edt(maske) / self.RAND_INSEL, 0.0, 1.0)
         deckung = gaussian_filter(deckung, self.WEICH)
         gross = grund.shape[1], grund.shape[0]
         voll = np.asarray(Image.fromarray(np.clip(voll * 255, 0, 255).astype(np.uint8)).resize(gross, Image.BILINEAR),
@@ -151,14 +157,9 @@ class Koerperfotoprojektion:
         f = dict(self.job.ergebnis['fototextur'])
         netz = dict(f.get('kacheln_netz') or f['kacheln'])
         pfade = {str(self.ablage.ergebnis(n)): int(k) for k, n in netz.items()}
-        from scipy.spatial import cKDTree
         ohne_haar = [t for t in teile if t.get('art') != 'haar']
         projektion = self._projektion(ohne_haar, referenzen, render, aus,
                                       next(i for i, t in enumerate(ohne_haar) if t is koerper))
-        kopfgewicht, baum = self._kopf(koerper, ruhe), cKDTree(np.asarray(koerper['punkte'], dtype=np.float64))
-
-        def kopf(lage):
-            return kopfgewicht[baum.query(lage, workers=-1)[1]] >= self.KOPF_AB
         gruppen = {}
         for i, eintrag in enumerate(ruhe['textur']):
             k = pfade.get(str(eintrag.get('albedo')))
@@ -167,10 +168,12 @@ class Koerperfotoprojektion:
                                                   'index_anzahl': 3 * int(eintrag['anzahl'])})
         neu, deckung = {}, {}
         for k, liste in sorted(gruppen.items()):
+            if k in self.AUSGENOMMEN:
+                continue
             raster = G9uvraster(koerper['punkte'], koerper['dreiecke'], ruhe['uv'], liste, groesse=self.RASTER)
             name = 'hautfoto_%d.jpg' % k
             deckung[k] = round(self._kachel(projektion, list(raster.alle().values()),
-                                            self.ablage.ergebnis(netz[str(k)]), self.ablage.ergebnis(name), kopf), 3)
+                                            self.ablage.ergebnis(netz[str(k)]), self.ablage.ergebnis(name)), 3)
             if deckung[k] > 0:
                 neu[str(k)] = name
         kacheln = dict(netz, **neu)

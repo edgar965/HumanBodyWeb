@@ -254,3 +254,36 @@ class DasStandmodell(SimpleTestCase):
             a = Engine2d3dKleiderstandmodell(self._job({'oberteil': 'eigen_foto_o'}, daten), object()).fassung()
             b = Engine2d3dKleiderstandmodell(self._job(None, daten), object()).fassung()
         self.assertEqual(a, b)
+
+
+class DieUhrImVorabModell(SimpleTestCase):
+    """Edgar 05.10.2026 („hast du kein Daz-Objekt für Uhr?"): das Startrezept von Sapiens 2 trug keine Uhr, obwohl die Fotos eine zeigen und `eigen_uhr_l` in der Garderobe liegt."""
+
+    def setUp(self):
+        Standvorabkleider._UHREN.clear()
+        self.addCleanup(Standvorabkleider._UHREN.clear)
+
+    def test_die_uhr_der_fotos_kommt_ins_modell_und_aendert_die_fassung(self):
+        job = DasStandmodell._job({'oberteil': 'eigen_foto_o', 'hose': 'eigen_foto_h'})
+        with mock.patch.object(Standvorabkleider, 'uhren', return_value=['eigen_uhr_l']):
+            regler = Standvorabkleider.modell(job)['kleidung']
+            mit = Standvorabkleider.fingerabdruck(job)
+        with mock.patch.object(Standvorabkleider, 'uhren', return_value=[]):
+            ohne = Standvorabkleider.fingerabdruck(job)
+        self.assertEqual(regler['sorte.eigen_uhr_l'], 1.0)
+        self.assertNotEqual(mit, ohne)
+
+    def test_die_uhr_kommt_aus_dem_zubehoer_der_fotos_und_wird_gemerkt(self):
+        job = DasStandmodell._job({'oberteil': 'eigen_foto_o'})
+        with mock.patch('core.dienste.iterationsreferenz.Iterationsreferenz.laden', return_value=([], [])), \
+                mock.patch('core.daten.engine2d3dkleiderablage.Engine2d3dKleiderablage'), \
+                mock.patch('core.dienste.begutachtungswerkzeug.Begutachtungswerkzeug.zubehoer', return_value={'uhr': ['l']}) as zubehoer:
+            self.assertEqual(Standvorabkleider.uhren(job), ['eigen_uhr_l'])
+            self.assertEqual(Standvorabkleider.uhren(job), ['eigen_uhr_l'])
+        zubehoer.assert_called_once()
+
+    def test_ohne_uhr_oder_bei_einem_fehler_bleibt_die_liste_leer(self):
+        job = DasStandmodell._job({'oberteil': 'eigen_foto_o'})
+        with mock.patch('core.dienste.iterationsreferenz.Iterationsreferenz.laden', side_effect=OSError('weg')):
+            self.assertEqual(Standvorabkleider.uhren(job), [])
+        self.assertEqual(Standvorabkleider._UHREN, {})        # ein Fehler wird nicht gemerkt: der nächste Aufruf probiert es wieder

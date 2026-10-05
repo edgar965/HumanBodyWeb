@@ -107,6 +107,16 @@ class DerNachbesserungslauf(SimpleTestCase):
         self.assertEqual(self._lauf(klient, agent).ausfuehren(), 'fertig')
         self.assertIn('nicht verwertbar', agent.prompts[1])
 
+    def test_eine_nicht_verwertbare_antwort_wird_roh_abgelegt(self):
+        """05.10.2026: „Keine JSON-Antwort" sagte nichts über die Ursache (Nemotron hing im Denken, Ende „length") — die Rohantwort liegt jetzt in `runde_<nr>_roh.json`."""
+        lauf = self._lauf(_Klient([_zustand(1), _zustand(2)]), _Agent('Das kann ich nicht.', ANTWORT))
+        self.assertEqual(lauf.ausfuehren(), 'fertig')
+        ablage = list(self.ordner.rglob('runde_*_roh.json'))
+        self.assertEqual(len(ablage), 1, ablage)
+        roh = json.loads(ablage[0].read_text(encoding='utf-8'))
+        self.assertEqual((roh['zeichen'], roh['anfang']), (len('Das kann ich nicht.'), 'Das kann ich nicht.'))
+        self.assertIn('Keine JSON-Antwort', roh['fehler'])
+
     def test_schreibt_der_agent_kein_rezept_endet_der_lauf_ohne_runde(self):
         klient, agent = _Klient([_zustand(1)]), _Agent(dict(ANTWORT, aufrufe=[], fertig=True))
         lauf = self._lauf(klient, agent, runden=3)

@@ -51,10 +51,13 @@ class DieHaarklemme(SimpleTestCase):
         karte = _kugelhuelle(0.10)
         karte[:, 0:36] = np.nan                         # die eine Hälfte der Richtungen hat kein Netzhaar (Gesicht)
         klemme = Haarklemme(karte, self.MITTE)
-        vorn_leer = np.array([[0.0, 1.6, 0.2], [0.0, 1.6, -0.2]])
+        # Mitten in den Hälften (Azimut 90° und 270°), nicht auf der Grenze: Die Hülle wird nach außen um ein Feld geglättet (Maximum der Nachbarn, `Haarklemme.__init__`),
+        # ein Punkt genau auf der Grenze zwischen belegter und leerer Hälfte (Azimut 0°/180°) wird deshalb mitgeklemmt.
+        vorn_leer = np.array([[0.2, 1.6, 0.0], [-0.2, 1.6, 0.0]])
         neu, anzahl, _w = klemme.klemmen(vorn_leer)
         self.assertEqual(anzahl, 1)                     # eines liegt in der leeren Hälfte, eines in der belegten
-        self.assertTrue(np.allclose(neu[0], vorn_leer[0]) or np.allclose(neu[1], vorn_leer[1]))
+        np.testing.assert_allclose(neu[0], vorn_leer[0])
+        self.assertFalse(np.allclose(neu[1], vorn_leer[1]))
 
     def test_bart_und_koerper_werden_nicht_geklemmt(self):
         klemme = Haarklemme(_kugelhuelle(0.10), self.MITTE)

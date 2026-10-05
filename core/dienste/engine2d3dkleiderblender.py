@@ -190,6 +190,24 @@ class Engine2d3dKleiderblender:
             roh = np.asarray(ursprung, dtype=np.int64)[roh]
         return roh
 
+    def exportieren(self, glb, ziel, fps, ton=None, zeit_s=300):
+        """Die animierte GLB als `.blend` (`MODELLEXPORT_BLENDER_SKRIPT`, Polygone 1,0, auf Wunsch mit Ton) → der Pfad `ziel`; RuntimeError, wenn Blender scheitert, das Zeitlimit reißt oder keine Datei schreibt.
+        Der Animationsexport (`Engine2d3dKleideranimexport`) startete Blender bis 05.10.2026 selbst und verstieß damit gegen `BlenderNurUeberEinenArbeiterTest` — jetzt geht er durch diesen Arbeiter."""
+        skript = Path(settings.MODELLEXPORT_BLENDER_SKRIPT)
+        befehl = [str(settings.BLENDER_EXE), '-b', '--factory-startup', '--python', str(skript), '--', '--glb', str(glb), '--blend', str(ziel), '--fps', str(int(fps)), '--polygone', '1.0']
+        if ton:
+            befehl += ['--audio', str(ton)]
+        self.ordner.mkdir(parents=True, exist_ok=True)
+        pp = PipelineProzess.starten(befehl, cwd=str(skript.parent), env_extra={'TMP': str(self.ordner), 'TEMP': str(self.ordner), 'PYTHONIOENCODING': 'utf-8'}, stdout_lesen=False)
+        try:
+            pp.proc.wait(timeout=zeit_s)
+        except Exception as fehler:  # noqa: BLE001 — Zeitgrenze: Prozessbaum beenden, dann melden
+            pp.beenden()
+            raise RuntimeError('Blender-Export: Zeitgrenze %d s (%s)' % (zeit_s, fehler)) from None
+        if pp.proc.returncode != 0 or not Path(ziel).is_file():
+            raise RuntimeError('Blender-Export gescheitert (%s): %s' % (pp.proc.returncode, pp.fehlertext(2000)))
+        return Path(ziel)
+
     def _laufen(self, auftrag, bericht, skript=None):
         t0 = time.perf_counter()
         skript = skript or self.SKRIPT

@@ -170,7 +170,9 @@ class Begutachtungswerkzeug:
         pfad = self.ablage.iterationen('runde_%03d_modell.glb' % beste)
         if not pfad.is_file():
             modell = ModellMitKleidern.aus(z['modell'])
-            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.kacheln(), ablage=self.ablage)
+            from .iterationsoptionen import Iterationsoptionen
+            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.kacheln(), ablage=self.ablage,
+                                   haarumbau=Iterationsoptionen.haarumbau(self.job))
             bau.glb(Haarzonen.anwenden(bau.teile(modell), modell.farben), pfad)
         shutil.copyfile(pfad, self.ablage.ergebnis(name))
         return pfad

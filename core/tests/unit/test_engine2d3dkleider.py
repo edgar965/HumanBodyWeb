@@ -14,14 +14,16 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from core.daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
-from core.dienste.genesisengine2d3dkleider import Genesisengine2d3dkleider
 from core.dienste.engine2d3dkleiderlauf import Engine2d3dKleiderlauf
 from core.dienste.engine2d3dkleideroptionen import Engine2d3dKleideroptionen
+from core.dienste.genesisengine2d3dkleider import Genesisengine2d3dkleider
 from core.dienste.meshfiguroptionen import Meshfiguroptionen
 from core.dienste.ollamamodelle import Ollamamodelle
 
 
 class Engine2d3dKleideroptionenTest(SimpleTestCase):
+    RENDER = ('rendermimik', 'renderhaut', 'renderlicht', 'renderqualitaet', 'renderphysik')
+
     def setUp(self):
         # Die Testfiguren stehen in der Daz-Bibliothek, die Prüf-KIs in Ollama — hier geht es
         # nur um die Kataloge.
@@ -39,9 +41,10 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
         # 02.10.2026 die sechste, `mesh` (die Regler von TRELLIS.2, `test_engine2d3dkleider_meshoptionen.py`); seit dem
         # 03.10.2026 die siebte, `vorbereitung` (Körper senkrecht stellen, `test_engine2d3dkleider_vorbereitung.py`).
         # Seit dem 04.10.2026 die achte, `segmentierung` (Sapiens, optional, `test_engine2d3dkleider_segmentierung.py`).
-        self.assertEqual(set(katalog), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film', 'rollen'})
+        # Dazu fünf Gruppen der Rendereinstellungen (`rendermimik`, `renderhaut`, `renderlicht`, `renderqualitaet`, `renderphysik`; Mitsuba-Render der Runden).
+        self.assertEqual(set(katalog), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film', 'rollen', *self.RENDER})
         figur = [f['schluessel'] for f in katalog['figur']['optionen']]
-        self.assertEqual(sorted(figur), ['basis', 'modell'])
+        self.assertLessEqual({'basis', 'modell'}, set(figur))            # die Gruppe hat inzwischen mehr Felder (Frisur, Textur, Kleidung, Runden …)
         iterationen = {f['schluessel']: f for f in katalog['iterationen']['optionen']}
         self.assertIn('qwen3.8:27b', [w['wert'] for w in iterationen['pruefki']['werte']])
         self.assertIn('aus', [w['wert'] for w in iterationen['pruefki']['werte']])
@@ -49,7 +52,7 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
 
     def test_die_gruppe_film_kennt_keine_blender_einstellung(self):
         felder = [f['schluessel'] for f in Engine2d3dKleideroptionen.katalog()['film']['optionen']]
-        self.assertEqual(sorted(felder), ['bilder', 'breite', 'bvh', 'hoehe'])
+        self.assertEqual(sorted(felder), ['bilder', 'breite', 'bvh', 'hoehe', 'ton'])           # `ton`: die Tonspur des Films (Studioton)
 
     def test_das_modell_wird_nicht_ungefragt_in_die_bibliothek_geschrieben(self):
         katalog = Engine2d3dKleideroptionen.katalog()
@@ -62,7 +65,7 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
         optionen = Engine2d3dKleideroptionen.pruefen(
             {'netz': {'formmodell': 'trellis2'}, 'figur': 'kein dict', 'x': 1}
         )
-        self.assertEqual(set(optionen), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film'})
+        self.assertEqual(set(optionen), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film', *self.RENDER})
         self.assertEqual(optionen['netz']['formmodell'], 'trellis2')
         self.assertEqual(optionen['figur']['basis'], 'feminine')
         self.assertEqual(Engine2d3dKleideroptionen.pruefen(None), Engine2d3dKleideroptionen.pruefen({}))
@@ -188,12 +191,14 @@ class Genesisengine2d3dkleiderTest(SimpleTestCase):
             self.addCleanup(p.stop)
         bau_k, tanz_k = bau.start(), tanz.start()
         bau_k.return_value.teile.return_value = ['koerper', 'shirt']
+        bau_k.return_value.stellung = {'FBMHeavy': 0.5}            # der Tanz bekommt die Stellung des Baus (samt Reglern des Modells), nicht die des Auftrags
         tanz_k.return_value.film.return_value = {'video': 'film.mp4', 'bilder': 10}
         job = SimpleNamespace(kennung='2026.09.30.00.00.00', stellung=lambda: {'FBMHeavy': 0.5},
-                              ergebnis={'kreislauf': {'modell': {'haar': {'sorte.kin_hair': 1.0}}}})
-        bericht = Genesisengine2d3dkleider(SimpleNamespace(job=job)).film('figur.glb', 'bewegung.json', 'aus', 10, 64, 64)
+                              ergebnis={'kreislauf': {'modell': {'haar': {'sorte.kin_hair': 1.0}}}}, optionen=None)
+        bericht = Genesisengine2d3dkleider(SimpleNamespace(job=job, ablage='ablage-attrappe')).film('figur.glb', 'bewegung.json', 'aus', 10, 64, 64)
         self.assertEqual(bericht['bilder'], 10)
-        bau_k.assert_called_once_with({'FBMHeavy': 0.5})
+        # Der Bau bekommt die Ablage des Auftrags (Klemme und Haarumbau, Option iterationen.haarumbau, Vorgabe an) und die Regler des Modells.
+        bau_k.assert_called_once_with({'FBMHeavy': 0.5}, koerper=mock.ANY, ablage='ablage-attrappe', haarumbau=True)
         modell = bau_k.return_value.teile.call_args[0][0]
         self.assertEqual(modell.haar, {'sorte.kin_hair': 1.0})
         tanz_k.assert_called_once_with({'FBMHeavy': 0.5}, ['koerper', 'shirt'])

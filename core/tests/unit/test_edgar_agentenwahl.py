@@ -97,6 +97,17 @@ class DerOpenrouteraufruf(SimpleTestCase):
             with self.assertRaises(Agentenfehler):
                 agent.auswerten(status, antwort)
 
+    def test_ein_abgeschnittener_text_ist_ein_fehler_mit_rohantwort_nicht_ein_json_fehler(self):
+        """Gemessen 05.10.2026 (Nemotron, „extra hoch", mit Bildern): Ende „length", 32.768 Token, davon 24.005 Denken — `content` hielt das Denken in Schleife, ohne JSON."""
+        antwort = {'choices': [{'message': {'content': 'We need to produce JSON …'}, 'finish_reason': 'length'}],
+                   'usage': {'prompt_tokens': 31375, 'completion_tokens': 32768, 'cost': 0, 'completion_tokens_details': {'reasoning_tokens': 24005}}, 'model': 'x'}
+        with self.assertRaises(Agentenfehler) as fehler:
+            Openrouteraufruf('x').auswerten(200, antwort)
+        self.assertIn('abgeschnitten', str(fehler.exception))
+        self.assertEqual((fehler.exception.roh['ende'], fehler.exception.roh['token']['denken']), ('length', 24005))
+        ok = Openrouteraufruf('x').auswerten(200, {'choices': [{'message': {'content': '{}'}, 'finish_reason': 'stop'}], 'usage': {}})
+        self.assertEqual(ok['ende'], 'stop')
+
     def test_ohne_schluesseldatei_steht_der_pfad_in_der_meldung_und_nie_der_schluessel(self):
         agent = Openrouteraufruf('x', schluessel_datei=PROJEKTTEMP / 'gibt_es_nicht.key')
         with self.assertRaises(Agentenfehler) as fehler:

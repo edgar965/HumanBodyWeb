@@ -56,7 +56,9 @@ class Engine2d3dKleiderstandmodell:
     #: 21 (05.10.2026, Edgar zum vierten Mal: „Unterhose ist viel zu weit, in der Vorlage ist sie eng anliegend", „Haar immer noch zu hoch in der Mitte", „Haare seitlich braun, ein Haarmodell, das alles beinhaltet
     #: und eine einheitliche Farbe hat"): Die Hose der Fotostücke liegt eng am Körper an (`Standhose`), das Haar vor den Iterationen ist EINE Haarkappe in der Haarfarbe der Fotos (`Haarkappe`).
     #: 22 (05.10.2026, Edgar: „diese Unterhose ist total aufgebläht, sie muss am Körper liegen"): Die enge Hose liegt 4 statt 8 mm über der Haut und wird kaum noch geglättet (`Hosenkoerper.ABSTAND_ENG`).
-    SCHREIBER = 22
+    #: 23 (05.10.2026, Edgar: „das Haar der Vorlage perfekt auf ein Haar aus Genesis umbauen"): Das Haar der Runden ist an der Haarlinie geschnitten und sitzt auf der Haarkappe (`Haarumbau`); Kopfkachel
+    #: bleibt gebacken, Fotohaut Fassung 2 (`Koerperfotoprojektion`).
+    SCHREIBER = 23
 
     def __init__(self, job, ablage=None):
         self.job = job
@@ -192,7 +194,9 @@ class Engine2d3dKleiderstandmodell:
             from .haarzonen import Haarzonen
             from .kleidermodellbau import Kleidermodellbau
             modell = ModellMitKleidern.aus(daten or vorab)
-            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, ablage=self.ablage)
+            from .iterationsoptionen import Iterationsoptionen
+            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, ablage=self.ablage,
+                                   haarumbau=bool(daten) and Iterationsoptionen.haarumbau(self.job), ohne_haar=bool(vorab) and kappe is not None)
             teile = [x for x in Haarzonen.anwenden(bau.teile(modell), modell.farben) if x.get('art') != 'koerper']
             if vorab:
                 teile = [x for x in teile if x.get('art') in Standvorabkleider.ARTEN]       # Kleidung UND die gewählte Frisur (websites-40, 04.10.2026)

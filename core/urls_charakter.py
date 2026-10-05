@@ -32,6 +32,7 @@ from .api.g9figur import G9figur
 from .api.g9fototextur import G9fototextur
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
+from .api.g9garderobepflege import G9garderobepflegeapi
 from .api.g9hautmischung import G9hautmischungapi
 from .api.g9morphformular import G9morphformularapi
 from .api.g9texturbuendel import G9texturbuendelapi
@@ -188,6 +189,10 @@ CHARAKTER = [
     path('api/garmentcode/genesis/<str:stueck>/', Gcgenesisapi.herkunft, name='gcgenesis_herkunft'),
     path('api/character/genesis9-figur/garderobe/kategorien/',
          G9garderobekategorienapi.kategorien, name='g9_figur_garderobe_kategorien'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/umbenennen/',
+         G9garderobepflegeapi.umbenennen, name='g9_figur_garderobe_umbenennen'),
+    path('api/character/genesis9-figur/garderobe/<str:kennung>/loeschen/',
+         G9garderobepflegeapi.loeschen, name='g9_figur_garderobe_loeschen'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/netz/',
          G9garderobeapi.kleidnetz, name='g9_figur_kleidnetz'),
     path('api/character/genesis9-figur/garderobe/<str:kennung>/vorschau/',

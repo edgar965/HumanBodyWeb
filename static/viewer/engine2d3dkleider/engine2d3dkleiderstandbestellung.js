@@ -5,9 +5,10 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
  * (01.10.2026, `POST /api/engine2d3dkleider/<id>/standmodell/`, `Engine2d3dKleiderstandmodell`).
  *
  * Der Zustand meldet `standmodell: {datei, fassung, soll, aktuell, fehler?}`. Ist `aktuell` falsch und läuft kein Lauf
- * (der baut sie an seinem Ende selbst), geht EINE Bestellung je Stand (`soll`) hinaus; der Bau dauert Sekunden in einem
- * eigenen Prozess, danach steht die neue Datei im Zustand und `Engine2d3dKleiderbuehnenmodell` lädt sie. Bis dahin bleibt die
- * alte Fassung stehen. Ist der Bau dieses Stands gescheitert (`fehler`), wird nicht wieder bestellt.
+ * (der baut sie an seinem Ende selbst), geht EINE Bestellung je Stand (`soll`) hinaus; der Bau dauert in einem eigenen Prozess
+ * 50–60 s (kalt, gemessen 05.10.2026; die Meldung „wird gebaut …" steht so lange), danach steht die neue Datei im Zustand und
+ * `Engine2d3dKleiderbuehnenmodell` lädt sie. Bis dahin bleibt die alte Fassung stehen. Ist der Bau dieses Stands gescheitert
+ * (`fehler`), wird nicht wieder bestellt. Seit 05.10.2026 bestellt die Bühne nur noch, wenn der Knopf „Modell" an ist (Standard aus).
  */
 export class Engine2d3dKleiderstandbestellung {
 

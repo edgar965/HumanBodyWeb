@@ -92,6 +92,18 @@ class Iterationsoptionen:
             'schoben die Beine von „.51" 40 Runden lang an den Anschlag (01.10.2026) — deshalb sind sie aus.',
         },
         {
+            'schluessel': 'haarumbau',
+            'titel': 'Frisur an das Haar der Vorlage anpassen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — die Frisur wird an der Haarlinie des Fotohaars geschnitten und sitzt auf einer Haarkappe in der Haarfarbe'),
+                ('aus', 'Aus — die Frisur bleibt, wie Garderobe und Rezept sie wählen'),
+            ],
+            'hinweis': 'Haarumbau (Edgar, 05.10.2026: „das Haar der Vorlage perfekt auf ein Haar aus Genesis umbauen"): Stirn, Schläfen, Ohren und Hals bleiben frei, Lücken der Haarkarten füllt die Kappe in der '
+            'Haarfarbe. Gilt nur für kurzes Haar mit Hülle des Fotohaars (Schritt „Frisur"); sonst bleibt die Frisur, wie sie ist.',
+        },
+        {
             'schluessel': 'kandidaten',
             'titel': 'Kandidaten je Runde',
             'art': 'zahl',
@@ -164,6 +176,11 @@ class Iterationsoptionen:
     @classmethod
     def vorgaben(cls):
         return {e['schluessel']: e['vorgabe'] for e in cls.KATALOG}
+
+    @classmethod
+    def haarumbau(cls, job):
+        """Ob die Frisur an das Haar der Vorlage angepasst wird (`Haarumbau`): Option `iterationen.haarumbau` des Auftrags, Vorgabe an."""
+        return cls.pruefen((job.optionen or {}).get('iterationen')).get('haarumbau') != 'aus'
 
     @classmethod
     def katalog(cls):

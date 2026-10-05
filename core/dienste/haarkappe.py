@@ -18,7 +18,8 @@ dieses Bereichs (Grad, innen positiv) ist ein Feld auf denselben 5°-Feldern; da
 
     teil = Haarkappe(ablage, netz).teil(rgb)      # Teil wie aus `Kleidermodellbau.teile` (art 'haar') für `Standmodellglb.teile`; None ohne Hülle des Fotohaars
 
-Gilt nur im Standmodell vor den Iterationen (`Standvorabkleider`); die Runden bauen ihr Haar aus der Frisur der Garderobe.
+Vor den Iterationen trägt das Standmodell die Kappe allein (`Standvorabkleider`). In den Runden liegt sie unter der Frisur der Garderobe, die an ihrer Haarlinie geschnitten wird (`Haarumbau`, seit 05.10.2026);
+dort ist ihre Farbe die der Karten im Render (`Haarumbau.anzeigefarbe`). Ihre Textur hat Strähnen (schmal in u, lang in v; `STRAEHNE`): Die Würfelabbildung legt v an Hinterkopf, Seiten und Scheitel in die Wuchsrichtung.
 """
 
 import logging
@@ -34,7 +35,6 @@ class Haarkappe:
     #: Zählt hoch, wenn sich die Kappe bei gleicher Eingabe ändert (gehört in die Fassung des Standmodells). 2: Haarlinie geschnitten, Würfel-UV. 3: Haarlinie aus der Abdeckung des Netzhaars. 4: Gesicht, Wange und Schläfe frei, Zungen am Haaransatz entfernt. 5: Haar über dem Ohr ab 10° statt 20°.
     VERSION = 5
     SORTE = 'haarkappe'
-    BILD = 'haarkappe.png'
     #: (Azimut bis in Grad von vorn, Höhenwinkel, ab dem Haar beginnt): Gesicht, Schläfe und Ohren bleiben frei (Annahme; `ohr_hoehe.py` fand seitlich Punkte bis 15–17° und bis Azimut 119°, im Bild liegt die Oberkante des Ohrs bei etwa 0–5° (aus dem Maßstab des Bildes geschätzt, nicht gemessen); 10° lässt Luft darüber). Das Netzhaar deckte am Testauftrag
     #: auch die rechte Wange bis −40° (Bartschatten im Foto) — dort wächst kein Kopfhaar.
     OHR = (122.0, 10.0)
@@ -47,13 +47,48 @@ class Haarkappe:
     TEXTUR_PX = 512
     PERIODE = 0.60                  # Kantenlänge der Textur in der Welt (m): ein Texel ist 1,2 mm
     KONTRAST = 0.14                 # Rauschen um die Haarfarbe (Anteil)
+    STRAEHNE = 4.0                  # Länge der Strähnen in der Textur (Texel, Gauß-Sigma in v; Breite 0,7 Texel)
     SAMEN = 7
 
     def __init__(self, ablage, netz):
         self.ablage = ablage
         self.netz = netz
+        self._lage_cache = None
 
     # ------------------------------------------------------------------ Hülle
+
+    def _lage(self):
+        """`(Klemme, gefüllte Hülle, Linienfeld)` — einmal je Kappe; alle None ohne Hülle des Fotohaars. Die Haarlinie (`grad_je_punkt`) und die Fläche (`flaeche`) lesen dasselbe Feld."""
+        if self._lage_cache is None:
+            from .haarklemme import Haarklemme
+            klemme = Haarklemme.fuer(self.ablage, np.asarray(self.netz['punkte'], dtype=np.float64))
+            karte = self._fuellen(klemme.roh) if klemme is not None else None
+            self._lage_cache = (klemme, karte, self._linienfeld(klemme.roh) if karte is not None else None)
+        return self._lage_cache
+
+    def grad_je_punkt(self, punkte, reichweite=None):
+        """Abstand zur Haarlinie in Grad je Punkt (Lage der Bühne), > 0 = im Haarbereich — None ohne Hülle des Fotohaars. Punkte weiter als `reichweite` (m) vom Kopfmittelpunkt liegen weit darunter."""
+        klemme, karte, linie = self._lage()
+        if karte is None:
+            return None
+        v = np.asarray(punkte, dtype=np.float64) - klemme.mitte
+        return self._ueber_der_linie(klemme, linie, v, np.linalg.norm(v, axis=1), self.REICHWEITE if reichweite is None else reichweite)
+
+    def radius_nacken(self):
+        """Der größte Abstand des Netzhaars vom Kopfmittelpunkt (m) zwischen −37° und 0° Höhenwinkel — None ohne Hülle des Fotohaars oder ohne Netzhaar in diesem Band."""
+        klemme, karte, _linie = self._lage()
+        if karte is None:
+            return None
+        hoehe = klemme.roh.shape[0]
+        el = (np.arange(hoehe) + 0.5) * 180.0 / hoehe - 90.0
+        zeilen = klemme.roh[(el >= self.UNTEN) & (el <= 0.0)]
+        return float(np.nanmax(zeilen)) if np.isfinite(zeilen).any() else None
+
+    def kurzhaarig(self, grenze=0.17):
+        """True, wenn das Netzhaar zwischen −37° und 0° Höhenwinkel nirgends weiter als `grenze` (m) vom Kopfmittelpunkt steht (`radius_nacken`) — kurzes Haar. Darunter liegt der Hals (Radius 0,17–0,20 m, auch ohne Haar).
+        Gemessen 05.10.2026 an allen drei Aufträgen mit Hülle (`kurzhaarig_messen.py`: test4 0,126 m, Sapiens 1 und 2 je 0,127 m — alle dieselbe Frisur, Mavick Hair Style); ein Auftrag mit langem Haar hat keine Hülle, die Grenze ist dort ungeprüft."""
+        radius = self.radius_nacken()
+        return radius is not None and radius < grenze
 
     @staticmethod
     def _summe3(a):
@@ -164,16 +199,13 @@ class Haarkappe:
         """`(punkte, dreiecke, haut, uv, normalen, daten)` der Kappe — None ohne Hülle des Fotohaars. `punkte` (3 · T, 3), `dreiecke` (T, 3), `haut` {knochen, index, gewicht} je Punkt."""
         from Genesis9.figurrigglb import G9figurrigglb
 
-        from .haarklemme import Haarklemme
         p = np.asarray(self.netz['punkte'], dtype=np.float64)
-        klemme = Haarklemme.fuer(self.ablage, p)
-        karte = self._fuellen(klemme.roh) if klemme is not None else None
+        klemme, karte, linie = self._lage()
         if karte is None:
             return None
         d = np.asarray(self.netz['dreiecke'], dtype=np.int64).reshape(-1, 3)
         v = p - klemme.mitte
         r = np.linalg.norm(v, axis=1)
-        linie = self._linienfeld(klemme.roh)
         f = self._ueber_der_linie(klemme, linie, v, r, self.REICHWEITE)
         d = d[(f[d] > 0.0).any(axis=1)]
         haut = self.netz['haut']
@@ -191,10 +223,11 @@ class Haarkappe:
         dicke = self.RAND_DICKE + self._weich(el_ueber / self.RAND_GRAD) * (np.clip(huelle - r, self.DICKE[0], self.DICKE[1]) - self.RAND_DICKE)
         punkte = klemme.mitte + v * ((r + dicke) / r)[:, None]
         tri = np.arange(len(punkte), dtype=np.int64).reshape(-1, 3)
-        # Würfelabbildung: je Dreieck die zwei Achsen, die senkrecht zu seiner Hauptrichtung stehen
+        # Würfelabbildung: je Dreieck die zwei Achsen, die senkrecht zu seiner Hauptrichtung stehen — v jeweils in der Wuchsrichtung: an den Seiten (Normale x) senkrecht (v = y), am Scheitel (Normale y) vor–zurück
+        # (v = z), vorn und hinten (Normale z) senkrecht (v = y)
         fn = np.cross(punkte[tri[:, 1]] - punkte[tri[:, 0]], punkte[tri[:, 2]] - punkte[tri[:, 0]])
         achse = np.argmax(np.abs(fn), axis=1)
-        paare = np.array([[1, 2], [0, 2], [0, 1]])[achse]                                    # (T, 2) Achsen je Dreieck
+        paare = np.array([[2, 1], [0, 2], [0, 1]])[achse]                                    # (T, 2) Achsen je Dreieck (u, v)
         je_ecke = np.repeat(paare, 3, axis=0)
         uv = (punkte[np.arange(len(punkte))[:, None], je_ecke] - klemme.mitte[je_ecke]) / self.PERIODE + 0.5
         oben = el_ueber > 0.0
@@ -212,11 +245,13 @@ class Haarkappe:
 
         zufall = np.random.default_rng(cls.SAMEN)
 
-        def rauschen(sigma):
-            z = ndimage.gaussian_filter(zufall.standard_normal((cls.TEXTUR_PX, cls.TEXTUR_PX)), sigma, mode='wrap')
+        def rauschen(sigma_u, sigma_v):
+            z = ndimage.gaussian_filter(zufall.standard_normal((cls.TEXTUR_PX, cls.TEXTUR_PX)), (sigma_v, sigma_u), mode='wrap')      # Zeilen = v
             return z / z.std()
 
-        feld = 0.9 * rauschen(1.0) + 0.1 * rauschen(3.0)      # nur feines Rauschen: gröbere Flecken ließen die Dreiecke der Würfelabbildung als Facetten erkennen
+        # Strähnen: schmal in u, lang in v (`STRAEHNE`) — die Würfelabbildung legt v an Hinterkopf, Seiten und Scheitel in die Wuchsrichtung (senkrecht bzw. vor–zurück). Nur feines Rauschen, gröbere Flecken
+        # ließen die Dreiecke der Würfelabbildung als Facetten erkennen.
+        feld = 0.8 * rauschen(0.7, cls.STRAEHNE) + 0.2 * rauschen(2.0, 2.0)
         licht = 1.0 + cls.KONTRAST * feld / feld.std()
         farbe = np.clip(np.asarray(rgb[:3], dtype=np.float64)[None, None, :] * licht[..., None], 0.0, 1.0)
         pfad.parent.mkdir(parents=True, exist_ok=True)
@@ -231,11 +266,12 @@ class Haarkappe:
         if gebaut is None or rgb is None:
             return None
         punkte, dreiecke, haut, uv, normalen, daten = gebaut
-        pfad = self.bild(rgb, self.ablage.arbeit(self.BILD))
+        # Das Bild trägt die Farbe im Namen (`artefakte-benennen`): Die Haarkappe des Standmodells (Fotofarbe) und die der Runden (Farbe des Rezepts, `Haarumbau`) teilen sich den Ordner.
+        pfad = self.bild(rgb, self.ablage.arbeit('haarkappe_%s.png' % ''.join('%02x' % int(round(min(max(float(c), 0.0), 1.0) * 255)) for c in rgb[:3])))
         logger.info('Haarkappe: %d Dreiecke über der Haarlinie, Dicke im Mittel %s mm, oben %s mm', daten['dreiecke'], daten['dicke_mittel_mm'], daten['dicke_oben_mm'])
         return {'art': 'haar', 'sorte': self.SORTE, 'punkte': punkte, 'dreiecke': dreiecke.reshape(-1), 'haut': haut, 'uv': uv, 'normalen': normalen, 'farbe': (1.0, 1.0, 1.0),
                 'gruppen': [{'name': 'kappe', 'index_ab': 0, 'index_anzahl': int(dreiecke.size), 'bilder': {}}],
-                'textur': [{'ab': 0, 'albedo': str(pfad), 'faktor': (1.0, 1.0, 1.0)}]}
+                'textur': [{'ab': 0, 'anzahl': int(dreiecke.shape[0]), 'albedo': str(pfad), 'faktor': (1.0, 1.0, 1.0)}]}
 
     @classmethod
     def fingerabdruck(cls, ablage):

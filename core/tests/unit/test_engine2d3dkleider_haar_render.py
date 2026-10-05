@@ -78,6 +78,10 @@ class DasVorabHaar(SimpleTestCase):
             self.aufrufe.append(('umfaerben', kennung))
             return self
 
+        def haar_gruppen_angleichen(self, kennung, staerke=0.6):
+            self.aufrufe.append(('angleichen', kennung))
+            return self
+
         def haar_farbe(self, farbe):
             self.aufrufe.append(('farbe', farbe))
             return self
@@ -85,16 +89,16 @@ class DasVorabHaar(SimpleTestCase):
     def test_mit_der_fotofarbe_erst_umfaerben_dann_toenen(self):
         modell = self.Attrappe()
         Standvorabkleider._haar_faerben(modell, 'mavick_hair_style', '#595150', [0.8, 0.8, 0.78])
-        self.assertEqual([a[0] for a in modell.aufrufe], ['umfaerben', 'farbe'])
+        self.assertEqual([a[0] for a in modell.aufrufe], ['umfaerben', 'angleichen', 'farbe'])
         self.assertEqual(modell.aufrufe[0][1], 'mavick_hair_style')
-        rot, gruen, blau = (int(modell.aufrufe[1][1][i:i + 2], 16) for i in (1, 3, 5))
+        rot, gruen, blau = (int(modell.aufrufe[2][1][i:i + 2], 16) for i in (1, 3, 5))
         self.assertTrue(rot == gruen == blau, 'unbuntes Haar bleibt unbunt (wie Runde 1)')
         self.assertGreater(rot, 0x59, 'die helle Fotofarbe tönt heller als die Netzfarbe #595150')
 
     def test_ohne_fotofarbe_gilt_die_netzfarbe(self):
         modell = self.Attrappe()
         Standvorabkleider._haar_faerben(modell, 'kin_hair', '#595150', None)
-        self.assertEqual([a[0] for a in modell.aufrufe], ['umfaerben', 'farbe'])
+        self.assertEqual([a[0] for a in modell.aufrufe], ['umfaerben', 'angleichen', 'farbe'])
 
     def test_ohne_jede_farbe_bleibt_das_haar_wie_es_ist(self):
         modell = self.Attrappe()

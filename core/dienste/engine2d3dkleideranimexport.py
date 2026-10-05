@@ -18,13 +18,11 @@ Ergebnis in `ergebnis/` (`modell_animiert.glb`, `.blend`) und als Kopie im Expor
 import json
 import logging
 import shutil
-import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from django.conf import settings
-
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+from .engine2d3dkleiderblender import Engine2d3dKleiderblender   # der EINE Blender-Arbeiter des Bereichs (`BlenderNurUeberEinenArbeiterTest`)
 from .studioton import Studioton
 
 logger = logging.getLogger('core')
@@ -133,17 +131,9 @@ class Engine2d3dKleideranimexport:
         bilder = max(1, len((bewegung or {}).get('times') or []))
         dauer = float((bewegung or {}).get('duration') or 0.0)
         fps = round(bilder / dauer) if dauer else 30
-        befehl = [str(settings.BLENDER_EXE), '-b', '--factory-startup', '--python',
-                  str(settings.MODELLEXPORT_BLENDER_SKRIPT), '--', '--glb', str(glb), '--blend', str(ziel),
-                  '--fps', str(int(fps)), '--polygone', '1.0']
-        if ton:
-            befehl += ['--audio', str(ton)]
         try:
-            lauf = subprocess.run(befehl, capture_output=True, text=True, timeout=self.BLENDER_TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            return {'fehler': 'Blender hat das Zeitlimit überschritten (%d s)' % self.BLENDER_TIMEOUT_S}
-        if lauf.returncode != 0 or not ziel.is_file():
-            logger.error('2D3D Kleider %s: Blender-Export gescheitert (%d): %s', self.job.kennung, lauf.returncode,
-                         lauf.stderr[-2000:])
-            return {'fehler': 'Blender konnte keine .blend schreiben (siehe Log)'}
+            Engine2d3dKleiderblender(self.ablage.arbeit('blender')).exportieren(glb, ziel, fps, ton, self.BLENDER_TIMEOUT_S)
+        except RuntimeError as fehler:
+            logger.error('2D3D Kleider %s: %s', self.job.kennung, fehler)
+            return {'fehler': 'Blender konnte keine .blend schreiben (siehe Log): %s' % str(fehler)[:200]}
         return {'datei': self.BLEND, 'bytes': ziel.stat().st_size, 'fps': int(fps), 'audio': bool(ton)}

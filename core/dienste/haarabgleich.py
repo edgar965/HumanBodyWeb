@@ -135,7 +135,21 @@ class Haarabgleich:
         bereich = bereich[zeilen[bereich] > 0]
         hals = int(bereich[np.argmin(zeilen[bereich])]) if len(bereich) else g
         haar, grenze = self.haar(rgb, maske, hals)
-        return {'winkel': float(r.winkel), 'haar': haar, 'maske': maske, 'art': art, 'hals': hals, 'grenze': grenze}
+        return {'winkel': float(r.winkel), 'haar': haar, 'maske': maske, 'art': art, 'hals': hals, 'grenze': grenze,
+                'farbe': self._farbe(r, teile, rgb, haar, art == self.HAAR, aus)}
+
+    def _farbe(self, r, teile, rgb, haar, render_haar, aus):
+        """Farbe des Haars in dieser Ansicht, Foto gegen Render (`Haarfarbmessung`) — None, wenn der Farbrender nicht gelingt (die Messung der Form läuft trotzdem)."""
+        from .genesishaarrender import Genesishaarrender
+        from .haarfarbmessung import Haarfarbmessung
+        pfad = aus / ('haarfarbe_%+04d.png' % int(round(r.winkel)))
+        try:
+            self.render.bild_kopf([(t['punkte'], t['dreiecke'], t['farbe'], Genesishaarrender.extra(t)) for t in teile], r.winkel, pfad, groesse=(self.GROESSE, self.GROESSE))
+            with Image.open(pfad) as bild:
+                return Haarfarbmessung.ansicht(np.asarray(bild.convert('RGB')), rgb, haar, render_haar)
+        except (OSError, ValueError, RuntimeError) as fehler:
+            logger.warning('Haarabgleich: Haarfarbe %+d° nicht gemessen (%s)', round(r.winkel), fehler)
+            return None
 
     def _versatz(self, art, oben):
         """Pixel, um die das Foto (Kopfmitte in der Bildmitte) nach rechts muss, damit es auf der Kopfmitte des Renders
@@ -186,6 +200,10 @@ class Haarabgleich:
                                         'punkte': int((n > 0).sum())}
         aus['fehler'] = round(1.0 - sum(ious) / len(ious), 4)
         aus['treffer'] = round(treffer / gesehen, 3) if gesehen else None
+        from .haarfarbmessung import Haarfarbmessung
+        farbe = Haarfarbmessung.auswerten([a.get('farbe') for a in ansichten])
+        if farbe:
+            aus['farbe'] = farbe
         return aus
 
     def _zellen(self, p, wert, n):

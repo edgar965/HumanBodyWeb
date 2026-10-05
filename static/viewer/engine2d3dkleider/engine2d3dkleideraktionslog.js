@@ -17,7 +17,9 @@
  *   reiter_fertig / seite_bereit       die Seite meldet ein Feld bzw. sich selbst fertig, mit der Zeit seit Klick bzw. Start
  *   sichtbarkeit / adresse             Tab verdeckt oder wieder da (Chrome drosselt verdeckte Tabs), `#`-Wechsel
  *   haenger                            Aufgaben im Hauptfaden ab 300 ms (Long-Task-Schnittstelle des Browsers; ab 1 s als Warnung)
- *   js_fehler / js_ablehnung / lade_fehler   Fehler im Skript, nicht abgefangene Zusagen, Skript/Stil, die nicht ankamen
+ *   reiter_bilder                      15 s nach einem Reiterklick: Zahl und längstes Bild, Bilder ≥ 250 ms, Größe der Zeichenflächen — das Hängen der 3D-Ansicht, das `haenger` nicht sieht
+ *   modell_geladen                     das Modell des Stands/der Runde in der 3D-Ansicht: Ladezeit des Browsers (`Engine2d3dKleiderbuehnenmodell._laden`, Ereignis `engine2d3dkleider-modell`)
+ *   js_fehler / js_ablehnung / lade_fehler  Fehler im Skript, nicht abgefangene Zusagen, Skript/Stil, die nicht ankamen
  */
 export class Engine2d3dKleiderAktionslog {
 
@@ -26,6 +28,8 @@ export class Engine2d3dKleiderAktionslog {
     static LANG_MS = 300;
     static HAENGER_MS = 1000;
     static PRUEFUNG_MS = 300;
+    static BILDER_S = 15;
+    static RUCKLER_MS = 250;
     static INTERAKTIV = 'button, a[href], [role="tab"], summary, select, input, textarea, [data-aktion]';
 
     /** @param {HTMLElement|null} leiste die Reiterleiste (`#auftrag-reiter`); ohne sie bleibt der Rest in Kraft */
@@ -92,6 +96,7 @@ export class Engine2d3dKleiderAktionslog {
         document.addEventListener('change', e => this._aenderung(e), true);
         document.addEventListener('visibilitychange', () => this.melden('sichtbarkeit', document.visibilityState));
         window.addEventListener('hashchange', () => this.melden('adresse', location.hash));
+        window.addEventListener('engine2d3dkleider-modell', e => this.melden('modell_geladen', e.detail.text, e.detail.stufe));
         if (this.leiste) {
             this.leiste.addEventListener('reiterwechsel', e => this._reiterwechsel(e.detail.name));
             this.leiste.addEventListener('reiterfertig', () => this._reiterfertig());
@@ -131,7 +136,10 @@ export class Engine2d3dKleiderAktionslog {
         const rest = ` · verzoegert=${verzoegert}ms${ziel.disabled ? ' · GESPERRT' : ''}${e.isTrusted ? '' : ' · per Skript'}`;
         const reiter = ziel.matches('[role="tab"][data-reiter]');
         this.melden(reiter ? 'reiter_klick' : 'klick', this.beschreiben(ziel) + rest, stufe);
-        if (reiter) this._nachpruefen(ziel.dataset.reiter, performance.now());
+        if (reiter) {
+            this._nachpruefen(ziel.dataset.reiter, performance.now());
+            this._bilder(ziel.dataset.reiter);
+        }
     }
 
     _rechtsklick(e) {
@@ -154,6 +162,34 @@ export class Engine2d3dKleiderAktionslog {
             this.melden('reiter_ergebnis', `${name} → sichtbar: ${offen.join(',') || 'keins'} · ${ok ? 'ok' : 'FALSCH'} · nach ${Math.round(performance.now() - start)}ms`,
                 ok ? 'info' : 'warning');
         }, Engine2d3dKleiderAktionslog.PRUEFUNG_MS);
+    }
+
+    /**
+     * 15 s nach einem Reiterklick die Bildfolge messen (05.10.2026, Edgar: „beim Wechsel auf Iterationen hängt das UI auch"): Der Hänger-Beobachter sieht nur den Hauptfaden — rechnet ein 3D-Bild
+     * zu lange (große Fläche, viel Geometrie), bleibt die Seite stehen, ohne dass dort eine lange Aufgabe steht. Die Zeile nennt Zahl und Länge der Bilder und die Größe der Zeichenflächen.
+     * Ein verdeckter Tab zeichnet keine Bilder (Chrome) — dann steht `verdeckt` dabei und die Zahl sagt nichts.
+     */
+    _bilder(name) {
+        const s = Engine2d3dKleiderAktionslog;
+        const start = performance.now();
+        let letzter = start, anzahl = 0, hoechst = 0, ruckler = 0, verdeckt = document.visibilityState !== 'visible';
+        let aus = false;
+        const takt = jetzt => {
+            anzahl += 1;
+            hoechst = Math.max(hoechst, jetzt - letzter);
+            ruckler += jetzt - letzter >= s.RUCKLER_MS ? 1 : 0;
+            letzter = jetzt;
+            if (!aus) requestAnimationFrame(takt);
+        };
+        requestAnimationFrame(takt);
+        // Der Abschluss hängt an einem Zeitgeber, nicht am letzten Bild: Ein verdeckter Tab bekommt keine Bilder, und ein hängender liefert den Bericht eben später.
+        setTimeout(() => {
+            aus = true;
+            if (document.visibilityState !== 'visible') verdeckt = true;
+            const flaechen = [...document.querySelectorAll('canvas')].map(c => `${c.width}x${c.height}`).join(' ') || 'keine';
+            this.melden('reiter_bilder', `${name} · ${anzahl} Bilder in ${s.BILDER_S} s · längstes ${Math.round(hoechst)}ms · ${ruckler}× über ${s.RUCKLER_MS}ms · Flächen ${flaechen} · DPR ${devicePixelRatio}${verdeckt ? ' · verdeckt' : ''}`,
+                ruckler ? 'warning' : 'info');
+        }, s.BILDER_S * 1000);
     }
 
     _reiterwechsel(name) {

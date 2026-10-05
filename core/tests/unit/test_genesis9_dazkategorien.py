@@ -170,6 +170,29 @@ class DazkategorienTest(SimpleTestCase):
         self.assertEqual(G9dazkategorien.vorgabe(eintrag), u'Röcke')
         self.assertEqual(len(G9dazkategorien.tabelle()), 13)
 
+    def test_6_das_zubehoer_der_eigenen_stuecke_steht_unter_requisiten(self):
+        """Edgar 05.10.2026: „das Zubehör unter Tab Requisiten" — nur das der eigenen Stücke (Hersteller `EIGEN`); Hosen, Hüte und das Zubehör der Daz-Produkte bleiben, wo Daz sie einordnet."""
+        k = 'People/Genesis 9/Clothing'
+        (self.support / 'EIGEN_Probe.dsx').write_text(u"""<Assets>
+  <Asset VALUE="People/Genesis 9/Clothing/EIGEN/Eigen Uhr l.duf">
+   <ContentType VALUE="Follower/Accessory"/>
+   <Categories><Category VALUE="/Default/Accessories"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/EIGEN/Eigen Hut Filz.duf">
+   <ContentType VALUE="Follower/Wardrobe/Headwear"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Headwear"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/EIGEN/Eigen Foto 1 hose.duf">
+   <ContentType VALUE="Follower/Wardrobe/Pant"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Pants"/></Categories>
+  </Asset></Assets>""", encoding='utf-8')
+        G9dazkategorien.vergessen()
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN/Eigen Uhr l')), u'Requisiten')
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN\\Eigen Uhr l')), u'Requisiten')     # Backslash der Windows-Bibliothek
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN/Eigen Hut Filz')), u'Kopfbedeckung')
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN/Eigen Foto 1 hose')), u'Hosen')
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'JS/JS Sash')), u'Zubehör')
+
     def test_5_reihenfolge_traegt_alle_namen(self):
         namen = set(G9dazkategorien.REIHENFOLGE)
         for _pfad, name in G9dazkategorien.NACH_PFAD + G9dazkategorien.NACH_TYP:

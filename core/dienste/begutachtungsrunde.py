@@ -158,7 +158,8 @@ class Begutachtungsrunde:
         self._melden(0.1, 'Runde %d: Modell bauen' % runde)
         # Gebaut in der A-Pose (GLB, Bühne); Render, Note, Befund und Fotoprojektion in der Haltung der Fotos — gehäutet,
         # damit die Ärmel den Armen folgen (`G9haltungshaut`, 01.10.2026).
-        bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.werkzeug.kacheln(), ablage=self.ablage)
+        bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.werkzeug.kacheln(), ablage=self.ablage,
+                               haarumbau=self.o.get('haarumbau') != 'aus')
         teile = G9haltungshaut(bau.stellung, modell.drehung(), bau.boden).posieren(
             Haarzonen.anwenden(bau.teile(modell), modell.farben))           # Haarfarbe je Kopfzone (02.10.2026)
         # Die Hose aus dem Körpernetz wie auf der Bühne und im Film (`Hosenteil`, 04.10.2026): Die drapierte GarmentCode-Hose klaffte im Schritt und trug

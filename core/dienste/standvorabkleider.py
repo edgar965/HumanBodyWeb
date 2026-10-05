@@ -48,6 +48,31 @@ class Standvorabkleider:
         gebaut = Kleiderwahl.mit_oberteil(cls._fotostuecke(job), Engine2d3dKleiderkoerperoptionen.oberteil(job))
         return [gebaut[name] for name in Kleiderwahl.FOTO_REIHE if gebaut.get(name)]
 
+    #: Gemerkt je Auftrag und Stand der Fotostücke: die Erkennung liest die Fotos, `fingerabdruck` wird bei jeder Zustandsabfrage der Bühne gebildet.
+    _UHREN = {}
+
+    @classmethod
+    def uhren(cls, job):
+        """Garderobenkennungen der Uhren, die die Fotos zeigen (`Uhrerkennung` über `Begutachtungswerkzeug.zubehoer`, das Stück `eigen_uhr_<l|r>` wird bei Bedarf gebaut) — leer ohne Uhr oder bei Fehler.
+        Edgar 05.10.2026 („hast du kein Daz-Objekt für Uhr?"): das Startrezept von Sapiens 2 trug keine Uhr, obwohl das Stück in der Garderobe liegt und Randy (2026.10.03.13.00.02) es trägt — nur die
+        automatische Runde hängte das Zubehör an (`Kleiderwahl.soll`), das Vorab-Modell nicht."""
+        import logging
+
+        from iterationen2d3d.kleiderwahl import Kleiderwahl
+        schluessel = (getattr(job, 'kennung', None), json.dumps(((job.ergebnis or {}).get('fotostuecke') or {}).get('stand'), sort_keys=True, default=str))  # `stand` ist eine Liste: nicht hashbar
+        if schluessel not in cls._UHREN:
+            try:
+                from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+                from .begutachtungswerkzeug import Begutachtungswerkzeug
+                from .iterationsreferenz import Iterationsreferenz
+                referenzen, _ausgelassen = Iterationsreferenz.laden(job)
+                zubehoer = Begutachtungswerkzeug(job, Engine2d3dKleiderablage(job.kennung)).zubehoer(referenzen)
+            except Exception as fehler:  # noqa: BLE001 — Zubehör ist Beiwerk: ohne Uhr weiter (nicht gemerkt, nächster Aufruf probiert es wieder)
+                logging.getLogger('core').warning('Standvorab %s: Uhr nicht erkannt (%s)', getattr(job, 'kennung', '?'), fehler)
+                return []
+            cls._UHREN[schluessel] = [Kleiderwahl.UHR % seite for seite in zubehoer.get('uhr') or []]
+        return cls._UHREN[schluessel]
+
     @classmethod
     def hemdfarbe(cls, job):
         """Die Farbe des Hemds im Foto (RGB 0–1): Mittel der Textur des Fotostücks `oberteil` — None ohne dieses Stück oder ohne Bild."""
@@ -110,17 +135,19 @@ class Standvorabkleider:
         return IterationHaare._neutral(rgb) if rgb else None  # noqa: SLF001 — dieselbe Regel „unbunt wird grau" wie Runde 1
 
     @classmethod
-    def _haar_faerben(cls, modell, kennung, frisur_farbe, foto):
+    def _haar_faerben(cls, modell, kennung, frisur_farbe, foto, hell=1.0):
         """Wie Runde 1 (`IterationHaare.farbe`): erst die Daz-Grundtöne der Strähnengruppen durch Grau ersetzen (`haar_umfaerben`), dann tönen — `haar_farbe` allein tönt Grundton × Farbe, die Gruppen
         blieben braun, orange und fast schwarz (Auftrag 2026.10.04.11.11.44: von der Frisur sah man nur die orange Gruppe, der Rest verschwand im dunklen Hintergrund). Farbe: die der Fotos, sonst die
-        Haarflächen des Netzes (`frisur_farbe`, #rrggbb). Danach die Gruppen angleichen (`GLEICH`)."""
+        Haarflächen des Netzes (`frisur_farbe`, #rrggbb). Danach die Gruppen angleichen (`GLEICH`). `hell`: wie hell die Karten im Render erscheinen (`Haarumbau.KARTEN_HELL`) — die Tönung wird durch
+        diesen Anteil geteilt, damit der Render die Fotofarbe trifft; 1,0 für die Bühne (GLB, ohne Eigenschatten der Karten)."""
         from iterationen2d3d.farbangleich import Farbangleich
         from iterationen2d3d.iterationhaare import IterationHaare
         rgb = foto or (Farbangleich.rgb_aus(frisur_farbe) if frisur_farbe else None)
         if rgb:
             modell.haar_umfaerben(kennung)
             modell.haar_gruppen_angleichen(kennung, cls.GLEICH)
-            modell.haar_farbe(Farbangleich.start_grau(IterationHaare._neutral(rgb)))  # noqa: SLF001 — dieselbe Regel „unbunt wird grau" wie Runde 1
+            neutral = IterationHaare._neutral(rgb)  # noqa: SLF001 — dieselbe Regel „unbunt wird grau" wie Runde 1
+            modell.haar_farbe(Farbangleich.start_grau([c / hell for c in neutral]))
 
     @classmethod
     def _hemd_faerben(cls, modell, kennung, rgb):
@@ -131,15 +158,15 @@ class Standvorabkleider:
             modell.kleid_farbe_je_stueck(kennung, Farbangleich.start_grau(rgb))
 
     @classmethod
-    def modell(cls, job, ohne_haar=False, modell=None):
+    def modell(cls, job, ohne_haar=False, modell=None, hell=1.0):
         """`ModellMitKleidern.als_dict()` mit genau diesen Stücken und der gewählten Frisur — None ohne Stücke. `ohne_haar`: kein Haar im Modell (das Standmodell trägt dann die Haarkappe, `Haarkappe`).
-        `modell`: ein anderes Modell, an dem die Aufrufe laufen (`Rezeptaufzeichnung` — dieselben Aufrufe als Text, `rezept`)."""
+        `modell`: ein anderes Modell, an dem die Aufrufe laufen (`Rezeptaufzeichnung` — dieselben Aufrufe als Text, `rezept`). `hell`: siehe `_haar_faerben`."""
         liste = cls.stuecke(job)
         if not liste:
             return None
         from Genesis9.modellmitkleidern import ModellMitKleidern
         from iterationen2d3d.kleiderwahl import Kleiderwahl
-        modell = (modell if modell is not None else ModellMitKleidern()).kleid_nur(*liste)
+        modell = (modell if modell is not None else ModellMitKleidern()).kleid_nur(*liste, *cls.uhren(job))
         if Kleiderwahl.OBERTEIL in liste:
             cls._hemd_faerben(modell, Kleiderwahl.OBERTEIL, cls.hemdfarbe(job))
         else:
@@ -149,20 +176,46 @@ class Standvorabkleider:
             modell.haar_nur(frisur[0])
             for kanal, wert in cls.frisurregler(job).items():
                 modell.haar_morph(frisur[0], kanal, wert)
-            cls._haar_faerben(modell, frisur[0], frisur[1], cls.haarfarbe(job))
+            cls._haar_faerben(modell, frisur[0], frisur[1], cls.haarfarbe(job), hell)
         else:
             modell.haar_keins()                         # ohne Wahl kein Standardhaar (`kin_hair`)
         return modell.als_dict()
 
+    @staticmethod
+    def haltungszeilen(job):
+        """Die Haltung der Fotos als Rezeptzeilen (`m.haltung(…)`, `m.haltung_gelenk(…)` für Ellbogen und Beine) — dieselben Regeln wie die automatische Runde (`IterationModell.haltung`) aus den Posenlandmarken
+        der Fotos (`Haltungsfotos`, `kreislauf.haltung_foto`; ohne Runde wird sie hier geschätzt und nicht abgelegt). Leer ohne Fotolandmarken: dann bleibt die A-Pose.
+        Gemessen an Sapiens 2 (Runde 1, 05.10.2026): ohne diese Zeilen stand die Figur mit gespreizten Armen vor Fotos mit hängenden Armen, und die Fotohaut der Arme deckte 0,4 % der Kachel (die Projektion
+        trifft dort Hintergrund)."""
+        import logging
+
+        from Genesis9.modellmitkleidern import ModellMitKleidern
+        from iterationen2d3d.iterationmodell import IterationModell
+        foto = ((job.ergebnis or {}).get('kreislauf') or {}).get('haltung_foto')
+        if not foto:
+            try:
+                from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+                from .haltungsfotos import Haltungsfotos
+                from .iterationsreferenz import Iterationsreferenz
+                referenzen, _ausgelassen = Iterationsreferenz.laden(job)
+                foto = Haltungsfotos(job, Engine2d3dKleiderablage(job.kennung)).fuer_lauf({}, referenzen)
+            except Exception as fehler:  # noqa: BLE001 — ohne Haltung der Fotos bleibt die A-Pose (Hinweis im Log)
+                logging.getLogger('core').warning('Startrezept %s: Haltung der Fotos nicht geschätzt (%s)', getattr(job, 'kennung', '?'), fehler)
+                return []
+        return IterationModell(ModellMitKleidern(), {'haltung_foto': foto}).haltung() if foto else []
+
     @classmethod
     def rezept(cls, job):
-        """Dieselben Aufrufe wie `modell`, als Zeilen eines Rezepts (`m.kleid_nur(…)`, `m.haar_nur(…)`, Farben) — die Figur, die der Stand vor den Iterationen zeigt (Haarkappe ausgenommen: im Rezept ist es die
-        gewählte Frisur). Leer ohne Fotostücke. Die Ausgangslage der Nachbesserung (`Edgar.Rezeptkatalog`)."""
+        """Die Haltung der Fotos (`haltungszeilen`) und dieselben Aufrufe wie `modell`, als Zeilen eines Rezepts (`m.kleid_nur(…)`, `m.haar_nur(…)`, Farben) — die Figur, die der Stand vor den Iterationen
+        zeigt (Haarkappe ausgenommen: im Rezept ist es die gewählte Frisur, getönt für den Render, `Haarumbau.KARTEN_HELL`). Leer ohne Fotostücke. Die Ausgangslage der Nachbesserung (`Edgar.Rezeptkatalog`)."""
         from Genesis9.modellmitkleidern import ModellMitKleidern
 
+        from .haarumbau import Haarumbau
         from .rezeptaufzeichnung import Rezeptaufzeichnung
         aufzeichnung = Rezeptaufzeichnung(ModellMitKleidern())
-        return aufzeichnung.zeilen if cls.modell(job, modell=aufzeichnung) is not None else []
+        if cls.modell(job, modell=aufzeichnung, hell=Haarumbau.KARTEN_HELL) is None:
+            return []
+        return cls.haltungszeilen(job) + aufzeichnung.zeilen
 
     @classmethod
     def fingerabdruck(cls, job):
@@ -174,5 +227,5 @@ class Standvorabkleider:
         # Die Hemdfarbe ist das Mittel der Textur des Fotostücks: ändert sie sich, ändert sich `stand` — sie selbst wird nicht gerechnet (die Fassung wird bei jeder Zustandsabfrage gebildet).
         from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
         from .haarkappe import Haarkappe
-        return [liste, cls._fotostuecke(job).get('oberteil'), ((job.ergebnis or {}).get('fotostuecke') or {}).get('stand'), cls.frisur(job), cls.frisurregler(job), cls.haarfarbe(job), cls.GLEICH,
-                Haarkappe.fingerabdruck(Engine2d3dKleiderablage(job.kennung))]
+        return [liste, cls.uhren(job), cls._fotostuecke(job).get('oberteil'), ((job.ergebnis or {}).get('fotostuecke') or {}).get('stand'), cls.frisur(job), cls.frisurregler(job), cls.haarfarbe(job),
+                cls.GLEICH, Haarkappe.fingerabdruck(Engine2d3dKleiderablage(job.kennung))]

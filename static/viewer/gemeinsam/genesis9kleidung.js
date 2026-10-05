@@ -79,6 +79,13 @@ export class Genesis9kleidung {
         return liste;
     }
 
+    /** Den gemerkten Katalog verwerfen — nach Umbenennen oder Löschen im Kontextmenü (`Genesis9garderobepflege`) holt der nächste Aufruf ihn neu. */
+    static vergessen() {
+        Genesis9kleidung._stuecke = null;
+        Genesis9kleidung._stueckeLauf = null;
+        Genesis9kleidung._namen = null;
+    }
+
     /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */
     static async anzeigename(kennung) {
         if (!Genesis9kleidung._namen) {

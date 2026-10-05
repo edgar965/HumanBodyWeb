@@ -1,6 +1,7 @@
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Kontextmenue } from '../../gemeinsam/kontextmenue.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
 
 /**
  * Genesis9garderobekategorien — Edgars Einteilung der Daz-Garderobe im Browser.
@@ -93,6 +94,8 @@ export class Genesis9garderobekategorien {
                     }
                 },
             });
+            // Umbenennen und Löschen bei jedem Stück (Edgar, 05.10.2026) — `Genesis9garderobepflege`.
+            eintraege.push(null, ...Genesis9garderobepflege.eintraege(stueck, neuzeichnen));
             return eintraege;
         });
     }

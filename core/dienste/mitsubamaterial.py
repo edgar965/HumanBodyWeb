@@ -140,8 +140,10 @@ class Mitsubamaterial:
 
     @classmethod
     def textur(cls, albedo, faktor, normalen=None, kante=1024, achse=1, metall=None, rauheit=None):
-        """Albedo-Bild × Faktor (linear, wie glTFs baseColorFactor), wahlweise mit Normalkarte; `metall`/`rauheit` nur für Metallstücke."""
-        feld = cls.bild(albedo, kante, 'albedo') * np.asarray(faktor, dtype=np.float32)[:3]
+        """Albedo-Bild × Faktor, wahlweise mit Normalkarte; `metall`/`rauheit` nur für Metallstücke. Der Faktor ist wie jede Farbe hier sRGB (Daz-Farbe × 2 × Tönung, `Kleidermodellbau._textur`) und wird nach
+        linear gerechnet — wie `Standmodellglb._netz` es für glTFs baseColorFactor tut und wie `flach` es für Stücke ohne Bild tut. Bis 05.10.2026 ging er unumgerechnet in die Multiplikation: Das Hemd der
+        Runde 1 (Tönung #353230, Grau 0,75) stand mit Mittel 0,48 im Render bei 0,33 im Foto (`befund.teile`: foto_farbe 0,3266 / render_farbe 0,4795), im Viewer-Modell dagegen bei 0,30."""
+        feld = cls.bild(albedo, kante, 'albedo') * cls.linear(np.asarray(faktor, dtype=np.float64)[:3]).astype(np.float32)
         innen = {'type': 'principled',
                  'base_color': {'type': 'bitmap', 'data': np.ascontiguousarray(feld, dtype=np.float32), 'raw': True,
                                 'filter_type': 'bilinear'},
