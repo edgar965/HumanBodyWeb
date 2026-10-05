@@ -22,6 +22,7 @@ import { GarmentcodeLauf } from './garmentcode_lauf.js';
 import { GarmentcodeLive } from './garmentcode_live.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { garmentcodeKombi } from './garmentcode_kombi.js';
+import { GarmentcodeAliase } from './garmentcode_aliase.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -178,6 +179,7 @@ class GarmentcodeReiter {
                 : 'nur Schnittmuster (Simulation nicht eingerichtet)';
             feld.textContent = `Bereit — ${zustand.entwuerfe.length} Vorlagen, ${dreid}.`;
             this.vorlagenFuellen(zustand.entwuerfe);
+            GarmentcodeAliase.setzen(zustand.aliase);
             const auswahl = document.getElementById('gc-vorlage');
             if (auswahl && auswahl.value) garmentcodeRegler.laden(auswahl.value);
         } catch (fehler) {
@@ -236,9 +238,10 @@ class GarmentcodeReiter {
      *
      * @returns `true`, wenn es diese Vorlage in der Liste gibt
      */
-    vorlageZeigen(vorlage) {
+    vorlageZeigen(name) {
         const auswahl = document.getElementById('gc-vorlage');
-        if (!auswahl || !vorlage) return false;
+        if (!auswahl || !name) return false;
+        const vorlage = GarmentcodeAliase.stueck(name);         // `t-shirt` → `oberteil`
         const gibtes = [...auswahl.options].some(o => o.value === vorlage);
         if (!gibtes) return false;
         if (auswahl.value === vorlage) return true;

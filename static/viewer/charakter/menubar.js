@@ -5,6 +5,7 @@ import { THREE, SESSION_KEY } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { closeAllDialogs } from './utils.js';
+import { Auswahlaufhebung } from './auswahl_aufheben.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Ursprungsfix } from './ursprungsfix.js';
@@ -122,6 +123,12 @@ export function bindKeyboardShortcuts() {
                 case 'y': e.preventDefault(); fn.sceneRedo?.(); return;
             }
         }
+        // Escape löst jede Auswahl, auch mit dem Fokus in einem Schieber oder Häkchen
+        // (`Auswahlaufhebung`); nur in einem Textfeld gehört es dem Feld.
+        if (e.key === 'Escape' && !Auswahlaufhebung.schreibtText(e.target)) {
+            Auswahlaufhebung.alles(); closeAllMenus(); closeAllDialogs();
+            return;
+        }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
         switch (e.key.toLowerCase()) {
             // G startet das Greifen (Maus bewegen, Klick setzt ab) und stellt
@@ -133,7 +140,6 @@ export function bindKeyboardShortcuts() {
                 if (state._selectedSubMesh) fn._removeSubMesh(state._selectedSubMesh);
                 else fn.deleteSelectedCharacter();
                 break;
-            case 'escape': fn.deselectCharacter(); closeAllMenus(); closeAllDialogs(); break;
         }
     });
 }

@@ -47,10 +47,12 @@
     height: 100%;
     display: block;
     background: #111;
-    cursor: grab;
+    /* Ruhezeiger = Pfeil. Seit 24.08.2026 stand hier `grab` (offene Hand) fest auf der Fläche, auch nach
+       Escape, wenn nichts mehr gewählt ist — gemessen 05.10.2026: `getComputedStyle(canvas).cursor` =
+       'grab', kein Skript setzt ihn zurück. Edgar las die Hand als „Verschieben-Zeiger". Der Finger über
+       einem Teil kommt weiter aus `Schwebeanzeige` (inline), das Ziehen der Kamera zeigt keinen Sonderzeiger. */
+    cursor: default;
 }
-
-#viewer-canvas:active { cursor: grabbing; }
 
 .viewer-btn {
     padding: 8px 14px;

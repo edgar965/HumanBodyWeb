@@ -186,13 +186,15 @@ export class Greifen {
             [window, 'pointerup', (e) => { e.stopImmediatePropagation(); }, true],
             [window, 'contextmenu', (e) => { e.preventDefault(); }, true],
             // `stopImmediatePropagation`, nicht `stopPropagation`: Escape hängt
-            // auch an `window` (dort wählt es die Figur ab). Ein Hörer am
-            // SELBEN Ziel läuft trotz `stopPropagation` weiter — die Figur
-            // fiel beim Abbrechen aus der Auswahl.
+            // auch an `window` (dort löst es die Auswahl). Ein Hörer am SELBEN
+            // Ziel läuft trotz `stopPropagation` weiter — also würde die Auswahl
+            // zweimal gelöst. Seit 05.10.2026 (Edgar: „ESC, mit dem ich aus allen
+            // aktuellen Selektionen weg bin, auch beim Verschieben") stellt Escape
+            // den alten Stand wieder her UND löst danach die Auswahl, in EINEM Druck.
             [window, 'keydown', (e) => {
                 const achse = Greifrechnung.achse(e.key);
                 if (achse) { e.stopImmediatePropagation(); this.beschraenken(achse); return; }
-                if (e.key === 'Escape') { e.stopImmediatePropagation(); this.abbrechen(); }
+                if (e.key === 'Escape') { e.stopImmediatePropagation(); this.abbrechen(); fn.auswahlAufheben?.(); }
                 else if (e.key === 'Enter') { e.stopImmediatePropagation(); this.bestaetigen(); }
             }, true],
         ];

@@ -34,7 +34,10 @@ export class GarmentcodeStueckquelle {
 
     /** Vorlage wechseln und, wenn bekannt, die Herkunft des Stücks zeigen. */
     static zeigen(vorlage, quelle) {
-        if (!fn.garmentcodeVorlageZeigen?.(vorlage) || !quelle?.schluessel) return;
+        if (!fn.garmentcodeVorlageZeigen?.(vorlage)) return;
+        // Ein Stück unter altem Namen (`t-shirt`) ohne gemerkte Herkunft: die Form, die der Name meint.
+        quelle = quelle?.schluessel ? quelle : fn.garmentcodeAliasForm?.(vorlage);
+        if (!quelle?.schluessel) return;
         if (quelle.art === 'vorbild') {
             GarmentcodeStueckquelle._warten(
                 () => document.querySelector(

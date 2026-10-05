@@ -86,6 +86,8 @@ class G9antworten(G9antwortvorrat):
                # g9hbstrang ist neu (Stranghaar auf HumanBody, Haarmischung).
                'HumanBodyWeb/core/dienste/g9hbfusspose.py',
                'HumanBodyWeb/core/dienste/g9hbsitz.py',
+               # Der Schuh als Ganzes am HumanBody-Fuss (05.10.2026).
+               'HumanBodyWeb/core/dienste/g9hbschuhpassung.py',
                'HumanBodyWeb/core/dienste/g9hbstoffbruecke.py',
                'HumanBodyWeb/core/dienste/g9hbstoffkorrektur.py',
                'HumanBodyWeb/core/dienste/g9hbstrang.py',

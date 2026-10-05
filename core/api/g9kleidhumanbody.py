@@ -31,6 +31,7 @@ from Genesis9.teilbindung import G9teilbindung
 from ..daten.netzantwort import Netzantwort
 from ..dienste.g9aufhumanbody import G9aufhumanbody
 from ..dienste.g9hbfusspose import G9hbfusspose
+from ..dienste.g9hbschuhpassung import G9hbschuhpassung
 from ..dienste.g9hbstoffbruecke import G9hbstoffbruecke
 from ..dienste.g9hbstoffkorrektur import G9hbstoffkorrektur
 from ..dienste.g9hbstrang import G9hbstrang
@@ -54,6 +55,11 @@ class G9kleidhumanbody:
     #: Mitte 0,5 — MB-Labs Displace-Modifier); mit dem 1 mm von `G9kollision`
     #: stand die Brust durch das Hemd (gemessen 19.09.2026: Apex 2,5 mm).
     HAUTABSTAND = 0.006
+    #: Schuhe (05.10.2026, Edgar: „Angie_Sneakers passt nicht auf Modell F2_ShirtLeggins, große Zehe geht durch den Schuh"): Mit 6 mm
+    #: stand die Haut der grossen Zehe an der Kappe durch — am Browser gemessen (Strahl +z von 960 Hautpunkten der Zehenfront bis zur
+    #: ersten Schuhflaeche) ragten 17 heraus, die Kappe lag 0–2 mm vor der Haut; die Haut im Browser ist die des Servers (Zehenspitze
+    #: 231 mm), aber um bis zu 5 mm verschoben (siehe oben), und die Kappe hat Flaechen mit Kanten bis 29 mm. Mit 8, 10 und 12 mm ragte keiner mehr heraus.
+    HAUTABSTAND_SCHUH = 0.010
 
     @classmethod
     def antwort(cls, kennung, eintrag, rumpf, vor_antwort=None):
@@ -86,6 +92,8 @@ class G9kleidhumanbody:
         zusatz.update(werte)
         zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
         hoch = np.array([0.0, formung.boden(), 0.0])
+        schuh = cls.ist_schuh(eintrag)
+        abstand = cls.HAUTABSTAND_SCHUH if schuh else cls.HAUTABSTAND
         stufen = G9netzstufe.browser()
         # Dauer je Schritt ins Log: Kin Hair brauchte hier kalt 88 s (30.09.2026), und
         # ohne Aufteilung laesst sich nicht sagen, wo sie steckt.
@@ -119,15 +127,17 @@ class G9kleidhumanbody:
             # dem Ruecken, gebunden ist es an den Kopf.
             bindung = (G9teilbindung.aus_haut(getattr(folger, 'dazhaut', None), len(punkte))
                        if eintrag.get('art') == 'kleidung' else None)
-            kaefig = traeger.uebertragen(punkte, bindung=bindung)
+            # Ein Schuh als Ganzes an den HumanBody-Fuss (05.10.2026, `G9hbschuhpassung`), Stoff Punkt fuer Punkt.
+            kaefig = (G9hbschuhpassung.passen(traeger, punkte, bindung=bindung) if schuh
+                      else traeger.uebertragen(punkte, bindung=bindung))
             if getattr(folger, 'koerperhaut', False):
-                gehoben = traeger.hinaus(kaefig, cls.HAUTABSTAND)
+                gehoben = traeger.hinaus(kaefig, abstand)
                 if eintrag.get('art') == 'kleidung':
                     # Mit seiner Stofflaenge spannen (30.09.2026, GC T-Shirt: „Drapierung bei
                     # den Bruesten fehlerhaft") — punktweise Heben kennt keine Laenge.
                     gehoben = G9hbstoffbruecke.spannen(
                         traeger, gehoben, kaefig, G9hbstoffbruecke.kanten(folger.polys, len(kaefig)),
-                        cls.HAUTABSTAND)
+                        abstand)
                 kaefig = gehoben
             kaefige.append(kaefig)
         dauer['uebertragen'] = time.perf_counter() - uhr
@@ -143,14 +153,15 @@ class G9kleidhumanbody:
             if getattr(folger, 'koerperhaut', False):
                 # Auch die UNTERTEILTEN Punkte: Wo der Kaefig eine vorstehende Brust
                 # umspannt, schneidet die Flaeche dazwischen bis 16 mm tief hinein.
-                netz['punkte'] = traeger.hinaus(netz['punkte'], cls.HAUTABSTAND)
+                netz['punkte'] = (G9hbschuhpassung.heben(traeger, netz['punkte'], abstand) if schuh
+                                  else traeger.hinaus(netz['punkte'], abstand))
                 if eintrag.get('art') == 'kleidung' and not netz.get('stufen'):
                     # Und gegen die FLAECHE: Zwischen drei Stoffpunkten stand die Brustwarze
                     # durch (30.09.2026, GC T-Shirt) — `G9hbstoffkorrektur`. Nur ohne
                     # Unterteilung: Dort liegen die Punkte 1–2 cm auseinander; unterteilt sind
                     # es Millimeter, und das G9 Base Shirt (33.078 Punkte) kostete 11 s mehr.
                     netz['punkte'], _bilanz = G9hbstoffkorrektur.anwenden(
-                        traeger, netz['punkte'], netz['dreiecke'], cls.HAUTABSTAND)
+                        traeger, netz['punkte'], netz['dreiecke'], abstand)
                 netz['normalen'] = folger.netzstufe(stufen).normalen(kaefig, netz['punkte'])
             dauer['netz'] += time.perf_counter() - uhr
             uhr = time.perf_counter()
@@ -197,6 +208,21 @@ class G9kleidhumanbody:
         return {'kennung': kennung, 'teile': antwort_teile, 'boden': 0.0, 'stufen': stufen,
                 'figurart': cls.FIGURART, 'innen': [], 'aussen': [], 'absatz': absatz,
                 'art': eintrag.get('art')}
+
+    @staticmethod
+    def ist_schuh(eintrag):
+        u"""Gehoert das Stueck in die Kategorie „Schuhe"? Die WIRKSAME Kategorie zaehlt (Edgars Einteilung vor der Vorgabe aus Daz' Metadaten);
+        ist die Einteilung nicht lesbar, gilt es als Kleidung."""
+        from Genesis9.garderobekategorien import G9garderobekategorien
+        try:
+            return G9garderobekategorien.kategorie(eintrag) == u'Schuhe'
+        except (OSError, ValueError, KeyError):
+            return False
+
+    @classmethod
+    def hautabstand(cls, eintrag):
+        u"""Der Mindestabstand zur Haut fuer dieses Stueck: `HAUTABSTAND_SCHUH` in der Kategorie „Schuhe", sonst `HAUTABSTAND`."""
+        return cls.HAUTABSTAND_SCHUH if cls.ist_schuh(eintrag) else cls.HAUTABSTAND
 
     @classmethod
     def bindungsflaeche(cls, rumpf):
