@@ -128,6 +128,8 @@ class Meshfiguroptionen:
                 ('haar', 'Haarfarbe des Netzes aufmalen'),
                 ('haut', 'Haut lassen (für eigenes Haar)'),
             ],
+            'hinweis': 'Unter dem Haar: „Haarfarbe des Netzes“ malt die Farbe, die das Netz dort trägt, auf die Genesis-Kopfhaut (die graue „Kappe“, solange kein Haar darüber sitzt); „Haut lassen“ '
+                       'nimmt dort keine Farbe aus dem Netz, die Daz-Haut bleibt — für Haar als eigenes Objekt (Frisur, Iterationen). Wirkt mit dem Schritt „Körper“ (Quelle „rechnen“).',
         },
         {
             'schluessel': 'kleidung',

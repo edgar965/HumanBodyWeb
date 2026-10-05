@@ -113,6 +113,38 @@ class HautmodellTest(unittest.TestCase):
         treffer = np.full(33, 1)
         self.assertIsNone(Meshfigurhautmodell.messen(p, f, k, treffer=treffer))
 
+    # `_einig` mit den gemessenen Werten (a*, b*) und Proben zweier Aufträge
+    # (04.10.2026, `_wegwerf/sapiens/hautmodell_gruppen.py`).
+    GENERISCH = ({'unterarm_l': (23.5, 27.4), 'unterschenkel_r': (1.1, 2.1), 'unterschenkel_l': (1.3, 2.2),
+                  'hand_l': (22.2, 27.3), 'gesicht': (17.8, 24.2)},
+                 {'unterarm_l': 592, 'unterschenkel_r': 1276, 'unterschenkel_l': 1116,
+                  'hand_l': 2052, 'gesicht': 314})
+    RANDY = ({'unterarm_l': (24.3, 30.0), 'unterschenkel_r': (1.0, 2.3), 'unterschenkel_l': (1.1, 2.6),
+              'hand_l': (19.7, 25.0), 'gesicht': (18.3, 26.3)},
+             {'unterarm_l': 392, 'unterschenkel_r': 1102, 'unterschenkel_l': 1374,
+              'hand_l': 1650, 'gesicht': 258})
+
+    @staticmethod
+    def _einig(fall):
+        return Meshfigurhautmodell._einig({n: np.array(v) for n, v in fall[0].items()}, fall[1])
+
+    def test_einig_findet_hand_und_unterarm_wenn_die_mitte_nur_das_gesicht_trifft(self):
+        # Mitte aller fünf = Gesicht; Hand liegt 5,4, Unterarm 6,5 davon entfernt (Grenze 5,0) —
+        # früher blieb eine Gruppe, kein Modell.
+        self.assertEqual(sorted(self._einig(self.GENERISCH)), ['hand_l', 'unterarm_l'])
+
+    def test_einig_laesst_den_fall_unberuehrt_den_die_mitte_schon_loeste(self):
+        self.assertEqual(sorted(self._einig(self.RANDY)), ['gesicht', 'hand_l'])
+
+    def test_einig_nimmt_keine_grauen_beine_als_haut(self):
+        # Zwei Beine in derselben Hose stimmen überein, sind aber unbunt —
+        # die bunten Stellen liegen weiter als 5 auseinander.
+        mediane = {n: np.array(v) for n, v in {'unterschenkel_r': (1.1, 2.1), 'unterschenkel_l': (1.3, 2.2),
+                                                'gesicht': (17.8, 24.2), 'hand_l': (30.0, 35.0)}.items()}
+        behalten = Meshfigurhautmodell._einig(mediane, {n: 1000 for n in mediane})
+        self.assertLess(len(behalten), 2)
+        self.assertFalse({'unterschenkel_r', 'unterschenkel_l'} & set(behalten))
+
 
 class BaenderTest(unittest.TestCase):
     def setUp(self):

@@ -5,6 +5,7 @@ Edgar (04.10.2026): „lege ein Menü an: Hilfe - Recherche, darunter Menü und 
 `core/daten/recherche_human3d.json` (`Rechercheprojekte`), die Tabelle baut `Recherchetabelle`; hier wird beides nur an die Vorlage gereicht.
 """
 
+from ..dienste.rechercheprio import Rechercheprio
 from ..dienste.rechercheprojekte import Rechercheprojekte
 from ..dienste.recherchetabelle import Recherchetabelle
 from .hilfeseite import Hilfeseite
@@ -25,6 +26,5 @@ class RechercheHuman3d(Hilfeseite):
             'meta': Rechercheprojekte.meta(),
             'anzahl': len(projekte),
             'kategorien': sorted(kategorien.items(), key=lambda k: (-k[1], k[0])),
-            'tabelle': Recherchetabelle.bauen(projekte),
-            'popup': Recherchetabelle.popup(projekte),
+            'tabelle': Recherchetabelle.bauen(projekte, Rechercheprio.laden()),
         }

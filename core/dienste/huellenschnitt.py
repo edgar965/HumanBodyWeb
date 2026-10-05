@@ -30,10 +30,15 @@ class Huellenschnitt:
     #: Eine Linie mit mehr mittlerem Abstand von ihrer Ebene ist kein Saum (m) — sie bleibt, wie das Feld sie zieht.
     EBEN_RMS = 0.02
     PUNKTE_MIN = 8
+    #: Eine Randlinie, die keine Ebene ist, nimmt die VORGEGEBENE Ebene (der Saum des Stücks darüber), wenn ihre Punkte im Mittel höchstens so weit (m) davon entfernt liegen. Befund 05.10.2026 am Auftrag
+    #: 2026.10.04.11.11.44: Ärmelsäume (100 % innerhalb 5 mm einer Ebene) und der Hemdsaum (89 %) sind eben; der Hosenbund nicht — nur 64 % innerhalb 15 mm, RMS 33 mm, die Schleife rollt sich nach innen.
+    VORGABE_NAH = 0.05
 
     def __init__(self, ruhe, dreiecke, halsgewicht=None):
         self.ruhe = np.asarray(ruhe, dtype=np.float64)
         self.dreiecke = np.asarray(dreiecke, dtype=np.int64)
+        #: Nach `feld`: die Ebenen der Säume dieses Stücks, `[(Mitte, Normale)]` — das Stück darunter nimmt die tiefste waagerechte als Vorgabe.
+        self.ebenen = []
         #: (V,) Hautgewicht der Halsknochen und ihrer Kinder je Figurpunkt (`_rundhals`); None = kein Rundhals.
         self.halsgewicht = None if halsgewicht is None else np.asarray(halsgewicht, dtype=np.float64)
 
@@ -67,11 +72,17 @@ class Huellenschnitt:
             werte = (nachbar @ werte) / anzahl
         return werte
 
-    def feld(self, wahl, hals=False):
+    def feld(self, wahl, hals=False, vorgabe=None):
+        """`vorgabe`: `(Mitte, Normale)` einer Ebene, die eine Randlinie ohne eigene Ebene nimmt (`eben`) — der Saum des Stücks darüber."""
         anteil, zahl = np.zeros(len(self.ruhe)), np.zeros(len(self.ruhe))
         np.add.at(anteil, self.dreiecke, np.repeat(np.asarray(wahl, np.float64)[:, None], 3, axis=1))
         np.add.at(zahl, self.dreiecke, 1.0)
-        return self.eben(self._mittel(anteil / np.maximum(zahl, 1.0), self.RUNDEN), hals)
+        return self.eben(self._mittel(anteil / np.maximum(zahl, 1.0), self.RUNDEN), hals, vorgabe)
+
+    def tiefster_saum(self):
+        """`(Mitte, Normale)` der tiefsten waagerechten Saum-Ebene dieses Stücks (Normale zu mehr als 0,9 senkrecht) — None ohne."""
+        waagerecht = [(m, n) for m, n in self.ebenen if abs(n[1]) > 0.9]
+        return min(waagerecht, key=lambda e: e[0][1]) if waagerecht else None
 
     # ------------------------------------------------------------ Ebenen
 
@@ -120,12 +131,13 @@ class Huellenschnitt:
     #: Halbe Schulterbreite um die Halslinie, in der der Rundhals gilt (m) — die Ärmel liegen weiter außen.
     SCHULTER = 0.17
 
-    def eben(self, f, hals=False):
+    def eben(self, f, hals=False, vorgabe=None):
         """Das Feld nahe jeder ebenen Randlinie durch den Abstand von ihrer Ebene ersetzen; `hals`: die oberste Linie
-        ist ein Rundhals (`_rundhals`)."""
+        ist ein Rundhals (`_rundhals`); `vorgabe` `(Mitte, Normale)`: eine Linie, die keine Ebene ist, aber im Mittel höchstens `VORGABE_NAH` davon entfernt liegt, nimmt diese Ebene (Hosenbund unter dem Hemdsaum)."""
         from scipy.spatial import cKDTree
         aus = f.copy()
         besetzt = np.full(len(f), np.inf)
+        self.ebenen = []
         linien = sorted(self._linien(f), key=lambda p: -p[:, 1].mean())
         if hals and linien and self._rundhals(f, linien[0], aus, besetzt):
             linien = linien[1:]
@@ -134,7 +146,10 @@ class Huellenschnitt:
             _w, achsen = np.linalg.eigh(np.cov((punkte - mitte).T))
             normale = achsen[:, 0]
             if np.sqrt(np.mean(((punkte - mitte) @ normale) ** 2)) > self.EBEN_RMS:
-                continue
+                if vorgabe is None or float(np.mean(np.abs((punkte - vorgabe[0]) @ vorgabe[1]))) > self.VORGABE_NAH:
+                    continue
+                mitte, normale = np.asarray(vorgabe[0], dtype=np.float64), np.asarray(vorgabe[1], dtype=np.float64)
+            self.ebenen.append((mitte, normale))
             abstand, _ = cKDTree(punkte).query(self.ruhe, distance_upper_bound=self.NAH)
             nah = np.isfinite(abstand) & (abstand < besetzt)
             if not nah.any():

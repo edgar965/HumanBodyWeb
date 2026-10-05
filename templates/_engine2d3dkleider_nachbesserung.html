@@ -1,0 +1,30 @@
+{% comment %}Block „Nachbesserungen" ganz unten auf der Auftragsseite „2D3D Kleider" (05.10.2026, Edgar: „mache mir unten im Job das UI, mit dem ich die Iterationen starten kann für die Nachbesserungen.
+Die Anzahl der Iterationen möchte ich setzen können, Vorgabe 1" · „benenne um … ‚Nachbesserungen'. Füge ein als Combo, welche KI genommen wird. Erstmal Lokal – Remote"). Steht AUSSERHALB der Reiter, damit er auf
+„Auftrag" und „Iterationen" zu sehen ist. Gesteuert von `Engine2d3dKleiderNachbesserung` (die Auswahl der KI: `Engine2d3dKleiderNachbesserungKi`, Katalog vom Server: `Agentenwahl`);
+der Lauf ist ein eigener Prozess (Paket `Edgar` in `2d3DIterationen`).{% endcomment %}
+<div class="card engine2d3dkleider-nachbesserung" id="nachbesserung">
+    <h2>Nachbesserungen</h2>
+    <p class="hb-hinweis">Je Iteration sieht sich die gewählte KI die Vorlagen und die letzte Runde an, schreibt dazu ein Rezept und einen Kommentar (Maßstab: die Vorgaben im Reiter „Bewertung"),
+        und der Server rechnet die Runde. Die KI ändert keinen Code. Eine Iteration dauert Minuten; Prompt und Antwort jeder Iteration liegen im Auftrag unter
+        <code>iterationen/nachbesserung/</code>.</p>
+    <div class="engine2d3dkleider-iterationsleiste">
+        <label class="hb-hinweis" for="nachbesserung-ort" title="Lokal: Ollama auf diesem Rechner. Remote: ein Dienst im Internet.">KI
+            <select id="nachbesserung-ort" class="viewer-select"></select></label>
+        <label class="hb-hinweis" for="nachbesserung-modell">Modell
+            <select id="nachbesserung-modell" class="viewer-select"></select></label>
+        <label class="hb-hinweis" for="nachbesserung-stufe" id="nachbesserung-stufe-feld" title="Wie gründlich das Modell nachdenkt: gering ist schneller, extra hoch gründlicher">Stufe
+            <select id="nachbesserung-stufe" class="viewer-select"></select></label>
+    </div>
+    <p class="hb-hinweis" id="nachbesserung-ki-hinweis"></p>
+    <div class="engine2d3dkleider-iterationsleiste">
+        <label class="hb-hinweis" for="nachbesserung-runden" title="So viele Iterationen nacheinander, jede mit ihrem eigenen Rezept">Iterationen
+            <input type="number" id="nachbesserung-runden" class="viewer-eingabe" min="1" max="50" value="1"></label>
+        <button type="button" class="btn btn-primary btn-sm" id="nachbesserung-start" disabled>
+            <i class="fas fa-play"></i> <span>Iterationen starten</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" id="nachbesserung-anhalten" disabled>
+            <i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        <span class="hb-hinweis" id="nachbesserung-meldung"></span>
+    </div>
+    <p class="hb-hinweis" id="nachbesserung-status">Wird geladen …</p>
+    <div id="nachbesserung-verlauf"></div>
+</div>

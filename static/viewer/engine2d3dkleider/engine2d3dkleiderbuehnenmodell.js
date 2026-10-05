@@ -31,8 +31,10 @@ export class Engine2d3dKleiderbuehnenmodell {
             leer: 'Modell',
             titel: q => (!q.stand ? `Modell der Runde ${q.runde}: Grundfigur mit Haar`
                 : q.runde ? `Das Modell des letzten Stands (Runde ${q.runde}): Genesis mit Augen, Kleidern und Haar, am Rig`
-                    : 'Noch keine Iteration: die Grundfigur aus dem Schritt „Körper“ mit Augen, Brauen und Wimpern, am Rig — '
-                      + 'Kleider und Haar setzen erst die Iterationen'),
+                    : q.kleidung ? 'Noch keine Iteration: die Grundfigur aus dem Schritt „Körper“ mit Augen, Brauen, Wimpern und den Kleiderstücken aus dem Netz '
+                                   + '(Schritt „Kleiderstücke“), am Rig — Haar setzen erst die Iterationen'
+                        : 'Noch keine Iteration: die Grundfigur aus dem Schritt „Körper“ mit Augen, Brauen und Wimpern, am Rig — '
+                          + 'Kleider (Schritt „Kleiderstücke“) und Haar setzen erst die Iterationen'),
             keine: 'Noch kein Modell — erst nach dem Schritt „Körper“',
         },
     };
@@ -101,13 +103,16 @@ export class Engine2d3dKleiderbuehnenmodell {
     _inhalt() {
         const arten = new Set();
         if (this.an && this.gruppe) this.gruppe.traverse(t => { if (t.isMesh) arten.add(Engine2d3dKleiderbuehnenmodell.art(t.name)); });
-        for (const [schluessel, art, was] of [['haare', 'haar', 'kein Haar'], ['kleider', 'kleidung', 'keine Kleider']]) {
+        for (const [schluessel, art, was, wer] of [
+            ['haare', 'haar', 'kein Haar', 'das setzen erst die Iterationen'],
+            ['kleider', 'kleidung', 'keine Kleider', 'der Schritt „Kleiderstücke“ und die Iterationen setzen sie'],
+        ]) {
             const knopf = document.querySelector(`button[data-schalter="${schluessel}"]`);
             if (!knopf) continue;
             knopf.dataset.titel ??= knopf.title;
             const leer = !!(this.an && this.gruppe) && !arten.has(art);
             knopf.classList.toggle('ohne-inhalt', leer);
-            knopf.title = leer ? `Das Modell trägt ${was} — die setzen erst die Iterationen (Reiter „Iterationen“)`
+            knopf.title = leer ? `Das Modell trägt ${was} — ${wer} (Reiter „Iterationen“)`
                 : knopf.dataset.titel;
         }
     }
@@ -139,7 +144,8 @@ export class Engine2d3dKleiderbuehnenmodell {
         const r = runden.find(x => Number(x.runde) === beste) || runden.at(-1) || null;   // Runden in Rundenfolge
         if (s?.datei && (s.aktuell || !r || Number(r.runde) <= Number(s.runde || 0))) {
             const adresse = `${seite.dateiAdresse('ergebnis', s.datei)}?v=${encodeURIComponent(s.fassung || '')}`;
-            return { adresse, runde: s.runde, stand: true };
+            // `teile` steht im Bericht des Stands (`stand.json`): trägt er Kleidung (Fotostücke vor den Iterationen, `Standvorabkleider`)?
+            return { adresse, runde: s.runde, stand: true, kleidung: (s.teile || []).some(t => String(t).startsWith('kleidung:')) };
         }
         if (!r) return null;
         return { adresse: seite.dateiAdresse('iterationen', r.dateien[schluessel]), runde: r.runde, stand: false };

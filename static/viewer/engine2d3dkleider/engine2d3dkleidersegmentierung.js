@@ -7,17 +7,20 @@
  *
  * Die Option „Kleidung aus der Segmentierung" baut `Meshoptionenformular` aus der Gruppe `segmentierung` (siehe `Engine2d3dKleiderseite.aufbauen`).
  */
+import { Engine2d3dKleidersegmentierungsklassen } from './engine2d3dkleidersegmentierungsklassen.js';
+
 export class Engine2d3dKleidersegmentierung {
 
     /** Stückfarben wie in `sapiens_klassen.py` (`Sapiensklassen.FARBEN`) — die Legende zeigt dieselben. */
     static STUECKE = [
-        ['Oberteil', '#dc2828'], ['Hose / Rock', '#f08c14'], ['Socken / Schuhe', '#5a64ff'], ['Zubehör', '#ff00ff'], ['nicht Kleidung', '#46af5a'],
+        ['Oberteil', '#dc2828'], ['Hose / Rock', '#f08c14'], ['Socken / Schuhe', '#5a64ff'], ['Zubehör', '#ff00ff'], ['Haar', '#a06e32'], ['nicht Kleidung', '#46af5a'],
     ];
 
     constructor(seite) {
         this.seite = seite;
         this.liste = document.getElementById('segmentierte-fotos');
         this.legende = document.getElementById('segmentierung-legende');
+        this.klassen = new Engine2d3dKleidersegmentierungsklassen(document.getElementById('segmentierung-klassen'));
         this._stand = null;
         for (const [name, farbe] of Engine2d3dKleidersegmentierung.STUECKE) {
             const punkt = document.createElement('span');
@@ -46,7 +49,8 @@ export class Engine2d3dKleidersegmentierung {
         this.knopf.disabled = !!z.laeuft;
         this.knopf.querySelector('span').textContent = z.laeuft && z.schritt === 'segmentierung' ? 'Berechnet …' : 'Segmentierung starten';
         const s = z.segmentiert;
-        const stand = JSON.stringify([s, z.optionen?.segmentierung?.verwenden]);
+        this.klassen.zeigen(z.optionen?.segmentierung, s?.kennzahlen);
+        const stand = JSON.stringify([s, z.optionen?.segmentierung?.verwenden, z.optionen?.segmentierung?.haar]);
         if (stand === this._stand) return;
         this._stand = stand;
         this.liste.innerHTML = '';
@@ -55,9 +59,10 @@ export class Engine2d3dKleidersegmentierung {
             return;
         }
         const wann = s.stand ? new Date(s.stand).toLocaleString('de-DE') : '';
+        const modell = s.kennzahlen?.modell ? `Sapiens-${String(s.kennzahlen.modell).toUpperCase()}. ` : '';
         this.hinweis.textContent = s.veraltet
-            ? `Stand ${wann} — passt nicht mehr zu Netz oder Fotos (${s.grund}); „Segmentierung starten“ rechnet neu. ${Engine2d3dKleidersegmentierung.kleidungssatz(s)}`
-            : `Stand ${wann}. ${Engine2d3dKleidersegmentierung.flaechensatz(s)} ${Engine2d3dKleidersegmentierung.kleidungssatz(s)}`;
+            ? `Stand ${wann} — passt nicht mehr zu Netz, Fotos oder Einstellungen (${s.grund}); „Segmentierung starten“ rechnet neu. ${Engine2d3dKleidersegmentierung.kleidungssatz(s)}`
+            : `Stand ${wann}. ${modell}${Engine2d3dKleidersegmentierung.flaechensatz(s)} ${Engine2d3dKleidersegmentierung.kleidungssatz(s)} ${Engine2d3dKleidersegmentierung.haarsatz(s)}`;
         this.hinweis.classList.toggle('hb-schlecht', !!s.veraltet);
         for (const bild of s.bilder) this.liste.appendChild(this._karte(bild, s));
     }
@@ -92,6 +97,16 @@ export class Engine2d3dKleidersegmentierung {
         const je = Object.entries(k.stuecke || {}).filter(([name, x]) => name !== 'nicht Kleidung' && x.flaechen > 0)
             .map(([name, x]) => `${name} ${Math.round(x.cm2).toLocaleString('de-DE')} cm²`).join(' · ');
         return `Netzflächen: ${k.flaechen_gesehen.toLocaleString('de-DE')} von ${k.flaechen_gesamt.toLocaleString('de-DE')} sichtbar${je ? ' — ' + je : ''}.`;
+    }
+
+    /** Was die Haarmaske (Schritt „haar" der Körper-Kette) mit der Klasse „Hair" gemacht hat: beide Flächen, ihre Überschneidung, das Ergebnis (nur bei Option „Haar aus der Segmentierung"). */
+    static haarsatz(s) {
+        const h = s.haar;
+        const zahl = x => Math.round(x).toLocaleString('de-DE');
+        if (s.haar_quelle === 'farbe' || !s.haar_quelle) return 'Haarmaske: aus der Farbe des Netzes (Option).';
+        if (!h) return `Haarmaske: Option „${s.haar_quelle}“ — der Schritt „Körper“ (Quelle „rechnen“) nimmt Sapiens beim nächsten Lauf.`;
+        if (!h.verwendet) return `Haarmaske: Sapiens NICHT benutzt (${h.grund}) — die Farbe galt.`;
+        return `Haarmaske (${h.quelle}): Farbe ${zahl(h.farbe.cm2)} cm², Sapiens ${zahl(h.sapiens.cm2)} cm², beide ${h.beide_flaechen.toLocaleString('de-DE')} Flächen → ${zahl(h.ergebnis.cm2)} cm² (${h.hinzu_flaechen.toLocaleString('de-DE')} dazu, ${h.weg_flaechen.toLocaleString('de-DE')} weg).`;
     }
 
     /** Was der Schritt „kleidung" der Körper-Kette mit den Etiketten gemacht hat (nur bei Quelle „rechnen"). */

@@ -23,6 +23,7 @@ import { Engine2d3dKleidermeshkarte } from './engine2d3dkleidermeshkarte.js';
 import { Engine2d3dKleidernetzansicht } from './engine2d3dkleidernetzansicht.js';
 import { Engine2d3dKleiderrender } from './engine2d3dkleiderrender.js';
 import { Engine2d3dKleidersegmentierung } from './engine2d3dkleidersegmentierung.js';
+import { Engine2d3dKleiderstuecke } from './engine2d3dkleiderstuecke.js';
 import { Engine2d3dKleidervorbereitung } from './engine2d3dkleidervorbereitung.js';
 import { Engine2d3dKleiderveraltet } from './engine2d3dkleiderveraltet.js';
 
@@ -38,7 +39,7 @@ export class Engine2d3dKleiderseite {
     static TAKT_MS = 2000;
     static TAKT_RUHE_MS = 6000;
     static NAMEN = {
-        vorbereitung: 'Vorbereitung', netz: 'Netz', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', iterationen: 'Iterationen',
+        vorbereitung: 'Vorbereitung', netz: 'Netz', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', kleiderstuecke: 'Kleiderstücke', iterationen: 'Iterationen',
         export: 'GLB mit Rig', film: 'Film', speichern: 'Speichern',
     };
     static STATUS = {
@@ -110,6 +111,7 @@ export class Engine2d3dKleiderseite {
         this.fotos = new Engine2d3dKleiderfotos(this);
         this.vorbereitung = new Engine2d3dKleidervorbereitung(this);
         this.segmentierung = new Engine2d3dKleidersegmentierung(this);
+        this.kleiderstuecke = new Engine2d3dKleiderstuecke(this);
         this._pfadstand = null;
         this.iterationen = new Engine2d3dKleideriterationen(this);
         this.begutachtung = new Engine2d3dKleiderbegutachtung(this);
@@ -238,6 +240,7 @@ export class Engine2d3dKleiderseite {
         this.fotos.zeigen(z);
         this.vorbereitung.zeigen(z);
         this.segmentierung.zeigen(z);
+        this.kleiderstuecke.zeigen(z);
         this.pfade(z);
         this.iterationen.zeigen(z);
         this.begutachtung.zeigen(z);

@@ -22,7 +22,7 @@ export class Engine2d3dKleiderrender {
         this.groesse = $('render-groesse');
         this.spp = $('render-spp');
         this.anmerkung = $('render-anmerkung');
-        this.laeufe = new Engine2d3dKleiderrenderlaeufe(seite);
+        this.laeufe = new Engine2d3dKleiderrenderlaeufe(seite, nummern => this.neu(nummern));
         this.knopf = $('render-starten');
         this.meldung = $('render-meldung');
         this._dauer = 0;
@@ -56,7 +56,8 @@ export class Engine2d3dKleiderrender {
         this.knopf.title = fehlt || 'Rendert das Modell mit Bewegung und Ton als Video';
         for (const feld of [this.sekunden, this.kamera, this.groesse, this.spp, this.anmerkung, this.ganz, ...this.stufen]) feld.disabled = laeuft;
         this._anzeigen(r, fehlt);
-        this.laeufe.zeigen(r.laeufe);
+        this.laeufe.zeigen(r.laeufe, r.status === 'laeuft' ? r : null);        // läuft ein Render, trägt seine Zeile die Anzeige „läuft" (Fortschritt, Schritt, Zeit)
+        this.laeufe.sperren(laeuft || !!fehlt, laeuft ? 'Es läuft schon ein Render' : fehlt || '');       // „Neu rendern" in der Tabelle: gleiche Bedingungen wie „Rendern"
     }
 
     _anzeigen(r, fehlt) {
@@ -65,7 +66,9 @@ export class Engine2d3dKleiderrender {
         const zeile = text => { const d = document.createElement('div'); d.textContent = text; this.meldung.appendChild(d); return d; };
         if (r.status === 'laeuft') {
             const vergangen = r.start ? Math.round(Date.now() / 1000 - r.start) : 0;
-            zeile(`${r.schritt || 'Läuft'} — ${Math.round((r.fortschritt || 0) * 100)} % · ${r.bilder} Bilder (${r.sekunden} s) · ${vergangen} s`);
+            const neu = r.neu_nr ? `Lauf #${r.neu_nr} neu · ` : '';
+            const warten = r.wartend ? ` · danach noch ${r.wartend} in der Warteschlange` : '';
+            zeile(`${neu}${r.schritt || 'Läuft'} — ${Math.round((r.fortschritt || 0) * 100)} % · ${r.bilder} Bilder (${r.sekunden} s) · ${vergangen} s${warten}`);
         } else if (r.status === 'fehler') {
             zeile(`Render fehlgeschlagen: ${r.fehler || 'unbekannt'}`);
         } else if (r.status === 'fertig' && r.ausgabe) {
@@ -79,6 +82,27 @@ export class Engine2d3dKleiderrender {
             zeile(`Kopie im Exportordner: ${r.ausgabe.export}`);
         } else if (fehlt) {
             zeile(fehlt);
+        }
+    }
+
+    /** „Neu rendern" aus der Tabelle: `nummern` = Liste von Laufnummern oder `'alle'`. Der Server prüft alle Läufe vor dem Start und rechnet sie nacheinander. */
+    async neu(nummern) {
+        this._schickt = true;
+        this.zeigen(this.seite.zustand);
+        const audio = document.getElementById('export-audio');
+        const tonPfad = document.getElementById('export-audio-pfad');
+        try {
+            const antwort = await Serverabruf.senden(this.seite.adresse('render/neu/'), {
+                ...(nummern === 'alle' ? { alle: true } : { nummern }), ton: audio.checked ? tonPfad.value.trim() : '',
+            });
+            if (antwort.error) throw new Error(antwort.error);
+            this.seite.zustand.render = antwort.render;
+        } catch (fehler) {
+            this.meldung.classList.add('hb-schlecht');
+            this.meldung.textContent = `Neu rendern nicht gestartet: ${fehler.daten?.error || fehler.message}`;
+        } finally {
+            this._schickt = false;
+            this.zeigen(this.seite.zustand);
         }
     }
 

@@ -23,6 +23,7 @@ __all__ = ['Haarzonen']
 class Haarzonen:
     ZONEN = ('oben', 'hinten', 'vorn', 'seite')
     PRAEFIX = 'haarzone:'
+    WEG = 'haarweg:'                 # Schlüssel in `modell.farben` für eine weggelassene Materialgruppe (`m.haar_gruppe_weg`)
     #: Richtung vom Kopfmittelpunkt: oben ab y > `OBEN`, sonst hinten/vorn ab |z| > `TIEFE` (Genesis blickt nach +z).
     OBEN = 0.55
     TIEFE = 0.35
@@ -64,7 +65,26 @@ class Haarzonen:
         return aus
 
     @classmethod
+    def weglassen(cls, teile, farben):
+        """Materialgruppen des Kartenhaars, die das Rezept weglässt (`m.haar_gruppe_weg('bangs')`, Schlüssel `haarweg:<name>` in `farben`): ihre Dreiecke werden zu Flächen ohne Inhalt
+        (alle drei Ecken die erste) — Indizes, Gruppen und Texturen behalten ihre Lage, nur die Fläche verschwindet (Bühne, Mitsuba und GLB zeichnen sie nicht)."""
+        namen = [k[len(cls.WEG):].lower() for k in (farben or {}) if str(k).startswith(cls.WEG)]
+        if not namen:
+            return teile
+        for t in teile:
+            if t.get('art') != 'haar' or any(o in str(t.get('sorte')) for o in cls.OHNE):
+                continue
+            for g in t.get('gruppen') or []:
+                if any(n in str(g.get('name')).lower() for n in namen):
+                    ab, anzahl = int(g['index_ab']) // 3, int(g['index_anzahl']) // 3
+                    d = np.asarray(t['dreiecke']).copy()
+                    d[ab:ab + anzahl] = d[ab:ab + anzahl, :1]
+                    t['dreiecke'] = d
+        return teile
+
+    @classmethod
     def anwenden(cls, teile, farben):
+        teile = cls.weglassen(teile, farben)
         faktoren = cls.faktoren(farben)
         if not faktoren:
             return teile

@@ -2,6 +2,7 @@ import { Auftragduplizieren } from '../gemeinsam/auftragduplizieren.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Zeilenwahl } from '../../js/auftraege/zeilenwahl.js';
 import { Engine2d3dKleiderkiwahl } from './engine2d3dkleiderkiwahl.js';
+import { Engine2d3dKleiderkopie } from './engine2d3dkleiderkopie.js';
 import { Engine2d3dKleiderqualitaet } from './engine2d3dkleiderqualitaet.js';
 import { Engine2d3dKleiderweiter } from './engine2d3dkleiderweiter.js';
 
@@ -138,10 +139,12 @@ export class Engine2d3dKleiderliste {
             if (knopf) knopf.disabled = anzahl === 0;
             if (zaehler) zaehler.textContent = String(anzahl);
             this.duplikat?.anzeigen(anzahl);
+            this.kopie?.anzeigen(anzahl);
             this.weiter?.anzeigen(anzahl);
         });
         this.duplikat = new Auftragduplizieren('engine2d3dkleider', 'engine2d3dkleider-duplizieren',
             'engine2d3dkleider-duplizieren-count', this.wahl);
+        this.kopie = new Engine2d3dKleiderkopie(this.wahl);
         this.weiter = new Engine2d3dKleiderweiter(this.wahl);
         this.wahl.binden();
         // Eigenes Kopfkästchen (`#engine2d3dkleider-select-all`): `Zeilenwahl` kennt nur `#select-all`, und die anderen Bereiche

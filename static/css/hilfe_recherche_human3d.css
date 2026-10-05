@@ -2,7 +2,7 @@
  *
  * Die Tabelle ist eine djangoBase-Tabelle (`db-tabelle sortable`, Gitter aus djangobase/css/tabellen.css); hier stehen nur die Zugaben dieser Seite. */
 
-/* Volle Breite: neun Spalten passen nicht in 960 px (volle-breite.md). */
+/* Volle Breite: zehn Spalten passen nicht in 960 px (volle-breite.md). */
 .doku-seite.rc-breit { max-width: none; }
 
 .rc-grenze { opacity: 0.85; }
@@ -16,6 +16,7 @@
 
 /* Spaltenbreiten, bevor jemand zieht (danach gelten die gemerkten). */
 .rc-tabelle th[data-key="name"] { min-width: 150px; }
+.rc-tabelle th[data-key="prio"] { min-width: 76px; }
 .rc-tabelle th[data-key="kurz"] { min-width: 210px; }
 .rc-tabelle th[data-key="github"] { min-width: 150px; }
 .rc-tabelle th[data-key="bild"] { min-width: 170px; }
@@ -29,11 +30,44 @@
 .rc-tabelle .rc-name { font-weight: 600; }
 .rc-kategorie { font-size: 0.78rem; opacity: 0.7; margin-top: 2px; }
 .rc-fehlt { opacity: 0.55; font-style: italic; }
+/* Spalte „Hugging Face": kleine Marken für Demo (Space), Modell und Datensatz. */
+.rc-tabelle th[data-key="hf"] { min-width: 96px; }
+.rc-hf-liste { display: flex; flex-wrap: wrap; gap: 4px; }
+a.rc-hf { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.78rem; font-weight: 600; text-decoration: none; white-space: nowrap; border: 1px solid transparent; }
+a.rc-hf-space { background: rgba(255, 190, 40, 0.2); border-color: rgba(255, 190, 40, 0.7); color: #ffd36b; }
+a.rc-hf-model { background: rgba(80, 160, 255, 0.18); border-color: rgba(80, 160, 255, 0.65); color: #9cc9ff; }
+a.rc-hf-dataset { background: rgba(90, 200, 130, 0.18); border-color: rgba(90, 200, 130, 0.65); color: #9fe3b8; }
+.rc-hf-popup { margin: 0; padding-left: 0; list-style: none; }
+.rc-hf-popup li { margin-bottom: 5px; }
+.rc-fork { font-size: 0.78rem; margin-top: 3px; color: #c9a8ff; }
+.rc-popup-fork { margin: 0 0 6px; font-size: 0.9rem; color: #c9a8ff; }
 .rc-tabelle td a { overflow-wrap: anywhere; }
+
+/* Spalte „Prio": ein schmales Zahlenfeld. Native Felder erben das Theme nicht (kontrast-lesbarkeit.md), also Farben ausdrücklich. */
+.rc-priozelle { text-align: center; }
+input.rc-prio {
+    width: 4.6em; padding: 3px 4px; text-align: center; font: inherit; font-weight: 600;
+    background: rgba(255, 255, 255, 0.08); color: var(--text, #e0e8f0); color-scheme: dark;
+    border: 1px solid var(--border, #3a4250); border-radius: 4px;
+}
+input.rc-prio:focus-visible { outline: 2px solid #7c5cbf; outline-offset: 1px; }
+input.rc-prio.rc-prio-gesetzt { border-color: #7c5cbf; background: rgba(124, 92, 191, 0.18); }
 
 /* Hauptbild: feste Kachel, das Bild füllt sie ohne Verzerrung (contain: Teaser-Bilder sind oft breit). Heller Grund, damit durchsichtige PNGs zu sehen sind. */
 .rc-bildzelle { padding: 4px; }
-.rc-tabelle img.rc-bild { display: block; width: 150px; height: 100px; object-fit: contain; background: #d9dde2; border-radius: 4px; }
+.rc-tabelle img.rc-bild { display: block; width: 150px; height: 100px; object-fit: contain; background: #d9dde2; border-radius: 4px; cursor: zoom-in; }
+
+/* Das Hauptbild groß. */
+.rc-bildfenster {
+    position: fixed; inset: 0; margin: auto; padding: 10px; max-width: 94vw; max-height: 94vh; overflow: hidden;
+    border: 1px solid var(--border, #3a4250); border-radius: 10px; background: var(--bg-card, #1e2430); color: var(--text, #eee);
+}
+.rc-bildfenster[open] { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rc-bildfenster::backdrop { background: rgba(0, 0, 0, 0.75); }
+.rc-bildfenster-bild { display: block; max-width: calc(94vw - 24px); max-height: calc(94vh - 80px); width: auto; height: auto; background: #d9dde2; border-radius: 4px; }
+.rc-bildfenster-titel { font-size: 0.9rem; opacity: 0.85; text-align: center; }
+.rc-bildfenster-zu { position: absolute; top: 6px; right: 8px; z-index: 1; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.rc-bildfenster-zu:hover { background: rgba(0, 0, 0, 0.85); }
 
 .rc-liste { margin: 0; padding-left: 1.1em; }
 .rc-liste li { margin-bottom: 2px; }

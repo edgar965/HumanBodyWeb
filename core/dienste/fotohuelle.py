@@ -49,6 +49,8 @@ class Fotohuelle:
         self.ruhe = np.asarray(ruhe, dtype=np.float64)
         self.posiert = np.asarray(posiert, dtype=np.float64)
         self.dreiecke = np.asarray(dreiecke, dtype=np.int64)
+        #: Der tiefste waagerechte Saum je gebautem Stück (`Huellenschnitt.tiefster_saum`) — das Stück darunter schneidet an ihm (`_saum_darueber`).
+        self._saeume = {}
         self.mitten = scan.punkte[scan.flaechen].mean(axis=1)
         abstand, index = cKDTree(self.mitten).query(self.posiert, workers=-1)
         self.marke = np.where(abstand < self.REICHWEITE, self.stueck[index], 0)
@@ -70,9 +72,49 @@ class Fotohuelle:
     #: Spielraum um den Höhenbereich des Stücks im Netz (`hoehen`, Höhenkern der Netzflächen), Meter.
     HOEHE_RAND = 0.02
 
-    def _auswahl(self, nummer, hoehen=None):
+    #: Welches Stück über welchem liegt (Hose unter dem Oberteil) und wie weit der Bund ÜBER den Hemdsaum reicht (m): Der Hosenbund ist keine Ebene (Hose 64 % innerhalb 15 mm einer Ebene, RMS 33 mm,
+    #: gemessen 05.10.2026) — er nimmt die Ebene des Hemdsaums, 1 cm höher, und liegt damit verdeckt unter dem Shirt. (Mit 1 cm TIEFER stand zwischen Saum und Bund ein heller Streifen — Fassung 23.)
+    DARUEBER = {2: 1}
+    BUND_UEBER_SAUM = 0.01
+
+    def _saum_darueber(self, nummer):
+        """`(Mitte, Normale)` der Ebene, an der das Stück `nummer` oben schneiden soll — die tiefste waagerechte Saum-Ebene des Stücks darüber, 1 cm höher (unter dem Shirt) — oder None."""
+        saum = self._saeume.get(self.DARUEBER.get(nummer))
+        if saum is None:
+            return None
+        return np.asarray(saum[0], dtype=np.float64) + np.array([0.0, self.BUND_UEBER_SAUM, 0.0]), saum[1]
+
+    #: Socken: jede Insel zum ganzen Fuß schließen. Die Maske nennt vorn am Knöchel „Bein", nicht „Socke" — die Socke hatte dort Löcher (Auftrag 2026.10.04.11.11.44: Ferse, Sohle und Rückseite des Knöchels
+    #: ja, die Vorderseite nein; gesehen am Bild der Rückseite/Vorderseite). Alle Figurflächen im Kasten der Insel (± `FUSS_RAND`) und in ihrer Höhenspanne gehören dazu.
+    #: Dasselbe für die Hose (05.10.2026, Bühne): Die Maske kennt von der Hose nur, was ein Foto sieht — am rechten Bein stand eine Treppenkante, ein Stück Oberschenkel fehlte.
+    FUSS_RAND = 0.02
+    FUESSE, HOSE = 3, 2
+
+    #: Weniger gewählte Flächen auf einer Körperseite sind kein Fuß (Sprenkel).
+    FUSS_MIN = 30
+
+    def _fuss_schliessen(self, wahl):
+        """Je Körperseite (links/rechts der Mittellinie) der Kasten um die gewählten Flächen — alle Figurflächen darin (Höhe ohne den Rand) kommen dazu."""
+        index = np.flatnonzero(wahl)
+        if not len(index):
+            return wahl
+        mitten = self.ruhe[self.dreiecke].mean(axis=1)
+        mitte_x = float(np.median(self.ruhe[:, 0]))
+        aus = wahl.copy()
+        for seite in (mitten[:, 0] < mitte_x, mitten[:, 0] >= mitte_x):
+            gewaehlt = index[seite[index]]
+            if len(gewaehlt) < self.FUSS_MIN:
+                continue
+            e = mitten[gewaehlt]
+            unten, oben = e.min(axis=0) - self.FUSS_RAND, e.max(axis=0) + self.FUSS_RAND
+            drin = ((mitten[:, 0] >= unten[0]) & (mitten[:, 0] <= oben[0]) & (mitten[:, 2] >= unten[2]) & (mitten[:, 2] <= oben[2])
+                    & (mitten[:, 1] >= unten[1] + self.FUSS_RAND) & (mitten[:, 1] <= oben[1] - self.FUSS_RAND))          # die Höhe ohne den Rand: der Saum bleibt, wo die Maske ihn sah
+            aus |= drin
+        return aus
+
+    def _auswahl(self, nummer, hoehen=None, kappe=None):
         """(F,) bool der Figurflächen des Stücks — im Höhenbereich `hoehen` (von, bis), geschlossen, geöffnet, Lücken
-        zum Stück darunter gefüllt, ohne kleine Teile."""
+        zum Stück darunter gefüllt, ohne kleine Teile. `kappe` `(Mitte, Normale)` (`_saum_darueber`): Flächen oberhalb dieser Ebene gehören nicht dazu."""
         from scipy.sparse.csgraph import connected_components
         inzidenz = self._nachbarn(self.dreiecke, len(self.ruhe))
         wahl = (self.marke[self.dreiecke] == nummer).all(axis=1)
@@ -106,6 +148,11 @@ class Fotohuelle:
             if hoehen is not None:                      # und nicht unter den Saum des Netzes (Auftrag 20.10.04: das
                 luecke &= y >= hoehen[0] - 2 * self.HOEHE_RAND     # Shirt reichte bis in den Schritt)
             wahl = wahl | luecke
+        if nummer in (self.FUESSE, self.HOSE):
+            wahl = self._fuss_schliessen(wahl)
+        if kappe is not None:                           # Hose: nichts oberhalb der Ebene des Hemdsaums (gemessen: ein Teil der Maske ragte bis 156 mm darüber hinaus — die „Zunge" am Hosenbund)
+            hoch = kappe[1] if kappe[1][1] > 0 else -kappe[1]
+            wahl = wahl & ~((self.ruhe[self.dreiecke].mean(axis=1) - kappe[0]) @ hoch > 0)
         index = np.flatnonzero(wahl)
         if not len(index):
             return wahl
@@ -153,6 +200,10 @@ class Fotohuelle:
     #: Mindestluft je Stück (m) — ein T-Shirt fällt locker (Fotos: über Brust und Bauch gerade herab), Hose und Socke
     #: sitzen eng. Gilt statt `ABSTAND_MIN`, wo größer.
     LUFT = {1: 0.010, 2: 0.004, 3: 0.002}
+    #: Größter Abstand je Stück (m), wo er unter `ABSTAND_MAX` liegt. Die Socke folgt dem Netz bis dorthin — am Auftrag 2026.10.04.11.11.44 stand sie am Schaft +4…8 mm, am Bund aber
+    #: +10…27 mm vom Bein ab (gemessen mit `_wegwerf/sapiens/socken_profil.py`, Bund 102–106 mm breit gegen 71–78 mm Bein): ein Stiefelschaft (Edgar: „die Socken sehen wie Stiefel aus"). Das Netz
+    #: bläht dort die Socke samt Achillessehne auf; eine Socke liegt an.
+    HOECHST = {3: 0.008}
 
     #: Stoff liegt auf, wo die Haut nach oben zeigt (Normale y in der Ruhelage): ab `OBEN[0]` beginnt die Grenze, ab
     #: `OBEN[1]` gilt nur noch `luft`. Prüfung Runde 18 (02.10.2026): auf den Schultern folgte die Hülle dem
@@ -160,24 +211,26 @@ class Fotohuelle:
     #: dunkler Rand hinter den Schultern, durch den Ausschnitt schwarz (Innenseite).
     OBEN = (0.35, 0.7)
 
-    def _aufliegen(self, normalen, luft):
+    def _aufliegen(self, normalen, luft, hoechst=None):
         oben = np.clip((normalen[:, 1] - self.OBEN[0]) / (self.OBEN[1] - self.OBEN[0]), 0.0, 1.0)
-        return self.ABSTAND_MAX * (1.0 - oben) + luft * oben
+        return (self.ABSTAND_MAX if hoechst is None else hoechst) * (1.0 - oben) + luft * oben
 
-    def _drapieren(self, ruhe, normalen, versatz, flaechen, luft):
+    def _drapieren(self, ruhe, normalen, versatz, flaechen, luft, hoechst=None):
         punkte = self._glatt(ruhe + normalen * versatz[:, None], flaechen, self.DRAPIER_RUNDEN, self.TAUBIN)
         # Taubins Gegenschritt schießt am Rand über (Kunstnetz: 30,1 mm bei 30 mm Grenze, test_fotohuelle Fall 1)
-        tiefe = np.clip(np.einsum('ij,ij->i', punkte - ruhe, normalen), luft, self.ABSTAND_MAX)
+        tiefe = np.clip(np.einsum('ij,ij->i', punkte - ruhe, normalen), luft, self.ABSTAND_MAX if hoechst is None else hoechst)
         return ruhe + normalen * tiefe[:, None]
 
     def bauen(self, nummer, hoehen=None):
         import trimesh
         from scipy.spatial import cKDTree
-        wahl = self._auswahl(nummer, hoehen)
+        kappe = self._saum_darueber(nummer)
+        wahl = self._auswahl(nummer, hoehen, kappe)
         if not wahl.any():
             return None
         schnitt = Huellenschnitt(self.ruhe, self.dreiecke, self.halsgewicht)    # glatte, ebene Säume statt Treppe
-        feld = schnitt.feld(wahl, hals=self.HALS.get(nummer, False))
+        feld = schnitt.feld(wahl, hals=self.HALS.get(nummer, False), vorgabe=kappe)
+        self._saeume[nummer] = schnitt.tiefster_saum()
         nah = (feld[self.dreiecke] >= schnitt.SCHNITT).any(axis=1)
         genutzt, neu = np.unique(self.dreiecke[nah].reshape(-1), return_inverse=True)
         flaechen = neu.reshape(-1, 3)
@@ -189,10 +242,11 @@ class Fotohuelle:
         baum = cKDTree(self.mitten[eigene])
         abstand, _ = baum.query(posiert, workers=-1)
         luft = max(self.ABSTAND_MIN, self.LUFT.get(nummer, 0.0))
+        hoechst = max(luft, self.HOECHST.get(nummer, self.ABSTAND_MAX))
         normalen = self._normalen(ruhe, flaechen)
-        versatz = self._glatt(np.clip(np.minimum(abstand, self._aufliegen(normalen, luft)), luft, self.ABSTAND_MAX),
+        versatz = self._glatt(np.clip(np.minimum(abstand, self._aufliegen(normalen, luft, hoechst)), luft, hoechst),
                               flaechen)
-        punkte = self._drapieren(ruhe, normalen, versatz, flaechen, luft)
+        punkte = self._drapieren(ruhe, normalen, versatz, flaechen, luft, hoechst)
         bunt = eigene[~self.farbsperre[eigene]]
         bunt = bunt if len(bunt) >= self.NACHBARN else eigene
         _, nah = cKDTree(self.mitten[bunt]).query(posiert, k=self.NACHBARN, workers=-1)

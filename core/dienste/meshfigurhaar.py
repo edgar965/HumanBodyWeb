@@ -66,6 +66,9 @@ class Meshfigurhaar:
         hauttest, hautquelle = self.hauttest()
         haar = Haarmaske(scan.punkte, scan.flaechen, farben, gesicht, hauttest, ebene)
         maske = haar.rechnen()
+        # Die Haarmaske aus der Sapiens-Klasse „Hair" (Option `segmentierung.haar`, 05.10.2026) — nur in 2D3D Kleider; „farbe" (Vorgabe) ändert nichts.
+        from .sapienshaar import Sapienshaar
+        sapiens = Sapienshaar(self.lauf).anwenden(maske, haar, len(scan.flaechen))
         np.savez_compressed(self.ablage.arbeit('haar_maske.npz'),
                             **{k: maske[k] for k in ('haar', 'geschuetzt', 'unten', 'bart')})
         teilung = Haarteilung(scan.punkte, scan.flaechen, scan.uv_ecken, farben, maske, haar.rahmen)
@@ -80,6 +83,8 @@ class Meshfigurhaar:
             'sekunden': {'laden': round(t1 - t0, 1), 'maske': round(t2 - t1, 1),
                          'bilder': round(time.perf_counter() - t2, 1)},
         }
+        if sapiens is not None:
+            self.job.ergebnis['haar']['sapiens'] = sapiens
 
     def objekt(self):
         """Das Haar als eigenes Objekt für die Bühne: `ergebnis/haar.glb` in der RUHELAGE der Figur.

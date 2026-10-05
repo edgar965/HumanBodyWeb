@@ -21,11 +21,15 @@ from .api.engine2d3dkleidereinstellungen import Engine2d3dKleidereinstellungen
 from .api.engine2d3dkleiderfotos import Engine2d3dKleiderfotoendpunkte
 from .api.engine2d3dkleideriterationen import Engine2d3dKleideriterationenendpunkte
 from .api.engine2d3dkleiderformen import Engine2d3dKleiderformendpunkte
+from .api.engine2d3dkleiderkopie import Engine2d3dKleiderkopieendpunkte
 from .api.engine2d3dkleidermalen import Engine2d3dKleidermalendpunkte
+from .api.engine2d3dkleidernachbesserung import Engine2d3dKleidernachbesserungendpunkte
 from .api.engine2d3dkleiderqualitaet import Engine2d3dKleiderqualitaetendpunkt
 from .api.engine2d3dkleiderreferenz import Engine2d3dKleiderreferenzendpunkte
+from .api.engine2d3dkleiderrezeptkatalog import Engine2d3dKleiderrezeptkatalogendpunkt
 from .api.engine2d3dkleiderrender import Engine2d3dKleiderrenderendpunkte
 from .api.engine2d3dkleiderstandmodell import Engine2d3dKleiderstandmodellendpunkte
+from .api.engine2d3dkleidervorgabe import Engine2d3dKleidervorgabeendpunkte
 
 __all__ = ['ENGINE2D3DKLEIDER']
 
@@ -34,6 +38,8 @@ ENGINE2D3DKLEIDER = [
     path('2d3dKleider/<kennung:kennung>/', Engine2d3dKleiderendpunkte.seite, name='engine2d3dkleider_auftrag'),
     path('api/engine2d3dkleider/anlegen/', Engine2d3dKleiderendpunkte.anlegen, name='engine2d3dkleider_anlegen'),
     path('api/engine2d3dkleider/katalog/', Engine2d3dKleiderendpunkte.katalog, name='engine2d3dkleider_katalog'),
+    # „Kopie mit allen Daten" der Auftragsliste (die ohne Daten ist „Job duplizieren": `urls_bildmodell`)
+    path('api/engine2d3dkleider/kopieren/', Engine2d3dKleiderkopieendpunkte.kopieren, name='engine2d3dkleider_kopieren'),
     path(
         'api/engine2d3dkleider/loeschen/',
         Engine2d3dKleiderendpunkte.mehrere_loeschen,
@@ -98,6 +104,44 @@ ENGINE2D3DKLEIDER = [
         Engine2d3dKleiderbegutachtungsendpunkte.funktionen,
         name='engine2d3dkleider_funktionen',
     ),
+    # Nachbesserung durch einen Claude-Agenten und die Bewertung (`core/api/engine2d3dkleidernachbesserung.py`, Paket `Edgar` in 2d3DIterationen, 05.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/nachbesserung/',
+        Engine2d3dKleidernachbesserungendpunkte.lesen,
+        name='engine2d3dkleider_nachbesserung',
+    ),
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/nachbesserung/starten/',
+        Engine2d3dKleidernachbesserungendpunkte.starten,
+        name='engine2d3dkleider_nachbesserung_starten',
+    ),
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/nachbesserung/anhalten/',
+        Engine2d3dKleidernachbesserungendpunkte.anhalten,
+        name='engine2d3dkleider_nachbesserung_anhalten',
+    ),
+    path(
+        'api/engine2d3dkleider/bewertung/',
+        Engine2d3dKleidernachbesserungendpunkte.bewertung,
+        name='engine2d3dkleider_bewertung',
+    ),
+    # Was ein Rezept benennen darf: Stücke, Haar, Regler, GarmentCode (`core/api/engine2d3dkleiderrezeptkatalog.py`, 05.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/rezeptkatalog/',
+        Engine2d3dKleiderrezeptkatalogendpunkt.lesen,
+        name='engine2d3dkleider_rezeptkatalog',
+    ),
+    # Der Prompt des Rundenberaters im Reiter „Bewertung": lesen und speichern (`core/api/engine2d3dkleidervorgabe.py`, gilt ab der nächsten Iteration)
+    path(
+        'api/engine2d3dkleider/vorgabe/',
+        Engine2d3dKleidervorgabeendpunkte.lesen,
+        name='engine2d3dkleider_vorgabe',
+    ),
+    path(
+        'api/engine2d3dkleider/vorgabe/speichern/',
+        Engine2d3dKleidervorgabeendpunkte.speichern,
+        name='engine2d3dkleider_vorgabe_speichern',
+    ),
     # Modell der besten Runde mit der Bewegung als GLB + Blender (`core/api/engine2d3dkleideranimexport.py`, 01.10.2026)
     path(
         'api/engine2d3dkleider/<uuid:job_id>/animexport/',
@@ -109,6 +153,12 @@ ENGINE2D3DKLEIDER = [
         'api/engine2d3dkleider/<uuid:job_id>/render/',
         Engine2d3dKleiderrenderendpunkte.starten,
         name='engine2d3dkleider_render',
+    ),
+    # Läufe der Render-Tabelle noch einmal rendern, einzeln oder alle (`Engine2d3dKleiderrenderneu`, 04.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/render/neu/',
+        Engine2d3dKleiderrenderendpunkte.neu,
+        name='engine2d3dkleider_render_neu',
     ),
     # Referenzvideo (Franks Ergebnis) neben den Vorlagebildern (`core/api/engine2d3dkleiderreferenz.py`, 04.10.2026)
     path(

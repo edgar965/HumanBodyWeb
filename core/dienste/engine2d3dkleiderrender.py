@@ -7,8 +7,8 @@ Mitsuba-Pfadverfolgung mit Entrauscher) in einem eigenen Prozess (`manage.py eng
 Zustand des Auftrags ab (`zustand['render']`).
 
 DAS REZEPT: Welche Programme die Stufen ausführen, steht je Auftrag in `arbeit/render/rezept.json` (`programme`: Ordner mit
-`video_bauen.py` und `film_video.py`, `name`: Arbeitsname dort). Ohne diese Datei ist der Schritt für den Auftrag aus — die Stoff- und
-Strähnenwerte (Hemd, Federn, Ketten) gehören zu seinen Teilen; ein Rezept für ein beliebiges Modell gibt es noch nicht.
+`video_bauen.py` und `film_video.py`, `name`: Arbeitsname dort). Ohne diese Datei gilt das allgemeine Rezept (`Engine2d3dKleiderrenderallgemein`, 04.10.2026: Standmodell, Figurcache und Mitsuba, ohne
+Simulation) — die Stoff- und Strähnenwerte (Hemd, Federn, Ketten) gehören zu den Teilen von Randy und stehen nur in dessen Rezept.
 
 Dateien in `arbeit/render/`: `rezept.json`, `auftrag.json` (die Wahl der Seite), `zustand.json` (Stufe, Fortschritt, Ergebnis), `render.pid`.
 Das Video: `ergebnis/render_video.mp4` und als Kopie im Exportordner des Auftrags (`<Name>_render.mp4`).
@@ -19,6 +19,7 @@ import logging
 import time
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+from .engine2d3dkleiderrenderallgemein import Engine2d3dKleiderrenderallgemein
 from .engine2d3dkleiderrenderlaeufe import Engine2d3dKleiderrenderlaeufe
 
 logger = logging.getLogger('core')
@@ -50,13 +51,15 @@ class Engine2d3dKleiderrender:
         return ordner / name
 
     def rezept(self):
-        """Das Rezept des Auftrags (`arbeit/render/rezept.json`) oder None."""
+        """Das Rezept des Auftrags (`arbeit/render/rezept.json`) — ohne eigenes das allgemeine (`Engine2d3dKleiderrenderallgemein`, 04.10.2026), None nur, wenn auch dessen Vorlage fehlt."""
         pfad = self._datei('rezept.json')
         try:
-            return json.loads(pfad.read_text(encoding='utf-8')) if pfad.is_file() else None
+            if pfad.is_file():
+                return json.loads(pfad.read_text(encoding='utf-8'))
         except (OSError, ValueError) as fehler:
             logger.warning('2D3D Kleider %s: render/rezept.json nicht lesbar (%s)', self.job.kennung, fehler)
             return None
+        return Engine2d3dKleiderrenderallgemein(pfad.parent).rezept()
 
     def bewegung_sekunden(self):
         """Länge der Bewegung in Sekunden (die ganze BVH) — 0, solange es keine gibt."""

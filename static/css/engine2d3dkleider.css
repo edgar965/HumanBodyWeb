@@ -27,6 +27,9 @@
 #engine2d3dkleider-optionen-segmentierung select { min-width: 32em; }
 .engine2d3dkleider-segmentierung-legende { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; margin: 4px 0 8px; }
 .engine2d3dkleider-segmentierung-farbe { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: -2px; }
+/* Karte „Kleiderstücke": die Tabelle der Messung (Zahlen rechtsbündig, Name und Vergleich linksbündig). */
+.engine2d3dkleider-stuecketabelle { margin: 8px 0; }
+.engine2d3dkleider-stuecketabelle td:nth-child(n+2):nth-child(-n+5), .engine2d3dkleider-stuecketabelle td:nth-child(n+7) { text-align: right; }
 
 /* Kennzahlen und Ablageorte in der Seitenspalte. */
 .engine2d3dkleider-netzkarte .mesh-kennzahlen { margin-bottom: 8px; }
@@ -175,14 +178,30 @@
 /* Render-Läufe (04.10.2026, `Engine2d3dKleiderrenderlaeufe`): der Bogen mit vier Bildern je Lauf, klein, ein Klick öffnet ihn groß. */
 .engine2d3dkleider-renderlaeufe { margin-top: 10px; overflow-x: auto; }
 .engine2d3dkleider-laufbogen { display: block; width: 260px; max-width: 100%; height: auto; border-radius: 4px; }
+/* Titelzeile der Render-Läufe: Überschrift links, „Alle neu rendern" daneben; die Knöpfe „Neu" je Zeile bleiben schmal. */
+.engine2d3dkleider-lauftitel { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: .35rem; }
+.engine2d3dkleider-neu { white-space: nowrap; }
+/* Die Zeile des Laufs, der gerade rechnet (04.10.2026, Edgar: „sichtbare UI … in der Zeile wo der läuft"): getönt, links ein Streifen, in „Aktion" Symbol, Text und Balken. */
+.db-tabelle tr.engine2d3dkleider-laeuft td { background: rgba(var(--accent-rgb, 79 140 255), 0.18); }
+.db-tabelle tr.engine2d3dkleider-laeuft td:first-child { box-shadow: inset 4px 0 0 var(--accent, #4f8cff); }
+.engine2d3dkleider-laeuft-anzeige { margin-top: .35rem; min-width: 11rem; }
+.engine2d3dkleider-laeuft-kopf { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.engine2d3dkleider-laeuft-balken { height: 6px; margin-top: .3rem; border-radius: 3px; background: rgba(127, 127, 127, 0.3); overflow: hidden; }
+.engine2d3dkleider-laeuft-balken > div { height: 100%; width: 0; border-radius: 3px; background: var(--accent, #4f8cff); transition: width .4s ease; }
+/* Verzeichnis und Dateiname eines Render-Laufs: Schreibmaschinenschrift, lange Pfade brechen um, ein Klick markiert den ganzen Wert. */
+.engine2d3dkleider-pfadzelle { font-family: ui-monospace, Consolas, monospace; font-size: .78rem; overflow-wrap: anywhere; min-width: 9rem; user-select: all; }
 /* Der Rahmen der Tabelle lässt sich aufziehen (Griff unten rechts); die Größe merkt `Engine2d3dKleiderrenderlaeufe._groesseMerken`. */
 .db-tabelle-rahmen.engine2d3dkleider-laufrahmen { resize: both; overflow: auto; min-width: 320px; min-height: 90px; max-width: 100%; max-height: 95vh; }
 
-/* Regler für Rendering und Physik (04.10.2026): fünf zuklappbare Gruppen über dem Knopf „Rendern". */
+/* Regler für Rendering und Physik (04.10.2026): fünf zuklappbare Gruppen über dem Knopf „Rendern".
+   Die Karten sind dunkel (`--bg-card`), der Text der Seite erbt aber die dunkle Schrift des Rahmens — Edgar: „nicht lesbar".
+   Deshalb setzt die Gruppe ihre helle Schrift (`--text`) selbst, wie die Reiterleiste darüber. */
 .engine2d3dkleider-renderregler { margin: 8px 0; }
 .engine2d3dkleider-reglertitel { margin: 4px 0; font-size: 0.95rem; }
-.engine2d3dkleider-reglergruppe { border: 1px solid var(--border, #3a4250); border-radius: 6px; margin: 4px 0; padding: 2px 8px; background: var(--bg-card, #1e2430); }
+.engine2d3dkleider-reglergruppe { border: 1px solid var(--border, #3a4250); border-radius: 6px; margin: 4px 0; padding: 2px 8px; background: var(--bg-card, #1e2430); color: var(--text, #eee); }
 .engine2d3dkleider-reglergruppe > summary { cursor: pointer; padding: 4px 0; font-weight: 600; }
+.engine2d3dkleider-reglergruppe label { color: var(--text, #eee); }
+.engine2d3dkleider-reglergruppe { --text-muted: #b8c0cf; }       /* Hinweistexte unter den Feldern (`.hb-hinweis` nimmt `var(--text-muted)`, Spezifität 0,3,0): heller als das Grau der Seite (4,5:1 → 8:1) */
 .engine2d3dkleider-reglergruppe .mesh-optionen { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 12px; padding: 6px 0; }
 .engine2d3dkleider-reglergruppe .mesh-feineinstellungen { grid-column: 1 / -1; }
 .engine2d3dkleider-reglergruppe .mesh-fein-felder { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 12px; }
@@ -190,7 +209,7 @@
 /* Referenzvideo (04.10.2026, `Engine2d3dKleiderreferenz`): der Rahmen mit Franks Video steht rechts neben den Vorlagebildern. */
 .engine2d3dkleider-vorlagenreihe { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
 .engine2d3dkleider-vorlagenreihe > .mesh-fotoliste { flex: 1 1 360px; min-width: 0; }
-.engine2d3dkleider-referenz { flex: 0 0 340px; max-width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border, #3a4250); border-radius: 8px; background: var(--bg-card, #1e2430); }
+.engine2d3dkleider-referenz { flex: 0 0 340px; max-width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border, #3a4250); border-radius: 8px; background: var(--bg-card, #1e2430); color: var(--text, #eee); }
 .engine2d3dkleider-referenz video { display: block; width: 100%; height: auto; max-height: 70vh; background: #000; border-radius: 4px; }
 .engine2d3dkleider-referenzpfad { display: flex; gap: 6px; }
 .engine2d3dkleider-referenzpfad input { flex: 1 1 auto; min-width: 0; }

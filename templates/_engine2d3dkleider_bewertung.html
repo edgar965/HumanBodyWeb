@@ -1,0 +1,24 @@
+{% comment %}Reiter „Bewertung" der Auftragsseite „2D3D Kleider" (05.10.2026, Edgar: „… in einem neuen Tab ‚Bewertung' in allen Jobs"): oben der Prompt des Rundenberaters, editierbar (Edgar: „der prompt soll
+editierbar sein, mach einen Speichern button und wende den neuen Prompt dann an für die nächste Runde"), darunter die Zusammenfassung von Edgars Rückmeldungen, dieselbe in jedem Auftrag.
+Gefüllt von `Engine2d3dKleiderVorgabe` (`GET/POST /api/engine2d3dkleider/vorgabe/`, Datei `2d3DIterationen/Edgar/vorgaben/abgleich.md`) und `Engine2d3dKleiderBewertung`
+(`GET /api/engine2d3dkleider/bewertung/`, Daten: `2d3DIterationen/Edgar/daten/bewertung.json`).{% endcomment %}
+<div id="reiter-bewertung" data-reiterfeld="bewertung" hidden>
+    <div class="card" id="vorgabe">
+        <h2>Prompt des Rundenberaters</h2>
+        <p class="hb-hinweis">Das Vorgehen, das die KI in jeder Iteration bekommt. Ein gespeicherter Text gilt ab der nächsten Iteration — auch in einer Nachbesserung, die gerade läuft
+            (ihre laufende Anfrage hat noch den alten). Der Teil über der ersten „##“-Überschrift ist nur für dich und geht nicht an die KI. Zusätzlich bekommt sie die Rückmeldungen darunter
+            („Bewertung“), den Stand der Iterationen und die Funktionen von <code>m</code>. Die Vorfassung bleibt als <code>abgleich.md.vorher</code> liegen.</p>
+        <textarea id="vorgabe-text" class="vorgabe-text" rows="32" spellcheck="false" aria-label="Prompt des Rundenberaters" disabled></textarea>
+        <div class="engine2d3dkleider-iterationsleiste">
+            <button type="button" class="btn btn-primary btn-sm" id="vorgabe-speichern" disabled>
+                <i class="fas fa-save"></i> <span>Speichern</span></button>
+            <span class="hb-hinweis" id="vorgabe-status" role="status">Wird geladen …</span>
+        </div>
+    </div>
+    <div class="card" id="bewertung">
+        <h2 id="bewertung-titel">Bewertung</h2>
+        <p class="hb-hinweis" id="bewertung-quelle">Wird geladen …</p>
+        <p class="hb-hinweis" id="bewertung-hinweis"></p>
+        <div id="bewertung-inhalt"></div>
+    </div>
+</div>

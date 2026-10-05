@@ -53,6 +53,13 @@ class Workflowzeiten:
     KOERPER_UEBERNEHMEN = Z(0.0, quelle=DB + ': …21.02.25, Quelle uebernehmen (auf 0,1 s gerundet)')
     KOERPER_RECHNEN = Z(694.8, 984.1, DB + ': 6 Aufträge mit Quelle rechnen, 5 verschiedene Werte')
     GRUNDFIGUR = Z(1.7, 2.3, DB + ': 7 Aufträge')
+    KLEIDERSTUECKE = Z(
+        47.2,
+        212.4,
+        'Auftrag 2026.10.04.11.11.44, 04.10.2026: Schritt allein 47,2 s (ergebnis.dauer, Stücke schon gebaut und gemerkt: bauen 0 s, messen samt Bibliotheks-Anker 47,2 s); '
+        'Obergrenze = 47,2 s + 165,2 s (Fotostuecke.holen() allein, zweiter von zwei Läufen mit 140,6 s und 165,2 s, getrennt gemessen) — Summe zweier Messungen, nicht als ein Lauf',
+        'Fotostücke bauen (beim ersten Mal), Stücknote messen, danach das Standmodell für die Bühne (21,8 s warm, 51,1 s kalt; steht im Band „Modell des Stands“, nicht in der Schrittzeit)',
+    )
     EXPORT = Z(1.8, 3.4, DB + ': 5 Aufträge')
     FILM = Z(
         34.1,

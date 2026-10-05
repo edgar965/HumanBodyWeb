@@ -27,6 +27,7 @@ export class Seitenreiter {
     static binden(leiste, merkschluessel, { wartet = false } = {}) {
         if (!leiste) return null;
         if (wartet) new Seitenreiterwartet(leiste);
+        leiste.dataset.gebunden = '1';          // meldet einem Rückfallskript der Seite (ohne Import), dass dieses Modul die Reiter jetzt bedient
         const reiter = new Seitenreiter(leiste, merkschluessel);
         reiter.zeigen(reiter.anfang());
         leiste.addEventListener('click', e => {

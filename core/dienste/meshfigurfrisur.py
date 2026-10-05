@@ -30,6 +30,8 @@ import time
 
 import numpy as np
 
+from .haarklemme import Haarklemme
+
 logger = logging.getLogger('core')
 
 __all__ = ['Meshfigurfrisur']
@@ -61,6 +63,11 @@ class Meshfigurfrisur:
         stand = self._netzstand()
         alt = (self.job.ergebnis or {}).get('frisur') or {}
         if stand and alt.get('netzstand') == stand and alt.get('option') == wahl and alt.get('kandidaten'):
+            if not self.ablage.ergebnis(Haarklemme.DATEI).is_file():        # Aufträge von vor der Haarklemme: nur die Hülle des Fotohaars nachtragen, nicht neu wählen
+                netz = Meshfigurhaar(self.lauf).ruhenetz()
+                if netz is not None:
+                    scan, punkte, haar = netz
+                    self._messung(punkte, scan.flaechen, haar, G9reglerableitung.lage(G9formung(self.job.stellung()))[0])
             logger.info('Frisur %s: Netz unverändert, Messung bleibt', self.job.kennung)
             return
         aus = self.job.ergebnis['frisur'] = {'option': wahl, 'sekunden': {}, 'netzstand': stand}
@@ -112,6 +119,10 @@ class Meshfigurfrisur:
             haar = haar & ~gesicht.reshape(-1)[feld]
         ziel = huelle.karte(Haarhuelle.proben(punkte, flaechen[haar], self.PROBEN))
         haut = huelle.karte(figur)
+        try:        # die Hülle des Fotohaars für `Haarklemme` (Bühne, Runden, Film): die Frisur steht nicht weiter vom Kopf ab als das Haar der Fotos
+            Haarklemme.ablegen(self.ablage, self.mitte, ziel)
+        except OSError as fehler:
+            logger.warning('Frisur %s: Hülle des Fotohaars nicht abgelegt (%s)', self.job.kennung, fehler)
         return (lambda p: huelle.abstand(ziel, huelle.karte(p), haut, gesicht)), haar
 
     # ------------------------------------------------------------- Wahl A

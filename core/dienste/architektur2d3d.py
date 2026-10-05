@@ -32,6 +32,9 @@ class Architektur2d3d:
          '(Meshfigurregistrierung, mit Frühstopp), Hautkacheln backen, Frisurkandidaten messen.'),
         ('grundfigur', 'Engine2d3dKleidergrundfigur',
          'Die Figur mit Rig in A-Pose: grundkoerper.glb, Stellung für Bühne und Export.'),
+        ('kleiderstuecke', 'Engine2d3dKleiderstuecke',
+         'Oberteil, Hose und Socken aus dem Netz als eigene Genesis-Stücke bauen (Fotostuecke: Form aus der angepassten Figur, Farbe aus dem Netz, Maske der Segmentierung) und messen '
+         '(Kleiderstuecknote: Deckung, Treue, F-Wert gegen die Maskenflächen, Aufbau, Körper gegen Haut, Bibliotheks-Anker). Die Bühne trägt sie danach schon vor Runde 1.'),
         ('iterationen', 'Iterationskreislauf → Begutachtungsrunde', 'Die Runden (unten). Modus „begutachtung" '
          '(Vorgabe): je Lauf 1 Runde mit Rezept von Hand oder bis 50 automatische Runden.'),
         ('export', 'Engine2d3dKleiderexport', 'Die beste Runde als GLB mit Rig.'),

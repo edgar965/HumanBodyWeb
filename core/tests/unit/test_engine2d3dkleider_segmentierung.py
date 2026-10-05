@@ -59,14 +59,14 @@ class Pfadkarte:
 
 class DieOption(SimpleTestCase):
     def test_ohne_angabe_ist_sie_aus_und_ein_unsinniger_wert_wird_zur_vorgabe(self):
-        self.assertEqual(Engine2d3dKleideroptionen.segmentierung({}), {'verwenden': 'aus'})
-        self.assertEqual(Engine2d3dKleideroptionen.segmentierung({'segmentierung': {'verwenden': 'vielleicht'}}), {'verwenden': 'aus'})
-        self.assertEqual(Engine2d3dKleideroptionen.segmentierung({'segmentierung': {'verwenden': 'an'}}), {'verwenden': 'an'})
+        self.assertEqual(Engine2d3dKleideroptionen.segmentierung({})['verwenden'], 'aus')
+        self.assertEqual(Engine2d3dKleideroptionen.segmentierung({'segmentierung': {'verwenden': 'vielleicht'}})['verwenden'], 'aus')
+        self.assertEqual(Engine2d3dKleideroptionen.segmentierung({'segmentierung': {'verwenden': 'an'}})['verwenden'], 'an')
 
     def test_die_gruppe_steht_im_katalog_und_im_formular(self):
         katalog = Engine2d3dKleideroptionen.katalog()
         felder = [f['schluessel'] for f in katalog['segmentierung']['optionen']]
-        self.assertEqual(felder, ['verwenden'])
+        self.assertEqual(felder, ['verwenden', 'haar', 'modell', 'schuhe', 'socken', 'zubehoer', 'min_stimmen', 'glaettung', 'nah_mm', 'raster', 'kante', 'rand'])
         self.assertIn('segmentierung', Engine2d3dKleideroptionen.GRUPPEN)
 
     def test_mischen_aendert_nur_die_geschickte_gruppe(self):
@@ -125,7 +125,7 @@ class DieKlassen(SimpleTestCase):
     def test_die_stuecke_tragen_die_nummern_der_kleidungsmaske(self):
         self.assertEqual((Sapiensklassen.OBERTEIL, Sapiensklassen.HOSE, Sapiensklassen.FUESSE, Sapiensklassen.ZUBEHOER),
                          (Kleidungsmaske.OBERTEIL, Kleidungsmaske.HOSE, Kleidungsmaske.FUESSE, Kleidungsmaske.ZUBEHOER))
-        self.assertEqual(Sapiensklassen.BEZEICHNUNG[1:], tuple(Kleidungsmaske.NAMEN[n] for n in (1, 2, 3, 4)))
+        self.assertEqual(Sapiensklassen.BEZEICHNUNG[1:5], tuple(Kleidungsmaske.NAMEN[n] for n in (1, 2, 3, 4)))       # 5 = Haar, kein Kleidungsstück
 
     def test_die_zuordnung_der_klassen(self):
         def stueck(name):
@@ -135,7 +135,8 @@ class DieKlassen(SimpleTestCase):
         for name in ('Left_Shoe', 'Right_Shoe', 'Left_Sock', 'Right_Sock'):
             self.assertEqual(stueck(name), 3, name)
         self.assertEqual(stueck('Apparel'), 4)
-        for name in ('Face_Neck', 'Hair', 'Torso', 'Left_Hand', 'Right_Upper_Leg', 'Left_Foot'):
+        self.assertEqual(stueck('Hair'), Sapiensklassen.HAAR)                  # seit 05.10.2026 eigene Stimme statt „nicht Kleidung"
+        for name in ('Face_Neck', 'Torso', 'Left_Hand', 'Right_Upper_Leg', 'Left_Foot'):
             self.assertEqual(stueck(name), 0, name)
         self.assertEqual(stueck('Background'), Sapiensklassen.HINTERGRUND)
 
@@ -150,7 +151,7 @@ class DieMaske(SimpleTestCase):
     def _stimmen(cls):
         """Streifen aus 400 Flächen (2 cm² je Fläche, Mitten im Abstand von 1 cm nach oben): 0–99 Füße, 100–179 ungesehen (die Regel sagt Hose), 180–259 Oberteil,
         260–299 keine Kleidung mit einer Insel Oberteil (270–274), 300–399 Oberteil — davon der Kopf (ab Fläche 351, `kopf_ab` 3,505 m)."""
-        s = np.zeros((cls.N, 5))
+        s = np.zeros((cls.N, Sapiensklassen.STUECKE))
         s[0:100, Sapiensklassen.FUESSE] = 10
         s[180:260, Sapiensklassen.OBERTEIL] = 10
         s[260:300, Sapiensklassen.KEINE] = 10
@@ -204,7 +205,7 @@ class DasLaden(SimpleTestCase):
     @staticmethod
     def _ablegen(ordner, netz, flaechen=10, fassung=None, netz_stand=None):
         stat = os.stat(netz)
-        np.savez_compressed(os.path.join(ordner, Sapiensmaske.DATEI), stimmen=np.ones((flaechen, 5)), flaechen=flaechen,
+        np.savez_compressed(os.path.join(ordner, Sapiensmaske.DATEI), klassen=np.ones((flaechen, len(Sapiensklassen.NAMEN))), flaechen=flaechen,
                             fassung=Sapiensmaske.FASSUNG if fassung is None else fassung,
                             netz=np.array(netz_stand or [stat.st_size, stat.st_mtime_ns]))
 
@@ -218,7 +219,7 @@ class DasLaden(SimpleTestCase):
         with Pruefablage.ordner() as ordner:
             netz = self._netz(ordner)
             self._ablegen(ordner, netz)
-            self.assertEqual(Sapiensmaske.laden(ordner, netz, 10).shape, (10, 5))
+            self.assertEqual(Sapiensmaske.laden(ordner, netz, 10).shape, (10, len(Sapiensklassen.NAMEN)))       # Stimmen je KLASSE, die Zuordnung machen die Optionen
 
     def test_ohne_datei_mit_anderer_flaechenzahl_fassung_oder_netz_verweigert_sie_mit_grund(self):
         with Pruefablage.ordner() as ordner:
@@ -267,7 +268,7 @@ class DerHaken(SimpleTestCase):
     def test_ohne_passende_stimmen_gilt_die_regel_und_der_grund_steht_im_bericht(self):
         with Pruefablage.ordner() as ordner:
             k = self._kleidung(SimpleNamespace(sapiens_maske=True))
-            k.ablage = SimpleNamespace(arbeit=lambda *a: ordner)
+            k.ablage = SimpleNamespace(arbeit=lambda *a: ordner, netzdatei=lambda original=False: 'x')
             maske = {'stueck': np.zeros(3, dtype=np.int8)}
             gleiche, bericht = k._sapiens(None, maske, None, SimpleNamespace(flaechen=[0, 1, 2]), SimpleNamespace(auftrag={'netz': 'x'}))
         self.assertIs(gleiche, maske)

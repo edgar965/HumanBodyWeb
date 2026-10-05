@@ -21,6 +21,9 @@ Körper aus einem Auftrag „Mesh to 3D" übernommen wird, dessen Netz als `arbe
 (`Engine2d3dKleiderendpunkte.datei`), nicht als Statik.
 """
 
+import json
+import os
+
 from .meshablage import Meshablage
 
 __all__ = ['Engine2d3dKleiderablage']
@@ -80,12 +83,37 @@ class Engine2d3dKleiderablage(Meshablage):
     def netz_arbeit(self, name=''):
         return self.unter(self.NETZ_ARBEIT) / name if name else self.unter(self.NETZ_ARBEIT)
 
-    def netzdatei(self, teil='koerper'):
-        """Das Netz aus den Fotos (Schritt „netz"), wenn es da ist — sonst None. Ein Kopfnetz gibt es nicht."""
+    #: Das aus dem Netz abgeleitete mit angeglichener Tiefe (`Netztiefe`, 05.10.2026) und sein Zettel — beide in `arbeit/`.
+    TIEFENNETZ, TIEFENZETTEL = 'netz_tiefe.glb', 'netz_tiefe.json'
+
+    def netzdatei(self, teil='koerper', original=False):
+        """Das Netz aus den Fotos (Schritt „netz"), wenn es da ist — sonst None. Ein Kopfnetz gibt es nicht.
+
+        Hat `Netztiefe` ein abgeleitetes Netz geschrieben (Option `koerper.tiefe`) und gehört es zu DIESEM Netz (Größe und Änderungszeit im Zettel), kommt DAS: Körper-Kette, Fotostücke und Frisur
+        rechnen auf dem Netz mit der Tiefe des Seitenfotos. `original=True` gibt immer das Netz des Schritts „netz" — die Segmentierung (Sapiens) und das Vorschaubild des Netzschritts
+        brauchen es (Flächen und UV sind dieselben, aber ihr Stand merkt sich Größe und Änderungszeit der Datei)."""
         if teil == 'kopf':
             return None
         pfad = self.netz(self.NETZDATEI)
-        return pfad if pfad.is_file() else None
+        if not pfad.is_file():
+            return None
+        if not original:
+            abgeleitet = self._tiefennetz(pfad)
+            if abgeleitet is not None:
+                return abgeleitet
+        return pfad
+
+    def _tiefennetz(self, original):
+        """Das abgeleitete Netz, wenn sein Zettel `aktiv` sagt und zu `original` passt — sonst None."""
+        glb, zettel = self.arbeit(self.TIEFENNETZ), self.arbeit(self.TIEFENZETTEL)
+        if not (glb.is_file() and zettel.is_file()):
+            return None
+        try:
+            stand = json.loads(zettel.read_text(encoding='utf-8'))
+            stat = os.stat(str(original))
+        except (OSError, ValueError):
+            return None
+        return glb if stand.get('aktiv') and stand.get('quelle') == [stat.st_size, stat.st_mtime_ns] else None
 
     def bezugsnetz(self):
         """(Netz, Lage 4×4 oder None) für die 3D-Note — None, wenn kein Bezugsnetz da ist."""

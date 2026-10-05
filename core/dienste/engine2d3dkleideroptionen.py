@@ -42,7 +42,11 @@ class Engine2d3dKleideroptionen:
     GRUPPEN = ('figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film') + RENDERGRUPPEN
     #: Felder, die im Formular erscheinen (None = alle des Katalogs).
     SICHTBAR = {
-        'figur': ('basis', 'modell'),
+        # ALLE Felder der Körper-Kette seit 05.10.2026 (Edgar: „Noch anderen Einstellungen, die du mir bisher verschwiegen hast? Baue diese alle ein und zeige mir die Optionen in der Oberfläche"): bis dahin standen
+        # nur `basis` und `modell` im Formular, 15 weitere (Größe, Runden, Dämpfung, Textur, `kopfhaut`, `kleidung`, `kleidungszug`, `kleidungsabstand_mm`, …) wirkten mit ihren Vorgaben, ohne dass man sie sah.
+        # Ausgenommen `haarkarten`: der Körperlauf setzt es fest auf „aus" (`Engine2d3dKleiderkoerperlauf`), ein Feld dafür täuschte eine Wahl vor.
+        'figur': ('basis', 'hoehe_cm', 'runden', 'gesicht', 'daempfung', 'eigenmorph', 'symmetrie', 'textur', 'kopfhaut', 'kleidung', 'kleidungszug', 'kleidungsabstand_mm', 'genitalform',
+                  'kandidaten', 'rest_kandidaten', 'referenz', 'blind', 'frisur', 'modell'),
         'vorbereitung': None,
         'segmentierung': None,
         # `textur` seit 30.09.2026 sichtbar: „fotos_ki" legte bei „schnell" Fotoränder auf Arme und Beine, „ki" (die
@@ -61,7 +65,9 @@ class Engine2d3dKleideroptionen:
     #: Gruppe `mesh` sie noch nicht trägt, behält den Wert, den er unter `netz` gespeichert hat.
     UEBERNAHME = ('aufloesung', 'flaechen', 'texturgroesse')
     #: Vorgaben, die hier von der Vorlage abweichen. (`flaechen` 100.000 steht jetzt in `Engine2d3dKleidermeshoptionen`.)
-    ABWEICHUNGEN = {'figur': {'modell': 'aus'}, 'vorbereitung': {}, 'netz': {}, 'mesh': {}, 'segmentierung': {}, 'koerper': {}, 'iterationen': {},
+    #: `figur.kopfhaut` hier „haut" statt „haar" (05.10.2026): In 2D3D Kleider kommt das Haar als eigenes Objekt (Frisur, Iterationen); die Haarfarbe des Netzes auf der Kopfhaut war die „Kappe", die Edgar
+    #: sah. Aufträge, die „haar" gespeichert haben, behalten es.
+    ABWEICHUNGEN = {'figur': {'modell': 'aus', 'kopfhaut': 'haut'}, 'vorbereitung': {}, 'netz': {}, 'mesh': {}, 'segmentierung': {}, 'koerper': {}, 'iterationen': {},
                     'film': {}, **{g: {} for g in RENDERGRUPPEN}}
     PRUEFER = (
         ('figur', Meshfiguroptionen),

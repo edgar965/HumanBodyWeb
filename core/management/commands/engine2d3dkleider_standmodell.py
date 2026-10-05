@@ -33,6 +33,13 @@ class Command(BaseCommand):
         pid.parent.mkdir(parents=True, exist_ok=True)
         pid.write_text(str(os.getpid()))
         stand = Engine2d3dKleiderstandmodell(job, ablage)
+        # Die Bewegung der BVH auf der Figur (Play der Bühne, Länge des Renders) braucht keinen Lauf: ein Auftrag, der nie bis „Film" kam, hat sie sonst nie (04.10.2026) — ein Fehler hält den Bau nicht auf.
+        try:
+            from core.dienste.standbewegung import Standbewegung
+            if Standbewegung(job, ablage).sichern():
+                job.save(update_fields=['ergebnis', 'updated_at'])
+        except Exception:  # noqa: BLE001 — ohne Bewegung fehlen nur Play und Render
+            logger.exception('2D3D Kleider %s: Bewegung der Figur nicht gerechnet', job.kennung)
         try:
             stand.bauen()
         except Exception as fehler:  # noqa: BLE001 — der Fehler gehört ins Log des Auftrags, die Bühne baut dann im Browser

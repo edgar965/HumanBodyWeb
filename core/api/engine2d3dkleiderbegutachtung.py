@@ -26,6 +26,7 @@ from ..dienste.begutachtungsrunde import Begutachtungsrunde
 from ..dienste.engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
 from ..dienste.engine2d3dkleidergpu import Engine2d3dKleidergpu
 from ..dienste.engine2d3dkleiderprompts import Engine2d3dKleiderprompts
+from ..dienste.engine2d3dkleiderrezeptbestand import Engine2d3dKleiderrezeptbestand
 from ..models import Engine2d3dKleiderauftrag
 from .engine2d3dkleider import Engine2d3dKleiderendpunkte
 
@@ -52,6 +53,8 @@ class Engine2d3dKleiderbegutachtungsendpunkte:
             runden = max(1, min(Begutachtungsrunde.RUNDEN_HOECHSTENS, int(rumpf.get('runden') or 1)))
             if not automatisch:
                 G9rezept.pruefen(aufrufe)
+                if rumpf.get('pruefen_bestand'):          # die Nachbesserung: Namen gegen die Bibliothek lesen (`Engine2d3dKleiderrezeptbestand`, 05.10.2026)
+                    Engine2d3dKleiderrezeptbestand(job).pruefen(aufrufe)
         except ValueError as fehler:
             return JsonResponse({'error': 'Rezept: %s' % fehler}, status=400)
         ergebnis = dict(job.ergebnis or {})
@@ -90,6 +93,7 @@ class Engine2d3dKleiderbegutachtungsendpunkte:
     def funktionen(request):
         from Genesis9.modellmitkleidern import ModellMitKleidern
         from Genesis9.modellrezept import G9rezept
+        voll = request.GET.get('voll') == '1'           # der ganze Docstring statt der ersten Zeile (Prompt der Nachbesserung)
         return JsonResponse({'objekt': G9rezept.OBJEKT,
                              'funktionen': [{'name': n, 'signatur': s, 'text': t}
-                                            for n, s, t in ModellMitKleidern.hilfe()]})
+                                            for n, s, t in ModellMitKleidern.hilfe(voll=voll)]})

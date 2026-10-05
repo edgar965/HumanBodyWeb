@@ -1,24 +1,33 @@
+import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
+import { Recherchehuman3dprio } from './recherchehuman3dprio.js';
+
 /**
  * Recherchehuman3d — das Fenster der Seite „Hilfe → Recherche → Human 3D" (04.10.2026).
  *
- * Edgar: „Klick auf Eintrag ToDo: Popup mit mehr Infos, mehr Bildern." Die Daten stehen als JSON-Block `#rc-daten` in der Seite (je Projekt unter seiner `id`, gebaut von
- * `Recherchetabelle.popup`). Alles, was aus der JSON-Datei kommt, stammt aus fremden READMEs: Texte gehen nur über `textContent`, Adressen nur als https-Link bzw. -Bild
+ * Edgar: „Klick auf Eintrag ToDo: Popup mit mehr Infos, mehr Bildern." Die Daten eines Projekts holt das Fenster beim Klick von
+ * `/hilfe/recherche/human-3d/popup/<id>/` (gebaut von `Recherchetabelle.popup`; früher stand alles als JSON-Block in der Seite — bei 1.043 Projekten über 2,5 MB doppelt). Alles, was aus der JSON-Datei kommt, stammt aus fremden READMEs: Texte gehen nur über `textContent`, Adressen nur als https-Link bzw. -Bild
  * (der Server hat sie schon geprüft). Ein Bild, das GitHub nicht mehr liefert, verschwindet still (Tabelle: „–"; Fenster: der Rahmen entfällt).
  */
 export class Recherchehuman3d {
 
+    static POPUP = '/hilfe/recherche/human-3d/popup/';
+
     constructor() {
         this.fenster = document.getElementById('rc-popup');
-        const block = document.getElementById('rc-daten');
-        this.daten = block ? JSON.parse(block.textContent) : {};
         this.inhalt = document.getElementById('rc-popup-inhalt');
         this.titel = document.getElementById('rc-popup-titel');
     }
 
     binden() {
         if (!this.fenster) return;
+        const tabelle = document.querySelector('table.rc-tabelle');
+        if (tabelle) Recherchehuman3dprio.binden(tabelle);
         document.addEventListener('click', (e) => {
-            const zelle = e.target instanceof Element ? e.target.closest('td.rc-todozelle') : null;
+            const ziel = e.target instanceof Element ? e.target : null;
+            if (!ziel) return;
+            const bild = ziel.closest('td.rc-bildzelle img.rc-bild');
+            if (bild) { this.bildOeffnen(bild); return; }
+            const zelle = ziel.closest('td.rc-todozelle');
             if (!zelle) return;
             const zeile = zelle.closest('tr[data-id]');
             if (zeile) this.oeffnen(zeile.dataset.id);
@@ -30,6 +39,30 @@ export class Recherchehuman3d {
         document.addEventListener('error', (e) => Recherchehuman3d.bildFehlt(e.target), true);
     }
 
+    /** Das Hauptbild der Tabelle groß in einem eigenen Fenster (Edgar, 04.10.2026: „Klick auf Hauptbild öffnet mir das im Popup"). Das Fenster entsteht beim ersten Klick. */
+    bildOeffnen(bild) {
+        const E = Recherchehuman3d;
+        if (!this.bildfenster) {
+            const fenster = E.el('dialog', 'rc-bildfenster');
+            fenster.id = 'rc-bildfenster';
+            const zu = E.el('button', 'rc-bildfenster-zu', '×');
+            zu.type = 'button';
+            zu.title = 'Schließen';
+            zu.addEventListener('click', () => fenster.close());
+            this.bildgross = E.el('img', 'rc-bildfenster-bild');
+            this.bildtitel = E.el('div', 'rc-bildfenster-titel');
+            fenster.append(zu, this.bildgross, this.bildtitel);
+            fenster.addEventListener('click', (e) => { if (e.target === fenster) fenster.close(); });
+            document.body.appendChild(fenster);
+            this.bildfenster = fenster;
+        }
+        const repo = bild.closest('tr')?.querySelector('a[target="_blank"]')?.textContent.trim();
+        this.bildgross.alt = bild.alt;
+        this.bildgross.src = bild.currentSrc || bild.src;
+        this.bildtitel.textContent = repo ? `${bild.alt} — ${repo}` : bild.alt;
+        this.bildfenster.showModal();
+    }
+
     static bildFehlt(ziel) {
         if (!(ziel instanceof HTMLImageElement) || !ziel.classList.contains('rc-bild')) return;
         const rahmen = ziel.closest('.rc-galerie-bild');
@@ -37,7 +70,7 @@ export class Recherchehuman3d {
         const platz = document.createElement('span');
         platz.className = 'rc-fehlt';
         platz.textContent = '–';
-        platz.title = 'Das Bild ist bei GitHub nicht mehr erreichbar';
+        platz.title = 'Das Bild konnte nicht geladen werden';
         ziel.replaceWith(platz);
     }
 
@@ -61,12 +94,19 @@ export class Recherchehuman3d {
     }
 
     static datum(iso) {
-        const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
-        return Number.isNaN(d.getTime()) ? String(iso || '–') : d.toLocaleDateString('de-DE');
+        const teile = String(iso || '').slice(0, 10).split('-');
+        return teile.length === 3 ? teile.reverse().join('.') : '–';
     }
 
-    oeffnen(id) {
-        const p = this.daten[id];
+    /** Holt die Daten des einen Projekts (statt aller in der Seite) und zeigt das Fenster. */
+    async oeffnen(id) {
+        let p;
+        try {
+            p = await Serverabruf.json(`${Recherchehuman3d.POPUP}${encodeURIComponent(id)}/`);
+        } catch (fehler) {
+            window.alert(`Die Angaben zum Projekt konnten nicht geladen werden: ${fehler.daten?.error || fehler.message}`);
+            return;
+        }
         if (!p) return;
         const E = Recherchehuman3d;
         this.titel.textContent = p.name;
@@ -84,19 +124,27 @@ export class Recherchehuman3d {
             kopf.appendChild(a);
         }
         this.inhalt.appendChild(kopf);
+        if (p.fork_von) {
+            const fork = E.el('p', 'rc-popup-fork');
+            fork.append(E.el('b', '', 'Fork von '), p.fork_von, p.fork_grund ? ` — ${p.fork_grund}` : '');
+            this.inhalt.appendChild(fork);
+        }
         this.inhalt.appendChild(E.el('p', 'rc-popup-kurz', p.kurz));
 
         const todo = E.abschnitt('Was uns fehlt (ToDo)');
         todo.appendChild(E.liste(p.todo, 'rc-todo-liste'));
         this.inhalt.appendChild(todo);
 
-        const bilder = [p.bild, ...(p.bilder || [])].filter((b, i, alle) => b && alle.indexOf(b) === i);
+        // `quellen` läuft parallel zu [Hauptbild, …Galerie] (ohne leere Plätze): die Vorschau liegt lokal, ein Klick öffnet das Original beim Projekt, falls bekannt.
+        const bilder = [p.bild, ...(p.bilder || [])].filter(Boolean);
         if (bilder.length) {
             const galerie = E.abschnitt('Bilder aus dem Projekt');
             const reihe = E.el('div', 'rc-galerie');
-            for (const adresse of bilder) {
+            for (const [nr, adresse] of bilder.entries()) {
                 const rahmen = E.el('a', 'rc-galerie-bild');
-                rahmen.href = adresse;
+                const quelle = (p.quellen || [])[nr];
+                rahmen.href = quelle || adresse;
+                rahmen.title = quelle ? 'Original beim Projekt öffnen' : 'Bild öffnen';
                 rahmen.target = '_blank';
                 rahmen.rel = 'noopener noreferrer';
                 const bild = E.el('img', 'rc-bild');
@@ -109,6 +157,22 @@ export class Recherchehuman3d {
             }
             galerie.appendChild(reihe);
             this.inhalt.appendChild(galerie);
+        }
+
+        if ((p.hf || []).length) {
+            const hf = E.abschnitt('Bei Hugging Face');
+            const liste = E.el('ul', 'rc-hf-popup');
+            for (const h of p.hf) {
+                const li = E.el('li');
+                const a = E.el('a', `rc-hf rc-hf-${h.typ}`, h.label);
+                a.href = h.url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                li.append(a, ` ${h.id} — ♥ ${Number(h.likes || 0).toLocaleString('de-DE')}`);
+                liste.appendChild(li);
+            }
+            hf.appendChild(liste);
+            this.inhalt.appendChild(hf);
         }
 
         const was = E.abschnitt('Beschreibung');

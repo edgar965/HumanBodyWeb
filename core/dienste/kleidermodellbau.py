@@ -38,9 +38,10 @@ class Kleidermodellbau:
     HAUT = (0.82, 0.68, 0.60)
     STUFE = 0
 
-    def __init__(self, stellung, drehung=None, stufe=STUFE, koerper=None, kacheln=None):
+    def __init__(self, stellung, drehung=None, stufe=STUFE, koerper=None, kacheln=None, ablage=None):
         """`drehung`: die Haltung (`ModellMitKleidern.drehung`; für den Film nicht, die Bewegung ist absolut).
-        `koerper`: Genesis-Regler des Modells ÜBER der Stellung des Auftrags (sonst wirkte `IterationKoerper` nicht)."""
+        `koerper`: Genesis-Regler des Modells ÜBER der Stellung des Auftrags (sonst wirkte `IterationKoerper` nicht).
+        `ablage`: die des Auftrags — mit ihr wird die Frisur an die Hülle des Fotohaars geklemmt (`Haarklemme`); ohne bleibt sie, wie sie gewählt ist."""
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.formung import G9formung
         from Genesis9.haut import G9haut
@@ -58,6 +59,8 @@ class Kleidermodellbau:
         self._koerper = None
         #: `{kachel: Pfad}` der gebackenen Haut (`Koerpertextur.kacheln`) — ohne: einfarbig `HAUT`.
         self.kacheln = dict(kacheln or {})
+        self.ablage = ablage
+        self._klemme = False                    # False: noch nicht gesucht, None: es gibt keine Hülle des Fotohaars
 
     # --------------------------------------------------------------- Körper
 
@@ -288,9 +291,18 @@ class Kleidermodellbau:
             return (0.5, 0.5, 0.5)
         return tuple(int(roh[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
 
+    def _haarklemme(self):
+        if self._klemme is False:
+            from .haarklemme import Haarklemme
+            self._klemme = Haarklemme.fuer(self.ablage, self.koerper()['punkte']) if self.ablage is not None else None
+        return self._klemme
+
     def teile(self, modell):
-        """Körper (mit Augen, Mund, Wimpern, Brauen — `Koerperanhaenge`, 02.10.2026), Kleider, Haar."""
-        return [self.koerper()] + Koerperanhaenge.teile(self, modell) + self._kleidung(modell) + self._haar(modell)
+        """Körper (mit Augen, Mund, Wimpern, Brauen — `Koerperanhaenge`, 02.10.2026), Kleider, Haar (an die Hülle des Fotohaars geklemmt, `Haarklemme`)."""
+        vorn = [self.koerper()] + Koerperanhaenge.teile(self, modell) + self._kleidung(modell)
+        haar = self._haar(modell)
+        klemme = self._haarklemme() if haar else None
+        return vorn + (klemme.anwenden(haar) if klemme else haar)
 
     # ------------------------------------------------------------------ GLB
 

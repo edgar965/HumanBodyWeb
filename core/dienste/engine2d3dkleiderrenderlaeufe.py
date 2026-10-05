@@ -40,8 +40,13 @@ class Engine2d3dKleiderrenderlaeufe:
             return []
 
     def neueste(self):
-        """Die letzten `ANZEIGE` Läufe, der jüngste zuerst (für die Seite)."""
-        return list(reversed(self.lesen()))[:self.ANZEIGE]
+        """Die letzten `ANZEIGE` Läufe, der jüngste zuerst (für die Seite), je mit dem Verzeichnis, in dem ihr Video liegt (`verzeichnis`).
+
+        Das Verzeichnis wird beim Lesen aus der Ablage abgeleitet, nicht in `laeufe.json` mitgeschrieben: So tragen es auch die Läufe, die vor
+        dieser Spalte entstanden sind, und es stimmt nach einem Umzug der Ablage.
+        """
+        verzeichnis = str(self.render.ablage.ergebnis())
+        return [dict(lauf, verzeichnis=verzeichnis) for lauf in list(reversed(self.lesen()))[:self.ANZEIGE]]
 
     def _bogen(self, video, ziel, sekunden):
         """Vier Bilder des Videos nebeneinander als PNG. → True, wenn die Datei da ist."""
@@ -56,7 +61,11 @@ class Engine2d3dKleiderrenderlaeufe:
     def eintragen(self, auftrag, video, dauer_s):
         """Den fertigen Lauf ablegen: Video und Bogen mit Nummer in `ergebnis/`, Eintrag in `laeufe.json`. → der Eintrag."""
         laeufe = self.lesen()
-        nr = max([int(e.get('nr') or 0) for e in laeufe] + [0]) + 1
+        # `neu_nr` (Knopf „Neu rendern", `Engine2d3dKleiderrenderneu`): Der Lauf mit dieser Nummer wird ERSETZT — gleiche Nummer, gleiche Stelle in der Liste.
+        nr = int(auftrag.get('neu_nr') or 0)
+        stelle = next((i for i, e in enumerate(laeufe) if int(e.get('nr') or 0) == nr), None) if nr else None
+        if stelle is None:
+            nr = max([int(e.get('nr') or 0) for e in laeufe] + [0]) + 1
         name = 'render_lauf_%03d' % nr
         ablage = self.render.ablage
         kopie = ablage.ergebnis(name + '.mp4')
@@ -65,12 +74,16 @@ class Engine2d3dKleiderrenderlaeufe:
         eintrag = {
             'nr': nr, 'zeit': time.strftime('%Y-%m-%d %H:%M:%S'), 'bilder': int(round(sekunden * self.render.FPS)), 'sekunden': sekunden,
             'groesse': '%dx%d' % (auftrag['breite'], auftrag['hoehe']), 'kamera': auftrag['kamera'], 'spp': int(auftrag.get('spp') or 48),
-            'licht': auftrag.get('licht') or 'studio', 'ton': bool(auftrag.get('ton')), 'dauer_s': round(dauer_s, 1),
+            'licht': auftrag.get('licht') or 'studio', 'ton': bool(auftrag.get('ton')), 'ton_pfad': str(auftrag.get('ton') or ''),
+            'name': str(auftrag.get('name') or ''), 'dauer_s': round(dauer_s, 1),
             'bytes': kopie.stat().st_size, 'video': kopie.name, 'anmerkung': str(auftrag.get('anmerkung') or '')[:600],
         }
         if self._bogen(kopie, ablage.ergebnis(name + '.png'), sekunden):
             eintrag['blatt'] = name + '.png'
-        laeufe.append(eintrag)
+        if stelle is None:
+            laeufe.append(eintrag)
+        else:
+            laeufe[stelle] = eintrag
         zwischen = self.pfad.with_name(self.DATEI + '.teil')
         zwischen.write_text(json.dumps(laeufe, ensure_ascii=False, indent=1), encoding='utf-8')
         zwischen.replace(self.pfad)

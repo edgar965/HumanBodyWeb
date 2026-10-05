@@ -20,6 +20,7 @@ unverändert benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Kata
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleider.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleidernachbesserung.css' %}">
 {% comment %}Dieselbe Importkarte wie die Szene und „Mesh to 3D": three r170 VOLLSTÄNDIG — der Export (`Modellexport` mit
 GLTFExporter) und die Netzlader fehlen in der lokalen Kopie unter static/vendor, und die Szenenmodule des Exports
 erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
@@ -54,6 +55,7 @@ Start und Ende eines Laufs um 64 px nach unten (gemessen im DOM: y 132 → 196) 
     <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cut"></i> Auftrag</button>
     <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
         Iterationen <span id="iterationen-anzahl"></span></button>
+    <button type="button" role="tab" aria-selected="false" data-reiter="bewertung"><i class="fas fa-clipboard-check"></i> Bewertung</button>
 </div>
 {% comment %}Die Reiter bindet dieses kleine Modul SOFORT (es lädt nur `seitenreiter.js`), nicht die Seitenklasse: Die hängt an dreißig Modulen
 und three.js — bis die geladen sind und alle Bausteine stehen, wäre „Iterationen“ ein toter Knopf. Bis die Seite „fertig“ meldet, steht eine
@@ -62,6 +64,35 @@ Sanduhr (`Seitenreiterwartet`). Nichts wird gemerkt (`null`): Die Seite öffnet 
 <script type="module">
 import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
 Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: true });
+</script>
+{% comment %}Das Aktionslog (04.10.2026, Edgar: „mach server logs wenn ich einen Tab wechsele, sowie bei allen Aktionen im UI"): ein EIGENES Modulskript, damit es schreibt, auch wenn
+`seitenreiter.js` oder die Seitenklasse nicht laden. Es meldet jede Bedienung, jeden Reiterwechsel samt Zustand, Fehler und Hänger des Hauptfadens an `/api/log/` (client.log).{% endcomment %}
+<script type="module">
+import { Engine2d3dKleiderAktionslog } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleideraktionslog.js' %}";
+Engine2d3dKleiderAktionslog.starten(document.getElementById('auftrag-reiter'));
+</script>
+{% comment %}RÜCKFALL (04.10.2026, Edgar: „Tab Auftrag ist wieder nicht anklickbar"): Ein Modulskript läuft erst, wenn seine Datei da ist. Startet der Dev-Server gerade neu
+(jede gespeicherte Python-Datei löst das aus), kommt sie nicht an — dann blieben die Reiter tot, bis man neu lädt. Dieses klassische Skript braucht nichts und schaltet
+die Felder selbst, solange das Modul nicht gebunden hat (`data-gebunden` setzt `Seitenreiter.binden`); danach macht es nichts mehr.{% endcomment %}
+<script>
+(function () {
+    var leiste = document.getElementById('auftrag-reiter');
+    /* Das Log des Rückfalls (05.10.2026, Edgar: „implementiere ein log auf dem Server wenn ich auf den Reiter Iterationen oder Auftrag klicke"): Die Modulskripte schreiben es erst, wenn
+       ihre Dateien da sind — dieses Skript schon beim Lesen der Seite. Es meldet nur, was kein Modul meldet: den Klick, solange `Seitenreiter` noch nicht gebunden hat. */
+    function melden(aktion, detail, stufe) {
+        try {
+            fetch('/api/log/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+                body: JSON.stringify({ page: 'engine2d3dkleider', action: aktion, detail: '[rueckfall] ' + detail, level: stufe }) }).catch(function () {});
+        } catch (fehler) { /* stumm gewollt: Das Log darf die Bedienung nicht aufhalten */ }
+    }
+    leiste.addEventListener('click', function (e) {
+        var knopf = e.target.closest('[role="tab"][data-reiter]');
+        if (!knopf || leiste.dataset.gebunden) return;
+        melden('reiter_klick_ohne_modul', 'reiter=' + knopf.dataset.reiter + ' · das Modul Seitenreiter hat die Leiste noch nicht gebunden · ' + Math.round(performance.now()) + ' ms nach Seitenstart', 'warning');
+        Array.prototype.forEach.call(leiste.querySelectorAll('[role="tab"][data-reiter]'), function (k) { k.setAttribute('aria-selected', String(k === knopf)); });
+        Array.prototype.forEach.call(document.querySelectorAll('[data-reiterfeld]'), function (f) { f.hidden = f.dataset.reiterfeld !== knopf.dataset.reiter; });
+    });
+})();
 </script>
 {% comment %}„Läuft im Hintergrund“ unter den Reitern, über beiden Feldern: Ein Lauf, der von außen gestartet wurde, soll man sehen und beenden
 können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten“.{% endcomment %}
@@ -157,14 +188,26 @@ des Schritts „Körper“. Der Knopf rechnet nur den Schritt (getrennt startbar
 Option gehört zur Gruppe `segmentierung`.{% endcomment %}
 <div class="card" id="segmentierung-karte">
     <h2>Segmentierung — Sapiens <span class="hb-hinweis">(optional, nach dem Netz)</span></h2>
-    <p class="hb-hinweis">Das Körperteil-Modell von Meta (Sapiens-1B) zerlegt jedes vorbereitete Foto in Oberteil, Hose, Socken/Schuhe, Zubehör und Haut. Die Etiketten werden wie die
+    <p class="hb-hinweis">Das Körperteil-Modell von Meta (Sapiens, Größe einstellbar) zerlegt jedes vorbereitete Foto in 28 Klassen (Liste unten), daraus werden Oberteil, Hose, Socken/Schuhe, Zubehör, Haar und Haut — welche Klasse was wird und die Schwellen stehen in den Einstellungen darunter. Die Etiketten werden wie die
         Fotofarbe auf das Netz gelegt (verdeckte Flächen stimmen nicht ab). Bei Option „An“ benutzt der Schritt „Körper“ (Quelle „rechnen“) sie für die Kleidungsmaske statt Farbe und Lage —
         daraus entstehen die Fotostücke (Oberteil, Hose, Socken). Der Schritt braucht das Netz und läuft allein über den Knopf; im vollen Lauf nur bei Option „An“. Gewichte unter
         CC BY-NC 4.0 (nicht kommerziell).</p>
     <div class="mesh-optionen" id="engine2d3dkleider-optionen-segmentierung"></div>
     <div class="engine2d3dkleider-vorbereitung-zeile" id="segmentierung-zeile"></div>
     <div class="engine2d3dkleider-segmentierung-legende" id="segmentierung-legende"></div>
+    <div id="segmentierung-klassen"></div>
     <div class="mesh-fotoliste engine2d3dkleider-vorbereitet" id="segmentierte-fotos"></div>
+</div>
+
+{% comment %}Karte „Kleiderstücke“ (04.10.2026, Edgar: „die Kleider sind im 3D View noch nicht wegklickbar … vor den Iterationen“ und „dafür fehlt mir eine Messgröße“): der Schritt
+`kleiderstuecke` baut Oberteil, Hose und Socken aus dem Netz als eigene Genesis-Stücke und misst sie (`Kleiderstuecknote`); die Bühne trägt sie danach schon vor Runde 1. Aufgebaut von
+`Engine2d3dKleiderstuecke` (JS) aus `zustand.kleiderstuecke`.{% endcomment %}
+<div class="card" id="kleiderstuecke-karte">
+    <h2>Kleiderstücke — vor den Iterationen <span class="hb-hinweis">(nach „Körper“ und „Grundfigur“)</span></h2>
+    <p class="hb-hinweis">Oberteil, Hose und Socken werden aus dem Netz der Fotos als eigene Genesis-Stücke gebaut (Form aus der angepassten Figur, Farbe aus dem Netz, Maske aus der Segmentierung, wenn die
+        Option dort „An“ ist) und gemessen. Danach trägt die Bühne sie schon vor Runde 1 — „Kleider“ blendet sie aus und ein. Runde 1 baut sie nicht neu, solange Netz, Maske und Figur gleich bleiben.</p>
+    <div class="engine2d3dkleider-vorbereitung-zeile" id="kleiderstuecke-zeile"></div>
+    <div id="kleiderstuecke-tabelle"></div>
 </div>
 
 {% comment %}Die Optionen stehen in einer eigenen Karte über die volle Breite, nicht in der Seitenspalte der Bühne wie bei
@@ -518,6 +561,9 @@ nicht gibt) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`,
         <div class="engine2d3dkleider-bildfenster-flaeche" id="bildfenster-flaeche"></div>
     </dialog>
 </div>
+{% comment %}Reiter „Bewertung" (Edgars Rückmeldungen, in allen Aufträgen) und der Block „Nachbesserung" ganz unten, auf jedem Reiter zu sehen (05.10.2026).{% endcomment %}
+{% include "_engine2d3dkleider_bewertung.html" %}
+{% include "_engine2d3dkleider_nachbesserung.html" %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -532,5 +578,18 @@ Engine2d3dKleiderreferenz.starten("{{ job.id }}");
 Auftragloeschen.binden();
 Auftragname.binden();
 new Engine2d3dKleiderbuehnengroesse();
+</script>
+{% comment %}Nachbesserung und Bewertung als EIGENE Modulskripte, unabhängig von der Seitenklasse: Hängt dort ein Modul, arbeiten sie trotzdem.{% endcomment %}
+<script type="module">
+import { Engine2d3dKleiderNachbesserung } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleidernachbesserung.js' %}";
+Engine2d3dKleiderNachbesserung.starten("{{ job.id }}");
+</script>
+<script type="module">
+import { Engine2d3dKleiderBewertung } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleiderbewertung.js' %}";
+Engine2d3dKleiderBewertung.starten();
+</script>
+<script type="module">
+import { Engine2d3dKleiderVorgabe } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleidervorgabe.js' %}";
+Engine2d3dKleiderVorgabe.starten();
 </script>
 {% endblock %}

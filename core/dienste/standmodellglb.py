@@ -29,6 +29,10 @@ import logging
 import numpy as np
 from Genesis9.rigglb import G9rigglb
 
+from .standhandhaut import Standhandhaut
+from .standhautdetail import Standhautdetail
+from .standhose import Standhose
+
 logger = logging.getLogger('core')
 
 __all__ = ['Standmodellglb']
@@ -49,8 +53,8 @@ class Standmodellglb(G9rigglb):
     #: Stoppelbart, der Mitsuba-Render der Iteration zeigt ihn dicht. Ob 0,15 dem Render genügt, sagt der Blick auf die Bühne.
     MASKE_GRENZE = 0.15
     DURCHSICHTIG = ('EyeMoisture', 'Cornea', 'Tear')
-    #: Kleidungsstücke dieser Art (`sorte` beginnt so) bekommen Falten und weißen Stoff.
-    HOSE = 'gc_hose'
+    #: Kleidungsstücke dieser Art (`sorte` beginnt so) bekommen ihre Löcher geschlossen und ihre Ränder geglättet (`Netzputz`).
+    PUTZEN = 'gc_hemd'
     #: Wohin ein Punkt gebunden wird, dessen Knochen das Skelett nicht kennt (gezählt in `fehlend`).
     ERSATZ = 'hip'
 
@@ -66,6 +70,9 @@ class Standmodellglb(G9rigglb):
                                'skeleton': wurzel}]
         self.gltf['samplers'] = [{'magFilter': 9729, 'minFilter': 9987, 'wrapS': 10497, 'wrapT': 10497}]
         self._bilder = {}
+        self._koerper = None                         # das Körpernetz (`koerper()`), aus dem die Hose entsteht
+        #: Ruhigere Flecken und feine Zeichnung auf Beinen und Armen (`Standhautdetail`) — nur vor den Iterationen (der Stand setzt es): mit Iterationen läuft eine Reihe (Randy), deren Film sich nicht ändern soll.
+        self.hautdetail = False
         self.fehlend = set()
         self.zahl = {'netze': 0, 'punkte': 0, 'dreiecke': 0, 'bilder': 0}
 
@@ -103,12 +110,23 @@ class Standmodellglb(G9rigglb):
                 return vorgabe
         return wert if wert is not None else vorgabe
 
-    def _bild(self, albedo=None, alpha=None, alphawert=1.0, weissen=None):
-        """Index der glTF-Textur — je (Bild, Maske, Deckkraft, Weißung) EINMAL in der Datei; None ohne beides. `weissen`: eine `Stoffweissung` (weißer Stoff der Hose: Flecken der
-        Fotoprojektion auf Weiß, Innenseiten ohne Streifen); ihr `schluessel` gehört zum Bildspeicher."""
+    def _bild_aus(self, bild, schluessel):
+        """Index der glTF-Textur für ein fertiges PIL-Bild (PNG, scharfe Kanten) — je `schluessel` EINMAL in der Datei."""
+        if schluessel in self._bilder:
+            return self._bilder[schluessel]
+        speicher = io.BytesIO()
+        bild.save(speicher, format='PNG')
+        self.gltf.setdefault('images', []).append({'bufferView': self._ablegen(speicher.getvalue()), 'mimeType': 'image/png'})
+        self.gltf.setdefault('textures', []).append({'source': len(self.gltf['images']) - 1, 'sampler': 0})
+        self._bilder[schluessel] = len(self.gltf['textures']) - 1
+        self.zahl['bilder'] += 1
+        return self._bilder[schluessel]
+
+    def _bild(self, albedo=None, alpha=None, alphawert=1.0):
+        """Index der glTF-Textur — je (Bild, Maske, Deckkraft) EINMAL in der Datei; None ohne beides."""
         if albedo is None and alpha is None:
             return None
-        schluessel = (str(albedo), str(alpha), round(float(alphawert), 3), weissen.schluessel if weissen is not None else None)
+        schluessel = (str(albedo), str(alpha), round(float(alphawert), 3))
         if schluessel in self._bilder:
             return self._bilder[schluessel]
         from PIL import Image
@@ -118,8 +136,6 @@ class Standmodellglb(G9rigglb):
                 bild = roh.convert('RGB')
                 bild.thumbnail((kante, kante))
                 bild = bild.copy()
-            if weissen is not None:
-                bild = weissen(bild)
         if alpha is not None:
             with Image.open(alpha) as roh:
                 maske = roh.convert('L')
@@ -149,7 +165,7 @@ class Standmodellglb(G9rigglb):
     # -------------------------------------------------------------------- Netz
 
     def _netz(self, name, punkte, dreiecke, normalen, uv, haut, textur=None, faktor=(1.0, 1.0, 1.0), maske=False,
-              zweiseitig=True, glanz=None):
+              zweiseitig=True, glanz=None, normale=None):
         """Ein Netz am gemeinsamen Skin — nur die Punkte, die seine Dreiecke brauchen. `glanz`: `{metall, rauheit, opazitaet}` der Materialgruppe
         (Stiefel glänzen, die Brille ist durchsichtig — wie im Render der Runde, `Mitsubamaterial.metallglanz`/`durchsicht`)."""
         dreiecke = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
@@ -178,6 +194,8 @@ class Standmodellglb(G9rigglb):
         self._glanz(material, glanz)
         if textur is not None and uv is not None:
             material['pbrMetallicRoughness']['baseColorTexture'] = {'index': textur}
+        if normale is not None and uv is not None:                      # Hautdetails der Arme (`Standhandhaut`)
+            material['normalTexture'] = {'index': normale, 'scale': 1.0}
         if maske == 'BLEND':
             material['alphaMode'] = 'BLEND'
         elif maske:
@@ -228,6 +246,7 @@ class Standmodellglb(G9rigglb):
         """Der Körper je UDIM-Kachel ein Netz: das gebackene Foto (`kacheln` {1001: Pfad}), sonst die Daz-Haut der
         ersten Gruppe der Kachel (mit ihrer Farbe)."""
         from Genesis9.material import G9material
+        self._koerper = netz
         dreiecke = np.asarray(netz['dreiecke'], dtype=np.int64).reshape(-1, 3)
         uv = self._uv(netz['uv'])
         uv[:, 0] = np.clip(uv[:, 0], 0.0, 1.0)
@@ -242,8 +261,12 @@ class Standmodellglb(G9rigglb):
             albedo = foto or (G9material.datei(bilder['albedo']) if bilder.get('albedo') else None)
             faktor = (1.0, 1.0, 1.0) if foto else self._zahl(bilder.get('farbe'), (1.0, 1.0, 1.0))
             wahl = np.concatenate([dreiecke[a:b] for a, b, _ in stuecke])
+            hand = Standhandhaut(self).karten(netz, albedo, detail=self.hautdetail) if kachel == Standhandhaut.KACHEL and albedo else None     # Arme, Hände: Hautlinien, Falten, Sehnen und Farbe (`Handhaut`)
+            detail = (Standhautdetail.karte(self, albedo) if self.hautdetail and albedo and kachel != Standhandhaut.KACHEL and Standhautdetail.gilt(kachel, albedo)
+                      else None)                     # Beine: ruhigere Flecken, Poren und Haare (vor den Iterationen)
+            textur, normale = hand or ((detail if detail is not None else self._bild(albedo)), None)
             self._netz('koerper__koerper__0_k%d' % kachel, netz['punkte'], wahl, netz.get('normalen'), uv, haut,
-                       self._bild(albedo), faktor, zweiseitig=False)
+                       textur, faktor, zweiseitig=False, normale=normale)
 
     def anhaenge(self, netz, augenbild=None):
         """Augen, Mund, Wimpern, Brauen (`G9koerpernetz` → `anhaenge`) — je Gruppe ein Netz; die Iris aus dem Bild
@@ -280,12 +303,12 @@ class Standmodellglb(G9rigglb):
             name = '%s__%s__%d' % (t.get('art'), t.get('sorte') or t.get('art'), i)
             dreiecke = np.asarray(t['dreiecke'], dtype=np.int64).reshape(-1, 3)
             haut = self._haut(t.get('haut'), len(t['punkte']))
-            weiss = str(t.get('sorte') or '').startswith(self.HOSE)       # weiße Hose: Stoffdrapierung (`Hosenfalten`) und fleckenfreies Weiß (`Stoffweissung`)
-            innen = None
-            if weiss:
-                from .hosenfalten import Hosenfalten
-                innen = Hosenfalten.innen(t['punkte'], dreiecke)
-                t = dict(t, punkte=Hosenfalten.anwenden(t['punkte'], dreiecke), normalen=None)       # Normalen neu aus den verschobenen Punkten, sonst bleiben die Falten ungeschattet
+            if Standhose.gilt(t.get('sorte')) and self._koerper is not None:
+                Standhose.ablegen(self, t, name)       # die Hose kommt aus dem Körpernetz (`Hosenkoerper`): locker (Runden) oder eng (Fotostück), nicht aus ihrem eigenen Netz
+                continue
+            if str(t.get('sorte') or '').startswith(self.PUTZEN):
+                from .netzputz import Netzputz
+                t, dreiecke, haut = Netzputz.teil(t, dreiecke, haut)      # Löcher am Ärmel schließen, Saum und Ärmelenden glätten
             gruppen = [g for g in (t.get('gruppen') or []) if int(g.get('index_anzahl') or 0) >= 3]
             uv = self._uv(t.get('uv'))
             if uv is None or not gruppen:
@@ -298,12 +321,7 @@ class Standmodellglb(G9rigglb):
                 tx = je_ab.get(ab) or {}
                 b = g.get('bilder') or {}
                 alpha = G9material.datei(b['alpha']) if b.get('alpha') else None
-                weissen = None
-                if weiss:
-                    from .stoffweissung import Stoffweissung
-                    gewaehlt = dreiecke[ab:ab + anzahl][innen[ab:ab + anzahl]]
-                    weissen = Stoffweissung(uv[gewaehlt] if len(gewaehlt) else None)
-                textur = self._bild(tx.get('albedo'), alpha, self._zahl(b.get('alphawert'), 1.0), weissen=weissen)
+                textur = self._bild(tx.get('albedo'), alpha, self._zahl(b.get('alphawert'), 1.0))
                 faktor = tx['faktor'] if tx.get('faktor') is not None else t['farbe']
                 self._netz('%s_g%d__%s' % (name, k, G9kleidtexturen.slug(g['name'])), t['punkte'],
                            dreiecke[ab:ab + anzahl], t.get('normalen'), uv, haut, textur, faktor,

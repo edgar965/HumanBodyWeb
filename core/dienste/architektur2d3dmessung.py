@@ -47,7 +47,7 @@ class Architektur2d3dmessung:
         ('Teilevorrat: Kleidung und Haar je Prozess aufbewahren, solange ihr Bauplan gleich bleibt',
          'Modell bauen kalt 41,7 s → warm 0,1 s für das Modell selbst'),
         ('Keine GLB je Runde', '56 MB je Runde weniger; der Zeitanteil ist nicht getrennt gemessen'),
-        ('Kein Standmodell nach reinen Runden', '20 s je Lauf weniger'),
+        ('Kein Standmodell nach reinen Runden', '20 s je Lauf weniger — seit 05.10.2026 nur noch im Modus „automatisch": Im Modus „Begutachtung" baut der Lauf es am Ende (Edgar), 40–50 s zusätzlich'),
         ('Note und Befund auf 128 × 192 statt 256', 'die Renders der Runde entstehen in max(Auflösungsstufe, tafelbreite 384) wegen der '
          'Prüfbilder (Begutachtungsrunde, Zeile 166); Zeitanteil nicht getrennt gemessen'),
         ('Mund: Mimikregler beim Lesen filtern', 'statt 872 s Körper neu rechnen: 0 s'),

@@ -7,7 +7,7 @@ Edgar, 04.10.2026: „mach eine intensive Suche auf GitHub nach ALLEN Projekten 
 Hilfe - Recherche, darunter Menü und Seite Human 3D, darin erstelle eine Tabelle nach djangoBase-Muster mit allen Projekten".
 
 Die Tabelle ist `djangobase/_tabelle.html`; ihre Struktur baut `Recherchetabelle`, die Projekte stehen in `core/daten/recherche_human3d.json` (`Rechercheprojekte`). Das Fenster nach einem
-Klick auf ToDo füllt `js/hilfe/recherchehuman3d.js` aus dem JSON-Block `rc-daten` (Texte per `textContent`, nie als HTML — sie stammen aus fremden READMEs).
+Klick auf ToDo füllt `js/hilfe/recherchehuman3d.js` mit den Daten des einen Projekts (`/hilfe/recherche/human-3d/popup/<id>/`, Texte per `textContent`, nie als HTML — sie stammen aus fremden READMEs).
 {% endcomment %}
 
 {% block title %}Recherche — Human 3D{% endblock %}
@@ -38,9 +38,20 @@ Klick auf ToDo füllt `js/hilfe/recherchehuman3d.js` aus dem JSON-Block `rc-date
     <strong>Was „alle" hier heißt:</strong> {{ meta.grenzen }}
   </p>
   <p>
+    <strong>Forks</strong> stehen nur, wenn sie etwas Besseres haben als das Original (mehr Sterne oder erkennbar eigene Verbesserungen); sie tragen unter dem Namen die Zeile „Fork von …".
+    <strong>Hugging Face</strong> zeigt Demo (Space), Modell und Datensatz des Projekts, soweit das README sie verlinkt und die HF-Schnittstelle sie öffentlich kennt (oder ein Konto mit demselben
+    Besitzer und Projektnamen existiert); fehlt der Eintrag, ist dort nichts gefunden worden.
+    <strong>Hauptbild</strong> und die Bilder im Fenster sind verkleinerte Kopien aus dem Projekt zur Vorschau (sie gehören den jeweiligen Autoren); ein Klick auf das Hauptbild zeigt es groß, ein Klick
+    auf ein Bild im Fenster öffnet das Original beim Projekt.
+  </p>
+  <p>
     <strong>ToDo</strong> nennt, was das Projekt kann und unser Projekt nicht hat — gemessen an dem, was im Code steht
     (Stichwortsuche im Quelltext, {{ meta.bestand_stand_text }}). Ein Klick auf die ToDo-Zelle öffnet ein Fenster mit allen Punkten, weiteren Bildern und den Eckdaten.
     Die Spaltenköpfe sortieren, die Spaltenbreiten lassen sich ziehen.
+  </p>
+  <p>
+    <strong>Prio</strong> ist deine Reihenfolge, ob wir ein Projekt testen oder einbauen (1 = zuerst; leer = noch nicht eingestuft). Jede Zahl gehört nur einem Projekt: Gibst du eine Zahl ein, die ein
+    anderes Projekt schon trägt, rückt dieses um eins nach hinten (und ein weiteres, das dort steht, ebenfalls). Gespeichert wird sofort beim Verlassen des Felds oder mit Enter.
   </p>
 
   <div class="rc-kategorien">
@@ -56,7 +67,6 @@ Klick auf ToDo füllt `js/hilfe/recherchehuman3d.js` aus dem JSON-Block `rc-date
     </div>
     <div id="rc-popup-inhalt"></div>
   </dialog>
-  {{ popup|json_script:"rc-daten" }}
   {% endif %}
 
 </div>

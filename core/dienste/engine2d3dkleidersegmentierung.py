@@ -23,6 +23,7 @@ from ..daten.wrapperpfad import Wrapperpfad
 from ..pipeline_process import PipelineProzess, PipelineStille
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .engine2d3dkleidernetz import Engine2d3dKleidernetz
+from .engine2d3dkleidersegmentierungsoptionen import Engine2d3dKleidersegmentierungsoptionen
 
 logger = logging.getLogger('core')
 
@@ -43,8 +44,12 @@ class Engine2d3dKleidersegmentierung:
         self.optionen = Engine2d3dKleideroptionen.segmentierung(self.job.optionen)
         self._ergebnis = None
 
+    def gebraucht(self):
+        """Braucht der volle Lauf die Etiketten? Für die Kleidungsmaske (`verwenden = an`) oder für die Haarmaske (`haar` Sapiens oder beides)."""
+        return self.optionen.get('verwenden') == 'an' or self.optionen.get('haar') in ('sapiens', 'beide')
+
     def ausfuehren(self):
-        if self.optionen.get('verwenden') != 'an' and getattr(self.lauf, 'ab', None) != 'segmentierung':
+        if not self.gebraucht() and getattr(self.lauf, 'ab', None) != 'segmentierung':
             logger.info('2D3D Kleider %s: Segmentierung aus (Option) — übersprungen', self.job.kennung)
             self.lauf.melden(1.0, 'Segmentierung aus (Option) — übersprungen')
             return
@@ -72,7 +77,7 @@ class Engine2d3dKleidersegmentierung:
 
     def beschreibung(self):
         """Was der Runner rechnen soll: das Netz, die vorbereiteten Fotos mit Rolle, die Ordner (JSON `segmentierung/auftrag.json`)."""
-        netz = self.ablage.netzdatei()
+        netz = self.ablage.netzdatei(original=True)             # nie das Tiefennetz: der Stand der Stimmen merkt sich Größe und Änderungszeit dieser Datei
         if netz is None:
             raise RuntimeError('Kein Netz — erst der Schritt „netz"')
         bilder = self.bilder_fuer(self.job, self.ablage)
@@ -84,6 +89,8 @@ class Engine2d3dKleidersegmentierung:
             'bilder': bilder,
             'hf_home': str(settings.HF_HOME_DIR),
             'ordner': {'segmentierung': str(self.ablage.segmentierung()), 'arbeit': str(self.ablage.arbeit())},
+            # Die Einstellungen, die ändern, WAS Sapiens rechnet (Modellgröße, Flächenbild, Fotokante, Rand) — der Runner legt sie im Stand ab, damit „veraltet" sie erkennt.
+            'optionen': Engine2d3dKleidersegmentierungsoptionen.rechenoptionen(self.optionen),
         }
 
     @classmethod

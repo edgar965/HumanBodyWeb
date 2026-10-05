@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Workflowstrecke — die Schritte eines Auftrags „2D3D Kleider" (seit 04.10.2026 neun, die Segmentierung ist optional) als Kette von Klassenkarten, mit ihren Optionen, ihrer
+"""Workflowstrecke — die Schritte eines Auftrags „2D3D Kleider" (seit 04.10.2026 zehn, die Segmentierung ist optional) als Kette von Klassenkarten, mit ihren Optionen, ihrer
 Zeit und der Zeitleiste eines vollständigen Auftrags (Hilfe → Architektur → 2D3D, 02.10.2026).
 
 Die Schritte kommen aus `Architektur2d3d.LAUF` (= `Engine2d3dKleiderlauf.SCHRITTE`), die Optionen aus den Katalogen
@@ -69,6 +69,7 @@ class Workflowstrecke:
             [('figur.basis', 'feminine · masculine · neutral'), ('figur.modell', 'aus (Vorgabe hier) · an')],
             [],
         ),
+        ('kleiderstuecke', 'Engine2d3dKleiderstuecke', W.KLEIDERSTUECKE, [], []),
         (
             'iterationen',
             'Iterationskreislauf',

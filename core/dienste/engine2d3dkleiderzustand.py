@@ -54,6 +54,8 @@ class Engine2d3dKleiderzustand:
             'vorbereitet': Engine2d3dKleiderzustand._vorbereitet(job),
             # Die Fotos mit den Etiketten des Schritts „Segmentierung" (`segmentierung/`), Karte unter dem Mesh.
             'segmentiert': Engine2d3dKleiderzustand._segmentiert(job),
+            # Die Kleiderstücke vor den Iterationen mit ihrer Messung (`Engine2d3dKleiderstuecke`), Karte „Kleiderstücke".
+            'kleiderstuecke': (job.ergebnis or {}).get('kleiderstuecke'),
             'modell': job.modell,
             'laeuft': job.laeuft,
             'schritte': list(Engine2d3dKleiderlauf.SCHRITTE),

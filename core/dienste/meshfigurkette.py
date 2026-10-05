@@ -105,6 +105,11 @@ class Meshfigurkette:
         # Textur und Runden auf einem kaputten Körper zu bauen (`meshfigur_rumpfpruefung.py`).
         pruefung = verlauf[-1].get('pruefung') or {}
         if pruefung and not pruefung.get('gueltig', True):
+            # Option `koerper.tor` (04.10.2026): „melden" lässt die Kette weiterlaufen — ohne ihre späteren Teilschritte (Gesicht, Textur, Vorschau) gäbe es keine Kleiderstücke (`genesis_ende.npz`).
+            if getattr(self.lauf, 'tor', 'anhalten') == 'melden':
+                self.job.ergebnis['koerper']['tor'] = {'angehalten': False, 'grund': pruefung.get('grund')}
+                logger.warning('2D3D Kleider %s: Körper-Tor schlägt an, der Lauf geht weiter (Option „Nur melden"): %s', self.job.kennung, pruefung.get('grund'))
+                return
             self.lauf.sichern('ergebnis')
             raise RuntimeError('Körper-Tor: %s' % pruefung.get('grund'))
 

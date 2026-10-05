@@ -106,13 +106,20 @@ class Meshfigurkleidung:
         if not getattr(self.lauf, 'sapiens_maske', False):
             return maske, None
         from Kleidung.sapiensmaske import Sapiensmaske
+        from Kleidung.sapienszuordnung import Sapienszuordnung
 
+        from .engine2d3dkleidersegmentierungsoptionen import Engine2d3dKleidersegmentierungsoptionen
+
+        einstellungen = getattr(self.lauf, 'sapiens_einstellungen', None) or {}
         try:
-            stimmen = Sapiensmaske.laden(self.ablage.arbeit(), daten.auftrag['netz'], len(scan.flaechen))
+            # Das Netz des Schritts „netz" (`original=True`), nicht `daten.auftrag['netz']`: Mit Option `koerper.tiefe` ist das die Tiefenfassung — die Stimmen wurden auf dem Original gerechnet.
+            klassen = Sapiensmaske.laden(self.ablage.arbeit(), self.ablage.netzdatei(original=True), len(scan.flaechen),
+                                         Engine2d3dKleidersegmentierungsoptionen.rechenoptionen(einstellungen))
         except Sapiensmaske.Unbrauchbar as grund:
             logger.warning('Kleidung %s: Sapiens-Maske nicht benutzt (%s) — Farbe und Lage gelten', self.job.kennung, grund)
             return maske, {'verwendet': False, 'grund': str(grund)}
-        stueck, bericht = Sapiensmaske(stimmen, karte, karte.inhalt, regel.mitte, regel.kopf_ab()).verbinden(maske['stueck'])
+        stimmen = Sapienszuordnung.stimmen(klassen, einstellungen)          # Schuhe, Socken, Zubehör nach den Optionen
+        stueck, bericht = Sapiensmaske(stimmen, karte, karte.inhalt, regel.mitte, regel.kopf_ab(), **Sapiensmaske.aus_optionen(einstellungen)).verbinden(maske['stueck'])
         logger.info('Kleidung %s: Sapiens-Maske, %d von %d Flächen anders als die Regel', self.job.kennung,
                     bericht['flaechen_geaendert'], len(scan.flaechen))
         return regel.abschliessen(stueck), bericht

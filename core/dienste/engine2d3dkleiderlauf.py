@@ -15,7 +15,9 @@ Kopie von `Blendermodelllauf`, mit der Genesis-Engine (`Genesisengine2d3dkleider
     segmentierung OPTIONAL (Option `segmentierung.verwenden`, ausdrücklich gestartet läuft er immer): Sapiens zerlegt die vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, Zubehör und
                  Haut und legt die Etiketten auf die Flächen des Netzes (`Engine2d3dKleidersegmentierung`, 04.10.2026); der Schritt „kleidung" der Körper-Kette nimmt sie für die Kleidungsmaske
     grundfigur   Genesis-9-Grundfigur (Option „Grundfigur") mit Rig, Stellung für Bühne und Export
-    iterationen  die Iterationen: Runden aus Optimierer + lokaler Prüf-KI gegen die Vorlagenbilder (`Iterationskreislauf`)
+    kleiderstuecke die Kleidung des Netzes als eigene Genesis-Stücke (Oberteil, Hose, Socken: `Fotostuecke`) VOR den Iterationen bauen und messen (`Kleiderstuecknote`), die Bühne trägt sie
+                 schon vor Runde 1 (`Engine2d3dKleiderstuecke`, 04.10.2026)
+    iterationen die Iterationen: Runden aus Optimierer + lokaler Prüf-KI gegen die Vorlagenbilder (`Iterationskreislauf`)
     export       die Figur als GLB mit Rig (`Engine2d3dKleiderexport`)
     film         BVH retargeten, die Engine rendert den Film (`Engine2d3dKleiderfilm`; ohne BVH übersprungen)
     speichern    Ablage in `output/Export/Engine2d3dKleider` (`Engine2d3dKleiderspeichern`)
@@ -43,7 +45,7 @@ __all__ = ['Engine2d3dKleiderlauf']
 
 
 class Engine2d3dKleiderlauf:
-    SCHRITTE = ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur', 'iterationen', 'export', 'film', 'speichern')
+    SCHRITTE = ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern')
     #: Anteil am Balken 0…100 — Netz (TRELLIS) und Iterationen sind die langen Teile.
     BAENDER = {
         'vorbereitung': (0, 3),
@@ -51,7 +53,8 @@ class Engine2d3dKleiderlauf:
         'segmentierung': (24, 27),
         'koerper': (27, 40),
         'grundfigur': (40, 43),
-        'iterationen': (43, 85),
+        'kleiderstuecke': (43, 47),
+        'iterationen': (47, 85),
         'export': (85, 88),
         'film': (88, 98),
         'speichern': (98, 100),
@@ -80,6 +83,7 @@ class Engine2d3dKleiderlauf:
         from .engine2d3dkleidergrundfigur import Engine2d3dKleidergrundfigur
         from .engine2d3dkleiderkoerper import Engine2d3dKleiderkoerper
         from .engine2d3dkleidernetz import Engine2d3dKleidernetz
+        from .engine2d3dkleiderstuecke import Engine2d3dKleiderstuecke
         from .engine2d3dkleidersegmentierung import Engine2d3dKleidersegmentierung
         from .engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
         from .engine2d3dkleidervorbereitung import Engine2d3dKleidervorbereitung
@@ -91,6 +95,7 @@ class Engine2d3dKleiderlauf:
             'segmentierung': lambda: Engine2d3dKleidersegmentierung(self).ausfuehren(),
             'koerper': lambda: Engine2d3dKleiderkoerper(self).ausfuehren(),
             'grundfigur': lambda: Engine2d3dKleidergrundfigur(self).ausfuehren(),
+            'kleiderstuecke': lambda: Engine2d3dKleiderstuecke(self).ausfuehren(),
             'iterationen': lambda: Iterationskreislauf(self).ausfuehren(),
             'export': lambda: Engine2d3dKleiderexport(self).ausfuehren(),
             'film': lambda: Engine2d3dKleiderfilm(self).ausfuehren(),
@@ -151,14 +156,35 @@ class Engine2d3dKleiderlauf:
         )
         logger.info('2D3D Kleider %s: %s in %.0f s', job.kennung, job.status, job.ergebnis['dauer_s'])
 
+    @staticmethod
+    def _von_hand(job, gelaufen):
+        """Gehören die Iterationen zu diesem Lauf, und werden sie von Hand gesteuert (Modus „Begutachtung": je Rezept ein Lauf mit einer oder n Runden, danach wartet der Auftrag)?"""
+        if 'iterationen' not in gelaufen:
+            return False
+        from .iterationsoptionen import Iterationsoptionen
+        o = Iterationsoptionen.pruefen((getattr(job, 'optionen', None) or {}).get('iterationen'))
+        return o.get('modus') == Iterationsoptionen.BEGUTACHTUNG
+
     def _standmodell(self, gelaufen):
         """Das 3D-Modell des letzten Stands für die Bühne (`Engine2d3dKleiderstandmodell`, 01.10.2026) — nach jedem Lauf, der
-        die Figur geändert hat. Ein Fehler hält den Lauf nicht auf: die Bühne baut die Figur dann im Browser."""
-        # Nach reinen Runden nicht (20 s je Lauf, Edgar 02.10.2026 „eine Runde muss 2–3 s dauern"): die Bühne bestellt
-        # es beim Öffnen der Seite (`Engine2d3dKleiderstandbestellung`).
-        if not {'koerper', 'grundfigur'} & set(gelaufen):
+        die Figur geändert hat, und nach dem Ende der letzten Runde, wenn die Iterationen von Hand gesteuert werden. Ein Fehler hält den Lauf nicht auf: die Bühne baut die Figur dann im Browser."""
+        # Edgar 04.10.2026: „bau das Modell IMMER nach dem Beenden der letzten Iteration, wenn die Iterationen manuell gesteuert werden" — einmal am Ende des Laufs, nicht je Runde eines
+        # Laufs mit n Runden. Der automatische Modus baut weiter nicht (20 s je Lauf, Edgar 02.10.2026 „eine Runde muss 2–3 s dauern"): die Bühne bestellt es beim Öffnen der Seite
+        # (`Engine2d3dKleiderstandbestellung`).
+        figur = {'koerper', 'grundfigur', 'kleiderstuecke'} & set(gelaufen)
+        if not figur and not Engine2d3dKleiderlauf._von_hand(self.job, gelaufen):
             return
         from .engine2d3dkleiderstandmodell import Engine2d3dKleiderstandmodell
+        from .standbewegung import Standbewegung
+        # Die Bewegung der BVH auf der Figur (Play der Bühne) braucht den Film-Schritt nicht (`Standbewegung`, 04.10.2026) — ein Fehler hält den Lauf auch hier nicht auf. Sie hängt nur an der Stellung
+        # des Auftrags und der BVH, nicht an den Runden: nach Runden gibt es nichts neu zu rechnen.
+        try:
+            if figur:
+                self.melden(1.0, 'Bewegung auf der Figur')
+                if Standbewegung(self.job, self.ablage).sichern():
+                    self.sichern('ergebnis')
+        except Exception:  # noqa: BLE001 — ohne Bewegung fehlt nur Play
+            logger.exception('2D3D Kleider %s: Bewegung der Figur nicht gerechnet', self.job.kennung)
         stand = Engine2d3dKleiderstandmodell(self.job, self.ablage)
         try:
             self.melden(1.0, 'Modell des letzten Stands für die Bühne')

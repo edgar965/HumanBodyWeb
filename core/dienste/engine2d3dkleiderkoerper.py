@@ -99,10 +99,25 @@ class Engine2d3dKleiderkoerper:
 
     # ------------------------------------------------------------- rechnen
 
+    def _tiefe(self):
+        """Das Tiefennetz (Option `koerper.tiefe`, `Netztiefe`) schreiben, bevor die Kette das Netz liest — oder ablegen, warum nicht. Ein Fehler hält den Lauf nicht auf: die Kette rechnet dann auf
+        dem Original, und der Grund steht im Ergebnis (`ergebnis.netztiefe`) — nie ein stilles Zurückfallen."""
+        from .netztiefe import Netztiefe
+        try:
+            bericht = Netztiefe(self.job, self.ablage).sichern()
+        except Exception as fehler:  # noqa: BLE001 — siehe Docstring
+            logger.exception('2D3D Kleider %s: Netztiefe gescheitert', self.job.kennung)
+            bericht = {'aktiv': False, 'grund': 'Fehler: %s' % str(fehler)[:300]}
+        self.job.ergebnis['netztiefe'] = bericht
+        self.lauf.sichern('ergebnis')
+        if bericht.get('aktiv'):
+            self.lauf.melden(0.0, 'Netztiefe angeglichen (Faktor bis %.2f)' % bericht.get('staerkster_faktor', 1.0))
+
     def _rechnen(self):
         from .engine2d3dkleiderkoerperlauf import Engine2d3dKleiderkoerperlauf
-        if self.ablage.netzdatei() is None:
+        if self.ablage.netzdatei(original=True) is None:
             raise RuntimeError('Kein Netz — erst der Schritt „netz"')
+        self._tiefe()
         kette = Engine2d3dKleiderkoerperlauf(self.lauf, self.optionen)
         schritte = kette.schrittfolge()
         for nummer, name in enumerate(self.KETTE):

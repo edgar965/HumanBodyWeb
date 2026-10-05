@@ -139,6 +139,7 @@ class Begutachtungsrunde:
         from Genesis9.modellrezept import G9rezept
 
         from .genesishaarrender import Genesishaarrender
+        from .hosenteil import Hosenteil
         from .kleidermodellbau import Kleidermodellbau
         start = time.perf_counter()
         runde = self._letzte_runde() + 1
@@ -157,9 +158,12 @@ class Begutachtungsrunde:
         self._melden(0.1, 'Runde %d: Modell bauen' % runde)
         # Gebaut in der A-Pose (GLB, Bühne); Render, Note, Befund und Fotoprojektion in der Haltung der Fotos — gehäutet,
         # damit die Ärmel den Armen folgen (`G9haltungshaut`, 01.10.2026).
-        bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.werkzeug.kacheln())
+        bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.werkzeug.kacheln(), ablage=self.ablage)
         teile = G9haltungshaut(bau.stellung, modell.drehung(), bau.boden).posieren(
             Haarzonen.anwenden(bau.teile(modell), modell.farben))           # Haarfarbe je Kopfzone (02.10.2026)
+        # Die Hose aus dem Körpernetz wie auf der Bühne und im Film (`Hosenteil`, 04.10.2026): Die drapierte GarmentCode-Hose klaffte im Schritt und trug
+        # das Streifenbild rot an der Innennaht; eine Änderung an der Standhose kam in den Iterationsbildern nie an.
+        teile = Hosenteil.ersetzen(teile, self.ablage.arbeit('runden') / ('runde_%04d' % runde))
         z['modell_hoehe'] = round(float(max(float(np.asarray(t['punkte'])[:, 1].max()) for t in teile)), 4)
         # Note in der Auflösungsstufe, Befund auf 128 × 192, Renders mindestens in Prüfbreite (Edgar 02.10.2026).
         breite = self.stufe.breite(z)

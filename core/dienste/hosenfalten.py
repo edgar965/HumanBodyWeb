@@ -21,7 +21,7 @@ __all__ = ['Hosenfalten']
 
 class Hosenfalten:
     #: Größte Verschiebung nach außen / nach innen (m): nach innen höchstens ein Millimeter, sonst durchstößt der Stoff die Haut (Abstand zur Haut siehe `bau.anliegen_mm`).
-    AUSSEN, INNEN = 0.010, 0.003
+    AUSSEN, INNEN = 0.012, 0.003
     FAECHER = 0.30            # Radius um den Schritt (m), in dem die Falten fächerförmig nach außen laufen
     KNIE = 0.58               # Anteil der Beinlänge (Schritt → Saum), bei dem das Knie liegt
 
@@ -83,18 +83,18 @@ class Hosenfalten:
         r = np.hypot(x, y - yc)
         alpha = np.arctan2(y - yc, x)
         faecher = np.sin(9.0 * alpha + 0.6 * np.sin(3.0 * alpha + 1.0)) * (1.0 - cls._weich(r / cls.FAECHER)) ** 1.2 * (0.55 + 0.45 * np.sin(23.0 * r))
-        feld = 0.0060 * faecher * (0.6 * vorn + 0.4 * hinten)
+        feld = 0.0070 * faecher * (0.6 * vorn + 0.4 * hinten)
         # 2. Reißverschlusswulst vorn: schmale Rinne an der Mittelnaht vom Schritt aufwärts
         rinne = np.exp(-(x / 0.006) ** 2) * cls._weich((y - yc + 0.01) / 0.03) * (1.0 - cls._weich((y - yc - 0.16) / 0.04)) * vorn
         feld -= 0.0040 * rinne
         # 3. Knie: Querfalten, hinten kräftiger (Kniekehle), vorn leichter
         yk = ymin + cls.KNIE * bein
         knie = np.sin(2.0 * np.pi * (y - yk) / 0.034 + 2.2 * np.sin(2.0 * theta)) * np.exp(-((y - yk) / 0.07) ** 2)
-        feld += 0.0050 * knie * (0.5 * vorn + 1.0 * hinten)
+        feld += 0.0060 * knie * (0.5 * vorn + 1.0 * hinten)
         # 4. Saum: Stauchfalten über dem Knöchel
         s = y - ymin
         saum = np.sin(2.0 * np.pi * s / 0.042 + 1.7 * np.sin(3.0 * theta)) * np.exp(-s / 0.11) * cls._weich(s / 0.012)
-        feld += 0.0040 * saum
+        feld += 0.0065 * saum
         # 5. Weiche Unruhe über Oberschenkel und Gesäß (kein Muster erkennbar)
         feld += 0.0015 * (np.sin(26.0 * x + 9.0 * y + 3.0 * z) + np.sin(17.0 * y - 11.0 * z + 1.3)) * cls._weich((y - ymin - 0.2) / 0.3)
         feld = np.clip(feld, -cls.INNEN, cls.AUSSEN)

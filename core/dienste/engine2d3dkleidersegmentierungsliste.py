@@ -15,6 +15,7 @@ from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from ..daten.wrapperpfad import Wrapperpfad
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .engine2d3dkleidersegmentierung import Engine2d3dKleidersegmentierung
+from .engine2d3dkleidersegmentierungsoptionen import Engine2d3dKleidersegmentierungsoptionen
 
 logger = logging.getLogger('core')
 
@@ -33,12 +34,14 @@ class Engine2d3dKleidersegmentierungsliste:
         if not stand:
             return None
         aktuelle = {b['datei']: b['png'] for b in Engine2d3dKleidersegmentierung.bilder_fuer(job, ablage)}
-        netz = ablage.netzdatei()
-        passt, grund = Sapiensstand.aktuell(ordner, str(netz) if netz else None, aktuelle)
+        netz = ablage.netzdatei(original=True)
+        einstellungen = Engine2d3dKleideroptionen.segmentierung(job.optionen)
+        passt, grund = Sapiensstand.aktuell(ordner, str(netz) if netz else None, aktuelle, Engine2d3dKleidersegmentierungsoptionen.rechenoptionen(einstellungen))
         bilder = []
         for e in stand.get('bilder', []):
             if (ablage.segmentierung() / str(e.get('ueberlagerung') or '-')).is_file():
                 bilder.append({k: e.get(k) for k in ('datei', 'rolle', 'ueberlagerung', 'anteile', 'iou', 'sichtbar')})
         kleidung = ((job.ergebnis or {}).get('kleidung') or {}).get('sapiens')
-        return {'stand': stand.get('stand'), 'verwenden': Engine2d3dKleideroptionen.segmentierung(job.optionen).get('verwenden'),
-                'veraltet': not passt, 'grund': grund, 'bilder': bilder, 'kennzahlen': stand.get('kennzahlen'), 'kleidung': kleidung}
+        haar = ((job.ergebnis or {}).get('haar') or {}).get('sapiens')
+        return {'stand': stand.get('stand'), 'verwenden': einstellungen.get('verwenden'), 'haar_quelle': einstellungen.get('haar'),
+                'veraltet': not passt, 'grund': grund, 'bilder': bilder, 'kennzahlen': stand.get('kennzahlen'), 'kleidung': kleidung, 'haar': haar}

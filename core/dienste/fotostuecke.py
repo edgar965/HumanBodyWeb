@@ -35,7 +35,7 @@ class Fotostuecke:
     ORDNER = {'socken': 'accessories', 'hose': 'pants', 'haar': 'accessories'}
     #: Weniger Flächen ist kein Stück (Fehlklassifikation).
     FLAECHEN_MIN = 500
-    FASSUNG = 20                # 20: Stoff liegt auf den Schultern auf (`Fotohuelle._aufliegen`, 02.10.2026)
+    FASSUNG = 25                # 25: Socke höchstens 8 mm vom Bein (`Fotohuelle.HOECHST`, kein Stiefelschaft); 24: Hosenbund 1 cm über dem Hemdsaum statt darunter; 23: Hose wie die Socken je Körperseite gefüllt; 22: Hose oberhalb der Saum-Ebene gekappt; 21: Hosenbund an der Ebene des Hemdsaums, Socken rundum (`Fotohuelle._saum_darueber`, `_fuss_schliessen`, 05.10.2026); 20: Stoff liegt auf den Schultern auf (`Fotohuelle._aufliegen`, 02.10.2026)
     #: 'huelle': Form aus der angepassten Figur (`Fotohuelle`, seit Fassung 13 — keine Risse unter den Ärmeln);
     #: 'netz': die Flächen des Netzes selbst, in die Ruhelage zurückgerechnet (bis Fassung 12).
     FORM = 'huelle'
@@ -74,7 +74,9 @@ class Fotostuecke:
         if not (maske.is_file() and ruhe.is_file() and posiert.is_file()):
             return {}, {'fehler': 'Maske oder Figur fehlen'}
         scan, _ = Meshfigurkleidung(type('Lauf', (), {'job': self.job, 'ablage': self.ablage})()).koerpernetz()
-        if scan.uv_ecken is None or scan.textur is None:
+        # Die Hülle (`FORM == 'huelle'`) holt nur Farben (`scan.farben`: Textur ODER Punktfarben) und schreibt ihren eigenen Atlas. Netze aus Pixal3D (Mehrbild) tragen Punktfarben statt einer Textur —
+        # der Auftrag „Generisch" (2026.10.04.12.40.34) bekam deshalb keine Kleiderstücke („Netz ohne Textur"), obwohl Körper und Maske stimmten.
+        if (scan.uv_ecken is None or scan.textur is None) and (self.FORM != 'huelle' or scan.punktfarben is None):
             return {}, {'fehler': 'Netz ohne Textur'}
         with np.load(maske) as d:
             stueck = np.asarray(d['stueck'])

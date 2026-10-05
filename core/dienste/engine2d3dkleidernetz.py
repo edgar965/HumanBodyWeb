@@ -190,7 +190,7 @@ class Engine2d3dKleidernetz:
 
     def _abschluss(self):
         job, ablage = self.job, self.ablage
-        glb = ablage.netzdatei()
+        glb = ablage.netzdatei(original=True)
         if glb is None:
             raise RuntimeError('Der Runner meldet Ergebnis, aber %s fehlt' % ablage.netz(ablage.NETZDATEI))
         ergebnis = dict(self._ergebnis)

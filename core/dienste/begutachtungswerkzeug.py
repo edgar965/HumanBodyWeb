@@ -83,8 +83,12 @@ class Begutachtungswerkzeug:
         """`{oberteil|hose|socken: Garderobenkennung}` — die Kleider aus dem Netz der Fotos (`Fotostuecke`, beim ersten
         Mal ~150 s, danach aus dem Auftrag); leer, wenn es keine gibt."""
         if getattr(self, '_fotostuecke', None) is None:
+            from iterationen2d3d.kleiderwahl import Kleiderwahl
+
+            from .engine2d3dkleiderkoerperoptionen import Engine2d3dKleiderkoerperoptionen
             from .fotostuecke import Fotostuecke
-            self._fotostuecke = Fotostuecke(self.job, self.ablage).holen()
+            # Das Oberteil nach der Option `koerper.oberteil` (Vorgabe: das Genesis-Hemd statt des Fotostücks, 04.10.2026).
+            self._fotostuecke = Kleiderwahl.mit_oberteil(Fotostuecke(self.job, self.ablage).holen(), Engine2d3dKleiderkoerperoptionen.oberteil(self.job))
         return self._fotostuecke
 
     def kacheln(self):
@@ -166,7 +170,7 @@ class Begutachtungswerkzeug:
         pfad = self.ablage.iterationen('runde_%03d_modell.glb' % beste)
         if not pfad.is_file():
             modell = ModellMitKleidern.aus(z['modell'])
-            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.kacheln())
+            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.kacheln(), ablage=self.ablage)
             bau.glb(Haarzonen.anwenden(bau.teile(modell), modell.farben), pfad)
         shutil.copyfile(pfad, self.ablage.ergebnis(name))
         return pfad

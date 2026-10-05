@@ -42,21 +42,40 @@ class Command(BaseCommand):
         pid.write_text(str(os.getpid()))
         try:
             self._lauf(job, render)
+            self._warteschlange(job, render)
         except Exception as fehler:  # noqa: BLE001 — der Fehler gehört ins Protokoll und auf die Seite
             logger.exception('2D3D Kleider %s: Render gescheitert', job.kennung)
             render.melden(status='fehler', fehler=str(fehler)[:600])
+            from core.dienste.engine2d3dkleiderrenderneu import Engine2d3dKleiderrenderneu
+            Engine2d3dKleiderrenderneu(render).leeren()             # nach einem Fehler nicht stumm mit dem Rest weiterrechnen
         finally:
             pid.unlink(missing_ok=True)
+
+    def _warteschlange(self, job, render):
+        """Die Läufe, die „Neu rendern" hinter dem ersten vorgemerkt hat (`Engine2d3dKleiderrenderneu`), nacheinander — eine Karte, ein Lauf."""
+        from core.dienste.engine2d3dkleiderrenderneu import Engine2d3dKleiderrenderneu
+        neu = Engine2d3dKleiderrenderneu(render)
+        while True:
+            auftrag = neu.naechster()
+            if auftrag is None:
+                return
+            render._datei('auftrag.json').write_text(json.dumps(auftrag, ensure_ascii=False, indent=1), encoding='utf-8')
+            self._lauf(job, render)
 
     # ------------------------------------------------------------------ Ablauf
 
     def _lauf(self, job, render):
+        from core.dienste.engine2d3dkleiderrenderallgemein import Engine2d3dKleiderrenderallgemein
         from core.dienste.engine2d3dkleiderrenderlaeufe import Engine2d3dKleiderrenderlaeufe
         from core.dienste.engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
         from core.dienste.engine2d3dkleiderstandmodell import Engine2d3dKleiderstandmodell
 
+        from core.dienste.engine2d3dkleiderrenderneu import Engine2d3dKleiderrenderneu
         auftrag = json.loads(render._datei('auftrag.json').read_text(encoding='utf-8'))
+        wartend = Engine2d3dKleiderrenderneu(render).wartend()           # Läufe, die nach diesem noch kommen („Neu rendern")
         rezept = render.rezept()
+        if rezept.get('allgemein'):                    # das allgemeine Rezept: die Programme der Vorlage in den Ordner des Auftrags kopieren
+            Engine2d3dKleiderrenderallgemein(render._datei('rezept.json').parent).einrichten()
         programme, name = Path(rezept['programme']), str(rezept.get('name') or 'render')
         stand = Engine2d3dKleiderstandmodell(job, render.ablage).eintrag() or {}
         glb = render.ablage.ergebnis(stand['datei']) if stand.get('datei') else None
@@ -66,19 +85,23 @@ class Command(BaseCommand):
         n = max(2, int(round(float(auftrag['sekunden']) * render.FPS)))
         t0 = time.time()
         render.melden(status='laeuft', schritt='Bewegung wird geschnitten', fortschritt=0.03, bilder=n, sekunden=auftrag['sekunden'], start=t0,
-                      ausgabe=None, fehler=None)
+                      ausgabe=None, fehler=None, neu_nr=auftrag.get('neu_nr'), wartend=wartend)
         bewegung = programme / 'bewegungen' / ('%s_bewegung.json' % name)
         self._schneiden(render.ablage.ergebnis(film.get('bewegung') or 'film_bewegung.json'), bewegung, n)
         self._vorbereiten(programme, name, glb)
+        regler = self._regler(job, render)
         py = sys.executable
-        self._stufe(render, 'Figurcache wird gerechnet (CPU)', 0.08, [py, str(programme / 'video_bauen.py'), name, str(bewegung), '--glb', str(glb), '--cpu'])
+        # Die Regler und die Länge der GANZEN BVH (Mimik: friedlich → fröhlich ab der Mitte der BVH, nicht des geschnittenen Stücks) gehen an `video_bauen`.
+        gemeinsam = [str(programme / 'video_bauen.py'), name, str(bewegung), '--glb', str(glb), '--regler', str(regler),
+                     '--gesamt-bilder', str(max(n, int(round(render.bewegung_sekunden() * render.FPS)))), '--start-bild', '0']
+        self._stufe(render, 'Figurcache wird gerechnet (CPU)', 0.08, [py] + gemeinsam + ['--cpu'])
         self._grafikkarte(render)
-        self._stufe(render, 'Stoff und Strähnen werden simuliert (GPU)', 0.45,
-                    [py, str(programme / 'video_bauen.py'), name, str(bewegung), '--glb', str(glb), '--gpu'])
+        self._stufe(render, 'Stoff und Strähnen werden simuliert (GPU)', 0.45, [py] + gemeinsam + ['--gpu'])
         ziel = render.ablage.ergebnis(render.VIDEO)
         befehl = [py, str(programme / 'film_video.py'), name, '--kamera', auftrag['kamera'], '--breite', str(auftrag['breite']),
                   '--hoehe', str(auftrag['hoehe']), '--spp', str(int(auftrag.get('spp') or 48)), '--von', '1', '--bis', str(n), '--ausname', 'film', '--zusammen',
                   '--ausdatei', str(ziel)]
+        befehl += ['--regler', str(regler)]
         if auftrag.get('ton'):
             befehl += ['--ton', str(auftrag['ton'])]
         self._grafikkarte(render)
@@ -88,11 +111,22 @@ class Command(BaseCommand):
         kopie = ordner / ('%s_render.mp4' % ((auftrag.get('name') or job.name or 'modell').strip() or 'modell'))
         shutil.copyfile(ziel, kopie)
         lauf = Engine2d3dKleiderrenderlaeufe(render).eintragen(dict(auftrag, licht='studio'), ziel, time.time() - t0)     # bleibt als Lauf Nr. N
-        render.melden(status='fertig', schritt='Fertig', fortschritt=1.0, dauer_s=round(time.time() - t0, 1), lauf=lauf['nr'], ausgabe={
+        # Folgen noch Läufe der Warteschlange, bleibt der Stand „läuft": Sonst zeigte die Seite zwischen zwei Läufen kurz „fertig" und gäbe „Rendern" frei.
+        render.melden(status='fertig' if not wartend else 'laeuft', schritt='Fertig' if not wartend else 'Lauf #%d fertig — der nächste folgt' % lauf['nr'],
+                      fortschritt=1.0, dauer_s=round(time.time() - t0, 1), lauf=lauf['nr'], ausgabe={
             'datei': render.VIDEO, 'pfad': str(ziel), 'export': str(kopie), 'ordner': str(ordner), 'bytes': ziel.stat().st_size,
             'ton': auftrag.get('ton') or None, 'adresse': '/api/engine2d3dkleider/%s/datei/ergebnis/%s' % (job.id, render.VIDEO)})
 
     # ------------------------------------------------------------------ Stufen
+
+    @staticmethod
+    def _regler(job, render):
+        """Die Regler der Seite (fünf Gruppen `render…` der Optionen, geprüft) als `arbeit/render/regler.json` — die Skripte der Stufen lesen sie über `Figurfilm.Filmregler.laden`."""
+        from core.dienste.engine2d3dkleideroptionen import Engine2d3dKleideroptionen
+        from Figurfilm.filmregler import Filmregler
+        pfad = Filmregler.schreiben(render._datei('regler.json'), Engine2d3dKleideroptionen.pruefen(job.optionen))
+        logger.info('2D3D Kleider %s: Regler des Renders in %s', job.kennung, pfad)
+        return pfad
 
     @staticmethod
     def _schneiden(quelle, ziel, n):

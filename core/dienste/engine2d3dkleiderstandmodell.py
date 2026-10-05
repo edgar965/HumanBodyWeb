@@ -24,6 +24,7 @@ import os
 import time
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+from .standvorabkleider import Standvorabkleider
 
 logger = logging.getLogger('core')
 
@@ -37,7 +38,25 @@ class Engine2d3dKleiderstandmodell:
     MUSTER = 'stand_%s.glb'
     #: Gehört zur Fassung: Ändert sich der Schreiber (`Standmodellglb`), werden alte Dateien neu gebaut.
     #: 8 (04.10.2026): weiße Hose mit Falten (`Hosenfalten`) und ohne Flecken (`Stoffweissung`).
-    SCHREIBER = 8
+    #: 9 (04.10.2026): Seitenstreifen der Vorlage aus der Geometrie auf der Hose (`Hosenstreifen`).
+    #: 10 (04.10.2026): Hose aus dem Körpernetz statt aus den Schnittbahnen (`Hosenkoerper`: geschlossen, lockerer, Hautgewichte des Körpers, Streifen im Hosenbild).
+    #: 11 (04.10.2026): Hose aus dem VERSCHWEISSTEN Körpernetz (die UV-Nähte hatten Beine und Rumpf zu Inseln getrennt: nur ein Hosenstummel).
+    #: 12 (04.10.2026): Ringmitte der Hose als Fenstermittel (glatter Streifen), stärkere Glättung, kräftigere Falten.
+    #: 13 (04.10.2026): Hose lockerer (Saum 20 mm, Oberschenkel 30 mm), Schrittwölbung stärker geglättet.
+    #: 14 (04.10.2026): Hose etwas schmaler (Oberschenkel 22 mm statt 30).
+    #: 15 (04.10.2026): Hautdetails der Arme und Hände (`Standhandhaut`: Normalenkarte `normalTexture` + Farbvariation der Armkachel 1004).
+    #: 16 (04.10.2026): Hemd geputzt (`Netzputz`: Löcher am Ärmel geschlossen, Saum und Ärmelenden geglättet).
+    #: 17 (04.10.2026, Edgar: „Beine viel zu dick"): Hose enger an der Haut (Oberschenkel 12, Knie 8, Wade 10 mm statt 22/14/16), Falten schwächer (`Hosenfalten`).
+    #: 18 (04.10.2026, Edgar: „riesen Geschlechtsteil", graue Flecken): Die Hose liegt überall mindestens 7 mm AUSSERHALB der Körperfläche (`Hosenkoerper._ausserhalb`) —
+    #: vorher drückte der Körper im Schritt bis 43 mm durch.
+    #: 19 (04.10.2026): Der Stand zeigt die LETZTE übernommene Runde statt der besten nach Note (`_kreislaufmodell`).
+    #: 20 (04.10.2026, Edgar zum dritten Mal: „Haar oben viel zu lang", „Haar seitlich braun", „Textur bei Beinen und Armen verwaschen", „Hände wie angenäht", „T-Shirt verfranst"): Die Frisur ist an die Hülle des
+    #: Fotohaars geklemmt (`Haarklemme`), ihre Strähnengruppen sind angeglichen, das Oberteil ist vor den Iterationen das Genesis-Hemd (Option `koerper.oberteil`), die Hand hat den Ton des Unterarms
+    #: (`Standhandangleich`), Beine und Arme zeigen ruhigere Flecken mit feiner Zeichnung (`Standhautdetail`).
+    #: 21 (05.10.2026, Edgar zum vierten Mal: „Unterhose ist viel zu weit, in der Vorlage ist sie eng anliegend", „Haar immer noch zu hoch in der Mitte", „Haare seitlich braun, ein Haarmodell, das alles beinhaltet
+    #: und eine einheitliche Farbe hat"): Die Hose der Fotostücke liegt eng am Körper an (`Standhose`), das Haar vor den Iterationen ist EINE Haarkappe in der Haarfarbe der Fotos (`Haarkappe`).
+    #: 22 (05.10.2026, Edgar: „diese Unterhose ist total aufgebläht, sie muss am Körper liegen"): Die enge Hose liegt 4 statt 8 mm über der Haut und wird kaum noch geglättet (`Hosenkoerper.ABSTAND_ENG`).
+    SCHREIBER = 22
 
     def __init__(self, job, ablage=None):
         self.job = job
@@ -45,8 +64,17 @@ class Engine2d3dKleiderstandmodell:
 
     # ------------------------------------------------------------------ Stand
 
+    def _letzte(self):
+        """Die letzte ÜBERNOMMENE Runde der Iterationen (mit ihrem Modell) — None ohne Runde."""
+        runden = [r for r in ((self.job.ergebnis or {}).get('iterationen') or []) if r.get('werte') and r.get('uebernommen', True)]
+        return runden[-1] if runden else None
+
     def _kreislaufmodell(self):
-        return ((self.job.ergebnis or {}).get('kreislauf') or {}).get('modell') or None
+        """Das Modell des Stands: das der LETZTEN Runde (04.10.2026, Edgar: „Modell ist nicht wie die letzte Iteration"). Bis dahin das der BESTEN nach Note
+        (`kreislauf.modell`, 01.10.2026) — die Note zählt Silhouetten und zog Bühne und Film auf den muskulösen Körper zurück, den Edgar als Bodybuilder verwarf,
+        obwohl die letzte Runde ihn schlanker zeigte. Ohne Runde bleibt `kreislauf.modell`."""
+        letzte = self._letzte()
+        return (letzte or {}).get('werte') or ((self.job.ergebnis or {}).get('kreislauf') or {}).get('modell') or None
 
     def stellung(self):
         stellung = dict(self.job.stellung() or {})
@@ -57,15 +85,20 @@ class Engine2d3dKleiderstandmodell:
         return bool(self.job.stellung())
 
     def _beste_runde(self):
-        return ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
+        """Die Runde, aus der der Stand kommt (Name aus der Zeit, als es die beste war): jetzt die letzte übernommene."""
+        letzte = self._letzte()
+        return letzte['runde'] if letzte else ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
 
     def fassung(self):
         """Fingerabdruck des Stands — 12 Zeichen. Mit der besten Runde: Eine neue Runde kann Stoff, Zubehör und Maße des Modells ändern,
         ohne dass `kreislauf.modell` (Körperwerte, Stücke) sich ändert — Runde 53 (Hemd anliegend, 04.10.2026) baute `stand_3e76741ccddd.glb`
         unter demselben Namen neu, und ein offener Tab behielt die alte Datei aus dem Browser-Cache (`artefakte-benennen`)."""
         f = (self.job.ergebnis or {}).get('fototextur') or {}
-        roh = json.dumps([self.SCHREIBER, self.stellung(), self._kreislaufmodell(), f.get('kacheln'), f.get('augen'),
-                          f.get('stand'), self._beste_runde(), self._zubehoer()], sort_keys=True, default=str)
+        teile = [self.SCHREIBER, self.stellung(), self._kreislaufmodell(), f.get('kacheln'), f.get('augen'),
+                 f.get('stand'), self._beste_runde(), self._zubehoer()]
+        # Vor den Iterationen tragen die Fotostücke (Schritt „Kleiderstücke") die Kleider — nur dann zählen sie zur Fassung, die Fassung der Aufträge mit Iterationen bleibt dieselbe.
+        vorab = None if self._kreislaufmodell() else Standvorabkleider.fingerabdruck(self.job)
+        roh = json.dumps(teile + ([vorab] if vorab else []), sort_keys=True, default=str)
         return hashlib.md5(roh.encode('utf-8')).hexdigest()[:12]
 
     @staticmethod
@@ -143,21 +176,30 @@ class Engine2d3dKleiderstandmodell:
         netz = G9koerpernetz(G9formung.aus_abfrage(self.stellung(), {}), G9charaktere.eintrag('basis'),
                              anhaenge=True, stufen=0).bauen()
         glb = Standmodellglb(netz['skelett']['knochen'])
+        glb.hautdetail = not self._kreislaufmodell()        # ruhigere Haut (`Standhautdetail`) nur vor den Iterationen: eine laufende Reihe soll ihren Film nicht ändern
         glb.koerper(netz, self._kacheln())
         daten = self._kreislaufmodell()
         from .brauenfarbe import Brauenfarbe  # Brauen/Wimpern in der Haarfarbe (statt Daz-Schwarz)
         Brauenfarbe().anwenden(netz, ((daten or {}).get('farben') or {}).get('haar'))
         glb.anhaenge(netz, self._augenbild())
         teile = []
-        if daten:
+        # Ohne Iteration die Fotostücke des Schritts „Kleiderstücke" (`Standvorabkleider`) — nur Kleidung, kein Standardhaar, A-Pose; das Haar ist die Haarkappe, wenn die Hülle des Fotohaars da ist.
+        kappe = None if daten else self._haarkappe(netz)
+        vorab = None if daten else Standvorabkleider.modell(self.job, ohne_haar=kappe is not None)
+        if daten or vorab:
             from Genesis9.modellmitkleidern import ModellMitKleidern
 
             from .haarzonen import Haarzonen
             from .kleidermodellbau import Kleidermodellbau
-            modell = ModellMitKleidern.aus(daten)
-            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper)
+            modell = ModellMitKleidern.aus(daten or vorab)
+            bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, ablage=self.ablage)
             teile = [x for x in Haarzonen.anwenden(bau.teile(modell), modell.farben) if x.get('art') != 'koerper']
+            if vorab:
+                teile = [x for x in teile if x.get('art') in Standvorabkleider.ARTEN]       # Kleidung UND die gewählte Frisur (websites-40, 04.10.2026)
+                if kappe is not None:       # die Kappe ersetzt die Kopfhaare, nicht den Bart
+                    teile = [x for x in teile if x.get('art') != 'haar' or any(o in str(x.get('sorte')) for o in ('_beard',))] + [kappe]
             glb.teile(teile)
+        if daten:
             # Die Haltung der Iterationen als Drehung der Gelenkknoten (`Standhaltung`): Netze und Bindematrizen bleiben in der A-Pose.
             from Genesis9.haltungshaut import G9haltungshaut
 
@@ -174,9 +216,8 @@ class Engine2d3dKleiderstandmodell:
                    'sekunden': round(time.perf_counter() - t, 1), 'knochen': len(glb.knochen),
                    'knochen_ohne_gelenk': sorted(glb.fehlend), **glb.zahl,
                    'teile': sorted({'%s:%s' % (x.get('art'), x.get('sorte')) for x in teile}),
-                   # Der Stand ist die BESTE Runde (`Begutachtungsstand`, 01.10.2026), nicht die letzte.
-                   'runde': ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
-                   or ((self.job.ergebnis or {}).get('kreislauf') or {}).get('letzte_runde')}
+                   # Der Stand ist die LETZTE übernommene Runde (seit 04.10.2026; davor die beste nach Note, `Begutachtungsstand`, 01.10.2026).
+                   'runde': self._beste_runde() or ((self.job.ergebnis or {}).get('kreislauf') or {}).get('letzte_runde')}
         zettel = self.ablage.ergebnis(self.BERICHT + '.teil')
         zettel.write_text(json.dumps(bericht, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(zettel, self.ablage.ergebnis(self.BERICHT))
@@ -185,6 +226,17 @@ class Engine2d3dKleiderstandmodell:
         logger.info('2D3D Kleider %s: Modell des Stands %s (%.1f MB, %d Netze, %.1f s)', self.job.kennung, name,
                     laenge / 1e6, glb.zahl['netze'], bericht['sekunden'])
         return bericht
+
+    def _haarkappe(self, netz):
+        """Das Haar vor den Iterationen: EIN Teil in EINER Farbe über dem ganzen Haarbereich (`Haarkappe`) — None ohne Hülle des Fotohaars oder ohne Haarfarbe (dann trägt der Stand die Frisur der Garderobe).
+        Ein Fehler hält den Bau nicht auf."""
+        from .haarkappe import Haarkappe
+        try:
+            rgb = Standvorabkleider.kappenfarbe(self.job)
+            return Haarkappe(self.ablage, netz).teil(rgb) if rgb else None
+        except Exception:  # noqa: BLE001 — ohne Kappe bleibt die Frisur der Garderobe
+            logger.exception('2D3D Kleider %s: Haarkappe nicht gebaut', self.job.kennung)
+            return None
 
     def _aufraeumen(self, behalten):
         """Ältere Fassungen weg — eine, die der Server gerade ausliefert, bleibt bis zum nächsten Bau liegen."""

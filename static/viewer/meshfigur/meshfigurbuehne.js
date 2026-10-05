@@ -23,6 +23,9 @@ export class Meshfigurbuehne {
     /** Seitlicher Versatz des Netzes, immer nach links (Edgar: „um ca. 1,5 m verschoben"). */
     static ABSTAND = 1.5;
 
+    /** Obergrenze für die Pixel der Leinwand (Geräte-Pixel, nach Geräteverhältnis) — siehe `_groesse`. */
+    static MAX_PIXEL = 3.0e6;
+
     constructor(seite) {
         this.seite = seite;
         this.feld = document.getElementById('buehne');
@@ -65,12 +68,37 @@ export class Meshfigurbuehne {
         // ein `resize` kommt — gemessen stand die Leinwand dann 1045 × 866 px in 760 × 794 px und zog das
         // Bodengitter über das Formular (27.09.2026).
         new ResizeObserver(() => this._groesse()).observe(this.feld);
-        const lauf = () => { this.steuerung.update(); this.renderer.render(this.szene, this.kamera); requestAnimationFrame(lauf); };
+        // Gezeichnet wird nur, was jemand sieht (04.10.2026, Edgar: „Seite hängt — kann nicht Tab wechseln"): Die Schleife zeichnete vorher jedes
+        // Bild weiter, auch wenn der Reiter mit der Bühne ausgeblendet war (`display: none`, keine Fläche) oder der Browser-Tab verdeckt — bei einem
+        // Modell mit 57 Netzen und rund 600 000 Dreiecken in einer großen Leinwand die Hauptlast der Seite. Ob DAS den Hänger verursacht hat, ist
+        // nicht belegt (im verdeckten Messtab nicht nachzustellen); die Last ist aber unnötig.
+        const lauf = () => {
+            if (!document.hidden && this.canvas.getClientRects().length) {
+                this.steuerung.update();
+                this.renderer.render(this.szene, this.kamera);
+            }
+            requestAnimationFrame(lauf);
+        };
         requestAnimationFrame(lauf);
     }
 
+    /**
+     * Leinwand an den Behälter anpassen — mit Grenzen für den Grafikspeicher (04.10.2026, Edgar: „Seite hängt, Tab Auftrag nicht anklickbar", offen ist nur
+     * der Wechsel von „Iterationen" zurück auf „Auftrag", direkt aus dem Dashboard geöffnet geht es). Ursache nicht belegt; belegt ist, was die Bühne vorhielt: Die
+     * Spalte der Bühne ist so hoch wie das Formular daneben (gemessen 1382 × 2142 px), mit Geräteverhältnis 1,575 und vierfacher Glättung waren das 7,3 Mio. Pixel
+     * im Zeichenpuffer — auch bei ausgeblendetem Reiter —, und andere Aufträge (Pixal) füllen dieselbe Karte bis auf wenige MB (`engine2d3dkleider_render.GPU_FREI_MB`).
+     * Deshalb: ausgeblendet (Behälter ohne Fläche) schrumpft der Puffer auf 1 × 1 und gibt den Speicher frei; sichtbar ist die Pixelzahl auf `MAX_PIXEL` begrenzt
+     * (das Geräteverhältnis sinkt entsprechend, die Leinwand bleibt so groß wie der Behälter).
+     */
     _groesse() {
-        const b = this.feld.clientWidth || 640, h = this.feld.clientHeight || 640;
+        const b = this.feld.clientWidth, h = this.feld.clientHeight;
+        if (!b || !h) {
+            this.renderer.setPixelRatio(1);
+            this.renderer.setSize(1, 1, false);
+            return;
+        }
+        const dichte = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(Meshfigurbuehne.MAX_PIXEL / (b * h)));
+        this.renderer.setPixelRatio(Math.max(0.5, dichte));
         this.renderer.setSize(b, h);
         this.kamera.aspect = b / h;
         this.kamera.updateProjectionMatrix();
