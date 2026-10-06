@@ -47,15 +47,18 @@ Klick auf ToDo füllt `js/hilfe/recherchehuman3d.js` mit den Daten des einen Pro
   <p>
     <strong>ToDo</strong> nennt, was das Projekt kann und unser Projekt nicht hat — gemessen an dem, was im Code steht
     (Stichwortsuche im Quelltext, {{ meta.bestand_stand_text }}). Ein Klick auf die ToDo-Zelle öffnet ein Fenster mit allen Punkten, weiteren Bildern und den Eckdaten.
-    Die Spaltenköpfe sortieren, die Spaltenbreiten lassen sich ziehen.
+    Die Spaltenköpfe sortieren, die Spaltenbreiten lassen sich ziehen. Die Kategorien über der Tabelle sind Schalter: Gewählte zeigen ihre Projekte, abgewählte blenden sie aus
+    („Alle selektieren" / „Alle abwählen" schalten alle zugleich).
   </p>
   <p>
     <strong>Prio</strong> ist deine Reihenfolge, ob wir ein Projekt testen oder einbauen (1 = zuerst; leer = noch nicht eingestuft). Jede Zahl gehört nur einem Projekt: Gibst du eine Zahl ein, die ein
     anderes Projekt schon trägt, rückt dieses um eins nach hinten (und ein weiteres, das dort steht, ebenfalls). Gespeichert wird sofort beim Verlassen des Felds oder mit Enter.
   </p>
 
-  <div class="rc-kategorien">
-    {% for name, n in kategorien %}<span class="rc-chip">{{ name }} <b>{{ n }}</b></span>{% endfor %}
+  <div class="rc-kategorien" id="rc-kategorien" role="group" aria-label="Kategorien: nur gewählte Projekte zeigen">
+    <button type="button" class="btn btn-sm" id="rc-kat-alle" title="Alle Kategorien wählen: die Tabelle zeigt alle Projekte">Alle selektieren</button>
+    <button type="button" class="btn btn-sm" id="rc-kat-keine" title="Alle Kategorien abwählen: die Tabelle ist leer, bis du eine wählst">Alle abwählen</button>
+    {% for name, n in kategorien %}<button type="button" class="rc-chip" aria-pressed="true" data-kategorie="{{ name }}" title="Klick schaltet die Kategorie ein oder aus">{{ name }} <b>{{ n }}</b></button>{% endfor %}
   </div>
 
   {% include "djangobase/_tabelle.html" with tabelle=tabelle %}

@@ -11,10 +11,8 @@ Körperkäfig hat am Kopf Dreiecke von rund 1 cm, ein Schnitt entlang der Kanten
 Rauschen um die Haarfarbe gibt der Fläche das Aussehen kurzer Haare, aufgetragen je Dreieck von der Seite her, die ihm am meisten zugewandt ist (Würfelabbildung: keine Pole und keine Naht wie bei einer Kugelabbildung —
 die erste Fassung zeigte hinten einen Stern); die Farbe ist überall dieselbe.
 
-Die Haarlinie kommt aus der Abdeckung des Netzhaars: Wo die Hülle (`Haarklemme.roh`) Netzhaar hat — Felder von 5°, von Einzelfeldern befreit (Schließen und Öffnen) —, ist Haar; das Gesicht und die Stirn bis zum
-Haaransatz des Netzes haben keins (am Testauftrag Ansatz bei 45–55° über der Augenhöhe, hoher Haaransatz wie im Foto). Zwei Grenzen sind ANNAHMEN: Gesicht, Schläfe und Ohren bleiben frei (`OHR`: bis Azimut 122° von vorn Haar erst ab
-10° — Punkte seitlich bis 15–17° und bis Azimut 119° (`ProjektTemp/_wegwerf/sapiens/ohr_hoehe.py`), die Oberkante des Ohrs im Bild bei etwa 0–5° (geschätzt); das Netzhaar deckte auch die rechte Wange bis −40°, `kappe_umriss.py`), und im Nacken endet das Haar bei `UNTEN` (−38°; das Netzhaar reicht bis −57°, dort liegt der Hals). Der Abstand zur Grenze
-dieses Bereichs (Grad, innen positiv) ist ein Feld auf denselben 5°-Feldern; das Schneiden und die Dicke lesen es.
+Die Haarlinie kommt aus der Abdeckung des Netzhaars: Wo die Hülle (`Haarklemme.roh`) Netzhaar hat — Felder von 5°, von Einzelfeldern befreit (Schließen und Öffnen) —, ist Haar; das Gesicht und die Stirn bis zum Haaransatz des Netzes haben keins (am Testauftrag Ansatz bei 45–55° über der Augenhöhe, hoher Haaransatz wie im Foto).
+Gesicht, Ohr, Koteletten und Nacken bestimmen seit VERSION 6 die Regeln der `Haarlinie` (Ohrknochen statt fester Winkel, runder Nacken); der Abstand zur Grenze dieses Bereichs (Grad, innen positiv) ist ein Feld auf denselben 5°-Feldern; das Schneiden und die Dicke lesen es.
 
     teil = Haarkappe(ablage, netz).teil(rgb)      # Teil wie aus `Kleidermodellbau.teile` (art 'haar') für `Standmodellglb.teile`; None ohne Hülle des Fotohaars
 
@@ -33,16 +31,17 @@ __all__ = ['Haarkappe']
 
 class Haarkappe:
     #: Zählt hoch, wenn sich die Kappe bei gleicher Eingabe ändert (gehört in die Fassung des Standmodells). 2: Haarlinie geschnitten, Würfel-UV. 3: Haarlinie aus der Abdeckung des Netzhaars. 4: Gesicht, Wange und Schläfe frei, Zungen am Haaransatz entfernt. 5: Haar über dem Ohr ab 10° statt 20°.
-    VERSION = 5
+    #: 6: Haarlinie nach Ohr (Ohrknochen), Koteletten und rundem Nacken (`Haarlinie`) statt fester Winkel — vorher eine Gerade über dem Ohr und eine Klippe dahinter.
+    VERSION = 6
     SORTE = 'haarkappe'
-    #: (Azimut bis in Grad von vorn, Höhenwinkel, ab dem Haar beginnt): Gesicht, Schläfe und Ohren bleiben frei (Annahme; `ohr_hoehe.py` fand seitlich Punkte bis 15–17° und bis Azimut 119°, im Bild liegt die Oberkante des Ohrs bei etwa 0–5° (aus dem Maßstab des Bildes geschätzt, nicht gemessen); 10° lässt Luft darüber). Das Netzhaar deckte am Testauftrag
-    #: auch die rechte Wange bis −40° (Bartschatten im Foto) — dort wächst kein Kopfhaar.
-    OHR = (122.0, 10.0)
-    #: Im Nacken endet das Haar bei diesem Höhenwinkel (Grad über der Waagerechten durch den Kopfmittelpunkt) — Annahme.
+    #: Höhenwinkel, bis zu dem das Haar im Nacken reicht (Grad über der Waagerechten durch den Kopfmittelpunkt) — gilt für `radius_nacken` (die Messung „kurzes Haar"); die Haarlinie selbst liegt in `Haarlinie.UNTEN_MITTE`/`UNTEN_SEITE`.
     UNTEN = -38.0
     RAND_GRAD = 8.0                # über so viele Grad über der Haarlinie wächst die Dicke von `RAND_DICKE` auf ihr Maß
     DICKE = (0.008, 0.035)          # Dicke des Haars über der Haut (m): nicht dünner als 8 mm (ein Haarschnitt), nicht dicker als 35 mm
     RAND_DICKE = 0.003              # an der Haarlinie
+    #: (Höhenwinkel, ab dem die Dicke voll gilt, Höhenwinkel, unter dem nur noch `faktor` davon gilt, faktor): ein Herrenschnitt ist an Nacken und Seiten kürzer als oben. Gemessen im Seitenbild (Auftrag 2026.10.04.21.41.43):
+    #: die Hülle des Netzhaars gab im Nacken (−17…−30°) 12–19 mm gegen 5–12 mm oben — im Foto läuft das Haar dort aus und die Kontur zieht zum Hals hin ein.
+    VERJUENGUNG = (25.0, -30.0, 0.45)
     REICHWEITE = 0.16               # nur Hautpunkte bis so weit vom Kopfmittelpunkt (m): Kopf, nicht Schultern
     TEXTUR_PX = 512
     PERIODE = 0.60                  # Kantenlänge der Textur in der Welt (m): ein Texel ist 1,2 mm
@@ -54,6 +53,7 @@ class Haarkappe:
         self.ablage = ablage
         self.netz = netz
         self._lage_cache = None
+        self._mitte = None
 
     # ------------------------------------------------------------------ Hülle
 
@@ -63,6 +63,7 @@ class Haarkappe:
             from .haarklemme import Haarklemme
             klemme = Haarklemme.fuer(self.ablage, np.asarray(self.netz['punkte'], dtype=np.float64))
             karte = self._fuellen(klemme.roh) if klemme is not None else None
+            self._mitte = klemme.mitte if klemme is not None else None
             self._lage_cache = (klemme, karte, self._linienfeld(klemme.roh) if karte is not None else None)
         return self._lage_cache
 
@@ -133,23 +134,21 @@ class Haarkappe:
         aussen = ndimage.distance_transform_edt(~z)
         return (innen - aussen)[rand:-rand, rand:-rand]
 
-    @classmethod
-    def _linienfeld(cls, roh):
-        """Abstand (Grad) jedes 5°-Felds zur Grenze des Haarbereichs, innen positiv: Abdeckung des Netzhaars, geschlossen und geöffnet (keine Einzelfelder), ohne Ohrbereich und unterhalb von `UNTEN`."""
+    def _linienfeld(self, roh):
+        """Abstand (Grad) jedes 5°-Felds zur Grenze des Haarbereichs, innen positiv: Abdeckung des Netzhaars, geschlossen und geöffnet (keine Einzelfelder), dazu die Koteletten, ohne Gesicht, Ohr und Nacken —
+        die Regeln stehen in `Haarlinie` (seit Fassung 6; vorher feste Winkel: Azimut 122° / Höhenwinkel 10° / −38°)."""
         from scipy import ndimage
 
-        hoehe, breite = roh.shape
+        from .haarlinie import Haarlinie
+        hoehe, _breite = roh.shape
         feld = 180.0 / hoehe
         rand = 6
         haar = np.pad(np.pad(~np.isnan(roh), ((0, 0), (rand, rand)), mode='wrap'), ((rand, rand), (0, 0)), mode='edge')
         eins = np.ones((3, 3), dtype=bool)
         haar = ndimage.binary_opening(ndimage.binary_closing(haar, eins), eins, iterations=2)[rand:-rand, rand:-rand]       # Zungen unter 25° Breite fallen weg (am Testauftrag eine am Haaransatz der Stirn)
-        el = ((np.arange(hoehe) + 0.5) * feld - 90.0)[:, None]
-        az = (np.arange(breite) + 0.5) * (360.0 / breite)
-        von_vorn = np.minimum(az, 360.0 - az)[None, :]
-        ohr = (von_vorn <= cls.OHR[0]) & (el < cls.OHR[1])
-        haar = haar & ~ohr & (el > cls.UNTEN)
-        return cls._vorzeichen(haar) * feld
+        weg, kotelett = Haarlinie.ausschluss(self.netz, self._mitte, roh)
+        bereich = ndimage.gaussian_filter(((haar | kotelett) & ~weg).astype(np.float64), Haarlinie.GLAETTEN, mode=('nearest', 'wrap')) > 0.5      # die Treppe der 5°-Felder runden (Ohr, Schläfe, Koteletten)
+        return self._vorzeichen(bereich) * feld
 
     @staticmethod
     def _ueber_der_linie(klemme, feld, v, r, reichweite):
@@ -195,8 +194,9 @@ class Haarkappe:
 
     # ------------------------------------------------------------------ Fläche
 
-    def flaeche(self):
-        """`(punkte, dreiecke, haut, uv, normalen, daten)` der Kappe — None ohne Hülle des Fotohaars. `punkte` (3 · T, 3), `dreiecke` (T, 3), `haut` {knochen, index, gewicht} je Punkt."""
+    def hautschnitt(self):
+        """`(haut_p, normalen, index, gewicht)` — die Dreiecke des Körpers über der Haarlinie, an ihr genau geschnitten (jedes Dreieck mit eigenen Eckpunkten: (3 · T, …)), Haut und Normale je Eckpunkt. None ohne Hülle des Fotohaars oder ohne Dreiecke
+        über der Linie. Dasselbe Stück Kopfhaut trägt die Kappe (`flaeche`) und die Wurzeln der Strähnen (`Herrenhaar`)."""
         from Genesis9.figurrigglb import G9figurrigglb
 
         p = np.asarray(self.netz['punkte'], dtype=np.float64)
@@ -211,16 +211,31 @@ class Haarkappe:
         haut = self.netz['haut']
         index = np.asarray(haut['index'], dtype=np.int64).reshape(-1, 4)
         gewicht = np.asarray(haut['gewicht'], dtype=np.float64).reshape(-1, 4)
-        geschnitten = self._schneiden(p, d, f, G9figurrigglb._normalen(p, np.asarray(self.netz['dreiecke'], dtype=np.int64).reshape(-1, 3)), index, gewicht) if len(d) else None  # noqa: SLF001
-        if geschnitten is None:
-            return None
-        haut_p, normalen, idx, gew = geschnitten
-        # Verschieben nach außen: Dicke aus der Hülle des Fotohaars, an der Linie auslaufend
+        return self._schneiden(p, d, f, G9figurrigglb._normalen(p, np.asarray(self.netz['dreiecke'], dtype=np.int64).reshape(-1, 3)), index, gewicht) if len(d) else None  # noqa: SLF001
+
+    def dicke_bei(self, haut_p):
+        """`(dicke, grad_ueber_der_linie, v, r)` für Punkte der Kopfhaut (Lage der Bühne): die Dicke des Haars über der Haut — Hülle des Fotohaars minus Hautradius je Richtung, `DICKE` begrenzt, an der Linie auf `RAND_DICKE` auslaufend."""
+        klemme, karte, linie = self._lage()
         v = haut_p - klemme.mitte
         r = np.maximum(np.linalg.norm(v, axis=1), 1e-9)
         el_ueber = self._ueber_der_linie(klemme, linie, v, r, self.REICHWEITE)
         huelle = klemme._grenze_je_punkt(v, r, karte)                                       # noqa: SLF001 — dieselbe Nachschlagung wie die Klemme
         dicke = self.RAND_DICKE + self._weich(el_ueber / self.RAND_GRAD) * (np.clip(huelle - r, self.DICKE[0], self.DICKE[1]) - self.RAND_DICKE)
+        el = np.degrees(np.arcsin(np.clip(v[:, 1] / r, -1.0, 1.0)))
+        oben, unten, faktor = self.VERJUENGUNG                                              # Nacken und Seiten sind kürzer geschnitten als oben: die Dicke nimmt nach unten ab
+        return dicke * (faktor + (1.0 - faktor) * self._weich((el - unten) / (oben - unten))), el_ueber, v, r
+
+    def flaeche(self, anteil=1.0):
+        """`(punkte, dreiecke, haut, uv, normalen, daten)` der Kappe — None ohne Hülle des Fotohaars. `punkte` (3 · T, 3), `dreiecke` (T, 3), `haut` {knochen, index, gewicht} je Punkt.
+        `anteil`: so viel der Dicke über der Linie (1 = die Dicke des Fotohaars; `Herrenhaar` legt die Kappe als Grund unter die Strähnen)."""
+        geschnitten = self.hautschnitt()
+        if geschnitten is None:
+            return None
+        haut = self.netz['haut']
+        klemme = self._lage()[0]
+        haut_p, normalen, idx, gew = geschnitten
+        dicke, el_ueber, v, r = self.dicke_bei(haut_p)                                      # Verschieben nach außen: Dicke aus der Hülle des Fotohaars, an der Linie auslaufend
+        dicke = self.RAND_DICKE + (dicke - self.RAND_DICKE) * anteil
         punkte = klemme.mitte + v * ((r + dicke) / r)[:, None]
         tri = np.arange(len(punkte), dtype=np.int64).reshape(-1, 3)
         # Würfelabbildung: je Dreieck die zwei Achsen, die senkrecht zu seiner Hauptrichtung stehen — v jeweils in der Wuchsrichtung: an den Seiten (Normale x) senkrecht (v = y), am Scheitel (Normale y) vor–zurück
@@ -239,30 +254,15 @@ class Haarkappe:
 
     @classmethod
     def bild(cls, rgb, pfad):
-        """Feines Rauschen um die Haarfarbe (`rgb` 0–1) als PNG — in beiden Richtungen nahtlos (die UV wiederholt sich nicht, aber die Würfelabbildung kennt keine Naht)."""
-        from PIL import Image
-        from scipy import ndimage
-
-        zufall = np.random.default_rng(cls.SAMEN)
-
-        def rauschen(sigma_u, sigma_v):
-            z = ndimage.gaussian_filter(zufall.standard_normal((cls.TEXTUR_PX, cls.TEXTUR_PX)), (sigma_v, sigma_u), mode='wrap')      # Zeilen = v
-            return z / z.std()
-
-        # Strähnen: schmal in u, lang in v (`STRAEHNE`) — die Würfelabbildung legt v an Hinterkopf, Seiten und Scheitel in die Wuchsrichtung (senkrecht bzw. vor–zurück). Nur feines Rauschen, gröbere Flecken
-        # ließen die Dreiecke der Würfelabbildung als Facetten erkennen.
-        feld = 0.8 * rauschen(0.7, cls.STRAEHNE) + 0.2 * rauschen(2.0, 2.0)
-        licht = 1.0 + cls.KONTRAST * feld / feld.std()
-        farbe = np.clip(np.asarray(rgb[:3], dtype=np.float64)[None, None, :] * licht[..., None], 0.0, 1.0)
-        pfad.parent.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(np.rint(farbe * 255.0).astype(np.uint8), 'RGB').save(pfad)
-        return pfad
+        """Feines Strähnenrauschen um die Haarfarbe (`rgb` 0–1) als PNG (`Haarkappenbild`)."""
+        from .haarkappenbild import Haarkappenbild
+        return Haarkappenbild.schreiben(rgb, pfad, cls.TEXTUR_PX, cls.KONTRAST, cls.STRAEHNE, cls.SAMEN)
 
     # ------------------------------------------------------------------ Teil
 
-    def teil(self, rgb):
-        """Das Haarteil (`art` 'haar', `sorte` 'haarkappe') in der Form der Teile von `Kleidermodellbau.teile`; None ohne Hülle des Fotohaars."""
-        gebaut = self.flaeche()
+    def teil(self, rgb, anteil=1.0):
+        """Das Haarteil (`art` 'haar', `sorte` 'haarkappe') in der Form der Teile von `Kleidermodellbau.teile`; None ohne Hülle des Fotohaars. `anteil`: siehe `flaeche`."""
+        gebaut = self.flaeche(anteil)
         if gebaut is None or rgb is None:
             return None
         punkte, dreiecke, haut, uv, normalen, daten = gebaut

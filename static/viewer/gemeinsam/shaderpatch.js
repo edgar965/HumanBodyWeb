@@ -43,6 +43,14 @@ export class Shaderpatch {
         return material;
     }
 
+    /** Den Eingriff wieder abnehmen (der Shader wird neu gebaut); true, wenn es ihn gab. */
+    static entfernen(material, schluessel) {
+        const eintraege = Shaderpatch._register.get(material);
+        if (!eintraege?.delete(schluessel)) return false;
+        Shaderpatch._binden(material, eintraege);
+        return true;
+    }
+
     /** Trägt das Material den Eingriff schon? */
     static hat(material, schluessel) {
         return Shaderpatch._register.get(material)?.has(schluessel) ?? false;

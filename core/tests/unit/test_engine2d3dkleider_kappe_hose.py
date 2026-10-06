@@ -17,6 +17,7 @@ from django.test import SimpleTestCase
 from core.dienste.engine2d3dkleiderlauf import Engine2d3dKleiderlauf
 from core.dienste.haarkappe import Haarkappe
 from core.dienste.haarklemme import Haarklemme
+from core.dienste.haarlinie import Haarlinie
 from core.dienste.hosenkoerper import Hosenkoerper
 from core.dienste.standhose import Standhose
 
@@ -59,7 +60,8 @@ class DieHaarkappe(SimpleTestCase):
         (punkte, dreiecke, _haut, _uv, _n, daten), _netz = _kappe(0.115)
         r = np.linalg.norm(punkte - MITTE, axis=1)
         self.assertAlmostEqual(float(r.max()), 0.115, places=3)               # oben: Hülle des Fotohaars
-        self.assertGreater(float(r.min()), 0.10 + Haarkappe.RAND_DICKE - 0.0005)  # nirgends in der Haut (Schnittpunkte liegen auf den Kanten der Kugel, 0,2 mm innen)
+        # nirgends in der Haut: an der Linie im Nacken ist die Dicke `RAND_DICKE` × Verjüngung (`VERJUENGUNG`: Nacken und Seiten kürzer als oben); Schnittpunkte liegen auf den Kanten der Kugel, 0,2 mm innen
+        self.assertGreater(float(r.min()), 0.10 + Haarkappe.RAND_DICKE * Haarkappe.VERJUENGUNG[2] - 0.0005)
         self.assertAlmostEqual(daten['dicke_oben_mm'], 15.0, places=0)
         self.assertGreater(len(dreiecke), 100)
 
@@ -79,14 +81,14 @@ class DieHaarkappe(SimpleTestCase):
         self.assertGreater(float(el.min()), Haarkappe.UNTEN - 4.0)             # die Schnittpunkte folgen der Linie bis auf die Auflösung der Felder (5°; an Kunstdaten −40,5°)
         self.assertGreater(float(el[von_vorn < 40.0].min()), 38.0)             # Gesicht und Stirn: das Netz hat dort kein Haar (Grenze bei 42°)
 
-    def test_die_ohren_bleiben_frei(self):
+    def test_wange_und_kiefer_unter_den_koteletten_bleiben_frei(self):
         (punkte, *_rest), _netz = _kappe(0.115)
         v = punkte - MITTE
         el = np.degrees(np.arcsin(v[:, 1] / np.linalg.norm(v, axis=1)))
         von_vorn = np.abs(np.degrees(np.arctan2(v[:, 0], v[:, 2])))
-        ohr = (von_vorn > 62.0) & (von_vorn < Haarkappe.OHR[0] - 5.0)        # Schläfe und Ohr (das Gesicht darunter hat in der Kunstkarte kein Netzhaar)
-        self.assertTrue(ohr.any())
-        self.assertGreater(float(el[ohr].min()), Haarkappe.OHR[1] - 5.0)
+        seite = (von_vorn > 66.0) & (von_vorn < 95.0)                         # hinter dem Gesicht, vor dem (angenommenen) Ohr bei 100° — ohne Ohrknochen gilt `Haarlinie`: Wange unter `KOTELETT_EL` ohne Haar
+        self.assertTrue(seite.any())
+        self.assertGreater(float(el[seite].min()), Haarlinie.KOTELETT_EL - 5.0)   # die Schnittpunkte folgen der Linie bis auf die Auflösung der Felder (5°)
 
     def test_die_dicke_laeuft_an_der_haarlinie_aus(self):
         (punkte, *_rest), _netz = _kappe(0.115)
@@ -98,11 +100,14 @@ class DieHaarkappe(SimpleTestCase):
         self.assertGreater(float(r[hinten & (el > 40.0)].min()), 0.10 + 0.012)  # weiter oben die volle Dicke
 
     def test_das_linienfeld_ist_innen_positiv_und_aussen_negativ(self):
-        feld = Haarkappe._linienfeld(_karte(0.115))
+        punkte, dreiecke, haut = _kopf()
+        kappe = Haarkappe(SimpleNamespace(), {'punkte': punkte, 'dreiecke': dreiecke, 'haut': haut})
+        kappe._mitte = MITTE                                                    # `_lage` setzt sie vor dem Linienfeld; hier ohne Klemme
+        feld = kappe._linienfeld(_karte(0.115))
         self.assertGreater(float(feld[35, 0]), 0.0)                             # Scheitel
         self.assertGreater(float(feld[18, 36]), 0.0)                            # Hinterkopf auf Augenhöhe (Azimut 180°)
         self.assertLess(float(feld[18, 0]), 0.0)                                # Gesicht (Azimut 0°, Höhe 2,5°)
-        self.assertLess(float(feld[18, 19]), 0.0)                               # Ohr (Azimut 97,5°)
+        self.assertLess(float(feld[18, 19]), 0.0)                               # Wange hinter dem Gesicht (Azimut 97,5°, Höhe 2,5° — ohne Ohrknochen gilt ein Ohr bei 100°, `Haarlinie.ausschluss`)
         self.assertLess(float(feld[3, 36]), 0.0)                                # unter dem Nacken
         self.assertGreater(float(feld[30, 71]), 0.0)                            # der Azimut läuft um: 357,5° gehört zu 0° und liegt über dem Gesicht im Haar
 

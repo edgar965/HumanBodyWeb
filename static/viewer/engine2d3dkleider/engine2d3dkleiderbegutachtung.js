@@ -22,6 +22,7 @@ export class Engine2d3dKleiderbegutachtung {
         this.kommentar = $('begutachtung-kommentar');
         this.knopf = $('begutachtung-runde');
         this.automatisch = $('begutachtung-automatisch');
+        this.ausgang = $('begutachtung-ausgang');
         this.runden = $('begutachtung-runden');
         this.meldung = $('begutachtung-meldung');
         this.stand = $('begutachtung-stand');
@@ -30,6 +31,7 @@ export class Engine2d3dKleiderbegutachtung {
         if (!this.karte) return;
         this.knopf.addEventListener('click', () => this.senden(false));
         this.automatisch.addEventListener('click', () => this.senden(true));
+        this.ausgang.addEventListener('click', () => this.senden(false, true));
         this.rezept.href = seite.adresse('rezept/');
         this._funktionen();
     }
@@ -58,10 +60,11 @@ export class Engine2d3dKleiderbegutachtung {
      * `automatisch`: statt des Rezepts im Feld schreibt `IterationModell` (Ordner 2d3DIterationen) die Rezepte selbst —
      * `runden` Runden nacheinander, jede mit Befund; der Kommentar geht mit.
      */
-    async senden(automatisch) {
-        const rumpf = { aufrufe: automatisch ? '' : this.aufrufe.value, kommentar: this.kommentar.value,
-            automatisch: !!automatisch, runden: automatisch ? Number(this.runden.value) || 1 : 1 };
-        const knopf = automatisch ? this.automatisch : this.knopf;
+    async senden(automatisch, ausgang = false) {
+        // `ausgang`: Iteration 0 — Vorlage und Modell der Ausgangslage; das Rezept (das Startrezept) schreibt der Server
+        const rumpf = { aufrufe: automatisch || ausgang ? '' : this.aufrufe.value, kommentar: ausgang ? '' : this.kommentar.value,
+            automatisch: !!automatisch, runden: automatisch ? Number(this.runden.value) || 1 : 1, ausgang };
+        const knopf = ausgang ? this.ausgang : automatisch ? this.automatisch : this.knopf;
         this.meldung.textContent = '';
         try {
             await Knopfsperre.waehrend(knopf, async () => {
@@ -73,8 +76,10 @@ export class Engine2d3dKleiderbegutachtung {
             knopf.disabled = false;
             return;
         }
-        this.aufrufe.value = '';
-        this.kommentar.value = '';
+        if (!ausgang) {
+            this.aufrufe.value = '';
+            this.kommentar.value = '';
+        }
         this.seite.zustand.laeuft = true;
         this.seite.zustand.status = 'laeuft';
         this.seite.zeigen();
@@ -88,9 +93,11 @@ export class Engine2d3dKleiderbegutachtung {
         this.karte.hidden = o.modus !== 'begutachtung';
         this.knopf.disabled = !!z.laeuft;
         this.automatisch.disabled = !!z.laeuft;
+        this.ausgang.disabled = !!z.laeuft;
+        const nummer = r => (r === 0 ? '0 (Vorlage und Modell)' : r || '–');
         const zustand = z.laeuft ? 'Eine Runde rechnet …'
-            : z.status === 'wartet' ? `Runde ${b.runde || '–'} gerechnet — wartet auf Begutachtung`
-            : b.runde ? `Letzte Runde ${b.runde}` : 'Noch keine Runde — „Neu berechnen" rechnet die Ausgangslage';
+            : z.status === 'wartet' ? `Runde ${nummer(b.runde)} gerechnet — wartet auf Begutachtung`
+            : b.runde !== undefined && b.runde !== null ? `Letzte Runde ${nummer(b.runde)}` : 'Noch keine Runde — „Iteration 0 rechnen" zeigt das Modell der Ausgangslage neben den Vorlagen';
         this.stand.textContent = b.fehler ? `${zustand} · Rezept der letzten Runde fehlerhaft: ${b.fehler}` : zustand;
     }
 }

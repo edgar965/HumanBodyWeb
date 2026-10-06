@@ -197,8 +197,8 @@ class Genesisengine2d3dkleiderTest(SimpleTestCase):
                               ergebnis={'kreislauf': {'modell': {'haar': {'sorte.kin_hair': 1.0}}}}, optionen=None)
         bericht = Genesisengine2d3dkleider(SimpleNamespace(job=job, ablage='ablage-attrappe')).film('figur.glb', 'bewegung.json', 'aus', 10, 64, 64)
         self.assertEqual(bericht['bilder'], 10)
-        # Der Bau bekommt die Ablage des Auftrags (Klemme und Haarumbau, Option iterationen.haarumbau, Vorgabe an) und die Regler des Modells.
-        bau_k.assert_called_once_with({'FBMHeavy': 0.5}, koerper=mock.ANY, ablage='ablage-attrappe', haarumbau=True)
+        # Der Bau bekommt die Ablage des Auftrags (Klemme und Haarumbau, Option iterationen.haarumbau, Vorgabe Herrenhaar) und die Regler des Modells.
+        bau_k.assert_called_once_with({'FBMHeavy': 0.5}, koerper=mock.ANY, ablage='ablage-attrappe', haarumbau='herren')
         modell = bau_k.return_value.teile.call_args[0][0]
         self.assertEqual(modell.haar, {'sorte.kin_hair': 1.0})
         tanz_k.assert_called_once_with({'FBMHeavy': 0.5}, ['koerper', 'shirt'])

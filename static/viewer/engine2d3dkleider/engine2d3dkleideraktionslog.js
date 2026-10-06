@@ -16,7 +16,10 @@
  *   reiter_ergebnis                    300 ms nach dem Klick: Welches Feld ist sichtbar? Passt es nicht zum Reiter, steht eine Warnung
  *   reiter_fertig / seite_bereit       die Seite meldet ein Feld bzw. sich selbst fertig, mit der Zeit seit Klick bzw. Start
  *   sichtbarkeit / adresse             Tab verdeckt oder wieder da (Chrome drosselt verdeckte Tabs), `#`-Wechsel
- *   haenger                            Aufgaben im Hauptfaden ab 300 ms (Long-Task-Schnittstelle des Browsers; ab 1 s als Warnung)
+ *   haenger                            Aufgaben im Hauptfaden ab 300 ms (Long-Task-Schnittstelle des Browsers; ab 1 s als Warnung) — meldet erst, wenn die Aufgabe VORBEI ist
+ *   haenger_live / haenger_ende        der Wächter in einem eigenen Faden (`Hauptfadenwaechter`, 05.10.2026): schreibt SELBST, solange der Hauptfaden steht, und meldet das Ende
+ *   reiter_ohne_klick                  ein Druck auf einen Reiter, auf den innerhalb von 800 ms kein Klick folgte — mit Ort des Loslassens, Abbruch/Ziehen und dem, was dort oben liegt
+ *   fenster                            Fokus des Fensters weg/da (ein Klick, der nur das Fenster aktiviert, bleibt sonst ohne Spur)
  *   reiter_bilder                      15 s nach einem Reiterklick: Zahl und längstes Bild, Bilder ≥ 250 ms, Größe der Zeichenflächen — das Hängen der 3D-Ansicht, das `haenger` nicht sieht
  *   modell_geladen                     das Modell des Stands/der Runde in der 3D-Ansicht: Ladezeit des Browsers (`Engine2d3dKleiderbuehnenmodell._laden`, Ereignis `engine2d3dkleider-modell`)
  *   js_fehler / js_ablehnung / lade_fehler  Fehler im Skript, nicht abgefangene Zusagen, Skript/Stil, die nicht ankamen
@@ -25,6 +28,8 @@ export class Engine2d3dKleiderAktionslog {
 
     static SEITE = 'engine2d3dkleider';
     static ADRESSE = '/api/log/';
+    static NAEHE_PX = 80;            // Drücke so weit über und unter der Leiste werden auch gemeldet (verrutschte Leiste, Klick knapp daneben)
+    static KLICK_MS = 800;           // so lange wartet ein Druck auf der Leiste auf seinen Klick, bevor er als verloren gemeldet wird
     static LANG_MS = 300;
     static HAENGER_MS = 1000;
     static PRUEFUNG_MS = 300;
@@ -45,6 +50,7 @@ export class Engine2d3dKleiderAktionslog {
         this._start = performance.now();
         this._wechsel = null;            // der laufende Reiterwechsel: { name, start }
         this._bereit = false;
+        this._druck_offen = null;        // ein Druck auf der Leiste, dessen Klick noch aussteht: { wo, hoch, abbruch }
     }
 
     // ------------------------------------------------------------------ Schreiben
@@ -92,17 +98,39 @@ export class Engine2d3dKleiderAktionslog {
         // Erfassungsphase: Der Klick wird gemeldet, auch wenn ein Zuhörer weiter unten ihn schluckt oder wirft.
         document.addEventListener('click', e => this._klick(e), true);
         document.addEventListener('pointerdown', e => this._druck(e), true);
+        document.addEventListener('pointerup', e => this._los(e), true);
+        document.addEventListener('pointercancel', e => this._abgebrochen(e), true);
+        document.addEventListener('dragstart', e => this._abgebrochen(e), true);
         document.addEventListener('contextmenu', e => this._rechtsklick(e), true);
         document.addEventListener('change', e => this._aenderung(e), true);
         document.addEventListener('visibilitychange', () => this.melden('sichtbarkeit', document.visibilityState));
+        window.addEventListener('blur', () => this.melden('fenster', 'Fokus weg'));
+        window.addEventListener('focus', () => this.melden('fenster', 'Fokus da'));
         window.addEventListener('hashchange', () => this.melden('adresse', location.hash));
-        window.addEventListener('engine2d3dkleider-modell', e => this.melden('modell_geladen', e.detail.text, e.detail.stufe));
+        window.addEventListener('engine2d3dkleider-modell', e => {
+            this.melden('modell_geladen', e.detail.text, e.detail.stufe);
+            this._bilder('modell');            // Bildfolge mit dem neuen Modell: ein schweres Modell zeigt sich hier, nicht erst nach einem Reiterklick
+        });
         if (this.leiste) {
             this.leiste.addEventListener('reiterwechsel', e => this._reiterwechsel(e.detail.name));
             this.leiste.addEventListener('reiterfertig', () => this._reiterfertig());
         }
         this._fehler();
         this._haenger();
+        this._waechter();
+    }
+
+    /**
+     * Der Wächter im eigenen Faden (`Hauptfadenwaechter`): schreibt ins Log, WÄHREND der Hauptfaden steht. Dynamisch geladen — ein statischer Import machte dieses
+     * Modul von einer weiteren Datei abhängig, und es soll gerade dann schreiben, wenn anderes nicht lädt.
+     */
+    _waechter() {
+        const s = Engine2d3dKleiderAktionslog;
+        import('../gemeinsam/hauptfadenwaechter.js')
+            .then(modul => modul.Hauptfadenwaechter.starten({
+                adresse: s.ADRESSE, seite: s.SEITE, kennung: this.kennung, fehler: text => this.melden('lade_fehler', text, 'error'),
+            }))
+            .catch(fehler => this.melden('lade_fehler', `hauptfadenwaechter.js: ${fehler && fehler.message ? fehler.message : fehler}`, 'error'));
     }
 
     _ziel(e) {
@@ -117,14 +145,49 @@ export class Engine2d3dKleiderAktionslog {
     _druck(e) {
         if (!this.leiste) return;
         const r = this.leiste.getBoundingClientRect();
-        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+        const innen = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+        const nah = e.clientY >= r.top - Engine2d3dKleiderAktionslog.NAEHE_PX && e.clientY <= r.bottom + Engine2d3dKleiderAktionslog.NAEHE_PX;
+        if (!innen && !nah) return;
         const ziel = e.target instanceof Element ? e.target : null;
         const knopf = ziel ? ziel.closest('[role="tab"][data-reiter]') : null;
-        const wo = knopf ? `auf ${knopf.dataset.reiter}` : `NEBEN den Reitern: ${ziel ? ziel.tagName.toLowerCase() + (ziel.id ? '#' + ziel.id : '') : '?'}`;
-        this.melden('reiter_druck', `${wo} · Fenster ${innerWidth}x${innerHeight} · Scroll ${Math.round(scrollY)} · Leiste y=${Math.round(r.top)}`, knopf ? 'info' : 'warning');
+        const wo = knopf ? `auf ${knopf.dataset.reiter}` : `${innen ? 'NEBEN den Reitern' : 'knapp neben der Leiste'}: ${ziel ? ziel.tagName.toLowerCase() + (ziel.id ? '#' + ziel.id : '') : '?'}`;
+        this.melden('reiter_druck', `${wo} · Fenster ${innerWidth}x${innerHeight} · Scroll ${Math.round(scrollY)} · Leiste y=${Math.round(r.top)} · oben ${this._oben(e.clientX, e.clientY)} · Taste ${e.button} ${e.pointerType}`,
+            knopf ? 'info' : 'warning');
+        if (innen) this._klickErwarten(e);
+    }
+
+    /** Die obersten drei Elemente an einem Punkt, als `button > div#auftrag-reiter > div` — was ein Klick dort tatsächlich trifft. */
+    _oben(x, y) {
+        return document.elementsFromPoint(x, y).slice(0, 3).map(el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')).join(' > ') || 'nichts';
+    }
+
+    /**
+     * Auf einen Druck auf der Leiste muss ein `click` folgen. Bleibt er innerhalb von `KLICK_MS` aus, steht hier, was dazwischen war (Loslassen woanders, Abbruch,
+     * Ziehen) — der Druck allein erreichte die Seite, der Wechsel aber nicht (05.10.2026, Edgar: „jeder dritte Klick funktioniert").
+     */
+    _klickErwarten(e) {
+        const eintrag = { wo: this._oben(e.clientX, e.clientY), x: e.clientX, y: e.clientY, hoch: '', abbruch: '' };
+        this._druck_offen = eintrag;
+        setTimeout(() => {
+            if (this._druck_offen !== eintrag) return;
+            this._druck_offen = null;
+            this.melden('reiter_ohne_klick', `Druck bei ${Math.round(eintrag.x)},${Math.round(eintrag.y)} (${eintrag.wo}) ohne Klick · Loslassen: ${eintrag.hoch || 'nie angekommen'}${eintrag.abbruch ? ' · ' + eintrag.abbruch : ''}`,
+                'warning');
+        }, Engine2d3dKleiderAktionslog.KLICK_MS);
+    }
+
+    _los(e) {
+        if (!this._druck_offen) return;
+        const ziel = e.target instanceof Element ? e.target : null;
+        this._druck_offen.hoch = `${ziel ? ziel.tagName.toLowerCase() + (ziel.id ? '#' + ziel.id : '') : '?'} bei ${Math.round(e.clientX)},${Math.round(e.clientY)} (oben ${this._oben(e.clientX, e.clientY)})`;
+    }
+
+    _abgebrochen(e) {
+        if (this._druck_offen) this._druck_offen.abbruch = e.type;
     }
 
     _klick(e) {
+        this._druck_offen = null;
         const ziel = this._ziel(e);
         if (!ziel) {
             // Druck und Loslassen auf verschiedenen Elementen (die Leiste rückte dazwischen): der Klick geht an die Leiste selbst, kein Knopf bekommt ihn.

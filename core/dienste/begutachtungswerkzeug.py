@@ -17,6 +17,7 @@ class Begutachtungswerkzeug:
         self.ablage = ablage
         self._koerper_punkte = None
         self._sicht = None
+        self._seite = None
 
     def takt(self, text):
         """Abschnitt `text` beginnt: die Dauer des vorigen ins Log (Frage Edgar 02.10.2026 „warum dauert eine Runde so
@@ -193,3 +194,18 @@ class Begutachtungswerkzeug:
         sicht = Sichtkoerper([(r.winkel, r.bild.maske) for r in referenzen], hoehe, self._koerper_punkte)
         self._sicht = (hoehe, sicht)
         return sicht
+
+    def seitenprofil(self, referenzen, z):
+        """`Seitenprofil` der Seitenfotos (±90°) auf feiner Fläche (≈ 1 mm je Bildpunkt) — je Lauf einmal je Modellhöhe; leer (`bool` False), wenn kein Seitenfoto da ist. Für `koerper_gesichtsprofil`."""
+        from iterationen2d3d.seitenprofil import Seitenprofil
+
+        from .iterationsreferenz import Iterationsreferenz
+        sicht = self.sichtkoerper(referenzen, z)
+        if sicht is None:
+            return None
+        if self._seite is not None and self._seite[0] == sicht.hoehe:
+            return self._seite[1]
+        seiten = [(r.winkel, Iterationsreferenz.bild(self.ablage, r.datei, Seitenprofil.FEIN).maske) for r in referenzen if abs(abs(r.winkel) - 90.0) < 1.0]
+        profil = Seitenprofil(seiten, sicht.hoehe, self._koerper_punkte)
+        self._seite = (sicht.hoehe, profil)
+        return profil

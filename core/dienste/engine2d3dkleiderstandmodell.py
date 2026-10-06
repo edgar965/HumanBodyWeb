@@ -58,7 +58,8 @@ class Engine2d3dKleiderstandmodell:
     #: 22 (05.10.2026, Edgar: „diese Unterhose ist total aufgebläht, sie muss am Körper liegen"): Die enge Hose liegt 4 statt 8 mm über der Haut und wird kaum noch geglättet (`Hosenkoerper.ABSTAND_ENG`).
     #: 23 (05.10.2026, Edgar: „das Haar der Vorlage perfekt auf ein Haar aus Genesis umbauen"): Das Haar der Runden ist an der Haarlinie geschnitten und sitzt auf der Haarkappe (`Haarumbau`); Kopfkachel
     #: bleibt gebacken, Fotohaut Fassung 2 (`Koerperfotoprojektion`).
-    SCHREIBER = 23
+    #: 24 (05.10.2026, Edgar: „Haar ist eine Linie über den Ohren", „ein Haar für einen normalen mittelalten Mann"): Haarlinie nach Ohr, Koteletten und Nacken (`Haarlinie`), das Haar vor den Iterationen ist das eigene Kurzhaar (`Herrenhaar`).
+    SCHREIBER = 24
 
     def __init__(self, job, ablage=None):
         self.job = job
@@ -98,10 +99,26 @@ class Engine2d3dKleiderstandmodell:
         f = (self.job.ergebnis or {}).get('fototextur') or {}
         teile = [self.SCHREIBER, self.stellung(), self._kreislaufmodell(), f.get('kacheln'), f.get('augen'),
                  f.get('stand'), self._beste_runde(), self._zubehoer()]
+        schichten = self._fotoschichten()
+        if schichten:                       # nur mit Fotoschichten: Aufträge ohne sie behalten ihre Fassung
+            teile.append(schichten)
         # Vor den Iterationen tragen die Fotostücke (Schritt „Kleiderstücke") die Kleider — nur dann zählen sie zur Fassung, die Fassung der Aufträge mit Iterationen bleibt dieselbe.
         vorab = None if self._kreislaufmodell() else Standvorabkleider.fingerabdruck(self.job)
         roh = json.dumps(teile + ([vorab] if vorab else []), sort_keys=True, default=str)
         return hashlib.md5(roh.encode('utf-8')).hexdigest()[:12]
+
+    def _fotoschichten(self):
+        """Die Atlanten der Fotoschichten DIESES Auftrags (`kleidtexturen/*foto_<kürzel>_f*.png`) als `[(Name, Größe, Änderungszeit)]` — leer ohne sie.
+        Das Modell der Runde nennt nur den Regler `bild.foto_<kürzel>` (immer 1,0), nicht den Inhalt des Atlas: `stand_ab281e7b38b5.glb` von „Edgar - Sapiens 4"
+        (06.10.2026) trug das Hemd weiß, ohne Foto und ohne die Farbe des Saums, und blieb es unter derselben Fassung, obwohl der heutige Bau dasselbe Modell mit
+        Foto baut (Hemdtextur Mittel 191 gegen 82/78/76); eine neu gerechnete Schicht änderte die Fassung ebenso wenig."""
+        from Genesis9.kleidtexturen import G9kleidtexturen
+        from Genesis9.rezeptumgebung import Rezeptumgebung
+        kuerzel = Rezeptumgebung.kuerzel(self.job.kennung)
+        ordner = G9kleidtexturen.ordner()
+        if not kuerzel or not ordner.is_dir():
+            return []
+        return sorted((p.name, p.stat().st_size, p.stat().st_mtime_ns) for p in ordner.glob('*foto_%s_f*.png' % kuerzel))
 
     @staticmethod
     def _zubehoer():
@@ -200,8 +217,8 @@ class Engine2d3dKleiderstandmodell:
             teile = [x for x in Haarzonen.anwenden(bau.teile(modell), modell.farben) if x.get('art') != 'koerper']
             if vorab:
                 teile = [x for x in teile if x.get('art') in Standvorabkleider.ARTEN]       # Kleidung UND die gewählte Frisur (websites-40, 04.10.2026)
-                if kappe is not None:       # die Kappe ersetzt die Kopfhaare, nicht den Bart
-                    teile = [x for x in teile if x.get('art') != 'haar' or any(o in str(x.get('sorte')) for o in ('_beard',))] + [kappe]
+                if kappe is not None:       # das eigene Haar (Kappe oder Herrenhaar, eine Liste von Teilen) ersetzt die Kopfhaare, nicht den Bart
+                    teile = [x for x in teile if x.get('art') != 'haar' or any(o in str(x.get('sorte')) for o in ('_beard',))] + kappe
             glb.teile(teile)
         if daten:
             # Die Haltung der Iterationen als Drehung der Gelenkknoten (`Standhaltung`): Netze und Bindematrizen bleiben in der A-Pose.
@@ -232,12 +249,20 @@ class Engine2d3dKleiderstandmodell:
         return bericht
 
     def _haarkappe(self, netz):
-        """Das Haar vor den Iterationen: EIN Teil in EINER Farbe über dem ganzen Haarbereich (`Haarkappe`) — None ohne Hülle des Fotohaars oder ohne Haarfarbe (dann trägt der Stand die Frisur der Garderobe).
-        Ein Fehler hält den Bau nicht auf."""
+        """Das Haar vor den Iterationen als Liste von Teilen: bei der Option `haarumbau = herren` das eigene Kurzhaar (`Herrenhaar`: Kappe und Strähnen), sonst EIN Teil in EINER Farbe über dem ganzen Haarbereich (`Haarkappe`) —
+        None ohne Hülle des Fotohaars oder ohne Haarfarbe (dann trägt der Stand die Frisur der Garderobe). Ein Fehler hält den Bau nicht auf."""
         from .haarkappe import Haarkappe
+        from .herrenhaar import Herrenhaar
+        from .iterationsoptionen import Iterationsoptionen
         try:
             rgb = Standvorabkleider.kappenfarbe(self.job)
-            return Haarkappe(self.ablage, netz).teil(rgb) if rgb else None
+            if not rgb:
+                return None
+            if Iterationsoptionen.haarumbau(self.job) == 'herren':
+                herren = Herrenhaar(self.ablage, netz)
+                return herren.teile(rgb) if herren.kappe.kurzhaarig() else None
+            teil = Haarkappe(self.ablage, netz).teil(rgb)
+            return [teil] if teil is not None else None
         except Exception:  # noqa: BLE001 — ohne Kappe bleibt die Frisur der Garderobe
             logger.exception('2D3D Kleider %s: Haarkappe nicht gebaut', self.job.kennung)
             return None

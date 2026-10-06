@@ -79,6 +79,54 @@ class UvrasterTest(SimpleTestCase):
         np.testing.assert_allclose(farbe[1], [1.0, 0.0, 0.0], atol=1e-6)
         np.testing.assert_allclose(farbe[2], [1.0, 0.0, 0.0], atol=1e-6)
 
+    def test_2a_ungesehenes_traegt_das_fotomittel_seiner_hoehe(self):
+        # Ein Hemd mit Verlauf (oben rot, unten blau): die Flanken, die keine Ansicht sieht, trugen EIN Mittel für das ganze Stück
+        # und standen als gleichförmige Streifen neben dem Verlauf (06.10.2026). Mit `hoehenprofil` tragen sie die Farbe ihrer Höhe.
+        hf, bf = 150, 100
+        foto = np.zeros((hf, bf, 3), np.float32)
+        foto[:75, :, 0] = 1.0                                              # obere Bildhälfte rot
+        foto[75:, :, 2] = 1.0                                              # untere blau
+        maske = np.ones((hf, bf), bool)
+        punkte = [[0.0, 1.6, 0.5], [0.0, 0.4, 0.5], [0.3, 1.6, 0.0], [0.3, 0.4, 0.0]]     # vorn oben/unten, Flanke oben/unten
+        normalen = [[0.0, 0.0, 1.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]
+        farben = {}
+        for profil in (False, True):
+            p = Fotoprojektion(mitte=[0.0, 1.0, 0.0], halb=1.2, render_groesse=(100, 150), hoehenprofil=profil)
+            p.ansicht(0.0, (50.0, 10.0, 140.0), foto, maske, maske)
+            farben[profil], getroffen = p.farben(punkte, normalen)
+            self.assertEqual(getroffen.tolist(), [True, True, False, False])
+        np.testing.assert_allclose(farben[False][2], farben[False][3], atol=1e-5)     # ein Mittel für beide Höhen
+        self.assertGreater(float(farben[True][2][0]), 0.9)                            # Flanke oben: rot
+        self.assertLess(float(farben[True][2][2]), 0.1)
+        self.assertGreater(float(farben[True][3][2]), 0.9)                            # Flanke unten: blau
+        self.assertLess(float(farben[True][3][0]), 0.1)
+
+    def test_2b_der_figurrand_zaehlt_nicht(self):
+        # Die Randpixel einer Freistellung sind Mischfarben mit der weißen Wand (helle Punkte entlang der Seitennaht, 06.10.2026).
+        hf, bf = 150, 100
+        figur = np.zeros((hf, bf), bool)
+        figur[20:130, 20:80] = True
+        foto = np.zeros((hf, bf, 3), np.float32)
+        for rand, erwartet in ((0, True), (2, False)):
+            p = Fotoprojektion(mitte=[0.0, 1.0, 0.0], halb=1.2, render_groesse=(100, 150), figurrand=rand)
+            p.ansicht(0.0, (50.0, 10.0, 140.0), foto, figur, np.ones((hf, bf), bool))
+            self.assertEqual(bool(p.ansichten[0]['drin'][75, 20]), erwartet)               # Pixel am Rand der Figur
+            self.assertTrue(bool(p.ansichten[0]['drin'][75, 50]))                          # Mitte bleibt
+
+    def test_2c_neben_der_haut_zaehlt_ein_pixel_mehr_nicht(self):
+        # Die Abtastung ist bilinear: ein Texel am Rand des Hautausschlusses mischt die Hautpixel mit (orange Linie an der Ärmelkante, 06.10.2026).
+        hf, bf = 150, 100
+        figur = np.ones((hf, bf), bool)
+        haut = np.zeros((hf, bf), bool)
+        haut[:, 60:] = True
+        foto = np.zeros((hf, bf, 3), np.float32)
+        p = Fotoprojektion(mitte=[0.0, 1.0, 0.0], halb=1.2, render_groesse=(100, 150))
+        p.ansicht(0.0, (50.0, 10.0, 140.0), foto, figur, np.ones((hf, bf), bool), ausschluss=haut)
+        drin = p.ansichten[0]['drin']
+        self.assertTrue(bool(drin[75, 58]))                                              # zwei Pixel vor der Haut: bleibt
+        self.assertFalse(bool(drin[75, 59]))                                             # das Pixel neben der Haut: weg
+        self.assertFalse(bool(drin[75, 60]))                                             # die Haut selbst
+
     def test_3_faltenkarte_kippt_die_normale(self):
         karte = self._viereck().karte({'name': 'Stoff', 'index_ab': 0, 'index_anzahl': 6})
         gewicht = karte['maske'].astype(np.float64)

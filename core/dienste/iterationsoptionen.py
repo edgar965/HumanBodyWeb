@@ -95,13 +95,62 @@ class Iterationsoptionen:
             'schluessel': 'haarumbau',
             'titel': 'Frisur an das Haar der Vorlage anpassen',
             'art': 'wahl',
-            'vorgabe': 'an',
+            'vorgabe': 'herren',
             'werte': [
+                ('herren', 'Herrenhaar — ein eigenes Kurzhaar für einen normalen Herrenschnitt: Strähnen auf der Kopfhaut in der Haarfarbe der Fotos, Umriss und Haarlinie aus dem Fotohaar; die Frisur der Garderobe wird nicht gebaut'),
                 ('an', 'An — die Frisur wird an der Haarlinie des Fotohaars geschnitten und sitzt auf einer Haarkappe in der Haarfarbe'),
                 ('aus', 'Aus — die Frisur bleibt, wie Garderobe und Rezept sie wählen'),
             ],
             'hinweis': 'Haarumbau (Edgar, 05.10.2026: „das Haar der Vorlage perfekt auf ein Haar aus Genesis umbauen"): Stirn, Schläfen, Ohren und Hals bleiben frei, Lücken der Haarkarten füllt die Kappe in der '
             'Haarfarbe. Gilt nur für kurzes Haar mit Hülle des Fotohaars (Schritt „Frisur"); sonst bleibt die Frisur, wie sie ist.',
+        },
+        {
+            'schluessel': 'rumpftiefe',
+            'titel': 'Rumpf an die Seitenansicht der Fotos angleichen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — Iteration 0 gibt dem Rumpf (Brust, Bauch, Rücken) die Tiefe der Silhouette im Seitenfoto und legt Kleidung enger an'),
+                ('aus', 'Aus — der Rumpf bleibt, wie der Schritt „Körper" ihn fittet'),
+            ],
+            'hinweis': 'Rumpftiefe (Edgar, 05.10.2026: „Bauch ist bei dir sehr dick"): Im Modell der Iteration 0 war der Körper 20–45 mm flacher als die Silhouette des Seitenfotos (der Schritt „Körper" zieht ihn unter Kleidung nur zu 60 % '
+            'ans Netz), das Hemd darüber stand am Unterbauch bis 41 mm zu tief — flache Brust, dicker Bauch. `koerper_rumpftiefe` vertieft den Körper dort, wo er flacher ist als der Sichtkörper der Fotos (abzüglich 8 mm Hemd), `passform` legt die Kleider enger.',
+        },
+        {
+            'schluessel': 'gesichtsprofil',
+            'titel': 'Lippen und Kinn an das Seitenfoto angleichen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — Iteration 0 rückt Lippen und Kinn so weit nach vorn wie im Seitenfoto (bezogen auf Augen und Nasenwurzel)'),
+                ('aus', 'Aus — das Gesicht bleibt, wie der Schritt „Körper" es fittet'),
+            ],
+            'hinweis': 'Eingedrücktes Kinn (Edgar, 05.10.2026: „Kinn über dem Mund ist bei dir eingedrückt"): Im Profil standen Lippen und Kinn 5–13 mm weiter hinter dem Seitenfoto als Augen und Nasenwurzel. '
+            '`koerper_gesichtsprofil` misst die Kante des Seitenfotos fein (≈ 1 mm) und rückt die Vorderseite von Kinn bis unter die Nase um den Unterschied nach vorn (höchstens 30 mm; die Nase bleibt). Zeigt das Foto einen Bart, steht die Lippe um dessen Dicke zu weit vorn.',
+        },
+        {
+            'schluessel': 'licht',
+            'titel': 'Licht der Fotos herausrechnen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — die Beleuchtung der Fotos wird je Ansicht geschätzt und aus der projizierten Farbe geteilt (Haut aus den Fotos, Kleidung, Haar)'),
+                ('aus', 'Aus — die Farbe der Fotos wird genommen, wie sie ist'),
+            ],
+            'hinweis': 'Fotolicht (Edgar, 05.10.2026: „Die Textur hat die Schatten des Lichtes drin"): Jede Ansicht hat ihr Licht — Oberschenkel hell, Waden dunkler, Seiten im Schatten. Es wird als einfaches Polynom '
+            'in Normale und Lage geschätzt (sieben Zahlen je Ansicht) und mit Stärke 0,85 herausgerechnet. Haare, Muttermale und Glanzlichter bleiben; es ist eine Näherung, keine Zerlegung in Albedo und Licht.',
+        },
+        {
+            'schluessel': 'belichtung',
+            'titel': 'Belichtung je Ansicht angleichen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — der Render jeder Ansicht wird so hell wie sein Foto, das Mittel über alle Ansichten bleibt (Note, Befund und Tafel sehen dasselbe)'),
+                ('aus', 'Aus — der Render bleibt, wie das feste Licht der Szene ihn macht'),
+            ],
+            'hinweis': 'Belichtung (Edgar, 06.10.2026: „der Render ist insgesamt dunkler als das Foto"): Render geteilt durch Foto war vorn 1,07, hinten 0,95, Seite 0,86 — das Licht der Szene steht fest, die Fotos sind verschieden belichtet. Der Faktor je Ansicht '
+            '(Foto ÷ Render in linearem Licht, geteilt durch das geometrische Mittel aller) nimmt nur diesen Unterschied weg; ist das Modell überall zu dunkel, bleibt es das. Runden VOR dieser Option wurden ohne Abgleich benotet — ihre Noten sind nicht gleich zu lesen.',
         },
         {
             'schluessel': 'kandidaten',
@@ -179,8 +228,29 @@ class Iterationsoptionen:
 
     @classmethod
     def haarumbau(cls, job):
-        """Ob die Frisur an das Haar der Vorlage angepasst wird (`Haarumbau`): Option `iterationen.haarumbau` des Auftrags, Vorgabe an."""
-        return cls.pruefen((job.optionen or {}).get('iterationen')).get('haarumbau') != 'aus'
+        """Wie das Haar an die Vorlage angepasst wird (`Haarumbau`, `Herrenhaar`): Option `iterationen.haarumbau` des Auftrags, Vorgabe Herrenhaar — `False`, `True` oder `'herren'` (`haarart`)."""
+        return cls.haarart(cls.pruefen((job.optionen or {}).get('iterationen')).get('haarumbau'))
+
+    @classmethod
+    def rumpftiefe(cls, job):
+        """Ob Iteration 0 dem Rumpf die Tiefe der Seitenansicht gibt (`koerper_rumpftiefe`, `passform`): Option `iterationen.rumpftiefe` des Auftrags, Vorgabe an."""
+        return cls.pruefen((job.optionen or {}).get('iterationen')).get('rumpftiefe') != 'aus'
+
+    @classmethod
+    def gesichtsprofil(cls, job):
+        """Ob Iteration 0 Lippen und Kinn nach dem Seitenfoto vorrückt (`koerper_gesichtsprofil`): Option `iterationen.gesichtsprofil`, Vorgabe an."""
+        return cls.pruefen((job.optionen or {}).get('iterationen')).get('gesichtsprofil') != 'aus'
+
+    @classmethod
+    def licht(cls, job):
+        """Stärke, mit der das Licht der Fotos aus der projizierten Farbe herausgerechnet wird (`Fotolicht`, `Fotoprojektion.licht`): Option `iterationen.licht` des Auftrags, Vorgabe an → `Fotolicht.STAERKE`, aus → 0."""
+        from iterationen2d3d.fotolicht import Fotolicht
+        return 0.0 if cls.pruefen((job.optionen or {}).get('iterationen')).get('licht') == 'aus' else Fotolicht.STAERKE
+
+    @staticmethod
+    def haarart(wert):
+        """Aus dem Wert der Option haarumbau: 'herren' (eigenes Kurzhaar, Herrenhaar), True (die Frisur umbauen, Haarumbau) oder False (aus) — so nimmt Kleidermodellbau den Parameter haarumbau."""
+        return 'herren' if wert == 'herren' else wert != 'aus'
 
     @classmethod
     def katalog(cls):

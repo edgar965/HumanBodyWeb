@@ -105,6 +105,31 @@ class OrtsmorphTest(SimpleTestCase):
         self.assertLess(float(d[1][0]), -0.1)
         self.assertEqual(brief['gezogen'], 3)
 
+    def test_4a_huelle_in_der_tiefe_laesst_die_flanken_stehen(self):
+        # Ärmel stehen an den Flanken: der waagerechte Strahl aus der Achse endet dort erst am Arm daneben (Hemd, 06.10.2026).
+        s = self._sicht()
+        kaefig = np.array([[0.05, 0.5, 0.0], [-0.05, 0.5, 0.0], [0.0, 0.5, 0.05], [0.0, 0.5, -0.05]])
+        deltas, brief = G9huellenmorph.deltas(s, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01, tiefe=True)
+        d = deltas[0]
+        self.assertEqual(float(np.abs(d[:2]).max()), 0.0)       # Flanken: kein Weg
+        self.assertGreater(float(d[2][2]), 0.15)                # vorn nach +z zum Rand
+        self.assertLess(float(d[3][2]), -0.15)                  # hinten nach −z
+        self.assertTrue(brief['tiefe'])
+        rundum, _brief = G9huellenmorph.deltas(s, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01)
+        self.assertGreater(float(rundum[0][0][0]), 0.1)         # ohne `tiefe` wandern auch die Flanken
+
+    def test_4b_huellenabstand_zaehlt_nur_vorder_und_rueckseite(self):
+        from iterationen2d3d.befundmessung import Befundmessung
+        punkte = []
+        for hoehe in (0.1, 0.3, 0.5, 0.7, 0.9):
+            punkte += [[0.0, hoehe, 0.2], [0.0, hoehe, -0.2], [0.01, hoehe, 0.2], [-0.01, hoehe, -0.2],   # vorn/hinten: 5 cm bis zum Rand
+                       [0.05, hoehe, 0.0], [-0.05, hoehe, 0.0]]                                          # Flanken: 20 cm bis zum Rand
+        mm = Befundmessung(None, None, sicht=self._sicht()).huelle(np.array(punkte))
+        self.assertEqual(len(mm), 5)
+        for wert in mm:
+            self.assertIsNotNone(wert)
+            self.assertTrue(40.0 < wert < 62.0, wert)           # rundum gemittelt stünden hier ~100 mm
+
     def test_5_rezept_mit_ort_und_neue_funktionen(self):
         namen = {n for n, _s, _t in ModellMitKleidern.hilfe()}
         for f in ('morph_ort', 'kleid_ring', 'kleid_huelle', 'kleid_welle', 'koerper_ort', 'koerper_huelle',
@@ -181,7 +206,7 @@ class StandardreglerTest(SimpleTestCase):
         text = '\n'.join(zeilen)
         self.assertIn("m.morph_ort('kleidung', 'shirt', 'netz_b2s0'", text)
         self.assertIn("'sektor': %r" % (Befundmessung.sektor(0),), text)
-        self.assertIn("m.kleid_huelle('shirt', staerke=0.5)", text)
+        self.assertIn("m.kleid_huelle('shirt', staerke=0.5, tiefe=True)", text)
         self.assertEqual(sum('netz_b' in z for z in zeilen), 1)
         m.kleidung['shirt.eigen.huelle'] = 0.5
         m.kleidung['shirt.eigen.netz_b2s0'] = -1.0

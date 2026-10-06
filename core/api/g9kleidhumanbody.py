@@ -31,6 +31,7 @@ from Genesis9.teilbindung import G9teilbindung
 from ..daten.netzantwort import Netzantwort
 from ..dienste.g9aufhumanbody import G9aufhumanbody
 from ..dienste.g9hbfusspose import G9hbfusspose
+from ..dienste.g9hbschuhhuelle import G9hbschuhhuelle
 from ..dienste.g9hbschuhpassung import G9hbschuhpassung
 from ..dienste.g9hbstoffbruecke import G9hbstoffbruecke
 from ..dienste.g9hbstoffkorrektur import G9hbstoffkorrektur
@@ -153,8 +154,10 @@ class G9kleidhumanbody:
             if getattr(folger, 'koerperhaut', False):
                 # Auch die UNTERTEILTEN Punkte: Wo der Kaefig eine vorstehende Brust
                 # umspannt, schneidet die Flaeche dazwischen bis 16 mm tief hinein.
-                netz['punkte'] = (G9hbschuhpassung.heben(traeger, netz['punkte'], abstand) if schuh
-                                  else traeger.hinaus(netz['punkte'], abstand))
+                netz['punkte'] = traeger.hinaus(netz['punkte'], abstand)
+                if schuh:
+                    # Die Zehenbox als gleichmaessige Rundung statt der Zehenform (05.10.2026, `G9hbschuhhuelle`).
+                    netz['punkte'] = G9hbschuhhuelle.runden(traeger, netz['punkte'])
                 if eintrag.get('art') == 'kleidung' and not netz.get('stufen'):
                     # Und gegen die FLAECHE: Zwischen drei Stoffpunkten stand die Brustwarze
                     # durch (30.09.2026, GC T-Shirt) — `G9hbstoffkorrektur`. Nur ohne

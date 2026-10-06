@@ -23,14 +23,16 @@ export class Detailbereiche {
     static ALLE = {
         haut: {
             farben: [['prop-detail-haut', 'haut']],
-            prozent: [['prop-detail-haut-glanz', 'haut_glanz']],
-            auswahl: [['prop-detail-haut-textur', 'haut_textur']],
+            prozent: [['prop-detail-haut-glanz', 'haut_glanz'], ['prop-detail-haut-poren-staerke', 'haut_poren_deckkraft'],
+                      ['prop-detail-haut-poren-dichte', 'haut_poren_dichte']],
+            auswahl: [['prop-detail-haut-textur', 'haut_textur'], ['prop-detail-haut-poren', 'haut_poren']],
             morphe: [],
         },
         augen: {
             farben: [['prop-detail-iris', 'iris'], ['prop-detail-sklera', 'sklera'],
                      ['prop-detail-wimpern', 'wimpern']],
-            prozent: [['prop-detail-wimpern-laenge', 'wimpern_laenge']],
+            prozent: [['prop-detail-wimpern-laenge', 'wimpern_laenge'], ['prop-detail-augen-relief', 'augen_relief']],
+            auswahl: [['prop-detail-augen-textur', 'augen_textur']],
             morphe: ['Eyelids_SizeZ', 'Eyelids_Crease', 'Eyelids_Angle', 'Eyelids_LowerCurve'],
         },
         brauen: {

@@ -70,6 +70,18 @@ if (g9.customProgramCacheKey() !== 'genesis9haut:s-d+hauteinzug') fehl('Kennung 
 // --- 4. hinterInclude meldet ein fehlendes Include ------------------------
 if (Shaderpatch.hinterInclude(shader(), 'gibt_es_nicht', 'x')) fehl('fehlendes Include gilt als eingefuegt');
 
+// --- 5. entfernen nimmt EINEN Eingriff ab (06.10.2026, `Hautporen`: „Keine“ muss den Shader wieder frei machen) ---
+const ent = material();
+Shaderpatch.anhaengen(ent, 'hautporen', (s2) => { s2.vertexShader += 'poren'; });
+Shaderpatch.anhaengen(ent, 'hauteinzug', (s2) => { s2.vertexShader += 'einzug'; });
+if (!Shaderpatch.entfernen(ent, 'hautporen')) fehl('entfernen meldet nichts');
+if (Shaderpatch.hat(ent, 'hautporen') || !Shaderpatch.hat(ent, 'hauteinzug')) fehl('falscher Eingriff abgenommen');
+if (ent.customProgramCacheKey() !== 'hauteinzug') fehl('Schluessel nach entfernen: ' + ent.customProgramCacheKey());
+s = shader(); ent.onBeforeCompile(s);
+if (s.vertexShader.includes('poren') || !s.vertexShader.includes('einzug')) fehl('entfernter Eingriff wirkt noch');
+if (Shaderpatch.entfernen(ent, 'hautporen')) fehl('zweites entfernen meldet true');
+if (Shaderpatch.entfernen(material(), 'x')) fehl('Material ohne Register meldet true');
+
 console.log(JSON.stringify({ ok: true, schluessel: Shaderpatch.schluessel(k) }));
 """
 

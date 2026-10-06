@@ -27,7 +27,10 @@ from django.utils import timezone
 from Genesis9.haltungshaut import G9haltungshaut
 from Genesis9.rezeptumgebung import Rezeptumgebung
 
+from .ansichtsrender import Ansichtsrender
 from .aufloesungsstufe import Aufloesungsstufe
+from .begutachtungsausgang import Begutachtungsausgang
+from .begutachtungsautomatik import Begutachtungsautomatik
 from .begutachtungsbefund import Begutachtungsbefund
 from .begutachtungskritik import Begutachtungskritik
 from .begutachtungsstand import Begutachtungsstand
@@ -86,17 +89,24 @@ class Begutachtungsrunde:
         quelle = (z.get('weiter') or {}).get('modell') or z.get('modell')    # eine Probe läuft weiter (Rundenauswahl)
         modell = ModellMitKleidern.aus(quelle) if quelle else self._start()
         naechste = beg.pop('naechste', None) or {}
+        vorlauf, ohne_rezept = 0, not (naechste.get('aufrufe') or naechste.get('automatisch'))
+        erste = not quelle and Begutachtungsausgang.fehlt(self.job)
+        if Begutachtungsausgang.verlangt(naechste) or (erste and ohne_rezept):         # Iteration 0: auf Bestellung, oder als Ausgangslage („Neu berechnen" ohne Rezept)
+            return self._ausgang(z, beg, referenzen)
         runden = 1
         if naechste.get('automatisch'):
             runden = max(1, min(self.RUNDEN_HOECHSTENS, int(naechste.get('runden') or 1)))
+        if erste:               # die erste Runde mit Rezept: erst Iteration 0 — Vorlage und Modell, vor jeder Änderung
+            vorlauf, self._lage = 1, (0, runden + 1)
+            modell = self._runde(z, beg, modell, Begutachtungsausgang.bestellung(self.job), referenzen)
         grund = naechste.get('kommentar') or 'automatisch (IterationModell)'
         for i in range(runden):
             if i and self.lauf.angehalten():
                 break
-            self._lage = (i, runden)
+            self._lage = (i + vorlauf, runden + vorlauf)
             if naechste.get('automatisch'):
                 neu = None if z.get('weiter') else self.stufe.faellig(z, referenzen)     # Stillstand in der Stufe
-                aufrufe, zusatz, fertig = ('', 'Stillstand', False) if neu else self._automatisch(modell, z, referenzen)
+                aufrufe, zusatz, fertig = ('', 'Stillstand', False) if neu else Begutachtungsautomatik(self).rezept(modell, z, referenzen)
                 if fertig:          # keine Änderung mehr: erst feiner messen (Edgar 02.10.2026), dann enden
                     neu = self.stufe.naechste(z, referenzen)
                     if not neu:
@@ -113,28 +123,6 @@ class Begutachtungsrunde:
         if naechste.get('automatisch'):     # automatische Runden enden „fertig", nicht „wartet" (Edgar 02.10.2026)
             self.job.ergebnis.setdefault('begutachtung', {})['zustand'] = 'fertig'
 
-    def _automatisch(self, modell, z, referenzen):
-        """Das Rezept der nächsten Runde aus dem Befund der letzten (`IterationModell`), ergänzt um die Prüf-KI, wenn
-        sie fällig ist (`Begutachtungskritik`) → (aufrufe, Zusatz zum Kommentar, fertig)."""
-        from iterationen2d3d.iterationmodell import IterationModell
-        kandidaten = [k.get('kennung') for k in (self.job.ergebnis.get('frisur') or {}).get('kandidaten') or []
-                      if k.get('kennung')]
-        befund = dict(Begutachtungsstand.befund_fuer_regeln(z) or {}, haltung_foto=z.get('haltung_foto'))
-        # Was nicht vom Render abhängt, gilt schon für Runde 1 (Edgar: „beim nächsten Modell in Runde 1"): Fotostücke,
-        # Uhr, Bart — vorher trug Runde 1 Bibliotheksshirt und -shorts (Wiederholungsauftrag 2026.10.01.19.21.30).
-        befund['zubehoer'] = self.werkzeug.zubehoer(referenzen)     # immer frisch: ein gespeicherter Befund kennt neue
-        befund['fotostuecke'] = self.werkzeug.fotostuecke()        # Erkenner nicht (Bart, 01.10.2026 abends)
-        befund['haarzonen'] = dict(self.job.ergebnis.get('haarzonen') or {})      # Fotofarbe je Kopfzone
-        if not befund.get('teile'):
-            befund['haar_netzfarbe'] = self.werkzeug.haarfarbe()
-        rezept = IterationModell(modell, befund, z.get('verlauf_befunde'), kandidaten,
-                                 form=self.o.get('form') == 'an').rezept()
-        rezept = Begutachtungsstand.ohne_gesperrte(rezept, z)        # Zeilen, die aus dieser Lage schon verworfen sind
-        rezept, zusatz, fertig = Begutachtungskritik(self.o, self.ablage).ergaenzen(rezept, modell, z)
-        if not fertig and not rezept:
-            return '', 'Rundenauswahl: aus der besten Runde %s geht keine Änderung mehr' % z.get('runde_bester'), True
-        return rezept, zusatz, fertig
-
     def _runde(self, z, beg, modell, naechste, referenzen):
         from Genesis9.modellrezept import G9rezept
 
@@ -142,13 +130,14 @@ class Begutachtungsrunde:
         from .hosenteil import Hosenteil
         from .kleidermodellbau import Kleidermodellbau
         start = time.perf_counter()
-        runde = self._letzte_runde() + 1
+        runde = Begutachtungsausgang.RUNDE if Begutachtungsausgang.verlangt(naechste) else self._letzte_runde() + 1
         rezept, fehler = [], None
         # Der Sichtkörper der Vorlagen (Konzept 4.1) steht dem Rezept zur Verfügung (`kleid_huelle`, `koerper_huelle`)
         # — gebaut aus den Silhouetten der Note und der Höhe des Modells der LETZTEN Runde (erste Runde: Körper).
         sicht = self.werkzeug.sichtkoerper(referenzen, z)
         modell.umgebung = Rezeptumgebung(sicht, self.werkzeug.drapierer(), auftrag=Rezeptumgebung.kuerzel(self.job.kennung),
-                                         haardynamik=self.werkzeug.haardynamik())
+                                         haardynamik=self.werkzeug.haardynamik(), stellung=self.job.stellung(),
+                                         seitenprofil=lambda: self.werkzeug.seitenprofil(referenzen, z))
         if naechste.get('aufrufe'):
             try:
                 rezept = [text for _zeile, text in G9rezept.anwenden(modell, naechste['aufrufe'])]
@@ -159,7 +148,7 @@ class Begutachtungsrunde:
         # Gebaut in der A-Pose (GLB, Bühne); Render, Note, Befund und Fotoprojektion in der Haltung der Fotos — gehäutet,
         # damit die Ärmel den Armen folgen (`G9haltungshaut`, 01.10.2026).
         bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.werkzeug.kacheln(), ablage=self.ablage,
-                               haarumbau=self.o.get('haarumbau') != 'aus')
+                               haarumbau=Iterationsoptionen.haarart(self.o.get('haarumbau')))
         teile = G9haltungshaut(bau.stellung, modell.drehung(), bau.boden).posieren(
             Haarzonen.anwenden(bau.teile(modell), modell.farben))           # Haarfarbe je Kopfzone (02.10.2026)
         # Die Hose aus dem Körpernetz wie auf der Bühne und im Film (`Hosenteil`, 04.10.2026): Die drapierte GarmentCode-Hose klaffte im Schritt und trug
@@ -185,19 +174,16 @@ class Begutachtungsrunde:
             self._melden(0.25, 'Runde %d: Fotoprojektion (Haut je Körper einmal, Stücke auf Wunsch: %s)' % (
                 runde, ', '.join(sorted(getattr(modell, 'fotowuensche', None) or [])) or '–'))
             fototextur = self.werkzeug.fototextur(modell, teile, referenzen, render, bau, aus)
-            for nummer, r in enumerate(referenzen):
-                self._melden(0.3 + 0.4 * nummer / max(1, len(referenzen)),
-                             'Runde %d: Rendern %d von %d' % (runde, nummer + 1, len(referenzen)))
-                pfad = aus / ('ansicht_%+04d.png' % int(round(r.winkel)))
-                render.bild_teile([(t['punkte'], t['dreiecke'], t['farbe'], Genesishaarrender.extra(t)) for t in teile],
-                                  r.winkel, pfad, groesse=groesse)
+            pfade, faktoren = Ansichtsrender.rendern(render, teile, referenzen, aus, groesse, self._melden, runde,
+                                                     abgleichen=self.o.get('belichtung') != 'aus')   # Belichtung je Ansicht an das Foto (06.10.2026)
+            for r, pfad, faktor in zip(referenzen, pfade, faktoren):
                 bild = Iterationsbild.aus_render(pfad)
                 fein = bild if breite == Iterationsbild.BREITE else Iterationsbild.aus_render(
                     pfad, Aufloesungsstufe.groesse(breite))
                 note = Iterationsnote.vergleichen(self.stufe.vorlage(r, breite), fein)
                 renders[r.datei] = bild
                 je_ansicht.append({'datei': r.datei, 'original': r.original, 'winkel': r.winkel, 'bild': pfad,
-                                   'nur_form': not r.farbe, **note})
+                                   'nur_form': not r.farbe, 'belichtung': round(faktor, 3), **note})
                 paare.append((r.gewicht, note, r.farbe))
                 messung.render_dazu(r, bild)
         finally:
@@ -235,15 +221,22 @@ class Begutachtungsrunde:
         self._melden(1.0, 'Runde %d: Gesamtnote %.4f — wartet auf Begutachtung' % (runde, note['gesamt']))
         return weiter
 
+    def _ausgang(self, z, beg, referenzen):
+        """Iteration 0 (`Begutachtungsausgang`): das Modell der Ausgangslage neben den Fotos. Hat der Auftrag schon Runden, bleibt ihr Stand, wie er war."""
+        nachtraeglich = not Begutachtungsausgang.fehlt(self.job)
+        vorher = Begutachtungsausgang.vorher(self.job) if nachtraeglich else None
+        self._runde(z, beg, self._start(), Begutachtungsausgang.bestellung(self.job), referenzen)
+        if nachtraeglich:
+            Begutachtungsausgang.nachher(self.job, vorher)
+            self.lauf.sichern('ergebnis')
+
     def _start(self):
-        """Der Ausgangszustand: die Frisur, die „Mesh to 3D" als beste gemessen hat (sonst die Vorgabe), keine
-        Kleider."""
+        """Der Ausgangszustand: die Frisur, die „Mesh to 3D" als beste gemessen hat (sonst die Vorgabe), keine Kleider."""
         from Genesis9.haargenerisch import G9haargenerisch
         from Genesis9.modellmitkleidern import ModellMitKleidern
-        modell = ModellMitKleidern()
         kandidaten = (self.job.ergebnis.get('frisur') or {}).get('kandidaten') or []
-        frisur = (kandidaten[0].get('kennung') if kandidaten else None) or G9haargenerisch.VORGABE
-        modell.haar_nur(frisur)
+        modell = ModellMitKleidern()
+        modell.haar_nur((kandidaten[0].get('kennung') if kandidaten else None) or G9haargenerisch.VORGABE)
         return modell
 
     def _letzte_runde(self):
@@ -260,7 +253,7 @@ class Begutachtungsrunde:
         dateien = {}
         tafel = 'runde_%03d_vergleich.png' % runde       # Prüfbilder in Prüfbreite, nicht auf der Fläche der Note
         if Pruefbilder(self.ablage, erg['tafelbreite']).tafel(
-                [(a['winkel'], a['datei'], a['bild'], a['iou']) for a in erg['je_ansicht']], ziel / tafel):
+                [(a['winkel'], a['datei'], a['bild'], a['iou'], a.get('belichtung', 1.0)) for a in erg['je_ansicht']], ziel / tafel):
             dateien['vergleich'] = tafel
         if erg.get('kopf'):
             dateien['kopf'] = 'runde_%03d_kopf.png' % runde
@@ -270,12 +263,11 @@ class Begutachtungsrunde:
             bild = 'runde_%03d_%s' % (runde, a['bild'].name)
             if a['bild'].is_file():
                 Iterationsrunde.zuschneiden(a['bild'], ziel / bild)
-            je_ansicht.append({k: a[k] for k in ('original', 'winkel', 'iou', 'farbe')} | {'render': bild})
+            je_ansicht.append({k: a[k] for k in ('original', 'winkel', 'iou', 'farbe')} | {'render': bild, 'belichtung': a.get('belichtung', 1.0)})
         # Keine GLB je Runde (Edgar 02.10.2026: 56 MB je Runde, gebraucht wird der Vergleich); die Bühne zeigt das Standmodell.
         dateien['formbezug'] = bau.formbezug(ziel, runde)     # Anker des Form-Pinsels (01.10.2026)
         netz = erg['note'].get('netz') or {}
-        notiz = naechste.get('kommentar') or ('Ausgangslage: Frisur aus „Mesh to 3D", keine Kleider' if runde == 1
-                                              else '')
+        notiz = naechste.get('kommentar') or ''
         if netz:
             notiz = (notiz + ' · ' if notiz else '') + 'Netz: Stoff %s mm zum Netz, Deckung %.0f %%' % (
                 netz.get('modell_mm'), 100.0 * float(netz.get('deckung') or 0))
@@ -283,7 +275,7 @@ class Begutachtungsrunde:
             'runde': runde,
             'zeit': timezone.localtime().strftime('%Y-%m-%d %H:%M:%S'),
             'sekunden': round(time.perf_counter() - start, 1),
-            'art': 'begutachtung' if naechste else 'ausgang',
+            'art': 'begutachtung' if naechste and not Begutachtungsausgang.verlangt(naechste) else 'ausgang',
             'uebernommen': fehler is None,
             'notiz': notiz,
             'note': erg['note'],

@@ -42,7 +42,7 @@ class Kleidermodellbau:
         """`drehung`: die Haltung (`ModellMitKleidern.drehung`; für den Film nicht, die Bewegung ist absolut).
         `koerper`: Genesis-Regler des Modells ÜBER der Stellung des Auftrags (sonst wirkte `IterationKoerper` nicht).
         `ablage`: die des Auftrags — mit ihr wird die Frisur an die Hülle des Fotohaars geklemmt (`Haarklemme`); ohne bleibt sie, wie sie gewählt ist.
-        `haarumbau`: die Frisur zusätzlich an der Haarlinie abschneiden und auf die Haarkappe setzen (`Haarumbau`, Option `iterationen.haarumbau`); nur mit `ablage`. `ohne_haar`: kein Haar bauen (der Stand vor den Iterationen trägt die Haarkappe; das Standardhaar `kin_hair`, 421.846 Flächen, würde sonst gebaut, geklemmt und verworfen — 5 s)."""
+        `haarumbau`: die Frisur zusätzlich an der Haarlinie abschneiden und auf die Haarkappe setzen (`Haarumbau`, Option `iterationen.haarumbau`); nur mit `ablage`; `'herren'`: stattdessen ein eigenes Kurzhaar (`Herrenhaar`), die Frisur wird nicht gebaut (Rückfall auf den Umbau, wo es nicht gilt). `ohne_haar`: kein Haar bauen (der Stand vor den Iterationen trägt die Haarkappe; das Standardhaar `kin_hair`, 421.846 Flächen, würde sonst gebaut, geklemmt und verworfen — 5 s)."""
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.formung import G9formung
         from Genesis9.haut import G9haut
@@ -61,7 +61,7 @@ class Kleidermodellbau:
         #: `{kachel: Pfad}` der gebackenen Haut (`Koerpertextur.kacheln`) — ohne: einfarbig `HAUT`.
         self.kacheln = dict(kacheln or {})
         self.ablage = ablage
-        self.haarumbau, self.ohne_haar = bool(haarumbau), bool(ohne_haar)
+        self.haarumbau, self.ohne_haar = ('herren' if haarumbau == 'herren' else bool(haarumbau)), bool(ohne_haar)
         self._klemme = False                    # False: noch nicht gesucht, None: es gibt keine Hülle des Fotohaars
 
     # --------------------------------------------------------------- Körper
@@ -301,14 +301,8 @@ class Kleidermodellbau:
 
     def teile(self, modell):
         """Körper (mit Augen, Mund, Wimpern, Brauen — `Koerperanhaenge`, 02.10.2026), Kleider, Haar (an die Hülle des Fotohaars geklemmt, `Haarklemme`)."""
-        vorn = [self.koerper()] + Koerperanhaenge.teile(self, modell) + self._kleidung(modell)
-        haar = [] if self.ohne_haar else self._haar(modell)
-        klemme = self._haarklemme() if haar else None
-        haar = klemme.anwenden(haar) if klemme else haar
-        if self.haarumbau and haar:             # an der Haarlinie des Fotohaars geschnitten, auf der Haarkappe in der Haarfarbe (`Haarumbau`)
-            from .haarumbau import Haarumbau
-            haar = Haarumbau.anwenden(haar, self.koerper(), self.ablage, (modell.farben or {}).get('haar'))
-        return vorn + haar
+        from .haarumbau import Haarumbau
+        return [self.koerper()] + Koerperanhaenge.teile(self, modell) + self._kleidung(modell) + Haarumbau.haarteile(self, modell)
 
     # ------------------------------------------------------------------ GLB
 

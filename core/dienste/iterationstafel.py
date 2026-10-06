@@ -29,9 +29,9 @@ class Iterationstafel:
             bild.paste(vorlage.als_bild(cls.HINTERGRUND), (i * w, 0))
             bild.paste(render.als_bild(cls.HINTERGRUND), (i * w, h))
             zeichnen.line([(i * w, 0), (i * w, 2 * h)], fill=cls.TRENNER)
-            zeichnen.text(
-                (i * w + 4, 2 * h + 3), '%+d°  IoU %.2f' % (round(winkel), note['iou']), fill=(40, 40, 40)
-            )
+            belichtung = float(note.get('belichtung') or 1.0)           # der Abgleich der Helligkeit an das Foto (`Belichtung`), 1 = keiner
+            text = '%+d°  IoU %.2f' % (round(winkel), note['iou']) + ('  Licht x%.2f' % belichtung if abs(belichtung - 1.0) >= 0.005 else '')
+            zeichnen.text((i * w + 4, 2 * h + 3), text, fill=(40, 40, 40))
         zeichnen.line([(0, h), (bild.width, h)], fill=cls.TRENNER)
         bild.save(ziel)
         return ziel

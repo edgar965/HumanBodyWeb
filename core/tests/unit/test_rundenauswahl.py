@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 u"""Die sechs Punkte „vom Foto zum Modell" (01.10.2026) — Kunstdaten, keine echten Netze, keine Grafikkarte.
 
-1. Fotoprüfung: ein Foto mit anderem Shirt fällt heraus, ein dunkleres (Schatten) nicht; Nahaufnahmen zählen nicht.
+1. Fotoprüfung: ein Foto mit anderem Shirt fällt heraus, ein dunkleres (Schatten) nicht; Nahaufnahmen zählen nicht; Haut (die Hand vor der Hüfte) zählt nicht (1b, 06.10.2026).
 2. Gesamtnote: Foto + Farbe je Teil + Gesicht, ohne Netznote — die Reihenfolge der `.51`-Runden 5 und 39.
 3. Rundenauswahl: besser → beste; ohne Umbau schlechter → verworfen und gesperrt; Umbau → Probe, nach drei Runden
    ohne Besserung verworfen; das Filtern gesperrter Zeilen.
@@ -47,6 +47,24 @@ class SechsPunkteTest(SimpleTestCase):
         nah[10:110, 10:90] = (200, 150, 120, 255)                                             # breiter als hoch
         befund = Fotopruefung.pruefen(fotos[:2] + [('gesicht.jpg', 'auto', nah)])
         self.assertEqual((befund['ausgelassen'], befund['nicht_geprueft']), ([], ['gesicht.jpg']))
+
+    def test_1b_fotopruefung_haut_zaehlt_nicht(self):
+        """Seitenfoto (06.10.2026): die Hand vor der Hüfte füllte den Mittelstreifen, das Foto flog als „andere Kleidung" aus jedem Lauf (Bandabstand 2,2/1,8); Pixel mit Hautfarbton gehen nicht in die Bandfarbe ein.
+        Sabotage: in `Fotopruefung.farben` die Zeile `punkte[~cls.haut(punkte)]` weglassen → dieser Fall rot."""
+        sys.path.insert(0, str(settings.BASE_DIR.parent / 'VideoToBVH' / 'wrappers'))
+        from mesh_fotopruefung import Fotopruefung
+        grau, schwarz, haut = (96, 98, 106), (40, 40, 44), (190, 115, 85)
+        farben = np.array([haut, grau, schwarz, (150, 110, 170), (140, 125, 100)], np.uint8)
+        self.assertEqual(list(Fotopruefung.haut(farben)), [True, False, False, False, False])      # Haut ja; Shirt, Hose, Lila, helles Shirt nein
+        gross = {'breite': 80, 'hoehe': 400}
+        seite = self._figur(grau, schwarz, **gross)
+        seite[194:234, 38:54, :3] = haut                                                            # die Hand: zwei Drittel des Mittelstreifens im Hüftband
+        fotos = [('vorne.jpg', 'vorne', self._figur(grau, schwarz, **gross)),
+                 ('hinten.jpg', 'hinten', self._figur((64, 66, 72), (28, 28, 30), **gross)),
+                 ('seite.jpg', 'rechts', seite)]
+        befund = Fotopruefung.pruefen(fotos)
+        self.assertEqual(befund['ausgelassen'], [])
+        self.assertEqual(befund['farben']['seite.jpg']['huefte'], befund['farben']['vorne.jpg']['huefte'])   # die Hand ist nicht in der Bandfarbe
 
     def test_2_gesamtnote(self):
         teil = {'art': 'kleidung', 'foto_farbe': [0.35, 0.34, 0.37], 'render_farbe': [0.15, 0.15, 0.15], 'pixel': 100}

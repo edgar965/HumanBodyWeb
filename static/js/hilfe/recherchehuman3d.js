@@ -1,5 +1,6 @@
 import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 import { Recherchehuman3dprio } from './recherchehuman3dprio.js';
+import { Recherchekategorien } from './recherchekategorien.js';
 
 /**
  * Recherchehuman3d — das Fenster der Seite „Hilfe → Recherche → Human 3D" (04.10.2026).
@@ -21,7 +22,10 @@ export class Recherchehuman3d {
     binden() {
         if (!this.fenster) return;
         const tabelle = document.querySelector('table.rc-tabelle');
-        if (tabelle) Recherchehuman3dprio.binden(tabelle);
+        if (tabelle) {
+            Recherchehuman3dprio.binden(tabelle);
+            Recherchekategorien.binden(tabelle);
+        }
         document.addEventListener('click', (e) => {
             const ziel = e.target instanceof Element ? e.target : null;
             if (!ziel) return;

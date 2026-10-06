@@ -45,6 +45,40 @@ class Haarumbau:
         return [min(1.0, max(0.0, c * 2.0 * Farbangleich.GRAU_MITTEL * cls.KARTEN_HELL)) for c in rgb]
 
     @classmethod
+    def herrenhaar(cls, koerper, ablage, haarfarbe):
+        """Statt der Frisur der Garderobe ein eigenes Kurzhaar (`Herrenhaar`, Option `iterationen.haarumbau` = herren): Strähnen aus den Wurzeln auf der Kopfhaut in der Haarfarbe, Umriss und Haarlinie aus dem Fotohaar → die Teile
+        (Kappe, Strähnengruppen) — oder None, wo es nicht gilt (keine Hülle des Fotohaars, kein kurzes Haar, Fehler): dann baut der Aufrufer die Frisur und `anwenden` sie um. `haarfarbe`: `modell.farben['haar']` (#rrggbb),
+        die Tönung der Frisur — sie wird wie bei der Kappe in die angezeigte Farbe umgerechnet (`anzeigefarbe`)."""
+        if ablage is None or not haarfarbe:
+            return None
+        from .herrenhaar import Herrenhaar
+        netz = {'punkte': koerper['punkte'], 'dreiecke': koerper['dreiecke'], 'haut': koerper['haut']}
+        try:
+            haar = Herrenhaar(ablage, netz)
+            if not haar.kappe.kurzhaarig():
+                logger.info('Herrenhaar: kein kurzes Haar (Radius des Netzhaars im Nacken %s) oder keine Hülle des Fotohaars — die Frisur bleibt', haar.kappe.radius_nacken())
+                return None
+            return haar.teile(cls.anzeigefarbe(haarfarbe))
+        except Exception:  # noqa: BLE001 — ohne das eigene Haar bleibt die Frisur wie gewählt (Warnung im Log)
+            logger.exception('Herrenhaar: nicht gebaut')
+            return None
+
+    @classmethod
+    def haarteile(cls, bau, modell):
+        """Das Haar eines `Kleidermodellbau` (`bau`) für `modell`: bei `haarumbau == 'herren'` das eigene Kurzhaar (`herrenhaar` — die Frisur der Garderobe wird dann gar nicht gebaut), sonst die Frisur, an die Hülle
+        des Fotohaars geklemmt (`Haarklemme`) und, bei `haarumbau`, an der Haarlinie geschnitten und auf die Haarkappe gesetzt (`anwenden`). `[]` bei `ohne_haar`."""
+        if bau.ohne_haar:
+            return []
+        farbe = (modell.farben or {}).get('haar')
+        herren = cls.herrenhaar(bau.koerper(), bau.ablage, farbe) if bau.haarumbau == 'herren' else None
+        if herren:
+            return herren
+        haar = bau._haar(modell)                                                         # noqa: SLF001 — der Bau gehört zusammen
+        klemme = bau._haarklemme() if haar else None                                     # noqa: SLF001
+        haar = klemme.anwenden(haar) if klemme else haar
+        return cls.anwenden(haar, bau.koerper(), bau.ablage, farbe) if bau.haarumbau and haar else haar
+
+    @classmethod
     def anwenden(cls, haar, koerper, ablage, haarfarbe):
         """`haar`: die Haarteile (`art == 'haar'`) nach der Haarklemme; `koerper`: das Körperteil (Punkte, Dreiecke, Haut) in der A-Pose; `haarfarbe`: `modell.farben['haar']` (#rrggbb).
         → die Teile mit abgeschnittener Frisur und der Haarkappe dazu — oder `haar` selbst, wo der Umbau nicht gilt (siehe oben)."""

@@ -227,5 +227,8 @@ class Standvorabkleider:
         # Die Hemdfarbe ist das Mittel der Textur des Fotostücks: ändert sie sich, ändert sich `stand` — sie selbst wird nicht gerechnet (die Fassung wird bei jeder Zustandsabfrage gebildet).
         from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
         from .haarkappe import Haarkappe
+        from .herrenhaar import Herrenhaar
+        from .iterationsoptionen import Iterationsoptionen
+        ablage = Engine2d3dKleiderablage(job.kennung)
         return [liste, cls.uhren(job), cls._fotostuecke(job).get('oberteil'), ((job.ergebnis or {}).get('fotostuecke') or {}).get('stand'), cls.frisur(job), cls.frisurregler(job), cls.haarfarbe(job),
-                cls.GLEICH, Haarkappe.fingerabdruck(Engine2d3dKleiderablage(job.kennung))]
+                cls.GLEICH, Haarkappe.fingerabdruck(ablage), Iterationsoptionen.haarumbau(job), Herrenhaar.fingerabdruck(ablage)]

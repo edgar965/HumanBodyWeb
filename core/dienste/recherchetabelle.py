@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Recherchetabelle — die Projekte der Recherche als Struktur für `djangobase/_tabelle.html` (04.10.2026).
 
-Spalten (Edgar): Name, Prio (Handeingabe, `Rechercheprio`), Kurzbeschreibung, GitHub-Link, Hugging Face (Demo/Modell/Daten), Hauptbild, Sterne bei GitHub, letzte Aktualisierung, Beschreibung, Details, ToDo. Alles, was aus der JSON-Datei kommt, stammt aus fremden
+Spalten (Edgar): Name, Prio (Handeingabe, `Rechercheprio`), Kategorie (sortierbar; Edgar, 06.10.2026: „sortierbare Spalte Kategorie … wo ist die Spalte??“ — bis dahin stand sie nur als kleine Zeile unter dem Namen), Kurzbeschreibung, GitHub-Link, Hugging Face (Demo/Modell/Daten), Hauptbild, Sterne bei GitHub, letzte Aktualisierung, Beschreibung, Details, ToDo. Alles, was aus der JSON-Datei kommt, stammt aus fremden
 READMEs und gilt als nicht vertrauenswürdig: jeder Text wird maskiert, jede Adresse muss mit `https://` beginnen (sonst steht dort kein Link und kein Bild).
 
 Sterne und Datum tragen den Rohwert als `data-sort` (die Sortierung des Browsers liest sonst die Anzeige: „12.345" wäre kleiner als „9.100"); Bild- und ToDo-Spalte sortieren nicht bzw. nach Text.
@@ -23,8 +23,9 @@ class Recherchetabelle:
     LOKAL = re.compile(r'^recherche/human3d/[A-Za-z0-9._-]+\.(?:webp|png|jpe?g)$')
 
     SPALTEN = (
-        ('Name', 'name', False, False, 'Name des Projekts und seine Kategorie'),
+        ('Name', 'name', False, False, 'Name des Projekts'),
         ('Prio', 'prio', True, False, 'Deine Reihenfolge: ob wir das testen oder einbauen (1 = zuerst). Jede Zahl nur einmal — eine vergebene Zahl schiebt die anderen nach hinten'),
+        ('Kategorie', 'kategorie', False, False, 'Kategorie des Projekts (die Liste darüber zählt sie) — ein Klick auf den Spaltenkopf sortiert danach'),
         ('Kurzbeschreibung', 'kurz', False, False, 'Ein Satz: was das Projekt tut'),
         ('GitHub', 'github', False, False, 'Repository auf GitHub (öffnet in neuem Tab)'),
         ('Hugging Face', 'hf', False, False, 'Demo (Space), Modell und Datensatz des Projekts bei Hugging Face — aus dem README, über die HF-Schnittstelle geprüft; Likes im Hinweis'),
@@ -128,8 +129,9 @@ class Recherchetabelle:
         todo = (f'<button type="button" class="rc-todo" data-id="{escape(p["id"])}" title="Mehr Infos und Bilder">'
                 f'{escape(p["todo_kurz"])} <span class="rc-mehr">mehr …</span></button>')
         return {'id': p['id'], 'zellen': [
-            {'html': f'<strong class="rc-name">{escape(p["name"])}</strong><div class="rc-kategorie">{escape(p["kategorie"])}</div>{cls._fork(p)}', 'sort': p['name'].lower()},
+            {'html': f'<strong class="rc-name">{escape(p["name"])}</strong>{cls._fork(p)}', 'sort': p['name'].lower()},
             {'html': cls._prio(p, prio), 'sort': prio or Rechercheprio.SORT_OHNE_PRIO, 'klasse': 'rc-priozelle'},
+            {'html': escape(p['kategorie']), 'sort': p['kategorie'].lower(), 'klasse': 'rc-kategoriezelle'},
             {'html': escape(p['kurz'])},
             {'html': link, 'sort': p['repo'].lower()},
             {'html': cls._hf(p), 'sort': cls.hf_rang(p), 'klasse': 'rc-hfzelle'},

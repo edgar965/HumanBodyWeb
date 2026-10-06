@@ -32,8 +32,10 @@
  * Die Farben (Haut, Augen, Lippen, Zähne, Zunge, Nägel) und der Glanz stehen
  * seit 12.09.2026 in `detailfarben.js`; hier bleiben Vorgabe, Prüfung, Längen.
  */
+import { Augentextur } from './augentextur.js';
 import { Detailfarben } from './detailfarben.js';
 import { Detailplan } from './detailplan.js';
+import { Hautporen } from './hautporen.js';
 import { Hauttextur } from './hauttextur.js';
 import { Protokoll } from './protokoll.js';
 
@@ -49,6 +51,7 @@ export class Koerperdetails {
      *  `brauen_*`: die gezeichnete Braue (`brauenhaut.js`) — Faktoren um 1, mm-Werte in m. */
     static VORGABE = Object.freeze({
         ...Detailfarben.VORGABE, wimpern_laenge: 1.0, naegel_fuss_laenge: 1.0, haut_textur: '',
+        haut_poren: '', haut_poren_deckkraft: 0.5, haut_poren_dichte: 1.0, augen_textur: '', augen_relief: 0.7,
         brauen_staerke: 1.0, brauen_dicke: 1.0, brauen_dichte: 1.0, brauen_bogen_laenge: 1.0,
         brauen_deckkraft: 1.0, brauen_lage: 0.0, brauen_hoehe_innen: 0.0,
         brauen_hoehe_aussen: 0.0, brauen_woelbung: 0.0,
@@ -74,8 +77,12 @@ export class Koerperdetails {
                 if (Number.isFinite(zahl)) {
                     aus[name] = Math.min(Koerperdetails.LAGE, Math.max(-Koerperdetails.LAGE, zahl));
                 }
-            } else if (/_(glanz|deckkraft)$/.test(name)) {
+            } else if (/_(glanz|deckkraft|relief)$/.test(name)) {
                 if (Number.isFinite(zahl)) aus[name] = Math.min(1, Math.max(0, zahl));
+            } else if (name === Hautporen.FELD) {
+                if (Hautporen.WAHL.some(([w]) => w === wert)) aus[name] = wert;
+            } else if (name === Augentextur.FELD) {
+                if (Augentextur.WAHL.some(([w]) => w === wert)) aus[name] = wert;
             } else if (name.endsWith('_textur')) {
                 if (Hauttextur.WAHL.some(([w]) => w === wert)) aus[name] = wert;
             } else if (Detailfarben.istFarbe(wert)) {
@@ -231,11 +238,15 @@ export class Koerperdetails {
         const farben = Koerperdetails.faerben(netz.material, details);
         Hauttextur.anwenden(netz, details)
             .catch(f => Protokoll.warnung('Koerperdetails', 'Hauttextur:', f));
+        Hautporen.anwenden(netz, details)
+            .catch(f => Protokoll.warnung('Koerperdetails', 'Hautporen:', f));
         const geo = netz.geometry;
         const index = geo.userData?.indexVoll?.index || geo.index?.array;
         const gruppen = geo.userData?.indexVoll?.gruppen || geo.groups;
         if (!index || !gruppen?.length) return { farben, bewegt: 0 };
         const ziel = punkte || geo.attributes.position.array;
+        Augentextur.anwenden(netz, details, index, gruppen, ziel)
+            .catch(f => Protokoll.warnung('Koerperdetails', 'Augentextur:', f));
         if (!geo.userData.detailplan) {
             geo.userData.detailplan = Detailplan.plan(index, gruppen, ziel);
             geo.userData.detailecken = Koerperdetails._betroffene(geo.userData.detailplan);

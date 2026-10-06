@@ -48,13 +48,13 @@ class Pruefbilder:
     # ------------------------------------------------------------------ Tafel
 
     def tafel(self, ansichten, ziel):
-        """`ansichten`: [(winkel, datei der Vorlage, Pfad des Renders, iou)] → `ziel` (PNG) oder None."""
+        """`ansichten`: [(winkel, datei der Vorlage, Pfad des Renders, iou[, Belichtungsfaktor])] → `ziel` (PNG) oder None."""
         paare = []
-        for winkel, datei, render, iou in ansichten:
+        for winkel, datei, render, iou, *belichtung in ansichten:
             if not render.is_file():
                 continue
             vorlage = Iterationsreferenz.bild(self.ablage, datei, self.groesse)
-            paare.append((winkel, vorlage, Iterationsbild.aus_render(render, self.groesse), {'iou': iou}))
+            paare.append((winkel, vorlage, Iterationsbild.aus_render(render, self.groesse), {'iou': iou, 'belichtung': belichtung[0] if belichtung else 1.0}))
         return Iterationstafel.bauen(paare, ziel) if paare else None
 
     # ------------------------------------------------------------------- Kopf

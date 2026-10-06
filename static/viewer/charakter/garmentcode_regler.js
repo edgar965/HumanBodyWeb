@@ -181,7 +181,41 @@ class GarmentcodeRegler {
             zeile.appendChild(schieber);
             zeile.appendChild(anzeige);
         }
+        if (feld.default_prob !== null && feld.default_prob !== undefined) {
+            zeile.appendChild(this.wahrscheinlichkeitsfeld(schluessel, feld));
+        }
         return zeile;
+    }
+
+    /**
+     * Zufalls-Wahrscheinlichkeit eines Reglers (0 = nie, 1 = immer). Sie
+     * verändert den Schnitt nicht; sie wird mit den Werten gespeichert und
+     * ohne Neubau übermittelt.
+     */
+    wahrscheinlichkeitsfeld(schluessel, feld) {
+        const schluesselProb = schluessel + '.default_prob';
+        const wrap = document.createElement('label');
+        wrap.className = 'zufall-feld';
+        wrap.title = 'Anteil der Würfe, die den Standardwert behalten (1 = immer Standard, 0 = immer zufällig)';
+        const text = document.createElement('span');
+        text.textContent = 'Standard';
+        const eingabe = document.createElement('input');
+        eingabe.type = 'number';
+        eingabe.min = '0';
+        eingabe.max = '1';
+        eingabe.step = '0.05';
+        const start = (schluesselProb in this.werte) ? this.werte[schluesselProb] : feld.default_prob;
+        eingabe.value = String(start);
+        eingabe.addEventListener('change', () => {
+            const zahl = parseFloat(eingabe.value);
+            if (Number.isNaN(zahl)) { eingabe.value = String(start); return; }
+            const geklemmt = Math.min(1, Math.max(0, zahl));
+            this.werte[schluesselProb] = geklemmt;
+            eingabe.value = String(geklemmt);
+            this.merken();
+        });
+        wrap.append(text, eingabe);
+        return wrap;
     }
 
     /**

@@ -96,7 +96,7 @@ export class Engine2d3dKleiderrundenzeilen {
         const nummer = this._zelle(String(r.runde), { num: true, sort: r.runde });
         if (z.beste) nummer.appendChild(E.el('span', ' ★', 'iter-beste', 'Das beste Modell aller Runden'));
         const n = r.note || {};
-        const art = E.ARTEN[r.art] || (r.art ? r.art : 'Handrunde');
+        const art = Number(r.runde) === 0 ? 'Iteration 0 · Vorlage und Modell' : E.ARTEN[r.art] || (r.art ? r.art : 'Handrunde');
         tr.append(wahl, nummer, auf,
             this._zeit(r),
             this._zelle(z.geloescht ? `${art} — wird gelöscht …` : art),

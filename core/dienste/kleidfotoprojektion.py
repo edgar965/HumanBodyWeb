@@ -22,6 +22,7 @@ from PIL import Image
 
 from .iterationsbild import Iterationsbild
 from .iterationsreferenz import Iterationsreferenz
+from .kleidhautfilter import Kleidhautfilter
 
 logger = logging.getLogger('core')
 
@@ -31,6 +32,8 @@ __all__ = ['Kleidfotoprojektion']
 class Kleidfotoprojektion:
     #: Fläche der Projektion (Breite, Höhe) — 512 × 768 wie der Render der Engine, 4-fach feiner als die Note.
     GROESSE = (512, 768)
+    #: Bildpunkte vom Rand der freigestellten Figur, die nicht zählen (`Fotoprojektion(figurrand=)`).
+    FIGURRAND = 2
 
     def __init__(self, ablage, render, ordner):
         self.ablage = ablage
@@ -59,6 +62,18 @@ class Kleidfotoprojektion:
             aus.append((r, abbildung, foto, masken))
         return aus
 
+    @staticmethod
+    def _hautausschluesse(ansichten, teilmasken, haut):
+        """Je Ansicht die Foto-Pixel, die Haut zeigen und für das Stück nicht zählen (`Kleidhautfilter`): die erweiterte Teilmaske ließ Haut neben dem Saum als hautfarbene Zellen in die Textur der Hose, und im Seitenfoto
+        kam die Hand vor der Hose dazu. Den Farbton des Stücks gibt die reinste Ansicht (`Kleidhautfilter.reinster`) — ohne Körper oder ohne Unterschied zur Haut gibt es keinen Ausschluss (None je Ansicht)."""
+        if not haut:
+            return [None] * len(ansichten)
+        hautmasken = [np.any([masken[i] for i in haut], axis=0) for _r, _a, _f, masken in ansichten]
+        bezug = Kleidhautfilter.reinster([Kleidhautfilter.bezug(foto.farbe, foto.maske, tm, hm) for (_r, _a, foto, _m), tm, hm in zip(ansichten, teilmasken, hautmasken)])
+        if bezug is None:
+            return [None] * len(ansichten)
+        return [Kleidhautfilter.haut(foto.farbe, foto.maske, tm, hm, stoff_ab=bezug[0]) for (_r, _a, foto, _m), tm, hm in zip(ansichten, teilmasken, hautmasken)]
+
     def bauen(self, modell, teile, referenzen):
         """→ `{kennung: steckbrief | {'fehler': text}}` für jeden Wunsch des Modells; die Wünsche werden geleert."""
         wuensche = dict(getattr(modell, 'fotowuensche', None) or {})
@@ -75,10 +90,12 @@ class Kleidfotoprojektion:
             if not indizes:
                 aus[kennung] = {'fehler': 'Stück nicht gebaut oder ohne UV (%s)' % art}
                 continue
-            projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE)
-            for r, abbildung, foto, masken in ansichten:
-                teilmaske = np.any([masken[i] for i in indizes], axis=0)
-                projektion.ansicht(r.winkel, abbildung, foto.farbe, foto.maske, teilmaske)
+            projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE, hoehenprofil=True, figurrand=self.FIGURRAND)
+            haut = [i for i, t in enumerate(teile) if t.get('art') == 'koerper' and t.get('sorte') == 'koerper']
+            teilmasken = [np.any([masken[i] for i in indizes], axis=0) for _r, _a, _f, masken in ansichten]
+            ausschluesse = self._hautausschluesse(ansichten, teilmasken, haut)
+            for (r, abbildung, foto, _masken), teilmaske, ausschluss in zip(ansichten, teilmasken, ausschluesse):
+                projektion.ansicht(r.winkel, abbildung, foto.farbe, foto.maske, teilmaske, ausschluss=ausschluss)
             raster = [G9uvraster(teile[i]['punkte'], teile[i]['dreiecke'], teile[i]['uv'], teile[i]['gruppen'],
                                  normalen=teile[i].get('normalen')) for i in indizes]
             try:

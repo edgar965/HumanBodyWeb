@@ -142,10 +142,11 @@ class DerToenungsfaktorImRender(SimpleTestCase):
 class DieFotohautFassung2(SimpleTestCase):
     def test_6_die_kopfkachel_bleibt_und_fassung_1_wird_neu_gerechnet(self):
         self.assertIn(1001, Koerperfotoprojektion.AUSGENOMMEN)
-        self.assertEqual(Koerperfotoprojektion.FASSUNG, 2)
-        alt = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': 1}}})
-        neu = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': 2}}})
-        self.assertTrue(Koerperfotoprojektion(alt, None).noetig())
+        self.assertEqual(Koerperfotoprojektion.FASSUNG, 3)                  # 3: Licht je Ansicht, Hände ohne Fotofarbe, Ton statt Überblendung (05.10.2026)
+        for veraltet in (1, 2):
+            alt = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': veraltet}}})
+            self.assertTrue(Koerperfotoprojektion(alt, None).noetig(), 'Fassung %d wird neu gerechnet' % veraltet)
+        neu = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': Koerperfotoprojektion.FASSUNG}}})
         self.assertFalse(Koerperfotoprojektion(neu, None).noetig())
 
     def test_6b_der_ausschluss_nimmt_pixel_aus_der_erweiterten_teilmaske(self):
@@ -186,11 +187,13 @@ class DieHaltungImStartrezept(SimpleTestCase):
 
 
 class DieOptionHaarumbau(SimpleTestCase):
-    def test_8_vorgabe_an_und_aus_schaltet_ab(self):
-        self.assertTrue(Iterationsoptionen.haarumbau(SimpleNamespace(optionen=None)))
-        self.assertTrue(Iterationsoptionen.haarumbau(SimpleNamespace(optionen={'iterationen': {'runden': 3}})))
-        self.assertFalse(Iterationsoptionen.haarumbau(SimpleNamespace(optionen={'iterationen': {'haarumbau': 'aus'}})))
-        self.assertEqual(Iterationsoptionen.pruefen({'haarumbau': 'quatsch'})['haarumbau'], 'an')
+    def test_8_vorgabe_herrenhaar_an_baut_um_aus_schaltet_ab(self):
+        self.assertEqual(Iterationsoptionen.haarumbau(SimpleNamespace(optionen=None)), 'herren')                       # Vorgabe seit 05.10.2026: das eigene Herrenhaar
+        self.assertEqual(Iterationsoptionen.haarumbau(SimpleNamespace(optionen={'iterationen': {'runden': 3}})), 'herren')
+        self.assertIs(Iterationsoptionen.haarumbau(SimpleNamespace(optionen={'iterationen': {'haarumbau': 'an'}})), True)   # Frisur umbauen
+        self.assertIs(Iterationsoptionen.haarumbau(SimpleNamespace(optionen={'iterationen': {'haarumbau': 'aus'}})), False)
+        self.assertEqual(Iterationsoptionen.pruefen({'haarumbau': 'quatsch'})['haarumbau'], 'herren')
+        self.assertEqual((Iterationsoptionen.haarart('herren'), Iterationsoptionen.haarart('an'), Iterationsoptionen.haarart('aus')), ('herren', True, False))
 
 
 class DieHaarfarbmessung(SimpleTestCase):

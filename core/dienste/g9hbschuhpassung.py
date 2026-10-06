@@ -30,9 +30,6 @@ class G9hbschuhpassung:
     MINDESTPUNKTE = 200
     #: Ausreisser der Paarung (Abstand zur Abbildung ueber diesem Vielfachen des Medians) fliegen einmal raus.
     AUSREISSER = 3.0
-    #: Groesster Hub eines unterteilten Punkts (Meter) und Nachbarn fuer die Glaettung des Hubs (`heben`).
-    HUB_MAX = 0.006
-    GLAETTUNG = 12
 
     @classmethod
     def passen(cls, traeger, punkte, bindung=None):
@@ -54,21 +51,6 @@ class G9hbschuhpassung:
             fest[maske] = cls.merkmale(p[maske]) @ abbildung
         gewicht[(p[:, 0] == 0.0)] = 0.0
         return gewicht[:, None] * fest + (1.0 - gewicht[:, None]) * punktweise
-
-    @classmethod
-    def heben(cls, traeger, punkte, abstand):
-        u"""Die (unterteilten) Schuhpunkte aus der Haut heben — OHNE Spitzen: `traeger.hinaus` schiebt einzelne Punkte im Vorfuss
-        (zwischen den Zehen) bis 27 mm weit, in beliebige Richtung (gemessen an F2_ShirtLeggins, 25 Punkte ueber 8 mm); das sind die
-        Beulen auf der Kappe. Der Hub wird auf `HUB_MAX` gekuerzt und als Feld ueber `GLAETTUNG` Nachbarn geglaettet, wie
-        `G9aufhumanbody.uebertragen` es mit der Verschiebung tut."""
-        p = np.asarray(punkte, dtype=np.float64)
-        if not len(p):
-            return p
-        hub = traeger.hinaus(p, abstand) - p
-        laenge = np.linalg.norm(hub, axis=1)
-        zu_lang = laenge > cls.HUB_MAX
-        hub[zu_lang] *= (cls.HUB_MAX / laenge[zu_lang])[:, None]
-        return p + traeger.geglaettet(p, hub, cls.GLAETTUNG)
 
     @staticmethod
     def merkmale(p):

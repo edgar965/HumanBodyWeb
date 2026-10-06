@@ -38,27 +38,30 @@ import time
 import numpy as np
 from PIL import Image
 
+from .hautmischung import Hautmischung
+from .hautproben import Hautproben
+
 logger = logging.getLogger('core')
 
 __all__ = ['Koerperfotoprojektion']
 
 
 class Koerperfotoprojektion:
-    FASSUNG = 2
+    #: 3 (05.10.2026, Edgar: „das Licht aus der Vorlage herausrechnen", „die Beine und Arme haben Nähte", „Texturprobleme auch bei der Hand"): Licht je Ansicht heraus (`Fotolicht`, Option `iterationen.licht`), Ton
+    #: der Fotohaut und der gebackenen Kachel angeglichen statt überblendet, keine Fotofarbe an der Hand (`Hautmischung`, `Hautproben`).
+    FASSUNG = 3
     GROESSE = (1024, 1536)
     RASTER = 1024
     #: Kacheln, die die gebackene Haut behalten (Kopf: siehe oben).
     AUSGENOMMEN = (1001,)
     #: Abstand zur Kleidung (Pixel der Projektionsfläche, 1 Pixel ≈ 1,1 mm), in dem die Haut keine Fotofarbe nimmt. Gemessen (Sapiens 2, `kopf_probe.py`): bei 4 sind die schwarzen Streifen am Saum und
     #: der helle Block über der Socke weg; bei 12 war die dünne dunkle Linie unter dem Saum nicht besser (sie liegt schon in der gebackenen Kachel), die Deckung aber kleiner (0,362 statt 0,374).
-    RAND_KLEID = 4
+    #: Fassung 3: 16 statt 4 — der Schatten unter dem Saum der Hose und des Ärmels ist noch Kleidung (Edgar: die dunkle Linie am Oberschenkel); gemessen an hautfoto_1003.jpg: bei 8 stand die Linie noch.
+    RAND_KLEID = 16
     #: Abstand zum Rand einer UV-Insel (Texel des Rasters), über den die Fotofarbe auf null ausblendet.
     RAND_INSEL = 6
-    #: So viele Pixel der Fotofigur am Rand zählen für die Haut nicht (Hintergrundanteil der Randpixel).
-    RAND_FOTO = 3
-    #: Deckung: ab `DECKUNG[0]` (Kosinus Normale · Blick) beginnt das Foto, ab `DECKUNG[1]` gilt es ganz.
-    DECKUNG = (0.25, 0.6)
-    WEICH = 3
+    #: So viele Pixel der Fotofigur am Rand zählen für die Haut nicht (Hintergrundanteil der Randpixel). Fassung 3: 5 statt 3 — an den Armen stand ein dunkler Rand um jeden Fleck aus Fotohaut (Kante gegen die helle Wand).
+    RAND_FOTO = 5
     #: Warm = Haut: R > G > B mit R − B über dieser Schwelle (0…1); wie `Fotostuecke.HAUT_ABSTAND` sinngemäß.
     WARM = 0.04
 
@@ -77,7 +80,8 @@ class Koerperfotoprojektion:
 
     # ------------------------------------------------------------ Rechnung
 
-    def _projektion(self, teile, referenzen, render, aus, index):
+    def _projektion(self, teile, referenzen, render, aus, index, licht=0.0):
+        """`licht`: Stärke, mit der das Licht der Fotos herausgerechnet wird (`Fotolicht`; 0 = aus — `Begutachtungswerkzeug._haarzonen` misst Verhältnisse am Haar und nimmt die Farbe, wie sie ist)."""
         from iterationen2d3d.fotoprojektion import Fotoprojektion
 
         from .kleidfotoprojektion import Kleidfotoprojektion
@@ -85,7 +89,7 @@ class Koerperfotoprojektion:
         kfp.GROESSE = self.GROESSE
         alle = np.vstack([np.asarray(t['punkte']) for t in teile])
         kamera = Fotoprojektion.aus_render(alle, render.RAND, self.GROESSE)
-        projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE)
+        projektion = Fotoprojektion(kamera.mitte, kamera.halb, self.GROESSE, licht=licht)
         koerper = teile[index].get('art') == 'koerper'
         for r, abbildung, foto, masken in kfp._ansichten(teile, referenzen):
             ausschluss, foto_maske = None, foto.maske
@@ -98,48 +102,31 @@ class Koerperfotoprojektion:
             projektion.ansicht(r.winkel, abbildung, foto.farbe, foto_maske, masken[index], ausschluss)
         return projektion
 
-    def _deckung(self, projektion, lage, normale):
-        beste = np.zeros(len(lage))
-        for a in projektion.ansichten:
-            _farbe, drin = projektion._farbe_in(lage, a)
-            beste = np.maximum(beste, np.clip(normale @ projektion.blick(a['winkel']), 0.0, None) * drin)
-        von, bis = self.DECKUNG
-        return np.clip((beste - von) / (bis - von), 0.0, 1.0)
-
-    def _kachel(self, projektion, karten, grund_pfad, ziel):
-        """Eine Kachel: Fotofarbe und Deckung im Raster, über die gebackene Kachel gelegt → Anteil gedeckter Texel."""
+    def _kachel(self, proben, p, grund_pfad, ziel):
+        """Eine Kachel: Fotofarbe (vom Licht befreit, ohne Hand) und Deckung im Raster, mit dem Ton der gebackenen Kachel angeglichen und nahtlos eingearbeitet (`Hautmischung`) → Anteil gedeckter Texel."""
         from Genesis9.kleidfototextur import G9kleidfototextur
-        from scipy.ndimage import distance_transform_edt, gaussian_filter
+        from scipy.ndimage import distance_transform_edt
         s = self.RASTER
-        farbe = np.zeros((s, s, 3), np.float32)
-        deckung = np.zeros((s, s), np.float32)
-        maske = np.zeros((s, s), bool)
         with Image.open(grund_pfad) as bild:
             grund = np.asarray(bild.convert('RGB'), dtype=np.float32) / 255.0
-        klein = np.asarray(Image.fromarray((grund * 255).astype(np.uint8)).resize((s, s), Image.BILINEAR),
-                           dtype=np.float32) / 255.0
-        for karte in karten:
-            m = karte['maske']
-            if not m.any():
-                continue
-            f, getroffen = projektion.farben(karte['lage'][m], karte['normale'][m])
-            d = self._deckung(projektion, karte['lage'][m], karte['normale'][m]) * getroffen
-            erlaubt = self.warm(f) | ~self.warm(klein[m])    # Fotofarbe ohne Hautton nur, wo auch die Haut keinen hat
-            d *= erlaubt
-            farbe[m], deckung[m] = f, d
-            maske |= m
+        klein = np.asarray(Image.fromarray((grund * 255).astype(np.uint8)).resize((s, s), Image.BILINEAR), dtype=np.float32) / 255.0
+        f, d, _getroffen = proben.farbe(p)
+        zeile, spalte = p['index'][:, 0], p['index'][:, 1]
+        d = d * (self.warm(f) | ~self.warm(klein[zeile, spalte]))        # Fotofarbe ohne Hautton nur, wo auch die Haut keinen hat
+        farbe = np.zeros((s, s, 3), np.float32)
+        deckung = np.zeros((s, s), np.float32)
+        farbe[zeile, spalte], deckung[zeile, spalte] = f, d
+        maske = p['maske']
         if not (deckung > 0).any():
             return 0.0
         voll = G9kleidfototextur._fuellen(farbe, deckung > 0, maske)
         # Zum Rand der UV-Inseln hin blendet die Fotofarbe aus: An den Nähten (Vorder- und Rückseite der Beine) sah die Projektion nur streifende Blickwinkel und legte helle Linien entlang der Beine.
         deckung = deckung * np.clip(distance_transform_edt(maske) / self.RAND_INSEL, 0.0, 1.0)
-        deckung = gaussian_filter(deckung, self.WEICH)
+        neu, bericht = Hautmischung.mischen(klein, maske, voll, deckung)
         gross = grund.shape[1], grund.shape[0]
-        voll = np.asarray(Image.fromarray(np.clip(voll * 255, 0, 255).astype(np.uint8)).resize(gross, Image.BILINEAR),
-                          dtype=np.float32) / 255.0
-        alpha = np.asarray(Image.fromarray(deckung.astype(np.float32)).resize(gross, Image.BILINEAR))[..., None]
-        ergebnis = grund * (1.0 - alpha) + voll * alpha
-        Image.fromarray(np.clip(ergebnis * 255 + 0.5, 0, 255).astype(np.uint8)).save(ziel, quality=92)
+        unterschied = np.stack([np.asarray(Image.fromarray((neu - klein)[..., c].astype(np.float32)).resize(gross, Image.BILINEAR)) for c in range(3)], axis=-1)
+        Image.fromarray(np.clip((grund + unterschied) * 255 + 0.5, 0, 255).astype(np.uint8)).save(ziel, quality=92)
+        logger.info('2D3D Kleider %s: Hautmischung %s', self.job.kennung, bericht)
         return float((deckung[maske] > 0.5).mean())
 
     def bauen(self, teile, referenzen, render, aus):
@@ -158,8 +145,8 @@ class Koerperfotoprojektion:
         netz = dict(f.get('kacheln_netz') or f['kacheln'])
         pfade = {str(self.ablage.ergebnis(n)): int(k) for k, n in netz.items()}
         ohne_haar = [t for t in teile if t.get('art') != 'haar']
-        projektion = self._projektion(ohne_haar, referenzen, render, aus,
-                                      next(i for i, t in enumerate(ohne_haar) if t is koerper))
+        from .iterationsoptionen import Iterationsoptionen
+        projektion = self._projektion(ohne_haar, referenzen, render, aus, next(i for i, t in enumerate(ohne_haar) if t is koerper), licht=Iterationsoptionen.licht(self.job))
         gruppen = {}
         for i, eintrag in enumerate(ruhe['textur']):
             k = pfade.get(str(eintrag.get('albedo')))
@@ -167,13 +154,19 @@ class Koerperfotoprojektion:
                 gruppen.setdefault(k, []).append({'name': 'k%d_%d' % (k, i), 'index_ab': 3 * int(eintrag['ab']),
                                                   'index_anzahl': 3 * int(eintrag['anzahl'])})
         neu, deckung = {}, {}
+        proben = Hautproben(projektion, koerper.get('haut'), koerper['dreiecke'])
+        samml = {}
         for k, liste in sorted(gruppen.items()):
             if k in self.AUSGENOMMEN:
                 continue
-            raster = G9uvraster(koerper['punkte'], koerper['dreiecke'], ruhe['uv'], liste, groesse=self.RASTER)
+            karten = [x for x in G9uvraster(koerper['punkte'], koerper['dreiecke'], ruhe['uv'], liste, groesse=self.RASTER).alle().values() if x['maske'].any()]
+            if karten:
+                samml[k] = proben.sammeln(karten)
+        if samml:
+            proben.licht_schaetzen(list(samml.values()))           # das Licht je Ansicht über ALLE Kacheln zusammen (`Fotolicht`)
+        for k, p in samml.items():
             name = 'hautfoto_%d.jpg' % k
-            deckung[k] = round(self._kachel(projektion, list(raster.alle().values()),
-                                            self.ablage.ergebnis(netz[str(k)]), self.ablage.ergebnis(name)), 3)
+            deckung[k] = round(self._kachel(proben, p, self.ablage.ergebnis(netz[str(k)]), self.ablage.ergebnis(name)), 3)
             if deckung[k] > 0:
                 neu[str(k)] = name
         kacheln = dict(netz, **neu)

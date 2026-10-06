@@ -1,0 +1,18 @@
+Haut-Poren und Augen — Karten aus matmadness/HumanShaders
+=======================================================
+
+Quelle:  https://github.com/matmadness/HumanShaders  (Copyright (c) 2025 matmadness)
+Lizenz:  Laut README stehen "Human Shaders and its resources (All the content inside the "HumanShaders" folder)" unter MIT und CC BY 4.0.
+Die Karten hier stammen aus diesem Ordner (HumanShaders/Resources/MicroDetail und HumanShaders/Resources/Eye).
+
+Namensnennung (CC BY 4.0): matmadness — HumanShaders — https://github.com/matmadness/HumanShaders. Geändert wurde:
+
+  poren_1.png, poren_2.png, poren_3.png   unverändert aus skin_micro_nrm_ao.png, skin_micro_nrm_ao_2.png, skin_micro_nrm_ao_3.png
+                                          (kachelbare Normalkarte, AO im blauen Kanal) — Viewer: gemeinsam/hautporen.js
+  auge_braun/haselnuss/gruen/blau/grau.jpg
+                                          aus eye_iris_diff.png (Farbton der Iris gedreht; braun = Original) und eye_sclera_diff.png
+                                          (Sättigung auf 55 % gesenkt), zu EINER Karte zusammengesetzt (Iris mittig, Durchmesser
+                                          0,361 des Augapfels), auf 1024 x 1024 verkleinert — Viewer: gemeinsam/augentextur.js
+  auge_normal.png                         aus eye_iris_nrm.png und eye_sclera_nrm.png, ebenso zusammengesetzt
+
+Nicht übernommen: die Kopf-Scans der Beispielmodelle des Repos (Digital Emily 2 — Lizenz unklar, USC ICT fragen; Infinite von Lee Perry-Smith — CC BY 3.0).

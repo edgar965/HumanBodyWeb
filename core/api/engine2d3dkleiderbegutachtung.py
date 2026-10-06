@@ -7,6 +7,9 @@
                                                  landen mit Kommentar und Rezept in `iterationen/prompts.json`)
                                                 {automatisch: true, runden: n} → `IterationModell` (Ordner
                                                 `2d3DIterationen`) schreibt die Rezepte selbst, n Runden nacheinander
+                                                {ausgang: true} → Iteration 0: Vorlage und Modell der Ausgangslage
+                                                (Startrezept, Runde Nummer 0) — ohne Rezept im Rumpf, ändert den Stand
+                                                eines Auftrags mit Runden nicht (`Begutachtungsausgang`)
     GET  /api/engine2d3dkleider/<id>/rezept/           alle wirksamen Aufrufe der übernommenen Runden als Text —
                                                 der wiederverwendbare Weg zu diesem Modell
     GET  /api/engine2d3dkleider/funktionen/            die Funktionen von `ModellMitKleidern` (Signatur, Kurztext)
@@ -48,10 +51,11 @@ class Engine2d3dKleiderbegutachtungsendpunkte:
             return JsonResponse({'error': belegt}, status=409)
         rumpf = Engine2d3dKleiderendpunkte.rumpf(request)
         aufrufe = str(rumpf.get('aufrufe') or '')[:20000]
-        automatisch = bool(rumpf.get('automatisch'))
+        ausgang = bool(rumpf.get('ausgang'))            # Iteration 0: Vorlage und Modell, das Rezept ist das Startrezept des Servers (`Begutachtungsausgang`)
+        automatisch = bool(rumpf.get('automatisch')) and not ausgang
         try:
             runden = max(1, min(Begutachtungsrunde.RUNDEN_HOECHSTENS, int(rumpf.get('runden') or 1)))
-            if not automatisch:
+            if not automatisch and not ausgang:
                 G9rezept.pruefen(aufrufe)
                 if rumpf.get('pruefen_bestand'):          # die Nachbesserung: Namen gegen die Bibliothek lesen (`Engine2d3dKleiderrezeptbestand`, 05.10.2026)
                     Engine2d3dKleiderrezeptbestand(job).pruefen(aufrufe)
@@ -59,7 +63,7 @@ class Engine2d3dKleiderbegutachtungsendpunkte:
             return JsonResponse({'error': 'Rezept: %s' % fehler}, status=400)
         ergebnis = dict(job.ergebnis or {})
         beg = dict(ergebnis.get('begutachtung') or {})
-        beg['naechste'] = {'aufrufe': '' if automatisch else aufrufe, 'automatisch': automatisch, 'runden': runden,
+        beg['naechste'] = {'aufrufe': '' if automatisch or ausgang else aufrufe, 'automatisch': automatisch, 'runden': runden, 'ausgang': ausgang,
                            'kommentar': str(rumpf.get('kommentar') or '')[:4000],
                            'nutzer': Engine2d3dKleiderprompts.nachrichten(rumpf.get('nutzer'))}
         beg['zustand'] = 'rechnet'
@@ -68,7 +72,7 @@ class Engine2d3dKleiderbegutachtungsendpunkte:
         job.save(update_fields=['ergebnis', 'updated_at'])
         pid = Engine2d3dKleiderarbeiter.starten(job, ab='iterationen', bis='iterationen')
         logger.info('2D3D Kleider %s: Begutachtung — %s, Runde startet (%s)', job.kennung,
-                    '%d Runden automatisch' % runden if automatisch
+                    'Iteration 0 (Vorlage und Modell)' if ausgang else '%d Runden automatisch' % runden if automatisch
                     else 'Rezept mit %d Zeilen' % len([z for z in aufrufe.splitlines() if z.strip()]), pid)
         return JsonResponse({'ok': True, 'pid': pid})
 

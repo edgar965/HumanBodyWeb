@@ -18,7 +18,7 @@ klappte beim Klick zugleich den Bereich; `data-bereich` sagt, was er zurücknimm
         <h3>Haut <span class="chevron">&#9660;</span></h3>
         <div class="panel-body">
             <div class="zeile-verteilt">
-                <small class="hb-gedaempft">Farbe, Glanz, MB-Lab-Textur · Reset = Farbe der Körperart</small>
+                <small class="hb-gedaempft">Farbe, Glanz, MB-Lab-Textur, Poren · Reset = Farbe der Körperart</small>
                 <button class="btn-reset-morphs prop-detail-reset" data-bereich="haut" type="button"
                         title="Hautfarbe und Glanz auf die Vorgabe">Reset</button>
             </div>
@@ -38,16 +38,37 @@ klappte beim Klick zugleich den Bereich; `data-bereich` sagt, was er zurücknimm
                     <option value="hum_m_afro">Mann – Afrikanisch</option>
                     <option value="hum_m_latino">Mann – Lateinamerikanisch</option>
                 </select></div>
+            {% comment %}Poren (Edgar, 06.10.2026): feine Normal-/AO-Karten aus HumanShaders, Liste `Hautporen.WAHL`, Rechnung `gemeinsam/hautporen.js`.{% endcomment %}
+            <div class="slider-row"><label>Poren</label>
+                <select id="prop-detail-haut-poren" class="viewer-select">
+                    <option value="">Keine</option>
+                    <option value="poren_1">Poren – Standard</option>
+                    <option value="poren_2">Poren – fein</option>
+                    <option value="poren_3">Poren – grob (Zellen)</option>
+                </select></div>
+            {% regler "prop-detail-haut-poren-staerke" "Porenstärke" min="0" max="100" wert="50" anzeige="50 %" %}
+            {% regler "prop-detail-haut-poren-dichte" "Porendichte" min="25" max="300" wert="100" anzeige="100 %" %}
         </div>
     </div>
     <div class="panel-section prop-section collapsed" id="prop-details-augen">
         <h3>Augen · Wimpern <span class="chevron">&#9660;</span></h3>
         <div class="panel-body">
             <div class="zeile-verteilt">
-                <small class="hb-gedaempft">Farben, Länge, Lider</small>
+                <small class="hb-gedaempft">Farben, Augentextur, Länge, Lider</small>
                 <button class="btn-reset-morphs prop-detail-reset" data-bereich="augen" type="button"
                         title="Augenfarben, Wimpern und Lidform auf die Vorgabe">Reset</button>
             </div>
+            {% comment %}Augentextur (Edgar, 06.10.2026): Iris + Sklera aus HumanShaders, Liste `Augentextur.WAHL`, Rechnung `gemeinsam/augentextur.js`. Mit Textur tönen die Farben nur, wenn sie von der Vorgabe abweichen.{% endcomment %}
+            <div class="slider-row"><label>Augentextur</label>
+                <select id="prop-detail-augen-textur" class="viewer-select">
+                    <option value="">Keine (Farben)</option>
+                    <option value="braun">Braun</option>
+                    <option value="haselnuss">Haselnuss</option>
+                    <option value="gruen">Grün</option>
+                    <option value="blau">Blau</option>
+                    <option value="grau">Grau</option>
+                </select></div>
+            {% regler "prop-detail-augen-relief" "Augenrelief" min="0" max="100" wert="70" anzeige="70 %" %}
             <div class="slider-row"><label>Iris</label>
                 <input type="color" id="prop-detail-iris" value="#4a7a9b" class="hb-farbfeld"></div>
             <div class="slider-row"><label>Augapfel</label>
