@@ -11,6 +11,9 @@ gleichzeitig starten": Nichts hielt den zweiten Lauf auf, beide hätten GPU (Bac
 3. Die Normalen-Grenze kommt aus dem Dialog (`normalen_grenze`): 35° säubert ein Texel mit 60° Kippung, 70° lässt es, `aus`
    ändert nichts. Fällt in eine Kachel mehr als `WARN_PROZENT`, steht eine Warnung in der Statuszeile.
 
+4. `laufend` nennt den Import, der gerade rechnet (Leiste oben und Dialog nach dem Neuladen der Seite); ein Doppelklick auf
+   „Importieren" startet genau einen Import — `_STARTSPERRE` hält Prüfung und Start zusammen (Fall 7, mit Gegenprobe Fall 8).
+
 Sabotage-Gegenprobe: in `laufender` die Prüfung `stand().get('status') == 'laeuft'` entfernen → `SperreTest.test_2` rot;
 `kennung != ausser` entfernen → `test_3` rot; in `_belegt` `return None` statt der Antwort → `test_4` rot; in `_saeubern`
 `grad` nicht durchreichen → `NormalenGrenzeTest.test_1` rot; die Schwelle in `_warnen` entfernen → `test_2` rot.
@@ -18,7 +21,10 @@ Sabotage-Gegenprobe: in `laufender` die Prüfung `stand().get('status') == 'laeu
 Nicht gelaufen (Stand 08.10.2026) — läuft nur auf Ansage.
 """
 
+import contextlib
 import json
+import threading
+import time
 from types import SimpleNamespace
 from unittest import mock
 
@@ -90,6 +96,56 @@ class SperreTest(SimpleTestCase):
 
     def test_5_ist_nichts_belegt_antwortet_belegt_mit_none(self):
         self.assertIsNone(Blendimportendpunkte._belegt())
+
+    def test_6_laufend_nennt_den_import_der_gerade_rechnet(self):
+        """Leiste und Dialog fragen es nach dem Neuladen der Seite."""
+        leer = json.loads(Blendimportendpunkte.laufend(RequestFactory().get('/x/')).content)
+        self.assertEqual(leer, {'kennung': None})
+        Blendimportablage('2026.10.08.12.00.00').stand_schreiben({'kennung': '2026.10.08.12.00.00', 'status': 'laeuft', 'schritt': 'haut',
+                                                                  'quelle': {'name': 'cute girl'}})
+        self.lebende.add('2026.10.08.12.00.00')
+        antwort = json.loads(Blendimportendpunkte.laufend(RequestFactory().get('/x/')).content)
+        self.assertEqual((antwort['kennung'], antwort['status'], antwort['schritt'], antwort['name']),
+                         ('2026.10.08.12.00.00', 'laeuft', 'haut', 'cute girl'))
+
+    def _doppelklick(self, sperre=None):
+        """Zwei `starten`-Anfragen gleichzeitig (Doppelklick); der Arbeitsprozess braucht eine Weile, bis sein Stand „läuft" sagt."""
+        gestartet, antworten = [], []
+
+        def langsam_starten(ablage, ab=None):
+            time.sleep(0.4)
+            gestartet.append(ablage.kennung)
+            Blendimportablage(ablage.kennung).stand_schreiben({'kennung': ablage.kennung, 'status': 'laeuft', 'schritt': 'export'})
+            self.lebende.add(ablage.kennung)
+
+        def klick():
+            anfrage = RequestFactory().post('/x/', data=json.dumps({'werte': {}}), content_type='application/json')
+            antworten.append(Blendimportendpunkte.starten(anfrage).status_code)
+
+        werte = {'pfad': 'x', 'name': 'ordner', 'eigener_name': ''}
+        stand = mock.patch.multiple(
+            'core.api.blendimport', Blendimportquelle=mock.Mock(return_value=mock.Mock(steckbrief=lambda: {'name': 'X'})),
+            Blendimporteinstellungen=mock.Mock(pruefen=lambda w: werte, speichern=lambda w: w))
+        with stand, mock.patch.object(Blendimportarbeiter, 'starten', side_effect=langsam_starten):
+            with mock.patch.object(Blendimportendpunkte, '_STARTSPERRE', sperre or Blendimportendpunkte._STARTSPERRE):
+                faeden = [threading.Thread(target=klick) for _ in range(2)]
+                for faden in faeden:
+                    faden.start()
+                    time.sleep(0.05)
+                for faden in faeden:
+                    faden.join()
+        return gestartet, sorted(antworten)
+
+    def test_7_ein_doppelklick_startet_genau_einen_import(self):
+        gestartet, antworten = self._doppelklick()
+        self.assertEqual(len(gestartet), 1)
+        self.assertEqual(antworten, [200, 409])
+
+    def test_8_gegenprobe_ohne_die_sperre_starten_beide(self):
+        """Beweist, dass Fall 7 die Sperre sieht: ohne sie gehen beide Anfragen durch."""
+        gestartet, antworten = self._doppelklick(sperre=contextlib.nullcontext())
+        self.assertEqual(len(gestartet), 2)
+        self.assertEqual(antworten, [200, 200])
 
 
 class NormalenGrenzeTest(SimpleTestCase):

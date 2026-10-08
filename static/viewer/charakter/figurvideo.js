@@ -1,12 +1,15 @@
 /**
  * Figurvideo — „Video" im Animations-Reiter.
  *
- * EIN Knopf, „Video erzeugen". Wo gerechnet wird, sagt die Auswahl
- * `figurvideo-weg`: „in dieser Szene" zeichnet die Leinwand Bild für Bild
- * auf (`videoaufnahme.js`), „auf dem Server" schickt Figur, Kleider und
- * Animation nach Python (`core/dienste/figurvideo.py`) und fragt den Stand
- * ab, bis das MP4 da ist. Balken, Meldung und Ergebnis teilen sich beide
- * (`figurvideo_anzeige.js`).
+ * ZWEI Knöpfe (Edgar, 08.10.2026):
+ * - „Video erzeugen": was hier im Browser läuft, ab der Abspielstelle, mit der
+ *   Kamera, wie sie von Hand steht — immer die Szene (`videoaufnahme.js`).
+ * - „Video erzeugen default": die ganze Animation. Wo gerechnet wird, sagt die
+ *   Auswahl `figurvideo-weg`: „in dieser Szene" zeichnet die Leinwand Bild für
+ *   Bild auf (`videoaufnahme.js`), „auf dem Server" schickt Figur, Kleider und
+ *   Animation nach Python (`core/dienste/figurvideo.py`) und fragt den Stand
+ *   ab, bis das MP4 da ist.
+ * Balken, Meldung und Ergebnis teilen sich beide (`figurvideo_anzeige.js`).
  *
  * Die Kleidung geht als Binärpaket mit (`figurvideo_stuecke.js`), das
  * fertige Video wird in den gewählten Ordner kopiert (`figurvideoablage.py`).
@@ -34,13 +37,10 @@ export class Figurvideo {
     /** Elemente verdrahten — einmal, beim Aufbau des Reiters. */
     einrichten() {
         const physik = document.getElementById('figurvideo-physik');
-        const sekunden = document.getElementById('figurvideo-sekunden');
-        if (!physik || !sekunden) return;
+        if (!physik) return;
         const anzeigen = () => {
             document.getElementById('figurvideo-physik-wert').textContent =
                 `${physik.value} mm`;
-            document.getElementById('figurvideo-sekunden-wert').textContent =
-                `${sekunden.value} s`;
         };
         physik.addEventListener('input', anzeigen);
         // Der Regler wirkt LIVE auf die gewählte Figur. Der Server-Weg
@@ -49,20 +49,27 @@ export class Figurvideo {
             const inst = _selectedInst();
             if (inst?.isSkinned) Weichgewebe.setzen(inst, Number(physik.value));
         });
-        sekunden.addEventListener('input', anzeigen);
         anzeigen();
         const weg = document.getElementById('figurvideo-weg');
         weg?.addEventListener('change', () => Anzeige.hinweisZeigen(weg.value));
         Anzeige.hinweisZeigen(weg?.value || 'szene');
         this.ablageVorgabe();
+        document.getElementById('figurvideo-ablage')
+            ?.addEventListener('change', () => this.ablageAufteilen());
         this.aufnahme = new Videoaufnahme({
             zeigen: (text, anteil) => Anzeige.zeigen(text, anteil),
             melden: (text, fehler) => Anzeige.melden(text, fehler),
             fertig: (antwort, info) => this.browserFertig(antwort, info),
             ablage: () => this.ablage(),
+            abgebrochen: () => Anzeige.abgebrochen(),
+            abbruchFrei: (frei) => Anzeige.abbruchFrei(frei),
         });
+        document.getElementById('figurvideo-abbrechen')
+            ?.addEventListener('click', () => this.abbrechen());
         document.getElementById('figurvideo-start')
             ?.addEventListener('click', () => this.starten());
+        document.getElementById('figurvideo-start-ganz')
+            ?.addEventListener('click', () => this.ganzStarten());
         document.getElementById('figurvideo-abspielen')
             ?.addEventListener('click', () => Anzeige.abspielen());
         document.getElementById('figurvideo-pfad')
@@ -82,11 +89,39 @@ export class Figurvideo {
         }
     }
 
-    /** Je nach Auswahl: die Szene selbst oder der Server. */
+    /** „Video erzeugen": was im Browser läuft, mit der Kamera von Hand — immer die Szene selbst, der Server hat seine eigene Kamera. */
     starten() {
+        this.aufnahme.starten(Videoaufnahme.SICHTBAR);
+    }
+
+    /** „Video erzeugen default": die ganze Animation; je nach Auswahl die Szene selbst oder der Server. */
+    ganzStarten() {
         const weg = document.getElementById('figurvideo-weg')?.value || 'szene';
         if (weg === 'server') this.serverStarten();
-        else this.aufnahme.starten();
+        else this.aufnahme.starten(Videoaufnahme.GANZ);
+    }
+
+    /**
+     * Knopf „Abbrechen" (Edgar, 08.10.2026): bricht den laufenden Lauf ab und beendet den Job. Szene: die
+     * Aufnahme hört auf (`Videoaufnahme.abbrechen`). Server: der Unterprozess wird beendet
+     * (`POST …/<kennung>/abbrechen/`), erst danach hört die Abfrage auf — schlägt der Abbruch fehl, läuft der
+     * Job noch, und der Balken muss weiter laufen.
+     */
+    async abbrechen() {
+        if (this.aufnahme.laeuft) { this.aufnahme.abbrechen(); return; }
+        if (!this.kennung) return;
+        const kennung = this.kennung;
+        Anzeige.abbruchFrei(false);
+        try {
+            const antwort = await Serverabruf.senden(`/api/animation/video/${kennung}/abbrechen/`, {});
+            if (antwort.fehler) throw new Error(antwort.fehler);
+            if (!antwort.abgebrochen) { Anzeige.melden(antwort.grund, false); return; }
+            this.aufraeumen();
+            Anzeige.abgebrochen();
+        } catch (fehler) {
+            Anzeige.melden(`Abbrechen fehlgeschlagen: ${fehler.message}`, false);
+            Anzeige.abbruchFrei(true);
+        }
     }
 
     // ------------------------------------------------------------ Eingabe
@@ -94,12 +129,38 @@ export class Figurvideo {
     /** Ordner, Dateiname, Figur und Animation — für die Kopie des Videos. */
     ablage() {
         const inst = _selectedInst();
+        const geteilt = Figurvideo.pfadTeilen(document.getElementById('figurvideo-ablage')?.value);
         return {
-            ablage: document.getElementById('figurvideo-ablage')?.value.trim() || '',
-            dateiname: document.getElementById('figurvideo-datei')?.value.trim() || '',
+            ablage: geteilt.ordner,
+            dateiname: document.getElementById('figurvideo-datei')?.value.trim() || geteilt.datei,
             figur: inst?.presetName || inst?.id || '',
             animation: Figurvideo.animationsname(state.currentAnimUrl),
         };
+    }
+
+    /**
+     * Ein GANZER Pfad im Feld „Ablage" (Edgar, 08.10.2026: „den Pfad des Verzeichnisses und den
+     * Dateinamen kopieren können in dem Feld Ablage"): `A:\Videos\Edgar.mp4` → Ordner `A:\Videos`,
+     * Datei `Edgar.mp4`. Ohne diese Trennung hätte der Server `Edgar.mp4` als ORDNER angelegt.
+     * Als Datei gilt nur, was auf `.mp4` endet — ein Ordner `A:\Videos\v1.2` bleibt ein Ordner.
+     */
+    static pfadTeilen(text) {
+        const roh = String(text || '').trim().replace(/^"|"$/g, '').trim();
+        const treffer = /^(.*)[\\/]([^\\/]+\.mp4)$/i.exec(roh);
+        if (!treffer) return { ordner: roh, datei: '' };
+        const ordner = /^[A-Za-z]:$/.test(treffer[1]) ? `${treffer[1]}\\` : treffer[1];   // `A:\Edgar.mp4` → `A:\`
+        return { ordner, datei: treffer[2] };
+    }
+
+    /** Nach dem Einfügen eines ganzen Pfads: Ordner im Feld „Ablage", Name im Feld „Datei" — sichtbar, nicht nur beim Start. */
+    ablageAufteilen() {
+        const feld = document.getElementById('figurvideo-ablage');
+        const datei = document.getElementById('figurvideo-datei');
+        if (!feld || !datei) return;
+        const geteilt = Figurvideo.pfadTeilen(feld.value);
+        if (!geteilt.datei) return;
+        feld.value = geteilt.ordner;
+        datei.value = geteilt.datei;
     }
 
     /** `/api/character/bvh/Walk/136_28/` → `Walk_136_28`. */
@@ -139,12 +200,14 @@ export class Figurvideo {
             details: inst.details || {},
             stuecke,
             bvh_url: state.currentAnimUrl,
-            // Ab HIER: wo die Animation in der Szene gerade steht. Bild 0
-            // ist ein Startzustand, und `136_28` läuft erst nach zwei
-            // Sekunden Einlaufen — wer das Video ab null startet, sieht
-            // erst eine stehende Figur.
-            ab_sekunden: state.mixer ? state.mixer.time : 0,
-            sekunden: Number(document.getElementById('figurvideo-sekunden').value),
+            // Die GANZE Animation (Edgar, 08.10.2026), gleich wo sie in der
+            // Szene gerade steht — wie beim Szenen-Weg (`Videoaufnahme`): ab
+            // dem Vorlauf (Bild 0 ist ein Startzustand) bis zum Ende des
+            // Clips; der Server kappt bei `HOECHSTE_SEKUNDEN`.
+            ab_sekunden: Videoaufnahme.VORLAUF / Videoaufnahme.FPS,
+            sekunden: state.currentAction
+                ? Math.max(state.currentAction.getClip().duration - Videoaufnahme.VORLAUF / Videoaufnahme.FPS, 1)
+                : 5,
             physik_mm: Number(document.getElementById('figurvideo-physik').value),
         };
     }
@@ -159,6 +222,7 @@ export class Figurvideo {
             return;
         }
         Anzeige.zeigen('Start …', 0);
+        Anzeige.abbruchFrei(false);               // noch keine Kennung — der Start lädt die Kleidung hoch
         try {
             // Als Formular (Auftrag als JSON, je Stück ein Binärpaket), über
             // `Serverabruf.formular` — das schickt das CSRF-Token mit. Ohne
@@ -172,6 +236,7 @@ export class Figurvideo {
                                            state.skinWeightData?.bone_names || []));
             if (ergebnis.fehler) throw new Error(ergebnis.fehler);
             this.kennung = ergebnis.kennung;
+            Anzeige.abbruchFrei(true);            // erst jetzt gibt es einen Job, den man abbrechen kann
             this.uhr = setInterval(() => this.abfragen(), Figurvideo.ABFRAGE_MS);
         } catch (fehler) {
             Anzeige.melden(`Start fehlgeschlagen: ${fehler.message}`, true);

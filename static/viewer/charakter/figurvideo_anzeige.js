@@ -50,9 +50,26 @@ export class Figurvideoanzeige {
         if (fehler) Figurvideoanzeige.sperren(false);
     }
 
+    /** Beide Startknöpfe zugleich: ein zweiter Lauf neben dem ersten teilt sich Balken und Kamera.
+     *  „Abbrechen" ist das Gegenstück — frei, solange ein Lauf rechnet. */
     static sperren(zu) {
-        const knopf = document.getElementById('figurvideo-start');
-        if (knopf) knopf.disabled = zu;
+        for (const id of ['figurvideo-start', 'figurvideo-start-ganz']) {
+            const knopf = document.getElementById(id);
+            if (knopf) knopf.disabled = zu;
+        }
+        Figurvideoanzeige.abbruchFrei(zu);
+    }
+
+    /** „Abbrechen" frei oder gesperrt — gesperrt, wo es nichts mehr abzubrechen gibt (Start läuft noch, Kodieren). */
+    static abbruchFrei(frei) {
+        const knopf = document.getElementById('figurvideo-abbrechen');
+        if (knopf) knopf.disabled = !frei;
+    }
+
+    /** Nach einem Abbruch: Meldung ohne Fehlerfarbe, alle Knöpfe wieder frei. */
+    static abgebrochen(text = 'Abgebrochen.') {
+        Figurvideoanzeige.melden(text, false);
+        Figurvideoanzeige.sperren(false);
     }
 
     // --------------------------------------------------------- Ergebnis

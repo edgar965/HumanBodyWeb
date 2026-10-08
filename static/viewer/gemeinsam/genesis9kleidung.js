@@ -9,6 +9,7 @@ import { Umfaerbung } from './umfaerbung.js';
 import { Kleidfarbmischung } from './kleidfarbmischung.js';
 import { Stoffwerte } from './stoffwerte.js';
 import { Reiterzuordnung } from './reiterzuordnung.js';
+import { Genesis9ersatz } from './genesis9ersatz.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -125,6 +126,8 @@ export class Genesis9kleidung {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
             netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
+            netz.userData.ersetzt = daten.ersetzt || [];    // Teile der Figur, die das Stück ersetzt (Originalaugen)
+            netz.userData.hautTiefe = (daten.hautTiefeMm || 0) / 1000;   // so tief hinter der Haut es sie noch verdeckt (Scham aus der .blend), m; 0 = Vorgabe
             // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;
             // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden — DORT
             // steht `inst.bodyMesh` sicher, hier oft noch nicht: Koerper und
@@ -152,6 +155,7 @@ export class Genesis9kleidung {
      * und Jeans 2,4 s einmal je Umbau. Die Lagenmaske bleibt GarmentCode-Sache.
      */
     static melden(inst, kennung, angezogen) {
+        Genesis9ersatz.nachziehen(inst);      // Ersatz-Stücke (Originalaugen) blenden Teile der Figur aus oder wieder ein
         Stueckereignis.melden(inst, kennung, angezogen);
         return Object.keys(inst?.clothMeshes || {}).some((schluessel) => Reiterzuordnung.gcLive(schluessel));
     }

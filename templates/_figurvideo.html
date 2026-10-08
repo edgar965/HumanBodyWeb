@@ -1,9 +1,12 @@
 {% comment %}
 Video der animierten, angezogenen Figur (11.09.2026).
 
-EIN Knopf. Wo gerechnet wird, steht als Auswahl mit Klartext darunter —
-Edgar (11.09.2026): „da steht Server und Browser?? Mach das eindeutig".
-Zwei Knöpfe nebeneinander sagten nicht, was der Unterschied ist.
+ZWEI Knöpfe (Edgar, 08.10.2026): „Video erzeugen" nimmt auf, was im Browser
+läuft (ab der Abspielstelle, Kamera von Hand); „Video erzeugen default" macht
+das ganze Video der Animation. Wo „default" gerechnet wird, steht als Auswahl
+mit Klartext darunter — Edgar (11.09.2026): „da steht Server und Browser??
+Mach das eindeutig". Früher zwei Knöpfe „Server" und „Browser", die nicht
+sagten, was der Unterschied ist; jetzt unterscheiden sich die Knöpfe im Ergebnis.
 
   „in dieser Szene"   Die Leinwand wird Bild für Bild aufgezeichnet, mit
                       Texturen, Licht und Kamera wie hier zu sehen; das
@@ -25,7 +28,7 @@ nachgibt. Eine Kennzahl ohne Einheit könnte sich niemand vorstellen.
 {% endcomment %}
 <div class="abschnitt-abgesetzt" id="figurvideo-bereich">
     <div class="abschnittstitel-fett"
-         title="Ein Video der gewählten Figur mit der laufenden Animation und ihren Kleidern. Das Weichgewebe (Velocity Skinning, Rohmer et al. 2021) kommt als Zuschlag auf die Bewegung — bei 0 mm ist es aus.">Video</div>
+         title="Ein Video der gewählten Figur mit der gewählten Animation und ihren Kleidern. „Video erzeugen“ nimmt auf, was hier läuft (ab der Abspielstelle, Kamera von Hand); „Video erzeugen default“ erzeugt die ganze Animation von Anfang bis Ende, gleich ob sie läuft oder angehalten ist. Das Weichgewebe (Velocity Skinning, Rohmer et al. 2021) kommt als Zuschlag auf die Bewegung — bei 0 mm ist es aus.">Video</div>
     <div class="reglerzeile">
         <label class="reglerbeschriftung" for="figurvideo-physik"
                title="Wie weit das weichste Gewebe höchstens nachgibt. 0 = aus. Gemessen an der Grundfigur: 25 mm sind sichtbar und behutsam, ab 50 mm wirkt es übertrieben.">Weichgewebe:</label>
@@ -33,20 +36,13 @@ nachgibt. Eine Kennzahl ohne Einheit könnte sich niemand vorstellen.
                class="hb-dehnt">
         <span id="figurvideo-physik-wert">25 mm</span>
     </div>
-    <div class="reglerzeile">
-        <label class="reglerbeschriftung" for="figurvideo-sekunden"
-               title="Länge des Videos, ab der Stelle, an der die Animation gerade steht.">Länge:</label>
-        <input type="range" id="figurvideo-sekunden" min="1" max="20" value="5" step="1"
-               class="hb-dehnt">
-        <span id="figurvideo-sekunden-wert">5 s</span>
-    </div>
     <label class="hb-font-size-0-75rem-b"
-           title="Die Kamera fährt der Figur in der Bodenebene nach, wie ein Kamerawagen — die Höhe bleibt, sonst wippt das Bild mit jedem Schritt. Ohne Häkchen läuft eine gehende Figur nach zwei Sekunden aus dem Bild. Gilt für „in dieser Szene"; der Server hat seine Kamera immer an der Figur.">
+           title="Die Kamera fährt der Figur in der Bodenebene nach, wie ein Kamerawagen — die Höhe bleibt, sonst wippt das Bild mit jedem Schritt. Ohne Häkchen läuft eine gehende Figur nach zwei Sekunden aus dem Bild. Gilt für „Video erzeugen default“ in dieser Szene; „Video erzeugen“ lässt die Kamera, wie sie ist, und der Server hat seine Kamera immer an der Figur.">
         <input type="checkbox" id="figurvideo-kamera" checked> Kamera folgt der Figur
     </label>
     <div class="reglerzeile">
         <label class="reglerbeschriftung" for="figurvideo-weg"
-               title="Wo das Video gerechnet wird. Was das heißt, steht darunter.">Rechnen:</label>
+               title="Wo „Video erzeugen default“ gerechnet wird. Was das heißt, steht darunter. „Video erzeugen“ nimmt immer die Szene auf.">Rechnen:</label>
         <select id="figurvideo-weg" class="hb-dehnt">
             <option value="szene">in dieser Szene (Browser)</option>
             <option value="server">auf dem Server (Python)</option>
@@ -55,9 +51,9 @@ nachgibt. Eine Kennzahl ohne Einheit könnte sich niemand vorstellen.
     <div id="figurvideo-weg-hinweis" class="figurvideo-hinweis"></div>
     <div class="reglerzeile">
         <label class="reglerbeschriftung" for="figurvideo-ablage"
-               title="Ordner auf diesem Rechner, in den das fertige Video kopiert wird. Leer = media/figurvideos des Servers. Wird angelegt, wenn es ihn nicht gibt.">Ablage:</label>
+               title="Ordner auf diesem Rechner, in den das fertige Video kopiert wird. Leer = media/figurvideos des Servers. Wird angelegt, wenn es ihn nicht gibt. Ein ganzer Pfad mit Dateiname (A:\Videos\Edgar.mp4) wird in Ordner und Datei geteilt.">Ablage:</label>
         <input type="text" id="figurvideo-ablage" class="hb-dehnt" spellcheck="false"
-               placeholder="Ordner …">
+               placeholder="Ordner … (oder ganzer Pfad mit Dateiname)">
     </div>
     <div class="reglerzeile">
         <label class="reglerbeschriftung" for="figurvideo-datei"
@@ -65,9 +61,17 @@ nachgibt. Eine Kennzahl ohne Einheit könnte sich niemand vorstellen.
         <input type="text" id="figurvideo-datei" class="hb-dehnt" spellcheck="false"
                placeholder="Figur_Animation_Zeit.mp4">
     </div>
-    <button id="figurvideo-start" class="viewer-btn hb-font-size-0-75rem-b"
-            title="Video der gewählten Figur mit der laufenden Animation erzeugen — so, wie oben eingestellt."><i
-            class="fas fa-video"></i> Video erzeugen</button>
+    <div class="hb-display-flex-eng">
+        <button id="figurvideo-start" class="viewer-btn hb-font-size-0-75rem-b"
+                title="Nimmt auf, was hier im Browser läuft: ab der Stelle, an der die Animation gerade steht, bis zu ihrem Ende — mit der Kamera, die Sie von Hand eingestellt haben (sie wird nicht nachgeführt). Immer in dieser Szene, egal was unter „Rechnen“ steht."><i
+                class="fas fa-video"></i> Video erzeugen</button>
+        <button id="figurvideo-start-ganz" class="viewer-btn hb-font-size-0-75rem-b"
+                title="Das ganze Video der Animation, von Anfang bis Ende, gleich ob sie läuft oder angehalten ist — mit den Einstellungen oben („Rechnen“, „Kamera folgt der Figur“)."><i
+                class="fas fa-video"></i> Video erzeugen default</button>
+        <button id="figurvideo-abbrechen" class="viewer-btn hb-font-size-0-75rem-b" disabled
+                title="Bricht die laufende Video-Erzeugung ab. Auf dem Server wird der Rechenprozess beendet, in der Szene hört die Aufnahme vor dem nächsten Bild auf; es entsteht kein Video. Nur während des Rechnens frei — beim Hochladen und Kodieren der Bilder nicht mehr."><i
+                class="fas fa-stop"></i> Abbrechen</button>
+    </div>
     <div id="figurvideo-stand" class="hb-versteckt hb-font-size-0-75rem-b">
         <div class="figurvideo-balken"><div id="figurvideo-anteil"></div></div>
         <div class="figurvideo-standzeile">

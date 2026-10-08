@@ -59,6 +59,9 @@ class DerAusschnitt(SimpleTestCase):
     def setUp(self):
         # Die Kunstfigur ist 800 px groß — in voller Auflösung messen (sonst liegt die Halszeile ±8 px daneben); echte Fotos laufen mit `TEILER` 8.
         self.enterContext(mock.patch.object(Engine2d3dKleiderkopfausschnitt, 'TEILER', 1))
+        # Der Ausschnitt reicht `HALS_DAZU` der Kopfhöhe unter die Halszeile. Mit 0,06 (seit 07.10.2026; vorher 0,10) endet er bei dieser Kunstfigur ÜBER den Schultern (die ab Zeile 194 ansetzen) — dann
+        # sähen weder die Prüfung noch ihre Gegenprobe je eine Schulter. Tiefer gesetzt reicht er in sie hinein, und erst dort zeigt sich, ob `HALS_SEITE` sie abschneidet.
+        self.enterContext(mock.patch.object(Engine2d3dKleiderkopfausschnitt, 'HALS_DAZU', 0.35))
 
     def test_der_ausschnitt_ist_quadratisch_und_traegt_den_ganzen_kopf(self):
         aus, befund = Engine2d3dKleiderkopfausschnitt.ausschnitt(silhouette())

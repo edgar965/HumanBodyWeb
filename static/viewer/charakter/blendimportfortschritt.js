@@ -1,31 +1,35 @@
 /**
  * Blendimportfortschritt — der Lauf eines Blender-Imports im Dialog „Modell importieren" (08.10.2026).
  *
- * Fragt `/api/character/blendimport/<kennung>/zustand/` alle zwei Sekunden: Balken (im Schritt „figur" der Fortschritt
- * des Auftrags „Mesh to 3D", den der Server auf das Band umrechnet), die Schritte mit Haken, die letzte Meldung, ein
- * Fehler im Klartext samt „Ab hier neu" und „Anhalten". Ist er fertig, wird das Modell in die Szene geladen
- * (`fn.addCharacterFromPreset`, derselbe Weg wie „Charakter hinzufügen → Gespeicherte Modelle").
+ * Zeigt den Stand, den `Blendimportzustand` alle zwei Sekunden holt (derselbe, den die Leiste oben neben „HumanBody"
+ * zeigt): Balken (im Schritt „figur" der Fortschritt des Auftrags „Mesh to 3D", den der Server auf das Band umrechnet),
+ * die Schritte mit Haken, die letzte Meldung, ein Fehler im Klartext samt „Ab hier neu" und „Anhalten". Jeder Stand geht
+ * auch an `bei` (der Dialog sperrt damit „Importieren", solange der Import rechnet). Ist er fertig, wird das Modell in
+ * die Szene geladen (`fn.addCharacterFromPreset`, derselbe Weg wie „Charakter hinzufügen → Gespeicherte Modelle").
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Blendimportzustand } from './blendimportzustand.js';
 import { escapeHtml } from './utils.js';
 
 export class Blendimportfortschritt {
 
-    static TAKT_MS = 2000;
-    static TITEL = { export: 'Lesen', umposen: 'Haltung', koerper: 'Körpernetz', figur: 'Genesis-Figur', stuecke: 'Kleider & Haar',
-                     haut: 'Haut backen', augen: 'Augen', modell: 'Modell' };
+    static TITEL = Blendimportzustand.TITEL;
 
-    constructor(feld, kennung, schritte) {
+    constructor(feld, kennung, schritte, bei = null) {
         this.feld = feld;
         this.kennung = kennung;
         this.schritte = schritte;
-        this.uhr = null;
+        this.bei = bei;
         this.geladen = false;
+        this.hoerer = ereignis => {
+            if (ereignis.detail.kennung === this.kennung) this.aufZustand(ereignis.detail);
+        };
+        this.klickhoerer = ereignis => this.klick(ereignis);
         this.feld.hidden = false;
         this.feld.innerHTML = '<div class="mi-balken"><div></div></div><div class="mi-schritte"></div>'
             + '<div class="mi-detail dialoghinweis"></div><div class="mi-knoepfe"></div>';
-        this.feld.addEventListener('click', ereignis => this.klick(ereignis));
+        this.feld.addEventListener('click', this.klickhoerer);
     }
 
     adresse(teil) {
@@ -33,28 +37,25 @@ export class Blendimportfortschritt {
     }
 
     starten() {
-        clearInterval(this.uhr);
-        this.uhr = setInterval(() => this.abfragen(), Blendimportfortschritt.TAKT_MS);
-        return this.abfragen();
+        document.removeEventListener(Blendimportzustand.EREIGNIS, this.hoerer);
+        document.addEventListener(Blendimportzustand.EREIGNIS, this.hoerer);
+        return Blendimportzustand.beobachten(this.kennung);
     }
 
-    async abfragen() {
-        let z;
-        try {
-            z = await Serverabruf.json(this.adresse('zustand'));
-        } catch (fehler) {
-            this.zeigen({ status: 'unbekannt', detail: `Zustand nicht lesbar: ${fehler.message}` });
-            return;
-        }
+    /** Nicht mehr zuhören (der Dialog zeigt einen anderen Import): weder dem Stand noch den Klicks im Feld. */
+    beenden() {
+        document.removeEventListener(Blendimportzustand.EREIGNIS, this.hoerer);
+        this.feld.removeEventListener('click', this.klickhoerer);
+    }
+
+    async aufZustand(z) {
         this.zeigen(z);
-        if (z.status !== 'laeuft' && z.status !== 'neu') clearInterval(this.uhr);
+        if (this.bei) this.bei(z);
         if (z.status === 'fertig' && !this.geladen) await this.laden(z);
     }
 
     zeigen(z) {
-        const lauf = z.figur_lauf;
-        const prozent = Math.max(z.fortschritt || 0, lauf ? lauf.fortschritt : 0);
-        this.feld.querySelector('.mi-balken > div').style.width = `${prozent}%`;
+        this.feld.querySelector('.mi-balken > div').style.width = `${Blendimportzustand.prozent(z)}%`;
         const fertigBis = this.schritte.indexOf(z.schritt);
         this.feld.querySelector('.mi-schritte').innerHTML = this.schritte.map((s, i) => {
             const art = z.status === 'fertig' || i < fertigBis ? 'fertig' : (i === fertigBis ? 'aktiv' : '');
@@ -62,12 +63,13 @@ export class Blendimportfortschritt {
             return `<span class="${art}">${art === 'fertig' ? '✓ ' : ''}${Blendimportfortschritt.TITEL[s] || s}`
                 + `${dauer ? ` (${Math.round(dauer)} s)` : ''}</span>`;
         }).join('');
+        const lauf = z.figur_lauf;
         const detail = this.feld.querySelector('.mi-detail');
         const text = lauf ? `Mesh to 3D ${lauf.kennung}: ${lauf.schritt || ''} — ${lauf.detail || ''}` : (z.detail || '');
         detail.textContent = z.status === 'gescheitert' ? `Gescheitert — ${z.fehler || 'ohne Grund'}` : text;
         detail.classList.toggle('fehlertext', z.status === 'gescheitert');
         const knoepfe = this.feld.querySelector('.mi-knoepfe');
-        if (z.status === 'laeuft' || z.status === 'neu') {
+        if (Blendimportzustand.laeuft(z)) {
             knoepfe.innerHTML = '<button data-lauf="anhalten">Anhalten</button>';
         } else if (z.status === 'gescheitert' || z.status === 'angehalten') {
             knoepfe.innerHTML = `<button data-lauf="neu" data-ab="${escapeHtml(z.schritt || '')}">`

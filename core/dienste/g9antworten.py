@@ -36,7 +36,9 @@ Der Schluessel traegt die juengste Aenderungszeit der Genesis-9-Quellen und
 der Antwortmodule: Eine Codeaenderung macht jede alte Antwort ungueltig,
 ohne dass jemand eine Nummer hochzaehlen muss. Was er NICHT sieht: eine
 geaenderte Daz-Bibliothek (neues Materialpreset auf ein altes Stueck) —
-dafuer `vergessen()` oder den Ordner loeschen.
+dafuer `vergessen()` oder den Ordner loeschen. AUSNAHME seit 08.10.2026: ein
+EIGENES Stueck, das unter derselben Kennung neu geschrieben wird (zweiter
+Blender-Import) — dessen `.duf`-Stand steht im Schluessel (`G9stueckstand`).
 """
 import contextvars
 import hashlib
@@ -47,6 +49,7 @@ import time
 from pathlib import Path
 
 from django.http import HttpResponse
+from Genesis9.stueckstand import G9stueckstand
 
 from ..daten.netzausgabe import Netzausgabe
 from ..daten.netzpaket import Netzpaket
@@ -180,7 +183,7 @@ class G9antworten(G9antwortvorrat):
     @classmethod
     def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None, binaer=False):
         text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung(),
-                           cls._eigenstand(rumpf, eintrag), binaer],
+                           cls._eigenstand(rumpf, eintrag), G9stueckstand.von(eintrag), binaer],
                           sort_keys=True, default=str)
         return '%s_%s_%s' % (art, cls._sicher(name),
                              hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])

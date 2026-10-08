@@ -29,9 +29,17 @@ def _zustand(nummer, laeuft=False):
     return {'name': 'T', 'kennung': 'k', 'laeuft': laeuft, 'status': 'laeuft' if laeuft else 'wartet', 'bilder': [], 'ergebnis': {'iterationen': runden, 'begutachtung': {'rezept': []}}}
 
 
+def _ausgangszustand():
+    """Der Stand nach Iteration 0 (Runde 0, `art` ausgang) — die Runde, die der Lauf vor der ersten Iteration eines Auftrags ohne Runden rechnen lässt (`Nachbesserungslauf._ausgang`)."""
+    runde = {'runde': 0, 'art': 'ausgang', 'note': {'gesamt': 0.9}, 'uebernommen': True, 'dateien': {}, 'je_ansicht': []}
+    return {'name': 'T', 'kennung': 'k', 'laeuft': False, 'status': 'wartet', 'bilder': [], 'ergebnis': {'iterationen': [runde], 'begutachtung': {'rezept': []}}}
+
+
 class _Klient:
+    """Attrappe des Servers. `gesendet`: die Rezepte (Runden), `ausgaenge`: die Bestellungen von Iteration 0 (`begutachten(…, ausgang=True)`, die der echte `Auftragsklient` kennt)."""
+
     def __init__(self, zustaende, antworten=((200, {'pid': 1}),)):
-        self.zustaende, self.antworten, self.gesendet = list(zustaende), list(antworten), []
+        self.zustaende, self.antworten, self.gesendet, self.ausgaenge = list(zustaende), list(antworten), [], []
 
     def zustand(self):
         return self.zustaende.pop(0) if len(self.zustaende) > 1 else self.zustaende[0]
@@ -44,7 +52,10 @@ class _Klient:
                 'startrezept': ["m.kleid_nur('g9_base_shirt', 'eigen_foto_x_hose')", "m.haar_nur('mavick_hair')"],
                 'garderobe': {'kleidung': ['g9_base_shirt'], 'haar': ['mavick_hair'], 'eigene': [], 'requisiten': []}, 'regler': {}, 'koerper': {}, 'schnitt': {}, 'fehler': []}
 
-    def begutachten(self, aufrufe, kommentar, nutzer=None):
+    def begutachten(self, aufrufe, kommentar, nutzer=None, ausgang=False):
+        if ausgang:
+            self.ausgaenge.append(kommentar)
+            return 200, {'pid': 1}
         self.gesendet.append((aufrufe, kommentar))
         return self.antworten.pop(0) if len(self.antworten) > 1 else self.antworten[0]
 
@@ -136,36 +147,41 @@ class DerNachbesserungslauf(SimpleTestCase):
         self.assertEqual(lauf.ausfuehren(), 'fehler')
         self.assertIn('rechnet', lauf.zustand.lesen()['meldung'])
 
-    def test_ohne_runde_wird_genau_eine_runde_bestellt_und_das_startrezept_geht_voran(self):
-        klient, agent = _Klient([_zustand(0), _zustand(1)]), _Agent(ANTWORT)
+    def test_ohne_runde_rechnet_der_lauf_erst_iteration_0_und_bestellt_dann_genau_eine_runde(self):
+        """Ohne Runde bestellt der Lauf zuerst Iteration 0 (Startrezept, Vorlage und Modell, `Nachbesserungslauf._ausgang`); sie zählt nicht als Iteration. Die Zeilen der KI gehen allein als Runde 1 hinaus."""
+        klient, agent = _Klient([_zustand(0), _ausgangszustand(), _zustand(1)]), _Agent(ANTWORT)
         lauf = self._lauf(klient, agent)
         self.assertEqual(lauf.ausfuehren(), 'fertig')
-        self.assertEqual(len(klient.gesendet), 1)                                           # keine Ausgangsrunde (Edgar: genau EINE Iteration)
-        zeilen = klient.gesendet[0][0].splitlines()
-        self.assertEqual(zeilen[:2], ["m.kleid_nur('g9_base_shirt', 'eigen_foto_x_hose')", "m.haar_nur('mavick_hair')"])
-        self.assertEqual(zeilen[2:], ANTWORT['aufrufe'])                                     # danach die Zeilen der KI
+        self.assertEqual(klient.ausgaenge, ['Iteration 0'])
+        self.assertEqual(len(klient.gesendet), 1)                                           # genau EINE Iteration der KI (Edgar, 05.10.2026)
+        self.assertEqual(klient.gesendet[0][0].splitlines(), ANTWORT['aufrufe'])             # das Startrezept steckt schon in Iteration 0, es wird nicht noch einmal vorangestellt
         self.assertEqual(len(agent.prompts), 1)
-        self.assertIn('Es gibt noch KEINE Runde', agent.prompts[0])
-        self.assertIn('Ausgangslage — Startrezept', agent.prompts[0])
-        self.assertEqual(len(lauf.zustand.lesen()['eintraege']), 1)
+        self.assertIn('Die letzte Runde ist Runde 0', agent.prompts[0])
+        self.assertNotIn('Es gibt noch KEINE Runde', agent.prompts[0])
+        eintraege = lauf.zustand.lesen()['eintraege']
+        self.assertEqual([e['i'] for e in eintraege], [0, 1])
+        self.assertEqual((eintraege[0]['runde'], eintraege[1]['runde']), (0, 1))
 
     def test_der_prompt_hat_den_katalog_der_namen_und_die_vollen_funktionstexte(self):
-        klient, agent = _Klient([_zustand(0), _zustand(1)]), _Agent(ANTWORT)
+        klient, agent = _Klient([_zustand(0), _ausgangszustand(), _zustand(1)]), _Agent(ANTWORT)
         self._lauf(klient, agent).ausfuehren()
         for erwartet in ('Was es gibt — nur diese Namen benutzen', 'eigen_foto_x_hose', 'g9_base_shirt', 'mavick_hair'):
             self.assertIn(erwartet, agent.prompts[0])
 
-    def test_ein_abgelehntes_rezept_ohne_runde_nennt_die_verschobenen_zeilennummern(self):
-        klient = _Klient([_zustand(0), _zustand(1)], [(400, {'error': 'Rezept: Zeile 3: kleid_nur — „x" ist kein Stück'}), (200, {'pid': 1})])
+    def test_ein_abgelehntes_rezept_nach_iteration_0_nennt_keine_verschobenen_zeilennummern(self):
+        """Die Zeilen der KI stehen allein im Rezept der Runde (das Startrezept gehört zu Iteration 0) — ihre Zeilennummern sind die des Servers."""
+        klient = _Klient([_zustand(0), _ausgangszustand(), _zustand(1)], [(400, {'error': 'Rezept: Zeile 1: kleid_nur — „x" ist kein Stück'}), (200, {'pid': 1})])
         agent = _Agent(ANTWORT)
         self.assertEqual(self._lauf(klient, agent).ausfuehren(), 'fertig')
-        self.assertIn('Zeilennummern zählen die 2 Zeilen des Startrezepts mit', agent.prompts[1])
+        self.assertIn('Zeile 1: kleid_nur', agent.prompts[1])
+        self.assertNotIn('Zeilennummern zählen', agent.prompts[1])
 
     def test_fehlt_der_katalog_endet_der_lauf_vor_dem_agentenaufruf(self):
-        klient, agent = _Klient([_zustand(0)]), _Agent(ANTWORT)
+        klient, agent = _Klient([_zustand(0), _ausgangszustand()]), _Agent(ANTWORT)
         klient.katalog = mock.Mock(side_effect=Auftragsfehler('GET …/rezeptkatalog/: HTTP 500'))
         lauf = self._lauf(klient, agent)
         self.assertEqual(lauf.ausfuehren(), 'fehler')
+        self.assertIn('HTTP 500', lauf.zustand.lesen()['meldung'])                          # der Grund ist der fehlende Katalog, nicht eine ausbleibende Iteration 0
         self.assertEqual(agent.prompts, [])                                                 # ein Prompt ohne Namen lässt die KI raten
 
     def test_endet_die_runde_ohne_neue_nummer_steht_der_grund_im_fehler(self):

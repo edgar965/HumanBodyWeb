@@ -22,6 +22,7 @@ Ablage je Auftrag unter MEDIA_ROOT/figurvideos/<kennung>/:
     video.mp4         das Ergebnis
     video.mp4.json    die Messwerte dazu (Ruheprobe, Gleichlauf, Zuschlag)
     ablage.json       wohin die Kopie fuer den Nutzer ging (`figurvideoablage.py`)
+    prozess.json      PID des Laufs, fuer den Abbruch (`figurvideoabbruch.py`)
 """
 
 import json
@@ -32,6 +33,7 @@ import uuid
 
 from django.conf import settings
 
+from .figurvideoabbruch import Figurvideoabbruch
 from .figurvideoablage import Figurvideoablage
 from .figurvideostuecke import Figurvideostuecke
 from .laufende_prozesse import LaufendeProzesse
@@ -89,6 +91,8 @@ class Figurvideo:
                 creationflags=flags,
             )
         LaufendeProzesse.eintragen('figurvideo_' + kennung, prozess)
+        # Für den Abbruch nach einem Autoreload des Servers, der das Verzeichnis leert (`figurvideoabbruch.py`).
+        Figurvideoabbruch.pid_merken(ordner, prozess.pid)
         logger.info(
             'Figurvideo %s gestartet: %d Stuecke, %.1f s, %.0f mm',
             kennung,
@@ -184,6 +188,14 @@ class Figurvideo:
                 stand['ablage_fehler'] = str(fehler)
             LaufendeProzesse.entfernen('figurvideo_' + kennung)
         return stand
+
+    # --------------------------------------------------------------- Abbruch
+
+    @classmethod
+    def abbrechen(cls, kennung):
+        """Den Lauf beenden; Einzelheiten und Antwort: `Figurvideoabbruch.abbrechen`."""
+        kennung = cls._sicher(kennung)
+        return Figurvideoabbruch.abbrechen(kennung, os.path.join(cls.wurzel(), kennung))
 
     # ------------------------------------------------ Browser-Bildfolge
 

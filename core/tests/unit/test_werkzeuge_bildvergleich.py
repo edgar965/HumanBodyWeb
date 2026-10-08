@@ -200,9 +200,11 @@ class WerkzeugeBildvergleichZahlenTest(SimpleTestCase):
         katalog = next(m for m in klasse.body if isinstance(m, ast.Assign) and getattr(m.targets[0], 'id', '') == 'KATALOG')
         felder = {}
         for eintrag in katalog.value.elts:
+            if not isinstance(eintrag, ast.Dict):
+                continue                                                # `*Iterationsoptionenfoto.FOTOOPTIONEN` — ausgelagerte Einträge (08.10.2026)
             d = {k.value: v for k, v in zip(eintrag.keys, eintrag.values, strict=True) if isinstance(k, ast.Constant)}
             felder[ast.literal_eval(d['schluessel'])] = {x: ast.literal_eval(d[x]) for x in ('vorgabe', 'min', 'max')
-                                                          if x in d and not isinstance(d[x], ast.Name)}
+                                                          if x in d and isinstance(d[x], (ast.Constant, ast.UnaryOp))}      # nur Zahlen (auch negative): Namen und Klassenkonstanten (`Haarlaenge.UNTEN_CM`, `GRENZE_CM[0]`) sind keine Literale
         self.assertEqual(felder['bildbreite'], {'vorgabe': 128, 'min': 96, 'max': 1024})
         self.assertEqual(felder['stufe_stillstand'], {'vorgabe': 3, 'min': 1, 'max': 100})
         self.assertEqual(felder['tafelbreite'], {'vorgabe': 384, 'min': 128, 'max': 1024})
@@ -225,8 +227,9 @@ class WerkzeugeBildvergleichZahlenTest(SimpleTestCase):
 
     def test_die_schritte_des_laufs_sind_die_genannten(self):
         schritte = konstante(self.D + 'engine2d3dkleiderlauf.py', 'Engine2d3dKleiderlauf', 'SCHRITTE')
-        # Stand 04.10.2026: davor `vorbereitung` (03.10.) und `segmentierung` (optional), danach `kleiderstuecke` vor den Iterationen — die Prüfung nannte noch die sieben von 02.10.2026.
-        self.assertEqual(schritte, ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern'))
+        # Stand 07.10.2026: davor `vorbereitung` (03.10.) und `segmentierung` (optional), danach `kleiderstuecke` vor den Iterationen, dazu `kopf` (der Kopf aus den drei Fotos, 07.10.) —
+        # die Prüfung nannte noch die sieben von 02.10.2026.
+        self.assertEqual(schritte, ('vorbereitung', 'netz', 'kopf', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern'))
 
     def test_das_farbraster_waechst_wie_die_zeile_es_nennt(self):
         # Dieselbe Rechnung wie Iterationsnote.felder (Docstring: 2485 × 3728 → 155 × 233).

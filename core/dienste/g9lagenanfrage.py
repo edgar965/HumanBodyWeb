@@ -72,7 +72,7 @@ class G9lagenanfrage:
         andere = []
         for nummer, eintrag in enumerate(self.eintraege):
             andere_kennung = self._kennung(eintrag.get('kennung'))
-            if not andere_kennung or andere_kennung == kennung:
+            if not andere_kennung or andere_kennung == kennung or self._ersatz(andere_kennung):
                 continue
             try:
                 punkte = self._kaefig(andere_kennung, self._namen(eintrag.get('stil')),
@@ -97,6 +97,15 @@ class G9lagenanfrage:
         flaeche = self.lagen.flaeche([p for _k, p in unten],
                                      einlagig=[self._einlagig(k) for k, _p in unten])
         return flaeche, innen, aussen
+
+    @staticmethod
+    def _ersatz(kennung):
+        u"""Ersetzt das getragene Stück Teile der Figur (Originalaugen, `G9stueckersatz`)? Es sitzt IN der Figur: kein anderes Stück
+        weicht ihm aus — mit den Augäpfeln als „Kleidung" darunter schob die Lagenrechnung das Haar nach außen (Haarkarten
+        wie Splitter, 08.10.2026 im Browser gesehen)."""
+        from Genesis9.garderobe import G9garderobe
+        from Genesis9.stueckersatz import G9stueckersatz
+        return bool(G9stueckersatz.fuer(G9garderobe.eintrag(kennung) or {}))
 
     def _einlagig(self, kennung):
         if kennung.startswith(self.GC):

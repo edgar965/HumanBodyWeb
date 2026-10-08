@@ -39,10 +39,18 @@ class Engine2d3dKleidernurtrellis:
                   'sauber.',
     }
 
+    #: Stellen in den Hinweisen der Seite „Mesh", die Hunyuan3D nennen und hier nicht stehen sollen (`licht`: „gilt für alle Wege (TRELLIS.2, Hunyuan3D, Fusion …)"; der Test hält die Gruppe frei von Hunyuan).
+    ERSATZ = (('TRELLIS.2, Hunyuan3D, Fusion', 'TRELLIS.2, Fusion'),)
+
     @classmethod
     def katalogfeld(cls, feld):
         """Das Feld, wie es dieser Bereich zeigt: nur die erlaubten Werte, ohne Hunyuan in den Texten."""
         schluessel = feld['schluessel']
+        if feld.get('hinweis') and schluessel not in cls.HINWEISE:
+            hinweis = feld['hinweis']
+            for alt, neu in cls.ERSATZ:
+                hinweis = hinweis.replace(alt, neu)
+            feld = dict(feld, hinweis=hinweis)
         if schluessel not in cls.ERLAUBT:
             return feld
         texte = cls.TEXTE.get(schluessel, {})

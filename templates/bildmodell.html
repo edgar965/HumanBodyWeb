@@ -103,8 +103,8 @@ Genesis-9-Regler gebracht. Alle Schritte lassen sich auf der Auftragsseite einze
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="module" src="/static/djangobase/js/tabellen_sortierung.js?v={{ djangobase.statik_v }}"></script>
-<script type="module" src="/static/djangobase/js/tabellen_breiten.js?v={{ djangobase.statik_v }}"></script>
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_sortierung.js' %}"></script>
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_breiten.js' %}"></script>
 <script type="module">
 import { Bildmodellliste } from "{% fassungspfad 'viewer/bildmodell/liste.js' %}";
 import { Laufbalken } from "{% fassungspfad 'viewer/gemeinsam/laufbalken.js' %}";

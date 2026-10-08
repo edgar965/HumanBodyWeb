@@ -202,7 +202,7 @@ export class Oberflaechenbindung {
         }
         const materialien = Array.isArray(netz.material) ? netz.material : [netz.material];
         for (const m of materialien) {
-            const u = m.userData.oberflaeche;
+            const u = Shaderpatch.eingriff(m, Oberflaechenbindung.SCHLUESSEL)?.uniforms;
             if (!u) continue;
             u.uOberflaecheAn.value = passt ? 1 : 0;
             u.uNormaleAusFlaeche.value = flaeche ? 1 : 0;
@@ -219,12 +219,17 @@ export class Oberflaechenbindung {
     }
 
     /** Die Uniforms EINMAL je Material anlegen — sie bleiben dieselben Objekte
-     *  (Three hält je Programm die Uniforms des zuletzt kompilierten, `genesis9.md`). */
+     *  (Three hält je Programm die Uniforms des zuletzt kompilierten, `genesis9.md`).
+     *
+     *  Sie hängen am EINGRIFF (`Shaderpatch.eingriff`), nicht an `material.userData`: `Material.clone()` schickt `userData` durch
+     *  JSON, und das Weichgewebe klont jedes Material (`Shaderpatch.klonen`) — der Klon trug dann `uZuKoerper` als einfaches Objekt,
+     *  und `_vorZeichnen` warf „u.uZuKoerper.value.copy is not a function"; die Videoaufnahme der Szene brach mit „Aufnahme
+     *  fehlgeschlagen" ab (08.10.2026, Edgar). Der Klon erbt die Eingriffsfunktion samt Uniforms. */
     static _eingriff(material) {
-        if (material.userData.oberflaeche) return;
+        if (Shaderpatch.hat(material, Oberflaechenbindung.SCHLUESSEL)) return;
         const platzhalter = new THREE.DataTexture(new Float32Array([0, 0, 0, 1]), 1, 1, THREE.RGBAFormat, THREE.FloatType);
         platzhalter.needsUpdate = true;
-        const u = material.userData.oberflaeche = {
+        const u = {
             uOberflaecheAn: { value: 0 },
             uKoerperLage: { value: platzhalter },
             uKoerperNormale: { value: platzhalter },
@@ -251,6 +256,7 @@ export class Oberflaechenbindung {
                 .replace('#include <normal_fragment_begin>', OberflaecheGLSL.FRAGMENT);
         };
         eingriff.kennung = () => 'o2';
+        eingriff.uniforms = u;
         Shaderpatch.anhaengen(material, Oberflaechenbindung.SCHLUESSEL, eingriff);
         material.needsUpdate = true;
     }

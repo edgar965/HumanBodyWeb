@@ -25,10 +25,12 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'hautporen.js')
+# Einstieg ist koerperdetails.js: Webmodul kopiert nur, was sich vom Einstieg aus importieren lässt, und Koerperdetails zieht beide Module
+# (Augentextur, Hautporen) mit — vom Prüfmodul aus war es nicht erreichbar (ERR_MODULE_NOT_FOUND).
+MODUL = Jsmodul('gemeinsam', 'koerperdetails.js')
 
 SKRIPT = """
-const { Hautporen: H } = await import(MODUL);
+const { Hautporen: H } = await import(new URL('./hautporen.js', MODUL).href);
 const { Shaderpatch } = await import(new URL('./shaderpatch.js', MODUL).href);
 const material = () => ({ clone() { return material(); } });
 const netz = () => ({ material: [material(), material(), material()] });
@@ -82,7 +84,7 @@ pruefe('fragment stoert', [f.includes('diffuseColor.rgb *= mix('), f.includes('n
 pruefe('includes bleiben', [f.includes('#include <color_fragment>'), f.includes('#include <normal_fragment_maps>'), v.includes('#include <skinnormal_vertex>')], [true, true, true]);
 
 // Liste und Koerperdetails
-const { Koerperdetails: K } = await import(new URL('./koerperdetails.js', MODUL).href);
+const { Koerperdetails: K } = await import(MODUL);
 const d = K.aus({ details: { haut_poren: 'poren_2', haut_poren_deckkraft: 7, haut_poren_dichte: 9 } });
 pruefe('aus: gueltig, geklemmt', [d.haut_poren, d.haut_poren_deckkraft, d.haut_poren_dichte], ['poren_2', 1, 3]);
 const x = K.aus({ details: { haut_poren: 'poren_9', haut_poren_dichte: 0.01 } });

@@ -43,7 +43,7 @@ class Engine2d3dKleiderkoerperoptionen:
                 ('anhalten', 'Anhalten — der Lauf stoppt nach dem Körper, wenn der Rumpf zu flach ist oder zu viele Regler am Anschlag stehen (Vorgabe)'),
                 ('melden', 'Nur melden — der Lauf geht weiter (Gesicht, Textur, Frisur, Kleiderstücke); das Urteil steht im Ergebnis und im Protokoll'),
             ],
-            'hinweis': 'Nach dem Körper prüft das Tor die Rumpftiefe der Figur gegen das Netz (Soll ≥ 75 %) und zählt die Regler am Anschlag (Soll ≤ 8). Bei „anhalten“ endet der Schritt dort mit '
+            'hinweis': 'Nach dem Körper prüft das Tor die Rumpftiefe der Figur gegen das Netz (Soll ≥ 75 %) und zählt die Regler am Anschlag (Soll ≤ 8; Regler, die überwiegend in Hand, Fingern oder Zehen wirken, zählen nicht). Bei „anhalten“ endet der Schritt dort mit '
                        'der Meldung — die späteren Teilschritte (Gesicht, Textur, Vorschau, Frisur) laufen dann nicht, und ohne sie gibt es keine Kleiderstücke (`genesis_ende.npz`). Gemessen: '
                        'Randy 58 % und 14 Regler, Generisch 70 % und 15 — bei Personen mit Shirt stehen oft Gelenkregler (Handgelenk, Knöchel, Schienbein) am Anschlag, ohne dass der Körper kaputt ist.',
         },
@@ -73,6 +73,40 @@ class Engine2d3dKleiderkoerperoptionen:
                        '(innerer Mundspalt 2,8 gegen 0,4 mm). Je Bereich entsteht ein Gauß-Feld über die Landmarken (`Meshfigurlandmarkmorphe`: Ziel = Netz-Landmarke auf der Netzfläche, '
                        'höchstens 8 mm je Landmarke), abgelegt als eigener Morph mit eigenem Regler (Wert 1,0 in der Stellung). Nur mit Netz-Landmarken; das Gesichtsoval (Haar, Bart) bleibt draußen. '
                        'Die Lider sind seit 08.10.2026 nicht mehr im Morph: das Kopfnetz hat gemalte, halb geschlossene Augen, und die Lidränder darauf zu ziehen setzte die Lider auf die Augäpfel (weißer Augapfel stand darunter heraus).',
+        },
+        {
+            'schluessel': 'regionen',
+            'titel': 'Regionen-Regler (Hals, Unterarm, Handgelenk, Oberschenkel, Unterschenkel, Knöchel)',
+            'art': 'wahl',
+            'vorgabe': 'aus',
+            'werte': [
+                ('aus', 'Aus — nur die Daz-Regler und der Rest-Morph (Vorgabe)'),
+                ('an', 'An — acht benannte Regler (`eigen:region_*`, −2 … 2) stehen in der Körperstufe der Anpassung zur Wahl'),
+            ],
+            'hinweis': 'Die Anpassung lässt Daz-Regler an ihre Grenze laufen, wo der Körper des Netzes mehr verlangt (an zwei Läufen desselben Fotos je 9 Regler am Anschlag: Hals, Unterarm, Handgelenk, Oberschenkel, Unterschenkel, Knöchel). '
+                       'Der Rest landet im Eigenmorph, der eine Verschiebung je Käfigpunkt ist und keinen Namen hat. Mit „An“ kommen Regler dazu, die die Punkte um die Achse eines Gliedes (Gelenk zu Gelenk) nach außen oder '
+                       'innen rücken (`G9koerperregionen`: weicher Rand entlang der Achse und quer dazu, links/rechts getrennt, 0,5–1,0 cm je Einheit, höchstens ±2). Sie sind Variablen der Körperstufe, also Teil der '
+                       'Ableitung (Reglersatz `regionen`, einmal je Grundfigur gebaut). Gemessen am Foto von `Hunyan-Best` (08.10.2026, ein Lauf mit gegen zwei Läufe ohne): 9 Regler am Anschlag mit wie ohne (zwei Daz-Regler wurden frei, zwei andere liefen an), '
+                       'Rest nach dem Eigenmorph 0,92 gegen 0,92–0,93 mm, Abstand Figur↔Netz 2,06 gegen 2,03–2,08 mm RMS. Etwas besser nur die Haut des Körpers (3,85 gegen 3,98–3,99 mm, Deckung 0,966 gegen 0,960), '
+                       'die Kleiderstücke minimal höher (0,091 gegen 0,086–0,089; kleiner ist besser, im Rahmen der Streuung). Das Ziel, Regler vom Anschlag zu holen, ist nicht erreicht — darum Vorgabe aus.',
+        },
+        {
+            'schluessel': 'spielraum',
+            'titel': 'Spielraum der Körperregler über Dazʼ Grenze',
+            'art': 'wahl',
+            'vorgabe': 'aus',
+            'werte': [
+                ('aus', 'Aus — Dazʼ Grenze ±100 % (Vorgabe)'),
+                ('150', '150 % — die Anpassung darf die Körperformregler bis ±150 % stellen'),
+                ('200', '200 % — bis ±200 %'),
+            ],
+            'hinweis': 'Genesis klemmt jeden Formregler bei ±100 % (Dazʼ Grenze; Daz Studio kennt dafür „Limits off“). Am Foto von `Hunyan-Best` standen 9 Regler am Anschlag; '
+                       'ein Test ohne Lauf (gleiche Verformung des Körpers mit kleinster Reglersumme, Abweichung 0,7 mm) holte vier davon weg — `Mass Forearms`, `Mass Hands`, `Mass Shins`, `Under Neck Height` '
+                       '(sich überlappende Regler heben sich auf und laufen an die Grenze) —, aber fünf blieben auf ±100 %: `Neck Depth back`, `Glute Crease`, `Mass Wrist`, `Taper Shin B`, `Thigh Depth`. '
+                       'Das Netz verlangt dort mehr, als Daz hergibt. Mit Spielraum rechnen Genesis (`G9reglergrenzen.SPIELRAUM`, Faktor 2), die Ableitung der Anpassung und das Tor mit den weiteren Grenzen; '
+                       'nur ausdrücklich gestellte Werte gehen darüber hinaus, Formelwerte bleiben an Dazʼ Grenze. Ohne die Option wie bisher. Der Spielraum gilt nur für die Körperbereiche der Anpassung '
+                       '(Stufe 3: Hals, Brust, Taille, Hüfte, Rücken, Arme, Hände, Beine, Füße) — nicht für Größen (`Proportion…`), Körpertypen, Charaktere und Posensteuerungen. '
+                       'Der Schieber im Bedienfeld zeigt einen Wert über 100 % an und reicht dann bis 200 %.',
         },
         {
             'schluessel': 'kopfstreckung',
@@ -179,6 +213,10 @@ class Engine2d3dKleiderkoerperoptionen:
             aus['naht'] = roh['naht']
         if roh.get('landmarkmorphe') in ('an', 'aus'):
             aus['landmarkmorphe'] = roh['landmarkmorphe']
+        if roh.get('regionen') in ('an', 'aus'):
+            aus['regionen'] = roh['regionen']
+        if roh.get('spielraum') in ('aus', '150', '200'):
+            aus['spielraum'] = roh['spielraum']
         for e in cls.KATALOG:
             if e['art'] == 'zahl' and roh.get(e['schluessel']) is not None:
                 try:

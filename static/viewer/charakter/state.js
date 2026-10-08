@@ -48,10 +48,26 @@ export function serverLog(action, detail, level) {
 // Light Presets
 // =========================================================================
 export const LIGHT_PRESETS = {
+    // Gemessen aus der echten Studio-Beleuchtung von „cute girl 5.0.blend"
+    // (Edgar, 08.10.2026: „baue mir Lichter wie die in Blender … Studio-Option,
+    // soll die Standard-Beleuchtung bei Charakter sein"). Ausgelesen mit Blender
+    // selbst (`-b --factory-startup <blend> --python lichter_auslesen.py`, nur
+    // lesend), nicht geschätzt: drei Spots/Areas „Key_cc3iid…" (400 W),
+    // „Ear_cc3iid…" (100 W, hinter der Figur — Streiflicht/Rim), „Right_cc3iid…"
+    // (50 W Fläche, seitlich — Fülllicht). Alle drei neutral weiß, kein
+    // Farbstich — anders als das alte handgesetzte Preset.
+    //
+    // UMRECHNUNG: Blender-Positionen mit derselben Formel wie jeder Netz-Import
+    // (`gemeinsam/kodierung.js blenderToThreeCoords`: three.y=blender.z,
+    // three.z=-blender.y), dann auf dieselbe Richtung normalisiert und auf die
+    // Distanz des alten Presets skaliert (6,7 m) — ein `DirectionalLight` hat
+    // keine Reichweite, nur die Richtung zählt. Die Intensität behält das
+    // gemessene Verhältnis 400:100:50 der Wattzahlen, Key auf die bisherige
+    // Stärke (3.0) genormt, damit Belichtung/Tonemapping weiter passen.
     studio: {
-        key:     { intensity: 3.0, color: 0xffffff, pos: [2, 4, -5] },
-        fill:    { intensity: 2.0, color: 0xeeeeff, pos: [-3, 3, -4] },
-        back:    { intensity: 2.5, color: 0xffeedd, pos: [0, 4, 5] },
+        key:     { intensity: 3.0,  color: 0xffffff, pos: [0.43, 1.58, 6.50] },
+        fill:    { intensity: 0.375, color: 0xffffff, pos: [6.14, -0.91, -2.52] },
+        back:    { intensity: 0.75, color: 0xffffff, pos: [2.25, 0.79, -6.26] },
         ambient: { intensity: 0.8, color: 0xffffff },
         exposure: 1.6
     },

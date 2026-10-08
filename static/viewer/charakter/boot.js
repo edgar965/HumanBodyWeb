@@ -74,6 +74,9 @@ fn.initDialogCloseHandlers();
 Netzstufe.einrichten(window, () => Genesis9aufbau.umschalten(state.characters.values()));
 // Lippensynchronisation im Reiter Animation (Genesis 9, 18.09.2026 abends).
 Genesis9lipsync.einrichten();
+// Rechnet noch ein Blender-Import (gestartet vor dem Neuladen), zeigt die Leiste oben neben „HumanBody" ihn weiter.
+import('./blendimportleiste.js').then(m => m.Blendimportleiste.aufnehmen())
+    .catch(fehler => Protokoll.debug('Blendimportleiste', `nicht aufgenommen: ${fehler.message}`));
 
 export async function init() {
     return new Szenenaufbau().starten();

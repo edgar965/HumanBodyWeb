@@ -11,6 +11,11 @@ der Summe der Hautgewichte je Knochen; dazu `inventar.json` mit Bildern je Mater
 Die Rolle (Körper, Kleid, Haar, …) entscheidet python14 (`Blendimportrollen`) — hier wird nur gelesen, nichts an der
 .blend geändert. Steuerformen von Rigs (`cs_*`, `WGT-*`, Netze ohne Flächen) fallen weg.
 
+Hat die Datei GAR KEINE Armatur (Character-Creator-Export, 15 Netze, gemessen 09.10.2026), kommen alle Netze ohne
+Hautgewichte heraus und das Inventar trägt `ohne_rig: true` — der Import überspringt dann das Umposen. Ist das höchste
+Netz nicht 0,5–2,5 m hoch (die Asian girl: 3,26 m), werden alle Punkte auf 1,75 m umgerechnet (`massstab`, `hoehe_original_m`
+im Inventar); mit Rig bleibt der Maßstab, wie er ist.
+
 Gemessen an `cute girl 5.0.blend` (08.10.2026): Körper 54.369 Punkte, Haar 34.637, Shirt 8.045, Jeans 5.272, je Auge
 770, Zähne/Zunge 5.766; die Bilder liegen NICHT gepackt neben der Datei (`//textures\\…`).
 """
@@ -29,10 +34,32 @@ class Blendexport:
     STEUERFORMEN = ('cs_', 'WGT-')
     #: Eingänge des Principled BSDF → Kanalname der Ablage.
     KANAELE = {'Base Color': 'farbe', 'Roughness': 'rauheit', 'Alpha': 'alpha', 'Normal': 'normalen'}
+    #: Höhe, auf die ein Modell OHNE Rig gebracht wird, wenn es nicht als Mensch in Metern gelten kann (Genesis' Ruhehöhe).
+    #: „Mesh to 3D" liest Längen über 3 als Zentimeter (`meshfigur_scan.einheit_anpassen`): die Asian girl misst 3,26 m, wurde so
+    #: auf 3,3 cm geschrumpft, und die Posenerkennung fand nichts („index 11 is out of bounds … size 0", 09.10.2026).
+    REFERENZ_M = 1.75
+    PLAUSIBEL_M = (0.5, 2.5)
 
     def __init__(self, ziel):
         self.ziel = ziel
+        #: Maßstab, mit dem alle Punkte geschrieben werden (1,0 = Original); nur bei einer Datei ohne Rig ≠ 1.
+        self.faktor = 1.0
         os.makedirs(ziel, exist_ok=True)
+
+    @classmethod
+    def massstab(cls, hoehe_m):
+        """1,0 für eine Höhe, die ein stehender Mensch haben kann; sonst der Faktor, der sie auf `REFERENZ_M` bringt."""
+        if cls.PLAUSIBEL_M[0] <= hoehe_m <= cls.PLAUSIBEL_M[1] or hoehe_m <= 0:
+            return 1.0
+        return cls.REFERENZ_M / hoehe_m
+
+    @staticmethod
+    def hoehe(obj, graph):
+        """Höhe (Welt-Z) der ausgewerteten Begrenzungsbox eines Objekts in Metern."""
+        ecken = np.array(obj.evaluated_get(graph).bound_box, dtype=np.float64)
+        welt = np.array(obj.matrix_world, dtype=np.float64)
+        z = ecken @ welt[2, :3] + welt[2, 3]
+        return float(z.max() - z.min())
 
     @staticmethod
     def argumente(argv):
@@ -51,6 +78,11 @@ class Blendexport:
             if not any(m.type == 'ARMATURE' and m.object for m in obj.modifiers):
                 continue
             aus.append(obj)
+        if not aus and not len(bpy.data.armatures):
+            # Eine Datei ganz ohne Skelett (Character-Creator-Export, gemessen 09.10.2026 an „Beautiful Asian girl"): alle
+            # Netze, ohne Hautgewichte. Die Rollen kommen dann aus Maßen, Material und Namen (`Blendimportrollen`).
+            aus = [o for o in bpy.data.objects
+                   if o.type == 'MESH' and not o.name.startswith(self.STEUERFORMEN) and len(o.data.polygons)]
         return aus
 
     def netz(self, obj, nummer, graph):
@@ -62,7 +94,7 @@ class Blendexport:
             co = np.empty(n * 3, dtype=np.float64)
             me.vertices.foreach_get('co', co)
             welt = np.array(obj.matrix_world, dtype=np.float64)
-            punkte = co.reshape(-1, 3) @ welt[:3, :3].T + welt[:3, 3]
+            punkte = (co.reshape(-1, 3) @ welt[:3, :3].T + welt[:3, 3]) * self.faktor
             t = len(me.loop_triangles)
             dreiecke = np.empty(t * 3, dtype=np.int64)
             me.loop_triangles.foreach_get('vertices', dreiecke)
@@ -120,7 +152,68 @@ class Blendexport:
                         aus['farbe_wert'] = fest
                         continue
                     aus[kanal] = self.bild_vor(buchse.links[0].from_node, set())
+            aus.update(self.detailnormale(knoten, mat.name))
         return aus
+
+    def detailnormale(self, bsdf, materialname):
+        """Eine ZWEITE Normalenkarte mit Kachelung: der Normal-Eingang hängt an einem Vector-Math-Knoten über zwei
+        Normal-Map-Knoten, der zweite trägt eine kleine Detailnormale, die das Mapping vielfach wiederholt. Gemessen
+        08.10.2026 an „cute girl": Bluse `ACVI_Detail_Cloth_Cotton3_Normal.dds` (256 px) mit Mapping-Skalierung 75 × 75 —
+        das Fischgrät-Gewebe —, Jeans dasselbe Bild 25 × 25. Gibt `{detailnormalen: <PNG im Export>, detail_kachel: [u, v]}`
+        oder `{}`. Ein DDS liest der Browser nicht: das Bild wird als PNG neben den Export gelegt (Pixel unverändert, das
+        Bild ist „Non-Color")."""
+        buchse = bsdf.inputs.get('Normal')
+        if buchse is None or not buchse.is_linked or buchse.links[0].from_node.type != 'VECT_MATH':
+            return {}
+        karten = [b.links[0].from_node for b in buchse.links[0].from_node.inputs
+                  if b.is_linked and b.links[0].from_node.type == 'NORMAL_MAP']
+        if len(karten) < 2:
+            return {}
+        bildknoten = self.bildknoten_vor(karten[1], set())
+        if bildknoten is None:
+            return {}
+        pfad = os.path.normpath(bpy.path.abspath(bildknoten.image.filepath, library=bildknoten.image.library))
+        if not pfad.lower().endswith('.png'):
+            pfad = self.als_png(bildknoten.image, 'detail_%s.png' % ''.join(c if c.isalnum() else '_' for c in materialname))
+        return {'detailnormalen': pfad, 'detail_kachel': self.kachelung(bildknoten)}
+
+    def als_png(self, bild, dateiname):
+        """Die Pixel eines Bilds unverändert als PNG neben den Export legen (über eine Kopie: `filepath_raw` am geladenen
+        Bild zu ändern verwirft dessen Daten — „does not have any image data", gemessen 08.10.2026) — absoluter Pfad."""
+        breite, hoehe = bild.size
+        pixel = np.empty(breite * hoehe * 4, dtype=np.float32)
+        bild.pixels.foreach_get(pixel)
+        kopie = bpy.data.images.new(os.path.splitext(dateiname)[0], breite, hoehe, alpha=True, float_buffer=False)
+        kopie.colorspace_settings.name = 'Non-Color'
+        kopie.pixels.foreach_set(pixel)
+        ziel = os.path.join(self.ziel, dateiname)
+        kopie.filepath_raw = ziel
+        kopie.file_format = 'PNG'
+        kopie.save()
+        return ziel
+
+    def bildknoten_vor(self, knoten, gesehen):
+        """Der erste Bildknoten stromaufwärts von `knoten` (mit Bild) oder None."""
+        if knoten is None or knoten.name in gesehen:
+            return None
+        gesehen.add(knoten.name)
+        if knoten.type == 'TEX_IMAGE' and knoten.image is not None:
+            return knoten
+        for buchse in knoten.inputs:
+            if buchse.is_linked:
+                treffer = self.bildknoten_vor(buchse.links[0].from_node, gesehen)
+                if treffer is not None:
+                    return treffer
+        return None
+
+    @staticmethod
+    def kachelung(bildknoten):
+        """Skalierung (u, v) des Mapping-Knotens vor dem Bild; ohne Mapping `[1.0, 1.0]`."""
+        vektor = bildknoten.inputs.get('Vector')
+        if vektor is not None and vektor.is_linked and vektor.links[0].from_node.type == 'MAPPING':
+            skala = vektor.links[0].from_node.inputs['Scale'].default_value
+            return [round(float(skala[0]), 4), round(float(skala[1]), 4)]
+        return [1.0, 1.0]
 
     @staticmethod
     def festfarbe(knoten):
@@ -160,12 +253,28 @@ class Blendexport:
 
     def laufen(self):
         graph = bpy.context.evaluated_depsgraph_get()
-        netze = [self.netz(obj, i, graph) for i, obj in enumerate(self.netze())]
+        mit_rig = self.netze()
+        ohne_rig = not len(bpy.data.armatures) and bool(mit_rig)
+        hoehe_original = max((self.hoehe(o, graph) for o in mit_rig), default=0.0)
+        if ohne_rig:
+            # Nur ohne Rig: `blendumposen.py` liest die Punkte später selbst aus der .blend und schriebe das Original zurück.
+            self.faktor = self.massstab(hoehe_original)
+        netze = [self.netz(obj, i, graph) for i, obj in enumerate(mit_rig)]
         inventar = {
             'blender': bpy.app.version_string,
             'datei': bpy.data.filepath,
             'einheit': bpy.context.scene.unit_settings.scale_length,
             'netze': netze,
+            # Was die Datei sonst enthält: Netze ohne Armatur-Modifikator werden nicht exportiert (der Import
+            # braucht Hautgewichte) — hat die Datei kein Skelett, steht es hier statt „kein Körper".
+            'armaturen': len(bpy.data.armatures),
+            'ohne_rig': ohne_rig,
+            # Die Punkte der Netze sind mit `massstab` multipliziert; `hoehe_original_m` ist die Höhe des höchsten Netzes davor.
+            'massstab': self.faktor,
+            'hoehe_original_m': round(hoehe_original, 4),
+            'ohne_armatur': [o.name for o in bpy.data.objects
+                             if o.type == 'MESH' and not o.name.startswith(self.STEUERFORMEN)
+                             and len(o.data.polygons) and o not in mit_rig],
         }
         with open(os.path.join(self.ziel, 'inventar.json'), 'w', encoding='utf-8') as f:
             json.dump(inventar, f, ensure_ascii=False, indent=1)

@@ -151,13 +151,14 @@ class SchrittsucheTest(SimpleTestCase):
 
     def test_6_drapieren(self):
         m = ModellMitKleidern()
-        m.kleid_nur('g9_base_shirt')
+        # Hemd UND Shorts: ohne Messung der Körperbänder wählt `Kleiderwahl.stuecke` beide, und was fehlt, zieht `IterationKleider.anziehen` vor allem anderen an (01.10.2026)
+        m.kleid_nur('g9_base_shirt', 'g9_base_shorts')
         # Formsuche eingeschwungen: netz_mm trifft die Grundlinie (grund_mm) genau, jedes Band unter BAND_MM.
         eingeschwungen = {'art': 'kleidung', 'netz_mm': 10.0, 'grund_mm': 10.0,
                           'baender': [10.0, 12.0, 8.0, 11.0, 9.0], 'pixel': 500}
         befund = {'teile': {'g9_base_shirt': eingeschwungen}}
         # … und der Stoffabstand steht seit drei Runden (Verlauf wie `IterationModell.verlaufseintrag`).
-        still = [{'runde': r, 'stoff_mm': mm} for r, mm in ((1, 30.0), (2, 12.0), (3, 11.0), (4, 10.4), (5, 10.0))]
+        still = [{'runde': r, 'stoff_mm': mm} for r, mm in ((1, 30.0), (2, 11.5), (3, 11.0), (4, 10.4), (5, 10.0))]   # letzte vier: 1,5 mm Spanne (bei 12,0 wären es genau `STILL_MM`, und die Schwelle ist „weniger als")
         aufrufe = IterationKleider(m, befund, still).aufrufe()
         self.assertEqual(aufrufe, ["m.kleid_drapieren('g9_base_shirt', bilder=24)"])
         # Solange die Form noch wandert (letzte vier Runden mehr als 2 mm), kommt kein Drapieren — auch wenn die
@@ -254,7 +255,7 @@ class SchrittsucheTest(SimpleTestCase):
     def test_10_netz_nach_label(self):
         # Zwei Probenwände: x = 0 ist Stoff des Netzes, x = 0,10 ist Haut (der hängende Arm im Foto). Ein Stoffpunkt bei
         # x = 0,09 liegt 10 mm vor der Haut, aber 90 mm vor dem Stoff — mit Labels zählt für Kleidung nur der Stoff.
-        y = np.linspace(0.0, 1.0, 120)                                               # ≥ Netzmengen.MINDESTENS je Wand
+        y = np.linspace(0.0, 1.0, 121)                                               # ≥ Netzmengen.MINDESTENS je Wand; 121: y = 0,5 liegt auf einer Probe (bei 120 steht die nächste 4 mm daneben: −10,85 statt −10)
         stoff = np.column_stack([np.zeros_like(y), y, np.zeros_like(y)])
         haut = np.column_stack([np.full_like(y, 0.10), y, np.zeros_like(y)])
         proben = np.vstack([stoff, haut])
@@ -270,5 +271,7 @@ class SchrittsucheTest(SimpleTestCase):
         self.assertAlmostEqual(mit.netz(punkte, 'haar')[0], -10.0)                   # Haar: alles außer Stoff
         self.assertAlmostEqual(mit.grund(punkte, punkte, 'kleidung'), 90.0)          # Grundlinie: derselbe Bezug
         # Zu kleine Teilmenge (unter MINDESTENS Proben): wieder alle Proben, wie ohne Labels.
-        klein = Befundmessung(proben[::3], normalen[::3], labels={k: v[::3] for k, v in labels.items()})
+        # (Eine gröbere Probenreihe, `proben[::3]`, taugt dafür nicht: sie ließe die Probe bei y = 0,5 weg, und der Abstand wüchse auf −13,0 mm.)
+        zahl = np.arange(len(proben))
+        klein = Befundmessung(proben, normalen, labels={'kleidung': zahl < 10, 'haut': zahl >= len(y)})
         self.assertAlmostEqual(klein.netz(punkte, 'kleidung')[0], -10.0)

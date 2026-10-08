@@ -32,6 +32,7 @@
  * (`inst.bodyMesh`, `inst.clothMeshes`) und das Ereignis, das sie anstößt.
  */
 import { Hautmaske } from './hautmaske.js';
+import { Hautmaskeersatz } from './hautmaskeersatz.js';
 import { Figurhaut } from './figurhaut.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Skelettereignis } from './skelettereignis.js';
@@ -50,13 +51,24 @@ export class Hautverdeckung extends Figurhaut {
         if (!stoffe.length) return Hautverdeckung.aufheben(inst);
         const voll = geo.userData.indexVoll;
         const t0 = performance.now();
-        const maske = Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe);
+        const ersatz = new Uint8Array(geo.attributes.position.count);
+        const maske = Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe, { ersatz });
         geo.userData.hautVerdeckt = maske;
         // Verdeckte Haut neben der gezeichneten bleibt versenkt gezeichnet
         // (`Saumband`); die Randecken wandern im Shader unter die Stoffkante
         // (`Saumschnitt`). Aus dem Index fällt nur, was jenseits des Bands liegt.
         const einzug = Hauteinzug.setzen(inst.bodyMesh, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });
-        const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg);
+        // Haut unter einem ERSATZSTÜCK (Scham) bleibt nicht als Saumband stehen: das Stück liegt HINTER ihr und wäre verdeckt.
+        // Der Ring, der bleibt, wird nicht eingezogen: eingezogen klafft am Stückrand ein dunkler Spalt (gesehen 09.10.2026).
+        const eingezogen = geo.getAttribute('einzug');
+        if (eingezogen) {
+            for (let i = 0; i < ersatz.length; i++) if (ersatz[i]) eingezogen.array.fill(0, 3 * i, 3 * i + 3);
+            eingezogen.needsUpdate = true;
+        }
+        const weg = einzug.weg || new Uint8Array(ersatz.length);
+        const innen = Hautmaskeersatz.innen(ersatz, maske, voll.index);
+        for (let i = 0; i < innen.length; i++) if (innen[i]) weg[i] = 1;
+        const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, weg);
         Hautverdeckung.indexSetzen(geo, neu.index, neu.gruppen);
         let verdeckt = 0;
         for (let i = 0; i < maske.length; i++) verdeckt += maske[i];
@@ -91,8 +103,15 @@ export class Hautverdeckung extends Figurhaut {
             const g = netz?.geometry;
             if (!g?.attributes?.position || !g.index) continue;
             if (!Hautverdeckung.zaehlt(netz)) continue;
-            aus.push({ schluessel, punkte: g.attributes.position.array,
-                       dreiecke: Hautverdeckung.vollerIndex(g), starr: Hautverdeckung.starr(schluessel) });
+            // `tiefe` (Scham aus einer .blend, 08.10.2026): ein Stück, das bis 25 mm HINTER der Figurfläche liegt (die Furche, die
+            // die Figur überbrückt), verdeckt die Haut davor trotzdem; ohne Angabe gilt `Hautmaske.TIEFE_M`.
+            // Ein Ersatzstück (mit `hautTiefe`) ist starr: kein freier Randstreifen, die Haut fällt bis zu seinem Rand weg
+            // (gemessen 09.10.2026, „cute girl Scham": Strahl allein 111 Punkte, mit Abstandstest 6 mm 353 — die Haut stand
+            // sonst neben und unter dem Stück und flimmerte an den Rändern).
+            const ersatz = !!netz.userData?.hautTiefe;
+            aus.push({ schluessel, punkte: g.attributes.position.array, tiefe: netz.userData?.hautTiefe || undefined,
+                       dreiecke: Hautverdeckung.vollerIndex(g), starr: ersatz || Hautverdeckung.starr(schluessel),
+                       nahe: ersatz ? Hautverdeckung.NAHE_ERSATZ_M : undefined, ersatz });
         }
         return aus;
     }
@@ -116,11 +135,28 @@ export class Hautverdeckung extends Figurhaut {
         return schluessel === 'gc_schuh';
     }
 
-    /** Ohne `art` (GarmentCode, MakeHuman, UMA) wie bisher; mit `art` nur `kleidung`. */
+    /** Ohne `art` (GarmentCode, MakeHuman, UMA) wie bisher; mit `art` nur `kleidung`.
+     *
+     * AUSGEBLENDET = VERDECKT NICHTS (Edgar, 08.10.2026, mit Bild: „du hast keine Formen für die Schamlippen, den Hügel"): Die
+     * Schalter „Kleidung aus" und „Stück ausblenden" setzen nur `visible = false`; die Maske blieb, die Haut unter dem Hosenbund
+     * stand weiter unter dem Stoff (`Hauteinzug`) — Hügel und Schamlippen waren flach, rot gesäumt, zerrissen. Gesehen im
+     * Chrome: Hose `visible: false`, `hautVerdeckt` gesetzt. Seither zählt nur, was sichtbar ist, und `menubar.js` meldet jede
+     * Änderung (`sichtbarkeit`). */
     static zaehlt(netz) {
+        if (netz?.visible === false) return false;
         const art = netz?.userData?.art;
+        // Ein Stück, das Teile der Figur ERSETZT (Originalaugen, `Genesis9ersatz`), sitzt IN der Figur — es verdeckt keine Haut.
+        if (netz?.userData?.ersetzt?.length) return false;
         return !art || art === 'kleidung';
     }
+
+    /** Stücke wurden ein- oder ausgeblendet (`visible`): die Maske gilt nur für die sichtbaren — neu rechnen. */
+    static sichtbarkeit(inst) {
+        Hautverdeckung.planen(inst);
+    }
+
+    /** So nah (m) am Rand eines Ersatzstücks fällt die Haut weg — etwa ein Körperpunktabstand der Stufe 1 (4 mm). */
+    static NAHE_ERSATZ_M = 0.006;
 
     /** Ruhezeit nach der letzten Meldung; `_ausstehend`: inst -> Zeitgeber. */
     static RUHE_MS = 400;

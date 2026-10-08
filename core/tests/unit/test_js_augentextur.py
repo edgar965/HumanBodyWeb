@@ -24,10 +24,12 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('gemeinsam', 'augentextur.js')
+# Einstieg ist koerperdetails.js: Webmodul kopiert nur, was sich vom Einstieg aus importieren lässt, und Koerperdetails zieht beide Module
+# (Augentextur, Hautporen) mit — vom Prüfmodul aus war es nicht erreichbar (ERR_MODULE_NOT_FOUND).
+MODUL = Jsmodul('gemeinsam', 'koerperdetails.js')
 
 SKRIPT = """
-const { Augentextur: A } = await import(MODUL);
+const { Augentextur: A } = await import(new URL('./augentextur.js', MODUL).href);
 const rund = (x) => Math.round(x * 1000) / 1000;
 
 // 1. UV: zwei Augen (x < 0 und x > 0), je 4 Irisecken (Radius 5 mm) und 4 Skleraecken (Radius 15 mm); die Iris-Aussenecken sind zugleich Skleraecken (geteilt).
@@ -96,7 +98,7 @@ pruefe('lauf ueberholt', await alt, false);
 pruefe('bleibt ohne', [m.material[4].map, m.material[6].map], [null, null]);
 
 // 6. Liste und Koerperdetails
-const { Koerperdetails: K } = await import(new URL('./koerperdetails.js', MODUL).href);
+const { Koerperdetails: K } = await import(MODUL);
 const d = K.aus({ details: { augen_textur: 'gruen', augen_relief: 5 } });
 pruefe('aus: gueltig, geklemmt', [d.augen_textur, d.augen_relief], ['gruen', 1]);
 pruefe('aus: unbekannt', K.aus({ details: { augen_textur: 'violett' } }).augen_textur, '');

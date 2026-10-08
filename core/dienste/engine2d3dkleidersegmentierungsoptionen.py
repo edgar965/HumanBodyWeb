@@ -110,7 +110,7 @@ class Engine2d3dKleidersegmentierungsoptionen:
                     aus[e['schluessel']] = str(wert)
             elif e['art'] == 'zahl':
                 try:
-                    zahl = min(e['max'], max(e['min'], float(wert)))
+                    zahl = float(min(e['max'], max(e['min'], float(wert))))     # `float`: an einer ganzzahligen Grenze (max 2) bliebe sonst ein int übrig
                 except (TypeError, ValueError):
                     continue
                 aus[e['schluessel']] = int(round(zahl)) if isinstance(e['schritt'], int) and isinstance(e['vorgabe'], int) else round(zahl, 3)

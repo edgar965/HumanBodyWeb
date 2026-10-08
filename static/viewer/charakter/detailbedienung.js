@@ -1,3 +1,5 @@
+import { Augentextur } from '../gemeinsam/augentextur.js';
+import { Genesis9augen } from '../gemeinsam/genesis9augen.js';
 import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import { Morphliste } from '../gemeinsam/morphliste.js';
 import { Brauenvorlagen } from '../gemeinsam/brauenvorlagen.js';
@@ -28,6 +30,9 @@ export class Detailbedienung {
     static _neuLaden = null;
     static _verdrahtet = false;
 
+    /** Kennung des Augentextur-Auswahlfelds — Genesis 9 bekommt eine eigene Liste (`_augenOptionenFuellen`). */
+    static AUGENTEXTUR_KENNUNG = 'prop-detail-augen-textur';
+
     /** Die Bereiche mit den Werten der Figur füllen. */
     static fuellen(inst, neuLaden) {
         Detailbedienung._figur = inst;
@@ -43,6 +48,7 @@ export class Detailbedienung {
         for (const [kennung, feld] of Detailbereiche.millimeter()) {
             Detailbedienung._reglerSetzen(kennung, Math.round(inst.details[feld] * 1000), 'mm');
         }
+        Detailbedienung._augenOptionenFuellen(inst);
         for (const [kennung, feld] of Detailbereiche.auswahl()) {
             const wahl = document.getElementById(kennung);
             if (wahl) wahl.value = inst.details[feld] || '';
@@ -59,6 +65,20 @@ export class Detailbedienung {
     static _koerperfarbe(inst) {
         const farbe = Charakterkoerper.materialien(inst)[0]?.color;
         return farbe?.getHexString ? `#${farbe.getHexString()}` : '#d4a574';
+    }
+
+    /**
+     * Die Optionen des Augentextur-Felds je Figurart neu aufbauen: Genesis 9 hat keine
+     * texturlose „nur Farbe"-Darstellung wie HumanBody, dafür eine eigene Augentextur
+     * des Modells — erster Eintrag „Original Augen vom Modell" statt „Keine (Farben)"
+     * (Edgar, 08.10.2026). Baut bei jedem `fuellen` neu, damit ein Figurwechsel innerhalb
+     * derselben Seite die richtige Liste zeigt.
+     */
+    static _augenOptionenFuellen(inst) {
+        const wahl = document.getElementById(Detailbedienung.AUGENTEXTUR_KENNUNG);
+        if (!wahl) return;
+        const liste = inst.quelle === 'genesis9' ? Genesis9augen.WAHL : Augentextur.WAHL;
+        wahl.innerHTML = liste.map(([wert, text]) => `<option value="${wert}">${text}</option>`).join('');
     }
 
     static _reglerSetzen(kennung, wert, einheit) {

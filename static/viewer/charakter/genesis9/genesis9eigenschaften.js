@@ -114,6 +114,19 @@ export class Genesis9eigenschaften {
         return { wert: gestellt ? eigen : (regler.vorgabe ?? 0), gesteuert: false };
     }
 
+    /**
+     * Der Bereich des Schiebers: Dazʼ Grenzen — steht der Wert darüber (Spielraum, 08.10.2026: die Anpassung an ein Netz darf Formregler bis ×2
+     * stellen, `weit_min`/`weit_max` im Plan), reicht der Schieber bis zum Spielraum, sonst bis zum Wert. Edgar: „der schieber soll auch höhere
+     * Werte anzeigen können, wenn du höhere hast".
+     */
+    static bereich(regler, wert) {
+        let unten = regler.min;
+        let oben = regler.max;
+        if (wert > oben) oben = Math.max(wert, regler.weit_max ?? wert);
+        if (wert < unten) unten = Math.min(wert, regler.weit_min ?? wert);
+        return { unten, oben };
+    }
+
     /** Nach einem Lauf die gesteuerten Schieber auf den neuen wirksamen Wert. */
     static nachziehen(inst, plan) {
         const alle = (plan?.bereiche || []).flatMap(b => b.regler || []);
@@ -121,6 +134,9 @@ export class Genesis9eigenschaften {
             const schieber = document.getElementById(`g9-${regler.name}`);
             if (!schieber || schieber === document.activeElement) continue;
             const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
+            const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
+            if (parseFloat(schieber.min) !== unten) schieber.min = unten;
+            if (parseFloat(schieber.max) !== oben) schieber.max = oben;
             if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;
             schieber.value = wert;
             const anzeige = schieber.parentElement?.querySelector('.slider-value');
@@ -150,11 +166,7 @@ export class Genesis9eigenschaften {
             inst.haut || '',
             wert => Genesis9lauf.planen(inst, () => inst.hautSetzen(wert),
                                         () => Genesis9eigenschaften._kopf(inst), 'haut')));
-        behaelter.appendChild(Genesis9eigenschaften._wahl('Augen',
-            (plan.augen || []).map(a => ({ id: a.id, name: a.name })),
-            inst.augen || '01',
-            wert => Genesis9lauf.planen(inst, () => inst.augenSetzen(wert),
-                                        () => Genesis9eigenschaften._kopf(inst), 'augen')));
+        behaelter.appendChild(Genesis9eigenschaften._augenWahl(inst, plan));
         Genesis9eigenschaften._brauen(inst, plan, behaelter);
         // Wimpern, Nagellack und Schminke (18.09.2026): je Kategorie ein Preset
         // aus den Charakterordnern und dem Daz-Makeup-System (`Genesis9/schminke.py`).
@@ -166,6 +178,29 @@ export class Genesis9eigenschaften {
                     () => inst.praesetSetzen(kategorie.kategorie, wert),
                     () => Genesis9eigenschaften._kopf(inst), `praeset:${kategorie.kategorie}`)));
         }
+    }
+
+    /** Sentinel im Augen-Dropdown für „Original Augen vom Modell" — nie an den Server
+     *  gesendet (`Genesis9Modell.augenOriginalSetzen`), siehe `genesis9fototextur.js`. */
+    static AUGEN_ORIGINAL = '__original__';
+
+    /**
+     * Das Augen-Dropdown. Trägt das Modell eine eigene Augen-Fotokachel
+     * (`inst.fototextur.augen`, Mesh-to-3D-/Blender-Import), steht „Original Augen vom
+     * Modell" als ERSTER Eintrag da (Edgar, 08.10.2026: „als erster Eintrag sollen die
+     * Original Augen vom Modell erscheinen") — vorausgewählt, solange der Nutzer noch
+     * kein Preset aus der Toolbar gewählt hat (`!inst._augenGewaehlt`). Ohne eigene Kachel
+     * (Katalogfigur) bleibt die Liste wie bisher, reine Daz-Presets.
+     */
+    static _augenWahl(inst, plan) {
+        const eintraege = (plan.augen || []).map(a => ({ id: a.id, name: a.name }));
+        const hatKachel = !!inst.fototextur?.augen;
+        if (hatKachel) eintraege.unshift({ id: Genesis9eigenschaften.AUGEN_ORIGINAL, name: 'Original Augen vom Modell' });
+        const gewaehlt = hatKachel && !inst._augenGewaehlt ? Genesis9eigenschaften.AUGEN_ORIGINAL : (inst.augen || '01');
+        return Genesis9eigenschaften._wahl('Augen', eintraege, gewaehlt,
+            wert => Genesis9lauf.planen(inst,
+                () => wert === Genesis9eigenschaften.AUGEN_ORIGINAL ? inst.augenOriginalSetzen() : inst.augenSetzen(wert),
+                () => Genesis9eigenschaften._kopf(inst), 'augen'));
     }
 
     /**
@@ -267,10 +302,11 @@ export class Genesis9eigenschaften {
         const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
         const kennung = `g9-${regler.name}`;
         const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : regler.name;
+        const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
         zeile.innerHTML = `
             <label for="${kennung}" title="${escapeHtml(titel)}">${
                 escapeHtml(regler.anzeige)}</label>
-            <input type="range" id="${kennung}" min="${regler.min}" max="${regler.max}"
+            <input type="range" id="${kennung}" min="${unten}" max="${oben}"
                    step="0.01" value="${wert}" data-regler="${escapeHtml(regler.name)}">
             <span class="slider-value">${Genesis9eigenschaften.text(wert, gesteuert)}</span>`;
         const schieber = zeile.querySelector('input');

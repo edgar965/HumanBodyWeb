@@ -25,6 +25,7 @@ import { Engine2d3dKleidernetzansicht } from './engine2d3dkleidernetzansicht.js'
 import { Engine2d3dKleiderrender } from './engine2d3dkleiderrender.js';
 import { Engine2d3dKleidersegmentierung } from './engine2d3dkleidersegmentierung.js';
 import { Engine2d3dKleiderstuecke } from './engine2d3dkleiderstuecke.js';
+import { Engine2d3dKleidersystemspeichern } from './engine2d3dkleidersystemspeichern.js';
 import { Engine2d3dKleidervorbereitung } from './engine2d3dkleidervorbereitung.js';
 import { Engine2d3dKleiderveraltet } from './engine2d3dkleiderveraltet.js';
 
@@ -131,6 +132,7 @@ export class Engine2d3dKleiderseite {
         this.kleidung = new Meshfigurkleidung(this);
         this.frisur = new Meshfigurfrisur();
         this.speicher = new Meshfigurspeicher(this);
+        this.systemspeicher = new Engine2d3dKleidersystemspeichern(this);
         this.zeigen();
         this.verfolgen();
         this.reiterFertig(); // ein Klick auf einen Reiter, der kam, bevor die Seite fertig war, wartet nicht länger
@@ -256,6 +258,7 @@ export class Engine2d3dKleiderseite {
         this.animexport.zeigen(z);
         this.render.zeigen(z);
         this.speicher.zeigen(z);
+        this.systemspeicher.zeigen(z);
     }
 
     /** Reiter „Auftrag" / „Iterationen" gewechselt (die Felder hat `Seitenreiter` schon umgeschaltet): bei „Iterationen" den Zustand

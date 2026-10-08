@@ -37,6 +37,7 @@ __all__ = ['Meshfigurregler']
 
 class Meshfigurregler:
     SATZ = 'charaktere'
+    SATZ_REGIONEN = 'regionen'
     GRUNDFIGUREN = {
         'feminine': {'BaseFeminine_figure_ctrl_Character': 1.0},
         'masculine': {'BaseMasculine_figure_ctrl_Character': 1.0},
@@ -91,7 +92,12 @@ class Meshfigurregler:
     #: Kleinere Werte werden 0 (wie `G9formanpassung.NULL_UNTER`).
     NULL_UNTER = 0.005
 
-    def __init__(self, grund, gesperrt=None):
+    def __init__(self, grund, gesperrt=None, satz=None, spielraum=1.0):
+        #: Der Reglersatz der Ableitung: `charaktere` oder `regionen` (dazu die Regionen-Regler, `G9koerperregionen`, Option `koerper.regionen`).
+        self.satz = satz or self.SATZ
+        #: Faktor auf Dazʼ Grenze für die Körperregler mit Spielraum (`G9reglergrenzen`, Option `koerper.spielraum`): 1 = wie Daz, höchstens `SPIELRAUM`.
+        self.spielraum = max(1.0, float(spielraum or 1.0))
+        self._grenzen_gemerkt = {}
         #: Die Grundfigur (`GRUNDFIGUREN[...]`) — Ort der Ableitung und Ziel der Dämpfung.
         self.grund = dict(grund or {})
         #: Marken gesperrter Regler (`sperrmarken`): Testfall „blind" — die Charakterregler der
@@ -155,25 +161,46 @@ class Meshfigurregler:
     def ableitung(self, teil):
         from Genesis9.reglerableitung import G9reglerableitung
 
-        return G9reglerableitung.holen(self.SATZ, self.grund, teil=teil)
+        return G9reglerableitung.holen(self.satz, self.grund, teil=teil)
+
+    def grenzen(self, teil):
+        """(K, 2) Grenzen der Variablen von `teil`: Dazʼ Grenzen, bei Reglern mit Spielraum (`weit_max` im Plan) × `spielraum`."""
+        a = self.ableitung(teil)
+        if self.spielraum <= 1.0:
+            return a.grenzen
+        if teil not in self._grenzen_gemerkt:
+            from Genesis9.reglerableitung import G9reglerableitung
+            from Genesis9.reglergrenzen import G9reglergrenzen
+
+            faktor = min(self.spielraum, G9reglergrenzen.SPIELRAUM)
+            plan = {r['name']: r for r in G9reglerableitung.regler(self.satz, teil=teil)}
+            g = np.array(a.grenzen, dtype=np.float64)
+            for i, v in enumerate(a.namen):
+                r = plan.get(a.paare[v][0])
+                # Nur die Körperbereiche (Stufe 3: Hals, Arme, Beine, Gesäß …) — Körpertypen und Charaktere auf 200 % wären ein anderer Körper, und das Tor soll genau das melden.
+                if r is not None and 'weit_max' in r and self.stufe_fuer(v, r.get('bereich'), teil) == 3:
+                    g[i] *= faktor
+            self._grenzen_gemerkt[teil] = g
+        return self._grenzen_gemerkt[teil]
 
     def daten(self, teil, stellung):
         """Begleitdaten der Ableitung von `teil` für die Stellung dieser Runde."""
         from Genesis9.reglerableitung import G9reglerableitung
 
         a = self.ableitung(teil)
-        bereich = {r['name']: r.get('bereich') for r in G9reglerableitung.regler(self.SATZ, teil=teil)}
+        g = self.grenzen(teil)
+        bereich = {r['name']: r.get('bereich') for r in G9reglerableitung.regler(self.satz, teil=teil)}
         jetzt = np.array([float(stellung.get(a.paare[v][0], 0.0)) for v in a.namen])
         grund = np.array([float(self.grund.get(a.paare[v][0], 0.0)) for v in a.namen])
         stufen = np.array([self.stufe_fuer(v, bereich.get(a.paare[v][0]), teil) for v in a.namen], np.int64)
         return {
-            'quelle': np.array(str(G9reglerableitung.ablagepfad(self.SATZ, self.grund, teil))),
+            'quelle': np.array(str(G9reglerableitung.ablagepfad(self.satz, self.grund, teil))),
             'namen': np.array(a.namen),
             'jetzt': jetzt.astype(np.float32),
             'grund': grund.astype(np.float32),
             'stufe': stufen,
-            'unten': (a.grenzen[:, 0] - jetzt).astype(np.float32),
-            'oben': (a.grenzen[:, 1] - jetzt).astype(np.float32),
+            'unten': (g[:, 0] - jetzt).astype(np.float32),
+            'oben': (g[:, 1] - jetzt).astype(np.float32),
         }
 
     def speichern(self, pfad, teil, stellung):
@@ -187,11 +214,12 @@ class Meshfigurregler:
         """Die neue Reglerstellung: `alt` plus die Werte der Variablen von `teil` (Paare auf
         beide Seiten), auf die Grenzen geklemmt, Kleinstwerte auf 0."""
         a = self.ableitung(teil)
+        g = self.grenzen(teil)
         aus = dict(alt)
         for i, v in enumerate(a.namen):
             if v not in werte:
                 continue
-            wert = float(np.clip(werte[v], a.grenzen[i, 0], a.grenzen[i, 1]))
+            wert = float(np.clip(werte[v], g[i, 0], g[i, 1]))
             for r in a.paare[v]:
                 if abs(wert) < self.NULL_UNTER:
                     aus.pop(r, None)

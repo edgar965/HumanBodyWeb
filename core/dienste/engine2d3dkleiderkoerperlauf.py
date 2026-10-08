@@ -45,6 +45,10 @@ class Engine2d3dKleiderkoerperlauf(Meshfigurlauf):
         self.zusatz = {'naht': ((koerperoptionen or {}).get('naht') or 'an') != 'aus'}
         # Option `koerper.landmarkmorphe` (07.10.2026): Augen-, Mund- und Nasenmorph aus den Landmarken (`Meshfigurlandmarkmorphe`) — `Meshfigurende.rest` ruft `landmarkmorphe`.
         self.landmarkmorphe_an = ((koerperoptionen or {}).get('landmarkmorphe') or 'an') != 'aus'
+        # Option `koerper.regionen` (08.10.2026): Regionen-Regler (`G9koerperregionen`) im Reglersatz der Körperstufe — `Meshfigurkette._regler` liest es.
+        self.regionen_an = (koerperoptionen or {}).get('regionen') == 'an'
+        # Option `koerper.spielraum` (08.10.2026): Faktor auf Dazʼ Grenze für die Körperregler (`Meshfigurregler.grenzen`, `G9reglergrenzen.SPIELRAUM`).
+        self.spielraum = {'150': 1.5, '200': 2.0}.get((koerperoptionen or {}).get('spielraum'), 1.0)
         self._von, self._bis = 0.0, 1.0
         self._letzte_db = 0.0
         self.Angehalten = aussen.Angehalten

@@ -40,7 +40,7 @@ class DieKopffarbe(SimpleTestCase):
         befund = dict(KOPF, teile={'herrenhaar_0': teil})
 
         class _Modell:
-            BILD = 'bild'
+            BILD = 'bild.'                     # wie `ModellTextur.BILD`: der Schlüssel der Grauschicht ist '<Frisur>.bild.grau' (ohne den Punkt fiele die Regel auf „erst umfärben" zurück)
             SORTE = 'sorte.'
             haar = {'sorte.herrenhaar': 1.0, 'herrenhaar.bild.grau': 1.0}
             farben = {'haar': '#484848'}

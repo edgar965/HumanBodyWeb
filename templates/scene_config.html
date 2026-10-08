@@ -1144,6 +1144,7 @@
                 </select>
 
                 <!-- Key Light -->
+                <!-- Werte 08.10.2026: gemessen aus „cute girl 5.0.blend" (`charakter/state.js LIGHT_PRESETS.studio`) -->
                 <div class="light-group">
                     <div class="light-group-title">Key Light</div>
                     {% regler "key-intensity" "Intensität" max="500" wert="300" schritt="10" anzeige="3.0" %}
@@ -1151,35 +1152,35 @@
                         <label>Farbe</label>
                         <input type="color" id="key-color" value="#ffffff">
                     </div>
-                    {% regler "key-pos-x" "Pos X" min="-100" max="100" wert="20" anzeige="2.0" %}
-                    {% regler "key-pos-y" "Pos Y" min="-100" max="100" wert="40" anzeige="4.0" %}
-                    {% regler "key-pos-z" "Pos Z" min="-100" max="100" wert="-50" anzeige="-5.0" %}
+                    {% regler "key-pos-x" "Pos X" min="-100" max="100" wert="4" anzeige="0.4" %}
+                    {% regler "key-pos-y" "Pos Y" min="-100" max="100" wert="16" anzeige="1.6" %}
+                    {% regler "key-pos-z" "Pos Z" min="-100" max="100" wert="65" anzeige="6.5" %}
                 </div>
 
                 <!-- Fill Light -->
                 <div class="light-group">
                     <div class="light-group-title">Fill Light</div>
-                    {% regler "fill-intensity" "Intensität" max="500" wert="200" schritt="10" anzeige="2.0" %}
+                    {% regler "fill-intensity" "Intensität" max="500" wert="38" schritt="10" anzeige="0.4" %}
                     <div class="slider-row">
                         <label>Farbe</label>
-                        <input type="color" id="fill-color" value="#eeeeff">
+                        <input type="color" id="fill-color" value="#ffffff">
                     </div>
-                    {% regler "fill-pos-x" "Pos X" min="-100" max="100" wert="-30" anzeige="-3.0" %}
-                    {% regler "fill-pos-y" "Pos Y" min="-100" max="100" wert="30" anzeige="3.0" %}
-                    {% regler "fill-pos-z" "Pos Z" min="-100" max="100" wert="-40" anzeige="-4.0" %}
+                    {% regler "fill-pos-x" "Pos X" min="-100" max="100" wert="61" anzeige="6.1" %}
+                    {% regler "fill-pos-y" "Pos Y" min="-100" max="100" wert="-9" anzeige="-0.9" %}
+                    {% regler "fill-pos-z" "Pos Z" min="-100" max="100" wert="-25" anzeige="-2.5" %}
                 </div>
 
                 <!-- Back Light -->
                 <div class="light-group">
                     <div class="light-group-title">Back Light</div>
-                    {% regler "back-intensity" "Intensität" max="500" wert="250" schritt="10" anzeige="2.5" %}
+                    {% regler "back-intensity" "Intensität" max="500" wert="75" schritt="10" anzeige="0.8" %}
                     <div class="slider-row">
                         <label>Farbe</label>
-                        <input type="color" id="back-color" value="#ffeedd">
+                        <input type="color" id="back-color" value="#ffffff">
                     </div>
-                    {% regler "back-pos-x" "Pos X" min="-100" max="100" wert="0" anzeige="0.0" %}
-                    {% regler "back-pos-y" "Pos Y" min="-100" max="100" wert="40" anzeige="4.0" %}
-                    {% regler "back-pos-z" "Pos Z" min="-100" max="100" wert="50" anzeige="5.0" %}
+                    {% regler "back-pos-x" "Pos X" min="-100" max="100" wert="23" anzeige="2.3" %}
+                    {% regler "back-pos-y" "Pos Y" min="-100" max="100" wert="8" anzeige="0.8" %}
+                    {% regler "back-pos-z" "Pos Z" min="-100" max="100" wert="-63" anzeige="-6.3" %}
                 </div>
 
                 <!-- Ambient -->
@@ -2159,7 +2160,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-{% include "_importmap.html" with subdivide=1 %}
+{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
 {# Eine Anfrage statt 230; abschaltbar unter Einstellungen -> Szene. Der Einstieg ist 'viewer/charakter/main.js' (Buendel: core/dienste/modulbuendel.py) — der Name steht hier, damit ein Pruefer den Weg von der Vorlage aus findet. #}
 <script type="module" src="{% szenenskript %}"></script>
 <script>

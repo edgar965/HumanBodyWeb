@@ -221,8 +221,30 @@ export class Genesis9garderobe {
     /** Je Stück ein Wunsch (`stueck:<kennung>`): zwei Häkchen kurz hintereinander kommen beide an. */
     static _anziehen(inst, kennung, werte) {
         Genesis9lauf.planen(inst,
-            () => Dazkleidung.anziehenAuf(inst, kennung, werte),
+            () => Dazkleidung.anziehenAuf(inst, kennung, werte)
+                .catch(fehler => Genesis9garderobe._misslungen(inst, kennung, fehler)),
             () => fn.updateVertexCount?.(), `stueck:${kennung}`);
+    }
+
+    /**
+     * Das Stück kam nicht an (Server nicht erreichbar, Fehlerantwort). `anziehen` trägt die Wahl schon
+     * VOR der Antwort ein: ohne Rücknahme stünde das Häkchen weiter da, ohne Stück in der Szene, und
+     * jeder spätere Neubau (Regler, Speichern) trüge den Wunsch mit (Edgar, 08.10.2026: „T-Shirt
+     * hinzugefügt – funktioniert nicht"; der Fehler stand nur im Kopf des Modell-Reiters, nicht dort,
+     * wo er hakte). Steht von dem Stück schon ein Netz in der Szene (Variantenwechsel), bleibt der Eintrag.
+     */
+    static async _misslungen(inst, kennung, fehler) {
+        const imBild = Object.keys(inst.clothMeshes || {}).some(
+            schluessel => schluessel.startsWith(`${kennung}/`)
+                || schluessel.startsWith(`${Dazkleidung.PRAEFIX}${kennung}/`));
+        if (!imBild) delete Dazkleidung.kleidung(inst)[kennung];
+        const name = await Genesis9kleidung.anzeigename(kennung);
+        await Genesis9garderobe.aktualisieren(inst);
+        const hinweis = document.createElement('div');
+        hinweis.className = 'fehlertext';
+        hinweis.textContent = `„${name}" kam nicht an (${fehler.message}) — bitte noch einmal anhaken.`;
+        document.getElementById(Genesis9garderobe.BEREICH)?.prepend(hinweis);
+        throw fehler;       // `Genesis9lauf` meldet es zusätzlich im Kopf und lässt den Stand unmarkiert
     }
 
     static _ausziehen(inst, kennung) {

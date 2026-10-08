@@ -80,17 +80,38 @@ class BlendimportquelleTest(SimpleTestCase):
         with self.assertRaises(ValueError):
             Blendimportquelle(self.pfad).datei()
 
+    def test_6_eigener_name_kommt_aus_dem_textfeld_und_verliert_sonderzeichen(self):
+        self._dateien('cute girl 5.0.blend')
+        self.assertEqual(Blendimportquelle(self.pfad, 'eigen', '  Mila  ').name(), 'Mila')
+        self.assertEqual(Blendimportquelle(self.pfad, 'eigen', 'Mila <3>/x\\y').name(), 'Mila 3xy')
+        self.assertEqual(Blendimportquelle(self.pfad, 'eigen', 'Mila   Zwei').name(), 'Mila Zwei')
+        self.assertEqual(Blendimportquelle(self.pfad, 'eigen', 'a' * 100).name(), 'a' * Blendimportquelle.NAME_MAX)
+        self.assertEqual(Blendimportquelle(self.pfad, 'eigen', 'Mila').steckbrief()['name'], 'Mila')
+
+    def test_7_eigener_name_ohne_brauchbaren_text_ist_ein_fehler(self):
+        self._dateien('cute girl 5.0.blend')
+        for text in ('', '   ', '***/\\<>'):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                Blendimportquelle(self.pfad, 'eigen', text).name()
+
+    def test_8_der_text_des_namensfelds_gilt_nur_bei_der_wahl_eigener_name(self):
+        self._dateien('cute girl 5.0.blend')
+        self.assertEqual(Blendimportquelle(self.pfad, 'ordner', 'Mila').name(), 'cute girl')
+        self.assertEqual(Blendimportquelle(self.pfad, 'datei', 'Mila').name(), 'cute girl')
+
 
 class BlendimporteinstellungenTest(SimpleTestCase):
     databases = set()
 
     def test_1_vorgaben_sind_die_entscheidungen(self):
         werte = Blendimporteinstellungen.pruefen({})
+        # Edgar (08.10.2026): „default für Import: Höchste Auflösung" — gespeichert UND im Browser 8192 px.
         self.assertEqual(werte['kachel_px'], '8192')
-        self.assertEqual(werte['browser_px'], '2048')
+        self.assertEqual(werte['browser_px'], '8192')
         self.assertEqual(werte['umposen'], 'rig')
-        self.assertEqual(werte['augen'], 'original')
+        self.assertEqual(werte['augen'], 'objekt', 'Edgar 08.10.2026: „die augen hast du nicht importiert (als extra objekt)"')
         self.assertEqual(werte['name'], 'ordner')
+        self.assertEqual(werte['eigener_name'], '')
 
     def test_2_unbekanntes_faellt_auf_die_vorgabe(self):
         werte = Blendimporteinstellungen.pruefen({'kachel_px': '123', 'umposen': 'x', 'pfad': ' "A:\\x" '})
@@ -100,6 +121,21 @@ class BlendimporteinstellungenTest(SimpleTestCase):
 
     def test_3_der_katalog_fuer_den_dialog_ist_json(self):
         json.dumps(Blendimporteinstellungen.katalog())
+
+    def test_4_eigener_name_ist_eine_wahl_mit_textfeld_das_nur_dazu_gehoert(self):
+        werte = Blendimporteinstellungen.pruefen({'name': 'eigen', 'eigener_name': ' "Mila" '})
+        self.assertEqual((werte['name'], werte['eigener_name']), ('eigen', 'Mila'))
+        self.assertEqual(Blendimporteinstellungen.pruefen({'name': 'unbekannt'})['name'], 'ordner')
+        optionen = {o['schluessel']: o for o in Blendimporteinstellungen.katalog()['optionen']}
+        self.assertIn('eigen', [w['wert'] for w in optionen['name']['werte']])
+        self.assertEqual(optionen['eigener_name']['nur_wenn'], {'name': 'eigen'})
+        self.assertTrue(optionen['eigener_name']['platzhalter'])
+
+    def test_5_beide_stufenlisten_enden_bei_der_hoechsten_aufloesung(self):
+        stufen = [w for w, _ in Blendimporteinstellungen.eintrag('browser_px')['werte']]
+        self.assertEqual(stufen[-1], '8192')
+        gespeichert = [w for w, _ in Blendimporteinstellungen.eintrag('kachel_px')['werte']]
+        self.assertEqual(gespeichert[-1], '8192', 'die höchste gespeicherte Auflösung ist die des Originals')
 
 
 class KnochenkarteTest(SimpleTestCase):

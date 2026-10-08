@@ -92,9 +92,19 @@ class OberflaechenbindungJsTest(SimpleTestCase):
         text = quelltext('gemeinsam', 'oberflaechenbindung.js')
         self.assertIn('Oberflaechenbindung._passt(inst, bindung)', text)
         self.assertIn('if ((inst.stufen || 0) !== bindung.stufen) return false;', text)
-        self.assertIn('if (material.userData.oberflaeche) return;', text)
+        self.assertIn('if (Shaderpatch.hat(material, Oberflaechenbindung.SCHLUESSEL)) return;', text)
         self.assertIn("if (!b || !geo?.attributes?.position || teil.stoff) return false;", text,
                       'Stoffschwung-Stuecke bleiben beim Worker')
+
+    def test_9_uniforms_haengen_am_eingriff_nicht_an_userdata(self):
+        """08.10.2026, Edgar: „Aufnahme fehlgeschlagen: u.uZuKoerper.value.copy is not a function". `Material.clone()` schickt
+        `userData` durch JSON, das Weichgewebe klont jedes Material (`Shaderpatch.klonen`) — der Klon trug die Uniforms als einfache
+        Objekte, `uZuKoerper.value.copy` fehlte. Die Uniforms gehören an die Eingriffsfunktion (`Shaderpatch.eingriff`), die der Klon erbt.
+        Sabotage: `material.userData.oberflaeche = {` wieder einführen → rot."""
+        text = quelltext('gemeinsam', 'oberflaechenbindung.js')
+        self.assertIn('eingriff.uniforms = u;', text)
+        self.assertIn('const u = Shaderpatch.eingriff(m, Oberflaechenbindung.SCHLUESSEL)?.uniforms;', text)
+        self.assertNotIn('userData.oberflaeche', text, 'die Uniforms dürfen nicht an userData hängen (JSON-Kopie beim Klonen)')
 
     def test_4_verdrahtung_auf_allen_seiten(self):
         kleidung = quelltext('gemeinsam', 'genesis9kleidung.js')

@@ -152,6 +152,9 @@ export class Genesis9netz {
     /** Gruppen mit weicher Deckkraft statt Alpha-Schnitt. */
     static WEICH = ['Eyebrows', 'Eyelashes'];
 
+    /** Anisotrope Filterung der Deckkraftkarten mit festem Schnitt (Three kappt auf das Maximum der Grafikkarte). */
+    static ANISOTROPIE = 16;
+
     static material(gruppe) {
         const bilder = gruppe.bilder || {};
         if (!bilder.albedo && Genesis9netz.GLANZ.some(g => gruppe.name.startsWith(g))) {
@@ -180,13 +183,23 @@ export class Genesis9netz {
         if (bilder.durchlicht) Genesis9haut.durchlicht(material, bilder.durchlicht);
         if (bilder.schminke) Genesis9haut.schminke(material);
         // 8K-Detailnormalen (nur mit Strg+Alt+H, `Genesis9/browserbilder.py`) über den Grundnormalen.
-        if (bilder.detailnormalen && bilder.normalen) Genesis9haut.detail(material, bilder.detailgewicht);
+        // Bei eigenen Stücken aus einer .blend (`Blendimportstuecke`) ist es eine KLEINE, gekachelte Gewebenormale
+        // (`detailkachel_u/v` Wiederholungen), die auch in der Ansicht gilt.
+        if (bilder.detailnormalen && bilder.normalen) {
+            Genesis9haut.detail(material, bilder.detailgewicht, bilder.detailkachel_u, bilder.detailkachel_v);
+        }
         if (bilder.alpha) {
             material.side = THREE.DoubleSide;
             if (Genesis9netz.WEICH.some(g => gruppe.name.startsWith(g))) {
                 material.transparent = true;
                 material.alphaTest = 0.02;
                 material.depthWrite = false;
+            } else if (Number.isFinite(bilder.alphaschwelle)) {
+                // Haarkarten mit einzelnen Strähnen (eigenes Stück aus einer .blend, 08.10.2026): ein fester Schnitt statt
+                // Alpha-to-Coverage — im Vergleich mit Blender („viel feiner granular") zeigt er die Strähnen einzeln
+                // statt als flache Bahnen. Das Stück nennt den Schnitt (`Alpha Cutoff`, `Blendimportstuecke`).
+                material.alphaToCoverage = false;
+                material.alphaTest = bilder.alphaschwelle;
             } else {
                 // Haarkarten (Edgar, 20.09.2026: „Kin Haar ist dünn, das sind ja
                 // krebskranke Haare"): Kins Deckkraftbild `HairT.jpg` hat im Mittel
@@ -249,7 +262,14 @@ export class Genesis9netz {
             laden(bilder.detailnormalen, bild => Genesis9haut.detailBild(material, bild));
         }
         if (bilder.alpha) {
-            laden(bilder.alpha, bild => { material.alphaMap = bild; });
+            laden(bilder.alpha, bild => {
+                material.alphaMap = bild;
+                // Feine Strähnen verschwimmen unter flachem Blick (Haarkarten am Hinterkopf): volle anisotrope Filterung.
+                if (Number.isFinite(bilder.alphaschwelle)) {
+                    bild.anisotropy = Genesis9netz.ANISOTROPIE;
+                    bild.needsUpdate = true;
+                }
+            });
         }
         if (bilder.rauheit) {
             laden(bilder.rauheit, bild => {

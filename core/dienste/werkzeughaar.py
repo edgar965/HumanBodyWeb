@@ -219,6 +219,22 @@ class Werkzeughaar:
          "m.haar_gruppen_angleichen('mavick_hair_style', staerke=0.6)",
          [(G + 'modelltextur.py', 'ModellTexturMixin')],
          'Das dunkle Unterhaar der Mavick-Frisur stand an den Seiten schwarz; die Texturschicht heißt grau_gleich. Wert auf 0…1 geklemmt.'),
+
+        ('Haaransatz vorn heben (Herrenhaar)',
+         'Hebt den Haaransatz vorn (Stirn, Schläfenecken) um einige Grad an; die Haarlinie der Haarkappe rückt in der Mitte nach oben und läuft zu den Seiten aus.',
+         'rezept',
+         'm.haar_ansatz(8)',
+         [(G + 'modellhaar.py', 'ModellHaarMixin'), (D + 'haaransatz.py', 'Haaransatz'), (D + 'herrenhaar.py', 'Herrenhaar')],
+         'grad 0…30 (geklemmt); 0 = die Haarlinie aus der Abdeckung des Netzhaars. Wirkt nur beim eigenen Kurzhaar und beim umgebauten Haar (Herrenhaar, Haarumbau), '
+         'nicht auf der Garderobenfrisur — dafür gibt es haar_heben. Der Wert steht in haltung_werte[\'haarlinie\'][\'vorn\'] (Genesis9/modellhaar.py, gelesen 08.10.2026).'),
+
+        ('Länge des Herrenhaars (unten und oben)',
+         'Stellt die Länge der Strähnen des eigenen Kurzhaars in cm: unten an Schläfen und Nacken, oben an der Kopfdecke, dazwischen glatt übergeblendet.',
+         'rezept',
+         'm.haar_laenge(1.2, 2.0)',
+         [(G + 'modellhaar.py', 'ModellHaarMixin'), (D + 'haarlaenge.py', 'Haarlaenge'), (D + 'herrenhaar.py', 'Herrenhaar')],
+         'Je 0,5…8 cm (geklemmt); die Dicke des Haars folgt der Länge. Vorgabe unten 1,2 und oben 2,0 cm (Haarlaenge.UNTEN_CM und OBEN_CM). Wirkt nur beim eigenen Kurzhaar — '
+         'haar_trim und haar_achse erreichen es nicht. Im UI: Optionen iterationen.haar_laenge_unten und haar_laenge_oben (Genesis9/modellhaar.py, gelesen 08.10.2026).'),
     ]
 
     # Klassenmodell: (von, 'ruft', nach, womit)

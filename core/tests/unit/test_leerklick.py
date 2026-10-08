@@ -51,4 +51,7 @@ class DasAbwaehlenBleibtErreichbarTest(SimpleTestCase):
     def test_escape_und_menue_waehlen_weiter_ab(self):
         menue = _lies('charakter', 'menubar.js')
         self.assertIn("case 'deselect': fn.deselectCharacter();", menue)
-        self.assertIn("case 'escape': fn.deselectCharacter();", menue)
+        # Escape löst seit 05.10.2026 JEDE Auswahl (Knochen, Figur, Zeilen, Verschieben, Fokus): `Auswahlaufhebung.alles()` ruft `fn.deselectCharacter` mit auf.
+        self.assertIn("e.key === 'Escape' && !Auswahlaufhebung.schreibtText(e.target)", menue)
+        self.assertIn('Auswahlaufhebung.alles();', menue)
+        self.assertIn('fn.deselectCharacter?.();', _lies('charakter', 'auswahl_aufheben.js'))

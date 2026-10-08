@@ -1,7 +1,8 @@
-import { TransformControls } from './state.js';
+import { TransformControls, LIGHT_PRESETS } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Buehne } from '../gemeinsam/buehne.js';
+import { applyPreset } from './lighting.js';
 
 /**
  * Szenenbuehne — die Bühne der Szene-Seite: der gemeinsame Aufbau aus `Buehne`
@@ -31,6 +32,11 @@ export class Szenenbuehne {
         state.fillLight = teile.fillLight;
         state.backLight = teile.backLight;
         state.ambientLight = teile.ambient;
+        // Standard-Beleuchtung dieser Seite ist „Studio" (Edgar, 08.10.2026) —
+        // nicht `Buehne.LICHTER` (die generischen Werte, die auch Mesh- und
+        // Animationsseite teilen). `fn.loadSettings()` legt später eigene
+        // gespeicherte Werte darüber, falls welche im localStorage stehen.
+        applyPreset(LIGHT_PRESETS.studio);
         this._werkzeug();
         window.addEventListener('resize', () => this.groesseAnpassen());
         return this;

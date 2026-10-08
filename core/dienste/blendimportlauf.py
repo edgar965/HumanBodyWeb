@@ -124,6 +124,10 @@ class Blendimportlauf:
         if self.stand['einstellungen'].get('umposen') != 'rig':
             self.ergebnis('umposen', {'aus': True})
             return
+        if self.inventar().get('ohne_rig'):
+            # Ohne Armatur gibt es nichts, womit sich umposen ließe: Punkte bleiben, wie der Export sie las; „Mesh to 3D" schätzt die Haltung.
+            self.ergebnis('umposen', {'aus': True, 'grund': 'Die Datei hat kein Skelett'})
+            return
         bericht = Blendimportumposen(self.ablage, self.melden).umposen(self.stand['quelle']['datei'])
         self.ergebnis('umposen', bericht)
 
@@ -142,6 +146,31 @@ class Blendimportlauf:
         job = figur.rechnen(job)
         self.ergebnis('figur', {'id': str(job.id), 'kennung': job.kennung, 'regler': len(job.stellung() or {}),
                                 'rest': (job.ergebnis or {}).get('rest', {}).get('regler')})
+        self._nachformung(job)
+
+    def _nachformung(self, job):
+        """Scham (und was `Blendimportnachformung.REGIONEN` sonst nennt) an das Original angleichen; ein Fehler dort
+        beendet den Import nicht — die Figur gilt dann, wie „Mesh to 3D" sie gebaut hat."""
+        from .blendimportnachformung import Blendimportnachformung
+
+        if self.stand['einstellungen'].get('scham') == 'objekt':
+            # Die Scham kommt als Stück (`Blendimportscham`); eine nachgeformte Haut darunter ergäbe sie doppelt
+            # (Edgar, 09.10.2026: „die hat im moment zwei mal Geschlechtsorgane" — facettierte Nachformung + Stück).
+            self.ergebnis('nachformung', {'aus': 'Scham kommt als Stück (Einstellung scham = objekt)'})
+            return
+        try:
+            bericht = Blendimportnachformung(self.ablage, job, self.inventar(), self.stand['rollen'],
+                                             self.stand['quelle']['name'], self.melden).formen()
+        except Exception as fehler:  # noqa: BLE001 — Zusatzschritt: der Import läuft mit der Figur der Anpassung weiter
+            logger.exception('Blender-Import %s: Nachformung gescheitert', self.ablage.kennung)
+            bericht = {'fehler': str(fehler)[:300]}
+        self.ergebnis('nachformung', bericht)
+
+    def zusatzregler(self):
+        """Die neuen Regler der Nachformung (`{eigen:…: 1.0}`), die zur Figur dieses Imports gehören — leer ohne sie."""
+        from .blendimportnachformung import Blendimportnachformung
+
+        return Blendimportnachformung.zusatzregler(self.stand)
 
     def _stuecke(self):
         from .blendimportstuecke import Blendimportstuecke
@@ -150,7 +179,9 @@ class Blendimportlauf:
             self.ergebnis('stuecke', {'aus': True, 'stuecke': {}})
             return
         stuecke, bericht = Blendimportstuecke(self.ablage, self.job(), self.inventar(), self.stand['rollen'],
-                                              self.stand['quelle']['name'], self.melden).bauen()
+                                              self.stand['quelle']['name'], self.melden,
+                                              self.stand['einstellungen'].get('augen'), self.zusatzregler(),
+                                              self.stand['einstellungen'].get('scham')).bauen()
         self.ergebnis('stuecke', {'stuecke': stuecke, 'bericht': bericht})
 
     def _haut(self):
@@ -158,7 +189,8 @@ class Blendimportlauf:
 
         haut = Blendimporthaut(self.ablage, self.job(), self.inventar(), self.stand['rollen'],
                                self.stand['einstellungen']['kachel_px'], self.melden,
-                               self.stand['einstellungen'].get('normalen_grenze'))
+                               self.stand['einstellungen'].get('normalen_grenze'), self.zusatzregler(),
+                               self.stand['einstellungen'].get('normalen_form') or 'weg')
         kacheln, bericht = haut.backen(self.stand['quelle']['datei'])
         self.ergebnis('haut', {**bericht, 'kacheln': kacheln})
 
@@ -167,7 +199,8 @@ class Blendimportlauf:
         from .blendimportaugen import Blendimportaugen
 
         job = self.job()
-        if self.stand['einstellungen'].get('augen') == 'original':
+        # `objekt`: dieselbe Irisübertragung — sie bleibt der Rückfall, wenn jemand das Augen-Stück auszieht.
+        if self.stand['einstellungen'].get('augen') in ('original', 'objekt'):
             e = Blendimportaugen(self.ablage, self.inventar(), self.stand['rollen']).schreiben()
             if e:
                 self.ergebnis('augen', {**e, 'art': 'original', 'pfad': str(self.ablage.ergebnis(e['datei']))})
@@ -181,7 +214,7 @@ class Blendimportlauf:
 
         e = self.stand.get('ergebnis') or {}
         modell = Blendimportmodell(self.ablage, self.job(), self.stand['quelle']['datei'],
-                                   self.stand['einstellungen']['browser_px'])
+                                   self.stand['einstellungen']['browser_px'], self.zusatzregler())
         name = modell.schreiben(self.stand['quelle']['name'], (e.get('haut') or {}).get('kacheln') or {},
                                 (e.get('augen') or {}).get('pfad'), (e.get('stuecke') or {}).get('stuecke') or {})
         self.ergebnis('modell', {'name': name})

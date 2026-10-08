@@ -43,6 +43,7 @@ from Genesis9.material import G9material
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
+from Genesis9.stueckersatz import G9stueckersatz
 
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9haarmischbau import G9haarmischbau
@@ -184,7 +185,12 @@ class G9garderobeapi:
         # Oberflaechenbindung (21.09.2026, Konzept Fitting): nur Kleidung, gegen
         # den REINEN Koerper — die Lagenflaeche traegt die Stuecke darunter,
         # deren Indizes gibt es im Browser nicht.
-        bindung = koerpernetz.bindungsflaeche() if eintrag.get('art') == 'kleidung' else None
+        ersetzt = G9stueckersatz.fuer(eintrag)
+        haut_tiefe = G9stueckersatz.haut_tiefe_fuer(eintrag)
+        # Ein Ersatz-Stück (Originalaugen) sitzt IN der Figur und hängt starr am Kopf: es folgt keiner Oberfläche. Ebenso das
+        # Scham-Stück (Hauttiefe): es liegt hinter der Fläche und hängt starr am Becken (`G9stueckteile.netze`).
+        bindung = (koerpernetz.bindungsflaeche()
+                   if eintrag.get('art') == 'kleidung' and not ersetzt and not haut_tiefe else None)
         # Die Rechnung selbst teilt sich die Antwort seit 24.09.2026 mit dem
         # GarmentCode-Bau auf Genesis 9 (`G9stueckteile`); GarmentCode-Stuecke
         # der Figur liegen mit in der Lagenrechnung (`gc_getragen`).
@@ -227,7 +233,11 @@ class G9garderobeapi:
                 'innen': innen, 'aussen': aussen,
                 # Die Art entscheidet im Browser, ob die Haut darunter
                 # ausgeblendet wird (`Hautverdeckung`, nur `kleidung`).
-                'art': eintrag.get('art')}
+                'art': eintrag.get('art'),
+                # Teile der Figur, die das Stück ersetzt (Originalaugen aus einer .blend, `G9stueckersatz`).
+                'ersetzt': ersetzt,
+                # So tief hinter der Haut das Stück sie noch verdeckt (mm; Scham aus einer .blend), 0 = Vorgabe der Hautmaske.
+                'hautTiefeMm': haut_tiefe}
 
     # -------------------------------------------------------------- Texturen
 

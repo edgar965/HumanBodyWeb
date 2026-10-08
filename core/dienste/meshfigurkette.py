@@ -37,7 +37,10 @@ class Meshfigurkette:
 
             eintrag = G9charaktere.eintrag(self.optionen['referenz']) or {}
             gesperrt = Meshfigurregler.sperrmarken(eintrag.get('regler') or {})
-        return Meshfigurregler(grund, gesperrt)
+        # Option `koerper.regionen` (08.10.2026): die Regionen-Regler (Hals, Unterarm, Handgelenk, Oberschenkel, Unterschenkel, Knöchel) gehören zur Körperstufe — „Mesh to 3D" hat das Attribut nicht und rechnet wie bisher.
+        satz = Meshfigurregler.SATZ_REGIONEN if getattr(self.lauf, 'regionen_an', False) else None
+        # Option `koerper.spielraum` (08.10.2026): die Körperregler dürfen bis ×1,5/×2 über Dazʼ Grenze — „Mesh to 3D" hat das Attribut nicht und klemmt wie bisher bei ±1.
+        return Meshfigurregler(grund, gesperrt, satz, getattr(self.lauf, 'spielraum', 1.0))
 
     def _genesis(self, name, stellung, haltung):
         from .meshfigurgenesis import Meshfigurgenesis
@@ -107,7 +110,14 @@ class Meshfigurkette:
         if pruefung and not pruefung.get('gueltig', True):
             # Option `koerper.tor` (04.10.2026): „melden" lässt die Kette weiterlaufen — ohne ihre späteren Teilschritte (Gesicht, Textur, Vorschau) gäbe es keine Kleiderstücke (`genesis_ende.npz`).
             if getattr(self.lauf, 'tor', 'anhalten') == 'melden':
-                self.job.ergebnis['koerper']['tor'] = {'angehalten': False, 'grund': pruefung.get('grund')}
+                # `anschlag_*`: wie viele Regler am Anschlag stehen, wie viele davon zählen und welche nicht (Zonen mit Gewicht < 1); der Rest nach dem Eigenmorph kommt im Schritt „rest" dazu (`Meshfigurende`).
+                self.job.ergebnis['koerper']['tor'] = {
+                    'angehalten': False,
+                    'grund': pruefung.get('grund'),
+                    'anschlag_zahl': pruefung.get('anschlag_zahl'),
+                    'anschlag_gezaehlt': pruefung.get('anschlag_gezaehlt'),
+                    'anschlag_ausgenommen': pruefung.get('anschlag_ausgenommen') or {},
+                }
                 logger.warning('2D3D Kleider %s: Körper-Tor schlägt an, der Lauf geht weiter (Option „Nur melden"): %s', self.job.kennung, pruefung.get('grund'))
                 return
             self.lauf.sichern('ergebnis')

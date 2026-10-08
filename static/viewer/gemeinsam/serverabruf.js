@@ -26,6 +26,10 @@ import { Netzpaket } from './netzpaket.js';
 
 export class Serverabruf extends ServerabrufBasis {
 
+    /** Versuche je Netzanfrage, wenn die Verbindung abreißt (`_mitWiederholung`) — und die Pause davor, je Versuch mehr. */
+    static NETZ_VERSUCHE = 6;
+    static NETZ_PAUSE_MS = 2000;
+
     /**
      * Eine NETZANTWORT holen — als Binärpaket, wenn der Server es kann.
      *
@@ -55,12 +59,40 @@ export class Serverabruf extends ServerabrufBasis {
 
     static async _netzAbruf(adresse, wahl = undefined) {
         const gewuenscht = { Accept: `${Netzpaket.TYP}, application/json` };
-        const antwort = await fetch(adresse, {
+        const antwort = await Serverabruf._mitWiederholung(adresse, () => fetch(adresse, {
             ...wahl, headers: { ...gewuenscht, ...(wahl?.headers || {}) },
-        });
+        }));
         if (!antwort.ok) throw await ServerabrufBasis._fehler(antwort, adresse);
         if (Netzpaket.erkannt(antwort)) return Netzpaket.lesen(await antwort.arrayBuffer());
         return antwort.json();
+    }
+
+    /**
+     * Reißt die VERBINDUNG ab (`fetch` wirft `TypeError: Failed to fetch`, es gibt keinen Status),
+     * wird die Netzanfrage wiederholt — nach 2, 4, 6, 8 und 10 s, zusammen 30 s. Eine Antwort mit
+     * Fehlerstatus gehört nicht hierher: Sie kommt sofort durch (`_netzAbruf`, `!antwort.ok`).
+     *
+     * Anlass (Edgar, 08.10.2026, „Edgar importiert, T-Shirt hinzugefügt – funktioniert nicht"): Eine
+     * andere Sitzung speicherte `engine2d3dkleiderkoerperoptionen.py`, Djangos Autoreload startete den
+     * Server neu (22:26:57, erste Antwort 22:27:09) — mitten in `POST …/garderobe/g9_base_shirt/netz/`
+     * (`client.log`: `Failed to fetch` nach 2,8 s). Das Stück kam nie. Netzanfragen sind reine
+     * Rechnung ohne Nebenwirkung; ein zweiter Versuch ist gefahrlos. Das Muster ist dasselbe wie beim
+     * Katalog der Garderobe (`Genesis9kleidung.stuecke`, 30.09.2026) und beim Drapieren
+     * (`Antwortnachholen`, 20.09.2026) — dort hat es jeweils einen eigenen Weg bekommen.
+     */
+    static async _mitWiederholung(adresse, abrufen) {
+        for (let versuch = 1; ; versuch += 1) {
+            try {
+                return await abrufen();
+            } catch (fehler) {
+                if (!(fehler instanceof TypeError) || versuch >= Serverabruf.NETZ_VERSUCHE) throw fehler;
+                const pause = Serverabruf.NETZ_PAUSE_MS * versuch;
+                fn.serverLog?.('server_call_retry',
+                    `${adresse} Versuch ${versuch} abgerissen (${fehler.message}) — neuer Versuch in ${pause} ms`,
+                    'warnung');
+                await new Promise(weiter => setTimeout(weiter, pause));
+            }
+        }
     }
 
     static async json(adresse, wahl = undefined) {

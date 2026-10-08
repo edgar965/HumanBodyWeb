@@ -76,12 +76,18 @@ export class Genesis9haut {
         return material;
     }
 
-    /** Die Detailnormalen ankündigen (`gewicht` = Daz' Detail Weight); Bild folgt mit `detailBild`. */
-    static detail(material, gewicht = 1) {
+    /**
+     * Die Detailnormalen ankündigen (`gewicht` = Daz' Detail Weight); Bild folgt mit `detailBild`.
+     * `kachelU/V`: Wiederholungen des Bilds über die UV der Grundnormale (Gewebe einer Bluse aus einer .blend: 75 × 75;
+     * die Hautpresets kacheln nicht → 1).
+     */
+    static detail(material, gewicht = 1, kachelU = 1, kachelV = 1) {
         const zusatz = Genesis9haut._zusatz(material);
+        const kachel = (w) => (Number.isFinite(w) && w >= 1 ? w : 1);
         zusatz.detail = {
             uDetailAn: { value: 0 },
             uDetailGewicht: { value: Number.isFinite(gewicht) ? gewicht : 1 },
+            uDetailKachel: { value: new THREE.Vector2(kachel(kachelU), kachel(kachelV)) },
             uDetailNormalen: { value: Genesis9haut.platzhalter(128, 128, 255) },
         };
         Genesis9haut._einhaengen(material);
@@ -138,6 +144,9 @@ export class Genesis9haut {
     static detailBild(material, bild) {
         const d = material.userData.genesis9?.detail;
         if (!d || !bild) return;
+        // Kachelung: ohne Wiederholung klemmt Three am Rand und das Gewebe wäre nur im ersten Feld da.
+        bild.wrapS = bild.wrapT = THREE.RepeatWrapping;
+        bild.needsUpdate = true;
         d.uDetailNormalen.value = bild;
         d.uDetailAn.value = 1;
     }
@@ -233,7 +242,7 @@ export class Genesis9haut {
                 shader.fragmentShader = shader.fragmentShader
                     .replace('#include <common>',
                              '#include <common>\nuniform float uDetailAn;\n'
-                             + 'uniform float uDetailGewicht;\nuniform sampler2D uDetailNormalen;');
+                             + 'uniform float uDetailGewicht;\nuniform vec2 uDetailKachel;\nuniform sampler2D uDetailNormalen;');
             }
             if (zusatz.schminke) {
                 Object.assign(shader.uniforms, zusatz.schminke);

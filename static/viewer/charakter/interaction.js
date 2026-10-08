@@ -11,6 +11,7 @@ import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _
     clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 import { Schwebeanzeige } from './schwebeanzeige.js';
 import { Trefferwahl } from './trefferwahl.js';
+import { Raycastbeschleunigung } from '../gemeinsam/raycastbeschleunigung.js';
 
 // =========================================================================
 // Canvas click binding
@@ -46,6 +47,7 @@ export function bindCanvasClick() {
             });
         });
 
+        Raycastbeschleunigung.sicherstellen(meshes);
         const hits = state.raycaster.intersectObjects(meshes, false);
         if (hits.length > 0) {
             const charId = hits[0].object.userData._parentCharId;

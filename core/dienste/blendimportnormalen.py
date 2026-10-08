@@ -52,6 +52,46 @@ class Blendimportnormalen:
             maske &= ~leer
         return maske
 
+    #: Gröber als so viele Pixel (bei 8192 px je Kachel) ist FORM, nicht Feindetail — Poren und Haut sind Pixel breit, die
+    #: Formdifferenz zwischen Figur und Original (Brust, Scham, Lippen) reicht über Hunderte.
+    FORM_PX = 24.0
+
+    @classmethod
+    def feindetail(cls, normal, leer=None, sigma_px=None, teiler=4):
+        """Die Karte nur mit ihrem Feindetail (`FORM_PX`): das großflächige Neigungsfeld fällt weg. Die gebackene Karte trägt
+        auch den Unterschied der FORM — wo die Figur vom Original abweicht (gemessen 08.10.2026: Scham, bis 22 mm), kippt sie
+        die Normalen großflächig, und im Licht steht eine Form, die die Fläche nicht hat. `leer` (Fehlstellen) zählt nicht in
+        die Mittelung und bleibt flach; die Eingabe bleibt unverändert."""
+        from scipy import ndimage
+
+        hoehe, breite = normal.shape[:2]
+        if hoehe % teiler or breite % teiler:
+            teiler = 1
+        sigma = (cls.FORM_PX if sigma_px is None else float(sigma_px)) / teiler
+        gueltig = np.ones((hoehe, breite), dtype=np.float32) if leer is None else (~leer).astype(np.float32)
+        x = normal[..., 0].astype(np.float32) / 127.5 - 1.0
+        y = normal[..., 1].astype(np.float32) / 127.5 - 1.0
+        z = np.maximum(normal[..., 2].astype(np.float32) / 127.5 - 1.0, 0.05)
+        tx, ty = x / z, y / z
+
+        def tief(feld):
+            """Gewichtetes Mittel der gültigen Neigung, auf `teiler` verkleinert, geglättet und wieder in voller Größe."""
+            klein = (feld * gueltig).reshape(hoehe // teiler, teiler, breite // teiler, teiler).mean(axis=(1, 3))
+            gewicht = gueltig.reshape(hoehe // teiler, teiler, breite // teiler, teiler).mean(axis=(1, 3))
+            mittel = ndimage.gaussian_filter(klein, sigma) / np.maximum(ndimage.gaussian_filter(gewicht, sigma), 1e-3)
+            return ndimage.zoom(mittel, teiler, order=1) if teiler > 1 else mittel
+
+        hx = (tx - tief(tx)) * gueltig
+        hy = (ty - tief(ty)) * gueltig
+        laenge = np.sqrt(hx * hx + hy * hy + 1.0)
+        neu = normal.copy()
+        for kanal, wert in enumerate((hx / laenge, hy / laenge, 1.0 / laenge)):
+            kodiert = np.clip(np.rint((wert + 1.0) * 127.5), 0, 255).astype(normal.dtype)
+            if leer is not None:
+                kodiert[leer] = cls.FLACH[kanal]
+            neu[..., kanal] = kodiert
+        return neu
+
     @classmethod
     def saeubern(cls, normal, leer=None, grad=None):
         """`(neue Karte, Anteil der geänderten Texel in %)` — `normal` (H, W, 3) uint8; ändert die Eingabe nicht."""

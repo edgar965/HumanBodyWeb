@@ -271,7 +271,8 @@ class DasHaar(SimpleTestCase):
         self.assertFalse(haar[10:15].any())                                           # die Farbe sah Haar, Sapiens sieht dort Haut → weg
         self.assertTrue(haar[30:35].all())                                            # kein Foto sieht sie → die Farbe gilt
         self.assertTrue(bericht['verwendet'])
-        self.assertEqual((bericht['hinzu_flaechen'], bericht['weg_flaechen']), (int((haar & ~self._maske()['haar']).sum()), 5))
+        # weg: 10–14 (Sapiens sieht dort Haut) und 7 (die Bartzone — die Farbe nannte sie Haar, Sapiens darf es nicht)
+        self.assertEqual((bericht['hinzu_flaechen'], bericht['weg_flaechen']), (int((haar & ~self._maske()['haar']).sum()), 6))
 
     def test_beide_ist_die_vereinigung(self):
         with Pruefablage.ordner() as ordner:

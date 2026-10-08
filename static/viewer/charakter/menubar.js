@@ -9,6 +9,7 @@ import { Auswahlaufhebung } from './auswahl_aufheben.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Ursprungsfix } from './ursprungsfix.js';
+import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 
 export function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -159,6 +160,7 @@ export function bindVisibilityToggles() {
             state.characters.forEach(inst => {
                 for (const m of Object.values(inst.clothMeshes)) { if (m) m.visible = state.clothesVisible; }
                 if (inst.hairMesh) inst.hairMesh.visible = state.clothesVisible;
+                Hautverdeckung.sichtbarkeit(inst);      // ausgeblendeter Stoff verdeckt die Haut nicht
             });
             clothesToggle.classList.toggle('active', state.clothesVisible);
         });

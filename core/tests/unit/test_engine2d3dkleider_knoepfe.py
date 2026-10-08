@@ -34,6 +34,8 @@ ERWARTET = {
     'engine2d3dkleider.html': [
         'engine2d3dkleider-name', 'engine2d3dkleider-dateien', 'engine2d3dkleider-anlegen',
         'engine2d3dkleider-duplizieren', 'engine2d3dkleider-bulk-delete',
+        # Kopie samt Runden, Mesh-Figur-Übernahme und Weiterführen eines Auftrags (seit 02.–06.10.2026)
+        'engine2d3dkleider-kopie-alles', 'engine2d3dkleider-meshfigur', 'engine2d3dkleider-weiter', 'engine2d3dkleider-weiter-runden',
     ],
     'engine2d3dkleider_auftrag.html': [
         # Kopf und Laufband
@@ -43,12 +45,16 @@ ERWARTET = {
         # Der Lauf ('bis-schritt' seit 02.10.2026: jeder Schritt startet getrennt; der Knopf „Mesh erzeugen" entsteht
         # in `engine2d3dkleidermeshkarte.js`, nicht in der Vorlage)
         'ab-schritt', 'bis-schritt', 'starten', 'anhalten',
-        # Die Bühne
-        'buehne-iterationsmodell', 'buehne-film', 'buehne-haarwahl',
+        # „Modell im System Speichern" (08.10.2026, rechts oben unter „Neu berechnen")
+        'modell-im-system-speichern',
+        # Die Bühne (seit dem 30.09.2026 dazu: Formen und Malen der Mesh-Bühne, Referenz, Reiter „Bewertung" und „Gesicht", die Begutachtung)
+        'buehne-iterationsmodell', 'buehne-film', 'buehne-haarwahl', 'buehne-formen', 'buehne-malen',
+        'reiter:bewertung', 'reiter:gesicht', 'referenz-pfad', 'referenz-uebernehmen',
+        'begutachtung-ausgang', 'begutachtung-automatisch', 'begutachtung-rezept', 'begutachtung-runde', 'begutachtung-runden',
         'schalter:mesh', 'schalter:haare', 'schalter:kleider',
         'schalter:nebeneinander', 'schalter:modell',
         # Die Bewegung
-        'anim-zurueck', 'anim-play', 'anim-vor', 'anim-scrubber',
+        'anim-zurueck', 'anim-play', 'anim-vor', 'anim-scrubber', 'anim-anfang', 'anim-ende', 'anim-stopp',
         # Ausgabe
         # Export seit 03.10.2026: GLB und Blender, mit den Beigaben BVH-Animation und Audio (je mit Pfad)
         'export-bvh', 'export-bvh-pfad', 'export-audio', 'export-audio-pfad', 'export-name', 'export-glb', 'export-blend',
@@ -104,8 +110,9 @@ class Engine2d3dKleiderknoepfeTest(SimpleTestCase):
                 self.assertEqual(sorted(set(self._elemente(self.vorlagen[name]))),
                                  sorted(set(erwartet)))
 
-    def test_2_es_sind_sechsundvierzig_bedienelemente(self):
-        self.assertEqual(sum(len(v) for v in ERWARTET.values()), 50)
+    def test_2_die_zahl_der_bedienelemente(self):
+        """Gezählt am 08.10.2026: 9 auf der Übersicht, 60 auf der Auftragsseite (sie wächst mit jedem Knopf — dieser Wert ist die Mahnung, die Liste oben mitzupflegen)."""
+        self.assertEqual(sum(len(v) for v in ERWARTET.values()), 69)
 
     # ------------------------------------------------- jedes ist verdrahtet
 
@@ -138,18 +145,19 @@ class Engine2d3dKleiderknoepfeTest(SimpleTestCase):
     def test_5_start_und_anhalten_gehoeren_zusammen(self):
         u"""„Neu berechnen" sperrt sich selbst und macht „Anhalten" frei — sonst startet ein
         Doppelklick zwei Läufe (`auftragsseiten.md`, Knopfsperre gegen Doppelstart)."""
-        modul = self._modul_mit('starten')
+        # Das Modul, das den Knopf verdrahtet — nicht das Aktionslog, dessen Kommentar `#starten` nennt (08.10.2026).
+        modul = self._modul_mit("getElementById('starten')")
         self.assertIsNotNone(modul)
-        self.assertIn('anhalten', modul)
-        self.assertIn('disabled', modul)
+        # `assertTrue` statt `assertIn`: ein Fehlschlag hängt sonst den ganzen Quelltext an die Meldung.
+        self.assertTrue('anhalten' in modul, 'das Modul des Startknopfes kennt „anhalten" nicht')
+        self.assertTrue('disabled' in modul, 'das Modul des Startknopfes sperrt nichts')
 
     def _modul_mit(self, kennung):
-        u"""Der Quelltext des ersten Moduls, das diese Kennung nennt."""
+        u"""Der Quelltext des ersten Moduls, das diese Kennung als Zeichenkette nennt (`'starten'`, `"starten"`, `#starten`) — nicht irgendeines, in dem das Wort nur vorkommt
+        (08.10.2026: `engine2d3dkleideraktionslog.js` enthält „starten" im Kommentar und kommt alphabetisch vor der Seite, die den Knopf verdrahtet)."""
         wurzel = Path(settings.BASE_DIR)
         gesucht = kennung.split(':', 1)[-1]
-        for ordner in JS_ORDNER:
-            for pfad in sorted((wurzel / 'static' / ordner).glob('*.js')):
-                text = pfad.read_text(encoding='utf-8', errors='replace')
-                if gesucht in text:
-                    return text
-        return None
+        genau = re.compile(r'''['"`#]%s['"`\s]''' % re.escape(gesucht))
+        module = [p.read_text(encoding='utf-8', errors='replace')
+                  for ordner in JS_ORDNER for p in sorted((wurzel / 'static' / ordner).glob('*.js'))]
+        return next((t for t in module if genau.search(t)), next((t for t in module if gesucht in t), None))

@@ -118,11 +118,12 @@ class DerNachbesserungsprompt(SimpleTestCase):
         self.assertNotIn('b.png', text)                          # Rolle „aus" zählt nicht
 
     def test_der_prompt_nennt_die_teile_der_letzten_runde_und_ohne_teile_keine_zeile(self):
+        # ohne `teile` zuerst: der Rundenstand teilt die Runden-Dicts mit dem Zustand, ein späteres Eintragen wirkte auch auf `self.stand`
+        self.assertNotIn('trägt (Kennungen', Nachbesserungsprompt(self.stand, self.funktionen, 'B').text())
         self.zustand['ergebnis']['iterationen'][0]['teile'] = {'g9_base_shirt': 1, 'mavick_hair': 1, 'weg': 0}
         stand = Rundenstand(self.zustand, self.ordner)
         self.assertEqual(stand.teile_text(), 'g9_base_shirt, mavick_hair')            # Anteil 0 trägt das Modell nicht
         self.assertIn('trägt (Kennungen für `m.kleid_*` und `m.haar_*`): g9_base_shirt, mavick_hair.', Nachbesserungsprompt(stand, self.funktionen, 'B').text())
-        self.assertNotIn('trägt (Kennungen', Nachbesserungsprompt(self.stand, self.funktionen, 'B').text())
 
     def test_die_vorgabe_sagt_was_die_bilder_nicht_zeigen(self):
         text = Nachbesserungsprompt(self.stand, self.funktionen, 'B').text()

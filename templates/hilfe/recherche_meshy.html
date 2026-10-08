@@ -37,7 +37,7 @@ wie bei TRELLIS.2/Hunyuan3D (`quelltext-vor-nachbau.md`).
 
   {% for b in bereiche %}
   <h2>{{ b.bereich }} <span class="rm-klein">— {{ b.eintraege|length }} Einträge</span></h2>
-  <table class="db-tabelle rm-tabelle">
+  <table class="db-tabelle rm-tabelle sortable" data-sort-key="hilfe-recherche-meshy">
     <thead><tr><th>Art</th><th>Thema</th><th>Befund</th><th>Quelle</th></tr></thead>
     <tbody>
     {% for e in b.eintraege %}

@@ -65,7 +65,7 @@ export class Genesis9hautGLSL {
     /** 8K-Detailnormalen als RNM über `mapN` — schreibt `normal`. */
     static DETAIL = `
         vec3 n1 = normalize( mapN );
-        vec3 detailN = texture2D( uDetailNormalen, vNormalMapUv ).xyz * 2.0 - 1.0;
+        vec3 detailN = texture2D( uDetailNormalen, vNormalMapUv * uDetailKachel ).xyz * 2.0 - 1.0;
         vec3 n2 = normalize( mix( vec3( 0.0, 0.0, 1.0 ), detailN, uDetailGewicht * uDetailAn ) );
         n1.z += 1.0;
         n2.xy = -n2.xy;

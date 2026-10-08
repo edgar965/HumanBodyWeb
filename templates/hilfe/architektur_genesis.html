@@ -35,14 +35,22 @@ Ablauf, neue Bausteine), `_architektur_genesis_pruefen.html` (Messung, Grenzen, 
     bekommt ohne Strg+Alt+H 2048² (gemessen: Farbe 0,3 MB, Normalen 5,4 MB), mit <code>hoch=1</code> 8192² (5,5 MB bzw. 92 MB).
     Zahlen, Bilder und Messungen: <a href="/hilfe/architektur/arp-modell/">ARP Modell</a>.
     <strong>Abweichungen vom Konzept:</strong> (1) Das Umposen (Schritt 3) läuft nicht über den Armature-Modifier, sondern über
-    starre Segmente um die Gelenke der Referenzknochen — Wirbelsäule, Hals und Kopf bleiben, Fingerglieder kamen nach dem
-    ersten Lauf dazu und sind im Code, aber noch nicht in einem Lauf. (2) Das Körper-Tor von „Mesh to 3D" hielt den ersten
-    Anlauf an (11 Regler am Anschlag, Soll ≤ 8); der Import lässt es nur melden. (3) Hautkacheln 8192 statt 4096. (4) Der
-    Eigenmorph heißt <code>eigen:cute_girl_mesh_113404</code> und ist <strong>noch kein eigener Schieber</strong> im
-    Reglerplan. <strong>Gemessen:</strong> Endfigur gegen das Original-Körpernetz 0,78 / 0,93 mm RMS (zugeordnete Paare,
-    ohne Ausreißer); über alle Körperpunkte Median 0,99 mm, p95 14,4 mm — die Abweichungen sitzen an Fingern, Brustwarzen,
-    Lippen, Schritt und Zehen. <strong>Noch nicht geprüft:</strong> Kachelnähte und Farbe der gebackenen Haut an festen
-    Hautstellen, Sitz der Stücke auf einer zweiten Genesis-Figur, der Lauf ohne Umposen.
+    starre Segmente um die Gelenke der Referenzknochen — Wirbelsäule, Hals und Kopf bleiben; die Fingerglieder sind seit dem
+    zweiten Lauf (2026.10.08.19.31.50) dabei: Hände und Finger RMS 8,11 → 6,43 mm, über 8 mm 28,9 → 18,4 %. (2) Das
+    Körper-Tor von „Mesh to 3D" hielt den ersten Anlauf an (11 Regler am Anschlag, Soll ≤ 8); der Import lässt es nur melden.
+    (3) Hautkacheln 8192 statt 4096 (Vorgabe seit 08.10.2026 abends auch im Browser). (4) Der Eigenmorph ist ein eigener
+    Schieber im Bereich „Modell-Eigen"; die Scham bekommt einen zweiten, <code>eigen:…_scham</code>, weil Genesis dort keine
+    Form für die inneren Schamlippen hat. (5) Die Originalaugen kommen als eigenes Stück („<em>Name</em> Augen", Zubehör) und
+    ersetzen die Genesis-Augen, solange sie getragen werden. <strong>Gemessen:</strong> Endfigur gegen das Original-Körpernetz
+    0,78 / 0,93 mm RMS (zugeordnete Paare, ohne Ausreißer); über alle Körperpunkte Median 1,0 mm, p95 13,4 mm — die
+    Abweichungen sitzen an Fingern, Brustwarzen, Lippen, Schritt und Zehen. Die Scham der Figur stand im unteren Venushügel bis
+    22 mm vor dem Original; nach der Nachformung liegt die Fläche dort im Median 0,14 mm (p90 1,1 mm) am Original.
+    <strong>Bedienung:</strong> Während ein Import rechnet, zeigt eine Leiste neben „HumanBody" oben Name, Schritt und Prozent
+    (auch nach dem Neuladen der Seite); „Importieren" ist ab dem Klick gesperrt, und der Server nimmt keinen zweiten Import neben
+    einem laufenden an. Eine .blend ohne Skelett (gemessen: 15 Netze, 0 Armaturen) meldet das im Klartext statt „Kein Körper".
+    <strong>Noch nicht geprüft:</strong> Sitz der Stücke auf einer zweiten Genesis-Figur, der Lauf ohne Umposen, die Form der Scham
+    im Chrome (der Tab lag im Hintergrund, der Viewport blieb schwarz); Finger, Brustwarzen, Lippen und Zehen sind noch ohne
+    eigenen Regler.
   </div>
 
   <div class="info-box info-box-orange">

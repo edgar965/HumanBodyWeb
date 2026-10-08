@@ -17,8 +17,11 @@ from ._wrappersuchpfad import Wrappersuchpfad
 Wrappersuchpfad.setzen()
 
 
-def _rumpf(abstand_ringe, tiefe=0.24, breite=0.34, punkte_je_ring=48):
-    """Ein Zylinder (Ellipse `breite` × `tiefe`, Achse y) aus Ringen im Abstand `abstand_ringe` — der Käfig ist dünn besetzt."""
+def _rumpf(abstand_ringe, tiefe=0.24, breite=0.34, punkte_je_ring=96):
+    """Ein Zylinder (Ellipse `breite` × `tiefe`, Achse y) aus Ringen im Abstand `abstand_ringe` — der Käfig ist dünn besetzt.
+
+    96 Punkte je Ring (gemessen 08.10.2026, `ProjektTemp/_wegwerf/cutegirl/rumpf_diag.py`): von einem Ring mit 48 liegen nur etwa 7 im Streifen `STREIFEN` (±4 cm um die Mitte) — unter `PUNKTE_MIN`
+    (8); mit 96 sind es etwa 14, und ein einzelner Ring im Schnitt reicht für die Messung."""
     punkte = []
     for y in np.arange(0.0, 1.7, abstand_ringe):
         w = np.linspace(0, 2 * np.pi, punkte_je_ring, endpoint=False)
@@ -55,8 +58,8 @@ class RumpfpruefungTest(unittest.TestCase):
             self.assertLess(v, 1.0)
 
     def test_sabotage_ohne_wachsende_dicke_sind_weniger_hoehen_messbar(self):
-        """FIGUR_MINDESTENS = 0 ist das Verhalten vor dem 07.10.2026: Der Schnitt bleibt ±6 mm — bei diesem Käfig (Ringe alle 5 cm, Höhen 0,9075 … 1,254 m) liegt kein Ring darin, die Höhe ist nicht
-        messbar. (Am echten Lauf traf der Schnitt bei 0,55 acht Punkte einer Seite: Tiefe 4 mm.) Mit wachsender Dicke sind alle vier messbar."""
+        """FIGUR_MINDESTENS = 0 ist das Verhalten vor dem 07.10.2026: Der Schnitt bleibt ±6 mm — bei diesem Käfig (Ringe alle 5 cm, Höhen 0,9075 / 1,023 / 1,155 / 1,254 m) liegt bei den ersten zwei
+        kein Ring darin (Ringe bei 0,90 und 1,00/1,05: 7,5 bis 27 mm daneben), die Höhe ist nicht messbar. (Am echten Lauf traf der Schnitt bei 0,55 acht Punkte einer Seite: Tiefe 4 mm.) Mit wachsender Dicke sind alle vier messbar."""
         figur = _rumpf(0.05)
         alt = [t['verhaeltnis'] for t in self._tiefen(figur, 0) if t['verhaeltnis'] is not None]
         neu = [t['verhaeltnis'] for t in self._tiefen(figur, 250) if t['verhaeltnis'] is not None]

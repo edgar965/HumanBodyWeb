@@ -6,6 +6,7 @@
     GET  /api/animation/video/ablage/     Vorgabeordner fuer die Kopie
     GET  /api/animation/video/<kennung>/  Stand: phase, anteil, fertig,
                                           fehler, video_url, bilanz, pfad
+    POST /api/animation/video/<kennung>/abbrechen/  beendet den Lauf
 
 Der Start kommt als FORMULAR: Feld `auftrag` mit dem JSON (Morphs,
 Stueckliste, Knochennamen) und je Stueck eine Binaerdatei
@@ -98,6 +99,16 @@ class Figurvideoendpunkte:
     def ablage(request):
         """Der Ordner, in den Videos ohne eigene Angabe kopiert werden."""
         return JsonResponse({'ordner': Figurvideoablage.vorgabe_ordner()})
+
+    @staticmethod
+    @require_POST
+    def abbrechen(request, kennung):
+        """Den Lauf des Server-Wegs beenden (Knopf „Abbrechen")."""
+        try:
+            return JsonResponse(Figurvideo.abbrechen(kennung))
+        except Exception as fehler:  # noqa: BLE001
+            logger.exception('Figurvideo: Abbruch fehlgeschlagen')
+            return JsonResponse({'fehler': str(fehler)}, status=500)
 
     @staticmethod
     @require_GET

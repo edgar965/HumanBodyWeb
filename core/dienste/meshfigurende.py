@@ -83,7 +83,17 @@ class Meshfigurende:
             # Augen-, Mund- und Nasenmorph aus den Landmarken (nur „2D3D Kleider", Option `koerper.landmarkmorphe`; leer sonst)
             'landmarkmorphe': self._landmarkmorphe(rest, gewicht, name, stellung),
         }
+        self._tor_mit_rest(zahlen)
         self.kopfeigen_nachziehen()
+
+    def _tor_mit_rest(self, zahlen):
+        """Hat das Körper-Tor angeschlagen und der Lauf ging weiter („Nur melden"), steht der Rest daneben: wie viel die Regler am Anschlag nach den Reglern (`rest_vorher_mm`) und nach dem
+        Eigenmorph (`rest_nachher_mm`) an Form schuldig bleiben, RMS über die Käfigpunkte mit Ziel. Ein Fehlalarm des Tors zeigt sich daran, dass der Rest klein ist (08.10.2026, Hunyuan-Lauf:
+        9 Regler am Anschlag, Rest 2,17 → 0,93 mm)."""
+        tor = (self.job.ergebnis.get('koerper') or {}).get('tor')
+        if tor:
+            tor['rest_vorher_mm'] = zahlen.get('rest_vorher_mm')
+            tor['rest_nachher_mm'] = zahlen.get('rest_nachher_mm')
 
     def _landmarkmorphe(self, rest, gewicht, name, stellung):
         """`{bereich: {regler, …}}` aus `lauf.landmarkmorphe` (07.10.2026) — „Mesh to 3D" hat die Methode nicht und bekommt `{}`. Ein Fehler hält den Lauf nicht auf: die Figur bleibt, wie sie war."""

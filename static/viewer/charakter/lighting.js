@@ -45,7 +45,7 @@ export function resetCamera() {
     markDirty();
 }
 
-function applyPreset(preset) {
+export function applyPreset(preset) {
     state.keyLight.intensity = preset.key.intensity;
     state.keyLight.color.setHex(preset.key.color);
     state.keyLight.position.set(...preset.key.pos);

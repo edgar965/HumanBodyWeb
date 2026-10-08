@@ -19,7 +19,7 @@ Die Optionen kommen beim Aufruf aus den Katalogen des Codes, die Fakten aus arch
     {{ g.fremd }} Felder der Seite „Mesh", die nur für das andere Formmodell gelten — „2D3D Kleider" formt nur mit TRELLIS.2.{% endif %}</p>
   {% endif %}
   {% if g.zeilen %}
-  <table class="db-tabelle wf-umfang">
+  <table class="db-tabelle wf-umfang sortable" data-sort-key="hilfe-architektur-2d3d-technik-1">
     <thead><tr><th>Schlüssel</th><th>Titel</th><th>Vorgabe</th><th>Werte</th><th>Formular</th><th>Hinweis</th></tr></thead>
     <tbody>
     {% for z in g.zeilen %}
@@ -44,7 +44,7 @@ Die Optionen kommen beim Aufruf aus den Katalogen des Codes, die Fakten aus arch
 </div>
 {% for b in t.bereiche %}
 <h4>{{ b.bereich }} <span class="a2d3d-klein">— {{ b.eintraege|length }} Einträge</span></h4>
-<table class="db-tabelle wf-umfang">
+<table class="db-tabelle wf-umfang sortable" data-sort-key="hilfe-architektur-2d3d-technik-2">
   <thead><tr><th>Art</th><th>Thema</th><th>Befund</th><th>Quelle</th></tr></thead>
   <tbody>
   {% for e in b.eintraege %}

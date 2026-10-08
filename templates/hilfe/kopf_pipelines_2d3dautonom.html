@@ -4,7 +4,7 @@ Eingebunden in kopf_pipelines.html direkt nach kopf_pipelines_2d3dautomatik.html
 <p>Ziel (Edgar): das Modell sieht aus wie die Fotos, von allen Seiten; jedes Objekt der Fotos wird ein eigenes Stück; der Code
   der Runden trägt beim nächsten Modell schon in Runde 1. Geprüft am Testauftrag <code>2026.10.01.12.38.09</code> (Gesamtnote
   0,83 in Runde 1 → 0,39 in Runde 34), wiederholt mit einem frischen Auftrag aus denselben Fotos.</p>
-<table class="db-tabelle">
+<table class="db-tabelle sortable" data-sort-key="hilfe-kopf-pipelines-2d3dautonom">
   <thead><tr><th>Baustein</th><th>Was er tut</th><th>Gemessen</th></tr></thead>
   <tbody>
     <tr><td>Fäden im Netz<br><code>mesh_zapfen</code>, Vorgabe 100.000 Flächen</td>
@@ -14,9 +14,12 @@ Eingebunden in kopf_pipelines.html direkt nach kopf_pipelines_2d3dautomatik.html
       <td>500.000: 102.448 Fadenflächen; 100.000 (Mesh-Auftrag 29.09.): 8</td></tr>
     <tr><td>Körper-Tor<br><code>meshfigur_rumpfpruefung</code></td>
       <td>Nach dem Körperschritt: Rumpftiefe der Figur gegen das Netz (≥ 75 %) und Regler am Anschlag (≤ 8) — sonst hält der
-        Lauf an. Unter dem Stoff hält ein Band die Haut 8–20 mm unter der Stoffoberfläche; Feinregler unter Stoff sind
+        Lauf an. Regler, die zu mindestens der Hälfte in Zonen wirken, die die Anpassung unter Gewicht 1 setzt (Hand, Finger, Zehen, Ohr, Schritt),
+        zählen nicht mit; sie stehen mit ihrem Anteil im Befund (<code>anschlag_ausgenommen</code>). Bei „Nur melden" steht daneben der Rest nach den
+        Reglern und nach dem Eigenmorph (<code>koerper.tor.rest_vorher_mm</code> / <code>rest_nachher_mm</code>). Unter dem Stoff hält ein Band die Haut 8–20 mm unter der Stoffoberfläche; Feinregler unter Stoff sind
         gedämpft; die Brust-Morphs der Frauenfigur sind auf der Männerfigur gesperrt.</td>
-      <td>Rumpf vorher 35 % (Brett), danach 82–94 %</td></tr>
+      <td>Rumpf vorher 35 % (Brett), danach 82–94 %. Hunyuan- und TRELLIS-Lauf desselben Fotos (08.10.2026): je 9 Regler am Anschlag, davon 1 ausgenommen
+        (<code>MassHands</code>, 99,8 % in abgewerteten Zonen); Rumpftiefe 85–98 %; Rest 2,17 → 0,93 mm (Hunyuan), 3,33 → 1,54 mm (TRELLIS)</td></tr>
     <tr><td>Fotostücke<br><code>Fotostuecke</code></td>
       <td>Shirt, Hose und Socken als eigene Genesis-Stücke. Seit Fassung 13 als <b>Hülle der Figur</b>
         (<code>Fotohuelle</code>): die Hautfläche unter dem Stück (Teilung des Schritts „Kleidung"), um den Abstand zum

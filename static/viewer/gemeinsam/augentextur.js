@@ -31,6 +31,9 @@ export class Augentextur {
     /** Stärke 1 der Normalkarte = diese Skalierung (HumanShaders: `normal_strength` 1,0 als Vorgabe, hier bis 1,5). */
     static RELIEF_MAX = 1.5;
     static WAHL = [['', 'Keine (Farben)'], ['braun', 'Braun'], ['haselnuss', 'Haselnuss'], ['gruen', 'Grün'], ['blau', 'Blau'], ['grau', 'Grau']];
+    /** Sentinel für Genesis9 (`genesis9augen.js`): die vom Modell gelieferte Augentextur unverändert lassen —
+     *  dort gibt es (anders als bei HumanBody) keine texturlose „nur Farbe"-Darstellung. */
+    static ORIGINAL = 'original';
 
     static _geladen = new Map();
     /** Netz → Nummer des jüngsten `anwenden` (überholte Läufe setzen nichts mehr). */
@@ -38,6 +41,11 @@ export class Augentextur {
 
     static eintrag(wert) {
         return Augentextur.WAHL.find(([w]) => w && w === wert) || null;
+    }
+
+    /** Gültiger Wert des Felds `augen_textur`: eine der Karten, leer, oder `ORIGINAL`. */
+    static istGueltig(wert) {
+        return wert === Augentextur.ORIGINAL || Augentextur.WAHL.some(([w]) => w === wert);
     }
 
     /**

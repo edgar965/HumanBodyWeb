@@ -142,12 +142,17 @@ class DerToenungsfaktorImRender(SimpleTestCase):
 class DieFotohautFassung2(SimpleTestCase):
     def test_6_die_kopfkachel_bleibt_ohne_registrierung_und_alte_fassungen_werden_neu_gerechnet(self):
         self.assertIn(1001, Koerperfotoprojektion.AUSGENOMMEN)               # Foto nur über die Kopfregistrierung (`Kopfregistrierung`), sonst bleibt die gebackene
-        self.assertEqual(Koerperfotoprojektion.FASSUNG, 4)                  # 3: Licht je Ansicht, Hände ohne Fotofarbe (05.10.2026); 4: Kopfkachel aus dem Vorderfoto (07.10.2026)
-        for veraltet in (1, 2, 3):
-            alt = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': veraltet}}})
+        # 3: Licht je Ansicht, Hände ohne Fotofarbe (05.10.2026); 4: Kopfkachel aus dem Vorderfoto (06./07.10.2026); 5: jedes Foto in seiner Haltung (08.10.2026)
+        self.assertEqual(Koerperfotoprojektion.FASSUNG, 5)
+        for veraltet in (1, 2, 3, 4):
+            alt = SimpleNamespace(optionen={}, ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': veraltet}}})
             self.assertTrue(Koerperfotoprojektion(alt, None).noetig(), 'Fassung %d wird neu gerechnet' % veraltet)
-        neu = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': Koerperfotoprojektion.FASSUNG}}})
+        # Vorgaben beider Fototext-Optionen (`haltung_je_foto`, `foto_abgleich`): an — der Stand merkt sie sich, ein Wechsel rechnet neu
+        stand = {'fassung': Koerperfotoprojektion.FASSUNG, 'haltung_je_foto': True, 'foto_abgleich': True}
+        neu = SimpleNamespace(optionen={}, ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': stand}})
         self.assertFalse(Koerperfotoprojektion(neu, None).noetig())
+        umgestellt = SimpleNamespace(optionen={'iterationen': {'haltung_je_foto': 'aus'}}, ergebnis=neu.ergebnis)
+        self.assertTrue(Koerperfotoprojektion(umgestellt, None).noetig(), 'die Option „Haltung je Foto" wurde ausgeschaltet')
 
     def test_6b_der_ausschluss_nimmt_pixel_aus_der_erweiterten_teilmaske(self):
         projektion = Fotoprojektion(mitte=[0.0, 1.0, 0.0], halb=1.2, render_groesse=(20, 30))
@@ -163,7 +168,10 @@ class DieFotohautFassung2(SimpleTestCase):
         self.assertTrue(ohne[15, 5])
         self.assertFalse(mit[15, 5])                      # im Ausschluss
         self.assertTrue(mit[15, 12])                      # außerhalb bleibt es
-        self.assertEqual(int((ohne & ~ausschluss != mit).sum()), 0)
+        # Die Abtastung ist bilinear: der Ausschluss fällt `AUSSCHLUSS_RAND` Pixel weiter als seine Maske (06.10.2026, dünne Linie an der Ärmelkante)
+        erweitert = Fotoprojektion.erweitern(ausschluss, Fotoprojektion.AUSSCHLUSS_RAND)
+        self.assertTrue(ohne[15, 8] and not mit[15, 8], 'das Pixel neben dem Ausschluss fällt mit weg')
+        self.assertEqual(int((ohne & ~erweitert != mit).sum()), 0)
 
 
 class DieHaltungImStartrezept(SimpleTestCase):

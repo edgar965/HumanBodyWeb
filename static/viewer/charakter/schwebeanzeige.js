@@ -4,6 +4,7 @@ import { _clearBoneHover, _createBoneOverlay, _getBoneFromIntersection,
 import { _findSubMeshForObject, _sameSubMesh, _setSubMeshEmissive,
          getAllSubMeshTargets } from './teilnetz_auswahl.js';
 import { Trefferwahl } from './trefferwahl.js';
+import { Raycastbeschleunigung } from '../gemeinsam/raycastbeschleunigung.js';
 
 /**
  * Was unter dem Mauszeiger liegt: Kleidungsstück oder Knochen, mit Namensschild
@@ -12,6 +13,16 @@ import { Trefferwahl } from './trefferwahl.js';
  * Die Prüfung läuft gedrosselt über `requestAnimationFrame` — bei jeder
  * Mausbewegung zu strahlen kostet auf großen Szenen spürbar Bildrate.
  *
+ * Nie während einer gedrückten Maustaste (Kamera drehen, verschieben, zoomen, Figur ziehen)
+ * und nie beim Greifen (G): dort gibt es nichts anzuzeigen, aber jeder Treffertest blockiert
+ * den Hauptfaden (Edgar, 08.10.2026: „Bedienung wieder holprig, Drehungen, Verschiebungen
+ * ruckeln"). Eine gehäutete Figur in Animation geht nicht über den Suchbaum
+ * (`Raycastbeschleunigung.ruhend`); für den Test ohne Suchbaum steht in
+ * `gemeinsam/raycastbeschleunigung.js` eine Messung von 297 ms je Aufruf (68 Netze, 335.025
+ * Dreiecke — hier nicht nachgemessen). Trägt jedes Bild einen solchen Test, sind das rund
+ * 3 Bilder je Sekunde (gerechnet). War der letzte Test langsam (`LANGSAM_MS`), läuft der
+ * nächste erst, wenn die Maus `RUHE_MS` stillsteht, nicht mehr bei jedem Bild.
+ *
  * Aus interaction.js herausgelöst (Umbau 27.08.2026, Befund `jsfunktionen`:
  * `initSubMeshInteraction()` hatte 91 Zeilen).
  */
@@ -19,27 +30,48 @@ export class Schwebeanzeige {
     /** Abstand des Namensschilds zum Zeiger in Pixeln. */
     static SCHILD_X = 14;
     static SCHILD_Y = -10;
+    /** Ab dieser Dauer eines Treffertests (ms) gilt er als langsam — dann erst bei ruhender Maus. */
+    static LANGSAM_MS = 30;
+    /** So lange (ms) muss die Maus stillstehen, bevor nach einem langsamen Test wieder geprüft wird. */
+    static RUHE_MS = 150;
 
     /** @param {HTMLCanvasElement} canvas */
     constructor(canvas) {
         this.canvas = canvas;
         this.schild = document.getElementById('mesh-tooltip');
+        /** Dauer des letzten Treffertests in ms; 0 vor dem ersten. */
+        this._dauer = 0;
+        this._ruhe = null;
         canvas.addEventListener('mousemove', (e) => this._gemerkt(e));
         canvas.addEventListener('mouseleave', () => this._verlassen());
     }
 
-    /** Merkt das Ereignis und prüft frühestens zum nächsten Bild. */
+    /**
+     * Merkt das Ereignis und prüft frühestens zum nächsten Bild — nicht bei gedrückter Taste
+     * (Kamera, Ziehen) und nicht beim Greifen; nach einem langsamen Test erst bei ruhender Maus.
+     */
     _gemerkt(e) {
         state._lastMouseEvent = e;
+        if (e.buttons || state.greiftGerade) return;
+        if (this._dauer > Schwebeanzeige.LANGSAM_MS) {
+            clearTimeout(this._ruhe);
+            this._ruhe = setTimeout(() => this._nachgemerkt(), Schwebeanzeige.RUHE_MS);
+            return;
+        }
         if (state._hoverPending) return;
         state._hoverPending = true;
         requestAnimationFrame(() => {
             state._hoverPending = false;
-            if (state._lastMouseEvent) this._pruefen(state._lastMouseEvent);
+            this._nachgemerkt();
         });
     }
 
+    _nachgemerkt() {
+        if (state._lastMouseEvent) this._pruefen(state._lastMouseEvent);
+    }
+
     _verlassen() {
+        clearTimeout(this._ruhe);
         if (state._hoveredSubMesh
             && !_sameSubMesh(state._hoveredSubMesh, state._selectedSubMesh)) {
             _setSubMeshEmissive(state._hoveredSubMesh, state._ZERO_EMISSIVE);
@@ -55,6 +87,7 @@ export class Schwebeanzeige {
         // Während des Nachziehens verändert sich die Geometrie — ein Treffer
         // darauf wäre schon beim Auswerten veraltet.
         if (state._refitting) return;
+        const start = performance.now();
         const rahmen = this.canvas.getBoundingClientRect();
         state.mouse.x = ((e.clientX - rahmen.left) / rahmen.width) * 2 - 1;
         state.mouse.y = -((e.clientY - rahmen.top) / rahmen.height) * 2 + 1;
@@ -67,6 +100,7 @@ export class Schwebeanzeige {
         state._hoveredCharId = treffer.teilnetz ? null : (treffer.figurId || null);
         this._teilnetzwechsel(treffer.teilnetz);
         this._knochenwechsel(treffer.knochen, treffer.koerpernetz);
+        this._dauer = performance.now() - start;
     }
 
     /**
@@ -103,6 +137,8 @@ export class Schwebeanzeige {
      */
     _treffer(ziele) {
         const leer = { teilnetz: null, knochen: null, koerpernetz: null, figur: null };
+        // `ziele.wurzeln` sind schon einzelne Netze (Teilnetze, Körper, Anhänge) — kein Baum darunter.
+        Raycastbeschleunigung.sicherstellen(ziele.wurzeln);
         const treffer = state.raycaster.intersectObjects(ziele.wurzeln, true);
         if (treffer.length === 0) return leer;
         // Wie der Klick (`Trefferwahl`): durch den Stoff stechende Haut zeigt den Stoff.

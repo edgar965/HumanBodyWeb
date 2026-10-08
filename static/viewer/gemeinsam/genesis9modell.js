@@ -14,8 +14,12 @@ import { Genesis9fototextur } from './genesis9fototextur.js';
 import { Genesis9vorgabe } from './genesis9vorgabe.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
+import { Genesis9ersatz } from './genesis9ersatz.js';
 import { Modell } from './modell.js';
 import { Skelettereignis } from './skelettereignis.js';
+import { Augentextur } from './augentextur.js';
+import { Genesis9augen } from './genesis9augen.js';
+import { Koerperdetails } from './koerperdetails.js';
 
 /**
  * Genesis9Modell — die Daz-Figur Genesis 9 als `Modell` für jede Seite.
@@ -60,6 +64,9 @@ export class Genesis9Modell extends Modell {
         this.haut = daten.haut || '';
         /** Augenbild 01–15. */
         this.augen = daten.augen || '01';
+        /** Hat der Nutzer in der Toolbar aktiv ein Augen-Preset gewählt (`augenSetzen`)? Nur dann
+         *  gilt es vor einer eigenen Fotokachel des Modells (`genesis9fototextur.js`, `_augenGewaehlt`). */
+        this._augenGewaehlt = false;
         /** Farbe der Brauen (`Brown`, `omni:Ruby`, `charakter:…`); leer = Vorgabe des Servers. */
         this.brauen = daten.brauen || '';
         /** Brauenstil `card01`..`card12`, `fiber01`..`fiber09`; leer = Karte 01. */
@@ -93,6 +100,12 @@ export class Genesis9Modell extends Modell {
         this.fototextur = { ...(daten.fototextur || {}) }; this.herkunft = daten.herkunft || null;
         /** Die Anhänge: Schlüssel → Netz. */
         this.anhangNetze = {};
+        /** Details des Reiters „Modell" (`Detailbedienung`) — bisher nur die Augentextur
+         *  wirklich umgesetzt (`detailfeldAnwenden`, `genesis9augen.js`); andere Felder
+         *  (Haut/Wimpern/Nägel) bleiben hier ohne Wirkung statt am falschen Netz zu
+         *  greifen (siehe `genesis9augen.js`: bodyMesh[4]/[6] sind bei Genesis 9 „Arms"/„Body",
+         *  nicht Sklera/Iris). Vorgabe „Original": die vom Modell gelieferte Augentextur gilt. */
+        this.details = { ...Koerperdetails.VORGABE, [Augentextur.FELD]: Augentextur.ORIGINAL };
         this.hoehe = 0;
         /** Punkte des Daz-Käfigs (25.182); `browserpunkte` und `stufen` sagen, was gezeichnet wird. */
         this.punktzahl = 0; this.browserpunkte = 0; this.stufen = 0;
@@ -156,13 +169,13 @@ export class Genesis9Modell extends Modell {
             this.eigeneKnochen = daten.skelett?.eigene || [];
         }
         // Fotokacheln des Modells statt der Daz-Albedo (27.09.2026, `Genesis9fototextur`).
-        const wahl = { haut: this.haut, praesets: this.praesets };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel
+        const wahl = { haut: this.haut, praesets: this.praesets, augenGewaehlt: this._augenGewaehlt };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel
         const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur, wahl) };
         this.bodyMesh = this._einhaengen(
             Genesis9netz.bauen(koerper, `genesis9_koerper_${this.id}`), daten.hautgewichte);
         this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
         for (const roh of daten.anhaenge || []) {
-            const anhang = Genesis9fototextur.anhang(roh, this.fototextur);   // Augenbild des Modells
+            const anhang = Genesis9fototextur.anhang(roh, this.fototextur, wahl);   // Augenbild des Modells
             this.anhangNetze[anhang.schluessel] = this._einhaengen(
                 Genesis9netz.bauen(anhang, `genesis9_${anhang.schluessel}_${this.id}`),
                 anhang.hautgewichte);
@@ -178,6 +191,12 @@ export class Genesis9Modell extends Modell {
         this._kleiderBinden(neuesSkelett);
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
         if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
+        // Ein neu gebautes Augennetz trägt wieder die Original-Karte — eine gewählte
+        // Augentextur (`detailfeldAnwenden`) muss nach jedem Umbau (Regler, Pose, Kleidung) neu gelegt werden.
+        if (this.details?.[Augentextur.FELD] && this.details[Augentextur.FELD] !== Augentextur.ORIGINAL) {
+            Genesis9augen.anwenden(this, this.details)
+                .catch(fehler => Protokoll.warnung('Genesis9Modell', `Augentextur: ${fehler.message}`));
+        }
         Protokoll.debug('Genesis9Modell',
             `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} `
             + `(${this.browserpunkte}), ${(this.hoehe * 100).toFixed(1)} cm, `
@@ -192,6 +211,7 @@ export class Genesis9Modell extends Modell {
         Eigenhaut.einhaengen(this.group, gebunden, this.skelett);
         // Anliegende Kleidung folgt der Oberflaeche je Bild (Attribute aus `Genesis9kleidung`).
         Oberflaechenbindung.verdrahten(this, gebunden);
+        Genesis9ersatz.nachziehen(this);     // ein neu gebauter Körper ersetzt die Netze neu: Ersatz-Stücke erneut gelten lassen
         return gebunden;
     }
 
@@ -251,9 +271,32 @@ export class Genesis9Modell extends Modell {
         return this.koerperAufbauen(null, false);
     }
 
+    /** Ein Augen-Preset aus der Toolbar — gilt ab jetzt vor einer eigenen Fotokachel des
+     *  Modells (`_augenGewaehlt`, siehe `genesis9fototextur.js`). */
     async augenSetzen(nummer) {
         this.augen = nummer || '01';
+        this._augenGewaehlt = true;
         return this.koerperAufbauen(null, false);
+    }
+
+    /** Zurück zur vom Modell gelieferten Augentextur (`fototextur.augen`) — „Original Augen
+     *  vom Modell", erster Eintrag des Dropdowns bei einem Modell mit eigener Augenkachel. */
+    async augenOriginalSetzen() {
+        this._augenGewaehlt = false;
+        return this.koerperAufbauen(null, false);
+    }
+
+    /**
+     * `Detailbedienung` (Reiter „Modell", Bereich „Augen"): nur die Augentextur ist
+     * umgesetzt — sofort, ohne Serverlauf (`genesis9augen.js`). Die übrigen Felder
+     * (Haut, Wimpern, Nägel) bleiben hier ohne Wirkung statt fälschlich auf
+     * `bodyMesh`-Materialien zu greifen, die bei Genesis 9 nicht zu diesen Teilen
+     * gehören (`Koerperdetails` ist fürs HumanBody-Netz gebaut).
+     */
+    detailfeldAnwenden(feld = null) {
+        if (feld !== null && feld !== Augentextur.FELD && feld !== Augentextur.RELIEF) return;
+        Genesis9augen.anwenden(this, this.details)
+            .catch(fehler => Protokoll.warnung('Genesis9Modell', `Augentextur: ${fehler.message}`));
     }
 
     async brauenSetzen(farbe) {

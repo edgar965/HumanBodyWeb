@@ -48,7 +48,9 @@ class KoerperUndTexturTest(SimpleTestCase):
         m.koerper_regler('body_bs_CalvesSize', 1.0)                                    # am Anschlag → Ortsregler
         self.assertEqual(IterationKoerper(m, befund).aufrufe(), ["m.koerper_regler('eigen:ort_waden', 0.7)"])
         self.assertEqual(IterationKoerper(m, {}).aufrufe(), [])
-        self.assertIn("m.koerper_regler('eigen:ort_waden', 0.7)", IterationModell(m, befund).aufrufe())
+        # Körper- und Gesichtsregler führt `IterationModell` nur mit `form=True` nach (Option `iterationen.form`, Vorgabe aus: die Form kommt aus dem Schritt „Körper")
+        self.assertIn("m.koerper_regler('eigen:ort_waden', 0.7)", IterationModell(m, befund, form=True).aufrufe())
+        self.assertNotIn("m.koerper_regler('eigen:ort_waden', 0.7)", IterationModell(m, befund).aufrufe())
 
     def test_2_textur_regeln(self):
         m = ModellMitKleidern().kleid_nur('shirt')
@@ -130,6 +132,9 @@ class KoerperUndTexturTest(SimpleTestCase):
         verlauf = [{'regler': {}, 'koerper_huelle': {'unterschenkel': -20.0}},
                    {'regler': {'body_bs_CalvesSize': -0.35}, 'koerper_huelle': {'unterschenkel': -21.0}}]
         befund = {'koerper_huelle': {'unterschenkel': -21.0}, 'koerper_baender': {'unterschenkel': self.HAUT}}
+        # Nur, was nicht schon auf dem Wert steht („schon zurück: nichts", `IterationKoerper.form`): der Ortsregler steht auf 0, seine Zeile entfällt.
+        self.assertEqual(IterationKoerper(m, befund, verlauf).aufrufe(), ["m.koerper_regler('body_bs_CalvesSize', 0.0)"])
+        m.koerper_regler('eigen:ort_waden', -0.2)                                      # steht auch der Ortsregler verstellt, gehen beide zurück
         self.assertEqual(IterationKoerper(m, befund, verlauf).aufrufe(),
                          ["m.koerper_regler('body_bs_CalvesSize', 0.0)", "m.koerper_regler('eigen:ort_waden', 0.0)"])
         verlauf.append({'regler': {'body_bs_CalvesSize': 0.0}, 'koerper_huelle': {'unterschenkel': -20.0}})
@@ -138,14 +143,14 @@ class KoerperUndTexturTest(SimpleTestCase):
     def test_6_umfaerben(self):
         self.assertTrue(Farbangleich.unerreichbar('#ffffff', [0.35, 0.34, 0.37], [0.15, 0.15, 0.15], 4708))
         self.assertFalse(Farbangleich.unerreichbar('#808080', [0.35, 0.34, 0.37], [0.3, 0.3, 0.3], 4708))
-        self.assertEqual(Farbangleich.start_grau([0.35, 0.344, 0.368]), '#3b3b3f')
+        self.assertEqual(Farbangleich.start_grau([0.35, 0.344, 0.368]), '#3b3a3f')
         m = ModellMitKleidern().kleid_nur('g9_base_shirt')
         m.kleid_farbe_je_stueck('g9_base_shirt', '#ffffff')
         teil = {'art': 'kleidung', 'foto_farbe': [0.35, 0.344, 0.368], 'render_farbe': [0.147, 0.147, 0.147],
                 'pixel': 4708}
         zeilen = IterationKleider(m, {'teile': {'g9_base_shirt': teil}}).farbe()
         self.assertEqual(zeilen, ["m.kleid_umfaerben('g9_base_shirt')",
-                                  "m.kleid_farbe_je_stueck('g9_base_shirt', '#3b3b3f')"])
+                                  "m.kleid_farbe_je_stueck('g9_base_shirt', '#3b3a3f')"])
         G9rezept.anwenden(m, '\n'.join(zeilen))
         self.assertEqual(m.kleidung['g9_base_shirt.bild.grau'], 1.0)
         self.assertNotIn('umfaerben', ' '.join(IterationKleider(m, {'teile': {'g9_base_shirt': teil}}).farbe()))

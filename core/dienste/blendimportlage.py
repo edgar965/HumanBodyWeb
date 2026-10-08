@@ -35,10 +35,12 @@ class Blendimportlage:
     #: (Edgar, 08.10.2026: „Nägel färben sich nicht, wenn ich die über Genesis setze").
     NICHT_GEBACKEN = (1005,)
 
-    def __init__(self, job):
+    def __init__(self, job, zusatz=None):
         from ..daten.meshfigurablage import Meshfigurablage
 
         self.job = job
+        #: Weitere Regler der Stellung (die Nachformung der Scham, `Blendimportnachformung.zusatzregler`) — `{eigen:…: 1.0}`.
+        self.zusatz = dict(zusatz or {})
         self.ablage = Meshfigurablage(job.kennung)
         with np.load(self.ablage.arbeit('scan_lage.npz')) as d:
             self.matrix = np.asarray(d['matrix'], dtype=np.float64)
@@ -47,6 +49,10 @@ class Blendimportlage:
             self.teil = np.asarray(d['teil'])
         self.kaefig_posiert = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
         self._entposen = None
+
+    def stellung(self):
+        """Die Regler der Figur: die der Anpassung samt Eigenmorph plus die Zusatzregler der Nachformung."""
+        return {**(self.job.stellung() or {}), **self.zusatz}
 
     def ins_netz(self, punkte_blender):
         p = Blendimportkoerper.gltf(punkte_blender)
@@ -84,7 +90,7 @@ class Blendimportlage:
         from Genesis9.formung import G9formung
         from Genesis9.reglerableitung import G9reglerableitung
 
-        kaefig, _, _ = G9reglerableitung.lage(G9formung(self.job.stellung()))
+        kaefig, _, _ = G9reglerableitung.lage(G9formung(self.stellung()))
         stufe = G9basisnetz.holen().netzstufe(self.STUFE)
         punkte = np.asarray(stufe.punkte(np.asarray(kaefig, dtype=np.float64)), dtype=np.float64)
         dreiecke = np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3)

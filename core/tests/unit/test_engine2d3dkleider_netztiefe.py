@@ -39,8 +39,10 @@ from core.dienste.seitentiefe import Seitentiefe
 from ._pruefablage import Pruefablage
 
 
-def ellipsoid(hoehe=1.7, breite=0.40, tiefe=0.36, teilung=4):
-    """Ein „Körper": Ellipsoid, Sohle bei y = 0, nach vorn (+z) tiefer als hinten nicht — symmetrisch um z = 0."""
+def ellipsoid(hoehe=1.7, breite=0.40, tiefe=0.36, teilung=5):
+    """Ein „Körper": Ellipsoid, Sohle bei y = 0, nach vorn (+z) tiefer als hinten nicht — symmetrisch um z = 0.
+
+    `teilung` 5 (10.242 Punkte): mit 4 lagen in der Schicht bei 0,6 der Größe nur etwa 5 Punkte im Mittelstreifen — unter `Seitentiefe.MIN_PUNKTE` (8), die Höhe fehlte im Profil (KeyError)."""
     kugel = trimesh.creation.icosphere(subdivisions=teilung, radius=1.0)
     punkte = np.asarray(kugel.vertices) * np.array([breite, hoehe / 2.0, tiefe])
     punkte[:, 1] += hoehe / 2.0
@@ -105,8 +107,8 @@ class DieFaktoren(SimpleTestCase):
         foto = {h: 0.10 for h in Seitentiefe.HOEHEN}                # halb so tief
         f = Netztiefe(None, None).faktoren(netz, foto, 0.8, 0.03)
         self.assertAlmostEqual(min(f.values()), 0.8, places=2)       # nicht unter `tiefe_min`
-        self.assertEqual(f[0.40], 1.0)                              # außerhalb des Bands
-        self.assertEqual(f[0.85], 1.0)
+        self.assertEqual(f[0.40], 1.0)                              # außerhalb des Bands (0,48–0,80)
+        self.assertAlmostEqual(f[0.85], 1.0, places=3)              # 0,05 hinter dem Rand: der Schweif der Glättung (σ 0,015) reicht bis dahin — gemessen 0,9998; `anwenden` blendet am Rand ohnehin aus
         self.assertLess(f[0.60], 0.85)
 
     def test_ein_flacheres_netz_oder_eines_innerhalb_der_toleranz_bleibt(self):
@@ -228,6 +230,7 @@ class DieAblage(SimpleTestCase):
         self.ablage = Engine2d3dKleiderablage.__new__(Engine2d3dKleiderablage)
         self.ablage.netz = lambda name='': self.ordner / 'netz' / name if name else self.ordner / 'netz'
         self.ablage.arbeit = lambda name='': self.ordner / 'arbeit' / name if name else self.ordner / 'arbeit'
+        self.ablage.kopf = lambda name='': self.ordner / 'kopf' / name if name else self.ordner / 'kopf'      # `netzdatei('kopf')` liest `kopf/mesh.glb`
 
     def _zettel(self, **felder):
         s = os.stat(self.original)

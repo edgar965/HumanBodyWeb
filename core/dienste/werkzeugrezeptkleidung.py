@@ -134,6 +134,16 @@ class Werkzeugrezeptkleidung:
          'Nullt nur Regler, die im Modell schon stehen (list(self.kleidung)); ein nie gesetztes Stück bleibt auf seiner '
          'Vorgabe — siehe kleid_nur. Gleiche Grenze wie kleid_aus (Grundsorte). Quelle: Genesis9/modellmitkleidern.py.'),
 
+        ('Keine Kleidung: die Figur ist nackt',
+         'Legt alles ab UND setzt die Marke kleidung.keine, damit die Grundsorte (das Standardhemd) nicht einspringt — für Fotos einer Person ohne Kleidung.',
+         'rezept',
+         "m.kleid_keins()",
+         [(G + 'modellmitkleidern.py', 'ModellMitKleidern'), (G + 'kleidgenerischwahl.py', 'G9kleidgenerischwahl'),
+          ('HumanBodyWeb/core/dienste/kleidermodellbau.py', 'Kleidermodellbau')],
+         'kleid_alle_aus genügt dafür nicht: stehen alle Anteile auf 0, gilt wieder die Grundsorte (G9kleidgenerischwahl.anteile). '
+         'Die Marke steht im Modell unter ModellMitKleidern.KEINE und sagt dem Bau (Kleidermodellbau), dass nichts getragen wird; ein später '
+         'gestelltes Stück (kleid_anteil über 0, kleid_nur) nimmt sie wieder weg. Quelle: Genesis9/modellmitkleidern.py (gelesen, 08.10.2026).'),
+
         ('Daz-Morph eines Stücks stellen',
          'Stellt einen echten Daz-Morph des Stücks (die Regler, die Daz mitliefert, etwa Adj Inflate).',
          'rezept',

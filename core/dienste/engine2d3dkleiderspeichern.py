@@ -23,6 +23,7 @@ from django.conf import settings
 from django.utils.timezone import template_localtime
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+from ..namensregeln import VERBOTEN, Namensregeln
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .meshfigurspeichern import Meshfigurspeichern
 
@@ -42,6 +43,18 @@ class Engine2d3dKleiderspeichern(Meshfigurspeichern):
                 optionen=Engine2d3dKleideroptionen.figur(job.optionen),
             )
         )
+
+    def _wunschname(self, wunsch):
+        """EXAKT der Name, den der Auftrag oben auf der Seite trägt (Edgar, 08.10.2026: „das Modell soll exakt
+        unter dem aktuellen Modellnamen gespeichert werden"): Kommas, Klammern und Punkte bleiben. Weg fällt nur,
+        was Windows in einem Dateinamen nicht kennt (`namensregeln.VERBOTEN`, `/`, `\\`), eine Punktfolge
+        (`Modellpfad` lehnt `..` ab) und Punkt/Leerzeichen am Ende. Gemessen: die alte Regel machte aus
+        „Kopf 2.0 Figur" ein „Kopf 20 Figur"."""
+        text = ''.join(z for z in str(wunsch) if z not in VERBOTEN and z not in '/\\')
+        text = re.sub(r'\.{2,}', '.', text).strip(' .')
+        if text and Namensregeln.geraet(text):
+            raise ValueError('„%s" ist als Dateiname nicht möglich (Windows-Gerätename)' % text)
+        return text
 
     def _adressen(self):
         stamm = '/api/engine2d3dkleider/%s/datei/ergebnis/' % self.job.id

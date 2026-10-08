@@ -255,6 +255,7 @@ urlpatterns = [
     # VOR `<kennung>/` — sonst hielte der Stand „ablage" fuer eine Kennung.
     path('api/animation/video/ablage/', Figurvideoendpunkte.ablage, name='figurvideo_ablage'),
     path('api/animation/video/<str:kennung>/', Figurvideoendpunkte.stand, name='figurvideo_stand'),
+    path('api/animation/video/<str:kennung>/abbrechen/', Figurvideoendpunkte.abbrechen, name='figurvideo_abbrechen'),
     path('api/character-test/switch/', Testverwaltung.figur_wechseln, name='test_switch_character'),
     # Der portierte UMA-Konformer (08.09.2026) - Reiter "UMA Python" im
     # Dialog "Charakter hinzufuegen".

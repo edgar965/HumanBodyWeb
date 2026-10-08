@@ -69,12 +69,21 @@ export class Genesis9fototextur {
         });
     }
 
-    /** Der Anhang „augen" mit dem Augenbild des Modells (`kacheln.augen`: Daz-Iris in der Farbe des
-     *  Netzes, `core/dienste/meshfiguraugenbild.py`, 27.09.2026) als Albedo der beiden Augäpfel.
-     *  Andere Anhänge und Modelle ohne Augenbild bleiben, wie sie sind. */
-    static anhang(anhang, kacheln) {
+    /**
+     * Der Anhang „augen" mit dem Augenbild des Modells (`kacheln.augen`: Daz-Iris in der Farbe des
+     * Netzes, `core/dienste/meshfiguraugenbild.py`, 27.09.2026) als Albedo der beiden Augäpfel.
+     * Andere Anhänge und Modelle ohne Augenbild bleiben, wie sie sind.
+     *
+     * `wahl.augenGewaehlt` (Edgar, 08.10.2026: „augen ändern in der Toolbar funktioniert
+     * nicht"): Anders als Haut/Kopf/Nagellack (`FREIGABE`/`frei()`) gab es hier BISHER keine
+     * Freigabe — die Kachel überschrieb jedes Augen-Preset aus der Toolbar bedingungslos,
+     * das Dropdown wirkte nie. Jetzt tritt die Kachel zurück, sobald der Nutzer im Reiter
+     * „Modell" aktiv ein Augen-Preset gewählt hat (`Genesis9Modell.augenSetzen`); „Original
+     * Augen vom Modell" (`Genesis9Modell.augenOriginalSetzen`) holt sie zurück.
+     */
+    static anhang(anhang, kacheln, wahl = null) {
         const adresse = (kacheln || {}).augen;
-        if (!adresse || anhang.schluessel !== 'augen') return anhang;
+        if (!adresse || anhang.schluessel !== 'augen' || wahl?.augenGewaehlt) return anhang;
         const gruppen = (anhang.gruppen || []).map(gruppe => (Genesis9fototextur.AUGAPFEL.test(gruppe.name)
             ? { ...gruppe, bilder: { ...(gruppe.bilder || {}), albedo: Genesis9fototextur.adresse(adresse) } }
             : gruppe));

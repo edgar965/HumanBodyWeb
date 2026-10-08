@@ -16,12 +16,16 @@ __all__ = ['Blendimportquelle']
 class Blendimportquelle:
     _FASSUNG = re.compile(r'(\d+(?:\.\d+)*)\s*$')
 
-    def __init__(self, pfad, namensart='ordner'):
+    #: Längster eigener Name — er wird Dateiname der Stücke und Eintrag in den Listen.
+    NAME_MAX = 60
+
+    def __init__(self, pfad, namensart='ordner', eigener_name=''):
         text = str(pfad or '').strip().strip('"').strip("'").strip()
         if not text:
             raise ValueError('Pfad fehlt: ein Ordner mit .blend-Dateien oder eine .blend')
         self.eingabe = Path(text).expanduser()
         self.namensart = namensart
+        self.eigener_name = str(eigener_name or '')
 
     @classmethod
     def fassung(cls, datei):
@@ -46,7 +50,13 @@ class Blendimportquelle:
         return self.kandidaten()[0]
 
     def name(self):
-        """Der Name der Figur: wie der Ordner der Datei, sonst der Dateistamm ohne Fassung."""
+        """Der Name der Figur: `eigen` = der Text aus dem Namensfeld, `ordner` = wie der Ordner der Datei, sonst der
+        Dateistamm ohne Fassung. Sonderzeichen entfallen (der Name wird Teil von Dateinamen)."""
+        if self.namensart == 'eigen':
+            name = re.sub(r'\s+', ' ', re.sub(r'[^\w\s\-]', '', self.eigener_name)).strip()[:self.NAME_MAX].strip()
+            if not name:
+                raise ValueError('Eigener Name fehlt: Namen ins Textfeld schreiben (Buchstaben, Ziffern, Leerzeichen, Bindestrich)')
+            return name
         datei = self.datei()
         if self.namensart == 'ordner':
             roh = datei.parent.name

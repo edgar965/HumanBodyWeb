@@ -18,6 +18,7 @@ from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, TransactionTestCase, override_settings
+from django.urls import reverse
 from PIL import Image
 
 from core.daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
@@ -96,7 +97,7 @@ class Engine2d3dKleiderzustandTest(Engine2d3dKleideraufbau, TransactionTestCase)
 
     def test_seite_und_zustand(self):
         job, _ = self._anlegen()
-        seite = self.client.get('/engine2d3dkleider/%s/' % job.kennung)
+        seite = self.client.get(reverse('engine2d3dkleider_auftrag', args=[job.kennung]))        # `/2d3dKleider/<kennung>/` (Umbenennung der Seiten, Oktober 2026)
         self.assertEqual(seite.status_code, 200)
         self.assertContains(seite, 'engine2d3dkleider-daten')
         zustand = self.client.get('/api/engine2d3dkleider/%s/zustand/' % job.id).json()
@@ -270,7 +271,7 @@ class Engine2d3dKleiderendpunkteTest(Engine2d3dKleideraufbau, TestCase):
         )
         self.assertTrue((Engine2d3dKleiderablage(kopie.kennung).unter('eingang') / 'vorn.png').is_file())
         self.assertFalse(Engine2d3dKleiderablage(kopie.kennung).vorlage('vorlage.png').exists())
-        self.assertEqual(antwort.json()['auftraege'][0]['url'], '/engine2d3dkleider/%s/' % kopie.kennung)
+        self.assertEqual(antwort.json()['auftraege'][0]['url'], reverse('engine2d3dkleider_auftrag', args=[kopie.kennung]))
         Engine2d3dKleiderauftrag.objects.filter(pk=job.pk).update(
             status='laeuft', progress=40, progress_detail='iterationen'
         )
@@ -312,11 +313,12 @@ class Engine2d3dKleiderendpunkteTest(Engine2d3dKleideraufbau, TestCase):
         self.assertEqual(tabelle['key'], 'engine2d3dkleider')
         self.assertEqual(
             [s['key'] for s in tabelle['spalten']],
-            ['wahl', 'vorlage', 'name', 'bilder', 'status', 'runden', 'abweichung', 'dauer', 'erstellt'],
+            ['wahl', 'vorlage', 'name', 'bilder', 'ki', 'status', 'runden', 'abweichung', 'qualitaet_mesh', 'qualitaet_3d', 'qualitaet_textur',
+             'qualitaet_mesh_gesamt', 'qualitaet_kleider', 'qualitaet_haar', 'qualitaet_gesicht', 'qualitaet_koerper', 'dauer', 'erstellt'],
         )
         zeile = tabelle['zeilen'][0]
         self.assertEqual(zeile['id'], str(job.id))
-        self.assertIn('href="/engine2d3dkleider/%s/"' % job.kennung, zeile['html'])
+        self.assertIn('href="%s"' % reverse('engine2d3dkleider_auftrag', args=[job.kennung]), zeile['html'])
         self.assertIn('/api/engine2d3dkleider/%s/datei/vorlage/vorlage.png?v=' % job.id, zeile['html'])
         self.assertEqual(len(tabelle['spalten']), zeile['html'].count('<td'), 'eine Zelle je Spalte')
 

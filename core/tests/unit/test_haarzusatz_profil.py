@@ -72,7 +72,8 @@ class HaarzusatzTest(SimpleTestCase):
         i = G9haarzusatz.interpolieren(s, s.punkte, anzahl=1, saat=1)
         self.assertEqual(i['l'].tolist(), [3, 3])
         np.testing.assert_allclose(i['w'].sum(axis=1), 1.0)
-        self.assertEqual(set(i['q'][0].tolist()) - {0}, {3} if i['w'][0, 2] > 0 else set(i['q'][0].tolist()) - {0})
+        # Der erste Punkt der Zwischensträhne mischt die Wurzeln beider Strähnen (0 und 3); Plätze ohne Gewicht (der zweite Quellpunkt am Kettenanfang, f = 0) zählen nicht
+        self.assertEqual(set(i['q'][0][i['w'][0] > 0].tolist()), {0, 3})
         neu = np.vstack([s.punkte, s.punkte[:3] + [0.0, 0.0, 0.003]])
         b = G9haarzusatz.aus_blender(s, s.punkte, neu, [3, 3, 3])
         self.assertEqual(b['l'].tolist(), [3])                                 # die zwei alten zählen nicht
@@ -161,7 +162,8 @@ class HaarzusatzTest(SimpleTestCase):
                   {'name': 'x_Eyes Distance-0x2', 'anzeige': '200+ Eyes Distance'}]
         befund = {'gesicht': {'verhaeltnis': {'breite': 1.2, 'augen': 1.01, 'mund': 0.8}, 'kopfregler': regler}}
         zeilen = IterationGesicht(M(), befund).aufrufe()
-        self.assertEqual(zeilen, ["m.koerper_regler('x_Face Width-0x1', 0.12)"])
+        # `IterationGesicht.REGLER`: die Breite stellt „Face Upper Width" (gemessen 01.10.2026: kein anderer Kopfregler bewegt die Wangenknochen-Landmarken über 1,1 %), nicht „Face Width"
+        self.assertEqual(zeilen, ["m.koerper_regler('x_Face Width Upper', 0.12)"])
         self.assertEqual(IterationGesicht(M(), {}).aufrufe(), [])
 
     def test_7_curl_und_braid_lassen_die_kappe(self):

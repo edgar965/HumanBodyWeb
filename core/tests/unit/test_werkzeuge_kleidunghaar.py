@@ -208,11 +208,13 @@ class WerkzeugeKleidungHaarVerhaltenTest(SimpleTestCase):
         self.assertAlmostEqual(G9kleidgenerischwahl.uebergang({'mischung:uebergang': 20}), 0.10)
         self.assertAlmostEqual(G9kleidgenerischwahl.uebergang({'mischung:uebergang': 0.1}), 0.005)
 
-    def test_mehr_als_vier_stuecke_werden_nicht_gemischt(self):
+    def test_alle_getragenen_stuecke_werden_gemischt_es_gibt_keine_grenze_mehr(self):
+        """Die Grenze von vier Stücken ist weg („Kleidung ohne Stückgrenze", Commit 93a9332 vom 03.10.2026): bei zwölf Stücken fielen Hemd, Hose und Stiefel nackt weg."""
         from Genesis9.kleidgenerischwahl import G9kleidgenerischwahl
         stuecke = [{'id': 's%d' % i} for i in range(6)]
         werte = {'sorte.s%d' % i: 1.0 for i in range(6)}
-        self.assertEqual(len(G9kleidgenerischwahl.mischung(stuecke, werte)), G9kleidgenerischwahl.HOECHSTENS)
+        self.assertIsNone(G9kleidgenerischwahl.HOECHSTENS)
+        self.assertEqual(len(G9kleidgenerischwahl.mischung(stuecke, werte)), 6)
 
     def test_die_passform_wird_auf_zwanzig_und_drei_bis_sechs_zentimeter_gekappt(self):
         from Genesis9.modellmitkleidern import ModellMitKleidern

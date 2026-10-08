@@ -4,6 +4,7 @@
 GET  /api/character/blendimport/einstellungen/          Katalog, gemerkte Werte, letzte Importe
 POST /api/character/blendimport/pruefen/                {pfad, name} → welche .blend, welcher Name (`Blendimportquelle`)
 POST /api/character/blendimport/starten/                {werte} → Werte merken, Import anlegen und starten
+GET  /api/character/blendimport/laufend/                {kennung|null, status, schritt, name} des Imports, der gerade rechnet
 GET  /api/character/blendimport/<kennung>/zustand/      Stand des Laufs; im Schritt „figur" mit dem Fortschritt des
                                                          Auftrags „Mesh to 3D"
 POST /api/character/blendimport/<kennung>/anhalten/
@@ -14,6 +15,7 @@ POST /api/character/blendimport/<kennung>/neu/          {ab} → ab diesem Schri
 
 import json
 import logging
+import threading
 
 from django.http import JsonResponse
 from django.utils import timezone
@@ -32,6 +34,8 @@ __all__ = ['Blendimportendpunkte']
 
 class Blendimportendpunkte:
     LETZTE = 5
+    #: Prüfung „läuft ein anderer Import?" und Start in einem Zug (`starten`, `neu`) — der Arbeitsprozess schreibt „läuft" erst nach dem Start.
+    _STARTSPERRE = threading.Lock()
 
     @staticmethod
     def _rumpf(request):
@@ -74,30 +78,45 @@ class Blendimportendpunkte:
     def pruefen(request):
         werte = Blendimporteinstellungen.pruefen(Blendimportendpunkte._rumpf(request))
         try:
-            return JsonResponse({'ok': True, **Blendimportquelle(werte['pfad'], werte['name']).steckbrief()})
+            quelle = Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name'])
+            return JsonResponse({'ok': True, **quelle.steckbrief()})
         except ValueError as fehler:
             return JsonResponse({'ok': False, 'error': str(fehler)}, status=400)
+
+    @staticmethod
+    @require_GET
+    def laufend(request):
+        """Welcher Import rechnet gerade? Die Topbar-Leiste und der Dialog fragen es nach dem Neuladen der Seite."""
+        kennung = Blendimportarbeiter.laufender()
+        if not kennung:
+            return JsonResponse({'kennung': None})
+        stand = Blendimportablage(kennung).stand()
+        return JsonResponse({'kennung': kennung, 'status': stand.get('status'), 'schritt': stand.get('schritt'),
+                             'name': (stand.get('quelle') or {}).get('name')})
 
     @staticmethod
     @require_POST
     def starten(request):
         from ..daten.auftragskennung import Auftragskennung
 
-        belegt = Blendimportendpunkte._belegt()
-        if belegt:
-            return belegt
-        werte = Blendimporteinstellungen.pruefen(Blendimportendpunkte._rumpf(request).get('werte'))
-        try:
-            quelle = Blendimportquelle(werte['pfad'], werte['name']).steckbrief()
-        except ValueError as fehler:
-            return JsonResponse({'error': str(fehler)}, status=400)
-        werte = Blendimporteinstellungen.speichern(werte)
-        kennung = Auftragskennung.frei(timezone.now(), lambda k: Blendimportablage(k).ordner().exists())
-        ablage = Blendimportablage(kennung)
-        ablage.anlegen()
-        ablage.stand_schreiben({'kennung': kennung, 'status': 'neu', 'quelle': quelle, 'einstellungen': werte,
-                                'angelegt': timezone.now().isoformat()})
-        Blendimportarbeiter.starten(ablage)
+        # Die Sperre hält Prüfung UND Start zusammen: zwei Klicks kurz hintereinander kommen als zwei Anfragen, und
+        # solange der erste Arbeitsprozess noch nicht „läuft" im Stand steht, sähe der zweite nichts Belegtes.
+        with Blendimportendpunkte._STARTSPERRE:
+            belegt = Blendimportendpunkte._belegt()
+            if belegt:
+                return belegt
+            werte = Blendimporteinstellungen.pruefen(Blendimportendpunkte._rumpf(request).get('werte'))
+            try:
+                quelle = Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name']).steckbrief()
+            except ValueError as fehler:
+                return JsonResponse({'error': str(fehler)}, status=400)
+            werte = Blendimporteinstellungen.speichern(werte)
+            kennung = Auftragskennung.frei(timezone.now(), lambda k: Blendimportablage(k).ordner().exists())
+            ablage = Blendimportablage(kennung)
+            ablage.anlegen()
+            ablage.stand_schreiben({'kennung': kennung, 'status': 'neu', 'quelle': quelle, 'einstellungen': werte,
+                                    'angelegt': timezone.now().isoformat()})
+            Blendimportarbeiter.starten(ablage)
         return JsonResponse({'ok': True, 'kennung': kennung, 'quelle': quelle})
 
     @staticmethod
@@ -145,11 +164,12 @@ class Blendimportendpunkte:
         ablage = Blendimportendpunkte._ablage(kennung)
         if ablage is None or not ablage.stand():
             return JsonResponse({'error': 'Kein Import %s' % kennung}, status=404)
-        if Blendimportarbeiter.lebt(ablage):
-            return JsonResponse({'error': 'Der Import läuft schon'}, status=409)
-        belegt = Blendimportendpunkte._belegt(ausser=kennung)
-        if belegt:
-            return belegt
-        ab =Blendimportendpunkte._rumpf(request).get('ab')
-        ab = ab if ab in Blendimportlauf.SCHRITTE else None
-        return JsonResponse({'ok': True, 'pid': Blendimportarbeiter.starten(ablage, ab=ab), 'ab': ab})
+        with Blendimportendpunkte._STARTSPERRE:
+            if Blendimportarbeiter.lebt(ablage):
+                return JsonResponse({'error': 'Der Import läuft schon'}, status=409)
+            belegt = Blendimportendpunkte._belegt(ausser=kennung)
+            if belegt:
+                return belegt
+            ab = Blendimportendpunkte._rumpf(request).get('ab')
+            ab = ab if ab in Blendimportlauf.SCHRITTE else None
+            return JsonResponse({'ok': True, 'pid': Blendimportarbeiter.starten(ablage, ab=ab), 'ab': ab})

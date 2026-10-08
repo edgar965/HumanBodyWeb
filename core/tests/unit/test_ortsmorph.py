@@ -113,8 +113,8 @@ class OrtsmorphTest(SimpleTestCase):
         deltas, brief = G9huellenmorph.deltas(s, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01, tiefe=True)
         d = deltas[0]
         self.assertEqual(float(np.abs(d[:2]).max()), 0.0)       # Flanken: kein Weg
-        self.assertGreater(float(d[2][2]), 0.15)                # vorn nach +z zum Rand
-        self.assertLess(float(d[3][2]), -0.15)                  # hinten nach −z
+        self.assertGreater(float(d[2][2]), 0.1)                 # vorn nach +z zum Rand (Rand bei 0,18 m: 0,18 − 0,05 = 0,13; die Maske ist 20 Spalten von 60·0,94 m breit)
+        self.assertLess(float(d[3][2]), -0.1)                   # hinten nach −z
         self.assertTrue(brief['tiefe'])
         rundum, _brief = G9huellenmorph.deltas(s, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01)
         self.assertGreater(float(rundum[0][0][0]), 0.1)         # ohne `tiefe` wandern auch die Flanken
@@ -138,13 +138,13 @@ class OrtsmorphTest(SimpleTestCase):
         from iterationen2d3d.befundmessung import Befundmessung
         punkte = []
         for hoehe in (0.1, 0.3, 0.5, 0.7, 0.9):
-            punkte += [[0.0, hoehe, 0.2], [0.0, hoehe, -0.2], [0.01, hoehe, 0.2], [-0.01, hoehe, -0.2],   # vorn/hinten: 5 cm bis zum Rand
-                       [0.05, hoehe, 0.0], [-0.05, hoehe, 0.0]]                                          # Flanken: 20 cm bis zum Rand
+            punkte += [[0.0, hoehe, 0.12], [0.0, hoehe, -0.12], [0.01, hoehe, 0.12], [-0.01, hoehe, -0.12],   # vorn/hinten: ~6 cm bis zum Rand (0,18 m, siehe Fall 2)
+                       [0.05, hoehe, 0.0], [-0.05, hoehe, 0.0]]                                          # Flanken: ~13 cm bis zum Rand, zählen nicht
         mm = Befundmessung(None, None, sicht=self._sicht()).huelle(np.array(punkte))
         self.assertEqual(len(mm), 5)
         for wert in mm:
             self.assertIsNotNone(wert)
-            self.assertTrue(40.0 < wert < 62.0, wert)           # rundum gemittelt stünden hier ~100 mm
+            self.assertTrue(40.0 < wert < 62.0, wert)           # rundum gemittelt stünden hier ~80 mm (Flanken 127 mm)
 
     def test_5_rezept_mit_ort_und_neue_funktionen(self):
         namen = {n for n, _s, _t in ModellMitKleidern.hilfe()}
@@ -162,7 +162,9 @@ class OrtsmorphTest(SimpleTestCase):
             m.kleid_huelle('shirt')
         self.assertIn(u'Sichtkörper', str(fehler.exception))
         with self.assertRaises(ValueError):
-            m.haltung_gelenk('l_hand', 'x', 10)
+            m.haltung_gelenk('l_nase', 'x', 10)                 # kein Gelenk der Liste
+        m.haltung_gelenk('l_hand', 'x', 10)                     # Hand und Finger gehören seit 03.10.2026 dazu (`ModellKoerperMixin.HAND`)
+        self.assertEqual(m.drehung()['l_hand'], {'rotation/x': 10.0})
         with self.assertRaises(ValueError) as fehler:
             m.kleid_drapieren('shirt')
         self.assertIn('Newton', str(fehler.exception))
@@ -196,7 +198,8 @@ class StandardreglerTest(SimpleTestCase):
             self.assertEqual({r['gruppe'] for r in regler}, {G9standardmorphe.GRUPPE[art]})
         self.assertFalse(G9standardmorphe.ist_standard('netz_b0'))
         for name, _a, operation, ort, _p in G9standardmorphe.HAAR:
-            self.assertIn(operation, ('trim', 'clump', 'noise', 'straighten', 'biegen', 'anlegen'), name)
+            # `curl` und `braid`: Locken und Zopf (01.10.2026, Blenders Curl/Braid Hair Curves als Ortsmorph)
+            self.assertIn(operation, ('trim', 'clump', 'noise', 'straighten', 'biegen', 'anlegen', 'curl', 'braid'), name)
             self.assertTrue(ort is None or isinstance(ort, dict), name)
         bereich = G9koerperstandardmorphe.bereich()
         self.assertEqual(bereich['schluessel'], 'ort')
@@ -212,7 +215,8 @@ class StandardreglerTest(SimpleTestCase):
     def test_7_automatik_schreibt_ortsmorphe_und_huelle(self):
         from iterationen2d3d.befundmessung import Befundmessung
         from iterationen2d3d.iterationkleider import IterationKleider
-        m = ModellMitKleidern().kleid_nur('shirt')
+        # Hemd UND Shorts: sonst zöge `IterationKleider.anziehen` die fehlenden Shorts vor allem anderen an (`Kleiderwahl.stuecke` nimmt ohne Körperbänder beide), und die Zeilen kämen erst in der Runde danach
+        m = ModellMitKleidern().kleid_nur('shirt', 'g9_base_shirt', 'g9_base_shorts')
         zellen = [[0.0] * 8 for _ in range(5)]
         zellen[2][0] = 30.0                                     # Band 2, Sektor 0: 30 mm zu weit außen
         befund = {'teile': {'shirt': {'art': 'kleidung', 'netz_mm': 5.0, 'netz_abs_mm': 5.0, 'grund_mm': 0.0,

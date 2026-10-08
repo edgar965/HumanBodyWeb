@@ -39,9 +39,10 @@ class GesichtsvorratTest(SimpleTestCase):
         koerper = np.array([[0.0, 0.0, 0.0], [0.0, 1.55 + kinn, 0.05], [0.0, 1.7, 0.0]]) + [0.0, hoch, 0.0]
         shirt = np.array([[0.0, 1.0 + saum, 0.1], [0.0, 1.45, 0.1]]) + [0.0, hoch, 0.0]
         haar = np.array([[0.0, 1.72, -0.02], [0.05, 1.6, -0.05]]) + [0.0, hoch, 0.0]
-        return [{'art': 'koerper', 'sorte': 'koerper', 'punkte': koerper, 'farbe': (0.8, 0.6, 0.5)},
-                {'art': 'kleid', 'sorte': 'shirt', 'punkte': shirt, 'farbe': (0.1, 0.1, 0.1)},
-                {'art': 'haar', 'sorte': 'haar', 'punkte': haar, 'farbe': haarfarbe}]
+        dreiecke = np.array([[0, 1, 1]])          # `Gesichtsmasse.befund` reicht (Punkte, Dreiecke, Farbe) je Teil an den Render; hier ein Mock
+        return [{'art': 'koerper', 'sorte': 'koerper', 'punkte': koerper, 'dreiecke': dreiecke, 'farbe': (0.8, 0.6, 0.5)},
+                {'art': 'kleid', 'sorte': 'shirt', 'punkte': shirt, 'dreiecke': dreiecke, 'farbe': (0.1, 0.1, 0.1)},
+                {'art': 'haar', 'sorte': 'haar', 'punkte': haar, 'dreiecke': dreiecke, 'farbe': haarfarbe}]
 
     def test_1_schluessel_haengt_nur_am_kopf(self):
         s = Gesichtsvorrat.schluessel

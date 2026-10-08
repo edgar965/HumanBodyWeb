@@ -107,7 +107,7 @@ class Modulbuendel:
     #: als Bare Specifier in der Import-Map von `bvh_studio.html` statt im
     #: Bündel; esbuild kann es hier ohnehin nicht auflösen (liegt außerhalb
     #: dieses `node_modules`, siehe `TheatreJS/node_modules`).
-    EXTERN = ('three', 'three/addons/*', 'three-subdivide', '/static/djangobase/*',
+    EXTERN = ('three', 'three/addons/*', 'three-subdivide', 'three-mesh-bvh', '/static/djangobase/*',
               '@theatre/core', '@theatre/studio')
 
     #: Länger darf ein Bündel nicht brauchen. Schlägt es fehl, liefert die
@@ -195,7 +195,7 @@ class Modulbuendel:
             lauf = subprocess.run(
                 befehl, capture_output=True, text=True, timeout=cls.ZEITGRENZE_S, cwd=settings.BASE_DIR
             )
-        except OSError, subprocess.SubprocessError:
+        except (OSError, subprocess.SubprocessError):
             logger.exception('Modulbuendel: Lauf fehlgeschlagen')
             return False
         if lauf.returncode != 0 or not os.path.isfile(ziel):

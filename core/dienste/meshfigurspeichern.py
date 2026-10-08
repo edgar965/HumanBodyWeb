@@ -119,7 +119,7 @@ class Meshfigurspeichern:
         ordner = Path(settings.HUMANBODY_MODELS_DIR)
         ordner.mkdir(parents=True, exist_ok=True)
         if wunsch is not None:
-            name = re.sub(r'[^\w\s\-]', '', str(wunsch)).strip()
+            name = self._wunschname(wunsch)
             if not name:
                 raise ValueError('Name fehlt')
             if (ordner / (name + '.json')).is_file() and not self._eigenes(ordner / (name + '.json')):
@@ -130,6 +130,11 @@ class Meshfigurspeichern:
         while (ordner / (name + '.json')).is_file() and not self._eigenes(ordner / (name + '.json')):
             name, n = '%s %d' % (stamm, n), n + 1
         return self._schreiben(ordner, name)
+
+    def _wunschname(self, wunsch):
+        """Der Dateiname zum gewünschten Namen: nur Buchstaben, Ziffern, Leerzeichen und Bindestrich bleiben
+        (wie jedes Speichern von Modellen im Projekt). „2D3D Kleider" überschreibt das (exakter Name)."""
+        return re.sub(r'[^\w\s\-]', '', str(wunsch)).strip()
 
     def _schreiben(self, ordner, name):
         from .modelltexturen import Modelltexturen

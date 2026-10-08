@@ -104,12 +104,21 @@ class DieHaarkappe(SimpleTestCase):
         kappe = Haarkappe(SimpleNamespace(), {'punkte': punkte, 'dreiecke': dreiecke, 'haut': haut})
         kappe._mitte = MITTE                                                    # `_lage` setzt sie vor dem Linienfeld; hier ohne Klemme
         feld = kappe._linienfeld(_karte(0.115))
-        self.assertGreater(float(feld[35, 0]), 0.0)                             # Scheitel
-        self.assertGreater(float(feld[18, 36]), 0.0)                            # Hinterkopf auf Augenhöhe (Azimut 180°)
-        self.assertLess(float(feld[18, 0]), 0.0)                                # Gesicht (Azimut 0°, Höhe 2,5°)
-        self.assertLess(float(feld[18, 19]), 0.0)                               # Wange hinter dem Gesicht (Azimut 97,5°, Höhe 2,5° — ohne Ohrknochen gilt ein Ohr bei 100°, `Haarlinie.ausschluss`)
-        self.assertLess(float(feld[3, 36]), 0.0)                                # unter dem Nacken
-        self.assertGreater(float(feld[30, 71]), 0.0)                            # der Azimut läuft um: 357,5° gehört zu 0° und liegt über dem Gesicht im Haar
+        # Das Feld liegt seit Fassung 7 (07.10.2026) auf dem Feinraster (`Haarlinie.FEIN` Zellen je 5°-Feld, 144 × 288 statt 36 × 72): (Zeile, Spalte) des 5°-Rasters → Mitte seiner Zellen.
+        fein = feld.shape[0] // 36
+        self.assertEqual((feld.shape[0], feld.shape[1]), (36 * Haarlinie.FEIN, 72 * Haarlinie.FEIN))
+
+        def wert(zeile, spalte):
+            return float(feld[zeile * fein + fein // 2, spalte * fein + fein // 2])
+
+        self.assertGreater(wert(35, 0), 0.0)                                    # Scheitel
+        self.assertGreater(wert(18, 36), 0.0)                                   # Hinterkopf auf Augenhöhe (Azimut 180°)
+        self.assertLess(wert(18, 0), 0.0)                                       # Gesicht (Azimut 0°, Höhe 2,5°)
+        # Wange hinter dem Gesicht: Azimut 82,5°, Höhe 2,5° (ohne Ohrknochen gilt ein Ohr bei 100°, `Haarlinie.ausschluss`). Bei 97,5° liegt der Punkt in der Ecke zwischen Wange und Haar — seit die Haarlinie mit
+        # `Haarlinie.RUNDUNG` (8°) gerundet wird, füllt sich diese Ecke (gemessen 08.10.2026: +1,25° bei 97,5°, −7,5° bei 82,5°).
+        self.assertLess(wert(18, 16), 0.0)
+        self.assertLess(wert(3, 36), 0.0)                                       # unter dem Nacken
+        self.assertGreater(wert(30, 71), 0.0)                                   # der Azimut läuft um: 357,5° gehört zu 0° und liegt über dem Gesicht im Haar
 
     def test_jedes_dreieck_hat_eigene_eckpunkte_mit_uv_normale_und_haut(self):
         (punkte, dreiecke, haut, uv, normalen, _daten), _netz = _kappe(0.115)

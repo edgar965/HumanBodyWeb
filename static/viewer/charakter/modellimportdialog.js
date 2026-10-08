@@ -9,6 +9,8 @@
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Blendimportfortschritt } from './blendimportfortschritt.js';
+import { Blendimportleiste } from './blendimportleiste.js';
+import { Blendimportzustand } from './blendimportzustand.js';
 import { escapeHtml } from './utils.js';
 
 export class Modellimportdialog {
@@ -26,6 +28,9 @@ export class Modellimportdialog {
 #modellimport-dialog .mi-hinweis { grid-column: 2; font-size: 0.75rem; color: var(--text-muted, #9aa3b5); }
 #modellimport-dialog .mi-abschnitt { margin: 14px 0 6px; font-weight: 600; }
 #modellimport-dialog .mi-quelle { min-height: 1.4em; font-size: 0.8rem; }
+#modellimport-dialog .mi-haut { margin: 4px 0 0 222px; font-size: 0.78rem; color: var(--text-muted, #9aa3b5); }
+#modellimport-dialog .mi-zeile.inaktiv { opacity: 0.45; }
+#modellimport-dialog .scene-modal-footer button:disabled { opacity: 0.5; cursor: not-allowed; }
 #modellimport-dialog .mi-balken { height: 10px; background: var(--bg-input, #1d2233); border-radius: 5px;
     overflow: hidden; margin: 8px 0; }
 #modellimport-dialog .mi-balken > div { height: 100%; width: 0; background: var(--accent, #e94560);
@@ -67,8 +72,12 @@ export class Modellimportdialog {
     <button class="primary" data-aktion="starten">Importieren</button>
   </div></div>`;
         document.body.appendChild(dialog);
+        Blendimportleiste.einrichten();            // die Leiste oben neben „HumanBody" hört auf denselben Stand wie der Dialog
         dialog.addEventListener('click', ereignis => Modellimportdialog.klick(dialog, ereignis));
-        dialog.addEventListener('change', () => Modellimportdialog.pruefen(dialog));
+        dialog.addEventListener('change', () => {
+            Modellimportdialog.abhaengigkeiten(dialog);
+            Modellimportdialog.pruefen(dialog);
+        });
         return dialog;
     }
 
@@ -96,8 +105,17 @@ export class Modellimportdialog {
             const daten = await Serverabruf.json('/api/character/blendimport/einstellungen/');
             felder.innerHTML = daten.optionen.map(o => Modellimportdialog.feld(o, daten.werte[o.schluessel])).join('');
             dialog._schritte = daten.schritte;
+            dialog._optionen = daten.optionen;
+            // Die Zusammenfassung der Haut-Größen steht direkt unter den beiden Haut-Feldern (mit den Feldern neu gebaut).
+            const haut = document.createElement('div');
+            haut.className = 'mi-haut';
+            dialog.querySelector('#mi-browser_px').closest('.mi-zeile').after(haut);
+            Modellimportdialog.abhaengigkeiten(dialog);
             Modellimportdialog.meldung(dialog, '');
             await Modellimportdialog.pruefen(dialog);
+            // Rechnet schon ein Import (gestartet vor dem Neuladen der Seite oder vorher in diesem Dialog), zeigt der Dialog ihn.
+            const laufend = await Blendimportzustand.laufend();
+            if (laufend && dialog._fortschritt?.kennung !== laufend) await Modellimportdialog.anzeigen(dialog, laufend);
         } catch (fehler) {
             Modellimportdialog.meldung(dialog, `Einstellungen nicht geladen: ${fehler.message}`, true);
         }
@@ -110,7 +128,7 @@ export class Modellimportdialog {
                 `<option value="${escapeHtml(w.wert)}"${w.wert === wert ? ' selected' : ''}>${escapeHtml(w.text)}</option>`
             ).join('')}</select>`
             : `<input id="${id}" data-schluessel="${option.schluessel}" type="text" value="${escapeHtml(wert || '')}"
-                 placeholder="A:\\…\\Ordner oder Datei.blend" autocomplete="off">`;
+                 placeholder="${escapeHtml(option.platzhalter || 'A:\\…\\Ordner oder Datei.blend')}" autocomplete="off">`;
         const hinweis = option.hinweis ? `<div class="mi-hinweis">${escapeHtml(option.hinweis)}</div>` : '';
         return `<div class="mi-zeile"><label for="${id}">${escapeHtml(option.titel)}</label>${eingabe}${hinweis}</div>`;
     }
@@ -119,6 +137,23 @@ export class Modellimportdialog {
         const aus = {};
         dialog.querySelectorAll('[data-schluessel]').forEach(e => { aus[e.dataset.schluessel] = e.value; });
         return aus;
+    }
+
+    /** Felder, die nur zu einer Wahl gehören („Eigener Name"), ausgrauen — und die Haut-Größen in einem Satz sagen. */
+    static abhaengigkeiten(dialog) {
+        const werte = Modellimportdialog.werte(dialog);
+        for (const option of dialog._optionen.filter(o => o.nur_wenn)) {
+            const aktiv = Object.entries(option.nur_wenn).every(([schluessel, soll]) => werte[schluessel] === soll);
+            const eingabe = dialog.querySelector(`[data-schluessel="${option.schluessel}"]`);
+            eingabe.disabled = !aktiv;
+            eingabe.closest('.mi-zeile').classList.toggle('inaktiv', !aktiv);
+        }
+        const gespeichert = Number(werte.kachel_px);
+        const browser = Number(werte.browser_px);
+        dialog.querySelector('.mi-haut').textContent = browser >= gespeichert
+            ? `Haut: Jede Kachel wird mit ${gespeichert} × ${gespeichert} px gespeichert und im Browser immer in dieser Größe geladen.`
+            : `Haut: Jede Kachel wird mit ${gespeichert} × ${gespeichert} px gespeichert. Normal lädt der Browser eine Kopie `
+              + `mit ${browser} × ${browser} px; Strg+Alt+H zeigt die volle Größe.`;
     }
 
     /** Welche .blend gelesen wird und wie die Figur heißt — sichtbar, bevor etwas rechnet. */
@@ -140,18 +175,40 @@ export class Modellimportdialog {
         }
     }
 
+    /** „Importieren" sperren, solange ein Import rechnet — ein zweiter Klick startete sonst einen zweiten Import. */
+    static sperren(dialog, gesperrt) {
+        const knopf = dialog.querySelector('[data-aktion="starten"]');
+        knopf.disabled = gesperrt;
+        knopf.textContent = gesperrt ? 'Import läuft …' : 'Importieren';
+        knopf.title = gesperrt ? 'Ein Import rechnet gerade — der nächste kann danach starten' : '';
+    }
+
+    /** Den Lauf dieses Imports im Dialog zeigen; „Importieren" bleibt gesperrt, bis er nicht mehr rechnet. */
+    static anzeigen(dialog, kennung) {
+        dialog._fortschritt?.beenden();
+        Modellimportdialog.sperren(dialog, true);
+        dialog._fortschritt = new Blendimportfortschritt(dialog.querySelector('.mi-lauf'), kennung, dialog._schritte || [],
+                                                         z => Modellimportdialog.sperren(dialog, Blendimportzustand.laeuft(z)));
+        return dialog._fortschritt.starten();
+    }
+
     static async starten(dialog) {
-        if (!(await Modellimportdialog.pruefen(dialog))) {
-            Modellimportdialog.meldung(dialog, 'Pfad prüfen', true);
-            return;
-        }
+        const knopf = dialog.querySelector('[data-aktion="starten"]');
+        if (knopf.disabled) return;
+        Modellimportdialog.sperren(dialog, true);       // sofort, vor dem ersten await: ein zweiter Klick findet ihn schon gesperrt
         try {
+            if (!(await Modellimportdialog.pruefen(dialog))) {
+                Modellimportdialog.meldung(dialog, 'Angaben prüfen — die Meldung steht über dem Knopf', true);
+                Modellimportdialog.sperren(dialog, false);
+                return;
+            }
             const antwort = await Serverabruf.senden('/api/character/blendimport/starten/',
                                                      { werte: Modellimportdialog.werte(dialog) });
             Modellimportdialog.meldung(dialog, `Import ${antwort.kennung} läuft — Einstellungen gemerkt.`);
-            new Blendimportfortschritt(dialog.querySelector('.mi-lauf'), antwort.kennung, dialog._schritte || []).starten();
+            await Modellimportdialog.anzeigen(dialog, antwort.kennung);
         } catch (fehler) {
             Modellimportdialog.meldung(dialog, `Nicht gestartet: ${fehler.message}`, true);
+            Modellimportdialog.sperren(dialog, false);
         }
     }
 }

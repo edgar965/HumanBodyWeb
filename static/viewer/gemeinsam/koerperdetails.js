@@ -82,7 +82,7 @@ export class Koerperdetails {
             } else if (name === Hautporen.FELD) {
                 if (Hautporen.WAHL.some(([w]) => w === wert)) aus[name] = wert;
             } else if (name === Augentextur.FELD) {
-                if (Augentextur.WAHL.some(([w]) => w === wert)) aus[name] = wert;
+                if (Augentextur.istGueltig(wert)) aus[name] = wert;
             } else if (name.endsWith('_textur')) {
                 if (Hauttextur.WAHL.some(([w]) => w === wert)) aus[name] = wert;
             } else if (Detailfarben.istFarbe(wert)) {

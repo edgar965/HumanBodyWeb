@@ -32,11 +32,13 @@ __all__ = ['Blendimportmodell']
 
 
 class Blendimportmodell:
-    def __init__(self, ablage, job, quelle, browser_px):
+    def __init__(self, ablage, job, quelle, browser_px, zusatz=None):
         self.ablage = ablage
         self.job = job
         self.quelle = str(quelle)
         self.browser_px = int(browser_px)
+        #: Weitere Regler der Figur (Nachformung der Scham): gehen mit Wert 1 ins Modell und bekommen einen Schieber.
+        self.zusatz = dict(zusatz or {})
 
     def name(self, wunsch):
         ordner = Path(settings.HUMANBODY_MODELS_DIR)
@@ -113,7 +115,7 @@ class Blendimportmodell:
             'name': name,
             'quelle': 'genesis9',
             'figur': {
-                'figur': 'basis', 'regler': self.job.stellung(), 'haut': '', 'augen': '01', 'brauen': '',
+                'figur': 'basis', 'regler': {**(self.job.stellung() or {}), **self.zusatz}, 'haut': '', 'augen': '01', 'brauen': '',
                 'brauenstil': '', 'praesets': {}, 'pose': '', 'ausdruck': '', 'kleidung': kleidung,
                 'fototextur': fototextur,
                 'herkunft': {'art': 'blend import', 'datei': self.quelle, 'import': self.ablage.kennung,

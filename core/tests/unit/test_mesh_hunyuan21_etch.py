@@ -21,9 +21,12 @@ class MalereiKatalogTest(unittest.TestCase):
         self.assertIn('malerei21', [wert for wert, _ in eintrag['werte']])
         self.assertEqual(Meshoptionen.pruefen({'textur': 'malerei21'})['textur'], 'malerei21')
 
-    def test_ansichten_sind_geklemmt(self):
+    def test_ansichten_ausserhalb_von_6_bis_9_werden_zur_vorgabe(self):
+        """`Meshoptionen.pruefen` klemmt Zahlen nicht, es nimmt nur Werte im Bereich (min…max) und sonst die Vorgabe — für alle Zahlenfelder."""
         self.assertEqual(Meshoptionen.pruefen({'malansichten21': 3})['malansichten21'], 6)
-        self.assertEqual(Meshoptionen.pruefen({'malansichten21': 12})['malansichten21'], 9)
+        self.assertEqual(Meshoptionen.pruefen({'malansichten21': 12})['malansichten21'], 6)
+        self.assertEqual(Meshoptionen.pruefen({'malansichten21': 7})['malansichten21'], 7)
+        self.assertEqual(Meshoptionen.pruefen({'malansichten21': 9})['malansichten21'], 9)
         self.assertEqual(Meshoptionen.pruefen({})['malansichten21'], 6)
 
     def test_alte_wahl_bleibt_vorgabe(self):

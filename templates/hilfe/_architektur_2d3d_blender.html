@@ -22,7 +22,7 @@ aus den Dateien `core/dienste/blendervergleich*.py`.
 {% for a in b.abschnitte %}
 <h3 id="tb-{{ a.kennung }}">{{ a.titel }}</h3>
 <p>{{ a.einleitung }}</p>
-<table class="db-tabelle tw-tabelle tw-blender">
+<table class="db-tabelle tw-tabelle tw-blender sortable" data-sort-key="hilfe-architektur-2d3d-blender">
   <thead>
     <tr><th rowspan="2">Aufgabe</th><th colspan="3" class="tw-kopf-lokal">Lokal (Genesis, Stoffsolver, Pipeline)</th><th colspan="4" class="tw-kopf-blender tw-blender-erste"><i class="bi bi-box"></i> Blender 5.2.2</th></tr>
     <tr><th>Werkzeug</th><th>Aufruf, Klassen</th><th>Zeit</th><th class="tw-blender-spalte tw-blender-erste">Werkzeug</th><th class="tw-blender-spalte">Aufruf aus Python</th><th class="tw-blender-spalte">Zeit</th><th class="tw-blender-spalte">Stand, Unterschied</th></tr>

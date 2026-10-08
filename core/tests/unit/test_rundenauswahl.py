@@ -70,7 +70,7 @@ class SechsPunkteTest(SimpleTestCase):
         teil = {'art': 'kleidung', 'foto_farbe': [0.35, 0.34, 0.37], 'render_farbe': [0.15, 0.15, 0.15], 'pixel': 100}
         note = Gesamtnote.berechnen({'foto': 0.6, 'abweichung': 1.9}, {'teile': {'s': teil},
                                                                         'gesicht': {'verhaeltnis': {'mund': 1.05}}})
-        self.assertEqual(note, {'gesamt': 0.8533, 'foto': 0.6, 'farbe_teile': 0.2033, 'gesicht': 0.05})
+        self.assertEqual(note, {'gesamt': 0.8533, 'foto': 0.6, 'farbe_teile': 0.2033, 'gesicht': 0.05, 'haar': 0.0})   # `haar`: ohne Haarabgleich 0
         runde5 = Gesamtnote.berechnen({'foto': 0.6179, 'abweichung': 1.799}, {})['gesamt'] + 0.166 + 0.091
         runde39 = Gesamtnote.berechnen({'foto': 0.6046, 'abweichung': 1.904}, {})['gesamt'] + 0.185 + 0.051
         self.assertLess(runde39, runde5)                    # die kurze Frisur vor der langen — die Netznote zählt nicht

@@ -22,6 +22,7 @@ from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.stoffhuelle import G9stoffhuelle
+from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stueckfelder import G9stueckfelder
 
 from .g9lagenanfrage import G9lagenanfrage
@@ -61,8 +62,17 @@ class G9stueckteile:
                                      G9lagenanfrage._namen(rumpf.get('stil')),
                                      rumpf.get('regler_stueck'))
         hoch = np.array([0.0, formung.boden(), 0.0])
-        kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
-                   for folger, lage in teile]
+        # Ein Stück mit Hauttiefe (Scham aus einer .blend, `Blendimportscham`) liegt bis 25 mm HINTER der Figurfläche und hängt
+        # starr am Becken: Folgen (drei nächste Hautpunkte) und Heben über die Haut schöben einzelne Punkte im Schritt bis 46 mm
+        # weg (gemessen 08.10.2026, Kantenmaximum im Browser) — seine Lage ist die gespeicherte Ruhelage der Figur des Imports.
+        starr = G9stueckersatz.haut_tiefe_fuer(eintrag) > 0
+        if starr:
+            from Genesis9.eigenstueck import G9eigenstueck
+            grund = np.array([0.0, G9eigenstueck.koerper()[4], 0.0])
+            kaefige = [np.asarray(folger.punkte, dtype=np.float64) - grund for folger, _lage in teile]
+        else:
+            kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
+                       for folger, lage in teile]
         # Die fuenf gemeinsamen Formachsen einer Frisur (`G9haarachsen`) — sie sind keine
         # Daz-Kanaele und laufen deshalb an `G9garderobe.reglerwerte` vorbei. Linear wie
         # jeder Morph, also einfach dazu.
@@ -93,6 +103,10 @@ class G9stueckteile:
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)
         flaeche, innen, aussen = anfrage.vorbereiten(
             kennung, [(f, p) for (f, _lage), p in zip(teile, kaefige, strict=True)])
+        # Ein Ersatz-Stück (Originalaugen, `G9stueckersatz`) sitzt IN der Figur: nicht aus der Haut heben (die Augäpfel
+        # lägen sonst vor dem Gesicht), keine Kollisionsfläche.
+        if G9stueckersatz.fuer(eintrag) or starr:
+            flaeche = None
         # GarmentCode-Stuecke darunter zuletzt als echte Flaeche (`G9stoffhuelle`, 24.09.2026):
         # gegen die Punktwolke allein lag Damiras Haar bis 29 mm im Kleid.
         huellen = anfrage.huellen(innen) if gc_vorrat else []

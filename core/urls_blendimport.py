@@ -15,6 +15,7 @@ BLENDIMPORT = [
          name='blendimport_einstellungen'),
     path('api/character/blendimport/pruefen/', Blendimportendpunkte.pruefen, name='blendimport_pruefen'),
     path('api/character/blendimport/starten/', Blendimportendpunkte.starten, name='blendimport_starten'),
+    path('api/character/blendimport/laufend/', Blendimportendpunkte.laufend, name='blendimport_laufend'),
     path('api/character/blendimport/<kennung:kennung>/zustand/', Blendimportendpunkte.zustand,
          name='blendimport_zustand'),
     path('api/character/blendimport/<kennung:kennung>/anhalten/', Blendimportendpunkte.anhalten,

@@ -61,6 +61,7 @@
  */
 import { Hautmaskegeometrie as G } from './hautmaskegeometrie.js';
 import { Maskeninseln } from './maskeninseln.js';
+import { Hautmaskeersatz } from './hautmaskeersatz.js';
 
 export class Hautmaske {
 
@@ -112,7 +113,8 @@ export class Hautmaske {
      *                     Haut (`abstand` negativ); `inseln`: Höchstgröße
      *                     freier Inseln, die noch geschlossen werden (0 = aus;
      *                     Messungen lassen die Maske roh); `inselflaeche`:
-     *                     ebenso als Fläche in m² (0 = nur die Punktzahl).
+     *                     ebenso als Fläche in m² (0 = nur die Punktzahl);
+     *                     `ersatz`: Uint8Array je Körperpunkt, 1 = ein ERSATZSTÜCK verdeckt ihn (`hautmaskeersatz.js`).
      */
     static verdeckt(koerper, dreiecke, stoffe, optionen = {}) {
         const abstand = optionen.abstand ?? Hautmaske.ABSTAND_M;
@@ -120,7 +122,6 @@ export class Hautmaske {
         const ringe = optionen.randringe ?? Hautmaske.RANDRINGE;
         const eng = optionen.eng ?? Hautmaske.ENG_M;
         const nahe = optionen.nahe ?? Hautmaske.NAHE_M;
-        const suchweite = optionen.suchweite ?? Math.max(abstand, tiefe, nahe);
         const inseln = optionen.inseln ?? Hautmaske.INSEL_MAX;
         const inselflaeche = optionen.inselflaeche ?? Hautmaske.INSEL_FLAECHE_M2;
         const n = koerper.length / 3;
@@ -130,11 +131,13 @@ export class Hautmaske {
         const basis = { koerper, normalen, koerpergitter };
         for (const stoff of stoffe || []) {
             if (!stoff?.punkte?.length || !stoff?.dreiecke?.length) continue;
-            // Ein STARRES Stück (Schuh) biegt sich am Rand nicht wie ein Bund — der
-            // Randstreifen, der eine lockere Kante beim Heben vor einem Loch schützt,
-            // bleibt hier zu (`hautverdeckung.js`); nur hier gilt der Abstandstest.
-            const [stueckRinge, stueckNahe] = stoff.starr ? [0, nahe] : [ringe, 0];
-            Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, stueckRinge, eng, suchweite, stueckNahe);
+            // STARR (Schuh, Ersatzstück): kein Randstreifen (`hautverdeckung.js`), dafür der Abstandstest; `stoff.nahe` begrenzt ihn.
+            const [stueckRinge, stueckNahe] = stoff.starr ? [0, stoff.nahe ?? nahe] : [ringe, 0];
+            const stueckTiefe = Math.max(tiefe, stoff.tiefe || 0);     // `stoff.tiefe`: Scham aus einer .blend, bis 30 mm hinter der Haut
+            const stueckWeite = optionen.suchweite ?? Math.max(abstand, stueckTiefe, nahe);
+            const davor = stoff.ersatz ? maske.slice() : null;
+            Hautmaske._einStueck(basis, maske, stoff, abstand, stueckTiefe, stueckRinge, eng, stueckWeite, stueckNahe);
+            if (davor) Hautmaskeersatz.maskieren(basis, maske, stoff, abstand, stueckTiefe, davor, optionen.ersatz);
         }
         if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper, inselflaeche);
         return maske;

@@ -46,3 +46,15 @@ class GarderobeKategorienJsTest(SimpleTestCase):
         self.assertIn(f"static ADRESSE = '{adresse}';", text)
         self.assertIn("Kontextmenue.binden(zeile", text)
         self.assertIn("'Neue Kategorie …'", text)
+
+    def test_3_misslungenes_anziehen_nimmt_das_haekchen_zurueck(self):
+        """08.10.2026 (Edgar: „T-Shirt hinzugefügt – funktioniert nicht"): `anziehen` trägt die Wahl VOR der
+        Antwort ein; riss der Abruf ab, blieb das Häkchen ohne Stück. Jetzt nimmt `_misslungen` den Eintrag
+        zurück (außer ein Netz des Stücks steht schon in der Szene), zeichnet die Liste neu und nennt den
+        Grund dort, wo der Nutzer hakte."""
+        text = quelltext('charakter', 'genesis9', 'genesis9garderobe.js')
+        self.assertIn('.catch(fehler => Genesis9garderobe._misslungen(inst, kennung, fehler))', text)
+        self.assertIn('if (!imBild) delete Dazkleidung.kleidung(inst)[kennung];', text)
+        self.assertIn('await Genesis9garderobe.aktualisieren(inst);', text)
+        self.assertIn("hinweis.className = 'fehlertext';", text)
+        self.assertIn('throw fehler;', text, 'Genesis9lauf soll den Fehler weiter melden und nichts als gelungen markieren')

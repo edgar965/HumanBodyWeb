@@ -2,7 +2,9 @@
 """Blendimporthaut — die Originalhaut der .blend auf die vier Haut-Kacheln von Genesis (Farbe, Normalen, Rauheit).
 
 Kachel 1005 (Nägel) wird nicht gebacken (`Blendimportlage.NICHT_GEBACKEN`): Genesis' Nägel und der Nagellack-Preset gelten.
-Die gebackenen Normalen werden von falschen Treffern gesäubert (`Blendimportnormalen`, Bericht `normalen_flach`).
+Die gebackenen Normalen werden von falschen Treffern gesäubert (`Blendimportnormalen`, Bericht `normalen_flach`) und auf ihr
+Feindetail begrenzt (Einstellung `normalen_form`); der Saum um die Fehlstellen wird geschlossen (`Blendimportrand`); die
+rohen Karten bleiben in `arbeit/` (`farbe_roh_<k>.jpg`, `normalen_roh_<k>.png`, `rauheit_roh_<k>.jpg`).
 
 „Mesh to 3D" überträgt die Netzfarbe über rund 2 Mio. Proben (`meshfigur.md`, Schritt „textur") — für ein Scan-Netz
 genug, für eine 8K-Haut zu grob, und Normalen und Rauheit kennt es nicht. Hier backt Blender aus dem Original
@@ -19,11 +21,14 @@ der Strahl (Auszug 15 mm, Reichweite 35 mm) nicht oder die falsche Stelle.
 """
 
 import logging
+import shutil
 
 import numpy as np
 
 from .blendimportblender import Blendimportblender
 from .blendimportlage import Blendimportlage
+from .blendimportnormalen import Blendimportnormalen
+from .blendimportrand import Blendimportrand
 
 logger = logging.getLogger('core')
 
@@ -33,7 +38,8 @@ __all__ = ['Blendimporthaut']
 class Blendimporthaut:
     FLACH = (128, 128, 255)
 
-    def __init__(self, ablage, job, inventar, rollen, px, melden=None, normalen_grenze=None):
+    def __init__(self, ablage, job, inventar, rollen, px, melden=None, normalen_grenze=None, zusatz=None,
+                 normalen_form='weg'):
         self.ablage = ablage
         self.job = job
         self.inventar = {n['name']: n for n in inventar['netze']}
@@ -42,6 +48,9 @@ class Blendimporthaut:
         self.melden = melden or (lambda anteil, text: None)
         #: Grad ab denen eine gebackene Normale als falscher Treffer gilt; `None` = Vorgabe der Säuberung, `'aus'` = nie.
         self.normalen_grenze = normalen_grenze
+        self.zusatz = dict(zusatz or {})
+        #: `weg` (Vorgabe): nur das Feindetail der gebackenen Normalen gilt; `bleibt`: die ganze Karte.
+        self.normalen_form = normalen_form
         self.normalen_flach = {}
 
     def _koerper(self):
@@ -62,7 +71,7 @@ class Blendimporthaut:
                 'ueber_8mm': round(float((d > 8.0).mean()), 4)}
 
     def backen(self, blend):
-        lage = Blendimportlage(self.job)
+        lage = Blendimportlage(self.job, self.zusatz)
         name, punkte = self._koerper()
         ruhe = lage.ruhelage(punkte)
         np.save(self.ablage.arbeit('koerper_ruhe.npy'), Blendimportlage.blender(ruhe))
@@ -80,6 +89,7 @@ class Blendimporthaut:
             self.ablage.ergebnis('gebacken.txt'))
         bericht['deckung'] = self.nacharbeiten(sorted(objs))
         bericht['normalen_flach'] = self.normalen_flach
+        bericht['normalen_form'] = self.normalen_form
         return self.kacheln(sorted(objs)), bericht
 
     # ------------------------------------------------------------ Nacharbeit
@@ -100,35 +110,45 @@ class Blendimporthaut:
         self.normalen_flach = {}
         for k in kacheln:
             farbe_pfad = self.ablage.ergebnis('haut_%d_farbe.jpg' % k)
+            # Die rohen Karten bleiben in `arbeit/` — Grenze, Saum und Fehlstellen lassen sich so ohne neues Backen (17 Minuten) ändern.
+            shutil.copyfile(farbe_pfad, self.ablage.arbeit('farbe_roh_%d.jpg' % k))
             farbe = np.asarray(Image.open(farbe_pfad).convert('RGB'))
             # JPEG verwischt das reine Schwarz der Fehlstellen um wenige Stufen.
             leer = farbe.max(axis=2) <= 6
             deckung[str(k)] = round(100.0 * (1.0 - leer.mean()), 1)
+            # Der Saum um die Fehlstellen ist nicht rein schwarz und bliebe als dunkle Linie stehen (`Blendimportrand`).
+            farbe, saum = Blendimportrand.schliessen(farbe, leer)
             ersatz = self._meshfigur_kachel(k)
             if leer.any() and ersatz is not None:
                 hinten = np.asarray(Image.open(ersatz).convert('RGB').resize(farbe.shape[1::-1], Image.LANCZOS))
                 farbe = np.where(leer[..., None], hinten, farbe)
+            if leer.any() or saum.any():
                 Image.fromarray(farbe).save(farbe_pfad, quality=95)
             normal_pfad = self.ablage.ergebnis('haut_%d_normalen.png' % k)
             normal = np.asarray(Image.open(normal_pfad).convert('RGB')).copy()
-            # Die rohe Karte bleibt in `arbeit/` — die Grenze der Säuberung lässt sich so ohne neues Backen (17 Minuten) ändern.
             Image.fromarray(normal).save(self.ablage.arbeit('normalen_roh_%d.png' % k))
-            normal[leer] = self.FLACH
-            normal, self.normalen_flach[str(k)] = self._saeubern(normal, leer)
+            normal[leer | saum] = self.FLACH
+            normal, self.normalen_flach[str(k)] = self._saeubern(normal, leer | saum)
+            if self.normalen_form != 'bleibt':
+                # Die Formdifferenz zwischen Figur und Original steht nicht in der Normalenkarte, sondern in der Fläche.
+                normal = Blendimportnormalen.feindetail(normal, leer | saum, self._form_px())
             Image.fromarray(normal).save(normal_pfad)
             rauh_pfad = self.ablage.ergebnis('haut_%d_rauheit.jpg' % k)
+            shutil.copyfile(rauh_pfad, self.ablage.arbeit('rauheit_roh_%d.jpg' % k))
             rauh = np.asarray(Image.open(rauh_pfad).convert('L')).copy()
-            if (~leer).any():
-                rauh[leer] = int(np.median(rauh[~leer]))
+            if (~(leer | saum)).any():
+                rauh[leer | saum] = int(np.median(rauh[~(leer | saum)]))
             Image.fromarray(rauh).save(rauh_pfad, quality=95)
             self.melden(0.95, 'Kachel %d nachgearbeitet (%.1f %% getroffen)' % (k, deckung[str(k)]))
             self._warnen(k)
         return deckung
 
+    def _form_px(self):
+        """Wellenlänge der Form in Pixeln dieser Kachelgröße (`Blendimportnormalen.FORM_PX` gilt bei 8192 px)."""
+        return max(3.0, Blendimportnormalen.FORM_PX * self.px / 8192.0)
+
     def _saeubern(self, normal, leer):
         """`(Karte, Anteil geänderter Texel in %)` mit der gewählten Grenze; `'aus'` lässt die Karte, wie sie ist."""
-        from .blendimportnormalen import Blendimportnormalen
-
         if self.normalen_grenze == 'aus':
             return normal, 0.0
         grad = float(self.normalen_grenze) if self.normalen_grenze else None
@@ -136,8 +156,6 @@ class Blendimporthaut:
 
     def _warnen(self, kachel):
         """Fällt in eine Kachel auffällig viel, steht es im Log und in der Statuszeile des Imports."""
-        from .blendimportnormalen import Blendimportnormalen
-
         anteil = self.normalen_flach[str(kachel)]
         if anteil < Blendimportnormalen.WARN_PROZENT:
             return

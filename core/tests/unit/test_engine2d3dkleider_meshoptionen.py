@@ -165,12 +165,15 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
         self.assertEqual(Engine2d3dKleideroptionen.pruefen({'netz': {'aufloesung': 'sehr_hoch'}})['mesh']['aufloesung'], 'hoch')
 
     def test_die_seite_speichert_jede_gruppe(self):
-        """Die Formulare von „netz", „mesh" und „koerper" wurden bis 02.10.2026 gebaut, aber nie gespeichert — eine
-        Gruppe, die in `GRUPPEN` (Python) steht, muss auch in `Engine2d3dKleidereinstellungen.GRUPPEN` (JS) stehen."""
-        pfad = Path(settings.BASE_DIR) / 'static' / 'viewer' / 'engine2d3dkleider' / 'engine2d3dkleidereinstellungen.js'
-        block = re.search(r'static GRUPPEN = \{(.*?)\};', pfad.read_text(encoding='utf-8'), re.S).group(1)
+        """Die Formulare von „netz", „mesh" und „koerper" wurden bis 02.10.2026 gebaut, aber nie gespeichert. Seit 04.10.2026 liest
+        `Engine2d3dKleidereinstellungen.GRUPPEN` (JS) die Behälter `engine2d3dkleider-optionen-<gruppe>` aus der Seite — eine Gruppe, die in
+        `GRUPPEN` (Python) steht, braucht also ihren Behälter in der Vorlage, sonst wird sie nie gespeichert."""
+        js = Path(settings.BASE_DIR) / 'static' / 'viewer' / 'engine2d3dkleider' / 'engine2d3dkleidereinstellungen.js'
+        self.assertIn('engine2d3dkleider-optionen-', js.read_text(encoding='utf-8'))
+        vorlagen = Path(settings.BASE_DIR) / 'templates'
+        seite = '\n'.join((vorlagen / name).read_text(encoding='utf-8') for name in ('engine2d3dkleider_auftrag.html', '_engine2d3dkleider_kopf.html'))
         for gruppe in Engine2d3dKleideroptionen.GRUPPEN:
-            self.assertRegex(block, r"\b%s: 'engine2d3dkleider-optionen-%s'" % (gruppe, gruppe))
+            self.assertRegex(seite, r'id="engine2d3dkleider-optionen-%s"' % gruppe)
 
 
 class NurTrellisTest(OhneDienste):
@@ -187,7 +190,7 @@ class NurTrellisTest(OhneDienste):
     def test_das_formular_zeigt_kein_formmodell_und_hunyuan_steht_nur_in_der_wahl_modell(self):
         katalog = Engine2d3dKleideroptionen.katalog()
         netz = {f['schluessel']: f for f in katalog['netz']['optionen']}
-        self.assertEqual(list(netz), ['textur', 'freistellen', 'licht'])
+        self.assertEqual(sorted(netz), ['freistellen', 'licht', 'textur'])                  # kein `formmodell`; die Reihenfolge ist die von `Meshoptionen`, nicht Teil der Zusage
         self.assertEqual([w['wert'] for w in netz['textur']['werte']], ['fotos_ki', 'fotos', 'ki', 'keine'])
         mesh = {f['schluessel']: f for f in katalog['mesh']['optionen']}
         self.assertEqual([w['wert'] for w in mesh['aufloesung']['werte']], ['schnell', 'mittel', 'hoch'])

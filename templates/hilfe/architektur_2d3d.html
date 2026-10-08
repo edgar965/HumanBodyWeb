@@ -76,7 +76,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   </table>
 
   <h2>Die Prüfung nach jeder Runde</h2>
-  <table class="db-tabelle">
+  <table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-1">
     <thead><tr><th>Schritt</th><th>Was Fable tut</th></tr></thead>
     <tbody>
       {% for p in pruefschleife %}<tr><td class="a2d3d-takt"><b>{{ p.schritt }}</b></td><td>{{ p.was }}</td></tr>{% endfor %}
@@ -93,7 +93,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   </div>
 
   <h2>Wer schreibt das Rezept der nächsten Runde?</h2>
-  <table class="db-tabelle">
+  <table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-2">
     <thead><tr><th>Weg</th><th>Wann</th><th>Wer sieht was an</th><th>Klassen</th></tr></thead>
     <tbody>
       {% for w in wege %}
@@ -106,7 +106,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   <p>Ein Auftrag rechnet in einem eigenen Prozess (<code>manage.py engine2d3dkleider_fahren</code>, gestartet von
     <code>Engine2d3dKleiderarbeiter</code>), damit ein Neustart des Servers ihn nicht mitreißt. Folge: Code, der nach dem Start
     des Prozesses geändert wird, gilt erst im nächsten Lauf. Die Schritte (<code>Engine2d3dKleiderlauf.SCHRITTE</code>):</p>
-  <table class="db-tabelle">
+  <table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-3">
     <thead><tr><th>Schritt</th><th>Klasse</th><th>Was er tut</th></tr></thead>
     <tbody>
       {% for s in lauf %}
@@ -123,7 +123,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   <h2>Eine Runde, Schritt für Schritt</h2>
   <p>Die letzte Spalte nennt den Abschnitt, unter dem der Schritt im <code>auftrag.log</code> gemessen wird
     (<code>2D3D Kleider &lt;kennung&gt;: x s &lt;Abschnitt&gt;</code>).</p>
-  <table class="db-tabelle">
+  <table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-4">
     <thead><tr><th class="a2d3d-nr">Nr.</th><th>Wann</th><th>Was</th><th>Klassen</th><th>Abschnitt im Log</th></tr></thead>
     <tbody>
       {% for r in runde %}
@@ -137,7 +137,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   {% include "hilfe/_architektur_2d3d_messung.html" with m=messung %}
 
   <h2>Festgelegt von Edgar</h2>
-  <table class="db-tabelle">
+  <table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-5">
     <thead><tr><th>Regel</th><th>Umsetzung</th></tr></thead>
     <tbody>
       {% for r in regeln %}<tr><td><b>{{ r.regel }}</b></td><td>{{ r.umsetzung }}</td></tr>{% endfor %}

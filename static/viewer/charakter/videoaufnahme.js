@@ -30,16 +30,32 @@ export class Videoaufnahme {
     /** Bilder vor dem ersten, damit die Tempoglättung (0,75) eingeschwungen
      *  ist — nach zehn Bildern sind 94 % des Sprungs abgebaut. */
     static VORLAUF = 10;
+    /** „Video erzeugen default": die ganze Animation von Anfang bis Ende, Kamera nach dem Häkchen „folgt der Figur". */
+    static GANZ = 'ganz';
+    /** „Video erzeugen": was hier im Browser läuft — ab der Abspielstelle bis zum Ende, mit der Kamera, wie Edgar sie von Hand stellt. */
+    static SICHTBAR = 'sichtbar';
 
     constructor(anzeige) {
         // { zeigen(text, anteil), melden(text, fehler),
         //   fertig({url, pfad}, info), ablage() → {ablage, dateiname, figur, animation} }
         this.anzeige = anzeige;
         this.laeuft = false;
+        this._abbruch = false;
+        this._kodiert = false;
         this._arbeitsvektor = new THREE.Vector3();
     }
 
-    async starten() {
+    /**
+     * Knopf „Abbrechen" (Edgar, 08.10.2026): Die Aufnahme hört vor dem nächsten Bild auf, nichts geht an den
+     * Server, die Wiedergabe steht wieder, wie sie war. Ab dem Senden (`_kodiert`) geht es nicht mehr — das ist
+     * EINE Anfrage, die der Server zu Ende kodiert; der Knopf ist dann gesperrt (`anzeige.abbruchFrei`).
+     */
+    abbrechen() {
+        if (this.laeuft && !this._kodiert) this._abbruch = true;
+    }
+
+    /** @param {string} modus  `Videoaufnahme.GANZ` oder `Videoaufnahme.SICHTBAR`. */
+    async starten(modus = Videoaufnahme.GANZ) {
         if (this.laeuft) return;
         const inst = _selectedInst();
         if (!inst?.isSkinned) { this.anzeige.melden('Keine gehäutete Figur gewählt.', true); return; }
@@ -48,18 +64,45 @@ export class Videoaufnahme {
             return;
         }
         const mm = Number(document.getElementById('figurvideo-physik')?.value || 0);
-        const sekunden = Number(document.getElementById('figurvideo-sekunden')?.value || 5);
         this.laeuft = true;
+        this._abbruch = false;
+        this._kodiert = false;
         const liefWeiter = state.playing;
         state.playing = false;
+        // ZWEI KNÖPFE (Edgar, 08.10.2026: „mach einen zweiten Button: Video erzeugen default, der das
+        // ganze Video der Animation erzeugt. Der Video erzeugen soll mir das erzeugen, was im Browser
+        // läuft, mit der Kamera Einstellung die ich manuell mache"):
+        // - GANZ: die ganze Animation, egal ob sie läuft oder nicht („der button Video erzeugen soll das
+        //   ganze Video für diese animation erzeugen, egal ob sie läuft oder nicht!").
+        // - SICHTBAR: ab der Abspielstelle bis zum Ende, Kamera unverändert.
+        // Die Aufnahme setzt die Zeit selbst (`_zeit`) und hängt nicht an der Wiedergabe. Dafür muss sie
+        // den Stand der Wiedergabe freigeben und danach zurückgeben:
+        // - PAUSIERT: Eine pausierte Aktion rechnet mit Zeitmaß 0, `mixer.setTime(t)` stellt dann bei
+        //   jedem t dieselbe Haltung (gemessen am Modell „Edgar", Dance1_smplx, Knochen l_upperarm:
+        //   Quaternion bei t = 1, 2 und 3 s identisch; mit `paused = false` drei verschiedene). Das
+        //   Video „Edgar.mp4" (DanceLang, 120 Bilder, mittlerer Unterschied zum ersten Bild 0,05 von
+        //   255) zeigte darum keine Bewegung.
+        // - TEMPO: `setTime(t)` rechnet mit `mixer.timeScale`; der Tempo-Regler verschöbe jede Zeit.
+        // - ABSPIELSTELLE: danach steht die Animation wieder dort, wo der Nutzer sie hatte.
+        const aktion = state.currentAction;
+        const vorher = { pausiert: aktion.paused, tempo: state.mixer.timeScale, zeit: aktion.time };
+        aktion.paused = false;
+        state.mixer.timeScale = 1;
         try {
-            const bilder = await this._aufnehmen(inst, mm, sekunden);
+            const bilder = await this._aufnehmen(inst, mm, modus, vorher.zeit);
+            if (!bilder) { this.anzeige.abgebrochen(); return; }
+            this._kodiert = true;
             this.anzeige.zeigen('Sende an Server für ffmpeg …', 0.97);
+            this.anzeige.abbruchFrei(false);
             const antwort = await this._kodieren(bilder, mm);
             this.anzeige.fertig(antwort, { bilder: bilder.length, mm });
         } catch (fehler) {
             this.anzeige.melden(`Aufnahme fehlgeschlagen: ${fehler.message}`, true);
         } finally {
+            aktion.time = vorher.zeit;
+            state.mixer.timeScale = vorher.tempo;
+            state.mixer.update(0);
+            aktion.paused = vorher.pausiert;
             this.laeuft = false;
             state.playing = liefWeiter;
         }
@@ -75,21 +118,25 @@ export class Videoaufnahme {
         if (state.currentAnimGroundFixed) Bodenstand.richten(state, this._arbeitsvektor);
     }
 
-    async _aufnehmen(inst, mm, sekunden) {
+    async _aufnehmen(inst, mm, modus, abspielstelle) {
         const fps = Videoaufnahme.FPS, dt = 1 / fps;
         const clip = state.currentAction.getClip();
         // Ab dem Vorlauf, nicht ab null: Bild 0 des Retargets ist ein
         // STARTZUSTAND (T-Pose), kein Bewegungsbild — es stand als erstes
         // Bild im Video. Der Vorlauf läuft über die ersten Bilder und
-        // schwingt dabei die Tempoglättung ein.
-        // Ab der Stelle, an der die Animation gerade steht — mindestens
-        // aber nach dem Vorlauf, damit Bild 0 (Startzustand) nie im Video ist.
-        const von = Math.max(state.mixer.time, Videoaufnahme.VORLAUF / fps);
-        const dauer = Math.min(sekunden, Math.max(clip.duration - von, 0));
+        // schwingt dabei die Tempoglättung ein. Bis zum Ende des Clips.
+        // GANZ: von vorn, unabhängig von der Abspielstelle. SICHTBAR: ab der
+        // Abspielstelle; steht sie am Ende (keine zwei Bilder mehr), von vorn —
+        // ein leeres Video hülfe niemandem.
+        const anfang = Videoaufnahme.VORLAUF / fps;
+        const ab = modus === Videoaufnahme.SICHTBAR ? Math.max(abspielstelle, anfang) : anfang;
+        const von = clip.duration - ab >= 2 * dt ? ab : anfang;
+        const dauer = Math.max(clip.duration - von, 0);
         const zahl = Math.round(dauer * fps);
         let staerke = 0;
         if (mm > 0 && Weichgewebe.vorbereiten(inst, mm)) {
             staerke = await this._kalibrieren(inst, mm, von, zahl, dt);
+            if (this._abbruch) return null;
         }
         // Durchlauf 2: rendern.
         Weichgewebe.vorbereiten(inst, mm);
@@ -101,9 +148,11 @@ export class Videoaufnahme {
         // „Kamera folgt": ab der Startstellung der Figur, nicht ab Bild 0 —
         // der Vorlauf läuft ohne Bild, die Kamera darf aber schon mit.
         this._zeit(von - Videoaufnahme.VORLAUF / fps);
-        const folge = this._kamerafolge(inst);
+        // SICHTBAR: die Kamera bleibt, wie Edgar sie von Hand eingestellt hat — ohne Nachführen.
+        const folge = modus === Videoaufnahme.SICHTBAR ? null : this._kamerafolge(inst);
         try {
             for (let n = -Videoaufnahme.VORLAUF; n < zahl; n++) {
+                if (this._abbruch) return null;
                 const t = von + n / fps;
                 this._zeit(t);
                 if (mm > 0) Weichgewebe.bildErzwingen(inst, dt, staerke);
@@ -152,6 +201,7 @@ export class Videoaufnahme {
         // Jedes vierte Bild genügt: Der Ausschlag hängt an der schnellsten
         // Bewegung, und die dauert länger als vier Bilder.
         for (let n = -Videoaufnahme.VORLAUF; n < zahl; n++) {
+            if (this._abbruch) return 0;
             this._zeit(von + n / fps);
             const g = Weichgewebe.bildErzwingen(inst, dt, 1.0);
             if (n >= 0 && n % 4 === 0) max = Math.max(max, g);

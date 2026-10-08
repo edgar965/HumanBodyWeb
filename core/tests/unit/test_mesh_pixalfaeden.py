@@ -55,8 +55,10 @@ class Kunstfigur:
 
     @staticmethod
     def arm():
-        """Dicker Zylinder (Radius 3 cm) 30 cm nach vorn — ein Arm, kein Faden."""
-        zylinder = trimesh.creation.cylinder(radius=0.03, height=0.30, sections=8).subdivide_to_size(0.012)
+        """Dicker Balken (6 × 6 cm, 30 cm lang) nach vorn — ein Arm, kein Faden. Gleichmäßig unterteilt (`subdivide`, alle Flächen zugleich): `subdivide_to_size` teilt je Fläche nach ihrer längsten Kante,
+        die Nachbarn passen danach nicht mehr aneinander (Kantenpunkte ohne Gegenstück), und Deckel oder Kuppen eines Zylinders oder einer Kapsel hingen als lose Stücke unter `KRUEMEL` (200 Flächen)
+        am Netz — sie fielen als Krümel weg (gemessen 08.10.2026, `ProjektTemp/_wegwerf/cutegirl/pixalfaeden_diag.py`: Zylinder 256, Kapsel 448 Flächen)."""
+        zylinder = trimesh.creation.box(extents=[0.06, 0.06, 0.30]).subdivide().subdivide().subdivide()
         zylinder.apply_translation([0.25, 0.0, 0.15])
         return zylinder
 
