@@ -14,6 +14,11 @@ Das beleuchtete sich als weißer „Pflaster"-Fleck (Edgar: „was ist das Pflas
 Der Median der belegten Texel liegt bei 5–7° (gemessen, alle Hautkacheln). Die Grenze von 50° ist eine Setzung, kein Messwert:
 Was darüber liegt, gilt als falscher Treffer, das Texel und sein Rand (`RAND_PX`) werden flach (die Normale der Figur selbst
 gilt dann). Je Kachel steht der Anteil der geänderten Texel im Bericht (`normalen_flach`).
+
+Gemessen im zweiten Import (2026.10.08.19.31.50, 50°, derselbe Körper mit Fingersegmenten): 1001 2,8 %, 1002 1,2 %, 1003 0,8 %,
+1004 2,7 % der Texel geändert. Bei einem ANDEREN Modell ist die Grenze nicht gemessen — deshalb wählbar (Dialog „Normalen säubern
+ab", `Blendimporteinstellungen`) und `WARN_PROZENT` meldet eine Kachel, in der mehr als das Dreifache des gemessenen Höchstwerts
+fällt (Setzung): dort stimmt die Grenze oder das Backen nicht.
 """
 
 import math
@@ -30,11 +35,14 @@ class Blendimportnormalen:
     #: So viele Pixel um einen falschen Treffer werden mit flachgelegt (Übergang).
     RAND_PX = 3
     BAND = 512
+    #: Ab diesem Anteil geänderter Texel einer Kachel (in %) meldet der Import eine Warnung.
+    WARN_PROZENT = 8.0
 
     @classmethod
-    def falsche(cls, normal, leer=None):
-        """Maske (H, W) der Texel mit Kippung über `GRENZE_GRAD`, ohne `leer` — bandweise (8192² in float32 wäre ein Gigabyte)."""
-        grenze = math.cos(math.radians(cls.GRENZE_GRAD))
+    def falsche(cls, normal, leer=None, grad=None):
+        """Maske (H, W) der Texel mit Kippung über `grad` (Vorgabe `GRENZE_GRAD`), ohne `leer` — bandweise (8192² in
+        float32 wäre ein Gigabyte)."""
+        grenze = math.cos(math.radians(cls.GRENZE_GRAD if grad is None else grad))
         maske = np.zeros(normal.shape[:2], dtype=bool)
         for oben in range(0, normal.shape[0], cls.BAND):
             band = normal[oben:oben + cls.BAND].astype(np.float32) / 127.5 - 1.0
@@ -45,11 +53,11 @@ class Blendimportnormalen:
         return maske
 
     @classmethod
-    def saeubern(cls, normal, leer=None):
+    def saeubern(cls, normal, leer=None, grad=None):
         """`(neue Karte, Anteil der geänderten Texel in %)` — `normal` (H, W, 3) uint8; ändert die Eingabe nicht."""
         from scipy import ndimage
 
-        schlecht = cls.falsche(normal, leer)
+        schlecht = cls.falsche(normal, leer, grad)
         if schlecht.any() and cls.RAND_PX:
             schlecht = ndimage.binary_dilation(schlecht, iterations=cls.RAND_PX)
         if leer is not None:

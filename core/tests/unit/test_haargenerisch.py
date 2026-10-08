@@ -8,11 +8,15 @@ Die echte Liste kostet Sekunden und hängt daran, was auf dem Rechner installier
 """
 
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import numpy as np
 from Genesis9.haarachsen import G9haarachsen
 from Genesis9.haargenerisch import G9haargenerisch
+from Genesis9.pfade import G9pfade
+
+from ._pruefablage import Pruefablage
 
 #: Zwei Frisuren, wie sie in der Garderobenliste stehen (`G9garderobeeintrag`).
 FRISUREN = [
@@ -32,6 +36,12 @@ class SammeleintragTest(unittest.TestCase):
         self.frisuren = mock.patch.object(G9haargenerisch, 'frisuren', classmethod(lambda cls: FRISUREN))
         self.frisuren.start()
         self.addCleanup(self.frisuren.stop)
+        # Ohne eigene Genesis-Daten (`3DObjects/models/Genesis9`): Seit dem 08.10.2026 liest der Code dort wirklich, und die
+        # Zusatzsträhnen (`str.*`) der echten Ablage machten aus 26 Reglern 38 — der Test prüfte Edgars Bestand.
+        self.daten = mock.patch.object(G9pfade, 'eigene_daten',
+                                       classmethod(lambda cls: Path(Pruefablage.wurzel()) / 'ohne_genesis9_daten'))
+        self.daten.start()
+        self.addCleanup(self.daten.stop)
         self.achsen = mock.patch.object(G9haarachsen, 'vorhanden', classmethod(lambda cls, k: True))
         self.achsen.start()
         self.addCleanup(self.achsen.stop)

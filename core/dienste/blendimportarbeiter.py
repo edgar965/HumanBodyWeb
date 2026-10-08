@@ -55,6 +55,21 @@ class Blendimportarbeiter:
         return bool(pid) and Prozesspruefung.lebt(pid)
 
     @classmethod
+    def laufender(cls, ausser=None):
+        """Kennung eines Imports, dessen Arbeitsprozess noch lebt (außer `ausser`) — sonst `None`.
+
+        Zwei Importe zugleich teilen sich GPU (Backen, „Mesh to 3D") und Kerne; es gibt sonst nichts, was den zweiten
+        aufhält. Der Endpunkt fragt vor dem Anlegen und vor jedem Neustart ab Schritt."""
+        from ..daten.blendimportablage import Blendimportablage
+
+        for kennung in Blendimportablage.alle():
+            ablage = Blendimportablage(kennung)
+            # Windows vergibt PIDs rasch neu: eine fremde Nummer in einer alten Datei darf nicht sperren — der Stand muss „läuft" sagen.
+            if kennung != ausser and cls.lebt(ablage) and ablage.stand().get('status') == 'laeuft':
+                return kennung
+        return None
+
+    @classmethod
     def anhalten(cls, ablage):
         """Stand zuerst (der Lauf prüft ihn), dann der Prozess samt Kindern (Runner, Blender halten die GPU)."""
         stand = ablage.stand()

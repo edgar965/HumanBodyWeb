@@ -8,6 +8,8 @@ GET  /api/character/blendimport/<kennung>/zustand/      Stand des Laufs; im Schr
                                                          Auftrags „Mesh to 3D"
 POST /api/character/blendimport/<kennung>/anhalten/
 POST /api/character/blendimport/<kennung>/neu/          {ab} → ab diesem Schritt neu rechnen
+
+`starten` und `neu` antworten 409, solange ein ANDERER Import läuft (`Blendimportarbeiter.laufender`).
 """
 
 import json
@@ -47,6 +49,16 @@ class Blendimportendpunkte:
             return None
 
     @staticmethod
+    def _belegt(ausser=None):
+        """409, solange ein anderer Import läuft (GPU und Kerne gehören ihm); sonst `None`."""
+        andere = Blendimportarbeiter.laufender(ausser=ausser)
+        if not andere:
+            return None
+        schritt = Blendimportablage(andere).stand().get('schritt') or '?'
+        return JsonResponse({'error': 'Import %s läuft noch (Schritt „%s") — erst nach seinem Ende starten' % (andere, schritt)},
+                            status=409)
+
+    @staticmethod
     @require_GET
     def einstellungen(request):
         letzte = []
@@ -71,6 +83,9 @@ class Blendimportendpunkte:
     def starten(request):
         from ..daten.auftragskennung import Auftragskennung
 
+        belegt = Blendimportendpunkte._belegt()
+        if belegt:
+            return belegt
         werte = Blendimporteinstellungen.pruefen(Blendimportendpunkte._rumpf(request).get('werte'))
         try:
             quelle = Blendimportquelle(werte['pfad'], werte['name']).steckbrief()
@@ -132,6 +147,9 @@ class Blendimportendpunkte:
             return JsonResponse({'error': 'Kein Import %s' % kennung}, status=404)
         if Blendimportarbeiter.lebt(ablage):
             return JsonResponse({'error': 'Der Import läuft schon'}, status=409)
-        ab = Blendimportendpunkte._rumpf(request).get('ab')
+        belegt = Blendimportendpunkte._belegt(ausser=kennung)
+        if belegt:
+            return belegt
+        ab =Blendimportendpunkte._rumpf(request).get('ab')
         ab = ab if ab in Blendimportlauf.SCHRITTE else None
         return JsonResponse({'ok': True, 'pid': Blendimportarbeiter.starten(ablage, ab=ab), 'ab': ab})

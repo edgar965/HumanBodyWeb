@@ -33,13 +33,15 @@ __all__ = ['Blendimporthaut']
 class Blendimporthaut:
     FLACH = (128, 128, 255)
 
-    def __init__(self, ablage, job, inventar, rollen, px, melden=None):
+    def __init__(self, ablage, job, inventar, rollen, px, melden=None, normalen_grenze=None):
         self.ablage = ablage
         self.job = job
         self.inventar = {n['name']: n for n in inventar['netze']}
         self.rollen = rollen
         self.px = int(px)
         self.melden = melden or (lambda anteil, text: None)
+        #: Grad ab denen eine gebackene Normale als falscher Treffer gilt; `None` = Vorgabe der Säuberung, `'aus'` = nie.
+        self.normalen_grenze = normalen_grenze
         self.normalen_flach = {}
 
     def _koerper(self):
@@ -93,8 +95,6 @@ class Blendimporthaut:
         """Fehlstellen füllen; `{kachel: Anteil getroffener Texel in %}`."""
         from PIL import Image
 
-        from .blendimportnormalen import Blendimportnormalen
-
         Image.MAX_IMAGE_PIXELS = None
         deckung = {}
         self.normalen_flach = {}
@@ -114,7 +114,7 @@ class Blendimporthaut:
             # Die rohe Karte bleibt in `arbeit/` — die Grenze der Säuberung lässt sich so ohne neues Backen (17 Minuten) ändern.
             Image.fromarray(normal).save(self.ablage.arbeit('normalen_roh_%d.png' % k))
             normal[leer] = self.FLACH
-            normal, self.normalen_flach[str(k)] = Blendimportnormalen.saeubern(normal, leer)
+            normal, self.normalen_flach[str(k)] = self._saeubern(normal, leer)
             Image.fromarray(normal).save(normal_pfad)
             rauh_pfad = self.ablage.ergebnis('haut_%d_rauheit.jpg' % k)
             rauh = np.asarray(Image.open(rauh_pfad).convert('L')).copy()
@@ -122,7 +122,29 @@ class Blendimporthaut:
                 rauh[leer] = int(np.median(rauh[~leer]))
             Image.fromarray(rauh).save(rauh_pfad, quality=95)
             self.melden(0.95, 'Kachel %d nachgearbeitet (%.1f %% getroffen)' % (k, deckung[str(k)]))
+            self._warnen(k)
         return deckung
+
+    def _saeubern(self, normal, leer):
+        """`(Karte, Anteil geänderter Texel in %)` mit der gewählten Grenze; `'aus'` lässt die Karte, wie sie ist."""
+        from .blendimportnormalen import Blendimportnormalen
+
+        if self.normalen_grenze == 'aus':
+            return normal, 0.0
+        grad = float(self.normalen_grenze) if self.normalen_grenze else None
+        return Blendimportnormalen.saeubern(normal, leer, grad)
+
+    def _warnen(self, kachel):
+        """Fällt in eine Kachel auffällig viel, steht es im Log und in der Statuszeile des Imports."""
+        from .blendimportnormalen import Blendimportnormalen
+
+        anteil = self.normalen_flach[str(kachel)]
+        if anteil < Blendimportnormalen.WARN_PROZENT:
+            return
+        text = 'Kachel %d: %.1f %% der Normalen flachgelegt (Warnung ab %.0f %%) — Grenze im Import-Dialog prüfen' % (
+            kachel, anteil, Blendimportnormalen.WARN_PROZENT)
+        logger.warning('Blender-Import %s: %s', self.ablage.kennung, text)
+        self.melden(0.95, text)
 
     def kacheln(self, kacheln):
         """`{1001: Datei, '1001:normalen': Datei, '1001:rauheit': Datei, …}` (Namen in `ergebnis/`)."""

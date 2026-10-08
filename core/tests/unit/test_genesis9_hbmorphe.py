@@ -149,5 +149,6 @@ class HbmorpheTest(SimpleTestCase):
                 schluessel = [b['schluessel'] for b in G9reglerplan.bereiche()]
             self.assertEqual(schluessel[:len(G9reglerplan.BEREICHE)], list(G9reglerplan.BEREICHE))
             # Dahinter „Kopf-Eigen" (`G9schnittmorph.bereich`, 27.09.2026) — immer, auch leer — und zuletzt
-            # „Nachformung (Ort)" (`G9koerperstandardmorphe.bereich`, 30.09.2026 nachts).
-            self.assertEqual(schluessel[len(G9reglerplan.BEREICHE):], ['hb_fantasie', 'kopf_eigen', 'ort'])
+            # „Nachformung (Ort)" (`G9koerperstandardmorphe.bereich`, 30.09.2026 nachts) und zuletzt „Modell-Eigen"
+            # (`G9modellmorphe.bereich`, 08.10.2026 — die Eigenform je importiertem Modell, ein Schieber).
+            self.assertEqual(schluessel[len(G9reglerplan.BEREICHE):], ['hb_fantasie', 'kopf_eigen', 'ort', 'modell_eigen'])

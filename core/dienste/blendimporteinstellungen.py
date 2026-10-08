@@ -51,6 +51,12 @@ class Blendimporteinstellungen:
         {'schluessel': 'browser_px', 'titel': 'Hautkacheln im Browser', 'art': 'wahl', 'vorgabe': '2048',
          'werte': [('1024', '1024 px'), ('2048', '2048 px'), ('4096', '4096 px')],
          'hinweis': 'Ohne Strg+Alt+H lädt der Browser diese verkleinerte Fassung.'},
+        {'schluessel': 'normalen_grenze', 'titel': 'Normalen säubern ab', 'art': 'wahl', 'vorgabe': '50',
+         'werte': [('35', '35° (streng)'), ('50', '50° (Vorgabe)'), ('70', '70° (nur grobe Fehltreffer)'),
+                   ('aus', 'Nicht säubern')],
+         'hinweis': 'Gebackene Normalen, die stärker von der Figur abweichen, gelten als falscher Strahltreffer (so '
+                    'entstand ein weißer Fleck im Dekolleté) und werden flach. An cute girl gemessen bei 50°: 0,8–2,8 % '
+                    'der Texel je Kachel; ab 8 % warnt der Import.'},
         {'schluessel': 'basis', 'titel': 'Grundfigur', 'art': 'wahl', 'vorgabe': 'feminine',
          'werte': [('feminine', 'Genesis 9 Feminine'), ('masculine', 'Genesis 9 Masculine'),
                    ('neutral', 'Genesis 9 (neutral)')]},

@@ -157,7 +157,8 @@ class Blendimportlauf:
         from .blendimporthaut import Blendimporthaut
 
         haut = Blendimporthaut(self.ablage, self.job(), self.inventar(), self.stand['rollen'],
-                               self.stand['einstellungen']['kachel_px'], self.melden)
+                               self.stand['einstellungen']['kachel_px'], self.melden,
+                               self.stand['einstellungen'].get('normalen_grenze'))
         kacheln, bericht = haut.backen(self.stand['quelle']['datei'])
         self.ergebnis('haut', {**bericht, 'kacheln': kacheln})
 

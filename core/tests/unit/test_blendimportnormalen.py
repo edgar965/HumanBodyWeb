@@ -63,7 +63,10 @@ class BlendimportnormalenTest(SimpleTestCase):
         self.assertEqual(tuple(schief[5, 5]), (255, 128, 128), 'die Eingabe bleibt unverändert')
 
     def test_4_anteil_ist_der_prozentsatz_der_geaenderten_texel(self):
+        # Eine leichte Neigung ringsum (nicht FLACH): nur dann ändert sich der Rand des schiefen Texels wirklich —
+        # auf einer flachen Karte würde „flachlegen" am Nachbarn nichts ändern und der Anteil (25 Texel) wäre zu groß.
         karte = self._karte(100)
+        karte[:, :] = (140, 128, 250)
         karte[50, 50] = (255, 128, 128)
         neu, anteil = Blendimportnormalen.saeubern(karte)
         geaendert = int(np.any(neu != karte, axis=2).sum())

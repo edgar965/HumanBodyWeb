@@ -52,7 +52,8 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
     <thead><tr>
       <th>Modell</th><th>Offen / zugänglich</th><th data-sort-aus>Parameter</th><th data-sort-aus>Auflösung</th>
       <th>Geschwindigkeit</th><th>Größe (Gewichte)</th><th data-sort-aus>Qualität (Einordnung der Quelle)</th>
-      <th data-sort-aus>Bei uns im Einsatz</th><th data-sort-aus>Quelle</th>
+      <th data-sort-aus>Bei uns im Einsatz</th><th data-sort-aus>Quelle</th><th>Rating</th>
+      <th data-sort-aus>Link</th><th data-sort-aus>Testen</th>
     </tr></thead>
     <tbody>
     {% for m in modellvergleich %}
@@ -66,6 +67,9 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
       <td>{{ m.qualitaet }}</td>
       <td>{{ m.bei_uns }}</td>
       <td class="a2d3d-klein">{{ m.quelle }}</td>
+      <td data-sort="{{ m.rating_sort|default:'' }}">{{ m.rating }}</td>
+      <td><a href="{{ m.link }}" target="_blank" rel="noopener noreferrer">öffnen ↗</a></td>
+      <td>{% if m.testen_url %}<a href="{{ m.testen_url }}" target="_blank" rel="noopener noreferrer">testen ↗</a>{% if m.testen_hinweis %} <span class="a2d3d-klein">({{ m.testen_hinweis }})</span>{% endif %}{% else %}<span class="a2d3d-klein">{{ m.testen_hinweis }}</span>{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
