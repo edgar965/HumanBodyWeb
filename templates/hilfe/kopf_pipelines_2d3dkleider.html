@@ -299,3 +299,79 @@ Iteration billig, und genau deshalb lohnt es sich, jede Runde anzusehen.</p>
   weggelassen bleibt das Sichtmodell. Gleich geblieben
   sind Auftrag, Tabelle, Iterationsansicht und Bühne.
 </div>
+
+<h3 id="direktmorph">Wie genau trifft die Grundfigur das Mesh? Vom Käfig-Rest zum direkten Eigenmorph (07.10.2026)</h3>
+<p>
+  Edgar: „ich brauche ein Modell das von der Textur und den Proportionen genau so aussieht wie das Mesh." Gemessen an
+  Auftrag „Edgar 8" (2026.10.06.23.35.04, Kopie von „Edgar - 7"): die 478 MediaPipe-Gesichtslandmarken aus
+  <code>arbeit/landmarken.npz</code> trafen die Figurfläche im Mittel <strong>26,9 mm</strong> daneben — obwohl sowohl der
+  Käfig-Rest (<code>G9restmorph</code>, aus dem Runner) als auch „Kopf-Eigen" (<code>G9schnittmorph</code>, Seite
+  <a href="/gesichtsform/">/gesichtsform/</a>) liefen und ihre JEWEILS EIGENE Metrik Besserung zeigte. Das Mesh selbst ist
+  genau (gegen die eigenen Landmarken, mit <code>scan_lage.npz</code> ausgerichtet: 1,6 mm Mittel) — der Fehler liegt
+  also vollständig im Genesis-Fit, nicht in der TRELLIS-Vorlage.
+</p>
+<h4>Ursache: zwei unabhängige Glättungen verwischen feine Gesichtszüge</h4>
+<ul>
+  <li><strong>Käfig-Rest:</strong> der Runner liefert den Rest je Punkt des Genesis-9-Käfigs (<code>G9basisnetz</code>,
+  25.182 Punkte, im Gesicht ~1 cm Punktabstand im Mittel), <code>G9restmorph</code> glättet ihn danach mit 6
+  Laplace-Schritten (<code>SCHRITTE=6</code>, <code>SCHRITT=0,5</code>) — ein Tiefpassfilter, der genau die lokal eng
+  begrenzten Unterschiede (Nasenbreite, Mundwinkel-Position) herausfiltert, bevor sie als Morph abgelegt werden.</li>
+  <li><strong>Kopf-Eigen:</strong> rechnet auf 14 Schnitten mit 144 Konturpunkten — eine viel gröbere Stützstellen-Dichte
+  als die 478 feinen MediaPipe-Punkte, kann also Details zwischen den Schnitten nicht auflösen.</li>
+</ul>
+<h4>Fix: direkter Punkt-zu-Fläche-Morph, volle Käfig-Dichte (<code>Genesis9/direktmorph.py</code>, <code>G9direktmorph</code>)</h4>
+<p>
+  Für jeden der 25.182 Käfigpunkte direkt den nächsten Punkt der ausgerichteten Mesh-Oberfläche suchen (wie beim
+  Mesh-Selbsttest), Delta mit NUR 2 leichten Glättungsschritten ablegen. Ergebnis: Gesicht 26,9 → <strong>16,1 mm</strong>
+  Mittel (−40 %), ohne an Käfig-Rest oder Kopf-Eigen weiterzudrehen.
+</p>
+<div class="info-box info-box-orange">
+  <strong>Vier Sicherungen, aus Schaden gelernt — beim Nachbauen nicht weglassen:</strong>
+  <ol>
+    <li><strong>Abstand/Winkel-Filter</strong> (15 mm, ~60°): ein Treffer weiter weg oder mit stark abweichender Normale
+    ist eher eine Fehlkorrespondenz als ein Form-Fehler (Kopf-Eigen hatte bei echten Korrekturen max. 13 mm).</li>
+    <li><strong>Nachbarschafts-Ausreißerfilter:</strong> ein Delta, das weit vom Mittel seiner akzeptierten Käfig-Nachbarn
+    abweicht, ist Rauschen, keine Form.</li>
+    <li><strong>Risikozonen GANZ ausnehmen, nicht filtern:</strong> Mund und Augen sind bei TRELLIS/Hunyuan-Netzen dünne,
+    gekrümmte Flächen mit einer Innenseite (Zahnfleisch/Augenhöhle) nahe der Außenseite — „nächste Fläche" trifft dort
+    systematisch die falsche Seite. Selbst mit Abstand- UND Ausreißerfilter blieb der komplette Kiefer aufgerissen
+    (Lippen bis 44 mm nach vorn verzogen, von Edgar als kaputtes Modell gemeldet) — erst die komplette Ausnahme der Mundregion (Radius
+    um die MediaPipe-Punkte 61/291/13/14, analog zur dokumentierten Augen-Lücke <code>Meshfiguraugenhoehle</code>) hat
+    es behoben.</li>
+    <li><strong>Pose-Risiko räumlich eingrenzen:</strong> die A-Pose-Figur und eine anders posierte Zielfigur haben an
+    Armen/Händen KEINE echte Punkt-Korrespondenz — „nächste Fläche" sieht den Pose-Unterschied fälschlich als
+    Form-Fehler an (Handgelenk-Spannweite wurde dabei um 3 cm SCHLECHTER, trotz Abstandfilter). Deshalb den
+    Direktmorph auf Kopf/Hals beschränkt (<code>G9koerperteile</code>); Rumpf/Arme/Beine erst nach einem Pose-Fit oder
+    einer Entkleidung (siehe ETCH-X unten).</li>
+  </ol>
+</div>
+<div class="info-box info-box-orange">
+  <strong>Pflicht vor jeder Erfolgsmeldung: ansehen, nicht nur messen.</strong> Der erste Versuch (5 cm Toleranz, ganzer
+  Körper, ohne Mund-Ausnahme) verbesserte den MITTELWERT über 478 Landmarken spürbar — zeigte dabei aber einen
+  komplett aufgerissenen Mund (riesige, nach vorn gewölbte Lippen). Ein gemittelter Fehler über viele Punkte verdeckt
+  genau solche lokalen Entgleisungen. <code>G9direktmorph.vorschau_render(...)</code> rendert seither einen
+  Kopf-Schnappschuss, der vor jeder Meldung angesehen wird — kein Erfolg zählt ohne das Bild.
+</div>
+<h4>Warum nicht auf SMPL-X, MakeHuman oder UMA wechseln?</h4>
+<p>
+  Alle vier Systeme (Genesis-Morphs, MakeHuman-Targets, UMA-DNA, SMPL-X-Betas) sind im Kern dasselbe: Vertex-Deltas auf
+  einem Base-Mesh fester Auflösung. Der Flaschenhals ist also nicht das Regler-System, sondern (a) die Auflösung des
+  Base-Meshes selbst, (b) Kleidung, die den direkten Fit am Rumpf verhindert, (c) Pose-Unterschiede zwischen A-Pose und
+  Zielpose. SMPL-X wäre für „haargenau" sogar SCHLECHTER geeignet: seine Beta-Parameter sind eine PCA-Basis aus
+  Trainingsdaten — ein individuelles Gesicht liegt oft außerhalb dieses Unterraums. Der freie Eigenmorph (jeder Punkt
+  frei beweglich) ist der am wenigsten eingeschränkte Ansatz im Projekt und bleibt bei Genesis 9.
+</p>
+<p>
+  <strong>Offen:</strong> Rumpf und Arme bleiben unverändert, solange Kleidung den direkten Fit verhindert. Eine zweite
+  Session prüft parallel „ETCH-X" (<code>XiaobenLi00/ETCH-X</code>, nicht-kommerziell) als Entkleider — Stage 1 sagt je
+  Punkt einen „Tightness"-Vektor von der Kleidung zum darunterliegenden Körper voraus. Gegenprobe (07.10.2026): Variante
+  <code>cape</code>/<code>cloth3d_amass</code> brauchbar (an bekanntem Stoffabstand wenige mm Fehler), <code>4d-dress</code>
+  nicht. Aufruf: <code>Etchentkleider.entkleiden(...)</code> in <code>VideoToBVH/wrappers/etch_entkleider.py</code>
+  (eigene Umgebung <code>python10_etch</code>). Noch nicht in diese Pipeline eingebaut.
+</p>
+<p>
+  Ablage der Eigenmorphe seit 07.10.2026 nach Architektur sortiert: <code>3DObjects/models/Genesis9/eigenmorphe/genesis/</code>
+  für Genesis-9-Käfig-Morphe; ein modellunabhängiger Morph käme unter
+  <code>3DObjects/models/Genesis9/eigenmorphe/ModellGenerisch/</code>. Ausführlich mit Code und Zahlen:
+  <code>.claude/rules/direktmorph.md</code>.
+</p>

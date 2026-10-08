@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Workflowlauf — die Entscheidungsbäume der acht Schritte eines Auftrags „2D3D Kleider" (Hilfe → Architektur → 2D3D, 02.10.2026).
+"""Workflowlauf — die Entscheidungsbäume der elf Schritte eines Auftrags „2D3D Kleider" (Hilfe → Architektur → 2D3D, 02.10.2026; „zehn" seit 06.10.2026, „elf" seit 07.10.2026 mit dem Kopf-Lauf).
 
 Edgar: „den Workflow der 2D3D mit allen Klassen und allen Optionen (z. B. Blender)" — dieser Teil: wo ein Lauf beginnt, woher
 Netz und Körper kommen, was nach den Iterationen folgt. Jede Verzweigung ist eine Option, die es im Code gibt
@@ -34,8 +34,9 @@ class Workflowlauf:
             K(
                 cls.T,
                 'ab = vorbereitung („Neu berechnen")',
-                'Alle acht Schritte: vorbereitung → netz → koerper → grundfigur → iterationen → export → '
-                'film → speichern. Vorher werden die Dauern früherer Läufe aus dem Ergebnis gelöscht.',
+                'Alle elf Schritte: vorbereitung → netz → kopf (nur bei Häkchen „Kopf extra rechnen“) → segmentierung (nur bei Option „an") → koerper → grundfigur → kleiderstuecke → iterationen → export → '
+                'film → speichern. Vorher werden die Dauern früherer Läufe aus dem Ergebnis gelöscht. Die Runden des Auftrags bleiben stehen: eine Kopie hängt die neue Iteration 0 an '
+                'die Runden ihrer Quelle an (gemessen am Lauf …14.10.22, 06.10.2026).',
                 ('Engine2d3dKleiderlauf',),
                 kante='ab fehlt oder vorbereitung',
                 vorgabe=True,
@@ -43,7 +44,7 @@ class Workflowlauf:
                 K(
                     cls.E,
                     'Aufbau je Auftrag',
-                    'netz + koerper + grundfigur, einmal je Auftrag (Auftrag …20.10.04).',
+                    'vorbereitung bis kleiderstuecke, einmal je Auftrag (Auftrag …14.10.22, 06.10.2026: 1.644,8 s).',
                     zeit=W.AUFBAU,
                 )
             ),
@@ -73,7 +74,7 @@ class Workflowlauf:
         return Workflowbaum(
             'start',
             'Wo beginnt ein Lauf?',
-            'Welche der acht Schritte rechnet ein Druck auf den Knopf?',
+            'Welche der elf Schritte rechnet ein Druck auf den Knopf?',
             wurzel,
             'Engine2d3dKleiderlauf.ausfuehren(ab, bis), Engine2d3dKleiderlauf.SCHRITTE',
         )

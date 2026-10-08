@@ -13,6 +13,7 @@ Prozess gebaut (`_vorrat`).
 """
 
 import json
+from pathlib import Path
 
 import numpy as np
 
@@ -33,7 +34,19 @@ class Koerperanhaenge:
         if schluessel not in cls._vorrat:
             cls._vorrat.clear()                      # eine Formung je Lauf: kein Wachsen über Runden
             cls._vorrat[schluessel] = cls._bauen(bau, haarfarbe)
-        return cls._vorrat[schluessel]
+        gemalt = cls.brauen_gemalt(getattr(bau, 'kacheln', None))
+        return [t for t in cls._vorrat[schluessel] if not (gemalt and t.get('sorte') == cls.BRAUEN)]
+
+    #: Sorte des Brauenteils (`anhang_<schluessel>`) und Name der Kopfkachel mit Fotohaut (`Koerperfotoprojektion`, Kachel 1001).
+    BRAUEN = 'anhang_brauen'
+    FOTOKOPF = 'hautfoto_1001'
+
+    @classmethod
+    def brauen_gemalt(cls, kacheln):
+        """True, wenn die Kopfkachel (1001) Fotohaut trägt (`kacheln`: `{kachel: Pfad}`): Die Brauen sind dann mit dem Gesicht aus dem Foto gemalt (buschig, grau, an der Stelle der Landmarken), die Geometrie-Brauen
+        (dünn, in der Haarfarbe) weichen im Bild davon ab — Edgar, 06.10.2026: „Augenbrauen … ganz anders als im Mesh". Ohne Fotohaut im Kopf bleiben sie."""
+        pfad = (kacheln or {}).get(1001)
+        return bool(pfad) and Path(str(pfad)).name.startswith(cls.FOTOKOPF)
 
     @classmethod
     def _bauen(cls, bau, haarfarbe):

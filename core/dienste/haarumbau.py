@@ -21,6 +21,7 @@ import logging
 import numpy as np
 
 from .haarkappe import Haarkappe
+from .haarlaenge import Haarlaenge
 
 logger = logging.getLogger('core')
 
@@ -45,16 +46,16 @@ class Haarumbau:
         return [min(1.0, max(0.0, c * 2.0 * Farbangleich.GRAU_MITTEL * cls.KARTEN_HELL)) for c in rgb]
 
     @classmethod
-    def herrenhaar(cls, koerper, ablage, haarfarbe):
+    def herrenhaar(cls, koerper, ablage, haarfarbe, ansatz=0.0, laenge=None):
         """Statt der Frisur der Garderobe ein eigenes Kurzhaar (`Herrenhaar`, Option `iterationen.haarumbau` = herren): Strähnen aus den Wurzeln auf der Kopfhaut in der Haarfarbe, Umriss und Haarlinie aus dem Fotohaar → die Teile
         (Kappe, Strähnengruppen) — oder None, wo es nicht gilt (keine Hülle des Fotohaars, kein kurzes Haar, Fehler): dann baut der Aufrufer die Frisur und `anwenden` sie um. `haarfarbe`: `modell.farben['haar']` (#rrggbb),
-        die Tönung der Frisur — sie wird wie bei der Kappe in die angezeigte Farbe umgerechnet (`anzeigefarbe`)."""
+        die Tönung der Frisur — sie wird wie bei der Kappe in die angezeigte Farbe umgerechnet (`anzeigefarbe`). `laenge`: eine `Haarlaenge` (unten, oben in cm), ohne die Vorgabe."""
         if ablage is None or not haarfarbe:
             return None
         from .herrenhaar import Herrenhaar
         netz = {'punkte': koerper['punkte'], 'dreiecke': koerper['dreiecke'], 'haut': koerper['haut']}
         try:
-            haar = Herrenhaar(ablage, netz)
+            haar = Herrenhaar(ablage, netz, ansatz, laenge)
             if not haar.kappe.kurzhaarig():
                 logger.info('Herrenhaar: kein kurzes Haar (Radius des Netzhaars im Nacken %s) oder keine Hülle des Fotohaars — die Frisur bleibt', haar.kappe.radius_nacken())
                 return None
@@ -70,22 +71,28 @@ class Haarumbau:
         if bau.ohne_haar:
             return []
         farbe = (modell.farben or {}).get('haar')
-        herren = cls.herrenhaar(bau.koerper(), bau.ablage, farbe) if bau.haarumbau == 'herren' else None
+        ansatz = cls.ansatz(modell)
+        herren = cls.herrenhaar(bau.koerper(), bau.ablage, farbe, ansatz, Haarlaenge.aus_modell(modell)) if bau.haarumbau == 'herren' else None
         if herren:
             return herren
         haar = bau._haar(modell)                                                         # noqa: SLF001 — der Bau gehört zusammen
         klemme = bau._haarklemme() if haar else None                                     # noqa: SLF001
         haar = klemme.anwenden(haar) if klemme else haar
-        return cls.anwenden(haar, bau.koerper(), bau.ablage, farbe) if bau.haarumbau and haar else haar
+        return cls.anwenden(haar, bau.koerper(), bau.ablage, farbe, ansatz) if bau.haarumbau and haar else haar
+
+    @staticmethod
+    def ansatz(modell):
+        """Grad, um die der Haaransatz vorn angehoben ist (`m.haar_ansatz`, steht in `modell.haltung_werte['haarlinie']['vorn']`) — 0 ohne."""
+        return float((((getattr(modell, 'haltung_werte', None) or {}).get('haarlinie')) or {}).get('vorn') or 0.0)
 
     @classmethod
-    def anwenden(cls, haar, koerper, ablage, haarfarbe):
+    def anwenden(cls, haar, koerper, ablage, haarfarbe, ansatz=0.0):
         """`haar`: die Haarteile (`art == 'haar'`) nach der Haarklemme; `koerper`: das Körperteil (Punkte, Dreiecke, Haut) in der A-Pose; `haarfarbe`: `modell.farben['haar']` (#rrggbb).
         → die Teile mit abgeschnittener Frisur und der Haarkappe dazu — oder `haar` selbst, wo der Umbau nicht gilt (siehe oben)."""
         if not haar or ablage is None:
             return haar
         netz = {'punkte': koerper['punkte'], 'dreiecke': koerper['dreiecke'], 'haut': koerper['haut']}
-        kappe = Haarkappe(ablage, netz)
+        kappe = Haarkappe(ablage, netz, ansatz)
         try:
             if not kappe.kurzhaarig():
                 radius = kappe.radius_nacken()

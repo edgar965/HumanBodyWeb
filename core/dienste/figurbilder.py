@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Figurbilder — die Vorschaubilder der Figur-Kandidaten, nur lesend.
 
-Die Bilder liegen unter `3DObjects/humanModels/<ordner>/` (je Kandidat ein
+Die Bilder liegen unter `3DObjects/humanModels Recherche/<ordner>/` (je Kandidat ein
 Ordner, geladen von den Herstellerseiten; `00_eigene_Renderings/` sind die
 Workbench-Renderings). Die Seite „Hilfe → Architektur → Andere Modelle"
 zeigt sie klein; die Originale sind bis 3,9 MB groß (`03_Lineup.jpg`), alle
@@ -26,7 +26,7 @@ __all__ = ['Figurbilder']
 
 
 class Figurbilder:
-    ORDNER = Path(settings.OBJECTS_ROOT) / 'humanModels'
+    ORDNER = Path(settings.OBJECTS_ROOT) / 'humanModels Recherche'
     ABLAGE = Path(settings.MEDIA_ROOT) / 'vorschau' / 'humanModels'
     ENDUNGEN = ('.jpg', '.jpeg', '.png', '.webp')
     TYPEN = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp'}

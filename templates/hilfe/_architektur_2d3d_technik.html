@@ -1,0 +1,60 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „Workflow", Abschnitt „Technische Details" (Edgar, 06.10.2026: „mach auch möglichst viele technische Details im unteren Bereich hinein, zu den Trellis Parametern usw.
+damit wir später nicht von neuem anfangen und Fehler nicht wiederholen"). Eingebunden in _architektur_2d3d_workflow.html mit `t` = workflow.technik (core/dienste/architektur2d3dtechnik.py).
+Die Optionen kommen beim Aufruf aus den Katalogen des Codes, die Fakten aus architektur2d3dfaktennetz.py und architektur2d3dfaktenkoerper.py.
+{% endcomment %}
+<h2 id="technik">Technische Details: Einstellungen, Messungen, Fallen</h2>
+<p>Damit niemand von vorn anfängt und kein Fehler zweimal passiert. <b>Zwei Teile, getrennt nach dem, was sie sind:</b> Die Einstellungen unten sind <b>aus dem Code gelesen</b>, beim Aufruf dieser Seite, mit
+  der Vorgabe, die ein Auftrag heute bekommt — sie können nicht veralten. Die Messungen, Entscheidungen und Fallen danach sind <b>von Hand aus den Regeldateien gesammelt</b> (Stand {{ t.stand }}, {{ t.anzahl }} Einträge,
+  jeder mit Quelle); Zahlen stehen mit Auftrag und Datum, „nicht gemessen" und „vermutet" bleiben stehen.</p>
+
+<h3>Alle Einstellungen eines Auftrags (aus dem Code)</h3>
+<p>Je Gruppe die Felder des Katalogs: Schlüssel (so steht er in <code>auftrag.optionen</code>), Vorgabe (mit <b>*</b>, wenn dieser Bereich von der Vorlage abweicht), erlaubte Werte und der Hinweis des Feldes.
+  „Formular nein" heißt: das Feld wirkt, steht aber nicht im Formular der Auftragsseite. Die Gruppe <b>mesh</b> sind die Regler von TRELLIS.2 und Pixal3D.</p>
+{% for g in t.optionen %}
+<details class="wf-optgruppe"{% if g.gruppe == 'mesh' %} open{% endif %}>
+  <summary><b>{{ g.titel }}</b> <span class="a2d3d-klein">— {{ g.anzahl }} Felder{% if g.verborgen %}, davon {{ g.verborgen }} nicht im Formular{% endif %}; {{ g.hinweis }}</span></summary>
+  {% if g.umgezogen or g.fremd %}
+  <p class="a2d3d-klein">Nicht aufgeführt:{% if g.umgezogen %} {{ g.umgezogen }} Felder (Auflösung, Flächen, Texturgröße), die seit 02.10.2026 in der Gruppe <b>mesh</b> stehen;{% endif %}{% if g.fremd %}
+    {{ g.fremd }} Felder der Seite „Mesh", die nur für das andere Formmodell gelten — „2D3D Kleider" formt nur mit TRELLIS.2.{% endif %}</p>
+  {% endif %}
+  {% if g.zeilen %}
+  <table class="db-tabelle wf-umfang">
+    <thead><tr><th>Schlüssel</th><th>Titel</th><th>Vorgabe</th><th>Werte</th><th>Formular</th><th>Hinweis</th></tr></thead>
+    <tbody>
+    {% for z in g.zeilen %}
+    <tr>
+      <td><code>{{ g.gruppe }}.{{ z.schluessel }}</code></td>
+      <td>{{ z.titel }}</td>
+      <td><b>{{ z.vorgabe }}</b>{% if z.abweichung %} <span title="weicht in 2D3D Kleider von der Vorlage ab">*</span>{% endif %}</td>
+      <td>{{ z.werte }}</td>
+      <td>{% if z.im_formular %}ja{% else %}<span class="a2d3d-fehlt">nein</span>{% endif %}</td>
+      <td>{{ z.hinweis }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="a2d3d-fehlt">Diese Gruppe war beim Aufruf nicht lesbar (Protokoll: „Optionsgruppe … nicht lesbar").</p>{% endif %}
+</details>
+{% endfor %}
+
+<h3>Messungen, Entscheidungen und Fallen (aus den Regeldateien)</h3>
+<div class="wf-legende">
+  {% for a in t.arten %}<span class="wf-legende-art"><span class="wf-art wf-art-{{ a.art }}">{{ a.text }}</span> {{ a.was }} ({{ a.anzahl }})</span>{% endfor %}
+</div>
+{% for b in t.bereiche %}
+<h4>{{ b.bereich }} <span class="a2d3d-klein">— {{ b.eintraege|length }} Einträge</span></h4>
+<table class="db-tabelle wf-umfang">
+  <thead><tr><th>Art</th><th>Thema</th><th>Befund</th><th>Quelle</th></tr></thead>
+  <tbody>
+  {% for e in b.eintraege %}
+  <tr>
+    <td><span class="wf-art wf-art-{{ e.art }}">{{ e.art }}</span></td>
+    <td><b>{{ e.thema }}</b></td>
+    <td>{{ e.befund }}</td>
+    <td class="a2d3d-klein">{{ e.quelle }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}

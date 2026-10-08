@@ -119,7 +119,7 @@ class Werkzeuggarmentcode:
          'baut er alles, was fehlt oder veraltet ist, --nur filtert nach Teilwort in Kennung oder Vorlage, --neu baut auch '
          'Aktuelles neu. Stand 25.09.2026: 171 von 171 Aufträgen gebaut, ~25 s je Stück; der Command nennt 20–45 s je '
          'Stück GPU-Drapierung und „der ganze Stapel dauert Stunden und gehört nicht neben Edgars Arbeit“ — nur auf '
-         'Ansage. Ablage 3DObjects/Genesis9/gc_stuecke/<Kennung>/ mit Fingerabdruck (Vorlage, Werte, Material, FASSUNG): ein '
+         'Ansage. Ablage 3DObjects/models/Genesis9/gc_stuecke/<Kennung>/ mit Fingerabdruck (Vorlage, Werte, Material, FASSUNG): ein '
          'zweiter Lauf baut nur Fehlendes. GarmentCodes Nacharbeit nur für Hose, Shorts, Anzug, Schuh '
          '(G9gcdrapierung.NACHARBEIT); Strümpfe mit Anlegen 2 mm (STRUMPFWERTE, Median 34 → 6 mm). Ungenähte breite Stiefel '
          '(StitchingError im Netzbau) baut G9gcdrapierung mit anderer Auflösung und schrittweise schmalerer Sohle; was '

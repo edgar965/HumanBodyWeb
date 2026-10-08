@@ -112,19 +112,6 @@ HILFE_EXTRA = [
         'url': '/hilfe/bvh-aus-video/',
         'aktiv': 'hilfe_bvh_aus_video',
     },
-    # Foto-zu-3D-Kopf-Verfahren: eigene (gemessen) und fremde (recherchiert) —
-    # Edgar (22.09.2026): „mach seite Hilfe - Foto - 3D in der du alle Modell
-    # erwähnst … recherchiere was von denen am besten ist, und was davon du
-    # nachbauen kannst"; benannt „2D->3D" auf Edgars Wunsch (23.09.2026), seit
-    # 29.09.2026 auch die ADRESSE (`/hilfe/2d-3d/` statt `/hilfe/kopf-pipelines/`
-    # — Python-Dateinamen/interner Django-Name bleiben `kopf_pipelines`, `>`
-    # ist in einer URL nicht sauber darstellbar).
-    {
-        'label': '2D -> 3D',
-        'icon': 'bi-person-bounding-box',
-        'url': '/hilfe/2d-3d/',
-        'aktiv': 'hilfe_kopf_pipelines',
-    },
     # Mimik, Haare, Kleidung, Wind — wie Studios es machen und welcher
     # offene Code in Frage kommt (Edgar, 12.09.2026: „schreibe schon mal
     # alles hinein in Hilfe - Animationseffekte").
@@ -162,6 +149,23 @@ HILFE_EXTRA = [
                 'icon': 'bi-arrow-repeat',
                 'url': '/hilfe/architektur/2d3d/',
                 'aktiv': 'hilfe_architektur_2d3d',
+            },
+            # Blender-Modell als Genesis-Figur mit eigenen Bibliotheksstücken
+            # (Edgar, 08.10.2026: „schreibe das hinein in eine neue Seite
+            # Hilfe - Architektur - Genesis").
+            {
+                'label': 'Genesis',
+                'icon': 'bi-person-bounding-box',
+                'url': '/hilfe/architektur/genesis/',
+                'aktiv': 'hilfe_architektur_genesis',
+            },
+            # Das Blender-Modell „cute girl" mit Auto-Rig-Pro-Rig: Mesh-Typ, Rig, Konzept C (Edgar, 08.10.2026: „mach eine
+            # neue Seite Hilfe - Architektur - ARP Modell mit diesen Infos und füge alle Infos zum Mesh typ rein").
+            {
+                'label': 'ARP Modell',
+                'icon': 'bi-diagram-3',
+                'url': '/hilfe/architektur/arp-modell/',
+                'aktiv': 'hilfe_architektur_arp',
             },
         ],
     },
@@ -245,6 +249,14 @@ HILFE_EXTRA = [
                 'icon': 'bi-person-bounding-box',
                 'url': '/hilfe/recherche/human-3d/',
                 'aktiv': 'hilfe_recherche_human3d',
+            },
+            # Was Meshy.ai anders macht als TRELLIS.2/Hunyuan3D, und offene Modelle mit höherer Auflösung
+            # (Edgar, 08.10.2026: „schreibe das rein in eine neue Seite hilfe - Recherche - meshy.ai").
+            {
+                'label': 'meshy.ai',
+                'icon': 'bi-stars',
+                'url': '/hilfe/recherche/meshy-ai/',
+                'aktiv': 'hilfe_recherche_meshy',
             },
         ],
     },

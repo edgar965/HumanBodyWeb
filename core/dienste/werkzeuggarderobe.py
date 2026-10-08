@@ -22,7 +22,7 @@ class Werkzeuggarderobe:
         'Reihenfolge: 1. die Liste lesen und die Kennung finden, 2. das Stück anziehen (Gruppen „Kleider anziehen …“, '
         '„Haar“), 3. bei Bedarf Stücke nachbauen (Zeile „MakeHuman-/GarmentCode-Bibliothek als Genesis-Stücke“ oder die '
         'Gruppe „Stücke aus Fotos und eigene Stücke“). Die Daz-Bibliothek wird nie beschrieben; Edgars Einteilung und alle '
-        'eigenen Stücke liegen daneben unter 3DObjects/Genesis9/.')
+        'eigenen Stücke liegen daneben unter 3DObjects/models/Genesis9/.')
 
     # (Werkzeug, Wofür, Art, Aufruf, Klassen, Hinweis)
     ZEILEN = [
@@ -48,7 +48,7 @@ class Werkzeuggarderobe:
          [(A + 'g9garderobekategorien.py', 'G9garderobekategorienapi'), (G + 'garderobekategorien.py', 'G9garderobekategorien'),
           (G + 'dazkategorien.py', 'G9dazkategorien'), (G + 'garderobe.py', 'G9garderobe')],
          '400 bei untauglichem Namen (höchstens 40 Zeichen), 404 bei unbekanntem Stück. Die Einteilung liegt NEBEN der '
-         'Bibliothek (3DObjects/Genesis9/garderobe_kategorien.json); wer nicht in zuordnung steht, gehört zur Vorgabe aus '
+         'Bibliothek (3DObjects/models/Genesis9/garderobe_kategorien.json); wer nicht in zuordnung steht, gehört zur Vorgabe aus '
          'Daz’ Metadaten (Runtime/Support/*.dsx: Kategorie vor ContentType). Vorgaben in dieser Reihenfolge: Oberteile, '
          'Hosen, Shorts, Röcke, Kleider, Anzüge, Outfits, Unterwäsche, Schuhe, Kopfbedeckung, Rüstung, Zubehör, Haare, '
          'Requisiten (G9dazkategorien.REIHENFOLGE); eine eigene Kategorie lebt, solange ein Stück darin liegt. Stand '
@@ -88,7 +88,7 @@ class Werkzeuggarderobe:
          'Der Weg je Stück: Klon (G9mhklon: Knochenrahmen, nichtstarres ICP) → auswerten (G9mhstueck: Material, Stärke, '
          'Glanz) → aus der Haut heben (3 mm) → Gewichte der 3 nächsten Hautpunkte → DSON schreiben. alle() fängt Fehler je '
          'Stück ab und meldet sie, statt den Lauf abzubrechen (106 von 165 schlugen einmal an einem .mhclo-Parser fehl, '
-         '25.09.2026). Läuft über die GANZE Bibliothek, schreibt in die eigene Bibliothek (3DObjects/Genesis9/bibliothek) '
+         '25.09.2026). Läuft über die GANZE Bibliothek, schreibt in die eigene Bibliothek (3DObjects/models/Genesis9/bibliothek) '
          'und belegt den Rechner: nur auf Ansage; Dauer nicht gemessen. Danach die Garderobe neu lesen lassen '
          '(G9mbstuecke.vergessen(); der laufende Server hielt die Liste im Speicher und wurde bisher neu gestartet — '
          'ein Neustart ist hier nicht Sache dieser Seite). Kategorie aus G9mbkategorien (Name schlägt Ordner: suit/uniform → '
@@ -108,7 +108,7 @@ class Werkzeuggarderobe:
         ('Regel: Daz-Bibliothek nie beschreiben, eigene Stücke in zweiter Wurzel',
          'Hält fest, wohin Stücke geschrieben werden dürfen.',
          'regel',
-         'Daz-Bibliothek nur lesen. Eigene Stücke: 3DObjects/Genesis9/bibliothek (Daz-Aufbau), Ablagen daneben: '
+         'Daz-Bibliothek nur lesen. Eigene Stücke: 3DObjects/models/Genesis9/bibliothek (Daz-Aufbau), Ablagen daneben: '
          'gc_stuecke/, eigene_stuecke/, kleidmorphe/, haarachsen/, haarzusatz/, kleidtexturen/.',
          [(G + 'garderobe.py', 'G9garderobe'), (G + 'eigenstand.py', 'G9eigenstand')],
          'G9pfade.finden sucht jede Adresse in beiden Wurzeln (Daz zuerst); Einträge aus der zweiten tragen eigen. Die '

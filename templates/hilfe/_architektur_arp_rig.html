@@ -1,0 +1,73 @@
+{% comment %}
+Teil 2 von Hilfe -> Architektur -> ARP Modell: das Rig (Auto-Rig Pro), die Knochenkarte ARP → Genesis und was das Umposen
+mit den Netzen macht. Zahlen aus `core/dienste/arpmodell.py` (Messungen 08.10.2026: `knochen_probe.py`,
+`richtungen_vergleich.py`, `umposen.json` des Imports).
+{% endcomment %}
+<h2>2. Das Rig: Auto-Rig Pro</h2>
+<p>
+  Das Ursprungsrig ist <strong>Auto-Rig Pro (ARP)</strong>, ein Blender-Add-on für Rigs. Das Rig steuert sich über
+  Steuerknochen (<code>c_…</code>); die Haut hängt an den <em>deformierenden</em> Knochen, die den Steuerknochen über
+  Constraints folgen.
+</p>
+<table class="doku">
+  <thead><tr><th>Merkmal</th><th>Befund</th></tr></thead>
+  <tbody>
+    {% for merkmal, befund in rig %}
+    <tr><td><strong>{{ merkmal }}</strong></td><td>{{ befund }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>Die Knochenkarte ARP → Genesis</h3>
+<p>
+  Beide stehen in einer A-Haltung, aber nicht in derselben: ARP hält den Oberarm rund 57° unter der Waagerechten,
+  Genesis 43°. Die Knochenkarte (<code>Genesis9/arpknochenkarte.py</code>, <code>G9arpknochenkarte</code>) nennt je Gliedmaß
+  die Richtung, in der Genesis es in Ruhe hält; <code>effekte/blender/blendimport/blendumposen.py</code> dreht die
+  Segmente starr um ihr Gelenk dorthin (kürzester Bogen, ohne Rolle) und häutet alle Netze mit den Gewichten der .blend
+  nach. Das ist der Import-Schritt „Haltung" (<code>Blendimportumposen</code>); Einstellung „Haltung" im Dialog.
+</p>
+<table class="doku">
+  <thead>
+    <tr><th>Segment</th><th>ARP: Gelenke</th><th>Genesis: Knochen</th><th>Abweichung der Richtung Gelenk zu Gelenk (°)</th>
+      <th>Drehung beim Umposen (°)</th></tr>
+  </thead>
+  <tbody>
+    {% for segment, arp, genesis, abweichung, drehung in knochenkarte %}
+    <tr><td><strong>{{ segment }}</strong></td><td><code>{{ arp }}</code></td><td><code>{{ genesis }}</code></td>
+      <td>{{ abweichung }}</td><td>{{ drehung }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="ag-bildhinweis">
+  Je Seite acht Gliedmaßen-Segmente und 15 Fingerglieder, links wie rechts (46 Segmente). {{ knochenkarte_fehlt }} Die Segmente nehmen die <strong>Referenzknochen</strong>
+  (<code>arm.l</code>, <code>thigh.l</code> …) als Gelenke; die Gruppen der deformierenden Knochen (<code>arm_stretch</code>,
+  <code>arm_twist</code>, <code>forearm_twist_2</code> …) hängen über reguläre Ausdrücke am jeweiligen Segment, alles andere
+  (Wirbelsäule, Hals, Kopf, Gesicht, Augen, Zähne) bleibt stehen.
+</p>
+
+<h3>Was das Umposen mit den Netzen macht</h3>
+<table class="doku">
+  <thead>
+    <tr><th>Netz</th><th>größte Bewegung (mm)</th><th>Median (mm)</th><th>Kanten außerhalb 0,8 … 1,25 des Originals (%)</th>
+      <th>größte Streckung einer Kante</th></tr>
+  </thead>
+  <tbody>
+    {% for netz, groesst, median, kanten, streckung in umposen %}
+    <tr><td><code>{{ netz }}</code></td><td>{{ groesst }}</td><td>{{ median }}</td><td>{{ kanten }}</td><td>{{ streckung }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<ul>
+  <li><strong>Gemessen</strong> am Lauf vom 08.10.2026 (<code>umposen.json</code>): Die Punkte aus dem Export und das Rig
+    in Ruhe stimmen auf 0,02 mm überein; die Haltung der Datei IST also die Ruhelage, und das Umposen rechnet immer von
+    ihr aus, nie von einem schon umposten Stand.</li>
+  <li><strong>Lineare Häutung</strong> wie Blenders Armature-Modifier: An den Gelenken knicken Kanten ein wenig
+    (Körper: 0,033 % der Kanten außerhalb 0,8 … 1,25, die größte 1,88-fach gestreckt). Das ist ein Zahlenbefund; ob es an
+    Ellbogen oder Knie sichtbar stört, ist <strong>noch nicht am Bild geprüft</strong>. Ein Bild Vorher/Nachher als
+    Punktwolke (Skript <code>umposen_bild.py</code>) zeigt Arme, Beine und Füße in der neuen Lage ohne Brüche.</li>
+  <li><strong>Folge für „Mesh to 3D"</strong>: Die Gelenkdrehungen, die der Fit danach noch schätzt, sind klein — für
+    Becken, Oberschenkel, Schienbeine und Füße höchstens 6,4° je Achse (Auszug aus <code>ergebnis.koerper.haltung</code>
+    des Laufs 2026.10.08.11.28.34). <strong>Offen:</strong> Die Gegenprobe „Import ohne Umposen" (Einstellung „Haltung" =
+    „Haltung der Datei lassen") ist nicht gelaufen; ob das Umposen die Anpassung wirklich verbessert, ist damit
+    nicht gemessen.</li>
+</ul>

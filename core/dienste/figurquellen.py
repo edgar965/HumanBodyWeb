@@ -23,6 +23,7 @@ SMPL_NEUTRAL.pkl`, SMPL-X `3DObjects/Archiv/SMPL-X/SMPLX_NEUTRAL.npz`.
 Adressen: `figurquellenlinks.py`; Bilder: `figurbilder.py`.
 """
 
+from .figurquellenblender import Figurquellenblender
 from .netzmasse import Netzmasse
 
 __all__ = ['Figurquellen']
@@ -420,8 +421,8 @@ class Figurquellen:
 
     @classmethod
     def rangliste(cls):
-        """Alle Zeilen mit Texten, Vergleichszahl und Rang (`Netzmasse`)."""
-        return Netzmasse.rangfolge(cls.ZEILEN)
+        """Alle Zeilen mit Texten, Vergleichszahl und Rang (`Netzmasse`), dazu die Blender-Modelle."""
+        return Netzmasse.rangfolge(cls.ZEILEN + Figurquellenblender.ZEILEN)
 
     @classmethod
     def mit_rang(cls):

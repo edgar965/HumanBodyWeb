@@ -18,7 +18,7 @@ class Werkzeughaarform:
     EINLEITUNG = (
         'Jede Operation ist eine Funktion mit Zahlenparametern und einem Gewicht je Punkt aus einem ORT; das Ergebnis ist '
         'ein eigener Morph der Frisur (<sorte>.eigen.<name>, −2…2), linear wie die Formachsen, abgelegt neben der '
-        'Bibliothek (3DObjects/Genesis9/kleidmorphe/). Jeder Aufruf baut den Morph UND stellt ihn auf wert; ein zweiter '
+        'Bibliothek (3DObjects/models/Genesis9/kleidmorphe/). Jeder Aufruf baut den Morph UND stellt ihn auf wert; ein zweiter '
         'Bau desselben Namens ersetzt den ersten. Der Ort ist ein Wörterbuch: {landmarke: schlaefe_l|schlaefe_r|ohr_l|ohr_r|'
         'stirn|nacken|scheitel, radius_cm: 6} oder {sektor: (a°, b°)} um die Kopfachse (0 vorn, positiv links); ohne Ort '
         'wirkt die Operation überall unter der Nackenlinie, die Kappe an der Kopfhaut bleibt. Mit Ort zählt Haar „frei von '

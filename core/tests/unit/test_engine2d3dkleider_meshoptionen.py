@@ -116,14 +116,18 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
             self.assertEqual(felder[schluessel]['gilt'], ['pixal3d', 'pixal3d_mv'], schluessel)
         self.assertNotIn('gilt', felder['fotopruefung'])  # gilt für jedes Modell
 
-    def test_das_modell_ist_trellis2_pixal3d_oder_pixal3d_mehrbild_und_sonst_die_vorgabe(self):
+    def test_das_modell_ist_trellis2_pixal3d_hunyuan3d_und_sonst_die_vorgabe(self):
         felder = {f['schluessel']: f for f in Engine2d3dKleideroptionen.katalog()['mesh']['optionen']}
-        self.assertEqual([w['wert'] for w in felder['modell']['werte']], ['trellis2', 'pixal3d', 'pixal3d_mv'])
+        self.assertEqual([w['wert'] for w in felder['modell']['werte']],
+                         ['trellis2', 'pixal3d', 'pixal3d_mv', 'hunyuan3d_2', 'hunyuan3d_2mv'])
+        # Hunyuan3D ist seit 07.10.2026 wählbar (Edgar: „Job mit der Hunyan Pipeline") und bleibt gespeichert.
+        hunyuan = Engine2d3dKleideroptionen.pruefen({'mesh': {'modell': 'hunyuan3d_2mv'}})['mesh']
+        self.assertEqual(hunyuan['modell'], 'hunyuan3d_2mv')
         self.assertEqual(Engine2d3dKleidermeshoptionen.vorgaben()['modell'], 'trellis2')
         gewaehlt = Engine2d3dKleideroptionen.pruefen({'mesh': {'modell': 'pixal3d_mv', 'pixal_fov': 0.2,
                                                                'pixal_speicher': 'sparsam'}})['mesh']
         self.assertEqual((gewaehlt['modell'], gewaehlt['pixal_fov'], gewaehlt['pixal_speicher']), ('pixal3d_mv', 0.2, 'sparsam'))
-        kaputt = Engine2d3dKleideroptionen.pruefen({'mesh': {'modell': 'hunyuan3d_2', 'pixal_fov': 5,
+        kaputt = Engine2d3dKleideroptionen.pruefen({'mesh': {'modell': 'quatsch', 'pixal_fov': 5,
                                                              'pixal_speicher': 'alles'}})['mesh']
         self.assertEqual((kaputt['modell'], kaputt['pixal_fov'], kaputt['pixal_speicher']), ('trellis2', 0, 'auto'))
 
@@ -180,14 +184,17 @@ class NurTrellisTest(OhneDienste):
         netz = Engine2d3dKleideroptionen.pruefen({'netz': {'textur': 'ki'}})['netz']
         self.assertEqual(netz['textur'], 'ki')
 
-    def test_das_formular_zeigt_kein_formmodell_und_nennt_hunyuan_nirgends(self):
+    def test_das_formular_zeigt_kein_formmodell_und_hunyuan_steht_nur_in_der_wahl_modell(self):
         katalog = Engine2d3dKleideroptionen.katalog()
         netz = {f['schluessel']: f for f in katalog['netz']['optionen']}
         self.assertEqual(list(netz), ['textur', 'freistellen', 'licht'])
         self.assertEqual([w['wert'] for w in netz['textur']['werte']], ['fotos_ki', 'fotos', 'ki', 'keine'])
         mesh = {f['schluessel']: f for f in katalog['mesh']['optionen']}
         self.assertEqual([w['wert'] for w in mesh['aufloesung']['werte']], ['schnell', 'mittel', 'hoch'])
-        self.assertNotIn('hunyuan', json.dumps([katalog['netz'], katalog['mesh']], ensure_ascii=False).lower())
+        # Hunyuan3D nennt nur noch die Wahl „Modell" der Gruppe `mesh` (07.10.2026); die Gruppe `netz` und alle anderen Felder nicht.
+        self.assertNotIn('hunyuan', json.dumps(katalog['netz'], ensure_ascii=False).lower())
+        uebrige = [f for f in katalog['mesh']['optionen'] if f['schluessel'] != 'modell']
+        self.assertNotIn('hunyuan', json.dumps(uebrige, ensure_ascii=False).lower())
 
 
 class TrellisreglerTest(SimpleTestCase):

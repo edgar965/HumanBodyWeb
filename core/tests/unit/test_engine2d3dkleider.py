@@ -42,7 +42,7 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
         # 03.10.2026 die siebte, `vorbereitung` (Körper senkrecht stellen, `test_engine2d3dkleider_vorbereitung.py`).
         # Seit dem 04.10.2026 die achte, `segmentierung` (Sapiens, optional, `test_engine2d3dkleider_segmentierung.py`).
         # Dazu fünf Gruppen der Rendereinstellungen (`rendermimik`, `renderhaut`, `renderlicht`, `renderqualitaet`, `renderphysik`; Mitsuba-Render der Runden).
-        self.assertEqual(set(katalog), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film', 'rollen', *self.RENDER})
+        self.assertEqual(set(katalog), {'figur', 'vorbereitung', 'netz', 'mesh', 'kopf', 'segmentierung', 'koerper', 'iterationen', 'film', 'rollen', *self.RENDER})
         figur = [f['schluessel'] for f in katalog['figur']['optionen']]
         self.assertLessEqual({'basis', 'modell'}, set(figur))            # die Gruppe hat inzwischen mehr Felder (Frisur, Textur, Kleidung, Runden …)
         iterationen = {f['schluessel']: f for f in katalog['iterationen']['optionen']}
@@ -65,7 +65,7 @@ class Engine2d3dKleideroptionenTest(SimpleTestCase):
         optionen = Engine2d3dKleideroptionen.pruefen(
             {'netz': {'formmodell': 'trellis2'}, 'figur': 'kein dict', 'x': 1}
         )
-        self.assertEqual(set(optionen), {'figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film', *self.RENDER})
+        self.assertEqual(set(optionen), {'figur', 'vorbereitung', 'netz', 'mesh', 'kopf', 'segmentierung', 'koerper', 'iterationen', 'film', *self.RENDER})
         self.assertEqual(optionen['netz']['formmodell'], 'trellis2')
         self.assertEqual(optionen['figur']['basis'], 'feminine')
         self.assertEqual(Engine2d3dKleideroptionen.pruefen(None), Engine2d3dKleideroptionen.pruefen({}))
@@ -99,7 +99,7 @@ class Engine2d3dKleiderlaufTest(SimpleTestCase):
         # die Grundfigur mit Rig folgt darauf (Engine2d3dKleidernetz, Engine2d3dKleiderkoerper).
         # Seit dem 03.10.2026 steht die Vorbereitung der Fotos (Freistellen, Ausrichten, Zuschnitt) als eigener Schritt davor.
         # Seit dem 04.10.2026 steht die optionale Segmentierung (Sapiens) zwischen Netz und Körper.
-        self.assertEqual(Engine2d3dKleiderlauf.SCHRITTE[:5], ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur'))
+        self.assertEqual(Engine2d3dKleiderlauf.SCHRITTE[:6], ('vorbereitung', 'netz', 'kopf', 'segmentierung', 'koerper', 'grundfigur'))
         quelle = inspect.getsource(Engine2d3dKleiderlauf.schrittfolge).lower()
         self.assertNotIn('_run_mesh', quelle, 'das Netz rechnet der Runner (Engine2d3dKleidernetz), nicht die Schrittfolge')
 

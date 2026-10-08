@@ -61,6 +61,7 @@
 .wf-segment { height: 100%; min-width: 3px; }
 .wf-seg1 { background: #4a90d9; } .wf-seg2 { background: #8a6fd1; } .wf-seg3 { background: #3fa56b; }
 .wf-seg4 { background: #e0792b; } .wf-seg5 { background: #d9433f; }
+.wf-seg6 { background: #c9a227; } .wf-seg7 { background: #2aa5b5; } .wf-seg8 { background: #8c8c8c; } .wf-seg9 { background: #b05fb0; }
 .wf-segmentliste { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.4rem 1rem; margin: 0.7rem 0; }
 .wf-segmentzeile { display: flex; align-items: center; gap: 0.5rem; font-size: 0.84rem; }
 .wf-chip { width: 0.9rem; height: 0.9rem; border-radius: 3px; flex: 0 0 auto; }
@@ -98,6 +99,21 @@
 .wf-knoten.wf-ende { border-left-color: #3fa56b; }
 .wf-knoten.wf-offen { border-style: dashed; border-left-style: solid; border-left-color: var(--text-muted); opacity: 0.9; }
 .wf-knoten.wf-vorgabe { box-shadow: 0 0 0 1px var(--accent); }
+.wf-knoten.wf-ausnahme { outline: 1px dashed var(--text-muted); outline-offset: 2px; }
+/* Marke im Kopf des Kastens: „Vorgabe" (der Weg, den die Vorgabe geht) und „Ausnahme" (läuft nur auf ausdrückliche Wahl). */
+.wf-marke-vorgabe, .wf-marke-ausnahme {
+    margin-left: auto; flex: 0 0 auto; padding: 0 0.4rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; line-height: 1.4;
+}
+/* Abschnitt „Technische Details": Art-Marke je Eintrag und aufklappbare Optionsgruppen. */
+.wf-art { display: inline-block; padding: 0 0.45rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; line-height: 1.5; border: 1px solid var(--border); }
+.wf-art-parameter { color: #4a90d9; border-color: #4a90d9; }
+.wf-art-messung { color: #3fa56b; border-color: #3fa56b; }
+.wf-art-falle { color: #d9433f; border-color: #d9433f; }
+.wf-art-entscheidung { color: #d9a441; border-color: #d9a441; }
+.wf-optgruppe { margin: 0.5rem 0; }
+.wf-optgruppe > summary { cursor: pointer; padding: 0.3rem 0; }
+.wf-marke-vorgabe { border: 1px solid var(--accent); color: var(--accent); }
+.wf-marke-ausnahme { border: 1px dashed var(--text-muted); color: var(--text-muted); }
 .wf-kopf { display: flex; gap: 0.4rem; align-items: baseline; font-weight: 600; font-size: 0.86rem; }
 .wf-text { font-size: 0.78rem; color: var(--text-secondary, var(--text-muted)); line-height: 1.35; }
 .wf-fuss { display: flex; flex-wrap: wrap; gap: 0.25rem; }

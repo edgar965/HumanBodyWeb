@@ -138,6 +138,8 @@ class Kleidermodellbau:
         from ..api.g9figur import G9figur
         from ..api.g9garderobe import G9garderobeapi
         from .g9kleidmischbau import G9kleidmischbau
+        if modell.kleidung.get(modell.KEINE):          # `kleid_keins`: nackt — sonst spränge die Grundsorte (das Standardhemd) ein
+            return []
         rumpf = self._rumpf(modell, modell.KLEIDUNG, modell.kleidung, 0)
         folge, uebergang = G9kleidgenerisch.mischung_aufloesen(modell.KLEIDUNG, rumpf['regler_stueck'])
         if not folge:

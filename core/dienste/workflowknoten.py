@@ -14,8 +14,9 @@ __all__ = ['Workflowknoten']
 class Workflowknoten:
     FRAGE, TAT, ENDE, OFFEN = 'frage', 'tat', 'ende', 'offen'
 
-    def __init__(self, art, titel, text='', klassen=(), zeit=None, kante='', teile=(), vorgabe=False):
-        """`kante`: die Antwort, die von der Frage hierher führt; `vorgabe`: der Weg, den die Vorgabe geht."""
+    def __init__(self, art, titel, text='', klassen=(), zeit=None, kante='', teile=(), vorgabe=False, ausnahme=False):
+        """`kante`: die Antwort, die von der Frage hierher führt; `vorgabe`: der Weg, den die Vorgabe geht; `ausnahme`: ein Weg, der
+        nur auf ausdrückliche Wahl läuft (Rezeptzeile von Hand, Option) — die Seite kennzeichnet beide mit einer Marke im Kopf des Kastens."""
         self.art = art
         self.titel = titel
         self.text = text
@@ -24,6 +25,7 @@ class Workflowknoten:
         self.kante = kante
         self.teile = list(teile)
         self.vorgabe = vorgabe
+        self.ausnahme = ausnahme
         self.kinder = []
 
     def mit(self, *kinder):

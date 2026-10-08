@@ -115,7 +115,7 @@ class Werkzeughaar:
          [(G + 'modellhaar.py', 'ModellHaarMixin'), (G + 'haarachsen.py', 'G9haarachsen'),
           (G + 'haareigenmorphe.py', 'G9haareigenmorphe')],
          'achse ∈ laenge, kurz, dichte, wellig, dutt (sonst ValueError). Die Achsen sind Deltas NEBEN der Bibliothek '
-         '(3DObjects/Genesis9/haarachsen/<kennung>_f1.npz), linear wie Daz-Morphe, für alle 18 Frisuren vorhanden '
+         '(3DObjects/models/Genesis9/haarachsen/<kennung>_f1.npz), linear wie Daz-Morphe, für alle 18 Frisuren vorhanden '
          '(Verzeichnis gelesen 03.10.2026; Bau 45 s für alle am 30.09.2026). Fehlt die Ablage einer Frisur, ist der Aufruf '
          'STILL wirkungslos (G9haarachsen.anwenden gibt die Käfige unverändert zurück) — dann bauen (Zeile „Formachsen '
          'bauen“). achse.laenge = 1 bewegt 13,7 % (Duke) bis 100 % (Mavick Beard) der Punkte, größter Weg 42,2 mm (Basic) bis '
@@ -191,7 +191,7 @@ class Werkzeughaar:
          '--nur beschränkt auf Frisuren, deren Kennung das Teilwort enthält; --neu baut auch Aktuelles neu. Je Frisur 0,2 bis '
          '6,0 s, alle 18 zusammen 45 s (Assets/kleidung/engine2d3dkleider.py ACHSEN_STAPEL_S, 30.09.2026). Die Ablage trägt die '
          'Fassung im Namen (…_f1) und prüft den Bestand der Bibliothek (G9bestand): ändert sich die Bibliothek, baut der nächste '
-         'Lauf neu. Heute vorhanden: alle 18 (Verzeichnis 3DObjects/Genesis9/haarachsen gelesen, 03.10.2026). Nur dann '
+         'Lauf neu. Heute vorhanden: alle 18 (Verzeichnis 3DObjects/models/Genesis9/haarachsen gelesen, 03.10.2026). Nur dann '
          'laufen lassen, wenn eine Frisur fehlt.'),
 
         ('„Haar Eigen“ bauen (geklonte Frisur mit Formreglern)',
@@ -201,10 +201,24 @@ class Werkzeughaar:
          [(G + 'haareigen.py', 'G9haareigen'), (G + 'haareigenmorphe.py', 'G9haareigenmorphe')],
          'Gebaut beim ersten Lauf von „Mesh to 3D“ (G9haareigen.sicherstellen, 64 s; haar.md 29.09.2026) oder von Hand. Netz mit '
          'den Vorgaben eingerechnet, Materialien/UV/Bilder/Hautbindung der Vorlage, 10 Farbpresets; Ablage '
-         '3DObjects/Genesis9/eigene_stuecke/Haar_Eigen/bilanz.json und People/Genesis 9/Hair/EIGEN/Haar Eigen/ in der '
+         '3DObjects/models/Genesis9/eigene_stuecke/Haar_Eigen/bilanz.json und People/Genesis 9/Hair/EIGEN/Haar Eigen/ in der '
          'eigenen Bibliothek. Grenzen der Klon-Bauart: genau ein Netz, kein Klon, keine eigenen Knochen (daher die '
          'Formachsen für alle Frisuren ohne Klon). Der Server liest die Liste neu, wenn sich die .dsx der eigenen Wurzel '
          'ändern (G9eigenstand).'),
+
+        ('Eine Materialgruppe des Kartenhaars weglassen',
+         'Lässt eine Gruppe wie bangs (der Pony von basic_hair) aus: ihre Dreiecke werden zu Flächen ohne Inhalt.',
+         'rezept',
+         "m.haar_gruppe_weg('bangs')",
+         [(G + 'modellhaar.py', 'ModellHaarMixin')],
+         'Runde 58 von „Randy" (04.10.2026): der Pony hing als flacher dunkler Streifen von der Hutkante bis zur Nasenwurzel, die Vorlage zeigt keinen. Wirkt über Haarzonen.weglassen, der Eintrag '
+         'steht als Farbe „haarweg:<gruppe>" im Modell (#000000 ist nur der Platzhalter, keine Farbe). Nur für Kartenhaar.'),
+        ('Strähnengruppen einer umgefärbten Frisur angleichen',
+         'Gleicht die Helligkeit der Strähnengruppen an (0 = Staffelung der Daz-Frisur, 1 = alle gleich hell); nach haar_umfaerben, im Startrezept der Iteration 0 mit 0,6.',
+         'rezept',
+         "m.haar_gruppen_angleichen('mavick_hair_style', staerke=0.6)",
+         [(G + 'modelltextur.py', 'ModellTexturMixin')],
+         'Das dunkle Unterhaar der Mavick-Frisur stand an den Seiten schwarz; die Texturschicht heißt grau_gleich. Wert auf 0…1 geklemmt.'),
     ]
 
     # Klassenmodell: (von, 'ruft', nach, womit)

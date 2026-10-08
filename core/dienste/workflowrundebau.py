@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Workflowrundebau — die Entscheidungsbäume im Inneren einer Runde von „2D3D Kleider": Drapieren (Newton, Blender oder
-Stoffsolver), Haar-Knoten (Blender), Bauen, Fotoprojektion, Renderer, Rundenauswahl; Haar-Dynamik: `Workflowhaardynamik`.
+"""Workflowrundebau — die Entscheidungsbäume im Inneren einer Runde von „2D3D Kleider": Kleidung (woher ein Stück kommt, wie es sitzt: `Workflowkleidung`),
+Drapieren (`Workflowdrapieren`), Haar-Knoten (Blender), Bauen, Fotoprojektion, Renderer, Rundenauswahl; Haar-Dynamik: `Workflowhaardynamik`.
 
 Edgar: „allen Optionen (z. B. Blender)". Blender kommt in der Pipeline an genau zwei Stellen vor, beide nur über den einen
 Arbeiter `Engine2d3dKleiderblender` und nur per Rezeptzeile: `m.kleid_drapieren(…, motor='blender')`, `m.haar_knoten(…)`. Der Stoffsolver
-(Blenders Rechnung auf der GPU) ist ein weiterer Weg, nur per Rezept: `motor='stoffsolver'`, `m.haar_dynamik(…)`.
+(Blenders Rechnung auf der GPU) ist ein weiterer Weg, nur per Rezept: `motor='stoffsolver'`, `m.haar_dynamik(…)`. Beide sind Ausnahmen; der Standard eines
+Laufs ist: kein Drapieren (06.10.2026, Baum `Workflowdrapieren`).
 """
 
 from .workflowbaum import Workflowbaum
+from .workflowdrapieren import Workflowdrapieren
 from .workflowhaardynamik import Workflowhaardynamik
+from .workflowkleidung import Workflowkleidung
 from .workflowknoten import Workflowknoten as K
 from .workflowzeiten import Workflowzeiten as W
 
@@ -21,7 +24,8 @@ class Workflowrundebau:
     @classmethod
     def baeume(cls):
         return [
-            cls.drapieren(),
+            *Workflowkleidung.baeume(),
+            Workflowdrapieren.baum(),
             cls.haarknoten(),
             Workflowhaardynamik.baum(),
             cls.bauen(),
@@ -29,73 +33,6 @@ class Workflowrundebau:
             cls.renderer(),
             cls.auswahl(),
         ]
-
-    @classmethod
-    def drapieren(cls):
-        wurzel = K(
-            cls.F,
-            'm.kleid_drapieren(kennung, bilder, druck, motor)',
-            'Eine Rezeptzeile, Vorgabe motor=newton. Die Automatik '
-            'schreibt sie, wenn die Form steht (Stoffabstand drei Runden innerhalb 2 mm, IterationKleider.drapieren); '
-            'die Prüf-KI darf sie nicht (Begutachtungskritik.VERBOTEN). Ergebnis: Morph <kennung>.eigen.drapiert, '
-            'linear stellbar 0…1.',
-            ('Rezeptumgebung', 'IterationKleider', 'G9kleidmorphe'),
-        ).mit(
-            K(
-                cls.T,
-                'Kleiddrapierung → Stoffnewton',
-                'Eigener GPU-Löser (Newton SolverStyle3D, Warp): Z oben ↔ Y oben umgerechnet, '
-                'oberes Band 8 % fest, Grundfigur als stehender Kollider, ohne Druck.',
-                ('Kleiddrapierung', 'Stoffnewton'),
-                kante='newton (Vorgabe)',
-                vorgabe=True,
-                teile=[
-                    ('erster Aufruf (Warp-Kernel übersetzen)', W.NEWTON_ERST),
-                    ('weitere Aufrufe, 24 Bilder', W.NEWTON_WARM),
-                ],
-            ),
-            K(
-                cls.T,
-                'Engine2d3dKleiderblender.drapieren → Blender Cloth',
-                'Mit Druck (Pressure), ein Blender-Aufruf je Stück; Netze per from_pydata, damit die Punktreihenfolge '
-                'bleibt. Seit 02.10.2026 fällt der Stoff entlang −Y (vorher −Z, quer zur Figur: gemessen 533 mm in '
-                '11 Bildern) und das obere Band bleibt fest wie bei Newton. Nur per Rezept von Hand.',
-                ('Engine2d3dKleiderblender', 'Rezeptumgebung'),
-                kante='blender',
-                teile=[
-                    ('Blender-Start je Aufruf', W.BLENDER_START),
-                    ('Cloth: Hose, 3.123 Punkte, 24 Bilder', W.BLENDER_HOSE),
-                    ('Cloth: Oberteil, 17.552 Punkte, 24 Bilder', W.BLENDER_OBERTEIL),
-                ],
-            ),
-            K(
-                cls.T,
-                'Stoffsolverdrapierung → Stoffsolver (Blenders Cloth auf der GPU)',
-                'Dieselbe Rechnung wie Blender Cloth (Federn, Biegung, Druck mit Volumenterm, Kollision Dreieck gegen '
-                'Dreieck, dazu Wind und Kraftfelder mit Texturen und bewegten Feldobjekten, Vertexgruppen, Schrumpfen, Nähte, '
-                'weiches und bewegtes Anheften, mehrere und bewegte Körper — die Tabelle „Der Stoffsolver gegen Blender" unten '
-                'führt jede Funktion mit Stand) als Warp-Löser in python14, ein Prozess je Stück, derselbe Auftrag. Braucht eine '
-                'CUDA-GPU; ohne sie wird abgelehnt. Gleiche Schwerkraft und festes Band wie die anderen Motoren. Nur per Rezept von '
-                'Hand; Oberteil 24 Bilder im Mittel 2,7 mm von Blender (Blenders eigenes Rauschen 2,3 mm), bei der rutschenden '
-                'Hose nicht unterscheidbar (200 Blender- gegen 500 Solver-Läufe: Streuung 44,3 gegen 45,2 mm). Die Zeiten sind '
-                'am 02.10.2026 vor dem Ausbau des Solvers gemessen und danach nicht neu.',
-                ('Stoffsolverdrapierung', 'Drapierauftrag', 'Stoffsimulation', 'Rezeptumgebung'),
-                kante='stoffsolver',
-                teile=[
-                    ('Hose, 3.123 Punkte, 24 Bilder (Blender: 19,5 s)', W.SOLVER_HOSE),
-                    ('Oberteil, 17.552 Punkte, 24 Bilder (Blender: 55,0 s)', W.SOLVER_OBERTEIL),
-                    ('ohne CUDA-GPU (Host, 12 Bilder) — wird abgelehnt', W.SOLVER_OHNE_GPU),
-                ],
-            ),
-        )
-        return Workflowbaum(
-            'drapieren',
-            'Drapieren: Newton, Blender oder Stoffsolver',
-            'Mit welchem Löser fällt der Stoff?',
-            wurzel,
-            'Rezeptumgebung.MOTOREN, Begutachtungswerkzeug.drapierer; Zeiten: ortsmorphe.md (Newton) und Stoffsolver/README.md, '
-            'Abschnitt „Messungen" (Blender und Stoffsolver, 02.10.2026, nicht aus der Pipeline)',
-        )
 
     @classmethod
     def haarknoten(cls):

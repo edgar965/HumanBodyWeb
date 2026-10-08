@@ -13,6 +13,7 @@ import logging
 from djangobase.fassungsstatik import Fassungsstatik
 
 from ..models import Engine2d3dKleiderauftrag
+from .engine2d3dkleiderkopfliste import Engine2d3dKleiderkopfliste
 from .engine2d3dkleiderlauf import Engine2d3dKleiderlauf
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .engine2d3dkleiderpfade import Engine2d3dKleiderpfade
@@ -52,6 +53,8 @@ class Engine2d3dKleiderzustand:
             'standmodell': Engine2d3dKleiderzustand._standmodell(job),
             # Die Fotos nach dem Schritt „Vorbereitung" (`vorbereitet/`), für die Seite unter den Originalen.
             'vorbereitet': Engine2d3dKleiderzustand._vorbereitet(job),
+            # Die Kopfausschnitte und das Kopfnetz des Schritts „Kopf" (`kopf/`), Karte „Kopf" unter dem Mesh.
+            'kopf': Engine2d3dKleiderzustand._kopf(job),
             # Die Fotos mit den Etiketten des Schritts „Segmentierung" (`segmentierung/`), Karte unter dem Mesh.
             'segmentiert': Engine2d3dKleiderzustand._segmentiert(job),
             # Die Kleiderstücke vor den Iterationen mit ihrer Messung (`Engine2d3dKleiderstuecke`), Karte „Kleiderstücke".
@@ -79,6 +82,15 @@ class Engine2d3dKleiderzustand:
             return Engine2d3dKleidervorbereitungsliste.von(job)
         except (OSError, ValueError, TypeError, KeyError, ImportError) as fehler:
             logger.warning('2D3D Kleider %s: vorbereitete Fotos nicht gelesen (%s)', job.kennung, fehler)
+            return None
+
+    @staticmethod
+    def _kopf(job):
+        """`Engine2d3dKleiderkopfliste.von()` — ein Fehler darin kostet nur die Anzeige, nie den Zustand."""
+        try:
+            return Engine2d3dKleiderkopfliste.von(job)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as fehler:
+            logger.warning('2D3D Kleider %s: Kopf nicht gelesen (%s)', job.kennung, fehler)
             return None
 
     @staticmethod

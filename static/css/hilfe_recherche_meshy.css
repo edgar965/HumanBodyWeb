@@ -1,0 +1,14 @@
+/* Hilfe -> Recherche -> meshy.ai (08.10.2026): Legende und Tabellen der Fundstellen. */
+
+.rm-breit { max-width: 1400px; }
+
+.rm-klein { font-size: 0.82rem; color: var(--text-muted); }
+
+.rm-legende { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; align-items: center; margin: 0.6rem 0 1rem; font-size: 0.82rem; }
+.rm-legende-art { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+.rm-art { display: inline-block; padding: 0 0.45rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; line-height: 1.5; border: 1px solid var(--border); }
+.rm-art-beleg { color: #3fa56b; border-color: #3fa56b; }
+.rm-art-vermutung { color: #d9a441; border-color: #d9a441; }
+
+.rm-tabelle td { vertical-align: top; }

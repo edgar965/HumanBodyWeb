@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Workflowstrecke — die Schritte eines Auftrags „2D3D Kleider" (seit 04.10.2026 zehn, die Segmentierung ist optional) als Kette von Klassenkarten, mit ihren Optionen, ihrer
+"""Workflowstrecke — die Schritte eines Auftrags „2D3D Kleider" (seit 07.10.2026 elf, Kopf und Segmentierung sind optional) als Kette von Klassenkarten, mit ihren Optionen, ihrer
 Zeit und der Zeitleiste eines vollständigen Auftrags (Hilfe → Architektur → 2D3D, 02.10.2026).
 
 Die Schritte kommen aus `Architektur2d3d.LAUF` (= `Engine2d3dKleiderlauf.SCHRITTE`), die Optionen aus den Katalogen
-(`Engine2d3dKleideroptionen.SICHTBAR`: nur was das Formular der Seite zeigt), die Zeiten aus `Workflowzeiten`. Die Zeitleiste zeigt den
-Auftrag 2026.10.01.20.10.04 von den Fotos bis zum Export: netz 563,1 s, koerper 872,0 s, grundfigur 1,8 s, 23 Runden zusammen
-1.826,3 s (Summe von `ergebnis.iterationen[].sekunden`), export 1,8 s. Film und Speichern liefen in diesem Auftrag nicht.
+(`Engine2d3dKleideroptionen.SICHTBAR`: nur was das Formular der Seite zeigt), die Zeiten aus `Workflowzeiten`. Die Zeitleiste zeigt (seit 06.10.2026)
+den Auftrag 2026.10.06.14.10.22, einen vollen Lauf mit allen Schritten neu, von den Fotos bis zum Export: vorbereitung 55,9 s, netz 384,3 s, segmentierung 28,0 s,
+koerper 877,0 s, grundfigur 1,7 s, kleiderstuecke 297,9 s, iterationen (eine Runde, Iteration 0) 154,2 s, export 2,1 s, film 357,7 s (300 Bilder) — zusammen 2.158,8 s;
+speichern 0,0 s. Vorher stand hier der Auftrag 2026.10.01.20.10.04 (23 Runden, 1.826,3 s, ohne Film).
 """
 
 from .workflowzeit import Workflowzeit
@@ -44,6 +45,18 @@ class Workflowstrecke:
                 ),
             ],
             ['netz', 'textur'],
+        ),
+        (
+            'kopf',
+            'Engine2d3dKleiderkopf',
+            W.KOPF,
+            [
+                ('kopf.rechnen', 'Häkchen, an (Vorgabe) · aus: der Schritt entfällt im vollen Lauf (ausdrücklich gestartet läuft er immer) und die Körper-Kette nimmt kein Kopfnetz'),
+                ('kopf.modell', 'hunyuan3d_2mv (Vorgabe, die drei Ausschnitte gemeinsam) · hunyuan3d_2 (nur der vordere)'),
+                ('kopf.flaechen', '100.000 · 200.000 · 300.000 (Vorgabe) · 500.000'),
+                ('mesh.aufloesung, mesh.texturgroesse, mesh.seed', 'wie beim Schritt „netz" (der Kopflauf liest dieselben Felder)'),
+            ],
+            [],
         ),
         (
             'segmentierung',
@@ -86,6 +99,8 @@ class Workflowstrecke:
                 'modus',
                 'rezeptweg',
                 'automatik',
+                'kleidung',
+                'sitz',
                 'drapieren',
                 'haarknoten',
                 'haardynamik',
@@ -105,18 +120,24 @@ class Workflowstrecke:
         ),
         ('speichern', 'Engine2d3dKleiderspeichern', W.SPEICHERN, [], ['ende']),
     ]
-    #: Auftrag 2026.10.01.20.10.04: (Schritt, Sekunden) — iterationen = Summe der 23 Runden.
+    #: Auftrag 2026.10.06.14.10.22 (voller Lauf vom 06.10.2026, alle Schritte neu): (Schritt, Sekunden) — iterationen = Iteration 0, die einzige Runde dieses Laufs.
     LEITER = (
-        'ergebnis.dauer (netz, koerper, grundfigur, export) und Summe von ergebnis.iterationen[].sekunden (23 Runden), '
-        'Auftrag 2026.10.01.20.10.04 (Datenbank, gelesen 02.10.2026)'
+        'ergebnis.dauer (vorbereitung, netz, segmentierung, koerper, grundfigur, kleiderstuecke, iterationen, export, film; speichern 0,0 s) des Auftrags 2026.10.06.14.10.22 '
+        '(Datenbank, gelesen 06.10.2026 nach dem Ende des Laufs)'
     )
     ZEITLEISTE = [
-        ('netz', 563.1),
-        ('koerper', 872.0),
-        ('grundfigur', 1.8),
-        ('iterationen (23 Runden)', 1826.3),
-        ('export', 1.8),
+        ('vorbereitung', 55.9),
+        ('netz', 384.3),
+        ('segmentierung', 28.0),
+        ('koerper', 877.0),
+        ('grundfigur', 1.7),
+        ('kleiderstuecke', 297.9),
+        ('iterationen (1 Runde: Iteration 0)', 154.2),
+        ('export', 2.1),
+        ('film (300 Bilder)', 357.7),
     ]
+    #: Die ersten sechs Einträge sind der Aufbau (einmal je Auftrag), danach kommen die Runden und der Export.
+    AUFBAU_SCHRITTE = 6
 
     def __init__(self, zeichner, titel):
         """`zeichner`: `Workflowzeichner`, `titel`: Kennung → Überschrift der Bäume (für die Verweise)."""
@@ -143,7 +164,7 @@ class Workflowstrecke:
     def zeitleiste(self):
         """Der Auftrag als ein Streifen: je Schritt ein Segment, Breite = Anteil an der Gesamtzeit."""
         gesamt = sum(s for _n, s in self.ZEITLEISTE)
-        aufbau = sum(s for _n, s in self.ZEITLEISTE[:3])
+        aufbau = sum(s for _n, s in self.ZEITLEISTE[: self.AUFBAU_SCHRITTE])
         segmente = [
             {
                 'name': n,

@@ -1,0 +1,70 @@
+{% comment %}
+Teil 1 von Hilfe -> Architektur -> ARP Modell: der Mesh-Typ. Alle Zahlen aus `core/dienste/arpmodell.py`
+(Messung mit Blender 5.2.2 im Hintergrund, nur lesend, 08.10.2026: `mesh_probe.py`, `material_probe.py`, `bildgroessen.py`).
+{% endcomment %}
+<h2>1. Der Mesh-Typ</h2>
+<p>
+  Gemessen am {{ stand }} an <code>{{ datei }}</code>. <strong>Reines Dreiecksnetz</strong>: In allen 9 Netzen sind
+  <strong>0 Vierecke und 0 n-Ecke</strong>. Das ist der Gegensatz zum HumanBody-Netz, das aus Vierecken besteht
+  (17.288) — die Dreieckszahl des Modells ist deshalb gegeben, nicht aus Vierecken abgeleitet.
+</p>
+<table class="doku">
+  <thead>
+    <tr><th>Netz</th><th>Rolle</th><th>Punkte</th><th>Dreiecke</th><th>Kanten</th><th>Kantenlänge mm: Median (p5 … p95, max)</th>
+      <th>Fläche m²</th><th>UV (u|v) von … bis</th><th>Gruppen: definiert / mit Gewicht</th><th>Material und Bilder</th></tr>
+  </thead>
+  <tbody>
+    {% for name, rolle, punkte, dreiecke, kanten, laenge, flaeche, uv, gruppen, material in netze %}
+    <tr><td><code>{{ name }}</code></td><td>{{ rolle }}</td><td>{{ punkte }}</td><td>{{ dreiecke }}</td>
+      <td>{{ kanten }}</td><td>{{ laenge }}</td><td>{{ flaeche }}</td><td>{{ uv }}</td><td>{{ gruppen }}</td>
+      <td>{{ material }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="ag-bildhinweis">
+  „Gruppen" sind Blender-Hautgruppen = Knochennamen. Das Haar hat 144 definierte Gruppen, aber nur <code>head.x</code>
+  trägt Gewicht — an allen 34.637 Punkten, zwischen 0,77 und 0,85 (Mittel 0,80), nirgends 1,0 und in keiner anderen
+  Gruppe (gemessen, <code>haar_gewichte_probe.py</code>). Ob Blender das Haar damit zu 80 oder zu 100 % mit dem Kopf
+  bewegt, ist nicht geprüft; der Import bindet es ohnehin ganz an <code>head</code>. Augen: ein Knochen je Auge
+  (<code>c_eye.l</code>, <code>c_eye.r</code>).
+</p>
+
+<h3>Eigenschaften des Netztyps</h3>
+<table class="doku">
+  <thead><tr><th>Merkmal</th><th>Befund</th><th>Wirkung auf den Import</th></tr></thead>
+  <tbody>
+    {% for merkmal, befund, wirkung in meshtyp %}
+    <tr><td><strong>{{ merkmal }}</strong></td><td>{{ befund }}</td><td>{{ wirkung }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>Material: nicht jedes Bild ist eine Farbe</h3>
+<ul>
+  <li><strong>Körper</strong>: Farbe, Rauheit und Normalen je 8192² (Farbe als sRGB, die beiden anderen Non-Color), alle
+    direkt am Principled BSDF; Subsurface 0,674. Sie werden beim Import auf vier der fünf Genesis-Kacheln umgebacken (die Nägel, 1005, bleiben Genesis)
+    (Hilfe → Architektur → Genesis, Schritt „Haut backen").</li>
+  <li><strong>Haar</strong>: Die Farbe geht durch einen Mix-Knoten mit <strong>Faktor 1,0</strong> und festem
+    <code>B</code> = (0,0232 | 0,0062 | 0,0041) linear — also ein <strong>festes dunkles Braun</strong>; das PNG
+    (<code>hair_basecolor.png</code>, 1024², RGBA) liefert über seinen <strong>Alpha-Ausgang</strong> nur die Deckkraft.
+    Seine eigene Farbe (Mittel 0,49 | 0,36 | 0,40, Streuung ~0,18) ist Rohmaterial und sähe als Haarfarbe bunt aus.
+    Der Import liest dieses Muster (<code>Blendexport.festfarbe</code>, gemessen und im Wegwerfordner gegengeprüft;
+    alle anderen Materialien blieben bei der Gegenprobe unverändert).</li>
+  <li><strong>Hemd, Shorts, Augen, Zähne, Zunge</strong>: das Bild direkt am Farbeingang. Die Hemd- und Shortstexturen
+    haben zusätzlich eine Normalenkarte; eine DDS-Detailnormale (Baumwolle, 256²) kann der Browser nicht lesen und fällt weg.</li>
+</ul>
+
+<h3>Dichte im Vergleich</h3>
+<p>
+  Aus der Rangliste von <a href="/hilfe/architektur/andere-modelle/">Andere Modelle</a> (dieselben Zahlen, kein zweites Mal
+  gepflegt). Beim Körper des Modells ist „Basisnetz" das fertige Netz: es gibt keine Unterteilungsstufe.
+</p>
+<table class="doku">
+  <thead><tr><th>Rang</th><th>Netz</th><th>Punkte</th><th>Vierecke</th><th>Dreiecke</th><th>Höchste Stufe</th></tr></thead>
+  <tbody>
+    {% for e in vergleich %}
+    <tr><td>{% if e.rang is not None %}{{ e.rang }}{% else %}—{% endif %}</td><td>{{ e.name }}</td><td>{{ e.basis_punkte_text }}</td>
+      <td>{{ e.basis_vierecke_text }}</td><td>{{ e.basis_dreiecke_text }}</td><td>{{ e.stufen_text }} → <strong>{{ e.hoechst_text }}</strong></td></tr>
+    {% endfor %}
+  </tbody>
+</table>

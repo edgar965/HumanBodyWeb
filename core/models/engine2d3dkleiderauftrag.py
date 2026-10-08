@@ -122,6 +122,10 @@ class Engine2d3dKleiderauftrag(models.Model):
         rest = e.get('rest') or {}
         if rest.get('regler'):
             stellung[rest['regler']] = 1.0
+        # Augen-, Mund- und Nasenmorph aus den Landmarken (`Meshfigurlandmarkmorphe`): je Bereich ein Regler, Wert 1,0 wie der Rest-Morph
+        for bereich in (rest.get('landmarkmorphe') or {}).values():
+            if isinstance(bereich, dict) and bereich.get('regler'):
+                stellung[bereich['regler']] = 1.0
         kopf = e.get('kopfeigen') or {}
         if stellung and kopf.get('regler'):
             stellung[kopf['regler']] = float(kopf.get('wert', 1.0))

@@ -24,6 +24,7 @@ import os
 import time
 
 from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
+from .standhaut import Standhaut
 from .standvorabkleider import Standvorabkleider
 
 logger = logging.getLogger('core')
@@ -59,7 +60,9 @@ class Engine2d3dKleiderstandmodell:
     #: 23 (05.10.2026, Edgar: „das Haar der Vorlage perfekt auf ein Haar aus Genesis umbauen"): Das Haar der Runden ist an der Haarlinie geschnitten und sitzt auf der Haarkappe (`Haarumbau`); Kopfkachel
     #: bleibt gebacken, Fotohaut Fassung 2 (`Koerperfotoprojektion`).
     #: 24 (05.10.2026, Edgar: „Haar ist eine Linie über den Ohren", „ein Haar für einen normalen mittelalten Mann"): Haarlinie nach Ohr, Koteletten und Nacken (`Haarlinie`), das Haar vor den Iterationen ist das eigene Kurzhaar (`Herrenhaar`).
-    SCHREIBER = 24
+    #: 25 (07.10.2026, Edgar: „mach alle 5" — Prioliste aus „Andere Modelle"): Die Haut des Körpers (`Standhaut`): Hautsatz nach Grundfigur (masculine → `G9 Masculine Skin 01 MAT`), Kacheln 2048² (Kopf 4096²)
+    #: statt 1024², die Daz-Normalenkarte je Kachel als `normalTexture` (auf den Armen unter dem Handrelief).
+    SCHREIBER = 25
 
     def __init__(self, job, ablage=None):
         self.job = job
@@ -67,17 +70,22 @@ class Engine2d3dKleiderstandmodell:
 
     # ------------------------------------------------------------------ Stand
 
-    def _letzte(self):
-        """Die letzte ÜBERNOMMENE Runde der Iterationen (mit ihrem Modell) — None ohne Runde."""
-        runden = [r for r in ((self.job.ergebnis or {}).get('iterationen') or []) if r.get('werte') and r.get('uebernommen', True)]
-        return runden[-1] if runden else None
+    def _beste(self):
+        """Die BESTE Runde der Iterationen (`kreislauf.runde_bester`, nach `Rundenauswahl`) mit ihrem Modell — None ohne Runde oder ohne Angabe.
+
+        `uebernommen` heißt nur „ohne Fehler"; eine verworfene oder nur probeweise Runde ist nicht der Stand (06.10.2026: Runde 5 einer Probe mit 0,4255
+        gegen beste Runde 3 mit 0,4021). Der Stand ist, was auch Export, Film und Speichern lesen."""
+        erg = self.job.ergebnis or {}
+        nummer = (erg.get('kreislauf') or {}).get('runde_bester')
+        beste = [r for r in (erg.get('iterationen') or []) if r.get('werte') and nummer is not None and r.get('runde') == nummer]
+        return beste[-1] if beste else None
 
     def _kreislaufmodell(self):
-        """Das Modell des Stands: das der LETZTEN Runde (04.10.2026, Edgar: „Modell ist nicht wie die letzte Iteration"). Bis dahin das der BESTEN nach Note
-        (`kreislauf.modell`, 01.10.2026) — die Note zählt Silhouetten und zog Bühne und Film auf den muskulösen Körper zurück, den Edgar als Bodybuilder verwarf,
-        obwohl die letzte Runde ihn schlanker zeigte. Ohne Runde bleibt `kreislauf.modell`."""
-        letzte = self._letzte()
-        return (letzte or {}).get('werte') or ((self.job.ergebnis or {}).get('kreislauf') or {}).get('modell') or None
+        """Das Modell des Stands: das der BESTEN Runde (06.10.2026, Edgar: „die Bühne soll das beste Modell zeigen"). Am 04.10.2026 war es die LETZTE Runde
+        („Modell ist nicht wie die letzte Iteration"); die zeigte am 06.10. in `…14.10.22` eine Probe (Runde 5, 0,4255) schlechter als jede andere Runde.
+        Ohne Runde bleibt `kreislauf.modell` — das Begutachtungsstand schon auf die beste Runde setzt."""
+        beste = self._beste()
+        return (beste or {}).get('werte') or ((self.job.ergebnis or {}).get('kreislauf') or {}).get('modell') or None
 
     def stellung(self):
         stellung = dict(self.job.stellung() or {})
@@ -88,17 +96,23 @@ class Engine2d3dKleiderstandmodell:
         return bool(self.job.stellung())
 
     def _beste_runde(self):
-        """Die Runde, aus der der Stand kommt (Name aus der Zeit, als es die beste war): jetzt die letzte übernommene."""
-        letzte = self._letzte()
-        return letzte['runde'] if letzte else ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
+        """Die Runde, aus der der Stand kommt: die beste (`_beste`), sonst `kreislauf.runde_bester`."""
+        beste = self._beste()
+        return beste['runde'] if beste else ((self.job.ergebnis or {}).get('kreislauf') or {}).get('runde_bester')
 
     def fassung(self):
         """Fingerabdruck des Stands — 12 Zeichen. Mit der besten Runde: Eine neue Runde kann Stoff, Zubehör und Maße des Modells ändern,
         ohne dass `kreislauf.modell` (Körperwerte, Stücke) sich ändert — Runde 53 (Hemd anliegend, 04.10.2026) baute `stand_3e76741ccddd.glb`
-        unter demselben Namen neu, und ein offener Tab behielt die alte Datei aus dem Browser-Cache (`artefakte-benennen`)."""
+        unter demselben Namen neu, und ein offener Tab behielt die alte Datei aus dem Browser-Cache (`artefakte-benennen`).
+
+        07.10.2026, Edgar 8: derselbe Fehler nochmal, andere Ursache — ein `eigen:<kennung>`-Regler wird unter DEMSELBEN
+        Namen neu abgelegt (Direktmorph-Nachbesserung), `self.stellung()` liefert `{regler: wert}` unveraendert, die
+        Fassung blieb bitgleich (`486a5147eb22` vor UND nach dem Mund-Fix) — der Browser behielt die kaputte Datei unter
+        derselben `?v=`-URL fuer immer. `G9formung.fingerabdruck()` hat das schon fuer SEINEN Cache geloest
+        (`G9eigenmorphe.dateistand`); hier fehlte dieselbe Absicherung."""
         f = (self.job.ergebnis or {}).get('fototextur') or {}
-        teile = [self.SCHREIBER, self.stellung(), self._kreislaufmodell(), f.get('kacheln'), f.get('augen'),
-                 f.get('stand'), self._beste_runde(), self._zubehoer()]
+        teile = [self.SCHREIBER, self.stellung(), self._eigen_dateistand(), self._kreislaufmodell(), f.get('kacheln'), f.get('augen'),
+                 f.get('stand'), self._beste_runde(), self._zubehoer(), Standhaut.fassung(self.job)]
         schichten = self._fotoschichten()
         if schichten:                       # nur mit Fotoschichten: Aufträge ohne sie behalten ihre Fassung
             teile.append(schichten)
@@ -106,6 +120,14 @@ class Engine2d3dKleiderstandmodell:
         vorab = None if self._kreislaufmodell() else Standvorabkleider.fingerabdruck(self.job)
         roh = json.dumps(teile + ([vorab] if vorab else []), sort_keys=True, default=str)
         return hashlib.md5(roh.encode('utf-8')).hexdigest()[:12]
+
+    def _eigen_dateistand(self):
+        """`[(reglername, dateistand_ns)]` je `eigen:`-Regler der Stellung — sortiert, fuer die Fassung (siehe `fassung()`,
+        07.10.2026). Ohne das aendert sich die Fassung NICHT, wenn ein Eigenmorph unter demselben Namen neu abgelegt wird."""
+        from Genesis9.eigenmorphe import G9eigenmorphe
+        return sorted(
+            (k, G9eigenmorphe.dateistand(k)) for k in self.stellung() if G9eigenmorphe.ist_eigen(k)
+        )
 
     def _fotoschichten(self):
         """Die Atlanten der Fotoschichten DIESES Auftrags (`kleidtexturen/*foto_<kürzel>_f*.png`) als `[(Name, Größe, Änderungszeit)]` — leer ohne sie.
@@ -193,13 +215,17 @@ class Engine2d3dKleiderstandmodell:
         # Die Netze bleiben in der A-Pose (`{}`); die Haltung der Iterationen kommt unten als Gelenkdrehung dazu (`Standhaltung`). Sie in den
         # Bau des Körpers zu geben (Versuch 03.10.2026) ließ den Körper gesenkt, aber Hemd, Hose, Stiefel und Zubehör in der A-Pose stehen.
         netz = G9koerpernetz(G9formung.aus_abfrage(self.stellung(), {}), G9charaktere.eintrag('basis'),
-                             anhaenge=True, stufen=0).bauen()
+                             hautpreset=Standhaut.preset(self.job), anhaenge=True, stufen=0).bauen()      # der Hautsatz folgt der Grundfigur (`Standhaut`)
         glb = Standmodellglb(netz['skelett']['knochen'])
         glb.hautdetail = not self._kreislaufmodell()        # ruhigere Haut (`Standhautdetail`) nur vor den Iterationen: eine laufende Reihe soll ihren Film nicht ändern
-        glb.koerper(netz, self._kacheln())
+        kacheln = self._kacheln()
+        glb.koerper(netz, kacheln)
         daten = self._kreislaufmodell()
         from .brauenfarbe import Brauenfarbe  # Brauen/Wimpern in der Haarfarbe (statt Daz-Schwarz)
+        from .koerperanhaenge import Koerperanhaenge
         Brauenfarbe().anwenden(netz, ((daten or {}).get('farben') or {}).get('haar'))
+        if Koerperanhaenge.brauen_gemalt(kacheln):          # Fotohaut im Kopf: die Brauen stehen im Gesicht
+            netz['anhaenge'] = [a for a in netz.get('anhaenge') or [] if a.get('schluessel') != 'brauen']
         glb.anhaenge(netz, self._augenbild())
         teile = []
         # Ohne Iteration die Fotostücke des Schritts „Kleiderstücke" (`Standvorabkleider`) — nur Kleidung, kein Standardhaar, A-Pose; das Haar ist die Haarkappe, wenn die Hülle des Fotohaars da ist.
@@ -259,7 +285,7 @@ class Engine2d3dKleiderstandmodell:
             if not rgb:
                 return None
             if Iterationsoptionen.haarumbau(self.job) == 'herren':
-                herren = Herrenhaar(self.ablage, netz)
+                herren = Herrenhaar(self.ablage, netz, laenge=Iterationsoptionen.haarlaenge(self.job))
                 return herren.teile(rgb) if herren.kappe.kurzhaarig() else None
             teil = Haarkappe(self.ablage, netz).teil(rgb)
             return [teil] if teil is not None else None

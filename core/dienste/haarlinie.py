@@ -38,6 +38,14 @@ class Haarlinie:
     UNTEN_MITTE = -38.0
     UNTEN_SEITE = -24.0
     NACKEN_BREITE = 85.0
+    #: Feinraster der Haarlinie: so viele Zellen je 5°-Feld und Richtung (4 → 1,25°). Auf dem 5°-Raster war der Rand um das Ohr eine Treppe aus Feldern von 9 mm Seite (Edgar, 07.10.2026: „das Haar ist sehr eckig um die Ohren").
+    FEIN = 4
+    #: Um jeden Hautpunkt des Ohrs wächst im Umkreis von so vielen Grad kein Haar (Scheiben, nicht Felder: der Rand um das Ohr ist rund) …
+    OHR_ABSTAND = 7.0
+    #: … und die Haarlinie als Ganzes wird mit dieser Gauß-Breite (Grad) gerundet: die Ecken an Schläfe, Koteletten und Gesichtsrand werden Bögen. Gesehen am Herrenhaar des Auftrags `2026.10.07.17.45.25`
+    #: (`ProjektTemp/_wegwerf/edgar/haar_ansicht.py`, Seitenansicht): bei 3° blieb die Stufe an der Schläfe (Gesichtsrand bei 62° Azimut, Kotelettengrenze bei 8°) fast rechteckig, bei 6° noch ein Absatz über dem Ohr, bei 9° eine
+    #: glatte S-Kurve; 8° ist der Mittelweg (Annahme nach Sicht, kein Maß).
+    RUNDUNG = 8.0
 
     @classmethod
     def _felder(cls, v, r, hoehe, breite):
@@ -84,9 +92,45 @@ class Haarlinie:
         return el <= rand
 
     @classmethod
-    def ausschluss(cls, netz, mitte, roh):
+    def ohrpunkte(cls, netz, mitte):
+        """`(M, 3)` Einheitsvektoren vom Kopfmittelpunkt zu den Hautpunkten des Ohrs (Gewicht auf `l_ear`/`r_ear` ab `OHR_GEWICHT`) — leer ohne Ohrknochen in der Haut."""
+        haut = (netz or {}).get('haut') or {}
+        namen = [str(n) for n in haut.get('knochen') or []]
+        ohren = [i for i, n in enumerate(namen) if n in ('l_ear', 'r_ear')]
+        if not ohren:
+            return np.zeros((0, 3))
+        index = np.asarray(haut['index']).reshape(-1, 4)
+        gewicht = np.asarray(haut['gewicht'], dtype=np.float64).reshape(-1, 4)
+        w = sum((gewicht * (index == i)).sum(axis=1) for i in ohren)
+        v = np.asarray(netz['punkte'], dtype=np.float64)[w >= cls.OHR_GEWICHT] - np.asarray(mitte, dtype=np.float64)
+        return v / np.maximum(np.linalg.norm(v, axis=1, keepdims=True), 1e-12)
+
+    @classmethod
+    def rund(cls, grob, netz, mitte):
+        """`(bereich, zelle)` — der Haarbereich (`grob`: Bool (hoehe, breite) auf dem 5°-Raster, OHNE Ohr: `ausschluss(…, mit_ohr=False)`) auf dem Feinraster (`FEIN`, `zelle` Grad je Zelle), das Ohr als Scheiben
+        von `OHR_ABSTAND` Grad um seine Hautpunkte herausgenommen, das Ganze mit `RUNDUNG` Grad gerundet. Azimut umlaufend."""
+        from scipy import ndimage
+
+        hoehe, breite = grob.shape
+        fein = ndimage.zoom(grob.astype(np.float64), cls.FEIN, order=1, mode='grid-wrap', grid_mode=True) > 0.5
+        zelle = 180.0 / fein.shape[0]
+        ohr = cls.ohrpunkte(netz, mitte)
+        if len(ohr):
+            el = np.radians((np.arange(fein.shape[0]) + 0.5) * zelle - 90.0)[:, None]
+            az = np.radians((np.arange(fein.shape[1]) + 0.5) * zelle)[None, :]
+            richtung = np.stack([np.cos(el) * np.sin(az), np.sin(el) * np.ones_like(az), np.cos(el) * np.cos(az)], axis=-1).reshape(-1, 3)     # wie `_felder`: Azimut von +z nach +x
+            kleinster = np.zeros(len(richtung))
+            for anfang in range(0, len(richtung), 8000):
+                kleinster[anfang:anfang + 8000] = (richtung[anfang:anfang + 8000] @ ohr.T).max(axis=1)
+            nah = (kleinster >= np.cos(np.radians(cls.OHR_ABSTAND))).reshape(fein.shape)
+            fein = fein & ~nah
+        sigma = cls.RUNDUNG / zelle
+        return ndimage.gaussian_filter(fein.astype(np.float64), sigma, mode=('nearest', 'wrap')) > 0.5, zelle
+
+    @classmethod
+    def ausschluss(cls, netz, mitte, roh, mit_ohr=True):
         """`(ausgeschlossen, kotelett)`, beide Bool (hoehe, breite) — `ausgeschlossen`: hier wächst kein Haar (Gesicht, Ohr, Nacken); `kotelett`: Felder der Koteletten, die das Netzhaar `roh` (NaN = kein Netzhaar)
-        mit genug Haar belegt, also Haar sein dürfen, auch wenn die Abdeckung Lücken hat."""
+        mit genug Haar belegt, also Haar sein dürfen, auch wenn die Abdeckung Lücken hat. `mit_ohr=False`: das Ohr bleibt draußen (die Haarkappe nimmt es als runde Scheiben auf dem Feinraster, `rund`)."""
         hoehe, breite = roh.shape
         feld = 180.0 / hoehe
         el = ((np.arange(hoehe) + 0.5) * feld - 90.0)[:, None]
@@ -103,4 +147,4 @@ class Haarlinie:
         if zone.any() and float((~np.isnan(roh))[zone].mean()) >= cls.KOTELETT_ANTEIL:
             kotelett = zone
         unter = (von_vorn > cls.GESICHT_AZ) & (von_vorn <= vorn) & (el < cls.KOTELETT_EL)      # unter den Koteletten: Wange und Kiefer
-        return gesicht | unter | ohr | cls.nacken(el, az), kotelett
+        return gesicht | unter | (ohr if mit_ohr else False) | cls.nacken(el, az), kotelett

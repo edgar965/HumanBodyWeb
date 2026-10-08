@@ -13,7 +13,7 @@ import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
  * jedes Stück trägt seine VORGABE (`kategorie`, aus Daz' Metadaten:
  * Oberteile, Hosen, Shorts, Röcke, Kleider, Anzüge, Outfits, Unterwäsche, Schuhe,
  * Kopfbedeckung, Zubehör, Haare, Requisiten — `G9dazkategorien`); Edgars Einteilung
- * liegt beim Server (`G9garderobekategorien`, `3DObjects/Genesis9/
+ * liegt beim Server (`G9garderobekategorien`, `3DObjects/models/Genesis9/
  * garderobe_kategorien.json`) und wird hier darübergelegt.
  *
  * Das Kontextmenü (`Kontextmenue`, dasselbe wie bei Animationen und Modell)

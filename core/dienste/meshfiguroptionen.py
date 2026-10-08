@@ -17,7 +17,8 @@ und Werte, alles andere fällt auf die Vorgabe).
     symmetrie    den Eigenmorph links/rechts mitteln (Daz-Figuren sind symmetrisch)
     textur       Farbe des Netzes auf die Genesis-Haut backen, nur den Hautton, oder keine
     kopfhaut     unter dem Haar: die Haarfarbe des Netzes aufmalen oder Haut lassen
-    kleidung     was die Anpassung mit Shirt und Hose des Netzes tut: nur nicht nach außen drücken, oder
+    entlichten   das Licht der Netzfarbe herausrechnen (Prozent; die drei Texturoptionen: `Meshfigurtexturoptionen`)
+    kleidung    was die Anpassung mit Shirt und Hose des Netzes tut: nur nicht nach außen drücken, oder
                  dazu schwach heranziehen (Rumpf hängt am Shirt) — oder wie Haut (alte Regel, Stoff = Haut)
     referenz     Testfall: eine Figur der Genesis-Bibliothek, gegen die das Ergebnis gemessen wird
     blind        beim Testfall die Regler der Referenzfigur selbst NICHT benutzen (ehrliche Probe)
@@ -26,6 +27,9 @@ und Werte, alles andere fällt auf die Vorgabe).
     haarkarten   Haarkarten aus der Haarschale des Netzes als eigenes Objekt (Bühne, Weg C)
     modell       das Ergebnis als Modell speichern (`data/models/<Name>.json`, Szene/Studio)
 """
+
+from .meshfigurkleidungsoptionen import Meshfigurkleidungsoptionen
+from .meshfigurtexturoptionen import Meshfigurtexturoptionen
 
 __all__ = ['Meshfiguroptionen']
 
@@ -108,29 +112,7 @@ class Meshfiguroptionen:
                 ('aus', 'Wie das Netz'),
             ],
         },
-        {
-            'schluessel': 'textur',
-            'titel': 'Textur',
-            'art': 'wahl',
-            'vorgabe': 'mesh',
-            'werte': [
-                ('mesh', 'Farbe des Netzes auf die Genesis-Haut'),
-                ('hautton', 'Nur den Hautton übernehmen'),
-                ('aus', 'Daz-Haut unverändert'),
-            ],
-        },
-        {
-            'schluessel': 'kopfhaut',
-            'titel': 'Kopfhaut',
-            'art': 'wahl',
-            'vorgabe': 'haar',
-            'werte': [
-                ('haar', 'Haarfarbe des Netzes aufmalen'),
-                ('haut', 'Haut lassen (für eigenes Haar)'),
-            ],
-            'hinweis': 'Unter dem Haar: „Haarfarbe des Netzes“ malt die Farbe, die das Netz dort trägt, auf die Genesis-Kopfhaut (die graue „Kappe“, solange kein Haar darüber sitzt); „Haut lassen“ '
-                       'nimmt dort keine Farbe aus dem Netz, die Daz-Haut bleibt — für Haar als eigenes Objekt (Frisur, Iterationen). Wirkt mit dem Schritt „Körper“ (Quelle „rechnen“).',
-        },
+    ] + Meshfigurtexturoptionen.KATALOG + [
         {
             'schluessel': 'kleidung',
             'titel': 'Kleidung im Netz',
@@ -168,6 +150,7 @@ class Meshfiguroptionen:
             'hinweis': 'Wie weit die Haut unter der Stoffoberfläche liegen soll (Stoffdicke und Luft): ein '
             'anliegendes Shirt 3–8 mm, ein weites 15–25 mm.',
         },
+    ] + Meshfigurkleidungsoptionen.KATALOG + [
         {
             'schluessel': 'genitalform',
             'titel': 'Genitalbereich (%)',

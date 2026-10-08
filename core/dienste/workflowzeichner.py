@@ -70,10 +70,15 @@ class Workflowzeichner:
     # ------------------------------------------------------------------ Kasten und Zweig
 
     def knoten(self, k):
-        klassen = ' wf-vorgabe' if k.vorgabe else ''
-        kopf = '<div class="wf-kopf"><i class="bi %s"></i><span class="wf-titel">%s</span></div>' % (
+        klassen = (' wf-vorgabe' if k.vorgabe else '') + (' wf-ausnahme' if k.ausnahme else '')
+        marke = (
+            '<span class="wf-marke-vorgabe">Vorgabe</span>' if k.vorgabe else
+            '<span class="wf-marke-ausnahme">Ausnahme</span>' if k.ausnahme else ''
+        )
+        kopf = '<div class="wf-kopf"><i class="bi %s"></i><span class="wf-titel">%s</span>%s</div>' % (
             self.ICONS[k.art],
             escape(k.titel),
+            marke,
         )
         text = '<div class="wf-text">%s</div>' % escape(k.text) if k.text else ''
         teile = self.teile(k.teile) if k.teile else ''

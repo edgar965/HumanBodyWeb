@@ -1,0 +1,83 @@
+{% comment %}Reiter „Gesicht" der Auftragsseite „2D3D Kleider" (07.10.2026, Edgar: „mach mir einen zweiten Tab bei der Modell
+View … wo du nur das Mesh Gesicht und das 3D Modell hast. Zeichne alle Linien ein die du gemessen hast, mit Bezeichnung von
+1 bis x und mach rechts eine Tabelle mit allen Spalten Nummer, Mesh (cm), Modell (cm)"): links das Netz aus den Fotos
+(TRELLIS), rechts das aktuelle Modell — zwei EIGENE, kleine three.js-Szenen (nicht die Hauptbühne), auf das Gesicht gezoomt,
+mit den Mess-Strecken aus `Engine2d3dKleiderGesichtsvergleich` (`GET …/gesichtsvergleich/`) als nummerierte Linien. Rechts
+die Tabelle mit denselben Nummern.{% endcomment %}
+<div id="reiter-gesicht" data-reiterfeld="gesicht" hidden>
+    <div class="card">
+        <h2>Gesicht — Mesh gegen Modell</h2>
+        <p class="hb-hinweis">Links das Netz, gegen das das Gesicht angepasst wurde (das Kopfnetz des Schritts „Kopf", sonst das
+            Körpernetz des Schritts „Netz"), rechts das aktuelle Modell (letzter Stand) — beide in der Ruhehaltung des Modells:
+            die Kopfhaltung der Person (Hals und Kopf drehen in der Anpassung mit, bei „Edgar 10" 10°) ist am Netz zurückgedreht,
+            sonst zeigten die Schnitte vor allem diese Drehung. Dieselben Gesichtsstrecken (MediaPipe-Landmarken) als Linien, nummeriert wie die Tabelle rechts. Der
+            „Modell"-Punkt einer Linie ist der nächste Oberflächenpunkt des Modells zum jeweiligen Mesh-Landmark — das Modell
+            hat keine eigene Landmarken-Topologie, nur die nächste Fläche ist ehrlich vergleichbar. Zusätzlich Ebenen-Schnitte
+            alle 2,5 cm durch den Kopf: <span style="color:#4fd4ff">horizontal</span>,
+            <span style="color:#ff4fd4">vertikal</span>, <span style="color:#a6ff4f">diagonal</span> — je Fläche ihre eigenen
+            Schnittlinien, zeigen Formabweichungen abseits der zwölf benannten Strecken.</p>
+        <p class="hb-hinweis" id="gesicht-status" role="status">Wird geladen …</p>
+        <div class="gesichtsvergleich-flaeche">
+            <div class="gesichtsvergleich-spalte">
+                <h3>Mesh</h3>
+                <div class="mesh-betrachter" id="gesicht-mesh"></div>
+            </div>
+            <div class="gesichtsvergleich-spalte">
+                <h3>Modell</h3>
+                <div class="mesh-betrachter" id="gesicht-modell"></div>
+            </div>
+            <div class="gesichtsvergleich-tabellenspalte">
+                <table class="gesichtsvergleich-tabelle" id="gesicht-tabelle">
+                    <thead>
+                        <tr><th>Nummer</th><th>Bezeichnung</th><th>Mesh (cm)</th><th>Modell (cm)</th><th>Differenz (cm)</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% comment %}Statische Vergleichsbilder (matplotlib, 07.10.2026, Edgar nach zwei Referenzbildern der PARALLELEN
+    Sitzung am Hunyuan-Kopf: „mach solche Bilder mit vergleich Mesh zu Modell" / „unterhalb der View" / „und solche
+    in dem Stil wo du Mesh rot hast, 3D Modell blau" / „solche fuer senkrechte Schnitte, daneben die Tabelle mit den
+    Werten. die Tabelle als djangoTabelle: Sortierbar und Spalten veraenderbar"): `Engine2d3dKleiderGesichtsbilder`,
+    drei PNG-Endpunkte (waagerecht/senkrecht-Profile, Silhouetten) + ein Werte-Endpunkt fuer die sortierbare
+    Tabelle rechts daneben (djangoBase `TabellenSortierung`/`TabellenBreiten`, dieselbe Bedienung wie ueberall sonst
+    im Projekt).{% endcomment %}
+    <div class="card">
+        <h2>Schnittprofile — statische Bilder</h2>
+        <p class="hb-hinweis">Waagerechte und senkrechte Schnitte alle 20 mm relativ zur Nasenspitze, je nur die
+            VORDERE Hälfte (Mesh rot, Modell blau); darunter die Punktwolken-Silhouetten (Seite/Front, grün = Höhe
+            der Nasenspitze). Rechts dieselben Werte als Tabelle — Kopf anklicken zum Sortieren, am rechten Rand
+            ziehen für die Spaltenbreite. Schnitte mit auffällig großem „max |Δ|" nahe Mund/Kinn sind mit Vorsicht
+            zu lesen: die Fläche faltet sich dort (Lippen, Kinnfalte) — eine einzelne, uneindeutige x/y-Zuordnung
+            kann dort Zacken erzeugen, die keine echte Formabweichung sind.</p>
+        <img id="gesicht-bild-horizontal" class="gesichtsvergleich-bild" alt="Waagerechte Schnittprofile, Mesh rot gegen Modell blau">
+        <img id="gesicht-bild-vertikal" class="gesichtsvergleich-bild" alt="Senkrechte Schnittprofile, Mesh rot gegen Modell blau">
+        <div class="gesichtsvergleich-bildspalten">
+            <img id="gesicht-bild-silhouetten" class="gesichtsvergleich-bild gesichtsvergleich-bild-silhouetten"
+                 alt="Silhouetten Seite und Front, Mesh rot gegen Modell blau">
+            <div class="gesichtsvergleich-werttabellenspalte">
+                <table class="sortable" id="gesicht-werttabelle" data-sort-key="2d3dkleider-gesicht-werte">
+                    <thead>
+                        <tr><th>Nummer</th><th>Richtung</th><th>Offset (mm)</th><th>max |Δ| (mm)</th><th>bei (mm)</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% comment %}Bilderreihen Augen, Mund, Nase (07.10.2026, Edgar: „augenform auch nicht, mach im Tab Gesicht auch eine Bilderreihe für augen, Mund, Nase"): `Engine2d3dKleiderGesichtsdetail` —
+    je Bereich drei Ansichten (vorn, 45°, Seite), je Ansicht Mesh | Modell | Überlagerung der Landmarken (rot = Mesh, blau = Modell). Gerendert wird beim ersten Öffnen eines Stands in einem
+    eigenen Prozess (~25 s), danach liegen die Bilder in `ergebnis/`.{% endcomment %}
+    <div class="card">
+        <h2>Augen · Mund · Nase — Bilderreihen</h2>
+        <p class="hb-hinweis">Je Bereich drei Ansichten (vorn, 45°, Seite von rechts), je Ansicht: das Netz | das Modell | beide
+            Landmarken-Linien auf dem Modell (<span style="color:#ff3c3c">rot</span> = Mesh, <span style="color:#468cff">blau</span> =
+            Modell; die Modell-Landmarken sind die eigenen der Figur, nicht die nächsten Flächenpunkte). Gleiche Kamera, gleiches
+            Licht, beide in der Ruhehaltung. Das erste Öffnen eines Stands rendert die drei Bilder (rund 25 s).</p>
+        <p class="hb-hinweis" id="gesicht-detail-status" role="status"></p>
+        <img id="gesicht-bild-augen" class="gesichtsvergleich-bild" alt="Augen und Brauen: Mesh, Modell, Überlagerung">
+        <img id="gesicht-bild-mund" class="gesichtsvergleich-bild" alt="Mund: Mesh, Modell, Überlagerung">
+        <img id="gesicht-bild-nase" class="gesichtsvergleich-bild" alt="Nase: Mesh, Modell, Überlagerung">
+    </div>
+</div>

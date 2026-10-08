@@ -1,0 +1,56 @@
+{% comment %}
+Teil 3 von Hilfe -> Architektur -> Genesis: woran „fertig" gemessen wird, Grenzen, Edgars Entscheidungen
+(08.10.2026) und der Nebenbefund zur eigenen Bibliothek.
+{% endcomment %}
+<h2>6. Woran „fertig" gemessen wird</h2>
+<ul>
+  <li><strong>Form:</strong> Abstand geformte Genesis ↔ Original-Körper je Körperteil (RMS, p95, Maximum); Gesicht
+    in Schnitten alle 2 cm waagerecht und senkrecht mit Maximum je Schnitt — kein Median über die Fläche. Zum
+    Vergleich: Ten24-Scan 1,76 mm RMS (<code>meshfigur-ten24.md</code>). Ein sauberes Netz ohne Kleidung darüber
+    sollte darunter liegen — das ist eine Erwartung, keine Messung.</li>
+  <li><strong>Bild:</strong> Original (Blender) und Genesis-Figur aus derselben Kamera, vorn, seitlich, Gesicht nah,
+    nebeneinander — ansehen, nicht nur messen.</li>
+  <li><strong>Textur:</strong> Farbe an festen Hautstellen Original ↔ gebacken; Nähte zwischen den Kacheln im Bild.</li>
+  <li><strong>Stücke:</strong> auf ihr, auf der nackten Grundfigur und auf einer zweiten Genesis-Figur anziehen;
+    Passform ziehen; eine BVH abspielen (Schultern, Hüfte).</li>
+  <li><strong>Gegenprobe:</strong> Umposen absichtlich weglassen → der Rumpf-Abstand muss sichtbar schlechter werden.</li>
+</ul>
+
+<h2>7. Grenzen</h2>
+<ul>
+  <li>Ihre Topologie, ihre Gesichtsknochen und ihre Mund-Texturen werden nicht übernommen — sie wird eine
+    Genesis-Figur, die so aussieht wie sie. Feine Züge hängen an der Genauigkeit des Eigenmorphs.</li>
+  <li>Brauen und Wimpern: ob sie in den 12 kleinen Teilen des Körpers stecken, ist ungeprüft; Genesis bringt eigene.</li>
+  <li>Umgetastete Texturen verlieren an den Kachelnähten.</li>
+</ul>
+
+<h2>8. Entscheidungen (Edgar, 08.10.2026)</h2>
+<table class="doku">
+  <thead><tr><th>Frage</th><th>Entscheidung</th><th>Umsetzung im Import</th></tr></thead>
+  <tbody>
+    <tr><td>Welche .blend?</td><td>die letzte, mit der aktuellsten Version</td>
+      <td>aus dem Ordner die .blend mit der höchsten Fassungsnummer im Namen (hier <code>cute girl 5.0.blend</code>)</td></tr>
+    <tr><td>Name</td><td>wie der Ordner</td><td>Figur <code>cute girl</code>, Stücke <code>cute girl …</code></td></tr>
+    <tr><td>Augen</td><td>Originalaugen auf Genesis übertragen, aber einstellbar / ersetzbar</td>
+      <td>Einstellung „Augen: Original"; die Genesis-Augen bleiben wählbar</td></tr>
+    <tr><td>Auflösung</td><td>gering im Browser, mit Strg+Alt+H auf die höchste umschaltbar</td>
+      <td>gebacken in voller Größe; der Browser bekommt die verkleinerte Fassung, Strg+Alt+H die volle</td></tr>
+    <tr><td>Lizenz</td><td>frei</td><td>—</td></tr>
+  </tbody>
+</table>
+<p>Die Einstellungen merkt sich der Import-Dialog; beim nächsten Import stehen sie als Vorgabe da.</p>
+
+<h2>9. Nebenbefund (erledigt): die eigene Bibliothek lag an zwei Orten</h2>
+<div class="info-box info-box-green">
+  <strong>Zusammengeführt am 08.10.2026</strong> (Edgar: „Code an einer Stelle"). Vorher schrieb der Code nach
+  <code>3DObjects/Genesis9</code> (116 Dateien in <code>bibliothek</code>, am 07.10.2026 zwischen 23:29 und 23:56 neu
+  angelegt), während der alte Bestand unter <code>3DObjects/models/Genesis9</code> lag (2.822 Dateien in
+  <code>bibliothek</code>, angelegt 25.09.2026, dazu <code>garderobe_kategorien.json</code>) und Skripte mit
+  <code>HB_OBJECTS_ROOT=…/models</code> dorthin schrieben. Warum der Code den Ort wechselte, ist nicht belegt.
+  Jetzt rechnet <code>G9pfade.eigene_daten()</code> EINEN Ort, <code>3DObjects/models/Genesis9</code>; Bibliothek,
+  Eigenmorphe, Kleidmorphe, -texturen, Haarachsen, GarmentCode-Stücke, Papierkorb und Kategorien hängen daran.
+  Verschoben wurden 177 Dateien, 29 Dubletten (gleicher SHA-256) entfielen, bei 41 Dateien mit gleichem Pfad und anderem
+  Inhalt galt die neuere (alle am 08.10.2026 neu geschrieben); die älteren liegen unter
+  <code>3DObjects/models/Genesis9/_zusammenfuehrung/2026-10-08/verlierer/alt/</code>. Danach lieferte die Garderobe
+  600 Einträge, darunter die drei Stücke von „cute girl" in ihren Kategorien.
+</div>

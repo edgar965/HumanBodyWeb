@@ -10,7 +10,11 @@ Was kopiert wird
     Zeile     `status`, `schritt`, `progress`, `progress_detail`, `optionen`, `bilder`, `eingang`, `ergebnis`, `started_at`, `finished_at` — die Kennung des Quellauftrags wird in den JSON-Feldern
               und in den kleinen JSON-Dateien durch die des Ziels ersetzt (sie steht in absoluten Pfaden). Name, Kennung, ID bleiben die des Ziels.
 Was NICHT kopiert wird: `pid` (leer), `error_message` (leer), `modell` (der Name eines gespeicherten Modells gehört der Quelle), die Handwertung `qualitaet_*` (jeder Rang gilt je Liste nur einmal).
-`ergebnis['kopie']` hält fest, woher der Stand kommt.
+`ergebnis['kopie']` hält fest, woher der Stand kommt (`ablagen` = Zahl der neu angelegten Ablagen, unten).
+
+Die Ablagen neben der Bibliothek (06.10.2026, `Engine2d3dKleiderauftragsablagen`): Foto-Atlanten, Hülle/Drapieren/Zellenmorphe und Körper-Ortsmorphe tragen das KÜRZEL der Kennung im Namen. Sie werden unter dem Kürzel der Kopie neu angelegt
+(nichts überschrieben), und in den JSON-Feldern der Zeile und in den kleinen JSON-Dateien tritt das Kürzel des Ziels an die Stelle des Kürzels der Quelle — sonst zeigte die Kopie auf die Dateien der Quelle (Kopie `…14.20.55`: graues Hemd im
+Standmodell, bis die Atlanten von Hand nachgelegt waren). Scheitert etwas nach dem Anlegen der Ablagen, werden sie wieder entfernt; die Fotostücke der Bibliothek (`eigen_foto_<acht Ziffern>_…`) gehen nicht mit.
 
 Zwei Umfänge (`mit_allem`):
     schlank   wie oben beschrieben — der Stand der Figur und der Runden, ohne Renderläufe und Protokoll (die Kopie „Edgar - Sapiens 2" aus „Edgar - Sapiens 1")
@@ -38,6 +42,7 @@ from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
 from ..models import Engine2d3dKleiderauftrag
 from .auftragsduplikat import Auftragsduplikat
 from .engine2d3dkleiderarbeiter import Engine2d3dKleiderarbeiter
+from .engine2d3dkleiderauftragsablagen import Engine2d3dKleiderauftragsablagen
 
 __all__ = ['Engine2d3dKleiderauftragskopie']
 
@@ -63,6 +68,8 @@ class Engine2d3dKleiderauftragskopie:
         self.mit_allem = mit_allem
         self.von = Engine2d3dKleiderablage(quelle.kennung).ordner()
         self.nach = Engine2d3dKleiderablage(ziel.kennung).ordner()
+        #: Die Ablagen neben der Bibliothek, die das Kürzel der Kennung tragen (06.10.2026) — siehe die Klasse.
+        self.ablagen = Engine2d3dKleiderauftragsablagen(quelle.kennung, ziel.kennung)
 
     @classmethod
     def als_neuer_auftrag(cls, quelle, mit_allem=True):
@@ -145,10 +152,10 @@ class Engine2d3dKleiderauftragskopie:
             text = pfad.read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError):
             return False
-        if self.quelle.kennung not in text:
+        if not self.ablagen.enthaelt(text):
             return False
         stand = pfad.stat()
-        pfad.write_text(text.replace(self.quelle.kennung, self.ziel.kennung), encoding='utf-8')
+        pfad.write_text(self.ablagen.ersetzen(text), encoding='utf-8')
         os.utime(pfad, ns=(stand.st_atime_ns, stand.st_mtime_ns))
         return True
 
@@ -174,15 +181,15 @@ class Engine2d3dKleiderauftragskopie:
     def _wert(self, feld):
         wert = getattr(self.quelle, feld)
         if feld in self.JSON_FELDER:
-            text = json.dumps(wert, ensure_ascii=False).replace(self.quelle.kennung, self.ziel.kennung)
-            return json.loads(text)
+            return json.loads(self.ablagen.ersetzen(json.dumps(wert, ensure_ascii=False)))
         return wert
 
     def _zeile(self):
         felder = {feld: self._wert(feld) for feld in self.FELDER}
         felder['ergebnis'] = dict(felder['ergebnis'], kopie={
             'von': self.quelle.kennung, 'name': self.quelle.name, 'am': timezone.localtime().strftime('%Y-%m-%d %H:%M:%S'),
-            'umfang': 'alles' if self.mit_allem else 'schlank', 'ohne': [] if self.mit_allem else ['arbeit/render', 'tmp', 'auftrag.log']})
+            'umfang': 'alles' if self.mit_allem else 'schlank', 'ohne': [] if self.mit_allem else ['arbeit/render', 'tmp', 'auftrag.log'],
+            'ablagen': len(self.ablagen.angelegt)})
         felder.update(pid=None, error_message='', modell='')
         return felder
 
@@ -192,6 +199,12 @@ class Engine2d3dKleiderauftragskopie:
         """Dateien, dann die Zeile → `{'dateien', 'mb', 'umgeschrieben', 'von', 'nach'}`. Scheitert das Kopieren der Dateien, bleibt die Zeile unverändert."""
         self.pruefen()
         zahl, umgeschrieben, groesse = self._kopieren_dateien()
-        with transaction.atomic():
-            Engine2d3dKleiderauftrag.objects.filter(pk=self.ziel.pk).update(**self._zeile(), updated_at=timezone.now())
-        return {'dateien': zahl, 'mb': round(groesse / 1e6, 1), 'umgeschrieben': umgeschrieben, 'von': str(self.von), 'nach': str(Path(self.nach))}
+        try:
+            ablagen = self.ablagen.kopieren()
+            with transaction.atomic():
+                Engine2d3dKleiderauftrag.objects.filter(pk=self.ziel.pk).update(**self._zeile(), updated_at=timezone.now())
+        except BaseException:
+            self.ablagen.zuruecknehmen()        # die Ablagen neben der Bibliothek gehören zu dieser Kopie; der Ordner räumt der Aufrufer
+            raise
+        return {'dateien': zahl, 'mb': round(groesse / 1e6, 1), 'umgeschrieben': umgeschrieben, 'von': str(self.von), 'nach': str(Path(self.nach)),
+                'ablagen': ablagen}

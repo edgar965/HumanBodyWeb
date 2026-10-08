@@ -52,8 +52,12 @@ class Engine2d3dKleidernetz:
         self._fotopruefung = None
         self._seed = None
 
+    def auftragsdatei(self):
+        """Wohin die Beschreibung für den Runner geschrieben wird — der Kopf-Lauf (`Engine2d3dKleiderkopfnetz`) nimmt seinen eigenen Ordner."""
+        return self.ablage.netz_arbeit('auftrag.json')
+
     def ausfuehren(self):
-        auftrag = self.ablage.netz_arbeit('auftrag.json')
+        auftrag = self.auftragsdatei()
         auftrag.write_text(json.dumps(self.beschreibung(), ensure_ascii=False, indent=1), encoding='utf-8')
         runner = os.path.join(Wrapperpfad.pfad(), self.RUNNER)
         pp = PipelineProzess.starten(

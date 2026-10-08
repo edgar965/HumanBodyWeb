@@ -6,7 +6,7 @@ Dreiecke)" — „mach diese Liste als HTML-Datei: Hilfe - Architektur - Andere
 Modelle" — „ich brauche ganze Körper, mach getrennte Liste für nur Kopf".
 Die Daten kommen aus `core.dienste.figurquellen` (Ganzkörper, Befund),
 `figurkoepfe` (nur Kopf), `figurquellenlinks` (Adressen) und `figurbilder`
-(Vorschaubilder aus `3DObjects/humanModels/`), nicht aus der Vorlage.
+(Vorschaubilder aus `3DObjects/humanModels Recherche/`), nicht aus der Vorlage.
 
 `Figurbild` liefert die Bilder: `vorschau` verkleinert (für das Raster),
 `original` in voller Größe (ein Klick auf das Bild). Beide nehmen nur, was

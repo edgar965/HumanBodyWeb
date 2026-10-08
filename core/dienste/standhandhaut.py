@@ -136,15 +136,19 @@ class Standhandhaut:
             hd = np.kron(hd, np.ones((cls.GROESSE // hd.shape[0],) * 2, dtype=bool)) if cls.GROESSE % hd.shape[0] == 0 else None
         return hd
 
-    def karten(self, netz, albedo, detail=False):
+    def karten(self, netz, albedo, detail=False, basisnormale=None):
         """(textur, normale): glTF-Texturnummern des Farbbilds mit der Variation und der Normalenkarte. `detail`: vorher die Flecken der Netzkachel dämpfen und feine Zeichnung dazu (`Standhautdetail`, nur vor den
-        Iterationen). Bei einem Fehler `None` — der Aufrufer nimmt dann die Kachel wie sie war."""
+        Iterationen). `basisnormale`: die Daz-Normalenkarte der Armkachel (PIL, `Standhaut.normalenbild`) — das Handrelief liegt darüber (`Standhaut.verrechnen`, seit 07.10.2026). Bei einem Fehler `None` — der Aufrufer
+        nimmt dann die Kachel wie sie war."""
         from PIL import Image
 
         from Figurfilm.handhaut import Handhaut
 
         try:
             normal, faktoren, masken = self._gerechnet(netz)
+            if basisnormale is not None:
+                from .standhaut import Standhaut
+                normal = Standhaut.verrechnen(basisnormale, normal)
             with Image.open(albedo) as roh:
                 if detail and Standhautdetail.gilt(self.KACHEL, albedo):           # ruhigere Flecken des Netzes und feine Zeichnung (Haare, Poren), solange es keine Haut aus den Fotos gibt
                     roh = Standhautdetail.anwenden(roh)

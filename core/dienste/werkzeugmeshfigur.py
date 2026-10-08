@@ -129,7 +129,7 @@ class Werkzeugmeshfigur:
          'from Genesis9.restmorph import G9restmorph; G9restmorph.ablegen(name, rest, gewicht, steckbrief=None)   # → Reglername eigen:<kennung>',
          [(D + 'meshfigurende.py', 'Meshfigurende'), (G + 'restmorph.py', 'G9restmorph'), (G + 'eigenmorphe.py', 'G9eigenmorphe'), (D + 'meshfiguraugenhoehle.py', 'Meshfiguraugenhoehle')],
          'Rest je Käfigpunkt über die Hautmischung in die Ruhelage zurückgerechnet, symmetrisch gemittelt (Option symmetrie), einseitige (bedeckte) Punkte mit Gewicht 1 verankert und nur nach '
-         'innen, dann Laplace-Glättung 6 Schritte × 0,5; die Augenpartie ist Lücke (Meshfiguraugenhoehle). Wert 0…2, Datei 3DObjects/Genesis9/eigenmorphe/<kennung>.npz/.json. Gemessen: Rest 3,2 mm (erster '
+         'innen, dann Laplace-Glättung 6 Schritte × 0,5; die Augenpartie ist Lücke (Meshfiguraugenhoehle). Wert 0…2, Datei 3DObjects/models/Genesis9/eigenmorphe/<kennung>.npz/.json. Gemessen: Rest 3,2 mm (erster '
          'Lauf), 2,74 mm (dritter); Zeit rest 30,8 s (Auftrag 2026.10.01.20.10.04). Grenze: der Eigenmorph übernimmt die Fehler des Netzes — Figur näher am Netz, aber weiter von der echten Damira '
          '(7,66 → 7,97 mm). Ein Eigenmorph wird unter demselben Namen neu abgelegt; der Fingerabdruck der Stellung trägt seit 27.09.2026 den Dateistand, sonst lieferte der Server die alte Form.'),
         ('Körper übernehmen oder rechnen (2D3D Kleider)',

@@ -173,6 +173,7 @@ class Meshoptionen:
             ('fotos', 'Nur Fotos (Lücken aufgefüllt)'),
             ('ki', 'Nur die Textur des Formmodells (TRELLIS.2: PBR; Hunyuan3D: eigene Texturmalerei)'),
             ('malerei', 'Hunyuan3D malt die Textur — auch auf einer TRELLIS.2-Form'),
+            ('malerei21', 'Hunyuan3D-2.1 malt mit PBR (Farbe + Rauheit/Metall), eigener Prozess — Spitze 13,9 GB Grafikspeicher (gemessen: 60.000 Flächen, 512 px, 6 Ansichten)'),
             ('keine', 'Keine (grau)'),
         ], 'hinweis': 'Hunyuan3D ohne kompilierte Rasterizer-Erweiterung fällt bei „ki"/„fotos_ki" '
                       'automatisch auf die Fotoprojektion zurück. **„fotos_ki" heißt bei '
@@ -181,12 +182,11 @@ class Meshoptionen:
                       'aber mit Punktfarben statt einer UV-Textur. **„Hunyuan3D malt"** ist '
                       'die Kombination, nach der die Form von TRELLIS.2 kommt (auf 1024 px '
                       'konditioniert) und die Textur von Hunyuan3D: die feinere Form mit '
-                      'einer echten UV-Textur statt TRELLIS.2s Voxel-PBR.'},
+                      'einer echten UV-Textur statt TRELLIS.2s Voxel-PBR. **„2.1"** malt auf jeder Form, mit Rauheitskarte (`mesh-hunyuan21.md`).'},
         {'schluessel': 'malansicht', 'titel': 'Malansicht (px)', 'art': 'wahl',
          'vorgabe': '0', 'fein': True,
-         'werte': [('0', 'Modellvorgabe (512)'), ('768', '768 — Versuch'),
-                   ('1024', '1024 — Versuch')],
-         'hinweis': 'Nur bei Hunyuan3D-Malerei. In DIESER Auflösung malt die '
+         'werte': [('0', 'Modellvorgabe (512)'), ('768', '768 — Versuch'), ('1024', '1024 — Versuch')],
+         'hinweis': 'Nur bei Hunyuan3D-Malerei (bei 2.1: 512 oder 768). In DIESER Auflösung malt die '
                     'Multiview-Diffusion jede der sechs Ansichten — und darin steckt die '
                     'ganze Figur: Bei 1,70 m Höhe ist der Kopf rund 66 px hoch, das Gesicht '
                     'etwa 40. **Die Texturgröße ändert daran nichts**, sie skaliert das '

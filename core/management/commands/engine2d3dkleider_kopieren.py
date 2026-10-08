@@ -36,4 +36,4 @@ class Command(BaseCommand):
             ergebnis = kopie.kopieren()
         except (ValueError, OSError) as fehler:
             raise CommandError('Kopie gescheitert: %s' % fehler) from None
-        self.stdout.write(self.style.SUCCESS('Kopiert: %(dateien)d neue Dateien, %(mb)s MB, %(umgeschrieben)d Textdateien umgeschrieben' % ergebnis))
+        self.stdout.write(self.style.SUCCESS('Kopiert: %(dateien)d neue Dateien, %(mb)s MB, %(umgeschrieben)d Textdateien umgeschrieben, %(ablagen)d Ablagen neben der Bibliothek' % ergebnis))

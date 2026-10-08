@@ -8,7 +8,9 @@ Edgar (02.10.2026): „ich brauche NUR trellis in dem Workflow, kein Hunyan". De
     formmodell   immer `trellis2` — das Feld steht nicht im Formular (`Engine2d3dKleideroptionen.SICHTBAR`)
     textur       fotos_ki · fotos · ki · keine
 
-und die Beschriftungen nennen Hunyuan3D nicht mehr. Ein gespeicherter Auftrag mit einem anderen Wert fällt beim Lesen auf die
+und die Beschriftungen der Gruppe `netz` nennen Hunyuan3D nicht mehr. **Seit 07.10.2026 (Edgar: „mach einen neuen Job in 2d3dKleider mit der Hunyan
+Pipeline, name: Edgar - Hunyan")** ist Hunyuan3D-2.0 / -2mv als Wahl `modell` der Gruppe `mesh` zurück (`Engine2d3dKleidermeshoptionen`); `formmodell` des
+Runners ist dort `mesh.modell` (`Engine2d3dKleidernetz`), diese Gruppe `netz` bleibt auf TRELLIS.2 festgeschrieben und wirkt nur noch bei der Textur. Ein gespeicherter Auftrag mit einem anderen Wert fällt beim Lesen auf die
 Vorgabe des Katalogs zurück (`pruefen`), ohne dass die Datenbank angefasst wird. Die Seite „Mesh" bleibt unverändert. Die
 Auflösung (Octree 768 „sehr hoch" gibt es nur bei Hunyuan3D) steht in der Gruppe `mesh` mit den drei TRELLIS-Stufen
 (`Engine2d3dKleidermeshoptionen`).
@@ -26,9 +28,9 @@ class Engine2d3dKleidernurtrellis:
     }
     TEXTE = {
         'textur': {
-            'fotos_ki': 'Fotos aufprojiziert, Lücken aus der Textur von TRELLIS.2',
+            'fotos_ki': 'Fotos aufprojiziert, Lücken aus der Textur des Formmodells',
             'fotos': 'Nur Fotos (Lücken aufgefüllt)',
-            'ki': 'Nur die Textur von TRELLIS.2 (PBR)',
+            'ki': 'Nur die Textur des Formmodells (bei TRELLIS.2 die PBR-Textur)',
             'keine': 'Keine (grau)',
         },
     }

@@ -218,6 +218,28 @@ class SchrittsucheTest(SimpleTestCase):
         self.assertIn("'netz_b2s4', {'band': (0.4, 0.6), 'sektor': (0.0, 45.0)}, weg_cm=1.0, richtung='haut', "
                       "weich=0.3, wert=0.5)", zeilen[1])
 
+    def test_8b_neue_zellenmorphe_tragen_das_auftragskuerzel(self):
+        # 06.10.2026: `kleidmorphe/<Stück>__netz_b<i>s<j>_f1.npz` trug keine Kennung — jeder Auftrag mit demselben Stück überschrieb die Dateien der anderen (36 von 288 am Tag neu geschrieben).
+        m = ModellMitKleidern()
+        m.kleid_nur('g9_base_shirt')
+        zellen = [[None] * 8 for _ in range(5)]
+        zellen[1][4] = 52.0                                    # Netz: 1,47 cm nach innen
+        befund = {'teile': {'g9_base_shirt': {'art': 'kleidung', 'netz_mm': 10.0, 'grund_mm': 10.0, 'baender': [10.0] * 5, 'zellen': zellen, 'pixel': 0}}}
+        mit = IterationKleider(m, befund, auftrag='j20261006142055').morphe()
+        self.assertEqual(len(mit), 1)
+        self.assertIn("'netz_b1s4_j20261006142055', {'band': (0.2, 0.4)", mit[0])
+        ohne = IterationKleider(m, befund).morphe()                      # ohne Kürzel bleibt der Name wie vorher
+        self.assertIn("'netz_b1s4', {'band': (0.2, 0.4)", ohne[0])
+        # Ein schon gestellter Morph wird unter SEINEM Namen weitergestellt — mit oder ohne Kürzel —, es entsteht kein zweiter.
+        m.morph_wert('kleidung', 'g9_base_shirt', 'netz_b1s4_j20261006142055', 0.5)
+        self.assertEqual(IterationKleider(m, befund, auftrag='j20261006142055').morphe(),
+                         ["m.morph_wert('kleidung', 'g9_base_shirt', 'netz_b1s4_j20261006142055', -0.97)"])
+        alt = ModellMitKleidern()
+        alt.kleid_nur('g9_base_shirt')
+        alt.morph_wert('kleidung', 'g9_base_shirt', 'netz_b1s4', 0.5)
+        self.assertEqual(IterationKleider(alt, befund, auftrag='j20261006142055').morphe(),
+                         ["m.morph_wert('kleidung', 'g9_base_shirt', 'netz_b1s4', -0.97)"])
+
     def test_9_weite_ohne_ausreisser(self):
         # Ein Stück, das gar nicht am Netz sitzt (Socke am formlosen TRELLIS-Fuß: 111 mm bei 38 mm Grundlinie), zählt
         # für die GEMEINSAME Weite nicht — sonst zöge es Shirt und Shorts an den Anschlag (−3 cm, Runden 7–15).

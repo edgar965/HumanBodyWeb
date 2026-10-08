@@ -5,7 +5,7 @@ Kunstdaten: ein Rumpf aus Gitterpunkten gegen einen Sichtkörper, der nur `rand`
 und 15 mm in der Tiefe verschoben und an den Lippen 12 mm weiter vorn zeigt; Silhouetten als Rechtecke. Keine Datenbank, keine Dateien.
 Geschrieben, nicht gelaufen (`testsuite-nur-auf-ansage`).
 
-Sabotage: in `G9rumpftiefe.deltas` `- hinten_w * hinten` streichen → Fall 2 rot; in `G9gesichtsprofil.deltas` `- dz` streichen → Fall 5 rot; in `Seitenprofil.vorn` das `* vorzeichen` streichen → Fall 9 rot.
+Sabotage: in `G9rumpftiefe.deltas` den Aufruf `cls.seitenansicht` auf True zwingen → Fall 4a rot; in `G9rumpftiefe.deltas` `- hinten_w * hinten` streichen → Fall 2 rot; in `G9gesichtsprofil.deltas` `- dz` streichen → Fall 5 rot; in `Seitenprofil.vorn` das `* vorzeichen` streichen → Fall 9 rot.
 """
 
 import numpy as np
@@ -74,6 +74,20 @@ class DieRumpftiefe(SimpleTestCase):
         delta, brief = G9rumpftiefe.deltas(_Sicht(), np.zeros((3, 3)), 0.008)
         np.testing.assert_array_equal(delta, 0.0)
         self.assertIn('grund', brief)
+
+    def test_4a_ohne_seitenansicht_bleibt_der_morph_leer(self):
+        # N1 (08.10.2026): Fotos nur vorne und hinten → der Sichtkörper kennt z nicht, vorn und hinten griff überall der Deckel von 60 mm (3.463 von 4.334 Punkten über 20 mm).
+        punkte = _rumpf()
+        for ansichten in ([{'winkel': 0.0}, {'winkel': 180.0}], [{'winkel': 0.0}], []):
+            sicht = _Sicht()
+            sicht.ansichten = ansichten
+            delta, brief = G9rumpftiefe.deltas(sicht, punkte, 0.008, 0.024)
+            np.testing.assert_array_equal(delta, 0.0)
+            self.assertIn('grund', brief)
+        for ansichten in ([{'winkel': 0.0}, {'winkel': 180.0}, {'winkel': -90.0}], [{'winkel': 90.0}], [{'winkel': 270.0}], [{'winkel': 45.0}]):
+            sicht = _Sicht()
+            sicht.ansichten = ansichten
+            self.assertGreater(float(np.abs(G9rumpftiefe.deltas(sicht, punkte, 0.008)[0]).max()), 0.0, ansichten)           # 45° (sin 0,71) zählt noch als Seite, 30° (0,5) ist die Grenze
 
 
 def _kopf():

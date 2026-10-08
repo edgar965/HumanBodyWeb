@@ -21,6 +21,7 @@ unverändert benutzt; sie liest dieselben Felder aus `zustand`. Zustand und Kata
 <link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleider.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleidernachbesserung.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/engine2d3dkleidergesichtsvergleich.css' %}">
 {% comment %}Dieselbe Importkarte wie die Szene und „Mesh to 3D": three r170 VOLLSTÄNDIG — der Export (`Modellexport` mit
 GLTFExporter) und die Netzlader fehlen in der lokalen Kopie unter static/vendor, und die Szenenmodule des Exports
 erwarten three-subdivide und three-mesh-bvh.{% endcomment %}
@@ -56,6 +57,7 @@ Start und Ende eines Laufs um 64 px nach unten (gemessen im DOM: y 132 → 196) 
     <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i>
         Iterationen <span id="iterationen-anzahl"></span></button>
     <button type="button" role="tab" aria-selected="false" data-reiter="bewertung"><i class="fas fa-clipboard-check"></i> Bewertung</button>
+    <button type="button" role="tab" aria-selected="false" data-reiter="gesicht"><i class="fas fa-ruler-combined"></i> Gesicht</button>
 </div>
 {% comment %}Die Reiter bindet dieses kleine Modul SOFORT (es lädt nur `seitenreiter.js`), nicht die Seitenklasse: Die hängt an dreißig Modulen
 und three.js — bis die geladen sind und alle Bausteine stehen, wäre „Iterationen“ ein toter Knopf. Bis die Seite „fertig“ meldet, steht eine
@@ -181,6 +183,7 @@ Knopf `Engine2d3dKleidermeshkarte`.{% endcomment %}
         übrigen Fotos gehen in die Textur.</p>
     <div class="mesh-optionen" id="engine2d3dkleider-optionen-mesh"></div>
 </div>
+{% include "_engine2d3dkleider_kopf.html" %}
 
 {% comment %}Karte „Segmentierung“ (04.10.2026, Edgar: „baue das ein in den 2d3dKleider jobs — optional nach der Mesh erzeugung“): Sapiens zerlegt die
 vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, Zubehör und Haut; die Etiketten gehen auf die Flächen des Netzes und — bei Option „An“ — in die Kleidungsmaske
@@ -566,6 +569,7 @@ nicht gibt) und bleiben leer — versteckt, nicht entfernt: `Meshfigurberichte`,
 </div>
 {% comment %}Reiter „Bewertung" (Edgars Rückmeldungen, in allen Aufträgen) und der Block „Nachbesserung" ganz unten, auf jedem Reiter zu sehen (05.10.2026).{% endcomment %}
 {% include "_engine2d3dkleider_bewertung.html" %}
+{% include "_engine2d3dkleider_gesicht.html" %}
 {% include "_engine2d3dkleider_nachbesserung.html" %}
 {% endblock %}
 
@@ -594,5 +598,11 @@ Engine2d3dKleiderBewertung.starten();
 <script type="module">
 import { Engine2d3dKleiderVorgabe } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleidervorgabe.js' %}";
 Engine2d3dKleiderVorgabe.starten();
+</script>
+{% comment %}Gesicht (07.10.2026): EIGENES Modulskript, baut seine zwei Szenen erst beim ERSTEN Öffnen des Reiters (die
+Leiste meldet `reiterwechsel`) — lädt kein GLB, solange niemand hinschaut.{% endcomment %}
+<script type="module">
+import { Engine2d3dKleiderGesicht } from "{% fassungspfad 'viewer/engine2d3dkleider/engine2d3dkleidergesicht.js' %}";
+Engine2d3dKleiderGesicht.starten("{{ job.id }}", document.getElementById('auftrag-reiter'));
 </script>
 {% endblock %}

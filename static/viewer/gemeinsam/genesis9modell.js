@@ -156,7 +156,8 @@ export class Genesis9Modell extends Modell {
             this.eigeneKnochen = daten.skelett?.eigene || [];
         }
         // Fotokacheln des Modells statt der Daz-Albedo (27.09.2026, `Genesis9fototextur`).
-        const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur) };
+        const wahl = { haut: this.haut, praesets: this.praesets };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel
+        const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur, wahl) };
         this.bodyMesh = this._einhaengen(
             Genesis9netz.bauen(koerper, `genesis9_koerper_${this.id}`), daten.hautgewichte);
         this.isSkinned = !!this.bodyMesh.isSkinnedMesh;

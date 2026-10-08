@@ -23,7 +23,7 @@ class Workflowfluss:
             [('ein Lauf mit einer Runde', W.LAUFANFANG), ('Rezept der Automatik', W.REZEPT)],
             ['start', 'modus', 'rezeptweg', 'automatik', 'drapieren', 'haarknoten', 'haardynamik'],
         ),
-        ('Modell bauen', 11, 13, [('Vorrat warm', W.BAUEN_WARM), ('Vorrat kalt', W.BAUEN_KALT)], ['bauen']),
+        ('Modell bauen', 11, 13, [('Vorrat warm', W.BAUEN_WARM), ('Vorrat kalt', W.BAUEN_KALT)], ['kleidung', 'sitz', 'bauen']),
         (
             'Fotoprojektion',
             14,

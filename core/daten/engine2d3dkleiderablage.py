@@ -6,7 +6,8 @@
     vorbereitet/  je Foto das freigestellte RGBA-PNG (Schritt „netz")
     netz/         das Netz aus den Fotos (TRELLIS/Hunyuan): mesh.glb, icon.png, bericht.json — Schritt „netz"
     netz_arbeit/  Zwischenstände dieses Schritts
-    vorlage/      das erste Foto klein (`vorlage.png`) — das Bild der Spalte „Vorlage" der Tabelle
+    kopf/         die drei Kopfausschnitte und das Kopfnetz (mesh.glb, icon.png) — Schritt „kopf" (07.10.2026); kopf_vorbereitet/, kopf_arbeit/ seine Zwischenstände
+    vorlage/     das erste Foto klein (`vorlage.png`) — das Bild der Spalte „Vorlage" der Tabelle
     arbeit/       Zwischenstände der Schritte (Grundfigur mit Rig, Lage des Netzes, Bewegung, Runden, Löschliste)
     ergebnis/     was die Seite ausliefert: Figur mit Rig, Kacheln, Bewegung, Film, das beste Modell der Iterationen
     iterationen/  die Runden: Vergleichstafeln, Renders je Blickwinkel, GLB je Runde
@@ -46,8 +47,13 @@ class Engine2d3dKleiderablage(Meshablage):
     ITERATIONEN = 'iterationen'
     #: Referenzvideo des Auftrags (04.10.2026, Edgar: „füge franks ergebnis video rechts neben den Vorlagebildern als Frame ein"): Kopie der Datei, die der Nutzer nennt.
     REFERENZ = 'referenz'
+    #: Der eigene Kopf-Lauf (Schritt „kopf", 07.10.2026): `kopf/` trägt die drei Kopfausschnitte UND die Ergebnisdateien des Runners (`mesh.glb`, `icon.png` …) — flach, der Datei-Endpunkt
+    #: kennt nur Namen ohne Pfad; seine Zwischenstände liegen in `kopf_arbeit/` und `kopf_vorbereitet/`.
+    KOPF = 'kopf'
+    KOPF_ARBEIT = 'kopf_arbeit'
+    KOPF_VORBEREITET = 'kopf_vorbereitet'
     #: Welche Unterordner über den Datei-Endpunkt lesbar sind.
-    LESBAR = (Meshablage.EINGANG, Meshablage.VORBEREITET, NETZ, Meshablage.ERGEBNIS, VORLAGE, ITERATIONEN, SEGMENTIERUNG, REFERENZ)
+    LESBAR = (Meshablage.EINGANG, Meshablage.VORBEREITET, NETZ, Meshablage.ERGEBNIS, VORLAGE, ITERATIONEN, SEGMENTIERUNG, REFERENZ, KOPF)
 
     def anlegen(self):
         for name in (self.EINGANG, self.VORBEREITET, self.NETZ, self.NETZ_ARBEIT, self.VORLAGE, self.ARBEIT,
@@ -58,6 +64,16 @@ class Engine2d3dKleiderablage(Meshablage):
     def segmentierung(self, name=''):
         """`segmentierung/` des Auftrags (legt der Schritt selbst an — alte Aufträge haben den Ordner nicht)."""
         return self.unter(self.SEGMENTIERUNG) / name if name else self.unter(self.SEGMENTIERUNG)
+
+    def kopf(self, name=''):
+        """`kopf/` des Auftrags (legt der Schritt „kopf" selbst an — alte Aufträge haben den Ordner nicht)."""
+        return self.unter(self.KOPF) / name if name else self.unter(self.KOPF)
+
+    def kopf_arbeit(self, name=''):
+        return self.unter(self.KOPF_ARBEIT) / name if name else self.unter(self.KOPF_ARBEIT)
+
+    def kopf_vorbereitet(self, name=''):
+        return self.unter(self.KOPF_VORBEREITET) / name if name else self.unter(self.KOPF_VORBEREITET)
 
     def iterationen(self, name=''):
         return self.unter(self.ITERATIONEN) / name if name else self.unter(self.ITERATIONEN)
@@ -87,13 +103,15 @@ class Engine2d3dKleiderablage(Meshablage):
     TIEFENNETZ, TIEFENZETTEL = 'netz_tiefe.glb', 'netz_tiefe.json'
 
     def netzdatei(self, teil='koerper', original=False):
-        """Das Netz aus den Fotos (Schritt „netz"), wenn es da ist — sonst None. Ein Kopfnetz gibt es nicht.
+        """Das Netz aus den Fotos (Schritt „netz"), wenn es da ist — sonst None. `teil = 'kopf'`: das Kopfnetz des Schritts „kopf" (`kopf/mesh.glb`), wenn es da ist; ob die Körper-Kette es nimmt,
+        entscheidet `Engine2d3dKleiderkopf.netz_fuer` (Option `kopf.rechnen`).
 
         Hat `Netztiefe` ein abgeleitetes Netz geschrieben (Option `koerper.tiefe`) und gehört es zu DIESEM Netz (Größe und Änderungszeit im Zettel), kommt DAS: Körper-Kette, Fotostücke und Frisur
         rechnen auf dem Netz mit der Tiefe des Seitenfotos. `original=True` gibt immer das Netz des Schritts „netz" — die Segmentierung (Sapiens) und das Vorschaubild des Netzschritts
         brauchen es (Flächen und UV sind dieselben, aber ihr Stand merkt sich Größe und Änderungszeit der Datei)."""
         if teil == 'kopf':
-            return None
+            kopf = self.kopf(self.NETZDATEI)
+            return kopf if kopf.is_file() else None
         pfad = self.netz(self.NETZDATEI)
         if not pfad.is_file():
             return None

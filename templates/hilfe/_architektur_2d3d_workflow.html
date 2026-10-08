@@ -6,8 +6,9 @@ die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht
 {% endcomment %}
 {% with w=workflow %}
 <h1>2D3D Kleider: der Workflow</h1>
-<p>Vom Foto zum Modell in acht Schritten, mit jeder Option, die der Code kennt — auch Blender —, als Entscheidungsbaum und mit der
-  Zeit, die der Schritt gemessen kostet. <b>Eine Zahl ohne Messung steht hier nicht:</b> wo nichts gemessen ist, steht „nicht gemessen".
+<p>Vom Foto zum Modell in elf Schritten (der eigene Kopf-Lauf und die Segmentierung mit Sapiens sind optional), mit jeder Option, die der Code kennt — auch Blender —,
+  als Entscheidungsbaum und mit der Zeit, die der Schritt gemessen kostet. Im Kopf eines Kastens steht <b>Vorgabe</b> (der Weg, den ein Lauf
+  ohne Eingriff geht) oder <b>Ausnahme</b> (läuft nur auf ausdrückliche Wahl: Option oder Rezeptzeile von Hand). <b>Eine Zahl ohne Messung steht hier nicht:</b> wo nichts gemessen ist, steht „nicht gemessen".
   Die kleine Zahl hinter einer Zeit verweist auf die Quelle (unten, „Quellen der Zeiten"); ein Klassenname führt zur Klassenkarte.</p>
 
 <div class="wf-legende">
@@ -18,9 +19,11 @@ die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht
   <span class="wf-legende-art"><span class="wf-muster wf-muster-tat"></span> Tat</span>
   <span class="wf-legende-art"><span class="wf-muster wf-muster-ende"></span> Ergebnis</span>
   <span class="wf-legende-art"><span class="wf-muster wf-muster-offen"></span> gibt es im Code, nicht gemessen oder nicht gewählt</span>
+  <span class="wf-legende-art"><span class="wf-marke-vorgabe">Vorgabe</span> der Weg ohne Eingriff</span>
+  <span class="wf-legende-art"><span class="wf-marke-ausnahme">Ausnahme</span> nur auf ausdrückliche Wahl</span>
 </div>
 
-<h2>Die acht Schritte eines Auftrags</h2>
+<h2>Die elf Schritte eines Auftrags</h2>
 <p>Reihenfolge und Klassen aus <code>Engine2d3dKleiderlauf.SCHRITTE</code>; die Optionen sind die, die das Formular der Seite „2D3D Kleider"
   zeigt (<code>Engine2d3dKleideroptionen.SICHTBAR</code>). Die Zeit unter dem Klassennamen ist die gemessene Spanne des Schritts.</p>
 <div class="wf-strecke">
@@ -40,9 +43,10 @@ die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht
 </div>
 
 <h2>Was ein Auftrag kostet</h2>
-<p>Ein vollständiger Auftrag von den Fotos bis zum Export (Auftrag 2026.10.01.20.10.04, 23 Runden): zusammen
-  <b>{{ w.zeitleiste.gesamt }}</b>. Der Aufbau — Netz, Körper, Grundfigur, einmal je Auftrag — kostet <b>{{ w.zeitleiste.aufbau }}</b>,
-  das sind {{ w.zeitleiste.aufbau_prozent }} %; der Rest sind die Runden.<sup><a class="wf-qnr" href="#quelle-{{ w.zeitleiste.quelle }}">{{ w.zeitleiste.quelle }}</a></sup></p>
+<p>Ein voller Lauf von den Fotos bis zum Film (Auftrag 2026.10.06.14.10.22, alle Schritte neu, eine Runde: Iteration 0; Speichern 0,0 s): zusammen
+  <b>{{ w.zeitleiste.gesamt }}</b>. Der Aufbau — Vorbereitung, Netz, Segmentierung, Körper, Grundfigur, Kleiderstücke, einmal je Auftrag — kostet
+  <b>{{ w.zeitleiste.aufbau }}</b>, das sind {{ w.zeitleiste.aufbau_prozent }} %; der Rest sind die Runde, der Export und der Film (357,7 s für 300 Bilder). Jede weitere Runde kostet
+  98–156 s (Prozess kalt, gemessen am Auftrag 2026.10.06.00.33.38) oder 28 s (zweite Runde im selben Lauf, 02.10.2026).<sup><a class="wf-qnr" href="#quelle-{{ w.zeitleiste.quelle }}">{{ w.zeitleiste.quelle }}</a></sup></p>
 <div class="wf-zeitleiste">
   {% for seg in w.zeitleiste.segmente %}<div class="wf-segment wf-seg{{ forloop.counter }}" style="width: {{ seg.prozent }}%"></div>{% endfor %}
 </div>
@@ -90,10 +94,11 @@ die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht
 </div>
 
 <h2>Entscheidungsbäume der Runde</h2>
-<p>Wer die Runden treibt, wer das Rezept schreibt, wie die Automatik entscheidet — und im Inneren der Runde: Drapieren
-  (<b>Newton oder Blender</b>), Haar-Knoten (Blender), Teilevorrat, Fotoprojektion, Renderer und Rundenauswahl. Blender kommt in der
-  Pipeline nur über den einen Arbeiter <code>Engine2d3dKleiderblender</code> vor und nur per Rezeptzeile; die Automatik wählt für das Drapieren
-  immer Newton.</p>
+<p>Wer die Runden treibt, wer das Rezept schreibt, wie die Automatik entscheidet — und im Inneren der Runde: woher ein Kleidungsstück kommt (Genesis-Bibliothek,
+  Fotostück mit Sapiens-Etiketten, GarmentCode), wie es sitzt (Kollision, Häutung in die Haltung, Haltungsabstand), das Drapieren, die Haar-Knoten (Blender),
+  der Teilevorrat, die Fotoprojektion, der Renderer und die Rundenauswahl. <b>Der Standard eines Laufs ist: kein Drapieren.</b> Die Zeile <code>m.kleid_drapieren</code> gibt es nur
+  von Hand; ihre Vorgabe ist Newton, gelaufen ist in einem Auftrag bisher nur der Stoffsolver (Randy, Runde 59). Blender kommt in der Pipeline nur über den einen Arbeiter
+  <code>Engine2d3dKleiderblender</code> vor und nur per Rezeptzeile — Blender und Stoffsolver sind Ausnahmen (Marke „Ausnahme" im Kasten).</p>
 {% for b in w.baeume_runde %}{{ b.html }}{% endfor %}
 
 <h2>Der Stoffsolver gegen Blender: was drin ist</h2>
@@ -145,6 +150,27 @@ die Bäume zeichnet `Workflowzeichner` als HTML (Kästen und Kanten, Text bricht
   {% endfor %}
 </div>
 {% endfor %}
+
+<h2>Die Sapiens-Läufe vom 04.–06.10.2026 (Stand 06.10.2026)</h2>
+<p>Gemessen aus den Iterationen der Aufträge (<code>ergebnis.iterationen</code>, Runde 1 = erste begutachtete Runde). Der Wert
+  <code>auswahl.gesamt</code> ist die Gesamtnote der Begutachtung: je kleiner, desto besser. Der Lauf mit dem kleinsten Wert ist der
+  beste; seine Kopie „Edgar - Sapiens 3 (Kopie)“ (2026.10.06.14.10.22) ist der Stand für den Pipeline-Test.</p>
+<table class="db-tabelle wf-umfang">
+  <thead><tr><th>Auftrag</th><th>Kennung</th><th>Iterationen</th><th>Gesamtnote Runde 1</th><th>Anmerkung</th></tr></thead>
+  <tbody>
+    <tr><td>Edgar - Sapiens 2</td><td>2026.10.04.21.41.43</td><td>1</td><td>0,3758</td><td>nur eine Begutachtung durch Claude, kein Ausgangseintrag</td></tr>
+    <tr><td>Edgar - Sapiens 5</td><td>2026.10.05.23.10.23</td><td>2</td><td>0,3539</td><td>Ausgang plus eine automatische Runde (IterationModell)</td></tr>
+    <tr><td>Edgar - Sapiens 4</td><td>2026.10.06.00.33.38</td><td>2</td><td>0,3522</td><td>Ausgang plus eine automatische Runde (IterationModell)</td></tr>
+    <tr><td><b>Edgar - Sapiens 3</b></td><td>2026.10.06.09.59.58</td><td>2</td><td><b>0,3516</b></td><td>Ausgang plus eine automatische Runde; bester Wert, Grundlage der Kopie</td></tr>
+    <tr><td>Edgar - Sapiens - Seitenfoto zählt für die Farbe</td><td>2026.10.06.10.57.22</td><td>2</td><td>0,3577</td><td>Ausgang plus eine Runde; mit Belichtungsabgleich, Noten nicht gleich zu lesen (Iteration 0: 0,3885)</td></tr>
+    <tr><td>Edgar - Sapiens 3 (Kopie) — Pipeline-Test</td><td>2026.10.06.14.10.22</td><td>3</td><td>0,3516 (Runde 1 der Quelle)</td><td>Voller Neulauf, alle Schritte neu (2.158,8 s); seine Iteration 0 ist Runde 2 mit Gesamtnote <b>0,3975</b> (Foto 0,2066, Farbe 0,016, Gesicht 0,0499, Haar 0,125) und wurde gegen Runde 1 der Quelle verworfen — anderes Netz, nicht vergleichbar mit 0,3633 der Iteration 0 der Quelle</td></tr>
+    <tr><td>Edgar - Sapiens 4 - Basis für Iterationen (Iteration 1, 06.10.)</td><td>2026.10.06.14.20.55</td><td>2</td><td>0,3522</td><td>Kopie von Sapiens 4 mit allen Daten, Ausgangspunkt für weitere Iterationen; die Foto-Atlanten sind unter dem Kürzel der Kopie neu angelegt</td></tr>
+  </tbody>
+</table>
+<p class="a2d3d-klein">Quelle: Datenbank, Felder <code>ergebnis.iterationen[].auswahl.gesamt</code> (gelesen 06.10.2026). Sapiens 1 hat keine Iteration
+  (nur bis „Kleiderstücke" gerechnet) und ist deshalb nicht vergleichbar.</p>
+
+{% include "hilfe/_architektur_2d3d_technik.html" with t=w.technik %}
 
 <h2>Quellen der Zeiten</h2>
 <ol class="wf-quellen">

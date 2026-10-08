@@ -83,8 +83,9 @@ class DerSchritt(SimpleTestCase):
         return Engine2d3dKleidersegmentierung(lauf)
 
     def test_der_schritt_steht_zwischen_netz_und_koerper(self):
+        # Seit 07.10.2026 steht der Kopf-Lauf vor ihm (`test_engine2d3dkleider_kopf.py`): netz → kopf → segmentierung → koerper.
         s = Engine2d3dKleiderlauf.SCHRITTE
-        self.assertEqual((s[s.index('netz') + 1], s[s.index('koerper') - 1]), ('segmentierung', 'segmentierung'))
+        self.assertEqual((s[s.index('kopf') + 1], s[s.index('koerper') - 1]), ('segmentierung', 'segmentierung'))
 
     def test_bei_option_aus_entfaellt_er_im_vollen_lauf(self):
         with mock.patch('core.dienste.engine2d3dkleidersegmentierung.PipelineProzess') as pp:

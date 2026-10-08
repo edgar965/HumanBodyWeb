@@ -1,6 +1,6 @@
 {% comment %}
 Teilvorlage von `andere_modelle.html`: eine Karte je Quelle — Rang, Name,
-Urteil, Adressen und die Vorschaubilder aus `3DObjects/humanModels/<ordner>/`.
+Urteil, Adressen und die Vorschaubilder aus `3DObjects/humanModels Recherche/<ordner>/`.
 Wird zweimal eingebunden (Ganzkörper, nur Kopf):
 
   karten    die Zeilen mit `links` und `bilder`
@@ -35,6 +35,14 @@ Wird zweimal eingebunden (Ganzkörper, nur Kopf):
       <a href="{% url 'hilfe_andere_modelle_bild' e.ordner datei %}" target="_blank" rel="noopener" title="{{ datei }}">
         <img loading="lazy" alt="{{ e.name }} — {{ datei }}"
              src="{% url 'hilfe_andere_modelle_vorschau' e.ordner datei %}"></a>
+      {% endfor %}
+    </div>
+    {% elif e.vorschau_statisch %}
+    {# Eigene Renderings aus `static/` (Blender-Modelle ohne Ordner unter `3DObjects/humanModels Recherche/`). #}
+    <div class="am-galerie">
+      {% for adresse, text in e.vorschau_statisch %}
+      <a href="{{ adresse }}" target="_blank" rel="noopener" title="{{ text }}">
+        <img loading="lazy" alt="{{ e.name }} — {{ text }}" src="{{ adresse }}"></a>
       {% endfor %}
     </div>
     {% else %}

@@ -1,0 +1,119 @@
+{% comment %}
+Teil 2 von Hilfe -> Architektur -> Genesis: Entscheidung (Genesis statt Fremdrig), der Ablauf in neun Schritten und die
+neuen Bausteine. Alles Konzept, nichts davon gebaut (Stand 08.10.2026).
+{% endcomment %}
+<h2>3. Entscheidung: Genesis-Figur, kein Fremdrig</h2>
+<table class="doku">
+  <thead><tr><th>Weg</th><th>Was man bekommt</th><th>Was man verliert</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A. Genesis 9 + Eigenmorph (Empfehlung)</strong></td>
+      <td>alle Genesis-Regler (Körper, 296 Kopfregler, Ausdrücke, JCMs, Lipsync), BVH-Retarget wie jede Genesis-Figur;
+        jedes Bibliotheksstück passt ihr, IHRE Stücke passen jeder Genesis-Figur</td>
+      <td>Topologie ist die von Genesis; die Form ist angenähert (Restfehler messen, Abschnitt 6); die Textur wird
+        umgetastet</td></tr>
+    <tr><td>B. HumanBody</td><td>DEF-Rig wie im Retarget</td>
+      <td>weniger Regler, Genesis-Garderobe nur über den Umweg Daz-auf-HumanBody, Kleidung landet nicht in der
+        Genesis-Bibliothek</td></tr>
+    <tr><td>C. Original-Netz mit Auto-Rig-Pro-Rig als eigene Figurart</td><td>genau ihr Aussehen</td>
+      <td>keine Morphs (es gibt keine), keine Genesis-Regler, keine Bibliothek — widerspricht dem Auftrag</td></tr>
+  </tbody>
+</table>
+<p>
+  „Mit allen Morphs und Rigs" heißt bei dieser Datei: <strong>ihre Morphs gibt es nicht</strong> (nur
+  <code>V_None</code>), und ihr Rig lässt sich nicht als Genesis-Rig weiterführen. Beides bekommt sie von Genesis —
+  dafür muss ihre FORM in Genesis hinein. Das Original bleibt als Wahrheit für die Messung.
+</p>
+<div class="info-box info-box-blue">
+  <strong>Warum nicht einfach „Mesh to 3D" mit einer exportierten OBJ:</strong> Es würde Haar und Kleidung über die
+  Farbe aus einem Netz schneiden, die Gelenke schätzen und die Kleidung als Schale nachbauen — alles, was diese Datei
+  exakt mitbringt (getrennte Netze, Gelenke im Rig, nackter Körper darunter). Der neue Lauf nimmt die BAUSTEINE von
+  Mesh to 3D (Regler-Fit, Kalibrierung, Eigenmorph, Speichern), aber nicht dessen Erkennung.
+</div>
+
+<h2>4. Der Ablauf</h2>
+<pre class="ag-fluss">.blend ─▶ 1 Auslesen ─▶ 2 Rollen ─▶ 3 Umposen in Genesis-Lage ─▶ 4 Körperfit + Eigenmorph
+                                         │                              │
+                                         ├──▶ 6 Kleider → Genesis-Stücke (Oberteil, Shorts)
+                                         └──▶ 7 Haar → Genesis-Frisur        │
+                                                                5 Textur umbacken (8K → Kacheln)
+                                                                             ▼
+                                                     8 Modell „cute girl" speichern + laden</pre>
+<table class="doku">
+  <thead><tr><th>Schritt</th><th>Was geschieht</th></tr></thead>
+  <tbody>
+    <tr><td>0. Einstieg</td><td>„Datei → Modell importieren…" nimmt weiter JSON; neu <code>.blend</code> (später
+      <code>.fbx</code>, <code>.glb</code>). Weil die Texturen NICHT in der .blend stecken, reicht der Upload der
+      einen Datei nicht — der Dialog hat ein <strong>Pfadfeld</strong> (der Server läuft auf demselben Rechner, wie bei
+      Mesh to 3D), dazu Name und die Rollentabelle aus Schritt 2. Der Lauf ist ein Auftrag mit Fortschritt; am Ende
+      lädt die Seite das Modell.</td></tr>
+    <tr><td>1. Auslesen</td><td>Blender 5.2.2 im Hintergrund: Objekte, Haut-Gruppen, Rig mit Ruhelage der Gelenke,
+      Materialknoten (welches Bild an welchem Eingang), Bildgrößen. JSON + je Netz eine GLB in
+      <code>3DObjects/blendimport/&lt;kennung&gt;/</code>.</td></tr>
+    <tr><td>2. Rollen</td><td>Körper = größtes Netz mit Haut über alle Gliedmaßen; Augen = kleine Netze an einem
+      Augenknochen; Mund = an Zahn-/Zungenknochen; Haar = nur an Kopfknochen UND Alpha-Material; Rest = Kleidung,
+      Kategorie aus Höhe und Name vorgeschlagen (Shirt → Oberteile, <code>jean</code> → Shorts). Widgets
+      (<code>cs_*</code>, <code>WGT-*</code>), Lichter und die unbenutzte Rigify-Armatur fallen weg. Im Dialog
+      bestätigbar.</td></tr>
+    <tr><td>3. Umposen — der Schlüssel<br><em>(umgesetzt anders: starre Segmente, Hilfe → ARP Modell)</em></td><td>Knochenkarte Auto-Rig Pro → Genesis (<code>thigh_*</code>→<code>l_thigh</code>,
+      <code>leg_*</code>→<code>l_shin</code>, <code>foot</code>/<code>toes_01</code>, <code>spine_01…05</code>,
+      <code>neck</code>, <code>head</code>, <code>shoulder</code>, <code>arm_*</code>, <code>forearm_*</code>,
+      <code>hand</code>, Finger). Die Grundfigur wird erst über Größe und Gliedlängen an IHRE Gelenke gebracht, dann
+      wird ihr Rig in Blender auf die Richtungen der Genesis-Knochen gedreht und der Armature-Modifier auf
+      <strong>alle</strong> Netze angewandt. Damit fällt die Pose-Sicherung des Direktmorphs weg (Pose-Unterschied sieht
+      aus wie Formfehler, <code>direktmorph.md</code>), und die Gelenke kommen aus dem Rig statt aus MediaPipe.</td></tr>
+    <tr><td>4. Körperfit + Eigenmorph</td><td>Regler-Fit (Größe → Körpertyp → Bereiche, Gesichtskette mit 296
+      Kopfreglern) gegen den umgeposten Körper, Gelenke als feste Paare. Danach der Direktmorph auf den
+      <strong>ganzen Körper</strong> — erlaubt, weil keine Kleidung darüberliegt, das Netz geschlossen ist und die
+      Haltung stimmt. Abstand- und Ausreißerfilter bleiben; Mund und Augen bleiben vorerst ausgenommen und werden erst
+      nach dem Vorschaubild geöffnet (hier sind es echte Lider und Lippen, nicht die KI-Mulden, an denen die Sicherung
+      entstand). Ergebnis <code>eigen:cute girl</code> (0…2), <strong>neu als Schieber</strong> im Reglerplan, Bereich
+      „Charaktere" — überblendbar, mit jedem Genesis-Charakter mischbar.</td></tr>
+    <tr><td>5. Textur umbacken</td><td>Blender Cycles „Selected to Active": Original-Körper (8K) → geformte Genesis-Figur
+      in gleicher Lage, je Genesis-Kachel <strong>Grundfarbe, Normalen (Tangentenraum), Rauheit</strong>. Vorschlag im
+      Konzept: 4096 je Kachel — <strong>umgesetzt anders</strong> (Edgar: Strg+Alt+H „auf die höchste"): gebacken wird mit
+      8192, so groß wie das Original, der Browser bekommt ohne Strg+Alt+H eine Fassung mit 2048; die 8K-Originale bleiben in der Ablage. Die Fotohaut
+      muss dafür Normalen und Rauheit mitnehmen. Augen: <code>Eye_BaseColor</code> auf die Genesis-Augen backen. Zähne
+      und Zunge: Genesis' eigene. <strong>Der Bake belastet die GPU</strong> — läuft erst nach Rückfrage.</td></tr>
+    <tr><td>6. Kleider → Genesis-Stücke</td><td>Shirt und Shorts aus Schritt 3 (Genesis-Haltung, auf der geformten Figur)
+      über <code>G9eigenstueck</code>, danach wie <code>Fotostuecke</code> die Form der Figur abziehen (Ruhelage der
+      Grundfigur) und neu schreiben — so passt das Stück JEDER Genesis-Figur. Die Auto-Rig-Pro-Gewichte fallen weg, es
+      gelten die Genesis-Körperhaut-Gewichte, damit es mit allen Körpermorphs und Gelenken mitgeht. Texturen 2048²
+      kopiert, die DDS-Detailnormale nach PNG. Kategorie über die .dsx (Namen so, dass die Namensregel greift:
+      „cute girl Jeansshorts", „cute girl Shirt"). Regler: Passform Länge/Weite von selbst.</td></tr>
+    <tr><td>7. Haar → Genesis-Frisur</td><td>Art Hair, alles an <code>head</code> (das Original hängt nur an
+      <code>head.x</code>, Gewicht 0,77–0,85 — dieselbe Lage wie <code>Herrenhaarstueck</code>). Alpha aus
+      <code>hair_basecolor.png</code> ins Material. Regler: Haarachsen. Farbvarianten wie bei „Haar Eigen" wären ein
+      Zusatz (nur Vorschlag).</td></tr>
+    <tr><td>8. Speichern</td><td>Modell <code>cute girl</code> in <code>data/models</code> (<code>quelle: genesis9</code>,
+      <code>regler</code> mit <code>eigen:cute girl</code>, <code>kleidung</code> = die drei Stücke,
+      <code>fototextur</code>, <code>herkunft: {art: 'blend import', datei, stand}</code>); erscheint unter
+      „Gespeicherte Modelle" und wird nach dem Lauf in die Szene geladen.</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Neue Bausteine (je Klasse eine Datei, ≤ 300 Zeilen)</h2>
+<table class="doku">
+  <thead><tr><th>Datei</th><th>Klasse</th><th>Aufgabe</th></tr></thead>
+  <tbody>
+    <tr><td><code>effekte/blender/blendimport/inventar.py</code></td><td><code>Blendinventar</code></td><td>Schritt 1 in Blender</td></tr>
+    <tr><td><code>effekte/blender/blendimport/umposen.py</code></td><td><code>Blendumposen</code></td>
+      <td>Schritt 3: Rig auf Genesis-Richtungen, Modifier anwenden, GLB je Netz</td></tr>
+    <tr><td><code>effekte/blender/blendimport/texturbacken.py</code></td><td><code>Blendtexturbacken</code></td>
+      <td>Schritt 5: Bake je Kachel und Kanal</td></tr>
+    <tr><td><code>core/dienste/blendimportrollen.py</code></td><td><code>Blendimportrollen</code></td><td>Schritt 2</td></tr>
+    <tr><td><code>Genesis9/arpknochenkarte.py</code></td><td><code>G9arpknochenkarte</code></td>
+      <td>Knochenkarte Auto-Rig Pro → Genesis (Tabelle als Klassenattribut)</td></tr>
+    <tr><td><code>core/dienste/blendimportlauf.py</code></td><td><code>Blendimportlauf</code></td>
+      <td>Schritte der Reihe nach, Stand im Auftrag</td></tr>
+    <tr><td><code>core/dienste/blendimportstuecke.py</code></td><td><code>Blendimportstuecke</code></td>
+      <td>Schritte 6–7 über <code>G9eigenstueck</code></td></tr>
+    <tr><td><code>core/api/blendimport.py</code>, <code>core/models/blendimportauftrag.py</code></td><td>—</td>
+      <td>Anlegen, Zustand, Datei wie bei Mesh to 3D</td></tr>
+    <tr><td><code>static/viewer/charakter/blendimportdialog.js</code></td><td><code>Blendimportdialog</code></td>
+      <td>Pfadfeld, Rollentabelle, Fortschritt</td></tr>
+  </tbody>
+</table>
+<p>
+  Erweiterungen: <code>szene_dialoge.js</code> (Dateiwahl <code>.json,.blend</code>), <code>Genesis9fototextur</code>
+  (Normalen, Rauheit), Reglerplan (Eigenmorph als Schieber). Tests werden geschrieben, laufen nur auf Ansage.
+</p>

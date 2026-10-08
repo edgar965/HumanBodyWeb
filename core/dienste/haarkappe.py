@@ -32,7 +32,8 @@ __all__ = ['Haarkappe']
 class Haarkappe:
     #: Zählt hoch, wenn sich die Kappe bei gleicher Eingabe ändert (gehört in die Fassung des Standmodells). 2: Haarlinie geschnitten, Würfel-UV. 3: Haarlinie aus der Abdeckung des Netzhaars. 4: Gesicht, Wange und Schläfe frei, Zungen am Haaransatz entfernt. 5: Haar über dem Ohr ab 10° statt 20°.
     #: 6: Haarlinie nach Ohr (Ohrknochen), Koteletten und rundem Nacken (`Haarlinie`) statt fester Winkel — vorher eine Gerade über dem Ohr und eine Klippe dahinter.
-    VERSION = 6
+    #: 7: runde Haarlinie auf dem Feinraster (Ohr als Scheiben, `Haarlinie.rund`) und die Dicke folgt auf Wunsch einer Funktion (`dicke_faktor`: beim `Herrenhaar` seine gewählte Länge, `Haarlaenge`).
+    VERSION = 7
     SORTE = 'haarkappe'
     #: Höhenwinkel, bis zu dem das Haar im Nacken reicht (Grad über der Waagerechten durch den Kopfmittelpunkt) — gilt für `radius_nacken` (die Messung „kurzes Haar"); die Haarlinie selbst liegt in `Haarlinie.UNTEN_MITTE`/`UNTEN_SEITE`.
     UNTEN = -38.0
@@ -49,9 +50,14 @@ class Haarkappe:
     STRAEHNE = 4.0                  # Länge der Strähnen in der Textur (Texel, Gauß-Sigma in v; Breite 0,7 Texel)
     SAMEN = 7
 
-    def __init__(self, ablage, netz):
+    def __init__(self, ablage, netz, ansatz=0.0, dicke_faktor=None):
+        """`ansatz`: Grad, um die der Haaransatz vorn angehoben wird (`Haaransatz`; Rezept `haar_ansatz`) — 0 = die Haarlinie aus der Abdeckung des Netzhaars.
+        `dicke_faktor`: eine Funktion Höhenwinkel (Grad, Feld) → Faktor auf die Dicke — wie dick das Haar zu Seiten und Nacken hin ist (`Haarlaenge.dickefaktor`, vom `Herrenhaar`: die Dicke folgt der Länge);
+        ohne sie gilt `VERJUENGUNG`."""
         self.ablage = ablage
         self.netz = netz
+        self.ansatz = float(ansatz or 0.0)
+        self.dicke_faktor = dicke_faktor
         self._lage_cache = None
         self._mitte = None
 
@@ -139,6 +145,7 @@ class Haarkappe:
         die Regeln stehen in `Haarlinie` (seit Fassung 6; vorher feste Winkel: Azimut 122° / Höhenwinkel 10° / −38°)."""
         from scipy import ndimage
 
+        from .haaransatz import Haaransatz
         from .haarlinie import Haarlinie
         hoehe, _breite = roh.shape
         feld = 180.0 / hoehe
@@ -146,14 +153,25 @@ class Haarkappe:
         haar = np.pad(np.pad(~np.isnan(roh), ((0, 0), (rand, rand)), mode='wrap'), ((rand, rand), (0, 0)), mode='edge')
         eins = np.ones((3, 3), dtype=bool)
         haar = ndimage.binary_opening(ndimage.binary_closing(haar, eins), eins, iterations=2)[rand:-rand, rand:-rand]       # Zungen unter 25° Breite fallen weg (am Testauftrag eine am Haaransatz der Stirn)
-        weg, kotelett = Haarlinie.ausschluss(self.netz, self._mitte, roh)
-        bereich = ndimage.gaussian_filter(((haar | kotelett) & ~weg).astype(np.float64), Haarlinie.GLAETTEN, mode=('nearest', 'wrap')) > 0.5      # die Treppe der 5°-Felder runden (Ohr, Schläfe, Koteletten)
-        return self._vorzeichen(bereich) * feld
+        haar = Haaransatz.anheben(haar, self.ansatz, feld)                                                                 # der Haaransatz vorn um `ansatz` Grad höher (Rezept `haar_ansatz`, 06.10.2026)
+        weg, kotelett = Haarlinie.ausschluss(self.netz, self._mitte, roh, mit_ohr=False)
+        # Das Ohr nimmt `Haarlinie.rund` als runde Scheiben auf dem Feinraster heraus (1,25° statt 5°) und rundet die ganze Linie — seit Fassung 7 (07.10.2026, „sehr eckig um die Ohren"): auf dem 5°-Raster blieb
+        # der Rand um das Ohr eine Treppe aus Feldern von 9 mm Seite, auch nach dem Glätten.
+        bereich, zelle = Haarlinie.rund((haar | kotelett) & ~weg, self.netz, self._mitte)
+        return self._vorzeichen(bereich) * zelle
 
     @staticmethod
     def _ueber_der_linie(klemme, feld, v, r, reichweite):
-        """Abstand zur Haarlinie (Grad, > 0 = Haar) je Punkt — bilinear im Linienfeld; Punkte außerhalb der Reichweite liegen weit darunter."""
-        return np.where(r < reichweite, klemme._grenze_je_punkt(v, r, feld), -90.0)  # noqa: SLF001 — dieselbe Nachschlagung wie die Klemme
+        """Abstand zur Haarlinie (Grad, > 0 = Haar) je Punkt — bilinear im Linienfeld (beliebiges Raster: die Zellengröße folgt der Form des Felds); Punkte außerhalb der Reichweite liegen weit darunter."""
+        from scipy import ndimage
+
+        hoehe, _breite = feld.shape
+        zelle = 180.0 / hoehe
+        az = np.degrees(np.arctan2(v[:, 0], v[:, 2])) % 360.0
+        el = np.degrees(np.arcsin(np.clip(v[:, 1] / np.maximum(r, 1e-12), -1.0, 1.0)))
+        rund = np.concatenate([feld[:, -1:], feld, feld[:, :1]], axis=1)                    # eine Spalte Umlauf, wie `Haarklemme._grenze_je_punkt`
+        wert = ndimage.map_coordinates(rund, [np.clip((el + 90.0) / zelle - 0.5, 0.0, hoehe - 1.0), az / zelle - 0.5 + 1.0], order=1, mode='nearest')
+        return np.where(r < reichweite, wert, -90.0)
 
     @staticmethod
     def _schneiden(p, d, f, normalen, index, gewicht):
@@ -222,6 +240,8 @@ class Haarkappe:
         huelle = klemme._grenze_je_punkt(v, r, karte)                                       # noqa: SLF001 — dieselbe Nachschlagung wie die Klemme
         dicke = self.RAND_DICKE + self._weich(el_ueber / self.RAND_GRAD) * (np.clip(huelle - r, self.DICKE[0], self.DICKE[1]) - self.RAND_DICKE)
         el = np.degrees(np.arcsin(np.clip(v[:, 1] / r, -1.0, 1.0)))
+        if self.dicke_faktor is not None:                                                   # `Herrenhaar`: die Dicke folgt der gewählten Länge (`Haarlaenge`)
+            return dicke * self.dicke_faktor(el), el_ueber, v, r
         oben, unten, faktor = self.VERJUENGUNG                                              # Nacken und Seiten sind kürzer geschnitten als oben: die Dicke nimmt nach unten ab
         return dicke * (faktor + (1.0 - faktor) * self._weich((el - unten) / (oben - unten))), el_ueber, v, r
 

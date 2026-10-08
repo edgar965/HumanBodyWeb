@@ -87,7 +87,7 @@ class DieGarderobepflege(SimpleTestCase):
         vergessen.assert_called_once()
         korb = Path(ergebnis['ziel'])
         self.assertEqual(ergebnis['art'], 'papierkorb')
-        self.assertEqual(korb.parent, self.objekte / 'Genesis9' / 'papierkorb')
+        self.assertEqual(korb.parent, self.objekte / 'models' / 'Genesis9' / 'papierkorb')
         for rel in (self.rel, self.rel.replace('.duf', '.png'), 'data/EIGEN/Eigen Uhr l/geo.dsf',
                     'Runtime/Textures/EIGEN/Eigen Uhr l/textur.png', 'Runtime/Support/EIGEN_Eigen_Uhr_l.dsx'):
             self.assertTrue((korb / rel).is_file(), rel)

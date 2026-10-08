@@ -51,13 +51,20 @@ class AutonomerLaufTest(SimpleTestCase):
         a = Rundenauswahl()
         a.nach_runde(1, 0.50, ['m.haltung(20)'])
         zeile = "m.kleid_nur('eigen_foto_x_oberteil', 'eigen_uhr_l')"
+        # 06.10.2026 (Edgar: nur Verbesserungen): ein Pflichtstück allein macht eine schlechtere Runde nicht „besser" → Probe
         aktion, weiter = a.nach_runde(2, 0.60, [zeile])
+        self.assertEqual((aktion, weiter['runde']), ('probe', 2))
+        # Dieselbe Garderobe mit besserer Note gilt als Verbesserung
+        a2 = Rundenauswahl()
+        a2.nach_runde(1, 0.50, ['m.haltung(20)'])
+        aktion, weiter = a2.nach_runde(2, 0.45, [zeile])
         self.assertEqual((aktion, weiter['runde']), ('besser', 2))
         b = Rundenauswahl()
         b.nach_runde(1, 0.50, [])
         b.probe = {'seit': 2, 'runden': 2, 'zeilen': [zeile], 'letzte': {'runde': 3, 'gesamt': 0.6}}
         aktion, weiter = b.nach_runde(4, 0.55, [])
-        self.assertEqual((aktion, weiter['runde']), ('besser', 4))
+        self.assertEqual((aktion, weiter['runde']), ('probe_verworfen', 1))
+        self.assertIn(zeile, b.verboten() or b.gesperrt.get('1', []))
         c = Rundenauswahl()
         c.nach_runde(1, 0.50, [])
         aktion, _w = c.nach_runde(2, 0.60, ["m.kleid_nur('g9_base_shirt')"])

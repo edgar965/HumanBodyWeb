@@ -12,7 +12,7 @@ Zwei Ranglisten (Ganzkörper, nur Kopf), je eine djangoBase-Tabelle
 
 Alle Texte, Zahlen und Adressen kommen aus `core/dienste/figurquellen.py`,
 `figurkoepfe.py` und `figurquellenlinks.py`, die Bilder aus
-`3DObjects/humanModels/` über `core/dienste/figurbilder.py` — eine Zahl im
+`3DObjects/humanModels Recherche/` über `core/dienste/figurbilder.py` — eine Zahl im
 HTML wäre eine Behauptung, die niemand mehr nachprüft.
 {% endcomment %}
 
@@ -39,7 +39,9 @@ Doku-Seiten laden es nicht selbst (siehe `video_to_bvh.html`).{% endcomment %}
     Herstellerseiten und liegen unter <code>{{ bilderordner }}</code>;
     ein Klick öffnet das Original. Die eigenen Figurarten (HumanBody,
     MakeHuman, UMA, SMPL, SMPL-X) stehen <span class="am-eigen-wort">rot</span>
-    in derselben Liste.
+    in derselben Liste; ein <span class="am-blend-wort">blaues</span> Blender-Modell
+    („cute girl", Auto-Rig Pro) steht zum Import an — seine Einzelheiten auf
+    <a href="/hilfe/architektur/arp-modell/">ARP Modell</a>.
   </p>
 
   {% include "hilfe/_andere_modelle_lesehilfe.html" with hb=lesehilfe.hb g9=lesehilfe.g9 %}

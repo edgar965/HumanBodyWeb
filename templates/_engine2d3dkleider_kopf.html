@@ -1,0 +1,14 @@
+{% comment %}Karte „Kopf“ (07.10.2026, Edgar: „mach einen extra Kopf lauf, extrahiere dazu die bilder vom Kopf, von alle drei seiten … Kopf Lauf als extra schritt und extra UI. Per Check box (default an)
+anwählbar. wenn das ausgewählt ist, erstellst und zeigst du die 3 Kopf Bilder im UI und rechnest den Kopf extra“): Häkchen, Modell und Flächen aus der Gruppe `kopf` (gebaut von
+`Meshoptionenformular`), der Knopf „Kopf rechnen“ (nur den Schritt), darunter die drei Kopfausschnitte und das Kopfnetz des letzten Laufs. Aufgebaut von `Engine2d3dKleiderkopf` (JS) aus `zustand.kopf`.{% endcomment %}
+<div class="card" id="kopf-karte">
+    <h2>Kopf — eigener Lauf <span class="hb-hinweis">(optional, nach dem Netz)</span></h2>
+    <p class="hb-hinweis">Hunyuan3D sieht jedes Foto nur als 518-px-Raster; auf einem Ganzkörperfoto bleiben dem Kopf rund 50 px. Der Schritt „Kopf“ schneidet den Kopf aus den drei vorbereiteten Fotos (vorne, hinten, Seite;
+        die Ausschnitte behalten die Pixel des Originals), rechnet daraus ein eigenes Kopfnetz und stellt es der Körper-Kette für das Gesicht zur Verfügung — wie das Kopfnetz in „Mesh to 3D“. Ohne Häkchen entfällt der Schritt im
+        vollen Lauf, und die Körper-Kette nimmt kein Kopfnetz. Der Schritt braucht die vorbereiteten Fotos („Vorbereitung“ oder „Netz“ vorher) und läuft allein über den Knopf; im vollen Lauf nur mit Häkchen.
+        Ob das Gesicht damit besser wird, ist noch nicht gemessen.</p>
+    <div class="mesh-optionen" id="engine2d3dkleider-optionen-kopf"></div>
+    <div class="engine2d3dkleider-vorbereitung-zeile" id="kopf-zeile"></div>
+    <div class="mesh-fotoliste engine2d3dkleider-vorbereitet" id="kopf-fotos"></div>
+    <div class="engine2d3dkleider-kopfnetz" id="kopf-netz"></div>
+</div>

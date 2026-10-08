@@ -4,7 +4,7 @@ u"""Edgars Einteilung der Daz-Garderobe (`G9garderobekategorien`, 20.09.2026).
 Edgar: „kannst du Unterteilungen machen, Kategorien wie bei GarmentCode? Plus
 Kontextmenü bei jedem Item, mit dem ich das in eine andere Kategorie
 verschieben kann." Die Einteilung liegt als JSON neben den eigenen Morphs
-(`3DObjects/Genesis9/garderobe_kategorien.json`); hier zeigt `datei()` in
+(`3DObjects/models/Genesis9/garderobe_kategorien.json`); hier zeigt `datei()` in
 einen Wegwerfordner. Vier Zusagen:
 
 1. Ohne Datei: die Vorgaben (seit 20.09.2026 nachts die GarmentCode-Namen aus

@@ -12,7 +12,9 @@
 export class Engine2d3dKleidermeshkarte {
 
     /** Die KI des Schritts „Netz" (Option `mesh.modell`) — die Namen der Auswahl in der Liste und im Feld „Modell" dieser Karte. */
-    static KI = { trellis2: 'TRELLIS.2', pixal3d: 'Pixal3D', pixal3d_mv: 'Pixal3D Mehrbild' };
+    static KI = {
+        trellis2: 'TRELLIS.2', pixal3d: 'Pixal3D', pixal3d_mv: 'Pixal3D Mehrbild', hunyuan3d_2: 'Hunyuan3D-2.0', hunyuan3d_2mv: 'Hunyuan3D-2mv',
+    };
 
     static ki(z) {
         return Engine2d3dKleidermeshkarte.KI[z?.optionen?.mesh?.modell] || Engine2d3dKleidermeshkarte.KI.trellis2;

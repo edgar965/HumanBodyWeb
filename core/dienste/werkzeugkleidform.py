@@ -17,7 +17,7 @@ class Werkzeugkleidform:
     EINLEITUNG = (
         'Ein Daz-Stück hat nur die Morphe, die Daz mitliefert. Was ein Foto verlangt — längerer Saum, weiter Bauch, '
         'aufgestellter Kragen — gibt es dort nicht; hier entsteht es als EIGENER MORPH: Deltas auf dem Käfig des Stücks, '
-        'abgelegt neben der Bibliothek (3DObjects/Genesis9/kleidmorphe/<kennung>__<name>_f1.npz), linear wie jeder Daz-Morph, '
+        'abgelegt neben der Bibliothek (3DObjects/models/Genesis9/kleidmorphe/<kennung>__<name>_f1.npz), linear wie jeder Daz-Morph, '
         'gestellt über den Regler <kennung>.eigen.<name> (−2…2, Gruppe „Eigene Morphe“). Reihenfolge: 1. Morph bauen '
         '(morph_neu, morph_ort, kleid_welle, kleid_ring, kleid_huelle — jeder Aufruf baut UND stellt auf wert), 2. mit '
         'morph_wert nachstellen. Alle brauchen die Daz-Bibliothek und ein zeigbares Stück (sonst ValueError „… ist kein '
@@ -158,7 +158,7 @@ class Werkzeugkleidform:
          "G9kleidmorphe.namen('g9_base_shirt')            # sortierte Namen der gebauten Morphe\n"
          "G9kleidmorphe.regler('g9_base_shirt', 'kleidung')  # Regler: eigene + feste + Textur-Schichten",
          [(G + 'kleidmorphe.py', 'G9kleidmorphe')],
-         'Die Ablage liegt unter 3DObjects/Genesis9/kleidmorphe/, die Fassung (f1) steht im Dateinamen. Für Haar art '
+         'Die Ablage liegt unter 3DObjects/models/Genesis9/kleidmorphe/, die Fassung (f1) steht im Dateinamen. Für Haar art '
          '"haar" angeben: dann kommen Strähnendicke und Zusatzsträhnen dazu. Quelle: Genesis9/kleidmorphe.py.'),
     ]
 

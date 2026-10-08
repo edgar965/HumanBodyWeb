@@ -14,6 +14,8 @@ Sichtmodell): Was die Engine an Einstellungen bekommt, steht mit ihren Einzelhei
 
 import re
 
+from .haarlaenge import Haarlaenge
+from .iterationsoptionenfoto import FOTOOPTIONEN
 from .ollamamodelle import Ollamamodelle
 
 __all__ = ['Iterationsoptionen']
@@ -105,6 +107,28 @@ class Iterationsoptionen:
             'Haarfarbe. Gilt nur für kurzes Haar mit Hülle des Fotohaars (Schritt „Frisur"); sonst bleibt die Frisur, wie sie ist.',
         },
         {
+            'schluessel': 'haar_laenge_unten',
+            'titel': 'Herrenhaar: Länge unten — Schläfen und Nacken (cm)',
+            'art': 'zahl',
+            'vorgabe': Haarlaenge.UNTEN_CM,
+            'min': Haarlaenge.GRENZE_CM[0],
+            'max': Haarlaenge.GRENZE_CM[1],
+            'schritt': 0.1,
+            'hinweis': 'Länge einer Strähne entlang des Kopfes an den Schläfen und hinten unten (Höhenwinkel bis 15°). Zwischen unten und oben wird glatt über die Höhe am Kopf übergeblendet (Edgar, 07.10.2026: „kürzer seitlich, '
+            'nach oben länger werdend, hinten auch kürzer“). Die Dicke des Haars folgt der Länge. Gilt nur beim Herrenhaar; die Vorgabe ist die Länge, die es vorher im Mittel hatte.',
+        },
+        {
+            'schluessel': 'haar_laenge_oben',
+            'titel': 'Herrenhaar: Länge oben — Kopfdecke (cm)',
+            'art': 'zahl',
+            'vorgabe': Haarlaenge.OBEN_CM,
+            'min': Haarlaenge.GRENZE_CM[0],
+            'max': Haarlaenge.GRENZE_CM[1],
+            'schritt': 0.1,
+            'hinweis': 'Länge einer Strähne oben und an der Kopfdecke (ab Höhenwinkel 65°, die Stirn vorn liegt auch dort). Die Länge oben ist die Länge des Haars an der Kopfdecke; nach unten läuft sie in die Länge unten aus. '
+            'Mehr als die Dicke der Hülle des Fotohaars gibt, macht das Haar nicht dicker, es legt sich weiter an den Kopf.',
+        },
+        {
             'schluessel': 'rumpftiefe',
             'titel': 'Rumpf an die Seitenansicht der Fotos angleichen',
             'art': 'wahl',
@@ -152,6 +176,7 @@ class Iterationsoptionen:
             'hinweis': 'Belichtung (Edgar, 06.10.2026: „der Render ist insgesamt dunkler als das Foto"): Render geteilt durch Foto war vorn 1,07, hinten 0,95, Seite 0,86 — das Licht der Szene steht fest, die Fotos sind verschieden belichtet. Der Faktor je Ansicht '
             '(Foto ÷ Render in linearem Licht, geteilt durch das geometrische Mittel aller) nimmt nur diesen Unterschied weg; ist das Modell überall zu dunkel, bleibt es das. Runden VOR dieser Option wurden ohne Abgleich benotet — ihre Noten sind nicht gleich zu lesen.',
         },
+        *FOTOOPTIONEN,
         {
             'schluessel': 'kandidaten',
             'titel': 'Kandidaten je Runde',
@@ -230,6 +255,12 @@ class Iterationsoptionen:
     def haarumbau(cls, job):
         """Wie das Haar an die Vorlage angepasst wird (`Haarumbau`, `Herrenhaar`): Option `iterationen.haarumbau` des Auftrags, Vorgabe Herrenhaar — `False`, `True` oder `'herren'` (`haarart`)."""
         return cls.haarart(cls.pruefen((job.optionen or {}).get('iterationen')).get('haarumbau'))
+
+    @classmethod
+    def haarlaenge(cls, job):
+        """Die Länge des Herrenhaars (`Haarlaenge`): Optionen `iterationen.haar_laenge_unten` und `…_oben` (cm) des Auftrags, Vorgabe `Haarlaenge.UNTEN_CM`/`OBEN_CM`."""
+        werte = cls.pruefen((job.optionen or {}).get('iterationen'))
+        return Haarlaenge(werte.get('haar_laenge_unten'), werte.get('haar_laenge_oben'))
 
     @classmethod
     def rumpftiefe(cls, job):

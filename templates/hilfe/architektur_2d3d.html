@@ -15,6 +15,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_workflow.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_werkzeuge.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kopf_pipelines.css' %}">
 {% endblock %}
 
 {% block doku_inhalt %}
@@ -40,6 +41,36 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
     <strong>Vorgabe:</strong> {{ vorgabe }}
   </div>
 
+  <h2>Modelle im Vergleich: TRELLIS, Hunyuan3D, Pixal3D, Meshy & Co.</h2>
+  <p>Stand {{ modellvergleich_stand }}. TRELLIS.2 und Pixal3D sind <b>bei uns im Einsatz</b>, ihre Zahlen stammen aus
+    eigenen Messungen (<code>architektur2d3dfaktennetz.py</code>). Die übrigen Modelle kennen wir nicht aus eigenem
+    Quelltext — ihre Zahlen sind aus fremden Quellen <b>zitiert</b>, siehe Spalte „Quelle" und
+    <a href="/hilfe/recherche/meshy-ai/">Hilfe → Recherche → meshy.ai</a>. „Qualität" ist in jeder Zeile eine
+    Einordnung der zitierten Quelle, keine eigene Messung. Auflösung sortiert nicht: Voxel³, Textur-K und
+    Polygonzahl sind keine vergleichbare Größe.</p>
+  <table class="db-tabelle sortable" data-sort-key="a2d3d-modellvergleich">
+    <thead><tr>
+      <th>Modell</th><th>Offen / zugänglich</th><th data-sort-aus>Parameter</th><th data-sort-aus>Auflösung</th>
+      <th>Geschwindigkeit</th><th>Größe (Gewichte)</th><th data-sort-aus>Qualität (Einordnung der Quelle)</th>
+      <th data-sort-aus>Bei uns im Einsatz</th><th data-sort-aus>Quelle</th>
+    </tr></thead>
+    <tbody>
+    {% for m in modellvergleich %}
+    <tr>
+      <td><b>{{ m.modell }}</b></td>
+      <td>{{ m.offen }}</td>
+      <td>{{ m.parameter }}</td>
+      <td>{{ m.aufloesung }}</td>
+      <td data-sort="{{ m.geschwindigkeit_s|default:'' }}">{{ m.geschwindigkeit }}</td>
+      <td data-sort="{{ m.groesse_gb|default:'' }}">{{ m.groesse }}</td>
+      <td>{{ m.qualitaet }}</td>
+      <td>{{ m.bei_uns }}</td>
+      <td class="a2d3d-klein">{{ m.quelle }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
   <h2>Die Prüfung nach jeder Runde</h2>
   <table class="db-tabelle">
     <thead><tr><th>Schritt</th><th>Was Fable tut</th></tr></thead>
@@ -49,11 +80,12 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   </table>
 
   <div class="info-box info-box-orange">
-    <strong>Ist-Stand — wo die Vorgabe verletzt wurde:</strong> Im autonomen Lauf vom 01./02.10.2026 liefen Blöcke von
-    3 bis 40 automatischen Runden ohne Prüfung dazwischen; angesehen und am Code verbessert wurde nur zwischen den Blöcken.
-    In diesen Runden schaut <b>niemand</b> auf das Bild: Das Rezept schreibt <code>IterationModell</code> nach festen
-    Regeln aus Messwerten (Schritte 7–8 unten), die Prüf-KI (Schritt 9) steht auf „aus". Automatische Runden sind nur
-    Feinstellen zwischen zwei Prüfungen, kein Ersatz.
+    <strong>Ist-Stand 06.10.2026:</strong> Jeder der fünf Sapiens-Aufträge hat Iteration 0 (das Startrezept) und <b>eine</b> automatische Runde
+    (<code>IterationModell</code>, Kommentar „automatisch"); weder ein Rezept von Hand noch ein Lauf des KI-Blocks „Nachbesserungen" steht in ihren Runden (gelesen in <code>ergebnis.iterationen</code>).
+    Die automatische Runde bringt rund 0,010 der Gesamtnote (3 %), fast nur aus der Farbe; Umriss (51 % der Note), Haar und Gesicht bewegt sie nicht (Abschnitt „Offene Befunde"). Ob weitere Runden
+    mit Rezepten gegen Haltung und Haar die Note senken, ist <b>nicht gemessen</b> — der Weg von „Randy" (59 Rezepte von Hand) ist belegt, seine Wirkung auf die Note nur grob.
+    <br><b>Früher (01./02.10.2026):</b> im autonomen Lauf liefen Blöcke von 3 bis 40 automatischen Runden ohne Prüfung dazwischen — das war gegen die Vorgabe. Automatische Runden sind nur
+    Feinstellen zwischen zwei Prüfungen, kein Ersatz (Schritte 7–8 unten); die Prüf-KI (Schritt 9) steht auf „aus".
   </div>
 
   <h2>Wer schreibt das Rezept der nächsten Runde?</h2>
@@ -125,7 +157,11 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
   {% endfor %}
 
   <h2>Offene Befunde</h2>
-  <p>Beim Schreiben dieser Seite gefunden, noch nicht behoben:</p>
+  <p>Am 06.10.2026 beim Durchsehen dieser Seite gefunden oder gemessen, noch nicht behoben:</p>
+  <ul>
+    {% for o in messung.offen_neu %}<li><b>{{ o.was }}:</b> {{ o.befund }}</li>{% endfor %}
+  </ul>
+  <p>Von früher, Stand {{ messung.offen_alt_stand }}:</p>
   <ul>
     {% for o in messung.offen %}<li><b>{{ o.was }}:</b> {{ o.befund }}</li>{% endfor %}
   </ul>
@@ -134,6 +170,7 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
 
   <div data-reiter="workflow">
     {% include "hilfe/_architektur_2d3d_workflow.html" %}
+    {% include "hilfe/_architektur_2d3d_kopf.html" %}
   </div>
 
   <div data-reiter="tools">

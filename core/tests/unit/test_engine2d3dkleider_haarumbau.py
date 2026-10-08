@@ -140,10 +140,10 @@ class DerToenungsfaktorImRender(SimpleTestCase):
 
 
 class DieFotohautFassung2(SimpleTestCase):
-    def test_6_die_kopfkachel_bleibt_und_fassung_1_wird_neu_gerechnet(self):
-        self.assertIn(1001, Koerperfotoprojektion.AUSGENOMMEN)
-        self.assertEqual(Koerperfotoprojektion.FASSUNG, 3)                  # 3: Licht je Ansicht, Hände ohne Fotofarbe, Ton statt Überblendung (05.10.2026)
-        for veraltet in (1, 2):
+    def test_6_die_kopfkachel_bleibt_ohne_registrierung_und_alte_fassungen_werden_neu_gerechnet(self):
+        self.assertIn(1001, Koerperfotoprojektion.AUSGENOMMEN)               # Foto nur über die Kopfregistrierung (`Kopfregistrierung`), sonst bleibt die gebackene
+        self.assertEqual(Koerperfotoprojektion.FASSUNG, 4)                  # 3: Licht je Ansicht, Hände ohne Fotofarbe (05.10.2026); 4: Kopfkachel aus dem Vorderfoto (07.10.2026)
+        for veraltet in (1, 2, 3):
             alt = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': veraltet}}})
             self.assertTrue(Koerperfotoprojektion(alt, None).noetig(), 'Fassung %d wird neu gerechnet' % veraltet)
         neu = SimpleNamespace(ergebnis={'fototextur': {'kacheln': {'1001': 'a.jpg'}, 'hautfoto': {'fassung': Koerperfotoprojektion.FASSUNG}}})

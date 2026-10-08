@@ -1,0 +1,77 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Architektur -> ARP Modell (Edgar, 08.10.2026: „mach eine neue Seite Hilfe - Architektur - ARP Modell mit diesen
+Infos und füge alle Infos zum Mesh typ rein"). „Diese Infos": was das Ursprungsrig ist (Auto-Rig Pro), ob ein anderes Rig
+„Mesh to 3D" umgehen könnte, was „Mesh to 3D" verliert, und Konzept C (das Original-Netz als eigene Figurart).
+Die gemessenen Zahlen kommen aus `core/dienste/arpmodell.py` (mit Quelle und Datum), der Text steht hier.
+Teile: `_architektur_arp_mesh.html` (Mesh-Typ), `_architektur_arp_rig.html` (Rig, Knochenkarte, Umposen),
+`_architektur_arp_wege.html` (die drei Wege, Konzept C, Messung, Entscheidung).
+{% endcomment %}
+
+{% block title %}Architektur ARP Modell{% endblock %}
+{% block topbar_title %}Architektur — ARP Modell: Blender-Figur mit Auto-Rig Pro{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_genesis.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite ag-breit">
+
+  <h1>ARP Modell: „cute girl" — Mesh-Typ, Rig und die Frage, ob ein eigenes Rig etwas bringt</h1>
+
+  <div class="info-box info-box-blue">
+    <strong>Stand {{ stand }}.</strong> Gelesen wird <code>{{ datei }}</code> (Blender 5.2.2, nur lesend). Das Modell ist ein
+    <strong>Dreiecksnetz mit Auto-Rig-Pro-Rig (ARP) und ohne Morphs</strong>: 9 Netze (Körper, Haar, Hemd, Shorts, zwei
+    Augen, Zähne oben und unten, Zunge), 559 Knochen, 8192²-Haut. Herkunft und Lizenz sind <strong>unbekannt</strong>.
+    Der Import als Genesis-Figur steht auf der Seite <a href="/hilfe/architektur/genesis/">Genesis</a>; hier steht, was das
+    Modell IST, und was die Alternative „Original-Netz als eigene Figurart" (Konzept C) brächte.
+  </div>
+
+  <p>
+    Kurz: Das Rig gibt dem Import die <strong>Haltung</strong> (Knochenkarte ARP → Genesis, Schritt „Haltung") und trennt
+    Körper, Kleider und Haar sauber. Die <strong>Form</strong> kann es nicht liefern — das Modell hat keine Morphs, nur
+    Knochen —, und die Genesis-Regler gehören zu Genesis' Netz. Darum bleibt „Mesh to 3D" (die Anpassung) nötig; ohne
+    Erkennung und ohne das Heraustrennen von Haar und Kleidung.
+  </p>
+
+  <div class="ag-bilder">
+    <figure>
+      <a href="/static/img/arp_modell/original_vorn.jpg" target="_blank" rel="noopener">
+        <img alt="cute girl, Original, von vorn" src="/static/img/arp_modell/original_vorn.jpg"></a>
+      <figcaption>Original von vorn</figcaption>
+    </figure>
+    <figure>
+      <a href="/static/img/arp_modell/original_seite.jpg" target="_blank" rel="noopener">
+        <img alt="cute girl, Original, von der Seite" src="/static/img/arp_modell/original_seite.jpg"></a>
+      <figcaption>Original von der Seite</figcaption>
+    </figure>
+    <figure>
+      <a href="/static/img/arp_modell/original_gesicht.jpg" target="_blank" rel="noopener">
+        <img alt="cute girl, Original, Gesicht" src="/static/img/arp_modell/original_gesicht.jpg"></a>
+      <figcaption>Original, Gesicht</figcaption>
+    </figure>
+    <figure>
+      <a href="/static/img/arp_modell/genesis_import_vorn.jpg" target="_blank" rel="noopener">
+        <img alt="cute girl als Genesis-9-Figur nach dem Import, in der Charakter-Seite"
+             src="/static/img/arp_modell/genesis_import_vorn.jpg"></a>
+      <figcaption>Nach dem Import: Genesis 9 in der Charakter-Seite</figcaption>
+    </figure>
+  </div>
+  <p class="ag-bildhinweis">
+    Die drei Original-Bilder: Blender EEVEE mit den Materialien der Datei, zwei Sonnenlichter, orthogonale Kamera
+    (Skript <code>original_eevee.py</code>, 08.10.2026). Das vierte: Bildschirmfoto der Charakter-Seite im Chrome (Perspektive,
+    mit Knochenanzeige), nach „Datei → Modell importieren…" — Figur, Haut, Haar, Hemd und Shorts aus dem Import.
+    <strong>Falle bei Vorschaubildern:</strong> Blenders Workbench nimmt den <em>aktiven</em> Bildknoten — bei den Shorts
+    war das die Normalenkarte (pastellfarben; das Farbbild ist Jeansstoff), beim Haar das PNG mit den bunten Strähnen
+    (die Farbe ist ein fester Wert, Abschnitt 1). Die ersten Bilder dieser Seite stimmten deshalb nicht.
+  </p>
+
+  {% include "hilfe/_architektur_arp_mesh.html" %}
+  {% include "hilfe/_architektur_arp_rig.html" %}
+  {% include "hilfe/_architektur_arp_wege.html" %}
+
+</div>
+{% endblock %}

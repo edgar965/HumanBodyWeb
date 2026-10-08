@@ -12,6 +12,8 @@ Kopie von `Blendermodelllauf`, mit der Genesis-Engine (`Genesisengine2d3dkleider
     vorbereitung die Fotos aufbereiten: Hintergrund entfernen, auf Wunsch den Körper senkrecht stellen, Zuschnitt, Licht
                  (`Engine2d3dKleidervorbereitung`, 03.10.2026; getrennt startbar, die Seite zeigt die Ergebnisse unter den Fotos)
     netz         Fotos → Netz (TRELLIS.2/Pixal3D), nimmt die vorbereiteten Fotos, wenn sie zu den Optionen passen
+    kopf         OPTIONAL (Häkchen `kopf.rechnen`, Vorgabe an; ausdrücklich gestartet läuft er immer): der Kopf aus den drei vorbereiteten Fotos geschnitten und als eigenes Kopfnetz gerechnet
+                 (Hunyuan3D, `Engine2d3dKleiderkopf`, 07.10.2026); der Schritt „koerper" setzt es für das Gesicht ein
     segmentierung OPTIONAL (Option `segmentierung.verwenden`, ausdrücklich gestartet läuft er immer): Sapiens zerlegt die vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, Zubehör und
                  Haut und legt die Etiketten auf die Flächen des Netzes (`Engine2d3dKleidersegmentierung`, 04.10.2026); der Schritt „kleidung" der Körper-Kette nimmt sie für die Kleidungsmaske
     grundfigur   Genesis-9-Grundfigur (Option „Grundfigur") mit Rig, Stellung für Bühne und Export
@@ -45,11 +47,12 @@ __all__ = ['Engine2d3dKleiderlauf']
 
 
 class Engine2d3dKleiderlauf:
-    SCHRITTE = ('vorbereitung', 'netz', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern')
-    #: Anteil am Balken 0…100 — Netz (TRELLIS) und Iterationen sind die langen Teile.
+    SCHRITTE = ('vorbereitung', 'netz', 'kopf', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern')
+    #: Anteil am Balken 0…100 — Netz (TRELLIS), Kopf (Hunyuan) und Iterationen sind die langen Teile.
     BAENDER = {
         'vorbereitung': (0, 3),
-        'netz': (3, 24),
+        'netz': (3, 17),
+        'kopf': (17, 24),
         'segmentierung': (24, 27),
         'koerper': (27, 40),
         'grundfigur': (40, 43),
@@ -82,6 +85,7 @@ class Engine2d3dKleiderlauf:
         from .engine2d3dkleiderfilm import Engine2d3dKleiderfilm
         from .engine2d3dkleidergrundfigur import Engine2d3dKleidergrundfigur
         from .engine2d3dkleiderkoerper import Engine2d3dKleiderkoerper
+        from .engine2d3dkleiderkopf import Engine2d3dKleiderkopf
         from .engine2d3dkleidernetz import Engine2d3dKleidernetz
         from .engine2d3dkleiderstuecke import Engine2d3dKleiderstuecke
         from .engine2d3dkleidersegmentierung import Engine2d3dKleidersegmentierung
@@ -92,6 +96,7 @@ class Engine2d3dKleiderlauf:
         return {
             'vorbereitung': lambda: Engine2d3dKleidervorbereitung(self).ausfuehren(),
             'netz': lambda: Engine2d3dKleidernetz(self).ausfuehren(),
+            'kopf': lambda: Engine2d3dKleiderkopf(self).ausfuehren(),
             'segmentierung': lambda: Engine2d3dKleidersegmentierung(self).ausfuehren(),
             'koerper': lambda: Engine2d3dKleiderkoerper(self).ausfuehren(),
             'grundfigur': lambda: Engine2d3dKleidergrundfigur(self).ausfuehren(),
@@ -124,6 +129,7 @@ class Engine2d3dKleiderlauf:
         try:
             for name in self.SCHRITTE[start:ende]:
                 self._schritt(name)
+                self._runden_beiseite(name)
                 t = time.perf_counter()
                 schritte[name]()
                 job.ergebnis.setdefault('dauer', {})[name] = round(time.perf_counter() - t, 1)
@@ -155,6 +161,13 @@ class Engine2d3dKleiderlauf:
             update_fields=['ergebnis', 'status', 'progress', 'progress_detail', 'finished_at', 'updated_at']
         )
         logger.info('2D3D Kleider %s: %s in %.0f s', job.kennung, job.status, job.ergebnis['dauer_s'])
+
+    def _runden_beiseite(self, name):
+        """Rechnet ein Schritt Fotos, Netz oder Körper neu (`Iterationsarchiv.VERALTET`), gehen die Runden vorher ins Archiv (06.10.2026): ihre Noten gelten für ein anderes Netz, die neue Iteration 0 darf nicht gegen sie
+        antreten. Beim zweiten solchen Schritt desselben Laufs gibt es nichts mehr wegzulegen."""
+        from .iterationsarchiv import Iterationsarchiv
+        if Iterationsarchiv.veraltet_durch(name) and Iterationsarchiv(self.job, self.ablage).beiseite('Schritt „%s“ neu gerechnet' % name):
+            self.sichern('ergebnis')
 
     @staticmethod
     def _von_hand(job, gelaufen):

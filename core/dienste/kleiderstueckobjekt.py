@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Kleiderstueckobjekt — das Netz eines gebauten Fotostücks (`Fotostuecke`), aus der OBJ-Datei im Arbeitsordner der Eigenstücke (04.10.2026).
 
-`Fotostuecke._schreiben` legt je Stück `3DObjects/Genesis9/eigene_stuecke/EIGEN_<Name>/stueck.obj` ab (Meter, Y oben, Füße 0 — die Ruhelage der Figur) und schreibt danach das Garderobenstück
+`Fotostuecke._schreiben` legt je Stück `3DObjects/models/Genesis9/eigene_stuecke/EIGEN_<Name>/stueck.obj` ab (Meter, Y oben, Füße 0 — die Ruhelage der Figur) und schreibt danach das Garderobenstück
 (`.duf`, Zentimeter) mit einer Korrektur auf der Grundfigur (`G9gcfigurbau.ruhelage`: Median 0 mm, Maximum 12–21 mm gemessen am Auftrag 2026.10.04.11.11.44). Gemessen wird das OBJ — das Netz
 VOR dieser Korrektur —, weil es in Metern und ohne Garderobenbau zu lesen ist.
 

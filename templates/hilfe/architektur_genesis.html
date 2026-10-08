@@ -1,0 +1,70 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Architektur -> Genesis (Edgar, 08.10.2026: „schreibe das hinein in eine neue Seite Hilfe - Architektur -
+Genesis"). Inhalt: das Konzept „Blender-Modell als Genesis-Figur importieren"
+(`Docu/konzepte/2026-10-08_blend-import-als-genesis-figur-konzept.md`). Text von Hand; die Tabelle der Bausteine
+kommt aus `core/dienste/architekturgenesis.py` und wird beim Aufruf gegen den Code geprüft.
+Teile: `_architektur_genesis_datei.html` (Datei, Ist-Zustand), `_architektur_genesis_ablauf.html` (Entscheidung,
+Ablauf, neue Bausteine), `_architektur_genesis_pruefen.html` (Messung, Grenzen, Entscheidungen, Nebenbefund).
+{% endcomment %}
+
+{% block title %}Architektur Genesis{% endblock %}
+{% block topbar_title %}Architektur — Genesis: Blender-Modell als Genesis-Figur{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_genesis.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite ag-breit">
+
+  <h1>Blender-Modell importieren: „cute girl" als Genesis-9-Figur mit eigenen Stücken</h1>
+
+  <div class="info-box info-box-blue">
+    <strong>Umsetzung (Stand {{ stand }}, Lauf 2026.10.08.11.28.06):</strong> Der Import steht im UI und ist
+    <strong>vollständig durchgelaufen</strong> — <em>Charakter-Seite → Datei → Modell importieren…</em>, Dialog mit Pfad
+    und allen Einstellungen aus Abschnitt 8, die beim nächsten Mal als Vorgabe dastehen
+    (<code>3DObjects/blendimport/einstellungen.json</code>; nach dem Neuladen stand der Pfad wieder da). Acht Schritte
+    (<code>Blendimportlauf</code>): Lesen → Haltung → Körpernetz → Genesis-Figur → Stücke → Haut backen → Augen → Modell,
+    zusammen rund 36 Minuten (Genesis-Figur 960 s, Haut backen 1029 s, Stücke 147 s; Rest unter 30 s).
+    <strong>Ergebnis, im Chrome gesehen:</strong> Das Modell „cute girl" steht unter „Gespeicherte Modelle" (326 Regler,
+    3 Stücke), lädt als Genesis 9 mit 175,0 cm und 402 wirksamen Morphs; Hemd (Kategorie „Oberteile", 13 Regler), Shorts
+    („Shorts", 13 Regler) und Haar („Haare", 15 Regler) stehen in der Garderobe; die Haut ist mit 8192² gebacken, der Browser
+    bekommt ohne Strg+Alt+H 2048² (gemessen: Farbe 0,3 MB, Normalen 5,4 MB), mit <code>hoch=1</code> 8192² (5,5 MB bzw. 92 MB).
+    Zahlen, Bilder und Messungen: <a href="/hilfe/architektur/arp-modell/">ARP Modell</a>.
+    <strong>Abweichungen vom Konzept:</strong> (1) Das Umposen (Schritt 3) läuft nicht über den Armature-Modifier, sondern über
+    starre Segmente um die Gelenke der Referenzknochen — Wirbelsäule, Hals und Kopf bleiben, Fingerglieder kamen nach dem
+    ersten Lauf dazu und sind im Code, aber noch nicht in einem Lauf. (2) Das Körper-Tor von „Mesh to 3D" hielt den ersten
+    Anlauf an (11 Regler am Anschlag, Soll ≤ 8); der Import lässt es nur melden. (3) Hautkacheln 8192 statt 4096. (4) Der
+    Eigenmorph heißt <code>eigen:cute_girl_mesh_113404</code> und ist <strong>noch kein eigener Schieber</strong> im
+    Reglerplan. <strong>Gemessen:</strong> Endfigur gegen das Original-Körpernetz 0,78 / 0,93 mm RMS (zugeordnete Paare,
+    ohne Ausreißer); über alle Körperpunkte Median 0,99 mm, p95 14,4 mm — die Abweichungen sitzen an Fingern, Brustwarzen,
+    Lippen, Schritt und Zehen. <strong>Noch nicht geprüft:</strong> Kachelnähte und Farbe der gebackenen Haut an festen
+    Hautstellen, Sitz der Stücke auf einer zweiten Genesis-Figur, der Lauf ohne Umposen.
+  </div>
+
+  <div class="info-box info-box-orange">
+    <strong>Konzept</strong> (Stand {{ stand }}). Auftrag Edgar: auf der Charakter-Seite über
+    „Datei → Modell importieren" ein Blender-Modell von der Platte holen
+    (<code>A:\3DTools\3DObjects\models\Blender\cute girl</code>) samt der großen Textur — möglichst als Genesis-
+    (sonst HumanBody-)Figur, mit Morphs und Rig; Haare und alle Kleider als neue Stücke in der Genesis-Bibliothek,
+    mit Reglern, in der passenden Kategorie. Dieselbe Fassung als Datei:
+    <code>Docu/konzepte/2026-10-08_blend-import-als-genesis-figur-konzept.md</code>.
+  </div>
+
+  <p>
+    Kurz: Das Modell wird eine <strong>Genesis-9-Figur mit eigenem Formmorph</strong>
+    (<code>eigen:cute girl</code>), kein Fremdrig. Der Schlüssel ist, ihr Rig in Blender zuerst auf die
+    Genesis-Ruhelage zu drehen — dann liegen Körper, Kleider und Haar in derselben Haltung wie Genesis, und die
+    Form lässt sich am ganzen Körper übertragen. Shirt und Shorts werden eigene Genesis-Stücke, das Haar eine
+    Genesis-Frisur; die 8K-Haut wird auf die Genesis-Kacheln umgebacken.
+  </p>
+
+  {% include "hilfe/_architektur_genesis_datei.html" %}
+  {% include "hilfe/_architektur_genesis_ablauf.html" %}
+  {% include "hilfe/_architektur_genesis_pruefen.html" %}
+
+</div>
+{% endblock %}

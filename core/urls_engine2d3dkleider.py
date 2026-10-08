@@ -21,6 +21,8 @@ from .api.engine2d3dkleidereinstellungen import Engine2d3dKleidereinstellungen
 from .api.engine2d3dkleiderfotos import Engine2d3dKleiderfotoendpunkte
 from .api.engine2d3dkleideriterationen import Engine2d3dKleideriterationenendpunkte
 from .api.engine2d3dkleiderformen import Engine2d3dKleiderformendpunkte
+from .api.engine2d3dkleidergesichtsbilder import Engine2d3dKleiderGesichtsbilderendpunkte
+from .api.engine2d3dkleidergesichtsvergleich import Engine2d3dKleiderGesichtsvergleichendpunkte
 from .api.engine2d3dkleiderkopie import Engine2d3dKleiderkopieendpunkte
 from .api.engine2d3dkleidermalen import Engine2d3dKleidermalendpunkte
 from .api.engine2d3dkleidernachbesserung import Engine2d3dKleidernachbesserungendpunkte
@@ -71,6 +73,23 @@ ENGINE2D3DKLEIDER = [
         'api/engine2d3dkleider/<uuid:job_id>/qualitaet/',
         Engine2d3dKleiderqualitaetendpunkt.setzen,
         name='engine2d3dkleider_qualitaet',
+    ),
+    # Mesh-gegen-Modell-Linien des Reiters „Gesicht" (`core/api/engine2d3dkleidergesichtsvergleich.py`, 07.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/gesichtsvergleich/',
+        Engine2d3dKleiderGesichtsvergleichendpunkte.lesen,
+        name='engine2d3dkleider_gesichtsvergleich',
+    ),
+    # Statische Vergleichsbilder + Tabellenwerte des Reiters „Gesicht" (`core/api/engine2d3dkleidergesichtsbilder.py`, 07.10.2026)
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/gesichtsbild/<str:art>/',
+        Engine2d3dKleiderGesichtsbilderendpunkte.bild,
+        name='engine2d3dkleider_gesichtsbild',
+    ),
+    path(
+        'api/engine2d3dkleider/<uuid:job_id>/gesichtswerte/',
+        Engine2d3dKleiderGesichtsbilderendpunkte.werte,
+        name='engine2d3dkleider_gesichtswerte',
     ),
     # Das 3D-Modell des letzten Stands für die Bühne bestellen (`core/api/engine2d3dkleiderstandmodell.py`, 01.10.2026)
     path(

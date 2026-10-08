@@ -43,4 +43,8 @@ class Meshoptionenfein:
             ('64', '64³ — grob, schnell'), ('96', '96³ (Vorgabe)'), ('128', '128³ — feiner, langsamer'),
         ], 'hinweis': 'Nur bei „Mehrere Fotos: Fusion" — das gemeinsame Gitter, auf dem die '
                       'Einzelnetze gemittelt werden.'},
+        {'schluessel': 'malansichten21', 'titel': 'Ansichten der 2.1-Malerei', 'art': 'zahl', 'vorgabe': 6,
+         'min': 6, 'max': 9, 'fein': True,
+         'hinweis': 'Nur bei „Hunyuan3D-2.1 malt": aus wie vielen Richtungen das Modell malt (6 = vorn, links, hinten, rechts, '
+                    'oben, unten; 7–9 fügen schräge Ansichten hinzu). Mehr Ansichten: weniger Lücken, längere Rechenzeit.'},
     ]

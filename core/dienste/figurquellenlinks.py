@@ -3,7 +3,7 @@
 
 Aus `figurquellen.py` herausgehalten, damit keine der beiden Dateien über
 die Grenze wächst (Regel: 200–300 Zeilen). Schlüssel ist der Bilderordner
-unter `3DObjects/humanModels/`, derselbe wie in `Figurquellen.rangliste()`
+unter `3DObjects/humanModels Recherche/`, derselbe wie in `Figurquellen.rangliste()`
 und `Figurkoepfe.rangliste()` — oder, wo sich zwei Zeilen einen Ordner
 teilen, deren `linkschluessel`.
 Alle Adressen wurden am 17.09.2026 gelesen; Triplegangers sperrt
@@ -159,8 +159,14 @@ class Figurquellenlinks:
             ('SMPL-X', 'https://smpl-x.is.tue.mpg.de/'),
             ('SMPL', 'https://smpl.is.tue.mpg.de/'),
         ],
+        # Ein Blender-Modell zum Import (Edgar, 08.10.2026): keine Herstellerseite — Herkunft und Lizenz sind unbekannt —,
+        # sondern die beiden Seiten dieses Programms, die es beschreiben (interne Adressen, keine gelesenen Webseiten).
+        'cute_girl_arp': [
+            ('Hilfe → Architektur → ARP Modell (Mesh-Typ, Rig, Konzept C)', '/hilfe/architektur/arp-modell/'),
+            ('Hilfe → Architektur → Genesis (Import als Genesis-Figur)', '/hilfe/architektur/genesis/'),
+        ],
         '12_Reallusion_CC_Base': [
-            ('CC-Basis', 'https://www.reallusion.com/character-creator/free-3d-character-base.html'),
+            ('CC-Basis','https://www.reallusion.com/character-creator/free-3d-character-base.html'),
         ],
         '13_Forschung_THuman_2K2K': [
             ('THuman2.0', 'https://github.com/ytrock/THuman2.0-Dataset'),

@@ -82,7 +82,14 @@ export async function loadFromFilePicker() {
     } catch (e) { alert(`Fehler beim Laden: ${e.message}`); }
 }
 
+/** „Datei → Modell importieren…": der Dialog mit JSON ODER .blend (`Modellimportdialog`, 08.10.2026). */
 export async function importModelFromFilePicker() {
+    const { Modellimportdialog } = await import('./modellimportdialog.js');
+    await Modellimportdialog.oeffnen();
+}
+
+/** Ein Modell-JSON wählen und laden (bis 08.10.2026 der ganze Menüpunkt). */
+export async function importJsonModell() {
     try {
         const data = await _openJsonFilePicker();
         if (!data) return;

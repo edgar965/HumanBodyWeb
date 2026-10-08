@@ -80,6 +80,15 @@ class Modelltexturen:
     def art(pfad):
         return mimetypes.guess_type(Path(pfad).name)[0] or 'application/octet-stream'
 
+    #: Zusatz der verkleinerten Fassung einer Kachel (`haut_1001_farbe.klein.jpg`) — der Browser bekommt sie ohne
+    #: Strg+Alt+H (`G9fototextur`, Blender-Import 08.10.2026). Nur Modelle, die sie mitbringen, haben eine.
+    KLEIN = '.klein'
+
+    @classmethod
+    def klein(cls, pfad):
+        pfad = Path(pfad)
+        return pfad.with_name(pfad.stem + cls.KLEIN + pfad.suffix)
+
     # -------------------------------------------------------------- Sichern
 
     @classmethod
@@ -116,6 +125,9 @@ class Modelltexturen:
             logger.exception('Modell %s: Textur %s nicht sicherbar', modellname, adresse)
             return adresse
         behalten.add(name)
+        klein = cls.klein(quelle)
+        if klein.is_file() and klein.resolve() != cls.klein(ziel).resolve():
+            shutil.copy2(klein, cls.klein(ziel))
         return cls.adresse(modellname, name, ziel.stat().st_mtime)
 
     @classmethod
@@ -130,6 +142,8 @@ class Modelltexturen:
     @classmethod
     def _aufraeumen(cls, ordner, behalten):
         """Kacheln eines früheren Stands entfernen, die das Modell nicht mehr nennt (nur Bilder, flach)."""
+        # Die verkleinerte Fassung einer behaltenen Kachel bleibt mit ihr.
+        behalten = set(behalten) | {cls.klein(Path(n)).name for n in behalten}
         for p in ordner.iterdir():
             if p.is_file() and p.suffix.lower() in cls.ENDUNGEN and p.name not in behalten:
                 p.unlink()

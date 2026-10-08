@@ -22,6 +22,7 @@ import numpy as np
 
 from .haarband import Haarband
 from .haarkappe import Haarkappe
+from .haarlaenge import Haarlaenge
 from .haarwuchs import Haarwuchs
 
 logger = logging.getLogger('core')
@@ -31,7 +32,8 @@ __all__ = ['Herrenhaar']
 
 class Herrenhaar:
     #: Zählt hoch, wenn sich das Haar bei gleicher Eingabe ändert (gehört in die Fassung des Standmodells).
-    VERSION = 1
+    #: 3 (07.10.2026): runde Haarlinie um die Ohren (`Haarkappe` 7); die Länge der Strähnen (und mit ihr die Dicke) ist je Höhe am Kopf wählbar: unten an Schläfen und Nacken, oben an der Kopfdecke (`Haarlaenge`).
+    VERSION = 3
     SORTE = 'herrenhaar'
     #: Wurzeln je cm² Kopfhaut (am Testauftrag knapp 30.000 Strähnen) und Obergrenze.
     DICHTE_CM2 = 45.0
@@ -39,9 +41,8 @@ class Herrenhaar:
     #: Punkte je Strähne (Wurzel … Spitze) und Halbbreite des Bands an Wurzel und Spitze (m): eine Strähne ist ein Büschel von einigen Haaren, im Kopfbild (0,66 mm je Bildpunkt) rund 2 Bildpunkte breit.
     PUNKTE = 4
     BREITE_M = (0.00075, 0.00035)
-    #: Länge der Strähne entlang des Kopfes als Vielfaches der Dicke, begrenzt (m).
-    LAUF_FAKTOR = 2.4
-    LAUF_GRENZE = (0.010, 0.040)
+    #: Die Länge der Strähne entlang des Kopfes (Bogenlänge ab der Wurzel) wählt `Haarlaenge`: ein Herrenschnitt ist an den Seiten und im Nacken kurz und wird nach oben zum Scheitel hin länger (Edgar, 07.10.2026: „kürzer
+    #: seitlich (nach oben länger werdend) und hinten auch kürzer, wird dann länger wenn es zum Scheitel geht" — und: unten und oben als Regler, dazwischen interpoliert). Die Dicke der Kappe und der Strähnen folgt ihr.
     #: Die Spitze liegt über der Haarlinie mindestens so viele Grad (`_bis_zur_linie`).
     LINIE_ABSTAND = 1.0
     #: Anteil der Strähnen, deren Spitze innen liegt, und die Höhe der Spitzen als Anteil der Dicke (innen/außen) — beide ÜBER der Kappe (`KAPPE_DICKE`).
@@ -66,8 +67,10 @@ class Herrenhaar:
     HELL = 1.11
     SAMEN = 7
 
-    def __init__(self, ablage, netz):
-        self.kappe = Haarkappe(ablage, netz)
+    def __init__(self, ablage, netz, ansatz=0.0, laenge=None):
+        """`ansatz`: Grad, um die der Haaransatz vorn angehoben wird (`Haaransatz`, Rezept `haar_ansatz`). `laenge`: eine `Haarlaenge` (unten/oben in cm, Rezept `haar_laenge`, Option `iterationen.haar_laenge_*`) — ohne die Vorgabe."""
+        self.laenge = laenge or Haarlaenge()
+        self.kappe = Haarkappe(ablage, netz, ansatz, dicke_faktor=self.laenge.dickefaktor)
         self.netz = netz
 
     # ------------------------------------------------------------------ Farbe
@@ -135,6 +138,7 @@ class Herrenhaar:
         """Alle Strähnen: `(reihen (S, K, 3), aussen (S, K, 3), breite (S, K), behalten (N,))` — `behalten` sagt, welche Wurzeln eine Strähne tragen (Haarlinie, Dichte)."""
         dicke, grad, v, r0 = self.kappe.dicke_bei(punkt)
         u0 = v / r0[:, None]
+        el = np.degrees(np.arcsin(np.clip(u0[:, 1], -1.0, 1.0)))                                    # Höhenwinkel der Wurzel am Kopf: danach richtet sich die Länge
         rau = Haarwuchs.rauschen(u0, self.SAMEN + 31)
         grad = grad + self.LINIE_GRAD * Haarwuchs.rauschen(u0, self.SAMEN + 32)
         rand = Haarkappe._weich(grad / Haarkappe.RAND_GRAD)                 # noqa: SLF001 — 0 an der Linie, 1 ab `RAND_GRAD` Grad darüber
@@ -143,7 +147,8 @@ class Herrenhaar:
         tau = np.linspace(0.0, 1.0, k)[None, :]
         innen = zufall.random(len(punkt)) < self.INNEN
         spitze = dicke * np.where(innen, zufall.uniform(*self.SPITZE_INNEN, len(punkt)), zufall.uniform(*self.SPITZE_AUSSEN, len(punkt)))
-        lauf = np.clip(self.LAUF_FAKTOR * dicke, *self.LAUF_GRENZE) * (0.85 + 0.30 * (rau + 1.0) / 2.0) * zufall.uniform(0.85, 1.15, len(punkt)) * (0.4 + 0.6 * rand)
+        # Die gewählte Länge (`Haarlaenge`) ist die mittlere: ±15 % nach Rauschfeld und ±15 % nach Zufall; ganz an der Haarlinie 80 % davon (die Dichte läuft dort ohnehin aus, `behalten`).
+        lauf = self.laenge.laenge(el) * (0.85 + 0.30 * (rau + 1.0) / 2.0) * zufall.uniform(0.85, 1.15, len(punkt)) * (0.8 + 0.2 * rand)
         t = Haarwuchs.laufrichtung(u0, self.SAMEN)
         lauf = self._bis_zur_linie(punkt, u0, t, r0, dicke, lauf)
         winkel = lauf[:, None] * tau / np.maximum(r0 + 0.5 * dicke, 1e-3)[:, None]                  # Bogen entlang der Kugel um den Kopfmittelpunkt
@@ -205,7 +210,7 @@ class Herrenhaar:
         return teile
 
     @classmethod
-    def fingerabdruck(cls, ablage):
-        """Gehört in die Fassung des Standmodells: Version dieses Haars, der Wuchsfelder und der Kappe samt der Quelle der Hülle — None ohne Quelle."""
+    def fingerabdruck(cls, ablage, laenge=None):
+        """Gehört in die Fassung des Standmodells: Version dieses Haars, der Wuchsfelder, der gewählten Länge (`Haarlaenge`) und der Kappe samt der Quelle der Hülle — None ohne Quelle."""
         kappe = Haarkappe.fingerabdruck(ablage)
-        return None if kappe is None else [cls.VERSION, kappe, cls.DICHTE_CM2, Haarwuchs.WIRBEL, Haarwuchs.NACH_HINTEN]
+        return None if kappe is None else [cls.VERSION, kappe, cls.DICHTE_CM2, Haarwuchs.WIRBEL, Haarwuchs.NACH_HINTEN, (laenge or Haarlaenge()).fingerabdruck()]

@@ -84,6 +84,26 @@
     color: #ff9940;
 }
 
+/* Blender-Modelle zum Import (Edgar, 08.10.2026: „füge das Modell auch in die Seite andere-modelle ein"): blau — ein
+ * fremdes Modell, weder eine Figurart im Haus (rot) noch das MB-Lab-Original (orange). */
+.doku-seite tr.am-blend.am-blend.am-blend td,
+.doku-seite tr.am-blend.am-blend.am-blend td a {
+    color: #5ab0ff;
+}
+.doku-seite tr.am-blend.am-blend.am-blend td {
+    background: rgba(90, 176, 255, 0.08);
+}
+.doku-seite .am-karte.am-blend.am-blend {
+    border-left-color: #5ab0ff;
+}
+.doku-seite .am-karte.am-blend.am-blend h3 {
+    color: #5ab0ff;
+}
+.doku-seite .am-blend-wort {
+    color: #5ab0ff;
+    font-weight: 600;
+}
+
 .am-lesehilfe ul {
     margin: 8px 0 0;
     padding-left: 1.2em;

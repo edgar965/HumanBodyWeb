@@ -41,10 +41,26 @@ class Engine2d3dKleiderkoerperlauf(Meshfigurlauf):
         self.sapiens_haar = self.sapiens_einstellungen.get('haar') or 'farbe'
         # Das Körper-Tor (Option `koerper.tor`, 04.10.2026): „anhalten" (Vorgabe) stoppt die Kette nach dem Körper, „melden" lässt sie weiterlaufen — `Meshfigurkette.koerper` liest es.
         self.tor = (koerperoptionen or {}).get('tor') or 'anhalten'
-        self.zusatz = {}
+        # Option `koerper.naht` (07.10.2026): „aus" lässt die Kappe des Kopfnetzes stehen und näht nicht — `Meshfigurdaten._zielnetz` liest es aus `auftrag.json`.
+        self.zusatz = {'naht': ((koerperoptionen or {}).get('naht') or 'an') != 'aus'}
+        # Option `koerper.landmarkmorphe` (07.10.2026): Augen-, Mund- und Nasenmorph aus den Landmarken (`Meshfigurlandmarkmorphe`) — `Meshfigurende.rest` ruft `landmarkmorphe`.
+        self.landmarkmorphe_an = ((koerperoptionen or {}).get('landmarkmorphe') or 'an') != 'aus'
         self._von, self._bis = 0.0, 1.0
         self._letzte_db = 0.0
         self.Angehalten = aussen.Angehalten
+
+    def landmarkmorphe(self, rest, gewicht, name, stellung):
+        """Augen-, Mund- und Nasenmorph aus den Landmarken (`Meshfigurlandmarkmorphe`, im Schritt „rest") — `{}` ohne die Option `koerper.landmarkmorphe`."""
+        if not self.landmarkmorphe_an:
+            return {}
+        from .meshfigurlandmarkmorphe import Meshfigurlandmarkmorphe
+
+        return Meshfigurlandmarkmorphe(self.job, self.ablage).bauen(rest, gewicht, name, stellung)
+
+    def kopfnetz(self):
+        """Das Kopfnetz des Schritts „kopf" (Häkchen `kopf.rechnen` an und Netz gerechnet), sonst None — „Mesh to 3D" liest es aus `eingang['kopf']`, das hat dieser Auftrag nicht (07.10.2026)."""
+        from .engine2d3dkleiderkopf import Engine2d3dKleiderkopf
+        return Engine2d3dKleiderkopf.netz_fuer(self.job, self.ablage)
 
     def schrittfolge(self):
         from .meshfigurende import Meshfigurende

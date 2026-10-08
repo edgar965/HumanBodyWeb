@@ -61,6 +61,7 @@ from .urls_blendermodell import BLENDERMODELL  # noqa: E402
 from .urls_engine2d3dkleider import ENGINE2D3DKLEIDER  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
+from .urls_blendimport import BLENDIMPORT  # noqa: E402
 from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
 
 urlpatterns = [
@@ -274,6 +275,8 @@ urlpatterns += BILDMODELL
 urlpatterns += MESH
 # Reiter „Mesh to 3D" (Netz → Genesis-9-Figur), 27.09.2026.
 urlpatterns += MESHFIGUR
+# Blender-Import auf der Charakter-Seite (.blend → Genesis-Modell mit eigenen Stücken), 08.10.2026.
+urlpatterns += BLENDIMPORT
 # Seite „Gesichtsform": Kopf-Eigen aus Schnitten und Konturen, 27.09.2026.
 urlpatterns += GESICHTSFORM
 # Bereich „BlenderModel" (Fotos → Netz → Figur), 29.09.2026.

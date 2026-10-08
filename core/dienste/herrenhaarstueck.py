@@ -46,6 +46,7 @@ class Herrenhaarstueck:
 
         from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
         from .haarumbau import Haarumbau
+        from .iterationsoptionen import Iterationsoptionen
         from .kleidermodellbau import Kleidermodellbau
         from .standvorabkleider import Standvorabkleider
         ablage = ablage or Engine2d3dKleiderablage(job.kennung)
@@ -53,7 +54,7 @@ class Herrenhaarstueck:
         G9rezept.anwenden(modell, '\n'.join(Standvorabkleider.rezept(job)) + '\n')        # die Haarfarbe der Fotos (`haar_farbe`) wie im Stand vor den Iterationen
         haarfarbe = (modell.farben or {}).get('haar')
         bau = Kleidermodellbau(job.stellung(), None, kacheln={}, ablage=ablage, haarumbau='herren')
-        teile = Haarumbau.herrenhaar(bau.koerper(), ablage, haarfarbe)
+        teile = Haarumbau.herrenhaar(bau.koerper(), ablage, haarfarbe, laenge=Iterationsoptionen.haarlaenge(job))     # die Länge der Optionen des Auftrags (`haar_laenge_unten/oben`)
         if not teile:
             raise ValueError('Herrenhaar nicht gebaut: keine Hülle des Fotohaars oder kein kurzes Haar (Log: „Herrenhaar")')
         return teile, haarfarbe

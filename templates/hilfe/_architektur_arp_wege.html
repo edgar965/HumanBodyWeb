@@ -1,0 +1,118 @@
+{% comment %}
+Teil 3 von Hilfe -> Architektur -> ARP Modell: die Wege (Genesis, HumanBody, Original-Netz = Konzept C), was „Mesh to 3D"
+verliert, die Messung des Genesis-Wegs, Entscheidung und Offenes. Zahlen der Messung aus `core/dienste/arpmodell.py`.
+{% endcomment %}
+<h2>3. Hilft ein eigenes Rig oder ein eigener Netztyp? Die drei Wege</h2>
+<p>
+  Edgar (08.10.2026): „Könnte man das Modell nicht anders riggen, mit HumanBody, um den Genesis Mesh to 3D zu umgehen?
+  Verliert man da nicht Daten bei dem Mesh to 3D?" — und: „macht es Sinn, ein neues Modell und Rig dafür zu machen,
+  gewinnen wir was? … erkläre mir nochmal Konzept C."
+</p>
+<table class="doku">
+  <thead><tr><th>Weg</th><th>Was es ist</th><th>Man bekommt</th><th>Man verliert / muss bauen</th><th>Stand</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A. Genesis 9 + Eigenmorph</strong></td>
+      <td>Das Modell wird eine Genesis-9-Figur: Regler und Eigenmorph aus „Mesh to 3D", Kleider und Haar als Stücke.</td>
+      <td>Alle Genesis-Regler (Körper, 296 Kopfregler, Ausdrücke), BVH-Retarget, Bibliothek, Kategorien im UI; die Stücke
+        passen jeder Genesis-Figur.</td>
+      <td>Genesis' Topologie statt der eigenen; die Form ist angenähert (Messung unten); die Haut wird umgebacken.</td>
+      <td><strong>gebaut</strong>, Import läuft (Hilfe → Architektur → Genesis)</td></tr>
+    <tr><td><strong>B. HumanBody-Figur</strong></td>
+      <td>Das Modell wird eine Figur im HumanBody-Format (DEF-Skelett, 176 Knochen; MB-Lab-Netz 18.210 Punkte).</td>
+      <td>Das Retarget-Ziel <code>def</code> ist da.</td>
+      <td>Weniger Regler als Genesis; ihre Regler gehören zum MB-Lab-Netz, nicht zu diesem Netz — es gäbe wieder eine
+        Anpassung (nur gröber). Keine Genesis-Garderobe ohne Umweg; Kleider landen nicht in der Genesis-Bibliothek.</td>
+      <td>nicht gebaut</td></tr>
+    <tr><td><strong>C. Original-Netz als eigene Figurart</strong></td>
+      <td>Das Netz bleibt, wie es ist (9 Netze, 8192²-Haut), mit seinem ARP-Rig — oder mit auf HumanBodys DEF-Skelett
+        übertragenen Hautgewichten.</td>
+      <td>Das Aussehen exakt, die Haut ohne Umbacken, das Gesicht mit seinen 62 Knochen.</td>
+      <td>Keine Regler, keine Genesis-Bibliothek, kein Retarget-Ziel, keine Lippen-/Ausdruckssteuerung; eine neue
+        Figurart durch den ganzen Code.</td>
+      <td>nicht gebaut; widerspricht dem Auftrag (Regler, Bibliothek)</td></tr>
+  </tbody>
+</table>
+
+<h3>Würde ein anderes Rig „Mesh to 3D" umgehen?</h3>
+<p>
+  Das Rig kann das Modell <strong>neu riggen</strong> (Hautgewichte von ARP auf das DEF-Skelett von HumanBody übertragen):
+  Das Originalnetz bliebe, und es ließe sich per BVH bewegen. Das ist Konzept C mit anderem Skelett — kein HumanBody-Modell.
+  Was ein Rig <strong>nicht</strong> liefert, ist die <strong>Form im Raum der Regler</strong>: Das Modell hat keine Morphs
+  (nur <code>V_None</code>), und Genesis' wie HumanBodys Regler hängen an ihrem eigenen Netz. Wer Regler will, braucht eine
+  Anpassung dorthin — „Mesh to 3D". Was das Rig dem Import abnimmt, ist die Erkennung (Gelenke und Haltung schätzen) und
+  das Heraustrennen von Haar und Kleidung: Beides steht im Rig und in den getrennten Netzen.
+</p>
+
+<h3>Konzept C im Einzelnen</h3>
+<div class="ag-spalten">
+  <div>
+    <strong>Was wir gewännen</strong>
+    <ul>
+      <li><strong>Aussehen:</strong> exakt das Original, kein Anpassungsfehler.</li>
+      <li><strong>Haut:</strong> die 8192²-Textur direkt, ohne Umbacken auf die Genesis-Kacheln (Kachelnähte,
+        Auflösungsverlust).</li>
+      <li><strong>Gesicht:</strong> die 62 Gesichtsknochen des Originals (Lippen, Lider, Brauen, Wangen, Ohren, Nase, Kinn).</li>
+      <li><strong>Haar und Kleider</strong> mit ihren eigenen Gewichten, ohne Umrechnen auf Genesis' Körperhaut.</li>
+    </ul>
+  </div>
+  <div>
+    <strong>Was wir verlören oder bauen müssten</strong>
+    <ul>
+      <li><strong>Regler:</strong> keine für Körper, Gesicht und Ausdrücke — das Modell hat selbst keine.</li>
+      <li><strong>Bibliothek:</strong> Kleider und Haar passen auf keine andere Figur und stehen nicht in der Genesis-Bibliothek.</li>
+      <li><strong>Animation:</strong> das BVH-Retarget kennt nur die Ziele <code>def</code> und <code>uma</code>; für ARP ein
+        neues Ziel mit Knochenkarte — oder die Übertragung auf DEF.</li>
+      <li><strong>Lippen- und Ausdruckssteuerung:</strong> kommt bisher aus Genesis-Morphs; für das Original neu.</li>
+      <li><strong>Aufwand:</strong> eine weitere Figurart zieht sich durch Szene, Charakter-Seite, Studio und Theatre. Wie
+        viel das ist, ist <strong>nicht gemessen</strong>; ich rechne mit deutlich mehr als dem Import.</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Was „Mesh to 3D" verliert — und was nicht</h3>
+<ul>
+  <li><strong>Topologie:</strong> Das Netz der Figur ist das von Genesis, nicht die 54.369 Punkte des Körpers
+    (Dichte im Vergleich: Abschnitt 1).</li>
+  <li><strong>Form:</strong> angenähert über Regler plus Eigenmorph. <strong>Gemessen:</strong> an den zugeordneten
+    Punktpaaren (ohne Ausreißer) RMS 0,78 / 0,93 mm; über <em>alle</em> Körperpunkte Median 0,99 mm, p95 14,4 mm, 12,3 %
+    über 8 mm — die große Abweichung sitzt an Fingern, Brustwarzen, Lippen, Schritt und Zehen, wo Genesis anders gebaut
+    ist (Tabelle unten, Wärmekarte).</li>
+  <li><strong>Textur:</strong> wird auf die Genesis-Kacheln umgebacken (8192² Original → vier UDIM-Kacheln 1001–1004; Nägel und Nagellack bleiben Genesis). Der Verlust ist
+    <strong>noch nicht gemessen</strong>: Das Backen steht im laufenden Import noch aus.</li>
+  <li><strong>Gesichtsknochen:</strong> die 62 Gesichtsgruppen des Originals entfallen; Genesis liefert Ausdrücke über Morphs.</li>
+  <li><strong>Augen und Mund:</strong> die Augäpfel und der Mund sind die von Genesis; vom Original wird die Iris ins
+    Genesis-Augenbild übertragen (Schritt „Augen"). Zähne und Zunge des Originals werden nicht übernommen.</li>
+  <li><strong>Gewichte:</strong> die der .blend für Kleider und Haar entfallen; es gelten Genesis' Körperhaut-Gewichte
+    (3 nächste Körperpunkte) bzw. <code>head</code> für das Haar.</li>
+  <li><strong>Nicht verloren:</strong> die Geometrie von Kleidern und Haar — sie werden in die Ruhelage gedreht, nicht neu gebaut.</li>
+</ul>
+
+<h2>4. Messung des Genesis-Wegs</h2>
+<p>
+  Auftrag „Mesh to 3D" 2026.10.08.11.34.04 im Import vom 08.10.2026 (Körper umpost, nackt, Kleidung „wie Haut", Gesicht und
+  Eigenmorph an). <strong>Zwischenstand:</strong> Haut backen, Stücke und Modell standen beim Schreiben noch aus; diese
+  Seite wird mit ihren Zahlen ergänzt.
+</p>
+<table class="doku">
+  <thead><tr><th>Größe</th><th>Wert</th><th>Was sie misst</th></tr></thead>
+  <tbody>
+    {% for groesse, wert, beleg in messung %}
+    <tr><td>{{ groesse }}</td><td><strong>{{ wert }}</strong></td><td>{{ beleg }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>5. Entscheidung und Offenes</h2>
+<ul>
+  <li><strong>Empfehlung:</strong> beim Genesis-Weg (A) bleiben — er liefert, was verlangt war (Regler, Bibliothek, Kategorien im
+    UI), und die Form passt über die ganze glatte Oberfläche (Median unter 1 mm); die Abweichungen stehen an den
+    Details, die Genesis anders baut (Finger, Brustwarzen, Lippen, Schritt, Zehen). Konzept C nur, wenn Original und Genesis-Figur im Bild (gleiche Kamera)
+    oder die umgebackene Haut nicht genügen; ein <strong>Zwischenweg</strong> wäre, nur das Gesicht oder die Haut
+    nachzubessern — billiger als eine neue Figurart.</li>
+  <li><strong>Offen:</strong> Haut backen (Original-Farbe gegen Genesis-Kachel an festen Hautstellen, Nähte); Sitz von Hemd,
+    Shorts und Haar auf der Figur und auf einer zweiten Genesis-Figur; Bild Original gegen Genesis aus derselben Kamera
+    (Vorn, Seite, Gesicht — die Original-Ansichten oben dienen als Referenz); die Gegenprobe ohne Umposen;
+    Aufwand von C; <strong>Herkunft und Lizenz des Modells</strong> vor jedem Weitergeben.</li>
+  <li><strong>Eintrag in „Andere Modelle":</strong> das Modell steht dort als Zeile und Karte mit denselben Eckdaten
+    (<a href="/hilfe/architektur/andere-modelle/#koerper-cute_girl_ARP">cute girl</a>).</li>
+</ul>

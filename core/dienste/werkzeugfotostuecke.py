@@ -125,7 +125,7 @@ class Werkzeugfotostuecke:
          "bilanz = G9eigenstueck.bauen('A:/…/mein_shirt.obj', 'Mein Shirt', ordner='tops', farbe=None, einheit='auto', oben='y')\n"
          "bilanz['stueck']      # Kennung in der Garderobe (eigen_… slug aus dem .duf-Namen)",
          [(G + 'eigenstueck.py', 'G9eigenstueck'), (G + 'objleser.py', 'G9objleser'), (G + 'mbkategorien.py', 'G9mbkategorien')],
-         'Schreibt in die eigene Bibliothek (Hersteller EIGEN, 3DObjects/Genesis9/eigene_stuecke/<Kennung>) und lässt die '
+         'Schreibt in die eigene Bibliothek (Hersteller EIGEN, 3DObjects/models/Genesis9/eigene_stuecke/<Kennung>) und lässt die '
          'Garderobe neu lesen (G9mbstuecke.vergessen). Die Garderobe schlüsselt nach dem geslugten .duf-Namen, nicht nach der '
          'Netzkennung des Schreibers: wer das Stück sofort holen will, nimmt stueck aus der Bilanz. Die Genesis-Lage ist die '
          'der Grundfigur G9formung({}) auf Stufe 0: Meter, Y oben, Füße 0. Ein Stück, das schon in Genesis-Lage liegt '

@@ -39,6 +39,23 @@ class Standvorabkleider:
     def _fotostuecke(job):
         return ((job.ergebnis or {}).get('fotostuecke') or {}).get('stuecke') or {}
 
+    #: Unter so vielen cm² gilt ein Stück der Segmentierung (Oberteil, Hose, Socken/Schuhe) als nicht vorhanden (Rand, Schatten, Falschtreffer). Gemessen: Sapiens findet an bekleideten Aufträgen Oberteil
+    #: 7.373, Hose 1.325, Socken 1.978 cm² (`…11.11.44`), an N1 (nackte Person) 0,0 / 0,0 / 0,0 — die Schwelle liegt weit von beiden.
+    NACKT_CM2 = 30.0
+
+    @classmethod
+    def nackt(cls, job):
+        """True, wenn die Segmentierung in den Fotos KEINE Kleidung fand (Oberteil, Hose, Socken/Schuhe je unter `NACKT_CM2`) und es auch kein Fotostück gibt: die Person ist nackt.
+        08.10.2026, N1 (`…22.53.48`, Fotos einer nackten Person): ohne Fotostück war das Startrezept LEER (`modell` gab None), und das frische Modell trug das Standardhemd `g9_base_shirt` — Runde 0 zeigte ein
+        schwarzes Hemd, und das Hemd schloss den Rumpf von der Fotohaut aus (Deckung der Rumpfkachel 3,6 %). Ohne Segmentierung (kein Befund) bleibt es beim alten Verhalten: kein Urteil."""
+        if cls._fotostuecke(job):
+            return False
+        stuecke = ((((job.ergebnis or {}).get('segmentierung') or {}).get('kennzahlen')) or {}).get('stuecke') or {}
+        namen = ('Oberteil', 'Hose / Rock', 'Socken / Schuhe')
+        if not all(n in stuecke for n in namen):
+            return False
+        return all(float((stuecke[n] or {}).get('cm2') or 0.0) < cls.NACKT_CM2 for n in namen)
+
     @classmethod
     def stuecke(cls, job):
         """Garderobenkennungen der Stücke in der Reihenfolge von `Kleiderwahl.FOTO_REIHE` (das Oberteil nach der Option `koerper.oberteil`) — leer ohne Stücke."""
@@ -116,13 +133,15 @@ class Standvorabkleider:
 
     @staticmethod
     def haarfarbe(job):
-        """Die Haarfarbe der FOTOS (RGB 0–1) aus dem Schritt „Segmentierung" (`kennzahlen.haarfarbe`, Median der Pixel der Sapiens-Klasse Haar) — None ohne diesen Schritt oder ohne Haar im Foto."""
+        """Die Haarfarbe der FOTOS (RGB 0–1) aus dem Schritt „Segmentierung" (Median der Pixel der Sapiens-Klasse Haar je Foto, `Haarfarbwahl`: Fotos mit Blaustich zählen nicht) — None ohne diesen Schritt oder ohne Haar im Foto."""
         from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
         try:
             daten = json.loads(Engine2d3dKleiderablage(job.kennung).segmentierung('segmentierung.json').read_text(encoding='utf-8'))
         except (OSError, ValueError):
             return None
-        rgb = ((daten.get('kennzahlen') or {}).get('haarfarbe') or {}).get('rgb')
+        from .haarfarbwahl import Haarfarbwahl
+        rgb = Haarfarbwahl.waehlen(daten.get('bilder'))[0]        # Fotos mit Blaustich zählen nicht (N1, 08.10.2026); Aufträge ohne Haarfarbe je Foto: das Mittel der Kennzahlen
+        rgb = rgb or ((daten.get('kennzahlen') or {}).get('haarfarbe') or {}).get('rgb')
         return [float(c) / 255.0 for c in rgb[:3]] if rgb else None
 
     @classmethod
@@ -162,15 +181,22 @@ class Standvorabkleider:
         """`ModellMitKleidern.als_dict()` mit genau diesen Stücken und der gewählten Frisur — None ohne Stücke. `ohne_haar`: kein Haar im Modell (das Standmodell trägt dann die Haarkappe, `Haarkappe`).
         `modell`: ein anderes Modell, an dem die Aufrufe laufen (`Rezeptaufzeichnung` — dieselben Aufrufe als Text, `rezept`). `hell`: siehe `_haar_faerben`."""
         liste = cls.stuecke(job)
-        if not liste:
+        if not liste and not cls.nackt(job):
             return None
         from Genesis9.modellmitkleidern import ModellMitKleidern
         from iterationen2d3d.kleiderwahl import Kleiderwahl
-        modell = (modell if modell is not None else ModellMitKleidern()).kleid_nur(*liste, *cls.uhren(job))
-        if Kleiderwahl.OBERTEIL in liste:
-            cls._hemd_faerben(modell, Kleiderwahl.OBERTEIL, cls.hemdfarbe(job))
+
+        from .iterationsoptionen import Iterationsoptionen
+        modell = modell if modell is not None else ModellMitKleidern()
+        uhren = cls.uhren(job)
+        if not liste and not uhren:
+            modell.kleid_keins()                        # nackte Person ohne Zubehör: nichts anziehen — `kleid_aus(Hemd)` genügte nicht, sonst spränge die Grundsorte ein (`ModellMitKleidern.kleid_keins`)
         else:
-            modell.kleid_aus(Kleiderwahl.OBERTEIL)
+            modell.kleid_nur(*liste, *uhren)
+            if Kleiderwahl.OBERTEIL in liste:
+                cls._hemd_faerben(modell, Kleiderwahl.OBERTEIL, cls.hemdfarbe(job))
+            else:
+                modell.kleid_aus(Kleiderwahl.OBERTEIL)
         frisur = None if ohne_haar else cls.frisur(job)
         if frisur:
             modell.haar_nur(frisur[0])
@@ -179,6 +205,9 @@ class Standvorabkleider:
             cls._haar_faerben(modell, frisur[0], frisur[1], cls.haarfarbe(job), hell)
         else:
             modell.haar_keins()                         # ohne Wahl kein Standardhaar (`kin_hair`)
+        laenge = Iterationsoptionen.haarlaenge(job)
+        if not laenge.ist_vorgabe():                    # die Länge des Herrenhaars (Option `iterationen.haar_laenge_*`) steht im Startrezept, wenn sie nicht die Vorgabe ist — die Runden bauen das Haar aus dem Modell
+            modell.haar_laenge(laenge.unten_cm, laenge.oben_cm)
         return modell.als_dict()
 
     @staticmethod
@@ -207,7 +236,7 @@ class Standvorabkleider:
     @classmethod
     def rezept(cls, job):
         """Die Haltung der Fotos (`haltungszeilen`) und dieselben Aufrufe wie `modell`, als Zeilen eines Rezepts (`m.kleid_nur(…)`, `m.haar_nur(…)`, Farben) — die Figur, die der Stand vor den Iterationen
-        zeigt (Haarkappe ausgenommen: im Rezept ist es die gewählte Frisur, getönt für den Render, `Haarumbau.KARTEN_HELL`). Leer ohne Fotostücke. Die Ausgangslage der Nachbesserung (`Edgar.Rezeptkatalog`)."""
+        zeigt (Haarkappe ausgenommen: im Rezept ist es die gewählte Frisur, getönt für den Render, `Haarumbau.KARTEN_HELL`). Leer ohne Fotostücke — außer die Person ist nackt (`nackt`): dann legt das Rezept das Standardhemd ab. Die Ausgangslage der Nachbesserung (`Edgar.Rezeptkatalog`)."""
         from Genesis9.modellmitkleidern import ModellMitKleidern
 
         from .haarumbau import Haarumbau
@@ -222,7 +251,7 @@ class Standvorabkleider:
         """Gehört in die Fassung des Standmodells: die Stücke, die Frisur und der Stand ihres Baus (Netz, Maske, Figur) — None ohne Stücke. Ein neu gebautes Stück unter demselben Namen
         ändert den Stand, die Bühne lädt dann die neue Datei (`artefakte-benennen`)."""
         liste = cls.stuecke(job)
-        if not liste:
+        if not liste and not cls.nackt(job):
             return None
         # Die Hemdfarbe ist das Mittel der Textur des Fotostücks: ändert sie sich, ändert sich `stand` — sie selbst wird nicht gerechnet (die Fassung wird bei jeder Zustandsabfrage gebildet).
         from ..daten.engine2d3dkleiderablage import Engine2d3dKleiderablage
@@ -231,4 +260,4 @@ class Standvorabkleider:
         from .iterationsoptionen import Iterationsoptionen
         ablage = Engine2d3dKleiderablage(job.kennung)
         return [liste, cls.uhren(job), cls._fotostuecke(job).get('oberteil'), ((job.ergebnis or {}).get('fotostuecke') or {}).get('stand'), cls.frisur(job), cls.frisurregler(job), cls.haarfarbe(job),
-                cls.GLEICH, Haarkappe.fingerabdruck(ablage), Iterationsoptionen.haarumbau(job), Herrenhaar.fingerabdruck(ablage)]
+                cls.GLEICH, Haarkappe.fingerabdruck(ablage), Iterationsoptionen.haarumbau(job), Herrenhaar.fingerabdruck(ablage, Iterationsoptionen.haarlaenge(job))]

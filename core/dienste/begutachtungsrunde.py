@@ -24,7 +24,6 @@ import time
 
 import numpy as np
 from django.utils import timezone
-from Genesis9.haltungshaut import G9haltungshaut
 from Genesis9.rezeptumgebung import Rezeptumgebung
 
 from .ansichtsrender import Ansichtsrender
@@ -37,12 +36,13 @@ from .begutachtungsstand import Begutachtungsstand
 from .engine2d3dkleidergrundfigur import Engine2d3dKleidergrundfigur
 from .engine2d3dkleiderprompts import Engine2d3dKleiderprompts
 from .haarabgleich import Haarabgleich
-from .haarzonen import Haarzonen
+from .haltungsansichten import Haltungsansichten
 from .haltungsfotos import Haltungsfotos
 from .iterationsbild import Iterationsbild
 from .iterationsnetznote import Iterationsnetznote
 from .iterationsnote import Iterationsnote
 from .iterationsoptionen import Iterationsoptionen
+from .iterationsoptionenfoto import Iterationsoptionenfoto
 from .iterationsreferenz import Iterationsreferenz
 from .iterationsrunde import Iterationsrunde
 from .pruefbilder import Pruefbilder
@@ -127,7 +127,6 @@ class Begutachtungsrunde:
         from Genesis9.modellrezept import G9rezept
 
         from .genesishaarrender import Genesishaarrender
-        from .hosenteil import Hosenteil
         from .kleidermodellbau import Kleidermodellbau
         start = time.perf_counter()
         runde = Begutachtungsausgang.RUNDE if Begutachtungsausgang.verlangt(naechste) else self._letzte_runde() + 1
@@ -145,15 +144,13 @@ class Begutachtungsrunde:
                 fehler = str(f)
                 logger.warning('2D3D Kleider %s: Rezept der Runde %d: %s', self.job.kennung, runde, fehler)
         self._melden(0.1, 'Runde %d: Modell bauen' % runde)
-        # Gebaut in der A-Pose (GLB, Bühne); Render, Note, Befund und Fotoprojektion in der Haltung der Fotos — gehäutet,
-        # damit die Ärmel den Armen folgen (`G9haltungshaut`, 01.10.2026).
+        # Gebaut in der A-Pose (GLB, Bühne); Render, Note, Befund und Fotoprojektion in der Haltung der Fotos — gehäutet, damit die Ärmel den Armen folgen (`G9haltungshaut`, 01.10.2026),
+        # mit der Hose aus dem Körpernetz (`Hosenteil`, 04.10.2026) und je Foto in dessen eigener Haltung, wo sie sich unterscheidet (`Haltungsansichten`, 08.10.2026).
         bau = Kleidermodellbau(self.job.stellung(), None, koerper=modell.koerper, kacheln=self.werkzeug.kacheln(), ablage=self.ablage,
                                haarumbau=Iterationsoptionen.haarart(self.o.get('haarumbau')))
-        teile = G9haltungshaut(bau.stellung, modell.drehung(), bau.boden).posieren(
-            Haarzonen.anwenden(bau.teile(modell), modell.farben))           # Haarfarbe je Kopfzone (02.10.2026)
-        # Die Hose aus dem Körpernetz wie auf der Bühne und im Film (`Hosenteil`, 04.10.2026): Die drapierte GarmentCode-Hose klaffte im Schritt und trug
-        # das Streifenbild rot an der Innennaht; eine Änderung an der Standhose kam in den Iterationsbildern nie an.
-        teile = Hosenteil.ersetzen(teile, self.ablage.arbeit('runden') / ('runde_%04d' % runde))
+        ansichten = Haltungsansichten.bauen(modell, bau, referenzen, z.get('haltung_foto'), self.ablage.arbeit('runden') / ('runde_%04d' % runde),
+                                            je_foto=Iterationsoptionenfoto.haltung_je_foto(self.job))
+        teile = ansichten.teile
         z['modell_hoehe'] = round(float(max(float(np.asarray(t['punkte'])[:, 1].max()) for t in teile)), 4)
         # Note in der Auflösungsstufe, Befund auf 128 × 192, Renders mindestens in Prüfbreite (Edgar 02.10.2026).
         breite = self.stufe.breite(z)
@@ -170,12 +167,12 @@ class Begutachtungsrunde:
             # will (die Schicht liegt danach neben der Bibliothek, die Teile bekommen ihre Texturen neu),
             # 3. der Render mit Texturen, der benotet wird (30.09.2026, nachts).
             for r in referenzen:
-                messung.masken(render, teile, r, aus / ('kennung_%+04d.png' % int(round(r.winkel))), befundgroesse)
+                messung.masken(render, ansichten.von(r), r, aus / ('kennung_%+04d.png' % int(round(r.winkel))), befundgroesse)
             self._melden(0.25, 'Runde %d: Fotoprojektion (Haut je Körper einmal, Stücke auf Wunsch: %s)' % (
                 runde, ', '.join(sorted(getattr(modell, 'fotowuensche', None) or [])) or '–'))
-            fototextur = self.werkzeug.fototextur(modell, teile, referenzen, render, bau, aus)
+            fototextur = self.werkzeug.fototextur(modell, teile, referenzen, render, bau, aus, ansichten)
             pfade, faktoren = Ansichtsrender.rendern(render, teile, referenzen, aus, groesse, self._melden, runde,
-                                                     abgleichen=self.o.get('belichtung') != 'aus')   # Belichtung je Ansicht an das Foto (06.10.2026)
+                                                     abgleichen=self.o.get('belichtung') != 'aus', teile_von=ansichten.von)   # Belichtung je Ansicht an das Foto (06.10.2026)
             for r, pfad, faktor in zip(referenzen, pfade, faktoren):
                 bild = Iterationsbild.aus_render(pfad)
                 fein = bild if breite == Iterationsbild.BREITE else Iterationsbild.aus_render(

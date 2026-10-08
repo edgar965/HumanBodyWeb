@@ -3,18 +3,19 @@
 
 Edgar: „mache einen neuen Tab, wo du den Workflow der 2D3D-Erkennung machst, mit allen Klassen und allen Optionen (z. B. Blender) —
 ich brauche grafische Klassen mit Entscheidungsbäumen und Infos, was jeder Schritt kostet an Zeit". Hier werden die Teile
-zusammengesteckt: die Kette der acht Schritte (`Workflowstrecke`), die Entscheidungsbäume des Laufs und der Runde
-(`Workflowlauf`, `Workflowrunde`, `Workflowrundebau`), der Fluss einer Runde (`Workflowfluss`) und die Klassenkarten
-(`Workflowkarten`). Die Quellen der Zeiten werden in der Reihenfolge nummeriert, in der sie auf der Seite zuerst stehen.
+zusammengesteckt: die Kette der elf Schritte (`Workflowstrecke`), die Entscheidungsbäume des Laufs und der Runde
+(`Workflowlauf`, `Workflowrunde`, `Workflowrundebau`, darin `Workflowkleidung` und `Workflowdrapieren`), der Fluss einer Runde (`Workflowfluss`), die Klassenkarten
+(`Workflowkarten`) und seit 06.10.2026 die technischen Details (`Architektur2d3dtechnik`). Die Quellen der Zeiten werden in der Reihenfolge nummeriert, in der sie auf der Seite zuerst stehen.
 """
 
+from .architektur2d3dtechnik import Architektur2d3dtechnik
+from .stoffsolverumfang import Stoffsolverumfang
 from .workflowfluss import Workflowfluss
 from .workflowkarten import Workflowkarten
 from .workflowlauf import Workflowlauf
 from .workflowquellen import Workflowquellen
 from .workflowrunde import Workflowrunde
 from .workflowrundebau import Workflowrundebau
-from .stoffsolverumfang import Stoffsolverumfang
 from .workflowstrecke import Workflowstrecke
 from .workflowzeichner import Workflowzeichner
 
@@ -64,4 +65,5 @@ class Architektur2d3dworkflow:
             'stoffsolver': {'zeilen': Stoffsolverumfang.zeilen(), 'zaehlung': Stoffsolverumfang.zaehlung(),
                             'quelle': Stoffsolverumfang.QUELLE},
             'quellen': [{'nr': n, 'text': q} for n, q in quellen.liste()],
+            'technik': Architektur2d3dtechnik.kontext(),
         }

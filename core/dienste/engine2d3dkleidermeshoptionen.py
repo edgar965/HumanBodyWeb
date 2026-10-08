@@ -150,11 +150,15 @@ class Engine2d3dKleidermeshoptionen:
             ('trellis2', 'TRELLIS.2 — ein Foto (Vorgabe)'),
             ('pixal3d', 'Pixal3D — ein Foto, Merkmale per Rückprojektion (Tencent ARC)'),
             ('pixal3d_mv', 'Pixal3D Mehrbild — vorne/hinten/links/rechts mit Kameras'),
+            ('hunyuan3d_2', 'Hunyuan3D-2.0 — ein Foto, eigene Texturmalerei (Tencent, Forschungslizenz)'),
+            ('hunyuan3d_2mv', 'Hunyuan3D-2mv — Mehrbild vorne/hinten/links/rechts, eigene Texturmalerei (Tencent, Forschungslizenz)'),
         ], 'hinweis': 'TRELLIS.2 (Microsoft, MIT) ist das Modell des Space `microsoft/TRELLIS.2`. Pixal3D (TencentARC, MIT, '
                       'SIGGRAPH 2026) baut auf TRELLIS.2 auf, legt die Bildmerkmale aber pixelgenau in das 3D-Gitter und kennt '
                       'einen echten Mehrbild-Modus. Es läuft in einer eigenen Umgebung (`python10_pixal`) und braucht eigene '
                       'Gewichte (46 GB). Die Felder unten wechseln mit dem Modell. Ob Pixal3D auf unseren Fotos besser wird, '
-                      'ist nicht gemessen.'},
+                      'ist nicht gemessen. Hunyuan3D (seit 07.10.2026 hier wählbar, auf Edgars Wunsch) läuft im selben Runner wie TRELLIS.2 '
+                      '(`python10_mesh`); die Sampler-Regler unten gelten dort nicht, die Textur „ki" ist seine eigene Malerei. '
+                      'Die Forschungslizenz von Tencent gilt nicht in der EU, in Großbritannien und Südkorea.'},
         {'schluessel': 'aufloesung', 'titel': 'Resolution', 'art': 'wahl', 'vorgabe': 'hoch', 'werte': [
             ('schnell', '512 — schnell (Pixal3D: 1024)'),
             ('mittel', '1024'),

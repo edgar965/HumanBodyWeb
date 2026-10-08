@@ -48,6 +48,46 @@ class Engine2d3dKleiderkoerperoptionen:
                        'Randy 58 % und 14 Regler, Generisch 70 % und 15 — bei Personen mit Shirt stehen oft Gelenkregler (Handgelenk, Knöchel, Schienbein) am Anschlag, ohne dass der Körper kaputt ist.',
         },
         {
+            'schluessel': 'naht',
+            'titel': 'Kopf an den Körper nähen',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — die Kappe am Hals des Kopfnetzes fällt weg, ein Band aus Dreiecken verbindet Körper- und Kopfring (Vorgabe)'),
+                ('aus', 'Aus — Körper und Kopf werden nur an der Ebene getrennt, die Kappe des Kopfnetzes bleibt, zwischen beiden klafft eine Lücke (Stand bis 07.10.2026)'),
+            ],
+            'hinweis': 'Wirkt nur mit einem Kopfnetz (Schritt „Kopf“, Häkchen an). Das Kopfnetz aus dem Kopf-Ausschnitt endet am Hals in einer geschlossenen, geneigten Kappe; ohne Naht blieb ihr vorderer Teil als '
+                       'Innenfläche im Hals und zwischen Körper und Kopf stand eine Lücke (`Meshfigurnaht`). Das Band folgt dem Körperring an der Schnittebene (bis 10 cm von der Halsachse — ein Hemdkragen zählt mit) '
+                       'und dem offenen Rand der Halsröhre. Ob es die Figur verbessert, ist gemessen offen: `Edgar - Hunyan Kopf` stand mit Naht bei 10, ohne bei 9 Reglern am Anschlag.',
+        },
+        {
+            'schluessel': 'landmarkmorphe',
+            'titel': 'Brauen-, Mund- und Nasenmorph aus den Landmarken',
+            'art': 'wahl',
+            'vorgabe': 'an',
+            'werte': [
+                ('an', 'An — im Schritt „Rest“ entstehen drei neue Morphe (Brauen, Mund, Nase), die den Rest über die Reglergrenzen hinaus holen (Vorgabe)'),
+                ('aus', 'Aus — nur die Regler und der Rest-Morph (Stand bis 07.10.2026)'),
+            ],
+            'hinweis': 'Die Gesichtsregler für Lippen und Nase stehen bei einem Netz wie „Edgar 10“ zu zwei Dritteln am Anschlag, und die Landmarken der Figur liegen 1,5 bis 3,3 mm neben denen des Netzes '
+                       '(innerer Mundspalt 2,8 gegen 0,4 mm). Je Bereich entsteht ein Gauß-Feld über die Landmarken (`Meshfigurlandmarkmorphe`: Ziel = Netz-Landmarke auf der Netzfläche, '
+                       'höchstens 8 mm je Landmarke), abgelegt als eigener Morph mit eigenem Regler (Wert 1,0 in der Stellung). Nur mit Netz-Landmarken; das Gesichtsoval (Haar, Bart) bleibt draußen. '
+                       'Die Lider sind seit 08.10.2026 nicht mehr im Morph: das Kopfnetz hat gemalte, halb geschlossene Augen, und die Lidränder darauf zu ziehen setzte die Lider auf die Augäpfel (weißer Augapfel stand darunter heraus).',
+        },
+        {
+            'schluessel': 'kopfstreckung',
+            'titel': 'Kopfnetz senkrecht strecken (%)',
+            'art': 'zahl',
+            'vorgabe': 0,
+            'min': 0,
+            'max': 25,
+            'schritt': 1,
+            'hinweis': 'Das Kopfnetz aus dem Kopf-Ausschnitt ist an Edgars Fotos um rund 11 % zu flach (Kamera über Kopfnetz-Landmarken gegen Foto-Landmarken angepasst: Streckung 1,111; Gesichtshöhe −15 und Nase–Kinn −16 mm, '
+                       'die Breiten stimmen auf 1–2 mm). Mit 11 sank der Profil-RMS gegen das Seitenfoto von 7,5 auf 1,7 mm und der mittlere Maßfehler von 9,5 auf 7,2 %; die Breiten wurden dabei 5 mm kleiner, weil die '
+                       'Einpassung einen Maßstab für Breite und Höhe wählt. 0 = aus (Vorgabe): der Wert hängt vom Foto, ein falscher Wert verlängert ein richtiges Gesicht. Wirkt nur mit Kopfnetz (Schritt „Kopf“, Häkchen an) '
+                       'und erst, wenn „Körper“ neu rechnet; `kopf/mesh.glb` bleibt, die Kette bekommt `kopf/mesh_gestreckt_<Zehntelprozent>.glb`.',
+        },
+        {
             'schluessel': 'oberteil',
             'titel': 'Oberteil',
             'art': 'wahl',
@@ -135,6 +175,10 @@ class Engine2d3dKleiderkoerperoptionen:
             aus['tor'] = roh['tor']
         if roh.get('oberteil') in ('bibliothek', 'foto'):
             aus['oberteil'] = roh['oberteil']
+        if roh.get('naht') in ('an', 'aus'):
+            aus['naht'] = roh['naht']
+        if roh.get('landmarkmorphe') in ('an', 'aus'):
+            aus['landmarkmorphe'] = roh['landmarkmorphe']
         for e in cls.KATALOG:
             if e['art'] == 'zahl' and roh.get(e['schluessel']) is not None:
                 try:

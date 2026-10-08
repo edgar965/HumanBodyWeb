@@ -13,7 +13,8 @@ u"""Ortsmorph, Sichtkörper, Ringmaß, Hülle, Haar-Operationen als Rezept (30.0
    ValueError.
 
 Sabotage-Gegenproben: in `G9ortsmorph._sektor` das `% 360` weglassen → Fall 1 rot (Sektor über −180/180 zerfällt);
-in `Sichtkoerper.rand` `weg[~drin[:, 0]] = 0.0` weglassen → Fall 2 rot (Start außerhalb liefert einen Weg).
+in `Sichtkoerper.rand` `weg[~drin[:, 0]] = 0.0` weglassen → Fall 2 rot (Start außerhalb liefert einen Weg);
+in `G9huellenmorph.deltas` `* ~frei` streichen → Fall 4c rot (ohne Seitenansicht zieht die Tiefe bis zum Deckel).
 """
 import numpy as np
 from django.test import SimpleTestCase
@@ -117,6 +118,21 @@ class OrtsmorphTest(SimpleTestCase):
         self.assertTrue(brief['tiefe'])
         rundum, _brief = G9huellenmorph.deltas(s, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01)
         self.assertGreater(float(rundum[0][0][0]), 0.1)         # ohne `tiefe` wandern auch die Flanken
+
+    def test_4c_huelle_ohne_seitenansicht_zieht_nicht_in_der_tiefe(self):
+        # Fotos nur vorne/hinten (08.10.2026, N1): z geht nicht in den Sichtkörper ein, der Strahl endet erst am Strahlmaximum — der Deckel von 15 cm zog Vorder- und Rückseite hinaus.
+        maske = np.zeros((60, 40), dtype=bool)
+        maske[2:58, 10:30] = True
+        s = Sichtkoerper([(0.0, maske), (180.0, maske)], hoehe=1.0)
+        kaefig = np.array([[0.05, 0.5, 0.0], [-0.05, 0.5, 0.0], [0.0, 0.5, 0.05], [0.0, 0.5, -0.05]])
+        deltas, brief = G9huellenmorph.deltas(s, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01)
+        d = deltas[0]
+        self.assertEqual(float(np.abs(d[2:]).max()), 0.0)       # vorn und hinten: keine Ansicht begrenzt die Tiefe
+        self.assertGreater(float(d[0][0]), 0.1)                 # die Breite kennen vorne/hinten: der Strahl in x endet am Umriss
+        self.assertEqual(brief['unbegrenzt'], 2)
+        mit_seite = Sichtkoerper([(0.0, maske), (180.0, maske), (90.0, maske)], hoehe=1.0)
+        d2 = G9huellenmorph.deltas(mit_seite, [kaefig], 0.0, 1.0, np.array([0.0, 0.5, 0.0]), staerke=1.0, weich=0.01)[0][0]
+        self.assertGreater(float(d2[2][2]), 0.1)                # mit Seitenansicht zieht die Vorderseite zum Rand
 
     def test_4b_huellenabstand_zaehlt_nur_vorder_und_rueckseite(self):
         from iterationen2d3d.befundmessung import Befundmessung

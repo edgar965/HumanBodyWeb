@@ -1,0 +1,56 @@
+/* Hilfe -> Architektur -> Genesis und ARP Modell: volle Breite statt der 960px-Vorgabe von `.doku-seite`
+ * (`~/.claude/rules/volle-breite.md`: keine zentrierte Box) — die Tabellen haben Fließtext in mehreren Spalten.
+ */
+.doku-seite.ag-breit {
+    max-width: none;
+}
+
+.ag-breit .ag-fluss {
+    white-space: pre;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.ag-breit .ag-fehlt {
+    color: var(--danger, #f14c4c);
+    font-weight: 600;
+}
+
+.ag-breit table.doku td,
+.ag-breit table.doku th {
+    vertical-align: top;
+}
+
+/* ARP Modell: drei Bilder nebeneinander, darunter ein kleiner Hinweis */
+.ag-breit .ag-bilder {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0 4px;
+}
+
+.ag-breit .ag-bilder figure {
+    margin: 0;
+}
+
+.ag-breit .ag-bilder img {
+    display: block;
+    height: 380px;
+    width: auto;
+    max-width: 100%;
+    border-radius: 6px;
+}
+
+.ag-breit .ag-bilder figcaption,
+.ag-breit .ag-bildhinweis {
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+/* ARP Modell, Konzept C: Gewinn und Verlust in zwei Spalten, auf schmalen Bildschirmen untereinander */
+.ag-breit .ag-spalten {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+}

@@ -19,7 +19,7 @@ und gemessen stand `figur.glb` von `.51` dort in der Ruhelage verzerrt: die geh�
 für Blender).
 
 Weggelassen: Feuchtfilm und Träne der Augen (im Browser durchsichtig; deckend gezeichnet verdecken sie die Iris),
-Normalen- und Rauheitsbilder (die Bühne soll schnell laden).
+Rauheitsbilder und alle Normalenkarten außer denen der Haut (Hautkacheln und Arme: `Standhaut`, `Standhandhaut`; die Bühne soll schnell laden).
 """
 
 import io
@@ -29,8 +29,7 @@ import logging
 import numpy as np
 from Genesis9.rigglb import G9rigglb
 
-from .standhandhaut import Standhandhaut
-from .standhautdetail import Standhautdetail
+from .standhaut import Standhaut
 from .standhose import Standhose
 
 logger = logging.getLogger('core')
@@ -122,15 +121,15 @@ class Standmodellglb(G9rigglb):
         self.zahl['bilder'] += 1
         return self._bilder[schluessel]
 
-    def _bild(self, albedo=None, alpha=None, alphawert=1.0):
-        """Index der glTF-Textur — je (Bild, Maske, Deckkraft) EINMAL in der Datei; None ohne beides."""
+    def _bild(self, albedo=None, alpha=None, alphawert=1.0, kante=None):
+        """Index der glTF-Textur — je (Bild, Maske, Deckkraft, Kante) EINMAL in der Datei; None ohne beides. `kante`: längste Kante in Pixeln (Vorgabe `KANTE`/`KANTE_MASKE`; die Hautkacheln nehmen `Standhaut.KANTE`)."""
         if albedo is None and alpha is None:
             return None
-        schluessel = (str(albedo), str(alpha), round(float(alphawert), 3))
+        schluessel = (str(albedo), str(alpha), round(float(alphawert), 3), kante)
         if schluessel in self._bilder:
             return self._bilder[schluessel]
         from PIL import Image
-        kante = self.KANTE_MASKE if alpha else self.KANTE
+        kante = kante or (self.KANTE_MASKE if alpha else self.KANTE)
         if albedo is not None:
             with Image.open(albedo) as roh:
                 bild = roh.convert('RGB')
@@ -243,30 +242,9 @@ class Standmodellglb(G9rigglb):
     # ----------------------------------------------------------------- Teile
 
     def koerper(self, netz, kacheln):
-        """Der Körper je UDIM-Kachel ein Netz: das gebackene Foto (`kacheln` {1001: Pfad}), sonst die Daz-Haut der
-        ersten Gruppe der Kachel (mit ihrer Farbe)."""
-        from Genesis9.material import G9material
-        self._koerper = netz
-        dreiecke = np.asarray(netz['dreiecke'], dtype=np.int64).reshape(-1, 3)
-        uv = self._uv(netz['uv'])
-        uv[:, 0] = np.clip(uv[:, 0], 0.0, 1.0)
-        haut = self._haut(netz['haut'], len(netz['punkte']))
-        je_kachel = {}
-        for g in netz['gruppen']:
-            von = int(g['index_ab']) // 3
-            je_kachel.setdefault(int(g.get('kachel') or 1001), []).append((von, von + int(g['index_anzahl']) // 3, g))
-        for kachel, stuecke in sorted(je_kachel.items()):
-            bilder = stuecke[0][2].get('bilder') or {}
-            foto = kacheln.get(kachel)
-            albedo = foto or (G9material.datei(bilder['albedo']) if bilder.get('albedo') else None)
-            faktor = (1.0, 1.0, 1.0) if foto else self._zahl(bilder.get('farbe'), (1.0, 1.0, 1.0))
-            wahl = np.concatenate([dreiecke[a:b] for a, b, _ in stuecke])
-            hand = Standhandhaut(self).karten(netz, albedo, detail=self.hautdetail) if kachel == Standhandhaut.KACHEL and albedo else None     # Arme, Hände: Hautlinien, Falten, Sehnen und Farbe (`Handhaut`)
-            detail = (Standhautdetail.karte(self, albedo) if self.hautdetail and albedo and kachel != Standhandhaut.KACHEL and Standhautdetail.gilt(kachel, albedo)
-                      else None)                     # Beine: ruhigere Flecken, Poren und Haare (vor den Iterationen)
-            textur, normale = hand or ((detail if detail is not None else self._bild(albedo)), None)
-            self._netz('koerper__koerper__0_k%d' % kachel, netz['punkte'], wahl, netz.get('normalen'), uv, haut,
-                       textur, faktor, zweiseitig=False, normale=normale)
+        """Der Körper je UDIM-Kachel ein Netz: das gebackene Foto (`kacheln` {1001: Pfad}), sonst die Daz-Haut der ersten Gruppe der Kachel — dazu ihre Normalenkarte
+        (`Standhaut`, seit 07.10.2026 dort)."""
+        Standhaut.legen(self, netz, kacheln)
 
     def anhaenge(self, netz, augenbild=None):
         """Augen, Mund, Wimpern, Brauen (`G9koerpernetz` → `anhaenge`) — je Gruppe ein Netz; die Iris aus dem Bild

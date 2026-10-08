@@ -16,6 +16,7 @@ import { Engine2d3dKleiderbuehnenmodell } from './engine2d3dkleiderbuehnenmodell
 import { Engine2d3dKleiderbegutachtung } from './engine2d3dkleiderbegutachtung.js';
 import { Engine2d3dKleidereinstellungen } from './engine2d3dkleidereinstellungen.js';
 import { Engine2d3dKleiderfotos } from './engine2d3dkleiderfotos.js';
+import { Engine2d3dKleiderkopf } from './engine2d3dkleiderkopf.js';
 import { Engine2d3dKleideriterationen } from './engine2d3dkleideriterationen.js';
 import { Engine2d3dKleiderformen } from './engine2d3dkleiderformen.js';
 import { Engine2d3dKleidermalen } from './engine2d3dkleidermalen.js';
@@ -39,7 +40,7 @@ export class Engine2d3dKleiderseite {
     static TAKT_MS = 2000;
     static TAKT_RUHE_MS = 6000;
     static NAMEN = {
-        vorbereitung: 'Vorbereitung', netz: 'Netz', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', kleiderstuecke: 'Kleiderstücke', iterationen: 'Iterationen',
+        vorbereitung: 'Vorbereitung', netz: 'Netz', kopf: 'Kopf (optional)', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', kleiderstuecke: 'Kleiderstücke', iterationen: 'Iterationen',
         export: 'GLB mit Rig', film: 'Film', speichern: 'Speichern',
     };
     static STATUS = {
@@ -110,6 +111,7 @@ export class Engine2d3dKleiderseite {
         this.meshkarte = new Engine2d3dKleidermeshkarte(this);
         this.fotos = new Engine2d3dKleiderfotos(this);
         this.vorbereitung = new Engine2d3dKleidervorbereitung(this);
+        this.kopf = new Engine2d3dKleiderkopf(this);
         this.segmentierung = new Engine2d3dKleidersegmentierung(this);
         this.kleiderstuecke = new Engine2d3dKleiderstuecke(this);
         this._pfadstand = null;
@@ -238,9 +240,7 @@ export class Engine2d3dKleiderseite {
         this.fehlerband.auftrag(z); // der Takt löscht eine stehende Meldung NICHT mehr
         this.schritte();
         this.fotos.zeigen(z);
-        this.vorbereitung.zeigen(z);
-        this.segmentierung.zeigen(z);
-        this.kleiderstuecke.zeigen(z);
+        for (const baustein of [this.vorbereitung, this.kopf, this.segmentierung, this.kleiderstuecke]) baustein.zeigen(z);
         this.pfade(z);
         this.iterationen.zeigen(z);
         this.begutachtung.zeigen(z);

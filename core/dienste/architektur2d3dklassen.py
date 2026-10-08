@@ -24,6 +24,8 @@ class Architektur2d3dklassen:
     SATZ_HOECHSTENS = 260
     X = 'HumanBodyWeb/effekte/figur/'
     S = 'Stoffsolver/'
+    E = '2d3DIterationen/Edgar/'
+    V = 'VideoToBVH/wrappers/'
     GRUPPEN = [
         ('Ablauf', 'Prozess, Lauf und Runde', [
             (D + 'engine2d3dkleiderarbeiter.py', 'Engine2d3dKleiderarbeiter'), (D + 'engine2d3dkleiderlauf.py', 'Engine2d3dKleiderlauf'),
@@ -35,7 +37,7 @@ class Architektur2d3dklassen:
         ('Rezept schreiben', 'Regeln aus dem Befund — Ordner 2d3DIterationen', [
             (P + 'iterationmodell.py', 'IterationModell'), (P + 'iterationkleider.py', 'IterationKleider'),
             (P + 'iterationkleidring.py', 'IterationKleidring'), (P + 'iterationtextur.py', 'IterationTextur'),
-            (P + 'iterationhaare.py', 'IterationHaare'), (P + 'iterationkoerper.py', 'IterationKoerper'),
+            (P + 'iterationhaare.py', 'IterationHaare'), (P + 'haarkopffarbe.py', 'Haarkopffarbe'), (P + 'iterationhaaransatz.py', 'IterationHaaransatz'), (P + 'iterationkoerper.py', 'IterationKoerper'),
             (P + 'iterationgesicht.py', 'IterationGesicht'), (P + 'kleiderwahl.py', 'Kleiderwahl'),
             (P + 'farbangleich.py', 'Farbangleich'), (P + 'schrittsuche.py', 'Schrittsuche'),
             (P + 'reglerpruefung.py', 'Reglerpruefung'), (P + 'rundenauswahl.py', 'Rundenauswahl')]),
@@ -53,7 +55,9 @@ class Architektur2d3dklassen:
             (D + 'fotostuecke.py', 'Fotostuecke'), (D + 'fotohuelle.py', 'Fotohuelle'),
             (D + 'huellenschnitt.py', 'Huellenschnitt'), (D + 'uhrerkennung.py', 'Uhrerkennung'),
             (D + 'haarzonen.py', 'Haarzonen'), (D + 'koerperfotoprojektion.py', 'Koerperfotoprojektion'),
-            (D + 'kleidfotoprojektion.py', 'Kleidfotoprojektion')]),
+            (D + 'kleidfotoprojektion.py', 'Kleidfotoprojektion'),
+            (D + 'kopfregistrierung.py', 'Kopfregistrierung'), (D + 'kopfwarp.py', 'Kopfwarp'),
+            (D + 'kopfprojektion.py', 'Kopfprojektion'), (D + 'kopfmarken.py', 'Kopfmarken')]),
         ('Rendern und benoten', 'gegen die Fotos und gegen das Netz', [
             (D + 'genesishaarrender.py', 'Genesishaarrender'), (D + 'mitsubaszene.py', 'Mitsubaszene'),
             (D + 'iterationsreferenz.py', 'Iterationsreferenz'), (D + 'iterationsbild.py', 'Iterationsbild'),
@@ -68,10 +72,34 @@ class Architektur2d3dklassen:
             (D + 'haltungsfotos.py', 'Haltungsfotos'), (P + 'haltungsschaetzung.py', 'Haltungsschaetzung')]),
         ('Ablegen und anzeigen', 'Dateien je Runde', [
             (D + 'iterationstafel.py', 'Iterationstafel'), (D + 'iterationsrunde.py', 'Iterationsrunde')]),
+        # Ergänzt am 06.10.2026 (Seite durchgesehen, Edgar: „da ist vieles überholt"): die Klassen vom 03.–06.10.2026 — Sitz und Herkunft der Kleidung, Iteration 0 (Haar, Haut, Licht, Form),
+        # Nachbesserung durch eine KI, Standmodell und Kopie, Netz (Pixal3D, Fotoprüfung). Die Zeilen lesen den Code wie alle anderen: fehlt eine Datei, steht es in der Zeile.
+        ('Kleidung: Herkunft und Sitz', 'Genesis-Bibliothek, Fotostück, GarmentCode; Kollision, Häutung in die Haltung, Haltungsabstand', [
+            (G + 'kollision.py', 'G9kollision'), (G + 'haltungsabstand.py', 'G9haltungsabstand'), (G + 'stoff.py', 'G9stoff'),
+            (G + 'gceigenes.py', 'G9gceigenes'), (G + 'gcausfoto.py', 'G9gcausfoto'), (G + 'kleidtexturen.py', 'G9kleidtexturen'),
+            (D + 'hosenteil.py', 'Hosenteil'), (D + 'kleidhautfilter.py', 'Kleidhautfilter'), (P + 'fotoprojektion.py', 'Fotoprojektion')]),
+        ('Iteration 0: Haar, Haut, Licht, Form', 'Ausgangslage vor jeder Änderung: Herrenhaar, Hautmischung, Fotolicht, Belichtung je Ansicht, Rumpftiefe, Gesichtsprofil', [
+            (D + 'begutachtungsausgang.py', 'Begutachtungsausgang'), (D + 'begutachtungsautomatik.py', 'Begutachtungsautomatik'),
+            (D + 'herrenhaar.py', 'Herrenhaar'), (D + 'herrenhaarstueck.py', 'Herrenhaarstueck'), (D + 'haarkappe.py', 'Haarkappe'), (D + 'haaransatz.py', 'Haaransatz'),
+            (D + 'haarumbau.py', 'Haarumbau'), (D + 'haarlinie.py', 'Haarlinie'), (D + 'haarwuchs.py', 'Haarwuchs'), (D + 'haarband.py', 'Haarband'),
+            (D + 'haarklemme.py', 'Haarklemme'), (D + 'hautmischung.py', 'Hautmischung'), (D + 'hautproben.py', 'Hautproben'),
+            (P + 'fotolicht.py', 'Fotolicht'), (P + 'belichtung.py', 'Belichtung'), (D + 'ansichtsrender.py', 'Ansichtsrender'),
+            (P + 'seitenprofil.py', 'Seitenprofil'), (G + 'rumpftiefe.py', 'G9rumpftiefe'), (G + 'gesichtsprofil.py', 'G9gesichtsprofil')]),
+        ('Nachbesserung durch eine KI', 'Block „Nachbesserungen" auf der Auftragsseite — Paket 2d3DIterationen/Edgar (Lokal: Qwen, Remote: Claude, Nemotron)', [
+            (E + 'nachbesserungslauf.py', 'Nachbesserungslauf'), (E + 'nachbesserungsprompt.py', 'Nachbesserungsprompt'), (E + 'agentenwahl.py', 'Agentenwahl'),
+            (E + 'rundenlauf.py', 'Rundenlauf'), (E + 'bewertung.py', 'Bewertung'), (E + 'vorgabe.py', 'Vorgabe'), (E + 'rezeptkatalog.py', 'Rezeptkatalog'),
+            (D + 'rezeptaufzeichnung.py', 'Rezeptaufzeichnung')]),
+        ('Standmodell, Kopie, Netzprüfung', 'Das Modell der Bühne, die Kopie eines Auftrags, Fotoprüfung und Pixal3D vor dem Körper', [
+            (D + 'engine2d3dkleiderstandmodell.py', 'Engine2d3dKleiderstandmodell'), (D + 'standmodellglb.py', 'Standmodellglb'),
+            (D + 'engine2d3dkleiderauftragskopie.py', 'Engine2d3dKleiderauftragskopie'),
+            (D + 'engine2d3dkleiderauftragsablagen.py', 'Engine2d3dKleiderauftragsablagen'), (D + 'iterationsarchiv.py', 'Iterationsarchiv'),
+            (V + 'mesh_fotopruefung.py', 'Fotopruefung'), (V + 'mesh_pixalfaeden.py', 'Pixalfaeden'), (V + 'pixal_gpu.py', 'Gpumodelle')]),
         # Ergänzt am 02.10.2026 für den Reiter „Workflow": die Schritte des Laufs, die Optionen und die Motoren.
         ('Lauf und Schritte', 'Die Schritte eines Auftrags (Engine2d3dKleiderlauf.SCHRITTE)', [
             (D + 'engine2d3dkleidervorbereitung.py', 'Engine2d3dKleidervorbereitung'),
-            (D + 'engine2d3dkleidernetz.py', 'Engine2d3dKleidernetz'), (D + 'engine2d3dkleidersegmentierung.py', 'Engine2d3dKleidersegmentierung'),
+            (D + 'engine2d3dkleidernetz.py', 'Engine2d3dKleidernetz'), (D + 'engine2d3dkleiderkopf.py', 'Engine2d3dKleiderkopf'),
+            (D + 'engine2d3dkleiderkopfausschnitt.py', 'Engine2d3dKleiderkopfausschnitt'), (D + 'engine2d3dkleiderkopfnetz.py', 'Engine2d3dKleiderkopfnetz'),
+            (D + 'engine2d3dkleidersegmentierung.py', 'Engine2d3dKleidersegmentierung'),
             (D + 'engine2d3dkleiderkoerper.py', 'Engine2d3dKleiderkoerper'),
             (D + 'engine2d3dkleiderkoerperlauf.py', 'Engine2d3dKleiderkoerperlauf'), (D + 'engine2d3dkleidergrundfigur.py', 'Engine2d3dKleidergrundfigur'),
             (D + 'engine2d3dkleiderstuecke.py', 'Engine2d3dKleiderstuecke'), (D + 'kleiderstuecknote.py', 'Kleiderstuecknote'),

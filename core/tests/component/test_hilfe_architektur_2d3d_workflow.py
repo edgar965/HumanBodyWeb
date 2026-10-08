@@ -196,7 +196,7 @@ class ZeitenSindBelegt(SimpleTestCase):
 
     def test_der_aufbau_der_zeitleiste_ist_die_summe_seiner_schritte(self):
         aufbau = Workflowstrecke.ZEITLEISTE
-        self.assertAlmostEqual(Workflowzeiten.AUFBAU.von, sum(s for _n, s in aufbau[:3]), places=1)
+        self.assertAlmostEqual(Workflowzeiten.AUFBAU.von, sum(s for _n, s in aufbau[: Workflowstrecke.AUFBAU_SCHRITTE]), places=1)
 
     def test_die_koerperteile_summieren_sich_auf_die_gemessene_gesamtzeit(self):
         summe = sum(z.von for _n, z in Workflowzeiten.koerper_teile())

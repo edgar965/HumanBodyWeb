@@ -1,0 +1,56 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Recherche -> meshy.ai (Edgar, 08.10.2026: „schaue nach, was meshy.ai oder trellis / hunyan auf Hugging face
+besser machen [...] Was machen die anders?", danach „gibt es andere Modelle die eine höhere Auflösung haben"). Die
+Einträge kommen aus `core/dienste/recherchemeshy.py` (`Recherchemeshy`) — eine Web-Recherche, kein eigenes Code-Lesen
+wie bei TRELLIS.2/Hunyuan3D (`quelltext-vor-nachbau.md`).
+{% endcomment %}
+
+{% block title %}Recherche meshy.ai{% endblock %}
+{% block topbar_title %}Recherche — meshy.ai{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_recherche_meshy.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite rm-breit">
+
+  <h1>meshy.ai: was macht es anders als TRELLIS.2/Hunyuan3D — und gibt es offene Modelle mit höherer Auflösung?</h1>
+
+  <div class="info-box info-box-blue">
+    <strong>Anlass (Stand {{ stand }}):</strong> {{ anlass }}
+  </div>
+
+  <p><strong>Kurz:</strong> Nein, Meshy nutzt nicht TRELLIS oder Hunyuan3D unter der Haube — es ist eine eigene,
+    geschlossene Modellreihe (Meshy-1 bis Meshy-7). Es gibt keinen Quelltext und kein technisches Paper von Meshy;
+    jeder Eintrag hier stammt aus einer Web-Recherche, nicht aus eigenem Code-Lesen wie bei TRELLIS.2/Hunyuan3D. Die
+    Spalte „Art" trennt deshalb <span class="rm-art rm-art-beleg">beleg</span> (mit Quelle) von
+    <span class="rm-art rm-art-vermutung">vermutung</span> (eigene Einordnung oder ein offener Widerspruch zwischen
+    Quellen).</p>
+
+  <div class="rm-legende">
+    {% for a in arten %}<span class="rm-legende-art"><span class="rm-art rm-art-{{ a.art }}">{{ a.text }}</span> {{ a.was }} ({{ a.anzahl }})</span>{% endfor %}
+  </div>
+
+  {% for b in bereiche %}
+  <h2>{{ b.bereich }} <span class="rm-klein">— {{ b.eintraege|length }} Einträge</span></h2>
+  <table class="db-tabelle rm-tabelle">
+    <thead><tr><th>Art</th><th>Thema</th><th>Befund</th><th>Quelle</th></tr></thead>
+    <tbody>
+    {% for e in b.eintraege %}
+    <tr>
+      <td><span class="rm-art rm-art-{{ e.art }}">{{ e.art }}</span></td>
+      <td><b>{{ e.thema }}</b></td>
+      <td>{{ e.befund }}</td>
+      <td class="rm-klein">{{ e.quelle }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+# -*- coding: utf-8 -*-
+"""Blendimportquelle — welche .blend ein Import liest und wie die Figur heißt.
+
+Edgar (08.10.2026): „die letzte blender Datei (mit der aktuellsten Version)" und „name wie der Ordner". Im Ordner von
+„cute girl" liegen `cute girl 4.0.blend`, `cute girl 4.5.blend`, `cute girl 5.0.blend` — die Fassung steht im Namen,
+nicht in der Änderungszeit (alle drei am 07.07.2026 binnen drei Minuten geschrieben). Deshalb entscheidet die höchste
+Zahl im Dateinamen; ohne Zahl die jüngste Datei. Blenders Sicherungen (`.blend1`, `.blend2`) zählen nicht.
+"""
+
+import re
+from pathlib import Path
+
+__all__ = ['Blendimportquelle']
+
+
+class Blendimportquelle:
+    _FASSUNG = re.compile(r'(\d+(?:\.\d+)*)\s*$')
+
+    def __init__(self, pfad, namensart='ordner'):
+        text = str(pfad or '').strip().strip('"').strip("'").strip()
+        if not text:
+            raise ValueError('Pfad fehlt: ein Ordner mit .blend-Dateien oder eine .blend')
+        self.eingabe = Path(text).expanduser()
+        self.namensart = namensart
+
+    @classmethod
+    def fassung(cls, datei):
+        """`(5, 0)` aus `cute girl 5.0.blend`, `()` ohne Zahl am Ende des Stamms."""
+        treffer = cls._FASSUNG.search(Path(datei).stem)
+        return tuple(int(t) for t in treffer.group(1).split('.')) if treffer else ()
+
+    def kandidaten(self):
+        if self.eingabe.is_file():
+            if self.eingabe.suffix.lower() != '.blend':
+                raise ValueError('Keine .blend: %s' % self.eingabe.name)
+            return [self.eingabe]
+        if not self.eingabe.is_dir():
+            raise ValueError('Nicht gefunden: %s' % self.eingabe)
+        dateien = [p for p in self.eingabe.iterdir() if p.is_file() and p.suffix.lower() == '.blend']
+        if not dateien:
+            raise ValueError('Keine .blend im Ordner %s' % self.eingabe)
+        return sorted(dateien, key=lambda p: (self.fassung(p), p.stat().st_mtime), reverse=True)
+
+    def datei(self):
+        """Die .blend, die gelesen wird."""
+        return self.kandidaten()[0]
+
+    def name(self):
+        """Der Name der Figur: wie der Ordner der Datei, sonst der Dateistamm ohne Fassung."""
+        datei = self.datei()
+        if self.namensart == 'ordner':
+            roh = datei.parent.name
+        else:
+            roh = self._FASSUNG.sub('', datei.stem)
+        return re.sub(r'[^\w\s\-]', '', roh).strip() or 'Blender Modell'
+
+    def steckbrief(self):
+        kandidaten = self.kandidaten()
+        return {
+            'datei': str(kandidaten[0]),
+            'name': self.name(),
+            'kandidaten': [{'datei': p.name, 'fassung': '.'.join(map(str, self.fassung(p))) or '—',
+                            'mb': round(p.stat().st_size / 1e6, 1)} for p in kandidaten],
+        }

@@ -1,0 +1,91 @@
+{% comment %}
+Teil 1 von Hilfe -> Architektur -> Genesis: was in der Datei steckt (gemessen) und was das Projekt heute kann.
+Messungen: Blender 5.2.2 im Hintergrund, nur lesend, `ProjektTemp/_wegwerf/cutegirl/blend_inventar.py`,
+`blend_probe2.py` … `blend_probe4.py` (08.10.2026).
+{% endcomment %}
+<h2>1. Was in der Datei steckt</h2>
+<p>
+  Gemessen am {{ stand }} an <code>cute girl 5.0.blend</code> (Blender 5.2.2 im Hintergrund, nur lesend;
+  Skripte unter <code>ProjektTemp/_wegwerf/cutegirl/</code>). Im Ordner liegen drei .blend (4.0: 31,8 MB,
+  4.5: 31,8 MB, 5.0: 34,8 MB — Unterschied nicht geprüft), eine statische OBJ (18 MB) und
+  <code>textures/</code> mit 18 Bildern. Die Bilder sind <strong>nicht in die .blend gepackt</strong>
+  (Pfade <code>//textures\…</code>).
+</p>
+<table class="doku">
+  <thead>
+    <tr><th>Objekt</th><th>Punkte / Dreiecke</th><th>gebunden an</th><th>Material / Texturen</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>body</code></td><td>54.369 / 108.545 (nur Dreiecke)</td>
+      <td>133 Gruppen, alle Auto-Rig-Pro-Knochen inkl. Gesicht</td>
+      <td>Grundfarbe, Normalen, Rauheit je <strong>8192²</strong> (Grundfarbe 101 MB PNG), Mikro-Normalen 512²</td></tr>
+    <tr><td><code>hair</code></td><td>34.637 / 33.379 (Haarkarten)</td><td><strong>nur <code>head.x</code></strong> (alle Punkte, Gewicht 0,77–0,85)</td>
+      <td><code>hair_basecolor.png</code> 1024² mit Alpha, Überblendung <code>HASHED</code></td></tr>
+    <tr><td><code>shirt</code></td><td>8.045 / 15.806</td><td>24 Gruppen (Wirbelsäule, Schultern, Arme)</td>
+      <td>Grundfarbe + Normalen 2048², Detail <code>ACVI_…Cotton3_Normal.dds</code> 256²</td></tr>
+    <tr><td><code>jean</code></td><td>5.272 / 10.332, Höhe 0,85–1,10 m → <strong>Shorts</strong></td>
+      <td>9 Gruppen (Becken, Oberschenkel)</td><td>Grundfarbe + Normalen 2048², dieselbe DDS</td></tr>
+    <tr><td><code>L_eyes</code>, <code>R_eyes</code></td><td>je 770 / 1.536</td><td><code>c_eye.l</code> / <code>c_eye.r</code></td>
+      <td><code>Eye_BaseColor.tga</code> 2048²</td></tr>
+    <tr><td><code>teeth_upper</code>, <code>teeth_lower</code>, <code>tongue</code></td><td>2.633 / 2.532 / 601 Punkte</td>
+      <td>Zahn- und Zungenknochen</td><td><code>Mouth_*</code> 2048² (Grundfarbe, Normalen, Rauheit, Spiegel, SSS)</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Höhe 1,754 m</strong>, Füße auf 0, Z oben, Maßstab 1,0. <strong>A-Haltung</strong>: Oberarm
+    <code>arm.l</code> von (0,143 | 1,436) nach (0,289 | 1,211), rund 57° unter der Waagerechten.</li>
+  <li><strong>Rig:</strong> <code>rig</code> ist ein Auto-Rig-Pro-Rig (Namen <code>c_…</code>, <code>.x/.l/.r</code>),
+    559 Knochen, <strong>144 deformierend</strong>, davon rund 60 im Gesicht (Lippen, Lider, Brauen, Wangen, Ohren,
+    Nase, Kinn, Zähne, Zunge). Daneben eine Rigify-Armatur <code>sexy girl_Rigify</code> (470 Knochen, 88
+    deformierend), <strong>die kein Netz benutzt</strong>.</li>
+  <li><strong>Morphs: keine.</strong> Jedes Netz hat nur <code>Basis</code> + <code>V_None</code>; <code>V_None</code>
+    bewegt am Körper 6 Punkte um höchstens 0,59 mm, sonst 0. Die Mimik läuft hier über die Gesichtsknochen, nicht
+    über Shape Keys. Die Aktionen (<code>…|idle_251087</code>) sind leer (Bild 0–0).</li>
+  <li><strong>Unter der Kleidung liegt Haut:</strong> 147 Randkanten am Körper, 138 davon über 1,54 m (Augen, Mund),
+    je 3 in den Bändern von Shorts und Shirt — der Rumpf ist geschlossen. Abstand Stück → Körperfläche: Shirt p50
+    13,3 / p99 40,0 mm, Shorts p50 5,9 / p99 14,4 mm. Der Körper besteht aus 13 zusammenhängenden Teilen; was die
+    12 kleinen sind (Wimpern? Brauen?), ist nicht geprüft.</li>
+  <li>Die Lichter heißen <code>Key_cc3iid_2528</code> usw. — <em>Vermutung</em>: ursprünglich aus Reallusion
+    Character Creator, danach auf Auto-Rig Pro umgebaut. Herkunft und Lizenz des Modells: unbekannt.</li>
+</ul>
+
+<h2>2. Was das Projekt heute kann</h2>
+<ul>
+  <li><strong>„Datei → Modell importieren…"</strong> (<code>templates/scene_config.html</code>,
+    <code>szene_dialoge.js</code>) liest <strong>nur JSON</strong> im Browser, ohne Server. Ein Netz geht dort nicht.</li>
+  <li><strong>„Mesh to 3D"</strong> (<code>/modell-aus-dateien/</code>) macht aus EINEM Netz eine Genesis-Figur:
+    Regler-Fit, 296 Kopfregler, Rest-Eigenmorph, Fotohaut, Frisur. Nimmt
+    <code>.glb .gltf .obj .ply .stl .off</code>, <strong>kein .blend/.fbx</strong>. Gebaut für Scans und KI-Netze:
+    Haar und Kleidung werden über die Farbe aus dem Körpernetz geschnitten, die Gelenke über MediaPipe geschätzt.</li>
+  <li><strong>Eigene Bibliotheksstücke</strong> schreibt <code>G9eigenstueck</code> über <code>G9dsonschreiber</code>
+    (.duf, .dsf mit Netz/UV/Haut, Texturen, .dsx mit Kategorie). Körpermorphs folgen von selbst
+    (<code>G9folger</code>), gehäutet wird vom Körper (<code>G9koerperhaut</code>); Kleidung bekommt die
+    Passform-Regler, Frisuren die Haarachsen.</li>
+  <li><strong>Kategorie im UI</strong> = Category der .dsx (<code>G9dazkategorien</code>; Shorts und Oberteile nach
+    dem Namen), darüber Edgars Zuordnung (<code>G9garderobekategorien</code>).</li>
+  <li><strong>Texturen:</strong> Browser-Grenze 4096 px je Kante (<code>G9texturverkleinerung</code>), schwere Bilder
+    erst mit Strg+Alt+H (<code>G9browserbilder</code>). Die Fotohaut eines Modells ersetzt heute <strong>nur die
+    Albedo</strong>; Normalen und Rauheit bleiben die von Daz.</li>
+  <li>Der Rest-Eigenmorph steht heute <strong>nicht als eigener Schieber</strong> im Reglerplan.</li>
+</ul>
+
+<h3>Bausteine, auf die das Konzept aufsetzt</h3>
+<p>Beim Aufruf der Seite gegen den Code geprüft: Datei vorhanden, Klasse darin, Zeilenzahl.</p>
+<div class="db-tabelle-rahmen">
+<table class="db-tabelle sortable" id="architekturGenesisBausteine" data-sort-key="hilfe-architektur-genesis-bausteine">
+  <thead>
+    <tr><th>Klasse</th><th>Datei</th><th class="num">Zeilen</th><th>Rolle im Konzept</th><th>Befund</th></tr>
+  </thead>
+  <tbody>
+    {% for b in bausteine %}
+    <tr>
+      <td data-sort="{{ b.klasse }}"><code>{{ b.klasse|default:"—" }}</code></td>
+      <td data-sort="{{ b.pfad }}"><code>{{ b.pfad }}</code></td>
+      <td class="num" data-sort="{{ b.zeilen }}">{{ b.zeilen }}</td>
+      <td>{{ b.rolle }}</td>
+      <td data-sort="{{ b.fehlt }}">{% if b.fehlt %}<span class="ag-fehlt">{{ b.fehlt }}</span>{% else %}da{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

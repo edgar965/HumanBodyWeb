@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Engine2d3dKleideroptionen — was der Bereich „2D3D Kleider" (`engine2d3dkleider`) einstellen lässt, mit Vorgaben (30.09.2026).
 
-Dreizehn Gruppen (acht der Pipeline, fünf Regler des Renders), je mit ihrem eigenen Katalog geprüft (gleichnamige Felder meinen in den Katalogen
+Vierzehn Gruppen (neun der Pipeline, fünf Regler des Renders), je mit ihrem eigenen Katalog geprüft (gleichnamige Felder meinen in den Katalogen
 Verschiedenes):
 
     figur        Grundfigur und „Als Modell speichern" (`Meshfiguroptionen` — nur diese zwei Felder)
@@ -11,6 +11,7 @@ Verschiedenes):
                  Hunyuan3D gestrichen, `Engine2d3dKleidernurtrellis`)
     mesh         das Interface von TRELLIS.2 wie im Hugging-Face-Space: Resolution, Seed, Decimation Target, Texture Size
                  und die Sampler der drei Stufen (`Engine2d3dKleidermeshoptionen`, 02.10.2026)
+    kopf         Schritt „Kopf" (07.10.2026): der Kopf wird aus den drei Fotos geschnitten und als eigenes Netz gerechnet — Häkchen, Modell, Flächen (`Engine2d3dKleiderkopfoptionen`)
     koerper      woher die Figur kommt: übernehmen aus „Mesh to 3D" oder rechnen (`Engine2d3dKleiderkoerperoptionen`)
     iterationen  Iterationen: Begutachtung oder automatisch, Runden, Kandidaten, Prüf-KI (`Iterationsoptionen`)
     film         BVH, Bilder, Größe (`Engine2d3dKleiderfilmoptionen`)
@@ -23,6 +24,7 @@ speichern".
 
 from .engine2d3dkleiderfilmoptionen import Engine2d3dKleiderfilmoptionen
 from .engine2d3dkleiderkoerperoptionen import Engine2d3dKleiderkoerperoptionen
+from .engine2d3dkleiderkopfoptionen import Engine2d3dKleiderkopfoptionen
 from .engine2d3dkleiderrenderoptionen import Engine2d3dKleiderrenderoptionen
 from .engine2d3dkleidermeshoptionen import Engine2d3dKleidermeshoptionen
 from .engine2d3dkleidernurtrellis import Engine2d3dKleidernurtrellis
@@ -39,7 +41,7 @@ __all__ = ['Engine2d3dKleideroptionen']
 class Engine2d3dKleideroptionen:
     #: Die fünf Reglergruppen des Renders (`Figurfilm.Filmregler.GRUPPEN`, 04.10.2026) kommen hinter dem Film: Qualität, Licht, Haut/Material, Physik, Mimik.
     RENDERGRUPPEN = ('renderqualitaet', 'renderlicht', 'renderhaut', 'renderphysik', 'rendermimik')
-    GRUPPEN = ('figur', 'vorbereitung', 'netz', 'mesh', 'segmentierung', 'koerper', 'iterationen', 'film') + RENDERGRUPPEN
+    GRUPPEN = ('figur', 'vorbereitung', 'netz', 'mesh', 'kopf', 'segmentierung', 'koerper', 'iterationen', 'film') + RENDERGRUPPEN
     #: Felder, die im Formular erscheinen (None = alle des Katalogs).
     SICHTBAR = {
         # ALLE Felder der Körper-Kette seit 05.10.2026 (Edgar: „Noch anderen Einstellungen, die du mir bisher verschwiegen hast? Baue diese alle ein und zeige mir die Optionen in der Oberfläche"): bis dahin standen
@@ -56,6 +58,7 @@ class Engine2d3dKleideroptionen:
         # im Hugging-Face-Space) — `UEBERNAHME` holt den gespeicherten Wert von hier.
         'netz': ('textur', 'freistellen', 'licht'),
         'mesh': None,
+        'kopf': None,
         'koerper': None,
         'iterationen': None,
         'film': None,
@@ -67,13 +70,14 @@ class Engine2d3dKleideroptionen:
     #: Vorgaben, die hier von der Vorlage abweichen. (`flaechen` 100.000 steht jetzt in `Engine2d3dKleidermeshoptionen`.)
     #: `figur.kopfhaut` hier „haut" statt „haar" (05.10.2026): In 2D3D Kleider kommt das Haar als eigenes Objekt (Frisur, Iterationen); die Haarfarbe des Netzes auf der Kopfhaut war die „Kappe", die Edgar
     #: sah. Aufträge, die „haar" gespeichert haben, behalten es.
-    ABWEICHUNGEN = {'figur': {'modell': 'aus', 'kopfhaut': 'haut'}, 'vorbereitung': {}, 'netz': {}, 'mesh': {}, 'segmentierung': {}, 'koerper': {}, 'iterationen': {},
+    ABWEICHUNGEN = {'figur': {'modell': 'aus', 'kopfhaut': 'haut'}, 'vorbereitung': {}, 'netz': {}, 'mesh': {}, 'kopf': {}, 'segmentierung': {}, 'koerper': {}, 'iterationen': {},
                     'film': {}, **{g: {} for g in RENDERGRUPPEN}}
     PRUEFER = (
         ('figur', Meshfiguroptionen),
         ('vorbereitung', Engine2d3dKleidervorbereitungsoptionen),
         ('netz', Meshoptionen),
         ('mesh', Engine2d3dKleidermeshoptionen),
+        ('kopf', Engine2d3dKleiderkopfoptionen),
         ('segmentierung', Engine2d3dKleidersegmentierungsoptionen),
         ('koerper', Engine2d3dKleiderkoerperoptionen),
         ('iterationen', Iterationsoptionen),
@@ -154,6 +158,11 @@ class Engine2d3dKleideroptionen:
     def mesh(cls, optionen):
         """Die Regler von TRELLIS.2 (Seed, Stage 1–3) — der Runner liest sie über `Engine2d3dKleidernetz.beschreibung`."""
         return cls.pruefen(optionen)['mesh']
+
+    @classmethod
+    def kopf(cls, optionen):
+        """Die Optionen des Schritts „Kopf" (`rechnen`, `modell`, `flaechen`, 07.10.2026)."""
+        return cls.pruefen(optionen)['kopf']
 
     @classmethod
     def segmentierung(cls, optionen):

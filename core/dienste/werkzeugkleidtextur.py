@@ -18,7 +18,7 @@ class Werkzeugkleidtextur:
     TITEL = 'Textur: Fotoprojektion, Decal, Falten, Umfärbung (Kleider und Haar)'
     EINLEITUNG = (
         'Eine Texturschicht ist ein Bild je Materialgruppe im UV-Raum neben der Bibliothek '
-        '(3DObjects/Genesis9/kleidtexturen/<kennung>__<gruppe>__<schicht>_f1.png), gestellt über den Regler '
+        '(3DObjects/models/Genesis9/kleidtexturen/<kennung>__<gruppe>__<schicht>_f1.png), gestellt über den Regler '
         '<kennung>.bild.<schicht> (Gruppe „Textur“, 0…1, Falten bis 2). Beim Bau (G9stueckteile.netze → '
         'G9kleidtexturen.anwenden) wird sie über die Daz-Bilder der Gruppe komponiert; Browser, Szene und Render sehen '
         'dasselbe. Schichtnamen: foto, foto_<kürzel>, grau, decal_<name>, falten_<name> (G9kleidtexturen.NAME). Reihenfolge: '

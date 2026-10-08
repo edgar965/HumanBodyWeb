@@ -128,7 +128,7 @@ class Werkzeugkoerper:
          "Antwort {regler: {name: 'eigen:ort_<name>', min −2, max 2, bereich 'ort'}, brief, form}; 400 bei „name fehlt“ und „ort fehlt“. Eingaben werden "
          'begrenzt (weg_cm −20…20, radius_cm 0,5…60, weich 0,01…0,5), Landmarken nur aus der Liste des GET. Der Name wird Kennung (a–z, 0–9, _; ä → ae). '
          'Der Browser hängt den Regler sofort an und stellt ihn auf 1 (genesis9koerpermorphformular.js). Jeder POST schreibt eine Datei neben die '
-         'Bibliothek (3DObjects/Genesis9/eigenmorphe/) — nur nach Ansage.'),
+         'Bibliothek (3DObjects/models/Genesis9/eigenmorphe/) — nur nach Ansage.'),
         ('HumanBody-Morphe auf Genesis (hb:…)',
          'Stellt einen der 204 HumanBody-Regler (MB-Lab) als Morph auf dem Genesis-Körper — Brust, Taille, Nase und mehr, wo Daz ohne Kaufpakete keinen Einzelregler hat.',
          'rezept',
@@ -166,6 +166,22 @@ class Werkzeugkoerper:
          'Schritt zurück, der den Rest nicht um BESSER_MM (2,0 mm) verkleinert; danach bleibt der Regler für den Auftrag stehen. Die Prüf-KI (pruefki, Vorgabe '
          'aus) darf haltung, haltung_gelenk, koerper_regler, koerper_regler_setzen und koerper_huelle nicht schreiben. Prüfen vor jeder neuen Regel: Messung am '
          'echten Auftrag gegen ein Bild (engine2d3dkleider.md, 01.10.2026).'),
+        ('Rumpf so tief wie das Seitenfoto',
+         'Brust, Bauch und Rücken nur dort vertiefen, wo der Körper flacher ist als die Seitenansicht der Fotos — als Eigenmorph, im Startrezept der Iteration 0.',
+         'rezept',
+         "m.koerper_rumpftiefe(name='rumpftiefe', schale_mm=8.0, wert=1.0, bauch_mm=24.0)   # Option iterationen.rumpftiefe (Vorgabe an)",
+         [(G + 'rumpftiefe.py', 'G9rumpftiefe')],
+         'Korrigiert den Körper, nicht das Hemd: vorn nach vorn, hinten nach hinten, nie negativ. 8 mm Hemd + Haut (schale_mm) passen an Brust und Hüfte; im Bauchfenster (Höhenanteil 0,50–0,64, '
+         'Auslauf 0,04) hängt das Hemd frei und bauch_mm 24 rechnet ab. Gemessen an EINEM Auftrag (Sapiens, 06.10.2026): Körper + Hemd minus Foto bei 0,50 / 0,55 / 0,60 / 0,65 der Größe '
+         '+19 / +16 / +43 / +14 mm → +3 / +1 / +15 / +5 mm, RMS 19 → 8 mm, Seiten-IoU 0,8457 → 0,8544; die Fensterlage ist nicht an anderen Männern geprüft. Braucht die Runde '
+         '(Rezeptumgebung mit Sichtkörper); eine einheitliche Zugabe von 16 oder 24 mm machte die Brust flacher (engine2d3dkleider-iteration0.md).'),
+        ('Lippen und Kinn nach dem Seitenfoto',
+         'Lippen und Kinn so weit vorn wie im Seitenfoto, bezogen auf Augen und Nasenwurzel — gegen das eingefallene Kinn; Eigenmorph, im Startrezept der Iteration 0.',
+         'rezept',
+         "m.koerper_gesichtsprofil(name='gesichtsprofil', wert=1.0)   # Option iterationen.gesichtsprofil (Vorgabe an)",
+         [(G + 'gesichtsprofil.py', 'G9gesichtsprofil')],
+         'Erst ausrichten, dann messen: die erste Fassung (Kante gegen Kante) schob das Kinn vor; die Ausrichtung des Fotos an der oberen Gesichtshälfte (Höhe UND Tiefe, 1,2 mm RMS) machte den Rest '
+         'messbar, ein Ausrichtungsfehler über RMS_MAX_M heißt „keine Korrektur". Braucht die Runde mit dem feinen Seitenprofil; ohne Seitenfoto bleibt der Morph leer.'),
     ]
     # Klassenmodell: (von, 'ruft', nach, womit)
     BEZIEHUNGEN = [

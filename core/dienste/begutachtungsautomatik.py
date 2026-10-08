@@ -16,6 +16,7 @@ class Begutachtungsautomatik:
 
     def rezept(self, modell, z, referenzen):
         """Das Rezept der nächsten Runde aus dem Befund der letzten (`IterationModell`), ergänzt um die Prüf-KI, wenn sie fällig ist → (aufrufe, Zusatz zum Kommentar, fertig)."""
+        from Genesis9.rezeptumgebung import Rezeptumgebung
         from iterationen2d3d.iterationmodell import IterationModell
         job, werkzeug = self.r.job, self.r.werkzeug
         kandidaten = [k.get('kennung') for k in (job.ergebnis.get('frisur') or {}).get('kandidaten') or [] if k.get('kennung')]
@@ -27,7 +28,8 @@ class Begutachtungsautomatik:
         befund['haarzonen'] = dict(job.ergebnis.get('haarzonen') or {})      # Fotofarbe je Kopfzone
         if not befund.get('teile'):
             befund['haar_netzfarbe'] = werkzeug.haarfarbe()
-        rezept = IterationModell(modell, befund, z.get('verlauf_befunde'), kandidaten, form=self.r.o.get('form') == 'an').rezept()
+        rezept = IterationModell(modell, befund, z.get('verlauf_befunde'), kandidaten, form=self.r.o.get('form') == 'an',
+                                 auftrag=Rezeptumgebung.kuerzel(job.kennung)).rezept()
         rezept = Begutachtungsstand.ohne_gesperrte(rezept, z)        # Zeilen, die aus dieser Lage schon verworfen sind
         rezept, zusatz, fertig = Begutachtungskritik(self.r.o, self.r.ablage).ergaenzen(rezept, modell, z)
         if not fertig and not rezept:

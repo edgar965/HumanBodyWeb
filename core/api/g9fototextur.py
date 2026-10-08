@@ -22,6 +22,12 @@ class G9fototextur:
         pfad = Modelltexturen.datei(modell, datei)
         if pfad is None or not pfad.is_file():
             raise Http404('Keine Textur %s/%s' % (modell, datei))
+        # Ohne Strg+Alt+H (`hoch=1`, `Genesis9fototextur.adresse`) die verkleinerte Fassung, wenn das Modell eine hat
+        # (Blender-Import, 08.10.2026) — sonst wie bisher die Datei selbst.
+        if request.GET.get('hoch') != '1':
+            klein = Modelltexturen.klein(pfad)
+            if klein.is_file():
+                pfad = klein
         antwort = FileResponse(open(pfad, 'rb'), content_type=Modelltexturen.art(pfad))
         antwort['Cache-Control'] = 'max-age=604800' if request.GET.get('v') else 'no-cache'
         return antwort

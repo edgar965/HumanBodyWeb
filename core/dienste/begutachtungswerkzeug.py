@@ -113,16 +113,17 @@ class Begutachtungswerkzeug:
         from .haardynamik import Haardynamik
         return Haardynamik(self.ablage.arbeit('haardynamik'))
 
-    def fototextur(self, modell, teile, referenzen, render, bau, aus):
+    def fototextur(self, modell, teile, referenzen, render, bau, aus, ansichten=None):
         """Die Haut aus den Fotos (`Koerperfotoprojektion`, einmal je Körper), dann die Fotoprojektion der gewünschten
-        Stücke (`Kleidfotoprojektion`) und die Texturen der Teile danach neu."""
+        Stücke (`Kleidfotoprojektion`) und die Texturen der Teile danach neu. `ansichten`: `Haltungsansichten` — die Haut jedes Fotos in
+        dessen eigener Haltung (08.10.2026); die Kleider-Fototextur rechnet weiter in der Haltung des Modells."""
         import logging
 
         from .kleidfotoprojektion import Kleidfotoprojektion
         from .koerperfotoprojektion import Koerperfotoprojektion
         farbig = [r for r in referenzen if r.farbe]          # Fotos mit anderer Kleidung zählen nur für die Form
         try:
-            Koerperfotoprojektion(self.job, self.ablage).bauen(teile, farbig, render, aus)
+            Koerperfotoprojektion(self.job, self.ablage).bauen(teile, farbig, render, aus, ansichten)
             self._haarzonen(teile, farbig, render, aus)
         except Exception:  # noqa: BLE001 — ohne Fotohaut rechnet die Runde mit der gebackenen weiter
             logging.getLogger('core').exception('2D3D Kleider %s: Haut/Haarzonen aus den Fotos nicht gebaut',
@@ -135,6 +136,8 @@ class Begutachtungswerkzeug:
             bau.textur_auffrischen([t.get('ruhe', t) for t in teile], modell, set(gebaut))
             for t in teile:                     # die gehäuteten Kopien tragen dieselben Bilder wie ihre Ruhelage
                 t['textur'] = t.get('ruhe', t)['textur']
+            if ansichten is not None:
+                ansichten.texturen_angleichen()
         return bericht
 
     def _haarzonen(self, teile, referenzen, render, aus):

@@ -8,7 +8,7 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
  * Edgar, 05.10.2026: „füge im Kontextmenü bei allen ein: Löschen, Umbenennen (zum löschen und umbenennen)". Der Server
  * (`G9garderobepflege`) ändert beim Umbenennen nur den ANZEIGENAMEN — die Kennung bleibt, Rezepte und Aufträge nennen die Stücke
  * dabei. Gelöscht wird ein eigenes Stück (Foto-Stücke, Uhr, GarmentCode, MakeHuman) in den Papierkorb
- * (`3DObjects/Genesis9/papierkorb/`, zurückholbar); ein Stück der Daz-Bibliothek wird nur ausgeblendet, die Dateien bleiben.
+ * (`3DObjects/models/Genesis9/papierkorb/`, zurückholbar); ein Stück der Daz-Bibliothek wird nur ausgeblendet, die Dateien bleiben.
  * Danach holt `Genesis9kleidung` den Katalog neu, und der Aufrufer zeichnet die Liste neu.
  */
 export class Genesis9garderobepflege {
@@ -35,7 +35,7 @@ export class Genesis9garderobepflege {
 
     static async loeschen(stueck, neuzeichnen) {
         const frage = stueck.eigen
-            ? `„${stueck.name}" in den Papierkorb legen?\n\nDie Dateien liegen danach in 3DObjects/Genesis9/papierkorb/ und lassen sich zurückholen.`
+            ? `„${stueck.name}" in den Papierkorb legen?\n\nDie Dateien liegen danach in 3DObjects/models/Genesis9/papierkorb/ und lassen sich zurückholen.`
             : `„${stueck.name}" ausblenden?\n\nDas ist ein Stück der Daz-Bibliothek: Seine Dateien bleiben unberührt, es verschwindet nur aus dieser Liste.`;
         if (!window.confirm(frage)) return;
         await Genesis9garderobepflege._senden(stueck, 'loeschen', {}, 'Löschen', neuzeichnen);

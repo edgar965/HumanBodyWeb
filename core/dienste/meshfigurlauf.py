@@ -164,11 +164,15 @@ class Meshfigurlauf:
             'ordner': {'arbeit': str(self.ablage.arbeit()), 'ergebnis': str(self.ablage.ergebnis())},
             **self.zusatz,
         }
-        kopf = self.ablage.netzdatei('kopf') if (self.job.eingang or {}).get('kopf') else None
+        kopf = self.kopfnetz()
         if kopf is not None:
             daten['kopfnetz'] = str(kopf)
         pfad.write_text(json.dumps(daten, ensure_ascii=False, indent=1), encoding='utf-8')
         return pfad
+
+    def kopfnetz(self):
+        """Das Kopfnetz, das der Runner einsetzen soll, oder None: hier das Netz aus `eingang['kopf']` („Mesh to 3D", Schalter „Kopfnetz verwenden"); „2D3D Kleider" nimmt das des Schritts „kopf" (`Engine2d3dKleiderkoerperlauf`)."""
+        return self.ablage.netzdatei('kopf') if (self.job.eingang or {}).get('kopf') else None
 
     def runner(self, schritt, runde=None, von=0.0, bis=1.0):
         """Einen Schritt des Runners rechnen — sein `[ergebnis]` (dict) oder ein Fehler."""

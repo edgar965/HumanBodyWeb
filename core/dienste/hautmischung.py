@@ -83,10 +83,13 @@ class Hautmischung:
         return np.where(maske[..., None] > 0, cls._linear(neu / 255.0), grund), int(maske.sum())
 
     @classmethod
-    def mischen(cls, grund, insel, foto, deckung):
+    def mischen(cls, grund, insel, foto, deckung, massstab=1.0):
         """`grund` (H, W, 3) sRGB 0…1 — die gebackene Kachel auf Rasterkante; `insel` (H, W) Bool — Texel der Kachel, die zum Körper gehören; `foto` (H, W, 3) sRGB — Fotofarbe (gefüllt, überall definiert);
-        `deckung` (H, W) 0…1 — wie sehr das Foto zählt (0 auch für Hände) → `(neu (H, W, 3) sRGB, Bericht)`; ohne Fotodeckung bleibt der Grund (nur ohne Linien)."""
+        `deckung` (H, W) 0…1 — wie sehr das Foto zählt (0 auch für Hände) → `(neu (H, W, 3) sRGB, Bericht)`; ohne Fotodeckung bleibt der Grund (nur ohne Linien).
+        `massstab`: so viel kleiner ist ein Texel dieser Kachel als die Körperkacheln (Kopf: ~3,5) — Tiefpass, Ausbreitung und Übergang wachsen in Texeln mit (die Längen sind in Millimetern gemeint)."""
         from scipy import ndimage
+
+        tief_px, ausbreitung_px, uebergang_px = cls.TIEF_PX * massstab, cls.AUSBREITUNG_PX * massstab, cls.UEBERGANG_PX * massstab
 
         g, f = cls._linear(np.asarray(grund, dtype=np.float64)), cls._linear(np.asarray(foto, dtype=np.float64))
         sitzt = deckung > 0.3
@@ -96,20 +99,20 @@ class Hautmischung:
             return cls._srgb(g), bericht
         # 1. Ton: Fotohaut / gebackene Haut unter denselben Texeln, in die ganze Kachel getragen
         gew = (deckung * sitzt).astype(np.float64)
-        foto_tief, _anteil = cls.tief(f, gew, cls.TIEF_PX)
-        grund_tief, _a2 = cls.tief(g, gew, cls.TIEF_PX)
+        foto_tief, _anteil = cls.tief(f, gew, tief_px)
+        grund_tief, _a2 = cls.tief(g, gew, tief_px)
         verhaeltnis = np.clip(foto_tief / np.maximum(grund_tief, 1e-4), *cls.GRENZEN)
         mittel = np.clip(np.median(verhaeltnis[sitzt], axis=0), *cls.GRENZEN)
-        ort, anteil = cls.tief(verhaeltnis, sitzt.astype(np.float64), cls.AUSBREITUNG_PX)
+        ort, anteil = cls.tief(verhaeltnis, sitzt.astype(np.float64), ausbreitung_px)
         trauen = np.clip(anteil / cls.ORT_AB, 0.0, 1.0)[..., None]
         faktor = np.clip(trauen * ort + (1.0 - trauen) * mittel, *cls.GRENZEN)
         angeglichen = g * faktor
         # 2. Zwei Bänder
         alle = insel.astype(np.float64)
-        a, _n = cls.tief(angeglichen, alle, cls.TIEF_PX)
+        a, _n = cls.tief(angeglichen, alle, tief_px)
         foto_zeichnung = np.where(sitzt[..., None], f - foto_tief, 0.0)
         grund_zeichnung = angeglichen - a
-        weich = np.clip(ndimage.gaussian_filter(deckung * sitzt, cls.UEBERGANG_PX), 0.0, 1.0)[..., None]
+        weich = np.clip(ndimage.gaussian_filter(deckung * sitzt, uebergang_px), 0.0, 1.0)[..., None]
         ton = weich * foto_tief + (1.0 - weich) * a
         zeichnung = weich * foto_zeichnung + (1.0 - weich) * cls.ZEICHNUNG_GRUND * grund_zeichnung
         neu = np.clip(ton + zeichnung, 0.0, 1.0)

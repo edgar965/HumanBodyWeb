@@ -62,6 +62,8 @@ class Meshfigurende:
         e = self.lauf.runner('rest', von=0.05, bis=0.85)
         with np.load(self.ablage.arbeit('rest.npz')) as d:
             rest, gewicht = d['rest'].astype(float), d['gewicht'].astype(float)
+            # Option `kleidungsluft_mm`: Punkte, die durch Stoff ragen, behalten nach dem Spiegeln und Glätten mindestens ihren Weg (`G9restmorph.untergrenze`, 07.10.2026).
+            mindest = d['mindest'].astype(float) if 'mindest' in d.files else None
         # Augenpartie aus der Umgebung füllen — nicht in die Augenmulde des Netzes ziehen.
         rest, gewicht, augen = Meshfiguraugenhoehle.luecke(rest, gewicht)
         if self.optionen.get('symmetrie') == 'an':
@@ -69,7 +71,7 @@ class Meshfigurende:
         self.lauf.melden(0.9, 'Eigenmorph glätten')
         name = '%s Mesh %s' % (self.job.name, self.job.kennung[-8:].replace('.', ''))
         regler, zahlen = G9restmorph.ablegen(
-            name, rest, gewicht, {'quelle': 'mesh to 3d', 'auftrag': self.job.kennung}
+            name, rest, gewicht, {'quelle': 'mesh to 3d', 'auftrag': self.job.kennung}, mindest=mindest
         )
         self.job.ergebnis['rest'] = {
             'regler': regler,
@@ -78,8 +80,21 @@ class Meshfigurende:
             'getroffen': e.get('rest_punkte'),
             'augenpartie_luecke': augen,
             'verlauf': e.get('verlauf'),
+            # Augen-, Mund- und Nasenmorph aus den Landmarken (nur „2D3D Kleider", Option `koerper.landmarkmorphe`; leer sonst)
+            'landmarkmorphe': self._landmarkmorphe(rest, gewicht, name, stellung),
         }
         self.kopfeigen_nachziehen()
+
+    def _landmarkmorphe(self, rest, gewicht, name, stellung):
+        """`{bereich: {regler, …}}` aus `lauf.landmarkmorphe` (07.10.2026) — „Mesh to 3D" hat die Methode nicht und bekommt `{}`. Ein Fehler hält den Lauf nicht auf: die Figur bleibt, wie sie war."""
+        bauer = getattr(self.lauf, 'landmarkmorphe', None)
+        if bauer is None:
+            return {}
+        try:
+            return bauer(rest, gewicht, name, stellung)
+        except Exception:  # noqa: BLE001 — ohne die Morphe fehlen nur die Feinheiten an Augen, Mund und Nase
+            logger.exception('%s: Landmarkmorphe nicht gebaut', self.job.kennung)
+            return {'fehler': 'siehe Log'}
 
     def kopfeigen_nachziehen(self):
         """„Kopf-Eigen" (Seite „Gesichtsform") mit seinen gespeicherten Zielkurven auf die NEUE Figur
@@ -140,6 +155,7 @@ class Meshfigurende:
             'hautton': hautton,
             'deckung': e.get('deckung_je_kachel'),
             'farbangleich': e.get('farbangleich'),
+            'entlichtung': e.get('entlichtung'),
             'iris': e.get('iris'),
             'wahl': wahl,
         }

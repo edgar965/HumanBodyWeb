@@ -25,12 +25,21 @@ __all__ = ['Gesichtsformquelle']
 
 
 class Gesichtsformquelle:
-    def __init__(self, auftrag=None, modell=None):
-        from ..models import Meshfigurauftrag
+    #: „Kopf-Eigen" hing nur an `Meshfigurauftrag` — `Gesichtsformziel._ablage_fuer` kennt BlenderModel und
+    #: „2D3D Kleider" schon (30.09.2026), die Auftragssuche hier aber noch nicht (07.10.2026, Edgar 8).
+    @staticmethod
+    def _modelle():
+        from ..models import Blendermodellauftrag, Engine2d3dKleiderauftrag, Meshfigurauftrag
 
+        return (Meshfigurauftrag, Engine2d3dKleiderauftrag, Blendermodellauftrag)
+
+    def __init__(self, auftrag=None, modell=None):
         self.job, self.modellname, self.modelldaten = None, None, None
         if auftrag:
-            self.job = Meshfigurauftrag.objects.filter(kennung=str(auftrag)).first()
+            for Modell in self._modelle():
+                self.job = Modell.objects.filter(kennung=str(auftrag)).first()
+                if self.job is not None:
+                    break
             if self.job is None:
                 raise ValueError('Auftrag %s gibt es nicht' % auftrag)
         elif modell:

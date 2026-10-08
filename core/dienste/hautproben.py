@@ -104,8 +104,8 @@ class Hautproben:
 
     # ------------------------------------------------------------ Farbe
 
-    def farbe(self, p):
-        """`(farbe (N, 3) sRGB, deckung (N,), getroffen (N,) bool)` einer Kachel: das Mittel der Ansichten, vom Licht befreit (wo es geschätzt ist); Deckung 0 an der Hand."""
+    def summen(self, p):
+        """`(summe (N, 3) linear, gewicht (N,), beste (N,))` der Ansichten dieser Proben — Zwischenstand von `farbe`; `Hautprobenmehrpose` legt die Summen mehrerer Proben (je Ansicht eine Haltung) zusammen."""
         n = len(p['lage'])
         summe = np.zeros((n, 3), dtype=np.float64)
         gewicht = np.zeros(n, dtype=np.float64)
@@ -116,8 +116,17 @@ class Hautproben:
             summe += farbe * gew[:, None]
             gewicht += gew
             beste = np.maximum(beste, p['kosinus'][i] * p['drin'][i])
+        return summe, gewicht, beste
+
+    @classmethod
+    def abschluss(cls, summe, gewicht, beste, hand):
+        """`(farbe (N, 3) sRGB, deckung (N,), getroffen (N,) bool)` aus den Summen; Deckung 0 an der Hand (`hand` (N,) bool)."""
         getroffen = gewicht >= 1e-6
-        farbe = self._srgb(np.where(getroffen[:, None], summe / np.maximum(gewicht, 1e-12)[:, None], 0.0))
-        von, bis = self.DECKUNG
-        deckung = np.clip((beste - von) / (bis - von), 0.0, 1.0) * getroffen * ~p['hand']
+        farbe = cls._srgb(np.where(getroffen[:, None], summe / np.maximum(gewicht, 1e-12)[:, None], 0.0))
+        von, bis = cls.DECKUNG
+        deckung = np.clip((beste - von) / (bis - von), 0.0, 1.0) * getroffen * ~hand
         return farbe.astype(np.float32), deckung.astype(np.float32), getroffen
+
+    def farbe(self, p):
+        """`(farbe (N, 3) sRGB, deckung (N,), getroffen (N,) bool)` einer Kachel: das Mittel der Ansichten, vom Licht befreit (wo es geschätzt ist); Deckung 0 an der Hand."""
+        return self.abschluss(*self.summen(p), p['hand'])

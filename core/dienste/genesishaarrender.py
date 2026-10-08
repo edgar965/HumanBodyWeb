@@ -74,6 +74,8 @@ class Genesishaarrender:
     def renderer(self):
         if self._renderer is None:
             import pyrender
+            from Genesis9.pyrenderreihenfolge import G9pyrenderreihenfolge
+            G9pyrenderreihenfolge.anwenden()          # Wimpern und Brauen nach der Haut zeichnen (08.10.2026)
             self._renderer = pyrender.OffscreenRenderer(self.BREITE, self.HOEHE)
         return self._renderer
 
