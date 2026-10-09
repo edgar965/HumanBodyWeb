@@ -75,7 +75,7 @@ class GarmentcodeNachbindungTest(SimpleTestCase):
             quelle = _quelle(ordner, name)
             self.assertIn('static RUHE_MS = 400;', quelle, name)
             self.assertIn('clearTimeout(%s._ausstehend.get(inst))' % klasse, quelle, name)
-            self.assertIn('}, %s.RUHE_MS));' % klasse, quelle, name)
+            self.assertIn(', %s.RUHE_MS));' % klasse, quelle, name)
             self.assertNotIn('}, 0);', quelle.split('Stueckereignis.hoeren(')[1], name)
 
     def test_daz_stuecke_melden_nur_mit_garmentcode_stueck(self):

@@ -23,7 +23,13 @@ import logging
 
 import numpy as np
 
+from .blendimportbilder import Blendimportbilder
+from .blendimportfuss import Blendimportfuss
 from .blendimportlage import Blendimportlage
+from .blendimportpruefung import Blendimportpruefung
+from .blendimportrequisit import Blendimportrequisit
+from .blendimportschamgewichte import Blendimportschamgewichte
+from .blendimportteile import Blendimportteile
 
 logger = logging.getLogger('core')
 
@@ -38,10 +44,12 @@ class Blendimportstuecke:
     HAAR_ZUSATZ = 'Haar'
     AUGEN_ZUSATZ = 'Augen'
     SCHAM_ZUSATZ = 'Scham'
+    GENITAL_ZUSATZ = 'Genitalien'
     #: Blenders Augen haben Rauheit 0 (Hornhaut): als `shininess` an den Schreiber, der daraus Rauheit 0,05 macht.
     AUGEN_GLANZ = 0.95
-    #: Bildformate, die der Browser liest; alles andere (TGA, BMP …) geht als PNG ins Stück.
-    BROWSER_FORMATE = ('.png', '.jpg', '.jpeg')
+    #: Folgt das geschriebene Stück dem Ziel schlechter als so (p99, mm), rechnet ein zweiter Durchgang gegen die gelesene Datei nach.
+    NACHRECHNEN_MM = 3.0
+    BROWSER_FORMATE = Blendimportbilder.BROWSER_FORMATE
 
     def __init__(self, ablage, job, inventar, rollen, figurname, melden=None, augen='original', zusatz=None, scham='aus'):
         self.ablage = ablage
@@ -51,10 +59,16 @@ class Blendimportstuecke:
         self.figurname = figurname
         self.melden = melden or (lambda anteil, text: None)
         self.lage = Blendimportlage(job, zusatz)
+        self._fuss = None
+        self._pruefung = None
+        #: Der Kontaktbogen aller geprüften Stücke (`Blendimportbogen`) nach `bauen()` — None ohne.
+        self.bogen_pfad = None
         #: `objekt`: die Originalaugen werden ein eigenes Stück (Einstellung „Augen" des Dialogs).
         self.augen_objekt = augen == 'objekt'
-        #: `objekt`: der Teil des Körpers, den die Figur nicht trägt, wird das Stück „<Name> Scham" (`Blendimportscham`).
-        self.scham_objekt = scham == 'objekt'
+        #: `objekt`: der Teil des Körpers, den die Figur nicht trägt, wird das Stück „<Name> Scham" (`Blendimportscham`);
+        #: `mann`: dasselbe Stück als „<Name> Genitalien" mit `anatomie = penis` — ohne die weiblichen Scham-Regler.
+        self.scham_objekt = scham in ('objekt', 'mann')
+        self.anatomie = 'penis' if scham == 'mann' else 'scham'
 
     def _netz(self, rolle):
         """Das Netz einer Rolle; eine Rolle mit mehreren Netzen (`namen`: beide Augen) wird zu EINEM zusammengelegt."""
@@ -68,6 +82,24 @@ class Blendimportstuecke:
         return {'punkte': np.concatenate([t['punkte'] for t in teile]),
                 'dreiecke': np.concatenate([t['dreiecke'] + int(a) for t, a in zip(teile, anfang, strict=True)]),
                 'uv_ecken': np.concatenate([t['uv_ecken'] for t in teile])}
+
+    def fuss(self):
+        """Die Absatzhaltung der Füße (`Blendimportfuss`), einmal je Lauf — None ohne Körper."""
+        if self._fuss is None:
+            koerper = next((r for r in self.rollen if r['rolle'] == 'koerper'), None)
+            if koerper is None:
+                return None
+            d = self._netz(koerper)
+            _, teile = self.lage.koerper_ruhelage(d['punkte'], d['dreiecke'], mit_teilen=True)
+            schuhe = [self.lage.ins_netz(self._netz(r)['punkte']) for r in self.rollen if r.get('ordner') == 'shoes']
+            self._fuss = Blendimportfuss(self.lage, self.lage.ins_netz(d['punkte']), teile, np.concatenate(schuhe) if schuhe else None)
+        return self._fuss
+
+    def pruefung(self):
+        """Die Abnahme der Stücke (`Blendimportpruefung`), einmal je Lauf — Haltung und Figur werden nur einmal gebaut."""
+        if self._pruefung is None:
+            self._pruefung = Blendimportpruefung(self.lage)
+        return self._pruefung
 
     def bauen(self):
         """`({rolle_name: garderobenkennung}, bericht)` für alle Kleider, das Haar und (Einstellung) die Augen."""
@@ -94,12 +126,36 @@ class Blendimportstuecke:
                 continue
             stuecke[schluessel] = kennung
             bericht[schluessel] = b
+        if self._pruefung is not None:
+            try:
+                ziel = self.ablage.ergebnis('stuecke_bogen.png')
+                ziel.parent.mkdir(parents=True, exist_ok=True)
+                self.bogen_pfad = self._pruefung.bogen.schreiben(ziel)
+            except Exception:  # noqa: BLE001 — das Bild ist Beigabe, kein Teil des Ergebnisses
+                logger.exception('Blender-Import %s: Kontaktbogen nicht geschrieben', self.ablage.kennung)
         return stuecke, bericht
 
     def anzeige(self, rolle):
-        zusatz = ({'haar': self.HAAR_ZUSATZ, 'auge': self.AUGEN_ZUSATZ, 'scham': self.SCHAM_ZUSATZ}.get(rolle['rolle'])
+        scham = self.GENITAL_ZUSATZ if self.anatomie == 'penis' else self.SCHAM_ZUSATZ
+        zusatz = ({'haar': self.HAAR_ZUSATZ, 'auge': self.AUGEN_ZUSATZ, 'scham': scham}.get(rolle['rolle'])
                   or rolle.get('art') or rolle['name'])
         return '%s %s' % (self.figurname, zusatz)
+
+    @staticmethod
+    def loch_angabe(loch):
+        """Das Loch des Scham-Stücks für die `.ersetzt.json` (`G9stueckersatz.loch`): Dreiecke der Haut und die Verschiebung der
+        Ringpunkte (m, auf Mikrometer gerundet) — oder None, wenn das Stück ohne Naht gebaut wurde."""
+        if not loch:
+            return None
+        def meter(feld):
+            return [[round(float(x), 6) for x in z] for z in feld]
+
+        v = loch['verschiebung']
+        # `ring`: die Ecken des Rings — Lage im Bau, Nummer des Hautpunkts, Verschiebung der Glättung: der Browser rückt den Rand des
+        # Stücks auf die Haut, wie sie jetzt ist (`stuecknaht.js`).
+        return {'dreiecke': loch['dreiecke'].tolist(), 'von': loch['von'],
+                'verschiebung': {'punkte': v['punkte'].tolist(), 'd': meter(v['d'])},
+                'ring': {'lage': meter(loch['ring']), 'punkte': [int(p) for p in loch['ring_punkte']], 'd': meter(loch['ring_d'])}}
 
     def scham_stueck(self, rolle):
         """Das Stück „<Name> Scham": Fläche und Haut des Originalkörpers dort, wo die Figur ihn nicht trägt
@@ -116,21 +172,30 @@ class Blendimportstuecke:
         ordner.mkdir(parents=True, exist_ok=True)
         figur = self.lage.genesis()
         flaeche = trimesh.Trimesh(figur['punkte'], figur['dreiecke'], process=False)
-        material_quelle = (self.inventar[rolle['name']]['materialien'] or [{}])[0] or {}
-        d = Blendimportscham(self.lage, self._netz(rolle), material_quelle).bauen(ordner, kennung, flaeche)
+        materialien = self.inventar[rolle['name']]['materialien'] or [{}]      # alle: das Stück nimmt das seiner Dreiecke
+        d = Blendimportscham(self.lage, self._netz(rolle), materialien).bauen(ordner, kennung, flaeche)
         if 'aus' in d:
             return None, d
+        np.save(self.ablage.arbeit('scham_punkte.npy'), d['punkte'])        # der Schritt „haut" füllt die Kachel darum mit Originalfarbe
         material = self.material(kennung, d['quelle'], ordner)
         netz = G9objleser.lesen(str(self.obj(ordner, d['punkte'], d['dreiecke'], d['uv_ecken'], material)))
         roh = np.asarray(netz['punkte'], dtype=np.float64)
         kategorie = self.AUGEN_KATEGORIE
         # `wicklung=False`: die Fläche liegt teils HINTER der Haut — die Abstimmung gegen die Haut drehte sie um.
-        # Gewichte: die der drei nächsten Hautpunkte, also bewegt sich das Stück beim Beugen wie die Haut dort (ganz am Becken
-        # stünden die Seitenteile bei gespreizten Beinen ab, gesehen 08.10.2026). Die LAGE folgt dem Körper nicht
-        # (`G9stueckteile.netze`, Hauttiefe), darum keine Rückrechnung auf die Grundfigur (`G9gcfigurbau`): die gespeicherte Lage IST
-        # die Ruhelage der Figur dieses Imports.
-        bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, kategorie, material, heben=False, wicklung=False)
-        G9stueckersatz.schreiben(bilanz['duf'], [], haut_tiefe_mm=Blendimportscham.HAUT_TIEFE_MM, anatomie='scham')
+        # Gewichte: die der Hautpunkte der FIGUR dieses Imports, die das Stück verdecken (`Blendimportschamgewichte`) — die der drei
+        # im Raum nächsten Punkte der Grundfigur hielten es zu 98 % am Becken, bei 25° gespreizten Beinen bewegte es sich 0 mm gegen 6,6 mm
+        # der Haut (gemessen 09.10.2026). Die LAGE folgt dem Körper nicht (`G9stueckteile.netze`, Hauttiefe), darum keine Rückrechnung
+        # auf die Grundfigur (`G9gcfigurbau`): die gespeicherte Lage IST die Ruhelage der Figur dieses Imports.
+        haut = Blendimportschamgewichte.fuer_figur(figur)
+        loch = d.get('loch')
+        # Verschweißt (`Blendimportschamnaht`): der Rand trägt die Gewichte der Haut auf dem Ring des Lochs, sonst folgte er einer Haltung anders.
+        gewichte = haut.gewichte(roh, np.asarray(netz['flaechen'], dtype=np.int64),
+                                 ring=(loch['ring'], loch['ring_punkte']) if loch else None)
+        d['bericht']['gewichte'] = haut.bericht
+        bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, kategorie, material, heben=False, wicklung=False,
+                                         gewichte=gewichte)
+        G9stueckersatz.schreiben(bilanz['duf'], [], haut_tiefe_mm=Blendimportscham.HAUT_TIEFE_MM, anatomie=self.anatomie,
+                                 eigene_gewichte=True, loch=self.loch_angabe(loch))
         bericht = dict(d['bericht'], stueck=bilanz['stueck'], name=anzeige, flaechen=bilanz['flaechen'], kategorie=list(kategorie),
                        punkte=bilanz['punkte'], knochen=bilanz['knochen'])
         logger.info('Blender-Import %s: Scham-Stück → %s (%s)', self.ablage.kennung, bilanz['stueck'], d['bericht'])
@@ -149,7 +214,21 @@ class Blendimportstuecke:
         auge = rolle['rolle'] == 'auge'
         d = self._netz(rolle)
         # Haar und Augen hängen im Original starr am Kopf: sie gehen mit dem Kopf in die Ruhelage.
-        punkte = self.lage.kopf_starr(d['punkte']) if haar or auge else self.lage.ruhelage(d['punkte'])
+        schuh = rolle.get('ordner') == 'shoes'
+        fuss = self.fuss() if schuh else None
+        absatz = fuss is not None and bool(fuss.aktiv())
+        requisit = None if (haar or auge or schuh) else Blendimportrequisit(self.lage).erkennen(d['punkte'])
+        if haar or auge:
+            punkte = self.lage.kopf_starr(d['punkte'])
+        elif requisit:
+            # Zu weit vom Körper für die Käfig-Nachbarschaft (Waffe in der Hand, Helm): starr mit dem Teil, das es berührt.
+            punkte, requisit['rundlauf_mm'] = Blendimportrequisit(self.lage).ruhelage(d['punkte'], requisit['nummer'])
+        else:
+            # Jedes Kleid sieht nur die Körperteile, die es tragen darf (Hände nie): sonst hing der Saum an der Hand auf der Hüfte. Ein Schuh
+            # geht in den Käfig mit den Füßen in Absatzhaltung (`Blendimportfuss`); die Figur stellt beim Tragen ihre Füße dazu.
+            erlaubt = Blendimportteile.erlaubt(rolle.get('ordner'), '%s %s' % (rolle['name'], rolle.get('art', '')))
+            punkte = (fuss.stueck_ruhelage(d['punkte'], d['dreiecke'], erlaubt) if absatz
+                      else self.lage.stueck_ruhelage(d['punkte'], d['dreiecke'], erlaubt))
         kennung, anzeige = G9eigenstueck.kennung_und_name(self.anzeige(rolle))
         ordner = G9eigenstueck.arbeitsordner(kennung)
         ordner.mkdir(parents=True, exist_ok=True)
@@ -164,18 +243,41 @@ class Blendimportstuecke:
         elif auge:
             kategorie, art, knochen = self.AUGEN_KATEGORIE, 'Clothing', 'head'
         else:
-            kategorie, art, knochen = G9mbkategorien.fuer(rolle.get('ordner') or 'tops', anzeige), 'Clothing', None
+            kategorie, art, knochen = (G9mbkategorien.fuer(rolle.get('ordner') or 'tops', anzeige), 'Clothing',
+                                       requisit['knochen'] if requisit else None)
         bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, kategorie, material, heben=False,
                                          knochen=knochen, art_ordner=art)
         figur = self.lage.stellung()
         ruhe, bericht = G9gcfigurbau.ruhelage(bilanz['stueck'], figur, roh, roh)
-        bilanz = G9eigenstueck.schreiben(ruhe, netz, kennung, anzeige, kategorie, material, heben=False,
-                                         knochen=knochen, art_ordner=art)
+        schreiben = lambda lage_ruhe: G9eigenstueck.schreiben(lage_ruhe, netz, kennung, anzeige, kategorie, material,  # noqa: E731
+                                                              heben=False, knochen=knochen, art_ordner=art)
+        bilanz = schreiben(ruhe)
+        angezogen = G9gcfigurbau.pruefen(bilanz['stueck'], figur, roh)
+        if angezogen['p99_mm'] > self.NACHRECHNEN_MM and not (haar or auge):
+            # Das geschriebene Stück folgt dem Ziel schlechter, als die Rückrechnung meldete (Hemd: Rest 3,0 mm, `pruefen` p99 13,2 / max 20,1 mm; Ursache
+            # vermutet: andere Bindung der Datei an die Körperteile). Ein zweiter Durchgang gegen die gelesene Datei hilft (Hemd: p99 1,0 / max 14,9 mm, +24 s).
+            ruhe2, bericht2 = G9gcfigurbau.ruhelage(bilanz['stueck'], figur, roh, ruhe)
+            bilanz2 = schreiben(ruhe2)
+            angezogen2 = G9gcfigurbau.pruefen(bilanz2['stueck'], figur, roh)
+            if (angezogen2['p99_mm'], angezogen2['max_mm']) < (angezogen['p99_mm'], angezogen['max_mm']):
+                bilanz, bericht, angezogen = bilanz2, dict(bericht2, zweiter_durchgang=True), angezogen2
+            else:
+                bilanz = schreiben(ruhe)
+                bericht['zweiter_durchgang'] = 'verworfen'
         bericht.update(stueck=bilanz['stueck'], name=anzeige, punkte=bilanz['punkte'], flaechen=bilanz['flaechen'],
-                       haut_median_mm=bilanz['haut_median_mm'], kategorie=list(kategorie),
-                       angezogen=G9gcfigurbau.pruefen(bilanz['stueck'], figur, roh))
+                       haut_median_mm=bilanz['haut_median_mm'], kategorie=list(kategorie), angezogen=angezogen)
         if haar:
             bericht['kopf'] = getattr(self.lage, 'kopf_befund', None)
+        if fuss is not None:
+            # Die Datei NACH der `.duf` (Stückstand im Antwortvorrat), bei jedem Schuh — auch leer, sonst bliebe der Griff eines früheren Laufs stehen.
+            G9stueckersatz.schreiben(bilanz['duf'], [], griff=fuss.griff() if absatz else None)
+            bericht['fuss'] = fuss.bericht() if absatz else None
+        if requisit:
+            bericht['requisit'] = requisit
+        elif not (haar or auge):
+            # Abnahme (Stufe 7): Kantenverzerrung, frei hängender Anteil, Haltungstreue gegen das Original — samt Hinweisen.
+            bericht['pruefung'] = self.pruefung().pruefen(bilanz['stueck'], punkte, self.lage.ins_netz(d['punkte']), d['dreiecke'],
+                                                          fuss if absatz else None, rolle['name'])
         if auge:
             # Die Datei NACH der `.duf` (Stückstand im Antwortvorrat): der Browser blendet die Genesis-Augen aus, solange es sitzt.
             G9stueckersatz.schreiben(bilanz['duf'], ['augen'])
@@ -202,7 +304,7 @@ class Blendimportstuecke:
 
         alpha = bild('alpha')
         if alpha:
-            alpha = cls.alphabild(alpha, ordner / (kennung + '_alpha.png'))
+            alpha = cls.alphabild(alpha, ordner / (kennung + '_alpha.png'), quelle.get('alpha_ausgang') or 'Alpha')
         # Feste Farbe statt Bild (`Blendexport.festfarbe`: Haar mit Mix-Faktor 1,0): linear → sRGB, wie Daz' Diffusfarbe.
         fest = quelle.get('farbe_wert')
         farbe = tuple(round(cls.srgb(w), 4) for w in fest) if fest and not quelle.get('farbe') else (1.0, 1.0, 1.0)
@@ -212,47 +314,9 @@ class Blendimportstuecke:
                 'alpha_schwelle': cls.HAAR_ALPHA_SCHWELLE if haar and alpha else None,
                 'shininess': None, 'opacity': None}
 
-    @classmethod
-    def browserbild(cls, pfad, ziel):
-        """Das Bild in einem Format, das der Browser liest: PNG und JPG gehen unverändert durch; TGA (das Augenbild der
-        .blend, `Eye_BaseColor.tga`), BMP und Ähnliches werden als PNG neben das Stück gelegt (`ziel`)."""
-        if str(pfad).lower().endswith(cls.BROWSER_FORMATE):
-            return pfad
-        from PIL import Image
-
-        with Image.open(pfad) as bild:
-            bild.convert('RGBA' if 'A' in bild.getbands() else 'RGB').save(ziel)
-        return str(ziel)
-
-    @staticmethod
-    def srgb(linear):
-        """Lineare Farbkomponente → sRGB (IEC 61966-2-1)."""
-        linear = max(0.0, min(1.0, float(linear)))
-        return 12.92 * linear if linear <= 0.0031308 else 1.055 * linear ** (1 / 2.4) - 0.055
-
-    @staticmethod
-    def alphabild(quelle, ziel):
-        """Der Alpha-Kanal als Graubild: three.js liest eine `alphaMap` aus dem GRÜNkanal, Daz' Schnittmasken sind
-        grau — das Farbbild mit Alpha (Haar der .blend: `hair_basecolor.png`, RGBA) gäbe dort die Haarfarbe als
-        Deckkraft. Ohne Alpha-Kanal bleibt das Bild, wie es ist."""
-        from PIL import Image
-
-        with Image.open(quelle) as bild:
-            if 'A' not in bild.getbands():
-                return str(quelle)
-            bild.getchannel('A').save(ziel)
-        return str(ziel)
-
-    @staticmethod
-    def obj(ordner, punkte, dreiecke, uv_ecken, material):
-        """`stueck.obj` (+ MTL ohne Bild: das Material geht getrennt an den Schreiber) — Punkte in Ruhe (m, Y oben),
-        UV je Dreiecksecke."""
-        (ordner / 'stueck.mtl').write_text('newmtl Stoff\nKd 1 1 1\n', encoding='utf-8')
-        uv = np.asarray(uv_ecken, dtype=np.float64).reshape(-1, 2)
-        zeilen = ['mtllib stueck.mtl', 'usemtl Stoff'] + ['v %.6f %.6f %.6f' % tuple(p) for p in punkte]
-        zeilen += ['vt %.6f %.6f' % tuple(t) for t in uv]
-        zeilen += ['f %d/%d %d/%d %d/%d' % (a + 1, 3 * i + 1, b + 1, 3 * i + 2, c + 1, 3 * i + 3)
-                   for i, (a, b, c) in enumerate(np.asarray(dreiecke, dtype=np.int64))]
-        pfad = ordner / 'stueck.obj'
-        pfad.write_text('\n'.join(zeilen) + '\n', encoding='utf-8')
-        return pfad
+    #: Bildhelfer in `Blendimportbilder` (die Datei stand bei 297 Zeilen); hier als Namen des Stücks, damit Aufrufer und Tests
+    #: (`mock.patch.object(Blendimportstuecke, 'alphabild', …)`) dieselben bleiben.
+    browserbild = staticmethod(Blendimportbilder.browserbild)
+    srgb = staticmethod(Blendimportbilder.srgb)
+    alphabild = staticmethod(Blendimportbilder.alphabild)
+    obj = staticmethod(Blendimportbilder.obj)

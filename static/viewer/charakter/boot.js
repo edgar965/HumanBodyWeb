@@ -52,7 +52,7 @@ import './cloth_export.js';
 import './greifen.js';
 import { Szenenaufbau } from './szenenaufbau.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Netzstufe } from '../gemeinsam/netzstufe.js';
+import { Netzstufenschalter } from '../gemeinsam/netzstufenschalter.js';
 
 // Die Menüleiste schaltet das Rig darüber ein und aus.
 fn.buildRigifySkeleton = buildRigifySkeleton;
@@ -69,9 +69,9 @@ window.addEventListener('keydown', ereignis => {
 
 fn.initDialogCloseHandlers();
 
-// Strg+Alt+H: hohe Auflösung (Filmstufe) für diesen Browser — Genesis-9-Figuren
-// bauen im Stand um, sonst lädt die Seite neu (`gemeinsam/netzstufe.js`).
-Netzstufe.einrichten(window, () => Genesis9aufbau.umschalten(state.characters.values()));
+// Strg+Alt+H: grob → fein → ultrafein (Filmstufe), die Stufe steht immer rechts unten — Genesis-9-Figuren
+// bauen im Stand um, sonst lädt die Seite neu (`gemeinsam/netzstufenschalter.js`, `netzstufe.js`).
+Netzstufenschalter.einrichten(window, ziel => Genesis9aufbau.stufeSetzen(state.characters.values(), ziel));
 // Lippensynchronisation im Reiter Animation (Genesis 9, 18.09.2026 abends).
 Genesis9lipsync.einrichten();
 // Rechnet noch ein Blender-Import (gestartet vor dem Neuladen), zeigt die Leiste oben neben „HumanBody" ihn weiter.

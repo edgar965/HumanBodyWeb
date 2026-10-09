@@ -8,7 +8,8 @@ rohen Karten bleiben in `arbeit/` (`farbe_roh_<k>.jpg`, `normalen_roh_<k>.png`, 
 
 „Mesh to 3D" überträgt die Netzfarbe über rund 2 Mio. Proben (`meshfigur.md`, Schritt „textur") — für ein Scan-Netz
 genug, für eine 8K-Haut zu grob, und Normalen und Rauheit kennt es nicht. Hier backt Blender aus dem Original
-(`blendbacken.py`): Der Körper wird dafür in die Ruhelage der Figur gerechnet (`Blendimportlage.ruhelage`), die Figur
+(`blendbacken.py`): Der Körper wird dafür in die Ruhelage der Figur gerechnet (`Blendimportlage.koerper_ruhelage`: jeder
+Punkt nur mit den Käfigpunkten seines Körperteils — mit der Hand auf der Hüfte hing die Hüfte sonst an der Hand), die Figur
 selbst (Regler + Eigenmorph, Stufe 1) liegt je Kachel als OBJ daneben.
 
 NACHARBEIT: Wo kein Strahl das Original trifft, ist die gebackene Farbe schwarz. Dort gilt die Kachel von „Mesh to 3D"
@@ -52,11 +53,39 @@ class Blendimporthaut:
         #: `weg` (Vorgabe): nur das Feindetail der gebackenen Normalen gilt; `bleibt`: die ganze Karte.
         self.normalen_form = normalen_form
         self.normalen_flach = {}
+        #: Farbfüllung um das Scham-Stück (`Blendimportumfeld`): das Objekt (oder None ohne Stück) und seine Zahlen je Kachel.
+        self.umfeld = None
+        self.umfeld_bericht = {}
+
+    def _umfeld(self, figur, ruhe, name, dreiecke):
+        """`Blendimportumfeld` des Scham-Stücks dieses Imports — None, wenn es keines gibt (`arbeit/scham_punkte.npy`) oder die
+        Farbe des Originals nicht zu lesen ist."""
+        pfad = self.ablage.arbeit('scham_punkte.npy')
+        materialien = self.inventar[name].get('materialien') or [{}]
+        farbe = (materialien[0] or {}).get('farbe')
+        if not pfad.is_file() or not farbe:
+            return None
+        if len(materialien) != 1:
+            # Mehrere Hautmaterialien (Character Creator): welches Bild zu welchem Dreieck gehört, entscheidet `Blendimportscham` — hier
+            # bliebe nur das erste (die Kopfhaut). Lieber die Ersatzkachel als die Farbe des Gesichts auf der Scham.
+            logger.info('Blender-Import %s: Körper mit %d Materialien — keine Originalfarbe im Umfeld des Scham-Stücks', self.ablage.kennung,
+                        len(materialien))
+            return None
+        from PIL import Image
+
+        from .blendimportumfeld import Blendimportumfeld
+
+        Image.MAX_IMAGE_PIXELS = None
+        with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
+            uv_ecken = np.asarray(d['uv_ecken'], dtype=np.float64)
+        with Image.open(farbe) as bild:
+            farbbild = np.asarray(bild.convert('RGB'))
+        return Blendimportumfeld(np.load(pfad), figur, {'punkte': ruhe, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken}, farbbild)
 
     def _koerper(self):
         name = next(r['name'] for r in self.rollen if r['rolle'] == 'koerper')
         with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
-            return name, np.asarray(d['punkte'], dtype=np.float64)
+            return name, np.asarray(d['punkte'], dtype=np.float64), np.asarray(d['dreiecke'], dtype=np.int64)
 
     def abstand(self, ruhe, figur, dreiecke):
         """Abstand jedes Körperpunkts zur FLÄCHE der Figur (mm) — Median, p95, Maximum, RMS und Anteil über 8 mm.
@@ -72,13 +101,14 @@ class Blendimporthaut:
 
     def backen(self, blend):
         lage = Blendimportlage(self.job, self.zusatz)
-        name, punkte = self._koerper()
-        ruhe = lage.ruhelage(punkte)
+        name, punkte, dreiecke = self._koerper()
+        ruhe = lage.koerper_ruhelage(punkte, dreiecke)
         np.save(self.ablage.arbeit('koerper_ruhe.npy'), Blendimportlage.blender(ruhe))
         ordner = self.ablage.arbeit('genesis')
         ordner.mkdir(parents=True, exist_ok=True)
         objs = lage.genesis_objs(ordner)
         figur = lage.genesis()
+        self.umfeld = self._umfeld(figur, ruhe, name, dreiecke)
         # `nummern`, nicht `kacheln`: der Lauf legt unter `kacheln` die Dateien ab (`{**bericht}` überschrieb sie mit der Liste).
         bericht = {'abstand': self.abstand(ruhe, figur['punkte'], figur['dreiecke']), 'nummern': sorted(objs)}
         logger.info('Blender-Import %s: Körper in Ruhe, Abstand zur Figur %s', self.ablage.kennung, bericht['abstand'])
@@ -88,6 +118,7 @@ class Blendimporthaut:
              '--ziel', self.ablage.ergebnis(), '--px', self.px],
             self.ablage.ergebnis('gebacken.txt'))
         bericht['deckung'] = self.nacharbeiten(sorted(objs))
+        bericht['umfeld'] = self.umfeld_bericht
         bericht['normalen_flach'] = self.normalen_flach
         bericht['normalen_form'] = self.normalen_form
         return self.kacheln(sorted(objs)), bericht
@@ -100,6 +131,41 @@ class Blendimporthaut:
         name = ((self.job.ergebnis or {}).get('fototextur') or {}).get('kacheln', {}).get(str(kachel))
         pfad = Meshfigurablage(self.job.kennung).ergebnis(name) if name else None
         return pfad if pfad and pfad.is_file() else None
+
+    def _farbe_fuellen(self, k, farbe, leer):
+        """`(Farbe, Saum)`: der Saum um die Fehlstellen geschlossen, die Fehlstellen mit der Ersatzkachel von „Mesh to 3D" gefüllt und —
+        mit Scham-Stück — im Umfeld des Stücks mit der Farbe des Originals (`Blendimportumfeld`)."""
+        from PIL import Image
+
+        # Der Saum um die Fehlstellen ist nicht rein schwarz und bliebe als dunkle Linie stehen (`Blendimportrand`).
+        farbe, saum = Blendimportrand.schliessen(farbe, leer)
+        ersatz = self._meshfigur_kachel(k)
+        if leer.any() and ersatz is not None:
+            hinten = np.asarray(Image.open(ersatz).convert('RGB').resize(farbe.shape[1::-1], Image.LANCZOS))
+            farbe = np.where(leer[..., None], hinten, farbe)
+        if leer.any() and self.umfeld is not None:
+            # Um das Scham-Stück gilt in den Fehlstellen die Farbe des Originals, nicht die blasse Ersatzkachel.
+            farbe = self.umfeld.fuellen(k, np.array(farbe), leer)
+            self.umfeld_bericht[str(k)] = self.umfeld.bericht
+        return farbe, saum
+
+    def farbe_neu(self, kacheln):
+        """Die Farbkacheln aus den rohen Backergebnissen (`arbeit/farbe_roh_<k>.jpg`) neu nacharbeiten — ohne neues Backen (je
+        Kachel 80 s auf der GPU). Normalen und Rauheit bleiben. `{kachel: Zahlen des Umfelds}`."""
+        from PIL import Image
+
+        Image.MAX_IMAGE_PIXELS = None
+        lage = Blendimportlage(self.job, self.zusatz)
+        name, punkte, dreiecke = self._koerper()
+        self.umfeld = self._umfeld(lage.genesis(), lage.koerper_ruhelage(punkte, dreiecke), name, dreiecke)
+        self.umfeld_bericht = {}
+        for k in kacheln:
+            farbe = np.asarray(Image.open(self.ablage.arbeit('farbe_roh_%d.jpg' % k)).convert('RGB'))
+            leer = farbe.max(axis=2) <= 6
+            farbe, _saum = self._farbe_fuellen(k, farbe, leer)
+            Image.fromarray(farbe).save(self.ablage.ergebnis('haut_%d_farbe.jpg' % k), quality=95)
+            self.melden(0.95, 'Farbe der Kachel %d neu' % k)
+        return self.umfeld_bericht
 
     def nacharbeiten(self, kacheln):
         """Fehlstellen füllen; `{kachel: Anteil getroffener Texel in %}`."""
@@ -116,12 +182,7 @@ class Blendimporthaut:
             # JPEG verwischt das reine Schwarz der Fehlstellen um wenige Stufen.
             leer = farbe.max(axis=2) <= 6
             deckung[str(k)] = round(100.0 * (1.0 - leer.mean()), 1)
-            # Der Saum um die Fehlstellen ist nicht rein schwarz und bliebe als dunkle Linie stehen (`Blendimportrand`).
-            farbe, saum = Blendimportrand.schliessen(farbe, leer)
-            ersatz = self._meshfigur_kachel(k)
-            if leer.any() and ersatz is not None:
-                hinten = np.asarray(Image.open(ersatz).convert('RGB').resize(farbe.shape[1::-1], Image.LANCZOS))
-                farbe = np.where(leer[..., None], hinten, farbe)
+            farbe, saum = self._farbe_fuellen(k, farbe, leer)
             if leer.any() or saum.any():
                 Image.fromarray(farbe).save(farbe_pfad, quality=95)
             normal_pfad = self.ablage.ergebnis('haut_%d_normalen.png' % k)

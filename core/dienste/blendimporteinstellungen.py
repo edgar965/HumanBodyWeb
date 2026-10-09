@@ -57,12 +57,15 @@ class Blendimporteinstellungen:
                     'Originaliris auf den Genesis-Augen. Das Augenbild liegt als eigene Datei beim Modell.'},
         {'schluessel': 'scham', 'titel': 'Scham', 'art': 'wahl', 'vorgabe': 'objekt',
          'werte': [('objekt', 'Fläche und Haut des Originals als eigenes Stück (Zubehör)'),
+                   ('mann', 'Männliche Anatomie (Penis, Hoden) als eigenes Stück — ohne Scham-Regler'),
                    ('figur', 'Nur die Genesis-Fläche (weiche Mulde)')],
          'hinweis': 'Die Genesis-Figur trägt die inneren Schamlippen nicht: ihr Käfig hat dort ~8 mm Punktabstand, die Furche '
                     'wird überbrückt, und das Backen trifft verschmiert. Eigenes Stück: der Teil des Körpers, der von der Figur '
                     'abweicht, kommt als „<Name> Scham" unter Zubehör — mit der Fläche und der Haut (Farbe, Normalen, Rauheit) '
                     'des Originals; die Genesis-Haut darunter entfällt, solange es getragen wird. Ausziehen zeigt wieder die '
-                    'Genesis-Fläche.'},
+                    'Genesis-Fläche. „Männliche Anatomie" baut dasselbe Stück („<Name> Genitalien"), trägt aber nicht die '
+                    'weiblichen Scham-Regler (Hügel, Lippen, Haube, Eingang, Damm) — Regler für Länge, Umfang und Hoden gibt es '
+                    'noch nicht.'},
         {'schluessel': 'kachel_px', 'titel': 'Haut: gespeicherte Auflösung', 'art': 'wahl', 'vorgabe': '8192',
          'werte': [('2048', '2048 px (klein)'), ('4096', '4096 px (mittel)'), ('8192', '8192 px (volle Auflösung)')],
          'hinweis': 'In dieser Größe wird jede der vier Haut-Kacheln (Kopf, Rumpf, Beine, Arme) aus dem Original '

@@ -72,3 +72,28 @@ class NachformungTest(SimpleTestCase):
         self.assertEqual(Blendimportnachformung.zusatzregler({'ergebnis': {'nachformung': {'fehler': 'x'}}}), {})
         self.assertEqual(Blendimportnachformung.zusatzregler({}), {})
         self.assertEqual(Blendimportnachformung.zusatzregler(None), {})
+
+    def test_5_bei_scham_objekt_entfaellt_die_nachformung(self):
+        """Edgar, 09.10.2026: „die hat im moment zwei mal Geschlechtsorgane" — die facettierte Nachformung der Figur lag unter dem
+        Scham-Stück. Mit `scham = objekt` kommt die Scham nur als Stück; mit `figur` läuft die Nachformung wie bisher.
+        Sabotage: die Bedingung in `Blendimportlauf._nachformung` streichen → der erste Teil wird rot."""
+        from unittest import mock
+
+        from core.dienste.blendimportlauf import Blendimportlauf
+        lauf = Blendimportlauf.__new__(Blendimportlauf)
+        lauf.ergebnis = mock.Mock()
+        lauf.inventar = lambda: {}
+        lauf.ablage, lauf.melden = object(), None
+        with mock.patch('core.dienste.blendimportnachformung.Blendimportnachformung') as nachformung:
+            lauf.stand = {'einstellungen': {'scham': 'objekt'}, 'rollen': [], 'quelle': {'name': 'x'}}
+            lauf._nachformung(job=None)
+            nachformung.assert_not_called()
+            schritt, wert = lauf.ergebnis.call_args[0]
+            self.assertEqual(schritt, 'nachformung')
+            self.assertIn('aus', wert)
+            self.assertEqual(Blendimportnachformung.zusatzregler({'ergebnis': {'nachformung': wert}}), {})
+            lauf.stand = {'einstellungen': {'scham': 'figur'}, 'rollen': [], 'quelle': {'name': 'x'}}
+            nachformung.return_value.formen.return_value = {'regler': {'eigen:x_scham': 1.0}}
+            lauf._nachformung(job=None)
+            nachformung.assert_called_once()
+            self.assertEqual(lauf.ergebnis.call_args[0], ('nachformung', {'regler': {'eigen:x_scham': 1.0}}))

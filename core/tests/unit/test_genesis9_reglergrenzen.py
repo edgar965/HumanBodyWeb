@@ -99,11 +99,12 @@ class ReglergrenzenTest(SimpleTestCase):
         G9reglergrenzen.anwenden(ablage)
         G9formeln.vergessen()
         try:
-            # selbst gestellt: ins Minus, begrenzt auf -max
+            # selbst gestellt: ins Minus; seit dem Spielraum (08.10.2026, `G9reglergrenzen.SPIELRAUM`) gilt ein gestellter Wert bis ×2
+            # über Dazʼ Grenze hinaus (-3 wird -2, nicht mehr -1) — nur der gestellte, nie ein Formelwert (unten)
             def wert(gesetzt, kanal):
                 return G9formeln(gesetzt, ablage).wert(kanal)
             self.assertAlmostEqual(wert({'body_bs_BreastSize': -0.5}, 'body_bs_BreastSize'), -0.5)
-            self.assertAlmostEqual(wert({'body_bs_BreastSize': -3.0}, 'body_bs_BreastSize'), -1.0)
+            self.assertAlmostEqual(wert({'body_bs_BreastSize': -3.0}, 'body_bs_BreastSize'), -2.0)
             # nur ueber Formeln negativ: bleibt auf Daz' Grenze 0
             f = G9formeln({'Fabrice_body_bs_body': 1.0}, ablage)
             self.assertEqual(f.wert('body_bs_ProportionLarger'), 0.0)

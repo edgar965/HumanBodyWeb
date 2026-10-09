@@ -183,7 +183,7 @@ class G9antworten(G9antwortvorrat):
     @classmethod
     def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None, binaer=False):
         text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung(),
-                           cls._eigenstand(rumpf, eintrag), G9stueckstand.von(eintrag), binaer],
+                           cls._eigenstand(rumpf, eintrag), [G9stueckstand.von(eintrag), G9stueckstand.griffe(rumpf)], binaer],
                           sort_keys=True, default=str)
         return '%s_%s_%s' % (art, cls._sicher(name),
                              hashlib.sha1(text.encode('utf-8')).hexdigest()[:16])

@@ -1,5 +1,7 @@
 import { Protokoll } from './protokoll.js';
 import { Figuraufbaustand } from './figuraufbaustand.js';
+import { Genesis9haeppchen } from './genesis9haeppchen.js';
+import { Netzstufenstand } from './netzstufenstand.js';
 
 /**
  * Genesis9aufbau — die Figur in zwei Zügen: Käfig sofort, volle Stufe nach.
@@ -47,8 +49,11 @@ export class Genesis9aufbau {
      */
     static async progressiv(inst) {
         await Genesis9aufbau.alles(inst, Genesis9aufbau.GROB);
+        // Die Figur steht in der groben Stufe da; die Anzeige sagt es und dass die gewählte nachkommt (`Netzstufenstand`).
+        Netzstufenstand.melden(inst, 'grob', Netzstufenstand.wahl !== 'grob');
+        // Die gewählte Stufe stückweise und erst nach Ruhe nachholen (`Genesis9haeppchen`, Edgar 09.10.2026).
         inst.fein = Genesis9aufbau._gcAbwarten(inst)
-            .then(() => Genesis9aufbau._nachzug(inst, 'Feine Stufe nicht geladen'));
+            .then(() => Genesis9haeppchen.zug(inst, true));
         return inst;
     }
 
@@ -59,21 +64,6 @@ export class Genesis9aufbau {
             Promise.resolve(inst.gcBereit).catch(() => {}),
             new Promise(loesen => setTimeout(loesen, Genesis9aufbau.GC_FRIST_MS)),
         ]);
-    }
-
-    /**
-     * Der Nachzug auf die volle Stufe, im Aufbaustand vermerkt — solange er
-     * läuft, zeigt die Szene das grobe Netz, und ein Export daraus wäre
-     * stillschweigend ein Sechzehntel der Figur (`Figuraufbaustand`).
-     */
-    static _nachzug(inst, meldung) {
-        Figuraufbaustand.beginnen(inst);
-        return Genesis9aufbau.alles(inst, null)
-            .catch(fehler => {
-                Protokoll.warnung('Genesis 9', `${meldung}: ${fehler.message}`);
-                return inst;
-            })
-            .finally(() => Figuraufbaustand.beenden(inst));
     }
 
     /**
@@ -99,28 +89,40 @@ export class Genesis9aufbau {
     }
 
     /**
-     * Strg+Alt+H ohne Neustart (18.09.2026 abends): jede Genesis-9-Figur holt
-     * dieselbe Stellung in der neuen Stufe (der Server liest den Keks); die
-     * Texturen liegen im Vorrat. Andere Figurarten bleiben stehen, wie sie
-     * sind — ihre Stufe gilt beim nächsten Laden (Edgar, 18.09. nachts: „das
-     * muss in 1-2 s gehen"; die HumanBody-Figur auf Stufe 3 sind 1,1 Mio.
-     * Punkte und 17 s Browseraufbau). Liefert false nur ohne Genesis-Figur —
-     * dann lädt die Seite neu wie bisher.
+     * Strg+Alt+H ohne Neustart (18.09.2026 abends; seit 09.10.2026 mit drei Stufen, `Netzstufenschalter`): jede
+     * Genesis-9-Figur holt dieselbe Stellung in der gewählten Stufe — grob (Käfig, sofort), fein oder ultrafein (stückweise,
+     * `Genesis9haeppchen`; der Server liest den Keks). Die Texturen liegen im Vorrat. Andere Figurarten bleiben stehen, wie sie
+     * sind — ihre Stufe gilt beim nächsten Laden (Edgar, 18.09. nachts: „das muss in 1-2 s gehen"; die HumanBody-Figur auf
+     * Stufe 3 sind 1,1 Mio. Punkte und 17 s Browseraufbau). Liefert false nur ohne Genesis-Figur — dann lädt die Seite neu.
      */
-    static async umschalten(figuren) {
+    static async stufeSetzen(figuren, ziel) {
         const alle = [...figuren].filter(inst => inst?.quelle === 'genesis9');
         const andere = [...figuren].length - alle.length;
         if (!alle.length) return false;
         if (andere) Protokoll.info('Genesis 9', `${andere} andere Figur(en) bleiben auf ihrer Stufe bis zum nächsten Laden`);
-        await Promise.all(alle.map(inst => {
-            inst.fein = Genesis9aufbau._nachzug(inst, 'Stufe nicht umgebaut');
-            return inst.fein;
-        }));
+        if (ziel === 'grob') {
+            await Promise.all(alle.map(async inst => {
+                await inst._feinZug;                    // ein laufender Nachzug bricht an der nächsten Stelle ab
+                await Genesis9aufbau.alles(inst, Genesis9aufbau.GROB);
+                Netzstufenstand.melden(inst, 'grob', false);
+                // Grob gewählt: Der Export bleibt gesperrt (`Figuraufbaustand`, sonst ein Sechzehntel der Figur ohne Meldung).
+                if (!inst._grobHalt) { inst._grobHalt = true; Figuraufbaustand.beginnen(inst); }
+            }));
+        } else {
+            await Promise.all(alle.map(inst => {
+                inst.fein = Genesis9haeppchen.zug(inst, false);
+                return inst.fein;
+            }));
+        }
         return true;
     }
 
-    /** Die Adresse mit `?stufen=` — oder unverändert. */
+    /**
+     * Die Adresse mit `?stufen=` — oder unverändert. Ohne Angabe gilt die gewählte Stufe: Hat der Nutzer „grob" gewählt
+     * (`Netzstufenstand`), holt auch ein Reglerzug oder ein neu angehaktes Stück nur den Käfig.
+     */
     static adresse(url, stufen) {
+        if ((stufen === null || stufen === undefined) && Netzstufenstand.wahl === 'grob') stufen = Genesis9aufbau.GROB;
         return stufen === null || stufen === undefined ? url : `${url}?stufen=${stufen}`;
     }
 }

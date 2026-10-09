@@ -13,6 +13,7 @@ import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9fototextur } from './genesis9fototextur.js';
 import { Genesis9vorgabe } from './genesis9vorgabe.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
+import { Netzstufenstand } from './netzstufenstand.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
 import { Genesis9ersatz } from './genesis9ersatz.js';
 import { Modell } from './modell.js';
@@ -149,7 +150,7 @@ export class Genesis9Modell extends Modell {
      * im UI"). Jetzt bleibt das Skelett stehen, wenn der Aufrufer weiß, dass er es nicht
      * bewegt hat — `!this.skelett` erzwingt den ersten Bau trotzdem.
      */
-    async koerperAufbauen(stufen = null, skelettFrisch = true) {
+    async koerperAufbauen(stufen = null, skelettFrisch = true, vorBau = null) {
         const lauf = this._lauf = (this._lauf || 0) + 1;
         const daten = await Serverabruf.netzSenden(Genesis9aufbau.adresse(
             `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen), {
@@ -160,6 +161,11 @@ export class Genesis9Modell extends Modell {
             });
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== this._lauf) return this;          // überholt: ein neuer Zug läuft
+        // `vorBau`: die Antwort ist da, gebaut wird sie erst auf Ruhe (`Genesis9aufbau._haeppchen`, 09.10.2026).
+        if (vorBau) {
+            await vorBau();
+            if (lauf !== this._lauf) return this;
+        }
         this._altesWeg();
         const neuesSkelett = skelettFrisch || !this.skelett;
         if (neuesSkelett) {
@@ -340,8 +346,8 @@ export class Genesis9Modell extends Modell {
      * `werte`: `{variante, stil, stile: {pose, laenge}, regler, griff}` — die
      * Stile gehen als Liste (`Genesis9garderobe.werte`), je Art eine Wahl.
      */
-    anziehen(kennung, werte = null, stufen = null, kaskade = true) {
-        return Genesis9kleidung.anziehen(this, kennung, werte, stufen, kaskade);
+    anziehen(kennung, werte = null, stufen = null, kaskade = true, vorBau = null) {
+        return Genesis9kleidung.anziehen(this, kennung, werte, stufen, kaskade, vorBau);
     }
 
     static stilliste(werte) { return Genesis9kleidung.stilliste(werte); }
@@ -401,6 +407,7 @@ export class Genesis9Modell extends Modell {
     }
 
     dispose() {
+        Netzstufenstand.vergessen(this);
         // Erst das Skelett abhängen (`Knochenbau.abraeumen`), dann Netze und Gruppe.
         this.skelettBauen(null);
         super.dispose();

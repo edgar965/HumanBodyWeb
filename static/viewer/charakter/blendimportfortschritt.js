@@ -65,9 +65,12 @@ export class Blendimportfortschritt {
         }).join('');
         const lauf = z.figur_lauf;
         const detail = this.feld.querySelector('.mi-detail');
+        const getrennt = z.verbindung === 'getrennt';
         const text = lauf ? `Mesh to 3D ${lauf.kennung}: ${lauf.schritt || ''} — ${lauf.detail || ''}` : (z.detail || '');
-        detail.textContent = z.status === 'gescheitert' ? `Gescheitert — ${z.fehler || 'ohne Grund'}` : text;
-        detail.classList.toggle('fehlertext', z.status === 'gescheitert');
+        detail.textContent = getrennt ? z.detail
+            : (z.status === 'gescheitert' ? `Gescheitert — ${z.fehler || 'ohne Grund'}` : text);
+        detail.classList.toggle('fehlertext', z.status === 'gescheitert' && !getrennt);
+        detail.classList.toggle('verbindungstext', getrennt);
         const knoepfe = this.feld.querySelector('.mi-knoepfe');
         if (Blendimportzustand.laeuft(z)) {
             knoepfe.innerHTML = '<button data-lauf="anhalten">Anhalten</button>';

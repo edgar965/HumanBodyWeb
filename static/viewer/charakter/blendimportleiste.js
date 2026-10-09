@@ -28,7 +28,8 @@ export class Blendimportleiste {
 #blendimport-leiste.fertig .bil-balken > span { background: var(--success, #5cb85c); }
 #blendimport-leiste.fertig .bil-text { color: var(--success, #5cb85c); }
 #blendimport-leiste.fehler .bil-balken > span { background: var(--danger, #e05252); }
-#blendimport-leiste.fehler .bil-text { color: var(--danger, #e05252); }`;
+#blendimport-leiste.fehler .bil-text { color: var(--danger, #e05252); }
+#blendimport-leiste.getrennt .bil-text { color: var(--warning, #f39c12); }`;
 
     static _abschalten = null;
     static _eingerichtet = false;
@@ -84,8 +85,15 @@ export class Blendimportleiste {
         }
         if (zustand.status === 'angehalten') text = `Import „${name}" angehalten`;
         if (zustand.status === 'unbekannt') text = zustand.detail || 'Import: Stand nicht lesbar';
+        const getrennt = zustand.verbindung === 'getrennt';
+        if (getrennt) {         // Der Server antwortet nicht — das ist KEIN Fehler des Imports, er rechnet weiter
+            text = `Import „${name}"${schritt ? ` · ${schritt}` : ''} — Server antwortet nicht (${zustand.getrennt_s} s), `
+                + 'Import rechnet weiter';
+            hinweis = `${zustand.detail} — Klick öffnet den Import-Dialog`;
+        }
+        leiste.classList.toggle('getrennt', getrennt);
         leiste.classList.toggle('fertig', zustand.status === 'fertig');
-        leiste.classList.toggle('fehler', zustand.status === 'gescheitert' || zustand.status === 'unbekannt');
+        leiste.classList.toggle('fehler', !getrennt && (zustand.status === 'gescheitert' || zustand.status === 'unbekannt'));
         leiste.querySelector('.bil-text').innerHTML = escapeHtml(text);
         leiste.querySelector('.bil-balken > span').style.width = `${prozent}%`;
         leiste.querySelector('.bil-prozent').textContent = `${Math.round(prozent)} %`;

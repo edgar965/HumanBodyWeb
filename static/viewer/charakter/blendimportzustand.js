@@ -7,6 +7,7 @@
  * dasselbe, ohne dass der Server doppelt gefragt wird.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export class Blendimportzustand {
 
@@ -17,6 +18,8 @@ export class Blendimportzustand {
 
     static _uhr = null;
     static _kennung = null;
+    static _letzter = null;           // der letzte Stand, der wirklich vom Server kam
+    static _getrenntSeit = null;      // ms; gesetzt, solange der Server nicht antwortet
 
     /** Rechnet der Import noch (oder steht er kurz davor)? */
     static laeuft(zustand) {
@@ -46,15 +49,47 @@ export class Blendimportzustand {
         try {
             zustand = await Serverabruf.json(`/api/character/blendimport/${encodeURIComponent(kennung)}/zustand/`);
         } catch (fehler) {
-            zustand = { status: 'unbekannt', detail: `Zustand nicht lesbar: ${fehler.message}` };
+            // Reißt die VERBINDUNG ab (der Server lädt nach einer gespeicherten Python-Datei neu, 09.10.2026: 50 s),
+            // sagt das nichts über den Import: Er läuft als eigener Prozess weiter. Früher wurde daraus „unbekannt" —
+            // rot, „Zustand nicht lesbar: Failed to fetch" — und das Fragen hörte auf, die Anzeige blieb stehen.
+            if (fehler instanceof TypeError) return Blendimportzustand._getrennt(kennung);
+            zustand = { status: 'unbekannt', detail: `Stand nicht lesbar (Server-Antwort: ${fehler.message})` };
         }
+        Blendimportzustand._wiederda(kennung);
         zustand.kennung = kennung;
+        Blendimportzustand._letzter = zustand;
         if (!Blendimportzustand.laeuft(zustand)) {
             clearInterval(Blendimportzustand._uhr);
             Blendimportzustand._uhr = null;
         }
         document.dispatchEvent(new CustomEvent(Blendimportzustand.EREIGNIS, { detail: zustand }));
         return zustand;
+    }
+
+    /** Der Server antwortet nicht: den letzten bekannten Stand weiterzeigen, mit dem Hinweis und den Sekunden. */
+    static _getrennt(kennung) {
+        const jetzt = Date.now();
+        if (Blendimportzustand._getrenntSeit === null) Blendimportzustand._getrenntSeit = jetzt;
+        const sekunden = Math.round((jetzt - Blendimportzustand._getrenntSeit) / 1000);
+        const bekannt = Blendimportzustand._letzter && Blendimportzustand._letzter.kennung === kennung
+            ? Blendimportzustand._letzter : { status: 'laeuft' };
+        const zustand = {
+            ...bekannt, kennung, verbindung: 'getrennt', getrennt_s: sekunden,
+            detail: `Der Server antwortet nicht (seit ${sekunden} s) — er lädt vermutlich nach einer Codeänderung neu. `
+                + 'Der Import rechnet im Hintergrund weiter; neuer Versuch alle 2 s.',
+        };
+        document.dispatchEvent(new CustomEvent(Blendimportzustand.EREIGNIS, { detail: zustand }));
+        return zustand;
+    }
+
+    /** Die erste Antwort nach einem Ausfall: im Protokoll vermerken (das übrige macht `Serverprotokoll`). */
+    static _wiederda(kennung) {
+        if (Blendimportzustand._getrenntSeit === null) return;
+        const sekunden = Math.round((Date.now() - Blendimportzustand._getrenntSeit) / 1000);
+        Blendimportzustand._getrenntSeit = null;
+        fn.serverLog?.('blendimport_verbindung_wieder',
+            `Import ${kennung}: Server nach ${sekunden} s wieder erreichbar — der Import lief in dieser Zeit weiter`,
+            sekunden >= 5 ? 'warning' : 'info');
     }
 
     /** Kennung des Imports, der gerade rechnet (auch nach dem Neuladen der Seite) — sonst `null`. */

@@ -49,6 +49,8 @@ class Blendimportlage:
             self.teil = np.asarray(d['teil'])
         self.kaefig_posiert = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
         self._entposen = None
+        self._kaefig_normalen = None
+        self._h = None
 
     def stellung(self):
         """Die Regler der Figur: die der Anpassung samt Eigenmorph plus die Zusatzregler der Nachformung."""
@@ -59,14 +61,144 @@ class Blendimportlage:
         return p @ self.matrix[:3, :3].T + self.matrix[:3, 3]
 
     def entposen(self):
+        from Genesis9.koerperteile import G9koerperteile
         from Kleidung.kleidungsentposen import Kleidungsentposen
 
         if self._entposen is None:
-            self._entposen = Kleidungsentposen(self.kaefig_ruhe, self.kaefig_posiert)
+            self._entposen = Kleidungsentposen(self.kaefig_ruhe, self.kaefig_posiert, self.teil, G9koerperteile.nachbarn())
         return self._entposen
 
     def ruhelage(self, punkte_blender):
+        """Ohne Teile — jeder Punkt sieht die nächsten Käfigpunkte, gleich welchen Teils (`koerper_ruhelage` und
+        `stueck_ruhelage` trennen die Teile; hier bleibt, wie es war)."""
         return self.entposen().ruhelage(self.ins_netz(punkte_blender))
+
+    #: LÄNGEN IN EINHEITEN DES KÄFIGS (`h`, Median des Punktabstands des posierten Käfigs: 4,0 mm bei 1,66 m, 4,3 mm bei 1,75 m, gemessen
+    #: 09.10.2026) statt in Millimetern: ein anderer Käfig oder eine andere Körpergröße verschiebt alle Schwellen mit. Die Faktoren
+    #: sind die an „Asian Female" (h = 4,0 mm) abgestimmten Millimeterwerte, geteilt durch `h` — dort ändert sich nichts.
+    #:
+    #: Gewicht, mit dem ein Stoffpunkt sein eigenes Teil behält: `exp(−(Abstand / (HAFT_H · h))²)` — nah an der Haut stark (1), bei
+    #: 2,5 h 0,64, bei 5 h 0,17, bei 7,5 h 0,02; frei hängender Stoff übernimmt das Teil seiner Nachbarn auf dem Stoff. (Bis 09.10.2026
+    #: `exp(−Abstand / 1 cm)`: die Strapse, 7–13 mm von der Haut des Oberschenkels, wurden mit 60 Runden vom Teil ihres oberen
+    #: Endes überstimmt und hingen am „rumpf", obwohl jeder ihrer Punkte den Oberschenkel als nächsten Käfigpunkt hatte.)
+    HAFT_H = 3.75
+    GLAETTEN_STOFF = 60
+    GLAETTEN_KOERPER = 3
+    #: Zusammenhängende Flecken mit einem Teil übernehmen das Teil ihrer Nachbarn (`teile_inseln`), wenn sie kleiner sind als
+    #: `INSEL_E2` Punkte — in Einheiten der Stückkante `e` (Median der Kantenlängen: 0,5 mm beim BH, 11 mm beim Pullover, 13 mm bei einer
+    #: Socke; 150 Punkte sind 0,3 cm² beim BH und 230 cm² bei der Socke), und die Fläche daraus bleibt zwischen den Grenzen in `h²`
+    #: (25 h² ≈ 4 cm², 940 h² ≈ 150 cm² bei h = 4 mm): ein Fleck, der kleiner als eine Handfläche ist, ist keine eigene Zuteilung.
+    INSEL_E2 = 150
+    INSEL_FLAECHE_H2 = (25.0, 940.0)
+    #: … aber nur, wenn sie im Mittel mindestens so weit vom Käfig hängen (Kleider; Pullover-Saum 17 mm = 4,3 h, Strapse 8 mm = 2 h).
+    INSEL_AB_H = 3.0
+
+    @property
+    def h(self):
+        """Der Punktabstand des posierten Käfigs (m): Median des Abstands zum nächsten Nachbarn."""
+        if self._h is None:
+            from scipy.spatial import cKDTree
+
+            self._h = float(np.median(cKDTree(self.kaefig_posiert).query(self.kaefig_posiert, k=2)[0][:, 1]))
+        return self._h
+
+    def insel_punkte(self, netz, dreiecke):
+        """Inselgrenze (Punkte) für ein Netz in Lage des Käfigs — siehe `INSEL_E2`."""
+        d = np.asarray(dreiecke, dtype=np.int64)
+        kante = float(np.median(np.linalg.norm(netz[d[:, 0]] - netz[d[:, 1]], axis=1)))
+        je_punkt = 0.87 * max(kante, 1e-6) ** 2                      # Fläche je Punkt eines Dreiecksnetzes (2 Dreiecke, ½ · e² · sin 60°)
+        flaeche = min(max(self.INSEL_E2 * je_punkt, self.INSEL_FLAECHE_H2[0] * self.h ** 2), self.INSEL_FLAECHE_H2[1] * self.h ** 2)
+        return max(3, int(round(flaeche / je_punkt)))
+
+    def kaefig_normalen(self):
+        """Punktnormalen des posierten Käfigs (am ungeteilten Genesis-Netz)."""
+        if self._kaefig_normalen is None:
+            from Genesis9.basisnetz import G9basisnetz
+
+            self._kaefig_normalen = G9basisnetz.holen().normalen(self.kaefig_posiert)
+        return self._kaefig_normalen
+
+    @staticmethod
+    def netz_normalen(punkte, dreiecke):
+        """Punktnormalen eines Dreiecksnetzes, nach Fläche gewichtet."""
+        d = np.asarray(dreiecke, dtype=np.int64)
+        n = np.cross(punkte[d[:, 1]] - punkte[d[:, 0]], punkte[d[:, 2]] - punkte[d[:, 0]])
+        aus = np.zeros_like(punkte)
+        for ecke in range(3):
+            np.add.at(aus, d[:, ecke], n)
+        laenge = np.linalg.norm(aus, axis=1, keepdims=True)
+        laenge[laenge < 1e-12] = 1.0
+        return aus / laenge
+
+    def koerper_ruhelage(self, punkte_blender, dreiecke, mit_teilen=False):
+        """Der Körper der .blend in der Ruhelage — jeder Punkt nur mit den Käfigpunkten SEINES Teils und der angrenzenden
+        (`Kleidungsentposen.teile_von`, mit Normale: die Hand auf der Hüfte trägt die Hüfte nicht). `mit_teilen`: dazu
+        die Teilnummer je Punkt."""
+        ent = self.entposen()
+        netz = self.ins_netz(punkte_blender)
+        normalen = self.netz_normalen(netz, dreiecke)
+        kaefig = self.kaefig_normalen()
+        _, nah = ent.baum.query(netz)
+        if float(np.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Exports gegen den des Käfigs
+            normalen = -normalen
+        teile = ent.teile_von(netz, None, normalen, kaefig)
+        teile = ent.teile_inseln(teile, dreiecke, self.insel_punkte(netz, dreiecke))
+        teile = ent.teile_glaetten(teile, dreiecke, 0.6, runden=self.GLAETTEN_KOERPER)
+        ruhe = ent.ruhelage(netz, teile)
+        return (ruhe, teile) if mit_teilen else ruhe
+
+    def entposen_zu(self, ruhe_kaefig):
+        """Dieselbe Rückrechnung gegen einen anderen Käfig in Ruhe (Füße in Absatzhaltung, `Blendimportfuss.ruhe_kaefig`)."""
+        from Genesis9.koerperteile import G9koerperteile
+        from Kleidung.kleidungsentposen import Kleidungsentposen
+
+        return Kleidungsentposen(ruhe_kaefig, self.kaefig_posiert, self.teil, G9koerperteile.nachbarn())
+
+    #: Entzerren (`Kleidungsentposen.entzerren`): Anker an die Käfiglage (200, Reichweite 2,5 h = 10 mm), Punkte, die in der Haltung höchstens
+    #: 1 h = 4 mm auseinander liegen, bleiben gekoppelt. Gemessen an Pullover, Höschen mit Strapsen, Shorts, Stiefeln, Socken (Anteil der
+    #: Kanten außerhalb 0,75–1,33, vorher → nachher): 6,49 → 6,02, 2,43 → 0,66, 1,98 → 0,02, 4,42 → 1,37, 2,47 → 2,13 % — keines schlechter.
+    #: Die Kopplung war an die Käfigeinheit gebunden, nicht an die Stückkante: beim BH (Kante 0,5 mm = 8 e) koppelte sie ganze Nachbarschaften (rund 230
+    #: Punkte je Punkt), bei noch dichteren Netzen wüchse der Speicher mit dem Quadrat der Dichte. Jetzt höchstens `KOPPELN_E` Stückkanten `e`: gemessen
+    #: 09.10.2026 an allen Stücken dreier Modelle (`ProjektTemp/_wegwerf/offene_punkte_probe.py koppeln`) ändert sich nur der BH (1,3 → 0,6 s, Abstand
+    #: Median 0,10 / p99 0,31 / max 0,8 mm, Kantenverzerrung 0,05 → 0,06 %, größte Streckung 1,43 → 1,58×) — alle anderen (e ≥ 1,3 mm) bitgleich.
+    ANKER = 200.0
+    ANKER_H = 2.5
+    KOPPELN_H = 1.0
+    KOPPELN_E = 3.0
+
+    #: Befund des letzten `stueck_ruhelage`: `{h_mm, kante_mm, insel_punkte, abstand_median_mm, frei_anteil, frei_median_mm}` — der Anteil
+    #: Punkte, die weiter als `INSEL_AB_H · h` vom Käfig hängen (frei hängender Stoff: dort taugt die Käfigbewegung nicht, siehe Konzept).
+    befund = None
+
+    def stueck_ruhelage(self, punkte_blender, dreiecke, erlaubt, mit_teilen=False, ruhe_kaefig=None, entzerren=True):
+        """Ein Kleidungsstück in der Ruhelage: seine Punkte suchen ihr Teil nur unter `erlaubt` (`Blendimportteile`) und
+        nur unter Käfigpunkten, deren Normale zur des Stoffs passt (der Unterarm, der auf der Hüfte liegt, trägt den
+        Saum nicht); frei hängender Stoff übernimmt das Teil von seinen Nachbarn auf dem Stoff, danach die Rückrechnung
+        mit den Teilen und `Kleidungsentposen.entzerren` (frei hängender Stoff behält die Kantenlängen des Originals: Strapse,
+        der Schritt zwischen gekreuzten Beinen). `ruhe_kaefig`: der Käfig, in den zurückgerechnet wird (Vorgabe: die Ruhe der Figur)."""
+        ent = self.entposen() if ruhe_kaefig is None else self.entposen_zu(ruhe_kaefig)
+        netz = self.ins_netz(punkte_blender)
+        normalen = self.netz_normalen(netz, dreiecke)
+        kaefig = self.kaefig_normalen()
+        _, nah = ent.baum.query(netz)
+        if float(np.einsum('ij,ij->i', normalen, kaefig[nah]).mean()) < 0.0:      # Umlauf des Exports gegen den des Käfigs
+            normalen = -normalen
+        h = self.h
+        d = np.asarray(dreiecke, dtype=np.int64)
+        kante = float(np.median(np.linalg.norm(netz[d[:, 0]] - netz[d[:, 1]], axis=1)))
+        teile, abstand = ent.teile_von(netz, erlaubt, normalen, kaefig, abstand=True)
+        insel = self.insel_punkte(netz, dreiecke)
+        teile = ent.teile_inseln(teile, dreiecke, insel, abstand=abstand, ab=self.INSEL_AB_H * h)
+        haft = np.exp(-(abstand / (self.HAFT_H * h)) ** 2)
+        teile = ent.teile_glaetten(teile, dreiecke, haft, runden=self.GLAETTEN_STOFF)
+        ruhe = ent.ruhelage(netz, teile)
+        if entzerren:
+            ruhe = ent.entzerren(ruhe, netz, dreiecke, abstand, min(self.KOPPELN_H * h, self.KOPPELN_E * kante), self.ANKER, self.ANKER_H * h)
+        frei = abstand > self.INSEL_AB_H * h
+        self.befund = {'h_mm': round(h * 1000.0, 2), 'kante_mm': round(kante * 1000.0, 2), 'insel_punkte': insel, 'abstand_median_mm': round(float(np.median(abstand)) * 1000.0, 1),
+                       'frei_anteil': round(float(frei.mean()), 3),
+                       'frei_median_mm': round(float(np.median(abstand[frei])) * 1000.0, 1) if frei.any() else None}
+        return (ruhe, teile) if mit_teilen else ruhe
 
     def kopf_starr(self, punkte_blender):
         """Haar: Kabsch (ohne Maßstab) über die Kopfpunkte des Käfigs, Haltung → Ruhe."""

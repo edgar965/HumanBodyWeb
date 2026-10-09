@@ -19,11 +19,31 @@ import { Genesis9morphformular } from './genesis9morphformular.js';
  */
 export class Genesis9stueckregler {
 
+    /**
+     * Der Kasten „Einstellungen" eines Stücks — mit dem Kopf; die Zeilen entstehen erst beim ERSTEN Aufklappen.
+     *
+     * Edgar, 09.10.2026: „warum dauert laden des Characters ewig … ich brauche schnelles Anzeigen, damit ich drehen und
+     * vergrößern kann". Gemessen (Chrome, `/Charakter/`): Die Garderobe baute für alle 634 Stücke ihre Regler und das Formular
+     * „Neuer Morph" sofort — 18.017 Schieber, 2.281 Auswahllisten, 130.529 DOM-Elemente, 568 Abrufe von `landmarken/` (je
+     * Formular einer, doppelt gebaut: 1.137), und der Hauptfaden stand danach ~44 s. Zu sehen ist davon nichts, solange die
+     * Kästen zu sind (alle stehen ZU, `Genesis9garderobe`).
+     */
     static bauen(inst, stueck, werteLesen) {
         const kasten = document.createElement('details');
         kasten.className = 'uma-gruppe genesis9-stueckregler';
         kasten.innerHTML = `<summary class="gedaempft">Einstellungen `
             + `<span class="gedaempft">(${stueck.regler.length})</span></summary>`;
+        let gebaut = false;
+        kasten.addEventListener('toggle', () => {
+            if (!kasten.open || gebaut) return;
+            gebaut = true;
+            Genesis9stueckregler._zeilen(kasten, inst, stueck, werteLesen);
+        });
+        return kasten;
+    }
+
+    /** Die Zeilen, Gruppen und das Morph-Formular in den aufgeklappten Kasten. */
+    static _zeilen(kasten, inst, stueck, werteLesen) {
         const gruppen = new Map();
         for (const r of stueck.regler) {
             if (!gruppen.has(r.gruppe)) gruppen.set(r.gruppe, []);
@@ -41,7 +61,6 @@ export class Genesis9stueckregler {
             kasten.appendChild(Genesis9morphformular.bauen(inst, stueck, werteLesen,
                 regler => Genesis9stueckregler._zeile(inst, stueck, regler, werteLesen)));
         }
-        return kasten;
     }
 
     /** Eine Gruppe als eigener Klappkasten (Edgar, 30.09.2026: „in Kategorien der jeweiligen

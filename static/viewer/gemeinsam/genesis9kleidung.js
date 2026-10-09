@@ -1,5 +1,6 @@
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
+import { fn } from './registrierung.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
 import { Genesis9lagen } from './genesis9lagen.js';
@@ -91,10 +92,44 @@ export class Genesis9kleidung {
     static async anzeigename(kennung) {
         if (!Genesis9kleidung._namen) {
             const stuecke = await Genesis9kleidung.stuecke();
-            Genesis9kleidung._namen = Object.fromEntries(
-                stuecke.map((s) => [s.id, s.name || s.id]));
+            const namen = Object.fromEntries(stuecke.map((s) => [s.id, s.name || s.id]));
+            // Nur ein echter Katalog wird behalten (wie `stuecke`): Ein leerer nach einem Fehlschlag liesse
+            // jedes Schild bis zum nächsten Laden bei der Kennung.
+            if (!stuecke.length) return namen[kennung] || kennung;
+            Genesis9kleidung._namen = namen;
         }
         return Genesis9kleidung._namen[kennung] || kennung;
+    }
+
+    /** Der Name, wenn der Katalog schon da ist — sonst null. Wartet nie. */
+    static gemerkterName(kennung) {
+        return Genesis9kleidung._namen ? (Genesis9kleidung._namen[kennung] || kennung) : null;
+    }
+
+    /**
+     * Die Schilder der Netze eines Stücks setzen — SOFORT, ohne auf den Katalog zu warten.
+     *
+     * Edgar, 09.10.2026: „warum dauert laden des Characters ewig … ich brauche schnelles Anzeigen". Gemessen: Die Figur
+     * kam erst in die Szene, als der Katalog da war (`FIGUR SICHTBAR` 20,5 s, Katalog 20,3 s), weil jedes Stück vor dem
+     * Bau seines Netzes auf `anzeigename` wartete — nur für den Namen im Hover-Schild. Der Katalog (3 MB, 634 Stücke) ist
+     * nach einem Serverneustart der langsamste Abruf der Seite (16,7 s). Jetzt entsteht das Netz mit dem Namen, den es
+     * gibt (sonst die Kennung); der richtige folgt, sobald der Katalog da ist, samt Neuzeichnen der Objektliste.
+     *
+     * @param paare `[[netz, teil], …]` — die Netze des Stücks mit ihren Teilen vom Server
+     */
+    static beschildern(inst, kennung, paare, herkunft = 'Genesis 9') {
+        const setzen = (name) => {
+            for (const [netz, teil] of paare) {
+                netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, paare.length, herkunft);
+            }
+        };
+        const bekannt = Genesis9kleidung.gemerkterName(kennung);
+        setzen(bekannt ?? kennung);
+        if (bekannt !== null) return;
+        Genesis9kleidung.anzeigename(kennung).then((name) => {
+            setzen(name);
+            fn.updateEquippedList?.(inst);
+        }).catch(() => {});
     }
 
     /** Das Schild: Name des Stücks, bei mehreren Teilen mit Teilname (nie `geometry`). */
@@ -107,7 +142,7 @@ export class Genesis9kleidung {
      * Ein Stück anziehen — alle seine Teile, über den getragenen Stücken darunter.
      * `werte`: `{variante, stil, stile: {pose, laenge}, regler, griff}`.
      */
-    static async anziehen(inst, kennung, werte, stufen, kaskade) {
+    static async anziehen(inst, kennung, werte, stufen, kaskade, vorBau = null) {
         inst.kleidung[kennung] = { ...(werte || {}) };
         const lauf = inst._lauf;
         const daten = await Serverabruf.netzSenden(Genesis9aufbau.adresse(
@@ -120,14 +155,20 @@ export class Genesis9kleidung {
             });
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;   // überholt oder ausgezogen
+        // `vorBau`: die Antwort ist da, gebaut wird sie erst auf Ruhe (`Genesis9aufbau._haeppchen`, 09.10.2026).
+        if (vorBau) {
+            await vorBau();
+            if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;
+        }
         inst._stueckWeg(kennung);
-        const name = await Genesis9kleidung.anzeigename(kennung);
+        const paare = [];
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
-            netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);
+            paare.push([netz, teil]);
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
             netz.userData.ersetzt = daten.ersetzt || [];    // Teile der Figur, die das Stück ersetzt (Originalaugen)
             netz.userData.hautTiefe = (daten.hautTiefeMm || 0) / 1000;   // so tief hinter der Haut es sie noch verdeckt (Scham aus der .blend), m; 0 = Vorgabe
+            netz.userData.hautLoch = daten.hautLoch?.dreiecke?.length ? daten.hautLoch : null;   // verschweißt: die Haut-Dreiecke, die entfallen (`stueckloch.js`)
             // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;
             // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden — DORT
             // steht `inst.bodyMesh` sicher, hier oft noch nicht: Koerper und
@@ -135,6 +176,7 @@ export class Genesis9kleidung {
             Oberflaechenbindung.anlegen(netz, teil);
             inst.clothMeshes[`${kennung}/${nummer}`] = inst._einhaengen(netz, teil.hautgewichte);
         });
+        Genesis9kleidung.beschildern(inst, kennung, paare);          // Name aus dem Katalog, wenn er schon da ist
         Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);    // eigene Farbe (24.09.2026)
         Kleidfarbmischung.anwenden(inst, kennung, inst.kleidung[kennung].regler);   // Textur der Mischung (30.09.2026)
         Stoffwerte.stueck(inst, kennung, inst.kleidung[kennung]);    // Rauheit, Metall, Gewebe (25.09.2026)

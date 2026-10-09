@@ -114,7 +114,9 @@ export class Hautmaske {
      *                     freier Inseln, die noch geschlossen werden (0 = aus;
      *                     Messungen lassen die Maske roh); `inselflaeche`:
      *                     ebenso als Fläche in m² (0 = nur die Punktzahl);
-     *                     `ersatz`: Uint8Array je Körperpunkt, 1 = ein ERSATZSTÜCK verdeckt ihn (`hautmaskeersatz.js`).
+     *                     `ersatz`: Uint8Array je Körperpunkt, 1 = ein ERSATZSTÜCK verdeckt ihn (`hautmaskeersatz.js`);
+     *                     `hoehe`: Float32Array (mit −Infinity vorbelegt), je Punkt die Höhe des Ersatzstücks über ihm;
+     *                     `rand`: Float32Array (mit Infinity vorbelegt), dessen Abstand vom Netzrand des Stücks.
      */
     static verdeckt(koerper, dreiecke, stoffe, optionen = {}) {
         const abstand = optionen.abstand ?? Hautmaske.ABSTAND_M;
@@ -135,9 +137,10 @@ export class Hautmaske {
             const [stueckRinge, stueckNahe] = stoff.starr ? [0, stoff.nahe ?? nahe] : [ringe, 0];
             const stueckTiefe = Math.max(tiefe, stoff.tiefe || 0);     // `stoff.tiefe`: Scham aus einer .blend, bis 30 mm hinter der Haut
             const stueckWeite = optionen.suchweite ?? Math.max(abstand, stueckTiefe, nahe);
-            const davor = stoff.ersatz ? maske.slice() : null;
             Hautmaske._einStueck(basis, maske, stoff, abstand, stueckTiefe, stueckRinge, eng, stueckWeite, stueckNahe);
-            if (davor) Hautmaskeersatz.maskieren(basis, maske, stoff, abstand, stueckTiefe, davor, optionen.ersatz);
+            if (stoff.ersatz) {
+                Hautmaskeersatz.maskieren(basis, maske, stoff, abstand, stueckTiefe, optionen.ersatz, optionen.hoehe, optionen.rand);
+            }
         }
         if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper, inselflaeche);
         return maske;
@@ -212,11 +215,12 @@ export class Hautmaske {
     // ------------------------------------------------------------ Index
 
     /**
-     * Der Index ohne Dreiecke, deren drei Ecken verdeckt sind. Die Gruppen
-     * (`{start, count, materialIndex}`, in Indexeinträgen) folgen mit.
-     * Ohne Gruppen gilt der ganze Index als eine.
+     * Der Index ohne Dreiecke, deren drei Ecken verdeckt sind (und ohne die, die `dreieckWeg`, ein Byte je Dreieck des
+     * Index, nennt — `stueckdeckung.js`). Die Gruppen (`{start, count, materialIndex}`, in Indexeinträgen) folgen mit.
+     * Ohne Gruppen gilt der ganze Index als eine. `dreieckBleibt` (ein Byte je Dreieck): diese Dreiecke bleiben, auch wenn ihre
+     * Ecken verdeckt sind (`stueckluecke.js`).
      */
-    static indexOhne(index, gruppen, maske) {
+    static indexOhne(index, gruppen, maske, dreieckWeg, dreieckBleibt) {
         const quellen = (gruppen && gruppen.length)
             ? gruppen
             : [{ start: 0, count: index.length, materialIndex: 0 }];
@@ -228,7 +232,8 @@ export class Hautmaske {
             const ende = Math.min(g.start + g.count, index.length);
             for (let k = g.start; k + 2 < ende; k += 3) {
                 const a = index[k], b = index[k + 1], c = index[k + 2];
-                if (maske[a] && maske[b] && maske[c]) { entfernt += 1; continue; }
+                if (((maske[a] && maske[b] && maske[c]) && !(dreieckBleibt && dreieckBleibt[k / 3]))
+                    || (dreieckWeg && dreieckWeg[k / 3])) { entfernt += 1; continue; }
                 behalten[lauf] = a; behalten[lauf + 1] = b; behalten[lauf + 2] = c;
                 lauf += 3;
             }

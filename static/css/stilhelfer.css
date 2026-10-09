@@ -158,6 +158,10 @@
  * ein Element außerhalb von `body[data-theme]` hängt. */
 .fehlertext.fehlertext.fehlertext { color: var(--danger, #e74c3c); }
 
+/* --- Verbindungstext: der Server antwortet gerade nicht (Autoreload) — kein Fehler der Sache selbst, darum gelb
+ * statt rot (Blender-Import, 09.10.2026). */
+.verbindungstext.verbindungstext.verbindungstext { color: var(--warning, #f39c12); }
+
 /* --- Nur eine Zeile Kleintext, ohne Dämpfung (5x) ---------------------- */
 .winzig.winzig.winzig { font-size: 0.7rem; }
 

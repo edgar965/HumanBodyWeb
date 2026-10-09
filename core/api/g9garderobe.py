@@ -62,7 +62,14 @@ class G9garderobeapi:
 
     @staticmethod
     @require_GET
-    def garderobe(request):
+    async def garderobe(request):
+        u"""ASYNC, die Rechnung in einem EIGENEN Faden (09.10.2026, Edgar: „warum dauert laden des Characters ewig"): Der Katalog
+        rechnet 1 s (warm) bis 17 s (nach einer Änderung der Bibliothek) und besetzte als plain-sync View Daphnes einen
+        geteilten Faden — Regler, Posen, Bibliothek und `models/` standen 10–14 s dahinter (wie bei `kleidnetz`)."""
+        return await sync_to_async(G9garderobeapi._katalog, thread_sensitive=False)(request)
+
+    @staticmethod
+    def _katalog(request):
         if not G9pfade.vorhanden():
             return JsonResponse({'stuecke': [], 'anzahl': 0, 'fehler': FEHLT})
         from .g9vorschau import G9vorschau
@@ -77,9 +84,12 @@ class G9garderobeapi:
         # `regler`: jede Frisur bekommt die fuenf gemeinsamen Formachsen dazu
         # (`G9haarachsen`) — erst hier, nicht in der abgelegten Liste je Stueck.
         # Dazu die eigenen Morphe aus den Iterationen von „2D3D Kleider" (`G9kleidmorphe`, Gruppe „Eigene Morphe").
+        from Genesis9.dazkategorien import G9dazkategorien
         from Genesis9.kleidmorphe import G9kleidmorphe
+        # Die Daz-Tabelle EINMAL je Anfrage: je Eintrag geholt zaehlte sie 620-mal die `.dsx` der Bibliotheken auf (10,7 s).
+        daz = G9dazkategorien.tabelle()
         stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s),
-                        kategorie=s.get('kategorie') or G9garderobekategorien.vorgabe(s),
+                        kategorie=s.get('kategorie') or G9garderobekategorien.vorgabe(s, daz),
                         regler=G9kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s))))
                    for s in roh]
         stuecke = G9garderobepflege.anwenden(stuecke)       # Umbenennen und Löschen aus dem Kontextmenü (05.10.2026)
@@ -178,8 +188,9 @@ class G9garderobeapi:
         formung = G9figur.formung(rumpf, {})
         # Ein Genesis-8-Schuh mit Fusspose: der Fuss der Figur stellt sich, der
         # Schuh bleibt in seiner (schon getragenen) Ruhelage (`G9autofit`).
+        # Ebenso ein eigener Absatzschuh der .blend (`stueck_griff`): er steht in der Ruhelage schon in Absatzhaltung.
         stueckformung = (G9figur.formung(rumpf, {}, ohne_griff=kennung)
-                         if eintrag.get('fusspose') else formung)
+                         if eintrag.get('fusspose') or eintrag.get('stueck_griff') else formung)
         stufen = G9netzstufe.browser()
         koerpernetz = G9koerpernetz(formung, stufen=stufen)
         # Oberflaechenbindung (21.09.2026, Konzept Fitting): nur Kleidung, gegen
@@ -237,7 +248,10 @@ class G9garderobeapi:
                 # Teile der Figur, die das Stück ersetzt (Originalaugen aus einer .blend, `G9stueckersatz`).
                 'ersetzt': ersetzt,
                 # So tief hinter der Haut das Stück sie noch verdeckt (mm; Scham aus einer .blend), 0 = Vorgabe der Hautmaske.
-                'hautTiefeMm': haut_tiefe}
+                'hautTiefeMm': haut_tiefe,
+                # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; leer = der
+                # Browser rechnet das Loch selbst, `hautverdeckung.js`).
+                'hautLoch': G9stueckersatz.loch_fuer(eintrag)}
 
     # -------------------------------------------------------------- Texturen
 

@@ -92,14 +92,21 @@ class SaumbandJsTest(SimpleTestCase):
 
     def test_einzug_und_index_haengen_am_band(self):
         """Eine Quelle für die Tiefe; die vier Verwender kürzen den Index
-        mit `weg` aus `Hauteinzug.setzen`, nicht mehr mit der Maske."""
+        mit `weg` aus dem Einzug (`Hauteinzug.setzen`/`eintragen`), nicht mehr mit der Maske.
+
+        Seit 09.10.2026 rechnet `Hauteinzugrechnung` (ohne Three.js, im Worker), `Hauteinzug` schreibt das Ergebnis; die Szene
+        (`Hautverdeckung`) reicht `einzug.weg` als `weg` an `indexOhne` weiter, die Ersatzstück-Schritte ergänzen es dazwischen."""
         viewer = MODUL.VIEWER
         einzug = (viewer / 'gemeinsam' / 'hauteinzug.js').read_text(encoding='utf-8')
         self.assertIn('static EINZUG_M = Saumband.TIEFE_M;', einzug)
-        self.assertIn('stand.weg = Saumband.weg(maske, abstaende);', einzug)
-        for ordner, name in (('gemeinsam', 'hautverdeckung.js'), ('gemeinsam', 'figurhaut.js')):
-            quelle = (viewer / ordner / name).read_text(encoding='utf-8')
-            self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', quelle, name)
-            self.assertNotIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', quelle, name)
+        rechnung = (viewer / 'gemeinsam' / 'hauteinzugrechnung.js').read_text(encoding='utf-8')
+        self.assertIn('stand.weg = Saumband.weg(maske, abstaende);', rechnung)
+        szene = (viewer / 'gemeinsam' / 'hautverdeckung.js').read_text(encoding='utf-8')
+        self.assertIn('const weg = einzug.weg || new Uint8Array(ersatz.length);', szene)
+        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, weg,', szene)
+        self.assertNotIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', szene)
+        figurhaut = (viewer / 'gemeinsam' / 'figurhaut.js').read_text(encoding='utf-8')
+        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', figurhaut)
+        self.assertNotIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', figurhaut)
         lagen = (viewer / 'charakter' / 'lagenverdeckung.js').read_text(encoding='utf-8')
         self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg || maske)', lagen)

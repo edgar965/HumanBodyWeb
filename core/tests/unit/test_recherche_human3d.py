@@ -20,6 +20,11 @@ from core.dienste.recherchetabelle import Recherchetabelle
 from ._pruefablage import Pruefablage
 
 
+def _zellen(tabelle, nr=0):
+    """Die Zellen einer Zeile nach Spaltenschlüssel — die Tabellen haben je Abschnitt eine andere Folge (`Rechercheabschnitte.PLAN`), Zahlen als Index wären brüchig."""
+    return dict(zip([s['key'] for s in tabelle['spalten']], tabelle['zeilen'][nr]['zellen'], strict=True))
+
+
 def _projekt(**ueber):
     p = {
         'id': 'a--b', 'name': 'B', 'repo': 'a/b', 'url': 'https://github.com/a/b', 'kategorie': 'Körper aus Foto', 'kurz': 'kurz', 'beschreibung': 'lang',
@@ -106,37 +111,39 @@ class DieTabelle(SimpleTestCase):
         self.assertNotIn('<img', html)
 
     def test_sterne_und_datum_tragen_den_rohwert_zum_sortieren(self):
-        zellen = Recherchetabelle.bauen([_projekt()])['zeilen'][0]['zellen']
-        sterne, datum = zellen[7], zellen[8]
+        zellen = _zellen(Recherchetabelle.bauen([_projekt()]))
+        sterne, datum = zellen['sterne'], zellen['aktualisiert']
         self.assertEqual(sterne['sort'], 12345)
         self.assertEqual(sterne['html'], '12.345')
         self.assertEqual(datum['sort'], '2026-09-01')
         self.assertEqual(datum['html'], '01.09.2026')
 
     def test_die_zeile_traegt_die_kennung_und_die_todozelle_ihre_klasse(self):
-        zeile = Recherchetabelle.bauen([_projekt()])['zeilen'][0]
-        self.assertEqual(zeile['id'], 'a--b')
-        self.assertEqual(zeile['zellen'][11]['klasse'], 'rc-todozelle')
-        self.assertIn('data-id="a--b"', zeile['zellen'][11]['html'])
+        tabelle = Recherchetabelle.bauen([_projekt()])
+        self.assertEqual(tabelle['zeilen'][0]['id'], 'a--b')
+        todo = _zellen(tabelle)['todo']
+        self.assertEqual(todo['klasse'], 'rc-todozelle')
+        self.assertIn('data-id="a--b"', todo['html'])
 
-    def test_zwoelf_spalten_in_der_verlangten_reihenfolge(self):
+    def test_die_erste_tabelle_hat_dreizehn_spalten_in_der_verlangten_reihenfolge(self):
         kopf = [s['label'] for s in Recherchetabelle.bauen([])['spalten']]
-        self.assertEqual(kopf, ['Name', 'Prio', 'Kategorie', 'Kurzbeschreibung', 'GitHub', 'Hugging Face', 'Hauptbild', 'Sterne bei GitHub', 'Letzte Aktualisierung', 'Beschreibung', 'Details', 'ToDo'])
+        self.assertEqual(kopf, ['Name', 'Prio', 'Kategorie', 'Einschätzung', 'Kurzbeschreibung', 'GitHub', 'Hugging Face', 'Hauptbild', 'Sterne bei GitHub', 'Letzte Aktualisierung', 'Beschreibung', 'Details', 'ToDo'])
 
     def test_die_kategorie_hat_eine_eigene_sortierbare_spalte(self):
         """Edgar, 06.10.2026: „sortierbare Spalte Kategorie … wo ist die Spalte??“ — eine Zelle je Projekt mit dem maskierten Namen, sortiert nach dem kleingeschriebenen Text; unter dem Namen steht sie nicht mehr."""
-        spalten = Recherchetabelle.bauen([])['spalten']
-        self.assertFalse(spalten[2]['sortAus'])
-        zellen = Recherchetabelle.bauen([_projekt(kategorie='Körper <b>aus</b> Foto')])['zeilen'][0]['zellen']
-        self.assertEqual(zellen[2]['html'], 'Körper &lt;b&gt;aus&lt;/b&gt; Foto')
-        self.assertEqual(zellen[2]['sort'], 'körper <b>aus</b> foto')
-        self.assertEqual(zellen[2]['klasse'], 'rc-kategoriezelle')
-        self.assertNotIn('Körper', zellen[0]['html'])
-        self.assertEqual(len(zellen), len(spalten))
+        spalten = {s['key']: s for s in Recherchetabelle.bauen([])['spalten']}
+        self.assertFalse(spalten['kategorie']['sortAus'])
+        tabelle = Recherchetabelle.bauen([_projekt(kategorie='Körper <b>aus</b> Foto')])
+        zellen = _zellen(tabelle)
+        self.assertEqual(zellen['kategorie']['html'], 'Körper &lt;b&gt;aus&lt;/b&gt; Foto')
+        self.assertEqual(zellen['kategorie']['sort'], 'körper <b>aus</b> foto')
+        self.assertEqual(zellen['kategorie']['klasse'], 'rc-kategoriezelle')
+        self.assertNotIn('Körper', zellen['name']['html'])
+        self.assertEqual(len(tabelle['zeilen'][0]['zellen']), len(tabelle['spalten']))
 
     def test_die_prio_zelle_traegt_zahl_und_sortierwert(self):
-        zellen = Recherchetabelle.bauen([_projekt(), _projekt(id='c--d', name='D', repo='c/d')], {'a--b': 3})['zeilen']
-        mit, ohne = zellen[0]['zellen'][1], zellen[1]['zellen'][1]
+        tabelle = Recherchetabelle.bauen([_projekt(), _projekt(id='c--d', name='D', repo='c/d')], {'a--b': 3})
+        mit, ohne = _zellen(tabelle, 0)['prio'], _zellen(tabelle, 1)['prio']
         self.assertEqual(mit['sort'], 3)
         self.assertIn('value="3"', mit['html'])
         self.assertIn('data-id="a--b"', mit['html'])
@@ -147,7 +154,7 @@ class DieTabelle(SimpleTestCase):
     def test_die_hf_spalte_baut_die_adresse_aus_der_kennung_und_verwirft_fremdes(self):
         hf = [{'typ': 'space', 'id': 'o/demo', 'likes': 12}, {'typ': 'model', 'id': 'o/gewichte', 'likes': 3}, {'typ': 'dataset', 'id': 'o/daten', 'likes': 0},
               {'typ': 'model', 'id': 'javascript:1', 'likes': 1}, {'typ': 'unbekannt', 'id': 'o/x', 'likes': 1}, {'typ': 'space', 'id': 'o/../x', 'likes': 1}]
-        zelle = Recherchetabelle.bauen([_projekt(hf=hf)])['zeilen'][0]['zellen'][5]
+        zelle = _zellen(Recherchetabelle.bauen([_projekt(hf=hf)]))['hf']
         self.assertEqual(zelle['sort'], 7)
         self.assertIn('href="https://huggingface.co/spaces/o/demo"', zelle['html'])
         self.assertIn('href="https://huggingface.co/o/gewichte"', zelle['html'])
@@ -156,13 +163,13 @@ class DieTabelle(SimpleTestCase):
         self.assertEqual(len(Recherchetabelle.hf_liste(_projekt(hf=hf))), 3)
 
     def test_ohne_hf_eintrag_steht_ein_strich_und_der_sortierwert_null(self):
-        zelle = Recherchetabelle.bauen([_projekt()])['zeilen'][0]['zellen'][5]
+        zelle = _zellen(Recherchetabelle.bauen([_projekt()]))['hf']
         self.assertEqual(zelle['sort'], 0)
         self.assertIn('rc-fehlt', zelle['html'])
 
     def test_mehrere_gleicher_art_werden_nummeriert_und_das_fenster_bekommt_alle(self):
         hf = [{'typ': 'model', 'id': 'o/a', 'likes': 5}, {'typ': 'model', 'id': 'o/b', 'likes': 2}]
-        html = Recherchetabelle.bauen([_projekt(hf=hf)])['zeilen'][0]['zellen'][5]['html']
+        html = _zellen(Recherchetabelle.bauen([_projekt(hf=hf)]))['hf']['html']
         self.assertIn('Modell 1', html)
         self.assertIn('Modell 2', html)
         self.assertEqual([h['url'] for h in Recherchetabelle.popup([_projekt(hf=hf)])['a--b']['hf']], ['https://huggingface.co/o/a', 'https://huggingface.co/o/b'])
@@ -173,10 +180,10 @@ class DieTabelle(SimpleTestCase):
             self.assertEqual(Recherchetabelle.bildadresse(falsch), '', repr(falsch))
 
     def test_ein_fork_traegt_seine_zeile_unter_dem_namen(self):
-        html = Recherchetabelle.bauen([_projekt(fork_von='x/orig', fork_grund='<b>mehr</b> Sterne')])['zeilen'][0]['zellen'][0]['html']
+        html = _zellen(Recherchetabelle.bauen([_projekt(fork_von='x/orig', fork_grund='<b>mehr</b> Sterne')]))['name']['html']
         self.assertIn('Fork von x/orig', html)
         self.assertNotIn('<b>mehr', html)
-        self.assertNotIn('Fork von', Recherchetabelle.bauen([_projekt()])['zeilen'][0]['zellen'][0]['html'])
+        self.assertNotIn('Fork von', _zellen(Recherchetabelle.bauen([_projekt()]))['name']['html'])
 
     def test_das_fenster_bekommt_nur_https_bilder(self):
         daten = Recherchetabelle.popup([_projekt(bilder=['https://x/y.png', 'http://x/z.png', 'javascript:1'])])['a--b']
@@ -197,10 +204,10 @@ class DieKategorieSchalter(SimpleTestCase):
         for kennung in ('rc-kategorien', 'rc-kat-alle', 'rc-kat-keine', 'rc-chip', '[data-kategorie]', 'dataset.kategorie'):
             self.assertIn(kennung, modul, f'Modul: {kennung}')
         self.assertIn('aria-pressed="true"', vorlage)                       # zu Beginn sind alle gewählt
-        zellenklasse = Recherchetabelle.bauen([_projekt()])['zeilen'][0]['zellen'][2]['klasse']
+        zellenklasse = _zellen(Recherchetabelle.bauen([_projekt()]))['kategorie']['klasse']
         self.assertIn(f'td.{zellenklasse}', modul)                          # die Zelle, aus der das Modul die Kategorie liest
         self.assertIn("import { Recherchekategorien } from './recherchekategorien.js'", haupt)
-        self.assertIn('Recherchekategorien.binden(tabelle)', haupt)
+        self.assertIn('Recherchekategorien.binden(tabellen)', haupt)         # seit 09.10.2026 alle drei Tabellen
 
     def test_die_schalter_tragen_den_namen_ohne_zahl_als_kennung(self):
         vorlage = (Path(settings.BASE_DIR) / 'templates' / 'hilfe' / 'recherche_human3d.html').read_text(encoding='utf-8')

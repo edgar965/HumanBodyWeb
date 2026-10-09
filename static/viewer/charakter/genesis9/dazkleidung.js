@@ -79,15 +79,16 @@ export class Dazkleidung {
         if (daten.fehler) throw new Error(daten.fehler);
         if (!inst.dazKleidung[kennung]) return 0;           // inzwischen ausgezogen
         Dazkleidung._weg(inst, kennung);
-        const name = await Genesis9kleidung.anzeigename(kennung);
+        const paare = [];
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `${Dazkleidung.PRAEFIX}${kennung}_${nummer}`);
+            paare.push([netz, teil]);
             netz.userData.hautgewichte = teil.hautgewichte || null;
-            netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length, 'Daz');
             netz.userData.art = daten.art || null;          // kleidung | haar — wie `Genesis9kleidung`
             inst.clothMeshes[`${Dazkleidung.PRAEFIX}${kennung}/${nummer}`] =
                 Dazkleidung.binden(inst, netz);
         });
+        Genesis9kleidung.beschildern(inst, kennung, paare, 'Daz');   // ohne auf den Katalog zu warten
         Umfaerbung.stueck(inst, kennung, inst.dazKleidung[kennung]);   // eigene Farbe (24.09.2026)
         Kleidfarbmischung.anwenden(inst, kennung, inst.dazKleidung[kennung].regler);   // Textur der Mischung (30.09.2026)
         Stoffwerte.stueck(inst, kennung, inst.dazKleidung[kennung]);   // Rauheit, Metall, Gewebe

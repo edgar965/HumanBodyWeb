@@ -21,17 +21,18 @@ export class Recherchehuman3d {
 
     binden() {
         if (!this.fenster) return;
-        const tabelle = document.querySelector('table.rc-tabelle');
-        if (tabelle) {
-            Recherchehuman3dprio.binden(tabelle);
-            Recherchekategorien.binden(tabelle);
+        // Seit 09.10.2026 drei Tabellen (offen, eingebaut, abgelegt): die Prio steht nur in der ersten, die Kategorie-Schalter gelten für alle.
+        const tabellen = [...document.querySelectorAll('table.rc-tabelle')];
+        for (const tabelle of tabellen) {
+            if (tabelle.querySelector('input.rc-prio')) Recherchehuman3dprio.binden(tabelle);
         }
+        Recherchekategorien.binden(tabellen);
         document.addEventListener('click', (e) => {
             const ziel = e.target instanceof Element ? e.target : null;
             if (!ziel) return;
             const bild = ziel.closest('td.rc-bildzelle img.rc-bild');
             if (bild) { this.bildOeffnen(bild); return; }
-            const zelle = ziel.closest('td.rc-todozelle');
+            const zelle = ziel.closest('td.rc-todozelle, td.rc-popupzelle');
             if (!zelle) return;
             const zeile = zelle.closest('tr[data-id]');
             if (zeile) this.oeffnen(zeile.dataset.id);
@@ -135,9 +136,24 @@ export class Recherchehuman3d {
         }
         this.inhalt.appendChild(E.el('p', 'rc-popup-kurz', p.kurz));
 
-        const todo = E.abschnitt('Was uns fehlt (ToDo)');
-        todo.appendChild(E.liste(p.todo, 'rc-todo-liste'));
-        this.inhalt.appendChild(todo);
+        // Urteil vom 09.10.2026 (nur Projekte mit Urteil): Marke, Aufwand, betroffenes Stück unseres Codes, Grund. Die Klasse der Marke kommt aus der festen Urteilsliste des Servers.
+        if (p.urteil) {
+            const urteil = E.abschnitt('Einschätzung');
+            const marke = E.el('p', 'rc-popup-urteil');
+            marke.append(E.el('span', `rc-urteil rc-urteil-${p.urteil}`, p.urteil_label));
+            if (p.urteil_aufwand) marke.append(` Aufwand ${p.urteil_aufwand}`);
+            urteil.appendChild(marke);
+            if (p.urteil_bereich) urteil.appendChild(E.el('p', 'rc-bereich', p.urteil_bereich));
+            if (p.urteil_grund) urteil.appendChild(E.el('p', 'rc-grund', p.urteil_grund));
+            this.inhalt.appendChild(urteil);
+        }
+
+        // Das ToDo ist am Bestand vom 04.10.2026 gemessen: bei eingebauten, veralteten und nicht lohnenden Projekten sagt es nichts mehr (`todo_zeigen` vom Server).
+        if (p.todo_zeigen !== false) {
+            const todo = E.abschnitt('Was uns fehlt (ToDo)');
+            todo.appendChild(E.liste(p.todo, 'rc-todo-liste'));
+            this.inhalt.appendChild(todo);
+        }
 
         // `quellen` läuft parallel zu [Hauptbild, …Galerie] (ohne leere Plätze): die Vorschau liegt lokal, ein Klick öffnet das Original beim Projekt, falls bekannt.
         const bilder = [p.bild, ...(p.bilder || [])].filter(Boolean);

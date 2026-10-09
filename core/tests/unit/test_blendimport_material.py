@@ -90,7 +90,7 @@ class DetailnormaleTest(SimpleTestCase):
 
     def _bildknoten(self, pfad):
         # Ein 1 × 2-Bild: acht Zahlen RGBA, so wie `pixels.foreach_get` sie liefert.
-        bild = SimpleNamespace(filepath=pfad, library=None, size=(1, 2))
+        bild = SimpleNamespace(filepath=pfad, library=None, size=(1, 2), packed_file=None)       # `bildpfad` fragt nach gepackten Bildern (Character Creator)
         bild.pixels = SimpleNamespace(foreach_get=lambda ziel: ziel.__setitem__(slice(None), [0.25, 0.5, 1.0, 1.0] * 2))
         mapping = _knoten('MAPPING', 'Mapping', {'Vector': _buchse(_knoten('TEX_COORD', 'Koordinate')),
                                                  'Scale': _buchse(wert=(75.0, 75.0, 1.0))})
@@ -138,7 +138,7 @@ class StueckmaterialTest(SimpleTestCase):
               'detail_kachel': [75.0, 75.0], 'alpha': 'A:/x/kein_alpha.png'}
 
     def _material(self, quelle, haar):
-        with mock.patch.object(Blendimportstuecke, 'alphabild', staticmethod(lambda bild, ziel: str(ziel))):
+        with mock.patch.object(Blendimportstuecke, 'alphabild', staticmethod(lambda bild, ziel, ausgang='Alpha': str(ziel))):
             return Blendimportstuecke.material('k', quelle, Path('ordner'), haar)
 
     def test_1_das_gewebe_kommt_ins_material(self):

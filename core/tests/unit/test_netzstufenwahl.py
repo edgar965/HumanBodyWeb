@@ -88,9 +88,10 @@ class DasDrahtformat(SimpleTestCase):
         self.assertIn('CookieMiddleware(URLRouter(', self._quelle('ui', 'asgi.py'))
 
     def test_beide_figurseiten_richten_die_taste_ein(self):
-        for teile in (('static', 'viewer', 'viewer', 'index.js'),
-                      ('static', 'viewer', 'charakter', 'boot.js')):
-            self.assertIn('Netzstufe.einrichten(', self._quelle(*teile), teile)
+        # Die Betrachterseite schaltet fein ↔ Filmstufe (`Netzstufe`); die Szene seit 09.10.2026 durch drei Stufen
+        # grob → fein → ultrafein mit Anzeige rechts unten (`Netzstufenschalter`, Fälle in `test_js_netzstufenschalter`).
+        self.assertIn('Netzstufe.einrichten(', self._quelle('static', 'viewer', 'viewer', 'index.js'))
+        self.assertIn('Netzstufenschalter.einrichten(', self._quelle('static', 'viewer', 'charakter', 'boot.js'))
 
 
 class NurDieseSeite(SimpleTestCase):

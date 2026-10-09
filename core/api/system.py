@@ -94,10 +94,12 @@ class Systemendpunkte:
         einzelheit = daten.get('detail', '')
         if einzelheit:
             text += ' - %s' % einzelheit
-        stufe = daten.get('level', 'info').lower()
-        if stufe == 'error':
+        # Auch die deutschen Stufen: `Serverabruf` meldet `warnung`, und die landete bisher unbemerkt als Info
+        # (09.10.2026: der Ausfall „Failed to fetch" stand deshalb nie als Warnung im Protokoll).
+        stufe = str(daten.get('level', 'info')).lower()
+        if stufe in ('error', 'fehler'):
             protokoll.error(text)
-        elif stufe == 'warning':
+        elif stufe in ('warning', 'warn', 'warnung'):
             protokoll.warning(text)
         else:
             protokoll.info(text)

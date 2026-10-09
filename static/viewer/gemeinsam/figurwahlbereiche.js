@@ -45,16 +45,29 @@ export class Figurwahlbereiche {
     }
 
     /**
+     * Alphabetisch nach der angezeigten Bezeichnung (Edgar, 09.10.2026: „bei Charakter
+     * hinzufügen sollen die Modelle alphabetisch sortiert sein"). Ohne Groß-/Kleinschreibung
+     * und mit Zahlen als Zahlen — der Server liefert Dateinamen in Codepunkt-Reihenfolge, da
+     * stünde „cute girl" hinter „Edgar" und „Zoe".
+     */
+    static sortiert(eintraege) {
+        const text = e => String(e.anzeige ?? e.name ?? '');
+        return [...eintraege].sort((a, b) =>
+            text(a).localeCompare(text(b), 'de', { sensitivity: 'base', numeric: true }));
+    }
+
+    /**
      * Die Zeilen auf die Bereiche verteilen; `zeile(eintrag)` baut das `li`.
      * Ein leerer Bereich sagt es; ist der ganze Reiter leer, steht der
-     * Leertext der Quelle in beiden.
+     * Leertext der Quelle in beiden. Innerhalb eines Bereichs alphabetisch.
      */
     static verteilen(behaelter, eintraege, zeile, leerText) {
         for (const [bereich] of Figurkataloge.BEREICHE) {
             const liste = Figurwahlbereiche.liste(behaelter, bereich);
             if (!liste) continue;
             liste.innerHTML = '';
-            const eigene = eintraege.filter(e => (e.bereich || 'standard') === bereich);
+            const eigene = Figurwahlbereiche.sortiert(
+                eintraege.filter(e => (e.bereich || 'standard') === bereich));
             const zahl = liste.parentElement.querySelector('[data-zahl]');
             if (zahl) zahl.textContent = `(${eigene.length})`;
             if (!eigene.length) {

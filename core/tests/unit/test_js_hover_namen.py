@@ -53,12 +53,17 @@ console.log(JSON.stringify(aus));
         })
 
     def test_2_die_stuecke_tragen_den_katalognamen(self):
+        """Seit 09.10.2026 über `beschildern`: das Netz entsteht SOFORT mit dem Namen, den es gibt (sonst die Kennung), der
+        Katalogname folgt — die Figur wartet nicht mehr auf den Katalog (3 MB, nach einem Serverneustart 16,7 s)."""
         kleidung = (STATIK / 'gemeinsam' / 'genesis9kleidung.js').read_text(encoding='utf-8')
-        self.assertIn("const name = await Genesis9kleidung.anzeigename(kennung);", kleidung)
-        self.assertIn("netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length);",
+        self.assertIn("netz.userData.beschriftung = Genesis9kleidung.beschriftung(name, teil.name, paare.length, herkunft);",
                       kleidung)
+        self.assertIn("Genesis9kleidung.beschildern(inst, kennung, paare);", kleidung)
+        self.assertIn("Genesis9kleidung.anzeigename(kennung).then((name) => {", kleidung)
+        self.assertNotIn("await Genesis9kleidung.anzeigename(kennung)", kleidung, 'der Bau wartet nicht auf den Katalog')
         daz = (STATIK / 'charakter' / 'genesis9' / 'dazkleidung.js').read_text(encoding='utf-8')
-        self.assertIn("Genesis9kleidung.beschriftung(name, teil.name, daten.teile.length, 'Daz')", daz)
+        self.assertIn("Genesis9kleidung.beschildern(inst, kennung, paare, 'Daz')", daz)
+        self.assertNotIn("await Genesis9kleidung.anzeigename(kennung)", daz, 'der Bau wartet nicht auf den Katalog')
         self.assertNotIn("`${kennung} (Daz)`", daz)
 
     def test_3_die_figur_meldet_den_modellnamen(self):

@@ -8,11 +8,13 @@ der Antwortvorrat lieferte die gemerkte Antwort von vor dem Import (`G9antworten
 2. Schreibt man die Datei neu, ändert sich der Wert — und damit der Schlüssel des Antwortvorrats; solange sie gleich bleibt,
    bleibt auch der Schlüssel gleich (der Vorrat nützt also weiter).
 3. Daz-Stücke ändern ihren Schlüssel nicht, wenn jemand die Datei anfasst (`vergessen()` bleibt ihr Weg).
+5. (09.10.2026, Stiefel der „Asian Female": Fuß im Browser 55°, im neu geschriebenen Stück 18°) Die Fußdrehung eines Absatzschuhs formt die
+   FIGUR; der Körper-Schlüssel trägt deshalb den Stand der Stücke aus `rumpf['griffe']` (`G9stueckstand.griffe`).
 
 Sabotage-Gegenprobe: in `von` `eintrag.get('eigen')` aus der Bedingung nehmen → Fall 3 rot; `G9stueckstand.von(eintrag)` aus
-`G9antworten.schluessel` streichen → Fall 2 rot.
+`G9antworten.schluessel` streichen → Fall 2 rot; `G9stueckstand.griffe(rumpf)` aus `G9antworten.schluessel` streichen → Fall 5 rot.
 
-Nicht gelaufen (Stand 08.10.2026) — läuft nur auf Ansage.
+Nicht gelaufen (Stand 08.10.2026; Fall 5 09.10.2026) — läuft nur auf Ansage.
 """
 
 import os
@@ -76,3 +78,14 @@ class StueckstandTest(SimpleTestCase):
     def test_4_fehlt_die_datei_bleibt_es_null_statt_eines_fehlers(self):
         self.duf.unlink()
         self.assertEqual(G9stueckstand.von(self._eintrag()), 0)
+
+    def test_5_der_stand_eines_stuecks_mit_griff_steht_im_schluessel_des_koerpers(self):
+        """Der Absatzschuh der .blend formt die FIGUR (Fußdrehung): wird er neu geschrieben, braucht der Körper eine neue Antwort."""
+        mit, ohne = {'regler': {}, 'griffe': ['asian_female_schuhe']}, {'regler': {}}
+        schluessel = lambda rumpf: G9antworten.schluessel('koerper', 'basis', rumpf, 1, {}, False)  # noqa: E731
+        with mock.patch.object(G9garderobe, 'eintrag', return_value=self._eintrag()):
+            vorher_mit, vorher_ohne = schluessel(mit), schluessel(ohne)
+            self.assertEqual(vorher_mit, schluessel(mit), 'ohne Änderung bleibt der Schlüssel')
+            self._anfassen()
+            self.assertNotEqual(vorher_mit, schluessel(mit), 'der Schuh wurde neu geschrieben: der Körper bekommt eine neue Antwort')
+            self.assertEqual(vorher_ohne, schluessel(ohne), 'ohne Griff im Rumpf ändert sich am Körper nichts')

@@ -23,6 +23,8 @@ export class Genesis9morphformular {
     static RICHTUNGEN = [['haut', 'Hautnormale'], ['aussen', 'nach außen'], ['innen', 'nach innen'], ['oben', 'nach oben'],
                          ['unten', 'nach unten'], ['vorn', 'nach vorn'], ['hinten', 'nach hinten']];
     static _landmarken = null;
+    /** Das LAUFENDE Versprechen der Namensliste — alle Formulare warten auf dasselbe (sonst holt jedes seine eigene). */
+    static _landmarkenLauf = null;
 
     static bauen(inst, stueck, werteLesen, zeileBauen) {
         const kasten = document.createElement('details');
@@ -71,9 +73,13 @@ export class Genesis9morphformular {
 
     static async _landmarkenFuellen(formular) {
         try {
+            // Erst nach der Antwort gemerkt, hieß: Alle Formulare, die VOR ihr entstanden, holten sie noch einmal
+            // (568 Abrufe je Aufbau der Garderobe, gemessen 09.10.2026). Ein Fehlschlag brennt sich nicht ein.
             if (!Genesis9morphformular._landmarken) {
-                const antwort = await Serverabruf.json(Genesis9morphformular.LANDMARKEN);
-                Genesis9morphformular._landmarken = Object.keys(antwort.landmarken || {}).sort();
+                Genesis9morphformular._landmarkenLauf ??= Serverabruf.json(Genesis9morphformular.LANDMARKEN)
+                    .then(antwort => Object.keys(antwort.landmarken || {}).sort())
+                    .catch(fehler => { Genesis9morphformular._landmarkenLauf = null; throw fehler; });
+                Genesis9morphformular._landmarken = await Genesis9morphformular._landmarkenLauf;
             }
         } catch { return; }
         const feld = formular.querySelector('[data-feld="landmarke"]');

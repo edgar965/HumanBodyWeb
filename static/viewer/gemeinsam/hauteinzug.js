@@ -43,13 +43,14 @@
  *
  * Liegt in `gemeinsam/`, weil das BVH Studio dieselbe Maske braucht
  * (`studio/spurhaut.js`, 11.09.2026).
+ *
+ * GERECHNET WIRD IN `hauteinzugrechnung.js` (ohne Three.js, seit 09.10.2026 auch in einem Worker, `hautarbeiter.js`); hier
+ * steht, was das Netz betrifft: `eintragen` schreibt das Attribut und patcht die Materialien, `setzen` rechnet und schreibt.
  */
 import * as THREE from 'three';
 import { Shaderpatch } from './shaderpatch.js';
-import { Hautmaskegeometrie } from './hautmaskegeometrie.js';
-import { Saumschnitt } from './saumschnitt.js';
 import { Saumband } from './saumband.js';
-import { Hautdicke } from './hautdicke.js';
+import { Hauteinzugrechnung } from './hauteinzugrechnung.js';
 
 export class Hauteinzug {
 
@@ -70,47 +71,18 @@ export class Hauteinzug {
      *   null ohne Maske.
      */
     static setzen(netz, maske, dreiecke, optionen = {}) {
+        const rechnung = Hauteinzugrechnung.rechnen(netz.geometry.attributes.position.array, maske, dreiecke, optionen);
+        return Hauteinzug.eintragen(netz, rechnung);
+    }
+
+    /**
+     * Das Ergebnis von `Hauteinzugrechnung.rechnen` ans Netz schreiben — gerechnet kann es anderswo sein (ein Worker,
+     * `hautarbeiter.js`): `rechnung.werte` wird zum Attribut (oder kopiert in das vorhandene), die Materialien werden gepatcht.
+     * @returns {{gesetzt, geschnappt, band, weg}}
+     */
+    static eintragen(netz, rechnung) {
         const geo = netz.geometry;
-        const pos = geo.attributes.position.array;
-        const n = pos.length / 3;
-        const werte = new Float32Array(n * 3);
-        const stand = { gesetzt: 0, geschnappt: 0, band: 0, weg: null };
-        if (maske && dreiecke) {
-            // Ruhenormalen nach außen (signiertes Volumen) — das
-            // `normal`-Attribut des Körpers zeigt im Browser nach innen.
-            const N = optionen.normalen || Hautmaskegeometrie.normalen(pos, dreiecke);
-            const kanten = optionen.kanten?.length ? optionen.kanten : null;
-            const gitter = kanten
-                ? Hautmaskegeometrie.punktgitter(Saumschnitt.mitten(kanten), Saumschnitt.ZELLE_M) : null;
-            const ecken = kanten ? Saumschnitt.randecken(maske, dreiecke) : null;
-            const abstaende = Saumband.abstaende(pos, maske, dreiecke);
-            // Nie tiefer als ein Teil der Körperdicke — sonst tritt ein Punkt
-            // an einer dünnen Stelle drüben wieder aus (`hautdicke.js`). Nur für
-            // die Haut; Stoff unter Stoff bringt die Hautnormalen mit.
-            const dicken = optionen.normalen ? null : Hautdicke.dicken(pos, N, maske);
-            for (let i = 0; i < n; i++) {
-                if (!maske[i]) continue;
-                const nx = N[3 * i], ny = N[3 * i + 1], nz = N[3 * i + 2];
-                const schnapp = (ecken && ecken[i])
-                    ? Saumschnitt.verschiebung(pos[3 * i], pos[3 * i + 1], pos[3 * i + 2],
-                                               nx, ny, nz, kanten, gitter)
-                    : null;
-                if (schnapp) {
-                    werte[3 * i] = schnapp[0]; werte[3 * i + 1] = schnapp[1]; werte[3 * i + 2] = schnapp[2];
-                    stand.geschnappt += 1;
-                } else {
-                    const tiefe = dicken
-                        ? Math.min(Saumband.tiefe(abstaende[i]), Hautdicke.grenze(dicken[i]))
-                        : Saumband.tiefe(abstaende[i]);
-                    werte[3 * i] = -tiefe * nx;
-                    werte[3 * i + 1] = -tiefe * ny;
-                    werte[3 * i + 2] = -tiefe * nz;
-                }
-                if (abstaende[i] <= Saumband.BAND_M) stand.band += 1;
-                stand.gesetzt += 1;
-            }
-            stand.weg = Saumband.weg(maske, abstaende);
-        }
+        const { werte, ...stand } = rechnung;
         geo.userData.saumschnitt = stand.geschnappt;
         geo.userData.saumband = stand.band;
         const bisher = geo.getAttribute('einzug');

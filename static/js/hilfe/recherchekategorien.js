@@ -10,15 +10,16 @@ export class Recherchekategorien {
 
     static AUS = 'rc-zeile-aus';
 
-    constructor(leiste, tabelle) {
+    constructor(leiste, tabellen) {
         this.leiste = leiste;
-        this.tabelle = tabelle;
+        this.tabellen = tabellen;
     }
 
-    /** Bindet die Leiste `#rc-kategorien` an die Tabelle (Ereignisdelegation: ein Horcher für Knöpfe und Schalter). */
-    static binden(tabelle) {
+    /** Bindet die Leiste `#rc-kategorien` an die Tabellen (Ereignisdelegation: ein Horcher für Knöpfe und Schalter). Seit 09.10.2026 gibt es drei Tabellen (offen, eingebaut, abgelegt); die Schalter gelten für alle. */
+    static binden(tabellen) {
         const leiste = document.getElementById('rc-kategorien');
-        if (leiste && tabelle) new Recherchekategorien(leiste, tabelle).binden();
+        const liste = [...(tabellen || [])];
+        if (leiste && liste.length) new Recherchekategorien(leiste, liste).binden();
     }
 
     binden() {
@@ -49,9 +50,11 @@ export class Recherchekategorien {
     /** Blendet jede Zeile ein oder aus, je nachdem, ob ihre Kategorie gewählt ist. */
     anwenden() {
         const gewaehlt = new Set(this.schalter().filter((s) => s.getAttribute('aria-pressed') === 'true').map((s) => s.dataset.kategorie));
-        for (const zeile of this.tabelle.tBodies[0].rows) {
-            const zelle = zeile.querySelector('td.rc-kategoriezelle');
-            if (zelle) zeile.classList.toggle(Recherchekategorien.AUS, !gewaehlt.has(zelle.textContent.trim()));
+        for (const tabelle of this.tabellen) {
+            for (const zeile of tabelle.tBodies[0].rows) {
+                const zelle = zeile.querySelector('td.rc-kategoriezelle');
+                if (zelle) zeile.classList.toggle(Recherchekategorien.AUS, !gewaehlt.has(zelle.textContent.trim()));
+            }
         }
     }
 }

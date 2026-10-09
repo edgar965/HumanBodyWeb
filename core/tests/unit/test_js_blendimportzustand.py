@@ -9,12 +9,15 @@ gefragt wird nur einmal je Takt.
 2. `prozent`: der größere von Stand und „Mesh to 3D"-Lauf, auf 0…100 begrenzt, ohne Angabe 0.
 3. `beobachten` meldet jeden Stand als Ereignis mit der Kennung und hört auf zu fragen, sobald der Import nicht mehr rechnet —
    auch bei einem Fehler (`unbekannt`); ein zweites `beobachten` derselben Kennung startet keinen zweiten Takt.
+3b. Reißt die VERBINDUNG ab (`TypeError`, der Server lädt nach einer gespeicherten Datei neu), meldet er `verbindung: 'getrennt'`
+   mit dem letzten bekannten Stand und fragt weiter — nie „unbekannt" (09.10.2026, „Zustand nicht lesbar", Import lief weiter).
 4. `laufend` gibt die Kennung oder `null`.
 
 Sabotage-Gegenprobe: in `abfragen` das `clearInterval` weglassen → Fall 3 rot (Anfragen nach dem Ende); `Math.min(100, …)` streichen
-→ Fall 2 rot; `zustand.kennung = kennung` weglassen → Fall 3 rot (der Dialog filtert nach der Kennung).
+→ Fall 2 rot; `zustand.kennung = kennung` weglassen → Fall 3 rot (der Dialog filtert nach der Kennung); die Zeile
+`if (fehler instanceof TypeError) return …_getrennt(kennung)` streichen → Fall 3b rot.
 
-Nicht gelaufen (Stand 08.10.2026) — läuft nur auf Ansage.
+Nicht gelaufen (Stand 09.10.2026) — läuft nur auf Ansage. Fall 3b im Chrome am echten Import gesehen (Ausfall per `fetch`-Attrappe).
 """
 
 from django.test import SimpleTestCase
@@ -66,6 +69,30 @@ const fehler = [];
 document.addEventListener(Z.EREIGNIS, e => { if (e.detail.kennung === 'k2') fehler.push(e.detail.status); });
 await Z.beobachten('k2');
 pruefe('Fehler gemeldet', fehler, ['unbekannt']);
+
+// 3b. Die VERBINDUNG reißt (der Server lädt neu, `TypeError: Failed to fetch`): kein „unbekannt", der Takt läuft weiter,
+// der letzte Stand bleibt stehen (09.10.2026: früher blieb die Leiste rot auf „Zustand nicht lesbar", der Import rechnete weiter)
+const json = daten => new Response(JSON.stringify(daten), { status: 200, headers: { 'Content-Type': 'application/json' } });
+let aus = false;
+globalThis.fetch = async () => {
+    if (aus) throw new TypeError('Failed to fetch');
+    return json({ status: 'laeuft', fortschritt: 40, schritt: 'figur' });
+};
+const k3 = [];
+document.addEventListener(Z.EREIGNIS, e => { if (e.detail.kennung === 'k3') k3.push(e.detail); });
+await Z.beobachten('k3');
+aus = true;
+await new Promise(r => setTimeout(r, 60));
+const getrennt = k3.filter(d => d.verbindung === 'getrennt');
+pruefe('getrennt gemeldet, Takt läuft weiter', getrennt.length > 1, true);
+pruefe('letzter Stand bleibt', [getrennt[0].status, getrennt[0].fortschritt, getrennt[0].schritt], ['laeuft', 40, 'figur']);
+pruefe('nie „unbekannt"', k3.some(d => d.status === 'unbekannt'), false);
+pruefe('Hinweis nennt den Import', getrennt[0].detail.includes('Import rechnet im Hintergrund weiter'), true);
+aus = false;
+await new Promise(r => setTimeout(r, 40));
+pruefe('wieder normal', k3[k3.length - 1].verbindung, undefined);
+globalThis.fetch = async () => json({ status: 'fertig', fortschritt: 100 });        // Takt beenden
+await new Promise(r => setTimeout(r, 40));
 
 // 4. laufend
 globalThis.fetch = async () => new Response(JSON.stringify({ kennung: null }), { status: 200, headers: { 'Content-Type': 'application/json' } });

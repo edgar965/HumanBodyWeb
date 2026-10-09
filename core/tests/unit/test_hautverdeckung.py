@@ -51,11 +51,15 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertNotIn('static merken(', self.modul)
         self.assertIn('geo.userData.indexVoll = {', self.figurhaut)
         self.assertIn('index: geo.index.array.slice()', self.figurhaut)
-        # Jede Maske rechnet vom vollen Index, nie vom gekuerzten.
-        self.assertIn('Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe)', self.modul)
+        # Jede Maske rechnet vom vollen Index, nie vom gekuerzten (seit 09.10.2026 in `Hautrechnung`, auch im Worker).
+        self.assertIn('Hautrechnung.rechnen(pos, voll.index, stoffe)', self.modul)
+        self.assertIn('geo.userData.indexVoll.index', self.modul)       # `anwendenAsync` schickt den vollen Index
+        rechnung = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hautrechnung.js')
+        self.assertIn('Hautmaske.verdeckt(pos, index, stoffe, { ersatz, hoehe, rand, normalen })', rechnung)
         # Seit dem 13.09.2026 mit `weg` aus dem Einzug: hinter der Maskengrenze
-        # bleibt ein Band versenkter Haut (`Saumband`).
-        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', self.modul)
+        # bleibt ein Band versenkter Haut (`Saumband`). Die Ersatzstück-Schritte ergänzen `weg` (09.10.2026).
+        self.assertIn('const weg = einzug.weg || new Uint8Array(ersatz.length);', self.modul)
+        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, weg,', self.modul)
         aufbau = HautverdeckungVerdrahtungTest._lies('charakter', 'weichgewebeaufbau.js')
         self.assertIn('geo.userData?.indexVoll?.index ||', aufbau)
 
@@ -65,10 +69,11 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
 
     def test_einzug_und_lagenverdeckung_haengen_daran(self):
         # Seit dem 13.09.2026 mit den Stoffkanten: Randecken wandern unter die
-        # Kante statt nach innen (`Saumschnitt`).
+        # Kante statt nach innen (`Saumschnitt`); gerechnet in `Hautrechnung`, geschrieben von `Hauteinzug.eintragen`.
+        self.assertIn('Hauteinzug.eintragen(inst.bodyMesh, rechnung.einzug);', self.modul)
         self.assertIn(
-            'Hauteinzug.setzen(inst.bodyMesh, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });',
-            self.modul,
+            '{ kanten: Saumschnitt.kanten(stoffe), hautnormalen: normalen }',
+            HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hautrechnung.js'),
         )
         self.assertIn('Hauteinzug.setzen(inst.bodyMesh, null, null);', self.modul)
         einzug = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')

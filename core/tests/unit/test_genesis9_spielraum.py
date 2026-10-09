@@ -129,7 +129,7 @@ class SpielraumGenesisTest(SimpleTestCase):
     def test_4_option_und_weg_durch_die_kette(self):
         katalog = {e['schluessel']: e for e in O.katalog()['optionen']}
         self.assertEqual(katalog['spielraum']['vorgabe'], 'aus')
-        self.assertEqual([w[0] for w in katalog['spielraum']['werte']], ['aus', '150', '200'])
+        self.assertEqual([w['wert'] for w in katalog['spielraum']['werte']], ['aus', '150', '200'])   # `katalog()` macht Paare zu {'wert', 'text'}
         self.assertEqual(O.pruefen({})['spielraum'], 'aus')
         self.assertEqual(O.pruefen({'spielraum': '200'})['spielraum'], '200')
         self.assertEqual(O.pruefen({'spielraum': '999'})['spielraum'], 'aus')

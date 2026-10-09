@@ -152,8 +152,19 @@ class Blendexport:
                         aus['farbe_wert'] = fest
                         continue
                     aus[kanal] = self.bild_vor(buchse.links[0].from_node, set())
+                    if kanal == 'alpha':
+                        aus['alpha_ausgang'] = self.ausgang(buchse.links[0])
             aus.update(self.detailnormale(knoten, mat.name))
         return aus
+
+    @staticmethod
+    def ausgang(link):
+        """Welche Buchse des Bildknotens speist Alpha: `Alpha` (die Deckkraft des Bilds) oder `Color` (ein Graubild, dessen
+        Alpha-Kanal überall 1 ist — die Maske steht in R = G = B). Gemessen 09.10.2026 an „Asian girl": `hair1_alpha.png` und
+        `bra_alpha.png` (Non-Color, Ausgang `Color`, Alpha-Kanal 255 überall) gegen `sock_basecolor.png` und
+        `eyelashes_basecolor_opacity.png` (sRGB, Ausgang `Alpha`). Wer immer den Alpha-Kanal nahm, bekam für das Haar eine
+        weiße Karte — volle Haarkarten statt einzelner Strähnen. Läuft die Kette über weitere Knoten, bleibt `Alpha`."""
+        return link.from_socket.name if link.from_node.type == 'TEX_IMAGE' else 'Alpha'
 
     def detailnormale(self, bsdf, materialname):
         """Eine ZWEITE Normalenkarte mit Kachelung: der Normal-Eingang hängt an einem Vector-Math-Knoten über zwei
@@ -172,10 +183,29 @@ class Blendexport:
         bildknoten = self.bildknoten_vor(karten[1], set())
         if bildknoten is None:
             return {}
-        pfad = os.path.normpath(bpy.path.abspath(bildknoten.image.filepath, library=bildknoten.image.library))
+        pfad = self.bildpfad(bildknoten.image)
         if not pfad.lower().endswith('.png'):
             pfad = self.als_png(bildknoten.image, 'detail_%s.png' % ''.join(c if c.isalnum() else '_' for c in materialname))
         return {'detailnormalen': pfad, 'detail_kachel': self.kachelung(bildknoten)}
+
+    def bildpfad(self, bild):
+        """Absoluter Pfad der Bilddatei. Fehlt die Datei und ist das Bild in die .blend GEPACKT (Character Creator bettet seine Texturen
+        ein und merkt sich nur den Pfad seines Temp-Ordners — „Daven.blend": 70 von 72 Bildern gepackt, alle Pfade unter
+        `C:\\Users\\<Autor>\\AppData\\Local\\Temp\\CharacterCreator4Temp`, gemessen 09.10.2026), schreibt der Export die Bytes unverändert nach
+        `<ziel>/bilder/<Bildname><Endung>` und gibt diesen Pfad zurück."""
+        roh = bpy.path.abspath(bild.filepath, library=bild.library) if bild.filepath else ''
+        pfad = os.path.normpath(roh) if roh else ''
+        if (pfad and os.path.isfile(pfad)) or bild.packed_file is None:
+            return pfad
+        ordner = os.path.join(self.ziel, 'bilder')
+        os.makedirs(ordner, exist_ok=True)
+        endung = os.path.splitext(pfad)[1] or '.png'
+        name = ''.join(c if c.isalnum() or c in '-_.' else '_' for c in bild.name)
+        ziel = os.path.join(ordner, name if name.lower().endswith(endung.lower()) else name + endung)
+        if not os.path.isfile(ziel):
+            with open(ziel, 'wb') as datei:
+                datei.write(bild.packed_file.data)
+        return ziel
 
     def als_png(self, bild, dateiname):
         """Die Pixel eines Bilds unverändert als PNG neben den Export legen (über eine Kopie: `filepath_raw` am geladenen
@@ -239,8 +269,7 @@ class Blendexport:
             return None
         gesehen.add(knoten.name)
         if knoten.type == 'TEX_IMAGE' and knoten.image is not None:
-            pfad = bpy.path.abspath(knoten.image.filepath, library=knoten.image.library)
-            return os.path.normpath(pfad) if pfad else None
+            return self.bildpfad(knoten.image) or None
         # Normal Map: zuerst ihr Farbeingang; Mix: die Eingänge der Reihe nach.
         for buchse in knoten.inputs:
             if buchse.is_linked:

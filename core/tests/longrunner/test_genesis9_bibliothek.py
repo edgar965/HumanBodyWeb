@@ -219,8 +219,9 @@ class ApiTest(SimpleTestCase):
         self.assertEqual(schluessel[:13], ['figur', 'koerper', 'kopf', 'mimik', 'hals',
                                            'brust', 'ruecken', 'taille', 'huefte',
                                            'arme', 'haende', 'beine', 'fuesse'])
-        # Dahinter die HB-Bereiche und „Kopf-Eigen" (27.09.2026, `G9schnittmorph`).
-        self.assertEqual([s for s in schluessel[13:] if s[:3] != 'hb_'], ['kopf_eigen'])
+        # Dahinter die HB-Bereiche, „Kopf-Eigen" (27.09.2026, `G9schnittmorph`), die Ortsmorphe, die Körperregionen und
+        # „Modell-Eigen" (Reihenfolge wie in `test_genesis9_hbmorphe`, Fall mit `G9reglerplan.BEREICHE`).
+        self.assertEqual([s for s in schluessel[13:] if s[:3] != 'hb_'], ['kopf_eigen', 'ort', 'region', 'modell_eigen'])
         # Seit 18.09.2026 hinter den 8 Starter-Hautsaetzen und 15 Augenbildern
         # die der Charakterordner (Amala G9 Skin MAT, Ursula, Kin, Anime …).
         haut = [h['id'] for h in r['haut']]

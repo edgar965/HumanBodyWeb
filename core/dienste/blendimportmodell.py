@@ -92,6 +92,17 @@ class Blendimportmodell:
                 logger.warning('Blender-Import: Eigenmorph %s ohne Schieber (%s)', schluessel, fehler)
         return namen
 
+    @staticmethod
+    def griff(kennung):
+        """Trägt das Stück eine Haltung (Absatzschuh: `G9stueckersatz.griff`, vom Eintrag als `stueck_griff` gemeldet)?
+
+        Nur dann stellt die Figur beim Laden des Modells ihre Füße dazu: `Genesis9Modell.anziehenMitGriff` baut sie bei
+        `griff: true` neu. Mit `griff: false` für jedes Stück (so schrieb es der Import bis 09.10.2026) stand der Schuh in
+        Absatzhaltung am flachen Fuß, und die Zehen ragten vorn heraus."""
+        from Genesis9.garderobe import G9garderobe
+
+        return bool((G9garderobe.eintrag(kennung) or {}).get('stueck_griff'))
+
     def schreiben(self, wunsch, kacheln, augen, stuecke):
         """`kacheln` `{schluessel: Datei in ergebnis/}`, `augen` Pfad oder None, `stuecke` `{name: kennung}` → Name."""
         from .modelltexturen import Modelltexturen
@@ -110,7 +121,7 @@ class Blendimportmodell:
             self.klein(ziel)
             fototextur[schluessel] = Modelltexturen.adresse(name, ziel.name, ziel.stat().st_mtime)
         kleidung = {k: {'variante': '', 'stil': '', 'stile': {}, 'regler': {}, 'farbe': None, 'gruppenfarben': {},
-                        'griff': False, 'knochen': False} for k in stuecke.values()}
+                        'griff': self.griff(k), 'knochen': False} for k in stuecke.values()}
         daten = {
             'name': name,
             'quelle': 'genesis9',

@@ -46,8 +46,12 @@ export class Figuraufbaustand {
      */
     static async warten(inst) {
         if (!inst) return;
+        // Wer wartet, braucht die feine Stufe JETZT: Der Aufbau nach Ruhe (`Genesis9aufbau._haeppchen`) wartet dann nicht mehr.
+        inst._feinDringend = true;
         if (inst.fein) await Promise.resolve(inst.fein).catch(() => {});
-        while (Figuraufbaustand.laeuft(inst)) {
+        // `_grobHalt`: Der Nutzer hat „grob" gewählt (`Genesis9aufbau.stufeSetzen`) und der Export ist deshalb gesperrt —
+        // das ist kein Aufbau, auf den man warten könnte.
+        while (Figuraufbaustand.laeuft(inst) && !inst._grobHalt) {
             await new Promise((weiter) => setTimeout(weiter, 100));
         }
     }

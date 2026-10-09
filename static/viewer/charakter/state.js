@@ -16,6 +16,7 @@ import { getDefaultModelConfig, getDefaultRigConfig } from '../modellbau/modellv
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Serverprotokoll } from '../gemeinsam/serverprotokoll.js';
 
 // Re-export everything that other modules may need
 export { THREE, OrbitControls, TransformControls, BVHLoader, GLTFLoader };
@@ -35,13 +36,10 @@ export const gltfLoader = new GLTFLoader();
 export function serverLog(action, detail, level) {
     const msg = detail ? `${action} — ${detail}` : action;
     Protokoll.debug('Scene', `${msg}`);
-    fetch('/api/log/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page: 'scene', action, detail: detail || '', level: level || 'info' }),
-    // stumm gewollt: Diese Zeile IST der Protokollweg — ein Fehler dabei darf
-    // die Aktion nicht aufhalten und sich nicht selbst melden wollen.
-    }).catch(() => {});
+    // Reißt die Verbindung ab (Autoreload des Servers), bleibt die Meldung liegen und kommt nach — samt einer
+    // Zusammenfassung „Server N s nicht erreichbar" im Fehlerlog (`gemeinsam/serverprotokoll.js`, 09.10.2026).
+    // Vorher: `.catch(() => {})` — der Ausfall war nirgends zu sehen. Ein Fehler hier hält die Aktion nicht auf.
+    Serverprotokoll.melden('scene', action, detail, level);
 }
 
 // =========================================================================

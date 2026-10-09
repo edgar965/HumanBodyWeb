@@ -57,10 +57,13 @@ export class Genesis9garderobe {
     static async fuellen(inst, behaelter) {
         if (!behaelter) return;
         behaelter.dataset.figur = inst.id;      // wer zuletzt anfragt, gewinnt (Wettlauf beim Laden)
+        // Dieselbe Figur zweimal kurz hintereinander (Auswahl, dann Nachladen — gemessen beim Start: zwei Läufe) baute die
+        // Liste ZWEIMAL; der ältere Lauf hört jetzt nach dem Warten auf, statt 130.000 Elemente für nichts zu bauen.
+        const lauf = behaelter._fuellLauf = (behaelter._fuellLauf || 0) + 1;
         behaelter.innerHTML = '<div class="gedaempft">Lade Garderobe …</div>';
         const [stuecke, stand] = await Promise.all([Genesis9garderobe.liste(),
                                                     Genesis9garderobekategorien.stand()]);
-        if (behaelter.dataset.figur !== inst.id) return;
+        if (behaelter.dataset.figur !== inst.id || behaelter._fuellLauf !== lauf) return;
         behaelter.innerHTML = '';
         if (!stuecke.length) {
             behaelter.innerHTML = '<div class="gedaempft">Keine Daz-Kleidung gefunden.</div>';

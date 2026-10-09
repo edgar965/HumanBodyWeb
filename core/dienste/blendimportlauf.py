@@ -128,7 +128,13 @@ class Blendimportlauf:
             # Ohne Armatur gibt es nichts, womit sich umposen ließe: Punkte bleiben, wie der Export sie las; „Mesh to 3D" schätzt die Haltung.
             self.ergebnis('umposen', {'aus': True, 'grund': 'Die Datei hat kein Skelett'})
             return
-        bericht = Blendimportumposen(self.ablage, self.melden).umposen(self.stand['quelle']['datei'])
+        try:
+            bericht = Blendimportumposen(self.ablage, self.melden).umposen(self.stand['quelle']['datei'])
+        except RuntimeError as fehler:
+            # Ein anderes Rig als Auto-Rig Pro (Daven.blend, Character Creator: Rigs `Armature` + `CC3_Base_Plus`, 09.10.2026): das
+            # Blender-Skript endet ohne Ergebnis. Die Haltung der Datei gilt dann — wie bei `umposen = aus`, der Grund steht im Ergebnis.
+            logger.warning('Blender-Import %s: Umposen gescheitert, Haltung der Datei gilt: %s', self.ablage.kennung, str(fehler)[:300])
+            bericht = {'aus': True, 'grund': 'Umposen gescheitert: %s' % str(fehler)[:300]}
         self.ergebnis('umposen', bericht)
 
     def _koerper(self):
@@ -153,7 +159,7 @@ class Blendimportlauf:
         beendet den Import nicht — die Figur gilt dann, wie „Mesh to 3D" sie gebaut hat."""
         from .blendimportnachformung import Blendimportnachformung
 
-        if self.stand['einstellungen'].get('scham') == 'objekt':
+        if self.stand['einstellungen'].get('scham') in ('objekt', 'mann'):
             # Die Scham kommt als Stück (`Blendimportscham`); eine nachgeformte Haut darunter ergäbe sie doppelt
             # (Edgar, 09.10.2026: „die hat im moment zwei mal Geschlechtsorgane" — facettierte Nachformung + Stück).
             self.ergebnis('nachformung', {'aus': 'Scham kommt als Stück (Einstellung scham = objekt)'})
@@ -178,11 +184,12 @@ class Blendimportlauf:
         if self.stand['einstellungen'].get('stuecke') != 'an':
             self.ergebnis('stuecke', {'aus': True, 'stuecke': {}})
             return
-        stuecke, bericht = Blendimportstuecke(self.ablage, self.job(), self.inventar(), self.stand['rollen'],
-                                              self.stand['quelle']['name'], self.melden,
-                                              self.stand['einstellungen'].get('augen'), self.zusatzregler(),
-                                              self.stand['einstellungen'].get('scham')).bauen()
-        self.ergebnis('stuecke', {'stuecke': stuecke, 'bericht': bericht})
+        bau = Blendimportstuecke(self.ablage, self.job(), self.inventar(), self.stand['rollen'],
+                                 self.stand['quelle']['name'], self.melden,
+                                 self.stand['einstellungen'].get('augen'), self.zusatzregler(),
+                                 self.stand['einstellungen'].get('scham'))
+        stuecke, bericht = bau.bauen()
+        self.ergebnis('stuecke', {'stuecke': stuecke, 'bericht': bericht, 'bogen': bau.bogen_pfad})
 
     def _haut(self):
         from .blendimporthaut import Blendimporthaut
