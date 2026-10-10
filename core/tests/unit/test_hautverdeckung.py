@@ -64,7 +64,9 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertIn('geo.userData?.indexVoll?.index ||', aufbau)
 
     def test_ohne_stuecke_kommt_der_volle_index_zurueck(self):
-        self.assertIn('if (!stoffe.length) return Hautverdeckung.aufheben(inst);', self.modul)
+        # Ohne Stoff, aber mit dem Loch eines verschweißten Stücks (`Stueckloch`, 09.10.2026): nur dieses Loch; sonst alles zurück.
+        self.assertIn('if (!stoffe.length) return loecher ? Hautloch.nurLoecher(inst, geo, voll, loecher) : Hautverdeckung.aufheben(inst);',
+                      self.modul)
         self.assertIn('Hautverdeckung.indexSetzen(geo, voll.index, voll.gruppen);', self.modul)
 
     def test_einzug_und_lagenverdeckung_haengen_daran(self):
@@ -93,6 +95,21 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertNotIn(
             'onBeforeCompile =', HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')
         )
+
+    def test_ausgezogene_kleidung_gibt_die_haut_sofort_frei(self):
+        """Rainy, 10.10.2026: nach dem Ausziehen stand die nackte Haut mit Flecken und Stufen da, bis der Worker die neue Maske gerechnet hatte.
+        Weniger zählende Stücke als in der gezeigten Maske → `freigeben` (voller Index, Einzug null, nur die Löcher verschweißter Stücke bleiben),
+        DANN erst die Rechnung im Worker. Ein Austausch (gleiche Zahl) bleibt, wie er war.
+        Sabotage: den Aufruf in `_rechnen` streichen → der zweite Teil wird rot; `_maskeAnzahl` in `anwenden` nicht setzen → der erste."""
+        self.assertIn('inst._maskeAnzahl = Hautverdeckung.zaehlende(inst).length;', self.modul)
+        self.assertIn('static freigeben(inst) {', self.modul)
+        self.assertIn('Hautverdeckung.zaehlende(inst).length < (inst._maskeAnzahl || 0)', self.modul)
+        rechnen = self.modul[self.modul.index('static _rechnen(inst) {'):]
+        self.assertLess(rechnen.index('Hautverdeckung.freigeben(inst)'), rechnen.index('Hautverdeckung.anwendenAsync(inst'),
+                        'erst freigeben, dann rechnen')
+        freigeben = self.modul[self.modul.index('static freigeben(inst) {'):self.modul.index('static aufheben(inst) {')]
+        self.assertIn('Hautloch.nurLoecher(inst, geo, voll, loecher)', freigeben)
+        self.assertIn('Hautverdeckung.aufheben(inst)', freigeben)
 
     def test_die_gruppen_werden_neu_gesetzt(self):
         """`addGroup` zaehlt Indexeintraege; ohne `clearGroups` laegen alte

@@ -31,9 +31,12 @@ import numpy as np
 
 
 class Blendumposen:
-    def __init__(self, ziel, karte):
+    def __init__(self, ziel, karte, massstab=1.0):
         self.ziel = ziel
         self.karte = karte
+        #: Maßstab des Exports (`inventar.json`, `massstab`): `blendexport.py` schreibt die Punkte damit multipliziert, und `punkte`
+        #: hier müssen im selben Maß stehen — sonst läge die umgeposte Figur in Rainys 3,3 m neben dem Export in 1,75 m.
+        self.massstab = float(massstab)
         self._rigs = {}
 
     @staticmethod
@@ -143,7 +146,8 @@ class Blendumposen:
         for s, i in spalte.items():
             m = bew[s][0]
             neu += gewicht[:, i][:, None] * (ruhe @ m[:3, :3].T + m[:3, 3])
-        return ruhe, neu, rig
+        # Erst am Ende: die Gelenke der Bewegungen stehen in Weltmaßen, ein Mischen mit skalierten Punkten verschöbe jedes Glied.
+        return ruhe * self.massstab, neu * self.massstab, rig
 
     def schreiben(self, datei, neu):
         pfad = os.path.join(self.ziel, datei)
@@ -207,4 +211,7 @@ class Blendumposen:
 if __name__ == '__main__':
     argumente = Blendumposen.argumente(sys.argv)
     with open(argumente.karte, encoding='utf-8') as datei:
-        Blendumposen(argumente.ziel, json.load(datei)).laufen()
+        karte = json.load(datei)
+    with open(os.path.join(argumente.ziel, 'inventar.json'), encoding='utf-8') as datei:
+        massstab = json.load(datei).get('massstab', 1.0)
+    Blendumposen(argumente.ziel, karte, massstab).laufen()

@@ -46,8 +46,9 @@ export class Genesis9netz {
     static ADRESSE = Genesis9texturen.ADRESSE;
     /** Hautton, bis die Bilder da sind. */
     static HAUT = 0xd9b39c;
-    /** Was ohne Bild eine Glanzschicht ist. */
+    /** Was ohne Bild eine Glanzschicht ist; Gruppen, deren Glanz einstellbar ist (`Genesis9teilmaterial`). */
     static GLANZ = ['EyeMoisture', 'Tear'];
+    static EINSTELLBAR = /^(Eye (Left|Right)|Head|Body|Arms|Legs|Fingernails|Toenails|Mouth|Teeth|Mouth Cavity)$/;
 
     /**
      * @param daten  Serverantwort mit vertices/faces/normals/uvs (base64) und `gruppen`
@@ -132,7 +133,7 @@ export class Genesis9netz {
         Genesis9texturen.vorladen(Genesis9netz.bildpfade(gruppen));
         const liste = [];
         for (const gruppe of gruppen) {
-            const material = Genesis9netz.material(gruppe);
+            const material = Genesis9netz.material(gruppe, brauen);
             if (brauen && !gruppe.bilder?.alpha) {
                 material.roughness = 0.95;
                 material.transparent = true;
@@ -155,17 +156,22 @@ export class Genesis9netz {
     /** Anisotrope Filterung der Deckkraftkarten mit festem Schnitt (Three kappt auf das Maximum der Grafikkarte). */
     static ANISOTROPIE = 16;
 
-    static material(gruppe) {
+    /**
+     * @param brauen  Material des Brauennetzes: immer ein Physical-Material (Glanz einstellbar) und mit weicher Deckkraft, auch wenn die Gruppe
+     *                nicht `Eyebrows…` heißt (`hairPhysicalShader1SG` bei „MB Olesia Brows Apply", `Layer1`/`Layer2` bei Kin) — 10.10.2026:
+     *                dort war das Material ein Standard-Material ohne Glanz-Eigenschaft, und das Zahnrad-Popup traf die Gruppe nicht.
+     */
+    static material(gruppe, brauen = false) {
         const bilder = gruppe.bilder || {};
+        // Klare Schicht (Hornhaut, Tränenfilm) ohne Eigenfarbe, nur Spiegelung, additiv — weiß mit 12 % Deckkraft lag sie als Schleier über der Pupille.
         if (!bilder.albedo && Genesis9netz.GLANZ.some(g => gruppe.name.startsWith(g))) {
             return new THREE.MeshPhysicalMaterial({
-                color: 0xffffff, roughness: 0.05, metalness: 0,
-                transparent: true, opacity: 0.12, depthWrite: false,
+                color: 0x000000, roughness: 0.05, metalness: 0, transparent: true,
+                opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false,
             });
         }
-        // Klarlack/Metall der Schminke (`Genesis9/glanz.py`) und ein Glanzgewicht
-        // (Eirgrid Shine, 18.09.2026 abends) brauchen Threes Physical-Material.
-        const material = Genesis9netz.haut(Boolean(bilder.schminke?.glanz) || bilder.glanzgewicht != null);
+        // Physical-Material: Klarlack/Metall der Schminke, Glanzgewicht (Eirgrid Shine), einstellbarer Glanz (`Genesis9teilmaterial`).
+        const material = Genesis9netz.haut(brauen || Boolean(bilder.schminke?.glanz) || bilder.glanzgewicht != null || Genesis9netz.EINSTELLBAR.test(gruppe.name));
         if (Genesis9netz.farbe(bilder)) material.color.copy(Genesis9netz.farbe(bilder));
         // Glanz ohne Bild: Rauheit als Zahl (nur ohne Rauheitskarte), Glanzgewicht als
         // `specularIntensity`, Metallgewicht als Faktor der Metallkarte.
@@ -190,7 +196,7 @@ export class Genesis9netz {
         }
         if (bilder.alpha) {
             material.side = THREE.DoubleSide;
-            if (Genesis9netz.WEICH.some(g => gruppe.name.startsWith(g))) {
+            if (brauen || Genesis9netz.WEICH.some(g => gruppe.name.startsWith(g))) {
                 material.transparent = true;
                 material.alphaTest = 0.02;
                 material.depthWrite = false;

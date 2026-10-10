@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Blendimportendpunkte — „Datei → Modell importieren…" mit einer .blend (Charakter-Seite, 08.10.2026).
+"""Blendimportendpunkte — „Datei → Modell importieren…" mit einer .blend, OBJ oder FBX (Charakter-Seite, 08.10.2026).
 
-GET  /api/character/blendimport/einstellungen/          Katalog, gemerkte Werte, letzte Importe
-POST /api/character/blendimport/pruefen/                {pfad, name} → welche .blend, welcher Name (`Blendimportquelle`)
-POST /api/character/blendimport/starten/                {werte} → Werte merken, Import anlegen und starten
+Ein Satz Endpunkte für alle Formate (10.10.2026): `format` (`blend` Vorgabe, `obj`, `fbx` — `Blendimportformate`) kommt als
+`?format=` beim GET und als Feld `format` im Rumpf der POSTs; er wählt Katalog, gemerkte Werte, Endung der Quelle und die Schritte.
+
+GET  /api/character/blendimport/einstellungen/          Katalog, gemerkte Werte, Schritte, letzte Importe [?format=]
+POST /api/character/blendimport/pruefen/                {pfad, name, format} → welche Datei, welcher Name (`Blendimportquelle`)
+POST /api/character/blendimport/starten/                {werte, format} → Werte merken, Import anlegen und starten
 GET  /api/character/blendimport/laufend/                {kennung|null, status, schritt, name} des Imports, der gerade rechnet
 GET  /api/character/blendimport/<kennung>/zustand/      Stand des Laufs; im Schritt „figur" mit dem Fortschritt des
                                                          Auftrags „Mesh to 3D"
@@ -24,6 +27,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..daten.blendimportablage import Blendimportablage
 from ..dienste.blendimportarbeiter import Blendimportarbeiter
 from ..dienste.blendimporteinstellungen import Blendimporteinstellungen
+from ..dienste.blendimportformate import Blendimportformate
 from ..dienste.blendimportlauf import Blendimportlauf
 from ..dienste.blendimportquelle import Blendimportquelle
 
@@ -53,6 +57,16 @@ class Blendimportendpunkte:
             return None
 
     @staticmethod
+    def _einstellungen(format):
+        """Die Einstellungs-Klasse des Formats. Die der .blend steht hier im Modul (`Blendimporteinstellungen`), nicht über
+        `Blendimportformate` — so bleibt sie für die Tests austauschbar; OBJ und FBX kommen aus `Blendimportformate`."""
+        return Blendimporteinstellungen if format == 'blend' else Blendimportformate.einstellungen(format)
+
+    @staticmethod
+    def _quelle(werte, format):
+        return Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name'], Blendimportformate.endung(format))
+
+    @staticmethod
     def _belegt(ausser=None):
         """409, solange ein anderer Import läuft (GPU und Kerne gehören ihm); sonst `None`."""
         andere = Blendimportarbeiter.laufender(ausser=ausser)
@@ -65,21 +79,23 @@ class Blendimportendpunkte:
     @staticmethod
     @require_GET
     def einstellungen(request):
+        format = Blendimportformate.pruefen(request.GET.get('format'))
         letzte = []
         for kennung in Blendimportablage.alle()[:Blendimportendpunkte.LETZTE]:
             stand = Blendimportablage(kennung).stand()
             letzte.append({'kennung': kennung, 'status': stand.get('status'), 'name': (stand.get('quelle') or {}).get('name'),
                            'modell': ((stand.get('ergebnis') or {}).get('modell') or {}).get('name')})
-        return JsonResponse({**Blendimporteinstellungen.katalog(), 'schritte': list(Blendimportlauf.SCHRITTE),
-                             'letzte': letzte})
+        return JsonResponse({**Blendimportendpunkte._einstellungen(format).katalog(), 'format': format,
+                             'schritte': list(Blendimportlauf.schritte_fuer(format)), 'letzte': letzte})
 
     @staticmethod
     @require_POST
     def pruefen(request):
-        werte = Blendimporteinstellungen.pruefen(Blendimportendpunkte._rumpf(request))
+        rumpf = Blendimportendpunkte._rumpf(request)
+        format = Blendimportformate.pruefen(rumpf.get('format'))
+        werte = Blendimportendpunkte._einstellungen(format).pruefen(rumpf)
         try:
-            quelle = Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name'])
-            return JsonResponse({'ok': True, **quelle.steckbrief()})
+            return JsonResponse({'ok': True, **Blendimportendpunkte._quelle(werte, format).steckbrief()})
         except ValueError as fehler:
             return JsonResponse({'ok': False, 'error': str(fehler)}, status=400)
 
@@ -105,12 +121,15 @@ class Blendimportendpunkte:
             belegt = Blendimportendpunkte._belegt()
             if belegt:
                 return belegt
-            werte = Blendimporteinstellungen.pruefen(Blendimportendpunkte._rumpf(request).get('werte'))
+            rumpf = Blendimportendpunkte._rumpf(request)
+            format = Blendimportformate.pruefen(rumpf.get('format'))
+            einstellungen = Blendimportendpunkte._einstellungen(format)
+            werte = einstellungen.pruefen(rumpf.get('werte'))
             try:
-                quelle = Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name']).steckbrief()
+                quelle = Blendimportendpunkte._quelle(werte, format).steckbrief()
             except ValueError as fehler:
                 return JsonResponse({'error': str(fehler)}, status=400)
-            werte = Blendimporteinstellungen.speichern(werte)
+            werte = einstellungen.speichern(werte)
             kennung = Auftragskennung.frei(timezone.now(), lambda k: Blendimportablage(k).ordner().exists())
             ablage = Blendimportablage(kennung)
             ablage.anlegen()
@@ -132,6 +151,8 @@ class Blendimportendpunkte:
                 stand.update(status='gescheitert', fehler=stand.get('fehler') or 'Arbeitsprozess lebt nicht mehr (auftrag.log)')
                 ablage.stand_schreiben(stand)
         stand['figur_lauf'] = Blendimportendpunkte._figurlauf(stand)
+        # Die Schritte dieses Imports (ein Stand von vor dem 10.10.2026 kennt sie nicht): eine .blend hat kein „umwandeln".
+        stand.setdefault('schritte', list(Blendimportlauf.schritte_fuer((stand.get('quelle') or {}).get('format'))))
         return JsonResponse(stand, json_dumps_params={'default': str})
 
     @staticmethod

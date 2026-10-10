@@ -1,0 +1,90 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Recherche -> Modelle Internet: frei zugängliche, hoch aufgelöste Menschenmodelle (OBJ, FBX, Blender) ab 200 MB.
+
+Edgar, 10.10.2026: „Suche im Internet nach frei zugänglichen, hoch auflösenden Human Modellen im obj, fbx oder blend Format … ab 200 MB Größe insgesamt“ — danach „schreibe die Links, Vorschau (Icon),
+Auflösung, Größe, Dateityp, Download-Link in eine neue Django-Base-Tabelle und baue dafür eine neue Seite Hilfe - Recherche - Modelle Internet“.
+
+Die Tabelle ist `djangobase/_tabelle.html`; ihre Struktur baut `Recherchemodelletabelle`, die Modelle stehen in `core/daten/recherche_modelle_internet.json` (`Recherchemodelleinternet`).
+Das Bildfenster füllt `js/hilfe/recherchemodelleinternet.js`; die Vorschaubilder liegen lokal unter `static/recherche/modelle_internet/`.
+{% endcomment %}
+
+{% block title %}Recherche — Modelle Internet{% endblock %}
+{% block topbar_title %}Recherche — Modelle Internet: hoch aufgelöste Menschenmodelle zum Herunterladen{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_recherche_modelle_internet.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite mi-breit">
+
+  <h1>Modelle Internet: {{ anzahl }} frei zugängliche Menschenmodelle ab {{ mindestgroesse }} MB</h1>
+
+  {% if not anzahl %}
+  <div class="info-box info-box-blue">
+    Noch keine Modelle erfasst — <code>core/daten/recherche_modelle_internet.json</code> fehlt oder ist leer.
+  </div>
+  {% else %}
+  <div class="info-box info-box-blue">
+    <strong>Anlass (Stand {{ meta.stand_text }}):</strong> {{ meta.anlass }}
+  </div>
+
+  <p>
+    <strong>Aufgenommen</strong> ist, was alle vier Bedingungen erfüllt:
+  </p>
+  <ul class="mi-kriterien">
+    {% for k in meta.kriterien %}<li>{{ k }}</li>{% endfor %}
+  </ul>
+  <p>
+    <strong>Wie gemessen wurde:</strong> {{ meta.messweise }}
+  </p>
+  <p>
+    Jede Zahl in „Auflösung“ und „Größe“ trägt eine Marke:
+    <span class="mi-beleg mi-beleg-gemessen">gemessen</span> = am {{ meta.stand_text }} selbst gemessen,
+    <span class="mi-beleg mi-beleg-angabe">Angabe</span> = Angabe des Anbieters oder der Datensatzkarte, nicht nachgeprüft,
+    <span class="mi-beleg mi-beleg-vermutung">Vermutung</span> = eigene Einschätzung oder Idee, nicht geprüft.
+    Die Spalte „Bewertung“ gibt je Fund ein Urteil —
+    <span class="mi-urteil mi-urteil-empfohlen">Empfohlen</span> (passt zum Ziel, der nächste Schritt lohnt),
+    <span class="mi-urteil mi-urteil-bedingt">Bedingt</span> (nützlich unter einer Bedingung oder ohne Neuigkeitswert),
+    <span class="mi-urteil mi-urteil-nicht_passend">Nicht passend</span> (verfehlt das Ziel) — und einen Rang von 1 (am besten) bis {{ anzahl }}; wie bewertet wurde, steht unter der Tabelle.
+    Die Tabelle ist nach der höchsten genannten Dreieckszahl sortiert; die Spaltenköpfe sortieren, die Spaltenbreiten lassen sich ziehen.
+    Ein Klick auf die Vorschau zeigt das Bild groß; die Bilder sind verkleinerte Kopien von den Seiten der Anbieter (sie gehören den jeweiligen Autoren).
+  </p>
+
+  <section class="mi-tabellenabschnitt">
+    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+  </section>
+
+  <h2 id="mi-bewertung">So ist bewertet</h2>
+  <p>Die Bewertung misst jeden Fund an vier Fragen (Stand {{ meta.bewertung.stand_text }}):</p>
+  <ul class="mi-kriterien">
+    {% for k in meta.bewertung.massstab %}<li>{{ k }}</li>{% endfor %}
+  </ul>
+  <p>{{ meta.bewertung.hinweis }}</p>
+
+  <h2 id="mi-nicht-aufgenommen">Gefunden, aber nicht aufgenommen</h2>
+  <p>Diese Quellen kamen bei der Suche vor und erfüllen eine der Bedingungen nicht — oder es ließ sich nicht prüfen, ob sie es tun.</p>
+  <ul class="mi-ausgeschieden">
+    {% for n in meta.nicht_aufgenommen %}
+    <li><a href="{{ n.url }}" target="_blank" rel="noopener noreferrer">{{ n.name }}</a> — {{ n.grund }}</li>
+    {% endfor %}
+  </ul>
+  {% if meta.hugging_face %}
+  <h3 id="mi-hugging-face">Hugging Face</h3>
+  <p>{{ meta.hugging_face }}</p>
+  {% endif %}
+  {% endif %}
+
+  {# Das Fenster steht immer da (auch ohne Modelle), damit das Modul seine Elemente ohne Fallunterscheidung findet. #}
+  <dialog id="mi-bildfenster" class="mi-bildfenster" aria-labelledby="mi-bildtitel">
+    <button type="button" class="mi-bildfenster-zu" id="mi-bildfenster-zu" title="Schließen (Esc)">×</button>
+    <img id="mi-bildgross" class="mi-bildfenster-bild" alt="">
+    <div id="mi-bildtitel" class="mi-bildfenster-titel"></div>
+  </dialog>
+
+</div>
+<script type="module" src="{% fassungspfad 'js/hilfe/recherchemodelleinternet.js' %}"></script>
+{% endblock %}

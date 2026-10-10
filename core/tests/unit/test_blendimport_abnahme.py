@@ -335,7 +335,7 @@ class SohleAusDerFormTest(unittest.TestCase):
 class FussZuverlaessigkeitTest(unittest.TestCase):
     """Wo der Körper den Fuß nicht trägt (Fallout ranger: 333 Körperpunkte im Fußteil gegen 2.166 Käfigpunkte), ist der Fußwinkel keine Messung."""
 
-    def _fuss(self, koerperpunkte):
+    def _fuss(self, koerperpunkte, mit_schuhen=False):
         zufall = np.random.default_rng(2)
         n_fuss, n_bein = 400, 400
         fuss = zufall.uniform([-0.04, 0.0, -0.1], [0.04, 0.08, 0.15], (n_fuss, 3))
@@ -344,7 +344,8 @@ class FussZuverlaessigkeitTest(unittest.TestCase):
         teil = np.array([G9koerperteile.NUMMER['l_fuss']] * n_fuss + [G9koerperteile.NUMMER['l_unterschenkel']] * n_bein)
         lage = SimpleNamespace(teil=teil, kaefig_ruhe=punkte, kaefig_posiert=punkte, h=0.004)
         koerper = fuss[zufall.integers(0, n_fuss, koerperpunkte)] + zufall.normal(scale=0.0005, size=(koerperpunkte, 3))
-        return Blendimportfuss(lage, koerper, np.full(koerperpunkte, G9koerperteile.NUMMER['l_fuss']))
+        schuhe = fuss + np.array([0.0, -0.01, 0.0]) if mit_schuhen else None
+        return Blendimportfuss(lage, koerper, np.full(koerperpunkte, G9koerperteile.NUMMER['l_fuss']), schuhe)
 
     def test_8_getragener_fuss_ist_verlaesslich(self):
         f = self._fuss(600)                                                          # 1,5 Körperpunkte je Käfigpunkt (Asian Female 1,46)
@@ -362,6 +363,22 @@ class FussZuverlaessigkeitTest(unittest.TestCase):
         self.assertIn('trägt ihn nicht', hinweise[0])
         self.assertIn('Linker', hinweise[0])
         self.assertEqual(f.bericht()['seiten'][0]['verlaesslich'], False)
+
+    def test_8c_koerper_ohne_fuesse_mit_schuhen_hat_trotzdem_eine_seite(self):
+        """Rainy, 10.10.2026: der Körper endet bei 0,911 m, kein Körperpunkt im Fußteil — bis dahin gab es keine Seite, keinen Griff und keine waagrechte Sohle;
+        gemessen im Browser stand der Stiefel 62 mm unter dem Boden, die Sohle −62 … +7 mm. Mit Schuhen kommt der Fußwinkel aus dem Käfig (ohne Nachzug an
+        Körperpunkten), die Sohle stellt `waagrecht`; `verlaesslich` bleibt falsch, der Hinweis erscheint.
+        Sabotage: die Bedingung `elif self.schuhe is not None` in `Blendimportfuss.seiten` streichen → dieser Fall wird rot."""
+        f = self._fuss(0, mit_schuhen=True)
+        seiten = f.seiten()
+        self.assertEqual(len(seiten), 1)
+        self.assertEqual(seiten[0]['deckung'], 0.0)
+        self.assertFalse(seiten[0]['verlaesslich'])
+        self.assertEqual(len(f.hinweise()), 1)
+
+    def test_8d_koerper_ohne_fuesse_ohne_schuhe_bleibt_ohne_seite(self):
+        """Ohne Schuhe gibt es nichts, was sich flach stellen ließe — wie bisher keine Seite."""
+        self.assertEqual(self._fuss(0).seiten(), [])
 
 
 class KalibrierungTest(unittest.TestCase):

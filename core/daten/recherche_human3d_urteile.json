@@ -6,11 +6,11 @@
   "quelle": "README-Auszüge und Eckdaten der Projektliste (Stand 04.10.2026), von Hilfsagenten in 21 Stapeln gelesen; Maßstab bestand_09_10.md; „eingebaut“ am eigenen Code belegt",
   "zaehler": {
    "neues_feature": 168,
-   "eingebaut": 12,
-   "lohnt_nicht": 554,
+   "eingebaut": 16,
+   "lohnt_nicht": 558,
    "veraltet": 116,
-   "beobachten": 144,
-   "verbesserung": 49
+   "beobachten": 150,
+   "verbesserung": 35
   }
  },
  "urteile": {
@@ -93,10 +93,10 @@
    "aufwand": "mittel"
   },
   "facebookresearch--sapiens2": {
-   "urteil": "verbesserung",
-   "grund": "Nachfolger unseres Sapiens: 29 Körperteile, 308 Keypoints, Normalen, Matting (ICLR 2026, Checkpoints auf HF); braucht aber Python ≥ 3.12 und PyTorch ≥ 2.7, unsere ML-Umgebung ist 3.10.",
-   "bereich": "Foto → Netz: Segmentierung, Haarmaske, Freisteller",
-   "aufwand": "mittel"
+   "urteil": "eingebaut",
+   "grund": "VideoToBVH/wrappers/sapiens2_modell.py, Gewichte sapiens2-seg-0.4b (1,63 GB) in hf_home/sapiens; als Option „modell“ der Segmentierung wählbar, Vorgabe bleibt Sapiens 1B. Gemessen an drei Fotosätzen: Anteil der freigestellten Person, den das Modell als Hintergrund liest, Sapiens 1B 0,2 / 34,6 / 96,6 % gegen Sapiens2 0,4B 1,4 / 1,7 / 5,1 %; ganzer Segmentierungsschritt 29,2 s gegen 22,1 s. Lizenz verbietet u. a. biometrische Verarbeitung und Deepfakes.",
+   "bereich": "Foto → Kleidung: wählbares Segmentierungsmodell (Sapiens2 0.4B)",
+   "aufwand": ""
   },
   "nv-tlabs--ardy": {
    "urteil": "neues_feature",
@@ -237,9 +237,9 @@
    "aufwand": "groß"
   },
   "SimonGiebenhain--pixel3dmm": {
-   "urteil": "verbesserung",
-   "grund": "FLAME-Anpassung über Normalen-/UV-Karten, nutzt MICA wie unser Kopfweg; Ansatz für zu flachen Kopf und Gesichtsdetail. CC BY-NC 4.0, CUDA-11.8-Umgebung muss auf cu128 umgestellt werden.",
-   "bereich": "Mesh to 3D: Kopf/FLAME-Anpassung",
+   "urteil": "beobachten",
+   "grund": "Gelaufen (Klon VideoToBVH/Pixel3DMM, Umgebung python10_pixel3dmm, Gewichte 2,25 + 1,47 GB und weitere ~1,1 GB, CC BY-NC 4.0; FLAME-Fit 159–182 s, nicht in der Pipeline): bestätigt die RICHTUNG — das Hunyuan-Kopfnetz ist in der Höhe zu kurz (Höhenstreckung bei gleichem Augenabstand 1,140 roh, 1,057 nach `kopfstreckung` um 11 %, Figur 1,060; Nasion–Kinn/Augenabstand −8,7 % roh, −1,1 % gestreckt). Die Größe der 11 % kann es nicht belegen: die Referenz streut zwischen Vorder- und Seitenfoto um 8–10 % (Nasion–Kinn 1,217 gegen 1,311), der Seitenfit schätzt die Drehung auf 66° statt ~90°, und der Vorderfit beruht auf demselben Foto wie die frühere Messung (k = 1,111) — keine unabhängige Bestätigung. Tiefe: Hunyuan ist nicht flach (Nase 32,2 mm vor der Augenmitte gegen 29,2 mm bei FLAME); absolute mm taugen nicht (Augenabstand FLAME 85,4 gegen 93,6 mm an der Figur). Nicht eingebaut, kein Messmodul.",
+   "bereich": "Mesh to 3D: Kopfform-Referenz",
    "aufwand": "mittel"
   },
   "NVlabs--GENMO": {
@@ -279,10 +279,10 @@
    "aufwand": ""
   },
   "NVIDIA--Audio2Face-3D": {
-   "urteil": "verbesserung",
-   "grund": "Trainierte Audio → Gesicht-Modelle (Regression v2.3, Diffusion v3.0) mit Emotion, offene Gewichte auf Hugging Face, SDK MIT; Ausgabe auch als Blendshape-Gewichte.",
-   "bereich": "BVH Studio: Lipsync und Mimik (Genesis 9)",
-   "aufwand": "mittel"
+   "urteil": "beobachten",
+   "grund": "Gelaufen (Modelle v2.3-Mark 321 MB und v3.0 777 MB nicht gesperrt, NVIDIA Open Model License, SDK MIT; onnxruntime auf der CPU genügt, kein TensorRT): glatter als Rhubarb (Beschleunigung RMS 57 / 67 gegen 135 / 157 1/s², Sprünge je s 0,2 / 0 gegen 1,4 / 1,6), aber nicht synchroner zur Lautstärke (Korrelation 0,46–0,62 gegen 0,47–0,50, Versatz bei allen −50…+17 ms) und der Mundschluss in Pausen schwankt (45–95 % gegen 73–76 %). Laufzeit riddle: Rhubarb 3,4 s, v2.3 42 s, v3.0 67 s. Nicht eingebaut. Zwei englische Clips ohne gefilmten Sprecher als Wahrheit sind kein Urteil; Deutsch ungeprüft. Abbildung auf Genesis steht (64–72 % des Mundgewichts treffen gebackene Kanäle, 20–31 % bräuchten Kanäle, die G9mimik noch nicht bäckt).",
+   "bereich": "BVH Studio: Lippensynchronisation",
+   "aufwand": "groß"
   },
   "jasongzy--Make-It-Animatable": {
    "urteil": "neues_feature",
@@ -358,9 +358,9 @@
   },
   "gaomingqi--sam-body4d": {
    "urteil": "verbesserung",
-   "grund": "Liegt bei uns nur geklont; zeitlich konsistente Netze mehrerer Personen über SAM-3-Segmentierung (MIT, Gewichte nach HF-Freigabe) – trifft die offene Schwäche Kennungswechsel/ReID.",
+   "grund": "Gelaufen (Umgebung python12_sambody4d, Zugang zu SAM 3 seit 09.10.2026 erteilt; ohne Verdeckungsergänzung, Diffusion-VAS 2 × 7,56 GB nicht geladen) auf den vier Prüfclips: B und C trennen die Paare sauber (Fehlbilder YOLO 170 / 4, CoMotion 90 / 0, SAM-Body4D 0 / 0; Kennungswechsel B 1 / 4 / 0), D aber falsch und die Kastenmaße zeigen es nicht: 0 Fehlbilder, doch in 16 von 16 geprüften Bildern ist jede Kennung eine Mischung aus Teilen beider Tänzer (der Detektor legte einen Kasten um das Paar). Kosten: rund 1,1 s je Bild bei zwei Personen (YOLO 39–63 ms, CoMotion 214–287 ms), Torch-Spitze 18–19 GB. Weg zum BVH besteht mit vorhandenem Code (mhr2soma aus GEM-X → Somabvh; an B gerechnet: Netzfehler 0,62 / 0,73 cm, 360–434 s je Person), ist weder retargetet noch angesehen. Fehler im Klon: alle Personen bekommen Form und Skalen der ersten (`id_batch=[[1]]`). Neulauf D mit den CoMotion-Kästen aus Bild 40 als Startvorgabe: Frau und Mann trennen sich in 10 von 12 geprüften Bildern richtig (30–260; vor dem Startbild nicht), vorher 0 von 16 — es lag an den Startkästen; die Kastenmaße (Enthaltensein 36 / 55 %) zeigen richtig und falsch weiterhin nicht. Nicht eingebaut; offen: YOLO-Kästen als Startvorgabe, die SAM License ist vor einem Einbau zu klären. Trifft den Kennungswechsel bei Mehrpersonen.",
    "bereich": "Video → BVH: Kennungswechsel bei Mehrpersonen",
-   "aufwand": "mittel"
+   "aufwand": "groß"
   },
   "hyz317--StdGEN": {
    "urteil": "lohnt_nicht",
@@ -441,10 +441,10 @@
    "aufwand": "groß"
   },
   "ZhengdiYu--Dyn-HaMR": {
-   "urteil": "verbesserung",
-   "grund": "MIT, Push 12.03.2026; MANO-Hände in Weltkoordinaten aus Video mit bewegter Kamera (HaMeR, VIPE), Schutz gegen Händigkeitswechsel — Alternative zu Fingern nur aus GEM-X.",
-   "bereich": "Video → BVH: Hände/Finger",
-   "aufwand": "mittel"
+   "urteil": "lohnt_nicht",
+   "grund": "Gebaut und an drei Tanzvideos gemessen (09.10.2026): läuft in python10 mit torch 2.10/sm_120, ein Port von torch 1.13 war nicht nötig (sechs kleine Änderungen, PORT_WINDOWS.md); die BMC-Grenzen ließen sich aus den Gelenkdaten (joints.zip, 91 MB) berechnen. Aber: HaMeR findet die Hand nur in 12–50 % der Bilder (kleine, bewegte Hände, 40–104 px), die Einzelbild-Finger sind rund zehnmal unruhiger als die GEM-X-Finger unserer Pipeline (Abweichung von der geglätteten Reihe im Median 5,6–6,4° gegen 0,30–0,86°, Sprünge über 30° je Bild in 5–8 % gegen 0), und die Standard-Optimierung (ohne HMP-Prior) glättet sie nicht (Dance1 links 5,7 → 7,6° nach 118 von 300 Iterationen, rechts 2,1 → 2,0°). Vorher gemessen: die GEM-X-Finger reichen (Median 0,58° gegen 0,25° bei Mixamo), das Ruckeln des Handgelenks in der Welt kommt aus der Körper- bzw. Kamerabahn. Offen geblieben: Handgelenk in der Welt mit SLAM-Kamera und der HMP-Prior (human_body_prior, hmp_model fehlen). Lizenz „nur nicht-kommerziell\"; Hand im Körper (6–9 % der Bilder) behebt es nicht (reines Handmodell).",
+   "bereich": "Video → BVH: Hände in Weltkoordinaten",
+   "aufwand": ""
   },
   "Pixel-Talk--PEAR": {
    "urteil": "verbesserung",
@@ -459,10 +459,10 @@
    "aufwand": ""
   },
   "PozzettiAndrea--ComfyUI-MotionCapture": {
-   "urteil": "beobachten",
-   "grund": "Dieselbe GVHMR-Fähigkeit wie bei uns, aber mit DPVO als fertigem CUDA-Paket (`dpvo_cuda` in nodes/comfy-env.toml) und einem Windows-GPU-Test im Repo (comfy-test.toml) — könnte unseren selbst gebauten DPVO/lietorch-Satz ersetzen. Ob das Paket die Blackwell-Karte (sm_120) kann, ist ungeprüft; GPL-3.0.",
-   "bereich": "Video → BVH: DPVO-Pakete ohne eigenen Bau (Kamerabahn)",
-   "aufwand": "mittel"
+   "urteil": "lohnt_nicht",
+   "grund": "Das fertige CUDA-Rad `dpvo_cuda` (3,19 MB, sm_120 enthalten) rechnet die Korrelation auf der Karte richtig (Abweichung 1,9·10⁻⁶ gegen NumPy), aber `lietorch_backends` stürzt auf der GPU bei jedem Aufruf ab (Segfault bei SE3.exp), und dem Paket fehlt `dpvo/loop_closure` — ein DPVO-Lauf bricht im ersten Bild ab. Unser selbst gebautes Rad aus slam_windows läuft (54,0 s, 0,69 GiB für 197 Bilder). GPL-3.0.",
+   "bereich": "",
+   "aufwand": ""
   },
   "jtydhr88--ComfyUI-HY-Motion1": {
    "urteil": "lohnt_nicht",
@@ -471,9 +471,9 @@
    "aufwand": ""
   },
   "apple-aiml-research--ml-comotion": {
-   "urteil": "verbesserung",
-   "grund": "Online-Tracking mehrerer Personen mit SMPL-Ausgabe, robust bei Verdeckung (ICLR 2025, zwei Checkpoints, Push 2026-09-11); Lizenz in eigenen Dateien, nicht wiedergegeben.",
-   "bereich": "Video → BVH: Mehrpersonen-Spur/Kennungswechsel",
+   "urteil": "beobachten",
+   "grund": "Gelaufen (Umgebung python10_comotion, Gewichte 1,08 + 0,39 GB, Gewichte nur für nicht-kommerzielle Forschung): hält Paare in Hebungen besser (Bilder, in denen eine der beiden Personen fehlt: B 170 → 90, D 170 → 17), wechselt aber ebenfalls die Kennungen (B 1→2 und 3→4, D wird der Mann von 1 zu 4) und erzeugt Doppelspuren (C: Kennung 5 liegt zu 92 % im Kasten einer anderen Person). Tempo 214–287 ms/Bild gegen 39–63 bei YOLO. Nicht eingebaut; offen ist, ob es nur dort hilft, wo YOLO weniger Personen sieht als bestellt (Clip D noch nicht mit zwei BVHs gemessen).",
+   "bereich": "Video → BVH: Kennungswechsel bei Mehrpersonen",
    "aufwand": "mittel"
   },
   "zju3dv--MotionStreamer": {
@@ -633,8 +633,8 @@
    "aufwand": "groß"
   },
   "Murrol--StableMotion": {
-   "urteil": "verbesserung",
-   "grund": "Diffusions-Bereinigung fehlerhafter SMPL-Bewegung (SIGGRAPH Asia 2025, MIT, Checkpoint auf OneDrive) für unser Zittern/Fußgleiten; README empfiehlt für eigene Daten eigenes Training.",
+   "urteil": "beobachten",
+   "grund": "Nicht ausprobiert, blockiert: braucht den AMASS-Normierer und SMPL+H, beides nur mit Registrierung (amass.is.tue.mpg.de, mano.is.tue.mpg.de) — das müsste Edgar selbst beantragen. Das Fußgleiten der Video-BVHs ist gemessen und etwa 2,8-fach über Mocap, der Bedarf besteht also.",
    "bereich": "Video → BVH: Zittern und Fußgleiten",
    "aufwand": "mittel"
   },
@@ -1173,10 +1173,10 @@
    "aufwand": ""
   },
   "markomih--VolumetricSMPL": {
-   "urteil": "verbesserung",
-   "grund": "SDF für SMPL/SMPL-X mit Selbstdurchdringungs- und Kollisions-Loss (ICCV 2025, MIT, pip, Gewichte laden automatisch) als Prüfwerkzeug; braucht PyTorch3D.",
-   "bereich": "Video → BVH: Durchdringung messen",
-   "aufwand": "klein"
+   "urteil": "eingebaut",
+   "grund": "VideoToBVH/wrappers/volumendurchdringung.py (Umgebung python10_vsmpl, Gewicht 51,6 MB, MIT) misst an den Video-Netzen 6–9 % der Bilder mit mehr als 1 cm Durchdringung, fast immer Hand an Becken oder Oberschenkel; ein Vergleichswert aus Mocap fehlt (AMASS nicht vorhanden). Reines Messwerkzeug, keine Korrektur.",
+   "bereich": "Video → BVH: Messwerkzeug für Selbstdurchdringung",
+   "aufwand": ""
   },
   "shunlinlu--ScaMo_code": {
    "urteil": "veraltet",
@@ -1552,7 +1552,7 @@
   },
   "Style3D--design2garmentcode-impl": {
    "urteil": "eingebaut",
-   "grund": "Assets/Design2GarmentCode, Umgebung python10_d2g; G9gcausfoto macht daraus die Werte für ein GC-Oberteil (workflowkleidung.py).",
+   "grund": "Assets/Design2GarmentCode, Umgebung python10_d2g; G9gcausfoto macht aus der params.json die Werte für ein GC-Oberteil. Die Foto-Beschreibung läuft seit 06.10.2026 lokal (Ollama qwen3.8:27b Q4_K_M, kein GPT-4o mehr im Fotoweg). Aber: Die Kette läuft nur in Wegwerfskripten (ProjektTemp/_wegwerf/d2g), G9gcausfoto hat im Code keinen Aufrufer (nur Hilfetext), ein Stück GCFOTO1 wurde einmal gebaut.",
    "bereich": "Kleidung: Foto-Design → GarmentCode-Oberteil",
    "aufwand": ""
   },
@@ -1629,10 +1629,10 @@
    "aufwand": ""
   },
   "georgeNakayama--AIpparel-Code": {
-   "urteil": "verbesserung",
-   "grund": "Schnittmuster aus Bild/Text, trainiert auf GarmentCodeData; MIT, Gewichte auf HF; lokales Modell als Alternative zu Design2GarmentCode (dort GPT-4o per API).",
-   "bereich": "Kleidung: Schnitt aus Foto",
-   "aufwand": "mittel"
+   "urteil": "beobachten",
+   "grund": "Der Vorschlag „lokaler Ersatz für GPT-4o\" entfällt: Design2GarmentCode beschreibt das Foto bei uns seit 06.10.2026 lokal (Ollama, ollama_bild.py), GPT-4o steckt nur noch in Text-/Änderungswegen der mitgelieferten Oberfläche. AIpparel (MIT, Gewichte nicht gesperrt) wäre ein anderer Weg „Schnitt aus Foto\": aipparel_pretrained.pth 27,2 GB (über der Grenze von 5 GB, nicht geladen) plus LLaVA-1.5-7B und CLIP, torch 2.3.1/cu121, flash_attn, deepspeed — ob das auf der Blackwell-Karte unter Windows läuft, ist nicht geprüft; es liefert Schnittteile und Nähte (*_pred_specification.json), nicht unsere params.json mit Reglern.",
+   "bereich": "Kleidung: Schnitt aus Foto (anderer Weg als Design2GarmentCode)",
+   "aufwand": "groß"
   },
   "jiwoohong93--ita-mdt_code": {
    "urteil": "lohnt_nicht",
@@ -1839,10 +1839,10 @@
    "aufwand": ""
   },
   "fashn-AI--fashn-human-parser": {
-   "urteil": "verbesserung",
-   "grund": "Kleines SegFormer-B4 (pip, Gewichte 244 MB auf HF) mit eigenen Klassen Kleid, Rock, Gürtel, Schmuck — ergänzt die Sapiens-Maske beim Kleidungsnetz aus dem Foto; NVIDIA-Source-Code-Lizenz.",
-   "bereich": "Foto → Kleidung: Kleidungsmasken",
-   "aufwand": "klein"
+   "urteil": "lohnt_nicht",
+   "grund": "Gelaufen und gemessen (Gewicht 256 MB, Lizenz NVIDIA SegFormer: nur Forschung und Evaluierung): schneller und kleiner als Sapiens (0,17–0,4 s, 0,61–1,71 GB), aber bei Randy und dem Zauberer schlechter als Sapiens2 0.4B (Hintergrundanteil 4,8 / 9,1 % gegen 1,7 / 5,1 %); auf Edgars Fotos liest FASHN weniger als Hintergrund (0,5 gegen 1,4 %), ordnet dort aber falsch zu: auf dem Seitenfoto wird aus den Shorts ein Oberteil und aus den Socken eine Hose, auf der langen Robe wechseln „Kleid“ und „Oberteil“ fleckig. Nicht eingebaut.",
+   "bereich": "",
+   "aufwand": ""
   },
   "humansensinglab--GAS": {
    "urteil": "lohnt_nicht",
@@ -1923,10 +1923,10 @@
    "aufwand": ""
   },
   "ant-research--HTD-Refine": {
-   "urteil": "verbesserung",
-   "grund": "Verfeinert vorhandene GVHMR-SMPL(-X)-Bewegung über geschätzte Geschwindigkeit/Beschleunigung zu natürlicher Weltbahn (CVPR 2026, Checkpoint vorhanden); AGPL-3.0, nur 30-fps-Video.",
-   "bereich": "Video → BVH: Zittern und globale Bahn",
-   "aufwand": "klein"
+   "urteil": "beobachten",
+   "grund": "Gelaufen (Klon VideoToBVH/HTD-Refine, Umgebung python10_htd, Gewicht 3,57 GB, AGPL-3.0): am Probevideo Fußgleiten 34,9 → 31,5 cm/s, aber der Versatz je Kontaktphase steigt von 4,4 auf 7,2 cm, die Gelenke verschieben sich um 6,5 cm (p95 22,6) und die Bahn um 1,2 m — nach dem Auftrag kein Gewinn. Einzelmessung an einem Video mit 1–3 s Bodenkontakt, daher nicht abgelegt. Gemessen wurde, dass Video-BVHs 31,8 cm/s gleiten gegen 6,4–11,9 bei Mocap.",
+   "bereich": "Video → BVH: Fußgleiten nachbessern",
+   "aufwand": "mittel"
   },
   "hailsong--VRGaussianAvatar": {
    "urteil": "lohnt_nicht",
@@ -2061,10 +2061,10 @@
    "aufwand": "mittel"
   },
   "orangeduck--100style-retarget": {
-   "urteil": "verbesserung",
-   "grund": "100STYLE-Gangarten als fertige BVH/FBX unter CC BY 4.0 als Bewegungsmaterial für die vorhandene Bibliothek; braucht eine Zuordnung Geno → Rigify, Finger fehlen.",
-   "bereich": "BVH Studio: Bibliothek (Gangarten)",
-   "aufwand": "klein"
+   "urteil": "eingebaut",
+   "grund": "15 Vorwärtsgänge (Geno-Skelett, CC BY 4.0) liegen als BVH in 3DObjects/animations/bvh/Gangarten 100STYLE/ mit HERKUNFT.md; sie laufen als Mixamo durch den Retarget (Hüftquerachse Quelle gegen Figur 0,00° Abweichung, gemessen 09.10.2026). Genutzt sind die Daten, nicht der Retarget-Code des Repos.",
+   "bereich": "BVH-Bibliothek: Kategorie „Gangarten 100STYLE“",
+   "aufwand": ""
   },
   "shihwesley--SamPlaysBaseball": {
    "urteil": "lohnt_nicht",
@@ -4323,9 +4323,9 @@
    "aufwand": ""
   },
   "twehrbein--FootMR": {
-   "urteil": "verbesserung",
-   "grund": "Veredelt als Nachstufe die Fußbewegung von GVHMR (haben wir), Knöchelwinkelfehler auf MOYO laut Paper bis 30 % kleiner; Demo-Code vorhanden, Push 05/2026, Lizenz NOASSERTION.",
-   "bereich": "Video → BVH: Fußbewegung und Fußgleiten",
+   "urteil": "beobachten",
+   "grund": "Gelaufen (Klon VideoToBVH/FootMR, Umgebung python10_footmr, Gewichte 179 MB + 2,55 GB, Lizenz „All Rights Reserved“): am Probevideo 34,9 → 32,7 cm/s, aber ohne Tempogrenze gemessen 51 → 65 cm/s, also schlechter. Einzelmessung an einem Video, daher nicht abgelegt.",
+   "bereich": "Video → BVH: Fußgleiten nachbessern",
    "aufwand": "mittel"
   },
   "Alqudimi--FitSense": {
@@ -5001,10 +5001,10 @@
    "aufwand": "mittel"
   },
   "Enekoassets--StayStill": {
-   "urteil": "verbesserung",
-   "grund": "Rund 650.000 Frames Idle-Bewegung als BVH (MIT, Zenodo) samt Auto-Bereinigung von Zitterstellen; Datenquelle für unsere BVH-Bibliothek, Skelettpassung ungeprüft.",
-   "bereich": "BVH Studio: Bibliothek um Idle-Bewegungen",
-   "aufwand": "mittel"
+   "urteil": "eingebaut",
+   "grund": "Idle-Bewegungen (MIT, Zenodo 18741736): 12 bereinigte Idle-Stücke von 12 Personen und je zwei Clips von 19 Aktionen liegen in der Bibliothek. Das Becken stand zuerst 90,00° verdreht, weil LaFAN in der Null-Lage jeden Knochen entlang +X legt; der Retarget-Motor hat dafür einen eigenen Weg (`Haltungsbezug`, nur für Formate mit HALTUNGSBEZUG, bisher nur LaFAN): Querachse der Hüfte 90,00 → 0,00°, Rumpfachse 27 → 1,5–2,3°, Schulterachse 14 → 0,5–1,3° (drei Clips nachgemessen), alle anderen Formate bitgleich (18 Dateien aus acht Formaten, vom Agenten). Offen: Hals streut zwischen Clips um 52–73°, LaFAN auf andere Ziele als Rigify-DEF nicht gemessen, die Aktions-Clips sind nicht bereinigt.",
+   "bereich": "BVH-Bibliothek: Kategorie „Idle StayStill“ (50 Clips) und Retarget-Weg für das LaFAN-Skelett",
+   "aufwand": ""
   },
   "HanetakaChou--Brioche-Puppet": {
    "urteil": "lohnt_nicht",
@@ -6213,10 +6213,10 @@
    "aufwand": ""
   },
   "ryanrudes--gvhmr": {
-   "urteil": "verbesserung",
-   "grund": "Fork von GVHMR (unser Klon ist das Original zju3dv/GVHMR) mit VGGT oder DUSt3R als Kameraschätzung statt DPVO (gvhmr/utils/preproc/vggt_slam.py, dust3r_slam.py) und uv-Installation; Standardpfad laut README byte-gleich. Trifft den Aufwand, den uns lietorch/DPVO gekostet hat. Nur 10 Sterne, Lizenz nicht angegeben, ob VGGT eine bessere Kamerabahn liefert als DPVO, ist ungeprüft.",
-   "bereich": "Video → BVH: Kamerabahn ohne selbst gebautes DPVO/lietorch",
-   "aufwand": "mittel"
+   "urteil": "lohnt_nicht",
+   "grund": "Fork von GVHMR (unser Klon ist das Original zju3dv/GVHMR) mit VGGT oder DUSt3R als Kameraschätzer statt DPVO. An EINEM Clip gemessen: DUSt3R braucht 18,8 GiB statt 0,69 (27-fach) und 104,5 s statt 54,0 s; die Weltbahn wird schlechter (Fußrutschen 3,03 statt 1,18–1,40 cm/Bild). Unser BVH entsteht aus den Kameraraum-Parametern und ändert sich durch die Kamerabahn nur um 0,19 cm (DPVO), 0,20 (SimpleVO), 0,39 (DUSt3R) gegen „feste Kamera“. VGGT wurde nicht geprüft (Gewicht 5,03 GB, über der Grenze von 5 GB, offen). Fork verlangt Python ≥ 3.11 und steht unter der GVHMR-Lizenz (nur Forschung).",
+   "bereich": "",
+   "aufwand": ""
   },
   "sisyphm--StudioRecon": {
    "urteil": "lohnt_nicht",

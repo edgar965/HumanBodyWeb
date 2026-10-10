@@ -6,10 +6,10 @@ gesicherter Anatomie im Netz). Gebaut ist deshalb nur, was ohne ein solches Mesh
 der Scham (die Saat wächst für hängende Hoden und einen hochstehenden Penis, `test_blendimport_scham_kasten.py`), aber:
 
 1. Der Dialog kennt den Wert `mann` und lässt ihn durch die Prüfung; Unbekanntes fällt weiter auf die Vorgabe.
-2. `Blendimportstuecke` baut bei `mann` ein Stück „<Name> Genitalien" mit `anatomie = penis`, bei `objekt` „<Name> Scham" mit `anatomie = scham`, bei `figur`
-   gar keins.
+2. `Blendimportstuecke` baut bei `mann` ein Stück „<Name> Genitalien" mit `anatomie = penis`, bei `objekt` „<Name> Scham" mit `anatomie = vagina` (bis
+   10.10.2026 `scham`), bei `figur` gar keins.
 3. `G9stueckersatz` schreibt und liest `penis`; `G9schammorphe.ist_anatomie` ist dafür FALSCH — das Stück trägt nicht die weiblichen Scham-Regler (Hügel,
-   Lippen, Haube, Eingang, Damm).
+   Lippen, Haube, Eingang, Damm), sondern die des Penis (`test_anatomien.py`).
 4. Die Nachformung der Scham entfällt auch bei `mann` (das Stück ersetzt sie).
 
 Sabotage-Gegenprobe: `('mann', …)` aus dem Katalog streichen macht Fall 1 rot; `self.anatomie = 'penis' if …` zu `'scham'` macht Fall 2 rot; `'penis'` aus `ANATOMIEN`
@@ -52,7 +52,7 @@ class SchamMannTest(SimpleTestCase):
         self.assertEqual(mann.anatomie, 'penis')
         self.assertEqual(mann.anzeige(koerper), 'Daven Genitalien')
         self.assertTrue(frau.scham_objekt)
-        self.assertEqual(frau.anatomie, 'scham')
+        self.assertEqual(frau.anatomie, 'vagina')
         self.assertEqual(frau.anzeige(koerper), 'Daven Scham')
         self.assertFalse(figur.scham_objekt)
 
@@ -79,7 +79,8 @@ class SchamMannTest(SimpleTestCase):
             lauf.inventar = lambda: {}
             lauf.ablage = mock.Mock()
             lauf.melden = lambda *a: None
-            with mock.patch('core.dienste.blendimportnachformung.Blendimportnachformung') as nachformung:
+            with mock.patch('core.dienste.blendimportnachformung.Blendimportnachformung') as nachformung, \
+                    mock.patch.object(Blendimportlauf, '_unterkleid', side_effect=lambda job, bericht: bericht):
                 nachformung.return_value.formen.return_value = {'ok': True}
                 lauf._nachformung(mock.Mock())
             self.assertEqual('aus' in gemerkt['nachformung'], entfaellt, scham)

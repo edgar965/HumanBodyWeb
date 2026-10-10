@@ -151,15 +151,22 @@ class StueckersatzAnatomieTest(SimpleTestCase):
         return mock.patch('Genesis9.garderobe.G9garderobe.datei', return_value=self.duf)
 
     def test_1_anatomie_und_zonen_gehen_hin_und_zurueck(self):
-        pfad = G9stueckersatz.schreiben(self.duf, [], haut_tiefe_mm=30, anatomie='scham',
+        pfad = G9stueckersatz.schreiben(self.duf, [], haut_tiefe_mm=30, anatomie='vagina',
                                         zonen={'innen': {'t': [0.4, 0.8], 'weich_t': 0.1}})
         daten = json.loads(pfad.read_text(encoding='utf-8'))
-        self.assertEqual(daten['anatomie'], 'scham')
+        self.assertEqual(daten['anatomie'], 'vagina')
         self.assertEqual(daten['haut_tiefe_mm'], 30.0)
         with self._eintrag_mit():
-            self.assertEqual(G9stueckersatz.anatomie_fuer({}), 'scham')
+            self.assertEqual(G9stueckersatz.anatomie_fuer({}), 'vagina')
             self.assertEqual(G9stueckersatz.zonen_fuer({}), {'innen': {'t': (0.4, 0.8), 'weich_t': 0.1}})
             self.assertEqual(G9stueckersatz.haut_tiefe_fuer({}), 30.0)
+
+    def test_1b_der_alte_schluessel_scham_wird_beim_schreiben_und_lesen_zu_vagina(self):
+        pfad = G9stueckersatz.schreiben(self.duf, [], anatomie='scham')
+        self.assertEqual(json.loads(pfad.read_text(encoding='utf-8'))['anatomie'], 'vagina', 'geschrieben wird der neue Name')
+        pfad.write_text(json.dumps({'anatomie': 'scham'}), encoding='utf-8')     # Datei eines Modells von vor dem 10.10.2026
+        with self._eintrag_mit():
+            self.assertEqual(G9stueckersatz.anatomie_fuer({}), 'vagina')
 
     def test_2_ohne_angabe_keine_anatomie_und_keine_zonen(self):
         G9stueckersatz.schreiben(self.duf, [])

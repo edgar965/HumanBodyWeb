@@ -30,6 +30,11 @@ dazu (`!FootPose`, `G9autofit.figurpose`). Hier ebenso:
                NICHT behoben, am Browser gemessen: ein flacher Fuß (Q = 1, der Käfig in der Haltung mit nach dem Schuh gestellten Füßen neu gebaut) legte die Sohle 141 mm
                statt 41 mm unter die Haut — die Figur wurde an einem Körper ohne Füße angepasst, ihre Beine sind um das fehlende Stück zu kurz, und der erfundene Fuß
                gleicht es teilweise aus (der Käfig reicht 80 mm unter das Körperende; Vermutung, nicht weiter geprüft). Die Abhilfe gehört in die Anpassung (Körper ohne Füße).
+    Ganz ohne Fuß (10.10.2026, Rainy: der Körper endet bei 0,911 m, kein einziger Körperpunkt im Fußteil; Beine und Füße kommen aus Hose und Stiefel,
+               `Blendimportkoerperergaenzung`): bis dahin gab es keine Seite, keinen Griff, keine waagrechte Sohle — im Browser stand der Stiefel mit dem tiefsten
+               Punkt 62 mm unter dem Boden, Sohle Ferse → Spitze −62 … +7 mm. Jetzt kommt die Seite mit Schuhen aus dem Käfig der Figur (Ruhe → Haltung, kein
+               Nachzug an Körperpunkten), die Sohle stellt `waagrecht`: Fuß 21,9° / 22,7°, im Browser (`boot_browser_nachbau.py`) tiefster Punkt −13 / −16 mm, Sohle
+               −12 … −13 mm (Ballenwölbung −2). Der Rest (13–16 mm unter der Haut-Unterkante) ist die Bodenregel des Viewers, die Schuhe nicht kennt.
 
 Strümpfe bleiben flach: Sie folgen der Figur über ihre Haut und drehen mit dem Fuß mit, wenn die Schuhe die Haltung setzen.
 """
@@ -184,15 +189,24 @@ class Blendimportfuss:
             fuss = lage.teil == self.nummer[teil_fuss]
             bein = lage.teil == self.nummer[teil_bein]
             koerper = self.netz[self.teile == self.nummer[teil_fuss]]
-            if fuss.sum() < 10 or bein.sum() < 10 or len(koerper) < 10:
+            if fuss.sum() < 10 or bein.sum() < 10:
                 continue
-            r_fuss, vorher, nachher = self._fuss(lage.kaefig_ruhe[fuss], lage.kaefig_posiert[fuss], koerper)
+            if len(koerper) >= 10:
+                r_fuss, vorher, nachher = self._fuss(lage.kaefig_ruhe[fuss], lage.kaefig_posiert[fuss], koerper)
+            elif self.schuhe is not None:
+                # Körper ohne Füße (Rainy, 10.10.2026: der Körper endet bei 0,911 m, Beine und Füße kommen aus Hose und Stiefel — `Blendimportkoerperergaenzung`):
+                # bis dahin gab es keine Seite, keinen Griff und keine waagrechte Sohle — gemessen an Rainys Schuhen im Browser: tiefster Punkt 62 mm unter
+                # dem Boden, Sohle Ferse → Spitze −62 … +7 mm (rund 16° geneigt; Asian Female ±5 mm). Der Fußwinkel kommt dann aus dem Käfig der Figur
+                # (Ruhe → Haltung, ohne Nachzug an Körperpunkten, die es nicht gibt); die Sohle stellt `waagrecht` am Schuh.
+                r_fuss, vorher, nachher = self.kabsch(lage.kaefig_ruhe[fuss], lage.kaefig_posiert[fuss])[0], 0.0, 0.0
+            else:
+                continue
             r_bein = self.kabsch(lage.kaefig_ruhe[bein], lage.kaefig_posiert[bein])[0]
             q = r_bein.T @ r_fuss
             winkel = float(np.degrees(np.arccos(np.clip((np.trace(q) - 1.0) / 2.0, -1.0, 1.0))))
             deckung = len(koerper) / max(int(fuss.sum()), 1)
             aus.append({'seite': seite, 'knochen': knochen, 'fuss': fuss, 'q': q, 'winkel': winkel, 'winkel_koerper': winkel,
-                        'waagrecht_grad': 0.0, 'r_bein': r_bein, 'punkte': lage.kaefig_posiert[fuss],
+                        'waagrecht_grad': 0.0, 'r_bein': r_bein, 'punkte': lage.kaefig_posiert[fuss], 'ohne_koerper': len(koerper) < 10,
                         'rest_vorher_mm': round(vorher, 2), 'rest_nachher_mm': round(nachher, 2), 'deckung': round(deckung, 2),
                         'verlaesslich': deckung >= self.FUSS_DECKUNG_MIN and nachher <= self.FUSS_REST_H_MAX * lage.h * 1000.0})
         je_fuss = self._schuh_je_fuss(aus)
@@ -208,9 +222,12 @@ class Blendimportfuss:
 
     def hinweise(self):
         """Texte für den Bericht des Schuhs: wo der Körper den Fuß nicht trägt, ist der Fußwinkel keine Messung am Fuß im Schuh (Fallout ranger)."""
-        return ['%s Fuß: der Körper der .blend trägt ihn nicht (%.0f %% der Käfigpunkte, ICP-Rest %.1f mm) — Fußwinkel %.0f° vermutlich Ausgleich für das fehlende Stück '
-                'Bein (der Körper endet bei den Knöcheln), kein Fuß im Schuh' % ('Linker' if s['seite'] == 'l' else 'Rechter', 100.0 * s['deckung'],
-                                                                                 s['rest_nachher_mm'], s['winkel']) for s in self.seiten() if not s['verlaesslich']]
+        seite = lambda s: 'Linker' if s['seite'] == 'l' else 'Rechter'  # noqa: E731
+        ohne = ['%s Fuß: der Körper der .blend hat keine Füße — Fußwinkel %.0f° aus dem Käfig der Figur, die Sohle des Schuhs steht waagrecht; ob der Fuß im Schuh '
+                'sitzt, ist nicht gemessen' % (seite(s), s['winkel']) for s in self.seiten() if s.get('ohne_koerper')]
+        return ohne + ['%s Fuß: der Körper der .blend trägt ihn nicht (%.0f %% der Käfigpunkte, ICP-Rest %.1f mm) — Fußwinkel %.0f° vermutlich Ausgleich für das fehlende Stück '
+                       'Bein (der Körper endet bei den Knöcheln), kein Fuß im Schuh' % (seite(s), 100.0 * s['deckung'], s['rest_nachher_mm'], s['winkel'])
+                       for s in self.seiten() if not s['verlaesslich'] and not s.get('ohne_koerper')]
 
     def aktiv(self):
         """Die Seiten, deren Fuß sich um mehr als `MINDEST_GRAD` gegen den Unterschenkel dreht."""

@@ -787,7 +787,7 @@
                         </select>
                     </div>
                     <div class="prop-row"><label>Aufloesung:</label>
-                        <select id="export-resolution">
+                        <select id="export-resolution" data-reihenfolge="fest">
                             <option value="viewport">Viewport (aktuell)</option>
                             <option value="720">720p (1280&times;720)</option>
                             <option value="1080" selected>1080p (1920&times;1080)</option>
@@ -877,7 +877,7 @@
                         </select>
                     </div>
                     <div class="prop-row"><label>Aufl&ouml;sung:</label>
-                        <select id="cloth-resolution">
+                        <select id="cloth-resolution" data-reihenfolge="fest">
                             <option value="720">720p (1280&times;720)</option>
                             <option value="1080" selected>1080p (1920&times;1080)</option>
                             <option value="1440">1440p (2560&times;1440)</option>
@@ -892,7 +892,7 @@
                     <div class="hb-erklaerung">CPU-Sim (Blender 5.0) + GPU-Render. Robust, stabile Physik. ~1 min
                     f&uuml;r 5s @ 30fps.</div>
                     <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
-                        <select id="cloth-quality-blender-eevee" class="hb-dehnt-fein">
+                        <select id="cloth-quality-blender-eevee" class="hb-dehnt-fein" data-reihenfolge="fest">
                             <option value="low">Niedrig &mdash; Cloth-Steps 3, Bend 0.3, EEVEE 32 Samples</option>
                             <option value="medium"
                                  selected>Mittel &mdash; Cloth-Steps 5, Bend 0.5, EEVEE 64 Samples</option>
@@ -914,7 +914,7 @@
                     <div class="hb-erklaerung">GPU-Sim (CUDA, RTX 3060) + GPU-Render (EEVEE). Beste
                     Qualit&auml;t/Speed-Balance. ~30s f&uuml;r 5s @ 30fps.</div>
                     <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
-                        <select id="cloth-quality-warp-blender" class="hb-dehnt-fein">
+                        <select id="cloth-quality-warp-blender" class="hb-dehnt-fein" data-reihenfolge="fest">
                             <option value="low">Niedrig &mdash; Warp 16 Substeps, Stretch 5e3, EEVEE 32</option>
                             <option value="medium"
                                  selected>Mittel &mdash; Warp 32 Substeps, Stretch 1e4, EEVEE 64</option>
@@ -933,7 +933,7 @@
                     <div class="hb-erklaerung">Komplett GPU, kein Blender. Schnellste Pipeline, einfacheres Rendering.
                     ~20s f&uuml;r 5s @ 30fps.</div>
                     <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
-                        <select id="cloth-quality-warp-only" class="hb-dehnt-fein">
+                        <select id="cloth-quality-warp-only" class="hb-dehnt-fein" data-reihenfolge="fest">
                             <option value="low">Niedrig &mdash; Warp 16 Substeps, pyrender basic</option>
                             <option value="medium" selected>Mittel &mdash; Warp 32 Substeps, pyrender Shading</option>
                             <option value="high">Hoch &mdash; Warp 64 Substeps, pyrender + Lights</option>

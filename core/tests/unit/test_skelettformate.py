@@ -60,6 +60,7 @@ class RegistryTest(SimpleTestCase):
     #: Die Formate aus dem Paket `formats/` — Kennung: Klassenname.
     AUS_DEM_PAKET = {
         'CMU': 'SkeletonCMU',
+        'LAFAN': 'SkeletonLaFAN',
         'MIXAMO': 'SkeletonMixamo',
         'GENESIS9': 'SkeletonGenesis9',
         'MOCAPNET': 'SkeletonMocapNet',
@@ -125,3 +126,27 @@ class RegistryTest(SimpleTestCase):
             if 'BONE_MAP_TO_RIGIFY' not in vars(klasse):
                 ohne.append(klassenname)
         self.assertEqual(ohne, [], 'Diese Formate haben keine eigene Zuordnungstabelle')
+
+
+class LafanErkennungTest(SimpleTestCase):
+    """LaFAN1 (StayStill) vor Mixamo erkennen, Geno (100STYLE) bleibt Mixamo (09.10.2026).
+
+    Bis dahin lief LaFAN als MIXAMO durch und verlor Hals und Zehen still.
+    Sabotage-Gegenprobe: `SkeletonLaFAN` in `formats/__init__.py` HINTER
+    `SkeletonMixamo` setzen — dann wird der erste Fall rot.
+    """
+
+    LAFAN = ['Hips', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToe', 'RightUpLeg', 'RightLeg',
+             'RightFoot', 'RightToe', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
+             'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+             'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand']
+    GENO = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Spine3', 'Neck', 'Neck1', 'Head',
+            'LeftArm', 'LeftUpLeg', 'LeftToeBase', 'LeftToeBaseEnd']
+
+    def test_lafan_wird_lafan_mit_allen_22_knochen(self):
+        bauart = Skeleton.detect_format(self.LAFAN)
+        self.assertEqual(bauart.FORMAT, 'LAFAN')
+        self.assertEqual([n for n in self.LAFAN if not bauart.BONE_MAP_TO_RIGIFY.get(n)], [])
+
+    def test_geno_bleibt_mixamo(self):
+        self.assertEqual(Skeleton.detect_format(self.GENO).FORMAT, 'MIXAMO')

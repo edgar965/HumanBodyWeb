@@ -21,7 +21,16 @@
  *
  * Bei Verschiebung null ist das exakt die Ruhenormale. Kosten je Bild: nur
  * die berührten Punkte und ihre Dreiecke (JCM Oberschenkel: einige tausend).
+ *
+ * VIELE berührte Punkte (Tanz: über die Hälfte des Körpers, 09.10.2026) rechnet ein Worker
+ * (`Normalenarbeit`, Rechnung in `Normalenrechnung`); der Hauptfaden schickt nur die Lage und
+ * schreibt das Ergebnis, sobald es da ist. Wenige Punkte (Visemes im Mund) und Seiten ohne Worker
+ * rechnen hier selbst — dieselben Zahlen. Nur mit der Einstellung „Normalen der Gelenkkorrekturen
+ * im Worker" (Einstellungen → Charakter, Vorgabe aus); ohne sie rechnet jeder Zug je Punkt wie vorher.
  */
+import { Normalenarbeit } from './normalenarbeit.js';
+import { Normalenrechnung } from './normalenrechnung.js';
+
 export class Genesis9normalen {
 
     /** Vorbereitung je Geometrie: Nachbardreiecke (CSR) und Kopiengruppen. */
@@ -57,6 +66,7 @@ export class Genesis9normalen {
             ruheDreiecke: new Float32Array(n * 3),      // je Gruppe einmal gerechnet …
             gerechnet: new Uint8Array(anzahl),           // … sobald sie berührt wird
             arbeit: [0, 0, 0],
+            summen: null,                                // Arbeitsfeld von `_summenAlle`, beim ersten dichten Zug angelegt
         };
         return daten.normalen;
     }
@@ -71,10 +81,23 @@ export class Genesis9normalen {
             const acx = pos[c] - pos[a], acy = pos[c + 1] - pos[a + 1], acz = pos[c + 2] - pos[a + 2];
             aus[0] += aby * acz - abz * acy; aus[1] += abz * acx - abx * acz; aus[2] += abx * acy - aby * acx;
         }
-        const l = Math.hypot(aus[0], aus[1], aus[2]) || 1;
+        const l = Math.sqrt(aus[0] * aus[0] + aus[1] * aus[1] + aus[2] * aus[2]) || 1;
         aus[0] /= l; aus[1] /= l; aus[2] /= l;
         return aus;
     }
+
+    /**
+     * Ab diesem Anteil berührter Punkte (an allen Punkten) ist ein Durchlauf über ALLE Dreiecke
+     * schneller als die Summe je Punkt (jedes Dreieck dort dreimal, einmal je Ecke).
+     *
+     * GEMESSEN 09.10.2026 (Chrome-Tab, Damira tanzt, die alte und die neue Rechnung im Wechsel,
+     * je 12 Läufe, Median): Körper (63.264 von 104.480 Punkten berührt) 24,9 → 17,5 ms, drei
+     * Kleidungsstücke zusammen 9,1 → 5,1 ms — die Normalen BITGLEICH (größte Abweichung 0). Die
+     * JCMs berühren an einem tanzenden Körper über die Hälfte der Punkte; die Normalen sind mit
+     * rund 78 % der Gelenkkorrekturen deren größter Posten (Zeitmesser um `_schreiben`/`nachziehen`).
+     * Die Grenze 0,25 ist gerechnet (je Punkt ~0,5 µs, Durchlauf ~15 ms), nicht gemessen.
+     */
+    static DICHT = 0.25;
 
     /**
      * Die Normalen der Punkte `punkte[0..anzahl)` nachziehen (nach dem
@@ -86,31 +109,98 @@ export class Genesis9normalen {
         const v = Genesis9normalen.vorbereiten(geo, ruhePos);
         if (!v) return false;
         const normal = geo.getAttribute('normal');
+        // Einstellung „Normalen der Gelenkkorrekturen im Worker" (Vorgabe aus): aus = je Punkt, wie vor dem 09.10.2026.
+        const dicht = Normalenarbeit.eingeschaltet && anzahl > Genesis9normalen.DICHT * v.gruppe.length;
+        if (dicht && Genesis9normalen._ausgelagert(geo, v, vorher, vorherAnzahl)) return true;
+        Normalenarbeit.ueberholt(geo);            // Antworten des Workers von vorher gelten nicht mehr
         const out = normal.array, pos = geo.getAttribute('position').array, index = geo.index.array;
         for (let j = 0; j < vorherAnzahl; j++) {
             const p = 3 * vorher[j];
             out[p] = v.ruhe[p]; out[p + 1] = v.ruhe[p + 1]; out[p + 2] = v.ruhe[p + 2];
         }
-        const s = v.arbeit;
-        for (let j = 0; j < anzahl; j++) {
-            const q = punkte[j], g = v.gruppe[q];
-            if (!v.gerechnet[g]) {
-                Genesis9normalen._summe(v, ruhePos, index, g, s);
-                for (let k = v.mitgliedZahl[g]; k < v.mitgliedZahl[g + 1]; k++) {
-                    const m = 3 * v.mitglied[k];
-                    v.ruheDreiecke[m] = s[0]; v.ruheDreiecke[m + 1] = s[1]; v.ruheDreiecke[m + 2] = s[2];
-                }
-                v.gerechnet[g] = 1;
-            }
-            Genesis9normalen._summe(v, pos, index, g, s);
-            const p = 3 * q;
-            let x = v.ruhe[p] + s[0] - v.ruheDreiecke[p];
-            let y = v.ruhe[p + 1] + s[1] - v.ruheDreiecke[p + 1];
-            let z = v.ruhe[p + 2] + s[2] - v.ruheDreiecke[p + 2];
-            const l = Math.hypot(x, y, z) || 1;
-            out[p] = x / l; out[p + 1] = y / l; out[p + 2] = z / l;
+        Genesis9normalen._ruheNachtragen(v, punkte, anzahl, ruhePos, index);
+        if (dicht) {
+            Genesis9normalen._dicht(v, punkte, anzahl, pos, index, out);
+        } else {
+            Genesis9normalen._einzeln(v, punkte, anzahl, pos, index, out);
         }
         normal.needsUpdate = true;
         return true;
+    }
+
+    /**
+     * Viele berührte Punkte: der Worker rechnet. Hier nur das, was nicht warten darf — Punkte, die im letzten Bild berührt
+     * waren und jetzt wieder in der Ruhe stehen, bekommen SOFORT ihre Ruhenormale; wer berührt bleibt, behält die alten
+     * Normalen, bis die neuen da sind (sonst blitzten sie zwischendurch auf die Ruhe zurück).
+     * @returns false, wenn die Seite keinen Worker hat (oder er ausgefallen ist) — dann rechnet `nachziehen` selbst
+     */
+    static _ausgelagert(geo, v, vorher, vorherAnzahl) {
+        const stand = geo.userData.felder;
+        if (!stand || !Normalenarbeit.anfordern(geo, v, stand)) return false;
+        const normal = geo.getAttribute('normal');
+        const out = normal.array;
+        for (let j = 0; j < vorherAnzahl; j++) {
+            const q = vorher[j];
+            if (stand.marke[q]) continue;
+            const p = 3 * q;
+            out[p] = v.ruhe[p]; out[p + 1] = v.ruhe[p + 1]; out[p + 2] = v.ruhe[p + 2];
+        }
+        normal.needsUpdate = true;
+        return true;
+    }
+
+    /** Wenige berührte Punkte (Visemes im Mund): je Punkt die Dreiecke seiner Gruppe summieren. */
+    static _einzeln(v, punkte, anzahl, pos, index, out) {
+        const s = v.arbeit;
+        for (let j = 0; j < anzahl; j++) {
+            const q = punkte[j];
+            Genesis9normalen._summe(v, pos, index, v.gruppe[q], s);
+            Genesis9normalen._eintragen(v, q, s[0], s[1], s[2], out);
+        }
+    }
+
+    /** Viele berührte Punkte (Gelenkkorrekturen im Tanz): ein Durchlauf über alle Dreiecke, Summen je Gruppe. */
+    static _dicht(v, punkte, anzahl, pos, index, out) {
+        const summen = Genesis9normalen._summenAlle(v, pos, index);
+        for (let j = 0; j < anzahl; j++) {
+            const q = punkte[j], g = 3 * v.gruppe[q];
+            const l = Math.sqrt(summen[g] * summen[g] + summen[g + 1] * summen[g + 1] + summen[g + 2] * summen[g + 2]) || 1;
+            Genesis9normalen._eintragen(v, q, summen[g] / l, summen[g + 1] / l, summen[g + 2] / l, out);
+        }
+    }
+
+    /** `n[q] = normiert(nRuhe[q] + s − nDreiecke(Ruhe)[q])`, `s` die normierte Dreiecksnormale der Gruppe von `q`. */
+    static _eintragen(v, q, sx, sy, sz, out) {
+        const p = 3 * q;
+        const x = v.ruhe[p] + sx - v.ruheDreiecke[p];
+        const y = v.ruhe[p + 1] + sy - v.ruheDreiecke[p + 1];
+        const z = v.ruhe[p + 2] + sz - v.ruheDreiecke[p + 2];
+        // Math.sqrt statt Math.hypot: hypot ist in V8 um ein Vielfaches langsamer und lief hier je Punkt zweimal.
+        const l = Math.sqrt(x * x + y * y + z * z) || 1;
+        out[p] = x / l; out[p + 1] = y / l; out[p + 2] = z / l;
+    }
+
+    /** Die Ruhe-Dreiecksnormale jeder berührten Gruppe — einmal in der Lebenszeit des Netzes. */
+    static _ruheNachtragen(v, punkte, anzahl, ruhePos, index) {
+        const s = v.arbeit;
+        for (let j = 0; j < anzahl; j++) {
+            const g = v.gruppe[punkte[j]];
+            if (v.gerechnet[g]) continue;
+            Genesis9normalen._summe(v, ruhePos, index, g, s);
+            for (let k = v.mitgliedZahl[g]; k < v.mitgliedZahl[g + 1]; k++) {
+                const m = 3 * v.mitglied[k];
+                v.ruheDreiecke[m] = s[0]; v.ruheDreiecke[m + 1] = s[1]; v.ruheDreiecke[m + 2] = s[2];
+            }
+            v.gerechnet[g] = 1;
+        }
+    }
+
+    /**
+     * Die (nicht normierte) Flächennormalen-Summe JEDER Gruppe — dieselbe Summe wie `_summe`, in einem Durchlauf über alle
+     * Dreiecke (`Normalenrechnung.summen`, dieselbe Rechnung wie im Worker).
+     */
+    static _summenAlle(v, pos, index) {
+        const summen = v.summen || (v.summen = new Float64Array(v.gerechnet.length * 3));
+        return Normalenrechnung.summen(index, v.gruppe, pos, summen);
     }
 }

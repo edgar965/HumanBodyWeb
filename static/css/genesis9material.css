@@ -1,0 +1,36 @@
+/* Zahnradknopf und Popup für Glanz, Rauheit, Relief, Deckkraft und Feuchte je Teil
+   (`genesis9materialdialog.js`, Edgar, 09.10.2026: „mach die Combo kleiner, daneben einen
+   Einstellungsknopf mit Popup"). Der Rahmen des Popups sind die Klassen des Farbdialogs (`stueckfarbe.css`). */
+
+/* Die Auswahlen des Bereichs „Haut, Augen, Brauen, Schminke": kleiner, und mit Knopf oder ohne gleich breit. */
+#prop-genesis9-haut .slider-row > select {
+    min-width: 0; height: 24px; padding: 1px 4px; font-size: 0.78rem;
+}
+#prop-genesis9-haut .slider-row:not(:has(> .hb-materialknopf)) > select { margin-right: 34px; }
+
+.hb-materialknopf {
+    flex: 0 0 26px; width: 26px; height: 24px; padding: 0; line-height: 1; font-size: 15px; cursor: pointer;
+    color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+}
+.hb-materialknopf:hover { color: var(--accent); border-color: var(--accent); }
+
+.scene-modal.hb-materialdialog { width: min(480px, 94vw); }   /* gewinnt gegen die Breite von `.stueckfarb-dialog` */
+.hb-materialdialog .scene-modal-body { max-height: 62vh; overflow-y: auto; }
+
+/* Block „Form" unter dem Material: die Formregler des Teils (`genesis9teilregler.js`), Zeilen wie in der Reglerliste. */
+.hb-formblock { margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--border); }
+.hb-formkopf { font-size: 0.8rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+.hb-formblock .slider-row { display: grid; grid-template-columns: 170px 1fr 44px; gap: 8px; margin: 5px 0; }
+.hb-formblock .slider-row label { font-size: 0.76rem; line-height: 1.2; color: var(--text); overflow-wrap: anywhere; }
+.hb-formblock .slider-row input[type="range"] { min-width: 0; }
+.hb-formblock .slider-value { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+.hb-materialzeile { display: grid; grid-template-columns: 76px 1fr 40px 24px; gap: 8px; align-items: center; margin: 8px 0; }
+.hb-materialzeile label { font-size: 0.8rem; color: var(--text); }
+.hb-materialzeile input[type="range"] { accent-color: var(--accent); height: 4px; min-width: 0; }
+.hb-materialzeile .slider-value { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+.hb-materialzurueck {
+    width: 24px; height: 24px; padding: 0; cursor: pointer; line-height: 1;
+    color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: 4px;
+}
+.hb-materialzurueck:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.hb-materialzurueck:disabled { opacity: 0.35; cursor: default; }

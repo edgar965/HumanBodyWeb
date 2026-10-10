@@ -10,8 +10,10 @@ Node ohne DOM:
 3. Ein Kopf-Preset gibt nur 1001 frei, ein Nagellack-Preset nur 1005.
 4. `hautton` behält die Diffusfarbe über der Kachel, `hautglanz` die Rauheit des Presets statt der des Modells.
 5. `frei` nennt genau die Kacheln der gewählten Kategorien.
+6. Mit gewähltem Brauenstil kommt die Kopfkachel (1001) von `…/fototextur-ohne-brauen/…` (`core/dienste/fotohautbrauen.py`), die übrigen unberührt.
 
-Sabotage-Gegenprobe: `frei.has(...)` in `gruppen` entfernen → Fall 2 und 3 rot; `delete bilder.farbe` bedingungslos → Fall 4 rot.
+Sabotage-Gegenprobe: `frei.has(...)` in `gruppen` entfernen → Fall 2 und 3 rot; `delete bilder.farbe` bedingungslos → Fall 4 rot;
+`wahl?.brauenstil &&` in `gruppen` entfernen → Fall 6 (ohne Brauenstil) rot; `=== Genesis9fototextur.KOPF` entfernen → Fall 6 (Rumpf) rot.
 """
 
 from django.test import SimpleTestCase
@@ -61,6 +63,19 @@ pruefe('Hautglanz behält die Rauheit des Presets', e[0].bilder.rauheit, 'preset
 pruefe('frei ohne Wahl', [...F.frei(null)], []);
 pruefe('frei Haut', [...F.frei({ haut: 'x' })].sort(), [1001, 1002, 1003, 1004]);
 pruefe('frei Nagellack und Kopf', [...F.frei({ praesets: { nagellack: 'a', kopf: 'b', schatten: 'c' } })].sort(), [1001, 1005]);
+
+// 6. Brauenstil (10.10.2026, Edgar, Asian: „ändern funktioniert nicht"): die Kopfkachel kommt ohne die aufgemalten Brauen des Originals,
+// alle anderen Kacheln bleiben. Ohne Brauenstil bleibt die Kachel, wie das Modell sie trägt.
+const API = '/api/character/genesis9-figur/fototextur/Asian/';
+const echt = { '1001': API + 'haut_1001_farbe.jpg/?v=7', '1002': API + 'haut_1002_farbe.jpg/?v=7', '1005': API + 'haut_1005_farbe.jpg/?v=7' };
+e = F.gruppen(server(), echt, { haut: '', praesets: {}, brauenstil: '' });
+pruefe('ohne Brauenstil: Kopf wie das Modell', e[0].bilder.albedo, echt['1001']);
+e = F.gruppen(server(), echt, { haut: '', praesets: {}, brauenstil: 'card06' });
+pruefe('Brauenstil: Kopf ohne gemalte Brauen', e[0].bilder.albedo, '/api/character/genesis9-figur/fototextur-ohne-brauen/Asian/haut_1001_farbe.jpg/?v=7');
+pruefe('Brauenstil: Rumpf und Nägel unberührt', [e[1].bilder.albedo, e[2].bilder.albedo], [echt['1002'], echt['1005']]);
+e = F.gruppen(server(), echt, { haut: '', praesets: { kopf: 'x' }, brauenstil: 'card06' });
+pruefe('Kopf-Preset gilt weiter vor der Kachel', e[0].bilder.albedo, 'preset_kopf');
+pruefe('ohneBrauen lässt fremde Adressen stehen', F.ohneBrauen('/k/1001'), '/k/1001');
 console.log(JSON.stringify({ ok: true }));
 """
 

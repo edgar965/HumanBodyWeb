@@ -29,6 +29,7 @@ import ujson
 from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
 from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG
 
+from .retargetsperre import Retargetsperre
 from .skelettgeometrie import Skelettgeometrie
 
 logger = logging.getLogger('core')
@@ -75,10 +76,8 @@ class Retargetdaten:
 
     @property
     def ablage(self):
-        # DIE FASSUNG DER REGELN GEHOERT IN DEN NAMEN (09.09.2026): Ohne
-        # sie liefern vorhandene Ablagen nach einer Regelaenderung
-        # weiter das alte Ergebnis — still, und die Aenderung kommt
-        # nirgends an. Begruendung in `retarget/fassung.py`.
+        # DIE FASSUNG DER REGELN GEHOERT IN DEN NAMEN (09.09.2026): Ohne sie liefern vorhandene Ablagen nach einer
+        # Regelaenderung weiter das alte Ergebnis — still. Begruendung in `retarget/fassung.py`.
         merkmal = f'v{REGELFASSUNG}_{self.hoehe:.4f}_{self.format}_{self.fusskorrektur}_{self.delta_norm}'
         if self.ziel != self.ZIEL_DEF:
             merkmal += f'_{self.ziel}'
@@ -124,12 +123,12 @@ class Retargetdaten:
     # ---------------------------------------------------------------- Rechnen
 
     def holen(self):
-        """Das Ergebnis — aus der Ablage oder frisch gerechnet."""
-        gemerkt = self.gemerkt()
-        if gemerkt is not None:
-            return self._mimik_dazu(self._gesicht_dazu(gemerkt))
-        ergebnis = self._rechnen()
-        self.merken(ergebnis)
+        """Das Ergebnis — aus der Ablage oder frisch gerechnet; gleiche Anfragen warten (`Retargetsperre`)."""
+        with Retargetsperre.fuer(self.ablage):
+            ergebnis = self.gemerkt()
+            if ergebnis is None:
+                ergebnis = self._rechnen()
+                self.merken(ergebnis)
         return self._mimik_dazu(self._gesicht_dazu(ergebnis))
 
     def _mimik_dazu(self, ergebnis):

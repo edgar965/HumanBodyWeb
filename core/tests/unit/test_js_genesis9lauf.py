@@ -69,10 +69,12 @@ class Genesis9laufUndHaarkartenTest(SimpleTestCase):
         erwartet = {
             ('genesis9garderobe.js', '`stueck:${kennung}`'): 2,
             ('genesis9stueckregler.js', '`stueck:${stueck.id}`'): 1,
-            ('genesis9eigenschaften.js', "'haut'"): 1,
-            ('genesis9eigenschaften.js', "'augen'"): 1,
-            ('genesis9eigenschaften.js', "'brauen'"): 1,
-            ('genesis9eigenschaften.js', "'brauenstil'"): 1,
+            # Der Schlüssel steht am Ende des `planen`-Aufrufs; derselbe Name kommt seit 09.10.2026 auch als Material-Kennung des
+            # Zahnrad-Popups vor (`Genesis9materialdialog.knopf(inst, 'haut', …)`) und zählt hier nicht.
+            ('genesis9eigenschaften.js', "_kopf(inst), 'haut')"): 1,
+            ('genesis9eigenschaften.js', "_kopf(inst), 'augen')"): 1,
+            ('genesis9eigenschaften.js', "_kopf(inst), 'brauen')"): 1,
+            ('genesis9eigenschaften.js', "_kopf(inst), 'brauenstil')"): 1,
             ('genesis9eigenschaften.js', '`praeset:${kategorie.kategorie}`'): 1,
             ('genesis9eigenschaften.js', '`regler:${regler.name}`'): 1,
             ('genesis9posen.js', "'formen'"): 1,

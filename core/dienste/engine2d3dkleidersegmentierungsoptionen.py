@@ -7,7 +7,7 @@ mir bisher verschwiegen hast? Baue diese alle ein und zeige mir die Optionen in 
 
     verwenden     Kleidungsmaske aus den Etiketten (an) oder Farbe und Lage (aus, Vorgabe) — im vollen Lauf läuft der Schritt nur bei „an" oder `haar` ≠ „farbe"
     haar          woher die Haarmaske kommt: Farbe des Netzes (Vorgabe) · Sapiens-Klasse Hair · beides (`Sapienshaar`)
-    modell        Größe der Sapiens-Segmentierung: 0.3b · 0.6b · 1b (Vorgabe, die einzige gemessene) — `Sapiensmodell.GROESSEN`
+    modell        Familie und Größe: Sapiens 0.3b · 0.6b · 1b (Vorgabe) · Sapiens2 sapiens2-0.4b (gemessen 09.10.2026) · sapiens2-0.8b — `Sapiensgewichte.GROESSEN`
     schuhe        Klassen Left/Right_Shoe: zu „Socken / Schuhe" (Vorgabe) · zu Zubehör · Haut          (`Sapienszuordnung`)
     socken        Klassen Left/Right_Sock: zu „Socken / Schuhe" (Vorgabe) · Haut
     zubehoer      Klasse Apparel: Zubehör (Vorgabe) · zum Oberteil · Haut
@@ -47,12 +47,18 @@ class Engine2d3dKleidersegmentierungsoptionen:
                       'Farbe allein — ein Foto mit grauem Haar und Hautton in der Nähe, Bart und Schatten bringen sie durcheinander. Sapiens kennt das Haar als eigene Klasse. Das Gesicht (Augen, Brauen, '
                       'Nase, Mund), die Bartzone und der Rumpf bleiben in jedem Fall geschützt. Der Schritt „Segmentierung“ läuft bei „Sapiens“ und „Beides“ im vollen Lauf mit. Ob Sapiens das Haar '
                       'besser trifft als die Farbe, ist an Edgars Fotos noch nicht gemessen — der Bericht „Haar“ zeigt beide Flächen und ihre Überschneidung.'},
-        {'schluessel': 'modell', 'titel': 'Sapiens-Modell (Größe)', 'art': 'wahl', 'vorgabe': '1b', 'werte': [
-            ('1b', '1B — 4,7 GB, mIoU 79,94 laut Dateiname (Vorgabe, die einzige hier gemessene)'),
-            ('0.6b', '0.6B — 2,7 GB, mIoU 77,77 laut Dateiname (nicht gelaufen)'),
-            ('0.3b', '0.3B — 1,4 GB, mIoU 76,73 laut Dateiname (nicht gelaufen)'),
+        {'schluessel': 'modell', 'titel': 'Sapiens-Modell (Familie und Größe)', 'art': 'wahl', 'vorgabe': '1b', 'werte': [
+            ('1b', 'Sapiens 1B — 4,7 GB, mIoU 79,94 laut Dateiname (Vorgabe)'),
+            ('0.6b', 'Sapiens 0.6B — 2,7 GB, mIoU 77,77 laut Dateiname (nicht gelaufen)'),
+            ('0.3b', 'Sapiens 0.3B — 1,4 GB, mIoU 76,73 laut Dateiname (nicht gelaufen)'),
+            ('sapiens2-0.4b', 'Sapiens2 0.4B — 1,6 GB, gemessen 09.10.2026: auch bunte und gerenderte Kleidung'),
+            ('sapiens2-0.8b', 'Sapiens2 0.8B — 3,3 GB (nicht gelaufen)'),
         ], 'hinweis': 'Kleinere Modelle brauchen weniger Grafikspeicher und Zeit, der Hersteller nennt dafür eine niedrigere mIoU auf seinem Goliath-Datensatz (Zahl im Dateinamen, nicht von uns gemessen). '
-                      'Eine 2B-Segmentierung ist auf Hugging Face nicht öffentlich. Beim ersten Lauf einer Größe lädt der Schritt ihre Gewichte (SHA-256 geprüft).'},
+                      'Eine 2B-Segmentierung ist auf Hugging Face nicht öffentlich. Beim ersten Lauf einer Größe lädt der Schritt ihre Gewichte (SHA-256 geprüft). '
+                      'Sapiens2 (Meta, 2026, Sapiens2 License — verbietet u. a. biometrische Verarbeitung und Deepfakes) ist der Nachfolger mit denselben Klassen und dazu „Eyeglass“ '
+                      '(hier Zubehör). Gemessen am 09.10.2026 auf 19 vorbereiteten Fotos: bei Edgars Fotos gleich wie Sapiens 1B (Säume innerhalb 1 cm), bei Randy (Hawaiihemd, '
+                      'gerendert) blieben mit Sapiens 1B 35 % der freigestellten Person ohne Etikett — das Hemd fehlte in 5 von 8 Ansichten —, mit Sapiens2 0.4B 1,7 %; beim Zauberer '
+                      '(Robe, gerendert) 97 % gegen 5 %. Grafikspeicher 2,7 statt 5,9 GB.'},
         {'schluessel': 'schuhe', 'titel': 'Schuhe (Left/Right_Shoe) werden …', 'art': 'wahl', 'vorgabe': 'fuesse', 'werte': [
             ('fuesse', 'Socken / Schuhe — ein Stück (Vorgabe)'),
             ('zubehoer', 'Zubehör'),

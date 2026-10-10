@@ -155,6 +155,23 @@
         </div>
         <div class="settings-row">
             <div class="settings-label">
+                <strong>Normalen der Gelenkkorrekturen im Worker</strong>
+                <small>Eine tanzende Genesis-Figur verschiebt mit den Gelenkkorrekturen (JCMs) über die Hälfte ihrer Körperpunkte
+                     in jedem Bild; deren Normalen rechnete bisher der Hauptfaden (gemessen 25–70&nbsp;ms je Bild, die Bedienung
+                     ruckelte). Eingeschaltet rechnet sie ein Worker — der Hauptfaden bleibt frei, die Normalen hängen ein bis
+                     drei Bilder hinter den Punkten her. Wirkt nach dem Neuladen der Szene.
+                     <br>Ausgeschaltet (Vorgabe) gilt die Rechnung von vorher.</small>
+            </div>
+            <div class="settings-input">
+                <label class="kaestchenzeile">
+                    <input type="checkbox" name="normalen_worker" id="normalen-worker" value="1"
+                        {% if normalen_worker %}checked{% endif %}>
+                    Aktiviert
+                </label>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
                 <strong>JavaScript gebündelt laden</strong>
                 <small>Die Szene-Seite besteht aus 230 einzelnen JS-Modulen. Jede
                      Anfrage kostet diesen Server 10–12&nbsp;ms, und er beantwortet
@@ -172,6 +189,27 @@
                         {% if module_buendeln %}checked{% endif %}>
                     Aktiviert
                 </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-cube"></i> Blender-Import</h2>
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Backen</strong>
+                <small>Womit der Import die Originalhaut einer .blend auf die Genesis-Kacheln bäckt (Farbe, Rauheit, Normalen).
+                     <br><b>Lokal</b>: auf der Grafikkarte, ohne Blender &mdash; dieselben Rechenwege wie Cycles, das Material wird als
+                     Knotengraph aus dem Export gelesen. Kennt der lokale Weg einen Knoten nicht, hält der Import an und nennt ihn (er rät nicht).
+                     <br><b>Blender</b>: Cycles &bdquo;Selected to Active&ldquo; wie bisher.
+                     <br>Gilt ab dem nächsten Schritt &bdquo;haut&ldquo; eines Imports.</small>
+            </div>
+            <div class="settings-input">
+                <select name="blendimport_backen" id="blendimport-backen" class="hb-width-100-2">
+                    {% for wert, text in backen_wahlen %}
+                    <option value="{{ wert }}"{% if wert == backen %} selected{% endif %}>{{ text }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
     </div>

@@ -18,6 +18,8 @@ von 24 Punkten (7, 14, 21, 28 mm), UV je Ecke = (x, z) · 10 — der Rand liegt 
 4. `Blendimportschamgeograft.verschweissen`: aus einer Kunsthaut (Ebene 24 × 24 Zellen von 4 mm, Schnittwert = Abstand − 30 mm) und dem
    Stück entsteht ein Stück, dessen Rand die Ecken des Rings des Lochs sind; `loch` nennt die Dreiecke der Haut, den Ring und die
    Verschiebung der Glättung. Ohne Loch (zu kleiner Schnittbereich) kommt `{'aus': Grund}`, das Stück bleibt unberührt.
+5.–7. Die Grenze für den Rand (`MAX_RAND_WEG_MM`): ein zu großes Stück wird beschnitten (5), bleibt es darüber, kommt `aus` (6); mit einem Anbau
+   gilt die weitere `MAX_RAND_WEG_ANBAU_MM` (7, gemessen 10.10.2026: ohne Anbau `aus`, mit Anbau Rand 15,96 mm daneben).
 
 Sabotage-Gegenprobe (nicht gelaufen): `_zu_ecken` in `anlegen` weglassen macht Fall 1 rot (Randpunkte mitten auf den Kanten); in `_einfuegen`
 die Kandidaten leeren macht Fall 1 rot (Ecken ohne Randpunkt); `_gleichlaeufig` ohne `np.maximum.accumulate` macht Fall 1 rot für eine der
@@ -25,6 +27,7 @@ beiden Umlaufrichtungen (Rand läuft rückwärts).
 """
 
 from types import SimpleNamespace
+from unittest import mock
 
 import numpy as np
 from django.test import SimpleTestCase
@@ -136,3 +139,47 @@ class SchamnahtTest(SimpleTestCase):
         self.assertEqual(len(rand), len(loch['ring']))
         kaputt = Blendimportschamgeograft.verschweissen(haut, np.full(len(punkte), 1.0), stueck, flaechen, uv)
         self.assertIn('aus', kaputt)
+
+    def _zu_grosses_stueck(self):
+        """`(haut, werte, stueck, flaechen, uv)`: ein Stück doppelt so groß wie das Loch (Rand bei 56 statt 30 mm)."""
+        zellen, zelle = self.N, 0.004
+        halb = zellen // 2
+        n = zellen + 1
+        punkte = np.array([[(c - halb) * zelle, 0.0, (r - halb) * zelle] for r in range(n) for c in range(n)])
+        dreiecke = []
+        for r in range(zellen):
+            for c in range(zellen):
+                a = r * n + c
+                dreiecke += [[a, a + 1, a + n], [a + 1, a + n + 1, a + n]]
+        haut = SimpleNamespace(vertices=punkte, faces=np.array(dreiecke))
+        werte = np.linalg.norm(punkte[:, [0, 2]], axis=1) - 0.030
+        stueck, flaechen, uv = self._scheibe(hoehe=0.0)
+        stueck[:, [0, 2]] *= 2.0
+        return haut, werte, stueck, flaechen, uv
+
+    def test_5_ein_stueck_das_ueber_das_loch_hinausreicht_wird_beschnitten(self):
+        """„Asian Female", 09.10.2026: Rand bis 62,6 mm neben dem Ring → Keile. Seit `Blendimportschamregister.beschneiden` (abends, vor dem Ring)
+        schneidet das Verschweißen Teile ab, die nicht über dem Loch liegen: das Stück bekommt seine Naht, und der Rand hält die Grenze.
+        (Gemessen 10.10.2026 am Kunststück: abgeschnitten 48, Rand höchstens 16,0 mm neben dem Ring bei Grenze 20; vorher erwartete dieser Fall
+        `aus` — die Erwartung stammte aus der Fassung ohne Beschneiden.)"""
+        ergebnis = Blendimportschamgeograft.verschweissen(*self._zu_grosses_stueck())
+        self.assertNotIn('aus', ergebnis, ergebnis.get('aus'))
+        self.assertGreater(ergebnis['bericht']['abgeschnitten'], 0)
+        self.assertLessEqual(ergebnis['bericht']['rand_weg_max_mm'], Blendimportschamgeograft.MAX_RAND_WEG_MM)
+
+    def test_6_bleibt_der_rand_ueber_der_grenze_bleibt_das_stueck_ohne_naht(self):
+        """Das Netz unter dem Beschneiden: liegt der Rand trotzdem weiter als `MAX_RAND_WEG_MM` vom Ring, kommt `{'aus': Grund}`."""
+        with mock.patch.object(Blendimportschamgeograft, 'MAX_RAND_WEG_MM', 5.0):
+            ergebnis = Blendimportschamgeograft.verschweissen(*self._zu_grosses_stueck())
+        self.assertIn('aus', ergebnis)
+        self.assertIn('neben dem Ring', ergebnis['aus'])
+
+    def test_7_ein_anbau_darf_weiter_vom_ring_liegen(self):
+        """Penis und Hoden (BodyParts3D, 10.10.2026): der Rand lag bis 22,3 mm neben dem Ring, Grenze 20 → das Stück blieb ohne Naht. Mit `anbau`
+        gilt `MAX_RAND_WEG_ANBAU_MM`; ohne ihn bleibt die engere Grenze (hier auf 5 mm gestellt, das Kunststück liegt bis 16 mm daneben)."""
+        with mock.patch.object(Blendimportschamgeograft, 'MAX_RAND_WEG_MM', 5.0):
+            ohne = Blendimportschamgeograft.verschweissen(*self._zu_grosses_stueck())
+            mit = Blendimportschamgeograft.verschweissen(*self._zu_grosses_stueck(), anbau=True)
+        self.assertIn('aus', ohne)
+        self.assertNotIn('aus', mit, mit.get('aus'))
+        self.assertLessEqual(mit['bericht']['rand_weg_max_mm'], Blendimportschamgeograft.MAX_RAND_WEG_ANBAU_MM)

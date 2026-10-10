@@ -10,12 +10,16 @@ Ecken des Quadrats ±20 mm dazu je Seitenmitte (8 Ecken) — die Haut steht an d
 
 1. Jede Randecke des Stücks liegt danach (Lage + Verschiebung) genau auf dem Ziel: Lage des Hautpunkts + Verschiebung der Glättung.
    Auch wenn das Stück um 1 mm neben der Lage im Bau steht (die Zuordnung toleriert 4 mm).
-2. Die Verschiebung läuft ins Innere aus: ein Punkt 5 mm vom Rand bekommt einen Teil, ab `BAND_M` (10 mm) und im Zentrum bleibt sie 0.
-3. Der Bericht nennt die gefundenen Ecken (8 von 8) und die Größe der Verschiebung (größte 3,9 mm an den Ecken des Quadrats).
-4. Ein Randpunkt, der keiner Ringecke nahe liegt (das Loch mitten im Stück), bleibt unberührt.
+2. Die Verschiebung geht als Feld ins Innere weiter (`_feld`): im Zentrum ist sie der MITTLERE Versatz des Rands (hier (0,5 | 3 | 0) mm: die Glättung `d` schiebt jede
+   Ecke um 0,5 mm in x; das Auswärts von ±2 mm hebt sich links und rechts auf, in z ebenso), ein Punkt nahe am Rand nimmt zusätzlich den Rest des eigenen Rands, der über `FELD_RADIUS_M` (12 mm) abklingt — die Mitte der Platte (20 mm vom Rand)
+   bekommt nur das Mittel. (Vorher lief sie über `BAND_M` auf 0 aus: bei einer Haut, die 105 mm höher stand, wurde der Rand hochgezogen und das Innere blieb
+   stehen; danach ein 1/d²-gewichtetes Mittel über den ganzen Rand verformte die Lippen: Edgar „warum so unregelmäßig???".)
+3. Der Bericht nennt die gefundenen Ecken (8 von 8) und die Größe der Verschiebung (größte 4,39 mm an den rechten Ecken des Quadrats, links 3,9 mm).
+4. Ein Randpunkt, der keiner Ringecke nahe liegt (das Loch mitten im Stück), ist kein Randpunkt der Naht und folgt dem Feld des Rands.
 
 Sabotage-Gegenprobe (nicht gelaufen): `ZUORDNUNG_M` 0,004 → 0,0004 macht Fall 1 rot (das um 1 mm versetzte Stück findet keine Ecke);
-`f = 1 − …` zu `f = 1` macht Fall 2 rot; `ring.d` aus dem Ziel streichen macht Fall 1 rot.
+in `_feld` die Gewichte `1 / (d2 + eps2)` zu `1` (Rest des Rands ohne Abstand) macht Fall 2 rot (nahe am Rand nicht mehr der Versatz des Rands);
+`ring.d` aus dem Ziel streichen macht Fall 1 rot.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
@@ -75,16 +79,26 @@ ECKEN.forEach(([r, c], j) => {
 });
 
 // --- 2. Auslauf ---------------------------------------------------------------------------------------
-const mitte = randId(10, 10), nah = randId(10, 2), fern = randId(10, 5);       // 0 mm, 16 mm bzw. 10 mm vom Rand
+const mitte = randId(10, 10);
 const betrag = (i) => Math.hypot(v.werte[3 * i], v.werte[3 * i + 1], v.werte[3 * i + 2]);
-if (betrag(mitte) !== 0) fehl('im Zentrum bleibt die Verschiebung 0: ' + betrag(mitte));
-if (betrag(fern) > 1e-9) fehl('ab 10 mm Weg vom Rand 0: ' + betrag(fern));
+if (Math.abs(v.werte[3 * mitte + 1] - 0.003) > 1e-4) fehl('im Zentrum folgt die Verschiebung dem Rand (3 mm in y): ' + v.werte[3 * mitte + 1]);
+if (Math.abs(v.werte[3 * mitte] - 0.0005) > 1e-4 || Math.abs(v.werte[3 * mitte + 2]) > 1e-4) fehl('im Zentrum das Mittel: x 0,5 mm (die Glättung), z hebt sich auf: ' + v.werte[3 * mitte] + ' / ' + v.werte[3 * mitte + 2]);
 const mittel = randId(10, 1);                                                    // 2 mm vom Rand (zwischen zwei Ecken, auf der Kante)
-if (!(betrag(mittel) > 0 && betrag(mittel) < betrag(randId(10, 0)))) fehl('der Auslauf nimmt nach innen ab');
+if (betrag(mittel) < 0.003 || betrag(mittel) > 0.006) fehl('nahe am Rand ein Versatz von der Größe des Rands: ' + betrag(mittel));
 
 // --- 3. Bericht ---------------------------------------------------------------------------------------
 if (v.gefunden !== 8 || v.ecken !== 8) fehl('Bericht: ' + v.gefunden + ' von ' + v.ecken);
-if (Math.abs(v.maxMm - 3.9) > 0.1) fehl('größte Verschiebung (mm): ' + v.maxMm);     // Ecke links unten: (−1,5 | 3 | −2) mm
+// Die rechten Ecken des Quadrats haben den größten Versatz: x = 2 mm nach außen + 0,5 mm Glättung = 2,5, dazu 3 mm in y und 2 mm in z → √19,25 = 4,39 mm
+// (links hebt sich die Glättung gegen das Auswärts auf: (−1,5 | 3 | ±2) mm = 3,9 mm). Die 3,9 galten bis 10.10.2026 fälschlich als das Größte.
+if (Math.abs(v.maxMm - 4.39) > 0.01) fehl('größte Verschiebung (mm): ' + v.maxMm);
+
+// --- 3b. für `Stucknormalen`: Weg zum Rand und die Randpunkte samt Ringecke --------------------------
+if (!v.weg || v.weg[randId(0, 0)] !== 0) fehl('weg am Rand 0');
+if (v.randpunkte.ids.length !== 8 || v.randpunkte.ecke.length !== 8) fehl('randpunkte: ' + v.randpunkte.ids.length);
+ECKEN.forEach(([r, c], j) => {
+    const k = Array.from(v.randpunkte.ids).indexOf(randId(r, c));
+    if (k < 0 || v.randpunkte.ecke[k] !== j) fehl('Ecke ' + j + ' im Randpunkt ' + k);
+});
 
 // --- 4. ein Loch mitten im Stück bleibt ---------------------------------------------------------------
 // Dreieck (5,5)-(5,6)-(6,5) herausnehmen: seine Punkte werden zu Randpunkten, liegen aber an keiner Ringecke
@@ -93,7 +107,8 @@ for (let t = 0; t + 2 < INDEX.length; t += 3) { if (INDEX[t] === randId(5, 5) &&
 const v3 = Stuecknaht.verschiebung(P, Uint32Array.from(ohne), RING, haut);
 if (v3.gefunden !== 8) fehl('das Loch darf keine Ecke stehlen: ' + v3.gefunden);
 const loch = randId(5, 5);
-if (Math.hypot(v3.werte[3 * loch], v3.werte[3 * loch + 1], v3.werte[3 * loch + 2]) > 1e-9) fehl('Punkt am Loch bewegt');
+if (Array.from(v3.randpunkte.ids).includes(loch)) fehl('Punkt am Loch ist kein Randpunkt der Naht');
+if (Math.abs(v3.werte[3 * loch + 1] - 0.003) > 2e-4) fehl('Punkt am Loch folgt dem Feld des Rands: ' + v3.werte[3 * loch + 1]);
 console.log(JSON.stringify({ ok: true, gefunden: v.gefunden, maxMm: v.maxMm }));
 """
 

@@ -84,7 +84,9 @@ class NachformungTest(SimpleTestCase):
         lauf.ergebnis = mock.Mock()
         lauf.inventar = lambda: {}
         lauf.ablage, lauf.melden = object(), None
-        with mock.patch('core.dienste.blendimportnachformung.Blendimportnachformung') as nachformung:
+        # Die Haut unter der Kleidung (`Blendimportunterkleid`) hat ihre eigene Probe (`test_blendimport_unterkleid.py`); hier bleibt sie draußen.
+        with mock.patch('core.dienste.blendimportnachformung.Blendimportnachformung') as nachformung, \
+                mock.patch.object(Blendimportlauf, '_unterkleid', side_effect=lambda job, bericht: bericht):
             lauf.stand = {'einstellungen': {'scham': 'objekt'}, 'rollen': [], 'quelle': {'name': 'x'}}
             lauf._nachformung(job=None)
             nachformung.assert_not_called()

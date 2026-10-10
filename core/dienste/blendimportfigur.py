@@ -28,6 +28,7 @@ class Blendimportfigur:
         'kopfhaut': 'haut',
         'textur': 'mesh',
         'modell': 'aus',
+        'einheit': 'meter',
         'gesicht': 'an',
         'eigenmorph': 'an',
     }

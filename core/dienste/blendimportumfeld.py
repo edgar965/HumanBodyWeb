@@ -117,23 +117,26 @@ class Blendimportumfeld:
 
     def original_farbe(self, orte):
         """`(farbe (n, 3) float, gefunden (n,) bool)`: die Farbe des Originals am nächsten Punkt seiner Fläche zu jedem Ort."""
-        import trimesh
-
         from scipy.spatial import cKDTree
 
+        from .hbdreiecksuche import Hbdreiecksuche
+
         o = self.original
-        flaeche = trimesh.Trimesh(o['punkte'], o['dreiecke'], process=False)
         hoehe, breite = self.farbbild.shape[:2]
         farbe = np.zeros((len(orte), 3))
         gefunden = np.zeros(len(orte), dtype=bool)
         # Der nächste PUNKT ist schnell: liegt er weiter als `ABSTAND_MAX_M` + Punktabstand weg, liegt auch die Fläche zu weit (Fallout
         # ranger, Kachel 1003: 2,29 Mio. Texel im Umfeld, davon 1,32 Mio. ohne Original — der Weg zur Fläche für alle kostete Minuten).
         nah_genug = np.flatnonzero(cKDTree(o['punkte']).query(orte)[0] <= self.ABSTAND_MAX_M + self.PUNKTABSTAND_M)
+        # `Hbdreiecksuche` statt `trimesh.proximity.closest_point` (10.10.2026, Rosemary Kachel 1001): trimesh brauchte je Block von 200.000
+        # Texeln 2–3 Minuten (py-spy dump im Lauf: `a` 200.000 → 400.000 → 600.000 im Abstand von 2–3 Minuten). Die Suche nimmt je Punkt die
+        # 8 Dreiecke mit dem nächsten Schwerpunkt und rechnet darunter den exakten nächsten Punkt (Ericson), dazu die UV der Ecken dieses
+        # Punkts — dieselbe Rechnung wie vorher; am Kugelnetz 0,045 gegen 0,259 ms je Punkt, Abweichung höchstens 0,001 mm
+        # (`ProjektTemp/_wegwerf/import_serie/umfeld_vergleich.py`). An den echten Daten noch nicht gemessen.
+        suche = Hbdreiecksuche(o['punkte'], o['dreiecke'], o['uv_ecken'])
         for a in range(0, len(nah_genug), self.BLOCK):
             nr = nah_genug[a:a + self.BLOCK]
-            nah, abstand, dreieck = trimesh.proximity.closest_point(flaeche, orte[nr])
-            schwer = trimesh.triangles.points_to_barycentric(flaeche.triangles[dreieck], nah)
-            uv = (o['uv_ecken'][dreieck] * schwer[..., None]).sum(axis=1)
+            uv, abstand = suche.uv(orte[nr])
             farbe[nr] = self.abtasten(uv[:, 0] * breite - 0.5, (1.0 - uv[:, 1]) * hoehe - 0.5)
             gefunden[nr] = abstand <= self.ABSTAND_MAX_M
         return farbe, gefunden

@@ -101,7 +101,7 @@ die Inhalte stehen in `kleidung.schrittvergleich.Kleidungsschritte`.
       {% for schluessel, titel in eigenstueck_kategorien %}<option value="{{ schluessel }}">{{ titel }}</option>{% endfor %}
     </select></label>
     <label>Farbe <input type="color" name="farbe" value="#8c9ccc"></label>
-    <label>Einheit <select name="einheit">
+    <label>Einheit <select name="einheit" data-reihenfolge="fest">
       <option value="auto">erkennen</option><option value="m">m</option><option value="dm">dm</option>
       <option value="cm">cm</option><option value="mm">mm</option>
     </select></label>

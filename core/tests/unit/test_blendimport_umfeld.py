@@ -12,11 +12,14 @@ ein Quadrat von 20 cm bei z = 0 (UV = Ort/20 cm, Kachel 1002), das „Original" 
 3. Liegt die Fläche des Originals weiter als `ABSTAND_MAX_M` hinter der Figur (anderes Körperteil), bleibt die Füllung.
 4. `texel` nimmt auch den Saum um eine Insel mit (Zugabe `RAND`), aber nicht mehr — dort lesen Filter und Mip-Stufen.
 5. Ohne Dreieck nahe am Stück (Kachel ohne Treffer) bleibt alles, wie es ist.
+6. Texel weit vom Original (anderes Körperteil) kosten keinen Weg zur Fläche; nahe Texel gehen durch die Flächensuche (`Hbdreiecksuche.uv`).
+7. Die Flächensuche liefert dieselbe UV und denselben Abstand wie `trimesh.proximity.closest_point` (10.10.2026: sie ersetzt ihn; am Kugelnetz 5,8× schneller).
 
 Sabotage-Gegenprobe: `RAND` = 0 → Fall 4 rot; `RADIUS_M` sehr groß → Fall 2 rot; `ABSTAND_MAX_M` sehr groß → Fall 3 rot; die Prüfung `gefunden`
-streichen → Fall 3 rot; die Kachelwahl `f['kachel'] == kachel` streichen → Fall 5 rot.
+streichen → Fall 3 rot; die Kachelwahl `f['kachel'] == kachel` streichen → Fall 5 rot; die Vorprüfung `nah_genug` streichen → Fall 6 rot;
+`Hbdreiecksuche.K` auf 1 → Fall 7 kann kippen.
 
-Nicht gelaufen (Stand 09.10.2026) — läuft nur auf Ansage.
+Nicht gelaufen (Stand 10.10.2026) — läuft nur auf Ansage.
 """
 
 from unittest import mock
@@ -111,14 +114,38 @@ class UmfeldTest(SimpleTestCase):
     def test_6_weit_entfernte_texel_kosten_keinen_weg_zur_flaeche(self):
         """Fallout ranger, Kachel 1003: 2,29 Mio. Texel im Umfeld, 1,32 Mio. davon ohne Original in Reichweite — der Weg zur Fläche für
         alle kostete Minuten im Import. Der nächste Eckpunkt entscheidet vorab."""
-        import trimesh
+        from core.dienste.hbdreiecksuche import Hbdreiecksuche
 
         for abstand_z, erwartet_aufrufe in ((-0.08, 0), (-0.003, 1)):
             umfeld, _ = self._umfeld(original_z=abstand_z)
             farbe, leer = self._kachel()
-            with mock.patch.object(trimesh.proximity, 'closest_point', wraps=trimesh.proximity.closest_point) as weg:
+            with mock.patch.object(Hbdreiecksuche, 'uv', autospec=True, side_effect=Hbdreiecksuche.uv) as weg:
                 umfeld.fuellen(self.KACHEL, farbe, leer)
             self.assertEqual(int(weg.call_count > 0), erwartet_aufrufe, 'Abstand %s' % abstand_z)
+
+    def test_7_die_flaechensuche_liefert_dieselbe_uv_und_denselben_abstand_wie_trimesh(self):
+        """Rosemary (10.10.2026), Kachel 1001: `trimesh.proximity.closest_point` brauchte je 200.000 Texel 2–3 Minuten; `Hbdreiecksuche`
+        rechnet dasselbe schneller. Gleiche Zahlen an einer verwackelten Kugel, Punkte 0–30 mm von der Fläche (gemessen mit 6.000 Punkten,
+        Unterteilung 5: größte Abstandsabweichung 0,001 mm, UV 3e-5; 0,259 gegen 0,045 ms je Punkt; mit den Werten dieses Tests 0,0004 mm / 1,7e-4)."""
+        import trimesh
+
+        from core.dienste.hbdreiecksuche import Hbdreiecksuche
+
+        rng = np.random.default_rng(3)
+        kugel = trimesh.creation.icosphere(subdivisions=4, radius=0.9)
+        punkte = kugel.vertices + rng.normal(scale=0.002, size=kugel.vertices.shape)
+        ecken = kugel.faces
+        v = punkte[ecken]
+        uv_ecken = np.stack([np.arctan2(v[..., 1], v[..., 0]) / (2 * np.pi) + 0.5, np.arcsin(np.clip(v[..., 2] / 0.9, -1, 1)) / np.pi + 0.5], axis=-1)
+        r = rng.normal(size=(500, 3))
+        orte = r / np.linalg.norm(r, axis=1, keepdims=True) * (0.9 + rng.uniform(-0.03, 0.03, size=(500, 1)))
+        flaeche = trimesh.Trimesh(punkte, ecken, process=False)
+        nah, abstand_alt, dreieck = trimesh.proximity.closest_point(flaeche, orte)
+        schwer = trimesh.triangles.points_to_barycentric(flaeche.triangles[dreieck], nah)
+        uv_alt = (uv_ecken[dreieck] * schwer[..., None]).sum(axis=1)
+        uv_neu, abstand_neu = Hbdreiecksuche(punkte, ecken, uv_ecken).uv(orte)
+        self.assertLess(float(np.abs(abstand_neu - abstand_alt).max()), 5e-5)           # 0,05 mm
+        self.assertLess(float(np.abs(uv_neu - uv_alt).max()), 1e-3)
 
     def test_5_eine_kachel_ohne_dreieck_im_umfeld_aendert_nichts(self):
         umfeld, _ = self._umfeld(kachel=1001)

@@ -1,3 +1,4 @@
+import { Figurwahlimporte } from './figurwahlimporte.js';
 import { Serverabruf } from './serverabruf.js';
 
 /**
@@ -12,7 +13,9 @@ import { Serverabruf } from './serverabruf.js';
  * gewählte Figur in seine Bühne stellt, sagt der Dialog selbst (`lader`).
  *
  * Jede Zeile hat `name` (Schlüssel für den Lader), `anzeige` und eine
- * `unterzeile` — die Texte sind die der Szene-Seite.
+ * `unterzeile`. Die Modellzeilen lassen sie leer (Edgar, 10.10.2026: „entferne den Gaga text
+ * unter den Modellnamen" — „gespeichert · 329 Regler · 9 Stücke", Punktzahlen, MB, Datum);
+ * gefüllt ist sie nur bei den abgebrochenen Importen (`Figurwahlimporte`: der Grund steht dort).
  */
 export class Figurkataloge {
 
@@ -59,12 +62,21 @@ export class Figurkataloge {
                     pflege: true },
     };
 
-    /** Die Zeilen einer Quelle: [{name, anzeige, unterzeile}]. */
+    /**
+     * Die Zeilen einer Quelle: [{name, anzeige, unterzeile}] — bei Genesis 9 dazu die abgebrochenen Blender-Importe (10.10.2026), mit
+     * Warnzeichen: sie haben kein Modell und wären sonst nicht zu finden. Beides kommt erst, wenn beides da ist; wer nicht auf die
+     * Importe warten will (der Figurwahl-Dialog), nimmt `modelle` und `Figurwahlimporte.zeilen` einzeln (`Figurwahlfuellung`).
+     */
     static async liste(quelle) {
+        const [modelle, verwaiste] = await Promise.all([Figurkataloge.modelle(quelle), Figurwahlimporte.zeilen(quelle)]);
+        return [...modelle, ...verwaiste];
+    }
+
+    /** Nur die Modelle einer Quelle — eine Abfrage an den Katalog, ohne die Importe (die brauchen deutlich länger). */
+    static async modelle(quelle) {
         const angaben = Figurkataloge.QUELLEN[quelle];
         if (!angaben) throw new Error(`Unbekannte Figurart: ${quelle}`);
-        const daten = await Serverabruf.json(angaben.adresse);
-        return Figurkataloge.zeilen(quelle, daten);
+        return Figurkataloge.zeilen(quelle, await Serverabruf.json(angaben.adresse));
     }
 
     /** Aus der Serverantwort die Zeilen — getrennt, damit es prüfbar ist. */
@@ -80,7 +92,7 @@ export class Figurkataloge {
         modell: (daten) => [
             ...(daten.koerpertypen || []).map(k => ({
                 name: k.name, anzeige: k.anzeige || k.name,
-                unterzeile: `${k.geschlecht} · Körpertyp (MB-Lab), ohne Morphs`,
+                unterzeile: '',
                 bereich: 'standard',
             })),
             ...(daten.presets || [])
@@ -93,7 +105,7 @@ export class Figurkataloge {
         uma: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,
             anzeige: String(f.name).replace(/\.glb$/i, ''),
-            unterzeile: `${f.geschlecht} · ${(f.bytes / 1048576).toFixed(1)} MB · ${f.stand}`,
+            unterzeile: '',
             bereich: 'gespeichert',
         })),
         // `gespeichert` (25.09.2026): eine ueber „Modell speichern" abgelegte
@@ -102,38 +114,33 @@ export class Figurkataloge {
         smpl: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,
             anzeige: f.anzeige || f.name,
-            unterzeile: f.gespeichert
-                ? `${f.geschlecht} · gespeicherte Figur`
-                : `${f.geschlecht} · ${f.smpl ? 'SMPL-X' : 'GarmentCode-Modell'} · `
-                    + (f.masse_vorhanden ? 'Maße vorgegeben' : 'ohne Maße'),
+            unterzeile: '',
             bereich: f.gespeichert ? 'gespeichert' : 'standard',
             gespeichert: Boolean(f.gespeichert),
         })),
         makehuman: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,
             anzeige: f.anzeige || f.name,
-            unterzeile: `${Number(f.punkte || 0).toLocaleString()} Punkte · `
-                + `${(Number(f.hoehe || 0) * 100).toFixed(1)} cm · `
-                + 'Kleidung sitzt ohne Nacharbeit',
+            unterzeile: '',
             bereich: 'standard',
         })),
         umapython: (daten) => (daten.rassen || []).map(name => ({
             name,
             anzeige: name,
-            unterzeile: 'UMA-Rasse, in Python gebaut — ohne Unity',
+            unterzeile: '',
             bereich: 'standard',
         })),
         genesis9: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,
             anzeige: f.anzeige || f.name,
-            unterzeile: f.gespeichert
-                ? `gespeichert · ${Object.keys(f.regler || {}).length} Regler · `
-                    + `${Object.keys(f.kleidung || {}).length} Stücke`
-                : `${f.geschlecht} · `
-                    + `${Number(daten.punkte?.punkte || 0).toLocaleString()} Punkte · `
-                    + `${Object.keys(f.regler || {}).length} Regler gesetzt`,
+            // Passt die Figur eines Imports nicht zum Körper (`befund`, `Blendimportplausibel`, 10.10.2026): rotes Zeichen, der Grund steht
+            // in der Unterzeile — das Modell bleibt wählbar.
+            unterzeile: (f.befund || []).join(' · '),
+            warnung: (f.befund || []).length ? f.befund.join(' · ') : null,
             bereich: f.gespeichert ? 'gespeichert' : 'standard',
             gespeichert: Boolean(f.gespeichert),
+            // Aus einem Blender-Import (`herkunft.import`, `Blendimportmodell`): der Dialog bietet „Import löschen …".
+            importKennung: f.herkunft?.import ? String(f.herkunft.import) : null,
         })),
     };
 }

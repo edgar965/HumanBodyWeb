@@ -8,8 +8,8 @@ Mit 20 Durchgängen und höchstens 4 mm Weg: 1.013°, zwei Ecken über 60°.
 Kunstwelt: Haut = Ebene y = 0 (Normalen nach oben), Ring = Kreis aus 48 Ecken, Radius 30 mm, jede zweite Ecke 2 mm nach außen gezogen
 (Zickzack); als Dreiecke eine Scheibe über dem Ring (Mitte + Ring), damit das Umklappen geprüft werden kann.
 
-1. `glaetten`: der Zickzack ist kleiner (der Abstand der Ecken vom Kreis sinkt), keine Ecke wandert weiter als `MAX_MM`, die Ebene wird
-   nicht verlassen (y bleibt 0).
+1. `glaetten`: der Zickzack ist kleiner (die Spanne der Radien sinkt auf unter die Hälfte; gemessen 2,0 → 0,0 mm), keine Ecke wandert weiter als
+   `MAX_MM`, die Ebene wird nicht verlassen (y bleibt 0).
 2. `glaetten` verändert die Eingabe nicht; ein glatter Kreis bleibt rund (er schrumpft gleichmäßig, wie jede Laplace-Glättung, höchstens
    um `MAX_MM`).
 3. `ziehen`: gibt die Verschiebung ALLER Punkte auf dem Ring zurück (auch Doppelgänger an UV-Nähten), mit `d` je Punkt; wo ein Dreieck
@@ -37,15 +37,17 @@ class SchamringTest(SimpleTestCase):
         return np.stack([radius * np.cos(winkel), np.zeros(self.K), radius * np.sin(winkel)], axis=1)
 
     @staticmethod
-    def _kreisabweichung(lage, mittel):
+    def _zacken(lage):
+        """Die Spanne der Radien (größter − kleinster): wie gezackt der Ring ist. Nicht die Abweichung von einem festen Radius — jede
+        Laplace-Glättung lässt einen Kreis schrumpfen (hier 30 → 28,45 mm; gemessen 10.10.2026, `scham_ring_probe.py`), das ist keine Zacke."""
         r = np.linalg.norm(lage[:, [0, 2]], axis=1)
-        return float(np.abs(r - mittel).max())
+        return float(r.max() - r.min())
 
     def test_1_der_zickzack_wird_kleiner_und_bleibt_in_der_ebene(self):
         lage = self._zickzack()
         normalen = np.tile([0.0, 1.0, 0.0], (self.K, 1))
         glatt = Blendimportschamring.glaetten(lage, normalen)
-        self.assertLess(self._kreisabweichung(glatt, self.RADIUS + 0.001), 0.5 * self._kreisabweichung(lage, self.RADIUS + 0.001))
+        self.assertLess(self._zacken(glatt), 0.5 * self._zacken(lage))
         weg = np.linalg.norm(glatt - lage, axis=1)
         self.assertLessEqual(float(weg.max()), Blendimportschamring.MAX_MM / 1000.0 + 1e-12)
         self.assertTrue(np.allclose(glatt[:, 1], 0.0))

@@ -122,6 +122,8 @@ export class Szenenschleife extends Zeichenschleife {
         // HumanBody-Kleidung an die Körperoberfläche binden (24.09.2026) — einmal je
         // Stück und Körpernetz, danach nur ein Blick in eine WeakMap.
         Humanbodybindung.takt(state.characters.values());
+        // Der Stoffschwung auf die Pose, in der gezeichnet wird (nach Bodenfix und Weichgewebe) — sonst steckt das Bein im Rock.
+        Genesis9stoffschwung.nachfuehren();
         // Mit Aura um Auswahl und Hover (25.09.2026, `auswahlaura.js`) — ohne Ziel direkt.
         Auswahlaura.rendern(state.renderer, state.scene, state.camera, ...Auswahlziele.jetzt());
         this.kameraanzeige();

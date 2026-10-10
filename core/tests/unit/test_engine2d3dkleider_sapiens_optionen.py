@@ -129,7 +129,8 @@ class DieGewichte(SimpleTestCase):
         from sapiens_gewichte import Sapiensgewichte
         for groesse in ('0.3b', '0.6b'):
             self.assertTrue(Sapiensgewichte.pfad('H', groesse).endswith(Sapiensgewichte.eintrag(groesse)[1]))
-        self.assertEqual({g: len(Sapiensgewichte.eintrag(g)[3]) for g in Sapiensgewichte.GROESSEN}, {'0.3b': 64, '0.6b': 64, '1b': 64})        # SHA-256
+        self.assertEqual({g: len(Sapiensgewichte.eintrag(g)[3]) for g in Sapiensgewichte.GROESSEN},
+                         {'0.3b': 64, '0.6b': 64, '1b': 64, 'sapiens2-0.4b': 64, 'sapiens2-0.8b': 64})        # SHA-256 (Sapiens2 seit 09.10.2026)
         with self.assertRaises(ValueError):
             Sapiensgewichte.eintrag('9b')
 

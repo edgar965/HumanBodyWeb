@@ -18,10 +18,12 @@ export class Genesis9Figur extends Genesis9Modell {
             regler: { ...(this.regler || {}) },
             haut: this.haut,
             augen: this.augen,
+            augen_gewaehlt: !!this._augenGewaehlt,   // ausdrückliche Augenwahl: gilt vor Fotokachel und Ersatz-Augen (09.10.2026)
             brauen: this.brauen,
             brauenstil: this.brauenstil,
             praesets: { ...this.praesets },
             hautmischung: { ...this.hautmischung },
+            teilmaterial: { ...this.teilmaterial },   // Glanz, Rauheit … je Teil (`Genesis9teilmaterial`, 09.10.2026)
             pose: this.pose,
             ausdruck: this.ausdruck,
             kleidung: { ...this.kleidung },

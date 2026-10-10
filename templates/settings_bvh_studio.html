@@ -121,7 +121,7 @@
     </div>
     <div class="settings-row">
         <label>Cloth-Qualit&auml;t:</label>
-        <select name="studio_cloth_quality" id="studio_cloth_quality">
+        <select name="studio_cloth_quality" id="studio_cloth_quality" data-reihenfolge="fest">
             <option value="low"
                  {% if prefs.studio_cloth_quality == 'low' %}selected{% endif %}>Niedrig (schnell)</option>
             <option value="medium"
@@ -147,7 +147,7 @@
     <h3>Export</h3>
     <div class="settings-row">
         <label>Video-Aufl&ouml;sung:</label>
-        <select name="studio_export_resolution" id="studio_export_resolution">
+        <select name="studio_export_resolution" id="studio_export_resolution" data-reihenfolge="fest">
             <option value="720" {% if prefs.studio_export_resolution == '720' %}selected{% endif %}>720p</option>
             <option value="1080"
                  {% if prefs.studio_export_resolution|default:'1080' == '1080' %}selected{% endif %}>1080p</option>

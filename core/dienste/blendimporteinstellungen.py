@@ -29,6 +29,8 @@ __all__ = ['Blendimporteinstellungen']
 
 
 class Blendimporteinstellungen:
+    #: OBJ und FBX (`Fremdimporteinstellungen`) erben die Methoden und ersetzen nur diese drei.
+    FORMAT = 'blend'
     DATEI = 'einstellungen.json'
 
     KATALOG = [
@@ -95,6 +97,17 @@ class Blendimporteinstellungen:
                    ('neutral', 'Genesis 9 (neutral)')]},
         {'schluessel': 'stuecke', 'titel': 'Kleider und Haar', 'art': 'wahl', 'vorgabe': 'an',
          'werte': [('an', 'Als eigene Stücke in die Genesis-Bibliothek'), ('aus', 'Nur die Figur')]},
+        {'schluessel': 'koerper_ergaenzen', 'titel': 'Körper unter Kleidung ergänzen', 'art': 'haken', 'vorgabe': 'an',
+         'werte': [('an', 'Ja'), ('aus', 'Nein')],
+         'hinweis': 'Reicht der Körper nicht bis zu den Füßen (Rosemary Winters: Strumpf-Netz über den Beinen), nimmt „Mesh to 3D" die '
+                    'Form des Kleidungsstücks darunter (3 mm nach innen) als Körper. Die Haut kommt aus der Genesis-9-Standardhaut, '
+                    'nie aus dem Stoff; die Haut der .blend bleibt unverändert.'},
+        {'schluessel': 'unvollstaendig', 'titel': 'Unvollständiger Körper', 'art': 'wahl', 'vorgabe': 'anhalten',
+         'werte': [('anhalten', 'Import nach dem Lesen anhalten und melden'), ('weiter', 'Trotzdem importieren')],
+         'hinweis': 'Reicht das Körper-Netz nur über weniger als 70 % der Figurhöhe (Rosemary Winters: Kopf bis Mitte Oberschenkel, 48 %; '
+                    'sonst 93–100 %), hält der Import nach 5 Sekunden an und sagt, was fehlt — „Mesh to 3D" passt eine ganze Figur an, '
+                    'und ein Torso ergäbe nach Stunden eine Figur, die nicht zum Körper passt. „Trotzdem importieren" nur für eine '
+                    'Büste oder einen Teilkörper, den du so willst.'},
     ]
 
     @classmethod
@@ -149,7 +162,7 @@ class Blendimporteinstellungen:
         optionen = []
         for e in cls.KATALOG:
             feld = {k: v for k, v in e.items() if k != 'werte'}
-            if e['art'] == 'wahl':
+            if e['art'] in ('wahl', 'haken'):
                 feld['werte'] = [{'wert': w, 'text': t} for w, t in e['werte']]
             optionen.append(feld)
-        return {'optionen': optionen, 'werte': cls.laden()}
+        return {'format': cls.FORMAT, 'optionen': optionen, 'werte': cls.laden()}

@@ -54,6 +54,8 @@ export class Szenenaufbau {
     static DEMO_NAME = 'Catwalk Idle 02';
     /** Erst nach dieser Zeit wird Vorgabekleidung angezogen — nach dem Start. */
     static KLEIDUNG_VERZOEGERUNG_MS = 3000;
+    /** Die zuletzt geladene Animation beim Öffnen der Seite laden? Aus seit 10.10.2026 (Edgar). */
+    static LETZTE_ANIMATION_BEIM_START = false;
 
     async starten() {
         // JEDER SCHRITT EINZELN GEMESSEN (10.09.2026, Edgar: „mehr als 10 s
@@ -181,6 +183,9 @@ export class Szenenaufbau {
      * umbenannte BVH soll die Szene nicht bei jedem Start erneut aufhalten.
      */
     async _letzteAnimation(hatSitzung) {
+        // Aus (Edgar, 10.10.2026: „beim Start von Charakter wird die Animation neuerdings automatisch gestartet, schalte das ab").
+        // Die letzte Animation bleibt in `Letztewahl` gemerkt; sie wird nur nicht mehr beim Öffnen geladen.
+        if (!Szenenaufbau.LETZTE_ANIMATION_BEIM_START) return;
         if (hatSitzung || !state.characters.size) return;
         const url = Letztewahl.animation();
         if (!url) return;

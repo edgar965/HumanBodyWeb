@@ -35,8 +35,11 @@ class Blendimportlage:
     #: (Edgar, 08.10.2026: „Nägel färben sich nicht, wenn ich die über Genesis setze").
     NICHT_GEBACKEN = (1005,)
 
-    def __init__(self, job, zusatz=None):
+    def __init__(self, job, zusatz=None, finger=True):
+        """`finger`: den Käfig der Haltung mit der Fingerhaltung des Originals rechnen (`Blendimportfinger`, wenn der Auftrag sie führt) — nur
+        der Schritt „finger" selbst fragt ohne sie (er beginnt bei der gestreckten Hand)."""
         from ..daten.meshfigurablage import Meshfigurablage
+        from .blendimportfinger import Blendimportfinger
 
         self.job = job
         #: Weitere Regler der Stellung (die Nachformung der Scham, `Blendimportnachformung.zusatzregler`) — `{eigen:…: 1.0}`.
@@ -48,6 +51,16 @@ class Blendimportlage:
             self.kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
             self.teil = np.asarray(d['teil'])
         self.kaefig_posiert = np.load(self.ablage.arbeit('posiert.npy')).astype(np.float64)
+        #: Fingerhaltung der Hände im Original (10.10.2026): die Käfigpunkte, die sie bewegt (mehr als 1 mm), und ihre Winkel `{knochen: {kanal: Grad}}`.
+        #: Die Ruhelage bleibt die gestreckte Hand; `kaefig_posiert` trägt die Finger, wie das Original sie hält — das Entposen führt sie zurück.
+        self.finger_bewegt = np.zeros(len(self.kaefig_posiert), dtype=bool)
+        self.finger_drehung = {}
+        korrektur = Blendimportfinger.kaefig(self.ablage) if finger else None
+        if korrektur is not None and len(self.kaefig_posiert) > int(korrektur[0].max(initial=-1)):
+            idx, delta = korrektur
+            self.kaefig_posiert[idx] += delta
+            self.finger_bewegt[idx] = np.linalg.norm(delta, axis=1) > 0.001
+            self.finger_drehung = Blendimportfinger.haltung(self.ablage)
         self._entposen = None
         self._kaefig_normalen = None
         self._h = None

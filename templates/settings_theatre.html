@@ -61,7 +61,7 @@
                 <small>Höhere Auflösungen benötigen mehr GPU-Speicher.</small>
             </div>
             <div class="settings-input">
-                <select name="theatre_video_resolution" class="settings-select">
+                <select name="theatre_video_resolution" class="settings-select" data-reihenfolge="fest">
                     <option value="720p"
                          {% if settings.theatre_video_resolution == '720p' %}selected{% endif %}>720p (1280 x
                               720)</option>
@@ -100,7 +100,7 @@
                 <small>Bitrate für das aufgenommene Video.</small>
             </div>
             <div class="settings-input">
-                <select name="theatre_video_quality" class="settings-select">
+                <select name="theatre_video_quality" class="settings-select" data-reihenfolge="fest">
                     <option value="low"
                          {% if settings.theatre_video_quality == 'low' %}selected{% endif %}>Niedrig (2 Mbps)</option>
                     <option value="medium"

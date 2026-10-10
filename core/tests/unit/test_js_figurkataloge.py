@@ -36,46 +36,43 @@ pruefe('modell', Figurkataloge.zeilen('modell', {
        [['Female_Anime', 'Female Anime', 'standard'],
         ['Female1', 'Female 1', 'gespeichert'], ['Rig', 'Rig', 'gespeichert']]);
 
-// --- UMA: Endung weg, Groesse in MB -----------------------------------------
+// Die Modellzeilen tragen KEINE Unterzeile (Edgar, 10.10.2026: „entferne den Gaga text unter den
+// Modellnamen" — Regler- und Stueckzahlen, Punkte, MB, Datum); gefuellt ist sie nur bei den
+// abgebrochenen Importen (`Figurwahlimporte`, test_js_figurwahlimporte).
+
+// --- UMA: Endung weg ----------------------------------------------------------
 pruefe('uma', Figurkataloge.zeilen('uma', {
     figuren: [{ name: 'Elf.glb', geschlecht: 'weiblich', bytes: 2621440, stand: '08.09.' }],
-}), [{ name: 'Elf.glb', anzeige: 'Elf', unterzeile: 'weiblich · 2.5 MB · 08.09.',
-       bereich: 'gespeichert' }]);
+}), [{ name: 'Elf.glb', anzeige: 'Elf', unterzeile: '', bereich: 'gespeichert' }]);
 
-// --- SMPL: Masse ja/nein; eine gespeicherte Figur im zweiten Bereich (25.09.2026)
+// --- SMPL: Standard und eine gespeicherte Figur im zweiten Bereich (25.09.2026) -
 pruefe('smpl', Figurkataloge.zeilen('smpl', {
     figuren: [{ name: 'mean_all', geschlecht: 'neutral', smpl: true, masse_vorhanden: true },
               { name: 'f_body', anzeige: 'Frau', geschlecht: 'weiblich', smpl: false },
               { name: 'Olga', geschlecht: 'weiblich', gespeichert: true }],
-}), [{ name: 'mean_all', anzeige: 'mean_all', unterzeile: 'neutral · SMPL-X · Maße vorgegeben',
-       bereich: 'standard', gespeichert: false },
-     { name: 'f_body', anzeige: 'Frau', unterzeile: 'weiblich · GarmentCode-Modell · ohne Maße',
-       bereich: 'standard', gespeichert: false },
-     { name: 'Olga', anzeige: 'Olga', unterzeile: 'weiblich · gespeicherte Figur',
-       bereich: 'gespeichert', gespeichert: true }]);
+}), [{ name: 'mean_all', anzeige: 'mean_all', unterzeile: '', bereich: 'standard', gespeichert: false },
+     { name: 'f_body', anzeige: 'Frau', unterzeile: '', bereich: 'standard', gespeichert: false },
+     { name: 'Olga', anzeige: 'Olga', unterzeile: '', bereich: 'gespeichert', gespeichert: true }]);
 
-// --- MakeHuman: Punkte und Hoehe in cm --------------------------------------
+// --- MakeHuman ------------------------------------------------------------------
 pruefe('makehuman', Figurkataloge.zeilen('makehuman', {
     figuren: [{ name: 'base', punkte: 13380, hoehe: 1.7 }],
-}).map(z => z.unterzeile.startsWith('13') && z.unterzeile.includes('170.0 cm')), [true]);
+}).map(z => [z.name, z.unterzeile]), [['base', '']]);
 
 // --- UMA Python: Rassennamen -----------------------------------------------
 pruefe('umapython', Figurkataloge.zeilen('umapython', { rassen: ['Human Male 3.0'] })
        .map(z => [z.name, z.anzeige]), [['Human Male 3.0', 'Human Male 3.0']]);
 
-// --- Genesis 9 (17.09.2026): Geschlecht, Punktzahl des Netzes, gesetzte Regler;
-// ein gespeichertes Modell (`gespeichert: true`) in den zweiten Bereich -----
+// --- Genesis 9 (17.09.2026): ein gespeichertes Modell (`gespeichert: true`) in den zweiten
+// Bereich; keine „gespeichert · 329 Regler · 9 Stücke"-Zeile mehr (10.10.2026) -----------
 pruefe('genesis9', Figurkataloge.zeilen('genesis9', {
     figuren: [{ name: 'amala', anzeige: 'Amala', geschlecht: 'weiblich',
                 regler: { Amala_figure_ctrl_Character: 1, body_bs_Navel_HD3: 1 } },
               { name: 'Meine', geschlecht: 'weiblich', regler: { a: 1 },
                 kleidung: { g9_base_bikini: {} }, gespeichert: true }],
     punkte: { punkte: 25182 },
-}).map(z => [z.name, z.anzeige, z.bereich,
-             z.unterzeile.includes('25') && z.unterzeile.endsWith('2 Regler gesetzt'),
-             z.unterzeile]),
-       [['amala', 'Amala', 'standard', true, 'weiblich · 25.182 Punkte · 2 Regler gesetzt'],
-        ['Meine', 'Meine', 'gespeichert', false, 'gespeichert · 1 Regler · 1 Stücke']]);
+}).map(z => [z.name, z.anzeige, z.bereich, z.unterzeile]),
+       [['amala', 'Amala', 'standard', ''], ['Meine', 'Meine', 'gespeichert', '']]);
 
 // --- Pflege (Umbenennen, Löschen) nur, wo Dateien liegen: HumanBody, UMA
 // und seit dem 20.09.2026 Genesis 9 (gespeicherte Modelle, `data/models/`) ---

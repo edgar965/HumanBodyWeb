@@ -1,0 +1,25 @@
+Quelle: https://github.com/blender/blender, Tag v5.2.2 (Commit d13f752e3b9c, der Build von Blender 5.2.2 LTS dieses Projekts).
+Unverändert übernommen; Lizenz je Datei im SPDX-Kopf (Apache-2.0). Geladen von https://raw.githubusercontent.com/blender/blender/v5.2.2/
+
+cbaab6248ddd571de5ce41482d580c769c6b4316566bdc05cb17a38a38962b66      4806  intern/cycles/util/defines.h
+f375b0f91dabdbf3e9fbedaa7bff767988e60d05d7c3ad01dfa486948dbeebd0     22914  intern/cycles/util/math_base.h
+99d667df6ba2de5c42b09cb26497062cf6b0dc047e0c75e2adb4965910a558ff     21547  intern/cycles/util/math_float3.h
+1f017e74acbdb065213364d4ac24f5524a4bbfd7d741036924f5c44dd465b3f9     16848  intern/cycles/util/math_float4.h
+c91872cdccdd38918ee6274ef633197752b5a899be4d851d99ef33beae5979b8      7229  intern/cycles/util/math_int4.h
+f93d17eadbfbecf2d6b4b37d5f36e1b9a6486b91418c3062efb4a5fc7a7bbf6e      1108  intern/cycles/util/optimization.h
+29a3b99af2656c5d25dd5a45d05e58c487b305784fecc5342243a741288052cb     12329  intern/cycles/util/simd.h
+9cf2d881accbde5a11b1f5359a3abcdc8ef4ac2d8bfb829533ce295ec4c2e2a2      2655  intern/cycles/util/types_base.h
+df3ab1124d9fa76e3262684179d2bbc9638d897fef0cf458ab3554829cacb74f      1431  intern/cycles/util/types_float2.h
+554f13ec0e60631b8858a1d1cc9bcd7f74d6011fb5f2afa6ea019c7303d6d369      4351  intern/cycles/util/types_float3.h
+b0e1167fdd33ba571637cd97d9552c215b068e18938b4e9f89ea4cbbbd06dd7d      3659  intern/cycles/util/types_float4.h
+282936350f4380d68749d41c3feb264c8d5d98078a8f791f0c99da8ea92b662c       738  intern/cycles/util/types_int2.h
+d6687ff22fa25f3e93c082dbd7799c7023b9d18611dfbab6f0ffc1e5fd421de6      3226  intern/cycles/util/types_int3.h
+92be785482e2b76b69d9077e0b0643bd718414f6c60660cee6b8896b013a4f7e      1710  intern/cycles/util/types_int4.h
+d6a9dcee0eb501893f93012cf42d9026b207baa9d3fc978ac26693da300eac82      2965  intern/cycles/util/types_normal.h
+9a2d48c882274596565b806d7ddbce3548d127ba4a49ce68ef2af0a4b6ed37d2      1924  intern/cycles/util/types_uint3.h
+0b7ad995a9be18057c3d83bf3e9918c90a7d32f109f84e8ceef620dcc924b05e       403  intern/cycles/util/windows.h
+295d4e37ac1980e1f811c340f618ffa68fc10bf906b34bc93a64c6960351bdfc       156  intern/mikktspace/README.md
+8da952d4433c90160940e77e57f44b2234b66b96f68ceeaa5932b77e9540f18b      5702  intern/mikktspace/mikk_atomic_hash_set.hh
+2b314080f18abed0ab714b1b868793cfd4b055fb2e970cee8d71289ba76a692a      2315  intern/mikktspace/mikk_float3.hh
+49c6c1a3ea1ab5f1b2ded452dea180a4dbdc030d2210e804106bf1c779a51585      4384  intern/mikktspace/mikk_util.hh
+6a196ad4b95b358bbd35add358a81a0ff1aab9828b38469072f0f6409e31d907     26301  intern/mikktspace/mikktspace.hh

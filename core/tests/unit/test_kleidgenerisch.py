@@ -9,6 +9,7 @@ Liste hängt daran, was auf dem Rechner installiert ist (und die Vorgabe je Eint
 import unittest
 from unittest import mock
 
+from Genesis9.dazkategorien import G9dazkategorien
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
 from Genesis9.kleidgenerisch import G9kleidgenerisch
@@ -315,8 +316,9 @@ class GruppenTest(unittest.TestCase):
         stand = {'kategorien': ['Kleider', 'Schuhe', 'Fantasy'], 'zuordnung': zuordnung}
         with mock.patch.object(G9garderobe, 'liste', classmethod(lambda cls: self.LISTE)), \
                 mock.patch.object(G9garderobekategorien, 'laden', classmethod(lambda cls: stand)), \
+                mock.patch.object(G9dazkategorien, 'tabelle', classmethod(lambda cls: {})), \
                 mock.patch.object(G9garderobekategorien, 'vorgabe',
-                                  classmethod(lambda cls, e: self.VORGABEN[e['id']])), \
+                                  classmethod(lambda cls, e, tabelle=None: self.VORGABEN[e['id']])), \
                 mock.patch.object(G9kleidgenerisch, '_vorgaben_stand', (None, {})):
             return [(k, [e['id'] for e in stuecke]) for k, stuecke in G9kleidgenerisch.gruppen()]
 

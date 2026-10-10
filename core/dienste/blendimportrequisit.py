@@ -24,9 +24,15 @@ __all__ = ['Blendimportrequisit']
 
 class Blendimportrequisit:
     FREI_H = 3.0
-    FREI_ANTEIL = 0.9
+    #: 0,9 → 0,75 (10.10.2026): das Katana von Rosemary Winters (115 cm, Griff dicht vernetzt IN der Hand) hat 19 % seiner Punkte näher als 3 h am Käfig
+    #: (frei 0,812, Median 16,0 h) und lief darum als Kleid durch die Käfig-Nachbarschaft — Klinge am Oberschenkel mitgezogen, Kanten 3,1 % gedehnt.
+    #: Gemessen an acht Importen (`ProjektTemp/_wegwerf/requisit_kalibrierung.py`): außer dem Katana liegt kein gesundes Stück (Rolle nicht Haar) mit
+    #: Median ≥ 8 h unter 0,9 frei; die größten Kleider (Mantel 4,9 h, Rüstung, Seil 5,2 h, Hemd 6,0 h) bleiben weit unter 8 h.
+    FREI_ANTEIL = 0.75
     ABSTAND_H = 8.0
     NAH_ANTEIL = 0.02
+    #: Mindestzahl Käfigpunkte des Handtellers für die Starrkörperbewegung (sonst alle Punkte des Teils).
+    HANDTELLER_MIN = 100
 
     def __init__(self, lage):
         self.lage = lage
@@ -59,6 +65,11 @@ class Blendimportrequisit:
         """`(Punkte in der Ruhelage, Rundlauf des Teils in mm RMS)` — Starrkörperbewegung des Käfigteils (ohne Maßstab)."""
         lage = self.lage
         teil = lage.teil == nummer
+        # Ohne die Punkte, die die Fingerhaltung bewegt (`Blendimportfinger`): Handteller und Handgelenk sind starr, die gebeugten Finger nicht —
+        # sie bogen die Starrkörperbewegung der Hand (Käfig der Haltung mit Faust, Ruhe mit gestreckter Hand).
+        handteller = teil & ~lage.finger_bewegt
+        if handteller.sum() >= self.HANDTELLER_MIN:
+            teil = handteller
         a, b = lage.kaefig_posiert[teil], lage.kaefig_ruhe[teil]
         ma, mb = a.mean(axis=0), b.mean(axis=0)
         u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))

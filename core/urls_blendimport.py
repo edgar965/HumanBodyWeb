@@ -7,10 +7,19 @@ Endpunkte: `core/api/blendimport.py`. Wie `urls_meshfigur.py` erst NACH `registe
 from django.urls import path
 
 from .api.blendimport import Blendimportendpunkte
+from .api.blendimportpflege import Blendimportpflegeendpunkte
 
 __all__ = ['BLENDIMPORT']
 
 BLENDIMPORT = [
+    # Löschen, Abbrechen, verwaiste Importe (10.10.2026, `core/api/blendimportpflege.py`)
+    path('api/character/blendimport/verwaist/', Blendimportpflegeendpunkte.verwaist, name='blendimport_verwaist'),
+    path('api/character/blendimport/verwaist/loeschen/', Blendimportpflegeendpunkte.verwaiste_loeschen,
+         name='blendimport_verwaiste_loeschen'),
+    path('api/character/blendimport/<kennung:kennung>/loeschplan/', Blendimportpflegeendpunkte.loeschplan,
+         name='blendimport_loeschplan'),
+    path('api/character/blendimport/<kennung:kennung>/loeschen/', Blendimportpflegeendpunkte.loeschen,
+         name='blendimport_loeschen'),
     path('api/character/blendimport/einstellungen/', Blendimportendpunkte.einstellungen,
          name='blendimport_einstellungen'),
     path('api/character/blendimport/pruefen/', Blendimportendpunkte.pruefen, name='blendimport_pruefen'),

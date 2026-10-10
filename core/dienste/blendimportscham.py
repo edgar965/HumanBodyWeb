@@ -38,7 +38,10 @@ import numpy as np
 from .blendimportatlas import Blendimportatlas
 from .blendimportnachformung import Blendimportnachformung
 from .blendimportschamgeograft import Blendimportschamgeograft
+from .blendimportschamhoehe import Blendimportschamhoehe
+from .blendimportschamregister import Blendimportschamregister
 from .blendimportschamschnitt import Blendimportschamschnitt
+from .blendimportschamtiefe import Blendimportschamtiefe
 
 logger = logging.getLogger('core')
 
@@ -77,6 +80,11 @@ class Blendimportscham:
     SCHRITT_HOEHE = 0.03
     SCHRITTE_MAX = 4
     GRENZ_BAND_M = 0.012
+    #: Nur Saatpunkte, die so weit (mm) vor der Figurfläche liegen, lassen den Kasten wachsen (`saat`) — Hoden und Penis stehen 25 mm und mehr
+    #: davor, Schenkelhaut neben einer anders angepassten Figur nur 5–15 mm.
+    WACHS_MM = 20.0
+    #: So weit (mm, bei 1,75 m Körperhöhe) unter dem tiefsten Kernpunkt endet die Saat (`begrenzen`) — nur bei einem Anbau (Kern ab `KERN_MM`).
+    UNTER_MM = 8.0
     #: Bilder des Originals, die in den Atlas gehen: Schlüssel im Inventar → (Dateiendung, Modus, Qualität).
     BILDER = {'farbe': ('.jpg', 'RGB', 92), 'normalen': ('.png', 'RGB', None), 'rauheit': ('.png', 'L', None)}
 
@@ -93,6 +101,8 @@ class Blendimportscham:
         #: Abstand (mm) jedes Originalpunkts zur Figurfläche im letzten Kasten und die seitliche Breite der Saat (`begrenzen`).
         self.abstand = None
         self.saat_breite_mm = None
+        #: Trägt die Saat einen Anbau (Kern ab `KERN_MM`, mindestens `KERN_MIN` Punkte) — `begrenzen`; die Naht darf dann weiter vom Ring liegen.
+        self.anbau = False
 
     def waehle_material(self, slot):
         """Der Eintrag des Materials `slot` (über die Liste hinaus: das letzte); er gilt danach als `self.material`."""
@@ -132,7 +142,10 @@ class Blendimportscham:
         for _ in range(self.SCHRITTE_MAX + 1):
             saat = self.saat_im_kasten(ruhe, flaeche, sohle, hoehe, unten, oben)
             self.kastenhoehe = (round(unten, 3), round(oben, 3))
-            y = ruhe[saat][:, 1]
+            # Wachsen darf der Kasten nur wegen eines ANBAUS (Abweichung ab `WACHS_MM`), nicht wegen jeder Saat: Bei der BodyParts3D-Haut
+            # (10.10.2026) lagen die Innenschenkel 5–15 mm neben der Figur, der Kasten wuchs viermal nach unten (0,44 → 0,32), und das Stück
+            # bekam zwei „Vorhänge" aus Schenkelhaut neben den Hoden.
+            y = ruhe[saat & (self.abstand >= self.WACHS_MM)][:, 1]
             weiter_unten = bool(len(y)) and float(y.min()) < sohle + unten * hoehe + self.GRENZ_BAND_M
             weiter_oben = bool(len(y)) and float(y.max()) > sohle + oben * hoehe - self.GRENZ_BAND_M
             if not (weiter_unten or weiter_oben):
@@ -142,12 +155,11 @@ class Blendimportscham:
         return self.begrenzen(ruhe, saat, hoehe)
 
     def saat_im_kasten(self, ruhe, flaeche, sohle, hoehe, unten, oben):
-        """Die Saat in einem Kasten der Höhe `unten … oben` (Anteile der Körperhöhe über der Sohle)."""
+        """Die Saat in einem Kasten der Höhe `unten … oben` (Anteile der Körperhöhe über der Sohle); wie der der Nachformung, hinten etwas weiter."""
         import trimesh
 
         r = Blendimportnachformung.REGIONEN['scham']
         zmed = float(np.median(ruhe[:, 2]))
-        # Wie der Kasten der Nachformung, hinten etwas weiter (der Damm hängt hinter dem Schritt).
         kasten = ((ruhe[:, 1] > sohle + unten * hoehe) & (ruhe[:, 1] < sohle + oben * hoehe)
                   & (np.abs(ruhe[:, 0]) < r['breite_m'] * hoehe / 1.75) & (ruhe[:, 2] > zmed - 0.03))
         abstand = np.zeros(len(ruhe))
@@ -165,25 +177,30 @@ class Blendimportscham:
         skala = hoehe / 1.75
         breite = self.SAAT_BREITE_M * skala
         kern = saat & (self.abstand >= self.KERN_MM)
-        if int(kern.sum()) >= self.KERN_MIN:
+        unterkante = -np.inf
+        self.anbau = int(kern.sum()) >= self.KERN_MIN
+        if self.anbau:
             breite = max(breite, (float(np.percentile(np.abs(ruhe[kern][:, 0]), 98)) + self.KERN_RAND_M * skala))
+            # Unter dem tiefsten Punkt des Anbaus (hängende Hoden) endet die Anatomie: Schenkelhaut darunter ist keine (BodyParts3D-Haut,
+            # 10.10.2026: zwei „Vorhänge" 4 cm unter den Hoden, die Innenschenkel lagen 5–15 mm neben der Figur).
+            unterkante = float(ruhe[kern][:, 1].min()) - self.UNTER_MM / 1000.0 * skala
         self.saat_breite_mm = round(breite * 1000.0, 1)
-        return saat & (np.abs(ruhe[:, 0]) < breite)
+        return saat & (np.abs(ruhe[:, 0]) < breite) & (ruhe[:, 1] >= unterkante)
 
-    def schnittwerte(self, ruhe, saat, punkte=None):
-        """Je Punkt ein Wert für den Schnitt (`Blendimportschamschnitt`): negativ = im Stück, 0 = auf der Kontur. Die Kontur ist die
-        Hülle der Saat (Vorderansicht), `RAND_MM` nach außen, begrenzt auf die Tiefe der Saat ± `TIEFE_RAND_MM` und den Suchraum — das
-        Größte aus den Abständen (m) zu diesen Grenzen, jeder Punkt hat einen endlichen Wert. `punkte`: andere Punkte (die Haut der
-        Figur, `verschweissen`), für die derselbe Wert gilt; ohne sind es die Punkte des Originals (`ruhe`)."""
+    def schnittwerte(self, ruhe, saat, flaeche, punkte=None):
+        """Je Punkt ein Wert für den Schnitt (`Blendimportschamschnitt`): negativ = im Stück, 0 = auf der Kontur — die Hülle der Saat
+        (Vorderansicht), `RAND_MM` nach außen, begrenzt auf die Tiefe (Saat ± `TIEFE_RAND_MM`, hinaus, bis das Original aufliegt:
+        `Blendimportschamtiefe`) und den Suchraum; das Größte aus den Abständen (m), jeder Punkt hat einen endlichen Wert. `punkte`: andere
+        Punkte (die Haut der Figur, `verschweissen`) mit demselben Wert; ohne die des Originals (`ruhe`). Saat statt Hülle: verworfen, `blendimport.md`."""
         from scipy.spatial import ConvexHull
 
         xy = ruhe[saat][:, [0, 1]]
         ecken = xy[ConvexHull(xy).vertices]            # gegen den Uhrzeigersinn
-        z = ruhe[saat][:, 2]
-        zugabe = self.TIEFE_RAND_MM / 1000.0
+        hinten, vorn = Blendimportschamtiefe.grenzen(ruhe, self.huelle_abstand(ecken, ruhe[:, [0, 1]]) < self.RAND_MM / 1000.0,
+                                                     ruhe[saat][:, 2], self.TIEFE_RAND_MM, flaeche)
         p = ruhe if punkte is None else np.asarray(punkte, dtype=np.float64)
         w = self.huelle_abstand(ecken, p[:, [0, 1]]) - self.RAND_MM / 1000.0
-        grenzen = [z.min() - zugabe - p[:, 2], p[:, 2] - (z.max() + zugabe),
+        grenzen = [hinten - p[:, 2], p[:, 2] - vorn,
                    np.abs(p[:, 0]) - self.SUCH_BREITE_M, np.abs(p[:, 1] - ruhe[saat][:, 1].mean()) - self.SUCH_HOEHE_M]
         for g in grenzen:
             w = np.maximum(w, g)
@@ -272,11 +289,9 @@ class Blendimportscham:
         if saat.sum() < self.MINDEST_SAAT:
             return {'aus': 'nur %d Originalpunkte weichen mehr als %.0f mm ab (Mindestens %d)' % (
                 saat.sum(), self.SCHWELLE_MM, self.MINDEST_SAAT)}
-        w = self.schnittwerte(punkte, saat)
+        w = self.schnittwerte(punkte, saat, flaeche)
         je_dreieck = (w[dreiecke] < 0.0).any(axis=1)
-        # Mehrere Hautmaterialien (Character Creator: Kopf, Körper, Arme, Beine — je eigene Bilder): nur Dreiecke des häufigsten
-        # Materials, ihre UV gehören zu EINEM Bildsatz; die anderen fallen aus dem Stück und stehen im Bericht.
-        slot, fremd = self.material_slot(je_dreieck)
+        slot, fremd = self.material_slot(je_dreieck)    # mehrere Hautmaterialien (je eigene Bilder): nur das häufigste, der Rest steht im Bericht
         if fremd:
             je_dreieck &= np.asarray(self.koerper['material']) == slot
         self.waehle_material(slot)
@@ -285,15 +300,19 @@ class Blendimportscham:
             punkte, dreiecke[je_dreieck], np.asarray(self.koerper['uv_ecken'])[je_dreieck], w)
         benutzt, neu = np.unique(schnitt_dreiecke, return_inverse=True)
         sel_punkte, sel_dreiecke = alle_punkte[benutzt], neu.reshape(-1, 3)
+        sel_punkte, register = Blendimportschamregister.anwenden(flaeche, punkte, w, sel_punkte)
+        if 'aus' in register:        # Figur und Original passen am Becken nicht zusammen: kein Stück
+            return {'aus': register['aus']}
         sel_punkte, rand = self.angleichen(sel_punkte, sel_dreiecke, flaeche)
-        # Geograft: das Loch in der Haut ist ein Kantenring der Figur, der Rand des Stücks liegt genau darauf (`Blendimportschamgeograft`).
-        naht = Blendimportschamgeograft.verschweissen(flaeche, self.schnittwerte(punkte, saat, flaeche.vertices), sel_punkte, sel_dreiecke, schnitt_uv)
+        naht = Blendimportschamgeograft.verschweissen(flaeche, self.schnittwerte(punkte, saat, flaeche, flaeche.vertices), sel_punkte, sel_dreiecke, schnitt_uv, self.anbau)
         if 'aus' not in naht:
             sel_punkte, sel_dreiecke, schnitt_uv = naht['punkte'], naht['dreiecke'], naht['uv_ecken']
         uv, quelle, atlas = self.haut(schnitt_uv, ordner, kennung)
         bericht = {'saat': int(saat.sum()), 'punkte': int(len(sel_punkte)), 'dreiecke': int(len(sel_dreiecke)), 'rand': rand, 'atlas': atlas,
                    'kasten_hoehe': list(self.kastenhoehe), 'material': slot, 'material_fremd': fremd, 'geschnitten': geschnitten,
-                   'saat_breite_mm': self.saat_breite_mm, 'naht': naht['bericht'] if 'aus' not in naht else {'aus': naht['aus']}}
+                   'saat_breite_mm': self.saat_breite_mm, 'register': register, 'naht': naht['bericht'] if 'aus' not in naht else {'aus': naht['aus']}}
         logger.info('Scham-Stück: %s', bericht)
+        # Höhe jedes Punkts über der Figurfläche (mm): die Regler des Penis lesen daran den Anbau ab (`Blendimportschamhoehe`).
         return {'punkte': sel_punkte, 'dreiecke': sel_dreiecke, 'uv_ecken': uv, 'quelle': quelle, 'bericht': bericht,
-                'loch': naht.get('loch')}
+                'loch': naht.get('loch'), 'hoehe_mm': Blendimportschamhoehe.ueber_figur(sel_punkte, flaeche),
+                'original': {'punkte': punkte, 'dreiecke': dreiecke}}      # die Vorgabe der Scham-Messung (`Schammessung`)

@@ -14,7 +14,10 @@ Die Rolle (Körper, Kleid, Haar, …) entscheidet python14 (`Blendimportrollen`)
 Hat die Datei GAR KEINE Armatur (Character-Creator-Export, 15 Netze, gemessen 09.10.2026), kommen alle Netze ohne
 Hautgewichte heraus und das Inventar trägt `ohne_rig: true` — der Import überspringt dann das Umposen. Ist das höchste
 Netz nicht 0,5–2,5 m hoch (die Asian girl: 3,26 m), werden alle Punkte auf 1,75 m umgerechnet (`massstab`, `hoehe_original_m`
-im Inventar); mit Rig bleibt der Maßstab, wie er ist.
+im Inventar). **Mit oder ohne Rig, und auch nach der Höhe der ganzen Figur** (10.10.2026): Rainy misst 3,33 m, seori 3,21 m, aber
+kein EINZELNES Netz ist höher als 2,5 m (Körper ohne Beine bzw. ohne Kopf, Hose 1,96 m) — der Maßstab blieb 1,0, „Mesh to 3D" las
+die 3,3 m als Zentimeter und die Figur passte ins Leere (Haut-Abstand RMS 372 bzw. 274 mm statt 5 mm). Gilt der höchste Einzelnetz-
+Wert als menschlich, entscheidet die Gesamthöhe aller Netze (`hoehe_gesamt_m`). `blendumposen.py` rechnet mit demselben Faktor.
 
 Gemessen an `cute girl 5.0.blend` (08.10.2026): Körper 54.369 Punkte, Haar 34.637, Shirt 8.045, Jeans 5.272, je Auge
 770, Zähne/Zunge 5.766; die Bilder liegen NICHT gepackt neben der Datei (`//textures\\…`).
@@ -28,12 +31,21 @@ import sys
 import bpy  # pyright: ignore[reportMissingImports]  (Blender)
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))          # Blender lädt nur dieses Skript: die Schwester-Module liegen daneben
+from blendmaterialgraph import Blendmaterialgraph  # noqa: E402
+from blendnetzattribute import Blendnetzattribute  # noqa: E402
+
 
 class Blendexport:
     #: Steuerformen der Rigs (Auto-Rig Pro `cs_*`, Rigify `WGT-*`) sind keine Netze der Figur.
     STEUERFORMEN = ('cs_', 'WGT-')
     #: Eingänge des Principled BSDF → Kanalname der Ablage.
     KANAELE = {'Base Color': 'farbe', 'Roughness': 'rauheit', 'Alpha': 'alpha', 'Normal': 'normalen'}
+    #: Hängt ein Eingang an einer Node-GRUPPE (Character Creator: `rl_pbr_shader`, `rl_hair_shader`, `rl_eye_shader`), gilt das Bild an dem
+    #: Gruppeneingang, dessen NAME zum Kanal passt („Diffuse Map", „Roughness Map", „Alpha Map", „Normal Map"). Gemessen 09.10.2026 an
+    #: `Asian_Girl.blend` (`ProjektTemp/_wegwerf/asian/gruppen_dump.py`): jede Gruppe trägt ALLE Bilder des Materials, und die Suche „erstes Bild
+    #: stromaufwärts" lieferte für Rauheit, Alpha UND Normalen das Diffuse-Bild — das Kleid verlor seine schwarze Hälfte (das Farbbild als Deckkraft).
+    GRUPPEN_WORTE = {'farbe': ('diffuse', 'albedo'), 'rauheit': ('rough',), 'alpha': ('alpha', 'opacity'), 'normalen': ('normal',)}
     #: Höhe, auf die ein Modell OHNE Rig gebracht wird, wenn es nicht als Mensch in Metern gelten kann (Genesis' Ruhehöhe).
     #: „Mesh to 3D" liest Längen über 3 als Zentimeter (`meshfigur_scan.einheit_anpassen`): die Asian girl misst 3,26 m, wurde so
     #: auf 3,3 cm geschrumpft, und die Posenerkennung fand nichts („index 11 is out of bounds … size 0", 09.10.2026).
@@ -42,8 +54,10 @@ class Blendexport:
 
     def __init__(self, ziel):
         self.ziel = ziel
-        #: Maßstab, mit dem alle Punkte geschrieben werden (1,0 = Original); nur bei einer Datei ohne Rig ≠ 1.
+        #: Maßstab, mit dem alle Punkte geschrieben werden (1,0 = Original); ≠ 1, wenn die Figur keine menschliche Höhe hat.
         self.faktor = 1.0
+        #: Ausgang des Bildknotens (`Color`/`Alpha`), wenn `bild_vor` das Bild über einen Gruppeneingang fand — sonst None.
+        self.bildausgang = None
         os.makedirs(ziel, exist_ok=True)
 
     @classmethod
@@ -53,13 +67,32 @@ class Blendexport:
             return 1.0
         return cls.REFERENZ_M / hoehe_m
 
+    @classmethod
+    def faktor_fuer(cls, einzel_m, gesamt_m):
+        """Maßstab der Figur: zuerst nach dem höchsten EINZELNEN Netz (wie bisher — Asian girl, Fallout ranger bleiben, wie sie waren);
+        ist das menschlich, nach der Höhe ALLER Netze zusammen. Nur das Einzelnetz zu messen übersah Figuren, deren Körper in Teile
+        zerfällt (Rainy: Körper ab der Hüfte + Hose bis zum Knöchel + Stiefel = 3,33 m, höchstes Netz 1,96 m)."""
+        faktor = cls.massstab(einzel_m)
+        return faktor if faktor != 1.0 else cls.massstab(gesamt_m)
+
     @staticmethod
     def hoehe(obj, graph):
         """Höhe (Welt-Z) der ausgewerteten Begrenzungsbox eines Objekts in Metern."""
+        z = Blendexport.z_bereich(obj, graph)
+        return float(z.max() - z.min())
+
+    @staticmethod
+    def z_bereich(obj, graph):
+        """Welt-Z der acht Ecken der ausgewerteten Begrenzungsbox eines Objekts."""
         ecken = np.array(obj.evaluated_get(graph).bound_box, dtype=np.float64)
         welt = np.array(obj.matrix_world, dtype=np.float64)
-        z = ecken @ welt[2, :3] + welt[2, 3]
-        return float(z.max() - z.min())
+        return ecken @ welt[2, :3] + welt[2, 3]
+
+    @classmethod
+    def gesamthoehe(cls, objekte, graph):
+        """Abstand vom tiefsten zum höchsten Punkt (Begrenzungsboxen) ALLER `objekte` in Metern; 0 ohne Objekte."""
+        z = [cls.z_bereich(o, graph) for o in objekte]
+        return float(max(v.max() for v in z) - min(v.min() for v in z)) if z else 0.0
 
     @staticmethod
     def argumente(argv):
@@ -107,11 +140,20 @@ class Blendexport:
                 uv = np.empty(len(me.loops) * 2, dtype=np.float64)
                 me.uv_layers.active.data.foreach_get('uv', uv)
                 uv_ecken = uv.reshape(-1, 2)[schleifen]
+            # Für den lokalen Backer: alle UV-Karten, Farbattribute, glatt/flach und die Polygone (`blendnetzattribute.py`).
+            attribute, attribut_info = Blendnetzattribute.lesen(me, schleifen, dreiecke.reshape(-1, 3))
         finally:
             auswertung.to_mesh_clear()
+        materialien = [self.material(slot.material, nummer, i) for i, slot in enumerate(obj.material_slots)]
+        benoetigt = {name for m in materialien for name in m.get('farb_namen', [])}
+        for eintrag in attribut_info['farbattribute']:
+            if 'schluessel' in eintrag and not (eintrag['name'] in benoetigt or (eintrag.get('standard') and '' in benoetigt)):
+                # Ein Farbattribut, das kein Graph liest, kommt nicht mit (Größe).
+                attribute.pop(eintrag.pop('schluessel'))
+                eintrag['nicht_exportiert'] = 'kein Graph liest es'
         datei = '%02d.npz' % nummer
         np.savez_compressed(os.path.join(self.ziel, datei), punkte=punkte, dreiecke=dreiecke.reshape(-1, 3),
-                            uv_ecken=uv_ecken.reshape(-1, 3, 2), material=material)
+                            uv_ecken=uv_ecken.reshape(-1, 3, 2), material=material, **attribute)
         return {
             'name': obj.name,
             'datei': datei,
@@ -119,8 +161,9 @@ class Blendexport:
             'dreiecke': int(t),
             'min': [round(float(v), 4) for v in punkte.min(axis=0)],
             'max': [round(float(v), 4) for v in punkte.max(axis=0)],
-            'materialien': [self.material(slot.material) for slot in obj.material_slots],
+            'materialien': materialien,
             'gewichte': self.gewichte(obj),
+            **attribut_info,
         }
 
     @staticmethod
@@ -136,24 +179,41 @@ class Blendexport:
 
     # ------------------------------------------------------------ Materialien
 
-    def material(self, mat):
-        """`{name, farbe, rauheit, alpha, normalen, ueberblendung}` — je Kanal das Bild (absoluter Pfad) oder None."""
+    def material(self, mat, nummer=0, slot=0):
+        """`{name, farbe, rauheit, alpha, normalen, ueberblendung}` — je Kanal das Bild (absoluter Pfad) oder None;
+        ohne Rauheitsbild `rauheit_wert` (die Zahl am Eingang: BodyParts3D-OBJ `Ns 30` → 0,827). Dazu der Knotengraph für den lokalen Backer
+        (`graph`: Datei unter `graphen/`, `graph_grund`, wenn es keinen gibt; `farb_namen`: Farbattribute, die er liest)."""
         aus = {'name': mat.name if mat else '', 'ueberblendung': getattr(mat, 'blend_method', '') if mat else ''}
         if not mat or not mat.node_tree:
+            aus['graph_grund'] = 'kein Material oder kein Knotenbaum'
             return aus
+        graph = Blendmaterialgraph(self).bauen(mat)
+        if 'ziel' in graph:
+            os.makedirs(os.path.join(self.ziel, 'graphen'), exist_ok=True)
+            name = os.path.join('graphen', 'graph_%02d_%02d.json' % (nummer, slot))
+            with open(os.path.join(self.ziel, name), 'w', encoding='utf-8') as f:
+                json.dump(graph, f, ensure_ascii=False)
+            aus['graph'] = name
+            aus['farb_namen'] = graph['farb_namen']
+        else:
+            aus['graph_grund'] = graph.get('grund', 'unbekannt')
         for knoten in mat.node_tree.nodes:
             if knoten.type != 'BSDF_PRINCIPLED':
                 continue
             for eingang, kanal in self.KANAELE.items():
                 buchse = knoten.inputs.get(eingang)
+                if buchse is not None and not buchse.is_linked and kanal == 'rauheit':
+                    aus['rauheit_wert'] = round(float(buchse.default_value), 4)
                 if buchse is not None and buchse.is_linked:
                     fest = self.festfarbe(buchse.links[0].from_node) if kanal == 'farbe' else None
                     if fest is not None:
                         aus['farbe_wert'] = fest
                         continue
-                    aus[kanal] = self.bild_vor(buchse.links[0].from_node, set())
+                    self.bildausgang = None
+                    aus[kanal] = self.bild_vor(buchse.links[0].from_node, set(), kanal)
                     if kanal == 'alpha':
-                        aus['alpha_ausgang'] = self.ausgang(buchse.links[0])
+                        # Über eine Gruppe ist der Ausgang der des Bildknotens am Gruppeneingang (CC: das Graubild `Color`).
+                        aus['alpha_ausgang'] = self.bildausgang or self.ausgang(buchse.links[0])
             aus.update(self.detailnormale(knoten, mat.name))
         return aus
 
@@ -263,31 +323,59 @@ class Blendexport:
             return None
         return [round(float(w), 5) for w in eingang.default_value[:3]]
 
-    def bild_vor(self, knoten, gesehen):
-        """Das erste Bild stromaufwärts (über Mix-, Normal-Map- und andere Knoten) — absoluter Pfad oder None."""
+    def bild_vor(self, knoten, gesehen, kanal=None):
+        """Das erste Bild stromaufwärts (über Mix-, Normal-Map- und andere Knoten) — absoluter Pfad oder None.
+        Eine Node-GRUPPE, an der ein Eingang mit einem Kanalnamen belegt ist (`GRUPPEN_WORTE`), wird nach den Namen ihrer Eingänge
+        gelesen: für Rauheit, Alpha und Normalen zählt nur der passende Eingang — ohne ihn gibt es KEIN Bild (nicht das erstbeste der
+        Gruppe, das Diffuse). Eine Gruppe ohne solche Namen und die Farbe ohne „Diffuse"-Eingang gehen wie vor dem 09.10.2026 das
+        erste Bild stromaufwärts."""
         if knoten is None or knoten.name in gesehen:
             return None
         gesehen.add(knoten.name)
         if knoten.type == 'TEX_IMAGE' and knoten.image is not None:
             return self.bildpfad(knoten.image) or None
+        if knoten.type == 'GROUP' and kanal in self.GRUPPEN_WORTE:
+            belegt = [b for b in knoten.inputs if b.is_linked]
+            erkannt = any(w in b.name.lower() for b in belegt for worte in self.GRUPPEN_WORTE.values() for w in worte)
+            for buchse in belegt:
+                if any(w in buchse.name.lower() for w in self.GRUPPEN_WORTE[kanal]):
+                    bild = self.bild_vor(buchse.links[0].from_node, gesehen, kanal)
+                    if bild:
+                        quelle = buchse.links[0]
+                        self.bildausgang = quelle.from_socket.name if quelle.from_node.type == 'TEX_IMAGE' else None
+                        return bild
+            if erkannt and kanal != 'farbe':
+                return None
         # Normal Map: zuerst ihr Farbeingang; Mix: die Eingänge der Reihe nach.
         for buchse in knoten.inputs:
             if buchse.is_linked:
-                bild = self.bild_vor(buchse.links[0].from_node, gesehen)
+                bild = self.bild_vor(buchse.links[0].from_node, gesehen, kanal)
                 if bild:
                     return bild
         return None
 
     # ------------------------------------------------------------------ Lauf
 
+    #: Ein Netz über so viel Meter ist keine Figur: Hinako trägt `BODY.001`, eine Kopie des Körpers im Maßstab 100 (122 m, Lage
+    #: 179…301 m) — gemessen 10.10.2026. Sie wird nicht exportiert, sondern im Inventar mit Grund vermerkt.
+    AUSREISSER_M = 25.0
+
     def laufen(self):
         graph = bpy.context.evaluated_depsgraph_get()
-        mit_rig = self.netze()
+        alle = self.netze()
+        mit_rig, ausgelassen = [], []
+        for obj in alle:
+            hoehe = self.hoehe(obj, graph)
+            if hoehe > self.AUSREISSER_M:
+                ausgelassen.append({'name': obj.name, 'hoehe_m': round(hoehe, 3),
+                                    'grund': 'Netz %.1f m hoch — keine Figur, vermutlich eine Kopie im falschen Maßstab' % hoehe})
+            else:
+                mit_rig.append(obj)
         ohne_rig = not len(bpy.data.armatures) and bool(mit_rig)
         hoehe_original = max((self.hoehe(o, graph) for o in mit_rig), default=0.0)
-        if ohne_rig:
-            # Nur ohne Rig: `blendumposen.py` liest die Punkte später selbst aus der .blend und schriebe das Original zurück.
-            self.faktor = self.massstab(hoehe_original)
+        hoehe_gesamt = self.gesamthoehe(mit_rig, graph)
+        # Auch mit Rig: `blendumposen.py` liest die Punkte später selbst aus der .blend und rechnet mit `massstab` aus dem Inventar.
+        self.faktor = self.faktor_fuer(hoehe_original, hoehe_gesamt)
         netze = [self.netz(obj, i, graph) for i, obj in enumerate(mit_rig)]
         inventar = {
             'blender': bpy.app.version_string,
@@ -301,9 +389,12 @@ class Blendexport:
             # Die Punkte der Netze sind mit `massstab` multipliziert; `hoehe_original_m` ist die Höhe des höchsten Netzes davor.
             'massstab': self.faktor,
             'hoehe_original_m': round(hoehe_original, 4),
+            #: Höhe aller Netze zusammen, vor dem Maßstab (Rainy 3,3 m: höchstes Einzelnetz 1,96 m).
+            'hoehe_gesamt_m': round(hoehe_gesamt, 4),
             'ohne_armatur': [o.name for o in bpy.data.objects
                              if o.type == 'MESH' and not o.name.startswith(self.STEUERFORMEN)
-                             and len(o.data.polygons) and o not in mit_rig],
+                             and len(o.data.polygons) and o not in mit_rig and o not in alle],
+            'ausgelassen': ausgelassen,
         }
         with open(os.path.join(self.ziel, 'inventar.json'), 'w', encoding='utf-8') as f:
             json.dump(inventar, f, ensure_ascii=False, indent=1)

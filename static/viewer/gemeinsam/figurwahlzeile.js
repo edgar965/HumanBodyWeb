@@ -21,14 +21,28 @@ import { Kontextmenue } from './kontextmenue.js';
 export class Figurwahlzeile {
 
     /**
-     * @param {Object} eintrag  { name, anzeige, unterzeile } aus Figurkataloge
-     * @param {Object} taten    { waehlen(), laden(), pflegen(was) | null }
-     *        `pflegen` fehlt → keine Werkzeug-Knöpfe
+     * Die Werkzeuge einer Zeile (Knopf rechts und Eintrag im Rechtsklickmenü). `importloeschen` (10.10.2026, Edgar: „Button zum Löschen
+     * eines Imports oder verwaisten Imports"): ein Modell aus einem Blender-Import samt Import, oder ein abgebrochener Import allein.
      */
-    static bauen(eintrag, { waehlen, laden, pflegen = null }) {
+    static WERKZEUGE = {
+        umbenennen: { symbol: 'fa-pen', text: 'Umbenennen', titel: 'Umbenennen' },
+        loeschen: { symbol: 'fa-trash', text: 'Löschen', titel: 'Löschen' },
+        importloeschen: { symbol: 'fa-eraser', text: 'Import löschen …',
+                          titel: 'Import löschen: Ordner, Auftrag „Mesh to 3D", Stücke und Modell' },
+    };
+
+    static STANDARD = ['umbenennen', 'loeschen'];
+
+    /**
+     * @param {Object} eintrag  { name, anzeige, unterzeile, warnung? } aus Figurkataloge — `warnung` setzt ein rotes Zeichen vor den Namen
+     * @param {Object} taten    { waehlen(), laden(), pflegen(was) | null, werkzeuge }
+     *        `pflegen` fehlt → keine Werkzeug-Knöpfe; `werkzeuge` nennt, welche (Vorgabe Umbenennen und Löschen)
+     */
+    static bauen(eintrag, { waehlen, laden, pflegen = null, werkzeuge = Figurwahlzeile.STANDARD }) {
         const li = document.createElement('li');
         li.dataset.name = eintrag.name;
-        li.innerHTML = Figurwahlzeile.markup(eintrag, Boolean(pflegen));
+        if (eintrag.warnung) li.classList.add('mit-warnung');
+        li.innerHTML = Figurwahlzeile.markup(eintrag, pflegen ? werkzeuge : false);
         li.addEventListener('click', (e) => {
             if (e.target.closest('[data-tun]')) return;   // Werkzeug, keine Wahl
             waehlen();
@@ -37,36 +51,38 @@ export class Figurwahlzeile {
             if (e.target.closest('[data-tun]')) return;
             laden();
         });
-        for (const was of ['umbenennen', 'loeschen']) {
+        for (const was of Object.keys(Figurwahlzeile.WERKZEUGE)) {
             li.querySelector(`[data-tun="${was}"]`)
                 ?.addEventListener('click', () => pflegen(was));
         }
         if (pflegen) {
             // Der Rechtsklick wählt die Zeile mit — man sieht, wovon das Menü spricht.
-            Kontextmenue.binden(li, () => { waehlen(); return Figurwahlzeile.menue(pflegen); });
+            Kontextmenue.binden(li, () => { waehlen(); return Figurwahlzeile.menue(pflegen, werkzeuge); });
         }
         return li;
     }
 
-    /** Die Einträge des Rechtsklickmenüs — dieselben zwei Werkzeuge wie die Knöpfe. */
-    static menue(pflegen) {
-        return [
-            { symbol: 'fa-pen', text: 'Umbenennen', tun: () => pflegen('umbenennen') },
-            { symbol: 'fa-trash', text: 'Löschen', tun: () => pflegen('loeschen') },
-        ];
+    /** Die Einträge des Rechtsklickmenüs — dieselben Werkzeuge wie die Knöpfe. */
+    static menue(pflegen, werkzeuge = Figurwahlzeile.STANDARD) {
+        return werkzeuge.map(was => ({
+            symbol: Figurwahlzeile.WERKZEUGE[was].symbol, text: Figurwahlzeile.WERKZEUGE[was].text, tun: () => pflegen(was),
+        }));
     }
 
+    /** `mitPflege`: `true` (Umbenennen und Löschen), eine Liste von Werkzeugen oder `false`. */
     static markup(eintrag, mitPflege) {
-        return `<span class="eintragsname">${Htmltext.t(eintrag.anzeige)}`
+        const werkzeuge = mitPflege === true ? Figurwahlzeile.STANDARD : (mitPflege || []);
+        const warnung = eintrag.warnung
+            ? `<i class="fas fa-triangle-exclamation eintrag-warnung" title="${Htmltext.t(eintrag.warnung)}"></i>` : '';
+        return `<span class="eintragsname">${warnung}${Htmltext.t(eintrag.anzeige)}`
             + (eintrag.unterzeile
                 ? `<span class="preset-sub">${Htmltext.t(eintrag.unterzeile)}</span>` : '')
             + '</span>'
-            + (mitPflege
+            + (werkzeuge.length
                 ? '<span class="eintragswerkzeuge">'
-                  + '<button class="knopf-schmal" data-tun="umbenennen" title="Umbenennen">'
-                  + '<i class="fas fa-pen"></i></button>'
-                  + '<button class="knopf-schmal" data-tun="loeschen" title="Löschen">'
-                  + '<i class="fas fa-trash"></i></button></span>'
+                  + werkzeuge.map(was => `<button class="knopf-schmal" data-tun="${was}" title="${Htmltext.t(Figurwahlzeile.WERKZEUGE[was].titel)}">`
+                                         + `<i class="fas ${Figurwahlzeile.WERKZEUGE[was].symbol}"></i></button>`).join('')
+                  + '</span>'
                 : '');
     }
 }

@@ -13,7 +13,8 @@ Punkt nur mit den Käfigpunkten seines Körperteils — mit der Hand auf der Hü
 selbst (Regler + Eigenmorph, Stufe 1) liegt je Kachel als OBJ daneben.
 
 NACHARBEIT: Wo kein Strahl das Original trifft, ist die gebackene Farbe schwarz. Dort gilt die Kachel von „Mesh to 3D"
-(Daz-Haut auf den Hautton getönt, darüber die Netzfarbe), die Normale wird flach (128, 128, 255), die Rauheit der Median
+(Daz-Haut auf den Hautton getönt, darüber die Netzfarbe) — im Ton des Gebackenen daneben und ohne ihre weißen Löcher
+(`Blendimportfarbangleich`), die Normale wird flach (128, 128, 255), die Rauheit der Median
 der getroffenen Texel. Der Anteil getroffener Texel steht je Kachel im Bericht, dazu der Abstand der Körperpunkte zur
 FLÄCHE der Figur in Ruhe (Median, p95, Maximum, RMS, Anteil über 8 mm) — er sagt, wie gut beide Flächen beim Backen
 übereinanderliegen. Gemessen am ersten Lauf (08.10.2026): Median 0,99 mm, p95 14,4 mm, 12,3 % über 8 mm — die großen
@@ -27,9 +28,12 @@ import shutil
 import numpy as np
 
 from .blendimportblender import Blendimportblender
+from .blendimportfarbangleich import Blendimportfarbangleich
 from .blendimportlage import Blendimportlage
 from .blendimportnormalen import Blendimportnormalen
 from .blendimportrand import Blendimportrand
+from .flaechenabstand import Flaechenabstand
+from .schammessungablage import Schammessungablage
 
 logger = logging.getLogger('core')
 
@@ -91,15 +95,15 @@ class Blendimporthaut:
         """Abstand jedes Körperpunkts zur FLÄCHE der Figur (mm) — Median, p95, Maximum, RMS und Anteil über 8 mm.
         Nicht zum nächsten Punkt: bei 104.480 Figurpunkten und 5–10 mm Punktabstand maß das den Punktabstand mit
         (Import 2026.10.08.11.28.06: Median 2,62 mm zum Punkt gegen 0,99 mm zur Fläche)."""
-        import trimesh
-
-        _, d, _ = trimesh.proximity.closest_point(trimesh.Trimesh(figur, dreiecke, process=False), ruhe)
-        d = d * 1000.0
+        # `Flaechenabstand` statt `trimesh.proximity.closest_point`: Rosemary (163.810 Körperpunkte, Figur passte nicht) brauchte dort 22,5 Minuten
+        # und 28 GB — dasselbe Maß, gleiche Zahlen (Abweichung ≤ 0,015 mm), 164.000 Punkte in wenigen Sekunden.
+        d = Flaechenabstand.abstand(ruhe, figur, dreiecke) * 1000.0
         return {'median_mm': round(float(np.median(d)), 2), 'p95_mm': round(float(np.percentile(d, 95)), 2),
                 'max_mm': round(float(d.max()), 1), 'rms_mm': round(float(np.sqrt((d ** 2).mean())), 2),
                 'ueber_8mm': round(float((d > 8.0).mean()), 4)}
 
-    def backen(self, blend):
+    def backen(self, blend, pruefen=None):
+        """`pruefen(abstand)` (der Lauf übergibt `Blendimportplausibel`) wirft, wenn die Figur nicht zum Körper passt — vor dem Backen."""
         lage = Blendimportlage(self.job, self.zusatz)
         name, punkte, dreiecke = self._koerper()
         ruhe = lage.koerper_ruhelage(punkte, dreiecke)
@@ -112,6 +116,8 @@ class Blendimporthaut:
         # `nummern`, nicht `kacheln`: der Lauf legt unter `kacheln` die Dateien ab (`{**bericht}` überschrieb sie mit der Liste).
         bericht = {'abstand': self.abstand(ruhe, figur['punkte'], figur['dreiecke']), 'nummern': sorted(objs)}
         logger.info('Blender-Import %s: Körper in Ruhe, Abstand zur Figur %s', self.ablage.kennung, bericht['abstand'])
+        if pruefen:
+            pruefen(bericht['abstand'])
         Blendimportblender(self.ablage, self.melden).laufen(
             'blendbacken.py', blend,
             ['--koerper', name, '--lage', self.ablage.arbeit('koerper_ruhe.npy'), '--genesis', ordner,
@@ -121,6 +127,7 @@ class Blendimporthaut:
         bericht['umfeld'] = self.umfeld_bericht
         bericht['normalen_flach'] = self.normalen_flach
         bericht['normalen_form'] = self.normalen_form
+        bericht['scham_farbe'] = Schammessungablage.nachtragen(self.ablage, figur)       # die Scham-Messung, zweiter Teil: die Hautkacheln sind jetzt da
         return self.kacheln(sorted(objs)), bericht
 
     # ------------------------------------------------------------ Nacharbeit
@@ -141,7 +148,9 @@ class Blendimporthaut:
         farbe, saum = Blendimportrand.schliessen(farbe, leer)
         ersatz = self._meshfigur_kachel(k)
         if leer.any() and ersatz is not None:
-            hinten = np.asarray(Image.open(ersatz).convert('RGB').resize(farbe.shape[1::-1], Image.LANCZOS))
+            # Die Ersatzkachel steht in einem anderen Ton als das Gebackene daneben (Asian, Daumenwurzel: beige Flecken zwischen rosa
+            # Streifen, ein weißes Loch im Daumen): Löcher stopfen, den Ton an die gebackene Nachbarschaft angleichen.
+            hinten = Blendimportfarbangleich.hinten(Image.open(ersatz), farbe, leer | saum)
             farbe = np.where(leer[..., None], hinten, farbe)
         if leer.any() and self.umfeld is not None:
             # Um das Scham-Stück gilt in den Fehlstellen die Farbe des Originals, nicht die blasse Ersatzkachel.

@@ -24,6 +24,7 @@ import logging
 import numpy as np
 
 from .blendimportbilder import Blendimportbilder
+from .blendimportfinger import Blendimportfinger
 from .blendimportfuss import Blendimportfuss
 from .blendimportlage import Blendimportlage
 from .blendimportpruefung import Blendimportpruefung
@@ -66,9 +67,10 @@ class Blendimportstuecke:
         #: `objekt`: die Originalaugen werden ein eigenes Stück (Einstellung „Augen" des Dialogs).
         self.augen_objekt = augen == 'objekt'
         #: `objekt`: der Teil des Körpers, den die Figur nicht trägt, wird das Stück „<Name> Scham" (`Blendimportscham`);
-        #: `mann`: dasselbe Stück als „<Name> Genitalien" mit `anatomie = penis` — ohne die weiblichen Scham-Regler.
+        #: `mann`: dasselbe Stück als „<Name> Genitalien" mit `anatomie = penis` (`G9penis`: Regler für Schaft, Eichel, Lage, Hoden);
+        #: `objekt` trägt `anatomie = vagina` (`G9vagina`, vorher `scham`).
         self.scham_objekt = scham in ('objekt', 'mann')
-        self.anatomie = 'penis' if scham == 'mann' else 'scham'
+        self.anatomie = 'penis' if scham == 'mann' else 'vagina'
 
     def _netz(self, rolle):
         """Das Netz einer Rolle; eine Rolle mit mehreren Netzen (`namen`: beide Augen) wird zu EINEM zusammengelegt."""
@@ -121,11 +123,9 @@ class Blendimportstuecke:
                 logger.exception('Blender-Import %s: Stück %s gescheitert', self.ablage.kennung, schluessel)
                 bericht[schluessel] = {'fehler': str(fehler)[:300]}
                 continue
-            if kennung is None:                       # das Stück entfällt mit Grund (Scham: die Figur trifft das Original)
-                bericht[schluessel] = b
-                continue
-            stuecke[schluessel] = kennung
             bericht[schluessel] = b
+            if kennung is not None:                   # sonst entfällt das Stück mit Grund (Scham: die Figur trifft das Original)
+                stuecke[schluessel] = kennung
         if self._pruefung is not None:
             try:
                 ziel = self.ablage.ergebnis('stuecke_bogen.png')
@@ -137,7 +137,8 @@ class Blendimportstuecke:
 
     def anzeige(self, rolle):
         scham = self.GENITAL_ZUSATZ if self.anatomie == 'penis' else self.SCHAM_ZUSATZ
-        zusatz = ({'haar': self.HAAR_ZUSATZ, 'auge': self.AUGEN_ZUSATZ, 'scham': scham}.get(rolle['rolle'])
+        # Haar: mehrere Frisurnetze tragen ihren Netznamen in `art` („Haar Bang"); EIN Netz heißt wie immer „Haar".
+        zusatz = ({'haar': rolle.get('art') or self.HAAR_ZUSATZ, 'auge': self.AUGEN_ZUSATZ, 'scham': scham}.get(rolle['rolle'])
                   or rolle.get('art') or rolle['name'])
         return '%s %s' % (self.figurname, zusatz)
 
@@ -166,6 +167,8 @@ class Blendimportstuecke:
         from Genesis9.stueckersatz import G9stueckersatz
 
         from .blendimportscham import Blendimportscham
+        from .blendimportschamrauheit import Blendimportschamrauheit
+        from .schammessungablage import Schammessungablage
 
         kennung, anzeige = G9eigenstueck.kennung_und_name(self.anzeige(rolle))
         ordner = G9eigenstueck.arbeitsordner(kennung)
@@ -177,7 +180,7 @@ class Blendimportstuecke:
         if 'aus' in d:
             return None, d
         np.save(self.ablage.arbeit('scham_punkte.npy'), d['punkte'])        # der Schritt „haut" füllt die Kachel darum mit Originalfarbe
-        material = self.material(kennung, d['quelle'], ordner)
+        material = Blendimportschamrauheit.anwenden(self.material(kennung, d['quelle'], ordner), d['quelle'])    # Rauheit der Haut als Zahl
         netz = G9objleser.lesen(str(self.obj(ordner, d['punkte'], d['dreiecke'], d['uv_ecken'], material)))
         roh = np.asarray(netz['punkte'], dtype=np.float64)
         kategorie = self.AUGEN_KATEGORIE
@@ -194,10 +197,12 @@ class Blendimportstuecke:
         d['bericht']['gewichte'] = haut.bericht
         bilanz = G9eigenstueck.schreiben(roh, netz, kennung, anzeige, kategorie, material, heben=False, wicklung=False,
                                          gewichte=gewichte)
+        # Der Penis bekommt die Höhe jedes Punkts über der Haut mit (`Blendimportschamhoehe`): daran erkennen seine Regler den Anbau.
+        hoehe = np.round(d['hoehe_mm'], 1).tolist() if self.anatomie == 'penis' and len(d['hoehe_mm']) == bilanz['punkte'] else None
         G9stueckersatz.schreiben(bilanz['duf'], [], haut_tiefe_mm=Blendimportscham.HAUT_TIEFE_MM, anatomie=self.anatomie,
-                                 eigene_gewichte=True, loch=self.loch_angabe(loch))
+                                 eigene_gewichte=True, loch=self.loch_angabe(loch), hoehe_mm=hoehe)
         bericht = dict(d['bericht'], stueck=bilanz['stueck'], name=anzeige, flaechen=bilanz['flaechen'], kategorie=list(kategorie),
-                       punkte=bilanz['punkte'], knochen=bilanz['knochen'])
+                       punkte=bilanz['punkte'], knochen=bilanz['knochen'], messung=Schammessungablage.messen(self.ablage, d, material, figur, ordner))
         logger.info('Blender-Import %s: Scham-Stück → %s (%s)', self.ablage.kennung, bilanz['stueck'], d['bericht'])
         return bilanz['stueck'], bericht
 
@@ -273,7 +278,8 @@ class Blendimportstuecke:
             G9stueckersatz.schreiben(bilanz['duf'], [], griff=fuss.griff() if absatz else None)
             bericht['fuss'] = fuss.bericht() if absatz else None
         if requisit:
-            bericht['requisit'] = requisit
+            # Trägt eine Hand das Requisit (Katana): die Figur schließt beim Tragen die Faust (`griff` in der `.ersetzt.json`, `Blendimportfinger`).
+            bericht['requisit'] = dict(requisit, griff=Blendimportfinger.requisit_griff(self.lage.ablage, bilanz['duf'], requisit['teil']))
         elif not (haar or auge):
             # Abnahme (Stufe 7): Kantenverzerrung, frei hängender Anteil, Haltungstreue gegen das Original — samt Hinweisen.
             bericht['pruefung'] = self.pruefung().pruefen(bilanz['stueck'], punkte, self.lage.ins_netz(d['punkte']), d['dreiecke'],

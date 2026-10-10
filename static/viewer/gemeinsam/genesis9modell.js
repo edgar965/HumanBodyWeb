@@ -20,6 +20,7 @@ import { Modell } from './modell.js';
 import { Skelettereignis } from './skelettereignis.js';
 import { Augentextur } from './augentextur.js';
 import { Genesis9augen } from './genesis9augen.js';
+import { Genesis9teilmaterial } from './genesis9teilmaterial.js';
 import { Koerperdetails } from './koerperdetails.js';
 
 /**
@@ -65,9 +66,9 @@ export class Genesis9Modell extends Modell {
         this.haut = daten.haut || '';
         /** Augenbild 01–15. */
         this.augen = daten.augen || '01';
-        /** Hat der Nutzer in der Toolbar aktiv ein Augen-Preset gewählt (`augenSetzen`)? Nur dann
-         *  gilt es vor einer eigenen Fotokachel des Modells (`genesis9fototextur.js`, `_augenGewaehlt`). */
-        this._augenGewaehlt = false;
+        /** Hat der Nutzer in der Toolbar aktiv ein Augen-Preset gewählt (`augenSetzen`)? Nur dann gilt es vor einer
+         *  Fotokachel oder Ersatz-Augen des Modells (`genesis9fototextur.js`, `genesis9ersatz.js`); wird mitgespeichert. */
+        this._augenGewaehlt = !!daten.augen_gewaehlt;
         /** Farbe der Brauen (`Brown`, `omni:Ruby`, `charakter:…`); leer = Vorgabe des Servers. */
         this.brauen = daten.brauen || '';
         /** Brauenstil `card01`..`card12`, `fiber01`..`fiber09`; leer = Karte 01. */
@@ -76,6 +77,7 @@ export class Genesis9Modell extends Modell {
         this.praesets = { ...(daten.praesets || {}) };
         /** Texturmischung (21.09.2026): weitere Hautsätze mit Prozent über der Haut (`Genesis9hautmischung`). */
         this.hautmischung = { ...(daten.hautmischung || {}) };
+        this.teilmaterial = { ...(daten.teilmaterial || {}) };   // Glanz, Rauheit … je Teil, `{augen: {glanz: 0.1}}` (`Genesis9teilmaterial`)
         /** Daz-Posenpreset (Standbild: Netz UND Skelett stehen in der Pose) und Ausdruck (FACS). */
         this.pose = daten.pose || '';
         this.ausdruck = daten.ausdruck || '';
@@ -175,7 +177,7 @@ export class Genesis9Modell extends Modell {
             this.eigeneKnochen = daten.skelett?.eigene || [];
         }
         // Fotokacheln des Modells statt der Daz-Albedo (27.09.2026, `Genesis9fototextur`).
-        const wahl = { haut: this.haut, praesets: this.praesets, augenGewaehlt: this._augenGewaehlt };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel
+        const wahl = { haut: this.haut, praesets: this.praesets, augenGewaehlt: this._augenGewaehlt, brauenstil: this.brauenstil };   // was der Nutzer selbst gewählt hat, gilt vor der Kachel (ein Brauenstil nimmt die gemalten Brauen aus der Kopfkachel)
         const koerper = { ...daten, gruppen: Genesis9fototextur.gruppen(daten.gruppen, this.fototextur, wahl) };
         this.bodyMesh = this._einhaengen(
             Genesis9netz.bauen(koerper, `genesis9_koerper_${this.id}`), daten.hautgewichte);
@@ -197,16 +199,14 @@ export class Genesis9Modell extends Modell {
         this._kleiderBinden(neuesSkelett);
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
         if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
-        // Ein neu gebautes Augennetz trägt wieder die Original-Karte — eine gewählte
-        // Augentextur (`detailfeldAnwenden`) muss nach jedem Umbau (Regler, Pose, Kleidung) neu gelegt werden.
+        // Ein neu gebautes Augennetz trägt wieder die Original-Karte — eine gewählte Augentextur (`detailfeldAnwenden`) neu legen.
         if (this.details?.[Augentextur.FELD] && this.details[Augentextur.FELD] !== Augentextur.ORIGINAL) {
             Genesis9augen.anwenden(this, this.details)
                 .catch(fehler => Protokoll.warnung('Genesis9Modell', `Augentextur: ${fehler.message}`));
         }
-        Protokoll.debug('Genesis9Modell',
-            `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} `
-            + `(${this.browserpunkte}), ${(this.hoehe * 100).toFixed(1)} cm, `
-            + `${Object.keys(this.morphwerte).length} Morphs wirksam`);
+        Genesis9teilmaterial.anwenden(this);   // Glanz, Rauheit … je Teil auf die frischen Materialien (`genesis9teilmaterial.js`)
+        Protokoll.debug('Genesis9Modell', `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} (${this.browserpunkte}), `
+            + `${(this.hoehe * 100).toFixed(1)} cm, ${Object.keys(this.morphwerte).length} Morphs wirksam`);
         return this;
     }
 

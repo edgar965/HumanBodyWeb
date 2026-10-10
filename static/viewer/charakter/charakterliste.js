@@ -214,6 +214,15 @@ export function deleteCharacter(id) {
         Modellbauzustand.charakterId = null;
     }
 
+    // Läuft gerade eine Animation auf dieser Figur, ist sie VOR dem Entsorgen
+    // anzuhalten: sonst treibt der Mischer den Körper weiter, `playing` bleibt
+    // gesetzt, und Stopp fasst eine Figur an, die es nicht mehr gibt (Edgar,
+    // 10.10.2026: „Animation läuft noch, auch wenn das Modell gelöscht ist,
+    // lässt sich nicht stoppen").
+    if (state._animatedCharId === id) {
+        fn.stopAnimation?.(true);
+    }
+
     inst.dispose();
     state.characters.delete(id);
     Figurmerker.vergessen(id);

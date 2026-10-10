@@ -219,3 +219,8 @@
     margin-left: auto;
     cursor: pointer;
 }
+
+/* Abgebrochener Import in der Liste (10.10.2026): rotes Warnzeichen vor dem Namen, roter Rand links; nicht wählbar, nur löschbar. */
+.figurwahl-dialog .eintrag-warnung { color: var(--danger, #e05252); margin-right: 8px; }
+.figurwahl-dialog .preset-list li.mit-warnung { border-left: 3px solid var(--danger, #e05252); cursor: default; }
+.figurwahl-dialog .preset-list li[data-aufraeumen] { cursor: default; border: 0; background: transparent; }

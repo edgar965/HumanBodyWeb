@@ -102,6 +102,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        # Mehrere Prozesse schreiben (Server, Aufträge, Blender-Import): ohne Wartezeit bricht ein kurzer Schreibkonflikt sofort ab
+        # („database is locked" im Schritt „gesicht", Fallout ranger, 10.10.2026). 30 s warten statt 5 s.
+        'OPTIONS': {'timeout': 30},
     }
 }
 

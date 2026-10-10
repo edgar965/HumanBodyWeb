@@ -2,9 +2,11 @@
 """Blendimportablage — die Dateien eines Blender-Imports (08.10.2026).
 
 `<OBJECTS_ROOT>/blendimport/<kennung>/`
-    export/      was Blender aus der .blend liest (`blendexport.py`): `inventar.json`, je Netz `<nr>.npz`
+    export/      was Blender aus der .blend liest (`blendexport.py`): `inventar.json`, je Netz `<nr>.npz`;
+                 bei OBJ/FBX dazu `umwandeln.json` (Bericht des Schritts „umwandeln")
     arbeit/      Körpernetz für „Mesh to 3D" (`koerper.glb`), Genesis-Netz für das Backen, Ruhelagen, Masken
     ergebnis/    gebackene Kacheln, Augenbild, Bericht
+    quelle.blend nur bei OBJ/FBX: die Datei als .blend (`blendumwandeln.py`) — ab „export" liest alles diese Datei
     stand.json   Zustand des Laufs (Schritt, Fortschritt, Ergebnis) — die Seite fragt ihn ab
     auftrag.log  Ausgabe des Arbeitsprozesses, auftrag.pid seine PID
 
@@ -16,6 +18,7 @@ einen gewöhnlichen Auftrag „Mesh to 3D" (`Meshfigurauftrag`), dessen Kennung 
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 from django.conf import settings
@@ -29,6 +32,7 @@ class Blendimportablage:
     ARBEIT = 'arbeit'
     ERGEBNIS = 'ergebnis'
     STAND = 'stand.json'
+    QUELLE_BLEND = 'quelle.blend'
     LOG = 'auftrag.log'
     PID = 'auftrag.pid'
     _KENNUNG = re.compile(r'^[0-9.]+$')
@@ -59,6 +63,10 @@ class Blendimportablage:
     def ergebnis(self, name=''):
         return self.unter(self.ERGEBNIS, name)
 
+    def quelle_blend(self):
+        """Wohin die Umwandlung einer OBJ/FBX die .blend schreibt."""
+        return self.ordner() / self.QUELLE_BLEND
+
     def log(self):
         return self.ordner() / self.LOG
 
@@ -84,7 +92,16 @@ class Blendimportablage:
         self.ordner().mkdir(parents=True, exist_ok=True)
         neben = self.ordner() / (self.STAND + '.neu')
         neben.write_text(json.dumps(daten, ensure_ascii=False, indent=1, default=str), encoding='utf-8')
-        os.replace(neben, self.ordner() / self.STAND)
+        # Windows verweigert das Ersetzen, solange ein Leser die Datei offen hält (Abfrage der Seite, Serienskript alle 30 s): kurz
+        # wiederholen statt den Lauf zu beenden (Rosemary, 10.10.2026: „Zugriff verweigert" beim Schritt „stücke", Lauf abgestürzt).
+        for versuch in range(50):
+            try:
+                os.replace(neben, self.ordner() / self.STAND)
+                return
+            except PermissionError:
+                if versuch == 49:
+                    raise
+                time.sleep(0.1)
 
     @classmethod
     def alle(cls):

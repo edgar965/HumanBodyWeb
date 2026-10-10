@@ -39,6 +39,19 @@ class Meshfiguroptionen:
 
     KATALOG = [
         {
+            # Blender-Import (10.10.2026): das Netz ist in Metern; die Erkennung errät die Einheit sonst aus der Länge — ein Körper
+            # über 3 m (Strumpf-Netz dazu) galt als Zentimeter und schrumpfte auf 3 cm, Erkennung fand keinen Menschen.
+            'schluessel': 'einheit',
+            'titel': 'Einheit des Netzes',
+            'art': 'wahl',
+            'vorgabe': 'auto',
+            'fein': True,
+            'werte': [
+                ('auto', 'Erraten: über 3 Einheiten Zentimeter, über 30 Millimeter'),
+                ('meter', 'Meter — das Netz ist schon in Metern (Blender-Import)'),
+            ],
+        },
+        {
             'schluessel': 'basis',
             'titel': 'Grundfigur',
             'art': 'wahl',

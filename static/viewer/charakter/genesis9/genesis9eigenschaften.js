@@ -5,6 +5,8 @@ import { Genesis9lauf } from './genesis9lauf.js';
 import { Genesis9garderobe } from './genesis9garderobe.js';
 import { Eigenschaftenbereiche } from '../eigenschaftenbereiche.js';
 import { Genesis9posen } from './genesis9posen.js';
+import { Genesis9ersatz } from '../../gemeinsam/genesis9ersatz.js';
+import { Genesis9materialdialog } from './genesis9materialdialog.js';
 import { Genesis9texturmischung } from './genesis9texturmischung.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
@@ -43,13 +45,9 @@ export class Genesis9eigenschaften {
         if (!bereich) return;
         bereich.classList.remove('hb-versteckt');
         Genesis9eigenschaften._kopf(inst);
-        // PARALLEL statt nacheinander (23.09.2026, Edgar: „mach das laden
-        // parallel und asynchron wie auf BVH Studio"): Regler-Plan, Posenliste
-        // und Garderobe sind DREI unabhaengige Serveranfragen in drei
-        // getrennte Behaelter — nur `_haut`/`_regler`/Texturmischung brauchen
-        // den Plan, Posen und Garderobe brauchen ihn nicht. Vorher liefen sie
-        // als `await`-Kette hintereinander (Log: drei Anfragen ueber ~2 s
-        // verteilt statt gleichzeitig).
+        // PARALLEL statt nacheinander (23.09.2026, Edgar: „mach das laden parallel und asynchron wie auf BVH Studio"):
+        // Regler-Plan, Posenliste und Garderobe sind DREI unabhaengige Anfragen in getrennte Behaelter — nur `_haut`/`_regler`/
+        // Texturmischung brauchen den Plan. Vorher eine `await`-Kette (Log: drei Anfragen ueber ~2 s verteilt).
         await Promise.all([
             Genesis9eigenschaften.plan().then(plan => {
                 Genesis9eigenschaften._haut(inst, plan);
@@ -131,16 +129,18 @@ export class Genesis9eigenschaften {
     static nachziehen(inst, plan) {
         const alle = (plan?.bereiche || []).flatMap(b => b.regler || []);
         for (const regler of alle) {
-            const schieber = document.getElementById(`g9-${regler.name}`);
-            if (!schieber || schieber === document.activeElement) continue;
-            const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
-            const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
-            if (parseFloat(schieber.min) !== unten) schieber.min = unten;
-            if (parseFloat(schieber.max) !== oben) schieber.max = oben;
-            if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;
-            schieber.value = wert;
-            const anzeige = schieber.parentElement?.querySelector('.slider-value');
-            if (anzeige) anzeige.textContent = Genesis9eigenschaften.text(wert, gesteuert);
+            // Liste (`g9-`) UND Popup „Form" (`g9d-`) tragen denselben Regler (`data-regler`).
+            for (const schieber of document.querySelectorAll(`input[data-regler="${CSS.escape(regler.name)}"]`)) {
+                if (schieber === document.activeElement) continue;
+                const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
+                const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
+                if (parseFloat(schieber.min) !== unten) schieber.min = unten;
+                if (parseFloat(schieber.max) !== oben) schieber.max = oben;
+                if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;
+                schieber.value = wert;
+                const anzeige = schieber.parentElement?.querySelector('.slider-value');
+                if (anzeige) anzeige.textContent = Genesis9eigenschaften.text(wert, gesteuert);
+            }
         }
     }
 
@@ -160,41 +160,43 @@ export class Genesis9eigenschaften {
         const behaelter = document.getElementById('prop-genesis9-haut');
         if (!behaelter) return;
         behaelter.innerHTML = '';
-        behaelter.appendChild(Genesis9eigenschaften._wahl('Haut',
+        // Neben jeder Auswahl mit Material ein Zahnrad: Glanz, Rauheit … im Popup (`Genesis9materialdialog`, 09.10.2026);
+        // sein Block „Form" zeigt die Formregler des Teils (`Genesis9teilregler`) als Zeilen wie die Reglerliste (Kennung `g9d-`).
+        Genesis9materialdialog.form = { inst, plan, zeile: r => Genesis9eigenschaften._zeile(inst, r, 'g9d-') };
+        behaelter.appendChild(Genesis9materialdialog.knopf(inst, 'haut', Genesis9eigenschaften._wahl('Haut',
             [{ id: '', name: 'Wie im Katalog' },
              ...(plan.haut || []).map(h => ({ id: h.id, name: `${h.name} (${h.geschlecht})` }))],
             inst.haut || '',
             wert => Genesis9lauf.planen(inst, () => inst.hautSetzen(wert),
-                                        () => Genesis9eigenschaften._kopf(inst), 'haut')));
-        behaelter.appendChild(Genesis9eigenschaften._augenWahl(inst, plan));
+                                        () => Genesis9eigenschaften._kopf(inst), 'haut'))));
+        behaelter.appendChild(Genesis9materialdialog.knopf(inst, 'augen', Genesis9eigenschaften._augenWahl(inst, plan)));
         Genesis9eigenschaften._brauen(inst, plan, behaelter);
-        // Wimpern, Nagellack und Schminke (18.09.2026): je Kategorie ein Preset
-        // aus den Charakterordnern und dem Daz-Makeup-System (`Genesis9/schminke.py`).
+        // Wimpern, Nagellack und Schminke (18.09.2026): je Kategorie ein Preset aus den Charakterordnern und dem Daz-Makeup-System.
         for (const kategorie of plan.praesets || []) {
-            behaelter.appendChild(Genesis9eigenschaften._wahl(kategorie.name,
+            behaelter.appendChild(Genesis9materialdialog.fuerKategorie(inst, kategorie.kategorie, Genesis9eigenschaften._wahl(kategorie.name,
                 [{ id: '', name: '—' }, ...kategorie.eintraege],
                 inst.praesets?.[kategorie.kategorie] || '',
                 wert => Genesis9lauf.planen(inst,
                     () => inst.praesetSetzen(kategorie.kategorie, wert),
-                    () => Genesis9eigenschaften._kopf(inst), `praeset:${kategorie.kategorie}`)));
+                    () => Genesis9eigenschaften._kopf(inst), `praeset:${kategorie.kategorie}`))));
         }
     }
 
-    /** Sentinel im Augen-Dropdown für „Original Augen vom Modell" — nie an den Server
-     *  gesendet (`Genesis9Modell.augenOriginalSetzen`), siehe `genesis9fototextur.js`. */
+    /** Sentinel für „Original Augen vom Modell" — nie an den Server gesendet (`Genesis9Modell.augenOriginalSetzen`). */
     static AUGEN_ORIGINAL = '__original__';
 
+    /** Der Brauenstil, den der Server bei leerem Wert zeichnet — gleich `G9brauen.VORGABE` (`Genesis9/brauen.py`; ein Test hält beide gegeneinander). */
+    static BRAUENVORGABE = 'card06';
+
     /**
-     * Das Augen-Dropdown. Trägt das Modell eine eigene Augen-Fotokachel
-     * (`inst.fototextur.augen`, Mesh-to-3D-/Blender-Import), steht „Original Augen vom
-     * Modell" als ERSTER Eintrag da (Edgar, 08.10.2026: „als erster Eintrag sollen die
-     * Original Augen vom Modell erscheinen") — vorausgewählt, solange der Nutzer noch
-     * kein Preset aus der Toolbar gewählt hat (`!inst._augenGewaehlt`). Ohne eigene Kachel
-     * (Katalogfigur) bleibt die Liste wie bisher, reine Daz-Presets.
+     * Das Augen-Dropdown. Trägt das Modell eigene Augen (Fotokachel `inst.fototextur.augen` aus Mesh-to-3D / Blender-Import
+     * oder ein Ersatz-Stück, `Genesis9ersatz.hatAugen`), steht „Original Augen vom Modell" als ERSTER Eintrag da (Edgar,
+     * 08.10.2026) — vorausgewählt, solange der Nutzer kein Preset gewählt hat (`!inst._augenGewaehlt`). Jedes Preset gilt
+     * bei jedem Modell vor den eigenen Augen (09.10.2026: „alle Modelle sollen alle Augen kriegen können").
      */
     static _augenWahl(inst, plan) {
         const eintraege = (plan.augen || []).map(a => ({ id: a.id, name: a.name }));
-        const hatKachel = !!inst.fototextur?.augen;
+        const hatKachel = !!inst.fototextur?.augen || Genesis9ersatz.hatAugen(inst);
         if (hatKachel) eintraege.unshift({ id: Genesis9eigenschaften.AUGEN_ORIGINAL, name: 'Original Augen vom Modell' });
         const gewaehlt = hatKachel && !inst._augenGewaehlt ? Genesis9eigenschaften.AUGEN_ORIGINAL : (inst.augen || '01');
         return Genesis9eigenschaften._wahl('Augen', eintraege, gewaehlt,
@@ -211,16 +213,21 @@ export class Genesis9eigenschaften {
     static _brauen(inst, plan, behaelter) {
         const stile = plan.brauenstile || [];
         if (!stile.length) return;
+        // Leerer Zustand = der Server zeichnet Karte 06 (`G9brauen.VORGABE`). Die Auswahl zeigt GENAU das und nicht den ersten Eintrag der Liste
+        // (Edgar, 10.10.2026, Asian: „ändern funktioniert nicht" — angezeigt „MB Olesia Brows Apply", gezeichnet Karte 06; wer den angezeigten
+        // Eintrag wählt, löst kein `change` aus). Gilt auch für die Art, nach der die Farbliste gebaut wird.
+        const vorgabe = stile.some(s => s.id === Genesis9eigenschaften.BRAUENVORGABE) ? Genesis9eigenschaften.BRAUENVORGABE : stile[0].id;
+        const stilJetzt = () => inst.brauenstil || vorgabe;
         const artVon = stil => (stile.find(s => s.id === stil) || stile[0]).art;
         const farben = art => (plan.brauenfarben || {})[art] || plan.brauen || [];
         const farbwahl = () => Genesis9eigenschaften._wahl('Brauenfarbe',
-            [{ id: '', name: 'Vorgabe (Brown)' }, ...farben(artVon(inst.brauenstil))],
+            [{ id: '', name: 'Vorgabe (Brown)' }, ...farben(artVon(stilJetzt()))],
             inst.brauen || '',
             wert => Genesis9lauf.planen(inst, () => inst.brauenSetzen(wert),
                                         () => Genesis9eigenschaften._kopf(inst), 'brauen'));
         let farbzeile = farbwahl();
-        behaelter.appendChild(Genesis9eigenschaften._wahl('Brauenstil',
-            stile, inst.brauenstil || stile[0].id,
+        behaelter.appendChild(Genesis9materialdialog.knopf(inst, 'brauen', Genesis9eigenschaften._wahl('Brauenstil',
+            stile, stilJetzt(),
             wert => {
                 const farbe = farben(artVon(wert)).some(f => f.id === inst.brauen) ? inst.brauen : '';
                 inst.brauenstil = wert;
@@ -230,7 +237,7 @@ export class Genesis9eigenschaften {
                 farbzeile = neu;
                 Genesis9lauf.planen(inst, () => inst.brauenstilSetzen(wert, farbe),
                                     () => Genesis9eigenschaften._kopf(inst), 'brauenstil');
-            }));
+            })));
         behaelter.appendChild(farbzeile);
     }
 
@@ -296,11 +303,11 @@ export class Genesis9eigenschaften {
         }).verdrahten();
     }
 
-    static _zeile(inst, regler) {
+    static _zeile(inst, regler, praefix = 'g9-') {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
-        const kennung = `g9-${regler.name}`;
+        const kennung = `${praefix}${regler.name}`;
         const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : regler.name;
         const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
         zeile.innerHTML = `

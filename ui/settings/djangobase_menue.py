@@ -258,6 +258,14 @@ HILFE_EXTRA = [
                 'url': '/hilfe/recherche/meshy-ai/',
                 'aktiv': 'hilfe_recherche_meshy',
             },
+            # Frei zugängliche, hoch aufgelöste Menschenmodelle (OBJ, FBX, Blender) ab 200 MB mit Vorschau, Auflösung, Größe, Dateityp und
+            # Download-Link (Edgar, 10.10.2026: „baue dafür eine neue Seite Hilfe - Recherche - Modelle Internet").
+            {
+                'label': 'Modelle Internet',
+                'icon': 'bi-cloud-download',
+                'url': '/hilfe/recherche/modelle-internet/',
+                'aktiv': 'hilfe_recherche_modelle_internet',
+            },
         ],
     },
 ]

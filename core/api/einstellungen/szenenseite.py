@@ -3,6 +3,7 @@
 
 import json
 
+from ...dienste.blendimportbackenwahl import Blendimportbackenwahl
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
 
@@ -47,6 +48,13 @@ class SzeneEinstellungen(Einstellungsseite):
         # 230 Module wieder einzeln im Browser — das braucht man beim
         # Suchen eines JavaScript-Fehlers.
         prefs['module_buendeln'] = '1' if post.get('module_buendeln') else '0'
+        # Vorgabe AUS: Die Normalen der Gelenkkorrekturen rechnet dann der Hauptfaden wie bisher;
+        # an rechnet sie ein Worker (`viewer/gemeinsam/normalenarbeit.js`), die Animation ruckelt weniger.
+        prefs['normalen_worker'] = '1' if post.get('normalen_worker') else '0'
+        # Womit der Blender-Import die Haut bäckt (`Blendimportbackenwahl`): nur ein bekannter Wert wird gespeichert, sonst bleibt die alte Wahl.
+        wahl = F.text(post, Blendimportbackenwahl.SCHLUESSEL)
+        if wahl in Blendimportbackenwahl.WAHLEN:
+            prefs[Blendimportbackenwahl.SCHLUESSEL] = wahl
         return prefs
 
     def kontext(self, s):
@@ -54,4 +62,7 @@ class SzeneEinstellungen(Einstellungsseite):
         return {
             'selection_opacity_pct': int(round(s.selection_opacity * 100)),
             'module_buendeln': str(prefs.get('module_buendeln', '1')) != '0',
+            'normalen_worker': str(prefs.get('normalen_worker', '0')) == '1',
+            'backen': Blendimportbackenwahl.aus(prefs),
+            'backen_wahlen': list(Blendimportbackenwahl.WAHLEN.items()),
         }

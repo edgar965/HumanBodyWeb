@@ -42,6 +42,7 @@ import { Genesis9felder } from '../../gemeinsam/genesis9felder.js';
 import { Genesis9gelenke } from '../../gemeinsam/genesis9gelenke.js';
 import { Stoffwache } from '../../gemeinsam/stoffwache.js';
 import { Stoffmischung } from '../../gemeinsam/stoffmischung.js';
+import { Stoffnachfuehrung } from '../../gemeinsam/stoffnachfuehrung.js';
 
 export class Genesis9stoffschwung {
 
@@ -82,6 +83,24 @@ export class Genesis9stoffschwung {
         const lebend = new Set(state.characters.values());
         for (const [inst, figur] of [...Genesis9stoffschwung._figuren]) {
             if (!lebend.has(inst)) { Genesis9stoffschwung._abraeumen(figur); Genesis9stoffschwung._figuren.delete(inst); }
+        }
+    }
+
+    /**
+     * Aus der Szenenschleife, NACH Bodenfix und Weichgewebe, vor dem Zeichnen: der Stoff liegt auf der Pose, in der die Figur
+     * jetzt gezeichnet wird, nicht auf der des Bildes, für das der Worker rechnete (`Stoffnachfuehrung`). Der Takt oben läuft
+     * VOR dem Bodenfix (`Bodenstand` senkt die Wurzel um bis zu mehreren Zentimetern) und vor dem Weichgewebe — die Matrizen,
+     * die der Worker bekam, sind nie die des gezeichneten Bildes.
+     */
+    static nachfuehren() {
+        if (!state.playing) return;
+        for (const [inst, figur] of Genesis9stoffschwung._figuren) {
+            let frisch = false;
+            for (const e of figur.stuecke.values()) {
+                if (!e.versatz || !e.anzeige.visible) continue;
+                if (!frisch) { inst.group.updateMatrixWorld(true); frisch = true; }
+                Stoffnachfuehrung.anwenden(e, Stoffhaut.matrizen(e.netz));
+            }
         }
     }
 
@@ -191,9 +210,11 @@ export class Genesis9stoffschwung {
         }
         if (!e.bereit || e.beschaeftigt) return;
         const { netz, anzeige } = e;
+        const M = Stoffhaut.matrizen(netz);
         anzeige.updateMatrixWorld(true);
+        Stoffnachfuehrung.senden(e, M);                 // die Häutung, für die der Worker rechnet (`nachfuehren` legt den Versatz darauf)
         e.worker.postMessage({
-            typ: 'bild', M: Stoffhaut.matrizen(netz), W: Float32Array.from(netz.matrixWorld.elements),
+            typ: 'bild', M, W: Float32Array.from(netz.matrixWorld.elements),
             inv: Float32Array.from(Genesis9stoffschwung._inv.copy(anzeige.matrixWorld).invert().elements),
             kapseln, Mk: haut?.Mk || null, Wk: haut?.Wk || null,
             dt: e.dtSumme, werte: e.felder ? (Genesis9gelenke.werte(e.inst) || null) : null,
@@ -210,6 +231,7 @@ export class Genesis9stoffschwung {
         geo.attributes.position.array.set(d.pos);
         geo.attributes.position.needsUpdate = true;
         if (geo.attributes.normal) { geo.attributes.normal.array.set(d.nrm); geo.attributes.normal.needsUpdate = true; }
+        Stoffnachfuehrung.antwort(e, d.pos);
         if (!e.anzeige.visible && state.playing) { e.anzeige.visible = true; e.netz.visible = false; }
         e.bilder++;
         e.auslenkung = d.auslenkung;
@@ -220,6 +242,7 @@ export class Genesis9stoffschwung {
     static _ruhe(figur) {
         for (const e of figur.stuecke.values()) {
             if (e.anzeige.visible) { e.anzeige.visible = false; e.netz.visible = true; }
+            Stoffnachfuehrung.vergessen(e);
         }
     }
 

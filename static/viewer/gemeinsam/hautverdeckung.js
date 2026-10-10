@@ -66,11 +66,12 @@ export class Hautverdeckung extends Figurhaut {
         const geo = inst?.bodyMesh?.geometry;
         if (!geo?.attributes?.position || !geo.index) return null;
         Hautverdeckung.merken(geo);
+        inst._maskeAnzahl = Hautverdeckung.zaehlende(inst).length;      // so viele Stücke zählen in der Maske, die jetzt gezeigt wird (`freigeben`)
         const voll = geo.userData.indexVoll;
         // Verschweißte Stücke (Scham aus einer .blend, `stueckloch.js`) bringen ihr Loch mit: genau diese Dreiecke fallen weg, ohne Rechnung.
         const loecher = Stueckloch.maske(Hautverdeckung.zaehlende(inst), voll.index.length / 3);
         const stoffe = Hautverdeckung.stoffe(inst, true);
-        if (loecher) Hautloch.naehen(geo, loecher);
+        Hautloch.naehen(geo, loecher, inst.bodyMesh);
         if (!stoffe.length) return loecher ? Hautloch.nurLoecher(inst, geo, voll, loecher) : Hautverdeckung.aufheben(inst);
         const t0 = performance.now();
         const pos = geo.attributes.position.array;
@@ -177,6 +178,21 @@ export class Hautverdeckung extends Figurhaut {
         const n = Hautanschmiegung.eintragen(eingezogen.array, senkung, normalen, ersatz, maske);
         eingezogen.needsUpdate = true;
         return n;
+    }
+
+    /**
+     * Kleidung ausgezogen oder ausgeblendet: die Haut darunter SOFORT ganz zeigen (Rainy, 10.10.2026: Flecken und Stufen in der nackten Haut,
+     * bis die neue Maske gerechnet war). Voller Index, Einzug null — nur die Löcher verschweißter Stücke bleiben; die Maske für die Stücke, die
+     * bleiben, kommt danach wie bisher. Preis: unter diesen steht die Haut bis dahin ungemaskt. Ursache und Zahlen: Tagebuch 2026-10-10.
+     */
+    static freigeben(inst) {
+        const geo = inst?.bodyMesh?.geometry;
+        const voll = geo?.userData?.indexVoll;
+        if (!geo?.attributes?.position || !geo.index || !voll) return null;
+        const loecher = Stueckloch.maske(Hautverdeckung.zaehlende(inst), voll.index.length / 3);
+        Hautloch.naehen(geo, loecher, inst.bodyMesh);
+        inst._maskeAnzahl = 0;                                          // gezeigt wird jetzt keine Maske mehr
+        return loecher ? Hautloch.nurLoecher(inst, geo, voll, loecher) : Hautverdeckung.aufheben(inst);
     }
 
     /** Den vollen Index wiederherstellen (kein Stück mehr). */
@@ -306,6 +322,8 @@ export class Hautverdeckung extends Figurhaut {
             return;
         }
         Hautverdeckung._ausstehend.delete(inst);
+        // Weniger Stücke als in der gezeigten Maske: Kleidung ist weg (ein Austausch hält die Zahl und bleibt, wie er war) — die Haut sofort zeigen.
+        if (Hautverdeckung.zaehlende(inst).length < (inst._maskeAnzahl || 0)) Hautverdeckung.freigeben(inst);
         const lauf = inst._maskeVersion;
         Hautverdeckung.anwendenAsync(inst, () => inst._maskeVersion === lauf)
             .catch((fehler) => Protokoll.warnung('Hautverdeckung', fehler.message));

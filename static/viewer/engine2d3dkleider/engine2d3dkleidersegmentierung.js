@@ -59,7 +59,8 @@ export class Engine2d3dKleidersegmentierung {
             return;
         }
         const wann = s.stand ? new Date(s.stand).toLocaleString('de-DE') : '';
-        const modell = s.kennzahlen?.modell ? `Sapiens-${String(s.kennzahlen.modell).toUpperCase()}. ` : '';
+        const name = String(s.kennzahlen?.modell || '');      // '1b' … oder 'sapiens2-0.4b' (09.10.2026)
+        const modell = name ? (name.startsWith('sapiens2-') ? `Sapiens2-${name.slice(9).toUpperCase()}. ` : `Sapiens-${name.toUpperCase()}. `) : '';
         this.hinweis.textContent = s.veraltet
             ? `Stand ${wann} — passt nicht mehr zu Netz, Fotos oder Einstellungen (${s.grund}); „Segmentierung starten“ rechnet neu. ${Engine2d3dKleidersegmentierung.kleidungssatz(s)}`
             : `Stand ${wann}. ${modell}${Engine2d3dKleidersegmentierung.flaechensatz(s)} ${Engine2d3dKleidersegmentierung.kleidungssatz(s)} ${Engine2d3dKleidersegmentierung.haarsatz(s)}`;

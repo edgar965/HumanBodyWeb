@@ -8,9 +8,14 @@ Edgar: „die augen hast du nicht importiert (als extra objekt)". Die Originalau
 3. Zieht man das Stück aus (Netz fehlt in `clothMeshes`), kommen die Augen zurück.
 4. Was jemand anders versteckt hat, bleibt versteckt: Die Klasse bringt nur zurück, was sie selbst ausgeblendet hat.
 5. Wird die Figur neu gebaut (neue, sichtbare Netze), gilt der Ersatz beim nächsten Aufruf erneut (idempotent).
+6. (09.10.2026, „alle Modelle sollen alle Augen kriegen können") Wählt der Nutzer ein Augen-Preset (`_augenGewaehlt`), bleiben die Augen
+   der Figur sichtbar und das Ersatz-Stück weicht; „Original Augen vom Modell" bringt es zurück.
+7. Ein von `_kleiderBinden` neu gesetztes Stücknetz (noch nicht in `clothMeshes`) weicht trotzdem — die Gruppe genügt.
+8. `hatAugen` sagt dem Dropdown, ob „Original Augen vom Modell" angeboten wird.
 
 Sabotage-Gegenprobe: `ersatzVerdeckt` nicht setzen → Fall 3 rot; `traene` aus `NETZE` streichen → Fall 2 rot; die Prüfung
-`netz.userData.ersatzVerdeckt` weglassen und immer einblenden → Fall 4 rot.
+`netz.userData.ersatzVerdeckt` weglassen und immer einblenden → Fall 4 rot; `_stueckWeichen` nicht aufrufen → Fall 6 rot;
+in `_stuecke` die Gruppe weglassen → Fall 7 rot. Nicht gelaufen (09.10.2026) — läuft nur auf Ansage.
 """
 
 from django.test import SimpleTestCase
@@ -64,6 +69,36 @@ E.nachziehen(inst);
 inst.group.children = inst.group.children.map(n => netz(n.name));          // neu gebaut: alles sichtbar
 E.nachziehen(inst);
 pruefe('nach dem Neubau', sichtbar(inst), 'koerper:1 augen:0 mund:1 wimpern:1 traene:0 brauen:1');
+
+// 6. Ausdrückliche Augenwahl (09.10.2026): die Augen der Figur bleiben, das Ersatz-Stück weicht — und kommt mit
+//    „Original Augen vom Modell" zurück. Das Stück steht in der Gruppe UND in clothMeshes (wie in der Szene).
+inst = figur();
+const ersatz = { name: 'genesis9_kleid_cute_girl_augen_0', visible: true, userData: { ersetzt: ['augen'] } };
+inst.group.children.push(ersatz);
+inst.clothMeshes['cute_girl_augen/0'] = ersatz;
+E.nachziehen(inst);
+pruefe('Stück ohne Wahl', sichtbar(inst), 'koerper:1 augen:0 mund:1 wimpern:1 traene:0 brauen:1 kleid:1');
+inst._augenGewaehlt = true;
+E.nachziehen(inst);
+pruefe('Augenwahl', sichtbar(inst), 'koerper:1 augen:1 mund:1 wimpern:1 traene:1 brauen:1 kleid:0');
+E.nachziehen(inst);
+pruefe('Augenwahl idempotent', sichtbar(inst), 'koerper:1 augen:1 mund:1 wimpern:1 traene:1 brauen:1 kleid:0');
+inst._augenGewaehlt = false;
+E.nachziehen(inst);
+pruefe('Original Augen', sichtbar(inst), 'koerper:1 augen:0 mund:1 wimpern:1 traene:0 brauen:1 kleid:1');
+
+// 7. `_kleiderBinden` setzt ein NEUES Objekt (gleiche userData, sichtbar) in die Gruppe, bevor `clothMeshes` es kennt:
+//    die Gruppe genügt, das Stück weicht trotzdem (gemessen im Chrome: es blieb sichtbar).
+inst._augenGewaehlt = true;
+E.nachziehen(inst);
+const neu = { name: ersatz.name, visible: true, userData: ersatz.userData };
+inst.group.children[inst.group.children.indexOf(ersatz)] = neu;
+E.nachziehen(inst);
+pruefe('neu gebundenes Stück weicht', neu.visible ? 1 : 0, 0);
+
+// 8. hatAugen: für das Dropdown „Original Augen vom Modell"
+pruefe('hatAugen mit Stück', E.hatAugen(inst), true);
+pruefe('hatAugen ohne Stück', E.hatAugen(figur()), false);
 pruefe('ohne inst', E.weg(undefined).size, 0);
 console.log(JSON.stringify({ ok: true }));
 """

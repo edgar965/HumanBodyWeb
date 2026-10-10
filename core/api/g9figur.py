@@ -26,14 +26,11 @@ ueber denen des Nutzers, seine Knochendrehungen gehen an die Formung;
 die Kennungen getragener Props (`G9garderobe.griff`): ihre Griffposen
 schliessen die Finger um Dolch und Speer — ueber der Pose.
 
-WARUM POST FUER DAS NETZ: Die Reglerstellung sind bis zu 108 Kanaele mit
-Werten — dieselbe Entscheidung wie bei `Mhfigur.netz` (269 Regler passen
-in keine Adresse). GET liefert die Vorgabestellung des Katalogeintrags
-(fuer Tests und den ersten Blick).
+WARUM POST FUER DAS NETZ: Die Reglerstellung sind bis zu 108 Kanaele — wie bei `Mhfigur.netz` (269 Regler
+passen in keine Adresse). GET liefert die Vorgabestellung des Katalogeintrags.
 
-Die Daten kommen aus der Daz-Bibliothek (`Genesis9/HERKUNFT.md`): gelesen
-in Python, nichts davon im Repo. Fehlt sie, antwortet der Katalog leer mit
-`vorhanden: false` — kein 500.
+Die Daten kommen aus der Daz-Bibliothek (`Genesis9/HERKUNFT.md`): gelesen in Python, nichts davon im Repo.
+Fehlt sie, antwortet der Katalog leer mit `vorhanden: false` — kein 500.
 """
 import logging
 
@@ -42,6 +39,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from ..daten.anfragerumpf import Anfragerumpf
+from ..dienste.blendimportplausibel import Blendimportplausibel
 from ..dienste.g9antworten import G9antworten
 from .g9netzantwort import G9netzantwort
 from ..dienste.modellkatalog import Modellkatalog
@@ -85,10 +83,9 @@ class G9figur:
             logger.warning('Genesis 9: Katalog nicht lesbar: %s', fehler)
             return JsonResponse({'figuren': [], 'vorhanden': True,
                                  'fehler': str(fehler)})
-        # Dahinter die GESPEICHERTEN Genesis-9-Modelle (`data/models/*.json`
-        # mit `quelle: genesis9`, 17.09.2026) — mit `gespeichert: true`, der
-        # Dialog stellt sie in den zweiten Bereich.
-        figuren += G9figur._gespeicherte()
+        # Dahinter die GESPEICHERTEN Genesis-9-Modelle (`data/models/*.json` mit `quelle: genesis9`, 17.09.2026) — `gespeichert: true`
+        # (zweiter Bereich im Dialog) und `befund`: passt die Figur eines Imports nicht zum Körper (`Blendimportplausibel`, 10.10.2026)?
+        figuren += Blendimportplausibel.markieren(G9figur._gespeicherte())
         from Genesis9.basisnetz import G9basisnetz
         return JsonResponse({'figuren': figuren, 'vorhanden': True,
                              'punkte': G9basisnetz.holen().steckbrief()})
@@ -106,15 +103,19 @@ class G9figur:
                             'regler': dict(eintrag['regler']),
                             'haut': eintrag.get('haut') or '',
                             'augen': eintrag.get('augen') or '',
+                            'augen_gewaehlt': bool(eintrag.get('augen_gewaehlt')),
                             'brauen': eintrag.get('brauen') or '',
                             'kleidung': dict(eintrag.get('kleidung') or {}),
                             'garmentcode': list(eintrag.get('garmentcode') or []),
                             'praesets': dict(eintrag.get('praesets') or {}),
                             'hautmischung': dict(eintrag.get('hautmischung') or {}),
+                            'teilmaterial': dict(eintrag.get('teilmaterial') or {}),
                             'brauenstil': eintrag.get('brauenstil') or '',
                             'pose': eintrag.get('pose') or '',
                             'ausdruck': eintrag.get('ausdruck') or '',
                             'fototextur': dict(eintrag.get('fototextur') or {}),
+                            # Woher das Modell stammt (`{art: 'blend import', import: <Kennung>}`): der Dialog bietet dann „Import löschen".
+                            'herkunft': dict(eintrag.get('herkunft') or {}),
                             'gespeichert': True})
         return aus
 
@@ -136,6 +137,7 @@ class G9figur:
                 'regler': dict(regler),
                 'haut': figur.get('haut') or grund.get('haut') or '',
                 'augen': figur.get('augen') or '',
+                'augen_gewaehlt': bool(figur.get('augen_gewaehlt')),
                 'brauen': figur.get('brauen') or '',
                 'kleidung': figur.get('kleidung') or {},
                 # GarmentCode-Stücke (`GarmentcodeAblage`): Studio/Theatre ziehen sie an (24.09.2026).
@@ -143,12 +145,15 @@ class G9figur:
                 'praesets': figur.get('praesets') or {},
                 # Texturmischung (21.09.2026): {hautsatz: prozent}, gemischt im Browser.
                 'hautmischung': figur.get('hautmischung') or {},
+                # Glanz, Rauheit … je Teil (`Genesis9teilmaterial`): {teil: {feld: wert}}.
+                'teilmaterial': figur.get('teilmaterial') or {},
                 'brauenstil': figur.get('brauenstil') or '',
                 'pose': figur.get('pose') or '',
                 'ausdruck': figur.get('ausdruck') or '',
                 # Fotokacheln (27.09.2026, `Modelltexturen`): {kachel: Adresse}, im Browser die Albedo.
                 'fototextur': figur.get('fototextur') if isinstance(figur.get('fototextur'), dict) else {},
                 'bilder': grund.get('bilder') or {},
+                'herkunft': figur.get('herkunft') if isinstance(figur.get('herkunft'), dict) else {},
                 'gespeichert': True}
 
     # ------------------------------------------------------------------ Netz

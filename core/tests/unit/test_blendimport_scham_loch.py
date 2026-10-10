@@ -7,8 +7,8 @@ Dreiecke der Haut mit EINEM geschlossenen Kantenring (Daz' Geograft „Anatomica
 
 Kunstwelt: Haut = Ebene y = 0, 24 × 24 Zellen von 4 mm (zwei Dreiecke je Zelle), Mitte im Ursprung; Schnittwert = Abstand zur Mitte − 30 mm.
 
-1. Das Loch hat EINEN geschlossenen Ring: jeder Ringpunkt steht einmal da, jeder hat genau zwei Randkanten; der Umfang liegt bei dem des
-   Kreises (2π · 30 mm, ± ein Viertel — die Kanten der Haut sind Zähne).
+1. Das Loch hat EINEN geschlossenen Ring: jeder Ringpunkt steht einmal da, jeder hat genau zwei Randkanten; die Ringpunkte liegen auf dem Kreis
+   (30 mm ± eine Zelle), der Umfang ist der einer Treppe: zwischen dem des Kreises (2π · 30 mm) und dem 1,45-fachen (gemessen 1,28–1,34).
 2. Im Loch liegen nur Dreiecke nahe der Scheibe (Mitte höchstens 30 mm + anderthalb Zellen), und die der Scheibe liegen drin.
 3. Die Haut an UV-Nähten ist geteilt (Punkte doppelt, gleiche Lage): die Nachbarschaft zählt nach Lage — dasselbe Loch, EIN Ring.
 4. Ein eingeschlossenes Loch im Loch (zwei Punkte mit positivem Wert in der Mitte) füllt sich; der Ring bleibt einer.
@@ -68,8 +68,15 @@ class SchamlochTest(SimpleTestCase):
         self.assertEqual(len(set(ring.tolist())), len(ring))
         kanten = haut.randkanten(im_loch)
         self.assertEqual(len(kanten), len(ring))
+        # Der Ring liegt auf dem Kreis (gemessen 10.10.2026, `ProjektTemp/_wegwerf/import_serie/scham_loch_ring.py`: Radius der 56 Ringpunkte 28,0–32,2 mm
+        # bei Soll 30). Sein UMFANG ist länger als der des Kreises: eine Kette von Dreieckskanten ist eine Treppe (zwischen 1,27 und 1,34 des Kreises bei
+        # Zellen von 4, 2 und 1 mm — er konvergiert nicht gegen 1). Die frühere Schranke „± ein Viertel" war zu eng und hatte nie gelaufen.
+        radien = np.linalg.norm(punkte[ring][:, [0, 2]], axis=1)
+        self.assertLessEqual(float(np.abs(radien - self.RADIUS).max()), self.ZELLE)
         umfang = haut.bericht(im_loch, ring)['ring_mm'] / 1000.0
-        self.assertAlmostEqual(umfang, 2 * np.pi * self.RADIUS, delta=0.25 * 2 * np.pi * self.RADIUS)
+        kreis = 2 * np.pi * self.RADIUS
+        self.assertGreaterEqual(umfang, kreis)
+        self.assertLessEqual(umfang, 1.45 * kreis)
 
     def test_2_im_loch_liegen_nur_dreiecke_nahe_der_scheibe(self):
         punkte, dreiecke = self._haut()

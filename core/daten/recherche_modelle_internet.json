@@ -1,0 +1,602 @@
+{
+  "meta": {
+    "stand": "2026-10-10",
+    "stand_text": "10.10.2026",
+    "anlass": "Edgar, 10.10.2026: „Suche im Internet nach frei zugänglichen, hoch auflösenden Human Modellen im obj, fbx oder blend Format für das Projekt a:\\3dtools. ab 200 MB Größe insgesamt“ — danach: „schreibe die Links, Vorschau (Icon), Auflösung, Größe, Dateityp, Download-Link in eine neue Django-Base-Tabelle und baue dafür eine neue Seite Hilfe - Recherche - Modelle Internet“.",
+    "kriterien": [
+      "Frei zugänglich: Der Download braucht keinen Kauf; Anmeldung, Formular oder Newsletter nur dort, wo es im Eintrag steht (hier: keiner der fünf).",
+      "Format: OBJ, FBX oder Blender; andere Formate stehen nur als Beigabe.",
+      "Größe: das Paket, das man herunterlädt, ist mindestens 200 MB groß (Dezimal-MB = 10⁶ Bytes, aus Content-Length, Git-Baum oder Hugging-Face-API) — oder ein Satz Pakete des Anbieters zusammen.",
+      "Menschenmodell: Ganzkörper-Scan, Avatar oder Anatomie des Menschen."
+    ],
+    "messweise": "Geladen sind nur zwei Funde, außerhalb von Git unter 3DObjects/models: von HSRD-100 je Person eine Pose (8,51 GB, Prüfsumme je Datei) und Z-Anatomy ganz (15 Dateien, Prüfsumme je Datei); die Übrigen sind nicht geladen. Gemessen ist sonst aus der Ferne: Größen per HEAD-Anfrage, Git-Baum-Schnittstelle und Hugging-Face-Schnittstelle; Inhalte der ZIP-Dateien per HTTP-Range (nur das Verzeichnis am Dateiende, bei den OBJ-Zählungen der Strom einer Datei); dazu zwei Proben, die wirklich geladen und gezählt wurden: Rocketbox-FBX (0,6 MB) und Z-Anatomy-Skelett-FBX (41,3 MB). Das Ten24-Paket liegt schon unter ProjektTemp/ten24 (OBJ_Package.zip, 1.967.870.302 Bytes — gleich der Größe auf dem Server).",
+    "bewertung": {
+      "stand_text": "10.10.2026",
+      "massstab": [
+        "Auflösung gegen Edgars Marke vom 17.09.2026: „Meshes mit 40.000 oder mehr Punkten“, ganze Körper, mit dem Ziel, das HumanBody-Netz fotorealistischer zu machen (Konzept hochaufloesende_figuren).",
+        "Lizenz: privat und kommerziell nutzbar? Share-Alike (CC BY-SA) ist gesondert vermerkt, weil Abgeleitetes dann unter derselben Lizenz stehen müsste.",
+        "Neuigkeitswert: Was bringt es über das hinaus, was im Haus ist (Ten24-Scan, HumanBody, Genesis 9, UMA)?",
+        "Körper-Wahrheit: Ein echter Test bräuchte einen unbekleideten Scan (meshfigur-ten24.md) — bekleidet oder nicht, steht deshalb bei jedem Scan."
+      ],
+      "hinweis": "Die Bewertung ist eine Einschätzung aus den Messwerten dieser Seite und dem Stand des Projekts. Nichts davon ist in einer Pipeline ausprobiert; was nur eine Idee oder ein Schluss ist, trägt die Marke „Vermutung“."
+    },
+    "hugging_face": "Suche vom 10.10.2026 nach Datensätzen mit Menschen-Netzen: 1.838 Datensätze aus 27 Stichwörtern und 3 Filtern (modality:3d, text-to-3d, image-to-3d) gesammelt, 1.301 davon nach Name und Tags menschenartig, 715 davon ab 200 MB. Als frei lizenzierte, hoch aufgelöste Menschen-Netze blieb nur HSRD-100. Die Nahtreffer stehen oben unter „nicht aufgenommen“ (Mixamo-Abbild, Spielfiguren, verschlüsselte .blend); die übrigen großen Treffer sind keine Menschenmodelle (Stoffsimulation, Garderobe, Bewegungsdaten, Videos, Sprache, Mathematik-Flächen). Grenzen der Suche: Sie filtert nach Name und Tags und übersieht Datensätze mit unauffälligem Namen; 21 Einzelabfragen scheiterten an der Rate-Begrenzung (429) und fehlen.",
+    "nicht_aufgenommen": [
+      {
+        "name": "Blender Human Base Meshes v1.4.1 (CC0, .blend)",
+        "grund": "50,6 MB (50.643.039 Bytes laut Server) — unter 200 MB. Am 10.10.2026 geladen und in Blender 5.2.2 vermessen: der realistische Mann (GEO-body_male_realistic, Multires Stufe 3 = 677.442 Punkte) ist nackt, trägt aber nur eine glatte Beule am Schritt, keine ausmodellierten Genitalien (Seitenprofil 3,9 cm weiter vorn als bei der Frau auf Höhe 0,755 m; Bild bestätigt); der stilisierte Mann (12.502 Punkte) hat nur eine kleine Stufe.",
+        "url": "https://mirror.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip"
+      },
+      {
+        "name": "Z-Anatomy Blender-Vorlage (Models-of-human-anatomy)",
+        "grund": "Z-Anatomy.zip 86,7 MB + Z-Biomechanics.7z 21,6 MB = 108,4 MB — unter 200 MB (CC BY-SA 4.0).",
+        "url": "https://github.com/Z-Anatomy/Models-of-human-anatomy"
+      },
+      {
+        "name": "BodyParts3D Fassung 4.0 (99 %, Haut und Genitalteile liegen lokal)",
+        "grund": "OBJ nur als 99-%-Pakete: 136 MB + 62 MB laut README — unter 200 MB. Gemessen am 10.10.2026 (isa-Paket, einzelne Einträge per Range gelesen): FJ2810 ist die Haut als ganzer nackter Männerkörper (102.467 Punkte, 203.382 Dreiecke, 1,72 m) mit außen modelliertem Penis und Hodensack; dazu Glans, Schwellkörper, Hoden einzeln.",
+        "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/README_e.html"
+      },
+      {
+        "name": "Ten24 / 3D Scan Store: freier weiblicher Kopfscan (2023; FBX, OBJ, ZBrush, Blender, 8K)",
+        "grund": "Newsletter-Anmeldung nötig, nicht kommerziell, Größe nicht angegeben.",
+        "url": "https://www.3dscanstore.com/blog/Free-3D-Head-Model"
+      },
+      {
+        "name": "Eisko Louise (20 Mio. Polygone, 4K) und FreakyHoody (20 Mio., 8K)",
+        "grund": "Download über ein Formular; Dateiformate und Größe stehen nicht auf der Seite. Louise: CC BY-NC-ND 4.0 (keine Ableitungen); FreakyHoody: „zur Evaluierung“.",
+        "url": "https://www.eisko.com/louise/virtual-model"
+      },
+      {
+        "name": "Triplegangers: Gratisproben je Gesicht, Körper, Hand",
+        "grund": "CC BY-NC-ND 4.0, Google Drive, Registrierung; Format und Größe der Probe nicht geprüft (die Seite antwortete mit 403).",
+        "url": "https://triplegangers.com/blog/technology/free-scan-samples"
+      },
+      {
+        "name": "THuman2.0/2.1, CustomHumans, 3DBodyTex",
+        "grund": "Forschungsdaten mit Lizenzvereinbarung oder Antrag — kein freier Download.",
+        "url": "https://github.com/ytrock/THuman2.0-Dataset"
+      },
+      {
+        "name": "Sketchfab-Scans (z. B. 35.000 bis 502.000 Dreiecke)",
+        "grund": "Download nur mit Anmeldung, Lizenz und Format je Modell verschieden; nicht einzeln geprüft.",
+        "url": "https://sketchfab.com/search?features=downloadable&type=models&q=full+body+scan"
+      },
+      {
+        "name": "Hugging Face: Mixamo-Animations-Characters (114 geriggte Figuren als FBX, 18,6 GB)",
+        "grund": "Abbild der Mixamo-Bibliothek; Lizenz „other“ — es gelten die Mixamo-Bedingungen von Adobe, ob die Weitergabe als Sammlung erlaubt ist, ist nicht geprüft. Auflösung nicht gemessen.",
+        "url": "https://huggingface.co/datasets/Linzhan/Mixamo-Animations-Characters"
+      },
+      {
+        "name": "Hugging Face: BlenderResources/Hoyoverse_Character_Models (24 GB, .blend)",
+        "grund": "Spielfiguren aus Computerspielen, Lizenz „unknown“, keine Karte — nicht frei im Sinn dieser Seite.",
+        "url": "https://huggingface.co/datasets/BlenderResources/Hoyoverse_Character_Models"
+      },
+      {
+        "name": "Hugging Face: MAN-HUMAN/009_blender_vault_dataset (12 Teile zu je 31 bis 49 GB, .blend)",
+        "grund": "Die Dateien heißen „encrypted.dp_….blend“, es gibt weder Lizenz noch Datensatzkarte.",
+        "url": "https://huggingface.co/datasets/MAN-HUMAN/009_blender_vault_dataset_0_999"
+      },
+      {
+        "name": "3DAnatomyman (Always3D, Gumroad): „Free Male Anatomy 3DModel\"",
+        "grund": "Suchtreffer 10.10.2026: über 900 Objekte in 4 Ebenen, FBX, Ableitung von BodyParts3D — CC BY-SA 2.1 JP laut Suchtext; die Seite selbst zeigt nur den Titel, Umfang (Haut? Genitalien? Anus?) und Größe nicht geprüft. Kein erigierter Zustand belegt.",
+        "url": "https://always3d.gumroad.com/l/haJWL"
+      },
+      {
+        "name": "Male Genitals (Kross, itch.io)",
+        "grund": "CC BY-ND 4.0 — keine Ableitungen, also nicht anpassbar; FBX; kostenlos nicht (ab 1,50 €). Zustand (erigiert?) steht nicht auf der Seite.",
+        "url": "https://burntplasticx.itch.io/male-genitals"
+      },
+      {
+        "name": "TAU male (creamtau, itch.io): Blender-Modell mit Genital-Formoptionen",
+        "grund": "Die Seite antwortete mit 403; Lizenz, Formoptionen (erigiert?) und Größe nicht geprüft. Der Suchtext nennt ein Blender-Modell mit eigenen Formen und einem Shape Key „Crus Muscles\".",
+        "url": "https://creamtau.itch.io/male"
+      },
+      {
+        "name": "Abdulcadir et al. 2020, J Sex Med 17(9): CT-gestützte 3D-Beckenmodelle (Penis, Beckenorgane)",
+        "grund": "Artikel und Anhang CC BY 4.0, STL für den 3D-Druck laut Abstract — die Dateien liegen hinter einem Login des Archivs der Uni Genf; die Modelle zeigen laut Artikel Ruhezustand oder „unknown state of arousal\". Nicht heruntergeladen.",
+        "url": "https://archive-ouverte.unige.ch/unige:158280"
+      },
+      {
+        "name": "NIH 3D Print Exchange 3DPX-015682: männliches Becken (L4, L5, Femur)",
+        "grund": "CC BY-NC-SA, nur Knochen — keine Weichteile, kein Penis, kein Anus.",
+        "url": "https://3d.nih.gov/entries/3DPX-015682"
+      },
+      {
+        "name": "MakeHuman / MPFB: Basisnetz und Targets (CC0)",
+        "grund": "Liegt lokal (`MakeHuman/MakeHuman/data/3dobjs/base.obj`, 19.158 Punkte): Gruppe „helper-genital\" grob, am 10.10.2026 von hinten unten gerendert: kein Anus erkennbar; ein Ziel für einen erigierten Zustand gibt es nicht. Die Suche fand keine Angabe zu Genital-Targets in MPFB.",
+        "url": "https://static.makehumancommunity.org/mpfb/faq/can_i_sell_models.html"
+      },
+      {
+        "name": "Scans echter Personen mit Genitalien oder Anus (Sketchfab u. a.)",
+        "grund": "Nicht gesucht: das Suchwerkzeug lehnte die Anfrage ab, und Einwilligung und Lizenz solcher Scans lassen sich nicht prüfen. Die vorhandenen Scan-Angebote (Triplegangers, Ten24, Eisko) sind ohnehin NC/ND oder Formularzugang.",
+        "url": "https://sketchfab.com/"
+      }
+    ]
+  },
+  "modelle": [
+    {
+      "id": "ten24-sample-scan",
+      "name": "Ten24 Sample Scan",
+      "kurz": "Ganzkörperscan eines Mannes (James Busby, Ten24) in neutraler Pose: Rohscan, sechs Reduktionsstufen, 16K-Texturen. Bekleidet — als Körper-Wahrheit ungeeignet (meshfigur-ten24.md).",
+      "quellen": [
+        {
+          "label": "ten24.info/sample-scan",
+          "url": "https://ten24.info/sample-scan/"
+        },
+        {
+          "label": "CG Channel 2016",
+          "url": "https://www.cgchannel.com/2016/03/download-ten24s-free-full-body-scan-of-an-adult-male/"
+        }
+      ],
+      "bild": "recherche/modelle_internet/ten24-sample-scan.webp",
+      "bild_herkunft": "Vorschaubild der Herstellerseite, Ordner 3DObjects/humanModels Recherche/04_Ten24_SampleScan (17.09.2026)",
+      "aufloesung": {
+        "sort": 15000000,
+        "zeilen": [
+          {
+            "text": "Rohscan ≈ 15 Mio. Polygone",
+            "beleg": "angabe"
+          },
+          {
+            "text": "Decimated-OBJ in sechs Stufen: 100k, 200k, 500k, 750k, 1.500k, 2.000k (nach Dateinamen; größte Datei 240,8 MB entpackt)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "SubD-Export Stufe 1–6 als OBJ (Stufe 6: 1.452,7 MB entpackt)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Texturen 16K (Colour_16k.jpg 99,0 MB; Pixelmaß nicht geöffnet)",
+            "beleg": "angabe"
+          }
+        ]
+      },
+      "groesse": {
+        "sort_mb": 2788.6,
+        "zeilen": [
+          {
+            "text": "OBJ Package 1.967,9 MB",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "RAW Package 380,2 MB (OBJ 676,4 MB + ZTL 204,3 MB entpackt)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "ZBrush Package 1.437,3 MB",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Complete Package 2.788,6 MB",
+            "beleg": "gemessen"
+          }
+        ]
+      },
+      "dateityp": "OBJ, ZTL (ZBrush); Texturen JPG und PSD (die Seite nennt TGA, im OBJ-Paket liegen JPG und PSD)",
+      "downloads": [
+        {
+          "label": "OBJ Package",
+          "url": "https://s3-us-west-2.amazonaws.com/samplescan/OBJ+Package.zip",
+          "groesse": "1.967,9 MB"
+        },
+        {
+          "label": "RAW Package",
+          "url": "https://s3-us-west-2.amazonaws.com/samplescan/RAW+Package.zip",
+          "groesse": "380,2 MB"
+        },
+        {
+          "label": "ZBrush Package",
+          "url": "https://s3-us-west-2.amazonaws.com/samplescan/Zbrush+Package.zip",
+          "groesse": "1.437,3 MB"
+        },
+        {
+          "label": "Complete Package",
+          "url": "https://s3-us-west-2.amazonaws.com/samplescan/Complete+Package.zip",
+          "groesse": "2.788,6 MB"
+        }
+      ],
+      "lizenz": "kommerziell und privat frei, Nennung von Ten24 verlangt",
+      "lizenz_url": "https://ten24.info/sample-scan/",
+      "hinweis": "Schon im Haus: ProjektTemp/ten24/OBJ_Package.zip. Die Dateien tragen auf dem Server das Datum 25.03.2016 (Last-Modified).",
+      "bewertung": {
+        "urteil": "bedingt",
+        "rang": 2,
+        "zeilen": [
+          {
+            "text": "Höchste Auflösung der fünf (Rohscan ≈ 15 Mio. Polygone laut Anbieter, größte OBJ-Stufe 2.000k) bei freier Lizenz mit Nennung.",
+            "beleg": "angabe"
+          },
+          {
+            "text": "Schon im Haus und benutzt: Das OBJ-Paket liegt unter ProjektTemp/ten24 und lief am 07.10.2026 durch Mesh to 3D (Abstand Figur ↔ Scan 1,76 mm RMS, meshfigur-ten24.md). Weitere Pakete von der Seite sind nur neu, wenn die RAW-Daten oder ZBrush gebraucht werden.",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Die Mängel bleiben: ein einziger Mann, bekleidet (Pullover, Jeans), kein Rig — als Körper-Wahrheit ungeeignet.",
+            "beleg": "gemessen"
+          }
+        ],
+        "naechster_schritt": "Nichts nachladen. Was fehlt (Frauen, andere Körper), liefert eher HSRD-100."
+      }
+    },
+    {
+      "id": "hsrd-100",
+      "name": "HSRD-100 — Human Scan Repository",
+      "kurz": "100 Ganzkörperscans (10 Personen × 10 Posen) per Fotogrammetrie, je Pose vier Auflösungsstufen als OBJ mit PNG-Textur.",
+      "quellen": [
+        {
+          "label": "huggingface.co/datasets/digitalrealitylab/HSRD-100",
+          "url": "https://huggingface.co/datasets/digitalrealitylab/HSRD-100"
+        }
+      ],
+      "bild": "recherche/modelle_internet/hsrd-100.webp",
+      "bild_herkunft": "Ausschnitt aus preview/HSR0015-Body-009-Cover.jpg des Datensatzes (Hugging Face)",
+      "aufloesung": {
+        "sort": 5000000,
+        "zeilen": [
+          {
+            "text": "Scan (roh): ≈ 5 Mio. Polygone laut Datensatzkarte (OBJ entpackt 770,0 MB, Dreiecke nicht nachgezählt); Textur 16.384 × 16.384 gemessen",
+            "beleg": "angabe"
+          },
+          {
+            "text": "Scan-LOD0: 499.929 Punkte, 1.000.002 Dreiecke, Textur 16.384 × 16.384",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Scan-LOD1: 49.963 Punkte, 99.998 Dreiecke, Textur 8.192 × 8.192",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Scan-LOD2: 4.995 Punkte, 10.002 Dreiecke, Textur 4.096 × 4.096",
+            "beleg": "gemessen"
+          }
+        ]
+      },
+      "groesse": {
+        "sort_mb": 246034,
+        "zeilen": [
+          {
+            "text": "Gesamt 246.034 MB ≈ 246 GB (1.305 Dateien; davon ≈ 157 GB Quellfotos und RealityCapture-Projekte unter source/)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Eine Pose (HSR0015-Body-009): Scan-LOD2 18,4 · Scan-LOD1 72,8 · Scan-LOD0 232,6 · Scan 516,4 MB",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Mittel über 100 Posen: 20,8 · 77,6 · 244,2 · 545,1 MB; alle Scan-LOD0 zusammen 24,4 GB, alle Scan 54,5 GB",
+            "beleg": "gemessen"
+          }
+        ]
+      },
+      "dateityp": "OBJ + PNG-Textur (Diffuse), je Paket ein ZIP; dazu JPG-Vorschau und JSON-Metadaten",
+      "downloads": [
+        {
+          "label": "Datensatz (alle Posen)",
+          "url": "https://huggingface.co/datasets/digitalrealitylab/HSRD-100/tree/main/data",
+          "groesse": "246 GB"
+        },
+        {
+          "label": "Beispiel Scan-LOD2",
+          "url": "https://huggingface.co/datasets/digitalrealitylab/HSRD-100/resolve/main/data/HSR0015/HSR0015-Body-009/scans/HSR0015-Body-009-Scan-LOD2.zip",
+          "groesse": "18,4 MB"
+        },
+        {
+          "label": "Beispiel Scan-LOD1",
+          "url": "https://huggingface.co/datasets/digitalrealitylab/HSRD-100/resolve/main/data/HSR0015/HSR0015-Body-009/scans/HSR0015-Body-009-Scan-LOD1.zip",
+          "groesse": "72,8 MB"
+        },
+        {
+          "label": "Beispiel Scan-LOD0",
+          "url": "https://huggingface.co/datasets/digitalrealitylab/HSRD-100/resolve/main/data/HSR0015/HSR0015-Body-009/scans/HSR0015-Body-009-Scan-LOD0.zip",
+          "groesse": "232,6 MB"
+        },
+        {
+          "label": "Beispiel Scan (roh)",
+          "url": "https://huggingface.co/datasets/digitalrealitylab/HSRD-100/resolve/main/data/HSR0015/HSR0015-Body-009/scans/HSR0015-Body-009-Scan.zip",
+          "groesse": "516,4 MB"
+        }
+      ],
+      "lizenz": "CC BY 4.0 (Namensnennung)",
+      "lizenz_url": "https://creativecommons.org/licenses/by/4.0/",
+      "hinweis": "Die Dateien ohne „Scan“ im Namen (…-LOD0.zip bis …-LOD2.zip) sind 41-Byte-Platzhalter (gemessen) — die Netze stecken in …-Scan-LOD*.zip. Die angesehene Beispielpose ist bekleidet (Jacke, Jeans); ob alle es sind, ist nicht geprüft. Der Datensatz ist nicht zugangsbeschränkt (gated: false). Seit 10.10.2026 liegt je Person eine Pose (alle vier Netzstufen, 8,51 GB) unter 3DObjects/models/HSRD; dort ist an allen zehn Posen gemessen — bei HSR0040-Body-004 haben LOD0 und Scan nur 8.192² statt 16.384² Textur.",
+      "bewertung": {
+        "urteil": "empfohlen",
+        "rang": 1,
+        "zeilen": [
+          {
+            "text": "Schließt die Lücke, die das Konzept vom 17.09. bei Ten24 nennt („nur männlich“): 10 Personen, 5 Frauen und 5 Männer, 21 bis 64 Jahre, 163 bis 180 cm, 48 bis 112 kg, vier Herkünfte (aus dem Manifest gezählt).",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "LOD1 mit 49.963 Punkten und 8K-Textur liegt über Edgars Marke „40.000 oder mehr Punkte“ (17.09.); LOD0 mit rund 500.000 Punkten gibt Reserve.",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Lizenz CC BY 4.0 laut Datensatzkarte; das Manifest führt jede Person als „Commercial“.",
+            "beleg": "angabe"
+          },
+          {
+            "text": "Je Pose liegen Quellfotos und das RealityCapture-Projekt dabei: Testmaterial für Foto → Netz mit bekanntem Ergebnis (Idee, nicht geprüft).",
+            "beleg": "vermutung"
+          },
+          {
+            "text": "Kleidung: Das Feld „clothing“ im Manifest ist leer, aber `metadata/pose_meta.json` je Pose führt es — am 10.10.2026 alle 100 gelesen: keine nackte Pose; am wenigsten an hat HSR0042-Body-045 (Mann, „Swimwear“, Badehose, ohne Oberteil; nicht geladen), dann HSR0081-Body-074 (Crop Top, Leggings). Alle übrigen in Alltags-, Winter-, Sport- oder Businesskleidung (77 „Casual wear“, 15 „Outerwear“). Als Körper-Wahrheit und für männliche Anatomie also nicht brauchbar (wie bei Ten24).",
+            "beleg": "gemessen"
+          }
+        ],
+        "naechster_schritt": "Je Person eine Pose als LOD1 laden (Mittel 77,6 MB, zusammen ≈ 0,8 GB) und ansehen, erst danach LOD0."
+      }
+    },
+    {
+      "id": "z-anatomy-fbx",
+      "name": "Z-Anatomy — Modelle der menschlichen Anatomie",
+      "kurz": "Neun FBX-Dateien nach Organsystemen (Skelett, Muskeln, Nerven, Gefäße, Eingeweide …) aus dem Z-Anatomy-Projekt; die Dateien liegen im Unity-Repo von Lluís Vinent Juanico.",
+      "quellen": [
+        {
+          "label": "LluisV/Z-Anatomy (Zweig PC-Version)",
+          "url": "https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX"
+        },
+        {
+          "label": "Z-Anatomy-Projekt",
+          "url": "https://github.com/Z-Anatomy/Models-of-human-anatomy"
+        }
+      ],
+      "bild": "recherche/modelle_internet/z-anatomy.webp",
+      "bild_herkunft": "Vorschaubild des Projektvideos (YouTube h6NNGB-_cSY), im README verlinkt",
+      "aufloesung": {
+        "sort": 1435894,
+        "zeilen": [
+          {
+            "text": "SkeletalSystem100.fbx: 721.832 Punkte, 1.435.894 Dreiecke (Summe aller Geometry-Knoten)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "VisceralSystem100.fbx (Namen und Dreiecke gelesen): männliche Geschlechtsorgane einzeln — Glans penis 1.391, Corpus cavernosum 1.288, Corpus spongiosum 560, Hoden je 1.356 Dreiecke, dazu Nebenhoden, Samenleiter, Prostata, Samenbläschen, Harnröhre; Organ-Anatomie, keine Hautfläche",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Die übrigen Dateien nicht gezählt (außer den Namen nach Geschlechtsorganen durchsucht)",
+            "beleg": "angabe"
+          }
+        ]
+      },
+      "groesse": {
+        "sort_mb": 232.5,
+        "zeilen": [
+          {
+            "text": "9 FBX zusammen 232,5 MB: CardioVascular41 64,9 · NervousSystem100 53,9 · SkeletalSystem100 41,3 · MuscularSystem100 37,3 · VisceralSystem100 18,4 · Joints100 9,8 · Regions of human body100 4,4 · LymphoidOrgans100 2,1 · References100 0,3 MB",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Blender-Dateien (.blend) liegen laut README auf Google Drive — Größe nicht geprüft",
+            "beleg": "angabe"
+          }
+        ]
+      },
+      "dateityp": "FBX (.blend auf Google Drive, nicht geprüft)",
+      "downloads": [
+        {
+          "label": "Ordner FBX (GitHub)",
+          "url": "https://github.com/LluisV/Z-Anatomy/tree/PC-Version/Resources/Models/FBX",
+          "groesse": "232,5 MB"
+        },
+        {
+          "label": "CardioVascular41.fbx",
+          "url": "https://raw.githubusercontent.com/LluisV/Z-Anatomy/PC-Version/Resources/Models/FBX/CardioVascular41.fbx",
+          "groesse": "64,9 MB"
+        },
+        {
+          "label": "NervousSystem100.fbx",
+          "url": "https://raw.githubusercontent.com/LluisV/Z-Anatomy/PC-Version/Resources/Models/FBX/NervousSystem100.fbx",
+          "groesse": "53,9 MB"
+        },
+        {
+          "label": "SkeletalSystem100.fbx",
+          "url": "https://raw.githubusercontent.com/LluisV/Z-Anatomy/PC-Version/Resources/Models/FBX/SkeletalSystem100.fbx",
+          "groesse": "41,3 MB"
+        },
+        {
+          "label": ".blend (Google Drive)",
+          "url": "https://drive.google.com/drive/folders/18M7IuH2ai2fl21Ud0YH1mSlNEPPmcZzq",
+          "groesse": "?"
+        }
+      ],
+      "lizenz": "CC BY-SA 4.0 (Namensnennung, Weitergabe unter gleicher Lizenz)",
+      "lizenz_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "hinweis": "Anatomie nach Organsystemen, kein Hautmodell als Gesamtfigur gemessen — nur das Skelett ist geöffnet und gezählt. „Gleiche Lizenz“ gilt auch für Abgeleitetes.",
+      "bewertung": {
+        "urteil": "bedingt",
+        "rang": 4,
+        "zeilen": [
+          {
+            "text": "Sehr dicht (Skelett 1.435.894 Dreiecke), aber nach Organsystemen getrennt; ein Gesamtkörper mit Haut ist nicht gemessen.",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Ob 3dTools ein Skelett- oder Muskelmodell braucht, steht in keiner Projektregel, die ich dafür gelesen habe (Konzept vom 17.09., Ten24-Regel) — der Bedarf ist nicht belegt.",
+            "beleg": "vermutung"
+          },
+          {
+            "text": "CC BY-SA 4.0: Abgeleitetes müsste unter gleicher Lizenz stehen. Vor einem Einbau mit den Lizenzen der eigenen Figuren abgleichen (HumanBody: MB-Lab AGPL / eigen, Genesis 9: Daz-EULA).",
+            "beleg": "angabe"
+          }
+        ],
+        "naechster_schritt": "Nur wenn Anatomie gebraucht wird: SkeletalSystem100.fbx (41,3 MB) in die Szene laden und gegen das DEF-Skelett legen."
+      }
+    },
+    {
+      "id": "bodyparts3d",
+      "name": "BodyParts3D 3.0 (OBJ, 95 %)",
+      "kurz": "Anatomie des erwachsenen Mannes (Database Center for Life Science, Japan): 934 OBJ-Dateien, je eine pro Element — darunter die Haut als ganzer nackter Körper mit Genitalien (FMA7163, 1,59 Mio. Dreiecke).",
+      "quellen": [
+        {
+          "label": "lifesciencedb.jp/bp3d",
+          "url": "https://lifesciencedb.jp/bp3d/"
+        },
+        {
+          "label": "README Fassung 3.0",
+          "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/20110915/README_e.html"
+        }
+      ],
+      "bild": "recherche/modelle_internet/bodyparts3d.webp",
+      "bild_herkunft": "Wikimedia Commons, „Anatomography rib cage and heart.png“ (CC BY-SA 2.1 jp, DBCLS)",
+      "aufloesung": {
+        "sort": 1586498,
+        "zeilen": [
+          {
+            "text": "934 OBJ-Dateien, je ein anatomisches Element, ohne Textur",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "95 % Polygonreduktion gegenüber dem Original (Paketname, README)",
+            "beleg": "angabe"
+          },
+          {
+            "text": "FMA7163.obj (Haut, ganzer Körper): 994.582 Punkte, 1.586.498 Dreiecke, 659 × 286 × 1.655 mm, 131,8 MB entpackt — das größte gezählte Teil",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Genitalteile einzeln: Glans FMA18247 5.252 Dreiecke, Schwellkörper FMA19618 4.860, Hoden FMA7211/7212 je ≈ 280 (Corpus spongiosum FMA19617, Hoden-Sammelteil FMA7210 und Nebenhoden FMA18255 sind in 3.0 keine eigene Datei)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Weitere Stichproben: FMA13336.obj 311.421 Punkte, 549.294 Dreiecke · FMA13295.obj 109.915 Punkte, 210.666 Dreiecke; übrige Teile nicht gezählt",
+            "beleg": "gemessen"
+          }
+        ]
+      },
+      "groesse": {
+        "sort_mb": 547.3,
+        "zeilen": [
+          {
+            "text": "BodyParts3D_3.0_obj_95.zip 547,3 MB (entpackt 1.967,1 MB)",
+            "beleg": "gemessen"
+          }
+        ]
+      },
+      "dateityp": "OBJ (eine Datei je Element)",
+      "downloads": [
+        {
+          "label": "BodyParts3D_3.0_obj_95.zip",
+          "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/20110915/BodyParts3D_3.0_obj_95.zip",
+          "groesse": "547,3 MB"
+        }
+      ],
+      "lizenz": "CC BY-SA 2.1 Japan (Fassung 3.0); Nennung „BodyParts3D, © The Database Center for Life Science“",
+      "lizenz_url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/20110915/README_e.html",
+      "hinweis": "Dieselben Daten gibt es in Fassung 4.0, aber nur als 99-%-Pakete (136 + 62 MB, unter 200 MB). Der ganze Körper steckt in EINER Datei: die Haut (3.0: FMA7163.obj, 4.0: FJ2810.obj) — ein nackter erwachsener Mann, glatt und ohne Textur, Arme am Körper, mit Penis, Glans und Hodensack außen modelliert (am 10.10.2026 in Blender gerendert und angesehen, 3.0 und 4.0). Lizenz widersprüchlich: das README in LATEST (27.02.2025) nennt für die Datenbank CC BY 4.0, der Kopf der OBJ-Dateien von 4.0 (FJ2810) und das README der Fassung 3.0 nennen CC BY-SA 2.1 Japan — bis zur Klärung gilt die strengere Lesart (Nennung + gleiche Lizenz).",
+      "bewertung": {
+        "urteil": "bedingt",
+        "rang": 3,
+        "zeilen": [
+          {
+            "text": "Die Haut ist ein ganzer nackter Männerkörper in einer Datei mit 1.586.498 Dreiecken und außen modellierten Genitalien — der einzige gefundene freie Körper mit männlicher Anatomie (HSRD-100 und Ten24 sind bekleidet, Blenders Human Base Meshes haben nur eine Beule). Ohne Textur (nur .obj im Paket), glatte Mannequin-Haut, eine Pose (Arme am Körper), ein Körper.",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Erste Fassung dieser Bewertung (Rang 5, „Nichts laden“) beruhte auf zwei Stichproben und dem Satz „kein Gesamtkörper in einer Datei“ — das war falsch, die Haut war nicht gezählt.",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Lizenz CC BY-SA 2.1 Japan (README der Fassung 3.0 und Kopf der 4.0-Dateien) bzw. CC BY 4.0 (README LATEST vom 27.02.2025); welche heute gilt, ist offen. Vorsichtshalber Share-Alike wie bei Z-Anatomy beachten.",
+            "beleg": "angabe"
+          },
+          {
+            "text": "Ob der Körper für 3dTools taugt (ein einzelner Körper „eines erwachsenen Mannes“ laut README, glatte Haut, kein Rig), ist nicht ausprobiert; als Vorlage für die Form von Penis und Hodensack passt er.",
+            "beleg": "vermutung"
+          }
+        ],
+        "naechster_schritt": "Haut FMA7163.obj (131,8 MB) laden und neben ein Genesis-9-Netz legen; Entscheidung über das ganze Paket (547 MB) danach."
+      }
+    },
+    {
+      "id": "rocketbox",
+      "name": "Microsoft Rocketbox Avatar Library",
+      "kurz": "117 Avatar-Ordner (40 Erwachsene, 73 Berufe, 4 Kinder; README: 115 Figuren), geriggt. NIEDRIG aufgelöst — hier nur, weil Größe, Format und Lizenz passen.",
+      "quellen": [
+        {
+          "label": "github.com/microsoft/Microsoft-Rocketbox",
+          "url": "https://github.com/microsoft/Microsoft-Rocketbox"
+        }
+      ],
+      "bild": "recherche/modelle_internet/rocketbox.webp",
+      "bild_herkunft": "Female_Adult_01.png aus dem Avatar-Ordner des Repos (MIT)",
+      "aufloesung": {
+        "sort": 8732,
+        "zeilen": [
+          {
+            "text": "Female_Adult_01: 4.734 Punkte, 8.732 Dreiecke (Export/Female_Adult_01.fbx, 609 KB)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Farbtextur 2.048 × 2.048 (TGA-Kopf gelesen)",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "README: „relatively low-poly“; vier Netzstufen hipoly, midpoly, lowpoly, ultralowpoly",
+            "beleg": "angabe"
+          }
+        ]
+      },
+      "groesse": {
+        "sort_mb": 10996.2,
+        "zeilen": [
+          {
+            "text": "Adults (40 Ordner) 3.589,7 MB · Professions (73) 7.093,4 MB · Children (4) 313,1 MB — Summe der Dateigrößen im Git-Baum, unkomprimiert",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Ein Avatar (Female_Adult_01) 108,1 MB, davon FBX 2,8 MB, der Rest Texturen",
+            "beleg": "gemessen"
+          }
+        ]
+      },
+      "dateityp": "FBX (Export/*.fbx und *_facial.fbx); Texturen TGA; PNG-Vorschau",
+      "downloads": [
+        {
+          "label": "Adults (Ordner)",
+          "url": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults",
+          "groesse": "3.589,7 MB"
+        },
+        {
+          "label": "Professions (Ordner)",
+          "url": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions",
+          "groesse": "7.093,4 MB"
+        },
+        {
+          "label": "Children (Ordner)",
+          "url": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Children",
+          "groesse": "313,1 MB"
+        },
+        {
+          "label": "Beispiel Female_Adult_01.fbx",
+          "url": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Adults/Female_Adult_01/Export/Female_Adult_01.fbx",
+          "groesse": "0,6 MB"
+        }
+      ],
+      "lizenz": "MIT",
+      "lizenz_url": "https://github.com/microsoft/Microsoft-Rocketbox/blob/master/LICENSE.md",
+      "hinweis": "Nach Auflösung steht Rocketbox zuletzt: der gemessene Avatar hat unter 9.000 Dreiecke. Bei ihm sind rund 105 der 108 MB Texturen (2K, TGA); ob das für alle gilt, ist nicht geprüft.",
+      "bewertung": {
+        "urteil": "nicht_passend",
+        "rang": 5,
+        "zeilen": [
+          {
+            "text": "Zu niedrig für das Ziel: 8.732 Dreiecke (ein Avatar gemessen) gegen ≈ 34.576 beim Basisnetz von HumanBody und 29.430 bei UMA (Seite „Andere Modelle“).",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Die 3,6 GB der Erwachsenen sind zum großen Teil Textur: beim gemessenen Avatar 105 von 108 MB (2K, TGA).",
+            "beleg": "gemessen"
+          },
+          {
+            "text": "Brauchbar höchstens als Testfiguren für Rig und Retargeting: FBX, MIT, 117 Ordner, laut README geriggt (nicht geprüft). Eigene Skelette hat 3dTools schon (DEF, UMA, Genesis).",
+            "beleg": "vermutung"
+          }
+        ],
+        "naechster_schritt": "Nichts laden."
+      }
+    }
+  ]
+}

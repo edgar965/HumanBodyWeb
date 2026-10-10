@@ -39,6 +39,18 @@ from .meshfiguroptionen import Meshfiguroptionen
 
 logger = logging.getLogger('core')
 
+
+def _endlich(wert):
+    """NaN und unendlich werden `None` — `json.loads` liest „NaN" als Zahl, und SQLite lehnt sie im JSON-Feld ab
+    (`CHECK constraint failed: JSON_VALID`, Seori-Import 10.10.2026: `gesicht_fehler_px` ohne Gesichtspunkte)."""
+    if isinstance(wert, float):
+        return wert if (wert == wert and abs(wert) != float('inf')) else None
+    if isinstance(wert, dict):
+        return {k: _endlich(v) for k, v in wert.items()}
+    if isinstance(wert, list):
+        return [_endlich(v) for v in wert]
+    return wert
+
 __all__ = ['Meshfigurlauf']
 
 
@@ -197,7 +209,7 @@ class Meshfigurlauf:
                         continue
                     self.melden(von + (bis - von) * wert, teile[1] if len(teile) > 1 else schritt)
                 elif zeile.startswith('[ergebnis] '):
-                    ergebnis = json.loads(zeile[11:])
+                    ergebnis = _endlich(json.loads(zeile[11:]))
                 elif zeile.startswith('[fehler] '):
                     meldung = json.loads(zeile[9:]).get('fehler')
                 if Meshfigurauftrag.objects.filter(pk=self.job.pk, status='angehalten').exists():

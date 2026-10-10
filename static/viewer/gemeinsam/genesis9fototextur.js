@@ -32,6 +32,17 @@ export class Genesis9fototextur {
         return adresse + (adresse.includes('?') ? '&' : '?') + 'hoch=1';
     }
 
+    /** Die Kopfkachel der Genesis-UV. */
+    static KOPF = 1001;
+
+    /** Der Pfad der Kopfkachel OHNE die aufgemalten Brauen des Originals (`core/api/g9fototexturohnebrauen.py`, `core/dienste/fotohautbrauen.py`).
+     *  Edgar, 10.10.2026, Asian: „ändern funktioniert nicht" — die Kachel eines Imports trägt die Brauen des Originals, und das Netz des
+     *  gewählten Brauenstils lag genau darauf; welchen Stil man auch wählte, die gemalte Braue blieb sichtbar. Nur wer einen Stil gewählt hat
+     *  (`wahl.brauenstil`), bekommt sie ohne; ohne Wahl bleibt die Kachel, wie das Modell sie trägt. Eine fremde Adresse bleibt unverändert. */
+    static ohneBrauen(adresse) {
+        return String(adresse).replace('/genesis9-figur/fototextur/', '/genesis9-figur/fototextur-ohne-brauen/');
+    }
+
     /** Welche Kacheln eine Wahl im Genesis-Bedienfeld freigibt (Edgar, 08.10.2026: „Nägel färben sich nicht, wenn ich
      *  die über Genesis setze, auch Skin nicht"): Wer ein Hautpreset, einen Kopf- oder Nagellack-Preset wählt, will DAS
      *  sehen — die Fotokachel dieser Gruppen tritt dann zurück, die Serverantwort (Preset) gilt. Die Kachel 1005
@@ -59,7 +70,8 @@ export class Genesis9fototextur {
         return (gruppen || []).map(gruppe => {
             const adresse = kacheln[String(gruppe.kachel)];
             if (!adresse || frei.has(Number(gruppe.kachel))) return gruppe;
-            const bilder = { ...(gruppe.bilder || {}), albedo: Genesis9fototextur.adresse(adresse) };
+            const farbe = wahl?.brauenstil && Number(gruppe.kachel) === Genesis9fototextur.KOPF ? Genesis9fototextur.ohneBrauen(adresse) : adresse;
+            const bilder = { ...(gruppe.bilder || {}), albedo: Genesis9fototextur.adresse(farbe) };
             if (!praesets.hautton) delete bilder.farbe;
             for (const kanal of Genesis9fototextur.KANAELE) {
                 const weitere = kacheln[`${gruppe.kachel}:${kanal}`];

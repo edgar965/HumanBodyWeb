@@ -36,4 +36,11 @@ bringt nur das Ziel-Div und den Aufruf mit.{% endcomment %}
 {% block topbar_extras %}{% include "_system_stats.html" %}{% endblock %}
 
 {% block body_scripts %}{{ block.super }}
+{% comment %}Jede Auswahlliste der Seite alphabetisch (Edgar, 10.10.2026) — eine Stelle für alle Seiten und alle zur Laufzeit gefüllten Listen; Stufenfolgen tragen data-reihenfolge="fest". Baumlisten (Animationen, Kleider, Garderobe, Getragen …) ordnet Baumsortierung ebenso.{% endcomment %}
+<script type="module">
+    import { Combosortierung } from "{% fassungspfad 'viewer/gemeinsam/combosortierung.js' %}";
+    import { Baumsortierung } from "{% fassungspfad 'viewer/gemeinsam/baumsortierung.js' %}";
+    Combosortierung.einrichten();
+    Baumsortierung.einrichten();
+</script>
 {% block extra_scripts %}{% endblock %}{% endblock %}

@@ -30,9 +30,10 @@ class Blendimportblender:
         self.melden = melden or (lambda anteil, text: None)
 
     def laufen(self, skript, blend, argumente, ergebnis):
-        """`skript` auf `blend` anwenden; `ergebnis` (Pfad) muss danach jünger sein als der Start."""
-        befehl = [str(settings.BLENDER_EXE), '-b', '--factory-startup', str(blend), '--python',
-                  str(self.SKRIPTE / skript), '--'] + [str(a) for a in argumente]
+        """`skript` auf `blend` anwenden; `ergebnis` (Pfad) muss danach jünger sein als der Start.
+        `blend=None`: Blender startet leer (die Umwandlung einer OBJ/FBX liest ihre Quelle selbst, `blendumwandeln.py`)."""
+        befehl = [str(settings.BLENDER_EXE), '-b', '--factory-startup'] + ([str(blend)] if blend else []) \
+            + ['--python', str(self.SKRIPTE / skript), '--'] + [str(a) for a in argumente]
         ergebnis = Path(ergebnis)
         vorher = ergebnis.stat().st_mtime_ns if ergebnis.exists() else -1
         logger.info('Blender-Import %s: %s', self.ablage.kennung, ' '.join(befehl))

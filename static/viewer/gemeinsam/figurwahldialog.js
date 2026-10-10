@@ -1,6 +1,7 @@
 import { Htmltext } from '/static/djangobase/js/htmltext.js';
 import { Figurkataloge } from './figurkataloge.js';
 import { Figurwahlbereiche } from './figurwahlbereiche.js';
+import { Figurwahlfuellung } from './figurwahlfuellung.js';
 import { Figurwahlzeile } from './figurwahlzeile.js';
 import { Figurlagefelder } from './figurlagefelder.js';
 
@@ -74,6 +75,7 @@ export class Figurwahldialog {
         this.quelle = this.quellen[0] || null;
         this.gewaehlt = null;
         this.element = null;
+        this.fuellung = new Figurwahlfuellung(this);
     }
 
     /** Die Vorgabe, wenn der Aufrufer keine liefert. */
@@ -225,24 +227,9 @@ export class Figurwahldialog {
 
     // -- Listen ---------------------------------------------------------------
 
-    async _fuellen(quelle) {
-        const behaelter = this._liste(quelle);
-        if (!behaelter) return;
-        Figurwahlbereiche.meldung(behaelter,
-            '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade …</li>');
-        let eintraege;
-        try {
-            eintraege = await Figurkataloge.liste(quelle);
-        } catch (fehler) {
-            Figurwahlbereiche.meldung(behaelter,
-                `<li class="fehlertext">Fehler: ${Htmltext.t(fehler.message)}</li>`);
-            return;
-        }
-        Figurwahlbereiche.verteilen(behaelter, eintraege,
-                                    eintrag => this._zeile(eintrag, quelle),
-                                    Figurkataloge.QUELLEN[quelle].leer);
-        // Die Listen kommen nebenläufig; vorwählen nur im offenen Reiter.
-        if (quelle === this.quelle && !this.gewaehlt) this._einzelnenVorwaehlen(quelle);
+    /** Modelle zuerst, die abgebrochenen Importe kommen nach (`Figurwahlfuellung`). */
+    _fuellen(quelle) {
+        return this.fuellung.fuellen(quelle);
     }
 
     _zeile(eintrag, quelle) {
@@ -250,21 +237,26 @@ export class Figurwahldialog {
         // Körpertyp oder ein Daz-Katalogeintrag ist keine Datei.
         const pflege = Boolean(this.pflege) && Figurkataloge.QUELLEN[quelle].pflege
             && (eintrag.bereich || 'standard') === 'gespeichert';
+        // Ein Modell aus einem Blender-Import lässt sich samt Import löschen; ein abgebrochener Import (`verwaist`, mit Warnzeichen)
+        // ist kein Modell: nicht wählbar, nicht ladbar, nur „Import löschen" (10.10.2026).
+        const werkzeuge = eintrag.verwaist ? ['importloeschen']
+            : [...Figurwahlzeile.STANDARD, ...(eintrag.importKennung ? ['importloeschen'] : [])];
         return Figurwahlzeile.bauen(eintrag, {
-            waehlen: () => this._waehlen({ quelle, name: eintrag.name, eintrag }),
-            laden: async () => {
+            waehlen: eintrag.verwaist ? () => {} : () => this._waehlen({ quelle, name: eintrag.name, eintrag }),
+            laden: eintrag.verwaist ? async () => {} : async () => {
                 this.schliessen();
                 await this._laden({ quelle, name: eintrag.name, eintrag });
             },
-            pflegen: pflege ? (was) => this._pflegen(quelle, eintrag.name, was) : null,
+            pflegen: pflege ? (was) => this._pflegen(quelle, eintrag.name, was, eintrag) : null,
+            werkzeuge,
         });
     }
 
     // -- Umbenennen, Löschen, Laden -------------------------------------------
 
-    async _pflegen(quelle, name, was) {
+    async _pflegen(quelle, name, was, eintrag = null) {
         try {
-            const geschehen = await this.pflege[was](quelle, name);
+            const geschehen = await this.pflege[was](quelle, name, eintrag);
             if (!geschehen) return;
             this._waehlen(null);
             await this._fuellen(quelle);

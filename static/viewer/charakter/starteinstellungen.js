@@ -4,6 +4,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bereichsgedaechtnis } from './bereichsgedaechtnis.js';
 import { Letztewahl } from './letztewahl.js';
 import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
+import { Normalenarbeit } from '../gemeinsam/normalenarbeit.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -60,6 +61,8 @@ export class Starteinstellungen {
         window._mhTposeDisplacement = this.tposeVerschiebung;
         this.bereicheOeffnen(daten.expanded_panels_scene);
         this.auswahlhelligkeit(daten.selection_opacity);
+        // Normalen der Gelenkkorrekturen im Worker (Einstellungen → Charakter, Vorgabe aus).
+        Normalenarbeit.einschalten(eigene.normalen_worker);
     }
 
     _mhKleidung(eigene) {

@@ -15,10 +15,12 @@ export class Genesis9vorgabe {
         const leer = wert => !Object.keys(wert || {}).length;
         if (!modell.haut) modell.haut = eintrag.haut || '';
         if (modell.augen === '01' && eintrag.augen) modell.augen = eintrag.augen;
+        if (eintrag.augen_gewaehlt) modell._augenGewaehlt = true;   // die gespeicherte Augenwahl gilt vor Fotokachel und Ersatz-Augen
         if (!modell.brauen) modell.brauen = eintrag.brauen || '';
         if (!modell.brauenstil) modell.brauenstil = eintrag.brauenstil || '';
         if (leer(modell.praesets)) modell.praesets = { ...(eintrag.praesets || {}) };
         if (leer(modell.hautmischung)) modell.hautmischung = { ...(eintrag.hautmischung || {}) };
+        if (leer(modell.teilmaterial)) modell.teilmaterial = { ...(eintrag.teilmaterial || {}) };
         if (!modell.pose) modell.pose = eintrag.pose || '';
         if (!modell.ausdruck) modell.ausdruck = eintrag.ausdruck || '';
         if (leer(modell.kleidung)) modell.kleidung = { ...(eintrag.kleidung || {}) };

@@ -46,6 +46,22 @@ pruefe('Symbole', menue.map(e => e.symbol).join(',') === 'fa-pen,fa-trash');
 menue[1].tun(); menue[0].tun();
 pruefe('Löschen ruft pflegen(loeschen), Umbenennen pflegen(umbenennen)',
        gerufen.join(',') === 'loeschen,umbenennen');
+
+// --- Import löschen (10.10.2026, Edgar: „Button zum Löschen eines Imports oder verwaisten Imports") ---
+// Ein abgebrochener Import: rotes Warnzeichen vor dem Namen, NUR der Knopf „Import löschen" (kein Umbenennen, kein Modell-Löschen).
+const imp = M({ name: '2026.10.09.23.08.44', anzeige: 'Rosemary (Import)', unterzeile: 'Gescheitert · 70 MB',
+                warnung: 'Abgebrochener Import — Gescheitert' }, ['importloeschen']);
+pruefe('Warnzeichen vor dem Namen', imp.includes('fa-triangle-exclamation') && imp.includes('Abgebrochener Import'));
+pruefe('nur Import löschen', imp.includes('data-tun="importloeschen"') && !imp.includes('data-tun="loeschen"')
+       && !imp.includes('data-tun="umbenennen"'));
+// Ein Modell aus einem Import: die zwei Werkzeuge wie bisher plus „Import löschen".
+const drei = M({ name: 'Asian', anzeige: 'Asian', unterzeile: '' }, [...Figurwahlzeile.STANDARD, 'importloeschen']);
+pruefe('drei Knöpfe', (drei.match(/data-tun=/g) || []).length === 3);
+pruefe('ohne Warnung kein Warnzeichen', !drei.includes('fa-triangle-exclamation'));
+const nurImport = Figurwahlzeile.menue((was) => gerufen.push(was), ['importloeschen']);
+pruefe('Menü: nur Import löschen', nurImport.length === 1 && nurImport[0].text === 'Import löschen …');
+nurImport[0].tun();
+pruefe('ruft pflegen(importloeschen)', gerufen[gerufen.length - 1] === 'importloeschen');
 console.log(JSON.stringify({ok: true}));
 """
 

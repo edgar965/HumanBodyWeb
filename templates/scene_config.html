@@ -12,10 +12,13 @@
 <link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hoehengriff.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/stueckfarbe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/genesis9material.css' %}">
 {# Der Stoffschwung-Worker (dForce-Kleidung) liegt außerhalb des Bündels: Pfad mit Fassung. #}
 <meta name="stoffarbeiter" content="{% fassungspfad 'viewer/gemeinsam/stoffarbeiter.js' %}">
 {# Die Haut-Maske rechnet in einem Worker (Hauptfaden frei zum Drehen), ebenfalls außerhalb des Bündels. #}
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+{# Die Normalen der Gelenkkorrekturen (JCMs) einer tanzenden Genesis-Figur rechnen in einem Worker, ebenfalls außerhalb des Bündels. #}
+<meta name="normalenarbeiter" content="{% fassungspfad 'viewer/gemeinsam/normalenarbeiter.js' %}">
 <style>
     .viewer-row {
         display: flex;

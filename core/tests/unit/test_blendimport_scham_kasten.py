@@ -70,3 +70,27 @@ class SchamKastenTest(SimpleTestCase):
         scham, _ruhe, _saat = self._lauf(*np.arange(0.20, 0.90, 0.01))
         grenze = round(0.44 - Blendimportscham.SCHRITTE_MAX * Blendimportscham.SCHRITT_HOEHE, 3)
         self.assertEqual(scham.kastenhoehe[0], grenze)
+
+    def test_5_schenkelhaut_neben_der_figur_laesst_den_kasten_nicht_wachsen(self):
+        # 10.10.2026, BodyParts3D-Haut: Die Innenschenkel lagen 5–15 mm neben der Figur — Saat, aber kein Anbau. Der Kasten wuchs viermal nach
+        # unten, das Stück bekam zwei Vorhänge aus Schenkelhaut. Jetzt wächst er nur bei Abweichungen ab `WACHS_MM` (Fall 2–4 mit 25 mm).
+        scham = Blendimportscham(None, {}, {})
+        grund = self._ruhe(0.88)
+        schenkel = np.array([[x, y, 0.012] for y in (0.775, 0.74, 0.70, 0.66) for x in (-0.01, 0.0, 0.01)])   # 12 mm vor der Fläche
+        saat = scham.saat(np.vstack([grund, schenkel]), self._flaeche(), 0.0, self.HOEHE)
+        self.assertEqual(scham.kastenhoehe, (0.44, 0.555))
+        self.assertGreater(int(saat.sum()), 3, 'die Schenkelhaut im Kasten bleibt Saat')
+
+    def test_6_unter_dem_tiefsten_anbaupunkt_endet_die_saat(self):
+        # 10.10.2026, BodyParts3D-Haut: zwei „Vorhänge" aus Schenkelhaut 4 cm unter den Hoden. Mit einem Anbau (Kern ab `KERN_MM`, mindestens `KERN_MIN`
+        # Punkte) endet die Saat `UNTER_MM` unter seinem tiefsten Punkt; ohne Anbau (die Scham einer Frau) bleibt sie, wie sie war.
+        scham = Blendimportscham(None, {}, {})
+        kern = np.array([[x, 0.80 - 0.0005 * i, 0.03] for i, x in enumerate(np.linspace(-0.01, 0.01, 50))])         # 50 Punkte, tiefster bei 0,7755
+        schenkel = np.array([[0.015, y, 0.012] for y in (0.76, 0.74, 0.72)])
+        ruhe = np.vstack([kern, schenkel])
+        scham.abstand = np.array([30.0] * len(kern) + [12.0] * len(schenkel))
+        maske = scham.begrenzen(ruhe, np.ones(len(ruhe), dtype=bool), self.HOEHE)
+        self.assertTrue(maske[:len(kern)].all(), 'der Anbau bleibt')
+        self.assertFalse(maske[len(kern):].any(), 'die Schenkelhaut unter ihm entfällt')
+        scham.abstand = np.array([12.0] * len(ruhe))                                                                  # kein Anbau: nichts entfällt
+        self.assertTrue(scham.begrenzen(ruhe, np.ones(len(ruhe), dtype=bool), self.HOEHE).all())

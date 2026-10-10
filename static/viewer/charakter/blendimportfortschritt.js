@@ -10,6 +10,7 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Blendimportzustand } from './blendimportzustand.js';
+import { Importpflege } from './importpflege.js';
 import { escapeHtml } from './utils.js';
 
 export class Blendimportfortschritt {
@@ -56,8 +57,11 @@ export class Blendimportfortschritt {
 
     zeigen(z) {
         this.feld.querySelector('.mi-balken > div').style.width = `${Blendimportzustand.prozent(z)}%`;
-        const fertigBis = this.schritte.indexOf(z.schritt);
-        this.feld.querySelector('.mi-schritte').innerHTML = this.schritte.map((s, i) => {
+        // Die Schritte nennt der Stand selbst (ein .blend-Import hat kein „umwandeln", OBJ/FBX schon); ältere Stände ohne `schritte`
+        // zeigen die des Dialogs.
+        const schritte = z.schritte || this.schritte;
+        const fertigBis = schritte.indexOf(z.schritt);
+        this.feld.querySelector('.mi-schritte').innerHTML = schritte.map((s, i) => {
             const art = z.status === 'fertig' || i < fertigBis ? 'fertig' : (i === fertigBis ? 'aktiv' : '');
             const dauer = (z.dauer || {})[s];
             return `<span class="${art}">${art === 'fertig' ? '✓ ' : ''}${Blendimportfortschritt.TITEL[s] || s}`
@@ -71,12 +75,19 @@ export class Blendimportfortschritt {
             : (z.status === 'gescheitert' ? `Gescheitert — ${z.fehler || 'ohne Grund'}` : text);
         detail.classList.toggle('fehlertext', z.status === 'gescheitert' && !getrennt);
         detail.classList.toggle('verbindungstext', getrennt);
+        // „Abbrechen" (rechnet noch) und „Löschen" (gescheitert/angehalten) entfernen den Import samt Daten (Edgar, 10.10.2026); „Kopieren"
+        // legt den Fehlertext in die Zwischenablage. `this.laeuft` merkt sich, ob die Rückfrage „abbrechen" oder „löschen" sagt.
         const knoepfe = this.feld.querySelector('.mi-knoepfe');
-        if (Blendimportzustand.laeuft(z)) {
-            knoepfe.innerHTML = '<button data-lauf="anhalten">Anhalten</button>';
+        this.laeuft = Blendimportzustand.laeuft(z);
+        this.fehlertext = z.status === 'gescheitert' && !getrennt ? `Import „${z.quelle?.name || this.kennung}" gescheitert: ${z.fehler || 'ohne Grund'}` : '';
+        const loeschen = '<button data-lauf="loeschen">'
+            + `${this.laeuft ? 'Abbrechen und löschen' : 'Import löschen'}</button>`;
+        const kopieren = this.fehlertext ? '<button data-lauf="kopieren">Fehler kopieren</button>' : '';
+        if (this.laeuft) {
+            knoepfe.innerHTML = `<button data-lauf="anhalten">Anhalten</button>${loeschen}`;
         } else if (z.status === 'gescheitert' || z.status === 'angehalten') {
             knoepfe.innerHTML = `<button data-lauf="neu" data-ab="${escapeHtml(z.schritt || '')}">`
-                + `Ab „${escapeHtml(Blendimportfortschritt.TITEL[z.schritt] || z.schritt || 'Anfang')}" neu</button>`;
+                + `Ab „${escapeHtml(Blendimportfortschritt.TITEL[z.schritt] || z.schritt || 'Anfang')}" neu</button>${loeschen}${kopieren}`;
         } else {
             knoepfe.innerHTML = '';
         }
@@ -86,6 +97,11 @@ export class Blendimportfortschritt {
         const knopf = ereignis.target.closest('[data-lauf]');
         if (!knopf) return;
         try {
+            if (knopf.dataset.lauf === 'kopieren') await Importpflege.kopieren(this.fehlertext, knopf);
+            if (knopf.dataset.lauf === 'loeschen') {
+                // Die Rückfrage mit dem Plan; danach hört niemand mehr auf den Stand (`vorSenden`), und `Importpflege` meldet das Löschen.
+                await Importpflege.loeschen(this.kennung, { abbrechen: this.laeuft, vorSenden: () => Blendimportzustand.vergessen() });
+            }
             if (knopf.dataset.lauf === 'anhalten') await Serverabruf.senden(this.adresse('anhalten'), {});
             if (knopf.dataset.lauf === 'neu') {
                 await Serverabruf.senden(this.adresse('neu'), { ab: knopf.dataset.ab || null });
@@ -93,6 +109,7 @@ export class Blendimportfortschritt {
             }
         } catch (fehler) {
             this.feld.querySelector('.mi-detail').textContent = fehler.message;
+            if (knopf.dataset.lauf === 'loeschen') this.starten();      // nicht gelöscht: der Import besteht, der Stand wird weiter gezeigt
         }
     }
 

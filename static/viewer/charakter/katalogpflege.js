@@ -1,4 +1,5 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Importpflege } from './importpflege.js';
 
 /**
  * Katalogpflege — Modelle und UMA-Figuren umbenennen oder löschen.
@@ -74,6 +75,21 @@ export class Katalogpflege {
             body: JSON.stringify({ name }),
         });
         return true;
+    }
+
+    /**
+     * Ein Modell aus einem Blender-Import samt Import löschen — oder einen abgebrochenen Import (Edgar, 10.10.2026). Die Rückfrage mit
+     * dem Plan steht in `Importpflege`.
+     *
+     * @returns true, wenn gelöscht wurde
+     */
+    static async importloeschen(art, name, eintrag) {
+        return Importpflege.loeschen(eintrag?.importKennung || name);
+    }
+
+    /** Alle verwaisten Importe auf einmal (Knopf am Ende der gespeicherten Liste). */
+    static verwaisteLoeschen() {
+        return Importpflege.verwaisteLoeschen();
     }
 
     /** `Uma_X.glb` → `Uma_X`; ein Modellname bleibt, wie er ist. */

@@ -69,6 +69,9 @@ class Blendimporthaltung:
                 for a, w in zip(ordnung.lower(), grad, strict=True):
                     werte['xyz'.index(a)] = float(w)
             aus[name] = {'rotation/%s' % a: w for a, w in zip('xyz', werte, strict=True)}
+        # Die Finger des Originals (`Blendimportfinger`): `kaefig_posiert` trägt sie, also auch die Figur in der Haltung.
+        for name, kanaele in self.lage.finger_drehung.items():
+            aus.setdefault(name, {}).update(kanaele)
         return aus
 
     def vorbereiten(self):
