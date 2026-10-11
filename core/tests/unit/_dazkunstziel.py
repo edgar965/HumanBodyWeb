@@ -13,7 +13,7 @@ class Dazkunstziel:
         """Das Ziel mit diesen Daten — die Dateien der Bibliothek werden nicht gelesen. `farbe`: `(H, W, 3)` uint8 oder None."""
         ziel = Dazgeograftziel.__new__(Dazgeograftziel)
         ziel.punkte, ziel.dreiecke, ziel.uv_ecken = np.asarray(punkte, dtype=np.float64), np.asarray(dreiecke, dtype=np.int64), np.asarray(uv_ecken, dtype=np.float64)
-        ziel.name, ziel._netz, ziel._farbe, ziel._proben = 'Kunst', None, None, None
+        ziel.name, ziel._netz, ziel._farbe, ziel._proben, ziel._rand = 'Kunst', None, None, None, None
         ziel.bild = lambda kanal: farbe if kanal == 'farbe' else None
         return ziel
 

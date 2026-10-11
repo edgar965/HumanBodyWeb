@@ -18,7 +18,7 @@ from django.test import SimpleTestCase
 
 from core.dienste.meshfigurregler import Meshfigurregler
 
-from ._wrappersuchpfad import WRAPPERS, Wrappersuchpfad
+from ._wrappersuchpfad import MESHTO3D, WRAPPERS, Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
@@ -110,10 +110,10 @@ class DoppelteKonstantenTest(SimpleTestCase):
 
     def test_bereichsnummern_stimmen_ueberein(self):
         a = self._nummern(TOOLS / 'Genesis9' / 'netzbereiche.py')
-        b = self._nummern(WRAPPERS / 'meshfigur_abstand.py')
+        b = self._nummern(MESHTO3D / 'meshfigur_abstand.py')
         self.assertEqual(a, b)
         self.assertEqual(a, '0, 1, 2, 3, 4, 5, 6, 7')
 
     def test_der_schritt_hat_ein_gewicht(self):
-        text = (WRAPPERS / 'meshfigur_abstand.py').read_text(encoding='utf-8')
+        text = (MESHTO3D / 'meshfigur_abstand.py').read_text(encoding='utf-8')
         self.assertIn('SCHRITT: 0.1', text)

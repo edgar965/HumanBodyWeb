@@ -144,7 +144,7 @@ class TorAnschlagTest(unittest.TestCase):
         """Die Kette ist erst dicht, wenn die letzte Schicht sie liest: Runner → `Meshfigurrumpfpruefung(…, zonen)`."""
         from pathlib import Path
 
-        runner = (Path(__file__).resolve().parents[4] / 'VideoToBVH' / 'wrappers' / '_run_meshfigur.py').read_text(encoding='utf-8')
+        runner = (Path(__file__).resolve().parents[4] / 'meshto3d' / '_run_meshfigur.py').read_text(encoding='utf-8')
         self.assertIn('Meshfigurabstand.GEWICHT.get(int(b), 1.0) for b in genesis[\'bereich\']', runner)
         self.assertIn('Meshfigurrumpfpruefung(self.posiert, self.daten.proben()[0], zonen)', runner)
 

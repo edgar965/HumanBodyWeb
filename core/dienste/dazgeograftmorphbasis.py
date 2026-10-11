@@ -28,36 +28,83 @@ class Dazgeograftmorphbasis:
     MIN_VALENZ = 0.95
     #: Ein Punkt gilt als Ringecke, wenn er höchstens so weit (m) von ihr liegt.
     LAGE_M = 1e-7
+    #: Hat das eine Stück mindestens so viel mal mehr Punkte (vor dem Ringschwanz) als das andere, sind es zwei Unterteilungsstufen (Stufe 2 gegen 1: Faktor 4); ein Punkt Unterschied am Schwanz ist keiner.
+    MIN_STUFENFAKTOR = 2
+    #: Über zwei Stufen ersetzt der Lagevergleich die Valenzprobe: Median des Abstands der zugeordneten Punkte nach Abzug der Mittellage, höchstens so viel (mm). Gemessen 11.10.2026 (Frau, Basis-Stück
+    #: gegen angepasstes): Stufe 1 [Median 8,9 / p99 15,7 mm], Stufe 2 [10,4 / 17,6 mm], zufällig gepaart [29–30 / 114 mm]. Gesetzt in der Mitte dazwischen.
+    LAGE_MAX_MM = 20.0
 
-    def __init__(self, angepasst, basis):
-        """`angepasst`, `basis`: Kennungen (`cute_girl_daz_scham`, `daz_anatomie_frau`)."""
+    def __init__(self, angepasst, basis, geschlecht='frau'):
+        """`angepasst`, `basis`: Kennungen (`cute_girl_daz_scham`, `daz_anatomie_frau`); `geschlecht`: des Geografts (für die Zuordnung über zwei Stufen)."""
         from Genesis9.kleidmorphe import G9kleidmorphe
 
         from .dazgeograftmorphuebertrag import Dazgeograftmorphuebertrag as U
+        from .dazgeograftumriss import Dazgeograftumriss
 
-        self.angepasst, self.basis = angepasst, basis
+        self.angepasst, self.basis, self.geschlecht = angepasst, basis, geschlecht
         teile_a, kaefige_a, _y0, _y1, _mitte, eintrag_a = G9kleidmorphe.kaefige(angepasst)
         self.teile_b, kaefige_b, _y0, _y1, _mitte, eintrag_b = G9kleidmorphe.kaefige(basis)
         if len(teile_a) != 1 or len(self.teile_b) != 1:
             raise ValueError('nur für Stücke aus einem Teil')
         self.p_a, self.p_b = kaefige_a[0], kaefige_b[0]
         da, db = U._dreiecke(teile_a[0][0].polys), U._dreiecke(self.teile_b[0][0].polys)
-        if da.shape != db.shape:
-            raise ValueError('verschiedene Zahl der Dreiecke (%d / %d): nicht dasselbe Geograft' % (len(da), len(db)))
-        #: Zahl der Punkte der Stufe 1 (vor den angehängten Ringecken) — so weit gilt „Punkt i ↔ Punkt i".
-        self.stufe = min(self._stufe_punkte(self.p_a, eintrag_a), self._stufe_punkte(self.p_b, eintrag_b))
-        valenz_a, valenz_b = (np.bincount(d.ravel(), minlength=n)[:self.stufe] for d, n in ((da, len(self.p_a)), (db, len(self.p_b))))
-        self.gleich = float((valenz_a == valenz_b).mean())
-        if self.gleich < self.MIN_VALENZ:
-            raise ValueError('nur %.0f %% der Punkte der Stufe 1 tragen in beiden Stücken gleich viele Dreiecke (nötig %.0f %%)' % (self.gleich * 100, self.MIN_VALENZ * 100))
-        self.dreiecke_a, self.dreiecke_b = da, db
+        stufe_a, stufe_b = self._stufe_punkte(self.p_a, eintrag_a), self._stufe_punkte(self.p_b, eintrag_b)
+        #: Zahl der Punkte des Basis-Stücks vor den angehängten Ringecken — so weit gibt es ein Gegenstück im angepassten.
+        self.stufe = min(stufe_a, stufe_b)
+        #: Anteil der Punkte, die in beiden Stücken gleich viele Dreiecke tragen (nur bei gleicher Unterteilungsstufe; über zwei Stufen hat der alte Punkt in der feineren dieselbe Valenz nicht mehr).
+        self.gleich = None
         self.zu = np.full(len(self.p_b), -1, dtype=np.int64)
-        self.zu[:self.stufe] = np.arange(self.stufe)
+        herkunft = Dazgeograftumriss.herkunft_lesen(eintrag_a)
+        if herkunft is not None:                                                # am Umriss zugeschnittenes Stück: die Nummern sagen, welche Punkte des Geografts es noch trägt
+            self.stufe = stufe_b
+            self.zu[:stufe_b] = self._zu_zugeschnitten(herkunft, stufe_b, geschlecht)
+            self.lage_mm = self.pruefen_lage()
+            if self.lage_mm[0] > self.LAGE_MAX_MM:
+                raise ValueError('die Punkte der beiden Stücke liegen im Median %.1f mm auseinander (Grenze %.0f mm): nicht aus demselben Käfig gebaut' % (self.lage_mm[0], self.LAGE_MAX_MM))
+        elif max(stufe_a, stufe_b) >= self.MIN_STUFENFAKTOR * self.stufe:         # angepasstes Stück eine Stufe feiner (Stufe 2 gegen 1: Faktor 4)
+            from .dazgeograftstufenzuordnung import Dazgeograftstufenzuordnung
+
+            self.zu[:stufe_b] = Dazgeograftstufenzuordnung.zuordnen(geschlecht, stufe_b, stufe_a)[:stufe_b]
+            self.lage_mm = self.pruefen_lage()
+            if self.lage_mm[0] > self.LAGE_MAX_MM:                         # statt der Valenzprobe: dasselbe Geograft liegt nahe beieinander, eine falsche Zuordnung nicht
+                raise ValueError('die Punkte der beiden Stücke liegen im Median %.1f mm auseinander (Grenze %.0f mm): nicht aus demselben Käfig gebaut' % (self.lage_mm[0], self.LAGE_MAX_MM))
+        else:
+            if da.shape != db.shape:
+                raise ValueError('verschiedene Zahl der Dreiecke (%d / %d): nicht dasselbe Geograft' % (len(da), len(db)))
+            valenz_a, valenz_b = (np.bincount(d.ravel(), minlength=n)[:self.stufe] for d, n in ((da, len(self.p_a)), (db, len(self.p_b))))
+            self.gleich = float((valenz_a == valenz_b).mean())
+            if self.gleich < self.MIN_VALENZ:
+                raise ValueError('nur %.0f %% der Punkte der Stufe 1 tragen in beiden Stücken gleich viele Dreiecke (nötig %.0f %%)' % (self.gleich * 100, self.MIN_VALENZ * 100))
+            self.zu[:self.stufe] = np.arange(self.stufe)
+        self.dreiecke_a, self.dreiecke_b = da, db
+        self.lage_mm = self.pruefen_lage()
         from Genesis9.schammorphe import G9schammorphe
 
         #: Flächennormalen (nach außen, wie die Regler sie rechnen) beider Stücke — für die Regler „entlang der Normale".
         self.n_a = G9schammorphe.normalen(self.p_a, teile_a[0][0].polys)
         self.n_b = G9schammorphe.normalen(self.p_b, self.teile_b[0][0].polys)
+
+    @staticmethod
+    def _zu_zugeschnitten(herkunft, anzahl_basis, geschlecht):
+        """Nummern, ein Eintrag je Punkt des Basis-Stücks (Stufe 1): sein Punkt im zugeschnittenen Stück — −1, wo der Schnitt ihn weggenommen hat (`Dazgeograftumriss`). `herkunft`: Datei neben dem Stück
+        (`Stufe`, `nahtfrei`, `herkunft` je Punkt). Über die Stufen geht die Zuordnung über die Rohnummern (`Dazgeograftstufenzuordnung`), bei Stufe 1 ist der Punkt `j` des Basis-Stücks der Punkt `j` des Geografts."""
+        from .dazgeograftstufenzuordnung import Dazgeograftstufenzuordnung
+
+        h = herkunft['herkunft']
+        im_geograft = (np.arange(anzahl_basis) if int(herkunft['stufe']) == 1
+                       else Dazgeograftstufenzuordnung.zuordnen(geschlecht, anzahl_basis, int(herkunft['nahtfrei']))[:anzahl_basis])
+        stelle = np.full(int(herkunft['nahtfrei']), -1, dtype=np.int64)
+        da = np.flatnonzero(h >= 0)
+        stelle[h[da]] = da
+        return stelle[im_geograft]
+
+    def pruefen_lage(self):
+        """`[Median, p99]` (mm) des Abstands zwischen jedem Basis-Punkt und seinem Gegenstück im angepassten Stück, nach Abzug der mittleren Verschiebung (das angepasste liegt auf der Figur des
+        Modells, das Basis-Stück auf der Grundfigur). Dasselbe Geograft gibt wenige Millimeter, eine falsche Zuordnung so viel wie zufällige Paarung."""
+        hat = self.zu >= 0
+        d = self.p_a[self.zu[hat]] - self.p_b[hat]
+        laenge = np.linalg.norm(d - d.mean(axis=0), axis=1) * 1000.0
+        return [round(float(np.median(laenge)), 1), round(float(np.percentile(laenge, 99)), 1)]
 
     @classmethod
     def _stufe_punkte(cls, punkte, eintrag):
@@ -91,6 +138,13 @@ class Dazgeograftmorphbasis:
         """Den Regler `name` vom angepassten Stück auf das Basis-Stück übertragen und ablegen → Steckbrief."""
         from Genesis9.kleidmorphe import G9kleidmorphe
 
+        d_b, zusatz = self.berechnen(name)
+        return G9kleidmorphe.ablegen(self.basis, name, [f.kennung for f, _lage in self.teile_b], [d_b], zusatz)
+
+    def berechnen(self, name):
+        """`(d_b (Nb, 3), zusatz)`: die Deltas des Reglers `name` auf den Punkten des Basis-Stücks und der Steckbrief — ohne etwas zu schreiben."""
+        from Genesis9.kleidmorphe import G9kleidmorphe
+
         from .dazgeograftmorphuebertrag import Dazgeograftmorphuebertrag as U
 
         zusatz = {'uebernommen_von': self.angepasst}
@@ -106,7 +160,7 @@ class Dazgeograftmorphbasis:
             d_b = np.where(hat, betrag[:, None] * self.n_b, 0.0)
         else:
             d_b = np.where(hat, d_a[np.maximum(self.zu, 0)], 0.0)
-        return G9kleidmorphe.ablegen(self.basis, name, [f.kennung for f, _lage in self.teile_b], [d_b], zusatz)
+        return d_b, zusatz
 
     def alle(self, namen):
         """Alle Regler `namen` übertragen → `(uebernommen, gescheitert)`."""

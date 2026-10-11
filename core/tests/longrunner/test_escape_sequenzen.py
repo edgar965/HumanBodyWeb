@@ -48,6 +48,7 @@ BAEUME = (
     'Assets/kleidung',
     'HumanBodyWeb/core',
     'HumanBodyWeb/ui',
+    'meshto3d',                         # seit 11.10.2026 eigener Ordner (vorher VideoToBVH/wrappers, dort ausgenommen); 29 Dateien ohne SyntaxWarning
     'Docu',
 )
 

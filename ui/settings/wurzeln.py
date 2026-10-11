@@ -35,6 +35,9 @@ if not (BASE_DIR / 'manage.py').is_file():  # pragma: no cover
 #: Arbeitsverzeichnis mit allen vier Repos (`A:\\3DTools`).
 TOOLS_ROOT = BASE_DIR.parent
 VIDEOTOBVH_ROOT = TOOLS_ROOT / 'VideoToBVH'
+#: „Mesh to 3D" (Netz → Genesis-Figur): der Rechenlauf in python10 (`_run_meshfigur.py`, `meshfigur_*.py`) liegt seit dem 11.10.2026 hier, nicht mehr in `VideoToBVH/wrappers`
+#: (Edgar: „es geht doch rein um die Erzeugung eines 3D Modells aus einem Mesh"). Die gemeinsamen Wrapper (`mesh_basis`, `posenerkennung`, `gesicht68`) bleiben in VideoToBVH.
+MESHTO3D_ROOT = TOOLS_ROOT / 'meshto3d'
 MOCAPNET_ROOT = VIDEOTOBVH_ROOT / 'MocapNET'
 HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
 

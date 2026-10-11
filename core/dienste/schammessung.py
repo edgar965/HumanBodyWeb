@@ -5,9 +5,10 @@ Edgar: „mach kein Raten und Bildvergleich, sondern Messungen, so wie wir es ei
 Scham Messungen durchgeführt", „diesen Importprozess in einer Klasse festschreiben und IMMER aufrufen". Das ist diese Klasse. Aufrufer: `Dazgeograft.bauen` (Daz-Geograft, auch das an eine
 Blender-Scham angepasste) und `Blendimportstuecke.scham_stueck` (Blender-, OBJ- und FBX-Import); die Farbe am Ring kommt dort nach dem Schritt „haut" (`Schammessungablage`).
 
-Gemessen wird in vier Klassen, alle in mm / Farbwerten 0–255, Definitionen in deren Docstrings:
+Gemessen wird in fünf Klassen, alle in mm / Farbwerten 0–255, Definitionen in deren Docstrings:
 
     `Schammessunggeometrie`   Form: Original → Modell je Zone, Tiefenkarte mit Mittelschnitt und Querprofilen, Stück → Original, Spiegelabstand
+    `Schammessungansichten`   Erhebungen (Volumen, Höhe) aus sechs Blickrichtungen gegen das Original und der Absatz zwischen Haut und Stück am Ring (11.10.2026)
     `Schammessungnaht`        Naht: Rand → Ring, Normalenwinkel am Ring
     `Schammessungknick`       Naht: Knick der Fläche über jede Ringkante (Haut- gegen Stückdreieck)
     `Schammessungtextur`      Textur: Farbe am Ring gegen die Haut daneben, Farbe gegen das Original
@@ -44,6 +45,10 @@ class Schammessung:
     LEUCHTDICHTE_PROZENT = 4.0
     #: Farbe gegen das Original: größter mittlerer Kanalunterschied (Setzung).
     ORIGINAL_FARBE_MITTEL = 12.0
+    #: Erhebungen aus vier Richtungen (`Schammessungansichten`): Volumen der Erhebung des Modells / des Originals (Setzung: 0,7 … 1,4; ein flaches Stück gibt 0). Gemessen 11.10.2026 an „cute girl Daz Scham": seitlich 0,49–0,57 (Stufe 2), 0,42–0,52 (Stufe 1).
+    TREUE_MIN, TREUE_MAX = 0.7, 1.4
+    #: Absatz am Ring: p90 der Höhe des Stücks 2 mm hinter dem Ring über der Hautebene darf höchstens so groß sein (mm, Setzung): am Ring geht die Haut ohne Stufe ins Stück über.
+    ABSATZ_P90_MM = 3.0
     #: Die Haut und das Original werden im Kasten ums Stück plus so viel (m) zugeschnitten.
     UMKREIS_M = 0.04
 
@@ -109,7 +114,7 @@ class Schammessung:
         from .schammessungtextur import Schammessungtextur
 
         f = self.figur
-        fp, fd =np.asarray(f['punkte'], dtype=np.float64), np.asarray(f['dreiecke'], dtype=np.int64)
+        fp, fd = np.asarray(f['punkte'], dtype=np.float64), np.asarray(f['dreiecke'], dtype=np.int64)
         sichtbar = np.ones(len(fd), dtype=bool)
         if self.loch:
             sichtbar[np.asarray(self.loch['dreiecke'], dtype=np.int64)] = False
@@ -135,6 +140,11 @@ class Schammessung:
         vorgabe, original = self._vorgabe(lo, hi, haut)
         geometrie = Schammessunggeometrie(rahmen, stueck, modell, vorgabe, original, rand)
         aus['geometrie'] = geometrie.messen()
+        if vorgabe is not None and self.loch:
+            from .schammessungansichten import Schammessungansichten
+
+            haut_voll = self._zuschneiden(fp, fd, lo, hi)
+            aus['ansichten'] = Schammessungansichten(rahmen, haut_voll, original, modell, stueck, vorgabe, self.loch['ring'], ring_normalen[ring_punkte]).messen()
         farbe = Schammessungtextur.bild(self.farbe_pfad)
         aus['farbe_am_ring'] = Schammessungtextur.am_ring(rand, self.punkte, self.dreiecke, self.uv_ecken, farbe, f, sichtbar, self.kachelbild)
         aus['farbe_gegen_original'] = Schammessungtextur.gegen_original(rahmen, self.punkte, self.dreiecke, self.uv_ecken, farbe,
@@ -178,6 +188,14 @@ class Schammessung:
         f = g.get('flaeche') or {}
         if f and f['ueber_90'] > max(self.KNICK_ANTEIL, 2.0 * f['ueber_90_original']):
             a.append('Fläche: %.1f %% der Kanten knicken über 90° (Original %.1f %%, Schwelle %.0f %%)' % (f['ueber_90'] * 100, f['ueber_90_original'] * 100, self.KNICK_ANTEIL * 100))
+        for ansicht in (m.get('ansichten') or {}).get('ansichten', []):
+            t = ansicht.get('treue')
+            if t is not None and not (self.TREUE_MIN <= t <= self.TREUE_MAX):
+                a.append('Erhebung von %s: das Modell trägt %.0f %% des Volumens der Erhebung des Originals (Schwelle %.0f–%.0f %%)' % (ansicht['name'], t * 100, self.TREUE_MIN * 100, self.TREUE_MAX * 100))
+        s = ((m.get('ansichten') or {}).get('absatz') or {}).get('stueck_mm')
+        if s and s['p90'] > self.ABSATZ_P90_MM:
+            a.append('Absatz am Ring: das Stück liegt %.0f mm hinter dem Ring im p90 %.1f mm (größter %.1f mm) über/unter der Hautebene (Schwelle %.1f mm)' % (
+                (m['ansichten']['absatz']['nach_innen_mm']), s['p90'], s['max'], self.ABSATZ_P90_MM))
         n = m.get('naht') or {}
         for schluessel in ('rand_zu_ring_mm', 'ring_zu_rand_mm'):
             if n.get(schluessel) and n[schluessel]['max'] > self.RAND_MAX_MM:

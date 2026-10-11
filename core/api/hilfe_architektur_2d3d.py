@@ -7,10 +7,15 @@ Zeilen (Schritte, Klassen, Messungen) kommen aus `core.dienste.architektur2d3d`;
 ihres Docstrings und ihrer Zeilenzahl aus dem Code gelesen, damit die Seite nicht hinter dem Code zurückbleibt.
 """
 
+import logging
+
 from ..dienste.architektur2d3d import Architektur2d3d
 from ..dienste.architektur2d3dmodellvergleich import Architektur2d3dmodellvergleich
+from ..dienste.architekturmeshto3d import Architekturmeshto3d
 from ..dienste.kopfpipelinevergleich import Kopfpipelinevergleich
 from .hilfeseite import Hilfeseite
+
+logger = logging.getLogger('core')
 
 
 class HilfeArchitektur2d3d(Hilfeseite):
@@ -28,4 +33,10 @@ class HilfeArchitektur2d3d(Hilfeseite):
         # Vergleichstabelle TRELLIS/Hunyuan3D/Pixal3D gegen Meshy & Co. (Edgar, 08.10.2026: „Mach [...] eine
         # Tabelle im djangoBase Stil mit allen Modellen [...] auflösung, geschwindigkeit, qualität, größe [...]").
         ergebnis.update(Architektur2d3dmodellvergleich.kontext())
+        # Reiter „MeshTo3D" (Edgar, 11.10.2026): scheitert sein Aufbau, zeigt der Reiter den Grund — die übrigen drei bleiben ganz.
+        try:
+            ergebnis['meshto3d'] = Architekturmeshto3d.kontext()
+        except Exception as fehler:  # noqa: BLE001 — ein Fehler im Reiter darf die Seite nicht kippen
+            logger.exception('Architektur 2D3D: Reiter MeshTo3D nicht aufgebaut')
+            ergebnis['meshto3d'] = {'fehler': '%s: %s' % (type(fehler).__name__, str(fehler)[:300])}
         return ergebnis

@@ -12,7 +12,7 @@ Kunststücke: ein Gitter 9 × 9 Punkte (Stufe 1, 81 Punkte); das Basis-Stück h�
 3. Die Zuordnung ist `Punkt i ↔ Punkt i` für alle Stufe-1-Punkte, die angehängten Ringecken des Basis-Stücks haben kein Gegenstück (−1) — auch wenn die Dreiecke in anderer Reihenfolge stehen.
 4. Tragen die Punkte nicht gleich viele Dreiecke (anders vernetzt), bricht die Klasse ab: es ist nicht dasselbe Geograft.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `__init__` `self.zu[:self.stufe] = np.arange(self.stufe)` durch die Ecke-für-Ecke-Zuordnung ersetzen macht Fall 3 rot (andere Dreiecksfolge); `LAGE_M` auf 1 stellen macht Fall 1 rot.
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `__init__` `self.zu[:self.stufe] = np.arange(self.stufe)` durch die Ecke-für-Ecke-Zuordnung ersetzen macht Fall 3 rot (andere Dreiecksfolge); `LAGE_M` auf 1 stellen macht Fall 1 rot.
 """
 from types import SimpleNamespace
 from unittest import mock
@@ -29,9 +29,9 @@ class DazgeograftmorphbasisTest(SimpleTestCase):
     K = 9
     RING = np.array([[0.100 + 0.001 * j, 0.100, 0.0] for j in range(8)])
 
-    def _gitter(self, andere_diagonale=False):
-        k = self.K
-        punkte = np.array([[(i - 4) * 0.004, (j - 4) * 0.004, 0.0] for j in range(k) for i in range(k)])
+    def _gitter(self, andere_diagonale=False, k=None, abstand=0.004):
+        k = k or self.K
+        punkte = np.array([[(i - (k - 1) / 2) * abstand, (j - (k - 1) / 2) * abstand, 0.0] for j in range(k) for i in range(k)])
         dreiecke = []
         for j in range(k - 1):
             for i in range(k - 1):
@@ -40,10 +40,10 @@ class DazgeograftmorphbasisTest(SimpleTestCase):
                 dreiecke += [[a, a + 1, a + k], [a + 1, a + k + 1, a + k]] if schachbrett else [[a, a + 1, a + k + 1], [a, a + k + 1, a + k]]
         return punkte, np.array(dreiecke)
 
-    def _stueck(self, angehaengt, umordnen=False, andere_diagonale=False):
+    def _stueck(self, angehaengt, umordnen=False, andere_diagonale=False, k=None, abstand=0.004):
         """`(teile, kaefige, y0, y1, mitte, eintrag)` wie `G9kleidmorphe.kaefige`: das Gitter plus `angehaengt` Ringecken; acht Dreiecke an den Gitterpunkten 0 und 1 verbinden sie
         (immer acht, so wie beide echten Stücke 8.320 Dreiecke haben, gleich wie viele Ecken die Naht eingefügt hat)."""
-        punkte, dreiecke = self._gitter(andere_diagonale)
+        punkte, dreiecke = self._gitter(andere_diagonale, k, abstand)
         n0 = len(punkte)
         punkte = np.vstack([punkte, self.RING[:angehaengt]])
         if angehaengt:
@@ -94,3 +94,32 @@ class DazgeograftmorphbasisTest(SimpleTestCase):
         with self.assertRaises(ValueError) as fehler:
             self._bauen(self._stueck(3), self._stueck(8, andere_diagonale=True))
         self.assertIn('gleich viele Dreiecke', str(fehler.exception))
+
+    # ---- zwei Unterteilungsstufen (11.10.2026): das angepasste Stück auf Stufe 2, das Basis-Stück auf Stufe 1
+
+    def _stufen_paar(self, zuordnung):
+        """Basis 9 × 9 Punkte (20 mm), angepasst 17 × 17 (10 mm, Dreiecke durchgemischt); `zuordnung` ersetzt die Rechnung mit der Daz-Bibliothek."""
+        grob, fein = self._stueck(3, abstand=0.02), self._stueck(8, umordnen=True, k=17, abstand=0.01)
+        with mock.patch('core.dienste.dazgeograftstufenzuordnung.Dazgeograftstufenzuordnung.zuordnen', return_value=zuordnung):
+            return self._bauen(grob, fein)
+
+    def test_5_ueber_zwei_stufen_gilt_die_zuordnung_der_rohnummern(self):
+        richtig = np.array([2 * j * 17 + 2 * i for j in range(9) for i in range(9)])           # Punkt (i, j) des groben Gitters liegt im feinen auf (2i, 2j)
+        b = self._stufen_paar(richtig)
+        self.assertEqual(b.stufe, 81)
+        self.assertEqual(b.zu[:81].tolist(), richtig.tolist())
+        self.assertEqual(b.zu[81:].tolist(), [-1, -1, -1], 'die angehängten Ringecken des Basis-Stücks haben kein Gegenstück')
+        self.assertIsNone(b.gleich, 'die Valenzprobe gibt es nur bei gleicher Stufe')
+        self.assertEqual(b.lage_mm, [0.0, 0.0], 'die zugeordneten Punkte liegen aufeinander')
+
+    def test_6_eine_falsche_zuordnung_ueber_zwei_stufen_wird_abgelehnt(self):
+        falsch = np.random.default_rng(7).permutation(289)[:81]
+        with self.assertRaises(ValueError) as fehler:
+            self._stufen_paar(falsch)
+        self.assertIn('auseinander', str(fehler.exception))
+
+    def test_7_gleiche_stufe_rechnet_nicht_ueber_die_stufen(self):
+        """Gleiche Stufe, nur ein längerer Schwanz aus Ringecken: die alte Zuordnung Punkt i ↔ Punkt i, ohne die Rechnung über die Stufen."""
+        with mock.patch('core.dienste.dazgeograftstufenzuordnung.Dazgeograftstufenzuordnung.zuordnen', side_effect=AssertionError('nicht gerufen')):
+            b = self._bauen(self._stueck(3), self._stueck(8, umordnen=True))
+        self.assertEqual(b.zu[:81].tolist(), list(range(81)))

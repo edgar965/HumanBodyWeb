@@ -37,7 +37,7 @@ class Schammessungablage:
 
         pfad = ablage.arbeit(cls.DATEI)
         if not pfad.is_file():
-            return {'hinweis': 'kein Scham-Stück in diesem Import (keine Messung)'}
+            return {'hinweis': 'kein Scham-Stück in diesem Import — gemessen wird die Figur selbst: ergebnis.figur.schammessung (`Meshfigurschammessung`)'}
         with np.load(pfad) as a:
             loch = {'dreiecke': a['loch_dreiecke'], 'ring': a['ring'], 'ring_punkte': a['ring_punkte']} if bool(a['hat_loch']) else None
             farbe = str(a['farbe_pfad']) or None

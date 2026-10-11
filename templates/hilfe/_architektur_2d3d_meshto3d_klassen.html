@@ -1,0 +1,42 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „MeshTo3D": das Klassenmodell (Edgar, 11.10.2026: „Auch Klassenmodell, Workflow und so weiter"). Eingebunden in _architektur_2d3d_meshto3d.html mit `m` = meshto3d.
+Die Karten baut `Architektur2d3dwerkzeuge.modell` (dieselbe Maschinerie wie im Reiter „Tools"), die Gruppen und Beziehungen stehen in `core/dienste/architekturmeshto3dklassen.py`.
+{% endcomment %}
+{% with k=m.klassen %}
+<h2 id="m3-klassen">Das Klassenmodell</h2>
+<p>{{ k.zaehlung.klassen }} Klassen in {{ k.gruppen|length }} Gruppen, zusammen {{ k.zaehlung.zeilen }} Zeilen. Ein Kasten zeigt Datei und Zeilenzahl, die Aufgabe (erster Satz des Modul-Docstrings, aus dem Code gelesen),
+  die öffentlichen Methoden, „beteiligt" (an welcher Aufgabe der Gruppe die Klasse hängt; „Einstieg" = die Klasse, die man ruft) und die <b>Beziehungen</b>: „ruft" nennt die Klasse und womit, „gerufen von" die Gegenseite.
+  Von den {{ k.zaehlung.beziehungen }} Beziehungen sind {{ k.zaehlung.beschriftet }} von Hand beschriftet (auch über die Prozessgrenze, wo es kein <code>import</code> gibt), {{ k.zaehlung.importiert }} sind aus den
+  <code>import</code>-Anweisungen der Dateien gelesen („importiert") — so fehlt keine Kante und keine ist erfunden. Die Gruppen sind eingeklappt; ein Verweis aus der Schrittetabelle klappt die Gruppe von selbst auf.</p>
+
+<div class="info-box m3-schichten">
+  <strong>Die Schichten in einem Satz:</strong> Browser → <code>Meshfigurendpunkte</code> (API) → <code>Meshfigurarbeiter</code> startet <code>manage.py meshfigur_fahren</code> → <code>Meshfigurlauf</code> führt die
+  Schritte. <code>Meshfigurhaar</code>, <code>Meshfigurkleidung</code>, <code>Meshfigurfrisur</code> und <code>Meshfigurspeichern</code> rechnen in python14; <code>Meshfigurkette</code> (koerper, gesicht),
+  <code>Meshfigurende</code> (rest, textur) und <code>Meshfigurvorschau</code> rufen über <code>Meshfigurlauf.runner</code> und <code>PipelineProzess</code> den Runner (<code>Meshfigurrunner</code> in python10), der
+  <code>Meshfigurregistrierung</code> auf <code>Meshfigurmodell</code> und <code>Meshfigurabstand</code> stützt. Die Figur-Seite (<code>Meshfigurgenesis</code>, <code>G9netzbereiche</code>,
+  <code>G9reglerableitung</code>, <code>G9restmorph</code>) liefert Käfig, Bereiche, Ableitungen und den Eigenmorph.
+</div>
+
+{% for g in k.gruppen %}
+<details class="tw-modell" id="tm-meshto3d-{{ g.kennung }}">
+<summary>{{ g.titel }} <span class="a2d3d-klein">— {{ g.karten|length }} Klassen, {{ g.zeilen }} Zeilen · {{ g.hinweis }}</span></summary>
+<div class="wf-karten">
+  {% for c in g.karten %}
+  <div class="wf-karte" id="{{ c.anker }}">
+    <div class="wf-karte-kopf">{{ c.klasse }}</div>
+    <div class="wf-karte-datei"><code>{{ c.modul }}</code> · {{ c.zeilen }} Zeilen</div>
+    <div class="wf-karte-satz">{% if c.fehlt %}<span class="a2d3d-fehlt">{{ c.fehlt }}</span> {% endif %}{{ c.satz }}</div>
+    {% if c.methoden_gezeigt %}
+    <ul class="wf-methoden">{% for me in c.methoden_gezeigt %}<li>{{ me }}()</li>{% endfor %}{% if c.methoden_mehr %}<li class="wf-mehr">+ {{ c.methoden_mehr }} weitere</li>{% endif %}</ul>
+    {% endif %}
+    <div class="tw-beziehungen">
+      {% for a in c.aufrufe %}<div><span class="tw-pfeil">{% if a.einstieg %}Einstieg{% else %}beteiligt{% endif %}</span> {{ a.werkzeug }}</div>{% endfor %}
+      {% for r in c.ruft %}<div><span class="tw-pfeil">ruft</span> <a href="#{{ r.anker }}">{{ r.klasse }}</a> <span class="a2d3d-klein">{{ r.womit }}</span></div>{% endfor %}
+      {% for r in c.gerufen_von %}<div><span class="tw-pfeil">gerufen von</span> <a href="#{{ r.anker }}">{{ r.klasse }}</a></div>{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+</details>
+{% endfor %}
+{% endwith %}

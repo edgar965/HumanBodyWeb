@@ -133,7 +133,7 @@ class KleidungsluftOptionTest(unittest.TestCase):
         """Die Kette ist erst dicht, wenn die letzte Schicht sie liest (`meshfigur.md`): Runner → `Meshfigurabstand(kleidung_luft)` → `ruhe_rest`."""
         from pathlib import Path
 
-        wrapper = Path(__file__).resolve().parents[4] / 'VideoToBVH' / 'wrappers'
+        wrapper = Path(__file__).resolve().parents[4] / 'meshto3d'
         runner = (wrapper / '_run_meshfigur.py').read_text(encoding='utf-8')
         abstand = (wrapper / 'meshfigur_abstand.py').read_text(encoding='utf-8')
         rest = (wrapper / 'meshfigur_registrierung.py').read_text(encoding='utf-8')

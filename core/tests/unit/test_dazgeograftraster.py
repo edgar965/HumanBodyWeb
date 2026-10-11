@@ -16,7 +16,7 @@ Kunstplatte: Quadrat 40 mm in der Ebene z = 0, UV (x, y)/40 mm (v nach oben, wie
 6. Ein Dreieck ohne UV-Fläche liefert keine Texel und keinen Fehler.
 7. `auffuellen`: ein ungedeckter Texel nimmt den Wert des nächsten gedeckten.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `texel` `t_vek = pu` und `b_vek = cross(n, pu)` statt der three.js-Formel macht Fall 3 rot (die Scherung ist weg).
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `texel` `t_vek = pu` und `b_vek = cross(n, pu)` statt der three.js-Formel macht Fall 3 rot (die Scherung ist weg).
 """
 import numpy as np
 from django.test import SimpleTestCase

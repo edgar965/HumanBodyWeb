@@ -12,7 +12,7 @@ Kunstwelt: Netz = Quadrat 40 mm, 11 × 11 Punkte (Abstand 4 mm) in z = 0, Ring =
 4. `_normalen` dreht die Normalen zur Seite von `aussen`: ein Netz mit umgekehrter Wicklung liefert trotzdem nach außen zeigende Normalen.
 5. Die Normalenprüfung wirkt: steht das Original senkrecht zu den Normalen des Netzes (Platte um 90° gekippt), zieht das Netz nicht dorthin (`NORMALE_GRAD` 60°) — die Mitte bleibt bei z = 0.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `verfeinern` `w[rand], ziel[rand] = …` weglassen macht Fall 1 rot (der Ring wandert); `NORMALE_GRAD` auf 180 macht Fall 5 rot.
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `verfeinern` `w[rand], ziel[rand] = …` weglassen macht Fall 1 rot (der Ring wandert); `NORMALE_GRAD` auf 180 macht Fall 5 rot.
 """
 from unittest import mock
 

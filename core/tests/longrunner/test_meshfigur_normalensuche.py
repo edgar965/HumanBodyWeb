@@ -18,15 +18,16 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 SKRIPT = Path(__file__).with_name('_meshfigur_normalensuche_skript.py')
-WRAPPERS = Path(settings.BASE_DIR).parent / 'VideoToBVH' / 'wrappers'
+WRAPPERS = Path(settings.WRAPPERS_DIR)
+MESHTO3D = Path(settings.MESHTO3D_DIR)
 PYTHON = Path(str(getattr(settings, 'PIPELINE_PYTHON', '')))
 
 
-@unittest.skipUnless(PYTHON.is_file() and WRAPPERS.is_dir(), 'python10 oder Wrapperbaum fehlt')
+@unittest.skipUnless(PYTHON.is_file() and WRAPPERS.is_dir() and MESHTO3D.is_dir(), 'python10 oder Wrapperbaum fehlt')
 class NormalensucheTest(SimpleTestCase):
     def _lauf(self):
         fertig = subprocess.run(
-            [str(PYTHON), str(SKRIPT), str(WRAPPERS)], capture_output=True, text=True, timeout=180, check=False
+            [str(PYTHON), str(SKRIPT), str(MESHTO3D), str(WRAPPERS)], capture_output=True, text=True, timeout=180, check=False
         )
         zeilen = [z for z in fertig.stdout.splitlines() if z.startswith('ERGEBNIS ')]
         self.assertTrue(zeilen, fertig.stderr[-800:])

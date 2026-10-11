@@ -1,0 +1,19 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „MeshTo3D": „So rechnet die Anpassung" und „Grenzen". Eingebunden in _architektur_2d3d_meshto3d.html mit `m` = meshto3d. Texte: `core/dienste/architekturmeshto3dmethode.py`.
+{% endcomment %}
+<h2 id="m3-methode">So rechnet die Anpassung</h2>
+<p>Die Punkte stammen aus dem Quelltext oder aus <code>.claude/rules/meshfigur.md</code>; Zahlen tragen dort das Datum ihrer Messung (meist 27.09.–08.10.2026, Fälle: Damira = Hunyuan-Netz des Reiters „Mesh",
+  Edgar = sein Körpernetz). Neu gemessen wurde für diese Seite nur, was ausdrücklich dasteht.</p>
+{% for a in m.methode %}
+<h3>{{ a.titel }}</h3>
+<ul>{% for p in a.punkte %}<li>{{ p }}</li>{% endfor %}</ul>
+{% endfor %}
+
+<h2 id="m3-grenzen">Grenzen</h2>
+<p>Was jede Session wissen muss, bevor sie ein Ergebnis von Mesh to 3D für gut oder schlecht erklärt.</p>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-grenzen">
+  <thead><tr><th>Was</th><th data-sort-aus>Befund</th></tr></thead>
+  <tbody>
+    {% for g in m.grenzen %}<tr><td><b>{{ g.was }}</b></td><td>{{ g.befund }}</td></tr>{% endfor %}
+  </tbody>
+</table>

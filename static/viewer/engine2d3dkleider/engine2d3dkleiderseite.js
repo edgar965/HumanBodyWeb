@@ -79,7 +79,7 @@ export class Engine2d3dKleiderseite {
 
     aufbauen() {
         const werte = this.zustand.optionen || {};
-        for (const gruppe of Object.keys(this.katalog).filter(g => document.getElementById('engine2d3dkleider-optionen-' + g))) {      // alle Gruppen des Katalogs mit Behälter (04.10.2026: dazu die Renderregler)
+        for (const gruppe of Object.keys(this.katalog).filter(g => document.getElementById('engine2d3dkleider-optionen-' + g))) {
             Meshoptionenformular.bauen(document.getElementById(`engine2d3dkleider-optionen-${gruppe}`), this.katalog[gruppe],
                 werte[gruppe]);
         }
@@ -102,6 +102,7 @@ export class Engine2d3dKleiderseite {
         // — und für immer, wenn einer davon beim Aufbau warf. Die Seite hört nur noch auf den Wechsel.
         document.getElementById('auftrag-reiter').addEventListener('reiterwechsel', e => this.reiterGewechselt(e.detail.name));
         document.getElementById('starten').addEventListener('click', () => this.starten());
+        document.getElementById('koerper-bauen').addEventListener('click', () => this.starten('koerper', 'grundfigur'));
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
         document.getElementById('laufband-anhalten').addEventListener('click', () => this.anhalten());
         document.addEventListener('visibilitychange', () => { if (!document.hidden) this.aktualisieren(); });

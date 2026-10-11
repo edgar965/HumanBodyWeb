@@ -215,7 +215,7 @@ class ClosureMittelTest(SimpleTestCase):
         for eingang, wert, stichwort in (('Thin Wall', {'wert': 1.0}, 'Thin Wall'), ('Thin Film Thickness', {'wert': 200.0}, 'Dünnfilm')):
             spec = self._spec(**{eingang: wert})
             self.assertIn(stichwort, Hautclosure.grund(spec), eingang)
-        for eingang, wert in (('Transmission Weight', {'wert': 1.0}), ('Transmission Weight', {'von': ['x', 0]}), ('Coat Normal', {'von': ['x', 0]})):   # seit 12.10.2026 gerechnet
+        for eingang, wert in (('Transmission Weight', {'wert': 1.0}), ('Transmission Weight', {'von': ['x', 0]}), ('Coat Normal', {'von': ['x', 0]})):   # seit 11.10.2026 gerechnet
             self.assertEqual(Hautclosure.grund(self._spec(**{eingang: wert})), '', eingang)
         for alpha in ({'wert': 0.5}, {'wert': 1.0}, {'von': ['x', 0]}):         # Alpha ist kein Grund mehr (Hautalpha + unveränderte Richtung), verbunden oder fest
             self.assertEqual(Hautclosure.grund(self._spec(Alpha=alpha)), '', alpha)
@@ -243,7 +243,7 @@ class ClosureMittelTest(SimpleTestCase):
 # * `gueltig` immer korrigiert (Schalter ignoriert)         → Test 3 rot
 # * `gueltig` nie korrigiert                                → Test 3 rot
 # Alpha (`hautalpha.py`): Schwelle 0,5 → 0,0 macht den Zoo-Test 4 rot (siehe dort); hier prüft Test 7b die Schwelle selbst (`Hautalpha.SCHWELLE == 0.5`, Nullvektor unter 0,5).
-# 12.10.2026 (Fälle 7c–7f): die Erwartungswerte sind mit `ProjektTemp/_wegwerf/cycles_vergleich/closure_testwerte.py` am Kern nachgerechnet (17,26° / 25,67° / 40,00° / Glas = Metall auf 0,00°);
+# 11.10.2026 (Fälle 7c–7f): die Erwartungswerte sind mit `ProjektTemp/_wegwerf/cycles_vergleich/closure_testwerte.py` am Kern nachgerechnet (17,26° / 25,67° / 40,00° / Glas = Metall auf 0,00°);
 # die Sabotage-Gegenprobe dieser Fälle wurde nicht per Testlauf gemacht — gegen Blender zeigt der Zoo (`test_hautbacken_zoo.py`, Fußzeile) für Transmission, Coat-Normale, Tangente und die
 # Glas-Energieerhaltung je eine rote Änderung.
 # Gegen Blender (Zoo, `test_hautbacken_zoo.py` Test 4): vor der Coat-Normalen-Korrektur lagen `glanz_lack` bei 25,4, `glanz_lack_halb_tint` 19,6, `glanz_sheen_lack` 34,5 und `glanz_alles`

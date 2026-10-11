@@ -12,7 +12,7 @@ import numpy as np
 
 from core.dienste.meshfiguroptionen import Meshfiguroptionen
 
-from ._wrappersuchpfad import WRAPPERS, Wrappersuchpfad
+from ._wrappersuchpfad import MESHTO3D, Wrappersuchpfad
 
 Wrappersuchpfad.setzen()
 
@@ -100,7 +100,7 @@ class EntlichtungOptionTest(unittest.TestCase):
         self.assertEqual(Meshfiguroptionen.pruefen({'entlichten': 'x'})['entlichten'], 0)
 
     def test_runner_liest_die_option(self):
-        quelle = (WRAPPERS / '_run_meshfigur.py').read_text(encoding='utf-8')
+        quelle = (MESHTO3D / '_run_meshfigur.py').read_text(encoding='utf-8')
         self.assertIn("optionen.get('entlichten')", quelle)
         self.assertIn('entlichtung=', quelle)
 

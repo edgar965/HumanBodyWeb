@@ -2,7 +2,7 @@
 """Meshfigurlauf — ein Auftrag „Mesh to 3D" vom Netz bis zur Genesis-Figur (läuft in `meshfigur_fahren`).
 
 Zwei Welten wechseln sich ab: Die Registrierung rechnet auf der Karte in python10
-(`VideoToBVH/wrappers/_run_meshfigur.py`, ein Schritt je Aufruf), Genesis 9 lebt hier in
+(`meshto3d/_run_meshfigur.py`, ein Schritt je Aufruf), Genesis 9 lebt hier in
 python14 — zwischen den Runden wird die Figur ECHT nachgerechnet (Formelketten, Knochen-
 skalierung, Gelenkkorrekturen), bevor die nächste Runde auf ihr aufsetzt.
 
@@ -32,7 +32,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from ..daten.meshfigurablage import Meshfigurablage
-from ..daten.wrapperpfad import Wrapperpfad
+from ..daten.meshto3dpfad import Meshto3dpfad
 from ..models import Meshfigurauftrag
 from ..pipeline_process import PipelineProzess, PipelineStille
 from .meshfiguroptionen import Meshfiguroptionen
@@ -190,13 +190,13 @@ class Meshfigurlauf:
         """Einen Schritt des Runners rechnen — sein `[ergebnis]` (dict) oder ein Fehler."""
         befehl = [
             settings.PIPELINE_PYTHON,
-            os.path.join(Wrapperpfad.pfad(), self.RUNNER),
+            os.path.join(Meshto3dpfad.pfad(), self.RUNNER),
             str(self.auftrag()),
             schritt,
         ]
         if runde is not None:
             befehl.append(str(runde))
-        pp = PipelineProzess.starten(befehl, cwd=Wrapperpfad.pfad(), env_extra=self.umgebung())
+        pp = PipelineProzess.starten(befehl, cwd=Meshto3dpfad.pfad(), env_extra=self.umgebung())
         ergebnis, meldung = None, None
         try:
             for zeile in pp.stdout_zeilen(stille_timeout=self.STILLE_S):

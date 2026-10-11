@@ -66,7 +66,16 @@ class Modellablage:
         pfad = cls.pfad(name)
         if not os.path.isfile(pfad):
             raise Ablagefehler('Modell nicht gefunden: %s' % name)
+        from .modellstuecke import Modellstuecke
+
+        eigene_stuecke = Modellstuecke.lesen(pfad)         # vor dem Löschen der Datei: nur dort steht, welche Stücke mit dem Modell gehen
         os.remove(pfad)
+        # Stücke, die nur für dieses Modell gebaut wurden (`Dazgeograftangepasst`), in den Papierkorb der Garderobe, wenn kein anderes Modell sie trägt (11.10.2026).
+        try:
+            Modellstuecke.entfernen(eigene_stuecke)
+        except Exception:  # noqa: BLE001
+            # Das Modell gilt als gelöscht, auch wenn ein Stück bleibt — die Datei ist weg, und daran hängt die Anzeige.
+            logger.exception('Stücke von %s nicht entfernt', name)
         # Die drapierten Netze dieser Szene liegen in einem eigenen Ordner
         # (seit 10.09.2026, `GarmentCode/szenenstuecke.py`). Ohne diesen
         # Schritt bliebe je gelöschter Szene ein Ordner mit ein paar Megabyte

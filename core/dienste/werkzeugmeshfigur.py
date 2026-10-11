@@ -13,7 +13,7 @@ class Werkzeugmeshfigur:
     G = 'Genesis9/'
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
-    W = 'VideoToBVH/wrappers/'
+    M = 'meshto3d/'
 
     KENNUNG = 'meshfigur'
     TITEL = 'Mesh to 3D: Netz → Genesis-Figur (Körperfit, Gesicht, Registrierung)'
@@ -64,8 +64,8 @@ class Werkzeugmeshfigur:
          'api',
          "POST /api/meshfigur/<id>/starten/   {ab: 'erkennung'}   bzw.   {ab: 'kalibrierung'}   (läuft nur, wenn die Tabelle fehlt)\n"
          '# Python: from Genesis9.netzlandmarken import G9netzlandmarken; G9netzlandmarken.holen()   # Tabelle oder None',
-         [(D + 'meshfigurlauf.py', 'Meshfigurlauf'), (W + 'meshfigur_erkennungsschritt.py', 'Meshfigurerkennungsschritt'), (G + 'netzlandmarken.py', 'G9netzlandmarken'),
-          (G + 'figurglb.py', 'G9figurglb'), (W + 'meshfigur_landmarkenflaeche.py', 'Meshfigurlandmarkenflaeche')],
+         [(D + 'meshfigurlauf.py', 'Meshfigurlauf'), (M + 'meshfigur_erkennungsschritt.py', 'Meshfigurerkennungsschritt'), (G + 'netzlandmarken.py', 'G9netzlandmarken'),
+          (G + 'figurglb.py', 'G9figurglb'), (M + 'meshfigur_landmarkenflaeche.py', 'Meshfigurlandmarkenflaeche')],
          'Erkennung (Damira): 48.935 Punkte nach dem Zusammenführen der UV-Nähte, Körper 33 Punkte (RANSAC-DLT + Gauß-Newton, 2–8 px), Gesicht 478 Punkte in 15 Nahaufnahmen (median 4,3 px). '
          'Kalibrierung: Genesis als texturierte GLB (G9figurglb) durch denselben Weg, Tabelle Genesis9/ablage/meshfigur_landmarken_v1.npz — Gesicht median 1,03 mm vom Käfig '
          '(p90 2,41, max 10,4), Gelenke relativ zum Daz-Gelenk (Detektor gegen Daz 5–31 mm!). Die alte 68-Punkte-Tabelle taugt für 3D nicht (Augen 94 mm daneben, Kinnlinie 20 mm). '
@@ -75,8 +75,8 @@ class Werkzeugmeshfigur:
          'Setzt ein eigenes Kopfnetz (Hunyuan-Gesicht) auf den Körper des Körpernetzes; die Gesichtskette fittet an dessen Gesicht.',
          'api',
          'POST /api/meshfigur/anlegen/   pfad_kopf=<Pfad>      POST /api/meshfigur/<id>/einstellungen/   {pfade: {kopf: <Pfad>}, kopf_an: true|false}',
-         [(D + 'meshfigureingang.py', 'Meshfigureingang'), (W + 'meshfigur_erkennungsschritt.py', 'Meshfigurerkennungsschritt'), (W + 'meshfigur_kopfnetz.py', 'Meshfigurkopfnetz'),
-          (W + 'meshfigur_kopfabgleich.py', 'Meshfigurkopfabgleich'), (W + 'meshfigur_zielnetz.py', 'Meshfigurzielnetz'), (W + 'meshfigur_farbangleich.py', 'Meshfigurfarbangleich')],
+         [(D + 'meshfigureingang.py', 'Meshfigureingang'), (M + 'meshfigur_erkennungsschritt.py', 'Meshfigurerkennungsschritt'), (M + 'meshfigur_kopfnetz.py', 'Meshfigurkopfnetz'),
+          (M + 'meshfigur_kopfabgleich.py', 'Meshfigurkopfabgleich'), (M + 'meshfigur_zielnetz.py', 'Meshfigurzielnetz'), (M + 'meshfigur_farbangleich.py', 'Meshfigurfarbangleich')],
          'Arbeitsgröße 0,3 m; Hochachse × Blick aus bis zu 6 × 8 Ansichten, 478 Punkte aus 15 Nahaufnahmen, Umeyama mit Maßstab auf die Gesichtspunkte des Körpernetzes, Ausreißer über '
          '2,5 × Median raus. Schnitt quer zur Halsachse Schulter → Ohrenmitte (nicht Gesichtsmitte: die Achse kippte 34°). Angeglichen wird der KÖRPER an den Kopf (Rumpf vorn, 12–45 cm '
          'unter der Halsebene, gegen 15 Hautstellen im Gesicht; Grenzen 0,25…4), die untersten 35 mm des Kopfes werden an der Naht in die Körperfarbe überblendet. „Kopfnetz verwenden“ aus = Kopf, '
@@ -85,10 +85,10 @@ class Werkzeugmeshfigur:
          'Stellt die Körperregler und die Haltung so, dass Genesis dem Netz am nächsten kommt: Haltung → Größe/Proportionen → Körpertyp → Bereiche.',
          'python',
          'Meshfigurkette(lauf).koerper()   # python14: je Runde Genesis ECHT rechnen, dann der Runner\n'
-         '# python10: python VideoToBVH/wrappers/_run_meshfigur.py <auftrag.json> koerper <runde>   (ein Schritt je Aufruf, Zustand in arbeit/zustand.npz)',
+         '# python10: python meshto3d/_run_meshfigur.py <auftrag.json> koerper <runde>   (ein Schritt je Aufruf, Zustand in arbeit/zustand.npz)',
          [(D + 'meshfigurkette.py', 'Meshfigurkette'), (D + 'meshfigurregler.py', 'Meshfigurregler'), (D + 'meshfigurgenesis.py', 'Meshfigurgenesis'),
-          (W + '_run_meshfigur.py', 'Meshfigurrunner'), (W + 'meshfigur_registrierung.py', 'Meshfigurregistrierung'), (W + 'meshfigur_modell.py', 'Meshfigurmodell'),
-          (W + 'meshfigur_kinematik.py', 'Meshfigurkinematik'), (G + 'netzbereiche.py', 'G9netzbereiche'), (G + 'reglerableitung.py', 'G9reglerableitung')],
+          (M + '_run_meshfigur.py', 'Meshfigurrunner'), (M + 'meshfigur_registrierung.py', 'Meshfigurregistrierung'), (M + 'meshfigur_modell.py', 'Meshfigurmodell'),
+          (M + 'meshfigur_kinematik.py', 'Meshfigurkinematik'), (G + 'netzbereiche.py', 'G9netzbereiche'), (G + 'reglerableitung.py', 'G9reglerableitung')],
          'Adam über die freien Größen (torch auf der Karte), alle 5 Schritte neue Nachbarn (KNN beidseitig, Punkt-zu-Ebene, Geman-McClure), Regler nach jedem Schritt auf Dazʼ Grenzen geklemmt. '
          'Runde 1: haltung (300 Schritte, nur Haltung und Lage) → groesse (Stufe 1: Proportion…, BodyMass; 300) → koerpertyp (Stufe 2: Charaktere, Heavy, Muscular, Fitness; 300) → bereiche '
          '(Stufe 3: Brust bis Füße; 400); ab Runde 2 eine Stufe mit allen Reglern. Zwischen den Runden rechnet python14 die Figur echt (Formelketten, Knochenskalierung, JCMs der Haltung). '
@@ -100,8 +100,8 @@ class Werkzeugmeshfigur:
          'Kopfhaltung, Schädel, Gesichtszüge, Ohren: eigene Kette über 296 Kopfregler gegen 478 Gesichtspunkte.',
          'python',
          'Meshfigurkette(lauf).gesicht()\n'
-         '# python10: python VideoToBVH/wrappers/_run_meshfigur.py <auftrag.json> gesicht',
-         [(D + 'meshfigurkette.py', 'Meshfigurkette'), (W + 'meshfigur_registrierung.py', 'Meshfigurregistrierung'), (W + 'meshfigur_landmarken.py', 'Meshfigurlandmarken'),
+         '# python10: python meshto3d/_run_meshfigur.py <auftrag.json> gesicht',
+         [(D + 'meshfigurkette.py', 'Meshfigurkette'), (M + 'meshfigur_registrierung.py', 'Meshfigurregistrierung'), (M + 'meshfigur_landmarken.py', 'Meshfigurlandmarken'),
           (G + 'netzbereiche.py', 'G9netzbereiche'), (D + 'meshfigurregler.py', 'Meshfigurregler')],
          'Stufen: kopfhaltung (200 Schritte) → schaedel (Stufe 11: Kopfgröße, Schädel, Charakterköpfe; 300) → zuege (12: Nase, Mund, Lippen, Augen, Brauen, Wangen, Kinn, Kiefer; 400) → fein '
          '(13: Ohren, Rest; 300). Nur Hals und Kopf drehen; Landmarken zählen nur, wenn ihr Dreieck ganz im Gesichtskern liegt (Kopfpunkte bis 3,5 cm über der Augenhöhe und mindestens 2 cm vor '

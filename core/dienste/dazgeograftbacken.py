@@ -20,6 +20,14 @@ __all__ = ['Dazgeograftbacken']
 class Dazgeograftbacken:
     #: Abstand zum Original (m): bis `NAH_M` gilt nur dessen Atlas, bis `FERN_M` blendet die Haut der Figur dazu.
     NAH_M, FERN_M = 0.004, 0.009
+    #: Dasselbe für die NORMALEN: eine Normale des Originals passt nur auf eine Fläche, die ihm nahe ist — das grobe Netz (4 mm Punktabstand) liegt bis p90 2,2 mm daneben, und weiter weg dreht die Karte
+    #: das Licht in Flecken mit dreieckigen Kanten (Chrome, 11.10.2026: mit flacher Karte verschwinden sie).
+    NAH_NORMALEN_M, FERN_NORMALEN_M = 0.0015, 0.003
+    #: Seitlich jenseits des Randes des Originals (`Dazgeograftziel.jenseits`): ab `JENSEITS_ZAEHLEN_M` (m) zählt ein Texel als „jenseits"; der Unterschied Original − Haut am Rand läuft über `FORTSETZEN_M`
+    #: aus, die Normalenkarte über ein Band von ± `RAND_BAND_M` um den Rand.
+    JENSEITS_ZAEHLEN_M, FORTSETZEN_M, RAND_BAND_M = 0.0005, 0.008, 0.004
+    #: Abstand (m) der Proben entlang der Randkanten des Stücks, an denen der Randabstand gemessen wird; Unschärfe (Texel des Atlas) des Unterschieds Original − Haut, der hinter den Rand fortgesetzt wird.
+    RAND_PROBE_M, FORTSETZEN_UNSCHARF_PX = 0.0005, 10.0
     #: Vom Rand des Stücks nach innen (m) läuft die Hautfarbe der Figur aus: am Rand ist es die Haut, ab so weit innen gilt der Atlas des Originals.
     RING_M = 0.012
     #: Umkreis (m) um die Mitte des Lochs, dessen Hautdreiecke als Quelle der Hautfarbe zählen.
@@ -29,6 +37,8 @@ class Dazgeograftbacken:
     #: Vom Rand (Weg über das Netz, m) nach innen läuft die Normalenkarte ein: so weit mischt der Browser die Normalen des Stücks zu denen der Haut (`Stucknormalen.BAND_M`) — dort ist die
     #: Normale, auf der die Karte gebacken wurde, nicht die, auf die sie beim Anzeigen trifft. Eine Karte mit 60° Neigung dreht sich mit ihr (am Ring 17: Stück gegen Haut 160°).
     RAND_NORMALEN_M = 0.010
+    #: Weichzeichnen harter Übergänge der Farb- und Rauheitskarte (`_weich`): Sprung zwischen Nachbartexeln (Mittel der Kanäle), Unschärfe (Texel) und Breite der Zone um die Kante (Texel).
+    KANTE_SPRUNG, KANTE_SIGMA, KANTE_BREITE = 20.0, 1.5, 2.0
 
     def __init__(self, ziel, figur, haut_ordner, aufloesung=1024):
         """`ziel`: `Dazgeograftziel`; `figur`: `{punkte, dreiecke, uv, kachel}` der Figur (`Dazgeografthaut.grundfigur`); `haut_ordner`: Ordner der gebackenen `haut_*`-Bilder."""
@@ -95,33 +105,48 @@ class Dazgeograftbacken:
         pos, zeile, spalte = t['position'], t['zeile'], t['spalte']
         abstand = trimesh.proximity.closest_point(self.ziel_netz, pos)[1]          # Abstand zur Fläche: bestimmt, wie weit das Original gilt
         dreieck, bary = self.ziel.stelle(pos, t['normale'])                        # Farbe und Normale von der Seite, auf der das Stück liegt (nicht von der Wand gegenüber)
-        uv_orig = np.einsum('mk,mkj->mj', bary, self.ziel.uv_ecken[dreieck])
         w_normal = 1.0 - self._glatt((abstand - self.NAH_M) / (self.FERN_M - self.NAH_M))
+        lage = self.ziel.randlage(pos, dreieck, bary)                              # + innerhalb, − seitlich hinter dem Rand des Originals (dort hat es keine Farbe)
+        jenseits = np.maximum(-lage, 0.0)
         # Zum Rand hin gilt die Hautfarbe der Figur (am Rand ganz): so geht die Textur ohne Stufe in die Haut daneben über. Gemessen 10.10.2026 (`Schammessung`, „cute girl"): ohne das
         # war die Farbe des Stücks am Rand (194,7 / 142,0 / 124,7) gegen die Haut 6–15 mm daneben (199,8 / 148,1 / 128,8) 3,7 % dunkler.
-        from scipy.spatial import cKDTree
-
-        from .schammessungnaht import Schammessungnaht
-
-        rand = Schammessungnaht.randpunkte(punkte, dreiecke)
-        w = w_normal * (self._glatt(cKDTree(rand).query(pos)[0] / self.RING_M) if len(rand) else 1.0)
+        baum = self._rand_baum(punkte, dreiecke)
+        w = w_normal * (self._glatt(baum.query(pos)[0] / self.RING_M) if baum is not None else 1.0)
         mitte = pos.mean(axis=0)
-        bericht = {'aufloesung': self.r, 'texel': int(len(pos)), 'original_voll': float((w >= 0.999).mean()), 'abstand_median_mm': round(float(np.median(abstand) * 1000), 2)}
+        bericht = {'aufloesung': self.r, 'texel': int(len(pos)), 'original_voll': float((w >= 0.999).mean()), 'abstand_median_mm': round(float(np.median(abstand) * 1000), 2),
+                   'jenseits_rand': {'texel': int((jenseits > self.JENSEITS_ZAEHLEN_M).sum()), 'anteil': round(float((jenseits > self.JENSEITS_ZAEHLEN_M).mean()), 4)}}
         dateien = {}
         for kanal in ('farbe', 'rauheit'):
-            atlas = self.ziel.bild(kanal)
-            wert = self._abtasten(atlas, uv_orig) if atlas is not None else np.full((len(pos), 3), 128.0)
-            fern = np.flatnonzero(w < 0.999)
-            if len(fern):
-                haut = self._hautwerte(pos[fern], kanal, mitte)
-                if kanal == 'farbe':
-                    nah = np.flatnonzero(w >= 0.999)[:20000]
-                    bericht['haut_gegen_original'] = round(float(np.abs(self._hautwerte(pos[nah], kanal, mitte) - wert[nah]).mean()), 1) if len(nah) else None
-                wert[fern] = w[fern, None] * wert[fern] + (1.0 - w[fern, None]) * haut
-            dateien[kanal] = self._schreiben(wert, zeile, spalte, ausgabe / ('baked_%s.%s' % (kanal, 'jpg' if kanal == 'farbe' else 'png')))
-        w_karte = w_normal * self._glatt(self._randweg(punkte, dreiecke, t) / self.RAND_NORMALEN_M)
+            wert = self._farbkarte(kanal, pos, dreieck, bary, w, jenseits, mitte, bericht)
+            dateien[kanal] = self._schreiben(wert, zeile, spalte, ausgabe / ('baked_%s.%s' % (kanal, 'jpg' if kanal == 'farbe' else 'png')), weich=True)
+        # Die Karte der Normalen endet am Rand des Originals (keine Fortsetzung wie bei der Farbe): über ein Band von ±`RAND_BAND_M` um den Rand läuft sie aus, dahinter gilt die glatte Normale des Netzes.
+        # Der Rand des Originals ist ein Zickzack (Schnitt durch Dreiecke des Körpers); ein hartes Ende zeichnete ihn als Sägezahn in die Beleuchtung.
+        w_nah = 1.0 - self._glatt((abstand - self.NAH_NORMALEN_M) / (self.FERN_NORMALEN_M - self.NAH_NORMALEN_M))
+        w_karte = w_nah * self._glatt((lage + self.RAND_BAND_M) / (2.0 * self.RAND_BAND_M)) * self._glatt(self._randweg(punkte, dreiecke, t) / self.RAND_NORMALEN_M)
         dateien['normalen'] = self._normalen(t, dreieck, bary, w_karte, ausgabe)
         return dateien, bericht
+
+    def _farbkarte(self, kanal, pos, dreieck, bary, w, jenseits, mitte, bericht):
+        """`(M, 3)` Werte des Kanals `farbe` oder `rauheit` je Texel: der Atlas des Originals, zum Rand des Stücks und weit vom Original weg die Haut der Figur; jenseits des Randes des Originals
+        die Haut mit dem Unterschied Original − Haut am Rand, der mit dem Weg bis `FORTSETZEN_M` ausläuft (der Atlas selbst setzt dort nur den letzten Texel fort: senkrechte Streifen)."""
+        uv_orig = np.einsum('mk,mkj->mj', bary, self.ziel.uv_ecken[dreieck])
+        atlas = self.ziel.bild(kanal)
+        wert = self._abtasten(atlas, uv_orig) if atlas is not None else np.full((len(pos), 3), 128.0)
+        fern, aussen = np.flatnonzero(w < 0.999), np.flatnonzero(jenseits > self.JENSEITS_ZAEHLEN_M)
+        if kanal == 'farbe':
+            nah = np.flatnonzero((w >= 0.999) & (jenseits <= self.JENSEITS_ZAEHLEN_M))[:20000]
+            bericht['haut_gegen_original'] = round(float(np.abs(self._hautwerte(pos[nah], kanal, mitte) - wert[nah]).mean()), 1) if len(nah) else None
+        if len(aussen):
+            from scipy.ndimage import gaussian_filter
+
+            ort = np.einsum('mk,mkj->mj', bary[aussen], self.ziel.punkte[self.ziel.dreiecke[dreieck[aussen]]])
+            # Der Unterschied am Rand wird aus dem UNSCHARFEN Atlas geholt: Haar und Poren des Randtexels, ins Hinterland gezogen, wären wieder Streifen.
+            grob = np.stack([gaussian_filter(atlas[..., k].astype(np.float32), self.FORTSETZEN_UNSCHARF_PX) for k in range(3)], axis=-1) if atlas is not None else None
+            unterschied = (self._abtasten(grob, uv_orig[aussen]) if grob is not None else wert[aussen]) - self._hautwerte(ort, kanal, mitte)
+            wert[aussen] = self._hautwerte(pos[aussen], kanal, mitte) + unterschied * (1.0 - self._glatt(jenseits[aussen] / self.FORTSETZEN_M))[:, None]
+        if len(fern):
+            wert[fern] = w[fern, None] * wert[fern] + (1.0 - w[fern, None]) * self._hautwerte(pos[fern], kanal, mitte)
+        return wert
 
     def _normalen(self, t, dreieck, bary, w, ausgabe):
         """Normalenkarte: Normale des Originals am nächsten Punkt (zur Außenseite des Geografts gedreht), so kodiert, dass three.js sie im eigenen Tangentenraum wieder ergibt."""
@@ -158,34 +183,61 @@ class Dazgeograftbacken:
             ts[ok] = np.linalg.solve(m[ok], n[ok][..., None])[..., 0]
         return ts / np.maximum(np.abs(ts).max(axis=1, keepdims=True), 1e-12)
 
-    def _randweg(self, punkte, dreiecke, t):
-        """Weg über die Kanten des Netzes (m) vom Rand des Stücks (Kanten mit einem Dreieck, nach Lage verschweißt) zu jedem Texel; jenseits von `2 · RAND_NORMALEN_M` ein großer Wert."""
-        from scipy.sparse import coo_matrix
-        from scipy.sparse.csgraph import dijkstra
+    def _rand_baum(self, punkte, dreiecke):
+        """KD-Baum über dichte Proben (Abstand `RAND_PROBE_M`) entlang der Randkanten des Stücks (Kanten mit einem Dreieck, nach Lage verschweißt) — oder None ohne Rand."""
+        from scipy.spatial import cKDTree
 
         _, erste, rep = np.unique(np.round(punkte / 1e-5).astype(np.int64), axis=0, return_index=True, return_inverse=True)
         d, p = rep.ravel()[dreiecke], punkte[erste]
         kanten = np.sort(np.concatenate([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), axis=1)
         eindeutig, zahl = np.unique(kanten, axis=0, return_counts=True)
-        rand = np.unique(eindeutig[zahl == 1])
-        laenge = np.linalg.norm(p[eindeutig[:, 0]] - p[eindeutig[:, 1]], axis=1)
-        zeilen, spalten = np.concatenate([eindeutig[:, 0], eindeutig[:, 1]]), np.concatenate([eindeutig[:, 1], eindeutig[:, 0]])
-        graph = coo_matrix((np.concatenate([laenge, laenge]), (zeilen, spalten)), shape=(len(p), len(p))).tocsr()
-        weg = dijkstra(graph, indices=rand, min_only=True, limit=2 * self.RAND_NORMALEN_M) if len(rand) else np.full(len(p), np.inf)
-        weg = np.where(np.isfinite(weg), weg, 1.0)
-        return np.einsum('mk,mk->m', t['bary'], weg[d[t['dreieck']]])
+        offen = eindeutig[zahl == 1]
+        if not len(offen):
+            return None
+        a, b = p[offen[:, 0]], p[offen[:, 1]]
+        teile = np.maximum(1, np.ceil(np.linalg.norm(b - a, axis=1) / self.RAND_PROBE_M).astype(np.int64))
+        s = np.concatenate([np.arange(n + 1) / n for n in teile])
+        kante = np.repeat(np.arange(len(offen)), teile + 1)
+        return cKDTree(a[kante] + s[:, None] * (b[kante] - a[kante]))
+
+    def _randweg(self, punkte, dreiecke, t):
+        """Abstand (m) jedes Texels vom Rand des Stücks (Luftlinie zu den dicht abgetasteten Randkanten); ab `2 · RAND_NORMALEN_M` der Ersatzwert 1,0. Gemessen 11.10.2026: der Weg über die Kanten des Netzes
+        (Dijkstra) lief nur entlang der Dreieckskanten und zeichnete die Höhenlinie der Normalenkarte als Sägezahn (im Chrome: gezackte Streifen am Rand des Stücks, ohne Karte der Normalen glatt)."""
+        baum = self._rand_baum(punkte, dreiecke)
+        if baum is None:
+            return np.full(len(t['dreieck']), 1.0)
+        pos = np.einsum('mk,mkj->mj', t['bary'], punkte[dreiecke[t['dreieck']]])
+        weg = baum.query(pos)[0]
+        return np.where(weg < 2 * self.RAND_NORMALEN_M, weg, 1.0)
 
     @staticmethod
     def _glatt(x):
         x = np.clip(x, 0.0, 1.0)
         return x * x * (3.0 - 2.0 * x)
 
-    def _schreiben(self, wert, zeile, spalte, pfad):
+    @classmethod
+    def _weich(cls, bild):
+        """Harte Übergänge (Farbe der Wand gegenüber gegen die richtige, Rand einer Lippe) laufen als Zickzack entlang der groben Dreiecke des Stücks und sehen im Bild zerfetzt aus: dort — und nur dort,
+        das Haar und die Poren bleiben scharf — wird mit `KANTE_SIGMA` Texeln weichgezeichnet. Eine Kante ist ein Sprung von mindestens `KANTE_SPRUNG` (Mittel der Kanäle) zwischen Nachbartexeln."""
+        from scipy.ndimage import gaussian_filter
+
+        dx = np.abs(np.diff(bild, axis=1)).mean(axis=2)
+        dy = np.abs(np.diff(bild, axis=0)).mean(axis=2)
+        sprung = np.zeros(bild.shape[:2])
+        sprung[:, :-1], sprung[:-1, :] = np.maximum(sprung[:, :-1], dx), np.maximum(sprung[:-1, :], dy)
+        sprung[:, 1:], sprung[1:, :] = np.maximum(sprung[:, 1:], dx), np.maximum(sprung[1:, :], dy)
+        maske = np.clip(gaussian_filter((sprung >= cls.KANTE_SPRUNG).astype(np.float64), cls.KANTE_BREITE) * 4.0, 0.0, 1.0)[..., None]
+        unscharf = np.stack([gaussian_filter(bild[..., k], cls.KANTE_SIGMA) for k in range(3)], axis=-1)
+        return bild * (1.0 - maske) + unscharf * maske
+
+    def _schreiben(self, wert, zeile, spalte, pfad, weich=False):
         from PIL import Image
 
         bild = np.zeros((self.r, self.r, 3), dtype=np.float64)
         bild[zeile, spalte] = wert
         bild = Dazgeograftraster.auffuellen(bild, zeile, spalte)
+        if weich:
+            bild = self._weich(bild)
         pfad.parent.mkdir(parents=True, exist_ok=True)
         ausgabebild = Image.fromarray(np.clip(bild + 0.5, 0, 255).astype(np.uint8))
         if pfad.suffix == '.jpg':

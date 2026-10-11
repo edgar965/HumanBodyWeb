@@ -12,7 +12,7 @@ Haut zurückgeklappt lag. Punktnormalen mitteln Falten weg, der Winkel zwischen 
 5. Fehlt einer Ringkante das sichtbare Hautdreieck (eine Sehne), zählt sie nicht: 15 statt 16 Kanten. Ohne jede Kante meldet `messen` einen Hinweis, kein Wurf.
 6. `winkel` liefert dieselben Zahlen als Liste `(Ringecke, Grad)`; `schlimmste` in `messen` sind die größten davon.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `haut_lage` die Verschiebung weglassen macht Fall 4 rot; in `winkel` `np.clip(…)` auf `normale(fp, haut_dreieck) @ -normale(p, tb)` (umgedreht) macht Fall 1 rot.
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `haut_lage` die Verschiebung weglassen macht Fall 4 rot; in `winkel` `np.clip(…)` auf `normale(fp, haut_dreieck) @ -normale(p, tb)` (umgedreht) macht Fall 1 rot.
 """
 import numpy as np
 from django.test import SimpleTestCase

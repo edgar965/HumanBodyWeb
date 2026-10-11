@@ -9,14 +9,21 @@ Keile und Facetten (Chrome, 11.10.2026: Sprung an Ringpunkt 7 und 69 von 56 und 
 3. `_kodieren` ist die Umkehrung der Dekodierung in three.js: für beliebige Normalen innerhalb von 60° um N ergibt `normalize(T·x + B·y + N·z)` mit dem kodierten Texel wieder die Normale — auch mit geschertem
    UV (Scherung 0,5, T und B nicht senkrecht). Der alte Tangentenraum (Orthonormalbasis) ergäbe dort über 5° Fehler: die Gegenprobe zeigt, dass der Test den Befund sieht.
 4. Ein entarteter Tangentenraum (UV ohne Fläche: T = B = 0) kodiert „flach" (0, 0, 1).
-5. `_randweg`: der Weg über die Kanten vom Rand: in der Mitte eines Streifens 8 mm (zwei Reihen zu 4 mm), weit im Innern der Ersatzwert 1,0; verschweißte und aufgespaltene Punkte (UV-Nähte) geben dasselbe.
+5. `_randweg`: der Abstand vom Rand (Luftlinie zu den dicht abgetasteten Randkanten): in der Mitte eines Streifens 8 mm (zwei Reihen zu 4 mm), weit im Innern der Ersatzwert 1,0; verschweißte und aufgespaltene
+   Punkte (UV-Nähte) geben dasselbe. (Bis 11.10.2026 der Weg über die Kanten des Netzes — der zeichnete die Höhenlinie der Normalenkarte als Sägezahn.)
 6. Ganzer Lauf an einer um 5° geneigten Original-Platte (Stück flach, 80 mm): die Normalenkarte dekodiert in der Mitte zur Normale des Originals (Fehler unter 1°, 8-Bit-Rundung), die Farbe links ist rot und
    rechts blau, die Dateien sind da. Ohne Hauttextur-Ordner füllt der Rand mit Grau (128).
+7. `_weich` (11.10.2026, die zerfetzten Ränder der Lippen im Chrome): ein Zickzack-Übergang zwischen zwei Farben wird weicher (größter Sprung zwischen Nachbartexeln sinkt auf unter die Hälfte), aber nur
+   dort — Texel weit von der Kante und ein schwaches Rauschen (Haar, Poren, Sprünge unter `KANTE_SPRUNG`) bleiben bitgleich.
+8. `Dazgeograftziel.randlage` (11.10.2026, die senkrechten Streifen im Chrome): an einer flachen Original-Platte 40 × 40 mm ist die Lage positiv = Abstand vom Rand innerhalb (Mitte 20 mm, bei x = 10 mm 10 mm, über der
+   Mitte in 4 mm Höhe ebenfalls 20 mm) und negativ = seitlicher Weg hinter den Rand (x = 26 mm: −6 mm, 12 mm hinter der Kante der y-Seite: −12 mm); `jenseits` ist der Betrag der negativen Werte, sonst 0.
+9. Ein Stück, das größer ist als das Original (80 mm gegen 40 mm), meldet im Bericht den Anteil der Texel jenseits des Randes (rund 75 %); liegt es ganz auf dem Original (Fall 6), sind es 0.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `_kodieren` `t['bitangente']` durch `np.cross(t['normale'], t['tangente'])` ersetzen macht Fall 3 rot (geschert); `RAND_NORMALEN_M` auf 0 stellt Fall 6 nicht rot
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `_kodieren` `t['bitangente']` durch `np.cross(t['normale'], t['tangente'])` ersetzen macht Fall 3 rot (geschert); `RAND_NORMALEN_M` auf 0 stellt Fall 6 nicht rot
 (die Mitte liegt weit vom Rand), aber `_randweg` Fall 5.
 """
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 from django.test import SimpleTestCase
@@ -24,6 +31,7 @@ from PIL import Image
 
 from core.dienste.dazgeograftbacken import Dazgeograftbacken
 from core.dienste.dazgeograftraster import Dazgeograftraster
+from core.dienste.dazgeograftziel import Dazgeograftziel
 
 from ._dazkunstziel import Dazkunstziel
 from ._pruefablage import Pruefablage
@@ -115,7 +123,7 @@ class DazgeograftbackenTest(SimpleTestCase):
         t = {'bary': np.array([[1.0, 0.0, 0.0]]), 'dreieck': np.array([t_index])}
         return Dazgeograftbacken.__new__(Dazgeograftbacken)._randweg(punkte, d, t)[0]
 
-    def test_5_der_weg_vom_rand_ist_der_kuerzeste_ueber_die_kanten(self):
+    def test_5_der_abstand_vom_rand_ist_die_luftlinie_zu_den_randkanten(self):
         self.assertAlmostEqual(float(self._weg(False)), 0.008, places=9, msg='Mitte des Streifens: zwei Reihen zu 4 mm bis zum Rand')
         self.assertAlmostEqual(float(self._weg(True)), 0.008, places=9, msg='UV-Nähte (aufgespaltene Punkte) trennen die Fläche nicht')
         punkte, d, _ = self._streifen(21, 21)
@@ -129,12 +137,13 @@ class DazgeograftbackenTest(SimpleTestCase):
         punkte = punkte - np.array([0.040, 0.040, 0.0])
         uv = (punkte[:, :2] / 0.080 + 0.5)[dreiecke]
         figur = {'punkte': punkte, 'dreiecke': dreiecke, 'uv': punkte[:, :2], 'kachel': np.zeros(len(dreiecke), dtype=np.int64)}
-        with Pruefablage.ordner('bake_') as ordner:
+        with Pruefablage.ordner('bake_') as ordner, mock.patch.object(Dazgeograftziel, 'PROBE_M', 0.002):        # gröbere Proben: die Platte ist glatt, das spart die Zeit der Schwelle
             dateien, bericht = Dazgeograftbacken(ziel, figur, Path(ordner) / 'ohne_haut', 64).backen(punkte, dreiecke, uv, Path(ordner) / 'aus')
             farbe = np.asarray(Image.open(dateien['farbe']).convert('RGB'), dtype=np.float64)
             karte = np.asarray(Image.open(dateien['normalen']).convert('RGB'), dtype=np.float64)
             self.assertTrue(dateien['rauheit'].is_file())
         self.assertGreater(bericht['texel'], 0.9 * 64 * 64)
+        self.assertEqual(bericht['jenseits_rand']['texel'], 0, 'das Stück liegt ganz auf dem Original: nichts jenseits des Randes')
         w = np.radians(5.0)
         soll = np.array([0.0, -np.sin(w), np.cos(w)])
         t = Dazgeograftraster.texel(punkte, dreiecke, uv, 64, np.tile([0.0, 0.0, 1.0], (len(punkte), 1)))
@@ -148,3 +157,41 @@ class DazgeograftbackenTest(SimpleTestCase):
         rechts = farbe[t['zeile'][(np.abs(x - 0.020) < 0.002) & (np.abs(y) < 0.010)], t['spalte'][(np.abs(x - 0.020) < 0.002) & (np.abs(y) < 0.010)]].mean(axis=0)
         self.assertGreater(float(links[0] - links[2]), 100.0, 'links rot')
         self.assertGreater(float(rechts[2] - rechts[0]), 100.0, 'rechts blau')
+
+    def test_8_die_lage_zum_rand_ist_innen_positiv_und_jenseits_negativ(self):
+        ziel = Dazkunstziel.geneigte_platte(0.0, halb=0.020)
+        pos = np.array([[0.0, 0.0, 0.0], [0.010, 0.0, 0.0], [0.026, 0.0, 0.0], [0.0, 0.032, 0.0], [0.0, 0.0, 0.004]])
+        dreieck, bary = ziel.stelle(pos)
+        lage = ziel.randlage(pos, dreieck, bary)
+        for ist, soll in zip(lage, (0.020, 0.010, -0.006, -0.012, 0.020), strict=True):
+            self.assertAlmostEqual(float(ist), soll, places=6)
+        self.assertEqual(ziel.jenseits(pos, dreieck, bary).round(6).tolist(), [0.0, 0.0, 0.006, 0.012, 0.0])
+
+    def test_9_ein_stueck_ueber_den_rand_des_originals_hinaus_meldet_den_anteil(self):
+        ziel = Dazkunstziel.geneigte_platte(0.0, halb=0.020)
+        punkte, dreiecke, _ = self._streifen(21, 21)                         # 80 × 80 mm
+        punkte = punkte - np.array([0.040, 0.040, 0.0])
+        uv = (punkte[:, :2] / 0.080 + 0.5)[dreiecke]
+        figur = {'punkte': punkte, 'dreiecke': dreiecke, 'uv': punkte[:, :2], 'kachel': np.zeros(len(dreiecke), dtype=np.int64)}
+        with Pruefablage.ordner('bake_') as ordner, mock.patch.object(Dazgeograftziel, 'PROBE_M', 0.002):
+            _dateien, bericht = Dazgeograftbacken(ziel, figur, Path(ordner) / 'ohne_haut', 64).backen(punkte, dreiecke, uv, Path(ordner) / 'aus')
+        self.assertGreater(bericht['jenseits_rand']['anteil'], 0.6, 'die Platte deckt ein Viertel des Stücks, der Rest liegt jenseits des Randes')
+        self.assertLess(bericht['jenseits_rand']['anteil'], 0.8)
+
+    def test_7_nur_harte_uebergaenge_werden_weichgezeichnet(self):
+        rng = np.random.default_rng(11)
+        n = 48
+        bild = np.zeros((n, n, 3))
+        grenze = 24 + np.round(3 * np.sin(np.arange(n) * 1.3)).astype(int)         # Zickzack-Kante, bis ±3 Texel
+        for zeile in range(n):
+            bild[zeile, :grenze[zeile]] = (200.0, 100.0, 100.0)
+            bild[zeile, grenze[zeile]:] = (100.0, 200.0, 200.0)
+        bild += rng.uniform(-4.0, 4.0, bild.shape)                                  # Haar und Poren: Rauschen weit unter KANTE_SPRUNG
+        weich = Dazgeograftbacken._weich(bild)
+        sprung = lambda b: float(np.abs(np.diff(b, axis=1)).mean(axis=2).max())     # noqa: E731
+        self.assertGreater(sprung(bild), 90.0)
+        self.assertLess(sprung(weich), 0.5 * sprung(bild), 'der härteste Übergang wird weicher')
+        fern = np.r_[0:12, 36:n]
+        self.assertEqual(weich[:, fern].tolist(), bild[:, fern].tolist(), 'weit von der Kante bleibt jedes Texel, wie es war')
+        flach = bild[:, :8]
+        self.assertEqual(Dazgeograftbacken._weich(flach)[:, :8].tolist(), flach.tolist(), 'ohne Kante ändert sich nichts, auch das Rauschen bleibt')

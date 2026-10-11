@@ -188,8 +188,10 @@ class Blendimportlauf:
         job = figur.anlegen(self.ablage.arbeit(Blendimportkoerper.DATEI))
         self.ergebnis('figur', {'id': str(job.id), 'kennung': job.kennung})
         job = figur.rechnen(job)
+        # Die Scham-Messung von „Mesh to 3D" (`Meshfigurschammessung`, läuft bei jedem Auftrag im Schritt „vorschau"): auch ohne Scham-Stück steht hier, wie die Figur die Scham des Originals trifft.
         self.ergebnis('figur', {'id': str(job.id), 'kennung': job.kennung, 'regler': len(job.stellung() or {}),
-                                'rest': (job.ergebnis or {}).get('rest', {}).get('regler')})
+                                'rest': (job.ergebnis or {}).get('rest', {}).get('regler'),
+                                'schammessung': (job.ergebnis or {}).get('schammessung')})
         self._nachformung(job)
 
     def _nachformung(self, job):

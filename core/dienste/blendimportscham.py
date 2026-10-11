@@ -213,27 +213,27 @@ class Blendimportscham:
         roh, zaehl = np.unique(kanten, axis=0, return_counts=True)
         return np.unique(roh[zaehl == 1])
 
-    # --------------------------------------------------------------- Rand
-
-    def angleichen(self, punkte, dreiecke, flaeche):
+    # --------------------------------------------------------------- Rand (auch für das Daz-Stück: `Dazgeograftangepasst`)
+    @classmethod
+    def angleichen(cls, punkte, dreiecke, flaeche, band_mm=None, max_mm=None):
         """`(neue Punkte, bericht)`: das Randband wird weich auf die Figurfläche gezogen (höchstens `ANGLEICH_MAX_MM`)."""
         import trimesh
         from scipy import sparse
         from scipy.sparse import csgraph
 
-        rand = self.randpunkte(dreiecke)
+        rand, band_mm, max_mm = cls.randpunkte(dreiecke), cls.BAND_MM if band_mm is None else band_mm, cls.ANGLEICH_MAX_MM if max_mm is None else max_mm
         n = len(punkte)
         a = np.concatenate([dreiecke[:, 0], dreiecke[:, 1], dreiecke[:, 2]])
         b = np.concatenate([dreiecke[:, 1], dreiecke[:, 2], dreiecke[:, 0]])
         graph = sparse.csr_matrix((np.linalg.norm(punkte[a] - punkte[b], axis=1) * 1000.0, (a, b)), shape=(n, n))
         weg = csgraph.dijkstra(graph, directed=False, indices=rand, min_only=True)
-        band = np.flatnonzero(weg < self.BAND_MM)
+        band = np.flatnonzero(weg < band_mm)
         nah = trimesh.proximity.closest_point(flaeche, punkte[band])[0]
         zug = nah - punkte[band]
         laenge = np.linalg.norm(zug, axis=1)
-        zu_weit = laenge > self.ANGLEICH_MAX_MM / 1000.0
-        zug[zu_weit] *= (self.ANGLEICH_MAX_MM / 1000.0 / laenge[zu_weit])[:, None]
-        t = np.clip(weg[band] / self.BAND_MM, 0.0, 1.0)
+        zu_weit = laenge > max_mm / 1000.0
+        zug[zu_weit] *= (max_mm / 1000.0 / laenge[zu_weit])[:, None]
+        t = np.clip(weg[band] / band_mm, 0.0, 1.0)
         neu = np.asarray(punkte, dtype=np.float64).copy()
         neu[band] += (1.0 - (3.0 * t ** 2 - 2.0 * t ** 3))[:, None] * zug
         vorher = trimesh.proximity.closest_point(flaeche, punkte[rand])[1] * 1000.0

@@ -37,6 +37,10 @@ class Dazgeograft:
     LAGE_M = 1e-7
     #: Liegt der Rand des Geografts im Bau weiter (mm) vom Ring, bricht der Bau ab (die Naht zöge Keile).
     MAX_RAND_WEG_MM = 30.0
+    #: Unterteilungsstufe des Geografts (Catmull-Clark über dem Käfig): 1 ≈ 4 mm Punktabstand (Frau 4.211 Punkte), 2 ≈ 2 mm (16.741). Die Basis-Stücke („Daz Anatomie Frau/Mann") bleiben auf Stufe 1: ihre
+    #: Zusatzmorphe (`Dazgeograftmorphe`, `Dazgeograftgerade`) hängen an den Punktnummern der Stufe 1. Das angepasste Stück (`Dazgeograftangepasst.STUFE`) liegt seit 11.10.2026 auf Stufe 2; seine Regler
+    #: kommen über `Dazgeograftstufenzuordnung` auf das Basis-Stück.
+    STUFE = 1
 
     def __init__(self, geschlecht='mann', farbe=None, rauheit=0.6):
         self.geschlecht = geschlecht
@@ -45,23 +49,25 @@ class Dazgeograft:
         #: Anzeigename und Materialgruppe des Stücks (Unterklassen setzen eigene), Bilder aus `backen`.
         self.anzeige, self.gruppe, self.bilder = self.NAMEN[geschlecht][0], self.GRUPPEN[geschlecht], {}
         self._stufe = None
+        #: Zahl der Punkte des Geografts nach dem Verschweißen der UV-Nähte (`stufe1`) — Bezug der Nummern, die ein Zuschnitt behält (`Dazgeograftumriss`).
+        self.nahtfrei_punkte = None
 
     def bauen(self, realism=1.0):
         """Das Stück in die eigene Bibliothek schreiben; gibt die Bilanz (`G9eigenstueck.schreiben`) mit `bericht` zurück."""
-        from .dazgeografthaut import Dazgeografthaut
         from .dazgeograftquelle import Dazgeograftquelle
 
         quelle = Dazgeograftquelle(self.geschlecht)
         kaefig = quelle.punkte + float(realism) * quelle.morph(self.REALISM)
         punkte, dreiecke, uv_ecken = self.stufe1(quelle, kaefig)
         figur = self.figur()
-        maske, loch_bericht = Dazgeografthaut.loch(figur, quelle.versteckt)
-        if loch_bericht['ohne'] or not maske.any():
+        maske, loch_bericht = self.loch_maske(figur, quelle)
+        if loch_bericht.get('ohne') or not maske.any():
             raise ValueError('Loch unvollständig: %s' % loch_bericht)
         bericht = {'quelle_punkte': int(len(quelle.punkte)), 'loch': loch_bericht}
-        punkte = self.angleichen(punkte, dreiecke, figur, maske, bericht)
+        punkte, dreiecke, uv_ecken = self.angleichen(punkte, dreiecke, uv_ecken, figur, maske, bericht)
         punkte, dreiecke, uv_ecken, loch, naht = self.verschweissen(figur, maske, punkte, dreiecke, uv_ecken)
-        punkte = self.randseite(punkte, figur, loch, bericht)
+        punkte = self.randseite(punkte, dreiecke, figur, loch, bericht)
+        punkte = self.falten(punkte, dreiecke, loch, bericht)
         self.bilder = self.backen(punkte, dreiecke, uv_ecken, figur, bericht)
         bilanz = self.schreiben(figur, punkte, dreiecke, uv_ecken, loch)
         bilanz['bericht'] = dict(bericht, naht=naht, messung=self.messen(figur, punkte, dreiecke, uv_ecken, loch))
@@ -77,18 +83,28 @@ class Dazgeograft:
 
         return Dazgeografthaut.grundfigur()
 
-    def angleichen(self, punkte, _dreiecke, _figur, _maske, _bericht):
-        """Die Punkte des Geografts vor dem Verschweißen anpassen → neue Punkte (hier unverändert)."""
-        return punkte
+    def loch_maske(self, figur, quelle):
+        """`(maske, bericht)`: welche Dreiecke der Haut (Stufe 1) das Stück ersetzt — hier die verdeckten Käfigflächen des Geografts (`Dazgeografthaut.loch`)."""
+        from .dazgeografthaut import Dazgeografthaut
 
-    def randseite(self, punkte, figur, loch, bericht):
-        """Die Punkte hinter dem Ring, die auf der Hautseite der Ringkante lagen, ins Loch zurück (`Dazgeograftrandseite`) → neue Punkte; sonst klappen Haut- und Stückdreieck an der Naht um.
+        return Dazgeografthaut.loch(figur, quelle.versteckt)
+
+    def angleichen(self, punkte, dreiecke, uv_ecken, _figur, _maske, _bericht):
+        """Das Geograft vor dem Verschweißen anpassen → `(punkte, dreiecke, uv_ecken)` (hier unverändert; eine Unterklasse darf auch zuschneiden, dann ändern sich Zahl und Nummern der Punkte)."""
+        return punkte, dreiecke, uv_ecken
+
+    def randseite(self, punkte, dreiecke, figur, loch, bericht):
+        """Die Punkte hinter dem Ring, die auf der Hautseite der Ringkante lagen, ins Loch zurück (`Schamnahtrandseite`) → neue Punkte; sonst klappen Haut- und Stückdreieck an der Naht um.
         Gemessen 11.10.2026 an den Basis-Stücken (Grundfigur, vor der Korrektur): Frau 17 Ringkanten über 60° (größter Knick 122°, 9 über 90°), Mann 23 (122°, 15) — danach 0 (56° / 51°)."""
-        from .dazgeograftrandseite import Dazgeograftrandseite
+        from .schamnahtrandseite import Schamnahtrandseite
 
-        neu, zahlen = Dazgeograftrandseite.schieben(punkte, figur, loch)
+        neu, zahlen = Schamnahtrandseite.schieben(punkte, figur, loch, dreiecke)
         bericht['randseite'] = zahlen
         return neu
+
+    def falten(self, punkte, _dreiecke, _loch, _bericht):
+        """Haarnadel-Falten im Innern glätten (`Schamfaltenglaetter`) → neue Punkte (hier unverändert: das rohe Geograft hat 1,7 % und kommt ohne Anpassung nicht dazu)."""
+        return punkte
 
     def backen(self, _punkte, _dreiecke, _uv_ecken, _figur, _bericht):
         """Bilder des Stücks nach dem Verschweißen → `{'farbe'|'normalen'|'rauheit': Pfad}` (hier keine)."""
@@ -130,11 +146,11 @@ class Dazgeograft:
         bericht['regler_gebaut'], bericht['regler_gescheitert'] = len(gebaut), gescheitert
 
     def _stufe_von(self, quelle):
-        """Das Stufe-1-Netz des Geografts (Topologie hängt nur an den Käfigflächen und UV, nicht an den Punkten), einmal je Bau."""
+        """Das Netz des Geografts auf `STUFE` (Topologie hängt nur an den Käfigflächen und UV, nicht an den Punkten), einmal je Bau."""
         from Genesis9.netzstufe import G9netzstufe
 
         if self._stufe is None:
-            self._stufe = G9netzstufe('dazgraft_%s' % self.geschlecht, quelle.polys, quelle.materialnamen, quelle.uvs, quelle.ueber, None, 1)
+            self._stufe = G9netzstufe('dazgraft_%s' % self.geschlecht, quelle.polys, quelle.materialnamen, quelle.uvs, quelle.ueber, None, self.STUFE)
         return self._stufe
 
     def stufe_punkte(self, quelle, kaefig):
@@ -147,9 +163,16 @@ class Dazgeograft:
         roh = self.stufe_punkte(quelle, kaefig)
         dreiecke = np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3)
         uv_ecken = np.asarray(stufe.uv, dtype=np.float64)[dreiecke]
+        erste, rep = self.nahtfrei(roh)
+        self.nahtfrei_punkte = int(len(erste))
+        return roh[erste], rep[dreiecke], uv_ecken
+
+    def nahtfrei(self, roh):
+        """`(erste, rep)`: welche Rohpunkte nach dem Verschweißen der UV-Nähte bleiben (`erste`, nach Lage sortiert — die Nummer eines Punkts im Stück hängt also an der Lage des Käfigs, nicht an
+        der Unterteiler-Reihenfolge) und auf welchen Punkt jeder Rohpunkt fällt (`rep`). `Dazgeograftstufenzuordnung` rechnet damit von einer Stufe auf die andere."""
         schluessel = np.round(roh / self.LAGE_M).astype(np.int64)
         _, erste, rep = np.unique(schluessel, axis=0, return_index=True, return_inverse=True)
-        return roh[erste], rep.ravel()[dreiecke], uv_ecken
+        return erste, rep.ravel()
 
     def verschweissen(self, figur, maske, punkte, dreiecke, uv_ecken):
         """Wie `Blendimportschamgeograft.verschweissen`, aber mit dem bekannten Loch: Ring glätten, Rand des Geografts darauf legen."""

@@ -75,6 +75,13 @@ class Blendimportunterkleid:
         return ((punkte[:, 1] > unten) & (punkte[:, 1] < oben) & (np.abs(punkte[:, 0]) < breit)
                 & (punkte[:, 2] > float(np.median(punkte[:, 2]))))
 
+    @staticmethod
+    def ohne(maske, ausnehmen):
+        """`maske` ohne die Punkte in `ausnehmen` (Maske über die Hautpunkte; `None` = nichts auszunehmen)."""
+        if ausnehmen is None:
+            return maske
+        return maske & ~np.asarray(ausnehmen, dtype=bool)[:len(maske)]
+
     @classmethod
     def vorderste(cls, huelle, punkte, maske):
         """`(N,)` z der vordersten Kleiderfläche in der Spalte (x, y) jedes Punkts in `maske`, von vorn gesehen — `-inf` ohne Kleidung dort
@@ -143,8 +150,10 @@ class Blendimportunterkleid:
 
     # ----------------------------------------------------------------- Lauf
 
-    def feld(self, zusatzregler=None):
-        """`(Zusatzfeld (Käfigpunkte, 3) oder None, Bericht)` — die Rechnung ohne Ablage des Reglers (Probe)."""
+    def feld(self, zusatzregler=None, ausnehmen=None):
+        """`(Zusatzfeld (Käfigpunkte, 3) oder None, Bericht)` — die Rechnung ohne Ablage des Reglers (Probe). `ausnehmen`: Maske der Hautpunkte (Stufe 1), die nicht zählen — die im Loch eines
+        Scham-Stücks, das sie ersetzt: gemessen 11.10.2026 an „cute girl" (Import 08:45): mit ihnen schob der Regler die Haut bis 33,9 mm zurück (davon bis 32 mm im Loch, 811 Punkte) und kippte die
+        Haut rund um den Ring des Daz-Stücks (Knick über die Naht Median 22° statt 10°); ohne sie genügen 6,6 mm (mit Nachformung 0,4: 3,6 mm), und 0 Hautpunkte stehen vor der Kleidung."""
         from Genesis9.basisnetz import G9basisnetz
         from Genesis9.formung import G9formung
         from Genesis9.reglerableitung import G9reglerableitung
@@ -164,6 +173,7 @@ class Blendimportunterkleid:
         for durchgang in range(self.DURCHGAENGE + 1):
             haut = np.asarray(stufe.punkte(kaefig0 + zusatz), dtype=np.float64)
             maske = self.kasten(haut, float(haut[:, 1].min()), float(haut[:, 1].max() - haut[:, 1].min()))
+            maske = self.ohne(maske, ausnehmen)
             if not maske.any():
                 return None, {'aus': 'kein Hautpunkt im Kasten'}
             if durchgang == 0:
@@ -181,9 +191,10 @@ class Blendimportunterkleid:
         bericht['zusatz_max_mm'] = round(float(np.linalg.norm(zusatz, axis=1).max()) * 1000.0, 1)
         return (zusatz if bericht['zusatz_max_mm'] > 0.0 else None), bericht
 
-    def formen(self, zusatzregler=None):
+    def formen(self, zusatzregler=None, ausnehmen=None, endung=None):
         """Bericht (mit `regler`: der neue Eigenmorph-Regler `{eigen:…: 1.0}`) oder `{'aus': Grund}`. `zusatzregler`: die Regler der
-        Nachformung der Scham, auf deren Figur die Haut hier gelegt wird."""
+        Nachformung der Scham, auf deren Figur die Haut hier gelegt wird; `ausnehmen`: Hautpunkte, die nicht zählen (`feld`); `endung`: Name des Reglers statt `ENDUNG`
+        (das Daz-Stück legt seinen eigenen ab, der des Imports bleibt unberührt)."""
         from Genesis9.eigenmorphe import G9eigenmorphe
 
         from .blendimportnachformung import Blendimportnachformung
@@ -191,12 +202,12 @@ class Blendimportunterkleid:
         reglername = ((self.job.ergebnis or {}).get('rest') or {}).get('regler')
         if not reglername or not G9eigenmorphe.vorhanden(reglername):
             return {'aus': 'Mesh to 3D hat keinen Eigenmorph geschrieben'}
-        zusatz, bericht = self.feld(zusatzregler)
+        zusatz, bericht = self.feld(zusatzregler, ausnehmen)
         if zusatz is None or bericht['vorher']['davor'] == 0:
             return dict(bericht, **({'aus': 'keine Haut vor der Kleidung'} if 'aus' not in bericht else {}))
         nummern, deltas = Blendimportnachformung.zusammenfuehren(None, None, zusatz)
         kennung = reglername[len(G9eigenmorphe.PRAEFIX):]
         brief = {'anzeige': '%s · Haut unter Kleidung' % self.figurname, 'nachformung': bericht}
-        bericht['regler'] = {G9eigenmorphe.ablegen(kennung + self.ENDUNG, nummern, deltas, brief): 1.0}
+        bericht['regler'] = {G9eigenmorphe.ablegen(kennung + (endung or self.ENDUNG), nummern, deltas, brief): 1.0}
         logger.info('Blender-Import %s: Haut unter die Kleidung %s', self.ablage.kennung, bericht)
         return bericht

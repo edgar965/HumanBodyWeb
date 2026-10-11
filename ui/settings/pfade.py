@@ -16,7 +16,15 @@ Modul, und beide haben eine Vorgeschichte:
 
 import os
 
-from .wurzeln import BASE_DIR, HUMANBODY_ROOT, MOCAPNET_ROOT, OBJECTS_ROOT, TOOLS_ROOT, VIDEOTOBVH_ROOT
+from .wurzeln import (
+    BASE_DIR,
+    HUMANBODY_ROOT,
+    MESHTO3D_ROOT,
+    MOCAPNET_ROOT,
+    OBJECTS_ROOT,
+    TOOLS_ROOT,
+    VIDEOTOBVH_ROOT,
+)
 
 #: Pipeline-Python (venv mit CUDA-PyTorch, ONNX Runtime GPU).
 PIPELINE_PYTHON = str(TOOLS_ROOT / 'python10' / 'Scripts' / 'python.exe')
@@ -73,6 +81,7 @@ GEM_ROOT = VIDEOTOBVH_ROOT / 'GEM'
 DUOMO_ROOT = VIDEOTOBVH_ROOT / 'DuoMo'
 GEMX_ROOT = VIDEOTOBVH_ROOT / 'GEM-X'
 WRAPPERS_DIR = VIDEOTOBVH_ROOT / 'wrappers'
+MESHTO3D_DIR = MESHTO3D_ROOT
 SMPL_MODELS_DIR = VIDEOTOBVH_ROOT / 'models' / 'smpl'
 # SMPL-X (15.09.2026): dieselben Dateien wie die Video-Pipeline
 # (`VideoToBVH/wrappers/baum.py`, `SMPLX_ORTE`) — Netz, Skelett und Haut der

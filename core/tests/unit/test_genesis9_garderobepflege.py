@@ -111,6 +111,15 @@ class DieGarderobepflege(SimpleTestCase):
         self.assertTrue(self.duf.with_suffix('.png').is_file())
         self.assertTrue((self.eigene / 'data' / 'EIGEN' / 'Eigen Uhr l' / 'geo.dsf').is_file())
 
+    def test_7_die_dateien_neben_der_duf_gehen_mit_in_den_papierkorb(self):
+        """`.ersetzt.json` (Loch) und `.herkunft.json` (Punkte nach dem Zuschnitt) liegen neben der `.duf` (11.10.2026): ohne sie bliebe eine Waise stehen und ein zurückgeholtes Stück hätte kein Loch."""
+        for endung in ('.ersetzt.json', '.herkunft.json'):
+            self._schreiben(self.duf.with_name(self.duf.stem + endung), endung)
+        ergebnis = G9garderobepflege.loeschen(self._eintrag())
+        for endung in ('.ersetzt.json', '.herkunft.json'):
+            self.assertTrue((Path(ergebnis['ziel']) / self.rel.replace('.duf', endung)).is_file(), endung)
+            self.assertFalse(self.duf.with_name(self.duf.stem + endung).exists(), endung)
+
     def test_6_ein_stueck_ausserhalb_der_wurzel_wird_nicht_angefasst(self):
         fremd = self.basis / 'daz' / 'x.duf'
         self._schreiben(fremd, 'daz')

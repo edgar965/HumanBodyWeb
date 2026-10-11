@@ -112,11 +112,12 @@ können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten�
         <span id="fortschritt-text" class="hb-hinweis"></span>
         {% comment %}Rechts oben: die Knopfreihe, darunter „Modell im System Speichern“ (`Engine2d3dKleidersystemspeichern`, 08.10.2026).{% endcomment %}
         <span class="engine2d3dkleider-laufspalte">
-            <span class="bildmodell-laufknoepfe">
-                <label class="hb-hinweis">ab <select id="ab-schritt" class="viewer-select"></select></label>
-                <label class="hb-hinweis" title="Der letzte Schritt dieses Laufs — „Ende“ rechnet bis zum Speichern. So lässt sich jeder Schritt getrennt starten.">bis <select id="bis-schritt" class="viewer-select"></select></label>
-                <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
-                <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+            <span class=”bildmodell-laufknoepfe”>
+                <label class=”hb-hinweis”>ab <select id=”ab-schritt” class=”viewer-select”></select></label>
+                <label class=”hb-hinweis” title=”Der letzte Schritt dieses Laufs — „Ende” rechnet bis zum Speichern. So lässt sich jeder Schritt getrennt starten.”>bis <select id=”bis-schritt” class=”viewer-select”></select></label>
+                <button type=”button” class=”btn btn-primary btn-sm” id=”starten”><i class=”fas fa-play”></i> <span>Neu berechnen</span></button>
+                <button type=”button” class=”btn btn-secondary btn-sm” id=”koerper-bauen” title=”Baut nur das Genesis-Modell (Schritte Körper und Grundfigur)”><i class=”fas fa-cube”></i> <span>Genesis-Modell bauen</span></button>
+                <button type=”button” class=”btn btn-secondary btn-sm” id=”anhalten” disabled><i class=”fas fa-stop”></i> <span>Anhalten</span></button>
             </span>
             <button type="button" class="btn btn-secondary btn-sm" id="modell-im-system-speichern" disabled><i class="fas fa-save"></i> <span>Modell im System Speichern</span></button>
             <span class="hb-hinweis" id="modell-im-system-meldung"></span>

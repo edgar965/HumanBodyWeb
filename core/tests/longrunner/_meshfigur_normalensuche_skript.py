@@ -5,7 +5,7 @@ Ein Kunstnetz mit Außenhaut (Normale +z, z = 0) und Innenwand 3 mm darunter (No
 näher an der Innenwand (0,9 mm) als an der Außenhaut. Gemessen wird für `kandidaten` = 1 (Verhalten bis 29.09.2026) und 16
 (Vorgabe): welcher Anteil der Punkte die Außenhaut trifft, und welcher Anteil den Normalentest besteht (`figur_zu_netz`).
 
-Aufruf: python10 _meshfigur_normalensuche_skript.py <pfad zu VideoToBVH/wrappers>
+Aufruf: python10 _meshfigur_normalensuche_skript.py <pfad zu meshto3d> <pfad zu VideoToBVH/wrappers>
 Ausgabe: eine Zeile `ERGEBNIS {"1": {"aussen": …, "passt": …}, "16": {…}}`.
 """
 import json
@@ -14,6 +14,7 @@ import sys
 import numpy as np
 import torch
 
+sys.path.insert(0, sys.argv[2])
 sys.path.insert(0, sys.argv[1])
 
 from meshfigur_abstand import Meshfigurabstand  # noqa: E402

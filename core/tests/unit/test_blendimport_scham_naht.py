@@ -126,6 +126,8 @@ class SchamnahtTest(SimpleTestCase):
         stueck[:, [0, 2]] *= 30.0 / 28.0                          # der Rand etwa auf dem Radius des Lochs
         ergebnis = Blendimportschamgeograft.verschweissen(haut, werte, stueck, flaechen, uv)
         self.assertNotIn('aus', ergebnis, ergebnis.get('aus'))
+        # Punkte und Spitzen hinter dem Ring kommen ins Loch zurück (`Schamnahtrandseite`, 11.10.2026): der Bericht nennt es, auch wenn nichts zu schieben war.
+        self.assertEqual(set(ergebnis['bericht']['randseite']), {'bewegt', 'max_mm', 'kanten'})
         loch = ergebnis['loch']
         self.assertEqual(loch['von'], len(dreiecke))
         self.assertGreater(len(loch['dreiecke']), 100)

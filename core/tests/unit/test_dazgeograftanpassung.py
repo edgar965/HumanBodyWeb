@@ -14,7 +14,7 @@ Grundfigur, dessen Rand der Ring ist; das Original eine Platte bei z = +20 mm.
 5. `_laplace`: Zeilensummen null, symmetrisch, Grad = Zahl der Nachbarn.
 6. Der Bericht von `anpassen` nennt Steifigkeit, Zahl der Treffer und die Verschiebung.
 
-Sabotage-Gegenprobe (nicht gelaufen): `RAND_GEWICHT` auf 0 setzen macht Fall 3 rot (der Rand wandert mit); die Zeile `w[rand], ziel[rand] = …` entfernen ebenso.
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): `RAND_GEWICHT` auf 0 setzen macht Fall 3 rot (der Rand wandert mit); die Zeile `w[rand], ziel[rand] = …` entfernen ebenso.
 """
 from types import SimpleNamespace
 from unittest import mock
@@ -121,3 +121,44 @@ class DazgeograftanpassungTest(SimpleTestCase):
         self.assertEqual(b['steifigkeit'], 3.0)
         self.assertGreater(b['treffer_original'], 50)
         self.assertGreater(b['verschiebung_mm']['max'], 3.0)
+
+    def test_7_feineres_netz_halbiert_steifigkeit_und_glaettung_und_vervierfacht_die_toleranz(self):
+        """Stufe 2 (Punktabstand ≈ 2 mm statt 4 mm): `STUFE_STEIF` ×0,5 und `STUFE_TOLERANZ` ×4 je Stufe (gemessen 11.10.2026, Tabelle in `Dazgeograftanpassung`); Stufe 1 bleibt unverändert."""
+        figur0, figur1 = self._platte(0.0), self._platte(0.010)
+        punkte, dreiecke, ring = self._stueck()
+        ziel = SimpleNamespace(punkte=self._platte(0.020)['punkte'], dreiecke=self._platte(0.020)['dreiecke'])
+        eins = Dazgeograftanpassung(figur0, figur1, ring, ziel)
+        zwei = Dazgeograftanpassung(figur0, figur1, ring, ziel, stufe=2)
+        self.assertEqual((eins.steif_faktor, eins.toleranz_faktor), (1.0, 1.0))
+        self.assertEqual((zwei.steif_faktor, zwei.toleranz_faktor), (0.5, 4.0))
+        self.assertEqual((eins.ring_faktor, zwei.ring_faktor), (1.0, 1.0), 'seit 11.10.2026 keine Skalierung der Ringbreite: Absatz und Erhebung wurden damit nicht besser')
+        zwei.verlegen(punkte, dreiecke)
+        self.assertEqual(zwei.bericht['verlegt_mm']['glaettung'], Dazgeograftanpassung.GLAETTUNG * 0.5)
+        zwei.anpassen(punkte, dreiecke, verfeinern=False)
+        self.assertEqual(zwei.bericht['anpassen']['steifigkeit'], Dazgeograftanpassung.STEIFIGKEIT * 0.5)
+
+    def test_8_der_ringfaktor_macht_die_festgehaltene_reihe_frei(self):
+        """`RING_AN_M` ist in Metern gesetzt; `STUFE_RING` (Vorgabe 1: keine Skalierung, die Probe vom 11.10.2026 war kein Gewinn, Tabelle in `Dazgeograftanpassung`) skaliert es je Stufe. Mit ×0,5 bleibt
+        die Reihe 4 mm vom Ring bei Stufe 1 mit Radius 4,5 mm festgehalten, bei Stufe 2 (2,25 mm) ist sie frei."""
+        figur0, figur1 = self._platte(0.0), self._platte(0.010)
+        punkte, dreiecke, ring = self._stueck()
+        ziel = SimpleNamespace(punkte=self._platte(0.020)['punkte'], dreiecke=self._platte(0.020)['dreiecke'])
+        reihe1 = 5 * 11 + 1                                              # Mitte der linken Seite, eine Reihe (4 mm) vom Ring
+        weg = {}
+        with mock.patch.object(Dazgeograftanpassung, 'RING_AN_M', 0.0045), mock.patch.object(Dazgeograftanpassung, 'BAND_GEWICHT', 0.0), mock.patch.object(Dazgeograftanpassung, 'STUFE_RING', 0.5):
+            for stufe in (1, 2):
+                anpassung = Dazgeograftanpassung(figur0, figur1, ring, ziel, stufe=stufe)
+                verlegt = anpassung.verlegen(punkte, dreiecke)
+                weg[stufe] = float(anpassung.anpassen(verlegt, dreiecke, verfeinern=False)[reihe1, 2] - verlegt[reihe1, 2])
+        self.assertLess(abs(weg[1]), 0.0005, 'Stufe 1: die Reihe bleibt festgehalten (%.2f mm)' % (weg[1] * 1000))
+        self.assertGreater(weg[2], 0.002, 'Stufe 2: die Reihe folgt dem Original (%.2f mm)' % (weg[2] * 1000))
+
+    def test_9_ohne_fest_folgt_auch_der_rand_dem_original(self):
+        """Am Umriss des Blender-Stücks zugeschnitten (`Dazgeograftumriss`) liegt der Rand IM Geograft, nicht auf der Haut: `fest=False` hält weder Ring noch Randband (11.10.2026)."""
+        anpassung, punkte, dreiecke = self._anpassung()
+        verlegt = anpassung.verlegen(punkte, dreiecke)
+        rand = np.array([j * 11 + i for j in range(11) for i in range(11) if i in (0, 10) or j in (0, 10)])
+        fest = anpassung.anpassen(verlegt, dreiecke, verfeinern=False)
+        frei = anpassung.anpassen(verlegt, dreiecke, verfeinern=False, fest=False)
+        self.assertLess(float(np.abs(fest[rand, 2] - verlegt[rand, 2]).max()), 0.0003, 'fest: der Ring bleibt auf der Haut')
+        self.assertGreater(float(np.median(frei[rand, 2] - verlegt[rand, 2])), 0.006, 'frei: der Rand geht mit der Mitte zum Original (10 mm entfernt)')

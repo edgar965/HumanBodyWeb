@@ -23,20 +23,22 @@ from pathlib import Path
 #: `…/3DTools` — vier Ebenen ueber dieser Datei (core/tests/unit).
 TOOLS = Path(__file__).resolve().parents[4]
 WRAPPERS = TOOLS / 'VideoToBVH' / 'wrappers'
+#: „Mesh to 3D" (`_run_meshfigur.py`, `meshfigur_*.py`) liegt seit dem 11.10.2026 in `A:\3dTools\meshto3d`, nicht mehr in `VideoToBVH/wrappers`.
+MESHTO3D = TOOLS / 'meshto3d'
 
 
 class Wrappersuchpfad:
-    """Der Suchpfad zu `VideoToBVH/wrappers`."""
+    """Der Suchpfad zu `VideoToBVH/wrappers` und `meshto3d`."""
 
     @staticmethod
     def setzen():
-        """Den Wrapperordner voranstellen. Gibt den Pfad zurueck."""
-        pfad = str(WRAPPERS)
-        if pfad not in sys.path:
-            sys.path.insert(0, pfad)
-        return pfad
+        """Beide Ordner voranstellen (`meshto3d` zuerst). Gibt den Pfad der Wrapper zurueck."""
+        for pfad in (str(WRAPPERS), str(MESHTO3D)):
+            if pfad not in sys.path:
+                sys.path.insert(0, pfad)
+        return str(WRAPPERS)
 
     @staticmethod
     def dateien():
-        """Alle eigenen Wrapper-Module (ohne `__init__`)."""
-        return sorted(p for p in WRAPPERS.glob('*.py') if p.name != '__init__.py')
+        """Alle eigenen Wrapper-Module (ohne `__init__`), auch die von „Mesh to 3D"."""
+        return sorted(p for ordner in (WRAPPERS, MESHTO3D) for p in ordner.glob('*.py') if p.name != '__init__.py')

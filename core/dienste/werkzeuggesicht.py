@@ -14,7 +14,7 @@ class Werkzeuggesicht:
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
     P = '2d3DIterationen/iterationen2d3d/'
-    W = 'VideoToBVH/wrappers/'
+    M = 'meshto3d/'
 
     KENNUNG = 'gesicht'
     TITEL = 'Gesicht, Augen, Brauen, Mund und Mimik'
@@ -97,7 +97,7 @@ class Werkzeuggesicht:
          'python',
          'Meshfiguriris(scan, gesicht).messen()   # python10-Runner, Schritt textur → {rechts: {farbe, proben, radius_mm}, links: …, farbe}\n'
          'Meshfiguraugenbild.schreiben(ordner, ziel)   # python14: G9_Eyes01_D.jpg in der Irisfarbe → meshfigur_augen.jpg (2048²)',
-         [(W + 'meshfigur_iris.py', 'Meshfiguriris'), (D + 'meshfiguraugenbild.py', 'Meshfiguraugenbild'), (D + 'meshfiguraugenhoehle.py', 'Meshfiguraugenhoehle'),
+         [(M + 'meshfigur_iris.py', 'Meshfiguriris'), (D + 'meshfiguraugenbild.py', 'Meshfiguraugenbild'), (D + 'meshfiguraugenhoehle.py', 'Meshfiguraugenhoehle'),
           (G + 'augenpartie.py', 'G9augenpartie')],
          'Ergebnis in ergebnis.fototextur.augen und im Modell figur.fototextur.augen; die Szene setzt es als Albedo der Augäpfel. Gemessen wird der Median der Netzfarbe im '
          'Ring 0,35–0,9 Irisradius um die Landmarken 468 und 473 (20.000 Proben je Auge, mindestens 200); gefärbt wird je Kanal linear (Faktor Ziel / Median der Iris, '

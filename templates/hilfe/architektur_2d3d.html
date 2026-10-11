@@ -16,17 +16,19 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_workflow.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_werkzeuge.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kopf_pipelines.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_2d3d_meshto3d.css' %}">
 {% endblock %}
 
 {% block doku_inhalt %}
 <div class="doku-seite a2d3d-breit wf-seite" data-reiter-seite>
 
-  {% comment %}Drei Reiter (Edgar, 02.10.2026: „mache einen neuen Tab … Workflow"; 03.10.2026: „… auf einem neuen Tab: Tools"). Alle Flächen stehen im HTML;
+  {% comment %}Vier Reiter (Edgar, 02.10.2026: „mache einen neuen Tab … Workflow"; 03.10.2026: „… auf einem neuen Tab: Tools"; 11.10.2026: „… in neuem Tab - MeshTo3D"). Alle Flächen stehen im HTML;
   `architektur2d3dreiter.js` blendet die jeweils anderen aus — ohne das Skript bleibt alles sichtbar.{% endcomment %}
   <div class="wf-reiter">
     <button type="button" class="wf-reiter-knopf active" data-aktion="reiter" data-ziel="ablauf"><i class="bi bi-list-ol"></i> Ablauf und Klassen</button>
     <button type="button" class="wf-reiter-knopf" data-aktion="reiter" data-ziel="workflow"><i class="bi bi-diagram-3"></i> Workflow</button>
     <button type="button" class="wf-reiter-knopf" data-aktion="reiter" data-ziel="tools"><i class="bi bi-tools"></i> Tools</button>
+    <button type="button" class="wf-reiter-knopf" data-aktion="reiter" data-ziel="meshto3d"><i class="bi bi-person-bounding-box"></i> MeshTo3D</button>
   </div>
 
   <div data-reiter="ablauf">
@@ -179,6 +181,10 @@ der 2D3D Iterationen in eine neue Seite Hilfe - Architektur 2D3D"). Die Zeilen k
 
   <div data-reiter="tools">
     {% include "hilfe/_architektur_2d3d_werkzeuge.html" %}
+  </div>
+
+  <div data-reiter="meshto3d">
+    {% include "hilfe/_architektur_2d3d_meshto3d.html" %}
   </div>
 
 </div>

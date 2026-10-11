@@ -23,13 +23,15 @@ class Dazgeograftziel:
     #: das Daz-Stück (291.045 Texel; Texel mit Normale des nächsten Originalpunkts entgegengesetzt / über 60°, Median des Abstands): ohne Preis 5,8 % / 10,6 %, 1,36 mm; 3 mm: 1,4 % / 4,5 %,
     #: 1,47 mm; **5 mm: 1,2 % / 3,5 %, 1,60 mm**; 10 mm: 0,05 % / 1,6 %, 2,11 mm (die Wahl ist eine Setzung: mehr Preis zieht weiter vom nächsten Punkt weg).
     NORMALEN_PREIS_M = 0.005
+    #: Eine Probe der Fläche „liegt am Rand", wenn sie höchstens so nah (m) an einer offenen Kante des Originals liegt; Proben entlang der Kanten im Abstand `RAND_PROBE_M`.
+    RAND_NAH_M, RAND_PROBE_M = 0.0008, 0.0005
 
     def __init__(self, name):
         """`name`: Anzeigename des Stücks, z. B. `cute girl Scham`."""
         from Genesis9.pfade import G9pfade
 
         self.name = name
-        self._netz, self._farbe, self._proben = None, None, None
+        self._netz, self._farbe, self._proben, self._rand = None, None, None, None
         stamm = name.replace(' ', '_')
         self.ordner = G9pfade.eigene() / 'data' / 'EIGEN' / name
         self.bilder_ordner = G9pfade.eigene() / 'Runtime' / 'Textures' / 'EIGEN' / name
@@ -70,7 +72,6 @@ class Dazgeograftziel:
         deren Farbe das Stück sonst gefärbt würde (gemessen: 5,8 % der Texel am angepassten Daz-Stück). Die Fläche wird dafür dicht abgetastet (`PROBE_M`); die Normalen sind die der Punkte,
         das Original ist in sich gleich herum gewickelt."""
         import trimesh
-        from scipy.spatial import cKDTree
 
         positionen = np.asarray(positionen, dtype=np.float64)
         if normalen is None:
@@ -102,6 +103,39 @@ class Dazgeograftziel:
         richtung = np.einsum('mk,mkj->mj', bary, np.asarray(self.netz().vertex_normals)[self.dreiecke[dreieck]])
         richtung /= np.maximum(np.linalg.norm(richtung, axis=1, keepdims=True), 1e-12)
         return cKDTree(np.column_stack([ort, self.NORMALEN_PREIS_M * richtung])), dreieck, bary
+
+    def _rand_baum(self):
+        """KD-Baum über dichte Proben entlang der offenen Kanten des Originals (Kanten mit genau einem Dreieck) — einmal gebaut."""
+        from scipy.spatial import cKDTree
+
+        if self._rand is None:
+            d = self.dreiecke
+            kanten = np.sort(np.concatenate([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), axis=1)
+            eindeutig, zahl = np.unique(kanten, axis=0, return_counts=True)
+            offen = eindeutig[zahl == 1]
+            a, b = self.punkte[offen[:, 0]], self.punkte[offen[:, 1]]
+            teile = np.maximum(1, np.ceil(np.linalg.norm(b - a, axis=1) / self.RAND_PROBE_M).astype(np.int64))
+            t = np.concatenate([np.arange(n + 1) / n for n in teile])
+            kante = np.repeat(np.arange(len(offen)), teile + 1)
+            self._rand = cKDTree(a[kante] + t[:, None] * (b[kante] - a[kante]))
+        return self._rand
+
+    def randlage(self, positionen, dreieck, bary):
+        """`(M,)` Lage jeder Position zum Rand des Originals (m), gesehen vom Punkt der Fläche (`stelle`): positiv = der Punkt liegt so weit INNERHALB des Randes, negativ = die Position liegt so weit SEITLICH
+        jenseits (dort gibt es keine Farbe des Originals: der Atlas setzt hinter der Kante nur den letzten Texel fort, und das Stück bekäme senkrechte Streifen — gemessen 11.10.2026 an „cute girl Daz Scham":
+        10.069 Texel, ein Streifenband von 4–7 mm Tiefe)."""
+        ecken = self.dreiecke[dreieck]
+        ort = np.einsum('mk,mkj->mj', bary, self.punkte[ecken])
+        n = np.einsum('mk,mkj->mj', bary, np.asarray(self.netz().vertex_normals)[ecken])
+        n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+        d = np.asarray(positionen, dtype=np.float64) - ort
+        seitlich = np.linalg.norm(d - np.einsum('ij,ij->i', d, n)[:, None] * n, axis=1)
+        innen = self._rand_baum().query(ort)[0]
+        return np.where(innen < self.RAND_NAH_M, -seitlich, innen)
+
+    def jenseits(self, positionen, dreieck, bary):
+        """`(M,)` Weg (m), den jede Position seitlich jenseits des Randes des Originals liegt (`randlage`), sonst 0."""
+        return np.maximum(-self.randlage(positionen, dreieck, bary), 0.0)
 
     def farbe_an(self, punkte, normalen=None):
         """`(N, 3)` Farbe (0–255) des Original-Atlas am Punkt der Fläche zu jedem der `punkte` (`stelle`: mit `normalen` seitenbewusst) — für `Schammessungtextur.gegen_original`."""

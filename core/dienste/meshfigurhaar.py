@@ -139,9 +139,9 @@ class Meshfigurhaar:
         from .gesichtsformziel import Gesichtsformziel
 
         try:
-            from ..daten.wrapperpfad import Wrapperpfad
+            from ..daten.meshto3dpfad import Meshto3dpfad
 
-            with Wrapperpfad():
+            with Meshto3dpfad():
                 from meshfigur_daten import Meshfigurdaten
 
                 modell = Meshfigurdaten(str(self.ablage.arbeit('auftrag.json'))).hautkarte()[0]

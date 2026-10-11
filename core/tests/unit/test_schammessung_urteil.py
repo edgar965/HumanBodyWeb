@@ -11,7 +11,7 @@ in ihr beendet den Import nie.
    16 Ringkanten über 60° — die Messung sieht die Falte, die die Punktnormalen verdeckten.
 4. `sicher` wirft nie: bei unbrauchbaren Eingaben kommt `{'fehler': …}` zurück und der Fehler steht im Log; mit `ordner` entsteht `messung.json`.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `messen` die Zeile `aus['naht']['knick_ueber_naht'] = …` entfernen macht Fall 3 rot; in `abweichungen` den Zweig `k.get('ueber_60')` entfernen macht Fälle 1 und 3 rot.
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `messen` die Zeile `aus['naht']['knick_ueber_naht'] = …` entfernen macht Fall 3 rot; in `abweichungen` den Zweig `k.get('ueber_60')` entfernen macht Fälle 1 und 3 rot.
 """
 import json
 from pathlib import Path

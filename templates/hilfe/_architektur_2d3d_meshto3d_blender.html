@@ -1,0 +1,53 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „MeshTo3D": „Mesh to 3D und Blender" (Edgar, 11.10.2026: „oder wird bei Mesh to 3D noch Blender genutzt?" und „was von Blender übernommen wurde"). Eingebunden in
+_architektur_2d3d_meshto3d.html mit `m` = meshto3d. Daten und Belege: `core/dienste/architekturmeshto3dblender.py`; die Liste der Import-Schritte liest `Architekturmeshto3d.blender` aus `Blendimportlauf.SCHRITTE`.
+{% endcomment %}
+{% with b=m.blender %}
+<h2 id="m3-blender">Mesh to 3D und Blender</h2>
+<div class="info-box info-box-green">
+  <strong>Kurz:</strong> Mesh to 3D selbst startet <b>kein</b> Blender. Blender steckt im Import um den Auftrag herum: in {{ b.zaehlung.ja }} von {{ b.schritte|length }} Schritten läuft es
+  (<code>umwandeln</code> nur bei OBJ und FBX, <code>export</code>, <code>umposen</code>), in einem ist es wählbar (<code>haut</code>, Vorgabe „Lokal"), in {{ b.zaehlung.nein }} läuft es nicht. Übernommen aus Blender (Cycles, Quelltext v5.2.2) ist der
+  Rechenweg des Backens der Haut — er läuft jetzt auf der GPU ohne Blender.
+</div>
+
+<h3>Die Schritte des Blender-Imports</h3>
+<p>Aus <code>Blendimportlauf.SCHRITTE</code>; „Blender?" sagt, ob der Schritt ein Blender-Prozess startet.</p>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-importschritte">
+  <thead><tr><th class="a2d3d-nr">Nr.</th><th>Schritt</th><th>Blender?</th><th data-sort-aus>Was er tut</th><th data-sort-aus>Klassen</th></tr></thead>
+  <tbody>
+    {% for s in b.schritte %}
+    <tr><td class="a2d3d-nr">{{ forloop.counter }}</td><td><b>{{ s.schritt }}</b></td>
+      <td><span class="m3-blender m3-blender-{{ s.blender }}">{{ s.blender }}</span></td>
+      <td>{{ s.was }}</td><td class="m3-klassen">{% for kl in s.klassen %}<code>{{ kl }}</code> {% endfor %}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p><b>Belege</b> (alle am 11.10.2026):</p>
+<ul>{% for x in b.belege %}<li>{{ x }}</li>{% endfor %}</ul>
+
+<h3>Wie der Import Mesh to 3D einsetzt</h3>
+<ul>{% for x in b.verzahnung %}<li>{{ x }}</li>{% endfor %}</ul>
+
+<h3>Was von Blender übernommen wurde: das Backen der Haut</h3>
+<p>Einstellung Charakter → Backen (<code>Blendimportbackenwahl</code>, Vorgabe „Lokal", gelesen, wenn der Schritt haut beginnt); „Blender" bleibt als Gegenprobe und Rückfall. Der Backer rechnet nach dem
+  Quelltext von Blender v5.2.2 (Quellen lokal unter <code>ProjektTemp/_wegwerf/cycles_quelle/</code>, jede Datei Blob-gleich dem Tag geprüft; bis 11.10.2026 waren 51 der 127 Dateien Fassungen von <code>main</code> — daraus kamen
+  falsche Überblendungen und die Rasterung ohne Abtastversatz). Unbekanntes ist ein <code>Hautgraphfehler</code> mit Material und Knoten — der Import hält an und nennt „Blender" als Ausweg, nie eine stille Näherung.</p>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-uebernahmen">
+  <thead><tr><th>Blender-Quelle (v5.2.2)</th><th data-sort-aus>Was dort geschieht</th><th>Eigene Stelle</th><th data-sort-aus>Stand, Messung</th></tr></thead>
+  <tbody>
+    {% for u in b.uebernahmen %}<tr><td><code>{{ u.0 }}</code></td><td>{{ u.1 }}</td><td class="a2d3d-klein">{{ u.2 }}</td><td class="a2d3d-klein">{{ u.3 }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h3>Gemessen</h3>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-messung">
+  <thead><tr><th>Was</th><th data-sort-aus>Wert</th><th data-sort-aus>Quelle</th></tr></thead>
+  <tbody>
+    {% for z in b.messung %}<tr><td><b>{{ z.0 }}</b></td><td>{{ z.1 }}</td><td class="a2d3d-klein">{{ z.2 }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h3>Nicht übernommen oder nicht geprüft</h3>
+<ul>{% for x in b.offen %}<li>{{ x }}</li>{% endfor %}</ul>
+<p class="a2d3d-klein">{{ b.anderswo }}</p>
+{% endwith %}

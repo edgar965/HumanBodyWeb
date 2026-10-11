@@ -2,7 +2,7 @@
 """Meshfigurgenesis — die Genesis-9-Figur als Datei für die Registrierung auf der Karte (python10).
 
 „Mesh to 3D" (27.09.2026): Die Anpassung an das Netz rechnet in `python10` mit torch
-(`VideoToBVH/wrappers/meshfigur_registrierung.py`), Genesis 9 lebt in `python14`. Hier wird
+(`meshto3d/meshfigur_registrierung.py`), Genesis 9 lebt in `python14`. Hier wird
 alles, was die Registrierung von Genesis braucht, EINMAL je Runde in ein npz geschrieben:
 
     punkte, dreiecke          Käfig der Reglerstellung (Füße auf 0), Vierecke halbiert

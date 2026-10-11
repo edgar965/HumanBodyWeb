@@ -19,6 +19,7 @@ class Schammessungzeilen:
                 cls._st(f['kantenwinkel_grad']), cls._st(f['kantenwinkel_original_grad']), f['ueber_90'] * 100, f['ueber_90_original'] * 100))
         s = g.get('symmetrie') or {}
         z.append('Symmetrie (Spiegelabstand zur Fläche, mm): Stück %s | Original %s' % (cls._st(s.get('stueck')), cls._st(s.get('original'))))
+        z += cls._ansichten(m.get('ansichten') or {})
         z += cls._naht(m.get('naht') or {})
         z += cls._farbe(m)
         a = m.get('abweichungen') or []
@@ -53,6 +54,23 @@ class Schammessungzeilen:
         z += ['  %-26s n %5d  Median %5.2f  p90 %5.2f  max %5.1f' % (r['zone'], r['n'], r['median'], r['p90'], r['max']) for r in t['zonen']]
         z.append('  Mittelschnitt (quer 0): längs mm | Original | Modell | Unterschied (Tiefe relativ zur Ringmitte, + = vor)')
         z += ['    %6.1f | %6.2f | %6.2f | %+5.2f' % (r['laengs_mm'], r['original_mm'], r['modell_mm'], r['d_mm']) for r in t['profil_mitte']]
+        return z
+
+    @classmethod
+    def _ansichten(cls, a):
+        """Erhebungen aus mehreren Richtungen und der Absatz am Ring (`Schammessungansichten`)."""
+        z = []
+        for r in a.get('ansichten', []):
+            if r.get('hinweis'):
+                z.append('Ansicht %s: %s' % (r['name'], r['hinweis']))
+                continue
+            z.append('Ansicht %-9s %5d Zellen: Erhebung Original %6d mm³ (Höhe p95 %s, größte %s mm) | Modell %6d mm³ (p95 %s, größte %s) | Treue %s | Senke Original %d / Modell %d mm³ | Abweichung Median %.2f p90 %.2f max %.1f mm' % (
+                r['name'], r['zellen'], r['volumen_original_mm3'], *(r.get('hoehe_original_mm') or ['—', '—']), r['volumen_modell_mm3'], *(r.get('hoehe_modell_mm') or ['—', '—']),
+                '%.2f' % r['treue'] if r.get('treue') is not None else '—', r['senke_original_mm3'], r['senke_modell_mm3'], r['abweichung']['median'], r['abweichung']['p90'], r['abweichung']['max']))
+        s = a.get('absatz')
+        if s:
+            z.append('Absatz am Ring (Höhe %.0f mm hinter dem Ring über der Hautebene, %d Ringpunkte): Stück %s | Original %s; über 3 mm: Stück %d, Original %d; über 10 mm: Stück %d, Original %d' % (
+                s['nach_innen_mm'], s['ringpunkte'], cls._st(s['stueck_mm']), cls._st(s['original_mm']), s['stueck_ueber_3mm'], s['original_ueber_3mm'], s['stueck_ueber_10mm'], s['original_ueber_10mm']))
         return z
 
     @classmethod

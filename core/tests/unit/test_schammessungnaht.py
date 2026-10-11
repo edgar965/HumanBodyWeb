@@ -10,7 +10,7 @@ Edgar: „die Naht ist noch sichtbar". Die Zahlen, die vor dem Bild stehen: Rand
 5. `randpunkte` findet den Rand auch bei aufgespaltenen Punkten (UV-Nähte: jedes Dreieck mit eigenen Punkten) — dieselben 16.
 6. Ein Stück ohne Rand (geschlossene Fläche) meldet einen Hinweis, keinen Fehler.
 
-Sabotage-Gegenprobe (nicht gelaufen): `LAGE_M` auf 1e-12 stellen macht Fall 5 rot (die Nähte bleiben offen und zählen als Rand).
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): `LAGE_M` auf 1e-12 stellen macht Fall 5 rot (die Nähte bleiben offen und zählen als Rand).
 """
 import numpy as np
 from django.test import SimpleTestCase

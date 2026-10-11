@@ -29,7 +29,7 @@ class Architekturgenesis:
          'Datei → Modell importieren: liest heute nur JSON im Browser; bekommt die Wahl .blend'),
         ('HumanBodyWeb/core/dienste/meshfigurlauf.py', 'Meshfigurlauf',
          'Mesh to 3D: Vorbild für den Auftrag mit Schritten; seine Erkennung wird NICHT übernommen'),
-        ('VideoToBVH/wrappers/meshfigur_modell.py', 'Meshfigurmodell',
+        ('meshto3d/meshfigur_modell.py', 'Meshfigurmodell',
          'Regler-Fit (Größe → Körpertyp → Bereiche, Gesichtskette) gegen den umgeposten Körper'),
         ('Genesis9/direktmorph.py', 'G9direktmorph',
          'Eigenmorph je Käfigpunkt — hier auf den ganzen Körper, weil Haltung und Haut stimmen'),

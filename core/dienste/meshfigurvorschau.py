@@ -5,6 +5,7 @@
   Tabelle, vorn, seitlich, hinten, Kopf.
 * Abstände zum Netz und das Vergleichsbild (Netz · Figur · Tiefenvergleich) aus dem Runner
   (`bewertung`: die ECHT gerechnete Endfigur in der Haltung des Netzes).
+* Scham-Messung (`Meshfigurschammessung`, 11.10.2026): bei jedem Auftrag, im Beckenkasten, Figur gegen Netz.
 * Testfall: mit Referenzfigur (Option `referenz`, eine Figur der Genesis-Bibliothek) wird das
   Ergebnis Punkt für Punkt und Fläche gegen Fläche gemessen — dieselbe Rechnung wie im Reiter
   „3D" (`Bildmodelltestfall`), dazu nach Procrustes mit Maßstab, weil ein Netz aus dem Reiter
@@ -35,6 +36,7 @@ class Meshfigurvorschau:
         from Genesis9.vorschaubild import G9vorschaubild
 
         from .meshfigurgenesis import Meshfigurgenesis
+        from .meshfigurschammessung import Meshfigurschammessung
 
         stellung = self.job.stellung()
         if not stellung:
@@ -67,6 +69,9 @@ class Meshfigurvorschau:
             'abstand': verlauf[-1],
             'haut': e.get('haut'),
         }
+        # Die Scham-Messung läuft bei JEDEM Auftrag, ohne Schalter (Edgar, 11.10.2026); ein Fehler steht im Ergebnis, der Lauf geht weiter.
+        self.lauf.melden(0.86, 'Scham messen')
+        self.job.ergebnis['schammessung'] = Meshfigurschammessung.sicher(self.lauf)
         self.lauf.melden(0.87, 'Haar als Objekt')
         self.haarobjekt()
         self.lauf.melden(0.88, 'Kleidung als Objekt')

@@ -352,7 +352,7 @@ def definitionen():
     glanz_fest('glanz_alpha_lack', Alpha=0.7, Coat__Weight=1.0, Coat__Roughness=0.2)
     d.append(('glanz_alpha_textur', lambda z: (z.principled(Alpha=z.grau()), z.ziel(farbe(z), None, z.normalkarte('OBJECT', 'ORIGINAL', 1.0).outputs['Normal']))))
 
-    # ---- Transmission (Glas, nicht dünnwandig), verbundene Coat-Normale, Anisotropie mit verbundener Tangente (12.10.2026, hinten angehängt). Hier bleiben Base Color und Roughness die Festwerte
+    # ---- Transmission (Glas, nicht dünnwandig), verbundene Coat-Normale, Anisotropie mit verbundener Tangente (11.10.2026, hinten angehängt). Hier bleiben Base Color und Roughness die Festwerte
     # (`glanz_fest` ersetzt sie durch die Verbindungen der Ziele), nur die Normale hängt an der Normalenkarte im Objektraum.
     def glanz_konst(name, verteilung=None, verbunden=None, **eingaenge):
         def f(z):

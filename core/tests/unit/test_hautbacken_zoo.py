@@ -7,7 +7,7 @@ beide Basen, Stärke, Konvention, zweite UV), Bump und das Principled BSDF selbs
 und Tangente). Blender 5.2.2 hat sie mit Cycles „Selected to Active" gebacken (CPU, eine Probe je Texel, PNG ohne Verlust); die Bilder liegen in `hautbacken_daten/zoo/` (6,8 MB). Der Test
 rechnet dieselben Materialien lokal auf der GPU und vergleicht je Material auf den Texeln, die es trifft (ohne den Rand zum Nachbarn).
 
-Gemessen am 12.10.2026 (alle 296 Materialien, `ProjektTemp/_wegwerf/blendimport_massstab/zoo_schwellen.py`): mittlere Abweichung (Stufen von 255, über alle drei Kanäle) bei Farbe höchstens 0,02,
+Gemessen am 11.10.2026 (alle 296 Materialien, `ProjektTemp/_wegwerf/blendimport_massstab/zoo_schwellen.py`): mittlere Abweichung (Stufen von 255, über alle drei Kanäle) bei Farbe höchstens 0,02,
 bei Rauheit 0,00, bei Normalen 0,05; p99 höchstens 1; Anteil der Texel über 6 Stufen höchstens 0,0002. Ausreißer sind einzelne Texel an Sprungstellen (Round, Wrap, Snap: 1 von rund 5.000 Texeln —
 ein Texel liegt auf der anderen Seite der Stufe; `bake.cc` rechnet die Schwerpunkte in `double`, der Backer in `float`). 49 Materialien (`korrektur_*`, `glanz_*`) backt Blender mit „Bump Map
 Correction": dort ist die gebackene Normale das gewichtete Mittel der Closure-Normalen (`hautbacken/closure`), und der Backer rechnet es nach (`glanz_gerechnet`); die übrigen 247 backt Blender
@@ -131,7 +131,7 @@ class ZooGegenBlenderTest(SimpleTestCase):
 # * `hautglanzkernel.py` Schwelle 0,01 → 0,5                      → hier grün (die Schwelle weitet nur aus), rot in `test_hautbacken_glanz.py` (Fall 1 und 3)
 # * `hautalpha.py` `SCHWELLE` 0,5 → 0,0                           → Test 4 rot: `glanz_alpha_unter_schwelle` (Mittel 64,7), `glanz_alpha_textur` (36,6) — sonst keines
 # * Coat-Normale `n` statt `sd->N` (`hautclosurekernel.py`)       → Test 4 rot (gemessen vor der Korrektur: `glanz_lack` 25,4, `glanz_lack_halb_tint` 19,6, `glanz_sheen_lack` 34,5, `glanz_alles` 23,2)
-# Sabotage-Gegenproben vom 12.10.2026 (`ProjektTemp/_wegwerf/cycles_vergleich/sabotage.py <fall>`, je eine Änderung, danach rückgängig):
+# Sabotage-Gegenproben vom 11.10.2026 (`ProjektTemp/_wegwerf/cycles_vergleich/sabotage.py <fall>`, je eine Änderung, danach rückgängig):
 # * `Hautbackenkachel.VERSATZ` (0,001; −0,002) → (0; 0)           → Test 3 und 4 rot: `vektor_wrap` und `farbattribut_standard` (Sprunganteil 0,0010), `bereich_vektor_stepped` (0,0005),
 #                                                                    `bump_1.0_0.1_normal_0.01` (Normalen, Sprunganteil 0,0017) — mit dem Versatz alle unter 0,0002
 # * Transmission-Gewicht mit 0 multipliziert (Kern)               → Test 4 rot: `glanz_transmission_*` 2,4–15,7 Stufen Mittel (außer `_schwarz`: schwarze Basis, nur das Glas bleibt)

@@ -22,6 +22,7 @@ from .blendimportschamloch import Blendimportschamloch
 from .blendimportschamnaht import Blendimportschamnaht
 from .blendimportschamregister import Blendimportschamregister
 from .blendimportschamring import Blendimportschamring
+from .schamnahtrandseite import Schamnahtrandseite
 
 logger = logging.getLogger('core')
 
@@ -66,6 +67,8 @@ class Blendimportschamgeograft:
             return {'aus': str(fehler)}
         loch = {'dreiecke': np.flatnonzero(im_loch).astype(np.int64), 'von': int(len(flaeche.faces)), 'ring': lage,
                 'ring_punkte': ring_punkte, 'verschiebung': verschiebung, 'ring_d': lage - lage0}
-        bericht = dict(haut.bericht(im_loch, ring), **naht, abgeschnitten=abgeschnitten, ring_gezogen_halbiert=verschiebung['halbiert'],
+        # Punkte und Spitzen hinter dem Ring zurück ins Loch (11.10.2026): sonst klappt das Stück an einzelnen Ringkanten auf der Haut zurück (cute girl: Ringecke 14 und 66 mit 178° und 168°).
+        punkte, randseite = Schamnahtrandseite.schieben(punkte, {'punkte': flaeche.vertices, 'dreiecke': flaeche.faces}, loch, dreiecke)
+        bericht = dict(haut.bericht(im_loch, ring), **naht, randseite=randseite, abgeschnitten=abgeschnitten, ring_gezogen_halbiert=verschiebung['halbiert'],
                        ring_gezogen_max_mm=round(float(np.linalg.norm(verschiebung['d'], axis=1).max()) * 1000.0, 2))
         return {'punkte': punkte, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken, 'loch': loch, 'bericht': bericht}

@@ -35,13 +35,37 @@ class Dazgeograftanpassung:
     BAND_M, BAND_GEWICHT = 0.006, 3.0
     #: Gemessen und verworfen (10.10.2026, `Schammessung`, Knicke im Band 12 mm am Rand: über 60° 2,3 %, über 90° 1,9 %): Laplace-Glättung der Punkte nahe am Ring nach der Anpassung
     #: (8–20 mm × 10–60 Schritte: Knicke 1,5–3,9 % über 90°, Randnormalen p90 28 → 42–57°) und stärkeres Glätten der Ringlinie (`Blendimportschamring.MAX_MM` 8–16 mm: Knicke über 90° 3,5–3,7 %).
+    #: Feineres Netz (`stufe` 2: Punktabstand ≈ 2 mm, Frau 16.780 statt 4.280 Punkte, Dreiecke ×4): Steifigkeit und Glättung ×0,5 je Stufe, Umklapp-Toleranz ×4 (die Zahl der Dreiecke, die schon
+    #: vor dem Anpassen umgeklappt sind, wächst mit ihr: 840 gegen 5.000). Gemessen 11.10.2026 mit `Schammessung` an „cute girl" (Probebau ohne Schreiben, `ProjektTemp/_wegwerf/stufe_reihe.sh`),
+    #: Form Original → Modell Median / p90 | Lippen seitlich Median | Knick über die Naht größter / Kanten über 60°:
+    #:   Stufe 1, Vorgaben            0,63 / 2,19 mm | 1,67 mm | 56,6° / 0
+    #:   Stufe 2, Vorgaben            0,49 / 2,13    | 1,57    | 52,0° / 0     die Durchgänge liefen nur mit Schritt 0,5 und 0,25 (Toleranz 100 zu klein)
+    #:   Stufe 2, Toleranz 400        0,41 / 1,83    | 1,00    | 53,4° / 0
+    #:   Stufe 2, Steifigkeit ×4 / ×2 0,67 / 2,46 und 0,53 / 2,02 — zu steif, schlechter als Toleranz allein
+    #:   Stufe 2, ×0,5 (gewählt)      0,32 / 1,73    | 0,83    | 49,2° / 0     ×0,25: 0,27 / 1,86, aber Fläche über 90° 1,4 % (Original 1,1 %) — knittert
+    #: Die Regler am Basis-Stück (Stufe 1) kommen auch von einem Stück auf Stufe 2: `Dazgeograftmorphbasis` ordnet über die Rohnummern der Unterteilung zu (`Dazgeograftstufenzuordnung`).
+    STUFE_STEIF, STUFE_TOLERANZ = 0.5, 4.0
+    #: Breite der festgehaltenen Ringreihen: `RING_AN_M` und `BAND_M` sind in Metern gesetzt, bei Stufe 1 (4 mm Punktabstand) halten sie die Ringreihe und eine weitere, bei Stufe 2 (2 mm) zwei bis drei Reihen.
+    #: Gemessen 11.10.2026 (`ProjektTemp/_wegwerf/stufe2_ring.py`, Probebau ohne Schreiben, Höhe des Stücks über der Hautebene an den 10 Ringpunkten mit tiefer Wand im Original, bei 1/2/3/5/8 mm nach innen):
+    #:   Stufe 1                     -0,1 / -11,7 / -12,4 / -13,1 / -13,6 mm   (die Wand beginnt bei 1–2 mm)
+    #:   Stufe 2, 4 / 6 mm (alt)      0,1 /   0,8 /   1,2 / -13,3 / -13,7       ein Absatz von 3–5 mm auf Hautniveau, dann die Wand; Kanten im Band 12 mm über 60° 8,7 %, über 90° 5,0 % (Stufe 1: 3,7 / 1,3 %)
+    #:   Stufe 2, 2 / 3 mm           -0,1 / -13,1 / -13,5 / -13,7 / -14,0       Wand wie bei Stufe 1; Band über 60° 4,1 %, über 90° 2,3 %; Form 0,31 / 1,85 mm (alt 0,32 / 1,73); Knick über die Naht größter 65,3° (alt 49,2°)
+    #: ABER (`Schammessungansichten`, 11.10.2026, `ProjektTemp/_wegwerf/ansichten_probe.py`): der Absatz 2 mm hinter dem Ring (Höhe über der Hautebene) ist mit 2 / 3 mm HÖHER, nicht niedriger — p90 5,8 / größter 14,5 mm,
+    #: 14 Ringpunkte über 3 mm und 5 über 10 mm (4 / 6 mm: 2,7 / 10,1 mm, 8 und 2; Stufe 1: 5,2 / 13,5 mm, 13 und 4) —, und das Stück trägt seitlich nur 49 % der Erhebung des Originals (4 / 6 mm: 57 %). Die Wand
+    #: von 10–15 mm liegt im Original selbst (seitlich am Ring steht die Haut 10–15 mm über ihm); der Faktor schiebt sie nur an den Ring. Verworfen: `STUFE_RING` = 1 (keine Skalierung); der Mechanismus bleibt für Proben.
+    STUFE_RING = 1.0
 
-    def __init__(self, figur0, figur, ring_punkte, ziel):
+    def __init__(self, figur0, figur, ring_punkte, ziel, stufe=1):
         """`figur0`, `figur`: `{punkte, dreiecke}` der Grundfigur und der Figur des Imports (Stufe 1, gleiche Topologie); `ring_punkte`: Nummern der Hautpunkte auf dem Ring des
-        Lochs (in beiden Figuren dieselben); `ziel`: `Dazgeograftziel`."""
+        Lochs (in beiden Figuren dieselben); `ziel`: `Dazgeograftziel`; `stufe`: Unterteilungsstufe des Geografts, das angepasst wird (1 = Punktabstand ≈ 4 mm, 2 = ≈ 2 mm)."""
         import trimesh
         from scipy.spatial import cKDTree
 
+        self.stufe = int(stufe)
+        #: Faktor auf Steifigkeit und Glättung und auf die Umklapp-Toleranz (1 bei Stufe 1).
+        self.steif_faktor, self.toleranz_faktor = self.STUFE_STEIF ** (self.stufe - 1), self.STUFE_TOLERANZ ** (self.stufe - 1)
+        #: Faktor auf `RING_AN_M` und `BAND_M` (1 bei Stufe 1).
+        self.ring_faktor = self.STUFE_RING ** (self.stufe - 1)
         self.p0 = np.asarray(figur0['punkte'], dtype=np.float64)
         self.p1 = np.asarray(figur['punkte'], dtype=np.float64)
         self.haut = trimesh.Trimesh(self.p1, np.asarray(figur['dreiecke'], dtype=np.int64), process=False)
@@ -84,14 +108,15 @@ class Dazgeograftanpassung:
         w = 1.0 / (d * d + 1e-8)
         w /= w.sum(axis=1, keepdims=True)
         verschiebung = np.einsum('nk,nkj->nj', w, (self.p1 - self.p0)[i])
-        if dreiecke is not None and self.GLAETTUNG > 0:
+        glaettung = self.GLAETTUNG * self.steif_faktor
+        if dreiecke is not None and glaettung > 0:
             import scipy.sparse as sp
             import scipy.sparse.linalg as spl
 
-            lhs = (sp.identity(len(punkte)) + self.GLAETTUNG * self._laplace(dreiecke, len(punkte))).tocsc()
+            lhs = (sp.identity(len(punkte)) + glaettung * self._laplace(dreiecke, len(punkte))).tocsc()
             verschiebung = spl.splu(lhs).solve(verschiebung)
         self.bericht['verlegt_mm'] = {'median': round(float(np.median(np.linalg.norm(verschiebung, axis=1)) * 1000), 1),
-                                      'max': round(float(np.linalg.norm(verschiebung, axis=1).max() * 1000), 1), 'glaettung': self.GLAETTUNG if dreiecke is not None else 0.0}
+                                      'max': round(float(np.linalg.norm(verschiebung, axis=1).max() * 1000), 1), 'glaettung': glaettung if dreiecke is not None else 0.0}
         return punkte + verschiebung
 
     def ausrichten(self, punkte):
@@ -124,8 +149,10 @@ class Dazgeograftanpassung:
                                       'rest_mm': round(float(np.median(baum.query(abgebildet[g])[0]) * 1000), 1)}
         return punkte + np.outer(d_uv[:, 0], self.e1) + np.outer(d_uv[:, 1], self.e2)
 
-    def anpassen(self, punkte, dreiecke, steifigkeit=None, verfeinern=True):
-        """Das Netz auf das Original ziehen, ohne es zu zerknittern → neue Punkte.
+    def anpassen(self, punkte, dreiecke, steifigkeit=None, verfeinern=True, fest=True):
+        """Das Netz auf das Original ziehen, ohne es zu zerknittern → neue Punkte. `fest`: die Ringreihen (und das Randband) bleiben bei ihrer verlegten Lage — richtig, wenn der Rand des Netzes auf
+        dem Ring der Haut liegt (das Geograft mit seinem eigenen Loch). Ist das Netz am Umriss des Blender-Stücks zugeschnitten (`Dazgeograftumriss`), liegt sein Rand IM Geograft und nicht auf der Haut:
+        `fest=False` lässt ihn dem Original folgen, die Haut holt `Blendimportscham.angleichen` danach heran.
 
         Je Punkt gibt es einen Treffer des Strahls längs der Hautnormalen auf dem Original (`_treffer`, höchstens `SUCHE_M` weit) — oder keinen. Gelöst wird die Verschiebung `D` des
         ganzen Netzes aus `(W + a·L) D = W (Treffer − Punkt)`: `W` = 1 an Punkten mit Treffer, `RAND_GEWICHT` auf dem Ring (dort bleibt die Haut), sonst 0; `L` der Graph-Laplace des
@@ -134,11 +161,12 @@ class Dazgeograftanpassung:
         import scipy.sparse as sp
         import scipy.sparse.linalg as spl
 
-        a = self.STEIFIGKEIT if steifigkeit is None else float(steifigkeit)
+        a = self.STEIFIGKEIT * self.steif_faktor if steifigkeit is None else float(steifigkeit)
         _d, i = self.baum1.query(punkte)
         n = self.normalen[i]
-        rand = self.ringabstand(punkte) < self.RING_AN_M
-        band = (self.ringabstand(punkte) < self.BAND_M) & ~rand if self.BAND_GEWICHT > 0 else np.zeros(len(punkte), dtype=bool)
+        keine = np.zeros(len(punkte), dtype=bool)
+        rand = self.ringabstand(punkte) < self.RING_AN_M * self.ring_faktor if fest else keine
+        band = (self.ringabstand(punkte) < self.BAND_M * self.ring_faktor) & ~rand if fest and self.BAND_GEWICHT > 0 else keine.copy()
         laplace = self._laplace(dreiecke, len(punkte))
         q, treffer_zahl = punkte, 0
         for _ in range(self.DURCHGAENGE):
@@ -157,7 +185,10 @@ class Dazgeograftanpassung:
         if verfeinern:
             from .dazgeograftverfeinerung import Dazgeograftverfeinerung
 
-            q, self.bericht['verfeinern'] = Dazgeograftverfeinerung.verfeinern(punkte, q, dreiecke, rand, laplace, self.ziel_netz, n, band=band, band_gewicht=self.BAND_GEWICHT)
+            plan = tuple((s * self.steif_faktor, r) for s, r in Dazgeograftverfeinerung.PLAN)
+            toleranz = int(round(Dazgeograftverfeinerung.UMKLAPP_TOLERANZ * self.toleranz_faktor))
+            q, self.bericht['verfeinern'] = Dazgeograftverfeinerung.verfeinern(punkte, q, dreiecke, rand, laplace, self.ziel_netz, n, plan=plan, band=band, band_gewicht=self.BAND_GEWICHT,
+                                                                               toleranz=toleranz)
         betrag = np.linalg.norm(q - punkte, axis=1)
         self.bericht['anpassen'] = {'steifigkeit': a, 'treffer_original': treffer_zahl, 'ohne_treffer': int(len(punkte) - treffer_zahl),
                                     'verschiebung_mm': {'median': round(float(np.median(betrag) * 1000), 1), 'max': round(float(betrag.max() * 1000), 1)}}

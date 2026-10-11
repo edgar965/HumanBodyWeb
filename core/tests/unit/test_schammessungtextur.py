@@ -10,7 +10,7 @@ Edgar: „die Textur ist unterschiedlich von der Umgebung". Zwei Maße an den TE
 3. `gegen_original`: gleiche Farbe → Mittel 0, Anteil „anders" 0; entgegengesetzte Farbe → Mittel über 100, Anteil 1. `farbe_an` bekommt die Orte UND die Normalen der Ecken (Form `(N, 3)` beide).
 4. Ecken weiter als `NAH_M` vom Original zählen nicht (dort mischt der Bake die Haut dazu): keine nahe Ecke → Hinweis.
 
-Sabotage-Gegenprobe (nicht gelaufen): `leuchtdichte` mit 0,5/0,5/0 macht Fall 2 rot; in `gegen_original` `farbe_an(ort[nah])` ohne Normalen macht Fall 3 rot (Argumente).
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): `leuchtdichte` mit 0,5/0,5/0 macht Fall 2 rot; in `gegen_original` `farbe_an(ort[nah])` ohne Normalen macht Fall 3 rot (Argumente).
 """
 from pathlib import Path
 

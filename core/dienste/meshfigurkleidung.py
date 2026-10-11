@@ -42,10 +42,10 @@ class Meshfigurkleidung:
 
     def koerpernetz(self):
         """`(scan, daten)` — das KÖRPERnetz in der Lage der Erkennung (nie das Kopfnetz) und die Daten des Runners."""
-        from ..daten.wrapperpfad import Wrapperpfad
+        from ..daten.meshto3dpfad import Meshto3dpfad
 
         arbeit = self.ablage.arbeit()
-        with Wrapperpfad():
+        with Meshto3dpfad():
             from meshfigur_daten import Meshfigurdaten
             from meshfigur_scan import Meshfigurscan
 
@@ -61,13 +61,13 @@ class Meshfigurkleidung:
         from Kleidung.kleidungsmaske import Kleidungsmaske
         from Kleidung.kleidungsteilung import Kleidungsteilung
 
-        from ..daten.wrapperpfad import Wrapperpfad
+        from ..daten.meshto3dpfad import Meshto3dpfad
 
         t0 = time.perf_counter()
         scan, daten = self.koerpernetz()
         self.lauf.melden(0.1, 'Kleidung erkennen')
-        # `hautkarte()` lädt Module des Runners nach — dafür muss das Wrapper-Verzeichnis im Pfad stehen.
-        with Wrapperpfad():
+        # `hautkarte()` lädt Module des Runners nach — dafür muss `meshto3d` (samt den gemeinsamen Wrappern) im Pfad stehen.
+        with Meshto3dpfad():
             from meshfigur_hautkarte import Meshfigurhautkarte
 
             modell = daten.hautkarte()[0]

@@ -13,7 +13,7 @@ class Werkzeughaut:
     D = 'HumanBodyWeb/core/dienste/'
     A = 'HumanBodyWeb/core/api/'
     P = '2d3DIterationen/iterationen2d3d/'
-    W = 'VideoToBVH/wrappers/'
+    M = 'meshto3d/'
 
     KENNUNG = 'haut'
     TITEL = 'Haut, Hautfarbe und Textur aus Netz und Fotos'
@@ -62,7 +62,7 @@ class Werkzeughaut:
          'Meshfigurende(lauf).textur()   # Schritt textur; Start: POST /api/meshfigur/<id>/starten/ {ab: "textur"}\n'
          '# Optionen: textur = mesh | hautton | aus (Vorgabe mesh), kopfhaut = haar | haut (Vorgabe haar)',
          [(D + 'meshfigurende.py', 'Meshfigurende'), (G + 'texturbacken.py', 'G9texturbacken'), (D + 'meshfigurtexelpruefung.py', 'Meshfigurtexelpruefung'),
-          (W + 'meshfigur_hautmodell.py', 'Meshfigurhautmodell')],
+          (M + 'meshfigur_hautmodell.py', 'Meshfigurhautmodell')],
          'Der Runner liefert je Texel die Farbe des Netzes (meshtextur.npz); G9texturbacken legt sie über die Daz-Albedo, getönt auf den Hautton des Netzes (Faktor je Kanal '
          '0,25…2,5), Kachel 2048², Rand 12 px nach außen. Am Körper zählt nur Hautfarbe (Hautmodell der kahlen Stellen: Gesicht, Hände, Unterarme, Unterschenkel — der Ton von '
          'Shirt und Shorts zählt nicht); Kopfhaar und Gesichtskern nehmen jede Farbe. Die Texelprüfung verwirft entsättigt-dunkle Treffer (Spaltschatten) und Ausreißer gegen ein '

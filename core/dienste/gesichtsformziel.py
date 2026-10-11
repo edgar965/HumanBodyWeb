@@ -61,14 +61,14 @@ class Gesichtsformziel:
 
     def laden(self):
         """`(scan, gesicht)` — das Netz in der Lage des Körpers und seine Gesichtspunkte (478, 3)."""
-        from ..daten.wrapperpfad import Wrapperpfad
+        from ..daten.meshto3dpfad import Meshto3dpfad
 
         arbeit = self.ablage.arbeit()
         with open(arbeit / 'auftrag.json', encoding='utf-8') as f:
             auftrag = json.load(f)
         with np.load(arbeit / 'scan_lage.npz') as d:
             matrix = d['matrix']
-        with Wrapperpfad():
+        with Meshto3dpfad():
             from meshfigur_scan import Meshfigurscan
 
             if auftrag.get('kopfnetz') and (arbeit / 'kopf_lage.npz').is_file():
@@ -207,9 +207,9 @@ class Gesichtsformziel:
 
     @staticmethod
     def _ist_haut(f):
-        from ..daten.wrapperpfad import Wrapperpfad
+        from ..daten.meshto3dpfad import Meshto3dpfad
 
-        with Wrapperpfad():
+        with Meshto3dpfad():
             from meshfigur_kopfabgleich import Meshfigurkopfabgleich
 
             return Meshfigurkopfabgleich.ist_haut(f)

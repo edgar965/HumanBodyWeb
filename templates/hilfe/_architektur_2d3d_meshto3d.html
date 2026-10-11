@@ -1,0 +1,121 @@
+{% comment %}
+Hilfe → Architektur → 2D3D, Reiter „MeshTo3D" (Edgar, 11.10.2026: „füge diese Info hinzu in /hilfe/architektur/2d3d/ in neuem Tab - MeshTo3D, wo du alle infos reintust, wie das geht, was von Blender
+übernommen wurde und so weiter mit möglichst vielen Details. Auch Klassenmodell, Workflow und so weiter."). Eingebunden in architektur_2d3d.html mit `meshto3d` im Kontext; die Daten liefert
+`core/dienste/architekturmeshto3d.py` (Schritte, Optionen, Klassenkarten, Zeiten aus dem Code bzw. den fertigen Aufträgen; die Beschreibungen stehen in `architekturmeshto3dschritte.py`, `…methode.py`,
+`…blender.py`). Die Teile: dieser (Überblick, Workflow, Schritte, Dateien, Zeiten, Optionen), `_architektur_2d3d_meshto3d_methode.html`, `…_klassen.html`, `…_blender.html`.
+{% endcomment %}
+{% with m=meshto3d %}
+<h1>Mesh to 3D: wie aus einem Menschen-Netz eine Genesis-9-Figur wird</h1>
+
+{% if m.fehler %}
+<div class="info-box info-box-red">
+  <strong>Der Reiter konnte nicht gebaut werden:</strong> <span class="a2d3d-fehlt">{{ m.fehler }}</span> (Einzelheiten im Log der Anwendung).
+</div>
+{% else %}
+<p>Stand {{ m.stand }}. Dieser Reiter beschreibt, wie „Mesh to 3D" arbeitet, wie die Teile zusammenhängen (Workflow, Klassenmodell), was in der Kette von Blender kommt und wo Blender noch läuft.
+  Schritte, Bänder, Optionen, Klassenkarten und Zeiten werden beim Aufruf aus dem Code und den fertigen Aufträgen gelesen; die Beschreibungen sind von Hand und tragen Datum und Fall der Messung.
+  Die Aufrufe der Server-API und die Werkzeugtabelle stehen im Reiter <a href="#t-meshfigur">Tools</a> (Gruppe „Mesh to 3D").</p>
+
+<nav class="m3-inhalt">
+  <a href="#m3-workflow">Ablauf</a> · <a href="#m3-schritte">Schritte</a> · <a href="#m3-dateien">Zwischendateien</a> · <a href="#m3-zeiten">Zeiten</a> · <a href="#m3-optionen">Optionen</a> ·
+  <a href="#m3-methode">So rechnet die Anpassung</a> · <a href="#m3-grenzen">Grenzen</a> · <a href="#m3-klassen">Klassenmodell</a> · <a href="#m3-blender">Mesh to 3D und Blender</a>
+</nav>
+
+{% if m.befunde %}
+<div class="info-box info-box-red tw-befunde">
+  <strong>Befunde ({{ m.befunde|length }}) — dieser Teil der Seite stimmt nicht mit dem Code überein:</strong>
+  <ul>{% for b in m.befunde %}<li class="a2d3d-fehlt">{{ b }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="info-box info-box-green m3-kurz">
+  {% for k in m.kurz %}<p><strong>{{ k.titel }}.</strong> {{ k.text }}</p>{% endfor %}
+</div>
+
+<h2 id="m3-workflow">Der Ablauf: {{ m.schritte|length }} Schritte in zwei Welten</h2>
+<p>Zwei Prozesse wechseln sich ab. <b>python14</b> ist Django mit Genesis 9: Es führt den Auftrag (<code>Meshfigurlauf</code>, ein eigener Prozess <code>manage.py meshfigur_fahren</code>) und rechnet die Figur
+  zwischen den Runden ECHT nach. <b>python10</b> rechnet auf der Grafikkarte: <code>_run_meshfigur.py</code> macht einen Schritt je Aufruf (torch, pytorch3d, MediaPipe, pyrender). Die Zahl in jedem Kasten ist das Band
+  des Schritts im Fortschrittsbalken (<code>Meshfigurlauf.BAENDER</code>, in Prozent); der Balken darunter zeigt, wie breit es ist.</p>
+<div class="wf-legende">
+  <span class="wf-legende-art"><span class="wf-chip m3-chip-14"></span> nur python14</span>
+  <span class="wf-legende-art"><span class="wf-chip m3-chip-beide"></span> python14 und python10 zusammen</span>
+</div>
+<div class="wf-strecke m3-strecke">
+  {% for s in m.schritte %}
+  <div class="wf-schritt m3-schritt m3-schritt-{{ s.welt_klasse }}">
+    <div class="wf-schrittkopf"><span class="wf-nr">{{ forloop.counter }}</span><span>{{ s.schritt }}</span></div>
+    <div class="m3-welt">{{ s.welt }}</div>
+    <div class="m3-spur" title="Band {{ s.von }}–{{ s.bis }} %"><span class="m3-band" style="margin-left: {{ s.von }}%; width: {{ s.breite }}%"></span></div>
+    <div class="a2d3d-klein">{{ s.von }}–{{ s.bis }} %</div>
+  </div>
+  {% if not forloop.last %}<div class="wf-pfeil"><i class="bi bi-arrow-right"></i></div>{% endif %}
+  {% endfor %}
+</div>
+
+<h2 id="m3-schritte">Was jeder Schritt tut</h2>
+<p>Die Reihenfolge ist <code>Meshfigurlauf.SCHRITTE</code>; ein Lauf kann ab einem Schritt neu rechnen (<code>--ab</code> bzw. „ab Schritt" auf der Seite). Die Klassen sind Verweise ins
+  <a href="#m3-klassen">Klassenmodell</a>; links stehen die der python14-Seite, rechts die des Runners (Ordner <code>VideoToBVH/wrappers</code>).</p>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-schritte">
+  <thead><tr><th class="a2d3d-nr">Nr.</th><th>Schritt</th><th>Welt</th><th>Band</th><th data-sort-aus>Klassen python14</th><th data-sort-aus>Klassen Runner-Seite</th><th data-sort-aus>Was er tut</th><th data-sort-aus>Ergebnis</th></tr></thead>
+  <tbody>
+    {% for s in m.schritte %}
+    <tr id="m3-s-{{ s.schritt }}">
+      <td class="a2d3d-nr">{{ forloop.counter }}</td>
+      <td><b>{{ s.schritt }}</b></td>
+      <td class="a2d3d-klein">{{ s.welt }}</td>
+      <td class="a2d3d-zahl">{{ s.von }}–{{ s.bis }} %</td>
+      <td class="m3-klassen">{% for k in s.klassen14 %}{% if k.anker %}<a href="#{{ k.anker }}"><code>{{ k.klasse }}</code></a>{% else %}<code class="a2d3d-fehlt">{{ k.klasse }}</code>{% endif %} {% empty %}–{% endfor %}</td>
+      <td class="m3-klassen">{% for k in s.klassen10 %}{% if k.anker %}<a href="#{{ k.anker }}"><code>{{ k.klasse }}</code></a>{% else %}<code class="a2d3d-fehlt">{{ k.klasse }}</code>{% endif %} {% empty %}–{% endfor %}</td>
+      <td>{{ s.was }}</td>
+      <td class="a2d3d-klein">{{ s.ergebnis }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2 id="m3-dateien">Was zwischen den Welten wandert</h2>
+<p>Die beiden Prozesse teilen nichts im Speicher. Alles geht über Dateien im Ordner <code>arbeit/</code> des Auftrags und über die Zeilen auf der Standardausgabe des Runners (gelesen aus
+  <code>Meshfigurlauf</code>, <code>Meshfigurende</code>, <code>Meshfigurrunner</code>).</p>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-dateien">
+  <thead><tr><th>Datei</th><th>schreibt</th><th>liest</th><th data-sort-aus>Inhalt</th></tr></thead>
+  <tbody>
+    {% for d in m.dateien %}<tr><td><code>{{ d.datei }}</code></td><td>{{ d.schreibt }}</td><td>{{ d.liest }}</td><td>{{ d.inhalt }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h2 id="m3-zeiten">Wie lange es dauert</h2>
+<p>Gelesen aus <code>ergebnis.dauer</code> der jüngsten fertigen Aufträge (Sekunden, Wanduhr je Schritt einschließlich des Runners; „–" = in diesem Auftrag nicht gemessen). Ein Auftrag aus dem
+  Blender-Import steht hier wie jeder andere. Die Werte hängen an der Last des Rechners — laufen nebenher Agenten oder ein zweiter GPU-Lauf, schwanken sie um mehr als den Faktor 1,5. Beispiele, keine Zusage.</p>
+{% if m.zeiten.zeilen %}
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-zeiten">
+  <thead><tr><th>Auftrag</th><th>Fertig</th><th class="a2d3d-zahl">Summe</th>{% for sp in m.zeiten.spalten %}<th class="a2d3d-zahl">{{ sp }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for z in m.zeiten.zeilen %}
+    <tr><td><b>{{ z.name }}</b> <span class="a2d3d-klein">{{ z.kennung }}</span></td><td class="a2d3d-klein">{{ z.datum }}</td>
+      <td class="a2d3d-zahl">{% if z.summe is None %}–{% else %}{{ z.summe }}{% endif %}</td>
+      {% for t in z.schritte %}<td class="a2d3d-zahl">{% if t is None %}–{% else %}{{ t }}{% endif %}</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="a2d3d-fehlt">{{ m.zeiten.hinweis }}</p>
+{% endif %}
+
+<h2 id="m3-optionen">Die Optionen</h2>
+<p>Alle {{ m.optionen|length }} Einstellungen eines Auftrags, gelesen aus <code>Meshfiguroptionen.KATALOG</code> (<code>pruefen()</code> nimmt nur bekannte Schlüssel und Werte, alles andere fällt auf die Vorgabe).
+  Die letzte Spalte zeigt, was der Blender-Import setzt (<code>Blendimportfigur.OPTIONEN</code>); leer = Vorgabe. „fein" = steht im Formular unter den Feineinstellungen.</p>
+<table class="db-tabelle sortable" data-sort-key="hilfe-architektur-2d3d-m3-optionen">
+  <thead><tr><th>Schlüssel</th><th>Titel</th><th data-sort-aus>Werte</th><th>Vorgabe</th><th>Import setzt</th><th data-sort-aus>Hinweis</th></tr></thead>
+  <tbody>
+    {% for o in m.optionen %}
+    <tr><td><code>{{ o.schluessel }}</code>{% if o.fein %} <span class="a2d3d-klein">fein</span>{% endif %}</td><td>{{ o.titel }}</td><td class="a2d3d-klein">{{ o.werte }}</td>
+      <td>{{ o.vorgabe }}</td><td>{{ o.importwert|default:"–" }}</td><td class="a2d3d-klein">{{ o.hinweis }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% include "hilfe/_architektur_2d3d_meshto3d_methode.html" %}
+{% include "hilfe/_architektur_2d3d_meshto3d_klassen.html" %}
+{% include "hilfe/_architektur_2d3d_meshto3d_blender.html" %}
+{% endif %}
+{% endwith %}

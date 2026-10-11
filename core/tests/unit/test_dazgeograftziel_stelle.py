@@ -14,7 +14,7 @@ Ein Fragepunkt bei z = 1,2 mm mit der gesuchten Normale +z liegt der oberen Plat
 5. `farbe_an(punkte, normalen)` liest die Farbe an dieser Stelle: untere Platte rot, obere blau → mit +z rot, ohne Normale blau.
 6. Weit weg vom Original (50 mm seitlich) kommt trotz Normale ein Treffer, der nächste Rand.
 
-Sabotage-Gegenprobe (nicht gelaufen): in `stelle` den Zweig `normalen is None` auch bei Normalen nehmen macht Fall 2 rot; in `_abtasten` die Normale nicht in den Baum nehmen macht Fall 2 rot.
+Sabotage-Gegenprobe (11.10.2026 im Speicher gelaufen, `ProjektTemp/_wegwerf/sabotage.py`: mit der Sabotage rot, ohne grün — Wortlaut als Quelltext-Änderung ungelaufen): in `stelle` den Zweig `normalen is None` auch bei Normalen nehmen macht Fall 2 rot; in `_abtasten` die Normale nicht in den Baum nehmen macht Fall 2 rot.
 """
 from unittest import mock
 

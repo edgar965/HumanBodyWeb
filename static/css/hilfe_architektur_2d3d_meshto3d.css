@@ -1,0 +1,27 @@
+/* Hilfe -> Architektur -> 2D3D, Reiter „MeshTo3D" (11.10.2026). Baut auf hilfe_architektur_2d3d_workflow.css auf (.wf-strecke, .wf-schritt, .wf-nr, .wf-pfeil, .wf-karte, .tw-modell). */
+
+.m3-inhalt { margin: 0.4rem 0 1rem; font-size: 0.88rem; }
+.m3-inhalt a { text-decoration: none; white-space: nowrap; }
+.m3-kurz p { margin: 0.35rem 0; }
+
+/* Schritte nach Welt: python14 blau, beide Welten bernstein (dieselben Töne wie die Zeitleiste und die Legende des Workflows). */
+.m3-chip-14, .m3-schritt-14 { --m3-farbe: #4a90d9; }
+.m3-chip-beide, .m3-schritt-beide { --m3-farbe: #c9a227; }
+.m3-chip-14, .m3-chip-beide { background: var(--m3-farbe); }
+.m3-schritt { border-top-color: var(--m3-farbe); flex: 1 1 9rem; }
+.m3-welt { font-size: 0.74rem; color: var(--text-muted); min-height: 2.1em; }
+
+/* Das Band des Schritts im Fortschrittsbalken: Spur 0–100 %, darin der Anteil des Schritts. */
+.m3-spur { height: 0.45rem; background: var(--bg-tertiary, var(--bg-secondary)); border-radius: 3px; overflow: hidden; }
+.m3-band { display: block; height: 100%; min-width: 2px; background: var(--m3-farbe); }
+
+.m3-klassen { font-size: 0.78rem; line-height: 1.7; }
+.m3-klassen code { white-space: nowrap; }
+
+/* Blender? ja / nein / Option. */
+.m3-blender { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 4px; border: 1px solid var(--border); font-size: 0.78rem; font-weight: 600; }
+.m3-blender-ja { color: #e0792b; border-color: #e0792b; }
+.m3-blender-nein { color: #2e9e5b; border-color: #2e9e5b; }
+.m3-blender-Option { color: #c29a1d; border-color: #c29a1d; }
+
+.m3-schichten { margin: 0.6rem 0 1rem; font-size: 0.88rem; }

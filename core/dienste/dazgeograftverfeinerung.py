@@ -21,11 +21,18 @@ class Dazgeograftverfeinerung:
     PLAN = ((3.0, 0.012), (2.0, 0.009), (1.4, 0.007), (1.0, 0.005))
     #: Zahl der Proben auf dem Original, Gewicht der Randpunkte, Gewicht der Rückwärtsziele je Probe (höchstens 3 zählen), größte Normalenabweichung (Grad).
     PROBEN, RAND_GEWICHT, RUECK_GEWICHT, NORMALE_GRAD = 30000, 100.0, 0.5, 60.0
+    #: Ein Durchgang wird halbiert, solange er mehr als so viele Dreiecke mehr umklappt als der Stand davor. Gemessen 11.10.2026 am neu gebauten Ziel von „cute girl" (Sockel ≈ 740 umgeklappte
+    #: Dreiecke gegen das Verlegte), Form Original → Modell Median / p90 | Lippen seitlich Median | Knick über die Naht Median / p90 | Falten über 90°:
+    #:   5 (vorher)  0,89 / 3,08 mm | 3,09 mm | 11,0° / 34,8° | 2,3 %     die Durchgänge 3 und 4 liefen nur noch mit Schritt 1/16 — schon 2 mm Änderung am Ziel kippten das Ergebnis
+    #:   20          0,81 / 2,86    | 2,69    | 10,9° / 36,5° | 2,2 %
+    #:   50 … 200    0,64 / 2,19    | 1,67    | 11,3° / 38,5° | 2,6 %     alle Durchgänge mit Schritt 1; 50, 100 und 200 sind gleich
+    UMKLAPP_TOLERANZ = 100
 
     @classmethod
-    def verfeinern(cls, anfang, q, dreiecke, rand, laplace, ziel_netz, aussen, plan=None, band=None, band_gewicht=0.0):
+    def verfeinern(cls, anfang, q, dreiecke, rand, laplace, ziel_netz, aussen, plan=None, band=None, band_gewicht=0.0, toleranz=None):
         """`(neue Punkte, bericht)`. `anfang`: die Punkte vor jeder Anpassung (Bezug der Verschiebung), `q`: der Stand nach dem ersten Schritt, `rand`: bool je Punkt (Ring),
-        `laplace`: der Graph-Laplace des Netzes, `aussen`: `(P, 3)` Richtung nach außen je Punkt (Hautnormale) — legt die Seite der Normalen fest."""
+        `laplace`: der Graph-Laplace des Netzes, `aussen`: `(P, 3)` Richtung nach außen je Punkt (Hautnormale) — legt die Seite der Normalen fest. `toleranz`: wie viele Dreiecke ein Durchgang
+        mehr umklappen darf als der Stand davor (Vorgabe `UMKLAPP_TOLERANZ`, gilt für ein Netz von ≈ 8.300 Dreiecken — bei feinerem wächst sie mit der Zahl der Dreiecke)."""
         import scipy.sparse as sp
         import scipy.sparse.linalg as spl
         import trimesh
@@ -41,6 +48,7 @@ class Dazgeograftverfeinerung:
         _d, i0 = proben_baum.query(q)
         n_proben = n_proben * (1.0 if np.einsum('ij,ij->i', n_proben[i0], n_netz).mean() >= 0 else -1.0)
         berichte, umgeklappt_vorher = [], cls._umgeklappt(q, dreiecke, anfang)
+        toleranz = cls.UMKLAPP_TOLERANZ if toleranz is None else toleranz
         for steifigkeit, reichweite in (plan or cls.PLAN):
             n_netz = cls._normalen(q, dreiecke, aussen)
             d_vor, i_vor = proben_baum.query(q)
@@ -63,7 +71,7 @@ class Dazgeograftverfeinerung:
             lhs = (sp.diags(w) + steifigkeit * laplace + 1e-9 * sp.identity(n)).tocsc()
             neu = anfang + spl.splu(lhs).solve(w[:, None] * (ziel - anfang))
             schritt = 1.0
-            while schritt > 0.1 and cls._umgeklappt(q + schritt * (neu - q), dreiecke, anfang) > max(umgeklappt_vorher, 0) + 5:
+            while schritt > 0.1 and cls._umgeklappt(q + schritt * (neu - q), dreiecke, anfang) > max(umgeklappt_vorher, 0) + toleranz:
                 schritt *= 0.5
             q = q + schritt * (neu - q)
             umgeklappt_vorher = cls._umgeklappt(q, dreiecke, anfang)

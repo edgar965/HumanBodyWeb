@@ -70,6 +70,45 @@ class Unterkleid(SimpleTestCase):
         self.assertEqual(bericht['davor_max_mm'], 30.0)
 
 
+class UnterkleidOhneLoch(SimpleTestCase):
+    u"""Das Daz-Stück ersetzt die Haut im Loch (11.10.2026): deren Punkte dürfen den Regler nicht bestimmen. Gemessen an „cute girl" (Import 08:45): mit den Lochpunkten schob der Regler die Haut
+    bis 33,9 mm zurück (im Loch bis 32 mm) und kippte die Haut rund um den Ring (Knick über die Naht Median 22° statt 9,8°); ohne sie genügten 6,6 mm, mit Nachformung 0,4 sogar 3,6 mm.
+
+    7. `ohne` nimmt Punkte aus der Maske — und `None` lässt sie, wie sie ist; eine zu lange Ausnahmemaske schadet nicht.
+    8. Ein ausgenommener Punkt vor dem Stoff bleibt stehen, der daneben geht dahinter.
+    9. `formen` reicht `ausnehmen` an die Rechnung und legt den Regler unter der gewünschten Endung ab (der des Imports bleibt unberührt).
+
+    Sabotage (im Kopf, nicht gelaufen): in `ohne` das `~` weglassen → Fall 7 und 8 rot; in `formen` `endung or self.ENDUNG` durch `self.ENDUNG` ersetzen → Fall 9 rot.
+    """
+
+    def test_7_ohne_nimmt_punkte_aus_der_maske(self):
+        maske = np.array([True, True, False, True])
+        self.assertEqual(U.ohne(maske, np.array([False, True, True, False])).tolist(), [True, False, False, True])
+        self.assertIs(U.ohne(maske, None), maske)
+        self.assertEqual(U.ohne(maske, np.array([True, True, True, True, True, True])).tolist(), [False, False, False, False])
+
+    def test_8_ein_ausgenommener_punkt_vor_dem_stoff_bleibt_stehen(self):
+        huelle = U.zu_huelle([platte(0.0)])
+        haut = np.array([[0.1, 0.1, 0.020], [-0.1, 0.1, 0.020]])
+        maske = U.ohne(np.ones(2, dtype=bool), np.array([False, True]))
+        v = U.verschiebung(haut, huelle, maske)
+        self.assertTrue(np.allclose(v[0], [0.0, 0.0, -0.020 - U.LUFT_M]))
+        self.assertTrue(np.allclose(v[1], 0.0), 'der Punkt im Loch bleibt, obwohl er vor dem Stoff steht')
+
+    def test_9_formen_reicht_die_ausnahme_weiter_und_legt_unter_eigener_endung_ab(self):
+        job = mock.Mock()
+        job.ergebnis = {'rest': {'regler': 'eigen:k'}}
+        u = U(mock.Mock(), job, {'netze': []}, [], 'k')
+        ausnehmen = np.array([False, True])
+        with mock.patch.object(U, 'feld', return_value=(np.full((2, 3), 0.01), {'vorher': {'davor': 5}})) as feld, \
+                mock.patch('Genesis9.eigenmorphe.G9eigenmorphe.vorhanden', return_value=True), \
+                mock.patch('Genesis9.eigenmorphe.G9eigenmorphe.ablegen', side_effect=lambda name, *_: 'eigen:' + name) as ablegen:
+            bericht = u.formen({'eigen:k_scham': 0.4}, ausnehmen=ausnehmen, endung='_unterkleid_daz')
+        feld.assert_called_once_with({'eigen:k_scham': 0.4}, ausnehmen)
+        self.assertEqual(ablegen.call_args[0][0], 'k_unterkleid_daz')
+        self.assertEqual(bericht['regler'], {'eigen:k_unterkleid_daz': 1.0})
+
+
 class UnterkleidLauf(SimpleTestCase):
 
     def test_6_der_lauf_ist_wiederholbar(self):
