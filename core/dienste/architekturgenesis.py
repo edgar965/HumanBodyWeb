@@ -59,6 +59,23 @@ class Architekturgenesis:
         ('Genesis9/browserbilder.py', 'G9browserbilder', 'schwere Bilder erst mit Strg+Alt+H (20 / 120 MB)'),
     ]
 
+    #: Die Bausteine des Fittings (11.10.2026, Abschnitt „Fitting der Kleider" der Seite) — dieselbe Prüfung wie bei `BAUSTEINE`.
+    FITTING = [
+        ('Genesis9/kollision.py', 'G9kollision',
+         'Heben aus der Fläche: Punkt entlang der Normale des nächsten Flächenpunkts auf ABSTAND 3 mm, `DURCHGAENGE` 2 (Dazs Collision Iterations), '
+         'zuerst der Käfig, danach ein feiner Durchgang nur nahe Käfigpunkten (`stufenweise`)'),
+        ('Genesis9/lagen.py', 'G9lagen', 'Stück gegen Stück: welches liegt unter welchem (Tiefenregel, Saum über Bund); `kaefig` = was die Lagenrechnung vom Stück sieht'),
+        ('Genesis9/lagenflaeche.py', 'G9lagenflaeche',
+         'Kollisionsfläche des äußeren Stücks: Haut, wo nackt, sonst der Käfig der inneren Stücke; bei einer Anatomie nur die Haut unter ihrem Fußabdruck ersetzt'),
+        ('Genesis9/stueckstarr.py', 'G9stueckstarr',
+         'Ein Stück mit Hauttiefe (Anatomie) liegt starr in seiner Ruhelage — dieselben Punkte für Anzeige und Lagenrechnung'),
+        ('HumanBodyWeb/core/dienste/g9lagenanfrage.py', 'G9lagenanfrage',
+         'Die getragenen Stücke einer Anfrage einordnen; die Anatomie liegt unter jedem Stück'),
+        ('HumanBodyWeb/core/dienste/g9stueckteile.py', 'G9stueckteile', 'Die Rechnung hinter einer Stückantwort: Käfig, Lagen, Browsernetz'),
+        ('Genesis9/koerpernetz.py', 'G9koerpernetz', 'Körperfläche (mit HD) und `folgernetz`: das Stück auf die Kollisionsfläche heben'),
+        ('Genesis9/stueckersatz.py', 'G9stueckersatz', 'Die `.ersetzt.json` eines Stücks: `haut_tiefe_mm`, `loch` (die entfallenden Hautdreiecke), `anatomie`'),
+    ]
+
     @classmethod
     def zeile(cls, pfad, klasse, rolle):
         """Ein Baustein mit Befund: gibt es die Datei, steht die Klasse darin, wie lang ist sie?"""
@@ -80,5 +97,9 @@ class Architekturgenesis:
         return [cls.zeile(*eintrag) for eintrag in cls.BAUSTEINE]
 
     @classmethod
+    def fitting(cls):
+        return [cls.zeile(*eintrag) for eintrag in cls.FITTING]
+
+    @classmethod
     def kontext(cls):
-        return {'stand': cls.STAND, 'bausteine': cls.bausteine()}
+        return {'stand': cls.STAND, 'bausteine': cls.bausteine(), 'fitting': cls.fitting()}

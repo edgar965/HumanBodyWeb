@@ -4,8 +4,8 @@
 Edgar: „die Textur ist unterschiedlich von der Umgebung" und „wir haben … die Textur verglichen". Zwei Maße, beide an den TEXTUREN (nicht am Bildschirm; die Beleuchtung misst der Chrome,
 `messung_naht2.js`):
 
-    am_ring           Farbe des Stück-Atlas an den Ecken höchstens `NAH_M` vom Rand gegen die Haut-Kachel in den Bändern `BAENDER_M` vom Rand außerhalb (Dreiecksmitten, mindestens 8 mm von
-                      jedem Stückpunkt) — `farbe_ring.py`, 09.10.2026. Je Band: Mittel RGB, mittlerer Betrag der Kanalunterschiede und Leuchtdichte-Unterschied in Prozent der Haut
+    am_ring           Farbe des Stück-Atlas an den Ecken höchstens `NAH_M` vom Rand gegen die Haut-Kachel in den Bändern `BAENDER_M` vom Rand außerhalb (Mitten der sichtbaren Hautdreiecke, also
+                      ohne das Loch) — `farbe_ring.py`, 09.10.2026. Je Band: Mittel RGB, mittlerer Betrag der Kanalunterschiede und Leuchtdichte-Unterschied in Prozent der Haut
                       (Y = 0,2126 R + 0,7152 G + 0,0722 B auf den sRGB-Werten, Stück minus Haut)
     gegen_original    Farbe des Stück-Atlas an jeder Dreiecksecke gegen die Farbe des Originals am nächsten Punkt seiner Fläche, je Zone; nur Ecken höchstens `NAH_M` vom Original (weiter weg
                       mischt der Bake bewusst die Haut der Figur dazu)
@@ -18,9 +18,9 @@ __all__ = ['Schammessungtextur']
 
 class Schammessungtextur:
     NAH_M = 0.004
-    BAENDER_M = ((0.006, 0.015), (0.015, 0.030))
-    #: Hautdreiecke, deren Mitte näher als das (m) an einem Stückpunkt liegt, zählen nicht als „daneben".
-    ABSTAND_STUECK_M = 0.008
+    #: Bänder der Haut daneben (Abstand der Dreiecksmitte vom Rand, m). Das erste, an den Rand grenzende, entscheidet über die Stufe an der Naht; die weiteren zeigen den natürlichen Verlauf der
+    #: Hautkachel (gemessen 10.10.2026 an „cute girl": 6–15 mm 199,8 / 148,1 / 128,8, 15–30 mm 204,7 / 153,7 / 133,9 — die Haut wird nach außen heller).
+    BAENDER_M = ((0.0, 0.006), (0.006, 0.015), (0.015, 0.030))
     #: Ein Texel gilt als „anders", wenn der mittlere Kanalunterschied zum Original über so viel liegt.
     ANDERS = 12.0
     #: Bilder über so viele Pixel Kantenlänge werden beim Lesen verkleinert (JPEG-Entwurf).
@@ -66,12 +66,11 @@ class Schammessungtextur:
         stueck = cls.abtasten(farbe, np.asarray(uv_ecken).reshape(-1, 2)[nah]).mean(axis=0)
         mitte = figur['punkte'][figur['dreiecke']].mean(axis=1)
         d_rand = cKDTree(rand).query(mitte)[0]
-        weit = cKDTree(punkte).query(mitte)[0] > cls.ABSTAND_STUECK_M
         uv = figur['uv'][figur['dreiecke']].mean(axis=1)
         aus = {'stueck_rand': {'n': int(nah.sum()), 'rgb': [round(float(x), 1) for x in stueck]}, 'baender': []}
         bilder = {}
         for lo, hi in cls.BAENDER_M:
-            wahl = np.flatnonzero(np.asarray(sichtbar) & weit & (d_rand >= lo) & (d_rand < hi))
+            wahl = np.flatnonzero(np.asarray(sichtbar) & (d_rand >= lo) & (d_rand < hi))
             farben = []
             for k in np.unique(figur['kachel'][wahl]):
                 if k not in bilder:
@@ -90,7 +89,10 @@ class Schammessungtextur:
 
     @classmethod
     def gegen_original(cls, rahmen, punkte, dreiecke, uv_ecken, farbe, farbe_an, abstand_mm):
-        """Bericht der Farbe gegen das Original. `farbe_an(punkte)` → `(N, 3)` Originalfarbe am nächsten Punkt; `abstand_mm`: `(V,)` Abstand jedes Stückpunkts zum Original."""
+        """Bericht der Farbe gegen das Original. `farbe_an(punkte, normalen)` → `(N, 3)` Originalfarbe an der Stelle des Originals, die nah liegt und dieselbe Seite zeigt (wie der Bake,
+        `Dazgeograftziel.stelle`); `abstand_mm`: `(V,)` Abstand jedes Stückpunkts zum Original."""
+        import trimesh
+
         if farbe is None or farbe_an is None or abstand_mm is None:
             return {'hinweis': 'ohne Farbbild, Originalfarbe oder Abstand nicht gemessen'}
         d = np.asarray(dreiecke)
@@ -98,7 +100,8 @@ class Schammessungtextur:
         nah = np.asarray(abstand_mm)[d].reshape(-1) <= cls.NAH_M * 1000.0
         if not nah.any():
             return {'hinweis': 'keine Stückecke nahe am Original'}
-        soll = farbe_an(ort[nah])
+        normalen = np.asarray(trimesh.Trimesh(np.asarray(punkte), d, process=False).vertex_normals)[d].reshape(-1, 3)
+        soll = farbe_an(ort[nah], normalen[nah])
         if soll is None:
             return {'hinweis': 'das Original hat keinen Farbatlas'}
         ist = cls.abtasten(farbe, np.asarray(uv_ecken).reshape(-1, 2)[nah])

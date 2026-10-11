@@ -28,6 +28,13 @@ class Dazgeograftanpassung:
     MASSSTAB = (0.6, 1.5)
     #: Steifigkeit `a` der Anpassung (Gewicht des Laplace gegen die Treffer; Punktabstand des Geografts ≈ 4 mm), Gewicht der Randpunkte und Zahl der Durchgänge.
     STEIFIGKEIT, RAND_GEWICHT, DURCHGAENGE = 3.0, 100.0, 3
+    #: Gewicht `μ` der Glättung der Verlege-Verschiebung: gelöst wird `(I + μ·L) D = D_roh` (gemessen, siehe `verlegen`: 5 → 2,8 % knickende Kanten, 200 → 2,2 %, 1000 → 2,4 %).
+    GLAETTUNG = 200.0
+    #: Randband: Punkte, die höchstens so weit (m) vom Ring liegen, bleiben mit diesem Gewicht nahe ihrer verlegten (geglätteten) Lage. 0 = aus.
+    #: Anlass (gemessen 10.10.2026, `Schammessung`): 9 von 100 Randpunkten hatten Normalen gegen die der Haut (bis 140°), dazu 4 am Seitenrand um 50° gekippt — der Rand knickte weg.
+    BAND_M, BAND_GEWICHT = 0.006, 3.0
+    #: Gemessen und verworfen (10.10.2026, `Schammessung`, Knicke im Band 12 mm am Rand: über 60° 2,3 %, über 90° 1,9 %): Laplace-Glättung der Punkte nahe am Ring nach der Anpassung
+    #: (8–20 mm × 10–60 Schritte: Knicke 1,5–3,9 % über 90°, Randnormalen p90 28 → 42–57°) und stärkeres Glätten der Ringlinie (`Blendimportschamring.MAX_MM` 8–16 mm: Knicke über 90° 3,5–3,7 %).
 
     def __init__(self, figur0, figur, ring_punkte, ziel):
         """`figur0`, `figur`: `{punkte, dreiecke}` der Grundfigur und der Figur des Imports (Stufe 1, gleiche Topologie); `ring_punkte`: Nummern der Hautpunkte auf dem Ring des
@@ -68,14 +75,23 @@ class Dazgeograftanpassung:
 
     # ------------------------------------------------------------ Schritte
 
-    def verlegen(self, punkte):
-        """Die Punkte (Raum der Grundfigur) in den Raum der Figur des Imports."""
+    def verlegen(self, punkte, dreiecke=None):
+        """Die Punkte (Raum der Grundfigur) in den Raum der Figur des Imports. Mit `dreiecke` wird die Verschiebung über das Netz geglättet (`GLÄTTUNG`): die rohe Verschiebung (6 nächste
+        Hautpunkte) ist so rau wie die Nachformung der Haut, und das knickte die Fläche — gemessen 10.10.2026 mit `Schammessung` an „cute girl" (Nachformung 1): Kanten über 90° beim
+        rohen Geograft 1,7 %, nach rohem Verlegen 7,2 %, nach der Anpassung 10,3 % (Original 0,8 %); mit Glättung 200 nach der Anpassung 2,2 % und die Form besser (Original → Modell
+        Median 0,95 → 0,68 mm, p90 4,98 → 2,70 mm). Glättung 1000 / 5000: Form 0,81 / 0,80 mm, also schlechter."""
         d, i = self.baum0.query(punkte, k=6)
         w = 1.0 / (d * d + 1e-8)
         w /= w.sum(axis=1, keepdims=True)
         verschiebung = np.einsum('nk,nkj->nj', w, (self.p1 - self.p0)[i])
+        if dreiecke is not None and self.GLAETTUNG > 0:
+            import scipy.sparse as sp
+            import scipy.sparse.linalg as spl
+
+            lhs = (sp.identity(len(punkte)) + self.GLAETTUNG * self._laplace(dreiecke, len(punkte))).tocsc()
+            verschiebung = spl.splu(lhs).solve(verschiebung)
         self.bericht['verlegt_mm'] = {'median': round(float(np.median(np.linalg.norm(verschiebung, axis=1)) * 1000), 1),
-                                      'max': round(float(np.linalg.norm(verschiebung, axis=1).max() * 1000), 1)}
+                                      'max': round(float(np.linalg.norm(verschiebung, axis=1).max() * 1000), 1), 'glaettung': self.GLAETTUNG if dreiecke is not None else 0.0}
         return punkte + verschiebung
 
     def ausrichten(self, punkte):
@@ -122,6 +138,7 @@ class Dazgeograftanpassung:
         _d, i = self.baum1.query(punkte)
         n = self.normalen[i]
         rand = self.ringabstand(punkte) < self.RING_AN_M
+        band = (self.ringabstand(punkte) < self.BAND_M) & ~rand if self.BAND_GEWICHT > 0 else np.zeros(len(punkte), dtype=bool)
         laplace = self._laplace(dreiecke, len(punkte))
         q, treffer_zahl = punkte, 0
         for _ in range(self.DURCHGAENGE):
@@ -130,13 +147,17 @@ class Dazgeograftanpassung:
             w = hat.astype(np.float64)
             ziel[~hat] = punkte[~hat]
             w[rand], ziel[rand] = self.RAND_GEWICHT, punkte[rand]
+            if band.any():
+                alt = w[band].copy()
+                w[band] = alt + self.BAND_GEWICHT
+                ziel[band] = (alt[:, None] * ziel[band] + self.BAND_GEWICHT * punkte[band]) / w[band][:, None]
             lhs = (sp.diags(w) + a * laplace + 1e-9 * sp.identity(len(punkte))).tocsc()
             loesung = spl.splu(lhs).solve(w[:, None] * (ziel - punkte))
             q, treffer_zahl = punkte + loesung, int((hat & ~rand).sum())
         if verfeinern:
             from .dazgeograftverfeinerung import Dazgeograftverfeinerung
 
-            q, self.bericht['verfeinern'] = Dazgeograftverfeinerung.verfeinern(punkte, q, dreiecke, rand, laplace, self.ziel_netz, n)
+            q, self.bericht['verfeinern'] = Dazgeograftverfeinerung.verfeinern(punkte, q, dreiecke, rand, laplace, self.ziel_netz, n, band=band, band_gewicht=self.BAND_GEWICHT)
         betrag = np.linalg.norm(q - punkte, axis=1)
         self.bericht['anpassen'] = {'steifigkeit': a, 'treffer_original': treffer_zahl, 'ohne_treffer': int(len(punkte) - treffer_zahl),
                                     'verschiebung_mm': {'median': round(float(np.median(betrag) * 1000), 1), 'max': round(float(betrag.max() * 1000), 1)}}

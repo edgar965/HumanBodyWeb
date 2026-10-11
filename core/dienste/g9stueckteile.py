@@ -24,6 +24,7 @@ from Genesis9.netzstufe import G9netzstufe
 from Genesis9.stoffhuelle import G9stoffhuelle
 from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stueckfelder import G9stueckfelder
+from Genesis9.stueckstarr import G9stueckstarr
 
 from .g9lagenanfrage import G9lagenanfrage
 
@@ -65,11 +66,9 @@ class G9stueckteile:
         # Ein Stück mit Hauttiefe (Scham aus einer .blend, `Blendimportscham`) liegt bis 25 mm HINTER der Figurfläche und hängt
         # starr am Becken: Folgen (drei nächste Hautpunkte) und Heben über die Haut schöben einzelne Punkte im Schritt bis 46 mm
         # weg (gemessen 08.10.2026, Kantenmaximum im Browser) — seine Lage ist die gespeicherte Ruhelage der Figur des Imports.
-        starr = G9stueckersatz.haut_tiefe_fuer(eintrag) > 0
+        starr = G9stueckstarr.ist(eintrag)
         if starr:
-            from Genesis9.eigenstueck import G9eigenstueck
-            grund = np.array([0.0, G9eigenstueck.koerper()[4], 0.0])
-            kaefige = [np.asarray(folger.punkte, dtype=np.float64) - grund for folger, _lage in teile]
+            kaefige = G9stueckstarr.punkte(teile)
         else:
             kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
                        for folger, lage in teile]

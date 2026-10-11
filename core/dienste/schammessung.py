@@ -9,6 +9,7 @@ Gemessen wird in vier Klassen, alle in mm / Farbwerten 0–255, Definitionen in 
 
     `Schammessunggeometrie`   Form: Original → Modell je Zone, Tiefenkarte mit Mittelschnitt und Querprofilen, Stück → Original, Spiegelabstand
     `Schammessungnaht`        Naht: Rand → Ring, Normalenwinkel am Ring
+    `Schammessungknick`       Naht: Knick der Fläche über jede Ringkante (Haut- gegen Stückdreieck)
     `Schammessungtextur`      Textur: Farbe am Ring gegen die Haut daneben, Farbe gegen das Original
     `Schammessungrahmen`      das gemeinsame Koordinatensystem und die Zonen
 
@@ -32,8 +33,13 @@ class Schammessung:
     FORM_MEDIAN_MM, FORM_P90_MM = 1.0, 3.0
     #: Tiefenkarte: mittlerer Betrag des Unterschieds (mm), Setzung.
     TIEFE_MEDIAN_MM = 1.0
+    #: Fläche: Anteil der Kanten, die über 90° knicken, darf höchstens so groß sein (Setzung) und höchstens das Doppelte des Originals.
+    KNICK_ANTEIL = 0.02
     #: Naht: größter Abstand Rand ↔ Ring (mm); der Bau legt den Rand auf die Ringecken (gemessen 0,000 mm, 09.10.2026).
     RAND_MAX_MM = 0.1
+    #: Naht: Knick der Fläche über eine Ringkante (Haut- gegen Stückdreieck, Grad): keine Kante darf darüber liegen (Setzung; über 90° liegt das Stück auf der Haut zurückgeklappt —
+    #: gemessen 11.10.2026 an „cute girl Daz Scham" an vier Kanten mit 143–147°, im Chrome die Keile an der Naht).
+    NAHT_KNICK_GRAD = 60.0
     #: Farbe am Ring: größter Leuchtdichte-Unterschied Stück ↔ Haut (Prozent); im Browser gerendert wurden 4 % gemessen (09.10.2026).
     LEUCHTDICHTE_PROZENT = 4.0
     #: Farbe gegen das Original: größter mittlerer Kanalunterschied (Setzung).
@@ -97,12 +103,13 @@ class Schammessung:
         import trimesh
 
         from .schammessunggeometrie import Schammessunggeometrie
+        from .schammessungknick import Schammessungknick
         from .schammessungnaht import Schammessungnaht
         from .schammessungrahmen import Schammessungrahmen
         from .schammessungtextur import Schammessungtextur
 
         f = self.figur
-        fp, fd = np.asarray(f['punkte'], dtype=np.float64), np.asarray(f['dreiecke'], dtype=np.int64)
+        fp, fd =np.asarray(f['punkte'], dtype=np.float64), np.asarray(f['dreiecke'], dtype=np.int64)
         sichtbar = np.ones(len(fd), dtype=bool)
         if self.loch:
             sichtbar[np.asarray(self.loch['dreiecke'], dtype=np.int64)] = False
@@ -117,6 +124,7 @@ class Schammessung:
             rahmen = Schammessungrahmen.von_ring(fp, ring_normalen, ring_punkte, self.punkte)
             naht = Schammessungnaht(self.punkte, self.dreiecke, self.loch['ring'], ring_normalen[ring_punkte], self.loch.get('ring_d'))
             aus['naht'] = naht.messen()
+            aus['naht']['knick_ueber_naht'] = Schammessungknick.messen(self.punkte, self.dreiecke, f, self.loch)
             rand = naht.rand
         else:
             aus['naht'] = {'hinweis': 'Stück ohne Naht (kein Loch in der Haut)'}
@@ -167,11 +175,18 @@ class Schammessung:
         t = (g.get('tiefenkarte') or {}).get('betrag')
         if t and t['median'] > self.TIEFE_MEDIAN_MM:
             a.append('Tiefenkarte: mittlerer Unterschied %.2f mm (Schwelle %.1f)' % (t['median'], self.TIEFE_MEDIAN_MM))
+        f = g.get('flaeche') or {}
+        if f and f['ueber_90'] > max(self.KNICK_ANTEIL, 2.0 * f['ueber_90_original']):
+            a.append('Fläche: %.1f %% der Kanten knicken über 90° (Original %.1f %%, Schwelle %.0f %%)' % (f['ueber_90'] * 100, f['ueber_90_original'] * 100, self.KNICK_ANTEIL * 100))
         n = m.get('naht') or {}
         for schluessel in ('rand_zu_ring_mm', 'ring_zu_rand_mm'):
             if n.get(schluessel) and n[schluessel]['max'] > self.RAND_MAX_MM:
                 a.append('Naht: %s größter Wert %.2f mm (Schwelle %.1f)' % (schluessel, n[schluessel]['max'], self.RAND_MAX_MM))
-        for band in (m.get('farbe_am_ring') or {}).get('baender', []):
+        k = n.get('knick_ueber_naht') or {}
+        if k.get('ueber_60'):
+            a.append('Naht: %d Ringkanten knicken über %.0f° (größter Wert %.0f°, Ringecken %s) — dort liegt das Stück auf der Haut zurückgeklappt' % (
+                k['ueber_60'], self.NAHT_KNICK_GRAD, k['max_grad'], ', '.join(str(j) for j, g in k['schlimmste'] if g > self.NAHT_KNICK_GRAD)))
+        for band in (m.get('farbe_am_ring') or {}).get('baender', [])[:1]:       # das nächste Band entscheidet; die weiteren zeigen den natürlichen Verlauf der Haut
             if band.get('n') and abs(band['leuchtdichte_prozent']) > self.LEUCHTDICHTE_PROZENT:
                 a.append('Farbe am Ring, Band %s mm: Leuchtdichte %+.1f %% gegen die Haut (Schwelle %.0f %%)' % (band['band_mm'], band['leuchtdichte_prozent'], self.LEUCHTDICHTE_PROZENT))
         c = m.get('farbe_gegen_original') or {}

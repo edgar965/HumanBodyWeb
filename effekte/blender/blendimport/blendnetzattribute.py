@@ -16,6 +16,8 @@ gegen `me.corner_normals`/`vertex_normals` geprüft am 10.10.2026 (Rosemary `bod
   * `eigene_normale` (L,2) int16 = Attribut `custom_normal` (INT16_2D auf der Ecke, relativ zum Lnor-Raum des Fächers gespeichert);
   * `kanten` (E,2) int32 = `.edge_verts` und `ecke_kante` (L,) int32 = `.corner_edge` (Kante je Ecke) — nur MIT `scharf_kante`, denn nur dafür liest Blender 5.2 sie
     (Kanten- und Eckenfeld eines Netzes ohne scharfe Kanten wären Megabytes ohne Verwendung).
+  * `dreieck_ecken` (T,3) int32 — nur bei Domain 'CORNER': die Ecke (Schleife) jeder Dreiecksecke. Cycles liest die Eckennormale eines Dreiecks als `corner_normals[corner_tris[i][j]]`;
+    ohne diese Zuordnung ließe sich das (L,3)-Ergebnis von `Hautbackenblendernormalen` nicht auf die Dreiecke legen (`poly_punkte[dreieck_ecken] == dreiecke`).
 Ohne diese Schlüssel sind alle Kanten und Polygone glatt und es gibt keine eigenen Normalen: Domain 'POINT' (`info['normalen_domain']`).
 """
 
@@ -86,7 +88,9 @@ class Blendnetzattribute:
         me.loop_triangles.foreach_get('polygon_index', dreieck_poly)
         arrays.update(poly_start=poly_start, poly_punkte=punkte, dreieck_poly=dreieck_poly)
         arrays.update(Blendnetzattribute._normalen_rohdaten(me))
-        info['normalen_rohdaten'] = sorted(k for k in ('scharf_kante', 'scharf_flaeche', 'eigene_normale', 'kanten', 'ecke_kante') if k in arrays)
+        if info['normalen_domain'] == 'CORNER':
+            arrays['dreieck_ecken'] = np.asarray(schleifen).reshape(t, 3).astype(np.int32)
+        info['normalen_rohdaten'] = sorted(k for k in ('scharf_kante', 'scharf_flaeche', 'eigene_normale', 'kanten', 'ecke_kante', 'dreieck_ecken') if k in arrays)
         return arrays, info
 
     @staticmethod

@@ -2,36 +2,33 @@
 """Blendimporthaut — die Originalhaut der .blend auf die vier Haut-Kacheln von Genesis (Farbe, Normalen, Rauheit).
 
 Kachel 1005 (Nägel) wird nicht gebacken (`Blendimportlage.NICHT_GEBACKEN`): Genesis' Nägel und der Nagellack-Preset gelten.
-Die gebackenen Normalen werden von falschen Treffern gesäubert (`Blendimportnormalen`, Bericht `normalen_flach`) und auf ihr
-Feindetail begrenzt (Einstellung `normalen_form`); der Saum um die Fehlstellen wird geschlossen (`Blendimportrand`); die
-rohen Karten bleiben in `arbeit/` (`farbe_roh_<k>.jpg`, `normalen_roh_<k>.png`, `rauheit_roh_<k>.jpg`).
 
-„Mesh to 3D" überträgt die Netzfarbe über rund 2 Mio. Proben (`meshfigur.md`, Schritt „textur") — für ein Scan-Netz
-genug, für eine 8K-Haut zu grob, und Normalen und Rauheit kennt es nicht. Hier backt Blender aus dem Original
-(`blendbacken.py`): Der Körper wird dafür in die Ruhelage der Figur gerechnet (`Blendimportlage.koerper_ruhelage`: jeder
-Punkt nur mit den Käfigpunkten seines Körperteils — mit der Hand auf der Hüfte hing die Hüfte sonst an der Hand), die Figur
-selbst (Regler + Eigenmorph, Stufe 1) liegt je Kachel als OBJ daneben.
+„Mesh to 3D" überträgt die Netzfarbe über rund 2 Mio. Proben (`meshfigur.md`, Schritt „textur") — für ein Scan-Netz genug, für eine 8K-Haut zu grob, und Normalen und Rauheit kennt es nicht.
+Hier wird aus dem Original gebacken. Der Körper wird dafür in die Ruhelage der Figur gerechnet (`Blendimportlage.koerper_ruhelage`: jeder Punkt nur mit den Käfigpunkten seines Körperteils —
+mit der Hand auf der Hüfte hing die Hüfte sonst an der Hand), die Figur selbst (Regler + Eigenmorph, Stufe 1) liegt je Kachel als OBJ daneben. Womit gebacken wird, wählt die Einstellung
+Charakter → Backen (`Blendimportbackenwahl`, gelesen, wenn der Schritt beginnt):
 
-NACHARBEIT: Wo kein Strahl das Original trifft, ist die gebackene Farbe schwarz. Dort gilt die Kachel von „Mesh to 3D"
-(Daz-Haut auf den Hautton getönt, darüber die Netzfarbe) — im Ton des Gebackenen daneben und ohne ihre weißen Löcher
-(`Blendimportfarbangleich`), die Normale wird flach (128, 128, 255), die Rauheit der Median
-der getroffenen Texel. Der Anteil getroffener Texel steht je Kachel im Bericht, dazu der Abstand der Körperpunkte zur
-FLÄCHE der Figur in Ruhe (Median, p95, Maximum, RMS, Anteil über 8 mm) — er sagt, wie gut beide Flächen beim Backen
-übereinanderliegen. Gemessen am ersten Lauf (08.10.2026): Median 0,99 mm, p95 14,4 mm, 12,3 % über 8 mm — die großen
-Abstände sitzen an Fingern, Brustwarzen, Lippen, Schritt und Zehen (Wärmekarte). Deutung, nicht geprüft: Dort trifft
-der Strahl (Auszug 15 mm, Reichweite 35 mm) nicht oder die falsche Stelle.
+    lokal    `Blendimporthautlokal`: auf der GPU im Speicher (NVIDIA Warp), ohne Blender; die Nacharbeit rechnet auf denselben Feldern, jede Datei wird einmal geschrieben.
+    blender  `blendbacken.py`: Cycles „Selected to Active" auf der GPU; die Bilder gehen über die Platte, die rohen Karten bleiben in `arbeit/` (`farbe_roh_<k>.jpg`,
+             `normalen_roh_<k>.png`, `rauheit_roh_<k>.jpg`) — Grenze, Saum und Fehlstellen lassen sich so ohne neues Backen (17 Minuten) ändern.
+
+NACHARBEIT (`Blendimporthautnacharbeit`): Wo kein Strahl das Original trifft, ist die gebackene Farbe schwarz; dort gilt die Kachel von „Mesh to 3D", die Normale wird flach, die Rauheit
+der Median der getroffenen Texel; gebackene Normalen werden gesäubert und auf ihr Feindetail begrenzt. Der Anteil getroffener Texel steht je Kachel im Bericht, dazu der Abstand der
+Körperpunkte zur FLÄCHE der Figur in Ruhe (Median, p95, Maximum, RMS, Anteil über 8 mm) — er sagt, wie gut beide Flächen beim Backen übereinanderliegen. Gemessen am ersten Lauf
+(08.10.2026): Median 0,99 mm, p95 14,4 mm, 12,3 % über 8 mm — die großen Abstände sitzen an Fingern, Brustwarzen, Lippen, Schritt und Zehen (Wärmekarte). Deutung, nicht geprüft: Dort
+trifft der Strahl (Auszug 15 mm, Reichweite 35 mm) nicht oder die falsche Stelle.
 """
 
 import logging
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
+from .blendimportbackenwahl import Blendimportbackenwahl
 from .blendimportblender import Blendimportblender
-from .blendimportfarbangleich import Blendimportfarbangleich
+from .blendimporthautnacharbeit import Blendimporthautnacharbeit
 from .blendimportlage import Blendimportlage
-from .blendimportnormalen import Blendimportnormalen
-from .blendimportrand import Blendimportrand
 from .flaechenabstand import Flaechenabstand
 from .schammessungablage import Schammessungablage
 
@@ -41,8 +38,6 @@ __all__ = ['Blendimporthaut']
 
 
 class Blendimporthaut:
-    FLACH = (128, 128, 255)
-
     def __init__(self, ablage, job, inventar, rollen, px, melden=None, normalen_grenze=None, zusatz=None,
                  normalen_form='weg'):
         self.ablage = ablage
@@ -56,10 +51,29 @@ class Blendimporthaut:
         self.zusatz = dict(zusatz or {})
         #: `weg` (Vorgabe): nur das Feindetail der gebackenen Normalen gilt; `bleibt`: die ganze Karte.
         self.normalen_form = normalen_form
-        self.normalen_flach = {}
-        #: Farbfüllung um das Scham-Stück (`Blendimportumfeld`): das Objekt (oder None ohne Stück) und seine Zahlen je Kachel.
+        #: Farbfüllung um das Scham-Stück (`Blendimportumfeld`): das Objekt (oder None ohne Stück).
         self.umfeld = None
-        self.umfeld_bericht = {}
+        self.nach = Blendimporthautnacharbeit(ablage, job, px, None, normalen_grenze, normalen_form, self.melden)
+
+    @staticmethod
+    def gpu_geraet():
+        """Das Warp-Gerät für die Nacharbeit (`core/dienste/hautnach`) — `None` ohne CUDA-GPU: dann rechnen die CPU-Fassungen."""
+        try:
+            import warp as wp
+
+            wp.init()
+            return 'cuda:0' if wp.get_cuda_device_count() else None
+        except Exception as fehler:  # noqa: BLE001 — ohne Warp bleibt die CPU
+            logger.warning('Blender-Import: Warp nicht nutzbar (%s) — die Nacharbeit rechnet auf der CPU', fehler)
+            return None
+
+    @property
+    def normalen_flach(self):
+        return self.nach.normalen_flach
+
+    @property
+    def umfeld_bericht(self):
+        return self.nach.umfeld_bericht
 
     def _umfeld(self, figur, ruhe, name, dreiecke):
         """`Blendimportumfeld` des Scham-Stücks dieses Imports — None, wenn es keines gibt (`arbeit/scham_punkte.npy`) oder die
@@ -84,7 +98,12 @@ class Blendimporthaut:
             uv_ecken = np.asarray(d['uv_ecken'], dtype=np.float64)
         with Image.open(farbe) as bild:
             farbbild = np.asarray(bild.convert('RGB'))
-        return Blendimportumfeld(np.load(pfad), figur, {'punkte': ruhe, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken}, farbbild)
+        original = {'punkte': ruhe, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken}
+        if self.nach.geraet:
+            from .hautnach.hautnachumfeld import Hautnachumfeld     # dieselbe Rechnung auf der GPU (50 s → 3 s an Rosemarys Kachel 1001)
+
+            return Hautnachumfeld(np.load(pfad), figur, original, farbbild, self.nach.geraet)
+        return Blendimportumfeld(np.load(pfad), figur, original, farbbild)
 
     def _koerper(self):
         name = next(r['name'] for r in self.rollen if r['rolle'] == 'koerper')
@@ -102,8 +121,11 @@ class Blendimporthaut:
                 'max_mm': round(float(d.max()), 1), 'rms_mm': round(float(np.sqrt((d ** 2).mean())), 2),
                 'ueber_8mm': round(float((d > 8.0).mean()), 4)}
 
-    def backen(self, blend, pruefen=None):
-        """`pruefen(abstand)` (der Lauf übergibt `Blendimportplausibel`) wirft, wenn die Figur nicht zum Körper passt — vor dem Backen."""
+    def backen(self, blend, pruefen=None, wahl=None):
+        """`pruefen(abstand)` (der Lauf übergibt `Blendimportplausibel`) wirft, wenn die Figur nicht zum Körper passt — vor dem Backen. `wahl`: 'lokal' oder 'blender' (Vorgabe: die
+        Einstellung, `Blendimportbackenwahl.gewaehlt`)."""
+        wahl = wahl or Blendimportbackenwahl.gewaehlt()
+        self.nach.geraet = self.gpu_geraet()
         lage = Blendimportlage(self.job, self.zusatz)
         name, punkte, dreiecke = self._koerper()
         ruhe = lage.koerper_ruhelage(punkte, dreiecke)
@@ -112,127 +134,117 @@ class Blendimporthaut:
         ordner.mkdir(parents=True, exist_ok=True)
         objs = lage.genesis_objs(ordner)
         figur = lage.genesis()
-        self.umfeld = self._umfeld(figur, ruhe, name, dreiecke)
+        self.umfeld = self.nach.umfeld = self._umfeld(figur, ruhe, name, dreiecke)
         # `nummern`, nicht `kacheln`: der Lauf legt unter `kacheln` die Dateien ab (`{**bericht}` überschrieb sie mit der Liste).
-        bericht = {'abstand': self.abstand(ruhe, figur['punkte'], figur['dreiecke']), 'nummern': sorted(objs)}
+        bericht = {'abstand': self.abstand(ruhe, figur['punkte'], figur['dreiecke']), 'nummern': sorted(objs), 'backen': wahl}
         logger.info('Blender-Import %s: Körper in Ruhe, Abstand zur Figur %s', self.ablage.kennung, bericht['abstand'])
         if pruefen:
             pruefen(bericht['abstand'])
-        Blendimportblender(self.ablage, self.melden).laufen(
-            'blendbacken.py', blend,
-            ['--koerper', name, '--lage', self.ablage.arbeit('koerper_ruhe.npy'), '--genesis', ordner,
-             '--ziel', self.ablage.ergebnis(), '--px', self.px],
-            self.ablage.ergebnis('gebacken.txt'))
-        bericht['deckung'] = self.nacharbeiten(sorted(objs))
+        if wahl == Blendimportbackenwahl.LOKAL:
+            bericht['deckung'] = self._backen_lokal(name, ruhe, figur, sorted(objs), bericht)
+        else:
+            Blendimportblender(self.ablage, self.melden).laufen(
+                'blendbacken.py', blend,
+                ['--koerper', name, '--lage', self.ablage.arbeit('koerper_ruhe.npy'), '--genesis', ordner,
+                 '--ziel', self.ablage.ergebnis(), '--px', self.px],
+                self.ablage.ergebnis('gebacken.txt'))
+            bericht['deckung'] = self.nacharbeiten(sorted(objs))
         bericht['umfeld'] = self.umfeld_bericht
         bericht['normalen_flach'] = self.normalen_flach
         bericht['normalen_form'] = self.normalen_form
         bericht['scham_farbe'] = Schammessungablage.nachtragen(self.ablage, figur)       # die Scham-Messung, zweiter Teil: die Hautkacheln sind jetzt da
         return self.kacheln(sorted(objs)), bericht
 
-    # ------------------------------------------------------------ Nacharbeit
+    # ------------------------------------------------------------ lokal
 
-    def _meshfigur_kachel(self, kachel):
-        from ..daten.meshfigurablage import Meshfigurablage
-
-        name = ((self.job.ergebnis or {}).get('fototextur') or {}).get('kacheln', {}).get(str(kachel))
-        pfad = Meshfigurablage(self.job.kennung).ergebnis(name) if name else None
-        return pfad if pfad and pfad.is_file() else None
-
-    def _farbe_fuellen(self, k, farbe, leer):
-        """`(Farbe, Saum)`: der Saum um die Fehlstellen geschlossen, die Fehlstellen mit der Ersatzkachel von „Mesh to 3D" gefüllt und —
-        mit Scham-Stück — im Umfeld des Stücks mit der Farbe des Originals (`Blendimportumfeld`)."""
+    def _backen_lokal(self, name, ruhe, figur, kacheln, bericht):
+        """Backt und arbeitet nach, alles im Speicher; je Kachel werden die drei Dateien einmal geschrieben. `{kachel: Anteil getroffener Texel in %}`."""
         from PIL import Image
 
-        # Der Saum um die Fehlstellen ist nicht rein schwarz und bliebe als dunkle Linie stehen (`Blendimportrand`).
-        farbe, saum = Blendimportrand.schliessen(farbe, leer)
-        ersatz = self._meshfigur_kachel(k)
-        if leer.any() and ersatz is not None:
-            # Die Ersatzkachel steht in einem anderen Ton als das Gebackene daneben (Asian, Daumenwurzel: beige Flecken zwischen rosa
-            # Streifen, ein weißes Loch im Daumen): Löcher stopfen, den Ton an die gebackene Nachbarschaft angleichen.
-            hinten = Blendimportfarbangleich.hinten(Image.open(ersatz), farbe, leer | saum)
-            farbe = np.where(leer[..., None], hinten, farbe)
-        if leer.any() and self.umfeld is not None:
-            # Um das Scham-Stück gilt in den Fehlstellen die Farbe des Originals, nicht die blasse Ersatzkachel.
-            farbe = self.umfeld.fuellen(k, np.array(farbe), leer)
-            self.umfeld_bericht[str(k)] = self.umfeld.bericht
-        return farbe, saum
+        from .blendimporthautlokal import Blendimporthautlokal      # erst hier: zieht Warp und die GPU-Rechnung herein
+        from .hautbacken.graph import Hautgraphfehler
+
+        Image.MAX_IMAGE_PIXELS = None
+        with np.load(self.ablage.export(self.inventar[name]['datei'])) as d:
+            npz = {k: d[k] for k in d.files}
+        lokal = Blendimporthautlokal(self.ablage, self.inventar[name], npz, Blendimportlage.blender(ruhe), figur, self.px, self.melden)
+        try:
+            lokal.vorbereiten()
+            deckung = {}
+            # Die PNG-Kodierung einer 8K-Normalenkarte dauert 12 s (Pillow, gemessen 10.10.2026): ein Schreiber im Hintergrund kodiert die fertige Kachel, während die GPU die nächste backt
+            # (zlib gibt die Python-Sperre frei). Eine Datei wird einmal geschrieben; Fehler des Schreibers kommen beim Warten auf ihn heraus.
+            with ThreadPoolExecutor(max_workers=1) as schreiber:
+                geschrieben = []
+                for i, k in enumerate(kacheln):
+                    self.melden(0.80 + 0.15 * i / len(kacheln), 'Kachel %d backen (lokal, GPU)' % k)
+                    e = lokal.kachel(k)
+                    n = self.nach.kachel(k, e['farbe'], e['normalen'], e['rauheit'], saum_schliessen=False)
+                    geschrieben.append(schreiber.submit(self._schreiben, k, n))
+                    deckung[str(k)] = n['deckung']
+                for auftrag in geschrieben:
+                    auftrag.result()
+        except Hautgraphfehler as fehler:
+            raise RuntimeError('Der lokale Backer kennt nicht alles, was das Material verlangt — Einstellungen → Charakter → Backen → „Blender" wählen. %s'
+                               % ' | '.join(fehler.gruende)) from fehler
+        bericht['ohne_graph'] = lokal.ohne_graph
+        bericht['retri'] = lokal.retri
+        bericht['glanz_gerechnet'] = lokal.glanz_gerechnet
+        bericht['glanz_korrektur'] = lokal.glanz_korrektur
+        if lokal.glanz_text():
+            logger.warning('Blender-Import %s: %s', self.ablage.kennung, lokal.glanz_text())
+            self.melden(0.95, lokal.glanz_text())
+        return deckung
+
+    def _schreiben(self, k, n, farbe=True):
+        """Die fertigen Bilder einer Kachel — jede Datei einmal. `farbe=False` lässt die Farbdatei, wie Blender sie schrieb (nichts nachzuarbeiten: kein zweites JPEG)."""
+        from PIL import Image
+
+        if farbe:
+            Image.fromarray(n['farbe']).save(self.ablage.ergebnis('haut_%d_farbe.jpg' % k), quality=95)
+        Image.fromarray(n['normalen']).save(self.ablage.ergebnis('haut_%d_normalen.png' % k))
+        Image.fromarray(n['rauheit']).save(self.ablage.ergebnis('haut_%d_rauheit.jpg' % k), quality=95)
+
+    # ------------------------------------------------------------ Blender: Nacharbeit über die Platte
 
     def farbe_neu(self, kacheln):
-        """Die Farbkacheln aus den rohen Backergebnissen (`arbeit/farbe_roh_<k>.jpg`) neu nacharbeiten — ohne neues Backen (je
-        Kachel 80 s auf der GPU). Normalen und Rauheit bleiben. `{kachel: Zahlen des Umfelds}`."""
+        """Die Farbkacheln aus den rohen Blender-Ergebnissen (`arbeit/farbe_roh_<k>.jpg`) neu nacharbeiten — ohne neues Backen (je Kachel 80 s auf der GPU). Normalen und Rauheit
+        bleiben. `{kachel: Zahlen des Umfelds}`."""
         from PIL import Image
 
         Image.MAX_IMAGE_PIXELS = None
+        self.nach.geraet = self.gpu_geraet()
         lage = Blendimportlage(self.job, self.zusatz)
         name, punkte, dreiecke = self._koerper()
-        self.umfeld = self._umfeld(lage.genesis(), lage.koerper_ruhelage(punkte, dreiecke), name, dreiecke)
-        self.umfeld_bericht = {}
+        self.umfeld = self.nach.umfeld = self._umfeld(lage.genesis(), lage.koerper_ruhelage(punkte, dreiecke), name, dreiecke)
+        self.nach.umfeld_bericht = {}
         for k in kacheln:
             farbe = np.asarray(Image.open(self.ablage.arbeit('farbe_roh_%d.jpg' % k)).convert('RGB'))
-            leer = farbe.max(axis=2) <= 6
-            farbe, _saum = self._farbe_fuellen(k, farbe, leer)
+            leer = farbe.max(axis=2) <= self.nach.LEER_BIS
+            farbe, _saum = self.nach.farbe_fuellen(k, farbe, leer)
             Image.fromarray(farbe).save(self.ablage.ergebnis('haut_%d_farbe.jpg' % k), quality=95)
             self.melden(0.95, 'Farbe der Kachel %d neu' % k)
         return self.umfeld_bericht
 
     def nacharbeiten(self, kacheln):
-        """Fehlstellen füllen; `{kachel: Anteil getroffener Texel in %}`."""
+        """Blenders Bilder (`ergebnis/`) nacharbeiten und zurückschreiben; die rohen Karten bleiben in `arbeit/`. `{kachel: Anteil getroffener Texel in %}`."""
         from PIL import Image
 
         Image.MAX_IMAGE_PIXELS = None
         deckung = {}
-        self.normalen_flach = {}
+        self.nach.normalen_flach = {}
         for k in kacheln:
             farbe_pfad = self.ablage.ergebnis('haut_%d_farbe.jpg' % k)
+            normal_pfad = self.ablage.ergebnis('haut_%d_normalen.png' % k)
+            rauh_pfad = self.ablage.ergebnis('haut_%d_rauheit.jpg' % k)
             # Die rohen Karten bleiben in `arbeit/` — Grenze, Saum und Fehlstellen lassen sich so ohne neues Backen (17 Minuten) ändern.
             shutil.copyfile(farbe_pfad, self.ablage.arbeit('farbe_roh_%d.jpg' % k))
-            farbe = np.asarray(Image.open(farbe_pfad).convert('RGB'))
-            # JPEG verwischt das reine Schwarz der Fehlstellen um wenige Stufen.
-            leer = farbe.max(axis=2) <= 6
-            deckung[str(k)] = round(100.0 * (1.0 - leer.mean()), 1)
-            farbe, saum = self._farbe_fuellen(k, farbe, leer)
-            if leer.any() or saum.any():
-                Image.fromarray(farbe).save(farbe_pfad, quality=95)
-            normal_pfad = self.ablage.ergebnis('haut_%d_normalen.png' % k)
-            normal = np.asarray(Image.open(normal_pfad).convert('RGB')).copy()
-            Image.fromarray(normal).save(self.ablage.arbeit('normalen_roh_%d.png' % k))
-            normal[leer | saum] = self.FLACH
-            normal, self.normalen_flach[str(k)] = self._saeubern(normal, leer | saum)
-            if self.normalen_form != 'bleibt':
-                # Die Formdifferenz zwischen Figur und Original steht nicht in der Normalenkarte, sondern in der Fläche.
-                normal = Blendimportnormalen.feindetail(normal, leer | saum, self._form_px())
-            Image.fromarray(normal).save(normal_pfad)
-            rauh_pfad = self.ablage.ergebnis('haut_%d_rauheit.jpg' % k)
+            shutil.copyfile(normal_pfad, self.ablage.arbeit('normalen_roh_%d.png' % k))
             shutil.copyfile(rauh_pfad, self.ablage.arbeit('rauheit_roh_%d.jpg' % k))
-            rauh = np.asarray(Image.open(rauh_pfad).convert('L')).copy()
-            if (~(leer | saum)).any():
-                rauh[leer | saum] = int(np.median(rauh[~(leer | saum)]))
-            Image.fromarray(rauh).save(rauh_pfad, quality=95)
-            self.melden(0.95, 'Kachel %d nachgearbeitet (%.1f %% getroffen)' % (k, deckung[str(k)]))
-            self._warnen(k)
+            n = self.nach.kachel(k, np.asarray(Image.open(farbe_pfad).convert('RGB')), np.asarray(Image.open(normal_pfad).convert('RGB')),
+                                 np.asarray(Image.open(rauh_pfad).convert('RGB')))
+            self._schreiben(k, n, farbe=n['farbe_geaendert'])
+            deckung[str(k)] = n['deckung']
         return deckung
-
-    def _form_px(self):
-        """Wellenlänge der Form in Pixeln dieser Kachelgröße (`Blendimportnormalen.FORM_PX` gilt bei 8192 px)."""
-        return max(3.0, Blendimportnormalen.FORM_PX * self.px / 8192.0)
-
-    def _saeubern(self, normal, leer):
-        """`(Karte, Anteil geänderter Texel in %)` mit der gewählten Grenze; `'aus'` lässt die Karte, wie sie ist."""
-        if self.normalen_grenze == 'aus':
-            return normal, 0.0
-        grad = float(self.normalen_grenze) if self.normalen_grenze else None
-        return Blendimportnormalen.saeubern(normal, leer, grad)
-
-    def _warnen(self, kachel):
-        """Fällt in eine Kachel auffällig viel, steht es im Log und in der Statuszeile des Imports."""
-        anteil = self.normalen_flach[str(kachel)]
-        if anteil < Blendimportnormalen.WARN_PROZENT:
-            return
-        text = 'Kachel %d: %.1f %% der Normalen flachgelegt (Warnung ab %.0f %%) — Grenze im Import-Dialog prüfen' % (
-            kachel, anteil, Blendimportnormalen.WARN_PROZENT)
-        logger.warning('Blender-Import %s: %s', self.ablage.kennung, text)
-        self.melden(0.95, text)
 
     def kacheln(self, kacheln):
         """`{1001: Datei, '1001:normalen': Datei, '1001:rauheit': Datei, …}` (Namen in `ergebnis/`)."""

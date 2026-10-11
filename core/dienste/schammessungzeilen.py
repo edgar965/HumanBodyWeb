@@ -13,6 +13,10 @@ class Schammessungzeilen:
         g = m.get('geometrie') or {}
         z += cls._form(g)
         z += cls._tiefe(g.get('tiefenkarte'))
+        f = g.get('flaeche')
+        if f:
+            z.append('Fläche: Kantenwinkel Stück (Grad) %s | Original %s | Kanten über 90°: Stück %.1f %%, Original %.1f %%' % (
+                cls._st(f['kantenwinkel_grad']), cls._st(f['kantenwinkel_original_grad']), f['ueber_90'] * 100, f['ueber_90_original'] * 100))
         s = g.get('symmetrie') or {}
         z.append('Symmetrie (Spiegelabstand zur Fläche, mm): Stück %s | Original %s' % (cls._st(s.get('stueck')), cls._st(s.get('original'))))
         z += cls._naht(m.get('naht') or {})
@@ -60,6 +64,13 @@ class Schammessungzeilen:
             z.append('  Glättung des Rings gegen die Haut (mm): %s' % cls._st(n['ring_glaettung_mm']))
         w = n['normalen_grad']
         z.append('  Normalenwinkel Stück ↔ Haut am Rand (Grad): Median %.1f, p90 %.1f, max %.1f; umgekehrt %.0f %%' % (w['median'], w['p90'], w['max'], w['umgekehrt'] * 100))
+        q = n.get('knick_ueber_naht')
+        if q and q.get('kanten'):
+            z.append('  Knick über die Naht je Ringkante (Haut ↔ Stück, Grad): %d Kanten, Median %.1f, p90 %.1f, max %.1f; über 30°: %d, über 60°: %d, über 90°: %d; schlimmste (Ringecke, Grad) %s' % (
+                q['kanten'], q['median_grad'], q['p90_grad'], q['max_grad'], q['ueber_30'], q['ueber_60'], q['ueber_90'], q['schlimmste']))
+        k = n.get('kanten_am_rand')
+        if k:
+            z.append('  Knicke der Fläche im Band 12 mm am Rand: %d Kanten, Median %.1f°, über 60° %.1f %%, über 90° %.1f %%' % (k['kanten'], k['median_grad'], k['ueber_60'] * 100, k['ueber_90'] * 100))
         return z
 
     @classmethod

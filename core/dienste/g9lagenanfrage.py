@@ -88,15 +88,41 @@ class G9lagenanfrage:
             punkte = self._gc_kaefig(eintrag)
             if punkte is not None:
                 andere.append((self.GC + str(eintrag.get('stueck') or '?'), punkte, False))
-        innen, aussen = self.lagen.einordnen(kaefig, andere)
+        innen, aussen = self._anatomie_unten(kennung, *self.lagen.einordnen(kaefig, andere))
         # Ein GarmentCode-Stueck ist EINE Stofflage — ohne `aussenlage` (24.09.2026,
         # `Genesis9/lagenflaeche.py`: 22 % der Kleidpunkte fielen dort heraus).
         # Dasselbe gilt für die EIGENEN Stücke der zweiten Bibliothek (GarmentCode
         # gebacken, MakeHuman, OBJ — 25.09.2026): ein Netz, keine Innenlage.
         unten = [(k, p) for k, p, _s in andere if k in innen]
         flaeche = self.lagen.flaeche([p for _k, p in unten],
-                                     einlagig=[self._einlagig(k) for k, _p in unten])
+                                     einlagig=[self._einlagig(k) for k, _p in unten],
+                                     fuesse=[self._fuss(k, p) for k, p in unten])
         return flaeche, innen, aussen
+
+    @classmethod
+    def _anatomie(cls, kennung):
+        u"""Ist das Stück eine Anatomie (Scham-Stück, Daz-Geograft: `G9stueckersatz.anatomie_fuer`)? GarmentCode-Stücke nie."""
+        from Genesis9.garderobe import G9garderobe
+        from Genesis9.stueckersatz import G9stueckersatz
+        return not kennung.startswith(cls.GC) and bool(G9stueckersatz.anatomie_fuer(G9garderobe.eintrag(kennung) or {}))
+
+    @classmethod
+    def _anatomie_unten(cls, kennung, innen, aussen):
+        u"""Die Anatomie ist Körper und liegt unter JEDEM Stück, auch wenn sie höher über der Haut steht (11.10.2026, Edgar: „die Kleider
+        müssen so gefittet werden, dass sie inklusive Scham passen“). Die Tiefenregel (`G9lagen.einordnen`: außen liegt, was weiter von der Haut
+        steht) hielt das Geograft, das 15–40 mm vor der Haut steht, für das äußere Stück — die Hose blieb auf der Haut und die Scham zeichnete sich
+        durch den Stoff. Zwischen zwei Anatomien bleibt es bei der Tiefenregel."""
+        if cls._anatomie(kennung):
+            return [k for k in innen if cls._anatomie(k)], aussen + [k for k in innen if not cls._anatomie(k)]
+        return innen + [k for k in aussen if cls._anatomie(k)], [k for k in aussen if not cls._anatomie(k)]
+
+    def _fuss(self, kennung, punkte):
+        u"""Der Fussabdruck eines starren Stuecks (Anatomie) auf der Haut — sonst None (`G9lagenflaeche.flaeche`)."""
+        if kennung.startswith(self.GC):
+            return None
+        from Genesis9.garderobe import G9garderobe
+        from Genesis9.stueckstarr import G9stueckstarr
+        return self.lagen.fussabdruck(punkte) if G9stueckstarr.ist(G9garderobe.eintrag(kennung) or {}) else None
 
     @staticmethod
     def _ersatz(kennung):

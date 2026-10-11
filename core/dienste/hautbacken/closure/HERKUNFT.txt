@@ -1,0 +1,4 @@
+Tabellen der Glanz-Closures von Cycles — aus intern/cycles/scene/shader.tables, Blender v5.2.2 (github.com/blender/blender, Tag v5.2.2; Build 5.2.2 LTS, hash d13f752e3b9c).
+SHA-256 der Quelldatei: fbde5fea5750eb32e2a638b74b97ef6a39eed29283b2f46eb139893ca3af5175
+Tabellen (float32): ggx_E[1024], ggx_Eavg[32], ggx_glass_E[4096], ggx_glass_Eavg[256], ggx_glass_inv_E[4096], ggx_glass_inv_Eavg[256], sheen_ltc[3072], ggx_gen_schlick_ior_s[4096], ggx_gen_schlick_s[4096]
+Gebaut mit tabellen_bauen.py am 11.10.2026.

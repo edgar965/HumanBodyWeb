@@ -13,8 +13,9 @@ import numpy as np
 import warp as wp
 
 from ..hautbackenkachel import Hautbackenkachel
-from . import hautausgabekernel as aus_kern
-from . import hautkontextkernel as kern
+from . import hautausgabekernel as aus_kern, hautkontextkernel as kern
+from .hautalpha import Hautalpha
+from .hautglanz import Hautglanz
 from .hautkontext import Hautkontext
 
 __all__ = ['Hautbackengraph']
@@ -30,7 +31,8 @@ class Hautbackengraph:
         self.s, self.graphen, self.px, self.geraet = schattung, graphen, int(px), geraet
 
     def backen(self, quelle, figur, figur_tangenten, kanaele=('farbe', 'rauheit', 'normalen')):
-        """`quelle`: `Hautbackenquelle` (BVH); `figur`: `Hautbackenflaeche` der Kachel; `figur_tangenten`: `(M, 3, 4)` float32 — Tangenten (xyz) und Vorzeichen (w) je Ecke."""
+        """`quelle`: `Hautbackenquelle` (BVH); `figur`: `Hautbackenflaeche` der Kachel; `figur_tangenten`: `(M, 3, 4)` float32 — Tangenten (xyz) und Vorzeichen (w) je Ecke
+        (`Hautschattungbau.figur_tangenten`). Gibt `{'farbe'|'rauheit'|'normalen': (px, px, 3) uint8, 'maske', 'material', 'treffer', 'ohne_graph', 'glanz_korrektur' (nicht gerechnet: {Material: {'texel', 'grund'}}), 'glanz_gerechnet' ({Material: Texel})}`."""
         g, px = self.geraet, self.px
         kachel = Hautbackenkachel(figur, px, g)
         treffer = kachel.schiessen(quelle, self.AUSZUG_M, self.STRAHL_M)
@@ -48,12 +50,14 @@ class Hautbackengraph:
         ids = kachel.ids.reshape(-1)
         bary = kachel.bary.reshape(-1)
         f_tri = wp.array(figur.dreiecke, dtype=wp.vec3i, device=g)
-        f_nor = wp.array(figur.normalen(), dtype=wp.vec3, device=g)
+        f_nor = kachel._nor
         f_pos = wp.array(figur.punkte.astype(np.float32), dtype=wp.vec3, device=g)
         f_uv = wp.array(figur.uv_ecken.reshape(-1, 2), dtype=wp.vec2, device=g)
         f_tang = wp.array(np.ascontiguousarray(figur_tangenten, dtype=np.float32).reshape(-1, 4), dtype=wp.vec4, device=g)
         face_f, hu_f, hv_f = treffer.face.reshape(-1), treffer.hu.reshape(-1), treffer.hv.reshape(-1)
         ohne_graph = np.zeros(0, dtype=np.int32)
+        glanz, alpha = Hautglanz(g), Hautalpha(g)
+        korrektur = {'gerechnet': {}, 'ungerechnet': {}}
         for m in np.unique(material):
             idx_m = treffer_idx[material == m]
             graph = self.graphen.get(int(m))
@@ -75,11 +79,17 @@ class Hautbackengraph:
                     wp.launch(aus_kern.schreiben_rauheit, dim=k, inputs=[idx, werte['rauheit'].daten, bilder['rauheit']], device=g)
                 if 'normal' in werte:
                     welt = werte['normal'].daten if werte['normal'] is not None else self._glatte_normale(ctx)
+                    if werte['normal'] is not None:
+                        welt = glanz.anwenden(graph, ctx, welt, korrektur)
+                        welt = alpha.anwenden(graph, ctx, welt)
                     wp.launch(aus_kern.schreiben_normale, dim=k, inputs=[idx, welt, ids, bary, f_tri, f_nor, f_tang, bilder['normalen']], device=g)
         aus = {name: feld.numpy().reshape(px, px, 3) for name, feld in bilder.items()}
         aus['maske'] = (face_np >= 0).reshape(px, px)
+        aus['material'] = np.where(face_np >= 0, self.s.material[np.maximum(face_np, 0)], -1).reshape(px, px)
         aus['treffer'] = treffer
         aus['ohne_graph'] = int(len(ohne_graph))
+        aus['glanz_korrektur'] = korrektur['ungerechnet']
+        aus['glanz_gerechnet'] = korrektur['gerechnet']
         return aus
 
     @staticmethod

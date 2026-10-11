@@ -23,7 +23,7 @@ class Dazgeograftverfeinerung:
     PROBEN, RAND_GEWICHT, RUECK_GEWICHT, NORMALE_GRAD = 30000, 100.0, 0.5, 60.0
 
     @classmethod
-    def verfeinern(cls, anfang, q, dreiecke, rand, laplace, ziel_netz, aussen, plan=None):
+    def verfeinern(cls, anfang, q, dreiecke, rand, laplace, ziel_netz, aussen, plan=None, band=None, band_gewicht=0.0):
         """`(neue Punkte, bericht)`. `anfang`: die Punkte vor jeder Anpassung (Bezug der Verschiebung), `q`: der Stand nach dem ersten Schritt, `rand`: bool je Punkt (Ring),
         `laplace`: der Graph-Laplace des Netzes, `aussen`: `(P, 3)` Richtung nach außen je Punkt (Hautnormale) — legt die Seite der Normalen fest."""
         import scipy.sparse as sp
@@ -56,6 +56,10 @@ class Dazgeograftverfeinerung:
             mitte = summe / np.maximum(anzahl, 1.0)[:, None]
             ziel = np.where(w[:, None] > 0, (w_vor[:, None] * proben[i_vor] + w_rueck[:, None] * mitte) / np.maximum(w, 1e-12)[:, None], q)
             w[rand], ziel[rand] = cls.RAND_GEWICHT, anfang[rand]
+            if band is not None and band.any() and band_gewicht > 0:         # randnahe Punkte bleiben mit `band_gewicht` bei ihrer verlegten Lage
+                alt = w[band].copy()
+                w[band] = alt + band_gewicht
+                ziel[band] = (alt[:, None] * ziel[band] + band_gewicht * anfang[band]) / w[band][:, None]
             lhs = (sp.diags(w) + steifigkeit * laplace + 1e-9 * sp.identity(n)).tocsc()
             neu = anfang + spl.splu(lhs).solve(w[:, None] * (ziel - anfang))
             schritt = 1.0

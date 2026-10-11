@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Hautknotenmix — die Mix-Knoten: „Mix" (neu, Farbe/Zahl/Vektor) und „MixRGB" (alt). Übernommen aus `intern/cycles/kernel/svm/mix.h` und `svm/color_util.h`
-(`svm_mix`, `svm_mix_*`; Blender-Quelltext vom 10.10.2026), die Übersetzung der Knoteneinstellungen aus `scene/shader_nodes.cpp` (`MixNode`, `MixColorNode`,
-`MixFloatNode`, `MixVectorNode`, `MixVectorNonUniformNode`).
+(`svm_mix`, `svm_mix_*`; Blender v5.2.2 — die Überblendungen rechnen dort mit `interp(a, b, t) = a + t * (b - a)`, nicht mit `endvalue_preserving_mix` wie `main`), die Übersetzung der
+Knoteneinstellungen aus `scene/shader_nodes.cpp` (`MixNode`, `MixColorNode`, `MixFloatNode`, `MixVectorNode`, `MixVectorNonUniformNode`).
 """
 
 import warp as wp
 
-from ...hautfunktionen import hsv_to_rgb, rgb_to_hsv, saturate3
+from ...hautfarbfunktionen import hsv_to_rgb, rgb_to_hsv, saturate3
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten
 
@@ -68,14 +68,14 @@ def svm_mix(typ: int, t: float, c1: wp.vec3, c2: wp.vec3) -> wp.vec3:
     tm = 1.0 - t
     one = wp.vec3(1.0, 1.0, 1.0)
     out = c1
-    if typ == 0:                                           # svm_mix_blend: endvalue_preserving_mix
-        out = (1.0 - t) * c1 + t * c2
-    elif typ == 1:                                         # add
-        out = c1 + t * c2
-    elif typ == 2:                                         # mul
-        out = wp.cw_mul(c1, wp.vec3(tm, tm, tm) + t * c2)
-    elif typ == 3:                                         # sub
-        out = c1 - t * c2
+    if typ == 0:                                           # svm_mix_blend: interp(col1, col2, t) = a + t * (b - a)
+        out = c1 + t * (c2 - c1)
+    elif typ == 1:                                         # add: interp(col1, col1 + col2, t)
+        out = c1 + t * ((c1 + c2) - c1)
+    elif typ == 2:                                         # mul: interp(col1, col1 * col2, t)
+        out = c1 + t * (wp.cw_mul(c1, c2) - c1)
+    elif typ == 3:                                         # sub: interp(col1, col1 - col2, t)
+        out = c1 + t * ((c1 - c2) - c1)
     elif typ == 4:                                         # screen
         out = one - wp.cw_mul(wp.vec3(tm, tm, tm) + t * (one - c2), one - c1)
     elif typ == 5:                                         # div
@@ -156,7 +156,7 @@ def _mix_alt(a: wp.array(dtype=wp.vec3), b: wp.array(dtype=wp.vec3), fac: wp.arr
 
 @wp.kernel
 def _mix_zahl(a: wp.array(dtype=wp.float32), b: wp.array(dtype=wp.float32), fac: wp.array(dtype=wp.float32), klemme: int, aus: wp.array(dtype=wp.float32)):
-    """`svm_node_mix_float`: endvalue_preserving_mix."""
+    """`svm_node_mix_float` (v5.2.2): `a * (1 - t) + b * t`."""
     i = wp.tid()
     t = fac[i]
     if klemme > 0:

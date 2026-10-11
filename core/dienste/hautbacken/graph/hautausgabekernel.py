@@ -8,7 +8,7 @@ geglätteten, NICHT normierten Punktnormalen und der interpolierten Tangente, `B
 
 import warp as wp
 
-from ..hautfunktionen import color_linear_to_srgb
+from ..hautfarbfunktionen import color_linear_to_srgb
 
 __all__ = ['holen', 'schreiben_farbe', 'schreiben_rauheit', 'schreiben_normale']
 
@@ -40,14 +40,13 @@ def schreiben_farbe(idx: wp.array(dtype=wp.int32), linear: wp.array(dtype=wp.vec
 
 
 @wp.kernel
-def schreiben_rauheit(idx: wp.array(dtype=wp.int32), wert: wp.array(dtype=wp.float32), aus: wp.array(dtype=wp.uint8)):
-    """Die Zahl als Grau (Non-Color, ohne Umrechnung) — Blender backt die Rauheit als Emission in ein Non-Color-Bild: R = G = B."""
+def schreiben_rauheit(idx: wp.array(dtype=wp.int32), wert: wp.array(dtype=wp.vec3), aus: wp.array(dtype=wp.uint8)):
+    """Die Rauheit als Farbe (Non-Color, ohne Umrechnung) — Blender backt sie als Emission in ein Non-Color-Bild; eine Zahl ist grau (R = G = B), eine Farbquelle behält ihre Kanäle."""
     i = wp.tid()
     t = idx[i]
-    b = _byte(wert[i])
-    aus[t * 3] = b
-    aus[t * 3 + 1] = b
-    aus[t * 3 + 2] = b
+    c = wert[i]
+    for k in range(3):
+        aus[t * 3 + k] = _byte(c[k])
 
 
 @wp.kernel

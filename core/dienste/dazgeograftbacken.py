@@ -3,10 +3,11 @@
 
 Das angepasste Netz (`Dazgeograftanpassung`) hat die Form des Originals nur in groben Zügen (Punktabstand ≈ 4 mm gegen ≈ 1 mm des Originals). Was darunter liegt, holt der Bake:
 
-    Farbe, Rauheit  je Texel der nächste Punkt der Original-Scham (`Dazgeograftziel`, Atlas aus der Originaltextur); weiter als `NAH_M` weg (Rand des Originals, dort geht die
+    Farbe, Rauheit  je Texel der Punkt der Original-Scham, der nah liegt UND dieselbe Seite zeigt (`Dazgeograftziel.stelle`: an Spalten liegt der nächste Punkt oft auf der Wand gegenüber;
+                    Atlas aus der Originaltextur); weiter als `NAH_M` von der Fläche weg (Rand des Originals, dort geht die
                     Scham in die Haut über) blendet es bis `FERN_M` in die gebackene Hauttextur der Figur über (`haut_<kachel>_<kanal>.klein.jpg`, gleiche Quelle)
-    Normalen        die Normale des Originals am nächsten Punkt, in den Tangentenraum des Geografts umgerechnet (OpenGL, G nach +v): die Falten, die das grobe Netz nicht trägt, stehen
-                    als Normalenkarte darauf. Wo das Original fehlt, bleibt die glatte Normale des Netzes (flach)
+    Normalen        die Normale des Originals an diesem Punkt, so kodiert, dass three.js sie in SEINEM Tangentenraum (`Dazgeograftraster`) wieder ergibt (OpenGL, G nach +v): die Falten, die das
+                    grobe Netz nicht trägt, stehen als Normalenkarte darauf. Wo das Original fehlt, bleibt die glatte Normale des Netzes (flach); zum Rand hin läuft die Karte aus (`RAND_NORMALEN_M`)
 Texel ohne Dreieck füllen sich vom Rand her (`Dazgeograftraster.auffuellen`). Ergebnis: Dateien in `ausgabe`, dazu ein Bericht mit Zahlen.
 """
 import numpy as np
@@ -19,17 +20,20 @@ __all__ = ['Dazgeograftbacken']
 class Dazgeograftbacken:
     #: Abstand zum Original (m): bis `NAH_M` gilt nur dessen Atlas, bis `FERN_M` blendet die Haut der Figur dazu.
     NAH_M, FERN_M = 0.004, 0.009
+    #: Vom Rand des Stücks nach innen (m) läuft die Hautfarbe der Figur aus: am Rand ist es die Haut, ab so weit innen gilt der Atlas des Originals.
+    RING_M = 0.012
     #: Umkreis (m) um die Mitte des Lochs, dessen Hautdreiecke als Quelle der Hautfarbe zählen.
     HAUT_UMKREIS_M = 0.14
     #: Größte Neigung (Grad) der gebackenen Normale gegen die glatte des Geografts.
     MAX_NEIGUNG_GRAD = 60.0
+    #: Vom Rand (Weg über das Netz, m) nach innen läuft die Normalenkarte ein: so weit mischt der Browser die Normalen des Stücks zu denen der Haut (`Stucknormalen.BAND_M`) — dort ist die
+    #: Normale, auf der die Karte gebacken wurde, nicht die, auf die sie beim Anzeigen trifft. Eine Karte mit 60° Neigung dreht sich mit ihr (am Ring 17: Stück gegen Haut 160°).
+    RAND_NORMALEN_M = 0.010
 
     def __init__(self, ziel, figur, haut_ordner, aufloesung=1024):
         """`ziel`: `Dazgeograftziel`; `figur`: `{punkte, dreiecke, uv, kachel}` der Figur (`Dazgeografthaut.grundfigur`); `haut_ordner`: Ordner der gebackenen `haut_*`-Bilder."""
-        import trimesh
-
         self.ziel, self.figur, self.haut_ordner, self.r = ziel, figur, haut_ordner, int(aufloesung)
-        self.ziel_netz = trimesh.Trimesh(ziel.punkte, ziel.dreiecke, process=False)
+        self.ziel_netz = ziel.netz()
         self._haut = {}
 
     # ------------------------------------------------------------ Hilfen
@@ -89,10 +93,18 @@ class Dazgeograftbacken:
         netz = trimesh.Trimesh(punkte, dreiecke, process=False)
         t = Dazgeograftraster.texel(punkte, dreiecke, uv_ecken, self.r, np.asarray(netz.vertex_normals))
         pos, zeile, spalte = t['position'], t['zeile'], t['spalte']
-        stelle, abstand, dreieck = trimesh.proximity.closest_point(self.ziel_netz, pos)
-        bary = self._baryzentrisch(self.ziel_netz, dreieck, stelle)
+        abstand = trimesh.proximity.closest_point(self.ziel_netz, pos)[1]          # Abstand zur Fläche: bestimmt, wie weit das Original gilt
+        dreieck, bary = self.ziel.stelle(pos, t['normale'])                        # Farbe und Normale von der Seite, auf der das Stück liegt (nicht von der Wand gegenüber)
         uv_orig = np.einsum('mk,mkj->mj', bary, self.ziel.uv_ecken[dreieck])
-        w = 1.0 - self._glatt((abstand - self.NAH_M) / (self.FERN_M - self.NAH_M))
+        w_normal = 1.0 - self._glatt((abstand - self.NAH_M) / (self.FERN_M - self.NAH_M))
+        # Zum Rand hin gilt die Hautfarbe der Figur (am Rand ganz): so geht die Textur ohne Stufe in die Haut daneben über. Gemessen 10.10.2026 (`Schammessung`, „cute girl"): ohne das
+        # war die Farbe des Stücks am Rand (194,7 / 142,0 / 124,7) gegen die Haut 6–15 mm daneben (199,8 / 148,1 / 128,8) 3,7 % dunkler.
+        from scipy.spatial import cKDTree
+
+        from .schammessungnaht import Schammessungnaht
+
+        rand = Schammessungnaht.randpunkte(punkte, dreiecke)
+        w = w_normal * (self._glatt(cKDTree(rand).query(pos)[0] / self.RING_M) if len(rand) else 1.0)
         mitte = pos.mean(axis=0)
         bericht = {'aufloesung': self.r, 'texel': int(len(pos)), 'original_voll': float((w >= 0.999).mean()), 'abstand_median_mm': round(float(np.median(abstand) * 1000), 2)}
         dateien = {}
@@ -107,23 +119,61 @@ class Dazgeograftbacken:
                     bericht['haut_gegen_original'] = round(float(np.abs(self._hautwerte(pos[nah], kanal, mitte) - wert[nah]).mean()), 1) if len(nah) else None
                 wert[fern] = w[fern, None] * wert[fern] + (1.0 - w[fern, None]) * haut
             dateien[kanal] = self._schreiben(wert, zeile, spalte, ausgabe / ('baked_%s.%s' % (kanal, 'jpg' if kanal == 'farbe' else 'png')))
-        dateien['normalen'] = self._normalen(t, netz, dreieck, bary, w, ausgabe)
+        w_karte = w_normal * self._glatt(self._randweg(punkte, dreiecke, t) / self.RAND_NORMALEN_M)
+        dateien['normalen'] = self._normalen(t, dreieck, bary, w_karte, ausgabe)
         return dateien, bericht
 
-    def _normalen(self, t, netz, dreieck, bary, w, ausgabe):
-        """Normalenkarte: Normale des Originals am nächsten Punkt (zur Außenseite des Geografts gedreht), im Tangentenraum des Geografts."""
+    def _normalen(self, t, dreieck, bary, w, ausgabe):
+        """Normalenkarte: Normale des Originals am nächsten Punkt (zur Außenseite des Geografts gedreht), so kodiert, dass three.js sie im eigenen Tangentenraum wieder ergibt."""
         n_orig = np.einsum('mk,mkj->mj', bary, np.asarray(self.ziel_netz.vertex_normals)[self.ziel.dreiecke[dreieck]])
         n_orig /= np.maximum(np.linalg.norm(n_orig, axis=1, keepdims=True), 1e-12)
         n_orig *= np.sign(np.einsum('ij,ij->i', n_orig, t['normale']) + 1e-12)[:, None]
         n_welt = w[:, None] * n_orig + (1.0 - w[:, None]) * t['normale']
         n_welt /= np.maximum(np.linalg.norm(n_welt, axis=1, keepdims=True), 1e-12)
-        ts = np.column_stack([np.einsum('ij,ij->i', n_welt, t[k]) for k in ('tangente', 'bitangente', 'normale')])
-        # Die Neigung gegen die glatte Normale des Geografts ist begrenzt: wo das Original schärfer faltet als das grobe Netz, entstünden sonst Wirbel (am Spalt gesehen).
-        neigung = np.hypot(ts[:, 0], ts[:, 1])
-        grenze = np.sin(np.radians(self.MAX_NEIGUNG_GRAD))
-        ts[:, :2] *= np.minimum(1.0, grenze / np.maximum(neigung, 1e-12))[:, None]
-        ts[:, 2] = np.sqrt(np.maximum(1.0 - ts[:, 0] ** 2 - ts[:, 1] ** 2, 0.0))
+        ts = self._kodieren(self._begrenzen(n_welt, t['normale']), t)
         return self._schreiben((ts * 0.5 + 0.5) * 255.0, t['zeile'], t['spalte'], ausgabe / 'baked_normalen.png')
+
+    @classmethod
+    def _begrenzen(cls, n, normale):
+        """Die Neigung von `n` gegen `normale` ist höchstens `MAX_NEIGUNG_GRAD`: wo das Original schärfer faltet als das grobe Netz, entstünden sonst Wirbel (am Spalt gesehen)."""
+        kos = np.clip(np.einsum('ij,ij->i', n, normale), -1.0, 1.0)
+        grenze = np.radians(cls.MAX_NEIGUNG_GRAD)
+        zu_viel = np.arccos(kos) > grenze
+        if zu_viel.any():
+            quer = n[zu_viel] - normale[zu_viel] * kos[zu_viel, None]
+            quer /= np.maximum(np.linalg.norm(quer, axis=1, keepdims=True), 1e-12)
+            n = n.copy()
+            n[zu_viel] = normale[zu_viel] * np.cos(grenze) + quer * np.sin(grenze)
+        return n
+
+    @staticmethod
+    def _kodieren(n, t):
+        """Der Texelwert `ts` (−1…1), aus dem three.js in `normalize(T·x + B·y + N·z)` die Normale `n` macht: `(T B N)·ts ∥ n`, das Größte auf ±1 gestreckt (nur die Richtung zählt).
+        Ist der Tangentenraum entartet (UV ohne Fläche), bleibt der Texel flach."""
+        m = np.stack([t['tangente'], t['bitangente'], t['normale']], axis=2)
+        ok = np.abs(np.linalg.det(m)) > 1e-3
+        ts = np.zeros((len(n), 3))
+        ts[:, 2] = 1.0
+        if ok.any():
+            ts[ok] = np.linalg.solve(m[ok], n[ok][..., None])[..., 0]
+        return ts / np.maximum(np.abs(ts).max(axis=1, keepdims=True), 1e-12)
+
+    def _randweg(self, punkte, dreiecke, t):
+        """Weg über die Kanten des Netzes (m) vom Rand des Stücks (Kanten mit einem Dreieck, nach Lage verschweißt) zu jedem Texel; jenseits von `2 · RAND_NORMALEN_M` ein großer Wert."""
+        from scipy.sparse import coo_matrix
+        from scipy.sparse.csgraph import dijkstra
+
+        _, erste, rep = np.unique(np.round(punkte / 1e-5).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+        d, p = rep.ravel()[dreiecke], punkte[erste]
+        kanten = np.sort(np.concatenate([d[:, [0, 1]], d[:, [1, 2]], d[:, [2, 0]]]), axis=1)
+        eindeutig, zahl = np.unique(kanten, axis=0, return_counts=True)
+        rand = np.unique(eindeutig[zahl == 1])
+        laenge = np.linalg.norm(p[eindeutig[:, 0]] - p[eindeutig[:, 1]], axis=1)
+        zeilen, spalten = np.concatenate([eindeutig[:, 0], eindeutig[:, 1]]), np.concatenate([eindeutig[:, 1], eindeutig[:, 0]])
+        graph = coo_matrix((np.concatenate([laenge, laenge]), (zeilen, spalten)), shape=(len(p), len(p))).tocsr()
+        weg = dijkstra(graph, indices=rand, min_only=True, limit=2 * self.RAND_NORMALEN_M) if len(rand) else np.full(len(p), np.inf)
+        weg = np.where(np.isfinite(weg), weg, 1.0)
+        return np.einsum('mk,mk->m', t['bary'], weg[d[t['dreieck']]])
 
     @staticmethod
     def _glatt(x):

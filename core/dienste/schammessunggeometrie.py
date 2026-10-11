@@ -44,6 +44,7 @@ class Schammessunggeometrie:
                 aus['original_zu_modell'] = self._original_zu_modell(region)
                 aus['stueck_zu_original'] = self._stueck_zu_original()
                 aus['tiefenkarte'] = self._tiefenkarte()
+                aus['flaeche'] = self._flaeche()
             else:
                 aus['hinweis'] = 'die Vorgabe liegt nicht im Bereich des Stücks'
         aus['symmetrie'] = self._symmetrie()
@@ -121,6 +122,15 @@ class Schammessunggeometrie:
                 zeilen.append({'quer_mm': round(float(us[j]) * 1000, 1), 'laengs_mm': round(float(ws[i]) * 1000, 1), 'original_mm': round(float(t_orig[n]) * 1000, 2),
                                'modell_mm': round(float(t_mod[n]) * 1000, 2), 'd_mm': round(float(d[n]), 2)})
         return zeilen
+
+    def _flaeche(self):
+        """Güte der Fläche des Stücks: `kantenwinkel_grad` = Winkel der Flächennormalen benachbarter Dreiecke (Knitter, Zacken), daneben der des Originals (feiner vermascht: kleinere Winkel);
+        `ueber_90` = Anteil der Kanten, an denen die Fläche um mehr als 90° knickt (Falten, umgeklappte Dreiecke) — beim Stück und beim Original. (Ein Vergleich der Normalen mit dem nächsten
+        Original-Dreieck taugt nicht: im Spalt ist das nächste Dreieck das der anderen Lippe — am 10.10.2026 meldete er 35–46 % „umgeklappt" bei jeder Fassung.)"""
+        stat = self.rahmen.statistik
+        stueck, original = np.degrees(self.stueck.face_adjacency_angles), np.degrees(self.vorgabe.face_adjacency_angles)
+        return {'kantenwinkel_grad': stat(stueck), 'kantenwinkel_original_grad': stat(original),
+                'ueber_90': round(float((stueck > 90.0).mean()), 4), 'ueber_90_original': round(float((original > 90.0).mean()), 4)}
 
     def _symmetrie(self):
         from scipy.spatial import cKDTree

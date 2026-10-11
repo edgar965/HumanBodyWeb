@@ -6,7 +6,8 @@
 
 import warp as wp
 
-from ...hautfunktionen import fractf, hsv_to_rgb, rgb_to_hsv
+from ...hautfarbfunktionen import hsv_to_rgb, rgb_to_hsv
+from ...hautfunktionen import fractf
 from ..hautumwandlung import Hautumwandlung
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten

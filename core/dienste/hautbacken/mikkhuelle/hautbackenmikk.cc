@@ -4,12 +4,15 @@
  *   GetNumFaces              = Anzahl der Dreiecke            GetNumVerticesOfFace = 3
  *   GetPosition(f, v)        = Position des Punktes, auf den Ecke v des Dreiecks f zeigt
  *   GetTexCoord(f, v)        = (u, v, 1.0) der Ecke            has_uv() = wahr
- *   GetNormal(f, v)          = glattes Dreieck: Punktnormale, DURCH Cycles' packed_normal (Oktaeder, 2 × 16 Bit) GESCHICKT und decode() zurück;
+ *   GetNormal(f, v)          = glattes Dreieck (Mesh::get_smooth, das Flag des Netzes — NICHT das in pack_shaders für den Shader überschriebene):
+ *                              Eckennormale, falls das Netz welche hat (Bereich CORNER), sonst Punktnormale — jeweils DURCH Cycles' packed_normal
+ *                              (Oktaeder, 2 × 16 Bit) GESCHICKT und decode() zurück;
  *                              flaches Dreieck: Mesh::Triangle::compute_normal (Kreuzprodukt, mit Cycles' float3-Rechnung)
  *   SetTangentSpace(f, v, T, orientation) = Tangente T, Vorzeichen orientation ? +1 : -1
  *
  * Zweiter Modus (`modus` = 1) ist `calc_tangents` aus Blenders Python-Schnittstelle (BKE mesh_tangent.cc, MeshToTangentQuadsTris): Normale
- * als float, ungepackt; flache Dreiecke mit der Newell-Flächennormale (normals_calc_faces). Er dient nur dem Vergleich mit Blender.
+ * als float, ungepackt, aus mesh.corner_normals() (hier: Eckennormalen, sonst Punktnormale bei glatten bzw. die Newell-Flächennormale bei
+ * flachen Dreiecken, wie corner_normals() sie im Bereich POINT/FACE füllt). Er dient nur dem Vergleich mit Blender.
  *
  * Gebaut wird ohne WITH_TBB: seriell (Blender rechnet ab 10.000 Dreiecken parallel; die Summen der Tangenten je Gruppe werden dort atomar
  * in wechselnder Reihenfolge addiert, die letzte Stelle kann dort von Lauf zu Lauf schwanken — hier nicht). */

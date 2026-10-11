@@ -12,10 +12,11 @@ rechnen ihn gesondert.
 
 import warp as wp
 
+from ..closure.hautclosure import GELESEN
 from .hautgraphfehler import Hautgraphfehler
+from .hauttextur import Hauttextur
 from .hautumwandlung import Hautumwandlung
 from .hautwert import Hautwert
-from .hauttextur import Hauttextur
 from .knoten.hautknotenfabrik import Hautknotenfabrik
 from .knoten.hautknotenkoordinate import _uv_koordinate
 
@@ -33,6 +34,8 @@ class Hautgraph:
         self._texturen = texturen if texturen is not None else {}
         self.knoten = {}
         gruende = []
+        if spec.get('echte_verschiebung'):
+            gruende.append('echte Verschiebung (Displacement-Methode „Displacement" oder „Both") ist nicht übernommen — sie verformt das Netz vor dem Backen')
         for schluessel, eintrag in spec['knoten'].items():
             if not Hautknotenfabrik.bekannt(eintrag['typ']):
                 gruende.append('Knoten „%s" (Typ %s) ist nicht übernommen' % (schluessel, eintrag['typ']))
@@ -57,7 +60,8 @@ class Hautgraph:
     def _ausgaenge(self):
         """`{Knoten: {gelesene Ausgänge}}`."""
         aus = {}
-        for q in self.spec['ziel'].values():
+        gelesen = [q for name, q in (self.spec.get('principled') or {}).items() if name in GELESEN]            # die Eingänge, die das Closure-Modell liest
+        for q in list(self.spec['ziel'].values()) + gelesen:
             if 'von' in q:
                 aus.setdefault(q['von'][0], set()).add(q['von'][1])
         for eintrag in self.spec['knoten'].values():
@@ -131,13 +135,15 @@ class Hautgraph:
         return self.quelle(knoten.eintrag['ein'][name], ctx, modus, art)
 
     def auswerten(self, ctx, kanaele=('farbe', 'rauheit', 'normal')):
-        """Die Kanäle des Principled BSDF für den Stapel: Farbe (linear, `c`), Rauheit (`f`), Normale (`v`; None, wenn der Normal-Eingang nicht verbunden ist)."""
+        """Die Kanäle des Principled BSDF für den Stapel: Farbe (linear, `c`), Rauheit (als Farbe `c`, siehe unten), Normale (`v`; None, wenn der Normal-Eingang nicht verbunden ist)."""
         aus = {}
         ziel = self.spec['ziel']
         if 'farbe' in kanaele:
             aus['farbe'] = self.quelle(ziel['farbe'], ctx, MITTE, 'c')
         if 'rauheit' in kanaele:
-            aus['rauheit'] = self.quelle(ziel['rauheit'], ctx, MITTE, 'f')
+            # Blender backt die Rauheit als Emission: `als_emission` hängt die QUELLE des Eingangs direkt an „Color" der Emission (`blendbacken.py`) — eine Farbquelle behält
+            # ihre drei Kanäle, eine Zahl wird grau (Zahl → Farbe), ein fester Wert ebenso. Keine Umrechnung Farbe → Zahl.
+            aus['rauheit'] = self.quelle(ziel['rauheit'], ctx, MITTE, 'c')
         if 'normal' in kanaele:
             aus['normal'] = self.quelle(ziel['normal'], ctx, MITTE, 'v') if 'von' in ziel['normal'] else None
         return aus

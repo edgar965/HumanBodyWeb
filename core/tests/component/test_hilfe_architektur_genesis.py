@@ -27,7 +27,7 @@ class SeiteArchitekturGenesis(SimpleTestCase):
         self.assertIn('href="/hilfe/architektur/genesis/"', self.text)
 
     def test_jeder_baustein_gibt_es_im_code(self):
-        for zeile in Architekturgenesis.bausteine():
+        for zeile in Architekturgenesis.bausteine() + Architekturgenesis.fitting():
             self.assertEqual(zeile['fehlt'], '', zeile['pfad'])
             self.assertGreater(zeile['zeilen'], 0, zeile['pfad'])
 
@@ -35,6 +35,11 @@ class SeiteArchitekturGenesis(SimpleTestCase):
         """Gegenprobe: eine erfundene Klasse in einer echten Datei muss als fehlend erscheinen."""
         zeile = Architekturgenesis.zeile('Genesis9/eigenstueck.py', 'GibtEsNicht', '')
         self.assertEqual(zeile['fehlt'], 'Klasse fehlt')
+
+    def test_der_fitting_abschnitt_steht_auf_der_seite(self):
+        """11.10.2026: das Fitting der Kleider mit der Scham — Abschnitt, Bausteine-Tabelle und die Messreihe."""
+        for satz in ('10. Fitting der Kleider', 'architekturGenesisFitting', 'G9stueckstarr', 'hidden_polys', 'Collision-Durchgänge'):
+            self.assertIn(satz, self.text)
 
     def test_die_entscheidungen_stehen_auf_der_seite(self):
         for satz in ('Entscheidungen (Edgar, 08.10.2026)', 'Strg+Alt+H', 'eigen:cute girl'):

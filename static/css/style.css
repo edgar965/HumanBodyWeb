@@ -160,6 +160,14 @@ body {
    z. B. theatre_studio.html mit width: calc(100vw - var(--sidebar-width))). */
 .main-wrapper .main-content { margin-left: 0; }
 
+/* Topbar (djangoBase: Titel links, Aktionen rechts per space-between): Titel und Auslastungsleiste stehen linksbündig nebeneinander
+   (Edgar, 11.10.2026: „die Leiste mit den Ressourcen ist fehlerhaft in Charakter, verschiebe sie linksbündig, direkt neben Model").
+   Rechtsbündig lag sie an der Fensterkante und wurde dort abgeschnitten (DISK 2 fehlte; gemessen auf /Charakter/: Seitenbreite 2.443
+   bei 2.195 Fensterbreite). `min-width: 0` lässt die Leiste umbrechen, statt aus der Topbar zu laufen. */
+.topbar { justify-content: flex-start; }
+.topbar-title { flex: 0 0 auto; }
+.topbar-actions { flex: 0 1 auto; min-width: 0; margin-left: 0; }
+
 h1 { margin-bottom: 1.5rem; font-size: 1.8rem; }
 h2 { margin-bottom: 1rem; font-size: 1.4rem; color: var(--text-muted); }
 

@@ -11,14 +11,18 @@ Faustregel für die Anbindung: bei Domain 'CORNER' liest Cycles `ecken`, sonst `
 Die Punkte sind die des Objektraums, in dem Blender rechnet; werden sie in den Weltraum gebracht (blendexport), gilt das nur für Drehung und gleichmäßigen Maßstab.
 """
 
+import logging
+
 import numpy as np
 
-from .hautbackenblendereintraege import Hautbackenblendereintraege
 from .hautbackenblenderecken import Hautbackenblenderecken
+from .hautbackenblendereintraege import Hautbackenblendereintraege
 from .hautbackenblenderfaecher import Hautbackenblenderfaecher
 from .hautbackenblenderflaechen import Hautbackenblenderflaechen as Flaechen
 
 __all__ = ['Hautbackenblendernormalen']
+
+LOG = logging.getLogger(__name__)
 
 
 class Hautbackenblendernormalen:
@@ -58,7 +62,11 @@ class Hautbackenblendernormalen:
         domain = Hautbackenblendernormalen.domain(flaechen, scharf_kante, scharf_flaeche, eigene_normale)
         sk = None if scharf_kante is None else np.asarray(scharf_kante, dtype=bool)
         sf = None if scharf_flaeche is None else np.asarray(scharf_flaeche, dtype=bool)
-        eigene = None if eigene_normale is None else np.asarray(eigene_normale, dtype=np.int16).reshape(-1, 2)
+        eigene = None if eigene_normale is None else np.asarray(eigene_normale)
+        if eigene is not None:
+            if eigene.ndim != 2 or eigene.shape[1] != 2 or eigene.dtype.kind not in 'iu':
+                raise ValueError('eigene_normale: (L,2) ganze Zahlen (INT16_2D) erwartet, nicht %s %s — freie Float3-Normalen sind nicht gebaut' % (eigene.dtype, eigene.shape))
+            eigene = eigene.astype(np.int16)
         if len(pp) != int(ps[-1]) or (sf is not None and len(sf) != flaechen):
             raise ValueError('poly_start/poly_punkte/scharf_flaeche passen nicht zusammen')
         if eigene is not None and len(eigene) != len(pp):
@@ -72,6 +80,8 @@ class Hautbackenblendernormalen:
         if flaechen == 0:
             return aus
         if domain == 'CORNER':
+            if e.doppelt:
+                LOG.warning('Hautbackenblendernormalen: ein Polygon benutzt einen Punkt mehrfach — Blender setzt die späteren Ecken dieses Punkts nie (nicht initialisierter Speicher), hier (0, 0, 0)')
             ek = None if ecke_kante is None else np.asarray(ecke_kante, dtype=np.int64)
             faecher = Hautbackenblenderfaecher(e, ek, sk, sf)
             ecken = Hautbackenblenderecken.berechnen(p, e, faecher, fn, eigene)

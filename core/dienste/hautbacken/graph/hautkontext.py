@@ -104,14 +104,6 @@ class Hautkontext:
             self._merk['nglatt'] = aus
         return self._merk['nglatt']
 
-    def normale_roh(self):
-        """Die Eckennormalen linear gemischt, nicht normiert (Normal-Map-Knoten, Basis „Original")."""
-        if 'nroh' not in self._merk:
-            aus = self._neu(wp.vec3)
-            wp.launch(kern.normale_roh, dim=self.n, inputs=[self.face, self.hu, self.hv, self.s.ecke_n, aus], device=self.geraet)
-            self._merk['nroh'] = aus
-        return self._merk['nroh']
-
     def glatt(self):
         """1, wenn das getroffene Dreieck glatt schattiert ist (`SHADER_SMOOTH_NORMAL`), sonst 0."""
         if 'glatt' not in self._merk:

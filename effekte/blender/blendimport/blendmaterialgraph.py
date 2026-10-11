@@ -8,7 +8,8 @@ Der lokale Backer (`core/dienste/hautbacken`) rechnet dieselben Knoten wie Cycle
 Wie `blendbacken.py` (`als_emission`) gilt der ERSTE Principled-BSDF des Materials auf oberster Ebene.
 
 Schlüssel: `ziel` (`farbe`, `rauheit`, `normal` → Quelle), `knoten` (`typ`, `eig`, `ein` mit Quellen je Buchsen-Identifier, `ein_art`, `aus_art`), `reihenfolge` (Eltern vor Kindern),
-`bilder`. Eine Quelle ist `{'von': [knoten, ausgang]}` oder `{'wert': …, 'art': 'f'|'c'|'v'|'i'|'b'|'r'}` (f Zahl, c Farbe, v Vektor, i/b Ganzzahl, r Drehung).
+`bilder`, `echte_verschiebung` (Displacement verbunden und Methode ≠ Bump), `bump_korrektur` (Material-Einstellung „Bump Map Correction",
+`SD_USE_BUMP_MAP_CORRECTION`), `principled` (Quelle je verfügbarem Eingang des Principled BSDF) und `principled_eig` (Verteilung, Methode der Untergrundstreuung). Eine Quelle ist `{'von': [knoten, ausgang]}` oder `{'wert': …, 'art': 'f'|'c'|'v'|'i'|'b'|'r'}` (f Zahl, c Farbe, v Vektor, i/b Ganzzahl, r Drehung).
 """
 
 from blendmaterialbild import Blendmaterialbild
@@ -34,8 +35,21 @@ class Blendmaterialgraph:
         if bsdf is None:
             return {'version': 1, 'grund': 'kein Principled BSDF auf oberster Ebene'}
         ziel = {schluessel: self.eingang(bsdf.inputs[name], ()) for schluessel, name in self.ZIELE}
+        # Alle verfügbaren Eingänge des Principled BSDF: aus ihnen bildet das Closure-Modell die gebackene Normale an Texeln mit Glanz-Normalen-Korrektur (`hautbacken/closure`).
+        principled = {buchse.identifier: self.eingang(buchse, ()) for buchse in bsdf.inputs if buchse.enabled}
         return {'version': 1, 'ziel': ziel, 'knoten': self.knoten, 'reihenfolge': self.reihenfolge, 'bilder': self.bilder.bilder,
-                'uv_namen': sorted(self.uv_namen), 'farb_namen': sorted(self.farb_namen)}
+                'uv_namen': sorted(self.uv_namen), 'farb_namen': sorted(self.farb_namen), 'echte_verschiebung': self.echte_verschiebung(mat, baum),
+                'bump_korrektur': bool(mat.cycles.use_bump_map_correction), 'principled': principled,
+                'principled_eig': {'distribution': bsdf.distribution, 'subsurface_method': bsdf.subsurface_method}}
+
+    @staticmethod
+    def echte_verschiebung(mat, baum):
+        """`Geometry::has_true_displacement` (`scene/geometry.cpp`): der Displacement-Eingang des aktiven Material-Ausgangs ist verbunden und die Methode ist nicht „Bump"."""
+        ausgang = next((k for k in baum.nodes if k.type == 'OUTPUT_MATERIAL' and k.is_active_output), None)
+        if ausgang is None or 'Displacement' not in ausgang.inputs:
+            return False
+        verbunden = any(l.is_valid and not l.is_muted for l in ausgang.inputs['Displacement'].links)
+        return bool(verbunden and getattr(mat, 'displacement_method', 'BUMP') != 'BUMP')
 
     # ------------------------------------------------------------ Verbindungen
 

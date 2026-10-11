@@ -13,7 +13,7 @@ import warp as wp
 
 from ..hautfunktionen import make_orthonormals_a, safe_normalize3
 
-__all__ = ['geometrie', 'differenzial', 'differenzial_uv', 'attribut2', 'attribut4', 'normale_unnormiert', 'normale_roh', 'glatt_je_treffer', 'tangente_interpoliert',
+__all__ = ['geometrie', 'differenzial', 'differenzial_uv', 'attribut2', 'attribut4', 'normale_unnormiert', 'glatt_je_treffer', 'tangente_interpoliert',
            'verteilen_vec3', 'verteilen_float']
 
 
@@ -221,17 +221,6 @@ def normale_unnormiert(face: wp.array(dtype=wp.int32), hu: wp.array(dtype=wp.flo
     if s[0] == 0.0 and s[1] == 0.0 and s[2] == 0.0:
         s = ng[i]
     aus[i] = s
-
-
-@wp.kernel
-def normale_roh(face: wp.array(dtype=wp.int32), hu: wp.array(dtype=wp.float32), hv: wp.array(dtype=wp.float32), ecken: wp.array(dtype=wp.vec3),
-                aus: wp.array(dtype=wp.vec3)):
-    """Die Eckennormalen linear gemischt, NICHT normiert — das Attribut `ATTR_STD_NORMAL_UNDISPLACED` des Normal-Map-Knotens mit Basis „Original" (`triangle_attribute`)."""
-    i = wp.tid()
-    f = face[i]
-    u = hu[i]
-    v = hv[i]
-    aus[i] = (1.0 - u - v) * ecken[f * 3] + u * ecken[f * 3 + 1] + v * ecken[f * 3 + 2]
 
 
 @wp.kernel

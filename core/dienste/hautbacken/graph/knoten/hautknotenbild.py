@@ -6,8 +6,8 @@
 
 import warp as wp
 
+from ..hauttextur import ERWEITERUNG, INTERPOLATION
 from ..hautwert import Hautwert
-from ..hauttextur import ERWEITERUNG, INTERPOLATION, Hauttextur
 from .hautknoten import Hautknoten
 
 __all__ = ['Hautknotenbild']

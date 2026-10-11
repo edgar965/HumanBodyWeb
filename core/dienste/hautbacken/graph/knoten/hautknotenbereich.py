@@ -6,7 +6,7 @@ Blender-Quelltext vom 10.10.2026.
 
 import warp as wp
 
-from ...hautfunktionen import safe_divide, safe_divide3, smootherstep, smoothstep_cycles
+from ...hautfunktionen import safe_divide3, smootherstep, smoothstep_cycles
 from ..hautwert import Hautwert
 from .hautknoten import Hautknoten
 

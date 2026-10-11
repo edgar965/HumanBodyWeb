@@ -18,6 +18,13 @@ __all__ = ['Schammessungnaht']
 class Schammessungnaht:
     #: Punkte, die um weniger als das (m) auseinanderliegen, sind derselbe (UV-Nähte teilen sie): Rundung auf 0,01 mm.
     LAGE_M = 1e-5
+    #: Breite des Bands am Rand (m), in dem die Knicke der Fläche gezählt werden.
+    BAND_M = 0.012
+
+    @classmethod
+    def randpunkte(cls, punkte, dreiecke):
+        """`(R, 3)` Randpunkte eines Netzes (Kanten mit genau einem Dreieck, nach Lage verschweißt) — auch für den Bake, der zum Rand hin in die Hautfarbe überblendet."""
+        return cls(punkte, dreiecke, np.zeros((0, 3)), np.zeros((0, 3))).rand
 
     def __init__(self, punkte, dreiecke, ring_lage, ring_normalen, ring_d=None):
         """`punkte`, `dreiecke`: das Stück; `ring_lage`: `(R, 3)` Ringecken; `ring_normalen`: `(R, 3)` Normalen der sichtbaren Haut an den Ringecken (gleiche Reihenfolge);
@@ -57,4 +64,16 @@ class Schammessungnaht:
         skalar = np.einsum('ij,ij->i', n_stueck, n_haut) / np.maximum(np.linalg.norm(n_stueck, axis=1) * np.linalg.norm(n_haut, axis=1), 1e-12)
         winkel = np.degrees(np.arccos(np.clip(np.abs(skalar), 0.0, 1.0)))
         aus['normalen_grad'] = dict(stat(winkel), umgekehrt=round(float((skalar < 0).mean()), 3))
+        aus['kanten_am_rand'] = self._kanten(cKDTree(self.rand))
         return aus
+
+    def _kanten(self, baum):
+        """Knicke der Fläche im Band `BAND_M` am Rand: Winkel zwischen den Normalen benachbarter Dreiecke, Anteil über 60° und über 90° — die gefalteten Keile am Ring, die im Chrome als
+        Sprünge der Naht erscheinen (gesehen 10.10.2026 am seitlichen Ring von „cute girl Daz"). Das Band der Stücke bis 12 mm vom Rand, Kantenmitte als Ort."""
+        kanten = self.netz.face_adjacency_edges
+        mitte = 0.5 * (self.punkte[kanten[:, 0]] + self.punkte[kanten[:, 1]])
+        im_band = baum.query(mitte)[0] <= self.BAND_M
+        winkel = np.degrees(self.netz.face_adjacency_angles[im_band])
+        if not len(winkel):
+            return None
+        return {'kanten': int(len(winkel)), 'median_grad': round(float(np.median(winkel)), 1), 'ueber_60': round(float((winkel > 60).mean()), 3), 'ueber_90': round(float((winkel > 90).mean()), 3)}

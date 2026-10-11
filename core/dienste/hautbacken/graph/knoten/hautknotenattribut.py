@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Hautknotenattribut — „Color Attribute" (Vertex Color) und „Attribute" für Farbattribute. Cycles ersetzt den Farbattribut-Knoten durch einen Attribut-Knoten mit
-`missing = 0` und `missing_alpha = 0` (`VertexColorNode::expand`, `scene/shader_nodes.cpp`); gelesen wird das Attribut wie in `kernel/svm/attribute.h`
-(`svm_node_attr_surface_eval`: RGBA → Farbe = xyz, „Fac" = Mittel von xyz, Alpha = w; Bump-Versatz `val += dx · Filterbreite`). Byte-Farben sind schon im Export in Linear
-umgerechnet (`blendnetzattribute.py`, wie `AttributeConverter<ColorGeometry4b>`). Blender-Quelltext vom 10.10.2026.
+"""Hautknotenattribut — „Color Attribute" (Vertex Color) und „Attribute" für Farbattribute. Blender v5.2.2 hat für den Farbattribut-Knoten einen eigenen SVM-Knoten
+(`kernel/svm/vertex_color.h`, `svm_node_vertex_color`: fehlt die Ebene, sind Farbe und Alpha 0; sonst RGBA → Farbe = xyz, Alpha = w, Bump-Versatz `val += dx · Filterbreite`); `main` ersetzt ihn
+später durch einen Attribut-Knoten mit `missing = 0` (`VertexColorNode::expand`) — dasselbe Verhalten. Der Attribut-Knoten liest wie `kernel/svm/attribute.h`
+(`svm_node_attr_surface_eval`: „Fac" = Mittel von xyz). Byte-Farben sind schon im Export in Linear umgerechnet (`blendnetzattribute.py`, wie `AttributeConverter<ColorGeometry4b>`).
 """
 
 import warp as wp

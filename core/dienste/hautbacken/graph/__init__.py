@@ -6,7 +6,8 @@ from .hautgraph import Hautgraph
 from .hautgraphfehler import Hautgraphfehler
 from .hautkontext import Hautkontext
 from .hautschattung import Hautbackenschattung
+from .hautschattungbau import Hautschattungbau
 from .hauttextur import Hauttextur
 from .hautwert import Hautwert
 
-__all__ = ['Hautbackengraph', 'Hautbackenschattung', 'Hautgraph', 'Hautgraphfehler', 'Hautkontext', 'Hauttextur', 'Hautwert']
+__all__ = ['Hautbackengraph', 'Hautbackenschattung', 'Hautgraph', 'Hautgraphfehler', 'Hautkontext', 'Hautschattungbau', 'Hauttextur', 'Hautwert']

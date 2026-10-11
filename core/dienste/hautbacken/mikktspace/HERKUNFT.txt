@@ -1,6 +1,14 @@
 Quelle: https://github.com/blender/blender, Tag v5.2.2 (Commit d13f752e3b9c, der Build von Blender 5.2.2 LTS dieses Projekts).
 Unverändert übernommen; Lizenz je Datei im SPDX-Kopf (Apache-2.0). Geladen von https://raw.githubusercontent.com/blender/blender/v5.2.2/
 
+Warum der Tag und nicht `main`: Der Build von Blender 5.2.2 LTS in tools/blender-5.2.2-windows-x64 meldet `build hash: d13f752e3b9c`, und der Baum des Tags v5.2.2 hat genau diesen
+Commit; gebacken wird mit DIESER Fassung. `main` unterscheidet sich in intern/mikktspace/ nur in zwei Zeilen (verglichen am 10.10.2026): mikktspace.hh Z. 386 (Klammer der
+`// degenerate`-Bedingung steht in `main` auf derselben Zeile) und mikk_atomic_hash_set.hh Z. 107 (Kommentar „effiently“ → „efficiently“). Der Algorithmus ist derselbe.
+
+Aus intern/cycles/util/ liegen nur die Header, die `packed_normal` (types_normal.h) und Cycles' float3-Rechnung (math_float3.h: dot, len, cross, normalize) brauchen — die Abhängigkeiten
+rekursiv über `#include "util/..."` geholt. Cycles setzt den Namensraum über die Befehlszeile (CCL_NAMESPACE_BEGIN/END); die Hülle in ../mikkhuelle/ definiert ihn vor dem ersten Include.
+Die Hülle baut ohne WITH_TBB (seriell) und mit MSVC statt clang-cl; beide Unterschiede sind in ../mikkhuelle/hautbackenmikk.cc und in der Prüfung (Golden-Test) beschrieben.
+
 cbaab6248ddd571de5ce41482d580c769c6b4316566bdc05cb17a38a38962b66      4806  intern/cycles/util/defines.h
 f375b0f91dabdbf3e9fbedaa7bff767988e60d05d7c3ad01dfa486948dbeebd0     22914  intern/cycles/util/math_base.h
 99d667df6ba2de5c42b09cb26497062cf6b0dc047e0c75e2adb4965910a558ff     21547  intern/cycles/util/math_float3.h

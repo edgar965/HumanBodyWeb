@@ -3,13 +3,13 @@
 
 Übernommen aus `intern/cycles/kernel/util/image.h` (`ImageInterpolator::interp_closest/interp_linear/interp_cubic`, `wrap_*`, `frac`, `SET_CUBIC_SPLINE_WEIGHTS`) und
 `kernel/svm/image.h` (`svm_image_texture`: Alpha ent-assoziieren, sRGB nach der Interpolation umrechnen); Blender-Quelltext vom 10.10.2026. Das Bild liegt wie in Cycles
-unten-zuerst im Speicher (Zeile 0 = unterer Bildrand, v = 0) als RGBA-Bytes. Nicht übernommen: Mip-Stufen/Texturcache (dort rechnet Cycles mit Ableitungen; ohne
-Cache, wie beim Backen mit der Vorgabe, tastet es immer die volle Auflösung ab).
+unten-zuerst im Speicher (Zeile 0 = unterer Bildrand, v = 0) als RGBA mit 16 Bit je Kanal (`Hauttextur`: ein 8-Bit-Wert liegt als Wert · 257, das ist x/255 ohne Verlust).
+Nicht übernommen: Mip-Stufen/Texturcache (dort rechnet Cycles mit Ableitungen; ohne Cache, wie beim Backen mit der Vorgabe, tastet es immer die volle Auflösung ab).
 """
 
 import warp as wp
 
-from ..hautfunktionen import color_srgb_to_linear
+from ..hautfarbfunktionen import color_srgb_to_linear
 
 __all__ = ['abtasten']
 
@@ -52,12 +52,12 @@ def _wrap_mirror(x: int, breite: int) -> int:
 
 
 @wp.func
-def _lies(daten: wp.array(dtype=wp.uint8), x: int, y: int, breite: int, hoehe: int) -> wp.vec4:
+def _lies(daten: wp.array(dtype=wp.uint16), x: int, y: int, breite: int, hoehe: int) -> wp.vec4:
     """`read_clip`: außerhalb des Bildes transparentes Schwarz."""
     if x < 0 or x >= breite or y < 0 or y >= hoehe:
         return wp.vec4(0.0, 0.0, 0.0, 0.0)
     k = (y * breite + x) * 4
-    s = 1.0 / 255.0
+    s = 1.0 / 65535.0
     return wp.vec4(float(daten[k]) * s, float(daten[k + 1]) * s, float(daten[k + 2]) * s, float(daten[k + 3]) * s)
 
 
@@ -74,7 +74,7 @@ def _gewicht(t: float, k: int) -> float:
 
 
 @wp.func
-def _naechster(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, x: float, y: float, erweiterung: int) -> wp.vec4:
+def _naechster(daten: wp.array(dtype=wp.uint16), breite: int, hoehe: int, x: float, y: float, erweiterung: int) -> wp.vec4:
     ix = _frac_i(x)
     iy = _frac_i(y)
     if erweiterung == 0:
@@ -93,7 +93,7 @@ def _naechster(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, x: floa
 
 
 @wp.func
-def _linear(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, x: float, y: float, erweiterung: int) -> wp.vec4:
+def _linear(daten: wp.array(dtype=wp.uint16), breite: int, hoehe: int, x: float, y: float, erweiterung: int) -> wp.vec4:
     ix = _frac_i(x - 0.5)
     iy = _frac_i(y - 0.5)
     tx = (x - 0.5) - float(ix)
@@ -123,7 +123,7 @@ def _linear(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, x: float, 
 
 
 @wp.func
-def _kubisch(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, x: float, y: float, erweiterung: int) -> wp.vec4:
+def _kubisch(daten: wp.array(dtype=wp.uint16), breite: int, hoehe: int, x: float, y: float, erweiterung: int) -> wp.vec4:
     ix = _frac_i(x - 0.5)
     iy = _frac_i(y - 0.5)
     tx = (x - 0.5) - float(ix)
@@ -180,7 +180,7 @@ def _kubisch(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, x: float,
 
 
 @wp.kernel
-def abtasten(daten: wp.array(dtype=wp.uint8), breite: int, hoehe: int, koordinate: wp.array(dtype=wp.vec3), interpolation: int, erweiterung: int, srgb: int,
+def abtasten(daten: wp.array(dtype=wp.uint16), breite: int, hoehe: int, koordinate: wp.array(dtype=wp.vec3), interpolation: int, erweiterung: int, srgb: int,
              entassoziieren: int, aus: wp.array(dtype=wp.vec4)):
     """`svm_node_tex_image` (Projektion FLAT) + `svm_image_texture`: Pixelkoordinate = (u · Breite, v · Höhe), dann je nach Einstellung abtasten, bei Bedarf das Alpha
     entfernen (r /= alpha, nur wenn alpha ≠ 0 und ≠ 1) und sRGB nach der Interpolation in Linear umrechnen (nur RGB)."""

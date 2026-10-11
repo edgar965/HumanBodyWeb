@@ -1,0 +1,175 @@
+{% comment %}
+Teil 4 von Hilfe -> Architektur -> Genesis: das Fitting der Kleider und was die Scham (das Daz-Geograft) daran ändert (11.10.2026).
+Edgar: „die Kleider müssen so gefittet werden, dass sie inkl. Scham passen", dann „erfinde nichts neues, schau bei DAZ nach, wie das
+Fitting gemacht wird" und „schreibe alles was du über Fitting jetzt zusammenträgst in die Hilfeseite in einem neuen Abschnitt".
+Text von Hand; die Bausteine-Tabelle kommt aus `core/dienste/architekturgenesis.py` (`FITTING`) und wird beim Aufruf gegen den Code geprüft.
+Jede Zahl steht mit ihrer Messung da (`ProjektTemp/_wegwerf/anatomie_fitting_messen.py`, Kin1 mit JS Pants, Stufe 1 = Browserstufe).
+{% endcomment %}
+<h2 id="fitting">10. Fitting der Kleider — und was die Scham ändert (11.10.2026)</h2>
+
+<div class="info-box info-box-orange">
+  <strong>Stand, ehrlich:</strong> Der Code ist geändert und an <em>einem</em> Fall gemessen (Kin1, JS Pants). Die Durchstiche der Scham durch die Hose sind
+  dabei von 28,2 % (1.195 von 4.231 Anatomiepunkten, alle Richtungen) auf 11,5 % (485) gesunken; von den Punkten, die nach vorn zeigen, stechen noch 53 durch.
+  <strong>Im Bild des Browsers ist der Endstand nicht abgenommen</strong>
+  — der Szenen-Tab lag im Hintergrund und der Dialog fror unter der Last anderer Sitzungen ein. Zielkonflikt, gemessen: Mehr Collision-Durchgänge schließen die
+  Durchstiche, spannen die Hose über der Scham aber zu einem Zelt (höchster Punkt 44 → 59 mm bei 43 mm Anatomiehöhe). Offen ist deshalb, welcher Wert gilt
+  (jetzt 5, Tabelle 10.4).
+</div>
+
+<h3>10.1 Wie Daz es macht (aus den Daz-Dateien und der Daz-Dokumentation gelesen)</h3>
+<ul>
+  <li><strong>„Fit To"</strong> ist Gewichtsübertrag (Transfer Utility) plus <strong>Smoothing Modifier</strong>. Der Modifier glättet die Punkte
+    iterativ und kann Kollisionen mit der Geometrie eines anderen Objekts korrigieren: Punkte werden aus der Fläche herausgeschoben, je Bild, mit
+    „Collision Iterations" (Daz-Forum: mehr Collision- als Smoothing-Durchgänge, kein Vielfaches — als Beispiele werden 3 und 5 sowie 5 und 7 genannt) und auf der
+    Unterteilungsstufe der Ansicht.
+    Quellen: <a href="https://docs.daz3d.com/public/software/dazstudio/4/referenceguide/scripting/api_reference/object_index/meshsmoothmodifier_dz">Daz-Doku
+    MeshSmoothModifier</a>, <a href="https://www.daz3d.com/forums/discussion/92291/secrets-of-poke-through-smoothing-collision-detection">Daz-Forum
+    „Secrets of poke-through"</a>; dasselbe Konzept mit anderen Verfahren: <code>Docu/konzepte/2026-09-21_kleidung-ohne-durchschimmern-konzept.md</code>.</li>
+  <li><strong>Die Kleidung selbst sagt nichts über das Geograft.</strong> <code>JS Pants.duf</code> trägt nur den Kanal „Smooth On" (Gruppe /Smoothing); keine
+    Kollisionsobjekte, kein Hinweis auf Anatomie. Die Kollision legt Daz beim „Fit To" an, nicht die Datei.</li>
+  <li><strong>Das Geograft</strong> (<code>Genesis 9 Anatomical Elements Female.duf</code>, gelesen 11.10.2026): Typ <code>wearable</code>, ContentType
+    <code>Follower/Attachment/Lower-Body/Hip/Front</code>, in der Szene nur ein <code>SkinBinding</code> — <strong>kein Smoothing- und kein Kollisionsmodifikator</strong>.
+    Die Geometrie (<code>Genesis9FemaleGenitalia.dsf</code>): 1.066 Punkte, 1.040 Flächen; <code>graft</code> nennt die Figur (25.182 Punkte, 25.156 Flächen),
+    <strong>84 Punktpaare</strong> (der Randring, der mit der Figur verschweißt wird) und <strong>180 versteckte Figurflächen</strong> (<code>hidden_polys</code>).
+    Im Produkt liegen Geometrie, UV-Sets, Materialien und Morphe — <strong>keine Passform- oder Kollisionsangaben für Kleidung</strong>.</li>
+  <li><strong>Heißt:</strong> Das Geograft ersetzt in der Figur die versteckten Flächen und ist von da an Teil ihrer Oberfläche; die Kleidung wird gegen die Figur
+    gefittet und kollidiert mit dieser Oberfläche. <strong>Nicht belegt:</strong> ob Dazs Smoothing Modifier das Geograft jedes Mal einbezieht. Ein Forenbeitrag
+    (<a href="https://forum.daz3d.com/forums/discussion/38812/an-autofollow-utility-for-m5-m6-pants-to-cover-posed-gens">Autofollow-Thread</a>, Genesis-2-Zeit, eine
+    Einzelaussage) sagt, der Standard-Modifier kollidiere „nicht immer" mit dem Geograft; Modifier entfernen und neu anlegen helfe.</li>
+</ul>
+
+<h3>10.2 Wie wir es machen (Ist, Bausteine werden beim Aufruf gegen den Code geprüft)</h3>
+<table class="db-tabelle sortable" id="architekturGenesisFitting" data-sort-key="hilfe-architektur-genesis-fitting">
+  <thead>
+    <tr><th>Klasse</th><th>Datei</th><th class="num">Zeilen</th><th>Aufgabe</th><th>Befund</th></tr>
+  </thead>
+  <tbody>
+    {% for b in fitting %}
+    <tr>
+      <td data-sort="{{ b.klasse }}"><code>{{ b.klasse|default:"—" }}</code></td>
+      <td data-sort="{{ b.pfad }}"><code>{{ b.pfad }}</code></td>
+      <td class="num" data-sort="{{ b.zeilen }}">{{ b.zeilen }}</td>
+      <td>{{ b.rolle }}</td>
+      <td data-sort="{{ b.fehlt }}">{% if b.fehlt %}<span class="ag-fehlt">{{ b.fehlt }}</span>{% else %}da{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p>
+  Dazu im Browser: <code>Hautverdeckung</code> (Haut unter dem Stoff nicht zeichnen), <code>Oberflaechenbindung</code> (enger Stoff folgt der Körperfläche,
+  nur „hinaus", Luft 1 cm) und der Stoffschwung für lose Stücke — die vier Schichten des Konzepts vom 21.09.2026 (<code>genesis9-passform.md</code>). Die
+  Kollision läuft auf <strong>Punkten</strong> (nächster Flächenpunkt, seine geglättete Normale), nicht auf Dreiecken wie Dazs Smoothing Modifier. Ein innerer
+  Stoff <strong>ersetzt</strong> die Haut in der Kollisionsfläche: Hautpunkte binnen <code>DECKUNG</code> 4 cm um seinen Käfig entfallen (ersetzt, nicht ergänzt, sonst
+  gewinnt die Haut als nächster Punkt und der Saum bleibt in der Jeans stecken).
+</p>
+
+<h3>10.3 Was die Scham daran ändert — der Befund (Kin1, JS Pants, gemessen)</h3>
+<table class="doku">
+  <thead><tr><th>Befund</th><th>Messung</th></tr></thead>
+  <tbody>
+    <tr><td>Das Stück liegt <strong>starr</strong> (<code>haut_tiefe_mm</code> 30, <code>loch</code> 1.440 Hautdreiecke) und steht <strong>weit vor der Haut</strong></td>
+      <td>4.231 Punkte; Höhe über der Haut p10 10,6 · <strong>Median 14,6</strong> · p90 28,5 · max 42,7 mm</td></tr>
+    <tr><td><strong>Die Lagenrechnung sah das Stück an anderer Stelle als der Browser.</strong> <code>G9lagen.kaefig</code> führte es wie jedes Kleid der Figur nach;
+      <code>G9stueckteile.netze</code> zeigt es in seiner gespeicherten Ruhelage</td>
+      <td>Käfig der Lagenrechnung: Median <strong>−2,4 mm</strong> unter der Haut; gezeigt +14,6 mm; Abstand der beiden Punktmengen Median 27,6 · p90 36,7 mm</td></tr>
+    <tr><td>Die Tiefenregel hielt das Geograft für das <strong>äußere</strong> Stück</td>
+      <td><code>daz_anatomie_frau: aussen [js_pants]</code> — die Hose blieb auf der Haut</td></tr>
+    <tr><td>Die Hose wurde nicht über die Scham gehoben</td>
+      <td>Strahl von jedem Anatomiepunkt entlang der Hautnormale gegen die Hosendreiecke: <strong>1.195 von 4.231 (28,2 %)</strong> ohne Hose darüber; nächster Hosenpunkt
+        entlang der Normale: Median −5,6 mm (die Anatomie davor), bei 86,7 % der Punkte</td></tr>
+    <tr><td>Der Flächenersatz (<code>DECKUNG</code> 4 cm) lässt rund um die Scham keine Haut stehen — die Hose findet dort nur die <strong>weit entfernten Spitzen</strong> als
+      „nächsten Punkt" und hebt sich mit</td>
+      <td>Höhentafel der vordersten Hosenfläche (Zellen 7 mm): Hose 28–46 mm über der Haut über etwa <strong>10 × 10 cm</strong>, ohne Lage 10–14 mm — ein Zelt mit Falten</td></tr>
+  </tbody>
+</table>
+<p>
+  <strong>Bild (eigener Renderer im Tab, Fassung mit der später verworfenen Hülle):</strong> an der Hose eine zackige, graue Fläche. Dieselbe Fläche blieb, als die
+  Anatomie ausgeblendet war — es ist also Stoff oder Haut, nicht die Anatomie. Mit nur der Anatomie (Hose aus) war die Scham glatt. Die Ursache der Zacken ist
+  nicht geklärt; in der Fassung ohne Hülle ist das Bild nicht erneut gesehen.
+</p>
+
+<h3>10.4 Was geändert ist (nur, was Daz auch tut) und was verworfen wurde</h3>
+<table class="doku">
+  <thead><tr><th>Änderung</th><th>Warum</th></tr></thead>
+  <tbody>
+    <tr><td><code>G9stueckstarr</code> (neu): Anzeige und Lagenrechnung nehmen dieselben Punkte (Ruhelage der Datei, um den Boden der Grundfigur gesenkt)</td>
+      <td>Die Kollisionsfläche ist die Anzeigefläche (Lehre vom 19.09.2026 mit den HD-Morphs). Danach Abstand Käfig ↔ Gezeigtes 0,0 mm.</td></tr>
+    <tr><td><code>G9lagenanfrage._anatomie_unten</code>: die Anatomie liegt unter <strong>jedem</strong> Stück</td>
+      <td>Bei Daz ist das Geograft Teil der Figur; die Tiefenregel gilt zwischen Kleidern, nicht gegen den Körper.</td></tr>
+    <tr><td><code>G9lagenflaeche.flaeche(fuesse=)</code>: bei einem starren Stück entfällt nur die Haut unter seinem Fußabdruck (<code>FUSS_DECKUNG</code> 6 mm)</td>
+      <td>Das entspricht den <code>hidden_polys</code> des Geografts: Es ersetzt die Haut darunter, nicht 4 cm ringsum. Eine <em>Näherung</em> — die 1.440 Dreiecke des Lochs (<code>loch</code>) wären genau.</td></tr>
+    <tr><td>Collision-Durchgänge über einer Anatomie: <code>STARR_DURCHGAENGE</code> 5 (vierter Eintrag der Fläche → <code>G9kollision.stufenweise(durchgaenge=)</code>)</td>
+      <td>Dazs Collision Iterations: bei Daz rechnet die Kollision mehr Durchgänge als die Glättung (Beispiele der Community 5 und 7); die Vorgabe 2 war unsere eigene. Alle anderen Stücke bleiben bei 2.</td></tr>
+  </tbody>
+</table>
+<p>
+  <strong>Messreihe über der Anatomie</strong> (Kin1, JS Pants; „vorn" = Anatomiepunkte, deren Normale nach vorn zeigt und über denen keine Hose liegt; Zelte aus der
+  Höhentafel, 7-mm-Zellen):
+</p>
+<table class="doku">
+  <thead><tr><th>Collision-Durchgänge</th><th>vorn ohne Hose darüber</th><th>Zellen über 20 mm</th><th>Zellen über 40 mm</th><th>höchster Punkt der Hose</th></tr></thead>
+  <tbody>
+    <tr><td>2 (Vorgabe)</td><td>341</td><td>73 von 178</td><td>1</td><td>44 mm</td></tr>
+    <tr><td>3</td><td>248</td><td>89 von 172</td><td>4</td><td>47 mm</td></tr>
+    <tr><td>4</td><td>147</td><td>92 von 166</td><td>11</td><td>58 mm</td></tr>
+    <tr><td><strong>5 (gesetzt)</strong></td><td>53</td><td>97 von 161</td><td>20</td><td>59 mm</td></tr>
+    <tr><td>ohne die Lage (vorher)</td><td>—, insgesamt 28,2 % durch</td><td>0 von 198</td><td>0</td><td>14 mm</td></tr>
+  </tbody>
+</table>
+<p>
+  <strong>Verworfen, weil nicht von Daz</strong> (gemessen, dann entfernt): eine <em>Hülle</em> (jeder Käfigpunkt der Anatomie auf die höchste Höhe seiner Nachbarn binnen
+  12 bzw. 20 mm), ein <em>Zuschlag</em> von 4–8 mm auf den Käfig und das <em>Anheben der Furche</em> auf die Haut. Mit Hülle und Zuschlag sank der Anteil ohne Hose darüber auf
+  3,5–3,8 %, aber das Bild blieb zackig; bei mehr Durchgängen wurde er mit Hülle <em>schlechter</em> (4,7 % bei 4, 5,9 % bei 8) — der Hub eines Punkts wird in
+  <code>hinaus</code> mit dem der Nachbarn gemittelt (<code>0,5 · eigener + 0,5 · größter der 6 Nachbarn</code>) und breitet sich mit jedem Durchgang aus.
+</p>
+
+<h3>10.5 Offen und nicht geprüft</h3>
+<ul>
+  <li><strong>Im Browser nicht abgenommen:</strong> die Fassung mit 5 Durchgängen. Zu sehen sein muss: Hose über der Scham geschlossen, kein hautfarbener Fleck, kein Zelt.</li>
+  <li><strong>Gemessen nur an Kin1 mit JS Pants.</strong> Olesia1 (Angie Jeans), nw_damira_8k (GC Babydoll), Tanzfigur, Ursula1: nicht gemessen — die Messung ist
+    <code>anatomie_fitting_messen.py &lt;Modell&gt; &lt;Hose&gt;</code>.</li>
+  <li><strong>Zielkonflikt Durchstich ↔ Zelt:</strong> Dazs Smoothing Modifier kollidiert mit <strong>Dreiecken</strong> auf der Unterteilungsstufe der Ansicht; unsere Kollision hebt
+    <strong>Punkte</strong> (Käfig, danach ein feiner Durchgang nur nahe Käfigpunkten). Ein Punkt zwischen zwei Hosenpunkten sackt hinter eine Wulst, wenn die Hose weniger Punkte hat als
+    die Anatomie. Der nächste Schritt, der <em>Dazs</em> Weg folgte: das Loch (<code>loch</code>, 1.440 Dreiecke) statt des Fußabdrucks, und eine Kollision gegen die Dreiecke der Anatomie.</li>
+  <li><strong>Modelle:</strong> Das Stück „Daz Anatomie Frau" (mit der Variante des Charakters) hängt wieder an <code>Damira</code>, <code>Genesis 9  nw_damira_8k</code>,
+    <code>Olesia1</code>, <code>Tanzfigur</code>, <code>Ursula1</code> und <code>Kin1</code>; die Stände davor liegen in <code>ProjektTemp/_wegwerf/modelle_vor_anatomie/</code>.</li>
+  <li><strong>Tests:</strong> nicht gelaufen (nur auf Ansage). Der Test dieser Seite prüft, dass jeder Baustein oben im Code steht.</li>
+</ul>
+
+<h3>10.6 Nachtrag: was die „11,5 %" bedeuten, und was mit vorhandenem Code versucht wurde (11.10.2026, später)</h3>
+<p>
+  Edgar: „durchstechende Punkte müssen 0 sein, warum noch immer 11,5 %?" und „nimm dir mehr Code aus Genesis, erfinde nichts neu". Gemessen
+  (<code>ProjektTemp/_wegwerf/anatomie_durchstich.py</code>, Kin1, JS Pants, Browserstufe; die Hose mit 8.815 Punkten, binnen 5 cm der Anatomie 290 Punkte und
+  357 Dreiecke von im Median 10,5 mm Kante; die Anatomie 4.231 Punkte im Abstand von im Median 0,4 mm):
+</p>
+<ul>
+  <li><strong>Die 11,5 % sind ein Strahl entlang der Hautnormale</strong> (485 von 4.231 Punkten ohne Hose darüber). Die Anatomie liegt in der Furche zwischen den Oberschenkeln:
+    bei 4.070 von 4.231 Punkten zeigt die Hautnormale zur Seite (|x| &gt; 0,5), dort ist es die Normale des Oberschenkels. Aufgeschlüsselt: Von den 1.441 Punkten mit nach vorn
+    zeigender Normale stechen 53 durch (3,7 %), von den 4.070 mit seitlicher Normale 449 (11,0 %). Die seitliche Richtung sieht man von vorn nicht — die Zahl misst also
+    zum größten Teil etwas anderes als das, was im Bild stört.</li>
+  <li><strong>Echt sind sie trotzdem:</strong> 463 der 485 stehen hinter der Hosenfläche (Abstand zum nächsten Hosen<em>dreieck</em>, tiefster 4,0 mm, 274 mehr als 1 mm). Ursache:
+    Die Kollision (<code>G9kollision.hinaus</code>) prüft Hosen-<em>Ecken</em> gegen Körperpunkte. Jede Ecke steht 3 mm über der Anatomie, das Dreieck dazwischen (10,5 mm) schneidet
+    über die Falte hinweg. Mehr Durchgänge (2 → 5) schließen das nicht, sie bauen nur das Zelt höher.</li>
+  <li><strong>Vorhandener Code, an dieser Stelle geprüft:</strong>
+    <table class="doku">
+      <thead><tr><th>Baustein</th><th>Was er kann</th><th>Ergebnis an der Anatomie</th></tr></thead>
+      <tbody>
+        <tr><td><code>GarmentCode/stoffkorrektur.py</code> (<code>Stoffkorrektur</code>, <code>flaechendurchstich.py</code>), aufgerufen wie in <code>G9hbstoffkorrektur</code></td>
+          <td>Körper gegen die <em>Dreiecke</em> des Stoffs (Lot ins Dreieck, Hub baryzentrisch), verteilt, gedeckelt — gelöst für die Brustwarze im T-Shirt und die Zehen in der Ballerina.</td>
+          <td>Durchstich nach <em>seiner</em> Definition (Außenseite des nächsten Dreiecks, ≤ 8 mm): ohne 23,9 %, mit Standardwerten <strong>43,6 %</strong>, mit Deckel 50 mm und 6 Durchgängen 22,7 %.
+            Es hebt entlang der Körpernormale; an den Flanken der Anatomie ist das die Seite, der Stoff wandert weg statt über die Falte.</td></tr>
+        <tr><td><code>G9stoffhuelle</code> (<code>hinaus</code>)</td>
+          <td>Stoff<em>punkte</em> über die Dreiecke eines inneren Stücks heben (Haar über dem Kleid).</td>
+          <td>Löst eine andere Aufgabe (Ecke gegen Dreieck der Anatomie), nicht das Schneiden eines Hosendreiecks über eine Falte — nicht eingebaut.</td></tr>
+      </tbody>
+    </table>
+    Beide sind <strong>nicht in die Stückrechnung eingehängt</strong>; die Versuchsdatei liegt unter <code>ProjektTemp/_wegwerf/g9anatomiekorrektur_versuch.py</code>.</li>
+  <li><strong>Selbst gebaut und wieder entfernt</strong> (die Vorlagen standen im Projekt, siehe oben — das war die falsche Reihenfolge): ein Flächenschritt mit Vorzeichen des nächsten Dreiecks
+    (die Hose hat Dreiecke entgegen dem Umlauf, 10 %; die Durchgänge schwangen, Ecken wanderten bis 81 mm), Abtasten der Dreiecke mit Zwischenpunkten (Hub bis 90 mm, Ergebnis je Teilung
+    verschieden), und die eigenen Flächennormalen der Anatomie als Schubrichtung der Eckenkollision (Zelt nur 22 statt 37 mm, mehr Punkte frei). Alle drei aus demselben Grund:
+    <strong>an einem Kamm der Anatomie ist die lokale Normale die Seitenrichtung</strong>; der Stoff muss <em>über</em> den Kamm, nicht von der Flanke weg.</li>
+  <li><strong>Messfalle:</strong> Eine Sichtprobe mit Strahlen gegen Hose und Haut zeigt seitlich „freie" Punkte, weil das Weglassen der Haut unter dem Fußabdruck der Anatomie den
+    angrenzenden Oberschenkel mit wegnimmt. Brauchbar sind nur Strahlen nach vorn/unten; die zeigten ohne Korrektur 24 von 1.411 geprüften Punkten (jeder dritte) in der Blickrichtung frei.</li>
+  <li><strong>Was Daz hier anders macht (Deutung, nicht belegt):</strong> Dazs Smoothing Modifier kollidiert auf der Unterteilungsstufe des Kleids; eine Hose mit 2–3 mm Kante sieht die
+    Falte. Bei uns ist die Browserstufe 1 die Hose mit 10 mm Kante; mit Strg+Alt+H (Stufe 2) sind die Dreiecke halb so lang — wie viele Durchstiche dort bleiben, ist <strong>nicht gemessen</strong>.</li>
+</ul>

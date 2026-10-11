@@ -61,6 +61,7 @@ class Dazgeograft:
         bericht = {'quelle_punkte': int(len(quelle.punkte)), 'loch': loch_bericht}
         punkte = self.angleichen(punkte, dreiecke, figur, maske, bericht)
         punkte, dreiecke, uv_ecken, loch, naht = self.verschweissen(figur, maske, punkte, dreiecke, uv_ecken)
+        punkte = self.randseite(punkte, figur, loch, bericht)
         self.bilder = self.backen(punkte, dreiecke, uv_ecken, figur, bericht)
         bilanz = self.schreiben(figur, punkte, dreiecke, uv_ecken, loch)
         bilanz['bericht'] = dict(bericht, naht=naht, messung=self.messen(figur, punkte, dreiecke, uv_ecken, loch))
@@ -79,6 +80,15 @@ class Dazgeograft:
     def angleichen(self, punkte, _dreiecke, _figur, _maske, _bericht):
         """Die Punkte des Geografts vor dem Verschweißen anpassen → neue Punkte (hier unverändert)."""
         return punkte
+
+    def randseite(self, punkte, figur, loch, bericht):
+        """Die Punkte hinter dem Ring, die auf der Hautseite der Ringkante lagen, ins Loch zurück (`Dazgeograftrandseite`) → neue Punkte; sonst klappen Haut- und Stückdreieck an der Naht um.
+        Gemessen 11.10.2026 an den Basis-Stücken (Grundfigur, vor der Korrektur): Frau 17 Ringkanten über 60° (größter Knick 122°, 9 über 90°), Mann 23 (122°, 15) — danach 0 (56° / 51°)."""
+        from .dazgeograftrandseite import Dazgeograftrandseite
+
+        neu, zahlen = Dazgeograftrandseite.schieben(punkte, figur, loch)
+        bericht['randseite'] = zahlen
+        return neu
 
     def backen(self, _punkte, _dreiecke, _uv_ecken, _figur, _bericht):
         """Bilder des Stücks nach dem Verschweißen → `{'farbe'|'normalen'|'rauheit': Pfad}` (hier keine)."""

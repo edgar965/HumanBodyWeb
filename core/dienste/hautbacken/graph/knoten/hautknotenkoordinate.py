@@ -85,7 +85,11 @@ class Hautknotenkoordinate(Hautknoten):
     def auswerten(self, graph, ctx, modus):
         g = graph.geraet
         if self.typ == 'MAPPING':
-            v, o, d, s = (self.ein(graph, ctx, modus, n, 'v') for n in ('Vector', 'Location', 'Rotation', 'Scale'))
+            v = self.ein(graph, ctx, modus, 'Vector', 'v')
+            # Nicht verfügbare Buchsen (Location bei VECTOR/NORMAL …) überspringt Cycles (`blender/shader.cpp`: „Skip unavailable sockets") — dort gilt die Vorgabe des
+            # Cycles-Knotens (`MappingNode`: location 0, rotation 0, scale 1); `svm_mapping` liest Location bei VECTOR/NORMAL ohnehin nicht.
+            o, d, s = (self.ein_oder(graph, ctx, modus, n, 'v', vorgabe)
+                       for n, vorgabe in (('Location', (0.0, 0.0, 0.0)), ('Rotation', (0.0, 0.0, 0.0)), ('Scale', (1.0, 1.0, 1.0))))
             aus = Hautwert.leer('v', ctx.n, g)
             wp.launch(_abbilden, dim=ctx.n, inputs=[v.daten, o.daten, d.daten, s.daten, ARTEN[self.eig['vector_type']], aus.daten], device=g)
             return {'Vector': aus}

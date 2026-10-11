@@ -201,6 +201,8 @@
                 <small>Womit der Import die Originalhaut einer .blend auf die Genesis-Kacheln bäckt (Farbe, Rauheit, Normalen).
                      <br><b>Lokal</b>: auf der Grafikkarte, ohne Blender &mdash; dieselben Rechenwege wie Cycles, das Material wird als
                      Knotengraph aus dem Export gelesen. Kennt der lokale Weg einen Knoten nicht, hält der Import an und nennt ihn (er rät nicht).
+                     Wo Cycles die gebackene Normale aus den Schichten des Principled BSDF mischt (starke Neigung, Lack) oder bei durchsichtigem Material (Alpha unter 0,5) gar keine schreibt,
+                     rechnet der lokale Weg das nach (auch bei Transmission und verbundener Coat-Normale); was er dabei nicht kann (Thin Wall, Dünnfilm), steht mit Material, Texelzahl und Grund im Bericht.
                      <br><b>Blender</b>: Cycles &bdquo;Selected to Active&ldquo; wie bisher.
                      <br>Gilt ab dem nächsten Schritt &bdquo;haut&ldquo; eines Imports.</small>
             </div>

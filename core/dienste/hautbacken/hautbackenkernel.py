@@ -4,16 +4,14 @@
 Alles rechnet je Texel einer Kachel (`ids`/`bary`: welches Dreieck der Figur, mit welchen Schwerpunktkoordinaten) und teilt sich die Treffer (`face`, `hu`, `hv`: welches
 Dreieck des Quellkörpers, mit welchen Schwerpunktkoordinaten) zwischen den Kanälen — Blender schoss für jeden Kanal neu.
 
-    rastern     UV-Dreiecke der Figur in die Kachel: je Texel Dreieck und Schwerpunkt (Texelmitte, wie `RE_bake_pixels_populate`)
+    rastern     UV-Dreiecke der Figur in die Kachel: je Texel Dreieck und Schwerpunkt (Texelmitte plus Blenders Versatz, `Hautbackenkachel.VERSATZ`, wie `RE_bake_pixels_populate`)
     schiessen   je Texel ein Strahl vom Punkt der Figur, `auszug` nach außen, entlang der geglätteten Normale nach innen, höchstens `laenge` weit, auf den Körper
-    abtasten    am Treffer die UV des Körpers, dort das Bild (bilinear, `wiederholen` wie ein Bildknoten ohne Erweiterung)
-    normalen    am Treffer die Normale des Körpers, mit der Normalenkarte gestört, im Tangentenraum der Figur (Blender: `bake(type='NORMAL', normal_space='TANGENT')`)
     erweitern   ein Schritt des Rands (Blender: `bake.margin`, 16 Texel): jedes leere Texel neben belegten nimmt den Mittelwert seiner belegten Nachbarn
 """
 
 import warp as wp
 
-__all__ = ['rastern', 'schiessen', 'abtasten', 'normalen_backen', 'erweitern']
+__all__ = ['rastern', 'schiessen', 'erweitern']
 
 wp.config.log_level = wp.LOG_WARNING
 
@@ -69,95 +67,6 @@ def schiessen(mesh: wp.uint64, pos: wp.array(dtype=wp.vec3), nor: wp.array(dtype
         face[y, x] = q.face
         hu[y, x] = q.v
         hv[y, x] = 1.0 - q.u - q.v
-
-
-@wp.kernel
-def abtasten(face: wp.array2d(dtype=wp.int32), hu: wp.array2d(dtype=wp.float32), hv: wp.array2d(dtype=wp.float32), uv_ecken: wp.array(dtype=wp.vec2),
-             bild: wp.array3d(dtype=wp.uint8), aus: wp.array3d(dtype=wp.uint8)):
-    """Die Farbe des Bildes am Treffer, bilinear auf den gespeicherten Werten (Cycles mischt Byte-Bilder vor dem Umrechnen), als Byte-Bild. Ohne Treffer bleibt `aus`."""
-    y, x = wp.tid()
-    f = face[y, x]
-    if f < 0:
-        return
-    u = hu[y, x]
-    v = hv[y, x]
-    uv = uv_ecken[f * 3] * (1.0 - u - v) + uv_ecken[f * 3 + 1] * u + uv_ecken[f * 3 + 2] * v
-    h = bild.shape[0]
-    w = bild.shape[1]
-    fx = uv[0] * float(w) - 0.5
-    fy = (1.0 - uv[1]) * float(h) - 0.5
-    x0 = int(wp.floor(fx))
-    y0 = int(wp.floor(fy))
-    ax = fx - float(x0)
-    ay = fy - float(y0)
-    for k in range(3):
-        s = float(0.0)
-        for dy in range(2):
-            for dx in range(2):
-                xx = ((x0 + dx) % w + w) % w
-                yy = ((y0 + dy) % h + h) % h
-                gew = (ax if dx == 1 else 1.0 - ax) * (ay if dy == 1 else 1.0 - ay)
-                s += gew * float(bild[yy, xx, k])
-        aus[y, x, k] = wp.uint8(wp.min(wp.max(s + 0.5, 0.0), 255.0))
-
-
-@wp.kernel
-def normalen_backen(face: wp.array2d(dtype=wp.int32), hu: wp.array2d(dtype=wp.float32), hv: wp.array2d(dtype=wp.float32),
-                    q_tri: wp.array(dtype=wp.vec3i), q_nor: wp.array(dtype=wp.vec3), q_tang: wp.array(dtype=wp.vec4),
-                    uv_ecken: wp.array(dtype=wp.vec2), karte: wp.array3d(dtype=wp.uint8), staerke: float,
-                    ids: wp.array2d(dtype=wp.int32), bary: wp.array2d(dtype=wp.vec2), f_tri: wp.array(dtype=wp.vec3i), f_nor: wp.array(dtype=wp.vec3),
-                    f_tang: wp.array(dtype=wp.vec4), aus: wp.array3d(dtype=wp.uint8)):
-    """Die Normale des Körpers am Treffer (geglättet, mit der Normalenkarte gestört) im Tangentenraum der Figur an diesem Texel: (x, y, z) · 0,5 + 0,5 als Byte.
-    Die Tangenten (`q_tang`, `f_tang`) stehen je Ecke (`Dreieck * 3 + Ecke`)."""
-    y, x = wp.tid()
-    f = face[y, x]
-    if f < 0:
-        return
-    u = hu[y, x]
-    v = hv[y, x]
-    w0 = 1.0 - u - v
-    i = q_tri[f]
-    n = wp.normalize(q_nor[i[0]] * w0 + q_nor[i[1]] * u + q_nor[i[2]] * v)
-    t4 = q_tang[f * 3] * w0 + q_tang[f * 3 + 1] * u + q_tang[f * 3 + 2] * v
-    t = wp.vec3(t4[0], t4[1], t4[2])
-    t = wp.normalize(t - n * wp.dot(n, t))
-    b = wp.cross(n, t) * q_tang[f * 3][3]
-    uv = uv_ecken[f * 3] * w0 + uv_ecken[f * 3 + 1] * u + uv_ecken[f * 3 + 2] * v
-    h = karte.shape[0]
-    w = karte.shape[1]
-    fx = uv[0] * float(w) - 0.5
-    fy = (1.0 - uv[1]) * float(h) - 0.5
-    x0 = int(wp.floor(fx))
-    y0 = int(wp.floor(fy))
-    ax = fx - float(x0)
-    ay = fy - float(y0)
-    m = wp.vec3(0.0, 0.0, 0.0)
-    for k in range(3):
-        s = float(0.0)
-        for dy in range(2):
-            for dx in range(2):
-                xx = ((x0 + dx) % w + w) % w
-                yy = ((y0 + dy) % h + h) % h
-                gew = (ax if dx == 1 else 1.0 - ax) * (ay if dy == 1 else 1.0 - ay)
-                s += gew * float(karte[yy, xx, k])
-        m[k] = s / 255.0 * 2.0 - 1.0
-    # Cycles, Knoten „Normal Map" (Tangentenraum): N' = x·T + y·B + z·N, bei Stärke ≠ 1 zur Normale hin gemischt
-    nk = wp.normalize(t * m[0] + b * m[1] + n * m[2])
-    ns = wp.normalize(n + (nk - n) * staerke)
-    # Tangentenraum der Figur am Texel
-    tt = ids[y, x]
-    j = f_tri[tt]
-    w1 = bary[y, x][0]
-    w2 = bary[y, x][1]
-    c0 = 1.0 - w1 - w2
-    fn = wp.normalize(f_nor[j[0]] * c0 + f_nor[j[1]] * w1 + f_nor[j[2]] * w2)
-    f4 = f_tang[tt * 3] * c0 + f_tang[tt * 3 + 1] * w1 + f_tang[tt * 3 + 2] * w2
-    ft = wp.vec3(f4[0], f4[1], f4[2])
-    ft = wp.normalize(ft - fn * wp.dot(fn, ft))
-    fb = wp.cross(fn, ft) * f_tang[tt * 3][3]
-    r = wp.vec3(wp.dot(ns, ft), wp.dot(ns, fb), wp.dot(ns, fn))
-    for k in range(3):
-        aus[y, x, k] = wp.uint8(wp.min(wp.max((r[k] * 0.5 + 0.5) * 255.0 + 0.5, 0.0), 255.0))
 
 
 @wp.kernel
