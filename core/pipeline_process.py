@@ -102,7 +102,7 @@ class PipelineProzess:
     # ------------------------------------------------------------------- Starten
 
     @classmethod
-    def starten(cls, cmd, cwd=None, env_extra=None, stderr_sammeln=True, stdout_lesen=True):
+    def starten(cls, cmd, cwd=None, env_extra=None, stderr_sammeln=True, stdout_lesen=True, stdin_offen=False):
         """Subprozess starten. Beide Ströme sind UTF-8-dekodiert.
 
         `stderr_sammeln=True` liest stderr in einem eigenen Faden mit (gegen den
@@ -113,10 +113,14 @@ class PipelineProzess:
         stdout nach DEVNULL — für Aufrufstellen, die den Fortschritt anders
         verfolgen (OpenPose zählt geschriebene JSON-Dateien). Vorher stand
         stdout dort auf PIPE, ohne dass jemand las: derselbe volle Puffer,
-        derselbe Klemmer wie bei stderr, nur noch nicht aufgefallen."""
+        derselbe Klemmer wie bei stderr, nur noch nicht aufgefallen.
+
+        `stdin_offen=True` (12.10.2026, `Meshfigurdauerprozess`): stdin ist eine Pipe, über die `senden` Befehle an einen
+        Prozess schickt, der mehrere Aufträge nacheinander rechnet. Sonst erbt das Kind stdin wie bisher."""
         env = cls.umgebung(env_extra)
         proc = subprocess.Popen(
             cmd,
+            stdin=subprocess.PIPE if stdin_offen else None,
             stdout=subprocess.PIPE if stdout_lesen else subprocess.DEVNULL,
             stderr=subprocess.PIPE if stderr_sammeln else subprocess.DEVNULL,
             text=True,
@@ -209,6 +213,21 @@ class PipelineProzess:
             if zeile is Stromleser.ENDE:
                 return
             yield zeile
+
+    def senden(self, zeile):
+        """Eine Zeile an stdin des Kindes (nur mit `stdin_offen=True`). Ein totes Kind meldet sich als `RuntimeError`."""
+        try:
+            self.proc.stdin.write(zeile.rstrip('\n') + '\n')
+            self.proc.stdin.flush()
+        except (OSError, ValueError, AttributeError) as fehler:
+            raise RuntimeError('Der Prozess nimmt nichts mehr an (%s)' % fehler) from fehler
+
+    def stdin_schliessen(self):
+        """stdin schließen — für ein Kind, das an dieser Stelle (Dateiende) aufhört."""
+        try:
+            self.proc.stdin.close()
+        except (OSError, ValueError, AttributeError):
+            pass
 
     # -------------------------------------------------------------------- Warten
 

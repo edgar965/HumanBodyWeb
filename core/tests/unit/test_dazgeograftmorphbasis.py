@@ -57,7 +57,9 @@ class DazgeograftmorphbasisTest(SimpleTestCase):
         def kaefige(kennung):
             return basis if kennung == 'basis' else angepasst
 
+        # `herkunft_lesen` liest die Zuschnittsdatei neben der .duf des Stücks (ein Garderobeneintrag mit `art`/`wurzel`) — die Kunststücke haben keine: kein Zuschnitt.
         with mock.patch('Genesis9.kleidmorphe.G9kleidmorphe.kaefige', side_effect=kaefige), mock.patch('Genesis9.stueckersatz.G9stueckersatz.loch_fuer', side_effect=self._loch_fuer), \
+                mock.patch('core.dienste.dazgeograftumriss.Dazgeograftumriss.herkunft_lesen', return_value=None), \
                 mock.patch('Genesis9.schammorphe.G9schammorphe.normalen', return_value=np.zeros((1, 3))):
             return Dazgeograftmorphbasis('angepasst', 'basis')
 

@@ -76,11 +76,11 @@ class Blendimportscham:
     KERN_MIN = 40
     KERN_RAND_M = 0.006
     #: Der Kasten der Saat wächst um diesen Anteil der Körperhöhe, wenn Saatpunkte höchstens `GRENZ_BAND_M` (m) an seiner oberen oder
-    #: unteren Grenze liegen — höchstens `SCHRITTE_MAX` Mal. Ohne Genital-Anbauten (die Scham von „cute girl") bleibt er, wie er war.
+    #: unteren Grenze liegen — höchstens `SCHRITTE_MAX` Mal (die Scham von „cute girl": einmal oben, 0,555 → 0,585).
     SCHRITT_HOEHE = 0.03
     SCHRITTE_MAX = 4
     GRENZ_BAND_M = 0.012
-    #: Nur Saatpunkte, die so weit (mm) vor der Figurfläche liegen, lassen den Kasten wachsen (`saat`) — Hoden und Penis stehen 25 mm und mehr
+    #: Bei einem Anbau lassen nur Saatpunkte, die so weit (mm) vor der Figurfläche liegen, den Kasten wachsen (`saat`) — Hoden und Penis stehen 25 mm und mehr
     #: davor, Schenkelhaut neben einer anders angepassten Figur nur 5–15 mm.
     WACHS_MM = 20.0
     #: So weit (mm, bei 1,75 m Körperhöhe) unter dem tiefsten Kernpunkt endet die Saat (`begrenzen`) — nur bei einem Anbau (Kern ab `KERN_MM`).
@@ -142,10 +142,9 @@ class Blendimportscham:
         for _ in range(self.SCHRITTE_MAX + 1):
             saat = self.saat_im_kasten(ruhe, flaeche, sohle, hoehe, unten, oben)
             self.kastenhoehe = (round(unten, 3), round(oben, 3))
-            # Wachsen darf der Kasten nur wegen eines ANBAUS (Abweichung ab `WACHS_MM`), nicht wegen jeder Saat: Bei der BodyParts3D-Haut
-            # (10.10.2026) lagen die Innenschenkel 5–15 mm neben der Figur, der Kasten wuchs viermal nach unten (0,44 → 0,32), und das Stück
-            # bekam zwei „Vorhänge" aus Schenkelhaut neben den Hoden.
-            y = ruhe[saat & (self.abstand >= self.WACHS_MM)][:, 1]
+            # Bei einem ANBAU wächst der Kasten nur wegen Punkten ab `WACHS_MM` (BodyParts3D-Haut, 10.10.2026: Innenschenkel 5–15 mm neben der Figur, der Kasten wuchs viermal nach unten, zwei „Vorhänge"),
+            # sonst wegen jeder Saat wie am 09.10.2026 (11.10.2026, „alt4": oben 0,555 → 0,585, das Stück reicht bis in den Venushügel; mit 0,555 endete es 3 cm tiefer, Edgar: „das hatten wir viel besser").
+            y = ruhe[saat & (self.abstand >= self.WACHS_MM) if int((saat & (self.abstand >= self.KERN_MM)).sum()) >= self.KERN_MIN else saat][:, 1]
             weiter_unten = bool(len(y)) and float(y.min()) < sohle + unten * hoehe + self.GRENZ_BAND_M
             weiter_oben = bool(len(y)) and float(y.max()) > sohle + oben * hoehe - self.GRENZ_BAND_M
             if not (weiter_unten or weiter_oben):
@@ -303,7 +302,7 @@ class Blendimportscham:
         sel_punkte, register = Blendimportschamregister.anwenden(flaeche, punkte, w, sel_punkte)
         if 'aus' in register:        # Figur und Original passen am Becken nicht zusammen: kein Stück
             return {'aus': register['aus']}
-        sel_punkte, rand = self.angleichen(sel_punkte, sel_dreiecke, flaeche)
+        sel_punkte, rand = self.angleichen(sel_punkte, sel_dreiecke, flaeche, max_mm=Blendimportschamgeograft.randband_max_mm(self.anbau))
         naht = Blendimportschamgeograft.verschweissen(flaeche, self.schnittwerte(punkte, saat, flaeche, flaeche.vertices), sel_punkte, sel_dreiecke, schnitt_uv, self.anbau)
         if 'aus' not in naht:
             sel_punkte, sel_dreiecke, schnitt_uv = naht['punkte'], naht['dreiecke'], naht['uv_ecken']

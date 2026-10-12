@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}{% load szenenskript %}
+{% block title %}Mesh-3D · {{ job.name }}{% endblock %}
+
+{% comment %}
+Jobseite „Mesh-3D“ (Edgar, 11.10.2026: „baue eine Jobseite, mit Vorschlag für UI so wie auf der anderen Seite“ — gemeint ist die Auftragsseite von „2D3D Kleider“).
+Gleicher Aufbau: oben der Lauf (Schritte mit Dauer, Fortschritt, „ab Schritt“, Neu berechnen, Anhalten), darunter eine Karte je Schritt mit dem, was er ergeben
+hat, dann der zweite Reiter „Iterationen“. Der Auftrag ist ein Modell-Import (`Blendimportlauf`); Zustand über `/api/mesh3d/<kennung>/zustand/`, Start, Anhalten und
+Löschen über die Endpunkte des Imports (`/api/character/blendimport/<kennung>/…`). Jede Karte baut EIN Modul (`static/viewer/mesh3d/`), die Seitenklasse verteilt den Zustand.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/bildmodell.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/meshfigur.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3d.css' %}">
+{% comment %}Importkarte für three.js: `gemeinsam/serverabruf.js` zieht es über `registrierung.js` nach (sonst „Failed to resolve module specifier“).{% endcomment %}
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header mesh-auftragskopf">
+    <div>
+        <a href="{% url 'mesh3d' %}" class="hb-hinweis"><i class="fas fa-arrow-left"></i> Mesh-3D</a>
+        <h1><i class="fas fa-cube"></i> <span id="auftrag-name" data-adresse="{% url 'mesh3d_name' job.kennung %}">{{ job.name }}</span>
+            <small class="hb-hinweis">Mesh-3D · {{ job.kennung }}</small></h1>
+    </div>
+    <div class="auftrag-kopfknoepfe">
+        <div class="bildmodell-status" id="auftrag-status"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-kopie-ohne"
+                title="Neuer Auftrag mit derselben Datei und denselben Einstellungen — nichts gerechnet">
+            <i class="fas fa-clone"></i> <span>Kopie ohne Daten</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-kopie-alles"
+                title="Der ganze Auftrag samt Netzen, Figur, Haut und dem Auftrag „Mesh to 3D“ — das gespeicherte Modell wird nicht kopiert">
+            <i class="fas fa-copy"></i> <span>Kopie mit allen Daten</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" id="auftrag-loeschen"
+                data-adresse="{% url 'blendimport_loeschen' job.kennung %}"
+                data-ziel="{% url 'mesh3d' %}"
+                data-frage="Diesen Auftrag mit Dateien, dem Auftrag „Mesh to 3D“ und dem gespeicherten Modell löschen? Stücke, die ein anderes Modell braucht, bleiben.">
+            <i class="fas fa-trash"></i> <span>Auftrag löschen</span></button>
+    </div>
+</div>
+
+<div class="seitenreiter" role="tablist" id="auftrag-reiter">
+    <button type="button" role="tab" aria-selected="true" data-reiter="auftrag"><i class="fas fa-cube"></i> Auftrag</button>
+    <button type="button" role="tab" aria-selected="false" data-reiter="iterationen"><i class="fas fa-layer-group"></i> Iterationen</button>
+</div>
+<script type="module">
+{% comment %}Seitenreiter, Mesh3dseite und Auftragloeschen kommen aus EINER Adresse (Bündel, `viewer/mesh3d/main.js`): 232 Einzelmodule kosteten kalt 6,5 s.{% endcomment %}
+import { Seitenreiter } from "{% mesh3dskript %}";
+Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: true });
+</script>
+<div id="fehler" class="bildmodell-fehler hb-versteckt"></div>
+
+<div id="reiter-auftrag" data-reiterfeld="auftrag">
+
+<div class="card" id="lauf">
+    <ol class="meshfigur-schritte" id="schritte"></ol>
+    <div class="bildmodell-balken"><div class="bildmodell-fuellung" id="fortschritt" style="width:0%"></div></div>
+    <div class="bildmodell-laufzeile">
+        <span id="fortschritt-text" class="hb-hinweis"></span>
+        <span class="bildmodell-laufknoepfe">
+            <label class="hb-hinweis" title="Der erste Schritt dieses Laufs; was davor liegt, wird aus dem gespeicherten Stand gelesen">ab <select id="ab-schritt" class="viewer-select" data-reihenfolge="fest"></select></label>
+            <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
+        </span>
+    </div>
+    <div class="hb-hinweis" id="lauf-hinweis">„Neu berechnen“ beginnt beim gewählten Schritt („ab“) und läuft bis zum Modell. Ein Lauf dauert
+        je nach Modell eine halbe bis anderthalb Stunden (Figur und Haut sind die langen Schritte); es rechnet immer nur ein Import zur Zeit.
+        Die Einstellungen werden sofort gespeichert und gelten ab dem nächsten Start.</div>
+</div>
+
+<div class="card mesh3d-karte" id="buehne-karte">
+    <h2>3D-Ansicht <span class="hb-hinweis">(Figur, Netz, Kleider, Haare, Animation)</span></h2>
+    {% comment %}Dieselbe Bühne wie die Auftragsseiten von „Mesh to 3D“ und „2D3D Kleider“ (`Meshfigurbuehne`, Knöpfe über `data-schalter` in `meshfigurschalter.js`, Vorgabe als Klasse `active`) —
+    gezeigt wird die Figur des Auftrags „Mesh to 3D“, den der Schritt „Figur“ gerechnet hat (`Mesh3dbuehne`). Die Animationsleiste ist `Engine2d3dKleideranimation` mit der Bewegung von `Mesh3dbewegung`.{% endcomment %}
+    <div class="meshfigur-buehnenspalte">
+        <div class="meshfigur-schalter schalterleiste" id="buehnen-schalter">
+            <button type="button" class="schaltknopf" data-schalter="mesh" title="Das Netz der Datei (der Auftrag „Mesh to 3D“ liest es in der Lage der Erkennung), immer 1,5 m links der Figur">
+                <i class="fas fa-draw-polygon"></i> Mesh</button>
+            <button type="button" class="schaltknopf active" data-schalter="haare" title="Das Haar auf der Figur — welches, wählt das Feld daneben">
+                <i class="fas fa-hat-wizard"></i> Haare</button>
+            <label hidden id="buehne-haarwahl-feld" title="Welches Haar die Figur trägt: die Frisur aus „Mesh to 3D“ (Daz oder „Haar Eigen“), das Haar aus dem Netz oder die Haarkarten aus seiner Schale">
+                <select id="buehne-haarwahl" aria-label="Welches Haar"></select></label>
+            <button type="button" class="schaltknopf active" data-schalter="kleider" title="Die Kleidungsstücke der Figur (aus dem Netz geschnitten oder die Genesis-Stücke des Imports)">
+                <i class="fas fa-tshirt"></i> Kleider</button>
+            <button type="button" class="schaltknopf" data-schalter="nebeneinander" title="Netz und Figur nebeneinander statt übereinander">
+                <i class="fas fa-columns"></i> Nebeneinander</button>
+            <button type="button" class="schaltknopf active" data-schalter="modell" title="Die angepasste Genesis-9-Figur">
+                <i class="fas fa-user"></i> 3DModell</button>
+            <button type="button" class="schaltknopf" id="buehne-animation" title="Die Bewegung (Vorgabe: der Tanz der Bibliothek) auf die Figur rechnen und hier abspielen — derselbe Retarget-Weg wie bei „2D3D Kleider“">
+                <i class="fas fa-person-running"></i> <span>Animation</span></button>
+        </div>
+        {% comment %}Größe der 3D-Ansicht (Edgar, 12.10.2026: „in der Höhe einstellbar, nicht aber in der Breite“): Regler und Ziehgriff, `Mesh3dbuehnengroesse` — wie bei der Mesh-Ansicht darunter.{% endcomment %}
+        <div class="mesh3d-groessenzeile">
+            <label for="buehne-groesse">Höhe</label>
+            <input type="range" id="buehne-groesse" min="240" max="1600" step="10" value="560" aria-label="Höhe der 3D-Ansicht">
+            <span id="buehne-groesse-wert" class="hb-hinweis mesh3d-animationszeit">560 px</span>
+            <label for="buehne-breite">Breite</label>
+            <input type="range" id="buehne-breite" min="320" max="1600" step="1" value="1600" aria-label="Breite der 3D-Ansicht">
+            <span id="buehne-breite-wert" class="hb-hinweis mesh3d-animationszeit">volle Breite</span>
+            <span class="hb-hinweis">— oder an der Ecke unten rechts ziehen.</span>
+        </div>
+        <div class="mesh-betrachter" id="buehne">
+            <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Schritt „Figur“ rechnet oder ist noch nicht gestartet.</div>
+        </div>
+        <div class="mesh3d-animationsleiste" id="animations-leiste" hidden>
+            <button type="button" id="anim-anfang" class="btn btn-secondary btn-sm" title="An den Anfang (Pos1)"><i class="fas fa-fast-backward"></i></button>
+            <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück (←)"><i class="fas fa-step-backward"></i></button>
+            <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause (Leertaste)"><i class="fas fa-play"></i></button>
+            <button type="button" id="anim-stopp" class="btn btn-secondary btn-sm" title="Stopp — zurück an den Anfang, Figur in der Ruhehaltung"><i class="fas fa-stop"></i></button>
+            <button type="button" id="anim-vor" class="btn btn-secondary btn-sm" title="Ein Bild vor (→)"><i class="fas fa-step-forward"></i></button>
+            <button type="button" id="anim-ende" class="btn btn-secondary btn-sm" title="Ans Ende (Ende)"><i class="fas fa-fast-forward"></i></button>
+            <input type="range" id="anim-scrubber" class="mesh3d-scrubber" min="0" max="1000" value="0" step="1">
+            <span id="anim-zeit" class="hb-hinweis mesh3d-animationszeit">0:00 / 0:00</span>
+            <span id="anim-bild" class="hb-hinweis mesh3d-animationszeit" title="Aktuelles Bild der Bewegung / Bilder gesamt">Bild 0 / 0</span>
+        </div>
+        <div class="hb-hinweis" id="animation-meldung"></div>
+        <div class="hb-hinweis" id="netzansicht-meldung"></div>
+    </div>
+</div>
+
+<div class="card mesh3d-karte" id="netz-karte">
+    <h2>Mesh-Ansicht <span class="hb-hinweis">(nur das Netz der Datei — Licht wie in der 3D-Ansicht)</span></h2>
+    {% comment %}Zweite Ansicht unter der 3D-Ansicht (Edgar, 12.10.2026): nur das Netz, mittig, dasselbe Licht (`Meshfigurlicht`), Höhe einstellbar (Regler und Ziehgriff, `Mesh3dbuehnengroesse`).
+    Das Netz kommt von derselben „Seite“ wie in der 3D-Ansicht (`Mesh3dbuehne.adapter`): vereinfachte Kopie bei großen Netzen, sonst das Original.{% endcomment %}
+    <div class="mesh3d-groessenzeile">
+        <label for="netz-groesse">Höhe</label>
+        <input type="range" id="netz-groesse" min="240" max="1600" step="10" value="560" aria-label="Höhe der Mesh-Ansicht">
+        <span id="netz-groesse-wert" class="hb-hinweis mesh3d-animationszeit">560 px</span>
+        <label for="netz-breite">Breite</label>
+        <input type="range" id="netz-breite" min="320" max="1600" step="1" value="1600" aria-label="Breite der Mesh-Ansicht">
+        <span id="netz-breite-wert" class="hb-hinweis mesh3d-animationszeit">volle Breite</span>
+        <span class="hb-hinweis">— oder an der Ecke unten rechts ziehen. Drehen: linke Maustaste, verschieben: rechte, zoomen: Rad.</span>
+    </div>
+    <div class="mesh-betrachter mesh3d-netzbetrachter" id="netz-buehne">
+        <div class="mesh-betrachter-hinweis" id="netz-hinweis">Noch kein Netz — die Ansicht erscheint, sobald der Auftrag „Mesh to 3D“ das Netz übernommen hat.</div>
+    </div>
+</div>
+
+<div class="card mesh3d-karte" id="quelle-karte">
+    <h2>Quelle und Einstellungen</h2>
+    <div class="mesh3d-zahlen" id="quelle-zahlen"></div>
+    {% comment %}Das Netz ändern (Edgar, 11.10.2026: „ich kann nicht mal das Modell ändern!!!“): Pfad, Name, Hochladen — `Mesh3dquelle` / `Mesh3dquellwechsel`.{% endcomment %}
+    <h3 class="engine2d3dkleider-gruppe">Netz ändern <span class="hb-hinweis" id="quelle-meldung"></span></h3>
+    <div class="mesh3d-felder">
+        <div class="mesh3d-feld"><label for="quelle-pfad">Datei oder Ordner (Pfad)</label>
+            <input id="quelle-pfad" type="text" autocomplete="off" spellcheck="false"></div>
+        <div class="mesh3d-feld"><label for="quelle-name">Name der Figur</label>
+            <input id="quelle-name" type="text" autocomplete="off" spellcheck="false" placeholder="leer: wie der Ordner der Datei">
+            <div class="hb-hinweis">Das Modell und die Stücke tragen diesen Namen.</div></div>
+    </div>
+    <div class="mesh3d-wahl">
+        <label class="hb-hinweis" for="quelle-format">Format <select id="quelle-format" class="viewer-select" data-reihenfolge="fest"></select></label>
+        <span class="mesh3d-wahl-innen" id="quelle-wahl"></span>
+        <button type="button" class="btn btn-primary btn-sm" id="quelle-uebernehmen"
+                title="Das Netz und den Namen dieses Auftrags ersetzen — ein anderes Netz verwirft die bisherigen Ergebnisse"><i class="fas fa-check"></i> <span>Quelle übernehmen</span></button>
+    </div>
+    <h3 class="engine2d3dkleider-gruppe">Einstellungen <span class="hb-hinweis einstellungen-meldung" id="optionen-meldung"></span></h3>
+    <p class="hb-hinweis" id="optionen-gesperrt" hidden>Ein Lauf rechnet: Die Einstellungen sind gesperrt und gelten ab dem nächsten Start.</p>
+    <div class="mesh3d-felder" id="mesh3d-optionen"></div>
+</div>
+
+<div class="card mesh3d-karte" id="rollen-karte">
+    <h2>Netze und Rollen <span class="hb-hinweis">(Schritt „Lesen“)</span></h2>
+    <p class="hb-hinweis">Blender liest jedes Netz der Datei; die Rolle sagt, was daraus wird: der Körper bekommt die Genesis-Figur, Kleider und Haar werden eigene
+        Stücke, Augen ersetzen die Genesis-Augen. Reicht der Körper nicht über die ganze Figur, hält der Lauf an (Einstellung „Unvollständiger Körper“).</p>
+    <div class="mesh3d-zahlen" id="rollen-zahlen"></div>
+    <div id="rollen-tabelle"></div>
+</div>
+
+<div class="card mesh3d-karte" id="segmentierung-karte" hidden>
+    <h2>Segmentierung <span class="hb-hinweis">(Schritt „Segmentierung“, Sapiens2 — nur beim Weg „Netz“)</span></h2>
+    <p class="hb-hinweis">Ein verschmolzenes Netz hat Kleidung, Haar und Haut in EINER Fläche. Sapiens2 etikettiert vier Ansichten des Netzes (Haut, Oberteil, Hose, Füße, Zubehör, Haar), die Etiketten
+        gehen mit Projektion und Verdeckung auf die Flächen. „Mesh to 3D“ nimmt davon den Hautton (Gesicht, Hände, Arme, Beine statt Robe), die Kleidungsmaske und die Haarmaske — die Figur wird dann an den
+        Körper unter dem Stoff angepasst und nicht an dessen Außenseite.</p>
+    <div class="mesh3d-zahlen" id="segmentierung-zahlen"></div>
+    <div class="mesh3d-schrittzeile" id="segmentierung-zeile"></div>
+    <div class="mesh3d-bilder" id="segmentierung-bilder"></div>
+</div>
+
+<div class="card mesh3d-karte" id="pose-karte">
+    <h2>Haltung und Pose <span class="hb-hinweis">(Schritte „Umposen“ und „Pose“)</span></h2>
+    <p class="hb-hinweis">Steht das Modell nicht in A-Haltung, muss seine Haltung gefunden werden, bevor die Figur angepasst und die Kleidung in die Ruhelage
+        zurückgerechnet wird („Entposen“). Mit dem Rig der Datei (Auto-Rig Pro) geht es über „Umposen“; sonst findet SAM 3D Body die Gelenke an einem Rendering
+        des Körpers (Schritt „Pose“, Einstellung unten), und „Mesh to 3D“ stellt die Figur danach.</p>
+    <div class="mesh3d-zahlen" id="pose-zahlen"></div>
+    <div class="mesh3d-schrittzeile" id="pose-zeile"></div>
+    <div class="mesh3d-bilder" id="pose-bilder"></div>
+</div>
+
+<div class="card mesh3d-karte" id="figur-karte">
+    <h2>Genesis-Figur <span class="hb-hinweis">(Schritte „Körpernetz“, „Figur“ und „Finger“)</span></h2>
+    <p class="hb-hinweis">Beim Weg „Teile“ geht der nackte Körper (mit Augen, eine Textur) als Netz in „Mesh to 3D“, beim Weg „Netz“ (ein verschmolzenes Netz, z. B. eine GLB aus Tripo) das ganze Netz samt
+        Kleidung, Hut und Bart: Regler, Gesichtskette und Eigenmorph passen die Genesis-9-Figur an, beim Weg „Netz“ wählt „Mesh to 3D“ dazu eine Frisur und speichert das Modell „&lt;Name&gt; Mesh“.
+        Die Seite dieses Auftrags zeigt Erkennung, Runden und Vergleich im Einzelnen.</p>
+    <div class="mesh3d-zahlen" id="figur-zahlen"></div>
+    <div class="mesh3d-bilder" id="figur-bilder"></div>
+</div>
+
+<div class="card mesh3d-karte" id="stuecke-karte">
+    <h2>Kleider, Haar und Augen <span class="hb-hinweis">(Schritt „Kleider und Haar“)</span></h2>
+    <p class="hb-hinweis">Jedes Kleid, das Haar und die Augen werden in die Ruhelage der Figur zurückgerechnet („Entposen“) und als Genesis-Stück in die Garderobe
+        geschrieben; die Abnahme misst, wie genau das Stück der Haltung des Originals folgt.</p>
+    <div class="mesh3d-zahlen" id="stuecke-zahlen"></div>
+    <div id="stuecke-tabelle"></div>
+    <div class="mesh3d-bilder" id="stuecke-bilder"></div>
+</div>
+
+<div class="card mesh3d-karte" id="haut-karte">
+    <h2>Haut und Augen <span class="hb-hinweis">(Schritte „Haut“ und „Augen“)</span></h2>
+    <p class="hb-hinweis">Die Originalhaut (Farbe, Normalen, Rauheit) wird auf die vier Genesis-Kacheln gebacken; der Abstand zeigt, wie nah die Figur dem Original ist.</p>
+    <div class="mesh3d-zahlen" id="haut-zahlen"></div>
+    <div class="mesh3d-bilder" id="haut-bilder"></div>
+</div>
+
+<div class="card mesh3d-karte" id="modell-karte">
+    <h2>Genesis-Modell <span class="hb-hinweis">(Schritt „Modell“)</span></h2>
+    <div class="mesh3d-zahlen" id="modell-zahlen"></div>
+</div>
+
+</div>
+
+<div id="reiter-iterationen" data-reiterfeld="iterationen" hidden>
+    <div class="card mesh3d-karte" id="iterationen-karte"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Mesh3dseite, Auftragloeschen, Auftragname } from "{% mesh3dskript %}";
+Mesh3dseite.starten("{{ job.kennung }}", "{{ format }}");
+Auftragloeschen.binden();
+Auftragname.binden();
+</script>
+{% endblock %}

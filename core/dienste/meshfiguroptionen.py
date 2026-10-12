@@ -22,13 +22,13 @@ und Werte, alles andere fällt auf die Vorgabe).
                  dazu schwach heranziehen (Rumpf hängt am Shirt) — oder wie Haut (alte Regel, Stoff = Haut)
     referenz     Testfall: eine Figur der Genesis-Bibliothek, gegen die das Ergebnis gemessen wird
     blind        beim Testfall die Regler der Referenzfigur selbst NICHT benutzen (ehrliche Probe)
-    frisur       welche Frisur das Modell trägt (Schritt „frisur"): die mit der kleinsten Hülle,
-                 nur Daz-Frisuren, nur „Haar Eigen", keine
+    frisur       welche Frisur das Modell trägt (Schritt „frisur"): kleinste Hülle, nur Daz-Frisuren, nur „Haar Eigen", keine
     haarkarten   Haarkarten aus der Haarschale des Netzes als eigenes Objekt (Bühne, Weg C)
     modell       das Ergebnis als Modell speichern (`data/models/<Name>.json`, Szene/Studio)
 """
 
 from .meshfigurkleidungsoptionen import Meshfigurkleidungsoptionen
+from .meshfigurregionenoptionen import Meshfigurregionenoptionen
 from .meshfigurtexturoptionen import Meshfigurtexturoptionen
 
 __all__ = ['Meshfiguroptionen']
@@ -125,7 +125,7 @@ class Meshfiguroptionen:
                 ('aus', 'Wie das Netz'),
             ],
         },
-    ] + Meshfigurtexturoptionen.KATALOG + [
+    ] + Meshfigurregionenoptionen.KATALOG + Meshfigurtexturoptionen.KATALOG + [
         {
             'schluessel': 'kleidung',
             'titel': 'Kleidung im Netz',

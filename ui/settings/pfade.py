@@ -37,6 +37,13 @@ MESH_PYTHON = str(TOOLS_ROOT / 'python10_mesh' / 'Scripts' / 'python.exe')
 #: Gewichte der Bild-zu-3D-Modelle (Hugging-Face-Ablage, wie `HF_HOME` der Pipelines).
 HF_HOME_DIR = TOOLS_ROOT / 'hf_home'
 
+#: SAM 3D Body (11.10.2026, Schritt „Pose" von „2D3D Kleider", `_run_sam3dpose.py`): eigene venv mit Python 3.12 (`python12_sambody4d`), Klon des Modells, Gewichte und MHR-Modell
+#: liegen bei GEM-X (`VideoToBVH/GEM-X/inputs`). Aus TOOLS_ROOT abgeleitet, nicht eingetippt.
+SAM3DBODY_PYTHON = str(TOOLS_ROOT / 'python12_sambody4d' / 'Scripts' / 'python.exe')
+SAM3DBODY_KLON = TOOLS_ROOT / 'VideoToBVH' / 'SAMBody4D'
+SAM3DBODY_CHECKPOINT = TOOLS_ROOT / 'VideoToBVH' / 'GEM-X' / 'inputs' / 'checkpoints' / 'sam-3d-body-dinov3' / 'sam3d_body.ckpt'
+SAM3DBODY_MHR = TOOLS_ROOT / 'VideoToBVH' / 'GEM-X' / 'inputs' / 'mhr_data' / 'mhr_model.pt'
+
 #: Django-Python (3.14) — derselbe Interpreter, der diesen Server fährt. Hilfe →
 #: Tests startet damit die Test-Befehle. Abgeleitet aus TOOLS_ROOT, nicht
 #: eingetippt: Auf einem zweiten Rechner mit anderem Laufwerk wäre ein fester

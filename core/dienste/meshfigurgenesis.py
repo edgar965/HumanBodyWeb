@@ -122,9 +122,21 @@ class Meshfigurgenesis:
             aus[maske] = G9netzbereiche.INNEN
         return aus
 
+    @staticmethod
+    def _gleich(pfad, daten):
+        """Hat `pfad` schon genau diese Arrays? (Name, Form, Werte — nicht die Bytes: `np.savez` schreibt Zeiten ins Zip.)"""
+        try:
+            with np.load(pfad, allow_pickle=False) as d:
+                return set(d.files) == set(daten) and all(np.array_equal(d[k], np.asarray(daten[k])) for k in daten)
+        except Exception:  # noqa: BLE001 — fehlt oder ist unlesbar: schreiben
+            return False
+
     def speichern(self, pfad):
+        """Die Datei für die Registrierung. Eine Datei mit gleichem Inhalt bleibt unangetastet: „textur" und „vorschau" schreiben dieselbe Figur, und die Frisurwahl liest `genesis_ende.npz` schon, während
+        die Vorschau läuft (`Meshfigurnebenlauf.frueh`) — ein Neuschreiben ließe sie eine halbe Datei lesen."""
         daten = self.daten()
-        np.savez(pfad, **daten)
+        if not self._gleich(pfad, daten):
+            np.savez(pfad, **daten)
         return {
             'punkte': int(len(daten['punkte'])),
             'knochen': int(len(daten['knochen'])),

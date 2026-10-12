@@ -72,7 +72,9 @@ class G9antworten(G9antwortvorrat):
     #: Laenger wartet niemand auf eine laufende Rechnung desselben Schluessels.
     WARTEN_S = 120.0
     #: Quellen, deren Aenderung jede alte Antwort ungueltig macht.
-    QUELLEN = ('Genesis9', 'HumanBodyWeb/core/api', 'HumanBodyWeb/core/daten',
+    #: `core/api` und `core/daten` stehen nicht mehr als ganze Ordner hier, sondern als Huelle der Module, die Antworten rechnen oder
+    #: ausliefern (`G9antwortquellen.WURZELN`) — seit 12.10.2026, und die Fassung ist ein Inhalts-Hash (siehe dort).
+    QUELLEN = ('Genesis9',
                'HumanBody/humanbody_core/catmull_clark.py',
                # Dienste, die Stueckantworten rechnen (19.09.2026): Lagen, Daz auf HumanBody.
                'HumanBodyWeb/core/dienste/g9lagenanfrage.py',
@@ -227,20 +229,13 @@ class G9antworten(G9antwortvorrat):
 
     @classmethod
     def fassung(cls):
-        u"""Juengste Aenderungszeit der Quellen — einmal je Prozess."""
+        u"""Hash der Inhalte aller Quellen (`QUELLEN` plus die Huelle der Antwortmodule) — einmal je Prozess. Bis 11.10.2026 die jüngste
+        Änderungszeit von ganz `core/api` und `core/daten`: jeder Neustart nach einer Änderung irgendwo dort verwarf den Vorrat."""
         if cls._fassung is None:
             from django.conf import settings
-            wurzel = Path(settings.TOOLS_ROOT)
-            juengste = 0
-            for rel in cls.QUELLEN:
-                pfad = wurzel / rel
-                dateien = [pfad] if pfad.is_file() else pfad.glob('*.py')
-                for datei in dateien:
-                    try:
-                        juengste = max(juengste, datei.stat().st_mtime_ns)
-                    except OSError:
-                        continue
-            cls._fassung = juengste
+
+            from .g9antwortquellen import G9antwortquellen
+            cls._fassung = G9antwortquellen.fassung(Path(settings.TOOLS_ROOT), cls.QUELLEN)
         return cls._fassung
 
     @classmethod

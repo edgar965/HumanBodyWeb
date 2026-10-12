@@ -12,6 +12,8 @@ Kopie von `Blendermodelllauf`, mit der Genesis-Engine (`Genesisengine2d3dkleider
     vorbereitung die Fotos aufbereiten: Hintergrund entfernen, auf Wunsch den Körper senkrecht stellen, Zuschnitt, Licht
                  (`Engine2d3dKleidervorbereitung`, 03.10.2026; getrennt startbar, die Seite zeigt die Ergebnisse unter den Fotos)
     netz         Fotos → Netz (TRELLIS.2/Pixal3D), nimmt die vorbereiteten Fotos, wenn sie zu den Optionen passen
+    pose         OPTIONAL (Häkchen `pose.rechnen`, Vorgabe aus; ausdrücklich gestartet läuft er immer): die Gelenke der Person am vorbereiteten Foto (SAM 3D Body) ins Netz legen und den Maßstab ableiten —
+                 für Gemälde und freie Posen; die Körper-Kette nimmt beides mit dem Häkchen (`Engine2d3dKleiderpose`, 11.10.2026)
     kopf         OPTIONAL (Häkchen `kopf.rechnen`, Vorgabe an; ausdrücklich gestartet läuft er immer): der Kopf aus den drei vorbereiteten Fotos geschnitten und als eigenes Kopfnetz gerechnet
                  (Hunyuan3D, `Engine2d3dKleiderkopf`, 07.10.2026); der Schritt „koerper" setzt es für das Gesicht ein
     segmentierung OPTIONAL (Option `segmentierung.verwenden`, ausdrücklich gestartet läuft er immer): Sapiens zerlegt die vorbereiteten Fotos in Oberteil, Hose, Socken/Schuhe, Zubehör und
@@ -47,13 +49,14 @@ __all__ = ['Engine2d3dKleiderlauf']
 
 
 class Engine2d3dKleiderlauf:
-    SCHRITTE = ('vorbereitung', 'netz', 'kopf', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern')
+    SCHRITTE = ('vorbereitung', 'netz', 'pose', 'kopf', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern')
     #: Anteil am Balken 0…100 — Netz (TRELLIS), Kopf (Hunyuan) und Iterationen sind die langen Teile.
     BAENDER = {
         'vorbereitung': (0, 3),
         'netz': (3, 17),
-        'kopf': (17, 24),
-        'segmentierung': (24, 27),
+        'pose': (17, 19),
+        'kopf': (19, 25),
+        'segmentierung': (25, 27),
         'koerper': (27, 40),
         'grundfigur': (40, 43),
         'kleiderstuecke': (43, 47),
@@ -87,6 +90,7 @@ class Engine2d3dKleiderlauf:
         from .engine2d3dkleiderkoerper import Engine2d3dKleiderkoerper
         from .engine2d3dkleiderkopf import Engine2d3dKleiderkopf
         from .engine2d3dkleidernetz import Engine2d3dKleidernetz
+        from .engine2d3dkleiderpose import Engine2d3dKleiderpose
         from .engine2d3dkleiderstuecke import Engine2d3dKleiderstuecke
         from .engine2d3dkleidersegmentierung import Engine2d3dKleidersegmentierung
         from .engine2d3dkleiderspeichern import Engine2d3dKleiderspeichern
@@ -96,6 +100,7 @@ class Engine2d3dKleiderlauf:
         return {
             'vorbereitung': lambda: Engine2d3dKleidervorbereitung(self).ausfuehren(),
             'netz': lambda: Engine2d3dKleidernetz(self).ausfuehren(),
+            'pose': lambda: Engine2d3dKleiderpose(self).ausfuehren(),
             'kopf': lambda: Engine2d3dKleiderkopf(self).ausfuehren(),
             'segmentierung': lambda: Engine2d3dKleidersegmentierung(self).ausfuehren(),
             'koerper': lambda: Engine2d3dKleiderkoerper(self).ausfuehren(),

@@ -185,3 +185,13 @@ class SchamnahtTest(SimpleTestCase):
         self.assertIn('aus', ohne)
         self.assertNotIn('aus', mit, mit.get('aus'))
         self.assertLessEqual(mit['bericht']['rand_weg_max_mm'], Blendimportschamgeograft.MAX_RAND_WEG_ANBAU_MM)
+
+    def test_8_das_tiefenfeld_laeuft_nur_ohne_anbau(self):
+        """„cute girl alt4" (11.10.2026): die Lücke zur Haut am Rand läuft als Feld ins Stück (`Schamtiefenfeld`), der Auslauf der Naht ist `NAHT_BAND_MM`; ein Anbau (Penis, Hoden)
+        hat eigene Maße und behält das Randband: der Bericht trägt dann ein leeres `tiefenfeld`."""
+        ohne = Blendimportschamgeograft.verschweissen(*self._zu_grosses_stueck())
+        mit = Blendimportschamgeograft.verschweissen(*self._zu_grosses_stueck(), anbau=True)
+        self.assertTrue(ohne['bericht']['tiefenfeld'])
+        self.assertEqual(mit['bericht']['tiefenfeld'], {})
+        self.assertEqual(Blendimportschamgeograft.randband_max_mm(True), None)
+        self.assertEqual(Blendimportschamgeograft.randband_max_mm(False), 0.0)

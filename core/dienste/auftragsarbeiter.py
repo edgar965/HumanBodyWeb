@@ -80,13 +80,16 @@ class Auftragsarbeiter:
         return prozess.pid
 
     @classmethod
-    def _popen(cls, befehl, protokoll):
+    def _popen(cls, befehl, protokoll, umgebung=None):
         """`CREATE_BREAKAWAY_FROM_JOB` scheitert, wenn das Job-Objekt des
-        Servers es verbietet — dann ohne."""
+        Servers es verbietet — dann ohne. `umgebung`: Variablen, die zur Umgebung des Servers dazukommen
+        (z. B. `OPENBLAS_NUM_THREADS` für Arbeiter, in denen mehrere Fäden numpy benutzen)."""
+        env = dict(os.environ, **umgebung) if umgebung else None
 
         def starten(**weitere):
             return subprocess.Popen(
                 befehl,
+                env=env,
                 cwd=str(settings.BASE_DIR),
                 stdin=subprocess.DEVNULL,
                 stdout=protokoll,

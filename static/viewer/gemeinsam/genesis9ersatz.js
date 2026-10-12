@@ -1,3 +1,5 @@
+import { Anatomiehaut } from './anatomiehaut.js';
+
 /**
  * Genesis9ersatz — Teile der Figur ausblenden, die ein getragenes Stück ersetzt (08.10.2026).
  *
@@ -64,6 +66,7 @@ export class Genesis9ersatz {
             }
         }
         Genesis9ersatz._stueckWeichen(inst);
+        Anatomiehaut.nachziehen(inst);      // dieselbe Stelle (nach Körperneubau/Anziehen): das Anatomie-Stück folgt dem Hautton (`anatomiehaut.js`)
     }
 
     /** Die Ersatz-Augen selbst: weg, solange die Augen der Figur gewählt sind, sonst wieder da. */

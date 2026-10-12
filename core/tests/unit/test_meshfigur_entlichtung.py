@@ -100,7 +100,7 @@ class EntlichtungOptionTest(unittest.TestCase):
         self.assertEqual(Meshfiguroptionen.pruefen({'entlichten': 'x'})['entlichten'], 0)
 
     def test_runner_liest_die_option(self):
-        quelle = (MESHTO3D / '_run_meshfigur.py').read_text(encoding='utf-8')
+        quelle = (MESHTO3D / 'meshfigur_runnertextur.py').read_text(encoding='utf-8')       # der Schritt „textur" steht seit 12.10.2026 dort (aus `_run_meshfigur.py` herausgelöst)
         self.assertIn("optionen.get('entlichten')", quelle)
         self.assertIn('entlichtung=', quelle)
 

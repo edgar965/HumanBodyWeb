@@ -31,6 +31,7 @@ logger = logging.getLogger('core')
 #: Der Weg ohne Bündel je Seite: der Einstiegspunkt der Einzelmodule.
 EINZELN = Modulbuendel.EINSTIEGE['scene']
 EINZELN_STUDIO = Modulbuendel.EINSTIEGE['studio']
+EINZELN_MESH3D = Modulbuendel.EINSTIEGE['mesh3d']
 
 
 @register.simple_tag
@@ -43,6 +44,12 @@ def szenenskript():
 def studioskript():
     """Die fertige Adresse von BVH Studio — mit Fassung im Pfad."""
     return _skript('studio', EINZELN_STUDIO)
+
+
+@register.simple_tag
+def mesh3dskript():
+    """Die fertige Adresse der Jobseite „Mesh-3D“ — mit Fassung im Pfad (12.10.2026, `viewer/mesh3d/main.js`)."""
+    return _skript('mesh3d', EINZELN_MESH3D)
 
 
 def _skript(seite, einzeln):

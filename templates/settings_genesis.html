@@ -1,0 +1,46 @@
+{% extends "einstellungsseite.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Einstellungen — Genesis{% endblock %}
+
+{% block einstellungen_titel %}Genesis Einstellungen{% endblock %}
+{% block formular_zusatz %} id="genesis-settings-form"{% endblock %}
+
+{% block einstellungen_karten %}
+<div class="settings-section">
+    <h3>Scham</h3>
+    <div class="settings-row">
+        <label for="{{ schluessel }}">Methode:</label>
+        <select name="{{ schluessel }}" id="{{ schluessel }}">
+            {% for wert, text in methode_wahlen.items %}
+            <option value="{{ wert }}"{% if wert == methode %} selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+        </select>
+        <span class="hint">Gilt für jeden Import einer .blend (Einstellung „Scham: Fläche und Haut des Originals als eigenes Stück"). <strong>Eigen</strong> (Vorgabe): Das Modell
+            trägt das Stück „&lt;Name&gt; Scham" aus dem Original — der Teil des Körpers, den die Figur nicht trägt, mit Fläche und Haut des Originals. <strong>DAZ</strong>: Nach dem Import
+            wird zusätzlich das Daz-Geograft „Anatomical Elements" an dieses Stück angepasst (Zuschnitt auf Umriss und Loch des Eigen-Stücks, Regler der alten Scham übernommen, danach die
+            Scham-Messung); das Modell trägt dann das Daz-Stück „&lt;Name&gt; Daz Scham", das Eigen-Stück bleibt in der Bibliothek. Das dauert einige Minuten länger. Bereits importierte Modelle
+            ändern sich nicht — dafür gibt es <code>manage.py dazgeograft_anpassen</code>.</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block einstellungen_nachtrag %}
+<style>
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
+.settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+</style>
+<script type="module">
+import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+
+Vorgabenformular.anmelden('genesis-settings-form', 'Genesis-Einstellungen gespeichert — gilt ab dem nächsten Import.');
+</script>
+{% endblock %}

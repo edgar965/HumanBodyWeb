@@ -97,7 +97,7 @@ class Architektur2d3dklassen:
         # Ergänzt am 02.10.2026 für den Reiter „Workflow": die Schritte des Laufs, die Optionen und die Motoren.
         ('Lauf und Schritte', 'Die Schritte eines Auftrags (Engine2d3dKleiderlauf.SCHRITTE)', [
             (D + 'engine2d3dkleidervorbereitung.py', 'Engine2d3dKleidervorbereitung'),
-            (D + 'engine2d3dkleidernetz.py', 'Engine2d3dKleidernetz'), (D + 'engine2d3dkleiderkopf.py', 'Engine2d3dKleiderkopf'),
+            (D + 'engine2d3dkleidernetz.py', 'Engine2d3dKleidernetz'), (D + 'engine2d3dkleiderpose.py', 'Engine2d3dKleiderpose'), (D + 'engine2d3dkleiderkopf.py', 'Engine2d3dKleiderkopf'),
             (D + 'engine2d3dkleiderkopfausschnitt.py', 'Engine2d3dKleiderkopfausschnitt'), (D + 'engine2d3dkleiderkopfnetz.py', 'Engine2d3dKleiderkopfnetz'),
             (D + 'engine2d3dkleidersegmentierung.py', 'Engine2d3dKleidersegmentierung'),
             (D + 'engine2d3dkleiderkoerper.py', 'Engine2d3dKleiderkoerper'),

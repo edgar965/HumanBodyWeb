@@ -27,6 +27,8 @@ from django.utils import timezone
 
 from ..daten.blendimportablage import Blendimportablage
 from .blendimportformate import Blendimportformate
+from .blendimportschamdaz import Blendimportschamdaz
+from .blendimportweg import Blendimportweg
 
 logger = logging.getLogger('core')
 
@@ -34,17 +36,27 @@ __all__ = ['Blendimportlauf']
 
 
 class Blendimportlauf:
-    SCHRITTE = ('umwandeln', 'export', 'umposen', 'koerper', 'figur', 'finger', 'stuecke', 'haut', 'augen', 'modell')
-    BAENDER = {'umwandeln': (0, 2), 'export': (2, 3), 'umposen': (3, 5), 'koerper': (5, 7), 'figur': (7, 70), 'finger': (70, 72),
+    SCHRITTE = ('umwandeln', 'export', 'umposen', 'koerper', 'segmentierung', 'pose', 'figur', 'finger', 'stuecke', 'haut', 'augen', 'modell')
+    #: Nur der Weg „netz“ hat `segmentierung` (`Blendimportweg.NETZ_SCHRITTE`) — beim Weg „teile“ trennen die Rollen der Objekte, was Sapiens am verschmolzenen Netz trennen muss.
+    NUR_NETZ = ('segmentierung',)
+    #: Die Bänder des Wegs „teile“ (lückenlos von 0 bis 100); der Weg „netz“ hat eigene (`Blendimportweg.NETZ_BAENDER`) — `baender_fuer`.
+    BAENDER = {'umwandeln': (0, 2), 'export': (2, 3), 'umposen': (3, 5), 'koerper': (5, 7), 'pose': (7, 9), 'figur': (9, 70), 'finger': (70, 72),
                'stuecke': (72, 80), 'haut': (80, 95), 'augen': (95, 97), 'modell': (97, 100)}
 
     class Angehalten(Exception):
         """Der Nutzer hat angehalten."""
 
     @classmethod
-    def schritte_fuer(cls, format):
-        """Die Schritte eines Formats: „umwandeln" gibt es nur, wenn Blender die Datei erst zur .blend machen muss."""
-        return tuple(s for s in cls.SCHRITTE if s != 'umwandeln' or Blendimportformate.umwandeln(format))
+    def schritte_fuer(cls, format, weg=None):
+        """Die Schritte eines Formats: „umwandeln" gibt es nur, wenn Blender die Datei erst zur .blend machen muss; der Weg „netz“ (ein verschmolzenes Netz, `Blendimportweg`) hat nur drei."""
+        if weg == Blendimportweg.NETZ:
+            return Blendimportweg.NETZ_SCHRITTE
+        return tuple(s for s in cls.SCHRITTE if s not in cls.NUR_NETZ and (s != 'umwandeln' or Blendimportformate.umwandeln(format)))
+
+    @classmethod
+    def baender_fuer(cls, weg=None):
+        """Schritt → (von, bis) in Prozent für den Weg: „netz“ hat eigene Bänder, alles andere ist „teile“."""
+        return Blendimportweg.NETZ_BAENDER if weg == Blendimportweg.NETZ else cls.BAENDER
 
     def __init__(self, kennung):
         self.ablage = Blendimportablage(kennung)
@@ -52,6 +64,10 @@ class Blendimportlauf:
         self.format = Blendimportformate.pruefen((self.stand.get('quelle') or {}).get('format'))
         self._band = (0, 100)
         self._letzte = 0.0
+
+    def weg(self):
+        """`teile` (die Kette mit Blender) oder `netz` (ein verschmolzenes Netz) — ein Stand ohne `weg` ist `teile`."""
+        return Blendimportweg.pruefen(self.stand.get('weg'))
 
     # ------------------------------------------------------------ Stand
 
@@ -96,7 +112,7 @@ class Blendimportlauf:
 
     def ausfuehren(self, ab=None):
         self.ablage.anlegen()
-        schritte = self.schritte_fuer(self.format)
+        schritte = self.schritte_fuer(self.format, self.weg())
         start = schritte.index(ab) if ab in schritte else 0
         # `schritte` im Stand: die Seite zeigt genau die Schritte DIESES Imports (eine .blend hat kein „umwandeln").
         self.sichern(status='laeuft', fehler='', gestartet=timezone.now().isoformat(), ab=schritte[start], schritte=list(schritte))
@@ -105,7 +121,7 @@ class Blendimportlauf:
             for name in schritte[start:]:
                 if self.ablage.stand().get('status') == 'angehalten':
                     raise self.Angehalten()
-                self._band = self.BAENDER[name]
+                self._band = self.baender_fuer(self.weg())[name]
                 self.sichern(schritt=name)
                 self.melden(0.0, name)
                 t = time.perf_counter()
@@ -177,21 +193,60 @@ class Blendimportlauf:
     def _koerper(self):
         from .blendimportkoerper import Blendimportkoerper
 
+        if self.weg() == Blendimportweg.NETZ:
+            from .blendimportnetz import Blendimportnetz
+
+            self.ergebnis('koerper', Blendimportnetz(self.ablage, self.melden).schreiben(self.stand['quelle']['datei']))
+            return
         ergaenzen = self.stand['einstellungen'].get('koerper_ergaenzen') == 'an'
         self.ergebnis('koerper', Blendimportkoerper(self.ablage, self.inventar(), self.stand['rollen'], ergaenzen).schreiben())
+
+    def _segmentierung(self):
+        """Weg „netz“: Sapiens trennt Haut, Kleidung und Haar am verschmolzenen Netz (`Blendimportsegmentierung`); die Stimmen nutzt `_figur`."""
+        from .blendimportkoerper import Blendimportkoerper
+        from .blendimportsegmentierung import Blendimportsegmentierung
+
+        segmentierung = Blendimportsegmentierung(self.ablage, self.melden, lambda: self.ablage.stand().get('status') == 'angehalten', self.Angehalten)
+        self.ergebnis('segmentierung', segmentierung.rechnen(self.ablage.arbeit(Blendimportkoerper.DATEI)))
+
+    def _pose(self):
+        """Die Haltung mit SAM 3D Body bestimmen (`Blendimportpose`, Einstellung `pose`); aus: der Schritt tut nichts, „Mesh to 3D“ schätzt die Haltung selbst."""
+        from .blendimportkoerper import Blendimportkoerper
+        from .blendimportpose import Blendimportpose
+
+        pose = Blendimportpose(self.ablage, self.stand['einstellungen'], self.melden,
+                               lambda: self.ablage.stand().get('status') == 'angehalten', self.Angehalten)
+        self.ergebnis('pose', pose.ausfuehren(self.ablage.arbeit(Blendimportkoerper.DATEI)))
 
     def _figur(self):
         from .blendimportfigur import Blendimportfigur
         from .blendimportkoerper import Blendimportkoerper
+        from .blendimportpose import Blendimportpose
 
-        figur = Blendimportfigur(self.ablage, self.stand['quelle']['name'], self.stand['einstellungen']['basis'])
-        job = figur.anlegen(self.ablage.arbeit(Blendimportkoerper.DATEI))
+        netz = self.weg() == Blendimportweg.NETZ
+        figur = Blendimportfigur(self.ablage, self.stand['quelle']['name'], self.stand['einstellungen']['basis'], netz=netz)
+        glb = self.ablage.arbeit(Blendimportkoerper.DATEI)
+        zusatz = Blendimportpose.zusatz(self.ablage, self.stand, glb)
+        job = figur.anlegen(glb)
         self.ergebnis('figur', {'id': str(job.id), 'kennung': job.kennung})
-        job = figur.rechnen(job)
+        sapiens = None
+        if netz:
+            from .blendimportsegmentierung import Blendimportsegmentierung
+            from ..daten.meshfigurablage import Meshfigurablage
+
+            sapiens = Blendimportsegmentierung.fuer_figur(self.ablage, self.stand, Meshfigurablage(job.kennung), glb)
+        job = figur.rechnen(job, zusatz, sapiens)
         # Die Scham-Messung von „Mesh to 3D" (`Meshfigurschammessung`, läuft bei jedem Auftrag im Schritt „vorschau"): auch ohne Scham-Stück steht hier, wie die Figur die Scham des Originals trifft.
         self.ergebnis('figur', {'id': str(job.id), 'kennung': job.kennung, 'regler': len(job.stellung() or {}),
                                 'rest': (job.ergebnis or {}).get('rest', {}).get('regler'),
-                                'schammessung': (job.ergebnis or {}).get('schammessung')})
+                                'schammessung': (job.ergebnis or {}).get('schammessung'),
+                                # Woher der Hautton kam (kahle Stellen oder Sapiens) und ob die Kleidungsmaske Sapiens folgte — die Karte „Segmentierung“ zeigt es (Weg „netz“).
+                                'hautmodell': ((job.ergebnis or {}).get('koerper') or {}).get('haut'),
+                                'kleidung': {k: ((job.ergebnis or {}).get('kleidung') or {}).get(k) for k in ('fehler', 'sapiens', 'hautmodell')}})
+        if netz:
+            # Weg „netz“: „Mesh to 3D“ speichert das Modell `<Name> Mesh` selbst (Option `modell` an); Nachformung, Stücke und Haut des Wegs „teile“ gibt es nicht.
+            self.ergebnis('modell', {'name': job.modell, 'weg': Blendimportweg.NETZ})
+            return
         self._nachformung(job)
 
     def _nachformung(self, job):
@@ -246,6 +301,8 @@ class Blendimportlauf:
         return Blendimportnachformung.zusatzregler(self.stand)
 
     def _stuecke(self):
+        from Genesis9.offscreenwerk import G9offscreenwerk
+
         from .blendimportstuecke import Blendimportstuecke
 
         if self.stand['einstellungen'].get('stuecke') != 'an':
@@ -255,7 +312,8 @@ class Blendimportlauf:
                                  self.stand['quelle']['name'], self.melden,
                                  self.stand['einstellungen'].get('augen'), self.zusatzregler(),
                                  self.stand['einstellungen'].get('scham'))
-        stuecke, bericht = bau.bauen()
+        with G9offscreenwerk.sitzung():        # ein Renderer für die Icons aller Stücke (`G9stueckicon`), nicht einer je Stück
+            stuecke, bericht = bau.bauen()
         self.ergebnis('stuecke', {'stuecke': stuecke, 'bericht': bericht, 'bogen': bau.bogen_pfad})
 
     def _haut(self):
@@ -294,4 +352,5 @@ class Blendimportlauf:
                                    self.stand['einstellungen']['browser_px'], self.zusatzregler())
         name = modell.schreiben(self.stand['quelle']['name'], (e.get('haut') or {}).get('kacheln') or {},
                                 (e.get('augen') or {}).get('pfad'), (e.get('stuecke') or {}).get('stuecke') or {})
-        self.ergebnis('modell', {'name': name})
+        daz = Blendimportschamdaz.bauen(name, self.stand['einstellungen'], self.melden)      # nur bei „DAZ" (Einstellungen → Genesis)
+        self.ergebnis('modell', {'name': name, **({'daz': daz} if daz else {})})

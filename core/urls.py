@@ -10,6 +10,7 @@ from .api import (
     seite_bvhstudio_einstellungen,
     seite_effekte_einstellungen,
     seite_fotoauftraege,
+    seite_genesis_einstellungen,
     seite_kleider2d3d_einstellungen,
     seite_kleider_einstellungen,
     seite_theatre_einstellungen,
@@ -60,6 +61,7 @@ from .urls_bildmodell import BILDMODELL  # noqa: E402
 from .urls_blendermodell import BLENDERMODELL  # noqa: E402
 from .urls_engine2d3dkleider import ENGINE2D3DKLEIDER  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
+from .urls_mesh3d import MESH3D  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
 from .urls_blendimport import BLENDIMPORT  # noqa: E402
 from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
@@ -132,6 +134,8 @@ urlpatterns = [
     # Renderer von 2D3D Kleider: Mitsuba oder pyrender (01.10.2026, `dienste/renderwahl.py`).
     path('settings/2d3dkleider/', seite_kleider2d3d_einstellungen.kleider2d3d_settings_page,
          name='settings_2d3dkleider'),
+    # Scham-Methode der Blender-Importe: Eigen oder DAZ (11.10.2026, `dienste/schamwahl.py`).
+    path('settings/genesis/', seite_genesis_einstellungen.genesis_settings_page, name='settings_genesis'),
     # Knopf „Neu backen" auf /settings/kleider/ (26.09.2026) — Unterprozess,
     # der Stand kommt aus einer Datei; siehe `dienste/gcstueckelauf.py`.
     path('api/kleider/gcstuecke/starten/', Gcstueckeendpunkte.starten, name='gcstuecke_starten'),
@@ -284,3 +288,5 @@ urlpatterns += GESICHTSFORM
 urlpatterns += BLENDERMODELL
 # Bereich „2D3D Kleider" (Kopie von BlenderModel, Genesis-Engine statt Blender), 30.09.2026.
 urlpatterns += ENGINE2D3DKLEIDER
+# Seite „Mesh-3D" (Netz → Genesis-Modell; ein Auftrag ist ein Modell-Import, `urls_mesh3d.py`), 11.10.2026.
+urlpatterns += MESH3D

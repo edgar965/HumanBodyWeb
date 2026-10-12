@@ -23,6 +23,7 @@
 import { Serverabruf as ServerabrufBasis } from '/static/djangobase/js/serverabruf.js';
 import { fn } from './registrierung.js';
 import { Netzpaket } from './netzpaket.js';
+import { Serverfehler } from './serverfehler.js';
 
 export class Serverabruf extends ServerabrufBasis {
 
@@ -131,7 +132,8 @@ export class Serverabruf extends ServerabrufBasis {
             fn.serverLog?.('server_call_failed',
                 `${methode} ${adresse} status=${fehler.status ?? '?'} `
                 + `${(performance.now() - start).toFixed(0)}ms ${fehler.message}`, 'warnung');
-            throw fehler;
+            // Das Protokoll trägt den rohen Text (technisch genau), der Nutzer bekommt einen Satz, der sagt, was los ist (`Serverfehler`).
+            throw Serverfehler.verstaendlich(fehler);
         }
     }
 }

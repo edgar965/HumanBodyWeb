@@ -101,8 +101,9 @@ class SchammessungansichtenTest(SimpleTestCase):
     def test_5_der_absatz_am_ring_wird_gemessen(self):
         flach = self._messen(self.haut)['absatz']
         self.assertLess(flach['stueck_mm']['max'], 0.1)
-        # ein Stück, das 2 mm hinter dem Ring (r = 28 mm) 12 mm unter der Hautebene liegt, innen bündig mit dem Hügel
-        stufe = _feld(lambda x, y: np.where(np.hypot(x, y) < 0.0285, -0.012, 0.0))
+        # ein Stück, das 2 mm hinter dem Ring (r = 28 mm) 12 mm unter der Hautebene liegt. Die Stufe endet bei 31 mm, einen Gitterschritt (2 mm) hinter dem Messpunkt: bei 28,5 mm lag der Messpunkt
+        # mitten in der Dreiecksfläche der Stufe, und von 24 Ringpunkten maßen nur 16 mehr als 10 mm (gemessen 12.10.2026: –5,7 / –10,5 / –12,0 mm je nach Winkel zum Gitter).
+        stufe = _feld(lambda x, y: np.where(np.hypot(x, y) < 0.031, -0.012, 0.0))
         aus = self._messen(self.haut, stueck=stufe)['absatz']
         self.assertGreater(aus['stueck_mm']['median'], 10.0)
         self.assertEqual(aus['stueck_ueber_10mm'], len(self.ring))

@@ -10,6 +10,7 @@ import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Ursprungsfix } from './ursprungsfix.js';
 import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
+import { Kleidersichtbarkeit } from '../gemeinsam/kleidersichtbarkeit.js';
 
 export function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -158,7 +159,8 @@ export function bindVisibilityToggles() {
         clothesToggle.addEventListener('click', () => {
             state.clothesVisible = !state.clothesVisible;
             state.characters.forEach(inst => {
-                for (const m of Object.values(inst.clothMeshes)) { if (m) m.visible = state.clothesVisible; }
+                Kleidersichtbarkeit.setzen(inst, state.clothesVisible);      // neu gebaute Stücke übernehmen den Stand (`Genesis9kleidung.anziehen`)
+                Kleidersichtbarkeit.anwenden(inst, state.clothesVisible);      // die Scham (Körperteil, `hautTiefe`) bleibt stehen
                 if (inst.hairMesh) inst.hairMesh.visible = state.clothesVisible;
                 Hautverdeckung.sichtbarkeit(inst);      // ausgeblendeter Stoff verdeckt die Haut nicht
             });

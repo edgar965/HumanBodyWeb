@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { Genesis9haut } from './genesis9haut.js';
 import { Stueckhautpatch } from './stueckhautpatch.js';
+import { Anatomiekarten } from './anatomiekarten.js';
 import { Stueckhautrechnung } from './stueckhautrechnung.js';
 
 export class Stueckhaut {
@@ -28,6 +29,8 @@ export class Stueckhaut {
     });
     /** Gelesene Karten (Pixel je Bild), damit jede nur einmal vom Bild geholt wird. */
     static _pixel = new WeakMap();
+    /** Farbe der Haut und Maß der Überblendung je Netz, wie `angleichen` sie rechnete (für `randSetzen`; nicht in `userData`, das Exporter lesen). */
+    static _rand = new WeakMap();
     /** Halbe Kantenlänge (Texel) des Quadrats, über das die Farbe einer Stelle gemittelt wird. */
     static LESE_R = 2;
 
@@ -49,8 +52,19 @@ export class Stueckhaut {
         };
         const haut = { pos: hg.attributes.position.array, normal: normal.array, dicke: hg.getAttribute('dicke')?.array || null, farbe };
         const r = Stueckhautrechnung.rechnen(Stueckhaut._lage(g.attributes.position.array, naht.werte), naht, haut);
-        Stueckhautpatch.eintragen(netz, r.farbe, r.misch);
+        Stueckhaut._rand.set(netz, { farbe: r.farbe, misch: r.misch });
+        Stueckhaut.randSetzen(netz);
         return { mitFarbe: r.mitFarbe, durchlicht: Stueckhaut._durchlicht(netz, g, mats, r.dicke) };
+    }
+
+    /**
+     * Die Überblendung der Farbe am Rand eintragen (gerechnet in `angleichen`, gemerkt am Netz). Aus (Maß 0), solange das Stück die Karten der Haut zeigt
+     * (`Anatomiekarten.traegtHaut`): seine Texel sind dann bis zum Ring die der Haut, und die flache Hautfarbe am Rand machte dort einen verschwommenen Ring.
+     */
+    static randSetzen(netz) {
+        const rand = Stueckhaut._rand.get(netz);
+        if (!rand) return;
+        Stueckhautpatch.eintragen(netz, rand.farbe, Anatomiekarten.traegtHaut(netz) ? new Float32Array(rand.misch.length) : rand.misch);
     }
 
     /** Punkte des Stücks nach dem Randversatz (so liegt es in Ruhelage am Ring). */

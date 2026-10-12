@@ -136,7 +136,7 @@ class KleidungsluftOptionTest(unittest.TestCase):
         wrapper = Path(__file__).resolve().parents[4] / 'meshto3d'
         runner = (wrapper / '_run_meshfigur.py').read_text(encoding='utf-8')
         abstand = (wrapper / 'meshfigur_abstand.py').read_text(encoding='utf-8')
-        rest = (wrapper / 'meshfigur_registrierung.py').read_text(encoding='utf-8')
+        rest = (wrapper / 'meshfigur_registrierungruhe.py').read_text(encoding='utf-8')            # `ruhe_rest` steht seit 12.10.2026 dort (aus `meshfigur_registrierung.py` herausgelöst)
         self.assertIn("kleidung_luft=float(self.daten.optionen.get('kleidungsluft_mm') or 0) / 1000.0", runner)
         self.assertIn('self.luft = float(kleidung_luft)', abstand)
         self.assertIn('torch.relu(r + self.abstand.luft) * passt', rest)

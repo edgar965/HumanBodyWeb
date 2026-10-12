@@ -171,7 +171,7 @@ class Engine2d3dKleidermeshoptionenTest(OhneDienste):
         js = Path(settings.BASE_DIR) / 'static' / 'viewer' / 'engine2d3dkleider' / 'engine2d3dkleidereinstellungen.js'
         self.assertIn('engine2d3dkleider-optionen-', js.read_text(encoding='utf-8'))
         vorlagen = Path(settings.BASE_DIR) / 'templates'
-        seite = '\n'.join((vorlagen / name).read_text(encoding='utf-8') for name in ('engine2d3dkleider_auftrag.html', '_engine2d3dkleider_kopf.html'))
+        seite = '\n'.join((vorlagen / name).read_text(encoding='utf-8') for name in ('engine2d3dkleider_auftrag.html', '_engine2d3dkleider_kopf.html', '_engine2d3dkleider_pose.html'))
         for gruppe in Engine2d3dKleideroptionen.GRUPPEN:
             self.assertRegex(seite, r'id="engine2d3dkleider-optionen-%s"' % gruppe)
 

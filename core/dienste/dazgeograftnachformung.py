@@ -31,18 +31,25 @@ class Dazgeograftnachformung:
     UNTER_ENDUNG = '_unterkleid_daz'
     UNTER_ENDUNG_UMRISS = '_unterkleid_umriss'
 
+    @staticmethod
+    def ist_zusatz(regler):
+        """Ist `regler` ein Zusatz-Regler dieses Baus (Nachformung `…_scham`, Unterkleid `…_unterkleid…`) und kein Körper-Regler?"""
+        return regler.endswith('_scham') or '_unterkleid' in regler
+
     @classmethod
-    def sichern(cls, daten, wert, loch_maske=None):
+    def sichern(cls, daten, wert, loch_maske=None, name=None):
         """`(regler, entfernen)`: `regler` = `{Regler: Wert}`, die das Daz-Modell zusätzlich trägt (Nachformung mit `wert`, Unterkleid `…_unterkleid_daz` mit 1); `entfernen` = Regler des Imports, die es
         nicht trägt (`…_unterkleid`). Fehlende Morphe werden hier gerechnet und abgelegt. `daten`: Inhalt von `data/models/<Modell>.json`.
-        `loch_maske`: bool je Dreieck der Haut — das Loch des Blender-Stücks, wenn das Daz-Stück dessen Umriss hat; das Unterkleid lässt dann DIESE Haut aus (Name `…_unterkleid_umriss`), sonst die im Loch des Geografts."""
+        `loch_maske`: bool je Dreieck der Haut — das Loch des Blender-Stücks, wenn das Daz-Stück dessen Umriss hat; das Unterkleid lässt dann DIESE Haut aus (Name `…_unterkleid_umriss`), sonst die im Loch des Geografts.
+        `name`: kommt der Umriss von einem ANDEREN Stück als dem Vorbild (`Dazgeograftangepasst.UMRISS_VON`), hängt er am Namen des Morphs (`…_unterkleid_umriss_<name>`) — sonst überschriebe der Bau den Morph der Modelle, die den
+        Umriss des Vorbilds tragen (am 11.10.2026 passiert: „cute girl daz2" mit dem Loch von alt2 legte den Morph von „Daz3" neu an)."""
         from Genesis9.eigenmorphe import G9eigenmorphe
 
         figur = daten.get('figur') or {}
         regler = dict(figur.get('regler') or {})
         kennung = (figur.get('herkunft') or {}).get('import')
         neu, entfernen = {}, []
-        for koerper in [k for k in regler if k.startswith(G9eigenmorphe.PRAEFIX) and not k.endswith(cls.ENDUNGEN)]:
+        for koerper in [k for k in regler if k.startswith(G9eigenmorphe.PRAEFIX) and not cls.ist_zusatz(k)]:
             lauf_job = cls._lauf(kennung, koerper)
             scham = koerper + '_scham'
             if not G9eigenmorphe.vorhanden(scham) and not (lauf_job and cls._nachformung(*lauf_job)):
@@ -51,7 +58,7 @@ class Dazgeograftnachformung:
             neu[scham] = float(wert)
             if koerper + '_unterkleid' in regler:
                 entfernen.append(koerper + '_unterkleid')
-                unter = lauf_job and cls._unterkleid(*lauf_job, regler, {scham: float(wert)}, loch_maske)
+                unter = lauf_job and cls._unterkleid(*lauf_job, regler, {scham: float(wert)}, loch_maske, name)
                 if unter:
                     neu[unter] = 1.0
         return neu, entfernen
@@ -82,13 +89,13 @@ class Dazgeograftnachformung:
         return bool(bericht.get('regler'))
 
     @classmethod
-    def _unterkleid(cls, lauf, job, regler, zusatzregler, loch_maske=None):
+    def _unterkleid(cls, lauf, job, regler, zusatzregler, loch_maske=None, name=None):
         """Der Unterkleid-Morph auf der Figur mit `zusatzregler` (Nachformung) ohne die Hautpunkte im Loch, abgelegt als `…_unterkleid_daz` (Loch des Geografts) oder `…_unterkleid_umriss` (`loch_maske`,
         das Loch des Blender-Stücks) → sein Name oder `None` (keine Haut vor der Kleidung)."""
         from .blendimportunterkleid import Blendimportunterkleid
 
         u = Blendimportunterkleid(lauf.ablage, job, lauf.inventar(), lauf.stand['rollen'], lauf.stand['quelle']['name'])
-        endung = cls.UNTER_ENDUNG if loch_maske is None else cls.UNTER_ENDUNG_UMRISS
+        endung = cls.UNTER_ENDUNG if loch_maske is None else cls.UNTER_ENDUNG_UMRISS + ('_' + name if name else '')
         bericht = u.formen(zusatzregler, ausnehmen=cls._lochpunkte(regler, loch_maske), endung=endung)
         logger.info('Daz-Geograft: Unterkleid für die Figur mit Nachformung gerechnet: %s', {k: v for k, v in bericht.items() if k != 'regler'})
         return next(iter(bericht.get('regler') or {}), None)
@@ -100,7 +107,7 @@ class Dazgeograftnachformung:
         from .dazgeografthaut import Dazgeografthaut
         from .dazgeograftquelle import Dazgeograftquelle
 
-        grund = Dazgeografthaut.grundfigur({k: v for k, v in regler.items() if not k.endswith(cls.ENDUNGEN[1:])})
+        grund = Dazgeografthaut.grundfigur({k: v for k, v in regler.items() if '_unterkleid' not in k})
         if loch_maske is not None:
             maske = np.asarray(loch_maske, dtype=bool)
         else:

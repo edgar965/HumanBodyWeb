@@ -112,12 +112,11 @@ können, egal auf welchem Reiter man ist. Das Band zeigt Stand und „Anhalten�
         <span id="fortschritt-text" class="hb-hinweis"></span>
         {% comment %}Rechts oben: die Knopfreihe, darunter „Modell im System Speichern“ (`Engine2d3dKleidersystemspeichern`, 08.10.2026).{% endcomment %}
         <span class="engine2d3dkleider-laufspalte">
-            <span class=”bildmodell-laufknoepfe”>
-                <label class=”hb-hinweis”>ab <select id=”ab-schritt” class=”viewer-select”></select></label>
-                <label class=”hb-hinweis” title=”Der letzte Schritt dieses Laufs — „Ende” rechnet bis zum Speichern. So lässt sich jeder Schritt getrennt starten.”>bis <select id=”bis-schritt” class=”viewer-select”></select></label>
-                <button type=”button” class=”btn btn-primary btn-sm” id=”starten”><i class=”fas fa-play”></i> <span>Neu berechnen</span></button>
-                <button type=”button” class=”btn btn-secondary btn-sm” id=”koerper-bauen” title=”Baut nur das Genesis-Modell (Schritte Körper und Grundfigur)”><i class=”fas fa-cube”></i> <span>Genesis-Modell bauen</span></button>
-                <button type=”button” class=”btn btn-secondary btn-sm” id=”anhalten” disabled><i class=”fas fa-stop”></i> <span>Anhalten</span></button>
+            <span class="bildmodell-laufknoepfe">
+                <label class="hb-hinweis">ab <select id="ab-schritt" class="viewer-select"></select></label>
+                <label class="hb-hinweis" title="Der letzte Schritt dieses Laufs — „Ende“ rechnet bis zum Speichern. So lässt sich jeder Schritt getrennt starten.">bis <select id="bis-schritt" class="viewer-select"></select></label>
+                <button type="button" class="btn btn-primary btn-sm" id="starten"><i class="fas fa-play"></i> <span>Neu berechnen</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" id="anhalten" disabled><i class="fas fa-stop"></i> <span>Anhalten</span></button>
             </span>
             <button type="button" class="btn btn-secondary btn-sm" id="modell-im-system-speichern" disabled><i class="fas fa-save"></i> <span>Modell im System Speichern</span></button>
             <span class="hb-hinweis" id="modell-im-system-meldung"></span>
@@ -189,6 +188,7 @@ Knopf `Engine2d3dKleidermeshkarte`.{% endcomment %}
         übrigen Fotos gehen in die Textur.</p>
     <div class="mesh-optionen" id="engine2d3dkleider-optionen-mesh"></div>
 </div>
+{% include "_engine2d3dkleider_pose.html" %}
 {% include "_engine2d3dkleider_kopf.html" %}
 
 {% comment %}Karte „Segmentierung“ (04.10.2026, Edgar: „baue das ein in den 2d3dKleider jobs — optional nach der Mesh erzeugung“): Sapiens zerlegt die
@@ -217,6 +217,14 @@ Option gehört zur Gruppe `segmentierung`.{% endcomment %}
         Option dort „An“ ist) und gemessen. Danach trägt die Bühne sie schon vor Runde 1 — „Kleider“ blendet sie aus und ein. Runde 1 baut sie nicht neu, solange Netz, Maske und Figur gleich bleiben.</p>
     <div class="engine2d3dkleider-vorbereitung-zeile" id="kleiderstuecke-zeile"></div>
     <div id="kleiderstuecke-tabelle"></div>
+</div>
+
+{% comment %}Karte „Genesis-Modell“ (11.10.2026, Edgar: „einen Button um den letzten Schritt einzeln zu bauen — also das Genesis Modell aus dem Mesh“, „da sollte der Button sein“ — nach „Kleiderstücke“):
+der Knopf rechnet nur die Schritte `koerper` und `grundfigur`. Aufgebaut von `Engine2d3dKleiderkoerperbauen` (JS).{% endcomment %}
+<div class="card" id="koerper-bauen-karte">
+    <h2>Genesis-Modell — aus dem Mesh</h2>
+    <p class="hb-hinweis">Baut nur das Genesis-Modell aus dem Netz der Fotos: die Schritte „Körper“ und „Grundfigur“. Kleiderstücke und Iterationen laufen dabei nicht mit; sie starten getrennt über ihre Karten und die Laufleiste („ab“ und „bis“).</p>
+    <div class="engine2d3dkleider-vorbereitung-zeile" id="koerper-bauen-zeile"></div>
 </div>
 
 {% comment %}Die Optionen stehen in einer eigenen Karte über die volle Breite, nicht in der Seitenspalte der Bühne wie bei

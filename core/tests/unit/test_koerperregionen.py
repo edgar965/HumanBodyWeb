@@ -109,6 +109,27 @@ class KatalogTest(unittest.TestCase):
         b = R.bereich()
         self.assertEqual((b['schluessel'], len(b['regler'])), ('region', len(R.KATALOG)))
 
+    def test_die_vier_neuen_umfangsregler_vom_12_10_2026(self):
+        """Taille, Hüfte, Oberarm, Schulterpartie: die Umfänge ohne einzelnen Daz-Regler (Edgar: „neue Regler für genau diese Anpassungen")."""
+        neu = {e['kennung']: e for e in R.KATALOG if e['kennung'] in ('oberarm', 'schulter', 'taille', 'huefte')}
+        self.assertEqual(sorted(neu), ['huefte', 'oberarm', 'schulter', 'taille'])
+        self.assertEqual(neu['taille']['achse'], ('pelvis', 'spine4'))
+        self.assertEqual(neu['huefte']['achse'], ('pelvis', 'spine4'))
+        self.assertEqual(neu['oberarm']['seiten'], ('l_', 'r_'))
+        self.assertLess(neu['huefte']['fenster'][1], neu['taille']['fenster'][0])        # die Hüfte liegt unter der Taille (t wächst nach oben)
+
+    def test_taille_wirkt_nur_im_fenster_und_im_radius(self):
+        e = next(x for x in R.KATALOG if x['kennung'] == 'taille')
+        gelenke = {'pelvis': np.array([0.0, 0.0, 0.0]), 'spine4': np.array([0.0, 0.28, 0.0])}
+        p = _zylinder(0.0, laenge=0.28, radius=0.15)
+        d = R._seite(e, '', p, gelenke)
+        t = p[:, 1] / 0.28
+        innen = (t > 0.1) & (t < 0.4)
+        self.assertAlmostEqual(float(np.linalg.norm(d[innen], axis=1).mean()), e['weg_cm'] / 100.0, places=4)
+        self.assertEqual(float(np.linalg.norm(d[t < -0.155], axis=1).max()), 0.0)        # der Anstieg beginnt bei t0 − anstieg = −0,15
+        arm = _zylinder(0.3, laenge=0.28, radius=0.04)                               # ein Arm neben dem Rumpf (30 cm von der Achse) bleibt liegen
+        self.assertEqual(float(np.linalg.norm(R._seite(e, '', arm, gelenke), axis=1).max()), 0.0)
+
 
 class VerdrahtungTest(unittest.TestCase):
     """Die Kette ist erst dicht, wenn die letzte Schicht sie liest (`meshfigur.md`): Option → Lauf → Kette → Reglersatz → Ableitung."""
@@ -124,6 +145,16 @@ class VerdrahtungTest(unittest.TestCase):
         self.assertEqual(O.pruefen({})['regionen'], 'aus')
         self.assertEqual(O.pruefen({'regionen': 'an'})['regionen'], 'an')
         self.assertEqual(O.pruefen({'regionen': 'unsinn'})['regionen'], 'aus')
+
+    def test_option_regionen_auch_in_mesh_to_3d(self):
+        """Seit 12.10.2026 hat auch „Mesh to 3D" / Mesh-3D die Option (Vorgabe aus) und `Meshfigurkette._regler` liest sie neben dem Attribut des Laufs."""
+        from core.dienste.meshfiguroptionen import Meshfiguroptionen as O
+
+        self.assertEqual({e['schluessel']: e for e in O.KATALOG}['regionen']['vorgabe'], 'aus')
+        self.assertEqual(O.pruefen({})['regionen'], 'aus')
+        self.assertEqual(O.pruefen({'regionen': 'an'})['regionen'], 'an')
+        self.assertEqual(O.pruefen({'regionen': 'x'})['regionen'], 'aus')
+        self.assertIn("self.optionen.get('regionen') == 'an'", self._text('HumanBodyWeb', 'core', 'dienste', 'meshfigurkette.py'))
 
     def test_lauf_kette_und_satz(self):
         self.assertIn("self.regionen_an = (koerperoptionen or {}).get('regionen') == 'an'",

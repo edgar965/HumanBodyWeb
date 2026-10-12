@@ -171,6 +171,9 @@ class Blendimportrollen:
             # dann nichts steht (nur Steuerformen) und für Inventare älterer Läufe.
             raise ValueError('Das Modell hat kein Skelett: %d Netze (%s%s), %s Armaturen — der Import braucht ein Modell mit Rig (Armatur und Hautgewichte, z. B. Auto-Rig Pro).'
                              % (len(self.ohne_armatur), ', '.join(self.ohne_armatur[:4]), ' …' if len(self.ohne_armatur) > 4 else '', self.armaturen if self.armaturen is not None else '0'))
+        if not self.netze:
+            # Ein Inventar ohne jedes Netz (alte Läufe, leere Datei): die Meldung nennt es, statt in `max()` über nichts zu enden.
+            raise ValueError('Kein Körper: das Inventar enthält kein Netz')
         if self.ohne_gewichte:
             # Ohne Gewichte zählt keine Knochenzahl: das höchste Netz ist der Körper (Asian girl: 3,26 m gegen 1,50 m der Socken).
             hoechste = max(self.hoehe(n) for n in self.netze)

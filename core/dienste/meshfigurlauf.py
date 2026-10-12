@@ -25,31 +25,19 @@ Runner-Zeilen: `[fortschritt] <0..100> <Text>` (je Schritt auf sein Band umgerec
 
 import json
 import logging
-import os
 import time
 
 from django.conf import settings
 from django.utils import timezone
 
 from ..daten.meshfigurablage import Meshfigurablage
-from ..daten.meshto3dpfad import Meshto3dpfad
 from ..models import Meshfigurauftrag
-from ..pipeline_process import PipelineProzess, PipelineStille
+from .meshfigurdauerprozess import Meshfigurdauerprozess
+from .meshfigurnebenlauf import Meshfigurnebenlauf
 from .meshfiguroptionen import Meshfiguroptionen
+from .meshfigurrunnerbahn import Meshfigurrunnerbahn
 
 logger = logging.getLogger('core')
-
-
-def _endlich(wert):
-    """NaN und unendlich werden `None` — `json.loads` liest „NaN" als Zahl, und SQLite lehnt sie im JSON-Feld ab
-    (`CHECK constraint failed: JSON_VALID`, Seori-Import 10.10.2026: `gesicht_fehler_px` ohne Gesichtspunkte)."""
-    if isinstance(wert, float):
-        return wert if (wert == wert and abs(wert) != float('inf')) else None
-    if isinstance(wert, dict):
-        return {k: _endlich(v) for k, v in wert.items()}
-    if isinstance(wert, list):
-        return [_endlich(v) for v in wert]
-    return wert
 
 __all__ = ['Meshfigurlauf']
 
@@ -73,6 +61,14 @@ class Meshfigurlauf:
     RUNNER = '_run_meshfigur.py'
     #: So lange darf der Runner schweigen (Modelle laden, eine lange Stufe).
     STILLE_S = 900
+    #: Schritte, die nur mit Dateien rechnen (CPU, kein Runner) und neben den Ketten in einem Faden laufen: „haar" und „kleidung" brauchen die Erkennung, aber nicht die Körperkette — ihre Zeit
+    #: (Zauberer: 80 und 49 s) verschwindet hinter „koerper"/„gesicht"/„rest" (170 s auf der GPU, ein Kern). „frisur" startet, sobald der Runner der Textur die Figur festgelegt hat
+    #: (`Meshfigurende.textur` → `nebenlauf_frueh`) und rechnet neben dem Backen der Kacheln und der Vorschau (gemessen 12.10.2026: Frisur 99 s statt 114 s dahinter, die Textur bleibt bei 114 s). Eine Unterklasse mit anderen Voraussetzungen setzt `()`.
+    NEBENLAEUFIG = ('haar', 'kleidung', 'frisur')
+    #: Nach diesen Schritten starten Nebenläufe, die nicht schon früher gestartet sind, vor ihrem Platz in `SCHRITTE` (`nebenlauf_frueh`) — die Figur steht dann fest (`genesis_ende.npz`, `posiert.npy`); gilt, wenn die Textur „aus" ist.
+    NACH_SCHRITT = {'textur': ('frisur',)}
+    #: Vor diesen Schritten müssen die Nebenläufe fertig sein (sie lesen deren Ergebnis).
+    WARTEN_VOR = {'vorschau': ('haar', 'kleidung'), 'frisur': ('haar', 'kleidung'), 'speichern': ('haar', 'kleidung', 'frisur')}
 
     class Angehalten(Exception):
         """Der Nutzer hat angehalten — kein Fehler, der Lauf endet still."""
@@ -84,6 +80,8 @@ class Meshfigurlauf:
         self.zusatz = {}
         self._band = (0, 100)
         self._letzte_db = 0.0
+        #: Der python10-Prozess für alle Runner-Schritte dieses Laufs (`Meshfigurdauerprozess`, 12.10.2026) — immer dasselbe Objekt, auch in den Kopien der Nebenläufe.
+        self.dauer = Meshfigurdauerprozess()
 
     # --------------------------------------------------------------- Ablauf
 
@@ -100,27 +98,38 @@ class Meshfigurlauf:
         self.ablage.anlegen()
         job.ergebnis = dict(job.ergebnis or {})
         start = self.SCHRITTE.index(ab) if ab in self.SCHRITTE else 0
-        schritte = {
-            'erkennung': self._erkennung,
-            'haar': lambda: Meshfigurhaar(self).ausfuehren(),
-            'kleidung': lambda: Meshfigurkleidung(self).ausfuehren(),
-            'kalibrierung': self._kalibrierung,
-            'koerper': lambda: Meshfigurkette(self).koerper(),
-            'gesicht': lambda: Meshfigurkette(self).gesicht(),
-            'rest': lambda: Meshfigurende(self).rest(),
-            'textur': lambda: Meshfigurende(self).textur(),
-            'vorschau': lambda: Meshfigurvorschau(self).ausfuehren(),
-            'frisur': lambda: Meshfigurfrisur(self).ausfuehren(),
-            'speichern': lambda: Meshfigurspeichern(self).ausfuehren(),
+        # Je Schritt eine Fabrik, die den Lauf bekommt: ein Nebenlauf (unten) rechnet mit einer Kopie des Laufs.
+        fabriken = {
+            'erkennung': lambda lauf: lauf._erkennung(),
+            'haar': lambda lauf: Meshfigurhaar(lauf).ausfuehren(),
+            'kleidung': lambda lauf: Meshfigurkleidung(lauf).ausfuehren(),
+            'kalibrierung': lambda lauf: lauf._kalibrierung(),
+            'koerper': lambda lauf: Meshfigurkette(lauf).koerper(),
+            'gesicht': lambda lauf: Meshfigurkette(lauf).gesicht(),
+            'rest': lambda lauf: Meshfigurende(lauf).rest(),
+            'textur': lambda lauf: Meshfigurende(lauf).textur(),
+            'vorschau': lambda lauf: Meshfigurvorschau(lauf).ausfuehren(),
+            'frisur': lambda lauf: Meshfigurfrisur(lauf).ausfuehren(),
+            'speichern': lambda lauf: Meshfigurspeichern(lauf).ausfuehren(),
         }
         t0 = time.perf_counter()
+        nebenlaeufe = {}
+        self._laufend = (nebenlaeufe, fabriken)             # für `nebenlauf_frueh`
         try:
             for name in self.SCHRITTE[start:]:
+                self._nebenlaeufe_abwarten(nebenlaeufe, self.WARTEN_VOR.get(name, ()))
                 self._schritt(name)
+                if name in self.NEBENLAEUFIG:
+                    if name not in nebenlaeufe:             # „frisur" läuft meist schon (`nebenlauf_frueh`)
+                        nebenlaeufe[name] = self._nebenlauf(name, fabriken[name])
+                    continue
                 t = time.perf_counter()
-                schritte[name]()
+                fabriken[name](self)
                 job.ergebnis.setdefault('dauer', {})[name] = round(time.perf_counter() - t, 1)
                 self.sichern('ergebnis')
+                for folge in self.NACH_SCHRITT.get(name, ()):
+                    self.nebenlauf_frueh(folge)
+            self._nebenlaeufe_abwarten(nebenlaeufe, tuple(nebenlaeufe))
         except self.Angehalten:
             logger.info('Mesh to 3D %s: angehalten', job.kennung)
             return
@@ -128,6 +137,10 @@ class Meshfigurlauf:
             logger.exception('Mesh to 3D %s: Schritt %s gescheitert', job.kennung, job.schritt)
             self._scheitern('%s: %s' % (job.schritt, fehler))
             return
+        finally:
+            for faden, _proxy, _erg in nebenlaeufe.values():       # ein Abbruch lässt keinen Faden zurück, der noch Dateien schreibt
+                faden.join()
+            self.dauer.schliessen()                                  # der Runner-Prozess endet mit dem Lauf (GPU-Speicher frei für den nächsten Schritt des Imports)
         job.ergebnis['dauer_s'] = round(time.perf_counter() - t0, 1)
         job.status = 'fertig'
         job.progress = 100
@@ -145,6 +158,18 @@ class Meshfigurlauf:
         self.job.schritt = name
         self.job.save(update_fields=['schritt', 'updated_at'])
         self.melden(0, name)
+
+    def _nebenlauf(self, name, fabrik):
+        """Den Schritt `name` in einem Faden starten (`Meshfigurnebenlauf.starten`): Kopie des Auftrags, keine Fortschrittsmeldung."""
+        return Meshfigurnebenlauf.starten(self, name, fabrik)
+
+    def _nebenlaeufe_abwarten(self, nebenlaeufe, namen):
+        """Wartet auf die Nebenläufe `namen` und übernimmt ihr Ergebnis in `job.ergebnis` (`Meshfigurnebenlauf.abwarten`)."""
+        Meshfigurnebenlauf.abwarten(self, nebenlaeufe, namen)
+
+    def nebenlauf_frueh(self, name):
+        """Der Nebenlauf `name` startet schon vor seinem Platz in `SCHRITTE` (`NACH_SCHRITT`); ohne laufendes `ausfuehren` (2D3D Kleider) geschieht nichts."""
+        return Meshfigurnebenlauf.frueh(self, name)
 
     def sichern(self, *felder):
         self.job.save(update_fields=list(felder) + ['updated_at'])
@@ -187,41 +212,8 @@ class Meshfigurlauf:
         return self.ablage.netzdatei('kopf') if (self.job.eingang or {}).get('kopf') else None
 
     def runner(self, schritt, runde=None, von=0.0, bis=1.0):
-        """Einen Schritt des Runners rechnen — sein `[ergebnis]` (dict) oder ein Fehler."""
-        befehl = [
-            settings.PIPELINE_PYTHON,
-            os.path.join(Meshto3dpfad.pfad(), self.RUNNER),
-            str(self.auftrag()),
-            schritt,
-        ]
-        if runde is not None:
-            befehl.append(str(runde))
-        pp = PipelineProzess.starten(befehl, cwd=Meshto3dpfad.pfad(), env_extra=self.umgebung())
-        ergebnis, meldung = None, None
-        try:
-            for zeile in pp.stdout_zeilen(stille_timeout=self.STILLE_S):
-                zeile = zeile.rstrip('\n')
-                if zeile.startswith('[fortschritt] '):
-                    teile = zeile[14:].split(' ', 1)
-                    try:
-                        wert = float(teile[0]) / 100.0
-                    except ValueError:
-                        continue
-                    self.melden(von + (bis - von) * wert, teile[1] if len(teile) > 1 else schritt)
-                elif zeile.startswith('[ergebnis] '):
-                    ergebnis = _endlich(json.loads(zeile[11:]))
-                elif zeile.startswith('[fehler] '):
-                    meldung = json.loads(zeile[9:]).get('fehler')
-                if Meshfigurauftrag.objects.filter(pk=self.job.pk, status='angehalten').exists():
-                    pp.beenden()
-                    raise self.Angehalten()
-        except PipelineStille as fehler:
-            pp.beenden()
-            raise RuntimeError('Runner schweigt (%s)' % fehler) from fehler
-        rc = pp.warten(timeout=120)
-        if rc != 0 or ergebnis is None:
-            raise RuntimeError(meldung or pp.fehlertext(1500) or 'Runner endete mit %s' % rc)
-        return ergebnis
+        """Einen Schritt des Runners rechnen — sein `[ergebnis]` (dict) oder ein Fehler. Im Dauerprozess des Laufs (`self.dauer`), sonst in einem eigenen (`Meshfigurrunnerbahn`)."""
+        return Meshfigurrunnerbahn(self).rechnen(schritt, runde, von, bis)
 
     def umgebung(self):
         """Zwischendateien im Auftrag (nie System-Temp), Modelle aus der Projektablage."""

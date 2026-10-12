@@ -35,6 +35,8 @@ class Workflowzeiten:
         'optional (segmentierung.verwenden); Sapiens-1B laden (rund 7 s), je Foto segmentieren, Netz je Ansicht rastern und abstimmen. Beim ersten Lauf kommen die 4,7 GB '
         'Gewichte dazu (Download ~6 min bei 11 MB/s, nicht im Auftrag gemessen)',
     )
+    #: Der Schritt „pose" (11.10.2026) ist in keinem vollen Auftrag gelaufen; gemessen ist nur der Schritt allein, offline, am Gemälde (`engine2d3dkleider-pose.md`): 54,7 s (SAM laden 22–33 s, ~3 s je Drehung).
+    POSE = Z(hinweis='optional (pose.rechnen, Vorgabe aus); SAM 3D Body findet die Gelenke am vorbereiteten Foto, sie werden in die Netz-Silhouette gelegt und liefern den Maßstab — Schritt allein offline 54,7 s (11.10.2026), in keinem vollen Auftrag gelaufen')
     #: Der Kopf-Lauf (07.10.2026) ist noch in keinem vollen Auftrag gelaufen — keine Zahl statt einer geschätzten (der Kopflauf vom 27.09.2026, `…13.23.11`, brauchte 798 s, aber aus EINEM Foto und ohne Ausschnitt).
     KOPF = Z(hinweis='optional (kopf.rechnen); drei Kopfausschnitte schneiden (CPU, unter 1 s je Foto gemessen), dann Hunyuan3D-2mv mit Texturmalerei auf 300.000 Flächen — am 07.10.2026 noch nicht gerechnet')
     NETZ = Z(

@@ -17,6 +17,7 @@ from .engine2d3dkleiderkopfliste import Engine2d3dKleiderkopfliste
 from .engine2d3dkleiderlauf import Engine2d3dKleiderlauf
 from .engine2d3dkleideroptionen import Engine2d3dKleideroptionen
 from .engine2d3dkleiderpfade import Engine2d3dKleiderpfade
+from .engine2d3dkleiderposeliste import Engine2d3dKleiderposeliste
 from .engine2d3dkleiderreferenz import Engine2d3dKleiderreferenz
 from .engine2d3dkleiderrender import Engine2d3dKleiderrender
 from .engine2d3dkleidersegmentierungsliste import Engine2d3dKleidersegmentierungsliste
@@ -53,6 +54,8 @@ class Engine2d3dKleiderzustand:
             'standmodell': Engine2d3dKleiderzustand._standmodell(job),
             # Die Fotos nach dem Schritt „Vorbereitung" (`vorbereitet/`), für die Seite unter den Originalen.
             'vorbereitet': Engine2d3dKleiderzustand._vorbereitet(job),
+            # Die Gelenke am Foto, im Netz und der Maßstab des Schritts „Pose" (`pose/`), Karte „Pose" unter dem Mesh.
+            'pose': Engine2d3dKleiderzustand._pose(job),
             # Die Kopfausschnitte und das Kopfnetz des Schritts „Kopf" (`kopf/`), Karte „Kopf" unter dem Mesh.
             'kopf': Engine2d3dKleiderzustand._kopf(job),
             # Die Fotos mit den Etiketten des Schritts „Segmentierung" (`segmentierung/`), Karte unter dem Mesh.
@@ -82,6 +85,15 @@ class Engine2d3dKleiderzustand:
             return Engine2d3dKleidervorbereitungsliste.von(job)
         except (OSError, ValueError, TypeError, KeyError, ImportError) as fehler:
             logger.warning('2D3D Kleider %s: vorbereitete Fotos nicht gelesen (%s)', job.kennung, fehler)
+            return None
+
+    @staticmethod
+    def _pose(job):
+        """`Engine2d3dKleiderposeliste.von()` — ein Fehler darin kostet nur die Anzeige, nie den Zustand."""
+        try:
+            return Engine2d3dKleiderposeliste.von(job)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as fehler:
+            logger.warning('2D3D Kleider %s: Pose nicht gelesen (%s)', job.kennung, fehler)
             return None
 
     @staticmethod

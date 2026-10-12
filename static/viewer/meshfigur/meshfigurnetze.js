@@ -11,13 +11,19 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
  * `erkennung.kopf.matrix_lage`), ggf. um den Faktor „Körpergröße" gestreckt. Mit Kopfnetz schneidet
  * je eine Ebene quer zum Hals (`erkennung.kopf.ebene`) wie im Zielnetz des Runners: unten zeigt das
  * Körpernetz, oben das Kopfnetz — so sieht man, woran die Figur angepasst wurde.
+ *
+ * `optionen.diffus` (12.10.2026, Mesh-Ansicht von „Mesh-3D“): Netze nur mit Vertexfarben tragen in der GLB kein `pbrMetallicRoughness`, und glTF setzt dafür Metall = 1, Rauheit = 1. Ohne
+ * Umgebungskarte (die Bühne hat keine) streut ein Metall kein Licht: die Haut steht fast schwarz da, obwohl ihre Farben hell sind (Edgars Netz: Mittel der Vertexfarben 187/146/131,
+ * Metall 1, gemessen im Chrome). `diffus` stellt Metall auf 0, wo es keine Metall-Textur und keine Umgebungskarte gibt — dann leuchtet das Netz im selben Licht wie die Figur.
+ * Vorgabe aus: die anderen Bühnen zeigen das Netz weiter wie bisher.
  */
 export class Meshfigurnetze {
 
-    constructor(seite, szene, melden) {
+    constructor(seite, szene, melden, optionen = {}) {
         this.seite = seite;
         this.szene = szene;
         this.melden = melden;
+        this.diffus = !!optionen.diffus;
         this.gruppe = null;
         this._schluessel = null;
         this._ebenen = [];
@@ -46,6 +52,9 @@ export class Meshfigurnetze {
 
     /** Netze (neu) laden, wenn sich Eingang oder Lage geändert haben — true, wenn neu geladen. */
     zeigen(z) {
+        // Eine Seite kann das Laden aufschieben (`netzWartet`): Mesh-3D lädt statt des 67-MB-Originals erst die vereinfachte Kopie, sobald sie gebaut ist (`Mesh3dnetzansicht`).
+        // Nichts wird gemerkt — der nächste Aufruf prüft wieder.
+        if (this.seite.netzWartet?.()) return false;
         const e = z.ergebnis || {};
         const erkennung = e.erkennung || {};
         // Ohne Erkennung (gleich nach dem Netz, vor „Körper") das Netz roh, auf den Boden gestellt (01.10.2026).
@@ -105,6 +114,11 @@ export class Meshfigurnetze {
             if (ebene) {
                 objekt.traverse(o => {
                     for (const m of [].concat(o.material || [])) m.clippingPlanes = [ebene];
+                });
+            }
+            if (this.diffus) {
+                objekt.traverse(o => {
+                    for (const m of [].concat(o.material || [])) if (m.isMeshStandardMaterial && !m.metalnessMap && !m.envMap) m.metalness = 0;
                 });
             }
             objekt.updateMatrixWorld(true);

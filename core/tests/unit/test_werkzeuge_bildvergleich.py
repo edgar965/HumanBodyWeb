@@ -229,7 +229,8 @@ class WerkzeugeBildvergleichZahlenTest(SimpleTestCase):
         schritte = konstante(self.D + 'engine2d3dkleiderlauf.py', 'Engine2d3dKleiderlauf', 'SCHRITTE')
         # Stand 07.10.2026: davor `vorbereitung` (03.10.) und `segmentierung` (optional), danach `kleiderstuecke` vor den Iterationen, dazu `kopf` (der Kopf aus den drei Fotos, 07.10.) —
         # die Prüfung nannte noch die sieben von 02.10.2026.
-        self.assertEqual(schritte, ('vorbereitung', 'netz', 'kopf', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern'))
+        # Seit dem 11.10.2026 dazu `pose` (optional, SAM 3D Body) hinter dem Netz.
+        self.assertEqual(schritte, ('vorbereitung', 'netz', 'pose', 'kopf', 'segmentierung', 'koerper', 'grundfigur', 'kleiderstuecke', 'iterationen', 'export', 'film', 'speichern'))
 
     def test_das_farbraster_waechst_wie_die_zeile_es_nennt(self):
         # Dieselbe Rechnung wie Iterationsnote.felder (Docstring: 2485 × 3728 → 155 × 233).

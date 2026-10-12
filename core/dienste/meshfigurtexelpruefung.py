@@ -30,12 +30,18 @@ eine gleichmäßig gemalte Frisur statt Flecken. Sonst (Glatze) bleibt sie. Mit 
 `kopfhaut = haut` liefert der Runner dort keine Treffer, dann geschieht hier nichts.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
+
+from .meshfigurtexelzone import Meshfigurtexelzone
 
 __all__ = ['Meshfigurtexelpruefung']
 
 
 class Meshfigurtexelpruefung:
+    #: So viele Kacheln gleichzeitig (fünf UDIM-Kacheln); bestimmt nur die Zeit, nie das Ergebnis.
+    FAEDEN = 5
     CHROMA = 4.0
     HELL = 0.40
     SATT = 0.5
@@ -103,6 +109,7 @@ class Meshfigurtexelpruefung:
         """Normierte Gauß-Faltung: `(Farbe (S, S, 3), Stützgewicht (S, S))` — bei großem `sigma` auf
         einem verkleinerten Bild (Blocksumme, bilinear zurück): dieselbe Wirkung, ein Bruchteil der Zeit
         (erste Fassung: 142 s für fünf Kacheln)."""
+        from Genesis9.bildzoom import G9bildzoom
         from scipy import ndimage
 
         s = maske.shape[0]
@@ -114,7 +121,7 @@ class Meshfigurtexelpruefung:
             gewicht = gewicht.reshape(s // f, f, s // f, f, 4).sum((1, 3)) / (f * f)
         glatt = np.stack([ndimage.gaussian_filter(gewicht[..., i], sigma / f) for i in range(4)], -1)
         if f > 1:
-            glatt = ndimage.zoom(glatt, (f, f, 1), order=1)
+            glatt = G9bildzoom.linear(glatt, f)         # wie `ndimage.zoom(…, order=1)` (Abweichung 3·10⁻¹⁶), doppelt so schnell
         m = glatt[..., 3]
         return glatt[..., :3] / np.maximum(m, 1e-9)[..., None], m
 
@@ -122,30 +129,40 @@ class Meshfigurtexelpruefung:
 
     def pruefen(self, hd):
         """Ein neues `hd` (Kopien) mit gesäuberten Hauttexeln und gemalter Kopfhaut — und der Befund."""
-        teile, proben = {}, []
-        for kachel in self.abtastung.kacheln:
-            if 'farbe_%d' % kachel not in hd:
-                continue
+        kacheln = [k for k in self.abtastung.kacheln if 'farbe_%d' % k in hd]
+
+        def vorbereiten(kachel):
             drin, ecken, anteile = self.abtastung.stellen(kachel)
             punkt = ecken[np.arange(len(ecken)), anteile.argmax(1)]
             haut = np.isin(self.bereich[punkt], self.hautbereiche) & ~self.kern[punkt]
             getroffen = np.asarray(hd['gewicht_%d' % kachel]) > 0
             ycc = self.ycbcr(np.asarray(hd['farbe_%d' % kachel], dtype=np.float64))
-            teile[kachel] = (drin, haut, self.bereich[punkt] == self.kopfhaut, getroffen, ycc)
-            proben.append(ycc[haut & getroffen][::7])
+            return (drin, haut, self.bereich[punkt] == self.kopfhaut, getroffen, ycc)
+
+        # Die Kacheln hängen nicht voneinander ab; scipy.ndimage und numpy geben den GIL frei (Zauberer: ein Faden nach dem anderen brauchte 63 s, `threads_messen.py` ×3–4).
+        with ThreadPoolExecutor(max_workers=max(1, min(len(kacheln), self.FAEDEN))) as pool:
+            teile = dict(zip(kacheln, pool.map(vorbereiten, kacheln), strict=True))
+        proben = [ycc[haut & getroffen][::7] for (_drin, haut, _kopf, getroffen, ycc) in teile.values()]
         ton = np.concatenate(proben) if proben else np.zeros((0, 3))
         if len(ton) < 1000:
             return hd, {'grund': 'zu wenige Hauttexel (%d)' % len(ton)}
         self.tonmodell = self.modell(ton)
         neu = dict(hd)
         befund = {'ton_ycbcr': [round(float(c), 1) for c in self.tonmodell[0]]}
-        for kachel, (drin, haut, kopf, getroffen, ycc) in teile.items():
+
+        def pruefen_eine(kachel):
+            drin, haut, kopf, getroffen, ycc = teile[kachel]
             farbe = np.asarray(hd['farbe_%d' % kachel], dtype=np.float64)
             gewicht = np.array(hd['gewicht_%d' % kachel], dtype=np.float32, copy=True)
             eintrag = self._haut(drin, haut, getroffen, ycc, farbe, gewicht)
             if kopf.any():
                 eintrag['kopfhaut'] = self._kopfhaut(drin, kopf, getroffen, ycc, farbe, gewicht)
-            neu['farbe_%d' % kachel] = np.clip(farbe + 0.5, 0, 255).astype(np.uint8)
+            return kachel, np.clip(farbe + 0.5, 0, 255).astype(np.uint8), gewicht, eintrag
+
+        with ThreadPoolExecutor(max_workers=max(1, min(len(kacheln), self.FAEDEN))) as pool:
+            ergebnisse = list(pool.map(pruefen_eine, teile))
+        for kachel, farbe, gewicht, eintrag in ergebnisse:
+            neu['farbe_%d' % kachel] = farbe
             neu['gewicht_%d' % kachel] = gewicht
             befund[str(kachel)] = eintrag
         return neu, befund
@@ -180,6 +197,8 @@ class Meshfigurtexelpruefung:
         grob, m_grob = self.glatt(bild, maske, self.GROB_PX)
         fuellung = np.where((m_fein > 0.15)[..., None], fein, grob)[drin]
         ziel = haut & ~gut & (m_grob[drin] > 1e-3)
+        # Große nie getroffene Zonen (Haut unter dem Stoff): Ton ohne den Saumschatten und ein weicher Übergang der echten Haut (`Meshfigurtexelzone`) — vor dem Füllen: `gut` und `ziel` sind getrennte Texel.
+        abgeblendet = Meshfigurtexelzone(self.abtastung.seite, self.glatt).anwenden(drin, ziel & ~getroffen, gut, farbe, ziel, fuellung)
         farbe[ziel] = fuellung[ziel]
         gewicht[ziel] = 1.0
         return {
@@ -188,6 +207,7 @@ class Meshfigurtexelpruefung:
             'verworfen': int((haut & getroffen & ~gut).sum()),
             'ausreisser': int(ausreisser.sum()),
             'gefuellt': int(ziel.sum()),
+            'abgeblendet': abgeblendet,
         }
 
     def _kopfinsel(self, drin, kopf):

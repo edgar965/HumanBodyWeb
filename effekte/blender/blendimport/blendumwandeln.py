@@ -52,7 +52,7 @@ class Blendumwandeln:
     def argumente(argv):
         p = argparse.ArgumentParser(prog='blendumwandeln')
         p.add_argument('--quelle', required=True)
-        p.add_argument('--format', required=True, choices=('obj', 'fbx'))
+        p.add_argument('--format', required=True, choices=('obj', 'fbx', 'glb'))
         p.add_argument('--ziel', required=True)
         p.add_argument('--bericht', required=True)
         trenner = argv.index('--') if '--' in argv else len(argv)
@@ -69,6 +69,9 @@ class Blendumwandeln:
         datei = self.a.quelle
         if self.a.format == 'obj':
             return [('wm.obj_import', lambda: bpy.ops.wm.obj_import(filepath=datei))]
+        if self.a.format == 'glb':
+            # GLB (11.10.2026, Jobseite „Mesh-3D“): Blenders glTF-Importer; an keiner Datei gelaufen, ein Fehler steht im Bericht des Schritts.
+            return [('import_scene.gltf', lambda: bpy.ops.import_scene.gltf(filepath=datei))]
         return [('import_scene.fbx', lambda: bpy.ops.import_scene.fbx(filepath=datei)),
                 ('wm.fbx_import', lambda: bpy.ops.wm.fbx_import(filepath=datei))]
 

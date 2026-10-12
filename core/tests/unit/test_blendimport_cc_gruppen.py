@@ -17,6 +17,7 @@ Nicht gelaufen (Stand 09.10.2026) — läuft nur auf Ansage.
 """
 
 import importlib.util
+import inspect
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -58,7 +59,18 @@ def _material(gruppe):
     return SimpleNamespace(name='Mat', blend_method='HASHED', node_tree=SimpleNamespace(nodes=[bsdf]))
 
 
-def _exporter():
+class _GraphAttrappe(object):
+    """Attrappe für `Blendmaterialgraph`: der Knotengraph für den lokalen Backer ist hier nicht der Gegenstand (er braucht echte Blender-Buchsen);
+    `test_0` hält ihre Signatur gleich der des Originals (`attrappen-signatur.md`)."""
+
+    def __init__(self, exporter):
+        self.exporter = exporter
+
+    def bauen(self, mat):
+        return {'version': 1, 'grund': 'Attrappe'}
+
+
+def _modul():
     bpy = ModuleType('bpy')
     bpy.path = SimpleNamespace(abspath=lambda pfad, library=None: pfad)
     pfad = Path(settings.BASE_DIR) / 'effekte' / 'blender' / 'blendimport' / 'blendexport.py'
@@ -66,6 +78,12 @@ def _exporter():
         spec = importlib.util.spec_from_file_location('blendexport_cc_test', pfad)
         modul = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(modul)
+    return modul
+
+
+def _exporter():
+    modul = _modul()
+    modul.Blendmaterialgraph = _GraphAttrappe
     with mock.patch('os.makedirs'), mock.patch('os.path.isfile', return_value=True):
         return modul.Blendexport('exportziel')
 
@@ -76,6 +94,13 @@ class ExporterGruppenTest(SimpleTestCase):
     def _lesen(self, gruppe):
         with mock.patch('os.path.isfile', return_value=True):
             return _exporter().material(_material(gruppe))
+
+    def test_0_die_attrappe_des_graphen_hat_die_signatur_des_originals(self):
+        echt = _modul().Blendmaterialgraph
+        for name in ('__init__', 'bauen'):
+            soll = set(inspect.signature(getattr(echt, name)).parameters)
+            ist = set(inspect.signature(getattr(_GraphAttrappe, name)).parameters)
+            self.assertEqual(soll, ist, name)
 
     def test_1_nur_diffuse_belegt_dann_keine_deckkraft_und_keine_normalen(self):
         """Das Kleid: die Gruppe trägt NUR das Farbbild — Alpha, Rauheit und Normalen bleiben leer (opak, keine Karte)."""

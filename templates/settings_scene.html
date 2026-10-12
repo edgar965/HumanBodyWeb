@@ -172,6 +172,26 @@
         </div>
         <div class="settings-row">
             <div class="settings-label">
+                <strong>Netzantworten der Genesis-Figuren</strong>
+                <small>Wo die Szene die Netzantworten einer Figur hält: Körper und jedes Daz-Stück je Stufe (grob, fein, ultrafein).
+                     <br><b>Im RAM</b> (Vorgabe): Jede gebaute Antwort bleibt im Arbeitsspeicher des Browsers. Ein Wechsel auf eine Stufe, die schon
+                     dagewesen war (Strg+Alt+H), braucht keine Anfrage; ein Hautwechsel holt nur die Materialien (10&nbsp;kB) statt des ganzen Netzes.
+                     Gemessen (cute girl Daz, fünf Stücke): grob und fein rund 24&nbsp;MB je Figur, mit ultrafein rund 61&nbsp;MB &mdash; die Texturen
+                     kosten ein Vielfaches davon.
+                     <br><b>Vom Server</b>: Nichts wird gehalten; jeder Stufen- und Hautwechsel fragt den Server (ein Hautwechsel das ganze Netz,
+                     bei fein 10&nbsp;MB und gemessen 0,9&ndash;1,4&nbsp;s Serverzeit). Spart Arbeitsspeicher im Browser.
+                     <br>Wirkt nach dem Neuladen der Szene.</small>
+            </div>
+            <div class="settings-input">
+                <select name="netzantworten" id="netzantworten" class="hb-width-100-2">
+                    {% for wert, text in netzantworten_wahlen %}
+                    <option value="{{ wert }}"{% if wert == netzantworten %} selected{% endif %}>{{ text }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
                 <strong>JavaScript gebündelt laden</strong>
                 <small>Die Szene-Seite besteht aus 230 einzelnen JS-Modulen. Jede
                      Anfrage kostet diesen Server 10–12&nbsp;ms, und er beantwortet

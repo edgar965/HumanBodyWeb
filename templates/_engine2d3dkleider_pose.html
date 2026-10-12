@@ -1,0 +1,16 @@
+{% comment %}Karte „Pose“ (11.10.2026, Edgar nach den Proben am Gemälde „Modigliani“: „baue das in die Job Pipeline hinein, als extra Schritt, wo man auch das Ergebnis sehen kann“): Häkchen, Drehung, Gelenke
+weglassen und Maßstab aus der Gruppe `pose` (gebaut von `Meshoptionenformular`), der Knopf „Pose rechnen“ (nur den Schritt), darunter die vier Drehungen mit den gefundenen Gelenken, das Netz von vorn und von der
+Seite mit den Landmarken, die Zahlen und die Tabelle der Gelenke. Aufgebaut von `Engine2d3dKleiderpose` (JS) aus `zustand.pose`.{% endcomment %}
+<div class="card" id="pose-karte">
+    <h2>Pose — Gelenke am Foto <span class="hb-hinweis">(optional, nach dem Netz)</span></h2>
+    <p class="hb-hinweis">SAM 3D Body findet die Gelenke der Person am vorbereiteten Foto („vorne“) — auch bei freier Pose (liegend, sitzend), an der die Erkennung am Netz nichts findet. Der Schritt legt die Gelenke ins Netz
+        (Silhouette des Netzes auf die Person des Fotos, Tiefe = Mitte der Netzpunkte), leitet den Maßstab des Netzes ab und zeigt beides unten; die Körper-Kette nimmt Landmarken und Maßstab, wenn das Häkchen an ist, und
+        sie wirken erst, wenn „Körper“ neu rechnet. SAM 3D Body erwartet eine aufrechte Person: Bei einem liegenden Bild die Drehung wählen, in der sie steht (die vier Drehungen stehen unten nebeneinander). Verdeckte
+        Gliedmaßen schätzt das Modell — stimmt ein Gelenk nicht, bei „Diese Gelenke nicht verwenden“ anhaken. Grafikkarte: gemessen 27–85 s für das Laden, 2–11 s je Drehung.</p>
+    <div class="mesh-optionen" id="engine2d3dkleider-optionen-pose"></div>
+    <div class="engine2d3dkleider-vorbereitung-zeile" id="pose-zeile"></div>
+    <div class="mesh-fotoliste engine2d3dkleider-vorbereitet" id="pose-fotos"></div>
+    <div class="engine2d3dkleider-pose-netz" id="pose-netz"></div>
+    <div class="engine2d3dkleider-pose-zahlen" id="pose-zahlen"></div>
+    <div id="pose-gelenke"></div>
+</div>

@@ -3,6 +3,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9netz } from '../../gemeinsam/genesis9netz.js';
 import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { Kleidersichtbarkeit } from '../../gemeinsam/kleidersichtbarkeit.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 
 /**
@@ -48,6 +49,7 @@ export class Genesis9frisur {
     static async anziehen(inst, url, farbe) {
         const name = Genesis9frisur.name(url);
         if (!inst || !name) return null;
+        const sichtbar = Kleidersichtbarkeit.fuer(inst, Genesis9frisur.SCHLUESSEL);       // „Kleider aus" gilt auch für die neue Frisur
         Genesis9frisur.ausziehen(inst);
         const stufen = inst.stufen ?? 1;
         let daten;
@@ -64,6 +66,7 @@ export class Genesis9frisur {
         if (!teil) return null;
         const netz = Genesis9netz.bauen(teil, `genesis9_frisur_${name}`);
         netz.userData.beschriftung = `${name} (HumanBody-Frisur)`;
+        netz.visible = sichtbar;
         Genesis9frisur.faerben(netz, farbe);
         inst.clothMeshes[Genesis9frisur.SCHLUESSEL] = inst._einhaengen(netz, teil.hautgewichte);
         inst.hairStyle = { url, name, color: farbe || '' };

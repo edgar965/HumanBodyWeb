@@ -159,6 +159,7 @@ class Meshfigurhaar:
 
     def bilder(self, scan, maske, teilung, rahmen):
         """`{teil: {ansicht: Datei}}` — beide Teile im selben Ausschnitt (der Kopf ohne Rumpf)."""
+        from Genesis9.offscreenwerk import G9offscreenwerk
         from Haar.haarbild import Haarbild
 
         bild = Haarbild(rahmen, scan.textur, self.KANTE)
@@ -166,10 +167,13 @@ class Meshfigurhaar:
         fenster = bild.fenster(scan.punkte[kopf])
         netze = {'ohne': teilung.ohne_haar(), 'nur': teilung.nur_haar()}
         aus = {}
-        for teil in self.TEILE:
-            for ansicht in Haarbild.ANSICHTEN:
-                name = self.datei(teil, ansicht)
-                bild.speichern(netze[teil], ansicht, fenster, self.ablage.ergebnis(name),
-                               farben=teilung.farben[~maske['haar'] if teil == 'ohne' else maske['haar']])
-                aus.setdefault(teil, {})[ansicht] = name
+        # Ein Renderer und ein Netz je Teil für alle drei Ansichten (`Haarbild._teil` erkennt es an der Identität von `netz` und `farben`) — vorher sechsmal Renderer, Netz und Textur neu (20 s von 37 s).
+        with G9offscreenwerk.sitzung():
+            for teil in self.TEILE:
+                farben = teilung.farben[~maske['haar'] if teil == 'ohne' else maske['haar']]
+                for ansicht in Haarbild.ANSICHTEN:
+                    name = self.datei(teil, ansicht)
+                    bild.speichern(netze[teil], ansicht, fenster, self.ablage.ergebnis(name), farben=farben)
+                    aus.setdefault(teil, {})[ansicht] = name
+            bild.freigeben()
         return aus

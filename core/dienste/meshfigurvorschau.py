@@ -13,6 +13,7 @@
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -32,6 +33,7 @@ class Meshfigurvorschau:
 
     def ausfuehren(self):
         from Genesis9.formung import G9formung
+        from Genesis9.offscreenwerk import G9offscreenwerk
         from Genesis9.reglerableitung import G9reglerableitung
         from Genesis9.vorschaubild import G9vorschaubild
 
@@ -44,18 +46,21 @@ class Meshfigurvorschau:
         punkte, _, _ = G9reglerableitung.lage(G9formung(stellung))
         bild = G9vorschaubild(punkte, kacheln=self.kacheln())
         dateien = {'icon': 'icon.png'}
-        # Von vorn wie das Vorlagebild daneben (`Meshfigurlauf.vorlage`), nicht dreiviertel.
-        bild.speichern(self.ablage.ergebnis('icon.png'), 'vorn', 256, 256)
-        for ansicht, name in self.BILDER.items():
-            bild.speichern(self.ablage.ergebnis(name), ansicht)
-            dateien[ansicht] = name
-        bild.speichern(
-            self.ablage.ergebnis('vorschau_kopf.png'),
-            'vorn',
-            600,
-            600,
-            (float(punkte[:, 1].max()) - 0.28, float(punkte[:, 1].max()) + 0.02),
-        )
+        # Ein Renderer und ein Netz für alle fünf Bilder (vorher je Bild ein neuer Renderer, Netz und Kacheln neu hochgeladen).
+        with G9offscreenwerk.sitzung():
+            # Von vorn wie das Vorlagebild daneben (`Meshfigurlauf.vorlage`), nicht dreiviertel.
+            bild.speichern(self.ablage.ergebnis('icon.png'), 'vorn', 256, 256)
+            for ansicht, name in self.BILDER.items():
+                bild.speichern(self.ablage.ergebnis(name), ansicht)
+                dateien[ansicht] = name
+            bild.speichern(
+                self.ablage.ergebnis('vorschau_kopf.png'),
+                'vorn',
+                600,
+                600,
+                (float(punkte[:, 1].max()) - 0.28, float(punkte[:, 1].max()) + 0.02),
+            )
+            bild.freigeben()
         dateien['kopf'] = 'vorschau_kopf.png'
         self.lauf.melden(0.2, 'Endfigur am Netz messen')
         haltung = (self.job.ergebnis.get('koerper') or {}).get('haltung') or {}
@@ -70,12 +75,15 @@ class Meshfigurvorschau:
             'haut': e.get('haut'),
         }
         # Die Scham-Messung läuft bei JEDEM Auftrag, ohne Schalter (Edgar, 11.10.2026); ein Fehler steht im Ergebnis, der Lauf geht weiter.
-        self.lauf.melden(0.86, 'Scham messen')
-        self.job.ergebnis['schammessung'] = Meshfigurschammessung.sicher(self.lauf)
-        self.lauf.melden(0.87, 'Haar als Objekt')
-        self.haarobjekt()
-        self.lauf.melden(0.88, 'Kleidung als Objekt')
-        self.kleidungsobjekt()
+        # Messung, Haarobjekt und Kleidungsobjekt hängen nur an den Dateien dieses Schritts und nicht voneinander (gemessen 12.10.2026, py-spy: 15 + 3 + 27 s nacheinander): drei Fäden.
+        # Keiner von ihnen meldet Fortschritt oder sichert den Auftrag; jeder fängt seinen Fehler selbst.
+        self.lauf.melden(0.86, 'Scham messen, Haar und Kleidung als Objekt')
+        with ThreadPoolExecutor(max_workers=3, thread_name_prefix='vorschau') as pool:
+            scham = pool.submit(Meshfigurschammessung.sicher, self.lauf)
+            objekte = [pool.submit(self.haarobjekt), pool.submit(self.kleidungsobjekt)]
+            for objekt in objekte:
+                objekt.result()
+            self.job.ergebnis['schammessung'] = scham.result()
         self.lauf.melden(0.9, 'Testfall')
         self.job.ergebnis['testfall'] = self.testfall(stellung, punkte)
 

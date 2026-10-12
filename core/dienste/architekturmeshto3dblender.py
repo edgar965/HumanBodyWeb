@@ -21,6 +21,11 @@ class Architekturmeshto3dblender:
         ('umposen', 'ja', 'Blender stellt das Rig auf REST und dreht je Segment (Schlüsselbein, Oberarm, Unterarm, Hand, Oberschenkel, Unterschenkel, Fuß, Zehen) auf die Genesis-Richtung — '
                           'kürzester Bogen, starr um das Gelenk, lineare Häutung mit den Gewichten der .blend (blendumposen.py).', ['Blendimportumposen']),
         ('koerper', 'nein', 'Der nackte Körper samt Augen wird zu EINER GLB mit einem Atlas (numpy, PIL); Achsen Blender Z oben → glTF Y oben = (x, z, −y).', ['Blendimportkoerper']),
+        ('segmentierung', 'nein', 'Nur beim Weg „netz“ (ein verschmolzenes Netz, Mesh-3D): Sapiens2 0.4B zerlegt Renderings des Netzes rundum in Haut, Kleidung und Haar; die Etiketten gehen als Stimmen auf die Netzflächen '
+                                  '(Abstimmnetz mit 150.000 Flächen), „Mesh to 3D“ nimmt Hautton und Kleidungsmaske daraus. Am Zauberer-Netz (1.935.797 Dreiecke) 200,7 s; Flächen mit Stimme: 1,5 % auf dem Rohnetz, 57,3 % auf dem Abstimmnetz.',
+         ['Blendimportsegmentierung', 'Blendimportweg']),
+        ('pose', 'nein', 'Einstellung „Pose bestimmen“ (Vorgabe aus): SAM 3D Body findet die Gelenke am Rendering des Körpers, „Mesh to 3D“ nimmt sie statt MediaPipe (`landmarken_hand`). Ist die Einstellung aus, tut der Schritt nichts. '
+                         'Am Zauberer-Netz 80–97 s, Übereinstimmung Netz ↔ Rendering (IoU) 0,977.', ['Blendimportpose', 'Posebestimmung']),
         ('figur', 'nein', 'Mesh to 3D auf diesem Körper (dieser Reiter): Regler, Gesicht, Eigenmorph. Die Optionen stehen in `Blendimportfigur.OPTIONEN`.', ['Blendimportfigur', 'Meshfigurlauf']),
         ('finger', 'nein', 'Die Finger der Figur an die Hände des Originals anpassen; ein Griff für das Requisit in der Hand.', ['Blendimportfinger']),
         ('stuecke', 'nein', 'Kleider und Haar als eigene Genesis-Stücke: Ruhelage über Kleidungsentposen (Haar: Kabsch am Kopf), OBJ mit der Original-Textur, `G9eigenstueck.schreiben`. Es wird nichts gebacken; die Gewichte der .blend '

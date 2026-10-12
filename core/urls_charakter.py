@@ -35,6 +35,7 @@ from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9garderobepflege import G9garderobepflegeapi
 from .api.g9hautmischung import G9hautmischungapi
+from .api.g9materialnetzapi import G9materialnetzapi
 from .api.g9morphformular import G9morphformularapi
 from .api.g9texturbuendel import G9texturbuendelapi
 from .api.g9vorschau import G9vorschau
@@ -235,6 +236,8 @@ CHARAKTER = [
          G9felderapi.stueck, name='g9_felder_stueck'),
     path('api/character/genesis9-figur/<str:name>/netz/', G9figur.netz,
          name='g9_figur_netz'),
+    path('api/character/genesis9-figur/<str:name>/material/', G9materialnetzapi.antwort,
+         name='g9_figur_material'),
     path('api/character/uma-figur/', Umafigur.liste, name='uma_figur_liste'),
     path('api/character/uma-figur/<str:name>/', Umafigur.datei, name='uma_figur'),
     path('api/character/uma-figur/<str:name>/zettel/', Umafigur.zettel,

@@ -24,6 +24,9 @@ __all__ = ['Engine2d3dKleiderkoerperlauf']
 
 
 class Engine2d3dKleiderkoerperlauf(Meshfigurlauf):
+    #: „haar" und „kleidung" laufen hier nacheinander wie bisher (die Nebenläufe von `Meshfigurlauf` sind für „Mesh to 3D" und den Blender-Import gemessen, nicht für diesen Auftrag).
+    NEBENLAEUFIG = ()
+
     def __init__(self, aussen, koerperoptionen):        # noqa: D107 — kein `super().__init__`: der lädt Meshfigurauftrag
         self.aussen = aussen
         self.job = aussen.job
@@ -43,6 +46,14 @@ class Engine2d3dKleiderkoerperlauf(Meshfigurlauf):
         self.tor = (koerperoptionen or {}).get('tor') or 'anhalten'
         # Option `koerper.naht` (07.10.2026): „aus" lässt die Kappe des Kopfnetzes stehen und näht nicht — `Meshfigurdaten._zielnetz` liest es aus `auftrag.json`.
         self.zusatz = {'naht': ((koerperoptionen or {}).get('naht') or 'an') != 'aus'}
+        # Die Pose aus dem Foto (Häkchen `pose.rechnen`, Schritt „pose“, 11.10.2026): Gelenke und Maßstab statt der Erkennung am Netz und der Einheitenregel — `Meshfigurerkennungsschritt` liest
+        # `landmarken_hand` und `masstab` aus `auftrag.json`. Ist das Häkchen an und die Pose veraltet, wirft `fuer_koerper` (die Kette läuft nicht still ohne Pose).
+        from .engine2d3dkleiderpose import Engine2d3dKleiderpose
+        pose = Engine2d3dKleiderpose.fuer_koerper(self.job, self.ablage)
+        if pose:
+            self.zusatz['landmarken_hand'] = str(pose['landmarken'])
+            if pose['masstab']:
+                self.zusatz['masstab'] = pose['masstab']
         # Option `koerper.landmarkmorphe` (07.10.2026): Augen-, Mund- und Nasenmorph aus den Landmarken (`Meshfigurlandmarkmorphe`) — `Meshfigurende.rest` ruft `landmarkmorphe`.
         self.landmarkmorphe_an = ((koerperoptionen or {}).get('landmarkmorphe') or 'an') != 'aus'
         # Option `koerper.regionen` (08.10.2026): Regionen-Regler (`G9koerperregionen`) im Reglersatz der Körperstufe — `Meshfigurkette._regler` liest es.

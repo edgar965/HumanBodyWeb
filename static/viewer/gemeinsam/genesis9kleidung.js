@@ -3,6 +3,7 @@ import { Protokoll } from './protokoll.js';
 import { fn } from './registrierung.js';
 import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
+import { Genesis9antwortspeicher } from './genesis9antwortspeicher.js';
 import { Genesis9lagen } from './genesis9lagen.js';
 import { Stueckereignis } from './stueckereignis.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
@@ -11,6 +12,7 @@ import { Kleidfarbmischung } from './kleidfarbmischung.js';
 import { Stoffwerte } from './stoffwerte.js';
 import { Reiterzuordnung } from './reiterzuordnung.js';
 import { Genesis9ersatz } from './genesis9ersatz.js';
+import { Kleidersichtbarkeit } from './kleidersichtbarkeit.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -145,7 +147,8 @@ export class Genesis9kleidung {
     static async anziehen(inst, kennung, werte, stufen, kaskade, vorBau = null) {
         inst.kleidung[kennung] = { ...(werte || {}) };
         const lauf = inst._lauf;
-        const daten = await Serverabruf.netzSenden(Genesis9aufbau.adresse(
+        // Aus dem Speicher der Figur (je Stufe, `Genesis9antwortspeicher`, 12.10.2026), sonst vom Server.
+        const antwort = await Genesis9antwortspeicher.kleid(inst, kennung, Genesis9aufbau.adresse(
             `${inst.constructor.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
                 regler: inst.regler || {}, variante: werte?.variante || '',
                 stil: Genesis9kleidung.stilliste(werte), regler_stueck: werte?.regler || {},
@@ -153,6 +156,7 @@ export class Genesis9kleidung {
                 ...Genesis9lagen.anfrage(inst.kleidung, kennung),
                 gc_getragen: Genesis9lagen.gcGetragen(inst),
             });
+        const daten = antwort.daten;
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;   // überholt oder ausgezogen
         // `vorBau`: die Antwort ist da, gebaut wird sie erst auf Ruhe (`Genesis9aufbau._haeppchen`, 09.10.2026).
@@ -160,14 +164,18 @@ export class Genesis9kleidung {
             await vorBau();
             if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;
         }
+        const sichtbar = Kleidersichtbarkeit.fuer(inst, kennung);       // vor dem Entfernen der alten Netze: „Kleider aus" gilt auch für das neu gebaute Stück
         inst._stueckWeg(kennung);
+        if (antwort.neu) Genesis9antwortspeicher.ablegen(inst, antwort.teil, antwort.stellung, antwort.stufe, daten);   // vor dem Bau: er verändert die Objekte der Antwort
         const paare = [];
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
+            netz.visible = sichtbar;
             paare.push([netz, teil]);
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
             netz.userData.ersetzt = daten.ersetzt || [];    // Teile der Figur, die das Stück ersetzt (Originalaugen)
             netz.userData.hautTiefe = (daten.hautTiefeMm || 0) / 1000;   // so tief hinter der Haut es sie noch verdeckt (Scham aus der .blend), m; 0 = Vorgabe
+            if (Kleidersichtbarkeit.istKoerperteil(netz)) netz.visible = true;       // die Scham ist keine Kleidung: „Kleider aus" gilt für sie nicht
             netz.userData.hautLoch = daten.hautLoch?.dreiecke?.length ? daten.hautLoch : null;   // verschweißt: die Haut-Dreiecke, die entfallen (`stueckloch.js`)
             // Oberflaechenbindung (21.09.2026, Konzept Fitting): Attribute ans Netz;
             // verdrahtet wird beim Einhaengen (auch nach jedem Neubinden — DORT

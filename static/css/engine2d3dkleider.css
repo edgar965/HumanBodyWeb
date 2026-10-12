@@ -27,6 +27,18 @@
 #engine2d3dkleider-optionen-segmentierung select { min-width: 32em; }
 .engine2d3dkleider-segmentierung-legende { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; margin: 4px 0 8px; }
 .engine2d3dkleider-segmentierung-farbe { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: -2px; }
+/* Karte „Pose" (11.10.2026): die vier Drehungen nebeneinander (das gewählte mit Rahmen), Netz von vorn und von der Seite, Zahlen, Tabelle der Gelenke. */
+#engine2d3dkleider-optionen-pose select { min-width: 17em; max-width: 100%; }
+.engine2d3dkleider-pose-bild { width: 320px; height: auto; max-height: 430px; object-fit: contain; background: #808080; }
+.engine2d3dkleider-pose-gewaehlt .engine2d3dkleider-pose-bild { outline: 3px solid var(--success, #2ecc71); outline-offset: -3px; }
+.engine2d3dkleider-pose-netz img { max-width: 100%; height: auto; background: #181820; }
+.engine2d3dkleider-pose-zahlen { margin: 8px 0; }
+.engine2d3dkleider-pose-zahlen div { margin: 2px 0; }
+/* Tabelle der Gelenke: `doku` gibt dem Zelltext die dunkle Bootstrap-Farbe — auf dem dunklen Tabellengrund unlesbar (Edgar, 11.10.2026: „das Ergebnis ist katastrophal"), darum Farbe und engere Zeilen hier. */
+.engine2d3dkleider-pose-gelenke th { color: #eee; padding: 6px 14px; }
+.engine2d3dkleider-pose-gelenke td { color: #e0e8f0; padding: 3px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.engine2d3dkleider-pose-gelenke td:nth-child(2) { text-align: left; }
+.engine2d3dkleider-pose-gelenke td:nth-child(n+3) { text-align: right; }
 /* Karte „Kleiderstücke": die Tabelle der Messung (Zahlen rechtsbündig, Name und Vergleich linksbündig). */
 .engine2d3dkleider-stuecketabelle { margin: 8px 0; }
 .engine2d3dkleider-stuecketabelle td:nth-child(n+2):nth-child(-n+5), .engine2d3dkleider-stuecketabelle td:nth-child(n+7) { text-align: right; }

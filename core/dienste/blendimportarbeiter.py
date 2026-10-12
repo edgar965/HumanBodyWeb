@@ -23,6 +23,9 @@ __all__ = ['Blendimportarbeiter']
 
 class Blendimportarbeiter:
     BEFEHL = 'blendimport_fahren'
+    #: „haar" und „kleidung" von „Mesh to 3D" rechnen in Fäden nebeneinander (`Meshfigurlauf.NEBENLAEUFIG`). Mehrere Fäden, die zugleich `@`/`dot` in numpy rufen, hängen sich mit mehreren
+    #: OpenBLAS-Fäden auf (gemessen 12.10.2026, `blas_faeden.py`: drei Fäden, keine Ausgabe nach 150 s; mit einem BLAS-Faden 15 s, 400 Durchläufe) — die Rechnungen hier sind klein und gewinnen nichts davon.
+    UMGEBUNG = {'OPENBLAS_NUM_THREADS': '1'}
 
     @classmethod
     def starten(cls, ablage, ab=None):
@@ -31,7 +34,7 @@ class Blendimportarbeiter:
         if ab:
             befehl += ['--ab', ab]
         with open(ablage.log(), 'ab') as protokoll:
-            prozess = Auftragsarbeiter._popen(befehl, protokoll)
+            prozess = Auftragsarbeiter._popen(befehl, protokoll, umgebung=cls.UMGEBUNG)
         ablage.pid().write_text(str(prozess.pid))
         stand = ablage.stand()
         stand.update(status='laeuft', fehler='', fortschritt=0, detail='Arbeitsprozess gestartet', pid=prozess.pid)

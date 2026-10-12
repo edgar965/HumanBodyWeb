@@ -16,10 +16,14 @@ import { Stucknormalen } from './stucknormalen.js';
 import { Hautnaht } from './hautnaht.js';
 import { Hautnahtpatch } from './hautnahtpatch.js';
 import { Stueckhaut } from './stueckhaut.js';
+import { Anatomiekarten } from './anatomiekarten.js';
 import { Stueckfeder } from './stueckfeder.js';
 import { Protokoll } from './protokoll.js';
 
 export class Hautloch {
+
+    /** Die Löcher je Geometrie der Haut, wie `naehen` sie zuletzt bekam (nicht in `userData`: die Netze darin wären ein Kreis für jeden Exporter). */
+    static _loecher = new WeakMap();
 
     /**
      * Der Rand verschweißter Stücke folgt der Haut, wie sie JETZT ist (`stuecknaht.js`): Verschiebung ins `einzug`-Feld des Stücks.
@@ -28,9 +32,11 @@ export class Hautloch {
     static naehen(geo, loecher, koerper = null) {
         if (!loecher) {                               // kein verschweißtes Stück (mehr): die Haut bekommt ihr Relief zurück
             if (koerper?.geometry?.getAttribute('nahtf')) Hautnahtpatch.aufheben(koerper);
+            Hautloch._loecher.delete(geo);
             return;
         }
         const haut = geo.attributes.position.array;
+        Hautloch._loecher.set(geo, loecher);          // für `randAbgleichen`, wenn die Karten des Stücks später fertig werden
         if (koerper) Hautloch.reliefNehmen(koerper, geo, loecher);
         for (const { netz, ring } of loecher.ringe) {
             const g = netz.geometry;
@@ -48,14 +54,29 @@ export class Hautloch {
     /**
      * Der Haut an der Naht das Relief teilweise nehmen (`hautnaht.js`, `hautnahtpatch.js`): die Normalenkarte der gebackenen Haut trägt
      * Poren und Wellen, der Rand des Stücks nicht. Der Faktor hängt nur an den Ringpunkten — er wird je Geometrie gemerkt.
+     * Ausgenommen sind Stücke, die die Karten der Haut selbst zeigen (`Anatomiekarten.traegtHaut`): ihr Rand hat dieselben Poren, das Relief
+     * wegzunehmen ergäbe ein verschwommenes Band um das Stück (Edgar, 12.10.2026: „diese verschwommene Naht beim Übergang zum restlichen Körper").
      */
     static reliefNehmen(koerper, geo, loecher) {
-        const punkte = loecher.ringe.flatMap(({ ring }) => Array.from(ring.punkte));
+        const punkte = loecher.ringe.filter(({ netz }) => !Anatomiekarten.traegtHaut(netz)).flatMap(({ ring }) => Array.from(ring.punkte));
         const schluessel = punkte.join(',');
         if (geo.userData.nahtFaktor?.schluessel !== schluessel) {
             geo.userData.nahtFaktor = { schluessel, faktor: Hautnaht.faktor(geo.attributes.position.array, Figurhaut.vollerIndex(geo), punkte) };
         }
         Hautnahtpatch.eintragen(koerper, geo.userData.nahtFaktor.faktor);
+    }
+
+    /**
+     * Die Karten eines Stücks sind fertig oder weg (`Anatomiehaut`): Relief der Haut und Farbrand des Stücks neu eintragen — mit oder ohne Angleichung,
+     * je nachdem, ob das Stück jetzt die Karten der Haut trägt. Rechnet nichts neu, nur die gemerkten Faktoren (`naehen`) werden anders gesetzt.
+     * @returns Zahl der Stücke am Ring
+     */
+    static randAbgleichen(inst) {
+        const koerper = inst?.bodyMesh, geo = koerper?.geometry, loecher = geo ? Hautloch._loecher.get(geo) : null;
+        if (!loecher) return 0;
+        Hautloch.reliefNehmen(koerper, geo, loecher);
+        for (const { netz } of loecher.ringe) Stueckhaut.randSetzen(netz);
+        return loecher.ringe.length;
     }
 
     /**

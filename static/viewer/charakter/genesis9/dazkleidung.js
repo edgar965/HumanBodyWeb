@@ -10,6 +10,7 @@ import { Umfaerbung } from '../../gemeinsam/umfaerbung.js';
 import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
 import { Stoffwerte } from '../../gemeinsam/stoffwerte.js';
 import { Hautverdeckung } from '../../gemeinsam/hautverdeckung.js';
+import { Kleidersichtbarkeit } from '../../gemeinsam/kleidersichtbarkeit.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 
 /**
@@ -78,10 +79,12 @@ export class Dazkleidung {
             });
         if (daten.fehler) throw new Error(daten.fehler);
         if (!inst.dazKleidung[kennung]) return 0;           // inzwischen ausgezogen
+        const sichtbar = Kleidersichtbarkeit.fuer(inst, `${Dazkleidung.PRAEFIX}${kennung}`);       // „Kleider aus" gilt auch für das neu gebaute Stück
         Dazkleidung._weg(inst, kennung);
         const paare = [];
         (daten.teile || []).forEach((teil, nummer) => {
             const netz = Genesis9netz.bauen(teil, `${Dazkleidung.PRAEFIX}${kennung}_${nummer}`);
+            netz.visible = sichtbar;
             paare.push([netz, teil]);
             netz.userData.hautgewichte = teil.hautgewichte || null;
             netz.userData.art = daten.art || null;          // kleidung | haar — wie `Genesis9kleidung`

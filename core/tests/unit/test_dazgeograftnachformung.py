@@ -54,7 +54,8 @@ class NachformungTest(SimpleTestCase):
         self.assertEqual(regler, {K + '_scham': 0.4, K + '_unterkleid_daz': 1.0})
         self.assertEqual(entfernen, [K + '_unterkleid'])
         nachformung.assert_not_called()
-        self.assertEqual(unterkleid.call_args[0][2:], ({K: 1.0, K + '_unterkleid': 1.0}, {K + '_scham': 0.4}))
+        # Dahinter folgen `loch_maske` und `name` (hier beide None, `_unterkleid(lauf, job, regler, zusatzregler, loch_maske, name)`).
+        self.assertEqual(unterkleid.call_args[0][2:4], ({K: 1.0, K + '_unterkleid': 1.0}, {K + '_scham': 0.4}))
 
     def test_2_fehlt_der_scham_morph_wird_die_nachformung_gerechnet(self):
         (regler, entfernen), nachformung, _unterkleid = self._sichern({K: 1.0}, vorhanden=set())
@@ -118,7 +119,17 @@ class NachformungTest(SimpleTestCase):
             innen = N._lochpunkte({K: 1.0}, maske)
         geograft_loch.assert_not_called()
         self.assertEqual(int(innen.sum()), 9, 'dieselbe Haut wie mit dem Loch des Geografts, wenn die Löcher gleich sind')
-        self.assertIn('_unterkleid_umriss', N.ENDUNGEN, 'der Morph zum Loch des Blender-Stücks ist kein Körper-Regler')
+        self.assertTrue(N.ist_zusatz(K + '_unterkleid_umriss'), 'der Morph zum Loch des Blender-Stücks ist kein Körper-Regler')
+        self.assertTrue(N.ist_zusatz(K + '_unterkleid_umriss_cute_girl_alt2_scham'), 'auch mit dem Namen eines fremden Umrisses (UMRISS_VON) nicht')
+        self.assertFalse(N.ist_zusatz(K), 'der Körper-Regler selbst schon')
+
+    def test_7c_ein_fremder_umriss_legt_den_morph_unter_eigenem_namen_ab(self):
+        """Am 11.10.2026 überschrieb „cute girl daz2" (Loch von alt2) den Morph `…_unterkleid_umriss` von „Daz3": der Name des Umrisses gehört an den Morph."""
+        with mock.patch.object(N, '_unterkleid', return_value='x') as unterkleid, \
+                mock.patch.object(N, '_lauf', return_value=('lauf', 'job')), \
+                mock.patch('Genesis9.eigenmorphe.G9eigenmorphe.vorhanden', return_value=True):
+            N.sichern({'figur': {'regler': {K: 1.0, K + '_unterkleid': 1.0}, 'herkunft': {'import': 'i'}}}, 0.4, np.zeros(3, dtype=bool), 'cute_girl_alt2_scham')
+        self.assertEqual(unterkleid.call_args.args[-1], 'cute_girl_alt2_scham')
 
 
 class ModellAbgleichTest(SimpleTestCase):

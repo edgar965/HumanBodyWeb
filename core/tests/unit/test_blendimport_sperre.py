@@ -163,10 +163,10 @@ class NormalenGrenzeTest(SimpleTestCase):
 
     def test_1_die_grenze_aus_dem_dialog_bestimmt_was_flach_wird(self):
         karte = self._karte()
-        streng, anteil_streng = self._haut('35')._saeubern(karte, None)
-        locker, anteil_locker = self._haut('70')._saeubern(karte, None)
-        aus, anteil_aus = self._haut('aus')._saeubern(karte, None)
-        vorgabe, _ = self._haut(None)._saeubern(karte, None)
+        streng, anteil_streng = self._haut('35').nach.saeubern(karte, None)
+        locker, anteil_locker = self._haut('70').nach.saeubern(karte, None)
+        aus, anteil_aus = self._haut('aus').nach.saeubern(karte, None)
+        vorgabe, _ = self._haut(None).nach.saeubern(karte, None)
         self.assertEqual(tuple(streng[20, 20]), Blendimportnormalen.FLACH)
         self.assertGreater(anteil_streng, 0.0)
         self.assertEqual(tuple(locker[20, 20]), (238, 128, 191))
@@ -178,10 +178,10 @@ class NormalenGrenzeTest(SimpleTestCase):
     def test_2_viele_geaenderte_texel_warnen_in_der_statuszeile(self):
         meldungen = []
         haut = self._haut(None, lambda anteil, text: meldungen.append(text))
-        haut.normalen_flach = {'1002': 1.2, '1004': Blendimportnormalen.WARN_PROZENT + 0.5}
-        haut._warnen(1002)
+        haut.nach.normalen_flach = {'1002': 1.2, '1004': Blendimportnormalen.WARN_PROZENT + 0.5}
+        haut.nach.warnen(1002)
         self.assertEqual(meldungen, [], 'unter der Schwelle bleibt es still')
-        haut._warnen(1004)
+        haut.nach.warnen(1004)
         self.assertEqual(len(meldungen), 1)
         self.assertIn('Kachel 1004', meldungen[0])
         self.assertIn('Grenze', meldungen[0])

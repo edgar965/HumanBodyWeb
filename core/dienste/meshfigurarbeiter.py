@@ -25,6 +25,8 @@ __all__ = ['Meshfigurarbeiter']
 
 class Meshfigurarbeiter:
     BEFEHL = 'meshfigur_fahren'
+    #: Wie `Blendimportarbeiter.UMGEBUNG`: „haar" und „kleidung" laufen in Fäden nebeneinander, mehrere OpenBLAS-Fäden hängen sich dabei auf.
+    UMGEBUNG = {'OPENBLAS_NUM_THREADS': '1'}
 
     @classmethod
     def starten(cls, job, ab=None):
@@ -34,7 +36,7 @@ class Meshfigurarbeiter:
         if ab:
             befehl += ['--ab', ab]
         with open(ablage.log(), 'ab') as protokoll:
-            prozess = Auftragsarbeiter._popen(befehl, protokoll)
+            prozess = Auftragsarbeiter._popen(befehl, protokoll, umgebung=cls.UMGEBUNG)
         ablage.pid().write_text(str(prozess.pid))
         job.pid = prozess.pid
         job.status = 'laeuft'

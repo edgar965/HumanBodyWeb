@@ -32,7 +32,9 @@ const warte = () => new Promise(r => setTimeout(r, 0));
 
 // --- DOM-Attrappe: ein Behälter mit den beiden Bereichen ------------------------------------
 const bereich = () => {
-    const ul = { innerHTML: '', kinder: [], appendChild(li) { this.kinder.push(li); } };
+    // `innerHTML = ''` leert die Liste wie im Browser (`Figurwahlbereiche.verteilen` baut sie bei jedem Füllen neu auf).
+    const ul = { _html: '', kinder: [], appendChild(li) { this.kinder.push(li); },
+                 get innerHTML() { return this._html; }, set innerHTML(wert) { this._html = wert; this.kinder = []; } };
     ul.parentElement = { querySelector: () => ({ textContent: '' }) };
     return ul;
 };
@@ -48,7 +50,8 @@ const baue = () => {
 };
 globalThis.document = { createElement: () => ({ dataset: {}, className: '', innerHTML: '',
                                                 querySelector: () => ({ addEventListener() {} }) }) };
-const namen = (b) => b.uls.gespeichert.kinder.map(k => k.name);
+// Die Zeile „verwaiste löschen“ (`Figurwahlimporte.aufraeumen`) ist ein Eintrag der Liste ohne Namen — sie zählt hier nicht.
+const namen = (b) => b.uls.gespeichert.kinder.filter(k => k.name !== undefined).map(k => k.name);
 
 const dialogMit = (behaelter) => {
     const dialog = {
@@ -107,9 +110,10 @@ const imp = (name) => ({ name, anzeige: name + ' (Import)', bereich: 'gespeicher
     const dialog = dialogMit(b);
     const fuellung = new Figurwahlfuellung(dialog);
     importeAbrufe = [];
+    // Die Wahl steht schon vor dem Füllen (Löschen/Umbenennen baut die Liste bei gewählter Zeile neu): beide Aufbauten markieren sie wieder.
+    dialog.gewaehlt = { quelle: 'genesis9', name: 'A' };
     const lauf = fuellung.fuellen('genesis9');
     await warte(); await warte();
-    dialog.gewaehlt = { quelle: 'genesis9', name: 'A' };
     importeAbrufe.at(-1)([imp('i1')]);
     await lauf;
     pruefe('Wahl neu markiert (nach den Modellen und nach den Importen)', dialog.gewaehltAufrufe, ['A', 'A']);

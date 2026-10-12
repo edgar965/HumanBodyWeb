@@ -14,7 +14,7 @@ import copy
 
 from .blendimporteinstellungen import Blendimporteinstellungen
 
-__all__ = ['Fremdimporteinstellungen', 'Objimporteinstellungen', 'Fbximporteinstellungen']
+__all__ = ['Fremdimporteinstellungen', 'Objimporteinstellungen', 'Fbximporteinstellungen', 'Glbimporteinstellungen']
 
 
 def _ableiten(endung, hinweis, ohne=(), aenderungen=None):
@@ -46,7 +46,7 @@ class Fremdimporteinstellungen(Blendimporteinstellungen):
 
     @classmethod
     def fuer(cls, format):
-        return {'obj': Objimporteinstellungen, 'fbx': Fbximporteinstellungen}[format]
+        return {'obj': Objimporteinstellungen, 'fbx': Fbximporteinstellungen, 'glb': Glbimporteinstellungen}[format]
 
 
 class Objimporteinstellungen(Fremdimporteinstellungen):
@@ -59,6 +59,23 @@ class Objimporteinstellungen(Fremdimporteinstellungen):
         '(Farbe, Rauheit, Deckkraft stehen in der .mtl; Normalenkarten nur, wenn sie dort als map_Bump stehen). Eine OBJ hat '
         'kein Skelett — „Mesh to 3D" schätzt die Haltung.',
         ohne=('umposen',))
+
+
+class Glbimporteinstellungen(Fremdimporteinstellungen):
+    """GLB (11.10.2026, Jobseite „Mesh-3D“): Blender liest sie wie eine FBX — Skelett und Gewichte, wenn die Datei sie trägt.
+    Die Haltung per Knochenkarte gilt nur für Auto-Rig Pro, darum wie bei FBX Vorgabe „aus“."""
+    FORMAT = 'glb'
+    DATEI = 'einstellungen_glb.json'
+    EIGEN = Fremdimporteinstellungen.EIGEN + ('umposen',)
+    KATALOG = _ableiten(
+        '.glb',
+        'Ein Ordner: die .glb mit der höchsten Fassungsnummer im Namen. Texturen sind in der Datei eingebettet. Mehrere Objekte '
+        '(Körper, Kleider, Haar) bleiben getrennt und bekommen ihre Rolle nach Maßen, Material und Namen; ein einziges verschmolzenes '
+        'Netz hat nur die Rolle „Körper“.',
+        aenderungen={'umposen': {
+            'vorgabe': 'aus',
+            'hinweis': 'Die Knochenkarte gilt nur für Auto-Rig Pro. Jedes andere Rig bleibt, wie es ist: die Haltung der Datei gilt, '
+                       '„Mesh to 3D“ schätzt sie.'}})
 
 
 class Fbximporteinstellungen(Fremdimporteinstellungen):

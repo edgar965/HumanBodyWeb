@@ -162,7 +162,8 @@ class RequisitTest(unittest.TestCase):
         posiert, ruhe = np.vstack([rumpf, hand_posiert]), np.vstack([rumpf, hand_ruhe])
         teil = np.array([G9koerperteile.NUMMER['rumpf']] * 300 + [G9koerperteile.NUMMER['r_hand']] * 150)
         baum = cKDTree(posiert)
-        return SimpleNamespace(h=0.004, teil=teil, kaefig_posiert=posiert, kaefig_ruhe=ruhe, ins_netz=lambda p: np.asarray(p, dtype=np.float64),
+        return SimpleNamespace(h=0.004, teil=teil, kaefig_posiert=posiert, kaefig_ruhe=ruhe, finger_bewegt=np.zeros(len(posiert), dtype=bool),
+                               ins_netz=lambda p: np.asarray(p, dtype=np.float64),
                                entposen=lambda: SimpleNamespace(baum=baum)), hand_posiert, hand_ruhe
 
     def test_5_requisit_geht_starr_mit_dem_teil_das_es_beruehrt(self):

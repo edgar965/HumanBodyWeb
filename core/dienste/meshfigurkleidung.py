@@ -126,18 +126,23 @@ class Meshfigurkleidung:
 
     def bilder(self, scan, teilung):
         """`{teil: {ansicht: Datei}}` — beide Teile im selben Ausschnitt (der ganze Körper)."""
+        from Genesis9.offscreenwerk import G9offscreenwerk
         from Kleidung.kleidungsbild import Kleidungsbild
 
         bild = Kleidungsbild(scan.textur)
         fenster = bild.fenster(scan.punkte)
         netze = {'ohne': teilung.ohne_kleidung(), 'nur': teilung.nur_kleidung()}
         aus = {}
-        for teil in self.TEILE:
-            wahl = ~teilung.maske['kleidung'] if teil == 'ohne' else teilung.maske['kleidung']
-            for ansicht in Kleidungsbild.ANSICHTEN:
-                name = self.datei(teil, ansicht)
-                bild.speichern(netze[teil], ansicht, fenster, self.ablage.ergebnis(name), farben=teilung.farben[wahl])
-                aus.setdefault(teil, {})[ansicht] = name
+        # Ein Renderer und ein Netz je Teil für alle drei Ansichten (siehe `Meshfigurhaar.bilder`).
+        with G9offscreenwerk.sitzung():
+            for teil in self.TEILE:
+                wahl = ~teilung.maske['kleidung'] if teil == 'ohne' else teilung.maske['kleidung']
+                farben = teilung.farben[wahl]
+                for ansicht in Kleidungsbild.ANSICHTEN:
+                    name = self.datei(teil, ansicht)
+                    bild.speichern(netze[teil], ansicht, fenster, self.ablage.ergebnis(name), farben=farben)
+                    aus.setdefault(teil, {})[ansicht] = name
+            bild.freigeben()
         return aus
 
     # --------------------------------------------------------------- Objekt
@@ -148,8 +153,9 @@ class Meshfigurkleidung:
         Das Netz steht in der Haltung der Person; `Kleidungsentposen` rechnet es mit dem Käfig der Figur (in Ruhe
         `genesis_ende.npz`, in der Haltung `posiert.npy`) zurück. Deshalb erst im Schritt „vorschau", wenn beide zur
         aktuellen Figur gehören. Scheitert es, steht der Grund in `ergebnis.kleidung.objekt.fehler`."""
-        from Kleidung.kleidungsentposen import Kleidungsentposen
         from Kleidung.kleidungsobjekt import Kleidungsobjekt
+
+        from .meshfigurkleidungsruhelage import Meshfigurkleidungsruhelage
 
         kleidung = self.job.ergebnis.get('kleidung')
         if not kleidung or kleidung.get('fehler'):
@@ -175,10 +181,12 @@ class Meshfigurkleidung:
             return None
         with np.load(ruhe) as d:
             kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
-        entposen = Kleidungsentposen(kaefig_ruhe, np.load(posiert).astype(np.float64))
+            teil = np.asarray(d['teil']) if 'teil' in d.files else None
+        # Mit Körperteilen (12.10.2026): eine Hand neben dem Saum zog die Unterhose mit nach außen (Fahne bis 131 mm) — `Meshfigurkleidungsruhelage`.
+        ruhelage = Meshfigurkleidungsruhelage(kaefig_ruhe, np.load(posiert).astype(np.float64), teil)
         genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
-        punkte = entposen.ruhelage(scan.punkte[genutzt])
+        punkte = ruhelage.punkte(scan.punkte[genutzt], neu.reshape(-1, 3))
         steckbrief = Kleidungsobjekt.schreiben(self.ablage.ergebnis('kleidung.glb'), punkte, neu.reshape(-1, 3),
                                                scan.uv_ecken[wahl], scan.textur)
-        kleidung['objekt'] = {'datei': 'kleidung.glb', **steckbrief, 'entposen': entposen.pruefen()}
+        kleidung['objekt'] = {'datei': 'kleidung.glb', **steckbrief, 'entposen': ruhelage.entposen.pruefen(), 'ruhelage': ruhelage.befund}
         return kleidung['objekt']

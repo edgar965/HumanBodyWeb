@@ -5,6 +5,7 @@ import { Bereichsgedaechtnis } from './bereichsgedaechtnis.js';
 import { Letztewahl } from './letztewahl.js';
 import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
 import { Normalenarbeit } from '../gemeinsam/normalenarbeit.js';
+import { Genesis9antwortspeicher } from '../gemeinsam/genesis9antwortspeicher.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -63,6 +64,8 @@ export class Starteinstellungen {
         this.auswahlhelligkeit(daten.selection_opacity);
         // Normalen der Gelenkkorrekturen im Worker (Einstellungen → Charakter, Vorgabe aus).
         Normalenarbeit.einschalten(eigene.normalen_worker);
+        // Netzantworten der Genesis-Figuren im RAM halten oder nicht (Einstellungen → Charakter, Vorgabe RAM).
+        Genesis9antwortspeicher.einstellen(eigene.netzantworten);
     }
 
     _mhKleidung(eigene) {

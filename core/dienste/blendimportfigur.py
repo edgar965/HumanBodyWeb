@@ -33,10 +33,20 @@ class Blendimportfigur:
         'eigenmorph': 'an',
     }
 
-    def __init__(self, ablage, name, basis):
+    #: Weg „netz“ (`Blendimportweg`, 11.10.2026): das Netz ist verschmolzen und trägt Kleidung und Haar selbst — es gelten die Vorgaben des Reiters „Mesh to 3D“ (Stoff zieht schwach, Frisur und Haarkarten aus dem
+    #: Netz, Kopfhaut, Textur aus dem Netz), nur Einheit (Meter: `Blendimportnetz` hat das Netz auf Menschenhöhe gebracht), Gesicht, Eigenmorph und das Speichern des Modells `<Name> Mesh` stehen fest.
+    OPTIONEN_NETZ = {
+        'einheit': 'meter',
+        'gesicht': 'an',
+        'eigenmorph': 'an',
+        'modell': 'an',
+    }
+
+    def __init__(self, ablage, name, basis, netz=False):
         self.ablage = ablage
         self.name = name
         self.basis = basis
+        self.netz = netz
 
     def anlegen(self, glb):
         from ..daten.auftragskennung import Auftragskennung
@@ -48,14 +58,16 @@ class Blendimportfigur:
         kennung = Auftragskennung.frei(timezone.now(), lambda k: Meshfigurauftrag.objects.filter(kennung=k).exists())
         ablage = Meshfigurablage(kennung)
         eingang = Meshfigureingang(ablage).anlegen([], str(glb), None)
-        optionen = Meshfiguroptionen.pruefen(dict(self.OPTIONEN, basis=self.basis))
+        optionen = Meshfiguroptionen.pruefen(dict(self.OPTIONEN_NETZ if self.netz else self.OPTIONEN, basis=self.basis))
         job = Meshfigurauftrag.objects.create(kennung=kennung, name=self.name, eingang=eingang, optionen=optionen)
         logger.info('Blender-Import %s: Auftrag „Mesh to 3D" %s angelegt', self.ablage.kennung, kennung)
         return job
 
     @staticmethod
-    def rechnen(job):
-        """Den Auftrag in DIESEM Prozess rechnen; danach muss er „fertig" sein, sonst ein Fehler mit seinem Grund."""
+    def rechnen(job, zusatz=None, sapiens=None):
+        """Den Auftrag in DIESEM Prozess rechnen; danach muss er „fertig“ sein, sonst ein Fehler mit seinem Grund.
+        `zusatz`: weitere Felder für `auftrag.json` des Runners (`Meshfigurlauf.zusatz`) — die Pose des Schritts „pose“ (`landmarken_hand`, `Blendimportpose.zusatz`).
+        `sapiens`: die Einstellungen der Segmentierung des Wegs „netz“ (`Blendimportsegmentierung.fuer_figur`) — dann nehmen Kleidungsmaske, Haarmaske und Hautton die Etiketten von Sapiens."""
         from ..models import Meshfigurauftrag
         from .meshfigurlauf import Meshfigurlauf
 
@@ -68,6 +80,12 @@ class Blendimportfigur:
         # Figur↔Netz 2,67 mm RMS, aber 11 Brust-/Schulterregler am Anschlag (Soll ≤ 8) — die Brust ist größer, als die Regler
         # hergeben. „melden": der Lauf geht weiter, der Befund steht in `ergebnis.koerper.tor` (wie bei „2D3D Kleider").
         lauf.tor = 'melden'
+        lauf.zusatz.update(zusatz or {})
+        if sapiens:
+            # Dieselben Attribute setzt „2D3D Kleider“ aus der Option `segmentierung` (`Engine2d3dKleiderkoerperlauf`); „Mesh to 3D“ hat sie sonst nicht (`Meshfigurkleidung._sapiens`, `Sapienshaar.quelle`).
+            lauf.sapiens_maske = sapiens.get('verwenden') == 'an'
+            lauf.sapiens_einstellungen = dict(sapiens)
+            lauf.sapiens_haar = sapiens.get('haar') or 'farbe'
         lauf.ausfuehren()
         job = Meshfigurauftrag.objects.get(pk=job.pk)
         if job.status != 'fertig':

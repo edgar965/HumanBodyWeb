@@ -22,8 +22,10 @@ class Modellstuecke:
         """Kennungen (Garderobe, z. B. `cute_girl_daz3_scham`) der Stücke, die das Modell mit sich führt — `daten`: Inhalt von `<Modell>.json`."""
         figur = daten.get('figur') if isinstance(daten, dict) else None
         herkunft = (figur or {}).get('herkunft')
-        liste = herkunft.get('daz_stuecke') if isinstance(herkunft, dict) else None
-        return [str(k) for k in liste] if isinstance(liste, list) else []
+        if not isinstance(herkunft, dict):
+            return []
+        # `daz_stuecke`: das Daz-Stück von `modell_ableiten`; `eigene_stuecke`: ein für dieses Modell gebautes Eigen-Stück (z. B. „cute girl alt Scham")
+        return [str(k) for s in ('daz_stuecke', 'eigene_stuecke') if isinstance(herkunft.get(s), list) for k in herkunft[s]]
 
     @classmethod
     def lesen(cls, pfad):

@@ -25,6 +25,7 @@ class Command(BaseCommand):
         parser.add_argument('--nachformung', type=float, default=None, help='Nachformung der Figur am Becken (`eigen:…_scham`), 0 = aus (Vorgabe siehe `Dazgeograftangepasst.NACHFORMUNG`)')
         parser.add_argument('--stufe', type=int, default=None, choices=(1, 2), help='Unterteilungsstufe des Geografts: 2 (≈ 2 mm Punktabstand, Vorgabe siehe `Dazgeograftangepasst.STUFE`) oder 1 (≈ 4 mm, ein Viertel der Punkte)')
         parser.add_argument('--ohne-umriss', action='store_true', help='das Loch des Geografts statt Umriss und Loch des Blender-Stücks (Stand bis 11.10.2026; Vorgabe siehe `Dazgeograftangepasst.UMRISS`)')
+        parser.add_argument('--umriss-von', default=None, help='Anzeigename eines anderen Blender-Stücks, dessen Loch (Umriss) gilt, z. B. „cute girl alt2 Scham" (größer: bis zum oberen Ende des Geografts); die Anpassung zielt weiter auf --scham (Vorgabe: das Loch von --scham)')
         parser.add_argument('--ziel-modell', default=None, help='Modell, das das Stück trägt und die Nachformung mitbekommt (Vorgabe: „<Modell> Daz", wenn es existiert)')
         parser.add_argument('--ableiten', action='store_true', help='das Ziel-Modell vorher frisch aus dem Modell des Imports ableiten (Kopie, Daz-Stück statt Blender-Scham) — nach einem Neuimport nötig')
 
@@ -33,6 +34,7 @@ class Command(BaseCommand):
         from core.dienste.dazgeograftmorphuebertrag import Dazgeograftmorphuebertrag
         from core.dienste.schammessung import Schammessung
 
+        Dazgeograftangepasst.UMRISS_VON = options['umriss_von'] or None
         try:
             bau = Dazgeograftangepasst(options['modell'], options['scham'], options['name'], options['aufloesung'], options['steifigkeit'], options['nachformung'], options['stufe'],
                                        False if options['ohne_umriss'] else None)

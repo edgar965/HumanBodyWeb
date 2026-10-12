@@ -13,9 +13,12 @@ import { Genesis9netz } from './genesis9netz.js';
 import { Genesis9fototextur } from './genesis9fototextur.js';
 import { Genesis9vorgabe } from './genesis9vorgabe.js';
 import { Genesis9aufbau } from './genesis9aufbau.js';
+import { Genesis9materialabruf } from './genesis9materialabruf.js';
 import { Netzstufenstand } from './netzstufenstand.js';
 import { Genesis9kleidung } from './genesis9kleidung.js';
 import { Genesis9ersatz } from './genesis9ersatz.js';
+import { Genesis9maske } from './genesis9maske.js';
+import { Materialwechsel } from './materialwechsel.js';
 import { Modell } from './modell.js';
 import { Skelettereignis } from './skelettereignis.js';
 import { Augentextur } from './augentextur.js';
@@ -154,13 +157,10 @@ export class Genesis9Modell extends Modell {
      */
     async koerperAufbauen(stufen = null, skelettFrisch = true, vorBau = null) {
         const lauf = this._lauf = (this._lauf || 0) + 1;
-        const daten = await Serverabruf.netzSenden(Genesis9aufbau.adresse(
-            `${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen), {
-                regler: this.regler || {}, haut: this.haut, augen: this.augen,
-                brauen: this.brauen, brauenstil: this.brauenstil, praesets: this.praesets,
-                pose: this.pose, ausdruck: this.ausdruck, griffe: this.griffe(),
-                kleidung: this.kleidungsliste(),
-            });
+        const adresse = Genesis9aufbau.adresse(`${Genesis9Modell.ADRESSE}${encodeURIComponent(this.figur)}/netz/`, stufen);
+        // Aus dem Speicher der Figur (je Stufe), bei anderen Materialien mit der leichten Anfrage, sonst vom Server (`Genesis9materialabruf`, 12.10.2026).
+        const antwort = await Genesis9materialabruf.holen(this, adresse, Genesis9materialabruf.nutzlast(this));
+        const daten = antwort.daten;
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== this._lauf) return this;          // überholt: ein neuer Zug läuft
         // `vorBau`: die Antwort ist da, gebaut wird sie erst auf Ruhe (`Genesis9aufbau._haeppchen`, 09.10.2026).
@@ -169,6 +169,7 @@ export class Genesis9Modell extends Modell {
             if (lauf !== this._lauf) return this;
         }
         this._altesWeg();
+        Genesis9materialabruf.merken(this, antwort);
         const neuesSkelett = skelettFrisch || !this.skelett;
         if (neuesSkelett) {
             // Mit den eigenen Knochen der getragenen Stücke (Eirgrid: 14 Zöpfe an
@@ -197,6 +198,7 @@ export class Genesis9Modell extends Modell {
         /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
         this.hdkanaele = daten.hdkanaele || [];
         this._kleiderBinden(neuesSkelett);
+        if (!neuesSkelett) Genesis9maske.nachMaterialwechsel(this);   // kein Skelettereignis: Loch, Naht und Randfarbe des frischen Körpers sonst nie neu (`genesis9maske.js`)
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
         if (Object.keys(this.hautmischung).length) Genesis9hautmischung.anwenden(this);
         // Ein neu gebautes Augennetz trägt wieder die Original-Karte — eine gewählte Augentextur (`detailfeldAnwenden`) neu legen.
@@ -247,6 +249,7 @@ export class Genesis9Modell extends Modell {
             this.group.remove(altes);
             const roh = new THREE.Mesh(altes.geometry, altes.material);
             roh.name = altes.name; roh.userData = altes.userData;
+            roh.visible = altes.visible;       // „Kleider aus" und ein einzeln ausgeblendetes Stück überleben das Neubinden (`Kleidersichtbarkeit`)
             // Stranghaar prüft Klicks selbst (`Genesis9strangtreffer`, eigene Eigenschaft
             // des Netzes) — ohne das war Viola nach dem ersten Reglerzug wieder unwählbar.
             if (Object.hasOwn(altes, 'raycast')) roh.raycast = altes.raycast;
@@ -272,24 +275,30 @@ export class Genesis9Modell extends Modell {
     // Haut, Augen, Brauen und Makeup-Presets bewegen keinen Knochen — `koerperAufbauen`
     // bekommt `skelettFrisch = false` und lässt das Skelett unangetastet (siehe dort).
 
+    /**
+     * EINE Stelle für jeden reinen Materialwechsel (Haut, Augen, Brauen, Brauenstil, Makeup; Edgar, 12.10.2026: „eine generische Methode für alle Wechsel"):
+     * `aendern` setzt, was gewählt wurde, danach wird der Körper ohne neues Skelett neu geholt. Alles, was von der Haut abhängt — Loch und Naht der Hautverdeckung,
+     * Randfarbe und Karten des Anatomie-Stücks (`Genesis9maske.nachMaterialwechsel`) — zieht der Bau selbst nach. Ein neuer Wechsel braucht keine eigene Nacharbeit,
+     * er geht hier durch; vorher stand dieselbe Zeile in sechs Methoden, und jede neue Abhängigkeit (Scham, Naht) hätte sechsmal nachgetragen werden müssen.
+     */
+    async materialWechseln(aendern) {
+        return Materialwechsel.ausfuehren(this, aendern);
+    }
+
     async hautSetzen(preset) {
-        this.haut = preset || '';
-        return this.koerperAufbauen(null, false);
+        return this.materialWechseln(() => { this.haut = preset || ''; });
     }
 
     /** Ein Augen-Preset aus der Toolbar — gilt ab jetzt vor einer eigenen Fotokachel des
      *  Modells (`_augenGewaehlt`, siehe `genesis9fototextur.js`). */
     async augenSetzen(nummer) {
-        this.augen = nummer || '01';
-        this._augenGewaehlt = true;
-        return this.koerperAufbauen(null, false);
+        return this.materialWechseln(() => { this.augen = nummer || '01'; this._augenGewaehlt = true; });
     }
 
     /** Zurück zur vom Modell gelieferten Augentextur (`fototextur.augen`) — „Original Augen
      *  vom Modell", erster Eintrag des Dropdowns bei einem Modell mit eigener Augenkachel. */
     async augenOriginalSetzen() {
-        this._augenGewaehlt = false;
-        return this.koerperAufbauen(null, false);
+        return this.materialWechseln(() => { this._augenGewaehlt = false; });
     }
 
     /**
@@ -306,21 +315,22 @@ export class Genesis9Modell extends Modell {
     }
 
     async brauenSetzen(farbe) {
-        this.brauen = farbe || '';
-        return this.koerperAufbauen(null, false);
+        return this.materialWechseln(() => { this.brauen = farbe || ''; });
     }
 
     async brauenstilSetzen(stil, farbe = undefined) {
-        this.brauenstil = stil || '';
-        if (farbe !== undefined) this.brauen = farbe || '';
-        return this.koerperAufbauen(null, false);
+        return this.materialWechseln(() => {
+            this.brauenstil = stil || '';
+            if (farbe !== undefined) this.brauen = farbe || '';
+        });
     }
 
     /** Ein Preset einer Kategorie wählen (leer = keins). */
     async praesetSetzen(kategorie, kennung) {
-        if (kennung) this.praesets[kategorie] = kennung;
-        else delete this.praesets[kategorie];
-        return this.koerperAufbauen(null, false);
+        return this.materialWechseln(() => {
+            if (kennung) this.praesets[kategorie] = kennung;
+            else delete this.praesets[kategorie];
+        });
     }
 
     /** Ein Hautsatz der Texturmischung auf Prozent (0 = raus) — ohne Neubau des Körpers:
@@ -414,5 +424,6 @@ export class Genesis9Modell extends Modell {
         this.bodyMesh = null;
         this.anhangNetze = {};
         this.clothMeshes = {};
+        this._antworten = null;                       // die gehaltenen Antworten je Stufe (`Genesis9antwortspeicher`)
     }
 }

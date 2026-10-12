@@ -47,15 +47,21 @@ class Dazgeograftangepasst(Dazgeograft):
     #: (Stand bis 11.10.2026, Modelle „cute girl Daz", „Daz1", „Daz2").
     UMRISS = True
     #: Randband des zugeschnittenen Stücks (mm): Breite und höchster Weg zur Haut, `None` = wie beim Blender-Stück (`Blendimportscham.BAND_MM`, `ANGLEICH_MAX_MM`: 12 / 8); `RAND_MAX_MM` 0 = kein Band.
-    #: Gemessen 11.10.2026 (Probebau ohne Schreiben, `ProjektTemp/_wegwerf/umriss_reihe.py`, Stufe 2, „cute girl", Umriss; Band 12 mm, Höchstweg wechselnd) — Edgar: „4 mm Randband ist zu viel":
+    #: Gemessen 11.10.2026 (Probebau ohne Schreiben, `ProjektTemp/_wegwerf/umriss_reihe.py`, Stufe 2, „cute girl", Umriss; Band 12 mm, Höchstweg wechselnd).
+    #: Edgar, 11.10.2026: „mach das wie Blender mit 8 mm" — gewählt ist die Blender-Vorgabe (12 / 8):
     #:   Höchstweg   Form Median / p90   Erhebung links / rechts   Knick über die Naht p90 / größter / Kanten über 60°   Rand → Ring p90 / größter
-    #:   0 (gewählt) 0,39 / 2,66 mm      0,87 / 0,84               45,2° / 62,5° / 1                                       16,4 / 20,4 mm
+    #:   0           0,39 / 2,66 mm      0,87 / 0,84               45,2° / 62,5° / 1                                       16,4 / 20,4 mm
     #:   2           0,40 / 2,69         0,82 / 0,77               43,1° / 62,7° / 1                                       14,4 / 18,4
     #:   3           0,42 / 2,77         0,78 / 0,74               41,0° / 60,8° / 1                                       13,4 / 17,4
     #:   4           0,45 / 2,78         0,75 / 0,71               38,7° / 58,7° / 0                                       12,5 / 16,4
-    #:   8 (Blender) 0,48 / 2,85         0,62 / 0,61               30,1° / 48,6° / 0                                        8,8 / 12,7
-    #: Das Band zieht die Lippenflanken (Erhebung) zur Haut; die Stufe am Ring (gültige Ringpunkte, `Schammessungansichten`) ist in allen Fällen klein (größte 1,7–4,1 mm). Preis des Verzichts: eine Naht-Kante über 60°.
-    RAND_BAND_MM, RAND_MAX_MM = None, 0
+    #:   8 (gewählt) 0,48 / 2,85         0,62 / 0,61               30,1° / 48,6° / 0                                        8,8 / 12,7
+    #: Das Band zieht den Rand zur Haut (kein Absatz, keine Naht-Kante über 60°) und kostet Erhebung der Lippenflanken; im Randstreifen liegen mit dem Band 707 statt 905 von 2.507 Punkten mehr als 3 mm unter der Haut
+    #: (`ProjektTemp/_wegwerf/randband_bild.py`). Die Stufe am Ring (gültige Ringpunkte, `Schammessungansichten`) ist in allen Fällen klein (größte 1,7–4,1 mm).
+    RAND_BAND_MM, RAND_MAX_MM = None, None
+    #: Woran das Randband den Rand zieht: `haut` (die Figurfläche, wie beim Blender-Stück — Stand bis 11.10.2026) oder `stueck` (die Scham des Blender-Imports, auf die sich das Geograft legt: der Rand folgt dann dem Original statt der Hautebene).
+    RAND_ZIEL = 'haut'
+    #: Anzeigename eines anderen Blender-Stücks, dessen Loch (Umriss) gilt statt dem von `scham` — z. B. das größere Loch eines Stücks mit höherem Kasten (`None` = das von `scham`). Die Anpassung zielt weiter auf `scham`.
+    UMRISS_VON = None
 
     def __init__(self, modell, scham, name=None, aufloesung=1024, steifigkeit=None, nachformung=None, stufe=None, umriss=None):
         """`modell`: Name des gespeicherten Modells (`cute girl`); `scham`: Anzeigename des Scham-Stücks seines Imports (`cute girl Scham`); `name`: des neuen Stücks;
@@ -87,7 +93,8 @@ class Dazgeograftangepasst(Dazgeograft):
             # werden hier aus dem Import des Modells gerechnet (`Dazgeograftnachformung`).
             from .dazgeograftnachformung import Dazgeograftnachformung
 
-            self.nachformung, self.entfernen = Dazgeograftnachformung.sichern(daten, wert, self.umriss_loch)
+            fremd = self.stueck_id(self.UMRISS_VON) if self.UMRISS_VON and self.umriss_loch is not None else None
+            self.nachformung, self.entfernen = Dazgeograftnachformung.sichern(daten, wert, self.umriss_loch, fremd)
         self.regler.update(self.nachformung)
         for schluessel in self.entfernen:
             self.regler.pop(schluessel, None)
@@ -164,11 +171,11 @@ class Dazgeograftangepasst(Dazgeograft):
         return {**geaendert, **{k: None for k in entfernt}}
 
     def _umriss_loch(self, an):
-        """Das Loch des Blender-Stücks `self.scham`, wenn `an` — sonst, und wenn das Stück keines nennt (Warnung), `None`."""
+        """Das Loch des Blender-Stücks `self.scham` (oder von `UMRISS_VON`, ein anderes Stück derselben Haut), wenn `an` — sonst, und wenn das Stück keines nennt (Warnung), `None`."""
         if not an:
             return None
         try:
-            return Dazgeograftumriss.loch(self.stueck_id(self.scham))
+            return Dazgeograftumriss.loch(self.stueck_id(self.UMRISS_VON or self.scham))
         except ValueError as fehler:
             logger.warning('Daz-Geograft für %s: kein Umriss des Blender-Stücks, es gilt das Loch des Geografts: %s', self.modell, fehler)
             return None
@@ -202,7 +209,8 @@ class Dazgeograftangepasst(Dazgeograft):
             verlegt, dreiecke, uv_ecken, self.herkunft, bericht['umriss'] = Dazgeograftumriss.zuschneiden(verlegt, dreiecke, uv_ecken, flaeche, maske, haut.lage(ring))
         angepasst = anpassung.anpassen(verlegt, dreiecke, self.steifigkeit, fest=not zugeschnitten)
         if zugeschnitten and self.RAND_MAX_MM != 0:        # wie beim Blender-Stück: der Rand läuft über `BAND_MM` auf die Haut, höchstens `ANGLEICH_MAX_MM`
-            angepasst, bericht['rand'] = Blendimportscham.angleichen(angepasst, dreiecke, flaeche, self.RAND_BAND_MM, self.RAND_MAX_MM)
+            ziel = flaeche if self.RAND_ZIEL == 'haut' else trimesh.Trimesh(anpassung.ziel.punkte, anpassung.ziel.dreiecke, process=False)
+            angepasst, bericht['rand'] = Blendimportscham.angleichen(angepasst, dreiecke, ziel, self.RAND_BAND_MM, self.RAND_MAX_MM)
         bericht['anpassung'] = anpassung.bericht
         bericht['nachformung'] = self.nachformung
         self._anpassung = anpassung

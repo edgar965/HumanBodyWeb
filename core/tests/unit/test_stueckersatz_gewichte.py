@@ -43,7 +43,7 @@ class EigeneGewichteTest(SimpleTestCase):
     def _teile(self, eigene, lage=None):
         """Ruft `G9garderobe.teile` mit Attrappen auf und gibt zurück, welches `koerperhaut` an `G9folger.holen` ging."""
         folger = mock.MagicMock()
-        with mock.patch.object(G9garderobe, 'eintrag', return_value={'zeigbar': True, 'name': 'x'}), \
+        with mock.patch.object(G9garderobe, 'eintrag', return_value={'zeigbar': True, 'name': 'x', 'art': 'kleidung'}), \
                 mock.patch.object(G9garderobe, 'datei', return_value=Path('x.duf')), \
                 mock.patch.object(G9garderobe, '_knoten', return_value=[('p', {'id': 'g'}, 'k')]), \
                 mock.patch('Genesis9.garderobe.G9dson.lesen', return_value=object()), \

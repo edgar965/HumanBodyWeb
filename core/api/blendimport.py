@@ -152,7 +152,7 @@ class Blendimportendpunkte:
                 ablage.stand_schreiben(stand)
         stand['figur_lauf'] = Blendimportendpunkte._figurlauf(stand)
         # Die Schritte dieses Imports (ein Stand von vor dem 10.10.2026 kennt sie nicht): eine .blend hat kein „umwandeln".
-        stand.setdefault('schritte', list(Blendimportlauf.schritte_fuer((stand.get('quelle') or {}).get('format'))))
+        stand.setdefault('schritte', list(Blendimportlauf.schritte_fuer((stand.get('quelle') or {}).get('format'), stand.get('weg'))))
         return JsonResponse(stand, json_dumps_params={'default': str})
 
     @staticmethod
@@ -166,7 +166,7 @@ class Blendimportendpunkte:
         job = Meshfigurauftrag.objects.filter(pk=figur['id']).first()
         if job is None:
             return None
-        von, bis = Blendimportlauf.BAENDER['figur']
+        von, bis = Blendimportlauf.baender_fuer(stand.get('weg'))['figur']
         return {'kennung': job.kennung, 'schritt': job.schritt, 'progress': job.progress,
                 'detail': job.progress_detail, 'fortschritt': int(von + (bis - von) * (job.progress or 0) / 100.0)}
 

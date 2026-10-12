@@ -8,7 +8,11 @@ Haar des Netzes liegt (`Meshfigurhaar.objekt`). Ohne Lagenrechnung gegen andere 
 „Mesh to 3D" nichts) und ohne Stufe: verglichen wird der Käfig.
 """
 
+import logging
+
 import numpy as np
+
+logger = logging.getLogger('core')
 
 __all__ = ['Meshfigurfrisurstueck']
 
@@ -39,14 +43,19 @@ class Meshfigurfrisurstueck:
     def grenzen(self):
         return {r['name']: (float(r['min']), float(r['max'])) for r in self.eintrag.get('regler') or []}
 
-    def teilpunkte(self, stil=None, regler=None):
-        """`[(Nᵢ, 3)]` je Teil — die Form, die `G9haarachsen.anwenden` braucht (es rechnet je Netz)."""
+    def _zusatz(self, stil, regler=None):
+        """`(zusatz, knochen)` wie `G9folger.punkte_zu` sie braucht: Vorgaben des Presets, darüber der Stil, darüber die Regler."""
         from Genesis9.garderobe import G9garderobe
 
         werte, knochen = G9garderobe.stilwerte(self.kennung, [stil['id']] if stil else [])
         zusatz = dict(self.eintrag.get('vorgaben') or {})
         zusatz.update(werte)
         zusatz.update(regler or {})
+        return zusatz, knochen
+
+    def teilpunkte(self, stil=None, regler=None):
+        """`[(Nᵢ, 3)]` je Teil — die Form, die `G9haarachsen.anwenden` braucht (es rechnet je Netz)."""
+        zusatz, knochen = self._zusatz(stil, regler)
         return [f.punkte_zu(self.formung, zusatz, drehung=knochen, lage=lage) - self.hoch
                 for f, lage in self.teile]
 
@@ -55,9 +64,27 @@ class Meshfigurfrisurstueck:
         return np.vstack(self.teilpunkte(stil, regler))
 
     def deltas(self, stil, namen):
-        """`{regler: (N, 3)}` Wirkung bei Wert 1 über dem Stil — Daz-Morphe sind linear."""
+        """`{regler: (N, 3)}` Wirkung bei Wert 1 über dem Stil — Daz-Morphe sind linear. Direkt auf den Punkten des Morphs (`Meshfigurfrisurdeltas`, 12.10.2026: Eirgrid 51 s → Sekunden); was dieser Weg nicht
+        kann (Prop, Passform, ein Kanal, den auch der Körper stellt), rechnet wie bisher die volle Differenz."""
         grund = self.punkte(stil)
-        return grund, {n: self.punkte(stil, {n: 1.0}) - grund for n in namen}
+        schnell = self._schnell(stil)
+        aus = {}
+        for n in namen:
+            delta = schnell.delta(n) if schnell is not None else None
+            aus[n] = delta if delta is not None else self.punkte(stil, {n: 1.0}) - grund
+        return grund, aus
+
+    def _schnell(self, stil):
+        """`Meshfigurfrisurdeltas` zum Grundstand dieses Stils — `None`, wenn die Herleitung nicht gilt oder die Vorbereitung scheitert (der Aufrufer rechnet dann dicht)."""
+        from .meshfigurfrisurdeltas import Meshfigurfrisurdeltas
+
+        try:
+            zusatz, knochen = self._zusatz(stil)
+            schnell = Meshfigurfrisurdeltas(self.formung, self.teile, zusatz, knochen)
+            return schnell if schnell.moeglich() else None
+        except Exception:  # noqa: BLE001 — die dichte Rechnung ist der sichere Weg; hier nur Zeit gespart
+            logger.exception('Frisur %s: schnelle Reglerwirkung nicht vorbereitet', self.kennung)
+            return None
 
     def kleidung(self, stil, regler, farbe):
         """Der Eintrag für `figur.kleidung` eines Modells — dieselbe Form wie „Modell speichern" der Szene

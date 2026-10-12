@@ -41,6 +41,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from ..daten.anfragerumpf import Anfragerumpf
 from ..dienste.blendimportplausibel import Blendimportplausibel
 from ..dienste.g9antworten import G9antworten
+from .g9materialwahl import G9materialwahl
 from .g9netzantwort import G9netzantwort
 from ..dienste.modellkatalog import Modellkatalog
 from Genesis9.brauen import G9brauen
@@ -179,26 +180,13 @@ class G9figur:
     @staticmethod
     def _koerper(name, eintrag, rumpf):
         u"""Das Antwort-Dict des Koerpers — oder eine Fehlerantwort."""
-        # Ohne Angabe im Rumpf gelten Haut, Augen und Brauen des Eintrags —
-        # bei einem gespeicherten Modell die gespeicherten.
-        haut = G9figur._name(rumpf.get('haut')) or G9figur._name(
-            eintrag.get('haut') if eintrag.get('gespeichert') else None)
-        augen = (G9figur._name(rumpf.get('augen'))
-                 or G9figur._name(eintrag.get('augen')) or '01')
-        brauen = (G9figur._name(rumpf.get('brauen'))
-                  or G9figur._name(eintrag.get('brauen')))
-        praesets = (rumpf['praesets'] if isinstance(rumpf.get('praesets'), dict)
-                    else eintrag.get('praesets') or {})
-        brauenstil = (G9figur._name(rumpf.get('brauenstil'))
-                      or G9figur._name(eintrag.get('brauenstil')))
+        # Haut, Augen, Brauen, Presets, Brauenstil: `G9materialwahl`, dieselbe Wahl wie bei `…/material/`.
         try:
             netz = G9koerpernetz(
                 G9figur.formung(rumpf, eintrag), eintrag,
-                hautpreset=haut, augen=augen,
                 anhaenge=rumpf.get('anhaenge', True) is not False,
-                brauen=brauen, praesets=praesets,
-                brauenstil=brauenstil,
-                kleidung=G9figur._kleidung(rumpf.get('kleidung'))).bauen()
+                kleidung=G9figur._kleidung(rumpf.get('kleidung')),
+                **G9materialwahl.aus(rumpf, eintrag)).bauen()
         except (OSError, ValueError, KeyError) as fehler:
             logger.warning('Genesis 9: Netz nicht baubar: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
@@ -274,13 +262,8 @@ class G9figur:
         roh = wert if isinstance(wert, (list, tuple)) else [wert]
         return [n for n in (G9figur._name(w) for w in roh) if n]
 
-    @staticmethod
-    def _name(wert):
-        u"""Ein Presetname aus dem Rumpf — ohne Pfadzeichen, sonst None."""
-        text = str(wert or '').strip()
-        if not text or '/' in text or '\\' in text or '..' in text:
-            return None
-        return text[:80]
+    #: Ein Presetname aus dem Rumpf, ohne Pfadzeichen (`G9materialwahl`, ausgelagert 12.10.2026).
+    _name = staticmethod(G9materialwahl.name)
 
     # --------------------------------------------------------------- Regler
 

@@ -122,7 +122,8 @@ class AntwortenStufenTest(SimpleTestCase):
         self.assertEqual(zaehler['n'], 4)
         # die Fassung steckt im Schluessel
         s1 = G9antworten.schluessel('koerper', 'x', rumpf, None)
-        with mock.patch.object(G9antworten, '_fassung', G9antworten.fassung() + 1):
+        # Die Fassung ist seit 12.10.2026 ein Inhalts-Hash (`G9antwortquellen.fassung`, Text), keine Zahl mehr.
+        with mock.patch.object(G9antworten, '_fassung', G9antworten.fassung() + 'x'):
             s2 = G9antworten.schluessel('koerper', 'x', rumpf, None)
         self.assertNotEqual(s1, s2)
         self.assertTrue(s1.startswith('koerper_x_'))

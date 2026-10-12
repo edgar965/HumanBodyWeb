@@ -9,6 +9,7 @@ Punkt mit einem Loch im Körper. Die Schritte hier, in dieser Reihenfolge:
     Loch      die Haut-Dreiecke unter dem Stück als EIN Kantenring der Figur (`Blendimportschamloch`)
     Ring      die Linie des Rings wird geglättet (`Blendimportschamring`): der Browser rückt die Hautpunkte um dasselbe Stück
     Naht      der Rand des Stücks liegt genau auf den Ecken des Rings (`Blendimportschamnaht`)
+    Tiefe     die Lücke zur Haut am Rand läuft als weiches Feld ins Stück (`Schamtiefenfeld`, nicht bei einem Anbau)
 
 Ohne Django. Hat das Loch keinen einfachen Rand, bleibt das Stück, wie es war — der Browser rechnet das Loch dann wie bisher
 (`hautverdeckung.js`).
@@ -23,6 +24,7 @@ from .blendimportschamnaht import Blendimportschamnaht
 from .blendimportschamregister import Blendimportschamregister
 from .blendimportschamring import Blendimportschamring
 from .schamnahtrandseite import Schamnahtrandseite
+from .schamtiefenfeld import Schamtiefenfeld
 
 logger = logging.getLogger('core')
 
@@ -41,6 +43,11 @@ class Blendimportschamgeograft:
     MAX_RAND_WEG_ANBAU_MM = 30.0
 
     @staticmethod
+    def randband_max_mm(anbau):
+        """Höchster Weg (mm) des Randbands zur Haut (`Blendimportscham.angleichen`): `None` = die Vorgabe der Klasse. Mit Tiefenfeld entfällt das Band bei einem Stück ohne Anbau."""
+        return None if anbau or Schamtiefenfeld.STAERKE <= 0 else Schamtiefenfeld.RANDBAND_MAX_MM
+
+    @staticmethod
     def verschweissen(flaeche, werte, punkte, dreiecke, uv_ecken, anbau=False):
         """`{punkte, dreiecke, uv_ecken, loch, bericht}` oder `{'aus': Grund}`. `anbau`: das Stück trägt Penis/Hoden (weitere Grenze für den Rand).
 
@@ -57,7 +64,12 @@ class Blendimportschamgeograft:
             normalen = Blendimportschamring.normalen(haut.punkte, haut.dreiecke)[ring_punkte]
             lage0 = haut.lage(ring)
             lage, verschiebung = Blendimportschamring.ziehen(haut.punkte, haut.dreiecke, im_loch, ring_punkte, lage0, normalen)
-            punkte, dreiecke, uv_ecken, naht = Blendimportschamnaht(lage).anlegen(punkte, dreiecke, uv_ecken)
+            feld = Schamtiefenfeld.STAERKE > 0 and not anbau       # die Tiefe der Haut ringsum (11.10.2026, „alt4"); ein Anbau (Penis, Hoden) hat eigene Maße
+            rand_vorher = punkte[Schamtiefenfeld.randpunkte(dreiecke)]
+            einrasten = Blendimportschamnaht(lage)
+            if feld:
+                einrasten.BAND_MM = Schamtiefenfeld.NAHT_BAND_MM
+            punkte, dreiecke, uv_ecken, naht = einrasten.anlegen(punkte, dreiecke, uv_ecken)
             grenze = Blendimportschamgeograft.MAX_RAND_WEG_ANBAU_MM if anbau else Blendimportschamgeograft.MAX_RAND_WEG_MM
             if naht['rand_weg_max_mm'] > grenze:
                 raise ValueError('der Rand des Stücks liegt bis %.1f mm neben dem Ring (Grenze %.0f mm): es reicht über das Loch hinaus'
@@ -67,8 +79,11 @@ class Blendimportschamgeograft:
             return {'aus': str(fehler)}
         loch = {'dreiecke': np.flatnonzero(im_loch).astype(np.int64), 'von': int(len(flaeche.faces)), 'ring': lage,
                 'ring_punkte': ring_punkte, 'verschiebung': verschiebung, 'ring_d': lage - lage0}
+        tiefenfeld = {}
+        if feld:        # die Lücke zur Haut am Rand läuft als weiches Feld ins Stück (`Schamtiefenfeld`), vor der Randseite: sie prüft die fertige Lage
+            punkte, tiefenfeld = Schamtiefenfeld.anwenden(punkte, dreiecke, rand_vorher)
         # Punkte und Spitzen hinter dem Ring zurück ins Loch (11.10.2026): sonst klappt das Stück an einzelnen Ringkanten auf der Haut zurück (cute girl: Ringecke 14 und 66 mit 178° und 168°).
         punkte, randseite = Schamnahtrandseite.schieben(punkte, {'punkte': flaeche.vertices, 'dreiecke': flaeche.faces}, loch, dreiecke)
-        bericht = dict(haut.bericht(im_loch, ring), **naht, randseite=randseite, abgeschnitten=abgeschnitten, ring_gezogen_halbiert=verschiebung['halbiert'],
+        bericht = dict(haut.bericht(im_loch, ring), **naht, randseite=randseite, tiefenfeld=tiefenfeld, abgeschnitten=abgeschnitten, ring_gezogen_halbiert=verschiebung['halbiert'],
                        ring_gezogen_max_mm=round(float(np.linalg.norm(verschiebung['d'], axis=1).max()) * 1000.0, 2))
         return {'punkte': punkte, 'dreiecke': dreiecke, 'uv_ecken': uv_ecken, 'loch': loch, 'bericht': bericht}

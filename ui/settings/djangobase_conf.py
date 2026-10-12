@@ -226,6 +226,8 @@ DJANGOBASE = {
         ('errors', 'Fehler (aggregiert)', 'error.log', None),
     ],
     'version_pakete': ['django', 'channels', 'daphne', 'numpy', 'scipy', 'trimesh'],
+    # Edgar, 11.10.2026: „mach die Historie mit ALLEN Commits" — sonst zeigt jedes Repo nur die letzten 100 (HumanBodyWeb hat 590).
+    'version_commits_alle': True,
     'repos': [
         ('HumanBodyWeb', '', str(BASE_DIR)),
         ('HumanBody', '', str(HUMANBODY_ROOT)),

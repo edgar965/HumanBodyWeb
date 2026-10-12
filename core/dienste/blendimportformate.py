@@ -12,6 +12,7 @@ Was je Format abweicht, steht NUR hier und in `Fremdimporteinstellungen` (Katalo
     blend   die Datei IST die Quelle; Haltung per Auto-Rig-Pro-Knochenkarte möglich
     obj     kein Skelett (die Datei kennt keins) → der Weg „ohne Rig"; Texturen aus der .mtl neben der Datei
     fbx     Skelett und Hautgewichte aus der Datei; Haltung der Datei, sofern es kein Auto-Rig Pro ist
+    glb     (11.10.2026) wie FBX: Skelett und Gewichte, soweit die Datei sie trägt; ohne Skelett der Weg „ohne Rig“
 """
 
 __all__ = ['Blendimportformate']
@@ -23,6 +24,9 @@ class Blendimportformate:
         'blend': {'titel': 'Blender', 'endung': '.blend'},
         'obj': {'titel': 'OBJ', 'endung': '.obj'},
         'fbx': {'titel': 'FBX', 'endung': '.fbx'},
+        # Seit 11.10.2026 für die Jobseite „Mesh-3D“: Blender liest GLB mit `import_scene.gltf` (`blendumwandeln.py`) — wie OBJ/FBX nur der
+        # erste Schritt „umwandeln“, danach dieselbe Kette. Der Dialog der Charakter-Seite führt GLB nicht (noch an keinem Modell gelaufen).
+        'glb': {'titel': 'GLB', 'endung': '.glb'},
     }
     VORGABE = 'blend'
 

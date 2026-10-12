@@ -33,6 +33,7 @@ from core.dienste.blendimportformate import Blendimportformate
 from core.dienste.blendimportlauf import Blendimportlauf
 from core.dienste.blendimportquelle import Blendimportquelle
 from core.dienste.blendimportumwandeln import Blendimportumwandeln
+from core.dienste.blendimportweg import Blendimportweg
 from core.dienste.fremdimporteinstellungen import Fbximporteinstellungen, Objimporteinstellungen
 
 
@@ -168,12 +169,22 @@ class LaufSchritteTest(SimpleTestCase):
             self.assertEqual(schritte[1:], blend, 'ab „export" dieselbe Kette')
 
     def test_2_jeder_schritt_hat_sein_band_und_die_baender_schliessen_aneinander(self):
-        self.assertEqual(set(Blendimportlauf.BAENDER), set(Blendimportlauf.SCHRITTE))
-        baender = [Blendimportlauf.BAENDER[s] for s in Blendimportlauf.SCHRITTE]
-        self.assertEqual(baender[0][0], 0)
-        self.assertEqual(baender[-1][1], 100)
-        for davor, danach in zip(baender, baender[1:], strict=False):
-            self.assertEqual(davor[1], danach[0])
+        """Je Weg: jeder Schritt hat ein Band, sie schließen lückenlos aneinander und füllen 0 bis 100 (die Bänder des Wegs „netz“ sind eigene)."""
+        self.assertEqual(set(Blendimportlauf.BAENDER) | set(Blendimportweg.NETZ_BAENDER), set(Blendimportlauf.SCHRITTE))
+        for weg, format in ((Blendimportweg.TEILE, 'blend'), (Blendimportweg.TEILE, 'fbx'), (Blendimportweg.NETZ, 'glb')):
+            bander = Blendimportlauf.baender_fuer(weg)
+            schritte = Blendimportlauf.schritte_fuer(format, weg)
+            baender = [bander[s] for s in schritte]
+            # Eine .blend braucht kein „umwandeln“ (Band 0–2): ihr Balken beginnt bei 2.
+            self.assertEqual(baender[0][0], 2 if format == 'blend' else 0, (weg, format))
+            self.assertEqual(baender[-1][1], 100, (weg, format))
+            for davor, danach in zip(baender, baender[1:], strict=False):
+                self.assertEqual(davor[1], danach[0], '%s: Band endet bei %s, das nächste beginnt bei %s' % (weg, davor[1], danach[0]))
+
+    def test_2b_der_weg_netz_waehlt_seine_baender(self):
+        self.assertIs(Blendimportlauf.baender_fuer(Blendimportweg.NETZ), Blendimportweg.NETZ_BAENDER)
+        self.assertIs(Blendimportlauf.baender_fuer(None), Blendimportlauf.BAENDER)
+        self.assertIs(Blendimportlauf.baender_fuer('unbekannt'), Blendimportlauf.BAENDER)
 
     def test_3_ab_export_liest_alles_die_umgewandelte_blend_die_herkunft_bleibt_die_datei(self):
         lauf = Blendimportlauf.__new__(Blendimportlauf)

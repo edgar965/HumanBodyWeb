@@ -126,8 +126,10 @@ class DieOptionen(SimpleTestCase):
 
 class DerLauf(SimpleTestCase):
     def test_der_schritt_steht_zwischen_netz_und_segmentierung(self):
+        """Seit dem 11.10.2026 steht die optionale Pose dazwischen: netz, pose, kopf, segmentierung."""
         s = Engine2d3dKleiderlauf.SCHRITTE
-        self.assertEqual((s[s.index('kopf') - 1], s[s.index('kopf') + 1]), ('netz', 'segmentierung'))
+        self.assertEqual((s[s.index('kopf') - 1], s[s.index('kopf') + 1]), ('pose', 'segmentierung'))
+        self.assertEqual(s[s.index('kopf') - 2], 'netz')
         self.assertIn('kopf', Engine2d3dKleiderlauf.BAENDER)
 
     def test_die_schrittfolge_kennt_ihn(self):

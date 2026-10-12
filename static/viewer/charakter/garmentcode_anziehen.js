@@ -5,6 +5,7 @@ import { GarmentcodeGeometrie } from './garmentcode_geometrie.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
 import { GarmentcodeTitel } from './garmentcode_titel.js';
 import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
+import { Kleidersichtbarkeit } from '../gemeinsam/kleidersichtbarkeit.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -91,6 +92,9 @@ export class GarmentcodeAnziehen {
         // Woraus das Gewebe seine Kachelgröße nimmt (10.09.2026).
         const stoff = { hatUv: !!geometrie.attributes.uv,
                         uvMeter: daten.uv_meter };
+        // Auch die Sichtbarkeit überlebt das Neu-Einhängen: „Kleider aus" (`Kleidersichtbarkeit`, 11.10.2026 — der GarmentCode-Schuh stand nach dem
+        // Wechsel aufs feine Netz wieder da, obwohl der Schalter „aus" zeigte).
+        const sichtbar = Kleidersichtbarkeit.fuer(figur, GarmentcodeAnziehen.schluessel(stueck));
         GarmentcodeAnziehen.entfernen(figur, stueck);
 
         const skelett = GarmentcodeAnziehen._skelett(figur);
@@ -116,6 +120,7 @@ export class GarmentcodeAnziehen {
                     : 'Kleidung als starres Netz eingehängt (Referenzkörper, ohne Rig)');
         }
         netz.name = GarmentcodeAnziehen.name(stueck);
+        netz.visible = sichtbar;
         // Die Rohdaten bleiben AM NETZ. Ein HumanBody-Körper bekommt sein
         // Rigify-Skelett erst beim Animieren (`convertInstToSkinned`); ein
         // Stück, das vorher eingehängt wurde, hängt bis dahin als starres

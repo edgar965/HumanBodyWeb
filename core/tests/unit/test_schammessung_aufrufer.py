@@ -24,18 +24,23 @@ class SchammessungAufruferTest(SimpleTestCase):
         from core.dienste.meshfigurvorschau import Meshfigurvorschau
 
         quelle = self._quelle(Meshfigurvorschau, 'ausfuehren')
-        self.assertIn('Meshfigurschammessung.sicher(self.lauf)', quelle)
+        # Seit 12.10.2026 läuft die Messung in einem Faden neben Haar- und Kleidungsobjekt (`pool.submit(Meshfigurschammessung.sicher, self.lauf)`).
+        self.assertIn('Meshfigurschammessung.sicher, self.lauf', quelle)
         self.assertIn("self.job.ergebnis['schammessung']", quelle)
-        # kein Schalter davor: der Aufruf steht nicht unter einer Bedingung auf der Optionenliste
-        zeile = next(z for z in quelle.splitlines() if 'Meshfigurschammessung.sicher' in z)
-        self.assertEqual(len(zeile) - len(zeile.lstrip()), 8, 'der Aufruf steht nicht auf der Ebene des Methodenrumpfs, sondern unter einer Bedingung')
+        # kein Schalter davor: der `with`-Block mit den Fäden steht auf der Ebene des Methodenrumpfs, nicht unter einer Bedingung
+        zeilen = quelle.splitlines()
+        aufruf = next(z for z in zeilen if 'Meshfigurschammessung.sicher' in z)
+        block = next(z for z in zeilen if 'ThreadPoolExecutor(' in z)
+        self.assertEqual(len(block) - len(block.lstrip()), 8, 'der Block steht nicht auf der Ebene des Methodenrumpfs, sondern unter einer Bedingung')
+        self.assertEqual(len(aufruf) - len(aufruf.lstrip()), 12, 'der Aufruf steht nicht unmittelbar im Block')
 
     def test_2_der_schritt_vorschau_laeuft_in_jedem_lauf(self):
         from core.dienste.engine2d3dkleiderkoerperlauf import Engine2d3dKleiderkoerperlauf
         from core.dienste.meshfigurlauf import Meshfigurlauf
 
         self.assertIn('vorschau', Meshfigurlauf.SCHRITTE)
-        self.assertIn("'vorschau': lambda: Meshfigurvorschau(self).ausfuehren()", self._quelle(Meshfigurlauf, 'ausfuehren'))
+        # Seit 12.10.2026 bekommt jede Fabrik den Lauf (ein Nebenlauf rechnet mit einer Kopie): `lambda lauf: …`.
+        self.assertIn("'vorschau': lambda lauf: Meshfigurvorschau(lauf).ausfuehren()", self._quelle(Meshfigurlauf, 'ausfuehren'))
         self.assertIn('Meshfigurvorschau(self).ausfuehren()', inspect.getsource(Engine2d3dKleiderkoerperlauf))
 
     def test_3_der_blender_import_traegt_die_messung_des_schritts_figur(self):

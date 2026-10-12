@@ -23,6 +23,9 @@ MENUE = [
             # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
             # Dashboard – Kleider Engine in Dashboard – Haar Engine").
             {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/2d3dKleider/'},
+            # Seit 11.10.2026 (Edgar: „mach ein neues Menü /mesh-3D … das neue Menü kommt in Dashboard"): ein Netz (Blender, OBJ, FBX, GLB) →
+            # Genesis-Modell mit Körper, Kleidung und Haar. Die Aufträge sind Modell-Importe (`core/api/mesh3d.py`), keine Kopie von 2D3D Kleider.
+            {'label': 'Mesh-3D', 'icon': 'bi-box', 'url': '/mesh-3D/'},
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
         ],
     },
@@ -83,6 +86,8 @@ EINSTELLUNGEN_EXTRA = [
     # Renderer der Aufträge von 2D3D Kleider (Edgar, 01.10.2026: „mach eine Einstellung auf einer neuen Seite
     # 2d3dKleider wo man beide auswählen kann, default mitsuba").
     {'label': '2D3D Kleider', 'url': '/settings/2d3dkleider/', 'icon': 'bi-brush'},
+    # Scham-Methode der Blender-Importe (Edgar, 11.10.2026: „in Einstellungen mache eine neue Seite Genesis").
+    {'label': 'Genesis', 'url': '/settings/genesis/', 'icon': 'bi-person-bounding-box'},
 ]
 
 

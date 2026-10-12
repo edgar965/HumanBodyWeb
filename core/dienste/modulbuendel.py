@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Die ES-Module einer Seite als EINE Datei ausliefern (Szene, BVH Studio).
+"""Die ES-Module einer Seite als EINE Datei ausliefern (Szene, BVH Studio, Mesh-3D).
 
 BEFUND (Edgar, 10.09.2026): „laden dauert doch noch immer länger als 10 s!!"
 
@@ -86,6 +86,8 @@ class Modulbuendel:
     EINSTIEGE = {
         'scene': 'viewer/charakter/main.js',
         'studio': 'viewer/studio/index.js',
+        # Jobseite „Mesh-3D“ (12.10.2026): 232 Einzelmodule kosteten kalt 6,5 s (`viewer/mesh3d/main.js`).
+        'mesh3d': 'viewer/mesh3d/main.js',
     }
 
     #: Wohin die fertigen Bündel kommen.

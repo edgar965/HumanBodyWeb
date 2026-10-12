@@ -1,0 +1,59 @@
+/* Seite „Mesh-3D“ (11.10.2026): Liste und Jobseite eines Modell-Imports. Aufbau und Stil wie „2D3D Kleider“ (`engine2d3dkleider.css`),
+   Schrittleiste aus `meshfigur.css`, Balken aus `bildmodell.css`; hier nur, was diese Seite zusätzlich braucht. */
+
+/* Neuer Auftrag: Formatreiter und Felder */
+.mesh3d-formate { display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+.mesh3d-formate button { padding: 4px 14px; border-radius: 14px; border: 1px solid var(--border-color, #455); background: transparent; color: inherit; cursor: pointer; }
+.mesh3d-formate button[aria-selected="true"] { border-color: var(--accent, #e94560); color: var(--accent, #e94560); font-weight: 600; }
+.mesh3d-wahl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.mesh3d-wahl .fehlertext, #quelle-meldung.fehlertext { color: var(--danger, #e74c3c); }
+.mesh3d-wahl-innen { display: contents; }
+.mesh3d-felder { display: grid; grid-template-columns: repeat(auto-fill, minmax(26em, 1fr)); gap: 10px 20px; margin: 8px 0; }
+.mesh3d-feld { display: flex; flex-direction: column; gap: 3px; }
+.mesh3d-feld.inaktiv { opacity: 0.45; }
+.mesh3d-feld label { font-size: 0.85rem; color: var(--text-secondary, #aab); }
+.mesh3d-feld input[type="text"], .mesh3d-feld select { width: 100%; }
+.mesh3d-feld .hb-hinweis { font-size: 0.78rem; }
+.mesh3d-feld-haken label { display: flex; align-items: center; gap: 6px; color: inherit; }
+.mesh3d-quelle { margin: 6px 0; font-size: 0.85rem; }
+.mesh3d-quelle.fehlertext { color: var(--danger, #e74c3c); }
+
+/* Tabelle */
+.mesh3dtabelle td, .mesh3dtabelle th { white-space: nowrap; }
+.mesh3d-zeile { cursor: pointer; }
+
+/* Jobseite: 3D-Ansicht — die Animationsleiste wie `engine2d3dkleider.css` (`.engine2d3dkleider-animationsleiste`); `meshfigur.css` stellt die Bühnenspalte */
+.mesh3d-animationsleiste { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.mesh3d-scrubber { flex: 1 1 120px; min-width: 100px; }
+.mesh3d-animationszeit { white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Die 3D-Ansicht und die Mesh-Ansicht darunter (12.10.2026): Höhe UND Breite über Regler oder Ziehgriff (`resize: both` braucht `overflow` ungleich `visible`; Grenzen wie die der Regler in der Vorlage,
+   `Mesh3dbuehnengroesse`). Ohne gewählte Breite füllt die Ansicht die Karte (`width: 100%`), mit einer ist sie schmaler, aber nie breiter als die Karte (`max-width: 100%`). */
+#buehne-karte .meshfigur-buehnenspalte .mesh-betrachter { height: 560px; min-height: 240px; max-height: 1600px; min-width: 320px; max-width: 100%; resize: both; overflow: hidden; }
+
+/* Jobseite: Mesh-Ansicht (12.10.2026) — nur das Netz, unter der 3D-Ansicht. Volle Breite der Karte (`.mesh-betrachter` ist sonst ein Flex-Kind). */
+.mesh3d-groessenzeile { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+.mesh3d-groessenzeile input[type="range"] { flex: 0 1 260px; }
+#netz-karte .mesh3d-netzbetrachter { width: 100%; flex: none; height: 560px; min-height: 240px; max-height: 1600px; min-width: 320px; max-width: 100%; resize: both; overflow: hidden; }
+
+/* Jobseite: Karten */
+.mesh3d-karte p.hb-hinweis { margin: 4px 0 8px; }
+.mesh3d-zahlen { margin: 6px 0; }
+.mesh3d-zahlen div { margin: 2px 0; }
+.mesh3d-bilder { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; align-items: flex-start; }
+.mesh3d-bild { display: flex; flex-direction: column; gap: 3px; max-width: 320px; }
+.mesh3d-bild img { max-width: 100%; height: auto; background: #181820; border-radius: 3px; }
+.mesh3d-bild-gross { max-width: 100%; }
+.mesh3d-bild-gross img { max-height: 640px; }
+/* Die Karten sind Bootstraps weiße `.card`: eine Tabelle mit heller Schrift braucht ihren eigenen dunklen Grund (wie die Tabellen von `db-tabelle`). */
+.mesh3d-tabelle { width: auto; min-width: 40em; margin: 8px 0; background: #16213e; border-collapse: collapse; }
+.mesh3d-tabelle th { color: #eee; background: #1a1a2e; padding: 5px 14px; text-align: left; }
+.mesh3d-tabelle td { color: #e0e8f0; padding: 3px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.mesh3d-tabelle a { color: #7fb8ff; }
+.mesh3d-tabelle td.num, .mesh3d-tabelle th.num { text-align: right; }
+.mesh3d-warnung { color: var(--warning, #f39c12); }
+.mesh3d-schlecht { color: var(--danger, #e74c3c); }
+.mesh3d-gut { color: var(--success, #2ecc71); }
+.mesh3d-leer { color: var(--text-secondary, #aab); font-style: italic; }
+.mesh3d-schrittzeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+.mesh3d-schritt-uebersprungen { border-color: #888; color: #888; text-decoration: line-through; }
+.mesh3d-schritt-angehalten { border-color: #d59b1f; color: #d59b1f; }

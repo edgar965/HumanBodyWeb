@@ -160,6 +160,7 @@ class Meshfigurende:
         self.lauf.zusatz['abtastung'] = str(G9texturabtastung.pfad(abtastung.seite))
         e = self.lauf.runner('textur', von=0.05, bis=0.7)
         self.lauf.zusatz.pop('abtastung', None)
+        self._frisur_frueh()
         hautton = (e.get('haut') or {}).get('hautton')
         self.job.ergebnis['textur'] = {
             'hautton': hautton,
@@ -181,6 +182,13 @@ class Meshfigurende:
             self.job.ergebnis['textur']['augenbild'] = augen
         self.job.ergebnis['fototextur'] = fototextur
 
+    def _frisur_frueh(self):
+        """Die Figur steht fest (`genesis_ende.npz` und `posiert.npy` sind geschrieben; spätere Schreiber lassen eine gleiche Datei in Ruhe): die Frisurwahl rechnet als Faden neben dem Backen und der Vorschau
+        (`Meshfigurnebenlauf.frueh`). Ohne diesen Aufruf — Textur „aus", 2D3D Kleider — startet sie nach „textur" (`Meshfigurlauf.NACH_SCHRITT`) bzw. an ihrem Platz."""
+        frueh = getattr(self.lauf, 'nebenlauf_frueh', None)
+        if frueh is not None:
+            frueh('frisur')
+
     def backen(self, hautton, seite):
         from Genesis9.texturabtastung import G9texturabtastung
         from Genesis9.texturbacken import G9texturbacken
@@ -200,6 +208,8 @@ class Meshfigurende:
             hd=hd,
             # Ein ganz bekleideter Rumpf hat keine Netzfarbe — seine Kachel ist die getönte Daz-Haut, nicht die weiße.
             auch_ohne_deckung=True,
+            # Haut unter dem Stoff im Ton der sichtbaren Haut weiterführen und die Netzfarbe zu ihr hin ausblenden (Edgar, Unterhose: heller Streifen am Oberschenkel, dunkles Band am Becken; `G9texturfuellung`).
+            fuellung='ausgedehnt',
         )
         return {
             'kacheln': {str(k): self._name(p) for k, p in kacheln.items()},

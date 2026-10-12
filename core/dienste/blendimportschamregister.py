@@ -81,10 +81,36 @@ class Blendimportschamregister:
         im_loch_punkt[haut.dreiecke[im_loch].ravel()] = True
         nah = cKDTree(haut.punkte).query(punkte)[1]
         behalten = im_loch_punkt[nah][dreiecke].any(axis=1)
+        # Innere Löcher bleiben zu (11.10.2026): das Original liegt hinter der Haut, der nächste Hautpunkt liegt dort oft neben dem Loch, und so fielen Dreiecke MITTEN im Stück weg — zusätzliche Randringe
+        # und offene Splitter am Rand (gemessen an „cute girl", alte und neue Figur: Randpunkte 119 statt 100, Normalenwinkel am Rand p90 48,7° statt 28,9°, 7 % statt 2 % umgekehrt; alte Figur: zwei
+        # zurückgeklappte Ringecken mit 180°). Weg darf nur, was bis an den äußeren Rand des Stücks reicht (die Zunge).
+        behalten |= cls._innere_loecher(dreiecke, ~behalten)
         if behalten.all():
             return punkte, dreiecke, uv_ecken, 0
         benutzt, neu = np.unique(dreiecke[behalten], return_inverse=True)
         return punkte[benutzt], neu.reshape(-1, 3), uv_ecken[behalten], int((~behalten).sum())
+
+    @staticmethod
+    def _innere_loecher(dreiecke, entfernt):
+        """Maske der `entfernt`en Dreiecke, die mit keinem Rand des Stücks zusammenhängen (zusammenhängend = gemeinsame Kante, nur unter entfernten Dreiecken): Löcher im Innern."""
+        from scipy import sparse
+        from scipy.sparse import csgraph
+
+        n = len(dreiecke)
+        kanten = np.sort(np.concatenate([dreiecke[:, [0, 1]], dreiecke[:, [1, 2]], dreiecke[:, [2, 0]]]), axis=1)
+        von = np.tile(np.arange(n), 3)
+        _roh, nummer, zaehl = np.unique(kanten, axis=0, return_inverse=True, return_counts=True)
+        nummer = np.asarray(nummer).reshape(-1)
+        am_rand = np.zeros(n, dtype=bool)
+        am_rand[von[zaehl[nummer] == 1]] = True
+        ordnung = np.argsort(nummer, kind='stable')
+        gleich = nummer[ordnung][1:] == nummer[ordnung][:-1]
+        a, b = von[ordnung][:-1][gleich], von[ordnung][1:][gleich]
+        beide = entfernt[a] & entfernt[b]
+        _zahl, gruppe = csgraph.connected_components(sparse.coo_matrix((np.ones(int(beide.sum())), (a[beide], b[beide])), shape=(n, n)), directed=False)
+        aussen = np.zeros(int(gruppe.max()) + 1, dtype=bool)
+        aussen[gruppe[entfernt & am_rand]] = True
+        return entfernt & ~aussen[gruppe]
 
     @classmethod
     def _verschieben(cls, flaeche, stuetz, stueck):

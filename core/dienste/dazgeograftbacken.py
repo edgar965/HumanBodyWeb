@@ -63,13 +63,27 @@ class Dazgeograftbacken:
 
         return trimesh.triangles.points_to_barycentric(netz.triangles[dreieck], punkte)
 
+    #: Größte Kante (px) einer Hautkachel, die hier gelesen wird: die volle 8192er Kachel (200 MB als Feld) wird mit `reduce` verkleinert — der Rand des Stücks braucht keine Poren.
+    KACHEL_MAX_PX = 2048
+    #: Namen der Hautbilder, in der Reihenfolge der Suche: die verkleinerte Fassung des Browsers (nur bei `browser_px` < `kachel_px`), sonst die volle Kachel.
+    KACHEL_NAMEN = ('haut_%d_%s.klein.jpg', 'haut_%d_%s.jpg', 'haut_%d_%s.png')
+
     def _kachelbild(self, kachel, kanal):
+        """Das Hautbild `(kachel, kanal)` als `(H, W, 3)` — `None` ohne Datei. Gesehen 11.10.2026: bei `browser_px = 8192` (Vorgabe, keine Verkleinerung) gibt es keine `.klein.jpg`; der Bake füllte den Rand
+        dann mit Grau (128) statt mit der Haut — jetzt gilt die volle Kachel, auf `KACHEL_MAX_PX` verkleinert."""
         from PIL import Image
 
         schluessel = (int(kachel), kanal)
         if schluessel not in self._haut:
-            pfad = self.haut_ordner / ('haut_%d_%s.klein.jpg' % schluessel)
-            self._haut[schluessel] = np.asarray(Image.open(pfad).convert('RGB')) if pfad.is_file() else None
+            Image.MAX_IMAGE_PIXELS = None
+            pfad = next((p for p in (self.haut_ordner / (n % schluessel) for n in self.KACHEL_NAMEN) if p.is_file()), None)
+            bild = None
+            if pfad is not None:
+                with Image.open(pfad) as roh:
+                    roh = roh.convert('RGB')
+                    teiler = max(1, max(roh.size) // self.KACHEL_MAX_PX)
+                    bild = np.asarray(roh.reduce(teiler) if teiler > 1 else roh)
+            self._haut[schluessel] = bild
         return self._haut[schluessel]
 
     def _hautwerte(self, punkte, kanal, mitte):

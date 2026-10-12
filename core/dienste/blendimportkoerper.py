@@ -165,6 +165,10 @@ class Blendimportkoerper:
         netz.export(str(ziel))
         logger.info('Blender-Import %s: Körpernetz %s (%d Punkte, %d Augen)', self.ablage.kennung, ziel,
                     len(netz.vertices), len(augen))
+        # Die leichte Kopie für die 3D-Ansicht der Jobseite „Mesh-3D“ baut schon jetzt, nicht erst beim Öffnen der Seite (`Mesh3dnetzansicht.vorab`).
+        from .mesh3dnetzansicht import Mesh3dnetzansicht
+
+        Mesh3dnetzansicht.vorab(self.ablage.kennung)
         return {'datei': str(ziel), 'punkte': int(len(netz.vertices)), 'dreiecke': int(len(netz.faces)),
                 'augen': len(augen), 'atlas': list(bild.size),
                 'ergaenzt': {'punkte': int(len(ergaenzt['punkte'])), 'kleider': ergaenzt['kleider'],

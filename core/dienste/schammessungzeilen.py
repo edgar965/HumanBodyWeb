@@ -75,8 +75,12 @@ class Schammessungzeilen:
 
     @classmethod
     def _naht(cls, n):
+        if not n:               # das Stück hat keine Naht-Angaben (`zeilen` reicht `{}` durch) — vorher KeyError 'randpunkte' bei „Farbe am Ring" im Lauf Fallout ranger, 12.10.2026
+            return ['Naht: keine Angaben']
         if n.get('hinweis'):
             return ['Naht: ' + n['hinweis']]
+        if n.get('aus'):        # das Stück trägt keine Naht (`Blendimportschamgeograft`: `{'aus': Grund}`) — vorher KeyError 'randpunkte' im Lauf Fallout ranger, 12.10.2026
+            return ['Naht: aus — %s' % str(n['aus'])[:200]]
         z = ['Naht: %d Randpunkte, %d Ringecken; Rand → Ring %s | Ring → Rand %s' % (n['randpunkte'], n['ringecken'], cls._st(n['rand_zu_ring_mm']), cls._st(n['ring_zu_rand_mm']))]
         if n.get('ring_glaettung_mm'):
             z.append('  Glättung des Rings gegen die Haut (mm): %s' % cls._st(n['ring_glaettung_mm']))

@@ -28,6 +28,8 @@ Changelog liest; die vier Repo-Listen darunter sind Rohmaterial, und zwar
 nur die letzten 100 Commits je Repo (Seitengröße der GitHub-Schnittstelle,
 `version_commits_per_page`, mehr gibt sie je Aufruf nicht her). Stand dort
 nur 0.57, sah es aus, als fehle alles zwischen 0.57 und der laufenden 0.60.
+(Seit 11.10.2026 holt `'version_commits_alle': True` in `djangobase_conf.py` alle
+Seiten — die Listen sind vollständig, der Changelog bleibt die Zusammenfassung.)
 
 Also beides beim Bump: die Marke in den Commit-Betreff (`.claude/rules/
 projekt.md`, Abschnitt Deploy — daran hängt die Zuordnung der Commits) UND

@@ -4,6 +4,7 @@
 import json
 
 from ...dienste.blendimportbackenwahl import Blendimportbackenwahl
+from ...dienste.netzantwortwahl import Netzantwortwahl
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
 
@@ -55,6 +56,10 @@ class SzeneEinstellungen(Einstellungsseite):
         wahl = F.text(post, Blendimportbackenwahl.SCHLUESSEL)
         if wahl in Blendimportbackenwahl.WAHLEN:
             prefs[Blendimportbackenwahl.SCHLUESSEL] = wahl
+        # Wo die Figuren ihre Netzantworten halten (`Netzantwortwahl`): wieder nur ein bekannter Wert, sonst bleibt die alte Wahl.
+        halten = F.text(post, Netzantwortwahl.SCHLUESSEL)
+        if halten in Netzantwortwahl.WAHLEN:
+            prefs[Netzantwortwahl.SCHLUESSEL] = halten
         return prefs
 
     def kontext(self, s):
@@ -65,4 +70,6 @@ class SzeneEinstellungen(Einstellungsseite):
             'normalen_worker': str(prefs.get('normalen_worker', '0')) == '1',
             'backen': Blendimportbackenwahl.aus(prefs),
             'backen_wahlen': list(Blendimportbackenwahl.WAHLEN.items()),
+            'netzantworten': Netzantwortwahl.aus(prefs),
+            'netzantworten_wahlen': list(Netzantwortwahl.WAHLEN.items()),
         }

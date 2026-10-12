@@ -113,8 +113,9 @@ class Meshfigurablage:
             if p.is_file():
                 p.unlink()
 
-    def netzdatei(self, teil='koerper'):
-        """Pfad des Netzes im Eingang (das erste mit Netzendung) — oder None."""
+    def netzdatei(self, teil='koerper', original=False):
+        """Pfad des Netzes im Eingang (das erste mit Netzendung) — oder None. `original` gibt es nur für die Schritte, die auch auf Aufträgen von „2D3D Kleider“ laufen
+        (`Meshfigurkleidung._sapiens`, `Sapienshaar`: dort ist es das Netz VOR der Tiefenfassung); „Mesh to 3D“ hat nur das eine."""
         ordner = self.unter(self.KOPF if teil == 'kopf' else self.EINGANG)
         if not ordner.is_dir():
             return None

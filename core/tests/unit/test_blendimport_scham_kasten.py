@@ -71,15 +71,29 @@ class SchamKastenTest(SimpleTestCase):
         grenze = round(0.44 - Blendimportscham.SCHRITTE_MAX * Blendimportscham.SCHRITT_HOEHE, 3)
         self.assertEqual(scham.kastenhoehe[0], grenze)
 
-    def test_5_schenkelhaut_neben_der_figur_laesst_den_kasten_nicht_wachsen(self):
-        # 10.10.2026, BodyParts3D-Haut: Die Innenschenkel lagen 5–15 mm neben der Figur — Saat, aber kein Anbau. Der Kasten wuchs viermal nach
-        # unten, das Stück bekam zwei Vorhänge aus Schenkelhaut. Jetzt wächst er nur bei Abweichungen ab `WACHS_MM` (Fall 2–4 mit 25 mm).
+    def test_5_bei_einem_anbau_laesst_schenkelhaut_neben_der_figur_den_kasten_nicht_wachsen(self):
+        # 10.10.2026, BodyParts3D-Haut: Die Innenschenkel lagen 5–15 mm neben der Figur — Saat neben einem Anbau. Der Kasten wuchs viermal nach
+        # unten, das Stück bekam zwei Vorhänge aus Schenkelhaut. Mit Anbau (Kern ab `KERN_MM`, mindestens `KERN_MIN` Punkte) wächst er nur bei
+        # Abweichungen ab `WACHS_MM` (Fall 2–4 mit 25 mm). Seit 11.10.2026 gilt das NUR mit Anbau (Fall 7).
         scham = Blendimportscham(None, {}, {})
         grund = self._ruhe(0.88)
+        kern = np.array([[x, 0.88, 0.03] for x in np.linspace(-0.01, 0.01, 50)])                              # 50 Punkte 30 mm vor der Fläche: ein Anbau
         schenkel = np.array([[x, y, 0.012] for y in (0.775, 0.74, 0.70, 0.66) for x in (-0.01, 0.0, 0.01)])   # 12 mm vor der Fläche
-        saat = scham.saat(np.vstack([grund, schenkel]), self._flaeche(), 0.0, self.HOEHE)
+        scham.saat(np.vstack([grund, kern, schenkel]), self._flaeche(), 0.0, self.HOEHE)
         self.assertEqual(scham.kastenhoehe, (0.44, 0.555))
-        self.assertGreater(int(saat.sum()), 3, 'die Schenkelhaut im Kasten bleibt Saat')
+        self.assertTrue(scham.anbau, 'der Kern ist ein Anbau')
+
+    def test_7_ohne_anbau_laesst_jede_saat_den_kasten_wachsen(self):
+        # 11.10.2026, „cute girl alt4": die Scham einer Frau hat keinen Anbau; ihre Saat liegt 12 mm vor der Figur und reicht bis an die obere Grenze. Der Kasten
+        # muss nach oben (0,555 → 0,585), sonst endet das Stück 3 cm tiefer als am 09.10.2026 (Edgar: „das hatten wir viel besser"). Mit der Einschränkung
+        # auf `WACHS_MM` (20 mm) wuchs er nicht.
+        scham = Blendimportscham(None, {}, {})
+        grund = self._ruhe(0.88)
+        saat_oben = np.array([[x, 0.965, 0.012] for x in (-0.01, 0.0, 0.01)])             # 6 mm unter der oberen Grenze (0,971 m), 12 mm vor der Fläche
+        scham.saat(np.vstack([grund, saat_oben]), self._flaeche(), 0.0, self.HOEHE)
+        self.assertGreater(scham.kastenhoehe[1], 0.58)
+        self.assertEqual(scham.kastenhoehe[0], 0.44)
+        self.assertFalse(scham.anbau)
 
     def test_6_unter_dem_tiefsten_anbaupunkt_endet_die_saat(self):
         # 10.10.2026, BodyParts3D-Haut: zwei „Vorhänge" aus Schenkelhaut 4 cm unter den Hoden. Mit einem Anbau (Kern ab `KERN_MM`, mindestens `KERN_MIN`

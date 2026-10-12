@@ -50,6 +50,16 @@ class Blendimporteinstellungen:
          'hinweis': 'Körper, Kleider und Haar stehen dann wie Genesis in A-Haltung; „Mesh to 3D" muss die Haltung nicht '
                     'mehr schätzen. Nur für Auto-Rig Pro; ein anderes Rig wird übersprungen. Eine .blend ganz ohne Skelett '
                     'bleibt in ihrer Haltung — „Mesh to 3D" schätzt sie.'},
+        {'schluessel': 'pose', 'titel': 'Pose bestimmen', 'art': 'wahl', 'vorgabe': 'aus',
+         'werte': [('aus', 'Aus — „Mesh to 3D“ findet die Haltung selbst (MediaPipe auf 8 Renderings)'),
+                   ('sam', 'SAM 3D Body am Rendering des Körpers')],
+         'hinweis': 'Für Modelle, die nicht in A-Haltung stehen und kein Auto-Rig-Pro-Rig haben (liegend, sitzend, stark verdreht): SAM 3D Body findet die Gelenke an '
+                    'einem Rendering des Körpers von vorn, „Mesh to 3D“ nimmt sie statt seiner eigenen Erkennung, und die Kleidung wird danach mit dem Käfig der gefundenen '
+                    'Haltung in die Ruhelage zurückgerechnet. Kostet etwa eine Minute (SAM laden). Nicht an einem Modell außerhalb der A-Haltung geprüft.'},
+        {'schluessel': 'pose_drehung', 'titel': 'Pose: Drehung des Renderings', 'art': 'wahl', 'vorgabe': '0', 'nur_wenn': {'pose': 'sam'},
+         'werte': [('0', '0° (Kopf oben)'), ('90', '90° gegen den Uhrzeigersinn'), ('180', '180°'), ('270', '270°')],
+         'hinweis': 'Wie das Rendering vor SAM gedreht wird. Steht die Figur aufrecht, bleibt es bei 0°; liegt sie, dreht man sie so, dass sie aufrecht steht — die Jobseite zeigt alle '
+                    'vier Drehungen mit den Gelenken.'},
         {'schluessel': 'augen', 'titel': 'Augen', 'art': 'wahl', 'vorgabe': 'objekt',
          'werte': [('objekt', 'Originalaugen als eigenes Objekt (Genesis-Augen ausgeblendet)'),
                    ('original', 'Originaliris auf die Genesis-Augen übertragen'),

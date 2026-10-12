@@ -58,9 +58,11 @@ class Unterkleid(SimpleTestCase):
                            [0.0, 0.85, -0.08],     # Becken, hinten
                            [0.0, 1.40, 0.08],      # Brust
                            [0.30, 0.85, 0.08]])    # zu weit seitlich
+        # „Vorn“ heißt: z über dem Median ALLER Punkte — eine Figur hat Vorder- und Rückseite, darum vier Punkte hinten dazu (sonst liegt der Median auf 0,08).
+        hinten = np.tile([0.0, 0.85, -0.08], (4, 1))
         # Höhe 1,75 m, Sohle 0: der Kasten läuft von 0,70 m bis 1,12 m
-        gewaehlt = U.kasten(punkte, 0.0, 1.75)
-        self.assertEqual(gewaehlt.tolist(), [True, False, False, False])
+        gewaehlt = U.kasten(np.vstack([punkte, hinten]), 0.0, 1.75)
+        self.assertEqual(gewaehlt.tolist(), [True, False, False, False] + [False] * 4)
 
     def test_5_der_bericht_trennt_davor_und_weit(self):
         huelle = U.zu_huelle([platte(0.0)])

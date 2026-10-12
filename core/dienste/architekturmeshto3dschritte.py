@@ -89,11 +89,12 @@ class Architekturmeshto3dschritte:
         ('vorschau', 'python14 ruft, python10 rechnet',
          ['Meshfigurvorschau'], ['Meshfigurvergleichsbild'],
          'Bilder der Figur (Icon, vorn, seitlich, hinten, Kopf), die Abstände Figur ↔ Netz und das Vergleichsbild (Netz · Figur · Tiefenvergleich) aus dem Runner-Schritt bewertung; '
-         'mit Referenzfigur (Option referenz) der Testfall Punkt für Punkt und Fläche gegen Fläche. Zum Schluss entstehen die Objekte Haar und Kleidung in der Ruhelage.',
+         'mit Referenzfigur (Option referenz) der Testfall Punkt für Punkt und Fläche gegen Fläche. Zum Schluss entstehen die Objekte Haar und Kleidung in der Ruhelage — in drei Fäden zusammen mit der Scham-Messung.',
          'ergebnis.vorschau, vergleich.jpg, Objekte für die Bühne.'),
         ('frisur', 'python14',
-         ['Meshfigurfrisur', 'Meshfigurfrisurstueck'], [],
-         'Eine Daz-Frisur oder „Haar Eigen" gegen das Netzhaar (Option frisur: beste | daz | eigen | aus), Haarkarten aus der Schale (Option haarkarten). Das Modell trägt die Wahl als „kleidung".',
+         ['Meshfigurfrisur', 'Meshfigurfrisurstueck', 'Meshfigurfrisurdeltas'], [],
+         'Eine Daz-Frisur oder „Haar Eigen" gegen das Netzhaar (Option frisur: beste | daz | eigen | aus), Haarkarten aus der Schale (Option haarkarten). Das Modell trägt die Wahl als „kleidung". '
+         'Sie startet schon nach dem Runner der Textur, als Faden neben dem Backen der Kacheln und der Vorschau (Meshfigurnebenlauf.frueh); „speichern" wartet auf sie.',
          'Frisur im Modell, Haarkarten.'),
         ('speichern', 'python14',
          ['Meshfigurspeichern'], [],

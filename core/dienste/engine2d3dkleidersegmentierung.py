@@ -53,7 +53,7 @@ class Engine2d3dKleidersegmentierung:
             logger.info('2D3D Kleider %s: Segmentierung aus (Option) — übersprungen', self.job.kennung)
             self.lauf.melden(1.0, 'Segmentierung aus (Option) — übersprungen')
             return
-        auftrag = self.ablage.segmentierung('auftrag.json')
+        auftrag = self.auftragsdatei()
         auftrag.parent.mkdir(parents=True, exist_ok=True)
         auftrag.write_text(json.dumps(self.beschreibung(), ensure_ascii=False, indent=1), encoding='utf-8')
         runner = os.path.join(Wrapperpfad.pfad(), self.RUNNER)
@@ -74,6 +74,10 @@ class Engine2d3dKleidersegmentierung:
         self._abschluss()
 
     # ------------------------------------------------------------- Auftrag
+
+    def auftragsdatei(self):
+        """Wohin die Auftragsbeschreibung für den Runner kommt — Mesh-3D (`Blendimportsegmentierung`) legt sie in den Ordner des Imports."""
+        return self.ablage.segmentierung('auftrag.json')
 
     def beschreibung(self):
         """Was der Runner rechnen soll: das Netz, die vorbereiteten Fotos mit Rolle, die Ordner (JSON `segmentierung/auftrag.json`)."""

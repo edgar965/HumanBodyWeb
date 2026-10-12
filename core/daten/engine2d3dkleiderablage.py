@@ -7,6 +7,7 @@
     netz/         das Netz aus den Fotos (TRELLIS/Hunyuan): mesh.glb, icon.png, bericht.json — Schritt „netz"
     netz_arbeit/  Zwischenstände dieses Schritts
     kopf/         die drei Kopfausschnitte und das Kopfnetz (mesh.glb, icon.png) — Schritt „kopf" (07.10.2026); kopf_vorbereitet/, kopf_arbeit/ seine Zwischenstände
+    pose/         die Gelenke am Foto (sam3d.json), die Landmarken im Netz (landmarken.npz) und die Kontrollbilder — Schritt „pose" (11.10.2026)
     vorlage/     das erste Foto klein (`vorlage.png`) — das Bild der Spalte „Vorlage" der Tabelle
     arbeit/       Zwischenstände der Schritte (Grundfigur mit Rig, Lage des Netzes, Bewegung, Runden, Löschliste)
     ergebnis/     was die Seite ausliefert: Figur mit Rig, Kacheln, Bewegung, Film, das beste Modell der Iterationen
@@ -52,8 +53,10 @@ class Engine2d3dKleiderablage(Meshablage):
     KOPF = 'kopf'
     KOPF_ARBEIT = 'kopf_arbeit'
     KOPF_VORBEREITET = 'kopf_vorbereitet'
+    #: Die Pose aus dem Foto (Schritt „pose", 11.10.2026): `sam3d.json` (Gelenke je Drehung), `landmarken.npz` (für die Körper-Kette), die Kontrollbilder.
+    POSE = 'pose'
     #: Welche Unterordner über den Datei-Endpunkt lesbar sind.
-    LESBAR = (Meshablage.EINGANG, Meshablage.VORBEREITET, NETZ, Meshablage.ERGEBNIS, VORLAGE, ITERATIONEN, SEGMENTIERUNG, REFERENZ, KOPF)
+    LESBAR = (Meshablage.EINGANG, Meshablage.VORBEREITET, NETZ, Meshablage.ERGEBNIS, VORLAGE, ITERATIONEN, SEGMENTIERUNG, REFERENZ, KOPF, POSE)
 
     def anlegen(self):
         for name in (self.EINGANG, self.VORBEREITET, self.NETZ, self.NETZ_ARBEIT, self.VORLAGE, self.ARBEIT,
@@ -64,6 +67,10 @@ class Engine2d3dKleiderablage(Meshablage):
     def segmentierung(self, name=''):
         """`segmentierung/` des Auftrags (legt der Schritt selbst an — alte Aufträge haben den Ordner nicht)."""
         return self.unter(self.SEGMENTIERUNG) / name if name else self.unter(self.SEGMENTIERUNG)
+
+    def pose(self, name=''):
+        """`pose/` des Auftrags (legt der Schritt „pose" selbst an — alte Aufträge haben den Ordner nicht)."""
+        return self.unter(self.POSE) / name if name else self.unter(self.POSE)
 
     def kopf(self, name=''):
         """`kopf/` des Auftrags (legt der Schritt „kopf" selbst an — alte Aufträge haben den Ordner nicht)."""

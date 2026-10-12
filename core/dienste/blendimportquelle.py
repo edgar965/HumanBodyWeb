@@ -52,14 +52,20 @@ class Blendimportquelle:
         """Die .blend, die gelesen wird."""
         return self.kandidaten()[0]
 
+    @classmethod
+    def eigener(cls, text):
+        """Der Name aus einem Textfeld, wie er gespeichert wird: Sonderzeichen entfallen (der Name wird Teil von Dateinamen), höchstens `NAME_MAX` Zeichen;
+        `ValueError`, wenn nichts übrig bleibt. Dieselbe Regel für das Namensfeld des Imports und für das Umbenennen auf der Jobseite (`Mesh3dname`)."""
+        name = re.sub(r'\s+', ' ', re.sub(r'[^\w\s\-]', '', str(text or ''))).strip()[:cls.NAME_MAX].strip()
+        if not name:
+            raise ValueError('Eigener Name fehlt: Namen ins Textfeld schreiben (Buchstaben, Ziffern, Leerzeichen, Bindestrich)')
+        return name
+
     def name(self):
         """Der Name der Figur: `eigen` = der Text aus dem Namensfeld, `ordner` = wie der Ordner der Datei, sonst der
         Dateistamm ohne Fassung. Sonderzeichen entfallen (der Name wird Teil von Dateinamen)."""
         if self.namensart == 'eigen':
-            name = re.sub(r'\s+', ' ', re.sub(r'[^\w\s\-]', '', self.eigener_name)).strip()[:self.NAME_MAX].strip()
-            if not name:
-                raise ValueError('Eigener Name fehlt: Namen ins Textfeld schreiben (Buchstaben, Ziffern, Leerzeichen, Bindestrich)')
-            return name
+            return self.eigener(self.eigener_name)
         datei = self.datei()
         if self.namensart == 'ordner':
             roh = datei.parent.name

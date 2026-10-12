@@ -16,7 +16,9 @@ import { Engine2d3dKleiderbuehnenmodell } from './engine2d3dkleiderbuehnenmodell
 import { Engine2d3dKleiderbegutachtung } from './engine2d3dkleiderbegutachtung.js';
 import { Engine2d3dKleidereinstellungen } from './engine2d3dkleidereinstellungen.js';
 import { Engine2d3dKleiderfotos } from './engine2d3dkleiderfotos.js';
+import { Engine2d3dKleiderkoerperbauen } from './engine2d3dkleiderkoerperbauen.js';
 import { Engine2d3dKleiderkopf } from './engine2d3dkleiderkopf.js';
+import { Engine2d3dKleiderpose } from './engine2d3dkleiderpose.js';
 import { Engine2d3dKleideriterationen } from './engine2d3dkleideriterationen.js';
 import { Engine2d3dKleiderformen } from './engine2d3dkleiderformen.js';
 import { Engine2d3dKleidermalen } from './engine2d3dkleidermalen.js';
@@ -41,7 +43,7 @@ export class Engine2d3dKleiderseite {
     static TAKT_MS = 2000;
     static TAKT_RUHE_MS = 6000;
     static NAMEN = {
-        vorbereitung: 'Vorbereitung', netz: 'Netz', kopf: 'Kopf (optional)', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', kleiderstuecke: 'Kleiderstücke', iterationen: 'Iterationen',
+        vorbereitung: 'Vorbereitung', netz: 'Netz', pose: 'Pose (optional)', kopf: 'Kopf (optional)', segmentierung: 'Segmentierung (optional)', koerper: 'Körper', grundfigur: 'Grundfigur', kleiderstuecke: 'Kleiderstücke', iterationen: 'Iterationen',
         export: 'GLB mit Rig', film: 'Film', speichern: 'Speichern',
     };
     static STATUS = {
@@ -102,7 +104,6 @@ export class Engine2d3dKleiderseite {
         // — und für immer, wenn einer davon beim Aufbau warf. Die Seite hört nur noch auf den Wechsel.
         document.getElementById('auftrag-reiter').addEventListener('reiterwechsel', e => this.reiterGewechselt(e.detail.name));
         document.getElementById('starten').addEventListener('click', () => this.starten());
-        document.getElementById('koerper-bauen').addEventListener('click', () => this.starten('koerper', 'grundfigur'));
         document.getElementById('anhalten').addEventListener('click', () => this.anhalten());
         document.getElementById('laufband-anhalten').addEventListener('click', () => this.anhalten());
         document.addEventListener('visibilitychange', () => { if (!document.hidden) this.aktualisieren(); });
@@ -113,9 +114,11 @@ export class Engine2d3dKleiderseite {
         this.meshkarte = new Engine2d3dKleidermeshkarte(this);
         this.fotos = new Engine2d3dKleiderfotos(this);
         this.vorbereitung = new Engine2d3dKleidervorbereitung(this);
+        this.pose = new Engine2d3dKleiderpose(this);
         this.kopf = new Engine2d3dKleiderkopf(this);
         this.segmentierung = new Engine2d3dKleidersegmentierung(this);
         this.kleiderstuecke = new Engine2d3dKleiderstuecke(this);
+        this.koerperbauen = new Engine2d3dKleiderkoerperbauen(this);
         this._pfadstand = null;
         this.iterationen = new Engine2d3dKleideriterationen(this);
         this.begutachtung = new Engine2d3dKleiderbegutachtung(this);
@@ -243,7 +246,7 @@ export class Engine2d3dKleiderseite {
         this.fehlerband.auftrag(z); // der Takt löscht eine stehende Meldung NICHT mehr
         this.schritte();
         this.fotos.zeigen(z);
-        for (const baustein of [this.vorbereitung, this.kopf, this.segmentierung, this.kleiderstuecke]) baustein.zeigen(z);
+        for (const baustein of [this.vorbereitung, this.pose, this.kopf, this.segmentierung, this.kleiderstuecke, this.koerperbauen]) baustein.zeigen(z);
         this.pfade(z);
         this.iterationen.zeigen(z);
         this.begutachtung.zeigen(z);

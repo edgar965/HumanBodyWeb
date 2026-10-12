@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Meshfigurhaarwahl } from './meshfigurhaarwahl.js';
 import { Meshfigurkleider } from './meshfigurkleider.js';
+import { Meshfigurladezeit } from './meshfigurladezeit.js';
+import { Meshfigurlicht } from './meshfigurlicht.js';
 import { Meshfigurnetze } from './meshfigurnetze.js';
 import { Meshfigurschalter } from './meshfigurschalter.js';
 
@@ -35,7 +37,10 @@ export class Meshfigurbuehne {
         this._baut = false;
         this._letzter = null;
         this._holt = false;
+        // Zeiten bis zum ersten gezeichneten Bild mit Figur → logs/client.log (Aktion `ladezeit`), siehe `Meshfigurladezeit`.
+        this.zeit = new Meshfigurladezeit(() => seite.jobId);
         try { this._buehne(); } catch (fehler) { this._melden(`Keine 3D-Ansicht: ${fehler.message}`); return; }
+        this.zeit.marke('buehne');
         this.netze = new Meshfigurnetze(seite, this.szene, text => this._melden(text));
         this.haar = new Meshfigurhaarwahl(seite, text => this._melden(text));
         this.kleider = new Meshfigurkleider(seite, text => this._melden(text));
@@ -59,11 +64,9 @@ export class Meshfigurbuehne {
         this.steuerung = new OrbitControls(this.kamera, this.canvas);
         this.steuerung.target.set(0, 0.9, 0);
         this.steuerung.enableDamping = true;
-        this.szene.add(new THREE.HemisphereLight(0xffffff, 0xc8c2ba, 1.3));
-        const haupt = new THREE.DirectionalLight(0xffffff, 1.0);
-        haupt.position.set(1, 1.5, 2);
-        this.kamera.add(haupt);
-        this.szene.add(this.kamera, new THREE.GridHelper(3, 12, 0x445566, 0x2a3340));
+        // Dasselbe Licht hat die Mesh-Ansicht von „Mesh-3D“ (`Mesh3dnetzbuehne`) — es steht in EINER Klasse.
+        Meshfigurlicht.einrichten(this.szene, this.kamera);
+        this.szene.add(new THREE.GridHelper(3, 12, 0x445566, 0x2a3340));
         // Der Behälter, nicht das Fenster: Er schrumpft, sobald die rechte Spalte gefüllt ist, ohne dass
         // ein `resize` kommt — gemessen stand die Leinwand dann 1045 × 866 px in 760 × 794 px und zog das
         // Bodengitter über das Formular (27.09.2026).
@@ -75,7 +78,7 @@ export class Meshfigurbuehne {
         const lauf = () => {
             if (!document.hidden && this.canvas.getClientRects().length) {
                 this.steuerung.update();
-                this.renderer.render(this.szene, this.kamera);
+                this.zeit.zeichnen(() => this.renderer.render(this.szene, this.kamera), this.renderer, !!this.modell);
             }
             requestAnimationFrame(lauf);
         };
@@ -150,6 +153,7 @@ export class Meshfigurbuehne {
         this._haarUndKleider();
         const stellung = z.stellung || {};
         if (!Object.keys(stellung).length) { this._melden('Noch keine Figur — erst nach der Körperkette.'); return; }
+        this.zeit.marke('zustand');
         const kacheln = this.kacheln(e.fototextur);
         // Neue Textur („Textur" neu gebacken) oder eine neue Frisur (Schritt „frisur") baut die Figur
         // ebenso neu wie neue Regler.
@@ -183,10 +187,12 @@ export class Meshfigurbuehne {
         this._baut = true;
         this._melden('Figur wird gebaut …');
         try {
+            this.zeit.marke('bau');
             const neu = new Genesis9Modell('meshfigur', {
                 figur: 'basis', regler: stellung, presetName: z.name, fototextur: kacheln, kleidung,
             });
             await neu.bauen();
+            this.zeit.marke('figur');
             if (this.modell) { this.szene.remove(this.modell.group); this.modell.dispose?.(); }
             this.modell = neu;
             this.szene.add(neu.group);

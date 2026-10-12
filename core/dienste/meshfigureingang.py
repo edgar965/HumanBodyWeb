@@ -30,6 +30,9 @@ class Meshfigureingang:
         r'^\s*(?:map_\w+|bump|norm|disp|decal|refl)\s+(.+?)\s*$', re.MULTILINE | re.IGNORECASE
     )
 
+    #: Endung der Netzablage neben der Datei — `Meshfigurscanablage.ENDUNG` im Runner (python10, dort nicht importierbar).
+    SCAN_ENDUNG = '.scan.npz'
+
     def __init__(self, ablage):
         self.ablage = ablage
 
@@ -78,12 +81,22 @@ class Meshfigureingang:
         s = Path(pfad).stat()
         return [int(s.st_mtime_ns), int(s.st_size)]
 
+    @classmethod
+    def _scanablage_mitnehmen(cls, pfad, ziel):
+        """Liegt neben dem Netz schon seine hergerichtete Ablage (`<datei>.scan.npz`, `Meshfigurscanablage`), geht sie mit in den Eingang: Das Lesen eines 67-MB-Netzes (1,9 Mio. Dreiecke) kostet ~11 s in
+        jedem neuen Auftrag, das Kopieren der Ablage 0,3 s (gemessen 12.10.2026). Ob sie zur Kopie passt, entscheidet der Runner an ihrem Stempel (Name, Größe, Änderungszeit — `copy2` behält die Zeit);
+        passt sie nicht, baut er sie neu und überschreibt sie."""
+        scan = Path(str(pfad) + cls.SCAN_ENDUNG)
+        if scan.is_file():
+            shutil.copyfile(scan, str(ziel) + cls.SCAN_ENDUNG)
+
     def uebernehmen(self, pfad, teil):
         """Netz und Beilagen in den Eingang (`teil` = 'koerper' oder 'kopf') kopieren → Eintrag."""
         ordner = self.ablage.eingang(teil)
         self.ablage.leeren(ordner)
         ziel = ordner / Meshfigurablage.sauber(pfad.name)
         shutil.copy2(pfad, ziel)
+        self._scanablage_mitnehmen(pfad, ziel)
         beilagen = []
         for datei in self.beilagen(pfad):
             name = Meshfigurablage.sauber(datei.name)

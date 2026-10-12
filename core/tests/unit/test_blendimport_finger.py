@@ -69,8 +69,9 @@ class FingerProbe(SimpleTestCase):
     def test_1b_ein_besserer_median_ohne_besseren_rand_gilt_nicht(self):
         u"""Die linke Hand von Rosemary: Median 0,71, p90 0,89 des Früheren — die Faust war falsch."""
         f = F.__new__(F)
-        vorher = np.concatenate([np.full(180, 4.0), np.full(20, 11.5)])
-        nachher = np.concatenate([np.full(180, 2.8), np.full(20, 10.3)])
+        # 15 % der Proben im Schwanz: p90 liegt IN ihm (bei 10 % läge die 90. Perzentile genau auf der Grenze und mischte beide Werte).
+        vorher = np.concatenate([np.full(170, 4.0), np.full(30, 11.5)])
+        nachher = np.concatenate([np.full(170, 2.8), np.full(30, 10.3)])
         probe = f._probe(vorher, nachher)
         self.assertLess(probe['nachher_median_mm'], F.RUHE_VORTEIL * probe['vorher_median_mm'])
         self.assertFalse(probe['gilt'], probe)
