@@ -176,6 +176,27 @@ class NetzansichtTest(SimpleTestCase):
             with mock.patch.object(Mesh3dnetzansicht, 'quelle', return_value=netz), mock.patch.object(Mesh3dnetzansicht, 'GROSS_BYTES', 100):
                 self.assertEqual(ansicht.zustand()['status'], 'fehlt')
 
+    def test_1b_ein_kleines_netz_nennt_adresse_und_datei(self):
+        """13.10.2026: Die Mesh-Ansicht zeigt das Netz auch ohne Auftrag „Mesh to 3D“ — dafür braucht der Zustand bei `unnoetig` Adresse und Dateinamen (der Lader wird nach der Endung gewählt)."""
+        with _ordner() as o:
+            netz = Path(o) / 'koerper.glb'
+            netz.write_bytes(b'x' * 200)
+            with mock.patch.object(Mesh3dnetzansicht, 'quelle', return_value=netz), mock.patch.object(Mesh3dnetzansicht, 'GROSS_BYTES', 1000):
+                zustand = Mesh3dnetzansicht('2026.10.11.12.00.00').zustand()
+            self.assertEqual(zustand['status'], 'unnoetig')
+            self.assertEqual(zustand['datei'], 'koerper.glb')
+            self.assertIn('/api/mesh3d/2026.10.11.12.00.00/netzansicht/?v=', zustand['adresse'])
+
+    def test_1c_verdrahtung_der_mesh_ansicht_ohne_figur(self):
+        """Wächter (Quelltext): Endpunkt liefert bei `unnoetig` das Netz selbst, die Bühne zeigt es bei fehlendem UND bei gelöschtem Auftrag „Mesh to 3D“."""
+        web = Path(__file__).resolve().parents[3]
+        endpunkt = (web / 'core' / 'api' / 'mesh3dnetzansicht.py').read_text(encoding='utf-8')
+        self.assertIn("ansicht.zustand()['status'] == 'unnoetig'", endpunkt)
+        buehne = (web / 'static' / 'viewer' / 'mesh3d' / 'mesh3dbuehne.js').read_text(encoding='utf-8')
+        self.assertIn('_netzOhneFigur(z)', buehne)
+        # seit 13.10.2026 mit der Ausgabe-Auswahl: eine gewählte Ausgabe (Variante) hat ihre eigene Figur, das Fehlen der ersten zählt dann nicht
+        self.assertIn('if (!id || (!this.ausgabe && z.figur.fehlt))', buehne)
+
     def test_2_der_stempel_aendert_sich_mit_dem_original(self):
         with _ordner() as o:
             netz = Path(o) / 'koerper.glb'

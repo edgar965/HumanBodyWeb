@@ -14,7 +14,7 @@ import { Mesh3dwahl } from './mesh3dwahl.js';
 export class Mesh3dquelle {
     static QUELLFELDER = ['pfad', 'name', 'eigener_name'];
     /** Beim Weg „netz“ (ein verschmolzenes Netz) zählen nur diese Einstellungen — Kleider, Haut, Augen, Scham und Körperergänzung gehören zum Weg „teile“. */
-    static NETZ_FELDER = ['basis', 'pose', 'pose_drehung'];
+    static NETZ_FELDER = ['basis', 'pose', 'pose_drehung', 'kleidung_zug', 'vergleichsvariante'];
     static FORMATE = { blend: 'Blender (.blend)', obj: 'OBJ', fbx: 'FBX', glb: 'GLB' };
 
     constructor(seite) {

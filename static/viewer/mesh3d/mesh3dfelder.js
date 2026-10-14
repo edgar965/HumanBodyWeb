@@ -26,8 +26,10 @@ export class Mesh3dfelder {
             return `<div class="mesh3d-feld mesh3d-feld-haken" data-feld="${option.schluessel}"><label for="${id}"><input id="${id}" type="checkbox"
                 data-schluessel="${option.schluessel}" data-haken="an"${wert === 'an' ? ' checked' : ''}> ${escapeHtml(option.titel)}</label>${hinweis}</div>`;
         }
+        // `leer`: eine Auswahl ohne Vorgabe — der Nutzer muss wählen (Grundfigur im Formular „Neuer Auftrag“: eine stille Vorgabe träfe einen Mann falsch, ohne Fehlermeldung).
+        const leer = option.leer ? `<option value=""${wert ? '' : ' selected'}>${escapeHtml(option.leer)}</option>` : '';
         const eingabe = option.art === 'wahl'
-            ? `<select id="${id}" data-schluessel="${option.schluessel}">${option.werte.map(w =>
+            ? `<select id="${id}" data-schluessel="${option.schluessel}">${leer}${option.werte.map(w =>
                 `<option value="${escapeHtml(w.wert)}"${w.wert === wert ? ' selected' : ''}>${escapeHtml(w.text)}</option>`).join('')}</select>`
             : `<input id="${id}" data-schluessel="${option.schluessel}" type="text" value="${escapeHtml(wert || '')}"
                 placeholder="${escapeHtml(option.platzhalter || '')}" autocomplete="off" spellcheck="false">`;

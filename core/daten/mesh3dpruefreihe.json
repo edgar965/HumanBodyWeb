@@ -1,0 +1,89 @@
+{
+ "auftraege": {
+  "2026.10.11.21.18.17": {
+   "aufgenommen": "2026-10-14",
+   "hinweis": "14.10.2026: Original (Neulauf ab Segmentierung) und Kopie 2026.10.14.01.31.31; Saum-Inseln umgefärbt; max-Regeln: schlechtester Wert beider Läufe; von Edgar nicht bestätigt",
+   "name": "Edgar",
+   "soll": {
+    "animation_gewaehlt": "basis",
+    "animation_max_dehnung": 22.68,
+    "animation_spitzen": 0.0,
+    "fehler": [],
+    "figur_netz_mm": 2.41,
+    "griff_seiten": [],
+    "haar_flaechen": 133660,
+    "hand_untergrenze": 0,
+    "hand_verformung_mm": 7.47,
+    "hautband_art": "umfaerben",
+    "hoehe_cm": 199.7,
+    "kleidung_flaechen": 286659,
+    "kleidung_unterkante_m": 0.8752,
+    "netz_figur_mm": 2.58,
+    "status": "fertig",
+    "teile": [
+     "beard"
+    ],
+    "zubehoer_flaechen": 13897
+   }
+  },
+  "2026.10.13.10.47.52": {
+   "aufgenommen": "2026-10-14",
+   "hinweis": "14.10.2026: Original (Neulauf ab Segmentierung) und zwei Kopien (…01.42.30 vor dem Griff, …02.03.01 mit Griff); max-Regeln: schlechtester Wert der Läufe (die Hand der Anpassung schwankt von Lauf zu Lauf: hand_verformung_mm 26 bis 42 mm); im Chrome gesehen, von Edgar nicht bestätigt",
+   "name": "Zauberer",
+   "soll": {
+    "animation_gewaehlt": "weich_0.5",
+    "animation_max_dehnung": 149.01,
+    "animation_spitzen": 0.0015,
+    "fehler": [],
+    "figur_netz_mm": 3.93,
+    "griff_seiten": [
+     "r"
+    ],
+    "haar_flaechen": 114609,
+    "hand_untergrenze": 0,
+    "hand_verformung_mm": 42.3,
+    "hautband_art": "umfaerben",
+    "hoehe_cm": 186.7,
+    "kleidung_flaechen": 1446129,
+    "kleidung_unterkante_m": -0.0091,
+    "netz_figur_mm": 13.75,
+    "status": "fertig",
+    "teile": [
+     "bag",
+     "beard",
+     "hat",
+     "spear"
+    ],
+    "zubehoer_flaechen": 246284
+   }
+  },
+  "2026.10.13.19.00.52": {
+   "aufgenommen": "2026-10-14",
+   "hinweis": "14.10.2026: Original (Neulauf ab Segmentierung) und Kopie 2026.10.14.01.25.22; Griff, Halter, Haarabzug, Flügel (Bestandteil angel wing); max-Regeln: schlechtester Wert beider Läufe; im Chrome gesehen, von Edgar nicht bestätigt",
+   "name": "Spiralballerina ohne Zweitarm",
+   "soll": {
+    "animation_gewaehlt": "weich_0.5",
+    "animation_max_dehnung": 36.72,
+    "animation_spitzen": 0.0007,
+    "fehler": [],
+    "figur_netz_mm": 5.76,
+    "griff_seiten": [],
+    "haar_flaechen": 481,
+    "hand_untergrenze": 0,
+    "hand_verformung_mm": 21.14,
+    "hautband_art": "umfaerben",
+    "hoehe_cm": 193.2,
+    "kleidung_flaechen": 30190,
+    "kleidung_unterkante_m": -0.039,
+    "netz_figur_mm": 8.33,
+    "status": "fertig",
+    "teile": [
+     "angel wing",
+     "hat"
+    ],
+    "zubehoer_flaechen": 5873
+   }
+  }
+ },
+ "fassung": 1
+}

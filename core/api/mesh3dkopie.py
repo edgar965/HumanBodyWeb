@@ -10,10 +10,11 @@ import json
 import logging
 
 from django.http import JsonResponse
-from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from ..dienste.mesh3dkopie import Mesh3dkopie
+from ..dienste.mesh3dlink import Mesh3dlink
+from ..dienste.mesh3dreiter import Mesh3dreiter
 
 logger = logging.getLogger('core')
 
@@ -37,7 +38,7 @@ class Mesh3dkopieendpunkte:
         from ..daten.blendimportablage import Blendimportablage
 
         name = (Blendimportablage(kennung).stand().get('quelle') or {}).get('name') or kennung
-        return {'kennung': kennung, 'name': name, 'url': reverse('mesh3d_auftrag', args=[kennung])}
+        return {'kennung': kennung, 'name': name, 'url': Mesh3dlink.pfad(kennung, name)}
 
     @staticmethod
     @require_POST
@@ -52,6 +53,7 @@ class Mesh3dkopieendpunkte:
             try:
                 kopie = Mesh3dkopie(kennung)
                 neue.append(kopie.mit_daten() if mit_daten else kopie.ohne_daten())
+                Mesh3dreiter.erben(kennung, neue[-1])
             except ValueError as fehler:
                 return JsonResponse({'error': str(fehler), 'kopiert': len(neue), 'auftraege': [Mesh3dkopieendpunkte._eintrag(k) for k in neue]}, status=409)
             except OSError as fehler:

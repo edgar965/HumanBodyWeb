@@ -10,6 +10,8 @@
  * gewählt hat — ein Fenster, das sich ändert, schreibt nichts.
  * Die Wahl bleibt im Browser (`localStorage`, nur eine Bequemlichkeit: ohne Speicher gilt die Vorgabe der Vorlage); geschrieben wird nur, wenn sich die Größe wirklich ändert.
  */
+import { Mesh3dbuehnengriff } from './mesh3dbuehnengriff.js';
+
 export class Mesh3dbuehnengroesse {
     /**
      * @param {HTMLElement} feld die Ansicht  @param {HTMLInputElement} regler Höhe  @param {HTMLElement} wert Anzeige neben dem Höhenregler  @param {string} schluessel Name der Höhe im Browserspeicher
@@ -34,6 +36,8 @@ export class Mesh3dbuehnengroesse {
         this.regler.addEventListener('input', () => this._setzen(Number(this.regler.value)));
         // Der Ziehgriff ändert die Größe ohne unsere Regler: Anzeige nachstellen und die neue Größe merken.
         new ResizeObserver(() => this._anzeigen()).observe(this.feld);
+        // Ein sichtbarer Griff in der Ecke (der des Browsers ist auf dem dunklen Grund nicht zu sehen).
+        this.griff = new Mesh3dbuehnengriff(this);
     }
 
     get min() { return Number(this.regler.min) || 240; }

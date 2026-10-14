@@ -25,6 +25,20 @@ class Meshfigurkleidungsoptionen:
             'fein': True,
             'hinweis': 'Der Rest-Schritt schiebt Figurpunkte, die durch Stoff oder Haar ragen, mindestens so weit unter die Oberfläche. 0 = nur bis auf die '
             'Oberfläche (bisher): Die Haut kann dann an Stellen, wo der Stoff sie knapp berührt, durchscheinen (Ten24-Scan, 07.10.2026). Bei einem '
-            'eng anliegenden Stoff macht ein hoher Wert die Figur dort schmaler als den Körper darunter.',
+            'eng anliegenden Stoff macht ein hoher Wert die Figur dort schmaler als den Körper darunter. An Händen und Fingern gilt sie nie (13.10.2026: dort rissen Daumen und kleiner Finger auf, Job „Edgar“).',
+        },
+        {
+            'schluessel': 'hautband',
+            'titel': 'Hautfarbener Rand der Kleidung',
+            'art': 'wahl',
+            'vorgabe': 'umfaerben',
+            'fein': True,
+            'werte': [
+                ('umfaerben', 'Umfärben — die Flächen bleiben, zeigen das Gewebe daneben (Vorgabe)'),
+                ('entfernen', 'Entfernen — der Streifen kommt nicht ins Objekt (so bis 13.10.2026)'),
+                ('aus', 'Aus — wie das Netz'),
+            ],
+            'hinweis': 'Die Textur des Netzes ist an den Rändern der Stoffinseln mit Hautfarbe aufgefüllt (Edgars Hose: 40 % der Randflächen, 6.694 Flächen insgesamt) — am Objekt ein oranger Zackenstreifen statt eines Saums. „Entfernen“ schälte ihn ab und nahm die Saumfalte '
+            'der Hose mit (Edgar, 13.10.2026: „der Saum der Hose fehlt“); „Umfärben“ lässt die Flächen stehen und gibt ihnen die UV der nächsten Gewebefläche.',
         },
     ]

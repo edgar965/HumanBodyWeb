@@ -17,18 +17,17 @@ das Verzeichnis dort stehen.
 """
 
 import os
-import sys
 
 from django.conf import settings
 
+from .pfadvergabe import Pfadvergabe
+
 
 class Wrapperpfad:
-    """Kontext, der das Wrapper-Verzeichnis nur waehrend des Blocks fuehrt."""
+    """Kontext, der das Wrapper-Verzeichnis nur waehrend des Blocks fuehrt — auch wenn mehrere Faeden ihn gleichzeitig halten (`Pfadvergabe`)."""
 
     def __init__(self):
         self.verzeichnis = self.pfad()
-        #: Wir haben ihn selbst eingehaengt — nur dann raeumen wir ihn weg.
-        self._eigen = False
 
     @staticmethod
     def pfad():
@@ -36,12 +35,9 @@ class Wrapperpfad:
         return os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
 
     def __enter__(self):
-        if self.verzeichnis not in sys.path:
-            sys.path.insert(0, self.verzeichnis)
-            self._eigen = True
+        Pfadvergabe.halten([self.verzeichnis])
         return self
 
     def __exit__(self, *_fehler):
-        if self._eigen and self.verzeichnis in sys.path:
-            sys.path.remove(self.verzeichnis)
+        Pfadvergabe.loslassen([self.verzeichnis])
         return False

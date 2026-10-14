@@ -55,7 +55,7 @@ class Blendimporteinstellungen:
                    ('sam', 'SAM 3D Body am Rendering des Körpers')],
          'hinweis': 'Für Modelle, die nicht in A-Haltung stehen und kein Auto-Rig-Pro-Rig haben (liegend, sitzend, stark verdreht): SAM 3D Body findet die Gelenke an '
                     'einem Rendering des Körpers von vorn, „Mesh to 3D“ nimmt sie statt seiner eigenen Erkennung, und die Kleidung wird danach mit dem Käfig der gefundenen '
-                    'Haltung in die Ruhelage zurückgerechnet. Kostet etwa eine Minute (SAM laden). Nicht an einem Modell außerhalb der A-Haltung geprüft.'},
+                    'Haltung in die Ruhelage zurückgerechnet. Kostet etwa eine Minute (SAM laden). Beim Weg „netz“ (ein verschmolzenes Netz) ist SAM die Vorgabe — alle Läufe dieses Wegs liefen so.'},
         {'schluessel': 'pose_drehung', 'titel': 'Pose: Drehung des Renderings', 'art': 'wahl', 'vorgabe': '0', 'nur_wenn': {'pose': 'sam'},
          'werte': [('0', '0° (Kopf oben)'), ('90', '90° gegen den Uhrzeigersinn'), ('180', '180°'), ('270', '270°')],
          'hinweis': 'Wie das Rendering vor SAM gedreht wird. Steht die Figur aufrecht, bleibt es bei 0°; liegt sie, dreht man sie so, dass sie aufrecht steht — die Jobseite zeigt alle '
@@ -107,6 +107,23 @@ class Blendimporteinstellungen:
                    ('neutral', 'Genesis 9 (neutral)')]},
         {'schluessel': 'stuecke', 'titel': 'Kleider und Haar', 'art': 'wahl', 'vorgabe': 'an',
          'werte': [('an', 'Als eigene Stücke in die Genesis-Bibliothek'), ('aus', 'Nur die Figur')]},
+        {'schluessel': 'kleidung_zug', 'titel': 'Stoff beim Anpassen (Weg „netz“)', 'art': 'wahl', 'vorgabe': 'weich',
+         'werte': [('weich', 'Der Stoff zieht den Körper unter seine Oberfläche (anliegende Kleidung)'),
+                   ('nah', 'Nur Stoff bis 7 cm Abstand zieht (anliegende Teile ja, lockere Robe nicht)'),
+                   ('ignorieren', 'Der Stoff zieht nicht, er darf den Körper nur nicht nach außen drücken (Robe, Mantel)')],
+         'hinweis': 'Nur beim Weg „netz“ (ein verschmolzenes, bekleidetes Netz): „Mesh to 3D“ passt die Figur an Haut UND Stoff an. Ein Zug passt zu einem T-Shirt; unter einer lockeren Robe '
+                    'bläht er den Körper auf ihre Form auf (Zauberer: Oberschenkel 103,5 gegen 64,0 cm an Edgars Figur). „Zieht nicht“ lässt den Körper unter dem Stoff von den kahlen Stellen und den Gelenken bestimmen. '
+                    'Beim Weg „netz“ ist „ignorieren“ die Vorgabe: an anliegender Kleidung (Edgar) gleich gut wie „nah“ (Figur→Netz 2,48 gegen 2,41 mm), an lockerer bläht „nah“ den Körper auf (Robe: Oberschenkel 68,9 gegen 51,8 cm; Reifenrock: Taille 73,3 gegen 58,6 cm). '
+                    'Dafür steht der Stoff mit „ignorieren“ öfter im Körper (Reifenrock 9,7 gegen 3,5 %). Unsicher: die Vergleichsvariante und die Bilder auf der Jobseite ansehen.'},
+        {'schluessel': 'vergleichsvariante', 'titel': 'Vergleichsvariante mitrechnen (Weg „netz“)', 'art': 'haken', 'vorgabe': 'an',
+         'werte': [('an', 'Ja'), ('aus', 'Nein')],
+         'hinweis': 'Nach einem fertigen Lauf rechnet der Auftrag von selbst eine zweite Ausgabe mit dem anderen Stoffzug (Vorgabe „ignorieren“ → „nah“; steht der Auftrag auf „nah“, rechnet sie „ignorieren“, bei „weich“ „nah“) auf demselben Körpernetz, derselben Segmentierung und Pose. '
+                    'Die Jobseite stellt beide nebeneinander (Karte „Empfehlungen und Varianten“); „Übernehmen“ macht eine zur Ausgabe. Kostet gemessen rund 4 Minuten und 141 MB je Variante (Spiralballerina). '
+                    'Läuft währenddessen ein anderer Import, wartet sie auf dessen Ende.'},
+        {'schluessel': 'animationspruefung', 'titel': 'Animationsprüfung (Stoff im Tanz messen und korrigieren)', 'art': 'haken', 'vorgabe': 'an',
+         'werte': [('an', 'Ja'), ('aus', 'Nein')],
+         'hinweis': 'Im Schritt „figur“ legt „Mesh to 3D“ eine Bewegung (A_Results/DanceKurz) auf die Figur, misst die Dehnung jeder Kante von Kleidung, Bart und Tasche und nimmt die Hautgewichte mit den wenigsten gerissenen Kanten (alte Käfig-Nachbarschaft gegen weiche Gewichte). '
+                    'Kostet rund 2–4 Minuten bei einem großen Netz; der Bericht steht im Ergebnis („Animation“). Aus: die Gewichte der Käfig-Nachbarschaft, ungeprüft.'},
         {'schluessel': 'koerper_ergaenzen', 'titel': 'Körper unter Kleidung ergänzen', 'art': 'haken', 'vorgabe': 'an',
          'werte': [('an', 'Ja'), ('aus', 'Nein')],
          'hinweis': 'Reicht der Körper nicht bis zu den Füßen (Rosemary Winters: Strumpf-Netz über den Beinen), nimmt „Mesh to 3D" die '

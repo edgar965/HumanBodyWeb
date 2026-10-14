@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Mesh3dnetzansichtendpunkte — die vereinfachte Netz-Kopie der 3D-Ansicht (11.10.2026), siehe `Mesh3dnetzansicht`.
 
-GET  /api/mesh3d/<kennung>/netzansicht/   die Kopie (`?v=<Änderungszeit des Originals>` → ein Jahr im Zwischenspeicher); 404, solange es sie nicht gibt
+GET  /api/mesh3d/<kennung>/netzansicht/   die Kopie (`?v=<Änderungszeit des Originals>` → ein Jahr im Zwischenspeicher); bei einem kleinen Netz (`unnoetig`) das Netz selbst; 404, solange es nichts gibt
 POST /api/mesh3d/<kennung>/netzansicht/   den Bau anstoßen (eigener Prozess) → {status}; ändert nichts, wenn die Kopie schon da ist oder gebaut wird
 """
 
@@ -23,7 +23,11 @@ class Mesh3dnetzansichtendpunkte:
             raise Http404()
         ansicht = Mesh3dnetzansicht(kennung)
         quelle = ansicht.quelle()
-        if quelle is None or not ansicht.aktuell(quelle):
+        if quelle is None:
+            raise Http404()
+        if ansicht.zustand()['status'] == 'unnoetig':          # klein genug: das Netz selbst (die Mesh-Ansicht ohne Auftrag „Mesh to 3D“ braucht es)
+            return Auftragsdatei.antwort(request, quelle, kennung=request.GET.get('v'))
+        if not ansicht.aktuell(quelle):
             raise Http404()
         return Auftragsdatei.antwort(request, ansicht.pfad(), kennung=request.GET.get('v'))
 

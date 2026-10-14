@@ -6,7 +6,6 @@ Geprüft: derselbe Prozess für zwei Schritte; ein Fehler im Kind beendet es und
 wiederholbar. NICHT gelaufen (Tests nur auf Ansage). Sabotage: `_verwerfen()` im `except BaseException` von `rechnen` streichen macht `test_ein_abbruch_beendet_den_prozess` rot.
 """
 
-import os
 import sys
 import time
 import unittest
@@ -63,9 +62,11 @@ class DauerprozessTest(unittest.TestCase):
         erst = self._ergebnis_pid()
         self.assertIn('[fortschritt] 50 halb', self.zeilen)
         self.assertTrue(self.dauer.lebt())
+        # `Popen.pid` ist unter Windows der Launcher der venv, `os.getpid()` im Kind der Interpreter dahinter (vier Prozesse sind normal, `projekt.md`) — gleich sind sie nie; geprüft wird, dass BEIDE für den zweiten Schritt dieselben bleiben.
+        launcher = self.dauer.pid
         self._rechnen('gesicht', 2)
         self.assertEqual(self._ergebnis_pid(), erst)
-        self.assertEqual(self.dauer.pid, erst)
+        self.assertEqual(self.dauer.pid, launcher)
 
     def test_ein_fehler_im_kind_beendet_es_und_der_naechste_schritt_startet_frisch(self):
         self._rechnen('koerper')
@@ -102,16 +103,19 @@ class DauerprozessTest(unittest.TestCase):
 
     def test_schliessen_laesst_das_kind_enden_und_ist_wiederholbar(self):
         self._rechnen('koerper')
-        pid = self.dauer.pid
+        launcher, kind = self.dauer.pid, self._ergebnis_pid()
         self.dauer.schliessen()
         self.assertFalse(self.dauer.lebt())
         self.assertIsNone(self.dauer.pid)
         self.dauer.schliessen()
-        if os.name == 'nt':
-            import subprocess
+        import psutil
 
-            aus = subprocess.run(['tasklist', '/FI', 'PID eq %d' % pid], capture_output=True, text=True, check=False).stdout
-            self.assertNotIn(str(pid), aus.split('PID')[-1] if 'PID' in aus else aus)
+        for _ in range(50):                    # `taskkill` kehrt zurück, bevor die Kinder weg sind (`subprozesse.md`)
+            if not (psutil.pid_exists(launcher) or psutil.pid_exists(kind)):
+                break
+            time.sleep(0.1)
+        self.assertFalse(psutil.pid_exists(launcher), 'Launcher lebt noch')
+        self.assertFalse(psutil.pid_exists(kind), 'Interpreter im Kind lebt noch')
 
     def test_ein_totes_kind_ohne_ende_ist_ein_fehler(self):
         tot = Path(self.ordner) / 'tot.py'

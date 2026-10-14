@@ -19,6 +19,7 @@ import { Mesh3dquelle } from './mesh3dquelle.js';
 import { Mesh3drollen } from './mesh3drollen.js';
 import { Mesh3dsegmentierung } from './mesh3dsegmentierung.js';
 import { Mesh3dstuecke } from './mesh3dstuecke.js';
+import { Mesh3dvarianten } from './mesh3dvarianten.js';
 
 export class Mesh3dseite {
     static TAKT_LAUFT_MS = 2000;
@@ -37,7 +38,10 @@ export class Mesh3dseite {
         this.zustand = null;
         this.fehlerband = new Fehlerband();
         this.lauf = new Mesh3dlauf(this);
-        this.karten = [this.lauf, new Mesh3dbuehne(this), new Mesh3dquelle(this), new Mesh3drollen(), new Mesh3dsegmentierung(this), new Mesh3dpose(this), new Mesh3dfigur(), new Mesh3dstuecke(),
+        this.buehne = new Mesh3dbuehne(this);
+        this.quelle = new Mesh3dquelle(this);
+        // Die Karte „Empfehlungen und Varianten“ steht hinter der Bühne: sie schaltet die „Ausgabe“ über der 3D-Ansicht (`buehne.ausgabeWaehlen`).
+        this.karten = [this.lauf, this.buehne, this.quelle, new Mesh3dvarianten(this), new Mesh3drollen(), new Mesh3dsegmentierung(this), new Mesh3dpose(this), new Mesh3dfigur(), new Mesh3dstuecke(),
             new Mesh3dhaut(), new Mesh3dmodell(), new Mesh3diterationen()];
         this._timer = null;
         this._laeuft = false;
@@ -62,10 +66,17 @@ export class Mesh3dseite {
         this._timer = window.setTimeout(() => { if (!document.hidden) this.aktualisieren(); else this._takt(); }, this._laeuft ? Mesh3dseite.TAKT_LAUFT_MS : Mesh3dseite.TAKT_RUHT_MS);
     }
 
+    /** Eine Einstellung des Auftrags setzen (`POST …/einstellungen/`, nicht während eines Laufs) und die Felder der Karte „Quelle und Einstellungen“ neu aufbauen — für die Empfehlungen der Karte „Varianten“. */
+    async einstellungSetzen(werte) {
+        const antwort = await Serverabruf.senden(`/api/mesh3d/${this.kennung}/einstellungen/`, { werte });
+        if (antwort.error) throw new Error(antwort.error);
+        this.quelle._gebaut = false;
+        await this.aktualisieren();
+    }
+
     /** Weg „netz“ (ein verschmolzenes Netz, `Blendimportweg`): die Karten des Wegs „teile“ — Netze und Rollen, Kleider und Haar, Haut — gibt es nicht, sie bleiben weg. */
     _weg(z) {
-        for (const id of ['rollen-karte', 'stuecke-karte', 'haut-karte']) document.getElementById(id).hidden = z.weg === 'netz';
-    }
+        for (const id of ['rollen-karte', 'stuecke-karte', 'haut-karte']) document.getElementById(id).hidden = z.weg === 'netz';    }
 
     /** Im verdeckten Tab wartet der Takt, statt zu fragen. */
     _takt() {

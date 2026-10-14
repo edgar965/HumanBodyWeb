@@ -40,6 +40,11 @@ kommen weiter aus DJANGOBASE['titel'].{% endcomment %}
 {% block topbar_title %}Model{% endblock %}
 
 {% block body_scripts %}{{ block.super }}
+{% comment %}Jede Bedienung im Browser ins Serverprotokoll (logs/client.log, Edgar 12.10.2026: „Logs für alle Aktionen aus dem Projekt“). Eigenes Skript, damit ein Ladefehler hier die Sortierung darunter nicht mitreißt.{% endcomment %}
+<script type="module">
+    import { Aktionsprotokoll } from "{% fassungspfad 'viewer/gemeinsam/aktionsprotokoll.js' %}";
+    Aktionsprotokoll.einrichten();
+</script>
 {% comment %}Jede Auswahlliste der Seite alphabetisch (Edgar, 10.10.2026) — eine Stelle für alle Seiten und alle zur Laufzeit gefüllten Listen; Stufenfolgen tragen data-reihenfolge="fest". Baumlisten (Animationen, Kleider, Garderobe, Getragen …) ordnet Baumsortierung ebenso.{% endcomment %}
 <script type="module">
     import { Combosortierung } from "{% fassungspfad 'viewer/gemeinsam/combosortierung.js' %}";

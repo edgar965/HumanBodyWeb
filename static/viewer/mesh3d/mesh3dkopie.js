@@ -13,13 +13,15 @@ export class Mesh3dkopie {
 
     /**
      * @param {() => string[]} kennungen die Aufträge, die kopiert werden
-     * @param {{knopf: string, zaehler?: string, mitDaten: boolean}[]} knoepfe Ids der Knöpfe im Dokument (`zaehler`: die Zahl darin)
+     * @param {{knopf: string|HTMLElement, zaehler?: string|HTMLElement|null, mitDaten: boolean}[]} knoepfe die Knöpfe im Dokument — als Id (Jobseite) oder als Element (die Listen der Reiter,
+     *   dort gibt es jeden Knopf je Reiter einmal und also keine eindeutige Id); `zaehler`: die Zahl darin
      * @param {boolean} springen mit genau einer Kopie auf deren Seite wechseln (Jobseite), sonst die Seite neu laden (Liste)
      */
     constructor(kennungen, knoepfe, springen = false) {
         this.kennungen = kennungen;
         this.springen = springen;
-        this.knoepfe = knoepfe.map(k => ({ knopf: document.getElementById(k.knopf), zaehler: k.zaehler ? document.getElementById(k.zaehler) : null, mitDaten: k.mitDaten }))
+        const holen = x => (typeof x === 'string' ? document.getElementById(x) : x || null);
+        this.knoepfe = knoepfe.map(k => ({ knopf: holen(k.knopf), zaehler: holen(k.zaehler), mitDaten: k.mitDaten }))
             .filter(k => k.knopf);
         for (const k of this.knoepfe) k.knopf.addEventListener('click', () => this.kopieren(k));
     }

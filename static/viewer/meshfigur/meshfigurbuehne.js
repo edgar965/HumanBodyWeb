@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
+import { Skelettereignis } from '../gemeinsam/skelettereignis.js';
 import { Meshfigurhaarwahl } from './meshfigurhaarwahl.js';
 import { Meshfigurkleider } from './meshfigurkleider.js';
 import { Meshfigurladezeit } from './meshfigurladezeit.js';
 import { Meshfigurlicht } from './meshfigurlicht.js';
 import { Meshfigurnetze } from './meshfigurnetze.js';
 import { Meshfigurschalter } from './meshfigurschalter.js';
+import { Meshfigurtakt } from './meshfigurtakt.js';
+import { Meshfigurteile } from './meshfigurteile.js';
+import { Meshfigurteileleiste } from './meshfigurteileleiste.js';
 
 /**
  * Meshfigurbuehne — die angepasste Genesis-Figur und das Netz (bzw. Körper- und Kopfnetz) auf einer Bühne.
@@ -37,6 +41,7 @@ export class Meshfigurbuehne {
         this._baut = false;
         this._letzter = null;
         this._holt = false;
+        this._haltungGebaut = 'null';       // die Haltung der gebauten Figur (JSON), 'null' = Ruhe
         // Zeiten bis zum ersten gezeichneten Bild mit Figur → logs/client.log (Aktion `ladezeit`), siehe `Meshfigurladezeit`.
         this.zeit = new Meshfigurladezeit(() => seite.jobId);
         try { this._buehne(); } catch (fehler) { this._melden(`Keine 3D-Ansicht: ${fehler.message}`); return; }
@@ -44,10 +49,31 @@ export class Meshfigurbuehne {
         this.netze = new Meshfigurnetze(seite, this.szene, text => this._melden(text));
         this.haar = new Meshfigurhaarwahl(seite, text => this._melden(text));
         this.kleider = new Meshfigurkleider(seite, text => this._melden(text));
+        // Bestandteile des Netzes (Stab, Bart, Tasche …), von SAM 3 gefunden: eigene Objekte, geschaltet mit „Haare" bzw. „Kleider".
+        this.teile = new Meshfigurteile(seite, text => this._melden(text));
+        this.teileleiste = new Meshfigurteileleiste(document.getElementById('bestandteile-leiste'), this.teile);       // je Bestandteil ein Knopf (nur Mesh-3D)
         this.schalter = new Meshfigurschalter(() => this._sichtbarkeit());
+        // Die Figur baut ihr Skelett bei jedem Umbau neu (Käfig, dann feine Stufe, jeder Reglerzug): die Objekte aus dem Netz (`Meshfighaut`) binden sich an das frische (13.10.2026).
+        Skelettereignis.hoeren(({ inst }) => { if (inst && inst === this.modell) this._objekteBinden(inst); });
+    }
+
+    /** Haar, Kleidung und Bestandteile an Gruppe und Skelett der gezeigten Figur hängen. */
+    _objekteBinden(modell) {
+        this.haar.anhaengen(modell);
+        this.kleider.anhaengen(modell);
+        this.teile.anhaengen(modell);
+    }
+
+    /** Die an die Knochen gebundenen Netz-Objekte samt Adresse ihrer Gelenkfelder (JCM) — `[{netz, adresse}]`, siehe `Meshfigurgelenke`. */
+    gelenkziele() {
+        const objekte = [this.haar.netz, this.haar.karten, this.kleider.netz, ...[...this.teile.eintraege.values()].map(e => e.objekt)];
+        return objekte.map(o => o.gelenkziel()).filter(Boolean);
     }
 
     _melden(text) { if (this.hinweis) { this.hinweis.textContent = text; this.hinweis.hidden = !text; } }
+
+    /** Die volle Bildrate anfordern (Animationsklassen rufen es mit jedem Schritt der Bewegung) — siehe `Meshfigurtakt`. */
+    wach(ms) { this.takt?.wach(ms); }
 
     _buehne() {
         this.canvas = document.createElement('canvas');
@@ -64,6 +90,9 @@ export class Meshfigurbuehne {
         this.steuerung = new OrbitControls(this.kamera, this.canvas);
         this.steuerung.target.set(0, 0.9, 0);
         this.steuerung.enableDamping = true;
+        // Wann gezeichnet wird (volle Rate nur bei Eingabe, Animation, Größenänderung; sonst 5 Bilder/s): `Meshfigurtakt`.
+        this.takt = new Meshfigurtakt();
+        this.steuerung.addEventListener('change', () => this.takt.wach());
         // Dasselbe Licht hat die Mesh-Ansicht von „Mesh-3D“ (`Mesh3dnetzbuehne`) — es steht in EINER Klasse.
         Meshfigurlicht.einrichten(this.szene, this.kamera);
         this.szene.add(new THREE.GridHelper(3, 12, 0x445566, 0x2a3340));
@@ -76,7 +105,7 @@ export class Meshfigurbuehne {
         // Modell mit 57 Netzen und rund 600 000 Dreiecken in einer großen Leinwand die Hauptlast der Seite. Ob DAS den Hänger verursacht hat, ist
         // nicht belegt (im verdeckten Messtab nicht nachzustellen); die Last ist aber unnötig.
         const lauf = () => {
-            if (!document.hidden && this.canvas.getClientRects().length) {
+            if (!document.hidden && this.canvas.getClientRects().length && this.takt.faellig()) {
                 this.steuerung.update();
                 this.zeit.zeichnen(() => this.renderer.render(this.szene, this.kamera), this.renderer, !!this.modell);
             }
@@ -95,6 +124,7 @@ export class Meshfigurbuehne {
      */
     _groesse() {
         const b = this.feld.clientWidth, h = this.feld.clientHeight;
+        this.takt.wach();
         if (!b || !h) {
             this.renderer.setPixelRatio(1);
             this.renderer.setSize(1, 1, false);
@@ -114,6 +144,7 @@ export class Meshfigurbuehne {
      * heimlich: `setzen` lässt „Mesh" dabei aufleuchten.
      */
     _sichtbarkeit() {
+        this.wach();
         if (this.schalter.stand.nebeneinander) this.schalter.setzen('mesh', true);
         const an = this.schalter.stand;
         if (this.modell) this.modell.group.visible = an.modell;
@@ -125,7 +156,43 @@ export class Meshfigurbuehne {
         this.netze.sichtbar(an.mesh);
         // Das Netz steht IMMER `ABSTAND` links neben der Figur, nie in ihr (Edgar, 01.10.2026: „das hatten wir schon 10 Mal").
         this.netze.verschieben(-Meshfigurbuehne.ABSTAND);
+        // „Haltung" umgeschaltet: die Figur wird in der anderen Haltung neu gebaut (der Server backt sie), die Objekte wechseln ihre Fassung.
+        if (this.modell && this._letzter && !this._baut && !this._holt && JSON.stringify(this._haltungVon(this._letzter)) !== this._haltungGebaut) {
+            this._holt = true;
+            queueMicrotask(() => { this._holt = false; this.zeigen(this._letzter); });
+        }
         this._haarUndKleider();
+    }
+
+    /**
+     * „Haltung" ausschalten (von der Animationsleiste gerufen): eine Bewegung gehört auf die Figur in Ruhe (A-Pose) — in der gebackenen Haltung wäre ihre Bindung die falsche
+     * (`mesh-3d-bestandteile.md`: ein Standbild, vor einer BVH-Bewegung die Pose auf „—"). Die Figur wird in Ruhe neu gebaut; erst danach lässt sich die Bewegung starten.
+     */
+    haltungAus() {
+        if (!this.schalter.stand.haltung) return false;
+        this.schalter.setzen('haltung', false);
+        this._melden('Haltung aus — die Figur wird in Ruhe gebaut, danach läuft der Befehl der Animationsleiste.');
+        this._sichtbarkeit();
+        return true;
+    }
+
+    /** Haar, Kleidung und Bestandteile des Netzes laden und in die Gruppe der Figur hängen — `posiert`: die Figur steht in der Haltung des Netzes, die Objekte in ihrer Fassung dafür. */
+    _objekteZeigen(z, gruppe, posiert) {
+        this.haar.zeigen(z, gruppe, posiert);
+        this.kleider.zeigen(z, gruppe, posiert);
+        this.teile.zeigen(z, gruppe, posiert);
+        this.teileleiste.zeigen();
+    }
+
+    /**
+     * Die Haltung des Netzes (`ergebnis.haltung`, `Meshfighaltung`), in der die Figur gebaut wird — `{knochen: {'rotation/x': Grad}}` oder null (Ruhe).
+     * Der Schalter „Haltung" wird nur angeboten, wenn der Lauf eine gültige hat; sonst bleibt alles wie vorher. Dann steht der Stoff unverändert am Körper, statt in die Ruhelage zurückgerechnet zu werden.
+     */
+    _haltungVon(z) {
+        const h = (z.ergebnis || {}).haltung || {};
+        const da = Boolean(h.gueltig && h.drehung && Object.keys(h.drehung).length);
+        this.schalter.anbieten('haltung', da);
+        return da && this.schalter.stand.haltung ? h.drehung : null;
     }
 
     /**
@@ -138,6 +205,7 @@ export class Meshfigurbuehne {
         const an = this.schalter.stand;
         this.haar.sichtbarkeit(an.haare);
         this.kleider.sichtbar(an.kleider);
+        this.teile.sichtbar(an.haare, an.kleider);
     }
 
     // --------------------------------------------------------------- Stand
@@ -148,8 +216,10 @@ export class Meshfigurbuehne {
         // Nur nach einem Neuladen: `_sichtbarkeit` setzt das Drehziel — alle 2 s gerufen, nähme es
         // dem Nutzer jedes Verschieben der Ansicht wieder weg.
         if (this.netze.zeigen(z)) this._sichtbarkeit();
-        this.haar.zeigen(z, this.modell?.group || null);
-        this.kleider.zeigen(z, this.modell?.group || null);
+        const haltung = this._haltungVon(z);
+        // Die Objekte folgen der Figur, die GEZEIGT wird (nicht der gewünschten): bis die neue Haltung gebaut ist, stünde der Stoff sonst neben der alten.
+        const posiert = this.modell ? this._haltungGebaut !== 'null' : Boolean(haltung);
+        this._objekteZeigen(z, this.modell?.group || null, posiert);
         this._haarUndKleider();
         const stellung = z.stellung || {};
         if (!Object.keys(stellung).length) { this._melden('Noch keine Figur — erst nach der Körperkette.'); return; }
@@ -163,10 +233,10 @@ export class Meshfigurbuehne {
         // `_sichtbarkeit` den Bau nach.
         this._letzter = z;
         if (!this.schalter.stand.modell && !this.modell) return;
-        const stand = JSON.stringify([stellung, kacheln, kleidung]);
+        const stand = JSON.stringify([stellung, kacheln, kleidung, haltung]);
         if (stand === this._stand || this._baut) return;
         this._stand = stand;
-        await this._bauen(stellung, z, kacheln, kleidung);
+        await this._bauen(stellung, z, kacheln, kleidung, haltung);
     }
 
     /**
@@ -183,21 +253,22 @@ export class Meshfigurbuehne {
             .map(([k, name]) => [k, `${this.seite.dateiAdresse('ergebnis', name)}?t=${marke}`]));
     }
 
-    async _bauen(stellung, z, kacheln, kleidung) {
+    async _bauen(stellung, z, kacheln, kleidung, haltung) {
         this._baut = true;
-        this._melden('Figur wird gebaut …');
+        this._melden(haltung ? 'Figur wird in der Haltung des Netzes gebaut …' : 'Figur wird gebaut …');
         try {
             this.zeit.marke('bau');
             const neu = new Genesis9Modell('meshfigur', {
-                figur: 'basis', regler: stellung, presetName: z.name, fototextur: kacheln, kleidung,
+                figur: 'basis', regler: stellung, presetName: z.name, fototextur: kacheln, kleidung, drehung: haltung,
             });
             await neu.bauen();
             this.zeit.marke('figur');
             if (this.modell) { this.szene.remove(this.modell.group); this.modell.dispose?.(); }
             this.modell = neu;
+            this._haltungGebaut = JSON.stringify(haltung);
             this.szene.add(neu.group);
-            this.haar.anhaengen(neu);
-            this.kleider.anhaengen(neu);
+            this._objekteZeigen(z, neu.group, Boolean(haltung));
+            this._objekteBinden(neu);
             const h = neu.hoehe || 1.7;
             this.steuerung.target.set(0, h * 0.52, 0);
             this.kamera.position.set(0, h * 0.55, h * 2.6);

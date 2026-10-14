@@ -27,6 +27,7 @@ und Werte, alles andere fällt auf die Vorgabe).
     modell       das Ergebnis als Modell speichern (`data/models/<Name>.json`, Szene/Studio)
 """
 
+from .meshfiguranimationsoptionen import Meshfiguranimationsoptionen
 from .meshfigurkleidungsoptionen import Meshfigurkleidungsoptionen
 from .meshfigurregionenoptionen import Meshfigurregionenoptionen
 from .meshfigurtexturoptionen import Meshfigurtexturoptionen
@@ -133,6 +134,7 @@ class Meshfiguroptionen:
             'vorgabe': 'weich',
             'werte': [
                 ('weich', 'Der Stoff zieht schwach — die Haut liegt knapp darunter (Vorgabe)'),
+                ('nah', 'Der Stoff zieht nur, wo er nah anliegt (Reichweite darunter) — für Roben und Mäntel'),
                 ('ignorieren', 'Der Stoff darf die Figur nur nicht nach außen drücken'),
                 ('wie_haut', 'Wie Haut (bis 29.09.2026: Shirt und Shorts formen die Figur)'),
             ],
@@ -153,6 +155,17 @@ class Meshfiguroptionen:
             'Edgar ein Sixpack statt des Bauchs; zu viel bläht die Figur unter weiten Stellen auf.',
         },
         {
+            'schluessel': 'kleidung_reichweite_cm',
+            'titel': 'Reichweite des Stoffzugs (cm)',
+            'art': 'zahl',
+            'vorgabe': 7,
+            'min': 2,
+            'max': 20,
+            'fein': True,
+            'hinweis': 'Nur bei „Der Stoff zieht nur, wo er nah anliegt“: Stoff, der weiter als dies von der Figur entfernt hängt (lockere Robe, Mantel, Umhang), zieht sie nicht. '
+            'Ein Shirt, dessen Bauch 4 cm vor der Grundfigur liegt, wird weiter gezogen; eine Robe 12 cm vor dem Oberschenkel nicht. Bei „schwach“ gelten 15 cm.',
+        },
+        {
             'schluessel': 'kleidungsabstand_mm',
             'titel': 'Haut unter dem Stoff (mm)',
             'art': 'zahl',
@@ -163,7 +176,7 @@ class Meshfiguroptionen:
             'hinweis': 'Wie weit die Haut unter der Stoffoberfläche liegen soll (Stoffdicke und Luft): ein '
             'anliegendes Shirt 3–8 mm, ein weites 15–25 mm.',
         },
-    ] + Meshfigurkleidungsoptionen.KATALOG + [
+    ] + Meshfigurkleidungsoptionen.KATALOG + Meshfiguranimationsoptionen.KATALOG + [
         {
             'schluessel': 'genitalform',
             'titel': 'Genitalbereich (%)',

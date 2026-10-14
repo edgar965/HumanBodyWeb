@@ -94,6 +94,7 @@ export class Engine2d3dKleiderAktionslog {
 
     anmelden() {
         const kenn = navigator.userAgent.match(/(OPR|Edg|Firefox|Chrome)\/[\d.]+/);
+        document.documentElement.dataset.aktionslog = 'eigen';      // das allgemeine `Aktionsprotokoll` lässt dann Klick, Änderung und Fehler aus (keine doppelten Zeilen)
         this.melden('seite_offen', `${location.hash || '(ohne #)'} · ${kenn ? kenn[0] : 'Browser unbekannt'} · ${document.visibilityState}`);
         // Erfassungsphase: Der Klick wird gemeldet, auch wenn ein Zuhörer weiter unten ihn schluckt oder wirft.
         document.addEventListener('click', e => this._klick(e), true);

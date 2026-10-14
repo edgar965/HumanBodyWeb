@@ -27,6 +27,14 @@ class Blendimportweg:
     #: Die Bänder des Fortschrittsbalkens (Prozent) für diesen Weg: er endet nach „figur" (das Modell speichert „Mesh to 3D“ selbst), also füllt „figur" den Rest bis 100.
     #: Nach den Zeiten am Zauberer (11.10.2026): Körper 12 s, Segmentierung 200,7 s, Pose 97,3 s, Figur rund 1.750 s von rund 2.060 s.
     NETZ_BAENDER = {'koerper': (0, 1), 'segmentierung': (1, 11), 'pose': (11, 16), 'figur': (16, 100)}
+    #: Vorgaben des Wegs „netz“ (13.10.2026, Konzept „Mesh-3D ohne Nacharbeit“): Aus dem Katalog kommen sie nicht — der gilt für alle Wege (Weg „teile“: Pose `aus`, Stoffzug ohne Wirkung).
+    #: `pose = sam`: alle 12 Aufträge dieses Wegs liefen so (SAM 3D Body findet die Gelenke am Rendering; ~12 s warm, 75 s kalt, `meshfigur-tempo.md`).
+    #: `kleidung_zug = ignorieren` (seit 13.10.2026 abends; vorher `nah`, davor `weich`), gemessen an drei Modellen (Tagebuch 13.10.2026, Abschnitt 8): anliegende Kleidung (Edgar, `nah` → `ignorieren`) Figur→Netz 2,41 → 2,48 mm, Netz→Figur 2,58 → 2,52 mm, Höhe
+    #: 199,7 → 199,8 cm — kein Unterschied; lockere Kleidung: Robe Oberschenkel 51,8 (`ignorieren`) gegen 68,9 cm (`nah`) und 103,5 (`weich`), Reifenrock Taille 58,6 gegen 73,3 cm, Hüfte 86,2 gegen 98,3 cm. Preis von `ignorieren`: der Stoff steht öfter im Körper
+    #: (Reifenrock 9,7 gegen 3,5 %). Die automatische Vergleichsvariante (`Mesh3dvariantenauto`) rechnet `nah` mit. Nicht gemessen: Polstertänzer (`nah`), Damira ist nackt (der Zug wirkt dort nicht).
+    VORGABEN_NETZ = {'pose': 'sam', 'kleidung_zug': 'ignorieren'}
+    #: Einstellungen, die am Modell hängen und darum nie vom zuletzt angelegten Auftrag geerbt werden: das Formular „Neuer Auftrag“ schickt sie nicht mit (`Mesh3dneu`), der Server nimmt die Vorgabe des Wegs.
+    MODELLABHAENGIG = ('pose', 'pose_drehung', 'kleidung_zug')
 
     @classmethod
     def pruefen(cls, wert):

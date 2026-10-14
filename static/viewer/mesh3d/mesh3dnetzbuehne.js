@@ -3,7 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Meshfigurbuehne } from '../meshfigur/meshfigurbuehne.js';
 import { Meshfigurlicht } from '../meshfigur/meshfigurlicht.js';
 import { Meshfigurnetze } from '../meshfigur/meshfigurnetze.js';
+import { Meshfigurtakt } from '../meshfigur/meshfigurtakt.js';
 import { Mesh3dbuehnengroesse } from './mesh3dbuehnengroesse.js';
+import { Mesh3dnetzwerkzeug } from './mesh3dnetzwerkzeug.js';
 
 /**
  * Mesh3dnetzbuehne — die Karte „Mesh-Ansicht“ der Jobseite „Mesh-3D“ (12.10.2026): NUR das Netz der Datei, mittig, unter der 3D-Ansicht.
@@ -17,6 +19,8 @@ import { Mesh3dbuehnengroesse } from './mesh3dbuehnengroesse.js';
  * Die Kamera passt sich dem Netz an, sobald es geladen ist: Drehpunkt = Mitte seines Kastens (also mitten im Bild, auch wenn die Lage der Erkennung das Netz nicht um x = 0 und z = 0
  * zentriert), Abstand so, dass es mit Rand hineinpasst. Wer die Ansicht angefasst hat, behält seine Kamera — nur ein NEUES Netz (anderer Eingang oder andere Lage) passt sie wieder ein.
  * Höhe und Breite stellt `Mesh3dbuehnengroesse` (Regler und Ziehgriff).
+ *
+ * „Netz bearbeiten“ (13.10.2026, `Mesh3dnetzwerkzeug`): die Leiste über der Ansicht wählt Teile des Netzes und schneidet sie aus; sie erfährt hier, wann ein Netz da ist (`netzGeladen`) und wann es ersetzt wird (`netzWeg`).
  */
 export class Mesh3dnetzbuehne {
     static SCHLUESSEL = 'mesh3d.netzansicht.hoehe';
@@ -24,8 +28,11 @@ export class Mesh3dnetzbuehne {
     /** Luft um das Netz beim Einpassen (Faktor auf den nötigen Abstand). */
     static RAND = 1.15;
 
-    /** @param {object} seite die „Seite“ der Bühne (`Mesh3dbuehne.adapter`): `dateiAdresse(ordner, name)` und `netzWartet()` */
-    constructor(seite) {
+    /**
+     * @param {object} seite die „Seite“ der Bühne (`Mesh3dbuehne.adapter`): `dateiAdresse(ordner, name)` und `netzWartet()`
+     * @param {object} [jobseite] die Jobseite (`Mesh3dseite`) — mit ihr gibt es die Leiste „Netz bearbeiten“
+     */
+    constructor(seite, jobseite = null) {
         this.seite = seite;
         this.feld = document.getElementById('netz-buehne');
         this.hinweis = document.getElementById('netz-hinweis');
@@ -35,6 +42,7 @@ export class Mesh3dnetzbuehne {
         this.netze = new Meshfigurnetze(seite, this.szene, text => this._melden(text), { diffus: true });
         this.groesse = new Mesh3dbuehnengroesse(this.feld, document.getElementById('netz-groesse'), document.getElementById('netz-groesse-wert'), Mesh3dnetzbuehne.SCHLUESSEL,
             { regler: document.getElementById('netz-breite'), wert: document.getElementById('netz-breite-wert'), schluessel: Mesh3dnetzbuehne.SCHLUESSEL_BREITE });
+        this.werkzeug = jobseite ? new Mesh3dnetzwerkzeug(this, jobseite) : null;
     }
 
     _melden(text) { if (this.hinweis) { this.hinweis.textContent = text; this.hinweis.hidden = !text; } }
@@ -55,10 +63,13 @@ export class Mesh3dnetzbuehne {
         this.steuerung.target.set(0, 0.9, 0);
         this.steuerung.enableDamping = true;
         this.steuerung.addEventListener('start', () => { this._angefasst = true; });
+        // Volle Bildrate nur bei Eingabe, ausklingender Kamera oder Größenänderung, sonst 5 Bilder/s — siehe `Meshfigurtakt`.
+        this.takt = new Meshfigurtakt();
+        this.steuerung.addEventListener('change', () => this.takt.wach());
         Meshfigurlicht.einrichten(this.szene, this.kamera);
         new ResizeObserver(() => this._groesse()).observe(this.feld);
         const lauf = () => {
-            if (!document.hidden && this.canvas.getClientRects().length) this.bild();
+            if (!document.hidden && this.canvas.getClientRects().length && this.takt.faellig()) this.bild();
             requestAnimationFrame(lauf);
         };
         requestAnimationFrame(lauf);
@@ -74,6 +85,7 @@ export class Mesh3dnetzbuehne {
     /** Leinwand an den Behälter anpassen, mit derselben Pixelgrenze wie die erste Ansicht; ausgeblendet gibt sie ihren Speicher frei. */
     _groesse() {
         const b = this.feld.clientWidth, h = this.feld.clientHeight;
+        this.takt.wach();
         if (!b || !h) {
             this.renderer.setPixelRatio(1);
             this.renderer.setSize(1, 1, false);
@@ -93,6 +105,7 @@ export class Mesh3dnetzbuehne {
         if (!z) { this._melden('Noch kein Netz — die Ansicht erscheint, sobald der Auftrag „Mesh to 3D“ das Netz übernommen hat.'); return; }
         // `zeigen` lädt nur neu, wenn Eingang oder Lage sich geändert haben; das neue Netz kommt unsichtbar und leer, `_nachziehen` passt die Kamera an, sobald es da ist.
         if (this.netze.zeigen(z)) {
+            this.werkzeug?.netzWeg();
             this.netze.sichtbar(true);
             this._kinder = 0;
             this._angefasst = false;
@@ -113,6 +126,7 @@ export class Mesh3dnetzbuehne {
         this._kinder = kinder;
         if (kinder && !this._angefasst) this._einpassen();
         this._meldung();
+        if (kinder) this.werkzeug?.netzGeladen();
     }
 
     /** Kamera auf die Mitte des Netz-Kastens richten und so weit zurücknehmen, dass es mit Rand ins Bild passt. */

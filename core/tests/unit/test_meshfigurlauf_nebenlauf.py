@@ -133,3 +133,36 @@ class NebenlaufTest(SimpleTestCase):
         z = lauf()
         z._nebenlaeufe_abwarten({}, ('haar', 'kleidung'))
         self.assertEqual(z.job.ergebnis, {'erkennung': {'ok': True}})
+
+    def test_kleidung_rechnet_erst_wenn_haar_fertig_ist(self):
+        """13.10.2026: die Kleidung liest `haar_maske.npz` (Hutflächen) — je nachdem, welcher Faden zuerst fertig war, stand der Hut in der Kleidung oder nicht. Jetzt wartet ihr Faden auf den des Haars."""
+        z = lauf()
+        halt = threading.Event()
+        reihenfolge = []
+
+        def haar(kopie):
+            halt.wait(5)
+            reihenfolge.append('haar')
+
+        def kleidung(kopie):
+            reihenfolge.append('kleidung')
+
+        nebenlaeufe = {}
+        z._laufend = (nebenlaeufe, {})
+        nebenlaeufe['haar'] = z._nebenlauf('haar', haar)
+        nebenlaeufe['kleidung'] = z._nebenlauf('kleidung', kleidung)
+        self.assertEqual(Meshfigurlauf.NEBEN_NACH, {'kleidung': ('haar',)})
+        nebenlaeufe['kleidung'][0].join(0.3)
+        self.assertEqual(reihenfolge, [])                                           # die Kleidung hat nicht angefangen, solange das Haar rechnet
+        halt.set()
+        nebenlaeufe['haar'][0].join()
+        nebenlaeufe['kleidung'][0].join()
+        self.assertEqual(reihenfolge, ['haar', 'kleidung'])
+
+    def test_ohne_laufendes_haar_wartet_die_kleidung_auf_nichts(self):
+        z = lauf()
+        z._laufend = ({}, {})                                                       # Neulauf ab „kleidung": die Haarmaske liegt schon in der Ablage
+        gelaufen = []
+        faden, _kopie, _aus = z._nebenlauf('kleidung', lambda kopie: gelaufen.append(True))
+        faden.join(2)
+        self.assertEqual(gelaufen, [True])

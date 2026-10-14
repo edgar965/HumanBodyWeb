@@ -343,6 +343,36 @@ class StandUndStempelTest(unittest.TestCase):
                 f.write('{kaputt')
             self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))
 
+    def test_die_haltung_gilt_auch_fuer_die_figur_mit_eigenmorph(self):
+        """13.10.2026: der Eigenmorph ändert nur die Punkte der Ruhelage. Der Haltungsstempel lässt sie aus — die Haltung des Rest-Schritts gilt für die Figur mit Eigenmorph (statt einer zweiten Anpassung, die die Glieder
+        um 6 mm verschob und die Untergrenze unter Stoff verlor). Eine andere Gelenkkette oder andere Gewichte ändern den Stempel weiter. Sabotage: `FORM = ()` → der erste Fall wird rot."""
+        with Pruefablage.ordner() as ordner:
+            r = self._runner(ordner)
+            self._figur(ordner)
+            np.savez(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
+            with open(os.path.join(ordner, r.GENESIS_STAND), 'w', encoding='utf-8') as f:
+                json.dump({'datei': 'genesis_ende.npz', 'sha1': r._genesis_stempel('genesis_ende.npz'), 'sha1_haltung': r._genesis_stempel('genesis_ende.npz', ohne=r.FORM)}, f)
+            voll, haltung = r._genesis_stempel('genesis_ende.npz'), r._genesis_stempel('genesis_ende.npz', ohne=r.FORM)
+            self._figur(ordner, scale=1.3)                                          # dieselbe Haltung, andere Form (Eigenmorph)
+            self.assertNotEqual(voll, r._genesis_stempel('genesis_ende.npz'))
+            self.assertEqual(haltung, r._genesis_stempel('genesis_ende.npz', ohne=r.FORM))
+            self.assertTrue(r._stand_gehoert_zu('genesis_ende.npz'))
+            arrays = {'punkte': np.arange(30, dtype=np.float32).reshape(10, 3), 'namen': np.array(['a', 'bb']), 'eltern': np.array([-1, 1])}   # andere Gelenkkette
+            np.savez(os.path.join(ordner, 'genesis_ende.npz'), **arrays)
+            self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))
+
+    def test_ein_vermerk_ohne_haltungsstempel_gilt_nur_bei_gleichem_inhalt(self):
+        """Vermerke vor dem 13.10.2026 tragen nur `sha1` — dann gilt die alte Regel (genau diese Figur)."""
+        with Pruefablage.ordner() as ordner:
+            r = self._runner(ordner)
+            self._figur(ordner)
+            np.savez(os.path.join(ordner, r.ZUSTAND), theta=np.zeros((2, 3)), rg=np.zeros(3), tg=np.zeros(3))
+            with open(os.path.join(ordner, r.GENESIS_STAND), 'w', encoding='utf-8') as f:
+                json.dump({'datei': 'genesis_ende.npz', 'sha1': r._genesis_stempel('genesis_ende.npz')}, f)
+            self.assertTrue(r._stand_gehoert_zu('genesis_ende.npz'))
+            self._figur(ordner, scale=1.3)
+            self.assertFalse(r._stand_gehoert_zu('genesis_ende.npz'))
+
 
 @unittest.skipUnless(_torch_cuda(), 'torch/pytorch3d fehlen in diesem Interpreter (python10-Tests)')
 class DrehmatrixTest(unittest.TestCase):

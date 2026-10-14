@@ -11,21 +11,20 @@ gleichnamige Module).
 """
 
 import os
-import sys
 
 from django.conf import settings
+
+from .pfadvergabe import Pfadvergabe
 
 __all__ = ['Meshto3dpfad']
 
 
 class Meshto3dpfad:
-    """Kontext, der `meshto3d` und `VideoToBVH/wrappers` nur während des Blocks führt."""
+    """Kontext, der `meshto3d` und `VideoToBVH/wrappers` nur während des Blocks führt — auch wenn mehrere Fäden ihn gleichzeitig halten (`Pfadvergabe`)."""
 
     def __init__(self):
         #: Reihenfolge der Suche: zuerst `meshto3d`, dann die gemeinsamen Wrapper.
         self.verzeichnisse = [self.pfad(), self.wrapper()]
-        #: Nur was wir selbst eingehängt haben, räumen wir weg.
-        self._eigen = []
 
     @staticmethod
     def pfad():
@@ -38,15 +37,9 @@ class Meshto3dpfad:
         return os.path.normpath(str(settings.WRAPPERS_DIR))
 
     def __enter__(self):
-        for verzeichnis in reversed(self.verzeichnisse):
-            if verzeichnis not in sys.path:
-                sys.path.insert(0, verzeichnis)
-                self._eigen.append(verzeichnis)
+        Pfadvergabe.halten(self.verzeichnisse)       # mehrere Fäden zugleich (haar/kleidung im Nebenlauf): der letzte räumt weg
         return self
 
     def __exit__(self, *_ausnahme):
-        for verzeichnis in self._eigen:
-            if verzeichnis in sys.path:
-                sys.path.remove(verzeichnis)
-        self._eigen = []
+        Pfadvergabe.loslassen(self.verzeichnisse)
         return False

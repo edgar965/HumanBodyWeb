@@ -225,6 +225,7 @@ class DasHaar(SimpleTestCase):
         def __init__(self, n):
             self._a = diags([np.ones(n - 1), np.ones(n - 1)], [-1, 1], format='csr')
             self.inhalt = np.full(n, 1e-4)
+            self.mitte = np.zeros((n, 3))                    # Flächenmitten wie `Haarmaske.mitte` — `Sapienshaar.ausbreiten` liest die Höhe
 
         def nachbarn(self):
             return self._a
@@ -252,7 +253,8 @@ class DasHaar(SimpleTestCase):
         geschuetzt[3] = True                # Gesichtszone mitten im Sapiens-Haar
         bart = np.zeros(self.N, dtype=bool)
         bart[7] = True
-        return {'haar': alt, 'geschuetzt': geschuetzt, 'bart': bart, 'unten': np.zeros(self.N, dtype=bool)}
+        # `haut`: seit 12.10.2026 liest `Sapienshaar.langer_bart` sie (Flächen unter der Schnittebene, die nicht Haut sind) — dieser Test lief danach nicht mehr (KeyError).
+        return {'haar': alt, 'geschuetzt': geschuetzt, 'bart': bart, 'unten': np.zeros(self.N, dtype=bool), 'haut': np.zeros(self.N, dtype=bool)}
 
     def test_farbe_aendert_nichts(self):
         with Pruefablage.ordner() as ordner:

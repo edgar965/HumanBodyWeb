@@ -231,10 +231,12 @@ class MeshAnsichtQuelltextTest(SimpleTestCase):
 
     def test_5_die_3d_ansicht_fuettert_die_mesh_ansicht(self):
         text = self._lesen('mesh3d', 'mesh3dbuehne.js')
-        self.assertIn('new Mesh3dnetzbuehne(this.adapter)', text)
+        self.assertIn('new Mesh3dnetzbuehne(this.adapter, this.seite)', text)       # die Seite (Kennung, Endpunkte) gehört seit 13.10.2026 dazu: „Netz bearbeiten“ ruft den Server
         # Zustand des Auftrags „Mesh to 3D“ UND der Fall ohne Figur (dort steht der Hinweis).
         self.assertIn('this.netzbuehne.zeigen(m)', text)
-        self.assertIn('this.netzbuehne.zeigen(null)', text)
+        # … und ohne Figur das Netz des Imports selbst, oder `null` (leere Karte), solange es nicht da ist (`_netzOhneFigur`, seit 13.10.2026)
+        self.assertIn('this.netzbuehne.zeigen(bereit ?', text)
+        self.assertIn(": null);", text)
 
     def test_6_nur_die_mesh_ansicht_laedt_das_netz_diffus(self):
         netzbuehne = self._lesen('mesh3d', 'mesh3dnetzbuehne.js')

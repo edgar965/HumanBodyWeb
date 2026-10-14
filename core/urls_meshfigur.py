@@ -10,6 +10,7 @@ from django.urls import path
 
 from .api.meshfigur import Meshfigurendpunkte
 from .api.meshfigureinstellungen import Meshfigureinstellungen
+from .api.meshfigurobjektfelder import Meshfigurobjektfeldendpunkt
 
 __all__ = ['MESHFIGUR']
 
@@ -34,5 +35,11 @@ MESHFIGUR = [
         'api/meshfigur/<uuid:job_id>/datei/<str:ordner>/<str:name>',
         Meshfigurendpunkte.datei,
         name='meshfigur_datei',
+    ),
+    # Gelenkkorrekturen (JCMs) der Objekte aus dem Netz, 14.10.2026 — erst das Modul, dann die Route.
+    path(
+        'api/meshfigur/<uuid:job_id>/objektfelder/<str:name>',
+        Meshfigurobjektfeldendpunkt.felder,
+        name='meshfigur_objektfelder',
     ),
 ]

@@ -138,6 +138,9 @@ class Blendimportlauf:
         self.sichern(status='fertig', fortschritt=100, detail='Fertig', dauer_s=round(time.perf_counter() - t0, 1),
                      beendet=timezone.now().isoformat())
         logger.info('Blender-Import %s: fertig', self.ablage.kennung)
+        from .mesh3dvariantenauto import Mesh3dvariantenauto
+
+        Mesh3dvariantenauto.sicher(self.ablage.kennung)      # Weg „netz“: eine Vergleichsvariante mitrechnen (Einstellung `vergleichsvariante`); wirft nie
 
     # ----------------------------------------------------------- Schritte
 
@@ -224,7 +227,9 @@ class Blendimportlauf:
         from .blendimportpose import Blendimportpose
 
         netz = self.weg() == Blendimportweg.NETZ
-        figur = Blendimportfigur(self.ablage, self.stand['quelle']['name'], self.stand['einstellungen']['basis'], netz=netz)
+        figur = Blendimportfigur(self.ablage, self.stand['quelle']['name'], self.stand['einstellungen']['basis'], netz=netz,
+                                 kleidung_zug=self.stand['einstellungen'].get('kleidung_zug'),
+                                 animationspruefung=self.stand['einstellungen'].get('animationspruefung'))
         glb = self.ablage.arbeit(Blendimportkoerper.DATEI)
         zusatz = Blendimportpose.zusatz(self.ablage, self.stand, glb)
         job = figur.anlegen(glb)

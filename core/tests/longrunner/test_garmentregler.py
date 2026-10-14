@@ -64,8 +64,9 @@ class ReglerdeckungTest(unittest.TestCase):
                 cls.gezeigt |= pfade(gruppe)
 
     def test_die_vorlage_hat_die_erwartete_groesse(self):
-        """122 Regler — faellt auf, wenn der Upstream sich aendert."""
-        self.assertEqual(len(self.alle), 122)
+        """123 Regler — faellt auf, wenn der Upstream sich aendert. (Bis 12.10.2026 122: `upstream/assets/design_params/default.yaml` trägt seit
+        dem 06.10.2026 10:06 einen Regler mehr; der Fund-Test darunter bestätigt, dass er auf der Oberfläche erreichbar ist.)"""
+        self.assertEqual(len(self.alle), 123)
 
     def test_jeder_regler_ist_irgendwo_erreichbar(self):
         """Der Kern: kein Regler faellt still unter den Tisch."""

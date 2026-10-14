@@ -43,6 +43,10 @@ SAM3DBODY_PYTHON = str(TOOLS_ROOT / 'python12_sambody4d' / 'Scripts' / 'python.e
 SAM3DBODY_KLON = TOOLS_ROOT / 'VideoToBVH' / 'SAMBody4D'
 SAM3DBODY_CHECKPOINT = TOOLS_ROOT / 'VideoToBVH' / 'GEM-X' / 'inputs' / 'checkpoints' / 'sam-3d-body-dinov3' / 'sam3d_body.ckpt'
 SAM3DBODY_MHR = TOOLS_ROOT / 'VideoToBVH' / 'GEM-X' / 'inputs' / 'mhr_data' / 'mhr_model.pt'
+#: SAM 3 (Segment Anything with Concepts, `facebook/sam3`, 3,4 GB; 12.10.2026): Bestandteile des Netzes über Textbegriffe (`_run_sam3teile.py`, `Blendimportbegriffe`), dieselbe venv wie SAM 3D Body.
+SAM3_CHECKPOINT = SAM3DBODY_KLON / 'checkpoints' / 'sam3' / 'sam3.pt'
+#: Die Begriffe, die SAM 3 sucht — Daten, kein Code je Gegenstand (`Kleidung/begriffsvorrat.json`).
+BEGRIFFSVORRAT = TOOLS_ROOT / 'Kleidung' / 'begriffsvorrat.json'
 
 #: Django-Python (3.14) — derselbe Interpreter, der diesen Server fährt. Hilfe →
 #: Tests startet damit die Test-Befehle. Abgeleitet aus TOOLS_ROOT, nicht

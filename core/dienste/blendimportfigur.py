@@ -35,31 +35,49 @@ class Blendimportfigur:
 
     #: Weg „netz“ (`Blendimportweg`, 11.10.2026): das Netz ist verschmolzen und trägt Kleidung und Haar selbst — es gelten die Vorgaben des Reiters „Mesh to 3D“ (Stoff zieht schwach, Frisur und Haarkarten aus dem
     #: Netz, Kopfhaut, Textur aus dem Netz), nur Einheit (Meter: `Blendimportnetz` hat das Netz auf Menschenhöhe gebracht), Gesicht, Eigenmorph und das Speichern des Modells `<Name> Mesh` stehen fest.
+    #: `kleidungsluft_mm` 4 (13.10.2026): die Haut der Figur darf nicht durch den Stoff des Netzes ragen. Spiralballerina (Strumpfhose, Mieder): 6 % der Kleidungspunkte lagen im Körper der Figur (15 % an den Knien, 13 % an der
+    #: Brust, 5,5 % tiefer als 5 mm) — „Hautflecken auf dem Kleid"; der Rest-Schritt schob die Punkte bis auf die Fläche, nicht darunter. Der Katalog von „Mesh to 3D" bleibt bei 0 (Ten24, 07.10.2026: 4 mm nahmen
+    #: Punkte außerhalb der Kleiderfläche von 359 auf 25 und machten die Figur unter dem Pullover ~2 mm schmaler); der Weg „netz" hat immer bekleidete Netze und setzt 4 mm (eine Einstellung dafür im Import gibt es noch nicht).
     OPTIONEN_NETZ = {
         'einheit': 'meter',
         'gesicht': 'an',
         'eigenmorph': 'an',
         'modell': 'an',
+        'kleidungsluft_mm': 4,
     }
 
-    def __init__(self, ablage, name, basis, netz=False):
+    def __init__(self, ablage, name, basis, netz=False, kleidung_zug=None, animationspruefung=None):
         self.ablage = ablage
         self.name = name
         self.basis = basis
         self.netz = netz
+        #: Einstellung `animationspruefung` des Imports (`an`/`aus`, fehlt bei Aufträgen von vor dem 13.10.2026: an) — wird die Option `animationspruefung` von „Mesh to 3D“ (`Meshfigurtanzpruefung`).
+        self.animationspruefung = animationspruefung
+        #: Einstellung `kleidung_zug` des Imports (nur Weg „netz“): `weich` (Vorgabe von „Mesh to 3D“) oder `ignorieren`.
+        self.kleidung_zug = kleidung_zug
+
+    def optionen(self):
+        """Die geprüften Optionen von „Mesh to 3D“ für diesen Import. Beim Weg „netz“ wählt die Einstellung `kleidung_zug` des Imports, wie der Stoff die Figur zieht
+        (`weich`, `nah`, `ignorieren`); ein Wert, den der Katalog von „Mesh to 3D“ nicht kennt, fällt in `pruefen` auf dessen Vorgabe."""
+        from .meshfiguroptionen import Meshfiguroptionen
+
+        roh = dict(self.OPTIONEN_NETZ if self.netz else self.OPTIONEN, basis=self.basis)
+        if self.netz and self.kleidung_zug:
+            roh['kleidung'] = self.kleidung_zug
+        if self.animationspruefung:
+            roh['animationspruefung'] = self.animationspruefung
+        return Meshfiguroptionen.pruefen(roh)
 
     def anlegen(self, glb):
         from ..daten.auftragskennung import Auftragskennung
         from ..daten.meshfigurablage import Meshfigurablage
         from ..models import Meshfigurauftrag
         from .meshfigureingang import Meshfigureingang
-        from .meshfiguroptionen import Meshfiguroptionen
 
         kennung = Auftragskennung.frei(timezone.now(), lambda k: Meshfigurauftrag.objects.filter(kennung=k).exists())
         ablage = Meshfigurablage(kennung)
         eingang = Meshfigureingang(ablage).anlegen([], str(glb), None)
-        optionen = Meshfiguroptionen.pruefen(dict(self.OPTIONEN_NETZ if self.netz else self.OPTIONEN, basis=self.basis))
-        job = Meshfigurauftrag.objects.create(kennung=kennung, name=self.name, eingang=eingang, optionen=optionen)
+        job = Meshfigurauftrag.objects.create(kennung=kennung, name=self.name, eingang=eingang, optionen=self.optionen())
         logger.info('Blender-Import %s: Auftrag „Mesh to 3D" %s angelegt', self.ablage.kennung, kennung)
         return job
 

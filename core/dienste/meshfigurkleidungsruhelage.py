@@ -30,6 +30,8 @@ class Meshfigurkleidungsruhelage:
         )
         #: Befund des letzten `punkte`: `{mit_teilen, teile, h_mm, kante_mm, abstand_median_mm, abstand_max_mm}`.
         self.befund = {}
+        #: Körperteil je Punkt des letzten `punkte` (M,) — die Hautgewichte (`Meshfigurhautgewichte.kaefig`) sehen dieselben Käfigpunkte wie die Rückrechnung; None ohne Teile.
+        self.teile_zuletzt = None
 
     @property
     def h(self):
@@ -51,6 +53,7 @@ class Meshfigurkleidungsruhelage:
         if self.teil is None:
             ruhe = self.entposen.ruhelage(netz)
             self.befund = {'mit_teilen': False}
+            self.teile_zuletzt = None
             return ruhe
         from .blendimportlage import Blendimportlage as L
 
@@ -68,6 +71,7 @@ class Meshfigurkleidungsruhelage:
         teile = self.entposen.teile_inseln(teile, d, max(3, int(round(flaeche / je_punkt))), abstand=abstand, ab=L.INSEL_AB_H * h)
         haft = np.exp(-(abstand / (L.HAFT_H * h)) ** 2)
         teile = self.entposen.teile_glaetten(teile, d, haft, runden=L.GLAETTEN_STOFF)
+        self.teile_zuletzt = teile
         ruhe = self.entposen.ruhelage(netz, teile)
         ruhe = self.entposen.entzerren(ruhe, netz, d, abstand, min(L.KOPPELN_H * h, L.KOPPELN_E * kante), L.ANKER, L.ANKER_H * h)
         self.befund = {'mit_teilen': True, 'teile': int(len(np.unique(teile))), 'h_mm': round(h * 1000, 2), 'kante_mm': round(kante * 1000, 2),

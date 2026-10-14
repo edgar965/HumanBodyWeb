@@ -13,6 +13,7 @@
  * Die Übersicht zeigt denselben Wert aus der Datenbank — sie braucht deshalb nichts
  * nachgezogen zu bekommen, sondern nur den nächsten Aufruf (`auftragsseiten.md`).
  */
+import { Aktionsprotokoll } from './aktionsprotokoll.js';
 import { Serverabruf } from './serverabruf.js';
 
 export class Auftragname {
@@ -50,7 +51,9 @@ export class Auftragname {
     /** Überschrift gegen ein Eingabefeld tauschen. */
     bearbeiten() {
         if (this.eingabe) { this.eingabe.focus(); return; }
+        this.meldung('');
         const alt = this.feld.textContent.trim();
+        Aktionsprotokoll.melden('name_bearbeiten', `Feld offen, alter Name ${JSON.stringify(alt)} → ${this.adresse}`);
         const eingabe = document.createElement('input');
         eingabe.type = 'text';
         eingabe.className = 'viewer-eingabe auftrag-name-eingabe';
@@ -72,20 +75,42 @@ export class Auftragname {
 
     async speichern(neu, alt) {
         const name = (neu || '').trim();
-        if (this.laeuft) return;
-        if (!name || name === alt) { this.beenden(alt); return; }
+        if (this.laeuft) { Aktionsprotokoll.melden('name_ignoriert', 'eine Speicherung läuft schon'); return; }
+        if (!name || name === alt) {
+            Aktionsprotokoll.melden('name_verworfen', `${name ? 'Name unverändert' : 'Name leer'} (${JSON.stringify(alt)}), nichts gesendet`);
+            this.beenden(alt);
+            return;
+        }
         this.laeuft = true;
+        Aktionsprotokoll.melden('name_senden', `${JSON.stringify(alt)} → ${JSON.stringify(name)} an ${this.adresse}`);
         try {
             const antwort = await Serverabruf.senden(this.adresse, { name });
             if (antwort && antwort.error) throw new Error(antwort.error);
+            Aktionsprotokoll.melden('name_gespeichert', JSON.stringify(antwort.name || name));
             this.beenden(antwort.name || name);
             document.title = document.title.replace(alt, antwort.name || name);
         } catch (fehler) {
+            Aktionsprotokoll.melden('name_fehler', `${fehler.status || '?'} ${fehler.daten?.error || fehler.message}`, 'error');
             this.beenden(alt);
-            window.alert(`Name konnte nicht gespeichert werden: ${fehler.daten?.error || fehler.message}`);
+            this.meldung(`Name konnte nicht gespeichert werden: ${fehler.daten?.error || fehler.message}`);
         } finally {
             this.laeuft = false;
         }
+    }
+
+    /**
+     * Den Fehler NEBEN dem Namen zeigen, bis der nächste Versuch beginnt. Bis 12.10.2026 stand hier `window.alert`: Ein Server-Neustart (Autoreload) mitten im Speichern ließ den Dialog
+     * sechs Minuten offen — die ganze Seite war so lange tot (kein Klick, kein Takt, kein Protokoll: `verbindung_unterbrochen` „360 s“ im client.log war dieser Dialog, nicht der Server).
+     */
+    meldung(text) {
+        if (!text) { this.hinweis?.remove(); this.hinweis = null; return; }
+        if (!this.hinweis) {
+            this.hinweis = document.createElement('span');
+            this.hinweis.className = 'auftrag-name-fehler';
+            this.hinweis.setAttribute('role', 'alert');
+            (this.stift || this.feld).after(this.hinweis);
+        }
+        this.hinweis.textContent = text;
     }
 
     beenden(text) {

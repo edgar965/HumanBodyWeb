@@ -49,19 +49,20 @@ export class Meshfigurhaarwahl {
         return (((z || {}).ergebnis || {}).frisur || {}).kleidung || {};
     }
 
-    zeigen(z, gruppe) {
+    /** `haltung`: die Figur steht in der Haltung des Netzes — das Haar aus dem Netz gibt es dann in dieser Haltung, die Haarkarten (Ruhelage) nicht; die Frisur ist ein Stück der Garderobe und folgt der Figur. */
+    zeigen(z, gruppe, haltung = false) {
         const e = z.ergebnis || {};
         this.frisur = (e.frisur || {}).wahl || null;
-        this.netz.zeigen(z, gruppe);
-        this.karten.zeigen(z, gruppe);
+        this.netz.zeigen(z, gruppe, haltung);
+        this.karten.zeigen(z, gruppe, haltung);
         this._optionen();
         this.anwenden();
     }
 
     anhaengen(modell) {
         this.modell = modell;
-        this.netz.anhaengen(modell.group);
-        this.karten.anhaengen(modell.group);
+        this.netz.anhaengen(modell.group, modell.skelett);
+        this.karten.anhaengen(modell.group, modell.skelett);
         this.anwenden();
     }
 

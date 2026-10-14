@@ -153,6 +153,7 @@ export class Genesis9kleidung {
                 regler: inst.regler || {}, variante: werte?.variante || '',
                 stil: Genesis9kleidung.stilliste(werte), regler_stueck: werte?.regler || {},
                 pose: inst.pose, ausdruck: inst.ausdruck, griffe: inst.griffe(),
+                ...(inst.drehung ? { drehung: inst.drehung } : {}),
                 ...Genesis9lagen.anfrage(inst.kleidung, kennung),
                 gc_getragen: Genesis9lagen.gcGetragen(inst),
             });

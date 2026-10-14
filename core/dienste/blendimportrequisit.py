@@ -70,10 +70,36 @@ class Blendimportrequisit:
         handteller = teil & ~lage.finger_bewegt
         if handteller.sum() >= self.HANDTELLER_MIN:
             teil = handteller
-        a, b = lage.kaefig_posiert[teil], lage.kaefig_ruhe[teil]
+        r, ma, mb, rms = self._starr(lage.kaefig_posiert[teil], lage.kaefig_ruhe[teil])
+        return (lage.ins_netz(punkte_blender) - ma) @ r.T + mb, round(rms, 2)
+
+    @staticmethod
+    def _starr(a, b):
+        """`(R, Mitte a, Mitte b, Rundlauf mm)` — die Starrkörperbewegung a → b (Kabsch ohne Maßstab): `(x − Mitte a) @ R.T + Mitte b`."""
         ma, mb = a.mean(axis=0), b.mean(axis=0)
         u, _, vt = np.linalg.svd((a - ma).T @ (b - mb))
         s = np.sign(np.linalg.det(vt.T @ u.T)) or 1.0
         r = vt.T @ np.diag([1.0, 1.0, s]) @ u.T
-        rms = float(np.sqrt((np.linalg.norm((a - ma) @ r.T + mb - b, axis=1) ** 2).mean())) * 1000.0
-        return (lage.ins_netz(punkte_blender) - ma) @ r.T + mb, round(rms, 2)
+        return r, ma, mb, float(np.sqrt((np.linalg.norm((a - ma) @ r.T + mb - b, axis=1) ** 2).mean())) * 1000.0
+
+    #: Teile, die einen Gegenstand tragen können (Stab, Schwert, Schirm, Flasche): die Hände.
+    TRAEGER = ('l_hand', 'r_hand')
+
+    def ruhelage_gehalten(self, punkte_blender, nummer):
+        """`(Punkte in der Ruhelage, Verschiebung in mm)` für einen Gegenstand in der HAND (14.10.2026, Edgar: „der Zauberstab geht durch den Körper bei der Animation").
+
+        `ruhelage` dreht den Gegenstand mit der Hand zurück in die Ruhe. Die Hand steht im Foto vorn gehoben (Drehung bis zur Ruhe 130°), in der Ruhe (A-Haltung) hängt sie seitlich: Der Stab des Zauberers, im Foto senkrecht (Achse y 0,997),
+        lag in der Ruhelage mit der Achse (0,874; 0,459; −0,158) — 63° zur Senkrechten, nach innen; 4,0 % seiner Punkte (2.267 von 57.081) lagen binnen 2 cm des Rumpf-, Kopf- und Gegenarm-Käfigs (gemessen `stab_ruhe_probe.py`).
+        Ein Gegenstand in der Hand hängt aber an der Schwerkraft, nicht am Handgelenk: er behält seine Ausrichtung und wandert nur mit der Hand, die Handmitte bleibt der Drehpunkt (der Abstand zur Hand ist derselbe: 42 mm von der
+        Stabachse). **Nicht** nach dem Becken ausgerichtet: die Anpassung kippt das Becken des Zauberers um 32,6° (der Rumpf nur 8,2°), der Stab hinge dann 29° schräg (0 Punkte im Körper, aber eine Schräge, die im Foto nicht steht).
+        Ohne genug Handpunkte (`HANDTELLER_MIN`) gilt die Starrkörperbewegung der Hand. Nur für Gegenstände, die der Lauf als Bestandteil (`Meshfigurteile`) in der Hand findet; der Blender-Import behält `ruhelage` (dort schließt die Figur
+        beim Tragen die Faust um das Stück, die Fingerwinkel gelten in der Handlage)."""
+        lage = self.lage
+        hand = lage.teil == nummer
+        handteller = hand & ~lage.finger_bewegt
+        if handteller.sum() >= self.HANDTELLER_MIN:
+            hand = handteller
+        if hand.sum() < self.HANDTELLER_MIN:
+            return self.ruhelage(punkte_blender, nummer)
+        schritt = lage.kaefig_ruhe[hand].mean(axis=0) - lage.kaefig_posiert[hand].mean(axis=0)
+        return lage.ins_netz(punkte_blender) + schritt, round(float(np.linalg.norm(schritt)) * 1000.0, 1)

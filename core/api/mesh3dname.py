@@ -40,5 +40,6 @@ class Mesh3dnameendpunkte:
             return JsonResponse({'error': str(fehler)}, status=409)
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
-        logger.info('mesh3d %s umbenannt: „%s" → „%s"', kennung, alt, name)
-        return JsonResponse({'ok': True, 'name': name})
+        mit = getattr(auftrag, 'angeglichen', {})
+        logger.info('mesh3d %s umbenannt: „%s" → „%s" (Auftrag Mesh to 3D: %s, Modell: %s)', kennung, alt, name, mit.get('figur'), mit.get('modell'))
+        return JsonResponse({'ok': True, 'name': name, 'figur': mit.get('figur'), 'modell': mit.get('modell')})

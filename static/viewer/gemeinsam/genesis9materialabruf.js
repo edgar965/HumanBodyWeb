@@ -30,6 +30,7 @@ export class Genesis9materialabruf {
         return {
             regler: inst.regler || {}, haut: inst.haut, augen: inst.augen, brauen: inst.brauen, brauenstil: inst.brauenstil,
             praesets: inst.praesets, pose: inst.pose, ausdruck: inst.ausdruck, griffe: inst.griffe(), kleidung: inst.kleidungsliste(),
+            ...(inst.drehung ? { drehung: inst.drehung } : {}),
         };
     }
 

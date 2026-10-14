@@ -113,6 +113,64 @@ class UntergrenzeTest(unittest.TestCase):
         np.testing.assert_array_equal(neu, feld)
 
 
+class ZuschlagVerteilenTest(unittest.TestCase):
+    """`G9restmorph.zuschlag_verteilen` (13.10.2026): die Untergrenze ohne Kerben. Die Käfignachbarschaft wird durch eine Kette aus 40 Punkten ersetzt (`_nachbarn`), das Feld ohne Untergrenze ist 0, ein Punkt in der Mitte
+    verlangt 10 mm nach innen. Sabotagen: die Schleife in `zuschlag_verteilen` entfernen → `test_die_flaeche_um_den_grenzpunkt_faellt_weich_ab` rot; `untergrenze` am Ende der Schleife weglassen →
+    `test_die_untergrenze_gilt_am_ende_bei_jedem_punkt` rot."""
+
+    N = 40
+
+    def setUp(self):
+        from scipy import sparse
+
+        from Genesis9.restmorph import G9restmorph
+
+        self.klasse = G9restmorph
+        kette = sparse.lil_matrix((self.N, self.N))
+        for i in range(self.N):
+            for j in (i - 1, i + 1):
+                if 0 <= j < self.N:
+                    kette[i, j] = 1.0
+        kette = kette.tocsr()
+        grad = np.asarray(kette.sum(axis=1)).ravel()
+        self._alt = G9restmorph._nachbarn
+        G9restmorph._nachbarn = sparse.diags(1.0 / grad) @ kette
+        self.addCleanup(setattr, G9restmorph, '_nachbarn', self._alt)
+        self.mindest = np.zeros((self.N, 3))
+        self.mindest[20] = [0.0, 0.0, -0.010]
+        self.glatt = np.zeros((self.N, 3))
+
+    def test_die_untergrenze_gilt_am_ende_bei_jedem_punkt(self):
+        feld, n = self.klasse.zuschlag_verteilen(self.glatt, self.mindest)
+        self.assertEqual(n, 1)
+        self.assertAlmostEqual(feld[20, 2], -0.010, places=9)
+
+    def test_die_flaeche_um_den_grenzpunkt_faellt_weich_ab(self):
+        einmal, _ = self.klasse.zuschlag_verteilen(self.glatt, self.mindest, durchgaenge=0)
+        verteilt, _ = self.klasse.zuschlag_verteilen(self.glatt, self.mindest, durchgaenge=12)
+        np.testing.assert_allclose(einmal, self.klasse.untergrenze(self.glatt, self.mindest)[0])      # 0 Durchgänge = Stand bis 13.10.2026
+        self.assertTrue((einmal[19] == 0).all() and (einmal[21] == 0).all(), 'einmal: eine Stufe neben dem Grenzpunkt')
+        self.assertLess(verteilt[19, 2], -0.004, 'verteilt: der Nachbar rückt mit nach innen')
+        stufe = lambda f: float(np.abs(np.diff(f[:, 2])).max())  # noqa: E731
+        self.assertLess(stufe(verteilt), 0.5 * stufe(einmal))
+
+    def test_weit_entfernt_aendert_sich_nichts(self):
+        verteilt, _ = self.klasse.zuschlag_verteilen(self.glatt, self.mindest, durchgaenge=12)
+        self.assertTrue((verteilt[:7] == 0).all() and (verteilt[33:] == 0).all(), 'der Zuschlag reicht höchstens so viele Punkte weit wie Durchgänge')
+
+    def test_ohne_untergrenze_bleibt_das_feld(self):
+        feld = np.random.default_rng(2).normal(size=(self.N, 3)) * 0.001
+        neu, n = self.klasse.zuschlag_verteilen(feld, np.zeros((self.N, 3)))
+        self.assertEqual(n, 0)
+        np.testing.assert_array_equal(neu, feld)
+
+    def test_ein_groesserer_geglaetteter_weg_bleibt(self):
+        feld = self.glatt.copy()
+        feld[20] = [0.0, 0.0, -0.020]
+        neu, _ = self.klasse.zuschlag_verteilen(feld, self.mindest, durchgaenge=12)
+        np.testing.assert_allclose(neu, feld)
+
+
 class KleidungsluftOptionTest(unittest.TestCase):
     def test_vorgabe_null_und_grenzen(self):
         katalog = {e['schluessel']: e for e in Meshfiguroptionen.katalog()['optionen']}
@@ -127,7 +185,8 @@ class KleidungsluftOptionTest(unittest.TestCase):
     def test_die_luft_steht_hinter_dem_abstand_und_vor_der_genitalform(self):
         schluessel = [e['schluessel'] for e in Meshfiguroptionen.katalog()['optionen']]
         self.assertEqual(schluessel.index('kleidungsluft_mm'), schluessel.index('kleidungsabstand_mm') + 1)
-        self.assertEqual(schluessel.index('genitalform'), schluessel.index('kleidungsluft_mm') + 1)
+        # seit 13.10.2026 stehen zwei Schalter des Stoffs dazwischen: `hautband` (Rand der Kleidung) und `animationspruefung` (Gewichte für die Bewegung)
+        self.assertEqual(schluessel[schluessel.index('kleidungsluft_mm') + 1:schluessel.index('genitalform')], ['hautband', 'animationspruefung'])
 
     def test_der_runner_reicht_sie_an_den_abstand_weiter(self):
         """Die Kette ist erst dicht, wenn die letzte Schicht sie liest (`meshfigur.md`): Runner → `Meshfigurabstand(kleidung_luft)` → `ruhe_rest`."""
@@ -139,7 +198,10 @@ class KleidungsluftOptionTest(unittest.TestCase):
         rest = (wrapper / 'meshfigur_registrierungruhe.py').read_text(encoding='utf-8')            # `ruhe_rest` steht seit 12.10.2026 dort (aus `meshfigur_registrierung.py` herausgelöst)
         self.assertIn("kleidung_luft=float(self.daten.optionen.get('kleidungsluft_mm') or 0) / 1000.0", runner)
         self.assertIn('self.luft = float(kleidung_luft)', abstand)
-        self.assertIn('torch.relu(r + self.abstand.luft) * passt', rest)
+        # seit 13.10.2026 je Punkt (`_luft_je_punkt`: an Händen und Fingern 0), der Skalar `abstand.luft` ist der Rückfall und der Schalter der Untergrenze
+        self.assertIn('luft = self._luft_je_punkt()', rest)
+        self.assertIn('torch.relu(r + luft) * passt', rest)
+        self.assertIn('return self.abstand.luft', rest)
 
 
 if __name__ == '__main__':

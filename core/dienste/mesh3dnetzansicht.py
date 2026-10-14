@@ -119,15 +119,17 @@ class Mesh3dnetzansicht:
         return bool(marke.get('pid')) and Prozesspruefung.lebt(int(marke['pid']))
 
     def zustand(self):
-        """`{status, adresse?, mb?, fehler?}` — `keine` (kein Netz), `unnoetig` (klein genug), `bereit`, `baut`, `fehler`, `fehlt` (noch nicht gebaut)."""
+        """`{status, adresse?, datei?, mb?, fehler?}` — `keine` (kein Netz), `unnoetig` (klein genug), `bereit`, `baut`, `fehler`, `fehlt` (noch nicht gebaut).
+        `adresse` und `datei` (Name mit Endung, nach der die Bühne den Lader wählt) stehen bei `bereit` UND `unnoetig`: Die Mesh-Ansicht zeigt das Netz damit auch, wenn es den Auftrag „Mesh to 3D“
+        des Imports nicht gibt (13.10.2026, „Rosemary Winters“ — der Auftrag war gelöscht, die Ansicht blieb leer); bei `unnoetig` liefert der Endpunkt das Netz selbst."""
         quelle = self.quelle()
         if quelle is None:
             return {'status': 'keine'}
         if quelle.stat().st_size <= self.GROSS_BYTES:
-            return {'status': 'unnoetig'}
+            return {'status': 'unnoetig', 'datei': quelle.name, 'adresse': '%s?v=%s' % (reverse('mesh3d_netzansicht', args=[self.kennung]), quelle.stat().st_mtime_ns)}
         if self.aktuell(quelle):
             stempel = self._gelesen(self.STAND)['stempel']
-            return {'status': 'bereit', 'mb': round(self.pfad().stat().st_size / 1e6, 1),
+            return {'status': 'bereit', 'datei': self.DATEI, 'mb': round(self.pfad().stat().st_size / 1e6, 1),
                     'adresse': '%s?v=%s' % (reverse('mesh3d_netzansicht', args=[self.kennung]), stempel[3])}
         if self.baut():
             return {'status': 'baut'}

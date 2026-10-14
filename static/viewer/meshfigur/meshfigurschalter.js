@@ -15,7 +15,7 @@
  */
 export class Meshfigurschalter {
 
-    static SCHLUESSEL = ['mesh', 'haare', 'kleider', 'nebeneinander', 'modell'];
+    static SCHLUESSEL = ['mesh', 'haare', 'kleider', 'nebeneinander', 'modell', 'haltung'];
 
     constructor(geaendert) {
         this.geaendert = geaendert;
@@ -43,5 +43,10 @@ export class Meshfigurschalter {
     /** Einen Knopf von der Bühne aus setzen — „Nebeneinander" schaltet so „Mesh" mit an. */
     setzen(schluessel, an) {
         this.felder[schluessel]?.classList.toggle('active', an);
+    }
+
+    /** Einen Knopf zeigen oder verbergen: „Haltung" gibt es nur, wenn der Lauf eine hat (`Meshfighaltung`). Verborgen wird über die Klasse — `.schaltknopf` setzt `display: flex`, das `hidden` überstimmt. */
+    anbieten(schluessel, ja) {
+        this.felder[schluessel]?.classList.toggle('hb-versteckt', !ja);
     }
 }

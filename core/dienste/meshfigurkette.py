@@ -13,6 +13,8 @@ die Größe der Person. Das Netz wird dann um den Faktor Vorgabe / Figur um den 
 
 import logging
 
+from .meshfigurhandmass import Meshfigurhandmass
+
 logger = logging.getLogger('core')
 
 __all__ = ['Meshfigurkette']
@@ -94,6 +96,8 @@ class Meshfigurkette:
             )
             if runde == 1 and float(self.optionen.get('hoehe_cm') or 0) > 0:
                 self._skalieren(stellung, verlauf[-1])
+        # Die Hände so groß wie die im Netz (14.10.2026, `Meshfigurhandmass`): ein Regler, kein Teil der Anpassung — sie wiegt die Hand mit 0,1.
+        Meshfigurhandmass.sicher(self.lauf, stellung)
         # `stellung`/`haltung_koerper` bleiben als Ergebnis DER KÖRPERKETTE stehen: ein Neustart ab
         # „gesicht" beginnt dort und nicht bei den Kopfreglern eines früheren Gesichtslaufs.
         self.job.ergebnis['koerper'] = {'runden': verlauf, 'haltung': haltung, 'stellung': stellung,

@@ -47,7 +47,7 @@ class Werkzeugmeshfigur:
          [(D + 'meshfiguroptionen.py', 'Meshfiguroptionen'), (A + 'meshfigureinstellungen.py', 'Meshfigureinstellungen')],
          'Schlüssel (Vorgabe): basis feminine | masculine | neutral (feminine); hoehe_cm 0…250 (0 = Größe des Netzes, sonst Scheitel ohne Haar); runden 1 | 2 | 3 (2); gesicht an | aus (an); '
          'daempfung weich 0,01 | mittel 0,02 | fest 0,05 (mittel); eigenmorph und symmetrie an | aus (an); textur mesh | hautton | aus (mesh); kopfhaut haar | haut (haar); kleidung weich | '
-         'ignorieren | wie_haut (weich); kleidungszug 0…100 % (60); kleidungsabstand_mm 0…40 (8); genitalform 0…100 % (30, nur männliche Grundfigur); kandidaten 1…64 (1); rest_kandidaten '
+         'nah | ignorieren | wie_haut (weich); kleidungszug 0…100 % (60); kleidung_reichweite_cm 2…20 (7, nur bei nah); kleidungsabstand_mm 0…40 (8); genitalform 0…100 % (30, nur männliche Grundfigur); kandidaten 1…64 (1); rest_kandidaten '
          '1…64 (16); referenz und blind (Testfall: Regler der Referenzfigur gesperrt); frisur beste | daz | eigen | aus; haarkarten und modell an | aus. pruefen() nimmt nur bekannte '
          'Schlüssel und Werte, alles andere fällt auf die Vorgabe. Normalensuche: 16 Nachbarn im Eigenmorph hoben die Punkte mit Gewicht an der Nase von 48 auf 91 %, in der Anpassung '
          'zog dieselbe Suche Lippen und Kinn 6–12 mm vor das Netz — deshalb dort 1.'),

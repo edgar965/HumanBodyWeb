@@ -29,7 +29,8 @@ Endpunkte: `core/api/mesh3d.py`; Katalog der Felder aus `/api/character/blendimp
     <p class="hb-hinweis">Ein Netz — Blender-Datei, FBX, OBJ oder GLB — wird zu einem Genesis-9-Modell mit Körper, Kleidung und Haar: Blender liest die Datei,
         „Mesh to 3D“ passt die Figur an den Körper an, Kleider und Haar werden eigene Genesis-Stücke, die Haut wird aus den Originaltexturen gebacken.
         Es ist derselbe Ablauf wie „Datei → Modell importieren…“ auf der Charakter-Seite. Der Auftrag startet nicht von selbst; Einstellungen, „Neu berechnen“
-        und die Ergebnisse stehen auf seiner Seite. Das Netz nennst du als Pfad oder lädst es vom Rechner hoch („Datei wählen“, „Ordner wählen“).</p>
+        und die Ergebnisse stehen auf seiner Seite. Das Netz nennst du als Pfad oder lädst es vom Rechner hoch („Datei wählen“, „Ordner wählen“).
+        Der Auftrag erscheint im Reiter, der unten gerade offen ist.</p>
     <div class="mesh3d-formate" id="mesh3d-formate" role="tablist"></div>
     <div class="mesh3d-wahl" id="mesh3d-wahl" title="Eine Datei oder einen ganzen Ordner (OBJ mit MTL und Bildern) vom Rechner hochladen — der Pfad der gelesenen Datei kommt dann ins Feld „Pfad“"></div>
     <div class="mesh3d-felder" id="mesh3d-felder"></div>
@@ -40,23 +41,44 @@ Endpunkte: `core/api/mesh3d.py`; Katalog der Felder aus `/api/character/blendimp
     </div>
 </div>
 
-<div class="card" id="mesh3d-liste">
+{% comment %}
+Reiter (Edgar, 13.10.2026: „einen neuen Reiter, das soll eine Kopie der aktuellen Seite sein, aber nur mit ausgewählten Testaufträgen. Es soll möglich sein, Jobs aus einem Tab zum anderen zu verschieben“):
+dieselbe Liste je Reiter, nach Zuordnung gefiltert (`Mesh3dreiter`, Datei `blendimport/mesh3d_reiter.json`). Das Formular „Neuer Auftrag“ steht einmal darüber; der neue Auftrag kommt in den Reiter, der gerade offen ist.
+Welcher Reiter beim Öffnen gilt: `#<reiter>` in der Adresse, sonst der zuletzt gewählte (`gemeinsam/seitenreiter.js`).
+{% endcomment %}
+<div class="seitenreiter" role="tablist" id="mesh3d-reiter">
+    {% for r in reiter %}
+    <button type="button" role="tab" data-reiter="{{ r.schluessel }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"><i class="fas {{ r.symbol }}"></i> {{ r.titel }}
+        <span class="mesh3d-reiter-zahl">({{ r.anzahl }})</span></button>
+    {% endfor %}
+</div>
+
+{% for r in reiter %}
+<div data-reiterfeld="{{ r.schluessel }}"{% if not forloop.first %} hidden{% endif %}>
+<div class="card mesh3d-liste">
     <div class="bildmodell-listenkopf">
-        <h2>Aufträge</h2>
+        <h2>{{ r.titel }}</h2>
         <div class="bildmodell-listenknoepfe">
-            <span class="hb-hinweis" id="mesh3d-liste-meldung"></span>
-            <button type="button" class="btn btn-secondary btn-sm" id="mesh3d-kopie-ohne" disabled
+            <span class="hb-hinweis mesh3d-liste-meldung"></span>
+            {% for z in r.ziele %}
+            <button type="button" class="btn btn-secondary btn-sm" data-aktion="verschieben" data-ziel="{{ z.schluessel }}" disabled
+                    title="Die gewählten Aufträge wandern in den Reiter „{{ z.titel }}“ — nur die Zuordnung ändert sich, nichts wird kopiert oder gelöscht">
+                <i class="fas fa-share-square"></i> <span>Nach „{{ z.titel }}“ verschieben (<span class="mesh3d-zaehler">0</span>)</span></button>
+            {% endfor %}
+            <button type="button" class="btn btn-secondary btn-sm" data-aktion="kopie-ohne" disabled
                     title="Neue Aufträge mit derselben Datei und denselben Einstellungen — nichts gerechnet">
-                <i class="fas fa-clone"></i> <span>Kopie ohne Daten (<span id="mesh3d-kopie-ohne-count">0</span>)</span></button>
-            <button type="button" class="btn btn-secondary btn-sm" id="mesh3d-kopie-alles" disabled
+                <i class="fas fa-clone"></i> <span>Kopie ohne Daten (<span class="mesh3d-zaehler">0</span>)</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" data-aktion="kopie-alles" disabled
                     title="Der ganze Auftrag samt Netzen, Figur, Haut und dem Auftrag „Mesh to 3D“ — das gespeicherte Modell wird nicht kopiert">
-                <i class="fas fa-copy"></i> <span>Kopie mit allen Daten (<span id="mesh3d-kopie-alles-count">0</span>)</span></button>
-            <button type="button" class="btn btn-danger btn-sm" id="mesh3d-bulk-delete" disabled>
-                <i class="fas fa-trash"></i> <span>Gewählte löschen (<span id="mesh3d-bulk-count">0</span>)</span></button>
+                <i class="fas fa-copy"></i> <span>Kopie mit allen Daten (<span class="mesh3d-zaehler">0</span>)</span></button>
+            <button type="button" class="btn btn-danger btn-sm" data-aktion="loeschen" disabled>
+                <i class="fas fa-trash"></i> <span>Gewählte löschen (<span class="mesh3d-zaehler">0</span>)</span></button>
         </div>
     </div>
-    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+    {% include "djangobase/_tabelle.html" with tabelle=r.tabelle %}
 </div>
+</div>
+{% endfor %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -65,6 +87,8 @@ Endpunkte: `core/api/mesh3d.py`; Katalog der Felder aus `/api/character/blendimp
 <script type="module">
 import { Mesh3dliste } from "{% fassungspfad 'viewer/mesh3d/mesh3dliste.js' %}";
 import { Mesh3dneu } from "{% fassungspfad 'viewer/mesh3d/mesh3dneu.js' %}";
+import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
+Seitenreiter.binden(document.getElementById('mesh3d-reiter'), 'mesh3d_reiter');
 Mesh3dliste.aufbauen();
 Mesh3dneu.aufbauen();
 </script>

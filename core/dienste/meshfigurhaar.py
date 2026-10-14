@@ -70,7 +70,11 @@ class Meshfigurhaar:
         from .sapienshaar import Sapienshaar
         sapiens = Sapienshaar(self.lauf).anwenden(maske, haar, len(scan.flaechen))
         np.savez_compressed(self.ablage.arbeit('haar_maske.npz'),
-                            **{k: maske[k] for k in ('haar', 'geschuetzt', 'unten', 'bart')})
+                            **{k: maske[k] for k in ('haar', 'geschuetzt', 'unten', 'bart')},
+                            # Sapiens sieht einen Hut als `Apparel`, nicht als Haar (`Sapienshaar.kopfbedeckung`); der Schritt „kleidung" macht daraus Zubehör. Ohne Sapiens: nichts.
+                            kopfbedeckung=maske.get('kopfbedeckung', np.zeros(len(scan.flaechen), dtype=bool)),
+                            # Ein Bart unter der Schnittebene (`Sapienshaar.langer_bart`): nur im Haar-Objekt, nicht in `haar` (die Frisurwahl misst die Hülle des Kopfhaars).
+                            langer_bart=maske.get('langer_bart', np.zeros(len(scan.flaechen), dtype=bool)))
         teilung = Haarteilung(scan.punkte, scan.flaechen, scan.uv_ecken, farben, maske, haar.rahmen)
         t2 = time.perf_counter()
         self.lauf.melden(0.5, 'Bilder ohne Haar / nur Haar')
@@ -102,13 +106,44 @@ class Meshfigurhaar:
             haar['objekt'] = {'fehler': 'Maske, Registrierung oder Netz fehlen oder passen nicht zusammen'}
             return None
         scan, punkte, wahl = netz
-        if scan.uv_ecken is None or scan.textur is None:
-            haar['objekt'] = {'fehler': 'Netz ohne Textur'}
+        if not scan.hat_aussehen():
+            haar['objekt'] = {'fehler': 'Netz ohne Textur und ohne Farben je Punkt'}
             return None
+        with np.load(self.ablage.arbeit('haar_maske.npz')) as d:
+            bart = d['langer_bart'] if 'langer_bart' in d.files else None
+        # Ein Bart, den SAM 3 als Bestandteil mit eigenem Objekt gefunden hat (`Meshfigurteile`, Gruppe „haar"), ist dieses Objekt — es steht neben JEDER Frisur der Bühne und nicht nur in „Haar aus dem Netz".
+        from .meshfigurteile import Meshfigurteile
+
+        teile = Meshfigurteile.holen(self.lauf)
+        eigene = Meshfigurteile.maske_eigene(teile)                     # jeder Bestandteil mit eigenem Objekt (Bart, aber auch ein Helm, den die Farbregel zum Haar zählte) steht nicht im Haarobjekt
+        eigener_bart = Meshfigurteile.maske_eigene(teile, ('haar',))
+        if eigene is not None and len(eigene) == len(wahl):
+            haar['teile_abgezogen'] = int((wahl & eigene).sum())
+            wahl = wahl & ~eigene
+        if eigener_bart is not None and len(eigener_bart) == len(wahl):
+            haar['bart_eigenes_objekt'] = int(eigener_bart.sum())
+        elif bart is not None and len(bart) == len(wahl) and bart.any():
+            wahl = wahl | bart                                       # der lange Bart hängt am Kopf, wie das Haar
+            haar['langer_bart'] = int(bart.sum())
+        from .meshfigurobjektflaechen import Meshfigurobjektflaechen
+
+        Meshfigurobjektflaechen.schreiben(self.ablage, 'haar', wahl)              # für die Abnahme: welche Flächen dieses Objekt wirklich trägt
         genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
+        # Haar und Bart hängen am Kopf (die Ruhelage ist eine Starrkörperbewegung des Kopfes): ganz an `head` gebunden, damit die Animation sie mitnimmt (`Meshfigurhautgewichte`).
+        from .meshfigurhautgewichte import Meshfigurhautgewichte
+
+        haut = Meshfigurhautgewichte.starr_von(self.ablage, len(genutzt), 'head')
         steckbrief = Haarobjekt.schreiben(self.ablage.ergebnis('haar.glb'), punkte[genutzt],
-                                          neu.reshape(-1, 3), scan.uv_ecken[wahl], scan.textur)
+                                          neu.reshape(-1, 3), haut=haut, **scan.aussehen(wahl, genutzt))
         haar['objekt'] = {'datei': 'haar.glb', **steckbrief}
+        # Dasselbe Haar unverändert in der Haltung des Netzes (`Meshfighaltung`): für die Bühne mit gebackener Haltung.
+        from .meshfighaltung import Meshfighaltung
+
+        haltung = Meshfighaltung.holen(self.lauf)
+        if haltung is not None:
+            steckbrief = Haarobjekt.schreiben(self.ablage.ergebnis('haar_haltung.glb'), haltung.punkte(scan.punkte[genutzt]),
+                                              neu.reshape(-1, 3), **scan.aussehen(wahl, genutzt))
+            haar['objekt']['haltung'] = {'datei': 'haar_haltung.glb', **steckbrief}
         return haar['objekt']
 
     def ruhenetz(self):

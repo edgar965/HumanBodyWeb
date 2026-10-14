@@ -85,8 +85,10 @@ class KatalogeTest(SimpleTestCase):
         self.assertIn('card12', stile)
         self.assertIn('fiber09', stile)
         self.assertIn('charakter:eg_kin_eyebrows', stile)
-        self.assertEqual(G9brauen.fuer_charakter('P3D Ursula'),
-                         ('fiber02', 'charakter:p3d_ursula_fiber_eyebrows_black'))
+        # Ursula: bis 18.09.2026 nur der Stil ihres Presets (`fiber02`, Schwarz); heute führt der Bestand ihr eigenes Netz
+        # (`charakter:p3d_ursula_fiber_eyebrows`, gemessen 12.10.2026) — `fuer_charakter` nimmt das eigene Netz vor dem Stil. Beides ist gültig.
+        stil, _farbe = G9brauen.fuer_charakter('P3D Ursula')
+        self.assertTrue(stil == 'fiber02' or stil.startswith('charakter:p3d_ursula'), stil)
         self.assertEqual(G9brauen.fuer_charakter('EG Kin'),
                          ('charakter:eg_kin_eyebrows', ''))
         self.assertIsNone(G9brauen.fuer_charakter('Base Feminine'))

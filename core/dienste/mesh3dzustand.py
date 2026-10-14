@@ -8,10 +8,12 @@ Arbeitsprozess noch lebt, gilt als gescheitert (wie `Blendimportendpunkte.zustan
 
 from ..daten.blendimportablage import Blendimportablage
 from .blendimportarbeiter import Blendimportarbeiter
+from .mesh3danimationswahl import Mesh3danimationswahl
 from .mesh3dbewegung import Mesh3dbewegung
 from .mesh3dergebnisse import Mesh3dergebnisse
 from .mesh3dnetzansicht import Mesh3dnetzansicht
 from .mesh3dschritte import Mesh3dschritte
+from .mesh3dvergleich import Mesh3dvergleich
 
 __all__ = ['Mesh3dzustand']
 
@@ -47,6 +49,19 @@ class Mesh3dzustand:
             live['detail'] = str(lauf['detail'])[:200]
         return live
 
+    @staticmethod
+    def _nachschnitt(datei):
+        """Pfad der aus `datei` gespeicherten bearbeiteten Datei oder `None` — nie ein Fehler: der Zustand der Seite hängt nicht an dieser Suche."""
+        if not datei or not str(datei).lower().endswith('.glb'):
+            return None
+        from .mesh3dnetzschnitt import Mesh3dnetzschnitt
+
+        try:
+            nach = Mesh3dnetzschnitt.nachfolger(datei)
+        except Exception:                                                       # noqa: BLE001 — eine Hilfsangabe, die den Zustand nicht kippen darf
+            return None
+        return str(nach) if nach else None
+
     @classmethod
     def von(cls, kennung):
         stand = cls.stand(kennung)
@@ -73,7 +88,8 @@ class Mesh3dzustand:
             'beendet': stand.get('beendet'),
             'dauer_s': stand.get('dauer_s'),
             'ab': stand.get('ab'),
-            'quelle': {'datei': quelle.get('datei'), 'format': quelle.get('format'), 'kandidaten': quelle.get('kandidaten') or []},
+            #: `nachschnitt`: die gespeicherte Datei, die aus dieser Quelle entstand (nach „Gespeicherten Schnitt zurücknehmen“ der Schnitt, den „… wiederholen“ zurückholt), sonst `None`
+            'quelle': {'datei': quelle.get('datei'), 'format': quelle.get('format'), 'kandidaten': quelle.get('kandidaten') or [], 'nachschnitt': cls._nachschnitt(quelle.get('datei'))},
             'einstellungen': stand.get('einstellungen') or {},
             'schritte': Mesh3dschritte.liste(stand),
             #: die Schritte, ab denen ein Lauf beginnen darf (die Kette kennt sie auch dann, wenn ein alter Stand sie nicht nennt)
@@ -91,6 +107,10 @@ class Mesh3dzustand:
             'modell': e.modell(),
             #: die schon gerechnete Bewegung für die Animationsleiste der 3D-Ansicht (`Mesh3dbewegung`), sonst `None`
             'bewegung': Mesh3dbewegung(kennung).stand(),
+            #: die Standardanimation dieses Auftrags (`Mesh3danimationswahl`): `{wahl, kategorie, name, standard, fehlt}` — die Auswahl unter der Animationsleiste
+            'animation': Mesh3danimationswahl(kennung).zustand(),
             #: die vereinfachte Netz-Kopie für die 3D-Ansicht (`Mesh3dnetzansicht`): `status` keine · unnoetig · bereit · baut · fehlt · fehler
             'netzansicht': Mesh3dnetzansicht(kennung).zustand(),
+            #: Hauptausgabe und Varianten nebeneinander, mit Empfehlungen (`Mesh3dvergleich`); `None` beim Weg „teile“
+            'varianten': Mesh3dvergleich.von(kennung, stand),
         }

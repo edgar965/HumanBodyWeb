@@ -7,7 +7,7 @@ bisher nicht hatte — eine Liste, eine Jobseite, das Anlegen ohne Start und das
 und Löschen laufen über die vorhandenen Endpunkte (`core/api/blendimport.py`, `blendimportpflege.py`).
 
 GET  /mesh-3D/                                   die Liste (Neuer Auftrag, Tabelle)
-GET  /mesh-3D/<kennung>/                         die Jobseite
+GET  /mesh-3D/<name>_<kennung>/                  die Jobseite (die reine Kennung und ein alter Name leiten um, `Mesh3dlink`)
 GET  /api/mesh3d/laufende/                       Kurzstand aller Aufträge (Liste im Takt)
 GET  /api/mesh3d/<kennung>/zustand/              der ganze Stand für die Jobseite (`Mesh3dzustand`)
 GET  /api/mesh3d/<kennung>/datei/<ordner>/<name> ein Bild des Imports (`ergebnis`, `arbeit`, `figur`)
@@ -20,7 +20,7 @@ import logging
 import re
 
 from django.http import Http404, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -34,6 +34,8 @@ from ..dienste.blendimportquelle import Blendimportquelle
 from ..dienste.blendimportweg import Blendimportweg
 from ..dienste.mesh3dbewegung import Mesh3dbewegung
 from ..dienste.mesh3dergebnisse import Mesh3dergebnisse
+from ..dienste.mesh3dlink import Mesh3dlink
+from ..dienste.mesh3dreiter import Mesh3dreiter
 from ..dienste.mesh3dtabelle import Mesh3dtabelle
 from ..dienste.mesh3dzustand import Mesh3dzustand
 
@@ -48,6 +50,8 @@ class Mesh3dendpunkte:
     ORDNER = ('ergebnis', 'arbeit', 'figur', 'pose', 'segmentierung')
     #: Diese Felder gehören zur Quelle, nicht zu den Einstellungen, die man auf der Jobseite ändert.
     QUELLFELDER = ('pfad', 'name', 'eigener_name')
+    #: Die Werte von `Blendimporteinstellungen` für `basis` — beim Anlegen muss einer davon ausdrücklich gewählt sein.
+    GRUNDFIGUREN = ('feminine', 'masculine', 'neutral')
 
     @staticmethod
     def _rumpf(request):
@@ -62,14 +66,26 @@ class Mesh3dendpunkte:
     @staticmethod
     @require_GET
     def liste(request):
-        return render(request, 'mesh3d.html', {'tabelle': Mesh3dtabelle().tabelle()})
+        """Eine Tabelle je Reiter (`Mesh3dreiter`): dieselbe Liste, nach Zuordnung gefiltert."""
+        aufgeteilt = Mesh3dreiter.aufteilen(Blendimportablage.alle())
+        reiter = [{'schluessel': s, 'titel': t, 'symbol': y, 'anzahl': len(aufgeteilt[s]), 'tabelle': Mesh3dtabelle(aufgeteilt[s]).tabelle(s),
+                   'ziele': [{'schluessel': z[0], 'titel': z[1]} for z in Mesh3dreiter.REITER if z[0] != s]} for s, t, y in Mesh3dreiter.REITER]
+        return render(request, 'mesh3d.html', {'reiter': reiter})
 
     @staticmethod
     @require_GET
-    def seite(request, kennung):
+    def seite(request, ort):
+        """Die Jobseite. Die Adresse ist `<name>_<kennung>` (`Mesh3dlink`); entscheidend ist die Kennung, ein anderer oder fehlender Name leitet auf die gültige Adresse um."""
+        kennung = Mesh3dlink.kennung_aus(ort)
+        if kennung is None:
+            raise Http404('Kein Auftrag unter %s' % ort)
         zustand = Mesh3dzustand.von(kennung)
         if zustand is None:
             raise Http404('Kein Auftrag %s' % kennung)
+        gueltig = Mesh3dlink.ort(kennung, zustand['name'])
+        if ort != gueltig:
+            ziel = '/mesh-3D/%s/' % gueltig
+            return redirect(ziel + ('?' + request.META['QUERY_STRING'] if request.META.get('QUERY_STRING') else ''))
         return render(request, 'mesh3d_auftrag.html', {'job': {'kennung': kennung, 'name': zustand['name']}, 'format': zustand['format']})
 
     # ---------------------------------------------------------------- Daten
@@ -137,7 +153,11 @@ class Mesh3dendpunkte:
         rumpf = Mesh3dendpunkte._rumpf(request)
         format = Blendimportformate.pruefen(rumpf.get('format'))
         klasse = Blendimportformate.einstellungen(format)
-        werte = klasse.pruefen(rumpf.get('werte'))
+        roh = rumpf.get('werte') if isinstance(rumpf.get('werte'), dict) else {}
+        # Die Grundfigur kennt nur der Mensch: eine falsche bleibt ohne Fehlermeldung (Vorgabe `feminine` für einen Mann) — darum keine stille Vorgabe, sondern eine Wahl.
+        if str(roh.get('basis')) not in Mesh3dendpunkte.GRUNDFIGUREN:
+            return JsonResponse({'error': 'Grundfigur fehlt — bitte wählen (%s)' % ', '.join(Mesh3dendpunkte.GRUNDFIGUREN)}, status=400)
+        werte = klasse.pruefen(roh)
         try:
             quelle = Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name'], Blendimportformate.endung(format)).steckbrief()
         except ValueError as fehler:
@@ -146,14 +166,19 @@ class Mesh3dendpunkte:
             weg, weg_grund = Blendimportweg.erkennen(format, quelle['datei'])
         except (OSError, ValueError) as fehler:
             return JsonResponse({'error': 'Die Datei lässt sich nicht lesen: %s' % fehler}, status=400)
+        if weg == Blendimportweg.NETZ:
+            # Was am Modell hängt, nimmt die Vorgabe des Wegs, nicht den Wert des letzten Auftrags (`Blendimportweg.VORGABEN_NETZ`) — außer das Formular schickt es ausdrücklich.
+            werte.update({k: v for k, v in Blendimportweg.VORGABEN_NETZ.items() if k not in roh})
         werte = klasse.speichern(werte)
         kennung = Auftragskennung.frei(timezone.now(), lambda k: Blendimportablage(k).ordner().exists())
         ablage = Blendimportablage(kennung)
         ablage.anlegen()
         ablage.stand_schreiben({'kennung': kennung, 'status': 'neu', 'bereich': 'mesh3d', 'quelle': quelle, 'einstellungen': werte,
                                 'weg': weg, 'weg_grund': weg_grund, 'angelegt': timezone.now().isoformat()})
+        if rumpf.get('reiter') in Mesh3dreiter.schluessel():          # der Auftrag steht im Reiter, in dem das Formular benutzt wurde
+            Mesh3dreiter.setzen([kennung], rumpf['reiter'])
         logger.info('Mesh-3D %s angelegt: %s (%s, Weg %s: %s)', kennung, quelle['name'], format, weg, weg_grund)
-        return JsonResponse({'ok': True, 'kennung': kennung, 'quelle': quelle, 'weg': weg, 'weg_grund': weg_grund})
+        return JsonResponse({'ok': True, 'kennung': kennung, 'link': Mesh3dlink.pfad(kennung, quelle.get('name') or kennung), 'quelle': quelle, 'weg': weg, 'weg_grund': weg_grund})
 
     @staticmethod
     @require_POST

@@ -39,6 +39,7 @@
 .auftrag-name-editierbar { cursor: text; border-bottom: 1px dashed transparent; }
 .auftrag-name-editierbar:hover { border-bottom-color: var(--border, #3a4250); }
 .auftrag-name-stift { vertical-align: middle; }
+.auftrag-name-fehler { color: var(--danger, #e5484d); margin-left: 0.6rem; font-size: 0.9rem; }
 .auftrag-name-eingabe { font-size: inherit; font-weight: inherit; min-width: 20ch; width: 60%; max-width: 100%; }
 .bildmodell-schritte { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; }
 .bildmodell-schritt { display: flex; align-items: center; gap: 6px; color: var(--text-muted, #888); font-size: 0.9rem; }

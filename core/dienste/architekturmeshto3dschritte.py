@@ -51,7 +51,7 @@ class Architekturmeshto3dschritte:
          'ergebnis.haar: Karte „Haar" (Netz ohne Haar / nur Haar), Befund.'),
         ('kleidung', 'python14',
          ['Meshfigurkleidung'], ['Meshfigurhautmodell', 'Meshfigurhautkarte', 'Meshfigurhautteilung', 'Meshfigurhautbaender'],
-         'Die Kleidung wird aus dem KÖRPERnetz geschnitten (Paket „Kleidung"; Option kleidung: weich | ignorieren | wie_haut). Dahinter steht der Hautton der KAHLEN Stellen — er '
+         'Die Kleidung wird aus dem KÖRPERnetz geschnitten (Paket „Kleidung"; Option kleidung: weich | nah | ignorieren | wie_haut; Hüte, die Sapiens als Zubehör sieht, gehen aus dem Haar ins Kleidungsobjekt). Dahinter steht der Hautton der KAHLEN Stellen — er '
          'gilt auch für die Körperkette und die Textur (vorher der von Rumpf und Oberschenkeln, bei Shirt und Shorts der Stoff). Das Objekt entsteht am Ende von vorschau.',
          'ergebnis.kleidung: Karte „Kleidung", Hautton, Bänder (je Körperabschnitt und 5 cm), Stücke.'),
         ('kalibrierung', 'python14 ruft, python10 rechnen',

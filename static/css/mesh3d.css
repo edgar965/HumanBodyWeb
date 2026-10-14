@@ -21,6 +21,8 @@
 /* Tabelle */
 .mesh3dtabelle td, .mesh3dtabelle th { white-space: nowrap; }
 .mesh3d-zeile { cursor: pointer; }
+/* Reiter der Liste: die Zahl der Aufträge neben dem Titel */
+.mesh3d-reiter-zahl { opacity: 0.6; font-weight: normal; margin-left: 2px; }
 
 /* Jobseite: 3D-Ansicht — die Animationsleiste wie `engine2d3dkleider.css` (`.engine2d3dkleider-animationsleiste`); `meshfigur.css` stellt die Bühnenspalte */
 .mesh3d-animationsleiste { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -29,6 +31,15 @@
 /* Die 3D-Ansicht und die Mesh-Ansicht darunter (12.10.2026): Höhe UND Breite über Regler oder Ziehgriff (`resize: both` braucht `overflow` ungleich `visible`; Grenzen wie die der Regler in der Vorlage,
    `Mesh3dbuehnengroesse`). Ohne gewählte Breite füllt die Ansicht die Karte (`width: 100%`), mit einer ist sie schmaler, aber nie breiter als die Karte (`max-width: 100%`). */
 #buehne-karte .meshfigur-buehnenspalte .mesh-betrachter { height: 560px; min-height: 240px; max-height: 1600px; min-width: 320px; max-width: 100%; resize: both; overflow: hidden; }
+
+/* Der sichtbare Ziehgriff unten rechts (13.10.2026, `Mesh3dbuehnengriff`): der des Browsers ist dunkelgrau auf dem schwarzen Grund der Leinwand und nicht zu sehen. */
+.mesh3d-griff { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; z-index: 6; cursor: nwse-resize; touch-action: none; border-radius: 0 0 6px 0; opacity: 0.85;
+    background: linear-gradient(135deg, transparent 0 40%, #fff 40% 47%, transparent 47% 58%, #fff 58% 65%, transparent 65% 76%, #fff 76% 83%, transparent 83%); filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)); }
+.mesh3d-griff:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.12); }
+/* Die Animationsleiste steht immer da; ohne gerechnete Bewegung ist sie blass, und die Zeile darunter sagt, was zu tun ist. */
+/* Die Standardanimation des Auftrags (13.10.2026, `Mesh3danimationswahlfeld`): zwei Auswahlfelder unter der Leiste — Kategorie und Datei der BVH-Bibliothek. */
+.mesh3d-animationswahl { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.mesh3d-animationswahl select { min-width: 12em; max-width: 28em; }
 
 /* Jobseite: Mesh-Ansicht (12.10.2026) — nur das Netz, unter der 3D-Ansicht. Volle Breite der Karte (`.mesh-betrachter` ist sonst ein Flex-Kind). */
 .mesh3d-groessenzeile { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
@@ -57,3 +68,27 @@
 .mesh3d-schrittzeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
 .mesh3d-schritt-uebersprungen { border-color: #888; color: #888; text-decoration: line-through; }
 .mesh3d-schritt-angehalten { border-color: #d59b1f; color: #d59b1f; }
+
+/* Karte „Empfehlungen und Varianten“ (13.10.2026): ein Block je Einstellung, darunter der Vergleich mit Bildern. */
+.mesh3d-variantenfeld { margin: 10px 0; padding: 8px 0; border-top: 1px solid rgba(128, 128, 128, 0.25); }
+.mesh3d-variantenkopf { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.mesh3d-empfehlung { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 4px 0; }
+.mesh3d-vergleich { margin: 14px 0; }
+.mesh3d-schluss { margin: 6px 0; font-weight: 600; }
+#buehne-ausgabe { max-width: 26em; }
+
+/* Netz bearbeiten (13.10.2026, `Mesh3dnetzwerkzeug`): Leiste über der Mesh-Ansicht, Liste der Teile des Netzes, Rahmen beim Ziehen. */
+.mesh3d-netzwerkzeug { margin: 6px 0; }
+.mesh3d-netzwerkzeug .hb-hinweis { margin: 6px 0; }
+.mesh3d-netzteile { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.mesh3d-netzteile .schaltknopf small { opacity: 0.75; }
+.mesh3d-netzteile .schaltknopf.entfernt { text-decoration: line-through; opacity: 0.45; }
+.mesh3d-netzergebnis code { user-select: all; }
+.mesh3d-rahmen { position: absolute; border: 1px dashed #ff3030; background: rgba(255, 48, 48, 0.14); pointer-events: none; z-index: 2; }
+.mesh3d-netzbetrachter.wz-teil canvas, .mesh3d-netzbetrachter.wz-rahmen canvas, .mesh3d-netzbetrachter.wz-farbe canvas, .mesh3d-netzbetrachter.wz-hover canvas { cursor: crosshair; }
+.mesh3d-farbfeld { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--text-muted, inherit); white-space: nowrap; }
+.mesh3d-farbfeld input { width: 4.2em; padding: 2px 4px; background: var(--bg-input, transparent); color: inherit; border: 1px solid var(--border, #555); border-radius: 4px; }
+/* Bereich per Hover (14.10.2026, `Mesh3dnetzhover`): der Regler „Granularität“ und die Zeile zum Bereich unter dem Zeiger. Die Zeile hat feste Höhe — erschiene sie erst mit dem Text, rutschte die Ansicht darunter weg, während der Zeiger über ihr steht. */
+.mesh3d-farbfeld.mesh3d-granularitaet input[type="range"] { width: 9em; padding: 0; border: 0; background: transparent; accent-color: #ffb04a; }
+.mesh3d-granularitaet-wert { display: inline-block; min-width: 3.6em; font-variant-numeric: tabular-nums; }
+.mesh3d-netzwerkzeug .mesh3d-hover-info { box-sizing: border-box; height: 1.5em; padding-top: 0; padding-bottom: 0; line-height: 1.5; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

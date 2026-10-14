@@ -26,6 +26,22 @@ class Mesh3dergebnisse:
         self.kennung = stand.get('kennung')
         self.ergebnis = stand.get('ergebnis') or {}
         self.ablage = Blendimportablage(self.kennung)
+        self._uebernommene_variante()
+
+    def _uebernommene_variante(self):
+        """Hat der Nutzer eine Variante übernommen (`Mesh3dvarianten.uebernehmen`), zeigt die Seite ihre Figur und ihr Modell statt der des ersten Laufs. Rechnet der Import gerade, gilt der Stand, wie er ist."""
+        if self.stand.get('bereich') != 'mesh3d' or self.stand.get('status') == 'laeuft':
+            return
+        from .mesh3dvarianten import Mesh3dvarianten
+
+        job = Mesh3dvarianten.haupt_job(self.kennung)
+        if job is None:
+            return
+        ergebnis = dict(self.ergebnis)
+        ergebnis['figur'] = Mesh3dvarianten.figur_von(job)
+        if job.modell:
+            ergebnis['modell'] = {'name': job.modell, 'weg': 'netz'}
+        self.ergebnis = ergebnis
 
     # ---------------------------------------------------------------- Adressen
 
@@ -96,10 +112,20 @@ class Mesh3dergebnisse:
             return None
         bilder = [{'schluessel': s, 'titel': t, 'adresse': self.adresse('figur', d)} for s, d, t in self.FIGURBILDER]
         mess = e.get('schammessung') if isinstance(e.get('schammessung'), dict) else None
-        return {'id': e.get('id'), 'kennung': e['kennung'], 'regler': e.get('regler'), 'rest': e.get('rest'),
+        return {'id': e.get('id'), 'kennung': e['kennung'], 'fehlt': self._auftrag_fehlt(e.get('id')), 'regler': e.get('regler'), 'rest': e.get('rest'),
                 'hautmodell': e.get('hautmodell'), 'kleidung': e.get('kleidung'),
                 'schammessung': {'urteil': mess.get('urteil'), 'abweichungen': mess.get('abweichungen')} if mess else None,
                 'bilder': [b for b in bilder if b['adresse']], **self._figurlauf()}
+
+    @staticmethod
+    def _auftrag_fehlt(figur_id):
+        """Nennt der Stand einen Auftrag „Mesh to 3D“, den es nicht mehr gibt? (Gemessen 13.10.2026: eine Kopie nannte den Auftrag ihres gelöschten Originals — die Bühne bekam 404.)"""
+        from ..models import Meshfigurauftrag
+
+        try:
+            return bool(figur_id) and not Meshfigurauftrag.objects.filter(pk=figur_id).exists()
+        except (ValueError, TypeError):                     # keine gültige UUID im Stand
+            return True
 
     def _figurlauf(self):
         """Läuft der Schritt „figur“ gerade: Fortschritt des Auftrags „Mesh to 3D“ (Schritt, Prozent)."""

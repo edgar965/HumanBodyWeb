@@ -17,18 +17,27 @@ class CharacterApiTests(TestCategory):
         return isinstance(presets, list) and len(presets) > 0, f'{len(presets)} Presets'
 
     @staticmethod
-    def test_models_contains_rig2():
-        """Rig2 in models-Liste vorhanden"""
+    def _studio_standard():
+        """Das Standardmodell des BVH-Studios (Vorgabe der Einstellungsseite) — seit 12.10.2026 statt des festen Namens `Rig2`:
+        `Rig1/2/3/5` wurden mit „13 alte Modelle entfernt“ gelöscht, die Vorgabe zeigte weiter auf `Rig2` (404)."""
+        from core.api.seite_bvhstudio_einstellungen import BvhStudioEinstellungenSeite
+
+        return BvhStudioEinstellungenSeite.VORGABEN['studio_default_model']
+
+    @staticmethod
+    def test_models_contains_studio_default():
+        """Das Standardmodell des Studios steht in der models-Liste"""
         code, data = Netzruf.senden('/api/character/models/')
         if code != 200:
             return False, f'HTTP {code}'
+        name = CharacterApiTests._studio_standard()
         names = {p.get('name') for p in data.get('presets', [])}
-        return 'Rig2' in names, 'Rig2 fehlt' if 'Rig2' not in names else ''
+        return name in names, f'{name} fehlt' if name not in names else ''
 
     @staticmethod
-    def test_model_detail_rig2():
-        """GET /api/character/model/Rig2/ → HTTP 200"""
-        code, _ = Netzruf.senden('/api/character/model/Rig2/')
+    def test_model_detail_studio_default():
+        """GET /api/character/model/<Standardmodell des Studios>/ → HTTP 200"""
+        code, _ = Netzruf.senden(f'/api/character/model/{CharacterApiTests._studio_standard()}/')
         return code == 200, f'HTTP {code}'
 
     @staticmethod

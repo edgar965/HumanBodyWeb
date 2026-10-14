@@ -12,6 +12,8 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Engine2d3dKleideranimation } from '../engine2d3dkleider/engine2d3dkleideranimation.js';
 import { Meshfigurbuehne } from '../meshfigur/meshfigurbuehne.js';
+import { Meshfigurgelenke } from '../meshfigur/meshfigurgelenke.js';
+import { Mesh3danimationswahlfeld } from './mesh3danimationswahlfeld.js';
 import { Mesh3dbuehnengroesse } from './mesh3dbuehnengroesse.js';
 import { Mesh3dnetzbuehne } from './mesh3dnetzbuehne.js';
 
@@ -24,11 +26,14 @@ export class Mesh3dbuehne {
     constructor(seite) {
         this.seite = seite;
         this.figurId = null;
+        /** Die Variante, die statt der Ausgabe des Auftrags gezeigt wird (`Mesh3dvarianten`, Auswahl „Ausgabe“); `null` = die Ausgabe des Auftrags. */
+        this.ausgabe = null;
         this.bewegung = null;
         this.netzansicht = null;
         this._angestossen = false;
         this._marke = '';
         this._holt = false;
+        this._rechnet = false;
         this.knopf = document.getElementById('buehne-animation');
         this.meldung = document.getElementById('animation-meldung');
         this.netzmeldung = document.getElementById('netzansicht-meldung');
@@ -39,7 +44,8 @@ export class Mesh3dbuehne {
             dateiAdresse(ordner, name) {
                 if (name === Mesh3dbuehne.BEWEGUNG) return diese.bewegung?.adresse || '';
                 // Das Netz im Eingang kann Millionen Dreiecke haben (Zauberer: 67 MB, Laden 2–7 s, Parsen 1,9 s): die Ansicht nimmt die vereinfachte Kopie, wenn es sie gibt.
-                if (ordner === 'eingang' && diese.netzansicht?.status === 'bereit') return diese.netzansicht.adresse;
+                // Ohne Auftrag „Mesh to 3D“ (`figurId` leer, siehe `zeigen`) gibt es nur diese Adresse — auch bei einem kleinen Netz (`unnoetig`).
+                if (ordner === 'eingang' && diese.netzansicht?.adresse && (diese.netzansicht.status === 'bereit' || !diese.figurId)) return diese.netzansicht.adresse;
                 return `/api/meshfigur/${diese.figurId}/datei/${ordner}/${encodeURIComponent(name)}`;
             },
             /** Solange die Kopie gebaut wird, lädt `Meshfigurnetze` nichts (weder das Original noch sie). */
@@ -50,16 +56,39 @@ export class Mesh3dbuehne {
         this.groesse = new Mesh3dbuehnengroesse(document.getElementById('buehne'), document.getElementById('buehne-groesse'), document.getElementById('buehne-groesse-wert'), Mesh3dbuehne.SCHLUESSEL,
             { regler: document.getElementById('buehne-breite'), wert: document.getElementById('buehne-breite-wert'), schluessel: Mesh3dbuehne.SCHLUESSEL_BREITE });
         this.animation = new Engine2d3dKleideranimation(this.adapter, this.buehne);
+        // Daz' Gelenkkorrekturen (JCM) in der Bewegung, wie in Charakter und Studio: Haut, Augen, Mund und die Objekte aus dem Netz, die anliegen (Edgar, 14.10.2026).
+        this.gelenke = new Meshfigurgelenke(this.buehne);
+        this.animation.nachBild = () => this.gelenke.takt();
+        // Eine Bewegung gehört auf die Figur in Ruhe (A-Pose): der erste Bedienbefehl der Leiste (Knopf ODER Taste) schaltet „Haltung“ aus, die Figur wird in Ruhe neu gebaut (`Meshfigurbuehne.haltungAus`),
+        // und der Befehl läuft danach von selbst (`Engine2d3dKleideranimation.bedienen`). Die Leiste steht immer da (Edgar, 13.10.2026: „die Animationsleiste ist wieder weg“).
+        this.animation.immerSichtbar = true;
+        this.animation.vorBedienung = () => this.buehne.haltungAus();
+        // Play, Leertaste und alle anderen Befehle ohne Bewegung rechnen sie zuerst (die Standardanimation des Auftrags) und laufen danach von selbst (Edgar, 13.10.2026: „Play ist ausgegraut, auch Space nicht“).
+        this.animation.ohneBewegung = () => {
+            if (this._rechnet) return true;
+            if (this.knopf.disabled) return false;
+            this.rechnen();
+            return true;
+        };
+        // Die Standardanimation dieses Auftrags (13.10.2026, Auswahl unter der Leiste): der Knopf „Animation“ rechnet die gewählte Datei; eine neue Wahl rechnet eine schon vorhandene Bewegung neu.
+        this.wahl = new Mesh3danimationswahlfeld(seite, () => this._nachWahl());
         // Die zweite Ansicht darunter (Karte „Mesh-Ansicht“): nur das Netz, dasselbe Licht, mittig — liest dieselbe „Seite“, also dieselbe Netz-Kopie.
-        this.netzbuehne = new Mesh3dnetzbuehne(this.adapter);
+        this.netzbuehne = new Mesh3dnetzbuehne(this.adapter, this.seite);
         this.knopf.disabled = true;
         this.knopf.addEventListener('click', () => this.rechnen());
     }
 
     async zeigen(z) {
         this._bewegung(z);
-        const id = z.figur?.id;
-        if (!id) { this.knopf.disabled = true; this.netzbuehne.zeigen(null); return; }
+        this.wahl.zeigen(z.animation);
+        const id = this.ausgabe || z.figur?.id;
+        if (!id || (!this.ausgabe && z.figur.fehlt)) {
+            // Keine Figur: die Mesh-Ansicht zeigt das Netz trotzdem (Edgar, 13.10.2026: „Mesh-Ansicht auch ohne den Auftrag Mesh to 3D“).
+            this.knopf.disabled = true;
+            this._netzOhneFigur(z);
+            if (id) this.netzmeldung.textContent = `Der Auftrag „Mesh to 3D“ ${z.figur.kennung} dieses Imports gibt es nicht mehr (er wurde mit einem anderen Import gelöscht) — „Neu berechnen“ ab „Figur“ rechnet ihn neu.`;
+            return;
+        }
         this.figurId = id;
         this._netzansicht(z.netzansicht || null);
         const laeuft = z.status === 'laeuft' && z.schritt === 'figur';
@@ -79,6 +108,25 @@ export class Mesh3dbuehne {
         } finally {
             this._holt = false;
         }
+    }
+
+    /** Eine Variante statt der Ausgabe des Auftrags zeigen (`id`) oder zu ihr zurück (`null`); der nächste Takt der Seite baut die Bühne neu. */
+    ausgabeWaehlen(id) {
+        if (this.ausgabe === id) return;
+        this.ausgabe = id;
+        this._marke = '';
+        if (this.seite.zustand) this.zeigen(this.seite.zustand);
+    }
+
+    /**
+     * Das Netz der Mesh-Ansicht, wenn es keinen Auftrag „Mesh to 3D“ gibt (noch nicht angelegt oder gelöscht): der Zustand der Seite nennt die Datei (`netzansicht.datei`, `.adresse`), die Lage ist die
+     * des Imports (`koerper.glb` steht schon in Menschenhöhe) — `Meshfigurnetze` stellt es ohne Lage der Erkennung mittig auf den Boden. Bis das Netz da ist (`keine`) oder gebaut wird, bleibt die Karte leer.
+     */
+    _netzOhneFigur(z) {
+        this._netzansicht(z.netzansicht || null);
+        const n = this.netzansicht;
+        const bereit = n && ['bereit', 'unnoetig'].includes(n.status) && n.adresse;
+        this.netzbuehne.zeigen(bereit ? { eingang: { datei: n.datei || 'netz.glb' }, ergebnis: {} } : null);
     }
 
     /**
@@ -106,11 +154,20 @@ export class Mesh3dbuehne {
         const b = z.bewegung;
         this.bewegung = b ? { adresse: `/api/mesh3d/${this.seite.kennung}/bewegungsdatei/?v=${encodeURIComponent(b.stand)}`, bilder: b.bilder } : null;
         this.animation.zeigen({ ergebnis: { film: this.bewegung ? { bewegung: Mesh3dbuehne.BEWEGUNG } : {} } });
-        this.meldung.textContent = b ? `Bewegung: ${String(b.bvh).split(/[\\/]/).pop()}, ${b.bilder} Bilder.` : '';
+        // Ohne Bewegung sagt die Zeile, was zu tun ist (blass ist die Leiste nicht mehr: „ausgegraut“ las sich als gesperrt); während der Knopf rechnet, bleibt seine Meldung stehen.
+        if (b) this.meldung.textContent = `Bewegung: ${String(b.bvh).split(/[\\/]/).pop()}, ${b.bilder} Bilder.`;
+        else if (!this._rechnet) this.meldung.textContent = 'Noch keine Bewegung — Play, die Leertaste oder der Knopf „Animation“ rechnen sie (Standardanimation).';
     }
 
-    /** Knopf „Animation“: die Bewegung auf der Figur rechnen (Vorgabe der Tanz), danach erscheint die Leiste. */
+    /** Nach einer neuen Standardanimation: liegt schon eine Bewegung auf der Figur, rechnet sie mit der neuen Datei (sonst spielte die Leiste die alte); ohne Bewegung rechnet erst der Knopf. */
+    async _nachWahl() {
+        if (this.bewegung && !this.knopf.disabled) await this.rechnen();
+        else if (!this.bewegung) this.meldung.textContent = 'Noch keine Bewegung — Play, die Leertaste oder der Knopf „Animation“ rechnen sie mit der gewählten Standardanimation.';
+    }
+
+    /** Knopf „Animation“: die Bewegung auf der Figur rechnen (die Standardanimation des Auftrags, Vorgabe DanceKurz), danach erscheint die Leiste. */
     async rechnen() {
+        this._rechnet = true;
         this.knopf.disabled = true;
         this.meldung.textContent = 'Bewegung wird gerechnet …';
         try {
@@ -121,8 +178,10 @@ export class Mesh3dbuehne {
             await this.seite.aktualisieren();
         } catch (fehler) {
             this.meldung.textContent = '';
+            this.animation.befehlVerwerfen();
             this.seite.fehlerband.meldung(`Animation nicht gerechnet: ${fehler.daten?.error || fehler.message}`);
         } finally {
+            this._rechnet = false;
             this.knopf.disabled = false;
         }
     }

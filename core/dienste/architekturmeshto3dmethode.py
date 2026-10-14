@@ -69,7 +69,8 @@ class Architekturmeshto3dmethode:
                                                              'Lippen und Kinn dorthin. Seit 29.09.2026 legt `Meshfigurlandmarkenflaeche` sie vor der Anpassung auf die Fläche.'),
         ('Finger und Zehen', 'In Bild-zu-3D-Netzen verkleben Finger und Zehen; sie zählen mit Gewicht 0 bzw. schwach. Das Ergebnis ist dort kein Maß für die Figur.'),
         ('Kleidung im Netz', 'Sie zieht die Figur nur schwach (Option kleidung weich, kleidungszug 60 %): ohne Zug wird der Rumpf ein Standardkörper — bei Edgar ein Sixpack statt des Bauchs —, zu viel Zug bläht '
-                             'die Figur unter weiten Stellen auf.'),
+                             'die Figur unter weiten Stellen auf (Zauberer in Robe, 12.10.2026: Oberschenkel 103,5 cm mit weich, 51,4 ohne Zug, Grundfigur 53,8). Die Option nah zieht nur Stoff, der an der GRUNDFIGUR '
+                             'höchstens kleidung_reichweite_cm (7) entfernt liegt, und legt die Menge einmal fest (Oberschenkel 72,2 cm); bei enger Kleidung (Edgar) ändert sie nichts (Maße ±0,1 cm).'),
         ('Nase und Mund', 'Offen (29.09.2026): 16 von 41 Nasenreglern stehen an der Grenze; der gespitzte Mund des Netzes bleibt 4,7 mm (p90 11 mm) daneben.'),
         ('Regler am Anschlag', 'Auch die acht Regionen-Regler (Hals, Nacken, Unterarm, Handgelenk, Oberschenkel, Oberschenkel hinten, Unterschenkel, Knöchel) haben die Zahl der Regler am Anschlag nicht gesenkt: '
                                'Runde 2 neun mit und ohne sie (drei Läufe, 08.10.2026, Details in meshfigur.md); die Vorgabe der Option koerper.regionen in 2D3D Kleider bleibt AUS.'),

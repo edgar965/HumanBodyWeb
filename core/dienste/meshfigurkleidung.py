@@ -17,6 +17,7 @@ Ablage:
 """
 
 import logging
+import os
 import time
 
 import numpy as np
@@ -62,6 +63,7 @@ class Meshfigurkleidung:
         from Kleidung.kleidungsteilung import Kleidungsteilung
 
         from ..daten.meshto3dpfad import Meshto3dpfad
+        from .meshfigurhaarabzug import Meshfigurhaarabzug
 
         t0 = time.perf_counter()
         scan, daten = self.koerpernetz()
@@ -81,9 +83,14 @@ class Meshfigurkleidung:
         regel = Kleidungsmaske(scan.punkte, scan.flaechen, entscheidung['haut'], landmarken['koerper'],
                                landmarken.get('gesicht'), karte)
         maske, sapiens = self._sapiens(regel, regel.rechnen(), karte, scan, daten)
+        maske, hut = self._kopfbedeckung(maske, regel)
+        maske = self._bart_abziehen(maske, regel)
+        maske, bereinigung = self._bereinigen(maske, regel, np.asarray(modell.ist_haut(entscheidung['farben']), dtype=bool))
+        maske = Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)      # NACH dem Bereinigen: Löcher füllen und Rand glätten holten Haarflächen sonst zurück in den Stoff
         # `maske['haut']`, nicht `entscheidung['haut']`: der Hautton nur dort, wo kein Stück gilt (`Kleidungsmaske.abschliessen`) — mit der Sapiens-Maske stand er sonst auf Hose und Socken.
+        # `hautfarbe`: nur die FARBE gegen das Hautmodell (nicht die Hautkarte, die Stoffbereiche ausnimmt) — damit schält `objekt` den hautfarbenen Textursaum an der Kante ab (`Kleidung.kleidungsrand`).
         np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz'), kleidung=maske['kleidung'],
-                            stueck=maske['stueck'], haut=maske['haut'])
+                            stueck=maske['stueck'], haut=maske['haut'], hautfarbe=np.asarray(modell.ist_haut(entscheidung['farben']), dtype=bool))
         teilung = Kleidungsteilung(scan.punkte, scan.flaechen, scan.uv_ecken, entscheidung['farben'], maske,
                                    karte.inhalt)
         t1 = time.perf_counter()
@@ -98,6 +105,77 @@ class Meshfigurkleidung:
         }
         if sapiens is not None:
             self.job.ergebnis['kleidung']['sapiens'] = sapiens
+        if hut is not None:
+            self.job.ergebnis['kleidung']['kopfbedeckung'] = hut
+        if bereinigung is not None:
+            self.job.ergebnis['kleidung']['bereinigung'] = bereinigung
+
+    @staticmethod
+    def _hautrand_behandeln(scan, wahl, hautfarbe, art='umfaerben'):
+        """`(wahl, uv_ecken, Bericht)` — der hautfarbene Textursaum an der Kante des Objekts (`Kleidung.kleidungsrand`): er stand an jedem Rand als oranger Streifen statt eines Saums. `art`:
+        `umfaerben` (Vorgabe seit 13.10.2026) — die Flächen bleiben, bekommen aber die UV des Gewebes daneben; `entfernen` — sie kommen nicht ins Objekt (so bis 13.10.2026: Edgar „die Hose hat keinen Saum“, dann „der Saum der Hose fehlt“ —
+        mit dem orangen Streifen ging die Saumfalte selbst verloren); `aus` — wie das Netz. Ohne `hautfarbe` in der Maske (Lauf vor dem 12.10.2026 abends) bleibt alles, wie es ist (Bericht None)."""
+        if art == 'aus' or hautfarbe is None or len(hautfarbe) != len(wahl) or scan.uv_ecken is None:        # ohne UV (Farben je Punkt) gibt es keinen Textursaum
+            return wahl, scan.uv_ecken, None
+        from Kleidung.kleidungsrand import Kleidungsrand
+
+        ids = np.flatnonzero(wahl)
+        nachbarn = Kleidungsrand.nachbarn_aus(scan.flaechen[ids])
+        band = Kleidungsrand.hautband(nachbarn, hautfarbe[ids], scan.flaecheninhalte()[ids])
+        if not band.any():
+            return wahl, scan.uv_ecken, None
+        bericht = {'flaechen': int(band.sum()), 'anteil': round(float(band.mean()), 4), 'art': art}
+        if art == 'entfernen':
+            neu = wahl.copy()
+            neu[ids[band]] = False
+            return neu, scan.uv_ecken, bericht
+        uv, umgefaerbt = Kleidungsrand.umfaerben(nachbarn, band, scan.uv_ecken[ids], np.asarray(scan.punkte)[np.asarray(scan.flaechen)[ids]].mean(axis=1))
+        uv_ecken = np.array(scan.uv_ecken, copy=True)
+        uv_ecken[ids] = uv
+        bericht['umgefaerbt'] = int(umgefaerbt.sum())
+        return wahl, uv_ecken, bericht
+
+    def _bart_abziehen(self, maske, regel):
+        """Was der Schritt „haar" als langen Bart ablegt (`haar_maske.npz`, `langer_bart`, `Sapienshaar.langer_bart`), ist Haar und nicht Kleidung. Fehlt die Ablage oder der Schlüssel: die Maske, wie sie ist."""
+        pfad = self.ablage.arbeit('haar_maske.npz')
+        if not os.path.isfile(pfad):
+            return maske
+        with np.load(pfad) as d:
+            bart = d['langer_bart'] if 'langer_bart' in d.files else None
+        stueck = np.asarray(maske['stueck'])
+        if bart is None or len(bart) != len(stueck) or not (bart & (stueck > 0) & (stueck != 4)).any():
+            return maske
+        stueck = stueck.copy()
+        stueck[bart & (stueck > 0) & (stueck != 4)] = 0
+        return regel.abschliessen(stueck)
+
+    def _bereinigen(self, maske, regel, hautfarbe=None):
+        """`(maske, bericht)`: Löcher im Stoff füllen, Zubehör über nicht hautfarbene Nachbarflächen vervollständigen und den Rand glätten (`Kleidung.kleidungsbereinigung`; `hautfarbe` (F,) bool: die Farbe gegen das Hautmodell) — die Sapiens-Maske lässt Flächen mitten in Hose und Hemd als Haut stehen
+        (Edgar: „Haut geht durch die Hose"), ihr Rand ist eine Zackenreihe, die Uhr fehlen Teile des Armbands. Ändert sich nichts, bleibt die Maske, wie sie ist (None)."""
+        from Kleidung.kleidungsbereinigung import Kleidungsbereinigung
+
+        stueck, bericht = Kleidungsbereinigung(regel.karte.nachbarn(), regel.inhalt, regel.mitte[:, 1], regel.kopf_ab()).bereinigen(maske['stueck'], hautfarbe)
+        if not (bericht['loch_flaechen'] or bericht['rand_geaendert_flaechen']):
+            return maske, None
+        return regel.abschliessen(stueck), bericht
+
+    def _kopfbedeckung(self, maske, regel):
+        """`(maske, bericht)`: ein Hut ist Zubehör, nicht Haar und nicht Kopf. Der Schritt „haar" legt die Flächen ab, die Sapiens als `Apparel` im Haarbereich sieht (`haar_maske.npz`, `kopfbedeckung`,
+        `Sapienshaar.kopfbedeckung`); der Kopf ist sonst nie Kleidung (`Kleidungsmaske.kopf_ab`), also gehören sie hier ausdrücklich dazu — als Stück „Zubehör", damit sie im Objekt „Kleidung" stehen
+        und nicht im Haar. Fehlt die Ablage oder ist kein Hut da, bleibt die Maske, wie sie ist (None)."""
+        pfad = self.ablage.arbeit('haar_maske.npz')
+        if not os.path.isfile(pfad):
+            return maske, None
+        with np.load(pfad) as d:
+            hut = d['kopfbedeckung'] if 'kopfbedeckung' in d.files else None
+        if hut is None or not hut.any() or len(hut) != len(maske['stueck']):
+            return maske, None
+        from Kleidung.kleidungsmaske import Kleidungsmaske
+
+        stueck = np.asarray(maske['stueck']).copy()
+        stueck[hut] = Kleidungsmaske.ZUBEHOER
+        neu = regel.abschliessen(stueck)
+        return neu, {'flaechen': int(hut.sum()), 'cm2': round(float(regel.inhalt[hut].sum()) * 1e4, 0)}
 
     def _sapiens(self, regel, maske, karte, scan, daten):
         """`(maske, bericht)`: die Sapiens-Fassung der Maske (`Kleidung/sapiensmaske.py`), wenn der Lauf sie verlangt — `lauf.sapiens_maske` setzt nur „2D3D Kleider" aus der Option
@@ -168,6 +246,7 @@ class Meshfigurkleidung:
         scan, _ = self.koerpernetz()
         with np.load(pfad) as d:
             wahl = d['kleidung']
+            hautfarbe = d['hautfarbe'] if 'hautfarbe' in d.files else None
         if len(wahl) != len(scan.flaechen):
             kleidung['objekt'] = {'fehler': 'Maske passt nicht zum Netz'}
             return None
@@ -176,17 +255,49 @@ class Meshfigurkleidung:
             # von `fehler` eine Meldung, von `hinweis` nichts.
             kleidung['objekt'] = {'hinweis': 'Keine Kleidung erkannt'}
             return None
-        if scan.uv_ecken is None or scan.textur is None:
-            kleidung['objekt'] = {'fehler': 'Netz ohne Textur'}
+        if not scan.hat_aussehen():
+            kleidung['objekt'] = {'fehler': 'Netz ohne Textur und ohne Farben je Punkt'}
             return None
         with np.load(ruhe) as d:
             kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
             teil = np.asarray(d['teil']) if 'teil' in d.files else None
         # Mit Körperteilen (12.10.2026): eine Hand neben dem Saum zog die Unterhose mit nach außen (Fahne bis 131 mm) — `Meshfigurkleidungsruhelage`.
         ruhelage = Meshfigurkleidungsruhelage(kaefig_ruhe, np.load(posiert).astype(np.float64), teil)
+        wahl, uv_ecken, hautband = self._hautrand_behandeln(scan, wahl, hautfarbe, str((self.job.optionen or {}).get('hautband') or 'umfaerben'))
+        if hautband:
+            kleidung['objekt_hautrand'] = hautband
+        # Was als eigener Bestandteil ein Objekt hat (Stab, Tasche — `Meshfigurteile`, SAM 3), steht nicht noch einmal im Kleidungsobjekt.
+        from .meshfigurteile import Meshfigurteile
+
+        eigene = Meshfigurteile.maske_eigene(Meshfigurteile.holen(self.lauf))
+        if eigene is not None and len(eigene) == len(wahl):
+            abgezogen = int((wahl & eigene).sum())
+            wahl = wahl & ~eigene
+            kleidung['teile_abgezogen'] = abgezogen
+            if not wahl.any():
+                kleidung['objekt'] = {'hinweis': 'Die Kleidung besteht nur aus eigenen Bestandteilen'}
+                return None
+        from .meshfigurobjektflaechen import Meshfigurobjektflaechen
+
+        Meshfigurobjektflaechen.schreiben(self.ablage, 'kleidung', wahl)       # für die Abnahme: welche Flächen dieses Objekt wirklich trägt
         genutzt, neu = np.unique(scan.flaechen[wahl].reshape(-1), return_inverse=True)
         punkte = ruhelage.punkte(scan.punkte[genutzt], neu.reshape(-1, 3))
+        # Knochen und Gewichte für die Animation (`Meshfigurhautgewichte`): aus der Käfig-Nachbarschaft, die auch die Rückrechnung benutzt hat.
+        from .meshfigurhautgewichte import Meshfigurhautgewichte
+
+        from .meshfigurtanzpruefung import Meshfigurtanzpruefung
+
+        # Animationsprüfung (13.10.2026): reißt der Stoff im Tanz, wählt sie die weichen statt der alten Gewichte (`ergebnis.animation`); Option `animationspruefung`.
+        haut = Meshfigurhautgewichte.kaefig_von(self.ablage, ruhelage, scan.punkte[genutzt], Meshfigurtanzpruefung.fuer(self.lauf), 'kleidung', neu.reshape(-1, 3), punkte)
         steckbrief = Kleidungsobjekt.schreiben(self.ablage.ergebnis('kleidung.glb'), punkte, neu.reshape(-1, 3),
-                                               scan.uv_ecken[wahl], scan.textur)
+                                               haut=haut, **scan.aussehen(wahl, genutzt, uv_ecken))
         kleidung['objekt'] = {'datei': 'kleidung.glb', **steckbrief, 'entposen': ruhelage.entposen.pruefen(), 'ruhelage': ruhelage.befund}
+        # Dasselbe Stück unverändert in der Haltung des Netzes (`Meshfighaltung`): für die Bühne mit gebackener Haltung, ohne Rückrechnung.
+        from .meshfighaltung import Meshfighaltung
+
+        haltung = Meshfighaltung.holen(self.lauf)
+        if haltung is not None:
+            steckbrief = Kleidungsobjekt.schreiben(self.ablage.ergebnis('kleidung_haltung.glb'), haltung.punkte(scan.punkte[genutzt]), neu.reshape(-1, 3),
+                                                   **scan.aussehen(wahl, genutzt, uv_ecken))
+            kleidung['objekt']['haltung'] = {'datei': 'kleidung_haltung.glb', **steckbrief}
         return kleidung['objekt']

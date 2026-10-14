@@ -63,8 +63,10 @@ class GelenkeLipsyncTest(SimpleTestCase):
         # 24.09.2026 (Damira „Naturally Bending") kommen die _cbs_*-Dateien
         # der gekauften Charaktere (Damira, Ursula, Kin, Olesia) dazu — die
         # Summe haengt am Bibliotheksstand, wie hier ueblich (`tests.md`).
+        # 12.10.2026: 221/167 statt 218/164 — drei Gelenkkorrekturen mehr durch Charakterpakete, die nach dem 24.09. dazukamen
+        # (`graph()['extern']` führt 13 Kanäle: Kin, MB Allyne, MB Olesia, NW Damira, P3D Ursula, facs_*); Gelenkknochen unverändert 54.
         self.assertEqual((len(g['kanaele']), len(g['morphe']), len(g['knochen'])),
-                         (218, 164, 54))
+                         (221, 167, 54))
         self.assertEqual(G9gelenkkorrekturen.werte({'l_thigh': {'rotation/x': 35}}),
                          {'body_cbs_thigh_x35p_l': 1.0})
         w = G9gelenkkorrekturen.werte(
@@ -82,7 +84,7 @@ class GelenkeLipsyncTest(SimpleTestCase):
         r = self.client.get('/api/character/genesis9-figur/felder/gelenke/?stufen=1')
         self.assertEqual(r.status_code, 200, r.content[:300])
         d = r.json()
-        self.assertEqual(len(d['felder']['koerper']), 164)
+        self.assertEqual(len(d['felder']['koerper']), 167)             # = Zahl der Morphe im Graphen (Fall 1)
         self.assertIn('mund', d['felder']['anhaenge'])
         self.assertEqual(len(d['achsen']), 138)
         self.assertEqual(d['achsen']['l_thigh']['r'], 'YZX')

@@ -25,15 +25,15 @@ export class Meshfigurkleider {
                                             { name: 'Kleidung aus dem Netz', datei: e => (e.kleidung || {}).objekt });
     }
 
-    /** Das Objekt laden, wenn sich die Datei geändert hat; `gruppe` = die Gruppe der Figur (oder null). */
-    zeigen(z, gruppe) {
-        this.netz.zeigen(z, gruppe);
+    /** Das Objekt laden, wenn sich die Datei geändert hat; `gruppe` = die Gruppe der Figur (oder null); `haltung`: die Figur steht in der Haltung des Netzes (`Meshfigurhaarobjekt`). */
+    zeigen(z, gruppe, haltung = false) {
+        this.netz.zeigen(z, gruppe, haltung);
         this.anwenden();
     }
 
     /** Nach jedem Neubau der Figur: das Objekt hängt sich in ihre neue Gruppe. */
     anhaengen(modell) {
-        this.netz.anhaengen(modell.group);
+        this.netz.anhaengen(modell.group, modell.skelett);
         this.anwenden();
     }
 

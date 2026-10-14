@@ -19,7 +19,7 @@ export class Studioeinstellungen {
 
     /** Feldname → [Schlüssel in ui_prefs, Umwandlung, Ersatzwert]. */
     static FELDER = {
-        modell: ['studio_default_model', String, 'Rig2'],
+        modell: ['studio_default_model', String, 'Rig4'],     // wie `BvhStudioEinstellungenSeite.VORGABEN` (Rig2 wurde gelöscht)
         koerperart: ['studio_body_type', String, 'Female_Caucasian'],
         bilderProSekunde: ['studio_fps', parseInt, 30],
         zeitleistenZoom: ['studio_zoom', parseInt, 100],

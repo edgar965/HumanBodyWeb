@@ -142,7 +142,7 @@ class HautmodellTest(unittest.TestCase):
         mediane = {n: np.array(v) for n, v in {'unterschenkel_r': (1.1, 2.1), 'unterschenkel_l': (1.3, 2.2),
                                                 'gesicht': (17.8, 24.2), 'hand_l': (30.0, 35.0)}.items()}
         behalten = Meshfigurhautmodell._einig(mediane, {n: 1000 for n in mediane})
-        self.assertLess(len(behalten), 2)
+        # Die zwei bunten Gruppen (Gesicht, eine sehr rote Hand) einigt seit 13.10.2026 die weite Stufe (gleicher Farbton) — graue Beine zählen nie (`test_meshfigur_hauteinigung`).
         self.assertFalse({'unterschenkel_r', 'unterschenkel_l'} & set(behalten))
 
 

@@ -40,6 +40,11 @@ class Blendimportarbeiter:
         stand.update(status='laeuft', fehler='', fortschritt=0, detail='Arbeitsprozess gestartet', pid=prozess.pid)
         ablage.stand_schreiben(stand)
         logger.info('Blender-Import %s: Arbeitsprozess %s (ab %s)', ablage.kennung, prozess.pid, ab or 'Anfang')
+        from .mesh3dvarianten import Mesh3dvarianten
+        from .mesh3dvariantenauto import Mesh3dvariantenauto
+
+        Mesh3dvariantenauto.entfernen(ablage.kennung)       # die automatische Vergleichsvariante verglich sich mit der alten Hauptausgabe; der neue Lauf legt eine neue an
+        Mesh3dvarianten.haupt_loesen(ablage.kennung)        # der neue Lauf ist die Hauptausgabe mit den jetzigen Einstellungen — eine übernommene Variante gilt nicht mehr als Ausnahme
         return prozess.pid
 
     @staticmethod

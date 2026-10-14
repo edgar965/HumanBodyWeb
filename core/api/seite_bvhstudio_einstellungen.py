@@ -23,7 +23,7 @@ class BvhStudioEinstellungenSeite(TemplateView):
 
     #: Feste Vorgaben ohne Pfadbezug.
     VORGABEN = {
-        'studio_default_model': 'Rig2',
+        'studio_default_model': 'Rig4',          # bis 12.10.2026 „Rig2“ — mit den Modellen Rig1/2/3/5 gelöscht (404); `Rig4` hat dasselbe Format (Charaktermodell mit `morphs`)
         'studio_body_type': 'Female_Caucasian',
         'studio_fps': '30',
         'studio_zoom': '100',

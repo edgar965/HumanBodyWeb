@@ -90,9 +90,18 @@ Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: t
                 <i class="fas fa-columns"></i> Nebeneinander</button>
             <button type="button" class="schaltknopf active" data-schalter="modell" title="Die angepasste Genesis-9-Figur">
                 <i class="fas fa-user"></i> 3DModell</button>
+            {% comment %}„Haltung“ (13.10.2026, `Meshfighaltung`): die Figur steht in der Haltung des Netzes, Stoff, Bestandteile und Haar aus dem Netz bleiben unverändert am Körper. Aus: Ruhe (A-Pose), die Objekte sind dorthin zurückgerechnet — lose Kleidung wird dabei verzerrt.
+            Der Knopf erscheint erst, wenn der Lauf eine gültige Haltung hat (`Meshfigurbuehne._haltungVon`); Vorgabe an.{% endcomment %}
+            <button type="button" class="schaltknopf active hb-versteckt" data-schalter="haltung" title="An: die Figur steht in der Haltung des Netzes, Kleidung und Bestandteile bleiben unverändert am Körper. Aus: Ruhehaltung (A-Pose), Kleidung und Bestandteile sind dorthin zurückgerechnet — lose Kleidung wie eine Robe wird dabei verzerrt.">
+                <i class="fas fa-walking"></i> Haltung</button>
             <button type="button" class="schaltknopf" id="buehne-animation" title="Die Bewegung (Vorgabe: der Tanz der Bibliothek) auf die Figur rechnen und hier abspielen — derselbe Retarget-Weg wie bei „2D3D Kleider“">
                 <i class="fas fa-person-running"></i> <span>Animation</span></button>
+            {% comment %}„Ausgabe“ (13.10.2026, `Mesh3dvarianten`): die Figur des ersten Laufs oder einer fertigen Variante — erscheint erst, wenn es eine Variante gibt. Die Bewegung der Animationsleiste ist die der Ausgabe des Auftrags.{% endcomment %}
+            <label hidden id="buehne-ausgabe-feld" title="Welche Ausgabe des Auftrags die 3D-Ansicht zeigt: der erste Lauf oder eine Variante (Karte „Empfehlungen und Varianten“)">
+                <select id="buehne-ausgabe" aria-label="Welche Ausgabe"></select></label>
         </div>
+        {% comment %}Bestandteile des Netzes (14.10.2026, `Meshfigurteileleiste`): je Bestandteil, den SAM 3 gefunden hat (Hut, Stab, Bart, Flügel …), ein Knopf zum Ein- und Ausblenden — erst sichtbar, wenn es welche gibt.{% endcomment %}
+        <div class="meshfigur-schalter schalterleiste hb-versteckt" id="bestandteile-leiste" role="group" aria-label="Bestandteile des Netzes"></div>
         {% comment %}Größe der 3D-Ansicht (Edgar, 12.10.2026: „in der Höhe einstellbar, nicht aber in der Breite“): Regler und Ziehgriff, `Mesh3dbuehnengroesse` — wie bei der Mesh-Ansicht darunter.{% endcomment %}
         <div class="mesh3d-groessenzeile">
             <label for="buehne-groesse">Höhe</label>
@@ -106,7 +115,7 @@ Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: t
         <div class="mesh-betrachter" id="buehne">
             <div class="mesh-betrachter-hinweis" id="buehne-hinweis">Noch keine Figur — der Schritt „Figur“ rechnet oder ist noch nicht gestartet.</div>
         </div>
-        <div class="mesh3d-animationsleiste" id="animations-leiste" hidden>
+        <div class="mesh3d-animationsleiste" id="animations-leiste">
             <button type="button" id="anim-anfang" class="btn btn-secondary btn-sm" title="An den Anfang (Pos1)"><i class="fas fa-fast-backward"></i></button>
             <button type="button" id="anim-zurueck" class="btn btn-secondary btn-sm" title="Ein Bild zurück (←)"><i class="fas fa-step-backward"></i></button>
             <button type="button" id="anim-play" class="btn btn-primary btn-sm" title="Abspielen / Pause (Leertaste)"><i class="fas fa-play"></i></button>
@@ -116,6 +125,13 @@ Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: t
             <input type="range" id="anim-scrubber" class="mesh3d-scrubber" min="0" max="1000" value="0" step="1">
             <span id="anim-zeit" class="hb-hinweis mesh3d-animationszeit">0:00 / 0:00</span>
             <span id="anim-bild" class="hb-hinweis mesh3d-animationszeit" title="Aktuelles Bild der Bewegung / Bilder gesamt">Bild 0 / 0</span>
+        </div>
+        {% comment %}Standardanimation dieses Auftrags (13.10.2026, `Mesh3danimationswahl` / `Mesh3danimationswahlfeld`): die Datei, die der Knopf „Animation“ rechnet; Vorgabe A_Results/DanceKurz. Gespeichert je Auftrag in `animation.json`.{% endcomment %}
+        <div class="mesh3d-animationswahl" id="anim-wahl">
+            <label for="anim-wahl-kategorie">Standardanimation</label>
+            <select id="anim-wahl-kategorie" aria-label="Kategorie der Standardanimation" disabled></select>
+            <select id="anim-wahl-datei" aria-label="Standardanimation dieses Auftrags" disabled></select>
+            <span class="hb-hinweis" id="anim-wahl-meldung"></span>
         </div>
         <div class="hb-hinweis" id="animation-meldung"></div>
         <div class="hb-hinweis" id="netzansicht-meldung"></div>
@@ -134,6 +150,40 @@ Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: t
         <input type="range" id="netz-breite" min="320" max="1600" step="1" value="1600" aria-label="Breite der Mesh-Ansicht">
         <span id="netz-breite-wert" class="hb-hinweis mesh3d-animationszeit">volle Breite</span>
         <span class="hb-hinweis">— oder an der Ecke unten rechts ziehen. Drehen: linke Maustaste, verschieben: rechte, zoomen: Rad.</span>
+    </div>
+    {% comment %}Netz bearbeiten (13.10.2026, `Mesh3dnetzwerkzeug`, Konzept `Docu/konzepte/2026-10-13_mesh-3d-netz-ausschneiden-konzept.md`): einen Teil des Netzes anklicken oder mit einem Rahmen wählen, entfernen, als neue GLB speichern,
+    als Quelle übernehmen und neu rechnen. Der Browser sendet nur Orte; der Server schneidet das Original (`Mesh3dnetzschnitt`). Die Leiste erscheint, sobald die Ansicht ein Netz mit genau einem Netzobjekt zeigt.{% endcomment %}
+    <div class="mesh3d-netzwerkzeug" id="netz-werkzeug" hidden>
+        <div class="schalterleiste" id="netz-wz-leiste">
+            {% comment %}Bereich per Hover (14.10.2026, Edgar: „per Hover im 3D View einzelne Bereiche highlighten … einen Slider für die Granularität“): die Vorgabe der Leiste. Die älteren Knöpfe (Teil, Rahmen, Farbe im Umkreis) bleiben als Rückfall.
+            Der Regler und das Zahlenfeld „Farbabstand ΔE“ weiter unten sind EIN Wert (`Mesh3dnetzfarbwahl`).{% endcomment %}
+            <button type="button" class="schaltknopf active" id="netz-wz-hover" title="Fahren Sie über das Netz: der Bereich ähnlicher Farbe unter dem Zeiger leuchtet orange. Klick wählt ihn (zum Beispiel einen weißen Flügel neben einer gelblichen Figur), Umschalt+Klick nimmt ihn weg. Ziehen dreht weiter.">
+                <i class="fas fa-magic"></i> Bereich per Hover</button>
+            <label class="mesh3d-farbfeld mesh3d-granularitaet" title="Wie fein der Bereich unter dem Zeiger ist: links nur fast gleiche Farbe, rechts auch ähnliche Farben (Farbabstand ΔE nach CIE-Lab; 5 = kaum sichtbar, 14 = gleiche Farbfamilie, über 30 = andere Farbe). Wirkt auch auf „Farbe im Umkreis“.">Granularität
+                <input type="range" id="netz-wz-granularitaet" min="1" max="60" step="1" value="14" aria-label="Granularität des bewegten Bereichs (Farbabstand ΔE)">
+                <span class="mesh3d-granularitaet-wert" id="netz-wz-granularitaet-wert">ΔE 14</span></label>
+            <button type="button" class="schaltknopf" id="netz-wz-teil" title="Klick auf das Netz wählt den ganzen zusammenhängenden Teil (zum Beispiel einen zweiten Unterarm, der nicht am Körper hängt). Umschalt+Klick nimmt einen Teil aus der Auswahl. Ziehen dreht weiter.">
+                <i class="fas fa-mouse-pointer"></i> Teil wählen</button>
+            <button type="button" class="schaltknopf" id="netz-wz-rahmen" title="Rechteck aufziehen: wählt alles, was im Rechteck liegt — auch Verdecktes dahinter und davor. Umschalt+Ziehen nimmt weg. Drehen geht in diesem Modus nicht.">
+                <i class="far fa-square"></i> Rahmen</button>
+            <button type="button" class="schaltknopf" id="netz-wz-farbe" title="Klick wählt alles im Umkreis um den Klick, das ungefähr die Farbe der angeklickten Stelle hat — auch wenn es nicht am Körper hängt (zum Beispiel ein weißer Flügel am Arm). Umschalt+Klick nimmt weg. Umkreis und Farbabstand stehen rechts daneben.">
+                <i class="fas fa-fill-drip"></i> Farbe im Umkreis</button>
+            <label class="mesh3d-farbfeld" title="Umkreis um den Klick in Zentimetern der angezeigten Figur">Umkreis <input type="number" id="netz-wz-farbradius" min="1" max="200" step="1" value="18"> cm</label>
+            <label class="mesh3d-farbfeld" title="Wie weit die Farbe abweichen darf (CIE-Lab, ΔE): 5 = kaum sichtbar, 14 = gleiche Farbfamilie, über 30 = andere Farbe">Farbabstand ΔE <input type="number" id="netz-wz-farbtoleranz" min="1" max="80" step="1" value="14"></label>
+            <button type="button" class="schaltknopf" id="netz-wz-umkehren" title="Die Auswahl umkehren: alles, was nicht gewählt war"><i class="fas fa-exchange-alt"></i> Umkehren</button>
+            <button type="button" class="schaltknopf" id="netz-wz-aufheben" title="Die Auswahl aufheben (Esc)"><i class="fas fa-times"></i> Aufheben</button>
+            <button type="button" class="schaltknopf" id="netz-wz-entfernen" title="Die gewählten Flächen aus der Ansicht nehmen (Entf). Geschrieben wird erst mit „Speichern“."><i class="fas fa-eraser"></i> Entfernen</button>
+            <button type="button" class="schaltknopf" id="netz-wz-zurueck" title="Den letzten Schritt zurücknehmen, auch ein „Entfernen“ (Strg+Z)"><i class="fas fa-undo"></i> Zurück</button>
+            <button type="button" class="schaltknopf" id="netz-wz-wiederholen" title="Einen zurückgenommenen Schritt wiederholen (Strg+Y oder Strg+Umschalt+Z)"><i class="fas fa-redo"></i> Wiederholen</button>
+            <button type="button" class="schaltknopf" id="netz-wz-speichern" title="Das Netz ohne die entfernten Flächen als neue GLB-Datei speichern. Die Quelle des Auftrags bleibt, wie sie ist."><i class="fas fa-save"></i> Speichern</button>
+            <button type="button" class="schaltknopf" id="netz-wz-rechnen" title="Speichern, die neue Datei zur Quelle dieses Auftrags machen (die bisherigen Ergebnisse werden verworfen) und von vorn neu rechnen"><i class="fas fa-play"></i> Speichern, übernehmen und rechnen</button>
+            <button type="button" class="schaltknopf" id="netz-wz-rueckgaengig" title="Das Entfernen rückgängig machen, das schon gespeichert und zur Quelle gemacht wurde: die Datei davor wird wieder die Quelle dieses Auftrags (die bisherigen Ergebnisse werden verworfen, danach „Neu berechnen“). Aktiv nur, wenn die Quelle eine mit „Netz bearbeiten“ gespeicherte Datei ist."><i class="fas fa-history"></i> Gespeicherten Schnitt zurücknehmen</button>
+            <button type="button" class="schaltknopf" id="netz-wz-schnittwieder" title="Einen zurückgenommenen gespeicherten Schnitt wiederholen: die jüngste Datei, die aus der jetzigen Quelle durch „Netz bearbeiten“ entstand, wird wieder die Quelle dieses Auftrags (die bisherigen Ergebnisse werden verworfen, danach „Neu berechnen“). Aktiv nur, wenn es eine solche Datei gibt."><i class="fas fa-redo-alt"></i> Gespeicherten Schnitt wiederholen</button>
+        </div>
+        <div class="hb-hinweis" id="netz-wz-meldung"></div>
+        <div class="hb-hinweis mesh3d-hover-info" id="netz-wz-hover-info" aria-live="polite"></div>
+        <div class="mesh3d-netzteile" id="netz-wz-teile"></div>
+        <div class="hb-hinweis mesh3d-netzergebnis" id="netz-wz-ergebnis" hidden></div>
     </div>
     <div class="mesh-betrachter mesh3d-netzbetrachter" id="netz-buehne">
         <div class="mesh-betrachter-hinweis" id="netz-hinweis">Noch kein Netz — die Ansicht erscheint, sobald der Auftrag „Mesh to 3D“ das Netz übernommen hat.</div>
@@ -161,6 +211,21 @@ Seitenreiter.binden(document.getElementById('auftrag-reiter'), null, { wartet: t
     <h3 class="engine2d3dkleider-gruppe">Einstellungen <span class="hb-hinweis einstellungen-meldung" id="optionen-meldung"></span></h3>
     <p class="hb-hinweis" id="optionen-gesperrt" hidden>Ein Lauf rechnet: Die Einstellungen sind gesperrt und gelten ab dem nächsten Start.</p>
     <div class="mesh3d-felder" id="mesh3d-optionen"></div>
+</div>
+
+{% comment %}Empfehlungen und Varianten (13.10.2026, Konzept „Mesh-3D ohne Nacharbeit“; Edgar: „Optionen für die unterschiedlichen Einstellungen, mit Vorschlag … die Jobs mit beiden Optionen auszurechnen und zu vergleichen“).
+`Mesh3dvarianten` zeichnet die Felder und Vergleiche aus `zustand.varianten` (`Mesh3dvergleich`); nur beim Weg „netz“ (sonst ist `zustand.varianten` leer und die Karte bleibt weg).{% endcomment %}
+<div class="card mesh3d-karte" id="varianten-karte" hidden>
+    <h2>Empfehlungen und Varianten <span class="hb-hinweis">(dieselbe Figur mit anderer Einstellung rechnen und vergleichen)</span></h2>
+    <p class="hb-hinweis">Je Einstellung steht, was empfohlen wird und warum. „Varianten rechnen“ legt je Wert einen weiteren Lauf auf demselben Netz an (nacheinander, eine GPU) und stellt ihn der ersten Ausgabe gegenüber;
+        „Übernehmen“ setzt den Wert im Auftrag und speichert das Modell der Variante. Eine Empfehlung gibt es nur, wenn eine Variante in allen gewerteten Zeilen nicht schlechter ist — sonst entscheidet das Bild.</p>
+    <div class="hb-hinweis" id="varianten-meldung"></div>
+    <div id="varianten-felder"></div>
+    <div id="varianten-vergleiche"></div>
+    <div class="mesh3d-schrittzeile">
+        <button type="button" class="btn btn-secondary btn-sm" id="varianten-anhalten" hidden title="Den Varianten-Prozess beenden — was wartete oder rechnete, steht danach auf „angehalten“"><i class="fas fa-stop"></i> <span>Varianten anhalten</span></button>
+        <button type="button" class="btn btn-secondary btn-sm" id="varianten-loeschen" hidden title="Alle Varianten dieses Auftrags entfernen (gespeicherte Modelle bleiben)"><i class="fas fa-trash"></i> <span>Alle Varianten löschen</span></button>
+    </div>
 </div>
 
 <div class="card mesh3d-karte" id="rollen-karte">

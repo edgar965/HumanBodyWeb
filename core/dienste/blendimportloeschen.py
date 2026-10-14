@@ -32,6 +32,7 @@ from pathlib import Path
 
 from ..daten.blendimportablage import Blendimportablage
 from .blendimportarbeiter import Blendimportarbeiter
+from .blendimportauftragsnutzer import Blendimportauftragsnutzer
 
 logger = logging.getLogger('core')
 
@@ -201,7 +202,7 @@ class Blendimportloeschen:
         """Was ein Löschen entfernte — für die Rückfrage im Browser (`modelle`: schon gelesen)."""
         gelesen = self.modelle_lesen() if modelle is None else modelle
         plan = self.kurzplan(gelesen)
-        job = self.auftrag()
+        job = Blendimportauftragsnutzer.frei(self.kennung, self.auftrag(), still=True)
         stuecke = self.stuecke(gelesen=gelesen)
         plan.update({
             'auftrag': {'kennung': job.kennung, 'name': getattr(job, 'name', '') or job.kennung} if job is not None else None,
@@ -285,8 +286,13 @@ class Blendimportloeschen:
             raise ImportNichtGeloescht('Der Arbeitsprozess von Import %s lässt sich nicht beenden' % self.kennung)
 
     def _auftrag_entfernen(self):
-        """Der Auftrag „Mesh to 3D" mit Ordner (wie `Meshfigurendpunkte._entfernen`) — das gespeicherte Modell gehört nicht dazu."""
-        job = self.auftrag()
+        """Der Auftrag „Mesh to 3D" mit Ordner (wie `Meshfigurendpunkte._entfernen`) — das gespeicherte Modell gehört nicht dazu;
+        ein Auftrag, den auch eine Kopie des Imports nennt, bleibt (`Blendimportauftragsnutzer`). Die Varianten des Imports (`Mesh3dvarianten`, eigene Aufträge „Mesh to 3D“) gehen mit —
+        beim Löschen des Imports wie beim Wechsel der Quelle (`Mesh3dquellwechsel._verwerfen`): sie gehören zum Netz, mit dem sie gerechnet wurden."""
+        from .mesh3dvarianten import Mesh3dvarianten
+
+        Mesh3dvarianten.alle_entfernen(self.kennung)
+        job = Blendimportauftragsnutzer.frei(self.kennung, self.auftrag())
         if job is None:
             return None
         from ..daten.meshfigurablage import Meshfigurablage

@@ -24,8 +24,16 @@ __all__ = ['Meshfigurnebenlauf']
 
 class Meshfigurnebenlauf:
     @staticmethod
-    def starten(lauf, name, fabrik):
-        """Den Schritt `name` in einem Faden starten — mit einer Kopie des Auftrags (eigenes `ergebnis`) und ohne Fortschrittsmeldung.
+    def voraussetzungen(lauf, nebenlaeufe, name):
+        """Die Fäden, auf die der Nebenlauf `name` warten muss, bevor er rechnet (`Meshfigurlauf.NEBEN_NACH`) — nur die, die in diesem Lauf wirklich laufen.
+        13.10.2026: „kleidung" liest, was „haar" schreibt (die Hutflächen in `haar_maske.npz`, `Meshfigurkleidung._kopfbedeckung`). Beide starteten zugleich; je nachdem, wer zuerst fertig war, stand der Hut
+        in der Kleidung (frischer Lauf: 5.862 von 5.862 Flächen) oder nicht (Referenzlauf: 0) — dieselbe GLB, dieselben Optionen."""
+        folge = getattr(lauf, 'NEBEN_NACH', {}).get(name, ())
+        return tuple(nebenlaeufe[n][0] for n in folge if n in nebenlaeufe)
+
+    @staticmethod
+    def starten(lauf, name, fabrik, vorher=()):
+        """Den Schritt `name` in einem Faden starten — mit einer Kopie des Auftrags (eigenes `ergebnis`) und ohne Fortschrittsmeldung; der Faden wartet zuerst auf die Fäden `vorher`.
         Gibt `(Faden, Kopie des Laufs, Ergebnis des Fadens)` zurück; `abwarten` übernimmt das Ergebnis."""
         kopie = copy.copy(lauf)
         kopie.job = copy.copy(lauf.job)
@@ -35,7 +43,9 @@ class Meshfigurnebenlauf:
         aus = {}
 
         def rechnen():
-            t = time.perf_counter()
+            for voraus in vorher:
+                voraus.join()                        # ein Fehler dort ist der Fehler SEINES Schritts (`abwarten` wirft ihn); hier zählt nur, dass seine Dateien fertig sind
+            t = time.perf_counter()                  # die Zeit der Arbeit, nicht des Wartens
             try:
                 fabrik(kopie)
             except BaseException as fehler:  # noqa: BLE001 — der Hauptfaden wirft ihn weiter, wenn er den Schritt abwartet
@@ -76,5 +86,5 @@ class Meshfigurnebenlauf:
         schritt = lauf.job.schritt
         lauf._nebenlaeufe_abwarten(nebenlaeufe, lauf.WARTEN_VOR.get(name, ()))
         lauf.job.schritt = schritt                  # `abwarten` setzt den Schritt des Nebenlaufs; der Hauptfaden steht weiter in seinem
-        nebenlaeufe[name] = cls.starten(lauf, name, fabriken[name])
+        nebenlaeufe[name] = cls.starten(lauf, name, fabriken[name], cls.voraussetzungen(lauf, nebenlaeufe, name))
         return True

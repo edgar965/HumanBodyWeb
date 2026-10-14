@@ -84,6 +84,9 @@ export class Genesis9Modell extends Modell {
         /** Daz-Posenpreset (Standbild: Netz UND Skelett stehen in der Pose) und Ausdruck (FACS). */
         this.pose = daten.pose || '';
         this.ausdruck = daten.ausdruck || '';
+        /** Eine Haltung als Gelenkwinkel (`{knochen: {'rotation/x': Grad}}`, wie ein Posenpreset, nur ohne Katalog): „Mesh to 3D" stellt die Figur damit in die Haltung des Netzes
+         *  (`Meshfighaltung`). Der Server backt sie; sie geht nur in die Anfragen, nie in die gespeicherte Figur (`toJSON`). */
+        this.drehung = daten.drehung && Object.keys(daten.drehung).length ? daten.drehung : null;
         /** Getragene Stücke in Anziehreihenfolge: Kennung → `{variante}`; Netze in `clothMeshes`,
          *  Lagen (`{innen, aussen}`, `Genesis9kleidung`) in `lagen`. */
         this.kleidung = { ...(daten.kleidung || {}) }; this.lagen = {};

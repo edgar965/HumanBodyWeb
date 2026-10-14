@@ -36,9 +36,57 @@ export class Engine2d3dKleideranimation {
         this.zeit = document.getElementById('anim-zeit');
         this.bildfeld = document.getElementById('anim-bild');
         this.bilder = 0;
+        /** Die Leiste bleibt auch ohne (geladene) Bewegung sichtbar — Mesh-3D setzt es; „2D3D Kleider“ und BlenderModel verstecken sie weiter, solange es nichts abzuspielen gibt. */
+        this.immerSichtbar = false;
+        /** Wird vor jedem Bedienbefehl gerufen; gibt es `true` zurück, baut die Seite die Figur um (Mesh-3D: „Haltung“ aus) und der Befehl läuft nach dem Umbau (`bedienen`). */
+        this.vorBedienung = null;
+        /** Wird gerufen, wenn ein Bedienbefehl kommt, solange es keine Bewegung gibt (Mesh-3D: rechnet die Standardanimation); `true` heißt: es wird gerechnet — der Befehl läuft, sobald die Bewegung geladen ist (`_wiederaufnehmen`). */
+        this.ohneBewegung = null;
+        this._anstehend = null;
+        this._merk = null;
+        this._adresse = null;
+        /** Wird nach jedem gestellten Bild der Bewegung gerufen (Mesh-3D: die Gelenkkorrekturen, `Meshfigurgelenke` — wie `Genesis9gelenke.alle` in Szene und Studio). */
+        this.nachBild = null;
         this._uhr = new THREE.Clock();
         this.bedienung = new Engine2d3dKleideranimationsbedienung(this);     // Knöpfe und Tasten
         this._takt();
+    }
+
+    /**
+     * Einen Bedienbefehl (Play, Bild vor, Schieber …) ausführen. Verlangt die Seite vorher einen Umbau der Figur (`vorBedienung`), läuft er erst danach: die neue Figur hat neue Knochen, also eine neue
+     * Aktion — der Klick auf Play ging dabei verloren, die Leiste stand auf Anfang, und die Leertaste scrollte die Seite (Edgar, 13.10.2026). Während des Umbaus zählt nur der erste Befehl.
+     */
+    bedienen(tun) {
+        if (this._anstehend) return;
+        // Ohne Bewegung zuerst die Bewegung (Edgar, 13.10.2026, Zauberer: „Play ist ausgegraut, funktioniert nicht, auch Space nicht“ — die Leiste war leer und Play tat nichts); danach läuft der Befehl wie jeder andere.
+        if (!this.action && this.ohneBewegung?.()) { this._anstehend = tun; return; }
+        if (this.vorBedienung?.()) { this._anstehend = tun; return; }
+        tun();
+    }
+
+    /** Der anstehende Befehl entfällt (die Bewegung ließ sich nicht rechnen oder laden) — sonst blockierte er jeden weiteren (`bedienen`). */
+    befehlVerwerfen() {
+        this._anstehend = null;
+    }
+
+    _sichtbar(an) {
+        this.karte.hidden = this.immerSichtbar ? false : !an;
+    }
+
+    /** Nach dem Umbau der Figur: lief die Bewegung vorher, läuft sie weiter (an derselben Stelle); danach der Befehl, der den Umbau ausgelöst hat. */
+    _wiederaufnehmen() {
+        const merk = this._merk;
+        this._merk = null;
+        if (merk && merk.adresse === this._adresse && (merk.lief || merk.zeit > 0)) {
+            this._aktiv(merk.zeit);
+            this.action.paused = !merk.lief;
+            this.knopf(merk.lief);
+            this.fortschritt();
+        }
+        const tun = this._anstehend;
+        this._anstehend = null;
+        // Wieder durch `bedienen`: eine eben gerechnete Bewegung braucht noch den Umbau der Figur (`vorBedienung`); danach läuft der Befehl.
+        if (tun) this.bedienen(tun);
     }
 
     /** Vom Seitentakt (alle 2 s) gerufen — merkt sich nur den Zustand, das eigentliche Prüfen macht
@@ -70,16 +118,21 @@ export class Engine2d3dKleideranimation {
         const stand = JSON.stringify([film.bewegung, modell?.skelett?.rootBone?.uuid || null]);
         if (stand === this._stand) return;
         this._stand = stand;
+        // Neue Knochen = neue Aktion: den Spielzustand merken, damit eine laufende Bewegung nach dem Umbau der Figur weiterläuft (`_wiederaufnehmen`).
+        // Gemerkt wird mit der Adresse der Bewegung: eine NEU gerechnete (andere Adresse) beginnt am Anfang.
+        const adresse = film.bewegung ? this.seite.dateiAdresse('ergebnis', film.bewegung) : null;
+        if (this.action) this._merk = { lief: this.action.isScheduled() && !this.action.paused, zeit: this.action.time, adresse: this._adresse };
+        this._adresse = adresse;
         this._loeschen();
-        this.karte.hidden = !(film.bewegung && modell?.skelett);
+        this._sichtbar(Boolean(film.bewegung && modell?.skelett));
         if (!film.bewegung || !modell?.skelett) return;
-        Serverabruf.json(this.seite.dateiAdresse('ergebnis', film.bewegung))
+        Serverabruf.json(adresse)
             .then(daten => this._aufbauen(modell, daten))
-            .catch(() => { this.karte.hidden = true; this._stand = null; });
+            .catch(() => { this._sichtbar(false); this._stand = null; this.befehlVerwerfen(); });
     }
 
     _aufbauen(modell, daten) {
-        if (!daten.tracks || !daten.frame_count) { this.karte.hidden = true; return; }
+        if (!daten.tracks || !daten.frame_count) { this._sichtbar(false); return; }
         Clipanimation.namenEntschaerfen(modell.skelett);
         const clip = Clipanimation.bauen(daten, modell.skelett);
         this.mixer = new THREE.AnimationMixer(modell.group);
@@ -95,6 +148,7 @@ export class Engine2d3dKleideranimation {
         this.bilder = daten.frame_count;
         this.knopf(false);
         this.fortschritt();
+        this._wiederaufnehmen();
     }
 
     _loeschen() {
@@ -111,6 +165,9 @@ export class Engine2d3dKleideranimation {
         const delta = this._uhr.getDelta();
         if (this.mixer && this.action && !this.action.paused) {
             this.mixer.update(delta);
+            this.nachBild?.();
+            // Die Bühne zeichnet im Leerlauf nur 5 Bilder/s (`Meshfigurtakt`): eine laufende Bewegung braucht die volle Rate.
+            this.buehne.wach?.();
             this.fortschritt();
         }
     }
@@ -122,6 +179,8 @@ export class Engine2d3dKleideranimation {
         if (!this.action.isScheduled()) { this.action.reset(); this.action.play(); this.action.paused = true; }
         if (zeit !== null) this.action.time = Math.min(Math.max(zeit, 0), this.dauer || 0);
         this.mixer.update(0);
+        this.nachBild?.();
+        this.buehne.wach?.();
     }
 
     umschalten() {
@@ -137,6 +196,7 @@ export class Engine2d3dKleideranimation {
         if (!this.action) return;
         this.action.stop();
         this._ruhe?.pose();
+        this.nachBild?.();
         this.knopf(false);
         this.fortschritt();
     }

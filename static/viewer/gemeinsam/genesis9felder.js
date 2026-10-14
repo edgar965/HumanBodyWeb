@@ -84,6 +84,26 @@ export class Genesis9felder {
     }
 
     /**
+     * Die Felder eines Objekts unter einer festen Adresse (`{felder: {kanal: {n, d}}}`, Mesh-3D: Kleidung, Haar und Bestandteile aus dem Netz,
+     * `Meshfigurobjektfelder`) — einmal je Adresse geholt, null bei Fehler. Die Adresse trägt den Stand des Objekts, ein neues Objekt holt neu.
+     */
+    static holenAdresse(adresse) {
+        const schluessel = `adresse/${adresse}`;
+        let lader = Genesis9felder._lader.get(schluessel);
+        if (!lader) {
+            lader = Serverabruf.netz(adresse)
+                .then(daten => (!daten || daten.fehler) ? null : Genesis9felder._kanaele(daten.felder))
+                .catch(fehler => {
+                    Protokoll.warnung('Genesis 9', `Objektfelder ${adresse} nicht ladbar:`, fehler);
+                    Genesis9felder._lader.delete(schluessel);
+                    return null;
+                });
+            Genesis9felder._lader.set(schluessel, lader);
+        }
+        return lader;
+    }
+
+    /**
      * `{laenge, weite}` (cm) aus den Stückreglern (`inst.kleidung[kennung].regler`:
      * `passform:laenge`, `passform:weite`) — null, wenn beide 0.
      */

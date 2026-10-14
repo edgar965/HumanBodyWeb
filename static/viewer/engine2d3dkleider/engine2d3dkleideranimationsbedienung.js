@@ -20,7 +20,8 @@ export class Engine2d3dKleideranimationsbedienung {
 
     constructor(animation) {
         this.a = animation;
-        const knopf = (id, tun) => document.getElementById(id)?.addEventListener('click', tun);
+        // Jeder Befehl geht durch `bedienen`: baut die Seite dafür erst die Figur um (Mesh-3D: „Haltung“ aus), läuft er danach von selbst.
+        const knopf = (id, tun) => document.getElementById(id)?.addEventListener('click', () => this.a.bedienen(tun));
         knopf('anim-anfang', () => this.a.springen(false));
         knopf('anim-zurueck', () => this.a.bild(-1));
         knopf('anim-play', () => this.a.umschalten());
@@ -28,7 +29,7 @@ export class Engine2d3dKleideranimationsbedienung {
         knopf('anim-vor', () => this.a.bild(1));
         knopf('anim-ende', () => this.a.springen(true));
         const schieber = this.a.scrubber;
-        schieber.addEventListener('input', () => this.a.gezogen());
+        schieber.addEventListener('input', () => this.a.bedienen(() => this.a.gezogen()));
         schieber.addEventListener('mousedown', () => { this.a._ziehen = true; });
         schieber.addEventListener('touchstart', () => { this.a._ziehen = true; }, { passive: true });
         const loslassen = () => { this.a._ziehen = false; };
@@ -39,10 +40,16 @@ export class Engine2d3dKleideranimationsbedienung {
 
     taste(ereignis) {
         const tun = Engine2d3dKleideranimationsbedienung.TASTEN[ereignis.code];
-        if (!tun || !this.a.action || this.a.karte.hidden) return;
+        if (!tun || this.a.karte.hidden) return;
         const ziel = ereignis.target;
-        if (ziel && (ziel.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(ziel.tagName))) return;
+        const art = ziel && ziel.tagName;
+        // Ein Schieber nimmt Pfeile, Pos1 und Ende selbst, die Leertaste aber nicht (13.10.2026: sie scrollte die Seite); Eingabefelder und Knöpfe behalten ihre Tasten.
+        const schieber = art === 'INPUT' && ziel.type === 'range';
+        if (ziel && (ziel.isContentEditable || /^(TEXTAREA|SELECT|BUTTON)$/.test(art) || (art === 'INPUT' && !schieber))) return;
+        if (schieber && ereignis.code !== 'Space') return;
+        // Auch solange die Bewegung noch nicht (wieder) geladen ist: solange die Leiste da ist, scrollt die Leertaste die Seite nicht (Edgar, 13.10.2026: „Play mit Pause-Taste … scrollt die Seite“).
+        // Ohne Bewegung entscheidet `bedienen`: Mesh-3D rechnet sie dann (`ohneBewegung`), die anderen Seiten tun nichts (alle Befehle prüfen `action`).
         ereignis.preventDefault();
-        tun(this.a);
+        this.a.bedienen(() => tun(this.a));
     }
 }

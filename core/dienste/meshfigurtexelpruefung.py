@@ -23,6 +23,9 @@ Lippen, Brauen, Lider sind keine Hautfarbe; Hände und Finger bekommen ohnehin k
 3. Jedes übrige Hauttexel der Insel (verworfen oder nie getroffen) bekommt das Feld aus den guten
    Nachbarn, fein, wo genug da ist, sonst grob (`GROB_PX`) — Gewicht 1, damit weder Füllschicht noch
    Einmalen darüber kommen.
+4. (14.10.2026) Dazu bekommt jedes gefüllte Texel die Zeichnung der echten Haut daneben (Härchen, Poren,
+   `Meshfigurtexeldetail`) — ohne sie standen die Füllungen als glatte rosa Inseln mit scharfem Rand in der
+   behaarten Fotohaut (Edgar1, Oberschenkel).
 
 KOPFHAUT: Hat das Netz dort überwiegend Nicht-Haut getroffen (Haar), bleiben nur Treffer nahe der
 Haarfarbe (Median; graue Füllzellen fallen weg), und die ganze Kopfhaut bekommt sie geglättet —
@@ -34,12 +37,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
+from .meshfigurtexeldetail import Meshfigurtexeldetail
+from .meshfigurtexelsaum import Meshfigurtexelsaum
 from .meshfigurtexelzone import Meshfigurtexelzone
 
 __all__ = ['Meshfigurtexelpruefung']
 
 
 class Meshfigurtexelpruefung:
+    #: Gefüllte Hauttexel bekommen die Zeichnung der Nachbarschaft (`Meshfigurtexeldetail`); False zum Vergleichen.
+    DETAIL_UEBERTRAGEN = True
+    NAGELKACHEL = 1005
     #: So viele Kacheln gleichzeitig (fünf UDIM-Kacheln); bestimmt nur die Zeit, nie das Ergebnis.
     FAEDEN = 5
     CHROMA = 4.0
@@ -76,6 +84,8 @@ class Meshfigurtexelpruefung:
         self.bereich = b.bereiche()
         self.kern = b.gesichtskern()
         self.hautbereiche = (b.HAUT, b.ZEHEN)
+        #: Hände und Finger zählen mit, sobald das Netz dort Texel getroffen hat (14.10.2026, `Meshfigurtextur.HAND_BEREICHE`): ungültige Hauttexel bekommen das Feld der guten Nachbarn statt der Daz-Haut — ohne Treffer an der Hand bleibt es, wie es war. Nie in der Nagelkachel.
+        self.handbereiche = (b.FINGER, b.HAND)
         self.kopfhaut = b.KOPFHAUT
         self.tonmodell = None
 
@@ -136,6 +146,9 @@ class Meshfigurtexelpruefung:
             punkt = ecken[np.arange(len(ecken)), anteile.argmax(1)]
             haut = np.isin(self.bereich[punkt], self.hautbereiche) & ~self.kern[punkt]
             getroffen = np.asarray(hd['gewicht_%d' % kachel]) > 0
+            hand = np.isin(self.bereich[punkt], self.handbereiche) & ~self.kern[punkt]
+            if kachel != self.NAGELKACHEL and (hand & getroffen).any():
+                haut |= hand
             ycc = self.ycbcr(np.asarray(hd['farbe_%d' % kachel], dtype=np.float64))
             return (drin, haut, self.bereich[punkt] == self.kopfhaut, getroffen, ycc)
 
@@ -154,7 +167,7 @@ class Meshfigurtexelpruefung:
             drin, haut, kopf, getroffen, ycc = teile[kachel]
             farbe = np.asarray(hd['farbe_%d' % kachel], dtype=np.float64)
             gewicht = np.array(hd['gewicht_%d' % kachel], dtype=np.float32, copy=True)
-            eintrag = self._haut(drin, haut, getroffen, ycc, farbe, gewicht)
+            eintrag = self._haut(drin, haut, getroffen, ycc, farbe, gewicht, saum=kachel == Meshfigurtexelsaum.KACHEL)
             if kopf.any():
                 eintrag['kopfhaut'] = self._kopfhaut(drin, kopf, getroffen, ycc, farbe, gewicht)
             return kachel, np.clip(farbe + 0.5, 0, 255).astype(np.uint8), gewicht, eintrag
@@ -174,13 +187,17 @@ class Meshfigurtexelpruefung:
         m[drin] = maske
         return bild, m
 
-    def _haut(self, drin, haut, getroffen, ycc, farbe, gewicht):
-        """Schritte 1–3 des Modulkopfs, in place auf `farbe`/`gewicht`."""
+    def _haut(self, drin, haut, getroffen, ycc, farbe, gewicht, saum=False):
+        """Schritte 1–3 des Modulkopfs, in place auf `farbe`/`gewicht`; `saum`: auch den Schatten am Rand eines Fremdkörpers verwerfen (Armkachel, `Meshfigurtexelsaum`)."""
         mitte = self.tonmodell[0]
         satt = self.satt(ycc) / max(float(self.satt(mitte)), 1e-6)
         schatten = (satt < self.SATT_SCHATTEN) & (ycc[:, 0] < mitte[0])
         gut = haut & getroffen & self.ist_haut(ycc) & ~schatten
-        ausreisser = np.zeros_like(gut)
+        fremd = haut & getroffen & (~self.ist_haut(ycc) | schatten)
+        im_schatten = Meshfigurtexelsaum(self.abtastung.seite, self.glatt).schatten(drin, fremd, ycc[:, 0], farbe, gut) if saum else np.zeros_like(gut)
+        gut &= ~im_schatten
+        ausreisser = im_schatten.copy()
+        schatten_saum = int(im_schatten.sum())
         for _ in range(self.DURCHGAENGE):
             bild, maske = self._bild(drin, farbe, gut)
             feld, stuetze = self.glatt(bild, maske, self.PRUEF_PX)
@@ -197,8 +214,11 @@ class Meshfigurtexelpruefung:
         grob, m_grob = self.glatt(bild, maske, self.GROB_PX)
         fuellung = np.where((m_fein > 0.15)[..., None], fein, grob)[drin]
         ziel = haut & ~gut & (m_grob[drin] > 1e-3)
+        grund = Meshfigurtexelsaum(self.abtastung.seite, self.glatt).grund(drin, gut, farbe, fuellung, ziel) if saum else 0       # Armkachel: der Grund der Haut statt ihres Mittels
         # Große nie getroffene Zonen (Haut unter dem Stoff): Ton ohne den Saumschatten und ein weicher Übergang der echten Haut (`Meshfigurtexelzone`) — vor dem Füllen: `gut` und `ziel` sind getrennte Texel.
         abgeblendet = Meshfigurtexelzone(self.abtastung.seite, self.glatt).anwenden(drin, ziel & ~getroffen, gut, farbe, ziel, fuellung)
+        # Die Füllung ist das glatte Feld der Nachbarn: die Zeichnung (Härchen, Poren) der echten Haut daneben bekommt sie dazu (`Meshfigurtexeldetail`).
+        detail = Meshfigurtexeldetail(self.abtastung.seite, self.glatt).anwenden(drin, ziel, gut, farbe, fuellung) if self.DETAIL_UEBERTRAGEN else 0
         farbe[ziel] = fuellung[ziel]
         gewicht[ziel] = 1.0
         return {
@@ -206,8 +226,11 @@ class Meshfigurtexelpruefung:
             'getroffen': int((haut & getroffen).sum()),
             'verworfen': int((haut & getroffen & ~gut).sum()),
             'ausreisser': int(ausreisser.sum()),
+            'saumschatten': schatten_saum,
+            'grundfeld': grund,
             'gefuellt': int(ziel.sum()),
             'abgeblendet': abgeblendet,
+            'detail': detail,
         }
 
     def _kopfinsel(self, drin, kopf):

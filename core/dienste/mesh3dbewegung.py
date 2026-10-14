@@ -3,7 +3,8 @@
 
 Edgar (11.10.2026): „machst du mir noch die 3D-Ansicht wie bei dem anderen Job? mit den Filtern für Mesh, Kleider, Model, der Animation usw." Die Ansicht ist die Bühne von „Mesh to 3D" und „2D3D Kleider"
 (`Meshfigurbuehne`, `Engine2d3dKleideranimation`); die Bewegung dazu rechnet KEIN neuer Weg, sondern derselbe wie dort: `Engine2d3dKleiderbewegung` (Retarget BVH → Genesis 9, `Retargetdaten`, CPU, im
-Django-Prozess) auf der Stellung des Auftrags „Mesh to 3D", den der Import im Schritt „figur" gerechnet hat. Vorgabe ist der Tanz der Bibliothek (`Engine2d3dKleiderfilmoptionen.tanz`, Daz/Dance.bvh).
+Django-Prozess) auf der Stellung des Auftrags „Mesh to 3D", den der Import im Schritt „figur" gerechnet hat. Welche Datei, wählt der Auftrag (`Mesh3danimationswahl`, Vorgabe A_Results/DanceKurz.bvh, seit 13.10.2026);
+ohne sie der Tanz der Bibliothek (`Engine2d3dKleiderfilmoptionen.tanz`, Daz/Dance.bvh, bis dahin die feste Vorgabe).
 
 Ablage: `arbeit/bewegung/bewegung.json` + `stand.json` (Fingerabdruck aus BVH-Datei samt Änderungszeit, Stellung und Körperhöhe — ist er gleich, bleibt die Datei, wie sie ist).
 """
@@ -15,6 +16,7 @@ import os
 from types import SimpleNamespace
 
 from ..daten.blendimportablage import Blendimportablage
+from .mesh3danimationswahl import Mesh3danimationswahl
 
 logger = logging.getLogger('core')
 
@@ -43,7 +45,7 @@ class Mesh3dbewegung:
 
     @staticmethod
     def bvh(wunsch=''):
-        """Die BVH-Datei: die gewünschte, wenn es sie gibt, sonst der Tanz der Bibliothek."""
+        """Die BVH-Datei: die gewünschte (`rechnen` nimmt ohne Angabe die Standardanimation des Auftrags), sonst der Tanz der Bibliothek."""
         from .engine2d3dkleiderfilmoptionen import Engine2d3dKleiderfilmoptionen
 
         pfad = str(wunsch or '').strip()
@@ -61,7 +63,8 @@ class Mesh3dbewegung:
         from .engine2d3dkleiderbewegung import Engine2d3dKleiderbewegung
 
         job = self.job()
-        bvh = self.bvh(wunsch)
+        # Ohne ausdrückliche Datei gilt die Standardanimation des Auftrags (13.10.2026, `Mesh3danimationswahl`, Vorgabe A_Results/DanceKurz); fehlt sie im Bestand, der Tanz der Bibliothek.
+        bvh = self.bvh(wunsch or Mesh3danimationswahl(self.ablage.kennung).pfad())
         hoehe = float((job.optionen or {}).get('hoehe_cm') or 0)
         stand = hashlib.md5(json.dumps([bvh, os.stat(bvh).st_mtime_ns, job.stellung(), hoehe], sort_keys=True, default=str).encode('utf-8')).hexdigest()[:12]
         ordner = self.ablage.arbeit(self.ORDNER)

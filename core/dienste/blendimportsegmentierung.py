@@ -25,6 +25,7 @@ import numpy as np
 from django.conf import settings
 from django.utils import timezone
 
+from .blendimportbegriffe import Blendimportbegriffe
 from .engine2d3dkleidersegmentierung import Engine2d3dKleidersegmentierung
 from .engine2d3dkleidersegmentierungsoptionen import Engine2d3dKleidersegmentierungsoptionen
 from .mesh3dansicht import Mesh3dansicht
@@ -52,6 +53,8 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         self._netz = None
         self._arbeit = None
         self._bilder = []
+        #: Bericht von `Blendimportbegriffe` (SAM 3): `{begriffe: {…}, …}` oder `{fehler: …}`; None, solange er nicht lief.
+        self._begriffe = None
 
     def ordner(self):
         return self.ablage.arbeit(self.ORDNER)
@@ -81,6 +84,9 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
             proxy = self._abstimmnetz(glb)
         self.lauf.melden(0.1, 'Segmentierung: Sapiens')
         self.ausfuehren()
+        # Die Bestandteile über Textbegriffe (SAM 3, `Blendimportbegriffe`): Stab, Bart, Tasche … — dasselbe Abstimm-Netz, dieselben Renderings. Ein Zusatz: scheitert er, steht der Grund im Bericht.
+        self.lauf.melden(0.88, 'Segmentierung: Bestandteile (SAM 3)')
+        self._begriffe = Blendimportbegriffe(self).ausfuehren()
         if proxy is not None:
             self.lauf.melden(0.97, 'Segmentierung: Stimmen auf das volle Netz übertragen')
             self._uebertragen(glb)
@@ -133,15 +139,19 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         Je Fläche des vollen Netzes die nächste Flächenmitte des Abstimm-Netzes; eine Fläche, die dort ungesehen blieb, bleibt es."""
         from scipy.spatial import cKDTree
 
-        with np.load(self._arbeit / self.DATEI) as d:
-            kopie = {k: d[k] for k in d.files}
         voll, klein = self._flaechenmitten(glb), self._flaechenmitten(self._netz)
         _, nah = cKDTree(klein).query(voll, workers=-1)
-        for feld in ('klassen', 'stimmen', 'hintergrund', 'ansichten'):
-            kopie[feld] = kopie[feld][nah]
-        kopie['netz'] = np.array(self.stempel(glb))
-        kopie['flaechen'] = len(voll)
-        np.savez_compressed(self.ordner() / self.DATEI, **kopie)
+        # Sapiens-Stimmen und die Stimmen der Begriffe (SAM 3, `teile_flaechen.npz`) gehen auf dieselbe Weise vom Abstimm-Netz auf das volle Netz.
+        for datei, felder in ((self.DATEI, ('klassen', 'stimmen', 'hintergrund', 'ansichten')), (Blendimportbegriffe.DATEI, ('stimmen', 'pixel', 'ansichten'))):
+            if not (self._arbeit / datei).is_file():
+                continue
+            with np.load(self._arbeit / datei) as d:
+                kopie = {k: d[k] for k in d.files}
+            for feld in felder:
+                kopie[feld] = kopie[feld][nah]
+            kopie['netz'] = np.array(self.stempel(glb))
+            kopie['flaechen'] = len(voll)
+            np.savez_compressed(self.ordner() / datei, **kopie)
 
     @staticmethod
     def _flaechenmitten(glb):
@@ -164,6 +174,7 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         ansichten = [{k: e.get(k) for k in ('rolle', 'iou', 'sichtbar', 'anteile', 'ueberlagerung', 'haarfarbe')} for e in stand.get('bilder', [])]
         return {'stand': timezone.now().isoformat(), 'optionen': dict(self.optionen), 'ansichten': ansichten, 'kennzahlen': stand.get('kennzahlen') or {},
                 'abstimmnetz': {'flaechen': proxy[0], 'punkte': proxy[1]} if proxy else None,
+                'begriffe': self._begriffe,
                 'quelle': {'koerper': self.stempel(self._glb)}, 'datei': self.DATEI}
 
     # --------------------------------------------------- Stempel und Auftrag
@@ -204,4 +215,11 @@ class Blendimportsegmentierung(Engine2d3dKleidersegmentierung):
         ziel = job_ablage.arbeit(cls.DATEI)
         ziel.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(ziel, **daten)
+        # Die Stimmen der Begriffe (SAM 3) gehören zum selben Netz und gehen mit — fehlen sie, rechnet „Mesh to 3D“ ohne Bestandteile (kein Fehler).
+        teile = ablage.arbeit(cls.ORDNER) / Blendimportbegriffe.DATEI
+        if teile.is_file():
+            with np.load(teile) as d:
+                gleiche = {k: d[k] for k in d.files}
+            gleiche['netz'] = daten['netz']
+            np.savez_compressed(job_ablage.arbeit(Blendimportbegriffe.DATEI), **gleiche)
         return dict(bericht.get('optionen') or {})

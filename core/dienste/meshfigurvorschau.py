@@ -37,7 +37,9 @@ class Meshfigurvorschau:
         from Genesis9.reglerableitung import G9reglerableitung
         from Genesis9.vorschaubild import G9vorschaubild
 
+        from .meshfigurabnahme import Meshfigurabnahme
         from .meshfigurgenesis import Meshfigurgenesis
+        from .meshfigurobjektflaechen import Meshfigurobjektflaechen
         from .meshfigurschammessung import Meshfigurschammessung
 
         stellung = self.job.stellung()
@@ -78,14 +80,34 @@ class Meshfigurvorschau:
         # Messung, Haarobjekt und Kleidungsobjekt hängen nur an den Dateien dieses Schritts und nicht voneinander (gemessen 12.10.2026, py-spy: 15 + 3 + 27 s nacheinander): drei Fäden.
         # Keiner von ihnen meldet Fortschritt oder sichert den Auftrag; jeder fängt seinen Fehler selbst.
         self.lauf.melden(0.86, 'Scham messen, Haar und Kleidung als Objekt')
+        self.haltung()                       # vor den Fäden: Kleidung, Haar und Bestandteile schreiben ihr Objekt auch in der Haltung des Netzes
+        Meshfigurobjektflaechen.leeren(self.ablage)          # jedes Objekt legt gleich seine Flächen ab (Abnahme); was ein früherer Lauf ablegte, gilt nicht mehr
         with ThreadPoolExecutor(max_workers=3, thread_name_prefix='vorschau') as pool:
             scham = pool.submit(Meshfigurschammessung.sicher, self.lauf)
             objekte = [pool.submit(self.haarobjekt), pool.submit(self.kleidungsobjekt)]
             for objekt in objekte:
                 objekt.result()
             self.job.ergebnis['schammessung'] = scham.result()
+        # Der Griff (14.10.2026): die Bestandteile stehen jetzt fest; hält eine Hand einen Gegenstand, schließen sich ihre Finger in der Haltung des Netzes (`ergebnis.haltung.drehung`). Wirft nie.
+        from .meshfigurgriff import Meshfigurgriff
+
+        self.lauf.melden(0.87, 'Griff der Hand')
+        Meshfigurgriff.sicher(self.lauf)
+        # Der Befund des Laufs (Objekte, Abstände, Maße) — bei jedem Auftrag, ohne Schalter; ein Fehler steht im Ergebnis, der Lauf geht weiter.
+        self.lauf.melden(0.88, 'Abnahme')
+        self.job.ergebnis['abnahme'] = Meshfigurabnahme.sicher(self.lauf)
         self.lauf.melden(0.9, 'Testfall')
         self.job.ergebnis['testfall'] = self.testfall(stellung, punkte)
+
+    def haltung(self):
+        """Die Haltung des Netzes für die Bühne (`Meshfighaltung`): die gebackene Figur gegen `posiert.npy`, Lage und Rest in `ergebnis.haltung`. Scheitert sie, steht der Grund dort; die Bühne bietet den Schalter dann nicht an."""
+        from .meshfighaltung import Meshfighaltung
+
+        try:
+            Meshfighaltung.rechnen(self.lauf)
+        except Exception as fehler:  # noqa: BLE001 — ein Zusatz: sichtbar im Ergebnis und im Log, der Lauf geht weiter
+            logger.exception('Mesh to 3D %s: Haltung des Netzes gescheitert', self.job.kennung)
+            self.job.ergebnis['haltung'] = {'gueltig': False, 'grund': str(fehler)[:300]}
 
     def kleidungsobjekt(self):
         """Die Kleidung aus Schritt „kleidung" als Objekt auf der Figur (`Meshfigurkleidung.objekt`) — wie das Haar
@@ -93,8 +115,10 @@ class Meshfigurvorschau:
         Person, die Bühne zeigt die Figur in Ruhe). Scheitert es, steht der Grund in `ergebnis.kleidung.objekt`;
         die Vorschau selbst ist davon unberührt."""
         from .meshfigurkleidung import Meshfigurkleidung
+        from .meshfigurteile import Meshfigurteile
 
         try:
+            Meshfigurteile.holen(self.lauf)               # die Bestandteile (Stab, Bart …) zuerst: Kleidung und Haar lassen ihre Flächen weg
             Meshfigurkleidung(self.lauf).objekt()
         except Exception as fehler:  # noqa: BLE001 — sichtbar im Ergebnis und im Log, der Lauf geht weiter
             logger.exception('Mesh to 3D %s: Kleidungsobjekt gescheitert', self.job.kennung)

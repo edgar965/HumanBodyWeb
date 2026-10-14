@@ -8,11 +8,12 @@ Die Zeile trägt `data-id` = Kennung; `mesh3d/mesh3dliste.js` öffnet auf Klick 
 
 from datetime import datetime
 
-from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from ..daten.blendimportablage import Blendimportablage
+from .mesh3dlink import Mesh3dlink
+from .mesh3dreiter import Mesh3dreiter
 from .mesh3dschritte import Mesh3dschritte
 from .mesh3dzustand import Mesh3dzustand
 
@@ -22,7 +23,7 @@ __all__ = ['Mesh3dtabelle']
 class Mesh3dtabelle:
     SCHLUESSEL = 'mesh3d'
     SPALTEN = (
-        {'label': '<input type="checkbox" id="mesh3d-select-all" title="alle auswählen / Auswahl aufheben">', 'key': 'wahl', 'sortAus': True},
+        {'label': '<input type="checkbox" class="mesh3d-alle" title="alle auswählen / Auswahl aufheben">', 'key': 'wahl', 'sortAus': True},
         {'label': 'Name', 'key': 'name'},
         {'label': 'Format', 'key': 'format', 'titel': 'Blender, OBJ, FBX oder GLB'},
         {'label': 'Status', 'key': 'status'},
@@ -42,10 +43,13 @@ class Mesh3dtabelle:
     def __init__(self, kennungen=None):
         self.kennungen = list(kennungen) if kennungen is not None else Blendimportablage.alle()
 
-    def tabelle(self):
+    def tabelle(self, reiter=None):
+        """`reiter`: Schlüssel des Reiters, in dem die Tabelle steht. Jede Tabelle hat ihren eigenen Speicher für Sortierung und Spaltenbreiten; die des ersten Reiters heißt weiter `mesh3d`."""
         zeilen = [z for z in (self.zeile(k) for k in self.kennungen) if z]
-        return {'key': self.SCHLUESSEL, 'spalten': list(self.SPALTEN), 'zeilen': zeilen, 'klasse': 'auftragstabelle mesh3dtabelle',
-                'leer': 'Noch kein Auftrag — oben eine Datei angeben.'}
+        erster = reiter is None or reiter == Mesh3dreiter.erster()
+        return {'key': self.SCHLUESSEL if erster else '%s-%s' % (self.SCHLUESSEL, reiter), 'spalten': list(self.SPALTEN), 'zeilen': zeilen,
+                'klasse': 'auftragstabelle mesh3dtabelle',
+                'leer': 'Noch kein Auftrag — oben eine Datei angeben.' if erster else 'Kein Auftrag in diesem Reiter — in der Liste „Aufträge“ wählen und hierher verschieben.'}
 
     def zeile(self, kennung):
         stand = Mesh3dzustand.stand(kennung)
@@ -53,7 +57,7 @@ class Mesh3dtabelle:
             return None
         quelle = stand.get('quelle') or {}
         e = stand.get('ergebnis') or {}
-        seite = reverse('mesh3d_auftrag', args=[kennung])
+        seite = Mesh3dlink.pfad(kennung, quelle.get('name') or kennung)
         zellen = (
             format_html('<td><input type="checkbox" class="mesh3d-wahl" data-id="{}" aria-label="Auftrag wählen"></td>', kennung),
             format_html('<td data-sort="{}"><a href="{}">{}</a></td>', str(quelle.get('name') or kennung).lower(), seite, quelle.get('name') or kennung),

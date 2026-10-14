@@ -13,6 +13,11 @@ export class Mesh3dneu {
     static FORMATE = [['blend', 'Blender (.blend)'], ['fbx', 'FBX'], ['obj', 'OBJ'], ['glb', 'GLB']];
     /** Die Felder, die das Formular zeigt; die übrigen Werte kommen unverändert vom Server. */
     static ZEIGEN = ['pfad', 'name', 'eigener_name', 'basis'];
+    /**
+     * Was am Modell hängt und darum NICHT vom zuletzt angelegten Auftrag geerbt wird (13.10.2026, `Blendimportweg.MODELLABHAENGIG`): das Formular schickt es nicht mit, der Server nimmt die Vorgabe des Wegs
+     * (Weg „netz“: Pose SAM, Stoffzug „nah“); auf der Jobseite stehen dazu Empfehlung und „Varianten rechnen“.
+     */
+    static NICHT_ERBEN = ['pose', 'pose_drehung', 'kleidung_zug'];
 
     static aufbauen() {
         const neu = new Mesh3dneu();
@@ -63,7 +68,9 @@ export class Mesh3dneu {
         }
         const daten = this.katalog[format];
         this.werte = { ...daten.werte };
-        const sichtbar = daten.optionen.filter(o => Mesh3dneu.ZEIGEN.includes(o.schluessel));
+        for (const schluessel of Mesh3dneu.NICHT_ERBEN) delete this.werte[schluessel];
+        this.werte.basis = '';                                       // keine stille Vorgabe: die Grundfigur wird gewählt
+        const sichtbar = daten.optionen.filter(o => Mesh3dneu.ZEIGEN.includes(o.schluessel)).map(o => (o.schluessel === 'basis' ? { ...o, leer: '— bitte wählen —' } : o));
         Mesh3dfelder.bauen(this.felder, sichtbar, this.werte, () => this.pruefen());
         this.pruefen();
     }
@@ -73,8 +80,16 @@ export class Mesh3dneu {
         return { ...this.werte, ...Mesh3dfelder.lesen(this.felder) };
     }
 
+    /** „Auftrag anlegen“ gilt erst mit gewählter Grundfigur. */
+    _freigabe() {
+        const gewaehlt = Boolean(this.werteLesen().basis);
+        this.knopf.disabled = !gewaehlt;
+        this.knopf.title = gewaehlt ? '' : 'Erst die Grundfigur wählen — eine falsche bleibt ohne Fehlermeldung';
+    }
+
     /** Welche Datei gelesen wird und wie die Figur heißt — sichtbar, bevor ein Auftrag entsteht (derselbe Endpunkt wie der Dialog der Charakter-Seite). */
     async pruefen() {
+        this._freigabe();
         const werte = this.werteLesen();
         this.quelle.classList.remove('fehlertext');
         if (!werte.pfad) { this.quelle.textContent = 'Ordner oder Datei angeben.'; return null; }
@@ -94,9 +109,11 @@ export class Mesh3dneu {
         this.knopf.disabled = true;
         this.meldung.textContent = 'Wird angelegt …';
         try {
-            const antwort = await Serverabruf.senden('/api/mesh3d/anlegen/', { format: this.format, werte: this.werteLesen() });
+            // Der Auftrag kommt in den Reiter, der unter dem Formular gerade offen ist.
+            const reiter = document.querySelector('#mesh3d-reiter [role="tab"][aria-selected="true"]')?.dataset.reiter;
+            const antwort = await Serverabruf.senden('/api/mesh3d/anlegen/', { format: this.format, werte: this.werteLesen(), reiter });
             if (antwort.error) throw new Error(antwort.error);
-            window.location.href = `/mesh-3D/${antwort.kennung}/`;
+            window.location.href = antwort.link || `/mesh-3D/${antwort.kennung}/`;
         } catch (fehler) {
             this.meldung.textContent = `Nicht angelegt: ${fehler.message}`;
             this.knopf.disabled = false;

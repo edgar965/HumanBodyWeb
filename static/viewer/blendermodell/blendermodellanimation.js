@@ -119,6 +119,8 @@ export class Blendermodellanimation {
         const delta = this._uhr.getDelta();
         if (this.mixer && this.action && !this.action.paused) {
             this.mixer.update(delta);
+            // Die Bühne zeichnet im Leerlauf nur 5 Bilder/s (`Meshfigurtakt`): eine laufende Bewegung braucht die volle Rate.
+            this.buehne.wach?.();
             this.fortschritt();
         }
     }
@@ -161,6 +163,7 @@ export class Blendermodellanimation {
         const ziel = this.action.time + richtung / this.fps;
         this.action.time = Math.min(Math.max(ziel, 0), this.dauer || ziel);
         this.mixer.update(0);
+        this.buehne.wach?.();
         this.fortschritt();
     }
 
@@ -168,6 +171,7 @@ export class Blendermodellanimation {
         if (!this.action || !this.dauer) return;
         this.action.time = (Number(this.scrubber.value) / 1000) * this.dauer;
         this.mixer.update(0);
+        this.buehne.wach?.();
         this.fortschritt();
     }
 

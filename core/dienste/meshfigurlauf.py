@@ -65,6 +65,9 @@ class Meshfigurlauf:
     #: (Zauberer: 80 und 49 s) verschwindet hinter „koerper"/„gesicht"/„rest" (170 s auf der GPU, ein Kern). „frisur" startet, sobald der Runner der Textur die Figur festgelegt hat
     #: (`Meshfigurende.textur` → `nebenlauf_frueh`) und rechnet neben dem Backen der Kacheln und der Vorschau (gemessen 12.10.2026: Frisur 99 s statt 114 s dahinter, die Textur bleibt bei 114 s). Eine Unterklasse mit anderen Voraussetzungen setzt `()`.
     NEBENLAEUFIG = ('haar', 'kleidung', 'frisur')
+    #: Ein Nebenlauf, der erst rechnet, wenn ein anderer fertig ist (der Faden wartet, der Hauptfaden nicht — die Ketten laufen weiter): „kleidung" liest die Hutflächen aus `haar_maske.npz`
+    #: (13.10.2026: ohne das hing der Hut in der Kleidung davon ab, welcher Faden zuerst fertig war — `Meshfigurnebenlauf.voraussetzungen`). Eine Unterklasse ohne Nebenläufe setzt `{}`.
+    NEBEN_NACH = {'kleidung': ('haar',)}
     #: Nach diesen Schritten starten Nebenläufe, die nicht schon früher gestartet sind, vor ihrem Platz in `SCHRITTE` (`nebenlauf_frueh`) — die Figur steht dann fest (`genesis_ende.npz`, `posiert.npy`); gilt, wenn die Textur „aus" ist.
     NACH_SCHRITT = {'textur': ('frisur',)}
     #: Vor diesen Schritten müssen die Nebenläufe fertig sein (sie lesen deren Ergebnis).
@@ -160,8 +163,9 @@ class Meshfigurlauf:
         self.melden(0, name)
 
     def _nebenlauf(self, name, fabrik):
-        """Den Schritt `name` in einem Faden starten (`Meshfigurnebenlauf.starten`): Kopie des Auftrags, keine Fortschrittsmeldung."""
-        return Meshfigurnebenlauf.starten(self, name, fabrik)
+        """Den Schritt `name` in einem Faden starten (`Meshfigurnebenlauf.starten`): Kopie des Auftrags, keine Fortschrittsmeldung; der Faden wartet auf die Fäden aus `NEBEN_NACH`."""
+        laufend = getattr(self, '_laufend', None)
+        return Meshfigurnebenlauf.starten(self, name, fabrik, Meshfigurnebenlauf.voraussetzungen(self, laufend[0] if laufend else {}, name))
 
     def _nebenlaeufe_abwarten(self, nebenlaeufe, namen):
         """Wartet auf die Nebenläufe `namen` und übernimmt ihr Ergebnis in `job.ergebnis` (`Meshfigurnebenlauf.abwarten`)."""
