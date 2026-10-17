@@ -33,7 +33,8 @@ export class Dazeigenschaften {
     /** Das Daz-Stück hinter einem gewählten Teilnetz — oder null. */
     static stueckVon(teilnetz) {
         if (!teilnetz || teilnetz.type !== 'cloth') return null;
-        const stueck = Reiterzuordnung.stueckVon(teilnetz.key);
+        const getragen = Reiterzuordnung.getragen(state.characters.get(teilnetz.charId));
+        const stueck = Reiterzuordnung.stueckVon(teilnetz.key, getragen);
         return stueck?.liste === 'daz' ? stueck.kennung : null;
     }
 

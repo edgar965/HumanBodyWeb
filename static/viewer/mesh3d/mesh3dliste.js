@@ -35,9 +35,14 @@ export class Mesh3dliste {
             { knopf: this.knopf('kopie-alles'), zaehler: this.zaehlerVon(this.knopf('kopie-alles')), mitDaten: true }]);
         if (!this.tabelle) return;
         this.tabelle.addEventListener('click', e => this.geklickt(e));
+        this.tabelle.addEventListener('change', () => this.zaehlen());
         if (this.alle) this.alle.addEventListener('change', () => this.alleWaehlen(this.alle.checked));
         this.loeschen.addEventListener('click', () => this.gewaehlteLoeschen());
         for (const knopf of this.verschieben) knopf.addEventListener('click', () => this.gewaehlteVerschieben(knopf));
+        // Chrome stellt die Haken beim Zurückkehren auf die Seite wieder her (Formularzustand, auch aus dem bfcache), ohne ein Ereignis — die Knöpfe standen dann bei „(0)“ und gesperrt,
+        // obwohl Zeilen angehakt waren (16.10.2026, Edgar: „Gewählte löschen ist inaktiv“). Also beim Aufbau und bei `pageshow` aus den Haken zählen.
+        this.zaehlen();
+        window.addEventListener('pageshow', () => this.zaehlen());
     }
 
     knopf(aktion) {
@@ -58,6 +63,13 @@ export class Mesh3dliste {
 
     geklickt(e) {
         if (e.target.closest('input, a, button, select')) {
+            this.zaehlen();
+            return;
+        }
+        // Ein Klick knapp neben das Kästchen (in seine Zelle) hakt an, statt den Auftrag zu öffnen — so verlor Edgar seine Auswahl (client.log 16.10.2026 12:43:05: `klick td` 5 px neben dem Kästchen, Seite verlassen).
+        const kaestchen = e.target.closest('td')?.querySelector('.mesh3d-wahl');
+        if (kaestchen) {
+            kaestchen.checked = !kaestchen.checked;
             this.zaehlen();
             return;
         }

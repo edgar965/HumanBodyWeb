@@ -80,6 +80,8 @@ class Mesh3dzustand:
             'weg_grund': stand.get('weg_grund') or '',
             'status': stand.get('status'),
             'fehler': stand.get('fehler') or '',
+            #: eingereiht (`Blendimportwarteschlange`): ein anderer Import rechnet, dieser startet danach von selbst — `status` bleibt „läuft", die Anzeige sagt „In der Warteschlange"
+            'wartet': bool(stand.get('wartet')),
             'schritt': stand.get('schritt'),
             'detail': stand.get('detail') or '',
             'fortschritt': max(int(stand.get('fortschritt') or 0), int(fortschritt) if stand.get('schritt') == 'figur' else 0),

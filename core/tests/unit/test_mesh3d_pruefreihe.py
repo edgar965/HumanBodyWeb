@@ -128,6 +128,15 @@ class InvariantenTest(SimpleTestCase):
         schlecht = {'kleidung': {'gewaehlt': 'basis', 'kandidaten': kandidaten, 'gewebe': {'angewandt': False}}}
         self.assertIs(Mesh3dmesswerte.wahl_beste(schlecht), False)
 
+    def test_soll_ohne_testauftrag_wird_gemeldet(self):
+        # 14.10.2026: zwei von drei Soll-Aufträgen (Edgar, Zauberer) gab es nicht mehr; die Reihe prüfte sie nie und meldete „alles bestanden“
+        soll = {'A': {'name': 'Ballerina', 'soll': {}}, 'B': {'name': 'Zauberer', 'soll': {}}, 'C': {}}
+        with mock.patch.object(P, 'laden', return_value=soll):
+            self.assertEqual(P.verwaist(['A']), [('B', 'Zauberer'), ('C', 'C')])
+            self.assertEqual(P.verwaist(['A', 'B', 'C']), [])
+            with mock.patch.object(P, 'testauftraege', return_value=['A', 'B']):
+                self.assertEqual(P.verwaist(), [('C', 'C')])
+
     def test_ein_auftrag_ohne_lauf_ist_offen_und_kein_fehler(self):
         # „Test Wiederholen Schnitt“: angelegt, nie gestartet — die Reihe meldete „NICHT bestanden“, weil der Status nicht `fertig` war
         for stand in ('neu', 'laeuft'):
@@ -152,7 +161,7 @@ class KopierenTest(SimpleTestCase):
                 self.stand = {'quelle': {'datei': datei}, 'weg': weg}
                 self.quelle = SimpleNamespace(arbeit=lambda name: SimpleNamespace(is_file=lambda: mit_koerper))
 
-            def ohne_daten(self):
+            def ohne_ergebnis(self):
                 aufrufe.append('ohne')
                 if not (datei and Path(datei).exists()):
                     raise ValueError('Die Datei gibt es nicht mehr')
@@ -290,7 +299,7 @@ class WaechterTest(SimpleTestCase):
         text = self._text('core', 'dienste', 'meshfigurkleidung.py')
         self.assertIn('Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)', text)
         # nach dem Bereinigen: das Füllen von Löchern und das Glätten des Rands holten Haarflächen sonst zurück in den Stoff
-        self.assertLess(text.index('self._bereinigen(maske, regel)'), text.index('Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)'))
+        self.assertLess(text.index('self._bereinigen(maske, regel,'), text.index('Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)'))
         self.assertIn('haar & (stueck > 0) & (stueck != cls.ZUBEHOER)', self._text('core', 'dienste', 'meshfigurhaarabzug.py'))
 
     def test_befehl_und_optionen_gibt_es(self):

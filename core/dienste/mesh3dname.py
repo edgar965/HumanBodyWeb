@@ -12,7 +12,10 @@ weil der Name Teil von Dateinamen der Stücke wird.
 das Modell um (`Modellablage.umbenennen`: Datei, Fotokacheln und ihre Adressen; die Szene `.scene.json` bleibt, wie bei jedem Umbenennen). Der neue Modellname ist der alte, bei dem der Name des Auftrags „Mesh to 3D“ am Anfang durch den neuen ersetzt ist
 (`Zauberer S0 ohne Zug Mesh` → `Zauberer S0 Mesh`; ein Zähler wie „ 2“ bleibt). Fängt der Modellname nicht mit dem alten Auftragsnamen an (von Hand gespeichert) oder gibt es den neuen Namen schon, bleibt das Modell, wie es ist — der Grund steht im Bericht.
 Ausgelagerte Ordner mit dem alten Namen (`output/Export/MeshTo3D/<Name>_<Zeit>`) werden nicht umgezogen, sie sind Ablage des Laufs.
-Während eines Laufs geht nichts: der Arbeitsprozess schreibt `stand.json` aus seinem Speicher und würde den neuen Namen zurücksetzen (409 im Endpunkt, wie bei `Mesh3dquellwechsel`).
+**Während eines Laufs** (14.10.2026, Edgar: „klicke ich auf den Editor-Stift …, es tut sich nichts“ — der Endpunkt antwortete 409 „Der Auftrag rechnet“, die Meldung stand nur klein neben dem Namen): der Arbeitsprozess schreibt `stand.json` aus seinem Speicher
+und würde den neuen Namen zurücksetzen, zwei Schreiber auf `stand.json.neu` können die Datei sogar zerreißen. Jetzt steht der Name in einer eigenen Datei (`name.json`, `Blendimportablage.name_schreiben`), die kein Lauf schreibt; `Blendimportablage.stand()` legt sie über jeden
+Stand — auch über den eines Arbeitsprozesses mit altem Code (er lädt Module beim Start). Während eines Laufs schreibt `setzen` nur `name.json` und gleicht Auftrag „Mesh to 3D“ und Modell nicht an (das täte `stand.json` und das Modell unter dem laufenden Import um);
+der neue Lauf übernimmt den Namen (`Blendimportlauf._name_nachziehen`) und holt das Angleichen am Ende nach (`nachziehen`). „Netz ändern“ (`Mesh3dquellwechsel`) bestimmt den Namen neu und löscht `name.json`.
 """
 
 import logging
@@ -28,9 +31,6 @@ __all__ = ['Mesh3dname']
 
 
 class Mesh3dname:
-    class Laeuft(ValueError):
-        """Der Auftrag rechnet — der Endpunkt antwortet 409."""
-
     def __init__(self, kennung):
         try:
             self.ablage = Blendimportablage(kennung)
@@ -41,16 +41,23 @@ class Mesh3dname:
             raise ValueError('Kein Auftrag %s' % kennung)
 
     def setzen(self, text):
-        """→ der gespeicherte Name; `ValueError` bei leerem Text, `Laeuft`, solange der Auftrag rechnet."""
+        """→ der gespeicherte Name; `ValueError` bei leerem Text. Auch während eines Laufs (siehe oben)."""
         name = Blendimportquelle.eigener(text)
+        self.ablage.name_schreiben(name)
         if Blendimportarbeiter.lebt(self.ablage) and self.stand.get('status') in ('laeuft', 'neu'):
-            raise self.Laeuft('Der Auftrag rechnet — den Namen nach dem Lauf ändern (oder erst anhalten)')
-        stand = self.ablage.stand()
-        stand['quelle'] = {**(stand.get('quelle') or {}), 'name': name}
-        stand['einstellungen'] = {**(stand.get('einstellungen') or {}), 'name': 'eigen', 'eigener_name': name}
-        self.ablage.stand_schreiben(stand)
+            self.angeglichen = {'figur': 'nach dem Lauf', 'modell': 'nach dem Lauf'}
+            return name
+        self.ablage.stand_schreiben(Blendimportablage.name_eintragen(self.ablage.stand(), name))
         self.angeglichen = self.angleichen()
         return name
+
+    @classmethod
+    def nachziehen(cls, kennung):
+        """Nach einem Lauf, der unterwegs umbenannt wurde: Auftrag „Mesh to 3D“ und Modell auf den Namen des Auftrags ziehen. Wirft nie."""
+        try:
+            cls(kennung).angleichen()
+        except Exception:  # noqa: BLE001
+            logger.exception('Mesh-3D %s: Namen nach dem Lauf nicht angeglichen', kennung)
 
     def angleichen(self):
         """Den Auftrag „Mesh to 3D“ und das gespeicherte Modell auf den Namen dieses Auftrags ziehen. → `{'figur': Text, 'modell': Text}`; wirft nie (ein Fehler hier darf das Umbenennen nicht rückgängig machen)."""

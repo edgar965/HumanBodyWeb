@@ -1,6 +1,7 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 import { Kontextmenue } from '../gemeinsam/kontextmenue.js';
+import { Ordnerwahl } from '../gemeinsam/ordnerwahl.js';
 
 /**
  * Kontextmenü auf den Animationen im Szene-Reiter — umbenennen und löschen.
@@ -52,8 +53,10 @@ export class Animationsmenue {
         ]);
     }
 
+    // Kein `verbergen()` vor den Aktionen (17.10.2026): Das Menü schließt
+    // `Kontextmenue` beim Klick selbst. Die Klasse hatte die Methode nicht —
+    // Umbenennen, Verschieben und Löschen warfen einen TypeError, bevor sie fragten.
     static async umbenennen(kategorie, name, danach) {
-        Animationsmenue.verbergen();
         const neu = prompt(`Neuer Name für „${name}":`, name);
         if (!neu || neu === name) return false;
         if (!await Animationsmenue._senden('rename', {
@@ -77,8 +80,8 @@ export class Animationsmenue {
      * einen zweiten Ordner daneben an.
      */
     static async verschieben(kategorie, name, danach) {
-        Animationsmenue.verbergen();
-        const ziel = await Animationsmenue._ordnerWaehlen(kategorie, name);
+        const ziel = await Ordnerwahl.waehlen(`„${name}" liegt in „${kategorie}"`,
+            Animationsmenue.ordner().map((o) => ({ wert: o, text: o, aktuell: o === kategorie })));
         if (!ziel || ziel === kategorie) return false;
         if (!await Animationsmenue._senden('move', {
                 category: kategorie, name, new_category: ziel })) {
@@ -89,7 +92,6 @@ export class Animationsmenue {
     }
 
     static async loeschen(kategorie, name, danach) {
-        Animationsmenue.verbergen();
         if (!confirm(`„${name}" aus „${kategorie}" endgültig löschen?\n\n`
                      + 'Die BVH-Datei wird von der Platte entfernt.')) {
             return false;
@@ -125,74 +127,7 @@ export class Animationsmenue {
             .filter(Boolean);
     }
 
-    /**
-     * Das Auswahlfenster. Liefert den Zielordner oder `null`.
-     *
-     * Kein `<dialog>`: Die Seite läuft mit einem eigenen Fensterstil, und ein
-     * modales `dialog` legt sich über die Szene, während man noch sehen will,
-     * welche Figur gewählt ist.
-     */
-    static _ordnerWaehlen(kategorie, name) {
-        return new Promise((fertig) => {
-            const hinter = document.createElement('div');
-            // Die Klassen der Seite, nicht eigene: `.scene-modal-overlay`
-            // und `.scene-modal` sind in `scene_config.html` gestaltet. Ein
-            // eigener Kasten hätte kein Aussehen — weisser Text auf weissem
-            // Grund, und niemand sieht, warum.
-            hinter.className = 'scene-modal-overlay visible';
-            hinter.innerHTML = `
-                <div class="scene-modal">
-                  <div class="scene-modal-header">
-                    <h4><i class="fas fa-arrows-alt"></i> Verschieben</h4>
-                    <button class="scene-modal-close" data-ab>&times;</button>
-                  </div>
-                  <div class="scene-modal-body">
-                    <div class="dialoghinweis" data-titel></div>
-                    <select class="viewer-select hb-dehnt-ohne-abstand"
-                            data-liste></select>
-                    <input class="scene-name-input hb-versteckt" type="text"
-                           data-neu placeholder="Name des neuen Ordners">
-                  </div>
-                  <div class="scene-modal-footer">
-                    <button data-ab>Abbrechen</button>
-                    <button class="primary" data-ok>Verschieben</button>
-                  </div>
-                </div>`;
-            const nimm = (was) => hinter.querySelector(`[${was}]`);
-            // Der Name kommt aus einem Verzeichnis auf der Platte — als
-            // TEXT setzen, nicht als HTML.
-            nimm('data-titel').textContent = `„${name}" liegt in „${kategorie}"`;
-            const liste = nimm('data-liste');
-            const feld = nimm('data-neu');
-            for (const ordner of Animationsmenue.ordner()) {
-                const eintrag = document.createElement('option');
-                eintrag.value = ordner;
-                eintrag.textContent = ordner
-                    + (ordner === kategorie ? ' (aktuell)' : '');
-                eintrag.disabled = ordner === kategorie;
-                liste.appendChild(eintrag);
-            }
-            const neuer = document.createElement('option');
-            neuer.value = '__neu__';
-            neuer.textContent = 'Neuer Ordner …';
-            liste.appendChild(neuer);
-            liste.addEventListener('change', () => {
-                feld.classList.toggle('hb-versteckt', liste.value !== '__neu__');
-                if (liste.value === '__neu__') feld.focus();
-            });
-            document.body.appendChild(hinter);
-            const schliessen = (wert) => { hinter.remove(); fertig(wert); };
-            nimm('data-ok').addEventListener('click', () => schliessen(
-                liste.value === '__neu__' ? feld.value.trim() : liste.value));
-            for (const knopf of hinter.querySelectorAll('[data-ab]')) {
-                knopf.addEventListener('click', () => schliessen(null));
-            }
-            // Ein Klick auf den Hintergrund bricht ab, einer im Kasten nicht.
-            hinter.addEventListener('click', (ereignis) => {
-                if (ereignis.target === hinter) schliessen(null);
-            });
-            liste.focus();
-        });
-    }
+    // Das Auswahlfenster „Verschieben nach …“ steht seit 17.10.2026 in
+    // `gemeinsam/ordnerwahl.js` — der Reiter „Posen“ braucht dasselbe.
 
 }

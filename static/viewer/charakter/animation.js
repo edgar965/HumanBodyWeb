@@ -13,6 +13,7 @@ import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 import { Animationsmenue } from './animationsmenue.js';
+import { Animationsordnermenue } from './animationsordnermenue.js';
 import { Umaanimation } from './uma/umaanimation.js';
 import { Eigenanimation } from './eigenanimation.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -250,8 +251,11 @@ export async function loadAnimationUI() {
         if (catNames.length === 0) { tree.innerHTML = '<div class="leer-hinweis">Keine Animationen</div>'; return; }
         for (const cat of catNames) {
             const anims = categories[cat];
-            const {kasten: catDiv, koerper: body} =
+            const {kasten: catDiv, kopf: catKopf, koerper: body} =
                 Kategoriekasten.bauen(cat, anims.length, { offen: offen.has(cat) });
+            // Rechtsklick auf den Ordner: umbenennen (auch auf der Platte), löschen (16.10.2026).
+            Animationsordnermenue.binden(catKopf, cat, anims.length, { state, fn,
+                baumNeu: loadAnimationUI, meldung: (text) => abspielsteuerung.meldung(text) });
             for (const anim of anims) {
                 const item = document.createElement('div'); item.className = 'anim-item';
                 item.innerHTML = `<span>${escapeHtml(anim.name)}</span><span
@@ -320,6 +324,11 @@ function _umbenennungAnwenden(kategorie, alterName, neuerName) {
 Bibliothekskanal.hoeren((meldung) => {
     if (meldung.aktion === 'rename' && meldung.category && meldung.name && meldung.new_name) {
         _umbenennungAnwenden(meldung.category, meldung.name, meldung.new_name);
+    }
+    if (meldung.aktion === 'rename_folder') {
+        Animationsordnermenue.umbenannt(meldung.category, meldung.new_name, state);
+    } else if (meldung.aktion === 'delete_folder') {
+        Animationsordnermenue.geloescht(meldung.category, { state, fn });
     }
     loadAnimationUI();
 });

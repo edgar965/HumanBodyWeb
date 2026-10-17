@@ -12,7 +12,7 @@ import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
  * Code. warum wurde das nicht gemacht???" Die Liste kommt von `Genesis9garderobe`;
  * jedes Stück trägt seine VORGABE (`kategorie`, aus Daz' Metadaten:
  * Oberteile, Hosen, Shorts, Röcke, Kleider, Anzüge, Outfits, Unterwäsche, Schuhe,
- * Kopfbedeckung, Zubehör, Haare, Requisiten — `G9dazkategorien`); Edgars Einteilung
+ * Socken, Kopfbedeckung, Zubehör, Haare, Requisiten — `G9dazkategorien`); Edgars Einteilung
  * liegt beim Server (`G9garderobekategorien`, `3DObjects/models/Genesis9/
  * garderobe_kategorien.json`) und wird hier darübergelegt.
  *
@@ -57,6 +57,11 @@ export class Genesis9garderobekategorien {
             || stueck.kategorie
             || Genesis9garderobekategorien.VORGABE[stueck.art]
             || Genesis9garderobekategorien.VORGABE.kleidung;
+    }
+
+    /** Ob der Name eine Kategorie der Assets ist (Oberteile, Hosen …) — im Gegensatz zu Passform, Mischung, Textur, Form (Ort). */
+    static ist(name) {
+        return Boolean(Genesis9garderobekategorien._stand?.kategorien?.includes(name));
     }
 
     /** `[[Name, [Stücke]]]` in der Reihenfolge des Stands — nur besetzte. */

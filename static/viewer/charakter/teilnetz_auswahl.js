@@ -158,9 +158,11 @@ export function _removeSubMesh(target) {
     switch (target.type) {
         case 'cloth': {
             const schluessel = String(target.key);
-            if (schluessel.startsWith(Dazkleidung.PRAEFIX)) {
+            if (schluessel.startsWith(Dazkleidung.PRAEFIX) && Dazkleidung.zustaendig(inst)) {
                 // Daz-/Genesis-Stück an einer HumanBody-Figur (`daz_<kennung>/n`): aus
                 // `dazKleidung` nehmen — sonst blieb das Häkchen in den Assets stehen.
+                // Nur dort: auf einer Genesis-9-Figur heißt `daz_anatomie_mann/0` das Stück „daz_anatomie_mann"
+                // und geht den Weg über `inst.ausziehen` weiter unten (16.10.2026).
                 Dazkleidung.ausziehen(inst, schluessel.slice(Dazkleidung.PRAEFIX.length).split('/')[0]);
             } else if (schluessel.startsWith('gc_') && !schluessel.includes('/')) {
                 // Nur das LIVE gebaute GarmentCode-Stück heißt `gc_<stück>` ohne `/` — die

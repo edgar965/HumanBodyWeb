@@ -134,18 +134,45 @@ class Werkzeugkoerper:
          'rezept',
          "m.koerper_regler('hb:Torso_BreastPosZ', 0.3)",
          [(G + 'hbmorphe.py', 'G9hbmorphe'), (G + 'formung.py', 'G9formung'), (D + 'hbmorpheaufgenesis.py', 'Hbmorpheaufgenesis')],
-         'Reglername hb:<HumanBody-Regler>, ZWEISEITIG −1…1 mit eigenen Deltas je Richtung (plus für > 0, minus für < 0). 204 Regler: 110 Gesicht, ≈ 85 Körper, 8 Fantasie, '
+         'Reglername hb:<HumanBody-Regler>, ZWEISEITIG −1…1 mit eigenen Deltas je Richtung (plus für > 0, minus für < 0). 211 Regler: 109 Gesicht, 96 Körper, 6 Fantasie, '
          'übertragen auf die 25.182 Käfigpunkte über die Paarung der Grundfiguren; im Bedienfeld „HB-Morphs Körper/Gesicht/Fantasie“ (Bereiche hb_koerper, hb_gesicht, hb_fantasie). '
-         '21 Regler mit Skelettwirkung (Body Size, Längen, Winkel, Head Size, Elfenohren) liegen nur als Steckbrief (rig: true) und sind nicht stellbar: ein Punktversatz ohne '
-         'Skelett-Nachzug blähte die Anhänge auf (Mund 6,8 → 94 cm bei Body Size −100 %, 20.09.2026, genesis9-inhalte.md). Die genauen Namen aus der Reglerliste nehmen; '
-         'Torso_BreastPosZ ist das Beispiel der Klasse, nicht gegen den Bestand geprüft.'),
+         'Seit dem 17.10.2026 gehören die 21 Regler mit Skelettwirkung (Body Size, Längen, Winkel, Head Size) dazu: Sie tragen Gelenkversätze, das Skelett folgt (G9formelnfremd), '
+         'und sie sind im Weltraum übertragen. (Der „Mund 6,8 → 94 cm“ vom 20.09.2026 war ein Zacken im übertragenen Feld, kein Skelettfehler — G9feldputz füllt solche Punkte.) '
+         'Die genauen Namen aus der Reglerliste nehmen; Torso_BreastPosZ ist das Beispiel der Klasse, nicht gegen den Bestand geprüft.'),
+        ('MakeHuman-, SMPL-X- und UMA-Morphe auf Genesis (mh:…, sx:…, uma:…)',
+         'Stellt einen Regler der anderen Projekte als Morph auf dem Genesis-Körper: MakeHuman (Alter Baby/Kind/Alt, Rasse, Muskeln, 258 Detailregler, 22 Körperformen, Maße), SMPL-X '
+         '(23 Maßregler in cm, Form 1–10), UMA (62 DNA-Regler, drei Kinder-Posen).',
+         'rezept',
+         "m.koerper_regler('mh:macro_Alter_Kind', 1.0)",
+         [(G + 'morphfamilie.py', 'G9morphfamilie'), (G + 'morphfamilien.py', 'G9morphfamilien'), (G + 'mhmorphe.py', 'G9mhmorphe'), (G + 'sxmorphe.py', 'G9sxmorphe'),
+          (G + 'umamorphe.py', 'G9umamorphe'), (G + 'gelenkversatz.py', 'G9gelenkversatz'), (G + 'formelnfremd.py', 'G9formelnfremd')],
+         'Gleiche Mechanik wie hb: je Regler Deltas je Richtung auf den Käfigpunkten plus Gelenkversätze (das Skelett folgt). mh: −1…1 bei Reglern mit zwei Seiten, 0…1 mit einer '
+         '(Steckbrief min/max); Bezug ist die weibliche MakeHuman-Vorgabe, das Geschlecht fehlt mit Absicht (Genesis hat BaseFeminine/BaseMasculine). sx: −1…1 = ±2 Beta bzw. '
+         'der volle Ausschlag der Maßregler (±15 % Länge, ±20 % Umfang). uma: Knochenvorgaben auf Genesis-Knochen übertragen — Achsen angenommen, nicht gegen UMA gemessen. '
+         'Bereiche mh_makro/mh_koerper/mh_gesicht/mh_mass/mh_formen, sx_mass/sx_form, uma_kind/uma_dna. Die genauen Namen aus der Reglerliste nehmen; mh:macro_Alter_Kind ist ein '
+         'Beispiel der Klasse, nicht gegen den Bestand geprüft.'),
+        ('Lebensalter (alter:jahre)',
+         'Ein Schieber vom Baby (1 Jahr) über das Kind (10) und die Vorgabe (25) bis 90 Jahre — Körper aus MakeHumans Alterskurve, über 25 dazu Gesicht und Falten des Reglers „Alter“.',
+         'rezept',
+         "m.koerper_regler('alter:jahre', -0.625)",
+         [(G + 'lebensalter.py', 'G9lebensalter'), (G + 'alter.py', 'G9alter'), (G + 'mhmorphe.py', 'G9mhmorphe')],
+         'Läuft −1…1 mit v = 2a − 1 (a = MakeHumans Altersregler): −1 = 1 Jahr, −0,625 = 10 Jahre, 0 = Vorgabe (25), +1 = 90. G9formung löst ihn auf (wie alter:gesamt) in mh:macro_Alter_Baby/'
+         'Kind/Alt und, über 0, alter:gesamt. Ohne gebaute MakeHuman-Morphs wirkt er nur über 0. Gemessen am 17.10.2026: 10 Jahre 79,3 % der Höhe (MakeHuman 79,3 %), 1 Jahr 37,9 % (37,9 %).'),
         ('HumanBody-Morphe bauen',
          'Überträgt alle HumanBody-Regler auf den Genesis-Käfig und schreibt sie in die Ablage — nötig nach einer Änderung der HumanBody-Morphpakete oder der Paarung.',
          'cli',
          'python14\\Scripts\\python.exe HumanBodyWeb\\manage.py hbmorphe_bauen [--nur-veraltet] [--leise]',
          [(D + 'hbmorpheaufgenesis.py', 'Hbmorpheaufgenesis'), (G + 'hbmorphe.py', 'G9hbmorphe')],
          'Schreibt nach Genesis9/ablage/hbmorphe/ (Artefakt, nicht im Git; bestand.json trägt Fassung und Stand) — nur nach Ansage. --nur-veraltet baut nur, wenn der Bestand fehlt oder älter '
-         'ist als die HumanBody-Morphs. Dauer: nicht gemessen.'),
+         'ist als die HumanBody-Morphs. Dauer 17.10.2026: 150 s (211 Regler).'),
+        ('MakeHuman-, SMPL-X- und UMA-Morphe bauen',
+         'Überträgt die Regler von MakeHuman, SMPL-X und UMA auf den Genesis-Käfig und schreibt sie in die Ablage — nötig nach einer Änderung der Ziele, des Klons, der Paarung oder der Grundfigur.',
+         'cli',
+         'python14\\Scripts\\python.exe HumanBodyWeb\\manage.py mhmorphe_bauen | sxmorphe_bauen | umamorphe_bauen [--leise]',
+         [(D + 'mhmorpheaufgenesis.py', 'Mhmorpheaufgenesis'), (D + 'sxmorpheaufgenesis.py', 'Sxmorpheaufgenesis'), (D + 'umamorpheaufgenesis.py', 'Umamorpheaufgenesis'),
+          (D + 'mhklonuebertragung.py', 'Mhklonuebertragung'), (G + 'knochenfeld.py', 'G9knochenfeld'), (G + 'feldputz.py', 'G9feldputz')],
+         'Schreibt nach Genesis9/ablage/mhmorphe|sxmorphe|umamorphe/ (Artefakte, nicht im Git) — nur nach Ansage. Gemessen 17.10.2026: MakeHuman 289 von 292 Reglern in 94 s '
+         '(die drei Penis-Regler erreichen keinen Käfigpunkt), SMPL-X 33 Regler in 22 s, UMA 63 von 65 in 7 s (Augengröße und -abstand: die Augäpfel sind Anhänge, ohne Käfigpunkt).'),
         ('Seite: Szene, Genesis-9-Figur',
          'Regler von Hand ziehen und die Wirkung im 3D-Bild sehen; Figur als Modell speichern.',
          'seite',
@@ -193,7 +220,7 @@ class Werkzeugkoerper:
         ('G9reglerplan', 'ruft', 'G9morphablage', 'holen(): alle Kanäle der Daz-Bibliothek'),
         ('G9morphablage', 'ruft', 'G9reglergrenzen', 'anwenden(ablage): einseitige Formregler zweiseitig machen'),
         ('G9formung', 'ruft', 'G9eigenmorphe', 'deltas(name) in _eigen_dazu(): Eigenmorphe auf die Morphpunkte; dateistand() im Fingerabdruck'),
-        ('G9formung', 'ruft', 'G9hbmorphe', 'deltas(name, wert): hb:…-Morphe, die Richtung steckt schon drin'),
+        ('G9formung', 'ruft', 'G9morphfamilien', 'deltas(name, wert): hb:/mh:/sx:/uma:-Morphe, die Richtung steckt schon drin; gelenke() geht über G9formelnfremd ins Skelett'),
         ('Hbmorpheaufgenesis', 'ruft', 'G9hbmorphe', 'ablegen(kennung, nummern, plus, minus, steckbrief): Morph je HumanBody-Regler schreiben'),
         ('G9rezept', 'ruft', 'ModellMitKleidern', 'anwenden(): getattr(modell, name)(*args, **kwargs) je Zeile'),
         ('ModellMitKleidern', 'erbt', 'ModellKoerperMixin', 'koerper_ort(), koerper_huelle(), haltung_gelenk() stehen im Mixin'),

@@ -134,9 +134,9 @@ export class Hautverdeckung extends Figurhaut {
         return Hautverdeckung.anwenden(inst, vorab && jetzt === stoffe.map((s) => s.schluessel).join('|') ? vorab : null);
     }
 
-    /** Die Stücke, die die Haut verdecken dürfen, als `[schluessel, netz]` (`zaehlt`). */
+    /** Die Stücke, die die Haut verdecken dürfen, als `[schluessel, netz]` (`zaehlt`; `stuecke` in `Figurhaut`). */
     static zaehlende(inst) {
-        return Object.entries(inst?.clothMeshes || {}).filter(([, netz]) => netz?.geometry?.index && Hautverdeckung.zaehlt(netz));
+        return Object.entries(Hautverdeckung.stuecke(inst)).filter(([, netz]) => netz?.geometry?.index && Hautverdeckung.zaehlt(netz));
     }
 
     /** Steile Hautdreiecke auf einem Ersatzstück, die dessen Fläche verdecken (`stueckluecke.js`) — `{weg, splitter}`. */
@@ -215,7 +215,7 @@ export class Hautverdeckung extends Figurhaut {
     static stoffe(inst, ohneVerschweisste = false) {
         const aus = [];
         const anzahl = (inst?.bodyMesh?.geometry?.userData?.indexVoll?.index?.length || 0) / 3;
-        for (const [schluessel, netz] of Object.entries(inst?.clothMeshes || {})) {
+        for (const [schluessel, netz] of Object.entries(Hautverdeckung.stuecke(inst))) {
             const g = netz?.geometry;
             if (!g?.attributes?.position || !g.index) continue;
             if (!Hautverdeckung.zaehlt(netz)) continue;

@@ -125,7 +125,7 @@ class Posebestimmung:
             scan = Meshfigurscan.laden(netz)
         alpha = np.asarray(Image.open(png).convert('RGBA'))[:, :, 3]
         abbildung = Engine2d3dKleiderposeabbildung(scan, alpha)
-        roh, treffer, liste = abbildung.landmarken(np.asarray(e['k2']), sam['namen'], Engine2d3dKleiderposegelenke.ZUORDNUNG, weglassen)
+        roh, treffer, liste = abbildung.landmarken(np.asarray(e['k2']), sam['namen'], Engine2d3dKleiderposegelenke.ZUORDNUNG, weglassen, k3=e.get('k3'))
         if int((treffer > 0).sum()) < 4:
             raise RuntimeError('Zu wenige Gelenke im Netz (%d) — Drehung oder Auswahl der Gelenke prüfen' % int((treffer > 0).sum()))
         np.savez(self.ordner / 'landmarken.npz', roh=roh, treffer=treffer)

@@ -15,7 +15,8 @@ __all__ = ['Ordnerkopie']
 
 class Ordnerkopie:
     #: Die Varianten eines Imports (`Mesh3dvarianten`) gehören ihm: eine Kopie, die ihre Liste mitnähme, zeigte auf Aufträge, die der Import beim Löschen mitnimmt.
-    NIE_NAMEN = frozenset({'auftrag.pid', 'baut.json', 'varianten.json', 'varianten.pid', 'varianten.log'})
+    #: `name.json` ist der Name des Originals (`Blendimportablage.name`); die Kopie hat ihren eigenen („<Name> Kopie“) und läge sonst darunter versteckt.
+    NIE_NAMEN = frozenset({'auftrag.pid', 'baut.json', 'varianten.json', 'varianten.pid', 'varianten.log', 'name.json'})
     NIE_ENDUNGEN = ('.teil',)
     TEXT_HOECHSTENS = 4 * 1024 * 1024
 

@@ -179,6 +179,27 @@ export class Clipfehlt {
         return geaendert;
     }
 
+    /**
+     * Ein Ordner der Bibliothek heißt jetzt anders (16.10.2026): alle Clips
+     * daraus auf den neuen Ordnernamen umstellen — der Server hat die
+     * GESPEICHERTEN Projekte schon nachgezogen (`Studioprojektumbenennung`),
+     * dieses offene hält seinen alten Stand im Speicher.
+     * @returns {number} Anzahl der umgestellten Clips
+     */
+    static ordnerUmbenannt(alteKategorie, neueKategorie, state, fn) {
+        let geaendert = 0;
+        for (const spur of state.project.tracks) {
+            for (const clip of spur.clips) {
+                if ((clip.type !== 'bvh' && clip.type !== 'freeze')
+                    || clip.category !== alteKategorie) continue;
+                clip.category = neueKategorie;
+                geaendert++;
+            }
+        }
+        if (geaendert > 0) Clipfehlt._nachtragen(state, fn);
+        return geaendert;
+    }
+
     static _spurRaeumen(spur, kategorie, name) {
         let entfernt = 0;
         // Von hinten: Ein `splice` beim Vorwärtslaufen überspringt den Nachbarn.

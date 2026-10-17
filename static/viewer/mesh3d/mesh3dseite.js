@@ -42,7 +42,7 @@ export class Mesh3dseite {
         this.quelle = new Mesh3dquelle(this);
         // Die Karte „Empfehlungen und Varianten“ steht hinter der Bühne: sie schaltet die „Ausgabe“ über der 3D-Ansicht (`buehne.ausgabeWaehlen`).
         this.karten = [this.lauf, this.buehne, this.quelle, new Mesh3dvarianten(this), new Mesh3drollen(), new Mesh3dsegmentierung(this), new Mesh3dpose(this), new Mesh3dfigur(), new Mesh3dstuecke(),
-            new Mesh3dhaut(), new Mesh3dmodell(), new Mesh3diterationen()];
+            new Mesh3dhaut(), new Mesh3dmodell(this), new Mesh3diterationen()];
         this._timer = null;
         this._laeuft = false;
         // Kopie dieses Auftrags (ohne / mit allen Daten): danach geht es auf die Seite der Kopie.

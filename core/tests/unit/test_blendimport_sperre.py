@@ -6,8 +6,8 @@ gleichzeitig starten": Nichts hielt den zweiten Lauf auf, beide hätten GPU (Bac
 
 1. `Blendimportarbeiter.laufender` nennt den Import, dessen Arbeitsprozess lebt UND dessen Stand „läuft" sagt — eine alte
    PID-Datei, deren Nummer Windows an einen fremden Prozess vergeben hat, sperrt nicht. Der eigene Import zählt nicht.
-2. Die Endpunkte `starten` und `neu` antworten 409 mit der Kennung und dem Schritt des laufenden Imports; es entsteht kein
-   neuer Import, der Arbeitsprozess startet nicht.
+2. Die Endpunkte `starten` und `neu` REIHEN EIN (seit 14.10.2026, vorher 409): Antwort `wartet` mit der Kennung des Imports davor,
+   der Arbeitsprozess startet mit `einreihen` (`Blendimportwarteschlange`).
 3. Die Normalen-Grenze kommt aus dem Dialog (`normalen_grenze`): 35° säubert ein Texel mit 60° Kippung, 70° lässt es, `aus`
    ändert nichts. Fällt in eine Kachel mehr als `WARN_PROZENT`, steht eine Warnung in der Statuszeile.
 
@@ -15,7 +15,7 @@ gleichzeitig starten": Nichts hielt den zweiten Lauf auf, beide hätten GPU (Bac
    „Importieren" startet genau einen Import — `_STARTSPERRE` hält Prüfung und Start zusammen (Fall 7, mit Gegenprobe Fall 8).
 
 Sabotage-Gegenprobe: in `laufender` die Prüfung `stand().get('status') == 'laeuft'` entfernen → `SperreTest.test_2` rot;
-`kennung != ausser` entfernen → `test_3` rot; in `_belegt` `return None` statt der Antwort → `test_4` rot; in `_saeubern`
+`kennung != ausser` entfernen → `test_3` rot; in `_hinter` `return None` statt der Kennung → `test_4` rot; in `_saeubern`
 `grad` nicht durchreichen → `NormalenGrenzeTest.test_1` rot; die Schwelle in `_warnen` entfernen → `test_2` rot.
 
 Nicht gelaufen (Stand 08.10.2026) — läuft nur auf Ansage.
@@ -76,26 +76,33 @@ class SperreTest(SimpleTestCase):
         self._import('2026.10.08.13.00.00', 'laeuft', lebt=True)
         self.assertEqual(Blendimportarbeiter.laufender(ausser='2026.10.08.12.00.00'), '2026.10.08.13.00.00')
 
-    def test_4_starten_und_neu_antworten_409_ohne_etwas_anzulegen(self):
+    def test_4_starten_und_neu_reihen_ein_statt_409(self):
+        """Seit 14.10.2026 (Edgar: „keine Gaga-Meldung, sondern eine normale Meldung, dass der Job in eine Queue eingereiht wird"): ein zweiter Start wird EINGEREIHT — Antwort 200 mit `wartet`,
+        der Arbeitsprozess startet mit `einreihen`, hinter dem Import, der rechnet. Kein 409."""
         self._import('2026.10.08.12.00.00', 'laeuft', lebt=True)
         self._import('2026.10.08.09.00.00', 'fertig', lebt=False)
-        vorher = Blendimportablage.alle()
         anfrage = RequestFactory().post('/api/character/blendimport/starten/', data=json.dumps({'werte': {}}),
                                         content_type='application/json')
-        with mock.patch.object(Blendimportarbeiter, 'starten') as starten:
+        werte = {'pfad': 'x', 'name': 'ordner', 'eigener_name': ''}
+        stand = mock.patch.multiple(
+            'core.api.blendimport', Blendimportquelle=mock.Mock(return_value=mock.Mock(steckbrief=lambda: {'name': 'X'})),
+            Blendimporteinstellungen=mock.Mock(pruefen=lambda w: werte, speichern=lambda w: w))
+        with stand, mock.patch.object(Blendimportarbeiter, 'starten', return_value=4711) as starten:
             antwort = Blendimportendpunkte.starten(anfrage)
-            neu = Blendimportendpunkte.neu(RequestFactory().post('/x/', data='{}', content_type='application/json'),
-                                           '2026.10.08.09.00.00')
-        self.assertEqual(antwort.status_code, 409)
-        text = json.loads(antwort.content)['error']
-        self.assertIn('2026.10.08.12.00.00', text)
-        self.assertIn('haut', text)
-        self.assertEqual(neu.status_code, 409)
-        starten.assert_not_called()
-        self.assertEqual(Blendimportablage.alle(), vorher, 'kein neuer Import angelegt')
+            neu = Blendimportendpunkte.neu(RequestFactory().post('/x/', data='{}', content_type='application/json'), '2026.10.08.09.00.00')
+        self.assertEqual(antwort.status_code, 200)
+        daten = json.loads(antwort.content)
+        self.assertTrue(daten['wartet'])
+        self.assertEqual(daten['hinter'], '2026.10.08.12.00.00')
+        self.assertEqual(neu.status_code, 200)
+        self.assertTrue(json.loads(neu.content)['wartet'])
+        self.assertEqual(starten.call_count, 2)
+        for aufruf in starten.call_args_list:
+            self.assertTrue(aufruf.kwargs['einreihen'])
+            self.assertEqual(aufruf.kwargs['hinter'], '2026.10.08.12.00.00')
 
-    def test_5_ist_nichts_belegt_antwortet_belegt_mit_none(self):
-        self.assertIsNone(Blendimportendpunkte._belegt())
+    def test_5_ist_nichts_belegt_reiht_nichts_ein(self):
+        self.assertIsNone(Blendimportendpunkte._hinter())
 
     def test_6_laufend_nennt_den_import_der_gerade_rechnet(self):
         """Leiste und Dialog fragen es nach dem Neuladen der Seite."""
@@ -112,15 +119,16 @@ class SperreTest(SimpleTestCase):
         """Zwei `starten`-Anfragen gleichzeitig (Doppelklick); der Arbeitsprozess braucht eine Weile, bis sein Stand „läuft" sagt."""
         gestartet, antworten = [], []
 
-        def langsam_starten(ablage, ab=None):
+        def langsam_starten(ablage, ab=None, einreihen=False, hinter=None):
             time.sleep(0.4)
-            gestartet.append(ablage.kennung)
+            gestartet.append((ablage.kennung, einreihen))
             Blendimportablage(ablage.kennung).stand_schreiben({'kennung': ablage.kennung, 'status': 'laeuft', 'schritt': 'export'})
             self.lebende.add(ablage.kennung)
+            return 4711
 
         def klick():
             anfrage = RequestFactory().post('/x/', data=json.dumps({'werte': {}}), content_type='application/json')
-            antworten.append(Blendimportendpunkte.starten(anfrage).status_code)
+            antworten.append(json.loads(Blendimportendpunkte.starten(anfrage).content)['wartet'])
 
         werte = {'pfad': 'x', 'name': 'ordner', 'eigener_name': ''}
         stand = mock.patch.multiple(
@@ -136,16 +144,18 @@ class SperreTest(SimpleTestCase):
                     faden.join()
         return gestartet, sorted(antworten)
 
-    def test_7_ein_doppelklick_startet_genau_einen_import(self):
+    def test_7_ein_doppelklick_rechnet_einen_import_und_reiht_den_zweiten_ein(self):
         gestartet, antworten = self._doppelklick()
-        self.assertEqual(len(gestartet), 1)
-        self.assertEqual(antworten, [200, 409])
+        self.assertEqual(len(gestartet), 2)
+        self.assertEqual(sorted(e for _, e in gestartet), [False, True], 'der erste rechnet, der zweite wartet')
+        self.assertEqual(antworten, [False, True])
 
-    def test_8_gegenprobe_ohne_die_sperre_starten_beide(self):
-        """Beweist, dass Fall 7 die Sperre sieht: ohne sie gehen beide Anfragen durch."""
+    def test_8_gegenprobe_ohne_die_sperre_rechnen_beide(self):
+        """Beweist, dass Fall 7 die Sperre sieht: ohne sie sieht der zweite den ersten nicht und beide würden sofort rechnen."""
         gestartet, antworten = self._doppelklick(sperre=contextlib.nullcontext())
         self.assertEqual(len(gestartet), 2)
-        self.assertEqual(antworten, [200, 200])
+        self.assertEqual([e for _, e in gestartet], [False, False])
+        self.assertEqual(antworten, [False, False])
 
 
 class NormalenGrenzeTest(SimpleTestCase):

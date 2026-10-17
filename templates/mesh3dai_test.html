@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}{{ test.name }} · Test · Mesh3D-AI{% endblock %}
+
+{% comment %}
+Mesh3D-AI, Reiter „Test“ (16.10.2026, Edgar: „darin auch eine Jobliste, aber nur Mesh und Ausgabe … testen, wie das bei Meshes ausschaut, wo wir keine Trainingsdaten haben“).
+Ein Test: ein Netz ohne Trainingsdaten (dasselbe wie ein Testauftrag auf /mesh-3D/), gerechnet mit dem Netz von Mesh3D-AI (`Mesh3daitest`). Zwei gekoppelte Felder:
+Mesh (das Netz im Rahmen des Datensatzes, mit dem vorhergesagten Rig) und Ausgabe (die trainierte Figur mit dem kleinsten Rest der Anpassung — `test.json` → `figur`, vor dem 16.10.2026 abends immer Ursula1 — in der vorhergesagten Haltung, gehäutet wie auf der Jobseite). Kein Ziel, keine Fehlerzahl.
+Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitestseite.js`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-microchip"></i> <a href="/mesh-3D-AI/" class="mesh3dai-zurueckzurliste" title="Alle Jobs">Mesh3D-AI</a> <span class="mesh3dai-pfad">›</span>
+        <a href="/mesh-3D-AI/#test" class="mesh3dai-zurueckzurliste" title="Alle Tests">Test</a> <span class="mesh3dai-pfad">›</span> {{ test.name }}</h1>
+</div>
+
+<section class="card mesh3dai-zeile" id="mesh3dai-test" data-kennung="{{ test.kennung }}">
+    {# Geschlecht der Figur (16.10.2026 abends, Edgar: „ganz oben im Testjob soll die Einstellung änderbar sein, ob es weiblich oder männlich ist“) — `Mesh3daitest.geschlecht_setzen`. #}
+    <div class="mesh3dai-test-einstellung">
+        <label for="mesh3dai-test-geschlecht">Figur:</label>
+        <select id="mesh3dai-test-geschlecht" data-reihenfolge="fest" disabled>
+            <option value="weiblich"{% if test.geschlecht == 'weiblich' %} selected{% endif %}>weiblich</option>
+            <option value="maennlich"{% if test.geschlecht == 'maennlich' %} selected{% endif %}>männlich</option>
+        </select>
+        <span class="mesh3dai-test-figur" id="mesh3dai-test-figur">{% if test.figur %}Ausgabe: {{ test.figur }}{% endif %}</span>
+    </div>
+    <div class="mesh3dai-zeilenkopf">
+        <h2>Ganzer Körper</h2>
+        <div class="mesh3dai-rigleiste"><button type="button" class="schaltknopf active" id="mesh3dai-test-rig" aria-pressed="true"><i class="fas fa-bone"></i> Rig</button></div>
+    </div>
+    <p class="hb-hinweis" id="mesh3dai-test-info">Netz ohne Trainingsdaten — es gibt kein Ziel, darum keine Fehlerzahl. Wird geladen …</p>
+    <div class="mesh3dai-bereiche mesh3dai-bereiche-zwei">
+        <div class="mesh3dai-feld">
+            <h3><span class="mesh3dai-nummer">1</span> Mesh</h3>
+            <div class="mesh3dai-leinwand" data-art="eingabe"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="eingabe"></div>
+        </div>
+        <div class="mesh3dai-feld">
+            <h3><span class="mesh3dai-nummer">2</span> Ausgabe</h3>
+            <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { Mesh3daitestseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestseite.js' %}";
+Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
+</script>
+{% endblock %}

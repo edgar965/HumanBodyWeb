@@ -32,6 +32,7 @@ class Blendimportablage:
     ARBEIT = 'arbeit'
     ERGEBNIS = 'ergebnis'
     STAND = 'stand.json'
+    NAME = 'name.json'
     QUELLE_BLEND = 'quelle.blend'
     LOG = 'auftrag.log'
     PID = 'auftrag.pid'
@@ -81,22 +82,62 @@ class Blendimportablage:
     # ------------------------------------------------------------------ Stand
 
     def stand(self):
-        """Der Zustand des Laufs (`{}` vor dem ersten Schreiben)."""
+        """Der Zustand des Laufs (`{}` vor dem ersten Schreiben). Ein Name aus `name.json` gilt über dem in `stand.json`.
+
+        Unter Windows ist die Datei für einen Augenblick gesperrt, während der rechnende Prozess sie ersetzt (`os.replace`): 16.10.2026 stürzte ein Import in der Warteschlange mit
+        `PermissionError` ab, weil er genau dann den Stand des rechnenden las. Darum bis zu 20 Versuche im Abstand von 50 ms, wie beim Schreiben (`AtomarSchreiber`)."""
+        for versuch in range(20):
+            try:
+                stand = json.loads((self.ordner() / self.STAND).read_text(encoding='utf-8'))
+                break
+            except FileNotFoundError:
+                return {}
+            except PermissionError:
+                if versuch == 19:
+                    raise
+                time.sleep(0.05)
+        name = self.name()
+        return self.name_eintragen(stand, name) if name and stand else stand
+
+    @staticmethod
+    def name_eintragen(stand, name):
+        """Der Name eines Auftrags steht an zwei Stellen: `quelle.name` (Liste, Überschrift, Kopie) und `einstellungen.eigener_name` (Karte „Quelle“). Ändert `stand` und gibt ihn zurück."""
+        stand['quelle'] = {**(stand.get('quelle') or {}), 'name': name}
+        stand['einstellungen'] = {**(stand.get('einstellungen') or {}), 'name': 'eigen', 'eigener_name': name}
+        return stand
+
+    # ------------------------------------------------------------------ Name (`name.json`)
+    # Der Arbeitsprozess eines Laufs schreibt `stand.json` aus seinem Speicher und setzt einen Namen zurück, den der Nutzer unterwegs gesetzt hat; zwei Schreiber auf dieselbe Datei (`stand.json.neu`) können sie
+    # außerdem zerreißen. Der Name der Jobseite steht deshalb in einer EIGENEN Datei, die kein Lauf schreibt, und `stand()` legt ihn über jeden Stand — auch über den eines Arbeitsprozesses mit altem Code.
+
+    def name(self):
+        """Der vom Nutzer gesetzte Name oder `None`."""
         try:
-            return json.loads((self.ordner() / self.STAND).read_text(encoding='utf-8'))
-        except FileNotFoundError:
-            return {}
+            name = json.loads((self.ordner() / self.NAME).read_text(encoding='utf-8')).get('name')
+        except (FileNotFoundError, ValueError, AttributeError):
+            return None
+        return name if isinstance(name, str) and name.strip() else None
+
+    def name_schreiben(self, name):
+        self._ersetzen(self.NAME, {'name': name})
+
+    def name_loeschen(self):
+        """Wer den Namen eines Auftrags neu bestimmt (Quelle ändern), nimmt den alten Wunsch zurück."""
+        (self.ordner() / self.NAME).unlink(missing_ok=True)
 
     def stand_schreiben(self, daten):
         """Atomar: erst daneben, dann ersetzen — die Seite liest jede Sekunde."""
+        self._ersetzen(self.STAND, daten)
+
+    def _ersetzen(self, datei, daten):
         self.ordner().mkdir(parents=True, exist_ok=True)
-        neben = self.ordner() / (self.STAND + '.neu')
+        neben = self.ordner() / (datei + '.neu')
         neben.write_text(json.dumps(daten, ensure_ascii=False, indent=1, default=str), encoding='utf-8')
         # Windows verweigert das Ersetzen, solange ein Leser die Datei offen hält (Abfrage der Seite, Serienskript alle 30 s): kurz
         # wiederholen statt den Lauf zu beenden (Rosemary, 10.10.2026: „Zugriff verweigert" beim Schritt „stücke", Lauf abgestürzt).
         for versuch in range(50):
             try:
-                os.replace(neben, self.ordner() / self.STAND)
+                os.replace(neben, self.ordner() / datei)
                 return
             except PermissionError:
                 if versuch == 49:

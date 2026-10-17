@@ -30,8 +30,11 @@ export class Figurwahlfuellung {
         Figurwahlbereiche.meldung(behaelter,
             '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade …</li>');
         let eintraege;
+        // Die Ordner der gespeicherten Modelle (`Figurwahlordner`, 15.10.2026) kommen mit derselben Füllung — eine kleine Datei, ohne sie bleibt die Liste flach.
+        const ordner = this.dialog.ordner?.laden();
         try {
             eintraege = await Figurkataloge.modelle(quelle);
+            await ordner;
         } catch (fehler) {
             Figurwahlbereiche.meldung(behaelter,
                 `<li class="fehlertext">Fehler: ${Htmltext.t(fehler.message)}</li>`);
@@ -50,7 +53,7 @@ export class Figurwahlfuellung {
         const dialog = this.dialog;
         Figurwahlbereiche.verteilen(behaelter, eintraege,
                                     eintrag => dialog._zeile(eintrag, quelle),
-                                    Figurkataloge.QUELLEN[quelle].leer);
+                                    Figurkataloge.QUELLEN[quelle].leer, dialog.ordner);
         Figurwahlimporte.aufraeumen(behaelter, eintraege.filter(e => e.verwaist).length,
                                     () => dialog._pflegen(quelle, null, 'verwaisteLoeschen'));
         // Die Zeilen sind neu gebaut: eine schon getroffene Wahl muss wieder markiert werden.

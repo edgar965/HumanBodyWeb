@@ -173,6 +173,7 @@ export class Genesis9kleidung {
             const netz = Genesis9netz.bauen(teil, `genesis9_kleid_${kennung}_${nummer}`);
             netz.visible = sichtbar;
             paare.push([netz, teil]);
+            netz.geometry.userData.lauf = lauf;             // vom Server für DIESEN Zug: genau, die Kleidervorschau verschiebt es nicht noch einmal
             netz.userData.art = daten.art || null;          // kleidung | haar | requisit
             netz.userData.ersetzt = daten.ersetzt || [];    // Teile der Figur, die das Stück ersetzt (Originalaugen)
             netz.userData.hautTiefe = (daten.hautTiefeMm || 0) / 1000;   // so tief hinter der Haut es sie noch verdeckt (Scham aus der .blend), m; 0 = Vorgabe
@@ -207,6 +208,10 @@ export class Genesis9kleidung {
      */
     static melden(inst, kennung, angezogen) {
         Genesis9ersatz.nachziehen(inst);      // Ersatz-Stücke (Originalaugen) blenden Teile der Figur aus oder wieder ein
+        // Die Liste „Objekte" im Reiter Modell neu füllen (16.10.2026, Edgar: „herrenhaar auf Mann - es wird im viewer NICHT angezeigt"): Ein Stück, das nach
+        // dem Laden der Figur über die Assets kam oder ging, stand nicht darin — gemessen am Daz Mann: Herrenhaar und JS Pants am Körper, die Liste nannte nur
+        // die Anatomie. `beschildern` meldete nur, solange der Katalog noch fehlte.
+        fn.updateEquippedList?.(inst);
         Stueckereignis.melden(inst, kennung, angezogen);
         return Object.keys(inst?.clothMeshes || {}).some((schluessel) => Reiterzuordnung.gcLive(schluessel));
     }

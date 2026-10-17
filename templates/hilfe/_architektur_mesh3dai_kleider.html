@@ -1,0 +1,47 @@
+{% load dezahl %}
+{% comment %}Abschnitt 8: Kleider, Haar, Kleider-Morphs, ob die Kleidung ein eigenes Netz braucht, und die Entscheidungen dazu. Daten: `Architekturmesh3daikleider` (Stücke gemessen 16.10.2026, Liste gegen Ursula1.json geprüft).
+Edgar, 16.10.2026 abends: „die Kleidergenerierung und Neuronale Netze dafür, sind die auch drin, oder braucht man ein extra Netz dafür?“ — „das heisst, wir haben die Kleidergenerierung noch gar nicht drin??“{% endcomment %}
+<h2 id="kleider">8. Kleider, Haar und ihre Morphs</h2>
+{% if kleider %}
+{% if kleider.befund %}<p class="ag-fehlt">{{ kleider.befund }}</p>{% endif %}
+<div class="info-box info-box-blue">
+  <strong>Stand: Mesh3D-AI erzeugt keine Kleider.</strong> Das Netz gibt Haltung und Form aus; Kleider kommen nur in der Eingabe vor (es sieht bekleidete Figuren) und als exakte Teile-Etiketten im
+  Datensatz, die kein Kopf lernt. Kleider bauen heute andere Wege, ohne eigenes Kleidernetz: Mesh-3D / „Mesh to 3D“ zerlegt das Netz mit Sapiens bzw. SAM 3 und schneidet Kleidung, Haar und Bestandteile
+  als Objekte heraus; „2D3D Kleider“ baut im Schritt „Kleiderstücke“ Genesis-Stücke aus dem Netz.<br>
+  <strong>Eigenes Netz?</strong> Für die <em>Wahl</em> eines Stücks nicht — dafür reichen weitere Köpfe am selben Rückgrat (Abschnitt 2: Teile je Punkt, Katalogwahl je Region). Erst wer die <em>Form</em> eines
+  Kleidungsstücks neu erzeugen will, braucht ein eigenes, großes Netz (unten, Entscheidungen). Vor jedem Kleiderkopf fehlen die Daten: die vier Jobs tragen drei Outfits mit Kleidung, Kleid, Rock, Robe, Mantel,
+  Hut und Schuhe kommen nicht vor.
+</div>
+{% if kleider.jobs %}
+<h3>Was die vier Jobs tragen (die Formvarianten übernehmen es reihum)</h3>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Job</th><th>Kleidung, Haar, Anatomie (Kennung der Garderobe)</th></tr></thead>
+  <tbody>{% for j in kleider.jobs %}<tr><td>{{ j.name }}</td><td>{{ j.kleidung|join:", "|default:"—" }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+<h3>Ursula1 im Einzelnen</h3>
+<p>Ursula1 trägt fünf Stücke aus der Genesis-Garderobe. Gezählt am Datensatz (gemessen 16.10.2026; „außen" = Dreiecke der Außenfläche in Spagat Bild 47):
+  zusammen <strong>{{ kleider.punkte|de }} Punkte, {{ kleider.dreiecke|de }} Dreiecke</strong>.</p>
+<table class="doku">
+  <thead><tr><th>Stück (Kennung)</th><th>Teil</th><th>Garderobe</th><th>Punkte</th><th>Dreiecke</th><th>außen</th><th>Regler des Stücks</th><th>in Ursula1 gestellt</th></tr></thead>
+  <tbody>
+    <tr><td>Körper</td><td>{{ kleider.koerper.0 }}</td><td>{{ kleider.koerper.1 }}</td><td class="num">{{ kleider.koerper.2|de }}</td><td class="num">{{ kleider.koerper.3|de }}</td><td class="num">{{ kleider.koerper.4 }}</td><td>23 Genesis-Regler</td><td></td></tr>
+  {% for s in kleider.stuecke %}
+    <tr><td><code>{{ s.kennung }}</code></td><td>{{ s.teil }}</td><td>{{ s.art }}</td><td class="num">{{ s.punkte|de }}</td><td class="num">{{ s.dreiecke|de }}</td><td class="num">{{ s.aussen }}</td><td>{{ s.regler }}</td><td>{{ s.wert }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3>Wie ein Stück im Datensatz entsteht und sich bewegt</h3>
+<table class="doku">
+  <tbody>{% for k, v in kleider.bau %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Entscheidungen</h3>
+<table class="doku">
+  <thead><tr><th>Frage</th><th>Optionen</th><th>Stand</th><th>Begründung / Quelle</th></tr></thead>
+  <tbody>{% for f, o, s, b in kleider.entscheidungen %}<tr><td>{{ f }}</td><td>{{ o }}</td><td><strong>{{ s }}</strong></td><td>{{ b }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}
+<p class="ag-fehlt">Die Kleider-Daten waren nicht lesbar (siehe Befunde oben).</p>
+{% endif %}

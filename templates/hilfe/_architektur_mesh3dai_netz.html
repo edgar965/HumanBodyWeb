@@ -1,0 +1,76 @@
+{% load dezahl %}
+{% comment %}Abschnitt 2: das Netz des Bezugslaufs Schicht für Schicht, die Köpfe am selben Rückgrat (gebaut und vorgeschlagen), rechts die Genesis-Regler und die vier Jobs.
+Daten: `Architekturmesh3dainetz` (Tabelle gegen den Lauf geprüft), `Architekturmesh3daiplan.koepfe`, `Architekturmesh3dairegler` (Katalog, Formkopf je Bereich, Jobs).{% endcomment %}
+<h2 id="netz">2. Das Netz</h2>
+<div class="m3a-spalten">
+  <div class="m3a-links">
+    {% if netz.stimmen %}
+    <h3>Stimmen je Punkt{% if netz.form %} und Formkopf{% endif %} — Lauf {{ lauf_name|default:"—" }}</h3>
+    <p><strong>Netztyp:</strong> Punktwolken-Netz mit den Kantenfaltungen von DGCNN (Dynamic Graph CNN, Wang et al. 2019; der Nachbargraph wird einmal aus der Lage gebaut) und einem Kopf
+      <em>je Punkt</em>: jeder Punkt gibt für jedes Ziel einen Versatz und ein Gewicht aus, das Ziel ist das gewichtete Mittel (Stimmen wie bei RigNet/VoteNet — aus dem Gedächtnis beschrieben, nicht
+      gegen deren Quelltext geprüft). GroupNorm statt BatchNorm (bei 8 Proben je Schritt lag das alte Netz im Trainingsmodus bei 212 mm, im Auswertemodus bei 59 mm), kein Dropout.
+      {% if netz.form %}Dazu ein <strong>zweiter Kopf</strong> (Zeilen 8–10): er liest aus den 1.024 Zahlen der ganzen Figur die {{ netz.form|de }} Formregler — einmal je Figur, nicht je Punkt (Abschnitt 3).{% endif %}
+    {% else %}
+    <h3>DGCNN-lite{% if netz.kanaele %} mit Daz-Winkeln{% endif %} — Lauf {{ lauf_name|default:"—" }}</h3>
+    <p><strong>Netztyp:</strong> Punktwolken-Netz nach dem Muster DGCNN (Dynamic Graph CNN, Wang et al. 2019): Kantenfaltungen („EdgeConv") auf einem Nachbargraphen, dann
+      Bündeln über alle Punkte, dann ein Regressionskopf aus voll verbundenen Schichten.{% if netz.kanaele %} Die letzte Schicht gibt Daz-Winkel in den Grenzen von Genesis 9 aus (Abschnitt 5).{% endif %}
+    {% endif %} <strong>{{ netz.schichten }} Schichten mit Gewichten, {{ netz.neuronen_punkt|de }} Neuronen je Punkt{% if netz.neuronen_form %} + {{ netz.neuronen_form|de }} im Formkopf{% endif %},
+      {{ netz.gewichte|de }} Gewichte</strong>{% if netz.lauf_gewichte %} — gleich der Zahl des Laufs ({{ netz.lauf_gewichte|de }}){% endif %}.
+      „Neuronen" heißt hier: Kanäle je Punkt; dieselben Gewichte gelten für jeden der 4.096 Punkte.</p>
+    <table class="doku m3a-schichten">
+      <thead><tr><th>#</th><th>Schicht</th><th>Typ</th><th>ein → aus</th><th>Gewichte</th><th>Werte je Probe</th><th>Aktivierung</th><th>Was sie tut</th></tr></thead>
+      <tbody>
+      {% for z in netz.zeilen %}
+        <tr{% if not z.nr %} class="m3a-ohne"{% endif %}><td>{{ z.nr }}</td><td>{{ z.name }}</td><td>{{ z.typ }}</td><td class="num">{{ z.ein|de }} → {{ z.aus|de }}</td>
+          <td class="num">{{ z.gewichte|de }}</td><td class="num">{{ z.werte|de }}</td><td>{{ z.aktivierung }}</td><td>{{ z.text }}</td></tr>
+      {% endfor %}
+        <tr class="m3a-summe"><td></td><td>Summe</td><td></td><td></td><td class="num">{{ netz.gewichte|de }}</td><td></td><td></td><td>{{ netz.ausgabe_text }}</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Köpfe am selben Rückgrat — gebaut und vorgeschlagen</h3>
+    <p>Alles, was das Netz über eine Figur sagen soll, hängt als eigener Kopf am selben Rückgrat (Schichten 1–4 und die ganze Figur): was je Punkt gilt (Gelenk-Stimmen, Teil), liest einen Kopf je Punkt;
+      was für die ganze Figur gilt (Form, Kleiderwahl, Mimik), einen Kopf aus den 1.024 Zahlen der ganzen Figur. <strong>Kleider brauchen dafür kein eigenes Netz</strong> — erst wer die Form eines Kleidungsstücks
+      neu <em>erzeugen</em> will, braucht ein eigenes, großes Netz (Abschnitt 8). Gebaut sind heute nur Haltung und Form.</p>
+    <table class="doku m3a-schichten">
+      <thead><tr><th>Kopf</th><th>liest</th><th>gibt aus</th><th class="num">Gewichte</th><th>Stand</th><th>Warum / wo</th></tr></thead>
+      <tbody>{% for name, liest, aus, gewichte, stand, text in koepfe %}<tr><td>{{ name }}</td><td>{{ liest }}</td><td>{{ aus }}</td><td class="num">{{ gewichte|de|default:"—" }}</td>
+        <td><strong>{{ stand }}</strong></td><td>{{ text }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <p class="m3a-klein">Gewichte der gebauten Köpfe aus der Schichttabelle oben; Vorschläge ohne Zahl, weil ihre Breite an der Garderobe hängt. Die 6D-Darstellung der Wurzeldrehung (Zhou et al. 2019) und
+      das Original-DGCNN sind aus dem Gedächtnis beschrieben, nicht gegen den Quelltext geprüft.</p>
+  </div>
+
+  <div class="m3a-rechts">
+    <h3>Genesis-Regler</h3>
+    {% if regler %}
+    <p><strong>{{ regler.gesamt|de }} Regler</strong> im Bedienfeld (gelesen aus dem Reglerkatalog, wie im Charakter): {{ regler.form|de }} Form, {{ regler.pose|de }} Pose/Mimik.
+      {% if regler.im_formkopf %}<strong>Der Formkopf gibt {{ regler.im_formkopf|de }} Regler aus</strong>{% if not regler.fehlen %} — alle Form-Regler des Katalogs, dazu die verborgenen Formabschnitte (200+-Helfer, Klone){% endif %}{% else %}Der Formkopf ist nicht gemessen (Formregler-Liste fehlt){% endif %};
+      die Posen-Regler (Fingerbeugen, Fußstellung …) ersetzt die Haltung über die Knochen, die Mimik gibt das Netz nicht aus (der Datensatz hat keine Ausdrücke).</p>
+    {% if regler.abweichung %}<p class="ag-fehlt">{{ regler.abweichung }}</p>{% endif %}
+    <table class="doku m3a-regler">
+      <thead><tr><th>Bereich</th><th>Regler</th><th>Form</th><th>Pose</th><th>im Formkopf</th><th>Art</th></tr></thead>
+      <tbody>
+      {% for z in regler.zeilen %}
+        <tr title="{{ z.grund }}"><td>{{ z.name }}</td><td class="num">{{ z.zahl|de }}</td><td class="num">{{ z.form|de }}</td><td class="num">{{ z.pose|de }}</td>
+          <td class="num">{{ z.im_formkopf|default_if_none:"—" }}</td><td>{{ z.kopf }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="m3a-klein">„Art“ ordnet den Bereich ein (Körperform, Gesicht, Mimik; „—“ = gehört zu EINEM Modell, etwa die Eigenform eines Imports). Im Formkopf stehen beide Arten in EINER Ausgabe.
+      Der Grund je Zeile steht im Tooltip.</p>
+    {% else %}
+    <p class="ag-fehlt">Der Reglerkatalog war nicht lesbar (siehe Befunde oben).</p>
+    {% endif %}
+    {% if jobs %}
+    <h4>Die vier Trainingsjobs</h4>
+    <table class="doku m3a-regler">
+      <thead><tr><th>Job</th><th>Geschlecht</th><th class="num">gestellte Regler</th><th>Kleidung und Haar</th></tr></thead>
+      <tbody>{% for j in jobs %}<tr><td><a href="/mesh-3D-AI/{{ j.name|lower }}/">{{ j.name }}</a></td><td>{{ j.geschlecht }}</td><td class="num">{{ j.regler }}</td><td class="m3a-klein">{{ j.kleidung|join:", "|default:"—" }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+    <h4>Ausgabe</h4>
+    <p class="m3a-klein">138 Gelenke (Rumpf 8 · Bein 8 · Fuß 4 · Zehen 22 · Arm 14 · Hand 4 · Finger 38 · Kopf 3 · Gesicht 37 — Genesis-9-Knochen) als Daz-Winkel{% if netz.form %} und {{ netz.form|de }} Formregler{% endif %}.
+      Keine Kleider, keine Mimik.</p>
+  </div>
+</div>

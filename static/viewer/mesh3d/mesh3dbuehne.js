@@ -85,6 +85,8 @@ export class Mesh3dbuehne {
         if (!id || (!this.ausgabe && z.figur.fehlt)) {
             // Keine Figur: die Mesh-Ansicht zeigt das Netz trotzdem (Edgar, 13.10.2026: „Mesh-Ansicht auch ohne den Auftrag Mesh to 3D“).
             this.knopf.disabled = true;
+            this.figurId = null;                                // die Adresse des Netzes kommt jetzt vom Zustand, nicht vom (entfernten) Auftrag „Mesh to 3D“
+            this._marke = '';
             this._netzOhneFigur(z);
             if (id) this.netzmeldung.textContent = `Der Auftrag „Mesh to 3D“ ${z.figur.kennung} dieses Imports gibt es nicht mehr (er wurde mit einem anderen Import gelöscht) — „Neu berechnen“ ab „Figur“ rechnet ihn neu.`;
             return;

@@ -26,6 +26,7 @@ from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stueckfelder import G9stueckfelder
 from Genesis9.stueckstarr import G9stueckstarr
 
+from .g9anatomiedrapierung import G9anatomiedrapierung
 from .g9lagenanfrage import G9lagenanfrage
 
 logger = logging.getLogger('core')
@@ -109,6 +110,9 @@ class G9stueckteile:
         # GarmentCode-Stuecke darunter zuletzt als echte Flaeche (`G9stoffhuelle`, 24.09.2026):
         # gegen die Punktwolke allein lag Damiras Haar bis 29 mm im Kleid.
         huellen = anfrage.huellen(innen) if gc_vorrat else []
+        # Über einem männlichen Geograft zuletzt der Drapierer (`G9anatomiedrapierung`, 16.10.2026) — nur mit Fläche: ein Ersatz- oder starres Stück
+        # wird nicht gehoben.
+        drapierung = G9anatomiedrapierung.fuer(innen) if flaeche is not None else None
         netze = []
         for (folger, lage), punkte in zip(teile, kaefige, strict=True):
             hd_werte = dict(formung.morphwerte())
@@ -126,8 +130,30 @@ class G9stueckteile:
                 netz['punkte'] = G9stoffhuelle.alle_hinaus(huellen, netz['punkte'])
                 if netz.get('bindung') is not None:
                     netz['bindung'] = bindung.fuer(netz['punkte'])
+            if drapierung is not None and lage is None and getattr(folger, 'koerperhaut', False) and len(netz['punkte']):
+                netz = cls._drapiert(drapierung, folger, passform, stufen, punkte, netz, rumpf.get('regler_stueck'), bindung)
             netze.append((folger, lage, netz))
         return netze, innen, aussen, hoch
+
+    @staticmethod
+    def _drapiert(drapierung, folger, passform, stufen, kaefig, netz, regler, bindung):
+        u"""`netz` mit über das Geograft drapierten Punkten; die Normalen folgen den gehobenen Punkten (wie in `G9kleidhumanbody`), sonst bleibt die Beule
+        dunkel. Ohne Unterteilung (Stufe 0: Browserpunkt i = Käfigpunkt `ursprung[i]`) rechnet `normalen` aus den Käfigpunkten, also werden die gehobenen
+        dorthin zurückgeschrieben."""
+        punkte, bilanz = drapierung.anwenden(netz['punkte'], netz['dreiecke'], netz.get('normalen'), regler)
+        if not bilanz.get('gehoben'):
+            return netz
+        netz = dict(netz, punkte=punkte)
+        stufe = passform.netzstufe(stufen) if passform is not None else folger.netzstufe(stufen)
+        roh = kaefig
+        if not stufe.stufen:
+            roh = np.array(kaefig, dtype=np.float64, copy=True)
+            roh[stufe.ursprung] = punkte
+        netz['normalen'] = stufe.normalen(roh, punkte)
+        if netz.get('bindung') is not None:
+            netz['bindung'] = bindung.fuer(punkte)
+        logger.info('Genesis 9: %s über dem Geograft drapiert: %s', folger.name, bilanz)
+        return netz
 
     @classmethod
     def getragene(cls, formung, eintraege, stufen=None):

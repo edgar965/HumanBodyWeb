@@ -11,11 +11,14 @@ import { fn } from '../gemeinsam/registrierung.js';
  * — bei GarmentCode nach dem Klick auf einen Reiter mit fünf Bereichen, von
  * denen keiner etwas tat.
  *
- * DREI BLEIBEN OFFEN, und das ist kein Versehen:
+ * VIER BLEIBEN OFFEN, und das ist kein Versehen:
  * * **Szene** — Licht, Kamera, Hintergrund gehören zur Szene, nicht zur Figur.
  * * **Modell** — der Modellbauer ERZEUGT eine Figur; er braucht keine.
  * * **Animation** — die Bibliothek lässt sich durchsehen, umbenennen und
  *   aufräumen, auch wenn niemand sie gerade abspielt.
+ * * **Posen** (17.10.2026) — dasselbe für die Pose-Bibliothek: durchsehen,
+ *   umbenennen, löschen. Anwenden und Speichern melden ohne Figur, woran es
+ *   fehlt (`Posenanwendung.pruefen`).
  *
  * Ein ausgegrauter Reiter wird auch nicht mehr angeklickt: `initTabs` fragt
  * `frei()`, sonst wäre das Grau eine Behauptung und der Klick käme durch.

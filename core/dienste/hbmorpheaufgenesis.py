@@ -39,10 +39,13 @@ DIE UEBERTRAGUNG ist der Kleiderweg rueckwaerts, nur ohne Versatz:
        Genesis Anhaenge, nicht Koerper), wird uebergangen.
     6. Ein Regler, der Gelenke verschiebt (`Hbmorphrig`: Kopfgelenk ab 5 mm
        oder ein Knochenabstand ab 7,5 mm — Body Size, alle Laengen, Winkel),
-       bekommt NUR den Steckbrief (`rig: true`, mit den Millimetern), keine
-       Deltas: ohne Skelett-Nachzug blaehte er die projizierten Anhaenge
-       auf (Mund 6,8 -> 94 cm bei Body Size -100 %, Edgar mit Bild,
-       20.09.2026). `bestand.json` fuehrt sie unter `rig_uebergangen`.
+       bekam bis zum 17.10.2026 NUR den Steckbrief (`rig: true`): ohne
+       Skelett-Nachzug blaehte er die projizierten Anhaenge auf (Mund
+       6,8 -> 94 cm bei Body Size -100 %, Edgar mit Bild, 20.09.2026).
+       Seit dem 17.10.2026 haben auch diese 21 Regler eine Datei, mit den
+       Gelenkversaetzen (`G9gelenkversatz`, abgelegt in der `.npz`), die
+       `G9formelnfremd` ins Skelett mischt. `bestand.json` fuehrt sie unter
+       `rig_mit_skelett`.
 
 Was NICHT drin ist: der Umfangsmassstab je Rumpfhoehe (`G9hbsitz`), den die
 Kleider brauchen — eine Verschiebung von 2 cm bleibt 2 cm mal Hoehenmassstab.
@@ -57,12 +60,10 @@ import os
 import time
 
 import numpy as np
-from Genesis9.basisnetz import G9basisnetz
+from Genesis9.gelenkversatz import G9gelenkversatz
 from Genesis9.hbmorphe import G9hbmorphe
-from Genesis9.kollision import G9kollision
 
-from .g9aufhumanbody import G9aufhumanbody
-from .hbmorphrig import Hbmorphrig
+from .hbmorphuebertragung import Hbmorphuebertragung
 from .hbtraeger import Hbtraeger
 
 logger = logging.getLogger('core')
@@ -70,86 +71,24 @@ logger = logging.getLogger('core')
 __all__ = ['Hbmorpheaufgenesis']
 
 
-class Hbmorpheaufgenesis:
-    u"""Alle HumanBody-Regler als Genesis-9-Morphs bauen."""
+class Hbmorpheaufgenesis(Hbmorphuebertragung):
+    u"""Alle HumanBody-Regler als Genesis-9-Morphs bauen (Zuordnung und Uebertragung: `Hbmorphuebertragung`)."""
 
-    GESCHLECHT = 'female'
-    BAUART = None
-    KANDIDATEN = 6
-    EINIG = G9aufhumanbody.EINIG
-    GLAETTUNG = 6
-    DURCHGAENGE = 1
-    #: Deltas unter dieser Laenge (m) gelten als null — Rauschen der Paarung.
-    NULL_M = 2e-5
+    #: Die Regler, die in HumanBody das Skelett veraendern (Laengen, Gesamtgroesse, Winkel, Kopf-/Hand-/Fussgroesse). Aus der ersten Messung vom 20.09.2026
+    #: (`Hbmorphrig`, Kopfgelenk ab 5 mm oder Knochenabstand ab 7,5 mm), ohne die Fantasy-Ohren (Spitzen, keine Gelenke), dazu die zwei Armlaengen
+    #: (der alte Schaetzer sah die Arm-Gelenke nicht: auf `l_upperarm` liegt kein Hautgewicht, nur auf den Verdrillungsknochen). Volumenregler (Mass, Tone,
+    #: Girth) stehen nicht hier — eine Schaetzung aus der Haut ueberzeichnet sie (Torso Mass: 55 mm „Laenge“ nach dem Familienschaetzer, gemessen 17.10.2026).
+    SKELETT = frozenset((
+        'Arms_ForearmLength', 'Arms_UpperarmLength', 'Body_Size', 'Chest_SizeZ', 'Feet_Size', 'Feet_SizeZ', 'Hands_FingersLength', 'Hands_Length',
+        'Hands_PalmLength', 'Hands_Size', 'Head_Size', 'Head_SizeX', 'Head_SizeZ', 'Legs_Bow', 'Legs_LowerlegLength', 'Legs_UpperlegLength',
+        'Neck_Angle', 'Neck_Length', 'Pelvis_Angle', 'Pelvis_Length', 'Torso_Length'))
 
     def __init__(self, melden=None):
+        super().__init__()
         self.melden = melden or (lambda *a: None)
-        self._paar = None
-        self._hb = None
-        self._ursprung = None
-        self._nachbar = None
-        self._zuordnung = None
         self._zustand = None
         self._basis = None
-        self._rig = None
-
-    # ---------------------------------------------------------- Vorbereiten
-
-    def paarung(self):
-        if self._paar is None:
-            self._paar = G9aufhumanbody.paarung_holen(self.GESCHLECHT, self.BAUART)
-        return self._paar
-
-    def humanbody(self):
-        u"""`{punkte, rahmen}` der HumanBody-Grundfigur (Three-Lage)."""
-        if self._hb is None:
-            figur = Hbtraeger.laden(self.GESCHLECHT, self.BAUART, {}, {})
-            self._hb = {'punkte': figur['punkte'], 'normalen': figur['normalen'],
-                        'rahmen': Hbtraeger.rahmen(figur['normalen'])}
-        return self._hb
-
-    def ursprung(self):
-        u"""(27087,) Browserpunkt -> Kaefigpunkt."""
-        if self._ursprung is None:
-            self._ursprung = np.asarray(G9basisnetz.holen().netzstufe(0).ursprung,
-                                        dtype=np.int64)
-        return self._ursprung
-
-    def nachbarn(self):
-        u"""(25182, GLAETTUNG) die naechsten Kaefigpunkte je Kaefigpunkt."""
-        if self._nachbar is None:
-            punkte = G9basisnetz.holen().punkte
-            _w, nachbar = G9kollision.naechste(G9kollision.baum(punkte), punkte,
-                                               k=self.GLAETTUNG)
-            self._nachbar = np.asarray(nachbar, dtype=np.int64)
-        return self._nachbar
-
-    def zuordnung(self):
-        u"""`(kandidaten (27087, K), gewichte (27087, K))` — je Genesis-Browserpunkt
-        seine HumanBody-Punkte desselben Koerperteils, Gewichte summieren zu 1."""
-        if self._zuordnung is not None:
-            return self._zuordnung
-        paar, hb = self.paarung(), self.humanbody()
-        zahl = len(paar['g9_punkte'])
-        kand = np.tile(paar['zu'][:, None], (1, self.KANDIDATEN))
-        gewicht = np.zeros((zahl, self.KANDIDATEN))
-        gewicht[:, 0] = 1.0
-        for _teil, (g9_idx, hb_idx) in paar['segmente'].items():
-            if not len(g9_idx) or len(hb_idx) < self.KANDIDATEN:
-                continue
-            abstand, nr = G9kollision.naechste(G9kollision.baum(hb['punkte'][hb_idx]),
-                                               paar['skaliert'][g9_idx], k=self.KANDIDATEN)
-            nr = hb_idx[np.asarray(nr)]
-            w = 1.0 / np.maximum(np.asarray(abstand, dtype=np.float64), 1e-4)
-            einig = np.einsum('ik,ijk->ij', paar['g9_normalen'][g9_idx],
-                              hb['normalen'][nr]) > self.EINIG
-            keiner = ~einig.any(axis=1)
-            einig[keiner, 0] = True                 # sonst der naechste, wie `zu`
-            w = np.where(einig, w, 0.0)
-            kand[g9_idx] = nr
-            gewicht[g9_idx] = w / w.sum(axis=1, keepdims=True)
-        self._zuordnung = (kand, gewicht)
-        return self._zuordnung
+        self._gelenke = None
 
     def zustand(self):
         u"""Der HumanBody-Rechner auf der Grundfigur der Paarung."""
@@ -185,34 +124,13 @@ class Hbmorpheaufgenesis:
             zustand.set_morph(name, 0.0)
         return punkte - self._basis
 
-    def uebertragen(self, hb_delta):
-        u"""(25182, 3) das HumanBody-Delta auf dem Genesis-Kaefig, geglaettet."""
-        paar, hb = self.paarung(), self.humanbody()
-        kand, gewicht = self.zuordnung()
-        # Je Kandidat: Delta in seinem HumanBody-Rahmen zerlegen (Anteile Normale,
-        # Aufwaerts, Quer), gewichtet summieren, im Genesis-Rahmen aufbauen.
-        anteile = np.einsum('ikaj,ikj->ika', hb['rahmen'][kand], hb_delta[kand])
-        anteile = np.einsum('ika,ik->ia', anteile, gewicht)
-        browser = np.einsum('ia,iaj->ij', anteile, paar['g9_rahmen']) / paar['massstab']
-        ursprung = self.ursprung()
-        zahl = len(G9basisnetz.holen().punkte)
-        summe = np.zeros((zahl, 3))
-        anzahl = np.zeros(zahl)
-        np.add.at(summe, ursprung, browser)
-        np.add.at(anzahl, ursprung, 1.0)
-        feld = summe / np.maximum(anzahl, 1.0)[:, None]
-        nachbar = self.nachbarn()
-        for _ in range(self.DURCHGAENGE):
-            feld = feld[nachbar].mean(axis=1)
-        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
-        return feld
-
     # -------------------------------------------------------------- Bauen
 
-    def rig(self):
-        if self._rig is None:
-            self._rig = Hbmorphrig()
-        return self._rig
+    def gelenkversatz(self):
+        u"""Die Schaetzung der Gelenkversaetze (`G9gelenkversatz`) — gleich fuer alle Familien."""
+        if self._gelenke is None:
+            self._gelenke = G9gelenkversatz()
+        return self._gelenke
 
     def bauen(self):
         u"""Alle Regler bauen; gibt `[{name, punkte, plus_mm, minus_mm}]` zurueck."""
@@ -228,16 +146,22 @@ class Hbmorpheaufgenesis:
                 logger.info('HB-Morphs: %s erreicht keinen Kaefigpunkt — uebergangen', name)
                 self.melden(nr, len(namen), name, None)
                 continue
-            mass = self.rig().beide(nummern, plus[nummern], minus[nummern])
-            quelle = {'quelle': 'HumanBody %s' % self.zustand().body_type, **mass}
+            modus = 'rahmen'
+            if name in self.SKELETT:
+                # Ein Regler, der Gelenke verschiebt, ist eine grosse, fast starre Verschiebung: im Weltraum uebertragen (siehe `uebertragen`).
+                plus, minus = self.uebertragen(self.hb_delta(name, 1.0), welt=True), self.uebertragen(self.hb_delta(name, -1.0), welt=True)
+                nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
+                modus = 'welt'
+            mass = self.gelenkversatz().beide(nummern, plus[nummern], minus[nummern])
+            mass['rig'] = name in self.SKELETT
+            quelle = {'quelle': 'HumanBody %s' % self.zustand().body_type, 'modus': modus, **mass}
+            # Gelenke nur fuer Regler, die Laengen aendern (`SKELETT`): ein Volumenmorph (Mass, Tone) verschiebt die Oberflaeche, nicht das Gelenk.
+            gelenke = self.gelenkversatz().fuer_morph(nummern, plus[nummern], minus[nummern]) if mass['rig'] else None
             if mass['rig']:
-                G9hbmorphe.steckbrief_schreiben(name, quelle)
                 rig_weg.append(name)
-                logger.info('HB-Morphs: %s verschiebt Gelenke (Kopf %.1f mm, Laenge %.1f mm) — '
-                            'uebergangen, bis das Skelett folgt', name, mass['kopf_mm'], mass['laenge_mm'])
-                self.melden(nr, len(namen), name, None)
-                continue
-            G9hbmorphe.ablegen(name, nummern, plus[nummern], minus[nummern], quelle)
+                logger.info('HB-Morphs: %s verschiebt Gelenke (Kopf %.1f mm, Laenge %.1f mm) — das Skelett folgt',
+                            name, mass['kopf_mm'], mass['laenge_mm'])
+            G9hbmorphe.ablegen(name, nummern, plus[nummern], minus[nummern], quelle, gelenke)
             brief = G9hbmorphe.steckbrief(name)
             aus.append({'name': name, 'punkte': brief['punkte'],
                         'plus_mm': brief['plus_mm'], 'minus_mm': brief['minus_mm']})
@@ -246,8 +170,8 @@ class Hbmorpheaufgenesis:
             'paarung': '%s/%s' % (self.GESCHLECHT, self.BAUART or '-'),
             'bauart': self.zustand().body_type,
             'hb_stand': self.hb_stand(), 'zahl': len(aus),
-            'rig_uebergangen': rig_weg,
-            'rig_grenzen': {'kopf_mm': Hbmorphrig.KOPF_MM, 'laenge_mm': Hbmorphrig.LAENGE_MM},
+            'rig_mit_skelett': rig_weg,
+            'rig_regeln': 'Namensliste Hbmorpheaufgenesis.SKELETT',
             'massstab': round(float(self.paarung()['massstab']), 4),
             'kandidaten': self.KANDIDATEN,
             'glaettung': {'nachbarn': self.GLAETTUNG, 'durchgaenge': self.DURCHGAENGE},

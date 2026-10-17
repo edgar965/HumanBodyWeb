@@ -12,6 +12,7 @@ from .api.mesh3d import Mesh3dendpunkte
 from .api.mesh3danimation import Mesh3danimationsendpunkte
 from .api.mesh3deingang import Mesh3deingangendpunkte
 from .api.mesh3dkopie import Mesh3dkopieendpunkte
+from .api.mesh3dmodell import Mesh3dmodellendpunkte
 from .api.mesh3dname import Mesh3dnameendpunkte
 from .api.mesh3dnetzansicht import Mesh3dnetzansichtendpunkte
 from .api.mesh3dnetzschnitt import Mesh3dnetzschnittendpunkte
@@ -34,6 +35,8 @@ MESH3D = [
     path('api/mesh3d/<kennung:kennung>/einstellungen/', Mesh3dendpunkte.einstellungen, name='mesh3d_einstellungen'),
     path('api/mesh3d/<kennung:kennung>/quelle/', Mesh3dquelleendpunkte.aendern, name='mesh3d_quelle'),
     path('api/mesh3d/<kennung:kennung>/name/', Mesh3dnameendpunkte.setzen, name='mesh3d_name'),
+    # „Als Modell speichern“ (15.10.2026): ein Mesh-3D-Auftrag speichert sein Modell nur auf Klick (`Mesh3dmodellspeichern`).
+    path('api/mesh3d/<kennung:kennung>/modell/', Mesh3dmodellendpunkte.speichern, name='mesh3d_modell'),
     path('api/mesh3d/<kennung:kennung>/datei/<str:ordner>/<str:name>', Mesh3dendpunkte.datei, name='mesh3d_datei'),
     path('api/mesh3d/<kennung:kennung>/bewegung/', Mesh3dendpunkte.bewegung, name='mesh3d_bewegung'),
     path('api/mesh3d/<kennung:kennung>/bewegungsdatei/', Mesh3dendpunkte.bewegungsdatei, name='mesh3d_bewegungsdatei'),

@@ -19,6 +19,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('kennung', help='Die Kennung des Imports (Ordner unter 3DObjects/blendimport)')
         parser.add_argument('--ab', default=None, help='Erster Schritt (Vorgabe: von vorn)')
+        parser.add_argument('--warten', action='store_true', help='Eingereiht: erst rechnen, wenn kein anderer Import rechnet und dieser an der Reihe ist (Blendimportwarteschlange)')
 
     def handle(self, *args, **options):
         from core.daten.blendimportablage import Blendimportablage
@@ -32,6 +33,11 @@ class Command(BaseCommand):
             raise CommandError('Kein Blender-Import %s' % options['kennung'])
         ablage.pid().write_text(str(os.getpid()))
         try:
+            if options.get('warten'):
+                from core.dienste.blendimportwarteschlange import Blendimportwarteschlange
+
+                if not Blendimportwarteschlange.abwarten(ablage):
+                    return                                      # angehalten oder entfernt, solange er wartete
             Blendimportlauf(ablage.kennung).ausfuehren(ab=options.get('ab'))
         except Exception:  # noqa: BLE001
             logger.exception('Blender-Import %s: Arbeitsprozess abgestürzt', ablage.kennung)

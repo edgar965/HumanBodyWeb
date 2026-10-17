@@ -1,0 +1,89 @@
+{% load dezahl %}
+{% comment %}Abschnitt 3: der Formkopf — Formregler, Formvarianten, Datensatz aller Jobs, Ergebnis des jüngsten Formlaufs (Edgar, 16.10.2026: „das netz soll auch: die Form vorhersagt: die Genesis-Formregler (815) usw.“).
+Daten: `Architekturmesh3daiform` (alles gelesen; Setzungen des Variantenbaus aus `mesh3dai_formvarianten.py`).{% endcomment %}
+<h2 id="form">3. Die Form: {% if form_regler %}{{ form_regler.anzahl|de }} {% endif %}Genesis-Formregler</h2>
+<p>Edgar (16.10.2026): „das netz soll auch: die Form vorhersagt: die Genesis-Formregler (815) usw.“ Die Form ist eine Eigenschaft der <em>ganzen</em> Figur, keine örtliche Frage wie ein Gelenk —
+  darum liest ein zweiter Kopf sie aus dem Merkmal der ganzen Figur (1.024 Zahlen, Abschnitt 2). Damit es etwas zu lernen gibt, braucht der Datensatz <strong>verschiedene Körper</strong>: die vier Jobs und
+  dazu Formvarianten.</p>
+
+{% if form_regler %}
+<h3>Die Regler und ihre Wirkung</h3>
+<p>Die Form-Regler des Bezugslaufs (<code>G9reglerplan.bereiche()</code> ohne die Posen-Regler; ab Fassung {{ form_regler.fassung }}{% if form_regler.fassung >= 2 %} mit Zähnen, Augen, „Alter“
+  und den verborgenen Formabschnitten 200+-Helfer und Klone{% endif %}): <strong>{{ form_regler.anzahl|de }}</strong>. Je Regler ist gemessen, wie weit er die Figur bewegt
+  (Ableitung an {{ form_regler.punkte|de }} Körperpunkten, <code>G9formung</code>, Figur auf dem Boden; <code>{{ form_regler.datei }}</code>, erzeugt {{ form_regler.erzeugt }}):
+  {{ form_regler.ohne_wirkung }} Regler bewegen unter 0,01 mm je Einheit. Am stärksten: {% for r in form_regler.staerkste %}{{ r.name }} {{ r.mm|de:1 }} mm{% if not forloop.last %} · {% endif %}{% endfor %}.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Bereich</th><th class="num">Regler</th><th class="num">ohne Wirkung</th><th class="num">Wirkung Median (mm je Einheit)</th><th class="num">größte</th></tr></thead>
+  <tbody>{% for z in form_regler.zeilen %}<tr><td>{{ z.titel }}</td><td class="num">{{ z.zahl|de }}</td><td class="num">{{ z.ohne_wirkung }}</td><td class="num">{{ z.median_mm|de:2 }}</td><td class="num">{{ z.groesste_mm|de:1 }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein"><strong>Formmaß (Verlust):</strong> nicht Regler gegen Regler — viele wirken kaum, andere überlagern sich (ein Charakter und seine Körperform). Gemessen wird, was die Figur tut:
+  Δ Regler × Wirkung → mittlere Verschiebung der Körperpunkte (RMS, lineare Näherung), dazu 0,01 × Δ² als Zug gegen wandernde wirkungslose Regler. Die echte Nachrechnung unten baut beide Figuren mit der
+  Genesis-Formung (alle 25.182 Punkte).</p>
+{% endif %}
+
+{% if form_varianten %}
+<h3>Formvarianten: {{ form_varianten.zahl }} Körper zusätzlich</h3>
+<table class="doku">
+  <tbody>{% for k, v in form_varianten.bau %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</tbody>
+</table>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Grundlage</th><th>Geschlecht</th><th class="num">Training</th><th class="num">Prüfform</th><th class="num">gestellte Regler</th></tr></thead>
+  <tbody>{% for z in form_varianten.zeilen %}<tr><td>{{ z.grundlage }}</td><td>{{ z.geschlecht }}</td><td class="num">{{ z.training }}</td><td class="num">{{ z.pruefung }}</td><td class="num">{{ z.regler }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Prüfformen: {{ form_varianten.pruefformen|join:", " }}. Gemessen beim Bau (16.10.2026, 4 nebeneinander): Teile 5–17 s, 12 Proben 107–175 s, Skelett 4–7 s je Variante, alle 40 in 1.411 s;
+  Wirkung der Regler 106 s.</p>
+{% endif %}
+
+{% if form_datensatz %}
+<h3>Der Datensatz des Formlaufs</h3>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Job</th><th class="num">Ordner</th><th class="num">Training</th><th class="num">Prüfung</th><th class="num">Spagat</th></tr></thead>
+  <tbody>{% for z in form_datensatz %}<tr><td>{{ z.name }}</td><td class="num">{{ z.ordner }}</td><td class="num">{{ z.training|default:0 }}</td><td class="num">{{ z.pruefung|default:0 }}</td><td class="num">{{ z.spagat|default:"—" }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Training = alle Trainingsproben in einem Topf; Prüfung = Prüfposen der Jobs (nie trainiert) + alle Proben der Prüfformen (ganze Figuren nie trainiert). Die Spagat-Bilder von Ursula1 trainiert der Lauf nicht.</p>
+{% endif %}
+
+<h3>Ergebnis</h3>
+{% if form_ergebnis %}
+<p>Lauf <code>{{ form_ergebnis.lauf }}</code> ({{ form_ergebnis.ablage }}): {{ form_ergebnis.epochen }} Epochen in {{ form_ergebnis.dauer_s|de }} s, {{ form_ergebnis.parameter|de }} Gewichte,
+  Training {{ form_ergebnis.proben_alle.training|de }} / Prüfung {{ form_ergebnis.proben_alle.pruefung|de }} Proben; Farben {{ form_ergebnis.farbe }}, Drehung ±{{ form_ergebnis.drehung|de:0 }}°, Formgewicht {{ form_ergebnis.form_gewicht|de:1 }}.
+  <strong>Form</strong> = mittlere Verschiebung der Körperpunkte in mm (lineare Näherung); „mittlere Form“ = immer die gemittelten Trainingsregler vorhersagen, „Grundfigur“ = alle Regler 0 —
+  das Netz muss unter beiden liegen. <strong>Gelenke</strong> = Mittel der 138 Gelenke in mm (gestimmt / nach der Anpassung der Daz-Winkel).</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Job</th><th>Gruppe</th><th class="num">Proben</th><th class="num">Gelenke gestimmt</th><th class="num">nach Anpassung</th><th class="num">Form</th><th class="num">mittlere Form</th><th class="num">Grundfigur</th></tr></thead>
+  <tbody>
+  {% for z in form_ergebnis.jobs %}<tr><td>{{ z.job }}</td><td>{{ z.gruppe }}</td><td class="num">{{ z.proben }}</td><td class="num">{{ z.gestimmt_mm|de:1 }}</td><td class="num">{{ z.gelenke_mm|de:1 }}</td>
+    <td class="num"><strong>{{ z.form_mm|de:1 }}</strong></td><td class="num">{{ z.mittlere_mm|de:1 }}</td><td class="num">{{ z.grund_mm|de:1 }}</td></tr>{% endfor %}
+  {% for art, z in form_ergebnis.zusammen.items %}<tr class="m3a-summe"><td>{{ art }}</td><td>{{ z.varianten }} Varianten</td><td></td><td></td><td class="num">{{ z.gelenke_mm|de:1 }}</td>
+    <td class="num"><strong>{{ z.form_mm|de:1 }}</strong></td><td class="num">{{ z.mittlere_form_mm|de:1 }}</td><td class="num">{{ z.grundfigur_mm|de:1 }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% if form_ergebnis.echt_training or form_ergebnis.echt_pruefung %}
+<p><strong>Echte Nachrechnung</strong> (<code>ProjektTemp/_wegwerf/mesh3dai_form_pruefen.py</code>: vorhergesagte Regler je Variante gemittelt, geklemmt, mit der Genesis-Formung gebaut; Abstand aller
+  25.182 Körperpunkte zum Soll, RMS in mm):</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Varianten</th><th class="num">Anzahl</th><th class="num">Vorhersage</th><th class="num">mittlere Form</th><th class="num">Grundfigur</th><th class="num">lineare Näherung</th></tr></thead>
+  <tbody>
+  {% for name, m in form_ergebnis.echt %}{% if m %}<tr><td>{{ name }}</td><td class="num">{{ m.varianten }}</td><td class="num"><strong>{{ m.vorhersage|de:1 }}</strong></td><td class="num">{{ m.mittlere_form|de:1 }}</td>
+    <td class="num">{{ m.grundfigur|de:1 }}</td><td class="num">{{ m.linear_mm|de:1 }}</td></tr>{% endif %}{% endfor %}
+  {% for v in form_ergebnis.pruefformen %}<tr><td class="m3a-klein">{{ v.name }} (Höhe {{ v.hoehe_soll_m|de:3 }} → {{ v.hoehe_vorhersage_m|de:3 }} m)</td><td></td><td class="num">{{ v.vorhersage.rms_mm|de:1 }}</td>
+    <td class="num">{{ v.mittlere_form.rms_mm|de:1 }}</td><td class="num">{{ v.grundfigur.rms_mm|de:1 }}</td><td class="num">{{ v.linear_mm|de:1 }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="ag-fehlt">Die echte Nachrechnung liegt für diesen Lauf noch nicht vor (<code>formen_pruefung_echt.json</code>).</p>
+{% endif %}
+{% if form_ergebnis.verlauf %}
+<details class="m3a-details"><summary>Verlauf je 20 Epochen (eine Punktauswahl)</summary>
+<table class="doku m3a-schmal">
+  <thead><tr><th class="num">Epoche</th><th class="num">Gelenke Training</th><th class="num">Gelenke Prüfung</th><th class="num">Form Training</th><th class="num">Form Prüfung</th></tr></thead>
+  <tbody>{% for v in form_ergebnis.verlauf %}<tr><td class="num">{{ v.epoche }}</td><td class="num">{{ v.training_eval_mm|de:1 }}</td><td class="num">{{ v.pruefung_mm|de:1 }}</td>
+    <td class="num">{{ v.training_form_mm|de:1 }}</td><td class="num">{{ v.pruefung_form_mm|de:1 }}</td></tr>{% endfor %}</tbody>
+</table>
+</details>
+{% endif %}
+{% else %}
+<p class="ag-fehlt">Noch kein fertiger Lauf mit Formkopf (<code>formen_ergebnis.json</code> unter <code>Ursula1/_diagnose</code> oder <code>_laeufe</code>).</p>
+{% endif %}
+
+{% include "hilfe/_architektur_mesh3dai_formvergleich.html" %}

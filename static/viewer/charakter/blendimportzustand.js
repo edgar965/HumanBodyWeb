@@ -15,7 +15,7 @@ export class Blendimportzustand {
     static EREIGNIS = 'blendimport-zustand';
     static VORLAEUFIG = 'blendimport-vorlaeufig';       // der Kurzstand von `laufend`, bevor der erste Zustand da ist — hört nur die Leiste
     static TITEL = { umwandeln: 'Umwandeln', export: 'Lesen', umposen: 'Haltung', pose: 'Pose', koerper: 'Körpernetz', segmentierung: 'Segmentierung', figur: 'Genesis-Figur', finger: 'Finger', stuecke: 'Kleider & Haar',
-                     haut: 'Haut backen', augen: 'Augen', modell: 'Modell' };
+                     haut: 'Haut backen', augen: 'Augen', modell: 'Modell', warteschlange: 'Warteschlange' };
 
     static _uhr = null;
     static _kennung = null;

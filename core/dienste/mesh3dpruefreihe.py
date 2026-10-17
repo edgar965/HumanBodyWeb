@@ -92,6 +92,13 @@ class Mesh3dpruefreihe:
         return [k for k in Blendimportablage.alle() if zuordnung.get(k) == cls.REITER]
 
     @classmethod
+    def verwaist(cls, kennungen=None):
+        """`[(Kennung, Name)]` der Einträge im Soll, zu denen es keinen Testauftrag mehr gibt (gelöscht oder in einen anderen Reiter verschoben). Eine Prüfung, deren Auftrag fehlt, lief nie — und stand trotzdem in der Datei: am 14.10.2026 galten zwei von drei Soll-Aufträgen (Edgar, Zauberer) nicht mehr,
+        und die Reihe meldete „alles bestanden“, ohne sie je zu prüfen."""
+        vorhanden = set(cls.testauftraege() if kennungen is None else kennungen)
+        return sorted((k, (e or {}).get('name') or k) for k, e in cls.laden().items() if k not in vorhanden)
+
+    @classmethod
     def aufnehmen(cls, kennungen=None, hinweis='', auch=()):
         """Das Soll aus dem jetzigen Stand schreiben (nur Werte, die sich messen ließen) → `{kennung: Zahl der Werte}`. `auch`: Kennungen WEITERER Läufe desselben Auftrags (Kopien der Prüfreihe) — bei Regeln der Art `max` gilt der größte, bei `min` der kleinste
         Wert aller Läufe: die Läufe streuen bei gleichen Eingaben (Ballerina Figur→Netz 3,68 gegen 5,76 mm, Zauberer-Hand 26 bis 42 mm), und ein Soll aus dem glücklichsten Lauf schlüge bei jedem zweiten Lauf Alarm."""
@@ -174,7 +181,7 @@ class Mesh3dpruefreihe:
 
     @staticmethod
     def kopieren(kennung):
-        """`(Kennung der Kopie, ab)` — die Kopie OHNE Daten, solange die Quelldatei des Auftrags noch da ist (dann rechnet die Kopie von vorn, `ab` ist `None`). Fehlt sie (am 14.10.2026 beim ersten `--rechnen` der Zauberer: „Die Datei … gibt es nicht mehr“,
+        """`(Kennung der Kopie, ab)` — die Kopie OHNE Ergebnis (mit Netz, `Mesh3dkopie.ohne_ergebnis`), solange die Quelldatei des Auftrags noch da ist (dann rechnet die Kopie von vorn, `ab` ist `None`). Fehlt sie (am 14.10.2026 beim ersten `--rechnen` der Zauberer: „Die Datei … gibt es nicht mehr“,
         8 von 12 Netz-Aufträgen haben ihre Quelle verloren), beim Weg „netz“ die Kopie MIT Daten, gerechnet ab der Segmentierung — das Netz auf Menschenhöhe liegt als `arbeit/koerper.glb` im Importordner. Beim Weg „teile“ (Blender liest die Datei) bleibt der Fehler."""
         from pathlib import Path
 
@@ -183,10 +190,10 @@ class Mesh3dpruefreihe:
         kopierer = Mesh3dkopie(kennung)
         datei = (kopierer.stand.get('quelle') or {}).get('datei')
         if datei and Path(datei).exists():
-            return kopierer.ohne_daten(), None
+            return kopierer.ohne_ergebnis(), None
         if kopierer.stand.get('weg') == 'netz' and kopierer.quelle.arbeit('koerper.glb').is_file():
             return kopierer.mit_daten(), 'segmentierung'
-        return kopierer.ohne_daten(), None                 # wirft mit dem Grund (Datei fehlt)
+        return kopierer.ohne_ergebnis(), None              # wirft mit dem Grund (Datei fehlt)
 
     @classmethod
     def neu_rechnen(cls, kennung, melden=None, warten_s=3600, takt_s=15):

@@ -134,6 +134,8 @@ export class Bibliothekmenues {
         if (!name || name === ziel.category) return;
         if (await Bibliothekablage.senden('rename_folder', {
                 category: ziel.category, new_name: name })) {
+            // Offene Clips auf den neuen Ordner (16.10.2026) — sonst 404 beim nächsten Laden.
+            Clipfehlt.ordnerUmbenannt(ziel.category, name, state, fn);
             this.baum.laden();
         }
     }

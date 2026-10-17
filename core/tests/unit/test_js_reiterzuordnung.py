@@ -93,6 +93,24 @@ pruefe('gebacken vorlage', Reiterzuordnung.vorlageVon('gc_t_shirt/0'), null);
 pruefe('live', Reiterzuordnung.gcLive('gc_hose'), true);
 pruefe('gebacken nicht live', Reiterzuordnung.gcLive('gc_t_shirt/0'), false);
 
+// --- 7. Ein Genesis-9-Stück, dessen Kennung selbst mit `daz_` beginnt (16.10.2026) --
+// Edgar: „wenn ich darauf klicke im Viewer, erscheint es nicht ausgewählt im Tab links" — „Daz Anatomie Mann" hat die Kennung
+// `daz_anatomie_mann`, das Netz heißt `daz_anatomie_mann/0`; als HumanBody-Stück gelesen wäre es `anatomie_mann`, und die Zeile `g9-kleid-anatomie_mann`
+// gibt es nicht. Welche Lesart gilt, sagt die Figur (`getragen`).
+const dazStueck = k => ({reiter: 'assets', liste: 'daz', kennung: k});
+pruefe('ohne Figur: HumanBody-Lesart', Reiterzuordnung.stueckVon('daz_anatomie_mann/0'), dazStueck('anatomie_mann'));
+pruefe('Genesis 9 trägt daz_anatomie_mann', Reiterzuordnung.stueckVon('daz_anatomie_mann/0', {daz_anatomie_mann: {}}), dazStueck('daz_anatomie_mann'));
+pruefe('HumanBody trägt anatomie_mann', Reiterzuordnung.stueckVon('daz_anatomie_mann/0', {anatomie_mann: {}}), dazStueck('anatomie_mann'));
+pruefe('beide getragen: ohne Präfix', Reiterzuordnung.stueckVon('daz_anatomie_mann/0', {daz_anatomie_mann: {}, anatomie_mann: {}}), dazStueck('anatomie_mann'));
+pruefe('keines getragen', Reiterzuordnung.stueckVon('daz_anatomie_mann/0', {}), dazStueck('anatomie_mann'));
+pruefe('ohne Präfix bleibt', Reiterzuordnung.stueckVon('toulouse_hair/1', {daz_x: {}}), dazStueck('toulouse_hair'));
+pruefe('Reiter bleibt Assets', Reiterzuordnung.fuer('daz_anatomie_mann/0'), 'assets');
+// `getragen(inst)`: wie `Dazkleidung.kleidung` — Genesis 9 (kennt `anziehenMitGriff`) in `kleidung`, HumanBody in `dazKleidung`.
+pruefe('getragen G9', Reiterzuordnung.getragen({anziehenMitGriff() {}, kleidung: {a: 1}, dazKleidung: {b: 2}}), {a: 1});
+pruefe('getragen HumanBody', Reiterzuordnung.getragen({kleidung: {a: 1}, dazKleidung: {b: 2}}), {b: 2});
+pruefe('getragen null', Reiterzuordnung.getragen(null), null);
+pruefe('getragen leer', Reiterzuordnung.getragen({}), null);
+
 console.log(JSON.stringify({ok: true}));
 """
 

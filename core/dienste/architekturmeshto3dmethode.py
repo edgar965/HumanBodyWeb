@@ -29,7 +29,7 @@ class Architekturmeshto3dmethode:
          ['`Meshfigurregler` teilt jeden Regler einer Stufe zu: 1 Größe und Proportionen (BodyMass, Beine, Arme, Rumpf, Hals, Schultern, Brustkorb, Hände, Füße), 2 Körpertyp '
           '(Charakterkörper, Heavy, Pear, Muscular, Fitness), 3 die übrigen Bereiche; Kopf: 11 Schädel und Charakterköpfe, 12 Züge (Nase, Mund, Lippen, Augen, Brauen, Wangen, Kinn, Kiefer), '
           '13 Ohren und Rest; Stufe 0 wird nie gestellt (z. B. ProportionSmaller/Larger, Mundhöhle, Ears Gone, Mimik, HipGenitalBulge) — Stand 27.09.2026, 158 Körper- und 296 Kopfregler.',
-          'Körper, Runde 1: haltung (300 Schritte) → groesse (300) → koerpertyp (300) → bereiche (400); ab Runde 2 eine Stufe mit allen Reglern. Gesicht: kopfhaltung (200) → schaedel (300) → '
+          'Körper, Runde 1: haltung_breit (300 Schritte, Landmarken mit 0,5 m Breite) → haltung (300) → groesse (300) → koerpertyp (300) → bereiche (400); ab Runde 2 eine Stufe mit allen Reglern. Gesicht: kopfhaltung (200) → schaedel (300) → '
           'zuege (400) → fein (300). Frühstopp seit 02.10.2026: alle 25 Schritte; bringt das Beste der letzten 50 weniger als 0,2 % gegenüber dem Besten davor, endet die Stufe (frühestens '
           'nach einem Drittel der Schritte).']),
         ('Wo das Netz zählt: Gewichte der Käfigpunkte',

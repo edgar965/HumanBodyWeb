@@ -136,6 +136,10 @@ class Posen:
 
         POST /api/character/pose-manage/
         { action: "rename"|"delete", category, name, new_name }
+        { action: "save", name, bones: {DEF-Name: [x, y, z, w]} }  (17.10.2026)
+
+        `save` legt die Stellung einer Figur als neue Pose unter `poseData/eigene/`
+        ab (`Posenablage`) — die Kategorie bestimmt der Server, nie der Betrachter.
         """
         daten, fehler = Anfragerumpf.lesen(request)
         if fehler:
@@ -144,6 +148,8 @@ class Posen:
         kategorie = daten.get('category', '')
         name = daten.get('name', '')
         logger.info('[pose-manage] action=%s, category=%s, name=%s', aktion, kategorie, name)
+        if aktion == 'save':
+            return Posen._speichern(name, daten.get('bones'))
         if aktion == 'delete':
             return Posen._loeschen(kategorie, name)
         if aktion == 'rename':
@@ -151,20 +157,36 @@ class Posen:
         return JsonResponse({'error': 'Unknown action: %s' % aktion}, status=400)
 
     @staticmethod
+    def _speichern(name, drehungen):
+        from ..dienste.posenablage import Posenablage, PosenFehler
+
+        try:
+            ergebnis = Posenablage.speichern(Posen.wurzel(), name, drehungen)
+        except PosenFehler as fehler:
+            return JsonResponse({'error': fehler.text}, status=fehler.kennzahl)
+        return JsonResponse({'ok': True, **ergebnis})
+
+    @staticmethod
     def _loeschen(kategorie, name):
+        """Seit 17.10.2026 in den Papierkorb `poseData/.trash/` statt von der Platte (`Posenordner`)."""
+        from ..dienste.posenablage import PosenFehler
+        from ..dienste.posenordner import Posenordner
+
         if not kategorie or not name:
             return JsonResponse({'error': 'category + name required'}, status=400)
-        pfad = Posen._geprueft(kategorie, name)
-        if not pfad or not pfad.is_file():
-            return JsonResponse({'error': 'Pose not found'}, status=404)
-        pfad.unlink()
-        logger.info('[pose-manage] Deleted: %s', pfad)
-        return JsonResponse({'ok': True})
+        try:
+            return JsonResponse(Posenordner.loeschen(Posen.wurzel(), f'{kategorie}/{name}'))
+        except PosenFehler as fehler:
+            return JsonResponse({'error': fehler.text}, status=fehler.kennzahl)
 
     @staticmethod
     def _umbenennen(kategorie, name, neuer_name):
+        from ..dienste.posenordner import Posenordner
+
         if not kategorie or not name or not neuer_name:
             return JsonResponse({'error': 'category, name, new_name required'}, status=400)
+        if f'{kategorie}/{name}' in Posenordner.FESTE_POSEN or '/' in neuer_name or neuer_name.startswith('.'):
+            return JsonResponse({'error': f'„{name}" lässt sich so nicht umbenennen.'}, status=409)
         alt = Posen._geprueft(kategorie, name)
         neu = Posen._geprueft(kategorie, neuer_name)
         if not alt or not alt.is_file():

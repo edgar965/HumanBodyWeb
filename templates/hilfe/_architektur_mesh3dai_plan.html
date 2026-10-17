@@ -1,0 +1,58 @@
+{% load dezahl %}
+{% comment %}Abschnitt 6: der Plan — Posen aus Pool und Saat, Zeiten, Hebel gegen die Datenzeit, offene Entscheidungen. Daten: `Architekturmesh3daiplan`.{% endcomment %}
+<h2 id="plan">6. Plan: Posen, Zeiten, Entscheidungen</h2>
+
+<h3>Posen der drei neuen Jobs und der Formvarianten</h3>
+<p>Damira0, Mann1 und Matt0 (16.10.2026, Edgar: „ich brauche nicht alle Spagat-Bilder … welche ca. 50 Posen ich brauchen könnte … Spagat maximal 10“): je Job ein Plan mit eigener Saat — 1 A-Pose · 1 T-Pose ·
+  15 Stehen mit Armhaltungen (Mixamo-Gesten) · 8 Tanz/Ballett · 8 Spagat-Bilder · 6 Sitzen · 4 Knien/Hocken · 4 Liegen · 2 Boden · 1 Breakdance, dazu 15 Prüfposen. Grund: die Testnetze stehen fast alle
+  (Arme am Kopf, seitlich, Tanz) und lagen genau dort daneben. Die <strong>Formvarianten</strong> nehmen A-Pose + 11 Posen aus dem Pool der 200 Trainingsposen der vier Jobs, als Daz-Winkel auf ihr eigenes
+  Skelett gelegt (Abschnitt 3). Ursula1 behält ihren Plan von unten.</p>
+
+<h3>Posen von Ursula1: Pool und feste Saat</h3>
+<p>Edgar (16.10.2026): „maximal 50 Posen", „Pools aus 200 Posen und du nimmst 50 davon, random. Oder die gleichen Posen, damit das Ergebnis nachvollziehbar ist?". <strong>Entscheidung:</strong> ein Pool
+  möglichst verschiedener Posen, daraus 50 mit <em>fester Saat</em> — wiederholbar; ein anderes Modell bekommt später eine andere Saat. Die Prüfposen sind in jedem Lauf dieselben.
+  Kein Verwackeln der Gelenke: jede Variante braucht eine eigene Außenfläche (Kosten wie eine neue Pose); Drehen und Verschieben im Training kosten nichts und laufen wie heute.</p>
+<p><strong>So wird gewählt</strong> (<code>ProjektTemp/_wegwerf/mesh3dai_posen_pool.py</code>): Kandidatendateien je Kategorie nach dem Namen (Mixamo, Mixamo-Tanz, Ballett, A_Results/Spagat2),
+  je Datei bis zu 8 Bilder, Retarget auf Ursula1, je Bild die Rig-Punkte im ausgerichteten Rahmen. Abstand zweier Posen = Mittel über die Hauptknochen (Rumpf, Beine, Füße, Arme, Hände, Kopf).
+  Pool: je Kategorie die am weitesten auseinanderliegenden Bilder, keine zwei näher als 20 mm. Auswahl: je Kategorie ein Start nach der Saat, dann immer die Pose mit dem größten Abstand zu
+  allen schon gewählten. Neue Prüfposen: je Kategorie eine Datei, die nie ins Training kommt. <strong>Einen Spagat am Boden hat die Bibliothek nicht</strong> — „Spagat/Beine weit" sind Rad,
+  Arabesque und Kicks (Spagat.bvh selbst ist ein Kick, die Hüfte bleibt über 0,84 m).</p>
+{% if posenwahl %}
+<table class="doku m3a-schmal">
+  <thead><tr><th>Kategorie</th><th>Dateien im Pool</th><th>Pool</th><th>gewählt (Training)</th><th>neue Prüfposen</th></tr></thead>
+  <tbody>
+  {% for z in posenwahl.kategorien %}<tr><td>{{ z.kategorie }}</td><td class="num">{{ z.dateien }}</td><td class="num">{{ z.pool }}</td><td class="num">{{ z.wahl }}</td><td class="num">{{ z.pruefung }}</td></tr>{% endfor %}
+    <tr class="m3a-summe"><td>Summe (Saat {{ posenwahl.saat }})</td><td></td><td class="num">{{ posenwahl.pool }}</td><td class="num">{{ posenwahl.liste|length }} inkl. Prüfung</td><td></td></tr>
+  </tbody>
+</table>
+<details class="m3a-details"><summary>Die gewählten Posen einzeln ({{ posenwahl.liste|length }}; dazu die A-Pose)</summary>
+<table class="doku">
+  <thead><tr><th>Gruppe</th><th>Kategorie</th><th>Datei</th><th>Bild</th><th>Hüfte über dem Boden</th><th>Rumpf gegen senkrecht</th><th>Winkel der Oberschenkel</th></tr></thead>
+  <tbody>
+  {% for e in posenwahl.liste %}<tr><td>{{ e.gruppe }}</td><td>{{ e.kategorie }}</td><td>{{ e.datei }}</td><td class="num">{{ e.bild }}</td><td class="num">{{ e.merkmale.huefte_m|de:2 }} m</td>
+    <td class="num">{{ e.merkmale.rumpf_neigung_grad|de:0 }}°</td><td class="num">{{ e.merkmale.beine_grad|de:0 }}°</td></tr>{% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">„Hüfte über dem Boden" ist im ausgerichteten Rahmen gemessen, der die FÜSSE auf den Boden stellt — kopfüber (Rad, Breakdance) liegt die Hüfte deshalb unter 0.</p>
+</details>
+{% else %}
+<p class="ag-fehlt">Keine Posenwahl im Datensatzordner (posenwahl_saat1.json fehlt).</p>
+{% endif %}
+
+<h3>Zeiten je Modell und für 100 Modelle</h3>
+<table class="doku">
+  <thead><tr><th>Was</th><th>Dauer</th><th>Grundlage</th></tr></thead>
+  <tbody>{% for was, dauer, grund in zeiten_plan %}<tr><td>{{ was }}</td><td>{{ dauer }}</td><td>{{ grund }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Hebel gegen die Datenzeit (die Sichtbarkeit ist 94–96 % einer Probe)</h3>
+<table class="doku">
+  <thead><tr><th>Hebel</th><th>Wirkung</th><th>Stand</th></tr></thead>
+  <tbody>{% for h, w, s in hebel %}<tr><td>{{ h }}</td><td>{{ w }}</td><td>{{ s }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Offene Entscheidungen</h3>
+<table class="doku">
+  <thead><tr><th>Frage</th><th>Stand</th><th>Vorschlag</th></tr></thead>
+  <tbody>{% for f, s, v in offen %}<tr><td>{{ f }}</td><td>{{ s }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody>
+</table>

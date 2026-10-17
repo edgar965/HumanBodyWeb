@@ -220,6 +220,61 @@
     cursor: pointer;
 }
 
+/* Ordner und Mehrfachauswahl der gespeicherten Modelle (15.10.2026, `Figurwahlordner`). Ein Ordner ist eine Zeile mit eigener Liste — die scrollt nicht für sich. */
+.figurwahl-ordnerleiste {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 2px 0 6px;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+.figurwahl-ordnerleiste button,
+.figurwahl-ordnerleiste select,
+.figurwahl-ordnerleiste input[type="text"] {
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--border-strong, #3d3d63);
+    border-radius: 4px;
+    color: var(--text, #ddd);
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    color-scheme: dark light;
+}
+.figurwahl-ordnerleiste select option { background: var(--bg-card); color: var(--text); }
+.figurwahl-ordnerleiste button:hover { border-color: var(--accent); cursor: pointer; }
+.figurwahl-ordnerleiste input[type="text"] { width: 180px; }
+.figurwahl-ordnerleiste .figurwahl-neuerordner,
+.figurwahl-ordnerleiste .figurwahl-auswahl { display: inline-flex; align-items: center; gap: 6px; }
+.figurwahl-ordnerleiste .figurwahl-meldung { color: var(--text-muted); }
+.figurwahl-ordnerleiste .hb-versteckt { display: none; }
+.figurwahl-dialog .preset-list li.figurwahl-ordner {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: default;
+}
+.figurwahl-dialog .preset-list li.figurwahl-ordner > details > summary {
+    cursor: pointer;
+    padding: 6px 8px;
+    border: 1px dashed var(--border);
+    border-radius: 5px;
+    margin-bottom: 4px;
+    font-size: 0.84rem;
+    color: var(--text);
+}
+.figurwahl-dialog .preset-list li.figurwahl-ordner > details > summary:hover { border-color: var(--accent); }
+.figurwahl-dialog .preset-list li.figurwahl-ordner .fa-folder,
+.figurwahl-dialog .preset-list li.figurwahl-ordner .fa-folder-open { color: var(--warning, #e0b252); margin-right: 4px; }
+.figurwahl-dialog .preset-list li.figurwahl-ordner > details > .preset-list {
+    max-height: none;
+    overflow: visible;
+    margin-left: 16px;
+}
+.figurwahl-dialog .preset-list li .figurwahl-haken { flex-shrink: 0; margin: 0 2px 0 0; cursor: pointer; }
+.figurwahl-dialog .preset-list li .figurwahl-haken + .eintragsname { flex: 1; }
+
 /* Abgebrochener Import in der Liste (10.10.2026): rotes Warnzeichen vor dem Namen, roter Rand links; nicht wählbar, nur löschbar. */
 .figurwahl-dialog .eintrag-warnung { color: var(--danger, #e05252); margin-right: 8px; }
 .figurwahl-dialog .preset-list li.mit-warnung { border-left: 3px solid var(--danger, #e05252); cursor: default; }

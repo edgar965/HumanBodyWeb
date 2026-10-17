@@ -39,7 +39,8 @@ export class Stueckmarkierung {
     zeigen(ziel) {
         const reiter = Reiterzuordnung.fuer(ziel?.key);
         Stueckmarkierung.reiterKlicken(reiter);
-        const stueck = Reiterzuordnung.stueckVon(ziel?.key);
+        const inst = ziel && this.zustand?.characters?.get(ziel.charId);
+        const stueck = Reiterzuordnung.stueckVon(ziel?.key, Reiterzuordnung.getragen(inst));
         if (!stueck) { Stueckmarkierung.loeschen(); return Promise.resolve(); }
         // Kein Daz-Stück (GarmentCode, Kleider, MakeHuman): die Daz-Garderobe steht zu —
         // sonst fände man beim Zurückwechseln die Kategorie des vorigen Stücks offen.

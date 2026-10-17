@@ -13,6 +13,7 @@ Zwei Fälle:
 Das Format ergibt sich aus der Endung einer gewählten Datei (`.blend`, `.obj`, `.fbx`, `.glb`); ein Ordner behält das Format des Auftrags. Während eines Laufs geht nichts (409 im Endpunkt).
 """
 
+import logging
 import shutil
 from pathlib import Path
 
@@ -22,6 +23,8 @@ from .blendimportformate import Blendimportformate
 from .blendimportloeschen import Blendimportloeschen
 from .blendimportquelle import Blendimportquelle
 from .blendimportweg import Blendimportweg
+
+logger = logging.getLogger('core')
 
 __all__ = ['Mesh3dquellwechsel']
 
@@ -76,7 +79,37 @@ class Mesh3dquellwechsel:
         stand.update(quelle=quelle, weg=weg, weg_grund=grund)
         stand['einstellungen'] = {**(stand.get('einstellungen') or {}), 'pfad': str(pfad).strip(), 'name': 'eigen' if eigener else 'ordner', 'eigener_name': eigener}
         self.ablage.stand_schreiben(stand)
-        return {'quelle': quelle, 'weg': weg, 'weg_grund': grund, 'neues_netz': neues_netz, 'verworfen': verworfen}
+        self.ablage.name_loeschen()                       # der Name kommt jetzt aus der Quelle; ein früher über den Stift gesetzter läge sonst darüber (`Blendimportablage.stand`)
+        netz = None
+        if neues_netz:
+            self._altes_netz_wegraeumen()
+            netz = self._neues_netz_ablegen(quelle['datei'], weg)
+        return {'quelle': quelle, 'weg': weg, 'weg_grund': grund, 'neues_netz': neues_netz, 'verworfen': verworfen, 'netz': netz}
+
+    #: Was zum Netz der alten Datei gehört und die Mesh-Ansicht der Seite speist: `koerper.glb` samt Ablage daneben, die leichte Vorschau, der Katalog der Inseln des Netz-Werkzeugs.
+    #: Edgar, 14.10.2026: „nach Klick auf Quelle übernehmen soll das alte Mesh aus der 2. View weg sein, und das neue geladen werden“ — die Ansicht las weiter `arbeit/koerper.glb` des ALTEN Netzes.
+    ALTES_NETZ = ('koerper.glb', 'koerper.glb.scan.npz', 'ansicht', 'netzbearbeitung')
+
+    def _altes_netz_wegraeumen(self):
+        for name in self.ALTES_NETZ:
+            ziel = self.ablage.arbeit(name)
+            if ziel.is_dir():
+                shutil.rmtree(ziel, ignore_errors=True)
+            else:
+                ziel.unlink(missing_ok=True)
+
+    def _neues_netz_ablegen(self, datei, weg):
+        """Beim Weg „netz“ das Körpernetz der neuen Datei sofort ablegen (`Blendimportnetz`, ~1 s) — damit steht es in der Mesh-Ansicht, und die leichte Vorschau wird gebaut (`Mesh3dnetzansicht.vorab`), ohne dass ein Lauf nötig ist.
+        Beim Weg „teile“ entsteht das Körpernetz erst im Lauf (Blender): die Ansicht bleibt bis dahin leer. Ein Fehler hier ändert nichts am Wechsel (der Lauf legt das Netz selbst ab) → der Bericht, `{'fehler': …}` oder `None`."""
+        if weg != Blendimportweg.NETZ:
+            return None
+        from .blendimportnetz import Blendimportnetz
+
+        try:
+            return Blendimportnetz(self.ablage, lambda *argumente: None).schreiben(datei)
+        except Exception as fehler:  # noqa: BLE001 — Beiwerk des Wechsels: der Lauf schreibt das Netz ohnehin
+            logger.warning('Mesh-3D %s: neues Netz nicht abgelegt', self.ablage.kennung, exc_info=True)
+            return {'fehler': str(fehler)}
 
     def _verwerfen(self):
         """Der Auftrag „Mesh to 3D“ des alten Netzes (Eintrag und Ordner) und die Bewegung auf seiner Figur → die Kennung des entfernten Auftrags oder `None`."""

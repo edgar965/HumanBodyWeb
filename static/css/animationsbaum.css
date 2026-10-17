@@ -151,8 +151,17 @@
    (`row.style.background = 'rgba(124,92,191,0.35)'` und `style.cssText`),
    Befund `jsstilfassungen`, 18.08.2026. Zweifach benannt, weil `.anim-item`
    in derselben Datei eine eigene Hintergrundregel hat. */
-.anim-item.pose-zeile { padding: 4px 8px; cursor: pointer; font-size: 0.8rem; }
+.anim-item.pose-zeile { padding: 4px 8px 4px 22px; cursor: pointer; font-size: 0.8rem; }
 .anim-item.pose-gewaehlt { background: rgba(124, 92, 191, 0.35); }
+.anim-item.pose-ausdruck { font-style: italic; }
+/* Posenbaum (Reiter „Posen", 17.10.2026): Ordner verschachtelt (HumanBody, Genesis 9) —
+   jede Ebene rückt ein, der Bestand oben steht fett. */
+.posenbaum .anim-category-body > .anim-category { margin-left: 10px; border-bottom: none; }
+.posenbaum .posenbestand > .anim-category-header { font-weight: 600; }
+/* `.anim-category.open .anim-category-body` oben greift über JEDE Tiefe: unter einem offenen
+   Bestand stand jeder Unterordner offen da, Pfeil gedreht, ohne `.open`. Hier je Ebene. */
+.posenbaum .anim-category:not(.open) > .anim-category-body { display: none; }
+.posenbaum .anim-category:not(.open) > .anim-category-header .cat-chevron { transform: none; }
 
 /* Kleiderkatalog der Modellseite. Stand als `style.cssText` im JavaScript
    (Befund `jsstilfassungen`, 18.08.2026). Zweifach benannt, weil `.anim-item`

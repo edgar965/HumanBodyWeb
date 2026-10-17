@@ -3,7 +3,8 @@
 
 Das Netz entsteht aus dem vorbereiteten Foto (Hunyuan3D/TRELLIS/Pixal3D: die Fotoseite nach +Z, Bild rechts = +X, Y oben — `mesh_fototextur.ACHSEN`). Seine Silhouette von vorn (x, −y) liegt deshalb auf der
 Person des Fotos; die beiden Rahmen sind nur um Verschiebung und Streckung verschieden: die Kasten (Netzumriss ↔ Alphakasten der Person) werden aufeinander gelegt, `sx`/`sy` Pixel je Netzeinheit.
-So wird aus jedem Gelenk-Pixel `(x, y)` im Netz; die Tiefe `z` ist die MITTE der Netzpunkte im Strahl (vorderste und hinterste Fläche gemeinsam, also im Körper). Ein Gelenk, dessen Strahl das Netz
+So wird aus jedem Gelenk-Pixel `(x, y)` im Netz; die Tiefe `z` ist die MITTE der Netzpunkte im Strahl (vorderste und hinterste Fläche gemeinsam, also im Körper) — an Ferse, Zehe und Handgelenk seit 17.10.2026
+die Tiefe aus SAM entlang der Kette (`Engine2d3dKleiderposetiefe`, `TIEFE = 'kette'`), weil die Mitte eines zur Kamera zeigenden Fußes Ferse und Zeh auf einen Punkt legt. Ein Gelenk, dessen Strahl das Netz
 verfehlt (Fuß am Bildrand, vom Gemälde abgeschnitten), wird auf die nächsten 400 Netzpunkte gezogen (`treffer` 4 statt 9). Gemessen an „Modigliani" (Probe E8): Silhouetten-IoU 0,72, 21 Landmarken, das Skelett
 liegt in vier Ansichten im Körper; das Gegenstück zu den acht Orientierungen der Probe (`(x,-y)` siegte mit 0,72 gegen höchstens 0,44) bleibt als Prüfung: nur die vier Vorzeichenwahlen, und eine andere als
 `(x,-y)` nur, wenn sie die IoU um `BESSER_UM` übertrifft (Spiegelung allein ist an einem symmetrischen Körper kein sicheres Maß).
@@ -35,7 +36,8 @@ class Engine2d3dKleiderposeabbildung:
     #: Tiefe eines Gelenks aus den Netzpunkten im Strahl: `mitte` = Mitte der Dicke (2.–98. Perzentil, im Körper — wie der Kopf der Datei es sagt), `median` = die ältere Wahl. Der Median liegt bei zwei
     #: Schichten (Vorder- und Rückseite des Rumpfs, fast gleich viele Punkte) in der dichteren: gemessen am Auftrag „Edgar" (12.10.2026) saßen die Hüften auf der Vorderseite (z +0,11 m, Gelenk der Figur ±0,00),
     #: die Schultern auf der Rückseite (−0,13 m, Gelenk −0,05) — 8–12 cm Tiefenfehler, die der Körper-Kette als Gelenkrest von 5–12 cm erschienen.
-    TIEFE = 'mitte'
+    #: `kette` (17.10.2026): Ferse, Zehe und Handgelenk entlang der Kette mit der Tiefe aus SAM (`Engine2d3dKleiderposetiefe.KETTE`), alles andere wie `mitte` — braucht `k3`, sonst gilt `mitte`.
+    TIEFE = 'kette'
 
     def __init__(self, scan, alpha):
         """`scan`: `Meshfigurscan.laden(netz)` (Koordinaten wie die Körper-Kette sie lädt); `alpha`: Alphakanal des vorbereiteten Fotos (H × W)."""
@@ -102,35 +104,64 @@ class Engine2d3dKleiderposeabbildung:
             self._baum = cKDTree(self._punkte[:, :2])
         return self._baum, self._punkte
 
-    def landmarken(self, k2, namen, zuordnung, weglassen=()):
-        """`(roh (33, 3), treffer (33,), liste)` — `k2` (70, 2) in Pixeln des vorbereiteten Fotos, `namen` die MHR-Namen, `zuordnung` {MediaPipe-Nummer: MHR-Name}.
+    def _xy(self, px, py):
+        vx, vy = self.VARIANTEN[self.variante]
+        return [((px - self.kasten[0]) / self.sx + self.u0) / vx, ((py - self.kasten[1]) / self.sy + self.v0) / vy]
+
+    def _tiefenkette(self, k2, k3, namen, zuordnung, radius):
+        """`Engine2d3dKleiderposetiefe` für `TIEFE = 'kette'` — nur mit `k3` und bei aufrechtem Bild (`vy` < 0: die Kamera blickt auf die Vorderseite, Netz-z = −SAM-z)."""
+        if self.TIEFE != 'kette' or k3 is None or self.VARIANTEN[self.variante][1] > 0:
+            return None
+        from .engine2d3dkleiderposetiefe import Engine2d3dKleiderposetiefe
+        index = {n: i for i, n in enumerate(namen)}
+        k3 = np.asarray(k3, dtype=np.float64)
+        alle = list(zuordnung.values())
+        massstab = Engine2d3dKleiderposetiefe.massstab_aus([self._xy(*(float(w) for w in k2[index[n]])) for n in alle], k3[[index[n] for n in alle], :2])
+        return Engine2d3dKleiderposetiefe(k3, namen, radius, massstab)
+
+    def landmarken(self, k2, namen, zuordnung, weglassen=(), k3=None):
+        """`(roh (33, 3), treffer (33,), liste)` — `k2` (70, 2) in Pixeln des vorbereiteten Fotos, `namen` die MHR-Namen, `zuordnung` {MediaPipe-Nummer: MHR-Name}, `k3` (70, 3) die Gelenke von SAM
+        in Metern (für `TIEFE = 'kette'`; ohne sie gilt die Mitte der Dicke).
 
         `roh` in den Koordinaten des GELADENEN Netzes (vor Einheit und Ausrichtung, NaN = kein Punkt) — so liest es `Meshfigurerkennungsschritt._von_hand`. `liste`: je Gelenk Pixel, Netzpunkt und Stand
-        (`innen`, `ausserhalb` = auf die nächsten Netzpunkte gezogen, `weggelassen`)."""
+        (`innen`, `ausserhalb` = auf die nächsten Netzpunkte gezogen, `weggelassen`, `verworfen` = die Tiefe aus SAM trifft keine Schicht im Strahl), bei der Kette dazu `tiefe` (`mitte`/`sam`)."""
         baum, punkte = self._baum_und_punkte()
         index = {n: i for i, n in enumerate(namen)}
-        vx, vy = self.VARIANTEN[self.variante]
         ausdehnung = max(float(np.ptp(self.scan.punkte[:, 0])), float(np.ptp(self.scan.punkte[:, 1])))
         radius = self.RADIUS * ausdehnung
+        kette = self._tiefenkette(k2, k3, namen, zuordnung, radius)
         roh, treffer, liste = np.full((33, 3), np.nan), np.zeros(33), []
+        strahlen = {}
+        for mp, name in sorted(zuordnung.items()):
+            px, py = (float(w) for w in k2[index[name]])
+            xy = self._xy(px, py)
+            nah = baum.query_ball_point(xy, radius)
+            strahlen[name] = (xy, punkte[nah, 2] if len(nah) >= self.MIN_PUNKTE else None)
+        #: Tiefe je Gelenk, an der die Kinder der Kette hängen (auch die Vorhersage eines verworfenen) — die Elterngelenke haben die kleineren MediaPipe-Nummern.
+        tiefen = {}
         for mp, name in sorted(zuordnung.items()):
             px, py = (float(w) for w in k2[index[name]])
             eintrag = {'mp': mp, 'name': name, 'foto': [round(px, 1), round(py, 1)]}
             if name in weglassen:
                 liste.append(dict(eintrag, stand='weggelassen'))
                 continue
-            u = (px - self.kasten[0]) / self.sx + self.u0
-            v = (py - self.kasten[1]) / self.sy + self.v0
-            xy = [u / vx, v / vy]
-            nah = baum.query_ball_point(xy, radius)
-            if len(nah) < self.MIN_PUNKTE:
+            xy, z = strahlen[name]
+            if z is None:
                 _, nn = baum.query(xy, k=self.ZIEHEN_AUF)
                 ziel = punkte[nn].mean(0)
                 roh[mp], treffer[mp], stand = ziel, 4.0, 'ausserhalb'
             else:
-                z = punkte[nah, 2]
-                roh[mp] = [xy[0], xy[1], float(np.median(z)) if self.TIEFE == 'median' else float((np.percentile(z, 2) + np.percentile(z, 98)) / 2.0)]
+                tiefe = float(np.median(z)) if self.TIEFE == 'median' else float((np.percentile(z, 2) + np.percentile(z, 98)) / 2.0)
+                if kette is not None and kette.zaehlt(name, tiefen):
+                    tiefe, art, vorhersage = kette.tiefe(name, z, tiefen[kette.kette(name)])
+                    eintrag['tiefe'] = art
+                    if art == 'verworfen':
+                        tiefen[name] = vorhersage
+                        liste.append(dict(eintrag, stand='verworfen', vorhersage=[round(xy[0], 4), round(xy[1], 4), round(vorhersage, 4)]))
+                        continue
+                roh[mp] = [xy[0], xy[1], tiefe]
                 treffer[mp], stand = 9.0, 'innen'
+            tiefen[name] = float(roh[mp][2])
             liste.append(dict(eintrag, stand=stand, netz=[round(float(w), 4) for w in roh[mp]]))
         return roh, treffer, liste
 

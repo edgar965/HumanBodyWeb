@@ -19,6 +19,7 @@ import { Serverabruf } from './serverabruf.js';
 export class Auftragname {
 
     static FELD = 'auftrag-name';
+    static DIAGNOSE_ALERT = false;         // der Alert nimmt dem Feld den Fokus (siehe `bearbeiten`); die Diagnose steht weiter im Protokoll (`name_diagnose`)
 
     /** Bindet das Namensfeld, falls die Seite eines hat. */
     static binden(id = Auftragname.FELD) {
@@ -42,10 +43,64 @@ export class Auftragname {
         stift.className = 'btn btn-secondary btn-sm auftrag-name-stift';
         stift.title = 'Namen ändern';
         stift.innerHTML = '<i class="fas fa-pen"></i>';
-        stift.addEventListener('click', (ereignis) => { ereignis.stopPropagation(); this.bearbeiten(); });
+        stift.addEventListener('click', (ereignis) => {
+            ereignis.stopPropagation();
+            this.klickZeigen();
+            this.diagnose('Klick auf den Stift', ereignis);
+            try {
+                this.bearbeiten();
+            } catch (fehler) {
+                this.klickZeigen(`Klick – Fehler: ${fehler && fehler.message ? fehler.message : fehler}`, true);
+                Aktionsprotokoll.melden('name_fehler', `bearbeiten() warf: ${fehler && fehler.message ? fehler.message : fehler}`, 'error');
+            }
+        });
+        // Erfassungsphase: ein Druck IM Rechteck des Stifts, der ein anderes Element trifft (verdeckt), käme sonst nie beim Stift an.
+        document.addEventListener('pointerdown', (ereignis) => {
+            if (this.stift && !this.stift.contains(ereignis.target) && this.imStift(ereignis)) this.diagnose('Druck im Stift-Rechteck, getroffen hat ein anderes Element', ereignis);
+        }, true);
         this.feld.after(' ', stift);
         this.stift = stift;
         return this;
+    }
+
+    /**
+     * „Klick“ direkt neben dem Stift (Edgar, 14.10.2026, bei „Polstertänzer Kopie“: „schreibe direkt neben dem Stift auf die Seite ‚Klick‘“): Zeigt AUF DER SEITE, dass der Klick am Stift angekommen ist —
+     * kein Alert (der nimmt dem Feld den Fokus). Erscheint der Text nicht, kam der Klick nie an; erscheint er und das Feld bleibt zu, steht der Grund im Text (`bleibt`) und im Protokoll.
+     */
+    klickZeigen(text = 'Klick', bleibt = false) {
+        if (!this.stift) return;
+        if (!this.klick) {
+            this.klick = document.createElement('span');
+            this.klick.className = 'auftrag-name-klick';
+            this.klick.style.cssText = 'margin-left:0.6rem;font-size:0.9rem;font-weight:600;color:var(--warning,#e5a50a);';
+            this.stift.after(this.klick);
+        }
+        this.klick.textContent = text;
+        clearTimeout(this.klickUhr);
+        if (!bleibt) this.klickUhr = setTimeout(() => { this.klick?.remove(); this.klick = null; }, 3000);
+    }
+
+    imStift(ereignis) {
+        const r = this.stift.getBoundingClientRect();
+        return r.width > 0 && ereignis.clientX >= r.left && ereignis.clientX <= r.right && ereignis.clientY >= r.top && ereignis.clientY <= r.bottom;
+    }
+
+    /**
+     * Diagnose (14.10.2026, Edgar: „klicke ich auf den Editor stift …, es tut sich nichts. Mach einen Alert, damit du das loggern kannst!“): Im client.log stand von einem solchen Klick NICHTS — kein `klick`,
+     * kein `druck_ohne_klick`; der Stift selbst funktionierte in einem frischen Tab. Der Alert nennt, wohin gedrückt wurde, wo der Stift liegt und was an seiner Stelle oben liegt; `Aktionsprotokoll`
+     * schreibt den Text ins Protokoll. Abschalten, sobald die Ursache feststeht: `DIAGNOSE_ALERT = false` (das Protokollieren bleibt).
+     */
+    diagnose(wo, ereignis) {
+        try {
+            const r = this.stift.getBoundingClientRect();
+            const oben = r.width > 0 ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+            const name = (el) => el ? `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : ''}` : 'nichts';
+            const text = `${wo}: Druck bei ${Math.round(ereignis.clientX)},${Math.round(ereignis.clientY)} auf ${name(ereignis.target)} · Stift ${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} · oben auf dem Stift liegt ${name(oben)} · scrollY ${Math.round(scrollY)} · Feld offen ${!!this.eingabe} · Speicherung läuft ${this.laeuft} · Seite ${document.visibilityState}`;
+            Aktionsprotokoll.melden('name_diagnose', text);
+            if (Auftragname.DIAGNOSE_ALERT) window.alert(text);
+        } catch (fehler) {
+            Aktionsprotokoll.melden('name_diagnose_fehler', String(fehler && fehler.message ? fehler.message : fehler), 'error');
+        }
     }
 
     /** Überschrift gegen ein Eingabefeld tauschen. */
@@ -63,8 +118,9 @@ export class Auftragname {
             if (ereignis.key === 'Enter') { ereignis.preventDefault(); this.speichern(eingabe.value, alt); }
             if (ereignis.key === 'Escape') { ereignis.preventDefault(); this.beenden(alt); }
         });
-        // Blur speichert ebenfalls — ein Klick daneben soll die Eingabe nicht verwerfen.
-        eingabe.addEventListener('blur', () => { if (this.eingabe) this.speichern(eingabe.value, alt); });
+        // Blur speichert ebenfalls — ein Klick daneben soll die Eingabe nicht verwerfen. Verliert das FENSTER den Fokus (ein `alert`, anderes Fenster, anderer Tab), bleibt das Feld offen:
+        // Der Alert der Diagnose nahm dem frisch geöffneten Feld sofort den Fokus, `speichern` sah „unverändert“ und schloss es wieder (Edgar 14.10.2026: „alert kommt, aber Ändern … nicht möglich“).
+        eingabe.addEventListener('blur', () => { if (this.eingabe === eingabe && document.hasFocus()) this.speichern(eingabe.value, alt); });
         this.feld.style.display = 'none';
         if (this.stift) this.stift.style.display = 'none';
         this.feld.after(eingabe);
@@ -114,7 +170,11 @@ export class Auftragname {
     }
 
     beenden(text) {
-        if (this.eingabe) { this.eingabe.remove(); this.eingabe = null; }
+        // Zuerst vergessen, dann entfernen: `remove()` löst synchron `blur` aus, und der Hörer sähe sonst noch ein offenes Feld, speicherte erneut und rief `beenden` verschachtelt
+        // (`NotFoundError: … no longer a child`, js_fehler im client.log 14.10.2026).
+        const eingabe = this.eingabe;
+        this.eingabe = null;
+        if (eingabe) eingabe.remove();
         this.feld.textContent = text;
         this.feld.style.display = '';
         if (this.stift) this.stift.style.display = '';

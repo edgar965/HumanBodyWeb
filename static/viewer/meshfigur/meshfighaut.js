@@ -38,7 +38,7 @@ export class Meshfighaut {
      * @param {object} haut  `Meshfighaut.laden` + `knochen` (Namensliste des Steckbriefs)
      * @returns {boolean} gebunden? (false: Punktzahl oder Knochen passen nicht — das Objekt bleibt, wie es ist)
      */
-    static binden(wurzel, skelett, haut) {
+    static binden(wurzel, skelett, haut, haltung = null) {
         const netze = Meshfighaut.netze(wurzel);
         if (netze.length !== 1) {
             Protokoll.warnung('Meshfighaut', `${netze.length} Netze in der GLB, erwartet 1 — nicht gebunden`);
@@ -67,8 +67,57 @@ export class Meshfighaut {
         geo.setAttribute('skinWeight', new THREE.BufferAttribute(gewicht, 4, true));
         const gebunden = netz.isSkinnedMesh ? netz : Meshfighaut._umwandeln(netz);
         gebunden.updateMatrix();
-        gebunden.bind(skelett.skeleton, gebunden.matrix);
+        if (haltung) Meshfighaut._an_die_haltung(gebunden, skelett, haltung);
+        else {
+            gebunden.bind(skelett.skeleton, gebunden.matrix);
+            gebunden.userData.haltungsbindung = false;
+        }
         return true;
+    }
+
+    /**
+     * An die HALTUNG des Netzes binden (`Meshfighaltungspose`): das Netz liegt unverändert im Raum der gebackenen Figur (Haltung), eine eigene Skelettinstanz trägt die Umkehrmatrizen der Haltung statt der
+     * der Ruhe, und die Bindematrix hebt das Netz um den Bodenversatz in den Raum der Vorwärtsrechnung (`haltung.boden`). Mit `haltung.beweglich` (ein gehaltener Stab) bindet das Netz ABGELÖST: seine eigene Matrix
+     * wirkt dann nach der Häutung (`Meshfigurstab` dreht den Stab um die Faust, ohne ihn von der Hand zu lösen) — `userData.hebung` ist die Bindematrix ohne die Lage des Netzes, die der Stab in seine Matrix zurückrechnet.
+     */
+    static _an_die_haltung(gebunden, skelett, haltung) {
+        const skeleton = new THREE.Skeleton(skelett.skeleton.bones, haltung.inverse);
+        const hebung = new THREE.Matrix4().makeTranslation(0, haltung.boden, 0);
+        gebunden.bindMode = haltung.beweglich ? THREE.DetachedBindMode : THREE.AttachedBindMode;
+        gebunden.bind(skeleton, hebung.clone().multiply(gebunden.matrix));
+        gebunden.userData.haltungsbindung = true;
+        gebunden.userData.hebung = hebung;
+        gebunden.userData.bindung = (gebunden.userData.bindung || 0) + 1;
+        if (haltung.beweglich) {
+            gebunden.matrixAutoUpdate = false;
+            gebunden.matrix.copy(hebung);
+            gebunden.matrixWorldNeedsUpdate = true;
+        }
+    }
+
+    /**
+     * Die Punkte eines an die Haltung gebundenen Netzes in der RUHELAGE der Figur (`Float32Array`, Lage der Figurgruppe): `Σ w · (Ruhe · Haltung⁻¹) · (Hebung · p)`. Die Maske der Haut-Verdeckung
+     * (`Meshfighautstueck`) vergleicht Stoff und Körper in der Ruhelage — die rohen Punkte des Netzes liegen in der Haltung.
+     */
+    static ruheposition(netz, skelett) {
+        const roh = netz.geometry.getAttribute('position'), idx = netz.geometry.getAttribute('skinIndex'), gew = netz.geometry.getAttribute('skinWeight');
+        const ruhe = skelett.skeleton.boneInverses, haltung = netz.skeleton.boneInverses;
+        const m = ruhe.map((r, i) => r.clone().invert().multiply(haltung[i]).multiply(netz.userData.hebung).elements);
+        const n = roh.count, aus = new Float32Array(3 * n);
+        for (let v = 0; v < n; v++) {
+            const x = roh.getX(v), y = roh.getY(v), z = roh.getZ(v);
+            let ax = 0, ay = 0, az = 0;
+            for (let k = 0; k < 4; k++) {
+                const w = gew.getComponent(v, k);
+                if (w === 0) continue;
+                const e = m[idx.getComponent(v, k)];
+                ax += w * (e[0] * x + e[4] * y + e[8] * z + e[12]);
+                ay += w * (e[1] * x + e[5] * y + e[9] * z + e[13]);
+                az += w * (e[2] * x + e[6] * y + e[10] * z + e[14]);
+            }
+            aus[3 * v] = ax; aus[3 * v + 1] = ay; aus[3 * v + 2] = az;
+        }
+        return aus;
     }
 
     /** Aus dem Netz der GLB ein `SkinnedMesh` an derselben Stelle. */

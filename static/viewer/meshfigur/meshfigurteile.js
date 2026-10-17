@@ -20,6 +20,8 @@ export class Meshfigurteile {
         this.eintraege = new Map();
         this.haare = true;
         this.kleider = true;
+        /** Wird gerufen, wenn ein Bestandteil (neu) an das Skelett gebunden ist: `(name, objekt)` — der gehaltene Stab hängt sich hier an `Meshfigurstab`. */
+        this.gebunden = null;
         // Einzeln abgeschaltete Bestandteile (Edgar, 14.10.2026: der kleine weiße Flügel der Ballerina „auch löschen"): je Auftragsseite gemerkt; ein ausgeblendetes Netz fehlt auch im Export.
         this.aus = new Set(Meshfigurteile.gemerkt());
     }
@@ -57,7 +59,10 @@ export class Meshfigurteile {
                     name: `Bestandteil ${t.name}`,
                     datei: e => (((e || {}).teile || []).find(x => x.name === t.name) || {}).objekt,
                 });
-                this.eintraege.set(t.name, { gruppe: t.gruppe, objekt });
+                // Ein gehaltener Gegenstand (Stab: `bewegung.haelt`) bindet abgelöst, damit `Meshfigurstab` ihn um die Faust drehen kann, wenn er dem Körper ausweichen muss.
+                objekt.beweglich = Boolean(((t.objekt || {}).haelt || {}).seite) && Boolean((t.objekt || {}).gehalten);
+                objekt.gebunden = () => this.gebunden?.(t.name, objekt);
+                this.eintraege.set(t.name, { gruppe: t.gruppe, objekt, haelt: ((t.objekt || {}).haelt || {}).seite || null });
             }
             this.eintraege.get(t.name).objekt.zeigen(z, gruppe, haltung);
         }
@@ -66,7 +71,7 @@ export class Meshfigurteile {
 
     /** Nach jedem Neubau der Figur: die Objekte hängen sich in ihre neue Gruppe. */
     anhaengen(modell) {
-        for (const { objekt } of this.eintraege.values()) objekt.anhaengen(modell.group, modell.skelett);
+        for (const { objekt } of this.eintraege.values()) objekt.anhaengen(modell.group, modell.skelett, modell);
         this.anwenden();
     }
 

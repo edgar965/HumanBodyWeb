@@ -175,6 +175,84 @@ class BvhverwaltungTest(SimpleTestCase):
         Bvhverwaltung.ausfuehren({'action': 'rename_folder', 'category': 'Aist', 'new_name': 'Ballett'})
         self.assertTrue((self.wurzel / 'Ballett' / 'Tanz.bvh').is_file())
 
+    def test_ordner_umbenennen_zieht_projekte_nach(self):
+        """Edgar, 16.10.2026: Ordner-Umbenennung -> Verzeichnis UND Clips in Projekten."""
+        self._anlegen('Aist', 'Tanz')
+        projekte = Pfadwurzeln.projekt_standard()
+        projekte.mkdir(parents=True)
+        projekt = {'name': 'P', 'tracks': [
+            {'type': 'bvh', 'clips': [
+                {'type': 'bvh', 'category': 'Aist', 'name': 'Tanz'},
+                {'type': 'freeze', 'category': 'Aist', 'name': 'Tanz'},
+                {'type': 'bvh', 'category': 'Mixamo', 'name': 'Tanz'},
+            ]},
+            # Ein Modellclip mit zufaellig gleicher Kategorie bleibt unberuehrt.
+            {'type': 'model', 'clips': [{'type': 'model', 'category': 'Aist', 'name': 'X'}]},
+        ]}
+        (projekte / 'P.studio.json').write_text(json.dumps(projekt), encoding='utf-8')
+        antwort = Bvhverwaltung.ausfuehren(
+            {'action': 'rename_folder', 'category': 'Aist', 'new_name': 'Ballett'})
+        self.assertEqual((antwort['projects_updated'], antwort['clips_updated']), (1, 2))
+        geschrieben = json.loads((projekte / 'P.studio.json').read_text(encoding='utf-8'))
+        self.assertEqual([c['category'] for c in geschrieben['tracks'][0]['clips']],
+                         ['Ballett', 'Ballett', 'Mixamo'])
+        self.assertEqual(geschrieben['tracks'][1]['clips'][0]['category'], 'Aist')
+
+    def test_ordner_umbenennen_weist_vergebenen_namen_ab(self):
+        self._anlegen('Aist', 'Tanz')
+        self._anlegen('Mixamo', 'Lauf')
+        with self.assertRaises(BvhFehler) as f:
+            Bvhverwaltung.ausfuehren(
+                {'action': 'rename_folder', 'category': 'Aist', 'new_name': 'Mixamo'})
+        self.assertEqual(f.exception.kennzahl, 409)
+        self.assertTrue((self.wurzel / 'Aist' / 'Tanz.bvh').is_file())
+
+    def test_ordner_umbenennen_nur_ein_namensteil(self):
+        self._anlegen('Aist', 'Tanz')
+        for neu in ('a/b', 'a\\b', '.trash', '..'):
+            with self.assertRaises(BvhFehler, msg=neu):
+                Bvhverwaltung.ausfuehren(
+                    {'action': 'rename_folder', 'category': 'Aist', 'new_name': neu})
+        self.assertTrue((self.wurzel / 'Aist' / 'Tanz.bvh').is_file())
+
+    def test_daz_ordner_ist_nicht_verwaltbar(self):
+        """Die Liste legt `Daz` bei jedem Abruf neu an — umbenennen/loeschen liefe ins Leere."""
+        self._anlegen('Daz', 'Gehen')
+        for aktion in ({'action': 'rename_folder', 'category': 'Daz', 'new_name': 'X'},
+                       {'action': 'delete_folder', 'category': 'Daz', 'with_content': True}):
+            with self.assertRaises(BvhFehler):
+                Bvhverwaltung.ausfuehren(aktion)
+        self.assertTrue((self.wurzel / 'Daz' / 'Gehen.bvh').is_file())
+
+    def test_voller_ordner_geht_mit_inhalt_in_den_papierkorb(self):
+        self._anlegen('Aist', 'Tanz', caches=('881259c8',))
+        antwort = Bvhverwaltung.ausfuehren(
+            {'action': 'delete_folder', 'category': 'Aist', 'with_content': True})
+        self.assertEqual(antwort['files'], 1)
+        self.assertFalse((self.wurzel / 'Aist').exists())
+        self.assertTrue((self.wurzel / '.trash' / 'Aist' / 'Tanz.bvh').is_file())
+        self.assertTrue((self.wurzel / '.trash' / 'Aist' / 'Tanz_retarget_881259c8.json').is_file())
+
+    def test_papierkorb_nimmt_denselben_namen_zweimal(self):
+        for _ in range(2):
+            self._anlegen('Aist', 'Tanz')
+            Bvhverwaltung.ausfuehren(
+                {'action': 'delete_folder', 'category': 'Aist', 'with_content': True})
+        self.assertTrue((self.wurzel / '.trash' / 'Aist' / 'Tanz.bvh').is_file())
+        self.assertTrue((self.wurzel / '.trash' / 'Aist_2' / 'Tanz.bvh').is_file())
+
+    def test_papierkorb_ist_kein_ordner_der_bibliothek(self):
+        from core.dienste.bvhverzeichnis import Bvhverzeichnis
+        self._anlegen('Aist', 'Tanz')
+        Bvhverwaltung.ausfuehren(
+            {'action': 'delete_folder', 'category': 'Aist', 'with_content': True})
+        # Mit der Wegwerf-Wurzel: ohne sie liest `Bvhverzeichnis` die ECHTE Bibliothek.
+        self.assertTrue((self.wurzel / '.trash').is_dir())
+        self.assertNotIn('.trash', Bvhverzeichnis(self.wurzel).kategorienamen())
+        with self.assertRaises(BvhFehler):
+            Bvhverwaltung.ausfuehren({'action': 'delete_folder', 'category': '.trash',
+                                      'with_content': True})
+
     # ------------------------------------------------------------- Abweisungen
 
     def test_unbekannte_aktion(self):

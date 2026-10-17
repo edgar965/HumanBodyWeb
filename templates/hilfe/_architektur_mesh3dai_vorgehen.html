@@ -1,0 +1,66 @@
+{% load dezahl %}
+{% comment %}Abschnitt 7: das Vorgehen — Datensatz Schritt für Schritt mit Zeiten, Training, Ergebnis, Analyse, Befunde. Daten: `Architekturmesh3daivorgehen` (Proben, Lauf, Analyse gelesen).{% endcomment %}
+<h2 id="vorgehen">7. Vorgehen: Datensatz, Training, Ergebnis</h2>
+<p>Der Datensatz aller Jobs und Formvarianten steht in Abschnitt 3; hier die Proben von Ursula1 im Einzelnen.</p>
+
+<h3>Die Proben von Ursula1 ({{ posen.gesamt|default:"—" }})</h3>
+{% if posen %}
+<p>Gruppen: <strong>Training {{ posen.je_gruppe.training }}</strong> · Prüfposen {{ posen.je_gruppe.pruefung }} (nie trainiert) · Spagat-Bilder {{ posen.je_gruppe.spagat }} (nie trainiert — die Bewegung
+  der Animationsleiste und eine Prüfung auf eine ungesehene Bewegung).</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Herkunft (Ordner der BVH)</th><th>Dateien</th><th>Training</th><th>Prüfung</th><th>Spagat</th><th>Beispiel</th></tr></thead>
+  <tbody>{% for z in posen.zeilen %}<tr><td>{{ z.herkunft }}</td><td class="num">{{ z.dateien }}</td><td class="num">{{ z.training }}</td><td class="num">{{ z.pruefung }}</td><td class="num">{{ z.spagat }}</td><td>{{ z.beispiel }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+<h3>Eine Probe, Schritt für Schritt — mit Zeiten</h3>
+<table class="doku">
+  <thead><tr><th>Schritt</th><th>Was geschieht</th><th>Dauer</th><th>Quelle</th></tr></thead>
+  <tbody>{% for s, was, dauer, quelle in schritte %}<tr><td>{{ s }}</td><td>{{ was }}</td><td>{{ dauer }}</td><td class="m3a-klein">{{ quelle }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Das Training</h3>
+<table class="doku">
+  <tbody>{% for k, v in training %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</tbody>
+</table>
+
+{% if lauf %}
+<h3>Ergebnis des Laufs {{ lauf.name }}</h3>
+<p>{{ lauf.epochen }} Epochen in {{ lauf.dauer_s }} s, {{ lauf.parameter|de }} Gewichte, {{ lauf.punkte|de }} Punkte je Probe, Sichtbarkeit Fassung {{ lauf.sicht }}.
+  Fehler = Abstand der 138 Rig-Punkte zum Ziel in mm, gemittelt über Proben und Punkte; „mittlere Pose" = immer die mittlere Trainingspose vorhersagen, „A-Pose" = immer die Ruhelage.
+  Das Netz muss unter beiden liegen.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Gruppe</th><th>Proben</th><th>Netz Ø</th><th>Median</th><th>p95</th><th>mittlere Pose</th><th>A-Pose</th><th>unter 10 mm</th></tr></thead>
+  <tbody>{% for g in lauf.gruppen %}<tr><td>{{ g.name }}</td><td class="num">{{ g.proben }}</td><td class="num">{{ g.netz_mm|de:1 }}</td><td class="num">{{ g.netz_median_mm|de:1 }}</td>
+    <td class="num">{{ g.netz_p95_mm|de:1 }}</td><td class="num">{{ g.mittlere_pose_mm|de:1 }}</td><td class="num">{{ g.a_pose_mm|de:1 }}</td><td class="num">{{ g.unter_10mm_prozent|de:1 }} %</td></tr>{% endfor %}</tbody>
+</table>
+<details class="m3a-details"><summary>Verlauf je Epoche (Trainingsverlust mit Augmentierung; Prüfung alle 10 Epochen mit einer Punktauswahl)</summary>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Epoche</th><th>Training (mm, im Trainingsmodus)</th><th>Prüfposen (mm)</th><th>Spagat-Bilder (mm)</th></tr></thead>
+  <tbody>{% for v in lauf.verlauf %}<tr><td class="num">{{ v.epoche }}</td><td class="num">{{ v.training_mm|de:1 }}</td><td class="num">{{ v.pruefung_mm|de:1 }}</td><td class="num">{{ v.spagat_mm|de:1 }}</td></tr>{% endfor %}</tbody>
+</table>
+</details>
+{% endif %}
+
+{% if analyse %}
+<h3>Warum das Ergebnis so ist: Netz gegen nächste Trainingspose ({{ analyse.lauf }})</h3>
+<p>Für jede Probe der Abstand zur ähnlichsten Trainingspose (Mittel der 138 Rig-Punkte; bei einer Trainingsprobe die nächste ANDERE). Folgt der Fehler des Netzes diesem Abstand,
+  holt das Netz im Kern die ähnlichste gesehene Pose — dann fehlen Posen, nicht Größe.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Gruppe</th><th>Proben</th><th>Netz Ø</th><th>nächste Trainingspose Ø</th><th>mittlere Pose Ø</th><th>Korrelation</th><th>Netz besser als nächste</th></tr></thead>
+  <tbody>{% for g in analyse.gruppen %}<tr><td>{{ g.name }}</td><td class="num">{{ g.proben }}</td><td class="num">{{ g.netz|de:1 }}</td><td class="num">{{ g.naechste|de:1 }}</td><td class="num">{{ g.mittlere|de:1 }}</td>
+    <td class="num">{{ g.korrelation|de:2 }}</td><td class="num">{{ g.besser }} von {{ g.proben }}</td></tr>{% endfor %}</tbody>
+</table>
+<details class="m3a-details" open><summary>Die Prüfposen einzeln</summary>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Probe</th><th>Netz (mm)</th><th>nächste Trainingspose (mm)</th><th>welche</th><th>mittlere Pose (mm)</th></tr></thead>
+  <tbody>{% for p in analyse.pruefposen %}<tr><td>{{ p.nr }} {{ p.name }}</td><td class="num">{{ p.netz|de:1 }}</td><td class="num">{{ p.naechste|de:1 }}</td><td>{{ p.naechste_nr }} {{ p.naechste_name }}</td><td class="num">{{ p.mittlere|de:1 }}</td></tr>{% endfor %}</tbody>
+</table>
+</details>
+{% endif %}
+
+<h3>Befunde unterwegs</h3>
+<table class="doku">
+  <thead><tr><th>Datum</th><th>Befund</th><th>Stand</th></tr></thead>
+  <tbody>{% for d, b, s in befunde_weg %}<tr><td>{{ d }}</td><td>{{ b }}</td><td>{{ s }}</td></tr>{% endfor %}</tbody>
+</table>

@@ -53,23 +53,58 @@ class Studioprojektumbenennung:
     @classmethod
     def umbenennen(cls, kategorie, alter_name, neuer_name):
         """Alle betroffenen Projektdateien schreiben. Liefert (Dateien, Clips)."""
+        def aendern(clip):
+            if clip.get('category') != kategorie or clip.get('name') != alter_name:
+                return False
+            clip['name'] = neuer_name
+            return True
+
+        ergebnis = cls._alle_projekte(aendern)
+        if ergebnis[0]:
+            logger.info(
+                '[bvh-manage] Rename propagated: %s/%s -> %s in %d project file(s), %d clip(s)',
+                kategorie, alter_name, neuer_name, *ergebnis,
+            )
+        return ergebnis
+
+    @classmethod
+    def ordner_umbenennen(cls, alte_kategorie, neue_kategorie):
+        """Ein Ordner heisst jetzt anders: `category` ALLER seiner Clips umstellen.
+
+        Edgar, 16.10.2026: Der Ordner im Szene-Reiter laesst sich umbenennen —
+        dabei wird das Verzeichnis auf der Platte umbenannt, und jedes
+        gespeicherte Projekt mit Clips daraus zeigte sonst auf einen Ordner, den
+        es nicht mehr gibt.
+        """
+        def aendern(clip):
+            if clip.get('category') != alte_kategorie:
+                return False
+            clip['category'] = neue_kategorie
+            return True
+
+        ergebnis = cls._alle_projekte(aendern)
+        if ergebnis[0]:
+            logger.info(
+                '[bvh-manage] Folder rename propagated: %s -> %s in %d project file(s), %d clip(s)',
+                alte_kategorie, neue_kategorie, *ergebnis,
+            )
+        return ergebnis
+
+    @classmethod
+    def _alle_projekte(cls, aendern):
+        """`aendern(clip)` auf jeden BVH-Clip jedes Projekts. Liefert (Dateien, Clips)."""
         dateien_geaendert = 0
         clips_geaendert = 0
         for ordner in cls.projektordner():
             for datei in ordner.rglob('*.studio.json'):
-                geaendert = cls._datei_umbenennen(datei, kategorie, alter_name, neuer_name)
+                geaendert = cls._datei_aendern(datei, aendern)
                 if geaendert:
                     dateien_geaendert += 1
                     clips_geaendert += geaendert
-        if dateien_geaendert:
-            logger.info(
-                '[bvh-manage] Rename propagated: %s/%s -> %s in %d project file(s), %d clip(s)',
-                kategorie, alter_name, neuer_name, dateien_geaendert, clips_geaendert,
-            )
         return dateien_geaendert, clips_geaendert
 
     @staticmethod
-    def _datei_umbenennen(pfad, kategorie, alter_name, neuer_name):
+    def _datei_aendern(pfad, aendern):
         try:
             with open(pfad, encoding='utf-8') as datei:
                 projekt = json.load(datei)
@@ -79,12 +114,10 @@ class Studioprojektumbenennung:
         geaendert = 0
         for spur in projekt.get('tracks') or []:
             for clip in spur.get('clips') or []:
-                if (clip.get('type') not in BVH_CLIPARTEN
-                        or clip.get('category') != kategorie
-                        or clip.get('name') != alter_name):
-                    continue
-                clip['name'] = neuer_name
-                geaendert += 1
+                # Nur Clips, die eine BVH-Datei meinen — ein Modellclip kann
+                # zufaellig denselben Namen tragen.
+                if clip.get('type') in BVH_CLIPARTEN and aendern(clip):
+                    geaendert += 1
         if not geaendert:
             return 0
         try:

@@ -12,21 +12,33 @@ MENUE = [
         'untermenu': [
             {'label': 'Studio', 'icon': 'bi-scissors', 'url': '/studio/'},
             {'label': 'Charakter', 'icon': 'bi-lightbulb', 'url': '/Charakter/'},
-            # Seit 26.09.2026 hier statt unter HumanBody (Edgar: „lege das Menü unter
-            # ‚Dashboard', vor Theatre"); Reiter 3D (Genesis) und Mesh (Fotos → Netz).
-            {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/modell-aus-dateien/'},
-            # Seit 29.09.2026 (Edgar: „mach ein neues Menü Dashboard - BlenderModel"): Fotos → Netz → Figur,
-            # eine Kopie des Reiters „Mesh to 3D" mit eigener Pipeline (`core/dienste/blendermodelllauf.py`).
-            {'label': 'BlenderModel', 'icon': 'bi-badge-3d', 'url': '/blendermodell/'},
-            # Seit 30.09.2026: die Kopie von BlenderModel für die Genesis-Engine statt Blender
-            # (`core/dienste/engine2d3dkleiderlauf.py`, `genesisengine2d3dkleider.py`). Zuerst als „Kleider Engine" angelegt (Edgar:
-            # „mach eine Seite Dashboard - Kleider Engine"), gleich danach umbenannt (Edgar: „Mach eine Umbenennung der Seite
-            # Dashboard – Kleider Engine in Dashboard – Haar Engine").
-            {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/2d3dKleider/'},
-            # Seit 11.10.2026 (Edgar: „mach ein neues Menü /mesh-3D … das neue Menü kommt in Dashboard"): ein Netz (Blender, OBJ, FBX, GLB) →
-            # Genesis-Modell mit Körper, Kleidung und Haar. Die Aufträge sind Modell-Importe (`core/api/mesh3d.py`), keine Kopie von 2D3D Kleider.
-            {'label': 'Mesh-3D', 'icon': 'bi-box', 'url': '/mesh-3D/'},
+            # Seit 14.10.2026 (Edgar: „Mach das Menü Dashboard – Mesh3D-AI und zeige mir den Input, gewünschten Trainingsoutput und Output, mit Dummies für Ursula1“):
+            # die Seite für das Training einer KI, die aus einem Netz ein Genesis-Modell macht — heute nur die Oberfläche mit Dummies (`core/api/mesh3dai.py`).
+            # Seit 14.10.2026 (Edgar: „mehrere Jobs außer Ursula … eine Hauptansicht mit einer Tabelle wie bei /mesh-3D/, und die Unterjobs wie Ursula1 als Unterseiten / unter Menüeinträge“):
+            # „Alle Jobs“ ist die Tabelle, jeder Job eine Unterseite `/mesh-3D-AI/<job>/`. Die Job-Einträge stehen NICHT hier: die Marke `dynamisch` lässt den `menu_provider`
+            # (`DJANGOBASE['menu_provider']` → `core/dienste/mesh3daimenue.py`) je Job aus `Mesh3daiattrappe.stammdaten()` einen Eintrag hinter „Alle Jobs“ hängen — ein neuer Job braucht hier nichts.
+            {
+                'label': 'Mesh3D-AI',
+                'icon': 'bi-cpu',
+                'dynamisch': 'mesh3dai_jobs',
+                'untermenu': [
+                    {'label': 'Alle Jobs', 'icon': 'bi-list-ul', 'url': '/mesh-3D-AI/'},
+                ],
+            },
             {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
+        ],
+    },
+    # Seit 16.10.2026 (Edgar: „mach ein Menü ALT (Hauptmenü), und verschiebe darin …"): die vier älteren Wege zur Figur, vorher unter Dashboard —
+    # Modell aus Dateien (26.09.2026, Reiter 3D und Mesh), BlenderModel (29.09.2026, Fotos → Netz → Figur, `blendermodelllauf.py`),
+    # 2D3D Kleider (30.09.2026, Genesis-Engine, `engine2d3dkleiderlauf.py`), Mesh-3D (11.10.2026, Netz → Genesis-Modell als Modell-Import, `core/api/mesh3d.py`).
+    {
+        'label': 'ALT',
+        'icon': 'bi-archive',
+        'untermenu': [
+            {'label': 'Modell aus Dateien', 'icon': 'bi-images', 'url': '/modell-aus-dateien/'},
+            {'label': 'BlenderModel', 'icon': 'bi-badge-3d', 'url': '/blendermodell/'},
+            {'label': '2D3D Kleider', 'icon': 'bi-brush', 'url': '/2d3dKleider/'},
+            {'label': 'Mesh-3D', 'icon': 'bi-box', 'url': '/mesh-3D/'},
         ],
     },
     {
@@ -88,6 +100,8 @@ EINSTELLUNGEN_EXTRA = [
     {'label': '2D3D Kleider', 'url': '/settings/2d3dkleider/', 'icon': 'bi-brush'},
     # Scham-Methode der Blender-Importe (Edgar, 11.10.2026: „in Einstellungen mache eine neue Seite Genesis").
     {'label': 'Genesis', 'url': '/settings/genesis/', 'icon': 'bi-person-bounding-box'},
+    # Abfragetakt der Statuskarte von Mesh3D-AI (Edgar, 14.10.2026: „Mach eine Seite Einstellungen – Mesh3D-AI").
+    {'label': 'Mesh3D-AI', 'url': '/settings/mesh3dai/', 'icon': 'bi-cpu'},
 ]
 
 
@@ -171,6 +185,13 @@ HILFE_EXTRA = [
                 'icon': 'bi-diagram-3',
                 'url': '/hilfe/architektur/arp-modell/',
                 'aktiv': 'hilfe_architektur_arp',
+            },
+            # Das Netz von Mesh3D-AI, die Genesis-Regler, das Vorgehen und die Kleider (Edgar, 16.10.2026: „Mach eine Seite Hilfe - Architektur - Mesh3DAI").
+            {
+                'label': 'Mesh3DAI',
+                'icon': 'bi-cpu',
+                'url': '/hilfe/architektur/mesh3dai/',
+                'aktiv': 'hilfe_architektur_mesh3dai',
             },
         ],
     },

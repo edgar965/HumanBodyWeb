@@ -61,6 +61,7 @@ class Meshfigurkleidung:
     def ausfuehren(self):
         from Kleidung.kleidungsmaske import Kleidungsmaske
         from Kleidung.kleidungsteilung import Kleidungsteilung
+        from Kleidung.sapiensmaske import Sapiensmaske
 
         from ..daten.meshto3dpfad import Meshto3dpfad
         from .meshfigurhaarabzug import Meshfigurhaarabzug
@@ -85,7 +86,9 @@ class Meshfigurkleidung:
         maske, sapiens = self._sapiens(regel, regel.rechnen(), karte, scan, daten)
         maske, hut = self._kopfbedeckung(maske, regel)
         maske = self._bart_abziehen(maske, regel)
-        maske, bereinigung = self._bereinigen(maske, regel, np.asarray(modell.ist_haut(entscheidung['farben']), dtype=bool))
+        # Mit der Sapiens-Maske reicht der Kragen über die Kopfgrenze (`Sapiensmaske.KRAGEN_M`) — das Bereinigen (Rand glätten, runden) muss ihn ebenso behandeln wie den Rest des Stoffs.
+        kragen = Sapiensmaske.KRAGEN_M if (sapiens or {}).get('verwendet') else 0.0
+        maske, bereinigung = self._bereinigen(maske, regel, np.asarray(modell.ist_haut(entscheidung['farben']), dtype=bool), kragen)
         maske = Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)      # NACH dem Bereinigen: Löcher füllen und Rand glätten holten Haarflächen sonst zurück in den Stoff
         # `maske['haut']`, nicht `entscheidung['haut']`: der Hautton nur dort, wo kein Stück gilt (`Kleidungsmaske.abschliessen`) — mit der Sapiens-Maske stand er sonst auf Hose und Socken.
         # `hautfarbe`: nur die FARBE gegen das Hautmodell (nicht die Hautkarte, die Stoffbereiche ausnimmt) — damit schält `objekt` den hautfarbenen Textursaum an der Kante ab (`Kleidung.kleidungsrand`).
@@ -149,12 +152,12 @@ class Meshfigurkleidung:
         stueck[bart & (stueck > 0) & (stueck != 4)] = 0
         return regel.abschliessen(stueck)
 
-    def _bereinigen(self, maske, regel, hautfarbe=None):
+    def _bereinigen(self, maske, regel, hautfarbe=None, kragen=0.0):
         """`(maske, bericht)`: Löcher im Stoff füllen, Zubehör über nicht hautfarbene Nachbarflächen vervollständigen und den Rand glätten (`Kleidung.kleidungsbereinigung`; `hautfarbe` (F,) bool: die Farbe gegen das Hautmodell) — die Sapiens-Maske lässt Flächen mitten in Hose und Hemd als Haut stehen
         (Edgar: „Haut geht durch die Hose"), ihr Rand ist eine Zackenreihe, die Uhr fehlen Teile des Armbands. Ändert sich nichts, bleibt die Maske, wie sie ist (None)."""
         from Kleidung.kleidungsbereinigung import Kleidungsbereinigung
 
-        stueck, bericht = Kleidungsbereinigung(regel.karte.nachbarn(), regel.inhalt, regel.mitte[:, 1], regel.kopf_ab()).bereinigen(maske['stueck'], hautfarbe)
+        stueck, bericht = Kleidungsbereinigung(regel.karte.nachbarn(), regel.inhalt, regel.mitte[:, 1], regel.kopf_ab() + kragen).bereinigen(maske['stueck'], hautfarbe)
         if not (bericht['loch_flaechen'] or bericht['rand_geaendert_flaechen']):
             return maske, None
         return regel.abschliessen(stueck), bericht

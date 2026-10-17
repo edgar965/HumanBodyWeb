@@ -1,0 +1,46 @@
+{% extends "einstellungsseite.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Einstellungen — Mesh3D-AI{% endblock %}
+
+{% block einstellungen_titel %}Mesh3D-AI Einstellungen{% endblock %}
+{% block formular_zusatz %} id="mesh3dai-settings-form"{% endblock %}
+
+{% comment %}
+Einstellungen → Mesh3D-AI (Edgar, 14.10.2026: „einstellbar, wie viele Minuten es sein sollen. Mach eine Seite Einstellungen – Mesh3D-AI"). Heute ein Wert: der Abfragetakt der Statuskarte auf der Jobseite
+(`/mesh-3D-AI/<job>/`, `Mesh3daistand`). Gespeichert über `Vorgabenformular` in `AppSettings.ui_prefs`, wie Einstellungen → Genesis.
+{% endcomment %}
+{% block einstellungen_karten %}
+<div class="settings-section">
+    <h3>Stand des Trainings</h3>
+    <div class="settings-row">
+        <label for="{{ schluessel }}">Abfrage alle (Minuten):</label>
+        <input type="number" name="{{ schluessel }}" id="{{ schluessel }}" value="{{ minuten }}" min="{{ minimum }}" max="{{ maximum }}" step="1" required>
+        <span class="hint">So oft holt die Jobseite von Mesh3D-AI den Stand des Datensatzes (fertige Proben) und des jüngsten Trainingslaufs (Epoche, Fehler in mm, letzte Logzeilen).
+            Vorgabe {{ vorgabe }}, erlaubt {{ minimum }} bis {{ maximum }}. Eine Abfrage liest nur Dateien auf der Platte (rund 200 Verzeichniseinträge und ein kleines Log), sie belastet
+            weder Training noch Grafikkarte; ein verdeckter Tab fragt gar nicht. Eine offene Seite übernimmt den neuen Wert nach ihrer nächsten Abfrage; der Knopf „Jetzt“ auf der Karte fragt sofort.
+            Das Training schreibt in den ersten drei Epochen je Epoche und danach alle zehn Epochen eine Logzeile — kürzere Takte zeigen also nicht mehr als das Log hergibt.</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block einstellungen_nachtrag %}
+<style>
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
+.settings-row input[type="number"] { width: 6em; }
+.settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+</style>
+<script type="module">
+import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+
+Vorgabenformular.anmelden('mesh3dai-settings-form', 'Mesh3D-AI-Einstellungen gespeichert — gilt ab der nächsten Abfrage der Jobseite.');
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}{% load fassung %}
+{% block title %}Mesh3D-AI{% endblock %}
+
+{% comment %}
+Dashboard „Mesh3D-AI“, Hauptansicht (Edgar, 14.10.2026: „wir werden bei /mesh-3D-AI/ mehrere Jobs außer Ursula haben … eine Hauptansicht mit einer Tabelle so wie bei /mesh-3D/, und dann die Unterjobs wie Ursula1 als Unterseiten / unter Menüeinträge“).
+Ein Job ist ein Modell, an dem eine KI „Netz → Genesis-Modell“ trainiert wird; seine Seite (`mesh3dai.html`, `/mesh-3D-AI/<job>/`) zeigt Eingabe, gewünschte Ausgabe und Ausgabe des Netzes.
+Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiattrappe`). Endpunkte: `core/api/mesh3dai.py`; Tabelle: `core/dienste/mesh3daitabelle.py`.
+{% endcomment %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+{% comment %}Die Reiterleiste (`.seitenreiter`) ist in `mesh.css` gestaltet — dieselbe wie auf /mesh-3D/ und „Modell aus Dateien“.{% endcomment %}
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
+{% comment %}`gemeinsam/serverabruf.js` zieht über `registrierung.js` three.js nach — ohne die Importkarte bricht jedes Modul der Seite ab, ohne Meldung außer „Failed to resolve module specifier“.{% endcomment %}
+{% include "_importmap.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-microchip"></i> Mesh3D-AI</h1>
+</div>
+
+{% if hinweis %}
+<div class="card mesh3dai-attrappe" role="note">
+    <strong><i class="fas fa-exclamation-triangle"></i> Attrappe.</strong> {{ hinweis }}
+</div>
+{% endif %}
+
+{% comment %}Zwei Reiter (16.10.2026, Edgar: „mach auf /mesh-3D-AI/ einen zweiten Tab: Test, darin auch eine Jobliste, aber nur Mesh und Ausgabe“): Jobs (Training) und Test (Netze ohne Trainingsdaten).{% endcomment %}
+<div class="seitenreiter" role="tablist" id="mesh3dai-reiter">
+    <button type="button" role="tab" data-reiter="jobs" aria-selected="true"><i class="fas fa-list"></i> Jobs</button>
+    <button type="button" role="tab" data-reiter="test" aria-selected="false"><i class="fas fa-vial"></i> Test ({{ testtabelle.zeilen|length }})</button>
+</div>
+
+<div data-reiterfeld="jobs">
+<div class="card mesh3dai-joblist">
+    <h2>Jobs</h2>
+    <p class="hb-hinweis">Ein Job ist ein Modell, an dem eine KI aus einem Netz ein Genesis-Modell machen lernt. Ein Klick auf eine Zeile öffnet die Seite des Jobs: Proben, Start (was das Netz sieht), Ziel (was es liefern soll) und Ergebnis (was es liefert).</p>
+    {% include "djangobase/_tabelle.html" with tabelle=tabelle %}
+</div>
+</div>
+
+<div data-reiterfeld="test" hidden>
+<div class="card mesh3dai-joblist">
+    <h2>Test</h2>
+    <p class="hb-hinweis">Netze, für die es <strong>keine Trainingsdaten</strong> gibt — dieselben wie die Testaufträge auf /mesh-3D/ (Edgar, Zauberer, Spiralballerina …). Gerechnet mit dem Netz von Mesh3D-AI, das nur an Ursula1 trainiert ist.
+        Ein Klick öffnet den Test mit zwei Feldern: <strong>Mesh</strong> (das Netz, mit dem vorhergesagten Rig) und <strong>Ausgabe</strong> (Ursula1 in der vorhergesagten Haltung). Ein Ziel gibt es nicht, darum keine Fehlerzahl.</p>
+    {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
+</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_sortierung.js' %}"></script>
+<script type="module" src="{% fassungspfad 'djangobase/js/tabellen_breiten.js' %}"></script>
+<script type="module">
+import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
+import { Mesh3dailiste } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailiste.js' %}";
+Seitenreiter.binden(document.getElementById('mesh3dai-reiter'), 'mesh3dai_reiter');
+Mesh3dailiste.aufbauen();
+</script>
+{% endblock %}

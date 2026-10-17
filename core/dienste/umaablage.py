@@ -72,6 +72,9 @@ class Umaablage:
             os.rename(alt_zettel, neu_zettel)
             cls._zettelname(neu_zettel, os.path.basename(neu)[:-4])
         cls._zeiger_setzen(alt, os.path.basename(neu))
+        from .modellordner import Modellordner
+
+        Modellordner.umbenannt(alt, os.path.basename(neu))        # der Ordner im Dialog geht mit (15.10.2026); wirft nie
         logger.info('UMA-Figur umbenannt: %s -> %s', alt, neu)
         return os.path.basename(neu)
 
@@ -89,6 +92,9 @@ class Umaablage:
         if os.path.isfile(zettel):
             os.remove(zettel)
         cls._zeiger_setzen(name, None)
+        from .modellordner import Modellordner
+
+        Modellordner.geloescht(name)
         logger.info('UMA-Figur gelöscht: %s', name)
         return True
 

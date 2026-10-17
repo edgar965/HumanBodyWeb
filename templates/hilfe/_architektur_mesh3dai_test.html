@@ -1,0 +1,31 @@
+{% load dezahl %}
+{% comment %}Abschnitt 4: die Testnetze — fremde Netze ohne Soll, vorhergesagte Figur je Geschlecht. Daten: `Architekturmesh3daitestnetze` (gelesen aus `_test/<kennung>/`).{% endcomment %}
+<h2 id="test">4. Testnetze: fremde Netze ohne Soll</h2>
+<p>Der Reiter <a href="/mesh-3D-AI/#test">Test</a> zeigt Netze, für die es kein Ziel-Rig gibt (Eingänge der Mesh-3D-Aufträge: Königin, Zauberer, Spiralballerina …). Gerechnet in
+  <code>ProjektTemp/_wegwerf/</code>, so:</p>
+<ol class="m3a-kurz">
+  <li><strong>Rahmen:</strong> das Netz auf die mittlere Höhe der A-Posen der vier Jobs, Mitte des Umrisses, Füße auf den Boden, Blick +Z (Annahme — die Spiralballerina zeigt der Kamera den Rücken);
+    4.096 Punkte mit ihrer Texturfarbe.</li>
+  <li><strong>Vorhersage</strong> (<code>mesh3dai_test_form.py --vorhersagen</code>): Stimmen und Formregler, vier Punktauswahlen gemittelt.</li>
+  <li><strong>Figur je Geschlecht</strong> (<code>mesh3dai_formfigur.py</code>): Regler auf ihre Grenzen geklemmt, unter 0,01 weg; Charaktere des anderen Geschlechts anteilig auf die gesetzten des eingestellten umgelegt
+    (sonst auf Base Feminine bzw. Base Masculine); ohne Kleider und Haar, Haut von Ursula1 bzw. Mann1; dann Teile, Anzeigenetz, Skelett — wie bei einem Job.</li>
+  <li><strong>Haltung</strong> (<code>mesh3dai_test_form.py --anpassen</code>): die Stimmen auf die Höhe dieser Figur gestreckt, die Daz-Winkel an IHR Skelett angepasst. Rest = mittlerer Abstand der
+    angepassten Gelenke zu den Stimmen — kein Fehler gegen ein Soll (es gibt keins).</li>
+  <li><strong>Seite:</strong> oben das Geschlecht (Vorgabe aus dem Mesh-3D-Auftrag), Umschalten rechnet nichts; das Ergebnisfeld zeigt die vorhergesagte Figur in der angepassten Haltung.</li>
+</ol>
+{% if testnetze and testnetze.zeilen %}
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Test</th><th>eingestellt</th><th>Figur der Seite</th><th class="num">Regler gesetzt</th><th class="num">weiblich: Rest / Höhe / Regler</th><th class="num">männlich: Rest / Höhe / Regler</th><th>Lauf</th></tr></thead>
+  <tbody>
+  {% for z in testnetze.zeilen %}<tr><td><a href="/mesh-3D-AI/test/{{ z.kennung }}/">{{ z.name }}</a>{% if z.fehler %} <span class="ag-fehlt">{{ z.fehler }}</span>{% endif %}</td><td>{{ z.geschlecht|default:"—" }}</td><td>{{ z.figur|default:"—" }}</td>
+    <td class="num">{{ z.regler_gesetzt|default:"—" }}</td>
+    {% for f in z.figuren %}<td class="num">{% if f %}{{ f.rest_mm|de:1 }} mm / {{ f.hoehe_m|de:3 }} m / {{ f.regler|default:"—" }}{% if f.umgelegt %} (umgelegt {{ f.umgelegt|de:2 }}){% endif %}{% else %}—{% endif %}</td>{% endfor %}
+    <td class="m3a-klein">{{ z.lauf|default:"—" }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">„Regler gesetzt“ = Regler, die das Netz über 0,01 vorhersagt; je Figur „Regler“ = nach Klemmen und Umlegen, „umgelegt“ = Summe der Charakter-Werte des
+  anderen Geschlechts, die auf die Charaktere des eingestellten verteilt wurden. {{ testnetze.mit_form }} von {{ testnetze.zeilen|length }} Tests haben eine vorhergesagte Figur;
+  die übrigen zeigen noch eine trainierte Figur (Ursula1, Mann1 …) mit der kleinsten Abweichung. Ob die vorhergesagte Form dem Netz ähnlich sieht, zeigt nur das Bild auf der Testseite — gemessen ist es nicht.</p>
+{% else %}
+<p class="ag-fehlt">Keine Testnetze unter <code>3DObjects/mesh3dai/_test/</code>.</p>
+{% endif %}

@@ -274,10 +274,15 @@ export class Genesis9haut {
                     .replace('#include <roughnessmap_fragment>',
                              '#include <roughnessmap_fragment>\n' + Genesis9hautGLSL.mischungRauheit(mischung));
             }
-            if (zusatz.detail || zusatz.schminke || mischung) {
+            if (zusatz.falten) {      // Falten des Alters (`Genesis9hautfalten`, 17.10.2026)
+                Object.assign(shader.uniforms, zusatz.falten);
+                shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
+                    '#include <common>\nuniform float uFaltenAn;\nuniform float uFaltenGewicht;\nuniform float uFaltenDunkel;\nuniform sampler2D uFaltenNormalen;');
+            }
+            if (zusatz.detail || zusatz.schminke || mischung || zusatz.falten) {
                 shader.fragmentShader = shader.fragmentShader.replace(
                     '#include <normal_fragment_maps>',
-                    Genesis9hautGLSL.normalen(Boolean(zusatz.schminke), Boolean(zusatz.detail), mischung));
+                    Genesis9hautGLSL.normalen(Boolean(zusatz.schminke), Boolean(zusatz.detail), mischung, Boolean(zusatz.falten)));
             }
             if (zusatz.klarlack) {
                 Object.assign(shader.uniforms, zusatz.klarlack);
@@ -288,8 +293,8 @@ export class Genesis9haut {
         };
         // Ein anderer Schlüssel je Zusatz, sonst teilt Three das Programm.
         eingriff.kennung = () => `${zusatz.durchlicht ? zusatz.durchlicht.gewicht.toFixed(3) : 'x'}-${
-            zusatz.schminke ? 's' : 'x'}-${zusatz.detail ? 'd' : 'x'}-${zusatz.klarlack ? 'k' : 'x'}-m${
-            zusatz.mischung?.anzahl || 0}`;
+            zusatz.schminke ? 's' : 'x'}-${zusatz.detail ? 'd' : 'x'}-${zusatz.klarlack ? 'k' : 'x'}-${
+            zusatz.falten ? 'f' : 'x'}-m${zusatz.mischung?.anzahl || 0}`;
         Shaderpatch.anhaengen(material, 'genesis9haut', eingriff);
     }
 }

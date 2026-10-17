@@ -24,17 +24,26 @@ import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
 import { Stueckereignis } from '../gemeinsam/stueckereignis.js';
+import { Stueckloch } from '../gemeinsam/stueckloch.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 
 export class Lagenverdeckung {
 
-    /** Alle Stücke der Figur gegeneinander maskieren. */
+    /**
+     * Alle Stücke der Figur gegeneinander maskieren.
+     *
+     * VERSCHWEISSTE STÜCKE (Anatomie, Scham) bleiben draußen (16.10.2026, Edgar: „herrenhaar auf Mann — es wird im viewer NICHT angezeigt"): Ihr
+     * `einzug` ist die Verschiebung des Rands auf die Haut (`Hautloch.naehen`, am Daz Mann 16 mm im Median). `aufheben` setzte ihn bei jeder Stückmeldung
+     * auf null, und `Hautloch.naehen` läuft bei einem Stück, das keine Haut verdeckt (Haar), VOR dieser Maske: der Rand stand 16 mm neben der Haut, dunkle
+     * Krallen am Ansatz des Geschlechtsteils. Gemessen im Chrome (Daz Mann, Herrenhaar angehakt): Einzugssumme −651,4 vor, 0,0 nach `Lagenverdeckung.anwenden`;
+     * mit einem T-Shirt oder dem Haar „cute girl" kam es nicht vor, weil dort die Haut-Maske später fertig wurde.
+     */
     static anwenden(inst) {
         const geo = inst?.bodyMesh?.geometry;
         if (!geo?.attributes?.position || !geo.index) return null;
         Hautverdeckung.merken(geo);
-        const stoffe = Hautverdeckung.stoffe(inst);
+        const stoffe = Hautverdeckung.stoffe(inst, true);
         for (const s of stoffe) Hautverdeckung.merken(inst.clothMeshes[s.schluessel].geometry);
         // Nur mit GarmentCode-Stück (20.09.2026: `Stueckereignis` kommt jetzt für jedes
         // Daz-Stück, damit die Hautverdeckung läuft) — Daz gegen Daz macht der Server
@@ -69,11 +78,12 @@ export class Lagenverdeckung {
         return stand;
     }
 
-    /** Alle Stücke wieder vollständig zeichnen. */
+    /** Alle Stücke wieder vollständig zeichnen — außer den verschweißten (`anwenden`): ihr Einzug gehört der Naht. */
     static aufheben(inst) {
+        const anzahl = (inst?.bodyMesh?.geometry?.userData?.indexVoll?.index?.length || 0) / 3;
         for (const netz of Object.values(inst?.clothMeshes || {})) {
             const voll = netz?.geometry?.userData?.indexVoll;
-            if (!voll) continue;
+            if (!voll || Stueckloch.von(netz, anzahl)) continue;
             Hautverdeckung.indexSetzen(netz.geometry, voll.index, voll.gruppen);
             delete netz.geometry.userData.lagenVerdeckt;
             Lagenverdeckung._einzug(netz, null, null);

@@ -125,6 +125,8 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'mehrere_loeschen', '/api/character/photo-jobs/bulk-delete/'),
         (WIRKUNG, 'verwalten', '/api/character/pose-manage/'),
         (LESEN, 'pose', '/api/character/pose/probe/'),
+        (LESEN, 'baum', '/api/character/posenbaum/'),
+        (WIRKUNG, 'verwalten', '/api/character/posenbaum/verwalten/'),
         (LESEN, 'liste', '/api/character/poses/'),
         (WIRKUNG, 'umsetzen', '/api/character/retarget-bvh-text/'),
         (LESEN, 'bibliotheks_bvh', '/api/character/retarget-bvh/probe/probe/'),

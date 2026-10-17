@@ -55,19 +55,35 @@ export class Reiterzuordnung {
      * Reiter, Liste und Kennung des Stücks hinter einem Schlüssel — `null`
      * bei allem, was keine eigene Zeile in einem Reiter hat (Haar, Kleiderbauer).
      *
+     * @param getragen die getragenen Daz-Stücke der Figur (`getragen(inst)`), Kennung → Werte — damit ein Genesis-9-Stück,
+     *   dessen Kennung SELBST mit `daz_` beginnt, nicht für ein HumanBody-Stück gehalten wird (siehe `dazKennung`)
      * @returns `{reiter, liste, kennung}` oder `null`
      */
-    static stueckVon(schluessel) {
+    static stueckVon(schluessel, getragen = null) {
         const name = String(schluessel || '');
         for (const [praefix, reiter, liste] of Reiterzuordnung.NACH_PRAEFIX) {
             if (!name.startsWith(praefix)) continue;
             if (praefix === 'gc_' && !Reiterzuordnung.gcLive(name)) continue;
             const rest = name.slice(praefix.length);
-            const kennung = liste === 'daz' ? Reiterzuordnung.dazKennung(rest) : rest;
+            let kennung = liste === 'daz' ? Reiterzuordnung.dazKennung(rest) : rest;
+            // `daz_anatomie_mann/0` ist auf einer Genesis-9-Figur das Stück „daz_anatomie_mann" (die Kennung trägt das `daz_`),
+            // auf einer HumanBody-Figur dagegen „anatomie_mann". Welches getragen wird, sagt die Figur (Edgar, 16.10.2026:
+            // „wenn ich darauf klicke im Viewer, erscheint es nicht ausgewählt im Tab links").
+            const ganz = liste === 'daz' ? Reiterzuordnung.dazKennung(name) : null;
+            if (ganz && getragen && !getragen[kennung] && getragen[ganz]) kennung = ganz;
             return kennung ? { reiter, liste, kennung } : null;
         }
         const kennung = Reiterzuordnung.dazKennung(name);
         return kennung ? { reiter: 'assets', liste: 'daz', kennung } : null;
+    }
+
+    /**
+     * Die getragenen Daz-Stücke einer Figur, Kennung → Werte — wie `Dazkleidung.kleidung`: eine Genesis-9-Figur (kennt
+     * `anziehenMitGriff`) trägt sie in `kleidung`, eine HumanBody-Figur in `dazKleidung`.
+     */
+    static getragen(inst) {
+        if (!inst) return null;
+        return (typeof inst.anziehenMitGriff !== 'function' ? inst.dazKleidung : inst.kleidung) || null;
     }
 
     /** `angie_jeans/2` → `angie_jeans`; `humanbody_frisur/0` und alles andere → `null`. */

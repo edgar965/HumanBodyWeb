@@ -95,9 +95,9 @@ export class Genesis9garderobe {
         const zeile = Genesis9garderobe._zeile(inst, stueck, neuzeichnen);
         if (stueck.id === gewaehlt) zeile.classList.add('selected');
         ziel.appendChild(zeile);
-        if (stueck.regler?.length && stueck.zeigbar) {
+        if (stueck.regler?.length && stueck.zeigbar) {      // der Knopf „Einstellungen" sitzt in der Zeile, die Regler darunter
             ziel.appendChild(Genesis9stueckregler.bauen(inst, stueck,
-                () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) })));
+                () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) }), zeile));
         }
     }
 
@@ -106,7 +106,7 @@ export class Genesis9garderobe {
     static gewaehltesStueck(inst) {
         const ziel = state._selectedSubMesh;
         if (!ziel || ziel.charId !== inst.id) return null;
-        const stueck = Reiterzuordnung.stueckVon(ziel.key);
+        const stueck = Reiterzuordnung.stueckVon(ziel.key, Dazkleidung.kleidung(inst));
         return stueck?.liste === 'daz' ? stueck.kennung : null;
     }
 

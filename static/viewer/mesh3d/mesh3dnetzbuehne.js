@@ -102,7 +102,13 @@ export class Mesh3dnetzbuehne {
     /** Der Zustand des Auftrags „Mesh to 3D“ (`/api/meshfigur/<id>/zustand/`), oder null, solange es ihn nicht gibt. */
     zeigen(z) {
         if (!this.renderer) return;
-        if (!z) { this._melden('Noch kein Netz — die Ansicht erscheint, sobald der Auftrag „Mesh to 3D“ das Netz übernommen hat.'); return; }
+        if (!z) {
+            // Kein Netz (mehr): das ALTE verschwindet — nach „Quelle übernehmen“ gehört es zur früheren Datei (Edgar, 14.10.2026: „das alte Mesh soll aus der 2. View weg sein, das neue geladen werden“).
+            this._leeren();
+            this._melden(this.seite.netzWartet?.() ? 'Die Vorschau des Netzes wird gebaut …'
+                : 'Noch kein Netz — es erscheint, sobald der Auftrag eines hat („Datei wählen …“ und „Quelle übernehmen“, oder der Lauf).');
+            return;
+        }
         // `zeigen` lädt nur neu, wenn Eingang oder Lage sich geändert haben; das neue Netz kommt unsichtbar und leer, `_nachziehen` passt die Kamera an, sobald es da ist.
         if (this.netze.zeigen(z)) {
             this.werkzeug?.netzWeg();
@@ -111,6 +117,16 @@ export class Mesh3dnetzbuehne {
             this._angefasst = false;
         }
         this._meldung();
+    }
+
+    /** Das gezeigte Netz wegnehmen (und vergessen, welches es war — ein späteres Netz derselben Adresse lädt wieder). */
+    _leeren() {
+        if (!this.netze.gruppe && this.netze._schluessel === null) return;
+        this.netze.entfernen();
+        this.netze._schluessel = null;
+        this._kinder = 0;
+        this._angefasst = false;
+        this.werkzeug?.netzWeg();
     }
 
     _meldung() {

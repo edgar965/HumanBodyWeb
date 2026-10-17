@@ -61,7 +61,7 @@ export class Figurwahlbereiche {
      * Ein leerer Bereich sagt es; ist der ganze Reiter leer, steht der
      * Leertext der Quelle in beiden. Innerhalb eines Bereichs alphabetisch.
      */
-    static verteilen(behaelter, eintraege, zeile, leerText) {
+    static verteilen(behaelter, eintraege, zeile, leerText, ordner = null) {
         for (const [bereich] of Figurkataloge.BEREICHE) {
             const liste = Figurwahlbereiche.liste(behaelter, bereich);
             if (!liste) continue;
@@ -70,6 +70,11 @@ export class Figurwahlbereiche {
                 eintraege.filter(e => (e.bereich || 'standard') === bereich));
             const zahl = liste.parentElement.querySelector('[data-zahl]');
             if (zahl) zahl.textContent = `(${eigene.length})`;
+            // Die gespeicherten Modelle in Ordnern, mit Mehrfachauswahl (15.10.2026, `Figurwahlordner`).
+            if (bereich === 'gespeichert' && ordner) {
+                ordner.fuellen(behaelter.dataset.quelle, liste, eigene, zeile, eintraege.length ? 'Keine Einträge.' : leerText);
+                continue;
+            }
             if (!eigene.length) {
                 liste.innerHTML = `<li class="gedaempft">${Htmltext.t(
                     eintraege.length ? 'Keine Einträge.' : leerText)}</li>`;

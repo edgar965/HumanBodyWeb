@@ -5,7 +5,7 @@ Konzept (Hilfe → Architektur → Genesis, 08.10.2026): Regler-Fit, Gesichtsket
 gebaut und gemessen; der Import gibt ihnen statt eines Scans den NACKTEN Körper (`Blendimportkoerper`). Dafür passen die
 Optionen: keine Frisur und keine Haarkarten (das Haar wird ein eigenes Stück), Kleidung „wie Haut" (es gibt keine im
 Netz), Kopfhaut „Haut lassen" (eigenes Haar), kein Modell `<Name> Mesh` — das Modell schreibt der Import selbst
-(`Blendimportmodell`), mit Kleidern, Haar und der gebackenen Haut.
+(`Blendimportmodell`), mit Kleidern, Haar und der gebackenen Haut — seit 15.10.2026 nur beim Import aus der Charakter-Seite, sonst auf Klick (`Mesh3dmodellspeichern`).
 
 Der Auftrag ist ein gewöhnlicher `Meshfigurauftrag`: Er steht in der Liste von „Mesh to 3D", seine Seite zeigt Erkennung,
 Runden und Vergleich. Gerechnet wird er im Prozess des Imports (`Meshfigurlauf.ausfuehren`), nicht in einem zweiten.
@@ -38,16 +38,20 @@ class Blendimportfigur:
     #: `kleidungsluft_mm` 4 (13.10.2026): die Haut der Figur darf nicht durch den Stoff des Netzes ragen. Spiralballerina (Strumpfhose, Mieder): 6 % der Kleidungspunkte lagen im Körper der Figur (15 % an den Knien, 13 % an der
     #: Brust, 5,5 % tiefer als 5 mm) — „Hautflecken auf dem Kleid"; der Rest-Schritt schob die Punkte bis auf die Fläche, nicht darunter. Der Katalog von „Mesh to 3D" bleibt bei 0 (Ten24, 07.10.2026: 4 mm nahmen
     #: Punkte außerhalb der Kleiderfläche von 359 auf 25 und machten die Figur unter dem Pullover ~2 mm schmaler); der Weg „netz" hat immer bekleidete Netze und setzt 4 mm (eine Einstellung dafür im Import gibt es noch nicht).
+    #: `modell` (15.10.2026): „Mesh to 3D“ speichert `<Name> Mesh` nur, wenn der Import es verlangt (`modell=True`, Import aus der Charakter-Seite) — ein Mesh-3D-Auftrag speichert erst auf Klick der Jobseite
+    #: (`Mesh3dmodellspeichern`; Edgar: „nicht automatisch gespeichert werden, nur wenn ich das im jeweiligen Jobfenster anklicke“).
     OPTIONEN_NETZ = {
         'einheit': 'meter',
         'gesicht': 'an',
         'eigenmorph': 'an',
-        'modell': 'an',
+        'modell': 'aus',
         'kleidungsluft_mm': 4,
     }
 
-    def __init__(self, ablage, name, basis, netz=False, kleidung_zug=None, animationspruefung=None):
+    def __init__(self, ablage, name, basis, netz=False, kleidung_zug=None, animationspruefung=None, frisur=None, frisur_ziel=None, modell=False, umfang=None):
         self.ablage = ablage
+        #: Einstellung `umfang` des Imports (nur Weg „netz“, 16.10.2026): `figur` (Vorgabe) oder `rig` — „Mesh to 3D“ hört dann nach der Körperkette auf (`Meshfigurumfangoptionen`).
+        self.umfang = umfang
         self.name = name
         self.basis = basis
         self.netz = netz
@@ -55,6 +59,12 @@ class Blendimportfigur:
         self.animationspruefung = animationspruefung
         #: Einstellung `kleidung_zug` des Imports (nur Weg „netz“): `weich` (Vorgabe von „Mesh to 3D“) oder `ignorieren`.
         self.kleidung_zug = kleidung_zug
+        #: Einstellung `frisur` des Imports (nur Weg „netz“, 14.10.2026): `beste` (Vorgabe von „Mesh to 3D“), `herren`, `daz`, `eigen`, `aus`. Fehlt sie (Aufträge von vorher), gilt die Vorgabe.
+        self.frisur = frisur
+        #: Einstellung `frisur_ziel` des Imports (nur Weg „netz“, 14.10.2026): `maske` (Vorgabe von „Mesh to 3D") oder `sapiens` (nur das Haar, das Sapiens selbst sieht).
+        self.frisur_ziel = frisur_ziel
+        #: Beim Weg „netz“ das Modell `<Name> Mesh` gleich mit speichern (nur der Import aus der Charakter-Seite, `stand.modell_speichern`).
+        self.modell = modell
 
     def optionen(self):
         """Die geprüften Optionen von „Mesh to 3D“ für diesen Import. Beim Weg „netz“ wählt die Einstellung `kleidung_zug` des Imports, wie der Stoff die Figur zieht
@@ -64,6 +74,14 @@ class Blendimportfigur:
         roh = dict(self.OPTIONEN_NETZ if self.netz else self.OPTIONEN, basis=self.basis)
         if self.netz and self.kleidung_zug:
             roh['kleidung'] = self.kleidung_zug
+        if self.netz and self.frisur:
+            roh['frisur'] = self.frisur
+        if self.netz and self.frisur_ziel:
+            roh['frisur_ziel'] = self.frisur_ziel
+        if self.netz and self.modell:
+            roh['modell'] = 'an'
+        if self.netz and self.umfang:
+            roh['umfang'] = self.umfang
         if self.animationspruefung:
             roh['animationspruefung'] = self.animationspruefung
         return Meshfiguroptionen.pruefen(roh)

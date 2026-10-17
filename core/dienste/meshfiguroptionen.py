@@ -22,6 +22,7 @@ und Werte, alles andere fällt auf die Vorgabe).
                  dazu schwach heranziehen (Rumpf hängt am Shirt) — oder wie Haut (alte Regel, Stoff = Haut)
     referenz     Testfall: eine Figur der Genesis-Bibliothek, gegen die das Ergebnis gemessen wird
     blind        beim Testfall die Regler der Referenzfigur selbst NICHT benutzen (ehrliche Probe)
+    frisur_ziel  woran die Frisuren gemessen werden: die Haarmaske (Vorgabe) oder nur das Haar, das Sapiens selbst sieht
     frisur       welche Frisur das Modell trägt (Schritt „frisur"): kleinste Hülle, nur Daz-Frisuren, nur „Haar Eigen", keine
     haarkarten   Haarkarten aus der Haarschale des Netzes als eigenes Objekt (Bühne, Weg C)
     modell       das Ergebnis als Modell speichern (`data/models/<Name>.json`, Szene/Studio)
@@ -31,6 +32,7 @@ from .meshfiguranimationsoptionen import Meshfiguranimationsoptionen
 from .meshfigurkleidungsoptionen import Meshfigurkleidungsoptionen
 from .meshfigurregionenoptionen import Meshfigurregionenoptionen
 from .meshfigurtexturoptionen import Meshfigurtexturoptionen
+from .meshfigurumfangoptionen import Meshfigurumfangoptionen
 
 __all__ = ['Meshfiguroptionen']
 
@@ -126,7 +128,7 @@ class Meshfiguroptionen:
                 ('aus', 'Wie das Netz'),
             ],
         },
-    ] + Meshfigurregionenoptionen.KATALOG + Meshfigurtexturoptionen.KATALOG + [
+    ] + Meshfigurumfangoptionen.KATALOG + Meshfigurregionenoptionen.KATALOG + Meshfigurtexturoptionen.KATALOG + [
         {
             'schluessel': 'kleidung',
             'titel': 'Kleidung im Netz',
@@ -242,8 +244,19 @@ class Meshfiguroptionen:
             'werte': [
                 ('beste', 'Die dem Netzhaar am nächsten kommt (Daz oder „Haar Eigen")'),
                 ('daz', 'Nur Daz-Frisuren'),
+                ('herren', 'Nur Herrenfrisuren (für männliche Figuren gebaute Stücke und das eigene Herrenhaar)'),
                 ('eigen', '„Haar Eigen" (Länge, Kurz, Dichte, Wellig, Dutt)'),
                 ('aus', 'Keine'),
+            ],
+        },
+        {
+            'schluessel': 'frisur_ziel',
+            'titel': 'Ziel der Frisurwahl',
+            'art': 'wahl',
+            'vorgabe': 'maske',
+            'werte': [
+                ('maske', 'Das Haar der Haarmaske (Farbe und Sapiens zusammen)'),
+                ('sapiens', 'Nur das Haar, das Sapiens selbst sieht (braucht die Segmentierung)'),
             ],
         },
         {
@@ -260,7 +273,9 @@ class Meshfiguroptionen:
             'schluessel': 'modell',
             'titel': 'Als Modell speichern',
             'art': 'wahl',
-            'vorgabe': 'an',
+            # Vorgabe „Nein“ seit 15.10.2026 (Edgar: „die neuen Modelle … sollen nicht automatisch gespeichert werden, nur wenn ich das im jeweiligen Jobfenster anklicke“) —
+            # gespeichert wird über „Als Genesis-Figur speichern“ auf der Auftragsseite.
+            'vorgabe': 'aus',
             'werte': [
                 ('an', 'Ja (Szene, Studio, Theatre)'),
                 ('aus', 'Nein'),

@@ -37,7 +37,7 @@ export class Mesh3dkopie {
     static frage(anzahl, mitDaten) {
         return mitDaten
             ? `${anzahl} Auftrag/Aufträge mit allen Daten kopieren (Netze, Figur, Haut, Ergebnisse, Auftrag „Mesh to 3D“)? Das kopiert den ganzen Ordner und kann etwas dauern. Das gespeicherte Modell wird nicht kopiert.`
-            : `${anzahl} Auftrag/Aufträge ohne Daten kopieren? Es entstehen neue Aufträge mit derselben Datei und denselben Einstellungen — nichts wird gerechnet.`;
+            : `${anzahl} Auftrag/Aufträge ohne Daten kopieren? Es entstehen neue Aufträge mit denselben Einstellungen, aber OHNE Netz — das neue Netz kommt mit „Datei wählen …“ und „Quelle übernehmen“. Nichts wird gerechnet.`;
     }
 
     async kopieren(eintrag) {

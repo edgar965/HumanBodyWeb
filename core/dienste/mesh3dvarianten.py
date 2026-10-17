@@ -180,10 +180,8 @@ class Mesh3dvarianten:
 
     @classmethod
     def uebernehmen(cls, kennung, eintrag_id):
-        """Eine Variante zur Ausgabe des Auftrags machen: der Wert gilt ab jetzt im Import (`stand.einstellungen`), die Seite zeigt ihre Figur als Hauptausgabe, und ihr Modell wird gespeichert
-        (`ab speichern`, Name wie der Auftrag, bei Gleichheit nummeriert — das Modell der ersten Ausgabe bleibt). → `{wert, feld, modell_wird_gespeichert}`."""
-        from .meshfigurarbeiter import Meshfigurarbeiter
-
+        """Eine Variante zur Ausgabe des Auftrags machen: der Wert gilt ab jetzt im Import (`stand.einstellungen`), die Seite zeigt ihre Figur als Hauptausgabe; ein Modell speichert erst
+        der Knopf „Als Modell speichern“ (seit 15.10.2026). → `{wert, feld, modell_wird_gespeichert: False}`."""
         ablage = Blendimportablage(kennung)
         stand = ablage.stand()
         daten = cls.lesen(kennung)
@@ -200,14 +198,13 @@ class Mesh3dvarianten:
         ablage.stand_schreiben(stand)
         daten['haupt'] = eintrag['id']
         cls.schreiben(kennung, daten)
-        speichern = not job.modell
-        if speichern:
-            job.name = eintrag.get('basisname') or job.name
-            job.optionen = {**(job.optionen or {}), 'modell': 'an'}
-            job.save(update_fields=['name', 'optionen', 'updated_at'])
-            Meshfigurarbeiter.starten(job, ab='speichern')
-        logger.info('Mesh-3D %s: Variante %s=%s übernommen (Modell wird gespeichert: %s)', kennung, eintrag['feld'], eintrag['wert'], speichern)
-        return {'feld': eintrag['feld'], 'wert': eintrag['wert'], 'modell_wird_gespeichert': speichern}
+        # Seit 15.10.2026 speichert „Übernehmen“ kein Modell mehr (Edgar: „nicht automatisch gespeichert werden, nur wenn ich das im jeweiligen Jobfenster anklicke“) — das tut der Knopf
+        # „Als Modell speichern“ der Jobseite, und zwar mit der Figur der übernommenen Variante (`Mesh3dmodellspeichern._netz`). Der Name der Variante wird der des Auftrags (für `<Name> Mesh`).
+        if eintrag.get('basisname') and job.name != eintrag['basisname']:
+            job.name = eintrag['basisname']
+            job.save(update_fields=['name', 'updated_at'])
+        logger.info('Mesh-3D %s: Variante %s=%s übernommen', kennung, eintrag['feld'], eintrag['wert'])
+        return {'feld': eintrag['feld'], 'wert': eintrag['wert'], 'modell_wird_gespeichert': False}
 
     # --------------------------------------------------------------- Löschen
 

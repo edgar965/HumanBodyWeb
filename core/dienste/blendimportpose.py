@@ -19,6 +19,7 @@ from django.utils import timezone
 
 from .engine2d3dkleiderposebilder import Engine2d3dKleiderposebilder
 from .engine2d3dkleiderposegelenke import Engine2d3dKleiderposegelenke
+from .engine2d3dkleiderposetiefe import Engine2d3dKleiderposetiefe
 from .mesh3dansicht import Mesh3dansicht
 from .posebestimmung import Posebestimmung
 
@@ -75,7 +76,8 @@ class Blendimportpose:
             'quelle': {'koerper': Posebestimmung.stand(glb)},
             'gelenke': {'gesetzt': int((e['treffer'] > 0).sum()), 'haupt_gesetzt': sum(1 for g in liste if g['name'] in haupt and g['stand'] != 'weggelassen'),
                         'ausserhalb': [g['name'] for g in liste if g['stand'] == 'ausserhalb'], 'liste': liste},
-            'abbildung': {'variante': abbildung.variante, 'iou': round(abbildung.iou, 3)},
+            # Tiefe der Gelenke im Netz (`Engine2d3dKleiderposeabbildung.TIEFE`, seit 17.10.2026 `kette`): ein Lauf mit der alten Mitte ist an den Füßen sitzender/laufender Figuren falsch.
+            'abbildung': {'variante': abbildung.variante, 'iou': round(abbildung.iou, 3), 'tiefe': abbildung.TIEFE, 'tiefe_fassung': Engine2d3dKleiderposetiefe.FASSUNG},
             'haltung': self.haltung(sam, grad),
             'bilder': bilder, 'datei': 'landmarken.npz', 'dauer_sam_s': sam.get('dauer_s'), 'sam_neu_gerechnet': neu,
         }

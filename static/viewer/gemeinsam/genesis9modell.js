@@ -4,6 +4,7 @@ import { Netzentsorgung } from './netzentsorgung.js';
 import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Genesis9hautmischung } from './genesis9hautmischung.js';
+import { Genesis9hautfalten } from './genesis9hautfalten.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
 // Nebenwirkung des Imports: die Hautverdeckung hoert auf Stueck- und Skelettereignis —
 // damit bekommt JEDE Seite, die eine Genesis-9-Figur baut (Szene, Studio, Theatre,
@@ -210,6 +211,9 @@ export class Genesis9Modell extends Modell {
                 .catch(fehler => Protokoll.warnung('Genesis9Modell', `Augentextur: ${fehler.message}`));
         }
         Genesis9teilmaterial.anwenden(this);   // Glanz, Rauheit … je Teil auf die frischen Materialien (`genesis9teilmaterial.js`)
+        // Falten des Alters (17.10.2026): ohne Alterswert kostet das nichts, mit ihm die Faltenkarten der Kacheln (`genesis9hautfalten.js`).
+        Genesis9hautfalten.anwenden(this)
+            .catch(fehler => Protokoll.warnung('Genesis9Modell', `Hautfalten: ${fehler.message}`));
         Protokoll.debug('Genesis9Modell', `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} (${this.browserpunkte}), `
             + `${(this.hoehe * 100).toFixed(1)} cm, ${Object.keys(this.morphwerte).length} Morphs wirksam`);
         return this;

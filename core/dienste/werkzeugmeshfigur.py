@@ -90,7 +90,7 @@ class Werkzeugmeshfigur:
           (M + '_run_meshfigur.py', 'Meshfigurrunner'), (M + 'meshfigur_registrierung.py', 'Meshfigurregistrierung'), (M + 'meshfigur_modell.py', 'Meshfigurmodell'),
           (M + 'meshfigur_kinematik.py', 'Meshfigurkinematik'), (G + 'netzbereiche.py', 'G9netzbereiche'), (G + 'reglerableitung.py', 'G9reglerableitung')],
          'Adam über die freien Größen (torch auf der Karte), alle 5 Schritte neue Nachbarn (KNN beidseitig, Punkt-zu-Ebene, Geman-McClure), Regler nach jedem Schritt auf Dazʼ Grenzen geklemmt. '
-         'Runde 1: haltung (300 Schritte, nur Haltung und Lage) → groesse (Stufe 1: Proportion…, BodyMass; 300) → koerpertyp (Stufe 2: Charaktere, Heavy, Muscular, Fitness; 300) → bereiche '
+         'Runde 1: haltung_breit und haltung (je 300 Schritte, nur Haltung und Lage; erst breites, dann schmales robustes Maß der Landmarken) → groesse (Stufe 1: Proportion…, BodyMass; 300) → koerpertyp (Stufe 2: Charaktere, Heavy, Muscular, Fitness; 300) → bereiche '
          '(Stufe 3: Brust bis Füße; 400); ab Runde 2 eine Stufe mit allen Reglern. Zwischen den Runden rechnet python14 die Figur echt (Formelketten, Knochenskalierung, JCMs der Haltung). '
          'Frühstopp seit 02.10.2026: alle 25 Schritte; bringt das Beste der letzten 50 weniger als 0,2 % gegenüber dem Besten davor, endet die Stufe (frühestens nach einem Drittel der Schritte). '
          'Gewicht der Käfigpunkte (G9netzbereiche): Haut 1, Finger 0, Hand 0,1, innen 0, Ohr 0,2, Zehen 0,3, Schritt 0,1, Kopfhaut einseitig. Stufe 0 (nie gestellt): ProportionSmaller/Larger, Grundfigur, '

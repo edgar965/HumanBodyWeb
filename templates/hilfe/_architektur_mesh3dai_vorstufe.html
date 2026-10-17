@@ -1,0 +1,152 @@
+{% load dezahl %}
+{% comment %}Abschnitt 1: die Vorstufe. 16.10.2026 (Edgar: „schreibe auch den Schritt Rig-Generierung als Vorstufe in die Architektur-Seite, und was das hilft“) als Messung neben dem Netz;
+seit 17.10.2026 vor das Netz geschaltet (Edgar: „warum macht die Pipeline das nicht, als erstes das Mesh zu riggen und in die A-Pose zu übertragen??“ → „baue das ein!“).
+Daten: `Architekturmesh3daikette` (Kette, Wege der Prüfposen-Jobs, Netz der Vorstufe, Testnetze) und `Architekturmesh3daivorstufe` (Rig gegen Netz an Ursula1, 16.10.) — alles gelesen.{% endcomment %}
+<h2 id="vorstufe">1. Vorstufe: erst riggen, in die A-Pose, dann das Netz</h2>
+<p>Ein fremdes Netz kommt in jeder Haltung — sitzend, liegend, im Spagat. Das Netz von Mesh3D-AI kennt nur die Posen seines Trainings; sein Fehler folgt dem Abstand zur nächsten Trainingspose (Abschnitt 7).
+  Die Vorstufe nimmt die Haltung vorher heraus: <strong>ohne KI ein Rig auf das Netz legen, das Netz damit in die A-Pose zurückrechnen, dann erst das Netz</strong> — und dessen Ergebnis mit den Drehungen
+  des Rigs zurück in die Haltung. Seit 17.10.2026 läuft so jede Erkennung (Jobproben und Testnetze); Code in <code>ProjektTemp/_wegwerf/mesh3dai_vorstufe*.py</code>, Aufruf
+  <code>python14 mesh3dai_vorstufe.py job|test &lt;Name&gt;</code>.</p>
+
+{% comment %}17.10.2026, Edgar: „ich verstehe noch nicht, wie du die Trainings und Erkennungsjobs machst. Erkläre das nochmal und mache das in die Hilfeseite. Wird als erstes das Mesh gerickt und in die A-Position
+gebracht? Falls nicht, dann begründe das.“ und „das mesh riggen in jedem Trainingsjob musst du ja nur einmal machen“.{% endcomment %}
+<div class="info-box info-box-blue">
+<h3>So laufen Training und Erkennung</h3>
+<p><strong>Training — einmal je Netz, ohne „Mesh to 3D“.</strong></p>
+<ol>
+  <li><strong>Datensatz je Job:</strong> eine Genesis-Figur (Ursula1, Damira0, Mann1, Matt0) in rund 50 Trainingsposen und 15 Prüfposen gehäutet; daraus die Außenfläche als Punktwolke (16.384 Punkte mit Farbe).
+    Das Ziel ist das Rig der Pose — aus dem Retarget bekannt, nicht geschätzt.</li>
+  <li><strong>Das gemeinsame Netz</strong> (Abschnitte 2–3: Gelenke und Formregler) lernt auf den Wolken <em>in der Pose</em>. Es muss also jede Haltung gesehen haben: auf nie trainierten Posen folgt sein
+    Fehler dem Abstand zur nächsten Trainingspose (Abschnitt 7).</li>
+  <li><strong>Das Netz der Vorstufe</strong> lernt auf denselben Posen, aber jede Wolke ist <em>in die A-Pose zurückgerechnet</em> — mit einem absichtlich verfälschten Rig, so falsch wie das von „Mesh to 3D“
+    (unten „Das Netz der Vorstufe“). Dafür läuft kein Mesh-3D-Auftrag: der Fehler des Rigs wird nachgestellt, darum sind es Minuten, nicht Stunden. Gelernt wird nicht jede Haltung, sondern nur, wie eine
+    zurückgerechnete Fläche bei einem falschen Rig aussieht und wo die wahren Gelenke dann liegen.</li>
+</ol>
+<p><strong>Erkennung — ein fremdes Netz (Reiter „Test“) oder die neue Pose eines Prüfposen-Jobs.</strong> Ja: das Netz wird <strong>zuerst gerigt und in die A-Pose gebracht</strong>, erst dann kommt ein Netz —
+  seit 17.10.2026 bei jeder Erkennung (Tabelle darunter):</p>
+<ol>
+  <li><strong>lage</strong> — liegt das Netz, wird es aufgerichtet (Mesh-3D rendert von vorn);</li>
+  <li><strong>rig</strong> — Mesh-3D „Nur Rig“: SAM 3D Body findet die Gelenke am Rendering, „Mesh to 3D“ passt eine Genesis-Figur in Form und Haltung an. <strong>Einmal je Netzdatei:</strong> ein fertiger Auftrag
+    auf derselben Datei wird wiederverwendet (dann wenige Sekunden statt rund drei Minuten); neu gerigt wird nur, wenn sich die Datei ändert oder die Pose-Bestimmung eine neue Fassung bekommt;</li>
+  <li><strong>figur</strong> und <strong>apose</strong> — mit dieser Figur wird die Fläche in ihre Ruhelage (A-Pose) zurückgerechnet; Dreiecke, die dabei reißen (Hand am Knöchel), fallen weg;</li>
+  <li><strong>netz</strong> — das Netz der Vorstufe korrigiert in der A-Pose die Gelenke, die Drehungen des Rigs bringen sie zurück in die Haltung, die Daz-Winkel werden angepasst;</li>
+  <li><strong>Sicherheitsregel</strong> — liegt das Netz der Vorstufe mehr als 60 mm neben der Rig-Figur, gilt das Rig allein (unten „Testnetze“).</li>
+</ol>
+<p>Die Jobseite zeigt den Zwischenschritt seit 17.10.2026 als <strong>viertes Feld „Rig → A-Pose“</strong> zwischen Start und Ziel (bei der Probe, auf der die Kette lief): die zurückgerechnete Fläche, wie das
+  Netz der Vorstufe sie bekommt, mit dem Skelett der Rig-Figur in Ruhe (Knopf „Rig“).</p>
+<p><strong>Warum die A-Pose hilft — und was sie heute (noch) nicht bringt:</strong> sie nimmt dem Netz die Haltung ab; am Spagat lag das Netz direkt 280,5 mm daneben, über die A-Pose 13,9 mm (17.10.2026).
+  Der größte Teil davon ist aber das <em>Rig</em> selbst: seit die Füße in „Mesh to 3D“ stimmen (<code>.claude/rules/mesh3dai-vorstufe.md</code>, „Füße“), liegen Rig allein und Vorstufe an den vier Jobs
+  gleichauf (17.10.2026: Ø 15,8 gegen 16,0 mm, je ein Lauf; die Tabelle darunter liest den jeweils aktuellen Stand). Offen ist, ob das Netz der Vorstufe mit Texturen und weiten Kleidern im Training (Fassung 3) dem Rig noch etwas hinzufügt.</p>
+<p><strong>Was noch in der Pose läuft, und warum:</strong> das gemeinsame Netz (als Vergleich „Netz direkt“ und für den Schritt „lage“, der erkennt, ob ein Netz liegt) und der <strong>Formkopf</strong>
+  (Abschnitt 3, die Genesis-Formregler). Die Form hängt nicht an der Haltung — trotzdem lag die vorhergesagte Form an Mann1 und Matt0 auf den Prüfposen schlechter als die Grundfigur (16.10.2026;
+  Vermutung: Pose und Form sind im Netz nicht getrennt). <strong>Seit 17.10.2026 nachmittags gebaut:</strong> der Formkopf auch auf der A-Pose-Wolke — die Formvarianten werden wie die Jobs mit
+  verfälschtem Rig in die A-Pose zurückgerechnet (<code>mesh3dai_vorstufe_formen_daten.py</code>), ein Netz lernt dort Gelenke und Form (<code>mesh3dai_vorstufe_form.py</code>); der Vergleich mit dem
+  Formkopf in der Pose steht in <a href="#form-apose">Abschnitt 3</a>.</p>
+<p><strong>Warum das Zwischenbild Löcher und andere Farben hat</strong> (Edgar, 17.10.2026: „Die Textur ist eine andere und es fehlen Punkte im Mesh“): die Kette lief bis zum Nachmittag auf <code>eingabe.glb</code>,
+  der Außenfläche des Datensatzes mit der flachen Teilfarbe je Teil (MannLaufen: drei Farben in der ganzen Fläche, das schwarze Hemd grau) — seither auf <code>eingabe_textur.glb</code>, derselben Fläche mit
+  der Farbe der Bilder je Ecke. Die Löcher sind echt: die Außenfläche trägt nur, was in der Haltung von außen zu sehen ist (MannLaufen 453.286 von 591.112 Dreiecken, 76,7 %; der Rest liegt unter dem Hemd,
+  an den Innenseiten der Arme, zwischen den Beinen), dazu fallen beim Zurückrechnen 0,7 % gerissene Dreiecke weg. In der A-Pose liegen diese Stellen offen; das Feld zeigt sie dunkel (Blick ins Innere der Fläche).</p>
+</div>
+{% if kette %}
+<table class="doku m3a-schmal">
+  <thead><tr><th>Schritt</th><th>Was geschieht</th><th class="num">Dauer je Netz</th></tr></thead>
+  <tbody>
+  {% for s in kette.schritte %}<tr><td>{{ s.schritt }}</td><td>{{ s.text }}</td><td class="num">{{ s.min|de:1 }}{% if s.max != s.min %} … {{ s.max|de:1 }}{% endif %} s</td></tr>{% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">Dauer aus <code>kette.json</code> der Läufe unten (ein Mesh-3D-Auftrag, der schon fertig vorlag, zählt dort mit wenigen Sekunden). „Nur Rig“ ist ein Mesh-3D-Auftrag mit Weg „netz“ und Umfang „Nur Rig“:
+  „Mesh to 3D“ passt eine Genesis-9-Figur in Form und Haltung an und hört nach der Körperkette auf; die Aufträge stehen im Reiter „Testaufträge“ von /mesh-3D/.</p>
+
+<h3>Gemessen an vier nie trainierten, schwierigen Posen</h3>
+<p class="m3a-klein">Je Job ist Probe 1 die neue Pose als OBJ (Daz-Winkel in den Genesis-Grenzen), Fehler = Mittel über die 138 Gelenke in mm gegen das Ziel, nach der Anpassung der Daz-Winkel; je ein Lauf, keine Streuung gemessen.
+  „Netz direkt“ und „Rig → A-Pose → Netz“ benutzen verschiedene Netze (Spalte Netz). Die Jobseiten zeigen alle drei Wege zum Umschalten.</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Job</th><th>Pose</th><th class="num">nächste Trainingspose</th>{% for w in kette.wege %}<th class="num">{{ w.text }}</th>{% endfor %}<th>Mesh-3D</th><th>Netz der Vorstufe</th></tr></thead>
+  <tbody>
+  {% for p in kette.posen %}<tr><td>{{ p.job }}</td><td>{{ p.pose }}{% if p.aufgerichtet %} <span class="m3a-klein">(lag — selbst aufgerichtet)</span>{% endif %}</td>
+    <td class="num">{{ p.abstand|de:1|default:"—" }} mm</td>
+    {% for w in p.werte %}<td class="num">{% if w.schluessel == 'vorstufe' %}<strong>{{ w.mm|de:1|default:"—" }}</strong>{% else %}{{ w.mm|de:1|default:"—" }}{% endif %}</td>{% endfor %}
+    <td><code>{{ p.mesh3d }}</code></td><td class="m3a-klein">{{ p.netz }}</td></tr>{% endfor %}
+    <tr class="m3a-summe"><td colspan="3">Ø</td>{% for m in kette.mittel_liste %}<td class="num">{{ m|de:1 }}</td>{% endfor %}<td colspan="2"></td></tr>
+  </tbody>
+</table>
+
+{% if kette.netz %}
+<h3>Das Netz der Vorstufe: trainiert auf zurückgerechneten Wolken</h3>
+<p>Das Netz, das nur echte Posen kennt, macht auf einer zurückgerechneten Wolke das Rig teils schlechter (liegend: Rig allein 12,9, mit diesem Netz 28,8 mm, 17.10.2026). Darum ein eigenes Netz für die Vorstufe:
+  je Trainingspose wird der Fehler des Rigs <strong>nachgestellt</strong> — die Daz-Winkel der großen Glieder verrauscht, Finger, Zehen und Gesicht in Ruhe (so steht das Rig aus „Nur Rig“) —, der Körper damit gehäutet und die Außenfläche mit diesem
+  falschen Rig in die A-Pose gerechnet. Ziel sind die WAHREN Gelenke, mit demselben falschen Rig in Ruhe gerechnet: rechnet die Vorstufe die Vorhersage mit dem Rig zurück, landet sie auf der wahren Pose.
+  Das Netz lernt so, den Fehler des Rigs auszugleichen — ohne jede Trainingspose durch Mesh-3D zu schicken.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Figur</th><th class="num">Rig verfälscht (Prüfposen)</th><th class="num">Training</th><th class="num">Prüfposen (nie trainiert)</th></tr></thead>
+  <tbody>
+  {% for f in kette.netz.figuren %}<tr><td>{{ f.figur }}</td><td class="num">{{ f.stoerung|de:1 }} mm</td><td class="num">{{ f.training|de:1 }} mm</td><td class="num"><strong>{{ f.pruefung|de:1 }}</strong> mm</td></tr>{% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">Lauf <code>{{ kette.netz.lauf }}</code>{% if kette.netz.gewaehlt %} (gewählt: {{ kette.netz.gewaehlt }}){% endif %}, Daten {{ kette.netz.eingang }}, Farben {{ kette.netz.farbe }}: {{ kette.netz.proben.training }} Trainingswolken ({{ kette.netz.k }} je Pose), {{ kette.netz.proben.pruefung }} Prüfwolken, {{ kette.netz.epochen }} Epochen,
+  {{ kette.netz.dauer_s|de }} s{% if kette.netz.start %}, Start mit den Gewichten von <code>{{ kette.netz.start }}</code>{% endif %}. Fehler = Abstand der gestimmten Gelenke zum Ziel in Ruhe (vor der Winkelanpassung) — derselbe
+  wie in der Haltung, das Rig dreht starr je Knochen. Nicht nachgestellt: die Form der Rig-Figur (eine angepasste Genesis-Figur, nicht die des Datensatzes).</p>
+{% if kette.netz.je_kleid %}
+<p>Seit Fassung 3 (17.10.2026) trägt jede Trainingspose die Figur dreimal: in den Kleidern des Datensatzes und in zwei <strong>weiten Stücken</strong> der Genesis-Garderobe (Abendkleid, Kleid mit weitem Rock,
+  Mönchsrobe — an die Figur gehäutet, nicht gedrapt), die Farbe kommt aus den <strong>Texturen</strong> der Figur mit einem Licht je Wolke (die Testnetze tragen eingebackenes Licht); gelernt wird
+  abwechselnd mit Textur und mit den flachen Teilfarben, mit denen die Jobs prüfen.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Prüfposen in …</th><th class="num">Fehler in Ruhe</th></tr></thead>
+  <tbody>
+  {% for k in kette.netz.je_kleid %}<tr><td>{% if k.kleid == 'grund' %}Kleidern des Datensatzes (Textur){% else %}{{ k.kleid }}{% endif %}</td><td class="num">{{ k.mm|de:1 }} mm</td></tr>{% endfor %}
+  {% if kette.netz.teilfarbe %}<tr><td>Kleidern des Datensatzes (Teilfarben)</td><td class="num">{{ kette.netz.teilfarbe|de:1 }} mm</td></tr>{% endif %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if kette.tests %}
+<h3>Testnetze (ohne Ziel) und die Sicherheitsregel</h3>
+<p>Für ein fremdes Netz gibt es kein Ziel, also keinen Fehler. Die Kette misst deshalb, wie weit die Gelenke, die das Netz der Vorstufe auf der A-Pose-Wolke abstimmt, von den Gelenken der Rig-Figur
+  aus Mesh-3D entfernt liegen (Ø der 138 Gelenke in Ruhe). <strong>Über 60 mm</strong> gilt das Netz als außerhalb seines Trainings, und die Testseite zeigt das <strong>Rig allein</strong>; darunter den Weg
+  über die Vorstufe. Die 60 mm sind eine Setzung: an den vier Jobs mit Ziel lag dieser Abstand bei 14–56 mm (dort ist die Vorstufe besser als das Rig allein), an Testnetzen in Kleid und Reifrock
+  vor Fassung 3 bei 89–331 mm.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Netz</th><th>Weg</th><th class="num">Netz ↔ Rig-Figur</th><th>Figur</th><th class="num">Rest der Anpassung</th><th>Mesh-3D</th></tr></thead>
+  <tbody>
+  {% for t in kette.tests %}<tr><td>{{ t.name }}{% if t.aufgerichtet %} <span class="m3a-klein">(aufgerichtet)</span>{% endif %}</td><td>{% if t.weg == 'vorstufe' %}Vorstufe{% else %}Rig allein{% endif %}</td>
+    <td class="num">{{ t.abweichung|de:1|default:"—" }} mm</td><td>{{ t.figur }}</td><td class="num">{{ t.rest|de:1 }} mm</td><td><code>{{ t.mesh3d }}</code></td></tr>{% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">Ohne Ziel gibt es nur den Abstand oben, den Rest der Winkelanpassung (wie gut das Skelett der Figur auf die Gelenke passt) und das Bild auf der Testseite.</p>
+{% endif %}
+{% else %}
+<p class="ag-fehlt">Noch keine Kette gerechnet (<code>&lt;Job&gt;/vorstufe/&lt;nnnn&gt;/kette.json</code> fehlt).</p>
+{% endif %}
+
+{% if vorstufe %}
+<details class="m3a-details"><summary>Vorher gemessen (16.10.2026): das Rig allein gegen das Netz, acht Prüfposen von Ursula1</summary>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Schritt von „Nur Rig“</th><th>Was geschieht</th><th class="num">Dauer Ø</th><th class="num">von … bis</th></tr></thead>
+  <tbody>
+  {% for s in vorstufe.schritte %}<tr><td>{{ s.schritt }}</td><td>{{ s.text }}</td><td class="num">{{ s.mittel|de:1 }} s</td><td class="num">{{ s.min|de:1 }} … {{ s.max|de:1 }} s</td></tr>{% endfor %}
+    <tr class="m3a-summe"><td>zusammen</td><td>je Netz ({{ vorstufe.schritte.0.auftraege }} Aufträge, gelesen aus <code>stand.json</code>)</td><td class="num">{{ vorstufe.gesamt_s|de }} s</td><td></td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Fehler = Mittel über die 138 Gelenke in mm gegen das Ziel-Rig. Rig: <code>Ursula1/_diagnose/autorig/</code> (<code>ProjektTemp/_wegwerf/mesh3dai_autorig_messen.py</code>); Netze: <code>vorhersagen.npz</code>
+  der Läufe, nach der Anpassung der Daz-Winkel. Probe 1 ist die A-Pose (Training), 41–50 sind Prüfposen. Je ein Lauf je Spalte.</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Probe</th><th class="num">Rig Ø</th><th class="num">Median</th><th class="num">Arm</th><th class="num">Hand</th><th class="num">Finger</th>
+    <th class="num">Netz: ein Vektor → Daz-Winkel (e2400)</th>{% for s in vorstufe.spalten %}<th class="num">Netz: {{ s.text }}<br><span class="m3a-klein">{{ s.lauf }}</span></th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for z in vorstufe.zeilen %}<tr><td>{{ z.nr }} {{ z.name }}{% if z.gruppe != 'pruefung' %} <span class="m3a-klein">({{ z.gruppe }})</span>{% endif %}</td>
+    <td class="num"><strong>{{ z.rig|de:1 }}</strong></td><td class="num">{{ z.median|de:1 }}</td><td class="num">{{ z.arm|de:1 }}</td><td class="num">{{ z.hand|de:1 }}</td><td class="num">{{ z.finger|de:1 }}</td>
+    <td class="num">{{ z.alt|de:1|default:"—" }}</td>{% for n in z.netze %}<td class="num">{{ n|de:1|default:"—" }}</td>{% endfor %}</tr>{% endfor %}
+    <tr class="m3a-summe"><td>Ø der {{ vorstufe.mittel.proben }} Prüfposen</td><td class="num">{{ vorstufe.mittel.rig|de:1 }}</td><td></td><td></td><td></td><td></td><td class="num">{{ vorstufe.mittel.alt|de:1|default:"—" }}</td>
+      {% for n in vorstufe.mittel.netze %}<td class="num">{{ n|de:1|default:"—" }}</td>{% endfor %}</tr>
+    <tr><td colspan="7">Rig besser als das Netz (Prüfposen)</td>{% for b in vorstufe.mittel.besser %}<td class="num">{{ b }} von {{ vorstufe.mittel.proben }}</td>{% endfor %}</tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Wo das Rig danebenliegt:</strong> wenn SAM 3D Body am Rendering eine Landmarke falsch setzt (Proben 47 und 49: Ellbogen bzw. Handgelenk 90–132 mm neben dem Ziel); beim Sitzen die Füße
+    (DamiraSitzen, Rig allein: Fuß 113, Zehen 133 mm). Finger und Gesicht stehen im Rig in Ruhelage (nur 22 Knochen werden angepasst) — die liefert das Netz.</li>
+  <li><strong>Gelenkpunkte des Netzes statt der von SAM</strong> (16.10.2026, Runde 1 der Anpassung, 8 Prüfposen): Ø 15,1 → 12,8 mm, aber bei drei Posen schlechter — die Regel weiß nicht, wer falsch liegt; nicht eingebaut
+    (<code>ProjektTemp/_wegwerf/mesh3dai_autorig_netzlm_probe.py</code>).</li>
+</ul>
+</details>
+{% endif %}

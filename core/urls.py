@@ -13,6 +13,7 @@ from .api import (
     seite_genesis_einstellungen,
     seite_kleider2d3d_einstellungen,
     seite_kleider_einstellungen,
+    seite_mesh3dai_einstellungen,
     seite_theatre_einstellungen,
     seiten,
 )
@@ -62,6 +63,7 @@ from .urls_blendermodell import BLENDERMODELL  # noqa: E402
 from .urls_engine2d3dkleider import ENGINE2D3DKLEIDER  # noqa: E402
 from .urls_mesh import MESH  # noqa: E402
 from .urls_mesh3d import MESH3D  # noqa: E402
+from .urls_mesh3dai import MESH3DAI  # noqa: E402
 from .urls_meshfigur import MESHFIGUR  # noqa: E402
 from .urls_blendimport import BLENDIMPORT  # noqa: E402
 from .urls_gesichtsform import GESICHTSFORM  # noqa: E402
@@ -136,6 +138,8 @@ urlpatterns = [
          name='settings_2d3dkleider'),
     # Scham-Methode der Blender-Importe: Eigen oder DAZ (11.10.2026, `dienste/schamwahl.py`).
     path('settings/genesis/', seite_genesis_einstellungen.genesis_settings_page, name='settings_genesis'),
+    # Abfragetakt der Statuskarte von Mesh3D-AI in Minuten (14.10.2026, `dienste/mesh3daistandwahl.py`).
+    path('settings/mesh3dai/', seite_mesh3dai_einstellungen.mesh3dai_settings_page, name='settings_mesh3dai'),
     # Knopf „Neu backen" auf /settings/kleider/ (26.09.2026) — Unterprozess,
     # der Stand kommt aus einer Datei; siehe `dienste/gcstueckelauf.py`.
     path('api/kleider/gcstuecke/starten/', Gcstueckeendpunkte.starten, name='gcstuecke_starten'),
@@ -290,3 +294,5 @@ urlpatterns += BLENDERMODELL
 urlpatterns += ENGINE2D3DKLEIDER
 # Seite „Mesh-3D" (Netz → Genesis-Modell; ein Auftrag ist ein Modell-Import, `urls_mesh3d.py`), 11.10.2026.
 urlpatterns += MESH3D
+# Seite „Mesh3D-AI" (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes, zunächst mit Dummies für Ursula1, `urls_mesh3dai.py`), 14.10.2026.
+urlpatterns += MESH3DAI

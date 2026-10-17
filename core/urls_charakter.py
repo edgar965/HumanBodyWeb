@@ -34,6 +34,7 @@ from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9garderobepflege import G9garderobepflegeapi
+from .api.g9hautfalten import G9hautfaltenapi
 from .api.g9hautmischung import G9hautmischungapi
 from .api.g9materialnetzapi import G9materialnetzapi
 from .api.g9morphformular import G9morphformularapi
@@ -48,7 +49,7 @@ from .api.netzbearbeitung import Netzbearbeitung
 from .api.schnittmuster import Schnittmuster
 from .api.schnittmuster_ablage import Schnittmusterablage
 from .api.smplx_ausgabe import SmplxAusgabe
-from .api.posen import Posen
+from .urls_posen import POSEN
 from .api.skelettdaten import Skelettdaten
 from .api.smplfigur import Smplfigur
 from .api.smplform import Smplformung
@@ -56,6 +57,7 @@ from .api.umafigur import Umafigur
 from .api.umakleidung import Umakleidung
 from .api.gemeinsameregler import Gemeinsameregler
 from .api.katalogverwaltung import Katalogverwaltung
+from .api.modellordner import Modellordnerendpunkte
 from .api.netz import Netzendpunkte
 from .api.kleidung import Kleidung
 
@@ -93,9 +95,7 @@ CHARAKTER = [
          name='smplx_texture'),
     path('api/character/mh-proxy-fit/', Mhproxy.anpassen, name='mh_proxy_fit'),
     path('api/character/tpose-vertices/', Mhproxy.tpose_punkte, name='tpose_vertices'),
-    path('api/character/poses/', Posen.liste, name='list_poses'),
-    path('api/character/pose/<path:pose_id>/', Posen.pose, name='pose_load'),
-    path('api/character/pose-manage/', Posen.verwalten, name='pose_manage'),
+    *POSEN,  # Posen: Liste, Laden, Verwalten, Ordnerbaum aller Modelle (`urls_posen.py`)
     path('api/character/mh-push-outside/', Mhproxy.herausschieben,
          name='mh_push_outside'),
     path('api/character/mesh/', Netzendpunkte.netz, name='character_mesh'),
@@ -209,6 +209,11 @@ CHARAKTER = [
     # Texturmischung (21.09.2026, core/api/g9hautmischung.py): Bilder eines Hautsatzes.
     path('api/character/genesis9-figur/haut/<str:preset>/bilder/',
          G9hautmischungapi.bilder, name='g9_figur_hautbilder'),
+    # Falten der Haut als Normalenkarten aus HumanBodys Altersfalten (17.10.2026, core/api/g9hautfalten.py) — vor `textur/<path:pfad>`.
+    path('api/character/genesis9-figur/hautfalten/<str:geschlecht>/',
+         G9hautfaltenapi.stand, name='g9_figur_hautfalten'),
+    path('api/character/genesis9-figur/hautfalten/<str:geschlecht>/<int:kachel>.png',
+         G9hautfaltenapi.bild, name='g9_figur_hautfalten_bild'),
     # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
     path('api/character/genesis9-figur/frisur/<str:name>/',
          G9frisurapi.netz, name='g9_figur_frisur'),
@@ -275,6 +280,14 @@ CHARAKTER = [
          Katalogverwaltung.modell_umbenennen, name='katalog_modell_umbenennen'),
     path('api/character/katalog/modell/loeschen/', Katalogverwaltung.modell_loeschen,
          name='katalog_modell_loeschen'),
+    # Mehrfachauswahl und Ordner der gespeicherten Modelle (15.10.2026).
+    path('api/character/katalog/loeschen-mehrere/', Katalogverwaltung.mehrere_loeschen,
+         name='katalog_loeschen_mehrere'),
+    path('api/character/modellordner/', Modellordnerendpunkte.liste, name='modellordner'),
+    path('api/character/modellordner/anlegen/', Modellordnerendpunkte.anlegen,
+         name='modellordner_anlegen'),
+    path('api/character/modellordner/verschieben/', Modellordnerendpunkte.verschieben,
+         name='modellordner_verschieben'),
     path('api/character/model/save/', Modelldateien.modell_sichern,
          name='character_model_save'),
     path('api/character/model/<str:name>/', Modelldateien.modell,

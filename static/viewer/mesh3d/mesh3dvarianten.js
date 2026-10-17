@@ -196,7 +196,7 @@ export class Mesh3dvarianten {
             if (s.status === 'fertig') {
                 const nimm = this._knopf(`Übernehmen: ${s.wert}`, 'fa-check', gesperrt || v.haupt === s.id,
                     v.haupt === s.id ? 'Diese Variante ist die Ausgabe des Auftrags' : 'Den Wert im Auftrag setzen, diese Figur als Ausgabe zeigen und ihr Modell speichern');
-                nimm.addEventListener('click', () => this._senden('uebernehmen/', { id: s.id }, `Variante „${s.wert}“ übernommen — das Modell wird gespeichert.`));
+                nimm.addEventListener('click', () => this._senden('uebernehmen/', { id: s.id }, `Variante „${s.wert}“ übernommen — gespeichert wird sie mit „Als Modell speichern“ (Karte „Genesis-Modell“).`));
                 zeile.appendChild(nimm);
             }
             const weg = this._knopf(`Löschen: ${s.wert}`, 'fa-trash', gesperrt, 'Diese Variante entfernen (gespeicherte Modelle bleiben)');

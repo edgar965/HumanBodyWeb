@@ -96,6 +96,8 @@ class G9antworten(G9antwortvorrat):
                'HumanBodyWeb/core/dienste/g9hbschuhhuelle.py',
                'HumanBodyWeb/core/dienste/g9hbstoffbruecke.py',
                'HumanBodyWeb/core/dienste/g9hbstoffkorrektur.py',
+               # Der Drapierer über dem männlichen Geograft (16.10.2026); `Genesis9/` mit `drapierer.py` steht oben.
+               'HumanBodyWeb/core/dienste/g9anatomiedrapierung.py',
                'HumanBodyWeb/core/dienste/g9hbstrang.py',
                'HumanBodyWeb/core/dienste/g9hbteilhaut.py',
                # Die Stoffkorrektur von GarmentCode, die `g9hbstoffkorrektur` aufruft.
@@ -204,11 +206,11 @@ class G9antworten(G9antwortvorrat):
         if any(str(k).startswith('eigen:') for k in regler):
             from Genesis9.eigenmorphe import G9eigenmorphe
             stand = G9eigenmorphe.stand()
-        # HB-Morphs (`hb:`, 20.09.2026) genauso: `hbmorphe_bauen` schreibt
+        # Morphs der fremden Familien (`hb:` 20.09.2026, `mh:`/`sx:`/`uma:` 17.10.2026) genauso: `hbmorphe_bauen` & Co. schreiben
         # dieselben Kennungen neu — der Bestand traegt den Stand.
-        if any(str(k).startswith('hb:') for k in regler):
-            from Genesis9.hbmorphe import G9hbmorphe
-            stand = (stand, G9hbmorphe.stand())
+        from Genesis9.morphfamilien import G9morphfamilien
+        if any(G9morphfamilien.ist_fremd(k) for k in regler):
+            stand = (stand, G9morphfamilien.stand())
         # Eigene Morphe (`eigen.`) und Texturschichten (`bild.`) eines Stuecks (30.09.2026): ein Rezept baut
         # denselben Namen neu — der Stand beider Ablagen geht mit, sobald einer im Rumpf steht.
         stueck = rumpf.get('regler_stueck') if isinstance(rumpf, dict) else None

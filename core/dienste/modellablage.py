@@ -58,6 +58,9 @@ class Modellablage:
             Modelltexturen.umbenennen(alt, neu, neu_pfad)
         except (OSError, ValueError):
             logger.exception('Texturen von %s nicht mit umbenannt', alt)
+        from .modellordner import Modellordner
+
+        Modellordner.umbenannt(alt, neu)        # der Ordner im Dialog „Charakter hinzufügen“ geht mit (15.10.2026); wirft nie
         logger.info('Modell umbenannt: %s -> %s', alt, neu)
         return neu
 
@@ -95,5 +98,8 @@ class Modellablage:
             Modelltexturen.entfernen(name)
         except (OSError, ValueError):
             logger.exception('Texturen von %s nicht entfernt', name)
+        from .modellordner import Modellordner
+
+        Modellordner.geloescht(name)
         logger.info('Modell gelöscht: %s', name)
         return True

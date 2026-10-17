@@ -1,0 +1,25 @@
+{% comment %}
+Die Download-Knöpfe eines Feldes auf „Mesh3D-AI“ (14.10.2026). Edgar: „ich möchte das Ursula1 export als obj auch herunterladen können im UI, damit ich checken kann, dass du nicht schummelst“ und
+„download möglichkeit auch für das Trainingsergebnis und das Ergebnis (als Genesis Objekt, glb, obj)“. Aufruf: {% include "_mesh3dai_download.html" with art="eingabe" %} (`soll` = Trainingsergebnis, `ausgabe` = Ergebnis des Netzes).
+Alle Knöpfe sind GESPERRT, solange es keinen Export gibt — mit erfundenen Daten gäbe es nur eine erfundene Datei zum „Nachprüfen“. Die Knöpfe tragen `data-download` und `data-format`, damit der Export sie später ohne Umbau anschließt.
+Die Eingabe hat kein Genesis-Objekt: sie ist ein Netz, kein Modell.
+{% endcomment %}
+<div class="mesh3dai-bereichsknoepfe mesh3dai-download">
+    {% if art == "eingabe" %}
+    {% with hilfe="Der Export der Außenfläche ist noch nicht gebaut. Hier steht später die Datei, die das Netz tatsächlich liest — zum Herunterladen und Nachprüfen." %}
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="obj" title="{{ hilfe }}"><i class="fas fa-download"></i> OBJ</button>
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="glb" title="{{ hilfe }}"><i class="fas fa-download"></i> GLB</button>
+    {% endwith %}
+    {% else %}
+    {% if art == "soll" %}{% with hilfe="Noch nicht gebaut. Hier steht später das gewünschte Ergebnis dieser Probe — das Genesis-Modell in der Pose, wie es für das Training entsteht — als Genesis-Objekt (Regler und Pose, ladbar im Charakter), GLB oder OBJ." %}
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="genesis" title="{{ hilfe }}"><i class="fas fa-download"></i> Genesis-Objekt</button>
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="glb" title="{{ hilfe }}"><i class="fas fa-download"></i> GLB</button>
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="obj" title="{{ hilfe }}"><i class="fas fa-download"></i> OBJ</button>
+    {% endwith %}{% else %}{% with hilfe="Noch nicht gebaut. Hier steht später das Ergebnis des Netzes für diese Probe — als Genesis-Objekt (Regler und Pose, ladbar im Charakter), GLB oder OBJ — damit sich nachprüfen lässt, was es wirklich liefert." %}
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="genesis" title="{{ hilfe }}"><i class="fas fa-download"></i> Genesis-Objekt</button>
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="glb" title="{{ hilfe }}"><i class="fas fa-download"></i> GLB</button>
+    <button type="button" class="btn btn-secondary btn-sm" disabled data-download="{{ art }}" data-format="obj" title="{{ hilfe }}"><i class="fas fa-download"></i> OBJ</button>
+    {% endwith %}{% endif %}
+    {% endif %}
+    <span class="hb-hinweis">Download folgt mit dem Export</span>
+</div>

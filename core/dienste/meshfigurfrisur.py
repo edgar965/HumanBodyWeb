@@ -42,6 +42,9 @@ class Meshfigurfrisur:
     OBERSTE = 2
     #: Bärte und Toon-Frisuren (für die Anime-Figur gebaut) sind keine Kandidaten.
     AUSSCHLUSS = re.compile(r'beard|bart|toon', re.IGNORECASE)
+    #: Herrenfrisuren (Option `frisur = herren`, 14.10.2026): Stücke, die für eine männliche Figur gebaut sind (Herkunft „Genesis 8 Male", „Genesis 2 Male" …; „Female" trifft nicht, `\b`),
+    #: und das eigene Herrenhaar (`Herrenhaarstueck.NAME`). Die Herkunft steht im Eintrag der Garderobe, keine Namensliste je Frisur.
+    HERREN_HERKUNFT = re.compile(r'\bmale\b', re.IGNORECASE)
     MITTE_UNTER_SCHEITEL_M = 0.10
     ANZEIGE = 12
 
@@ -58,22 +61,27 @@ class Meshfigurfrisur:
         from .meshfigurhaar import Meshfigurhaar
 
         wahl = self.optionen.get('frisur') or 'beste'
+        # Woran die Frisuren gemessen werden: die Haarmaske (Vorgabe) oder nur das Haar, das Sapiens selbst sieht (Option `frisur_ziel`, 14.10.2026, Edgar: „nimm das Sapienshaar als Ziel für Edgar1970").
+        ziel = self.optionen.get('frisur_ziel') or 'maske'
         # Unverändertes Netz, schon gemessen: nicht noch einmal (Frage Edgar 02.10.2026 „ein Körperschritt darf keine
         # 900 s dauern" — gemessen 161 s für 8 Frisuren gegen dieselbe Haarhülle; der Mund-Fix rechnete sie neu).
+        # Das Ziel gehört in den Schlüssel: ein anderes Ziel ist eine andere Messung (`artefakte-benennen.md`).
         stand = self._netzstand()
         alt = (self.job.ergebnis or {}).get('frisur') or {}
-        if stand and alt.get('netzstand') == stand and alt.get('option') == wahl and alt.get('kandidaten'):
+        if stand and alt.get('netzstand') == stand and alt.get('option') == wahl and (alt.get('ziel') or 'maske') == ziel and alt.get('kandidaten'):
             if not self.ablage.ergebnis(Haarklemme.DATEI).is_file():        # Aufträge von vor der Haarklemme: nur die Hülle des Fotohaars nachtragen, nicht neu wählen
-                netz = Meshfigurhaar(self.lauf).ruhenetz()
+                netz = Meshfigurhaar(self.lauf).ruhenetz(ziel)
                 if netz is not None:
                     scan, punkte, haar = netz
                     self._messung(punkte, scan.flaechen, haar, G9reglerableitung.lage(G9formung(self.job.stellung()))[0])
             logger.info('Frisur %s: Netz unverändert, Messung bleibt', self.job.kennung)
             return
-        aus = self.job.ergebnis['frisur'] = {'option': wahl, 'sekunden': {}, 'netzstand': stand}
-        netz = Meshfigurhaar(self.lauf).ruhenetz()
+        aus = self.job.ergebnis['frisur'] = {'option': wahl, 'ziel': ziel, 'sekunden': {}, 'netzstand': stand}
+        netz = Meshfigurhaar(self.lauf).ruhenetz(ziel)
         if netz is None:
-            aus['fehler'] = 'Kein Haar aus Schritt „haar" (Maske oder Registrierung fehlen)'
+            aus['fehler'] = ('Kein Sapiens-Haar in „haar_maske.npz" (Segmentierung fehlt oder der Schritt „haar" lief ohne Sapiens) — Ziel „Sapiens-Haar" nicht möglich'
+                             if ziel == 'sapiens' else 'Kein Haar aus Schritt „haar" (Maske oder Registrierung fehlen)')
+            logger.warning('Frisur %s: %s', self.job.kennung, aus['fehler'])
             return
         scan, punkte, haar = netz
         t0 = time.perf_counter()
@@ -134,10 +142,22 @@ class Meshfigurfrisur:
         eigen = G9haareigen.kennung()
         if wahl == 'eigen':
             return [eigen]
+
+        def passt(eintrag):
+            if wahl == 'herren':
+                return self._herren(eintrag)
+            return wahl == 'beste' or eintrag['id'] != eigen
+
         return [e['id'] for e in G9garderobe.liste()
                 if e.get('art') == 'haar' and e.get('zeigbar')
-                and not self.AUSSCHLUSS.search(e.get('name') or '')
-                and (wahl == 'beste' or e['id'] != eigen)]
+                and not self.AUSSCHLUSS.search(e.get('name') or '') and passt(e)]
+
+    @classmethod
+    def _herren(cls, eintrag):
+        """Ob der Eintrag der Garderobe eine Herrenfrisur ist: für eine männliche Figur gebaut (`herkunft`) oder das eigene Herrenhaar."""
+        from .herrenhaarstueck import Herrenhaarstueck
+
+        return bool(cls.HERREN_HERKUNFT.search(str(eintrag.get('herkunft') or ''))) or (eintrag.get('name') or '').lower() == Herrenhaarstueck.NAME.lower()
 
     def waehlen(self, wahl, formung, aus):
         from Genesis9.haareigen import G9haareigen

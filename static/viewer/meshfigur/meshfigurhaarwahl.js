@@ -61,8 +61,8 @@ export class Meshfigurhaarwahl {
 
     anhaengen(modell) {
         this.modell = modell;
-        this.netz.anhaengen(modell.group, modell.skelett);
-        this.karten.anhaengen(modell.group, modell.skelett);
+        this.netz.anhaengen(modell.group, modell.skelett, modell);
+        this.karten.anhaengen(modell.group, modell.skelett, modell);
         this.anwenden();
     }
 

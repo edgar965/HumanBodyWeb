@@ -1,0 +1,67 @@
+{% load dezahl %}
+{% comment %}„Kurz erklärt“ (16.10.2026, Edgar: „räume die Hilfeseite auf, mach sie verständlicher … mach auch eine einfache Grafik zu der KI in der Form wie im Bild“; abends: „passe die ganze Seite an mit dem aktuellen Stand“).
+Bild: `Architekturmesh3daibild` (Kästen Eingabe / versteckt / Ausgabe, gelb der Formkopf, Kreise als Sinnbild der Neuronen). Läufe: `Architekturmesh3daiergebnis`.{% endcomment %}
+<h2 id="kurz">Kurz erklärt</h2>
+{% if bild %}<div class="m3a-bildrahmen">{{ bild }}</div>{% endif %}
+<ol class="m3a-kurz">
+  <li><strong>Eingabe:</strong> das Netz einer Figur als 4.096 Punkte der Außenfläche — je Punkt Lage (x, y, z) und Farbe (r, g, b). Je Probe liegen 16.384 Punkte bereit (nach Fläche verteilt);
+    das Training zieht jedes Mal 4.096 davon, die Vorhersage mittelt vier Ziehungen. <em>Nicht die Punkte des Genesis-Netzes</em>: die KI soll Netze ohne Genesis-Aufbau lesen (Scans, Tripo,
+    die Eingänge von Mesh-3D). Im Training bekommt jedes Teil eine Zufallsfarbe (ein Fünftel der Proben ganz grau) und jede Probe eine Drehung bis ±30° — sonst las das Netz die Teile an ihrer flachen
+    Farbe ab (gemessen, Abschnitt 7). Die 4.096 sind eine Setzung, nicht gegen mehr Punkte gemessen.</li>
+  <li><strong>Neuronen:</strong> die große Zahl in jeder Spalte der Grafik. Ein Neuron ist ein Kanal, der für JEDEN Punkt mit denselben Gewichten rechnet: nach Schicht 1 trägt jeder Punkt 64 Zahlen,
+    die Figur also 64 × 4.096 = 262.144. Zusammen {{ netz.neuronen_punkt|de }} Neuronen je Punkt{% if netz.neuronen_form %}, dazu {{ netz.neuronen_form|de }} im Formkopf, der einmal je Figur rechnet{% endif %}.</li>
+  <li><strong>Schicht 1–3:</strong> jeder Punkt schaut auf seine 16 nächsten Nachbarn und lernt die <em>örtliche Form</em> um sich: Rundung eines Arms, Kante eines Ärmels, Finger.</li>
+  <li><strong>Schicht 4 und ganze Figur:</strong> je Punkt 512 Merkmale; dazu ein Bild der <em>ganzen Figur</em> (Maximum und Mittel über alle Punkte, 1.024 Zahlen), das jedem Punkt wieder angehängt wird — damit er weiß, wo in der Figur er liegt.</li>
+  <li><strong>Schicht 5–6 und Ausgabe:</strong> jeder Punkt <em>stimmt</em> für jedes Gelenk: „das Gelenk liegt um diesen Versatz von mir entfernt“ und wie sicher er ist (Gewicht).
+    Die Lage eines Gelenks ist das gewichtete Mittel aller Stimmen.</li>
+  {% if netz.form %}<li><strong>Formkopf (gelb):</strong> aus den 1.024 Zahlen der ganzen Figur drei Schichten bis zu den {{ netz.form|de }} Genesis-Form-Reglern — Körper, Proportionen, Kopf, Gesicht, Charaktere
+    (Abschnitt 3). Gelernt wird nicht Regler gegen Regler, sondern wie weit die Figur sich dadurch bewegt.</li>{% endif %}
+  <li><strong>Nach dem Netz:</strong> die Daz-Winkel aller Knochen werden an die gestimmten Gelenke angepasst — jeder Winkel in den Grenzen von Genesis 9, auf dem Skelett der Figur (Abschnitt 5).
+    Bei fremden Netzen wird zuerst aus den vorhergesagten Reglern eine Figur gebaut, je Geschlecht, und die Winkel an IHR Skelett angepasst (Abschnitt 4).</li>
+  <li><strong>Trainiert</strong> auf vier Jobs (Ursula1, Damira0, Mann1, Matt0, je 50 Trainings- und 15 Prüfposen) und 40 Formvarianten (je 12 Posen, fünf davon nie trainiert) in einem Topf (Abschnitt 3).</li>
+  <li><strong>Neben dem Netz gibt es einen Weg ohne KI:</strong> die Rig-Generierung von Mesh-3D („Nur Rig“) legt ein Rig auf jedes Netz, ohne Training, in rund drei Minuten (Abschnitt 1).
+    Sie ist heute <em>nicht</em> vor das Netz geschaltet — in der Grafik grau unten links, ohne Pfeil; gerechnet nur zum Vergleich.</li>
+  <li><strong>Was das Netz nicht ausgibt:</strong> Kleider, Haar, Mimik. Kleider brauchen dafür kein eigenes Netz, sondern weitere Köpfe am selben Rückgrat — vorgeschlagen, nicht gebaut (Abschnitte 2 und 8).</li>
+  <li><strong>Warum Stimmen:</strong> das frühere Netz fasste die ganze Figur in EINEN Vektor und riet daraus die ganze Pose. Mit 50 Trainingsposen lernte es Posen auswendig, keine Körperteile
+    (Fehler folgte dem Abstand zur nächsten Trainingspose, Korrelation 0,99). Ein Ellbogen sieht in jeder Pose ähnlich aus — die Frage „wo ist das Gelenk von mir aus“ ist örtlich.</li>
+</ol>
+
+{% if groesse %}
+<h3>Größe, Grafikspeicher, Regler</h3>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Punkte je Figur</th><th class="num">Vorhersage: Speicher</th><th class="num">Vorhersage: Zeit</th><th class="num">Training (Batch 8): Speicher</th></tr></thead>
+  <tbody>
+  {% for v in groesse.netz.vorhersage %}
+    <tr><td class="num">{{ v.punkte|de }}{% if v.punkte == 4096 %} (heute){% endif %}</td><td class="num">{{ v.spitze_mb|de }} MB</td><td class="num">{{ v.ms|de:1 }} ms</td>
+      <td class="num">{% for t in groesse.netz.training %}{% if t.punkte == v.punkte %}{{ t.spitze_mb|de }} MB{% endif %}{% empty %}—{% endfor %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein"><strong>Gemessen am Netz ohne Formkopf</strong> ({{ groesse.netz.parameter|de }} Gewichte, je 4 Byte → Datei <code>netz.pt</code> {{ groesse.netz.datei_mb|de:1 }} MB){% if netz.form %}; mit Formkopf sind es
+  {{ netz.gewichte|de }} Gewichte — der Formkopf rechnet einmal je Figur, sein Speicher beim Rechnen ist nicht gemessen{% endif %}. Nach dem Laden sind {{ groesse.netz.gewichte_mb|de:1 }} MB auf der Grafikkarte belegt
+  und {{ groesse.netz.reserviert_geladen_mb|de }} MB reserviert — PyTorch vergibt Grafikspeicher in Blöcken (dazu die CUDA-Laufzeit von torch, die der Treiber unter Windows nicht je Prozess nennt). Was beim Rechnen
+  Speicher kostet, sind die Zwischenwerte: jede Schicht rechnet für jeden Punkt (64 Neuronen × 4.096 Punkte × 16 Nachbarn in einer Kantenfaltung). Spitze = größter belegter Grafikspeicher einer Vorhersage
+  (eine Figur, bf16) bzw. eines Trainingsschritts (vorwärts + rückwärts). Gemessen {{ groesse.netz.gemessen }} auf {{ groesse.netz.gpu }}, Lauf <code>{{ groesse.netz.lauf }}</code>
+  (<code>ProjektTemp/_wegwerf/mesh3dai_netz_groesse.py</code>).<br>
+  Alle Regler zusammen: <strong>{{ groesse.regler.gesamt|de }}</strong> — Genesis {{ groesse.regler.genesis|de }} ({{ groesse.regler.genesis_form|de }} Form, davon gibt der Formkopf alle aus; {{ groesse.regler.genesis_pose|de }} Pose,
+  ersetzt durch die Haltung) + Kleider {{ groesse.regler.kleider_regler|de }} (Regler aller {{ groesse.regler.stuecke|de }} Stücke der Garderobe, darin {{ groesse.regler.kleidung_passform|de }} Passform-Regler Länge/Weite;
+  dazu die Wahl des Stücks: {{ groesse.regler.varianten|de }} Varianten, {{ groesse.regler.stile|de }} Stile — nicht gebaut). Gezählt mit <code>ProjektTemp/_wegwerf/mesh3dai_kleider_regler_zaehlen.py</code>.</p>
+{% endif %}
+
+<h3>Was es bringt (Ursula1, dieselben Proben in jeder Zeile)</h3>
+{% if ergebnisse %}
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Lauf</th><th>Netz</th><th class="num">Jobs</th><th class="num">Epochen</th><th class="num">Training</th><th class="num">Prüfposen</th><th class="num">Prüfposen Median</th><th class="num">Spagat</th><th class="num">Dauer</th><th class="num">Gewichte</th></tr></thead>
+  <tbody>
+  {% for z in ergebnisse %}
+    <tr{% if not z.da %} class="m3a-ohne"{% endif %}><td><code>{{ z.lauf }}</code></td><td>{{ z.text }}</td><td class="num">{{ z.daten }}</td><td class="num">{{ z.epochen|default:"—" }}</td>
+      <td class="num">{{ z.training|de:1|default:"—" }}</td><td class="num">{{ z.pruefung|de:1|default:"—" }}</td><td class="num">{{ z.pruefung_median|de:1|default:"—" }}</td>
+      <td class="num">{{ z.spagat|de:1|default:"—" }}</td><td class="num">{% if z.dauer_s %}{{ z.dauer_s|de }} s{% else %}—{% endif %}</td><td class="num">{{ z.parameter|de|default:"—" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">Fehler = Mittel über die 138 Gelenke in mm, gegen das Ziel-Rig, nach der Anpassung der Daz-Winkel; Training 50 Posen, Prüfposen 15 (nie trainiert, aus Dateien, die nie ins Training kommen),
+  Spagat 125 Bilder (nie auf Ursula1 trainiert — in den Läufen mit vier Jobs aber auf den anderen Figuren; die letzten sechs liegen 0–58 mm von einer Trainingspose aus <code>Spagat2.bvh</code>).
+  Die Läufe mit Zufallsfarben (letzte Zeilen) zählen dort, wo die anderen auf echten Texturen zusammenbrechen (Abschnitt 7) — auf diesen Proben mit flachen Teilfarben liegen sie zurück.
+  Je ein Lauf, die Streuung von Lauf zu Lauf ist nicht gemessen. Offen: Hände, Finger und Zehen auf ungesehenen Posen (über 100 mm) — der Fehler sitzt meist in EINER Gliedmaße.</p>
+{% endif %}

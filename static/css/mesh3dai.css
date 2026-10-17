@@ -1,0 +1,130 @@
+/* Seite „Mesh3D-AI“ (14.10.2026): Job, Proben, drei Bereiche (Eingabe · gewünschte Ausgabe · Ausgabe des Netzes) und Kennzahlen. Zunächst mit Dummies für Ursula1. */
+
+/* Fester Block oben (Edgar, 14.10.2026: „mach diesen Bereich oben fest, wenn ich blättere, möchte ich den Bereich noch sehen“): bleibt unter der Kopfleiste der Seite (`.topbar`, sticky, 50 px) stehen. Der Grund muss deckend sein, sonst
+   scheinen die Zeilen darunter durch. Die Höhe der Leiste und des Blocks setzt `Mesh3daiseite` (`--mesh3dai-leiste`, `--mesh3dai-oben`), 50 px ist nur der Wert vor dem ersten Messen. */
+.mesh3dai-oben { position: sticky; top: var(--mesh3dai-leiste, 50px); z-index: 40; background: var(--bg-primary, #0f0f1a); padding: 4px 0 2px; }
+.mesh3dai-oben > .card { margin: 0 0 4px; padding: 6px 12px; }
+.mesh3dai-oben .mesh3dai-attrappe { padding: 4px 12px; font-size: 0.85rem; }
+.mesh3dai-oben .mesh3dai-chips { margin: 6px 0 4px; }
+.mesh3dai-oben .mesh3dai-probeninfo { min-height: 1.2em; }
+.mesh3dai-oben .mesh3dai-probenkopf h2 { font-size: 1.05rem; }
+.mesh3dai-attrappe { border-left: 4px solid var(--warning, #f0ad4e); }
+.mesh3dai-attrappe strong { color: var(--warning, #f0ad4e); }
+/* Seit 15.10.2026: dasselbe Band, wenn die Seite echte Daten zeigt (ein Trainingslauf ist fertig). Grün wie der Fehler 0 mm. */
+.mesh3dai-echt { border-left: 4px solid #2fb36b; }
+.mesh3dai-echt strong { color: #2fb36b; }
+.mesh3dai-oben .mesh3dai-echt { padding: 4px 12px; font-size: 0.85rem; }
+
+.mesh3dai-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Überschrift der Jobseite: „Mesh3D-AI › Ursula1“, der erste Teil führt zur Liste. Die Liste (`mesh3dai_liste.html`) zeigt ihre Zeilen als Verweis. */
+.mesh3dai-zurueckzurliste { color: inherit; text-decoration: none; }
+.mesh3dai-zurueckzurliste:hover { text-decoration: underline; }
+.mesh3dai-pfad { opacity: 0.6; }
+.mesh3daitabelle tbody tr[data-id] { cursor: pointer; }
+.mesh3dai-zusammenfassung { display: flex; gap: 24px; flex-wrap: wrap; margin-left: auto; font-size: 0.9rem; }
+.mesh3dai-zusammenfassung b { font-variant-numeric: tabular-nums; }
+
+/* Statuskarte „Datensatz und Training“ (14.10.2026): echte Zahlen von der Platte, `mesh3daistand.js`. */
+.mesh3dai-stand { margin: 8px 0; }
+.mesh3dai-standkopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.mesh3dai-standkopf h2 { margin: 0; font-size: 1.05rem; }
+.mesh3dai-standzeile { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0; }
+.mesh3dai-standbalken { width: clamp(140px, 22vw, 320px); accent-color: var(--accent, #e94560); }
+/* Die Seitenstile geben jeder Tabelle einen dunklen Grund (rgb 22,33,62) und der Kopfzeile Grau (136) — auf der Karte, die im hellen Theme weiß ist, stand dunkle Schrift auf dunklem Grund (gesehen 15.10.2026, Zellen unlesbar).
+   Darum Grund durchsichtig und Farbe geerbt: so gilt es in beiden Themes. `width: auto`, sonst zieht die Seite die Tabelle auf die ganze Kartenbreite (2.032 px bei acht Zahlenspalten). */
+.mesh3dai-standtabelle { width: auto; border-collapse: collapse; margin: 8px 0; font-size: 0.88rem; background: transparent; color: inherit; }
+.mesh3dai-standtabelle th, .mesh3dai-standtabelle td { padding: 3px 12px; border-bottom: 1px solid rgba(128, 128, 128, 0.3); text-align: left; background: transparent; color: inherit; }
+.mesh3dai-standtabelle th { font-weight: 600; }
+.mesh3dai-standtabelle td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.mesh3dai-stand pre { margin: 6px 0 0; font-size: 0.8rem; white-space: pre-wrap; }
+
+/* Tabelle „Wie gut?“ unter jedem Ergebnis (16.10.2026, `mesh3daiguete.js`): durchsichtig mit geerbter Farbe wie die Statuskarte — die Seitenstile legen sonst jeder Tabelle einen dunklen Grund unter. */
+.mesh3dai-guetetabelle { width: auto; border-collapse: collapse; margin: 4px 0 6px; font-size: 0.8rem; background: transparent; color: inherit; }
+.mesh3dai-guetetabelle th, .mesh3dai-guetetabelle td { padding: 1px 10px 1px 0; border-bottom: 1px solid rgba(128, 128, 128, 0.25); text-align: left; background: transparent; color: inherit; }
+.mesh3dai-guetetabelle th { font-weight: 600; }
+.mesh3dai-guetetabelle td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Proben: Kopf mit Knöpfen, darunter ein Kästchen je Probe (Farbe nach Aufteilung, Rand nach Fehler) */
+.mesh3dai-probenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mesh3dai-probenkopf h2 { margin: 0; }
+.mesh3dai-probenknoepfe { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mesh3dai-probenzaehler { min-width: 6em; text-align: center; font-variant-numeric: tabular-nums; }
+.mesh3dai-filter { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; }
+.mesh3dai-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 6px; }
+/* Hintergründe als halbdurchsichtiges Grau statt `--bg-secondary`: das war im hellen Theme dunkel, die Nummer darauf dunkel auf dunkel (gesehen 14.10.2026) — so gilt es in beiden Themes. */
+.mesh3dai-chip { min-width: 2.2em; padding: 3px 6px; border-radius: 4px; border: 2px solid transparent; background: rgba(128, 128, 128, 0.2); color: inherit; font-size: 0.8rem; cursor: pointer; font-variant-numeric: tabular-nums; }
+.mesh3dai-chip[data-aufteilung="pruefung"] { background: rgba(240, 173, 78, 0.38); }
+.mesh3dai-chip[data-fehler="mittel"] { border-bottom-color: #e0b341; }
+.mesh3dai-chip[data-fehler="hoch"] { border-bottom-color: #e5484d; }
+.mesh3dai-chip[aria-selected="true"] { border-color: var(--accent, #e94560); font-weight: 700; }
+.mesh3dai-probeninfo { font-size: 0.9rem; min-height: 1.4em; }
+.mesh3dai-marke { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.78rem; margin-left: 6px; background: rgba(128, 128, 128, 0.22); }
+.mesh3dai-marke.pruefung { background: rgba(240, 173, 78, 0.45); }
+/* Wege zum Rig einer Probe (Job UrsulaSpagat, `mesh3daiwegwahl.js`): Knöpfe in der Zeile der Probe. */
+.mesh3dai-wegwahl { display: inline-flex; vertical-align: middle; margin-left: 12px; }
+.mesh3dai-wegwahl-titel { margin-right: 2px; font-size: 0.85rem; opacity: 0.8; }
+
+/* Drei Bereiche nebeneinander, bei schmalem Fenster untereinander */
+.mesh3dai-bereiche { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .mesh3dai-bereiche { grid-template-columns: minmax(0, 1fr); } }
+.mesh3dai-bereich { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.mesh3dai-bereich h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+/* Der Hinweistext hat in den drei Spalten verschieden viele Zeilen — mit `min-height` allein (`3em` ohne die 24 px Innenabstand) säße das Feld der dritten Spalte 13 px höher (gemessen 14.10.2026: 429/429/410). Darum teilen sich die drei Karten die Zeilen
+   des Rasters (`subgrid`): Überschrift, Hinweis, Feld, Text und Knöpfe stehen in jeder Spalte auf derselben Höhe, egal wie breit das Fenster ist. */
+/* Sieben Zeilen (16.10.2026): seit der Tabelle „Wie gut?“ hat das Ergebnis sieben Teile — mit `span 6` fiel das siebte (Kästchen „Ziel als Geist“) in die letzte Zeile, auf die Download-Knöpfe (Edgar: „Formatierung?“).
+   Ein Subgrid legt keine Zeilen an, es stapelt Überzähliges in der letzten. Darum feste Zeilen für die Teile, die nicht jede Karte hat: Tabelle 5, Download 6, Geist 7 — die Download-Knöpfe stehen in allen drei Karten auf einer Höhe. */
+.mesh3dai-bereiche > .mesh3dai-bereich { display: grid; grid-row: span 7; grid-template-rows: subgrid; row-gap: 6px; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-guete { grid-row: 5; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-download { grid-row: 6; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-geistwahl { grid-row: 7; }
+/* Vier Felder, wenn die Probe das Zwischenbild „Rig → A-Pose“ hat (17.10.2026); das verborgene Feld braucht `display: none` ausdrücklich — `display: grid` oben schlägt das Attribut `hidden`. */
+.mesh3dai-bereiche.mesh3dai-bereiche-vier { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .mesh3dai-bereiche.mesh3dai-bereiche-vier { grid-template-columns: minmax(0, 1fr); } }
+.mesh3dai-bereiche > .mesh3dai-bereich[hidden] { display: none; }
+.mesh3dai-bereich > .hb-hinweis { margin: 0; }
+.mesh3dai-nummer { display: inline-flex; align-items: center; justify-content: center; width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent, #e94560); color: #fff; font-size: 0.85rem; }
+/* Höhe nach dem Fenster, nicht nach der Breite: bei drei Spalten auf einem breiten Bildschirm wäre 3:4 so hoch, dass man scrollen muss, um eine Figur ganz zu sehen. */
+.mesh3dai-leinwand { position: relative; width: 100%; height: clamp(320px, 62vh, 760px); background: #1b1f27; border-radius: 6px; overflow: hidden; }
+.mesh3dai-leinwand canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.mesh3dai-leinwand .mesh3dai-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8a93a6; font-size: 0.9rem; }
+.mesh3dai-bereichsinfo { font-size: 0.85rem; min-height: 3.2em; white-space: pre-line; }
+
+/* Zeilen unter dem ganzen Körper (Gesicht, Hände/Füße, Kleider, 14.10.2026): eine Karte je Zeile, darin drei Felder ohne eigene Karte. Niedriger als der ganze Körper, weil Ausschnitte weniger Höhe brauchen. */
+/* Name der Zeile und gleich daneben die Reihe der Ansichtsarten (Schaltknöpfe aus `schaltknoepfe.css`) — die erste Fassung war ein Auswahlfeld am rechten Rand und wurde übersehen. */
+/* Der Kopf der Zeile (Name und Ansichtsarten) bleibt unter dem festen Block hängen, solange die Zeile zu sehen ist: `background: inherit` nimmt den Grund der Karte (weiß), im ganzen Körper den der Seite. */
+.mesh3dai-zeilenkopf { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; margin: 0 0 6px; padding: 4px 0; position: sticky; top: calc(var(--mesh3dai-leiste, 50px) + var(--mesh3dai-oben, 0px)); z-index: 30; background: inherit; }
+.mesh3dai-zeilenkopf h2 { margin: 0; }
+.mesh3dai-ansichtwahl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mesh3dai-ansichtname { font-size: 0.85rem; color: var(--text-muted, #8a93a6); }
+.mesh3dai-ansicht .schaltknopf, .mesh3dai-rigleiste .schaltknopf { padding: 5px 10px; }
+.mesh3dai-rigleiste { margin-left: 10px; padding-left: 12px; border-left: 1px solid var(--border, #3a4254); }
+/* Animationsleiste einer Zeile: Play, Regler (Tausendstel der Bewegung) und Zähler; die Breite des Zählers ist fest, damit der Regler beim Spielen nicht wandert. */
+.mesh3dai-animation { display: flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 12px; border-left: 1px solid var(--border, #3a4254); }
+.mesh3dai-play { padding: 5px 10px; min-width: 5.6em; }
+.mesh3dai-bildregler { width: clamp(110px, 12vw, 220px); accent-color: var(--accent, #e94560); }
+.mesh3dai-bildzaehler { font-size: 0.82rem; font-variant-numeric: tabular-nums; min-width: 17em; }
+.mesh3dai-koerperzeile > .mesh3dai-zeilenkopf { margin: 6px 0 8px; background: var(--bg-primary, #0f0f1a); }
+.mesh3dai-download { align-items: center; }
+.mesh3dai-teilzeile > h2 { margin: 0 0 4px; }
+.mesh3dai-teilzeile > .hb-hinweis { margin: 0 0 10px; }
+.mesh3dai-feld { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mesh3dai-feld h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.mesh3dai-teilzeile .mesh3dai-leinwand { height: clamp(260px, 44vh, 520px); }
+.mesh3dai-teilzeile .mesh3dai-bereichsinfo { min-height: 4.6em; }
+.mesh3dai-bereichsknoepfe { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Kennzahlen */
+.mesh3dai-werte { display: grid; grid-template-columns: repeat(auto-fill, minmax(14em, 1fr)); gap: 8px 20px; margin: 6px 0; }
+.mesh3dai-wert { display: flex; flex-direction: column; }
+.mesh3dai-wert span { font-size: 0.78rem; color: var(--text-secondary, #aab); }
+.mesh3dai-wert b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+/* Testseite (16.10.2026, Reiter „Test“): zwei Felder — Mesh und Ausgabe. */
+.mesh3dai-bereiche.mesh3dai-bereiche-zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .mesh3dai-bereiche.mesh3dai-bereiche-zwei { grid-template-columns: minmax(0, 1fr); } }
+
+/* Wahl weiblich/männlich oben auf der Testseite (16.10.2026 abends). */
+.mesh3dai-test-einstellung { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 6px 0 10px; border-bottom: 1px solid var(--border, #3a4254); }
+.mesh3dai-test-einstellung label { font-weight: 600; }
+.mesh3dai-test-einstellung select { min-width: 9em; }
+.mesh3dai-test-figur { color: var(--text-muted, #8a93a6); }

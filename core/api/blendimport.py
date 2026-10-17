@@ -13,7 +13,8 @@ GET  /api/character/blendimport/<kennung>/zustand/      Stand des Laufs; im Schr
 POST /api/character/blendimport/<kennung>/anhalten/
 POST /api/character/blendimport/<kennung>/neu/          {ab} → ab diesem Schritt neu rechnen
 
-`starten` und `neu` antworten 409, solange ein ANDERER Import läuft (`Blendimportarbeiter.laufender`).
+`starten` und `neu` reihen den Import ein, solange ein ANDERER Import rechnet oder wartet (`Blendimportarbeiter.laufender`, `Blendimportwarteschlange`): Antwort `{ok, wartet: true, meldung, hinter}`, der
+Arbeitsprozess startet sofort und wartet, bis er an der Reihe ist (bis 14.10.2026 gab es hier ein 409 mit „erst nach seinem Ende starten"). 409 bleibt nur für „derselbe Import läuft schon".
 """
 
 import json
@@ -67,14 +68,23 @@ class Blendimportendpunkte:
         return Blendimportquelle(werte['pfad'], werte['name'], werte['eigener_name'], Blendimportformate.endung(format))
 
     @staticmethod
-    def _belegt(ausser=None):
-        """409, solange ein anderer Import läuft (GPU und Kerne gehören ihm); sonst `None`."""
-        andere = Blendimportarbeiter.laufender(ausser=ausser)
-        if not andere:
+    def _hinter(ausser=None):
+        """Kennung des Imports, hinter dem ein neuer Start sich einreihen muss (er rechnet, oder es stehen schon Wartende davor — GPU und Kerne gehören immer nur einem); sonst `None`."""
+        from ..dienste.blendimportwarteschlange import Blendimportwarteschlange
+
+        if not Blendimportarbeiter.laufender(ausser=ausser):
             return None
-        schritt = Blendimportablage(andere).stand().get('schritt') or '?'
-        return JsonResponse({'error': 'Import %s läuft noch (Schritt „%s") — erst nach seinem Ende starten' % (andere, schritt)},
-                            status=409)
+        return Blendimportwarteschlange.hinter(ausser=ausser)
+
+    @staticmethod
+    def _eingereiht(ablage, ab, hinter):
+        """Den Import starten — hinter `hinter` eingereiht, wenn ein anderer rechnet oder wartet — und die Antwort bauen: `wartet` und die Meldung für die Anzeige (keine Fehlermeldung, kein 409)."""
+        pid = Blendimportarbeiter.starten(ablage, ab=ab, einreihen=bool(hinter), hinter=hinter)
+        antwort = {'ok': True, 'pid': pid, 'ab': ab, 'wartet': bool(hinter)}
+        if hinter:
+            antwort['meldung'] = ablage.stand().get('detail') or 'In der Warteschlange'
+            antwort['hinter'] = hinter
+        return antwort
 
     @staticmethod
     @require_GET
@@ -118,9 +128,7 @@ class Blendimportendpunkte:
         # Die Sperre hält Prüfung UND Start zusammen: zwei Klicks kurz hintereinander kommen als zwei Anfragen, und
         # solange der erste Arbeitsprozess noch nicht „läuft" im Stand steht, sähe der zweite nichts Belegtes.
         with Blendimportendpunkte._STARTSPERRE:
-            belegt = Blendimportendpunkte._belegt()
-            if belegt:
-                return belegt
+            hinter = Blendimportendpunkte._hinter()
             rumpf = Blendimportendpunkte._rumpf(request)
             format = Blendimportformate.pruefen(rumpf.get('format'))
             einstellungen = Blendimportendpunkte._einstellungen(format)
@@ -133,10 +141,12 @@ class Blendimportendpunkte:
             kennung = Auftragskennung.frei(timezone.now(), lambda k: Blendimportablage(k).ordner().exists())
             ablage = Blendimportablage(kennung)
             ablage.anlegen()
+            # `modell_speichern`: der Import aus der Charakter-Seite IST der Auftrag, ein Modell zu bauen (der Dialog lädt es danach) — ein Mesh-3D-Auftrag speichert nur auf Klick
+            # der Jobseite (`Mesh3dmodellspeichern`, 15.10.2026).
             ablage.stand_schreiben({'kennung': kennung, 'status': 'neu', 'quelle': quelle, 'einstellungen': werte,
-                                    'angelegt': timezone.now().isoformat()})
-            Blendimportarbeiter.starten(ablage)
-        return JsonResponse({'ok': True, 'kennung': kennung, 'quelle': quelle})
+                                    'angelegt': timezone.now().isoformat(), 'modell_speichern': True})
+            antwort = Blendimportendpunkte._eingereiht(ablage, None, hinter)
+        return JsonResponse({**antwort, 'kennung': kennung, 'quelle': quelle})
 
     @staticmethod
     @require_GET
@@ -187,10 +197,20 @@ class Blendimportendpunkte:
             return JsonResponse({'error': 'Kein Import %s' % kennung}, status=404)
         with Blendimportendpunkte._STARTSPERRE:
             if Blendimportarbeiter.lebt(ablage):
+                # Steht er schon in der Schlange, ist das keine Fehlermeldung wert: er startet, sobald er an der Reihe ist.
+                if ablage.stand().get('wartet'):
+                    return JsonResponse({'ok': True, 'wartet': True, 'meldung': ablage.stand().get('detail') or 'In der Warteschlange'})
                 return JsonResponse({'error': 'Der Import läuft schon'}, status=409)
-            belegt = Blendimportendpunkte._belegt(ausser=kennung)
-            if belegt:
-                return belegt
-            ab = Blendimportendpunkte._rumpf(request).get('ab')
+            if not (ablage.stand().get('quelle') or {}).get('datei'):
+                # Die Kopie ohne Daten (`Mesh3dkopie.ohne_daten`) bringt kein Netz mit: ohne Datei würde der Lauf erst im Schritt „koerper“ mit einem unverständlichen Fehler enden.
+                return JsonResponse({'error': 'Dem Auftrag fehlt das Netz — „Datei wählen …“ lädt eines hoch, „Quelle übernehmen“ setzt es (die Kopie ohne Daten bringt keines mit).'}, status=400)
+            hinter = Blendimportendpunkte._hinter(ausser=kennung)
+            rumpf = Blendimportendpunkte._rumpf(request)
+            stand = ablage.stand()
+            if stand.get('modell_speichern') and not rumpf.get('modell_speichern'):
+                # „Neu berechnen“ der Mesh-3D-Jobseite: auch ein Auftrag aus der Charakter-Seite speichert dann nur noch auf Klick (`Mesh3dmodellspeichern`).
+                stand['modell_speichern'] = False
+                ablage.stand_schreiben(stand)
+            ab = rumpf.get('ab')
             ab = ab if ab in Blendimportlauf.SCHRITTE else None
-            return JsonResponse({'ok': True, 'pid': Blendimportarbeiter.starten(ablage, ab=ab), 'ab': ab})
+            return JsonResponse(Blendimportendpunkte._eingereiht(ablage, ab, hinter))

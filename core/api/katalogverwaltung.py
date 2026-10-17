@@ -5,6 +5,7 @@
     POST /api/character/katalog/uma/loeschen/       {name}
     POST /api/character/katalog/modell/umbenennen/  {alt, neu}
     POST /api/character/katalog/modell/loeschen/    {name}
+    POST /api/character/katalog/loeschen-mehrere/   {art, namen}   (15.10.2026, Mehrfachauswahl im Dialog)
 
 Beides sind Vorgänge, die Dateien verändern, deshalb ausschließlich POST und
 mit einer Rückfrage davor im Browser. Die eigentliche Arbeit machen
@@ -61,6 +62,37 @@ class Katalogverwaltung:
     @require_POST
     def modell_loeschen(request):
         return Katalogverwaltung._loeschen(request, Modellablage)
+
+    # -- mehrere auf einmal (15.10.2026) ---------------------------------------
+
+    #: Reiter → Ablage; ein gespeichertes Genesis-9-Modell ist eine Modelldatei wie ein HumanBody-Modell.
+    ABLAGEN = {'modell': Modellablage, 'genesis9': Modellablage, 'uma': Umaablage}
+    HOECHSTENS_MEHRERE = 500
+
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def mehrere_loeschen(request):
+        """POST /api/character/katalog/loeschen-mehrere/ {art, namen} → {geloescht: [...], fehler: {name: grund}} (Edgar: „ich möchte Modelle batch löschen
+        können (Mehrfachauswahl und löschen)“). Die Rückfrage stellt der Dialog EINMAL für alle; gelöscht wird je Modell genau wie beim einzelnen Löschen."""
+        cls = Katalogverwaltung
+        daten, fehler = cls._daten(request)
+        if fehler:
+            return fehler
+        ablage = cls.ABLAGEN.get(str(daten.get('art') or ''))
+        namen = [str(n).strip()[: cls.HOECHSTENS] for n in (daten.get('namen') or []) if str(n).strip()]
+        if ablage is None or not namen or len(namen) > cls.HOECHSTENS_MEHRERE:
+            return JsonResponse({'error': 'art (modell, genesis9, uma) und 1 bis %d namen angeben' % cls.HOECHSTENS_MEHRERE}, status=400)
+        geloescht, gescheitert = [], {}
+        for name in namen:
+            try:
+                ablage.loeschen(name)
+                geloescht.append(name)
+            except (Ablagefehler, OSError) as f:
+                logger.exception('Löschen fehlgeschlagen: %s', name)
+                gescheitert[name] = str(f)
+        logger.info('Mehrere gelöscht (%s): %d, gescheitert %d', daten.get('art'), len(geloescht), len(gescheitert))
+        return JsonResponse({'geloescht': geloescht, 'fehler': gescheitert})
 
     # -- gemeinsam ------------------------------------------------------------
 

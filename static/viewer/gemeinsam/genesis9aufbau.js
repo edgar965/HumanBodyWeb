@@ -2,6 +2,7 @@ import { Protokoll } from './protokoll.js';
 import { Figuraufbaustand } from './figuraufbaustand.js';
 import { Genesis9haeppchen } from './genesis9haeppchen.js';
 import { Netzstufenstand } from './netzstufenstand.js';
+import { Kleidervorschau } from './kleidervorschau.js';
 
 /**
  * Genesis9aufbau — die Figur in zwei Zügen: Käfig sofort, volle Stufe nach.
@@ -79,7 +80,9 @@ export class Genesis9aufbau {
      * Körper bleibt fatal; ein Stück, das scheitert, wird gemeldet und fehlt.
      */
     static async alles(inst, stufen) {
+        const vorher = Kleidervorschau.merken(inst);    // der Körper vor diesem Zug: die Stücke folgen ihm, bis der Server ihre genaue Lage liefert
         const koerper = inst.koerperAufbauen(stufen);   // zählt `_lauf` hoch, bevor die Stücke ihn lesen
+        Kleidervorschau.begleiten(inst, vorher, koerper);
         const stuecke = inst.getragen().map(             // ohne Kaskade: alle kommen ohnehin
             kennung => inst.anziehen(kennung, inst.kleidung[kennung], stufen, false).catch(fehler => {
                 Protokoll.warnung('Genesis 9', `${kennung} nicht geladen: ${fehler.message}`);

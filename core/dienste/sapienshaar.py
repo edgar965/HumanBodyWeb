@@ -8,7 +8,7 @@ diese Klasse legt Sapiens darüber, je nach Option `segmentierung.haar`:
 
     farbe     nichts — die Maske der Farbe gilt (Vorgabe, wie bisher)
     sapiens   wo Sapiens die Fläche sieht (genug Stimmen), entscheidet Sapiens; sonst die Farbe
-    beide     Haar ist, was die Farbe ODER Sapiens als Haar sieht
+    beide     Haar ist, was die Farbe ODER Sapiens als Haar sieht — außer, was ein Foto sieht und als Haut, Oberteil, Hose oder Fuß liest (`Sapiensmaske.fremd_aus`, 14.10.2026)
 
 Geschützt bleibt in jedem Fall, was die Haarmaske selbst schützt: das Innere des Gesichts (`geschuetzt`), die Bartzone (`bart` — der Bart ist KEIN Haar), alles unter der Schnittebene des Kopfnetzes
 (`unten`). Fehlen die Stimmen oder gehören sie nicht zu diesem Netz und diesen Einstellungen, gilt die Farbe und der Grund steht im Bericht (`ergebnis.haar.sapiens.grund`) — nie ein stilles Zurückfallen
@@ -75,16 +75,49 @@ class Sapienshaar:
             hut = hut | (self.ausbreiten(kopf, neu & ~klar_haar, haarmaske.nachbarn(), np.asarray(haarmaske.mitte)[:, 1]) & ~kopf)
         maske['kopfbedeckung'] = hut                                 # steht in `haar_maske.npz`; der Schritt „kleidung" macht daraus Zubehör
         neu = neu & ~hut
-        maske['haar'] = neu
+        # Das Haar, das Sapiens selbst sieht (ohne Farbe, ohne die ungesehenen Nachbarn): das Ziel der Frisurwahl bei `frisur_ziel = sapiens` (14.10.2026, Edgar: „nimm das Sapienshaar als Ziel für Edgar1970").
+        maske['haar_sapiens'] = sapiens & ~hut
         # Ein Bart, der unter die Schnittebene des Kopfes hängt (Zauberer: bis zur Brust), ist weder Hals noch Kleidung — er kommt NUR ins Haar-Objekt (`Meshfigurhaar.objekt`), nicht in die Frisurwahl.
+        # Er hängt an der Maske VOR dem Abzug des Fremden (der Bart ist für Sapiens `Face_Neck`).
         bart = self.langer_bart(klassen, np.asarray(maske['unten'], dtype=bool) & ~np.asarray(maske['haut'], dtype=bool),
                                 neu | np.asarray(maske['bart'], dtype=bool) | np.asarray(maske['geschuetzt'], dtype=bool), haarmaske.nachbarn(), cm2)
+        # Was ein Foto SIEHT und als Haut, Oberteil, Hose oder Fuß liest, ist kein Haar — auch wenn die Farbe es dazurechnete (14.10.2026, Edgar2009/Edgar1970: die Farbmaske hielt Ohr, Wange, Hals und dunkle
+        # Kleidung für Haar, 6.204 statt 2.159 cm² am Jungen von 1970; die Frisurwahl nahm daraufhin eine lange Frisur). Hut und Zubehör bleiben, wie sie sind: er ist für Sapiens `Apparel`, nie `Hair`.
+        fremd = Sapiensmaske.fremd_aus(stimmen, haarmaske.nachbarn(), **{k: v for k, v in Sapiensmaske.aus_optionen(einstellungen).items() if k != 'nah_m'})
+        fremd_entfernt = neu & fremd
+        neu = neu & ~fremd
+        # Ungesehene Haarflächen (kein Foto sieht sie: Innenseiten, Rückseiten) entscheidet nicht die Farbe, sondern die nächste GESEHENE Fläche — wie bei der Kleidungsmaske (`Sapiensmaske._von_sichtbaren`):
+        # Hängt eine ungesehene „Haarfläche" dicht (`nah_m`) an Haut, Hemd oder Hose, ist sie das auch (Edgar1970: 1.462 cm² dunkler Stoff blieben sonst Haar, die Farbe kann Haar und dunkle Kleidung
+        # eines Schwarzweißfotos nicht trennen). Weiter weg gilt die Farbe.
+        neu, nah_entschieden = self.nah_entscheiden(neu, gesehen, sapiens, np.asarray(haarmaske.mitte, dtype=np.float64),
+                                                    Sapiensmaske.aus_optionen(einstellungen).get('nah_m', Sapiensmaske.NAH_M))
+        maske['haar'] = neu
         maske['langer_bart'] = bart
         return {'quelle': wahl, 'verwendet': True, 'flaechen_gesehen': int(gesehen.sum()),
                 'farbe': self._zahlen(alt, cm2), 'sapiens': self._zahlen(sapiens, cm2), 'ergebnis': self._zahlen(neu, cm2),
+                'fremd_entfernt': self._zahlen(fremd_entfernt, cm2), 'nah_entschieden_flaechen': nah_entschieden,
                 'kopfbedeckung': self._zahlen(hut, cm2), 'langer_bart': self._zahlen(bart, cm2),
                 'beide_flaechen': int((alt & sapiens).sum()), 'geaendert_flaechen': int((neu != alt).sum()),
                 'hinzu_flaechen': int((neu & ~alt).sum()), 'weg_flaechen': int((~neu & alt).sum())}
+
+    @staticmethod
+    def nah_entscheiden(neu, gesehen, sapiens, mitte, nah_m):
+        """`(neu, Zahl der geänderten Flächen)` — jede UNGESEHENE Fläche der Haarmaske (`neu`), die höchstens `nah_m` (Meter, Flächenmitten) von einer gesehenen liegt, nimmt deren Urteil (`sapiens`: Haar ja/nein);
+        weiter weg und alles Gesehene bleibt. Ohne gesehene Flächen oder ohne ungesehene Haarflächen: unverändert."""
+        neu = np.asarray(neu, dtype=bool).copy()
+        gesehen = np.asarray(gesehen, dtype=bool)
+        rest = np.flatnonzero(neu & ~gesehen)
+        if not len(rest) or not gesehen.any():
+            return neu, 0
+        from scipy.spatial import cKDTree
+
+        quelle = np.flatnonzero(gesehen)
+        abstand, nah = cKDTree(mitte[quelle]).query(mitte[rest])
+        dicht = abstand <= float(nah_m)
+        urteil = np.asarray(sapiens, dtype=bool)[quelle[nah[dicht]]]
+        geaendert = int((neu[rest[dicht]] != urteil).sum())
+        neu[rest[dicht]] = urteil
+        return neu, geaendert
 
     #: Eine „Haarfläche", auf der Sapiens `Apparel` mehr als so viel stärker sieht als `Hair`, ist eine Kopfbedeckung — und erst ab `HUT_MIN_CM2` zusammen (ein Haarreif oder ein einzelner Fleck ist keine).
     HUT_VERHAELTNIS = 1.5

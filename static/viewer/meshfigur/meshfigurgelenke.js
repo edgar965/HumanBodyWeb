@@ -1,5 +1,7 @@
 import { Genesis9felder } from '../gemeinsam/genesis9felder.js';
 import { Genesis9gelenke } from '../gemeinsam/genesis9gelenke.js';
+import { Meshfigurgriff } from './meshfigurgriff.js';
+import { Meshfigurstab } from './meshfigurstab.js';
 
 /**
  * Meshfigurgelenke — Daz' Gelenkkorrekturen (JCMs) in der Bewegung der Mesh-Bühne (14.10.2026).
@@ -18,11 +20,17 @@ export class Meshfigurgelenke {
 
     constructor(buehne) {
         this.buehne = buehne;
+        this.griff = new Meshfigurgriff(buehne);
+        this.stab = new Meshfigurstab(buehne);
         this._ziele = new WeakMap();        // Netz -> {adresse, felder: null (lädt) | {kanal: {n, d}}}
+        // Ein Bestandteil ist (neu) an die Haltung gebunden: der gehaltene Stab wird vermerkt, die Hand schließt sich und der Stab weicht aus — auch in der Ruhe, ohne dass eine Bewegung läuft.
+        buehne.teile.gebunden = (name, objekt) => { this.stab.gebunden(name, objekt); this.griff.takt(); this.stab.takt(); };
     }
 
-    /** Ein Bild: Haut rechnen, die gleichen Werte auf die Objekte legen. */
+    /** Ein Bild: die haltende Hand im Griff lassen (die Bewegung überschreibt die Finger), den Stab in der Faust dem Körper ausweichen lassen, Haut rechnen, die gleichen Werte auf die Objekte legen. */
     takt() {
+        this.griff.takt();
+        this.stab.takt();
         const werte = Genesis9gelenke.takt(this.buehne.modell);
         if (!werte) return null;
         for (const ziel of this.buehne.gelenkziele()) this._anwenden(ziel, werte);

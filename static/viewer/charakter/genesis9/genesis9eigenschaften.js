@@ -11,6 +11,7 @@ import { Genesis9texturmischung } from './genesis9texturmischung.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
 import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
+import { Genesis9skala } from './genesis9skala.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -139,7 +140,7 @@ export class Genesis9eigenschaften {
                 if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;
                 schieber.value = wert;
                 const anzeige = schieber.parentElement?.querySelector('.slider-value');
-                if (anzeige) anzeige.textContent = Genesis9eigenschaften.text(wert, gesteuert);
+                if (anzeige) anzeige.textContent = Genesis9eigenschaften.text(wert, gesteuert, regler);
             }
         }
     }
@@ -308,19 +309,20 @@ export class Genesis9eigenschaften {
         zeile.className = 'slider-row';
         const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
         const kennung = `${praefix}${regler.name}`;
-        const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : regler.name;
+        // `hinweis`: ein Sammelregler (Alter, `G9alter`) sagt, was er stellt — sein Name allein täte es nicht.
+        const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : (regler.hinweis || regler.name);
         const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
         zeile.innerHTML = `
             <label for="${kennung}" title="${escapeHtml(titel)}">${
                 escapeHtml(regler.anzeige)}</label>
             <input type="range" id="${kennung}" min="${unten}" max="${oben}"
                    step="0.01" value="${wert}" data-regler="${escapeHtml(regler.name)}">
-            <span class="slider-value">${Genesis9eigenschaften.text(wert, gesteuert)}</span>`;
+            <span class="slider-value">${Genesis9eigenschaften.text(wert, gesteuert, regler)}</span>`;
         const schieber = zeile.querySelector('input');
         const anzeige = zeile.querySelector('.slider-value');
         schieber.addEventListener('input', () => {
             const neu = parseFloat(schieber.value);
-            anzeige.textContent = Genesis9eigenschaften.text(neu);
+            anzeige.textContent = Genesis9eigenschaften.text(neu, false, regler);
             Genesis9lauf.planen(inst, () => inst.reglerSetzen(regler.name, neu),
                                 () => { Genesis9eigenschaften._kopf(inst);
                                         Genesis9eigenschaften.nachziehen(inst, Genesis9eigenschaften._plan); },
@@ -330,7 +332,9 @@ export class Genesis9eigenschaften {
     }
 
     /** Daz zeigt die Kanäle als Prozent — hier auch; gesteuerte mit Stern. */
-    static text(wert, gesteuert = false) {
+    static text(wert, gesteuert = false, regler = null) {
+        const eigene = Genesis9skala.text(wert, regler);     // Lebensalter in Jahren (`G9lebensalter`)
+        if (eigene) return `${eigene}${gesteuert ? ' *' : ''}`;
         return `${Math.round(wert * 100)} %${gesteuert ? ' *' : ''}`;
     }
 }

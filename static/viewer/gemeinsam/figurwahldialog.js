@@ -2,6 +2,7 @@ import { Htmltext } from '/static/djangobase/js/htmltext.js';
 import { Figurkataloge } from './figurkataloge.js';
 import { Figurwahlbereiche } from './figurwahlbereiche.js';
 import { Figurwahlfuellung } from './figurwahlfuellung.js';
+import { Figurwahlordner } from './figurwahlordner.js';
 import { Figurwahlzeile } from './figurwahlzeile.js';
 import { Figurlagefelder } from './figurlagefelder.js';
 
@@ -76,6 +77,8 @@ export class Figurwahldialog {
         this.gewaehlt = null;
         this.element = null;
         this.fuellung = new Figurwahlfuellung(this);
+        // Ordner, Mehrfachauswahl, Verschieben und Löschen der gespeicherten Modelle (15.10.2026).
+        this.ordner = new Figurwahlordner(this);
     }
 
     /** Die Vorgabe, wenn der Aufrufer keine liefert. */

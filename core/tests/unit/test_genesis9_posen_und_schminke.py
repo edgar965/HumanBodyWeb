@@ -305,8 +305,8 @@ class Genesis9BrauenUndHautwahl(SimpleTestCase):
                                                 'label': 'x'}))
         self.assertIsNone(G9reglerplan.bereich({'gruppe': '/Pose Controls',
                                                 'label': 'x'}))
-        self.assertIsNone(G9reglerplan.bereich({'gruppe': '/Pose Controls/Head/Mouth/'
-                                                          'Base Anime', 'label': 'x'}))
+        self.assertEqual(G9reglerplan.bereich({'gruppe': '/Pose Controls/Head/Mouth/'
+                                                         'Base Anime', 'label': 'x'}), 'mimik')    # Toon-Mimik zählt seit 17.10.2026 mit
         self.assertEqual(G9reglerplan.bereich({'gruppe': '/Morphs',
                                                'label': 'Nails Oval'}),
                          'koerper')

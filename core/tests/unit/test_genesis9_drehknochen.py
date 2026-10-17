@@ -69,7 +69,8 @@ class Drehknochen(SimpleTestCase):
                 'reihenfolge': 'XZY'}]
         with mock.patch.object(G9skelett, 'roh', classmethod(lambda cls: roh)), \
                 mock.patch.object(G9drehknochen, 'tabelle',
-                                  classmethod(lambda cls: G9drehknochen.lesen(KNOCHEN))):
+                                  classmethod(lambda cls: G9drehknochen.lesen(KNOCHEN))), \
+                mock.patch.object(G9felderapi, 'anhangachsen', staticmethod(lambda: {})):
             achsen = G9felderapi.achsen()
         self.assertNotIn('dreh', achsen['l_forearm'])
         self.assertEqual(achsen['l_forearmtwist1']['dreh']['von'], 'l_forearm')

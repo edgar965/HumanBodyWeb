@@ -125,11 +125,9 @@ class Bildmodellhautverschiebung:
 
     # ----------------------------------------------------------- Backen
 
-    def kachel(self, abtastung, nummer, feld):
-        """`((S, S) float 0..1, mittlerer Abstand Texel → HumanBody-Fläche in m)` — Kachel `nummer`."""
-        from humanbody_core.hautverschiebung import Hautverschiebung
-        from scipy import ndimage
-
+    def texel(self, abtastung, nummer):
+        """`(drin (S, S) bool, lage (n, 3), uv (n, 2), abstand (n,))` der Texel in Inseln der Kachel `nummer`:
+        ihre Lage in HumanBody-Lage, die UV des nächsten HumanBody-Oberflächenpunkts und der Abstand dorthin (m)."""
         d = self._vorbereiten()
         drin, ecken, anteile = abtastung.stellen(nummer)
         pos = np.einsum('nk,nkc->nc', anteile, d['lage'][ecken])
@@ -141,6 +139,14 @@ class Bildmodellhautverschiebung:
             if not m.any() or suche is None:
                 continue
             uv[m], abstand[m] = suche.uv(pos[m])
+        return drin, pos, uv, abstand
+
+    def kachel(self, abtastung, nummer, feld):
+        """`((S, S) float 0..1, mittlerer Abstand Texel → HumanBody-Fläche in m)` — Kachel `nummer`."""
+        from humanbody_core.hautverschiebung import Hautverschiebung
+        from scipy import ndimage
+
+        drin, _pos, uv, abstand = self.texel(abtastung, nummer)
         s = abtastung.seite
         bild = np.full((s, s), self.MITTE, dtype=np.float64)
         bild[drin] = Hautverschiebung.abtasten(feld, uv)

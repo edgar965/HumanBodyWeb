@@ -42,7 +42,7 @@ class Engine2d3dKleidersegmentierungsoptionen:
         {'schluessel': 'haar', 'titel': 'Haar aus der Segmentierung (Sapiens-Klasse Hair)', 'art': 'wahl', 'vorgabe': 'farbe', 'werte': [
             ('farbe', 'Farbe des Netzes — Helligkeit gegen Hautton, Gesichtszone geschützt (bisher)'),
             ('sapiens', 'Sapiens — wo ein Foto die Fläche sieht gilt die Klasse „Hair", sonst die Farbe'),
-            ('beide', 'Beides — Haar ist, was die Farbe oder Sapiens als Haar sieht'),
+            ('beide', 'Beides — Haar ist, was die Farbe oder Sapiens als Haar sieht, außer was ein Foto als Haut oder Kleidung sieht'),
         ], 'hinweis': 'Die Haarmaske trennt das Netz in „ohne Haar" und „nur Haar" (das Haar-Objekt `haar.glb`), gibt dem Schritt „Frisur" die Fläche zum Messen und färbt die Frisur. Bisher entschied die '
                       'Farbe allein — ein Foto mit grauem Haar und Hautton in der Nähe, Bart und Schatten bringen sie durcheinander. Sapiens kennt das Haar als eigene Klasse. Das Gesicht (Augen, Brauen, '
                       'Nase, Mund), die Bartzone und der Rumpf bleiben in jedem Fall geschützt. Der Schritt „Segmentierung“ läuft bei „Sapiens“ und „Beides“ im vollen Lauf mit. Ob Sapiens das Haar '

@@ -51,6 +51,9 @@ body[data-theme="dark"] {
     --warning:      #f39c12;
     --danger:       #e74c3c;
     --border:       #2a2a4a;
+    /* Die „Einstellungen" der Assets (Edgar, 16.10.2026: „Ändere die Farbe der Einstellungen in Gelb") — nicht der
+       Akzent, damit sie nicht wie eine Kategorie aussehen. */
+    --einstellung:  #ffd23f;
     /* Overlays: helle Schleier auf dunklem Grund */
     --ov03: rgba(255,255,255,0.03);
     --ov04: rgba(255,255,255,0.04);
@@ -84,6 +87,7 @@ body[data-theme="light"] {
     --warning:      #e69500;
     --danger:       #c62828;
     --border:       #e2e6ea;
+    --einstellung:  #a87800;         /* Gelb auf Weiß: dunkler, sonst unlesbar */
     /* Overlays GEKIPPT: dunkle Schleier auf hellem Grund */
     --ov03: rgba(0,0,0,0.03);
     --ov04: rgba(0,0,0,0.035);

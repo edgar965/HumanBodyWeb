@@ -3,7 +3,7 @@
 
 Edgar: „die Jobs sind ja echte Kacke, die Kopie-Möglichkeit für Jobs vergessen“. Wie bei „2D3D Kleider“ zwei Wege (`Engine2d3dKleiderauftragskopie`, `Auftragsduplikat`):
 
-    ohne Daten   Eingabe und Einstellungen — dieselbe Datei, dieselbe Grundfigur, dieselben Optionen; ein neuer Auftrag im Zustand „angelegt“, nichts gerechnet
+    ohne Daten   nur die Einstellungen — dieselbe Grundfigur, dieselben Optionen, aber KEIN Netz (seit 14.10.2026: die Datei der Quelle wird nicht mehr mitgenommen); ein neuer Auftrag im Zustand „angelegt“, nichts gerechnet
     mit Daten    der ganze Importordner (Export, Arbeit, Ergebnis, Stand, Log) samt EIGENEM Auftrag „Mesh to 3D“ (`Mesh3dkopiefigur`); die Kopie steht im selben Schritt wie die Quelle
 
 Der Name ist ein Teil des Imports (er wird Name des gespeicherten Modells und Dateiname der Stücke, `Blendimportquelle.NAME_MAX`, keine Sonderzeichen): „Zauberer“ → „Zauberer Kopie“,
@@ -80,19 +80,33 @@ class Mesh3dkopie:
     # ------------------------------------------------------------------ Ohne Daten
 
     def ohne_daten(self):
-        """Ein neuer Auftrag mit derselben Datei und denselben Einstellungen, nichts gerechnet → seine Kennung."""
+        """Ein neuer Auftrag mit denselben Einstellungen, aber OHNE Netz — nichts gerechnet, kein Pfad → seine Kennung. Das Netz ist die wichtigste Eingabe: Edgar, 14.10.2026: „bei einem Klick auf Job kopieren ohne Daten
+        — warum machst du denn noch das alte Mesh rein??“ Die Kopie hatte die Datei der Quelle behalten, zeigte sie in der Mesh-Ansicht, und wer eine neue Datei hochlud und „Neu berechnen“ drückte, rechnete das alte Netz
+        (beide Aufträge am 14.10.2026, 16:43 und 17:12). Jetzt steht die Datei leer; „Datei wählen …“ und „Quelle übernehmen“ setzen sie, „Neu berechnen“ ohne Datei sagt, was fehlt."""
+        return self._anlegen(mit_netz=False)
+
+    def ohne_ergebnis(self):
+        """Ein neuer Auftrag mit derselben Datei und denselben Einstellungen, nichts gerechnet → seine Kennung (für die Prüfreihe: sie rechnet die Kopie von vorn; die Knöpfe der Seite geben dagegen KEIN Netz mit, `ohne_daten`)."""
+        return self._anlegen(mit_netz=True)
+
+    def _anlegen(self, mit_netz):
         self.pruefen()
         quelle = dict(self.stand.get('quelle') or {})
-        if not quelle.get('datei') or not Path(quelle['datei']).exists():
+        if mit_netz and (not quelle.get('datei') or not Path(quelle['datei']).exists()):
             raise ValueError('Die Datei von „%s“ gibt es nicht mehr: %s' % (self.name, quelle.get('datei')))
         kennung, name = self._neue_kennung(), self.neuer_name()
+        einstellungen = self._einstellungen(name)
+        if not mit_netz:
+            quelle.update(datei='', kandidaten=[])
+            quelle.pop('blend', None)
+            einstellungen['pfad'] = ''
         ablage = Blendimportablage(kennung)
         ablage.anlegen()
         ablage.stand_schreiben({
             'kennung': kennung, 'status': 'neu', 'bereich': self.stand.get('bereich') or 'mesh3d', 'quelle': {**quelle, 'name': name},
-            'einstellungen': self._einstellungen(name), 'weg': self.stand.get('weg') or 'teile',
-            'weg_grund': self.stand.get('weg_grund') or '', 'angelegt': timezone.now().isoformat(), 'kopie': self._kopie('ohne Daten')})
-        logger.info('Kopie Mesh-3D ohne Daten: %s (%s) → %s (%s)', self.name, self.quelle.kennung, name, kennung)
+            'einstellungen': einstellungen, 'weg': self.stand.get('weg') or 'teile',
+            'weg_grund': self.stand.get('weg_grund') or '', 'angelegt': timezone.now().isoformat(), 'kopie': self._kopie('ohne Daten' if not mit_netz else 'ohne Ergebnis')})
+        logger.info('Kopie Mesh-3D %s: %s (%s) → %s (%s)', 'ohne Daten, ohne Netz' if not mit_netz else 'ohne Ergebnis, mit Netz', self.name, self.quelle.kennung, name, kennung)
         return kennung
 
     # ------------------------------------------------------------------ Mit Daten
@@ -101,7 +115,7 @@ class Mesh3dkopie:
         """Ordner und Auftrag „Mesh to 3D“ kopieren, der Stand bleibt wie in der Quelle → die Kennung der Kopie. Ohne Ergebnis (nichts gerechnet) ist es die Kopie ohne Daten."""
         self.pruefen()
         if not self.stand.get('ergebnis'):
-            return self.ohne_daten()
+            return self._anlegen(mit_netz=True)               # nichts gerechnet: nichts zu kopieren außer Datei und Einstellungen — das Netz bleibt (Prüfreihe, `Mesh3dpruefreihe.kopieren`)
         kennung, name = self._neue_kennung(), self.neuer_name()
         ziel = Blendimportablage(kennung)
         figur = self._figur(name)
@@ -144,6 +158,7 @@ class Mesh3dkopie:
         stand['quelle']['name'] = name
         stand['einstellungen'] = self._einstellungen(name)
         stand.pop('pid', None)
+        stand.pop('modell_speichern', None)          # eine Kopie ist ein Mesh-3D-Auftrag: Modell nur auf Klick (`Mesh3dmodellspeichern`)
         ergebnis = stand.get('ergebnis') or {}
         ergebnis.pop('modell', None)
         if figur is not None:

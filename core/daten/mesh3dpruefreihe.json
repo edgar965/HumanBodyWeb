@@ -1,34 +1,8 @@
 {
  "auftraege": {
-  "2026.10.11.21.18.17": {
+  "2026.10.14.02.03.01": {
    "aufgenommen": "2026-10-14",
-   "hinweis": "14.10.2026: Original (Neulauf ab Segmentierung) und Kopie 2026.10.14.01.31.31; Saum-Inseln umgefärbt; max-Regeln: schlechtester Wert beider Läufe; von Edgar nicht bestätigt",
-   "name": "Edgar",
-   "soll": {
-    "animation_gewaehlt": "basis",
-    "animation_max_dehnung": 22.68,
-    "animation_spitzen": 0.0,
-    "fehler": [],
-    "figur_netz_mm": 2.41,
-    "griff_seiten": [],
-    "haar_flaechen": 133660,
-    "hand_untergrenze": 0,
-    "hand_verformung_mm": 7.47,
-    "hautband_art": "umfaerben",
-    "hoehe_cm": 199.7,
-    "kleidung_flaechen": 286659,
-    "kleidung_unterkante_m": 0.8752,
-    "netz_figur_mm": 2.58,
-    "status": "fertig",
-    "teile": [
-     "beard"
-    ],
-    "zubehoer_flaechen": 13897
-   }
-  },
-  "2026.10.13.10.47.52": {
-   "aufgenommen": "2026-10-14",
-   "hinweis": "14.10.2026: Original (Neulauf ab Segmentierung) und zwei Kopien (…01.42.30 vor dem Griff, …02.03.01 mit Griff); max-Regeln: schlechtester Wert der Läufe (die Hand der Anpassung schwankt von Lauf zu Lauf: hand_verformung_mm 26 bis 42 mm); im Chrome gesehen, von Edgar nicht bestätigt",
+   "hinweis": "Soll vom Auftrag 2026.10.13.10.47.52 übernommen (gelöscht); die Aufträge 2026.10.14.02.03.01 und der Neulauf 2026.10.14.15.19.10 bestehen es — 14.10.2026: Original (Neulauf ab Segmentierung) und zwei Kopien (…01.42.30 vor dem Griff, …02.03.01 mit Griff); max-Regeln: schlechtester Wert der Läufe (die Hand der Anpassung schwankt von Lauf zu Lauf: hand_verformung_mm 26 bis 42 mm); im Chrome gesehen, von Edgar nicht bestätigt",
    "name": "Zauberer",
    "soll": {
     "animation_gewaehlt": "weich_0.5",
@@ -57,9 +31,35 @@
     "zubehoer_flaechen": 246284
    }
   },
-  "2026.10.13.19.00.52": {
+  "2026.10.14.13.10.02": {
    "aufgenommen": "2026-10-14",
-   "hinweis": "14.10.2026: Original (Neulauf ab Segmentierung) und Kopie 2026.10.14.01.25.22; Griff, Halter, Haarabzug, Flügel (Bestandteil angel wing); max-Regeln: schlechtester Wert beider Läufe; im Chrome gesehen, von Edgar nicht bestätigt",
+   "hinweis": "Handmaß (Hand 18,3 → 20,1 cm) und Zubehör-Vervollständigung vom 14.10.2026 im Chrome gesehen; ersetzt das Soll von 2026.10.11.21.18.17 (gelöscht)",
+   "name": "Edgar",
+   "soll": {
+    "animation_gewaehlt": "basis",
+    "animation_max_dehnung": 10.21,
+    "animation_spitzen": 0.0,
+    "fehler": [],
+    "figur_netz_mm": 2.42,
+    "griff_seiten": [],
+    "haar_flaechen": 133646,
+    "hand_untergrenze": 0,
+    "hand_verformung_mm": 10.04,
+    "hautband_art": "umfaerben",
+    "hoehe_cm": 199.7,
+    "kleidung_flaechen": 292170,
+    "kleidung_unterkante_m": 0.8784,
+    "netz_figur_mm": 2.57,
+    "status": "fertig",
+    "teile": [
+     "beard"
+    ],
+    "zubehoer_flaechen": 16770
+   }
+  },
+  "2026.10.14.15.00.06": {
+   "aufgenommen": "2026-10-14",
+   "hinweis": "Soll vom Auftrag 2026.10.13.19.00.52 übernommen (gelöscht); der Neulauf 2026.10.14.15.00.06 besteht es — 14.10.2026: Original (Neulauf ab Segmentierung) und Kopie 2026.10.14.01.25.22; Griff, Halter, Haarabzug, Flügel (Bestandteil angel wing); max-Regeln: schlechtester Wert beider Läufe; im Chrome gesehen, von Edgar nicht bestätigt",
    "name": "Spiralballerina ohne Zweitarm",
    "soll": {
     "animation_gewaehlt": "weich_0.5",

@@ -29,13 +29,20 @@ class Meshfigurhalter:
     STAB_VERHAELTNIS = 4.0
 
     @classmethod
+    def haendeflaechen(cls, klassen):
+        """(F,) bool — die Flächen, die Sapiens als Hand sieht (beide Etiketten, mindestens `MIN_STIMMEN` Pixel); `klassen` (F, 28) Stimmen oder None."""
+        if klassen is None:
+            return None
+        return (klassen.max(axis=1) >= cls.MIN_STIMMEN) & np.isin(klassen.argmax(axis=1), cls.HAND_KLASSEN)
+
+    @classmethod
     def pruefen(cls, scan, klassen, bestandteil, haende):
         """`{seite, zentrum, flaechen, stabfoermig}` oder `None`. `scan` mit `punkte`/`flaechen` (Lage des Netzes), `klassen` (F, 28) Sapiens-Stimmen, `bestandteil` (P, 3) Punkte des Bestandteils,
         `haende` `{'r': (3,), 'l': (3,)}` — die Handmitten der Figur in der Haltung."""
         from scipy.spatial import cKDTree
 
         flaechen, punkte = np.asarray(scan.flaechen), np.asarray(scan.punkte)
-        gesehen = (klassen.max(axis=1) >= cls.MIN_STIMMEN) & np.isin(klassen.argmax(axis=1), cls.HAND_KLASSEN)
+        gesehen = cls.haendeflaechen(klassen)
         if not gesehen.any() or not len(bestandteil):
             return None
         mitten = punkte[flaechen[gesehen]].mean(axis=1)

@@ -28,18 +28,30 @@ class Blendimportarbeiter:
     UMGEBUNG = {'OPENBLAS_NUM_THREADS': '1'}
 
     @classmethod
-    def starten(cls, ablage, ab=None):
+    def starten(cls, ablage, ab=None, einreihen=False, hinter=None):
+        """Den Arbeitsprozess starten. `einreihen`: ein anderer Import rechnet oder wartet (`hinter`) — der Prozess startet trotzdem sofort, wartet aber, bis er an der Reihe ist
+        (`Blendimportwarteschlange`); der Stand sagt es („In der Warteschlange …"), statt dass der Start mit 409 abgelehnt wird."""
+        from .blendimportwarteschlange import Blendimportwarteschlange
+
         ablage.anlegen()
+        stand = ablage.stand()
+        stand.update(status='laeuft', fehler='', fortschritt=0, detail='Arbeitsprozess gestartet', wartet=False)
+        stand.pop('eingereiht', None)
+        ablage.stand_schreiben(stand)
+        if einreihen:
+            Blendimportwarteschlange.einreihen(ablage, hinter)       # VOR dem Prozess: er liest den Stand sofort
         befehl = [sys.executable, str(Path(settings.BASE_DIR) / 'manage.py'), cls.BEFEHL, ablage.kennung]
         if ab:
             befehl += ['--ab', ab]
+        if einreihen:
+            befehl.append('--warten')
         with open(ablage.log(), 'ab') as protokoll:
             prozess = Auftragsarbeiter._popen(befehl, protokoll, umgebung=cls.UMGEBUNG)
         ablage.pid().write_text(str(prozess.pid))
         stand = ablage.stand()
-        stand.update(status='laeuft', fehler='', fortschritt=0, detail='Arbeitsprozess gestartet', pid=prozess.pid)
+        stand.update(pid=prozess.pid)
         ablage.stand_schreiben(stand)
-        logger.info('Blender-Import %s: Arbeitsprozess %s (ab %s)', ablage.kennung, prozess.pid, ab or 'Anfang')
+        logger.info('Blender-Import %s: Arbeitsprozess %s (ab %s%s)', ablage.kennung, prozess.pid, ab or 'Anfang', ', eingereiht hinter %s' % hinter if einreihen else '')
         from .mesh3dvarianten import Mesh3dvarianten
         from .mesh3dvariantenauto import Mesh3dvariantenauto
 
@@ -81,7 +93,7 @@ class Blendimportarbeiter:
     def anhalten(cls, ablage):
         """Stand zuerst (der Lauf prüft ihn), dann der Prozess samt Kindern (Runner, Blender halten die GPU)."""
         stand = ablage.stand()
-        stand.update(status='angehalten', detail='Angehalten')
+        stand.update(status='angehalten', detail='Angehalten', wartet=False)          # auch ein Wartender verlässt die Schlange
         ablage.stand_schreiben(stand)
         figur = (stand.get('ergebnis') or {}).get('figur') or {}
         if figur.get('id'):

@@ -231,14 +231,14 @@ class VerdrahtungTest(unittest.TestCase):
         from pathlib import Path
 
         quelle = (Path(__file__).resolve().parents[2] / 'dienste' / 'meshfigurkleidung.py').read_text(encoding='utf-8')
-        self.assertIn('maske, bereinigung = self._bereinigen(maske, regel)', quelle)
+        self.assertIn('maske, bereinigung = self._bereinigen(maske, regel, ', quelle)
         self.assertIn('maske = self._bart_abziehen(maske, regel)', quelle)
-        self.assertLess(quelle.index('self._bereinigen(maske, regel)'), quelle.index("np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz')"))
+        self.assertLess(quelle.index('self._bereinigen(maske, regel, '), quelle.index("np.savez_compressed(self.ablage.arbeit('kleidung_maske.npz')"))
         self.assertIn("hautfarbe=np.asarray(modell.ist_haut(entscheidung['farben'])", quelle)
         self.assertIn('self._hautrand_behandeln(scan, wahl, hautfarbe', quelle)        # seit 13.10.2026: umfärben statt abschälen (`hautband`-Option); vorher `_ohne_hautrand`
         self.assertIn('Kleidungsrand.umfaerben(nachbarn, band, scan.uv_ecken[ids], np.asarray(scan.punkte)', quelle)
         self.assertIn('Kleidungsrand.hautband(nachbarn, hautfarbe[ids], scan.flaecheninhalte()[ids])', quelle, 'die kleinen hautfarbenen Inseln im Innern (14.10.2026) brauchen den Flächeninhalt')
-        self.assertLess(quelle.index('self._bereinigen(maske, regel)'), quelle.index('Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)'), 'Haar nach dem Bereinigen abziehen')
+        self.assertLess(quelle.index('self._bereinigen(maske, regel, '), quelle.index('Meshfigurhaarabzug.abziehen(self.ablage, maske, regel)'), 'Haar nach dem Bereinigen abziehen')
 
 
 if __name__ == '__main__':

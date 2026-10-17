@@ -150,6 +150,15 @@ export class Figurhaut {
         for (const g of gruppen) geo.addGroup(g.start, g.count, g.materialIndex);
     }
 
+    /**
+     * Alle Netze, die die Haut verdecken können: die getragenen Stücke (`inst.clothMeshes`) und Objekte, die eine Seite von außen anmeldet
+     * (`inst.hautStuecke`, Kennung → Netz in der Ruhelage der Figur) — Mesh-3D meldet so das Kleidungsobjekt aus dem Netz an (14.10.2026, Edgar:
+     * Mesh-3D soll sich wie Charakter und Studio verhalten; dort kam die Haut unter dem Stoff nie durch, hier schon).
+     */
+    static stuecke(inst) {
+        return { ...(inst?.clothMeshes || {}), ...(inst?.hautStuecke || {}) };
+    }
+
     /** Der volle Index eines Körpers, gekürzt oder nicht. */
     static vollerIndex(geo) {
         return geo?.userData?.indexVoll?.index || geo?.index?.array || null;

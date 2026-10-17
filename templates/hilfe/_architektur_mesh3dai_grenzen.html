@@ -1,0 +1,111 @@
+{% load dezahl %}
+{% comment %}Abschnitt 5: warum die Finger brachen, und die Ausgabe als Daz-Winkel in ihren Grenzen (16.10.2026). Daten: `Architekturmesh3daigrenzen` (Bericht und Grenzen aus dem Datensatz, Vergleich der Läufe gerechnet).{% endcomment %}
+<h2 id="grenzen">5. Warum die Finger brachen — Ausgabe als Daz-Winkel</h2>
+<p>Edgar (16.10.2026, mit einem Bild aus dem Ergebnisfeld: eine Hand mit abgeknickten Fingern): „ich verstehe nicht, wie du mit Genesis-Reglern so kaputte Finger und Gesichter kriegen kannst. Das sollte doch
+  mit den Reglern gar nicht gehen, weil die Beschränkungen haben … Was ist falsch an unserem Ansatz?"</p>
+{% if grenzen %}
+{% with b=grenzen.bericht %}
+<h3>Was das Ergebnisfeld bis dahin zeigte</h3>
+<ul>
+  <li><strong>Das Netz gab keine Genesis-Regler und keine Gelenkwinkel aus</strong>, sondern 138 frei geschätzte 3D-Punkte (414 Zahlen ohne Bezug zueinander). Die Grenzen von Genesis griffen deshalb nirgends.</li>
+  <li><strong>Das Ergebnisfeld häutete daraus eine Näherung</strong> (<code>mesh3daihaeutung.js</code>, <code>knochenmatrizen</code>): jeder Knochen an seinen geschätzten Punkt geschoben und auf dem kürzesten Bogen zu
+    seinen Kindern gedreht. Keine festen Knochenlängen, keine Gelenkgrenzen, keine Drehung um die Längsachse; die Fingerspitzen (<code>l_index3</code> …) saßen an ihrem eigenen Punkt, abgelöst vom Glied davor.</li>
+  {% if grenzen.glieder_mm %}<li><strong>Fehler gegen Gliedlänge:</strong> die Fingerglieder von Ursula1 sind {{ grenzen.glieder_mm.0|de:0 }}–{{ grenzen.glieder_mm.1|de:0 }} mm lang (Ruhelage, <code>kinematik.json</code>);
+    der Fingerfehler des Laufs mit freien Punkten steht unten in der Tabelle (Spalte Finger). Ein Fehler, der ein Vielfaches eines Glieds ist, lässt jedes Glied in eine beliebige Richtung zeigen — auch seitwärts oder nach hinten.</li>{% endif %}
+  <li><strong>Gesicht:</strong> die 37 Gesichtsknochen wurden genauso einzeln verschoben, das Gesicht riss auseinander — obwohl die Mimik im Datensatz nie verändert wird und das Gesicht starr am Kopf hängen müsste.</li>
+</ul>
+
+<h3>Genesis hat die Grenzen</h3>
+<p><code>Genesis9.dsf</code>: {{ b.kanaele.gesamt|de }} Drehkanäle (138 Knochen × x, y, z), alle mit Grenzen (<code>clamped</code>); {{ b.kanaele.ohne_spielraum|de }} davon ohne jeden Spielraum (min = max).
+  Beispiele (Grad, Achsen um die Knochenachsen aus <code>orientation</code>, Reihenfolge <code>rotation_order</code> — die erste Achse zuerst):</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Knochen</th><th>Reihenfolge</th><th>x</th><th>y</th><th>z</th></tr></thead>
+  <tbody>{% for k in grenzen.beispiele %}<tr><td>{{ k.name }}</td><td>{{ k.reihenfolge }}</td>
+    {% for a in k.achsen %}<td class="num">{% if a.gesperrt %}gesperrt ({{ a.min|de:0 }}){% else %}{{ a.min|de:0 }} … {{ a.max|de:0 }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Ein mittleres Fingerglied beugt sich in Daz also nur um eine Achse; Verdrehen und Seitbeugen sind gesperrt.</p>
+
+<h3>Der Fehler im Ansatz</h3>
+<p>Das Netz sollte Punkte raten statt eine Pose der Figur. Knochenlängen, Gelenkachsen, Grenzen und das starre Gesicht musste es selbst lernen — mit 50 Posen geht das nicht. Die Ausgabe als Punkte war meine Wahl,
+  weil der Datensatz Punkte enthielt.</p>
+
+<h3>Was jetzt gebaut ist (16.10.2026)</h3>
+<ul>
+  <li><strong>Ausgabe:</strong> je <em>freiem</em> Daz-Kanal eine Zahl z, Winkel = min + (max − min) · sigmoid(z) — ein Winkel außerhalb der Grenzen ist nicht darstellbar. Dazu die Wurzel <code>hip</code>: Drehung als 6D, Lage frei.
+    <strong>Fest</strong> stehen Kanäle ohne Spielraum und Kanäle, die sich im Training nicht bewegen (Spanne unter 0,05°) — darunter das ganze Gesicht, solange der Datensatz keine Mimik hat.</li>
+  <li><strong>Vorwärtskinematik als letzte Schicht</strong> (<code>ProjektTemp/_wegwerf/mesh3dai_kinematik_torch.py</code>): D<sub>b</sub> = D<sub>Eltern</sub> · O·E·Oᵀ, p<sub>b</sub> = p<sub>Eltern</sub> + D<sub>Eltern</sub> · (c<sub>b</sub> − c<sub>Eltern</sub>);
+    E in der Reihenfolge des Knochens, O aus <code>orientation</code>, c die Gelenke der Ruhelage — je Job sein eigenes Skelett (<code>kinematik.json</code>), bei den Formvarianten das ihrer Formung,
+    bei Testnetzen das der vorhergesagten Figur. Knochenlängen stimmen durch die Bauart.
+    <strong>Gegenprobe:</strong> die Vorwärtsrechnung aus den Winkeln des Datensatzes trifft <code>soll.npz</code> auf {{ b.vorwaerts_max_mm|de:4 }} mm (alle {{ b.proben|de }} Proben).</li>
+  <li><strong>Verlust:</strong> Abstand der 138 Gelenke UND ihrer Enden (Kopf → Ende jedes Knochens) — sonst bekämen die Endglieder (Fingerspitzen) nie eine Rückmeldung zu ihrer Drehung.</li>
+  <li><strong>Ergebnisfeld:</strong> Ursula1 aus der Ruhelage mit den Drehungen des Netzes gehäutet — dieselbe Hautmischung wie das Ziel im Datenskript (<code>Mesh3daihaeutung.ausDrehungen</code>, Ruhelage im Anzeigenetz).
+    Für Läufe mit freien Punkten bleibt die Näherung.</li>
+</ul>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Gruppe</th><th>Knochen</th><th>Kanäle</th><th>ohne Spielraum</th><th>im Training unbewegt</th><th>frei (gibt das Netz aus)</th></tr></thead>
+  <tbody>{% for g in b.gruppen %}<tr><td>{{ g.gruppe }}</td><td class="num">{{ g.knochen }}</td><td class="num">{{ g.kanaele }}</td><td class="num">{{ g.ohne_spielraum }}</td><td class="num">{{ g.ohne_bewegung }}</td><td class="num">{{ g.frei }}</td></tr>{% endfor %}
+    <tr class="m3a-summe"><td>Summe (ohne Wurzel)</td><td></td><td class="num">{{ b.kanaele.gesamt|add:"-3" }}</td><td class="num">{{ b.kanaele.ohne_spielraum }}</td><td class="num">{{ b.kanaele.ohne_bewegung }}</td><td class="num">{{ b.kanaele.frei }} + Wurzel 9</td></tr></tbody>
+</table>
+
+<h3>Befund: schon die Zielposen verletzen die Grenzen</h3>
+<p>Die Winkel jeder Probe sind aus derselben Pose gerechnet wie <code>soll.npz</code> (Retarget BVH → Genesis 9). <strong>{{ b.proben_mit_verletzung }} von {{ b.proben }} Proben</strong> liegen an mindestens einem Kanal
+  mehr als 1° außerhalb der Daz-Grenzen; {{ b.werte_verletzt|de }} von {{ b.werte_gesamt|de }} Kanalwerten. Der Retarget legt Drehung auf Achsen, die Genesis sperrt: Fingerglieder um die eigene Achse verdreht,
+  das Ellbogengelenk seitlich gebeugt (<code>forearm</code> z), das Handgelenk verdreht (Daz legt die Verdrehung in den Unterarm und seine Twist-Knochen).
+  Ein Netz mit begrenzter Ausgabe kann diese Ziele also nicht genau treffen; es sucht die nächste gültige Pose.</p>
+<div class="m3a-spalten">
+  <div class="m3a-links">
+    <table class="doku">
+      <thead><tr><th>Gruppe</th><th>Werte &gt; 1° daneben</th><th>&gt; 10°</th><th>größte</th></tr></thead>
+      <tbody>{% for v in b.verletzungen %}<tr><td>{{ v.gruppe }}</td><td class="num">{{ v.ueber_1|de }}</td><td class="num">{{ v.ueber_10|de }}</td><td class="num">{{ v.groesste|de:1 }}°</td></tr>{% endfor %}</tbody>
+    </table>
+    <p class="m3a-klein"><strong>Grenzfehler</strong> — jeden Winkel einzeln auf seine Grenze geklemmt, feste Kanäle auf ihrem Wert, gegen <code>soll.npz</code> (mm, Mittel über die 138 Gelenke). Das Netz kann besser
+      sein, weil es über andere Gelenke ausgleicht:</p>
+    <table class="doku">
+      <thead><tr><th>Proben</th><th>Ø</th><th>größter</th><th>Finger</th><th>Hand</th><th>Arm</th><th>Gesicht</th></tr></thead>
+      <tbody>{% for g in b.grenzfehler %}<tr><td>{{ g.gruppe }} ({{ g.proben }})</td><td class="num">{{ g.mittel_mm|de:1 }}</td><td class="num">{{ g.groesster_mm|de:0 }}</td><td class="num">{{ g.je_gruppe_mm.finger|de:1 }}</td>
+        <td class="num">{{ g.je_gruppe_mm.hand|de:1 }}</td><td class="num">{{ g.je_gruppe_mm.arm|de:1 }}</td><td class="num">{{ g.je_gruppe_mm.gesicht|de:1 }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <div class="m3a-rechts">
+    <table class="doku">
+      <thead><tr><th>Knochen</th><th>Achse</th><th>Grenze</th><th>Median</th><th>von … bis</th><th>Proben &gt; 10° daneben</th></tr></thead>
+      <tbody>{% for z in b.groesste %}<tr><td>{{ z.knochen }}</td><td>{{ z.achse }}</td><td class="num">{{ z.min|de:0 }} … {{ z.max|de:0 }}</td><td class="num">{{ z.median|de:1 }}</td>
+        <td class="num">{{ z.von|de:0 }} … {{ z.bis|de:0 }}</td><td class="num">{{ z.proben_ueber_10 }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+
+<h3>Ergebnis: freie Punkte gegen Daz-Winkel</h3>
+{% if grenzen.vergleich %}
+<p>Beide Läufe auf denselben Proben, gleiche Daten, gleiche Einstellungen (Epochen, Augmentierung, Rumpf des Netzes). Fehler in mm je Gelenk (Mittel); Knochenlänge = Abweichung der Strecke Eltern → Knochen vom Soll;
+  Grenzverletzungen = Winkel der Ausgabe außerhalb der Daz-Grenzen (nur bei Daz-Winkeln messbar).</p>
+<table class="doku">
+  <thead><tr><th>Lauf</th><th>Ausgabe</th><th>Proben</th><th>Ø</th><th>Finger</th><th>Hand</th><th>Gesicht</th><th>Kopf</th><th>Arm</th><th>Rumpf</th><th>Bein</th><th>Knochenlänge Ø / größte</th><th>Grenzverletzungen</th></tr></thead>
+  <tbody>{% for l in grenzen.vergleich %}{% for g in l.gruppen %}<tr>
+    <td>{% if forloop.first %}{{ l.lauf }}<br><span class="m3a-klein">{{ l.zahlen }} Ausgabezahlen, {{ l.parameter|de }} Gewichte, {{ l.dauer_s }} s</span>{% endif %}</td>
+    <td>{% if forloop.first %}{% if l.ausgabe == 'kanaele' %}Daz-Winkel{% else %}freie Punkte{% endif %}{% endif %}</td>
+    <td>{{ g.gruppe }} ({{ g.proben }})</td><td class="num">{{ g.netz_mm|de:1 }}</td><td class="num">{{ g.je.finger|de:1 }}</td><td class="num">{{ g.je.hand|de:1 }}</td><td class="num">{{ g.je.gesicht|de:1 }}</td>
+    <td class="num">{{ g.je.kopf|de:1 }}</td><td class="num">{{ g.je.arm|de:1 }}</td><td class="num">{{ g.je.rumpf|de:1 }}</td><td class="num">{{ g.je.bein|de:1 }}</td>
+    <td class="num">{{ g.laenge_mm|de:2 }} / {{ g.laenge_max_mm|de:0 }}</td><td class="num">{% if g.verletzt is None %}—{% else %}{{ g.verletzt }}{% endif %}</td></tr>{% endfor %}{% endfor %}</tbody>
+</table>
+<p><strong>Lesart (16.10.2026, Läufe <code>posen50_plan_e480</code> gegen <code>kanaele_e480</code>, je ein Lauf, keine Streuung gemessen):</strong> Mit Daz-Winkeln gibt es keinen gebrochenen Finger und kein
+  auseinandergerissenes Gesicht mehr — Knochenlängen und Grenzen stimmen durch die Bauart (freie Punkte: Knochenlänge im Mittel 11–15 mm daneben, einzelne Knochen bis 29 cm — Tabelle). <strong>Genauer wird es dadurch
+  nicht:</strong> auf dem Training liegen beide im Mittel gleich (Finger, Hände und Gesicht näher, Rumpf und Beine weiter weg); auf den nie trainierten Proben liegt der Lauf mit Daz-Winkeln fast überall
+  weiter weg, auch an Fingern und Händen — nur das Gesicht der Prüfposen kommt näher. Ein Teil davon ist die Grenze selbst: die Ziele liegen außerhalb dessen, was Genesis erlaubt (oben).
+  <em>Vermutung, nicht gemessen:</em> ein Fehler in der Drehung von Hüfte und Wirbelsäule wandert durch die ganze Kette, während freie Punkte jedes Gelenk für sich treffen.</p>
+{% else %}
+<p class="ag-fehlt">Kein Lauf mit Daz-Winkeln unter <code>_laeufe/</code>.</p>
+{% endif %}
+
+<h3>Offen</h3>
+<ul>
+  <li><strong>Zielposen in den Grenzen:</strong> den Retarget auf Genesis so ändern, dass er die Grenzen achtet (Verdrehung in Unterarm und Twist-Knochen, keine Seitbeuge im Ellbogen) — das betrifft auch Studio und
+    Charakter; oder das Ziel im Datensatz auf die nächste gültige Pose ziehen (neue Flächen und Eingaben, rund 10 min Datenlauf). Entscheidung Edgar.</li>
+  <li><strong>Twist-Knochen:</strong> Daz dreht <code>forearmtwist</code>/<code>upperarmtwist</code>/<code>thightwist</code> per Formel mit; Ziel und Ergebnis tun es hier beide nicht (im Training unbewegt, also fest).</li>
+  <li><strong>Rumpf und Beine:</strong> Fehler durch die Kette (Vermutung oben) — zu prüfen etwa mit einem Verlust, der Hüfte und Wirbelsäule stärker gewichtet.</li>
+  <li>Unabhängig davon lernte dieses erste Netz die 50 verschiedenen Trainingsposen nicht unter rund 75 mm (Abschnitt 7, Grundprobe); das Stimmen-Netz kommt auf 8–14 mm (Kurz erklärt, Läufe).</li>
+</ul>
+{% endwith %}
+{% else %}
+<p class="ag-fehlt">Kein Kinematik-Bericht im Datensatzordner (<code>kinematik_bericht.json</code> fehlt — <code>ProjektTemp/_wegwerf/mesh3dai_kinematik.py</code> rechnen).</p>
+{% endif %}

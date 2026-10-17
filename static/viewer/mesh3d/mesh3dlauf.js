@@ -45,12 +45,13 @@ export class Mesh3dlauf {
             this.liste.appendChild(punkt);
         }
         this.balken.style.width = `${laeuft || z.status === 'fertig' ? z.fortschritt : (z.status === 'neu' ? 0 : z.fortschritt)}%`;
-        const klar = Mesh3dlauf.STATUS[z.status] || z.status;
-        this.text.textContent = laeuft ? `${z.fortschritt} % — ${z.detail || z.schritt || ''}` : `${klar}${z.dauer_s ? ` · ${Mesh3danzeige.dauer(z.dauer_s)}` : ''}`;
+        const klar = z.wartet ? 'In der Warteschlange' : (Mesh3dlauf.STATUS[z.status] || z.status);
+        // Eingereiht (ein anderer Import rechnet): eine normale Auskunft statt eines Fehlers, der Auftrag startet von selbst.
+        this.text.textContent = z.wartet ? (z.detail || 'In der Warteschlange') : laeuft ? `${z.fortschritt} % — ${z.detail || z.schritt || ''}` : `${klar}${z.dauer_s ? ` · ${Mesh3danzeige.dauer(z.dauer_s)}` : ''}`;
         this.status.textContent = klar;
         this._abwahl(z);
         this.starten.disabled = laeuft;
-        this.starten.querySelector('span').textContent = laeuft ? 'Berechnet …' : 'Neu berechnen';
+        this.starten.querySelector('span').textContent = z.wartet ? 'Eingereiht …' : laeuft ? 'Berechnet …' : 'Neu berechnen';
         this.anhalten.disabled = !laeuft;
         this.ab.disabled = laeuft;
     }
@@ -70,9 +71,14 @@ export class Mesh3dlauf {
     async neu(ab, knopf = null) {
         const tat = async () => {
             try {
+                // Eine hochgeladene, nicht übernommene Datei kommt zuerst ins Netz des Auftrags (`Mesh3dquelle.vorStart`); ein neues Netz rechnet immer von vorn (die Ergebnisse des alten sind weg).
+                const quelle = await this.seite.quelle.vorStart();
+                if (quelle === false) return;
+                if (quelle?.neues_netz) ab = null;
                 const antwort = await Serverabruf.senden(`/api/character/blendimport/${this.seite.kennung}/neu/`, { ab });
                 if (antwort.error) throw new Error(antwort.error);
                 await this.seite.aktualisieren();
+                if (antwort.wartet && antwort.meldung) this.text.textContent = antwort.meldung;      // sofort sagen, dass der Auftrag eingereiht ist (der nächste Takt bringt denselben Text vom Stand)
             } catch (fehler) {
                 this.seite.fehlerband.meldung(`Start fehlgeschlagen: ${fehler.message}`);
                 throw fehler;

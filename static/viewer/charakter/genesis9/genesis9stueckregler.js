@@ -5,6 +5,8 @@ import { Dazkleidung } from './dazkleidung.js';
 import { Sortenanteile } from './sortenanteile.js';
 import { Kleidfarbmischung } from '../../gemeinsam/kleidfarbmischung.js';
 import { Genesis9morphformular } from './genesis9morphformular.js';
+import { Genesis9garderobekategorien } from './genesis9garderobekategorien.js';
+import { Combosortierung } from '../../gemeinsam/combosortierung.js';
 
 /**
  * Genesis9stueckregler — die Anpassungsregler EINES Daz-Kleidungsstücks.
@@ -20,7 +22,13 @@ import { Genesis9morphformular } from './genesis9morphformular.js';
 export class Genesis9stueckregler {
 
     /**
-     * Der Kasten „Einstellungen" eines Stücks — mit dem Kopf; die Zeilen entstehen erst beim ERSTEN Aufklappen.
+     * Der Knopf „Einstellungen (N)" IN der Zeile des Stücks (`zeile`) und der Kasten mit den Reglern, der sich darunter
+     * öffnet (zurückgegeben: der Aufrufer hängt ihn hinter die Zeile). Die Zeilen entstehen erst beim ERSTEN Aufklappen.
+     *
+     * Edgar, 16.10.2026: „die ‚Einstellungen' verwirren sehr, die oberhalb der Assets sind" — bis dahin ein eigener Klappkasten
+     * (`<details>`, rot) unter jeder Zeile; der von „Kleidung – Generisch: Alle Kategorien" stand ganz oben und trug Gruppen
+     * mit denselben Namen wie die Kategorien darunter. Jetzt sitzt der Knopf in der Zeile, alles ist gelb, und die Gruppen
+     * folgen der Reihenfolge der Kategorien (`_geordnet`).
      *
      * Edgar, 09.10.2026: „warum dauert laden des Characters ewig … ich brauche schnelles Anzeigen, damit ich drehen und
      * vergrößern kann". Gemessen (Chrome, `/Charakter/`): Die Garderobe baute für alle 634 Stücke ihre Regler und das Formular
@@ -28,18 +36,43 @@ export class Genesis9stueckregler {
      * Formular einer, doppelt gebaut: 1.137), und der Hauptfaden stand danach ~44 s. Zu sehen ist davon nichts, solange die
      * Kästen zu sind (alle stehen ZU, `Genesis9garderobe`).
      */
-    static bauen(inst, stueck, werteLesen) {
-        const kasten = document.createElement('details');
-        kasten.className = 'uma-gruppe genesis9-stueckregler';
-        kasten.innerHTML = `<summary class="gedaempft">Einstellungen `
-            + `<span class="gedaempft">(${stueck.regler.length})</span></summary>`;
+    static bauen(inst, stueck, werteLesen, zeile) {
+        const kasten = document.createElement('div');
+        kasten.className = 'genesis9-stueckregler';
+        kasten.hidden = true;
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'einstellung-knopf';
+        knopf.setAttribute('aria-expanded', 'false');
+        knopf.textContent = `Einstellungen (${stueck.regler.length})`;
         let gebaut = false;
-        kasten.addEventListener('toggle', () => {
-            if (!kasten.open || gebaut) return;
+        knopf.addEventListener('click', () => {
+            const auf = kasten.hidden;
+            kasten.hidden = !auf;
+            knopf.classList.toggle('offen', auf);
+            knopf.setAttribute('aria-expanded', String(auf));
+            if (!auf || gebaut) return;
             gebaut = true;
             Genesis9stueckregler._zeilen(kasten, inst, stueck, werteLesen);
         });
+        zeile.appendChild(knopf);
         return kasten;
+    }
+
+    /**
+     * Die Kategorie-Gruppen so geordnet, wie die Kategorien in den Assets stehen: alphabetisch, mit derselben Regel wie
+     * `Baumsortierung` (`Combosortierung.KOLLATOR`). Was vor der ersten Kategorie stand (Passform, Mischung, Textur), bleibt
+     * vorn; was danach kam (Form (Ort)), hinten. Ohne Kategorie unter den Gruppen — jedes einzelne Stück — bleibt die
+     * Reihenfolge des Servers.
+     */
+    static _geordnet(gruppen) {
+        const eintraege = [...gruppen];
+        const ist = ([name]) => Genesis9garderobekategorien.ist(name);
+        const erste = eintraege.findIndex(ist);
+        if (erste < 0) return eintraege;
+        const name = ([n]) => Combosortierung.schluessel(n);
+        const kategorien = eintraege.filter(ist).sort((a, b) => Combosortierung.KOLLATOR.compare(name(a), name(b)));
+        return [...eintraege.slice(0, erste), ...kategorien, ...eintraege.slice(erste).filter(e => !ist(e))];
     }
 
     /** Die Zeilen, Gruppen und das Morph-Formular in den aufgeklappten Kasten. */
@@ -49,7 +82,7 @@ export class Genesis9stueckregler {
             if (!gruppen.has(r.gruppe)) gruppen.set(r.gruppe, []);
             gruppen.get(r.gruppe).push(r);
         }
-        for (const [gruppe, regler] of gruppen) {
+        for (const [gruppe, regler] of Genesis9stueckregler._geordnet(gruppen)) {
             const ziel = gruppen.size > 1
                 ? Genesis9stueckregler._gruppe(kasten, gruppe, regler.length)
                 : kasten;
@@ -167,9 +200,10 @@ export class Genesis9stueckregler {
         regler.sorte_zuletzt = name.slice('sorte.'.length);
     }
 
-    /** Daz-Regler in Prozent; Passform-Regler (`einheit: cm`, `Genesis9/passform.py`) in Zentimetern. */
+    /** Daz-Regler in Prozent; Passform-Regler (`einheit: cm`, `Genesis9/passform.py`) in Zentimetern, der Abstand der Drapierung (`einheit: mm`) in Millimetern. */
     static text(wert, regler = null) {
         if (regler?.einheit === 'cm') return `${(Math.round(wert * 10) / 10).toFixed(1)} cm`;
+        if (regler?.einheit === 'mm') return `${(Math.round(wert * 10) / 10).toFixed(1)} mm`;      // war „300 %": Wert 3 mm als Prozent (16.10.2026)
         return `${Math.round(wert * 100)} %`;
     }
 }

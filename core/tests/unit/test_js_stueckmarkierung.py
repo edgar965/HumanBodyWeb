@@ -111,6 +111,10 @@ const zeileJeans = kasten.anhaengen(new Element('div', {klassen: ['slider-row']}
 zeileJeans.anhaengen(new Element('input', {id: 'g9-kleid-angie_jeans'}));
 const zeileShirt = kasten.anhaengen(new Element('div', {klassen: ['slider-row', 'selected']}));
 zeileShirt.anhaengen(new Element('input', {id: 'g9-kleid-g9_base_shirt'}));
+// Ein Stück, dessen Kennung selbst mit `daz_` beginnt (Daz Anatomie Mann, 16.10.2026) — in einer eigenen Kategorie.
+const kasten2 = garderobe.anhaengen(new Element('details', {klassen: ['g9-kategorie']}));
+const zeileAnatomie = kasten2.anhaengen(new Element('div', {klassen: ['slider-row']}));
+zeileAnatomie.anhaengen(new Element('input', {id: 'g9-kleid-daz_anatomie_mann'}));
 // MakeHuman-Liste: Ordner zu, Zeile mit data-garment-id.
 const mh = wurzel.anhaengen(new Element('div', {id: 'mh-list', klassen: ['anim-tree']}));
 const ordner = mh.anhaengen(new Element('div', {klassen: ['anim-folder']}));
@@ -135,7 +139,9 @@ fn.mhAuswahlGeaendert = () => aufrufe.push(['mh']);
 Stueckmarkierung.WARTEN_MS = 1;
 // `characters` wie `scene/state.js`: eine Map charId -> Instanz mit `gcStuecke`.
 const gcHose = {gcStuecke: {gc_hose: {quelle: {art: 'vorbild', schluessel: 'vorbild_x'}}}};
-const zustand = {characters: new Map([['fig1', gcHose]])};
+// Eine Genesis-9-Figur (kennt `anziehenMitGriff`) trägt „daz_anatomie_mann" in `kleidung`.
+const genesis9 = {anziehenMitGriff() {}, kleidung: {daz_anatomie_mann: {}}};
+const zustand = {characters: new Map([['fig1', gcHose], ['fig2', genesis9]])};
 const markierung = new Stueckmarkierung(zustand);
 
 // --- 1. Daz-Stueck auf Genesis 9: Assets-Reiter geklickt, Zeile markiert ---
@@ -194,6 +200,15 @@ pruefe('MH-Wahl bleibt', zeileMh.classList.contains('selected'), true);
 // --- 7. Fehlende Zeile: kein Fehler, nach den Versuchen null --------------
 Stueckmarkierung.VERSUCHE = 2;
 pruefe('fehlt', await Stueckmarkierung.zeile('daz', 'gibtesnicht'), null);
+
+// --- 8. Kennung mit `daz_` auf Genesis 9: die Zeile `g9-kleid-daz_anatomie_mann` (16.10.2026) ---
+// Edgar: „wenn ich darauf klicke im Viewer, erscheint es nicht ausgewählt im Tab links". `daz_anatomie_mann/0` las die Zuordnung als
+// HumanBody-Stück „anatomie_mann" — die Zeile dazu gibt es nicht. Mit der Figur (`charId`) kennt sie das getragene Stück.
+Stueckmarkierung.VERSUCHE = 3;
+await markierung.zeigen({key: 'daz_anatomie_mann/0', charId: 'fig2'});
+pruefe('Anatomie markiert', zeileAnatomie.classList.contains('selected'), true);
+pruefe('Kategorie der Anatomie offen', kasten2.open, true);
+pruefe('andere Kategorie zu', kasten.open, false);
 
 console.log(JSON.stringify({ok: true}));
 """

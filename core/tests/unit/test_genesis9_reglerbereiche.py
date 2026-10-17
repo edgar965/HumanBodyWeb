@@ -69,7 +69,7 @@ class Reglerbereiche(SimpleTestCase):
                          'huefte')
         self.assertEqual(b(kanal('/Pose Controls/Neck', 'Neck Flex')), 'hals')
         self.assertEqual(b(kanal('/Pose Controls/Head/Mouth', 'Jaw Open')), 'mimik')
-        self.assertIsNone(b(kanal('/Pose Controls/Head/Eyes/Base Anime', 'x')))
+        self.assertEqual(b(kanal('/Pose Controls/Head/Eyes/Base Anime', 'x')), 'mimik')       # Toon-Mimik zählt seit 17.10.2026 mit
         self.assertIsNone(b(kanal('/Pose Controls/Quatsch', 'x')))
 
     def test_3_people_figur_kopf_koerper(self):

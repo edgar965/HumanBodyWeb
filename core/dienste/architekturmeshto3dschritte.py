@@ -64,7 +64,7 @@ class Architekturmeshto3dschritte:
          ['Meshfigurkette', 'Meshfigurregler', 'Meshfigurgenesis'],
          ['Meshfigurrunner', 'Meshfigurregistrierung', 'Meshfigurmodell', 'Meshfigurkinematik', 'Meshfigurabstand', 'Meshfigurlandmarken', 'Meshfigurrumpfpruefung'],
          'Körperkette in Runden (Vorgabe 2). Je Runde rechnet python14 die Figur für die aktuelle Reglerstellung ECHT (Formelketten, Knochenskalierung, Daz-Gelenkkorrekturen '
-         'der gefundenen Haltung), der Runner stellt die Regler auf der Karte (torch, Adam) und meldet Werte und Haltung zurück. Runde 1 in vier Stufen — haltung → groesse → '
+         'der gefundenen Haltung), der Runner stellt die Regler auf der Karte (torch, Adam) und meldet Werte und Haltung zurück. Runde 1 in fünf Stufen — haltung_breit → haltung → groesse → '
          'koerpertyp → bereiche —, ab Runde 2 eine Stufe mit allen Reglern. Option Körpergröße: nach Runde 1 wird das Netz um den Boden auf die Größe gestreckt (Runner-Schritt '
          'skalieren). Am Ende das Tor `Meshfigurrumpfpruefung` (Rumpftiefe gegen das Netz, Regler am Anschlag).',
          'ergebnis.koerper (runden mit dem Verlauf je Stufe, haltung, stellung, tor), arbeit/zustand.npz, posiert.npy.'),

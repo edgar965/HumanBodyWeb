@@ -210,7 +210,7 @@ export class Aktionsprotokoll {
         if (!ziel) return;
         const verzoegert = Math.round(performance.now() - e.timeStamp);
         const stufe = verzoegert >= Aktionsprotokoll.HAENGER_MS ? 'warning' : 'info';
-        const rest = ` · verzoegert=${verzoegert}ms${ziel.disabled ? ' · GESPERRT' : ''}${e.isTrusted ? '' : ' · per Skript'}`;
+        const rest = ` · verzoegert=${verzoegert}ms${ziel.disabled ? ' · GESPERRT' : ''}${e.isTrusted ? ` · bei ${Math.round(e.clientX)},${Math.round(e.clientY)}` : ' · per Skript'}`;
         this.melden('klick', this.beschreiben(ziel) + rest, stufe);
     }
 

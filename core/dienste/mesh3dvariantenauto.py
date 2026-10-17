@@ -44,8 +44,8 @@ class Mesh3dvariantenauto:
         stand = ablage.stand()
         if not stand or (stand.get('weg') or 'teile') != 'netz':
             return None
-        if (stand.get('einstellungen') or {}).get('vergleichsvariante', 'an') != 'an':
-            return None
+        if (stand.get('einstellungen') or {}).get('vergleichsvariante', 'an') != 'an' or (stand.get('einstellungen') or {}).get('umfang') == 'rig':
+            return None          # „Nur Rig“ (16.10.2026): eine Variante wäre eine ganze Figur, kein Vergleich
         wert = cls.GEGENWERT.get(Mesh3dvarianten.aktuell(stand, cls.FELD))
         daten = Mesh3dvarianten.lesen(kennung)
         vorhanden = {e['wert'] for e in daten['eintraege'] if e['feld'] == cls.FELD} | {daten['vorher'].get(cls.FELD)}

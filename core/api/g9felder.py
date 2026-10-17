@@ -155,6 +155,19 @@ class G9felderapi:
             if k['name'] in dreh:
                 eintrag['dreh'] = dreh[k['name']]
             aus[k['name']] = eintrag
+        for name, eintrag in G9felderapi.anhangachsen().items():
+            aus.setdefault(name, eintrag)
+        return aus
+
+    @staticmethod
+    def anhangachsen():
+        u"""Die eigenen Knochen der Grundanhänge (Mund: `tongue01…05`, 17.10.2026) im Format von `achsen` — die Zungenregler der Mimik-Spur drehen sie
+        (`G9anhangformeln`); ohne Achse überginge sie `Mimikgenesis9._knochen`."""
+        from Genesis9.anhang import G9anhang
+        aus = {}
+        for _schluessel, folger in G9anhang.alle():
+            for k in (folger.eigene.knochen if folger.eigene is not None else ()):
+                aus[k['name']] = {'o': [round(float(w), 4) for w in k['orientation']], 'r': k['reihenfolge']}
         return aus
 
     @staticmethod

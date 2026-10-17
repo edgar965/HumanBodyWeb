@@ -44,6 +44,8 @@ class G9lagenanfrage:
     #: Vorsatz der Kennung eines GarmentCode-Stuecks in `innen`/`aussen`.
     GC = 'gc:'
     _kaefige = OrderedDict()
+    #: Schluessel -> Event: dieser Kaefig wird gerade von einem Thread gerechnet (`_kaefig`).
+    _rechnend = {}
     _schloss = threading.Lock()
 
     def __init__(self, rumpf, formung, koerper, grob=None, gc=None):
@@ -140,19 +142,34 @@ class G9lagenanfrage:
         return bool((G9garderobe.eintrag(kennung) or {}).get('eigen'))
 
     def _kaefig(self, kennung, stile, regler):
-        u"""Der gehobene Kaefig eines getragenen Stuecks — aus dem Vorrat oder gerechnet."""
+        u"""Der gehobene Kaefig eines getragenen Stuecks — aus dem Vorrat oder gerechnet, je Schluessel von EINEM Thread.
+
+        Ein Reglerzug fragt alle Stuecke GLEICHZEITIG (`Genesis9aufbau.alles`), und jedes will die Kaefige der anderen: Ohne Absprache rechnete jede der vier
+        Anfragen dieselben drei Kaefige (je 0,24 s) noch einmal (16.10.2026). Wer den Schluessel zuerst hat, rechnet; die anderen warten und nehmen das Ergebnis.
+        Scheitert der Rechner, rechnet der naechste Wartende selbst — und bekommt denselben Fehler zu sehen."""
         schluessel = json.dumps([kennung, self.formung.fingerabdruck(), stile, regler],
                                 sort_keys=True, default=str)
-        with self._schloss:
-            punkte = self._kaefige.get(schluessel)
-            if punkte is not None:
-                self._kaefige.move_to_end(schluessel)
-                return punkte
-        punkte = self.lagen.kaefig(kennung, self.formung, stile, regler)
-        with self._schloss:
-            self._kaefige[schluessel] = punkte
-            while len(self._kaefige) > self.KAEFIGE_MAX:
-                self._kaefige.popitem(last=False)
+        while True:
+            with self._schloss:
+                punkte = self._kaefige.get(schluessel)
+                if punkte is not None:
+                    self._kaefige.move_to_end(schluessel)
+                    return punkte
+                rechnet = self._rechnend.get(schluessel)
+                if rechnet is None:
+                    self._rechnend[schluessel] = threading.Event()
+                    break
+            rechnet.wait()
+        try:
+            punkte = self.lagen.kaefig(kennung, self.formung, stile, regler)
+            with self._schloss:
+                self._kaefige[schluessel] = punkte
+                while len(self._kaefige) > self.KAEFIGE_MAX:
+                    self._kaefige.popitem(last=False)
+        finally:
+            with self._schloss:
+                fertig = self._rechnend.pop(schluessel)
+            fertig.set()
         return punkte
 
     def _gc_kaefig(self, eintrag):

@@ -101,6 +101,39 @@ export class Figurmerker {
         return anzahl;
     }
 
+    /**
+     * Ein umbenannter ORDNER (16.10.2026): jede gemerkte Animation daraus zeigt
+     * auf den neuen Ordner. Liefert, wie viele Figuren sie gemerkt hatten.
+     */
+    static ordnerUmbenannt(alt, neu) {
+        if (!alt || !neu) return 0;
+        let anzahl = 0;
+        for (const eintrag of Object.values(Figurmerker._alle())) {
+            const anim = eintrag.animation;
+            if (!anim || anim.category !== alt) continue;
+            anim.category = neu;
+            anim.url = `/api/character/bvh/${encodeURIComponent(neu)}`
+                + `/${encodeURIComponent(anim.name)}/`;
+            anzahl += 1;
+        }
+        if (anzahl) Figurmerker._speichern();
+        return anzahl;
+    }
+
+    /** Ein gelöschter ORDNER: alle gemerkten Animationen daraus vergessen. */
+    static ordnerVergessen(kategorie) {
+        if (!kategorie) return 0;
+        let anzahl = 0;
+        for (const eintrag of Object.values(Figurmerker._alle())) {
+            if (eintrag.animation && eintrag.animation.category === kategorie) {
+                eintrag.animation = null;
+                anzahl += 1;
+            }
+        }
+        if (anzahl) Figurmerker._speichern();
+        return anzahl;
+    }
+
     /** Beim Löschen der Figur — sonst wächst der Zettel mit jeder Sitzung. */
     static vergessen(id) {
         if (!id) return;

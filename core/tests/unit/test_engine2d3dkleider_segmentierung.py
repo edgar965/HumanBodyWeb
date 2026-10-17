@@ -190,7 +190,9 @@ class DieMaske(SimpleTestCase):
         stueck, bericht = self._verbinden()
         self.assertTrue((stueck[270:275] == 0).all())
         self.assertTrue((stueck[300:351] == Sapiensklassen.OBERTEIL).all())
-        self.assertTrue((stueck[351:] == 0).all())
+        # Der Kragen (14.10.2026, `Sapiensmaske.KRAGEN_M` 9 cm = 9 Flächen): ein Oberteil, das ein Foto sieht, reicht über die Kopfgrenze; darüber ist Kopf.
+        self.assertTrue((stueck[351:359] == Sapiensklassen.OBERTEIL).all())
+        self.assertTrue((stueck[361:] == 0).all())
         self.assertGreaterEqual(bericht['inseln_entfernt_flaechen'], 5)
 
     def test_der_bericht_nennt_je_stueck_regel_und_sapiens(self):

@@ -186,6 +186,18 @@ class DieMaskeMitHaar(SimpleTestCase):
         self.assertEqual(bericht['haar']['flaechen'], int(maske.haar.sum()))
         self.assertGreater(bericht['haar']['cm2'], 0)
 
+    def test_der_kragen_reicht_ueber_die_kopfgrenze_aber_nicht_bis_ins_gesicht(self):
+        # 14.10.2026, Edgar2009 (Polohemd): „T-Shirt zu klein am Hals" — 25.164 Flächen, die Sapiens als Oberteil sieht, lagen über der Kopfgrenze und wurden nie Kleidung (`Sapiensmaske.KRAGEN_M`).
+        s = np.zeros((self.N, Sapienszuordnung.STUECKE))
+        s[:, Sapienszuordnung.OBERTEIL] = 10
+        mitte = np.zeros((self.N, 3))
+        mitte[:, 1] = np.arange(self.N) * 0.01
+        maske = Sapiensmaske(s, _Pfadkarte(self.N), np.full(self.N, 2e-4), mitte, kopf_ab=0.30)
+        stueck, _ = maske.verbinden(np.zeros(self.N, dtype=np.int8))
+        self.assertTrue((stueck[0:39] == Sapienszuordnung.OBERTEIL).all())          # bis 0,30 m und der Kragen bis 0,30 + 0,09 m
+        self.assertTrue((stueck[41:] == 0).all())                                    # darüber ist Kopf
+        self.assertEqual(Sapiensmaske.KRAGEN_M, 0.09)
+
     def test_die_schwellen_kommen_aus_den_optionen(self):
         maske, _ = self._verbinden(min_stimmen=1000.0)               # so viele Pixel hat keine Fläche → nichts gesehen
         self.assertFalse(maske.haar.any())
@@ -226,6 +238,7 @@ class DasHaar(SimpleTestCase):
             self._a = diags([np.ones(n - 1), np.ones(n - 1)], [-1, 1], format='csr')
             self.inhalt = np.full(n, 1e-4)
             self.mitte = np.zeros((n, 3))                    # Flächenmitten wie `Haarmaske.mitte` — `Sapienshaar.ausbreiten` liest die Höhe
+            self.mitte[:, 1] = np.arange(n) * 0.01           # eine Fläche je Zentimeter Höhe: `Sapienshaar.nah_entscheiden` fragt den Abstand der Mitten
 
         def nachbarn(self):
             return self._a
@@ -277,13 +290,40 @@ class DasHaar(SimpleTestCase):
         # weg: 10–14 (Sapiens sieht dort Haut) und 7 (die Bartzone — die Farbe nannte sie Haar, Sapiens darf es nicht)
         self.assertEqual((bericht['hinzu_flaechen'], bericht['weg_flaechen']), (int((haar & ~self._maske()['haar']).sum()), 6))
 
-    def test_beide_ist_die_vereinigung(self):
+    def test_beide_ist_die_vereinigung_ohne_was_ein_foto_als_haut_sieht(self):
         with Pruefablage.ordner() as ordner:
             maske = self._maske()
-            Sapienshaar(self._lauf(ordner, 'beide')).anwenden(maske, self._Haarmaske(self.N), self.N)
+            bericht = Sapienshaar(self._lauf(ordner, 'beide')).anwenden(maske, self._Haarmaske(self.N), self.N)
         haar = maske['haar']
-        self.assertTrue(haar[0:3].all() and haar[10:15].all() and haar[30:35].all())
+        self.assertTrue(haar[0:3].all() and haar[30:35].all())                        # Sapiens-Haar, und die Farbe, wo kein Foto hinsieht und keine gesehene Fläche dicht daneben liegt
         self.assertFalse(haar[3])                                                     # geschützt bleibt geschützt
+        # 14.10.2026 (Edgar2009/Edgar1970): 10–14 nannte die Farbe Haar, ein Foto SIEHT dort Haut (`Face_Neck`) — das Haar-Objekt hatte Ohr, Wange und Hals, am Jungen von 1970 dunkle Kleidung.
+        self.assertFalse(haar[10:15].any())
+        self.assertEqual(bericht['fremd_entfernt']['flaechen'], 5)
+
+    def test_fremd_aus_nennt_nur_gesehenes_das_weder_haar_noch_zubehoer_ist(self):
+        s = np.zeros((6, Sapienszuordnung.STUECKE))
+        s[0, Sapienszuordnung.HAAR] = 10
+        s[1, Sapienszuordnung.KEINE] = 10                       # Haut
+        s[2, Sapienszuordnung.OBERTEIL] = 10                    # Hemd, Kragen
+        s[3, Sapienszuordnung.HOSE] = 10
+        s[4, Sapienszuordnung.ZUBEHOER] = 10                    # Hut: kein Haar, aber auch nichts, was die Haarmaske abziehen darf (sie legt ihn selbst ab)
+        # Fläche 5: kein Foto sieht sie
+        fremd = Sapiensmaske.fremd_aus(s, diags([np.ones(5), np.ones(5)], [-1, 1], format='csr') * 0.0)       # ohne Glättung über die Nachbarn
+        self.assertEqual(fremd.tolist(), [False, True, True, True, False, False])
+
+    def test_ungesehene_haarflaechen_nehmen_das_urteil_der_naechsten_gesehenen(self):
+        mitte = np.zeros((8, 3))
+        mitte[:, 1] = [0.00, 0.01, 0.02, 0.03, 0.50, 0.51, 0.52, 0.80]            # 0–3 beieinander, 4–6 beieinander, 7 allein
+        gesehen = np.array([True, True, False, False, True, False, False, False])
+        sapiens = np.array([False, False, False, False, True, False, False, False])   # Sapiens: 0, 1 Haut/Hemd; 4 Haar
+        neu = np.array([False, False, True, True, True, True, True, True])        # die Farbe nennt 2–7 Haar
+        aus, geaendert = Sapienshaar.nah_entscheiden(neu, gesehen, sapiens, mitte, 0.015)
+        # 2 liegt 1 cm hinter dem gesehenen 1 (Hemd) → kein Haar; 3 liegt 2 cm davon → bleibt, wie die Farbe sagt; 5 liegt 1 cm hinter dem gesehenen Haar 4 → Haar; 6, 7 weit weg → die Farbe
+        self.assertEqual(aus.tolist(), [False, False, False, True, True, True, True, True])
+        self.assertEqual(geaendert, 1)
+        ohne, nichts = Sapienshaar.nah_entscheiden(neu, np.zeros(8, dtype=bool), sapiens, mitte, 0.015)
+        self.assertEqual((ohne.tolist(), nichts), (neu.tolist(), 0))               # nichts gesehen: nichts entschieden
 
     def test_ohne_passende_stimmen_gilt_die_farbe_und_der_grund_steht_im_bericht(self):
         with Pruefablage.ordner() as ordner:

@@ -29,6 +29,8 @@ class Meshfigurteile:
     DATEI = 'teile_flaechen.npz'
     #: Ein Bestandteil, dessen Punkte im Median näher als das am Käfig der Figur liegen, ist Oberfläche und kein Objekt.
     FLACH_M = 0.008
+    #: Starr an EIN Körperteil nur, wenn so viele Punkte des Stücks ihren nächsten Käfigpunkt in diesem Teil haben (Setzung zwischen den gemessenen Werten am Zauberer: Bart 0,47 gegen Hut und Tasche 1,00).
+    STARR_ANTEIL = 0.8
     _sperre = threading.Lock()
     _vorrat = {}
 
@@ -79,6 +81,7 @@ class Meshfigurteile:
             lauf.job.ergebnis['teile'] = []
             return []
         teile = Bestandteile.zerlegen(daten, scan.flaechen, scan.flaecheninhalte() * 1e4)
+        cls._anschliessen(scan, teile, cls._klassen(ablage, len(scan.flaechen)))
         with np.load(ablage.arbeit('genesis_ende.npz')) as d:
             kaefig_ruhe = np.asarray(d['punkte'], dtype=np.float64)
             teil = np.asarray(d['teil']) if 'teil' in d.files else None
@@ -99,6 +102,41 @@ class Meshfigurteile:
         return teile
 
     @staticmethod
+    def _klassen(ablage, flaechen):
+        """Die Sapiens-Stimmen des Netzes (F, 28) oder None, wenn es sie nicht gibt oder sie zu einem anderen Netz gehören."""
+        pfad = ablage.arbeit('sapiens_flaechen.npz')
+        if not pfad.is_file():
+            return None
+        with np.load(pfad) as d:
+            klassen = np.asarray(d['klassen']) if 'klassen' in d.files else None
+        return klassen if klassen is not None and len(klassen) == flaechen else None
+
+    @staticmethod
+    def _anschliessen(scan, teile, klassen=None):
+        """Ein langer, dünner Bestandteil (Stab) nimmt die Flächen auf, die ihm anliegen und mit ihm zusammenhängen, auch wenn ein anderes Etikett sie mitgenommen hat (`Meshfigurteileanschluss`) —
+        sonst bleibt der Teil des Stabs, den SAM nicht traf, bei der Kleidung und der Stab ist in der Animation nicht durchgängig. Flächen, die Sapiens als Hand sieht, bleiben Hand (die Finger liegen am Stab)."""
+        from .meshfigurhalter import Meshfigurhalter
+        from .meshfigurteileanschluss import Meshfigurteileanschluss
+
+        belegt = np.zeros(len(scan.flaechen), dtype=bool)
+        for t in teile:
+            belegt |= t['maske']
+        haende = Meshfigurhalter.haendeflaechen(klassen)
+        cm2 = None
+        for t in teile:
+            if not Meshfigurhalter.stabfoermig(scan.punkte[np.unique(scan.flaechen[t['maske']].reshape(-1))]):
+                continue
+            nie = belegt & ~t['maske']
+            if haende is not None:
+                nie = nie | haende
+            t['maske'], dazu = Meshfigurteileanschluss.erweitern(scan.flaechen, scan.punkte, t['maske'], nie)
+            if dazu:
+                cm2 = scan.flaecheninhalte() * 1e4 if cm2 is None else cm2
+                t.update(flaechen=int(t['maske'].sum()), cm2=round(float(cm2[t['maske']].sum()), 0), anschluss_flaechen=dazu)
+                belegt |= t['maske']
+                logger.info('Mesh to 3D: Bestandteil %s nimmt %d anliegende Flächen auf', t['name'], dazu)
+
+    @staticmethod
     def _halterdaten(ablage, flaechen, ruhelage):
         """`(klassen (F, 28), {'r': Handmitte, 'l': Handmitte})` für `Meshfigurhalter` — die Sapiens-Stimmen des Netzes und die Handmitten der Figur in der Haltung; None ohne Stimmen für dieses Netz."""
         from Genesis9.koerperteile import G9koerperteile
@@ -112,6 +150,14 @@ class Meshfigurteile:
             return None
         haende = {s: np.asarray(ruhelage.posiert)[np.asarray(ruhelage.teil) == G9koerperteile.NUMMER[s + '_hand']].mean(axis=0) for s in ('r', 'l')}
         return klassen, haende
+
+    @classmethod
+    def _starr_nur_bei_anteil(cls, requisit, erkannt, haelt, punkte):
+        """`erkannt`, wenn das Stück überwiegend an EINEM Körperteil hängt (oder gehalten wird), sonst None (dann folgt es den nahen Knochen wie die Kleidung). Der Bart des Zauberers liegt zu 49 % am Rumpf, zu 47 % am Kopf
+        (gemessen, `bart_anteil.py`): starr am Kopf kippte er mit jeder Kopfhaltung von der Brust weg und legte sie frei; Hut (100 % Kopf) und Tasche (100 % Oberschenkel) bleiben starr, ein gehaltener Stab ebenfalls (56 % Hand)."""
+        if haelt or requisit.anteil_teil(punkte, erkannt['nummer']) >= cls.STARR_ANTEIL:
+            return erkannt
+        return None
 
     @classmethod
     def _objekt(cls, t, scan, ruhelage, lage, ablage, haltung=None, pruefung=None, halter=None):
@@ -137,9 +183,12 @@ class Meshfigurteile:
 
         requisit = Blendimportrequisit(lage)
         erkannt = requisit.erkennen(punkte)
+        haelt = None
         if erkannt:
             # Welche Hand hält es? Das Netz entscheidet (Handflächen, die es berühren), nicht das nächste Körperteil der Figur — die Hand der Anpassung steht von Lauf zu Lauf bis zu 8 cm anders (`Meshfigurhalter`).
             haelt = Meshfigurhalter.pruefen(scan, halter[0], punkte, halter[1]) if halter is not None else None
+            erkannt = cls._starr_nur_bei_anteil(requisit, erkannt, haelt, punkte)
+        if erkannt:
             if haelt:
                 name = haelt['seite'] + '_hand'
                 erkannt = {**erkannt, 'teil': name, 'nummer': G9koerperteile.NUMMER[name], 'knochen': Blendimportteile.KNOCHEN[name]}
@@ -168,4 +217,4 @@ class Meshfigurteile:
     @staticmethod
     def _eintrag(t):
         """Der Teil des Bestandteils, der in `ergebnis.teile` steht (ohne die Maske)."""
-        return {k: t[k] for k in ('name', 'begriff', 'gruppe', 'flaechen', 'cm2', 'stuecke', 'treffer', 'bestwert', 'abstand_median_mm', 'objekt') if k in t}
+        return {k: t[k] for k in ('name', 'begriff', 'gruppe', 'flaechen', 'cm2', 'stuecke', 'treffer', 'bestwert', 'abstand_median_mm', 'anschluss_flaechen', 'objekt') if k in t}

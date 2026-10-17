@@ -95,8 +95,11 @@ class Meshfigurlauf:
         from .meshfigurkette import Meshfigurkette
         from .meshfigurkleidung import Meshfigurkleidung
         from .meshfigurspeichern import Meshfigurspeichern
+        from .meshfigurumfangoptionen import Meshfigurumfangoptionen
         from .meshfigurvorschau import Meshfigurvorschau
 
+        # „Nur Rig“ (Option `umfang`, 16.10.2026): das Skelett steht nach der Körperkette — ohne Haar, Kleidung und Frisur (Nebenläufe) und ohne die Schritte danach.
+        nur_rig = Meshfigurumfangoptionen.nur_rig(self.optionen)
         job = self.job
         self.ablage.anlegen()
         job.ergebnis = dict(job.ergebnis or {})
@@ -120,6 +123,8 @@ class Meshfigurlauf:
         self._laufend = (nebenlaeufe, fabriken)             # für `nebenlauf_frueh`
         try:
             for name in self.SCHRITTE[start:]:
+                if nur_rig and name in self.NEBENLAEUFIG:
+                    continue
                 self._nebenlaeufe_abwarten(nebenlaeufe, self.WARTEN_VOR.get(name, ()))
                 self._schritt(name)
                 if name in self.NEBENLAEUFIG:
@@ -132,6 +137,8 @@ class Meshfigurlauf:
                 self.sichern('ergebnis')
                 for folge in self.NACH_SCHRITT.get(name, ()):
                     self.nebenlauf_frueh(folge)
+                if nur_rig and name == Meshfigurumfangoptionen.RIG_BIS:
+                    break
             self._nebenlaeufe_abwarten(nebenlaeufe, tuple(nebenlaeufe))
         except self.Angehalten:
             logger.info('Mesh to 3D %s: angehalten', job.kennung)

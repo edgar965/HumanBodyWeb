@@ -1,0 +1,33 @@
+{% comment %}
+Eine Zeile unter dem ganzen Körper auf „Mesh3D-AI“ (14.10.2026, Edgar: „… Vergleichs-Zeilen für Gesicht, Hände/Füße, Kleider“ und „NUR Körper, also ohne Kleider“): drei gekoppelte Felder wie beim Körper — Eingabe · gewünschte Ausgabe · Ausgabe des Netzes —,
+dazu die Wahl der Ansichtsart und je Feld die Download-Knöpfe. Aufruf: {% include "_mesh3dai_zeile.html" with bereich="gesicht" titel="Gesicht" hinweis="…" %}.
+`bereich` ist der Schlüssel in `static/viewer/mesh3dai/mesh3daibereiche.js` (Zeichner, Kamera, Texte) und in den Daten des Servers (`Mesh3daiattrappe.TEILE`).
+{% endcomment %}
+<section class="card mesh3dai-zeile mesh3dai-teilzeile" data-bereich="{{ bereich }}" id="mesh3dai-zeile-{{ bereich }}">
+    <div class="mesh3dai-zeilenkopf">
+        <h2>{{ titel }}</h2>
+        {% include "_mesh3dai_ansichtwahl.html" %}
+    </div>
+    <p class="hb-hinweis">{{ hinweis }}</p>
+    <div class="mesh3dai-bereiche">
+        <div class="mesh3dai-feld">
+            <h3><span class="mesh3dai-nummer">1</span> Start</h3>
+            <div class="mesh3dai-leinwand" data-art="eingabe"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="eingabe"></div>
+            {% include "_mesh3dai_download.html" with art="eingabe" %}
+        </div>
+        <div class="mesh3dai-feld">
+            <h3><span class="mesh3dai-nummer">2</span> Ziel</h3>
+            <div class="mesh3dai-leinwand" data-art="soll"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="soll"></div>
+            {% include "_mesh3dai_download.html" with art="soll" %}
+        </div>
+        <div class="mesh3dai-feld">
+            <h3><span class="mesh3dai-nummer">3</span> Ergebnis</h3>
+            <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
+            <div class="mesh3dai-guete" data-guete></div>
+            {% include "_mesh3dai_download.html" with art="ausgabe" %}
+        </div>
+    </div>
+</section>

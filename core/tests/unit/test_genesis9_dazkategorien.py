@@ -193,6 +193,50 @@ class DazkategorienTest(SimpleTestCase):
         self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN/Eigen Foto 1 hose')), u'Hosen')
         self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'JS/JS Sash')), u'Zubehör')
 
+    def test_7_socken_und_struempfe_haben_einen_eigenen_bereich(self):
+        """Edgar 17.10.2026: „mach einen neuen Bereich bei Assets: Socken und verschiebe alle Strümpfe und Socken aus den anderen Assets darin“ — vorher standen sie unter Hosen
+        und Unterwäsche (Gemessen an der Bibliothek: 60 Stücke, 13 davon nur über den Namen). Die Strumpfhose bedeckt den Schritt und bleibt eine Hose; Schuhe und Outfits bleiben,
+        wo Daz sie einordnet, auch wenn „Socks“ im Namen steht."""
+        k = 'People/Genesis 9/Clothing'
+        (self.support / 'SOCKEN_Probe.dsx').write_text(u"""<Assets>
+  <Asset VALUE="People/Genesis 9/Clothing/GC/GC Stockings Fishnet.duf">
+   <ContentType VALUE="Follower/Wardrobe/Pant"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Pants"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/MB/MB Marco Stocking01.duf">
+   <ContentType VALUE="Follower/Wardrobe/Pant"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Underwear/Bottoms"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/GC/GC Crudehighsocks.duf">
+   <ContentType VALUE="Follower/Wardrobe/Pant"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Pants"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/Daz/Wadenwaermer.duf">
+   <ContentType VALUE="Follower/Wardrobe/Socks"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Socks"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/GC/GC Pantyhose01.duf">
+   <ContentType VALUE="Follower/Wardrobe/Pant"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Pants"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/GC/GC Sneaker With Socks.duf">
+   <ContentType VALUE="Follower/Wardrobe/Footwear"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Footwear"/></Categories>
+  </Asset>
+  <Asset VALUE="People/Genesis 9/Clothing/Worker/Winter Outfit With Socks.duf">
+   <ContentType VALUE="Preset/Wearables"/>
+   <Categories><Category VALUE="/Default/Wardrobe/Outfits"/></Categories>
+  </Asset></Assets>""", encoding='utf-8')
+        G9dazkategorien.vergessen()
+        faelle = [('GC/GC Stockings Fishnet', u'Socken'), ('MB/MB Marco Stocking01', u'Socken'), ('GC/GC Crudehighsocks', u'Socken'),
+                  ('Daz/Wadenwaermer', u'Socken'),                        # nur über Dazʼ Kategorie `Wardrobe/Socks`, ohne Sockenwort im Namen
+                  ('GC/GC Pantyhose01', u'Hosen'), ('GC/GC Sneaker With Socks', u'Schuhe'), ('Worker/Winter Outfit With Socks', u'Outfits')]
+        for datei, soll in faelle:
+            self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, datei)), soll, datei)
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'EIGEN/Eigen Foto 9 socken f25')), u'Socken', 'ohne Eintrag in der .dsx (Art kleidung → Oberteile) zählt der Name')
+        self.assertEqual(G9dazkategorien.vorgabe(_eintrag(k, 'GC/GC Strümpfe lang')), u'Socken')
+        self.assertIn(u'Socken', G9dazkategorien.REIHENFOLGE)
+
     def test_5_reihenfolge_traegt_alle_namen(self):
         namen = set(G9dazkategorien.REIHENFOLGE)
         for _pfad, name in G9dazkategorien.NACH_PFAD + G9dazkategorien.NACH_TYP:

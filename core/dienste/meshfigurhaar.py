@@ -74,7 +74,9 @@ class Meshfigurhaar:
                             # Sapiens sieht einen Hut als `Apparel`, nicht als Haar (`Sapienshaar.kopfbedeckung`); der Schritt „kleidung" macht daraus Zubehör. Ohne Sapiens: nichts.
                             kopfbedeckung=maske.get('kopfbedeckung', np.zeros(len(scan.flaechen), dtype=bool)),
                             # Ein Bart unter der Schnittebene (`Sapienshaar.langer_bart`): nur im Haar-Objekt, nicht in `haar` (die Frisurwahl misst die Hülle des Kopfhaars).
-                            langer_bart=maske.get('langer_bart', np.zeros(len(scan.flaechen), dtype=bool)))
+                            langer_bart=maske.get('langer_bart', np.zeros(len(scan.flaechen), dtype=bool)),
+                            # Das Haar, das Sapiens selbst sieht — Ziel der Frisurwahl bei `frisur_ziel = sapiens` (`Meshfigurfrisur`). Ohne Sapiens: nichts (alles False, keine stille Ersatzmaske).
+                            haar_sapiens=maske.get('haar_sapiens', np.zeros(len(scan.flaechen), dtype=bool)))
         teilung = Haarteilung(scan.punkte, scan.flaechen, scan.uv_ecken, farben, maske, haar.rahmen)
         t2 = time.perf_counter()
         self.lauf.melden(0.5, 'Bilder ohne Haar / nur Haar')
@@ -146,10 +148,11 @@ class Meshfigurhaar:
             haar['objekt']['haltung'] = {'datei': 'haar_haltung.glb', **steckbrief}
         return haar['objekt']
 
-    def ruhenetz(self):
+    def ruhenetz(self, haarziel='maske'):
         """`(scan, punkte in der Ruhelage der Figur (P, 3), Haarflächen (F,) bool)` — oder None, wenn Maske,
         Registrierung oder Netz fehlen oder nicht zusammenpassen. Auch die Frisurwahl und die Haarkarten
-        (`Meshfigurfrisur`) nehmen das Haar von hier."""
+        (`Meshfigurfrisur`) nehmen das Haar von hier. `haarziel`: `maske` (die Haarmaske) oder `sapiens` (nur das Haar,
+        das Sapiens selbst sieht, `haar_maske.npz` → `haar_sapiens`; fehlt es oder ist es leer: None)."""
         from .gesichtsformziel import Gesichtsformziel
 
         pfad = self.ablage.arbeit('haar_maske.npz')
@@ -157,7 +160,10 @@ class Meshfigurhaar:
         if not pfad.is_file() or not ziel.vorhanden():
             return None
         with np.load(pfad) as d:
-            wahl = d['haar']
+            if haarziel == 'sapiens':
+                wahl = d['haar_sapiens'] if 'haar_sapiens' in d.files else np.zeros(0, dtype=bool)
+            else:
+                wahl = d['haar']
         scan, _ = ziel.laden()
         if len(wahl) != len(scan.flaechen) or not wahl.any():
             return None

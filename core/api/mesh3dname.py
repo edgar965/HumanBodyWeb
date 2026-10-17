@@ -4,7 +4,7 @@
     POST /api/mesh3d/<kennung>/name/   {name}  → {ok, name}
 
 Dieselbe Antwortform wie `Auftragsnameendpunkte` bei den anderen Bereichen, damit `gemeinsam/auftragname.js` ohne Änderung bedient wird. Der Name wird gesäubert (`Blendimportquelle.eigener`) und
-kommt gesäubert zurück; ein Auftrag, der rechnet, ist 409.
+kommt gesäubert zurück; auch ein Auftrag, der rechnet, lässt sich umbenennen (der Lauf übernimmt den Namen).
 """
 
 import json
@@ -36,8 +36,6 @@ class Mesh3dnameendpunkte:
         alt = (auftrag.stand.get('quelle') or {}).get('name')
         try:
             name = auftrag.setzen(rumpf.get('name'))
-        except Mesh3dname.Laeuft as fehler:
-            return JsonResponse({'error': str(fehler)}, status=409)
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
         mit = getattr(auftrag, 'angeglichen', {})

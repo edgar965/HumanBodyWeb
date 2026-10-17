@@ -54,10 +54,15 @@ class TiefeTest(unittest.TestCase):
         """Die Gegenprobe: die alte Wahl landet auf der Vorderseite (so waren die Hüften 11 cm vor dem Körper)."""
         self.assertGreater(self._tiefe('median'), 0.09)
 
-    def test_vorgabe_ist_die_mitte(self):
+    def test_vorgabe_ist_die_kette(self):
+        """Seit 17.10.2026 die Kette (`Engine2d3dKleiderposetiefe`); Rumpf und Gesicht rechnet sie weiter mit der Mitte."""
         from core.dienste.engine2d3dkleiderposeabbildung import Engine2d3dKleiderposeabbildung as A
 
-        self.assertEqual(A.TIEFE, 'mitte')
+        self.assertEqual(A.TIEFE, 'kette')
+
+    def test_kette_ohne_sam_ist_die_mitte(self):
+        """Ohne `k3` (kein SAM, oder ein alter Aufrufer) rechnet die Kette wie die Mitte."""
+        self.assertAlmostEqual(self._tiefe('kette'), 0.0, places=6)
 
 
 class SamTabelleTest(unittest.TestCase):

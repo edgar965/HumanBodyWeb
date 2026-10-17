@@ -61,6 +61,15 @@ class Blendimportrequisit:
         return {'teil': name, 'nummer': nummer, 'knochen': knochen,
                 'abstand_median_mm': round(float(np.median(d)) * 1000.0, 1), 'frei_anteil': round(frei, 3)}
 
+    def anteil_teil(self, punkte_blender, nummer):
+        """Anteil (0…1) der Punkte, deren nächster Käfigpunkt zum Körperteil `nummer` gehört — wie weit ein Stück wirklich an EINEM Teil hängt (`erkennen` nimmt nur die 2 % nächsten Punkte: ein langer Bart, dessen
+        Kinn am Kopf und dessen Hälfte auf der Brust liegt, galt als „am Kopf" und kippte mit jeder Kopfhaltung von der Brust weg)."""
+        lage = self.lage
+        _, i = lage.entposen().baum.query(lage.ins_netz(punkte_blender), workers=-1)
+        teile = lage.teil[i]
+        teile = teile[teile >= 0]
+        return float((teile == nummer).mean()) if len(teile) else 0.0
+
     def ruhelage(self, punkte_blender, nummer):
         """`(Punkte in der Ruhelage, Rundlauf des Teils in mm RMS)` — Starrkörperbewegung des Käfigteils (ohne Maßstab)."""
         lage = self.lage

@@ -169,9 +169,9 @@ class Blendimportloeschen:
         return round(summe / 1048576, 1)
 
     def grund_verwaist(self, modelle, gelesen=()):
-        """Warum dieser Import niemandem mehr dient — oder `None`, wenn er läuft oder sein Modell noch da ist."""
+        """Warum dieser Import niemandem mehr dient — oder `None`, wenn er läuft, sein Modell noch da ist oder er ein Mesh-3D-Auftrag ist (der speichert seit 15.10.2026 kein Modell von selbst)."""
         stand = self.stand()
-        if self.laeuft() or modelle:
+        if self.laeuft() or modelle or stand.get('bereich') == 'mesh3d':     # 15.10.2026: „Alle verwaisten Importe löschen (20)" nahm 19 Mesh-3D-Aufträge mit (Ordner per rmtree weg)
             return None
         status = stand.get('status')
         if not stand:

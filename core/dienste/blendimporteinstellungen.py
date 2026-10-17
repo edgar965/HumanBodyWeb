@@ -115,11 +115,25 @@ class Blendimporteinstellungen:
                     'bläht er den Körper auf ihre Form auf (Zauberer: Oberschenkel 103,5 gegen 64,0 cm an Edgars Figur). „Zieht nicht“ lässt den Körper unter dem Stoff von den kahlen Stellen und den Gelenken bestimmen. '
                     'Beim Weg „netz“ ist „ignorieren“ die Vorgabe: an anliegender Kleidung (Edgar) gleich gut wie „nah“ (Figur→Netz 2,48 gegen 2,41 mm), an lockerer bläht „nah“ den Körper auf (Robe: Oberschenkel 68,9 gegen 51,8 cm; Reifenrock: Taille 73,3 gegen 58,6 cm). '
                     'Dafür steht der Stoff mit „ignorieren“ öfter im Körper (Reifenrock 9,7 gegen 3,5 %). Unsicher: die Vergleichsvariante und die Bilder auf der Jobseite ansehen.'},
+        {'schluessel': 'frisur', 'titel': 'Frisur (Weg „netz“)', 'art': 'wahl', 'vorgabe': 'beste',
+         'werte': [('beste', 'Die dem Netzhaar am nächsten kommt (alle Frisuren der Garderobe)'),
+                   ('herren', 'Nur Herrenfrisuren (für männliche Figuren gebaute Stücke und das eigene Herrenhaar)'),
+                   ('daz', 'Nur Daz-Frisuren'), ('eigen', '„Haar Eigen“'), ('aus', 'Keine Frisur')],
+         'hinweis': 'Nur beim Weg „netz“: „Mesh to 3D“ misst jede Frisur der Garderobe gegen die Hülle des Netzhaars und nimmt die mit der kleinsten Abweichung. Ist die Haarmaske des Netzes größer als das echte Haar '
+                    '(Edgar1970: 2.882 cm² gegen 2.159 cm² bei Sapiens), gewinnt eine lange Frisur (Eirgrid, 22,8 mm). „Nur Herrenfrisuren“ beschränkt die Wahl auf Stücke für männliche Figuren und das eigene Herrenhaar.'},
+        {'schluessel': 'frisur_ziel', 'titel': 'Ziel der Frisurwahl (Weg „netz“)', 'art': 'wahl', 'vorgabe': 'maske',
+         'werte': [('maske', 'Das Haar der Haarmaske (Farbe und Sapiens zusammen)'), ('sapiens', 'Nur das Haar, das Sapiens selbst sieht')],
+         'hinweis': 'Nur beim Weg „netz“: woran die Frisuren gemessen werden. Die Haarmaske ist größer als das Haar, das Sapiens sieht (Edgar1970: 2.882 gegen 2.159 cm²) — dann gewinnt eine zu lange oder zu volle Frisur. '
+                    '„Nur das Haar, das Sapiens selbst sieht“ misst gegen das kleinere Ziel; es braucht den Schritt „segmentierung“ (läuft beim Weg „netz“ mit).'},
         {'schluessel': 'vergleichsvariante', 'titel': 'Vergleichsvariante mitrechnen (Weg „netz“)', 'art': 'haken', 'vorgabe': 'an',
          'werte': [('an', 'Ja'), ('aus', 'Nein')],
          'hinweis': 'Nach einem fertigen Lauf rechnet der Auftrag von selbst eine zweite Ausgabe mit dem anderen Stoffzug (Vorgabe „ignorieren“ → „nah“; steht der Auftrag auf „nah“, rechnet sie „ignorieren“, bei „weich“ „nah“) auf demselben Körpernetz, derselben Segmentierung und Pose. '
                     'Die Jobseite stellt beide nebeneinander (Karte „Empfehlungen und Varianten“); „Übernehmen“ macht eine zur Ausgabe. Kostet gemessen rund 4 Minuten und 141 MB je Variante (Spiralballerina). '
                     'Läuft währenddessen ein anderer Import, wartet sie auf dessen Ende.'},
+        {'schluessel': 'umfang', 'titel': 'Umfang (Weg „netz“)', 'art': 'wahl', 'vorgabe': 'figur',
+         'werte': [('figur', 'Ganze Figur (Rig, Gesicht, Eigenmorph, Textur, Haar, Kleidung)'), ('rig', 'Nur Rig — das Genesis-Skelett im Netz, endet nach der Körperkette')],
+         'hinweis': 'Nur beim Weg „netz“ (16.10.2026): „Nur Rig“ legt das Genesis-Skelett in das Netz (Segmentierung, Pose, Erkennung und Körperkette von „Mesh to 3D“: Haltung der 22 Hauptknochen, Lage, Größe) und hört dann auf — '
+                    'ohne Gesicht, Eigenmorph, Textur, Frisur, Haar- und Kleidungsobjekt. Finger und Gesicht stehen in Ruhelage; ein Modell lässt sich daraus nicht speichern.'},
         {'schluessel': 'animationspruefung', 'titel': 'Animationsprüfung (Stoff im Tanz messen und korrigieren)', 'art': 'haken', 'vorgabe': 'an',
          'werte': [('an', 'Ja'), ('aus', 'Nein')],
          'hinweis': 'Im Schritt „figur“ legt „Mesh to 3D“ eine Bewegung (A_Results/DanceKurz) auf die Figur, misst die Dehnung jeder Kante von Kleidung, Bart und Tasche und nimmt die Hautgewichte mit den wenigsten gerissenen Kanten (alte Käfig-Nachbarschaft gegen weiche Gewichte). '

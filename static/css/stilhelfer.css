@@ -991,4 +991,4 @@
     line-height:1.6;
 }
 /* Sanduhr (`gemeinsam/sanduhr.js`, 18.09.2026): solange eine Änderung rechnet. */
-html.hb-sanduhr, html.hb-sanduhr * { cursor: progress !important; }
+html.hb-sanduhr, html.hb-sanduhr * { cursor: wait !important; }   /* `wait` = die Sanduhr selbst; `progress` (Pfeil mit Ring) fiel neben dem Regler nicht auf (16.10.2026) */

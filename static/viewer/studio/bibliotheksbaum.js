@@ -42,6 +42,9 @@ export class Bibliotheksbaum {
                     && meldung.name && meldung.new_name) {
                 Clipfehlt.umbenannt(meldung.category, meldung.name, meldung.new_name, state, fn);
             }
+            if (meldung.aktion === 'rename_folder' && meldung.category && meldung.new_name) {
+                Clipfehlt.ordnerUmbenannt(meldung.category, meldung.new_name, state, fn);
+            }
             this.laden();
         });
     }

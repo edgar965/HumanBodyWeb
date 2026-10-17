@@ -52,7 +52,10 @@ class Bvhverzeichnis:
                 namen = []
                 for eintrag in eintraege:
                     try:
-                        if eintrag.is_dir():
+                        # Punkt vorn = Papierkorb (`.trash`, `Bvhordner`) — kein
+                        # Ordner der Bibliothek. Gemessen 16.10.2026: Vorher gab
+                        # es in der Wurzel keinen Ordner mit Punkt.
+                        if eintrag.is_dir() and not eintrag.name.startswith('.'):
                             namen.append(eintrag.name)
                     # stumm gewollt: Ein einzelner Eintrag, der sich nicht
                     # befragen laesst (Netzlaufwerk, Rechte, gerade geloescht),

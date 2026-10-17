@@ -64,7 +64,9 @@ export class Reiterinhalt {
         assets: ['loadGarmentUI', 'loadHairUI', 'loadClothUI',
                  'loadCharmorphAssets', 'loadMHProxyUI'],
         kleider: ['loadKleiderUI'],
-        modell: ['loadPoseUI'],
+        // Bis 17.10.2026 unter „modell" (Abschnitt „Pose" ganz unten im Reiter
+        // „Skeleton"); seit dem eigenen Reiter „Posen" hier.
+        posen: ['loadPoseUI'],
     };
 
     /** Was schon gebaut ist. Jeder Reiter wird genau einmal gefüllt. */

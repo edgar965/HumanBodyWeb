@@ -19,22 +19,14 @@ import logging
 import shutil
 
 from .bvhablage import Bvhablage
-from .dienstfehler import DienstFehler
+from .bvhfehler import BvhFehler  # noqa: F401 — Name bleibt hier importierbar
+from .bvhordner import Bvhordner
 from .studioprojekt_umbenennung import Studioprojektumbenennung
 
 logger = logging.getLogger('core')
 
 #: Muster der Retarget-Zwischenspeicher zu einer BVH-Datei.
 CACHE_MUSTER = '%s_retarget_*.json'
-
-
-class BvhFehler(DienstFehler):
-    """Ablehnung der BVH-Verwaltung. Rumpf und Kennzahl siehe `DienstFehler`.
-
-    Eigene Klasse, damit ein `except BvhFehler` nicht die Kleiderverwaltung
-    mitfaengt — aber ohne den Rumpf noch einmal zu schreiben (Befund
-    `doppelrumpf`, 17.08.2026: derselbe Rumpf und dasselbe `__init__` lagen
-    zweimal im Projekt)."""
 
 
 class Bvhverwaltung:
@@ -163,39 +155,19 @@ class Bvhverwaltung:
         return {'ok': True}
 
     # ------------------------------------------------------------------ Ordner
+    # Die Arbeit steht in `Bvhordner`; hier nur Felder lesen und weiterreichen.
 
     @staticmethod
     def _ordner_anlegen(daten):
         (name,) = Bvhverwaltung._pflicht(daten, 'folder_name')
-        ordner = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / name)
-        if not ordner:
-            raise BvhFehler('Invalid folder name')
-        if ordner.exists():
-            raise BvhFehler('Folder already exists', 409)
-        ordner.mkdir(parents=True)
-        logger.info('[bvh-manage] Created folder: %s', ordner)
-        return {'ok': True}
+        return Bvhordner.anlegen(name)
 
     @staticmethod
     def _ordner_umbenennen(daten):
         kategorie, neu = Bvhverwaltung._pflicht(daten, 'category', 'new_name')
-        alt = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / kategorie)
-        if not alt or not alt.is_dir():
-            raise BvhFehler('Folder not found', 404)
-        ziel = Bvhverwaltung._freies_ziel(Bvhablage.wurzel() / neu, f'Folder {neu} already exists')
-        alt.rename(ziel)
-        logger.info('[bvh-manage] Renamed folder: %s -> %s', alt, ziel)
-        return {'ok': True, 'new_name': neu}
+        return Bvhordner.umbenennen(kategorie, neu)
 
     @staticmethod
     def _ordner_loeschen(daten):
         (kategorie,) = Bvhverwaltung._pflicht(daten, 'category')
-        ordner = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / kategorie)
-        if not ordner or not ordner.is_dir():
-            raise BvhFehler('Folder not found', 404)
-        inhalt = list(ordner.iterdir())
-        if inhalt:
-            raise BvhFehler(f'Folder not empty ({len(inhalt)} items)', 409)
-        ordner.rmdir()
-        logger.info('[bvh-manage] Deleted folder: %s', ordner)
-        return {'ok': True}
+        return Bvhordner.loeschen(kategorie, mit_inhalt=bool(daten.get('with_content')))

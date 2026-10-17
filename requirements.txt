@@ -23,6 +23,9 @@ djangorestframework==3.16.1
 numpy==2.4.4
 scipy==1.17.1
 trimesh==4.11.5
+# rtree: trimesh braucht es für Strahl- und Abstandsanfragen am Netz (`ray`, `proximity`) — der Drapierer (`Genesis9/drapierhindernis.py`, 16.10.2026)
+# ruft `ray.intersects_location` für die Austrittsstellen; im venv war es schon da, stand aber nicht in dieser Liste.
+rtree==1.4.1
 # ujson: bisher nur transitiv über autobahn im venv — seit 23.09.2026 auch
 # direkt importiert (core/dienste/retargetdaten.py, core/api/retarget.py):
 # rund 3,4x schneller als die Standardbibliothek bei den grossen

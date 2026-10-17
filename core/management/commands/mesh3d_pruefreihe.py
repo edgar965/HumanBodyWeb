@@ -22,7 +22,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from core.dienste.mesh3dpruefreihe import Mesh3dpruefreihe as P
 
-        kennungen = [k for k in P.testauftraege() if not options['kennung'] or k == options['kennung']]
+        alle = P.testauftraege()
+        kennungen = [k for k in alle if not options['kennung'] or k == options['kennung']]
+        if options['kennung'] and not kennungen:
+            raise CommandError('Kein Testauftrag mit der Kennung %s (Reiter „Testaufträge“) — geprüft wurde nichts.' % options['kennung'])
         if options['auch'] and (not options['aufnehmen'] or len(kennungen) != 1):
             raise CommandError('--auch gilt nur mit --aufnehmen und genau einem Auftrag (--kennung)')
         if options['aufnehmen']:
@@ -40,6 +43,9 @@ class Command(BaseCommand):
             for name, ist, s, gut, text in zeilen:
                 if gut is not True or options['verbosity'] > 1:
                     self.stdout.write('  %-4s %-24s ist %-28s soll %-28s %s' % ('offen' if gut is None else ('ok' if gut else 'FEHL'), name, str(ist)[:28], str(s)[:28], text))
-        self.stdout.write('\nPrüfreihe Mesh-3D: %s' % ('alles bestanden' if ganz_ok else 'NICHT alles bestanden'))
+        verwaist = [] if options['kennung'] else P.verwaist(alle)
+        for k, name in verwaist:
+            self.stdout.write('\nWARNUNG %s  %s: Soll ohne Testauftrag — der Auftrag ist gelöscht oder liegt nicht im Reiter „Testaufträge“; dieses Soll wurde NICHT geprüft (neu aufnehmen: --kennung <Auftrag> --aufnehmen)' % (k, name))
+        self.stdout.write('\nPrüfreihe Mesh-3D: %s%s' % ('alles bestanden' if ganz_ok else 'NICHT alles bestanden', ' (%d Soll ohne Auftrag nicht geprüft)' % len(verwaist) if verwaist else ''))
         if not ganz_ok:
             raise SystemExit(1)

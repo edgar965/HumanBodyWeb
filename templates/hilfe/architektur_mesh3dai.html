@@ -1,0 +1,53 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Architektur -> Mesh3DAI (Edgar, 16.10.2026: „Mach erstmal einen Plan des Netzes, ich bin Entwickler und möchte alles verstehen … eine Seite Hilfe - Architektur - Mesh3DAI").
+Aufgeräumt am 16.10.2026 nachmittags (Edgar: „räume auch die Hilfeseite auf, mach die verständlicher … mach auch eine einfache Grafik zu der KI in der Form wie im Bild").
+Abends auf den Stand gebracht (Edgar: „passe auch /hilfe/architektur/mesh3dai/ an, die ganze Seite mit dem aktuellen Stand“, „schreibe auch den Schritt Rig-Generierung als Vorstufe … und was das hilft“,
+„die Kleidergenerierung und Neuronale Netze dafür, sind die auch drin, oder braucht man ein extra Netz dafür?“): Vorstufe, Formkopf, Testnetze, Köpfe am selben Rückgrat, vier Jobs.
+Oben sichtbar: Kurz erklärt, 1 Vorstufe, 2 Netz, 3 Form, 4 Testnetze; zum Aufklappen 5 Daz-Winkel, 6 Plan, 7 Vorgehen, 8 Kleider.
+Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vorstufe, …netz, …plan, …regler, …form, …testnetze, …grenzen, …vorgehen, …kleider).
+{% endcomment %}
+
+{% block title %}Architektur Mesh3DAI{% endblock %}
+{% block topbar_title %}Architektur — Mesh3D-AI: wie die KI aus einem Netz Skelett und Form macht{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_genesis.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_architektur_mesh3dai.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite ag-breit m3a">
+
+  <h1>Mesh3D-AI: Netz → Genesis-Modell</h1>
+
+  <div class="info-box info-box-blue">
+    <strong>Worum es geht:</strong> Eine KI bekommt ein 3D-Netz einer Figur und soll daraus ein Genesis-9-Modell machen: die <strong>Haltung</strong> (138 Knochen als Daz-Winkel in den Grenzen von Genesis)
+    und die <strong>Form</strong> (Genesis-Form-Regler, seit 16.10.2026 abends; im Bezugslauf {{ form_regler.anzahl|default:"—" }}). Kleider, Haar und Mimik gibt sie nicht aus. Trainiert wird auf vier Jobs (<a href="/mesh-3D-AI/ursula1/">Ursula1</a>,
+    <a href="/mesh-3D-AI/damira0/">Damira0</a>, <a href="/mesh-3D-AI/mann1/">Mann1</a>, <a href="/mesh-3D-AI/matt0/">Matt0</a>) und {{ form_varianten.zahl|default:"—" }} Formvarianten; fremde Netze ohne Soll zeigt der Reiter
+    <a href="/mesh-3D-AI/#test">Test</a>. Bezugslauf dieser Seite: <code>{{ lauf_name|default:"—" }}</code>.
+    Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.
+  </div>
+
+  {% if befunde %}
+  <div class="info-box info-box-red">
+    <strong>Befunde beim Aufbau der Seite:</strong>
+    <ul>{% for b in befunde %}<li>{{ b }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% include "hilfe/_architektur_mesh3dai_kurz.html" %}
+  {% include "hilfe/_architektur_mesh3dai_vorstufe.html" %}
+  {% include "hilfe/_architektur_mesh3dai_netz.html" %}
+  {% include "hilfe/_architektur_mesh3dai_form.html" %}
+  {% include "hilfe/_architektur_mesh3dai_test.html" %}
+
+  <h2 id="einzelheiten">Einzelheiten (zum Aufklappen)</h2>
+  <details class="m3a-mehr" id="grenzen-klappe"><summary>5. Warum die Finger brachen — Ausgabe als Daz-Winkel</summary>{% include "hilfe/_architektur_mesh3dai_grenzen.html" %}</details>
+  <details class="m3a-mehr"><summary>6. Plan: Posen, Zeiten, Entscheidungen</summary>{% include "hilfe/_architektur_mesh3dai_plan.html" %}</details>
+  <details class="m3a-mehr"><summary>7. Vorgehen: Datensatz, Training, Ergebnis, Befunde</summary>{% include "hilfe/_architektur_mesh3dai_vorgehen.html" %}</details>
+  <details class="m3a-mehr"><summary>8. Kleider, Haar und ihre Morphs — und ob sie ein eigenes Netz brauchen</summary>{% include "hilfe/_architektur_mesh3dai_kleider.html" %}</details>
+
+</div>
+{% endblock %}

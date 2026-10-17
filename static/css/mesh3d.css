@@ -50,6 +50,8 @@
 .mesh3d-karte p.hb-hinweis { margin: 4px 0 8px; }
 .mesh3d-zahlen { margin: 6px 0; }
 .mesh3d-zahlen div { margin: 2px 0; }
+/* Karte „Genesis-Modell“: Knopf „Als Modell speichern“, Meldung, Verweis in einer Zeile (15.10.2026) */
+.mesh3d-zahlen .mesh3d-modellzeile { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .mesh3d-bilder { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; align-items: flex-start; }
 .mesh3d-bild { display: flex; flex-direction: column; gap: 3px; max-width: 320px; }
 .mesh3d-bild img { max-width: 100%; height: auto; background: #181820; border-radius: 3px; }

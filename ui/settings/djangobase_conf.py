@@ -280,6 +280,8 @@ DJANGOBASE = {
     'review_wurzel': str(TOOLS_ROOT),
     'review_bereiche': REVIEW_BEREICHE,
     'menu': MENUE,
+    # Die Jobs von Mesh3D-AI wachsen zur Laufzeit: der Provider hängt sie an die Gruppe mit der Marke `dynamisch` (djangobase_menue.py). Modulfunktion, kein Klassenaufruf (`import_string`).
+    'menu_provider': 'core.dienste.mesh3daimenue.menue_erweitern',
     'einstellungen_menu': True,
     'hilfe_menu': True,
     'benutzer_verwaltung': False,

@@ -110,7 +110,7 @@ class HbmorpheTest(SimpleTestCase):
             ablage.kanaele = {}
             with mock.patch('Genesis9.formung.G9basisnetz.holen', return_value=basis), \
                     mock.patch('Genesis9.formung.G9morphablage.holen', return_value=ablage), \
-                    mock.patch('Genesis9.formung.G9formeln') as formeln:
+                    mock.patch('Genesis9.formung.G9formelnfremd') as formeln:
                 formeln.return_value.morphwerte.return_value = {}
                 formeln.return_value.ablage = ablage
                 # Aus der Anfrage: begrenzt auf -1..1, Unbekanntes uebergangen
@@ -119,9 +119,10 @@ class HbmorpheTest(SimpleTestCase):
                 self.assertTrue(G9formung.fremd('hb:Waist_Size'))
                 self.assertTrue(G9formung.fremd('eigen:x'))
                 self.assertFalse(G9formung.fremd('body_ctrl_WaistBend'))
-                # Der Formelgraph sieht den hb:-Regler nicht
+                # Der Formelgraph sieht den hb:-Regler nicht als Daz-Kanal — nur als `fremd` (Gelenkversaetze, 17.10.2026)
                 _ = f.formeln
                 self.assertEqual(formeln.call_args[0][0], {})
+                self.assertEqual(formeln.call_args[1]['fremd'], {'hb:Waist_Size': -1.0})
                 punkte = f.morphpunkte()
                 np.testing.assert_allclose(punkte[0], [-0.05, 0, 0], atol=1e-7)   # minus-Seite
                 np.testing.assert_allclose(punkte[2], [0, 0, 0], atol=1e-7)
@@ -145,8 +146,14 @@ class HbmorpheTest(SimpleTestCase):
     def test_5_reglerplan_haengt_hb_bereiche_an(self):
         with _Ordner(self):
             G9hbmorphe.ablegen('Fantasy_ElfEars', [1], [[0.01, 0, 0]], [[0, 0, 0]])
-            with mock.patch.object(G9reglerplan, 'holen', return_value=[]):
+            # Zähne/Augen (`G9anhangregler`) und „Verborgen (Daz)" (`G9verborgeneregler`, beide 17.10.2026) lesen die echte Bibliothek — hier leer.
+            with mock.patch.object(G9reglerplan, 'holen', return_value=[]), \
+                    mock.patch('Genesis9.anhangregler.G9anhangregler.bereiche', return_value=[]), \
+                    mock.patch('Genesis9.verborgeneregler.G9verborgeneregler.bereiche', return_value=[]):
                 schluessel = [b['schluessel'] for b in G9reglerplan.bereiche()]
+            # „Alter" (`G9alter`, 17.10.2026) steht gleich hinter „Figur".
+            self.assertEqual(schluessel[1], 'alter')
+            schluessel = [s for s in schluessel if s != 'alter']
             self.assertEqual(schluessel[:len(G9reglerplan.BEREICHE)], list(G9reglerplan.BEREICHE))
             # Dahinter „Kopf-Eigen" (`G9schnittmorph.bereich`, 27.09.2026) — immer, auch leer — und zuletzt
             # „Nachformung (Ort)" (`G9koerperstandardmorphe.bereich`, 30.09.2026 nachts) und zuletzt „Modell-Eigen"

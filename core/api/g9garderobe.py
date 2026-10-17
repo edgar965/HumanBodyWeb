@@ -32,6 +32,7 @@ from asgiref.sync import sync_to_async
 from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
+from Genesis9.drapierung import G9drapierung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
 from Genesis9.garderobepflege import G9garderobepflege
@@ -88,12 +89,18 @@ class G9garderobeapi:
         from Genesis9.kleidmorphe import G9kleidmorphe
         # Die Daz-Tabelle EINMAL je Anfrage: je Eintrag geholt zaehlte sie 620-mal die `.dsx` der Bibliotheken auf (10,7 s).
         daz = G9dazkategorien.tabelle()
-        stuecke = [dict(s, varianten=G9vorschau.varianten_mit_vorschau(s),
-                        kategorie=s.get('kategorie') or G9garderobekategorien.vorgabe(s, daz),
-                        regler=G9kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s))))
-                   for s in roh]
+        stuecke = [G9garderobeapi._stueck(s, daz, G9vorschau, G9kleidmorphe) for s in roh]
         stuecke = G9garderobepflege.anwenden(stuecke)       # Umbenennen und Löschen aus dem Kontextmenü (05.10.2026)
         return JsonResponse({'stuecke': stuecke, 'anzahl': len(stuecke)})
+
+    @staticmethod
+    def _stueck(s, daz, vorschau, kleidmorphe):
+        u"""Ein Listeneintrag für den Browser: Vorschauen der Varianten, Kategorie und die Reglerliste — Haarachsen, eigene Morphe und, bei Hosen, Unterwäsche
+        und Anzügen, die Drapierung über dem männlichen Geograft (`G9drapierung`, 16.10.2026)."""
+        kategorie = s.get('kategorie') or G9garderobekategorien.vorgabe(s, daz)
+        regler = kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s)))
+        return dict(s, varianten=vorschau.varianten_mit_vorschau(s), kategorie=kategorie,
+                    regler=G9drapierung.erweitern(dict(s, regler=regler), kategorie))
 
     @staticmethod
     @csrf_exempt
@@ -276,6 +283,8 @@ class G9garderobeapi:
         if not G9pfade.vorhanden():
             return JsonResponse({'posen': [], 'ausdruecke': [], 'formen': [],
                                  'fehler': FEHLT})
-        return JsonResponse({'posen': G9posen.liste('pose'),
-                             'ausdruecke': G9posen.liste('ausdruck'),
+        # Ordner und Gelöschtes aus dem Reiter „Posen" (`G9poseneinteilung`, 17.10.2026) gelten auch hier.
+        from Genesis9.poseneinteilung import G9poseneinteilung as einteilung
+        return JsonResponse({'posen': einteilung.anwenden(G9posen.liste('pose'), G9posen.katalog()),
+                             'ausdruecke': einteilung.anwenden(G9posen.liste('ausdruck'), G9posen.katalog()),
                              'formen': G9posen.liste('form')})

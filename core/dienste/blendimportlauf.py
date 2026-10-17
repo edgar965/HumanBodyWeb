@@ -27,7 +27,6 @@ from django.utils import timezone
 
 from ..daten.blendimportablage import Blendimportablage
 from .blendimportformate import Blendimportformate
-from .blendimportschamdaz import Blendimportschamdaz
 from .blendimportweg import Blendimportweg
 
 logger = logging.getLogger('core')
@@ -64,6 +63,7 @@ class Blendimportlauf:
         self.format = Blendimportformate.pruefen((self.stand.get('quelle') or {}).get('format'))
         self._band = (0, 100)
         self._letzte = 0.0
+        self._name_geaendert = False
 
     def weg(self):
         """`teile` (die Kette mit Blender) oder `netz` (ein verschmolzenes Netz) — ein Stand ohne `weg` ist `teile`."""
@@ -72,8 +72,18 @@ class Blendimportlauf:
     # ------------------------------------------------------------ Stand
 
     def sichern(self, **felder):
+        self._name_nachziehen()
         self.stand.update(felder, aktualisiert=timezone.now().isoformat())
         self.ablage.stand_schreiben(self.stand)
+
+    def _name_nachziehen(self):
+        """Ein Name, den der Nutzer WÄHREND des Laufs auf der Jobseite gesetzt hat (`Mesh3dname`, Datei `name.json`), steht nur auf der Platte — dieser Prozess schreibt `stand.json` aus seinem Speicher und setzte ihn zurück
+        (deshalb lehnte der Endpunkt das Umbenennen während eines Laufs mit 409 ab; Edgar 14.10.2026: der Stift „tut sich nichts“). Jetzt übernimmt der Lauf den Namen bei jedem Schreiben (`Blendimportablage.stand` legt `name.json`
+        über den Stand), die folgenden Schritte rechnen mit ihm und `stand.json` trägt ihn wieder."""
+        name = (self.ablage.stand().get('quelle') or {}).get('name')
+        if name and name != (self.stand.get('quelle') or {}).get('name'):
+            Blendimportablage.name_eintragen(self.stand, name)
+            self._name_geaendert = True
 
     def melden(self, anteil, text):
         jetzt = time.monotonic()
@@ -138,6 +148,10 @@ class Blendimportlauf:
         self.sichern(status='fertig', fortschritt=100, detail='Fertig', dauer_s=round(time.perf_counter() - t0, 1),
                      beendet=timezone.now().isoformat())
         logger.info('Blender-Import %s: fertig', self.ablage.kennung)
+        if self._name_geaendert:
+            from .mesh3dname import Mesh3dname
+
+            Mesh3dname.nachziehen(self.ablage.kennung)       # umbenannt während des Laufs: Auftrag „Mesh to 3D“ und Modell tragen noch den alten Namen; wirft nie
         from .mesh3dvariantenauto import Mesh3dvariantenauto
 
         Mesh3dvariantenauto.sicher(self.ablage.kennung)      # Weg „netz“: eine Vergleichsvariante mitrechnen (Einstellung `vergleichsvariante`); wirft nie
@@ -229,7 +243,10 @@ class Blendimportlauf:
         netz = self.weg() == Blendimportweg.NETZ
         figur = Blendimportfigur(self.ablage, self.stand['quelle']['name'], self.stand['einstellungen']['basis'], netz=netz,
                                  kleidung_zug=self.stand['einstellungen'].get('kleidung_zug'),
-                                 animationspruefung=self.stand['einstellungen'].get('animationspruefung'))
+                                 frisur=self.stand['einstellungen'].get('frisur'),
+                                 frisur_ziel=self.stand['einstellungen'].get('frisur_ziel'),
+                                 animationspruefung=self.stand['einstellungen'].get('animationspruefung'),
+                                 modell=bool(self.stand.get('modell_speichern')), umfang=self.stand['einstellungen'].get('umfang'))
         glb = self.ablage.arbeit(Blendimportkoerper.DATEI)
         zusatz = Blendimportpose.zusatz(self.ablage, self.stand, glb)
         job = figur.anlegen(glb)
@@ -249,8 +266,9 @@ class Blendimportlauf:
                                 'hautmodell': ((job.ergebnis or {}).get('koerper') or {}).get('haut'),
                                 'kleidung': {k: ((job.ergebnis or {}).get('kleidung') or {}).get(k) for k in ('fehler', 'sapiens', 'hautmodell')}})
         if netz:
-            # Weg „netz“: „Mesh to 3D“ speichert das Modell `<Name> Mesh` selbst (Option `modell` an); Nachformung, Stücke und Haut des Wegs „teile“ gibt es nicht.
-            self.ergebnis('modell', {'name': job.modell, 'weg': Blendimportweg.NETZ})
+            # Weg „netz“: „Mesh to 3D“ speichert das Modell `<Name> Mesh` nur beim Import aus der Charakter-Seite selbst (Option `modell`, `Blendimportfigur`), sonst auf Klick der Jobseite
+            # (`Mesh3dmodellspeichern`); Nachformung, Stücke und Haut des Wegs „teile“ gibt es nicht.
+            self.ergebnis('modell', {'name': job.modell or None, 'weg': Blendimportweg.NETZ, 'bereit': (job.optionen or {}).get('umfang') != 'rig'})
             return
         self._nachformung(job)
 
@@ -350,12 +368,7 @@ class Blendimportlauf:
         self.ergebnis('augen', {'art': 'genesis', 'pfad': str(pfad) if pfad and pfad.is_file() else None})
 
     def _modell(self):
-        from .blendimportmodell import Blendimportmodell
+        """Das Modell wird nur gespeichert, wenn der Stand `modell_speichern` trägt (Import aus der Charakter-Seite) — sonst auf Klick der Jobseite (`Mesh3dmodellspeichern`, 15.10.2026)."""
+        from .mesh3dmodellspeichern import Mesh3dmodellspeichern
 
-        e = self.stand.get('ergebnis') or {}
-        modell = Blendimportmodell(self.ablage, self.job(), self.stand['quelle']['datei'],
-                                   self.stand['einstellungen']['browser_px'], self.zusatzregler())
-        name = modell.schreiben(self.stand['quelle']['name'], (e.get('haut') or {}).get('kacheln') or {},
-                                (e.get('augen') or {}).get('pfad'), (e.get('stuecke') or {}).get('stuecke') or {})
-        daz = Blendimportschamdaz.bauen(name, self.stand['einstellungen'], self.melden)      # nur bei „DAZ" (Einstellungen → Genesis)
-        self.ergebnis('modell', {'name': name, **({'daz': daz} if daz else {})})
+        Mesh3dmodellspeichern.schritt(self)

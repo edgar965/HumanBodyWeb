@@ -1,24 +1,37 @@
 /**
- * Scene Editor -- Pose browser + apply + rename/delete.
+ * Scene Editor -- Reiter „Posen": Ordnerbaum aller Modelle, Anwenden, Tastatur.
  *
  * UMBAU 18.08.2026: 236 Zeilen. Die Rechnung (Ruhelage, Deltas, Gliedmaßen,
  * T-Pose-Beine) steht jetzt in `posenanwendung.Posenanwendung`; hier bleibt die
  * Liste mit Auswahl, Kontextmenü und Tastaturkürzeln.
+ *
+ * UMBAU 17.10.2026 (Edgar: „mache alle vorhandenen Poses aus allen Modellen in
+ * Ordner bei Poses (auch valkyrie, HumanBody usw)"): Die flache Liste der
+ * HumanBody-Kategorien ist ein Baum über alle Bestände — HumanBody und die
+ * Daz-Posen von Genesis 9 (`/api/character/posenbaum/`). Gezeichnet wird in
+ * `Posenbaumansicht`, das Menü ist `Kontextmenue` (`Posenbaummenue`; das feste
+ * `#pose-ctx-menu` der Vorlage ist weg), angewendet wird je Bestand (`Posenwahl`).
  */
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Posenanwendung } from './posenanwendung.js';
+import { Posenspeichern } from './posenspeichern.js';
+import { Posenbaumansicht } from './posenbaumansicht.js';
+import { Posenbaummenue } from './posenbaummenue.js';
+import { Posenwahl } from './posenwahl.js';
 
-/** Ausgewählte Zeile und ihre Pose (`{id, name, category}`). */
+/** Ausgewählte Zeile und ihre Pose samt Bestand (`{pose, bestand}`). */
 let _zeile = null;
-let _pose = null;
+let _auswahl = null;
+let _ansicht = null;
+let _menue = null;
 
-function _auswaehlen(zeile, pose) {
+function _auswaehlen(zeile, pose, bestand) {
     _zeile?.classList.remove('pose-gewaehlt');
     _zeile = zeile;
-    _pose = pose;
+    _auswahl = { pose, bestand };
     zeile.classList.add('pose-gewaehlt');
 }
 
@@ -40,198 +53,81 @@ function _status(text, ok = true) {
 }
 
 /** Eine Pose anwenden und das Ergebnis melden. */
-async function _anwenden(pose) {
+async function _anwenden(pose, bestand) {
     if (!pose) return;
-    const befund = await Posenanwendung.vomServer(pose.id);
-    _status(befund.ok
-            ? `„${pose.name}" liegt an (${befund.gesetzt} Knochen).`
-            : befund.grund, befund.ok);
+    const befund = await Posenwahl.anwenden(pose, bestand);
+    _status(befund.ok ? befund.text : befund.grund, befund.ok);
 }
 
-/* ── Kontextmenü ── */
-const _menue = () => document.getElementById('pose-ctx-menu');
+/* ── Baum, Menü und Tastatur: je einmal einrichten ── */
 
-function _menueZeigen(x, y) {
-    const menue = _menue();
-    if (!menue) return;
-    menue.style.display = 'block';
-    menue.style.left = x + 'px';
-    menue.style.top = y + 'px';
-    // Ins Fenster ziehen: Am rechten oder unteren Rand stünde es sonst halb
-    // außerhalb und die letzten Einträge wären nicht erreichbar.
-    const rahmen = menue.getBoundingClientRect();
-    if (rahmen.right > window.innerWidth) {
-        menue.style.left = (window.innerWidth - rahmen.width - 4) + 'px';
-    }
-    if (rahmen.bottom > window.innerHeight) {
-        menue.style.top = (window.innerHeight - rahmen.height - 4) + 'px';
-    }
-}
-
-function _menueVerbergen() {
-    const menue = _menue();
-    if (menue) menue.style.display = 'none';
-}
-
-/**
- * Posen umbenennen und löschen.
- *
- * Liefert im Fehlerfall `{ok: false, error}` statt zu werfen — die beiden
- * Aufrufer zeigen `error` in einem `alert`.
- */
-async function poseManage(action, data) {
-    try {
-        return await Serverabruf.senden('/api/character/pose-manage/',
-                                        { action, ...data });
-    } catch (fehler) {
-        Protokoll.fehler('Pose', action, fehler);
-        return { ok: false, error: fehler.message };
-    }
-}
-
-async function renameSelectedPose() {
-    if (!_pose) return;
-    const name = prompt('Neuer Name:', _pose.name);
-    if (!name || name === _pose.name) return;
-    const antwort = await poseManage('rename', { category: _pose.category,
-                                                name: _pose.name,
-                                                new_name: name });
-    _nachAktion(antwort, 'Rename fehlgeschlagen');
-}
-
-async function deleteSelectedPose() {
-    if (!_pose) return;
-    if (!confirm(`Pose "${_pose.name}" wirklich löschen?`)) return;
-    const antwort = await poseManage('delete', { category: _pose.category,
-                                                name: _pose.name });
-    _nachAktion(antwort, 'Delete fehlgeschlagen');
-}
-
-function _nachAktion(antwort, fehlertext) {
-    if (!antwort.ok) {
-        alert(antwort.error || fehlertext);
-        return;
-    }
-    // Auswahl fallen lassen: Die Zeile, auf die sie zeigt, wird neu gebaut.
-    _zeile = null;
-    _pose = null;
-    loadPoseUI();
-}
-
-/* ── Kontextmenü und Tastatur: je einmal anmelden ── */
-let _menueGebunden = false;
-
-function _menueBinden() {
-    if (_menueGebunden) return;
-    _menueGebunden = true;
-    document.addEventListener('click', _menueVerbergen);
-    const menue = _menue();
-    if (!menue) return;
-    const aktionen = { apply: () => _anwenden(_pose),
-                       rename: renameSelectedPose,
-                       delete: deleteSelectedPose };
-    menue.querySelectorAll('.pose-ctx-item').forEach(eintrag => {
-        eintrag.addEventListener('click', ereignis => {
-            ereignis.stopPropagation();
-            _menueVerbergen();
-            if (eintrag.dataset.action === 'apply' && !_pose) return;
-            aktionen[eintrag.dataset.action]?.();
-        });
+function _einrichten(liste) {
+    if (_ansicht) return;
+    _ansicht = new Posenbaumansicht(liste, {
+        // Ein Klick wählt UND wendet an (seit 09.09.2026 — wie die Animationsbäume).
+        klick: (pose, bestand, zeile) => { _auswaehlen(zeile, pose, bestand); _anwenden(pose, bestand); },
+        menuePose: (ereignis, pose, bestand, zeile) => {
+            _auswaehlen(zeile, pose, bestand);
+            _menue.pose(ereignis, pose, bestand);
+        },
+        menueOrdner: (ereignis, knoten, bestand) => _menue.ordner(ereignis, knoten, bestand),
     });
-}
-
-let _tastenGebunden = false;
-
-function _tastenBinden() {
-    if (_tastenGebunden) return;
-    _tastenGebunden = true;
-    const liste = document.getElementById('pose-list');
-    if (!liste) return;
+    _menue = new Posenbaummenue({
+        ansicht: _ansicht,
+        anwenden: _anwenden,
+        neuLaden: loadPoseUI,
+        meldung: _status,
+        geaendert: (bestand) => { if (bestand.quelle === 'genesis9') Posenwahl.genesis9Vergessen(); },
+    });
     // `tabindex`: Ohne ihn bekommt die Liste keinen Fokus und keine Tasten.
     liste.setAttribute('tabindex', '0');
-    liste.addEventListener('keydown', ereignis => {
+    liste.addEventListener('keydown', (ereignis) => {
+        if (!_auswahl) return;
         if (ereignis.key === 'F2') {
             ereignis.preventDefault();
-            renameSelectedPose();
+            _menue.umbenennen(_auswahl.pose, _auswahl.bestand);
         } else if (ereignis.key === 'Delete') {
             ereignis.preventDefault();
-            deleteSelectedPose();
+            if (!(_auswahl.bestand.feste_posen || []).includes(_auswahl.pose.id)) {
+                _menue.loeschen(_auswahl.pose, _auswahl.bestand);
+            }
         }
+    });
+    // Einmal binden: Bis zum 17.10.2026 hängte JEDES `loadPoseUI` (auch das nach
+    // Umbenennen und Speichern) einen weiteren Hörer an (im Code gelesen).
+    document.getElementById('pose-reset')?.addEventListener('click', () => {
+        const befund = Posenanwendung.zuruecksetzen();
+        _status(befund.ok ? 'Ruhelage hergestellt.' : befund.grund, befund.ok);
     });
 }
 
 /* ── Liste ── */
 
-export async function loadPoseUI() {
+/**
+ * @param waehle  die Pose, die nach dem Aufbau gewählt dastehen soll: `{bestand, id}`,
+ *                oder als Text eine HumanBody-Kennung (`eigene/name`, die gerade gespeicherte)
+ */
+export async function loadPoseUI(waehle = null) {
     const liste = document.getElementById('pose-list');
     if (!liste) return;
-    _menueBinden();
-    _tastenBinden();
+    if (typeof waehle === 'string') waehle = { bestand: 'humanbody', id: waehle };
+    else if (!waehle?.id || !waehle?.bestand) waehle = null;   // z. B. ein Ereignis als Argument
+    _einrichten(liste);
+    Posenspeichern.binden({ status: _status, neuLaden: loadPoseUI });
     try {
-        const daten = await Serverabruf.json('/api/character/poses/');
-        liste.innerHTML = '';
-        for (const [kategorie, posen] of Object.entries(daten.categories || {})) {
-            liste.appendChild(_ordner(kategorie, posen));
+        const daten = await Serverabruf.json('/api/character/posenbaum/');
+        // Auswahl fallen lassen: Die Zeile, auf die sie zeigt, wird neu gebaut.
+        _zeile = null;
+        _auswahl = null;
+        const zeile = _ansicht.zeichnen(daten, waehle);
+        if (zeile) {
+            _auswaehlen(zeile, _ansicht.angabe(zeile), _ansicht.bestand(waehle.bestand));
+            zeile.scrollIntoView({ block: 'nearest' });
         }
     } catch (fehler) {
-        Protokoll.fehler('Pose', 'Liste nicht ladbar', fehler);
+        Protokoll.fehler('Pose', 'Baum nicht ladbar', fehler);
         liste.innerHTML = '<div class="leer-hinweis">Poses nicht verfügbar</div>';
     }
-    document.getElementById('pose-reset')
-        ?.addEventListener('click', () => {
-            const befund = Posenanwendung.zuruecksetzen();
-            _status(befund.ok ? 'Ruhelage hergestellt.' : befund.grund,
-                    befund.ok);
-        });
-}
-
-/**
- * Ein Kategorieordner. Nur `rest_poses` ist offen: Dort liegen T- und A-Pose,
- * die fast immer gemeint sind; alles andere sind Dutzende Stilposen.
- */
-function _ordner(kategorie, posen) {
-    const kasten = document.createElement('div');
-    kasten.className = 'anim-folder';
-    const kopf = document.createElement('div');
-    kopf.className = 'anim-folder-header';
-    kopf.innerHTML = `<span class="chevron">&#9660;</span> ${kategorie} `
-        + `(${posen.length})`;
-    kasten.appendChild(kopf);
-    const koerper = document.createElement('div');
-    koerper.className = 'anim-folder-body';
-    for (const pose of posen) {
-        koerper.appendChild(_zeileBauen(kategorie, pose));
-    }
-    kasten.appendChild(koerper);
-    const klappen = (offen) => {
-        koerper.style.display = offen ? '' : 'none';
-        kopf.querySelector('.chevron').textContent = offen ? '▼' : '▶';
-    };
-    kopf.addEventListener('click',
-                          () => klappen(koerper.style.display === 'none'));
-    klappen(kategorie === 'rest_poses');
-    return kasten;
-}
-
-function _zeileBauen(kategorie, pose) {
-    const angabe = { id: pose.id, name: pose.name, category: kategorie };
-    const zeile = document.createElement('div');
-    zeile.className = 'anim-item pose-zeile';
-    zeile.textContent = pose.name;
-    // Ein Klick wählt UND wendet an. Bis zum 09.09.2026 brauchte es dafür
-    // einen Doppelklick — nirgends sonst im Projekt: die beiden
-    // Animationsbäume (`animation/baum.js`, `skelett_test/animationsbaum.js`)
-    // laden beim einfachen Klick.
-    zeile.addEventListener('click', () => {
-        _auswaehlen(zeile, angabe);
-        _anwenden(angabe);
-    });
-    zeile.addEventListener('contextmenu', ereignis => {
-        ereignis.preventDefault();
-        _auswaehlen(zeile, angabe);
-        _menueZeigen(ereignis.clientX, ereignis.clientY);
-    });
-    return zeile;
 }
 
 /** Der Weg aus dem Hauptmenü (T-Pose/A-Pose) und aus dem Szenenaufbau. */

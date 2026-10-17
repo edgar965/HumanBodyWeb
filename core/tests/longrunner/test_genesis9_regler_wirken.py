@@ -40,10 +40,12 @@ Wimpern) bleiben, wo und wie gross sie waren.
 Ohne Daz-Bibliothek, ohne Body Shapes oder ohne gebaute HB-Morphs
 (`manage.py hbmorphe_bauen`) uebersprungen — mit Grund, nicht gruen.
 
+SEIT 17.10.2026 sind die Rig-Morphs (Body Size, Laengen, Winkel) DRIN: Sie tragen Gelenkversaetze (`G9gelenkversatz`), das Skelett folgt
+(`G9formelnfremd`), Zacken im Feld fuellt `G9feldputz` — `hb_rig_morphs_nehmen_das_skelett_mit`.
+
 Sabotage-Gegenproben: `G9hbmorphe.deltas` gibt immer `plus` zurueck →
-Fall `hb_minus_ist_eigene_form` rot; in `Hbmorpheaufgenesis.bauen` den
-Rig-Ausschluss entfernen und neu bauen → `hb_alle_morphs_sind_harmlos` UND
-`hb_rig_morphs_sind_draussen` rot; in `G9reglerbereiche` Waist → 'kopf'
+Fall `hb_minus_ist_eigene_form` rot; in `Hbmorpheaufgenesis.bauen` die Gelenke
+weglassen und neu bauen → `hb_rig_morphs_nehmen_das_skelett_mit` rot; in `G9reglerbereiche` Waist → 'kopf'
 aendert an diesem Test nichts (er prueft die Geometrie, nicht die
 Einteilung — dafuer `test_genesis9_neue_pakete`).
 """
@@ -58,6 +60,7 @@ from Genesis9.hbmorphe import G9hbmorphe
 from Genesis9.morphablage import G9morphablage
 from Genesis9.pfade import G9pfade
 
+from core.dienste.hbmorpheaufgenesis import Hbmorpheaufgenesis
 from core.dienste.hbmorphrig import Hbmorphrig
 
 MIN_MM = 3.0
@@ -185,7 +188,10 @@ class ReglerWirkenTest(SimpleTestCase):
         u"""Jeder angebotene HB-Morph, beide Seiten — begrenzt, oertlich, ohne Rig."""
         rig = Hbmorphrig(G9formung({}))
         befunde = []
+        skelett = {'hb:' + n for n in Hbmorpheaufgenesis.SKELETT}       # Laengen und Groessen: gross und mit Skelett, eigener Fall unten
         for r in G9hbmorphe.liste():
+            if r['name'] in skelett:
+                continue
             for wert in (1.0, -1.0):
                 d = self.verschiebung(r['name'], wert)
                 betrag = np.linalg.norm(d, axis=1)
@@ -204,20 +210,26 @@ class ReglerWirkenTest(SimpleTestCase):
         self.assertEqual(befunde, [])
         self.assertGreaterEqual(len(G9hbmorphe.liste()), 150)
 
-    def test_hb_rig_morphs_sind_draussen(self):
-        u"""Body Size, Laengen, Kopfgroesse: Steckbrief mit Millimetern, keine Deltas."""
+    def test_hb_rig_morphs_nehmen_das_skelett_mit(self):
+        u"""Body Size, Laengen, Kopfgroesse (seit 17.10.2026 im Bedienfeld): Deltas UND Gelenkversaetze; das Skelett steht im neuen Koerper, die
+        Anhaenge behalten ihre Groesse im Verhaeltnis zum Kopf (der Mund 6,8 -> 94 cm vom 20.09.2026 war ein Zacken im Feld, kein Skelettfehler)."""
         angeboten = {r['name'] for r in G9hbmorphe.liste()}
-        weg = {'hb:' + u['kennung'] for u in G9hbmorphe.uebergangene() if u.get('rig')}
         for name in RIG:
-            self.assertNotIn(name, angeboten, name)
-            self.assertIn(name, weg, name)
-            self.assertFalse(G9hbmorphe.vorhanden(name), name)
-            self.assertIsNone(G9hbmorphe.deltas(name, -1.0), name)
+            self.assertIn(name, angeboten, name)
+            self.assertIsNotNone(G9hbmorphe.deltas(name, -1.0), name)
+            self.assertTrue(len(G9hbmorphe.gelenke(name, -1.0)) > 0, name + ': keine Gelenkversaetze')
         brief = G9hbmorphe.steckbrief('Body_Size')
         self.assertTrue(brief['rig'])
         self.assertGreater(brief['kopf_mm'], 100.0)
-        self.assertEqual(G9formung.aus_abfrage({'hb:Body_Size': -1.0}).regler, {})
-        self.assertTrue({n[3:] for n in RIG} <= set(G9hbmorphe.bestand()['rig_uebergangen']))
+        self.assertEqual(G9formung.aus_abfrage({'hb:Body_Size': -1.0}).regler, {'hb:Body_Size': -1.0})
+        self.assertTrue({n[3:] for n in RIG} <= set(G9hbmorphe.bestand()['rig_mit_skelett']))
+        # Das Skelett folgt: Kopfgelenk bei Body Size −1 um mehr als 300 mm tiefer, und die Haut hat keinen Zacken nach oben.
+        grund = {k['name']: k for k in G9formung({}).skelett().gelenkknochen()}
+        klein = G9formung({'hb:Body_Size': -1.0})
+        knochen = {k['name']: k for k in klein.skelett().gelenkknochen()}
+        self.assertLess(knochen['head']['kopf'][1], grund['head']['kopf'][1] - 0.30)
+        punkte = np.asarray(klein.punkte())
+        self.assertLess(punkte[:, 1].max() - punkte[:, 1].min(), 1.3)
 
     # ----------------------------------------------------- der Browser-Weg
 

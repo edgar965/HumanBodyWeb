@@ -1,0 +1,30 @@
+{% load dezahl %}
+{% comment %}Abschnitt 3, Ende: Formkopf in der Pose gegen auf der A-Pose-Wolke (Edgar, 17.10.2026: „BAUE das: Mein Vorschlag ist, die Form ebenfalls auf der A-Pose-Wolke zu lernen“).
+Daten: `Architekturmesh3daiformvergleich` (liest `_vorstufe/form_vergleich.json` von `mesh3dai_form_vergleich.py`).{% endcomment %}
+<h3 id="form-apose">Form in der Pose gegen Form auf der A-Pose-Wolke</h3>
+<p>Die Form hängt nicht an der Haltung — trotzdem gab der Formkopf auf der Wolke in der Pose derselben Figur je Pose eine andere Form. Darum ein zweiter Lauf: dasselbe Netz mit Formkopf, aber auf den
+  Wolken, die die Vorstufe mit dem Rig in die A-Pose zurückrechnet (<code>mesh3dai_vorstufe_form.py</code>; Rig verfälscht wie im Training der Vorstufe, Fassung 4). Beide Läufe: dieselben vier Jobs und
+  Formvarianten, dieselbe Formregler-Liste, 200 Epochen, Saat 1, Teilfarben je Teil gewürfelt; verschieden sind nur die Eingabe und die Drehung der Augmentierung (±30° in der Pose, ±10° in der A-Pose, weil das Rig ausrichtet).</p>
+{% if form_vergleich %}
+<p class="m3a-klein">Läufe: Pose <code>{{ form_vergleich.pose }}</code>, A-Pose <code>{{ form_vergleich.apose }}</code>, {{ form_vergleich.regler|de }} Regler. Formmaß in mm (lineare Näherung, Abschnitt oben).
+  <strong>je Pose</strong> = jede Probe für sich; <strong>gemittelt</strong> = das Mittel der vorhergesagten Regler über alle Posen der Figur (so baut die echte Nachrechnung die Figur);
+  <strong>Streuung</strong> = wie weit die Vorhersagen derselben Figur auseinanderliegen — 0 hieße: jede Pose gibt dieselbe Form.</p>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Figuren</th><th class="num">Anzahl</th><th class="num">Pose: je Pose</th><th class="num">gemittelt</th><th class="num">Streuung</th>
+    <th class="num">A-Pose: je Pose</th><th class="num">gemittelt</th><th class="num">Streuung</th><th class="num">mittlere Form</th><th class="num">Grundfigur</th></tr></thead>
+  <tbody>
+  {% for z in form_vergleich.zeilen %}<tr><td>{{ z.titel }}</td><td class="num">{{ z.figuren }}</td>
+    <td class="num">{{ z.pose.form_mm|de:1 }}</td><td class="num">{{ z.pose.form_gemittelt_mm|de:1 }}</td><td class="num">{{ z.pose.streuung_mm|de:1 }}</td>
+    <td class="num"><strong>{{ z.apose.form_mm|de:1 }}</strong></td><td class="num">{{ z.apose.form_gemittelt_mm|de:1 }}</td><td class="num">{{ z.apose.streuung_mm|de:1 }}</td>
+    <td class="num">{{ z.apose.mittlere_form_mm|de:1 }}</td><td class="num">{{ z.apose.grundfigur_mm|de:1 }}</td></tr>{% endfor %}
+  {% for z in form_vergleich.jobs %}<tr class="m3a-klein"><td>{{ z.job }} — {{ z.gruppe }}</td><td class="num">{{ z.apose.proben }}</td>
+    <td class="num">{{ z.pose.form_mm|de:1 }}</td><td class="num">{{ z.pose.form_gemittelt_mm|de:1 }}</td><td class="num">{{ z.pose.streuung_mm|de:1 }}</td>
+    <td class="num">{{ z.apose.form_mm|de:1 }}</td><td class="num">{{ z.apose.form_gemittelt_mm|de:1 }}</td><td class="num">{{ z.apose.streuung_mm|de:1 }}</td>
+    <td class="num">{{ z.apose.mittlere_form_mm|de:1 }}</td><td class="num">{{ z.apose.grundfigur_mm|de:1 }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+<p class="m3a-klein">Ein Lauf je Seite, eine Saat — Unterschiede von wenigen mm sind nicht belegt. Die Wolke der A-Pose kommt aus einem nachgestellten Rig-Fehler, nicht aus „Mesh to 3D“: an echten Netzen
+  kommt der Fehler der Rig-Figur (ihre eigene Form) dazu.</p>
+{% else %}
+<p class="ag-fehlt">Der Vergleich liegt noch nicht vor (<code>_vorstufe/form_vergleich.json</code>, <code>ProjektTemp/_wegwerf/mesh3dai_form_vergleich.py</code>).</p>
+{% endif %}

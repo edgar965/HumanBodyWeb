@@ -40,11 +40,13 @@ class PosenklickTest(SimpleTestCase):
     """Der Klick loest aus, nicht der Doppelklick."""
 
     def test_die_zeile_wendet_beim_klick_an(self):
+        # Seit 17.10.2026 (Ordnerbaum aller Modelle) zeichnet `Posenbaumansicht` die
+        # Zeilen; ihr Klickhoerer ruft `umfeld.klick`, und das steht in `pose_apply.js`.
+        ansicht = PosenklickTest._quelle('charakter/posenbaumansicht.js')
+        zeile = ansicht.split('    _zeile(')[1]
+        self.assertIn('umfeld.klick', zeile.split("addEventListener('click'")[1].split('\n')[0])
         quelle = PosenklickTest._quelle('charakter/pose_apply.js')
-        # Der Klickhoerer der Zeile steht in `_zeileBauen`; er muss neben der
-        # Auswahl auch das Anwenden rufen.
-        block = quelle.split('function _zeileBauen')[1]
-        hoerer = block.split("addEventListener('click'")[1].split('});')[0]
+        hoerer = quelle.split('klick:')[1].split('\n')[0]
         self.assertIn('_auswaehlen', hoerer, 'Der Klick muss die Zeile weiter markieren.')
         self.assertIn(
             '_anwenden',
@@ -58,8 +60,8 @@ class PosenklickTest(SimpleTestCase):
         Bei einem Doppelklick feuert `click` zweimal UND `dblclick` — das
         waeren drei Serverabrufe und dreimal dieselbe Rechnung.
         """
-        quelle = PosenklickTest._quelle('charakter/pose_apply.js')
-        self.assertNotIn('dblclick', quelle)
+        for pfad in ('charakter/pose_apply.js', 'charakter/posenbaumansicht.js'):
+            self.assertNotIn('dblclick', PosenklickTest._quelle(pfad), pfad)
 
     def test_jeder_ausstieg_nennt_seinen_grund(self):
         """`vomServer` und `zuruecksetzen` duerfen nicht schweigen."""

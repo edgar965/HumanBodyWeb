@@ -62,23 +62,36 @@ export class Genesis9hautGLSL {
         basisN = mix( basisN, ueberlagert, glitzer.a * uSchminkeNormalenAn );
 `;
 
-    /** 8K-Detailnormalen als RNM über `mapN` — schreibt `normal`. */
+    /** 8K-Detailnormalen als RNM über `mapN` — schreibt `mapN` zurück (`normal` setzt `normalen` danach). */
     static DETAIL = `
         vec3 n1 = normalize( mapN );
         vec3 detailN = texture2D( uDetailNormalen, vNormalMapUv * uDetailKachel ).xyz * 2.0 - 1.0;
         vec3 n2 = normalize( mix( vec3( 0.0, 0.0, 1.0 ), detailN, uDetailGewicht * uDetailAn ) );
         n1.z += 1.0;
         n2.xy = -n2.xy;
-        vec3 gemischt = n1 * dot( n1, n2 ) / n1.z - n2;
-        normal = normalize( tbn * gemischt );
+        mapN = n1 * dot( n1, n2 ) / n1.z - n2;
 `;
 
-    static OHNE_DETAIL = `
-        normal = normalize( tbn * mapN );
+    /**
+     * FALTEN des Alters (17.10.2026, `Genesis9haut.falten`): die Normalenkarte aus HumanBodys Altersfalten (`core/dienste/g9hautfalten.py`,
+     * je Kachel) als RNM über `mapN`; die Steigung wird mit dem Gewicht (Alterswert × Stärke) gestreckt, 0 = flach = keine Wirkung.
+     * Alpha = Furchentiefe: dunkelt die Albedo in der Furche ab (`uFaltenDunkel`), wie die Verschattung eines echten Reliefs — `diffuseColor`
+     * wird erst in `lights_physical_fragment` gelesen, also NACH diesem Block.
+     */
+    static FALTEN = `
+        vec4 faltenT = texture2D( uFaltenNormalen, vNormalMapUv );
+        diffuseColor.rgb *= 1.0 - faltenT.a * uFaltenDunkel * uFaltenAn;
+        vec3 faltenN = faltenT.xyz * 2.0 - 1.0;
+        faltenN.xy *= uFaltenGewicht * uFaltenAn;
+        faltenN = normalize( faltenN );
+        vec3 f1 = normalize( mapN );
+        f1.z += 1.0;
+        faltenN.xy = -faltenN.xy;
+        mapN = f1 * dot( f1, faltenN ) / f1.z - faltenN;
 `;
 
     /** Der Ersatz für `normal_fragment_maps`, je nach Zusätzen zusammengesetzt. */
-    static normalen(mitGlitzer, mitDetail, mischung = 0) {
+    static normalen(mitGlitzer, mitDetail, mischung = 0, mitFalten = false) {
         return `
 #if defined( USE_NORMALMAP_TANGENTSPACE )
     {
@@ -86,7 +99,8 @@ export class Genesis9hautGLSL {
 ${Genesis9hautGLSL.mischungNormalen(mischung)}${mitGlitzer ? Genesis9hautGLSL.GLITZER : ''}
         vec3 mapN = basisN * 2.0 - 1.0;
         mapN.xy *= normalScale;
-${mitDetail ? Genesis9hautGLSL.DETAIL : Genesis9hautGLSL.OHNE_DETAIL}
+${mitDetail ? Genesis9hautGLSL.DETAIL : ''}${mitFalten ? Genesis9hautGLSL.FALTEN : ''}
+        normal = normalize( tbn * mapN );
     }
 #else
     #include <normal_fragment_maps>

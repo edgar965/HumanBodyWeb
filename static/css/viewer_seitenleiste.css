@@ -158,8 +158,19 @@
     gap:4px;
 }
 
-/* Anpassungsregler eines Daz-Kleidungsstücks unter seiner Zeile
-   (scene/genesis9/genesis9stueckregler.js, 18.09.2026): eingerückt, damit
-   sie als Teil der Zeile darüber lesbar sind, nicht als eigenes Stück. */
-.genesis9-stueckregler.genesis9-stueckregler { margin: 0 0 6px 28px; }
-.genesis9-stueckregler > summary { text-transform: none; letter-spacing: 0; }
+/* Anpassungsregler eines Daz-Kleidungsstücks (charakter/genesis9/genesis9stueckregler.js, 18.09.2026): der Knopf
+   „Einstellungen (N)" sitzt IN der Zeile des Stücks, die Regler öffnen sich direkt darunter. Seit 16.10.2026 gelb
+   (Edgar: „Ändere die Farbe der Einstellungen in Gelb"), auch die Gruppen darin — sonst sahen die Gruppen von „Kleidung –
+   Generisch: Alle Kategorien" (Oberteile, Hosen …) aus wie die Kategorien der Assets selbst. */
+.einstellung-knopf {
+    flex: 0 0 auto; margin-left: auto; padding: 0 2px; background: none; border: 0; cursor: pointer;
+    font: inherit; font-size: 0.72rem; color: var(--einstellung);
+}
+.einstellung-knopf:hover, .einstellung-knopf.offen { text-decoration: underline; }
+.einstellung-knopf::before { content: "▸ "; }
+.einstellung-knopf.offen::before { content: "▾ "; }
+.slider-row.selected .einstellung-knopf { color: #fff; }
+.genesis9-stueckregler.genesis9-stueckregler {
+    margin: 0 0 6px 28px; padding-left: 8px; border-left: 2px solid var(--einstellung);
+}
+.genesis9-stueckregler .genesis9-reglergruppe > summary.aufklappkopf { color: var(--einstellung); }

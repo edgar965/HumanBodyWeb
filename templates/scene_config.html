@@ -694,6 +694,7 @@
             <div class="panel-tab" data-tab="assets">Assets</div>
             <div class="panel-tab" data-tab="garmentcode">GarmentCode</div>
             <div class="panel-tab" data-tab="animation">Animation</div>
+            <div class="panel-tab" data-tab="posen">Posen</div>
             <div class="panel-tab" data-tab="szene">Szene</div>
             <div class="panel-tab" data-tab="modell">Skeleton</div>
             <div class="panel-tab" data-tab="rigging">Rigging</div>
@@ -1135,6 +1136,36 @@
                     </div>
                 </div>
             </div><!-- /tab-animation -->
+
+            <!-- Posen Tab (17.10.2026) — vorher der Abschnitt „Pose" ganz unten im Reiter „Skeleton" -->
+            <div class="tab-pane" id="tab-posen">
+                {# Ohne `data-panel-key` (17.10.2026): Der Abschnitt hat keinen Kopf zum Aufklappen — der gemerkte Zustand „zu" vom alten Platz unter „Skeleton" ließ den Reiter leer. #}
+                <div class="panel-section abschnitt-ohne-rahmen">
+                    <div class="panel-body" id="pose-panel">
+                        <div id="pose-list" class="anim-tree textfeld-dehnbar">
+                            <div class="hb-hinweis">Lade Posen …</div>
+                        </div>
+                        <div class="hb-hinweis">Rechtsklick auf Pose oder Ordner: verschieben, umbenennen, löschen.</div>
+                        <div id="pose-status" class="hb-hinweis"></div>
+                        <div class="hb-display-flex">
+                            <button id="pose-reset" class="btn-toggle hb-dehnt"><i
+                                 class="fas fa-undo"></i> A-Pose (Reset)</button>
+                        </div>
+                        <div class="abschnitt-abgesetzt">
+                            <div class="abschnittstitel-fett">Aktuelle Pose speichern</div>
+                            <div class="hb-display-flex-eng">
+                                <input type="text" id="pose-save-name" class="scene-name-input hb-dehnt"
+                                     maxlength="64" placeholder="Name der neuen Pose"
+                                     title="Name der Pose — sie landet im Ordner „eigene“">
+                                <button id="pose-save-btn" class="viewer-btn hb-font-size-0-75rem-b"
+                                     title="Die Stellung der gewählten Figur als Pose speichern"><i
+                                          class="fas fa-save"></i> Speichern</button>
+                            </div>
+                            <div class="hb-hinweis">Legt die Stellung der gewählten Figur im Ordner „eigene“ ab.</div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /tab-posen -->
 
             <!-- Szene Tab -->
             <div class="tab-pane" id="tab-szene">
@@ -1617,21 +1648,6 @@
                         <button class="action-btn" id="mg-save-server">Speichern unter...</button>
                     </div>
                 </div>
-                <!-- Pose Browser -->
-                <div class="panel-section" data-panel-key="pose_browser">
-                    <h3>Pose <span class="chevron">&#9660;</span></h3>
-                    <div class="panel-body" id="pose-panel">
-                        <div id="pose-list" class="anim-tree textfeld-dehnbar"
-                            >
-                            <div class="hb-hinweis">Lade Poses...</div>
-                        </div>
-                        <div id="pose-status" class="hb-hinweis"></div>
-                        <div class="hb-display-flex">
-                            <button id="pose-reset" class="btn-toggle hb-dehnt"><i
-                                 class="fas fa-undo"></i> A-Pose (Reset)</button>
-                        </div>
-                    </div>
-                </div>
             </div><!-- /tab-modell -->
 
             <!-- Rigging Tab -->
@@ -1825,19 +1841,8 @@
     </div>
 </div>
 
-<!-- Pose context menu -->
-<div id="pose-ctx-menu" class="hb-kontextmenue">
-    <div class="pose-ctx-item hb-menueeintrag" data-action="apply"><i
-         class="fas fa-play hb-symbolspalte"></i> Anwenden</div>
-    <div class="hb-trennlinie"></div>
-    <div class="pose-ctx-item hb-menueeintrag" data-action="rename"><i
-         class="fas fa-pen hb-symbolspalte"></i> Umbenennen (F2)</div>
-    <div class="pose-ctx-item hb-menueeintrag" data-action="delete"><i
-         class="fas fa-trash hb-symbolspalte"></i> Loeschen (Entf)</div>
-</div>
+<!-- Das Kontextmenü der Posen ist seit 17.10.2026 `Kontextmenue` (`posenbaummenue.js`). -->
 <style>
-.pose-ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
-
 /* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
    Je Element seine eigene Kennung als Selektor: Die gab es schon, und
    ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
