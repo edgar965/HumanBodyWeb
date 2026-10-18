@@ -128,4 +128,6 @@ class FamilienBasisTest(SimpleTestCase):
             G9mhmorphe.ablegen('c', [1], [[0.01, 0, 0]], [[0, 0, 0]], {'bereich': 'mh_makro', 'anzeige': 'Makro', 'reihe': 0})
             bereiche = G9mhmorphe.bereiche()
             self.assertEqual([b['schluessel'] for b in bereiche], ['mh_makro', 'mh_gesicht'], 'Reihenfolge von BEREICHE, unbelegte fehlen')
-            self.assertEqual([r['anzeige'] for r in bereiche[1]['regler']], ['Erster', 'Zweiter'])
+            # Mit Herkunftskürzel (Edgar, 18.10.2026: „Makehuman ein MH_“); sortiert wird nach `reihe`, nicht nach dem Namen.
+            self.assertEqual([r['anzeige'] for r in bereiche[1]['regler']], ['MH_Erster', 'MH_Zweiter'])
+            self.assertEqual({f.KUERZEL for f in (G9hbmorphe, G9mhmorphe, G9sxmorphe, G9umamorphe)}, {'HB_', 'MH_', 'SM_', 'UM_'})

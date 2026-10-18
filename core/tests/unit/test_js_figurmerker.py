@@ -64,6 +64,16 @@ Figurmerker.tabMerken('a', 'kleider');
 pruefe('a tab neu', Figurmerker.tab('a'), 'kleider');
 pruefe('a animation bleibt', Figurmerker.animation('a').name, 'Walk');
 
+// --- die zuletzt geaenderte Eigenschaft im Reiter „Modell" (`Modellklappung`, 18.10.2026) --
+const wo = {ziel: '#g9-x', pfad: ['Genesis 9', 'Form (Daz-Regler)', 'Kopf']};
+pruefe('leer eigenschaft', Figurmerker.eigenschaft('b'), null);
+Figurmerker.eigenschaftMerken('b', wo);
+pruefe('b eigenschaft', Figurmerker.eigenschaft('b'), wo);
+pruefe('b tab bleibt', Figurmerker.tab('b'), 'kleider');
+pruefe('a ohne eigenschaft', Figurmerker.eigenschaft('a'), null);
+Figurmerker.eigenschaftMerken('b', null);
+pruefe('b eigenschaft vergessen', Figurmerker.eigenschaft('b'), null);
+
 // --- Animation ohne Adresse ist „nichts gewaehlt" ---------------------------
 Figurmerker.animationMerken('a', {name: 'kaputt'});
 pruefe('ohne url = null', Figurmerker.animation('a'), null);
@@ -103,7 +113,7 @@ pruefe('b bleibt', Figurmerker.tab('b'), 'kleider');
 // --- der Zettel liegt im sessionStorage und kommt von dort zurueck ----------
 pruefe('Schluessel', geschrieben[geschrieben.length - 1], Figurmerker.SCHLUESSEL);
 const roh = JSON.parse(sessionStorage.getItem(Figurmerker.SCHLUESSEL));
-pruefe('gespeichert', roh, {b: {tab: 'kleider', animation: null}});   // null = Walk vergessen
+pruefe('gespeichert', roh, {b: {tab: 'kleider', eigenschaft: null, animation: null}});   // null = Walk vergessen
 Figurmerker._zettel = null;                      // wie nach einem Reload
 pruefe('nach Reload', Figurmerker.tab('b'), 'kleider');
 

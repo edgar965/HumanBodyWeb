@@ -12,7 +12,8 @@ import { Genesis9hautebenenregler } from './genesis9hautebenenregler.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
 import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
-import { Genesis9skala } from './genesis9skala.js';
+import { Genesis9reglerliste } from './genesis9reglerliste.js';
+import { Genesis9reglerzeile } from './genesis9reglerzeile.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -90,63 +91,7 @@ export class Genesis9eigenschaften {
     }
 
     // ------------------------------------------------------------- Anzeige
-
-    /**
-     * Der Wert, den ein Regler zeigt: was der Nutzer gestellt hat, sonst der
-     * WIRKSAME Wert aus dem Formelgraphen (`inst.morphwerte`, vom Server).
-     *
-     * Edgar (18.09.2026): „bei Ursula9 ist der Ursula Head gerade bei 0 %,
-     * auch andere Ursula-Properties sind bei 0". Das Preset stellt nur den
-     * Steuerregler `P3DUrsula_figure_ctrl_Character` auf 1; Kopf und Körper
-     * (`P3DUrsula_head_bs_Head`, `_body_bs_Body`) bekommen ihre 100 % über
-     * Formeln — im Regler-Wörterbuch stehen sie nicht, der Schieber zeigte 0.
-     * Daz zeigt bei so einem Kanal die Summe. `gesteuert` = nicht selbst
-     * gestellt, aber wirksam.
-     */
-    static wert(inst, regler) {
-        const eigen = inst.regler?.[regler.name];
-        const gestellt = eigen !== undefined && eigen !== null;
-        const wirksam = inst.morphwerte?.[regler.name];
-        // Ein Kanal mit Deltas zeigt seine SUMME (eigener Wert + Formeln, wie
-        // Daz) — auch nach einem eigenen Zug: 50 % eigen + 100 % gesteuert
-        // sind begrenzt 100 %, und das steht dann auch am Schieber.
-        if (wirksam !== undefined && Math.abs(wirksam) > 1e-9) {
-            return { wert: wirksam, gesteuert: !gestellt };
-        }
-        return { wert: gestellt ? eigen : (regler.vorgabe ?? 0), gesteuert: false };
-    }
-
-    /**
-     * Der Bereich des Schiebers: Dazʼ Grenzen — steht der Wert darüber (Spielraum, 08.10.2026: die Anpassung an ein Netz darf Formregler bis ×2
-     * stellen, `weit_min`/`weit_max` im Plan), reicht der Schieber bis zum Spielraum, sonst bis zum Wert. Edgar: „der schieber soll auch höhere
-     * Werte anzeigen können, wenn du höhere hast".
-     */
-    static bereich(regler, wert) {
-        let unten = regler.min;
-        let oben = regler.max;
-        if (wert > oben) oben = Math.max(wert, regler.weit_max ?? wert);
-        if (wert < unten) unten = Math.min(wert, regler.weit_min ?? wert);
-        return { unten, oben };
-    }
-
-    /** Nach einem Lauf die gesteuerten Schieber auf den neuen wirksamen Wert. */
-    static nachziehen(inst, plan) {
-        const alle = (plan?.bereiche || []).flatMap(b => b.regler || []);
-        for (const regler of alle) {
-            // Liste (`g9-`) UND Popup „Form" (`g9d-`) tragen denselben Regler (`data-regler`).
-            for (const schieber of document.querySelectorAll(`input[data-regler="${CSS.escape(regler.name)}"]`)) {
-                if (schieber === document.activeElement) continue;
-                const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
-                const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
-                if (parseFloat(schieber.min) !== unten) schieber.min = unten;
-                if (parseFloat(schieber.max) !== oben) schieber.max = oben;
-                if (Math.abs(parseFloat(schieber.value) - wert) < 1e-6) continue;
-                schieber.value = wert;
-                const anzeige = schieber.parentElement?.querySelector('.slider-value');
-                if (anzeige) anzeige.textContent = Genesis9eigenschaften.text(wert, gesteuert, regler);
-            }
-        }
-    }
+    // Wert, Bereich und Text eines Reglers stehen seit 18.10.2026 in `genesis9reglerzeile.js` (Aliasse und Paare der Gliederung).
 
     static _kopf(inst) {
         const feld = document.getElementById('prop-genesis9-kopf');
@@ -265,30 +210,17 @@ export class Genesis9eigenschaften {
 
     // -------------------------------------------------------------- Regler
 
+    /** Die Reglerliste nach Körperteil mit Suche (`genesis9reglerliste.js`, 18.10.2026). Alle Bereiche zu — welcher aufgeht, entscheidet `Modellklappung`. */
     static _regler(inst, plan) {
         const behaelter = document.getElementById('prop-genesis9-regler');
         if (!behaelter) return;
-        behaelter.innerHTML = '';
-        const bereiche = plan.bereiche || [];
-        if (!bereiche.length) {
-            behaelter.innerHTML = `<div class="gedaempft">${
-                escapeHtml(plan.fehler || 'Keine Regler gefunden.')}</div>`;
-            return;
-        }
-        for (const bereich of bereiche) {
-            const kasten = document.createElement('details');
-            kasten.className = 'uma-gruppe';
-            kasten.open = bereich.schluessel === 'figur';
-            kasten.innerHTML = `<summary>${escapeHtml(bereich.name)} `
-                + `<span class="gedaempft">(${bereich.regler.length})</span></summary>`;
-            for (const r of bereich.regler) {
-                kasten.appendChild(Genesis9eigenschaften._zeile(inst, r));
-            }
-            Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
-            // „Nachformung (Ort)": das freie Morph-Formular für den Körper (01.10.2026).
-            Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));
-            behaelter.appendChild(kasten);
-        }
+        Genesis9reglerliste.fuellen(behaelter, document.getElementById('prop-genesis9-reglerkopf'), plan,
+            r => Genesis9eigenschaften._zeile(inst, r),
+            (kasten, bereich) => {
+                Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
+                // „Nachformung (Ort)": das freie Morph-Formular für den Körper (01.10.2026).
+                Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));
+            });
     }
 
     /**
@@ -307,37 +239,11 @@ export class Genesis9eigenschaften {
         }).verdrahten();
     }
 
+    /** Eine Reglerzeile (`genesis9reglerzeile.js`); nach jedem Lauf Kopfzeile und gesteuerte Schieber nachziehen. */
     static _zeile(inst, regler, praefix = 'g9-') {
-        const zeile = document.createElement('div');
-        zeile.className = 'slider-row';
-        const { wert, gesteuert } = Genesis9eigenschaften.wert(inst, regler);
-        const kennung = `${praefix}${regler.name}`;
-        // `hinweis`: ein Sammelregler (Alter, `G9alter`) sagt, was er stellt — sein Name allein täte es nicht.
-        const titel = gesteuert ? `${regler.name} — über Formeln gestellt` : (regler.hinweis || regler.name);
-        const { unten, oben } = Genesis9eigenschaften.bereich(regler, wert);
-        zeile.innerHTML = `
-            <label for="${kennung}" title="${escapeHtml(titel)}">${
-                escapeHtml(regler.anzeige)}</label>
-            <input type="range" id="${kennung}" min="${unten}" max="${oben}"
-                   step="0.01" value="${wert}" data-regler="${escapeHtml(regler.name)}">
-            <span class="slider-value">${Genesis9eigenschaften.text(wert, gesteuert, regler)}</span>`;
-        const schieber = zeile.querySelector('input');
-        const anzeige = zeile.querySelector('.slider-value');
-        schieber.addEventListener('input', () => {
-            const neu = parseFloat(schieber.value);
-            anzeige.textContent = Genesis9eigenschaften.text(neu, false, regler);
-            Genesis9lauf.planen(inst, () => inst.reglerSetzen(regler.name, neu),
-                                () => { Genesis9eigenschaften._kopf(inst);
-                                        Genesis9eigenschaften.nachziehen(inst, Genesis9eigenschaften._plan); },
-                                `regler:${regler.name}`);
-        });
-        return zeile;
-    }
-
-    /** Daz zeigt die Kanäle als Prozent — hier auch; gesteuerte mit Stern. */
-    static text(wert, gesteuert = false, regler = null) {
-        const eigene = Genesis9skala.text(wert, regler);     // Lebensalter in Jahren (`G9lebensalter`)
-        if (eigene) return `${eigene}${gesteuert ? ' *' : ''}`;
-        return `${Math.round(wert * 100)} %${gesteuert ? ' *' : ''}`;
+        return Genesis9reglerzeile.bauen(inst, regler, () => {
+            Genesis9eigenschaften._kopf(inst);
+            Genesis9reglerzeile.nachziehen(inst, Genesis9eigenschaften._plan);
+        }, praefix);
     }
 }

@@ -56,7 +56,7 @@ from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.posen import G9posen
 from Genesis9.schminke import G9schminke
 from Genesis9.pfade import G9pfade
-from Genesis9.reglerplan import G9reglerplan
+from Genesis9.reglergliederung import G9reglergliederung
 
 logger = logging.getLogger('core')
 
@@ -287,7 +287,8 @@ class G9figur:
                                  'brauen': [], 'fehler': FEHLT})
         from Genesis9.anhang import G9anhang
         return JsonResponse({
-            'bereiche': G9reglerplan.bereiche(),
+            # Nach Körperteil gegliedert (`G9reglergliederung`, 18.10.2026); `G9reglerplan.bereiche()` bleibt die Liste nach Herkunft.
+            'bereiche': G9reglergliederung.bereiche(),
             'haut': G9hautpresets.hautpresets(),
             'augen': G9hautpresets.augen(),
             'praesets': G9hautwahl.kategorien() + G9schminke.katalog(),

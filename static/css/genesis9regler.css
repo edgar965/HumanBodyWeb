@@ -1,0 +1,15 @@
+/* Reglerliste des Genesis-Bedienfelds nach Körperteil (`genesis9reglerliste.js`, 18.10.2026): Werkzeugzeile mit Suche, „nur geänderte",
+   „Seiten koppeln"; Gruppen im Bereich eingerückt, damit man sieht, wozu ein Regler gehört. */
+
+.g9-reglerkopf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 6px; }
+.g9-reglersuche {
+    flex: 1 1 100%; min-width: 0; height: 26px; padding: 2px 6px; font-size: 0.8rem;
+    color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+}
+.g9-reglersuche:focus { outline: none; border-color: var(--accent); }
+.g9-reglerschalter { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; }
+.g9-reglerschalter input { accent-color: var(--accent); margin: 0; }
+
+/* Gruppe im Bereich (Kopf · Nase, Ganzer Körper · Größe, Haltung · Arme …) — vierfache Klasse, weil `stilhelfer.css` `.uma-gruppe` dreifach setzt. */
+.uma-gruppe.uma-gruppe.uma-gruppe.g9-untergruppe { margin: 2px 0 2px 10px; padding-left: 6px; border-left: 1px solid var(--border); }
+.uma-gruppe.uma-gruppe.uma-gruppe.g9-untergruppe > summary { font-size: 0.78rem; color: var(--text-muted); }

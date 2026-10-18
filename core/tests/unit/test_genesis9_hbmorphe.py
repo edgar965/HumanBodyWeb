@@ -100,7 +100,8 @@ class HbmorpheTest(SimpleTestCase):
                              ['hb:Abdomen_Mass', 'hb:Waist_Size'])       # nach Kategorie
             regler = bereiche[1]['regler'][0]
             self.assertEqual((regler['min'], regler['max'], regler['vorgabe']), (-1.0, 1.0, 0.0))
-            self.assertEqual(regler['anzeige'], 'Nose Size Y')
+            # Das Kürzel `HB_` zeigt die Herkunft (Edgar, 18.10.2026) — die Regler stehen jetzt neben den Daz-Reglern ihres Körperteils.
+            self.assertEqual(regler['anzeige'], 'HB_Nose Size Y')
 
     def test_4_formung_nimmt_hb_regler(self):
         with _Ordner(self):

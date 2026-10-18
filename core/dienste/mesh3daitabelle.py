@@ -23,14 +23,14 @@ class Mesh3daitabelle:
     SPALTEN = (
         {'label': 'Job', 'key': 'name'},
         {'label': 'Modell', 'key': 'modell', 'titel': 'Das Genesis-Modell, an dem trainiert wird'},
+        {'label': 'Zuletzt trainiert', 'key': 'trainiert',
+         'titel': 'Ende des jüngsten fertigen Trainings an den Daten dieses Jobs (Zeit von lauf_ergebnis.json): Läufe des Jobs (_laeufe) und gemeinsame Netze der Vorstufe/Form (_vorstufe/laeufe), '
+                  'die den Job in ihren Trainingsdaten nennen; Probeläufe zählen nicht. Der Name des Laufs steht im Tooltip der Zelle'},
         {'label': 'Proben', 'key': 'proben', 'num': True, 'titel': 'Posen, die die Seite des Jobs zeigt'},
         {'label': 'Training', 'key': 'training', 'num': True, 'titel': 'Davon zum Training'},
         {'label': 'Prüfposen', 'key': 'pruefung', 'num': True, 'titel': 'Davon nie trainiert — daran wird gemessen'},
         {'label': 'Datensatz', 'key': 'datensatz', 'num': True,
          'titel': 'Proben des echten Datensatzes auf der Platte (3DObjects/mesh3dai/<Modell>/proben): fertig gerechnet von geplant. Fertig heißt: eingabe.npz liegt da, das Datenskript schreibt sie zuletzt'},
-        {'label': 'Zuletzt trainiert', 'key': 'trainiert',
-         'titel': 'Ende des jüngsten fertigen Trainings an den Daten dieses Jobs (Zeit von lauf_ergebnis.json): Läufe des Jobs (_laeufe) und gemeinsame Netze der Vorstufe/Form (_vorstufe/laeufe), '
-                  'die den Job in ihren Trainingsdaten nennen; Probeläufe zählen nicht. Der Name des Laufs steht im Tooltip der Zelle'},
         {'label': 'Status', 'key': 'status', 'titel': '„Echt (Lauf …)“: Datensatz und Vorhersagen des jüngsten fertigen Trainingslaufs; „Attrappe“: Flächen, Kleider und Ausgabe des Netzes sind erfunden, Posen und Rig echt'},
     )
 
@@ -46,11 +46,11 @@ class Mesh3daitabelle:
         zellen = (
             format_html('<td data-sort="{}"><a href="{}">{}</a></td>', job['name'].lower(), self.adresse(job), job['name']),
             format_html('<td data-sort="{}">{}</td>', job['modell'].lower(), job['modell']),
+            self._trainiert(job['ordner']),          # dritte Spalte (Edgar, 18.10.2026)
             self._zahl(job['proben']),
             self._zahl(job['training']),
             self._zahl(job['pruefung']),
             self._datensatz(job['ordner']),
-            self._trainiert(job['ordner']),
             format_html('<td data-sort="{}">{}</td>', job['status'].lower(), job['status']),
         )
         return {'id': job['id'], 'klasse': 'mesh3dai-zeile-job', 'html': mark_safe(''.join(zellen))}

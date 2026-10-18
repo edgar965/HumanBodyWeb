@@ -24,7 +24,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 export class Figurmerker {
 
     static SCHLUESSEL = 'scene.figurmerker';
-    /** {id: {tab, animation: {name, url, category}, kleider}} — erst beim ersten Zugriff gelesen. */
+    /** {id: {tab, animation: {name, url, category}, kleider, eigenschaft: {ziel, pfad}}} — erst beim ersten Zugriff gelesen. */
     static _zettel = null;
 
     // ------------------------------------------------------------------ Lesen
@@ -39,6 +39,11 @@ export class Figurmerker {
 
     static kleider(id) {
         return Figurmerker._eintrag(id).kleider || null;
+    }
+
+    /** `{ziel, pfad}` der zuletzt geänderten Eigenschaft im Reiter „Modell" (`Modellklappung`). */
+    static eigenschaft(id) {
+        return Figurmerker._eintrag(id).eigenschaft || null;
     }
 
     // ---------------------------------------------------------------- Merken
@@ -57,6 +62,10 @@ export class Figurmerker {
 
     static kleiderMerken(id, kennung) {
         Figurmerker._setzen(id, 'kleider', kennung || null);
+    }
+
+    static eigenschaftMerken(id, wo) {
+        Figurmerker._setzen(id, 'eigenschaft', wo || null);
     }
 
     /**

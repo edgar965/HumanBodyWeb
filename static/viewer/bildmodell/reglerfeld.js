@@ -20,8 +20,10 @@ export class Reglerfeld {
     static ADRESSE = '/api/character/genesis9-figur/regler/';
     static _plan = null;
     static MERKER = 'bildmodell.reglerfeld.';
-    static NUR_FORM = ['figur', 'koerper', 'kopf', 'mimik', 'hals', 'brust', 'ruecken',
-                       'taille', 'huefte', 'arme', 'haende', 'beine', 'fuesse'];
+    // Seit 18.10.2026 nach Körperteil gegliedert (`Genesis9/reglergliederung.py`): „charaktere" statt „figur", Posen unter „haltung", die
+    // HB-/MH-/SM-/UM-Regler stehen in den Körperteil-Bereichen (der Rückfall auf `hb…` greift nur ohne Zuordnungstabelle).
+    static NUR_FORM = ['charaktere', 'figur', 'koerper', 'kopf', 'mimik', 'hals', 'brust', 'ruecken',
+                       'taille', 'huefte', 'arme', 'haende', 'beine', 'fuesse', 'haltung'];
 
     constructor(auftrag, ansicht) {
         this.auftrag = auftrag;

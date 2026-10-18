@@ -2,6 +2,7 @@ import { escapeHtml } from '../utils.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
 import { Genesis9morphformular } from './genesis9morphformular.js';
+import { Modellklappung } from '../modellklappung.js';
 
 /**
  * Genesis9koerpermorphformular — das freie Morph-Formular im Bereich „Nachformung (Ort)" des Körper-Reiters
@@ -55,6 +56,7 @@ export class Genesis9koerpermorphformular {
             if (zaehler) zaehler.textContent = `(${bereich.regler.length})`;
             const schieber = zeile.querySelector('input[type="range"]');
             if (schieber) { schieber.value = '1'; zeile.querySelector('.slider-value').textContent = '100 %'; }
+            Modellklappung.merken(schieber || zeile, inst.id);   // der neue Regler ist die zuletzt hinzugefügte Eigenschaft
             Genesis9lauf.planen(inst, () => inst.reglerSetzen(regler.name, 1), () => {}, `regler:${regler.name}`);
         } catch (fehler) {
             meldung.textContent = `Fehler: ${escapeHtml(fehler.daten?.fehler || fehler.message)}`;

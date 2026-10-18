@@ -20,6 +20,7 @@ import { Dazeigenschaften } from './genesis9/dazeigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
+import { Modellklappung } from './modellklappung.js';
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Formbedienung } from './formbedienung.js';
 import { Detailbedienung } from './detailbedienung.js';
@@ -81,7 +82,7 @@ export async function populateProperties(charId) {
     if (!inst) return;
     state.currentPropsCharId = charId;
     Eigenschaftenbereiche.zeigen(true);
-    populateTransform(inst);
+    Transformfelder.fuellen(inst);
     // Eine UMA-Figur (05.09.2026) hat Regler und Farben statt Body Type,
     // Morphs und Ausstattung; der Assets-Reiter zeigt ihre Unity-Garderobe.
     const uma = inst.quelle === 'uma';
@@ -187,6 +188,7 @@ export async function populateProperties(charId) {
  * sich — kein Fehler, aber leer und verwirrend.
  */
 function _gemerktesHerstellen(charId) {
+    Modellklappung.anwenden(charId);   // alle Bereiche zu, nur der der zuletzt geänderten Eigenschaft auf (18.10.2026)
     const tab = Figurmerker.tab(charId) || 'eigenschaften';
     if (tab && document.querySelector(`.panel-tab[data-tab="${tab}"]`)) switchTab(tab);
     fn.animationMarkieren?.(Figurmerker.animation(charId)?.name || null);
@@ -204,10 +206,6 @@ export function clearProperties() {
     Formbedienung.leeren();
     Eigenschaftenbereiche.umaGarderobe(null);
     Eigenschaftenbereiche.genesis9Garderobe(null);
-}
-
-function populateTransform(inst) {
-    Transformfelder.fuellen(inst);
 }
 
 export function syncTransformInputs() {

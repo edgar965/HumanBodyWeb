@@ -76,7 +76,8 @@ class Genesis9laufUndHaarkartenTest(SimpleTestCase):
             ('genesis9eigenschaften.js', "_kopf(inst), 'brauen')"): 1,
             ('genesis9eigenschaften.js', "_kopf(inst), 'brauenstil')"): 1,
             ('genesis9eigenschaften.js', '`praeset:${kategorie.kategorie}`'): 1,
-            ('genesis9eigenschaften.js', '`regler:${regler.name}`'): 1,
+            # Die Reglerzeile steht seit 18.10.2026 in eigenem Modul (Aliasse und Paare der Gliederung nach Körperteil).
+            ('genesis9reglerzeile.js', '`regler:${regler.name}`'): 1,
             ('genesis9posen.js', "'formen'"): 1,
             ('genesis9posen.js', '`pose:${feld}`'): 1,
         }
