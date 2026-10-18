@@ -29,6 +29,7 @@ import numpy as np
 from django.test import SimpleTestCase
 from Genesis9.formung import G9formung
 from Genesis9.hbmorphe import G9hbmorphe
+from Genesis9.morphfamilien import G9morphfamilien
 from Genesis9.reglerplan import G9reglerplan
 
 
@@ -89,7 +90,8 @@ class HbmorpheTest(SimpleTestCase):
         with _Ordner(self):
             self.assertEqual(G9hbmorphe.bereiche(), [])
             G9hbmorphe.ablegen('Waist_Size', [1], [[0.01, 0, 0]], [[0, 0, 0]])
-            G9hbmorphe.ablegen('Nose_SizeY', [2], [[0, 0.01, 0]], [[0, 0, 0]])
+            # Beide Richtungen wirken: der Schieber läuft −1 … 1 (eine tote Seite schneidet `G9morphfamilie._weg` ab, siehe `test_genesis9_schieberbahn`).
+            G9hbmorphe.ablegen('Nose_SizeY', [2], [[0, 0.01, 0]], [[0, -0.01, 0]])
             G9hbmorphe.ablegen('Abdomen_Mass', [3], [[0, 0, 0.01]], [[0, 0, 0]])
             bereiche = G9hbmorphe.bereiche()
             self.assertEqual([b['schluessel'] for b in bereiche], ['hb_koerper', 'hb_gesicht'])
@@ -147,7 +149,9 @@ class HbmorpheTest(SimpleTestCase):
         with _Ordner(self):
             G9hbmorphe.ablegen('Fantasy_ElfEars', [1], [[0.01, 0, 0]], [[0, 0, 0]])
             # Zähne/Augen (`G9anhangregler`) und „Verborgen (Daz)" (`G9verborgeneregler`, beide 17.10.2026) lesen die echte Bibliothek — hier leer.
+            # Nur HumanBody: die echten Ablagen von MakeHuman, SMPL-X und UMA (seit 17.10.2026 gebaut) gehören nicht in diesen Fall.
             with mock.patch.object(G9reglerplan, 'holen', return_value=[]), \
+                    mock.patch.object(G9morphfamilien, 'alle', return_value=[G9hbmorphe]), \
                     mock.patch('Genesis9.anhangregler.G9anhangregler.bereiche', return_value=[]), \
                     mock.patch('Genesis9.verborgeneregler.G9verborgeneregler.bereiche', return_value=[]):
                 schluessel = [b['schluessel'] for b in G9reglerplan.bereiche()]

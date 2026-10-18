@@ -2,6 +2,7 @@ import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9lauf } from './genesis9lauf.js';
+import { Genesis9posenvorschau } from './genesis9posenvorschau.js';
 
 /**
  * Genesis9posen — Daz-Posen und -Ausdrücke einer Genesis-9-Figur (18.09.2026).
@@ -106,6 +107,7 @@ export class Genesis9posen {
             wahl.appendChild(block);
         }
         wahl.addEventListener('change', () => {
+            Genesis9posenvorschau.zeigen(inst, feld, wahl.value);     // sofort, der Neubau folgt (17.10.2026)
             Genesis9lauf.planen(inst, () => inst.poseSetzen(feld, wahl.value), () => {}, `pose:${feld}`);
             markDirty();
         });

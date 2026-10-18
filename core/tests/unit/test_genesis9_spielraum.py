@@ -41,6 +41,11 @@ class _Ablage:
     def hat_deltas(self, kennung):
         return kennung in self._deltas
 
+    def aufloesen(self, name):
+        u"""Wie `G9morphablage.aufloesen` — `G9formeln` löst damit seit 17.10.2026 die Kanäle der Anhangformeln auf (`_anhaenge_dazu`)."""
+        from Genesis9.kanalnamen import G9kanalnamen
+        return G9kanalnamen.von(self).aufloesen(name)
+
 
 def kanal(kennung, gruppe, lo=-1.0, hi=1.0):
     return {'id': kennung, 'label': kennung, 'gruppe': gruppe, 'region': '', 'min': lo, 'max': hi, 'vorgabe': 0.0, 'sichtbar': True, 'hd': '', 'formeln': []}

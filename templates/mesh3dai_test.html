@@ -48,6 +48,32 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
         </div>
     </div>
 </section>
+
+{% comment %}
+Kleider und Bestandteile (17.10.2026 nachts, Edgar: „Toggle für jedes Kleidungsstück für beide Optionen und Button zum übernehmen von Option a oder b in das End-Modell, mit speichern des Modells“) —
+`Mesh3daitestkleider` (Server und Seite), `Mesh3daitestmodell`.
+{% endcomment %}
+<section class="card mesh3dai-kleider" id="mesh3dai-kleider">
+    <div class="mesh3dai-zeilenkopf">
+        <h2>Kleider und Bestandteile</h2>
+        <div class="schalterleiste">
+            <span class="mesh3dai-kleider-titel">Alle:</span>
+            <button type="button" class="schaltknopf" data-kleider-alle="a" aria-pressed="false" title="Jedes Stück aus dem Katalog, wo es eines gibt">a · Katalog</button>
+            <button type="button" class="schaltknopf" data-kleider-alle="b" aria-pressed="false" title="Jedes Stück so, wie es aus dem Netz geschnitten ist">b · aus dem Netz</button>
+        </div>
+    </div>
+    <p class="hb-hinweis" data-kleider="info">Wird geladen …</p>
+    <table class="doku mesh3dai-kleider-tabelle">
+        <thead><tr><th>Stück</th><th>a · Katalog</th><th>b · aus dem Netz</th><th>Wahl</th></tr></thead>
+        <tbody data-kleider="tabelle"></tbody>
+    </table>
+    <div class="mesh3dai-kleider-speichern">
+        <label for="mesh3dai-kleider-name">Modellname:</label>
+        <input type="text" id="mesh3dai-kleider-name" maxlength="80">
+        <button type="button" class="btn btn-primary" id="mesh3dai-kleider-speichern" disabled><i class="fas fa-save"></i> Übernehmen und als Modell speichern</button>
+        <span class="hb-hinweis" data-kleider="stand"></span>
+    </div>
+</section>
 {% endblock %}
 
 {% block extra_scripts %}

@@ -140,24 +140,30 @@ class Werkzeugkoerper:
          'und sie sind im Weltraum übertragen. (Der „Mund 6,8 → 94 cm“ vom 20.09.2026 war ein Zacken im übertragenen Feld, kein Skelettfehler — G9feldputz füllt solche Punkte.) '
          'Die genauen Namen aus der Reglerliste nehmen; Torso_BreastPosZ ist das Beispiel der Klasse, nicht gegen den Bestand geprüft.'),
         ('MakeHuman-, SMPL-X- und UMA-Morphe auf Genesis (mh:…, sx:…, uma:…)',
-         'Stellt einen Regler der anderen Projekte als Morph auf dem Genesis-Körper: MakeHuman (Alter Baby/Kind/Alt, Rasse, Muskeln, 258 Detailregler, 22 Körperformen, Maße), SMPL-X '
+         'Stellt einen Regler der anderen Projekte als Morph auf dem Genesis-Körper: MakeHuman (Geschlecht, Alter Baby/Kind/Alt, Rasse, Muskeln, 258 Detailregler, 22 Körperformen, Maße), SMPL-X '
          '(23 Maßregler in cm, Form 1–10), UMA (62 DNA-Regler, drei Kinder-Posen).',
          'rezept',
          "m.koerper_regler('mh:macro_Alter_Kind', 1.0)",
          [(G + 'morphfamilie.py', 'G9morphfamilie'), (G + 'morphfamilien.py', 'G9morphfamilien'), (G + 'mhmorphe.py', 'G9mhmorphe'), (G + 'sxmorphe.py', 'G9sxmorphe'),
           (G + 'umamorphe.py', 'G9umamorphe'), (G + 'gelenkversatz.py', 'G9gelenkversatz'), (G + 'formelnfremd.py', 'G9formelnfremd')],
          'Gleiche Mechanik wie hb: je Regler Deltas je Richtung auf den Käfigpunkten plus Gelenkversätze (das Skelett folgt). mh: −1…1 bei Reglern mit zwei Seiten, 0…1 mit einer '
-         '(Steckbrief min/max); Bezug ist die weibliche MakeHuman-Vorgabe, das Geschlecht fehlt mit Absicht (Genesis hat BaseFeminine/BaseMasculine). sx: −1…1 = ±2 Beta bzw. '
+         '(Steckbrief min/max); Bezug ist die weibliche MakeHuman-Vorgabe; mh:macro_Geschlecht (0…1, +1 = MakeHumans Mann) ist ein ZWEITES Geschlecht neben BaseFeminine/BaseMasculine und '
+         'überlagert es. sx: −1…1 = ±2 Beta bzw. '
          'der volle Ausschlag der Maßregler (±15 % Länge, ±20 % Umfang). uma: Knochenvorgaben auf Genesis-Knochen übertragen — Achsen angenommen, nicht gegen UMA gemessen. '
          'Bereiche mh_makro/mh_koerper/mh_gesicht/mh_mass/mh_formen, sx_mass/sx_form, uma_kind/uma_dna. Die genauen Namen aus der Reglerliste nehmen; mh:macro_Alter_Kind ist ein '
          'Beispiel der Klasse, nicht gegen den Bestand geprüft.'),
-        ('Lebensalter (alter:jahre)',
-         'Ein Schieber vom Baby (1 Jahr) über das Kind (10) und die Vorgabe (25) bis 90 Jahre — Körper aus MakeHumans Alterskurve, über 25 dazu Gesicht und Falten des Reglers „Alter“.',
+        ('Alter in Jahren (alter:jahre)',
+         'Ein Schieber „Alter (MakeHuman, 18 – 90 Jahre)“ von 18 Jahren über die Vorgabe (25) bis 90 Jahre — Größe und Proportionen aus MakeHumans Alterskurve, über 25 dazu das Aussehen '
+         '(Gesicht, Falten, graues Haar). Kinder: g1:BasicChild, g1:Kids4 (Genesis 1) oder die MakeHuman-Regler mh:macro_Alter_Baby/Kind.',
          'rezept',
-         "m.koerper_regler('alter:jahre', -0.625)",
-         [(G + 'lebensalter.py', 'G9lebensalter'), (G + 'alter.py', 'G9alter'), (G + 'mhmorphe.py', 'G9mhmorphe')],
-         'Läuft −1…1 mit v = 2a − 1 (a = MakeHumans Altersregler): −1 = 1 Jahr, −0,625 = 10 Jahre, 0 = Vorgabe (25), +1 = 90. G9formung löst ihn auf (wie alter:gesamt) in mh:macro_Alter_Baby/'
-         'Kind/Alt und, über 0, alter:gesamt. Ohne gebaute MakeHuman-Morphs wirkt er nur über 0. Gemessen am 17.10.2026: 10 Jahre 79,3 % der Höhe (MakeHuman 79,3 %), 1 Jahr 37,9 % (37,9 %).'),
+         "m.koerper_regler('alter:jahre', -0.29)",
+         [(G + 'lebensalter.py', 'G9lebensalter'), (G + 'alterung.py', 'G9alterung'), (G + 'alter.py', 'G9alter'), (G + 'mhmorphe.py', 'G9mhmorphe'),
+          (D + 'mhaehnlichkeit.py', 'Mhaehnlichkeit')],
+         'Läuft −0,29…1 auf MakeHumans Skala v = 2a − 1 (a = MakeHumans Altersregler): −0,29 = 18 Jahre, 0 = Vorgabe (25), +1 = 90; ein gespeicherter Wert unter −0,29 gilt als 18 Jahre '
+         '(seit 18.10.2026, vorher −1 = 1 Jahr). G9formung löst ihn auf (G9alterung) in mh:macro_Alter_Kind/Alt; das Aussehen (über 25 Jahre = v) rechnet G9alterung mit „Wirkt älter / jünger“ '
+         '(alter:gesamt) zu EINEM Wert (0…1) zusammen und schickt ihn als alter_aussehen an den Browser. Ohne gebaute MakeHuman-Morphs wirkt er nur über 0 (Aussehen). Gemessen am 18.10.2026 '
+         '(Ursula, alter_ab18.py): 18 Jahre 90,3 % der Höhe, 21 Jahre 95,0 % — MakeHuman rechnet zwischen 10 und 25 Jahren linear. Baby und Kind sind als Ähnlichkeit plus Rest auf den Käfig '
+         'gelegt (Mhaehnlichkeit; Neubau nur dieser zwei: manage.py mhmorphe_bauen --nur macro_Alter_Baby,macro_Alter_Kind).'),
         ('HumanBody-Morphe bauen',
          'Überträgt alle HumanBody-Regler auf den Genesis-Käfig und schreibt sie in die Ablage — nötig nach einer Änderung der HumanBody-Morphpakete oder der Paarung.',
          'cli',
@@ -170,9 +176,11 @@ class Werkzeugkoerper:
          'cli',
          'python14\\Scripts\\python.exe HumanBodyWeb\\manage.py mhmorphe_bauen | sxmorphe_bauen | umamorphe_bauen [--leise]',
          [(D + 'mhmorpheaufgenesis.py', 'Mhmorpheaufgenesis'), (D + 'sxmorpheaufgenesis.py', 'Sxmorpheaufgenesis'), (D + 'umamorpheaufgenesis.py', 'Umamorpheaufgenesis'),
-          (D + 'mhklonuebertragung.py', 'Mhklonuebertragung'), (G + 'knochenfeld.py', 'G9knochenfeld'), (G + 'feldputz.py', 'G9feldputz')],
-         'Schreibt nach Genesis9/ablage/mhmorphe|sxmorphe|umamorphe/ (Artefakte, nicht im Git) — nur nach Ansage. Gemessen 17.10.2026: MakeHuman 289 von 292 Reglern in 94 s '
-         '(die drei Penis-Regler erreichen keinen Käfigpunkt), SMPL-X 33 Regler in 22 s, UMA 63 von 65 in 7 s (Augengröße und -abstand: die Augäpfel sind Anhänge, ohne Käfigpunkt).'),
+          (D + 'mhklonuebertragung.py', 'Mhklonuebertragung'), (D + 'mhkopfklon.py', 'Mhkopfklon'), (D + 'mhkopfausrichtung.py', 'Mhkopfausrichtung'),
+          (G + 'knochenfeld.py', 'G9knochenfeld'), (G + 'feldputz.py', 'G9feldputz')],
+         'Schreibt nach Genesis9/ablage/mhmorphe|sxmorphe|umamorphe/ (Artefakte, nicht im Git) — nur nach Ansage. Gemessen 17.10.2026: MakeHuman 290 von 293 Reglern in 118 s '
+         '(die drei Penis-Regler erreichen keinen Käfigpunkt), SMPL-X 33 Regler in 22 s, UMA 63 von 65 in 7 s (Augengröße und -abstand: die Augäpfel sind Anhänge, ohne Käfigpunkt). '
+         'MakeHumans Kopf wird dafür auf Genesis\' Kopf ausgerichtet (Mhkopfklon) — der Klon der Kleider ließ das Gesicht 26–30 mm zu weit hinten.'),
         ('Seite: Szene, Genesis-9-Figur',
          'Regler von Hand ziehen und die Wirkung im 3D-Bild sehen; Figur als Modell speichern.',
          'seite',

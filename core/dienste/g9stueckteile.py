@@ -69,7 +69,7 @@ class G9stueckteile:
         # weg (gemessen 08.10.2026, Kantenmaximum im Browser) — seine Lage ist die gespeicherte Ruhelage der Figur des Imports.
         starr = G9stueckstarr.ist(eintrag)
         if starr:
-            kaefige = G9stueckstarr.punkte(teile)
+            kaefige = G9stueckstarr.punkte(teile, formung)
         else:
             kaefige = [folger.punkte_zu(stueckformung, zusatz, drehung=knochen, lage=lage) - hoch
                        for folger, lage in teile]
@@ -112,7 +112,7 @@ class G9stueckteile:
         huellen = anfrage.huellen(innen) if gc_vorrat else []
         # Über einem männlichen Geograft zuletzt der Drapierer (`G9anatomiedrapierung`, 16.10.2026) — nur mit Fläche: ein Ersatz- oder starres Stück
         # wird nicht gehoben.
-        drapierung = G9anatomiedrapierung.fuer(innen) if flaeche is not None else None
+        drapierung = G9anatomiedrapierung.fuer(innen, formung) if flaeche is not None else None
         netze = []
         for (folger, lage), punkte in zip(teile, kaefige, strict=True):
             hd_werte = dict(formung.morphwerte())

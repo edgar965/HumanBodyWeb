@@ -5,7 +5,7 @@ WARUM: Aus MakeHumans Katalog (269 Regler plus 22 Koerperformen) wird die Auftra
 Datei `<kennung>.npz` wuerde ueberschrieben), faellt nirgends auf. Geprueft gegen die echten MakeHuman-Daten (uebersprungen, wenn sie fehlen):
 
 1. Alle Kennungen sind eindeutig und dateisicher (`G9mhmorphe.kennung` aendert sie nicht).
-2. Zwoelf Makros von Hand, kein Geschlecht (Genesis hat BaseFeminine/BaseMasculine); Alter in DREI Morphs (Baby, Kind, Alt).
+2. Dreizehn Makros von Hand, darunter MakeHumans Geschlecht als ZWEITES neben dem von Genesis (einseitig 0…1, +1 = Mann); Alter in DREI Morphs (Baby, Kind, Alt).
 3. Jeder Detailregler des Katalogs (ohne Makros) kommt vor; zweiseitige Regler laufen −1…1 mit `minus`, einseitige 0…1 ohne.
 4. Die Koerperformen sind einseitige `ziel`-Auftraege.
 5. Jeder Auftrag liegt in einem Bereich der Familie, Reihenfolge `reihe` lueckenlos aufsteigend.
@@ -39,16 +39,22 @@ class MhmorphplanTest(SimpleTestCase):
         for k in kennungen:
             self.assertEqual(G9mhmorphe.kennung(k), k)
 
-    def test_2_zwoelf_makros_ohne_geschlecht_und_alter_in_drei_morphs(self):
+    def test_2_dreizehn_makros_mit_geschlecht_und_alter_in_drei_morphs(self):
         makros = [a for a in self.plan if a['bereich'] == 'mh_makro']
-        self.assertEqual(len(makros), 12)
+        self.assertEqual(len(makros), 13)
         kennungen = {a['kennung'] for a in makros}
-        self.assertTrue({'macro_Alter_Baby', 'macro_Alter_Kind', 'macro_Alter_Alt'} <= kennungen)
-        self.assertFalse([k for k in kennungen if 'eschlecht' in k or 'ender' in k])
+        self.assertTrue({'macro_Alter_Baby', 'macro_Alter_Kind', 'macro_Alter_Alt', 'macro_Geschlecht'} <= kennungen)
         kind = [a for a in makros if a['kennung'] == 'macro_Alter_Kind'][0]
         self.assertEqual(kind['plus'], {'makro': {'age': 0.1875}})
         self.assertIsNone(kind['minus'])
         self.assertEqual(kind['min'], 0.0)
+
+    def test_2b_geschlecht_ist_einseitig_vom_weiblichen_bezug_zum_mann(self):
+        geschlecht = [a for a in self.plan if a['kennung'] == 'macro_Geschlecht'][0]
+        self.assertEqual(geschlecht['plus'], {'makro': {'gender': 1.0}})
+        self.assertIsNone(geschlecht['minus'])
+        self.assertEqual((geschlecht['min'], geschlecht['max']), (0.0, 1.0))
+        self.assertEqual(geschlecht['bereich'], 'mh_makro')
 
     def test_3_jeder_detailregler_kommt_vor_mit_den_richtigen_seiten(self):
         katalog = Mhmodifikatoren.holen().regler

@@ -32,6 +32,7 @@ from asgiref.sync import sync_to_async
 from django.http import FileResponse, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
+from Genesis9.aehnlichkeit import G9aehnlichkeit
 from Genesis9.drapierung import G9drapierung
 from Genesis9.garderobe import G9garderobe
 from Genesis9.garderobekategorien import G9garderobekategorien
@@ -255,7 +256,8 @@ class G9garderobeapi:
                 # Teile der Figur, die das Stück ersetzt (Originalaugen aus einer .blend, `G9stueckersatz`).
                 'ersetzt': ersetzt,
                 # So tief hinter der Haut das Stück sie noch verdeckt (mm; Scham aus einer .blend), 0 = Vorgabe der Hautmaske.
-                'hautTiefeMm': haut_tiefe,
+                # Bei einem Kind schrumpft das Stück mit (`G9aehnlichkeit`) — die Tiefe, in der es die Haut verdeckt, schrumpft mit, sonst fiele rund um das kleine Stück Haut weg (schwarzes Loch).
+                'hautTiefeMm': round(haut_tiefe * G9aehnlichkeit.massstab(formung.regler), 3),
                 # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; leer = der
                 # Browser rechnet das Loch selbst, `hautverdeckung.js`).
                 'hautLoch': G9stueckersatz.loch_fuer(eintrag)}

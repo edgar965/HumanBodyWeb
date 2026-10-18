@@ -37,8 +37,17 @@ class Engine2d3dKleiderposetiefe:
              'left-heel', 'right-heel', 'left-big-toe-tip', 'right-big-toe-tip')
     #: Eigene Grenzen (kurz, lang in Radien) für die Hüften: der Rumpf ist dick (stehend 6–7,5 Radien vorn bis hinten — dort bleibt die Mitte). Hüften fallen nie weg, sie werden geklemmt.
     BEREICH = {'left-hip': (8.0, 12.0), 'right-hip': (8.0, 12.0)}
+    #: Fassung 3 (17.10.2026 nachts, Edgar am Zwischenbild von DamiraSitzen: „das becken ist doch riesig“): die Hüften nehmen die Mitte des Strahls ein Viertel des Wegs zur Schulter derselben Seite —
+    #: dort läuft er durch den Rumpf, nicht durch ein Bein, das zur Kamera zeigt oder nach hinten gestreckt ist. Fassung 2 (Schulter + Tiefenunterschied aus SAM) legte die Hüften der sitzenden Figur
+    #: 44/59 mm zu weit vor; die Anpassung holte sie mit einem um 65° gekippten Becken (65 mm hinter dem Ziel) und einem um 95° verdrehten Oberschenkel — das Mittel der 138 Gelenke sah es nicht (13 mm).
+    #: Gemessen nur die Abbildung (`ProjektTemp/_wegwerf/mesh3dai_huefttiefe_pruefen.py`, 24 Hüften an 12 Aufträgen mit Ziel, |z − Oberschenkelgelenk|): Mitte 35,7 · Fassung 2 19,3 · Rumpf 0,25 16,8 mm
+    #: (0,15: 29,2, 0,35: 18,6, 0,5: 33,4, Median statt Mitte schlechter). Ist der Bereich dort länger als `RUMPF_HOECHST` Radien, liegt etwas vor oder hinter dem Rumpf (Ursula1 Probe 47: ein Arm vor dem
+    #: Bauch, 12–19 Radien; sonst 4,3–7,5) — dann gilt die Kette wie in Fassung 2. Zusammen 9,8 mm, größter 41 mm.
+    RUMPF = {'left-hip': 'left-shoulder', 'right-hip': 'right-shoulder'}
+    RUMPF_ANTEIL = 0.25
+    RUMPF_HOECHST = 9.0
     #: Steht im Ergebnis des Pose-Schritts (`ergebnis.pose.abbildung.tiefe_fassung`): Läufe mit einer anderen Fassung sind nicht vergleichbar.
-    FASSUNG = 2
+    FASSUNG = 3
     #: Bereich bis so viele Radien = Glied quer zum Strahl → Mitte; ab `LANG` die Vorhersage (Setzungen: 4 × 0,033 m ≈ 13 cm, 8 × ≈ 27 cm).
     KURZ = 4.0
     LANG = 8.0
@@ -65,6 +74,13 @@ class Engine2d3dKleiderposetiefe:
     def zaehlt(self, name, tiefen):
         """Rechnet die Kette dieses Gelenk? Nur die in `KETTE`, und nur, wenn ihr Elterngelenk eine Tiefe hat."""
         return name in self.KETTE and self.ELTERN.get(name) in tiefen
+
+    def rumpf(self, z_strahl):
+        """Tiefe einer Hüfte aus dem Strahl über ihr (Punkt Hüfte + `RUMPF_ANTEIL` · (Schulter − Hüfte)): Mitte des Bereichs, oder None, wenn der Strahl leer oder länger als `RUMPF_HOECHST` Radien ist."""
+        if z_strahl is None or not len(z_strahl):
+            return None
+        lo, hi = float(np.percentile(z_strahl, 2)), float(np.percentile(z_strahl, 98))
+        return None if (hi - lo) / self.radius > self.RUMPF_HOECHST else (lo + hi) / 2.0
 
     def tiefe(self, name, z_strahl, z_eltern):
         """`(z, art, vorhersage)`: `art` = `mitte` (kurzer Bereich), `sam` (langer Bereich, Vorhersage darin), `gemischt`, `verworfen` (`z` = NaN)."""

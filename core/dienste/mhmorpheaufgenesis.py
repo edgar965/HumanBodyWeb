@@ -3,8 +3,9 @@ u"""Mhmorpheaufgenesis — alle MakeHuman-Regler als Genesis-9-Morphs bauen (17.
 
 Edgar, 17.10.2026: „du solltest ALLE Morphs und Regler aus den anderen Projekten portieren und als neue Morphs fuer Genesis nachbauen“.
 
-Je Regler des Plans (`Mhmorphplan`: 12 Makros, 257 Detailregler, 22 Koerperformen) wird MakeHumans Netz in der Reglerstellung gerechnet (`Mhformung`, also mit
-MakeHumans eigenen Gewichten), gegen die weibliche Vorgabefigur abgezogen und ueber den Klon auf den Genesis-Kaefig gelegt (`Mhklonuebertragung`).
+Je Regler des Plans (`Mhmorphplan`: 13 Makros, 258 Detailregler, 22 Koerperformen) wird MakeHumans Netz in der Reglerstellung gerechnet (`Mhformung`, also mit
+MakeHumans eigenen Gewichten), gegen die weibliche Vorgabefigur abgezogen und ueber den Klon auf den Genesis-Kaefig gelegt (`Mhklonuebertragung`, Kopf ausgerichtet:
+`Mhkopfklon`).
 Abgelegt als `mh:<Gruppe>_<Regler>` (`G9mhmorphe`, Ablage `Genesis9/ablage/mhmorphe/`).
 
 DAS SKELETT: MakeHumans Gelenke sind Mittelwerte von Helferwuerfeln im Netz (`Mhskelett`) — folgen also jedem Regler von selbst. Hier dient das als
@@ -20,6 +21,7 @@ import numpy as np
 from Genesis9.gelenkversatz import G9gelenkversatz
 from Genesis9.mhmorphe import G9mhmorphe
 
+from .mhaehnlichkeit import Mhaehnlichkeit
 from .mhklonuebertragung import Mhklonuebertragung
 from .mhmorphplan import Mhmorphplan
 
@@ -118,20 +120,30 @@ class Mhmorpheaufgenesis:
 
     # -------------------------------------------------------------- Bauen
 
-    def bauen(self):
-        u"""Alle Regler bauen; gibt `[{name, punkte, plus_mm, minus_mm}]` zurueck."""
+    def feld(self, auftrag, d_plus, d_minus):
+        u"""`(plus, minus, f_plus, f_minus, rest, aehnlich)` — die Käfigfelder eines Auftrags. Die Kinder-Morphs gehen als Ähnlichkeit plus Rest (`Mhaehnlichkeit`, Edgar 17.10.2026),
+        alle anderen durch die Rahmen der Glieder, mit der Höhe an MakeHuman angeglichen. `rest`/`aehnlich = (s, zentrum, unter)` sind für Gelenke und Steckbrief (sonst None)."""
+        if Mhaehnlichkeit.ist(auftrag['kennung']) and not auftrag['minus']:
+            plus, rest, s, unter, zentrum = Mhaehnlichkeit(self).feld(d_plus)
+            return plus, np.zeros_like(plus), 1.0, 1.0, rest, (s, zentrum, unter)
+        plus = self.uebertragung.uebertragen(d_plus * self.METER)
+        minus = self.uebertragung.uebertragen(d_minus * self.METER) if auftrag['minus'] else np.zeros_like(plus)
+        plus, f_plus = self.hoehe_angleichen(plus, d_plus)
+        minus, f_minus = (self.hoehe_angleichen(minus, d_minus) if auftrag['minus'] else (minus, 1.0))
+        return plus, minus, f_plus, f_minus, None, None
+
+    def bauen(self, nur=None):
+        u"""Alle Regler bauen (oder nur die Kennungen in `nur`: dann bleibt der übrige Bestand, ohne Aufräumen); gibt `[{name, punkte, plus_mm, minus_mm}]` zurueck."""
         start = time.perf_counter()
         self.vorbereiten()
-        auftraege = Mhmorphplan.auftraege()
-        G9mhmorphe.leeren()
+        auftraege = [a for a in Mhmorphplan.auftraege() if nur is None or a['kennung'] in nur]
+        if nur is None:
+            G9mhmorphe.leeren()
         aus, skelett = [], []
         for nr, auftrag in enumerate(auftraege, 1):
             d_plus = self.delta(auftrag['plus'])
             d_minus = self.delta(auftrag['minus']) if auftrag['minus'] else np.zeros_like(d_plus)
-            plus = self.uebertragung.uebertragen(d_plus * self.METER)
-            minus = self.uebertragung.uebertragen(d_minus * self.METER) if auftrag['minus'] else np.zeros_like(plus)
-            plus, f_plus = self.hoehe_angleichen(plus, d_plus)
-            minus, f_minus = (self.hoehe_angleichen(minus, d_minus) if auftrag['minus'] else (minus, 1.0))
+            plus, minus, f_plus, f_minus, rest, aehnlich = self.feld(auftrag, d_plus, d_minus)
             nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
             if not len(nummern):
                 logger.info('MH-Morphs: %s erreicht keinen Kaefigpunkt — uebergangen', auftrag['kennung'])
@@ -139,16 +151,25 @@ class Mhmorpheaufgenesis:
                 continue
             mass = {k: max(a, b) for (k, a), b in zip(self.mass(d_plus).items(), self.mass(d_minus).values(), strict=True)}
             rig = mass['kopf_mm'] >= G9gelenkversatz.KOPF_MM or mass['laenge_mm'] >= G9gelenkversatz.LAENGE_MM
-            gelenke = self.gelenkversatz().fuer_morph(nummern, plus[nummern], minus[nummern]) if rig else None
+            gelenke = None
             if rig:
                 skelett.append(auftrag['kennung'])
+                gelenke = self.gelenkversatz().fuer_morph(nummern, (plus if rest is None else rest)[nummern], minus[nummern], aehnlich=aehnlich and aehnlich[:2])
             quelle = {'quelle': 'MakeHuman 1.3 (Bezug: weibliche Vorgabefigur)', 'anzeige': auftrag['anzeige'], 'kategorie': auftrag['kategorie'],
                       'bereich': auftrag['bereich'], 'reihe': auftrag['reihe'], 'min': auftrag['min'], 'max': auftrag['max'], 'rig': rig,
                       'hoehenfaktor': [round(f_plus, 3), round(f_minus, 3)], **mass}
+            if aehnlich is not None:
+                quelle['aehnlichkeit'] = round(aehnlich[0], 4)          # Maßstab, der analytisch auf den Käfig ging (`Mhaehnlichkeit`)
+                quelle['aehnlichkeit_unter'] = round(aehnlich[2], 4)    # Mittelpunkt so viele Meter unter dem Boden, auf der Körperachse (`G9aehnlichkeit.zentrum`)
             G9mhmorphe.ablegen(auftrag['kennung'], nummern, plus[nummern], minus[nummern], quelle, gelenke)
             brief = G9mhmorphe.steckbrief(auftrag['kennung'])
             aus.append({'name': auftrag['kennung'], 'punkte': brief['punkte'], 'plus_mm': brief['plus_mm'], 'minus_mm': brief['minus_mm']})
             self.melden(nr, len(auftraege), auftrag['kennung'], brief)
+        if nur is not None:
+            # Teilbau: nur die genannten Regler sind neu; der Bestand bleibt (Zahlen des letzten Vollbaus), der Stand ändert sich, damit Antwortvorräte neu rechnen.
+            G9mhmorphe.bestand_schreiben({**{k: v for k, v in G9mhmorphe.bestand().items() if k != 'fassung'}, 'teilbau': sorted(nur)})
+            logger.info('MH-Morphs auf Genesis 9: %d Regler (Teilbau) in %.1f s', len(aus), time.perf_counter() - start)
+            return aus
         G9mhmorphe.bestand_schreiben({
             'zahl': len(aus), 'mit_skelett': skelett, 'bezug': 'MakeHuman weiblich (Geschlecht 0)',
             'ungueltige_kaefigpunkte': int(self.uebertragung.ungueltig().sum()), 'sekunden': round(time.perf_counter() - start, 1)})

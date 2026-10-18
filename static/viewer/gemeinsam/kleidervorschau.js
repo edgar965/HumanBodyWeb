@@ -1,4 +1,5 @@
 import { Protokoll } from './protokoll.js';
+import { Kleiderknochen } from './kleiderknochen.js';
 
 /**
  * Kleidervorschau — die Kleidung folgt einem neuen Körper SOFORT, noch bevor der Server ihre genaue Lage liefert.
@@ -15,6 +16,10 @@ import { Protokoll } from './protokoll.js';
  * Die genaue Lage vom Server ersetzt sie wenig später wie bisher.
  *
  * Ein Stück, das in DIESEM Lauf schon vom Server kam, ist genau (`geometry.userData.lauf`) und wird nicht noch einmal verschoben.
+ *
+ * WAS KEINE BINDUNG HAT, FOLGT DEN KNOCHEN (17.10.2026, Daz-Posen): Haar, Requisiten und der ungebundene Anteil freier Stoffpunkte
+ * (`1 − mischung`) wandern mit der Bewegung ihrer Knochen von der alten zur neuen Stellung (`Kleiderknochen`) — bis dahin blieb das Haar
+ * bei „03 Laying Back" an der alten Kopfstelle stehen, bis seine eigene Antwort kam.
  */
 export class Kleidervorschau {
 
@@ -25,7 +30,9 @@ export class Kleidervorschau {
     static merken(inst) {
         const position = inst?.bodyMesh?.geometry?.attributes?.position;
         if (!position) return null;
-        return { punkte: Float32Array.from(position.array), stufen: inst.stufen || 0 };
+        // `exakt`: die Daz-Wege der Posenvorschau, wenn der Zug genau ihre Stellung bringt (`inst._posenwege.gilt`).
+        const exakt = inst._posenwege?.gilt?.(inst) ? inst._posenwege.wege : null;
+        return { punkte: Float32Array.from(position.array), stufen: inst.stufen || 0, knochen: Kleiderknochen.lagen(inst), exakt };
     }
 
     /**
@@ -55,9 +62,11 @@ export class Kleidervorschau {
         const beginn = performance.now();
         const verschiebung = Kleidervorschau._verschiebung(vorher.punkte, neu);
         if (!verschiebung) return 0;
+        // null ohne gemerkte Knochen: nur die Oberflächenbindung
+        const wege = Kleiderknochen.ausServer(vorher.exakt, inst) || Kleiderknochen.wege(vorher.knochen, inst);
         let stuecke = 0, punkte = 0;
         for (const netz of Object.values(inst.clothMeshes || {})) {
-            const n = Kleidervorschau._mitnehmen(inst, netz, verschiebung, vorher.stufen, neu.length / 3);
+            const n = Kleidervorschau._mitnehmen(inst, netz, verschiebung, vorher.stufen, neu.length / 3, wege);
             if (n) { stuecke++; punkte += n; }
         }
         Protokoll.debug('Kleidervorschau', `${stuecke} Stücke, ${punkte} Punkte in ${(performance.now() - beginn).toFixed(0)} ms mitgenommen`);
@@ -76,15 +85,18 @@ export class Kleidervorschau {
         return groesste > Kleidervorschau.SCHWELLE ? d : null;
     }
 
-    /** Ein Netz: seine gebundenen Punkte um die Körperverschiebung verschieben. @returns Zahl der verschobenen Punkte */
-    static _mitnehmen(inst, netz, verschiebung, stufen, koerperPunkte) {
+    /**
+     * Ein Netz: seine gebundenen Punkte um die Körperverschiebung verschieben, den Rest mit den Knochen (`wege`, darf null sein).
+     * Die Knochenbewegung zuerst: Sie rechnet von der alten Lage, die Oberflächenverschiebung hängt nicht von ihr ab.
+     * @returns Zahl der verschobenen Punkte
+     */
+    static _mitnehmen(inst, netz, verschiebung, stufen, koerperPunkte, wege = null) {
         const geo = netz?.geometry;
-        const bindung = geo?.userData?.bindung;
-        if (!bindung || netz.userData?.stoff || geo.userData.lauf === inst._lauf) return 0;
-        if (bindung.stufen !== stufen || (bindung.punkte !== undefined && bindung.punkte !== koerperPunkte)) return 0;
-        const dreieck = geo.attributes.bindung?.array, bary = geo.attributes.bary?.array, mischung = geo.attributes.mischung?.array;
-        const position = geo.attributes.position;
-        if (!dreieck || !bary || !mischung || position.count !== mischung.length) return 0;
+        if (!geo || netz.userData?.stoff || geo.userData?.lauf === inst._lauf) return 0;
+        const bindung = Kleidervorschau._bindung(geo, stufen, koerperPunkte);
+        const knochen = wege ? Kleiderknochen.haeuten(netz, wege, bindung ? (i) => Kleidervorschau._frei(bindung, i) : null) : 0;
+        if (!bindung) return knochen;
+        const { dreieck, bary, mischung, position } = bindung;
         const p = position.array;
         let bewegt = 0;
         for (let i = 0; i < mischung.length; i++) {
@@ -102,6 +114,22 @@ export class Kleidervorschau {
             geo.boundingSphere = null;       // Hülle und Kugel stammen aus der alten Lage
             geo.boundingBox = null;
         }
-        return bewegt;
+        return Math.max(bewegt, knochen);
+    }
+
+    /** Die Oberflächenbindung eines Netzes, wenn sie zu diesem Körper passt — sonst null. */
+    static _bindung(geo, stufen, koerperPunkte) {
+        const bindung = geo.userData?.bindung;
+        if (!bindung || bindung.stufen !== stufen || (bindung.punkte !== undefined && bindung.punkte !== koerperPunkte)) return null;
+        const dreieck = geo.attributes.bindung?.array, bary = geo.attributes.bary?.array, mischung = geo.attributes.mischung?.array;
+        const position = geo.attributes.position;
+        if (!dreieck || !bary || !mischung || position.count !== mischung.length) return null;
+        return { dreieck, bary, mischung, position };
+    }
+
+    /** Der Anteil von Punkt i, den die Oberfläche NICHT trägt: `1 − mischung`, ganz ohne Körperdreieck 1. */
+    static _frei({ dreieck, mischung }, i) {
+        const m = mischung[i];
+        return m > 0 && dreieck[3 * i] >= 0 ? 1 - m : 1;
     }
 }

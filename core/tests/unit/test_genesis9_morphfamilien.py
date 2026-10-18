@@ -54,7 +54,7 @@ class FamilienBasisTest(SimpleTestCase):
 
     def test_1_jede_familie_hat_eigene_speicher(self):
         familien = G9morphfamilien.alle()
-        self.assertEqual([f.PRAEFIX for f in familien], ['hb:', 'mh:', 'sx:', 'uma:'])
+        self.assertEqual([f.PRAEFIX for f in familien], ['hb:', 'mh:', 'sx:', 'uma:', 'g1:'], 'g1: = Genesis-1-Kinder (18.10.2026)')
         for a in familien:
             for b in familien:
                 if a is not b:
@@ -71,7 +71,8 @@ class FamilienBasisTest(SimpleTestCase):
         self.assertFalse(G9morphfamilien.ist_fremd('alter:gesamt'))
 
     def test_3_angaben_nur_mit_datei_und_aus_dem_steckbrief(self):
-        with _Ordner(G9mhmorphe, 'mh'):
+        # SMPL-X leer umlenken: seit 17.10.2026 gibt es die echte Ablage, und `sx:Form_01` stünde darin.
+        with _Ordner(G9mhmorphe, 'mh'), _Ordner(G9sxmorphe, 'sx_leer'):
             G9mhmorphe.ablegen('macro_Alter_Kind', [1, 2], [[0.1, 0, 0], [0, 0.1, 0]], [[0, 0, 0], [0, 0, 0]], {'min': 0.0, 'max': 1.0, 'bereich': 'mh_makro'})
             G9mhmorphe.ablegen('head_head-age-decr_incr', [3], [[0.01, 0, 0]], [[-0.01, 0, 0]], {'bereich': 'mh_gesicht'})
             self.assertEqual(G9morphfamilien.angaben('mh:macro_Alter_Kind'), {'min': 0.0, 'max': 1.0})

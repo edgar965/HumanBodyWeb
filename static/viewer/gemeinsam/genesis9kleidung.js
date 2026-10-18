@@ -13,6 +13,7 @@ import { Stoffwerte } from './stoffwerte.js';
 import { Reiterzuordnung } from './reiterzuordnung.js';
 import { Genesis9ersatz } from './genesis9ersatz.js';
 import { Kleidersichtbarkeit } from './kleidersichtbarkeit.js';
+import { Genesis9hautebenen } from './genesis9hautebenen.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -190,6 +191,7 @@ export class Genesis9kleidung {
         Umfaerbung.stueck(inst, kennung, inst.kleidung[kennung]);    // eigene Farbe (24.09.2026)
         Kleidfarbmischung.anwenden(inst, kennung, inst.kleidung[kennung].regler);   // Textur der Mischung (30.09.2026)
         Stoffwerte.stueck(inst, kennung, inst.kleidung[kennung]);    // Rauheit, Metall, Gewebe (25.09.2026)
+        Genesis9hautebenen.haar(inst);                               // graue Strähnen auf ein neu gebautes Haarstück (17.10.2026)
         await Genesis9lagen.nachziehen(inst, kennung, daten, stufen, kaskade);
         Genesis9kleidung.melden(inst, kennung, true);
         return daten.teile?.length || 0;

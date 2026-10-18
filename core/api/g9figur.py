@@ -41,6 +41,8 @@ from django.views.decorators.http import require_GET, require_http_methods
 from ..daten.anfragerumpf import Anfragerumpf
 from ..dienste.blendimportplausibel import Blendimportplausibel
 from ..dienste.g9antworten import G9antworten
+from ..dienste.g9bedlamhaut import G9bedlamhaut  # noqa: F401  (trägt sich als Anbieter von Hautsätzen ein: BEDLAM, 17.10.2026)
+from ..dienste.g9hbpose import G9hbpose
 from .g9materialwahl import G9materialwahl
 from .g9netzantwort import G9netzantwort
 from ..dienste.modellkatalog import Modellkatalog
@@ -111,6 +113,7 @@ class G9figur:
                             'praesets': dict(eintrag.get('praesets') or {}),
                             'hautmischung': dict(eintrag.get('hautmischung') or {}),
                             'teilmaterial': dict(eintrag.get('teilmaterial') or {}),
+                            'hautebenen': dict(eintrag.get('hautebenen') or {}),
                             'brauenstil': eintrag.get('brauenstil') or '',
                             'pose': eintrag.get('pose') or '',
                             'ausdruck': eintrag.get('ausdruck') or '',
@@ -148,6 +151,8 @@ class G9figur:
                 'hautmischung': figur.get('hautmischung') or {},
                 # Glanz, Rauheit … je Teil (`Genesis9teilmaterial`): {teil: {feld: wert}}.
                 'teilmaterial': figur.get('teilmaterial') or {},
+                # Hautebenen (17.10.2026, `Genesis9hautebenen`): {name: Prozent} — Hautton, Flecken, Muskel-/Fettzeichnung, graue Haare.
+                'hautebenen': figur.get('hautebenen') if isinstance(figur.get('hautebenen'), dict) else {},
                 'brauenstil': figur.get('brauenstil') or '',
                 'pose': figur.get('pose') or '',
                 'ausdruck': figur.get('ausdruck') or '',
@@ -197,6 +202,8 @@ class G9figur:
             'browserpunkte': netz['browserpunkte'], 'stufen': netz['stufen'],
             'morphwerte': netz['morphwerte'],
             'hdkanaele': netz.get('hdkanaele') or [],
+            'hdwerte': netz.get('hdwerte') or {},
+            'alter_aussehen': netz.get('alter_aussehen') or 0.0,
             'gelenkregler': netz.get('gelenkregler') or {},
             'anhaenge': [dict(G9figur._netzantwort(a), schluessel=a['schluessel'],
                               name=a['name']) for a in netz['anhaenge']],
@@ -219,6 +226,11 @@ class G9figur:
         # (`ModellMitKleidern.drehung`, 30.09.2026) — kein Posenpreset, nur im Arbeitsprozess.
         drehung = {k: dict(v) for k, v in (rumpf.get('drehung') or {}).items() if isinstance(v, dict)}
         for feld in ('ausdruck', 'pose'):
+            roh = rumpf.get(feld) or (eintrag.get(feld) if eintrag.get('gespeichert') else None)
+            if feld == 'pose' and G9hbpose.ist(roh):
+                # HumanBody-Pose `hb:<id>` (17.10.2026, `g9hbpose.py`); eine Kopie: die Griffe schreiben hinein.
+                drehung = {k: dict(v) for k, v in G9hbpose.drehung(roh, regler).items()}
+                continue
             kennung = G9figur._name(rumpf.get(feld)) or G9figur._name(
                 eintrag.get(feld) if eintrag.get('gespeichert') else None)
             if not kennung:

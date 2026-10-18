@@ -8,6 +8,7 @@
 Sabotage: in `anwenden` den Teil `&& !this.aus.has(name)` streichen → `SchaltenTest` rot; in `Meshfigurteileleiste._knopf` den Aufruf `this.teile.schalten` streichen → `LeisteTest` rot.
 """
 
+import json
 from pathlib import Path
 
 from django.conf import settings
@@ -15,9 +16,13 @@ from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-TEILE = Jsmodul('meshfigur', 'meshfigurteile.js')
 LEISTE = Jsmodul('meshfigur', 'meshfigurteileleiste.js')
 WEB = Path(settings.BASE_DIR)
+# `meshfigurteile.js` importiert `Meshfigurhaarobjekt` und damit `three/addons/loaders/GLTFLoader.js` — das löst der Spiegel (`Webmodul`) nicht auf
+# (WebmodulFehler in der Suite, 18.10.2026). Das Skript liest die Klasse deshalb von ihrem echten Ort ohne ihre Importe, wie `test_js_posenaufnahme`;
+# `Meshfigurhaarobjekt` braucht der Fall nicht (er legt die Einträge selbst an). Einstieg ist die Leiste, sie importiert nichts.
+TEILE = LEISTE
+TEILE_QUELLE = str(Jsmodul.VIEWER / 'meshfigur' / 'meshfigurteile.js')
 
 VORSPANN = """
 const speicher = {};
@@ -26,7 +31,9 @@ globalThis.localStorage = { getItem: k => (k in speicher ? speicher[k] : null), 
 """
 
 SKRIPT_SCHALTEN = VORSPANN + """
-const { Meshfigurteile } = await import(MODUL);
+const { readFileSync } = await import('node:fs');
+const quelle = readFileSync(__QUELLE__, 'utf8').replace(/^import .*$/gm, '').replace(/^export class/m, 'class');
+const Meshfigurteile = new Function('Meshfigurhaarobjekt', quelle + '\\nreturn Meshfigurteile;')(class {});
 const sicht = {};
 const objekt = name => ({ sichtbar: an => { sicht[name] = an; } });
 const bau = () => {
@@ -104,7 +111,7 @@ class SchaltenTest(SimpleTestCase):
     databases = set()
 
     def test_ein_bestandteil_laesst_sich_einzeln_ausblenden_und_wird_gemerkt(self):
-        ausgabe = TEILE.laufen(SKRIPT_SCHALTEN)
+        ausgabe = TEILE.laufen(SKRIPT_SCHALTEN.replace('__QUELLE__', json.dumps(TEILE_QUELLE)))
         self.assertTrue(ausgabe.get('ok'), ausgabe)
 
 

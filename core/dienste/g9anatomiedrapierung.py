@@ -34,8 +34,9 @@ class G9anatomiedrapierung:
         self.hindernis = hindernis
 
     @classmethod
-    def fuer(cls, innen):
-        u"""Das Hindernis aus den Anatomie-Stücken unter `innen` (Kennungen) — oder None, wenn keines der `ANATOMIEN` getragen wird."""
+    def fuer(cls, innen, formung=None):
+        u"""Das Hindernis aus den Anatomie-Stücken unter `innen` (Kennungen) — oder None, wenn keines der `ANATOMIEN` getragen wird. Mit `formung` liegen die Stücke dort,
+        wo das starre Stück der Stellung liegt (`G9stueckstarr.punkte`: es folgt dem Becken)."""
         from Genesis9.garderobe import G9garderobe
         from Genesis9.stueckersatz import G9stueckersatz
         from Genesis9.stueckstarr import G9stueckstarr
@@ -48,7 +49,7 @@ class G9anatomiedrapierung:
             if G9stueckersatz.anatomie_fuer(G9garderobe.eintrag(kennung) or {}) not in cls.ANATOMIEN:
                 continue
             teile = G9garderobe.teile(kennung)
-            stuecke += list(zip(G9stueckstarr.punkte(teile), (folger.polys for folger, _lage in teile), strict=True))
+            stuecke += list(zip(G9stueckstarr.punkte(teile, formung), (folger.polys for folger, _lage in teile), strict=True))
         if not stuecke:
             return None
         return cls(G9drapierhindernis.aus_stuecken(stuecke))

@@ -28,13 +28,15 @@ class RundenTest(unittest.TestCase):
         return np.isin(zelle, [y * self.N + x for y in ys for x in xs])
 
     def test_ein_kamm_am_rand_wird_zur_linie(self):
-        """Zähne von 3 × 2 Zellen im Abstand von 8 Zeilen an einer geraden Kante: die Mehrheit über die Kantennachbarn lässt sie stehen, das Runden nimmt sie weg."""
+        """Zähne von 3 × 2 Zellen im Abstand von 8 Zeilen an einer geraden Kante: die Mehrheit über die Kantennachbarn lässt sie stehen, das Runden nimmt sie weg.
+        Die Zähne halten Abstand zum Rand des Kunstnetzes (ab Zeile 12, ≥ 17 mm): der Rand spiegelt — der Zahn in Zeile 4 (5,6 mm vom Rand, σ 12 mm) zählte doppelt und blieb stehen
+        (gemessen 18.10.2026, `ProjektTemp/_wegwerf/kleidungsrunden_diag.py`); ein echtes Netz hat dort keinen Rand."""
         nachbarn, zelle, inhalt, hoehe = self._netz()
         stueck = np.where(zelle % self.N < 30, 1, 0).astype(np.int8)
-        zaehne = self._zellen(zelle, [y + d for y in range(4, 56, 8) for d in (0, 1)], (30, 31, 32))
+        zaehne = self._zellen(zelle, [y + d for y in range(12, 48, 8) for d in (0, 1)], (30, 31, 32))
         stueck[zaehne] = 1
         neu, bericht = Kleidungsbereinigung(nachbarn, inhalt, hoehe, kopf_ab=1.0).bereinigen(stueck)
-        spitzen = self._zellen(zelle, [y + d for y in range(4, 56, 8) for d in (0, 1)], (31, 32))
+        spitzen = self._zellen(zelle, [y + d for y in range(12, 48, 8) for d in (0, 1)], (31, 32))
         self.assertTrue((neu[spitzen] == 0).all(), 'die äußeren zwei Spalten jedes Zahns sind weg')
         self.assertLess(float((neu[zaehne] == 1).mean()), 0.4, 'die Linie liegt dort, wo der mittlere Rand lag: nur ein Rest der Zahnwurzeln bleibt')
         self.assertGreaterEqual(bericht['rund_geaendert_flaechen'], 1)
@@ -134,7 +136,11 @@ class ZubehoerTest(unittest.TestCase):
         hautfarbe[streifen] = False                                         # Armband: nicht hautfarben
         neu, bericht = Kleidungsbereinigung(nachbarn, inhalt, hoehe, kopf_ab=1.0).bereinigen(stueck, hautfarbe)
         self.assertEqual(bericht['zubehoer_dazu_flaechen'], int(streifen.sum()), 'alle Flächen des Streifens kommen dazu')
-        self.assertGreater(float((neu[streifen] == 4).mean()), 0.8, 'nach dem Runden bleibt der Streifen bis auf die Ecken Zubehör')
+        # `_runden` (σ 12 mm) macht den nur 40 × 56 mm großen Block runder: die Ecken fallen, und auch die äußerste Spalte des Streifens (x 32) weicht fast überall um eine Zelle zurück —
+        # gemessen bleiben vom ganzen Streifen 45 %, die zwei inneren Spalten in Zeile 17–35 vollständig (18.10.2026, `ProjektTemp/_wegwerf/kleidungsrunden_diag2.py`). Gezählt wird diese Mitte;
+        # ohne das Wachsen (`WACHS_RINGE = 0`) wäre sie 0 — das Runden dehnt einen Block nicht nach außen.
+        mitte = streifen & np.isin(zelle, [y * self.N + x for y in range(20, 36) for x in (30, 31)])
+        self.assertGreater(float((neu[mitte] == 4).mean()), 0.8, 'nach dem Runden bleibt der Streifen bis auf die Ecken Zubehör')
 
     def test_hautfarbene_flaechen_wachsen_nicht_mit(self):
         nachbarn, zelle, inhalt, hoehe, stueck, streifen = self._netz()
@@ -149,7 +155,9 @@ class ZubehoerTest(unittest.TestCase):
         hautfarbe = np.zeros(len(zelle), dtype=bool)
         neu, bericht = Kleidungsbereinigung(nachbarn, inhalt, hoehe, kopf_ab=1.0).bereinigen(stueck, hautfarbe)
         self.assertEqual(bericht['zubehoer_dazu_flaechen'], 0)
-        self.assertEqual(int((neu == 4).sum()), int((stueck == 4).sum()))
+        # Verglichen mit demselben Lauf OHNE Hautfarbe: das Runden nimmt dem Block in beiden die Ecken (2.000 → 1.811 Flächen, 18.10.2026) — gewachsen ist nichts.
+        ohne, _ = Kleidungsbereinigung(nachbarn, inhalt, hoehe, kopf_ab=1.0).bereinigen(stueck)
+        self.assertEqual(int((neu == 4).sum()), int((ohne == 4).sum()))
 
     def test_ohne_hautfarbe_bleibt_es_wie_vorher(self):
         nachbarn, zelle, inhalt, hoehe, stueck, streifen = self._netz()

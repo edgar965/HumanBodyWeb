@@ -38,9 +38,10 @@ function aufbau({ hidden = false, action = {} } = {}) {
 }
 const ereignis = (code, ziel = { tagName: 'BODY' }) => ({ code, target: ziel, verhindert: false, preventDefault() { this.verhindert = true; } });
 
-// 1. Die Leiste steht da, die Bewegung ist (noch) nicht geladen: die Leertaste scrollt die Seite NICHT, es geschieht nichts.
+// 1. Die Leiste steht da, die Bewegung ist (noch) nicht geladen: die Leertaste scrollt die Seite NICHT. Der Befehl geht trotzdem durch `bedienen` — dort entscheidet die Seite
+//    (Mesh-3D rechnet die Bewegung dann, `ohneBewegung`; die anderen Seiten tun nichts, ihre Befehle prüfen `action`). Bis zu dieser Änderung geschah hier nichts.
 let log = aufbau({ action: null }); let e = ereignis('Space'); taste(e);
-pruefe('1 verhindert', e.verhindert, true); pruefe('1 nichts bedient', log, []);
+pruefe('1 verhindert', e.verhindert, true); pruefe('1 die Seite entscheidet', log, ['bedienen', 'umschalten']);
 
 // 2. Mit geladener Bewegung läuft der Befehl durch `bedienen`.
 log = aufbau(); e = ereignis('Space'); taste(e);

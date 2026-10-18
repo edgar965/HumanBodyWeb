@@ -6,6 +6,7 @@ from django.urls import path
 from .api.mesh3dai import Mesh3daiendpunkte
 from .api.mesh3daiflaechen import Mesh3daiflaechenendpunkte
 from .api.mesh3daitest import Mesh3daitestendpunkte
+from .api.mesh3daitestkleider import Mesh3daitestkleiderendpunkte
 
 __all__ = ['MESH3DAI']
 
@@ -19,6 +20,12 @@ MESH3DAI = [
     # Die vorhergesagte Figur eines Tests (16.10.2026 abends, Formkopf): Anzeigenetz und Bilder wie beim Job.
     path('api/mesh3dai/test/<str:kennung>/figur/<str:geschlecht>/netz/', Mesh3daitestendpunkte.figurnetz, name='mesh3dai_testfigurnetz'),
     path('api/mesh3dai/test/<str:kennung>/figur/<str:geschlecht>/bild/<str:name>', Mesh3daitestendpunkte.figurbild, name='mesh3dai_testfigurbild'),
+    # Kleider und Bestandteile eines Tests, je Stück Weg a (Katalog) oder b (aus dem Netz), und die Übernahme ins Modell (17.10.2026 nachts, `Mesh3daitestkleider`, `Mesh3daitestmodell`).
+    path('api/mesh3dai/test/<str:kennung>/kleider/<str:geschlecht>/', Mesh3daitestkleiderendpunkte.liste, name='mesh3dai_testkleider'),
+    path('api/mesh3dai/test/<str:kennung>/kleider/<str:geschlecht>/wahl/', Mesh3daitestkleiderendpunkte.wahl, name='mesh3dai_testkleiderwahl'),
+    path('api/mesh3dai/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/netz/', Mesh3daitestkleiderendpunkte.netz, name='mesh3dai_testkleidnetz'),
+    path('api/mesh3dai/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/bild/<str:name>', Mesh3daitestkleiderendpunkte.bild, name='mesh3dai_testkleidbild'),
+    path('api/mesh3dai/test/<str:kennung>/modell/<str:geschlecht>/', Mesh3daitestkleiderendpunkte.modell, name='mesh3dai_testmodell'),
     path('mesh-3D-AI/<str:job>/', Mesh3daiendpunkte.seite, name='mesh3dai_job'),
     path('api/mesh3dai/jobs/', Mesh3daiendpunkte.jobs, name='mesh3dai_jobs'),
     path('api/mesh3dai/<str:job>/proben/', Mesh3daiendpunkte.proben, name='mesh3dai_proben'),

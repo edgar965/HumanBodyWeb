@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Genesis9hautGLSL } from './genesis9hautglsl.js';
+import { Genesis9hautebenenGLSL } from './genesis9hautebenenglsl.js';
 import { Shaderpatch } from './shaderpatch.js';
 
 /**
@@ -279,10 +280,12 @@ export class Genesis9haut {
                 shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
                     '#include <common>\nuniform float uFaltenAn;\nuniform float uFaltenGewicht;\nuniform float uFaltenDunkel;\nuniform sampler2D uFaltenNormalen;');
             }
-            if (zusatz.detail || zusatz.schminke || mischung || zusatz.falten) {
+            const ebenen = zusatz.hautebenen;      // Hautton, Flecken, Muskel-/Fettzeichnung (`Genesis9hautebenen`, 17.10.2026)
+            if (ebenen) Genesis9hautebenenGLSL.einhaengen(shader, ebenen, Boolean(zusatz.schminke));
+            if (zusatz.detail || zusatz.schminke || mischung || zusatz.falten || ebenen?.zeichnung || ebenen?.mimik) {
                 shader.fragmentShader = shader.fragmentShader.replace(
                     '#include <normal_fragment_maps>',
-                    Genesis9hautGLSL.normalen(Boolean(zusatz.schminke), Boolean(zusatz.detail), mischung, Boolean(zusatz.falten)));
+                    Genesis9hautGLSL.normalen(Boolean(zusatz.schminke), Boolean(zusatz.detail), mischung, Boolean(zusatz.falten), Boolean(ebenen?.zeichnung), Boolean(ebenen?.mimik)));
             }
             if (zusatz.klarlack) {
                 Object.assign(shader.uniforms, zusatz.klarlack);
@@ -294,7 +297,7 @@ export class Genesis9haut {
         // Ein anderer Schlüssel je Zusatz, sonst teilt Three das Programm.
         eingriff.kennung = () => `${zusatz.durchlicht ? zusatz.durchlicht.gewicht.toFixed(3) : 'x'}-${
             zusatz.schminke ? 's' : 'x'}-${zusatz.detail ? 'd' : 'x'}-${zusatz.klarlack ? 'k' : 'x'}-${
-            zusatz.falten ? 'f' : 'x'}-m${zusatz.mischung?.anzahl || 0}`;
+            zusatz.falten ? 'f' : 'x'}-m${zusatz.mischung?.anzahl || 0}-h${zusatz.hautebenen ? 'e' + (zusatz.hautebenen.zeichnung ? 'z' : '') + (zusatz.hautebenen.mimik ? 'm' : '') : 'x'}`;
         Shaderpatch.anhaengen(material, 'genesis9haut', eingriff);
     }
 }

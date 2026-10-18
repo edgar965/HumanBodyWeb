@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 u"""Hbmorphuebertragung — ein HumanBody-Verschiebungsfeld auf den Genesis-9-Kaefig legen (aus `Hbmorpheaufgenesis` herausgeloest, 17.10.2026).
 
-Die Zuordnung (Paarung der Grundfiguren, Kandidaten je Punkt, Normalen-Einigkeit) und die zwei Wege der Uebertragung:
+Die Zuordnung (Paarung der Grundfiguren, Kandidaten je Punkt, Normalen-Einigkeit: `Hbzuordnung`) und die zwei Wege der Uebertragung:
 
 - **Rahmen** (Vorgabe): Das Delta wird in den Rahmen (Normale, Aufwaerts, Quer) des HumanBody-Punkts zerlegt und im Rahmen des Genesis-Punkts
   wieder aufgebaut — ein Delta entlang der Normale bleibt entlang der Normale, auch wo die Figuren anders stehen. Richtig fuer Formregler.
@@ -13,6 +13,10 @@ PUNKTE OHNE GEGENSTUECK (`ungueltig`, 17.10.2026): Genesis hat Mundinnenraum, Au
 greift die Zuordnung einen Punkt mit gegenlaeufiger Normale oder weit weg — das Vorzeichen jedes Deltas entlang der Normale kippte (Body Size −1: +236 mm statt
 −500 mm am Mundinnenraum, die Hoehe des Netzes stieg auf 1,825 m statt zu sinken). Solche Punkte (2.271 von 25.182) werden aus ihren Nachbarn gefuellt
 (`G9feldputz.fuellen`), Reste von Zacken auf den Median der Nachbarn gesetzt (`putzen`).
+
+VERSCHLUCKTE REGLER (`uebertragen_wirksam`, 17.10.2026): Ein kleiner Gesichtsregler (3 mm Hub auf 1–2 cm) fiel zwischen die Punkte, weil Genesis' Gesicht 9–25 mm anders sitzt
+als HumanBodys (`Eyes_innerSinus`: 2,62 mm in der Quelle, 0,000 auf Genesis). Kommt ein Regler mit weniger als `RUECKFALL` seiner Staerke an, wird er mit der Kopfausrichtung
+(`Hbzuordnung(ausgerichtet=True)`) neu uebertragen und die Fassung genommen, die mindestens `FAKTOR`-mal staerker ist. Alle anderen Regler bleiben bitgleich.
 """
 import numpy as np
 from Genesis9.basisnetz import G9basisnetz
@@ -21,6 +25,8 @@ from Genesis9.kollision import G9kollision
 
 from .g9aufhumanbody import G9aufhumanbody
 from .hbtraeger import Hbtraeger
+from .hbvorwaerts import Hbvorwaerts
+from .hbzuordnung import Hbzuordnung
 
 __all__ = ['Hbmorphuebertragung']
 
@@ -30,24 +36,24 @@ class Hbmorphuebertragung:
 
     GESCHLECHT = 'female'
     BAUART = None
-    KANDIDATEN = 6
+    KANDIDATEN = Hbzuordnung.KANDIDATEN
     EINIG = G9aufhumanbody.EINIG
     GLAETTUNG = 6
     DURCHGAENGE = 1
     #: Deltas unter dieser Laenge (m) gelten als null — Rauschen der Paarung.
     NULL_M = 2e-5
-    #: Weiter als das (m) vom Kaefigpunkt entfernt liegt kein HumanBody-Gegenstueck mehr (gemessen 17.10.2026: 572 von 25.182 Punkten).
-    LUECKE_M = 0.05
+    #: Kommt weniger als dieser Anteil der Quell-Staerke an, wird mit der Kopfausrichtung neu uebertragen ...
+    RUECKFALL = 0.25
+    #: ... und die ausgerichtete Fassung genommen, wenn sie mindestens so viel mal staerker ist.
+    FAKTOR = 2.0
 
     def __init__(self):
         self._paar = None
         self._hb = None
         self._ursprung = None
         self._nachbar = None
-        self._zuordnung = None
-        self._naehe = None
-        self._ohne = None
-        self._luecke = None
+        self._zuordnungen = {}
+        self._vorwaerts = {}
         self._putz = None
 
     # ---------------------------------------------------------- Vorbereiten
@@ -79,58 +85,31 @@ class Hbmorphuebertragung:
             self._nachbar = np.asarray(nachbar, dtype=np.int64)
         return self._nachbar
 
-    def zuordnung(self):
+    def zuordnungsobjekt(self, ausgerichtet=False):
+        u"""Die `Hbzuordnung` der Paarung, mit oder ohne Kopfausrichtung (gemerkt)."""
+        if ausgerichtet not in self._zuordnungen:
+            self._zuordnungen[ausgerichtet] = Hbzuordnung(self.paarung(), self.humanbody(), self.ursprung(), len(G9basisnetz.holen().punkte), ausgerichtet)
+        return self._zuordnungen[ausgerichtet]
+
+    def zuordnung(self, ausgerichtet=False):
         u"""`(kandidaten (27087, K), gewichte (27087, K))` — je Genesis-Browserpunkt seine HumanBody-Punkte desselben Koerperteils, Gewichte summieren zu 1."""
-        if self._zuordnung is not None:
-            return self._zuordnung
-        paar, hb = self.paarung(), self.humanbody()
-        zahl = len(paar['g9_punkte'])
-        kand = np.tile(paar['zu'][:, None], (1, self.KANDIDATEN))
-        gewicht = np.zeros((zahl, self.KANDIDATEN))
-        gewicht[:, 0] = 1.0
-        #: Abstand (m, HumanBody-Lage) des naechsten Kandidaten je Genesis-Browserpunkt — gross = kein Gegenstueck (Mundinnenraum, Zehen).
-        self._naehe = np.full(zahl, np.inf)
-        self._ohne = np.zeros(zahl, dtype=bool)
-        for _teil, (g9_idx, hb_idx) in paar['segmente'].items():
-            if not len(g9_idx) or len(hb_idx) < self.KANDIDATEN:
-                continue
-            abstand, nr = G9kollision.naechste(G9kollision.baum(hb['punkte'][hb_idx]), paar['skaliert'][g9_idx], k=self.KANDIDATEN)
-            self._naehe[g9_idx] = np.asarray(abstand, dtype=np.float64)[:, 0]
-            nr = hb_idx[np.asarray(nr)]
-            w = 1.0 / np.maximum(np.asarray(abstand, dtype=np.float64), 1e-4)
-            einig = np.einsum('ik,ijk->ij', paar['g9_normalen'][g9_idx], hb['normalen'][nr]) > self.EINIG
-            keiner = ~einig.any(axis=1)
-            einig[keiner, 0] = True                 # sonst der naechste, wie `zu`
-            # ... aber mit gegenlaeufiger Normale kippt das Vorzeichen jedes Deltas entlang der Normale — fuer Felder zaehlt so ein Punkt als „ohne Gegenstueck“.
-            self._ohne[np.asarray(g9_idx)[keiner]] = True
-            w = np.where(einig, w, 0.0)
-            kand[g9_idx] = nr
-            gewicht[g9_idx] = w / w.sum(axis=1, keepdims=True)
-        self._zuordnung = (kand, gewicht)
-        return self._zuordnung
+        return self.zuordnungsobjekt(ausgerichtet).kandidaten()
+
+    def ungueltig(self, ausgerichtet=False):
+        u"""(25182,) True, wo es kein HumanBody-Gegenstueck gibt (siehe `Hbzuordnung.ungueltig`)."""
+        return self.zuordnungsobjekt(ausgerichtet).ungueltig()
 
     def putz(self):
         if self._putz is None:
             self._putz = G9feldputz.vom_kaefig()
         return self._putz
 
-    def ungueltig(self):
-        u"""(25182,) True, wo es kein HumanBody-Gegenstueck gibt: naechster Kandidat weiter als `LUECKE_M` oder nur mit gegenlaeufiger Normale."""
-        if self._luecke is None:
-            self.zuordnung()
-            kaefig = np.zeros(len(G9basisnetz.holen().punkte))
-            np.maximum.at(kaefig, self.ursprung(), np.where(np.isfinite(self._naehe), self._naehe, 9.0))
-            ohne = np.zeros(len(kaefig))
-            np.maximum.at(ohne, self.ursprung(), self._ohne.astype(float))
-            self._luecke = (kaefig > self.LUECKE_M) | (ohne > 0)
-        return self._luecke
-
     # ------------------------------------------------------------ Uebertragen
 
-    def uebertragen(self, hb_delta, welt=False):
+    def uebertragen(self, hb_delta, welt=False, ausgerichtet=False):
         u"""(25182, 3) das HumanBody-Delta auf dem Genesis-Kaefig, gefuellt, geglaettet, geputzt. `welt`: siehe Kopf der Datei."""
         paar, hb = self.paarung(), self.humanbody()
-        kand, gewicht = self.zuordnung()
+        kand, gewicht = self.zuordnung(ausgerichtet)
         if welt:
             browser = np.einsum('ik,ikj->ij', gewicht, hb_delta[kand]) / paar['massstab']
         else:
@@ -145,10 +124,51 @@ class Hbmorphuebertragung:
         np.add.at(anzahl, self.ursprung(), 1.0)
         feld = summe / np.maximum(anzahl, 1.0)[:, None]
         putz = self.putz()
-        feld = putz.fuellen(feld, self.ungueltig())
+        feld = putz.fuellen(feld, self.ungueltig(ausgerichtet))
         nachbar = self.nachbarn()
         for _ in range(self.DURCHGAENGE):
             feld = feld[nachbar].mean(axis=1)
         feld, _zacken = putz.putzen(feld)
         feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
         return feld
+
+    @staticmethod
+    def staerke(feld):
+        u"""Groesste Verschiebung (m) eines Felds."""
+        return float(np.linalg.norm(np.asarray(feld, dtype=np.float64), axis=1).max()) if len(feld) else 0.0
+
+    def vorwaerts(self, ausgerichtet=False):
+        u"""Die `Hbvorwaerts` zur Paarung, mit oder ohne Kopfausrichtung (gemerkt)."""
+        if ausgerichtet not in self._vorwaerts:
+            such = self.zuordnungsobjekt(ausgerichtet).suchpunkte()
+            self._vorwaerts[ausgerichtet] = Hbvorwaerts(self.paarung(), self.humanbody(), such, self.ursprung(), len(G9basisnetz.holen().punkte), self.nachbarn())
+        return self._vorwaerts[ausgerichtet]
+
+    def uebertragen_vorwaerts(self, hb_delta, ausgerichtet=False):
+        u"""(25182, 3) das Delta vorwaerts auf den Kaefig gelegt (siehe `Hbvorwaerts`), geputzt."""
+        feld, _zacken = self.putz().putzen(self.vorwaerts(ausgerichtet).uebertragen(hb_delta))
+        feld[np.linalg.norm(feld, axis=1) < self.NULL_M] = 0.0
+        return feld
+
+    def uebertragen_wirksam(self, hb_plus, hb_minus):
+        u"""`(plus, minus, weg)` — beide Richtungen eines Reglers. `weg`: 'rahmen' (normal), 'ausgerichtet', 'vorwaerts' oder 'vorwaerts_ausgerichtet' (siehe Kopf der Datei).
+
+        Reihenfolge der Rueckfaelle: Kopfausrichtung, dann die Vorwaertsuebertragung (ohne und mit Ausrichtung); genommen wird die staerkste Fassung, die mindestens `FAKTOR`-mal staerker
+        ist als die bisher beste."""
+        plus, minus = self.uebertragen(hb_plus), self.uebertragen(hb_minus)
+        quelle = max(self.staerke(hb_plus), self.staerke(hb_minus))
+        beste = max(self.staerke(plus), self.staerke(minus))
+        weg = 'rahmen'
+        if quelle <= 0 or beste >= self.RUECKFALL * quelle:
+            return plus, minus, weg
+        versuche = (('ausgerichtet', lambda d: self.uebertragen(d, ausgerichtet=True)),
+                    ('vorwaerts', lambda d: self.uebertragen_vorwaerts(d)),
+                    ('vorwaerts_ausgerichtet', lambda d: self.uebertragen_vorwaerts(d, ausgerichtet=True)))
+        for name, uebertragen in versuche:
+            if beste >= self.RUECKFALL * quelle:
+                break
+            p2, m2 = uebertragen(hb_plus), uebertragen(hb_minus)
+            neu = max(self.staerke(p2), self.staerke(m2))
+            if neu > 0 and neu >= self.FAKTOR * beste:
+                plus, minus, beste, weg = p2, m2, neu, name
+        return plus, minus, weg

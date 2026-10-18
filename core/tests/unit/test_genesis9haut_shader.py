@@ -106,11 +106,11 @@ class DurchlichtShader(SimpleTestCase):
         )
         glsl = self.glsl()
         detail = Genesis9hautQuelle.glsl(glsl, 'DETAIL')
+        # Seit 17.10.2026 (Hautfalten) schreibt DETAIL das Ergebnis in `mapN`; `normal = normalize( tbn * mapN )` steht EINMAL im Rahmen, nach allen Schichten.
         for stueck in (
             'n1.z += 1.0;',
             'n2.xy = -n2.xy;',
-            'vec3 gemischt = n1 * dot( n1, n2 ) / n1.z - n2;',
-            'normal = normalize( tbn * gemischt );',
+            'mapN = n1 * dot( n1, n2 ) / n1.z - n2;',
             'mix( vec3( 0.0, 0.0, 1.0 ), detailN, uDetailGewicht * uDetailAn )',
         ):
             self.assertIn(stueck, detail, stueck)
@@ -119,6 +119,7 @@ class DurchlichtShader(SimpleTestCase):
             '#if defined( USE_NORMALMAP_TANGENTSPACE )',
             'vec3 mapN = basisN * 2.0 - 1.0;',
             'mapN.xy *= normalScale;',
+            'normal = normalize( tbn * mapN );',
             '#else\n    #include <normal_fragment_maps>',
         ):
             self.assertIn(stueck, rahmen, stueck)

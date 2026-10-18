@@ -91,6 +91,7 @@ class G9lagenanfrage:
             if punkte is not None:
                 andere.append((self.GC + str(eintrag.get('stueck') or '?'), punkte, False))
         innen, aussen = self._anatomie_unten(kennung, *self.lagen.einordnen(kaefig, andere))
+        innen, aussen = self._haar_aussen(kennung, innen, aussen)
         # Ein GarmentCode-Stueck ist EINE Stofflage — ohne `aussenlage` (24.09.2026,
         # `Genesis9/lagenflaeche.py`: 22 % der Kleidpunkte fielen dort heraus).
         # Dasselbe gilt für die EIGENEN Stücke der zweiten Bibliothek (GarmentCode
@@ -117,6 +118,34 @@ class G9lagenanfrage:
         if cls._anatomie(kennung):
             return [k for k in innen if cls._anatomie(k)], aussen + [k for k in innen if not cls._anatomie(k)]
         return innen + [k for k in aussen if cls._anatomie(k)], [k for k in aussen if not cls._anatomie(k)]
+
+    @classmethod
+    def _art(cls, kennung):
+        u"""`art` des Garderobeneintrags (`kleidung`, `haar`, `requisit` …); GarmentCode ist Kleidung."""
+        if kennung.startswith(cls.GC):
+            return 'kleidung'
+        from Genesis9.garderobe import G9garderobe
+        return (G9garderobe.eintrag(kennung) or {}).get('art')
+
+    @classmethod
+    def _haar_aussen(cls, kennung, innen, aussen):
+        u"""Haar liegt über der Kleidung, auch wo die Tiefenregel anders misst.
+
+        17.10.2026, Edgar mit Bild („02 Stretching G9B": Shirt zerrissen, die Pose dauerte 30–60 s):
+        Mit erhobenen Armen liegen die Ärmel am Haar; dort stand das Haar näher an der Haut (des
+        Arms) und galt als INNERES Stück. Das Shirt wurde über beide Haare gehoben —
+        `_aeussere_stuecke` rechnete über 7.389 + 319.503 + 433.212 Punkte 20,8 s, ohne Pose 0,24 s
+        (`ProjektTemp/_wegwerf/posen_lagen_diag.py`). In Daz weicht ebenso das Haar der Kleidung
+        aus, nicht umgekehrt. Nur zwischen Haar und Kleidung; Haar gegen Haar und Requisiten
+        bleiben bei der Tiefenregel."""
+        art = cls._art(kennung)
+        if art == 'haar':
+            return (innen + [k for k in aussen if cls._art(k) == 'kleidung'],
+                    [k for k in aussen if cls._art(k) != 'kleidung'])
+        if art == 'kleidung':
+            return ([k for k in innen if cls._art(k) != 'haar'],
+                    aussen + [k for k in innen if cls._art(k) == 'haar'])
+        return innen, aussen
 
     def _fuss(self, kennung, punkte):
         u"""Der Fussabdruck eines starren Stuecks (Anatomie) auf der Haut — sonst None (`G9lagenflaeche.flaeche`)."""

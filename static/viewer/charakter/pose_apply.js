@@ -95,10 +95,14 @@ function _einrichten(liste) {
     });
     // Einmal binden: Bis zum 17.10.2026 hängte JEDES `loadPoseUI` (auch das nach
     // Umbenennen und Speichern) einen weiteren Hörer an (im Code gelesen).
-    document.getElementById('pose-reset')?.addEventListener('click', () => {
-        const befund = Posenanwendung.zuruecksetzen();
-        _status(befund.ok ? 'Ruhelage hergestellt.' : befund.grund, befund.ok);
-    });
+    // Je Figurart (`Posenwahl.zuruecksetzen`, 17.10.2026): bis dahin nur HumanBody.
+    document.getElementById('pose-reset')?.addEventListener('click', posenZuruecksetzen);
+}
+
+/** „A-Pose (Reset)" — der Knopf im Reiter und das Hauptmenü bei einer Genesis-Figur (`menubar.js`). */
+function posenZuruecksetzen() {
+    const befund = Posenwahl.zuruecksetzen();
+    _status(befund.ok ? (befund.text || 'Ruhelage hergestellt.') : befund.grund, befund.ok);
 }
 
 /* ── Liste ── */
@@ -130,8 +134,18 @@ export async function loadPoseUI(waehle = null) {
     }
 }
 
-/** Der Weg aus dem Hauptmenü (T-Pose/A-Pose) und aus dem Szenenaufbau. */
-export async function applyPoseFromServer(poseId) {
+/**
+ * Der Weg aus dem Hauptmenü (T-Pose/A-Pose) und aus dem Szenenaufbau.
+ * @param uebertragen  true (nur das Hauptmenü): eine gewählte Genesis-9-Figur bekommt die HumanBody-Pose übertragen
+ *                     (`Posenwahl`, `G9hbpose`, 17.10.2026). Der Szenenaufbau NICHT — seine Startpose überschriebe
+ *                     sonst bei jedem Laden die gespeicherte Pose der Figur.
+ */
+export async function applyPoseFromServer(poseId, uebertragen = false) {
+    if (uebertragen && state.characters.get(state.selectedCharacterId)?.quelle === 'genesis9') {
+        const ergebnis = await Posenwahl.anwenden({ id: poseId, name: poseId.split('/').pop() }, { quelle: 'humanbody' });
+        _status(ergebnis.ok ? ergebnis.text : ergebnis.grund, ergebnis.ok);
+        return ergebnis;
+    }
     const befund = await Posenanwendung.vomServer(poseId);
     _status(befund.ok ? `Pose liegt an (${befund.gesetzt} Knochen).`
                       : befund.grund, befund.ok);
@@ -141,5 +155,6 @@ export async function applyPoseFromServer(poseId) {
 // Register
 fn.loadPoseUI = loadPoseUI;
 fn.applyPoseFromServer = applyPoseFromServer;
+fn.posenZuruecksetzen = posenZuruecksetzen;
 window.__applyPoseRuntime = applyPoseFromServer;
 window.__characters = state.characters;

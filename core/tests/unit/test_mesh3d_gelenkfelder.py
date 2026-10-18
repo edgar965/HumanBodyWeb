@@ -127,5 +127,6 @@ class DrahtTest(SimpleTestCase):
         text = quelltext('static', 'viewer', 'meshfigur', 'meshfigurhaarobjekt.js')
         self.assertIn("haut && dateiAdresse.includes('/datei/ergebnis/')", text)
         self.assertIn("replace('/datei/ergebnis/', '/objektfelder/')", text)
-        self.assertIn('this._haltung) return null', text, 'in der Haltung des Netzes steht das Objekt starr: keine Felder')
+        # Seit 14.10.2026 auch an die Haltung gebunden (`_drehung`): deren Fassung ist nicht in der Ruhelage gerechnet — ebenfalls keine Felder.
+        self.assertIn('this._haltung || this._drehung) return null', text, 'in der Haltung des Netzes steht das Objekt starr: keine Felder')
         self.assertIn('gelenkziele()', quelltext('static', 'viewer', 'meshfigur', 'meshfigurbuehne.js'))

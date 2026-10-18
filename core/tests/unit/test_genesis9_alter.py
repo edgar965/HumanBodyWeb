@@ -13,6 +13,8 @@ Zusagen:
 4. Männlich oder weiblich entscheidet die Grundfigur im Rumpf; ein Daz-Regler mit `nur für` gilt nur dort.
 5. `G9formung` rechnet nur mit den Einzelreglern: derselbe Fingerabdruck wie die aufgelöste Stellung; `aus_abfrage` nimmt den Schieber an und begrenzt ihn auf −1…1.
 6. Der Reglerplan führt den Bereich „Alter“ gleich hinter „Figur“.
+7. Älter macht keinen Bauch (`OHNE_BAUCH`, Edgar 17.10.2026: „Lebensalter Älter macht bei Ursula einen dicken Bauch“); jünger stellt den Torso weiter.
+8. Kein Kind-Anteil mehr (17.10.2026, Vorschlag A „ein Alter, ein Aussehen“): „Wirkt älter / jünger“ ändert nur das Aussehen, nie die Größe — die kommt allein vom Lebensalter (`test_genesis9_alterung`).
 
 Sabotage-Gegenprobe (nicht gefahren): in `_anteil` `plus`/`minus` vertauschen → Fall 2 rot; `aufloesen` ohne `min/max` → Fall 3b rot; `maennlich` immer False → Fall 4 rot; den Aufruf von `aufloesen` in
 `G9formung.__init__` streichen → Fall 5 rot; den Bereich ans Ende des Plans legen → Fall 6 rot. Geschrieben, nicht gelaufen (nur auf Ansage).
@@ -32,6 +34,8 @@ Humanbodypfad.setzen()
 from Genesis9.alter import G9alter  # noqa: E402
 from Genesis9.alterdaten import G9alterdaten  # noqa: E402
 from Genesis9.formung import G9formung  # noqa: E402
+from Genesis9.hbmorphe import G9hbmorphe  # noqa: E402
+from Genesis9.mhmorphe import G9mhmorphe  # noqa: E402
 from Genesis9.reglerplan import G9reglerplan  # noqa: E402
 
 M, W = G9alter.MAENNLICH, G9alter.WEIBLICH
@@ -92,9 +96,9 @@ class AufloesenTest(SimpleTestCase):
 
     def test_3_der_schieber_verschwindet_und_steht_auf_den_einzelreglern(self):
         with grenzen():
-            aus = G9alter.aufloesen({W: 1.0, G9alter.NAME: 1.0, 'hb:Torso_Tone': 0.5})
+            aus = G9alter.aufloesen({W: 1.0, G9alter.NAME: 1.0, 'hb:Arms_UpperarmTone': 0.5})
         self.assertNotIn(G9alter.NAME, aus)
-        self.assertAlmostEqual(aus['hb:Torso_Tone'], 0.5 + G9alter.beitraege(1.0, False)['hb:Torso_Tone'], msg='summiert mit dem, was dort steht')
+        self.assertAlmostEqual(aus['hb:Arms_UpperarmTone'], 0.5 + G9alter.beitraege(1.0, False)['hb:Arms_UpperarmTone'], msg='summiert mit dem, was dort steht')
         self.assertIn('hb:Cheeks_SideCrease', aus)
         self.assertAlmostEqual(aus['body_bs_BodyOlder'], 1.0)
         self.assertEqual(aus[W], 1.0)
@@ -106,14 +110,14 @@ class AufloesenTest(SimpleTestCase):
         self.assertEqual(aus['body_bs_BodyOlder'], 0.7)
 
     def test_3c_ohne_schieber_dieselbe_stellung_und_bei_null_ohne_beitrag(self):
-        vorher = {W: 1.0, 'hb:Torso_Tone': 0.3}
+        vorher = {W: 1.0, 'hb:Arms_UpperarmTone': 0.3}
         self.assertIs(G9alter.aufloesen(vorher), vorher)
         self.assertEqual(G9alter.aufloesen({W: 1.0, G9alter.NAME: 0.0}), {W: 1.0})
 
     def test_3d_ein_name_ohne_gegenstueck_wirkt_nicht(self):
-        with mock.patch.object(G9alter, '_grenzen', classmethod(lambda cls: {'hb:Torso_Tone': (-1.0, 1.0)})):
+        with mock.patch.object(G9alter, '_grenzen', classmethod(lambda cls: {'hb:Arms_UpperarmTone': (-1.0, 1.0)})):
             aus = G9alter.aufloesen({W: 1.0, G9alter.NAME: 1.0})
-        self.assertEqual(sorted(aus), sorted([W, 'hb:Torso_Tone']))
+        self.assertEqual(sorted(aus), sorted([W, 'hb:Arms_UpperarmTone']))
 
 
 class DazTabelleTest(SimpleTestCase):
@@ -140,14 +144,41 @@ class GeschlechtTest(SimpleTestCase):
         self.assertFalse(G9alter.maennlich({W: 1.0}))
         self.assertFalse(G9alter.maennlich({}), 'ohne Grundfigur gilt die weibliche Tabelle (HumanBodys Vorgabe)')
         mann, frau = G9alter.beitraege(1.0, True), G9alter.beitraege(1.0, False)
-        m_minus, m_plus = G9alterdaten.MAENNLICH['Torso_Tone']
-        self.assertAlmostEqual(mann['hb:Torso_Tone'], m_plus - m_minus)
-        self.assertAlmostEqual(frau['hb:Torso_Tone'], -0.24 - 0.2, msg='weiblich (0,2, −0,24): der Weg 18 → 100')
+        m_minus, m_plus = G9alterdaten.MAENNLICH['Arms_UpperarmTone']
+        self.assertAlmostEqual(mann['hb:Arms_UpperarmTone'], m_plus - m_minus)
+        self.assertAlmostEqual(frau['hb:Arms_UpperarmTone'], -0.4 - 0.1, msg='weiblich (0,1, −0,4): der Weg 18 → 100')
         self.assertIn('body_bs_PectoralsSag', mann)
         self.assertNotIn('body_bs_PectoralsSag', frau)
         self.assertIn('body_ctrl_BreastsHangForward', frau)
         self.assertNotIn('body_ctrl_BreastsHangForward', mann)
         self.assertNotIn('hb:Torso_BreastTone', mann, 'die männliche Tabelle führt ihn nicht')
+
+
+class BauchUndKindTest(SimpleTestCase):
+    databases = set()
+
+    def test_7_aelter_macht_keinen_bauch_juenger_darf_flacher_werden(self):
+        for maennlich in (False, True):
+            alt, jung = G9alter.beitraege(1.0, maennlich), G9alter.beitraege(-1.0, maennlich)
+            for name in G9alter.OHNE_BAUCH:
+                self.assertNotIn(G9hbmorphe.regler(name), alt, '%s darf beim Älterwerden nicht stehen (Ursula: +92 mm Bauch)' % name)
+            for kanal in G9alter.OHNE_BAUCH_DAZ:
+                self.assertNotIn(kanal, alt, kanal)
+            self.assertIn('hb:Torso_Tone', jung, 'jünger stellt den Torso weiter (ein flacherer Bauch schadet nicht)')
+            self.assertIn('hb:Chin_Tone', alt, 'der Rest des Alters bleibt')
+
+    def test_8_wirkt_juenger_legt_kein_kind_dazu_und_aendert_die_groesse_nicht(self):
+        with mock.patch.object(G9mhmorphe, 'vorhanden', return_value=True):
+            for wert in (-1.0, -0.4, 0.5, 1.0):
+                aus = G9alter.beitraege(wert, False)
+                self.assertEqual([k for k in aus if k.startswith('mh:')], [], 'Alter %+.1f: kein MakeHuman-Morph, also keine Größe (Lebensalter −1 und Alter −1 zählten das Kind doppelt)' % wert)
+
+    def test_8b_der_aufruf_mit_dem_aussehen_ersetzt_den_rohen_schieber(self):
+        with grenzen():
+            roh = G9alter.aufloesen({W: 1.0, G9alter.NAME: 0.6})
+            aussehen = G9alter.anwenden({W: 1.0, G9alter.NAME: 5.0}, 0.6)
+        self.assertEqual(roh, aussehen, '`anwenden` rechnet mit dem übergebenen Aussehen, nicht mit dem Wert im Rumpf')
+        self.assertNotIn(G9alter.NAME, aussehen)
 
 
 class FormungTest(SimpleTestCase):
@@ -160,7 +191,9 @@ class FormungTest(SimpleTestCase):
             ohne = G9formung({M: 1.0})
         self.assertNotIn(G9alter.NAME, mit.regler)
         self.assertEqual(mit.regler, aufgeloest.regler)
-        self.assertEqual(mit.fingerabdruck(), aufgeloest.fingerabdruck())
+        self.assertAlmostEqual(mit.alter_aussehen, 0.6, msg='das Aussehen steht auf der Stellung (der Server schickt es als `alter_aussehen`)')
+        self.assertEqual(aufgeloest.alter_aussehen, 0.0, 'die aufgelöste Stellung trägt keinen Schieber mehr')
+        self.assertNotEqual(mit.fingerabdruck(), aufgeloest.fingerabdruck(), 'gleiche Einzelregler, anderes Aussehen (Falten, graues Haar): nie dieselbe geteilte Stellung')
         self.assertNotEqual(mit.fingerabdruck(), ohne.fingerabdruck())
         self.assertTrue(mit.eigen(), 'die HB-Morphs stehen unter den fremden Reglern (`hb:`)')
 

@@ -190,9 +190,11 @@ export class Posenanwendung {
             return { ok: false, grund: 'Keine Figur gewählt.' };
         }
         if (figur.quelle && figur.quelle !== Posenanwendung.QUELLE_HUMANBODY) {
+            // Mit Ausweg (17.10.2026, Edgar auf einer Genesis-9-Figur: „HumanBody Poses funktionieren gar nicht").
+            const ausweg = figur.quelle === 'genesis9' ? ' Für sie gelten die Posen unter „Genesis 9 (Daz)“.' : '';
             return { ok: false,
-                     grund: 'Posen gelten für HumanBody-Figuren; diese Figur '
-                            + `kommt von ${figur.quelle}.` };
+                     grund: 'HumanBody-Posen gelten nur für HumanBody-Figuren; die gewählte Figur '
+                            + `kommt von ${figur.quelle}.${ausweg}` };
         }
         return { ok: true };
     }

@@ -31,9 +31,15 @@ export class Genesis9hautfalten {
     /** Geschlecht → Promise<{kachel: Adresse}|null> */
     static _stand = new Map();
 
-    /** Der Alterswert 0 … 1 (nur „älter" zeichnet Falten). */
+    /**
+     * Der Alterswert 0 … 1 (nur „älter" zeichnet Falten): das EINE Aussehen, das der Server aus „Alter“ (`alter:jahre`) und „Wirkt älter / jünger“ (`alter:gesamt`) rechnet und in der
+     * Netzantwort als `alter_aussehen` schickt (`G9alterung`, 17.10.2026, Vorschlag A). Vorher las diese Stelle das MAXIMUM der rohen Schieber, während der Körper SUMMIERTE — Lebensalter −1
+     * (Baby) mit Alter +1 bekam Falten und graue Haare. Ohne das Feld (eine Antwort ohne `alter_aussehen`, ältere Server) gilt die alte Regel.
+     */
     static alter(inst) {
-        return Math.min(1, Math.max(0, Number(inst.regler?.[Genesis9hautfalten.REGLER]) || 0));
+        if (Number.isFinite(inst.alterAussehen)) return Math.min(1, Math.max(0, inst.alterAussehen));
+        const r = inst.regler || {};
+        return Math.min(1, Math.max(0, Number(r[Genesis9hautfalten.REGLER]) || 0, Number(r['alter:jahre']) || 0));
     }
 
     /** `male`, wenn die männliche Grundfigur im Rumpf stärker steht — wie `G9alter.maennlich`. */
@@ -75,6 +81,9 @@ export class Genesis9hautfalten {
      * `lauf` verwirft die Antwort eines überholten Aufrufs (der Schieber löst viele Körperbauten aus).
      */
     static async anwenden(inst) {
+        // `lauf` zählt JEDEN Aufruf, auch den ohne Alter: sonst setzt ein überholter Aufruf mit Alter (er wartet noch auf die Karten) seine Falten NACH der Rückstellung auf 0 wieder ein —
+        // der Schieber stünde auf 0 und die Haut bliebe gealtert (17.10.2026, Edgar: „Altersregler hinterlässt Müll").
+        const lauf = inst._faltenlauf = (inst._faltenlauf || 0) + 1;
         const alter = Genesis9hautfalten.alter(inst);
         const gewicht = alter * Genesis9hautfalten.STAERKE;
         const materialien = Genesis9hautfalten.materialien(inst);
@@ -82,7 +91,6 @@ export class Genesis9hautfalten {
             for (const m of materialien) Genesis9hautfalten.gewichtSetzen(m, 0, 0);
             return;
         }
-        const lauf = inst._faltenlauf = (inst._faltenlauf || 0) + 1;
         const bilder = await Genesis9hautfalten.bilder(Genesis9hautfalten.geschlecht(inst));
         if (!bilder || lauf !== inst._faltenlauf) return;
         for (const material of materialien) {

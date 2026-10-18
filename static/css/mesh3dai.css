@@ -128,3 +128,14 @@
 .mesh3dai-test-einstellung label { font-weight: 600; }
 .mesh3dai-test-einstellung select { min-width: 9em; }
 .mesh3dai-test-figur { color: var(--text-muted, #8a93a6); }
+/* Kleider und Bestandteile eines Tests (17.10.2026 nachts, `Mesh3daitestkleider`). */
+.mesh3dai-kleider { margin-top: 12px; }
+.mesh3dai-kleider-titel { align-self: center; margin-right: 4px; font-weight: 600; }
+.mesh3dai-kleider-tabelle { width: 100%; margin: 6px 0 10px; }
+/* Durchsichtig mit geerbter Farbe: die Seitenstile legen jeder Tabelle einen dunklen Grund unter (dunkel auf dunkel, gesehen 17.10.2026 — wie die Statuskarte am 15.10.). */
+.mesh3dai-kleider-tabelle, .mesh3dai-kleider-tabelle thead, .mesh3dai-kleider-tabelle tbody, .mesh3dai-kleider-tabelle tr,
+.mesh3dai-kleider-tabelle th, .mesh3dai-kleider-tabelle td { background: transparent; color: inherit; }
+.mesh3dai-kleider-tabelle th, .mesh3dai-kleider-tabelle td { padding: 4px 8px; border-bottom: 1px solid var(--border, #3a4254); vertical-align: middle; }
+.mesh3dai-kleider-wahl { flex-wrap: nowrap; }
+.mesh3dai-kleider-speichern { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mesh3dai-kleider-speichern input { min-width: 22em; }

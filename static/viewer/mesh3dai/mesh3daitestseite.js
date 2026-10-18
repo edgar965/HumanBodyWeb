@@ -8,10 +8,12 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Mesh3daiansicht } from './mesh3daiansicht.js';
-import { Mesh3daiflaechen } from './mesh3daiflaechen.js';
+import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 import { Mesh3dairigzeichner } from './mesh3dairigzeichner.js';
+import { Mesh3daitestkleider } from './mesh3daitestkleider.js';
+import { Mesh3daitestnetzbau } from './mesh3daitestnetzbau.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 const de = (n, s = 0) => Number(n).toLocaleString('de-DE', { minimumFractionDigits: s, maximumFractionDigits: s });
@@ -21,6 +23,10 @@ export class Mesh3daitestseite {
     static async starten(wurzel) {
         const seite = new Mesh3daitestseite(wurzel);
         window.__mesh3daitest = seite;
+        // Der Rig-Knopf ist derselbe Eintrag wie auf den Jobseiten (17.10.2026, Edgar: „Die Einstellung des Rig Buttons merkst du dir immer noch nicht, die soll für alle Jobs gelten“) —
+        // bis dahin hatte die Testseite einen eigenen Zustand, der beim Öffnen immer „an“ war.
+        const stand = await Mesh3daiansichtgedaechtnis.laden();
+        if (typeof stand.rig === 'boolean') seite.rigSetzen(stand.rig, false);
         await seite.laden();
         return seite;
     }
@@ -32,20 +38,30 @@ export class Mesh3daitestseite {
         this.daten = null;
         this.netz = null;          // das Netz des Tests (GLB-Szene)
         this.figur = null;         // Ursula1 in der vorhergesagten Haltung
+        this.figurNetz = null;     // ihr Anzeigenetz (für den Neubau ohne die verdeckten Dreiecke, `figurNeu`)
         const zeichner = { zeichnen: (inhalt, art) => this._zeichnen(inhalt, art) };
         this.ansichten = ['eingabe', 'ausgabe'].map(art => new Mesh3daiansicht(wurzel.querySelector(`.mesh3dai-leinwand[data-art="${art}"]`), art, zeichner, KAMERA));
         Mesh3daiansicht.koppeln(this.ansichten);
         this.rigknopf = wurzel.querySelector('#mesh3dai-test-rig');
         this.rigknopf.addEventListener('click', () => {
-            this.rig = !this.rig;
-            this.rigknopf.classList.toggle('active', this.rig);
-            this.rigknopf.setAttribute('aria-pressed', String(this.rig));
-            this.zeigen();
+            Mesh3daiansichtgedaechtnis.merken({ rig: !this.rig });
+            this.rigSetzen(!this.rig);
         });
         Mesh3daiflaechennetz.nachLaden = () => this.zeigen();
         // Geschlecht der Figur (16.10.2026 abends): der Server nimmt unter den Figuren dieses Geschlechts die mit dem kleinsten Rest — gerechnet ist schon alles, die Seite lädt nur neu.
         this.wahl = wurzel.querySelector('#mesh3dai-test-geschlecht');
         this.wahl?.addEventListener('change', () => this.geschlechtSetzen(this.wahl.value));
+        // Kleider und Bestandteile (17.10.2026 nachts): je Stück Katalog (a) oder aus dem Netz (b), dazu „Übernehmen und speichern“.
+        const karte = document.getElementById('mesh3dai-kleider');
+        this.kleider = karte ? new Mesh3daitestkleider(karte, this) : null;
+        this.matrizen = null;
+    }
+
+    rigSetzen(an, zeichnen = true) {
+        this.rig = an;
+        this.rigknopf.classList.toggle('active', an);
+        this.rigknopf.setAttribute('aria-pressed', String(an));
+        if (zeichnen) this.zeigen();
     }
 
     async geschlechtSetzen(wert) {
@@ -59,6 +75,14 @@ export class Mesh3daitestseite {
             if (vorher) this.wahl.value = vorher;
             this.wahl.disabled = false;
         }
+    }
+
+    /** Woher die Haltung der vorhergesagten Form kommt (`test.json` → `form.<geschlecht>.haltung`, seit 17.10.2026 spätabends der gewählte Weg; davor die Stimmen des Netzes in der Pose). */
+    _formHaltung(i) {
+        const haltung = i.form?.[i.geschlecht]?.haltung;
+        return haltung === 'rig' ? 'die Gelenke der Rig-Figur aus „Mesh to 3D“ (Weg: Rig allein)'
+            : haltung === 'vorstufe' ? 'die Gelenke der Vorstufe (Netz auf der A-Pose, mit dem Rig zurück in die Haltung)'
+                : 'die Gelenke, die das Netz in der Pose stimmt';
     }
 
     _text(art, text) {
@@ -90,9 +114,9 @@ export class Mesh3daitestseite {
             if (form) {
                 const regler = Object.entries(daten.form_regler || {});
                 const charaktere = regler.filter(([n]) => n.includes('figure_ctrl')).sort((a, b) => b[1] - a[1]).map(([n, w]) => `${n.split('_')[0]} ${de(w, 2)}`);
-                this._text('ausgabe', `Genesis-Figur aus den vorhergesagten Formreglern (${regler.length} gesetzt von 815; Charaktere: ${charaktere.join(' · ') || 'keiner'}), ohne Kleider und Haar, `
+                this._text('ausgabe', `Genesis-Figur aus den vorhergesagten Formreglern (${de(regler.length)} gesetzt von ${daten.form_regler_gesamt ? de(daten.form_regler_gesamt) : '?'}, Charaktere: ${charaktere.join(' · ') || 'keiner'}), Kleider und Bestandteile nach der Wahl in der Karte darunter, `
                     + `in der vorhergesagten Haltung (Daz-Winkel in den Grenzen von Genesis 9, Knochenlängen dieser Figur). Höhe ${de(i.hoehe_m, 3)} m. `
-                    + `Anpassung der Winkel an die gestimmten Gelenke: Rest ${de(i.ik_rest_mm, 1)} mm. Geschlecht „${daten.geschlechter[i.geschlecht]}“: Charaktere des anderen Geschlechts sind auf dieses umgelegt.`);
+                    + `Anpassung der Winkel an ${this._formHaltung(i)}: Rest ${de(i.ik_rest_mm, 1)} mm. Geschlecht „${daten.geschlechter[i.geschlecht]}“: Charaktere des anderen Geschlechts sind auf dieses umgelegt.`);
             } else {
                 const quelle = i.weg === 'rig' ? 'die Gelenke der Rig-Figur aus „Mesh to 3D“' : i.weg === 'vorstufe' ? 'die Gelenke der Vorstufe (Netz auf der A-Pose, mit dem Rig zurück in die Haltung)' : 'die gestimmten Gelenke';
                 this._text('ausgabe', `${figur} in der erkannten Haltung (Daz-Winkel in den Grenzen von Genesis 9, Knochenlängen von ${figur}) — die Form bleibt ${figur}, erkannt wird nur die Haltung. `
@@ -114,6 +138,11 @@ export class Mesh3daitestseite {
         // Der Rahmen ist eine Streckung um den Fußpunkt der Mitte: dieselbe Vorschau passt auf jede Figurhöhe (`netz_skala` = Höhe der Figur / Höhe der Vorschau).
         this.netz?.scale.setScalar(this.daten.netz_skala ?? 1);
         this.zeigen();
+        // Die Kleider gehören zur vorhergesagten Figur dieses Geschlechts (`kleider_<g>/`): mit derselben Haltung gehäutet.
+        if (this.kleider && this.daten.figur_netz) {
+            if (this.kleider.geschlecht === this.daten.info.geschlecht) await this.kleider.neuHaeuten(this.matrizen);
+            else await this.kleider.laden(this.daten.info.geschlecht, this.matrizen, `${this.daten.info.name} Mesh3D-AI`);
+        }
     }
 
     async _netzLaden() {
@@ -137,43 +166,33 @@ export class Mesh3daitestseite {
         try {
             // Vorhergesagte Form (16.10.2026 abends): eigenes Anzeigenetz unter der Adresse des Tests (`figur_netz`), sonst das des Jobs der gewählten Figur.
             const netz = await Mesh3daiflaechennetz.holen(this.daten.job, this.daten.figur_netz);
-            if (!netz.ruhe) throw new Error('Anzeigenetz ohne Ruhelage');
             const d = this.daten;
-            const lage = Mesh3daihaeutung.verformen(netz.ruhe, netz.knochen, netz.gewicht, netz.kopf.haut, Mesh3daihaeutung.ausDrehungen(d.dreh, d.ausgabe, d.ruhezentren));
-            const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.BufferAttribute(lage, 3));
-            geo.setAttribute('uv', netz.uvAttribut);
-            netz.farbe ??= Mesh3daiflaechen.farben(netz.kopf, netz.dreiecke, netz.etikett);
-            geo.setAttribute('color', netz.farbe);
-            // Dreiecke nach Material sortiert (eine Gruppe je Material, −1 = Farbe je Punkt = das letzte Material).
-            const materialien = netz.materialien();
-            const letzter = materialien.length - 1;
-            const je = Array.from({ length: materialien.length }, () => []);
-            for (let t = 0; t < netz.material.length; t++) {
-                const m = netz.material[t] < 0 ? letzter : netz.material[t];
-                je[m].push(netz.dreiecke[t * 3], netz.dreiecke[t * 3 + 1], netz.dreiecke[t * 3 + 2]);
-            }
-            const index = new Uint32Array(je.reduce((s, l) => s + l.length, 0));
-            let ab = 0;
-            je.forEach((l, m) => {
-                if (!l.length) return;
-                index.set(l, ab);
-                geo.addGroup(ab, l.length, m);
-                ab += l.length;
-            });
-            geo.setIndex(new THREE.BufferAttribute(index, 1));
-            geo.computeVertexNormals();
-            geo.userData.gemeinsam = true;
-            for (const m of materialien) m.userData.gemeinsam = true;
-            this.figur = new THREE.Mesh(geo, materialien);
+            // Die Matrizen bleiben gemerkt: die Kleider der Karte werden mit denselben gehäutet (`Mesh3daitestkleider`).
+            this.matrizen = Mesh3daihaeutung.ausDrehungen(d.dreh, d.ausgabe, d.ruhezentren);
+            this.figurNetz = netz;
+            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen);
         } catch (fehler) {
             this._text('ausgabe', `Ausgabe nicht gebaut: ${fehler.message}`);
         }
     }
 
+    /**
+     * Die Figur nach der Wahl der Karte neu bauen (gerufen nach jeder Wahl): Haut der Figur oder die Haut aus dem Netz (`Mesh3daitestkleider.hautNetz`, dieselben Dreiecke),
+     * ohne die Dreiecke unter den gewählten Stücken (`Mesh3daitestkleider.verdeckt`) — wie die Hautverdeckung in Charakter und Studio.
+     */
+    async figurNeu() {
+        const netz = (await this.kleider?.hautNetz()) || this.figurNetz;
+        if (netz && this.matrizen) {
+            this.figur?.geometry.dispose();          // nur die Geometrie: Materialien und Attribute teilt sie mit dem Anzeigenetz
+            this.figur = Mesh3daitestnetzbau.mesh(netz, this.matrizen, this.kleider?.verdeckt(netz.material.length));
+        }
+        this.zeigen();
+    }
+
     _zeichnen(inhalt, art) {
         const objekt = art === 'eingabe' ? this.netz : this.figur;
         if (objekt) inhalt.add(objekt);
+        if (art === 'ausgabe' && this.figur && this.kleider) for (const o of this.kleider.sichtbare()) inhalt.add(o);
         if (this.rig && this.daten) {
             const beschr = this.daten.rig;
             inhalt.add(Mesh3dairigzeichner.zeichnen(beschr, beschr.knochen.map((_k, j) => j), this.daten.ausgabe));

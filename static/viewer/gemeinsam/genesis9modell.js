@@ -5,6 +5,7 @@ import { Protokoll } from './protokoll.js';
 import { Eigenhaut } from './eigenhaut.js';
 import { Genesis9hautmischung } from './genesis9hautmischung.js';
 import { Genesis9hautfalten } from './genesis9hautfalten.js';
+import { Genesis9hautebenen } from './genesis9hautebenen.js';
 import { Oberflaechenbindung } from './oberflaechenbindung.js';
 // Nebenwirkung des Imports: die Hautverdeckung hoert auf Stueck- und Skelettereignis —
 // damit bekommt JEDE Seite, die eine Genesis-9-Figur baut (Szene, Studio, Theatre,
@@ -81,6 +82,8 @@ export class Genesis9Modell extends Modell {
         this.praesets = { ...(daten.praesets || {}) };
         /** Texturmischung (21.09.2026): weitere Hautsätze mit Prozent über der Haut (`Genesis9hautmischung`). */
         this.hautmischung = { ...(daten.hautmischung || {}) };
+        /** Hautebenen (17.10.2026): Hautton, Rötung, Sommersprossen, Altersflecken, Muskel-/Fettzeichnung, graue Haare — `{name: Prozent}` (`Genesis9hautebenen`). */
+        this.hautebenen = { ...(daten.hautebenen || {}) };
         this.teilmaterial = { ...(daten.teilmaterial || {}) };   // Glanz, Rauheit … je Teil, `{augen: {glanz: 0.1}}` (`Genesis9teilmaterial`)
         /** Daz-Posenpreset (Standbild: Netz UND Skelett stehen in der Pose) und Ausdruck (FACS). */
         this.pose = daten.pose || '';
@@ -201,6 +204,10 @@ export class Genesis9Modell extends Modell {
         this.gelenkregler = daten.gelenkregler || {};   // JCM-Schalter (`genesis9gelenke.js`)
         /** Wirksame HD-Morphkanäle (`Genesis9/hdmorphe.py`) — auf Stufe 1, mit Strg+Alt+H auch 2. */
         this.hdkanaele = daten.hdkanaele || [];
+        /** Wert je HD-Kanal dieser Stellung (17.10.2026): die Gewichte der Mimikfalten (`Genesis9mimikfalten`). */
+        this.hdwerte = daten.hdwerte || {};
+        /** Das EINE Aussehen aus „Alter“ und „Wirkt älter / jünger“ (−1…1, `G9alterung`, 17.10.2026): Falten, Altersflecken und graues Haar folgen ihm (`Genesis9hautfalten.alter`). */
+        this.alterAussehen = Number.isFinite(Number(daten.alter_aussehen)) ? Number(daten.alter_aussehen) : null;
         this._kleiderBinden(neuesSkelett);
         if (!neuesSkelett) Genesis9maske.nachMaterialwechsel(this);   // kein Skelettereignis: Loch, Naht und Randfarbe des frischen Körpers sonst nie neu (`genesis9maske.js`)
         // Frische Materialien: die Texturmischung neu einhängen (Bilder aus dem Vorrat).
@@ -214,6 +221,9 @@ export class Genesis9Modell extends Modell {
         // Falten des Alters (17.10.2026): ohne Alterswert kostet das nichts, mit ihm die Faltenkarten der Kacheln (`genesis9hautfalten.js`).
         Genesis9hautfalten.anwenden(this)
             .catch(fehler => Protokoll.warnung('Genesis9Modell', `Hautfalten: ${fehler.message}`));
+        // Hautebenen (17.10.2026): Werte der Figur auf die frischen Materialien; ohne gestellten Wert und ohne Alter kostet das nichts.
+        Genesis9hautebenen.anwenden(this)
+            .catch(fehler => Protokoll.warnung('Genesis9Modell', `Hautebenen: ${fehler.message}`));
         Protokoll.debug('Genesis9Modell', `${this.figur}: ${this.punktzahl} Punkte, Stufe ${this.stufen} (${this.browserpunkte}), `
             + `${(this.hoehe * 100).toFixed(1)} cm, ${Object.keys(this.morphwerte).length} Morphs wirksam`);
         return this;
@@ -346,6 +356,12 @@ export class Genesis9Modell extends Modell {
         if (prozent > 0) this.hautmischung[id] = Math.min(100, Math.round(prozent));
         else delete this.hautmischung[id];
         if (!Genesis9hautmischung.gewichte(this)) await Genesis9hautmischung.anwenden(this);
+        return this;
+    }
+
+    /** Eine Hautebene stellen (Prozent; `null` = Standard) — ohne Neubau des Körpers, nur Uniforms (`Genesis9hautebenen`). */
+    async hautebenenSetzen(name, prozent) {
+        await Genesis9hautebenen.setzen(this, name, prozent);
         return this;
     }
 

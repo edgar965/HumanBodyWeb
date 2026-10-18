@@ -60,7 +60,8 @@ class EndpunkteTest(EndpunktProbe):
     #: So viele Routen weisen ein GET ab. Die Zahl steht hier ausgeschrieben:
     #: Sinkt sie, hat jemand einen Methodenschutz verloren — und das ist der
     #: Fehler, der `delete_job` und `scan_bvh_files` gekostet hat.
-    NUR_POST_ANZAHL = 44
+    #: 45 seit 17.10.2026: `posenbaum/verwalten/` (Ordnerbaum der Posen) kam dazu.
+    NUR_POST_ANZAHL = 45
 
     ENDPUNKTE = [
         (LESEN, 'animationen', '/api/animationen/probe/'),

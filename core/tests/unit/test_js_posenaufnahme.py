@@ -24,29 +24,36 @@ am Browser):
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
 
+import json
+
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-MODUL = Jsmodul('charakter', 'posenaufnahme.js')
+# Einstieg ist Three.js, nicht `posenaufnahme.js`: `Webmodul` spiegelt alles, was der
+# Einstieg importiert, und über `posenanwendung.js` → `state.js` hinge daran
+# `three/addons/…` — das löst der Spiegel nicht auf (lief am 17.10.2026 in der Suite
+# deshalb auf WebmodulFehler). Die beiden Klassen liest das Skript von ihrem echten Ort.
+MODUL = Jsmodul('..', 'vendor', 'three', 'build', 'three.module.js')
+QUELLEN = {d: str(Jsmodul.VIEWER / 'charakter' / d) for d in ('posenanwendung.js', 'posenaufnahme.js')}
 
 SKRIPT = """
 const { readFileSync } = await import('node:fs');
-const { fileURLToPath } = await import('node:url');
-const THREE = await import(new URL('../../vendor/three/build/three.module.js', MODUL).href);
+const THREE = await import(MODUL);
+const QUELLEN = __QUELLEN__;
 
 // Die Klassen ohne ihre Importe laden (sie hängen am Browser: state.js, DOM).
 const lade = (datei, klasse, stuetzen) => {
-    const quelle = readFileSync(fileURLToPath(new URL(datei, MODUL)), 'utf8')
+    const quelle = readFileSync(QUELLEN[datei], 'utf8')
         .replace(/^import .*$/gm, '').replace(/^export class/m, 'class');
     const rumpf = quelle + `\\nreturn ${klasse};`;
     return new Function(...Object.keys(stuetzen), rumpf)(...Object.values(stuetzen));
 };
 const Posenabsatz = { aktiv: (f) => !!f?.absatz && f.absatz.winkel_grad > 0 };
-const Posenanwendung = lade('./posenanwendung.js', 'Posenanwendung', {
+const Posenanwendung = lade('posenanwendung.js', 'Posenanwendung', {
     state: {}, _selectedInst: () => null, convertInstToSkinned: () => {}, Serverabruf: {},
     Protokoll: { debug() {} }, Posenabsatz, fn: {} });
-const Posenaufnahme = lade('./posenaufnahme.js', 'Posenaufnahme', { Posenanwendung, Posenabsatz });
+const Posenaufnahme = lade('posenaufnahme.js', 'Posenaufnahme', { Posenanwendung, Posenabsatz });
 
 // Eine feste Zahlenfolge: derselbe Lauf bei jedem Start.
 const zufall = (() => {
@@ -174,5 +181,5 @@ class PosenaufnahmeTest(SimpleTestCase):
     """Zurücklesen ist die Umkehrung des Anwendens — auf allen Knochen."""
 
     def test_aufnahme_kehrt_das_anwenden_um(self):
-        ausgabe = MODUL.laufen(SKRIPT)
+        ausgabe = MODUL.laufen(SKRIPT.replace('__QUELLEN__', json.dumps(QUELLEN)))
         self.assertTrue(ausgabe.get('ok'), ausgabe)

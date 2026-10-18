@@ -67,4 +67,5 @@ class Meshfigurhalter:
         if len(p) < 10:
             return False
         s = np.linalg.svd(p - p.mean(axis=0), compute_uv=False)
-        return bool(s[1] > 0 and s[0] / s[1] >= cls.STAB_VERHAELTNIS)
+        # Ohne Division: eine ganz gerade Linie (zweite Ausdehnung 0) ist der dünnste Stab, nicht „kein Stab" (vorher `s[1] > 0 and …`).
+        return bool(s[0] > 0 and s[0] >= cls.STAB_VERHAELTNIS * s[1])

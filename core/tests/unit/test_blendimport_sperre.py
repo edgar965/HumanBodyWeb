@@ -55,8 +55,11 @@ class SperreTest(SimpleTestCase):
         arbeiter.start()
         self.addCleanup(arbeiter.stop)
 
-    def _import(self, kennung, status, lebt):
-        Blendimportablage(kennung).stand_schreiben({'kennung': kennung, 'status': status, 'schritt': 'haut'})
+    def _import(self, kennung, status, lebt, quelle=None):
+        stand = {'kennung': kennung, 'status': status, 'schritt': 'haut'}
+        if quelle:
+            stand['quelle'] = quelle
+        Blendimportablage(kennung).stand_schreiben(stand)
         if lebt:
             self.lebende.add(kennung)
 
@@ -80,7 +83,8 @@ class SperreTest(SimpleTestCase):
         """Seit 14.10.2026 (Edgar: „keine Gaga-Meldung, sondern eine normale Meldung, dass der Job in eine Queue eingereiht wird"): ein zweiter Start wird EINGEREIHT — Antwort 200 mit `wartet`,
         der Arbeitsprozess startet mit `einreihen`, hinter dem Import, der rechnet. Kein 409."""
         self._import('2026.10.08.12.00.00', 'laeuft', lebt=True)
-        self._import('2026.10.08.09.00.00', 'fertig', lebt=False)
+        # Mit Netz: ohne `quelle.datei` lehnt `neu` seither mit 400 ab (die Kopie ohne Daten bringt keines mit).
+        self._import('2026.10.08.09.00.00', 'fertig', lebt=False, quelle={'datei': 'figur.blend'})
         anfrage = RequestFactory().post('/api/character/blendimport/starten/', data=json.dumps({'werte': {}}),
                                         content_type='application/json')
         werte = {'pfad': 'x', 'name': 'ordner', 'eigener_name': ''}

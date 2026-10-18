@@ -24,8 +24,9 @@ class PosetiefeTest(unittest.TestCase):
         return T(k3, self.NAMEN, radius, massstab)
 
     def test_kurzes_glied_behaelt_die_mitte(self):
-        """Fuß quer zum Strahl: Bereich 6 cm (2 Radien) → Mitte, auch wenn SAM etwas anderes sagt."""
-        t = self._tiefe({'left-ankle': 0.0, 'left-big-toe-tip': -0.2})
+        """Fuß quer zum Strahl: Bereich 6 cm (2 Radien) → Mitte, auch wenn SAM etwas anderes sagt (Vorhersage 5 cm, 0,7 Radien neben dem Bereich).
+        Nicht weiter als `WEIT` daneben: mit −0,2 (5,7 Radien) fiel das Gelenk weg — das ist der Fall `test_weit_daneben_faellt_weg`, nicht dieser (18.10.2026)."""
+        t = self._tiefe({'left-ankle': 0.0, 'left-big-toe-tip': -0.05})
         z, art, _v = t.tiefe('left-big-toe-tip', np.linspace(-0.03, 0.03, 50), 0.0)
         self.assertEqual(art, 'mitte')
         self.assertAlmostEqual(z, 0.0, places=3)

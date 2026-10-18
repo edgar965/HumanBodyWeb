@@ -21,6 +21,7 @@ export class Genesis9vorgabe {
         if (leer(modell.praesets)) modell.praesets = { ...(eintrag.praesets || {}) };
         if (leer(modell.hautmischung)) modell.hautmischung = { ...(eintrag.hautmischung || {}) };
         if (leer(modell.teilmaterial)) modell.teilmaterial = { ...(eintrag.teilmaterial || {}) };
+        if (leer(modell.hautebenen)) modell.hautebenen = { ...(eintrag.hautebenen || {}) };
         if (!modell.pose) modell.pose = eintrag.pose || '';
         if (!modell.ausdruck) modell.ausdruck = eintrag.ausdruck || '';
         if (leer(modell.kleidung)) modell.kleidung = { ...(eintrag.kleidung || {}) };

@@ -8,6 +8,7 @@ import { Genesis9posen } from './genesis9posen.js';
 import { Genesis9ersatz } from '../../gemeinsam/genesis9ersatz.js';
 import { Genesis9materialdialog } from './genesis9materialdialog.js';
 import { Genesis9texturmischung } from './genesis9texturmischung.js';
+import { Genesis9hautebenenregler } from './genesis9hautebenenregler.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
 import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
@@ -56,6 +57,8 @@ export class Genesis9eigenschaften {
                 Genesis9eigenschaften._reglergriff();
                 // Texturmischung ganz unten (21.09.2026): alle Hautsaetze mit Prozent.
                 Genesis9texturmischung.fuellen(inst, plan);
+                // Hautebenen (17.10.2026): Hautton, Flecken, Muskel-/Fettzeichnung, graue Haare — Uniform-Regler ohne Serverlauf.
+                Genesis9hautebenenregler.fuellen(inst);
             }),
             Genesis9posen.fuellen(inst),
             // Die Garderobe steht im Assets-Reiter (`_genesis9_garderobe.html`,

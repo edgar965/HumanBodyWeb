@@ -78,9 +78,9 @@ class VerdrahtungTest(unittest.TestCase):
 
         quelle = (Path(__file__).resolve().parents[2] / 'dienste' / 'meshfigurhaar.py').read_text(encoding='utf-8')
         self.assertIn("langer_bart=maske.get('langer_bart'", quelle)
-        objekt = quelle[quelle.index('def objekt(self)'):quelle.index('def ruhenetz(self)')]
+        objekt = quelle[quelle.index('def objekt(self)'):quelle.index('def ruhenetz(self')]         # ohne `)`: `ruhenetz` hat inzwischen `haarziel`
         self.assertIn("d['langer_bart']", objekt)
-        ruhenetz = quelle[quelle.index('def ruhenetz(self)'):quelle.index('def hauttest(self)')]
+        ruhenetz = quelle[quelle.index('def ruhenetz(self'):quelle.index('def hauttest(self)')]
         self.assertNotIn('langer_bart', ruhenetz, 'die Frisurwahl misst die Hülle des KOPFhaars — der Bart gehört nicht hinein')
 
 

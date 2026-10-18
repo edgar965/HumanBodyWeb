@@ -193,8 +193,9 @@ class Genesis9Glanz(SimpleTestCase):
                 },
             )
             morphe = G9anhangmorphe._lesen(morphs)
-            deltas, _steckbriefe, hd = morphe
+            deltas, _steckbriefe, hd, formeln = morphe              # seit 17.10.2026 auch die Formeln der Anhänge (`G9anhangmorphe._formeln`)
             self.assertEqual(hd, {'HD Wrinkles': '/x/HD Wrinkles.dhdm'})
+            self.assertEqual(formeln, [], 'der Morph hat keine Formeln')
             self.assertIn('HD Wrinkles', deltas)
             eigen = G9anhangmorphe(deltas, {}, hd)
             with mock.patch.object(G9pfade, 'finden', side_effect=lambda r: _Pfad(ordner) / r.lstrip('/')):

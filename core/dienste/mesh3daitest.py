@@ -111,7 +111,14 @@ class Mesh3daitest:
             regler = json.loads((fig / 'modell.json').read_text(encoding='utf-8'))['figur']['regler']
         except (OSError, ValueError, KeyError):
             regler = {}
-        return {'ordner': '_test/%s/form_%s' % (p.name, geschlecht), 'datei': datei, 'kinematik': fig / 'kinematik.json', 'rest_mm': f.get('rest_mm'), 'hoehe_m': f.get('hoehe_m'), 'regler': regler}
+        # Zahl der Formregler, die das Netz vorhersagt (Fassung des Laufs: 815, 911, 1.318 …) — die Seite schrieb bis 17.10.2026 fest „von 815“.
+        try:
+            with np.load(p / 'form.npz') as z:
+                gesamt = int(z['regler'].shape[0])
+        except (OSError, ValueError, KeyError):
+            gesamt = None
+        return {'ordner': '_test/%s/form_%s' % (p.name, geschlecht), 'datei': datei, 'kinematik': fig / 'kinematik.json', 'rest_mm': f.get('rest_mm'), 'hoehe_m': f.get('hoehe_m'), 'regler': regler,
+                'regler_gesamt': gesamt}
 
     @classmethod
     def form_ordner(cls, kennung, geschlecht):
@@ -177,6 +184,7 @@ class Mesh3daitest:
         return {
             'kennung': kennung, 'info': info, 'job': job, 'rig': beschr, 'figur_hinweis': hinweis, 'geschlechter': cls.GESCHLECHTER, 'netz_skala': round(float(skala), 6),
             'figur_netz': '/api/mesh3dai/test/%s/figur/%s' % (kennung, geschlecht) if form else None, 'form_regler': form['regler'] if form else None,
+            'form_regler_gesamt': form.get('regler_gesamt') if form else None,
             'ausgabe': np.round(e['rig'].astype(float), 4).tolist(),
             'dreh': np.round(Mesh3daidaten._quaternionen(e['dreh'].astype(float)), 5).tolist(),
             'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist(),
@@ -189,7 +197,12 @@ class Mesh3daitest:
         p = cls.pfad(kennung)
         if p is None or wert not in cls.GESCHLECHTER:
             return False
-        AtomarSchreiber.json_schreiben(p / 'einstellung.json', {'geschlecht': wert})
+        # Die Datei trägt seit 17.10.2026 nachts auch die Kleiderwahl (`Mesh3daitestkleider`): lesen, ergänzen, schreiben — nicht ersetzen.
+        try:
+            alt = json.loads((p / 'einstellung.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            alt = {}
+        AtomarSchreiber.json_schreiben(p / 'einstellung.json', {**(alt if isinstance(alt, dict) else {}), 'geschlecht': wert})
         return True
 
     @classmethod

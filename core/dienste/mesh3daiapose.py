@@ -75,6 +75,8 @@ class Mesh3daiapose:
                 punkte, dreiecke, farbe = z['punkte'].astype('<f4'), z['dreiecke'].astype('<u4'), z['farbe'].astype(np.uint8)
                 ix = {str(n): i for i, n in enumerate(z['knochen'])}
                 rig, netz = z['rig'], z['netz']
+                # Seit 17.10.2026 abends füllt der Schritt „apose“ die Löcher (`Vorstufenluecken`): Zahl der Fülldreiecke, die hinten an der Fläche hängen; ältere Ablagen ohne das Feld: 0.
+                gefuellt = int(z['gefuellt']) if 'gefuellt' in z.files else 0
                 if any(n not in ix for n in namen):
                     logger.warning('Mesh3daiapose: %s kennt nicht alle Knochen des Rigs — nicht ausgeliefert', datei)
                     return None
@@ -87,7 +89,7 @@ class Mesh3daiapose:
         kopf = {'punkte': int(len(punkte)), 'dreiecke': int(len(dreiecke)), 'rig': np.round(rig, 5).tolist(), 'netz': np.round(netz, 5).tolist(),
                 'abstand_mm': round(float(1000 * np.linalg.norm(netz - rig, axis=1).mean()), 1), 'ablage': Path(wege.get('ablage', '')).name,
                 'mesh3d': wege.get('mesh3d'), 'netz_vorstufe': wege.get('netz_vorstufe'), 'figur': datei.stem.replace('anzeige_', ''),
-                'eingabe': cls.eingabe(wege)}
+                'eingabe': cls.eingabe(wege), 'gefuellt': gefuellt}
         text = json.dumps(kopf).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         farbteil = farbe.tobytes()

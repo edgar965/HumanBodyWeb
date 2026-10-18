@@ -46,6 +46,14 @@ DIE UEBERTRAGUNG ist der Kleiderweg rueckwaerts, nur ohne Versatz:
        Gelenkversaetzen (`G9gelenkversatz`, abgelegt in der `.npz`), die
        `G9formelnfremd` ins Skelett mischt. `bestand.json` fuehrt sie unter
        `rig_mit_skelett`.
+    7. VERSCHLUCKTE Gesichtsregler (17.10.2026, Edgar: „Teste alle Morphs“):
+       Genesis' Gesicht sitzt 9–25 mm anders als HumanBodys, ein Regler mit
+       3 mm Hub auf 1–2 cm Flaeche fiel zwischen die Punkte
+       (`Eyes_innerSinus` 2,62 mm Quelle -> 0,000 mm). Kommt weniger als ein
+       Viertel an, wird mit der Kopfausrichtung neu uebertragen
+       (`Hbmorphuebertragung.uebertragen_wirksam`, `quelle['kopf_ausgerichtet']`).
+       Bleibt ein Regler unter `MINDEST_MM`, wird er uebergangen — ein
+       Schieber ohne Wirkung ist schlechter als keiner.
 
 Was NICHT drin ist: der Umfangsmassstab je Rumpfhoehe (`G9hbsitz`), den die
 Kleider brauchen — eine Verschiebung von 2 cm bleibt 2 cm mal Hoehenmassstab.
@@ -78,6 +86,9 @@ class Hbmorpheaufgenesis(Hbmorphuebertragung):
     #: (`Hbmorphrig`, Kopfgelenk ab 5 mm oder Knochenabstand ab 7,5 mm), ohne die Fantasy-Ohren (Spitzen, keine Gelenke), dazu die zwei Armlaengen
     #: (der alte Schaetzer sah die Arm-Gelenke nicht: auf `l_upperarm` liegt kein Hautgewicht, nur auf den Verdrillungsknochen). Volumenregler (Mass, Tone,
     #: Girth) stehen nicht hier — eine Schaetzung aus der Haut ueberzeichnet sie (Torso Mass: 55 mm „Laenge“ nach dem Familienschaetzer, gemessen 17.10.2026).
+    #: Ein Regler, der auf dem Kaefig weniger als das (mm) bewegt, ist fuer Edgar ein toter Schieber (Test `test_genesis9_alter_semantik`, 17.10.2026) — er wird uebergangen und
+    #: steht mit seinem Grund im Steckbrief (`G9hbmorphe.uebergangene`). Betraf nach der Kopfausrichtung vier Regler (Iris, Mundwinkelfalte, Lippenvorstand, Augenkreuzung).
+    MINDEST_MM = 0.1
     SKELETT = frozenset((
         'Arms_ForearmLength', 'Arms_UpperarmLength', 'Body_Size', 'Chest_SizeZ', 'Feet_Size', 'Feet_SizeZ', 'Hands_FingersLength', 'Hands_Length',
         'Hands_PalmLength', 'Hands_Size', 'Head_Size', 'Head_SizeX', 'Head_SizeZ', 'Legs_Bow', 'Legs_LowerlegLength', 'Legs_UpperlegLength',
@@ -139,19 +150,22 @@ class Hbmorpheaufgenesis(Hbmorphuebertragung):
         G9hbmorphe.leeren()
         aus, rig_weg = [], []
         for nr, name in enumerate(namen, 1):
-            plus = self.uebertragen(self.hb_delta(name, 1.0))
-            minus = self.uebertragen(self.hb_delta(name, -1.0))
-            nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
-            if not len(nummern):
-                logger.info('HB-Morphs: %s erreicht keinen Kaefigpunkt — uebergangen', name)
-                self.melden(nr, len(namen), name, None)
-                continue
-            modus = 'rahmen'
+            hb_plus, hb_minus = self.hb_delta(name, 1.0), self.hb_delta(name, -1.0)
             if name in self.SKELETT:
                 # Ein Regler, der Gelenke verschiebt, ist eine grosse, fast starre Verschiebung: im Weltraum uebertragen (siehe `uebertragen`).
-                plus, minus = self.uebertragen(self.hb_delta(name, 1.0), welt=True), self.uebertragen(self.hb_delta(name, -1.0), welt=True)
-                nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
+                plus, minus = self.uebertragen(hb_plus, welt=True), self.uebertragen(hb_minus, welt=True)
                 modus = 'welt'
+            else:
+                plus, minus, modus = self.uebertragen_wirksam(hb_plus, hb_minus)
+            nummern = np.nonzero((np.abs(plus).max(axis=1) > 0) | (np.abs(minus).max(axis=1) > 0))[0]
+            staerke_mm = max(self.staerke(plus), self.staerke(minus)) * 1000.0
+            if not len(nummern) or staerke_mm < self.MINDEST_MM:
+                logger.info('HB-Morphs: %s kommt auf dem Kaefig nicht an (%.3f mm von %.2f mm der Quelle) — uebergangen', name, staerke_mm,
+                            max(self.staerke(hb_plus), self.staerke(hb_minus)) * 1000.0)
+                G9hbmorphe.steckbrief_schreiben(name, {'uebergangen': 'wirkt auf Genesis nicht (%.3f mm von %.2f mm)' % (
+                    staerke_mm, max(self.staerke(hb_plus), self.staerke(hb_minus)) * 1000.0)})
+                self.melden(nr, len(namen), name, None)
+                continue
             mass = self.gelenkversatz().beide(nummern, plus[nummern], minus[nummern])
             mass['rig'] = name in self.SKELETT
             quelle = {'quelle': 'HumanBody %s' % self.zustand().body_type, 'modus': modus, **mass}

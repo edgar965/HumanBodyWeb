@@ -3,24 +3,33 @@
 Bild: `Architekturmesh3daibild` (Kästen Eingabe / versteckt / Ausgabe, gelb der Formkopf, Kreise als Sinnbild der Neuronen). Läufe: `Architekturmesh3daiergebnis`.{% endcomment %}
 <h2 id="kurz">Kurz erklärt</h2>
 {% if bild %}<div class="m3a-bildrahmen">{{ bild }}</div>{% endif %}
+{% comment %}17.10.2026 abends (Edgar: „Die Architekturseite mit den Erklärungen ist ja noch leicht gaga. Schreib doch einfach hinein, was du tust. Was die Eingabe ist, was die Ausgabe ist.“):
+die Liste folgt jetzt dem Weg — Eingabe der Kette, Vorstufe, Eingabe des Netzes, Schichten, Formkopf, nach dem Netz, Ausgabe; der Punkt „Rig-Generierung heute NICHT vor dem Netz“ war seit dem Morgen falsch.{% endcomment %}
 <ol class="m3a-kurz">
-  <li><strong>Eingabe:</strong> das Netz einer Figur als 4.096 Punkte der Außenfläche — je Punkt Lage (x, y, z) und Farbe (r, g, b). Je Probe liegen 16.384 Punkte bereit (nach Fläche verteilt);
-    das Training zieht jedes Mal 4.096 davon, die Vorhersage mittelt vier Ziehungen. <em>Nicht die Punkte des Genesis-Netzes</em>: die KI soll Netze ohne Genesis-Aufbau lesen (Scans, Tripo,
-    die Eingänge von Mesh-3D). Im Training bekommt jedes Teil eine Zufallsfarbe (ein Fünftel der Proben ganz grau) und jede Probe eine Drehung bis ±30° — sonst las das Netz die Teile an ihrer flachen
-    Farbe ab (gemessen, Abschnitt 7). Die 4.096 sind eine Setzung, nicht gegen mehr Punkte gemessen.</li>
+  <li><strong>Was die Kette tut:</strong> aus einem fremden Netz ein Genesis-9-Skelett in der Haltung dieses Netzes und die Form der Figur machen. <strong>Eingabe</strong> ist eine Datei
+    (GLB/OBJ: Scan, Tripo, die Eingänge von Mesh-3D) mit Punkten, Dreiecken und Farbe — ohne Genesis-Aufbau. <strong>Ausgabe</strong> sind die Daz-Winkel aller 138 Knochen und die Genesis-Form-Regler.</li>
+  <li><strong>Vorstufe (rot unten links, ohne KI):</strong> Lage → Rig → A-Pose; was jeder Schritt bekommt, tut und abgibt, steht in seinem Kasten (ausführlich Abschnitt 1). Am Ende liegt das Netz
+    in der A-Pose der Rig-Figur, als 16.384 Punkte mit Farbe (nach Fläche verteilt). Der Pfeil führt in die Eingabe des Netzes.</li>
+  <li><strong>Eingabe des Netzes (rot oben):</strong> 4.096 dieser Punkte, je Punkt Lage (x, y, z) und Farbe (r, g, b); die Vorhersage mittelt vier Ziehungen. Die Gelenke rechnet das Netz der Vorstufe: dieselben
+    Schichten wie in der Grafik, trainiert auf Wolken in der A-Pose, die aus den Trainingsfiguren mit einem absichtlich verfälschten Rig zurückgerechnet sind — so lernt es, die Fehler des echten Rigs
+    auszugleichen (Abschnitt 1). Farben im Training: Teilfarben und
+    echte Texturen; ohne das las das Netz die Teile an ihrer flachen Farbe ab (gemessen, Abschnitt 7). Die 4.096 sind eine Setzung, nicht gegen mehr Punkte gemessen.</li>
   <li><strong>Neuronen:</strong> die große Zahl in jeder Spalte der Grafik. Ein Neuron ist ein Kanal, der für JEDEN Punkt mit denselben Gewichten rechnet: nach Schicht 1 trägt jeder Punkt 64 Zahlen,
     die Figur also 64 × 4.096 = 262.144. Zusammen {{ netz.neuronen_punkt|de }} Neuronen je Punkt{% if netz.neuronen_form %}, dazu {{ netz.neuronen_form|de }} im Formkopf, der einmal je Figur rechnet{% endif %}.</li>
   <li><strong>Schicht 1–3:</strong> jeder Punkt schaut auf seine 16 nächsten Nachbarn und lernt die <em>örtliche Form</em> um sich: Rundung eines Arms, Kante eines Ärmels, Finger.</li>
   <li><strong>Schicht 4 und ganze Figur:</strong> je Punkt 512 Merkmale; dazu ein Bild der <em>ganzen Figur</em> (Maximum und Mittel über alle Punkte, 1.024 Zahlen), das jedem Punkt wieder angehängt wird — damit er weiß, wo in der Figur er liegt.</li>
-  <li><strong>Schicht 5–6 und Ausgabe:</strong> jeder Punkt <em>stimmt</em> für jedes Gelenk: „das Gelenk liegt um diesen Versatz von mir entfernt“ und wie sicher er ist (Gewicht).
-    Die Lage eines Gelenks ist das gewichtete Mittel aller Stimmen.</li>
-  {% if netz.form %}<li><strong>Formkopf (gelb):</strong> aus den 1.024 Zahlen der ganzen Figur drei Schichten bis zu den {{ netz.form|de }} Genesis-Form-Reglern — Körper, Proportionen, Kopf, Gesicht, Charaktere
-    (Abschnitt 3). Gelernt wird nicht Regler gegen Regler, sondern wie weit die Figur sich dadurch bewegt.</li>{% endif %}
-  <li><strong>Nach dem Netz:</strong> die Daz-Winkel aller Knochen werden an die gestimmten Gelenke angepasst — jeder Winkel in den Grenzen von Genesis 9, auf dem Skelett der Figur (Abschnitt 5).
-    Bei fremden Netzen wird zuerst aus den vorhergesagten Reglern eine Figur gebaut, je Geschlecht, und die Winkel an IHR Skelett angepasst (Abschnitt 4).</li>
-  <li><strong>Trainiert</strong> auf vier Jobs (Ursula1, Damira0, Mann1, Matt0, je 50 Trainings- und 15 Prüfposen) und 40 Formvarianten (je 12 Posen, fünf davon nie trainiert) in einem Topf (Abschnitt 3).</li>
-  <li><strong>Neben dem Netz gibt es einen Weg ohne KI:</strong> die Rig-Generierung von Mesh-3D („Nur Rig“) legt ein Rig auf jedes Netz, ohne Training, in rund drei Minuten (Abschnitt 1).
-    Sie ist heute <em>nicht</em> vor das Netz geschaltet — in der Grafik grau unten links, ohne Pfeil; gerechnet nur zum Vergleich.</li>
+  <li><strong>Schicht 5–6 und Ausgabe (grün):</strong> jeder Punkt <em>stimmt</em> für jedes Gelenk: „das Gelenk liegt um diesen Versatz von mir entfernt“ und wie sicher er ist (Gewicht).
+    Die Lage eines Gelenks ist das gewichtete Mittel aller Stimmen. <strong>Ausgabe des Netzes:</strong> 138 Gelenke und ihre Enden in der A-Pose.</li>
+  {% if netz.form %}<li><strong>Formkopf (gelb):</strong> ein zweites kleines Netz am selben Rückgrat, das einmal je Figur rechnet. <strong>Eingabe:</strong> die 1.024 Zahlen der ganzen Figur.
+    Formschicht 1 und Formschicht 2 sind seine zwei verdeckten Schichten (je 512 Neuronen), nacheinander gerechnet — mit nur einer Schicht könnte er bloß gewichtete Summen lernen.
+    <strong>Ausgabe:</strong> je Genesis-Form-Regler eine Zahl, {{ netz.form|de }} Regler (Körper, Proportionen, Kopf, Gesicht, Charaktere, die Morph-Familien HumanBody, MakeHuman, SMPL-X, UMA; Abschnitt 3).
+    Gelernt wird nicht Regler gegen Regler, sondern wie weit die Figur sich dadurch bewegt. Heute liest der Formkopf die Wolke noch in der Haltung; ob er auf der A-Pose-Wolke besser wird, zeigt der
+    Vergleich in Abschnitt 3.</li>{% endif %}
+  <li><strong>Nach dem Netz (grauer Kasten 4):</strong> die Gelenke gehen mit dem Rig zurück in die Haltung des Netzes, dann werden die Daz-Winkel aller Knochen angepasst — jeder in den Grenzen von
+    Genesis 9 (Abschnitt 5). Liegt das Ergebnis in Ruhe mehr als 60 mm neben der Rig-Figur, kennt das Netz dieses Netz nicht (Textur, weite Kleider) — dann gilt das Rig allein. Bei fremden Netzen
+    wird zuerst aus den vorhergesagten Reglern eine Figur gebaut, je Geschlecht, und die Winkel an IHR Skelett angepasst (Abschnitt 4).</li>
+  <li><strong>Trainiert</strong> auf vier Jobs (Ursula1, Damira0, Mann1, Matt0, je 50 Trainings- und 15 Prüfposen) und den Formvarianten (je 12 Posen; jede siebte Variante nie trainiert) in einem
+    Topf (Abschnitt 3).</li>
   <li><strong>Was das Netz nicht ausgibt:</strong> Kleider, Haar, Mimik. Kleider brauchen dafür kein eigenes Netz, sondern weitere Köpfe am selben Rückgrat — vorgeschlagen, nicht gebaut (Abschnitte 2 und 8).</li>
   <li><strong>Warum Stimmen:</strong> das frühere Netz fasste die ganze Figur in EINEN Vektor und riet daraus die ganze Pose. Mit 50 Trainingsposen lernte es Posen auswendig, keine Körperteile
     (Fehler folgte dem Abstand zur nächsten Trainingspose, Korrelation 0,99). Ein Ellbogen sieht in jeder Pose ähnlich aus — die Frage „wo ist das Gelenk von mir aus“ ist örtlich.</li>

@@ -77,11 +77,12 @@ class DrahtTest(SimpleTestCase):
 
     def test_mesh3d_meldet_das_kleidungsobjekt_an(self):
         text = self._text('meshfigur', 'meshfigurkleider.js')
-        self.assertIn('new Meshfighautstueck(geometrie, () => this._netz())', text)
+        # Seit der Bindung an die Haltung (14.10.2026) mit den Punkten in der Ruhelage als drittem Argument (`Meshfighaut.ruheposition`).
+        self.assertIn('new Meshfighautstueck(geometrie, () => this._netz(), haltung ? Meshfighaut.ruheposition(netz, modell.skelett) : null)', text)
         self.assertIn('modell.hautStuecke = geometrie ? { [Meshfigurkleider.HAUTSTUECK]: this._hautStueck } : {};', text)
         self.assertIn('Hautverdeckung.planen(modell);', text)
         # Netz (nach dem Binden ein neues Objekt) und Sichtbarkeit gehören zum Stand — sonst bliebe die Maske nach dem Ausblenden stehen
-        self.assertIn('`${netz.uuid}|${netz.visible}`', text)
+        self.assertIn('`${netz.uuid}|${netz.visible}|${netz.userData?.bindung || 0}`', text)      # dazu die Bindung (ein neu gebundenes Netz meldet neu)
         # jede Meldung über `anwenden`, das die Bühne ohnehin bei jedem Stand ruft
         self.assertIn('this._hautMelden();', text)
         self.assertIn('if (modell !== this.modell) this._hautStand = null;', text)

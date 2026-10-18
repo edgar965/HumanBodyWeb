@@ -20,13 +20,16 @@ from Genesis9.strangverdichtung import G9strangverdichtung
 
 
 class Attrappenmorphe:
-    u"""Wie `G9anhangmorphe`: `deltas[name] = (nummern, deltas)`, `eigene`."""
+    u"""Wie `G9anhangmorphe`: `deltas[name] = (nummern, deltas)`, `eigene`, `delta_von` (seit 17.10.2026 liest `G9strangverdichtung` die Deltas darüber)."""
 
     def __init__(self, deltas):
         self.deltas = deltas
 
     def eigene(self, werte):
         return {k: v for k, v in werte.items() if k in self.deltas}
+
+    def delta_von(self, schluessel, morphwerte=None):
+        return self.deltas.get(schluessel)
 
     def anwenden(self, punkte, werte):
         aus = np.array(punkte, dtype=np.float64, copy=True)

@@ -78,6 +78,10 @@ class KunstbeispielTest(SimpleTestCase):
         """`name="…"` wird serverseitig im POST gelesen."""
         self.assertNotIn('probe-pfad', self.stumm)
 
+    def test_ein_griff_ueber_die_raute_zaehlt(self):
+        """`querySelector('#…')` — ein Feld, das erst beim Speichern gelesen wird (18.10.2026)."""
+        self.assertNotIn('probe-ueber-raute', self.stumm)
+
     def test_genau_ein_befund(self):
         self.assertEqual(len(self.stumm), 1, self.stumm)
 

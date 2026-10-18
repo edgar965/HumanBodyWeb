@@ -13,6 +13,7 @@ Rechts steht, was NACH dem Netz geschieht (ohne Gewichte), grau.
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
+from .architekturmesh3daibildkasten import Architekturmesh3daibildkasten
 from .architekturmesh3dainetz import Architekturmesh3dainetz
 
 __all__ = ['Architekturmesh3daibild']
@@ -37,7 +38,8 @@ class Architekturmesh3daibild:
         ('ausgabe', 'Ausgabe', 'Stimmen'),
     )
     #: Die zweite Reihe unter den Spalten 6–8: (Spalte, Titel, Zeile von `formkopf`).
-    FORMREIHE = ((6, 'Form 1', 'Form 1'), (7, 'Form 2', 'Form 2'), (8, 'Formregler', 'Formregler'))
+    #: Edgar, 17.10.2026 abends: „Was ist form1 und Form2 nacheinander??“ — die zwei verdeckten Schichten des Formkopfs (`Formnetz.form`: Linear 1024→512, LeakyReLU, 512→512, LeakyReLU, 512→Regler).
+    FORMREIHE = ((6, 'Formschicht 1', 'Form 1'), (7, 'Formschicht 2', 'Form 2'), (8, 'Formregler', 'Formregler'))
     EINGABE_KREISE = ('x', 'y', 'z', 'r', 'g', 'b')
     FARBEN = {'eingabe': ('#f8cecc', '#b85450'), 'versteckt': ('#dae8fc', '#6c8ebf'), 'figur': ('#eef1f6', '#8a99b3'), 'ausgabe': ('#d5e8d4', '#82b366'), 'danach': ('#eeeeee', '#999999'),
               'form': ('#fff2cc', '#d6b656')}
@@ -159,7 +161,7 @@ class Architekturmesh3daibild:
         """`form` = Zahl der Formregler des Bezugslaufs (None: Netz ohne Formkopf, keine zweite Reihe); `vorstufe` = `Architekturmesh3daivorstufe.kontext`, `kette` = `Architekturmesh3daikette.kontext`
         (beide None: kein Kasten unten links)."""
         t = cls._tabelle(form)
-        hoehe = cls.FORM_UNTEN + 90 if form or vorstufe or kette else cls.KASTEN_UNTEN + 64
+        hoehe = (Architekturmesh3daibildkasten.UNTEN if kette else cls.FORM_UNTEN) + 90 if form or vorstufe or kette else cls.KASTEN_UNTEN + 64
         teile = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" role="img" aria-label="Ein Punkt auf dem Weg durch die KI von Mesh3D-AI" class="m3a-bild">' % (cls.BREITE, hoehe),
                  '<defs><marker id="m3a-pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker></defs>',
                  '<rect x="0" y="0" width="%d" height="%d" rx="10" fill="#ffffff"/>' % (cls.BREITE, hoehe)]
@@ -195,9 +197,9 @@ class Architekturmesh3daibild:
         if form:
             cls._formreihe(teile, t, x0)
         if kette:
-            cls._kettenkasten(teile, kette)
+            Architekturmesh3daibildkasten.kette(cls, teile, kette)
         elif vorstufe:
-            cls._rigkasten(teile, vorstufe)
+            Architekturmesh3daibildkasten.rig(cls, teile, vorstufe)
         erste, zweite = cls._fuss(groesse, form)
         teile.append('<text x="20" y="%d" font-size="14" fill="#222">%s</text>' % (hoehe - 38, escape(erste)))
         if zweite:
@@ -209,7 +211,9 @@ class Architekturmesh3daibild:
     def _formreihe(cls, teile, t, x0):
         """Zweite Reihe: aus „Ganze Figur“ (Spalte 5) nach unten und in den Formkopf, rechts was im Test daraus wird."""
         y = (cls.FORM_OBEN + cls.FORM_UNTEN) / 2
-        stichworte = {'Form 1': [('aus der ganzen Figur', False)], 'Form 2': [], 'Formregler': [('Genesis-Form-Regler', False)]}
+        stichworte = {'Formschicht 1': [('verdeckt, liest die 1.024', False), ('Zahlen der ganzen Figur', False)],
+                      'Formschicht 2': [('verdeckt, rechnet weiter', False), ('(ohne sie: nur lineare', False), ('Summen möglich)', False)],
+                      'Formregler': [('je Genesis-Form-Regler', False), ('eine Zahl', False)]}
         for spalte, titel, name in cls.FORMREIHE:
             zeile = t[name]
             cls._spalte(teile, cls._x(spalte), cls.FORM_OBEN, cls.FORM_UNTEN, 'form', titel, zeile[4],
@@ -222,59 +226,7 @@ class Architekturmesh3daibild:
         cls._grau(teile, x0, y, (('Im Test (ohne Gewichte)', True), ('Figur aus den Reglern', False), ('bauen (Genesis-Formung)', False), ('→ Skelett der Figur', False),
                                  ('→ Daz-Winkel an IHR', False), ('Skelett anpassen', False)))
         cls._pfeil(teile, cls._x(8) + cls.SPALTE, y, x0 - 2, y)
-
-    @classmethod
-    def _kettenkasten(cls, teile, kette):
-        """Unten links, MIT Pfeil in die Eingabe: seit 17.10.2026 läuft die Vorstufe vor dem Netz (Edgar: „warum macht die Pipeline das nicht, als erstes das Mesh zu riggen und in die A-Pose zu übertragen??“ →
-        „baue das ein!“). Zahlen aus `Architekturmesh3daikette.kontext` (die Prüfposen-Jobs, gegen das Ziel)."""
-        # Kurzfassung (Edgar, 17.10.2026: „mach eine Kurzfassung auf der Architektur Seite, diese Schritt im Graph links“ — vorher fünf lange Sätze im Kasten, der Satz zum Rig mit „(2–2 s)“):
-        # drei kleine Kästen Lage → Rig → A-Pose, ein Pfeil hinauf in die Eingabe, eine Zeile für das, was nach dem Netz kommt, eine Zeile Messung. Die Sätze stehen ausführlich in Abschnitt 1.
-        x, oben, breite = 20, cls.FORM_OBEN, cls._x(4) + cls.SPALTE - 20
-        m = kette.get('mittel') or {}
-        fuell, rand = cls.FARBEN['eingabe']
-        teile.append('<rect x="%d" y="%d" width="%d" height="%d" rx="6" fill="%s" stroke="%s"/>' % (x, oben, breite, cls.FORM_UNTEN - oben, fuell, rand))
-        teile.append('<text x="%d" y="%d" font-size="15" font-weight="600" fill="#222">Vorstufe (Abschnitt 1) — vor dem Netz</text>' % (x + 16, oben + 26))
-        schritte = (('1 Lage', 'liegt das Netz?', 'dann aufrichten'), ('2 Rig', 'Mesh-3D „Nur Rig“', 'einmal je Netz'), ('3 A-Pose', 'Netz mit dem Rig', 'zurückrechnen'))
-        kb, abstand, k_oben, k_hoehe = 170, 36, oben + 42, 72
-        for i, (titel, a, b) in enumerate(schritte):
-            kx = x + 16 + i * (kb + abstand)
-            teile.append('<rect x="%d" y="%d" width="%d" height="%d" rx="5" fill="#ffffff" stroke="%s"/>' % (kx, k_oben, kb, k_hoehe, rand))
-            for j, (text, groesse, fett) in enumerate(((titel, 14, True), (a, 12, False), (b, 12, False))):
-                teile.append('<text x="%.0f" y="%d" text-anchor="middle" font-size="%d"%s fill="#222">%s</text>'
-                             % (kx + kb / 2, k_oben + 22 + 20 * j, groesse, ' font-weight="600"' if fett else '', escape(text)))
-            if i:
-                cls._pfeil(teile, kx - abstand + 3, k_oben + k_hoehe / 2, kx - 3, k_oben + k_hoehe / 2)
-        # Aus „3 A-Pose“ hinauf in die Eingabe des Netzes.
-        ax = x + 16 + 2 * (kb + abstand) + kb / 2
-        cx = cls._x(0) + cls.SPALTE / 2
-        y_quer = (cls.KASTEN_UNTEN + oben) / 2
-        teile.append('<polyline points="%.0f,%d %.0f,%.0f %.0f,%.0f %.0f,%d" fill="none" stroke="#222" stroke-width="2.5" marker-end="url(#m3a-pfeil)"/>'
-                     % (ax, k_oben, ax, y_quer, cx, y_quer, cx, cls.KASTEN_UNTEN + 3))
-        rechts = x + 16 + 3 * (kb + abstand) - 8
-        for j, text in enumerate(('Nach dem Netz:', 'mit dem Rig zurück in die', 'Haltung, dann Daz-Winkel')):
-            teile.append('<text x="%.0f" y="%d" font-size="12"%s fill="#555">%s</text>' % (rechts, k_oben + 22 + 20 * j, ' font-weight="600"' if j == 0 else '', escape(text)))
-        if all(m.get(k) is not None for k in ('direkt', 'vorstufe', 'rig')):
-            teile.append('<text x="%d" y="%d" font-size="13" fill="#222">%s</text>' % (x + 16, cls.FORM_UNTEN - 14, escape(
-                'Gemessen, %d schwierige Prüfposen, je ein Lauf: Netz direkt Ø %s · Vorstufe Ø %s · Rig allein Ø %s mm'
-                % (len(kette.get('posen') or []), _de(m['direkt'], 1), _de(m['vorstufe'], 1), _de(m['rig'], 1)))))
-
-    @classmethod
-    def _rigkasten(cls, teile, vorstufe):
-        """Unten links, grau und OHNE Pfeil: die Rig-Generierung von Mesh-3D läuft heute getrennt vom Netz (Edgar, 16.10.2026: „ich sehe die Rig-Vorstufe nicht, die wird doch ganz am Anfang gemacht?“).
-        Das Netz bekommt nur Punkte + Farbe; das Rig wurde nur zum Vergleich gerechnet (Abschnitt 1). Zahlen aus `Architekturmesh3daivorstufe.kontext`."""
-        x, oben, breite = 20, cls.FORM_OBEN, cls._x(4) + cls.SPALTE - 20
-        mittel = vorstufe.get('mittel') or {}
-        netze = [n for n in mittel.get('netze') or [] if n is not None]
-        zeilen = [('Rig-Generierung ohne KI (Abschnitt 1) — heute NICHT vor das Netz geschaltet', True),
-                  ('Mesh-3D „Nur Rig“: „Mesh to 3D“ passt eine Genesis-Figur an das Netz an, ohne Training%s.'
-                   % (', rund %s s je Netz' % _de(vorstufe['gesamt_s']) if vorstufe.get('gesamt_s') else ''), False),
-                  ('Kein Pfeil ins Netz: Mesh3D-AI bekommt nur Punkte + Farbe, im Training wie im Test.', False)]
-        if mittel.get('rig') is not None and netze:
-            zeilen.append(('Gerechnet nur zum Vergleich, %d Proben von Ursula1: Rig Ø %s mm, Netze %s–%s mm (%d Prüfposen).'
-                           % (len(vorstufe.get('zeilen') or []), _de(mittel['rig'], 1), _de(min(netze), 1), _de(max(netze), 1), mittel.get('proben', 0)), False))
-        zeilen.append(('Als Vorstufe angeschlossen (Startwert, Trainingsziel, Bezug im Test): Vorschlag, nicht gebaut.', False))
-        fuell, rand = cls.FARBEN['danach']
-        teile.append('<rect x="%d" y="%d" width="%d" height="%d" rx="6" fill="%s" stroke="%s" stroke-dasharray="6 4"/>' % (x, oben, breite, cls.FORM_UNTEN - oben, fuell, rand))
-        for j, (text, fett) in enumerate(zeilen):
-            teile.append('<text x="%d" y="%d" font-size="%d"%s fill="#222">%s</text>'
-                         % (x + 16, oben + 30 + 28 * j, 15 if fett else 13, ' font-weight="600"' if fett else '', escape(text)))
+        for j, text in enumerate(('Formkopf = ein zweites kleines Netz am selben Rückgrat, einmal je Figur.',
+                                  'Formschicht 1 und 2 sind seine verdeckten Schichten, nacheinander gerechnet;',
+                                  'die letzte gibt je Genesis-Form-Regler eine Zahl aus.')):
+            teile.append('<text x="%d" y="%d" font-size="13" fill="#555">%s</text>' % (cls._x(6), cls.FORM_UNTEN + 20 + 17 * j, escape(text)))

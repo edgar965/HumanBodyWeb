@@ -34,6 +34,10 @@ class _Ablage:
     def hat_deltas(self, kennung):
         return kennung in self._deltas
 
+    def aufloesen(self, name):
+        """`G9morphablage.aufloesen`: Name -> Kanal-ID. Die Kunstkanaele heissen wie ihre Kennung (die Attrappe fehlte seit `G9formeln._anhaenge_dazu`, 17.10.2026 gefahren)."""
+        return name if name in self.kanaele else None
+
 
 def kanal(kennung, gruppe, lo=0.0, hi=1.0, hd='', formeln=()):
     return {'id': kennung, 'label': kennung, 'gruppe': gruppe, 'region': '',

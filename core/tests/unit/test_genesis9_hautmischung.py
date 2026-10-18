@@ -73,7 +73,8 @@ class HautmischungTest(SimpleTestCase):
         haut = quelltext('gemeinsam', 'genesis9haut.js')
         self.assertIn('zusatz.mischungSchichten = zusatz.mischungSchichten || [];', haut)
         self.assertIn('for (const s of zusatz.mischungSchichten || []) Object.assign(shader.uniforms, s);', haut)
-        self.assertIn("-m${\n            zusatz.mischung?.anzahl || 0}", haut, 'die Zahl der Schichten im Programmschluessel')
+        self.assertIn('-m${zusatz.mischung?.anzahl || 0}', haut, 'die Zahl der Schichten im Programmschluessel')
         glsl = quelltext('gemeinsam', 'genesis9hautglsl.js')
         self.assertIn('static mischungFarbe(anzahl)', glsl)
-        self.assertIn('static normalen(mitGlitzer, mitDetail, mischung = 0)', glsl)
+        # Die Signatur wuchs mit den Falten (17.10.2026) und den Hautebenen: `mitFalten`, `mitZeichnung`, `mitMimik`.
+        self.assertIn('static normalen(mitGlitzer, mitDetail, mischung = 0, mitFalten = false, mitZeichnung = false, mitMimik = false)', glsl)

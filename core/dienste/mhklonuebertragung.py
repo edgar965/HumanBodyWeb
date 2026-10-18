@@ -8,6 +8,8 @@ DER WEG
 1. **Der Klon** (`G9mhklon`, 25.09.2026 fuer Kleider gebaut): das MakeHuman-Netz in der Gestalt von Genesis 9 — jeder hm08-Hautpunkt liegt auf der
    Genesis-Flaeche. Hier aus der **weiblichen Vorgabefigur** gebaut (Geschlecht 0), nicht aus `base.obj`: Die Morphs sind Differenzen gegen diese
    Figur, und Genesis 9 ist eine Frau; ein Klon aus der Mischfigur (Geschlecht 0,5) legte Brust und Hueften neben die Genesis-Brust.
+   **Mit ausgerichtetem Kopf** (`Mhkopfklon`, 17.10.2026): der Rumpfklon legte MakeHumans Gesicht 26–30 mm hinter Genesis' Gesicht (gemessen an Nasenspitze
+   und Kinn) — fuer Kleider unerheblich, fuer Nasen-, Mund- und Augenregler nicht.
 2. **Das Delta wandert mit dem Klon**: `abbilden` ist der LINEARE Teil von `G9mhklon.geschaetzt` (Rahmen der Glieder, Aehnlichkeit des Rumpfs) — ein
    Delta am Unterarm dreht und streckt sich wie der Unterarm, ohne dass die ICP-Anpassung an die Haut mitspielt (die ist nichtlinear und gilt der Lage,
    nicht der Verschiebung).
@@ -21,7 +23,8 @@ import numpy as np
 from Genesis9.basisnetz import G9basisnetz
 from Genesis9.feldputz import G9feldputz
 from Genesis9.kollision import G9kollision
-from Genesis9.mhklon import G9mhklon
+
+from .mhkopfklon import Mhkopfklon
 
 __all__ = ['Mhklonuebertragung']
 
@@ -69,8 +72,8 @@ class Mhklonuebertragung:
         grund = g9.punkte() - np.array([0.0, g9.boden(), 0.0])
         flaeche = (np.asarray(stufe.punkte(grund), dtype=np.float64), np.asarray(stufe.dreiecke, dtype=np.int64).reshape(-1, 3))
         self.koerper = mh._punktnummern(('koerper',))
-        self.klon = G9mhklon(mh.punkte_am_boden(alle, roh), self.koerper, Mhskelett(self.formung).bauen()['knochen'], Mhhaut.roh(),
-                             g9.skelett().bauen()['knochen'], flaeche, mh.vierecke(('koerper',)))
+        self.klon = Mhkopfklon(mh.punkte_am_boden(alle, roh), self.koerper, Mhskelett(self.formung).bauen()['knochen'], Mhhaut.roh(),
+                               g9.skelett().bauen()['knochen'], flaeche, mh.vierecke(('koerper',)))
         self.klon.boden = float(g9.boden())
         self.vierecke = mh.vierecke(('koerper',))
         self._zuordnen(g9)
@@ -121,7 +124,7 @@ class Mhklonuebertragung:
             lokal[:, 0] *= g_laenge / m_laenge
             lokal[:, 1:] *= klon.massstab
             aus += w[:, i:i + 1] * (lokal @ g_achsen)
-        return aus
+        return klon.kopf_linear(aus)
 
     def putz(self):
         if self._putz is None:

@@ -72,10 +72,12 @@ export function handleMenuAction(action) {
             if (state.characters.size === 0) return;
             if (confirm('Alle Charaktere l\u00f6schen?')) fn.clearAllCharacters();
             break;
-        case 'pose-tpose': fn.applyPoseFromServer('rest_poses/t-pose'); break;
+        // Genesis 9 (17.10.2026): T-Pose übertragen, A-Pose wie „A-Pose (Reset)" im Reiter Posen (`pose_apply.js`).
+        case 'pose-tpose': fn.applyPoseFromServer('rest_poses/t-pose', true); break;
         case 'pose-apose': {
             const inst = fn._selectedInst();
-            if (inst?.isSkinned && inst._aPoseBones) {
+            if (inst?.quelle === 'genesis9') fn.posenZuruecksetzen?.();
+            else if (inst?.isSkinned && inst._aPoseBones) {
                 let skel = null;
                 inst.group.traverse(child => { if (!skel && child.isSkinnedMesh
                     && child.skeleton) skel = child.skeleton; });

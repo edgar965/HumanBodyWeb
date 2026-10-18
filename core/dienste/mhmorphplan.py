@@ -10,9 +10,11 @@ Ein Auftrag ist ein Regler in beiden Richtungen:
 
 DREI QUELLEN
 ============
-1. **Die 12 Makroregler**, von Hand (siehe `MAKRO`): Alter in DREI Morphs (Baby, Kind, Alt), Rasse in drei, Muskeln, Gewicht, Groesse, Proportionen, Brustgroesse
-   und -festigkeit zweiseitig. Das **Geschlecht** fehlt mit Absicht: Genesis hat sein eigenes (`BaseFeminine`/`BaseMasculine`), und es ist der groesste
-   Einzelunterschied der Figur — ein MakeHuman-Delta daneben ueberlagerte nur ein zweites, schlechteres Geschlecht.
+1. **Die 13 Makroregler**, von Hand (siehe `MAKRO`): Geschlecht, Alter in DREI Morphs (Baby, Kind, Alt), Rasse in drei, Muskeln, Gewicht, Groesse, Proportionen,
+   Brustgroesse und -festigkeit zweiseitig. Das **Geschlecht** (`macro_Geschlecht`, 17.10.2026 auf Edgars Wunsch: „Genesis hat ja ein extra Teil fuer Geschlecht,
+   kannst du ein zweites von MakeHuman einbauen?“) ist ein ZWEITES neben Genesis' eigenem (`BaseFeminine`/`BaseMasculine`): einseitig 0…1, Bezug die weibliche Vorgabe,
+   +1 = MakeHumans Mann. Es ueberlagert das Genesis-Geschlecht (wer beide aufdreht, bekommt beide Wirkungen) und ist dafuer da, MakeHumans Form des Maennlichen
+   zu haben — Schulter, Becken, Brustkorb, Gesicht, wie MakeHuman sie schneidet.
    ALTER: MakeHumans Kurve hat vier Stuetzstellen (1, 10, 25, 90 Jahre = 0 / 0,1875 / 0,5 / 1), die Zielgewichte laufen dazwischen linear. Gegen die Vorgabe
    (25 Jahre, `young` = 1) ist `F(Alter) − F(25)` darum die gewichtete Summe von (Baby − jung), (Kind − jung) und (Alt − jung) — drei Morphs, die zusammen die
    ganze Kurve tragen (`G9lebensalter` mischt sie nach Jahren).
@@ -34,6 +36,7 @@ class Mhmorphplan:
                'Face': 'mh_gesicht', 'Measure': 'mh_mass'}
     #: Die Makroregler von Hand — der Detailplan ueberspringt sie (`regler.makro`). (kennung, anzeige, plus, minus); minus None = einseitig 0…1.
     MAKRO = (
+        ('macro_Geschlecht', u'Geschlecht (weiblich … männlich)', {'makro': {'gender': 1.0}}, None),
         ('macro_Alter_Baby', u'Alter: Baby (1 Jahr)', {'makro': {'age': 0.0}}, None),
         ('macro_Alter_Kind', u'Alter: Kind (10 Jahre)', {'makro': {'age': 0.1875}}, None),
         ('macro_Alter_Alt', u'Alter: Alt (90 Jahre)', {'makro': {'age': 1.0}}, None),

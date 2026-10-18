@@ -100,7 +100,10 @@ SMPL_MODELS_DIR = VIDEOTOBVH_ROOT / 'models' / 'smpl'
 SMPLX_MODELS_DIR = OBJECTS_ROOT / 'Archiv' / 'SMPL-X'
 # BEDLAM-Hauttexturen (26.09.2026, Meshcapade/MPI Tuebingen, CC-BY-NC-4.0,
 # `SMPL/HERKUNFT.md`) — von Edgar von Hand heruntergeladen, nicht im Repo.
-SMPLX_BEDLAM_DIR = OBJECTS_ROOT / 'SMPLX' / 'bedlam_body_textures_meshcapade'
+#: Der Ordner liegt seit der Zusammenführung vom 08.10.2026 unter `3DObjects/models/SMPLX/` (gemessen 17.10.2026: `3DObjects/SMPLX/` gibt es nicht mehr, die 100 Texturen und die
+#: Lizenzdatei stehen dort) — die alte Stelle bleibt als Rückfall. Mit dem alten Pfad lieferte `Smplxbedlamhaut.liste` bis dahin eine leere Liste.
+_BEDLAM_NEU = OBJECTS_ROOT / 'models' / 'SMPLX' / 'bedlam_body_textures_meshcapade'
+SMPLX_BEDLAM_DIR = _BEDLAM_NEU if _BEDLAM_NEU.is_dir() else OBJECTS_ROOT / 'SMPLX' / 'bedlam_body_textures_meshcapade'
 
 # ------------------------------------------------------------------ HumanBody
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'

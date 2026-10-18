@@ -49,16 +49,18 @@ export class Mesh3daiapose {
         return { kopf, geo, rig: kopf.rig, netz: kopf.netz };
     }
 
-    /** Ansichtsarten mit geschlossener Fläche: dort zeigt die Rückseite dunkel, wo die Außenfläche ein Loch hat. */
+    /** Ansichtsarten mit geschlossener Fläche: dort zeigt die Rückseite durchscheinend, wo die Außenfläche ein Loch hat. */
     static FLAECHENARTEN = new Set(['oberflaeche', 'oberflaeche_draht', 'textur', 'matcap', 'normalen']);
-    /** Die Rückseite: Farbe der Fläche × `DUNKEL` (in „Textur“ die Farbe je Punkt), sonst ein dunkler Ton. */
-    static DUNKEL = 0x4a4a4a;
-    static DUNKEL_EINHEIT = 0x5b534c;
+    /** Die Rückseite: Farbe der Fläche (in „Textur“ die Farbe je Punkt), sonst ein mittlerer Ton — halb durchsichtig (`DECKKRAFT`). */
+    static INNEN_EINHEIT = 0x8a8a8a;
+    static DECKKRAFT = 0.3;
 
     /**
      * Das Feld „Rig → A-Pose“ einer Probe zeichnen (`Mesh3daiechtzeichner`, Art `apose`). Edgar (17.10.2026): „es fehlen Punkte im Mesh“ — die Außenfläche trägt nur, was in der Haltung von außen zu sehen
-     * war; in der A-Pose liegen diese Stellen offen. Damit man durch ein Loch nicht einfach auf den Grund schaut, bekommt die Fläche eine DUNKLE Rückseite: ein Loch sieht aus wie der Blick ins Innere einer
-     * hohlen Schale. Die erste Fassung (rot) färbte auch die Haarsträhnen rot — sie sind einseitige Flächen, ihre Rückseite ist kein Loch (im Chrome gesehen, UrsulaSpagat).
+     * war; in der A-Pose liegen diese Stellen offen. Die Rückseite der Fläche ist darum sichtbar, aber halb durchsichtig in ihrer eigenen Farbe: durch ein Loch sieht man die Innenseite gegenüber UND den Grund
+     * dahinter — ein Fenster, kein Farbfleck. Erste Fassung rot (färbte die einseitigen Haarsträhnen rot, UrsulaSpagat), zweite dunkel in der eigenen Farbe: an MannLaufen standen die Löcher der Oberarme
+     * (27 % der Armfläche in der Laufpose verdeckt) als braune Flecken auf der Haut, Edgar: „Mesh texturfehler“ — die Farben selbst stimmen, Dreieck für Dreieck aus der Eingabe
+     * (`ProjektTemp/_wegwerf/mesh3dai_apose_ecken.py`, `mesh3dai_apose_loecher.py`).
      */
     static zeichnen(inhalt, d) {
         const a = d.probe?.aposeDaten;
@@ -68,10 +70,12 @@ export class Mesh3daiapose {
         inhalt.add(objekt);
         if (Mesh3daiapose.FLAECHENARTEN.has(d.modus)) {
             const farbig = d.modus === 'textur';
-            const material = Mesh3daigemeinsam.material(farbig ? 'apose:innen_farbe' : 'apose:innen', () => new THREE.MeshBasicMaterial(
-                farbig ? { vertexColors: true, color: Mesh3daiapose.DUNKEL, side: THREE.BackSide } : { color: Mesh3daiapose.DUNKEL_EINHEIT, side: THREE.BackSide }));
+            const durch = { side: THREE.BackSide, transparent: true, opacity: Mesh3daiapose.DECKKRAFT, depthWrite: false };
+            const material = Mesh3daigemeinsam.material(farbig ? 'apose:durch_farbe' : 'apose:durch', () => new THREE.MeshBasicMaterial(
+                farbig ? { ...durch, vertexColors: true } : { ...durch, color: Mesh3daiapose.INNEN_EINHEIT }));
             const rueck = new THREE.Mesh(a.geo, material);
             rueck.frustumCulled = false;
+            rueck.renderOrder = 1;
             inhalt.add(rueck);
         }
     }
@@ -84,8 +88,15 @@ export class Mesh3daiapose {
         if (!a) return 'Zwischenbild wird geladen …';
         const k = a.kopf;
         const eingabe = k.eingabe ? ` Eingabe: ${k.eingabe}.` : '';
+        // Seit 17.10.2026 abends füllt der Schritt „apose“ die Löcher mit der Fläche der Rig-Figur (`Vorstufenluecken`); ältere Ablagen zeigen sie noch durchscheinend.
+        const loecher = k.gefuellt
+            ? ` Löcher gefüllt (${de(k.gefuellt)} Dreiecke): was in der Haltung verdeckt war (die Außenfläche hat dort nichts) oder beim Zurückrechnen riss, kommt aus der Fläche der Rig-Figur — `
+              + 'in der Höhe der Fläche ringsum (Kleidung, Haar), mit der Farbe der nächsten echten Stelle. Hände bleiben ungefüllt. Was noch durchscheint, ist ein Loch unter 1 cm. '
+            : ' Durchscheinend: ein Loch — Fläche, die in der Haltung verdeckt war (die Außenfläche hat dort nichts) oder beim Zurückrechnen riss. ';
         return `Die Außenfläche, mit der Figur aus „Mesh to 3D“ (Auftrag ${k.mesh3d}, „Nur Rig“) in deren A-Pose zurückgerechnet, ausgerichtet und auf ${k.figur} skaliert — so bekommt das Netz der `
-            + `Vorstufe (${k.netz_vorstufe}) die Figur (${de(k.punkte)} Punkte, ${de(k.dreiecke)} Dreiecke).${eingabe} Dunkel (Blick ins Innere): ein Loch — Fläche, die in der Haltung verdeckt war (die Außenfläche hat dort nichts) oder beim Zurückrechnen riss. `
+            + `Vorstufe (${k.netz_vorstufe}) die Figur (${de(k.punkte)} Punkte, ${de(k.dreiecke)} Dreiecke).${eingabe}${loecher}`
+            + `Die Finger dreht das Rig nicht zurück (seine Finger stehen in Ruhe): eine Faust bleibt eine Faust. Stücke, die neben ihrem Platz liegen (etwa ein Hemdsaum), zeigen, wo das Rig nicht genau `
+            + `in der Haltung des Netzes steht — diesen Fehler gleicht das Netz der Vorstufe aus. `
             + `Rig: das Skelett der Rig-Figur in Ruhe (Farben der Gruppen); orange: wohin das Netz der Vorstufe die Gelenke hier schiebt, im Mittel ${de(k.abstand_mm, 1)} mm. Nur hier, in der A-Pose, rechnet das Netz; `
             + `Ziel und Ergebnis stehen wieder in der Haltung des Netzes, weil das Skelett DIESES Netzes gesucht ist — das Rig dreht die Korrektur Knochen für Knochen zurück.`;
     }

@@ -6,11 +6,14 @@ Ein Job ist ein Modell, an dem eine KI „Netz → Genesis-Modell“ trainiert w
 `mesh3dai/mesh3dailiste.js` öffnet auf Klick die Jobseite `/mesh-3D-AI/<job>/`. Gleiche Bauart wie `Mesh3dtabelle`: Spalten, Zeilen mit `data-id`, fertiges HTML je Zeile.
 """
 
+from datetime import datetime
+
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .mesh3daidaten import Mesh3daidaten
 from .mesh3daidatensatz import Mesh3daidatensatz
+from .mesh3daitrainingsdatum import Mesh3daitrainingsdatum
 
 __all__ = ['Mesh3daitabelle']
 
@@ -25,6 +28,9 @@ class Mesh3daitabelle:
         {'label': 'Prüfposen', 'key': 'pruefung', 'num': True, 'titel': 'Davon nie trainiert — daran wird gemessen'},
         {'label': 'Datensatz', 'key': 'datensatz', 'num': True,
          'titel': 'Proben des echten Datensatzes auf der Platte (3DObjects/mesh3dai/<Modell>/proben): fertig gerechnet von geplant. Fertig heißt: eingabe.npz liegt da, das Datenskript schreibt sie zuletzt'},
+        {'label': 'Zuletzt trainiert', 'key': 'trainiert',
+         'titel': 'Ende des jüngsten fertigen Trainings an den Daten dieses Jobs (Zeit von lauf_ergebnis.json): Läufe des Jobs (_laeufe) und gemeinsame Netze der Vorstufe/Form (_vorstufe/laeufe), '
+                  'die den Job in ihren Trainingsdaten nennen; Probeläufe zählen nicht. Der Name des Laufs steht im Tooltip der Zelle'},
         {'label': 'Status', 'key': 'status', 'titel': '„Echt (Lauf …)“: Datensatz und Vorhersagen des jüngsten fertigen Trainingslaufs; „Attrappe“: Flächen, Kleider und Ausgabe des Netzes sind erfunden, Posen und Rig echt'},
     )
 
@@ -44,9 +50,21 @@ class Mesh3daitabelle:
             self._zahl(job['training']),
             self._zahl(job['pruefung']),
             self._datensatz(job['ordner']),
+            self._trainiert(job['ordner']),
             format_html('<td data-sort="{}">{}</td>', job['status'].lower(), job['status']),
         )
         return {'id': job['id'], 'klasse': 'mesh3dai-zeile-job', 'html': mark_safe(''.join(zellen))}
+
+    @staticmethod
+    def _trainiert(ordner):
+        """„17.10.2026 16:20" (Ende des jüngsten fertigen Trainings, `Mesh3daitrainingsdatum`), Tooltip: Lauf und mit welchen Jobs; ohne Training „—". Sortiert nach der Zeit."""
+        letztes = Mesh3daitrainingsdatum.letztes(ordner)
+        if not letztes:
+            return mark_safe('<td data-sort="0" title="Noch kein fertiges Training">—</td>')
+        art = 'gemeinsames Netz der Vorstufe/Form' if letztes['art'] == 'vorstufe' else 'Lauf des Jobs'
+        titel = '%s %s, trainiert mit %s' % (art, letztes['lauf'], ', '.join(letztes['mit']))
+        return format_html('<td data-sort="{}" title="{}">{}</td>', int(letztes['zeit']), titel,
+                           datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'))
 
     @staticmethod
     def _zahl(wert):

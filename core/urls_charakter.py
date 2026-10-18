@@ -34,6 +34,7 @@ from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9garderobepflege import G9garderobepflegeapi
+from .api.g9hautebenen import G9hautebenenapi
 from .api.g9hautfalten import G9hautfaltenapi
 from .api.g9hautmischung import G9hautmischungapi
 from .api.g9materialnetzapi import G9materialnetzapi
@@ -214,6 +215,11 @@ CHARAKTER = [
          G9hautfaltenapi.stand, name='g9_figur_hautfalten'),
     path('api/character/genesis9-figur/hautfalten/<str:geschlecht>/<int:kachel>.png',
          G9hautfaltenapi.bild, name='g9_figur_hautfalten_bild'),
+    # Hautebenen (17.10.2026, core/api/g9hautebenen.py): Muskel-/Fettzeichnung (`zeichnung`) und Gebiete für Sommersprossen/Altersflecken (`gebiet`).
+    path('api/character/genesis9-figur/hautebenen/<str:produkt>/<str:geschlecht>/',
+         G9hautebenenapi.stand, name='g9_figur_hautebenen'),
+    path('api/character/genesis9-figur/hautebenen/<str:produkt>/<str:geschlecht>/<int:kachel>.png',
+         G9hautebenenapi.bild, name='g9_figur_hautebenen_bild'),
     # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
     path('api/character/genesis9-figur/frisur/<str:name>/',
          G9frisurapi.netz, name='g9_figur_frisur'),

@@ -1,3 +1,5 @@
+import { Genesis9hautebenenGLSL } from './genesis9hautebenenglsl.js';
+
 /**
  * Genesis9hautGLSL — die Shader-Stücke, die `Genesis9haut` in Threes
  * `MeshStandardMaterial`/`MeshPhysicalMaterial` einhängt (aus
@@ -91,7 +93,7 @@ export class Genesis9hautGLSL {
 `;
 
     /** Der Ersatz für `normal_fragment_maps`, je nach Zusätzen zusammengesetzt. */
-    static normalen(mitGlitzer, mitDetail, mischung = 0, mitFalten = false) {
+    static normalen(mitGlitzer, mitDetail, mischung = 0, mitFalten = false, mitZeichnung = false, mitMimik = false) {
         return `
 #if defined( USE_NORMALMAP_TANGENTSPACE )
     {
@@ -99,7 +101,7 @@ export class Genesis9hautGLSL {
 ${Genesis9hautGLSL.mischungNormalen(mischung)}${mitGlitzer ? Genesis9hautGLSL.GLITZER : ''}
         vec3 mapN = basisN * 2.0 - 1.0;
         mapN.xy *= normalScale;
-${mitDetail ? Genesis9hautGLSL.DETAIL : ''}${mitFalten ? Genesis9hautGLSL.FALTEN : ''}
+${mitDetail ? Genesis9hautGLSL.DETAIL : ''}${mitFalten ? Genesis9hautGLSL.FALTEN : ''}${mitZeichnung ? Genesis9hautebenenGLSL.ZEICHNUNG : ''}${mitMimik ? Genesis9hautebenenGLSL.MIMIK : ''}
         normal = normalize( tbn * mapN );
     }
 #else

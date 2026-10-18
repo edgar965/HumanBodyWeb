@@ -24,6 +24,7 @@ export class Genesis9Figur extends Genesis9Modell {
             praesets: { ...this.praesets },
             hautmischung: { ...this.hautmischung },
             teilmaterial: { ...this.teilmaterial },   // Glanz, Rauheit … je Teil (`Genesis9teilmaterial`, 09.10.2026)
+            hautebenen: { ...this.hautebenen },       // Hautton, Flecken, Muskel-/Fettzeichnung, graue Haare (`Genesis9hautebenen`, 17.10.2026)
             pose: this.pose,
             ausdruck: this.ausdruck,
             kleidung: { ...this.kleidung },

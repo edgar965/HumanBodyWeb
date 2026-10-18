@@ -119,6 +119,15 @@ class Engine2d3dKleiderposeabbildung:
         massstab = Engine2d3dKleiderposetiefe.massstab_aus([self._xy(*(float(w) for w in k2[index[n]])) for n in alle], k3[[index[n] for n in alle], :2])
         return Engine2d3dKleiderposetiefe(k3, namen, radius, massstab)
 
+    def _rumpfstrahl(self, k2, index, name, kette, baum, punkte, radius):
+        """Tiefen der Netzpunkte im Strahl über einer Hüfte (`Engine2d3dKleiderposetiefe.rumpf`), None ohne Schulter oder mit zu wenig Punkten."""
+        schulter = kette.RUMPF[name]
+        if schulter not in index:
+            return None
+        h, s = np.asarray(k2[index[name]], dtype=np.float64), np.asarray(k2[index[schulter]], dtype=np.float64)
+        nah = baum.query_ball_point(self._xy(*(h + kette.RUMPF_ANTEIL * (s - h))), radius)
+        return punkte[nah, 2] if len(nah) >= self.MIN_PUNKTE else None
+
     def landmarken(self, k2, namen, zuordnung, weglassen=(), k3=None):
         """`(roh (33, 3), treffer (33,), liste)` — `k2` (70, 2) in Pixeln des vorbereiteten Fotos, `namen` die MHR-Namen, `zuordnung` {MediaPipe-Nummer: MHR-Name}, `k3` (70, 3) die Gelenke von SAM
         in Metern (für `TIEFE = 'kette'`; ohne sie gilt die Mitte der Dicke).
@@ -152,7 +161,11 @@ class Engine2d3dKleiderposeabbildung:
                 roh[mp], treffer[mp], stand = ziel, 4.0, 'ausserhalb'
             else:
                 tiefe = float(np.median(z)) if self.TIEFE == 'median' else float((np.percentile(z, 2) + np.percentile(z, 98)) / 2.0)
-                if kette is not None and kette.zaehlt(name, tiefen):
+                rumpf = kette.rumpf(self._rumpfstrahl(k2, index, name, kette, baum, punkte, radius)) if kette is not None and name in kette.RUMPF else None
+                if rumpf is not None:
+                    tiefe = rumpf
+                    eintrag['tiefe'] = 'rumpf'
+                elif kette is not None and kette.zaehlt(name, tiefen):
                     tiefe, art, vorhersage = kette.tiefe(name, z, tiefen[kette.kette(name)])
                     eintrag['tiefe'] = art
                     if art == 'verworfen':
