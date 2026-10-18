@@ -1,4 +1,4 @@
-import { Anatomieton } from './anatomieton.js';
+import { Anatomielage } from './anatomielage.js';
 import { Anatomiezuordnung } from './anatomiezuordnung.js';
 import { Anatomiehash } from './anatomiehash.js';
 import { Anatomiearbeit } from './anatomiearbeit.js';
@@ -44,7 +44,8 @@ export class Anatomiebacken {
             if (netz.userData.anatomieBackt !== schluessel) return false;       // ein neuerer Lauf (andere Haut) hat übernommen
             const alt = netz.userData.anatomieGebacken;
             for (const t of [alt?.map, alt?.normalMap, alt?.roughnessMap]) t?.dispose?.();     // GPU-Speicher des alten Stands
-            netz.userData.anatomieGebacken = { ...neu, schluessel };
+            // `vorbild` (ein Material) NICHT aufzählbar: Exporter schreiben `userData` als JSON (vgl. `Hautloch._loecher`).
+            netz.userData.anatomieGebacken = Object.defineProperty({ ...neu, schluessel }, 'vorbild', { value: neu.vorbild, enumerable: false });
             return true;
         };
         Anatomiebacken.backen(inst, netz, original, haut)
@@ -53,10 +54,7 @@ export class Anatomiebacken {
             .finally(() => { if (netz.userData.anatomieBackt === schluessel) netz.userData.anatomieBackt = null; });
     }
 
-    /**
-     * Die Karten rechnen: `{map, normalMap, roughnessMap, farbe}` oder null (keine Karte der Haut in der Nähe, kein Index).
-     * @param haut  Namen der Gruppen des Körpers, die Haut sind (`Anatomiehaut.HAUT`)
-     */
+    /** Die Karten rechnen: `{map, normalMap, roughnessMap, farbe, vorbild}` oder null (keine Haut-Karte in der Nähe, kein Index). `haut`: Gruppen der Haut (`Anatomiehaut.HAUT`). */
     static async backen(inst, netz, original, haut) {
         const e = Anatomiebacken.eingabe(inst, netz, original, haut);
         if (!e) return null;
@@ -70,7 +68,8 @@ export class Anatomiebacken {
             map: Anatomietextur.aus(vorlage, bild.farbe, breite, hoehe),
             normalMap: bild.normal && vorN ? Anatomietextur.aus(vorN, bild.normal, breite, hoehe) : null,
             roughnessMap: bild.rauheit && vorR ? Anatomietextur.aus(vorR, bild.rauheit, breite, hoehe) : null,
-            farbe: quelle.texturen[Anatomiebacken.haeufigste(zu, quelle.gruppe, quelle.texturen.length)].color,
+            // Farbe und VORBILD: das Körpermaterial mit den meisten Texeln — seine Kachel und Gruppe tragen die Hautebenen auf das Stück (`Genesis9hautebenenstueck`, 18.10.2026).
+            ...((t) => ({ farbe: t.color, vorbild: t.material }))(quelle.texturen[Anatomiebacken.haeufigste(zu, quelle.gruppe, quelle.texturen.length)]),
         };
     }
 
@@ -99,8 +98,7 @@ export class Anatomiebacken {
     /**
      * Was die Rechnung liest: die Hautdreiecke in der Nähe (`quelle`), die Größe der Karte, die UV des Stücks (`uvKarte`: in Zeilen der Karte) und das Stück als
      * `{pos, uv, index, normal}` für die Zuordnung — oder null (keine Karte der Haut in der Nähe, kein Index, keine Vorlage mit Bild).
-     * Vorlage (Größe, Farbraum, `flipY`) ist die eigene Farbkarte des Stücks; ohne eine („Daz Anatomie Mann" hat nur eine Farbe, 18.10.2026 an Matt0) die Farbkarte
-     * der Haut — wie bei Normalen und Rauheit in `backen`. UV der Rechnung und neue Textur folgen derselben Vorlage, also passt `flipY` in beiden Fällen.
+     * Vorlage (Größe, Farbraum, `flipY`): die eigene Farbkarte des Stücks, ohne eine („Daz Anatomie Mann", 18.10.2026) die der Haut; UV und neue Textur folgen ihr beide.
      */
     static eingabe(inst, netz, original, haut) {
         const quelle = Anatomiebacken.quelle(inst, netz, haut);
@@ -109,7 +107,8 @@ export class Anatomiebacken {
         const breite = Math.max(Anatomiebacken.KANTE_MIN, Math.min(Anatomiebacken.KANTE_MAX, vorlage.image.width));
         const hoehe = Math.max(Anatomiebacken.KANTE_MIN, Math.min(Anatomiebacken.KANTE_MAX, vorlage.image.height));
         const uv = geo.attributes.uv.array, uvKarte = vorlage.flipY ? Float32Array.from(uv, (w, i) => (i & 1 ? 1 - w : w)) : uv;
-        const stueck = { pos: geo.attributes.position.array, uv: uvKarte, index: geo.index.array, normal: geo.attributes.normal?.array || null };
+        // Lage, wie sie gezeigt wird (`Anatomielage`: mit `einzug`) — ohne ihn rechnete das Daz-Stück an DamiraAlt 7,8 mm (Rand) bis 37 mm neben seiner Stelle.
+        const stueck = { pos: Anatomielage.lage(geo), uv: uvKarte, index: geo.index.array, normal: geo.attributes.normal?.array || null };
         return { quelle, breite, hoehe, uv, uvKarte, stueck, vorlage };
     }
 
@@ -164,14 +163,14 @@ export class Anatomiebacken {
         const koerper = inst?.bodyMesh, geo = koerper?.geometry, stueck = netz?.geometry;
         if (!geo?.attributes?.uv || !geo.index || !stueck?.attributes?.position) return null;
         const voll = geo.userData?.indexVoll, index = voll ? voll.index : geo.index.array, gruppen = voll ? voll.gruppen : geo.groups;
-        const material = [koerper.material].flat(), pos = geo.attributes.position.array;
-        const kasten = Anatomieton.kasten(stueck, Anatomiezuordnung.REICHWEITE);
+        const material = [koerper.material].flat(), pos = Anatomielage.lage(geo);         // beide mit `einzug`, wie gezeigt (`Anatomielage`)
+        const kasten = Anatomielage.kasten(Anatomielage.lage(stueck), Anatomiezuordnung.REICHWEITE);
         const drin = (i) => [0, 1, 2].every(k => pos[3 * i + k] >= kasten.lo[k] && pos[3 * i + k] <= kasten.hi[k]);
         const texturen = [], ecken = [], gruppe = [];
         for (const gr of gruppen || []) {
             const m = material[gr.materialIndex];
             if (!haut.includes(m?.userData?.gruppe) || !m.map?.isTexture) continue;
-            const nr = texturen.push({ map: m.map, normalMap: m.normalMap || null, roughnessMap: m.roughnessMap || null, color: m.color }) - 1;
+            const nr = texturen.push({ map: m.map, normalMap: m.normalMap || null, roughnessMap: m.roughnessMap || null, color: m.color, material: m }) - 1;
             for (let n = 0; n + 2 < gr.count; n += 3) {
                 const a = index[gr.start + n], b = index[gr.start + n + 1], c = index[gr.start + n + 2];
                 if (drin(a) || drin(b) || drin(c)) { ecken.push(a, b, c); gruppe.push(nr); }

@@ -9,6 +9,17 @@
  */
 export class Genesis9garderobezeile {
 
+    /** Die Zeile eines Stücks in der Garderobe (Assets-Reiter) — null, solange sie nicht gebaut ist (`Genesis9garderobe._zeile`: Häkchen `g9-kleid-<Kennung>`). */
+    static zeileVon(kennung) {
+        return document.getElementById(`g9-kleid-${kennung}`)?.closest('.slider-row') || null;
+    }
+
+    /** Den Namen in der Zeile ersetzen, ohne die Liste neu zu bauen (das Kürzel der Herkunft dahinter bleibt). */
+    static benennen(zeile, name) {
+        const text = zeile?.querySelector('.stueckname')?.firstChild;
+        if (text?.nodeType === Node.TEXT_NODE) text.textContent = name;
+    }
+
     /** Zeile und Reglerkasten aus- (`false`) oder wieder einblenden. */
     static zeigen(zeile, sichtbar) {
         for (const teil of [zeile, zeile._regler]) {

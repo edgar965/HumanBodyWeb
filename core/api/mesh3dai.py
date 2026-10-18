@@ -27,6 +27,11 @@ from ..dienste.mesh3daiattrappe import Mesh3daiattrappe
 from ..dienste.mesh3daidaten import Mesh3daidaten
 from ..dienste.mesh3daiflaeche import Mesh3daiflaeche
 from ..dienste.mesh3daiflaechenanimation import Mesh3daiflaechenanimation
+from ..dienste.mesh3daiformtraining import Mesh3daiformtraining
+from ..dienste.mesh3daiformtrainingjetzt import Mesh3daiformtrainingjetzt
+from ..dienste.mesh3daiformtrainingtabelle import Mesh3daiformtrainingtabelle
+from ..dienste.mesh3daiformvarianten import Mesh3daiformvarianten
+from ..dienste.mesh3daiformvariantentabelle import Mesh3daiformvariantentabelle
 from ..dienste.mesh3daistand import Mesh3daistand
 from ..dienste.mesh3daitabelle import Mesh3daitabelle
 from ..dienste.mesh3daitesttabelle import Mesh3daitesttabelle
@@ -40,8 +45,13 @@ class Mesh3daiendpunkte:
     def liste(request):
         # Das Band „Attrappe“ nur, solange ein Job noch keinen fertigen Lauf hat (seit 15.10.2026 zeigt ein Job mit Lauf echte Daten).
         attrappe = any(Mesh3daidaten.lauf(j['ordner']) is None for j in Mesh3daiattrappe.stammdaten())
-        # Zweiter Reiter „Test“ (16.10.2026): Netze ohne Trainingsdaten (`Mesh3daitesttabelle`).
+        # Zweiter Reiter „Test“ (16.10.2026): Netze ohne Trainingsdaten (`Mesh3daitesttabelle`); dritter „Formtraining“ (18.10.2026): Läufe der gemeinsamen Netze und Formvarianten.
+        laeufe = Mesh3daiformtraining.laeufe()
+        varianten = Mesh3daiformvarianten.alle()
         return render(request, 'mesh3dai_liste.html', {'tabelle': Mesh3daitabelle().tabelle(), 'testtabelle': Mesh3daitesttabelle().tabelle(),
+                                                       'formtraining': Mesh3daiformtrainingtabelle().tabelle(laeufe),
+                                                       'formvarianten': Mesh3daiformvariantentabelle().tabelle(varianten),
+                                                       'jetzt': Mesh3daiformtrainingjetzt.zeilen(laeufe, Mesh3daiformvarianten.summe(varianten), Mesh3daiformtraining.gpu()),
                                                        'hinweis': Mesh3daiattrappe.HINWEIS if attrappe else ''})
 
     @staticmethod

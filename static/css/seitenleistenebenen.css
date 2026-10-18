@@ -1,0 +1,46 @@
+/* Seitenleistenebenen — Farbe und Schriftgröße der aufklappbaren Köpfe in den Reitern der Szenenseite (/Charakter/),
+ * nach ihrer Tiefe.
+ *
+ * AUFTRAG (Edgar, 18.10.2026): „Die erste Ebene immer rot, die ebene darunter: gelb, die weitere ebene darunter: Grün,
+ * die nächste dann grau. Die Ebenenen sollen je 1 pixel weniger in schriftgröße haben als die der Parents … das soll für
+ * alle Tabs gelten, z.B. Modell, Assets usw".
+ *
+ * EBENE = Zahl der Kästen über dem Kopf, den eigenen mitgezählt. Ein Kasten ist eine `.panel-section` (Kopf `h3`) oder
+ * ein `<details>` (Kopf `summary`) — dieselbe Definition wie `Modellklappung.KASTEN`. Jede Ebene ist eine Kette mit
+ * einem Kasten mehr; die längere Kette hat die höhere Spezifität und gewinnt ohne `!important`. Ab Ebene 5 bleibt es
+ * bei Ebene 5. Gemessen am 18.10.2026 (Chrome, Genesis-9-Figur gewählt): Köpfe auf den Ebenen 1–4, keiner tiefer.
+ *
+ * Die dreifache Klasse (wie in `stilhelfer.css`) hebt schon Ebene 1 über die eigenen Kopfregeln der Bausteine —
+ * die stärkste davon ist `.uma-gruppe.uma-gruppe.uma-gruppe.g9-untergruppe > summary`. Damit folgen auch die Gruppen
+ * in „Einstellungen (N)" eines Stücks der Ebene; vorher waren sie fest gelb (`viewer_seitenleiste.css`).
+ *
+ * Gelb und Grün kommen aus `theme.css` (`--einstellung`, `--success`): Im hellen Thema sind sie dort dunkler, sonst
+ * stünde Gelb auf Weiß. Nur auf dieser Seite geladen (`scene_config.html`), nicht auf der Charakterseite.
+ */
+.panel-tab-content.panel-tab-content.panel-tab-content :is(details, .panel-section) > :is(summary, h3) {
+    color: var(--accent);
+    font-size: 0.85rem;
+}
+
+.panel-tab-content.panel-tab-content.panel-tab-content :is(details, .panel-section) :is(details, .panel-section) > :is(summary, h3) {
+    color: var(--einstellung);
+    font-size: calc(0.85rem - 1px);
+}
+
+.panel-tab-content.panel-tab-content.panel-tab-content :is(details, .panel-section) :is(details, .panel-section)
+    :is(details, .panel-section) > :is(summary, h3) {
+    color: var(--success);
+    font-size: calc(0.85rem - 2px);
+}
+
+.panel-tab-content.panel-tab-content.panel-tab-content :is(details, .panel-section) :is(details, .panel-section)
+    :is(details, .panel-section) :is(details, .panel-section) > :is(summary, h3) {
+    color: var(--text-muted);
+    font-size: calc(0.85rem - 3px);
+}
+
+.panel-tab-content.panel-tab-content.panel-tab-content :is(details, .panel-section) :is(details, .panel-section)
+    :is(details, .panel-section) :is(details, .panel-section) :is(details, .panel-section) > :is(summary, h3) {
+    color: var(--text-muted);
+    font-size: calc(0.85rem - 4px);
+}

@@ -1,0 +1,10 @@
+/* Seite einer Formvariante (18.10.2026, `mesh3dai_formvariante.html`): Leiste über den drei Feldern, Legende der Abweichung, schmale Tabellen. */
+.mesh3dai-fv-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 8px; }
+.mesh3dai-fv-leiste label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.mesh3dai-fv-leiste select { max-width: 32em; }
+.mesh3dai-fv-titel { font-size: 0.85rem; opacity: 0.8; margin-right: 2px; }
+/* Dieselben Stufen wie `Mesh3daiformvariantezeichner.STUFEN` (0 · 10 · 30 · 60 mm). */
+.mesh3dai-fv-legende { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+.mesh3dai-fv-legende[hidden] { display: none; }
+.mesh3dai-fv-verlauf { flex: 1; height: 10px; border-radius: 3px; background: linear-gradient(90deg, #2ea043 0%, #e3b341 16.7%, #f0883e 50%, #e5534b 100%); }
+/* Die Tabellen tragen `doku mesh3dai-lauftabelle` (`mesh3daiformlauf.css`): durchsichtig mit geerbter Farbe — die Seitenstile legen jeder Tabelle sonst einen dunklen Grund unter (dunkel auf dunkel, gesehen 18.10.2026). */

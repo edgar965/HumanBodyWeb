@@ -136,7 +136,7 @@ vec3 g9Beule( vec3 p, vec3 n, float h, float seite ) {
     }
 #ifdef USE_MAP
     if ( uHtF3.y > 0.0 ) {
-        float htMm = g9Punkte( vMapUv + vec2( 3.1, 5.3 ), 0.05 / uHtMeterUV, 0.035 * uHtF3.z, 0.8 * uHtF3.y );
+        float htMm = g9Punkte( HT_UV + vec2( 3.1, 5.3 ), 0.05 / uHtMeterUV, 0.035 * uHtF3.z, 0.8 * uHtF3.y );
         htL *= mix( vec3( 1.0 ), vec3( 0.30, 0.20, 0.15 ), htMm );
     }
 #endif
@@ -149,7 +149,7 @@ vec3 g9Beule( vec3 p, vec3 n, float h, float seite ) {
 #ifdef USE_MAP
     if ( uHtF3.w > 0.0 ) {
         float htPkG = 0.75 * htKopf + 0.35 * htRumpf * smoothstep( 0.62, 0.72, htY ) + 0.06 * ( htArme + htBeine + htRumpf );
-        htPickel = g9Punkte( vMapUv + vec2( 9.1, 1.7 ), 0.022 / uHtMeterUV, 0.10, uHtF3.w * htPkG );
+        htPickel = g9Punkte( HT_UV + vec2( 9.1, 1.7 ), 0.022 / uHtMeterUV, 0.10, uHtF3.w * htPkG );
         htL *= mix( vec3( 1.0 ), vec3( 1.0, 0.60, 0.58 ), htPickel );
     }
 #endif
@@ -168,7 +168,7 @@ ${Genesis9hautrauschenGLSL.GEBIET}
         }
 #ifdef USE_MAP
         if ( uHtB1.y > 0.0 ) {
-            float htNb = g9Punkte( vMapUv + vec2( 4.4, 8.8 ), 0.006 / uHtMeterUV, 0.32, 0.55 );
+            float htNb = g9Punkte( HT_UV + vec2( 4.4, 8.8 ), 0.006 / uHtMeterUV, 0.32, 0.55 );
             htH -= uHtB1.y * htKopf * ( 0.35 + 0.65 * htGebietW.b ) * 0.0005 * htNb * ( 1.0 - smoothstep( 0.0006, 0.0015, htFw ) );
         }
 #endif

@@ -58,9 +58,22 @@ export class Anatomiefenster {
         const y0 = Math.max(0, Math.floor(z0) - rand), y1 = Math.min(hoehe, Math.ceil(z1) + rand);
         const b = x1 - x0, h = y1 - y0;
         if (b <= 0 || h <= 0) return null;
+        if (bild.data) {                                // `DataTexture` (Platzhalter der Hautebenen, 1 × 1, z. B. Normalen von „Body“ bei DamiraAlt): `drawImage` warf, der Bake blieb leer
+            const daten = Anatomiefenster._daten(bild, x0, y0, b, h);
+            return daten ? { daten, x0, y0, b, h, breite, hoehe, flip } : null;
+        }
         const leinwand = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(b, h) : Object.assign(document.createElement('canvas'), { width: b, height: h });
         const ctx = leinwand.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(bild, x0, y0, b, h, 0, 0, b, h);
         return { daten: ctx.getImageData(0, 0, b, h).data, x0, y0, b, h, breite, hoehe, flip };
+    }
+
+    /** Das Rechteck aus den Daten einer `DataTexture` (RGBA, 8 Bit, Zeile 0 = v 0 wie bei den Bildern ohne `flipY`) — null bei anderem Format. */
+    static _daten(bild, x0, y0, b, h) {
+        const quelle = bild.data;
+        if (!(quelle instanceof Uint8Array || quelle instanceof Uint8ClampedArray) || quelle.length !== 4 * bild.width * bild.height) return null;
+        const daten = new Uint8ClampedArray(4 * b * h);
+        for (let y = 0; y < h; y++) daten.set(quelle.subarray(4 * ((y0 + y) * bild.width + x0), 4 * ((y0 + y) * bild.width + x0 + b)), 4 * y * b);
+        return daten;
     }
 }

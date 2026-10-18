@@ -2,6 +2,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
+import { Genesis9genitalkasten } from './genesis9genitalkasten.js';
 
 /**
  * Genesis9garderobepflege — „Umbenennen" und „Löschen" im Kontextmenü eines Garderobenstücks.
@@ -17,6 +18,10 @@ import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
  * neu geholt und die Liste neu gebaut war — erst dann ließ sich das nächste Stück anklicken. Jetzt verschwindet nur die Zeile
  * (samt Reglerkasten), sofort beim Klick; der Server arbeitet im Hintergrund, und das Stück wird nur aus dem gemerkten
  * Katalog genommen (`Genesis9kleidung.entfernen`). Scheitert der Server, kommt die Zeile wieder.
+ *
+ * ÜBERALL, WO DAS STÜCK STEHT (Edgar, 18.10.2026: „es sollen doch ALLE Assets umbenannt und gelöscht werden können?"): Dasselbe Stück
+ * steht in der Garderobe (Assets-Reiter) und, wenn es eine Anatomie hat, als Kasten im Bereich „Genitalien" (Modell-Reiter). Umbenennen
+ * und Löschen ziehen beide nach — von welcher Seite auch ausgelöst (`_nachziehen`, `_mitnehmen`), ohne eine Liste neu zu bauen.
  */
 export class Genesis9garderobepflege {
 
@@ -37,14 +42,35 @@ export class Genesis9garderobepflege {
     static async umbenennen(stueck, neuzeichnen) {
         const neu = window.prompt(`Neuer Name für „${stueck.name}" (leer = Name der Bibliothek):`, stueck.name);
         if (neu === null) return;
-        await Genesis9garderobepflege._senden(stueck, 'umbenennen', { name: neu }, 'Umbenennen', neuzeichnen);
+        if (await Genesis9garderobepflege._senden(stueck, 'umbenennen', { name: neu }, 'Umbenennen', neuzeichnen)) {
+            await Genesis9garderobepflege._nachziehen(stueck);
+        }
+    }
+
+    /**
+     * Nach dem Umbenennen den Namen aus dem frischen Katalog holen — bei leerem Namen ist es der der Bibliothek, den kennt nur der Server —
+     * und in der Garderobenzeile sowie im Kasten der Genitalien setzen (jeweils nur, wenn es sie gibt).
+     */
+    static async _nachziehen(stueck) {
+        const neu = (await Genesis9kleidung.stuecke()).find(s => s.id === stueck.id);
+        if (!neu) return;
+        stueck.name = neu.name;         // das Menü fragt beim nächsten Mal nach dem jetzigen Namen
+        Genesis9garderobezeile.benennen(Genesis9garderobezeile.zeileVon(stueck.id), neu.name);
+        Genesis9genitalkasten.benennen(stueck.id, neu.name);
+    }
+
+    /** Nach dem Löschen: was vom Stück noch steht (Garderobenzeile, Kasten der Genitalien), nimmt der Server-Erfolg mit. */
+    static _mitnehmen(stueck) {
+        const zeile = Genesis9garderobezeile.zeileVon(stueck.id);
+        if (zeile) Genesis9garderobezeile.entfernen(zeile);
+        Genesis9genitalkasten.entfernen(stueck.id);
     }
 
     /** Ohne Rückfrage (Edgar, 18.10.2026: „mach die Rückfragen vor dem Löschen weg") — ein eigenes Stück liegt danach im
      *  Papierkorb (`3DObjects/models/Genesis9/papierkorb/`), eines der Daz-Bibliothek ist nur ausgeblendet; beides ist zurückholbar. */
     static async loeschen(stueck, neuzeichnen, zeile = null) {
         if (!zeile) {           // ohne bekannte Zeile wie bisher: Katalog neu, Liste neu
-            await Genesis9garderobepflege._senden(stueck, 'loeschen', {}, 'Löschen', neuzeichnen);
+            if (await Genesis9garderobepflege._senden(stueck, 'loeschen', {}, 'Löschen', neuzeichnen)) Genesis9garderobepflege._mitnehmen(stueck);
             return;
         }
         Genesis9garderobezeile.zeigen(zeile, false);
@@ -56,19 +82,22 @@ export class Genesis9garderobepflege {
             window.alert(`Löschen fehlgeschlagen: ${fehler.message}`);
             return;
         }
-        Genesis9garderobezeile.entfernen(zeile);
+        Genesis9garderobezeile.entfernen(zeile);        // `zeile` kann auch der Kasten der Genitalien sein (`Genesis9genitalmenue`)
         Genesis9kleidung.entfernen(stueck.id);
+        Genesis9garderobepflege._mitnehmen(stueck);
     }
 
+    /** @returns {Promise<boolean>} ob der Server die Änderung angenommen hat */
     static async _senden(stueck, aktion, nutzlast, titel, neuzeichnen) {
         try {
             await Serverabruf.senden(Genesis9garderobepflege.adresse(stueck, aktion), nutzlast);
         } catch (fehler) {
             Protokoll.fehler('Garderobe', `${titel} von „${stueck.name}" fehlgeschlagen`, fehler);
             window.alert(`${titel} fehlgeschlagen: ${fehler.message}`);
-            return;
+            return false;
         }
         Genesis9kleidung.vergessen();
         neuzeichnen?.();
+        return true;
     }
 }

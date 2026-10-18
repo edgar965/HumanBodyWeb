@@ -46,7 +46,6 @@ from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
 from Genesis9.stueckersatz import G9stueckersatz
-from Genesis9.stueckverdeckung import G9stueckverdeckung
 
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9haarmischbau import G9haarmischbau
@@ -97,11 +96,11 @@ class G9garderobeapi:
 
     @staticmethod
     def _stueck(s, daz, vorschau, kleidmorphe):
-        u"""Ein Listeneintrag für den Browser: Vorschauen der Varianten, Kategorie und die Reglerliste — Haarachsen, eigene Morphe und, bei Hosen, Unterwäsche
-        und Anzügen, die Drapierung über dem männlichen Geograft (`G9drapierung`, 16.10.2026)."""
+        u"""Ein Listeneintrag für den Browser: Vorschauen der Varianten, Kategorie, Anatomie (Abteilung „Genitalien", `genesis9genitalien.js`, 18.10.2026) und die
+        Reglerliste — Haarachsen, eigene Morphe und, bei Hosen, Unterwäsche und Anzügen, die Drapierung über dem männlichen Geograft (`G9drapierung`, 16.10.2026)."""
         kategorie = s.get('kategorie') or G9garderobekategorien.vorgabe(s, daz)
         regler = kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s)))
-        return dict(s, varianten=vorschau.varianten_mit_vorschau(s), kategorie=kategorie,
+        return dict(s, varianten=vorschau.varianten_mit_vorschau(s), kategorie=kategorie, anatomie=G9stueckersatz.anatomie_fuer(s) if s.get('eigen') else '',
                     regler=G9drapierung.erweitern(dict(s, regler=regler), kategorie))
 
     @staticmethod
@@ -259,9 +258,10 @@ class G9garderobeapi:
                 # So tief hinter der Haut das Stück sie noch verdeckt (mm; Scham aus einer .blend), 0 = Vorgabe der Hautmaske.
                 # Bei einem Kind schrumpft das Stück mit (`G9aehnlichkeit`) — die Tiefe, in der es die Haut verdeckt, schrumpft mit, sonst fiele rund um das kleine Stück Haut weg (schwarzes Loch).
                 'hautTiefeMm': round(haut_tiefe * G9aehnlichkeit.massstab(formung.regler), 3),
-                # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; MakeHuman-Stücke:
-                # die Haut, die MakeHuman löscht, `nurWeg`, `G9stueckverdeckung`; leer = der Browser rechnet das Loch selbst, `hautverdeckung.js`).
-                'hautLoch': G9stueckersatz.loch_fuer(eintrag) or G9stueckverdeckung.loch_fuer(eintrag, stufen)}
+                # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; leer = der
+                # Browser rechnet das Loch selbst, `hautverdeckung.js`). Die weggenommene Haut der MakeHuman-/GarmentCode-Stücke (`G9stueckverdeckung`,
+                # `nurWeg`) ist seit 18.10.2026 abends wieder AUS — Edgar mit Bild (Löcher im Schritt): „nimm den vorletzten Commit".
+                'hautLoch': G9stueckersatz.loch_fuer(eintrag)}
 
     # -------------------------------------------------------------- Texturen
 

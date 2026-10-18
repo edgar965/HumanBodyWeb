@@ -29,6 +29,7 @@ from .api.brauen import Brauenendpunkte
 from .api.eigenstueck import Eigenstueckapi
 from .api.gcgenesis import Gcgenesisapi
 from .api.g9eigenehautapi import G9eigenehautapi
+from .api.g9eigenehautpflegeapi import G9eigenehautpflegeapi
 from .api.g9figur import G9figur
 from .api.g9fototextur import G9fototextur
 from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
@@ -227,6 +228,9 @@ CHARAKTER = [
          G9hautebenenapi.bild, name='g9_figur_hautebenen_bild'),
     # Eigene Haut speichern (18.10.2026, core/api/g9eigenehautapi.py): Rezept aus Grundsatz und Reglern, danach als `eigen:<schluessel>` in der Hautauswahl.
     path('api/character/genesis9-figur/eigenehaut/', G9eigenehautapi.speichern, name='g9_figur_eigenehaut'),
+    # … und umbenennen / löschen (18.10.2026, core/api/g9eigenehautpflegeapi.py): der Schlüssel ist der Teil der Kennung nach `eigen:`; gelöscht heißt Papierkorb.
+    path('api/character/genesis9-figur/eigenehaut/<str:schluessel>/umbenennen/', G9eigenehautpflegeapi.umbenennen, name='g9_figur_eigenehaut_umbenennen'),
+    path('api/character/genesis9-figur/eigenehaut/<str:schluessel>/loeschen/', G9eigenehautpflegeapi.loeschen, name='g9_figur_eigenehaut_loeschen'),
     # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
     path('api/character/genesis9-figur/frisur/<str:name>/',
          G9frisurapi.netz, name='g9_figur_frisur'),

@@ -1,3 +1,4 @@
+import { Anatomiemitte } from './anatomiemitte.js';
 import { Dreiecksabstand } from './dreiecksabstand.js';
 import { Strahldreieck } from './strahldreieck.js';
 
@@ -16,15 +17,14 @@ import { Strahldreieck } from './strahldreieck.js';
  * kann —, dann, wenn das Stück Normalen hat, der Strahl entlang seiner Normale (`Strahldreieck`): Der nächste Punkt einer Fläche aus ebenen Facetten hängt an
  * den Kanten und Ecken (alle Texel über einer Kante bekamen dieselbe Stelle, Blöcke in der Karte), der Strahl geht stetig von Dreieck zu Dreieck. Der Treffer
  * des Strahls gilt, wo er flach genug auf der Haut steht und nicht weiter als 2,5 × der nächste Abstand liegt; sonst bleibt der nächste Punkt.
- * Texel, die kein Hautdreieck näher als `REICHWEITE` haben, bleiben leer (die Karte füllt sie auf).
- * Gemessen am Daz-Stück (8.320 Dreiecke, 292.000 belegte Texel auf 1.024², Chrome im Hintergrund-Tab): erste Fassung mit Map-Gitter 18,5 s.
+ * Texel, die kein Hautdreieck näher als `REICHWEITE` haben, bleiben leer (die Karte füllt sie auf). Weit vor der Haut hängende Stücke: `Anatomiemitte`.
  */
 export class Anatomiezuordnung {
 
     /** Kantenlänge (m) der Gitterzellen — etwa die Kante eines Hautdreiecks (4 mm auf Stufe 1). */
     static ZELLE = 0.006;
-    /** So weit (m) darf die Haut vom Stück entfernt liegen (gemessen am Daz-Stück: Median 3 mm, größte 11,5 mm). */
-    static REICHWEITE = 0.02;
+    /** So weit (m) darf die Haut vom Stück entfernt liegen. „cute girl" Median 3 / größte 11,5 mm; „Daz Anatomie Frau" an DamiraAlt mit Einzug 4,8 / 17,5 mm (ohne: 14 / 31). */
+    static REICHWEITE = 0.04;
     /** Erst so weit (m) um das Dreieck suchen; reicht das nicht für alle Texel, danach bis `REICHWEITE`. */
     static NAH = 0.012;
     /** Um so viel (m) mehr als der nächste Abstand bleiben Dreiecke Kandidaten: ein schräger Strahl trifft weiter seitlich (`Strahldreieck`). */
@@ -45,13 +45,22 @@ export class Anatomiezuordnung {
         const gitter = Anatomiezuordnung._gitter(haut);
         const belegt = new Uint8Array(breite * hoehe);
         const liste = { n: 0, texel: new Uint32Array(65536), btri: new Int32Array(65536), l2: new Float32Array(65536), l3: new Float32Array(65536), stri: new Int32Array(65536) };
-        const index = stueck.index, ab = new Float64Array(3);
-        let letzte = performance.now();
-        for (let s = 0; 3 * s + 2 < index.length; s++) {
+        const index = stueck.index, ab = new Float64Array(3), dreiecke = Math.floor(index.length / 3), kands = [];
+        let letzte = performance.now(), fern = 0;
+        const luft = async (s) => { if (atmen && (s & 31) === 31 && performance.now() - letzte > Anatomiezuordnung.TAKT_MS) { await atmen(); letzte = performance.now(); } };
+        for (let s = 0; s < dreiecke; s++) {
+            kands.push(Anatomiezuordnung._kandidaten(gitter, haut, stueck.pos, [index[3 * s], index[3 * s + 1], index[3 * s + 2]], ab));
+            if (Anatomiemitte.fern(kands[s])) fern++;
+            await luft(s);
+        }
+        // Hängt das Stück weit vor der Haut (Penis: Matt0 54 % der Punkte über 20 mm), bildet `Anatomiemitte` es von einer Mitte im Becken aus ab.
+        const stellen = fern > Anatomiemitte.ANTEIL * dreiecke ? Anatomiemitte.stellen(stueck, haut, gitter) : null;
+        const dazu = (nr, bt, l2, l3, s) => Anatomiezuordnung._dazu(liste, nr, bt, l2, l3, s);
+        for (let s = 0; s < dreiecke; s++) {
             const ecken = [index[3 * s], index[3 * s + 1], index[3 * s + 2]];
-            const kand = Anatomiezuordnung._kandidaten(gitter, haut, stueck.pos, ecken, ab);
-            if (kand) Anatomiezuordnung._rastern(stueck, ecken, s, kand, haut, breite, hoehe, belegt, liste, ab);
-            if (atmen && (s & 31) === 31 && performance.now() - letzte > Anatomiezuordnung.TAKT_MS) { await atmen(); letzte = performance.now(); }
+            if (stellen) Anatomiemitte.rastern(stueck, ecken, s, stellen, haut, gitter, breite, hoehe, belegt, dazu);
+            else if (kands[s]) Anatomiezuordnung._rastern(stueck, ecken, s, kands[s], haut, breite, hoehe, belegt, liste, ab);
+            await luft(s);
         }
         const n = liste.n;
         return { anzahl: n, texel: liste.texel.slice(0, n), btri: liste.btri.slice(0, n), l2: liste.l2.slice(0, n), l3: liste.l3.slice(0, n), stri: liste.stri.slice(0, n), belegt };
@@ -66,7 +75,7 @@ export class Anatomiezuordnung {
         const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
         for (let i = 0; i < e.length; i++) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[3 * e[i] + k]); hi[k] = Math.max(hi[k], p[3 * e[i] + k]); }
         const n = [0, 1, 2].map(k => Math.max(1, Math.floor((hi[k] - lo[k]) / z) + 1));
-        const g = { lo, n, start: new Int32Array(n[0] * n[1] * n[2] + 1), liste: null };
+        const g = { lo, n, zelle: z, start: new Int32Array(n[0] * n[1] * n[2] + 1), liste: null };
         const zellen = (t) => {
             const a = 3 * e[3 * t], b = 3 * e[3 * t + 1], c = 3 * e[3 * t + 2];
             const von = [0, 1, 2].map(k => Math.floor((Math.min(p[a + k], p[b + k], p[c + k]) - lo[k]) / z));
@@ -187,13 +196,10 @@ export class Anatomiezuordnung {
         return bt;
     }
 
+    /** Ein Texel in die Liste (sie wächst in Verdopplungen). */
     static _dazu(liste, nr, bt, b2, b3, s) {
         if (liste.n === liste.texel.length) {
-            for (const name of ['texel', 'btri', 'l2', 'l3', 'stri']) {
-                const neu = new liste[name].constructor(liste[name].length * 2);
-                neu.set(liste[name]);
-                liste[name] = neu;
-            }
+            for (const name of ['texel', 'btri', 'l2', 'l3', 'stri']) { const neu = new liste[name].constructor(liste[name].length * 2); neu.set(liste[name]); liste[name] = neu; }
         }
         const n = liste.n++;
         liste.texel[n] = nr; liste.btri[n] = bt; liste.l2[n] = b2; liste.l3[n] = b3; liste.stri[n] = s;

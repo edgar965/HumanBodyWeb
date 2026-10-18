@@ -1,0 +1,37 @@
+/* Seite EINES Trainingslaufs (/mesh-3D-AI/formtraining/<lauf>/, 18.10.2026) — `templates/mesh3dai_formlauf.html`.
+   Tabellen und Flächen ohne eigenen Grund und mit geerbter Schrift: die Seitenstile legen jeder Tabelle einen dunklen Grund unter (dunkel auf dunkel, `mesh3dai.md`, Karte „Datensatz und Training"). */
+.mesh3dai-laufkarte h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mesh3dai-laufkarte details > summary { cursor: pointer; list-style: revert; }
+.mesh3dai-laufkarte details > summary h2 { display: inline-flex; margin: 0; }
+
+.mesh3dai-zustand { font-size: 0.85rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.mesh3dai-zustand-fertig { color: #2ea043; }
+.mesh3dai-zustand-lauft { color: var(--accent, #e94560); }
+.mesh3dai-zustand-steht { color: var(--warning, #f0ad4e); }
+
+.mesh3dai-laufbalken { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 10px; }
+.mesh3dai-fakten { display: grid; grid-template-columns: max-content 1fr; gap: 3px 16px; margin: 6px 0; font-size: 0.9rem; }
+.mesh3dai-fakten dt { font-weight: 600; }
+.mesh3dai-fakten dd { margin: 0; overflow-wrap: anywhere; }
+
+.mesh3dai-kurvenrahmen { width: 100%; color: inherit; }
+.mesh3dai-kurve { display: block; width: 100%; height: auto; }
+.mesh3dai-legende { display: flex; flex-wrap: wrap; gap: 4px 22px; margin: 8px 0; padding: 0; list-style: none; font-size: 0.88rem; }
+.mesh3dai-legendenstrich { display: inline-block; width: 26px; margin-right: 6px; vertical-align: middle; border-top: 3px solid; }
+.mesh3dai-legendenstrich.mesh3dai-gestrichelt { border-top-style: dashed; }
+
+.mesh3dai-lauftabelle-rahmen { overflow-x: auto; }
+table.mesh3dai-lauftabelle { width: auto; border-collapse: collapse; margin: 8px 0; font-size: 0.88rem; background: transparent; color: inherit; }
+table.mesh3dai-lauftabelle th, table.mesh3dai-lauftabelle td { padding: 3px 12px; border-bottom: 1px solid rgba(128, 128, 128, 0.3); text-align: left; background: transparent; color: inherit; }
+table.mesh3dai-lauftabelle th { font-weight: 600; }
+table.mesh3dai-lauftabelle td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.mesh3dai-lauftabelle tr.mesh3dai-gruppenzeile th { background: rgba(128, 128, 128, 0.15); padding-top: 6px; }
+.mesh3dai-bezug { opacity: 0.6; }
+/* mit `table.mesh3dai-lauftabelle td` davor: die Regel `td { color: inherit }` oben schlägt sonst die Klasse (im Chrome gesehen: fett, aber schwarz) */
+.mesh3dai-besser, table.mesh3dai-lauftabelle td.mesh3dai-besser { color: #2ea043; font-weight: 600; }
+.mesh3dai-schlechter, table.mesh3dai-lauftabelle td.mesh3dai-schlechter { color: #e5534b; font-weight: 600; }
+
+.mesh3dai-warnung { border-left: 4px solid var(--warning, #f0ad4e); padding: 6px 12px; margin: 8px 0; font-size: 0.9rem; }
+.mesh3dai-warnung ul { margin: 4px 0; padding-left: 1.2em; }
+.mesh3dai-ausgelassen { margin: 8px 0; padding-left: 1.2em; font-size: 0.85rem; columns: 2 320px; }
+.mesh3dai-log { max-height: 60vh; overflow: auto; margin: 8px 0 0; font-size: 0.8rem; white-space: pre-wrap; background: transparent; color: inherit; }

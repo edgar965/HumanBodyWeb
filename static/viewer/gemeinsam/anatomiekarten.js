@@ -12,6 +12,8 @@
  * Klasse hält, was dazu gehört: den Schlüssel (wovon die gerechneten Karten abhängen), das Ablegen am Material und das Zurücknehmen. Die gerechneten Karten
  * gehören dem Netz (`userData.anatomieGebacken`); Texturen der Haut selbst werden nie verändert.
  */
+import { Anatomielage } from './anatomielage.js';
+
 export class Anatomiekarten {
 
     /** Die eigenen Karten des Stücks — auch, solange gerade gerechnete auf dem Material liegen. */
@@ -25,8 +27,9 @@ export class Anatomiekarten {
     }
 
     /**
-     * Wovon die gerechneten Karten abhängen: die Karten der Haut-Gruppen (Rumpf, Beine …) und die Form des Stücks. Null ohne Farbkarte der Haut — dann
-     * bleibt `Anatomiehaut` bei der einfachen Farbe.
+     * Wovon die gerechneten Karten abhängen: die Karten der Haut-Gruppen (Rumpf, Beine …) und die Form des Stücks — samt seinem `einzug` (`Anatomielage.kennung`,
+     * 18.10.2026): die Naht schreibt ihn erst, wenn die Maske gerechnet ist, oft nach dem ersten Bake; ein neuer Einzug ist ein neuer Schlüssel. Null ohne Farbkarte
+     * der Haut — dann bleibt `Anatomiehaut` bei der einfachen Farbe.
      */
     static schluessel(inst, netz, haut) {
         const teile = [];
@@ -34,7 +37,8 @@ export class Anatomiekarten {
             if (!haut.includes(m?.userData?.gruppe) || !m.map?.isTexture) continue;
             teile.push([m.map, m.normalMap, m.roughnessMap].map(t => t?.uuid || '-').join('/'));
         }
-        return teile.length && netz?.geometry?.uuid ? `${netz.geometry.uuid}|${teile.join('|')}` : null;
+        const einzug = Anatomielage.kennung(netz?.geometry), form = einzug === '-' ? netz?.geometry?.uuid : `${netz?.geometry?.uuid}~${einzug}`;
+        return teile.length && netz?.geometry?.uuid ? `${form}|${teile.join('|')}` : null;
     }
 
     /** Die gerechneten Karten zu `schluessel` — `{leer: true}` nach einem Fehlschlag, null, solange nichts gerechnet ist. */

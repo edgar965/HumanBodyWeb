@@ -1,0 +1,50 @@
+/* Reiter „Lauf Aktuell“ auf /mesh-3D-AI/ (18.10.2026) — `viewer/mesh3dai/mesh3dailaufaktuell*.js`. Balken ohne eigene Schriftfarbe, Grund halbdurchsichtig: gilt im hellen und im dunklen Theme. */
+.mesh3dai-la-werte { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 6px 28px; margin: 6px 0 10px; }
+/* Textspalte `minmax(0, max-content)` und `min-width: 0`: der Text bricht um, statt die Karte zu verbreitern (18.10.2026 lief „1.896 von 1.920 Proben (1…“ rechts aus dem Bild). */
+.mesh3dai-la-wert { display: grid; grid-template-columns: 9.5em minmax(60px, 1fr) minmax(0, max-content); align-items: center; gap: 10px; font-size: 0.9rem; min-width: 0; }
+.mesh3dai-la-fortschritt .mesh3dai-la-wert { grid-template-columns: 13em minmax(120px, 1fr) minmax(0, max-content); }
+.mesh3dai-la-name { font-weight: 600; }
+.mesh3dai-la-text { font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.mesh3dai-la-balken { position: relative; height: 12px; border-radius: 6px; background: rgba(128, 128, 128, 0.22); overflow: hidden; }
+.mesh3dai-la-fuellung { height: 100%; border-radius: 6px; background: #2ea043; transition: width 0.6s ease; }
+.mesh3dai-la-fuellung.mesh3dai-la-warn { background: var(--warning, #f0ad4e); }
+.mesh3dai-la-fuellung.mesh3dai-la-gefahr { background: #e5534b; }
+.mesh3dai-la-fuellung.mesh3dai-la-fortschrittsfuellung { background: var(--accent, #e94560); }
+.mesh3dai-la-balken.mesh3dai-la-leer { visibility: hidden; }
+.mesh3dai-la-balken.mesh3dai-la-unbestimmt { background: repeating-linear-gradient(45deg, rgba(128, 128, 128, 0.22) 0 8px, rgba(128, 128, 128, 0.4) 8px 16px); background-size: 200% 100%; animation: mesh3dai-la-laeuft 1.5s linear infinite; }
+@keyframes mesh3dai-la-laeuft { from { background-position: 0 0; } to { background-position: -45px 0; } }
+
+.mesh3dai-la-job { border-top: 1px solid rgba(128, 128, 128, 0.3); padding: 10px 0 6px; }
+.mesh3dai-la-job:first-of-type { border-top: 0; }
+.mesh3dai-la-job h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.mesh3dai-la-art { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 1px 8px; margin-right: 4px; border-radius: 999px; border: 1px solid currentColor; vertical-align: middle; }
+.mesh3dai-la-befehl { margin: 2px 0; overflow-wrap: anywhere; font-size: 0.85rem; }
+.mesh3dai-la-fortschritt { display: grid; gap: 6px; margin: 4px 0 8px; }
+.mesh3dai-la-link { margin-top: 2px; }
+.mesh3dai-la-liste { margin: 4px 0 6px; padding-left: 1.2em; font-size: 0.9rem; }
+.mesh3dai-la-doppelt { color: #e5534b; }
+.mesh3dai-la-fehler { border-left: 4px solid var(--warning, #f0ad4e); padding: 4px 10px; }
+.mesh3dai-la-fuss { margin-top: 4px; }
+
+/* Warteschlange (`mesh3daiwarteschlangezeichner.js`): durchsichtig mit geerbter Farbe — die Seitenstile legen jeder Tabelle sonst einen dunklen Grund unter. */
+.mesh3dai-ws-rahmen { overflow-x: auto; }
+table.mesh3dai-ws-tabelle { width: 100%; border-collapse: collapse; margin: 6px 0 8px; font-size: 0.88rem; background: transparent; color: inherit; }
+table.mesh3dai-ws-tabelle th, table.mesh3dai-ws-tabelle td { padding: 4px 10px; border-bottom: 1px solid rgba(128, 128, 128, 0.25); text-align: left; vertical-align: top; background: transparent; color: inherit; }
+table.mesh3dai-ws-tabelle th { font-weight: 600; }
+table.mesh3dai-ws-tabelle td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.mesh3dai-ws-tabelle tr.mesh3dai-ws-kette td { padding-top: 12px; background: rgba(128, 128, 128, 0.12); }
+table.mesh3dai-ws-tabelle tr.mesh3dai-ws-laeuft td { background: rgba(233, 69, 96, 0.10); }
+table.mesh3dai-ws-tabelle tr.mesh3dai-ws-laeuft td:first-child { box-shadow: inset 4px 0 0 var(--accent, #e94560); }
+table.mesh3dai-ws-tabelle tr.mesh3dai-ws-fertig td, table.mesh3dai-ws-tabelle tr.mesh3dai-ws-uebersprungen td { opacity: 0.7; }
+.mesh3dai-ws-zustand { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 0 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.mesh3dai-ws-zustand[data-zustand="fertig"] { color: #2ea043; }
+.mesh3dai-ws-zustand[data-zustand="laeuft"] { color: var(--accent, #e94560); }
+.mesh3dai-ws-zustand[data-zustand="abgebrochen"] { color: #e5534b; }
+.mesh3dai-ws-fortschritt { min-width: 20em; }
+.mesh3dai-ws-fortschritt .mesh3dai-la-balken { margin: 4px 0 3px; }
+.mesh3dai-ws-text { font-variant-numeric: tabular-nums; }
+.mesh3dai-ws-log { font-size: 0.8rem; opacity: 0.8; overflow-wrap: anywhere; }
+
+@media (max-width: 700px) {
+    .mesh3dai-la-wert, .mesh3dai-la-fortschritt .mesh3dai-la-wert { grid-template-columns: 1fr; gap: 2px; }
+}

@@ -17,10 +17,13 @@ Zusagen:
 4. `G9reglergliederung.bereiche`: Reihenfolge (Charaktere vorn, feste Bereiche unverändert, Daz-Steuerung zuletzt), jeder Regler genau einmal
    (Zeilen + Aliasse + Paar-Hälften = Plan), ohne Tabelle bleiben Familienregler in ihrem Herkunftsbereich, kleine „Wirkt nur mit“-Gruppen werden
    eine Sammelgruppe.
+5. Abteilung „Genitalien" (`G9genitalregler`, Edgar 18.10.2026: „mach eine extra Abteilung bei Genesis Morphs für die Genitalien"): steht hinter „Hüfte
+   und Po", nimmt Daz' `Hip Genital Bulge`, MakeHumans Genitalvolumen und die Scham-Körperform eines Imports auf — auch aus einem festen Bereich
+   („Modell-Eigen"), der sie dann nicht mehr führt —, Gruppen in der Folge Daz, MakeHuman, eigene; ohne einen dieser Regler steht sie leer da.
 
 Sabotage-Gegenprobe (nicht gefahren): in `gemessen` `KOPF_AB` auf 0,9 → Fall 1 rot; in `_daz_form` die Bedingung `eigen < EIGEN_UNTER` streichen →
-Fall 2 (Umzug) rot; in `_einhaengen` den Faktor nicht umkehren → Fall 3 rot; in `_zusammenstellen` die festen Bereiche weglassen → Fall 4 rot.
-Geschrieben, nicht gelaufen (nur auf Ansage).
+Fall 2 (Umzug) rot; in `_einhaengen` den Faktor nicht umkehren → Fall 3 rot; in `_zusammenstellen` die festen Bereiche weglassen → Fall 4 rot;
+in `_zusammenstellen` die Filterung der festen Bereiche streichen → Fall 5 rot. Geschrieben, nicht gelaufen (nur auf Ansage).
 """
 from unittest import mock
 
@@ -30,6 +33,7 @@ from ..unit._humanbodypfad import Humanbodypfad
 
 Humanbodypfad.setzen()
 
+from Genesis9.genitalregler import G9genitalregler  # noqa: E402
 from Genesis9.reglergliederung import G9reglergliederung  # noqa: E402
 from Genesis9.reglerplatz import G9reglerplatz  # noqa: E402
 from Genesis9.reglerzusammenlegung import G9reglerzusammenlegung  # noqa: E402
@@ -118,7 +122,7 @@ class GliederungTest(SimpleTestCase):
                 'aliase': [], 'paare': [['p', 'q', -0.99]]}
         with mock.patch('Genesis9.reglerorte.G9reglerorte.fehlende_melden'):
             aus = G9reglergliederung.bereiche(roh=roh, ablage=ablage, orte=orte)
-        self.assertEqual([b['schluessel'] for b in aus], ['charaktere', 'alter', 'kopf', 'taille', 'daz_steuerung'])
+        self.assertEqual([b['schluessel'] for b in aus], ['charaktere', 'alter', 'kopf', 'taille', 'genitalien', 'daz_steuerung'])
         kopf = next(b for b in aus if b['schluessel'] == 'kopf')['regler']
         self.assertEqual([(r['name'], r['gruppe']) for r in kopf][:2], [('nase', 'Nase'), ('q', 'Nase')])
         self.assertEqual(kopf[-1]['gruppe'], G9reglerplatz.G_NUR_REST, 'zwei Regler mit demselben Treiber sind keine eigene Gruppe')
@@ -129,3 +133,26 @@ class GliederungTest(SimpleTestCase):
         aus = G9reglergliederung.bereiche(roh=roh, ablage=ablage, orte={'regler': {}, 'aliase': [], 'paare': []})
         self.assertIn('hb_koerper', [b['schluessel'] for b in aus])
         self.assertEqual(next(b for b in aus if b['schluessel'] == 'hb_koerper')['name'], 'HB-Morphs Körper')
+
+    def test_5_genitalien_eigene_abteilung(self):
+        roh = [{'schluessel': 'huefte', 'name': 'Hüfte', 'regler': [regler('body_bs_HipGenitalBulge'), regler('glute')]},
+               {'schluessel': 'mh_koerper', 'name': 'MH', 'regler': [regler('mh:pelvis_bulge-decr_incr')]},
+               {'schluessel': 'modell_eigen', 'name': 'Modell-Eigen', 'regler': [regler('eigen:cute_girl_mesh_1_scham'), regler('eigen:x_bauch')]}]
+        ablage = _Ablage(body_bs_HipGenitalBulge={'region': 'Hip'}, glute={'region': 'Hip'})
+        orte = {'regler': {'body_bs_HipGenitalBulge': gemessen(huefte=1.0), 'glute': gemessen(huefte=1.0),
+                           'mh:pelvis_bulge-decr_incr': gemessen(huefte=1.0)}, 'aliase': [], 'paare': []}
+        with mock.patch('Genesis9.reglerorte.G9reglerorte.fehlende_melden'):
+            aus = G9reglergliederung.bereiche(roh=roh, ablage=ablage, orte=orte)
+        je = {b['schluessel']: b for b in aus}
+        schluessel = [b['schluessel'] for b in aus]
+        self.assertEqual(schluessel.index('genitalien'), schluessel.index('huefte') + 1, 'direkt hinter „Hüfte und Po"')
+        self.assertEqual(je['genitalien']['name'], 'Genitalien')
+        self.assertEqual([(r['name'], r['gruppe']) for r in je['genitalien']['regler']],
+                         [('body_bs_HipGenitalBulge', G9genitalregler.G_DAZ), ('mh:pelvis_bulge-decr_incr', G9genitalregler.G_MH),
+                          ('eigen:cute_girl_mesh_1_scham', G9genitalregler.G_EIGEN)])
+        self.assertEqual([r['name'] for r in je['huefte']['regler']], ['glute'])
+        self.assertEqual([r['name'] for r in je['modell_eigen']['regler']], ['eigen:x_bauch'], 'der feste Bereich führt die Scham nicht mehr')
+        # Ohne Genitalregler steht die Abteilung trotzdem da — der Browser hängt die Stücke hinein (`genesis9genitalien.js`).
+        with mock.patch('Genesis9.reglerorte.G9reglerorte.fehlende_melden'):
+            aus = G9reglergliederung.bereiche(roh=[dict(roh[0], regler=[regler('glute')])], ablage=ablage, orte=orte)
+        self.assertEqual(next(b for b in aus if b['schluessel'] == 'genitalien')['regler'], [])

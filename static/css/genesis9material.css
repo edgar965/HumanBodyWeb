@@ -54,3 +54,7 @@
 .hb-hautspeichern-zeile button:disabled { opacity: 0.5; cursor: default; }
 .hb-hautspeichern-stand { min-height: 1.1em; margin-top: 6px; font-size: 0.75rem; color: var(--text-muted); }
 .hb-hautspeichern-stand.fehler { color: #e8907f; }
+/* „Meine Häute": die gespeicherten eigenen Häute, Rechtsklick = Umbenennen / Löschen (`genesis9eigenehautpflege.js`, 18.10.2026). */
+.hb-eigenehaeute[hidden] { display: none; }
+.hb-eigenehaut-zeile { margin-top: 4px; padding: 4px 8px; font-size: 0.8rem; color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; cursor: context-menu; overflow-wrap: anywhere; }
+.hb-eigenehaut-zeile:hover { border-color: var(--accent); }

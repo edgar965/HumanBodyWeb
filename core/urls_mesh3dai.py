@@ -5,6 +5,9 @@ from django.urls import path
 
 from .api.mesh3dai import Mesh3daiendpunkte
 from .api.mesh3daiflaechen import Mesh3daiflaechenendpunkte
+from .api.mesh3daiformlauf import Mesh3daiformlaufendpunkte
+from .api.mesh3daiformvariante import Mesh3daiformvarianteendpunkte
+from .api.mesh3dailaufaktuell import Mesh3dailaufaktuellendpunkt
 from .api.mesh3daitest import Mesh3daitestendpunkte
 from .api.mesh3daitestkleider import Mesh3daitestkleiderendpunkte
 
@@ -26,6 +29,16 @@ MESH3DAI = [
     path('api/mesh3dai/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/netz/', Mesh3daitestkleiderendpunkte.netz, name='mesh3dai_testkleidnetz'),
     path('api/mesh3dai/test/<str:kennung>/kleid/<str:geschlecht>/<str:weg>/<str:stueck>/bild/<str:name>', Mesh3daitestkleiderendpunkte.bild, name='mesh3dai_testkleidbild'),
     path('api/mesh3dai/test/<str:kennung>/modell/<str:geschlecht>/', Mesh3daitestkleiderendpunkte.modell, name='mesh3dai_testmodell'),
+    # Reiter „Formtraining“ (18.10.2026): die Seite je Trainingslauf; Reiter „Lauf Aktuell“: was gerade rechnet (vor `<job>`, damit `lauf-aktuell` nie als Job gelesen wird).
+    path('mesh-3D-AI/formtraining/<str:lauf>/', Mesh3daiformlaufendpunkte.seite, name='mesh3dai_formlauf'),
+    path('api/mesh3dai/lauf-aktuell/', Mesh3dailaufaktuellendpunkt.stand, name='mesh3dai_laufaktuell'),
+    # Seite je Formvariante (18.10.2026 abends): Start · Ziel · Ergebnis des Formkopfs, Figuren bei Bedarf aus den Reglern (`Mesh3daiformvariante`, `…figur`) — vor `<job>`.
+    path('mesh-3D-AI/formvariante/<str:figur>/', Mesh3daiformvarianteendpunkte.seite, name='mesh3dai_formvariante'),
+    path('api/mesh3dai/formvariante/<str:figur>/', Mesh3daiformvarianteendpunkte.daten, name='mesh3dai_formvariante_daten'),
+    path('api/mesh3dai/formvariante/<str:figur>/wolke/<int:nr>/<int:k>/', Mesh3daiformvarianteendpunkte.wolke, name='mesh3dai_formvariante_wolke'),
+    path('api/mesh3dai/formvariante/<str:figur>/figur/<str:was>/', Mesh3daiformvarianteendpunkte.figur, name='mesh3dai_formvariante_figur'),
+    path('api/mesh3dai/formvariante/<str:figur>/koerper/', Mesh3daiformvarianteendpunkte.koerper, name='mesh3dai_formvariante_koerper'),
+    path('api/mesh3dai/formvariante/<str:figur>/bild/<str:name>', Mesh3daiformvarianteendpunkte.bild, name='mesh3dai_formvariante_bild'),
     path('mesh-3D-AI/<str:job>/', Mesh3daiendpunkte.seite, name='mesh3dai_job'),
     path('api/mesh3dai/jobs/', Mesh3daiendpunkte.jobs, name='mesh3dai_jobs'),
     path('api/mesh3dai/<str:job>/proben/', Mesh3daiendpunkte.proben, name='mesh3dai_proben'),

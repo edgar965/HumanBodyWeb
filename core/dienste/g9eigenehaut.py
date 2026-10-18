@@ -138,7 +138,7 @@ class G9eigenehaut:
     def speichern(cls, name, grund, hautebenen=None, teilmaterial=None, hautmischung=None):
         """Das Rezept schreiben (gleicher Schlüssel = überschreiben) → `(eintrag, ueberschrieben)`. ValueError bei ungültigem Namen oder ohne Grundsatz."""
         name = cls.name(name)
-        schluessel = cls.schluessel(name)
+        schluessel = cls.vorhandener(name) or cls.schluessel(name)
         grund = cls.grund(grund)
         if not grund:
             raise ValueError('Die Figur hat keinen benannten Hautsatz — bitte zuerst eine Haut in der Auswahl wählen.')
@@ -148,16 +148,34 @@ class G9eigenehaut:
             'teilmaterial': cls._zahlen(teilmaterial, 10.0),
             'hautmischung': {k: v for k, v in cls._zahlen(hautmischung, 100.0).items() if v > 0},
         }
-        ordner = cls.ordner()
-        ordner.mkdir(parents=True, exist_ok=True)
         ziel = cls._pfad(schluessel)
         ueberschrieben = ziel.is_file()
-        vorlaeufig = ziel.with_suffix('.neu')
-        vorlaeufig.write_text(json.dumps(rezept, ensure_ascii=False, indent=1), encoding='utf-8')
-        vorlaeufig.replace(ziel)
+        cls.schreiben(schluessel, rezept)
         logger.info('Eigene Haut gespeichert: %s (%s, Grund %s, %d Hautebenen)%s', name, ziel, grund, len(rezept['hautebenen']),
                     ' — überschrieben' if ueberschrieben else '')
         return cls.eintrag(schluessel, rezept), ueberschrieben
+
+    @classmethod
+    def schreiben(cls, schluessel, rezept):
+        """Das Rezept ablegen: erst in `.neu`, dann ersetzen — ein abgebrochener Schreibvorgang lässt die alte Datei heil."""
+        ziel = cls._pfad(schluessel)
+        ziel.parent.mkdir(parents=True, exist_ok=True)
+        vorlaeufig = ziel.with_suffix('.neu')
+        vorlaeufig.write_text(json.dumps(rezept, ensure_ascii=False, indent=1), encoding='utf-8')
+        vorlaeufig.replace(ziel)
+
+    @classmethod
+    def vorhandener(cls, name):
+        """Der Schlüssel der schon gespeicherten Haut mit diesem NAMEN (ohne Groß-/Kleinschreibung) — oder ''.
+
+        Nach dem Umbenennen (`G9eigenehautpflege`) bleibt der Schlüssel, der Name ändert sich: Wer unter dem neuen Namen speichert, soll die Haut
+        überschreiben und keine zweite mit gleichem Namen anlegen.
+        """
+        gesucht = str(name or '').strip().lower()
+        for eintrag in cls.praesets():
+            if str(eintrag['rezept'].get('name') or '').strip().lower() == gesucht:
+                return eintrag['id'][len(cls.PRAEFIX):]
+        return ''
 
 
 G9hautpresets.anbieten(G9eigenehaut)         # beim ersten Import als Anbieter von Hautsätzen eintragen

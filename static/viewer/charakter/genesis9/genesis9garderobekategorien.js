@@ -81,24 +81,35 @@ export class Genesis9garderobekategorien {
 
     // ------------------------------------------------------------ Kontextmenü
 
-    /** Rechtsklick auf die Zeile: verschieben; `neuzeichnen` danach. */
+    /** Rechtsklick auf die Zeile: verschieben, umbenennen, löschen; `neuzeichnen` danach. */
     static menue(zeile, stueck, neuzeichnen) {
         Kontextmenue.binden(zeile, () => {
-            const stand = Genesis9garderobekategorien._stand;
-            if (!stand || stueck.oben) return [];      // der Eintrag oben gehört zu keiner Kategorie
-            // EINE Combo-Box statt einer Zeile je Kategorie (Edgar, 18.10.2026: „verschieben Funktion vereinfachen, mach eine Combo
-            // Box mit allen ordnern (anstelle der Auflistung)"); die eigene steht gewählt, „Neue Kategorie …" am Ende.
-            const eigene = Genesis9garderobekategorien.kategorie(stueck, stand);
-            const namen = stand.kategorien.includes(eigene) ? stand.kategorien : [...stand.kategorien, eigene];
-            return [{
-                symbol: 'fa-folder', text: 'Verschieben nach', wert: eigene,
-                auswahl: [...namen.map(name => ({ wert: name, text: name })),
-                          { wert: Genesis9garderobekategorien.NEU, text: 'Neue Kategorie …' }],
-                waehlen: wert => Genesis9garderobekategorien._gewaehlt(stueck, wert, neuzeichnen, zeile),
-            },
+            const verschieben = Genesis9garderobekategorien.verschiebenEintrag(stueck, neuzeichnen, zeile);
+            if (!verschieben) return [];
             // Umbenennen und Löschen bei jedem Stück (Edgar, 05.10.2026) — `Genesis9garderobepflege`.
-            null, ...Genesis9garderobepflege.eintraege(stueck, neuzeichnen, zeile)];
+            return [verschieben, null, ...Genesis9garderobepflege.eintraege(stueck, neuzeichnen, zeile)];
         });
+    }
+
+    /**
+     * Der Menüeintrag „Verschieben nach" mit allen Kategorien — null, solange der Stand fehlt oder das Stück oben steht (der Eintrag
+     * oben gehört zu keiner Kategorie). Auch der Bereich „Genitalien" (`Genesis9genitalmenue`) nimmt ihn: dort gibt es keine eigene
+     * Einteilung, ein Stück bleibt in DERSELBEN Kategorie der Garderobe.
+     *
+     * EINE Combo-Box statt einer Zeile je Kategorie (Edgar, 18.10.2026: „verschieben Funktion vereinfachen, mach eine Combo Box mit
+     * allen ordnern (anstelle der Auflistung)"); die eigene steht gewählt, „Neue Kategorie …" am Ende.
+     */
+    static verschiebenEintrag(stueck, neuzeichnen, zeile, text = 'Verschieben nach') {
+        const stand = Genesis9garderobekategorien._stand;
+        if (!stand || stueck.oben) return null;
+        const eigene = Genesis9garderobekategorien.kategorie(stueck, stand);
+        const namen = stand.kategorien.includes(eigene) ? stand.kategorien : [...stand.kategorien, eigene];
+        return {
+            symbol: 'fa-folder', text, wert: eigene,
+            auswahl: [...namen.map(name => ({ wert: name, text: name })),
+                      { wert: Genesis9garderobekategorien.NEU, text: 'Neue Kategorie …' }],
+            waehlen: wert => Genesis9garderobekategorien._gewaehlt(stueck, wert, neuzeichnen, zeile),
+        };
     }
 
     /** Wahl in der Combo-Box: eine Kategorie, oder `NEU` — dann der Name per Abfrage. */

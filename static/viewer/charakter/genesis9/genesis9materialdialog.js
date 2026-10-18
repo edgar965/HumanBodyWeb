@@ -73,18 +73,21 @@ export class Genesis9materialdialog {
                 </div>
             </div>`;
         document.body.appendChild(huelle);
-        const taste = (e) => { if (e.key === 'Escape') Genesis9materialdialog.schliessen(); };
-        document.addEventListener('keydown', taste);
-        Genesis9materialdialog._offen = { huelle, inst, teil, taste };
-        Genesis9materialdialog._zeichnen();
-        huelle.querySelector('.scene-modal-close').addEventListener('click', Genesis9materialdialog.schliessen);
-        huelle.querySelector('.hb-material-fertig').addEventListener('click', Genesis9materialdialog.schliessen);
+        // × / „Fertig" / Esc schließen GENAU diesen Dialog und sind verdrahtet, bevor der Inhalt gebaut wird (18.10.2026, wie `Stueckfarbdialog`):
+        // ein Fehler beim Zeichnen ließ sonst ein Popup ohne wirksames × stehen.
+        const zu = () => Genesis9materialdialog.schliessen(huelle);
+        huelle._taste = (e) => { if (e.key === 'Escape') zu(); };
+        document.addEventListener('keydown', huelle._taste);
+        huelle.querySelector('.scene-modal-close').addEventListener('click', zu);
+        huelle.querySelector('.hb-material-fertig').addEventListener('click', zu);
         huelle.querySelector('.hb-material-alles').addEventListener('click', async () => {
             Genesis9teilmaterial.zuruecksetzen(inst, teil);
             if (teil === 'haut') await Genesis9hautdialogblock.zuruecksetzen(inst);
             markDirty();
-            if (Genesis9materialdialog._offen?.inst === inst) Genesis9materialdialog._zeichnen();
+            if (Genesis9materialdialog._offen?.huelle === huelle) Genesis9materialdialog._zeichnen();
         });
+        Genesis9materialdialog._offen = { huelle, inst, teil };
+        Genesis9materialdialog._zeichnen();
     }
 
     /** Ist das Popup für diese Figur offen, seine Zeilen neu bauen (nach einem Hautwechsel: frische Materialien, Werte einer gespeicherten Haut). */
@@ -92,12 +95,13 @@ export class Genesis9materialdialog {
         if (Genesis9materialdialog._offen?.inst === inst) Genesis9materialdialog._zeichnen();
     }
 
-    static schliessen() {
-        const offen = Genesis9materialdialog._offen;
-        if (!offen) return;
-        document.removeEventListener('keydown', offen.taste);
-        offen.huelle.remove();
-        Genesis9materialdialog._offen = null;
+    /** Ohne Angabe den gemerkten Dialog, sonst genau `huelle` — das × eines Dialogs gilt immer ihm selbst. */
+    static schliessen(huelle = null) {
+        const ziel = huelle || Genesis9materialdialog._offen?.huelle;
+        if (!ziel) return;
+        if (ziel._taste) document.removeEventListener('keydown', ziel._taste);
+        ziel.remove();
+        if (Genesis9materialdialog._offen?.huelle === ziel) Genesis9materialdialog._offen = null;
     }
 
     /** Die Zeilen des offenen Dialogs aus dem Stand der Figur neu bauen. */

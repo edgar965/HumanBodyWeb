@@ -6,16 +6,14 @@ import { Genesis9hautrauschenGLSL } from './genesis9hautrauschenglsl.js';
  * FARBE (Hautton, Rötung, Sommersprossen, Altersflecken) steht hinter `alphamap_fragment`, also NACH Textur, Texturmischung und Schminke und VOR `lights_physical_fragment`
  * (dort liest Three `diffuseColor`). Wo Schminke liegt (`g9Schminke`), bleibt die Haut darunter unberührt: ein Lippenstift wird nicht braun getupft.
  *
- * HAUTTON: `albedo^(1 + k·t)` im linearen Raum. Mehr Melanin absorbiert stärker — dunkler UND gesättigter, weil die Kanäle ungleich dunkel werden (Beer-Lambert:
- * Durchlässigkeit^Dicke). Ein Faktor auf die Farbe würde sie nur dunkler machen. t > 0 dunkler, t < 0 heller; k = 0,55 gesetzt (Augenmaß, Chrome).
- * Wirkt relativ auf jeden Hautsatz — ein heller Satz wird mit t = 1 mittelbraun, ein dunkler mit t = −1 hell, nicht umgekehrt gleich.
+ * HAUTTON: `albedo^(1 + k·t)` im linearen Raum. Mehr Melanin absorbiert stärker — dunkler UND gesättigter (Beer-Lambert: Durchlässigkeit^Dicke); t > 0 dunkler, t < 0 heller,
+ * k = 0,55 gesetzt (Augenmaß, Chrome). Relativ auf jeden Hautsatz — ein heller Satz wird mit t = 1 mittelbraun, ein dunkler mit t = −1 hell.
  *
  * PUNKTE (Sommersprossen, Altersflecken): ein Gitter aus Zellen, je Zelle höchstens ein Punkt an gewürfelter Stelle mit gewürfeltem Radius (`g9Punkte`) — Auflösung unbegrenzt,
  * nichts liegt im Bild. WO sie sitzen, sagt die Gebietskarte (`G9hautebenen`: R Sommersprossen, G Altersflecken); wie groß eine Zelle in UV ist, rechnet `uHtMeterUV`
  * (Meter je UV-Einheit der Kachel) aus Millimetern um — der Kopf hat eine kleinere Kachelfläche als der Rumpf.
  *
- * ZEICHNUNG (Muskel, Fett): wie die Falten (`Genesis9hautGLSL.FALTEN`) eine Normalenschicht per Reoriented Normal Mapping über `mapN`; die Karte trägt BEIDE Normalen in
- * einem Bild (R/G Muskel, B/A Fett), die Gewichte sind Uniforms.
+ * ZEICHNUNG (Muskel, Fett): wie die Falten (`Genesis9hautGLSL.FALTEN`) eine Normalenschicht per RNM über `mapN`; die Karte trägt BEIDE Normalen (R/G Muskel, B/A Fett).
  *
  * ZWEITE WELLE (18.10.2026): Struktur, Farbton, Olivton, Sättigung, Helligkeit, Teint, Wangenröte, Augenringe, Äderchen, Pigment, Muttermale, Weißflecken, Pickel und die
  * Beulenschicht (Cellulite, Aknenarben) stehen in `Genesis9hautrauschenGLSL`; hier werden sie in die Farbe und hinter `normal_fragment_maps` eingesetzt. Jeder Teil ist mit
@@ -76,16 +74,16 @@ ${R.STRUKTUR}
     htL = mix( htL, mix( htL, vec3( htLuma ) * vec3( 1.04, 1.0, 0.98 ), 0.6 ), max( -uHtRoetung, 0.0 ) );
 ${R.TON}
 #ifdef USE_MAP
-    if ( uHtGebietAn > 0.5 ) htGebietW = texture2D( uHtGebiet, vMapUv );
+    if ( uHtGebietAn > 0.5 ) htGebietW = texture2D( uHtGebiet, HT_UV );
 #endif
 ${R.TEINT}
 #ifdef USE_MAP
     if ( uHtGebietAn > 0.5 && uHtSommer > 0.0 ) {
-        float htS = g9Punkte( vMapUv, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, uHtF4.w ) * mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer;
+        float htS = g9Punkte( HT_UV, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, uHtF4.w ) * mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer;
         htL *= mix( vec3( 1.0 ), vec3( 0.58, 0.40, 0.30 ), clamp( htS, 0.0, 1.0 ) );
     }
     if ( uHtGebietAn > 0.5 && uHtAlter > 0.0 ) {
-        float htA = g9Punkte( vMapUv + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * htGebietW.g * uHtAlter;
+        float htA = g9Punkte( HT_UV + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * htGebietW.g * uHtAlter;
         htL *= mix( vec3( 1.0 ), vec3( 0.72, 0.56, 0.42 ), clamp( htA, 0.0, 1.0 ) );
     }
 #endif
@@ -98,15 +96,17 @@ ${R.FLECKEN}
     /**
      * Den Zusatz in den Shader: Uniforms eintragen, Deklarationen hinter `common`, die Farbe hinter `alphamap_fragment`, die Beulen hinter `normal_fragment_maps` (die Normalenschichten
      * setzt `Genesis9hautGLSL.normalen` — sie ersetzt danach nur die Zeile `#include <normal_fragment_maps>`, die Beulen bleiben dahinter). Die Lage im Objektraum (`vHtLage`) kommt aus
-     * `position`. `ebenen` ist `zusatz.hautebenen` (`{uniforms, zeichnung, mimik}`).
+     * `position`. `ebenen` ist `zusatz.hautebenen` (`{uniforms, zeichnung, mimik}`). Punkte und Gebiete lesen `HT_UV`: die Kachel-UV (`vMapUv`), auf einem Anatomie-Stück
+     * die der Haut darunter (`HT_UV_HAUT`, Attribut `uvHaut` — `Genesis9hautebenenstueck`, 18.10.2026).
      */
     static einhaengen(shader, ebenen, mitSchminke) {
         Object.assign(shader.uniforms, ebenen.uniforms);
         shader.vertexShader = shader.vertexShader
-            .replace('#include <common>', '#include <common>\nvarying vec3 vHtLage;')
-            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvHtLage = position;');
+            .replace('#include <common>', '#include <common>\nvarying vec3 vHtLage;\n#ifdef HT_UV_HAUT\nattribute vec2 uvHaut;\nvarying vec2 vHtUv;\n#endif')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvHtLage = position;\n#ifdef HT_UV_HAUT\nvHtUv = uvHaut;\n#endif');
         shader.fragmentShader = shader.fragmentShader
-            .replace('#include <common>', '#include <common>\n' + Genesis9hautebenenGLSL.UNIFORMS + Genesis9hautrauschenGLSL.UNIFORMS
+            .replace('#include <common>', '#include <common>\n#ifdef HT_UV_HAUT\nvarying vec2 vHtUv;\n#define HT_UV vHtUv\n#else\n#define HT_UV vMapUv\n#endif\n'
+                + Genesis9hautebenenGLSL.UNIFORMS + Genesis9hautrauschenGLSL.UNIFORMS
                 + (ebenen.zeichnung ? Genesis9hautebenenGLSL.ZEICHNUNG_UNIFORMS : '') + (ebenen.mimik ? Genesis9hautebenenGLSL.MIMIK_UNIFORMS : ''))
             .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n' + Genesis9hautebenenGLSL.farbe(mitSchminke))
             .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + Genesis9hautrauschenGLSL.BEULEN);

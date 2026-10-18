@@ -25,7 +25,6 @@ from Genesis9.stoffhuelle import G9stoffhuelle
 from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stueckfelder import G9stueckfelder
 from Genesis9.stueckstarr import G9stueckstarr
-from Genesis9.stueckverdeckung import G9stueckverdeckung
 
 from .g9anatomiedrapierung import G9anatomiedrapierung
 from .g9lagenanfrage import G9lagenanfrage
@@ -101,8 +100,6 @@ class G9stueckteile:
         bilder = G9kleidtransparenz.anwenden(kennung, bilder, rumpf.get('regler_stueck'))
         # Stueck gegen Stueck (19.09.2026): Haut plus die getragenen Stuecke
         # DARUNTER als Kollisionsflaeche; was darueber liegt, holt der Browser neu.
-        # Ohne die Haut, die ein MakeHuman-Stueck verdeckt (Zehen im Schuh, `G9stueckverdeckung`, 18.10.2026).
-        koerper = G9stueckverdeckung.ohne_kollision(koerper, eintrag, stufen)
         anfrage = G9lagenanfrage(rumpf, formung, koerper, gc=gc_vorrat)
         flaeche, innen, aussen = anfrage.vorbereiten(
             kennung, [(f, p) for (f, _lage), p in zip(teile, kaefige, strict=True)])

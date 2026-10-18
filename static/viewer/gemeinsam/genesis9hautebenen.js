@@ -6,6 +6,7 @@ import { Genesis9ergrauen } from './genesis9ergrauen.js';
 import { Genesis9mimikfalten } from './genesis9mimikfalten.js';
 import { Genesis9hautebenenwerte } from './genesis9hautebenenwerte.js';
 import { Genesis9texturen } from './genesis9texturen.js';
+import { Genesis9hautebenenstueck } from './genesis9hautebenenstueck.js';
 
 /**
  * Genesis9hautebenen — Hautton, Rötung, Sommersprossen, Altersflecken, Muskel- und Fettzeichnung und graue Haare einer Genesis-9-Figur (17.10.2026).
@@ -113,8 +114,7 @@ export class Genesis9hautebenen {
         d.farbe.copy(d.farbeGrund).lerp(ziel, Math.min(1, Math.abs(ton)));
     }
 
-    static STREU_DUNKEL = [0x6A / 255, 0x1C / 255, 0x14 / 255];
-    static STREU_HELL = [1, 0x9C / 255, 0x91 / 255];
+    static STREU_DUNKEL = [0x6A / 255, 0x1C / 255, 0x14 / 255]; static STREU_HELL = [1, 0x9C / 255, 0x91 / 255];
 
     // -------------------------------------------------------------- Anwenden
 
@@ -128,20 +128,20 @@ export class Genesis9hautebenen {
         const mitZeichnung = w.muskel > 0 || w.fett > 0;
         const mitMimik = Genesis9hautebenenwerte.mimikAktiv(inst, w.mimik);
         const lauf = inst._hautebenenlauf = (inst._hautebenenlauf || 0) + 1;
-        const betroffen = [];
-        const kopf = [];
+        const betroffen = [], kopf = [];
         const koerper = Genesis9hautebenen.koerpermass(inst);
-        for (const m of Genesis9hautebenen.materialien(inst)) {
+        // Körper UND Anatomie-Stücke mit den Karten der Haut (`Genesis9hautebenenstueck`, 18.10.2026): `v` gibt Gruppe und Kachel — am Stück das Körpermaterial seines Bakes.
+        for (const { m, v } of Genesis9hautebenenstueck.ziele(inst, Genesis9hautebenen.materialien(inst))) {
             Genesis9hautebenen.streufarbe(m, w.ton);           // auch zurück auf die Preset-Farbe, wenn der Ton wieder 0 ist
-            const mimikHier = mitMimik && m.userData.gruppe === Genesis9mimikfalten.GRUPPE;
+            const mimikHier = mitMimik && m === v && m.userData.gruppe === Genesis9mimikfalten.GRUPPE;
             if (!mitFarbe && !mitZeichnung && !mimikHier && !m.userData.genesis9?.hautebenen) continue;
-            const h = Genesis9hautebenen.einrichten(m, mitZeichnung, mimikHier);
+            const h = Genesis9hautebenen.einrichten(m, mitZeichnung && m === v, mimikHier);      // Zeichnung liest die Normalen-UV: am Stück wäre das sein Atlas
             const u = h.uniforms;
             u.uHtTon.value = w.ton; u.uHtRoetung.value = w.roetung; u.uHtSommer.value = w.sommer; u.uHtAlter.value = w.altersflecken; u.uHtGroesseS.value = w.groesse;
-            Genesis9hautebenen._zweiteWelle(u, w, Genesis9hautebenen.TEIL[m.userData.gruppe] ?? 1, koerper);
+            Genesis9hautebenen._zweiteWelle(u, w, Genesis9hautebenen.TEIL[v.userData.gruppe] ?? 1, koerper);
             if (u.uHtMuskel) { u.uHtMuskel.value = w.muskel; u.uHtFett.value = w.fett; }
             if (u.uHtMimikW) kopf.push(m);
-            betroffen.push(m);
+            betroffen.push({ m, v });
         }
         Genesis9hautebenen._mimikgewichte(inst, kopf, w.mimik, mitMimik);
         Genesis9ergrauen.anwenden(inst, w.ergrauen);
@@ -150,7 +150,7 @@ export class Genesis9hautebenen {
         // Die Gebietskarte trägt auch `meter_je_uv` — die Punkte (Muttermale, Pickel, Aknenarben) brauchen es für ihre Größe in Millimetern.
         if (Genesis9hautebenenwerte.mitGebiet(w) || w.muttermale > 0 || w.pickel > 0) jobs.push(Genesis9hautebenen._karten(inst, lauf, betroffen, 'gebiet', geschlecht));
         if (mitZeichnung) jobs.push(Genesis9hautebenen._karten(inst, lauf, betroffen, 'zeichnung', geschlecht));
-        if (mitMimik) jobs.push(Genesis9hautebenen._karten(inst, lauf, kopf, 'mimik', 'female').then(() => Genesis9hautebenen._mimikgewichte(inst, kopf, w.mimik, mitMimik)));
+        if (mitMimik) jobs.push(Genesis9hautebenen._karten(inst, lauf, kopf.map(m => ({ m, v: m })), 'mimik', 'female').then(() => Genesis9hautebenen._mimikgewichte(inst, kopf, w.mimik, mitMimik)));
         await Promise.all(jobs);
     }
 
@@ -187,17 +187,17 @@ export class Genesis9hautebenen {
 
     static MERKER = { gebiet: 'gebietBild', zeichnung: 'zeichnungBild', mimik: 'mimikBild' };
 
-    static async _karten(inst, lauf, materialien, produkt, geschlecht) {
+    /** `ziele`: `[{m, v}]` — die Karte der Kachel von `v` kommt an `m` (am Anatomie-Stück die Kachel des Körpermaterials, aus dem es gebacken ist). */
+    static async _karten(inst, lauf, ziele, produkt, geschlecht) {
         const merk = Genesis9hautebenen.MERKER[produkt];
-        const offen = materialien.filter(m => !m.userData.genesis9.hautebenen[merk]);
+        const offen = ziele.filter(({ m }) => !m.userData.genesis9.hautebenen[merk]);
         if (!offen.length) return;
         const karten = await Genesis9hautkarten.holen(produkt, geschlecht);
         if (!karten || lauf !== inst._hautebenenlauf) return;
-        for (const m of offen) {
-            const h = m.userData.genesis9.hautebenen;
-            const adresse = karten.bilder[String(m.userData.kachel)];
+        for (const { m, v } of offen) {
+            const h = m.userData.genesis9.hautebenen, adresse = karten.bilder[String(v.userData.kachel)];
             if (!adresse) continue;                      // Kachel ohne Karte (Nägel)
-            const angaben = karten.kacheln[String(m.userData.kachel)] || {};
+            const angaben = karten.kacheln[String(v.userData.kachel)] || {};
             if (angaben.meter_je_uv) h.uniforms.uHtMeterUV.value = angaben.meter_je_uv;
             if (produkt === 'mimik') h.mimikKanaele = angaben.kanaele || [];
             h[merk] = true;

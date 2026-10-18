@@ -4,6 +4,7 @@ import { Genesis9hautebenen } from '../../gemeinsam/genesis9hautebenen.js';
 import { Genesis9hautebenenwerte } from '../../gemeinsam/genesis9hautebenenwerte.js';
 import { Genesis9eigenehaut } from '../../gemeinsam/genesis9eigenehaut.js';
 import { Genesis9hautebenenregler } from './genesis9hautebenenregler.js';
+import { Genesis9eigenehautpflege } from './genesis9eigenehautpflege.js';
 
 /**
  * Genesis9hautdialogblock — im Popup hinter dem Zahnrad der Haut (`Genesis9materialdialog`) unter Glanz, Rauheit und Relief: alle Schieber der Hautebenen (Farbe und Teint,
@@ -22,7 +23,10 @@ export class Genesis9hautdialogblock {
         block.innerHTML = '<div class="hb-formkopf">Haut gestalten</div>'
             + '<div class="hb-font-size-0-72rem">Wirkt sofort im Shader, ohne Neubau. Doppelklick auf einen Schieber: Standard. Der Hilfetext steht am Namen.</div>';
         block.appendChild(Genesis9hautebenenregler.gruppen(inst, { nurHaut: true, praefix: 'g9d-hautebene-' }));
-        block.appendChild(Genesis9hautdialogblock._speichern(inst, plan, nachSpeichern));
+        // „Meine Häute" unter dem Speichern: Umbenennen und Löschen im Rechtsklick-Menü (`Genesis9eigenehautpflege`); eine neu gespeicherte Haut steht sofort darin.
+        const liste = Genesis9eigenehautpflege.liste(inst, plan, nachSpeichern);
+        block.appendChild(Genesis9hautdialogblock._speichern(inst, plan, () => { nachSpeichern?.(); liste.neu(); }));
+        block.appendChild(liste);
         return block;
     }
 

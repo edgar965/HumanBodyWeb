@@ -1,6 +1,7 @@
 import { Anatomieton } from './anatomieton.js';
 import { Anatomiekarten } from './anatomiekarten.js';
 import { Anatomiebacken } from './anatomiebacken.js';
+import { Anatomielage } from './anatomielage.js';
 
 /**
  * Anatomiehaut — das starre Anatomie-Stück (Daz-Geograft „Daz Anatomie Frau|Mann", Scham/Penis aus einer .blend) folgt der
@@ -24,9 +25,9 @@ import { Anatomiebacken } from './anatomiebacken.js';
  *
  * AUCH AUF DER KATALOG-HAUT (18.10.2026, Edgar: „Figur Matt0 - textur vom Genital wird nicht von der textur des Körpers übernommen", danach „fixe das bei allen
  * Modellen"): Bis dahin galt das alles nur mit gewählter Haut; ohne (`inst.haut` leer) behielt das Stück seine Variante. Gemessen im Chrome an Matt0: „Daz Anatomie Mann"
- * hat keine Variante und keine Karte, nur die Farbe #9f7866 — es stand einfarbig ohne Poren auf den 4096er-Karten von `G9Masculine04`. Jetzt folgt ein Stück OHNE
- * eigene Karte auch der Katalog-Haut. MIT eigener Karte (Varianten der Frau: `Damira_genital`, Ursula, Olesia, Allyne; gebackene Scham eines Imports) behält es sie
- * auf der Katalog-Haut — die Karte IST das Genital (Labien), gebacken aus der glatten Haut darunter war es weg (Regression, Edgar 18.10.2026 abends).
+ * hat keine Variante und keine Karte, nur die Farbe #9f7866. Jetzt folgt ein Stück OHNE eigene Karte auch der Katalog-Haut; MIT eigener Karte (Damira, Ursula,
+ * Olesia, Allyne) behält es sie dort — die Karte IST das Genital (Labien). Abends kurz „jedes Stück jeder Haut", dann Edgar, 23:11: „Damira0 ist aktuell auch kaputt
+ * im Genital" (Katalog-Haut, gebacken); im Stand vom 12.10. (nicht gebacken) „Damira0 funktioniert". Test Fall 6 und 11. Lage: `Anatomielage` (mit `einzug`).
  *
  * Nichts davon wird gespeichert — es wird bei jedem Körperneubau und Anziehen neu abgeleitet (`Genesis9ersatz.nachziehen`). Mit eigener Farbe des Stücks (`werte.farbe`, `gruppenfarben`) gilt es, wie es ist.
  * Die Bilder kommen asynchron: gerechnet wird erst, wenn alle Bilder im Vorrat da sind (`Genesis9texturen.wartenAufAlle`).
@@ -67,7 +68,7 @@ export class Anatomiehaut {
     static hautton(inst, netz) {
         const koerper = inst?.bodyMesh, geo = koerper?.geometry;
         if (!geo || !netz?.geometry) return null;
-        const kasten = Anatomieton.kasten(netz.geometry, Anatomiehaut.RAND_M);
+        const kasten = Anatomielage.kasten(Anatomielage.lage(netz.geometry), Anatomiehaut.RAND_M);
         const material = [koerper.material].flat();
         const proben = [];
         for (const gruppe of geo.groups || []) {
@@ -92,10 +93,10 @@ export class Anatomiehaut {
         return Anatomieton.abstand(eigen, haut) <= Anatomiehaut.TOLERANZ;
     }
 
-    /** Woran man erkennt, dass sich nichts geändert hat: Haut, Körpernetz, Stücknetze, ihre Variante und Farbe. */
+    /** Woran man erkennt, dass sich nichts geändert hat: Haut, Körpernetz, Stücknetze, ihr Einzug (die Naht kommt später, `Hautloch.naehen`), Variante und Farbe. */
     static stand(inst) {
-        return [inst?.haut || '', inst?.bodyMesh?.uuid || '', ...Anatomiehaut.stuecke(inst).map(({ kennung, netz }) =>
-            [netz.uuid, inst.kleidung?.[kennung]?.variante || '', inst.kleidung?.[kennung]?.farbe || ''].join('/'))].join('|');
+        return [inst?.haut || '', inst?.bodyMesh?.uuid || '', ...Anatomiehaut.stuecke(inst).map(({ kennung, netz }) => [netz.uuid, Anatomielage.kennung(netz.geometry),
+            inst.kleidung?.[kennung]?.variante || '', inst.kleidung?.[kennung]?.farbe || ''].join('/'))].join('|');
     }
 
     /**
@@ -106,6 +107,7 @@ export class Anatomiehaut {
     static anwenden(inst) {
         let fertig = true;
         for (const { kennung, netz } of Anatomiehaut.stuecke(inst)) {
+            Anatomielage.figuren.set(netz, inst);                                  // für `Hautloch.naehen`: ein neuer Einzug zieht das Stück nach
             const werte = inst.kleidung?.[kennung] || {};
             const eigene = Boolean(werte.farbe) || Object.keys(werte.gruppenfarben || {}).length > 0;
             const haut = eigene ? null : Anatomiehaut.hautton(inst, netz);       // auch die Katalog-Haut (`inst.haut` leer), siehe oben
@@ -191,8 +193,10 @@ export class Anatomiehaut {
      */
     static async _randAbgleichen(inst) {
         try {
-            const { Hautloch } = await import('./hautloch.js');
+            const [{ Hautloch }, { Genesis9hautebenen }] = await Promise.all([import('./hautloch.js'), import('./genesis9hautebenen.js')]);
             Hautloch.randAbgleichen(inst);
+            // Die Hautebenen (Ton, Punkte, Flecken) auch auf die neuen Karten des Stücks (`Genesis9hautebenenstueck`, 18.10.2026: „Lädt eigene Textur, und nicht die von dem Modell").
+            Genesis9hautebenen.anwenden(inst)?.catch?.(fehler => console.warn(`Anatomiehaut: Hautebenen: ${fehler.message}`));
         } catch (fehler) {
             console.warn(`Anatomiehaut: Rand der Naht: ${fehler.message}`);
         }

@@ -20,6 +20,12 @@ import { Stueckfarbe } from './stueckfarbe.js';
  *
  * Der Hintergrund bleibt frei (kein Abdunkeln, `stueckfarbdialog.css`), damit
  * man die Figur beim Wählen sieht. Esc, „Fertig" und „×" schließen.
+ *
+ * SCHLIESSEN (18.10.2026, Edgar: „die popups mit den einstellungen (z.B. Haut, Farbe) können mit dem x rechts oben nicht geschlossen werden"):
+ * `oeffnen` wartet auf den Stücknamen — zwei schnelle Klicks auf den Farbknopf legten ZWEI Dialoge an (beide Aufrufe räumten vor dem Warten auf).
+ * × und „Fertig" schlossen nur den gemerkten (`_offen`): nach dem oberen blieb der zweite stehen, und sein × tat nichts (im Chrome nachgestellt:
+ * 2 Dialoge, nach dem ersten × noch 1, nach dem zweiten × noch 1). Jetzt gibt ein überholter Aufruf auf (`_lauf`), und × / „Fertig" / Esc schließen
+ * ihren EIGENEN Dialog; verdrahtet sind sie vor dem Inhalt, damit ein Fehler beim Zeichnen sie nicht verhindert.
  */
 export class Stueckfarbdialog {
 
@@ -37,6 +43,8 @@ export class Stueckfarbdialog {
     ];
 
     static _offen = null;
+    /** Zählt die Aufrufe von `oeffnen`: nur der letzte legt nach dem Warten einen Dialog an. */
+    static _lauf = 0;
 
     /**
      * @param o.inst     die Figur
@@ -47,7 +55,10 @@ export class Stueckfarbdialog {
      */
     static async oeffnen({ inst, kennung, gruppe = '', ganz = null, wert = '' }) {
         Stueckfarbdialog.schliessen();
+        const lauf = ++Stueckfarbdialog._lauf;
         const name = await Genesis9kleidung.anzeigename(kennung).catch(() => kennung);
+        if (lauf !== Stueckfarbdialog._lauf) return null;          // ein späterer Aufruf (Doppelklick) hat übernommen
+        Stueckfarbdialog.schliessen();
         const zustand = { inst, kennung, ziel: gruppe, ganz, wert };
         const huelle = document.createElement('div');
         huelle.className = 'scene-modal-overlay visible stueckfarb-huelle';
@@ -74,25 +85,25 @@ export class Stueckfarbdialog {
                 </div>
             </div>`;
         document.body.appendChild(huelle);
-        Stueckfarbdialog._offen = { huelle, zustand, taste: null };
+        const zu = () => Stueckfarbdialog.schliessen(huelle);
+        huelle._taste = (e) => { if (e.key === 'Escape') zu(); };
+        huelle.querySelector('.scene-modal-close').addEventListener('click', zu);
+        huelle.querySelector('.stueckfarb-fertig').addEventListener('click', zu);
+        document.addEventListener('keydown', huelle._taste);
+        Stueckfarbdialog._offen = { huelle, zustand };
         Stueckfarbdialog._palette(huelle, zustand);
         Stueckfarbdialog._eigen(huelle, zustand);
         Stueckfarbdialog._zeichnen(huelle, zustand);
-        const zu = () => Stueckfarbdialog.schliessen();
-        huelle.querySelector('.scene-modal-close').addEventListener('click', zu);
-        huelle.querySelector('.stueckfarb-fertig').addEventListener('click', zu);
-        const taste = (e) => { if (e.key === 'Escape') zu(); };
-        document.addEventListener('keydown', taste);
-        Stueckfarbdialog._offen.taste = taste;
         return huelle;
     }
 
-    static schliessen() {
-        const offen = Stueckfarbdialog._offen;
-        if (!offen) return;
-        document.removeEventListener('keydown', offen.taste);
-        offen.huelle.remove();
-        Stueckfarbdialog._offen = null;
+    /** Ohne Angabe den gemerkten Dialog, sonst genau `huelle` — das × eines Dialogs gilt immer ihm selbst. */
+    static schliessen(huelle = null) {
+        const ziel = huelle || Stueckfarbdialog._offen?.huelle;
+        if (!ziel) return;
+        if (ziel._taste) document.removeEventListener('keydown', ziel._taste);
+        ziel.remove();
+        if (Stueckfarbdialog._offen?.huelle === ziel) Stueckfarbdialog._offen = null;
     }
 
     /** Getragen? Nur dann gibt es Gruppen und wirkt die Farbe sofort. */

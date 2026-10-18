@@ -15,6 +15,7 @@ import { Kopfeigenlink } from './kopfeigenlink.js';
 import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
 import { Genesis9reglerliste } from './genesis9reglerliste.js';
 import { Genesis9reglerzeile } from './genesis9reglerzeile.js';
+import { Genesis9genitalien } from './genesis9genitalien.js';
 
 /**
  * Genesis9eigenschaften — der Eigenschaften-Reiter einer Genesis-9-Figur.
@@ -225,21 +226,17 @@ export class Genesis9eigenschaften {
     static _regler(inst, plan) {
         const behaelter = document.getElementById('prop-genesis9-regler');
         if (!behaelter) return;
-        Genesis9reglerliste.fuellen(behaelter, document.getElementById('prop-genesis9-reglerkopf'), plan,
+        const [liste, genitalien] = Genesis9genitalien.teilen(plan);     // „Genitalien": eigener Bereich unter Genesis, nicht in der Liste (18.10.2026)
+        Genesis9genitalien.fuellen(document.getElementById('prop-genesis9-genitalien'), genitalien, inst, r => Genesis9eigenschaften._zeile(inst, r));
+        Genesis9reglerliste.fuellen(behaelter, document.getElementById('prop-genesis9-reglerkopf'), liste,
             r => Genesis9eigenschaften._zeile(inst, r),
             (kasten, bereich) => {
                 Kopfeigenlink.anhaengen(kasten, bereich, inst);   // „Kopf-Eigen": Link zur Seite „Gesichtsform"
-                // „Nachformung (Ort)": das freie Morph-Formular für den Körper (01.10.2026).
-                Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));
+                Genesis9koerpermorphformular.anhaengen(kasten, bereich, inst, r => Genesis9eigenschaften._zeile(inst, r));   // „Nachformung (Ort)": freies Morph-Formular
             });
     }
 
-    /**
-     * Der Griff unter der Reglerliste (Edgar, 20.09.2026: „mach unten an der
-     * Stelle einen Griff, mit dem ich die Ansicht nach unten verschieben
-     * kann, merke dir die Position"). Einmal verdrahtet — das Feld ist Teil
-     * der Vorlage, `_regler` tauscht nur seinen Inhalt.
-     */
+    /** Der Griff unter der Reglerliste (Edgar, 20.09.2026: „mach unten an der Stelle einen Griff …, merke dir die Position"). Einmal verdrahtet. */
     static _reglergriff() {
         if (Genesis9eigenschaften._griff) return;
         Genesis9eigenschaften._griff = new Hoehengriff({

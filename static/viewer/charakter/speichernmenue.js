@@ -4,6 +4,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kontextmenue } from '../gemeinsam/kontextmenue.js';
 import { Szenenausgabe } from './szenenausgabe.js';
 import { Modellexportdialog } from './modellexport_dialog.js';
+import { Figurumbenennen } from './figurumbenennen.js';
 
 /**
  * Speichern — Modell oder Szene.
@@ -103,6 +104,12 @@ export class Speichernmenue {
                 null,
                 { symbol: 'fa-file-export', text: 'Modell exportieren …',
                   tun: () => Modellexportdialog.oeffnen(charId) },
+                null,
+                // Umbenennen und Entfernen (Edgar, 18.10.2026: „es sollen doch ALLE Assets umbenannt und gelöscht werden können?").
+                { symbol: 'fa-pen', text: 'Umbenennen …',
+                  tun: () => Figurumbenennen.umbenennen(charId) },
+                { symbol: 'fa-trash', text: 'Aus der Szene entfernen',
+                  tun: () => fn.deleteCharacter(charId) },
             ];
         });
     }

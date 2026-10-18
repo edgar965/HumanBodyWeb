@@ -17,6 +17,7 @@ import { Hautnaht } from './hautnaht.js';
 import { Hautnahtpatch } from './hautnahtpatch.js';
 import { Stueckhaut } from './stueckhaut.js';
 import { Anatomiekarten } from './anatomiekarten.js';
+import { Anatomielage } from './anatomielage.js';
 import { Stueckfeder } from './stueckfeder.js';
 import { Protokoll } from './protokoll.js';
 
@@ -30,7 +31,7 @@ export class Hautloch {
      * Die Haut im Browser ist nicht die des Imports (gemessen 09.10.2026: Median 2,2 mm, bis 7,8 mm an den Oberschenkeln).
      */
     static naehen(geo, loecher, koerper = null) {
-        if (!loecher?.ringe.length) {                 // kein verschweißtes Stück (mehr), höchstens weggenommene Haut (`nurWeg`): die Haut bekommt ihr Relief zurück
+        if (!loecher) {                               // kein verschweißtes Stück (mehr): die Haut bekommt ihr Relief zurück
             if (koerper?.geometry?.getAttribute('nahtf')) Hautnahtpatch.aufheben(koerper);
             Hautloch._loecher.delete(geo);
             return;
@@ -43,6 +44,7 @@ export class Hautloch {
             Stueckfeder.zuruecknehmen(netz);          // auf der groben Stufe rechnete die Haut das Stück noch als Ersatzstück
             const r = Stuecknaht.verschiebung(g.attributes.position.array, Figurhaut.vollerIndex(g), ring, haut);
             Hauteinzug.eintragen(netz, { werte: r.werte, gesetzt: r.gefunden, geschnappt: 0, band: 0, weg: null });
+            Hautloch.anatomieNachziehen(netz);
             const winkel = Hautloch.normalenAngleichen(netz, geo, ring, r);
             const farbe = koerper ? Stueckhaut.angleichen(netz, koerper, r) : null;
             Protokoll.debug('Stuecknaht', `${netz.name || 'Stück'}: ${r.gefunden} von ${r.ecken} Ringecken (${r.rand} Randpunkte), `
@@ -94,6 +96,18 @@ export class Hautloch {
         normal.needsUpdate = true;
         if (g.userData.normalen?.ruhe) g.userData.normalen.ruhe.set(normal.array);
         return n;
+    }
+
+    /**
+     * Ein Anatomie-Stück rechnet seine Karten an der Lage MIT Einzug (`Anatomielage`, 18.10.2026: ohne ihn an DamiraAlt 7,8–37 mm neben der Haut, Nähte und fremdes
+     * Muster). Der Einzug kommt hier, oft nach dem ersten Bake: `Anatomiehaut` zieht nach (ein laufender Abgleich zuerst zu Ende; ein unveränderter Einzug tut nichts).
+     */
+    static anatomieNachziehen(netz) {
+        const inst = Anatomielage.figuren.get(netz);
+        if (!inst) return;
+        Promise.all([import('./anatomiehaut.js'), inst._anatomieWartet || null])
+            .then(([{ Anatomiehaut }]) => Anatomiehaut.nachziehen(inst))
+            .catch(fehler => Protokoll.warnung('Hautloch', `Anatomie nachziehen: ${fehler.message}`));
     }
 
     /** Nur verschweißte Stücke, sonst nichts zu maskieren: aus der Haut fallen genau ihre Löcher weg, ohne Einzug und Saumband. */

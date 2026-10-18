@@ -1,0 +1,11 @@
+{% comment %}Eine Texttabelle (Klasse `doku`, keine Datensortierung) aus `{'kopf': [Spalten], 'zeilen': [[{text, klasse, titel}] | {'gruppe': Überschrift}]}` —
+gebaut von `Mesh3daiformlaufgruppen` / `Mesh3daiformlauffiguren` für /mesh-3D-AI/formtraining/<lauf>/.{% endcomment %}
+<div class="mesh3dai-lauftabelle-rahmen">
+<table class="doku mesh3dai-lauftabelle">
+    <thead><tr>{% for k in t.kopf %}<th>{{ k }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for z in t.zeilen %}{% if z.gruppe %}
+        <tr class="mesh3dai-gruppenzeile"><th colspan="{{ t.kopf|length }}">{{ z.gruppe }}</th></tr>{% else %}
+        <tr>{% for c in z %}<td{% if c.klasse %} class="{{ c.klasse }}"{% endif %}{% if c.titel %} title="{{ c.titel }}"{% endif %}>{{ c.text }}</td>{% endfor %}</tr>{% endif %}{% endfor %}
+    </tbody>
+</table>
+</div>

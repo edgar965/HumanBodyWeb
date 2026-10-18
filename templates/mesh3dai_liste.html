@@ -11,6 +11,7 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiat
 <link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mesh3dailaufaktuell.css' %}">
 {% comment %}Die Reiterleiste (`.seitenreiter`) ist in `mesh.css` gestaltet — dieselbe wie auf /mesh-3D/ und „Modell aus Dateien“.{% endcomment %}
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh.css' %}">
 {% comment %}`gemeinsam/serverabruf.js` zieht über `registrierung.js` three.js nach — ohne die Importkarte bricht jedes Modul der Seite ab, ohne Meldung außer „Failed to resolve module specifier“.{% endcomment %}
@@ -32,6 +33,8 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiat
 <div class="seitenreiter" role="tablist" id="mesh3dai-reiter">
     <button type="button" role="tab" data-reiter="jobs" aria-selected="true"><i class="fas fa-list"></i> Jobs</button>
     <button type="button" role="tab" data-reiter="test" aria-selected="false"><i class="fas fa-vial"></i> Test ({{ testtabelle.zeilen|length }})</button>
+    <button type="button" role="tab" data-reiter="formtraining" aria-selected="false"><i class="fas fa-shapes"></i> Formtraining ({{ formtraining.zeilen|length }})</button>
+    <button type="button" role="tab" data-reiter="aktuell" aria-selected="false"><i class="fas fa-gauge-high"></i> Lauf Aktuell</button>
 </div>
 
 <div data-reiterfeld="jobs">
@@ -50,6 +53,36 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiat
     {% include "djangobase/_tabelle.html" with tabelle=testtabelle %}
 </div>
 </div>
+
+{% comment %}Dritter Reiter „Formtraining“ (18.10.2026, Edgar: „ich brauche ein UI für alle Training Jobs … die gerade laufenden Jobs sehen, letztes Datum usw. … mach einen neuen Tab ‚Formtraining‘“):
+die Trainingsläufe der gemeinsamen Netze (`Mesh3daiformtrainingtabelle`) und die synthetischen Figuren (`Mesh3daiformvariantentabelle`), alles von der Platte.
+Ein Lauf öffnet seine Seite `/mesh-3D-AI/formtraining/<lauf>/` (`mesh3dai_formlauf.html`); die Formvarianten öffnen (noch) keine.{% endcomment %}
+<div data-reiterfeld="formtraining" hidden>
+<div class="card mesh3dai-joblist mesh3dai-jetzt" role="status">
+    <h2>Jetzt</h2>
+    <ul>{% for zeile in jetzt %}<li>{{ zeile }}</li>{% endfor %}</ul>
+    <p class="hb-hinweis">Stand beim Laden der Seite (Formvarianten höchstens 30 s alt). Ein Lauf, der noch auf die GPU oder auf Daten wartet, hat noch keinen Ordner und erscheint erst, wenn er beginnt.</p>
+</div>
+<div class="card mesh3dai-joblist">
+    <h2>Trainingsläufe</h2>
+    <p class="hb-hinweis">Je Lauf ein Netz, das an den Jobs und den Formvarianten zugleich trainiert wird (Ordner <code>3DObjects/mesh3dai/_vorstufe/laeufe/</code>). <strong>Formkopf</strong> sagt Rig und Genesis-Formregler voraus,
+        <strong>Vorstufe</strong> nur das Rig in der A-Pose. Laufende Läufe sind hervorgehoben; die Messwerte der letzten Zwischenmessung stehen im Tooltip der Statuszelle.
+        Ein Klick auf eine Zeile öffnet den Lauf: Verlauf, Ergebnis je Gruppe, Vergleich mit dem vorigen Lauf, Kopfmessung, Ergebnis je Figur, Log.</p>
+    {% include "djangobase/_tabelle.html" with tabelle=formtraining %}
+</div>
+<div class="card mesh3dai-joblist">
+    <h2>Formvarianten ({{ formvarianten.zeilen|length }})</h2>
+    <p class="hb-hinweis">Die synthetischen Figuren: je Variante ein Charaktermix mit Formreglern auf einem der vier Jobs, in dessen Kleidung, mit eigenen Posen (Ordner <code>3DObjects/mesh3dai/FormNNN/</code>).
+        Der Datenlauf rechnet je Pose zuerst MIA (Rig und Ruhelage, Make-It-Animatable), danach die A-Pose-Wolke Fassung 9, die das Formtraining liest. <strong>Prüfformen</strong> werden nie trainiert, nur gemessen.</p>
+    {% include "djangobase/_tabelle.html" with tabelle=formvarianten %}
+</div>
+</div>
+
+{% comment %}Vierter Reiter „Lauf Aktuell“ (18.10.2026, Edgar: „wo du den gerade laufenden Job listest, mit GPU, CPU-Verbrauch und Fortschrittsbalken“): gebaut im Browser aus
+`GET /api/mesh3dai/lauf-aktuell/` (`Mesh3dailaufaktuell`), abgefragt nur, solange dieses Feld sichtbar ist.{% endcomment %}
+<div data-reiterfeld="aktuell" hidden>
+<div data-laufaktuell><div class="card mesh3dai-joblist"><p class="hb-hinweis">Stand wird geladen … (die erste Messung nach einem Serverstart dauert einige Sekunden)</p></div></div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -58,7 +91,9 @@ Heute gibt es einen Job, „Ursula1“, mit den Zahlen der Attrappe (`Mesh3daiat
 <script type="module">
 import { Seitenreiter } from "{% fassungspfad 'viewer/gemeinsam/seitenreiter.js' %}";
 import { Mesh3dailiste } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailiste.js' %}";
+import { Mesh3dailaufaktuell } from "{% fassungspfad 'viewer/mesh3dai/mesh3dailaufaktuell.js' %}";
 Seitenreiter.binden(document.getElementById('mesh3dai-reiter'), 'mesh3dai_reiter');
 Mesh3dailiste.aufbauen();
+Mesh3dailaufaktuell.binden(document.querySelector('[data-reiterfeld="aktuell"]'));
 </script>
 {% endblock %}
