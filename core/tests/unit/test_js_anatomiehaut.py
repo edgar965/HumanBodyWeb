@@ -13,13 +13,18 @@ Körper, Stück und Karten sind hier Attrappen mit den Feldern, die der Code lie
 `Anatomiehaut` (Entscheidung):
 4. dunkle Haut, helles Stück → Karte weg, Farbe = Hautton rings um das Stück; die Ablage hält Karte und Farbe.
 5. passende Haut OHNE Farbkarte (Rechnung nicht möglich) → das Stück bleibt, wie es war.
-6. Haut zurück auf leer → Karte und Farbe sind wieder die alten (Rundreise).
+6. Haut zurück auf leer → das Stück MIT eigener Karte (Genitalvariante) zeigt sie wieder, Farbe und Ablage zurück (Rundreise); eine eigene Farbe ändert daran nichts.
 7. Eigene Farbe am Stück gilt vor der Haut; fehlt die Karte des Stücks (Bild noch nicht da), bleibt alles und `anwenden` meldet „nicht fertig".
 8. Kommt die eigene Karte NACH dem Umstellen an (Texturen laden asynchron), wird sie wieder abgenommen und gemerkt.
 9. `stand` ändert sich mit Haut und Körpernetz; ohne Anatomie-Stück ist `nachziehen` leer.
 10. Mit Farbkarte der Haut folgt das Stück JEDER Haut, auch einer mit passendem Ton (Edgar, 12.10.2026: „fixe alle skins" — auf `G9 Feminine Skin 01`, sehr hell,
     stand das Stück als Fleck auf seiner eigenen Karte): die eigene Karte weg (gerechnet wird), die Ablage hält sie, die Rechnung ist angestoßen (`anatomieBackt` = Schlüssel);
     der Schlüssel der Rechnung ändert sich mit der Haut (andere Karten → andere Rechnung).
+11. Katalog-Haut (`haut` leer, Edgar 18.10.2026: „Figur Matt0 - textur vom Genital wird nicht von der textur des Körpers übernommen", dann „fixe das bei allen
+    Modellen"): ein Stück OHNE eigene Farbkarte („Daz Anatomie Mann" hat nur eine Farbe) bekommt die gerechneten Karten der Haut; MIT eigener (Variante der Frau)
+    behält es sie — die Karte ist das Genital, aus der glatten Haut darunter gebacken war es weg (Regression, Edgar 18.10.2026 abends: „Damira0 … haben schon wieder
+    nicht mehr die weiblichen Genitalien"). Sabotage: in `anwenden` `bleibt` auf false → Fälle 6 und 11 rot; den Hautton an `inst.haut` binden → Fall 11 rot.
+    Geschrieben 18.10.2026, nicht gelaufen.
 
 Sabotage-Gegenprobe: `TOLERANZ` auf 100 → Fall 4 rot; `_zurueck` leeren → Fall 6 rot; die Prüfung `eigene` weglassen → Fall 7 rot; die Zeile
 `ablage.karte = m.map` streichen → Fall 8 rot; in `proben` die Zeile von `v` nicht wickeln → Fall 2 rot; in `anwenden` `schluessel ||` streichen → Fall 10 rot.
@@ -139,7 +144,7 @@ pruefe('passt: Karte bleibt', m(inst).map === bleibt, true);
 pruefe('passt: Farbe bleibt', [m(inst).color.r, m(inst).color.g, m(inst).color.b], [1, 1, 1]);
 pruefe('passt: keine Ablage', m(inst).userData.anatomieHaut, undefined);
 
-// 6. Rundreise: Haut zurück auf leer
+// 6. Rundreise: Haut zurück auf leer → die eigene Karte (Genitalvariante) ist wieder da; eine eigene Farbe ändert daran nichts
 inst = figur('G9 Feminine Skin 04 MAT', WEISS, DUNKEL);
 const vorher = m(inst).map;
 A.anwenden(inst);
@@ -148,6 +153,9 @@ A.anwenden(inst);
 pruefe('zurück: Karte', m(inst).map === vorher, true);
 pruefe('zurück: Farbe', [m(inst).color.r, m(inst).color.g, m(inst).color.b], [1, 1, 1]);
 pruefe('zurück: Ablage weg', m(inst).userData.anatomieHaut, undefined);
+inst.kleidung.daz_anatomie_frau.farbe = '#ffffff';
+A.anwenden(inst);
+pruefe('eigene Farbe: Karte bleibt', m(inst).map === vorher && m(inst).userData.anatomieHaut === undefined, true);
 
 // 7. eigene Farbe gilt vor der Haut; Bild noch nicht da → nicht fertig, nichts geändert
 inst = figur('G9 Feminine Skin 04 MAT', WEISS, DUNKEL);
@@ -198,6 +206,21 @@ pruefe('Karten: Rechnung angestoßen', netz.userData.anatomieBackt, 'g1|karte202
 const anderes = mitKarten(DUNKEL);
 A.anwenden(anderes);
 pruefe('andere Haut, anderer Schlüssel', anderes.clothMeshes['daz_anatomie_frau/0'].userData.anatomieBackt, 'g1|karte115,81,62/-/-');
+
+// 11. Katalog-Haut (`haut` leer): ohne eigene Farbkarte folgt das Stück dem Körper (Matt0, „Daz Anatomie Mann"), mit eigener bleibt sie (Damira, Ursula1)
+inst = mitKarten(DUNKEL);
+inst.haut = '';
+m(inst).map = null;
+m(inst).color.setRGB(0.35, 0.18, 0.13);
+pruefe('ohne Karte: fertig', A.anwenden(inst), true);
+pruefe('ohne Karte: Ablage angelegt', m(inst).userData.anatomieHaut.karte, null);
+pruefe('ohne Karte: Rechnung angestoßen', inst.clothMeshes['daz_anatomie_frau/0'].userData.anatomieBackt, 'g1|karte115,81,62/-/-');
+inst = mitKarten(DUNKEL);
+inst.haut = '';
+const mitEigener = m(inst).map;
+A.anwenden(inst);
+pruefe('eigene Karte: bleibt, keine Ablage', m(inst).map === mitEigener && m(inst).userData.anatomieHaut === undefined, true);
+pruefe('eigene Karte: Farbe bleibt', [m(inst).color.r, m(inst).color.g, m(inst).color.b], [1, 1, 1]);
 console.log(JSON.stringify({ ok: true }));
 """
         ausgabe = HAUT.laufen(skript)

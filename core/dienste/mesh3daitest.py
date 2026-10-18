@@ -27,6 +27,7 @@ import numpy as np
 from django.conf import settings
 
 from ..atomic_write import AtomarSchreiber
+from .mesh3daiaposewahl import Mesh3daiaposewahl
 from .mesh3daidaten import Mesh3daidaten
 from .mesh3dairig import Mesh3dairig
 
@@ -78,21 +79,27 @@ class Mesh3daitest:
             wert = info.get('geschlecht_vorgabe') or cls.geschlecht_der_figur(info.get('figur') or cls.MODELL) or 'weiblich'
         return wert
 
+    @staticmethod
+    def endung(p, weg):
+        """'_direkt', wenn Einstellungen → Mesh3D-AI den Zwischenschritt A-Pose ausschaltet (`weg` = `Mesh3daiaposewahl.gewaehlt()` == 'aus') und der Test die Fassung OHNE Vorstufe gesichert hat
+        (`test_direkt.json`, `ergebnis_<Figur>_direkt.npz`, `vorschau_direkt.glb` — `mesh3dai_vorstufe_test.py ablegen`); sonst '' (18.10.2026)."""
+        return '_direkt' if weg == 'aus' and (p / 'test_direkt.json').is_file() else ''
+
     @classmethod
-    def figuren(cls, p, info):
+    def figuren(cls, p, info, endung=''):
         """{Figur: Rest der Anpassung in mm} der Figuren, deren Ergebnis im Ordner liegt — neue Ablage `ergebnis_<Figur>.npz`, alte nur `ergebnis.npz` für `figur`."""
         aus = {}
         for name, wert in (info.get('figuren') or {}).items():
-            if (p / ('ergebnis_%s.npz' % name)).is_file():
+            if (p / ('ergebnis_%s%s.npz' % (name, endung))).is_file():
                 aus[name] = wert['rest_mm'] if isinstance(wert, dict) else float(wert)
         if not aus and (p / 'ergebnis.npz').is_file():
             aus[info.get('figur') or cls.MODELL] = info.get('ik_rest_mm')
         return aus
 
     @classmethod
-    def wahl(cls, p, info, geschlecht):
+    def wahl(cls, p, info, geschlecht, endung=''):
         """(Figur, Hinweis): unter den gerechneten Figuren des Geschlechts die mit dem kleinsten Rest; gibt es keine, die gerechnete mit einem Hinweis."""
-        da = cls.figuren(p, info)
+        da = cls.figuren(p, info, endung)
         passend = {n: r for n, r in da.items() if cls.geschlecht_der_figur(n) == geschlecht}
         if passend:
             return min(passend, key=lambda n: passend[n] if passend[n] is not None else 1e9), ''
@@ -134,16 +141,18 @@ class Mesh3daitest:
         if not cls.ordner().is_dir():
             return []
         aus = []
+        weg = Mesh3daiaposewahl.gewaehlt()
         for p in sorted(cls.ordner().iterdir()):
             if not (p / 'test.json').is_file():
                 continue
+            e = cls.endung(p, weg)
             try:
-                info = json.loads((p / 'test.json').read_text(encoding='utf-8'))
+                info = json.loads((p / ('test%s.json' % e)).read_text(encoding='utf-8'))
                 info['geschlecht'] = cls.geschlecht(p, info)
-                info['figur'] = 'Form (vorhergesagt)' if cls.form(p, info, info['geschlecht']) else cls.wahl(p, info, info['geschlecht'])[0]
+                info['figur'] = 'Form (vorhergesagt)' if cls.form(p, info, info['geschlecht']) else cls.wahl(p, info, info['geschlecht'], e)[0]
             except (OSError, ValueError) as fehler:
                 info = {'kennung': p.name, 'name': p.name, 'fehler': str(fehler)}
-            info['fertig'] = bool(info.get('figur')) and (p / 'vorschau.glb').is_file()
+            info['fertig'] = bool(info.get('figur')) and (p / ('vorschau%s.glb' % e)).is_file()
             aus.append(info)
         return sorted(aus, key=lambda i: str(i.get('name', '')).lower())
 
@@ -153,16 +162,26 @@ class Mesh3daitest:
         p = cls.pfad(kennung)
         if p is None:
             return None
-        info = json.loads((p / 'test.json').read_text(encoding='utf-8'))
+        # Zwischenschritt A-Pose „aus“ (Einstellungen → Mesh3D-AI): die gesicherte Fassung ohne Vorstufe, falls es sie gibt.
+        weg = Mesh3daiaposewahl.gewaehlt()
+        endung = cls.endung(p, weg)
+        info = json.loads((p / ('test%s.json' % endung)).read_text(encoding='utf-8'))
+        # `methode` (18.10.2026 abends): welche Klasse der Kette die A-Pose rechnete — ein Test ohne Mesh-3D-Auftrag lief über MeshToRigToPose_MIA. Je Testnetz liegt nur EIN Lauf mit Vorstufe vor;
+        # `andere_methode`: eingestellt ist die andere (die Seite sagt es, gezeigt wird dieser).
+        methode = ('mia' if not info.get('mesh3d') else 'rig') if info.get('weg') else None
+        info['zwischenschritt'] = {'einstellung': weg, 'text': Mesh3daiaposewahl.text(weg), 'ohne_vorstufe': bool(endung),
+                                   'fehlt': weg == 'aus' and not endung and bool(info.get('weg')),
+                                   'methode': Mesh3daiaposewahl.NAMEN.get(methode), 'eingestellt': Mesh3daiaposewahl.NAMEN[weg],
+                                   'andere_methode': bool(methode) and weg != 'aus' and methode != weg}
         geschlecht = cls.geschlecht(p, info)
         form = cls.form(p, info, geschlecht)
         if form:
             figur, hinweis, job, datei, kin_datei = 'Form', '', None, form['datei'], form['kinematik']
         else:
-            figur, hinweis = cls.wahl(p, info, geschlecht)
+            figur, hinweis = cls.wahl(p, info, geschlecht, endung)
             if figur is None:
                 return None
-            datei = p / ('ergebnis_%s.npz' % figur)
+            datei = p / ('ergebnis_%s%s.npz' % (figur, endung))
             if not datei.is_file():
                 datei = p / 'ergebnis.npz'
             job = cls.job_der_figur(figur)
@@ -179,7 +198,7 @@ class Mesh3daitest:
         f = form if form else (info.get('figuren') or {}).get(figur)
         hoehe = f['hoehe_m'] if isinstance(f, dict) else info.get('hoehe_m')
         skala = hoehe / info['vorschau_hoehe_m'] if hoehe and info.get('vorschau_hoehe_m') else 1.0
-        rest = form['rest_mm'] if form else cls.figuren(p, info).get(figur, info.get('ik_rest_mm'))
+        rest = form['rest_mm'] if form else cls.figuren(p, info, endung).get(figur, info.get('ik_rest_mm'))
         info.update({'figur': figur, 'geschlecht': geschlecht, 'hoehe_m': hoehe, 'ik_rest_mm': rest})
         return {
             'kennung': kennung, 'info': info, 'job': job, 'rig': beschr, 'figur_hinweis': hinweis, 'geschlechter': cls.GESCHLECHTER, 'netz_skala': round(float(skala), 6),
@@ -188,7 +207,7 @@ class Mesh3daitest:
             'ausgabe': np.round(e['rig'].astype(float), 4).tolist(),
             'dreh': np.round(Mesh3daidaten._quaternionen(e['dreh'].astype(float)), 5).tolist(),
             'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist(),
-            'netz': '/api/mesh3dai/test/%s/netz/?v=%d' % (kennung, int((p / 'vorschau.glb').stat().st_mtime)),
+            'netz': '/api/mesh3dai/test/%s/netz/?v=%d%s' % (kennung, int((p / ('vorschau%s.glb' % endung)).stat().st_mtime), endung),
         }
 
     @classmethod
@@ -208,4 +227,7 @@ class Mesh3daitest:
     @classmethod
     def vorschau(cls, kennung):
         p = cls.pfad(kennung)
-        return p / 'vorschau.glb' if p is not None and (p / 'vorschau.glb').is_file() else None
+        if p is None:
+            return None
+        datei = p / ('vorschau%s.glb' % cls.endung(p, Mesh3daiaposewahl.gewaehlt()))
+        return datei if datei.is_file() else None

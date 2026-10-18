@@ -101,7 +101,7 @@ export class Speichernmenue {
                 { symbol: 'fa-folder-open', text: 'Szene speichern unter …',
                   tun: () => Speichernmenue.szene(true) },
                 null,
-                { symbol: 'fa-file-export', text: 'Exportieren …',
+                { symbol: 'fa-file-export', text: 'Modell exportieren …',
                   tun: () => Modellexportdialog.oeffnen(charId) },
             ];
         });

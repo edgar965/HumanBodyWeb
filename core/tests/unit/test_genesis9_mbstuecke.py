@@ -64,7 +64,7 @@ class Uvsatz(SimpleTestCase):
         from Genesis9.basisnetz import G9basisnetz
         WEGWERF.mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=WEGWERF) as ordner:
-            s = G9dsonschreiber(ordner, 'MB', 'Probe', 'Probe')
+            s = G9dsonschreiber(ordner, 'MH', 'Probe', 'Probe')
             uvs = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0.5, 0.5]])
             # Punkt 0 hat in Flaeche 1 einen anderen UV (4) als in Flaeche 0 (0)
             satz = s._uvsatz(3, [[0, 1, 2], [2, 1, 0]], uvs, [[0, 1, 2], [2, 1, 4]])
@@ -126,10 +126,12 @@ class Mhclolesen(SimpleTestCase):
                 '10 - 20 25 30 - 40',
                 '50',
             ])
-            kopf, zeilen = G9mhstueck._mhclo_lesen(pfad)
+            kopf, zeilen, loeschen = G9mhstueck._mhclo_lesen(pfad)
             self.assertEqual(kopf.get('material'), 'probe.mhmat')
             self.assertEqual(len(zeilen), 1)
             self.assertEqual(zeilen[0][:3], ['0', '1', '2'])
+            # die Bereiche hinter `delete_verts` (18.10.2026: `G9stueckverdeckung` blendet die Haut dort aus)
+            self.assertEqual(loeschen, ['10', '-', '20', '25', '30', '-', '40', '50'])
 
     def test_5_sabotage_delete_verts_als_kopfschluessel(self):
         u"""Gegenprobe zu Fall 4: `delete_verts` als GEWOEHNLICHER Kopfschluessel
@@ -146,7 +148,7 @@ class Mhclolesen(SimpleTestCase):
             with mock.patch.object(G9mhstueck, '_MODUSSCHLUESSEL', frozenset(('verts',))), \
                  mock.patch.object(G9mhstueck, '_KOPFSCHLUESSEL',
                                    G9mhstueck._KOPFSCHLUESSEL | {'delete_verts'}):
-                _kopf, zeilen = G9mhstueck._mhclo_lesen(pfad)
+                _kopf, zeilen, _loeschen = G9mhstueck._mhclo_lesen(pfad)
             self.assertEqual(len(zeilen), 2)  # richtig waere 1
 
 

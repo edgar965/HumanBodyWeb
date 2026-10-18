@@ -220,7 +220,7 @@ export class Hautverdeckung extends Figurhaut {
             if (!g?.attributes?.position || !g.index) continue;
             if (!Hautverdeckung.zaehlt(netz)) continue;
             // Ein verschweißtes Stück (`stueckloch.js`) hat sein Loch fertig — es nimmt an der Rechnung nicht teil.
-            if (ohneVerschweisste && Stueckloch.von(netz, anzahl)) continue;
+            if (ohneVerschweisste && Stueckloch.verschweisst(netz, anzahl)) continue;
             // `tiefe` (Scham aus einer .blend, 08.10.2026): ein Stück, das bis 25 mm HINTER der Figurfläche liegt (die Furche, die
             // die Figur überbrückt), verdeckt die Haut davor trotzdem; ohne Angabe gilt `Hautmaske.TIEFE_M`.
             // Ein Ersatzstück (mit `hautTiefe`) ist starr: kein freier Randstreifen, die Haut fällt bis zu seinem Rand weg

@@ -23,6 +23,8 @@ from pathlib import Path
 
 import numpy as np
 
+from .mesh3daiapose import Mesh3daiapose
+from .mesh3daiaposewahl import Mesh3daiaposewahl
 from .mesh3daiattrappe import Mesh3daiattrappe
 from .mesh3daiautorig import Mesh3daiautorig
 from .mesh3daibild import Mesh3daibild
@@ -30,7 +32,6 @@ from .mesh3daidatensatz import Mesh3daidatensatz
 from .mesh3daidatenteile import Mesh3daidatenteile
 from .mesh3dairig import Mesh3dairig
 from .mesh3daivergleich import Mesh3daivergleich
-from .mesh3daiapose import Mesh3daiapose
 from .mesh3daiwege import Mesh3daiwege
 
 logger = logging.getLogger('core')
@@ -52,6 +53,14 @@ class Mesh3daidaten:
     HINWEIS_STIMMEN = ('Echt: die Proben des Datensatzes (Posen aus BVH-Bildern, %(modell)s gehäutet in der Pose mit flachen Teilfarben und allem Haar, Rig mit 138 Genesis-9-Knochen als Soll). Im Lauf %(lauf)s stimmt '
                        'jeder Punkt der Außenfläche für die Lage jedes Gelenks; danach werden Daz-Winkel in den Grenzen von Genesis 9 an diese Gelenke angepasst (die Winkel rechnet die Anpassung, nicht das Netz). Rig und Figur im Ergebnis '
                        'kommen aus diesen Winkeln (Vorwärtskinematik, Knochenlängen von %(modell)s, Hautmischung wie im Ziel).%(training)s')
+    #: Trainingspaare (18.10.2026 abends, `Mesh3daipaare`): Start = Tripo-Netz, Ziel = Genesis-Export, Ergebnis = die Kette auf dem Tripo-Netz (`mesh3dai_paar_lauf.py` schreibt den Lauf).
+    HINWEIS_PAAR = ('Trainingspaar: Start = das Tripo-Netz aus den vier Bildern des Genesis-Exports (16.384 Punkte mit seiner Textur, für die Anzeige auf das Ziel gelegt — Tripo normiert die Größe), '
+                    'Ziel = der Genesis-Export in der Pose (Fläche, Rig mit 138 Knochen). %(ergebnis)s')
+    ERGEBNIS_PAAR = ('Ergebnis = die Kette auf dem Tripo-Netz (Vorstufe MIA, Netz, Formkopf; Lauf %(lauf)s), das Rig mit Maßstab auf das Ziel gelegt; die Figur im Ergebnis ist das Ziel, mit dem vorhergesagten Rig '
+                     'gehäutet (Näherung) — die vorhergesagte Form zeigt der Reiter „Test“.')
+    OHNE_ERGEBNIS_PAAR = 'Ein Ergebnis gibt es noch nicht: die Kette auf dem Tripo-Netz läuft nach dem Formtraining (`mesh3dai_paar_kette.sh`).'
+    #: Punkte der Eingabewolke auf der Seite: ein Paar zeigt im Start die Wolke selbst (nicht die Außenfläche des Ziels) — alle 16.384, sonst bleibt die Figur zu dünn.
+    EINGABE_ANZEIGE_PAAR = 16384
     _ablage = {}
 
     @staticmethod
@@ -72,6 +81,11 @@ class Mesh3daidaten:
             if plan:
                 training = sum(1 for e in plan.values() if e['gruppe'] == 'training')
                 job = dict(job, proben=len(plan), training=training, pruefung=len(plan) - training, status='Echt (Lauf %s)' % lauf.name, hinweis=cls.hinweis(lauf, modell=job.get('modell')))
+            elif job.get('paar'):
+                plan = cls._plan(job['ordner']) or {}
+                training = sum(1 for e in plan.values() if e['gruppe'] == 'training')
+                job = dict(job, proben=len(plan), training=training, pruefung=len(plan) - training, status='Paar: Start und Ziel bereit, noch kein Ergebnis',
+                           hinweis=cls.HINWEIS_PAAR % {'ergebnis': cls.OHNE_ERGEBNIS_PAAR})
             aus.append(job)
         return aus
 
@@ -83,6 +97,8 @@ class Mesh3daidaten:
                 ergebnis = json.loads((lauf / 'lauf_ergebnis.json').read_text(encoding='utf-8'))
             except (OSError, ValueError):
                 ergebnis = {}
+        if ergebnis.get('kopf') == 'paar':
+            return cls.HINWEIS_PAAR % {'ergebnis': cls.ERGEBNIS_PAAR % {'lauf': ergebnis.get('formkopf') or lauf.name}}
         alle = ergebnis.get('training_daten') or []
         werte = {'lauf': lauf.name, 'modell': modell or ergebnis.get('daten') or 'Ursula1',
                  'training': ' Ein Netz für %d Figuren: trainiert an den Trainingsproben von %s zusammen.' % (len(alle), ', '.join(alle)) if len(alle) > 1 else ''}
@@ -188,6 +204,8 @@ class Mesh3daidaten:
             alternativen[w['schluessel']] = {'name': w['name'], 'text': w['text'], 'rig': q['rig'], 'kennzahlen': q['kennzahlen'], 'teile': q['teile']}
         vorgabe = alternativen[wege['standard']]
         p.update(rig=vorgabe['rig'], kennzahlen=vorgabe['kennzahlen'], teile=vorgabe['teile'], wege=alternativen, weg=wege['standard'], wege_reihe=[w['schluessel'] for w in wege['wege']])
+        # Welche Methode die A-Pose rechnete (18.10.2026 abends, Einstellungen → Mesh3D-AI): `fehlt` — der Job hat keinen Lauf der eingestellten Methode, gezeigt ist der jüngste.
+        p['zwischenschritt'] = {'methode': wege['methode'], 'fehlt': wege['fehlt'], 'datei': wege['datei'], 'eingestellt': Mesh3daiaposewahl.NAMEN[Mesh3daiaposewahl.gewaehlt()]}
 
     @classmethod
     def _probe(cls, e, gruppe, soll, ausgabe, namen, gruppen, vergleich, dreh=None):
@@ -199,7 +217,9 @@ class Mesh3daidaten:
                'kennzahlen': {'mittel_mm': k['mittel_mm'], 'groesster_mm': k['groesster_mm'], 'groesster_knochen': k['groesster_gelenk'], 'knochen': len(namen)}}
         if dreh is not None:
             rig['dreh'] = np.round(cls._quaternionen(np.asarray(dreh, dtype=float)), 5).tolist()
+        # `start`: bei einem Trainingspaar ist der Start ein ANDERES Netz als das Ziel (Tripo) — das Feld zeigt die Wolke, nicht die Außenfläche des Ziels (`Mesh3daiechtzeichner`).
         return {'id': int(e['nr']), 'name': e['name'], 'quelle': e['quelle'], 'gruppe': gruppe, 'aufteilung': 'training' if gruppe == 'training' else 'pruefung',
+                'start': 'wolke' if e.get('paar') else None,
                 'bewegung': Path(e['bvh']).stem if e.get('bvh') else None, 'bild': e.get('bild'), 'datei': e.get('obj'),
                 'soll': [], 'ausgabe': [], 'kennzahlen': k, 'eingabe': {'punkte': cls.EINGABE_ANZEIGE, 'echt': True}, 'rig': rig,
                 'teile': Mesh3daidatenteile.teile(soll, ausgabe, vergleich, int(e['nr']))}
@@ -211,7 +231,8 @@ class Mesh3daidaten:
         if not datei.is_file():
             return None
         e = np.load(datei)
-        wahl = np.sort(np.random.default_rng(int(nr)).choice(len(e['punkte']), min(cls.EINGABE_ANZEIGE, len(e['punkte'])), replace=False))
+        anzahl = cls.EINGABE_ANZEIGE_PAAR if job.get('paar') else cls.EINGABE_ANZEIGE
+        wahl = np.sort(np.random.default_rng(int(nr)).choice(len(e['punkte']), min(anzahl, len(e['punkte'])), replace=False))
         # float64 vor dem Runden: float32 gerundet ergibt in JSON `-0.0020000000949949026` statt `-0.002` (gemessen: 326 KB je Wolke).
         # `etikett` = Teil je Punkt (`Mesh3daiflaeche.TEILE`) — die Zeilen „Nur Körper" und „Kleider" zeigen nur ihre Teile der Wolke.
         return {'nr': int(nr), 'von': int(len(e['punkte'])), 'punkte': np.round(e['punkte'][wahl].astype(float), 3).tolist(),

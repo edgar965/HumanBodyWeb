@@ -22,6 +22,9 @@ import { Genesis9texturen } from './genesis9texturen.js';
  * 0,23 (40 Jahre) bis 1 (90 Jahre).
  *
  * Ein Material bekommt den Zusatz erst, wenn ein Wert von null abweicht — eine Figur ohne Hautebenen läuft mit dem Shader von vorher.
+ *
+ * ZWEITE WELLE (18.10.2026, Edgar: „möglichst viele Regler, damit ich möglichst komplexe Haut erstellen kann"): 18 weitere Regler (`Genesis9hautebenenwerte.FELDER`), Shader in
+ * `Genesis9hautrauschenGLSL`. „Altersfalten" hebt die Faltenschicht des Alters an (`Genesis9hautfalten.anwenden`, Maximum aus Regler und Alter).
  */
 export class Genesis9hautebenen {
 
@@ -65,7 +68,10 @@ export class Genesis9hautebenen {
                 zeichnung: false, gebietBild: false, zeichnungBild: false, mimik: false, mimikBild: false, mimikKanaele: [],
                 uniforms: {
                     uHtTon: { value: 0 }, uHtRoetung: { value: 0 }, uHtSommer: { value: 0 }, uHtAlter: { value: 0 }, uHtGroesseS: { value: 1 },
-                    uHtMeterUV: { value: 1 }, uHtGebietAn: { value: 0 }, uHtGebiet: { value: Genesis9haut.platzhalter(0, 0, 0) },
+                    uHtMeterUV: { value: 1 }, uHtGebietAn: { value: 0 }, uHtGebiet: { value: Genesis9haut.platzhalter(0, 0, 0, THREE.NoColorSpace, 0) },
+                    // Zweite Welle (18.10.2026, `Genesis9hautrauschenGLSL`): je vier Werte in einem vec4.
+                    uHtF1: { value: new THREE.Vector4() }, uHtF2: { value: new THREE.Vector4() }, uHtF3: { value: new THREE.Vector4(1, 0, 1, 0) },
+                    uHtF4: { value: new THREE.Vector4(0, 0, 0, 0.8) }, uHtF5: { value: new THREE.Vector4(0, 0, 1.7, 0) }, uHtB1: { value: new THREE.Vector4() },
                 },
             };
             neu = true;
@@ -118,12 +124,13 @@ export class Genesis9hautebenen {
      */
     static async anwenden(inst) {
         const w = Genesis9hautebenen.wirksam(inst);
-        const mitFarbe = w.ton !== 0 || w.roetung !== 0 || w.sommer > 0 || w.altersflecken > 0;
+        const mitFarbe = Genesis9hautebenenwerte.mitFarbe(w) || Genesis9hautebenenwerte.mitBeulen(w);
         const mitZeichnung = w.muskel > 0 || w.fett > 0;
         const mitMimik = Genesis9hautebenenwerte.mimikAktiv(inst, w.mimik);
         const lauf = inst._hautebenenlauf = (inst._hautebenenlauf || 0) + 1;
         const betroffen = [];
         const kopf = [];
+        const koerper = Genesis9hautebenen.koerpermass(inst);
         for (const m of Genesis9hautebenen.materialien(inst)) {
             Genesis9hautebenen.streufarbe(m, w.ton);           // auch zurück auf die Preset-Farbe, wenn der Ton wieder 0 ist
             const mimikHier = mitMimik && m.userData.gruppe === Genesis9mimikfalten.GRUPPE;
@@ -131,6 +138,7 @@ export class Genesis9hautebenen {
             const h = Genesis9hautebenen.einrichten(m, mitZeichnung, mimikHier);
             const u = h.uniforms;
             u.uHtTon.value = w.ton; u.uHtRoetung.value = w.roetung; u.uHtSommer.value = w.sommer; u.uHtAlter.value = w.altersflecken; u.uHtGroesseS.value = w.groesse;
+            Genesis9hautebenen._zweiteWelle(u, w, Genesis9hautebenen.TEIL[m.userData.gruppe] ?? 1, koerper);
             if (u.uHtMuskel) { u.uHtMuskel.value = w.muskel; u.uHtFett.value = w.fett; }
             if (u.uHtMimikW) kopf.push(m);
             betroffen.push(m);
@@ -139,10 +147,33 @@ export class Genesis9hautebenen {
         Genesis9ergrauen.anwenden(inst, w.ergrauen);
         const geschlecht = Genesis9hautfalten.geschlecht(inst);
         const jobs = [];
-        if (w.sommer > 0 || w.altersflecken > 0) jobs.push(Genesis9hautebenen._karten(inst, lauf, betroffen, 'gebiet', geschlecht));
+        // Die Gebietskarte trägt auch `meter_je_uv` — die Punkte (Muttermale, Pickel, Aknenarben) brauchen es für ihre Größe in Millimetern.
+        if (Genesis9hautebenenwerte.mitGebiet(w) || w.muttermale > 0 || w.pickel > 0) jobs.push(Genesis9hautebenen._karten(inst, lauf, betroffen, 'gebiet', geschlecht));
         if (mitZeichnung) jobs.push(Genesis9hautebenen._karten(inst, lauf, betroffen, 'zeichnung', geschlecht));
         if (mitMimik) jobs.push(Genesis9hautebenen._karten(inst, lauf, kopf, 'mimik', 'female').then(() => Genesis9hautebenen._mimikgewichte(inst, kopf, w.mimik, mitMimik)));
         await Promise.all(jobs);
+    }
+
+    /** Materialgruppe → Teil im Shader (`Genesis9hautrauschenGLSL.GEBIET`). */
+    static TEIL = { Head: 0, Body: 1, Arms: 2, Legs: 3 };
+
+    /** Höhe und Boden des Körpers in Ruhelage (Objektraum, aus der Geometrie) — für Gebiete nach Körperhöhe (Cellulite, Pickel an Brust und Rücken). */
+    static koerpermass(inst) {
+        const geometrie = inst.bodyMesh?.geometry;
+        if (!geometrie?.attributes?.position) return { hoehe: 1.7, boden: 0 };
+        if (!geometrie.boundingBox) geometrie.computeBoundingBox();
+        const { min, max } = geometrie.boundingBox;
+        return { hoehe: Math.max(0.5, max.y - min.y), boden: min.y };
+    }
+
+    /** Die Werte der zweiten Welle in die vier-Werte-Uniforms (Belegung: `Genesis9hautrauschenGLSL`). */
+    static _zweiteWelle(u, w, teil, koerper) {
+        u.uHtF1.value.set(w.farbton, w.oliv, w.saettigung, w.helligkeit);
+        u.uHtF2.value.set(w.struktur, w.teint, w.pigment, w.vitiligo);
+        u.uHtF3.value.set(w.flecken, w.muttermale, w.muttermaleGroesse, w.pickel);
+        u.uHtF4.value.set(w.adern, w.wangen, w.augenringe, w.dichte);
+        u.uHtF5.value.set(w.weite, teil, koerper.hoehe, koerper.boden);
+        u.uHtB1.value.set(w.cellulite, w.narben, w.pickel, 0);
     }
 
     /** Die Gewichte der Mimikfalten auf die Kopfmaterialien — ohne Mimik (oder ohne Ausdruck) alle 0, dann ist die Schleife im Shader leer. */
@@ -193,12 +224,25 @@ export class Genesis9hautebenen {
         Genesis9ergrauen.anwenden(inst, Genesis9hautebenen.wirksam(inst).ergrauen);
     }
 
-    /** Einen Wert stellen (Prozent) und anwenden; `null` = zurück auf den Standard. */
+    /** Einen Wert stellen (Prozent) und anwenden; `null` = zurück auf den Standard. Die Altersfalten liegen in einer eigenen Schicht (`Genesis9hautfalten`). */
     static setzen(inst, name, wert) {
         inst.hautebenen = { ...(inst.hautebenen || {}) };
+        Genesis9hautebenen._eintragen(inst, name, wert);
+        if (name === 'falten') Genesis9hautfalten.anwenden(inst);
+        return Genesis9hautebenen.anwenden(inst);
+    }
+
+    /** Mehrere Werte auf einmal (`{name: Prozent|null}`) — ein Anwenden statt eines je Feld (Zurücksetzen, gespeicherte Haut). */
+    static alleSetzen(inst, werte) {
+        inst.hautebenen = { ...(inst.hautebenen || {}) };
+        for (const [name, wert] of Object.entries(werte || {})) Genesis9hautebenen._eintragen(inst, name, wert);
+        if ('falten' in (werte || {})) Genesis9hautfalten.anwenden(inst);
+        return Genesis9hautebenen.anwenden(inst);
+    }
+
+    static _eintragen(inst, name, wert) {
         const zahl = Number(wert);
         if (wert === null || !Number.isFinite(zahl) || zahl === Genesis9hautebenen.standard(name)) delete inst.hautebenen[name];
         else inst.hautebenen[name] = Math.round(zahl);
-        return Genesis9hautebenen.anwenden(inst);
     }
 }

@@ -60,14 +60,14 @@ export class Anatomiebacken {
     static async backen(inst, netz, original, haut) {
         const e = Anatomiebacken.eingabe(inst, netz, original, haut);
         if (!e) return null;
-        const { quelle, breite, hoehe, stueck } = e;
+        const { quelle, breite, hoehe, stueck, vorlage } = e;
         const zu = await Anatomiebacken.zuordnung(netz, stueck, quelle.haut, breite, hoehe);
         if (!zu.anzahl) return null;
         const bild = await Anatomiebacken.bild(netz, zu, e);
         if (!bild) return null;                                        // überholt: eine neuere Haut hat den Auftrag abgelöst
         const vorN = original.normalen || quelle.texturen.find(t => t.normalMap)?.normalMap, vorR = original.rauheit || quelle.texturen.find(t => t.roughnessMap)?.roughnessMap;
         return {
-            map: Anatomietextur.aus(original.karte, bild.farbe, breite, hoehe),
+            map: Anatomietextur.aus(vorlage, bild.farbe, breite, hoehe),
             normalMap: bild.normal && vorN ? Anatomietextur.aus(vorN, bild.normal, breite, hoehe) : null,
             roughnessMap: bild.rauheit && vorR ? Anatomietextur.aus(vorR, bild.rauheit, breite, hoehe) : null,
             farbe: quelle.texturen[Anatomiebacken.haeufigste(zu, quelle.gruppe, quelle.texturen.length)].color,
@@ -99,16 +99,18 @@ export class Anatomiebacken {
     /**
      * Was die Rechnung liest: die Hautdreiecke in der Nähe (`quelle`), die Größe der Karte, die UV des Stücks (`uvKarte`: in Zeilen der Karte) und das Stück als
      * `{pos, uv, index, normal}` für die Zuordnung — oder null (keine Karte der Haut in der Nähe, kein Index, keine Vorlage mit Bild).
+     * Vorlage (Größe, Farbraum, `flipY`) ist die eigene Farbkarte des Stücks; ohne eine („Daz Anatomie Mann" hat nur eine Farbe, 18.10.2026 an Matt0) die Farbkarte
+     * der Haut — wie bei Normalen und Rauheit in `backen`. UV der Rechnung und neue Textur folgen derselben Vorlage, also passt `flipY` in beiden Fällen.
      */
     static eingabe(inst, netz, original, haut) {
         const quelle = Anatomiebacken.quelle(inst, netz, haut);
-        const geo = netz.geometry, vorlage = original.karte;
+        const geo = netz.geometry, vorlage = original.karte || quelle?.texturen[0]?.map;
         if (!quelle || !geo.index || !vorlage?.image?.width) return null;
         const breite = Math.max(Anatomiebacken.KANTE_MIN, Math.min(Anatomiebacken.KANTE_MAX, vorlage.image.width));
         const hoehe = Math.max(Anatomiebacken.KANTE_MIN, Math.min(Anatomiebacken.KANTE_MAX, vorlage.image.height));
         const uv = geo.attributes.uv.array, uvKarte = vorlage.flipY ? Float32Array.from(uv, (w, i) => (i & 1 ? 1 - w : w)) : uv;
         const stueck = { pos: geo.attributes.position.array, uv: uvKarte, index: geo.index.array, normal: geo.attributes.normal?.array || null };
-        return { quelle, breite, hoehe, uv, uvKarte, stueck };
+        return { quelle, breite, hoehe, uv, uvKarte, stueck, vorlage };
     }
 
     /**

@@ -20,7 +20,7 @@ class Architekturmesh3daikleider:
         ('dforce_mk_hime_cut_hair', 'haar', 'Haar · Daz „dForce MK Hime Cut Hair Lite", Strähnen (Stranghaar), Stil Bangs C', 364552, 359968, '292.812 (81 %)', '24 (Adjustment: Länge, Abstand …)', 'Farbe #0b0a0a'),
         ('toon_base_female_panty', 'slip', 'Kleidung · Daz „Toon Base Clothing", Variante gelb (umgefärbt)', 9459, 17248, '313 (1,8 %)', '8 (Loosen, Expand, Crotch …)', 'Farbe #0e0b0a'),
         ('lva_pant', 'hose', 'Kleidung · Daz „dForce Leather Viking Armor", Hose', 4892, 8936, '8.357 (94 %)', '6 (Adj Inflate …, Passform)', 'Adj Inflate All −0,27, Farbe #0d1a54'),
-        ('mb_joepal_crude_t_shirt_female', 'hemd', 'Kleidung · MakeHuman-Stück als Genesis-Stück (MB, EIGEN)', 1199, 2068, '1.974 (95 %)', '2 (Passform Länge, Weite)', 'Farbe #1a2a6a'),
+        ('mh_joepal_crude_t_shirt_female', 'hemd', 'Kleidung · MakeHuman-Stück als Genesis-Stück (MH, EIGEN)', 1199, 2068, '1.974 (95 %)', '2 (Passform Länge, Weite)', 'Farbe #1a2a6a'),
     )
     KOERPER = ('koerper', 'Genesis-9-Körper, Stufe 0 (Käfig), mit Ursulas 23 Reglern', 27087, 50312, '34.422 (68 %)')
 

@@ -19,6 +19,8 @@ from .architekturmesh3daikette import Architekturmesh3daikette
 from .architekturmesh3daigrenzen import Architekturmesh3daigrenzen
 from .architekturmesh3daigroesse import Architekturmesh3daigroesse
 from .architekturmesh3daikleider import Architekturmesh3daikleider
+from .architekturmesh3daimia import Architekturmesh3daimia
+from .mesh3daiaposewahl import Mesh3daiaposewahl
 from .architekturmesh3dainetz import Architekturmesh3dainetz
 from .architekturmesh3daiplan import Architekturmesh3daiplan
 from .architekturmesh3dairegler import Architekturmesh3dairegler
@@ -69,7 +71,10 @@ class Architekturmesh3dai:
         vorstufe = teil('Vorstufe', lambda: Architekturmesh3daivorstufe.kontext(ordner, form_lauf))
         # 17.10.2026: die Vorstufe als Kette VOR dem Netz (Edgar: „baue das ein!“) — gemessen an den Prüfposen-Jobs und den Testnetzen.
         kette = teil('Kette', lambda: Architekturmesh3daikette.kontext(ordner.parent))
+        # 18.10.2026: der Schritt MIA gegen den alten Weg (Edgar: „schreibe einen neuen Absatz, was mit diesem MIA Schritt anders ist als davor“) und die Einstellung „Zwischenschritt A-Pose“.
+        mia = teil('MIA', lambda: Architekturmesh3daimia.kontext(ordner.parent))
         return {
+            'mia': mia, 'aposewahl': teil('Einstellung A-Pose', lambda: Mesh3daiaposewahl.text(Mesh3daiaposewahl.gewaehlt())),
             'job': job, 'lauf_name': lauf.name if lauf else None,
             # „Kurz erklärt“: Bild der Schichten (mit Formkopf, wenn der Bezugslauf einen hat; unten links grau die Rig-Generierung, nicht angeschlossen) und die Läufe nebeneinander;
             # darunter Größe und Grafikspeicher (gemessen, `Architekturmesh3daigroesse`).

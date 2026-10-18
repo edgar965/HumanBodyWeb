@@ -43,8 +43,23 @@ class Modellexportziel:
         return [wurzel / 'HumanBody' / 'data', wurzel / 'HumanBodyBlender' / 'data']
 
     @staticmethod
+    def vorgabe(name_roh):
+        """`<Vorgabeordner>/<Modellname>` — der Startwert des Dialogs (Edgar, 18.10.2026)."""
+        return Path(str(settings.HUMANBODY_MODELLEXPORT_VORGABE_DIR)) / Modellexportziel.name(name_roh)
+
+    @staticmethod
     def ordner(roh):
-        """Der geprüfte, angelegte Zielordner — oder `ZielAbgelehnt`.
+        """Der geprüfte, angelegte Zielordner — oder `ZielAbgelehnt`."""
+        ziel = Modellexportziel.pruefen(roh)
+        try:
+            os.makedirs(ziel, exist_ok=True)
+        except OSError as e:
+            raise ZielAbgelehnt('Ordner nicht anlegbar: %s' % e) from e
+        return ziel
+
+    @staticmethod
+    def pruefen(roh):
+        """Der geprüfte Zielordner, NICHT angelegt — für die Frage, was dort schon liegt.
 
         Dieselben zwei Grobprüfungen wie in `SafePath._grobpruefung` (UNC,
         NTFS-Datenströme) — hier eigenständig, weil das Wurzelmodell darunter
@@ -73,10 +88,6 @@ class Modellexportziel:
                 raise ZielAbgelehnt(
                     '%s ist ein Produktivdaten-Ordner und für den Export gesperrt' % gesperrt
                 )
-        try:
-            os.makedirs(ziel, exist_ok=True)
-        except OSError as e:
-            raise ZielAbgelehnt('Ordner nicht anlegbar: %s' % e) from e
         return ziel
 
     @staticmethod

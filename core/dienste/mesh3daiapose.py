@@ -5,7 +5,8 @@ Edgar: „Wird als erstes das Mesh gerickt und in die A-Position gebracht? … G
 und Bringen in die A-Position?" — die Vorstufe (Rig aus „Mesh to 3D", Netz damit in die A-Pose, darauf das Netz der Vorstufe) lief seit dem Morgen, die Seite zeigte aber nur Start · Ziel · Ergebnis.
 Gelesen wird, was die Kette der Vorstufe ablegt (`ProjektTemp/_wegwerf/mesh3dai_vorstufe_anzeige.py`): `<ablage>/<Netz der Vorstufe>/anzeige_<Figur>.npz` — die Fläche des Netzes in der Ruhelage der
 Rig-Figur, im Rahmen, den das Netz der Vorstufe sieht (Blick +Z, Hüfte in der Mitte, Füße auf dem Boden), dazu die Gelenke der Rig-Figur in Ruhe und die Gelenke, die das Netz dort abstimmt. Welche
-Ablage zu einem Lauf gehört, steht in seiner `wege.json` (`ablage`, `netz_vorstufe`).
+Ablage zu einem Lauf gehört, steht in der Fassung von `wege.json`, die die Jobseite zeigt (`Mesh3daiwege.gewaehlt`: jüngster Lauf der Methode aus Einstellungen → Mesh3D-AI — seit 18.10.2026 abends
+MeshToRigToPose_MIA oder MeshToRigToPose; `ablage`, `netz_vorstufe`).
 
     Mesh3daiapose.vorhanden(lauf) -> bool          (die Probe 1 des Jobs hat ein Zwischenbild)
     Mesh3daiapose.paket(lauf, namen) -> bytes|None
@@ -22,6 +23,9 @@ from pathlib import Path
 
 import numpy as np
 
+from .mesh3daiaposewahl import Mesh3daiaposewahl
+from .mesh3daiwege import Mesh3daiwege
+
 logger = logging.getLogger('core')
 
 __all__ = ['Mesh3daiapose']
@@ -32,11 +36,19 @@ class Mesh3daiapose:
     PROBE = 1
 
     @staticmethod
-    def _wege(lauf):
+    def _gewaehlt(lauf):
+        """(wege, kette) der Fassung, die die Jobseite zeigt (`Mesh3daiwege.gewaehlt`: jüngster Lauf der Methode aus Einstellungen → Mesh3D-AI) — oder (None, {})."""
+        g = Mesh3daiwege.gewaehlt(lauf) if lauf else None
+        if g is None:
+            return None, {}
         try:
-            return json.loads((Path(lauf) / 'wege.json').read_text(encoding='utf-8'))
-        except (OSError, ValueError, TypeError):
-            return None
+            return json.loads(g[0].read_text(encoding='utf-8')), g[1]
+        except (OSError, ValueError):
+            return None, {}
+
+    @classmethod
+    def _wege(cls, lauf):
+        return cls._gewaehlt(lauf)[0]
 
     @classmethod
     def datei(cls, lauf):
@@ -85,8 +97,11 @@ class Mesh3daiapose:
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as fehler:
             logger.warning('Mesh3daiapose: %s nicht lesbar (%s)', datei, fehler)
             return None
-        wege = cls._wege(lauf) or {}
-        kopf = {'punkte': int(len(punkte)), 'dreiecke': int(len(dreiecke)), 'rig': np.round(rig, 5).tolist(), 'netz': np.round(netz, 5).tolist(),
+        wege, kette = cls._gewaehlt(lauf)
+        wege = wege or {}
+        # `methode` (18.10.2026 abends): MeshToRigToPose_MIA oder MeshToRigToPose — der Text unter dem Feld beschreibt, was DIESE Methode tat.
+        kopf = {'methode': Mesh3daiaposewahl.methode(kette), 'methode_name': Mesh3daiaposewahl.name_des_laufs(kette), 'weg_grund': kette.get('weg_grund', ''),
+                'punkte': int(len(punkte)), 'dreiecke': int(len(dreiecke)), 'rig': np.round(rig, 5).tolist(), 'netz': np.round(netz, 5).tolist(),
                 'abstand_mm': round(float(1000 * np.linalg.norm(netz - rig, axis=1).mean()), 1), 'ablage': Path(wege.get('ablage', '')).name,
                 'mesh3d': wege.get('mesh3d'), 'netz_vorstufe': wege.get('netz_vorstufe'), 'figur': datei.stem.replace('anzeige_', ''),
                 'eingabe': cls.eingabe(wege), 'gefuellt': gefuellt}

@@ -78,7 +78,7 @@ export class Genesis9garderobe {
         }
         for (const [titel, eigene] of Genesis9garderobekategorien.gruppen(stuecke, stand)) {
             const kasten = document.createElement('details');
-            kasten.className = 'g9-kategorie';
+            kasten.className = 'g9-kategorie'; kasten.dataset.kategorie = titel;      // `Genesis9garderobezeile.verschieben` findet sie
             kasten.open = Genesis9garderobekategorien.offen(titel, eigene.some(s => s.id === gewaehlt));
             kasten.innerHTML = `<summary class="aufklappkopf">${escapeHtml(titel)} `
                 + `<span class="gedaempft">(${eigene.length})</span></summary>`;
@@ -96,7 +96,7 @@ export class Genesis9garderobe {
         if (stueck.id === gewaehlt) zeile.classList.add('selected');
         ziel.appendChild(zeile);
         if (stueck.regler?.length && stueck.zeigbar) {      // der Knopf „Einstellungen" sitzt in der Zeile, die Regler darunter
-            ziel.appendChild(Genesis9stueckregler.bauen(inst, stueck,
+            ziel.appendChild(zeile._regler = Genesis9stueckregler.bauen(inst, stueck,       // `_regler`: Löschen nimmt ihn mit
                 () => ({ ...(Dazkleidung.kleidung(inst)[stueck.id] || {}) }), zeile));
         }
     }

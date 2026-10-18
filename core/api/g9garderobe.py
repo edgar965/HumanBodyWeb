@@ -46,6 +46,7 @@ from Genesis9.netzstufe import G9netzstufe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
 from Genesis9.stueckersatz import G9stueckersatz
+from Genesis9.stueckverdeckung import G9stueckverdeckung
 
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9haarmischbau import G9haarmischbau
@@ -258,9 +259,9 @@ class G9garderobeapi:
                 # So tief hinter der Haut das Stück sie noch verdeckt (mm; Scham aus einer .blend), 0 = Vorgabe der Hautmaske.
                 # Bei einem Kind schrumpft das Stück mit (`G9aehnlichkeit`) — die Tiefe, in der es die Haut verdeckt, schrumpft mit, sonst fiele rund um das kleine Stück Haut weg (schwarzes Loch).
                 'hautTiefeMm': round(haut_tiefe * G9aehnlichkeit.massstab(formung.regler), 3),
-                # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; leer = der
-                # Browser rechnet das Loch selbst, `hautverdeckung.js`).
-                'hautLoch': G9stueckersatz.loch_fuer(eintrag)}
+                # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; MakeHuman-Stücke:
+                # die Haut, die MakeHuman löscht, `nurWeg`, `G9stueckverdeckung`; leer = der Browser rechnet das Loch selbst, `hautverdeckung.js`).
+                'hautLoch': G9stueckersatz.loch_fuer(eintrag) or G9stueckverdeckung.loch_fuer(eintrag, stufen)}
 
     # -------------------------------------------------------------- Texturen
 

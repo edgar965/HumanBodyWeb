@@ -89,15 +89,25 @@ export class Mesh3daiapose {
         const k = a.kopf;
         const eingabe = k.eingabe ? ` Eingabe: ${k.eingabe}.` : '';
         // Seit 17.10.2026 abends füllt der Schritt „apose“ die Löcher mit der Fläche der Rig-Figur (`Vorstufenluecken`); ältere Ablagen zeigen sie noch durchscheinend.
-        const loecher = k.gefuellt
+        // MeshToRigToPose_MIA schließt Löcher mit MeshLab „Close Holes“ (`Miafuellung`), nicht aus einer Figur.
+        const loecher = k.methode === 'mia'
+            ? ' Löcher: mit MeshLab „Close Holes“ auf der größten Insel geschlossen; kleine Stücke (Haarsträhnen) behalten nur Gewichte naher Knochen (Inselregel). '
+            : k.gefuellt
             ? ` Löcher gefüllt (${de(k.gefuellt)} Dreiecke): was in der Haltung verdeckt war (die Außenfläche hat dort nichts) oder beim Zurückrechnen riss, kommt aus der Fläche der Rig-Figur — `
               + 'in der Höhe der Fläche ringsum (Kleidung, Haar), mit der Farbe der nächsten echten Stelle. Hände bleiben ungefüllt. Was noch durchscheint, ist ein Loch unter 1 cm. '
             : ' Durchscheinend: ein Loch — Fläche, die in der Haltung verdeckt war (die Außenfläche hat dort nichts) oder beim Zurückrechnen riss. ';
-        return `Die Außenfläche, mit der Figur aus „Mesh to 3D“ (Auftrag ${k.mesh3d}, „Nur Rig“) in deren A-Pose zurückgerechnet, ausgerichtet und auf ${k.figur} skaliert — so bekommt das Netz der `
-            + `Vorstufe (${k.netz_vorstufe}) die Figur (${de(k.punkte)} Punkte, ${de(k.dreiecke)} Dreiecke).${eingabe}${loecher}`
-            + `Die Finger dreht das Rig nicht zurück (seine Finger stehen in Ruhe): eine Faust bleibt eine Faust. Stücke, die neben ihrem Platz liegen (etwa ein Hemdsaum), zeigen, wo das Rig nicht genau `
+        // Methode (18.10.2026 abends, `Mesh3daiapose.paket` → `methode`): der Text beschreibt, was DIESER Lauf tat — vorher stand hier auch bei MIA „Figur aus Mesh to 3D“.
+        const rueckfall = k.methode === 'rig' && k.weg_grund && !k.weg_grund.startsWith('Weg MIA aus') ? ` (${k.weg_grund})` : '';
+        const wie = k.methode === 'mia'
+            ? `${k.methode_name}: Make-It-Animatable v2 hat das Netz geriggt (Hautgewichte je Punkt, 52 Mixamo-Knochen), es damit in die T-Pose gerechnet und die Oberarme auf die Genesis-A-Pose gesenkt; `
+              + `ausgerichtet und auf ${k.figur} skaliert`
+            : `${k.methode_name}${rueckfall}: ein Mesh-3D-Auftrag „Nur Rig“ (${k.mesh3d}) hat eine Genesis-Figur an das Netz angepasst (SAM 3D Body + „Mesh to 3D“), jeder Punkt des Netzes folgt `
+              + `ihrem Käfig in deren A-Pose; ausgerichtet und auf ${k.figur} skaliert`;
+        const finger = k.methode === 'mia' ? '' : 'Die Finger dreht das Rig nicht zurück (seine Finger stehen in Ruhe): eine Faust bleibt eine Faust. ';
+        return `${wie} — so bekommt das Netz der Vorstufe (${k.netz_vorstufe}) die Figur (${de(k.punkte)} Punkte, ${de(k.dreiecke)} Dreiecke).${eingabe}${loecher}`
+            + `${finger}Stücke, die neben ihrem Platz liegen (etwa ein Hemdsaum), zeigen, wo das Rig nicht genau `
             + `in der Haltung des Netzes steht — diesen Fehler gleicht das Netz der Vorstufe aus. `
-            + `Rig: das Skelett der Rig-Figur in Ruhe (Farben der Gruppen); orange: wohin das Netz der Vorstufe die Gelenke hier schiebt, im Mittel ${de(k.abstand_mm, 1)} mm. Nur hier, in der A-Pose, rechnet das Netz; `
+            + `Rig: das Skelett des Riggers in Ruhe (Farben der Gruppen); orange: wohin das Netz der Vorstufe die Gelenke hier schiebt, im Mittel ${de(k.abstand_mm, 1)} mm. Nur hier, in der A-Pose, rechnet das Netz; `
             + `Ziel und Ergebnis stehen wieder in der Haltung des Netzes, weil das Skelett DIESES Netzes gesucht ist — das Rig dreht die Korrektur Knochen für Knochen zurück.`;
     }
 }

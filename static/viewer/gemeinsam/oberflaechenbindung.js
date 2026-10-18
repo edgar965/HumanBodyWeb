@@ -188,8 +188,12 @@ export class Oberflaechenbindung {
 
     static _vorZeichnen(renderer, inst, netz) {
         const lage = Koerperlage.sichern(renderer, inst);
+        // Fehlt, solange der Modellexport die Geometrie gegen eine Kopie ohne eigene Attribute tauscht
+        // (`Netzattribute.tauschen`, GLB). Vorher warf `_passt` hier in jedem Bild des Exports — mitten in Threes
+        // Renderlauf (Edgars Tab, 18.10.2026: 59 Ausnahmen; die JPG-Ansichten des nächsten Exports waren schwarz,
+        // siehe `Modellansichten.aufnehmen`).
         const bindung = netz.geometry.userData.bindung;
-        const passt = Kleidereinstellungen.an('kleider_oberflaechenbindung') && Boolean(lage)
+        const passt = Boolean(bindung) && Kleidereinstellungen.an('kleider_oberflaechenbindung') && Boolean(lage)
             && Oberflaechenbindung._passt(inst, bindung);
         const flaeche = Kleidereinstellungen.an('kleider_normalen_aus_flaeche');
         // Stoff- und Körperraum: `transformed` ist bei beiden lokal zum eigenen Netz
@@ -206,7 +210,7 @@ export class Oberflaechenbindung {
             if (!u) continue;
             u.uOberflaecheAn.value = passt ? 1 : 0;
             u.uNormaleAusFlaeche.value = flaeche ? 1 : 0;
-            u.uNormalVorzeichen.value = bindung.vorzeichen || 1;
+            u.uNormalVorzeichen.value = bindung?.vorzeichen || 1;
             if (passt) { u.uZuKoerper.value.copy(Oberflaechenbindung._zu); u.uVonKoerper.value.copy(Oberflaechenbindung._von); }
             u.uKapselAn.value = Oberflaechenbindung.KAPSELN_AKTIV && lage && lage.anzahl ? 1 : 0;
             if (!lage) continue;

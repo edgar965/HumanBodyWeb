@@ -1,0 +1,94 @@
+{% load dezahl %}
+{% comment %}Abschnitt 1, Kasten „Schritt MIA“ (18.10.2026). Edgar: „Ich verstehe aber noch nicht genau, wie du jetzt trainierst und berechnest mit dem A-Pose Zwischenschritt, update das auf der Hilfe Seite,
+schreibe einen neuen Absatz, was mit diesem MIA Schritt anders ist als davor“. Zahlen aus `Architekturmesh3daimia` (gelesen: wege.json + Sicherungen, pruefung.json, lauf_ergebnis.json);
+was im Text von Hand steht, trägt Datum und Quelle.{% endcomment %}
+<div class="info-box info-box-blue" id="mia">
+<h3>Zwei Methoden für die A-Pose: MeshToRigToPose (alt) und MeshToRigToPose_MIA (neu, seit 18.10.2026)</h3>
+<p>Beide Methoden stehen als eigene Klasse in der Kette und heißen auf allen Seiten gleich:</p>
+<ul>
+  <li><strong>MeshToRigToPose</strong> (alt, 17.10.2026, <code>ProjektTemp/_wegwerf/mesh3dai_mesh_to_rig_to_pose.py</code>): Das Projekt baut das Rig selbst. Ein Mesh-3D-Auftrag „Nur Rig“ lässt SAM 3D Body
+    die Gelenke am Rendering finden, „Mesh to 3D“ passt eine Genesis-9-Figur in Form und Haltung an. Danach folgt jeder Punkt des Netzes dem Käfig dieser Figur in deren A-Pose. Früher hieß das
+    „Mesh-3D „Nur Rig““, „Rig → A-Pose → Netz“ oder „der alte Weg“.</li>
+  <li><strong>MeshToRigToPose_MIA</strong> (neu, 18.10.2026, <code>ProjektTemp/_wegwerf/mesh3dai_mesh_to_rig_to_pose_mia.py</code>): Ein fertiges Werkzeug riggt, nämlich <strong>Make-It-Animatable v2</strong>
+    (MIA, CVPR 2025, MIT-Lizenz; Klon <code>A:\3DTools\Make-It-Animatable</code>, Umgebung <code>python11_mia</code>). Edgar: „Mesh riggen und danach drehen ist Standardcode … übernimm das!“ Fällt MIAs Ergebnis
+    durch die Prüfung, rechnet die Kette MeshToRigToPose (Rückfall).</li>
+</ul>
+<p>Welche Methode gilt, stellt man unter <a href="/settings/mesh3dai/">Einstellungen → Mesh3D-AI</a> ein (Text am Ende des Kastens).</p>
+<table class="doku">
+  <thead><tr><th></th><th>MeshToRigToPose (alt, 17.10.2026): Mesh-3D-Figur</th><th>MeshToRigToPose_MIA (neu): Make-It-Animatable</th></tr></thead>
+  <tbody>
+    <tr><td>Wer riggt</td><td>SAM 3D Body (21 Gelenke am Rendering) + „Mesh to 3D“: eine Genesis-9-Figur wird in Form und Haltung an das Netz angepasst (138 Knochen, Finger und Gesicht in Ruhe)</td>
+      <td>MIA: ein Netz sagt für jeden Punkt der Fläche Hautgewichte zu 52 Mixamo-Knochen voraus, dazu die Gelenke und je Knochen die Drehung in seine Ruhelage (T-Pose); keine Genesis-Figur</td></tr>
+    <tr><td>Dauer je Netz</td><td>rund 180 s (ein Mesh-3D-Auftrag; einmal je Netzdatei, danach wiederverwendet)</td>
+      <td>14–19 s auf der GPU, dazu einmal 13 s zum Laden der Modelle (Stapel der vier Jobs: 40 s, <code>mesh3dai_mia/stapel_jobs.log</code>, 18.10.2026)</td></tr>
+    <tr><td>In die A-Pose</td><td>jeder Punkt der Fläche folgt dem Käfig der angepassten Genesis-Figur in deren Ruhelage (<code>Meshfigurkleidungsruhelage</code>)</td>
+      <td>lineare Mischhäutung (LBS) mit MIAs Gewichten in MIAs T-Pose, dann die Oberarme um die Schulter auf den Winkel der Genesis-A-Pose gesenkt (41–47°) — Vorwärtskinematik wie an jedem Rig</td></tr>
+    <tr><td>Nach der A-Pose (eigen)</td><td>gerissene Dreiecke (Kante länger als das Doppelte) und abgerissene Stücke weg, Löcher aus dem Käfig gefüllt</td>
+      <td>dasselbe Weglassen; dazu die Inselregel (kleine Stücke wie Haarsträhnen behalten nur Gewichte naher Knochen), Löcher mit MeshLab „Close Holes“, die Prüfung (Knie, Ellbogen, Füße, Abriss, Hand)</td></tr>
+    <tr><td>Zurück in die Haltung</td><td>mit den Drehungen der Genesis-Rig-Figur</td><td>mit MIAs Knochen: je Genesis-Knochen der zugeordnete Mixamo-Knochen, starr</td></tr>
+    <tr><td><strong>Training</strong> des Netzes der Vorstufe</td>
+      <td>kein Mesh-3D-Auftrag: der Fehler des Rigs wird <em>nachgestellt</em> (die wahren Daz-Winkel verrauscht), die Trainingswolke mit diesem falschen Rig in die A-Pose gerechnet</td>
+      <td>jede Trainingswolke läuft <em>selbst durch MIA</em> (Fassung 7/8: alle Trainings- und Prüfposen der vier Figuren, in Blöcken zu 100 unter der GPU-Sperre) — das Netz lernt MIAs echten Fehler;
+        Wolken, an denen MIAs Prüfung durchfällt, gehen nicht ins Training</td></tr>
+    <tr><td>Ziel des Netzes</td><td>die wahren Gelenke, mit demselben falschen Rig in die A-Pose gerechnet</td><td>die wahren Gelenke, mit MIAs Knochen in dieselbe A-Pose gerechnet</td></tr>
+  </tbody>
+</table>
+<p><strong>Was vom Standard übernommen ist und was eigen</strong> (geprüft 18.10.2026 gegen <code>app_v2.py</code> und <code>app_blender.py</code> von MIA): Der Aufruf ist MIAs eigene Reihenfolge
+  (<code>_pipeline</code>: <code>prepare_input</code> → <code>preprocess</code> → <code>infer</code> mit Normalen → <code>vis</code> mit Nachbearbeitung der Gewichte, mit Fingern) mit den Vorgaben der
+  MIA-Oberfläche; vier Gewichte je Punkt, normiert — wie MIAs <code>bw_post_process</code> und Blenders Armature-Modifier im Export. Einzige Abweichung: „Restore Global Transform“ ist an (Ergebnis im
+  Rahmen der Eingabe statt in MIAs Hüftrahmen — ein anderes Koordinatensystem, dieselbe Form). Die Knochenkette ist geschlossen (Kopf eines Knochens über die eigene und über die Matrix des Elternknochens
+  höchstens 0,8 mm auseinander, an allen vier Jobs, <code>ProjektTemp/_wegwerf/mia_kette_pruefen.py</code>) — die LBS-Ruhelage ist also dieselbe, die MIAs Blender-Export zeigt.
+  <strong>Eigen</strong> sind: die Arme in die A-Pose (MIA kennt nur die T-Pose), Inselregel, Lochfüllung, Prüfung und Rückfall.</p>
+
+{% if mia %}
+<h4>Gemessen an den vier Prüfposen-Jobs (Probe 1, nie trainiert)</h4>
+<table class="doku m3a-laeufe">
+  <thead><tr><th>Job</th><th>Pose</th><th class="num">Netz direkt (ohne A-Pose)</th><th class="num">MeshToRigToPose → Netz</th><th class="num">MeshToRigToPose: Rig allein</th>
+    <th class="num">MeshToRigToPose_MIA → Netz</th><th class="num">MeshToRigToPose_MIA: Rig allein</th><th>MIAs Prüfung</th></tr></thead>
+  <tbody>
+  {% for j in mia.jobs %}<tr><td>{{ j.job }}</td><td>{{ j.pose }}</td><td class="num">{{ j.direkt|de:1|default:"—" }}</td>
+    <td class="num">{{ j.alt.vorstufe|de:1|default:"—" }}</td><td class="num">{{ j.alt.rig|de:1|default:"—" }}</td>
+    <td class="num"><strong>{{ j.mia.vorstufe|de:1|default:"—" }}</strong></td><td class="num">{{ j.mia.rig|de:1|default:"—" }}</td>
+    <td class="m3a-klein">{% if j.mia.erzwungen %}durchgefallen ({{ j.mia.gruende|join:"; " }}) — trotzdem gerechnet („erzwingen“), in der Kette gälte der Rückfall{% else %}bestanden{% endif %}</td></tr>{% endfor %}
+    <tr class="m3a-summe"><td colspan="2">Ø</td><td class="num">{{ mia.mittel.direkt|de:1 }}</td><td class="num">{{ mia.mittel.alt|de:1 }}</td><td class="num">{{ mia.mittel.alt_rig|de:1 }}</td>
+      <td class="num">{{ mia.mittel.mia|de:1 }}</td><td class="num">{{ mia.mittel.mia_rig|de:1 }}</td><td></td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Fehler = Mittel über die 138 Gelenke in mm gegen das Ziel, nach der Anpassung der Daz-Winkel; je ein Lauf. Läufe derselben Kette mit demselben Netz streuen um rund 2 mm (DamiraSitzen 14,9 / 16,7 / 16,6 mm
+  am 18.10.2026). Quelle je Job: die jüngste Fassung jedes Wegs in <code>wege.json</code> bzw. <code>wege_vor_&lt;Zeit&gt;.json</code> des Laufs —
+  {% for j in mia.jobs %}{{ j.job }}: MeshToRigToPose Ablage {{ j.alt.ablage }} mit Netz <code>{{ j.alt.netz }}</code>, MeshToRigToPose_MIA Ablage {{ j.mia.ablage }} mit <code>{{ j.mia.netz }}</code>{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+
+<h4>Das Netz der Vorstufe je Weg (Prüfwolken der vier Figuren)</h4>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Weg</th><th>Lauf</th><th class="num">Wolken Training / Prüfung</th><th class="num">ausgelassen (MIAs Prüfung)</th><th class="num">Fehler des Rigs</th><th class="num">nach dem Netz</th></tr></thead>
+  <tbody>
+  {% if mia.netz_alt %}<tr><td>MeshToRigToPose (Rig-Fehler nachgestellt)</td><td><code>{{ mia.netz_alt.lauf }}</code></td><td class="num">{{ mia.netz_alt.proben.training|de }} / {{ mia.netz_alt.proben.pruefung|de }}</td>
+    <td class="num">—</td><td class="num">{{ mia.netz_alt.rig|de:1 }} mm</td><td class="num">{{ mia.netz_alt.pruefung|de:1 }} mm</td></tr>{% endif %}
+  {% if mia.netz_mia %}<tr><td>MeshToRigToPose_MIA (jede Wolke durch MIA)</td><td><code>{{ mia.netz_mia.lauf }}</code>{% if not mia.mia_gewaehlt %} <span class="m3a-klein">(jüngstes, noch nicht gewählt)</span>{% endif %}</td>
+    <td class="num">{{ mia.netz_mia.proben.training|de }} / {{ mia.netz_mia.proben.pruefung|de }}</td><td class="num">{{ mia.netz_mia.ausgelassen|de|default:"—" }}</td>
+    <td class="num">{{ mia.netz_mia.rig|de:1 }} mm</td><td class="num">{{ mia.netz_mia.pruefung|de:1 }} mm</td></tr>{% endif %}
+  </tbody>
+</table>
+<p class="m3a-klein">Fehler in Ruhe (vor der Winkelanpassung), Mittel über die vier Figuren. Die beiden Zeilen sind nicht gleich schwer: vorher ist der Rig-Fehler der Prüfwolken nachgestellt (verrauschte Winkel), jetzt ist er
+  MIAs echter Fehler. MIA verfehlt hier etwas mehr ({{ mia.netz_mia.rig|de:1 }} gegen {{ mia.netz_alt.rig|de:1 }} mm) und an anderen Stellen; dass das Netz deshalb mehr übrig lässt
+  ({{ mia.netz_mia.pruefung|de:1 }} gegen {{ mia.netz_alt.pruefung|de:1 }} mm), ist eine Vermutung, nicht getrennt gemessen.</p>
+
+<p><strong>Was es heute bringt — zwei verschiedene Fragen</strong> (Stand 18.10.2026):</p>
+<ul>
+  <li><strong>Das Netz in der A-Pose (das Zwischenbild):</strong> MeshToRigToPose ist das Verfahren, dessen Zwischenbild am 17.10.2026 kaputt aussah (Edgar: „dieser Schritt (nach A-Pose) funktioniert bei keinem Mesh“);
+    danach wurden nur die Löcher gefüllt. Gegen die echte A-Pose gemessen (MannLaufen): Hände 113–134 mm, Hemd im Median 27 mm daneben, Rücken an der Taille 5–8 cm im Körper. Abweichung der Körpertiefe vom Gesäß bis
+    unter die Brust an den vier Jobs: MeshToRigToPose 6,9–40,8 %, MeshToRigToPose_MIA 2,6–8,0 %. <strong>Hier ist MIA deutlich besser.</strong></li>
+  <li><strong>Die 138 Gelenke am Ende (Tabelle oben):</strong> MIA ist im Mittel <strong>nicht besser</strong> ({{ mia.mittel.mia|de:1 }} gegen {{ mia.mittel.alt|de:1 }} mm), besser nur beim Laufen
+    (Liegen und Spagat fallen durch MIAs Prüfung; Liegen ist noch ohne Aufrichten gerechnet). Diese Zahl misst nur die Gelenke, nicht das Zwischenbild. MeshToRigToPose kommt trotz des kaputten Zwischenbilds auf gute Gelenke, weil sein Rig
+    eine ganze Genesis-Anpassung ist und allein schon bei {{ mia.mittel.alt_rig|de:1 }} mm liegt (MIA allein {{ mia.mittel.mia_rig|de:1 }} mm). Sein Netz ist auf Wolken trainiert, die auf demselben Weg verzerrt wurden.
+    Dass es deshalb die Verzerrung herausrechnet, ist eine Vermutung und nicht getrennt gemessen.</li>
+</ul>
+<p>Ohne A-Pose („Netz direkt“) sind es {{ mia.mittel.direkt|de:1 }} mm. Der Gewinn von MIA ist das richtige Zwischenbild, die Zeit (kein Mesh-3D-Auftrag, kein Anpassen einer Genesis-Figur) und dass es ein
+  Standardwerkzeug ist. Ob MIA an fremden Netzen (Tripo, Reiter „Test“) besser riggt, ist <strong>nicht gemessen</strong> — dort gibt es kein Ziel.</p>
+{% endif %}
+<p><strong>Offen</strong> (18.10.2026): das Netz Fassung 8 ist an den Jobs noch nicht gerechnet; liegende Netze vor MIA aufrichten (an MattLiegen als Probe: die rechte Hand stimmt dann, die Prüfung
+  besteht) ist nicht eingebaut; langes Haar über den Schultern (DamiraSitzen) — MIA nennt lange Haare selbst als Grenze; im Spagat reißt der Fuß an der haltenden Hand ab (UrsulaSpagat).</p>
+<p><strong>Einstellbar</strong> unter <a href="/settings/mesh3dai/">Einstellungen → Mesh3D-AI</a>, „Zwischenschritt A-Pose: Methode“ (MeshToRigToPose_MIA mit Rückfall · MeshToRigToPose · aus); eingestellt ist heute:
+  <strong>{{ aposewahl|default:"—" }}</strong>. Die Jobseite zeigt sofort den jüngsten Lauf der eingestellten Methode, auch das Zwischenbild in der A-Pose. „Netz direkt“ rechnet jede Kette mit; die Knöpfe
+  „Weg“ schalten auf der Jobseite zwischen den Wegen eines Laufs um.</p>
+</div>

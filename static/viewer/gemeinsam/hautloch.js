@@ -30,7 +30,7 @@ export class Hautloch {
      * Die Haut im Browser ist nicht die des Imports (gemessen 09.10.2026: Median 2,2 mm, bis 7,8 mm an den Oberschenkeln).
      */
     static naehen(geo, loecher, koerper = null) {
-        if (!loecher) {                               // kein verschweißtes Stück (mehr): die Haut bekommt ihr Relief zurück
+        if (!loecher?.ringe.length) {                 // kein verschweißtes Stück (mehr), höchstens weggenommene Haut (`nurWeg`): die Haut bekommt ihr Relief zurück
             if (koerper?.geometry?.getAttribute('nahtf')) Hautnahtpatch.aufheben(koerper);
             Hautloch._loecher.delete(geo);
             return;

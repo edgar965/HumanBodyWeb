@@ -4,34 +4,56 @@ import { closeDialog, openDialog } from './utils.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Modellexportinhalt, STATISCHE_FORMATE } from './modellexport_inhalt.js';
 import { Modellexport } from './modellexport.js';
+import { Modellexportordner } from './modellexport_ordner.js';
+import { Szenenausgabe } from './szenenausgabe.js';
 import { Figuraufbaustand } from '../gemeinsam/figuraufbaustand.js';
 
 /**
- * Modellexportdialog — der Dialog hinter „Exportieren …" im Kontextmenü der
- * Modellzeile (`speichernmenue.js`).
+ * Modellexportdialog — der Dialog hinter „Modell exportieren …" im Kontextmenü
+ * der Modellzeile (`speichernmenue.js`) und der Figur in der 3D-Ansicht
+ * (`figurkontextmenue.js`).
  *
  * WARNUNGEN LIVE (26.09.2026, `Docu/konzept_modellexport.md`): Jede Änderung
  * an einem Häkchen oder Format rechnet `Modellexportinhalt.warnungen` neu —
  * VOR dem Export, nicht erst in der Abschlussmeldung.
+ *
+ * SEIT 18.10.2026 (Edgar: „exportieren als glb, blender, fbx, und jpg", „auch in
+ * json", „Per Default: json, glb und jpg aktiviert"): FBX, JPG (vier Ansichten)
+ * und JSON (die Daten von „Modell speichern unter") dazu; Ordner und Dateiname
+ * kommen aus `Modellexportordner` (`3DObjects/modelsExport/<Modellname>`), die
+ * Pose ist die angezeigte. Formate und Pose werden NICHT mehr vom letzten Mal
+ * übernommen — Edgar hat die Vorgabe festgelegt, eine gemerkte Wahl stünde ihr
+ * bei jedem Öffnen im Weg.
  */
 export class Modellexportdialog {
 
-    static VORGABE_ENDPUNKT = '/api/character/modellexport/vorgabe/';
-    static UI_PREF_SCHLUESSEL = 'modell_export_ordner';
-    //: Format-Häkchen, Inhalt (außer Animation — die richtet sich lieber
-    //: nach der GERADE aktiven Animation als nach dem letzten Mal), Pose und
-    //: Auflösung — das sind echte Vorlieben, keine je-Figur-Werte wie Name.
+    static FORMATE = ['json', 'glb', 'blend', 'fbx', 'jpg', 'obj', 'ply', 'stl', 'dae'];
+    static VORGABE_FORMATE = ['json', 'glb', 'jpg'];
+    //: Inhalt (außer Animation — die richtet sich lieber nach der GERADE
+    //: aktiven Animation als nach dem letzten Mal) und Auflösung — das sind
+    //: echte Vorlieben, keine je-Figur-Werte wie Name.
     static EINSTELLUNGEN_SCHLUESSEL = 'modell_export_einstellungen';
 
     static _instId = null;
+    static _ordner = null;
 
     /** An das Dialog-Markup binden — einmal beim Seitenaufbau. */
     static verdrahten() {
         const dialog = document.getElementById('modellexport-dialog');
         if (!dialog) return;
-        for (const id of ['modellexport-fmt-glb', 'modellexport-fmt-obj', 'modellexport-fmt-ply',
-                          'modellexport-fmt-stl', 'modellexport-fmt-dae', 'modellexport-fmt-blend',
-                          'modellexport-rig', 'modellexport-textur', 'modellexport-assets',
+        Modellexportdialog._ordner = new Modellexportordner({
+            ordner: document.getElementById('modellexport-ordner'),
+            name: document.getElementById('modellexport-name'),
+            knopf: document.getElementById('modellexport-suchen'),
+            vorhanden: document.getElementById('modellexport-vorhanden'),
+        }, () => Modellexportdialog._formate());
+        for (const f of Modellexportdialog.FORMATE) {
+            document.getElementById(`modellexport-fmt-${f}`)?.addEventListener('change', () => {
+                Modellexportdialog._warnungenZeichnen();
+                Modellexportdialog._ordner.pruefenBald();
+            });
+        }
+        for (const id of ['modellexport-rig', 'modellexport-textur', 'modellexport-assets',
                           'modellexport-animation']) {
             document.getElementById(id)?.addEventListener('change', () => Modellexportdialog._warnungenZeichnen());
         }
@@ -66,6 +88,12 @@ export class Modellexportdialog {
         Modellexportdialog._instId = charId;
 
         const prefs = await Serverabruf.json('/api/ui-prefs/').catch(() => ({}));
+        for (const f of Modellexportdialog.FORMATE) {
+            const cb = document.getElementById(`modellexport-fmt-${f}`);
+            if (cb) cb.checked = Modellexportdialog.VORGABE_FORMATE.includes(f);
+        }
+        const aktuell = document.querySelector('input[name="modellexport-pose"][value="aktuell"]');
+        if (aktuell) aktuell.checked = true;
         Modellexportdialog._einstellungenAnwenden(prefs[Modellexportdialog.EINSTELLUNGEN_SCHLUESSEL]);
 
         const anim = Modellexportinhalt.animationsstand(inst);
@@ -73,30 +101,19 @@ export class Modellexportdialog {
             ? `(„${anim.clip.name || 'Clip'}")` : anim.fremd ? `(gehört zu „${anim.fremdname}")` : '(keine aktiv)';
         document.getElementById('modellexport-animation').checked = anim.aktiv;
 
-        document.getElementById('modellexport-name').value = inst.presetName || inst.presetKey || 'figur';
-
-        const ordnerFeld = document.getElementById('modellexport-ordner');
-        ordnerFeld.value = await Modellexportdialog._ordnerVorgabe(prefs);
+        await Modellexportdialog._ordner.vorbelegen(inst.presetName || inst.presetKey || 'figur');
 
         openDialog(dialog);
         Modellexportdialog._warnungenZeichnen();
         Modellexportdialog._sperreZeichnen();
     }
 
-    /** Zuletzt genutzte Formate/Inhalt/Pose/Auflösung ins Markup übernehmen. */
+    /** Zuletzt genutzten Inhalt und Auflösung ins Markup übernehmen (Formate und Pose nicht, siehe Klassenkopf). */
     static _einstellungenAnwenden(einstellungen) {
         if (!einstellungen) return;
-        for (const f of ['glb', 'obj', 'ply', 'stl', 'dae', 'blend']) {
-            const cb = document.getElementById(`modellexport-fmt-${f}`);
-            if (cb) cb.checked = einstellungen.formate?.includes(f) ?? cb.checked;
-        }
         for (const feld of ['rig', 'textur', 'assets']) {
             const cb = document.getElementById(`modellexport-${feld}`);
             if (cb && feld in einstellungen) cb.checked = !!einstellungen[feld];
-        }
-        if (einstellungen.pose) {
-            const radio = document.querySelector(`input[name="modellexport-pose"][value="${einstellungen.pose}"]`);
-            if (radio) radio.checked = true;
         }
         if (einstellungen.aufloesung !== undefined) {
             const sel = document.getElementById('modellexport-aufloesung');
@@ -112,22 +129,10 @@ export class Modellexportdialog {
         }
     }
 
-    static async _ordnerVorgabe(prefs) {
-        if (prefs[Modellexportdialog.UI_PREF_SCHLUESSEL]) return prefs[Modellexportdialog.UI_PREF_SCHLUESSEL];
-        try {
-            const antwort = await Serverabruf.json(Modellexportdialog.VORGABE_ENDPUNKT);
-            return antwort.ordner || '';
-        } catch {
-            return '';
-        }
-    }
-
     // ------------------------------------------------------------- Optionen
 
     static _formate() {
-        const gewaehlt = ['glb', 'obj', 'ply', 'stl', 'dae', 'blend']
-            .filter((f) => document.getElementById(`modellexport-fmt-${f}`)?.checked);
-        return gewaehlt;
+        return Modellexportdialog.FORMATE.filter((f) => document.getElementById(`modellexport-fmt-${f}`)?.checked);
     }
 
     static _optionen() {
@@ -137,7 +142,7 @@ export class Modellexportdialog {
             textur: !!document.getElementById('modellexport-textur')?.checked,
             assets: !!document.getElementById('modellexport-assets')?.checked,
             animation: !!document.getElementById('modellexport-animation')?.checked,
-            pose: document.querySelector('input[name="modellexport-pose"]:checked')?.value || 'ruhelage',
+            pose: document.querySelector('input[name="modellexport-pose"]:checked')?.value || 'aktuell',
             //: 0 = Original — `<select>`-Werte sind Strings, deshalb `Number(...)`.
             aufloesung: Number(document.getElementById('modellexport-aufloesung')?.value || 0),
             //: Anteil der Dreiecke, die im `.blend`-Export bleiben — 1 = Original,
@@ -146,12 +151,14 @@ export class Modellexportdialog {
             fps: Math.min(120, Math.max(1, Math.round(Number(document.getElementById('modellexport-fps')?.value) || 30))),
             ordner: document.getElementById('modellexport-ordner')?.value.trim(),
             name: document.getElementById('modellexport-name')?.value.trim(),
+            // Genau in den angezeigten Ordner — er trägt schon den Modellnamen (`Modellexportordner`).
+            direkt: true,
         };
     }
 
-    /** Posenzeile nur, wenn eine Pose überhaupt zum Tragen kommt. */
+    /** Posenzeile nur, wenn eine Pose überhaupt zum Tragen kommt — DAE stellt seit 18.10.2026 auch mit Rig die Gelenke danach. */
     static _poseZeileZeigen(optionen) {
-        const nutzt = !optionen.rig || optionen.formate.some((f) => STATISCHE_FORMATE.includes(f));
+        const nutzt = !optionen.rig || optionen.formate.some((f) => STATISCHE_FORMATE.includes(f) || f === 'dae');
         document.getElementById('modellexport-pose-zeile').hidden = !nutzt;
     }
 
@@ -180,13 +187,12 @@ export class Modellexportdialog {
         knopf.disabled = true;
         knopf.textContent = 'Exportiere …';
         try {
+            if (optionen.formate.includes('json')) optionen.modelldaten = Szenenausgabe.modelldaten(inst);
             const ergebnis = await Modellexport.exportieren(inst, optionen);
             Serverabruf.senden('/api/ui-prefs/', {
-                [Modellexportdialog.UI_PREF_SCHLUESSEL]: optionen.ordner,
                 [Modellexportdialog.EINSTELLUNGEN_SCHLUESSEL]: {
-                    formate: optionen.formate, rig: optionen.rig, textur: optionen.textur,
-                    assets: optionen.assets, pose: optionen.pose, aufloesung: optionen.aufloesung,
-                    fps: optionen.fps, polygone: optionen.polygone,
+                    rig: optionen.rig, textur: optionen.textur, assets: optionen.assets,
+                    aufloesung: optionen.aufloesung, fps: optionen.fps, polygone: optionen.polygone,
                 },
             }).catch(() => {});
             closeDialog(document.getElementById('modellexport-dialog'));

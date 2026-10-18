@@ -105,9 +105,16 @@ export class Mesh3daitestseite {
             const wahl = form ? ` Figur der Ausgabe: vorhergesagt aus den Formreglern (Lauf ${i.form?.lauf}).`
                 : i.figuren ? ` Figur der Ausgabe: ${figur} — von ${Object.keys(i.figuren).length} trainierten die mit dem kleinsten Rest der Anpassung (${Object.entries(i.figuren).map(([n, r]) => `${n} ${de(r.rest_mm ?? r, 1)} mm`).join(' · ')}).` : '';
             // Seit 17.10.2026 rechnet die Vorstufe (Rig → A-Pose → Netz); ist das Netz der Vorstufe zu weit von der Rig-Figur, gilt das Rig allein (`weg`, `weg_grund` in test.json).
-            const weg = i.weg === 'vorstufe' ? ` Weg: Rig (Mesh-3D ${i.mesh3d}) → A-Pose → Netz der Vorstufe → zurück in die Haltung.`
-                : i.weg === 'rig' ? ` Weg: Rig allein (Mesh-3D ${i.mesh3d}) — ${i.weg_grund}.` : '';
-            info.textContent = `Netz ohne Trainingsdaten (${i.quelle}) — gerechnet mit dem Netz des Laufs ${form ? i.form?.lauf : i.lauf} (trainiert an ${trainiert}).${weg}${wahl} Es gibt kein Ziel, darum keine Fehlerzahl.`;
+            // Seit 18.10.2026 kann das Rig auch von Make-It-Animatable kommen (Kette ohne Mesh-3D-Auftrag: `mesh3d` leer); Namen der Methoden seit dem Abend: MeshToRigToPose_MIA / MeshToRigToPose.
+            const rig = i.mesh3d ? `MeshToRigToPose: Mesh-3D-Figur, Auftrag ${i.mesh3d}` : 'MeshToRigToPose_MIA: Make-It-Animatable';
+            const weg = i.weg === 'vorstufe' ? ` Weg: A-Pose über ${rig} → Netz der Vorstufe → zurück in die Haltung.`
+                : i.weg === 'rig' ? ` Weg: Rig allein (${rig}) — ${i.weg_grund}.` : '';
+            // Einstellungen → Mesh3D-AI, „Zwischenschritt A-Pose“ (`Mesh3daiaposewahl`): bei „aus“ das gesicherte Ergebnis ohne Vorstufe.
+            const zs = i.zwischenschritt;
+            const schritt = zs?.ohne_vorstufe ? ' Zwischenschritt A-Pose: aus (Einstellungen → Mesh3D-AI) — gezeigt wird das Ergebnis des Netzes direkt auf der Pose.'
+                : zs?.fehlt ? ' Zwischenschritt A-Pose ist ausgeschaltet, für diesen Test liegt aber kein Ergebnis ohne Vorstufe vor — gezeigt wird das mit Vorstufe.'
+                : zs?.andere_methode ? ` Eingestellt ist ${zs.eingestellt} — dieses Testnetz ist nur mit ${zs.methode} gerechnet; gezeigt wird das.` : '';
+            info.textContent = `Netz ohne Trainingsdaten (${i.quelle}) — gerechnet mit dem Netz des Laufs ${form ? i.form?.lauf : i.lauf} (trainiert an ${trainiert}).${weg}${schritt}${wahl} Es gibt kein Ziel, darum keine Fehlerzahl.`;
             this._text('eingabe', `Das Netz, auf ${de(i.hoehe_m, 3)} m Höhe gebracht (Maßstab ${de(i.massstab, 3)}${i.weg ? ' aus der Höhe der Rig-Figur' : ''}, Mitte des Umrisses auf die Achse, Boden auf 0)${i.weg ? '' : ' — so sieht es das Netz von Mesh3D-AI'}; `
                 + `${de(i.netz_punkte)} Punkte, hier auf ${de(i.vorschau_dreiecke)} Dreiecke verkleinert. Das Netz bekommt davon 16.384 Punkte mit ihren Texturfarben (im Training: 5 flache Teilfarben).\n`
                 + 'Rig (Knopf „Rig“): das Rig, das Mesh3D-AI in dieses Netz legt.');

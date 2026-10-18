@@ -6,6 +6,7 @@
  * Ein Bild, das nachkommt, zeichnet die Seite neu (`nachLaden`, gesetzt von `Mesh3daiseite`).
  */
 import * as THREE from 'three';
+import { Mesh3daianatomie } from './mesh3daianatomie.js';
 
 export class Mesh3daiflaechennetz {
     static _abrufe = new Map();
@@ -73,6 +74,8 @@ export class Mesh3daiflaechennetz {
             return material;
         });
         this._materialien.push(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }));
+        // Das Anatomie-Stück bekommt die Haut des Körpers (wie in Charakter und Studio, `Anatomiebacken`) — im Hintergrund, danach zeichnet die Seite neu.
+        Mesh3daianatomie.anwenden(this, this._materialien, () => Mesh3daiflaechennetz.nachLaden?.());
         return this._materialien;
     }
 }

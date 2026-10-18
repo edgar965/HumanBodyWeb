@@ -7,11 +7,14 @@ import { Colladaskin } from './colladaskin.js';
  * Baut auf der BINDEPOSE auf (`Colladaskin.bindLokalMatrix`, siehe dessen
  * Docstring) — die aktuelle Pose kommt, wenn gewählt, über
  * `<library_animations>` (`Colladaanimation`) als Zeitspur oben drauf.
+ * Mit `aktuell` (Export „aktuelle Pose" ohne Animation, 18.10.2026) stehen
+ * die Gelenke in der angezeigten Pose (`Colladaskin.aktuellLokalMatrix`).
  */
 export class Colladaknoten {
 
     /** @returns der XML-Text — ein `<node>` je Wurzelknochen (meist einer). */
-    static gelenkbaum(skeleton, sids) {
+    static gelenkbaum(skeleton, sids, aktuell = false) {
+        const lokal = aktuell ? Colladaskin.aktuellLokalMatrix : Colladaskin.bindLokalMatrix;
         const kinder = new Map();
         const wurzeln = [];
         skeleton.bones.forEach((bone, i) => {
@@ -23,7 +26,7 @@ export class Colladaknoten {
             }
         });
         const knoten = (i) => {
-            const matrix = zahlen(zeilenMajor(Colladaskin.bindLokalMatrix(skeleton, i)));
+            const matrix = zahlen(zeilenMajor(lokal(skeleton, i)));
             const nachkommen = (kinder.get(i) || []).map(knoten).join('');
             return `<node id="${sids[i]}" name="${xmlEsc(skeleton.bones[i].name)}" sid="${sids[i]}" type="JOINT">`
                 + `<matrix sid="matrix">${matrix}</matrix>${nachkommen}</node>`;

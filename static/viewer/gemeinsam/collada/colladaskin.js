@@ -33,6 +33,21 @@ export class Colladaskin {
     }
 
     /**
+     * Die Lage des Knochens `index` in der ANGEZEIGTEN Pose, relativ zum Elternknochen (Wurzel: Welt).
+     *
+     * Für den Export „aktuelle Pose" ohne Animation (Edgar, 18.10.2026: „Das Modell soll in der aktuell
+     * eingestellten Pose exportiert werden"). Mit `bone.matrixWorld` als Gelenk-Weltlage, `boneInverses` als
+     * INV_BIND_MATRIX und `bindMatrix` als bind_shape_matrix rechnet Collada genau, was Three im Modus „attached"
+     * zeigt (`bindMatrixInverse` = Kehrwert der Netz-Weltlage hebt sich dort gegen dessen `matrixWorld` auf).
+     */
+    static aktuellLokalMatrix(skeleton, index) {
+        const bone = skeleton.bones[index];
+        const elternIndex = bone.parent && bone.parent.isBone ? skeleton.bones.indexOf(bone.parent) : -1;
+        if (elternIndex < 0) return bone.matrixWorld.clone();
+        return skeleton.bones[elternIndex].matrixWorld.clone().invert().multiply(bone.matrixWorld);
+    }
+
+    /**
      * Eindeutige `sid`s für alle Knochen — von `Colladaknoten` (Gelenkknoten)
      * UND hier (Joints-Liste des Skins) benutzt, damit beide auf denselben
      * Namen zeigen.

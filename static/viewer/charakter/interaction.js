@@ -11,7 +11,8 @@ import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _
     clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 import { Schwebeanzeige } from './schwebeanzeige.js';
 import { Trefferwahl } from './trefferwahl.js';
-import { Raycastbeschleunigung } from '../gemeinsam/raycastbeschleunigung.js';
+import { Modellklappung } from './modellklappung.js';
+import { Figurtreffer } from './figurtreffer.js';
 
 // =========================================================================
 // Canvas click binding
@@ -30,25 +31,7 @@ export function bindCanvasClick() {
         // nicht zugleich als Auswahlklick gelten und die Figur abwählen.
         if (state.greiftGerade) return;
 
-        const rect = canvas.getBoundingClientRect();
-        state.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        state.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        state.raycaster.setFromCamera(state.mouse, state.camera);
-
-        const meshes = [];
-        state.characters.forEach((inst, id) => {
-            inst.group.traverse(child => {
-                // Unsichtbares (die ruhende Simulationskopie eines dForce-Stücks)
-                // fängt keinen Klick — der Raycaster fragt `visible` nicht selbst.
-                if (child.isMesh && child.visible && !child.userData._boneOverlay) {
-                    child.userData._parentCharId = id;
-                    meshes.push(child);
-                }
-            });
-        });
-
-        Raycastbeschleunigung.sicherstellen(meshes);
-        const hits = state.raycaster.intersectObjects(meshes, false);
+        const hits = Figurtreffer.unter(e);
         if (hits.length > 0) {
             const charId = hits[0].object.userData._parentCharId;
             if (charId) {
@@ -80,8 +63,9 @@ export function bindCanvasClick() {
                 }
                 clearSubMeshSelection();
                 _clearBoneSelection();
-                // Kein `switchTab('eigenschaften')` mehr: welcher Reiter
-                // aufgeht, entscheidet der Merkzettel der Figur (Figurmerker).
+                // Ein Klick auf den Körper zeigt den Reiter „Modell" mit offenem Hauptbereich (Edgar, 18.10.2026) — vor dem
+                // Füllen gemerkt, denn `_gemerktesHerstellen` schaltet danach auf den Reiter aus dem Figurmerker.
+                Modellklappung.vomViewer(charId);
                 fn.selectCharacter(charId);
                 fn._updatePropContext();
                 return;

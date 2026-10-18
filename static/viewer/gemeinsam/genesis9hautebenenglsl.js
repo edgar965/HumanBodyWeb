@@ -1,3 +1,5 @@
+import { Genesis9hautrauschenGLSL } from './genesis9hautrauschenglsl.js';
+
 /**
  * Genesis9hautebenenGLSL — die Shader-Stücke der Hautebenen (17.10.2026, Edgar: „Hautton, Sommersprossen, Altersflecken, graue Haare, Muskel- und Fettzeichnung").
  *
@@ -14,6 +16,10 @@
  *
  * ZEICHNUNG (Muskel, Fett): wie die Falten (`Genesis9hautGLSL.FALTEN`) eine Normalenschicht per Reoriented Normal Mapping über `mapN`; die Karte trägt BEIDE Normalen in
  * einem Bild (R/G Muskel, B/A Fett), die Gewichte sind Uniforms.
+ *
+ * ZWEITE WELLE (18.10.2026): Struktur, Farbton, Olivton, Sättigung, Helligkeit, Teint, Wangenröte, Augenringe, Äderchen, Pigment, Muttermale, Weißflecken, Pickel und die
+ * Beulenschicht (Cellulite, Aknenarben) stehen in `Genesis9hautrauschenGLSL`; hier werden sie in die Farbe und hinter `normal_fragment_maps` eingesetzt. Jeder Teil ist mit
+ * seinem Uniform abgeschaltet, solange der Regler auf 0 steht.
  */
 export class Genesis9hautebenenGLSL {
 
@@ -48,40 +54,62 @@ float g9Punkte( vec2 uv, float zelle, float radius, float anteil ) {
 }
 `;
 
-    /** Die Farbe. `frei` ist der Anteil, der nicht unter Schminke liegt (`g9Schminke`, wenn die Haut Schminke trägt). */
+    /**
+     * Die Farbe. `frei` ist der Anteil, der nicht unter Schminke liegt (`g9Schminke`, wenn die Haut Schminke trägt). Reihenfolge: Struktur (an der Textur), Hautton, Rötung, Farbton …
+     * Helligkeit, Teint/Röte/Augenringe/Äderchen, Sommersprossen und Altersflecken, Pigment, Muttermale, Weißflecken, Pickel. `htPickel` und `htGebietW` stehen außerhalb des
+     * Blocks, die Beulenschicht liest sie später.
+     */
     static farbe(mitSchminke) {
+        const R = Genesis9hautrauschenGLSL;
         return `
+float htPickel = 0.0;
+vec4 htGebietW = vec4( 0.0 );
 {
     vec3 htC = diffuseColor.rgb;
     float htFrei = ${mitSchminke ? '1.0 - g9Schminke' : '1.0'};
-    vec3 htL = pow( max( htC, vec3( 0.0005 ) ), vec3( 1.0 + 0.55 * uHtTon ) );
+${R.GEBIET}
+    vec3 htL = htC;
+${R.STRUKTUR}
+    htL = pow( max( htL, vec3( 0.0005 ) ), vec3( 1.0 + 0.55 * uHtTon ) );
     float htLuma = dot( htL, vec3( 0.2126, 0.7152, 0.0722 ) );
     htL = mix( htL, htL * vec3( 1.10, 0.90, 0.88 ), max( uHtRoetung, 0.0 ) );
     htL = mix( htL, mix( htL, vec3( htLuma ) * vec3( 1.04, 1.0, 0.98 ), 0.6 ), max( -uHtRoetung, 0.0 ) );
+${R.TON}
 #ifdef USE_MAP
-    if ( uHtGebietAn > 0.5 ) {
-        vec4 htGebiet = texture2D( uHtGebiet, vMapUv );
-        float htS = g9Punkte( vMapUv, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, 0.8 ) * htGebiet.r * uHtSommer;
+    if ( uHtGebietAn > 0.5 ) htGebietW = texture2D( uHtGebiet, vMapUv );
+#endif
+${R.TEINT}
+#ifdef USE_MAP
+    if ( uHtGebietAn > 0.5 && uHtSommer > 0.0 ) {
+        float htS = g9Punkte( vMapUv, 0.006 / uHtMeterUV, 0.28 * uHtGroesseS, uHtF4.w ) * mix( htGebietW.r, 1.0, uHtF5.x ) * uHtSommer;
         htL *= mix( vec3( 1.0 ), vec3( 0.58, 0.40, 0.30 ), clamp( htS, 0.0, 1.0 ) );
-        float htA = g9Punkte( vMapUv + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * htGebiet.g * uHtAlter;
+    }
+    if ( uHtGebietAn > 0.5 && uHtAlter > 0.0 ) {
+        float htA = g9Punkte( vMapUv + vec2( 7.7, 2.3 ), 0.018 / uHtMeterUV, 0.36, 0.55 ) * htGebietW.g * uHtAlter;
         htL *= mix( vec3( 1.0 ), vec3( 0.72, 0.56, 0.42 ), clamp( htA, 0.0, 1.0 ) );
     }
 #endif
+${R.FLECKEN}
     diffuseColor.rgb = mix( htC, htL, htFrei );
 }
 `;
     }
 
     /**
-     * Den Zusatz in den Shader: Uniforms eintragen, Deklarationen hinter `common`, die Farbe hinter `alphamap_fragment` (die Normalenschichten setzt `Genesis9hautGLSL.normalen`).
-     * `ebenen` ist `zusatz.hautebenen` (`{uniforms, zeichnung, mimik}`).
+     * Den Zusatz in den Shader: Uniforms eintragen, Deklarationen hinter `common`, die Farbe hinter `alphamap_fragment`, die Beulen hinter `normal_fragment_maps` (die Normalenschichten
+     * setzt `Genesis9hautGLSL.normalen` — sie ersetzt danach nur die Zeile `#include <normal_fragment_maps>`, die Beulen bleiben dahinter). Die Lage im Objektraum (`vHtLage`) kommt aus
+     * `position`. `ebenen` ist `zusatz.hautebenen` (`{uniforms, zeichnung, mimik}`).
      */
     static einhaengen(shader, ebenen, mitSchminke) {
         Object.assign(shader.uniforms, ebenen.uniforms);
+        shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vHtLage;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvHtLage = position;');
         shader.fragmentShader = shader.fragmentShader
-            .replace('#include <common>', '#include <common>\n' + Genesis9hautebenenGLSL.UNIFORMS + (ebenen.zeichnung ? Genesis9hautebenenGLSL.ZEICHNUNG_UNIFORMS : '')
-                + (ebenen.mimik ? Genesis9hautebenenGLSL.MIMIK_UNIFORMS : ''))
-            .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n' + Genesis9hautebenenGLSL.farbe(mitSchminke));
+            .replace('#include <common>', '#include <common>\n' + Genesis9hautebenenGLSL.UNIFORMS + Genesis9hautrauschenGLSL.UNIFORMS
+                + (ebenen.zeichnung ? Genesis9hautebenenGLSL.ZEICHNUNG_UNIFORMS : '') + (ebenen.mimik ? Genesis9hautebenenGLSL.MIMIK_UNIFORMS : ''))
+            .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n' + Genesis9hautebenenGLSL.farbe(mitSchminke))
+            .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + Genesis9hautrauschenGLSL.BEULEN);
     }
 
     static ZEICHNUNG_UNIFORMS = `

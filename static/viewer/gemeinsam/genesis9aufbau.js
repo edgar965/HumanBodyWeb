@@ -3,6 +3,7 @@ import { Figuraufbaustand } from './figuraufbaustand.js';
 import { Genesis9haeppchen } from './genesis9haeppchen.js';
 import { Netzstufenstand } from './netzstufenstand.js';
 import { Kleidervorschau } from './kleidervorschau.js';
+import { Genesis9kennungumzug } from './genesis9kennungumzug.js';
 
 /**
  * Genesis9aufbau — die Figur in zwei Zügen: Käfig sofort, volle Stufe nach.
@@ -83,8 +84,9 @@ export class Genesis9aufbau {
         const vorher = Kleidervorschau.merken(inst);    // der Körper vor diesem Zug: die Stücke folgen ihm, bis der Server ihre genaue Lage liefert
         const koerper = inst.koerperAufbauen(stufen);   // zählt `_lauf` hoch, bevor die Stücke ihn lesen
         Kleidervorschau.begleiten(inst, vorher, koerper);
-        const stuecke = inst.getragen().map(             // ohne Kaskade: alle kommen ohnehin
-            kennung => inst.anziehen(kennung, inst.kleidung[kennung], stufen, false).catch(fehler => {
+        // ohne Kaskade: alle kommen ohnehin. Eine alte Kennung (`mb_…` vor dem 18.10.2026) erst auf die neue umstellen.
+        const stuecke = inst.getragen().map(kennung => Genesis9kennungumzug.kennung(inst, kennung)
+            .then(k => k && inst.anziehen(k, inst.kleidung[k], stufen, false)).catch(fehler => {
                 Protokoll.warnung('Genesis 9', `${kennung} nicht geladen: ${fehler.message}`);
             }));
         await Promise.all([koerper, ...stuecke]);

@@ -90,6 +90,8 @@ export class Figurwahldialog {
 
     async oeffnen() {
         const dialog = this._element();
+        Figurwahlbereiche.zuklappen(dialog);
+        this.ordner.zuklappen();
         dialog.classList.add('visible');
         this._waehlen(null);
         this.lagefelder?.vorbelegen();
@@ -160,10 +162,6 @@ export class Figurwahldialog {
         });
         for (const knopf of this._reiterknoepfe()) {
             knopf.addEventListener('click', () => this._umschalten(knopf.dataset.quelle));
-        }
-        for (const bereich of dialog.querySelectorAll('details.dialogbereich')) {
-            bereich.addEventListener('toggle',
-                                     () => Figurwahlbereiche.merken(this.kennung, bereich));
         }
         this._feld('bestaetigen')?.addEventListener('click', async () => {
             if (!this.gewaehlt) return;
@@ -252,6 +250,7 @@ export class Figurwahldialog {
             },
             pflegen: pflege ? (was) => this._pflegen(quelle, eintrag.name, was, eintrag) : null,
             werkzeuge,
+            zusatz: pflege ? (li) => this.ordner.menue.modellEintraege(quelle, eintrag, li) : null,
         });
     }
 

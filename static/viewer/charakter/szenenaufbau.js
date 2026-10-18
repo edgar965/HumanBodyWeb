@@ -37,6 +37,7 @@ export class Szenenaufbau {
         'bindLightingUI', 'bindRendererUI', 'bindCameraUI', 'bindActions',
         'bindMenubar', 'initCharacterDialog', 'initSceneDialogs',
         '_initSaveAnimDialog', 'initModellexportDialog', 'bindKeyboardShortcuts', 'bindCanvasClick',
+        'bindFigurKontextmenue',
         'greifenBeobachten',
         'initSubMeshInteraction', 'initTabs', 'bindVisibilityToggles',
         'initPropGarmentControls', '_initPropMHControls', 'initPropHairControls',

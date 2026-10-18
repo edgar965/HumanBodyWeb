@@ -4,10 +4,11 @@
 DER BROWSER SCHREIBT DIE FORMATE, NICHT DIESE KLASSE (26.09.2026,
 Docu/konzept_modellexport.md)
 ==================================================================
-GLB, OBJ+MTL, PLY, STL und DAE entstehen vollständig im Viewer (Three.js-
-Exporter bzw. der eigene Collada-Schreiber) — hier kommt nur die Ablage der
-fertigen Bytes. Einzige Ausnahme: `.blend` ist Blenders eigenes Format, dafür
-läuft Blender im Hintergrund (`modellexportblend.py`, GLB -> .blend).
+GLB, OBJ+MTL, PLY, STL, DAE und die vier JPG-Ansichten entstehen vollständig
+im Viewer (Three.js-Exporter, der eigene Collada-Schreiber, `Modellansichten`)
+— hier kommt nur die Ablage der fertigen Bytes. Einzige Ausnahme: `.blend` und
+`.fbx` (seit 18.10.2026) schreibt Blender im Hintergrund aus der GLB, beide in
+EINEM Lauf (`modellexportblend.py`).
 
 PLATZHALTER STATT ZWEITEM FELD
 ===============================
@@ -50,13 +51,19 @@ TEXTFORMATE = {'.obj', '.mtl', '.dae'}
 class Modellexportlauf:
     """Ein Exportauftrag: Ziel prüfen, Dateien ablegen, .blend bauen."""
 
-    def __init__(self, ordner_roh, name_roh, dateien, blend_quelle=None, fps=30, polygone=1.0):
+    def __init__(self, ordner_roh, name_roh, dateien, blend_quelle=None, fps=30, polygone=1.0,
+                 direkt=False, blender_formate=('blend',)):
         self.ordner_roh = ordner_roh
         self.name_roh = name_roh
         self.dateien = dateien  # Liste von UploadedFile, Namen mit PLATZHALTER
-        self.blend_quelle = blend_quelle  # UploadedFile oder None
+        self.blend_quelle = blend_quelle  # UploadedFile (GLB) oder None
         self.fps = fps  # Szenen-FPS der .blend — die GLB ist schon in dieser Rate abgetastet
-        self.polygone = polygone  # Anteil der Dreiecke im .blend-Export (1 = Original)
+        self.polygone = polygone  # Anteil der Dreiecke im .blend-/.fbx-Export (1 = Original)
+        # True: genau in DEN Ordner, gleichnamige Dateien werden überschrieben (Dialog der Szene seit
+        # 18.10.2026 — der Ordner trägt dort schon den Modellnamen, der Dialog meldet Vorhandenes vorher).
+        self.direkt = direkt
+        # Was Blender aus `blend_quelle` macht: 'blend' und/oder 'fbx' (FBX seit 18.10.2026).
+        self.blender_formate = tuple(blender_formate) or ('blend',)
 
     def ausfuehren(self):
         """Wirft `ZielAbgelehnt` — sonst `{ordner, dateien: [{name, bytes}]}`."""
@@ -67,8 +74,9 @@ class Modellexportlauf:
         # siebzehn Bilder, die sonst mit denen jedes anderen Exports im selben
         # Verzeichnis liegen. Alles beieinander heißt zugleich, dass die
         # relativen Verweise (`mtllib`, `map_Kd`) weiter stimmen.
-        ordner = self._freie_ablage(ordner, stamm)
-        stamm = ordner.name
+        if not self.direkt:
+            ordner = self._freie_ablage(ordner, stamm)
+            stamm = ordner.name
 
         geschrieben = []
         for datei in self.dateien:
@@ -81,9 +89,14 @@ class Modellexportlauf:
             geschrieben.append({'name': zielname, 'bytes': pfad.stat().st_size})
 
         if self.blend_quelle is not None:
-            geschrieben.append(self._blend_bauen(ordner, stamm))
+            geschrieben.extend(self._blender_bauen(ordner, stamm))
 
         return {'ordner': str(ordner), 'dateien': geschrieben}
+
+    @staticmethod
+    def vorhanden(ordner, stamm, endungen):
+        """Welche `<stamm><endung>` in `ordner` schon liegen — die ein direkter Export überschriebe."""
+        return [stamm + e for e in endungen if (ordner / (stamm + e)).is_file()]
 
     # --------------------------------------------------------------- Ablegen
 
@@ -132,10 +145,10 @@ class Modellexportlauf:
 
     # ----------------------------------------------------------------- Blend
 
-    def _blend_bauen(self, ordner, stamm):
-        """GLB nach ProjektTemp, Blender darüber, Ergebnis in `ordner`."""
+    def _blender_bauen(self, ordner, stamm):
+        """GLB nach ProjektTemp, EIN Blender-Lauf für alle `blender_formate`, Ergebnisse in `ordner`."""
         glb_temp = ProjektTemp.datei(suffix='.glb', prefix='modellexport_')
-        blend_pfad = ordner / ('%s.blend' % stamm)
+        ziele = {f: ordner / ('%s.%s' % (stamm, f)) for f in self.blender_formate}
         try:
             self._schreiben(self.blend_quelle, glb_temp)
             befehl = [
@@ -145,19 +158,22 @@ class Modellexportlauf:
                 # `modellexportblend.py`-Docstring (Fund 26.09.2026).
                 str(settings.BLENDER_EXE), '-b', '--factory-startup', '--python',
                 str(settings.MODELLEXPORT_BLENDER_SKRIPT), '--',
-                '--glb', str(glb_temp), '--blend', str(blend_pfad), '--fps', str(self.fps),
-                '--polygone', str(self.polygone),
+                '--glb', str(glb_temp), '--fps', str(self.fps), '--polygone', str(self.polygone),
             ]
+            for format_, pfad in ziele.items():
+                befehl += ['--%s' % format_, str(pfad)]
             ergebnis = subprocess.run(
                 befehl, capture_output=True, text=True, timeout=BLENDER_TIMEOUT_S,
             )
-            if ergebnis.returncode != 0 or not blend_pfad.is_file():
-                logger.error('Modellexportlauf: Blender fehlgeschlagen (%d): %s',
-                             ergebnis.returncode, ergebnis.stderr[-2000:])
-                raise ZielAbgelehnt('Blender konnte keine .blend schreiben (siehe Log)')
+            fehlt = [p.name for p in ziele.values() if not p.is_file()]
+            if ergebnis.returncode != 0 or fehlt:
+                logger.error('Modellexportlauf: Blender fehlgeschlagen (%d, fehlt %s): %s',
+                             ergebnis.returncode, fehlt, ergebnis.stderr[-2000:])
+                raise ZielAbgelehnt('Blender konnte %s nicht schreiben (siehe Log)'
+                                    % ', '.join(fehlt or ziele))
         except subprocess.TimeoutExpired:
             logger.error('Modellexportlauf: Blender lief in den Zeitlimit (%ds)', BLENDER_TIMEOUT_S)
             raise ZielAbgelehnt('Blender hat das Zeitlimit überschritten (%ds)' % BLENDER_TIMEOUT_S) from None
         finally:
             ProjektTemp.weg(glb_temp)
-        return {'name': blend_pfad.name, 'bytes': blend_pfad.stat().st_size}
+        return [{'name': p.name, 'bytes': p.stat().st_size} for p in ziele.values()]

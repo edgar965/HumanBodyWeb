@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Genesis9haut } from './genesis9haut.js';
+import { Genesis9hautebenenwerte } from './genesis9hautebenenwerte.js';
 import { Genesis9texturen } from './genesis9texturen.js';
 import { Protokoll } from './protokoll.js';
 import { Serverabruf } from './serverabruf.js';
@@ -84,7 +85,8 @@ export class Genesis9hautfalten {
         // `lauf` zählt JEDEN Aufruf, auch den ohne Alter: sonst setzt ein überholter Aufruf mit Alter (er wartet noch auf die Karten) seine Falten NACH der Rückstellung auf 0 wieder ein —
         // der Schieber stünde auf 0 und die Haut bliebe gealtert (17.10.2026, Edgar: „Altersregler hinterlässt Müll").
         const lauf = inst._faltenlauf = (inst._faltenlauf || 0) + 1;
-        const alter = Genesis9hautfalten.alter(inst);
+        // Der Regler „Altersfalten" der Hautebenen (18.10.2026) hebt die Falten an, auch ohne Alter — Maximum, wie bei Altersflecken und grauen Haaren.
+        const alter = Math.max(Genesis9hautfalten.alter(inst), Math.min(1, Math.max(0, Genesis9hautebenenwerte.wert(inst, 'falten') / 100)));
         const gewicht = alter * Genesis9hautfalten.STAERKE;
         const materialien = Genesis9hautfalten.materialien(inst);
         if (gewicht <= 0) {

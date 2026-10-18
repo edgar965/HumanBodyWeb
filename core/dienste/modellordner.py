@@ -106,6 +106,40 @@ class Modellordner:
         return len(namen)
 
     @classmethod
+    def ordner_umbenennen(cls, quelle, alt, neu):
+        """Den Ordner `alt` in `neu` umbenennen (Kontextmenü, 18.10.2026); seine Modelle gehen mit. Nur Groß-/Kleinschreibung ändern ist erlaubt. → neuer Name."""
+        neu = cls.name_pruefen(neu)
+        with cls._sperre:
+            daten = cls.lesen()
+            q = cls._quelle(daten, quelle)
+            if alt not in q['ordner']:
+                raise ValueError('Den Ordner „%s“ gibt es nicht' % alt)
+            if any(o.lower() == neu.lower() and o != alt for o in q['ordner']):
+                raise ValueError('Den Ordner „%s“ gibt es schon' % neu)
+            q['ordner'] = [neu if o == alt else o for o in q['ordner']]
+            q['modelle'] = {m: (neu if o == alt else o) for m, o in q['modelle'].items()}
+            cls._schreiben(daten)
+        logger.info('Modellordner %s: „%s“ umbenannt in „%s“', quelle, alt, neu)
+        return neu
+
+    @classmethod
+    def ordner_loeschen(cls, quelle, name):
+        """Den Ordner `name` löschen (Kontextmenü, 18.10.2026). Seine Modelle bleiben auf der Platte und stehen danach ohne Ordner — ein Ordner ist nur
+        eine Zuordnung; Modelle löschen geht über die Mehrfachauswahl. → Anzahl der Modelle, die ohne Ordner dastehen."""
+        with cls._sperre:
+            daten = cls.lesen()
+            q = cls._quelle(daten, quelle)
+            if name not in q['ordner']:
+                raise ValueError('Den Ordner „%s“ gibt es nicht' % name)
+            q['ordner'] = [o for o in q['ordner'] if o != name]
+            frei = [m for m, o in q['modelle'].items() if o == name]
+            for m in frei:
+                del q['modelle'][m]
+            cls._schreiben(daten)
+        logger.info('Modellordner %s: „%s“ gelöscht, %d Modelle ohne Ordner', quelle, name, len(frei))
+        return len(frei)
+
+    @classmethod
     def umbenannt(cls, alt, neu):
         """Ein Modell heißt jetzt `neu` — sein Ordner geht mit (alle Reiter; ein Name gehört genau einer Datei). Wirft nie."""
         cls._nachziehen(lambda m: m.__setitem__(neu, m.pop(alt)) if alt in m else None, 'umbenannt %s -> %s' % (alt, neu))

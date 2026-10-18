@@ -18,7 +18,9 @@ __all__ = ['Architekturmesh3daikette']
 class Architekturmesh3daikette:
     JOBS = ('UrsulaSpagat', 'DamiraSitzen', 'MattLiegen', 'MannLaufen')
     WEGE = (('direkt', 'Netz direkt'), ('vorstufe', 'Rig → A-Pose → Netz'), ('rig', 'Rig allein'))
-    SCHRITTE = (('lage', 'Lage: liegt das Netz? dann aufrichten (Wirbelsäule aus dem Netz direkt, über 45° schräg)'), ('rig', 'Mesh-3D „Nur Rig“ (ein fertiger Auftrag auf derselben Datei wird genommen)'),
+    SCHRITTE = (('mia_stapel', 'Make-It-Animatable v2 auf der Datei: Gelenke, Hautgewichte, Pose je Knochen (GPU, mit Laden der Modelle) — seit 18.10.2026 der erste Schritt'),
+                ('mia', 'MIAs Ruhelage, Oberarme auf die Genesis-A-Pose, Inselregel, Lochfüllung, Prüfung — durchgefallen: weiter mit „lage“'),
+                ('lage','Lage: liegt das Netz? dann aufrichten (Wirbelsäule aus dem Netz direkt, über 45° schräg)'), ('rig', 'Mesh-3D „Nur Rig“ (ein fertiger Auftrag auf derselben Datei wird genommen)'),
                 ('figur', 'Käfig, Gelenke und Drehungen der Rig-Figur'), ('apose', 'Netz mit der Rig-Figur in die A-Pose, gerissene Dreiecke und abgerissene Stücke weg, 16.384 Punkte'),
                 ('netz', 'Netz der Vorstufe auf der Wolke, mit den Drehungen des Rigs zurück in die Haltung, Daz-Winkel'))
 

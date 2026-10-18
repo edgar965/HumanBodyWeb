@@ -35,7 +35,8 @@ export class Mesh3daiechtzeichner {
         const liste = art === 'eingabe' ? (d.beschreibung?.eingabe_etiketten ?? d.beschreibung?.etiketten) : d.beschreibung?.etiketten;
         const etiketten = liste?.length ? liste : null;
         // Punktwolke des Datensatzes in der Ansicht „Punkte“ (in der Animation gibt es sie nicht — dort die Punkte der Fläche) und solange die Fläche fehlt.
-        const wolke = art === 'eingabe' && ((d.modus === 'punkte' && probe.eingabeEcht) || !probe.flaeche);
+        // Trainingspaar (18.10.2026, `probe.start === 'wolke'`): der Start ist das Tripo-Netz, ein ANDERES Netz als das Ziel — immer die Wolke, nie die Außenfläche des Ziels.
+        const wolke = art === 'eingabe' && ((d.modus === 'punkte' && probe.eingabeEcht) || !probe.flaeche || probe.start === 'wolke');
         // Ausgabe: die Figur, gehäutet mit dem vorhergesagten Rig — bei einem Lauf mit Daz-Winkeln genau (Drehung je Knochen aus dem Netz, aus der Ruhelage wie das Ziel), sonst die Näherung
         // aus den Rig-Punkten (`Mesh3daihaeutung`); ohne Hautgewichte nur das Rig.
         const genau = probe.rig.dreh && d.haltung?.ruhezentren ? { dreh: probe.rig.dreh, ruhezentren: d.haltung.ruhezentren } : null;

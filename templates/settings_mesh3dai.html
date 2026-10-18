@@ -21,6 +21,27 @@ Einstellungen → Mesh3D-AI (Edgar, 14.10.2026: „einstellbar, wie viele Minute
             Das Training schreibt in den ersten drei Epochen je Epoche und danach alle zehn Epochen eine Logzeile — kürzere Takte zeigen also nicht mehr als das Log hergibt.</span>
     </div>
 </div>
+{% comment %}18.10.2026, Edgar: „Sollen wir den Zwischenschritt der A-Pose berechnen aus dem Mesh einstellbar machen, um den Effekt zu messen?“ — `Mesh3daiaposewahl`. Abends: „mach das auswählbar …,
+über welche Methode das Aufrichten in A-Pose geht, mit Mesh-3D oder MIA. Mach eine bessere Kennzeichnung, was die alte Mesh-3D-Methode war“ — Klassen MeshToRigToPose / MeshToRigToPose_MIA.{% endcomment %}
+<div class="settings-section">
+    <h3>Zwischenschritt A-Pose: Methode</h3>
+    <div class="settings-row">
+        <label for="{{ apose_schluessel }}">Netz vorher in die A-Pose über:</label>
+        <select name="{{ apose_schluessel }}" id="{{ apose_schluessel }}" data-reihenfolge="fest">
+            {% for wert, text in apose_werte %}<option value="{{ wert }}"{% if wert == apose_wert %} selected{% endif %}>{{ text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ apose_vorgabe }}.</span>
+    </div>
+    <table class="doku mesh3dai-methoden">
+        <thead><tr><th>Wert</th><th>Methode (Klasse in der Kette)</th><th>Was sie tut</th></tr></thead>
+        <tbody>
+        {% for m in apose_methoden %}<tr{% if m.wert == apose_wert %} class="mesh3dai-methode-gewaehlt"{% endif %}><td><code>{{ m.wert }}</code></td><td><strong>{{ m.name }}</strong>{% if m.datei %}<br><code>{{ m.datei }}</code>{% endif %}</td><td>{{ m.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+    <p class="hint">Gilt für die Kette der Vorstufe (<code>mesh3dai_vorstufe.py job|test</code>; „aus“ rechnet dort nichts) und <strong>sofort</strong> für die Anzeige: die Jobseite zeigt den jüngsten Lauf der
+        gewählten Methode (Knöpfe „Weg“, Zwischenbild in der A-Pose) — ohne neuen Lauf, wenn der Job schon einen mit dieser Methode hat; sonst sagt sie, welche gezeigt wird. Bei „aus“ zuerst „Netz direkt“.
+        Die Testnetze sind bisher nur mit einer Methode gerechnet; die Testseite nennt sie. Vergleich beider Methoden: Hilfe → Architektur → Mesh3DAI, Abschnitt 1.</p>
+</div>
 {% endblock %}
 
 {% block einstellungen_nachtrag %}
@@ -36,7 +57,10 @@ Einstellungen → Mesh3D-AI (Edgar, 14.10.2026: „einstellbar, wie viele Minute
 .settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .settings-row label { min-width: 200px; font-size: 0.9rem; color: var(--text-muted); }
 .settings-row input[type="number"] { width: 6em; }
-.settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+.settings-row .hint, .settings-section > .hint { font-size: 0.75rem; color: var(--text-muted); }
+.mesh3dai-methoden { margin: 6px 0 10px; font-size: 0.82rem; }
+.mesh3dai-methoden td { vertical-align: top; }
+.mesh3dai-methode-gewaehlt td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 </style>
 <script type="module">
 import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";

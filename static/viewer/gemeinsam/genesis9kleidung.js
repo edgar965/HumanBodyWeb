@@ -91,6 +91,11 @@ export class Genesis9kleidung {
         Genesis9kleidung._namen = null;
     }
 
+    /** Ein gelöschtes Stück aus dem gemerkten Katalog nehmen, ohne ihn neu zu holen (`Genesis9garderobepflege.loeschen`, 18.10.2026). */
+    static entfernen(kennung) {
+        if (Genesis9kleidung._stuecke) Genesis9kleidung._stuecke = Genesis9kleidung._stuecke.filter((s) => s.id !== kennung);
+    }
+
     /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */
     static async anzeigename(kennung) {
         if (!Genesis9kleidung._namen) {

@@ -11,7 +11,7 @@ import { state } from './state.js';
  * geprüft, nicht vermutet.
  */
 export const STATISCHE_FORMATE = ['obj', 'ply', 'stl'];
-export const GERIGGTE_FORMATE = ['glb', 'blend', 'dae'];
+export const GERIGGTE_FORMATE = ['glb', 'blend', 'fbx', 'dae'];
 
 export class Modellexportinhalt {
 
@@ -86,7 +86,7 @@ export class Modellexportinhalt {
             }
         }
         if (!rig && formate.some((f) => GERIGGTE_FORMATE.includes(f))) {
-            warnungen.push('Rig ist aus — auch GLB/.blend/DAE bekommen ein starres Netz ohne Skelett.');
+            warnungen.push('Rig ist aus — auch GLB/.blend/FBX/DAE bekommen ein starres Netz ohne Skelett.');
         }
         if (textur && formate.includes('stl')) {
             warnungen.push('STL kann keine Textur speichern — das Netz bleibt ohne Bildkarte.');

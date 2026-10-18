@@ -10,9 +10,8 @@ import { Anatomiebacken } from './anatomiebacken.js';
  * eingetragen. Ein Hautwechsel (`Genesis9Modell.hautSetzen`) baut nur den Körper neu; das Stück behält seine Variante — Ursulas
  * helle Karte stand als weißer Fleck auf einer dunklen Haut.
  *
- * HIER: Hat die Figur eine Haut gewählt (`inst.haut`), wird der Hautton RINGS UM DAS STÜCK gemessen (Median der Texel an den UV der
- * Körperpunkte im erweiterten Kasten des Stücks, `Anatomieton`) und mit dem Ton verglichen, den das Stück selbst zeigt (Median der
- * Texel an SEINEN UV, mal Farbe). Hat die Haut Farbkarten, zeigt das Stück IMMER Karten, die aus denen der Haut gerechnet sind
+ * HIER: Der Hautton wird RINGS UM DAS STÜCK gemessen (Median der Texel an den UV der Körperpunkte im erweiterten Kasten des Stücks, `Anatomieton`)
+ * und mit dem Ton verglichen, den das Stück selbst zeigt (Median der Texel an SEINEN UV, mal Farbe). Hat die Haut Farbkarten, zeigt das Stück IMMER Karten, die aus denen der Haut gerechnet sind
  * (`Anatomiebacken`, seit 11.10.2026 abends: Farbe, Normalen und Rauheit im Atlas des Stücks, Texel für Texel von der Stelle der Haut darunter —
  * Edgar: „die neue Skin Textur erscheint da nicht, nur die Farbe"; vorher stand es in einer einfachen Farbe im Hautton, ohne Poren). Bis sie fertig
  * sind (in Häppchen auf dem Hauptfaden) steht das Stück in dieser einfachen Farbe; schlägt die Rechnung fehl, bleibt es dabei.
@@ -23,8 +22,13 @@ import { Anatomiebacken } from './anatomiebacken.js';
  * (Rechnung nicht möglich) gilt die Schwelle weiter: ein Stück mit passendem Ton bleibt, wie es war. Die Farbe liegt im Material, nicht in der Umfärbung (`umfaerbung.js`): deren Shader-Patch ließ am
  * oberen Rand des Stücks eine dunkle Linie stehen (10.10.2026, `Dazgeograftvarianten.hautton`).
  *
- * Nichts davon wird gespeichert — es wird bei jedem Körperneubau und jedem Anziehen neu abgeleitet (`Genesis9ersatz.nachziehen`).
- * Ohne Haut (`inst.haut` leer) oder mit eigener Farbe des Stücks (`werte.farbe`, `gruppenfarben`) gilt das Stück, wie es ist.
+ * AUCH AUF DER KATALOG-HAUT (18.10.2026, Edgar: „Figur Matt0 - textur vom Genital wird nicht von der textur des Körpers übernommen", danach „fixe das bei allen
+ * Modellen"): Bis dahin galt das alles nur mit gewählter Haut; ohne (`inst.haut` leer) behielt das Stück seine Variante. Gemessen im Chrome an Matt0: „Daz Anatomie Mann"
+ * hat keine Variante und keine Karte, nur die Farbe #9f7866 — es stand einfarbig ohne Poren auf den 4096er-Karten von `G9Masculine04`. Jetzt folgt ein Stück OHNE
+ * eigene Karte auch der Katalog-Haut. MIT eigener Karte (Varianten der Frau: `Damira_genital`, Ursula, Olesia, Allyne; gebackene Scham eines Imports) behält es sie
+ * auf der Katalog-Haut — die Karte IST das Genital (Labien), gebacken aus der glatten Haut darunter war es weg (Regression, Edgar 18.10.2026 abends).
+ *
+ * Nichts davon wird gespeichert — es wird bei jedem Körperneubau und Anziehen neu abgeleitet (`Genesis9ersatz.nachziehen`). Mit eigener Farbe des Stücks (`werte.farbe`, `gruppenfarben`) gilt es, wie es ist.
  * Die Bilder kommen asynchron: gerechnet wird erst, wenn alle Bilder im Vorrat da sind (`Genesis9texturen.wartenAufAlle`).
  */
 export class Anatomiehaut {
@@ -104,8 +108,8 @@ export class Anatomiehaut {
         for (const { kennung, netz } of Anatomiehaut.stuecke(inst)) {
             const werte = inst.kleidung?.[kennung] || {};
             const eigene = Boolean(werte.farbe) || Object.keys(werte.gruppenfarben || {}).length > 0;
-            const haut = inst.haut && !eigene ? Anatomiehaut.hautton(inst, netz) : null;
-            if (inst.haut && !eigene && !haut) { fertig = false; continue; }
+            const haut = eigene ? null : Anatomiehaut.hautton(inst, netz);       // auch die Katalog-Haut (`inst.haut` leer), siehe oben
+            if (!eigene && !haut) { fertig = false; continue; }
             const schluessel = haut ? Anatomiekarten.schluessel(inst, netz, Anatomiehaut.HAUT) : null;
             const gebacken = schluessel ? Anatomiekarten.gebacken(netz, schluessel) : null;
             for (const m of Anatomiehaut.materialien(netz)) {
@@ -113,14 +117,14 @@ export class Anatomiehaut {
                 if (ablage && m.map && m.map !== ablage.hautKarte) { ablage.karte = m.map; m.map = null; }   // die EIGENE Karte kam nach dem Umstellen an: wieder weg
                 const eigen = Anatomiehaut.eigenton(ablage ? { map: ablage.karte, color: ablage.farbe } : m, netz.geometry);
                 if (!eigen) { fertig = false; continue; }
+                const bleibt = !inst.haut && Boolean(ablage ? ablage.karte : m.map);    // Katalog-Haut + eigene Karte (Genitalvariante): bleibt, siehe oben
                 // Mit Karten der Haut (`schluessel`) folgt das Stück JEDER Haut; nur ohne sie (Haut ohne Farbkarte) entscheidet der Ton.
-                if (haut && (schluessel || !Anatomiehaut.passt(eigen, haut))) {
+                if (haut && !bleibt && (schluessel || !Anatomiehaut.passt(eigen, haut))) {
                     if (schluessel && !gebacken) Anatomiebacken.anstossen(inst, netz, Anatomiekarten.original(m), schluessel, Anatomiehaut.HAUT, () => Anatomiehaut._neu(inst));
                     Anatomiehaut._setzen(m, haut, gebacken);
                 } else {
-                    Anatomiehaut._zurueck(m);
-                    // Katalog-Haut: die Zuordnung schon im Hintergrund rechnen, damit der erste Hautwechsel nur noch die Karten backt (`Anatomiebacken.zuordnung`)
-                    if (!inst.haut) Anatomiebacken.vorrechnen(inst, netz, Anatomiekarten.original(m), Anatomiehaut.HAUT);
+                    Anatomiehaut._zurueck(m);    // Zuordnung schon im Hintergrund rechnen: ein Hautwechsel backt danach nur noch die Karten
+                    Anatomiebacken.vorrechnen(inst, netz, Anatomiekarten.original(m), Anatomiehaut.HAUT);
                 }
             }
         }

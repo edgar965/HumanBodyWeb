@@ -42,6 +42,7 @@ from ..daten.anfragerumpf import Anfragerumpf
 from ..dienste.blendimportplausibel import Blendimportplausibel
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9bedlamhaut import G9bedlamhaut  # noqa: F401  (trägt sich als Anbieter von Hautsätzen ein: BEDLAM, 17.10.2026)
+from ..dienste.g9eigenehaut import G9eigenehaut  # noqa: F401  (trägt sich als Anbieter von Hautsätzen ein: gespeicherte eigene Häute, 18.10.2026)
 from ..dienste.g9hbpose import G9hbpose
 from .g9materialwahl import G9materialwahl
 from .g9netzantwort import G9netzantwort
@@ -49,7 +50,7 @@ from ..dienste.modellkatalog import Modellkatalog
 from Genesis9.brauen import G9brauen
 from Genesis9.charaktere import G9charaktere
 from Genesis9.formung import G9formung
-from Genesis9.garderobe import G9garderobe
+from Genesis9.griffkette import G9griffkette
 from Genesis9.hautpresets import G9hautpresets
 from Genesis9.hautwahl import G9hautwahl
 from Genesis9.koerpernetz import G9koerpernetz
@@ -239,13 +240,8 @@ class G9figur:
             regler.update(werte)
             if feld == 'pose':
                 drehung = dict(knochen)
-        for kennung in G9figur._namen(rumpf.get('griffe')):
-            if kennung == ohne_griff:
-                continue
-            for name, kanaele in G9garderobe.griff(kennung).items():
-                drehung.setdefault(name, {}).update(kanaele)
-            # Dark Fantasy Weapons (Genesis 8) greifen ueber Posensteuerungen.
-            regler.update(G9garderobe.griffregler(kennung))
+        # Griffposen getragener Stücke: ein Schuh stellt den Fuß AUF die Pose, ein Requisit greift fest (`G9griffkette`, 18.10.2026).
+        G9griffkette.anwenden(drehung, regler, G9figur._namen(rumpf.get('griffe')), ohne_griff)
         return G9formung.aus_abfrage(regler, drehung)
 
     @staticmethod

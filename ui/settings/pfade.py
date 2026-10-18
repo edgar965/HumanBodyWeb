@@ -127,8 +127,13 @@ HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
 # Modell-Export aus dem Kontextmenü der Charakterliste (26.09.2026,
-# Docu/konzept_modellexport.md): Vorgabe-Zielordner, wählbar im Dialog.
-HUMANBODY_MODELLEXPORT_VORGABE_DIR = BASE_DIR / 'output' / 'Export' / 'Models'
+# Docu/konzept_modellexport.md): Vorgabe-Zielordner, wählbar im Dialog. Seit
+# 18.10.2026 `3DObjects/modelsExport`, der Dialog hängt den Modellnamen an
+# (Edgar: „A:\3DTools\3DObjects\modelsExport + <Modellname> … als Default").
+HUMANBODY_MODELLEXPORT_VORGABE_DIR = OBJECTS_ROOT / 'modelsExport'
+#: Das Fenster „Ordner suchen" des Exportdialogs — ein eigener Prozess, weil
+#: tkinter nicht in einem Faden des Servers laufen darf (`core/dienste/ordnersuche.py`).
+ORDNERSUCHE_SKRIPT = BASE_DIR / 'werkzeug' / 'ordnersuchefenster.py'
 # Jedes fertige Mesh aus dem Reiter „Mesh" (Fotos -> freies Netz) landet zusätzlich
 # hier als GLB (Edgar, 26.09.2026) — der Auftragsordner bleibt die Quelle.
 MESH_FOTO3D_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Foto3D'
@@ -139,8 +144,8 @@ MESHFIGUR_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'MeshTo3D'
 BLENDERMODELL_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'BlenderModel'
 # Bereich „2D3D Kleider" (Vorlagenfotos -> Figur mit Kleidern, 30.09.2026): wie BlenderModel, ein Ordner je Auftrag.
 ENGINE2D3DKLEIDER_EXPORT_DIR = BASE_DIR / 'output' / 'Export' / 'Engine2d3dKleider'
-#: Blender-Skript, das eine GLB in eine .blend umschreibt — nur gerufen, wenn
-#: „.blend" im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
+#: Blender-Skript, das eine GLB in eine .blend und/oder .fbx umschreibt — nur gerufen,
+#: wenn eins davon im Dialog angehakt ist (die übrigen Formate schreibt der Browser).
 MODELLEXPORT_BLENDER_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'modellexportblend.py'
 
 # ------------------------------------------------------------------- Effekte

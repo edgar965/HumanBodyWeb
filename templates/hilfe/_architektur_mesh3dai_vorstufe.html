@@ -23,7 +23,8 @@ gebracht? Falls nicht, dann begründe das.“ und „das mesh riggen in jedem Tr
     zurückgerechnete Fläche bei einem falschen Rig aussieht und wo die wahren Gelenke dann liegen.</li>
 </ol>
 <p><strong>Erkennung — ein fremdes Netz (Reiter „Test“) oder die neue Pose eines Prüfposen-Jobs.</strong> Ja: das Netz wird <strong>zuerst gerigt und in die A-Pose gebracht</strong>, erst dann kommt ein Netz —
-  seit 17.10.2026 bei jeder Erkennung (Tabelle darunter):</p>
+  seit 17.10.2026 bei jeder Erkennung (Tabelle darunter). <strong>Seit 18.10.2026 riggt zuerst Make-It-Animatable</strong> (<a href="#mia">Kasten darunter</a>); die folgende Liste ist der Weg vom
+  17.10.2026 und heute der Rückfall, wenn MIAs Prüfung durchfällt:</p>
 <ol>
   <li><strong>lage</strong> — liegt das Netz, wird es aufgerichtet (Mesh-3D rendert von vorn);</li>
   <li><strong>rig</strong> — Mesh-3D „Nur Rig“: SAM 3D Body findet die Gelenke am Rendering, „Mesh to 3D“ passt eine Genesis-Figur in Form und Haltung an. <strong>Einmal je Netzdatei:</strong> ein fertiger Auftrag
@@ -47,6 +48,7 @@ gebracht? Falls nicht, dann begründe das.“ und „das mesh riggen in jedem Tr
   der Farbe der Bilder je Ecke. Die Löcher sind echt: die Außenfläche trägt nur, was in der Haltung von außen zu sehen ist (MannLaufen 453.286 von 591.112 Dreiecken, 76,7 %; der Rest liegt unter dem Hemd,
   an den Innenseiten der Arme, zwischen den Beinen), dazu fallen beim Zurückrechnen 0,7 % gerissene Dreiecke weg. In der A-Pose liegen diese Stellen offen; das Feld zeigt sie dunkel (Blick ins Innere der Fläche).</p>
 </div>
+{% include "hilfe/_architektur_mesh3dai_mia.html" %}
 {% if kette %}
 <table class="doku m3a-schmal">
   <thead><tr><th>Schritt</th><th>Was geschieht</th><th class="num">Dauer je Netz</th></tr></thead>

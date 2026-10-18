@@ -2,6 +2,7 @@ import { escapeHtml } from '../utils.js';
 import { markDirty } from '../undo.js';
 import { Genesis9teilmaterial } from '../../gemeinsam/genesis9teilmaterial.js';
 import { Genesis9teilregler } from './genesis9teilregler.js';
+import { Genesis9hautdialogblock } from './genesis9hautdialogblock.js';
 
 /**
  * Genesis9materialdialog — der Zahnradknopf neben einer Auswahl und das Popup mit Glanz, Rauheit, Relief,
@@ -15,6 +16,9 @@ import { Genesis9teilregler } from './genesis9teilregler.js';
  * (Rahmen wie der Farbdialog, `stueckfarbdialog.js`: Hintergrund frei, damit man die Figur beim Verstellen sieht).
  * Esc, „Fertig" und „×" schließen; ein zweiter Klick auf denselben Knopf auch. Die Werte gelten sofort, gehen mit
  * der Figur in die Datei (`inst.teilmaterial`) und kommen nach jedem Neubau wieder (`Genesis9Modell.koerperAufbauen`).
+ *
+ * HAUT (18.10.2026, Edgar: „bei den einstellungen der Haut sollen diese Regler kommen, darin auch Button zum speichern der neuen Haut"): beim Teil `haut` folgen die Schieber der
+ * Hautebenen und „Als eigene Haut speichern" (`Genesis9hautdialogblock`); „Alles auf Standard" nimmt dort auch die Hautebenen zurück.
  */
 export class Genesis9materialdialog {
 
@@ -23,7 +27,7 @@ export class Genesis9materialdialog {
 
     static _offen = null;
 
-    /** Von `Genesis9eigenschaften._haut` gesetzt: `{ inst, plan, zeile(regler) }` — die Quelle des Blocks „Form". */
+    /** Von `Genesis9eigenschaften._haut` gesetzt: `{ inst, plan, zeile(regler), hautNeu() }` — die Quelle des Blocks „Form"; `hautNeu` baut die Hautauswahl nach dem Speichern neu. */
     static form = null;
 
     /** Den Zahnradknopf an eine Zeile hängen und die Zeile zurückgeben. */
@@ -32,7 +36,8 @@ export class Genesis9materialdialog {
         knopf.type = 'button';
         knopf.className = 'hb-materialknopf';
         knopf.textContent = '⚙';
-        knopf.title = `Material · ${Genesis9teilmaterial.TEILE[teil].titel}: Glanz, Rauheit …`;
+        knopf.title = teil === 'haut' ? 'Haut einstellen: Glanz, Rauheit, Farbe, Flecken, Relief — und als eigene Haut speichern'
+            : `Material · ${Genesis9teilmaterial.TEILE[teil].titel}: Glanz, Rauheit …`;
         knopf.addEventListener('click', () => Genesis9materialdialog.umschalten(inst, teil));
         zeile.appendChild(knopf);
         return zeile;
@@ -74,11 +79,17 @@ export class Genesis9materialdialog {
         Genesis9materialdialog._zeichnen();
         huelle.querySelector('.scene-modal-close').addEventListener('click', Genesis9materialdialog.schliessen);
         huelle.querySelector('.hb-material-fertig').addEventListener('click', Genesis9materialdialog.schliessen);
-        huelle.querySelector('.hb-material-alles').addEventListener('click', () => {
+        huelle.querySelector('.hb-material-alles').addEventListener('click', async () => {
             Genesis9teilmaterial.zuruecksetzen(inst, teil);
+            if (teil === 'haut') await Genesis9hautdialogblock.zuruecksetzen(inst);
             markDirty();
-            Genesis9materialdialog._zeichnen();
+            if (Genesis9materialdialog._offen?.inst === inst) Genesis9materialdialog._zeichnen();
         });
+    }
+
+    /** Ist das Popup für diese Figur offen, seine Zeilen neu bauen (nach einem Hautwechsel: frische Materialien, Werte einer gespeicherten Haut). */
+    static aktualisieren(inst) {
+        if (Genesis9materialdialog._offen?.inst === inst) Genesis9materialdialog._zeichnen();
     }
 
     static schliessen() {
@@ -102,7 +113,13 @@ export class Genesis9materialdialog {
         const form = Genesis9materialdialog.form;
         const block = form?.inst === inst ? Genesis9teilregler.block(form.plan, teil, form.zeile) : null;
         if (block) koerper.appendChild(block);
-        huelle.querySelector('.hb-material-alles').disabled = !felder.some(f => f.eigen);
+        const haut = teil === 'haut' && form?.inst === inst;
+        if (haut) {
+            const hautblock = Genesis9hautdialogblock.block(inst, form.plan, form.hautNeu);
+            hautblock.addEventListener('input', (e) => { if (e.target.type === 'range') Genesis9materialdialog._alles(inst); });
+            koerper.appendChild(hautblock);
+        }
+        huelle.querySelector('.hb-material-alles').disabled = !felder.some(f => f.eigen) && !(haut && Genesis9hautdialogblock.hatEigene(inst));
     }
 
     static _zeile(inst, teil, f) {

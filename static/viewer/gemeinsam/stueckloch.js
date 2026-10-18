@@ -45,6 +45,15 @@ export class Stueckloch {
     }
 
     /**
+     * Ist das Stück VERSCHWEISST (Scham aus einer .blend)? Ein Loch mit `nurWeg` (MakeHuman-Stücke, 18.10.2026: die Haut, die MakeHuman
+     * unter Schuh und Handschuh löscht, `Genesis9/stueckverdeckung.py`) nimmt nur Dreiecke weg — das Stück bleibt in der Hautverdeckung
+     * und in der Lagenverdeckung wie jedes andere.
+     */
+    static verschweisst(netz, anzahl) {
+        return !!Stueckloch.von(netz, anzahl) && !netz.userData.hautLoch.nurWeg;
+    }
+
+    /**
      * Die verschweißten Stücke einer Figur und ihr gemeinsames Loch: `{schluessel, weg}` — `weg[t] = 1`, wenn das Dreieck `t` der
      * Haut entfällt —, oder null, wenn kein sichtbares Stück ein passendes Loch trägt.
      * @param stuecke  `[schluessel, netz]`-Paare der Stücke, die zählen (sichtbar, Art Kleidung)
@@ -58,6 +67,7 @@ export class Stueckloch {
             if (!nummern) continue;
             weg = weg || new Uint8Array(anzahl);
             for (let i = 0; i < nummern.length; i++) weg[nummern[i]] = 1;
+            if (netz.userData.hautLoch.nurWeg) continue;                // nur weggenommene Haut: keine Naht, kein Ring
             schluessel.push(name);
             const v = netz.userData.hautLoch.verschiebung;
             if (v?.punkte?.length) { punkte.push(...v.punkte); for (const z of v.d) d.push(z[0], z[1], z[2]); }

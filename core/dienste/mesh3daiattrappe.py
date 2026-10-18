@@ -110,8 +110,13 @@ class Mesh3daiattrappe:
 
     @classmethod
     def stammdaten(cls):
-        """`[{id, name, modell, ordner}]` — nur, wer die Jobs ist. Billig: das Menü der Seitenleiste fragt es auf JEDER Seite der Anwendung (`Mesh3daimenue`), `jobs()` liest dafür erst den Plan (BVH-Dateien)."""
-        return [dict(s) for s in cls.STAMMDATEN]
+        """`[{id, name, modell, ordner}]` — nur, wer die Jobs ist. Billig: das Menü der Seitenleiste fragt es auf JEDER Seite der Anwendung (`Mesh3daimenue`), `jobs()` liest dafür erst den Plan (BVH-Dateien).
+        Dazu die gebauten Trainingspaare (18.10.2026 abends, `Mesh3daipaare`: Tripo-Netz + Genesis-Export, Marke `paar.json` im Jobordner)."""
+        from .mesh3daipaare import Mesh3daipaare
+
+        feste = [dict(s) for s in cls.STAMMDATEN]
+        ids = {s['id'] for s in feste}
+        return feste + [p for p in Mesh3daipaare.stammdaten() if p['id'] not in ids]
 
     @classmethod
     def jobs(cls):

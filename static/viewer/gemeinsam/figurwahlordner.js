@@ -1,5 +1,6 @@
 import { Htmltext } from '/static/djangobase/js/htmltext.js';
 import { Figurkataloge } from './figurkataloge.js';
+import { Figurwahlordnermenue } from './figurwahlordnermenue.js';
 import { Serverabruf } from './serverabruf.js';
 
 /**
@@ -9,7 +10,8 @@ import { Serverabruf } from './serverabruf.js';
  * Modellen. ich möchte Modelle zu den Ordnern verschieben können, auch batch verschieben. ich möchte Modelle batch löschen können (Mehrfachauswahl und löschen)“.
  *
  * Ein Ordner ist eine Zuordnung auf dem Server (`Modellordner`, `3DObjects/models/modellordner.json`), kein Verzeichnis — die Modelle bleiben, wo sie sind, und jeder
- * Lader findet sie unter ihrem Namen. Die Ordner stehen zugeklappt über den Modellen ohne Ordner (Stand je Ordner im localStorage). Ordner sieht jeder Dialog;
+ * Lader findet sie unter ihrem Namen. Die Ordner stehen zugeklappt über den Modellen ohne Ordner — bei jedem Öffnen des Dialogs (18.10.2026, „immer eingeklappt“);
+ * offen bleibt einer nur, solange der Dialog steht. Rechtsklick auf einen Ordner: Umbenennen, Löschen (`Figurwahlordnermenue`). Ordner sieht jeder Dialog;
  * anlegen, verschieben und löschen nur ein Dialog mit Pflege (die Szene „/Charakter/“, `Katalogpflege`) und nur in Reitern mit Pflege (`Figurkataloge.QUELLEN`).
  * Haken je Zeile wählen aus (Umschalt-Klick: alle sichtbaren dazwischen); ein Klick auf die Zeile selbst wählt weiter das EINE Modell zum Hinzufügen.
  */
@@ -27,6 +29,8 @@ export class Figurwahlordner {
         this.gewaehlt = {};
         this._letzter = {};
         this._laeuft = null;
+        this._offen = new Set();
+        this.menue = new Figurwahlordnermenue(this, Figurwahlordner.ADRESSE);
     }
 
     /** Die Zuordnung vom Server (eine Anfrage, auch wenn alle Reiter zugleich füllen). Ohne Antwort bleibt die Liste flach. */
@@ -77,7 +81,7 @@ export class Figurwahlordner {
         li.className = 'figurwahl-ordner';
         li.dataset.ordner = name;
         const details = document.createElement('details');
-        details.open = this._offen(quelle, name);
+        details.open = this._istOffen(quelle, name);
         details.addEventListener('toggle', () => this._merken(quelle, name, details.open));
         const kopf = document.createElement('summary');
         kopf.innerHTML = `<i class="fas fa-folder${details.open ? '-open' : ''}"></i> ${Htmltext.t(name)} <span class="gedaempft">(${eintraege.length})</span>`;
@@ -90,6 +94,7 @@ export class Figurwahlordner {
         if (!eintraege.length) ul.innerHTML = '<li class="gedaempft">Leer — Modelle mit Haken wählen und „Verschieben nach …“.</li>';
         details.append(kopf, ul);
         li.appendChild(details);
+        if (pflege) this.menue.binden(kopf, quelle, name, eintraege.length);
         return li;
     }
 
@@ -246,25 +251,24 @@ export class Figurwahlordner {
         }
     }
 
-    // -- Gedächtnis: welcher Ordner offen ist ----------------------------------
+    // -- Welcher Ordner offen ist: nur solange der Dialog steht (ein Neuaufbau nach Verschieben klappt ihn nicht zu) --
 
-    _schluessel(quelle, name) {
-        return `figurwahl-ordner:${this.dialog.kennung}:${quelle}:${name}`;
+    /** Beim Öffnen des Dialogs: alle Ordner zu. */
+    zuklappen() {
+        this._offen.clear();
     }
 
-    _offen(quelle, name) {
-        try {
-            return localStorage.getItem(this._schluessel(quelle, name)) === '1';
-        } catch (_) {
-            return false;
-        }
+    /** Ein umbenannter Ordner bleibt offen, wenn er es war. */
+    offenUmbenennen(quelle, alt, neu) {
+        if (this._offen.delete(`${quelle}:${alt}`)) this._offen.add(`${quelle}:${neu}`);
+    }
+
+    _istOffen(quelle, name) {
+        return this._offen.has(`${quelle}:${name}`);
     }
 
     _merken(quelle, name, offen) {
-        try {
-            localStorage.setItem(this._schluessel(quelle, name), offen ? '1' : '0');
-        } catch (_) {
-            // stumm gewollt: ohne localStorage startet ein Ordner zugeklappt
-        }
+        if (offen) this._offen.add(`${quelle}:${name}`);
+        else this._offen.delete(`${quelle}:${name}`);
     }
 }

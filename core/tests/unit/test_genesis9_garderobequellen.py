@@ -8,7 +8,7 @@ Schluessel jedes einzelnen — ein neues Stueck veraltete die Ablage aller ander
 
 Kunstdaten im Ordner `_wegwerf`, die eigene Bibliothek per `G9_EIGENE_BIBLIOTHEK` umgelenkt:
 
-1. Ein neues Stueck im selben Herstellerordner aendert den Schluessel der anderen NICHT (EIGEN, GC und MB).
+1. Ein neues Stueck im selben Herstellerordner aendert den Schluessel der anderen NICHT (EIGEN, GC und MH — bis 18.10.2026 MB).
 2. Seine eigenen Dateien aendern ihn: eine neue Vorschau, eine Variante mit dem Namensanfang (`<Name> f2`).
 3. Ein anderer Name mit gleichem Anfang ohne Trenner (`Alphabet` zu `Alpha`) gehoert nicht dazu.
 4. Ein Ordner, der kein Herstellerordner ist (Produktordner mit Presets), schluesselt weiter ueber den GANZEN
@@ -55,7 +55,7 @@ class Garderobequellen(SimpleTestCase):
 
     def test_1_ein_neues_stueck_aendert_den_schluessel_der_anderen_nicht(self):
         kleidung = self._eigene_bibliothek()
-        for hersteller in ('EIGEN', 'GC', 'MB'):
+        for hersteller in ('EIGEN', 'GC', 'MH'):
             alpha = kleidung / hersteller / 'Alpha Hemd.duf'
             schreiben(alpha)
             schreiben(alpha.with_suffix('.png'), 'x')

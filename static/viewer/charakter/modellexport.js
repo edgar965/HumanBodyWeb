@@ -20,13 +20,15 @@ import { Colladaschreiber } from '../gemeinsam/collada/colladaschreiber.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Clipabtastung } from '../gemeinsam/clipabtastung.js';
+import { Modellansichten } from './modellansichten.js';
 
 /**
  * Modellexport — sammelt Objekte, schreibt die gewählten Formate, schickt
  * sie an den Server (`core/api/modellexport.py`).
  *
  * DER BROWSER SCHREIBT DIE FORMATE, DER SERVER LEGT NUR AB — außer bei
- * `.blend`, das läuft durch Blender (`Docu/konzept_modellexport.md`).
+ * `.blend` und `.fbx`, die schreibt Blender aus der GLB (`Docu/konzept_modellexport.md`).
+ * `jpg` sind vier Ansichten der Szene (`Modellansichten`), kein Netzformat.
  */
 export class Modellexport {
 
@@ -38,7 +40,7 @@ export class Modellexport {
 
     /**
      * @param inst      die Figur (`state.characters.get(...)`)
-     * @param optionen  {formate, rig, textur, assets, animation, pose, fps, ordner, name}
+     * @param optionen  {formate, rig, textur, assets, animation, pose, fps, ordner, name, direkt, modelldaten}
      * @returns {ordner, dateien, warnungen} — vom Server
      */
     static async exportieren(inst, optionen) {
@@ -55,7 +57,19 @@ export class Modellexport {
         // `vorladen()` trägt sofort leere Platzhalter ein und füllt sie erst
         // später (siehe `Genesis9texturen.wartenAufAlle`-Doku). Ohne dieses
         // Warten exportiert ein Export direkt nach dem Laden ohne Textur.
-        if (optionen.textur) await Genesis9texturen.wartenAufAlle();
+        const jpg = optionen.formate.includes('jpg');
+        if (optionen.textur || jpg) await Genesis9texturen.wartenAufAlle();
+
+        const dateien = [];
+        // JSON = die Daten von „Modell speichern unter" (`Szenenausgabe.modelldaten`); der Szenendialog gibt sie
+        // fertig mit — hier nicht selbst gebaut, weil die Auftragsseite „Mesh to 3D" dieses Modul ohne Szene lädt.
+        if (optionen.formate.includes('json') && optionen.modelldaten) {
+            const daten = { ...optionen.modelldaten, name: optionen.name };
+            dateien.push({ name: `${Modellexport.PLATZHALTER}.json`,
+                           blob: new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' }) });
+        }
+        // Die Ansichten vor den Netzformaten: Die tauschen Werkstoffe und Texturen für die Dauer ihres Exports.
+        if (jpg) dateien.push(...await Modellansichten.aufnehmen(inst, Modellexport.PLATZHALTER));
 
         const anim = Modellexportinhalt.animationsstand(inst);
         const animationOk = !!(optionen.animation && anim.aktiv && !anim.fremd);
@@ -78,9 +92,10 @@ export class Modellexport {
             return gebackenCache;
         };
 
-        const dateien = [];
+        // .blend und .fbx baut Blender aus derselben GLB (`modellexportblend.py`).
+        const blender = ['blend', 'fbx'].filter((f) => optionen.formate.includes(f));
         let glbBytes = null;
-        if (optionen.formate.includes('glb') || optionen.formate.includes('blend')) {
+        if (optionen.formate.includes('glb') || blender.length) {
             const rigObjekte = optionen.rig ? objekteRig : gebacken();
             glbBytes = await Modellexport._glb(rigObjekte, optionen, animationOk, anim);
             if (optionen.formate.includes('glb')) {
@@ -101,11 +116,10 @@ export class Modellexport {
             warnungen.push(...teilergebnis.warnungen);
         }
 
-        const blendQuelle = optionen.formate.includes('blend')
-            ? new Blob([glbBytes], { type: 'model/gltf-binary' }) : null;
+        const blendQuelle = blender.length ? new Blob([glbBytes], { type: 'model/gltf-binary' }) : null;
 
         Protokoll.info('Modellexport', `${optionen.formate.join(', ')} nach ${optionen.ordner}`);
-        return Modellexport._senden(optionen, dateien, blendQuelle, warnungen);
+        return Modellexport._senden(optionen, dateien, blendQuelle, warnungen, blender);
     }
 
     // -------------------------------------------------------------- Formate
@@ -192,10 +206,25 @@ export class Modellexport {
     static async _dae(objekte, optionen, animationOk, wurzel) {
         const animation = animationOk && optionen.rig
             ? { wurzel, mixer: state.mixer, action: state.currentAction, fps: optionen.fps } : null;
-        const { xml, bilder, warnungen } = await Colladaschreiber.bauen(objekte, {
-            textur: optionen.textur, rig: optionen.rig, animation, praefix: `${Modellexport.PLATZHALTER}_`,
-            aufloesung: optionen.aufloesung,
-        });
+        // Eigener Präfix `_dae_`: `ObjMtl` gibt namenlosen Werkstoffen `mat_<n>` AM Werkstoff, Collada übernimmt den
+        // Namen — beide schrieben `MODELL_mat_<n>.png`, OBJ aber mit eingebackener Farbe und eigener Alphamaske. Im
+        // gemeinsamen Export überschrieb die DAE-Fassung die der OBJ (18.10.2026).
+        // Mit Rig dieselben Netze wie die GLB: Hauteinzug und Stoffdicke eingebacken (`Netzattribute`), die ganze Haut
+        // statt des gekürzten Index der Szene (`Vollindex`). Vorher schrieb die DAE die rohen Punkte — gemessen
+        // 18.10.2026 (Ursula1, linker Arm gedreht): T-Shirt der DAE bis x = 0,186 m, in der OBJ 0,197 m.
+        const zuruecksetzenGeo = optionen.rig ? Netzattribute.tauschen(objekte) : null;
+        const zuruecksetzenVoll = optionen.rig ? Vollindex.tauschen(objekte) : null;
+        let ergebnis;
+        try {
+            ergebnis = await Colladaschreiber.bauen(objekte, {
+                textur: optionen.textur, rig: optionen.rig, animation, praefix: `${Modellexport.PLATZHALTER}_dae_`,
+                aufloesung: optionen.aufloesung, pose: optionen.pose,
+            });
+        } finally {
+            zuruecksetzenVoll?.();
+            zuruecksetzenGeo?.();
+        }
+        const { xml, bilder, warnungen } = ergebnis;
         const dateien = [
             { name: `${Modellexport.PLATZHALTER}.dae`, blob: new Blob([xml], { type: 'model/vnd.collada+xml' }) },
             ...bilder.map((b) => ({ name: b.dateiname, blob: b.blob })),
@@ -205,12 +234,15 @@ export class Modellexport {
 
     // -------------------------------------------------------------- Senden
 
-    static async _senden(optionen, dateien, blendQuelle, warnungen) {
+    static async _senden(optionen, dateien, blendQuelle, warnungen, blender = []) {
         const formular = new FormData();
         formular.append('ordner', optionen.ordner);
         formular.append('name', optionen.name);
         formular.append('fps', String(optionen.fps));
         formular.append('polygone', String(optionen.polygone));
+        // `direkt`: genau in diesen Ordner, ohne Unterordner je Export (Dialog der Szene, 18.10.2026).
+        if (optionen.direkt) formular.append('direkt', '1');
+        if (blender.length) formular.append('blender_formate', blender.join(','));
         formular.append('warnungen', JSON.stringify(warnungen));
         for (const d of dateien) formular.append('dateien', d.blob, d.name);
         if (blendQuelle) formular.append('blend_quelle', blendQuelle, `${Modellexport.PLATZHALTER}.glb`);

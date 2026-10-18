@@ -71,7 +71,8 @@ class Genesis9laufUndHaarkartenTest(SimpleTestCase):
             ('genesis9stueckregler.js', '`stueck:${stueck.id}`'): 1,
             # Der Schlüssel steht am Ende des `planen`-Aufrufs; derselbe Name kommt seit 09.10.2026 auch als Material-Kennung des
             # Zahnrad-Popups vor (`Genesis9materialdialog.knopf(inst, 'haut', …)`) und zählt hier nicht.
-            ('genesis9eigenschaften.js', "_kopf(inst), 'haut')"): 1,
+            # Seit 18.10.2026 zieht `_nachHaut` nach dem Hautwechsel auch Schieber, Texturmischung und Popup nach (eigene Häute bringen Werte mit).
+            ('genesis9eigenschaften.js', "_nachHaut(inst, plan), 'haut')"): 1,
             ('genesis9eigenschaften.js', "_kopf(inst), 'augen')"): 1,
             ('genesis9eigenschaften.js', "_kopf(inst), 'brauen')"): 1,
             ('genesis9eigenschaften.js', "_kopf(inst), 'brauenstil')"): 1,

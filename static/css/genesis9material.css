@@ -34,3 +34,23 @@
 }
 .hb-materialzurueck:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .hb-materialzurueck:disabled { opacity: 0.35; cursor: default; }
+
+/* Haut: die Schieber der Hautebenen und „Als eigene Haut speichern" unter Glanz, Rauheit, Relief (`genesis9hautdialogblock.js`, 18.10.2026). */
+.hb-hautdialogblock { margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--border); }
+.hb-hautdialogblock .slider-row { display: grid; grid-template-columns: 180px 1fr 48px; gap: 8px; align-items: center; margin: 4px 0; }
+.hb-hautdialogblock .slider-row label { font-size: 0.76rem; line-height: 1.2; color: var(--text); overflow-wrap: anywhere; cursor: help; }
+.hb-hautdialogblock .slider-row input[type="range"] { accent-color: var(--accent); min-width: 0; }
+.hb-hautdialogblock .slider-value { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+.hb-hautspeichern { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+.hb-hautspeichern-zeile { display: flex; gap: 8px; margin-top: 6px; }
+.hb-hautspeichern-zeile input {
+    flex: 1; min-width: 0; height: 28px; padding: 2px 8px; font-size: 0.8rem;
+    color: var(--text); background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+}
+.hb-hautspeichern-zeile button {
+    height: 28px; padding: 0 12px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+    color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: 4px;
+}
+.hb-hautspeichern-zeile button:disabled { opacity: 0.5; cursor: default; }
+.hb-hautspeichern-stand { min-height: 1.1em; margin-top: 6px; font-size: 0.75rem; color: var(--text-muted); }
+.hb-hautspeichern-stand.fehler { color: #e8907f; }

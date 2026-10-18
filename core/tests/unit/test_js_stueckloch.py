@@ -12,6 +12,9 @@ Körper. Der Bau legt das Loch fest (`Blendimportschamloch`), das Stück bringt 
 3. `verschieben`: addiert die Verschiebung auf das `einzug`-Feld (nie ersetzt — ein Saumband unter anderem Stoff behält seinen Einzug);
    ein Punkt außerhalb des Feldes wird übersprungen, ohne Verschiebung 0.
 4. `vereinen`: null zählt als leer; die erste Maske bleibt unverändert.
+5. `nurWeg` (18.10.2026, MakeHuman-Stücke: die Haut, die MakeHuman unter Schuh und Handschuh löscht, `Genesis9/stueckverdeckung.py`):
+   die Dreiecke fallen in der Maske weg, das Stück zählt aber nicht als verschweißt (kein Schlüssel, `verschweisst` false) — es bleibt in
+   der Haut- und Lagenverdeckung. Sabotage: in `verschweisst` das `&& !…nurWeg` streichen macht Fall 5 rot. Geschrieben, nicht gelaufen.
 
 Sabotage-Gegenprobe (nicht gelaufen — Tests laufen nur auf Ansage): in `von` `loch.von !== anzahl` zu `false` macht Fall 1 rot;
 in `maske` `weg[nummern[i]] = 1` zu `= nummern[i] % 2` macht Fall 2 rot; in `verschieben` `+=` zu `=` macht Fall 3 rot.
@@ -69,6 +72,16 @@ pruefe('a unverändert', Array.from(a), [1, 0, 0]);
 pruefe('nur a', Stueckloch.vereinen(a, null) === a, true);
 pruefe('nur b', Stueckloch.vereinen(null, b) === b, true);
 pruefe('keine', Stueckloch.vereinen(null, null), null);
+
+// --- 5. nurWeg (MakeHuman-Stücke, 18.10.2026) ---------------------------------------------------------
+const weg = netz(10, [6, 7], { nurWeg: true });
+const m2 = Stueckloch.maske([['a', mit], ['schuh', weg]], 10);
+pruefe('nurWeg: Dreiecke fallen weg', Array.from(m2.weg), [0, 1, 0, 1, 0, 0, 1, 1, 0, 0]);
+pruefe('nurWeg: nicht verschweißt', m2.schluessel, ['a']);
+pruefe('nurWeg: kein Ring', m2.ringe.length, 1);
+pruefe('verschweisst: Scham ja', Stueckloch.verschweisst(mit, 10), true);
+pruefe('verschweisst: Schuh nein', Stueckloch.verschweisst(weg, 10), false);
+pruefe('verschweisst: andere Haut nein', Stueckloch.verschweisst(mit, 12), false);
 console.log(JSON.stringify({ ok: true }));
 """
 

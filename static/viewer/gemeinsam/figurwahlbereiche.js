@@ -12,10 +12,13 @@ import { Figurkataloge } from './figurkataloge.js';
  * Platte, und die Genesis9 die ich gespeichert habe)."
  *
  * Herausgelöst aus `figurwahldialog.js` (der stand danach bei 339 Zeilen):
- * hier das Markup der Bereiche, das Verteilen der Zeilen und das Gedächtnis
- * (localStorage je Dialog, Reiter und Bereich — wer einen Bereich aufklappt,
- * findet ihn beim nächsten Öffnen so wieder; die Vorgabe ist zu). Welche
- * Zeile in welchen Bereich gehört, sagt `Figurkataloge` (`bereich`).
+ * hier das Markup der Bereiche und das Verteilen der Zeilen. Welche Zeile in
+ * welchen Bereich gehört, sagt `Figurkataloge` (`bereich`).
+ *
+ * IMMER ZU (Edgar, 18.10.2026: „die tabs bei Charakter hinzufügen sollen immer
+ * eingeklappt sein"): Bis dahin merkte sich jeder Bereich im localStorage, ob
+ * er offen war, und ging beim nächsten Öffnen wieder auf. Jetzt klappt
+ * `zuklappen` bei jedem Öffnen des Dialogs alles zu, Bereiche wie Ordner.
  */
 export class Figurwahlbereiche {
 
@@ -24,8 +27,7 @@ export class Figurwahlbereiche {
         return `<div class="figurwahl-bereiche${versteckt ? ' hb-versteckt' : ''}" `
             + `id="${kennung}-liste-${quelle}" data-quelle="${quelle}">`
             + Figurkataloge.BEREICHE.map(([bereich, titel]) =>
-                `<details class="dialogbereich" data-bereich="${bereich}"`
-                + `${Figurwahlbereiche.offen(kennung, quelle, bereich) ? ' open' : ''}>`
+                `<details class="dialogbereich" data-bereich="${bereich}">`
                 + `<summary>${Htmltext.t(titel)} <span class="gedaempft" data-zahl></span></summary>`
                 + `<ul class="preset-list" data-quelle="${quelle}" data-bereich="${bereich}"></ul>`
                 + '</details>').join('')
@@ -84,30 +86,8 @@ export class Figurwahlbereiche {
         }
     }
 
-    // -- Gedächtnis -----------------------------------------------------------
-
-    static schluessel(kennung, quelle, bereich) {
-        return `figurwahl-bereich:${kennung}:${quelle}:${bereich}`;
-    }
-
-    static offen(kennung, quelle, bereich) {
-        try {
-            return localStorage.getItem(Figurwahlbereiche.schluessel(kennung, quelle, bereich)) === '1';
-        } catch (_) {
-            return false;
-        }
-    }
-
-    /** Beim `toggle` eines `details`: den Stand merken. */
-    static merken(kennung, details) {
-        const liste = details.querySelector('ul[data-bereich]');
-        if (!liste) return;
-        try {
-            localStorage.setItem(
-                Figurwahlbereiche.schluessel(kennung, liste.dataset.quelle, liste.dataset.bereich),
-                details.open ? '1' : '0');
-        } catch (_) {
-            // stumm gewollt: ohne localStorage bleibt der Bereich beim Vorgabewert
-        }
+    /** Alle Bereiche und Ordner des Dialogs zu — bei jedem Öffnen (der Dialog wird nur einmal gebaut und behielte sonst den letzten Stand). */
+    static zuklappen(dialog) {
+        for (const kasten of dialog?.querySelectorAll('details') || []) kasten.open = false;
     }
 }

@@ -13,6 +13,7 @@ Ohne Blender, ohne GPU, ohne Sapiens-Modell — Kunstdaten in `ProjektTemp`, kei
 """
 
 import json
+import os
 import struct
 import tempfile
 from pathlib import Path
@@ -266,6 +267,10 @@ class SegmentierungTest(SimpleTestCase):
             self.assertFalse(job.arbeit('sapiens_flaechen.npz').exists())
             self.assertIsNone(Blendimportsegmentierung.fuer_figur(ablage, {'ergebnis': {}}, job, glb))
             glb.write_bytes(b'g' * 100)                                                  # gleich groß, aber neu geschrieben: eine andere Änderungszeit
+            # ausdrücklich setzen: Wenige ms nach dem ersten Schreiben liegt Windows noch im selben Uhrtakt, st_mtime_ns bliebe gleich
+            # (Gesamtlauf 18.10.2026 rot, `fuer_figur` gab die Stimmen zurück)
+            stat = glb.stat()
+            os.utime(glb, ns=(stat.st_atime_ns, stat.st_mtime_ns + 2_000_000_000))
             job.netzdatei().write_bytes(b'g' * 100)
             self.assertIsNone(Blendimportsegmentierung.fuer_figur(ablage, stand, job, glb))   # das Körpernetz hat sich seit der Segmentierung geändert
 

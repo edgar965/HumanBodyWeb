@@ -22,6 +22,11 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  *
  * NUR BEIM AUSWÄHLEN, nicht während der Arbeit: Ein Bereich, der beim Ziehen eines Schiebers darüber zuklappte,
  * schöbe den Schieber unter dem Mauszeiger weg.
+ *
+ * KLICK AUF DEN KÖRPER IM VIEWER (Edgar, 18.10.2026): „wenn ich auf das Modell klicke im Viewer, soll der Modell Tab
+ * ausgewählt sein und ausgeklappt werden". `vomViewer` merkt der Figur den Reiter „Modell" (den stellt danach
+ * `_gemerktesHerstellen` her) und öffnet beim nächsten `anwenden` den Hauptbereich ihrer Figurart (`HAUPTBEREICHE`,
+ * der erste sichtbare) — die Kategorien darin bleiben zu, bis auf die Kette der zuletzt geänderten Eigenschaft.
  */
 export class Modellklappung {
 
@@ -30,9 +35,19 @@ export class Modellklappung {
     static AUSGENOMMEN = '.genesis9-morphformular';
     static MERKMALE = ['regler', 'morph', 'meta'];
     static KASTEN = '.panel-section, details';
+    /** Je Figurart ihr Hauptbereich; HumanBody hat keinen eigenen Block, dort ist es der Körpertyp. */
+    static HAUPTBEREICHE = ['prop-genesis9-section', 'prop-uma-section', 'prop-umapython-section', 'prop-smpl-section',
+                            'prop-makehuman-section', 'prop-bodytype-section'];
     static _verdrahtet = false;
+    static _vomViewer = null;
 
-    /** Alles zu, nur die Kette über der zuletzt geänderten Eigenschaft der Figur `id` auf. */
+    /** Ein Klick auf den Körper der Figur `id` im Viewer — vor `selectCharacter` zu rufen. */
+    static vomViewer(id) {
+        Figurmerker.tabMerken(id, 'eigenschaften');
+        Modellklappung._vomViewer = id;
+    }
+
+    /** Alles zu, nur die Kette über der zuletzt geänderten Eigenschaft der Figur `id` auf — nach einem Viewer-Klick dazu der Hauptbereich. */
     static anwenden(id) {
         Modellklappung._verdrahten();
         const inhalt = document.getElementById(Modellklappung.INHALT);
@@ -44,6 +59,11 @@ export class Modellklappung {
             if (k.classList.contains('panel-section')) k.classList.remove('collapsed');
             if (k.tagName === 'DETAILS') k.open = true;
         }
+        if (Modellklappung._vomViewer !== id) return;
+        Modellklappung._vomViewer = null;
+        const haupt = Modellklappung.HAUPTBEREICHE.map(k => document.getElementById(k))
+            .find(el => el && inhalt.contains(el) && !el.closest('.hb-versteckt'));
+        haupt?.classList.remove('collapsed');
     }
 
     /** `feld` (ein Element im Reiter) als zuletzt geänderte Eigenschaft der Figur merken. */

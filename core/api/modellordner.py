@@ -4,6 +4,8 @@
     GET  /api/character/modellordner/                 → {quelle: {ordner: [...], modelle: {name: ordner}}}
     POST /api/character/modellordner/anlegen/         {quelle, name}            → {ok, name}
     POST /api/character/modellordner/verschieben/     {quelle, namen, ordner}   → {ok, anzahl}     ordner leer = ohne Ordner
+    POST /api/character/modellordner/umbenennen/      {quelle, ordner, name}    → {ok, name}
+    POST /api/character/modellordner/loeschen/        {quelle, ordner}          → {ok, anzahl}     anzahl = Modelle, die jetzt ohne Ordner stehen
 """
 
 import json
@@ -45,6 +47,26 @@ class Modellordnerendpunkte:
         namen = rumpf.get('namen') if isinstance(rumpf.get('namen'), list) else []
         try:
             anzahl = Modellordner.verschieben(str(rumpf.get('quelle') or ''), namen, str(rumpf.get('ordner') or ''))
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, 'anzahl': anzahl})
+
+    @staticmethod
+    @require_POST
+    def umbenennen(request):
+        rumpf = Modellordnerendpunkte._rumpf(request)
+        try:
+            name = Modellordner.ordner_umbenennen(str(rumpf.get('quelle') or ''), str(rumpf.get('ordner') or ''), rumpf.get('name'))
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        return JsonResponse({'ok': True, 'name': name})
+
+    @staticmethod
+    @require_POST
+    def loeschen(request):
+        rumpf = Modellordnerendpunkte._rumpf(request)
+        try:
+            anzahl = Modellordner.ordner_loeschen(str(rumpf.get('quelle') or ''), str(rumpf.get('ordner') or ''))
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
         return JsonResponse({'ok': True, 'anzahl': anzahl})

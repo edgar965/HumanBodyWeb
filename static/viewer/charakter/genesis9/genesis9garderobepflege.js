@@ -1,6 +1,7 @@
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
 
 /**
  * Genesis9garderobepflege — „Umbenennen" und „Löschen" im Kontextmenü eines Garderobenstücks.
@@ -9,17 +10,23 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
  * (`G9garderobepflege`) ändert beim Umbenennen nur den ANZEIGENAMEN — die Kennung bleibt, Rezepte und Aufträge nennen die Stücke
  * dabei. Gelöscht wird ein eigenes Stück (Foto-Stücke, Uhr, GarmentCode, MakeHuman) in den Papierkorb
  * (`3DObjects/models/Genesis9/papierkorb/`, zurückholbar); ein Stück der Daz-Bibliothek wird nur ausgeblendet, die Dateien bleiben.
- * Danach holt `Genesis9kleidung` den Katalog neu, und der Aufrufer zeichnet die Liste neu.
+ * Nach dem Umbenennen holt `Genesis9kleidung` den Katalog neu, und der Aufrufer zeichnet die Liste neu.
+ *
+ * LÖSCHEN OHNE NEUAUFBAU (Edgar, 18.10.2026: „nach jedem Löschen eines Garderobenteils wird das Menü neu aufgebaut - mach das
+ * asynchron, so dass ich schnell löschen kann"): Bis dahin stand nach jedem Löschen „Lade Garderobe …" da, bis der ganze Katalog
+ * neu geholt und die Liste neu gebaut war — erst dann ließ sich das nächste Stück anklicken. Jetzt verschwindet nur die Zeile
+ * (samt Reglerkasten), sofort beim Klick; der Server arbeitet im Hintergrund, und das Stück wird nur aus dem gemerkten
+ * Katalog genommen (`Genesis9kleidung.entfernen`). Scheitert der Server, kommt die Zeile wieder.
  */
 export class Genesis9garderobepflege {
 
     static ADRESSE = '/api/character/genesis9-figur/garderobe/';
 
     /** Die zwei Einträge für das Kontextmenü einer Zeile (`Kontextmenue.binden`). */
-    static eintraege(stueck, neuzeichnen) {
+    static eintraege(stueck, neuzeichnen, zeile = null) {
         return [
             { symbol: 'fa-pen', text: 'Umbenennen …', tun: () => Genesis9garderobepflege.umbenennen(stueck, neuzeichnen) },
-            { symbol: 'fa-trash', text: 'Löschen …', tun: () => Genesis9garderobepflege.loeschen(stueck, neuzeichnen) },
+            { symbol: 'fa-trash', text: 'Löschen', tun: () => Genesis9garderobepflege.loeschen(stueck, neuzeichnen, zeile) },
         ];
     }
 
@@ -33,12 +40,24 @@ export class Genesis9garderobepflege {
         await Genesis9garderobepflege._senden(stueck, 'umbenennen', { name: neu }, 'Umbenennen', neuzeichnen);
     }
 
-    static async loeschen(stueck, neuzeichnen) {
-        const frage = stueck.eigen
-            ? `„${stueck.name}" in den Papierkorb legen?\n\nDie Dateien liegen danach in 3DObjects/models/Genesis9/papierkorb/ und lassen sich zurückholen.`
-            : `„${stueck.name}" ausblenden?\n\nDas ist ein Stück der Daz-Bibliothek: Seine Dateien bleiben unberührt, es verschwindet nur aus dieser Liste.`;
-        if (!window.confirm(frage)) return;
-        await Genesis9garderobepflege._senden(stueck, 'loeschen', {}, 'Löschen', neuzeichnen);
+    /** Ohne Rückfrage (Edgar, 18.10.2026: „mach die Rückfragen vor dem Löschen weg") — ein eigenes Stück liegt danach im
+     *  Papierkorb (`3DObjects/models/Genesis9/papierkorb/`), eines der Daz-Bibliothek ist nur ausgeblendet; beides ist zurückholbar. */
+    static async loeschen(stueck, neuzeichnen, zeile = null) {
+        if (!zeile) {           // ohne bekannte Zeile wie bisher: Katalog neu, Liste neu
+            await Genesis9garderobepflege._senden(stueck, 'loeschen', {}, 'Löschen', neuzeichnen);
+            return;
+        }
+        Genesis9garderobezeile.zeigen(zeile, false);
+        try {
+            await Serverabruf.senden(Genesis9garderobepflege.adresse(stueck, 'loeschen'), {});
+        } catch (fehler) {
+            Genesis9garderobezeile.zeigen(zeile, true);
+            Protokoll.fehler('Garderobe', `Löschen von „${stueck.name}" fehlgeschlagen`, fehler);
+            window.alert(`Löschen fehlgeschlagen: ${fehler.message}`);
+            return;
+        }
+        Genesis9garderobezeile.entfernen(zeile);
+        Genesis9kleidung.entfernen(stueck.id);
     }
 
     static async _senden(stueck, aktion, nutzlast, titel, neuzeichnen) {

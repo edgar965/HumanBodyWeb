@@ -3,7 +3,7 @@
 
 Der Browser hat die Formate schon geschrieben (GLB/OBJ/PLY/STL/DAE, siehe
 `static/viewer/scene/modellexport.js`); hier werden sie nur noch abgelegt.
-Nur `.blend` läuft noch durch Blender (`core/dienste/modellexportlauf.py`).
+Nur `.blend` und `.fbx` laufen durch Blender (`core/dienste/modellexportlauf.py`).
 """
 
 import json
@@ -15,17 +15,58 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..dienste.modellexportlauf import Modellexportlauf, ZielAbgelehnt
+from ..dienste.modellexportziel import Modellexportziel
+from ..dienste.ordnersuche import Ordnersuche
 
 logger = logging.getLogger('core')
 
+#: Was Blender aus der GLB baut — der Rest kommt fertig aus dem Browser.
+BLENDER_FORMATE = ('blend', 'fbx')
+
 
 class Modellexportanfrage:
-    """`vorgabe` liefert den Startordner, `ablegen` nimmt den Export an."""
+    """`vorgabe` liefert den Startordner, `vorhanden` was dort liegt, `ordnersuche` das Fenster
+    „Ordner suchen", `ablegen` nimmt den Export an."""
 
     @staticmethod
     @require_GET
     def vorgabe(request):
-        return JsonResponse({'ordner': str(settings.HUMANBODY_MODELLEXPORT_VORGABE_DIR)})
+        """Mit `?name=`: `<Vorgabeordner>/<Modellname>` (Dialog der Szene seit 18.10.2026),
+        sonst der Vorgabeordner."""
+        name = request.GET.get('name')
+        if name is None:
+            return JsonResponse({'ordner': str(settings.HUMANBODY_MODELLEXPORT_VORGABE_DIR)})
+        return JsonResponse({'ordner': str(Modellexportziel.vorgabe(name))})
+
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def vorhanden(request):
+        """`{ordner, name, endungen: [".glb", "_vorne.jpg", …]}` → `{vorhanden: [Dateinamen]}`.
+        Legt nichts an."""
+        try:
+            daten = json.loads(request.body or b'{}')
+            ordner = Modellexportziel.pruefen(daten.get('ordner'))
+        except (json.JSONDecodeError, ValueError) as e:
+            return JsonResponse({'vorhanden': [], 'error': str(e)})
+        stamm = Modellexportziel.name(daten.get('name'))
+        endungen = [str(e) for e in daten.get('endungen') or [] if isinstance(e, str)]
+        return JsonResponse({'ordner': str(ordner), 'stamm': stamm,
+                             'vorhanden': Modellexportlauf.vorhanden(ordner, stamm, endungen)})
+
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def ordnersuche(request):
+        """Öffnet das Fenster „Ordner suchen" auf diesem Rechner und wartet auf die Wahl.
+        → `{ordner}`, leer bei Abbruch."""
+        try:
+            daten = json.loads(request.body or b'{}')
+        except json.JSONDecodeError:
+            daten = {}
+        ordner = Ordnersuche.waehlen(daten.get('start') or '', 'Exportordner wählen')
+        logger.info('Modellexport: Ordnersuche → %s', ordner or '(abgebrochen)')
+        return JsonResponse({'ordner': ordner})
 
     @staticmethod
     @csrf_exempt
@@ -41,6 +82,8 @@ class Modellexportanfrage:
             blend_quelle=request.FILES.get('blend_quelle'),
             fps=_fps(request.POST.get('fps')),
             polygone=_polygone(request.POST.get('polygone')),
+            direkt=request.POST.get('direkt') == '1',
+            blender_formate=_blender_formate(request.POST.get('blender_formate')),
         )
         try:
             ergebnis = lauf.ausfuehren()
@@ -69,6 +112,12 @@ def _polygone(roh):
     except (TypeError, ValueError):
         return 1.0
     return min(1.0, max(0.05, wert))
+
+
+def _blender_formate(roh):
+    """`"blend,fbx"` → `('blend', 'fbx')`; fehlt das Feld (ältere Aufrufer), nur `.blend` wie bisher."""
+    gewaehlt = tuple(f for f in BLENDER_FORMATE if f in str(roh or '').split(','))
+    return gewaehlt or ('blend',)
 
 
 def _liste(roh):

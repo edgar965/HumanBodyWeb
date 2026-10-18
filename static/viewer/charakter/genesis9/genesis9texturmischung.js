@@ -23,7 +23,8 @@ export class Genesis9texturmischung {
         const behaelter = document.getElementById(Genesis9texturmischung.BEREICH);
         if (!behaelter) return;
         behaelter.innerHTML = '';
-        const saetze = plan.haut || [];
+        // Ohne die eigenen Häute (`eigen:…`, 18.10.2026): sie tragen die Bilder ihres Grundsatzes, ihre Regler wirken im Shader und kämen in der Mischung nicht mit.
+        const saetze = (plan.haut || []).filter(h => !String(h.id).startsWith('eigen:'));
         if (!saetze.length) {
             behaelter.innerHTML = '<div class="gedaempft">Keine Hautsätze gefunden.</div>';
             return;

@@ -11,6 +11,8 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+{# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
+<meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 {% include "_importmap.html" %}
 {% endblock %}
 

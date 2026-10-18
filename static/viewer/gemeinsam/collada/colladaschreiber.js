@@ -27,11 +27,13 @@ export class Colladaschreiber {
      *                 je nach „Rig"-Häkchen)
      * @param optionen {textur, rig, animation: {wurzel, mixer, action} | null,
      *                  praefix: vor jeden Bilddateinamen gesetzt,
-     *                  aufloesung: 0 = Original, sonst längere Bildkartenseite}
+     *                  aufloesung: 0 = Original, sonst längere Bildkartenseite,
+     *                  pose: 'aktuell' stellt die Gelenke in die angezeigte Pose (nur ohne Animation)}
      * @returns {xml, bilder: [{dateiname, blob}], warnungen}
      */
     static async bauen(objekte, optionen = {}) {
-        const { textur = true, rig = true, animation = null, praefix = '', aufloesung = 0 } = optionen;
+        const { textur = true, rig = true, animation = null, praefix = '', aufloesung = 0, pose = 'ruhelage' } = optionen;
+        const aktuell = pose === 'aktuell' && !animation;
         const mat = await Colladamaterial.bauen(objekte, textur, praefix, aufloesung);
 
         let geometrien = '';
@@ -59,7 +61,8 @@ export class Colladaschreiber {
             controller += skinXml;
             if (!behandelteSkelette.has(obj.skeleton)) {
                 behandelteSkelette.add(obj.skeleton);
-                gelenkbaeume += Colladaknoten.gelenkbaum(obj.skeleton, sids);
+                if (aktuell) obj.skeleton.bones[0]?.updateWorldMatrix(true, true);
+                gelenkbaeume += Colladaknoten.gelenkbaum(obj.skeleton, sids, aktuell);
                 if (animation) {
                     animationsXml += Colladaanimation.bauen(
                         animation.wurzel, animation.mixer, animation.action, obj.skeleton, sids,

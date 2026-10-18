@@ -19,6 +19,7 @@ import './utils.js';
 import './skeleton.js';
 import './character.js';
 import './interaction.js';
+import './figurkontextmenue.js';
 import './lighting.js';
 import './menubar.js';
 import './save_load.js';

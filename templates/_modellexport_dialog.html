@@ -1,4 +1,4 @@
-{# Rechtsklick auf die Modellzeile -> „Exportieren …" (scene/modellexport_dialog.js). #}
+{# Rechtsklick auf die Modellzeile oder die Figur -> „Modell exportieren …" (charakter/modellexport_dialog.js). #}
 <div class="scene-modal-overlay" id="modellexport-dialog">
     <div class="scene-modal">
         <div class="scene-modal-header">
@@ -6,14 +6,19 @@
             <button class="scene-modal-close" data-close>&times;</button>
         </div>
         <div class="scene-modal-body">
-            <div class="hb-font-size-0-75rem-gedaempft">Formate</div>
+            <div class="hb-font-size-0-75rem-gedaempft">Formate (mehrere möglich)</div>
             <div class="modellexport-reihe">
+                <label title="Die Daten von „Modell speichern unter“"><input type="checkbox" id="modellexport-fmt-json" checked> JSON</label>
                 <label><input type="checkbox" id="modellexport-fmt-glb" checked> GLB</label>
+                <label><input type="checkbox" id="modellexport-fmt-blend"> Blender (.blend)</label>
+                <label><input type="checkbox" id="modellexport-fmt-fbx"> FBX</label>
+                <label title="Vier Bilder: vorne, links, rechts, hinten"><input type="checkbox" id="modellexport-fmt-jpg" checked> JPG (4 Ansichten)</label>
+            </div>
+            <div class="modellexport-reihe">
                 <label><input type="checkbox" id="modellexport-fmt-obj"> OBJ</label>
                 <label><input type="checkbox" id="modellexport-fmt-ply"> PLY</label>
                 <label><input type="checkbox" id="modellexport-fmt-stl"> STL</label>
                 <label><input type="checkbox" id="modellexport-fmt-dae"> DAE</label>
-                <label><input type="checkbox" id="modellexport-fmt-blend"> .blend</label>
             </div>
 
             <div class="hb-font-size-0-75rem-gedaempft">Inhalt</div>
@@ -36,7 +41,7 @@
                 <option value="512">512 px (schnelle Vorschau)</option>
             </select>
 
-            <div class="hb-font-size-0-75rem-gedaempft">Polygonanzahl (nur .blend)</div>
+            <div class="hb-font-size-0-75rem-gedaempft">Polygonanzahl (nur .blend und FBX)</div>
             <select class="scene-name-input" id="modellexport-polygone">
                 <option value="1" selected>Original</option>
                 <option value="0.5">50 %</option>
@@ -45,19 +50,24 @@
             </select>
 
             <div id="modellexport-pose-zeile" hidden>
-                <div class="hb-font-size-0-75rem-gedaempft">Pose (OBJ/PLY/STL, oder Rig aus)</div>
+                <div class="hb-font-size-0-75rem-gedaempft">Pose (OBJ/PLY/STL/DAE, oder Rig aus; mit Rig tragen GLB, .blend und FBX immer die aktuelle)</div>
                 <div class="modellexport-reihe">
-                    <label><input type="radio" name="modellexport-pose" value="ruhelage" checked> Ruhelage</label>
-                    <label><input type="radio" name="modellexport-pose" value="aktuell"> angezeigtes Animationsbild</label>
+                    <label><input type="radio" name="modellexport-pose" value="aktuell" checked> aktuelle Pose</label>
+                    <label><input type="radio" name="modellexport-pose" value="ruhelage"> Ruhelage</label>
                 </div>
             </div>
 
             <div class="hb-font-size-0-75rem-gedaempft">Ordner</div>
-            <input class="scene-name-input" id="modellexport-ordner" type="text" autocomplete="off">
+            <div class="modellexport-ordnerzeile">
+                <input class="scene-name-input" id="modellexport-ordner" type="text" autocomplete="off">
+                <button type="button" id="modellexport-suchen" title="Fenster „Ordner suchen“ öffnen">
+                    <i class="fas fa-folder-open"></i> Suchen …</button>
+            </div>
 
-            <div class="hb-font-size-0-75rem-gedaempft">Dateiname</div>
+            <div class="hb-font-size-0-75rem-gedaempft">Dateiname (JPG zusätzlich _vorne, _links, _rechts, _hinten)</div>
             <input class="scene-name-input" id="modellexport-name" type="text" autocomplete="off">
 
+            <div id="modellexport-vorhanden" class="modellexport-vorhanden" hidden></div>
             <div id="modellexport-warnungen" class="modellexport-warnungen"></div>
             <div id="modellexport-aufbau" class="modellexport-aufbau" hidden>
                 <i class="fas fa-hourglass-half"></i>
@@ -77,4 +87,14 @@
 .modellexport-warnungen { margin-top: 8px; }
 .modellexport-warnungen div { font-size: 0.78rem; color: #d9a441; padding: 2px 0; }
 .modellexport-aufbau { margin-top: 8px; font-size: 0.78rem; color: #7fc4e8; }
+.modellexport-ordnerzeile { display: flex; gap: 6px; align-items: center; }
+.modellexport-ordnerzeile input { flex: 1; min-width: 0; }
+/* Wie die Knöpfe der Fußzeile — ein Knopf ohne eigene Regel steht weiß im dunklen Dialog. */
+.modellexport-ordnerzeile button {
+    white-space: nowrap; cursor: pointer; padding: 7px 12px; font-size: 0.82rem; border-radius: 5px;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text);
+}
+.modellexport-ordnerzeile button:hover { border-color: var(--accent); }
+.modellexport-ordnerzeile button:disabled { opacity: 0.4; cursor: wait; }
+.modellexport-vorhanden { margin-top: 8px; font-size: 0.78rem; color: #e8907f; }
 </style>

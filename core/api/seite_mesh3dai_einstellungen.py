@@ -8,6 +8,7 @@ gelesen wird er bei jeder Abfrage des Stands (`Mesh3daistandwahl`, `Mesh3daistan
 
 from django.views.generic import TemplateView
 
+from ..dienste.mesh3daiaposewahl import Mesh3daiaposewahl
 from ..dienste.mesh3daistandwahl import Mesh3daistandwahl
 
 
@@ -21,7 +22,13 @@ class Mesh3daiEinstellungenSeite(TemplateView):
 
         prefs = dict(AppSettings.load().ui_prefs or {})
         return dict(super().get_context_data(**kwargs), schluessel=Mesh3daistandwahl.SCHLUESSEL, minuten=Mesh3daistandwahl.aus(prefs),
-                    vorgabe=Mesh3daistandwahl.VORGABE, minimum=Mesh3daistandwahl.MINIMUM, maximum=Mesh3daistandwahl.MAXIMUM)
+                    vorgabe=Mesh3daistandwahl.VORGABE, minimum=Mesh3daistandwahl.MINIMUM, maximum=Mesh3daistandwahl.MAXIMUM,
+                    # 18.10.2026: der Zwischenschritt „A-Pose aus dem Netz“ (Edgar: „einstellbar machen, um den Effekt zu messen“)
+                    apose_schluessel=Mesh3daiaposewahl.SCHLUESSEL, apose_wert=Mesh3daiaposewahl.aus(prefs), apose_werte=Mesh3daiaposewahl.WERTE,
+                    apose_vorgabe=Mesh3daiaposewahl.text(Mesh3daiaposewahl.VORGABE),
+                    # 18.10.2026 abends: je Methode Name der Klasse, Datei in der Kette und Beschreibung (Edgar: „Mach eine bessere Kennzeichnung, was die alte Mesh-3D-Methode war“)
+                    apose_methoden=[{'wert': w, 'name': Mesh3daiaposewahl.NAMEN[w], 'datei': Mesh3daiaposewahl.DATEIEN.get(w, ''), 'beschreibung': Mesh3daiaposewahl.BESCHREIBUNG[w]}
+                                    for w, _text in Mesh3daiaposewahl.WERTE])
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heißt sonst ``view``.

@@ -245,12 +245,12 @@ class SchrittsucheTest(SimpleTestCase):
         # Ein Stück, das gar nicht am Netz sitzt (Socke am formlosen TRELLIS-Fuß: 111 mm bei 38 mm Grundlinie), zählt
         # für die GEMEINSAME Weite nicht — sonst zöge es Shirt und Shorts an den Anschlag (−3 cm, Runden 7–15).
         m = ModellMitKleidern()
-        m.kleid_nur('g9_base_shirt', 'mb_joepal_crude_low_socks')
+        m.kleid_nur('g9_base_shirt', 'mh_joepal_crude_low_socks')
         shirt = {'art': 'kleidung', 'netz_mm': 22.0, 'grund_mm': 10.0, 'baender': [None] * 5, 'pixel': 0}
         socke = {'art': 'kleidung', 'netz_mm': 111.0, 'grund_mm': 38.0, 'baender': [None] * 5, 'pixel': 0}
-        befund = {'teile': {'g9_base_shirt': shirt, 'mb_joepal_crude_low_socks': socke}}
+        befund = {'teile': {'g9_base_shirt': shirt, 'mh_joepal_crude_low_socks': socke}}
         self.assertEqual(IterationKleider(m, befund).weite(), ['m.passform(weite_cm=-0.42)'])    # nur das Shirt
-        self.assertEqual(IterationKleider(m, {'teile': {'mb_joepal_crude_low_socks': socke}}).weite(), [])
+        self.assertEqual(IterationKleider(m, {'teile': {'mh_joepal_crude_low_socks': socke}}).weite(), [])
 
     def test_10_netz_nach_label(self):
         # Zwei Probenwände: x = 0 ist Stoff des Netzes, x = 0,10 ist Haut (der hängende Arm im Foto). Ein Stoffpunkt bei

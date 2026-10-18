@@ -28,6 +28,7 @@ from .api.hauttexturen import Hauttexturen
 from .api.brauen import Brauenendpunkte
 from .api.eigenstueck import Eigenstueckapi
 from .api.gcgenesis import Gcgenesisapi
+from .api.g9eigenehautapi import G9eigenehautapi
 from .api.g9figur import G9figur
 from .api.g9fototextur import G9fototextur
 from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
@@ -68,6 +69,10 @@ CHARAKTER = [
     path('api/character/figur-glb/<str:name>/', Figurexport.datei, name='figur_glb'),
     path('api/character/modellexport/vorgabe/', Modellexportanfrage.vorgabe,
          name='modellexport_vorgabe'),
+    path('api/character/modellexport/vorhanden/', Modellexportanfrage.vorhanden,
+         name='modellexport_vorhanden'),
+    path('api/character/modellexport/ordnersuche/', Modellexportanfrage.ordnersuche,
+         name='modellexport_ordnersuche'),
     path('api/character/modellexport/', Modellexportanfrage.ablegen, name='modellexport_ablegen'),
     path('api/character/figur-glb/<str:name>/ablegen/', Figurexport.ablegen,
          name='figur_glb_ablegen'),
@@ -220,6 +225,8 @@ CHARAKTER = [
          G9hautebenenapi.stand, name='g9_figur_hautebenen'),
     path('api/character/genesis9-figur/hautebenen/<str:produkt>/<str:geschlecht>/<int:kachel>.png',
          G9hautebenenapi.bild, name='g9_figur_hautebenen_bild'),
+    # Eigene Haut speichern (18.10.2026, core/api/g9eigenehautapi.py): Rezept aus Grundsatz und Reglern, danach als `eigen:<schluessel>` in der Hautauswahl.
+    path('api/character/genesis9-figur/eigenehaut/', G9eigenehautapi.speichern, name='g9_figur_eigenehaut'),
     # HumanBody-Frisur (GLB) auf dem Genesis-Kopf (19.09.2026, core/api/g9frisurapi.py).
     path('api/character/genesis9-figur/frisur/<str:name>/',
          G9frisurapi.netz, name='g9_figur_frisur'),
@@ -294,6 +301,10 @@ CHARAKTER = [
          name='modellordner_anlegen'),
     path('api/character/modellordner/verschieben/', Modellordnerendpunkte.verschieben,
          name='modellordner_verschieben'),
+    path('api/character/modellordner/umbenennen/', Modellordnerendpunkte.umbenennen,
+         name='modellordner_umbenennen'),
+    path('api/character/modellordner/loeschen/', Modellordnerendpunkte.loeschen,
+         name='modellordner_loeschen'),
     path('api/character/model/save/', Modelldateien.modell_sichern,
          name='character_model_save'),
     path('api/character/model/<str:name>/', Modelldateien.modell,

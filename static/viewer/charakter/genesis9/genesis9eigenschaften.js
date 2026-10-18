@@ -9,6 +9,7 @@ import { Genesis9ersatz } from '../../gemeinsam/genesis9ersatz.js';
 import { Genesis9materialdialog } from './genesis9materialdialog.js';
 import { Genesis9texturmischung } from './genesis9texturmischung.js';
 import { Genesis9hautebenenregler } from './genesis9hautebenenregler.js';
+import { Genesis9eigenehaut } from '../../gemeinsam/genesis9eigenehaut.js';
 import { Hoehengriff } from '../../gemeinsam/hoehengriff.js';
 import { Kopfeigenlink } from './kopfeigenlink.js';
 import { Genesis9koerpermorphformular } from './genesis9koerpermorphformular.js';
@@ -111,13 +112,15 @@ export class Genesis9eigenschaften {
         behaelter.innerHTML = '';
         // Neben jeder Auswahl mit Material ein Zahnrad: Glanz, Rauheit … im Popup (`Genesis9materialdialog`, 09.10.2026);
         // sein Block „Form" zeigt die Formregler des Teils (`Genesis9teilregler`) als Zeilen wie die Reglerliste (Kennung `g9d-`).
-        Genesis9materialdialog.form = { inst, plan, zeile: r => Genesis9eigenschaften._zeile(inst, r, 'g9d-') };
+        // `hautNeu`: nach „Als eigene Haut speichern" steht die neue Haut in `plan.haut` — die Auswahl neu bauen (18.10.2026).
+        Genesis9materialdialog.form = { inst, plan, zeile: r => Genesis9eigenschaften._zeile(inst, r, 'g9d-'), hautNeu: () => Genesis9eigenschaften._haut(inst, plan) };
+        // Eigene Häute (`eigen:…`, `Genesis9eigenehaut`) legen beim Wählen ihre Regler auf; danach Schieber und offenes Popup nachziehen. Ohne Geschlecht keine leeren Klammern.
         behaelter.appendChild(Genesis9materialdialog.knopf(inst, 'haut', Genesis9eigenschaften._wahl('Haut',
             [{ id: '', name: 'Wie im Katalog' },
-             ...(plan.haut || []).map(h => ({ id: h.id, name: `${h.name} (${h.geschlecht})` }))],
+             ...(plan.haut || []).map(h => ({ id: h.id, name: h.geschlecht && h.geschlecht !== 'eigen' ? `${h.name} (${h.geschlecht})` : h.name }))],
             inst.haut || '',
-            wert => Genesis9lauf.planen(inst, () => inst.hautSetzen(wert),
-                                        () => Genesis9eigenschaften._kopf(inst), 'haut'))));
+            wert => Genesis9lauf.planen(inst, () => Genesis9eigenehaut.waehlen(inst, plan, wert),
+                                        () => Genesis9eigenschaften._nachHaut(inst, plan), 'haut'))));
         behaelter.appendChild(Genesis9materialdialog.knopf(inst, 'augen', Genesis9eigenschaften._augenWahl(inst, plan)));
         Genesis9eigenschaften._brauen(inst, plan, behaelter);
         // Wimpern, Nagellack und Schminke (18.09.2026): je Kategorie ein Preset aus den Charakterordnern und dem Daz-Makeup-System.
@@ -129,6 +132,14 @@ export class Genesis9eigenschaften {
                     () => inst.praesetSetzen(kategorie.kategorie, wert),
                     () => Genesis9eigenschaften._kopf(inst), `praeset:${kategorie.kategorie}`))));
         }
+    }
+
+    /** Nach einem Hautwechsel: Kopfzeile, Schieber der Hautebenen, Texturmischung und ein offenes Popup auf den Stand der Figur — eine eigene Haut bringt ihre Werte mit. */
+    static _nachHaut(inst, plan) {
+        Genesis9eigenschaften._kopf(inst);
+        Genesis9hautebenenregler.nachziehen(inst);
+        Genesis9texturmischung.fuellen(inst, plan);
+        Genesis9materialdialog.aktualisieren(inst);
     }
 
     /** Sentinel für „Original Augen vom Modell" — nie an den Server gesendet (`Genesis9Modell.augenOriginalSetzen`). */

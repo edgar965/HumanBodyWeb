@@ -35,10 +35,11 @@ export class Figurwahlzeile {
 
     /**
      * @param {Object} eintrag  { name, anzeige, unterzeile, warnung? } aus Figurkataloge — `warnung` setzt ein rotes Zeichen vor den Namen
-     * @param {Object} taten    { waehlen(), laden(), pflegen(was) | null, werkzeuge }
-     *        `pflegen` fehlt → keine Werkzeug-Knöpfe; `werkzeuge` nennt, welche (Vorgabe Umbenennen und Löschen)
+     * @param {Object} taten    { waehlen(), laden(), pflegen(was) | null, werkzeuge, zusatz(li) }
+     *        `pflegen` fehlt → keine Werkzeug-Knöpfe; `werkzeuge` nennt, welche (Vorgabe Umbenennen und Löschen);
+     *        `zusatz(li)` → weitere Einträge nur im Rechtsklickmenü, ohne Knopf (Verschieben in einen Ordner, 18.10.2026)
      */
-    static bauen(eintrag, { waehlen, laden, pflegen = null, werkzeuge = Figurwahlzeile.STANDARD }) {
+    static bauen(eintrag, { waehlen, laden, pflegen = null, werkzeuge = Figurwahlzeile.STANDARD, zusatz = null }) {
         const li = document.createElement('li');
         li.dataset.name = eintrag.name;
         if (eintrag.warnung) li.classList.add('mit-warnung');
@@ -57,16 +58,18 @@ export class Figurwahlzeile {
         }
         if (pflegen) {
             // Der Rechtsklick wählt die Zeile mit — man sieht, wovon das Menü spricht.
-            Kontextmenue.binden(li, () => { waehlen(); return Figurwahlzeile.menue(pflegen, werkzeuge); });
+            Kontextmenue.binden(li, () => { waehlen(); return Figurwahlzeile.menue(pflegen, werkzeuge, zusatz?.(li)); });
         }
         return li;
     }
 
-    /** Die Einträge des Rechtsklickmenüs — dieselben Werkzeuge wie die Knöpfe. */
-    static menue(pflegen, werkzeuge = Figurwahlzeile.STANDARD) {
-        return werkzeuge.map(was => ({
+    /** Die Einträge des Rechtsklickmenüs — dieselben Werkzeuge wie die Knöpfe, `zusatz` nach „Umbenennen" (Reihenfolge wie bei Animationen). */
+    static menue(pflegen, werkzeuge = Figurwahlzeile.STANDARD, zusatz = []) {
+        const eintraege = werkzeuge.map(was => ({
             symbol: Figurwahlzeile.WERKZEUGE[was].symbol, text: Figurwahlzeile.WERKZEUGE[was].text, tun: () => pflegen(was),
         }));
+        eintraege.splice(werkzeuge[0] === 'umbenennen' ? 1 : 0, 0, ...(zusatz || []));
+        return eintraege;
     }
 
     /** `mitPflege`: `true` (Umbenennen und Löschen), eine Liste von Werkzeugen oder `false`. */

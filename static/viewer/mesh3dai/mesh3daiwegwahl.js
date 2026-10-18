@@ -29,6 +29,17 @@ export class Mesh3daiwegwahl {
             });
             leiste.append(knopf);
         }
+        // Welche Methode die A-Pose rechnete (18.10.2026 abends, Einstellungen → Mesh3D-AI „Zwischenschritt A-Pose“): MeshToRigToPose_MIA oder MeshToRigToPose.
+        const zs = probe.zwischenschritt;
+        if (zs) {
+            const hinweis = document.createElement('span');
+            hinweis.className = 'mesh3dai-wegwahl-methode';
+            hinweis.textContent = zs.fehlt
+                ? `Eingestellt ist ${zs.eingestellt} — für diesen Job gibt es davon keinen Lauf; gezeigt: ${zs.methode}.`
+                : `A-Pose über ${zs.methode} (umschalten: Einstellungen → Mesh3D-AI).`;
+            if (zs.fehlt) hinweis.classList.add('mesh3dai-wegwahl-fehlt');
+            leiste.append(hinweis);
+        }
         return leiste;
     }
 

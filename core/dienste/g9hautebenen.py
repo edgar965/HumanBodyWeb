@@ -9,7 +9,9 @@ Edgar, 17.10.2026: „Baue noch Hautebenen: Hautton, Sommersprossen, Altersfleck
                                   nur 0,04 (gemessen 17.10.2026: Kopf 0,04, Rumpf 0,45–0,49), die Gesichts-Gebiete sind GESETZT, nicht gemessen
     G   Altersflecken-Gebiet      GESETZT (kein System auf der Platte hat Altersflecken, `genesis9-alter.md` Tabelle 7): Handrücken und Unterarme außen, Stirn und
                                   Schläfen, Schultern/Décolleté nach oben gewandte Haut
-    B   unbenutzt (0)
+    B   Wangen- und Nasenröte     seit Fassung 2 (18.10.2026): Wangen, untere Nase, Kinn aus den Landmarken — GESETZT; auch das Gebiet der Aknenarben
+    A   Augenringe                seit Fassung 2: die unteren Lidpunkte jedes Auges (`G9gesichtsteile` auge_r/auge_l, unter ihrem Mittel), `RING_VERSATZ` nach unten
+                                  versetzt, Gauß mit `RING_RADIUS` — GESETZT, an keinem Foto geprüft
 
 Je Kachel zusätzlich `meter_je_uv`: wie viele Meter eine UV-Einheit auf dieser Kachel misst (Median der Kantenlängen) — der Shader rechnet damit die Punktgröße von Millimetern
 in UV um, sonst wären die Sommersprossen auf dem Kopf (kleine Kachelfläche) so groß wie das halbe Gesicht.
@@ -33,7 +35,8 @@ __all__ = ['G9hautebenen']
 class G9hautebenen(G9hautfalten):
     """`bauen()` rechnet alle Kacheln dieses Geschlechts und schreibt sie in die Ablage."""
 
-    FASSUNG = 1
+    #: 2 (18.10.2026): RGBA mit Wangenröte (B) und Augenringen (A).
+    FASSUNG = 2
     OHNE_FALTEN = (1005,)                      # Nägel
     #: Der größte Wert der MB-Lab-Maske (168/255 weiblich, 153/255 männlich) wird 1.
     MASKE_MAX = {'female': 168.0 / 255.0, 'male': 153.0 / 255.0}
@@ -41,6 +44,11 @@ class G9hautebenen(G9hautfalten):
     GESICHT_SOMMER = (('nase', 0.022, 1.0), ('wange', 0.034, 0.85), ('stirn', 0.022, 0.35))
     #: Gesicht, Altersflecken: Stirn und Schläfen stark, Wangen schwach — gesetzt.
     GESICHT_ALTER = (('stirn', 0.030, 0.9), ('schlaefe', 0.030, 0.7), ('wange', 0.028, 0.35))
+    #: Gesicht, Rötung (Kanal B): Wangen stark, untere Nase, Kinn schwach — gesetzt. Von der Nase nur die unteren 70 % der Punkte (nicht der Nasenrücken zwischen den Augen).
+    GESICHT_ROETE = (('wange', 0.030, 1.0), ('nase', 0.016, 0.8), ('kinn', 0.018, 0.4))
+    #: Augenringe (Kanal A): Versatz der unteren Lidlinie nach unten und Radius des Gauß, Meter — gesetzt.
+    RING_VERSATZ = 0.006
+    RING_RADIUS = 0.007
     #: Weichzeichnen der Karte (Pixel).
     GLAETTUNG_PX = 2.0
 
@@ -104,8 +112,43 @@ class G9hautebenen(G9hautfalten):
                 alter[kopf] = np.maximum(alter[kopf], staerke * self._gauss(d, radius))
         return np.clip(sommer, 0.0, 1.0), np.clip(alter, 0.0, 1.0)
 
+    @classmethod
+    def lidbogen(cls, gesicht):
+        """Die unteren Lidpunkte beider Augen (unter dem Mittel ihres Auges), um `RING_VERSATZ` nach unten versetzt — (n, 3) oder None."""
+        teile = []
+        for name in ('auge_r', 'auge_l'):
+            punkte = gesicht.get(name)
+            if punkte is None or not len(punkte):
+                continue
+            unten = punkte[punkte[:, 1] < punkte[:, 1].mean()]
+            teile.append(unten - np.array([0.0, cls.RING_VERSATZ, 0.0]))
+        return np.vstack(teile) if teile else None
+
+    def gesichtsfelder(self, pos, teil, gesicht):
+        """`(roete (n,), ringe (n,))` — Wangen-/Nasenröte und Augenringe je Texel, nur am Kopf (Fassung 2)."""
+        from Genesis9.koerperteile import G9koerperteile
+        from scipy.spatial import cKDTree
+
+        kopf = np.isin(teil, [G9koerperteile.NUMMER['kopf']])
+        roete, ringe = np.zeros(len(pos)), np.zeros(len(pos))
+        if not kopf.any():
+            return roete, ringe
+        for name, radius, staerke in self.GESICHT_ROETE:
+            punkte = gesicht.get(name)
+            if punkte is None or not len(punkte):
+                continue
+            if name == 'nase':
+                punkte = punkte[punkte[:, 1] <= np.percentile(punkte[:, 1], 70)]
+            d, _i = cKDTree(punkte).query(pos[kopf])
+            roete[kopf] = np.maximum(roete[kopf], staerke * self._gauss(d, radius))
+        bogen = self.lidbogen(gesicht)
+        if bogen is not None:
+            d, _i = cKDTree(bogen).query(pos[kopf])
+            ringe[kopf] = self._gauss(d, self.RING_RADIUS)
+        return np.clip(roete, 0.0, 1.0), np.clip(ringe, 0.0, 1.0)
+
     def kachel(self, traeger, abtastung, nummer, grund):
-        """`(bild (S, S, 3) uint8, meter_je_uv)` einer Kachel."""
+        """`(bild (S, S, 4) uint8, meter_je_uv)` einer Kachel."""
         from scipy import ndimage
 
         kaefig, normalen, teil_je_punkt, maske, gesicht = grund
@@ -116,13 +159,14 @@ class G9hautebenen(G9hautfalten):
         normale /= np.maximum(np.linalg.norm(normale, axis=1, keepdims=True), 1e-9)
         fuehrend = ecken[np.arange(len(ecken)), anteile.argmax(1)]
         sommer, alter = self.felder(pos, normale, teil_je_punkt[fuehrend], uv, maske, gesicht)
+        roete, ringe = self.gesichtsfelder(pos, teil_je_punkt[fuehrend], gesicht)
         s = abtastung.seite
-        karten = np.zeros((s, s, 3))
-        karten[drin, 0], karten[drin, 1] = sommer, alter
+        karten = np.zeros((s, s, 4))
+        karten[drin, 0], karten[drin, 1], karten[drin, 2], karten[drin, 3] = sommer, alter, roete, ringe
         weg, (iy, ix) = ndimage.distance_transform_edt(~drin, return_indices=True)
         nah = (~drin) & (weg <= self.RAND_PX)
         karten[nah] = karten[iy[nah], ix[nah]]
-        for k in range(2):
+        for k in range(4):
             karten[..., k] = ndimage.gaussian_filter(karten[..., k], self.GLAETTUNG_PX)
         lage = np.zeros((s, s, 3))
         lage[drin] = pos
@@ -161,10 +205,12 @@ class G9hautebenen(G9hautfalten):
             if int(nummer) in self.OHNE_FALTEN:
                 continue
             bild, meter_je_uv = self.kachel(traeger, abtastung, nummer, grund)
-            logger.info('Hautebenen %s Kachel %d: Sommersprossen max %d, Altersflecken max %d, %.3f m je UV (%.1f s)', self.geschlecht, nummer,
-                        int(bild[..., 0].max()), int(bild[..., 1].max()), meter_je_uv, time.perf_counter() - t0)
-            Image.fromarray(bild, 'RGB').save(self.bildpfad(self.geschlecht, nummer), 'PNG')
-            kacheln[str(nummer)] = {'meter_je_uv': round(meter_je_uv, 4), 'sommer_max': int(bild[..., 0].max()), 'alter_max': int(bild[..., 1].max())}
+            logger.info('Hautebenen %s Kachel %d: Sommersprossen max %d, Altersflecken max %d, Röte max %d, Augenringe max %d, %.3f m je UV (%.1f s)',
+                        self.geschlecht, nummer, int(bild[..., 0].max()), int(bild[..., 1].max()), int(bild[..., 2].max()), int(bild[..., 3].max()),
+                        meter_je_uv, time.perf_counter() - t0)
+            Image.fromarray(bild, 'RGBA').save(self.bildpfad(self.geschlecht, nummer), 'PNG')
+            kacheln[str(nummer)] = {'meter_je_uv': round(meter_je_uv, 4), 'sommer_max': int(bild[..., 0].max()), 'alter_max': int(bild[..., 1].max()),
+                                    'roete_max': int(bild[..., 2].max()), 'ringe_max': int(bild[..., 3].max())}
         liste = {'geschlecht': self.geschlecht, 'fassung': self.FASSUNG, 'seite': self.SEITE, 'kacheln': kacheln,
                  'sekunden': round(time.perf_counter() - t0, 1)}
         ziel = self.listenpfad(self.geschlecht)

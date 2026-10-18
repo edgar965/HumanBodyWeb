@@ -2,6 +2,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Kontextmenue } from '../../gemeinsam/kontextmenue.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
+import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
 
 /**
  * Genesis9garderobekategorien — Edgars Einteilung der Daz-Garderobe im Browser.
@@ -17,9 +18,9 @@ import { Genesis9garderobepflege } from './genesis9garderobepflege.js';
  * garderobe_kategorien.json`) und wird hier darübergelegt.
  *
  * Das Kontextmenü (`Kontextmenue`, dasselbe wie bei Animationen und Modell)
- * bietet je andere Kategorie einen Eintrag „Verschieben nach …" und darunter
- * „Neue Kategorie …" (Name per Abfrage). Nach dem Verschieben zeichnet der
- * Aufrufer die Liste neu — der Stand kommt mit der Antwort zurück.
+ * bietet „Verschieben nach" als Combo-Box mit allen Kategorien und am Ende
+ * „Neue Kategorie …" (Name per Abfrage; bis 18.10.2026 eine Zeile je Kategorie). Beim Verschieben wandert nur die Zeile
+ * (seit 18.10.2026, `verschieben`) — der Stand kommt mit der Antwort zurück.
  *
  * Alle Kategorien stehen ZU; offen ist EINZIG die des in der Szene gewählten Stücks
  * (`Genesis9garderobe.gewaehltesStueck`).
@@ -37,6 +38,8 @@ export class Genesis9garderobekategorien {
     static ADRESSE = '/api/character/genesis9-figur/garderobe/kategorien/';
     /** Art -> Vorgabe, wenn der Server keine `kategorie` mitgibt (`G9dazkategorien.NACH_ART`). */
     static VORGABE = { kleidung: 'Oberteile', haar: 'Haare', requisit: 'Requisiten' };
+    /** Wert der Combo-Box für „Neue Kategorie …" — kein Name einer Kategorie kann ihn tragen. */
+    static NEU = '\u0000neu';
     static _stand = null;
 
     /** `{kategorien: [Name], zuordnung: {kennung: Name}}` — einmal geholt. */
@@ -83,38 +86,60 @@ export class Genesis9garderobekategorien {
         Kontextmenue.binden(zeile, () => {
             const stand = Genesis9garderobekategorien._stand;
             if (!stand || stueck.oben) return [];      // der Eintrag oben gehört zu keiner Kategorie
+            // EINE Combo-Box statt einer Zeile je Kategorie (Edgar, 18.10.2026: „verschieben Funktion vereinfachen, mach eine Combo
+            // Box mit allen ordnern (anstelle der Auflistung)"); die eigene steht gewählt, „Neue Kategorie …" am Ende.
             const eigene = Genesis9garderobekategorien.kategorie(stueck, stand);
-            const eintraege = stand.kategorien
-                .filter(name => name !== eigene)
-                .map(name => ({
-                    symbol: 'fa-folder', text: `Verschieben nach „${name}"`,
-                    tun: () => Genesis9garderobekategorien.verschieben(stueck, name, neuzeichnen),
-                }));
-            eintraege.push(null, {
-                symbol: 'fa-folder-plus', text: 'Neue Kategorie …',
-                tun: () => {
-                    const name = window.prompt(`„${stueck.name}" verschieben in neue Kategorie:`, '');
-                    if (name && name.trim()) {
-                        Genesis9garderobekategorien.verschieben(stueck, name.trim(), neuzeichnen);
-                    }
-                },
-            });
+            const namen = stand.kategorien.includes(eigene) ? stand.kategorien : [...stand.kategorien, eigene];
+            return [{
+                symbol: 'fa-folder', text: 'Verschieben nach', wert: eigene,
+                auswahl: [...namen.map(name => ({ wert: name, text: name })),
+                          { wert: Genesis9garderobekategorien.NEU, text: 'Neue Kategorie …' }],
+                waehlen: wert => Genesis9garderobekategorien._gewaehlt(stueck, wert, neuzeichnen, zeile),
+            },
             // Umbenennen und Löschen bei jedem Stück (Edgar, 05.10.2026) — `Genesis9garderobepflege`.
-            eintraege.push(null, ...Genesis9garderobepflege.eintraege(stueck, neuzeichnen));
-            return eintraege;
+            null, ...Genesis9garderobepflege.eintraege(stueck, neuzeichnen, zeile)];
         });
     }
 
-    static async verschieben(stueck, name, neuzeichnen) {
+    /** Wahl in der Combo-Box: eine Kategorie, oder `NEU` — dann der Name per Abfrage. */
+    static _gewaehlt(stueck, wert, neuzeichnen, zeile) {
+        const name = wert === Genesis9garderobekategorien.NEU
+            ? (window.prompt(`„${stueck.name}" verschieben in neue Kategorie:`, '') || '').trim()
+            : wert;
+        if (name) Genesis9garderobekategorien.verschieben(stueck, name, neuzeichnen, zeile);
+    }
+
+    /** Die Zeile wandert SOFORT in die Kategorie, der Server im Hintergrund — ohne Neuaufbau, offene Kategorien bleiben offen
+     *  (Edgar, 18.10.2026: „nach verschieben eines Assets wird das menü wieder geschlossen", `Genesis9garderobezeile`).
+     *  Scheitert der Server, wandert sie zurück. Ohne bekannte Zeile wie bisher: neu zeichnen. */
+    static async verschieben(stueck, name, neuzeichnen, zeile = null) {
+        const vorher = Genesis9garderobekategorien._stand;
+        const alt = vorher ? Genesis9garderobekategorien.kategorie(stueck, vorher) : null;
+        const umgehaengt = Boolean(zeile && vorher) && Genesis9garderobekategorien._umhaengen(zeile, stueck, name);
         try {
             Genesis9garderobekategorien._stand = await Serverabruf.senden(
                 Genesis9garderobekategorien.ADRESSE, { kennung: stueck.id, kategorie: name });
         } catch (fehler) {
+            if (umgehaengt) {
+                Genesis9garderobekategorien._stand = vorher;
+                Genesis9garderobezeile.verschieben(zeile, alt, vorher.kategorien);
+            }
             Protokoll.fehler('Garderobe', `Verschieben nach „${name}" fehlgeschlagen`, fehler);
             window.alert(`Verschieben fehlgeschlagen: ${fehler.message}`);
             return;
         }
-        neuzeichnen?.();
+        if (!umgehaengt) neuzeichnen?.();
+    }
+
+    /** Den Stand so vorwegnehmen, wie der Server ihn gleich zurückgibt, und die Zeile umhängen. */
+    static _umhaengen(zeile, stueck, name) {
+        const stand = Genesis9garderobekategorien._stand;
+        Genesis9garderobekategorien._stand = {
+            ...stand,
+            kategorien: stand.kategorien.includes(name) ? stand.kategorien : [...stand.kategorien, name],
+            zuordnung: { ...(stand.zuordnung || {}), [stueck.id]: name },
+        };
+        return Genesis9garderobezeile.verschieben(zeile, name, Genesis9garderobekategorien._stand.kategorien);
     }
 
     // ------------------------------------------------------------ Aufgeklappt

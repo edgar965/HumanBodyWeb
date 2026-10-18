@@ -54,7 +54,10 @@ class Mesh3daiendpunkte:
             return redirect(Mesh3daitabelle.adresse(gefunden))
         lauf = Mesh3daidaten.lauf(gefunden['ordner'])
         hinweis = Mesh3daidaten.hinweis(lauf, modell=gefunden.get('modell')) if lauf else Mesh3daiattrappe.HINWEIS
-        return render(request, 'mesh3dai.html', {'hinweis': hinweis, 'echt': lauf is not None, 'job': gefunden})
+        if lauf is None and gefunden.get('paar'):
+            # Trainingspaar ohne Ergebnis: Start und Ziel sind echt — kein Band „Attrappe“ (Edgar sah es am 18.10.2026 auf dem neuen Job Matt1).
+            hinweis = Mesh3daidaten.HINWEIS_PAAR % {'ergebnis': Mesh3daidaten.OHNE_ERGEBNIS_PAAR}
+        return render(request, 'mesh3dai.html', {'hinweis': hinweis, 'echt': lauf is not None or bool(gefunden.get('paar')), 'job': gefunden})
 
     @staticmethod
     @require_GET
@@ -71,6 +74,9 @@ class Mesh3daiendpunkte:
         daten = Mesh3daidaten.proben(gefunden) or Mesh3daiattrappe.proben(gefunden['id'])
         if daten is None:
             # Die Attrappe gibt es nur für Ursula1; ein anderer Job zeigt erst nach seinem ersten fertigen Lauf etwas.
+            if gefunden.get('paar'):
+                return JsonResponse({'error': '%s ist ein Trainingspaar: Start (Tripo-Netz) und Ziel (Genesis-Export) liegen bereit. %s' % (gefunden['name'], Mesh3daidaten.OHNE_ERGEBNIS_PAAR)},
+                                    status=404)
             return JsonResponse({'error': 'Für %s gibt es noch keinen fertigen Trainingslauf.' % gefunden['name']}, status=404)
         return JsonResponse(daten)
 

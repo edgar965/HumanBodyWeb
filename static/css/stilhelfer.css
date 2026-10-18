@@ -262,6 +262,13 @@
 
 .hb-trennlinie.hb-trennlinie.hb-trennlinie { height:1px; background:var(--border); margin:4px 0; }
 
+/* Eintrag mit Combo-Box (`Kontextmenue._auswahl`, 18.10.2026: Verschieben in eine Kategorie) */
+.hb-menueauswahl.hb-menueauswahl.hb-menueauswahl { cursor:default; }
+.hb-menueauswahl.hb-menueauswahl.hb-menueauswahl select {
+    flex:1; min-width:140px; font-size:0.82rem; padding:2px 4px;
+    background:var(--bg-primary); color:#ddd; border:1px solid var(--border); border-radius:4px;
+}
+
 /* Aufnahmebalken ueber der 3D-Ansicht (Klasse `Aufnahmebalken`, 28.08.2026).
  * Stand als fuenf `style.cssText`-Zeilen in ZWEI Vorlagen — gemeldet von
  * `doppelcode` und `jsstilfassungen`. */

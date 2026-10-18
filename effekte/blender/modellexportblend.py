@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""modellexportblend — eine GLB in eine .blend umschreiben.
+"""modellexportblend — eine GLB in eine .blend und/oder .fbx umschreiben.
 
 Aufruf (aus `core/dienste/modellexportlauf.py`), MIT `--factory-startup`:
 
-    blender -b --factory-startup --python modellexportblend.py -- --glb <quelle.glb> --blend <ziel.blend>
+    blender -b --factory-startup --python modellexportblend.py -- --glb <quelle.glb>
+            [--blend <ziel.blend>] [--fbx <ziel.fbx>]
 
 Nur DAS tut dieses Skript: GLB importieren (Netz, Skin, Werkstoffe samt
 Texturen, Animation — glTF trägt das alles), leere Szene, dann speichern.
@@ -32,7 +33,9 @@ import mathutils  # noqa: E402  # pyright: ignore[reportMissingImports]  (Blende
 def argumente(argv):
     parser = argparse.ArgumentParser(prog='modellexportblend')
     parser.add_argument('--glb', required=True)
-    parser.add_argument('--blend', required=True)
+    # Mindestens eins von beiden; FBX seit 18.10.2026 (Edgar: „exportieren als glb, blender, fbx, und jpg").
+    parser.add_argument('--blend', default='')
+    parser.add_argument('--fbx', default='')
     parser.add_argument('--fps', type=int, default=30)
     parser.add_argument('--polygone', type=float, default=1.0)
     parser.add_argument('--audio', default='', help='Audiodatei: läuft als Tonstreifen im Sequenzer mit (03.10.2026)')
@@ -232,9 +235,30 @@ def polygone_reduzieren(quote):
     return {'netze': netze, 'dreiecke_vorher': vorher, 'dreiecke_nachher': nachher}
 
 
+def fbx_schreiben(pfad, mit_animation):
+    """Die Szene als FBX, Bilder eingebettet.
+
+    Gelesen in Blender 5.2.2, `io_scene_fbx/export_fbx_bin.py:1782` (`fbx_data_video_elements`): Mit
+    `embed_textures` schreibt der Exporter `packed_file.data` — die Bilder, die der glTF-Import eingepackt
+    hat — als `Content` in die Datei; `embed_textures` gilt nur bei `path_mode='COPY'` (Zeile 3560).
+    `add_leaf_bones` ist im Operator an (Vorgabe True) und hängt jedem Endknochen einen `_end`-Knochen an,
+    den keine andere Anwendung erwartet — aus.
+    """
+    bpy.ops.export_scene.fbx(
+        filepath=pfad, path_mode='COPY', embed_textures=True, add_leaf_bones=False,
+        bake_anim=mit_animation, use_armature_deform_only=False,
+    )
+    return pfad
+
+
 def main():
     a = argumente(sys.argv)
+    if not a.blend and not a.fbx:
+        raise SystemExit('modellexportblend: weder --blend noch --fbx angegeben')
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    # Kein `<name>.blend1` neben einer überschriebenen Datei (der Dialog der Szene schreibt seit
+    # 18.10.2026 direkt in den gewählten Ordner und überschreibt gleichnamige Dateien).
+    bpy.context.preferences.filepaths.save_version = 0
     fps = fps_setzen(a.fps)
     bpy.ops.import_scene.gltf(filepath=a.glb)
     fremd = fremdkoerper_entfernen()
@@ -243,9 +267,13 @@ def main():
     blick = ansicht_auf_figur()
     spur = zeitleiste()
     ton = tonspur(a.audio) if a.audio else None
-    bpy.ops.wm.save_as_mainfile(filepath=a.blend)
-    print('modellexportblend: geschrieben %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s, FPS %s, '
-          'Polygone %s, Ton %s)' % (a.blend, fremd, ansichten, blick, spur, fps, polygone, ton), flush=True)
+    if a.blend:
+        bpy.ops.wm.save_as_mainfile(filepath=a.blend)
+    if a.fbx:
+        fbx_schreiben(a.fbx, mit_animation=spur is not None)
+    print('modellexportblend: geschrieben %s %s (fremd weg %s, Ansichten %d, Blick %s, Animation %s, FPS %s, '
+          'Polygone %s, Ton %s)' % (a.blend, a.fbx, fremd, ansichten, blick, spur, fps, polygone, ton),
+          flush=True)
 
 
 if __name__ == '__main__':

@@ -83,7 +83,7 @@ export class Lagenverdeckung {
         const anzahl = (inst?.bodyMesh?.geometry?.userData?.indexVoll?.index?.length || 0) / 3;
         for (const netz of Object.values(inst?.clothMeshes || {})) {
             const voll = netz?.geometry?.userData?.indexVoll;
-            if (!voll || Stueckloch.von(netz, anzahl)) continue;
+            if (!voll || Stueckloch.verschweisst(netz, anzahl)) continue;
             Hautverdeckung.indexSetzen(netz.geometry, voll.index, voll.gruppen);
             delete netz.geometry.userData.lagenVerdeckt;
             Lagenverdeckung._einzug(netz, null, null);
