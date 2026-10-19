@@ -25,6 +25,8 @@ export class Hautloch {
 
     /** Die Löcher je Geometrie der Haut, wie `naehen` sie zuletzt bekam (nicht in `userData`: die Netze darin wären ein Kreis für jeden Exporter). */
     static _loecher = new WeakMap();
+    /** Je Geometrie der Haut die Stücke (`uuid`), für die `vorab` zuletzt genäht hat. */
+    static _vorab = new WeakMap();
 
     /**
      * Der Rand verschweißter Stücke folgt der Haut, wie sie JETZT ist (`stuecknaht.js`): Verschiebung ins `einzug`-Feld des Stücks.
@@ -108,6 +110,27 @@ export class Hautloch {
         Promise.all([import('./anatomiehaut.js'), inst._anatomieWartet || null])
             .then(([{ Anatomiehaut }]) => Anatomiehaut.nachziehen(inst))
             .catch(fehler => Protokoll.warnung('Hautloch', `Anatomie nachziehen: ${fehler.message}`));
+        // Was durch die Kleidung sticht, ausblenden (`anatomieverdeckung.js`, 19.10.2026) — die Naht läuft nach jedem An- und Ausziehen.
+        import('./anatomieverdeckung.js').then(({ Anatomieverdeckung }) => Anatomieverdeckung.planen(inst))
+            .catch(fehler => Protokoll.warnung('Hautloch', `Anatomieverdeckung: ${fehler.message}`));
+    }
+
+    /**
+     * Während eine Stufe nachlädt, wartet die Maske (`Hautverdeckung._rechnen`) — die Löcher verschweißter Stücke kosten keine Rechnung und kommen
+     * sofort (19.10.2026: in `/Charakter/` stand die Scham auf der groben Stufe 5 s lang ohne Loch). Nur auf einer Haut ohne Maske der Kleider
+     * (`hautVerdeckt`): eine schon gezeigte Maske bleibt stehen, bis die neue fertig ist. Neu genäht wird, sobald ein Stück neu gebaut ist (die feine
+     * Fassung kommt oft vor dem feinen Körper — ohne Naht stand ihr Rand dort neben dem groben Loch). @returns der Stand von `nurLoecher` oder null
+     */
+    static vorab(inst, stuecke) {
+        const koerper = inst?.bodyMesh, geo = koerper?.geometry, voll = geo?.userData?.indexVoll;
+        if (!geo?.index || !voll || geo.userData.hautVerdeckt) return null;
+        const schluessel = stuecke.map(([, netz]) => netz.uuid).join('|');
+        if (Hautloch._vorab.get(geo) === schluessel) return null;
+        const loecher = Stueckloch.maske(stuecke, voll.index.length / 3, geo.attributes.position.array);
+        if (!loecher) return null;
+        Hautloch._vorab.set(geo, schluessel);
+        Hautloch.naehen(geo, loecher, koerper);
+        return Hautloch.nurLoecher(inst, geo, voll, loecher);
     }
 
     /** Nur verschweißte Stücke, sonst nichts zu maskieren: aus der Haut fallen genau ihre Löcher weg, ohne Einzug und Saumband. */

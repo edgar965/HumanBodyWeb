@@ -42,6 +42,23 @@ Einstellungen → Mesh3D-AI (Edgar, 14.10.2026: „einstellbar, wie viele Minute
         gewählten Methode (Knöpfe „Weg“, Zwischenbild in der A-Pose) — ohne neuen Lauf, wenn der Job schon einen mit dieser Methode hat; sonst sagt sie, welche gezeigt wird. Bei „aus“ zuerst „Netz direkt“.
         Die Testnetze sind bisher nur mit einer Methode gerechnet; die Testseite nennt sie. Vergleich beider Methoden: Hilfe → Architektur → Mesh3DAI, Abschnitt 1.</p>
 </div>
+{% comment %}19.10.2026, Edgar nach der Untersuchung „ein Bildersatz kostet 1,7–2,8 s“: „mach alle 3, per Option einstellbar, default: A“ — `Mesh3daitexturwahl`.{% endcomment %}
+<div class="settings-section">
+    <h3>Bilder der Figuren</h3>
+    <div class="settings-row">
+        <label for="{{ textur_schluessel }}">Bilder laden als:</label>
+        <select name="{{ textur_schluessel }}" id="{{ textur_schluessel }}" data-reihenfolge="fest">
+            {% for w in textur_wege %}<option value="{{ w.wert }}"{% if w.wert == textur_wert %} selected{% endif %}>{{ w.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ textur_vorgabe }}. Gilt ab dem nächsten Laden der Jobseite, nur für die Genesis-Figuren in Ziel und Ergebnis.</span>
+    </div>
+    <table class="doku mesh3dai-methoden">
+        <thead><tr><th>Weg</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for w in textur_wege %}<tr{% if w.wert == textur_wert %} class="mesh3dai-methode-gewaehlt"{% endif %}><td><strong>{{ w.text }}</strong></td><td>{{ w.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
 
 {% block einstellungen_nachtrag %}

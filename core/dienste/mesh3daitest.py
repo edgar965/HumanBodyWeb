@@ -145,6 +145,10 @@ class Mesh3daitest:
         for p in sorted(cls.ordner().iterdir()):
             if not (p / 'test.json').is_file():
                 continue
+            # Trainingspaare (Ziel unter `ziel/`) sind seit 19.10.2026 Trainingsdaten, keine Tests (Edgar: „die sollst du als nächstes trainieren, lösche sie aus den Testläufen“);
+            # ihr Ordner bleibt (MIA-Grundhaltung des Tripo-Netzes = Eingang der Trainingswolke), die Seite `/mesh-3D-AI/test/<paar>/` bleibt über die Adresse erreichbar.
+            if (p / 'ziel' / 'ziel.json').is_file():
+                continue
             e = cls.endung(p, weg)
             try:
                 info = json.loads((p / ('test%s.json' % e)).read_text(encoding='utf-8'))

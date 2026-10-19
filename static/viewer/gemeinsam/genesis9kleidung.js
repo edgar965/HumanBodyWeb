@@ -14,6 +14,7 @@ import { Reiterzuordnung } from './reiterzuordnung.js';
 import { Genesis9ersatz } from './genesis9ersatz.js';
 import { Kleidersichtbarkeit } from './kleidersichtbarkeit.js';
 import { Genesis9hautebenen } from './genesis9hautebenen.js';
+import { Zeichenstand } from './zeichenstand.js';
 
 /**
  * Genesis9kleidung — Daz-Stücke einer Genesis-9-Figur anziehen und ausziehen,
@@ -153,8 +154,9 @@ export class Genesis9kleidung {
     static async anziehen(inst, kennung, werte, stufen, kaskade, vorBau = null) {
         inst.kleidung[kennung] = { ...(werte || {}) };
         const lauf = inst._lauf;
-        // Aus dem Speicher der Figur (je Stufe, `Genesis9antwortspeicher`, 12.10.2026), sonst vom Server.
-        const antwort = await Genesis9antwortspeicher.kleid(inst, kennung, Genesis9aufbau.adresse(
+        // Aus dem Speicher der Figur (je Stufe, `Genesis9antwortspeicher`, 12.10.2026), sonst vom Server. Bis die Antwort da ist und noch kein Netz des Stücks steht,
+        // nennt die Anzeige es unter „lädt noch" (`Zeichenstand`, 19.10.2026); gebaut wird danach ohne Pause (außer mit `vorBau`, dann steht das alte Netz).
+        const antwort = await Zeichenstand.laden(inst, kennung, Genesis9antwortspeicher.kleid(inst, kennung, Genesis9aufbau.adresse(
             `${inst.constructor.ADRESSE}garderobe/${encodeURIComponent(kennung)}/netz/`, stufen), {
                 regler: inst.regler || {}, variante: werte?.variante || '',
                 stil: Genesis9kleidung.stilliste(werte), regler_stueck: werte?.regler || {},
@@ -162,7 +164,7 @@ export class Genesis9kleidung {
                 ...(inst.drehung ? { drehung: inst.drehung } : {}),
                 ...Genesis9lagen.anfrage(inst.kleidung, kennung),
                 gc_getragen: Genesis9lagen.gcGetragen(inst),
-            });
+            }));
         const daten = antwort.daten;
         if (daten.fehler) throw new Error(daten.fehler);
         if (lauf !== inst._lauf || !inst.kleidung[kennung]) return 0;   // überholt oder ausgezogen

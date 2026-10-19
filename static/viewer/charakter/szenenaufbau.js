@@ -12,6 +12,7 @@ import { Reiterfreigabe } from './reiterfreigabe.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Startmessung } from '../gemeinsam/startmessung.js';
+import { Netzstufenstand } from '../gemeinsam/netzstufenstand.js';
 import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
 import { Reiterinhalt } from './reiterinhalt.js';
 
@@ -160,6 +161,7 @@ export class Szenenaufbau {
                 Protokoll.warnung('Scene', 'Vorgabefigur nicht ladbar:', fehler);
             }
         }
+        Netzstufenstand.seiteFertig();               // die Figuren sind angestoßen: ab jetzt meldet jede selbst, was ihr fehlt (Anzeige rechts unten)
         M.um('  Anfangszustand merken', () => fn.captureInitial?.());
         await M.umAsync('  Letzte Animation', () => this._letzteAnimation(hatSitzung));
         await M.umAsync('  Pose setzen', () => this._pose(einstellungen));

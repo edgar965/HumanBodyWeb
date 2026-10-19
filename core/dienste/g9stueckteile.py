@@ -21,6 +21,7 @@ import numpy as np
 from Genesis9.garderobe import G9garderobe
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
+from Genesis9.passformvorgabe import G9passformvorgabe
 from Genesis9.stoffhuelle import G9stoffhuelle
 from Genesis9.stueckersatz import G9stueckersatz
 from Genesis9.stueckfelder import G9stueckfelder
@@ -43,9 +44,10 @@ class G9stueckteile:
 
     @staticmethod
     def zusatz(kennung, eintrag, stile, regler_stueck):
-        u"""(Werte, Knochendrehung): Vorgaben des Presets, darueber Stil und Regler."""
+        u"""(Werte, Knochendrehung): Vorgaben (Preset, Länge `G9passformvorgabe`), darueber Stil und Regler."""
         werte, knochen = G9garderobe.stilwerte(kennung, stile)
         zusatz = dict(eintrag.get('vorgaben') or {})
+        zusatz.update(G9passformvorgabe.werte(kennung, regler_stueck))
         zusatz.update(werte)
         zusatz.update(G9garderobe.reglerwerte(kennung, regler_stueck))
         return zusatz, knochen

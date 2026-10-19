@@ -1,0 +1,20 @@
+{# Einstellungen → Charakter: dauerhafter Vorrat der Anzeigen (`core/dienste/netzvorratwahl.py`, 19.10.2026) — eigene Datei, settings_scene.html hat schon 280 Zeilen. #}
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Anzeigen der Genesis-Figuren dauerhaft speichern</strong>
+                <small>Der Server legt jede Anzeige einer Figur (Körper und jedes Daz-Stück, je Stufe) auf der Platte ab und liefert sie beim nächsten Laden
+                     sofort — auch nach Änderungen am Programm (dann wird im Hintergrund mit dem neuen Stand nachgerechnet; einmal sieht man den alten).
+                     Nach dem Laden eines gespeicherten Modells und nach „Modell speichern" werden die übrigen Stufen bis zur gewählten vorab abgelegt,
+                     sobald niemand die Maus bewegt.
+                     <br>Platz (geschätzt, nur grob gemessen): rund 3–7&nbsp;GB für alle gespeicherten Modelle bis ultrafein, ohne ultrafein etwa ein Viertel;
+                     höchstens 20&nbsp;GB, was am längsten nicht gebraucht wurde, fällt zuerst weg.
+                     <br>Wirkt sofort auf dem Server; das Vorab-Füllen im Browser nach dem Neuladen der Szene.</small>
+            </div>
+            <div class="settings-input">
+                <select name="netzvorrat" id="netzvorrat" class="hb-width-100-2" data-reihenfolge="fest">
+                    {% for wert, text in netzvorrat_wahlen %}
+                    <option value="{{ wert }}"{% if wert == netzvorrat %} selected{% endif %}>{{ text }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>

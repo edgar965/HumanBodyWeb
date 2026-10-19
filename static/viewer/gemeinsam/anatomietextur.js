@@ -12,8 +12,23 @@ export class Anatomietextur {
     static aus(vorlage, rgba, breite, hoehe) {
         const leinwand = Object.assign(document.createElement('canvas'), { width: breite, height: hoehe });
         leinwand.getContext('2d').putImageData(new ImageData(rgba, breite, hoehe), 0, 0);
-        const t = new vorlage.constructor(leinwand);
-        for (const name of ['colorSpace', 'flipY', 'wrapS', 'wrapT', 'minFilter', 'magFilter', 'anisotropy', 'generateMipmaps']) t[name] = vorlage[name];
+        return Anatomietextur._textur(vorlage, leinwand);
+    }
+
+    /** Dasselbe aus einem abgelegten Bild (`Anatomievorrat.holen`): auf eine Leinwand gleicher Größe, dann wie `aus`. */
+    static ausBild(vorlage, bild, breite, hoehe) {
+        const leinwand = Object.assign(document.createElement('canvas'), { width: breite, height: hoehe });
+        leinwand.getContext('2d').drawImage(bild, 0, 0, breite, hoehe);
+        bild.close?.();
+        return Anatomietextur._textur(vorlage, leinwand);
+    }
+
+    static _textur(vorlage, leinwand) {
+        // Eine Vorlage als S3TC-Block (`Texturweg`, Weg C, 19.10.2026): die Leinwand wird eine gewöhnliche Textur (die Elternklasse) und behält deren Mip-Kette —
+        // ein Block hat `generateMipmaps = false`, die Leinwand hätte sonst keine Stufen bei einem Mip-Filter (schwarz).
+        const block = !!vorlage.isCompressedTexture;
+        const t = new (block ? Object.getPrototypeOf(vorlage.constructor) : vorlage.constructor)(leinwand);
+        for (const name of ['colorSpace', 'flipY', 'wrapS', 'wrapT', 'minFilter', 'magFilter', 'anisotropy', 'generateMipmaps']) if (!block || !['minFilter', 'generateMipmaps'].includes(name)) t[name] = vorlage[name];
         t.needsUpdate = true;
         return t;
     }

@@ -85,7 +85,10 @@ export class Netzpaket {
         return wert;
     }
 
-    /** Ein Feld als Sicht auf den Puffer — ohne Kopie. */
+    /** Die Annahme für `Accept`: 16-Bit-Felder bestellt (`core/daten/netzkurz.py`, 19.10.2026) — `_feld` rechnet sie zurück. */
+    static ANNAHME = 'application/x-humanbody-netz;kodierung=u16';
+
+    /** Ein Feld als Sicht auf den Puffer — ohne Kopie; ein gekürztes (`kurz`) als neues Float32Array. */
     static _feld(marke, puffer, beginn) {
         const Bauart = TYPEN[marke.typ];
         if (!Bauart) throw new Error(`Netzpaket: unbekannter Typ ${marke.typ}`);
@@ -94,6 +97,17 @@ export class Netzpaket {
             throw new Error(`Netzpaket: Feld ${marke.typ} liegt hinter dem Ende `
                 + `(${versatz} + ${marke.bytes} > ${puffer.byteLength})`);
         }
+        if (marke.kurz) return Netzpaket.entkuerzen(new Uint16Array(puffer, versatz, marke.anzahl), marke.kurz);
         return new Bauart(puffer, versatz, marke.anzahl);
+    }
+
+    /**
+     * 16 Bit → float32: `ab + q · schritt` in double, wie `Netzkurz.entpacken` (die Null bleibt exakt: `ab` liegt auf dem Raster). Rund 2 ms je Million Werte —
+     * die Kopie, die `kodierung.js` ohnehin macht, entfällt dafür nicht (sie bleibt die Schutzkopie gegen Drehen in place).
+     */
+    static entkuerzen(q, { ab, schritt }) {
+        const aus = new Float32Array(q.length);
+        for (let i = 0; i < q.length; i++) aus[i] = ab + q[i] * schritt;
+        return aus;
     }
 }

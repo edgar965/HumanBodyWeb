@@ -96,8 +96,8 @@ pruefe('später: dasselbe', B.zuordnung(n, stueck(), haut(), 16, 16) === p1, tru
 pruefe('ein Lauf', laeufe, 1);
 const h2 = haut(); h2.pos[2] = 0.0004;
 const p3 = B.zuordnung(n, stueck(), h2, 16, 16);
+await p3;                                   // gerechnet wird seit 19.10.2026 erst nach der Frage an die Worker (`Anatomiezuordnungsarbeit`), einen Schritt später
 pruefe('geänderte Haut: neue Rechnung', [p3 !== p1, laeufe], [true, 2]);
-await p3;
 
 // 4. Ruhe-Normalen im Schlüssel
 const ruhe = Float32Array.from([0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1]);

@@ -4,6 +4,8 @@ import { Genesis9haeppchen } from './genesis9haeppchen.js';
 import { Netzstufenstand } from './netzstufenstand.js';
 import { Kleidervorschau } from './kleidervorschau.js';
 import { Genesis9kennungumzug } from './genesis9kennungumzug.js';
+import { Zeichenstand } from './zeichenstand.js';
+import { Genesis9vorrat } from './genesis9vorrat.js';
 
 /**
  * Genesis9aufbau — die Figur in zwei Zügen: Käfig sofort, volle Stufe nach.
@@ -50,7 +52,7 @@ export class Genesis9aufbau {
      * freigibt, bliebe die Figur sonst für immer auf der groben Stufe.
      */
     static async progressiv(inst) {
-        await Genesis9aufbau.alles(inst, Genesis9aufbau.GROB);
+        await Genesis9vorrat.laden(inst, () => Genesis9aufbau.alles(inst, Genesis9aufbau.GROB));   // eine Anzeige: der Server legt sie dauerhaft ab (`Genesis9vorrat`)
         // Die Figur steht in der groben Stufe da; die Anzeige sagt es und dass die gewählte nachkommt (`Netzstufenstand`).
         Netzstufenstand.melden(inst, 'grob', Netzstufenstand.wahl !== 'grob');
         // Die gewählte Stufe stückweise und erst nach Ruhe nachholen (`Genesis9haeppchen`, Edgar 09.10.2026).
@@ -81,6 +83,7 @@ export class Genesis9aufbau {
      * Körper bleibt fatal; ein Stück, das scheitert, wird gemeldet und fehlt.
      */
     static async alles(inst, stufen) {
+        Zeichenstand.beobachten(inst);                  // was noch fehlt, steht ab jetzt in der Anzeige rechts unten („⏳ … lädt noch: …")
         const vorher = Kleidervorschau.merken(inst);    // der Körper vor diesem Zug: die Stücke folgen ihm, bis der Server ihre genaue Lage liefert
         const koerper = inst.koerperAufbauen(stufen);   // zählt `_lauf` hoch, bevor die Stücke ihn lesen
         Kleidervorschau.begleiten(inst, vorher, koerper);
@@ -108,7 +111,7 @@ export class Genesis9aufbau {
         if (ziel === 'grob') {
             await Promise.all(alle.map(async inst => {
                 await inst._feinZug;                    // ein laufender Nachzug bricht an der nächsten Stelle ab
-                await Genesis9aufbau.alles(inst, Genesis9aufbau.GROB);
+                await Genesis9vorrat.laden(inst, () => Genesis9aufbau.alles(inst, Genesis9aufbau.GROB));
                 Netzstufenstand.melden(inst, 'grob', false);
                 // Grob gewählt: Der Export bleibt gesperrt (`Figuraufbaustand`, sonst ein Sechzehntel der Figur ohne Meldung).
                 if (!inst._grobHalt) { inst._grobHalt = true; Figuraufbaustand.beginnen(inst); }

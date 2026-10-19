@@ -49,13 +49,22 @@ export class Netzstufenschalter {
         return true;
     }
 
-    /** Der Text der Anzeige. */
+    /** So viele offene Teile nennt die Anzeige, der Rest steht als „+n". */
+    static OFFEN_MAX = 3;
+
+    /**
+     * Der Text der Anzeige. Fehlt noch etwas (`stand.offen`, `Zeichenstand`: Körper, Stücke, Texturen, Hautfarbe der Scham, Naht, Haut unter der
+     * Kleidung), steht vorn die Sanduhr und hinten „lädt noch: …" (19.10.2026, Edgar: „mach eine Sanduhr oder eine Anzeige … bis alles geladen ist").
+     */
     static text(stand = Netzstufenstand.zusammen(), wahl = Netzstufenstand.wahl) {
+        const offen = stand.offen || [], max = Netzstufenschalter.OFFEN_MAX;
+        const noch = offen.length ? ` · lädt noch: ${offen.slice(0, max).join(', ')}${offen.length > max ? ` +${offen.length - max}` : ''}` : '';
+        const uhr = stand.laedt || offen.length ? '⏳ ' : '';
         if (stand.laedt) {
             const zaehler = stand.gesamt ? ` (${stand.fertig}/${stand.gesamt})` : '';
-            return `Netz: ${stand.stufe} → ${wahl} lädt …${zaehler} · ${Netzstufenschalter.HINWEIS}`;
+            return `${uhr}Netz: ${stand.stufe} → ${wahl} lädt …${zaehler}${noch} · ${Netzstufenschalter.HINWEIS}`;
         }
-        return `Netz: ${stand.stufe} · ${Netzstufenschalter.HINWEIS}`;
+        return `${uhr}Netz: ${stand.stufe}${noch} · ${Netzstufenschalter.HINWEIS}`;
     }
 
     /** Die Anzeige rechts unten anlegen oder auffrischen. */
@@ -69,13 +78,14 @@ export class Netzstufenschalter {
             Object.assign(feld.style, {
                 position: 'fixed', right: '12px', bottom: '12px', zIndex: '9000',
                 padding: '6px 10px', borderRadius: '6px', font: '12px/1.4 sans-serif',
-                pointerEvents: 'none', boxShadow: '0 2px 8px rgba(0,0,0,.4)',
+                pointerEvents: 'none', boxShadow: '0 2px 8px rgba(0,0,0,.4)', maxWidth: 'calc(100vw - 24px)',
             });
             document.body.appendChild(feld);
         }
         feld.textContent = Netzstufenschalter.text(stand);
         feld.dataset.stufe = stand.stufe;
         feld.dataset.laedt = stand.laedt ? '1' : '0';
+        feld.dataset.offen = stand.offen?.length ? '1' : '0';
         // grob hell-gelb (Warnung: noch nicht scharf), fein dezent, ultrafein orange wie bisher die hohe Stufe.
         const farben = {
             grob: ['rgba(255, 224, 140, 0.95)', '#1a1a1a'],

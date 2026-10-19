@@ -10,6 +10,7 @@ import { Szenenzustand } from './szenenzustand.js';
 import { Figurarten } from './figurarten.js';
 import { Reiterstand } from './reiterstand.js';
 import { Startfigur } from './startfigur.js';
+import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -78,6 +79,8 @@ export async function restoreSessionState() {
                     // kennen; Map und Gruppe nehmen denselben Eintrag nur
                     // einmal.
                     zeigen(inst);
+                    // Wie nach dem Laden über den Dialog (`charakterliste.figurAusModelldaten`): alle Stufen bis zur Einstellung dauerhaft ablegen lassen — auch nach F5 (19.10.2026).
+                    if (inst?.quelle === 'genesis9') Genesis9vorrat.fuellen(inst).catch(f => console.warn(`Genesis9vorrat: ${f.message}`));
                 } catch (e) {
                     console.error(`Failed to restore character ${charData.presetName}:`, e);
                 }

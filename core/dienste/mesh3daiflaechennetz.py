@@ -14,6 +14,10 @@ Paket (little endian): uint32 Länge des Kopfes · Kopf (JSON, auf ein Vielfache
 aufgefüllt) float32 ruhe (V·3). Jeder Block beginnt auf einem Vielfachen von 4 (Sichten im Browser ohne Kopie).
 `ruhe` (16.10.2026, `ProjektTemp/_wegwerf/mesh3dai_kinematik.py --netz`): die Punkte in der Ruhelage (Meter, Raum der Retarget-Rechnung, NICHT ausgerichtet) — damit häutet die Seite das Ergebnis eines
 Laufs mit Daz-Winkeln genau so wie das Datenskript das Ziel (Hautmischung aus der Ruhelage), statt der Näherung aus den Rig-Punkten.
+`verborgen` (19.10.2026, Trainingspaare: die Haut unter dem Anatomie-Stück, `ProjektTemp/_wegwerf/mesh3dai_paar_geograft.py`): Nummern der Dreiecke, die die Seite NICHT zeichnet — sie bleiben im Netz,
+weil `Mesh3daianatomie` aus ihnen das Stück backt. Im Kopf die Zahl, am Ende (nach `ruhe`) uint32 verborgen (Zahl).
+`normalen` (19.10.2026, Trainingspaare: die Normalen des Genesis-Exports, sonst knickt die Naht Haut ↔ Anatomie-Stück): im Kopf `normalen: true`, danach int8 (V·3, × 127, auf 4 aufgefüllt);
+`anatomie_fertig` im Kopf: das Stück trägt schon die Karte der Charakter-Seite, die Seite backt nicht neu.
 """
 
 import json
@@ -67,6 +71,12 @@ class Mesh3daiflaechennetz:
                 daten = {k: z[k] for k in ('dreiecke', 'etikett', 'knochen', 'gewicht', 'uv', 'material', 'teilfarben')}
                 if 'ruhe' in z.files and len(z['ruhe']) == len(daten['uv']):
                     daten['ruhe'] = z['ruhe'].astype(np.float32)
+                if 'verborgen' in z.files:
+                    daten['verborgen'] = z['verborgen'].astype(np.uint32)
+                # Trainingspaare (19.10.2026): das Anatomie-Stück trägt schon die Karte der Charakter-Seite — `Mesh3daianatomie` backt dann nicht neu
+                daten['anatomie_fertig'] = bool(z['anatomie_fertig']) if 'anatomie_fertig' in z.files else False
+                if 'normalen' in z.files and len(z['normalen']) == len(daten['uv']):
+                    daten['normalen'] = np.clip(np.round(z['normalen'].astype(np.float32) * 127), -127, 127).astype(np.int8)
             daten['materialien'] = json.loads((ordner / 'materialien.json').read_text(encoding='utf-8'))
             daten['fassung'] = fassung
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as fehler:
@@ -87,7 +97,8 @@ class Mesh3daiflaechennetz:
         haut = int(d['knochen'].shape[1])
         kopf = {'fassung': d['fassung'], 'punkte': int(len(d['uv'])), 'dreiecke': int(len(d['dreiecke'])), 'haut': haut, 'teile': list(cls.TEILE),
                 'teilfarben': d['teilfarben'].astype(int).tolist(),
-                'materialien': [{'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')} for m in d['materialien']], 'ruhe': 'ruhe' in d}
+                'materialien': [{'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')} for m in d['materialien']], 'ruhe': 'ruhe' in d,
+                'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d}
         text = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         a = cls._auffuellen
@@ -96,6 +107,10 @@ class Mesh3daiflaechennetz:
                  d['uv'].astype('<f4').tobytes(), a(d['material'].astype('<i2').tobytes())]
         if 'ruhe' in d:
             teile.append(d['ruhe'].astype('<f4').tobytes())
+        if len(d.get('verborgen', ())):
+            teile.append(d['verborgen'].astype('<u4').tobytes())
+        if 'normalen' in d:
+            teile.append(a(d['normalen'].tobytes()))
         return b''.join(teile)
 
     @classmethod

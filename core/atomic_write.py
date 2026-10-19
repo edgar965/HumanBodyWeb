@@ -62,6 +62,15 @@ class AtomarSchreiber:
 
         `zeilenende='\\n'` erzwingt Unix-Zeilenenden — BVH-Dateien brauchen das,
         sonst stolpern Leser über `\\r\\n`."""
+        return cls._unteilbar(pfad, text, dict(mode='w', encoding='utf-8', newline=zeilenende))
+
+    @classmethod
+    def bytes_schreiben(cls, pfad, daten):
+        """Bytes unteilbar schreiben (Bilder, Binärpakete — 19.10.2026, `G9texturablage`)."""
+        return cls._unteilbar(pfad, daten, dict(mode='wb'))
+
+    @classmethod
+    def _unteilbar(cls, pfad, inhalt, oeffnen):
         ziel = Path(pfad)
         ziel.parent.mkdir(parents=True, exist_ok=True)
 
@@ -70,16 +79,14 @@ class AtomarSchreiber:
             # delete=False, weil die Datei nach dem Schließen noch gebraucht wird;
             # dir=ziel.parent, damit os.replace auf demselben Laufwerk bleibt.
             with tempfile.NamedTemporaryFile(
-                mode='w',
-                encoding='utf-8',
-                newline=zeilenende,
+                **oeffnen,
                 dir=str(ziel.parent),
                 prefix='.' + ziel.name + '.',
                 suffix='.tmp',
                 delete=False,
             ) as f:
                 tmp_name = f.name
-                f.write(text)
+                f.write(inhalt)
                 f.flush()
                 os.fsync(f.fileno())
             cls._ersetzen(tmp_name, ziel)

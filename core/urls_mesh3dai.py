@@ -7,6 +7,7 @@ from .api.mesh3dai import Mesh3daiendpunkte
 from .api.mesh3daiflaechen import Mesh3daiflaechenendpunkte
 from .api.mesh3daiformlauf import Mesh3daiformlaufendpunkte
 from .api.mesh3daiformvariante import Mesh3daiformvarianteendpunkte
+from .api.mesh3daigenesis import Mesh3daigenesisendpunkt
 from .api.mesh3dailaufaktuell import Mesh3dailaufaktuellendpunkt
 from .api.mesh3daitest import Mesh3daitestendpunkte
 from .api.mesh3daitestkleider import Mesh3daitestkleiderendpunkte
@@ -45,6 +46,7 @@ MESH3DAI = [
     path('api/mesh3dai/<str:job>/stand/', Mesh3daiendpunkte.stand, name='mesh3dai_stand'),
     path('api/mesh3dai/<str:job>/eingabe/<int:nr>/', Mesh3daiendpunkte.eingabe, name='mesh3dai_eingabe'),
     path('api/mesh3dai/<str:job>/flaeche/<int:nr>/', Mesh3daiendpunkte.flaeche, name='mesh3dai_flaeche'),
+    path('api/mesh3dai/<str:job>/genesis/<int:nr>/', Mesh3daigenesisendpunkt.probe, name='mesh3dai_genesis'),
     # Das Zwischenbild „Rig → A-Pose" (17.10.2026, `Mesh3daiapose`).
     path('api/mesh3dai/<str:job>/apose/<int:nr>/', Mesh3daiendpunkte.apose, name='mesh3dai_apose'),
     # Das gemeinsame Anzeigenetz (volles Haar, UV, Material) und seine Bilder (15.10.2026, `Mesh3daiflaechennetz`).

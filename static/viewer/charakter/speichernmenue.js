@@ -5,6 +5,7 @@ import { Kontextmenue } from '../gemeinsam/kontextmenue.js';
 import { Szenenausgabe } from './szenenausgabe.js';
 import { Modellexportdialog } from './modellexport_dialog.js';
 import { Figurumbenennen } from './figurumbenennen.js';
+import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
 
 /**
  * Speichern — Modell oder Szene.
@@ -67,6 +68,12 @@ export class Speichernmenue {
         inst.presetName = name;
         inst.presetKey = name;
         fn.updateCharacterListUI?.();
+        // Ein gespeichertes Genesis-Modell: dieser Stand ist jetzt eine Anzeige; alle Stufen bis zur Einstellung dauerhaft auf dem Server ablegen
+        // lassen (`Genesis9vorrat`, 19.10.2026: „bei jedem Modell, das gespeichert ist, direkt alles speichern für alle Anzeigen").
+        if (inst.quelle === 'genesis9') {
+            Genesis9vorrat.festhalten(inst);
+            Genesis9vorrat.fuellen(inst).catch(f => console.warn(`Genesis9vorrat: ${f.message}`));
+        }
         // Der Dialog „Charakter hinzufügen" holt seine Listen bei jedem Öffnen
         // neu (`Charakterdialog.oeffnen`) — ein `fn.refreshModelList` gab es nie.
         return true;

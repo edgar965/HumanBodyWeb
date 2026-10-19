@@ -146,7 +146,8 @@ class Genesis9antwortspeicherTest(SimpleTestCase):
         quelle = (GEMEINSAM / 'genesis9kleidung.js').read_text(encoding='utf-8')
         self.assertIn("import { Genesis9antwortspeicher } from './genesis9antwortspeicher.js';", quelle)
         rumpf = quelle.split('static async anziehen(', 1)[1].split('\n    }\n', 1)[0]
-        self.assertIn('await Genesis9antwortspeicher.kleid(inst, kennung,', rumpf)
+        # Seit 19.10.2026 umhüllt `Zeichenstand.laden` den Abruf (die Anzeige „lädt noch" nennt das Stück, bis seine Antwort da ist).
+        self.assertIn('await Zeichenstand.laden(inst, kennung, Genesis9antwortspeicher.kleid(inst, kennung,', rumpf)
         self.assertNotIn('Serverabruf.netzSenden', rumpf, 'der Abruf des Stücks läuft über den Speicher')
         ablegen = 'Genesis9antwortspeicher.ablegen(inst, antwort.teil, antwort.stellung, antwort.stufe, daten)'
         self.assertIn(ablegen, rumpf)

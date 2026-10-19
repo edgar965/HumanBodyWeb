@@ -29,7 +29,7 @@ auf einer HumanBody-Figur (`G9kleidhumanbody`).
 import logging
 
 from asgiref.sync import sync_to_async
-from django.http import FileResponse, HttpResponseNotFound, JsonResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from Genesis9.aehnlichkeit import G9aehnlichkeit
@@ -41,16 +41,18 @@ from Genesis9.haarachsen import G9haarachsen
 from Genesis9.haargenerisch import G9haargenerisch
 from Genesis9.kleidgenerisch import G9kleidgenerisch
 from Genesis9.koerpernetz import G9koerpernetz
-from Genesis9.material import G9material
 from Genesis9.netzstufe import G9netzstufe
+from Genesis9.passformvorgabe import G9passformvorgabe
 from Genesis9.pfade import G9pfade
 from Genesis9.posen import G9posen
 from Genesis9.stueckersatz import G9stueckersatz
+from Genesis9.stuecklochstufen import G9stuecklochstufen
 
 from ..dienste.g9antworten import G9antworten
 from ..dienste.g9haarmischbau import G9haarmischbau
 from ..dienste.g9kleidmischbau import G9kleidmischbau
 from ..dienste.g9stueckteile import G9stueckteile
+from ..dienste.g9texturfassung import G9texturfassung
 from .g9figur import FEHLT, G9figur
 from .g9kleidhumanbody import G9kleidhumanbody
 
@@ -97,9 +99,11 @@ class G9garderobeapi:
     @staticmethod
     def _stueck(s, daz, vorschau, kleidmorphe):
         u"""Ein Listeneintrag für den Browser: Vorschauen der Varianten, Kategorie, Anatomie (Abteilung „Genitalien", `genesis9genitalien.js`, 18.10.2026) und die
-        Reglerliste — Haarachsen, eigene Morphe und, bei Hosen, Unterwäsche und Anzügen, die Drapierung über dem männlichen Geograft (`G9drapierung`, 16.10.2026)."""
+        Reglerliste — Haarachsen, eigene Morphe und, bei Hosen, Unterwäsche und Anzügen, die Drapierung über dem männlichen Geograft (`G9drapierung`, 16.10.2026);
+        die Länge mit der Vorgabe des Stücks (`G9passformvorgabe`, 19.10.2026)."""
         kategorie = s.get('kategorie') or G9garderobekategorien.vorgabe(s, daz)
-        regler = kleidmorphe.erweitern(dict(s, regler=G9haarachsen.erweitern(s)))
+        regler = G9passformvorgabe.erweitern(s.get('id'), G9haarachsen.erweitern(s))
+        regler = kleidmorphe.erweitern(dict(s, regler=regler))
         return dict(s, varianten=vorschau.varianten_mit_vorschau(s), kategorie=kategorie, anatomie=G9stueckersatz.anatomie_fuer(s) if s.get('eigen') else '',
                     regler=G9drapierung.erweitern(dict(s, regler=regler), kategorie))
 
@@ -261,20 +265,17 @@ class G9garderobeapi:
                 # Die Haut-Dreiecke, die unter dem Stück entfallen (Scham aus einer .blend, verschweißt wie ein Daz-Geograft; leer = der
                 # Browser rechnet das Loch selbst, `hautverdeckung.js`). Die weggenommene Haut der MakeHuman-/GarmentCode-Stücke (`G9stueckverdeckung`,
                 # `nurWeg`) ist seit 18.10.2026 abends wieder AUS — Edgar mit Bild (Löcher im Schritt): „nimm den vorletzten Commit".
-                'hautLoch': G9stueckersatz.loch_fuer(eintrag)}
+                # `weitere`: dasselbe Loch auf der groben und (Anfrage auf Stufe 2) der ultrafeinen Stufe (`G9stuecklochstufen`, 19.10.2026) — der Browser nimmt das, das zur Haut passt.
+                'hautLoch': G9stuecklochstufen.mit_stufen(G9stueckersatz.loch_fuer(eintrag), stufen, min((n['stufen'] for _f, _l, n in netze), default=stufen))}
 
     # -------------------------------------------------------------- Texturen
 
     @staticmethod
     @require_GET
-    def textur(request, pfad):
-        u"""Ein Bild aus `Runtime/Textures` der Bibliothek oder der Schminke-
-        Ablage (`schminke/<hash>_f.jpg`, `G9ebenen`) — sonst 404."""
-        datei = G9material.datei(pfad)
-        art = G9material.bildart(pfad)
-        if datei is None or not art:
-            return HttpResponseNotFound('Texture not found')
-        return FileResponse(open(datei, 'rb'), content_type=art)
+    async def textur(request, pfad):
+        u"""Ein Bild aus `Runtime/Textures` der Bibliothek oder einer Ablage (`schminke/…`, `G9ebenen`), mit ETag (unverändert → 304) — sonst 404. Auf `?kante=` oder
+        `?format=bc` verkleinert bzw. als GPU-Block (`G9texturfassung`, 19.10.2026); ASYNC, weil eine Fassung beim ersten Abruf bis ~2 s rechnet."""
+        return await sync_to_async(G9texturfassung.antwort, thread_sensitive=False)(request, pfad)
 
     # ---------------------------------------------------------------- Posen
 

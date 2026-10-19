@@ -2,6 +2,7 @@
 {% load static regler %}
 {% load szenenskript %}
 {% load fassung %}
+{% load jsfassung %}
 
 {% block title %}HumanBody · Szene{% endblock %}
 
@@ -19,6 +20,8 @@
 <meta name="stoffarbeiter" content="{% fassungspfad 'viewer/gemeinsam/stoffarbeiter.js' %}">
 {# Die Haut-Maske rechnet in einem Worker (Hauptfaden frei zum Drehen), ebenfalls außerhalb des Bündels. #}
 <meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+{# Ihr Ergebnis liegt dauerhaft auf dem Server, unter der Fassung DIESES Codes (Inhalts-Hash, `core/dienste/jsquellen.py`, `gemeinsam/hautmaskenvorrat.js`). #}
+<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
 {# Die Normalen der Gelenkkorrekturen (JCMs) einer tanzenden Genesis-Figur rechnen in einem Worker, ebenfalls außerhalb des Bündels. #}
 <meta name="normalenarbeiter" content="{% fassungspfad 'viewer/gemeinsam/normalenarbeiter.js' %}">
 {# Die Karten des Scham-Stücks (Bild und Füllen nach einem Hautwechsel) rechnen in einem Worker, ebenfalls außerhalb des Bündels. #}

@@ -1,5 +1,6 @@
 import { Serverabruf } from './serverabruf.js';
 import { Netzstufenstand } from './netzstufenstand.js';
+import { Genesis9vorrat } from './genesis9vorrat.js';
 
 /**
  * Genesis9antwortspeicher — die Netzantworten einer Figur JE STUFE im Arbeitsspeicher halten (12.10.2026).
@@ -87,7 +88,7 @@ export class Genesis9antwortspeicher {
         const stufe = Genesis9antwortspeicher.stufe(adresse);
         const treffer = Genesis9antwortspeicher.suchen(inst, teil, stellung, stufe);
         if (treffer) return { daten: Genesis9antwortspeicher.kopie(treffer.daten), teil, stellung, stufe, neu: false };
-        return { daten: await Serverabruf.netzSenden(adresse, nutzlast), teil, stellung, stufe, neu: true };
+        return { daten: await Serverabruf.netzSenden(adresse, nutzlast, Genesis9vorrat.kopf(inst, teil, adresse, nutzlast)), teil, stellung, stufe, neu: true };   // Anzeige → dauerhaft (`Genesis9vorrat`)
     }
 
     /** Was im Speicher liegt, in Bytes: `{teil: {stufe: Bytes}}` — jeder Antwortpuffer einmal gezählt (die Felder einer Antwort teilen ihn). Für Proben. */

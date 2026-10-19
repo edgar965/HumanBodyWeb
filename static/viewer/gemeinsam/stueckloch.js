@@ -12,7 +12,11 @@
  * Stücks genau auf diesen Ring (`Blendimportschamnaht`). Das Stück bringt die Dreiecknummern mit (`userData.hautLoch`,
  * `{von, dreiecke}`); der Browser lässt genau diese Dreiecke weg — keine Rechnung, keine Strahlen, keine Absenkung, keine
  * weiche Kante. Gilt nur, wenn die Haut dieselbe Zahl Dreiecke hat wie beim Bau (`von`, Stufe 1: 201.248); ein anderes Netz
- * (grobe Stufe, andere Figur) kennt die Nummern nicht — dann rechnet `hautverdeckung.js` wie vorher.
+ * kennt die Nummern nicht — dann rechnet `hautverdeckung.js` wie vorher.
+ *
+ * GROBE STUFE (19.10.2026, Edgar: „berechne die Scham auch für die grobe Stufe"): der Server legt dasselbe Loch für die Haut des Käfigs dazu
+ * (`hautLoch.weitere`, `G9stuecklochstufen`: Käfigflächen aus der Unterteilung, Ring auf der Lochkante mit `punkte2`/`t`). `fassung` nimmt
+ * die Fassung, deren `von` zur Haut passt — sonst stand das Stück auf der groben Stufe als Lappen ohne Loch auf der Haut.
  *
  * Ohne Three.js und ohne DOM (Node-Test `test_js_stueckloch.py`).
  */
@@ -30,18 +34,29 @@ export class Stueckloch {
      * @param anzahl  Zahl der Dreiecke der Haut (volle Folge, ohne ausgeblendete)
      */
     static von(netz, anzahl) {
+        const fassung = Stueckloch.fassung(netz, anzahl);
+        return fassung ? Uint32Array.from(fassung.dreiecke) : null;
+    }
+
+    /**
+     * Die Fassung des Lochs (`{von, dreiecke, ring?, verschiebung?}`), die zu einer Haut mit `anzahl` Dreiecken passt: das Loch der Stufe 1
+     * selbst oder eine aus `weitere` (grobe Stufe) — sonst null.
+     */
+    static fassung(netz, anzahl) {
         const loch = netz?.userData?.hautLoch;
         if (!loch?.dreiecke?.length) return null;
-        if (loch.von !== anzahl) {
-            const schluessel = `${netz.name}|${loch.von}|${anzahl}`;
+        const alle = [loch, ...(Array.isArray(loch.weitere) ? loch.weitere : [])];
+        const passend = alle.find((f) => f?.von === anzahl && f.dreiecke?.length);
+        if (!passend) {
+            const schluessel = `${netz.name}|${alle.map((f) => f?.von).join(',')}|${anzahl}`;
             if (!Stueckloch._gemeldet.has(schluessel)) {
                 Stueckloch._gemeldet.add(schluessel);
-                Protokoll.debug('Stueckloch', `${netz.name || 'Stück'}: Loch für ${loch.von} Hautdreiecke, die Haut hat ${anzahl} — `
-                    + 'die Haut rechnet das Loch selbst');
+                Protokoll.debug('Stueckloch', `${netz.name || 'Stück'}: Loch für ${alle.map((f) => f?.von).join(' / ')} Hautdreiecke, `
+                    + `die Haut hat ${anzahl} — die Haut rechnet das Loch selbst`);
             }
             return null;
         }
-        return Uint32Array.from(loch.dreiecke);
+        return passend;
     }
 
     /**
@@ -50,25 +65,49 @@ export class Stueckloch {
      * @param stuecke  `[schluessel, netz]`-Paare der Stücke, die zählen (sichtbar, Art Kleidung)
      * @param anzahl   Zahl der Dreiecke der Haut
      */
-    static maske(stuecke, anzahl) {
+    static maske(stuecke, anzahl, haut = null) {
         let weg = null;
-        const schluessel = [], punkte = [], d = [], ringe = [];
+        const schluessel = [], punkte = [], d = [], ringe = [], zwischen = [];
         for (const [name, netz] of stuecke) {
-            const nummern = Stueckloch.von(netz, anzahl);
-            if (!nummern) continue;
+            const fassung = Stueckloch.fassung(netz, anzahl);
+            if (!fassung) continue;
             weg = weg || new Uint8Array(anzahl);
-            for (let i = 0; i < nummern.length; i++) weg[nummern[i]] = 1;
+            for (const t of fassung.dreiecke) weg[t] = 1;
             schluessel.push(name);
-            const v = netz.userData.hautLoch.verschiebung;
+            const v = fassung.verschiebung;
             if (v?.punkte?.length) { punkte.push(...v.punkte); for (const z of v.d) d.push(z[0], z[1], z[2]); }
-            const r = netz.userData.hautLoch.ring;
+            const r = fassung.ring;
             if (r?.punkte?.length) {
-                ringe.push({ netz, ring: { lage: Float32Array.from(r.lage.flat()), punkte: Uint32Array.from(r.punkte),
-                                           d: Float32Array.from(r.d.flat()) } });
+                const ring = { lage: Float32Array.from(r.lage.flat()), punkte: Uint32Array.from(r.punkte), d: Float32Array.from(r.d.flat()) };
+                // Grobe Stufe: die Ringecke liegt zwischen zwei Hautpunkten (Kantenmitte der Lochkante, `stuecknaht.js`).
+                if (r.punkte2?.length === r.punkte.length && r.t?.length === r.punkte.length) {
+                    ring.punkte2 = Uint32Array.from(r.punkte2);
+                    ring.t = Float32Array.from(r.t);
+                }
+                ringe.push({ netz, ring });
             }
+            if (haut && r?.zwischen?.length) zwischen.push(...r.zwischen);
         }
         if (!weg) return null;
+        if (zwischen.length) Stueckloch.kantenmitten(haut, zwischen, punkte, d);
         return { schluessel, weg, ringe, verschiebung: punkte.length ? { punkte: Uint32Array.from(punkte), d: Float32Array.from(d) } : null };
+    }
+
+    /**
+     * Ultrafein mit einem Stück, das nicht unterteilt wird (19.10.2026, `G9stuecklochultrafein`, `ring.zwischen`: `[Kantenpunkt, Ecke a, Ecke b]` der Haut): Die zweite
+     * Unterteilung der Haut setzt auf jede Kante der Lochkante einen Punkt, das Stück hat dort keinen — gemessen an DamiraAlt lagen diese 100 Punkte im Median 2,6 mm,
+     * höchstens 4,1 mm neben der geraden Kante des Stücks. Sie rücken auf die Mitte ihrer zwei Ecken, wie diese samt Verschiebung liegen (dorthin legt `Stuecknaht`
+     * auch die Ecken des Stücks). Ergänzt `punkte`/`d` (die Verschiebung des Lochs).
+     * @param haut  Punkte der Haut in Ruhe (3 je Punkt, ohne Einzug)
+     */
+    static kantenmitten(haut, zwischen, punkte, d) {
+        const platz = new Map(punkte.map((p, k) => [p, k]));
+        const lage = (i, c) => haut[3 * i + c] + (platz.has(i) ? d[3 * platz.get(i) + c] : 0);
+        for (const [e, a, b] of zwischen) {
+            if (3 * Math.max(e, a, b) + 2 >= haut.length) continue;
+            punkte.push(e);
+            for (let c = 0; c < 3; c++) d.push((lage(a, c) + lage(b, c)) / 2 - lage(e, c));
+        }
     }
 
     /**

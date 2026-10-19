@@ -60,7 +60,7 @@ class Auftragsdatei:
     HOECHSTENS = 8 * 1024 * 1024
 
     @classmethod
-    def antwort(cls, request, pfad, herunterladen=False, kennung=None):
+    def antwort(cls, request, pfad, herunterladen=False, kennung=None, art=None):
         """`FileResponse` (oder `206` auf eine `Range`-Anfrage) mit Zwischenspeicher-Kopfzeilen, oder 304.
 
         `pfad`: geprüfter Dateipfad (die Endpunkte lösen ihn über ihre Ablage auf —
@@ -75,7 +75,7 @@ class Auftragsdatei:
             cls._kopfzeilen(antwort, marke, stand.st_mtime, kennung)
             return antwort
 
-        art = mimetypes.guess_type(pfad.name)[0] or 'application/octet-stream'
+        art = art or mimetypes.guess_type(pfad.name)[0] or 'application/octet-stream'      # `art`: wer es besser weiß (Bilder der Daz-Bibliothek, `G9material.bildart`)
         bereich = None if herunterladen else cls.BEREICH.match(request.META.get('HTTP_RANGE') or '')
         if bereich:
             antwort = cls._bereichsantwort(pfad, stand.st_size, bereich, art)

@@ -12,6 +12,7 @@ import { Mesh3daiapose } from './mesh3daiapose.js';
 import { Mesh3daiechtmaterial } from './mesh3daiechtmaterial.js';
 import { Mesh3daiflaechen } from './mesh3daiflaechen.js';
 import { Mesh3daigemeinsam } from './mesh3daigemeinsam.js';
+import { Mesh3daigenesisfigur } from './mesh3daigenesisfigur.js';
 import { Mesh3dairigzeichner } from './mesh3dairigzeichner.js';
 
 export class Mesh3daiechtzeichner {
@@ -29,6 +30,15 @@ export class Mesh3daiechtzeichner {
         // Das Zwischenbild „Rig → A-Pose“ (17.10.2026) hat eine eigene Fläche (`Mesh3daiapose`), nicht die der Probe.
         if (art === 'apose') {
             Mesh3daiapose.zeichnen(inhalt, d);
+            return;
+        }
+        // Ziel und Ergebnis als Genesis-Figur aus dem Code der Charakter-Seite (19.10.2026, `Mesh3daigenesisfigur`); solange sie baut, steht ein Text im Feld. Ohne Figur (Hände/Füße,
+        // Bilder der Animation, Lauf ohne Gelenkwinkel) bleibt der bisherige Weg darunter.
+        const genesis = Mesh3daigenesisfigur.fuer(d, art);
+        if (genesis) {
+            if (genesis.stand === 'fertig') Mesh3daigenesisfigur.einhaengen(inhalt, genesis, d, art);
+            else inhalt.userData.hinweis = genesis.text;
+            if (art === 'ausgabe') z._geist(inhalt, d);
             return;
         }
         // Teile der Figur, die das Feld zeigt; die Eingabe von „Nur Körper“ ist die ganze Außenfläche mit Kleidern (`eingabe_etiketten` leer).

@@ -39,7 +39,16 @@ class Netzausgabe:
         """
         if request is None:
             return False
-        return Netzpaket.INHALTSTYP in request.headers.get('Accept', '')
+        annahme = request.headers.get('Accept', '')
+        if Netzpaket.INHALTSTYP not in annahme:
+            return False
+        # 16 Bit nur, wer es bestellt (`Netzkurz`, 19.10.2026): ein Tab mit altem Code läse die Bytes sonst als float32. Der Wert ist wahr
+        # wie vorher, und weil der Antwortvorrat das Format im Schlüssel trägt (`G9antworten.schluessel`), liegen beide Fassungen getrennt.
+        return Netzausgabe.KURZ if Netzausgabe.KURZ_ANNAHME in annahme else True
+
+    #: Die Annahme des Browsers für 16-Bit-Felder (`gemeinsam/serverabruf.js`) und der Wert, den `will_binaer` dafür liefert.
+    KURZ_ANNAHME = 'kodierung=u16'
+    KURZ = 'u16'
 
     @classmethod
     def antwort(cls, daten, request=None, status=200):
@@ -50,8 +59,9 @@ class Netzausgabe:
         JSON-Kopf ohne Nutzlast, und ohne passenden `Accept`-Kopf kommt
         ohnehin JSON heraus.
         """
-        if cls.will_binaer(request):
-            return HttpResponse(Netzpaket.packen(daten), status=status,
+        binaer = cls.will_binaer(request)
+        if binaer:
+            return HttpResponse(Netzpaket.packen(daten, kurz=binaer == cls.KURZ), status=status,
                                 content_type=Netzpaket.INHALTSTYP)
         return JsonResponse(daten, encoder=Netzjson, status=status)
 
@@ -64,5 +74,5 @@ class Netzausgabe:
         das Paket des ersten in seinem Format vorgesetzt.
         """
         if binaer:
-            return (Netzpaket.packen(daten), Netzpaket.INHALTSTYP)
+            return (Netzpaket.packen(daten, kurz=binaer == cls.KURZ), Netzpaket.INHALTSTYP)
         return (Netzjson.bytes(daten), 'application/json')

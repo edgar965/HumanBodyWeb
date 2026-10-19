@@ -54,6 +54,21 @@ export class Mesh3daiflaechennetz {
         ab += auf4(f * 2);
         // Ruhelage (16.10.2026, Server `Mesh3daiflaechennetz`, Kopf `ruhe`): Grundlage für das genau gehäutete Ergebnis eines Laufs mit Daz-Winkeln.
         this.ruhe = this.kopf.ruhe ? new Float32Array(puffer, ab, v * 3) : null;
+        if (this.ruhe) ab += v * 12;
+        // Dreiecke, die nicht gezeichnet werden (19.10.2026, Trainingspaare: die Haut unter dem Anatomie-Stück — sie bleibt fürs Backen des Stücks im Netz): als Maske je Dreieck.
+        this.verborgen = null;
+        if (this.kopf.verborgen) {
+            this.verborgen = new Uint8Array(f);
+            for (const t of new Uint32Array(puffer, ab, this.kopf.verborgen)) this.verborgen[t] = 1;
+            ab += this.kopf.verborgen * 4;
+        }
+        // Normalen je Punkt (19.10.2026, Trainingspaare: die des Genesis-Exports — sonst knickte die Naht Haut ↔ Anatomie-Stück, `Mesh3daiflaechennormalen`): int8 × 127.
+        this.normalen = null;
+        if (this.kopf.normalen) {
+            const roh = new Int8Array(puffer, ab, v * 3);
+            this.normalen = new Float32Array(v * 3);
+            for (let i = 0; i < roh.length; i++) this.normalen[i] = roh[i] / 127;
+        }
         this.uvAttribut = new THREE.BufferAttribute(this.uv, 2);
         /** Indexlisten, die nur an der Verbindung hängen (ganze Figur, nur Körper, Kleider) — für alle Proben dieselben (`Mesh3daiflaechen.teil`). */
         this.indexAblage = new Map();

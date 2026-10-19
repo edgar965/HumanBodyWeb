@@ -29,6 +29,8 @@ import numpy as np
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.lagen import G9lagen
 
+from .g9lagenanatomie import G9lagenanatomie
+
 logger = logging.getLogger('core')
 
 __all__ = ['G9lagenanfrage']
@@ -90,7 +92,7 @@ class G9lagenanfrage:
             punkte = self._gc_kaefig(eintrag)
             if punkte is not None:
                 andere.append((self.GC + str(eintrag.get('stueck') or '?'), punkte, False))
-        innen, aussen = self._anatomie_unten(kennung, *self.lagen.einordnen(kaefig, andere))
+        innen, aussen = G9lagenanatomie.unten(kennung, kaefig, andere, *self.lagen.einordnen(kaefig, andere), self._anatomie, self.lagen.NAEHE)
         innen, aussen = self._haar_aussen(kennung, innen, aussen)
         # Ein GarmentCode-Stueck ist EINE Stofflage — ohne `aussenlage` (24.09.2026,
         # `Genesis9/lagenflaeche.py`: 22 % der Kleidpunkte fielen dort heraus).
@@ -108,16 +110,6 @@ class G9lagenanfrage:
         from Genesis9.garderobe import G9garderobe
         from Genesis9.stueckersatz import G9stueckersatz
         return not kennung.startswith(cls.GC) and bool(G9stueckersatz.anatomie_fuer(G9garderobe.eintrag(kennung) or {}))
-
-    @classmethod
-    def _anatomie_unten(cls, kennung, innen, aussen):
-        u"""Die Anatomie ist Körper und liegt unter JEDEM Stück, auch wenn sie höher über der Haut steht (11.10.2026, Edgar: „die Kleider
-        müssen so gefittet werden, dass sie inklusive Scham passen“). Die Tiefenregel (`G9lagen.einordnen`: außen liegt, was weiter von der Haut
-        steht) hielt das Geograft, das 15–40 mm vor der Haut steht, für das äußere Stück — die Hose blieb auf der Haut und die Scham zeichnete sich
-        durch den Stoff. Zwischen zwei Anatomien bleibt es bei der Tiefenregel."""
-        if cls._anatomie(kennung):
-            return [k for k in innen if cls._anatomie(k)], aussen + [k for k in innen if not cls._anatomie(k)]
-        return innen + [k for k in aussen if cls._anatomie(k)], [k for k in aussen if not cls._anatomie(k)]
 
     @classmethod
     def _art(cls, kennung):

@@ -34,7 +34,7 @@
 import { Hautmaske } from './hautmaske.js';
 import { Hautmaskeersatz } from './hautmaskeersatz.js';
 import { Hautrechnung } from './hautrechnung.js';
-import { Hautarbeit } from './hautarbeit.js';
+import { Hautmaskenvorrat } from './hautmaskenvorrat.js';
 import { Hautanschmiegung } from './hautanschmiegung.js';
 import { Stueckfeder } from './stueckfeder.js';
 import { Stueckdeckung } from './stueckdeckung.js';
@@ -69,12 +69,11 @@ export class Hautverdeckung extends Figurhaut {
         inst._maskeAnzahl = Hautverdeckung.zaehlende(inst).length;      // so viele Stücke zählen in der Maske, die jetzt gezeigt wird (`freigeben`)
         const voll = geo.userData.indexVoll;
         // Verschweißte Stücke (Scham aus einer .blend, `stueckloch.js`) bringen ihr Loch mit: genau diese Dreiecke fallen weg, ohne Rechnung.
-        const loecher = Stueckloch.maske(Hautverdeckung.zaehlende(inst), voll.index.length / 3);
-        const stoffe = Hautverdeckung.stoffe(inst, true);
+        const loecher = Stueckloch.maske(Hautverdeckung.zaehlende(inst), voll.index.length / 3, geo.attributes.position.array);
+        const stoffe = Hautverdeckung.stoffe(inst, true, true);
         Hautloch.naehen(geo, loecher, inst.bodyMesh);
         if (!stoffe.length) return loecher ? Hautloch.nurLoecher(inst, geo, voll, loecher) : Hautverdeckung.aufheben(inst);
-        const t0 = performance.now();
-        const pos = geo.attributes.position.array;
+        const t0 = performance.now(), pos = Hautverdeckung.lage(geo);
         const rechnung = vorab || Hautrechnung.rechnen(pos, voll.index, stoffe);
         // Der Randabstand eines Ersatzstücks entsteht bei der Rechnung am Stück (`Hautmaskeersatz.maskieren`); aus dem Worker kommt er als Feld.
         stoffe.forEach((stoff, i) => { if (rechnung.randabstaende[i]) stoff.randabstand = rechnung.randabstaende[i]; });
@@ -108,29 +107,29 @@ export class Hautverdeckung extends Figurhaut {
         for (let i = 0; i < maske.length; i++) verdeckt += maske[i];
         const stand = { verdeckt, band: einzug.band, dreiecke: neu.entfernt, stuecke: stoffe.length, gesenkt,
                         luecken: luecke ? luecke.offen : 0, splitter: splitter.splitter, ms: Math.round(performance.now() - t0),
-                        rechenMs: rechnung.ms, imWorker: !!vorab, verschweisst: loecher ? loecher.schluessel : [] };
+                        rechenMs: rechnung.ms, imWorker: !!vorab, ausVorrat: !!vorab?.ausVorrat, verschweisst: loecher ? loecher.schluessel : [] };
         Protokoll.debug('Hautverdeckung', `${verdeckt} Körperpunkte unter ${stoffe.length} `
             + `Stücken, ${einzug.band} davon im Saumband, ${gesenkt} auf ein Ersatzstück gesenkt, `
             + `${neu.entfernt} Dreiecke ausgeblendet (${stand.splitter} steile Splitter), `
             + `${stand.luecken} ohne Stück dahinter stehengelassen, ${stand.ms} ms auf dem Hauptfaden `
-            + `(Rechnung ${stand.rechenMs} ms${vorab ? ' im Worker' : ''})`);
+            + `(Rechnung ${stand.rechenMs} ms${stand.ausVorrat ? ', aus dem Vorrat' : vorab ? ' im Worker' : ''})`);
         return stand;
     }
 
     /**
-     * Wie `anwenden`, aber gerechnet wird in einem Worker (`hautarbeit.js`); der Hauptfaden schreibt nur das Ergebnis. Ohne Worker
-     * rechnet `anwenden` selbst. null, wenn der Auftrag überholt ist (`gueltig()` false: ein neuer Plan ist unterwegs).
+     * Wie `anwenden`, aber gerechnet wird in einem Worker (`hautarbeit.js`) — oder die Maske liegt schon dauerhaft auf dem Server (`hautmaskenvorrat.js`,
+     * 19.10.2026); der Hauptfaden schreibt nur das Ergebnis. Ohne Worker rechnet `anwenden` selbst. null, wenn der Auftrag überholt ist (`gueltig()` false).
      */
     static async anwendenAsync(inst, gueltig = () => true) {
         const geo = inst?.bodyMesh?.geometry;
         if (!geo?.attributes?.position || !geo.index) return null;
         Hautverdeckung.merken(geo);
-        const stoffe = Hautverdeckung.stoffe(inst, true);
+        const stoffe = Hautverdeckung.stoffe(inst, true, true);
         if (!stoffe.length) return Hautverdeckung.anwenden(inst);       // nichts zu rechnen: nur das Loch eines verschweißten Stücks oder gar nichts
-        const vorab = await Hautarbeit.rechnen(geo.attributes.position.array, geo.userData.indexVoll.index, stoffe);
-        if (vorab === Hautarbeit.VERALTET || !gueltig() || inst.bodyMesh?.geometry !== geo) return null;
+        const vorab = await Hautmaskenvorrat.rechnen(inst, Hautverdeckung.lage(geo), geo.userData.indexVoll.index, stoffe);
+        if (vorab === Hautmaskenvorrat.VERALTET || !gueltig() || inst.bodyMesh?.geometry !== geo) return null;
         // Dieselben Stücke in derselben Reihenfolge wie beim Abschicken — nur dann gehören `randabstaende` zu ihnen.
-        const jetzt = Hautverdeckung.stoffe(inst, true).map((s) => s.schluessel).join('|');
+        const jetzt = Hautverdeckung.stoffe(inst, true, true).map((s) => s.schluessel).join('|');
         return Hautverdeckung.anwenden(inst, vorab && jetzt === stoffe.map((s) => s.schluessel).join('|') ? vorab : null);
     }
 
@@ -189,7 +188,7 @@ export class Hautverdeckung extends Figurhaut {
         const geo = inst?.bodyMesh?.geometry;
         const voll = geo?.userData?.indexVoll;
         if (!geo?.attributes?.position || !geo.index || !voll) return null;
-        const loecher = Stueckloch.maske(Hautverdeckung.zaehlende(inst), voll.index.length / 3);
+        const loecher = Stueckloch.maske(Hautverdeckung.zaehlende(inst), voll.index.length / 3, geo.attributes.position.array);
         Hautloch.naehen(geo, loecher, inst.bodyMesh);
         inst._maskeAnzahl = 0;                                          // gezeigt wird jetzt keine Maske mehr
         return loecher ? Hautloch.nurLoecher(inst, geo, voll, loecher) : Hautverdeckung.aufheben(inst);
@@ -212,7 +211,7 @@ export class Hautverdeckung extends Figurhaut {
      * Haar und Requisiten bleibt die Haut — ein Strang- oder Kartenhaar
      * verdeckt keine Kopfhaut, ein Dolch keine Hand.
      */
-    static stoffe(inst, ohneVerschweisste = false) {
+    static stoffe(inst, ohneVerschweisste = false, ruhe = false) {
         const aus = [];
         const anzahl = (inst?.bodyMesh?.geometry?.userData?.indexVoll?.index?.length || 0) / 3;
         for (const [schluessel, netz] of Object.entries(Hautverdeckung.stuecke(inst))) {
@@ -227,12 +226,15 @@ export class Hautverdeckung extends Figurhaut {
             // (gemessen 09.10.2026, „cute girl Scham": Strahl allein 111 Punkte, mit Abstandstest 6 mm 353 — die Haut stand
             // sonst neben und unter dem Stück und flimmerte an den Rändern).
             const ersatz = !!netz.userData?.hautTiefe;
-            aus.push({ schluessel, punkte: g.attributes.position.array, tiefe: netz.userData?.hautTiefe || undefined,
+            aus.push({ schluessel, punkte: ruhe ? Hautverdeckung.lage(g) : g.attributes.position.array, tiefe: netz.userData?.hautTiefe || undefined,
                        dreiecke: Hautverdeckung.vollerIndex(g), starr: ersatz || Hautverdeckung.starr(schluessel),
                        nahe: ersatz ? Hautverdeckung.NAHE_ERSATZ_M : undefined, ersatz, netz });
         }
-        return aus;
+        return ruhe ? aus.sort((a, b) => (a.schluessel < b.schluessel ? -1 : +(a.schluessel > b.schluessel))) : aus;   // fest: die Ankunft der Stücke wechselt
     }
+
+    /** Die Punkte IN RUHE: eine laufende Bewegung schreibt die Gelenkkorrekturen je Bild ins Attribut (`Genesis9felder`) — Maske und Schlüssel gelten der Ruhe. */
+    static lage(geo) { const p = geo.attributes.position.array, r = geo.userData?.felder?.ruhe; return r?.length === p.length ? r : p; }
 
     /**
      * STARRE Stücke (bisher nur der GarmentCode-Schuh, Schlüssel immer
@@ -316,21 +318,20 @@ export class Hautverdeckung extends Figurhaut {
      * Die Rechnung läuft im Worker (`anwendenAsync`): sie wartet nicht mehr auf Ruhe des Nutzers, vorher ein Block von 3–14 s.
      */
     static _rechnen(inst) {
-        const nachladen = Figuraufbaustand.laeuft(inst) && !inst._grobHalt;
-        if (nachladen) {
+        if (Figuraufbaustand.laeuft(inst) && !inst._grobHalt) {         // die Löcher verschweißter Stücke warten nicht (`Hautloch.vorab`)
+            Hautloch.vorab(inst, Hautverdeckung.zaehlende(inst));
             Hautverdeckung._ausstehend.set(inst, setTimeout(() => Hautverdeckung._rechnen(inst), Hautverdeckung.NACHLADEN_MS));
             return;
         }
         Hautverdeckung._ausstehend.delete(inst);
         // Weniger Stücke als in der gezeigten Maske: Kleidung ist weg (ein Austausch hält die Zahl und bleibt, wie er war) — die Haut sofort zeigen.
         if (Hautverdeckung.zaehlende(inst).length < (inst._maskeAnzahl || 0)) Hautverdeckung.freigeben(inst);
-        const lauf = inst._maskeVersion;
-        Hautverdeckung.anwendenAsync(inst, () => inst._maskeVersion === lauf)
-            .catch((fehler) => Protokoll.warnung('Hautverdeckung', fehler.message));
+        const lauf = inst._maskeVersion;     // `_maskeRechnet`: die Rechnung im Worker läuft („Haut unter der Kleidung" in der Anzeige, `Zeichenstand`)
+        inst._maskeRechnet = Hautverdeckung.anwendenAsync(inst, () => inst._maskeVersion === lauf).catch((fehler) => Protokoll.warnung('Hautverdeckung', fehler.message))
+            .finally(() => { if (inst._maskeVersion === lauf) inst._maskeRechnet = null; });
     }
 }
 
 Hautverdeckung.einhaengen();
 // Für Messungen aus der Konsole — die Szene lädt als ein Bündel.
-window.__hautverdeckung = Hautverdeckung;
-window.__hautmaske = Hautmaske;
+window.__hautverdeckung = Hautverdeckung; window.__hautmaske = Hautmaske;

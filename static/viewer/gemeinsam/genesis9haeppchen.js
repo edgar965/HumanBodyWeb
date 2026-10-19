@@ -2,6 +2,7 @@ import { Protokoll } from './protokoll.js';
 import { Figuraufbaustand } from './figuraufbaustand.js';
 import { Nutzerruhe } from './nutzerruhe.js';
 import { Netzstufenstand } from './netzstufenstand.js';
+import { Genesis9vorrat } from './genesis9vorrat.js';
 
 /**
  * Genesis9haeppchen — die gewählte Stufe (fein oder ultrafein) STÜCK FÜR STÜCK nachholen, auf Wunsch erst nach Ruhe.
@@ -31,7 +32,8 @@ export class Genesis9haeppchen {
             Figuraufbaustand.beenden(inst);
         }
         const davor = inst._feinZug || Promise.resolve();
-        const zug = davor.then(() => Genesis9haeppchen._lauf(inst, ruhe));
+        // Die Stufe nachladen ist eine Anzeige: der Server legt die Antworten dauerhaft ab (`Genesis9vorrat`, 19.10.2026).
+        const zug = davor.then(() => Genesis9vorrat.laden(inst, () => Genesis9haeppchen._lauf(inst, ruhe)));
         inst._feinZug = zug.catch(() => {});
         return zug;
     }

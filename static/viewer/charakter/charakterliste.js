@@ -14,6 +14,7 @@ import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Speichernmenue } from './speichernmenue.js';
 import { Startfigur } from './startfigur.js';
 import { Letztewahl } from './letztewahl.js';
+import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -140,6 +141,7 @@ async function figurAusModelldaten(daten, wahl) {
     fn.updateVertexCount();
     fn.selectCharacter(inst.id);
     markDirty();
+    if (daten.quelle === 'genesis9') Genesis9vorrat.fuellen(inst).catch(f => console.warn(`Genesis9vorrat: ${f.message}`));   // alle Stufen dauerhaft ablegen lassen (19.10.2026)
     return inst;
 }
 

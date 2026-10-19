@@ -36,7 +36,8 @@ export class Stuecknaht {
      * Die Verschiebung (xyz je Punkt des Stücks, `Float32Array`) und ihr Bericht.
      * @param punkte   Punkte des Stücks (Ruhelage), xyz
      * @param index    Dreiecksindex des Stücks (voll)
-     * @param ring     `{lage: Float32Array (k·3), punkte: Uint32Array (k), d: Float32Array (k·3)}`
+     * @param ring     `{lage: Float32Array (k·3), punkte: Uint32Array (k), d: Float32Array (k·3)}` — auf der groben Stufe dazu `punkte2`
+     *   (Uint32Array) und `t` (Float32Array): die Ecke liegt zwischen den Hautpunkten `punkte` und `punkte2` (`G9stuecklochstufen`)
      * @param haut     Punkte der Haut (Ruhelage), xyz — so, wie der Browser sie hat
      * @returns {{werte, ecken, gefunden, medianMm, maxMm, weg, randpunkte}} — `weg`: Weg über das Netz zum Rand je Punkt (`Infinity`
      *   jenseits von `BAND_M`; null ohne Randpunkt), `randpunkte`: `{ids, ecke}` die Randpunkte (alle Kopien) und ihre Ringecke
@@ -50,8 +51,11 @@ export class Stuecknaht {
         const randIds = [], versatz = [], randEcke = [];     // je Randpunkt (alle Kopien): Nummer, Versatz und Ringecke
         const betrag = [];
         zuordnung.forEach((j, g) => {
-            const i = ring.punkte[j], ziel = [0, 0, 0], v = [0, 0, 0];
-            for (let c = 0; c < 3; c++) { ziel[c] = haut[3 * i + c] + ring.d[3 * j + c]; v[c] = ziel[c] - gruppen[g].p[c]; }
+            const i = ring.punkte[j], i2 = ring.punkte2 ? ring.punkte2[j] : i, s = ring.t ? ring.t[j] : 0, ziel = [0, 0, 0], v = [0, 0, 0];
+            for (let c = 0; c < 3; c++) {
+                ziel[c] = (1 - s) * haut[3 * i + c] + s * haut[3 * i2 + c] + ring.d[3 * j + c];
+                v[c] = ziel[c] - gruppen[g].p[c];
+            }
             betrag.push(Math.hypot(v[0], v[1], v[2]));
             for (const id of gruppen[g].ids) { randIds.push(id); versatz.push(v); randEcke.push(j); }
         });

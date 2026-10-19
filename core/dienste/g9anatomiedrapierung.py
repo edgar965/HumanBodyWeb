@@ -36,20 +36,28 @@ class G9anatomiedrapierung:
     @classmethod
     def fuer(cls, innen, formung=None):
         u"""Das Hindernis aus den Anatomie-Stücken unter `innen` (Kennungen) — oder None, wenn keines der `ANATOMIEN` getragen wird. Mit `formung` liegen die Stücke dort,
-        wo das starre Stück der Stellung liegt (`G9stueckstarr.punkte`: es folgt dem Becken)."""
+        wo der Browser sie zeigt: Ruhelage (`G9stueckstarr.punkte`), an den Ring der Haut gerückt (`G9stueckstarr.nachgezogen`, wie `G9lagen.kaefig`).
+
+        Edgar, 19.10.2026: „mach das auch für männliche Genitalien mit Matt0" — an Matt0 steht das Geograft im Browser gleichmäßig 31,5 mm neben der Ruhelage; der
+        Drapierer hob den Stoff über eine Stelle, an der das gezeigte Glied nicht hängt, und die Eichel stach unter dem Bund der GC Pants Wool durch."""
         from Genesis9.garderobe import G9garderobe
         from Genesis9.stueckersatz import G9stueckersatz
         from Genesis9.stueckstarr import G9stueckstarr
 
         from .g9lagenanfrage import G9lagenanfrage
-        stuecke = []
+        stuecke, haut = [], None
         for kennung in innen:
             if not G9lagenanfrage._anatomie(kennung):
                 continue
-            if G9stueckersatz.anatomie_fuer(G9garderobe.eintrag(kennung) or {}) not in cls.ANATOMIEN:
+            eintrag = G9garderobe.eintrag(kennung) or {}
+            if G9stueckersatz.anatomie_fuer(eintrag) not in cls.ANATOMIEN:
                 continue
             teile = G9garderobe.teile(kennung)
-            stuecke += list(zip(G9stueckstarr.punkte(teile, formung), (folger.polys for folger, _lage in teile), strict=True))
+            if haut is None and formung is not None:
+                from Genesis9.koerpernetz import G9koerpernetz
+                haut = G9koerpernetz(formung, stufen=1).koerperflaeche()[0]
+            punkte = G9stueckstarr.nachgezogen(eintrag, G9stueckstarr.punkte(teile, formung), haut, formung)
+            stuecke += list(zip(punkte, (folger.polys for folger, _lage in teile), strict=True))
         if not stuecke:
             return None
         return cls(G9drapierhindernis.aus_stuecken(stuecke))

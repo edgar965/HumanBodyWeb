@@ -1,6 +1,7 @@
 import { Serverabruf } from './serverabruf.js';
 import { Protokoll } from './protokoll.js';
 import { Genesis9antwortspeicher } from './genesis9antwortspeicher.js';
+import { Genesis9vorrat } from './genesis9vorrat.js';
 
 /**
  * Genesis9materialabruf — die Netzantwort des Körpers: aus dem Speicher, mit neuen Materialien, oder vom Server (12.10.2026).
@@ -64,7 +65,8 @@ export class Genesis9materialabruf {
             return { daten: Genesis9antwortspeicher.kopie(treffer.daten), stellung, stufe, material, neu: false };
         }
         const daten = treffer ? await Genesis9materialabruf._leicht(adresse, nutzlast, Genesis9antwortspeicher.kopie(treffer.daten)) : null;
-        return { daten: daten || await Serverabruf.netzSenden(adresse, nutzlast), stellung, stufe, material, neu: true };
+        // Eine Anzeige (Laden, Stufenwechsel) legt der Server dauerhaft ab (`Genesis9vorrat`, 19.10.2026).
+        return { daten: daten || await Serverabruf.netzSenden(adresse, nutzlast, Genesis9vorrat.kopf(inst, 'koerper', adresse, nutzlast)), stellung, stufe, material, neu: true };
     }
 
     /** Eine Antwort, die gebaut wird, im Speicher ablegen (nicht die einer überholten Anfrage; nicht, was schon so darin liegt). */
@@ -111,3 +113,6 @@ export class Genesis9materialabruf {
             && g.index_ab === neu[i].index_ab && g.index_anzahl === neu[i].index_anzahl);
     }
 }
+
+// Für `Genesis9vorrat.festhalten`: der Rumpf des Körpers nach dem Stand der Figur (dort kein Import hierher — sonst ein Ring).
+Genesis9vorrat.koerperNutzlast = (inst) => Genesis9materialabruf.nutzlast(inst);

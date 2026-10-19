@@ -12,9 +12,13 @@ Kunstdaten ohne Daz-Bibliothek: das Hindernis ist eine Kugel (Radius 3 cm), der 
    unberührt, alle Werte endlich.
 3. Weit weg vom Hindernis bleibt der Stoff, wie er ist.
 4. `G9drapierung`: Vorgaben, Begrenzung auf die Reglergrenzen (auch 0 mm Abstand → 0,5 mm), und die Regler hängen nur an Hosen, Shorts, Unterwäsche, Anzügen.
+5. Gegenrichtung (19.10.2026, `mh_cortu_cargo_pants` an Matt0: grobes Netz, das Glied ging mitten durch eine Stofffläche): EIN großes Dreieck um die Kugel
+   (Umkreis 7 cm, Inkreis 3,5 cm) — keine Stoffkante trifft sie, kein Stoffpunkt liegt in ihr. Ohne `flaechen` verlangt `anforderung` nichts, mit ihnen stechen
+   Kanten der Kugel durch das Dreieck, und alle drei Ecken müssen mindestens um den Abstand hinaus.
 
-Tests geschrieben, nicht gelaufen (nur auf Ansage). Sabotage-Gegenprobe (nicht gefahren): in `G9drapierer.drapieren` die Zeile `x = x + cls._loesen(…)`
-weglassen → Fall 2 rot; in `G9drapierhindernis.kreuzungen` die Bedingung `t <= 1.0` weglassen → Fall 1 rot (die Strecke trifft dann auch Dreiecke hinter ihrem Ende).
+Gelaufen 19.10.2026 auf Ansage: 5 Fälle grün. Sabotage-Gegenprobe (nicht gefahren): in `G9drapierer.drapieren` die Zeile `x = x + cls._loesen(…)`
+weglassen → Fall 2 rot; in `G9drapierhindernis.kreuzungen` die Bedingung `t <= 1.0` weglassen → Fall 1 rot (die Strecke trifft dann auch Dreiecke hinter ihrem Ende);
+in `anforderung` den Aufruf von `_gegen` weglassen → Fall 5 rot.
 """
 import numpy as np
 from django.test import SimpleTestCase
@@ -78,6 +82,20 @@ class Drapieren(SimpleTestCase):
         self.assertGreater(float(neu[:, 2].max()), RADIUS, 'der höchste Stoffpunkt liegt über dem Scheitel der Kugel')
         ecke = np.linalg.norm(punkte[:, :2], axis=1) > 0.049
         self.assertLess(float(np.abs(neu[ecke] - punkte[ecke]).max()), 1e-9, 'außerhalb der Ausbreitung bleibt der Stoff, wo er war')
+
+    def test_5_ein_grosses_dreieck_um_die_kugel_muss_hinaus(self):
+        hindernis = kugel()
+        winkel = np.radians([90.0, 210.0, 330.0])
+        punkte = np.column_stack([0.07 * np.cos(winkel), 0.07 * np.sin(winkel), np.zeros(3)])
+        dreiecke = np.array([[0, 1, 2]])
+        normalen = np.tile([0.0, 0.0, 1.0], (3, 1))
+        kanten = G9drapierhindernis.kanten(dreiecke)
+        r_ohne, _drin, kreuzend_ohne = hindernis.anforderung(punkte, kanten, normalen, 0.003)
+        self.assertEqual(kreuzend_ohne, 0, 'keine Stoffkante trifft die Kugel, kein Stoffpunkt liegt in ihr')
+        self.assertEqual(float(r_ohne.max()), 0.0)
+        r, _drin, kreuzend = hindernis.anforderung(punkte, kanten, normalen, 0.003, dreiecke)
+        self.assertGreater(kreuzend, 0, 'Kanten der Kugel stechen durch das Dreieck')
+        self.assertTrue((r >= 0.003 - 1e-12).all(), 'alle drei Ecken müssen hinaus')
 
     def test_3_weit_weg_vom_hindernis_aendert_sich_nichts(self):
         hindernis = kugel()

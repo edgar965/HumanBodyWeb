@@ -5,6 +5,7 @@ import json
 
 from ...dienste.blendimportbackenwahl import Blendimportbackenwahl
 from ...dienste.netzantwortwahl import Netzantwortwahl
+from ...dienste.netzvorratwahl import Netzvorratwahl
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
 
@@ -60,6 +61,10 @@ class SzeneEinstellungen(Einstellungsseite):
         halten = F.text(post, Netzantwortwahl.SCHLUESSEL)
         if halten in Netzantwortwahl.WAHLEN:
             prefs[Netzantwortwahl.SCHLUESSEL] = halten
+        # Bis zu welcher Stufe die Anzeigen dauerhaft auf dem Server liegen (`Netzvorratwahl`, 19.10.2026) — ebenso nur ein bekannter Wert.
+        vorrat = F.text(post, Netzvorratwahl.SCHLUESSEL)
+        if vorrat in Netzvorratwahl.WAHLEN:
+            prefs[Netzvorratwahl.SCHLUESSEL] = vorrat
         return prefs
 
     def kontext(self, s):
@@ -72,4 +77,6 @@ class SzeneEinstellungen(Einstellungsseite):
             'backen_wahlen': list(Blendimportbackenwahl.WAHLEN.items()),
             'netzantworten': Netzantwortwahl.aus(prefs),
             'netzantworten_wahlen': list(Netzantwortwahl.WAHLEN.items()),
+            'netzvorrat': Netzvorratwahl.aus(prefs),
+            'netzvorrat_wahlen': list(Netzvorratwahl.WAHLEN.items()),
         }

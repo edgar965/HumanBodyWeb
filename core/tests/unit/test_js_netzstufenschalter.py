@@ -12,9 +12,15 @@ In Node mit Attrappen für `document`, `window` und `location` (wie `test_js_net
    grob → fein ebenso. Liefert `umbauen` true, lädt die Seite nicht neu.
 6. Ohne Genesis-Figur (`umbauen` liefert false): Neuladen; auf ultrafein mit dem Einmal-Keks `netzstufen_neuladen=1`.
 
-Sabotage: `naechste` ohne Kreis (Modulo) → Fall 1 rot; Keks nicht gesetzt → Fall 5 rot; Anzeige nur bei Wahl → Fall 4 rot.
+7. (19.10.2026, Edgar: „mach eine Sanduhr oder eine Anzeige … bis alles geladen ist") `offen`: was eine Figur noch nicht gezeichnet hat
+   (`Zeichenstand`); derselbe Text zweier Figuren steht einmal mit „×2", eine vergessene Figur meldet nichts mehr. Der Text trägt dann vorn
+   „⏳" und hinten „lädt noch: …" (höchstens drei, der Rest als „+n"); auch „lädt …" (Stufenwechsel) trägt die Sanduhr.
+8. (19.10.2026) Vor der ersten Figur lädt die Seite: „lädt noch: Seite" mit Sanduhr, bis `seiteFertig` — vorher stand ~0,8 s „Netz: grob" ohne Sanduhr.
 
-Gelaufen am 09.10.2026 (Gesamtlauf auf Ansage): grün.
+Sabotage: `naechste` ohne Kreis (Modulo) → Fall 1 rot; Keks nicht gesetzt → Fall 5 rot; Anzeige nur bei Wahl → Fall 4 rot;
+`_entsorgt.add` in `vergessen` streichen → Fall 7 rot.
+
+Gelaufen am 09.10.2026 (Gesamtlauf auf Ansage): grün. Fall 7 und die Sanduhr (19.10.2026): geschrieben, nicht gelaufen.
 """
 from django.test import SimpleTestCase
 
@@ -56,20 +62,37 @@ const anzeige = () => document.getElementById('netzstufe-abzeichen');
 // 1. Kreis
 pruefe('kreis', ['grob', 'fein', 'ultrafein'].map(s => Z.naechste(s)), ['fein', 'ultrafein', 'grob']);
 
-// 2. zusammen
-pruefe('ohne figur: die wahl', Z.zusammen(), { stufe: 'fein', laedt: false, fertig: 0, gesamt: 0 });
+// 2. zusammen — 8. vor der ersten Figur lädt die SEITE (19.10.2026), bis sie fertig meldet
+pruefe('seite lädt', Z.zusammen().offen, ['Seite']);
+pruefe('seite lädt: sanduhr', S.text().startsWith('⏳ '), true);
+Z.seiteFertig(0);
+pruefe('ohne figur: die wahl', Z.zusammen(), { stufe: 'fein', laedt: false, fertig: 0, gesamt: 0, offen: [] });
 const a = { id: 'a' }, b = { id: 'b' };
 Z.melden(a, 'fein', false);
 Z.melden(b, 'grob', true, 3, 10);
-pruefe('niedrigste, laedt, zaehler', Z.zusammen(), { stufe: 'grob', laedt: true, fertig: 3, gesamt: 10 });
+pruefe('niedrigste, laedt, zaehler', Z.zusammen(), { stufe: 'grob', laedt: true, fertig: 3, gesamt: 10, offen: [] });
+// 7. offen (19.10.2026, `Zeichenstand`): gleiche Texte zweier Figuren einmal mit ×2, vergessen nimmt sie mit
+Z.offen(a, ['Körper', 'Texturen']);
+Z.offen(b, ['Texturen']);
+pruefe('offen: gezählt', Z.zusammen().offen, ['Körper', 'Texturen ×2']);
 Z.vergessen(b);
 pruefe('b vergessen', Z.zusammen().stufe, 'fein');
+pruefe('b vergessen: offen ohne b', Z.zusammen().offen, ['Körper', 'Texturen']);
+pruefe('entsorgt', [Z.entsorgt(b), Z.entsorgt(a)], [true, false]);
+Z.offen(b, ['Körper']);
+pruefe('entsorgte Figur meldet nichts mehr', Z.zusammen().offen, ['Körper', 'Texturen']);
+Z.offen(a, []);
+pruefe('leere Liste: alles gezeichnet', Z.zusammen().offen, []);
 Z.vergessen(a);
 
 // 3. text
 pruefe('text fertig', S.text({ stufe: 'fein', laedt: false, fertig: 0, gesamt: 0 }, 'fein'), 'Netz: fein · Strg+Alt+H zum Ändern');
 pruefe('text ladend', S.text({ stufe: 'grob', laedt: true, fertig: 3, gesamt: 10 }, 'fein'),
-       'Netz: grob → fein lädt … (3/10) · Strg+Alt+H zum Ändern');
+       '⏳ Netz: grob → fein lädt … (3/10) · Strg+Alt+H zum Ändern');
+pruefe('text offen', S.text({ stufe: 'grob', laedt: false, fertig: 0, gesamt: 0, offen: ['Daz Anatomie Frau (Hautfarbe) ×2'] }, 'grob'),
+       '⏳ Netz: grob · lädt noch: Daz Anatomie Frau (Hautfarbe) ×2 · Strg+Alt+H zum Ändern');
+pruefe('text offen, mehr als drei', S.text({ stufe: 'fein', laedt: false, offen: ['A', 'B', 'C', 'D', 'E'] }, 'fein'),
+       '⏳ Netz: fein · lädt noch: A, B, C +2 · Strg+Alt+H zum Ändern');
 
 // 4. anzeige immer da
 const umgebaut = [];

@@ -71,7 +71,7 @@ pruefe('umgeschaltet', await um, true);
 pruefe('koerper erst nach dem stueck', a.gestartet.map(g => g[0]), ['kleid', 'koerper']);
 pruefe('stufe des browsers', a.gestartet.map(g => g[1]), [null, null]);
 pruefe('fein gesetzt', [a.fein instanceof Promise, b.fein instanceof Promise], [true, true]);
-pruefe('stand fein', Netzstufenstand.zusammen(), { stufe: 'fein', laedt: false, fertig: 0, gesamt: 0 });
+pruefe('stand fein', Netzstufenstand.zusammen(), { stufe: 'fein', laedt: false, fertig: 0, gesamt: 0, offen: [] });   // `offen` seit 19.10.2026 (`Zeichenstand`)
 
 // 3. gemischt
 const h = figur('modell', []), g = figur('genesis9', ['haar']);

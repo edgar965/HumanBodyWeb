@@ -22,6 +22,7 @@ import hashlib
 import json
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import numpy as np
@@ -132,40 +133,44 @@ class Meshfigurgriff:
         return bericht
 
     def _suchen(self, halter, ziele, kaefig):
-        from .blendimportfingersuche import Blendimportfingersuche
         from .blendimporthaltung import Blendimporthaltung
-        from .meshfigurgriffmodell import Meshfigurgriffmodell
 
         lage = SimpleNamespace(ablage=self.ablage, stellung=self.job.stellung, finger_drehung={}, kaefig_posiert=kaefig)
         halt = Blendimporthaltung(lage)
         if halt.vorbereiten() is None:
             return {s: {'uebernommen': False, 'grund': 'Der Auftrag führt keine Haltung'} for s in halter}
-        seiten = {}
-        for seite, eintrag_halter in sorted(halter.items()):
-            name, ziel = eintrag_halter['name'], ziele[seite]
-            eintrag = {'haelt': name, 'netzpunkte': int(len(ziel)), 'uebernommen': False, 'griff': {}}
-            if eintrag_halter.get('leer'):
-                eintrag['leer'] = True
-            seiten[seite] = eintrag
-            if len(ziel) < self.MINDEST_PUNKTE:
-                eintrag['grund'] = 'nur %d Netzpunkte, die Sapiens als Hand sieht, in Handreichweite' % len(ziel)
-                continue
-            modell = Meshfigurgriffmodell(halt, seite, ziel)
-            ohne = modell.ohne_finger()                                        # die beste Lage der GESTRECKTEN Hand: das müssen die Finger schlagen
-            erg = Blendimportfingersuche(modell, lambda text: logger.info('Mesh to 3D %s: Griff %s', self.job.kennung, text)).suchen()
-            v, n = ohne['kennzahlen'], erg['nachher']
-            eintrag.update(ohne_finger=v, nachher=n, start=erg['start'], sekunden=erg['sekunden'], phi=[round(float(x), 2) for x in erg['phi']])
-            # Wie weit wandert die Hand der Figur (Mitte der Handpunkte) durch Armwinkel und Finger? Mehr als `MAX_WEG_M` ist keine Korrektur mehr, sondern eine andere Pose.
-            weg = float(np.linalg.norm(modell.posiert(erg['phi']).mean(axis=0) - modell.posiert(np.zeros(modell.anzahl)).mean(axis=0)))
-            eintrag['weg_mm'] = round(weg * 1000.0, 1)
-            gilt = (bool(erg['uebernommen']) and n['original_median_mm'] < self.VORTEIL * v['original_median_mm'] and n['original_p90_mm'] < self.VORTEIL * v['original_p90_mm'] and weg <= self.MAX_WEG_M)
-            if gilt:
-                eintrag.update(uebernommen=True, griff=modell.als_griff(erg['phi']))
-            else:
-                eintrag['grund'] = ('Hand wanderte %.0f cm (mehr als %.0f cm)' % (100 * weg, 100 * self.MAX_WEG_M) if weg > self.MAX_WEG_M else
-                                    'Median und p90 des Abstands Netz-Hand → Figurhand werden durch die Finger nicht um %.0f %% besser als bei gestreckter Hand an bester Stelle' % (100.0 * (1.0 - self.VORTEIL)))
-            logger.info('Mesh to 3D %s: Griff %s — %s', self.job.kennung, seite, {k: v for k, v in eintrag.items() if k != 'griff'})
-        return seiten
+        # Die Hände hängen nicht voneinander ab: nebeneinander (19.10.2026; je Hand rechnen die Starts schon in Fäden, `Blendimportfingersuche`). Ergebnis je Seite wie vorher, sortiert.
+        with ThreadPoolExecutor(max(1, len(halter))) as pool:
+            fertig = dict(pool.map(lambda s: (s, self._eine_seite(s, halter[s], ziele[s], halt)), sorted(halter)))
+        return {s: fertig[s] for s in sorted(halter)}
+
+    def _eine_seite(self, seite, eintrag_halter, ziel, halt):
+        """Eine Hand: Suche der Finger (und Armwinkel) und die Annahme — der Eintrag von `seiten[seite]`."""
+        from .blendimportfingersuche import Blendimportfingersuche
+        from .meshfigurgriffmodell import Meshfigurgriffmodell
+
+        eintrag = {'haelt': eintrag_halter['name'], 'netzpunkte': int(len(ziel)), 'uebernommen': False, 'griff': {}}
+        if eintrag_halter.get('leer'):
+            eintrag['leer'] = True
+        if len(ziel) < self.MINDEST_PUNKTE:
+            eintrag['grund'] = 'nur %d Netzpunkte, die Sapiens als Hand sieht, in Handreichweite' % len(ziel)
+            return eintrag
+        modell = Meshfigurgriffmodell(halt, seite, ziel)
+        ohne = modell.ohne_finger()                                        # die beste Lage der GESTRECKTEN Hand: das müssen die Finger schlagen
+        erg = Blendimportfingersuche(modell, lambda text: logger.info('Mesh to 3D %s: Griff %s', self.job.kennung, text)).suchen()
+        v, n = ohne['kennzahlen'], erg['nachher']
+        eintrag.update(ohne_finger=v, nachher=n, start=erg['start'], sekunden=erg['sekunden'], phi=[round(float(x), 2) for x in erg['phi']])
+        # Wie weit wandert die Hand der Figur (Mitte der Handpunkte) durch Armwinkel und Finger? Mehr als `MAX_WEG_M` ist keine Korrektur mehr, sondern eine andere Pose.
+        weg = float(np.linalg.norm(modell.posiert(erg['phi']).mean(axis=0) - modell.posiert(np.zeros(modell.anzahl)).mean(axis=0)))
+        eintrag['weg_mm'] = round(weg * 1000.0, 1)
+        gilt = (bool(erg['uebernommen']) and n['original_median_mm'] < self.VORTEIL * v['original_median_mm'] and n['original_p90_mm'] < self.VORTEIL * v['original_p90_mm'] and weg <= self.MAX_WEG_M)
+        if gilt:
+            eintrag.update(uebernommen=True, griff=modell.als_griff(erg['phi']))
+        else:
+            eintrag['grund'] = ('Hand wanderte %.0f cm (mehr als %.0f cm)' % (100 * weg, 100 * self.MAX_WEG_M) if weg > self.MAX_WEG_M else
+                                'Median und p90 des Abstands Netz-Hand → Figurhand werden durch die Finger nicht um %.0f %% besser als bei gestreckter Hand an bester Stelle' % (100.0 * (1.0 - self.VORTEIL)))
+        logger.info('Mesh to 3D %s: Griff %s — %s', self.job.kennung, seite, {k: v for k, v in eintrag.items() if k != 'griff'})
+        return eintrag
 
     # ------------------------------------------------------------------ Haltung
 

@@ -11,6 +11,7 @@ Original → Käfigpunkte Median 9,24 → 3,13 mm (p90 30,1 → 7,8), jede Auswe
 """
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from scipy.optimize import least_squares
@@ -42,10 +43,16 @@ class Blendimportfingersuche:
         null = np.zeros(m.anzahl)
         wert0 = m.wert(null)
         beste, auswertungen = None, 0
-        for g in self.STARTS:
+
+        def ein_start(g):
             start = np.clip(m.griffpose * g, m.unten, m.oben)
-            erg = least_squares(lambda u: m.reste(u * self.EINHEIT), start / self.EINHEIT, bounds=(m.unten / self.EINHEIT, m.oben / self.EINHEIT),
-                                loss='soft_l1', f_scale=self.BREITE_M, diff_step=self.DIFFERENZ, max_nfev=self.SCHRITTE)
+            return least_squares(lambda u: m.reste(u * self.EINHEIT), start / self.EINHEIT, bounds=(m.unten / self.EINHEIT, m.oben / self.EINHEIT),
+                                 loss='soft_l1', f_scale=self.BREITE_M, diff_step=self.DIFFERENZ, max_nfev=self.SCHRITTE)
+        # Die Starts hängen nicht voneinander ab: nebeneinander in Fäden (19.10.2026, `griff_starts_parallel_pruefen.py` an Damira0Tripo: je Start bitgleich, 25,1 → 14,9 s);
+        # ausgewertet in der Reihenfolge von STARTS wie vorher (bei gleichem Wert gilt der frühere)
+        with ThreadPoolExecutor(len(self.STARTS)) as pool:
+            ergebnisse = list(pool.map(ein_start, self.STARTS))
+        for g, erg in zip(self.STARTS, ergebnisse):
             phi = erg.x * self.EINHEIT
             wert = m.wert(phi)
             auswertungen += int(erg.nfev) * (len(null) + 1)

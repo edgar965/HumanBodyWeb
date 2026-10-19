@@ -12,9 +12,15 @@ Körper. Der Bau legt das Loch fest (`Blendimportschamloch`), das Stück bringt 
 3. `verschieben`: addiert die Verschiebung auf das `einzug`-Feld (nie ersetzt — ein Saumband unter anderem Stoff behält seinen Einzug);
    ein Punkt außerhalb des Feldes wird übersprungen, ohne Verschiebung 0.
 4. `vereinen`: null zählt als leer; die erste Maske bleibt unverändert.
-5. `nurWeg` (18.10.2026, MakeHuman-Stücke: die Haut, die MakeHuman unter Schuh und Handschuh löscht, `Genesis9/stueckverdeckung.py`):
-   die Dreiecke fallen in der Maske weg, das Stück zählt aber nicht als verschweißt (kein Schlüssel, `verschweisst` false) — es bleibt in
-   der Haut- und Lagenverdeckung. Sabotage: in `verschweisst` das `&& !…nurWeg` streichen macht Fall 5 rot. Geschrieben, nicht gelaufen.
+5. entfallen (19.10.2026): `nurWeg`/`verschweisst` (MakeHuman-Stücke) wurden am 18.10.2026 abends zurückgenommen (`genesis9-garderobe.md`,
+   „WIEDER AUS") — der Fall stand seitdem rot gegen Methoden, die es nicht mehr gibt.
+7. `zwischen` (19.10.2026, ultrafein mit einem Stück ohne Unterteilung, `G9stuecklochultrafein._ring`): der Kantenpunkt der Haut rückt auf die
+   Mitte seiner zwei Ecken, wie diese samt Verschiebung liegen (`kantenmitten`); ohne Punkte der Haut keine Kantenmitten. Sabotage: in
+   `kantenmitten` die Verschiebung der Ecken weglassen (`lage` nur `haut[…]`) macht Fall 7 rot. Geschrieben, nicht gelaufen.
+
+6. `weitere` (19.10.2026, grobe Stufe, `Genesis9/stuecklochstufen.py`): die Fassung, deren `von` zur Haut passt, liefert Dreiecke, Ring
+   (mit `punkte2`/`t`) und Verschiebung; die feine Haut nimmt weiter das eigene Loch. Sabotage: in `fassung` nur `[loch]` statt
+   `[loch, ...weitere]` macht Fall 6 rot. Geschrieben, nicht gelaufen.
 
 Sabotage-Gegenprobe (nicht gelaufen — Tests laufen nur auf Ansage): in `von` `loch.von !== anzahl` zu `false` macht Fall 1 rot;
 in `maske` `weg[nummern[i]] = 1` zu `= nummern[i] % 2` macht Fall 2 rot; in `verschieben` `+=` zu `=` macht Fall 3 rot.
@@ -73,15 +79,31 @@ pruefe('nur a', Stueckloch.vereinen(a, null) === a, true);
 pruefe('nur b', Stueckloch.vereinen(null, b) === b, true);
 pruefe('keine', Stueckloch.vereinen(null, null), null);
 
-// --- 5. nurWeg (MakeHuman-Stücke, 18.10.2026) ---------------------------------------------------------
-const weg = netz(10, [6, 7], { nurWeg: true });
-const m2 = Stueckloch.maske([['a', mit], ['schuh', weg]], 10);
-pruefe('nurWeg: Dreiecke fallen weg', Array.from(m2.weg), [0, 1, 0, 1, 0, 0, 1, 1, 0, 0]);
-pruefe('nurWeg: nicht verschweißt', m2.schluessel, ['a']);
-pruefe('nurWeg: kein Ring', m2.ringe.length, 1);
-pruefe('verschweisst: Scham ja', Stueckloch.verschweisst(mit, 10), true);
-pruefe('verschweisst: Schuh nein', Stueckloch.verschweisst(weg, 10), false);
-pruefe('verschweisst: andere Haut nein', Stueckloch.verschweisst(mit, 12), false);
+// --- 5. (entfallen: `nurWeg`/`verschweisst` gibt es seit der Rücknahme am 18.10.2026 abends nicht mehr, `genesis9-garderobe.md`) ------
+
+// --- 7. zwischen: ultrafein mit einem Stück, das nicht unterteilt wird (19.10.2026, `Stueckloch.kantenmitten`) ---------------------
+// Haut: Punkt 0 und 2 sind Ecken, Punkt 1 der Kantenpunkt dazwischen (2 mm über der Geraden); Ecke 2 hat eine Verschiebung von 1 mm in x.
+const haut = Float32Array.from([0, 0, 0,  0.01, 0.002, 0,  0.02, 0, 0]);
+const ultra = netz(10, [0], { weitere: [{ von: 6, dreiecke: [5], ring: { lage: [[0, 0, 0], [0.02, 0, 0]], punkte: [0, 2], d: [[0, 0, 0], [0.001, 0, 0]], zwischen: [[1, 0, 2]] },
+                                         verschiebung: { punkte: [2], d: [[0.001, 0, 0]] } }] });
+const mu = Stueckloch.maske([['a', ultra]], 6, haut);
+pruefe('zwischen: Kantenpunkt verschoben', Array.from(mu.verschiebung.punkte), [2, 1]);
+pruefe('zwischen: auf die Mitte der verschobenen Ecken', Array.from(mu.verschiebung.d.slice(3)).map(rund), [0.0005, -0.002, 0]);
+pruefe('zwischen: ohne Haut keine Kantenmitten', Array.from(Stueckloch.maske([['a', ultra]], 6).verschiebung.punkte), [2]);
+
+// --- 6. weitere: dasselbe Loch für die grobe Stufe (19.10.2026, `G9stuecklochstufen`) ------------------------------------
+const grobRing = { lage: ring.lage, punkte: [4, 5, 6], punkte2: [5, 5, 7], t: [0.5, 0, 0.5], d: [[0, 0, 0], [0, 0, 0], [0, 0, 0]] };
+const zwei = netz(10, [1, 3], { ring, verschiebung: { punkte: [2], d: [[0.001, 0, 0]] }, weitere: [{ von: 4, dreiecke: [0, 2], ring: grobRing }] });
+pruefe('grob: Fassung passt', Array.from(Stueckloch.von(zwei, 4)), [0, 2]);
+pruefe('fein: weiter das eigene Loch', Array.from(Stueckloch.von(zwei, 10)), [1, 3]);
+pruefe('keine Fassung passt', Stueckloch.von(zwei, 7), null);
+const mg = Stueckloch.maske([['a', zwei]], 4);
+pruefe('grob: Maske', Array.from(mg.weg), [1, 0, 1, 0]);
+pruefe('grob: Ring der Fassung', Array.from(mg.ringe[0].ring.punkte), [4, 5, 6]);
+pruefe('grob: zweiter Punkt', Array.from(mg.ringe[0].ring.punkte2), [5, 5, 7]);
+pruefe('grob: Anteil', Array.from(mg.ringe[0].ring.t), [0.5, 0, 0.5]);
+pruefe('grob: keine Verschiebung der feinen Haut', mg.verschiebung, null);
+pruefe('fein: Ring ohne punkte2', Stueckloch.maske([['a', zwei]], 10).ringe[0].ring.punkte2, undefined);
 console.log(JSON.stringify({ ok: true }));
 """
 

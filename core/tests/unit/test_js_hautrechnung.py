@@ -12,7 +12,8 @@ derselbe Code (`Hautrechnung.rechnen`) auf beiden Wegen — geprüft wird, dass 
 2. `Hautarbeiter`: eine Nachricht `rechnen` → `fertig` mit derselben Rechnung, jeder Puffer des Ergebnisses übertragen und keiner
    doppelt (eine doppelte Nennung wirft beim Übertragen); ein Fehler in der Rechnung → `fehler` mit der Nummer; Fremdes wird ignoriert.
 3. `Hautarbeit`: ein Worker je Auftrag (Modultyp), vom Netz geht nichts mit, die Puffer sind Kopien und werden übertragen; ein
-   neuer Auftrag überholt den alten (`VERALTET`, Worker beendet, späte Antwort ignoriert); ein Fehler → null, `ausgefallen`, danach
+   neuer Auftrag DERSELBEN Figur überholt den alten (`VERALTET`, Worker beendet, späte Antwort ignoriert), der einer anderen Figur wartet
+   (19.10.2026 — vorher brach er den laufenden ab, und die erste Figur blieb ohne Maske); ein Fehler → null, `ausgefallen`, danach
    kein neuer Worker.
 
 Sabotage: `hautnormalen` ignorieren und die Normalen anders rechnen → Fall 1 rot; in `Hautarbeiter.puffer` `.buffer` weglassen oder den
@@ -142,21 +143,27 @@ pruefe('kopien statt Original', [nachricht.pos !== P, nachricht.index !== T, nac
 pruefe('kopien uebertragen', [nachricht.pos, nachricht.index, nachricht.stoffe[0].punkte, nachricht.stoffe[0].dreiecke]
        .every((x) => uebertragen.includes(x.buffer)), true);
 
-// --- 3b. ein neuer Auftrag ueberholt den alten ---------------------------------------------------------------------------
+// --- 3b. ein neuer Auftrag DERSELBEN Figur ueberholt den alten ------------------------------------------------------------
 const b = Hautarbeit.rechnen(P, T, [stoff(0.002)]);
 pruefe('erster veraltet', await a, Hautarbeit.VERALTET);
 pruefe('erster Worker beendet', arbeiter[0].beendet, true);
+// --- 3b'. eine ANDERE Figur wartet, bis der laufende fertig ist (19.10.2026: vorher brach sie ihn ab) --------------------
+const d = Hautarbeit.rechnen(P, T, [stoff(0.005)], 'andere');
+pruefe('andere Figur wartet', arbeiter.length, 2);
 arbeiter[0].onmessage({ data: { typ: 'fertig', id: 1, ergebnis: { x: 1 } } });          // zu spaet: ignoriert
 arbeiter[1].onmessage({ data: { typ: 'fertig', id: 2, ergebnis: { x: 2 } } });
 pruefe('zweiter liefert', await b, { x: 2 });
 pruefe('zweiter Worker beendet', arbeiter[1].beendet, true);
+pruefe('danach startet die andere Figur', [arbeiter.length, arbeiter[2].gesendet[0].nachricht.id], [3, 3]);
+arbeiter[2].onmessage({ data: { typ: 'fertig', id: 3, ergebnis: { x: 3 } } });
+pruefe('andere Figur liefert', await d, { x: 3 });
 
 // --- 3c. ein Fehler: null, ausgefallen, kein neuer Worker ----------------------------------------------------------------
 const c = Hautarbeit.rechnen(P, T, [stoff(0.003)]);
-arbeiter[2].onmessage({ data: { typ: 'fehler', id: 3, meldung: 'kaputt' } });
+arbeiter[3].onmessage({ data: { typ: 'fehler', id: 4, meldung: 'kaputt' } });
 pruefe('fehler gibt null', await c, null);
 pruefe('ausgefallen', Hautarbeit.ausgefallen, true);
-pruefe('danach kein Worker mehr', [await Hautarbeit.rechnen(P, T, [stoff(0.004)]), arbeiter.length], [null, 3]);
+pruefe('danach kein Worker mehr', [await Hautarbeit.rechnen(P, T, [stoff(0.004)]), arbeiter.length], [null, 4]);
 console.log(JSON.stringify({ ok: true }));
 """
 
@@ -199,6 +206,8 @@ class HautrechnungTest(SimpleTestCase):
         szene = (Jsmodul.VIEWER / 'gemeinsam' / 'hautverdeckung.js').read_text(encoding='utf-8')
         self.assertIn('inst._maskeVersion = (inst._maskeVersion || 0) + 1;', szene)        # jeder Plan überholt den Auftrag
         self.assertIn('Hautverdeckung.anwendenAsync(inst, () => inst._maskeVersion === lauf)', szene)
-        self.assertIn('Hautarbeit.rechnen(', szene)
+        self.assertIn('Hautmaskenvorrat.rechnen(inst, ', szene)            # seit 19.10.2026 über den Vorrat, der rechnet über `Hautarbeit`
+        vorrat = (Jsmodul.VIEWER / 'gemeinsam' / 'hautmaskenvorrat.js').read_text(encoding='utf-8')
+        self.assertIn('Hautarbeit.rechnen(pos, index, stoffe, inst?.id', vorrat)
         vorlage = (settings.BASE_DIR / 'templates' / 'scene_config.html').read_text(encoding='utf-8')
         self.assertIn('<meta name="hautarbeiter" content="{% fassungspfad \'viewer/gemeinsam/hautarbeiter.js\' %}">', vorlage)

@@ -10,17 +10,25 @@
  *             gruppe, fenster: [{farbe, normal, rauh}|null], breite, hoehe, uvKarte}
  *            → fertig {id, ergebnis: {farbe, normal, rauheit}}   (die Puffer werden übertragen, nicht kopiert)
  *            → fehler {id, meldung}                              (der Hauptfaden rechnet dann selbst weiter)
+ *   zuordnung {id, st: {pos, uv, index, normal}, ha: {pos, ecken}, breite, hoehe, von, bis}       (19.10.2026, `Anatomiezuordnungsarbeit`)
+ *            → fertig {id, ergebnis: {fern, anzahl, texel, btri, l2, l3, stri}}   — ein Abschnitt der Stück-Dreiecke (`Anatomiezuordnungsteil`)
  *
  * Er liegt außerhalb des Szenenbündels (`/buendel/<fassung>/scene.js`): die Vorlage nennt seinen Pfad mit Fassung
  * (`<meta name="anatomiearbeiter">`, `{% fassungspfad %}`) — dieselbe Lösung wie bei `hautarbeiter.js`.
  */
 import { Anatomierechnung } from './anatomierechnung.js';
+import { Anatomiezuordnungsteil } from './anatomiezuordnungsteil.js';
 
 class Anatomiearbeiter {
 
     static async rechnen(d) {
         const ergebnis = await Anatomierechnung.rechnen(d);
         self.postMessage({ typ: 'fertig', id: d.id, ergebnis }, Anatomiearbeiter.puffer(ergebnis));
+    }
+
+    static async zuordnung(d) {
+        const ergebnis = Anatomiezuordnungsteil.rechnen(d.st, d.ha, d.breite, d.hoehe, d.von, d.bis);
+        self.postMessage({ typ: 'fertig', id: d.id, ergebnis }, [ergebnis.texel, ergebnis.btri, ergebnis.l2, ergebnis.l3, ergebnis.stri].map(a => a.buffer));
     }
 
     /** Die Puffer des Ergebnisses, jeder genau einmal (eine doppelte Nennung wirft beim Übertragen). */
@@ -31,8 +39,9 @@ class Anatomiearbeiter {
     /** Der Rückgabewert ist das Versprechen des Laufs (der Worker selbst braucht ihn nicht; die Prüfung wartet darauf). */
     static nachricht(ereignis) {
         const d = ereignis.data;
-        if (d?.typ !== 'rechnen') return undefined;
-        return Anatomiearbeiter.rechnen(d).catch((fehler) => {
+        const tun = d?.typ === 'rechnen' ? Anatomiearbeiter.rechnen : d?.typ === 'zuordnung' ? Anatomiearbeiter.zuordnung : null;
+        if (!tun) return undefined;
+        return tun(d).catch((fehler) => {
             self.postMessage({ typ: 'fehler', id: d.id, meldung: fehler?.stack || String(fehler) });
         });
     }

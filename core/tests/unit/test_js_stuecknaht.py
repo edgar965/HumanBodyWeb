@@ -22,6 +22,9 @@ in `_feld` die Gewichte `1 / (d2 + eps2)` zu `1` (Rest des Rands ohne Abstand) m
 `ring.d` aus dem Ziel streichen macht Fall 1 rot.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
+
+5. Grobe Stufe (19.10.2026, `G9stuecklochstufen`): mit `punkte2`/`t` liegt das Ziel einer Ecke zwischen zwei Hautpunkten. Sabotage: `s` in
+   `verschiebung` auf 0 setzen macht Fall 5 rot. Geschrieben, nicht gelaufen.
 """
 
 from django.test import SimpleTestCase
@@ -109,6 +112,19 @@ if (v3.gefunden !== 8) fehl('das Loch darf keine Ecke stehlen: ' + v3.gefunden);
 const loch = randId(5, 5);
 if (Array.from(v3.randpunkte.ids).includes(loch)) fehl('Punkt am Loch ist kein Randpunkt der Naht');
 if (Math.abs(v3.werte[3 * loch + 1] - 0.003) > 2e-4) fehl('Punkt am Loch folgt dem Feld des Rands: ' + v3.werte[3 * loch + 1]);
+
+// --- 5. grobe Stufe: die Ecke liegt zwischen zwei Hautpunkten (`punkte2`, `t`, 19.10.2026) ------------------------------
+// Jede Ecke zwischen ihrem Hautpunkt j und dem nächsten (j + 1) bei t = 0,5, ohne Glättung: Ziel = Mitte der beiden
+const GROB = { lage: RING.lage, punkte: RING.punkte, punkte2: Uint32Array.from(hautpunkte.map((j) => (j + 1) % 8)),
+               t: new Float32Array(8).fill(0.5), d: new Float32Array(24) };
+const v5 = Stuecknaht.verschiebung(P, INDEX, GROB, haut);
+ECKEN.forEach(([r, c], j) => {
+    const i = randId(r, c), j2 = (j + 1) % 8;
+    for (let k = 0; k < 3; k++) {
+        const ziel = 0.5 * haut[3 * j + k] + 0.5 * haut[3 * j2 + k], ist = P[3 * i + k] + v5.werte[3 * i + k];
+        if (Math.abs(ist - ziel) > 1e-6) fehl('grob: Ecke ' + j + ' Achse ' + k + ': ' + rund(ist) + ' statt ' + rund(ziel));
+    }
+});
 console.log(JSON.stringify({ ok: true, gefunden: v.gefunden, maxMm: v.maxMm }));
 """
 

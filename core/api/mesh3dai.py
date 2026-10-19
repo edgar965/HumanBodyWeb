@@ -35,6 +35,7 @@ from ..dienste.mesh3daiformvariantentabelle import Mesh3daiformvariantentabelle
 from ..dienste.mesh3daistand import Mesh3daistand
 from ..dienste.mesh3daitabelle import Mesh3daitabelle
 from ..dienste.mesh3daitesttabelle import Mesh3daitesttabelle
+from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
 
 __all__ = ['Mesh3daiendpunkte']
 
@@ -67,7 +68,8 @@ class Mesh3daiendpunkte:
         if lauf is None and gefunden.get('paar'):
             # Trainingspaar ohne Ergebnis: Start und Ziel sind echt — kein Band „Attrappe“ (Edgar sah es am 18.10.2026 auf dem neuen Job Matt1).
             hinweis = Mesh3daidaten.HINWEIS_PAAR % {'ergebnis': Mesh3daidaten.OHNE_ERGEBNIS_PAAR}
-        return render(request, 'mesh3dai.html', {'hinweis': hinweis, 'echt': lauf is not None or bool(gefunden.get('paar')), 'job': gefunden})
+        return render(request, 'mesh3dai.html', {'hinweis': hinweis, 'echt': lauf is not None or bool(gefunden.get('paar')), 'job': gefunden,
+                                                 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
 
     @staticmethod
     @require_GET

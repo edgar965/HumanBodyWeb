@@ -11,17 +11,27 @@ export class Mesh3daiwarteschlangezeichner {
         'fertig': '✓ fertig', 'läuft': '▶ läuft', 'wartet': 'wartet', 'übersprungen': 'übersprungen', 'abgebrochen': 'abgebrochen', 'nicht gestartet': 'nicht gestartet',
     };
 
+    /** Zustände, die in die Warteschlange gehören — alles andere ist erledigt (19.10.2026, Edgar: „was soll diese Gaga Warteschlange?? die jobs sind doch als erledigt markiert, das ist doch keine Warteschlange??“). */
+    static OFFEN = ['läuft', 'wartet'];
+
     static karte(stand, jetzt) {
         const w = stand.warteschlange;
         if (!w) return null;
-        const schritte = (w.ketten || []).flatMap((k) => k.schritte);
-        const offen = schritte.filter((s) => s.zustand === 'wartet').length;
-        const karte = Z.karte(`Warteschlange (${schritte.length} Schritte, ${offen} offen)`);
+        // Oben nur, was läuft oder wartet — der laufende Ablauf zuerst, die Schritte neu durchgezählt; Erledigtes eingeklappt darunter.
+        const offen = (w.ketten || []).filter((k) => this.OFFEN.includes(k.zustand))
+            .sort((a, b) => (a.zustand === 'läuft' ? 0 : 1) - (b.zustand === 'läuft' ? 0 : 1))
+            .map((k) => ({ ...k, schritte: k.schritte.map((s) => ({ ...s })) }));
+        const erledigt = (w.ketten || []).filter((k) => !this.OFFEN.includes(k.zustand) && k.zustand !== 'nicht gestartet');
+        const schritte = offen.flatMap((k) => k.schritte);
+        schritte.forEach((s, i) => { s.nr = i + 1; });
+        const wartend = schritte.filter((s) => s.zustand === 'wartet').length;
+        const karte = Z.karte(offen.length ? `Warteschlange (${offen.length} ${offen.length === 1 ? 'Ablauf' : 'Abläufe'}, noch ${wartend} ${wartend === 1 ? 'Schritt' : 'Schritte'})` : 'Warteschlange (leer)');
         if (w.fehler) karte.append(Z.el('p', 'mesh3dai-la-fehler', `${w.fehler} (${w.datei})`));
         const laeuft = schritte.filter((s) => s.zustand === 'läuft');
-        karte.append(Z.el('p', '', laeuft.length ? `Gerade: ${laeuft.map((s) => `Schritt ${s.nr} · ${s.titel}`).join(' · ')}` : 'Gerade läuft kein Schritt einer Kette.'));
-        if (schritte.length) karte.append(this.tabelle(w, jetzt));
+        karte.append(Z.el('p', '', laeuft.length ? `Gerade: ${laeuft.map((s) => s.titel).join(' · ')}` : (offen.length ? 'Gerade läuft kein Schritt — der nächste wartet.' : 'Gerade läuft nichts, und nichts wartet.')));
+        if (schritte.length) karte.append(this.tabelle({ ketten: offen }, jetzt));
         if (w.unbeschrieben?.length) karte.append(this.unbeschrieben(w.unbeschrieben, jetzt));
+        if (erledigt.length) karte.append(this.erledigt(erledigt, jetzt));
         const hinweis = Z.el('p', 'hb-hinweis', 'Die Schritte laufen von selbst nacheinander: jeder Block wartet, bis der vorige fertig ist. Wo sich der Fortschritt nicht messen lässt, läuft der Balken durch.');
         hinweis.title = `Beschreibung der Ketten: ${w.datei}`;
         karte.append(hinweis);
@@ -105,6 +115,21 @@ export class Mesh3daiwarteschlangezeichner {
         zeile.title = [f?.hinweis, s.abschnitt && `Abschnitt: ${s.abschnitt}`, s.letzte_zeile && `Log zuletzt: ${s.letzte_zeile}`].filter(Boolean).join('\n');
         zelle.append(zeile);
         if (s.lauf) zelle.append(Z.link(s.lauf.adresse, 'Zwischenstand ansehen'));
+    }
+
+    /** Erledigte Abläufe der letzten 24 Stunden, eingeklappt: je Ablauf eine Zeile (fertig um … / stehen geblieben). */
+    static erledigt(ketten, jetzt) {
+        const block = Z.el('details', 'mesh3dai-ws-erledigt');
+        block.append(Z.el('summary', '', `Erledigt in den letzten 24 Stunden (${ketten.length})`));
+        const ul = Z.el('ul', 'mesh3dai-la-liste');
+        for (const k of ketten) {
+            const li = Z.el('li');
+            li.append(Z.el('strong', '', k.titel), document.createTextNode(' '), this.marke(k.zustand), document.createTextNode(` ${this.kettentext(k, jetzt)}`));
+            li.title = `${k.skript} · Log ${k.log}`;
+            ul.append(li);
+        }
+        block.append(ul);
+        return block;
     }
 
     static unbeschrieben(liste, jetzt) {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Schnellanzeige } from './schnellanzeige.js';
 
 /**
  * Buehne — Renderer, Szene, Kamera, Licht und Gitter, wie alle Figurenseiten
@@ -67,8 +68,8 @@ export class Buehne {
 
         const renderer = new THREE.WebGLRenderer({ canvas: leinwand,
                                                    antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio,
-                                        Buehne.MAX_PIXELVERHAELTNIS));
+        // Pixeldichte 1, wenn die Seite die schnelle Anzeige verlangt (`Schnellanzeige`, Vorgabe aus).
+        renderer.setPixelRatio(Schnellanzeige.pixeldichte(Buehne.MAX_PIXELVERHAELTNIS));
         renderer.setSize(breite, hoehe, stil);
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;

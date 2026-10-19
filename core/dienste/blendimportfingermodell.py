@@ -149,7 +149,8 @@ class Blendimportfingermodell:
         s = self.proben(self.posiert(phi))
         s = self.pivot + (1.0 + phi[self.n] / 100.0) * (s - self.pivot)
         schritt = max(1, len(s) // self.PUNKTE)
-        d1, _ = cKDTree(s).query(self.ziel_s, workers=-1)
+        # ohne Ausbalancieren (19.10.2026): derselbe nächste Abstand, schneller gebaut (`griff_kdbaum_pruefen.py`: bitgleich, je Auswertung 19,4 → 14,1 ms)
+        d1, _ = cKDTree(s, balanced_tree=False, compact_nodes=False).query(self.ziel_s, workers=-1)
         d2, _ = self.baum_ziel.query(s[::schritt], workers=-1)
         return np.minimum(d1, self.STUTZ_M), np.minimum(d2, self.STUTZ_M)
 

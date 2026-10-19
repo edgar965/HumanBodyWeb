@@ -59,7 +59,7 @@ export class Serverabruf extends ServerabrufBasis {
     }
 
     static async _netzAbruf(adresse, wahl = undefined) {
-        const gewuenscht = { Accept: `${Netzpaket.TYP}, application/json` };
+        const gewuenscht = { Accept: `${Netzpaket.ANNAHME}, application/json` };     // 16-Bit-Felder bestellt (19.10.2026); `Netzpaket.lesen` rechnet sie zurück
         const antwort = await Serverabruf._mitWiederholung(adresse, () => fetch(adresse, {
             ...wahl, headers: { ...gewuenscht, ...(wahl?.headers || {}) },
         }));

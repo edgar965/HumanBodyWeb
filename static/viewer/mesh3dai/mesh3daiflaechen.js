@@ -9,6 +9,7 @@
  */
 import * as THREE from 'three';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
+import { Mesh3daiflaechennormalen } from './mesh3daiflaechennormalen.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 
 export class Mesh3daiflaechen {
@@ -65,7 +66,7 @@ export class Mesh3daiflaechen {
         netz.farbe ??= Mesh3daiflaechen.farben(netz.kopf, netz.dreiecke, netz.etikett);
         return {
             kopf: { ...netz.kopf, fassung: probe.fassung }, haut: netz.kopf.haut, lage, dreiecke: netz.dreiecke, etikett: netz.etikett, aussen: new Uint8Array(puffer, ab, f),
-            knochen: netz.knochen, gewicht: netz.gewicht, farbe: netz.farbe, uv: netz.uvAttribut, material: netz.material, netz, indexAblage: netz.indexAblage, ruhe: netz.ruhe,
+            knochen: netz.knochen, gewicht: netz.gewicht, farbe: netz.farbe, uv: netz.uvAttribut, material: netz.material, netz, indexAblage: netz.indexAblage, ruhe: netz.ruhe, verborgen: netz.verborgen, normalen: netz.normalen,
         };
     }
 
@@ -116,14 +117,15 @@ export class Mesh3daiflaechen {
         this.dreiecke = roh.dreiecke;
         this.etikett = roh.etikett;
         this.aussen = roh.aussen;
-        this.knochen = roh.knochen;
-        this.gewicht = roh.gewicht;
+        [this.knochen, this.gewicht, this.normalen] = [roh.knochen, roh.gewicht, roh.normalen ?? null];   // `normalen`: mitgeliefert (Trainingspaare, `Mesh3daiflaechennormalen`)
         /** Punkte in der Ruhelage (Float32Array V·3, nicht ausgerichtet) — mit ihnen häutet `ausgabe` das Ergebnis eines Laufs mit Daz-Winkeln genau; fehlt bei älteren Netzen. */
         this.ruhe = roh.ruhe ?? null;
+        /** Dreiecke, die nie gezeichnet werden (Uint8Array je Dreieck oder null) — die Haut unter dem Anatomie-Stück der Trainingspaare (`Mesh3daiflaechennetz`, 19.10.2026). */
+        this.verborgen = roh.verborgen ?? null;
         const basis = new THREE.BufferGeometry();
         basis.setAttribute('position', new THREE.BufferAttribute(this.lage, 3));
         basis.setIndex(new THREE.BufferAttribute(this.dreiecke, 1));
-        basis.computeVertexNormals();
+        Mesh3daiflaechennormalen.setzen(basis, this.normalen);
         this.attribute = { position: basis.getAttribute('position'), normal: basis.getAttribute('normal'), color: roh.farbe ?? Mesh3daiflaechen.farben(roh.kopf, roh.dreiecke, roh.etikett) };
         // UV und Material je Dreieck (Fassung 4 und Animation mit `textur`): „Textur“ zeichnet die Bilder der Figur (`bilder`), die übrigen Arten sehen nur die Gruppen nicht.
         if (roh.uv) this.attribute.uv = roh.uv instanceof THREE.BufferAttribute ? roh.uv : new THREE.BufferAttribute(roh.uv, 2);
@@ -146,13 +148,13 @@ export class Mesh3daiflaechen {
     ausgabe(soll, vorhersage, eltern, genau = null) {
         if (!this.haut) return null;
         if (this._ausgabe?.quelle === vorhersage) return this._ausgabe.flaeche;
-        const lage = genau && this.ruhe
-            ? Mesh3daihaeutung.verformen(this.ruhe, this.knochen, this.gewicht, this.haut, Mesh3daihaeutung.ausDrehungen(genau.dreh, vorhersage, genau.ruhezentren))
-            : Mesh3daihaeutung.verformen(this.lage, this.knochen, this.gewicht, this.haut, Mesh3daihaeutung.knochenmatrizen(soll, vorhersage, eltern));
+        const m = genau && this.ruhe ? null : Mesh3daihaeutung.knochenmatrizen(soll, vorhersage, eltern);     // Näherung: aus der Pose des Soll (mitgelieferte Normalen gelten dort)
+        const lage = m ? Mesh3daihaeutung.verformen(this.lage, this.knochen, this.gewicht, this.haut, m)
+            : Mesh3daihaeutung.verformen(this.ruhe, this.knochen, this.gewicht, this.haut, Mesh3daihaeutung.ausDrehungen(genau.dreh, vorhersage, genau.ruhezentren));
         const basis = new THREE.BufferGeometry();
         basis.setAttribute('position', new THREE.BufferAttribute(lage, 3));
         basis.setIndex(new THREE.BufferAttribute(this.dreiecke, 1));
-        basis.computeVertexNormals();
+        Mesh3daiflaechennormalen.setzen(basis, m && this.normalen ? Mesh3daiflaechennormalen.gehaeutet(this.normalen, this.knochen, this.gewicht, this.haut, m) : null);
         const flaeche = Object.create(this);
         flaeche.attribute = { ...this.attribute, position: basis.getAttribute('position'), normal: basis.getAttribute('normal') };
         flaeche._geometrien = new Map();
@@ -190,6 +192,7 @@ export class Mesh3daiflaechen {
             const wahl = new Uint32Array(this.etikett.length);
             let n = 0;
             for (let i = 0; i < this.etikett.length; i++) {
+                if (this.verborgen?.[i]) continue;
                 if (aussen && !this.aussen[i]) continue;
                 if (erlaubt && !erlaubt.has(this.etikett[i])) continue;
                 if (ausschnitt) {

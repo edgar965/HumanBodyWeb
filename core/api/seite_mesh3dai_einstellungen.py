@@ -10,6 +10,7 @@ from django.views.generic import TemplateView
 
 from ..dienste.mesh3daiaposewahl import Mesh3daiaposewahl
 from ..dienste.mesh3daistandwahl import Mesh3daistandwahl
+from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
 
 
 class Mesh3daiEinstellungenSeite(TemplateView):
@@ -28,7 +29,10 @@ class Mesh3daiEinstellungenSeite(TemplateView):
                     apose_vorgabe=Mesh3daiaposewahl.text(Mesh3daiaposewahl.VORGABE),
                     # 18.10.2026 abends: je Methode Name der Klasse, Datei in der Kette und Beschreibung (Edgar: „Mach eine bessere Kennzeichnung, was die alte Mesh-3D-Methode war“)
                     apose_methoden=[{'wert': w, 'name': Mesh3daiaposewahl.NAMEN[w], 'datei': Mesh3daiaposewahl.DATEIEN.get(w, ''), 'beschreibung': Mesh3daiaposewahl.BESCHREIBUNG[w]}
-                                    for w, _text in Mesh3daiaposewahl.WERTE])
+                                    for w, _text in Mesh3daiaposewahl.WERTE],
+                    # 19.10.2026: wie die Jobseite die Bilder der Genesis-Figuren lädt (Edgar: „mach alle 3, per Option einstellbar, default: A“)
+                    textur_schluessel=Mesh3daitexturwahl.SCHLUESSEL, textur_wert=Mesh3daitexturwahl.aus(prefs), textur_vorgabe=Mesh3daitexturwahl.text(Mesh3daitexturwahl.VORGABE),
+                    textur_wege=[{'wert': w, 'text': t, 'beschreibung': Mesh3daitexturwahl.BESCHREIBUNG[w]} for w, t in Mesh3daitexturwahl.WERTE])
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heißt sonst ``view``.

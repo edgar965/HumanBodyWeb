@@ -54,6 +54,7 @@ from Genesis9.stueckstand import G9stueckstand
 from ..daten.netzausgabe import Netzausgabe
 from ..daten.netzpaket import Netzpaket
 from .g9antwortvorrat import G9antwortvorrat
+from .g9vorratanfrage import G9vorratanfrage
 
 __all__ = ['G9antworten']
 
@@ -78,6 +79,7 @@ class G9antworten(G9antwortvorrat):
                'HumanBody/humanbody_core/catmull_clark.py',
                # Dienste, die Stueckantworten rechnen (19.09.2026): Lagen, Daz auf HumanBody.
                'HumanBodyWeb/core/dienste/g9lagenanfrage.py',
+               'HumanBodyWeb/core/dienste/g9lagenanatomie.py',
                # Die Stueckrechnung selbst und die GarmentCode-Stuecke darin (24.09.2026).
                'HumanBodyWeb/core/dienste/g9stueckteile.py',
                # Die Haarmischung von „Haar – Generisch" (30.09.2026).
@@ -134,15 +136,12 @@ class G9antworten(G9antwortvorrat):
         cls._letzte_anfrage = time.time()
         binaer = Netzausgabe.will_binaer(request)
         schluessel = cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer)
-        daten = cls.holen(schluessel)
-        if daten is None:
-            daten = cls.rechnen(schluessel, bauen, platte=cls.platte_an(),
-                                binaer=binaer)
-            if isinstance(daten, HttpResponse):
-                return daten
-        if gewaehlt != cls.VORAUS:
+        # Erst dieser Vorrat, dann der dauerhafte über Code-Änderungen hinweg (`G9modellvorrat`, 19.10.2026: sofort, im Hintergrund neu), dann rechnen.
+        dauer = G9vorratanfrage(request, cls.schluessel(art, name, rumpf, gewaehlt, eintrag, binaer, fassung='stabil'))
+        antwort = dauer.liefern(cls.holen(schluessel), lambda: cls.rechnen(schluessel, bauen, platte=cls.platte_an(), binaer=binaer), cls.inhaltstyp(binaer))
+        if gewaehlt != cls.VORAUS and antwort.status_code < 400:
             cls.vorausrechnen(art, name, rumpf, bauen, eintrag, binaer)
-        return HttpResponse(daten, content_type=cls.inhaltstyp(binaer))
+        return antwort
 
     @staticmethod
     def inhaltstyp(binaer):
@@ -185,8 +184,8 @@ class G9antworten(G9antwortvorrat):
     # --------------------------------------------------------- Schluessel
 
     @classmethod
-    def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None, binaer=False):
-        text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung(),
+    def schluessel(cls, art, name, rumpf, gewaehlt, eintrag=None, binaer=False, fassung=None):
+        text = json.dumps([art, name, rumpf, gewaehlt, eintrag, cls.fassung() if fassung is None else fassung,
                            cls._eigenstand(rumpf, eintrag), [G9stueckstand.von(eintrag), G9stueckstand.griffe(rumpf)], binaer],
                           sort_keys=True, default=str)
         return '%s_%s_%s' % (art, cls._sicher(name),

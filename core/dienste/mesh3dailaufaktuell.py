@@ -31,6 +31,14 @@ class Mesh3dailaufaktuell:
     #: Edgar, 18.10.2026: „der laufende Job ist völlig gaga, und unverständlich. Was läuft denn?? Lass deine blöden Technik infos weg … und sage verständlich was da läuft“ —
     #: die Seite zeigt Titel und Satz, nicht mehr Skript und Befehl (die stehen nur noch im Tooltip).
     REGELN = (
+        ('form2_kurz30', 'Probe', 'Probe: Reichen 30 Durchgänge statt 120?',
+         'Dasselbe Körperform-Training wie der lange Lauf, aber nur 30 Durchgänge — um zu sehen, ob kurze Läufe für Vergleiche reichen. Diese KI wird nicht verwendet.', 'training'),
+        ('formtraining_netz_messen', 'Probe', 'Probe: Wo rechnet die Grafikkarte beim Training?',
+         'Ein paar Trainingsschritte mit Zeitmessung, um zu sehen, welche Rechnungen am längsten dauern — es entsteht keine KI.', None),
+        ('form2_tempo_probe', 'Probe', 'Probe: Wie schnell ist das Training jetzt?',
+         'Zwei Durchgänge Körperform-Training mit dem schnelleren Ablauf, nur um die Zeit zu messen — es entsteht keine neue KI.', 'training'),
+        ('tempoprobe', 'Probe', 'Probe: Rechnet der schnellere Weg in die Grundhaltung genauso?',
+         'Acht Figuren werden auf dem alten und auf dem schnellen Weg in die Grundhaltung gebracht und verglichen. Nur wenn alles gleich herauskommt, wird der schnelle Weg eingeschaltet.', None),
         ('mesh3dai_vorstufe_mia_daten_lauf', 'Daten', 'Trainingsdaten erzeugen',
          'Die Beispielfiguren werden in die Grundhaltung (A-Pose) gebracht, so wie später jedes neue 3D-Modell vorbereitet wird. Aus diesen Figuren lernt die KI danach.', 'daten'),
         ('mesh3dai_vorstufe_form', 'Training', 'Die KI lernt die Körperform',

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { Genesis9texturblock } from './genesis9texturblock.js';
+import { Texturweg } from './texturweg.js';
 
 /**
  * Genesis9texturen — jede Bilddatei einer Genesis-9-Figur EINMAL im Browser.
@@ -23,6 +25,9 @@ import * as THREE from 'three';
  * das für Bitmaps nicht gilt). Farbraum und Verwendung hängen an der Datei:
  * eine Albedo ist immer sRGB, eine Normalenkarte immer linear, darum darf
  * der Vorrat sie teilen.
+ *
+ * Seit 19.10.2026 wählt die Seite, in welcher Fassung die Bilder der Bibliothek kommen (`Texturweg`: verkleinert, eines nach dem anderen hochgeladen oder als
+ * S3TC-Block) — die Wahl steht in der Adresse, also auch im Schlüssel des Vorrats und gerechneter Karten.
  */
 export class Genesis9texturen {
 
@@ -37,7 +42,8 @@ export class Genesis9texturen {
      *  gespeicherten Modells, `Genesis9fototextur`) geht unverändert durch. */
     static adresse(pfad) {
         if (pfad.startsWith('/')) return pfad;
-        return Genesis9texturen.ADRESSE + pfad.split('/').map(encodeURIComponent).join('/');
+        const abfrage = Texturweg.abfrage();
+        return Genesis9texturen.ADRESSE + pfad.split('/').map(encodeURIComponent).join('/') + (abfrage ? `?${abfrage}` : '');
     }
 
     /**
@@ -76,63 +82,99 @@ export class Genesis9texturen {
     }
 
     static _leereTextur(pfad, srgb) {
-        const textur = new THREE.Texture();
-        textur.flipY = false;                    // die Bitmap kommt schon gewendet
+        const textur = Texturweg.komprimiert() && !pfad.startsWith('/') ? Genesis9texturblock.leer() : new THREE.Texture();
+        textur.flipY = false;                    // die Bitmap kommt schon gewendet (der Block auch)
         textur.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
         textur.name = pfad.split('?')[0].split('/').filter(Boolean).pop();
+        textur.userData.adresse = Genesis9texturen.adresse(pfad);   // woher das Bild kommt: Teil des Schlüssels gerechneter Karten (`Anatomievorrat`)
         return textur;
     }
 
+    /** Länger darf die Adresse des Bündels nicht werden (Daphnes Anfragezeile) — sonst POST, das der Browser nicht behält. */
+    static ADRESSE_MAX = 12000;
+
+    /**
+     * Das Bündel holen und Stück für Stück lesen (19.10.2026): GET, damit der Browser es behält (ETag, ein unverändertes Bündel kommt als 304 aus seinem
+     * Speicher — vorher übertrug jedes Laden alles neu, an Mann1 48,6 MB in 5,2 s); und jedes Bild wird dekodiert, sobald SEINE Bytes da sind, nicht erst
+     * nach dem ganzen Bündel. Scheitert etwas, kommt jedes Bild, das noch fehlt, einzeln (wie vor dem 23.09.2026).
+     */
     static async _buendelHolen(offen) {
-        let puffer = null;
-        let kopf = null;
-        let versatz = 0;
         try {
-            const antwort = await fetch(Genesis9texturen.BUENDEL, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pfade: [...offen.keys()] }),
-            });
-            if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
-            puffer = await antwort.arrayBuffer();
-            const kopflaenge = new DataView(puffer).getUint32(0);
-            kopf = JSON.parse(new TextDecoder().decode(new Uint8Array(puffer, 4, kopflaenge)));
-            versatz = 4 + kopflaenge;
+            const pfade = [...offen.keys()], wahl = Texturweg.abfrage() ? `?${Texturweg.abfrage()}` : '';
+            const adresse = `${Genesis9texturen.BUENDEL}${wahl || '?'}${wahl ? '&' : ''}${pfade.map(p => `p=${encodeURIComponent(p)}`).join('&')}`;
+            const antwort = adresse.length <= Genesis9texturen.ADRESSE_MAX ? await fetch(adresse)
+                : await fetch(Genesis9texturen.BUENDEL + wahl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pfade }) });
+            if (!antwort.ok || !antwort.body) throw new Error(`HTTP ${antwort.status}`);
+            await Genesis9texturen._buendelLesen(antwort.body.getReader(), offen);
         } catch (fehler) {
-            // Kein Bündel: jedes Bild einzeln, wie vor dem 23.09.2026.
-            for (const [pfad, eintrag] of offen) Genesis9texturen._einzeln(pfad, eintrag);
-            return;
+            // Was noch fehlt (kein Bündel, Strom abgerissen): einzeln.
         }
-        for (const teil of kopf.teile || []) {
-            const eintrag = offen.get(teil.pfad);
-            if (!eintrag) continue;
-            offen.delete(teil.pfad);
-            if (!teil.art || !teil.bytes) {       // war zu groß fürs Bündel
-                Genesis9texturen._einzeln(teil.pfad, eintrag);
-                continue;
-            }
-            const roh = new Uint8Array(puffer, versatz, teil.bytes);
-            versatz += teil.bytes;
-            Genesis9texturen._bitmap(new Blob([roh], { type: teil.art }))
-                .then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
-                .catch(() => Genesis9texturen._einzeln(teil.pfad, eintrag));
-        }
-        // Was der Kopf nicht nennt (dürfte nicht vorkommen): einzeln holen.
         for (const [pfad, eintrag] of offen) Genesis9texturen._einzeln(pfad, eintrag);
     }
 
+    /** `[4 Byte Kopflänge][Kopf][Bild 1][Bild 2] …` aus dem Strom: jedes Bild an `_bitmap`, sobald es ganz da ist; erledigte fallen aus `offen`. */
+    static async _buendelLesen(leser, offen) {
+        const stuecke = [];                            // {start, daten}: empfangen, absolute Lage im Strom
+        let da = 0, teile = null, naechster = 0, versatz = 0;
+        const bereich = (von, bis) => stuecke.filter(s => s.start < bis && s.start + s.daten.length > von)
+            .map(s => s.daten.subarray(Math.max(0, von - s.start), Math.min(s.daten.length, bis - s.start)));
+        const kopie = (von, bis) => { const aus = new Uint8Array(bis - von); let p = 0; for (const t of bereich(von, bis)) { aus.set(t, p); p += t.length; } return aus; };
+        for (;;) {
+            const { done, value } = await leser.read();
+            if (value?.length) { stuecke.push({ start: da, daten: value }); da += value.length; }
+            if (!teile && da >= 4) {
+                const laenge = new DataView(kopie(0, 4).buffer).getUint32(0);
+                if (da >= 4 + laenge) { teile = JSON.parse(new TextDecoder().decode(kopie(4, 4 + laenge))).teile || []; versatz = 4 + laenge; }
+            }
+            while (teile && naechster < teile.length) {
+                const teil = teile[naechster], eintrag = offen.get(teil.pfad);
+                const groesse = teil.art && teil.bytes ? teil.bytes : 0;
+                if (da < versatz + groesse) break;
+                naechster += 1;
+                if (!eintrag) { versatz += groesse; continue; }
+                offen.delete(teil.pfad);
+                if (!groesse) { Genesis9texturen._einzeln(teil.pfad, eintrag); continue; }       // war zu groß fürs Bündel
+                const blob = new Blob(bereich(versatz, versatz + groesse), { type: teil.art });
+                versatz += groesse;
+                Genesis9texturen._bitmap(blob).then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
+                    .catch(() => Genesis9texturen._einzeln(teil.pfad, eintrag));
+            }
+            while (stuecke.length && stuecke[0].start + stuecke[0].daten.length <= versatz) stuecke.shift();     // Gelesenes freigeben
+            if (done) return;
+        }
+    }
+
+    /** Blob → Bitmap, ein S3TC-Block (Weg C, `Genesis9texturblock`) → `{bild, stufen, …}`. */
     static _bitmap(blob) {
+        if (blob.type === Genesis9texturblock.ART) return Genesis9texturblock.lesen(blob);
         return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
     }
 
+    /** Eine Adresse einzeln laden: der Block über `fetch` (der `ImageBitmapLoader` kennt ihn nicht), sonst wie bisher. */
+    static _laden(adresse) {
+        if (!adresse.includes('format=bc')) return Genesis9texturen.lader().loadAsync(adresse);
+        return fetch(adresse).then(antwort => {
+            if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
+            return antwort.blob();
+        }).then(blob => Genesis9texturen._bitmap(blob));
+    }
+
+    /** Das Bild an die Textur hängen — bei Weg B in der Reihe, je Aufgabe eines, gleich auf die Karte (`Texturweg.einreihen`). */
+    static _setzen(textur, inhalt) {
+        return Texturweg.einreihen(textur, () => {
+            if (Genesis9texturblock.ist(inhalt)) Genesis9texturblock.setzen(textur, inhalt);
+            else textur.image = inhalt;
+            textur.needsUpdate = true;
+        });
+    }
+
     static _fertig(eintrag, bitmap) {
-        eintrag.textur.image = bitmap;
-        eintrag.textur.needsUpdate = true;
-        eintrag.loesen(eintrag.textur);
+        return Genesis9texturen._setzen(eintrag.textur, bitmap).then(() => eintrag.loesen(eintrag.textur));
     }
 
     /** Ein Bild des Bündels einzeln nachladen — in DASSELBE Texturobjekt. */
     static _einzeln(pfad, eintrag) {
-        return Genesis9texturen.lader().loadAsync(Genesis9texturen.adresse(pfad))
+        return Genesis9texturen._laden(Genesis9texturen.adresse(pfad))
             .then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
             .catch(() => {
                 Genesis9texturen._vorrat.delete(Genesis9texturen.adresse(pfad));
@@ -153,8 +195,29 @@ export class Genesis9texturen {
             if (material) { material.userData?.teilnach?.(); material.needsUpdate = true; }   // eigene Materialwerte nach dem Bild wieder auflegen (`Genesis9teilmaterial`)
         };
         if (eintrag.textur.image) anwenden(eintrag.textur);
-        else eintrag.fertig.then(anwenden);
+        else {
+            Genesis9texturen._zaehlen(material, 1);
+            eintrag.fertig.then(textur => { Genesis9texturen._zaehlen(material, -1); anwenden(textur); });
+        }
         return eintrag.textur;
+    }
+
+    /**
+     * Material → Zahl der Bilder, die `holen` ihm noch einsetzt (19.10.2026). Das Material zeigt nicht, ob ein Bild unterwegs ist (`map` steht erst im
+     * Rückruf): `Anatomiehaut` maß den Hautton am Körper ohne Karte — die Farbe vor den Bildern — und hielt die Scham für fertig; `Zeichenstand`
+     * meldet „Texturen". Eine WeakMap, nicht `userData`: ein Klon des Materials (`Material.clone`, Weichgewebe) bekäme den Zähler mit und nie zurück.
+     */
+    static _offen = new WeakMap();
+
+    static _zaehlen(material, schritt) {
+        if (!material) return;
+        const n = (Genesis9texturen._offen.get(material) || 0) + schritt;
+        if (n > 0) Genesis9texturen._offen.set(material, n); else Genesis9texturen._offen.delete(material);
+    }
+
+    /** Wie viele Bilder `holen` diesem Material noch einsetzt. */
+    static offen(material) {
+        return Genesis9texturen._offen.get(material) || 0;
     }
 
     /** Der Vorratseintrag einer Datei — beim ersten Mal wird geladen. */
@@ -163,11 +226,7 @@ export class Genesis9texturen {
         let eintrag = Genesis9texturen._vorrat.get(adresse);
         if (eintrag) return eintrag;
         const textur = Genesis9texturen._leereTextur(pfad, srgb);
-        const fertig = Genesis9texturen.lader().loadAsync(adresse).then(bitmap => {
-            textur.image = bitmap;
-            textur.needsUpdate = true;
-            return textur;
-        }).catch(() => {
+        const fertig = Genesis9texturen._laden(adresse).then(bild => Genesis9texturen._setzen(textur, bild)).then(() => textur).catch(() => {
             Genesis9texturen._vorrat.delete(adresse);
             return null;
         });

@@ -1,10 +1,12 @@
 import { Anatomielage } from './anatomielage.js';
 import { Anatomiezuordnung } from './anatomiezuordnung.js';
+import { Anatomiezuordnungsarbeit } from './anatomiezuordnungsarbeit.js';
 import { Anatomiehash } from './anatomiehash.js';
 import { Anatomiearbeit } from './anatomiearbeit.js';
 import { Anatomiefenster } from './anatomiefenster.js';
 import { Anatomierechnung } from './anatomierechnung.js';
 import { Anatomietextur } from './anatomietextur.js';
+import { Anatomievorrat } from './anatomievorrat.js';
 
 /**
  * Anatomiebacken — die Karten des Scham-Stücks aus den Karten der gewählten Haut rechnen (11.10.2026).
@@ -59,18 +61,26 @@ export class Anatomiebacken {
         const e = Anatomiebacken.eingabe(inst, netz, original, haut);
         if (!e) return null;
         const { quelle, breite, hoehe, stueck, vorlage } = e;
+        const vorN = original.normalen || quelle.texturen.find(t => t.normalMap)?.normalMap, vorR = original.rauheit || quelle.texturen.find(t => t.roughnessMap)?.roughnessMap;
+        // Farbe und VORBILD: das Körpermaterial mit den meisten Texeln — seine Kachel und Gruppe tragen die Hautebenen auf das Stück (`Genesis9hautebenenstueck`, 18.10.2026).
+        const gruppe = (t) => ({ farbe: t.color, vorbild: t.material });
+        // Schon einmal gerechnet (dauerhaft auf dem Server, `Anatomievorrat`, 19.10.2026): nicht noch einmal.
+        const schluessel = Anatomievorrat.schluessel(netz, e, original);
+        const abgelegt = await Anatomievorrat.holen(schluessel, { farbe: vorlage, normal: vorN, rauheit: vorR }, breite, hoehe);
+        if (abgelegt && quelle.texturen[abgelegt.nr]) return { map: abgelegt.map, normalMap: abgelegt.normalMap, roughnessMap: abgelegt.roughnessMap, ...gruppe(quelle.texturen[abgelegt.nr]) };
         const zu = await Anatomiebacken.zuordnung(netz, stueck, quelle.haut, breite, hoehe);
         if (!zu.anzahl) return null;
         const bild = await Anatomiebacken.bild(netz, zu, e);
         if (!bild) return null;                                        // überholt: eine neuere Haut hat den Auftrag abgelöst
-        const vorN = original.normalen || quelle.texturen.find(t => t.normalMap)?.normalMap, vorR = original.rauheit || quelle.texturen.find(t => t.roughnessMap)?.roughnessMap;
-        return {
+        const nr = Anatomiebacken.haeufigste(zu, quelle.gruppe, quelle.texturen.length);
+        const aus = {
             map: Anatomietextur.aus(vorlage, bild.farbe, breite, hoehe),
             normalMap: bild.normal && vorN ? Anatomietextur.aus(vorN, bild.normal, breite, hoehe) : null,
             roughnessMap: bild.rauheit && vorR ? Anatomietextur.aus(vorR, bild.rauheit, breite, hoehe) : null,
-            // Farbe und VORBILD: das Körpermaterial mit den meisten Texeln — seine Kachel und Gruppe tragen die Hautebenen auf das Stück (`Genesis9hautebenenstueck`, 18.10.2026).
-            ...((t) => ({ farbe: t.color, vorbild: t.material }))(quelle.texturen[Anatomiebacken.haeufigste(zu, quelle.gruppe, quelle.texturen.length)]),
+            ...gruppe(quelle.texturen[nr]),
         };
+        Anatomievorrat.ablegen(schluessel, aus, nr);                   // im Hintergrund
+        return aus;
     }
 
     /**
@@ -108,7 +118,8 @@ export class Anatomiebacken {
         const hoehe = Math.max(Anatomiebacken.KANTE_MIN, Math.min(Anatomiebacken.KANTE_MAX, vorlage.image.height));
         const uv = geo.attributes.uv.array, uvKarte = vorlage.flipY ? Float32Array.from(uv, (w, i) => (i & 1 ? 1 - w : w)) : uv;
         // Lage, wie sie gezeigt wird (`Anatomielage`: mit `einzug`) — ohne ihn rechnete das Daz-Stück an DamiraAlt 7,8 mm (Rand) bis 37 mm neben seiner Stelle.
-        const stueck = { pos: Anatomielage.lage(geo), uv: uvKarte, index: geo.index.array, normal: geo.attributes.normal?.array || null };
+        // Voller Index: `Anatomieverdeckung` kürzt den gezeichneten, wo das Stück durch die Kleidung sticht — die Karten gelten für das ganze Stück.
+        const stueck = { pos: Anatomielage.lage(geo), uv: uvKarte, index: geo.userData?.indexVoll?.index || geo.index.array, normal: geo.attributes.normal?.array || null };
         return { quelle, breite, hoehe, uv, uvKarte, stueck, vorlage };
     }
 
@@ -124,7 +135,10 @@ export class Anatomiebacken {
         const schluessel = Anatomiehash.schluessel({ ...stueck, normal: ruhe || stueck.normal }, haut, breite, hoehe);
         const alt = netz.userData.anatomieZuordnung;
         if (alt?.schluessel === schluessel) return alt.zu;
-        const zu = Anatomiezuordnung.rechnen(stueck, haut, breite, hoehe, Anatomiebacken.atmen);
+        // Auf mehreren Workern (19.10.2026, `Anatomiezuordnungsarbeit`: dasselbe Ergebnis); ohne Worker oder für weit hängende Stücke wie bisher auf dem Hauptfaden in Häppchen.
+        const zu = Anatomiezuordnungsarbeit.rechnen(stueck, haut, breite, hoehe)
+            .catch(() => null)
+            .then(r => r || Anatomiezuordnung.rechnen(stueck, haut, breite, hoehe, Anatomiebacken.atmen));
         netz.userData.anatomieZuordnung = { schluessel, zu };
         zu.catch(() => { if (netz.userData.anatomieZuordnung?.zu === zu) delete netz.userData.anatomieZuordnung; });
         return zu;

@@ -1,4 +1,3 @@
-import { Genesis9kleidung } from './genesis9kleidung.js';
 import { Protokoll } from './protokoll.js';
 
 /**
@@ -27,6 +26,8 @@ export class Genesis9kennungumzug {
         const paar = Genesis9kennungumzug.UMZUG.find(([alt]) => kennung.startsWith(alt));
         if (!paar) return kennung;
         const neu = paar[1] + kennung.slice(paar[0].length);
+        // Erst hier geladen (19.10.2026): statisch zog `genesis9kleidung.js` Three.js in den Baum von `genesis9aufbau.js`, dessen Node-Test damit seit dem 18.10. scheiterte.
+        const { Genesis9kleidung } = await import('./genesis9kleidung.js');
         const ids = new Set((await Genesis9kleidung.stuecke()).map((s) => s.id));
         if (!ids.size || ids.has(kennung) || !ids.has(neu) || !inst.kleidung?.[kennung]) return kennung;
         Protokoll.info('Genesis 9', `${kennung} heißt jetzt ${neu} — umgestellt`);

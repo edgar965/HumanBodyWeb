@@ -51,6 +51,7 @@ import struct
 from django.core.serializers.json import DjangoJSONEncoder
 
 from .netzfeld import Netzfeld
+from .netzkurz import Netzkurz
 
 __all__ = ['Netzpaket']
 
@@ -68,10 +69,10 @@ class Netzpaket:
     MARKE = '__netzfeld__'
 
     @classmethod
-    def packen(cls, daten):
-        u"""`dict` mit Netzfeldern -> Bytes im Format oben."""
+    def packen(cls, daten, kurz=False):
+        u"""`dict` mit Netzfeldern -> Bytes im Format oben. `kurz`: große float32-Felder als 16 Bit (`Netzkurz`, Marke trägt `kurz`)."""
         felder = []
-        kopf = cls._ersetzen(daten, felder)
+        kopf = cls._ersetzen(daten, felder, kurz=kurz)
         roh = json.dumps(kopf, cls=DjangoJSONEncoder,
                          separators=(',', ':')).encode('utf-8')
         # Die Polsterung steht IM Kopf-Bereich, nicht dahinter: Die gemeldete
@@ -89,7 +90,7 @@ class Netzpaket:
         return 0 if rest == 0 else cls.AUSRICHTUNG - rest
 
     @classmethod
-    def _ersetzen(cls, wert, felder, versatz=None):
+    def _ersetzen(cls, wert, felder, versatz=None, kurz=False):
         u"""Rekursiv jedes Netzfeld durch seinen Platzhalter ersetzen.
 
         `versatz` zählt die Nutzlast mit — als einelementige Liste, weil die
@@ -98,15 +99,20 @@ class Netzpaket:
         if versatz is None:
             versatz = [0]
         if isinstance(wert, Netzfeld):
+            gekuerzt = Netzkurz.packen(wert.rohdaten, wert.anzahl) if kurz and wert.typ == 'float32' else None
+            if gekuerzt:
+                wert = Netzfeld(gekuerzt[0], 'float32', wert.anzahl)     # die Bytes sind uint16, gelesen wird float32 (`kurz` in der Marke)
             marke = {'typ': wert.typ, 'pos': versatz[0],
                      'bytes': len(wert.rohdaten), 'anzahl': wert.anzahl}
+            if gekuerzt:
+                marke['kurz'] = gekuerzt[1]
             versatz[0] += len(wert.rohdaten) + cls._polster(len(wert.rohdaten))
             felder.append(wert)
             return {cls.MARKE: marke}
         if isinstance(wert, dict):
-            return {k: cls._ersetzen(v, felder, versatz) for k, v in wert.items()}
+            return {k: cls._ersetzen(v, felder, versatz, kurz) for k, v in wert.items()}
         if isinstance(wert, (list, tuple)):
-            return [cls._ersetzen(v, felder, versatz) for v in wert]
+            return [cls._ersetzen(v, felder, versatz, kurz) for v in wert]
         return wert
 
     # ----------------------------------------------------------- Gegenprobe
@@ -133,8 +139,10 @@ class Netzpaket:
             marke = wert.get(cls.MARKE)
             if isinstance(marke, dict) and len(wert) == 1:
                 ab = beginn + marke['pos']
-                return Netzfeld(roh[ab:ab + marke['bytes']], marke['typ'],
-                                marke['anzahl'])
+                bytes_ = roh[ab:ab + marke['bytes']]
+                if marke.get('kurz'):
+                    bytes_ = Netzkurz.entpacken(bytes_, marke['anzahl'], marke['kurz'])
+                return Netzfeld(bytes_, marke['typ'], marke['anzahl'])
             return {k: cls._einsetzen(v, roh, beginn) for k, v in wert.items()}
         if isinstance(wert, list):
             return [cls._einsetzen(v, roh, beginn) for v in wert]

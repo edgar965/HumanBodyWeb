@@ -76,6 +76,7 @@ export class Anatomiehaut {
             if (!Anatomiehaut.HAUT.includes(m?.userData?.gruppe)) continue;
             const punkte = Anatomieton.nahe(geo, gruppe, kasten);
             if (!punkte.size) continue;
+            if (Anatomiehaut.bildOffen(m)) return null;                         // ohne Karte gemessen wäre es die Farbe VOR den Bildern
             const p = Anatomieton.proben(m, geo.attributes.uv, punkte);
             if (!p) return null;
             proben.push(...p);
@@ -93,10 +94,33 @@ export class Anatomiehaut {
         return Anatomieton.abstand(eigen, haut) <= Anatomiehaut.TOLERANZ;
     }
 
-    /** Woran man erkennt, dass sich nichts geändert hat: Haut, Körpernetz, Stücknetze, ihr Einzug (die Naht kommt später, `Hautloch.naehen`), Variante und Farbe. */
+    /**
+     * Woran man erkennt, dass sich nichts geändert hat: Haut, Körpernetz, die Karten seiner Haut-Gruppen (19.10.2026: kamen sie nach dem Durchlauf, galt die Scham mit
+     * der Farbe vor den Bildern als fertig — weiß, nie gerechnet), Stücknetze, ihr Einzug (die Naht kommt später, `Hautloch.naehen`), Variante und Farbe.
+     */
     static stand(inst) {
-        return [inst?.haut || '', inst?.bodyMesh?.uuid || '', ...Anatomiehaut.stuecke(inst).map(({ kennung, netz }) => [netz.uuid, Anatomielage.kennung(netz.geometry),
+        const karten = [inst?.bodyMesh?.material].flat().filter(m => Anatomiehaut.HAUT.includes(m?.userData?.gruppe)).map(m => m.map?.uuid || '-').join(',');
+        return [inst?.haut || '', inst?.bodyMesh?.uuid || '', karten, ...Anatomiehaut.stuecke(inst).map(({ kennung, netz }) => [netz.uuid, Anatomielage.kennung(netz.geometry),
             inst.kleidung?.[kennung]?.variante || '', inst.kleidung?.[kennung]?.farbe || ''].join('/'))].join('|');
+    }
+
+    /** `Genesis9texturen`, sobald `_warten` es geladen hat (dynamischer Import, siehe dort): wartet ein Material noch auf ein Bild? */
+    static _texturen = null;
+
+    static bildOffen(m) {
+        return (Anatomiehaut._texturen?.offen(m) || 0) > 0;
+    }
+
+    /**
+     * Die Stücke, die noch nicht in der Haut stehen (`Zeichenstand`, „lädt noch"): während auf Bilder gewartet wird, ihre Karten gerechnet werden, oder der Stand neu ist
+     * und noch kein Durchlauf ihn kennt. Ein Stand, an dem `_warten` aufgegeben hat, gilt nicht als offen — sonst stünde die Sanduhr für immer.
+     */
+    static offen(inst) {
+        const stuecke = Anatomiehaut.stuecke(inst);
+        if (!stuecke.length) return [];
+        const stand = Anatomiehaut.stand(inst);
+        const neu = stand !== inst._anatomieStand && stand !== inst._anatomieAufgegeben;
+        return stuecke.filter(({ netz }) => inst._anatomieWartet || neu || netz.userData.anatomieBackt).map(({ netz }) => netz);
     }
 
     /**
@@ -115,6 +139,7 @@ export class Anatomiehaut {
             const schluessel = haut ? Anatomiekarten.schluessel(inst, netz, Anatomiehaut.HAUT) : null;
             const gebacken = schluessel ? Anatomiekarten.gebacken(netz, schluessel) : null;
             for (const m of Anatomiehaut.materialien(netz)) {
+                if (Anatomiehaut.bildOffen(m)) { fertig = false; continue; }      // die eigene Karte kommt noch — ihr Rückruf setzte sonst über das Gerechnete
                 const ablage = m.userData.anatomieHaut;
                 if (ablage && m.map && m.map !== ablage.hautKarte) { ablage.karte = m.map; m.map = null; }   // die EIGENE Karte kam nach dem Umstellen an: wieder weg
                 const eigen = Anatomiehaut.eigenton(ablage ? { map: ablage.karte, color: ablage.farbe } : m, netz.geometry);
@@ -178,13 +203,16 @@ export class Anatomiehaut {
 
     static async _warten(inst) {
         const { Genesis9texturen } = await import('./genesis9texturen.js');
+        Anatomiehaut._texturen = Genesis9texturen;
+        let stand = null;
         for (let runde = 0; runde < Anatomiehaut.RUNDEN; runde++) {
             await Genesis9texturen.wartenAufAlle();
-            const stand = Anatomiehaut.stand(inst);
+            stand = Anatomiehaut.stand(inst);
             const fertig = Anatomiehaut.anwenden(inst);
             await Anatomiehaut._randAbgleichen(inst);
             if (fertig) { inst._anatomieStand = stand; return; }
         }
+        inst._anatomieAufgegeben = stand;       // kein Hautton in der Nähe, kein Bild: erst ein neuer Stand versucht es wieder (`offen`, `Zeichenstand`)
     }
 
     /**

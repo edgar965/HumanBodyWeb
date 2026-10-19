@@ -26,6 +26,7 @@ from Genesis9.haarachsen import G9haarachsen
 from Genesis9.koerpernetz import G9koerpernetz
 from Genesis9.netzstufe import G9netzstufe
 from Genesis9.oberflaechenbindung import G9oberflaechenbindung
+from Genesis9.passformvorgabe import G9passformvorgabe
 from Genesis9.teilbindung import G9teilbindung
 
 from ..daten.netzantwort import Netzantwort
@@ -90,6 +91,7 @@ class G9kleidhumanbody:
         bilder = G9garderobe.bilder(kennung, G9figur._name(rumpf.get('variante')))
         werte, knochen = G9garderobe.stilwerte(kennung, G9figur._namen(rumpf.get('stil')))
         zusatz = dict(eintrag.get('vorgaben') or {})
+        zusatz.update(G9passformvorgabe.werte(kennung, rumpf.get('regler_stueck')))
         zusatz.update(werte)
         zusatz.update(G9garderobe.reglerwerte(kennung, rumpf.get('regler_stueck')))
         hoch = np.array([0.0, formung.boden(), 0.0])

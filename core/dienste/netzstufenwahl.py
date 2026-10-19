@@ -105,9 +105,12 @@ class Netzstufenwahl:
             antwort.delete_cookie(cls.KEKS, path='/', samesite='Lax')
         return antwort
 
+    #: `?stufen=einstellung`: die Einstellung, auch wenn ein Keks steht — so füllt `Genesis9vorrat` „fein" vorab, während die Seite auf ultrafein steht (19.10.2026).
+    EINSTELLUNG = 'einstellung'
+
     def _stellen(self, request):
         gewaehlt = self.aus_anfrage(request.GET)
-        if gewaehlt is None:
+        if gewaehlt is None and request.GET.get(self.ANFRAGE) != self.EINSTELLUNG:
             gewaehlt = self.aus_cookies(request.COOKIES)
         return self._gewaehlt.set(gewaehlt)
 

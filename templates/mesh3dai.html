@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}
+{% load static %}{% load fassung %}{% load jsfassung %}
 {% block title %}Mesh3D-AI{% endblock %}
 
 {% comment %}
@@ -14,6 +14,15 @@ Endpunkte: `core/api/mesh3dai.py`. Seit 14.10.2026 ist das die Seite EINES Jobs 
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
+{# Ziel und Ergebnis sind Genesis-Figuren aus dem Code der Charakter-Seite (`Mesh3daigenesisfigur`): die Haut-Maske rechnet in deren Worker. #}
+<meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+{# Ihr Ergebnis liegt dauerhaft auf dem Server, unter der Fassung DIESES Codes (`core/dienste/jsquellen.py`, `gemeinsam/hautmaskenvorrat.js`). #}
+<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+{% comment %}Schnelle Anzeige (19.10.2026, `gemeinsam/schnellanzeige.js`): Figuren auf Daz' Käfig (grob), Leinwände mit Pixeldichte 1 — bis zu acht Figuren und 16 Felder auf einer Seite.
+Strg+Alt+H schaltet die Netzstufe weiter (grob → fein → ultrafein). Die Charakter-Seite bleibt bei der Vorgabe (fein); sie schaltet die schnelle Anzeige mit derselben Zeile ein.{% endcomment %}
+<meta name="schnellanzeige" content="an">
+{# Wie die Bilder der Genesis-Figuren kommen (Einstellungen → Mesh3D-AI, `Mesh3daitexturwahl`, `gemeinsam/texturweg.js`): klein · verteilt · komprimiert. #}
+<meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
 {% comment %}Die Ansichten zeichnen mit three.js — ohne die Importkarte bricht jedes Modul der Seite ab, ohne Meldung außer „Failed to resolve module specifier“ in der Konsole.{% endcomment %}
 {% include "_importmap.html" %}
 {% endblock %}

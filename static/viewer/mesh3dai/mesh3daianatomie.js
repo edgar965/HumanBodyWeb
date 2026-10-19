@@ -31,6 +31,9 @@ export class Mesh3daianatomie {
         const teile = netz.kopf.teile || [];
         const koerper = teile.indexOf('koerper'), anatomie = teile.indexOf('anatomie');
         if (anatomie < 0 || koerper < 0 || !netz.ruhe) return false;
+        // Trainingspaare (19.10.2026, Edgar: „die textur der Scham ist falsch, fangen wir wieder von vorne an mit dieser Textur??“): das Netz kommt aus dem GLB-Export der
+        // Charakter-Seite, das Stück trägt dort schon die Karte, die `Anatomiebacken` auf der Charakter-Seite gerechnet hat — nicht noch einmal backen.
+        if (netz.kopf.anatomie_fertig) return false;
         const stueck = [], stueckMaterial = new Set(), haut = new Map();
         for (let t = 0; t < netz.material.length; t++) {
             const m = netz.material[t], e = netz.etikett[t];

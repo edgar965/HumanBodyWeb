@@ -147,7 +147,7 @@ export class Mesh3daizeile {
         const grund = !probe ? null : echt && this.schluessel !== 'koerper' ? Mesh3daiechtteile.daten(antwort, probe, this.schluessel) : this.bereich.daten(antwort, probe);
         // Die Punktwolke der Eingabe hängt an `id`; die Bilder der Bewegung tragen einen festen `punktsamen`, damit die Punkte nicht von Bild zu Bild flimmern.
         const d = grund ? {
-            ...grund, probe, id: probe.punktsamen ?? probe.id, geist, modus: this.modus, echt,
+            ...grund, probe, id: probe.punktsamen ?? probe.id, geist, modus: this.modus, echt, job: antwort.job, zeile: this.schluessel,
             rig: this.rig, rigBeschreibung: antwort.rig, rigIndizes: antwort.rig?.zeilen?.[this.schluessel], rigMassstab: this.bereich.rigMassstab, haltung: antwort.haltung ?? null,
         } : null;
         for (const a of this.ansichten) a.zeigen(d);

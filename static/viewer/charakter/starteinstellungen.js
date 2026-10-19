@@ -6,6 +6,7 @@ import { Letztewahl } from './letztewahl.js';
 import { Auswahlaura } from '../gemeinsam/auswahlaura.js';
 import { Normalenarbeit } from '../gemeinsam/normalenarbeit.js';
 import { Genesis9antwortspeicher } from '../gemeinsam/genesis9antwortspeicher.js';
+import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -66,6 +67,8 @@ export class Starteinstellungen {
         Normalenarbeit.einschalten(eigene.normalen_worker);
         // Netzantworten der Genesis-Figuren im RAM halten oder nicht (Einstellungen → Charakter, Vorgabe RAM).
         Genesis9antwortspeicher.einstellen(eigene.netzantworten);
+        // Bis zu welcher Stufe die Anzeigen dauerhaft auf dem Server liegen und vorab gefüllt werden (Einstellungen → Charakter, Vorgabe ultrafein).
+        Genesis9vorrat.einstellen(eigene.netzvorrat);
     }
 
     _mhKleidung(eigene) {

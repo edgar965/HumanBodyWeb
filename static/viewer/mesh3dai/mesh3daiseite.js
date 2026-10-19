@@ -3,6 +3,9 @@
  * holt den Kurzstand (`/api/mesh3dai/jobs/`) und die Proben des Jobs, baut die Zeilen (ganzer Körper, Gesicht, Hände/Füße, Kleider; je Zeile
  * Eingabe · gewünschte Ausgabe · Ausgabe des Netzes), die Probenwahl und die Kennzahlen. Heute liefert der Server Dummies für „Ursula1“ (`attrappe: true`); die Seite zeigt es deutlich an und rechnet selbst nichts.
  */
+import { Genesis9aufbau } from '../gemeinsam/genesis9aufbau.js';
+import { Netzstufenschalter } from '../gemeinsam/netzstufenschalter.js';
+import { Netzstufenstand } from '../gemeinsam/netzstufenstand.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Mesh3daianimationsdaten } from './mesh3daianimationsdaten.js';
 import { Mesh3daianimationsleiste } from './mesh3daianimationsleiste.js';
@@ -10,9 +13,11 @@ import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
 import { Mesh3daiapose } from './mesh3daiapose.js';
 import { Mesh3daiflaechen } from './mesh3daiflaechen.js';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
+import { Mesh3daigenesisfigur } from './mesh3daigenesisfigur.js';
 import { Mesh3daiprobenwahl } from './mesh3daiprobenwahl.js';
 import { Mesh3daistand } from './mesh3daistand.js';
 import { Mesh3daiwegwahl } from './mesh3daiwegwahl.js';
+import { Mesh3daizeichenflaeche } from './mesh3daizeichenflaeche.js';
 import { Mesh3daizeile } from './mesh3daizeile.js';
 
 export class Mesh3daiseite {
@@ -24,6 +29,7 @@ export class Mesh3daiseite {
 
     constructor() {
         const hole = id => document.getElementById(id);
+        Mesh3daizeichenflaeche.renderer();          // vor der ersten Figur: der Renderer meldet sich beim `Texturweg` (Weg C prüft S3TC, bevor eine Adresse entsteht)
         this.jobId = hole('mesh3dai-job').dataset.job;
         this.jobinfo = hole('mesh3dai-jobinfo');
         this.zusammenfassung = hole('mesh3dai-zusammenfassung');
@@ -33,6 +39,11 @@ export class Mesh3daiseite {
         this.zeilen = [...document.querySelectorAll('.mesh3dai-zeile')].map(el => new Mesh3daizeile(el));
         // Die Felder zeichnen nur auf Anforderung: ein Bild der Figur, das nach dem ersten Zeichnen kommt, muss sie neu zeichnen lassen.
         Mesh3daiflaechennetz.nachLaden = () => this.zeilen.forEach(zeile => zeile.ansichten.forEach(a => a.zeichnen()));
+        // Genesis-Figuren in Ziel und Ergebnis (`Mesh3daigenesisfigur`): fertig gebaut oder neue Netzstufe → die Felder hängen sie neu ein. Strg+Alt+H schaltet die Stufe wie in Charakter;
+        // die Seite beginnt mit „grob“ (`<meta name="schnellanzeige">`) und lädt dabei nie neu.
+        Mesh3daigenesisfigur.neuZeichnen = () => this.zeilen.forEach(zeile => zeile.ansichten.forEach(a => (a.art === 'soll' || a.art === 'ausgabe') && a.neuZeigen()));
+        Mesh3daigenesisfigur.nurZeichnen = () => this.zeilen.forEach(zeile => zeile.ansichten.forEach(a => (a.art === 'soll' || a.art === 'ausgabe') && a.zeichnen()));
+        Netzstufenschalter.einrichten(window, async ziel => (await Genesis9aufbau.stufeSetzen(Mesh3daigenesisfigur.modelle(), ziel), Mesh3daigenesisfigur.neuZeichnen(), true));
         this.wahl = new Mesh3daiprobenwahl({
             chips: hole('mesh3dai-chips'), zurueck: hole('mesh3dai-zurueck'), weiter: hole('mesh3dai-weiter'), zaehler: hole('mesh3dai-zaehler'),
             nurPruefung: hole('mesh3dai-nurpruefung'), schlechtZuerst: hole('mesh3dai-schlechtzuerst'),
@@ -76,6 +87,7 @@ export class Mesh3daiseite {
         if (typeof gemerkt.geist === 'boolean') this.geist.checked = gemerkt.geist;
         this.jobs = antwort.jobs;
         await this.job(this.jobId);
+        Netzstufenstand.seiteFertig();      // die Figuren der Felder sind angestoßen: ab jetzt meldet jede selbst (Anzeige rechts unten)
     }
 
     fehler(fehler) {

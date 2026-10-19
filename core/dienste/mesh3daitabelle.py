@@ -46,14 +46,31 @@ class Mesh3daitabelle:
         zellen = (
             format_html('<td data-sort="{}"><a href="{}">{}</a></td>', job['name'].lower(), self.adresse(job), job['name']),
             format_html('<td data-sort="{}">{}</td>', job['modell'].lower(), job['modell']),
-            self._trainiert(job['ordner']),          # dritte Spalte (Edgar, 18.10.2026)
+            self._nie_trainiert() if job.get('paar') else self._trainiert(job['ordner']),          # dritte Spalte (Edgar, 18.10.2026)
             self._zahl(job['proben']),
             self._zahl(job['training']),
             self._zahl(job['pruefung']),
             self._datensatz(job['ordner']),
-            format_html('<td data-sort="{}">{}</td>', job['status'].lower(), job['status']),
+            self._paarstatus(job) if job.get('paar') else format_html('<td data-sort="{}">{}</td>', job['status'].lower(), job['status']),
         )
         return {'id': job['id'], 'klasse': 'mesh3dai-zeile-job', 'html': mark_safe(''.join(zellen))}
+
+    #: Trainingspaare (19.10.2026, Edgar: „Hast du jetzt diese Jobs trainiert oder nicht? In der Tabelle steht ein Datum bei trainiert, aber Spalte Training = 0“): auf ihnen wird nie trainiert —
+    #: das Datum war die Zeit, zu der die Kette ihr Ergebnis gerechnet hat (`mesh3dai_paar_lauf.py`), und stand unter „Zuletzt trainiert“.
+    PAAR_TITEL = 'Testpaar: ein Tripo-Netz mit bekannter Lösung (Genesis-Export). Darauf wird nicht trainiert — die KI wird daran nur geprüft.'
+
+    @classmethod
+    def _nie_trainiert(cls):
+        return format_html('<td data-sort="0" title="{}">nie (Testpaar)</td>', cls.PAAR_TITEL)
+
+    @classmethod
+    def _paarstatus(cls, job):
+        """„Testpaar, geprüft am 19.10.2026 04:42" — Zeit des jüngsten Ergebnisses der Kette; der Name des Laufs im Tooltip."""
+        letztes = Mesh3daitrainingsdatum.letztes(job['ordner'])
+        if not letztes:
+            return format_html('<td data-sort="testpaar" title="{}">Testpaar, noch nicht geprüft</td>', cls.PAAR_TITEL)
+        return format_html('<td data-sort="testpaar {}" title="{} Ergebnis: Lauf {}">Testpaar, geprüft am {}</td>', int(letztes['zeit']), cls.PAAR_TITEL, letztes['lauf'],
+                           datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'))
 
     @staticmethod
     def _trainiert(ordner):

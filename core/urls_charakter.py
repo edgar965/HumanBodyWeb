@@ -33,10 +33,12 @@ from .api.g9eigenehautpflegeapi import G9eigenehautpflegeapi
 from .api.g9figur import G9figur
 from .api.g9fototextur import G9fototextur
 from .api.g9fototexturohnebrauen import G9fototexturohnebrauen
+from .api.g9anatomiekartenapi import G9anatomiekartenapi
 from .api.g9garderobe import G9garderobeapi
 from .api.g9garderobekategorien import G9garderobekategorienapi
 from .api.g9garderobepflege import G9garderobepflegeapi
 from .api.g9hautebenen import G9hautebenenapi
+from .api.g9hautmaskenapi import G9hautmaskenapi
 from .api.g9hautfalten import G9hautfaltenapi
 from .api.g9hautmischung import G9hautmischungapi
 from .api.g9materialnetzapi import G9materialnetzapi
@@ -226,6 +228,11 @@ CHARAKTER = [
          G9hautebenenapi.stand, name='g9_figur_hautebenen'),
     path('api/character/genesis9-figur/hautebenen/<str:produkt>/<str:geschlecht>/<int:kachel>.png',
          G9hautebenenapi.bild, name='g9_figur_hautebenen_bild'),
+    # Die gerechneten Karten des Anatomie-Stücks dauerhaft (19.10.2026, core/api/g9anatomiekartenapi.py, `gemeinsam/anatomievorrat.js`).
+    path('api/character/genesis9-figur/anatomiekarten/<str:schluessel>/', G9anatomiekartenapi.eintrag, name='g9_figur_anatomiekarten'),
+    path('api/character/genesis9-figur/anatomiekarten/<str:schluessel>/<str:art>.png', G9anatomiekartenapi.bild, name='g9_figur_anatomiekarten_bild'),
+    # Die Haut-Maske dauerhaft (19.10.2026, core/api/g9hautmaskenapi.py, `gemeinsam/hautmaskenvorrat.js`): Ordner = Fassung des Codes, Schlüssel = Hash der Eingabe.
+    path('api/character/genesis9-figur/hautmasken/<str:fassung>/<str:schluessel>/', G9hautmaskenapi.eintrag, name='g9_figur_hautmasken'),
     # Eigene Haut speichern (18.10.2026, core/api/g9eigenehautapi.py): Rezept aus Grundsatz und Reglern, danach als `eigen:<schluessel>` in der Hautauswahl.
     path('api/character/genesis9-figur/eigenehaut/', G9eigenehautapi.speichern, name='g9_figur_eigenehaut'),
     # … und umbenennen / löschen (18.10.2026, core/api/g9eigenehautpflegeapi.py): der Schlüssel ist der Teil der Kennung nach `eigen:`; gelöscht heißt Papierkorb.

@@ -45,7 +45,7 @@ const farbe = (r, g, b) => ({ r, g, b,
     clone() { return farbe(this.r, this.g, this.b); },
     copy(o) { this.r = o.r; this.g = o.g; this.b = o.b; return this; },
     setRGB(r2, g2, b2) { this.r = r2; this.g = g2; this.b = b2; return this; } });
-const attribut = (flach, n) => ({ count: flach.length / n,
+const attribut = (flach, n) => ({ count: flach.length / n, array: Float32Array.from(flach),      // `array`: `Anatomielage.lage` liest die Punkte als Feld (seit 18.10.2026)
     getX: i => flach[n * i], getY: i => flach[n * i + 1], getZ: i => flach[n * i + 2] });
 const lin = (byte) => { const c = byte / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
 const karte = (rgb, alpha = 255) => {
