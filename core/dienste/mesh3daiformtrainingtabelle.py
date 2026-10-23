@@ -12,6 +12,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .mesh3daiformzellen import Mesh3daiformzellen as Z
+from .mesh3daitabelle import Mesh3daitabelle
 
 __all__ = ['Mesh3daiformtrainingtabelle']
 
@@ -27,7 +28,8 @@ class Mesh3daiformtrainingtabelle:
          'titel': 'Nur von der Platte: fertig = lauf_ergebnis.json liegt da; läuft = ohne Ergebnis und lauf.log vor weniger als 60 min geändert (bzw. dem Dreifachen eines Abschnitts von 20 Epochen); '
                   'steht = länger still (abgebrochen oder abgestürzt). Die Messwerte der letzten Zwischenmessung stehen im Tooltip der Zelle'},
         {'label': 'Gestartet', 'key': 'start', 'titel': 'Aus dem Ordnernamen — das Skript legt den Ordner nach dem Laden der Daten an'},
-        {'label': 'Dauer (min)', 'key': 'dauer', 'num': True, 'titel': 'Trainingszeit ohne das Laden der Daten (dauer_s; während des Laufs die Sekunden der letzten Epochenzeile)'},
+        {'label': 'Dauer', 'key': 'dauer', 'num': True,
+         'titel': 'Trainingszeit in Minuten und Sekunden, ohne das Laden der Daten (dauer_s; während des Laufs die Sekunden der letzten Epochenzeile)'},
         {'label': 'Epochen', 'key': 'epochen', 'num': True},
         {'label': 'Figuren', 'key': 'figuren', 'num': True, 'titel': 'Jobs (training_daten) und Formvarianten im Training; die Namen der Jobs stehen im Tooltip'},
         {'label': 'Proben', 'key': 'proben', 'num': True, 'titel': 'Wolken im Training / in der Prüfung'},
@@ -55,7 +57,7 @@ class Mesh3daiformtrainingtabelle:
             Z.zeit(lf['letzte'] if lf['zustand'] != 'fertig' else lf['ende'], titel='Fertig' if lf['zustand'] == 'fertig' else 'Letzte Zeile im lauf.log'),
             Z.text(self.status(lf), sort=lf['zustand'], titel=self.messung(lf['messung'])),
             Z.zeit(lf['start']),
-            Z.zahlzelle(round(lf['dauer_s'] / 60.0) if lf['dauer_s'] else None),
+            Mesh3daitabelle.laufzeit_zelle({'sekunden': lf['dauer_s'], 'teile': [('Training ohne das Laden der Daten', lf['dauer_s'])], 'ohne': []} if lf['dauer_s'] else None),
             Z.text(epochen, sort=lf['epoche'] or 0),
             Z.text(figurtext, sort=figuren, titel=', '.join(jobs)),
             Z.text(probentext, sort=p['training'] or 0),

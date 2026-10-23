@@ -137,8 +137,10 @@ export class Mesh3daiwarteschlangezeichner {
         block.append(Z.el('p', '', 'Außerdem laufen diese Abläufe, deren Schritte hier nicht beschrieben sind:'));
         const ul = Z.el('ul', 'mesh3dai-la-liste');
         for (const k of liste) {
-            const li = Z.el('li', '', `${k.name} · seit ${Z.uhr(k.start)} Uhr (${Z.spanne(jetzt - k.start)})`);
-            li.title = `PID ${k.pid}`;
+            // Dateiname ohne „mesh3dai_“ und „.sh“ (20.10.2026: „gaga Texte“); der volle Name im Tooltip.
+            const name = k.name.replace(/^mesh3dai_/, '').replace(/\.sh$/, '').replaceAll('_', ' ');
+            const li = Z.el('li', '', `${name} · seit ${Z.uhr(k.start)} Uhr (${Z.spanne(jetzt - k.start)})`);
+            li.title = `${k.name} · PID ${k.pid}`;
             if (k.doppelt) li.append(Z.el('strong', 'mesh3dai-la-doppelt', ' · läuft doppelt'));
             ul.append(li);
         }

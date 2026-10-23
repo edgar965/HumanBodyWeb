@@ -92,9 +92,18 @@ export class Genesis9kleidung {
         Genesis9kleidung._namen = null;
     }
 
-    /** Ein gelöschtes Stück aus dem gemerkten Katalog nehmen, ohne ihn neu zu holen (`Genesis9garderobepflege.loeschen`, 18.10.2026). */
+    /** Ein gelöschtes Stück aus dem gemerkten Katalog nehmen, ohne ihn neu zu holen (`Genesis9garderobepflege.loeschen`, 18.10.2026).
+     *  Die Kennung bleibt für dieses Seitenleben als gelöscht gemerkt (`geloescht`): ein Anziehen, das noch unterwegs war, scheitert
+     *  dann still statt mit „kam nicht an … bitte noch einmal anhaken" (20.10.2026). */
     static entfernen(kennung) {
+        Genesis9kleidung._geloescht.add(kennung);
         if (Genesis9kleidung._stuecke) Genesis9kleidung._stuecke = Genesis9kleidung._stuecke.filter((s) => s.id !== kennung);
+    }
+
+    static _geloescht = new Set();
+
+    static geloescht(kennung) {
+        return Genesis9kleidung._geloescht.has(kennung);
     }
 
     /** Der Name des Stücks aus dem Katalog — sonst die Kennung. */

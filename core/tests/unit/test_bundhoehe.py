@@ -207,9 +207,11 @@ class VerdrahtungTest(SimpleTestCase):
 
     def test_beide_bauwege_geben_die_bundmaske_ans_anlegen(self):
         # Seit 24.09.2026 kommt `stoffe=stoffe` dazu (Daz-Garderobe als getragene Stücke) — die
-        # Netzdatei, aus der die Bundmaske gelesen wird, steht weiter an fünfter Stelle.
-        self.assertIn(
-            'Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei,', self._quelle('stoffbindung.py')
+        # Netzquelle, aus der die Bundmaske gelesen wird, steht weiter an fünfter Stelle; seit dem
+        # Speicherweg (20.10.2026) das `Speichernetz` oder, ohne ihn, die Netzdatei.
+        self.assertRegex(
+            self._quelle('stoffbindung.py'),
+            r'Stoffnacharbeit\(fein_p, fein_f, dreiecke, getragen,\s*speicher if speicher is not None else netzdatei,',
         )
         self.assertIn('anleger.anlegen(punkte, anliegen_mm, fest)', self._quelle('stoffnacharbeit.py'))
         gemeinsam = self._quelle('gemeinsamablage.py')

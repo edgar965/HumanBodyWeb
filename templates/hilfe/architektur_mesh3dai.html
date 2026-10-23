@@ -24,7 +24,9 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
 
   <div class="info-box info-box-blue">
     <strong>Worum es geht:</strong> Eine KI bekommt ein 3D-Netz einer Figur und soll daraus ein Genesis-9-Modell machen: die <strong>Haltung</strong> (138 Knochen als Daz-Winkel in den Grenzen von Genesis)
-    und die <strong>Form</strong> (Genesis-Form-Regler, seit 16.10.2026 abends; im Bezugslauf {{ form_regler.anzahl|default:"—" }}). Kleider, Haar und Mimik gibt sie nicht aus. Trainiert wird auf vier Jobs (<a href="/mesh-3D-AI/ursula1/">Ursula1</a>,
+    und die <strong>Form</strong> (Genesis-Form-Regler, seit 16.10.2026 abends; im Bezugslauf {{ form_regler.anzahl|default:"—" }}). Kleider und Haar gibt sie seit 21.10.2026 als
+    <strong>Schicht auf dem Genesis-Käfig</strong> selbst aus, trainiert gegen die Zielstücke (<a href="#schicht">Kleider wie das Ziel</a>); davor über Zerlegen, Ausschneiden und GarmentCode
+    (<a href="#garmentcode">Kleider-GarmentCode</a>, als Wege k, s, f weiter wählbar). Mimik gibt sie nicht aus. Trainiert wird auf vier Jobs (<a href="/mesh-3D-AI/ursula1/">Ursula1</a>,
     <a href="/mesh-3D-AI/damira0/">Damira0</a>, <a href="/mesh-3D-AI/mann1/">Mann1</a>, <a href="/mesh-3D-AI/matt0/">Matt0</a>) und {{ form_varianten.zahl|default:"—" }} Formvarianten; fremde Netze ohne Soll zeigt der Reiter
     <a href="/mesh-3D-AI/#test">Test</a>. Bezugslauf dieser Seite: <code>{{ lauf_name|default:"—" }}</code>.
     Zahlen liest die Seite beim Aufruf aus Datensatz und Läufen; Zahlen von Hand nennen ihre Quelle. Was <strong>Vorschlag</strong> heißt, ist nicht gebaut.
@@ -42,6 +44,10 @@ Daten: `core/dienste/architekturmesh3dai.py` (Teile: …bild, …ergebnis, …vo
   {% include "hilfe/_architektur_mesh3dai_netz.html" %}
   {% include "hilfe/_architektur_mesh3dai_form.html" %}
   {% include "hilfe/_architektur_mesh3dai_test.html" %}
+  {# 21.10.2026: Kleider wie das Ziel (Schichtkopf, Weg g) — vor GarmentCode, ohne Nummer #}
+  {% include "hilfe/_architektur_mesh3dai_schicht.html" %}
+  {# 20.10.2026: Kleider-GarmentCode — sichtbar, ohne Nummer, damit die Verweise „Abschnitt 5–8“ der übrigen Teile stimmen #}
+  {% include "hilfe/_architektur_mesh3dai_garmentcode.html" %}
 
   <h2 id="einzelheiten">Einzelheiten (zum Aufklappen)</h2>
   <details class="m3a-mehr" id="grenzen-klappe"><summary>5. Warum die Finger brachen — Ausgabe als Daz-Winkel</summary>{% include "hilfe/_architektur_mesh3dai_grenzen.html" %}</details>

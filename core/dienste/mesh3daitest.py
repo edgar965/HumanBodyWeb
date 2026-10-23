@@ -135,6 +135,14 @@ class Mesh3daitest:
             return None
         return '_test/%s/form_%s' % (kennung, geschlecht)
 
+    @staticmethod
+    def _mit_name(p, info):
+        """Der eigene Name aus `name.json` (19.10.2026, Stift auf der Testseite, `Mesh3dainame`) über dem aus `test.json` — den schreibt jeder Neulauf neu."""
+        from .mesh3dainame import Mesh3dainame
+
+        info['name'] = Mesh3dainame.lesen(p) or info.get('name') or p.name
+        return info
+
     @classmethod
     def alle(cls):
         """Die Tests mit ihrem Stand (`test.json`), nach Name; ein unlesbarer steht mit Fehler in der Liste statt zu fehlen. `figur`/`geschlecht` sind die eingestellten."""
@@ -151,7 +159,7 @@ class Mesh3daitest:
                 continue
             e = cls.endung(p, weg)
             try:
-                info = json.loads((p / ('test%s.json' % e)).read_text(encoding='utf-8'))
+                info = cls._mit_name(p, json.loads((p / ('test%s.json' % e)).read_text(encoding='utf-8')))
                 info['geschlecht'] = cls.geschlecht(p, info)
                 info['figur'] = 'Form (vorhergesagt)' if cls.form(p, info, info['geschlecht']) else cls.wahl(p, info, info['geschlecht'], e)[0]
             except (OSError, ValueError) as fehler:
@@ -169,7 +177,7 @@ class Mesh3daitest:
         # Zwischenschritt A-Pose „aus“ (Einstellungen → Mesh3D-AI): die gesicherte Fassung ohne Vorstufe, falls es sie gibt.
         weg = Mesh3daiaposewahl.gewaehlt()
         endung = cls.endung(p, weg)
-        info = json.loads((p / ('test%s.json' % endung)).read_text(encoding='utf-8'))
+        info = cls._mit_name(p, json.loads((p / ('test%s.json' % endung)).read_text(encoding='utf-8')))
         # `methode` (18.10.2026 abends): welche Klasse der Kette die A-Pose rechnete — ein Test ohne Mesh-3D-Auftrag lief über MeshToRigToPose_MIA. Je Testnetz liegt nur EIN Lauf mit Vorstufe vor;
         # `andere_methode`: eingestellt ist die andere (die Seite sagt es, gezeigt wird dieser).
         methode = ('mia' if not info.get('mesh3d') else 'rig') if info.get('weg') else None
@@ -179,6 +187,7 @@ class Mesh3daitest:
                                    'andere_methode': bool(methode) and weg != 'aus' and methode != weg}
         geschlecht = cls.geschlecht(p, info)
         form = cls.form(p, info, geschlecht)
+        from .mesh3daiergebnisfigur import Mesh3daiergebnisfigur
         if form:
             figur, hinweis, job, datei, kin_datei = 'Form', '', None, form['datei'], form['kinematik']
         else:
@@ -208,6 +217,8 @@ class Mesh3daitest:
             'kennung': kennung, 'info': info, 'job': job, 'rig': beschr, 'figur_hinweis': hinweis, 'geschlechter': cls.GESCHLECHTER, 'netz_skala': round(float(skala), 6),
             'figur_netz': '/api/mesh3dai/test/%s/figur/%s' % (kennung, geschlecht) if form else None, 'form_regler': form['regler'] if form else None,
             'form_regler_gesamt': form.get('regler_gesamt') if form else None,
+            # Die Figur als Genesis-Modell (22.10.2026, Animation der Ausgabe wie Mesh-3D): dieselbe wie im Ergebnis der Jobseite eines Tripo-Jobs (`Mesh3daiergebnisfigur`).
+            'figur_genesis': Mesh3daiergebnisfigur._figur(geschlecht, form['regler']) if form else None,
             'ausgabe': np.round(e['rig'].astype(float), 4).tolist(),
             'dreh': np.round(Mesh3daidaten._quaternionen(e['dreh'].astype(float)), 5).tolist(),
             'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist(),

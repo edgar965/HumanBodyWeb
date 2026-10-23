@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Genesis9texturbasis } from './genesis9texturbasis.js';
 import { Genesis9texturblock } from './genesis9texturblock.js';
 import { Texturweg } from './texturweg.js';
 
@@ -39,10 +40,10 @@ export class Genesis9texturen {
     static _lader = null;
 
     /** Die Adresse eines Bibliothekspfads — eine eigene Adresse (`/api/…`, die Fotokacheln eines
-     *  gespeicherten Modells, `Genesis9fototextur`) geht unverändert durch. */
-    static adresse(pfad) {
+     *  gespeicherten Modells, `Genesis9fototextur`) geht unverändert durch. `srgb`: Farbbild — nur bei UASTC Teil der Adresse (`Texturweg.abfrage`). */
+    static adresse(pfad, srgb = true) {
         if (pfad.startsWith('/')) return pfad;
-        const abfrage = Texturweg.abfrage();
+        const abfrage = Texturweg.abfrage(srgb);
         return Genesis9texturen.ADRESSE + pfad.split('/').map(encodeURIComponent).join('/') + (abfrage ? `?${abfrage}` : '');
     }
 
@@ -65,20 +66,24 @@ export class Genesis9texturen {
      * @param eintraege [{pfad, srgb}] — `srgb` nur für Farbbilder (Albedo).
      */
     static vorladen(eintraege) {
-        const offen = new Map();
+        const gruppen = new Map();               // Abfrage → (Pfad → Eintrag): bei UASTC je eine Anfrage für Farb- und Datenbilder, sonst eine
         for (const e of eintraege || []) {
             const pfad = e?.pfad;
             // Das Bündel kennt nur die Daz-Bibliothek; eigene Adressen lädt `holen` einzeln.
-            if (!pfad || offen.has(pfad) || pfad.startsWith('/')) continue;
-            const adresse = Genesis9texturen.adresse(pfad);
+            if (!pfad || pfad.startsWith('/')) continue;
+            const srgb = !!e.srgb, wahl = Texturweg.abfrage(srgb);
+            const offen = gruppen.get(wahl) || new Map();
+            if (offen.has(pfad)) continue;
+            const adresse = Genesis9texturen.adresse(pfad, srgb);
             if (Genesis9texturen._vorrat.has(adresse)) continue;   // liegt schon oder lädt
             let loesen;
             const fertig = new Promise(r => { loesen = r; });
-            const textur = Genesis9texturen._leereTextur(pfad, e.srgb);
-            offen.set(pfad, { textur, loesen });
+            const textur = Genesis9texturen._leereTextur(pfad, srgb);
+            offen.set(pfad, { textur, loesen, srgb });
+            gruppen.set(wahl, offen);
             Genesis9texturen._vorrat.set(adresse, { textur, fertig });
         }
-        if (offen.size) Genesis9texturen._buendelHolen(offen);
+        for (const [wahl, offen] of gruppen) Genesis9texturen._buendelHolen(offen, wahl);
     }
 
     static _leereTextur(pfad, srgb) {
@@ -86,7 +91,7 @@ export class Genesis9texturen {
         textur.flipY = false;                    // die Bitmap kommt schon gewendet (der Block auch)
         textur.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
         textur.name = pfad.split('?')[0].split('/').filter(Boolean).pop();
-        textur.userData.adresse = Genesis9texturen.adresse(pfad);   // woher das Bild kommt: Teil des Schlüssels gerechneter Karten (`Anatomievorrat`)
+        textur.userData.adresse = Genesis9texturen.adresse(pfad, srgb);   // woher das Bild kommt: Teil des Schlüssels gerechneter Karten (`Anatomievorrat`)
         return textur;
     }
 
@@ -98,9 +103,9 @@ export class Genesis9texturen {
      * Speicher — vorher übertrug jedes Laden alles neu, an Mann1 48,6 MB in 5,2 s); und jedes Bild wird dekodiert, sobald SEINE Bytes da sind, nicht erst
      * nach dem ganzen Bündel. Scheitert etwas, kommt jedes Bild, das noch fehlt, einzeln (wie vor dem 23.09.2026).
      */
-    static async _buendelHolen(offen) {
+    static async _buendelHolen(offen, abfrage = Texturweg.abfrage()) {
         try {
-            const pfade = [...offen.keys()], wahl = Texturweg.abfrage() ? `?${Texturweg.abfrage()}` : '';
+            const pfade = [...offen.keys()], wahl = abfrage ? `?${abfrage}` : '';
             const adresse = `${Genesis9texturen.BUENDEL}${wahl || '?'}${wahl ? '&' : ''}${pfade.map(p => `p=${encodeURIComponent(p)}`).join('&')}`;
             const antwort = adresse.length <= Genesis9texturen.ADRESSE_MAX ? await fetch(adresse)
                 : await fetch(Genesis9texturen.BUENDEL + wahl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pfade }) });
@@ -136,7 +141,7 @@ export class Genesis9texturen {
                 if (!groesse) { Genesis9texturen._einzeln(teil.pfad, eintrag); continue; }       // war zu groß fürs Bündel
                 const blob = new Blob(bereich(versatz, versatz + groesse), { type: teil.art });
                 versatz += groesse;
-                Genesis9texturen._bitmap(blob).then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
+                Genesis9texturen._bitmap(blob, Genesis9texturen.adresse(teil.pfad, eintrag.srgb)).then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
                     .catch(() => Genesis9texturen._einzeln(teil.pfad, eintrag));
             }
             while (stuecke.length && stuecke[0].start + stuecke[0].daten.length <= versatz) stuecke.shift();     // Gelesenes freigeben
@@ -144,19 +149,26 @@ export class Genesis9texturen {
         }
     }
 
-    /** Blob → Bitmap, ein S3TC-Block (Weg C, `Genesis9texturblock`) → `{bild, stufen, …}`. */
-    static _bitmap(blob) {
+    /** Blob → Bitmap, ein S3TC-Block (Weg C, `Genesis9texturblock`) oder UASTC (`Genesis9texturbasis`) → `{bild, stufen, …}`. Scheitert UASTC im Browser (Wandler
+     *  nicht geladen), kommt derselbe Pfad als S3TC-Block (`adresse` ohne Abfrage + `format=bc`). */
+    static _bitmap(blob, adresse = '') {
         if (blob.type === Genesis9texturblock.ART) return Genesis9texturblock.lesen(blob);
+        if (blob.type === Genesis9texturbasis.ART) {
+            return Genesis9texturbasis.lesen(blob).catch(fehler => {
+                console.warn(`Genesis9texturen: UASTC nicht lesbar (${fehler?.message || fehler}) — S3TC-Block für ${adresse.split('?')[0].split('/').pop()}`);
+                return Genesis9texturen._laden(`${adresse.split('?')[0]}?format=bc`);
+            });
+        }
         return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
     }
 
-    /** Eine Adresse einzeln laden: der Block über `fetch` (der `ImageBitmapLoader` kennt ihn nicht), sonst wie bisher. */
+    /** Eine Adresse einzeln laden: Block und UASTC über `fetch` (der `ImageBitmapLoader` kennt sie nicht), sonst wie bisher. */
     static _laden(adresse) {
-        if (!adresse.includes('format=bc')) return Genesis9texturen.lader().loadAsync(adresse);
+        if (!adresse.includes('format=bc') && !adresse.includes('format=uastc')) return Genesis9texturen.lader().loadAsync(adresse);
         return fetch(adresse).then(antwort => {
             if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
             return antwort.blob();
-        }).then(blob => Genesis9texturen._bitmap(blob));
+        }).then(blob => Genesis9texturen._bitmap(blob, adresse));
     }
 
     /** Das Bild an die Textur hängen — bei Weg B in der Reihe, je Aufgabe eines, gleich auf die Karte (`Texturweg.einreihen`). */
@@ -174,10 +186,11 @@ export class Genesis9texturen {
 
     /** Ein Bild des Bündels einzeln nachladen — in DASSELBE Texturobjekt. */
     static _einzeln(pfad, eintrag) {
-        return Genesis9texturen._laden(Genesis9texturen.adresse(pfad))
+        const adresse = Genesis9texturen.adresse(pfad, eintrag.srgb);
+        return Genesis9texturen._laden(adresse)
             .then(bitmap => Genesis9texturen._fertig(eintrag, bitmap))
             .catch(() => {
-                Genesis9texturen._vorrat.delete(Genesis9texturen.adresse(pfad));
+                Genesis9texturen._vorrat.delete(adresse);
                 eintrag.loesen(null);
             });
     }
@@ -222,7 +235,7 @@ export class Genesis9texturen {
 
     /** Der Vorratseintrag einer Datei — beim ersten Mal wird geladen. */
     static eintrag(pfad, srgb) {
-        const adresse = Genesis9texturen.adresse(pfad);
+        const adresse = Genesis9texturen.adresse(pfad, srgb);
         let eintrag = Genesis9texturen._vorrat.get(adresse);
         if (eintrag) return eintrag;
         const textur = Genesis9texturen._leereTextur(pfad, srgb);

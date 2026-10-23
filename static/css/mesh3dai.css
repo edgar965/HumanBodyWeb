@@ -78,10 +78,15 @@
    des Rasters (`subgrid`): Überschrift, Hinweis, Feld, Text und Knöpfe stehen in jeder Spalte auf derselben Höhe, egal wie breit das Fenster ist. */
 /* Sieben Zeilen (16.10.2026): seit der Tabelle „Wie gut?“ hat das Ergebnis sieben Teile — mit `span 6` fiel das siebte (Kästchen „Ziel als Geist“) in die letzte Zeile, auf die Download-Knöpfe (Edgar: „Formatierung?“).
    Ein Subgrid legt keine Zeilen an, es stapelt Überzähliges in der letzten. Darum feste Zeilen für die Teile, die nicht jede Karte hat: Tabelle 5, Download 6, Geist 7 — die Download-Knöpfe stehen in allen drei Karten auf einer Höhe. */
-.mesh3dai-bereiche > .mesh3dai-bereich { display: grid; grid-row: span 7; grid-template-rows: subgrid; row-gap: 6px; }
-.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-guete { grid-row: 5; }
-.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-download { grid-row: 6; }
-.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-geistwahl { grid-row: 7; }
+/* Acht Zeilen (22.10.2026): die Animationsleiste des Ergebnisses (`_mesh3dai_figurbewegung.html`) bekam keine eigene und lag auf dem Kästchen „Ziel als Geist“ — Edgars Klicks auf Play trafen das Kästchen
+   (client.log). Jetzt Zeile 4 direkt unter dem Feld; der Text darunter nimmt in Karten ohne Leiste die Zeilen 4–5, damit dort keine Lücke bleibt. */
+.mesh3dai-bereiche > .mesh3dai-bereich { display: grid; grid-row: span 8; grid-template-rows: subgrid; row-gap: 6px; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-figurbewegung { grid-row: 4; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-bereichsinfo { grid-row: 4 / span 2; }
+.mesh3dai-bereiche > .mesh3dai-bereich:has(> .mesh3dai-figurbewegung) > .mesh3dai-bereichsinfo { grid-row: 5; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-guete { grid-row: 6; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-download { grid-row: 7; }
+.mesh3dai-bereiche > .mesh3dai-bereich > .mesh3dai-geistwahl { grid-row: 8; }
 /* Vier Felder, wenn die Probe das Zwischenbild „Rig → A-Pose“ hat (17.10.2026); das verborgene Feld braucht `display: none` ausdrücklich — `display: grid` oben schlägt das Attribut `hidden`. */
 .mesh3dai-bereiche.mesh3dai-bereiche-vier { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .mesh3dai-bereiche.mesh3dai-bereiche-vier { grid-template-columns: minmax(0, 1fr); } }
@@ -144,3 +149,25 @@
 .mesh3dai-kleider-wahl { flex-wrap: nowrap; }
 .mesh3dai-kleider-speichern { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .mesh3dai-kleider-speichern input { min-width: 22em; }
+
+/* Testfälle der Kleider-KI (22.10.2026, `mesh3daitestfaelle.js`): Tabellen wie die Kleiderkarte, FEHLER rot, keine grün — in den Farben des Themes. */
+.mesh3dai-testfaelle { margin-top: 12px; }
+.mesh3dai-testfaelle h3 { font-size: 1rem; margin: 10px 0 4px; }
+.mesh3dai-testfaelle-messung + .mesh3dai-testfaelle-messung { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border, #3a4254); }
+.mesh3dai-testfaelle .mesh3dai-rot, .mesh3dai-testfaelle-tabelle td.mesh3dai-rot { color: var(--danger, #e74c3c); font-weight: 600; }
+.mesh3dai-testfaelle .mesh3dai-gruen, .mesh3dai-testfaelle-tabelle td.mesh3dai-gruen { color: var(--success, #27ae60); }
+.mesh3dai-testfaelle-tabelle td.mesh3dai-testfaelle-fehler { font-size: 0.85rem; }
+.mesh3dai-testfaelle-tabelle tr.mesh3dai-testfaelle-gewaehlt td { font-weight: 600; }
+/* Standardanimation der Ergebnisfigur (22.10.2026, `_mesh3dai_figurbewegung.html`): Leiste wie bei Mesh-3D (`mesh3d.css`, `.mesh3d-animationsleiste`), Zahlen mit fester Breite, damit der Schieber nicht wandert. */
+.mesh3dai-figurbewegung { display: flex; flex-direction: column; gap: 4px; }
+.mesh3dai-figurbewegung-leiste, .mesh3dai-figurbewegung-wahl { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
+.mesh3dai-figurbewegung-schieber { flex: 1 1 140px; min-width: 120px; accent-color: var(--accent, #e94560); }
+.mesh3dai-figurbewegung-zahl { font-size: 0.82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mesh3dai-figurbewegung-wahl label { font-size: 0.85rem; color: var(--text-muted, #8a93a6); margin: 0; }
+.mesh3dai-figurbewegung-wahl select { max-width: 16em; }
+/* Name und Kategorie je Stück in der Kleiderkarte der Testseite (22.10.2026, `Mesh3daitestkleidname`). */
+.mesh3dai-kleider-stueckname { width: 100%; min-width: 14em; }
+.mesh3dai-kleider-kategorie { min-width: 9em; }
+/* Datum und Dauer des Laufs im festen Block oben (22.10.2026, `Mesh3dailaufzeile`). */
+.mesh3dai-laufzeile { font-size: 0.88rem; margin-top: 4px; color: var(--text-muted, #8a93a6); }
+.mesh3dai-laufzeile b { color: var(--text-primary, inherit); font-weight: 600; }

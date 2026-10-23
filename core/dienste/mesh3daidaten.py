@@ -44,21 +44,23 @@ class Mesh3daidaten:
     EINGABE_ANZEIGE = 4096
     SCHWELLE_MM = 10.0
     #: Die Figur heißt wie der Datensatz des Laufs (`daten` in `lauf_ergebnis.json`; bis 16.10.2026 abends stand hier fest „Ursula1“ — auch auf der Seite von Mann1).
-    HINWEIS = ('Echt: die Proben des Datensatzes (Posen aus BVH-Bildern, %(modell)s gehäutet in der Pose mit flachen Teilfarben und allem Haar, Rig mit 138 Genesis-9-Knochen als Soll) und die Rig-Punkte, '
-               'die das Netz des Laufs %(lauf)s vorhersagt. Das Netz sagt NUR die Rig-Punkte voraus — eine Fläche als Ausgabe des Netzes gibt es nicht; die Zeilen darunter sind Ausschnitte desselben Rigs.')
+    #: Kurz seit 20.10.2026 abends (Edgar: „ich brauche keine Romane, kurz und bündig“) — bis dahin stand hier ein Absatz über Datensatz, Netz und Anpassung.
+    HINWEIS = 'Lauf %(lauf)s · das Netz sagt nur die Rig-Punkte voraus.'
     #: Lauf mit Daz-Winkeln als Ausgabe (16.10.2026, `--ausgabe kanaele`): die Seite häutet das Ergebnis genau wie das Ziel, aus der Ruhelage mit den vorhergesagten Knochendrehungen.
-    HINWEIS_KANAELE = ('Echt: die Proben des Datensatzes (Posen aus BVH-Bildern, %(modell)s gehäutet in der Pose mit flachen Teilfarben und allem Haar, Rig mit 138 Genesis-9-Knochen als Soll). Das Netz des Laufs %(lauf)s '
-                       'gibt Daz-Winkel in den Grenzen von Genesis 9 aus; Rig und Figur im Ergebnis kommen aus diesen Winkeln (Vorwärtskinematik, Knochenlängen von %(modell)s, Hautmischung wie im Ziel).')
+    HINWEIS_KANAELE = 'Lauf %(lauf)s · Figur im Ergebnis von der KI, nicht %(modell)s.'
     #: Lauf mit Stimmen je Punkt (16.10.2026, `mesh3dai_stimmen_netz.py`, `kopf = stimmen` in `lauf_ergebnis.json`): das Netz sagt Punkte voraus, die Winkel kommen aus einer Anpassung danach.
-    HINWEIS_STIMMEN = ('Echt: die Proben des Datensatzes (Posen aus BVH-Bildern, %(modell)s gehäutet in der Pose mit flachen Teilfarben und allem Haar, Rig mit 138 Genesis-9-Knochen als Soll). Im Lauf %(lauf)s stimmt '
-                       'jeder Punkt der Außenfläche für die Lage jedes Gelenks; danach werden Daz-Winkel in den Grenzen von Genesis 9 an diese Gelenke angepasst (die Winkel rechnet die Anpassung, nicht das Netz). Rig und Figur im Ergebnis '
-                       'kommen aus diesen Winkeln (Vorwärtskinematik, Knochenlängen von %(modell)s, Hautmischung wie im Ziel).%(training)s')
-    #: Trainingspaare (18.10.2026 abends, `Mesh3daipaare`): Start = Tripo-Netz, Ziel = Genesis-Export, Ergebnis = die Kette auf dem Tripo-Netz (`mesh3dai_paar_lauf.py` schreibt den Lauf).
-    HINWEIS_PAAR = ('Trainingspaar: Start = das Tripo-Netz aus den vier Bildern des Genesis-Exports (16.384 Punkte mit seiner Textur, für die Anzeige auf das Ziel gelegt — Tripo normiert die Größe), '
-                    'Ziel = der Genesis-Export in der Pose (Fläche, Rig mit 138 Knochen). %(ergebnis)s')
-    ERGEBNIS_PAAR = ('Ergebnis = die Kette auf dem Tripo-Netz (Vorstufe MIA, Netz, Formkopf; Lauf %(lauf)s), das Rig mit Maßstab auf das Ziel gelegt; die Figur im Ergebnis ist das Ziel, mit dem vorhergesagten Rig '
-                     'gehäutet (Näherung) — die vorhergesagte Form zeigt der Reiter „Test“.')
-    OHNE_ERGEBNIS_PAAR = 'Ein Ergebnis gibt es noch nicht: die Kette auf dem Tripo-Netz läuft nach dem Formtraining (`mesh3dai_paar_kette.sh`).'
+    HINWEIS_STIMMEN = 'Lauf %(lauf)s%(training)s · Figur im Ergebnis von der KI, nicht %(modell)s.'
+    #: Tripo-Jobs (18.10.2026 abends, `Mesh3daipaare`; bis 19.10.2026 „Trainingspaar“ genannt — Edgar: „hör auch mit Tripo Paar, das sind ganz einfache Tripo jobs“): Start = Tripo-Netz, Ziel = Genesis-Export,
+    #: Ergebnis = was die KI aus dem Tripo-Netz macht (`mesh3dai_paar_lauf.py` schreibt den Lauf). Bis 19.10.2026 spätabends war die Figur im Ergebnis das ZIEL in der vorhergesagten Pose, ihr Rig auf das Ziel
+    #: gelegt, die Pose aus Make-It-Animatable — Edgar: „Hast du geschummelt …?“. Seitdem: Figur und Pose nur aus der KI (`Mesh3daiergebnisfigur`), Lage nach fester Regel.
+    #: Kleider und Haar im Ergebnis (20.10.2026, `Mesh3daiergebniskleider`, `Mesh3daiprobenkleider`) — bis dahin stand hier „gibt die KI nicht aus“.
+    #: 20.10.2026 mittags: Haar nicht mehr als Frisur der Garderobe (Edgar an DamiraAlt: „die sollen doch nicht aus der Bibliothek kommen“) — die Vorgabe nimmt nur k und s (`Mesh3daitestkikleider.AUS_DER_BIBLIOTHEK`).
+    KLEIDER_TEXT = 'Kleider und Haar: aus der KI, wo gerechnet.'
+    HINWEIS_PAAR = 'Tripo-Job: Start = Tripo-Netz, Ziel = dein Genesis-Export. %(ergebnis)s'
+    ERGEBNIS_PAAR = 'Ergebnis nur aus der KI (Formnetz %(lauf)s).'
+    OHNE_ERGEBNIS_PAAR = 'Noch kein Ergebnis.'
+    #: Unter dem Ergebnis (19.10.2026 spätabends, Edgar: „alle jobs, alle test jobs, alle trainings sollen der WAHRHEIT entsprechen“): was aus der KI kommt — seit 20.10.2026 abends in einer Zeile.
+    ERGEBNIS_TEXT = 'Nur aus der KI: Pose, Figur, Kleider und Haar (wo gerechnet). Haut: aus dem Hautkopf, wo gerechnet, sonst Vorgabe des Geschlechts.'
     #: Punkte der Eingabewolke auf der Seite: ein Paar zeigt im Start die Wolke selbst (nicht die Außenfläche des Ziels) — alle 16.384, sonst bleibt die Figur zu dünn.
     EINGABE_ANZEIGE_PAAR = 16384
     _ablage = {}
@@ -84,7 +86,7 @@ class Mesh3daidaten:
             elif job.get('paar'):
                 plan = cls._plan(job['ordner']) or {}
                 training = sum(1 for e in plan.values() if e['gruppe'] == 'training')
-                job = dict(job, proben=len(plan), training=training, pruefung=len(plan) - training, status='Paar: Start und Ziel bereit, noch kein Ergebnis',
+                job = dict(job, proben=len(plan), training=training, pruefung=len(plan) - training, status='Tripo-Job: Start und Ziel bereit, noch kein Ergebnis',
                            hinweis=cls.HINWEIS_PAAR % {'ergebnis': cls.OHNE_ERGEBNIS_PAAR})
             aus.append(job)
         return aus
@@ -101,7 +103,7 @@ class Mesh3daidaten:
             return cls.HINWEIS_PAAR % {'ergebnis': cls.ERGEBNIS_PAAR % {'lauf': ergebnis.get('formkopf') or lauf.name}}
         alle = ergebnis.get('training_daten') or []
         werte = {'lauf': lauf.name, 'modell': modell or ergebnis.get('daten') or 'Ursula1',
-                 'training': ' Ein Netz für %d Figuren: trainiert an den Trainingsproben von %s zusammen.' % (len(alle), ', '.join(alle)) if len(alle) > 1 else ''}
+                 'training': ' · trainiert an %s' % ', '.join(alle) if len(alle) > 1 else ''}
         if ergebnis.get('kopf') == 'stimmen':
             return cls.HINWEIS_STIMMEN % werte
         return (cls.HINWEIS_KANAELE if ergebnis.get('ausgabe') == 'kanaele' else cls.HINWEIS) % werte
@@ -166,7 +168,10 @@ class Mesh3daidaten:
         # Lauf mit Daz-Winkeln: je Probe die Drehung jedes Knochens gegen die Ruhelage (ausgerichtet) und einmal die Ruhezentren — damit häutet die Seite das Ergebnis genau (`Mesh3daiflaechen.ausgabe`).
         haltung = None
         gruppen_da = [g for g in cls.GRUPPEN if g + '_nr' in vor.files]
-        if ergebnis.get('ausgabe') == 'kanaele' and all(g + '_dreh' in vor.files for g in gruppen_da) and (ordner / 'kinematik.json').is_file():
+        if ergebnis.get('ausgabe') == 'kanaele' and all(g + '_dreh' in vor.files for g in gruppen_da) and 'ruhezentren' in vor.files:
+            # Tripo-Job (19.10.2026 abends, `mesh3dai_paar_lauf.py`): Drehungen und Ruhezentren der VORHERGESAGTEN Figur (seit 19.10.2026 spätabends) — gezeichnet wird das Ergebnis als Genesis-Figur.
+            haltung = {'art': 'kanaele', 'ruhezentren': np.round(vor['ruhezentren'].astype(float), 6).tolist()}
+        elif ergebnis.get('ausgabe') == 'kanaele' and all(g + '_dreh' in vor.files for g in gruppen_da) and (ordner / 'kinematik.json').is_file():
             kin = json.loads((ordner / 'kinematik.json').read_text(encoding='utf-8'))['knochen']
             if [k['name'] for k in kin] == namen:
                 haltung = {'art': 'kanaele', 'ruhezentren': np.round(np.array([k['zentrum'] for k in kin]), 6).tolist()}
@@ -192,6 +197,7 @@ class Mesh3daidaten:
         return {'job': job['id'], 'modell': job.get('modell') or job['name'], 'attrappe': False, 'hinweis': cls.hinweis(lauf, ergebnis, job.get('modell')),
                 'lauf': {'name': lauf.name, 'epochen': ergebnis.get('epochen'), 'dauer_s': ergebnis.get('dauer_s'), 'ausgabe': ergebnis.get('ausgabe', 'punkte')},
                 'gelenke': [], 'rig': beschr, 'haltung': haltung, 'teile': Mesh3daidatenteile.beschreibungen(), 'proben': proben,
+                'ergebnis_flaeche': False, 'ergebnis_text': cls.ERGEBNIS_TEXT,
                 'zusammenfassung': {'%s_mittel_mm' % g: masse.get(g, {}).get('netz_mm') for g in cls.GRUPPEN}}
 
     @classmethod

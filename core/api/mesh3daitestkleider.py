@@ -51,6 +51,19 @@ class Mesh3daitestkleiderendpunkte:
         return JsonResponse(Mesh3daitestkleider.liste(kennung, geschlecht))
 
     @staticmethod
+    @require_POST
+    def speichern(request, kennung, geschlecht):
+        """Name und Kategorie eines Stücks für „Übernehmen und als Modell speichern“ (22.10.2026, `Mesh3daitestkleidspeichern`): {stueck, name?, kategorie?}."""
+        rumpf = Mesh3daitestkleiderendpunkte._rumpf(request)
+        try:
+            ok = Mesh3daitestkleider.speichern_setzen(kennung, geschlecht, rumpf.get('stueck'), rumpf.get('name'), rumpf.get('kategorie'))
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
+        if not ok:
+            return JsonResponse({'error': 'Test %s, Geschlecht %s oder Stück %s unbekannt' % (kennung, geschlecht, rumpf.get('stueck'))}, status=400)
+        return JsonResponse(Mesh3daitestkleider.liste(kennung, geschlecht))
+
+    @staticmethod
     @require_GET
     def netz(request, kennung, geschlecht, weg, stueck):
         paket = Mesh3daitestkleider.paket(kennung, geschlecht, weg, stueck)

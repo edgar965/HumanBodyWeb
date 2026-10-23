@@ -3,6 +3,10 @@ import { Genesis9kleidung } from '../../gemeinsam/genesis9kleidung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Genesis9garderobezeile } from './genesis9garderobezeile.js';
 import { Genesis9genitalkasten } from './genesis9genitalkasten.js';
+import { Genesis9lauf } from './genesis9lauf.js';
+import { Dazkleidung } from './dazkleidung.js';
+import { fn } from '../../gemeinsam/registrierung.js';
+import { state } from '../state.js';
 
 /**
  * Genesis9garderobepflege — „Umbenennen" und „Löschen" im Kontextmenü eines Garderobenstücks.
@@ -59,11 +63,20 @@ export class Genesis9garderobepflege {
         Genesis9genitalkasten.benennen(stueck.id, neu.name);
     }
 
-    /** Nach dem Löschen: was vom Stück noch steht (Garderobenzeile, Kasten der Genitalien), nimmt der Server-Erfolg mit. */
+    /** Nach dem Löschen: was vom Stück noch steht (Garderobenzeile, Kasten der Genitalien), nimmt der Server-Erfolg mit — und jede
+     *  Figur, die es trägt oder gerade anzieht, zieht es aus. Edgar, 20.10.2026: „Eigen Foto 04111144 hose f20" angehakt und drei
+     *  Sekunden später gelöscht; das Anziehen las die Dateien, als sie schon im Papierkorb lagen (500 „Daz-Datei fehlt"), und die
+     *  Garderobe meldete „kam nicht an … bitte noch einmal anhaken". */
     static _mitnehmen(stueck) {
         const zeile = Genesis9garderobezeile.zeileVon(stueck.id);
         if (zeile) Genesis9garderobezeile.entfernen(zeile);
         Genesis9genitalkasten.entfernen(stueck.id);
+        Genesis9kleidung.entfernen(stueck.id);
+        for (const inst of state.characters.values()) {
+            if (!(stueck.id in Dazkleidung.kleidung(inst))) continue;
+            Genesis9lauf.planen(inst, () => Dazkleidung.ausziehenAuf(inst, stueck.id),
+                () => fn.updateVertexCount?.(), `stueck:${stueck.id}`);
+        }
     }
 
     /** Ohne Rückfrage (Edgar, 18.10.2026: „mach die Rückfragen vor dem Löschen weg") — ein eigenes Stück liegt danach im
@@ -83,7 +96,6 @@ export class Genesis9garderobepflege {
             return;
         }
         Genesis9garderobezeile.entfernen(zeile);        // `zeile` kann auch der Kasten der Genitalien sein (`Genesis9genitalmenue`)
-        Genesis9kleidung.entfernen(stueck.id);
         Genesis9garderobepflege._mitnehmen(stueck);
     }
 

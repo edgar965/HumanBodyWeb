@@ -5,18 +5,23 @@ Edgar: „mach auch einen neuen Tab: ‚Lauf Aktuell‘, wo du den gerade laufen
   * Rechner gesamt: djangoBase `SystemStats` (nvidia-smi + psutil, geglättet, dieselbe Messung wie die Auslastungsleiste anderer Projekte);
   * je Job: Prozessbaum (`Mesh3dailaufprozesse`), GPU je Prozess aus den Windows-Leistungszählern (`Mesh3daigpuprozesse`);
   * Fortschritt von der Platte: Training = Epoche von N des laufenden Laufordners (`Mesh3daiformtraining`), Datenlauf = Proben mit MIA bzw. Wolke Fassung 9 der Formvarianten,
-    die der Befehl nennt (`Mesh3daiformvarianten`). Welches Skript welchen Fortschritt hat, steht in `REGELN` — ein unbekanntes Skript erscheint ohne Balken.
+    die der Befehl nennt (`Mesh3daiformvarianten`). Job, Schritt und Art des Fortschritts je Skript: `Mesh3dailaufbeschreibung` (seit 20.10.2026; vorher `REGELN` hier).
+  * je Job der Ablauf (Kette und Schritt n von m), wenn die Warteschlange den laufenden Schritt diesem Prozess zuordnet; die Plätze der GPU-Sperre (`gpu.lock`, `gpu.lock.2`).
 Gemessen wird im Hintergrund (djangoBase `HintergrundCache`, erneuert, wenn älter als `TAKT_S` − 1): eine Messung kostet rund 1 s (zwei Zählerabfragen im Abstand von 0,5 s beim ersten Mal),
 die Anfrage bekommt sofort den zuletzt bekannten Stand.
 
   * Warteschlange: die Ketten mit ihren Schritten (fertig/läuft/wartet) aus `ProjektTemp/mia_daten/warteschlange.json` und den Logs (`Mesh3daiwarteschlange`).
 
-    Mesh3dailaufaktuell.lesen() -> {zeit, takt_s, system, sperre, jobs, laeufe_ohne_prozess, ketten, warteschlange, fremde_gpu, kerne}
+    Mesh3dailaufaktuell.lesen() -> {zeit, takt_s, system, sperre, plaetze, jobs, laeufe_ohne_prozess, ketten, warteschlange, fremde_gpu, kerne}
 """
 
 import time
+from pathlib import Path
+
+from django.conf import settings
 
 from .mesh3daiformtraining import Mesh3daiformtraining
+from .mesh3dailaufbeschreibung import Mesh3dailaufbeschreibung
 from .mesh3daiformvarianten import Mesh3daiformvarianten
 from .mesh3daigpuprozesse import Mesh3daigpuprozesse
 from .mesh3dailaufprozesse import Mesh3dailaufprozesse
@@ -27,31 +32,6 @@ __all__ = ['Mesh3dailaufaktuell']
 
 class Mesh3dailaufaktuell:
     TAKT_S = 5
-    #: (Teil des Befehls, Art, Titel, was passiert — in Worten ohne Technik, Fortschritt) — die erste passende Zeile gilt.
-    #: Edgar, 18.10.2026: „der laufende Job ist völlig gaga, und unverständlich. Was läuft denn?? Lass deine blöden Technik infos weg … und sage verständlich was da läuft“ —
-    #: die Seite zeigt Titel und Satz, nicht mehr Skript und Befehl (die stehen nur noch im Tooltip).
-    REGELN = (
-        ('form2_kurz30', 'Probe', 'Probe: Reichen 30 Durchgänge statt 120?',
-         'Dasselbe Körperform-Training wie der lange Lauf, aber nur 30 Durchgänge — um zu sehen, ob kurze Läufe für Vergleiche reichen. Diese KI wird nicht verwendet.', 'training'),
-        ('formtraining_netz_messen', 'Probe', 'Probe: Wo rechnet die Grafikkarte beim Training?',
-         'Ein paar Trainingsschritte mit Zeitmessung, um zu sehen, welche Rechnungen am längsten dauern — es entsteht keine KI.', None),
-        ('form2_tempo_probe', 'Probe', 'Probe: Wie schnell ist das Training jetzt?',
-         'Zwei Durchgänge Körperform-Training mit dem schnelleren Ablauf, nur um die Zeit zu messen — es entsteht keine neue KI.', 'training'),
-        ('tempoprobe', 'Probe', 'Probe: Rechnet der schnellere Weg in die Grundhaltung genauso?',
-         'Acht Figuren werden auf dem alten und auf dem schnellen Weg in die Grundhaltung gebracht und verglichen. Nur wenn alles gleich herauskommt, wird der schnelle Weg eingeschaltet.', None),
-        ('mesh3dai_vorstufe_mia_daten_lauf', 'Daten', 'Trainingsdaten erzeugen',
-         'Die Beispielfiguren werden in die Grundhaltung (A-Pose) gebracht, so wie später jedes neue 3D-Modell vorbereitet wird. Aus diesen Figuren lernt die KI danach.', 'daten'),
-        ('mesh3dai_vorstufe_form', 'Training', 'Die KI lernt die Körperform',
-         'Die KI sieht viele Beispielfiguren in Grundhaltung und lernt, daraus die Körperregler von Genesis abzulesen: Größe, Proportionen, Kopf und Gesicht. '
-         'Am Ende steht eine neue KI, die anschließend an Figuren geprüft wird, die sie nie gesehen hat.', 'training'),
-        ('mesh3dai_vorstufe_netz', 'Training', 'Die KI lernt das Skelett', 'Die KI lernt, in einer Figur in Grundhaltung die Gelenke zu finden.', 'training'),
-        ('mesh3dai_stimmen', 'Training', 'Die KI lernt das Skelett', 'Die KI lernt, in einer Figur die Lage der Gelenke zu finden.', 'training'),
-        ('mesh3dai_kopffehler_messen', 'Prüfung', 'Prüfung: Wie gut trifft die neue KI Kopf und Körper?',
-         'Für Figuren, die die KI nie gesehen hat, wird die vorhergesagte Figur gebaut und mit der echten verglichen — Kopf, Gesicht und Körper, neben der bisherigen KI.', None),
-        ('mesh3dai_form_pruefen', 'Prüfung', 'Prüfung der Körperform', 'Die vorhergesagten Figuren werden gebaut und mit den echten verglichen.', None),
-        ('mesh3dai_paar', 'Testfigur', 'Echte Testfigur durchrechnen', 'Ein Tripo-Modell, dessen richtige Lösung wir kennen (Genesis-Export), läuft durch die ganze Erkennung; danach wird verglichen.', None),
-        ('mesh3dai_test', 'Testfigur', 'Testfiguren neu berechnen', 'Die Testmodelle laufen mit der aktuellen KI durch: Körperform, Figur und Kleider.', None),
-    )
     #: so viele neue Proben braucht das Tempo, bevor eine Restzeit genannt wird
     MIN_PROBEN = 5
     _speicher = None
@@ -72,12 +52,11 @@ class Mesh3dailaufaktuell:
         laufend = [lf for lf in Mesh3daiformtraining.laeufe(jetzt) if lf['zustand'] == 'läuft']
         varianten = Mesh3daiformvarianten.alle(jetzt)
         jobs = []
+        namen = Mesh3dailaufbeschreibung.namen()
         for job in prozesse['jobs']:
-            # Der ganze Befehl, nicht nur das erste Skript: ein GPU-Lauf startet über `mesh3dai_stimmen_lauf.py <Trainingsskript> …` (Sperre), das Trainingsskript steht in den Argumenten.
-            befehl = ' '.join([job['skript'], *job['argumente']])
-            art, titel, was, fortschritt = next(((a, t, w, f) for teil, a, t, w, f in cls.REGELN if teil in befehl),
-                                                ('Mesh3D-AI', 'Unbekannter Lauf (%s)' % job['skript'], 'Für dieses Skript ist keine Beschreibung hinterlegt.', None))
-            job = {**job, 'art': art, 'titel': titel, 'was': was, 'fortschritt': [], 'lauf': None, 'befehl_kurz': cls._kurz(job['argumente'])}
+            beschreibung = Mesh3dailaufbeschreibung.beschreiben(job, namen)
+            fortschritt = beschreibung.pop('fortschritt_art')
+            job = {**job, **beschreibung, 'fortschritt': [], 'lauf': None, 'ablauf': None, 'befehl_kurz': cls._kurz(job['argumente'])}
             if fortschritt == 'training':
                 lf = next((x for x in laufend if (x['start'] or 0) >= job['start'] - 90), None)
                 if lf is not None:
@@ -87,11 +66,45 @@ class Mesh3dailaufaktuell:
             elif fortschritt == 'daten':
                 job['fortschritt'] = cls._daten(job, varianten, jetzt)
             jobs.append(job)
-        return {'zeit': jetzt, 'takt_s': cls.TAKT_S, 'system': SystemStats.lesen(), 'sperre': Mesh3daiformtraining.gpu(), 'jobs': jobs,
+        warteschlange = Mesh3daiwarteschlange.lesen(prozesse['ketten'], jobs, jetzt)
+        cls._ablauf(jobs, warteschlange)
+        return {'zeit': jetzt, 'takt_s': cls.TAKT_S, 'system': SystemStats.lesen(), 'sperre': Mesh3daiformtraining.gpu(), 'plaetze': cls._plaetze(), 'jobs': jobs,
                 'laeufe_ohne_prozess': [{'name': lf['name'], 'kurz': lf['kurz'], 'adresse': '/mesh-3D-AI/formtraining/%s/' % lf['name'], 'fortschritt': cls._training(lf)}
                                         for lf in laufend],
-                'ketten': prozesse['ketten'], 'warteschlange': Mesh3daiwarteschlange.lesen(prozesse['ketten'], jobs, jetzt),
+                'ketten': prozesse['ketten'], 'warteschlange': warteschlange,
                 'fremde_gpu': prozesse['fremde_gpu'], 'kerne': prozesse['kerne']}
+
+    @staticmethod
+    def _ablauf(jobs, warteschlange):
+        """Je Job die Kette, deren laufender Schritt ihm gehört (`job` = PID, `Mesh3daiwarteschlange._fortschritt`): Titel, Schritt n von m. Ohne Eintrag in der Warteschlange
+        die Kette aus den Vorfahren des Prozesses (`kette`, Dateiname) — Git-Bash trennt die Elternkette oft, dann bleibt es leer."""
+        je_pid = {j['pid']: j for j in jobs}
+        for k in warteschlange.get('ketten') or ():
+            for n, s in enumerate(k['schritte'], 1):
+                job = je_pid.get(s.get('job'))
+                if job is not None and s.get('zustand') == 'läuft':
+                    job['ablauf'] = {'titel': k['titel'], 'schritt': n, 'von': len(k['schritte']), 'schritt_titel': s['titel']}
+        for job in jobs:
+            if job['ablauf'] is None and job.get('kette'):
+                name = job['kette'][0]
+                job['ablauf'] = {'titel': name.removeprefix('mesh3dai_').removesuffix('.sh').replace('_', ' '), 'schritt': None, 'von': None, 'schritt_titel': name}
+
+    @staticmethod
+    def _plaetze():
+        """Die zwei Plätze der GPU-Sperre (`gpu_sperre.py`: `gpu.lock`, `gpu.lock.2`) — je Platz `{platz, name, seit}` oder `{platz}` (frei)."""
+        ordner = Path(settings.TOOLS_ROOT).joinpath(*Mesh3daiformtraining.SPERRE).parent
+        aus = []
+        for platz, datei in ((1, 'gpu.lock'), (2, 'gpu.lock.2')):
+            d = Mesh3daiformtraining._json(ordner / datei)
+            if isinstance(d, dict) and d.get('name'):
+                try:
+                    seit = float(d.get('seit'))
+                except (TypeError, ValueError):
+                    seit = None
+                aus.append({'platz': platz, 'name': str(d['name']), 'seit': seit})
+            else:
+                aus.append({'platz': platz})
+        return aus
 
     @staticmethod
     def _training(lf):

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}{% load fassung %}
+{% load static %}{% load fassung %}{% load jsfassung %}
 {% block title %}{{ test.name }} · Test · Mesh3D-AI{% endblock %}
 
 {% comment %}
@@ -11,15 +11,24 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
+{% comment %}Die Animation der Ausgabe ist eine Genesis-Figur aus dem Code der Charakter-Seite (22.10.2026, `Mesh3daifigurbewegung`) — dieselben Angaben wie auf der Jobseite (`mesh3dai.html`):
+Worker der Haut-Maske und ihre Fassung, schnelle Anzeige (grob, Strg+Alt+H schaltet), Weg der Bilder.{% endcomment %}
+<meta name="hautarbeiter" content="{% fassungspfad 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="hautmaskenfassung" content="{% jsfassung 'viewer/gemeinsam/hautarbeiter.js' %}">
+<meta name="schnellanzeige" content="an">
+<meta name="texturweg" content="{{ texturweg }}" data-kante="{{ texturkante }}">
 {% include "_importmap.html" %}
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1><i class="fas fa-microchip"></i> <a href="/mesh-3D-AI/" class="mesh3dai-zurueckzurliste" title="Alle Jobs">Mesh3D-AI</a> <span class="mesh3dai-pfad">›</span>
-        <a href="/mesh-3D-AI/#test" class="mesh3dai-zurueckzurliste" title="Alle Tests">Test</a> <span class="mesh3dai-pfad">›</span> {{ test.name }}</h1>
+        <a href="/mesh-3D-AI/#test" class="mesh3dai-zurueckzurliste" title="Alle Tests">Test</a> <span class="mesh3dai-pfad">›</span>
+        {# Name änderbar (19.10.2026, Stift wie bei Mesh-3D: `gemeinsam/auftragname.js`, `Mesh3dainame`); Kennung und Adresse bleiben. #}
+        <span id="auftrag-name" data-adresse="{% url 'mesh3dai_testname' test.kennung %}">{{ test.name }}</span></h1>
 </div>
 
 <section class="card mesh3dai-zeile" id="mesh3dai-test" data-kennung="{{ test.kennung }}">
@@ -46,6 +55,8 @@ Endpunkte `core/api/mesh3daitest.py`, Seite `static/viewer/mesh3dai/mesh3daitest
         <div class="mesh3dai-feld">
             <h3><span class="mesh3dai-nummer">2</span> Ausgabe</h3>
             <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
+            {% url 'mesh3dai_teststandardanimation' test.kennung as standardanimation %}
+            {% include "_mesh3dai_figurbewegung.html" with adresse=standardanimation tasten=True %}
             <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
         </div>
     </div>
@@ -60,13 +71,14 @@ Kleider und Bestandteile (17.10.2026 nachts, Edgar: „Toggle für jedes Kleidun
         <h2>Kleider und Bestandteile</h2>
         <div class="schalterleiste">
             <span class="mesh3dai-kleider-titel">Alle:</span>
-            <button type="button" class="schaltknopf" data-kleider-alle="a" aria-pressed="false" title="Jedes Stück aus dem Katalog, wo es eines gibt">a · Katalog</button>
-            <button type="button" class="schaltknopf" data-kleider-alle="b" aria-pressed="false" title="Jedes Stück so, wie es aus dem Netz geschnitten ist">b · aus dem Netz</button>
+            <button type="button" class="schaltknopf" data-kleider-alle="ki" aria-pressed="false" title="Nur was die KI ausgibt: je Stück Schnitt, sonst geschnitten; Haar aus dem Netz geschnitten, keine Frisur der Garderobe (Vorgabe)">KI</button>
+            <button type="button" class="schaltknopf" data-kleider-alle="a" aria-pressed="false" title="Jedes Stück des Mesh-3D-Laufs aus dem Katalog, wo es eines gibt (nicht aus der KI)">a · Katalog</button>
+            <button type="button" class="schaltknopf" data-kleider-alle="b" aria-pressed="false" title="Jedes Stück so, wie der Mesh-3D-Lauf es aus dem Netz geschnitten hat (nicht aus der KI)">b · Mesh-3D-Lauf</button>
         </div>
     </div>
     <p class="hb-hinweis" data-kleider="info">Wird geladen …</p>
     <table class="doku mesh3dai-kleider-tabelle">
-        <thead><tr><th>Stück</th><th>a · Katalog</th><th>b · aus dem Netz</th><th>Wahl</th></tr></thead>
+        <thead><tr><th>Stück</th><th>Name im Modell</th><th>Kategorie</th><th>Wege</th><th>Wahl</th></tr></thead>
         <tbody data-kleider="tabelle"></tbody>
     </table>
     <div class="mesh3dai-kleider-speichern">
@@ -76,11 +88,22 @@ Kleider und Bestandteile (17.10.2026 nachts, Edgar: „Toggle für jedes Kleidun
         <span class="hb-hinweis" data-kleider="stand"></span>
     </div>
 </section>
+
+{% comment %}
+Testfälle der Kleider-KI (22.10.2026, Edgar: „wieviel Fehler von wievielen insgesamt, für alle Prioritäten … in das UI … für die trainings und Testjobs … in einer Tabelle“) — die Messung der Stücke, die
+diese Seite zeigt, gegen das Ziel (`Mesh3daitestfaelle`, `mesh3daitestfaelle.js`); Tests ohne Ziel haben keine.
+{% endcomment %}
+<section class="card mesh3dai-testfaelle" id="mesh3dai-testfaelle">
+    <h2>Testfälle der KI</h2>
+    <div data-testfaelle="inhalt"><span class="hb-hinweis">Wird geladen …</span></div>
+</section>
 {% endblock %}
 
 {% block extra_scripts %}
 <script type="module">
 import { Mesh3daitestseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestseite.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
 Mesh3daitestseite.starten(document.getElementById('mesh3dai-test'));
+Auftragname.binden();
 </script>
 {% endblock %}

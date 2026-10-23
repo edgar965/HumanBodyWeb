@@ -1,0 +1,109 @@
+{% load dezahl %}
+{% comment %}Abschnitt „Kleider-GarmentCode“ (20.10.2026, Edgar: „Erkläre mir nochmal das Konzept. Da ist noch ein Widerspruch drin … wie die Kleider gemacht werden … welche Stellen du misst …
+warum suchst du aber dann am Ende ein existierendes Asset aus der Liste??“, „Suche im Internet nach Lösungen wie das andere machen“, „brauchst du da nicht ein zweites Neuronales Netz dafür??“).
+Daten: `Architekturmesh3daigarmentcode`.{% endcomment %}
+<h2 id="garmentcode">Kleider-GarmentCode: wie die KI ein Kleidungsstück baut</h2>
+{% if garmentcode %}
+{% with g=garmentcode %}
+<div class="info-box info-box-blue">
+  <strong>Kurz:</strong> Kein Kleidungsstück wird aus einer Liste genommen. Die KI zerlegt das Netz, schneidet jedes Stück heraus und bestimmt die Zahlen eines GarmentCode-Bauplans;
+  GarmentCode schneidet, näht und drapiert das Stück daraus jedes Mal neu auf der KI-Figur.
+  Den Katalog gibt es nur als <em>Bauart</em> (Hose, Rock …) und als <em>Übungsmaterial</em> für das Training — Einzelheiten unter „Der Katalog“ unten.
+  Heute ist das Ergebnis ungenau, weil an jedem Stück nur wenige Stellen gemessen werden und das Schnittnetz die übrigen Zahlen rät.<br>
+  <strong>Seit 21.10.2026 ist der Bauplan nicht mehr die Vorgabe:</strong> der Schichtkopf (Weg g) gibt die Form jedes Stücks selbst aus, trainiert gegen die Zielstücke — Abschnitt
+  <a href="#schicht">„Kleider wie das Ziel“</a>. Der Bauplan-Weg (s) und der Schnitt aus der Fläche (f) bleiben wählbar.
+</div>
+
+<h3>Neuronales Netz für Assets</h3>
+<p>Der Stand als Bild: was gebaut ist (durchgezogen) und was fehlt (gestrichelt), für Kleider, Haar und Zubehör. Die Vorschläge zu Weg g stehen im Konzept, Abschnitt 8; die zum Bauplan unten unter „Vorschläge“.</p>
+{% if g.bild %}<div class="m3a-bildrahmen">{{ g.bild }}</div>{% endif %}
+
+<h3>Die Schritte</h3>
+<table class="doku">
+  <thead><tr><th>Schritt</th><th>wer rechnet</th><th>Eingabe</th><th>was passiert</th><th>Ausgabe</th></tr></thead>
+  <tbody>{% for s, wer, ein, was, aus in g.schritte %}<tr><td><strong>{{ s }}</strong></td><td>{{ wer }}</td><td>{{ ein }}</td><td>{{ was }}</td><td>{{ aus }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Was heute am Stück gemessen wird</h3>
+<p>Gemessen wird am ausgeschnittenen Stück in der Ruhelage der KI-Figur, Körpermaße von der KI-Figur. Das ist die <strong>vollständige Liste</strong> (`Schnittmessung.messen`):</p>
+<table class="doku">
+  <thead><tr><th>Stelle</th><th>wie gemessen</th><th>wird zur Zahl</th><th>für</th></tr></thead>
+  <tbody>{% for stelle, wie, zahl, fuer in g.gemessen %}<tr><td>{{ stelle }}</td><td>{{ wie }}</td><td>{{ zahl }}</td><td>{{ fuer }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">{{ g.eichung }}</p>
+
+<h3>Was nicht gemessen wird</h3>
+<table class="doku">
+  <thead><tr><th>was</th><th>Zahlen im Bauplan</th><th>Stand</th></tr></thead>
+  <tbody>{% for was, zahlen, stand in g.nicht_gemessen %}<tr><td>{{ was }}</td><td>{{ zahlen }}</td><td>{{ stand }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Zahlen je Bauplan</h3>
+{% if g.aufbau_fehlt %}<p class="ag-fehlt">Die Übungsbeispiele für {{ g.figur }} haben noch keine Beschreibung (`aufbau.json`) — Tabelle nicht lesbar.</p>{% else %}
+<table class="doku m3a-schmal">
+  <thead><tr><th>Bauplan</th><th>Formen</th><th class="num">Zahlen</th><th>davon gemessen</th><th class="num">Vorbilder Training</th><th class="num">Vorbilder Prüfung</th></tr></thead>
+  <tbody>{% for z in g.bauplaene %}<tr><td>{{ z.name }}</td><td>{{ z.formen|join:", "|default:"—" }}</td><td class="num">{{ z.felder }}</td>
+    <td>{{ z.gemessen|length }}{% if z.gemessen %}: <code>{{ z.gemessen|join:", " }}</code>{% endif %}</td><td class="num">{{ z.training }}</td><td class="num">{{ z.pruefung }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Gelesen aus der Beschreibung der Übungsbeispiele für {{ g.figur }}; zusammen {{ g.vorbilder }} Vorbilder und Formen. Ganze Vorbilder der Prüfung sieht das Training nie.</p>
+{% endif %}
+
+<h3>Der Katalog — warum er vorkommt, obwohl alles neu gebaut wird</h3>
+<table class="doku">
+  <tbody>{% for frage, text in g.katalog %}<tr><th>{{ frage }}</th><td>{{ text }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Ursula1 heute: echtes Stück gegen GarmentCode-Schnitt</h3>
+<p>Probe 1, gemessen am 20.10.2026 (`ProjektTemp/_wegwerf/ursula1_kleider_vermessen.py`). Der Schnitt kommt vom alten Schnittnetz, alle Zahlen vom Netz, ohne Regelwahl.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Stelle</th><th>ausgeschnitten (Wahrheit)</th><th>GarmentCode-Schnitt</th></tr></thead>
+  <tbody>{% for stelle, k, s in g.ursula_messung %}<tr><td>{{ stelle }}</td><td>{{ k }}</td><td>{{ s }}</td></tr>{% endfor %}</tbody>
+</table>
+<table class="doku">
+  <thead><tr><th>Stück</th><th>Zahlen, die das alte Schnittnetz vorschlug</th></tr></thead>
+  <tbody>{% for stueck, text in g.ursula_zahlen %}<tr><td>{{ stueck }}</td><td>{{ text }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Was den Netzen fehlt</h3>
+<table class="doku">
+  <thead><tr><th>was fehlt</th><th>bei uns</th><th>andere</th></tr></thead>
+  <tbody>{% for was, uns, andere in g.fehlt %}<tr><td><strong>{{ was }}</strong></td><td>{{ uns }}</td><td>{{ andere }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Wie andere es machen (Recherche 20.10.2026)</h3>
+<p class="m3a-klein">Aus den Zusammenfassungen der Arbeiten gelesen; nichts davon ausprobiert.</p>
+<table class="doku">
+  <thead><tr><th>Verfahren</th><th>wie</th><th>für uns</th></tr></thead>
+  <tbody>{% for name, quelle, wie, uns in g.recherche %}<tr><td>{% if quelle %}<a href="{{ quelle }}" target="_blank" rel="noopener">{{ name }}</a>{% else %}{{ name }}{% endif %}</td><td>{{ wie }}</td><td>{{ uns }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Was gerade läuft, und Vorschläge</h3>
+<ul>
+  <li>Neue Übungsbeispiele für {{ g.figur }} (Vorbilder ± kleine Streuung): <strong>{{ g.proben_fertig|de }} von {{ g.proben_ziel|de }}</strong> fertig.</li>
+  {% if g.regelwahl and not g.regelwahl.fehlt %}
+  <li>Schnittnetz nur für {{ g.figur }}: Lauf <code>{{ g.regelwahl.lauf }}</code>. Regelwahl je Bauplan (Zahlen aus Form · Messung · Netz · Regel):
+    {% for z in g.regelwahl.je %}{{ z.name }} {{ z.form }} · {{ z.messung }} · {{ z.ki }} · {{ z.regel }}{% if not forloop.last %}; {% endif %}{% endfor %}.
+    {% with b=g.regelwahl.bericht %}Fehler auf der Prüfhälfte ({{ b.proben }} Proben): alles Netz {{ b.ki }}, alles Form {{ b.form }}, gewählt {{ b.gewaehlt }}, Median des Trainings {{ b.median }}.{% endwith %}</li>
+  {% elif g.regelwahl %}
+  <li>Schnittnetz nur für {{ g.figur }}: Lauf <code>{{ g.regelwahl.lauf }}</code>, die Regelwahl ist noch nicht gerechnet.</li>
+  {% else %}
+  <li>Danach: Schnittnetz nur für {{ g.figur }} trainieren, Regelwahl je Zahl, Hose und T-Shirt neu bauen und gegen die Tabelle oben messen — noch nicht gelaufen.</li>
+  {% endif %}
+</ul>
+<h3>Vorschläge (nicht gebaut)</h3>
+<table class="doku">
+  <thead><tr><th>Nr.</th><th>Vorschlag</th><th>wozu</th><th>Haken</th><th>wann</th></tr></thead>
+  <tbody>{% for nr, was, wozu, haken, wann in g.vorschlaege %}<tr><td>{{ nr }}</td><td>{{ was }}</td><td>{{ wozu }}</td><td>{{ haken }}</td><td><strong>{{ wann }}</strong></td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Was wir aus fremdem Code nehmen können</h3>
+<p class="m3a-klein">Nachgesehen auf den Projektseiten am 20.10.2026; nichts heruntergeladen, nichts ausprobiert.</p>
+<table class="doku">
+  <thead><tr><th>Code</th><th>Lizenz</th><th>was drin ist</th><th>was wir nehmen</th></tr></thead>
+  <tbody>{% for name, quelle, lizenz, inhalt, nehmen in g.uebernahme %}<tr><td>{% if quelle %}<a href="{{ quelle }}" target="_blank" rel="noopener">{{ name }}</a>{% else %}{{ name }}{% endif %}</td>
+    <td>{{ lizenz }}</td><td>{{ inhalt }}</td><td>{{ nehmen }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endwith %}
+{% else %}
+<p class="ag-fehlt">Die Daten zu Kleider-GarmentCode waren nicht lesbar (siehe Befunde oben).</p>
+{% endif %}

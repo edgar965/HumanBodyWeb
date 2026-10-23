@@ -140,10 +140,14 @@ class ReglerhilfeTest(SimpleTestCase):
         self.assertEqual(Reglerhilfe.bedingung('left.enable_asym'), '')
 
     def test_die_hilfe_kommt_als_dreiteil(self):
+        """Text, Bedingung, Original — und seit 20.10.2026 `vorgabe` (was der Schieber
+        ungestellt zeigt: „Figur" beim Ärmelwinkel, `aermelwinkel.py`, sonst None)."""
         hilfe = Reglerhilfe.hilfe('sleeve.end_width')
-        self.assertEqual(set(hilfe), {'text', 'bedingung', 'original'})
+        self.assertEqual(set(hilfe), {'text', 'bedingung', 'original', 'vorgabe'})
         self.assertEqual(hilfe['original'], 'sleeve.end_width')
         self.assertIn('Ärmelende', hilfe['text'])
+        self.assertIsNone(hilfe['vorgabe'])
+        self.assertEqual(Reglerhilfe.hilfe('sleeve.sleeve_angle')['vorgabe'], 'Figur')
 
 
 class ReglerpresetsTest(SimpleTestCase):
@@ -190,11 +194,13 @@ class ReglerpresetsTest(SimpleTestCase):
         self.assertEqual(Reglerpresets.werte('aermel_eng')['sleeve.end_width'], 0.2)
 
     def test_das_gemessene_preset_ist_das_aus_dem_bildschirmfoto(self):
-        """Vier Werte, gegen die die Messreihe gefahren wurde.
+        """Drei Werte aus dem Bildschirmfoto, gegen die die Messreihe gefahren wurde.
 
         Ändert sie jemand, gelten die Zahlen im Hinweistext („6,1 statt
         14,2 mm") nicht mehr — und ein Hinweis mit falschen Messwerten ist
-        schlimmer als keiner.
+        schlimmer als keiner. Den vierten (Ärmelwinkel 10°) hat das Preset
+        seit 20.10.2026 nicht mehr: auf Genesis kam der Stoff damit nie zur
+        Ruhe, den Winkel setzt die Armhaltung (`aermelwinkel.py`).
         """
         self.assertEqual(
             Reglerpresets.werte('aermel_eng'),
@@ -202,7 +208,6 @@ class ReglerpresetsTest(SimpleTestCase):
                 'sleeve.length': 1.1,
                 'sleeve.connecting_width': 0.0,
                 'sleeve.end_width': 0.2,
-                'sleeve.sleeve_angle': 10,
             },
         )
 

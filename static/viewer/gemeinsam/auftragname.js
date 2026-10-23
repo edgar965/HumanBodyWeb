@@ -145,6 +145,8 @@ export class Auftragname {
             Aktionsprotokoll.melden('name_gespeichert', JSON.stringify(antwort.name || name));
             this.beenden(antwort.name || name);
             document.title = document.title.replace(alt, antwort.name || name);
+            // Weitere Stellen derselben Seite, die den Namen zeigen (Mesh3D-AI: Karte „Job“, 19.10.2026), tragen `data-auftragname-kopie`.
+            document.querySelectorAll('[data-auftragname-kopie]').forEach((el) => { el.textContent = antwort.name || name; });
         } catch (fehler) {
             Aktionsprotokoll.melden('name_fehler', `${fehler.status || '?'} ${fehler.daten?.error || fehler.message}`, 'error');
             this.beenden(alt);

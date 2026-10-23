@@ -43,7 +43,8 @@ Browser mit GET (Pfade als `p=…`), die Antwort trägt ein ETag aus Pfad, Grö�
 Laden fragt er nach und bekommt 304 ohne Inhalt, die Bytes kommen aus seinem Speicher. POST bleibt für ältere Tabs.
 
 FASSUNG DER BILDER (19.10.2026, `G9texturfassung`): `kante=1024` oder `format=bc` in der Adresse (auch beim POST) liefert jedes Bild verkleinert bzw. als GPU-Block;
-die Wahl steht im ETag. Was noch nicht abgelegt ist, wird auf `FAEDEN` Fäden zugleich gerechnet (ein 4096er-Block rund 2 s).
+die Wahl steht im ETag. Was noch nicht abgelegt ist, wird auf `FAEDEN` Fäden zugleich gerechnet (ein 4096er-Block rund 2 s). `format=uastc` (/Charakter/) liefert
+den Block, bis die UASTC-Fassung im Hintergrund kodiert ist — ob sie liegt, steht je Bild im ETag (`G9texturfassung.stand`).
 """
 import hashlib
 import json
@@ -116,7 +117,8 @@ class G9texturbuendelapi:
                 stand = datei.stat() if datei is not None else None
             except OSError:
                 stand = None
-            summe.update(('%s|%s|%s\n' % (pfad, stand.st_size if stand else '-', stand.st_mtime_ns if stand else '-')).encode('utf-8'))
+            summe.update(('%s|%s|%s%s\n' % (pfad, stand.st_size if stand else '-', stand.st_mtime_ns if stand else '-',
+                                             G9texturfassung.stand(pfad, *wahl))).encode('utf-8'))
         return quote_etag(summe.hexdigest()[:24])
 
     @staticmethod

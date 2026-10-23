@@ -13,8 +13,10 @@
  */
 import { Genesis9Modell } from '../gemeinsam/genesis9modell.js';
 import { Genesis9vorrat } from '../gemeinsam/genesis9vorrat.js';
+import { Hautverdeckung } from '../gemeinsam/hautverdeckung.js';
 import { Mesh3daiausrichtung } from './mesh3daiausrichtung.js';
 import { Mesh3daiechtmaterial } from './mesh3daiechtmaterial.js';
+import { Mesh3daikikleiderfeld } from './mesh3daikikleiderfeld.js';
 
 export class Mesh3daigenesisfigur {
     static ZEILEN = new Set(['koerper', 'koerper_nackt', 'gesicht', 'kleider']);
@@ -89,7 +91,9 @@ export class Mesh3daigenesisfigur {
     static fuer(d, art) {
         const z = Mesh3daigenesisfigur;
         if (!d?.echt || !d.job || !z.ZEILEN.has(d.zeile) || (art !== 'soll' && art !== 'ausgabe') || d.probe?.punktsamen !== undefined || d.probe?.id == null) return undefined;
-        const schluessel = [d.job, d.probe.id, art, d.zeile].join('|');
+        // Der Weg gehört zum Schlüssel des Ergebnisses (19.10.2026 spätabends): seine Winkel kommen aus dem Weg, dessen Rig das Feld zeigt (`Mesh3daigenesis`, Server).
+        const weg = art === 'ausgabe' ? (d.probe.weg ?? '') : '';
+        const schluessel = [d.job, d.probe.id, art, d.zeile, weg].join('|');
         let e = z._figuren.get(schluessel);
         if (!e) {
             e = { stand: 'baut', modell: null, text: 'Genesis-Figur wird gebaut …' };
@@ -104,10 +108,11 @@ export class Mesh3daigenesisfigur {
         return e.stand === 'ohne' ? undefined : e;
     }
 
-    static _datenHolen(job, nr) {
-        const schluessel = `${job}|${nr}`;
+    static _datenHolen(job, nr, weg = '') {
+        const schluessel = `${job}|${nr}|${weg}`;
         if (!Mesh3daigenesisfigur._daten.has(schluessel)) {
-            Mesh3daigenesisfigur._daten.set(schluessel, fetch(`/api/mesh3dai/${encodeURIComponent(job)}/genesis/${nr}/`).then(async antwort => {
+            const frage = weg ? `?weg=${encodeURIComponent(weg)}` : '';
+            Mesh3daigenesisfigur._daten.set(schluessel, fetch(`/api/mesh3dai/${encodeURIComponent(job)}/genesis/${nr}/${frage}`).then(async antwort => {
                 if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
                 return antwort.json();
             }));
@@ -118,7 +123,7 @@ export class Mesh3daigenesisfigur {
     static async _bauen(e, d, art) {
         const z = Mesh3daigenesisfigur;
         try {
-            const daten = await z._datenHolen(d.job, d.probe.id);
+            const daten = await z._datenHolen(d.job, d.probe.id, art === 'ausgabe' ? (d.probe.weg ?? '') : '');
             const haltung = art === 'soll' ? daten.ziel : daten.ergebnis;
             // Ergebnis ohne vorhergesagte Gelenkwinkel (Lauf mit freien Punkten): kein Genesis-Ergebnis — das Feld bleibt beim bisherigen Weg.
             if (art === 'ausgabe' && !haltung) {
@@ -126,7 +131,11 @@ export class Mesh3daigenesisfigur {
                 z.neuZeichnen?.();
                 return;
             }
-            const figur = { ...daten.figur };
+            // Das Ergebnis hat seine EIGENE Figur (19.10.2026 spätabends, Edgar: „das Ergebnis soll direkt aus der KI kommen“): vorhergesagte Form oder Grundfigur, Grundhaut, keine Kleider
+            // (`Mesh3daiergebnisfigur`). Bis hierher stand dort die Figur des Ziels — Form, Gesicht, Haut, Kleider waren die Wahrheit, nur die Pose kam aus der KI.
+            const figur = { ...(art === 'ausgabe' && daten.figur_ergebnis ? daten.figur_ergebnis : daten.figur) };
+            if (art === 'ausgabe') e.quelle = daten.ergebnis_quelle ?? '';
+            e.kleidung = figur.kleidung ?? {};
             // Eine Haltung als Winkel ersetzt das Posenpreset (der Server nimmt sonst die Pose). Ohne Haltung (Trainingspaar) steht die Figur in ihrer gespeicherten Pose.
             if (haltung) {
                 figur.pose = '';
@@ -139,6 +148,16 @@ export class Mesh3daigenesisfigur {
             // Eine Kennung je Feld: `Netzstufenstand` führt den Stand je Kennung (die Anzeige „Netz: grob …“ zählt sonst nur eine Figur).
             const modell = new Genesis9Modell(`mesh3dai_${art}_${++z._nummer}`, figur);
             await modell.bauen();
+            // Kleider aus der KI (20.10.2026, Tripo-Jobs): die auf der Testseite gewählten Stücke, mit der Haltung der KI gehäutet (`Mesh3daikikleiderfeld`)
+            if (art === 'ausgabe' && daten.ki_kleider && d.zeile !== 'koerper_nackt') {
+                e.ki = await Mesh3daikikleiderfeld.laden(daten.ki_kleider).catch(f => { console.warn(`Mesh3daikikleiderfeld: ${f.message}`); return null; });
+                if (e.ki) e.quelle = `${e.quelle} Kleider und Haar aus der KI: ${e.ki.namen.join(', ')} (${daten.ki_kleider.test ? `Wahl auf der Testseite ${daten.ki_kleider.test}` : `Vorgabe KI, auf die Figur dieser Probe übertragen`}).`;
+                // Haut und Anatomie-Stück unter den KI-Kleidern ausblenden wie in Charakter und Studio (21.10.2026)
+                if (e.ki) {
+                    modell.hautStuecke = Mesh3daikikleiderfeld.hautStuecke(e.ki);
+                    Hautverdeckung.planen(modell);
+                }
+            }
             e.modell = modell;
             e.stand = 'fertig';
             e.text = '';
@@ -168,7 +187,14 @@ export class Mesh3daigenesisfigur {
         gruppe.traverse(o => { o.frustumCulled = false; o.layers.set(1); });
         gruppe.userData.mesh3daiFremd = true;
         inhalt.userData.genesisErsatz = d.modus === 'textur' ? null : z._ersatz(d.modus);
+        // Ohne Kleider aus der KI bleibt das Ergebnis der Zeile „Kleider“ leer und sagt es.
+        if (art === 'ausgabe' && d.zeile === 'kleider' && !e.ki && !Object.keys(e.kleidung ?? {}).some(k => !z.ANATOMIE.test(k))) inhalt.userData.hinweis = 'Für diesen Job liegen keine Kleider aus der KI vor.';
         inhalt.add(gruppe);
+        if (e.ki) {
+            // Schalter „Kleider“ (21.10.2026): ausgeblendet zeigt die Figur die Haut darunter wieder (die Maske rechnet ohne die Stücke neu)
+            if (Mesh3daikikleiderfeld.kleiderZeigen(e.ki, d.kleider !== false)) Hautverdeckung.planen(e.modell);
+            Mesh3daikikleiderfeld.einhaengen(inhalt, e.ki, d.probe.rig?.ausgabe, d.teil?.ausschnitte?.[0] ?? null);
+        }
     }
 
     static _ausrichten(gruppe, knochen, ziel, ausschnitt) {

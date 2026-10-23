@@ -237,6 +237,10 @@ export class Genesis9garderobe {
      * wo er hakte). Steht von dem Stück schon ein Netz in der Szene (Variantenwechsel), bleibt der Eintrag.
      */
     static async _misslungen(inst, kennung, fehler) {
+        if (Genesis9kleidung.geloescht(kennung)) {      // gelöscht, während es noch kam — kein Fehler, das Stück ist weg (20.10.2026)
+            delete Dazkleidung.kleidung(inst)[kennung];
+            return;
+        }
         const imBild = Object.keys(inst.clothMeshes || {}).some(
             schluessel => schluessel.startsWith(`${kennung}/`)
                 || schluessel.startsWith(`${Dazkleidung.PRAEFIX}${kennung}/`));

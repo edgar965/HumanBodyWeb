@@ -6,11 +6,17 @@
  * gehäutet mit denselben Matrizen (`Mesh3daitestnetzbau`). „Übernehmen und speichern“ startet den Prozess auf dem Server und fragt alle 2 s nach seinem Stand.
  */
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
+import { Mesh3daitestkleidname } from './mesh3daitestkleidname.js';
 import { Mesh3daitestnetzbau } from './mesh3daitestnetzbau.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 const de = (n, s = 0) => Number(n).toLocaleString('de-DE', { minimumFractionDigits: s, maximumFractionDigits: s });
-const WEGTEXT = { a: 'Katalog', b: 'aus dem Netz', aus: 'aus' };
+// k/s/h (20.10.2026): Kleider aus der KI von Mesh3D-AI (Server `Mesh3daitestkikleider`); a/b kommen aus dem Mesh-3D-Lauf, nicht aus der KI
+// d und n sind Vergleichslinien zum Schnitt s (20.10.2026): wählbar, nie Vorgabe, nie im Ergebnis der Jobseite
+// f (21.10.2026): Schnitt aus der Fläche — Nähte vom Körper, flachgelegt, GarmentCode näht und drapiert; Vorgabe vor s
+// g (21.10.2026): Schicht aus der KI — der Schichtkopf gibt die Form des Stücks je Punkt des Genesis-Käfigs aus, gegen die Zielstücke trainiert
+const WEGTEXT = { a: 'Katalog', b: 'Mesh-3D-Lauf', k: 'KI geschnitten', s: 'KI Schnitt', f: 'KI Schnitt aus der Fläche', g: 'KI Schicht', h: 'Bibliothek Frisur', d: 'Vergleich Schnittdeutung', n: 'Vergleich NeuralTailor', aus: 'aus' };
+const WEGE = ['g', 'k', 'f', 's', 'h', 'd', 'n', 'a', 'b'];
 
 export class Mesh3daitestkleider {
     constructor(karte, seite) {
@@ -60,11 +66,14 @@ export class Mesh3daitestkleider {
     _setzen(daten) {
         this.liste = daten;
         const q = daten.quelle;
+        const ki = daten.ki;
+        const zahlKi = daten.stuecke.filter(st => st.quelle === 'ki').length;
         this.info.textContent = daten.stuecke.length
-            ? `${daten.stuecke.length} Stücke. b = aus dem Netz geschnitten (Mesh-3D-Lauf „${q?.name}“, Mesh to 3D ${q?.figur}) und auf die vorhergesagte Figur übertragen; `
-              + 'a = Stück der Garderobe auf dieser Figur gebaut, umgefärbt in der Farbe aus dem Netz — gewählt durch Messung (Überdeckung der bedeckten Körperstellen; '
-              + 'Haar: die Frisur, die „Mesh to 3D“ am Netzhaar gewählt hat). Haut: a = die Haut der Figur, b = die gebackene Haut des Mesh-3D-Laufs (gleiche Genesis-UV; '
-              + 'ein kurzer Bart steht dort in der Haut, nicht im Haar). Das Netz von Mesh3D-AI sagt Kleider noch nicht selbst voraus.'
+            ? `${daten.stuecke.length} Stücke, davon ${zahlKi} aus der KI. `
+              + (ki ? `KI (Zerlegung ${ki.zerlegung?.lauf ?? '?'}${ki.schnitt_lauf ? `, Schnitt ${ki.schnitt_lauf}` : ''}): k = die KI zieht die Grenze im Netz, Geometrie und Textur aus dem Netz, auf die vorhergesagte Figur übertragen; `
+                    + 's = GarmentCode-Schnitt, Katalogstück, Form und Regler vom Schnittkopf aus dem geschnittenen Stück; h = Frisur der Garderobe (Bibliothek) mit den nächsten Haarmaßen der KI, nur auf eigene Wahl. '
+                  : 'Kleider aus der KI sind für diesen Test noch nicht gerechnet. ')
+              + (q ? `Nicht aus der KI: b = vom Mesh-3D-Lauf „${q.name}“ geschnitten, a = Garderobe-Stück nach Messung gegen b; Haut a = Haut der Figur, b = gebackene Haut des Mesh-3D-Laufs.` : '')
             : (daten.grund || 'Keine Stücke.');
         this.karte.querySelectorAll('[data-kleider-alle]').forEach(k => {
             const an = k.dataset.kleiderAlle === daten.vorgabe;
@@ -82,31 +91,53 @@ export class Mesh3daitestkleider {
         return td;
     }
 
+    /** Ein Satz je Weg: was dieser Weg für das Stück gebaut hat (oder warum nicht). */
+    _beschreibung(st, w) {
+        const e = st[w];
+        if (!e || e.fehler) return `${w} · ${WEGTEXT[w]}: — ${e?.fehler || 'nicht gerechnet'}`;
+        const haut = st.art === 'haut';
+        const abstand = u => u?.art === 'starr' ? 'starr übertragen' : `Abstand zur Haut Median ${de(u?.abstand_mm_median ?? 0, 1)} mm`;
+        const text = {
+            a: () => haut ? e.anzeige_name : `${e.anzeige_name} (${e.kategorie}${e.ueberdeckung != null ? `, Überdeckung ${de(e.ueberdeckung, 2)}` : ''})`,
+            b: () => haut ? `${e.anzeige_name}: Kacheln ${Object.keys(e.kacheln || {}).join(', ')}` : `${de(e.dreiecke)} Dreiecke (${abstand(e.uebertrag)})`,
+            k: () => `${de(e.dreiecke)} Dreiecke aus dem Netz (${abstand(e.uebertrag)})`,
+            s: () => `GarmentCode ${e.schnitt?.stueck} · ${e.schnitt?.form} (Sicherheit ${de(e.schnitt?.sicherheit ?? 0, 2)}), Abstand zum geschnittenen Stück ${de(e.abstand_mm?.netz_zum_schnitt ?? 0, 1)} mm`,
+            h: () => `${e.anzeige_name} (Abstand der Haarmaße ${de(e.abstand ?? 0, 2)}${e.farbe ? `, Farbe ${e.farbe}` : ''})`,
+            d: () => `Deutung „${e.schnitt?.deutung}“ → GarmentCode ${e.schnitt?.stueck} · ${e.schnitt?.form}, Abstand zum geschnittenen Stück ${de(e.abstand_mm?.netz_zum_schnitt ?? 0, 1)} mm`,
+            n: () => `${de(e.schnitt?.teile ?? 0)} Schnittteile, ${de(e.schnitt?.naehte ?? 0)} Nähte, Abstand zum geschnittenen Stück ${de(e.abstand_mm?.netz_zum_schnitt ?? 0, 1)} mm`,
+            f: () => `${de(e.schnitt?.flaeche?.teile?.length ?? 0)} Schnittteile, ${de(e.schnitt?.flaeche?.schnitt?.naehte ?? 0)} Nähte, Abstand zum geschnittenen Stück ${de(e.abstand_mm?.netz_zum_schnitt ?? 0, 1)} mm`,
+            g: () => `${de(e.dreiecke ?? 0)} Dreiecke aus dem Schichtkopf (${abstand(e.uebertrag)})${e.stufe2?.lauf ? `, Stufe 2 ${e.stufe2.lauf}` : ''}`,
+        }[w];
+        // Ein Weg ohne eigenen Satz darf die Karte nicht abbrechen (22.10.2026: g fehlte hier, „Kleider nicht lesbar“ — die Testseite zeigte seit Weg g keine Kleider)
+        return `${w} · ${haut && w === 'a' ? 'Haut der Figur' : WEGTEXT[w]}: ${text ? text() : (e.grund || 'gerechnet')}`;
+    }
+
     _zeile(st) {
         const tr = document.createElement('tr');
-        const a = st.a && !st.a.fehler ? st.a : null;
-        const b = st.b && !st.b.fehler ? st.b : null;
         const haut = st.art === 'haut';
-        tr.append(this._zelle(st.name, haut ? 'die Haut der Figur' : `${st.art}, Region ${st.region}${st.bewegung === 'starr' ? ', starr' : ''}`));
-        if (haut) {
-            tr.append(this._zelle(a ? a.anzeige_name : `— ${st.a?.fehler || 'nicht gerechnet'}`));
-            tr.append(this._zelle(b ? `${b.anzeige_name}: Kacheln ${Object.keys(b.kacheln || {}).join(', ')}` : `— ${st.b?.fehler || 'nicht gerechnet'}`));
-        } else {
-            tr.append(this._zelle(a ? `${a.anzeige_name} (${a.kategorie}${a.ueberdeckung != null ? `, Überdeckung ${de(a.ueberdeckung, 2)}` : ''})` : `— ${st.a?.fehler || 'nicht gerechnet'}`,
-                a?.kandidaten ? `nächste: ${a.kandidaten.slice(1).map(k => `${k.kennung} ${de(k.ueberdeckung, 2)}`).join(' · ')}` : ''));
-            tr.append(this._zelle(b ? `${de(b.dreiecke)} Dreiecke (${b.uebertrag?.art === 'starr' ? 'starr übertragen' : `Abstand zur Haut Median ${de(b.uebertrag?.abstand_mm_median ?? 0, 1)} mm`})`
-                : `— ${st.b?.fehler || 'nicht gerechnet'}`));
+        const wege = WEGE.filter(w => st[w]);
+        tr.append(this._zelle(st.name, haut ? 'die Haut der Figur' : `${st.art}, Region ${st.region}${st.bewegung === 'starr' ? ', starr' : ''}${st.quelle === 'ki' ? ' — aus der KI' : ' — aus dem Mesh-3D-Lauf'}`));
+        // Name und Kategorie in der Garderobe (22.10.2026, `Mesh3daitestkleidname`)
+        tr.append(...Mesh3daitestkleidname.zellen(st, this.liste?.kategorien, this.name?.value?.trim(), rumpf => this.stueckSpeichern(rumpf)));
+        const td = document.createElement('td');
+        for (const w of wege) {
+            const zeile = document.createElement('div');
+            zeile.textContent = this._beschreibung(st, w);
+            if (w === 'a' && st.a?.kandidaten) zeile.title = `nächste: ${st.a.kandidaten.slice(1).map(k => `${k.kennung} ${de(k.ueberdeckung, 2)}`).join(' · ')}`;
+            if (w === 'h' && st.h?.kandidaten) zeile.title = `nächste: ${st.h.kandidaten.slice(1).map(k => `${k.kennung} ${de(k.abstand, 2)}`).join(' · ')}`;
+            td.append(zeile);
         }
+        tr.append(td);
         const wahl = document.createElement('td');
         const leiste = document.createElement('div');
         leiste.className = 'schalterleiste mesh3dai-kleider-wahl';
         // Haut: kein „aus“ — eine Figur ohne Haut gibt es nicht.
-        for (const w of haut ? ['a', 'b'] : ['a', 'b', 'aus']) {
+        for (const w of haut ? wege : [...wege, 'aus']) {
             const k = document.createElement('button');
             k.type = 'button';
             k.className = 'schaltknopf' + (st.wahl === w ? ' active' : '');
             k.textContent = w === 'aus' ? 'aus' : `${w} · ${haut && w === 'a' ? 'Haut der Figur' : WEGTEXT[w]}`;
-            k.disabled = (w === 'a' && !a) || (w === 'b' && !b);
+            k.disabled = w !== 'aus' && (!st[w] || !!st[w].fehler);
             k.setAttribute('aria-pressed', String(st.wahl === w));
             k.addEventListener('click', () => this.waehlen(st.id, w));
             leiste.append(k);
@@ -118,6 +149,15 @@ export class Mesh3daitestkleider {
 
     async waehlen(id, wahl) {
         await this._senden('wahl/', { stueck: id, wahl });
+    }
+
+    /** Name oder Kategorie eines Stücks speichern — nur die Tabelle neu, die Figur bleibt (`Mesh3daitestkleidname`). */
+    async stueckSpeichern(rumpf) {
+        try {
+            this._setzen(await Serverabruf.senden(this._adresse(`kleider/${this.geschlecht}/speichern/`), rumpf));
+        } catch (fehler) {
+            alert(`Nicht gespeichert: ${fehler.daten?.error || fehler.message}`);
+        }
     }
 
     async alle(weg) {

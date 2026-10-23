@@ -47,7 +47,9 @@ DEFINITION = re.compile(
     r'\s+([A-Z][A-Za-z0-9_]+)'
 )
 IMPORT = re.compile(r'import\s*\{([^}]*)\}\s*from|import\s+\*\s+as\s+(\w+)\s+from|import\s+(\w+)\s+from')
-LOKAL = re.compile(r'(?:[(,{]\s*|=\s*\{[^}]*?)([A-Z][A-Za-z0-9_]+)\s*[,)=}]')
+# Das Trennzeichen danach nur ansehen, nicht verbrauchen (20.10.2026): sonst fehlt dem nächsten Namen
+# sein Komma davor, und von `{ A, B, C, D }` galt nur jeder zweite als lokal (`zeichenstand.js`: Fehlalarm).
+LOKAL = re.compile(r'(?:[(,{]\s*|=\s*\{[^}]*?)([A-Z][A-Za-z0-9_]+)(?=\s*[,)=}])')
 
 
 class Jsimporte:

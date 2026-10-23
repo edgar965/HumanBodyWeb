@@ -1,0 +1,26 @@
+{% comment %}
+Standardanimation der Ergebnisfigur (22.10.2026, Edgar: „Mach die Standard Animation auf allen Jobs wieder rein, Testjob und trainings jobs, nur bei der Figur. So wie die Mesh-3D Jobs, mit der Standardanimation,
+playleiste, stop und pause usw.“): dieselben Knöpfe wie die Leiste der Mesh-3D-Jobseite (`mesh3d_auftrag.html`), darunter die Wahl der Standardanimation (je Job bzw. Test, Vorgabe A_Results/DanceKurz).
+`Mesh3daifigurbewegungsleiste` (Bedienung), `Mesh3daifigurbewegung` (Figur, Retarget, Mischer). `adresse`: `/api/mesh3dai/…/standardanimation/`; `tasten`: Leertaste, Pfeile, Pos1, Ende (nur die Testseite).
+{% endcomment %}
+<div class="mesh3dai-figurbewegung" data-figurbewegung data-adresse="{{ adresse }}">
+    <div class="mesh3dai-figurbewegung-leiste" role="group" aria-label="Animation der Figur">
+        <span class="mesh3dai-ansichtname">Animation</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-bewegung="anfang" title="An den Anfang{% if tasten %} (Pos1){% endif %}"><i class="fas fa-fast-backward"></i></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bewegung="zurueck" title="Ein Bild zurück{% if tasten %} (←){% endif %}"><i class="fas fa-step-backward"></i></button>
+        <button type="button" class="btn btn-primary btn-sm" data-bewegung="play" title="Abspielen / Pause{% if tasten %} (Leertaste){% endif %}"><i class="fas fa-play"></i></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bewegung="stopp" title="Stopp — zurück an den Anfang, das Feld zeigt wieder die Haltung der KI"><i class="fas fa-stop"></i></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bewegung="vor" title="Ein Bild vor{% if tasten %} (→){% endif %}"><i class="fas fa-step-forward"></i></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bewegung="ende" title="Ans Ende{% if tasten %} (Ende){% endif %}"><i class="fas fa-fast-forward"></i></button>
+        <input type="range" class="mesh3dai-figurbewegung-schieber" data-bewegung="schieber" min="0" max="1000" value="0" step="1" aria-label="Stelle der Animation">
+        <span class="hb-hinweis mesh3dai-figurbewegung-zahl" data-bewegung="zeit">0:00 / 0:00</span>
+        <span class="hb-hinweis mesh3dai-figurbewegung-zahl" data-bewegung="bild" title="Aktuelles Bild der Bewegung / Bilder gesamt">Bild 0 / 0</span>
+    </div>
+    <div class="mesh3dai-figurbewegung-wahl">
+        <label>Standardanimation</label>
+        <select data-bewegung="kategorie" aria-label="Kategorie der Standardanimation" disabled></select>
+        <select data-bewegung="datei" aria-label="Standardanimation" disabled></select>
+        <span class="hb-hinweis" data-bewegung="wahlmeldung"></span>
+    </div>
+    <div class="hb-hinweis" data-bewegung="meldung"></div>
+</div>

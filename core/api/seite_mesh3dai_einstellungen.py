@@ -8,8 +8,11 @@ gelesen wird er bei jeder Abfrage des Stands (`Mesh3daistandwahl`, `Mesh3daistan
 
 from django.views.generic import TemplateView
 
+from ..dienste.mesh3daiabnahmewahl import Mesh3daiabnahmewahl
 from ..dienste.mesh3daiaposewahl import Mesh3daiaposewahl
+from ..dienste.mesh3daikostuemstufe import Mesh3daikostuemstufe
 from ..dienste.mesh3daistandwahl import Mesh3daistandwahl
+from ..dienste.mesh3daistufe2wahl import Mesh3daistufe2wahl
 from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
 
 
@@ -32,7 +35,15 @@ class Mesh3daiEinstellungenSeite(TemplateView):
                                     for w, _text in Mesh3daiaposewahl.WERTE],
                     # 19.10.2026: wie die Jobseite die Bilder der Genesis-Figuren lädt (Edgar: „mach alle 3, per Option einstellbar, default: A“)
                     textur_schluessel=Mesh3daitexturwahl.SCHLUESSEL, textur_wert=Mesh3daitexturwahl.aus(prefs), textur_vorgabe=Mesh3daitexturwahl.text(Mesh3daitexturwahl.VORGABE),
-                    textur_wege=[{'wert': w, 'text': t, 'beschreibung': Mesh3daitexturwahl.BESCHREIBUNG[w]} for w, t in Mesh3daitexturwahl.WERTE])
+                    textur_wege=[{'wert': w, 'text': t, 'beschreibung': Mesh3daitexturwahl.BESCHREIBUNG[w]} for w, t in Mesh3daitexturwahl.WERTE],
+                    # 21.10.2026: Stufe 2 der Kleider-KI (Edgar: „Mach das einstellbar unter Einstellungen - Mesh3d-AI. Die erste Stufe bleibt so wie sie jetzt ist“)
+                    stufe2_felder=Mesh3daistufe2wahl.felder(Mesh3daistufe2wahl.aus(prefs)),
+                    # 22.10.2026: ab wann ein Trainingsjob OK ist (Edgar: „Mach die Fehleranzahl einstellbar bis ein Trainingsjob OK ist“)
+                    abnahme_schluessel=Mesh3daiabnahmewahl.SCHLUESSEL, abnahme_wert=Mesh3daiabnahmewahl.aus(prefs), abnahme_vorgabe=Mesh3daiabnahmewahl.VORGABE,
+                    abnahme_minimum=Mesh3daiabnahmewahl.MINIMUM, abnahme_maximum=Mesh3daiabnahmewahl.MAXIMUM,
+                    # 23.10.2026: wie weit der Kostüm-Weg A geht (Edgar: „zu Punkt 3: Das bitte einstellbar“)
+                    kostuem_schluessel=Mesh3daikostuemstufe.SCHLUESSEL, kostuem_wert=Mesh3daikostuemstufe.aus(prefs), kostuem_vorgabe=Mesh3daikostuemstufe.text(Mesh3daikostuemstufe.VORGABE),
+                    kostuem_stufen=[{'wert': w, 'text': t, 'beschreibung': Mesh3daikostuemstufe.BESCHREIBUNG[w]} for w, t in Mesh3daikostuemstufe.WERTE])
 
 
 #: Name gesetzt wie bei den anderen Seiten — ``as_view()`` heißt sonst ``view``.

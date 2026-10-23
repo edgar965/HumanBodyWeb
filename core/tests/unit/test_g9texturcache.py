@@ -38,8 +38,9 @@ class G9texturcacheTest(unittest.TestCase):
         art = {'a.jpg': 'image/jpeg', 'b.png': 'image/png'}
         return (mock.patch('core.api.g9texturbuendel.G9material.datei', side_effect=lambda p: dateien.get(p)),
                 mock.patch('core.api.g9texturbuendel.G9material.bildart', side_effect=lambda p: art.get(p)),
-                mock.patch('core.api.g9garderobe.G9material.datei', side_effect=lambda p: dateien.get(p)),
-                mock.patch('core.api.g9garderobe.G9material.bildart', side_effect=lambda p: art.get(p)), dateien)
+                # Das Einzelbild liefert seit 19.10.2026 `G9texturfassung.antwort` (Fassungen kante/bc/uastc), dort wird der Name gelesen.
+                mock.patch('core.dienste.g9texturfassung.G9material.datei', side_effect=lambda p: dateien.get(p)),
+                mock.patch('core.dienste.g9texturfassung.G9material.bildart', side_effect=lambda p: art.get(p)), dateien)
 
     @staticmethod
     def _inhalt(antwort):
@@ -70,10 +71,11 @@ class G9texturcacheTest(unittest.TestCase):
             *flicken, _dateien = self._welt(wurzel)
             with flicken[2], flicken[3]:
                 f = RequestFactory()
-                eins = G9garderobeapi.textur(f.get('/t/b.png'), 'b.png')
+                textur = async_to_sync(G9garderobeapi.textur)   # async seit 19.10.2026 (eine Fassung rechnet beim ersten Abruf)
+                eins = textur(f.get('/t/b.png'), 'b.png')
                 self.assertEqual((eins.status_code, eins['Content-Type']), (200, 'image/png'))
                 self.assertEqual(self._inhalt(eins), b'\x89PNG zwei')
                 eins.close()                                    # die Datei freigeben (Windows: sonst bleibt der Prüfordner liegen)
-                zwei = G9garderobeapi.textur(f.get('/t/b.png', HTTP_IF_NONE_MATCH=eins['ETag']), 'b.png')
+                zwei = textur(f.get('/t/b.png', HTTP_IF_NONE_MATCH=eins['ETag']), 'b.png')
                 self.assertEqual(zwei.status_code, 304)
-                self.assertEqual(G9garderobeapi.textur(f.get('/t/x.png'), 'x.png').status_code, 404)
+                self.assertEqual(textur(f.get('/t/x.png'), 'x.png').status_code, 404)

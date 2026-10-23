@@ -68,6 +68,20 @@ export class Mesh3daiflaechennetz {
             const roh = new Int8Array(puffer, ab, v * 3);
             this.normalen = new Float32Array(v * 3);
             for (let i = 0; i < roh.length; i++) this.normalen[i] = roh[i] / 127;
+            ab += auf4(v * 3);
+        }
+        // Farbe je Punkt (21.10.2026 abends, Weg g Fassung 3: aus dem Eingang): uint8 sRGB → lineare Farbe für das Material der Farbe je Punkt (Material −1, `materialien`).
+        if (this.kopf.punktfarbe) {
+            const roh = new Uint8Array(puffer, ab, v * 3);
+            const lin = new Float32Array(v * 3);
+            const c = new THREE.Color();
+            for (let i = 0; i < v; i++) {
+                c.setRGB(roh[i * 3] / 255, roh[i * 3 + 1] / 255, roh[i * 3 + 2] / 255, THREE.SRGBColorSpace);
+                lin[i * 3] = c.r;
+                lin[i * 3 + 1] = c.g;
+                lin[i * 3 + 2] = c.b;
+            }
+            this.farbe = new THREE.BufferAttribute(lin, 3);
         }
         this.uvAttribut = new THREE.BufferAttribute(this.uv, 2);
         /** Indexlisten, die nur an der Verbindung hängen (ganze Figur, nur Körper, Kleider) — für alle Proben dieselben (`Mesh3daiflaechen.teil`). */
@@ -80,7 +94,29 @@ export class Mesh3daiflaechennetz {
         if (this._materialien) return this._materialien;
         const lader = new THREE.TextureLoader();
         this._materialien = this.kopf.materialien.map(m => {
-            const material = new THREE.MeshStandardMaterial({ color: new THREE.Color(...(m.farbe ?? [1, 1, 1])), roughness: 0.75, side: THREE.DoubleSide });
+            // Material aus der KI (21.10.2026 nachts, Stufe 2: Rauheit, Glanz, Metall je Stück in `materialien.json`) — Glanz wie `Genesis9netz` als `specularIntensity` eines physikalischen Materials
+            const Art = Number.isFinite(m.glanz) ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+            const material = new Art({ color: new THREE.Color(...(m.farbe ?? [1, 1, 1])), roughness: Number.isFinite(m.rauheit) ? m.rauheit : 0.75,
+                metalness: Number.isFinite(m.metall) ? m.metall : 0, side: THREE.DoubleSide });
+            if (Number.isFinite(m.glanz)) material.specularIntensity = m.glanz;
+            // Materialkarte je Texel (G Rauheit, B Metall, A Glanz) — dann gelten die Werte der Karte, die Zahlen oben sind nur ihr Mittel
+            if (m.bild_material) {
+                const karte = lader.load(`${this.basis}/bild/${m.bild_material}`, () => Mesh3daiflaechennetz.nachLaden?.());
+                karte.colorSpace = THREE.NoColorSpace;
+                material.roughness = 1;
+                material.roughnessMap = karte;
+                material.metalness = 1;
+                material.metalnessMap = karte;
+                if (material.isMeshPhysicalMaterial) {
+                    material.specularIntensity = 1;
+                    material.specularIntensityMap = karte;
+                }
+            }
+            // Relief aus der KI: Normalenkarte im Tangentenraum (Rahmen aus Lage und UV, wie three.js ihn bildet)
+            if (m.bild_normal) {
+                material.normalMap = lader.load(`${this.basis}/bild/${m.bild_normal}`, () => Mesh3daiflaechennetz.nachLaden?.());
+                material.normalMap.colorSpace = THREE.NoColorSpace;
+            }
             if (m.bild) {
                 material.map = lader.load(`${this.basis}/bild/${m.bild}`, () => Mesh3daiflaechennetz.nachLaden?.());
                 material.map.colorSpace = THREE.SRGBColorSpace;

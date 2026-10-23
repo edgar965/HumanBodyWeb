@@ -118,4 +118,35 @@ class ListeTest(SimpleTestCase):
             st = Mesh3daitestkleider.liste('probe', 'maennlich')['stuecke'][0]
         self.assertNotIn('netz', st['a'])
         self.assertIn('/kleid/maennlich/b/haut', st['b']['netz'])
-        self.assertEqual(st['wahl'], 'b')
+        # Seit 20.10.2026 ist die Vorgabe „ki“ (das Ergebnis kommt aus der KI): die Haut zeigt dann die Haut der Figur (a), nicht die gebackene des Mesh-3D-Laufs.
+        self.assertEqual(st['wahl'], 'a')
+
+    def test_12_ki_zeilen_aus_ki_json(self):
+        # KI-Zeilen kommen aus `ki.json`, bei Vorgabe „ki“ in ihrer Reihenfolge (`ki_vorgabe`); Weg ohne Netz bekommt keine Adresse.
+        # Sabotage: in `wirksam` den Zweig `if ki:` unter `vorgabe == 'ki'` weglassen → „aus“ statt „s“.
+        ordner = self.test / 'kleider_maennlich'
+        for weg in ('k', 's'):
+            (ordner / weg / 'ki_oberteil' / 'anzeige').mkdir(parents=True)
+            (ordner / weg / 'ki_oberteil' / 'anzeige' / 'netz.npz').write_bytes(b'x')
+        zeile = {'id': 'ki_oberteil', 'name': 'Oberteil', 'art': 'oberteil', 'quelle': 'ki', 'ki_vorgabe': ['s', 'k'], 'k': {'punkte': 10}, 's': {'punkte': 12}, 'h': {'fehler': 'x'}}
+        (ordner / 'ki.json').write_text(json.dumps({'stuecke': [zeile]}), encoding='utf-8')
+        with mock.patch('core.dienste.mesh3daitest.Mesh3daitest.pfad', return_value=self.test):
+            liste = Mesh3daitestkleider.liste('probe', 'maennlich')
+        ki = next(s for s in liste['stuecke'] if s['id'] == 'ki_oberteil')
+        self.assertEqual(ki['wahl'], 's')
+        self.assertIn('/kleid/maennlich/s/ki_oberteil', ki['s']['netz'])
+        self.assertNotIn('netz', ki['h'])
+
+    def test_13_vorgabe_b_schaltet_ki_aus(self):
+        st = {'id': 'ki_hose', 'quelle': 'ki', 'ki_vorgabe': ['k'], 'k': {'punkte': 3}}
+        self.assertEqual(Mesh3daitestkleider.wirksam(st, None, 'b'), 'aus')
+        self.assertEqual(Mesh3daitestkleider.wirksam(st, 'k', 'b'), 'k')
+        self.assertEqual(Mesh3daitestkleider.wirksam({'id': 'hose', 'b': {'punkte': 1}}, None, 'ki'), 'aus')
+
+    def test_14_vorgabe_ki_nimmt_keine_frisur_der_bibliothek(self):
+        # Edgar 20.10.2026: Haar nicht aus der Bibliothek. Auch eine alte `ki.json` mit h vorn zeigt k; ohne k bleibt das Haar aus; die eigene Wahl h gilt.
+        # Sabotage: in `wirksam` den Filter `AUS_DER_BIBLIOTHEK` weglassen → „h“ statt „k“.
+        haar = {'id': 'ki_haar', 'quelle': 'ki', 'art': 'haar', 'ki_vorgabe': ['h', 'k', 's'], 'k': {'punkte': 5}, 'h': {'punkte': 9}}
+        self.assertEqual(Mesh3daitestkleider.wirksam(haar, None, 'ki'), 'k')
+        self.assertEqual(Mesh3daitestkleider.wirksam(dict(haar, k=None), None, 'ki'), 'aus')
+        self.assertEqual(Mesh3daitestkleider.wirksam(haar, 'h', 'ki'), 'h')

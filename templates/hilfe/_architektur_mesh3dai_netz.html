@@ -31,7 +31,8 @@ Daten: `Architekturmesh3dainetz` (Tabelle gegen den Lauf geprüft), `Architektur
     <h3>Köpfe am selben Rückgrat — gebaut und vorgeschlagen</h3>
     <p>Alles, was das Netz über eine Figur sagen soll, hängt als eigener Kopf am selben Rückgrat (Schichten 1–4 und die ganze Figur): was je Punkt gilt (Gelenk-Stimmen, Teil), liest einen Kopf je Punkt;
       was für die ganze Figur gilt (Form, Kleiderwahl, Mimik), einen Kopf aus den 1.024 Zahlen der ganzen Figur. <strong>Kleider brauchen dafür kein eigenes Netz</strong> — erst wer die Form eines Kleidungsstücks
-      neu <em>erzeugen</em> will, braucht ein eigenes, großes Netz (Abschnitt 8). Gebaut sind heute nur Haltung und Form.</p>
+      neu <em>erzeugen</em> will, braucht ein eigenes, großes Netz (Abschnitt 8). Das war der Stand vom 16.10.2026. <strong>Seit 20.10.2026</strong> gibt es für Kleider zwei eigene, kleine Netze
+      neben diesem: das Zerlegungsnetz (Art je Punkt) und das Schnittnetz (GarmentCode-Bauplan und seine Zahlen) — Abschnitt <a href="#garmentcode">Kleider-GarmentCode</a>.</p>
     <table class="doku m3a-schichten">
       <thead><tr><th>Kopf</th><th>liest</th><th>gibt aus</th><th class="num">Gewichte</th><th>Stand</th><th>Warum / wo</th></tr></thead>
       <tbody>{% for name, liest, aus, gewichte, stand, text in koepfe %}<tr><td>{{ name }}</td><td>{{ liest }}</td><td>{{ aus }}</td><td class="num">{{ gewichte|de|default:"—" }}</td>

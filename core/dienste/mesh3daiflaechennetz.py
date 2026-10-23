@@ -18,6 +18,7 @@ Laufs mit Daz-Winkeln genau so wie das Datenskript das Ziel (Hautmischung aus de
 weil `Mesh3daianatomie` aus ihnen das Stück backt. Im Kopf die Zahl, am Ende (nach `ruhe`) uint32 verborgen (Zahl).
 `normalen` (19.10.2026, Trainingspaare: die Normalen des Genesis-Exports, sonst knickt die Naht Haut ↔ Anatomie-Stück): im Kopf `normalen: true`, danach int8 (V·3, × 127, auf 4 aufgefüllt);
 `anatomie_fertig` im Kopf: das Stück trägt schon die Karte der Charakter-Seite, die Seite backt nicht neu.
+`punktfarbe` (21.10.2026 abends, Weg g Fassung 3 von Mesh3D-AI: Farbe je Punkt aus dem Eingang): im Kopf `punktfarbe: true`, danach uint8 sRGB (V·3, auf 4 aufgefüllt); die Dreiecke tragen Material −1.
 """
 
 import json
@@ -39,6 +40,7 @@ class Mesh3daiflaechennetz:
     ORDNER = 'anzeige'
     FASSUNGEN = (1,)
     TEILE = ('koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd')
+    MATERIALWERTE = ('rauheit', 'glanz', 'metall', 'relief')
     _ablage = {}
 
     @classmethod
@@ -77,6 +79,8 @@ class Mesh3daiflaechennetz:
                 daten['anatomie_fertig'] = bool(z['anatomie_fertig']) if 'anatomie_fertig' in z.files else False
                 if 'normalen' in z.files and len(z['normalen']) == len(daten['uv']):
                     daten['normalen'] = np.clip(np.round(z['normalen'].astype(np.float32) * 127), -127, 127).astype(np.int8)
+                if 'punktfarbe' in z.files and len(z['punktfarbe']) == len(daten['uv']):
+                    daten['punktfarbe'] = z['punktfarbe'].astype(np.uint8)
             daten['materialien'] = json.loads((ordner / 'materialien.json').read_text(encoding='utf-8'))
             daten['fassung'] = fassung
         except (OSError, ValueError, KeyError, zipfile.BadZipFile) as fehler:
@@ -97,8 +101,11 @@ class Mesh3daiflaechennetz:
         haut = int(d['knochen'].shape[1])
         kopf = {'fassung': d['fassung'], 'punkte': int(len(d['uv'])), 'dreiecke': int(len(d['dreiecke'])), 'haut': haut, 'teile': list(cls.TEILE),
                 'teilfarben': d['teilfarben'].astype(int).tolist(),
-                'materialien': [{'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')} for m in d['materialien']], 'ruhe': 'ruhe' in d,
-                'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d}
+                # Rauheit, Glanz, Metall nur, wenn das Stück sie trägt (21.10.2026 nachts, Stufe 2 der Kleider-KI) — sonst bleibt die Vorgabe der Seite
+                'materialien': [dict({'name': m.get('name'), 'bild': m.get('bild'), 'farbe': m.get('farbe')}, **{k: m[k] for k in cls.MATERIALWERTE if isinstance(m.get(k), (int, float))},
+                                     **{k: m[k] for k in ('bild_material', 'bild_normal') if isinstance(m.get(k), str)})
+                                for m in d['materialien']], 'ruhe': 'ruhe' in d,
+                'verborgen': int(len(d.get('verborgen', ()))), 'anatomie_fertig': bool(d.get('anatomie_fertig')), 'normalen': 'normalen' in d, 'punktfarbe': 'punktfarbe' in d}
         text = json.dumps(kopf, ensure_ascii=False).encode('utf-8')
         text += b' ' * (-len(text) % 4)
         a = cls._auffuellen
@@ -111,11 +118,14 @@ class Mesh3daiflaechennetz:
             teile.append(d['verborgen'].astype('<u4').tobytes())
         if 'normalen' in d:
             teile.append(a(d['normalen'].tobytes()))
+        if 'punktfarbe' in d:
+            teile.append(a(d['punktfarbe'].tobytes()))
         return b''.join(teile)
 
     @classmethod
     def bild(cls, modell, name):
-        if not re.fullmatch(r'm\d{1,4}\.jpg', str(name)):
+        # `m<n>_material.png` (21.10.2026 nachts): Materialkarte eines KI-Stücks der Stufe 2 — G Rauheit, B Metall, A Glanz (wie three.js die Karten liest)
+        if not re.fullmatch(r'm\d{1,4}(\.jpg|_material\.png|_normal\.png)', str(name)):
             return None
         pfad = cls.ordner(modell) / 'bilder' / name
         return pfad if pfad.is_file() else None

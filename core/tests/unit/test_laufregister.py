@@ -46,7 +46,7 @@ class LaufregisterTest(SimpleTestCase):
     def _schlaefer(self, kennzeichen=True):
         befehl = [sys.executable, '-c', 'import time; time.sleep(60)']
         if kennzeichen:
-            befehl.append(Laufregister.KENNZEICHEN)
+            befehl.append(Laufregister.KENNZEICHEN[0])     # seit 20.10.2026 ein Tupel (Einzelprozess, Dauerprozess)
         prozess = subprocess.Popen(befehl, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.prozesse.append(prozess)
         return prozess

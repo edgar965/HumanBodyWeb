@@ -1,0 +1,124 @@
+{% load dezahl %}
+{% comment %}Abschnitt „Kleider wie das Ziel: der Schichtkopf“ (21.10.2026, Edgar: „das ist doch gaga, wie sieht die KI nicht, welches Zielstück sie bauen soll?? wie trainierst du denN??“ → „mach, und update auch
+die Hilfe dateien“). Daten: `Architekturmesh3daischicht` (liest `3DObjects/mesh3dai/_schicht/`). Konzept `Docu/konzepte/2026-10-21_mesh3dai-kleider-wie-das-ziel-konzept.md`.{% endcomment %}
+<h2 id="schicht">Kleider wie das Ziel: der Schichtkopf (Weg g)</h2>
+{% with s=schicht %}
+<div class="info-box info-box-blue">
+  <strong>Warum neu:</strong> Bis 21.10.2026 sah das Training die <em>Form</em> eines Zielstücks nie. Der Zerlegungskopf lernte nur, welcher Punkt zu welcher Art gehört; der Schnittkopf lernte
+  GarmentCode-Zahlen an eigenen Übungsstücken, die Daz-Zielstücke (Ursulas Hose, Mann1s T-Shirt) kamen darin gar nicht vor. Gebaut wurde außerhalb der KI — ausgeschnitten (k), GarmentCode (s),
+  flachgelegt und drapiert (f) —, und gemessen wurde gegen das ausgeschnittene Stück k, nicht gegen das Ziel.<br>
+  <strong>Jetzt:</strong> Der Schichtkopf gibt die Form selbst aus — je Punkt des Genesis-Käfigs und je Art: liegt das Stück dort, und wie weit steht es ab. Trainiert wird in Millimetern gegen die
+  ZIELSTÜCKE der Trainingsfiguren. Keine Wahl aus der Garderobe: die Stücke der Garderobe sind nur das Übungsmaterial, an dem die Figuren des Datensatzes angezogen sind.
+</div>
+
+<h3>Die Schritte</h3>
+<table class="doku">
+  <thead><tr><th>Schritt</th><th>Eingabe</th><th>was passiert</th><th>Ausgabe</th></tr></thead>
+  <tbody>{% for schritt, ein, was, aus in s.schritte %}<tr><td><strong>{{ schritt }}</strong></td><td>{{ ein }}</td><td>{{ was }}</td><td>{{ aus }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h3>Kann eine Schicht ein Zielstück überhaupt tragen? (Rückbau ohne Netz)</h3>
+{% if s.darstellbar %}
+<p>Jedes Zielstück aus seinem eigenen Soll zurückgebaut und gegen das Stück gemessen — die Obergrenze dessen, was der Kopf erreichen kann ({{ s.darstellbar.figuren }} Figuren, Soll Fassung
+  {{ s.darstellbar.fassung }}, `mesh3dai_schicht_darstellbar.py`, 21.10.2026). Median über die Stücke einer Art; Löcher = Anteil der Zielfläche ohne gebaute Fläche binnen 5 mm;
+  Überschuss = Anteil der gebauten Fläche ohne Zielfläche binnen 5 mm (Fahnen, Häute zwischen den Gliedern).</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Art</th><th>Stücke</th><th>Gebaut → Ziel (mm)</th><th>Ziel → gebaut (mm)</th><th>Löcher (Median)</th><th>Löcher (größte)</th><th>Überschuss (Median)</th></tr></thead>
+  <tbody>{% for z in s.darstellbar.zeilen %}<tr><td>{{ z.art }}</td><td class="num">{{ z.stuecke }}</td><td class="num">{{ z.weg_ziel|de:1 }}</td><td class="num">{{ z.ziel_weg|de:1 }}</td>
+    <td class="num">{{ z.loecher|de:1 }} %</td><td class="num">{{ z.loecher_max|de:1 }} %</td><td class="num">{% if z.ueberschuss is not None %}{{ z.ueberschuss|de:1 }} %{% else %}—{% endif %}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="m3a-klein">Lesart: anliegende Stücke liegen bei 1–2 mm, auch Kleid, Rock und Robe tragen sich überwiegend. <strong>Haar nicht:</strong> was frei vom Körper hängt (lange Strähnen,
+  Zopf, Dutt), hat keinen Käfigpunkt unter sich — dort bleiben Löcher; auch kurzes Haar liegt in mehreren Lagen, gebaut wird nur die äußerste. Zusatzstrahlen auf Ringen um jeden Punkt
+  machten es schlechter (Löcher duke_hair 26,8 → 31,3 %, Dutt 82,8 → 93,3 %). Dafür bräuchte das Haar eine eigene Trägerfläche (Haarkäfig, Konzept Abschnitt 3; nicht gebaut).<br>
+  <strong>Fassung 1 → 2:</strong> ohne die Zugehörigkeit trug das Soll Häute zwischen den Beinen und Fahnen unter den Armen — gemessen an 10 Figuren Überschuss der Kleidung 4–10 % → 0,1–0,7 %
+  (Ursula1 Oberteil 8,3 → 0,1 %, Hose 4,8 → 0,7 %), Löcher gleich (2,1 → 2,1 %, 0,9 → 1,1 %).</p>
+{% else %}<p class="ag-fehlt">Keine Messung der Darstellbarkeit (`_schicht/darstellbar_v1.json`).</p>{% endif %}
+
+<h3>Training</h3>
+{% if s.lauf and s.lauf.fassung >= 3 %}
+<p>Lauf <code>{{ s.lauf.name }}</code> (Daten Fassung 3): {{ s.lauf.schritte|de }} Schritte, {{ s.lauf.sekunden|de }} s, {{ s.lauf.gewichte|de }} Gewichte; je Schritt eine Wolke einer Trainingsfigur,
+  durch dieselbe Kette wie im Einsatz (A-Pose-Wolke der Vorstufe, Art aus dem Zerlegungskopf, Käfig der KI-Figur aus der Formvorhersage dieser Probe, Ziel auf diesen Käfig übertragen).
+  Zusätzlich gestört: Punkte ±1,5 mm, Farbe, Art-Flecken, Art ganz weg, Punkte weg. Verlust: Saum als Abstand (cm, nahe am Saum stärker) + Lage über der Hülle (mm). {{ s.lauf.grund }}</p>
+{% for m in s.lauf.messungen %}
+<p><strong>Prüfwolken ({{ s.lauf.pruefwolken }}), Eingabe {{ m.name }}</strong>, Schritt {{ m.schritt|de }} — der Kopf neben der Basislinie „nächster Punkt“ (Bedeckung und Art des nächsten beobachteten
+  Punkts im Umkreis 5 cm, seine Höhe als Lage).</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Größe</th><th>Kopf</th><th>nächster Punkt</th></tr></thead>
+  <tbody>{% for z in m.zeilen %}<tr><td>{{ z.groesse }}</td><td class="num">{{ z.netz|de:3 }}</td><td class="num">{{ z.basis|de:3 }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endfor %}
+{% elif s.lauf %}
+<p>Lauf <code>{{ s.lauf.name }}</code>: {{ s.lauf.schritte|de }} Schritte, {{ s.lauf.sekunden|de }} s, {{ s.lauf.gewichte|de }} Gewichte; je Schritt eine Wolke einer Trainingsfigur. Gestört wie im Einsatz:
+  Käfig weich um ±8 mm entlang der Normale verschoben (Körperfehler der KI), Punkte ±1,5 mm, Farbe gestreut, Art aus der Zerlegung mit Fehlern oder ganz weg.
+  Verlust: Deckung (Kreuzentropie + Dice je Art) + Abstand in mm, wo das Ziel liegt. {{ s.lauf.grund }}</p>
+{% for m in s.lauf.messungen %}
+<p><strong>Prüfwolken ({{ s.lauf.pruefwolken }}, mit fester Saat gezogen aus 338: 282 von 30 nie trainierten Figuren, 56 aus Prüfposen von vier Trainingsfiguren — Damira0, Mann1, Matt0, Ursula1),
+  Eingabe {{ m.name }}</strong>, Schritt {{ m.schritt|de }} — der Kopf neben der Basislinie „nächster Punkt“
+  (Deckung und Abstand des nächsten beobachteten Punkts: das, was Weg k sieht). IoU der Deckung; Abstand = Median der Abweichung in mm, wo beide gedeckt sagen.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Art</th><th>IoU Kopf</th><th>IoU nächster Punkt</th><th>Abstand Kopf (mm)</th><th>Abstand nächster Punkt (mm)</th></tr></thead>
+  <tbody>{% for z in m.zeilen %}<tr><td>{{ z.art }}</td><td class="num">{{ z.netz.iou|de:3 }}</td><td class="num">{{ z.basis.iou|de:3 }}</td><td class="num">{{ z.netz.mm_median|de:1 }}</td>
+    <td class="num">{{ z.basis.mm_median|de:1 }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endfor %}
+{% else %}<p class="ag-fehlt">Kein gewählter Lauf (`_schicht/gewaehlt.json`).</p>{% endif %}
+
+<h3>Training gegen Einsatz (Ursula1, gemessen 21.10.2026 abends)</h3>
+<p>Derselbe Kopf (Lauf <code>2026.10.21.10.42_schicht2_zugehoerig</code>), Deckung je Käfigpunkt gegen das Soll von Ursula1, einmal mit dem Eingang des Trainings, einmal mit dem des Einsatzes
+  (<code>schicht_fehlerkette.py Ursula1 1</code>). Ursula1 ist eine Trainingsfigur — der Kopf kennt ihr Stück.</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Eingang</th><th>IoU Oberteil</th><th>IoU Hose</th><th>IoU Haar</th><th>nackt, wo das Ziel bedeckt</th><th>davon Rücken 0,8–1,2 m</th></tr></thead>
+  <tbody>
+    <tr><td>wie im Training: Wolke an ihrer Stelle, wahre Art, echter Käfig (12 Wolken)</td><td class="num">0,935–0,949</td><td class="num">0,956–0,973</td><td class="num">0,744–0,758</td><td class="num">0,4–1,3 %</td><td class="num">3–4 Punkte</td></tr>
+    <tr><td>wie im Einsatz: Eingangsnetz, Zerlegung, Übertrag auf den Körper der KI</td><td class="num">0,821</td><td class="num">0,891</td><td class="num">0,716</td><td class="num">1,8 %</td><td class="num">71 Punkte</td></tr>
+  </tbody>
+</table>
+<p class="m3a-klein">Lesart: Was im Bild fehlt (Rücken, Brücke im Schritt), geht zwischen Training und Einsatz verloren. Der Käfig der KI liegt am selben Punkt 15,2 mm (Median, p90 20,5) vom echten Käfig —
+  er ist entlang der Haut verschoben, eine Störung, die das Training nicht zeigt (es stört nur ±8 mm entlang der Normale). Die IoU der Prüfung oben sieht das nicht.
+  Licht: in allen drei Feldern gleich; das Ergebnis wirkt flach, weil ein Stück EINE Farbe trägt, Start und Ziel dagegen Schatten und Falten in der Farbe.</p>
+
+<h3 id="schicht-pruefung">Prüfung nach Fehlerklassen (Konzept Abschnitt 8, Grundsatz 4)</h3>
+{% if s.pruefung %}
+<p>Je Käfigpunkt der KI-Figur ein Strahl entlang der Richtung der Hülle (`Kleiderpruefung`, `schicht_pruefung_lauf.py`): was zeigt der <strong>Eingang</strong> (die A-Pose-Wolke der Vorstufe auf dem
+  Körper der KI, Art aus der Zerlegung — das, was die KI sieht), was das <strong>Ergebnis</strong>, was das <strong>Ziel</strong> (dieselben Strahlen auf dem echten Körper). Anteile in %:
+  <em>Lücke</em> = Eingang zeigt Stoff, Ergebnis keinen · <em>Fahne</em> = Ergebnis Stoff, Eingang Haut · <em>Durchstich</em> = äußerste Lage weniger als 0,5 mm über der Haut ·
+  <em>Zacken</em> = Saumlänge ÷ geglättete Saumlänge − 1 (0 = glatt) · <em>Mulde</em> = in Falten (Hülle über 8 mm) liegt das Stück mehr als 5 mm unter der Hülle ·
+  <em>Haar</em> = Eingang Haar, Ergebnis keins · gegen das Ziel dieselben Zähler je Käfigpunkt. Die Zeile „Ziel“ ist der Bezug: so glatt und so überbrückt ist das Ziel selbst.</p>
+{% for j in s.pruefung.jobs %}
+<p><strong>{{ j.job }}</strong>, Probe {{ j.probe }} (gemessen {{ j.gemessen }})</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Weg</th>{% for k in s.pruefung.klassen %}<th>{{ k }}</th>{% endfor %}<th>Lücke gegen Ziel am unteren Rücken</th></tr></thead>
+  <tbody>{% for z in j.zeilen %}<tr{% if z.neu %} class="m3a-neu"{% endif %}><td>{{ z.weg }}</td>{% for w in z.werte %}<td class="num">{{ w|de:2 }}</td>{% endfor %}
+    <td class="num">{{ z.ruecken|de:1 }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endfor %}
+{% else %}<p class="ag-fehlt">Noch nicht gemessen (`_schicht/pruefung.json`).</p>{% endif %}
+
+<h3>Gegen das Ziel gemessen (Grundjobs)</h3>
+{% if s.gegen_ziel %}
+<p>Alle Wege einer Probe gegen die Zielstücke derselben Art, in der Ruhelage (`flaeche_gegen_ziel.py`). Das Ziel sitzt auf dem echten Körper, die Wege auf dem Körper der KI — dessen Abstand steht
+  als erste Zeile und steckt in allen Zahlen. Median / p90 in mm.</p>
+{% for j in s.gegen_ziel %}
+<p><strong>{{ j.job }}</strong>, Probe {{ j.probe }} (gemessen {{ j.gemessen }})</p>
+<table class="doku m3a-schmal">
+  <thead><tr><th>Art</th><th>Weg</th><th>Weg → Ziel</th><th>Ziel → Weg</th><th>Löcher</th></tr></thead>
+  <tbody>{% for z in j.zeilen %}<tr{% if z.neu %} class="m3a-neu"{% endif %}><td>{{ z.art }}</td><td>{{ z.weg }}</td><td class="num">{{ z.weg_ziel.0|de:1 }} / {{ z.weg_ziel.1|de:1 }}</td>
+    <td class="num">{{ z.ziel_weg.0|de:1 }} / {{ z.ziel_weg.1|de:1 }}</td><td class="num">{% if z.loecher is not None %}{{ z.loecher|de:1 }} %{% endif %}</td></tr>{% endfor %}</tbody>
+</table>
+{% endfor %}
+{% else %}<p class="ag-fehlt">Noch nicht gemessen (`_schicht/gegen_ziel.json`).</p>{% endif %}
+
+<h3>Warum die Fehler kommen, und was sie grundsätzlich verhindert (Konzept Abschnitt 8, nichts davon gebaut)</h3>
+<p>Körper der KI, übertragener Eingang und Schicht entstehen getrennt und werden nie gegeneinander abgeglichen; der Kopf lernt nur auf einem Eingang, in dem Körper und Eingang zusammenpassen.
+  Gemessen an Ursula1: am unteren Rücken liegt der beobachtete Stoff im Einsatz 13,3 mm UNTER der Haut der KI (Training 7,1 mm darüber) — dort baut der Kopf nichts, der Hautstreifen; an der Brust
+  −4,7 statt +6,5 mm, am Bauch +13,9 statt +7,1 mm. Die Zerlegung stimmt dort (347 von 352 Beobachtungen „Oberteil“). Jede Stelle, an der die drei auseinanderliegen, kann brechen.</p>
+<ol>
+  <li><strong>Das Training sieht genau den Einsatz:</strong> jede Trainingsprobe durch dieselbe Kette (Vorstufe, Zerlegung, KI-Figur, Übertrag), das Soll auf dem Käfig dieser KI-Figur (Fassung 3).
+    Prüfgröße: Training gegen Einsatz an derselben Figur.</li>
+  <li><strong>Das Ergebnis muss den Eingang erklären:</strong> am Ende Körper und Stücke gemeinsam an das Eingangsnetz angleichen — Stoff auf der beobachteten Fläche, Körper immer darunter, Verdecktes aus dem Kopf.</li>
+  <li><strong>Eine Darstellung, die diese Fehler nicht bilden kann:</strong> Hülle mit geschlossenen Mulden als Träger jedes Stücks, Saum als Abstand in mm, Bedeckung und Art getrennt, Farbe je Punkt.</li>
+  <li><strong>Prüfung an allen Jobs nach Fehlerklassen</strong> (Lücke, Durchstich, Fahne, Zacken, Mulde, Haar, Lage) gegen den Eingang und, wo vorhanden, gegen das Ziel; ein Lauf, der eine Klasse
+    an einem Job verschlechtert, wird nicht gewählt.</li>
+</ol>
+<p class="m3a-klein">Nicht gelöst: langes, frei hängendes Haar (braucht Haarkäfig oder Strähnen); ungesehene Stücke (den Testjobs fehlt die Arten-Datei).</p>
+{% endwith %}

@@ -7,6 +7,8 @@ Einzelabruf (`G9garderobeapi.textur`) und das Bündel (`G9texturbuendelapi`). Oh
 
     kante=512|1024|2048   `G9texturkopie` (Weg A)
     format=bc             `G9texturblock` (Weg C); geht vor `kante`
+    format=uastc          `G9texturbasis` (UASTC, /Charakter/, `Szenentexturwahl`); `&raum=lin` für Bilder ohne Farbe (Normalen, Rauheit …) — bis die
+                          Fassung kodiert ist, kommt der Block von Weg C
 Weg B (volle Bilder, eines nach dem anderen hochladen) braucht vom Server nichts.
 """
 from django.http import HttpResponseNotFound
@@ -14,6 +16,7 @@ from django.http import HttpResponseNotFound
 from Genesis9.material import G9material
 
 from .auftragsdatei import Auftragsdatei
+from .g9texturbasis import G9texturbasis
 from .g9texturblock import G9texturblock
 from .g9texturkopie import G9texturkopie
 
@@ -27,9 +30,11 @@ class G9texturfassung:
 
     @classmethod
     def wahl(cls, abfrage):
-        u"""`(kante, form)` aus den Parametern der Anfrage: `kante` eine von `KANTEN` oder 0, `form` 'bc' oder ''."""
+        u"""`(kante, form)` aus den Parametern der Anfrage: `kante` eine von `KANTEN` oder 0, `form` 'bc', 'uastc', 'uastc-lin' oder ''."""
         if (abfrage.get('format') or '') == 'bc':
             return 0, 'bc'
+        if (abfrage.get('format') or '') == 'uastc':
+            return 0, 'uastc-lin' if abfrage.get('raum') == 'lin' else 'uastc'
         try:
             kante = int(abfrage.get('kante') or 0)
         except ValueError:
@@ -39,7 +44,16 @@ class G9texturfassung:
     @staticmethod
     def marke(kante, form):
         u"""Teil des ETags im Bündel: Wahl und Fassung des Rechenwegs (das Original geht dort mit Größe und Zeit ein)."""
-        return 'k%d|f%s|%d|%d' % (kante, form, G9texturkopie.FASSUNG, G9texturblock.FASSUNG)
+        return 'k%d|f%s|%d|%d|%d' % (kante, form, G9texturkopie.FASSUNG, G9texturblock.FASSUNG, G9texturbasis.FASSUNG)
+
+    @staticmethod
+    def stand(pfad, kante=0, form=''):
+        u"""Was sich an der Antwort für `pfad` ändert, ohne dass sich das Original ändert: bei UASTC, ob die Fassung schon liegt (sonst kommt der Block) —
+        Teil des ETags im Bündel, sonst bekäme der Browser den Block für immer als 304. Sonst ''."""
+        if not form.startswith('uastc'):
+            return ''
+        original = G9material.datei(pfad)
+        return 'u1' if original is not None and G9texturbasis.liegt(original, str(pfad), form == 'uastc-lin') else 'u0'
 
     @staticmethod
     def datei(pfad, kante=0, form=''):
@@ -49,6 +63,8 @@ class G9texturfassung:
             return None, None
         if form == 'bc':
             return G9texturblock.fuer(original, str(pfad))
+        if form.startswith('uastc'):
+            return G9texturbasis.fuer(original, str(pfad), form == 'uastc-lin')
         if kante:
             return G9texturkopie.fuer(original, str(pfad), art, kante)
         return original, art

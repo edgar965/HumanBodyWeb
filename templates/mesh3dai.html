@@ -12,6 +12,7 @@ Endpunkte: `core/api/mesh3dai.py`. Seit 14.10.2026 ist das die Seite EINES Jobs 
 {% block extra_head %}
 <link rel="stylesheet" href="{% fassungspfad 'css/schaltknoepfe.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/mesh3dai.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragname.css' %}">
 {# Die Karte des Anatomie-Stücks (Haut des Körpers, `Mesh3daianatomie` → `Anatomiebacken`) rechnet in einem Worker, wie in der Szene. #}
 <meta name="anatomiearbeiter" content="{% fassungspfad 'viewer/gemeinsam/anatomiearbeiter.js' %}">
 {# Ziel und Ergebnis sind Genesis-Figuren aus dem Code der Charakter-Seite (`Mesh3daigenesisfigur`): die Haut-Maske rechnet in deren Worker. #}
@@ -29,7 +30,9 @@ Strg+Alt+H schaltet die Netzstufe weiter (grob → fein → ultrafein). Die Char
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-microchip"></i> <a href="/mesh-3D-AI/" class="mesh3dai-zurueckzurliste" title="Alle Jobs">Mesh3D-AI</a> <span class="mesh3dai-pfad">›</span> {{ job.name }}</h1>
+    <h1><i class="fas fa-microchip"></i> <a href="/mesh-3D-AI/" class="mesh3dai-zurueckzurliste" title="Alle Jobs">Mesh3D-AI</a> <span class="mesh3dai-pfad">›</span>
+    {# Name änderbar (19.10.2026, Stift wie bei Mesh-3D: `gemeinsam/auftragname.js`, `Mesh3dainame`); Kennung und Adresse bleiben. #}
+    <span id="auftrag-name" data-adresse="{% url 'mesh3dai_name' job.id %}">{{ job.name }}</span></h1>
 </div>
 
 {% comment %}
@@ -44,11 +47,13 @@ solange die Zeile zu sehen ist (`mesh3dai.css`; die Höhen setzt `Mesh3daiseite`
 
 <div class="card" id="mesh3dai-job" data-job="{{ job.id }}">
     <div class="mesh3dai-kopf">
-        <span>Job (ein Modell): <b>{{ job.name }}</b></span>
+        <span>Job (ein Modell): <b data-auftragname-kopie>{{ job.name }}</b></span>
         <a href="/mesh-3D-AI/" class="btn btn-secondary btn-sm" title="Zur Liste aller Jobs"><i class="fas fa-list"></i> Alle Jobs</a>
         <span class="hb-hinweis" id="mesh3dai-jobinfo"></span>
         <div class="mesh3dai-zusammenfassung" id="mesh3dai-zusammenfassung"></div>
     </div>
+    {% comment %}Datum und Dauer des Laufs (22.10.2026, Edgar: „im job schreibe oben eine Zeile mit dem Datum des Laufs und die Dauer“) — `Mesh3dailaufzeile`, dieselben Zahlen wie die Jobliste.{% endcomment %}
+    <div class="mesh3dai-laufzeile">{% for t in laufzeile %}{% if not forloop.first %} · {% endif %}<span title="{{ t.tipp }}">{{ t.titel }}: <b>{{ t.wert }}</b></span>{% endfor %}</div>
 </div>
 
 <div class="card" id="mesh3dai-probenkarte">
@@ -67,7 +72,73 @@ solange die Zeile zu sehen ist (`mesh3dai.css`; die Höhen setzt `Mesh3daiseite`
 </div>
 </div>
 
+<div class="mesh3dai-zeile mesh3dai-koerperzeile" data-bereich="koerper" id="mesh3dai-zeile-koerper">
+    <div class="mesh3dai-zeilenkopf">
+        <h2>Ganzer Körper</h2>
+        {% include "_mesh3dai_ansichtwahl.html" %}
+    </div>
+    <div class="mesh3dai-bereiche" id="mesh3dai-bereiche">
+        <section class="card mesh3dai-bereich" id="mesh3dai-eingabe">
+            {% comment %}Die drei Felder heißen seit 15.10.2026 Start · Ziel · Ergebnis (Edgar: „mache die 3 Ansichten mit neuen Namen: Start, Ziel und Ergebnis“); im Code bleiben die Schlüssel eingabe · soll · ausgabe.{% endcomment %}
+            <h2><span class="mesh3dai-nummer" data-nummer="eingabe">1</span> Start</h2>
+            <p class="hb-hinweis">Was die KI bekommt: nur die Außenfläche.</p>
+            <div class="mesh3dai-leinwand" data-art="eingabe"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="eingabe"></div>
+            {% include "_mesh3dai_download.html" with art="eingabe" %}
+        </section>
+
+        {% comment %}Zwischenbild „Rig → A-Pose“ (Edgar, 17.10.2026: „nicht drei Bilder, sondern vier Bilder, mit dem Rig und Bringen in die A-Position“): nur bei der Probe, auf der die Kette der Vorstufe lief
+        (`probe.apose`, Server `Mesh3daiapose`); sonst verborgen, und die Felder zählen 1–3 (`Mesh3daizeile._aposeFeld`).{% endcomment %}
+        <section class="card mesh3dai-bereich" id="mesh3dai-apose" data-feld="apose" hidden>
+            <h2><span class="mesh3dai-nummer" data-nummer="apose">2</span> Rig → A-Pose</h2>
+            {% comment %}17.10.2026 (Edgar: „im zweiten Schritt hast du den Körper in A-Pose gebracht … Warum sind die zwei Bilder rechts dann doch in der Laufpose?“): der Text sagt, dass NUR hier in der A-Pose gerechnet
+            wird und Ziel/Ergebnis die Haltung des Netzes zeigen; durchscheinend = Löcher der Außenfläche (bis 17.10.2026 abends dunkel — sah aus wie falsche Textur), orange = die Gelenke des Netzes (`Mesh3daiapose`, `Mesh3dairigzeichner`).{% endcomment %}
+            <p class="hb-hinweis">Netz in der A-Pose; orange: Gelenke der Vorstufe.</p>
+            <div class="mesh3dai-leinwand" data-art="apose"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="apose"></div>
+        </section>
+
+        <section class="card mesh3dai-bereich" id="mesh3dai-soll">
+            <h2><span class="mesh3dai-nummer" data-nummer="soll">2</span> Ziel</h2>
+            <p class="hb-hinweis">Soll: Genesis-Modell mit Kleidern, Haar und Rig.</p>
+            <div class="mesh3dai-leinwand" data-art="soll"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="soll"></div>
+            {% include "_mesh3dai_download.html" with art="soll" %}
+        </section>
+
+        <section class="card mesh3dai-bereich" id="mesh3dai-ausgabe">
+            <h2><span class="mesh3dai-nummer" data-nummer="ausgabe">3</span> Ergebnis</h2>
+            <p class="hb-hinweis">Ausgabe der KI. Punkte: Fehler je Knochen (grün 0, rot ab 30 mm).</p>
+            <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
+            <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
+            {% url 'mesh3dai_standardanimation' job.id as standardanimation %}
+            {% include "_mesh3dai_figurbewegung.html" with adresse=standardanimation tasten=False %}
+            <div class="mesh3dai-guete" data-guete></div>
+            {% include "_mesh3dai_download.html" with art="ausgabe" %}
+            <div class="mesh3dai-bereichsknoepfe mesh3dai-geistwahl">
+                {% comment %}Vorgabe aus (Edgar, 15.10.2026: „warum noch immer 2 Meshes beim Ergebnis und zwei Rigs?“) — an zeigt das Soll (Fläche und graues Rig) zusätzlich zur Ausgabe.{% endcomment %}
+                <label class="mesh3dai-filter"><input type="checkbox" id="mesh3dai-geist"> Ziel als Geist darüber (in allen Zeilen)</label>
+            </div>
+        </section>
+    </div>
+</div>
+
+{% comment %}Hinweise der Zeilen seit 20.10.2026 abends leer (Edgar: „ich brauche keine Romane … oder ggf. gar kein Text“) — der Titel sagt, was die Zeile zeigt.{% endcomment %}
+{% include "_mesh3dai_zeile.html" with bereich="koerper_nackt" titel="Nur Körper (ohne Kleider)" hinweis="" %}
+
+{% include "_mesh3dai_zeile.html" with bereich="gesicht" titel="Gesicht" hinweis="" %}
+
+{% include "_mesh3dai_zeile.html" with bereich="haende" titel="Hände und Füße" hinweis="" %}
+
+{% include "_mesh3dai_zeile.html" with bereich="kleider" titel="Kleider" hinweis="" %}
+
+<div class="card" id="mesh3dai-kennzahlen">
+    <h2>Kennzahlen dieser Probe</h2>
+    <div id="mesh3dai-kennzahlentext"></div>
+</div>
+
 {% comment %}
+Datensatz, Training und Testfälle stehen HINTER den Ansichten (22.10.2026, Edgar: „zeige zuerst die View und dann diese ganzen Bereiche“).
 Statuskarte (Edgar, 14.10.2026: „aktualisierst du alle paar Minuten den Trainingsstand auf der Ursula Seite? … mach das, alle paar Minuten, damit es die Trainings nicht beeinträchtigt … einstellbar"): ECHTE Zahlen von der Platte
 (Datensatz, jüngster Trainingslauf), im Takt von Einstellungen → Mesh3D-AI. Nicht Teil des festen Blocks oben, damit der nicht höher wird. `mesh3daistand.js`.
 {% endcomment %}
@@ -81,73 +152,24 @@ Statuskarte (Edgar, 14.10.2026: „aktualisierst du alle paar Minuten den Traini
     <div data-stand="inhalt"><span class="hb-hinweis">Stand wird geholt …</span></div>
 </div>
 
-<div class="mesh3dai-zeile mesh3dai-koerperzeile" data-bereich="koerper" id="mesh3dai-zeile-koerper">
-    <div class="mesh3dai-zeilenkopf">
-        <h2>Ganzer Körper</h2>
-        {% include "_mesh3dai_ansichtwahl.html" %}
-    </div>
-    <div class="mesh3dai-bereiche" id="mesh3dai-bereiche">
-        <section class="card mesh3dai-bereich" id="mesh3dai-eingabe">
-            {% comment %}Die drei Felder heißen seit 15.10.2026 Start · Ziel · Ergebnis (Edgar: „mache die 3 Ansichten mit neuen Namen: Start, Ziel und Ergebnis“); im Code bleiben die Schlüssel eingabe · soll · ausgabe.{% endcomment %}
-            <h2><span class="mesh3dai-nummer" data-nummer="eingabe">1</span> Start</h2>
-            <p class="hb-hinweis">Die Außenfläche des Netzes — nur sie sieht das Netz. Kein Körper unter der Kleidung, keine Namen, keine Gruppen.</p>
-            <div class="mesh3dai-leinwand" data-art="eingabe"></div>
-            <div class="mesh3dai-bereichsinfo" data-info="eingabe"></div>
-            {% include "_mesh3dai_download.html" with art="eingabe" %}
-        </section>
-
-        {% comment %}Zwischenbild „Rig → A-Pose“ (Edgar, 17.10.2026: „nicht drei Bilder, sondern vier Bilder, mit dem Rig und Bringen in die A-Position“): nur bei der Probe, auf der die Kette der Vorstufe lief
-        (`probe.apose`, Server `Mesh3daiapose`); sonst verborgen, und die Felder zählen 1–3 (`Mesh3daizeile._aposeFeld`).{% endcomment %}
-        <section class="card mesh3dai-bereich" id="mesh3dai-apose" data-feld="apose" hidden>
-            <h2><span class="mesh3dai-nummer" data-nummer="apose">2</span> Rig → A-Pose</h2>
-            {% comment %}17.10.2026 (Edgar: „im zweiten Schritt hast du den Körper in A-Pose gebracht … Warum sind die zwei Bilder rechts dann doch in der Laufpose?“): der Text sagt, dass NUR hier in der A-Pose gerechnet
-            wird und Ziel/Ergebnis die Haltung des Netzes zeigen; durchscheinend = Löcher der Außenfläche (bis 17.10.2026 abends dunkel — sah aus wie falsche Textur), orange = die Gelenke des Netzes (`Mesh3daiapose`, `Mesh3dairigzeichner`).{% endcomment %}
-            <p class="hb-hinweis">Das Netz mit dem Rig aus „Mesh to 3D“ in die A-Pose zurückgerechnet — hier rechnet das Netz der Vorstufe (orange: seine Gelenke). Was in der Pose verdeckt war, ist mit der Fläche der Rig-Figur gefüllt. Ziel und Ergebnis zeigen das Skelett danach wieder in der Haltung des Netzes.</p>
-            <div class="mesh3dai-leinwand" data-art="apose"></div>
-            <div class="mesh3dai-bereichsinfo" data-info="apose"></div>
-        </section>
-
-        <section class="card mesh3dai-bereich" id="mesh3dai-soll">
-            <h2><span class="mesh3dai-nummer" data-nummer="soll">2</span> Ziel</h2>
-            <p class="hb-hinweis">Das Genesis-Modell in der Pose, mit Kleidern und Haar — so soll das Netz es liefern (aus dem Retarget bekannt, nicht geschätzt).</p>
-            <div class="mesh3dai-leinwand" data-art="soll"></div>
-            <div class="mesh3dai-bereichsinfo" data-info="soll"></div>
-            {% include "_mesh3dai_download.html" with art="soll" %}
-        </section>
-
-        <section class="card mesh3dai-bereich" id="mesh3dai-ausgabe">
-            <h2><span class="mesh3dai-nummer" data-nummer="ausgabe">3</span> Ergebnis</h2>
-            <p class="hb-hinweis">Was das Netz aus der Eingabe macht — in der Haltung des Netzes, denn gesucht ist das Skelett so, wie das Netz steht. Punkte: Fehler je Knochen (grün = 0 mm, rot ab 30 mm; Attrappe: Kapseln rot ab 50 mm).</p>
-            <div class="mesh3dai-leinwand" data-art="ausgabe"></div>
-            <div class="mesh3dai-bereichsinfo" data-info="ausgabe"></div>
-            <div class="mesh3dai-guete" data-guete></div>
-            {% include "_mesh3dai_download.html" with art="ausgabe" %}
-            <div class="mesh3dai-bereichsknoepfe mesh3dai-geistwahl">
-                {% comment %}Vorgabe aus (Edgar, 15.10.2026: „warum noch immer 2 Meshes beim Ergebnis und zwei Rigs?“) — an zeigt das Soll (Fläche und graues Rig) zusätzlich zur Ausgabe.{% endcomment %}
-                <label class="mesh3dai-filter"><input type="checkbox" id="mesh3dai-geist"> Ziel als Geist darüber (in allen Zeilen)</label>
-            </div>
-        </section>
-    </div>
-</div>
-
-{% include "_mesh3dai_zeile.html" with bereich="koerper_nackt" titel="Nur Körper (ohne Kleider)" hinweis="Die schwerste Aufgabe: aus der Außenfläche MIT Kleidern den Körper darunter finden. Die Eingabe ist dieselbe wie oben; gewünscht ist die nackte Figur in der Pose, nur Haut." %}
-
-{% include "_mesh3dai_zeile.html" with bereich="gesicht" titel="Gesicht" hinweis="Ausschnitt um den Kopf: Landmarken von Kontur, Brauen, Augen, Nase und Mund in der Kopfhaltung der Pose. Beim Netz kommen später die Gesichtsregler und die Mimik dazu." %}
-
-{% include "_mesh3dai_zeile.html" with bereich="haende" titel="Hände und Füße" hinweis="Vier Ausschnitte nebeneinander — Hände oben, Füße unten —, jeder um Handgelenk oder Knöchel: Fingerglieder und Zehen mit ihrer Krümmung. Beim Netz kommen später die Finger- und Zehenwinkel dazu." %}
-
-{% include "_mesh3dai_zeile.html" with bereich="kleider" titel="Kleider" hinweis="Der Teil der Außenfläche, der Stoff ist: Oberteil, Ärmel, Hose, Schuhe. Beim Netz kommen später die Wahl des Stücks aus der Garderobe und die Passform dazu." %}
-
-<div class="card" id="mesh3dai-kennzahlen">
-    <h2>Kennzahlen dieser Probe</h2>
-    <div id="mesh3dai-kennzahlentext"></div>
-    <p class="hb-hinweis">Die vierte Spalte („heutige Anpassung“ von Mesh to 3D auf derselben Außenfläche) kommt, sobald es einen Export gibt — erst dann zeigt sich, ob das Netz etwas bringt.</p>
+{% comment %}
+Testfälle der Kleider-KI am Trainingsjob (22.10.2026, Edgar: „wieviel Fehler von wievielen insgesamt, für alle Prioritäten … in das UI … für die trainings und Testjobs … in einer Tabelle“): die Messung
+des jüngsten Stufe-2-Trainings dieses Jobs gegen das Ziel samt Verlauf der Prio-1-Wache (`Mesh3daitestfaelle.fuer_job`, `mesh3daitestfaelle.js`).
+{% endcomment %}
+<div class="card mesh3dai-testfaelle" id="mesh3dai-testfaelle" data-adresse="{% url 'mesh3dai_jobtestfaelle' job.id %}">
+    <h2>Testfälle der Kleider-KI (Training)</h2>
+    <div data-testfaelle="inhalt"><span class="hb-hinweis">Wird geladen …</span></div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script type="module">
 import { Mesh3daiseite } from "{% fassungspfad 'viewer/mesh3dai/mesh3daiseite.js' %}";
+import { Auftragname } from "{% fassungspfad 'viewer/gemeinsam/auftragname.js' %}";
+import { Mesh3daitestfaelle } from "{% fassungspfad 'viewer/mesh3dai/mesh3daitestfaelle.js' %}";
 Mesh3daiseite.aufbauen();
+Auftragname.binden();
+const testfaelle = document.getElementById('mesh3dai-testfaelle');
+new Mesh3daitestfaelle(testfaelle).laden(`${testfaelle.dataset.adresse}?t=${Date.now()}`);
 </script>
 {% endblock %}

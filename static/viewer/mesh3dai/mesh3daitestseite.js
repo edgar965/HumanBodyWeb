@@ -9,9 +9,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Mesh3daiansicht } from './mesh3daiansicht.js';
 import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
+import { Mesh3daifigurbewegung } from './mesh3daifigurbewegung.js';
+import { Mesh3daifigurbewegungsleiste } from './mesh3daifigurbewegungsleiste.js';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 import { Mesh3dairigzeichner } from './mesh3dairigzeichner.js';
+import { Mesh3daitestfaelle } from './mesh3daitestfaelle.js';
 import { Mesh3daitestkleider } from './mesh3daitestkleider.js';
 import { Mesh3daitestnetzbau } from './mesh3daitestnetzbau.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -42,6 +45,13 @@ export class Mesh3daitestseite {
         const zeichner = { zeichnen: (inhalt, art) => this._zeichnen(inhalt, art) };
         this.ansichten = ['eingabe', 'ausgabe'].map(art => new Mesh3daiansicht(wurzel.querySelector(`.mesh3dai-leinwand[data-art="${art}"]`), art, zeichner, KAMERA));
         Mesh3daiansicht.koppeln(this.ansichten);
+        // Standardanimation der Ausgabe (22.10.2026, wie Mesh-3D): die vorhergesagte Figur als Genesis-Modell in Bewegung, mit Leertaste, Pfeilen, Pos1, Ende.
+        const leiste = wurzel.querySelector('[data-figurbewegung]');
+        const feld = this.ansichten.find(a => a.art === 'ausgabe');
+        if (leiste && feld) {
+            this.bewegung = new Mesh3daifigurbewegung(feld, () => this._bewegungsquelle());
+            new Mesh3daifigurbewegungsleiste(leiste, this.bewegung, { tasten: true }).wahlLaden(leiste.dataset.adresse);
+        }
         this.rigknopf = wurzel.querySelector('#mesh3dai-test-rig');
         this.rigknopf.addEventListener('click', () => {
             Mesh3daiansichtgedaechtnis.merken({ rig: !this.rig });
@@ -54,6 +64,9 @@ export class Mesh3daitestseite {
         // Kleider und Bestandteile (17.10.2026 nachts): je Stück Katalog (a) oder aus dem Netz (b), dazu „Übernehmen und speichern“.
         const karte = document.getElementById('mesh3dai-kleider');
         this.kleider = karte ? new Mesh3daitestkleider(karte, this) : null;
+        // Testfälle der Kleider-KI (22.10.2026): FEHLER von Prüfungen je Prio, je Geschlecht neben den Stücken
+        const testfaelle = document.getElementById('mesh3dai-testfaelle');
+        this.testfaelle = testfaelle ? new Mesh3daitestfaelle(testfaelle) : null;
         this.matrizen = null;
     }
 
@@ -90,7 +103,20 @@ export class Mesh3daitestseite {
         if (feld) feld.textContent = text;
     }
 
+    /** Was die Standardanimation bewegt: die vorhergesagte Figur (`figur_genesis`) und die Stücke der wirksamen Wahl der Karte darunter (ihre Anzeigenetze, schon geladen). */
+    async _bewegungsquelle() {
+        const d = this.daten;
+        if (!d?.figur_genesis) return null;
+        const stuecke = [];
+        for (const st of this.kleider?.liste?.stuecke ?? []) {
+            const netz = st.art !== 'haut' && st.wahl !== 'aus' ? this.kleider.netze.get(`${st.wahl}/${st.id}`) : null;
+            if (netz) stuecke.push({ id: st.id, art: st.art, netz: await netz.catch(() => null) });
+        }
+        return { schluessel: `${this.kennung}|${d.info.geschlecht}`, figur: d.figur_genesis, stuecke: stuecke.filter(s => s.netz), knochen: d.rig.knochen.map(k => k.name), ruhezentren: d.ruhezentren };
+    }
+
     async laden() {
+        this.bewegung?.verwerfen();         // anderes Geschlecht: andere Figur
         const info = this.wurzel.querySelector('#mesh3dai-test-info');
         try {
             const antwort = await fetch(`/api/mesh3dai/test/${encodeURIComponent(this.kennung)}/`);
@@ -133,6 +159,7 @@ export class Mesh3daitestseite {
                 this.wahl.value = i.geschlecht;
                 this.wahl.disabled = false;
             }
+            this.testfaelle?.laden(`/api/mesh3dai/test/${encodeURIComponent(this.kennung)}/testfaelle/${encodeURIComponent(i.geschlecht)}/?t=${Date.now()}`);
             const figurText = this.wurzel.querySelector('#mesh3dai-test-figur');
             if (figurText) figurText.textContent = `Ausgabe: ${form ? 'vorhergesagte Form' : figur}${daten.figur_hinweis ? ' — ' + daten.figur_hinweis : ''}`;
         } catch (fehler) {
@@ -188,6 +215,7 @@ export class Mesh3daitestseite {
      * ohne die Dreiecke unter den gewählten Stücken (`Mesh3daitestkleider.verdeckt`) — wie die Hautverdeckung in Charakter und Studio.
      */
     async figurNeu() {
+        this.bewegung?.verwerfen();         // neue Wahl der Stücke: die bewegte Figur trägt die alten
         const netz = (await this.kleider?.hautNetz()) || this.figurNetz;
         if (netz && this.matrizen) {
             this.figur?.geometry.dispose();          // nur die Geometrie: Materialien und Attribute teilt sie mit dem Anzeigenetz

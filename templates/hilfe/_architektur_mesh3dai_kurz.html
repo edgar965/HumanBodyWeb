@@ -1,7 +1,8 @@
 {% load dezahl %}
 {% comment %}„Kurz erklärt“ (16.10.2026, Edgar: „räume die Hilfeseite auf, mach sie verständlicher … mach auch eine einfache Grafik zu der KI in der Form wie im Bild“; abends: „passe die ganze Seite an mit dem aktuellen Stand“).
 Bild: `Architekturmesh3daibild` (Kästen Eingabe / versteckt / Ausgabe, gelb der Formkopf, Kreise als Sinnbild der Neuronen). Läufe: `Architekturmesh3daiergebnis`.{% endcomment %}
-<h2 id="kurz">Kurz erklärt</h2>
+<h2 id="kurz">Neuronales Netz – Figur</h2>
+{# 20.10.2026 umbenannt, vorher „Kurz erklärt“ (Edgar: „benenne die Grafik … um in ‚Neuronales Netz - Figur‘“); die Grafik der Kleider heißt „Neuronales Netz für Assets“ (Abschnitt Kleider-GarmentCode). #}
 {% if bild %}<div class="m3a-bildrahmen">{{ bild }}</div>{% endif %}
 {% comment %}17.10.2026 abends (Edgar: „Die Architekturseite mit den Erklärungen ist ja noch leicht gaga. Schreib doch einfach hinein, was du tust. Was die Eingabe ist, was die Ausgabe ist.“):
 die Liste folgt jetzt dem Weg — Eingabe der Kette, Vorstufe, Eingabe des Netzes, Schichten, Formkopf, nach dem Netz, Ausgabe; der Punkt „Rig-Generierung heute NICHT vor dem Netz“ war seit dem Morgen falsch.{% endcomment %}
@@ -26,7 +27,8 @@ die Liste folgt jetzt dem Weg — Eingabe der Kette, Vorstufe, Eingabe des Netze
     Gelernt wird nicht Regler gegen Regler, sondern wie weit die Figur sich dadurch bewegt. Heute liest der Formkopf die Wolke noch in der Haltung; ob er auf der A-Pose-Wolke besser wird, zeigt der
     Vergleich in Abschnitt 3.</li>{% endif %}
   <li><strong>Nach dem Netz (grauer Kasten 4):</strong> die Gelenke gehen mit dem Rig zurück in die Haltung des Netzes, dann werden die Daz-Winkel aller Knochen angepasst — jeder in den Grenzen von
-    Genesis 9 (Abschnitt 5). Liegt das Ergebnis in Ruhe mehr als 60 mm neben der Rig-Figur, kennt das Netz dieses Netz nicht (Textur, weite Kleider) — dann gilt das Rig allein. Bei fremden Netzen
+    Genesis 9 (Abschnitt 5). Die Pose kommt immer aus diesem Netz: die frühere Regel „über 60 mm neben der Rig-Figur gilt das Rig allein“ ist seit 19.10.2026 aus — an allen sechs Tripo-Jobs
+    mit Wahrheit lag das Netz näher an der Wahrheit als das Rig allein. Bei fremden Netzen
     wird zuerst aus den vorhergesagten Reglern eine Figur gebaut, je Geschlecht, und die Winkel an IHR Skelett angepasst (Abschnitt 4).</li>
   <li><strong>Trainiert</strong> auf vier Jobs (Ursula1, Damira0, Mann1, Matt0, je 50 Trainings- und 15 Prüfposen) und den Formvarianten (je 12 Posen; jede siebte Variante nie trainiert) in einem
     Topf (Abschnitt 3).</li>

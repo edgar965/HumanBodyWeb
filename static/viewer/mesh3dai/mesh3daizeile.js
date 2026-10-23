@@ -28,6 +28,7 @@ export class Mesh3daizeile {
         this.guete = element.querySelector('[data-guete]');
         this.modus = Mesh3daimaterial.VORGABE;
         this.rig = true;
+        this.kleider = true;
         this._letzte = null;
         this._antwort = null;
         this._geist = false;   // wie das Kästchen „Soll als Geist“ (Vorgabe aus)
@@ -46,6 +47,7 @@ export class Mesh3daizeile {
         for (const zeile of Mesh3daizeile.alle) {
             if (modus) zeile.modusSetzen(modus, false);
             if (typeof stand?.rig === 'boolean') zeile.rigSetzen(stand.rig, false);
+            if (typeof stand?.kleider === 'boolean') zeile.kleiderSetzen(stand.kleider, false);
         }
     }
 
@@ -82,7 +84,7 @@ export class Mesh3daizeile {
             for (const zeile of Mesh3daizeile.alle) zeile.rigSetzen(an);
         });
         this._rigKnopf = knopf;
-        leiste.replaceChildren(knopf);
+        leiste.replaceChildren(knopf, this._kleiderknopf());
         this.rigSetzen(this.rig, false);
     }
 
@@ -90,6 +92,35 @@ export class Mesh3daizeile {
         this.rig = an;
         this._rigKnopf?.classList.toggle('active', an);
         this._rigKnopf?.setAttribute('aria-pressed', String(an));
+        if (zeichnen && this._letzte) this.zeigen(...this._letzte);
+    }
+
+    /**
+     * Der Schaltknopf „Kleider“ (21.10.2026, Edgar: „mach auch einen Toggle ‚Kleider‘, mit dem ich die Kleider im Ergebnis aus- und einblenden kann“): blendet die Kleider aus der KI im Feld
+     * „Ergebnis“ aus (das Haar bleibt), die Haut darunter kommt wieder (`Mesh3daigenesisfigur.einhaengen`). Ziel und Start bleiben unberührt; gilt für alle Zeilen, gemerkt wie „Rig“.
+     */
+    _kleiderknopf() {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'schaltknopf';
+        knopf.dataset.kleider = '';
+        knopf.title = 'Die Kleider aus der KI im Ergebnis ein- und ausblenden — in allen Zeilen; das Haar bleibt, die Haut darunter wird wieder gezeigt.';
+        knopf.innerHTML = '<i class="fas fa-tshirt"></i> ';
+        knopf.append('Kleider');
+        knopf.addEventListener('click', () => {
+            const an = !this.kleider;
+            Mesh3daiansichtgedaechtnis.merken({ kleider: an });
+            for (const zeile of Mesh3daizeile.alle) zeile.kleiderSetzen(an);
+        });
+        this._kleiderKnopf = knopf;
+        this.kleiderSetzen(this.kleider, false);
+        return knopf;
+    }
+
+    kleiderSetzen(an, zeichnen = true) {
+        this.kleider = an;
+        this._kleiderKnopf?.classList.toggle('active', an);
+        this._kleiderKnopf?.setAttribute('aria-pressed', String(an));
         if (zeichnen && this._letzte) this.zeigen(...this._letzte);
     }
 
@@ -148,11 +179,15 @@ export class Mesh3daizeile {
         // Die Punktwolke der Eingabe hängt an `id`; die Bilder der Bewegung tragen einen festen `punktsamen`, damit die Punkte nicht von Bild zu Bild flimmern.
         const d = grund ? {
             ...grund, probe, id: probe.punktsamen ?? probe.id, geist, modus: this.modus, echt, job: antwort.job, zeile: this.schluessel,
-            rig: this.rig, rigBeschreibung: antwort.rig, rigIndizes: antwort.rig?.zeilen?.[this.schluessel], rigMassstab: this.bereich.rigMassstab, haltung: antwort.haltung ?? null,
+            rig: this.rig, kleider: this.kleider, rigBeschreibung: antwort.rig, rigIndizes: antwort.rig?.zeilen?.[this.schluessel], rigMassstab: this.bereich.rigMassstab, haltung: antwort.haltung ?? null,
+            // 19.10.2026 spätabends: das Ergebnis zeigt keine Fläche des Ziels mehr (Server `ergebnis_flaeche: false`) — nur die Genesis-Figur aus der KI oder das Rig.
+            ergebnisOhneZielflaeche: antwort.ergebnis_flaeche === false,
         } : null;
         for (const a of this.ansichten) a.zeigen(d);
         let texte = !d ? {} : echt ? Mesh3daiechtteile.texte(this.schluessel, probe, grund.teil, this.modus, antwort.modell) : this.bereich.texte({ probe, ...grund });
         if (probe && !grund) texte = { ausgabe: 'Der Server liefert für diese Zeile keine Daten.' };
+        // Was im Ergebnis aus der KI kommt und was nicht (Server `ergebnis_text`, 19.10.2026 spätabends) — seit 20.10.2026 abends nur einmal, beim ganzen Körper (stand in allen fünf Zeilen).
+        if (echt && probe && antwort.ergebnis_text && this.schluessel === 'koerper') texte.ausgabe = texte.ausgabe ? `${texte.ausgabe}\n${antwort.ergebnis_text}` : antwort.ergebnis_text;
         this._aposeFeld(!!(echt && probe?.apose));
         if (this.info.apose) texte.apose = Mesh3daiapose.text(probe);
         for (const [art, el] of Object.entries(this.info)) el.textContent = texte[art] ?? '';

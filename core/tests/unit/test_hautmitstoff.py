@@ -190,8 +190,10 @@ class NacharbeitTest(SimpleTestCase):
         quelle = open(settings.ASSETS_ROOT / 'GarmentCode' / 'drapierdienst.py', encoding='utf-8').read()
         # Die Nacharbeit selbst steht seit dem 19.09.2026 in `stoffbindung.py` (Genesis 9 als zweiter Traeger).
         bindung = open(settings.ASSETS_ROOT / 'GarmentCode' / 'stoffbindung.py', encoding='utf-8').read()
-        # `stoffe=stoffe` (Daz-Garderobe, 24.09.2026) folgt als Schlüsselwort.
-        self.assertIn('Stoffnacharbeit(fein_p, fein_f, dreiecke, getragen, netzdatei,', bindung)
+        # `stoffe=stoffe` (Daz-Garderobe, 24.09.2026) folgt als Schlüsselwort; die Netzquelle ist seit dem
+        # Speicherweg (20.10.2026) das `Speichernetz` oder, ohne ihn, die Netzdatei.
+        self.assertRegex(bindung, r'Stoffnacharbeit\(fein_p, fein_f, dreiecke, getragen,\s*'
+                                  r'speicher if speicher is not None else netzdatei,')
         lauf = quelle.index('def lauf(')
         self.assertIn('getragen=getragen', quelle[lauf : quelle.index('def _variantenordner', lauf)])
 

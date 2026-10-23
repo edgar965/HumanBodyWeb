@@ -13,6 +13,11 @@ export class Mesh3daianimationsleiste {
     static alle = [];
     static _spielende = new Set();
     static _lauf = 0;
+    /**
+     * Die Standardanimation der Ergebnisfigur (22.10.2026, `Mesh3daifigurbewegung`, von `Mesh3daiseite` gesetzt): `{umschalten(), stellen(anteil), zustand() → {spielt, text, anteil}}`.
+     * Hat der Job keine Spagat-Bewegung (Tripo-Jobs: `/api/mesh3dai/<job>/animation/` → 404 — Edgar bekam die HTML-Fehlerseite in die Zeile), bedient die Leiste der Zeile diese Bewegung.
+     */
+    static figur = null;
     /** Abstand unter dem festen Block, an dem die „aktive“ Zeile für die Leertaste gesucht wird (px). */
     static LINIE_PX = 70;
 
@@ -50,6 +55,12 @@ export class Mesh3daianimationsleiste {
                 // Echte Daten: die Flächen aller Bilder (ein Paket, rund 38 MB) kommen nach — bis dahin zeigen die Felder Rig und Text, danach die gehäutete Figur je Bild.
                 if (this.daten.attrappe === false) this._flaechenHolen(antwort.job);
             } catch (fehler) {
+                // Keine Spagat-Bewegung für diesen Job: die Zeile bedient die Standardanimation der Figur (`figur`).
+                if (fehler.status === 404 && Mesh3daianimationsleiste.figur) {
+                    for (const leiste of Mesh3daianimationsleiste.alle) leiste.ersatz = true;
+                    Mesh3daianimationsleiste.figurGeaendert();
+                    return null;
+                }
                 this._text(`Nicht geladen: ${fehler.message ?? fehler}`, true);
                 return null;
             } finally {
@@ -79,7 +90,21 @@ export class Mesh3daianimationsleiste {
             this.anhalten();
             return;
         }
-        if (await this._laden()) this.starten();
+        if (!this.ersatz && await this._laden()) this.starten();
+        else if (this.ersatz) Mesh3daianimationsleiste.figur?.umschalten();
+    }
+
+    /** Die Figur hat sich bewegt (oder steht): Knopf, Regler und Text der Zeilen, die sie bedienen, nachziehen. */
+    static figurGeaendert() {
+        const z = Mesh3daianimationsleiste.figur?.zustand();
+        if (!z) return;
+        for (const leiste of Mesh3daianimationsleiste.alle) {
+            if (!leiste.ersatz) continue;
+            leiste.play.classList.toggle('active', z.spielt);
+            leiste.play.replaceChildren(Object.assign(document.createElement('i'), { className: `fas ${z.spielt ? 'fa-pause' : 'fa-play'}` }), z.spielt ? ' Pause' : ' Play');
+            if (z.anteil != null) leiste.regler.value = Math.round(z.anteil * 1000);
+            leiste._text(z.text);
+        }
     }
 
     starten() {
@@ -110,7 +135,14 @@ export class Mesh3daianimationsleiste {
     }
 
     async _gezogen() {
-        if (!(await this._laden())) return;
+        if (this.ersatz) {
+            Mesh3daianimationsleiste.figur?.stellen(Number(this.regler.value) / 1000);
+            return;
+        }
+        if (!(await this._laden())) {
+            if (this.ersatz) Mesh3daianimationsleiste.figur?.stellen(Number(this.regler.value) / 1000);
+            return;
+        }
         const n = this.daten.bilder.length;
         const b = Math.round((Number(this.regler.value) / 1000) * (n - 1));
         if (this.spielt) this._t0 = performance.now() - (b / this.daten.fps) * 1000;
@@ -166,6 +198,10 @@ export class Mesh3daianimationsleiste {
     }
 
     _anzeige() {
+        if (this.ersatz) {
+            Mesh3daianimationsleiste.figurGeaendert();
+            return;
+        }
         this._knopf();
         const d = this.daten;
         if (!d) {

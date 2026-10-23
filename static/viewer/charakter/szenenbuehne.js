@@ -2,6 +2,7 @@ import { TransformControls, LIGHT_PRESETS } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Buehne } from '../gemeinsam/buehne.js';
+import { Texturweg } from '../gemeinsam/texturweg.js';
 import { applyPreset } from './lighting.js';
 
 /**
@@ -25,6 +26,7 @@ export class Szenenbuehne {
         // CSS-Größe der Leinwand mitsetzen.
         const teile = Buehne.bauen(state.canvas, { masse: 'rahmen', stil: true });
         state.renderer = teile.renderer;
+        Texturweg.anmelden(teile.renderer);          // vor der ersten Figur: S3TC prüfen, KTX2-Lader einrichten (Einstellungen → Charakter, `Szenentexturwahl`)
         state.scene = teile.scene;
         state.camera = teile.camera;
         state.controls = teile.controls;

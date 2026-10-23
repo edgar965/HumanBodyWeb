@@ -31,7 +31,9 @@ class Mesh3daitestendpunkte:
         if ordner is None:
             raise Http404('Kein Test %s' % kennung)
         info = next((t for t in Mesh3daitest.alle() if t.get('kennung') == kennung), {'kennung': kennung, 'name': kennung})
-        return render(request, 'mesh3dai_test.html', {'test': info})
+        # Die Animation der Ausgabe baut eine Genesis-Figur (22.10.2026): Bilder wie auf der Jobseite (`Mesh3daitexturwahl`).
+        from ..dienste.mesh3daitexturwahl import Mesh3daitexturwahl
+        return render(request, 'mesh3dai_test.html', {'test': info, 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
 
     @staticmethod
     @require_GET

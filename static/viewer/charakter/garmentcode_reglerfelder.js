@@ -83,8 +83,13 @@ export class GarmentcodeReglerfelder {
 
         const anzeige = document.createElement('span');
         anzeige.className = 'slider-val';
+        // Nicht gestellt zeigt ein Regler mit Vorgabe aus der Figur das Wort
+        // statt der Zahl aus `default.yaml` (20.10.2026: Ärmelwinkel = Armhaltung
+        // der Figur, `Assets/GarmentCode/aermelwinkel.py`); den Winkel nennt die Meldung.
+        const vorgabe = (feld.hilfe && feld.hilfe.vorgabe) || null;
         const zeigen = (wert) => {
-            anzeige.textContent = ganz ? String(wert) : wert.toFixed(2);
+            const offen = vorgabe && !(schluessel in regler.werte);
+            anzeige.textContent = offen ? vorgabe : (ganz ? String(wert) : wert.toFixed(2));
         };
         zeigen(Number(feld.wert));
 

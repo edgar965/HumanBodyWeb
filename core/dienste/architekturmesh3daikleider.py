@@ -46,7 +46,8 @@ class Architekturmesh3daikleider:
         ('Sapiens im Datensatz?', 'Etiketten aus dem Bau · Sapiens/SAM 3 auf Renderings',
          'GEBAUT: aus dem Bau, kein Sapiens', 'Sapiens erzeugt keine Kleider, nur Etiketten je Fläche — im Datensatz sind sie schon exakt. Sapiens gehört in die BASISLINIE (die heutige Anpassung an echten Netzen).'),
         ('Was gibt das Netz für Kleider aus?', 'a) Katalogwahl je Region (Top-k) + Passform + Farbe · b) Stück aus dem Netz schneiden (Etikett → `Fotostuecke`/`Blendimportstuecke`) · c) GarmentCode-Schnittmaße',
-         'NICHT GEBAUT — Vorschlag: a), b) als Rückfall; c) nicht bewertet', 'Konzept 14.10.2026, Abschnitt 5: die Messung (Hülle/Abstand wie bei der Frisurwahl) entscheidet unter den Kandidaten des Netzes. Heute gibt das Netz keine Kleider aus.'),
+         'GEBAUT 20.10.2026: b) als Weg k und c) als Weg s (Vorgabe); a) nur auf eigene Wahl', 'Stand 16.10.2026 war „nicht gebaut“. Seither zwei eigene Netze (Zerlegung, Schnitt) — '
+         'Abschnitt „Kleider-GarmentCode“.'),
         ('Eigenes Netz für Kleider?', 'Köpfe am selben Rückgrat (Teile je Punkt, Katalogwahl je Region) · eigenes Netz, das die Form eines Stücks erzeugt (z. B. AIpparel)',
          'VORSCHLAG: Köpfe am Rückgrat', 'Für die Wahl reicht das Merkmal der ganzen Figur, das schon Form und Haltung trägt; die Etiketten je Punkt liegen exakt im Datensatz. Ein erzeugendes Netz ist ein eigenes '
          'Großprojekt: AIpparel (09.10.2026 geprüft) hat 27,2 GB Gewichte, ein anderes Ausgabeformat als `params.json` und ist auf Blackwell ungeprüft (`schnittmuster-aipparel.md`).'),
@@ -58,7 +59,8 @@ class Architekturmesh3daikleider:
         ('Stoff simulieren?', 'gehäutet wie heute · dForce/Stoffschwung je Pose',
          'GEBAUT: gehäutet', 'Im Browser werden enge Stücke ebenfalls nicht simuliert (`G9stoff.entscheiden`, p90 Abstand < 5 cm). Lose Stücke (Rock, Kleid) fehlen im Datensatz.'),
         ('Haar?', 'alles Haar als Außenfläche · Frisur als Katalogwahl ausgeben',
-         'GEBAUT: alles Haar (Fassung 3); Ausgabe OFFEN', 'Das Strähnenhaar sind 80,6 % aller Dreiecke (359.968 von 446.852) und 22 % der Punkte. Ausgabe als Frisurwahl wie `Meshfigurfrisur` (Vorschlag).'),
+         'GEBAUT: alles Haar (Fassung 3); Ausgabe seit 20.10.2026 aus dem Netz geschnitten (Weg k), Frisurwahl (Weg h) nur auf eigene Wahl',
+         'Das Strähnenhaar sind 80,6 % aller Dreiecke (359.968 von 446.852) und 22 % der Punkte. Die Frisurwahl nimmt ein Stück der Bibliothek und ist darum nie Vorgabe.'),
     )
 
     @classmethod

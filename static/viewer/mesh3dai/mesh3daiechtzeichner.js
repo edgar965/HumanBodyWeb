@@ -19,6 +19,9 @@ export class Mesh3daiechtzeichner {
     /** Punktgröße der Wolke in m (perspektivisch): ganzer Körper rund 1,65 m hoch; in den Ausschnitten (Gesicht, Hände) kleiner. */
     static PUNKTGROESSE = 0.017;
     static PUNKTGROESSE_AUSSCHNITT = 0.006;
+    /** Dichte Wolke eines Tripo-Jobs (2 Mio. Punkte, Abstand rund 1 mm): kleine Punkte, sonst verschwimmt die Textur. */
+    static PUNKTGROESSE_DICHT = 0.0025;
+    static PUNKTGROESSE_DICHT_AUSSCHNITT = 0.0012;
     static GEISTFARBE = 0x8d97ab;
     /** Reihenfolge der Teile in Wolke und Fläche (= `Mesh3daiflaeche.TEILE` auf dem Server). */
     static TEILE = ['koerper', 'anatomie', 'haar', 'slip', 'hose', 'hemd'];
@@ -50,7 +53,9 @@ export class Mesh3daiechtzeichner {
         // Ausgabe: die Figur, gehäutet mit dem vorhergesagten Rig — bei einem Lauf mit Daz-Winkeln genau (Drehung je Knochen aus dem Netz, aus der Ruhelage wie das Ziel), sonst die Näherung
         // aus den Rig-Punkten (`Mesh3daihaeutung`); ohne Hautgewichte nur das Rig.
         const genau = probe.rig.dreh && d.haltung?.ruhezentren ? { dreh: probe.rig.dreh, ruhezentren: d.haltung.ruhezentren } : null;
-        const flaeche = art === 'ausgabe' ? probe.flaeche?.ausgabe(probe.rig.soll, probe.rig.ausgabe, d.rigBeschreibung.knochen.map(k => k.eltern), genau) : probe.flaeche;
+        // Seit 19.10.2026 spätabends (Edgar: „das Ergebnis soll direkt aus der KI kommen“): diese Fläche wäre die Figur des ZIELS in der vorhergesagten Pose — mit `ergebnisOhneZielflaeche` zeigt das Ergebnis
+        // hier nur das Rig; eine Fläche gibt es dort, wo die Seite die Figur der KI baut (`Mesh3daigenesisfigur`).
+        const flaeche = art === 'ausgabe' ? (d.ergebnisOhneZielflaeche ? null : probe.flaeche?.ausgabe(probe.rig.soll, probe.rig.ausgabe, d.rigBeschreibung.knochen.map(k => k.eltern), genau)) : probe.flaeche;
         const ausschnitte = d.teil?.ausschnitte?.length ? d.teil.ausschnitte : [null];
         for (const a of ausschnitte) {
             const objekte = [];
@@ -86,6 +91,7 @@ export class Mesh3daiechtzeichner {
      */
     static punktwolke(w, { etiketten = null, ausschnitt = null, rig = null } = {}) {
         const z = Mesh3daiechtzeichner;
+        if (w.dicht) return z._dichteWolke(w, { etiketten, ausschnitt, rig });
         const erlaubt = etiketten ? new Set(etiketten.map(e => z.TEILE.indexOf(e))) : null;
         let naechster = null, knochen = null, r2 = 0;
         if (ausschnitt) {
@@ -111,6 +117,39 @@ export class Mesh3daiechtzeichner {
         geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lage), 3));
         geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(farben), 3));
         const groesse = ausschnitt ? z.PUNKTGROESSE_AUSSCHNITT : z.PUNKTGROESSE;
+        const material = Mesh3daigemeinsam.material(`echtwolke:${groesse}`, () => new THREE.PointsMaterial({ size: groesse, vertexColors: true, sizeAttenuation: true }));
+        return new THREE.Points(geo, material);
+    }
+
+    /** Dieselbe Wolke aus Typed Arrays (`Mesh3daiseite._dichteWolke`: `lage` Float32, `rgb` Uint8 sRGB, `etikett` Int8) — ohne ein Objekt je Punkt. */
+    static _dichteWolke(w, { etiketten, ausschnitt, rig }) {
+        const z = Mesh3daiechtzeichner;
+        const erlaubt = etiketten ? new Set(etiketten.map(e => z.TEILE.indexOf(e))) : null;
+        const lin = new Float32Array(256);
+        const c = new THREE.Color();
+        for (let k = 0; k < 256; k++) lin[k] = c.setRGB(k / 255, 0, 0, THREE.SRGBColorSpace).r;
+        let naechster = null, knochen = null, r2 = 0, m = null;
+        if (ausschnitt) {
+            w._naechster ??= Mesh3daiflaechen.naechste(w.anzahl, i => [w.lage[3 * i], w.lage[3 * i + 1], w.lage[3 * i + 2]], rig);
+            naechster = w._naechster;
+            knochen = new Set(ausschnitt.knochen);
+            r2 = ausschnitt.radius ** 2;
+            m = ausschnitt.mitte;
+        }
+        const lage = new Float32Array(w.anzahl * 3), farben = new Float32Array(w.anzahl * 3);
+        let n = 0;
+        for (let i = 0; i < w.anzahl; i++) {
+            if (erlaubt && !erlaubt.has(w.etikett[i])) continue;
+            const x = w.lage[3 * i], y = w.lage[3 * i + 1], q = w.lage[3 * i + 2];
+            if (ausschnitt && (!knochen.has(naechster[i]) || (x - m[0]) ** 2 + (y - m[1]) ** 2 + (q - m[2]) ** 2 > r2)) continue;
+            lage[3 * n] = x; lage[3 * n + 1] = y; lage[3 * n + 2] = q;
+            farben[3 * n] = lin[w.rgb[3 * i]]; farben[3 * n + 1] = lin[w.rgb[3 * i + 1]]; farben[3 * n + 2] = lin[w.rgb[3 * i + 2]];
+            n++;
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(lage.subarray(0, 3 * n), 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(farben.subarray(0, 3 * n), 3));
+        const groesse = ausschnitt ? z.PUNKTGROESSE_DICHT_AUSSCHNITT : z.PUNKTGROESSE_DICHT;
         const material = Mesh3daigemeinsam.material(`echtwolke:${groesse}`, () => new THREE.PointsMaterial({ size: groesse, vertexColors: true, sizeAttenuation: true }));
         return new THREE.Points(geo, material);
     }

@@ -22,6 +22,7 @@
 .mesh3dai-la-fortschritt { display: grid; gap: 6px; margin: 4px 0 8px; }
 .mesh3dai-la-link { margin-top: 2px; }
 .mesh3dai-la-liste { margin: 4px 0 6px; padding-left: 1.2em; font-size: 0.9rem; }
+.mesh3dai-la-ruhend { opacity: 0.55; }
 .mesh3dai-la-doppelt { color: #e5534b; }
 .mesh3dai-la-fehler { border-left: 4px solid var(--warning, #f0ad4e); padding: 4px 10px; }
 .mesh3dai-la-fuss { margin-top: 4px; }
@@ -44,6 +45,13 @@ table.mesh3dai-ws-tabelle tr.mesh3dai-ws-fertig td, table.mesh3dai-ws-tabelle tr
 .mesh3dai-ws-fortschritt .mesh3dai-la-balken { margin: 4px 0 3px; }
 .mesh3dai-ws-text { font-variant-numeric: tabular-nums; }
 .mesh3dai-ws-log { font-size: 0.8rem; opacity: 0.8; overflow-wrap: anywhere; }
+
+/* Laufende Jobs als Tabelle (20.10.2026): der Balken in der Zelle ohne Namensspalte, ein wartender Job gedämpft. */
+table.mesh3dai-la-jobs td { vertical-align: middle; }
+table.mesh3dai-la-jobs .mesh3dai-la-fortschritt { margin: 0; }
+table.mesh3dai-la-jobs .mesh3dai-la-fortschritt .mesh3dai-la-wert { grid-template-columns: minmax(100px, 1fr) minmax(0, max-content); }
+table.mesh3dai-la-jobs .mesh3dai-la-fortschritt .mesh3dai-la-name { display: none; }
+table.mesh3dai-la-jobs tr.mesh3dai-la-wartet td { opacity: 0.75; }
 
 @media (max-width: 700px) {
     .mesh3dai-la-wert, .mesh3dai-la-fortschritt .mesh3dai-la-wert { grid-template-columns: 1fr; gap: 2px; }

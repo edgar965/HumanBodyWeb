@@ -1,0 +1,19 @@
+{# Einstellungen → Charakter: wie die Bilder der Genesis-Figuren auf /Charakter/ kommen (`core/dienste/szenentexturwahl.py`, 19.10.2026) — eigene Datei, settings_scene.html hat schon 280 Zeilen. #}
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Bilder der Genesis-Figuren</strong>
+                <small>Wie die Bilder (Haut, Augen, Kleidung …) auf die Grafikkarte kommen. Gilt ab dem nächsten Laden der Seite /Charakter/.
+                    {% for weg in szenentextur_wege %}
+                    <br><b>{{ weg.kurz }}:</b> {{ weg.beschreibung }}
+                    {% endfor %}
+                    <br>{{ szenentextur_quelle }}
+                </small>
+            </div>
+            <div class="settings-input">
+                <select name="{{ szenentextur_schluessel }}" id="szenentexturen" class="hb-width-100-2" data-reihenfolge="fest">
+                    {% for weg in szenentextur_wege %}
+                    <option value="{{ weg.wert }}"{% if weg.wert == szenentextur_wert %} selected{% endif %}>{{ weg.text }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>

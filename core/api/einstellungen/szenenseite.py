@@ -6,6 +6,7 @@ import json
 from ...dienste.blendimportbackenwahl import Blendimportbackenwahl
 from ...dienste.netzantwortwahl import Netzantwortwahl
 from ...dienste.netzvorratwahl import Netzvorratwahl
+from ...dienste.szenentexturwahl import Szenentexturwahl
 from .basis import Einstellungsseite
 from .formularwert import Formularwert as F
 
@@ -65,6 +66,10 @@ class SzeneEinstellungen(Einstellungsseite):
         vorrat = F.text(post, Netzvorratwahl.SCHLUESSEL)
         if vorrat in Netzvorratwahl.WAHLEN:
             prefs[Netzvorratwahl.SCHLUESSEL] = vorrat
+        # Wie die Bilder der Genesis-Figuren kommen (`Szenentexturwahl`, 19.10.2026) — nur ein bekannter Wert.
+        bilder = F.text(post, Szenentexturwahl.SCHLUESSEL)
+        if bilder in dict(Szenentexturwahl.WERTE):
+            prefs[Szenentexturwahl.SCHLUESSEL] = bilder
         return prefs
 
     def kontext(self, s):
@@ -79,4 +84,9 @@ class SzeneEinstellungen(Einstellungsseite):
             'netzantworten_wahlen': list(Netzantwortwahl.WAHLEN.items()),
             'netzvorrat': Netzvorratwahl.aus(prefs),
             'netzvorrat_wahlen': list(Netzvorratwahl.WAHLEN.items()),
+            'szenentextur_schluessel': Szenentexturwahl.SCHLUESSEL,
+            'szenentextur_wert': Szenentexturwahl.aus(prefs),
+            'szenentextur_wege': [{'wert': w, 'text': t, 'kurz': Szenentexturwahl.KURZ[w], 'beschreibung': Szenentexturwahl.BESCHREIBUNG[w]}
+                                  for w, t in Szenentexturwahl.WERTE],
+            'szenentextur_quelle': Szenentexturwahl.QUELLE,
         }

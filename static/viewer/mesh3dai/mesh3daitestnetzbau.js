@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { Mesh3daiflaechen } from './mesh3daiflaechen.js';
+import { Mesh3daiflaechennormalen } from './mesh3daiflaechennormalen.js';
 import { Mesh3daihaeutung } from './mesh3daihaeutung.js';
 
 export class Mesh3daitestnetzbau {
@@ -38,7 +39,8 @@ export class Mesh3daitestnetzbau {
             ab += l.length;
         });
         geo.setIndex(new THREE.BufferAttribute(index, 1));
-        geo.computeVertexNormals();
+        // mitgelieferte Normalen (21.10.2026, Weg g mit Textur je Stück: die Punkte sind an den Atlasnähten doppelt — gerechnet knickte dort die Schattierung), mit der Haltung gedreht
+        Mesh3daiflaechennormalen.setzen(geo, netz.normalen ? Mesh3daiflaechennormalen.gehaeutet(netz.normalen, netz.knochen, netz.gewicht, netz.kopf.haut, matrizen) : null);
         geo.userData.gemeinsam = true;          // die Felder geben ihren Inhalt bei jedem Zeichnen frei — dieses Netz bleibt
         for (const m of materialien) m.userData.gemeinsam = true;
         return new THREE.Mesh(geo, materialien);

@@ -22,6 +22,7 @@ from django.conf import settings
 from ..atomic_write import AtomarSchreiber
 from .mesh3daitest import Mesh3daitest
 from .mesh3daitestkleider import Mesh3daitestkleider
+from .mesh3daitestkleidspeichern import Mesh3daitestkleidspeichern
 
 logger = logging.getLogger(__name__)
 
@@ -136,14 +137,22 @@ class Mesh3daitestmodell:
                         fototextur = st['b'].get('adressen') or None
                     bericht.append({'id': 'haut', 'wahl': wahl, 'kacheln': sorted(fototextur or {})})
                     continue
-                cls._schreiben(ordner, meldung='%s: %s' % (st['name'], {'a': 'Katalogstück', 'b': 'Stück aus dem Netz', 'aus': 'aus'}[wahl]))
-                if wahl == 'a':
-                    kleidung[st['a']['kennung']] = {'farbe': st['a'].get('farbe')}
-                    bericht.append({'id': st['id'], 'wahl': 'a', 'stueck': st['a']['kennung']})
-                elif wahl == 'b':
-                    eigen = Mesh3daitesteigenstueck(ordner / 'b' / st['id'], st, form['figur']['regler'], name, Mesh3dairig.namen()).holen()
+                cls._schreiben(ordner, meldung='%s: %s' % (st['name'], {'a': 'Katalogstück', 'b': 'Stück aus dem Netz', 'k': 'KI: aus dem Netz geschnitten', 's': 'KI: Schnitt',
+                                                                         'f': 'KI: Schnitt aus der Fläche', 'g': 'KI: Schicht', 'h': 'KI: Frisur der Garderobe', 'aus': 'aus'}.get(wahl, wahl)))
+                if wahl in ('a', 'h'):
+                    # a: Katalogstück; h (KI, 20.10.2026): die Frisur der Garderobe nach den Haarmaßen der KI — beides ein Stück der Garderobe mit Umfärbung
+                    kleidung[st[wahl]['kennung']] = {'farbe': st[wahl].get('farbe')}
+                    bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': st[wahl]['kennung']})
+                elif wahl in Mesh3daitestkleidspeichern.EIGENE:
+                    # b: Objekt des Mesh-3D-Laufs; k, s, f, g (KI): geschnitten, GarmentCode-Schnitt, Schnitt aus der Fläche, Schicht — alle liegen als Anzeigenetz auf der Figur und werden eigene
+                    # Genesis-Stücke (`Mesh3daitesteigenstueck` liest den Übertrag unter `b`). f und g fehlten hier bis 22.10.2026: Stücke aus dem Schichtkopf kamen nie ins Modell.
+                    eigen = Mesh3daitesteigenstueck(ordner / wahl / st['id'], dict(st, b=st[wahl]), form['figur']['regler'], name, Mesh3dairig.namen()).holen()
                     kleidung[eigen['stueck']] = {'farbe': None}
-                    bericht.append({'id': st['id'], 'wahl': 'b', 'stueck': eigen['stueck'], 'angezogen': eigen.get('angezogen'), 'gemerkt': bool(eigen.get('gemerkt'))})
+                    # Name und Kategorie in der Garderobe, wie in der Karte gewählt (`Mesh3daitestkleidspeichern`)
+                    from Genesis9.garderobe import G9garderobe
+                    sp = st.get('speichern') or {}
+                    garderobe = Mesh3daitestkleidspeichern.anwenden(eigen['stueck'], {'name': sp.get('name'), 'kategorie': sp.get('kategorie')}, G9garderobe.eintrag(eigen['stueck']))
+                    bericht.append({'id': st['id'], 'wahl': wahl, 'stueck': eigen['stueck'], 'angezogen': eigen.get('angezogen'), 'gemerkt': bool(eigen.get('gemerkt')), 'garderobe': garderobe})
             daten = cls.modelldaten(name, kennung, geschlecht, form, kleidung, fototextur)
             if fototextur and ziel_ordner is None:
                 # Die Kacheln neben das Modell (überleben das Löschen des Mesh-3D-Laufs) — wie jedes Speichern mit Fotohaut. Ein Probelauf mit `ziel_ordner` behält die Adressen des Laufs.

@@ -6,6 +6,7 @@ Ein Job ist ein Modell, an dem eine KI „Netz → Genesis-Modell“ trainiert w
 `mesh3dai/mesh3dailiste.js` öffnet auf Klick die Jobseite `/mesh-3D-AI/<job>/`. Gleiche Bauart wie `Mesh3dtabelle`: Spalten, Zeilen mit `data-id`, fertiges HTML je Zeile.
 """
 
+import json
 from datetime import datetime
 
 from django.utils.html import format_html
@@ -13,6 +14,9 @@ from django.utils.safestring import mark_safe
 
 from .mesh3daidaten import Mesh3daidaten
 from .mesh3daidatensatz import Mesh3daidatensatz
+from .mesh3dailaufzeit import Mesh3dailaufzeit
+from .mesh3daipaare import Mesh3daipaare
+from .mesh3dairechendatum import Mesh3dairechendatum
 from .mesh3daitrainingsdatum import Mesh3daitrainingsdatum
 
 __all__ = ['Mesh3daitabelle']
@@ -26,6 +30,12 @@ class Mesh3daitabelle:
         {'label': 'Zuletzt trainiert', 'key': 'trainiert',
          'titel': 'Ende des jüngsten fertigen Trainings an den Daten dieses Jobs (Zeit von lauf_ergebnis.json): Läufe des Jobs (_laeufe) und gemeinsame Netze der Vorstufe/Form (_vorstufe/laeufe), '
                   'die den Job in ihren Trainingsdaten nennen; Probeläufe zählen nicht. Der Name des Laufs steht im Tooltip der Zelle'},
+        {'label': 'Zuletzt gerechnet', 'key': 'gerechnet',
+         'titel': 'Jüngste Datei, die ein Rechenschritt für diesen Job geschrieben hat — Training, Datensatz, Vorstufe, Form, Ergebnisfigur, Zerlegung, Kleider, künstliche Tripo-Netze '
+                  '(Mesh3dairechendatum). In Klammern der Schritt, im Tooltip die Datei. Einstellungen und Namen zählen nicht'},
+        {'label': 'Laufzeit', 'key': 'laufzeit', 'num': True,
+         'titel': 'Wie lange die Rechnung gedauert hat, deren Ergebnis die Jobseite zeigt — nur gemessene Zeiten (Mesh3dailaufzeit): beim Grundjob das Training aus „Zuletzt trainiert“ (dauer_s), '
+                  'beim Tripo-Job die Kette seines Tests (Vorstufe, Figur bauen, Zerlegung, Kleider). Aufteilung im Tooltip der Zelle'},
         {'label': 'Proben', 'key': 'proben', 'num': True, 'titel': 'Posen, die die Seite des Jobs zeigt'},
         {'label': 'Training', 'key': 'training', 'num': True, 'titel': 'Davon zum Training'},
         {'label': 'Prüfposen', 'key': 'pruefung', 'num': True, 'titel': 'Davon nie trainiert — daran wird gemessen'},
@@ -46,7 +56,9 @@ class Mesh3daitabelle:
         zellen = (
             format_html('<td data-sort="{}"><a href="{}">{}</a></td>', job['name'].lower(), self.adresse(job), job['name']),
             format_html('<td data-sort="{}">{}</td>', job['modell'].lower(), job['modell']),
-            self._nie_trainiert() if job.get('paar') else self._trainiert(job['ordner']),          # dritte Spalte (Edgar, 18.10.2026)
+            self._paartraining(job) if job.get('paar') else self._trainiert(job['ordner']),          # dritte Spalte (Edgar, 18.10.2026)
+            self._gerechnet(job),                                                                      # vierte Spalte (Edgar, 20.10.2026)
+            self.laufzeit_zelle(Mesh3dailaufzeit.job(job)),                                            # fünfte Spalte (Edgar, 20.10.2026 abends)
             self._zahl(job['proben']),
             self._zahl(job['training']),
             self._zahl(job['pruefung']),
@@ -55,33 +67,74 @@ class Mesh3daitabelle:
         )
         return {'id': job['id'], 'klasse': 'mesh3dai-zeile-job', 'html': mark_safe(''.join(zellen))}
 
-    #: Trainingspaare (19.10.2026, Edgar: „Hast du jetzt diese Jobs trainiert oder nicht? In der Tabelle steht ein Datum bei trainiert, aber Spalte Training = 0“): auf ihnen wird nie trainiert —
-    #: das Datum war die Zeit, zu der die Kette ihr Ergebnis gerechnet hat (`mesh3dai_paar_lauf.py`), und stand unter „Zuletzt trainiert“.
-    PAAR_TITEL = 'Testpaar: ein Tripo-Netz mit bekannter Lösung (Genesis-Export). Darauf wird nicht trainiert — die KI wird daran nur geprüft.'
+    #: Trainingspaare: bis 19.10.2026 vormittags nur Prüffälle (Edgar: „Hast du jetzt diese Jobs trainiert oder nicht?“ — das Datum war die Zeit der Kette, nicht eines Trainings);
+    #: seitdem Trainingsdaten des Formnetzes (Edgar: „die sollst du als nächstes trainieren“), sofern MIA das Tripo-Netz in die A-Pose bringt (`mesh3dai_paar_wolke.py` nimmt nur den Weg MIA).
+    #: Die Spalte zählt deshalb nur die gemeinsamen Formläufe (`paare` in `lauf_ergebnis.json`); die Läufe unter `_laeufe/` eines Paars sind Ergebnisse der Kette.
+    #: 19.10.2026 spätabends: „Tripo-Job“ statt „Trainingspaar/Prüfpaar“ (Edgar: „hör auch mit Tripo Paar, das sind ganz einfache Tripo jobs“).
+    PAAR_TITEL = ('Tripo-Job: ein Tripo-Netz mit bekannter Lösung (dein Genesis-Export). Im Formtraining lernt das Formnetz daraus, wenn MIA das Netz in die A-Pose bringt; das Posennetz hat Tripo-Jobs '
+                  'bisher nie gesehen.')
+    #: Kette der Vorstufe je Paar (`mesh3dai_vorstufe.py test <kennung>`): `weg` = mia, sonst Rückfall mit `weg_grund`.
+    KETTE = ('_test', 'vorstufe')
 
     @classmethod
-    def _nie_trainiert(cls):
-        return format_html('<td data-sort="0" title="{}">nie (Testpaar)</td>', cls.PAAR_TITEL)
+    def _paartraining(cls, job):
+        """Datum des jüngsten Formtrainings, das dieses Paar in `paare` nennt; sonst „nie“ mit dem Grund aus der Kette (MIA im Rückfall → keine Trainingswolke)."""
+        if Mesh3daitrainingsdatum.letztes(job['ordner'], wo=('vorstufe',)):
+            return cls._trainiert(job['ordner'], wo=('vorstufe',))
+        grund = cls._ohne_wolke(job)
+        if grund:
+            return format_html('<td data-sort="0" title="{} Kette: {}">nie (MIA-Prüfung nicht bestanden)</td>', cls.PAAR_TITEL, grund)
+        return format_html('<td data-sort="0" title="{} Kein Formtraining nennt dieses Paar.">nie</td>', cls.PAAR_TITEL)
+
+    @classmethod
+    def _ohne_wolke(cls, job):
+        """Grund aus der jüngsten Kette, wenn sie nicht über MIA lief (dann gibt es keine Trainingswolke) — sonst None."""
+        ordner = Mesh3daipaare.ordner().joinpath(cls.KETTE[0], job['id'], cls.KETTE[1])
+        ketten = sorted(ordner.glob('*/kette.json')) if ordner.is_dir() else []
+        if not ketten:
+            return None
+        try:
+            kette = json.loads(ketten[-1].read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return None
+        return None if kette.get('weg') == 'mia' else (kette.get('weg_grund') or 'Weg %s' % kette.get('weg'))
 
     @classmethod
     def _paarstatus(cls, job):
-        """„Testpaar, geprüft am 19.10.2026 04:42" — Zeit des jüngsten Ergebnisses der Kette; der Name des Laufs im Tooltip."""
-        letztes = Mesh3daitrainingsdatum.letztes(job['ordner'])
-        if not letztes:
-            return format_html('<td data-sort="testpaar" title="{}">Testpaar, noch nicht geprüft</td>', cls.PAAR_TITEL)
-        return format_html('<td data-sort="testpaar {}" title="{} Ergebnis: Lauf {}">Testpaar, geprüft am {}</td>', int(letztes['zeit']), cls.PAAR_TITEL, letztes['lauf'],
-                           datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'))
+        """„Tripo-Job (im Formtraining)" oder „Tripo-Job (nicht im Training)"; die jüngste Kette auf dem Tripo-Netz im Tooltip."""
+        im_training = Mesh3daitrainingsdatum.letztes(job['ordner'], wo=('vorstufe',))
+        text = 'Tripo-Job (im Formtraining)' if im_training else 'Tripo-Job (nicht im Training)'
+        kette = Mesh3daitrainingsdatum.letztes(job['ordner'], wo=('job',))
+        titel = cls.PAAR_TITEL + (' Kette zuletzt: Lauf %s, %s' % (kette['lauf'], datetime.fromtimestamp(kette['zeit']).strftime('%d.%m.%Y %H:%M')) if kette else ' Die Kette lief noch nicht.')
+        return format_html('<td data-sort="{}" title="{}">{}</td>', text.lower(), titel, text)
 
     @staticmethod
-    def _trainiert(ordner):
+    def _trainiert(ordner, wo=('job', 'vorstufe')):
         """„17.10.2026 16:20" (Ende des jüngsten fertigen Trainings, `Mesh3daitrainingsdatum`), Tooltip: Lauf und mit welchen Jobs; ohne Training „—". Sortiert nach der Zeit."""
-        letztes = Mesh3daitrainingsdatum.letztes(ordner)
+        letztes = Mesh3daitrainingsdatum.letztes(ordner, wo=wo)
         if not letztes:
             return mark_safe('<td data-sort="0" title="Noch kein fertiges Training">—</td>')
         art = 'gemeinsames Netz der Vorstufe/Form' if letztes['art'] == 'vorstufe' else 'Lauf des Jobs'
         titel = '%s %s, trainiert mit %s' % (art, letztes['lauf'], ', '.join(letztes['mit']))
         return format_html('<td data-sort="{}" title="{}">{}</td>', int(letztes['zeit']), titel,
                            datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'))
+
+    @staticmethod
+    def _gerechnet(job):
+        """„20.10.2026 11:02 (Kleider)" (`Mesh3dairechendatum`), Tooltip: Schritt und Datei; ohne Rechnung „—". Sortiert nach der Zeit."""
+        letztes = Mesh3dairechendatum.letztes(job)
+        if not letztes:
+            return mark_safe('<td data-sort="0" title="Noch nichts gerechnet">—</td>')
+        return format_html('<td data-sort="{}" title="Zuletzt gerechnet: {} — {}">{} ({})</td>', int(letztes['zeit']), letztes['was'], letztes['datei'],
+                           datetime.fromtimestamp(letztes['zeit']).strftime('%d.%m.%Y %H:%M'), letztes['was'])
+
+    @staticmethod
+    def laufzeit_zelle(laufzeit):
+        """„3 min 12 s“, Tooltip die gemessenen Teile; ohne gemessene Zeit „—“. Sortiert nach Sekunden. Auch für die Tabelle der Tests."""
+        if not laufzeit:
+            return mark_safe('<td class="num" data-sort="0" title="Keine gemessene Laufzeit abgelegt">—</td>')
+        return format_html('<td class="num" data-sort="{}" title="{}">{}</td>', int(round(laufzeit['sekunden'])), Mesh3dailaufzeit.titel(laufzeit),
+                           Mesh3dailaufzeit.text(laufzeit['sekunden']))
 
     @staticmethod
     def _zahl(wert):

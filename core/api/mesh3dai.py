@@ -9,6 +9,7 @@ GET /mesh-3D-AI/<job>/                   die Jobseite (Eingabe · gewünschte Au
 GET /api/mesh3dai/jobs/                  die Jobs (Kurzstand)
 GET /api/mesh3dai/<job>/proben/          die Proben des Jobs — echt (Datensatz + Vorhersagen des jüngsten fertigen Laufs, `Mesh3daidaten`), sonst die Attrappe
 GET /api/mesh3dai/<job>/eingabe/<nr>/    die Punktwolke EINER echten Probe (4.096 Punkte mit Farbe und Teil)
+GET /api/mesh3dai/<job>/eingabe/<nr>/dicht/   Tripo-Jobs: die dichte Start-Wolke (2 Mio. Punkte, Binärpaket, `Mesh3daieingabedicht`)
 GET /api/mesh3dai/<job>/flaeche/<nr>/    die gehäutete Figur EINER echten Probe (Binärpaket, `Mesh3daiflaeche`) für die Ansichtsarten
 GET /api/mesh3dai/<job>/apose/<nr>/      das Zwischenbild „Rig → A-Pose“ der Probe, auf der die Vorstufe lief (Binärpaket, `Mesh3daiapose`)
 GET /api/mesh3dai/<job>/stand/           ECHT: fertige Proben des Datensatzes und der jüngste Trainingslauf (Platte), dazu der Abfragetakt in Minuten
@@ -68,8 +69,11 @@ class Mesh3daiendpunkte:
         if lauf is None and gefunden.get('paar'):
             # Trainingspaar ohne Ergebnis: Start und Ziel sind echt — kein Band „Attrappe“ (Edgar sah es am 18.10.2026 auf dem neuen Job Matt1).
             hinweis = Mesh3daidaten.HINWEIS_PAAR % {'ergebnis': Mesh3daidaten.OHNE_ERGEBNIS_PAAR}
+        # Zeile oben: wann gerechnet, wie lange (22.10.2026, `Mesh3dailaufzeile`).
+        from ..dienste.mesh3dailaufzeile import Mesh3dailaufzeile
         return render(request, 'mesh3dai.html', {'hinweis': hinweis, 'echt': lauf is not None or bool(gefunden.get('paar')), 'job': gefunden,
-                                                 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE})
+                                                 'texturweg': Mesh3daitexturwahl.gewaehlt(), 'texturkante': Mesh3daitexturwahl.KANTE,
+                                                 'laufzeile': Mesh3dailaufzeile.teile(gefunden)})
 
     @staticmethod
     @require_GET
@@ -101,6 +105,18 @@ class Mesh3daiendpunkte:
         if daten is None:
             raise Http404('Keine Probe %s in %s' % (nr, job))
         return JsonResponse(daten)
+
+    @staticmethod
+    @require_GET
+    def eingabe_dicht(request, job, nr):
+        """Die dichte Start-Wolke eines Tripo-Jobs (2 Mio. Punkte, Binärpaket `Mesh3daieingabedicht`, rund 20 MB); 404, solange `eingabe_dicht.npz` fehlt."""
+        from ..dienste.mesh3daieingabedicht import Mesh3daieingabedicht
+
+        gefunden = Mesh3daiattrappe.job(job)
+        paket = Mesh3daieingabedicht.paket(gefunden, nr) if gefunden else None
+        if paket is None:
+            raise Http404('Keine dichte Wolke für Probe %s in %s' % (nr, job))
+        return HttpResponse(paket, content_type='application/octet-stream')
 
     @staticmethod
     @require_GET

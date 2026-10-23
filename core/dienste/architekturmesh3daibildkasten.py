@@ -32,7 +32,7 @@ class Architekturmesh3daibildkasten:
                              ('Ausgabe', ('Punktwolke mit Farbe in', 'der A-Pose → ins Netz')))),
         ('4 Zurück — nach dem Netz', True, (('Eingabe', ('138 Gelenke in der A-Pose', '(Ausgabe des Netzes)')),
                                             ('Was passiert', ('mit dem Rig zurück in die', 'Haltung, Daz-Winkel anpassen')),
-                                            ('Ausgabe', ('Skelett in der Haltung', '(über 60 mm vom Rig:', 'Rig allein)')))),
+                                            ('Ausgabe', ('Skelett in der Haltung', '(immer aus dem Netz,', 'seit 19.10.2026)')))),
     )
     #: Höhe eines Schrittkastens und Unterkante des ganzen Kastens — er reicht tiefer als die Formreihe (`Architekturmesh3daibild.FORM_UNTEN` 770).
     HOEHE = 200

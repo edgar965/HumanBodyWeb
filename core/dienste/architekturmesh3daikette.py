@@ -47,10 +47,15 @@ class Architekturmesh3daikette:
     def kontext(cls, wurzel):
         """`{posen: [...], mittel, zeiten, netz, tests}` oder None, wenn kein Job eine Kette gerechnet hat."""
         posen, zeiten = [], {}
+        from .mesh3daiattrappe import Mesh3daiattrappe
         for job in cls.JOBS:
-            ordner = wurzel / job
+            # die vier Prüfposen-Jobs sind seit 20.10.2026 abends beiseitegelegt (`Mesh3daiattrappe.BEISEITE`) — die Messung der Kette bleibt hier lesbar
+            ordner = wurzel / job if (wurzel / job).is_dir() else wurzel / Mesh3daiattrappe.BEISEITE_ORDNER / job
             wege, lauf = cls._wege(ordner)
-            kette = cls._json(Path((wege or {}).get('ablage') or cls._ablage(ordner)) / 'kette.json')
+            ablage = Path((wege or {}).get('ablage') or cls._ablage(ordner))
+            if not ablage.is_dir():          # `ablage` steht absolut in wege.json — nach dem Beiseitelegen liegt sie im neuen Jobordner
+                ablage = ordner / 'vorstufe' / ablage.name
+            kette = cls._json(ablage / 'kette.json')
             if not kette or not wege:
                 continue
             probe = next((p for p in cls._json(ordner / 'proben.json') or [] if p.get('nr') == 1), {})

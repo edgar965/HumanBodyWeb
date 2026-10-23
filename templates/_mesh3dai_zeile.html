@@ -8,7 +8,7 @@ dazu die Wahl der Ansichtsart und je Feld die Download-Knöpfe. Aufruf: {% inclu
         <h2>{{ titel }}</h2>
         {% include "_mesh3dai_ansichtwahl.html" %}
     </div>
-    <p class="hb-hinweis">{{ hinweis }}</p>
+    {% if hinweis %}<p class="hb-hinweis">{{ hinweis }}</p>{% endif %}
     <div class="mesh3dai-bereiche">
         <div class="mesh3dai-feld">
             <h3><span class="mesh3dai-nummer">1</span> Start</h3>

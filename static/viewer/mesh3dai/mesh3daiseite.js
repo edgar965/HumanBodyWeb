@@ -13,7 +13,10 @@ import { Mesh3daiansichtgedaechtnis } from './mesh3daiansichtgedaechtnis.js';
 import { Mesh3daiapose } from './mesh3daiapose.js';
 import { Mesh3daiflaechen } from './mesh3daiflaechen.js';
 import { Mesh3daiflaechennetz } from './mesh3daiflaechennetz.js';
+import { Mesh3daifigurbewegung } from './mesh3daifigurbewegung.js';
+import { Mesh3daifigurbewegungsleiste } from './mesh3daifigurbewegungsleiste.js';
 import { Mesh3daigenesisfigur } from './mesh3daigenesisfigur.js';
+import { Mesh3daikikleiderfeld } from './mesh3daikikleiderfeld.js';
 import { Mesh3daiprobenwahl } from './mesh3daiprobenwahl.js';
 import { Mesh3daistand } from './mesh3daistand.js';
 import { Mesh3daiwegwahl } from './mesh3daiwegwahl.js';
@@ -56,6 +59,21 @@ export class Mesh3daiseite {
         });
         for (const [schluessel, kaestchen] of Object.entries(this.filter)) kaestchen.addEventListener('change', () => Mesh3daiansichtgedaechtnis.merken({ [schluessel]: kaestchen.checked }));
         document.addEventListener('keydown', Mesh3daianimationsleiste.leertaste);
+        // Standardanimation der Ergebnisfigur (22.10.2026, wie Mesh-3D): im Feld „Ergebnis“ der Zeile „Ganzer Körper“; ohne Tasten (Pfeile wählen die Probe, die Leertaste spielt die Zeilen).
+        const feld = this.zeilen.find(z => z.schluessel === 'koerper')?.ansichten.find(a => a.art === 'ausgabe');
+        const leiste = document.querySelector('[data-figurbewegung]');
+        if (feld && leiste) {
+            this.bewegung = new Mesh3daifigurbewegung(feld, () => this._bewegungsquelle());
+            const figurleiste = new Mesh3daifigurbewegungsleiste(leiste, this.bewegung);
+            figurleiste.wahlLaden(leiste.dataset.adresse);
+            // Jobs ohne Spagat-Bewegung (Tripo-Jobs): Play in den Zeilenköpfen und die Leertaste bedienen diese Bewegung.
+            figurleiste.nachAnzeige = () => Mesh3daianimationsleiste.figurGeaendert();
+            Mesh3daianimationsleiste.figur = {
+                umschalten: () => figurleiste.befehl(b => b.umschalten()),
+                stellen: anteil => figurleiste.befehl(b => b.stellen(anteil * b.dauer)),
+                zustand: () => figurleiste.zustand(),
+            };
+        }
         this._festhalten(hole('mesh3dai-oben'));
         // Die einzige ECHTE Karte der Seite: Datensatz und Training von der Platte, im Takt der Einstellung (Einstellungen → Mesh3D-AI).
         this.stand = Mesh3daistand.aufbauen(this.jobId, hole('mesh3dai-stand'));
@@ -129,7 +147,22 @@ export class Mesh3daiseite {
         return feld;
     }
 
+    /** Was die Standardanimation bewegt: die Figur des Ergebnisses dieser Probe (Regler, Haut, Anatomie-Stück) und die Stücke aus der KI — vom Server wie das stille Bild (`Mesh3daigenesisfigur`). */
+    async _bewegungsquelle() {
+        const probe = this.aktuell;
+        if (!probe || !this.echt) return null;
+        const weg = probe.weg ?? '';
+        const daten = await Mesh3daigenesisfigur._datenHolen(this.jobId, probe.id, weg);
+        if (!daten?.figur_ergebnis) return null;
+        const ki = daten.ki_kleider ? await Mesh3daikikleiderfeld.laden(daten.ki_kleider) : null;
+        return {
+            schluessel: `${this.jobId}|${probe.id}|${weg}`, figur: daten.figur_ergebnis, stuecke: ki?.stuecke ?? [],
+            knochen: daten.ki_kleider?.knochen ?? this.daten.rig?.knochen?.map(k => k.name), ruhezentren: daten.ki_kleider?.ruhezentren ?? null,
+        };
+    }
+
     zeigen(probe) {
+        if (probe !== this.aktuell) this.bewegung?.verwerfen();
         this.aktuell = probe;
         if (probe) {
             Mesh3daiansichtgedaechtnis.merkenJeJob('probe', this.jobId, probe.id);
@@ -159,12 +192,28 @@ export class Mesh3daiseite {
     /** Die Punktwolke einer echten Probe nachholen (rund 160 KB, erst bei Wahl der Probe) und die Zeilen neu zeichnen — nur, wenn die Probe dann noch gewählt ist. */
     async _wolkeHolen(probe) {
         try {
-            probe.eingabeEcht = await Serverabruf.json(`/api/mesh3dai/${encodeURIComponent(this.jobId)}/eingabe/${probe.id}/`);
+            // Tripo-Job (21.10.2026, Edgar: „2 Mio punkte!“): erst die dichte Wolke (Binärpaket, `Mesh3daieingabedicht`), ohne sie die 16.384 Punkte
+            if (probe.start === 'wolke') probe.eingabeEcht = await this._dichteWolke(probe);
+            probe.eingabeEcht ??= await Serverabruf.json(`/api/mesh3dai/${encodeURIComponent(this.jobId)}/eingabe/${probe.id}/`);
         } catch (fehler) {
             this.probeninfo.append(` · Punktwolke nicht geladen: ${fehler.message ?? fehler}`);
             return;
         }
         this._neuZeichnen(probe);
+    }
+
+    /** Paket: uint32 Anzahl · float32 Einheit · int16 Lage (n × 3) · uint8 Farbe (n × 3) · int8 Teil (n); null bei 404. */
+    async _dichteWolke(probe) {
+        const antwort = await fetch(`/api/mesh3dai/${encodeURIComponent(this.jobId)}/eingabe/${probe.id}/dicht/`);
+        if (antwort.status === 404) return null;
+        if (!antwort.ok) throw new Error(`HTTP ${antwort.status}`);
+        const puffer = await antwort.arrayBuffer();
+        const kopf = new DataView(puffer, 0, 8);
+        const n = kopf.getUint32(0, true), einheit = kopf.getFloat32(4, true);
+        const q = new Int16Array(puffer, 8, n * 3);
+        const lage = new Float32Array(n * 3);
+        for (let i = 0; i < lage.length; i++) lage[i] = q[i] * einheit;
+        return { dicht: true, anzahl: n, von: n, lage, rgb: new Uint8Array(puffer, 8 + n * 6, n * 3), etikett: new Int8Array(puffer, 8 + n * 9, n) };
     }
 
     /** Die gehäutete Figur der Probe (rund 2 MB, `Mesh3daiflaechen`) für die Ansichtsarten; fehlt sie (404), zeigt die Eingabe die Punktwolke und sagt es. */
@@ -197,6 +246,7 @@ export class Mesh3daiseite {
         // Mehrere Wege zum Rig (Job UrsulaSpagat, 16.10.2026): Knöpfe hinter der Probe; ein Wechsel zeichnet Texte und alle Zeilen neu.
         const wege = Mesh3daiwegwahl.knoepfe(probe, () => {
             Mesh3daiansichtgedaechtnis.merkenJeJob('weg', this.jobId, probe.weg);
+            this.bewegung?.verwerfen();          // die Ergebnisfigur hängt am Weg
             this._texte(probe);
             this._neuZeichnen(probe);
         });

@@ -59,6 +59,50 @@ Einstellungen → Mesh3D-AI (Edgar, 14.10.2026: „einstellbar, wie viele Minute
         </tbody>
     </table>
 </div>
+{% comment %}21.10.2026, Edgar: „Mach das einstellbar unter Einstellungen - Mesh3d-AI. Die erste Stufe bleibt so wie sie jetzt ist. Mach eine zweite Stufe“ — `Mesh3daistufe2wahl`.{% endcomment %}
+<div class="settings-section">
+    <h3>Kleider-KI: Stufe 2 (Detail)</h3>
+    <p class="hint">Stufe 1 bleibt fest: Form der Kleider je Punkt des Genesis-Körpers (1–1,5 cm), Farbe je Punkt aus 262.144 Punkten des Tripo-Netzes. Stufe 2 bekommt das Tripo-Netz dicht als
+        Eingang und gibt feinere Form (Höhe je Punkt) und eine Farbe je Texel aus — trainiert gegen das Ziel, nicht vom Tripo-Netz kopiert. Gilt für den nächsten Lauf der Kleider; ein Lauf der Stufe 2
+        wird nur mit den Werten benutzt, mit denen er gerechnet wurde.</p>
+    {% for f in stufe2_felder %}
+    <div class="settings-row">
+        <label for="{{ f.schluessel }}">{{ f.titel }}:</label>
+        <select name="{{ f.schluessel }}" id="{{ f.schluessel }}" data-reihenfolge="fest">
+            {% for wert, text in f.werte %}<option value="{{ wert }}"{% if wert == f.wert %} selected{% endif %}>{{ text }}</option>{% endfor %}
+        </select>
+        <span class="hint">{{ f.beschreibung }} Vorgabe: {{ f.vorgabe }}.</span>
+    </div>
+    {% endfor %}
+    {% comment %}22.10.2026, Edgar: „die Fehler müssen auf unter 10 gehen, erst dann starte die anderen Jobs“ → „Mach die Fehleranzahl einstellbar bis ein Trainingsjob OK ist“ — `Mesh3daiabnahmewahl`.{% endcomment %}
+    <div class="settings-row">
+        <label for="{{ abnahme_schluessel }}">Trainingsjob OK unter (Fehler):</label>
+        <input type="number" name="{{ abnahme_schluessel }}" id="{{ abnahme_schluessel }}" value="{{ abnahme_wert }}" min="{{ abnahme_minimum }}" max="{{ abnahme_maximum }}" step="1" required>
+        <span class="hint">Ein Trainingsjob gilt erst als fertig, wenn der Abgleich Ergebnis ↔ Ziel (Ruhe und Pose: Bedeckung, Schnitt, Textur, Bereiche, Kleinteile, Form, Material) WENIGER Fehler
+            findet als dieser Wert — der Trainingsfehler zählt nicht. Nur ein OK-Lauf wird gewählt; der Lauf über alle Tripo-Jobs startet erst, wenn OlesiaWalk OK ist.
+            Vorgabe {{ abnahme_vorgabe }}, erlaubt {{ abnahme_minimum }} bis {{ abnahme_maximum }}.</span>
+    </div>
+</div>
+{% comment %}23.10.2026, Edgar zur Strategie für eigene Kostüme: „zu Punkt 3: Das bitte einstellbar. Für die Strategie, und erste Berechnung: Stufe 1“ — `Mesh3daikostuemstufe`.{% endcomment %}
+<div class="settings-section">
+    <h3>Eigene Kostüme (Weg A: aus dem Eingang ausschneiden)</h3>
+    <p class="hint">Das Kostüm wird nicht erzeugt, sondern aus dem Tripo-Netz ausgeschnitten und auf die Figur der KI gelegt. Was Haut, Haar und Kostüm ist (Runde 1) und welche Kategorie ein
+        Kostümteil hat (Runde 2), entscheiden Sapiens2 und SAM 3. Die Stufe sagt, wann das Ergebnis als fertig gilt — sie bestimmt, wie die Teile auf die Figur kommen und welche Prüfungen zur
+        Abnahme gehören. Gilt für den nächsten Lauf.</p>
+    <div class="settings-row">
+        <label for="{{ kostuem_schluessel }}">Fertig heißt:</label>
+        <select name="{{ kostuem_schluessel }}" id="{{ kostuem_schluessel }}" data-reihenfolge="fest">
+            {% for s in kostuem_stufen %}<option value="{{ s.wert }}"{% if s.wert == kostuem_wert %} selected{% endif %}>{{ s.text }}</option>{% endfor %}
+        </select>
+        <span class="hint">Vorgabe: {{ kostuem_vorgabe }}.</span>
+    </div>
+    <table class="doku mesh3dai-methoden">
+        <thead><tr><th>Stufe</th><th>Was geschieht</th></tr></thead>
+        <tbody>
+        {% for s in kostuem_stufen %}<tr{% if s.wert == kostuem_wert %} class="mesh3dai-methode-gewaehlt"{% endif %}><td><strong>{{ s.text }}</strong></td><td>{{ s.beschreibung }}</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
 
 {% block einstellungen_nachtrag %}

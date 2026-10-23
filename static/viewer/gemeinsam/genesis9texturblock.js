@@ -41,10 +41,10 @@ export class Genesis9texturblock {
         return !!inhalt?.stufen;
     }
 
-    /** Den gelesenen Block an die Textur hängen (danach `needsUpdate`). */
+    /** Den gelesenen Block an die Textur hängen (danach `needsUpdate`). `format` ist 'bc1'/'bc3' (Block) oder schon eine three.js-Konstante (UASTC, `Genesis9texturbasis`). */
     static setzen(textur, paket) {
         textur.mipmaps = paket.stufen;
-        textur.format = Genesis9texturblock.FORMATE[paket.format];
+        textur.format = typeof paket.format === 'number' ? paket.format : Genesis9texturblock.FORMATE[paket.format];
         textur.image = paket.bild;
         textur.userData.blockGroesse = { width: paket.breite, height: paket.hoehe };
     }

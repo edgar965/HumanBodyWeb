@@ -94,29 +94,32 @@ class Mesh3daiattrappe:
     #: (`ProjektTemp/_wegwerf/mesh3dai_pose1_bauen.py`), die übrigen Proben die von Ursula1.
     #: `geschlecht` (16.10.2026 abends, Edgar: „ganz oben im Testjob soll die Einstellung änderbar sein, ob es weiblich oder männlich ist“): welche Figuren ein Test als Ausgabe nehmen darf (`Mesh3daitest`).
     STAMMDATEN = ({'id': 'ursula1', 'name': 'Ursula1', 'modell': 'Ursula1', 'ordner': 'Ursula1', 'geschlecht': 'weiblich'},
-                  {'id': 'ursula_pose1', 'name': 'Ursula_Pose1', 'modell': 'Ursula1', 'ordner': 'Ursula_Pose1', 'geschlecht': 'weiblich'},
                   # 16.10.2026, Edgar: „Erstelle 3 neue Trainingsjobs: Damira0, Mann1 und Matt0 … trainier das Netz auf alle" (Datensatz `ProjektTemp/_wegwerf/mesh3dai_modell_kette.py`).
                   {'id': 'damira0', 'name': 'Damira0', 'modell': 'Damira0', 'ordner': 'Damira0', 'geschlecht': 'weiblich'},
                   {'id': 'mann1', 'name': 'Mann1', 'modell': 'Mann1', 'ordner': 'Mann1', 'geschlecht': 'maennlich'},
-                  {'id': 'matt0', 'name': 'Matt0', 'modell': 'Matt0', 'ordner': 'Matt0', 'geschlecht': 'maennlich'},
-                  # 16.10.2026, Edgar: „Erstelle ein Training UrsulaSpagat, wo du die Ursula 1 in eine komplizierte Spagatposition bringst" — Probe 1 Standspagat (Prüfpose), 2–191 = Ursula1
-                  # (`ProjektTemp/_wegwerf/mesh3dai_spagat_bauen.py`).
-                  {'id': 'ursulaspagat', 'name': 'UrsulaSpagat', 'modell': 'Ursula1', 'ordner': 'UrsulaSpagat', 'geschlecht': 'weiblich'},
-                  # 16.10.2026 nachts, Edgar: „mach jetzt noch 3 weitere Posen mit Damira0: sitzen, Matt0 in liegen, und Mann1 beim Laufen und trainiere" — Probe 1 je eine Prüfpose als OBJ,
-                  # 2–66 = der Grundjob (`ProjektTemp/_wegwerf/mesh3dai_neupose_bauen.py`).
-                  {'id': 'damirasitzen', 'name': 'DamiraSitzen', 'modell': 'Damira0', 'ordner': 'DamiraSitzen', 'geschlecht': 'weiblich'},
-                  {'id': 'mattliegen', 'name': 'MattLiegen', 'modell': 'Matt0', 'ordner': 'MattLiegen', 'geschlecht': 'maennlich'},
-                  {'id': 'mannlaufen', 'name': 'MannLaufen', 'modell': 'Mann1', 'ordner': 'MannLaufen', 'geschlecht': 'maennlich'})
+                  {'id': 'matt0', 'name': 'Matt0', 'modell': 'Matt0', 'ordner': 'Matt0', 'geschlecht': 'maennlich'})
+    #: Beiseitegelegt am 20.10.2026 abends (Edgar: „überprüfe die Jobliste, vieles davon ist doch unnütz, weil wir ja sowieso den Code neu schreiben? Lösche die Jobs die nicht mehr aktuell sind“):
+    #: die Versuchs-Jobs vom 15.–17.10.2026 mit ihren alten Einzeltrainings (Stimmnetz je Job). Die Ordner liegen unter `3DObjects/mesh3dai/_beiseite/2026.10.20/` — nicht gelöscht;
+    #: zurückholen = Ordner zurückschieben und die Zeile wieder in STAMMDATEN. Ursula_Pose1 (15.10.: Ursula1 + eine OBJ-Pose), UrsulaSpagat (16.10.: Standspagat), DamiraSitzen/MattLiegen/MannLaufen
+    #: (16.10. nachts: je eine Prüfpose als OBJ, 2–66 = der Grundjob; `mesh3dai_neupose_bauen.py`) — die vier letzten waren die Prüfposen der Vorstufe (Hilfe, Abschnitt Kette) und bis heute die „Grundjobs“ der Kleider.
+    BEISEITE = ({'id': 'ursula_pose1', 'name': 'Ursula_Pose1', 'modell': 'Ursula1', 'ordner': 'Ursula_Pose1', 'geschlecht': 'weiblich'},
+                {'id': 'ursulaspagat', 'name': 'UrsulaSpagat', 'modell': 'Ursula1', 'ordner': 'UrsulaSpagat', 'geschlecht': 'weiblich'},
+                {'id': 'damirasitzen', 'name': 'DamiraSitzen', 'modell': 'Damira0', 'ordner': 'DamiraSitzen', 'geschlecht': 'weiblich'},
+                {'id': 'mattliegen', 'name': 'MattLiegen', 'modell': 'Matt0', 'ordner': 'MattLiegen', 'geschlecht': 'maennlich'},
+                {'id': 'mannlaufen', 'name': 'MannLaufen', 'modell': 'Mann1', 'ordner': 'MannLaufen', 'geschlecht': 'maennlich'})
+    BEISEITE_ORDNER = '_beiseite/2026.10.20'
 
     @classmethod
     def stammdaten(cls):
         """`[{id, name, modell, ordner}]` — nur, wer die Jobs ist. Billig: das Menü der Seitenleiste fragt es auf JEDER Seite der Anwendung (`Mesh3daimenue`), `jobs()` liest dafür erst den Plan (BVH-Dateien).
-        Dazu die gebauten Trainingspaare (18.10.2026 abends, `Mesh3daipaare`: Tripo-Netz + Genesis-Export, Marke `paar.json` im Jobordner)."""
+        Dazu die gebauten Trainingspaare (18.10.2026 abends, `Mesh3daipaare`: Tripo-Netz + Genesis-Export, Marke `paar.json` im Jobordner). Seit 19.10.2026 mit dem eigenen Namen aus
+        `name.json` (`Mesh3dainame`, Stift auf der Jobseite); der ursprüngliche steht in `name_vorgabe`."""
+        from .mesh3dainame import Mesh3dainame
         from .mesh3daipaare import Mesh3daipaare
 
         feste = [dict(s) for s in cls.STAMMDATEN]
         ids = {s['id'] for s in feste}
-        return feste + [p for p in Mesh3daipaare.stammdaten() if p['id'] not in ids]
+        return Mesh3dainame.jobs(feste + [p for p in Mesh3daipaare.stammdaten() if p['id'] not in ids])
 
     @classmethod
     def jobs(cls):

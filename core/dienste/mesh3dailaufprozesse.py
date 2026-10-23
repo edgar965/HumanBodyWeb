@@ -55,7 +55,9 @@ class Mesh3dailaufprozesse:
         for pid in spitzen:
             k, baum = kandidaten[pid], baeume[pid]
             vorfahren = cls._vorfahren(pid, karte)
-            jobs.append({**cls._befehl(k['cmd']), 'pid': pid, 'start': k['start'], 'prozesse': len(baum),
+            # `gpu_sperre.py hole …` blockiert, bis ein Platz frei ist (`Gpusperre.__enter__`, `mesh3dai_stimmen_lauf.py`): lebt er im Baum, wartet der Job auf die Grafikkarte.
+            wartet = any('gpu_sperre.py' in ' '.join(kandidaten[p]['cmd']) and 'hole' in kandidaten[p]['cmd'] for p in baum if p in kandidaten)
+            jobs.append({**cls._befehl(k['cmd']), 'pid': pid, 'start': k['start'], 'prozesse': len(baum), 'wartet_gpu': wartet,
                          'kette': list(dict.fromkeys(os.path.basename(ketten[v]['cmd'][1]) for v in vorfahren if v in ketten)),
                          'cpu_kerne': round(sum(kerne.get(p, 0.0) for p in baum), 2), 'ram_mb': round(cls._ram(baum)), **cls._gpu_baum(baum, gpu)})
         ausfuehrend = {v for pid in spitzen for v in cls._vorfahren(pid, karte)}

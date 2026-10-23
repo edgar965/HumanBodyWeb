@@ -31,7 +31,8 @@ gebracht? Falls nicht, dann begründe das.“ und „das mesh riggen in jedem Tr
     auf derselben Datei wird wiederverwendet (dann wenige Sekunden statt rund drei Minuten); neu gerigt wird nur, wenn sich die Datei ändert oder die Pose-Bestimmung eine neue Fassung bekommt;</li>
   <li><strong>figur</strong> und <strong>apose</strong> — mit dieser Figur wird die Fläche in ihre Ruhelage (A-Pose) zurückgerechnet; Dreiecke, die dabei reißen (Hand am Knöchel), fallen weg;</li>
   <li><strong>netz</strong> — das Netz der Vorstufe korrigiert in der A-Pose die Gelenke, die Drehungen des Rigs bringen sie zurück in die Haltung, die Daz-Winkel werden angepasst;</li>
-  <li><strong>Sicherheitsregel</strong> — liegt das Netz der Vorstufe mehr als 60 mm neben der Rig-Figur, gilt das Rig allein (unten „Testnetze“).</li>
+  <li><strong>Sicherheitsregel — seit 19.10.2026 aus.</strong> Bis dahin galt: liegt das Netz der Vorstufe mehr als 60 mm neben der Rig-Figur, gilt das Rig allein. Gemessen an den sechs Tripo-Jobs
+    mit Wahrheit lag das Netz aber in allen sechs näher an der Wahrheit (Ø 138 Gelenke ohne Ausrichtung 38–50 gegen 50–77 mm) — die Regel warf die bessere Antwort weg. Die Pose kommt jetzt immer aus dem Netz.</li>
 </ol>
 <p>Die Jobseite zeigt den Zwischenschritt seit 17.10.2026 als <strong>viertes Feld „Rig → A-Pose“</strong> zwischen Start und Ziel (bei der Probe, auf der die Kette lief): die zurückgerechnete Fläche, wie das
   Netz der Vorstufe sie bekommt, mit dem Skelett der Rig-Figur in Ruhe (Knopf „Rig“).</p>
@@ -104,6 +105,7 @@ gebracht? Falls nicht, dann begründe das.“ und „das mesh riggen in jedem Tr
 
 {% if kette.tests %}
 <h3>Testnetze (ohne Ziel) und die Sicherheitsregel</h3>
+<p><strong>Die Regel ist seit 19.10.2026 aus</strong> (siehe oben): Was folgt, beschreibt, wie sie wählte; die Spalte „Weg“ zeigt bei neu gerechneten Netzen „vorstufe“.</p>
 <p>Für ein fremdes Netz gibt es kein Ziel, also keinen Fehler. Die Kette misst deshalb, wie weit die Gelenke, die das Netz der Vorstufe auf der A-Pose-Wolke abstimmt, von den Gelenken der Rig-Figur
   aus Mesh-3D entfernt liegen (Ø der 138 Gelenke in Ruhe). <strong>Über 60 mm</strong> gilt das Netz als außerhalb seines Trainings, und die Testseite zeigt das <strong>Rig allein</strong>; darunter den Weg
   über die Vorstufe. Die 60 mm sind eine Setzung: an den vier Jobs mit Ziel lag dieser Abstand bei 14–56 mm (dort ist die Vorstufe besser als das Rig allein), an Testnetzen in Kleid und Reifrock

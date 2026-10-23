@@ -44,6 +44,11 @@
     width: auto;
 }
 
+/* Abschnitt „Kleider wie das Ziel“ (21.10.2026): der neue Weg g in der Tabelle gegen das Ziel hervorgehoben */
+.m3a tr.m3a-neu td {
+    font-weight: 600;
+}
+
 .m3a .m3a-klein {
     font-size: 0.85rem;
     opacity: 0.85;

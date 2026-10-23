@@ -157,8 +157,13 @@ export class Mesh3daiansicht {
         // drei Feldern (Edgar, 15.10.2026: „das muss einheitlich sein in allen views“ — vorher war das Ergebnis dunkel).
         this.grund = d?.echt ? Mesh3daiansicht.GRUND_WOLKE : Mesh3daiansicht.GRUND;
         if (d) {
-            this.zeichner.zeichnen(this.inhalt, this.art, d);
-            Mesh3dairigzeichner.ueberlagern(this.inhalt, this.art, d);
+            // Standardanimation (22.10.2026, `Mesh3daifigurbewegung`): solange sie läuft oder steht, die bewegte Figur statt der stillen — ohne Rig (es zeigt die Haltung der KI, nicht die Bewegung).
+            if (this.bewegung?.aktiv) {
+                this.bewegung.einhaengen(this.inhalt, d);
+            } else {
+                this.zeichner.zeichnen(this.inhalt, this.art, d);
+                Mesh3dairigzeichner.ueberlagern(this.inhalt, this.art, d);
+            }
             // Ein Zeichner kann einen Text ins Feld legen (Genesis-Figur wird gebaut, gescheitert).
             const text = this.inhalt.userData.hinweis;
             if (text) {

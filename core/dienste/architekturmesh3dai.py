@@ -15,6 +15,7 @@ from .architekturmesh3daibild import Architekturmesh3daibild
 from .architekturmesh3daiergebnis import Architekturmesh3daiergebnis
 from .architekturmesh3daiform import Architekturmesh3daiform
 from .architekturmesh3daiformvergleich import Architekturmesh3daiformvergleich
+from .architekturmesh3daigarmentcode import Architekturmesh3daigarmentcode
 from .architekturmesh3daikette import Architekturmesh3daikette
 from .architekturmesh3daigrenzen import Architekturmesh3daigrenzen
 from .architekturmesh3daigroesse import Architekturmesh3daigroesse
@@ -24,6 +25,7 @@ from .mesh3daiaposewahl import Mesh3daiaposewahl
 from .architekturmesh3dainetz import Architekturmesh3dainetz
 from .architekturmesh3daiplan import Architekturmesh3daiplan
 from .architekturmesh3dairegler import Architekturmesh3dairegler
+from .architekturmesh3daischicht import Architekturmesh3daischicht
 from .architekturmesh3daitestnetze import Architekturmesh3daitestnetze
 from .architekturmesh3daivorgehen import Architekturmesh3daivorgehen
 from .architekturmesh3daivorstufe import Architekturmesh3daivorstufe
@@ -95,5 +97,9 @@ class Architekturmesh3dai:
             'lauf': teil('Lauf', lambda: Architekturmesh3daivorgehen.lauf(lauf, ergebnis)),
             'analyse': teil('Analyse', lambda: Architekturmesh3daivorgehen.analyse(Mesh3daidaten.proben(job))),
             'kleider': teil('Kleider', lambda: Architekturmesh3daikleider.kontext(jobs)),
+            # 20.10.2026: wie die KI ein Kleidungsstück über GarmentCode baut, was gemessen wird, was fehlt (Edgar: „Kleider-GarmentCode … da ist noch ein Widerspruch drin“)
+            'garmentcode': teil('Kleider-GarmentCode', Architekturmesh3daigarmentcode.kontext),
+            # 21.10.2026: Kleider wie das Ziel — der Schichtkopf, trainiert gegen die Zielstücke (Edgar: „wie sieht die KI nicht, welches Zielstück sie bauen soll??“)
+            'schicht': teil('Kleider wie das Ziel', Architekturmesh3daischicht.kontext),
             'befunde': befunde,
         }
